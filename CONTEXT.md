@@ -23,3 +23,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 修改后必须通过 node --check 全量语法校验。
 - manifest.json 版本号按 semver 递增；release 附带离线 zip。
 - README.md 安装指引指向 GitHub 仓库 LonSha/ruby-phone。
+
+## 候选技术储备（已侦察未移植）
+- moyunphone（墨韵手机）：核心代码 JS 混淆，无法直接移植；其 NovelAI v4 多角色生图 + 角色一致性、上下文总结、hooks 生命周期、host-performance 宿主性能守护为后续演进方向。
+- Anrrow-phone-music：GD Studio 多源引擎与 TMUSIC 标签协议已全量移植（见 music-data.js / index.js）。
