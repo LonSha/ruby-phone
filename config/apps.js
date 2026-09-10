@@ -190,6 +190,14 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'health',
+        name: '健康',
+        icon: '💗',
+        color: '#f43f5e',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置

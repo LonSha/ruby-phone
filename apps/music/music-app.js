@@ -205,4 +205,44 @@ export class MusicApp {
             console.warn('🎵 [音乐] 扫描历史消息失败:', e);
         }
     }
- }
+ 
+    /**
+     * 汲取自芋圆机：一键将当前正在播放的歌曲分享到微信聊天
+     */
+    shareCurrentTrackToWechat(targetChatId = null) {
+        const current = this.musicData?.getCurrentTrack?.() || this.musicData?.nowPlaying;
+        if (!current || !current.name) {
+            window.toastr?.warning('当前没有正在播放的歌曲', '音乐');
+            return false;
+        }
+
+        const wechatApp = window.VirtualPhone?.wechatApp;
+        const wechatData = wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData;
+        if (!wechatData) {
+            window.toastr?.warning('微信数据尚未就绪', '音乐');
+            return false;
+        }
+
+        const chatId = targetChatId || wechatApp?.currentChat?.id || Object.keys(wechatData.data?.messages || {})[0];
+        if (!chatId) {
+            window.toastr?.info('请先在微信中开启一个对话', '音乐');
+            return false;
+        }
+
+        const songTitle = current.name;
+        const songArtist = current.artist || '未知歌手';
+        const msg = {
+            id: 'msg_music_' + Date.now(),
+            sender: 'user',
+            type: 'text',
+            text: `🎵 分享单曲《${songTitle}》- ${songArtist}`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now()
+        };
+
+        wechatData.addMessage(chatId, msg);
+        window.toastr?.success(`已将《${songTitle}》分享至微信！`, '音乐');
+        return true;
+    }
+
+}

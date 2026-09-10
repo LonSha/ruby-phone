@@ -74,7 +74,38 @@ if (window.GGP_Loaded) {
     console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');
 } else {
     window.GGP_Loaded = true;
-    console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
+    
+    // 💡 汲取自玉子手机：注册原生 Slash Command 快捷命令
+    try {
+        if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
+            const SlashCommandParser = SillyTavern.getContext().SlashCommandParser;
+            const SlashCommand = SillyTavern.getContext().SlashCommand;
+            if (SlashCommandParser && SlashCommand) {
+                SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+                    name: 'rubyphone',
+                    callback: () => {
+                        activatePhoneFromFloatingEntry();
+                        return '';
+                    },
+                    helpString: '打开/关闭 RubyPhone 虚拟手机面板',
+                }));
+                SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+                    name: 'rubyphone-toggle',
+                    callback: () => {
+                        activatePhoneFromFloatingEntry();
+                        return '';
+                    },
+                    helpString: '切换 RubyPhone 显示状态',
+                }));
+                console.log('[RubyPhone] 🚀 成功注册 /rubyphone 与 /rubyphone-toggle 斜杠命令！');
+            }
+        }
+    } catch (cmdErr) {
+        console.warn('[RubyPhone] 注册 Slash 命令跳过:', cmdErr);
+    }
+
+
+console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     // 🔥 核心模块（启动时加载）- 只加载最必要的
     let APPS, PhoneStorage;
@@ -9615,7 +9646,18 @@ if (window.GGP_Loaded) {
                         .catch(err => {
                             console.error('❌ 加载贴吧失败:', err);
                             phoneShell?.showNotification('错误', '贴吧加载失败', '❌');
-                        });
+                        }                } else if (appId === 'health') {
+                    import('./apps/health/health-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.healthApp) {
+                                window.VirtualPhone.healthApp = new module.HealthApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.healthApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载健康App失败:', err);
+                            phoneShell?.showNotification('错误', '健康App加载失败', '❌');
+                        }););
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }
