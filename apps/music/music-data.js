@@ -855,6 +855,8 @@ export class MusicData {
 
             if (!searchData || searchData.length === 0) {
                 console.warn(`🎵 [音乐] 搜索无结果: ${name} ${artist}`);
+                const gdResult = await this._fetchGdStudioSong(name, artist);
+                if (gdResult) return gdResult;
                 return await this._fetchExternalMusicSourceSong(name, artist);
             }
 
@@ -919,10 +921,14 @@ export class MusicData {
                 }
             }
 
-            return await this._fetchExternalMusicSourceSong(name, artist);
+            const gdResult = await this._fetchGdStudioSong(name, artist);
+                if (gdResult) return gdResult;
+                return await this._fetchExternalMusicSourceSong(name, artist);
         } catch (e) {
             console.error('🎵 [音乐] API请求失败:', e);
-            return await this._fetchExternalMusicSourceSong(name, artist);
+            const gdResult = await this._fetchGdStudioSong(name, artist);
+                if (gdResult) return gdResult;
+                return await this._fetchExternalMusicSourceSong(name, artist);
         }
     }
 
@@ -1014,6 +1020,98 @@ export class MusicData {
         });
 
         return this._externalMusicSourcePromise;
+    }
+
+    /**
+     * 🎵 GD Studio 多源音乐引擎（移植自 Anrrow-phone-music v0.5.0）
+     * 多源搜索(网易云/酷我/JOOX) → 按匹配度评分 → 逐候选解析320K直链 → 失败自动换源
+     */
+    async _fetchGdStudioSong(name, artist) {
+        const safeName = this._cleanSongText(name);
+        const safeArtist = this._cleanSongText(artist);
+        if (!safeName) return null;
+
+        const GD_API = 'https://music-api.gdstudio.xyz/api.php';
+        const SOURCES = ['netease', 'kuwo', 'joox'];
+        const norm = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+        const cacheKey = `${norm(safeName)}|${norm(safeArtist)}`;
+
+        // 内存缓存命中
+        this._gdSongCache = this._gdSongCache || new Map();
+        if (this._gdSongCache.has(cacheKey)) return this._gdSongCache.get(cacheKey);
+
+        const query = `${safeName} ${safeArtist}`.trim();
+        const playable = [];
+
+        for (const source of SOURCES) {
+            let candidates = [];
+            try {
+                const searchUrl = `${GD_API}?types=search&source=${source}&name=${encodeURIComponent(query)}&count=8&br=320`;
+                const res = await fetch(searchUrl);
+                if (!res.ok) continue;
+                candidates = await res.json() || [];
+                if (!Array.isArray(candidates)) continue;
+            } catch (e) {
+                console.warn(`🎵 [GD源] ${source} 搜索失败:`, e?.message || e);
+                continue;
+            }
+
+            // 按名称+歌手匹配度评分排序
+            const nTitle = norm(safeName), nArtist = norm(safeArtist);
+            const scoreOf = c => {
+                let s = 0;
+                const cn = norm(c.name || c.title || '');
+                const ca = norm(c.artist || c.singer || '');
+                if (cn.includes(nTitle) || nTitle.includes(cn)) s += 10;
+                if (nArtist && (ca.includes(nArtist) || nArtist.includes(ca))) s += 8;
+                if (cn === nTitle) s += 5;
+                return s;
+            };
+            candidates.forEach(c => c._score = scoreOf(c));
+            candidates.sort((a, b) => b._score - a._score);
+
+            // 只取前3个候选解析直链，避免打爆接口
+            for (const candidate of candidates.slice(0, 3)) {
+                if (!candidate.id) continue;
+                try {
+                    const urlRes = await fetch(`${GD_API}?types=url&source=${source}&id=${encodeURIComponent(candidate.id)}&br=320`);
+                    if (!urlRes.ok) continue;
+                    const urlData = await urlRes.json();
+                    let audioUrl = urlData?.url;
+                    if (!audioUrl) continue;
+                    if (audioUrl.startsWith('http://')) audioUrl = audioUrl.replace('http://', 'https://');
+
+                    playable.push({
+                        url: audioUrl,
+                        pic: candidate.pic || candidate.cover || null,
+                        id: String(candidate.id),
+                        urlSource: 'gdstudio-' + source,
+                        lrc: null,
+                        name: candidate.name || candidate.title || safeName,
+                        artist: candidate.artist || candidate.singer || safeArtist || '未知',
+                        _score: candidate._score
+                    });
+                } catch (e) {
+                    console.warn(`🎵 [GD源] ${source} 直链解析失败(id:${candidate.id}):`, e?.message || e);
+                }
+            }
+
+            // 只要本源已有可用候选就不再打下一源（省请求）
+            if (playable.length >= 2) break;
+        }
+
+        // 匹配度最高者胜出
+        playable.sort((a, b) => (b._score || 0) - (a._score || 0));
+        const best = playable[0] || null;
+        if (best) {
+            // 验毒：确保不是30秒试听
+            const isFull = await this._checkPlayableSongUrl(best.url);
+            if (isFull) {
+                this._gdSongCache.set(cacheKey, best);
+                return best;
+            }
+        }
+        return null;
     }
 
     async _fetchExternalMusicSourceSong(name, artist) {

@@ -1400,7 +1400,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     const PHONE_RECIPIENT_REGEX = /(?:接听人|接收人|被叫方|recipient|receiver)\s*[:：]\s*([^<。\.\n\r]+)/i;
 
     // 音乐标签正则（新版完整卡片格式，兼容大小写/空格/属性）
-    const MUSIC_TAG_REGEX = /<\s*music\b[^>]*>([\s\S]*?)<\/\s*music\s*>/gi;
+    const MUSIC_TAG_REGEX = /<\s*(?:music|TMUSIC)\b([^>]*)>([\s\S]*?)<\/\s*(?:music|TMUSIC)\s*>/gi;
 
     const _fallbackNotificationQueue = [];
 
@@ -8327,7 +8327,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             let hasMusicTag = false;
             const musicBlocks = [];
             while ((musicMatch = MUSIC_TAG_REGEX.exec(text)) !== null) {
-                const block = String(musicMatch[1] || '').trim();
+                // <TMUSIC who="char" name="歌名" artist="歌手" ...> 属性式标签（移植自 Anrrow-phone-music）
+                const attrs = String(musicMatch[1] || '');
+                const attrTitle = (attrs.match(/\btitle\s*=\s*"([^"]*)"/i) || [])[1];
+                if (attrTitle) {
+                    const attrArtist = (attrs.match(/\bartist\s*=\s*"([^"]*)"/i) || [])[1] || '未知';
+                    musicBlocks.push(`[ Media | ${attrTitle} | ${attrArtist} ]`);
+                    continue;
+                }
+                const block = String(musicMatch[2] || '').trim();
                 if (block) musicBlocks.push(block);
             }
             if (musicBlocks.length === 0) {
