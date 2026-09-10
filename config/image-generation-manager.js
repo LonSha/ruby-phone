@@ -1,0 +1,4898 @@
+/* ========================================================
+ *  柚月小手机 (Yuzuki's Little Phone)
+ *  作者 (Author): yuzuki
+ *
+ * ⚠️ 版权声明 (Copyright Notice):
+ * 1. 禁止商业化：本项目仅供交流学习，严禁任何形式的倒卖、盈利等商业行为。
+ * 2. 禁止二改发布：严禁未经授权修改代码后作为独立项目二次发布或分发。
+ * 3. 禁止抄袭：严禁盗用本项目的核心逻辑、UI设计与相关原代码。
+ *
+ * Copyright (c) yuzuki. All rights reserved.
+ * ======================================================== */
+
+import { decompress as decompressZstd } from '../assets/vendor/fzstd.js';
+
+const NOVELAI_QUEUE_POLL_MS = 3000;
+const NOVELAI_QUEUE_WAIT_MS = 30 * 60 * 1000;
+const NOVELAI_QUEUE_HEARTBEAT_MS = 30 * 1000;
+const NOVELAI_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
+
+export class ImageGenerationManager {
+    constructor(storage) {
+        this.storage = storage;
+        this._queueUserId = null;
+        this._lastQueueNotice = '';
+        this._sdModelsCache = null;
+        this._sdModelsCacheUrl = '';
+        this._sdModelsCacheTime = 0;
+        this._sdModelsCacheTtl = 5 * 60 * 1000;
+        this._comfyUIResourcesCache = null;
+        this._comfyUIResourcesCacheUrl = '';
+        this._comfyUIResourcesCacheTime = 0;
+        this._comfyUIResourcesCacheTtl = 5 * 60 * 1000;
+        this._csrfToken = null;
+        this._csrfTokenPromise = null;
+    }
+
+    _get(key, fallback = '') {
+        const value = this.storage?.get?.(key);
+        if (value === null || value === undefined || value === '') return fallback;
+        return value;
+    }
+
+    _getBool(key, fallback = false) {
+        const value = this.storage?.get?.(key);
+        if (value === null || value === undefined || value === '') return fallback;
+        return value === true || value === 'true';
+    }
+
+    _getBoolDefaultTrue(key) {
+        const value = this.storage?.get?.(key);
+        return value !== false && value !== 'false';
+    }
+
+    _getNumber(key, fallback, min = null, max = null) {
+        const raw = this.storage?.get?.(key);
+        if (raw === null || raw === undefined || raw === '') return fallback;
+        const value = Number(raw);
+        let result = Number.isFinite(value) ? value : fallback;
+        if (min !== null) result = Math.max(min, result);
+        if (max !== null) result = Math.min(max, result);
+        return result;
+    }
+
+    _normalizeSdBaseUrl(value) {
+        let baseUrl = String(value || '').trim().replace(/\/+$/, '');
+        if (!baseUrl) return '';
+        if (!/^https?:\/\/.+/i.test(baseUrl)) {
+            baseUrl = `http://${baseUrl.replace(/^\/+/, '')}`;
+        }
+        return baseUrl;
+    }
+
+    _normalizeComfyUIBaseUrl(value) {
+        let baseUrl = String(value || '').trim().replace(/\/+$/, '');
+        if (!baseUrl) return '';
+        if (!/^https?:\/\/.+/i.test(baseUrl)) {
+            baseUrl = `http://${baseUrl.replace(/^\/+/, '')}`;
+        }
+        return baseUrl;
+    }
+
+    _normalizeComfyUIMode(value) {
+        return String(value || '').trim().toLowerCase() === 'remote' ? 'remote' : 'local';
+    }
+
+    _normalizeComfyUITransport(value) {
+        return String(value || '').trim().toLowerCase() === 'direct' ? 'direct' : 'tavern';
+    }
+
+    _getComfyUIEndpointUrl(overrides = {}) {
+        const mode = this._normalizeComfyUIMode(overrides.comfyuiMode || this._get('phone-image-comfyui-mode', 'local'));
+        const localUrl = this._normalizeComfyUIBaseUrl(overrides.comfyuiUrl || this._get('phone-image-comfyui-url', 'http://127.0.0.1:8188'));
+        const remoteUrl = this._normalizeComfyUIBaseUrl(overrides.comfyuiRemoteUrl || this._get('phone-image-comfyui-remote-url', ''));
+        return mode === 'remote' ? remoteUrl : localUrl;
+    }
+
+    _normalizeApiBaseUrl(value, fallback = '') {
+        let baseUrl = String(value || fallback || '').trim().replace(/\/+$/, '');
+        if (!baseUrl) return '';
+        if (!/^https?:\/\/.+/i.test(baseUrl)) {
+            baseUrl = `https://${baseUrl.replace(/^\/+/, '')}`;
+        }
+        return baseUrl;
+    }
+
+    _normalizeSdAuth(value) {
+        const auth = String(value || '').trim();
+        if (!auth) return '';
+        if (/^basic\s+/i.test(auth)) return auth;
+        if (!auth.includes(':')) return auth;
+        try {
+            return `Basic ${btoa(unescape(encodeURIComponent(auth)))}`;
+        } catch (e) {
+            return `Basic ${btoa(auth)}`;
+        }
+    }
+
+    _buildSdHeaders(extra = {}, config = null) {
+        const headers = { ...extra };
+        const auth = this._normalizeSdAuth(config?.sdAuth || this._get('phone-image-sd-auth', ''));
+        if (auth) headers.Authorization = auth;
+        return headers;
+    }
+
+    _isSillyTavern() {
+        try {
+            const inBrowser = typeof window !== 'undefined';
+            return Boolean(
+                (inBrowser && window.location && window.location.port === '8000') ||
+                (typeof globalThis !== 'undefined' && globalThis.SillyTavern)
+            );
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async _getCsrfToken() {
+        if (this._csrfToken) return this._csrfToken;
+        if (this._csrfTokenPromise) return this._csrfTokenPromise;
+        this._csrfTokenPromise = (async () => {
+            try {
+                const response = await fetch('/csrf-token');
+                if (!response.ok) return null;
+                const data = await response.json().catch(() => null);
+                this._csrfToken = String(data?.token || '').trim() || null;
+                return this._csrfToken;
+            } catch (e) {
+                this._csrfTokenPromise = null;
+                return null;
+            }
+        })();
+        return this._csrfTokenPromise;
+    }
+
+    async _sdProxyRequest(endpoint, body = {}, method = 'POST', options = {}) {
+        const token = await this._getCsrfToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['X-CSRF-Token'] = token;
+        return fetch(`/api/sd/${endpoint}`, {
+            method,
+            headers,
+            body: method === 'GET' ? undefined : JSON.stringify(body || {}),
+            credentials: 'include',
+            signal: options.signal
+        });
+    }
+
+    async _stProxyRequest(endpoint, body = {}, options = {}) {
+        const token = await this._getCsrfToken(options.forceRefresh === true);
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-ST-Phone-Internal-API': '1'
+        };
+        if (token) headers['X-CSRF-Token'] = token;
+        return fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body || {}),
+            credentials: 'include',
+            signal: options.signal
+        });
+    }
+
+    _normalizeSdListPayload(payload) {
+        return Array.isArray(payload)
+            ? payload
+            : (Array.isArray(payload?.items)
+                ? payload.items
+                : (Array.isArray(payload?.data)
+                    ? payload.data
+                    : (Array.isArray(payload?.result) ? payload.result : [])));
+    }
+
+    _mapSdListItems(payload, mapper = item => item) {
+        return this._normalizeSdListPayload(payload)
+            .map(mapper)
+            .map(item => String(item || '').trim())
+            .filter(Boolean);
+    }
+
+    _sdDirectRequest(url, options = {}) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(options.method || 'GET', url, true);
+            if (options.headers) {
+                Object.entries(options.headers).forEach(([key, value]) => {
+                    xhr.setRequestHeader(key, value);
+                });
+            }
+            xhr.responseType = 'text';
+            xhr.timeout = Number(options.timeout || 120000);
+            xhr.onload = () => {
+                resolve({
+                    ok: xhr.status >= 200 && xhr.status < 300,
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    text: () => Promise.resolve(xhr.responseText || ''),
+                    json: () => {
+                        try {
+                            return Promise.resolve(JSON.parse(xhr.responseText || 'null'));
+                        } catch (err) {
+                            return Promise.reject(err);
+                        }
+                    }
+                });
+            };
+            xhr.onerror = () => reject(new Error(`请求失败: ${url}`));
+            xhr.ontimeout = () => reject(new Error(`请求超时: ${url}`));
+            xhr.send(options.body || null);
+        });
+    }
+
+    _normalizeNovelAISampler(value) {
+        const sampler = String(value || '').trim();
+        const allowed = new Set([
+            'k_euler',
+            'ddim_v3',
+            'k_dpmpp_2s_ancestral',
+            'k_dpmpp_2m',
+            'k_euler_ancestral',
+            'k_dpmpp_2m_sde',
+            'k_dpmpp_sde'
+        ]);
+        return allowed.has(sampler) ? sampler : 'k_euler';
+    }
+
+    _normalizeNovelAISchedule(value, model = '') {
+        if (this._isNovelAIV5Model(model)) return 'karras';
+        const schedule = String(value || '').trim();
+        const allowed = new Set(['native', 'exponential', 'polyexponential', 'karras']);
+        return allowed.has(schedule) ? schedule : 'native';
+    }
+
+    _isNovelAIV4PlusModel(model) {
+        return /^nai-diffusion-(?:4|5)(?:-|$)/i.test(String(model || '').trim());
+    }
+
+    _isNovelAIV45Model(model) {
+        return /^nai-diffusion-4-5(?:-|$)/i.test(String(model || '').trim());
+    }
+
+    _isNovelAIV5Model(model) {
+        return /^nai-diffusion-5(?:-|$)/i.test(String(model || '').trim());
+    }
+
+    _clampReferenceValue(value, fallback = 0.7, min = 0, max = 1) {
+        const num = Number.parseFloat(value);
+        if (!Number.isFinite(num)) return fallback;
+        const clamped = Math.max(min, Math.min(max, num));
+        return Math.round(clamped * 100) / 100;
+    }
+
+    _normalizeNovelAIReferenceImage(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const dataUrlMatch = raw.match(/^data:image\/[a-z0-9.+-]+;base64,([\s\S]+)$/i);
+        if (dataUrlMatch) return dataUrlMatch[1].replace(/\s+/g, '');
+        if (/^[A-Za-z0-9+/=\s]+$/.test(raw.slice(0, 120))) return raw.replace(/\s+/g, '');
+        return '';
+    }
+
+    _buildNovelAIReferenceCacheKey(imageBase64 = '') {
+        const text = String(imageBase64 || '');
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `phone-ref-${(hash >>> 0).toString(16)}-${text.length}`;
+    }
+
+    _buildComfyUIWorkflowFingerprint(workflowText = '') {
+        const text = String(workflowText || '');
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `${(hash >>> 0).toString(16)}-${text.length}`;
+    }
+
+    _normalizeComfyUILoras(value = []) {
+        let items = value;
+        if (typeof items === 'string') {
+            try {
+                items = JSON.parse(items || '[]');
+            } catch (e) {
+                items = [];
+            }
+        }
+        if (!Array.isArray(items)) return [];
+
+        const seen = new Set();
+        const clampStrength = (raw, fallback = 1) => {
+            const valueNumber = Number.parseFloat(raw);
+            const normalized = Number.isFinite(valueNumber) ? valueNumber : fallback;
+            return Math.round(Math.max(-10, Math.min(10, normalized)) * 1000) / 1000;
+        };
+        return items.map((item) => {
+            const name = String(item?.name || item?.loraName || item?.lora_name || item || '').trim();
+            if (!name || seen.has(name)) return null;
+            seen.add(name);
+            return {
+                name,
+                strength: clampStrength(
+                    item?.strength
+                    ?? item?.strengthModel
+                    ?? item?.strength_model
+                    ?? item?.strengthClip
+                    ?? item?.strength_clip,
+                    1
+                )
+            };
+        }).filter(Boolean);
+    }
+
+    _normalizeNovelAIReferences(options = {}) {
+        const rawList = Array.isArray(options.novelAIReferences)
+            ? options.novelAIReferences
+            : (Array.isArray(options.referenceImages) ? options.referenceImages : []);
+        return rawList
+            .map((item) => {
+                const image = typeof item === 'string'
+                    ? this._normalizeNovelAIReferenceImage(item)
+                    : this._normalizeNovelAIReferenceImage(item?.image || item?.imageData || item?.dataUrl || item?.base64);
+                if (!image) return null;
+                return {
+                    image,
+                    cacheSecretKey: String(item?.cacheSecretKey || item?.cache_secret_key || '').trim()
+                        || this._buildNovelAIReferenceCacheKey(image),
+                    strength: this._clampReferenceValue(item?.strength ?? item?.referenceStrength, 0.7, 0, 1),
+                    informationExtracted: this._clampReferenceValue(
+                        item?.informationExtracted ?? item?.referenceInformationExtracted,
+                        1,
+                        0,
+                        1
+                    )
+                };
+            })
+            .filter(Boolean)
+            .slice(0, 4);
+    }
+
+    _normalizeNovelAIVibeItems(items = []) {
+        return (Array.isArray(items) ? items : [])
+            .map((item) => {
+                const image = typeof item === 'string'
+                    ? this._normalizeNovelAIReferenceImage(item)
+                    : this._normalizeNovelAIReferenceImage(item?.image || item?.imageData || item?.dataUrl || item?.base64);
+                if (!image) return null;
+                return {
+                    image,
+                    cacheSecretKey: String(item?.cacheSecretKey || item?.cache_secret_key || '').trim()
+                        || this._buildNovelAIReferenceCacheKey(image),
+                    strength: this._clampReferenceValue(item?.strength ?? item?.referenceStrength, 0.6, 0, 1),
+                    informationExtracted: this._clampReferenceValue(
+                        item?.informationExtracted ?? item?.referenceInformationExtracted,
+                        1,
+                        0,
+                        1
+                    )
+                };
+            })
+            .filter(Boolean);
+    }
+
+    _normalizeNovelAIVibeGroups(groups = []) {
+        const seen = new Set();
+        return (Array.isArray(groups) ? groups : [])
+            .map((group) => {
+                const id = String(group?.id || '').trim();
+                const name = String(group?.name || '').trim();
+                if (!id || !name || seen.has(id)) return null;
+                seen.add(id);
+                const items = (Array.isArray(group?.items) ? group.items : (Array.isArray(group?.vibes) ? group.vibes : group?.references))
+                    ?.map?.((item) => {
+                        const image = typeof item === 'string'
+                            ? String(item || '').trim()
+                            : String(item?.image || item?.imageData || item?.dataUrl || item?.base64 || item?.imageUrl || item?.url || '').trim();
+                        if (!image) return null;
+                        return {
+                            image,
+                            cacheSecretKey: String(item?.cacheSecretKey || item?.cache_secret_key || '').trim(),
+                            strength: this._clampReferenceValue(item?.strength ?? item?.referenceStrength, 0.6, 0, 1),
+                            informationExtracted: this._clampReferenceValue(
+                                item?.informationExtracted ?? item?.referenceInformationExtracted,
+                                1,
+                                0,
+                                1
+                            )
+                        };
+                    })
+                    .filter(Boolean)
+                    || [];
+                if (!items.length) return null;
+                return {
+                    id,
+                    name,
+                    items,
+                    updatedAt: Number(group?.updatedAt || 0) || Date.now()
+                };
+            })
+            .filter(Boolean);
+    }
+
+    _getNovelAIVibeGroups() {
+        const raw = this._get('phone-image-novelai-vibe-groups', '[]');
+        let groups = [];
+        try {
+            groups = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+        } catch (e) {
+            groups = [];
+        }
+        return this._normalizeNovelAIVibeGroups(groups);
+    }
+
+    async _imageUrlToNovelAIReferenceDataUrl(url) {
+        const safeUrl = String(url || '').trim();
+        if (!safeUrl) return '';
+        if (safeUrl.startsWith('data:image/')) return safeUrl;
+        const response = await fetch(safeUrl, {
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        if (!response.ok) {
+            throw new Error(`Vibe 参考图读取失败 (${response.status})`);
+        }
+        const blob = await response.blob();
+        const dataUrl = await this._blobToDataUrl(blob);
+        return dataUrl.startsWith('data:image/') ? dataUrl : '';
+    }
+
+    async _encodeNovelAIVibeImage(image, informationExtracted, config, signal) {
+        const endpoint = `${this._resolveNovelAIEndpoint(config)}/ai/encode-vibe`;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/octet-stream, application/json'
+            },
+            body: JSON.stringify({
+                image,
+                information_extracted: informationExtracted,
+                model: config.model
+            }),
+            signal
+        });
+        const bytes = this._maybeDecompressZstdBytes(new Uint8Array(await response.arrayBuffer()));
+        if (!response.ok) {
+            const parsed = this._tryParseJsonBytes(bytes);
+            const message = parsed?.message || parsed?.error || this._getBytesPreview(bytes);
+            throw new Error(`Vibe 编码失败 (${response.status})${message ? `: ${String(message).slice(0, 160)}` : ''}`);
+        }
+        if (!bytes.length) throw new Error('Vibe 编码失败：NovelAI 返回空数据');
+        return this._uint8ArrayToBase64(bytes);
+    }
+
+    _looksLikeNovelAIVibeEncoding(value) {
+        const text = String(value || '').replace(/\s+/g, '');
+        return text.length > 2000 && !/^iVBORw0KGgo|^\/9j\/|^UklGR/i.test(text);
+    }
+
+    async _encodeNovelAIVibeItems(items, config, signal) {
+        if (!config || !this._isNovelAIV4PlusModel(config.model)) return items;
+        const encodedItems = [];
+        for (const item of items) {
+            encodedItems.push({
+                ...item,
+                image: this._looksLikeNovelAIVibeEncoding(item.image)
+                    ? item.image
+                    : await this._encodeNovelAIVibeImage(
+                        item.image,
+                        item.informationExtracted,
+                        config,
+                        signal
+                    )
+            });
+        }
+        return encodedItems;
+    }
+
+    _uint8ArrayToBase64(bytes) {
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(null, bytes.slice(i, i + chunkSize));
+        }
+        return btoa(binary);
+    }
+
+    async _resolveNovelAIVibeReferences(options = {}, config = null) {
+        const explicit = this._normalizeNovelAIVibeItems(options.novelAIVibes || options.vibeReferences || []);
+        if (explicit.length) return this._encodeNovelAIVibeItems(explicit, config, options.signal);
+        const enabled = this._getBool('phone-image-novelai-vibe-enabled', false);
+        if (!enabled) return [];
+        const activeId = String(this._get('phone-image-novelai-active-vibe-group', '') || '').trim();
+        if (!activeId) return [];
+        const group = this._getNovelAIVibeGroups().find(item => item.id === activeId);
+        if (!group?.items?.length) return [];
+
+        const resolved = [];
+        for (const item of group.items) {
+            const source = String(item.image || '').trim();
+            let image = this._normalizeNovelAIReferenceImage(source);
+            if (!image && source) {
+                try {
+                    image = this._normalizeNovelAIReferenceImage(await this._imageUrlToNovelAIReferenceDataUrl(source));
+                } catch (err) {
+                    console.warn('[NovelAI] Vibe 参考图读取失败，已跳过:', err);
+                }
+            }
+            if (!image) continue;
+            resolved.push({
+                image,
+                cacheSecretKey: item.cacheSecretKey || this._buildNovelAIReferenceCacheKey(image),
+                strength: item.strength,
+                informationExtracted: item.informationExtracted
+            });
+        }
+        let finalItems = resolved;
+
+        if (this._getBool('phone-image-novelai-vibe-normalize-strength', false)) {
+            const total = resolved.reduce((sum, item) => sum + Math.max(0, Number(item.strength) || 0), 0);
+            if (total > 0) {
+                finalItems = resolved.map(item => ({
+                    ...item,
+                    strength: this._clampReferenceValue((Number(item.strength) || 0) / total, item.strength, 0, 1)
+                }));
+            }
+        }
+
+        return this._encodeNovelAIVibeItems(finalItems, config, options.signal);
+    }
+
+    _normalizeSdReferenceImages(options = {}) {
+        const rawList = Array.isArray(options.novelAIReferences)
+            ? options.novelAIReferences
+            : (Array.isArray(options.referenceImages) ? options.referenceImages : []);
+        return rawList
+            .map((item) => {
+                const image = typeof item === 'string'
+                    ? this._normalizeNovelAIReferenceImage(item)
+                    : this._normalizeNovelAIReferenceImage(item?.image || item?.imageData || item?.dataUrl || item?.base64);
+                return image || '';
+            })
+            .filter(Boolean)
+            .slice(0, 1);
+    }
+
+    _normalizeComfyUIReferenceImages(options = {}) {
+        const rawList = Array.isArray(options.novelAIReferences)
+            ? options.novelAIReferences
+            : (Array.isArray(options.referenceImages) ? options.referenceImages : []);
+        return rawList
+            .map((item) => {
+                const image = typeof item === 'string'
+                    ? this._normalizeNovelAIReferenceImage(item)
+                    : this._normalizeNovelAIReferenceImage(item?.image || item?.imageData || item?.dataUrl || item?.base64);
+                return image || '';
+            })
+            .filter(Boolean);
+    }
+
+    _containsCjk(text) {
+        return /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/.test(String(text || ''));
+    }
+
+    _cleanNovelAITagText(text) {
+        return String(text || '')
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/```[\s\S]*?```/g, (block) => block.replace(/```[a-z]*|```/gi, ''))
+            .replace(/^\s*(?:prompt|positive prompt|tags?|nai tags?|english tags?|提示词|正面提示词)\s*[:：]/i, '')
+            .replace(/[\r\n;；]+/g, ', ')
+            .replace(/[，、]/g, ', ')
+            .replace(/[。！？]/g, '')
+            .replace(/\s*,\s*/g, ', ')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, '')
+            .trim();
+    }
+
+    async translatePromptToEnglish(rawPrompt, appKey = '') {
+        const source = String(rawPrompt || '').trim();
+        if (!source || !this._containsCjk(source)) return source;
+
+        const apiManager = (typeof window !== 'undefined') ? window.VirtualPhone?.apiManager : null;
+        if (!apiManager || typeof apiManager.callAI !== 'function') {
+            throw new Error('小手机 API 未初始化，无法生成英文 TAG');
+        }
+
+        const normalizedApp = String(appKey || '').trim().toLowerCase();
+        const appName = ['wechat', 'weibo'].includes(normalizedApp) ? normalizedApp : 'phone_online';
+        const result = await apiManager.callAI([
+            {
+                role: 'system',
+                content: [
+                    'You convert Chinese image descriptions into English image-generation prompt tags.',
+                    'Output only concise English comma-separated tags.',
+                    'Do not output explanations, Markdown, Chinese, labels, or complete sentences.',
+                    'Preserve subject, gender, count, appearance, pose, expression, clothing, setting, camera distance, angle, lighting, atmosphere, and illustration style.',
+                    'Do not add unrelated content.'
+                ].join('\n')
+            },
+            {
+                role: 'user',
+                content: `Chinese image description:\n${source}\n\nEnglish comma-separated tags only:`
+            }
+        ], {
+            appId: appName,
+            max_tokens: 360,
+            stream: false
+        });
+
+        if (result?.success === false) {
+            throw new Error(result?.error || '小手机 API 未能生成英文 TAG');
+        }
+        const translated = this._cleanNovelAITagText(result?.summary || result?.content || result?.text || '');
+        if (!translated || this._containsCjk(translated)) {
+            throw new Error('小手机 API 返回的英文 TAG 无效');
+        }
+        return translated;
+    }
+
+    async _translatePromptForNovelAI(rawPrompt, appKey = '') {
+        const source = String(rawPrompt || '').trim();
+        if (!source || !this._containsCjk(source)) return source;
+
+        const apiManager = (typeof window !== 'undefined') ? window.VirtualPhone?.apiManager : null;
+        if (!apiManager || typeof apiManager.callAI !== 'function') {
+            return source;
+        }
+
+        const appName = ['wechat', 'weibo'].includes(appKey) ? appKey : 'phone_online';
+        const messages = [
+            {
+                role: 'system',
+                content: [
+                    'You convert Chinese image descriptions into NovelAI positive prompt tags.',
+                    'Output only English comma-separated tags.',
+                    'Do not add explanations, Markdown, Chinese, or full sentences.',
+                    'Preserve visible subject, gender, count, pose, expression, clothing, setting, camera distance, angle, atmosphere, and anime illustration style.',
+                    'If the source implies people or humanoids, include clear tags such as 1girl, 1boy, adult character, male focus, or female focus when appropriate.',
+                    'Do not add unrelated quality tags unless they are clearly requested by the source.'
+                ].join('\n')
+            },
+            {
+                role: 'user',
+                content: `Chinese source description:\n${source}\n\nEnglish NovelAI tags only:`
+            }
+        ];
+
+        try {
+            const result = await apiManager.callAI(messages, {
+                appId: appName,
+                max_tokens: 360,
+                stream: false
+            });
+            const translated = this._cleanNovelAITagText(result?.summary || result?.content || result?.text || '');
+            if (translated && !this._containsCjk(translated)) {
+                return translated;
+            }
+        } catch (e) {
+            console.warn('[NovelAI] 中文提示词自动转英文失败，已回退原描述:', e);
+        }
+        return source;
+    }
+
+    async _prepareNovelAIOptions(options = {}) {
+        const appKey = String(options?.app || '').trim().toLowerCase();
+        if (!['wechat', 'weibo'].includes(appKey)) return options;
+
+        const rawPrompt = String(options.prompt || '').trim();
+        if (!this._containsCjk(rawPrompt)) return options;
+
+        const translatedPrompt = await this._translatePromptForNovelAI(rawPrompt, appKey);
+        if (!translatedPrompt || translatedPrompt === rawPrompt) return options;
+
+        return {
+            ...options,
+            rawPrompt,
+            prompt: translatedPrompt,
+            translatedPrompt
+        };
+    }
+
+    _getAppDefaultSize(app) {
+        switch (String(app || '').trim().toLowerCase()) {
+            case 'honey':
+                return { width: 832, height: 1216 };
+            case 'wechat':
+                return { width: 512, height: 512 };
+            case 'weibo':
+                return { width: 1024, height: 1024 };
+            case 'diary':
+                return { width: 512, height: 512 };
+            default:
+                return { width: 832, height: 1216 };
+        }
+    }
+
+    _getProviderAppBindings() {
+        const raw = this.storage?.get?.('phone-image-provider-app-bindings');
+        let parsed = {};
+        try {
+            parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
+        } catch (e) {
+            parsed = {};
+        }
+
+        const allowedApps = new Set(['honey', 'wechat', 'weibo', 'diary']);
+        const allowedProviders = new Set(['novelai', 'openai', 'siliconflow', 'sd', 'comfyui']);
+        const bindings = {};
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            Object.entries(parsed).forEach(([app, provider]) => {
+                const appKey = String(app || '').trim().toLowerCase();
+                const providerKey = String(provider || '').trim().toLowerCase();
+                if (allowedApps.has(appKey) && allowedProviders.has(providerKey)) {
+                    bindings[appKey] = providerKey;
+                }
+            });
+        }
+        return bindings;
+    }
+
+    getBoundProviderForApp(app = '') {
+        const appKey = String(app || '').trim().toLowerCase();
+        if (!appKey) return '';
+        return this._getProviderAppBindings()[appKey] || '';
+    }
+
+    _getStoredComfyUIWorkflows() {
+        let workflows = [];
+        try {
+            const raw = this._get('phone-image-comfyui-workflows', '[]');
+            workflows = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+        } catch (e) {
+            workflows = [];
+        }
+        if (!Array.isArray(workflows)) return [];
+
+        return workflows.map((item) => {
+            const id = String(item?.id || '').trim();
+            const name = String(item?.name || '').trim();
+            const workflow = typeof item?.workflow === 'string'
+                ? String(item.workflow || '').trim()
+                : (item?.workflow && typeof item.workflow === 'object' ? JSON.stringify(item.workflow) : '');
+            if (!id || !name || !workflow) return null;
+            const hasPromptSettingsFlag = Object.prototype.hasOwnProperty.call(item || {}, 'promptSettingsInitialized');
+            const promptSettingsInitialized = hasPromptSettingsFlag
+                ? item?.promptSettingsInitialized === true
+                : ['fixedPrompt', 'fixedPromptEnd', 'negativePrompt']
+                    .some(key => Object.prototype.hasOwnProperty.call(item || {}, key));
+            return {
+                ...item,
+                id,
+                name,
+                workflow,
+                nodeMapping: typeof item?.nodeMapping === 'string'
+                    ? String(item.nodeMapping || '').trim()
+                    : (item?.nodeMapping && typeof item.nodeMapping === 'object' ? JSON.stringify(item.nodeMapping) : ''),
+                comfyuiModel: String(item?.comfyuiModel || item?.model || '').trim(),
+                comfyuiSampler: String(item?.comfyuiSampler || item?.sampler || 'euler').trim() || 'euler',
+                comfyuiScheduler: String(item?.comfyuiScheduler || item?.scheduler || 'normal').trim() || 'normal',
+                comfyuiVae: String(item?.comfyuiVae || item?.vae || '').trim(),
+                comfyuiClip: String(item?.comfyuiClip || item?.clip || '').trim(),
+                comfyuiLoras: this._normalizeComfyUILoras(item?.comfyuiLoras ?? item?.loras),
+                promptSettingsInitialized,
+                fixedPrompt: String(item?.fixedPrompt || ''),
+                fixedPromptEnd: String(item?.fixedPromptEnd || ''),
+                negativePrompt: String(item?.negativePrompt || ''),
+                promptSettingsByApp: this._normalizeComfyUIPromptSettingsByApp(item?.promptSettingsByApp)
+            };
+        }).filter(Boolean);
+    }
+
+    _getActiveOpenAIImagePromptPreset(app = '') {
+        const scope = this._normalizeImagePresetScope(app);
+        if (!scope) return null;
+        const activeId = String(
+            this._get(`phone-image-openai-${scope}-active-preset`, '')
+            || (scope === 'honey' ? this._get('phone-image-openai-active-preset', '') : '')
+            || ''
+        ).trim();
+        if (!activeId) return null;
+        try {
+            const rawMap = this._get('phone-image-openai-presets-by-app', '{}');
+            const presetMap = typeof rawMap === 'string' ? JSON.parse(rawMap || '{}') : rawMap;
+            let presets = presetMap && typeof presetMap === 'object' && Array.isArray(presetMap[scope])
+                ? presetMap[scope]
+                : null;
+            if (!presets && scope === 'honey') {
+                const raw = this._get('phone-image-openai-presets', '[]');
+                presets = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+            }
+            if (!Array.isArray(presets)) return null;
+            const preset = presets.find(item => String(item?.id || '').trim() === activeId);
+            if (!preset || typeof preset !== 'object') return null;
+            return {
+                id: activeId,
+                name: String(preset.name || '').trim(),
+                fixedPrompt: String(preset.fixedPrompt || ''),
+                fixedPromptEnd: String(preset.fixedPromptEnd || ''),
+                negativePrompt: String(preset.negativePrompt || ''),
+                openaiModel: String(preset.openaiModel || preset.model || '').trim(),
+                openaiQuality: String(preset.openaiQuality || preset.quality || 'auto').trim() || 'auto',
+                honeyWidth: preset.honeyWidth,
+                honeyHeight: preset.honeyHeight,
+                wechatWidth: preset.wechatWidth,
+                wechatHeight: preset.wechatHeight,
+                weiboWidth: preset.weiboWidth,
+                weiboHeight: preset.weiboHeight,
+                diaryWidth: preset.diaryWidth,
+                diaryHeight: preset.diaryHeight,
+                width: preset.width,
+                height: preset.height
+            };
+        } catch (e) {
+            console.warn('[GPT Image] 读取当前 GPT 生图预设失败，已回退到 App 提示词设置:', e);
+            return null;
+        }
+    }
+
+    _getComfyUIReferencePlaceholderInfo(workflow = '') {
+        const workflowText = typeof workflow === 'string'
+            ? workflow
+            : JSON.stringify(workflow || {});
+        const legacyTokens = [
+            '%reference_image%',
+            '%reference_image_filename%',
+            '%reference_image_subfolder%',
+            '%reference_image_type%',
+            '%comfyui_reference_image%',
+            '%comfyuicankaoImage%',
+            '%comfyuicankaotupian%'
+        ];
+        const hasLegacy = legacyTokens.some(token => workflowText.includes(token));
+        const numberedIndexes = new Set();
+        const patterns = [
+            /%(?:reference_image(?:_(?:filename|subfolder|type))?|comfyui_reference_image|comfyuicankaoImage|comfyuicankaotupian)_(\d+)%/gi,
+            /%reference_image_(\d+)_(?:filename|subfolder|type)%/gi
+        ];
+        patterns.forEach((pattern) => {
+            let match;
+            while ((match = pattern.exec(workflowText)) !== null) {
+                const index = Number(match[1]);
+                if (Number.isInteger(index) && index > 0) numberedIndexes.add(index);
+            }
+        });
+        const indexes = [...numberedIndexes].sort((a, b) => a - b);
+        const highestNumberedIndex = indexes[indexes.length - 1] || 0;
+        if (highestNumberedIndex > 32) {
+            throw new Error('ComfyUI 编号参考图槽位最多支持 32 个');
+        }
+        const slotCount = Math.max(hasLegacy ? 1 : 0, highestNumberedIndex);
+        return {
+            hasLegacy,
+            numberedIndexes: indexes,
+            hasAny: hasLegacy || indexes.length > 0,
+            slotCount
+        };
+    }
+
+    getComfyUIWorkflowChoices({ videoOnly = false, imageToVideoOnly = false, app = 'honey' } = {}) {
+        return this._getStoredComfyUIWorkflows().map((item) => {
+            try {
+                const parsed = this._parseComfyUIWorkflow(item.workflow);
+                const nodes = Object.values(parsed || {});
+                const isVideoWorkflow = nodes.some(node => String(node?.class_type || '').trim() === 'VHS_VideoCombine');
+                const referencePlaceholderInfo = this._getComfyUIReferencePlaceholderInfo(parsed);
+                const acceptsReferenceImage = referencePlaceholderInfo.hasAny
+                    || this._canInjectComfyUIWanReferenceImage(parsed, app);
+                return {
+                    ...item,
+                    isVideoWorkflow,
+                    acceptsReferenceImage,
+                    referenceImageSlotCount: referencePlaceholderInfo.slotCount,
+                    fingerprint: this._buildComfyUIWorkflowFingerprint(item.workflow)
+                };
+            } catch (error) {
+                console.warn(`[ComfyUI] 工作流“${item.name}”无法用于选择:`, error);
+                return null;
+            }
+        }).filter((item) => {
+            if (!item) return false;
+            if ((videoOnly || imageToVideoOnly) && !item.isVideoWorkflow) return false;
+            if (imageToVideoOnly && !item.acceptsReferenceImage) return false;
+            return true;
+        });
+    }
+
+    _normalizeImagePresetScope(app = '') {
+        const appKey = String(app || '').trim().toLowerCase();
+        if (appKey === 'diary') return 'wechat';
+        if (['honey', 'wechat', 'weibo'].includes(appKey)) return appKey;
+        return '';
+    }
+
+    _normalizeComfyUIPromptSettings(settings = null) {
+        if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return null;
+        const promptKeys = ['fixedPrompt', 'fixedPromptEnd', 'negativePrompt'];
+        const hasInitializedFlag = Object.prototype.hasOwnProperty.call(settings, 'promptSettingsInitialized');
+        const initialized = hasInitializedFlag
+            ? settings.promptSettingsInitialized === true
+            : promptKeys.some(key => Object.prototype.hasOwnProperty.call(settings, key));
+        if (!initialized) return null;
+        return {
+            promptSettingsInitialized: true,
+            fixedPrompt: String(settings.fixedPrompt || ''),
+            fixedPromptEnd: String(settings.fixedPromptEnd || ''),
+            negativePrompt: String(settings.negativePrompt || '')
+        };
+    }
+
+    _normalizeComfyUIPromptSettingsByApp(settingsByApp = null) {
+        const raw = settingsByApp && typeof settingsByApp === 'object' && !Array.isArray(settingsByApp)
+            ? settingsByApp
+            : {};
+        const normalized = {};
+        ['honey', 'wechat', 'weibo'].forEach((scope) => {
+            const settings = this._normalizeComfyUIPromptSettings(raw[scope]);
+            if (settings) normalized[scope] = settings;
+        });
+        if (!normalized.wechat) {
+            const diarySettings = this._normalizeComfyUIPromptSettings(raw.diary);
+            if (diarySettings) normalized.wechat = diarySettings;
+        }
+        return normalized;
+    }
+
+    _getComfyUIPromptSettingsForApp(workflow, app = '') {
+        const scope = this._normalizeImagePresetScope(app);
+        const settingsByApp = this._normalizeComfyUIPromptSettingsByApp(workflow?.promptSettingsByApp);
+        if (scope && settingsByApp[scope]) return settingsByApp[scope];
+        return this._normalizeComfyUIPromptSettings(workflow);
+    }
+
+    _getComfyUIBuiltInPromptSettings(app = '') {
+        const scope = this._normalizeImagePresetScope(app);
+        if (!scope || !this._getBool(`phone-image-comfyui-${scope}-prompt-draft-initialized`, false)) {
+            return null;
+        }
+        return {
+            promptSettingsInitialized: true,
+            fixedPrompt: String(this._get(`phone-image-comfyui-${scope}-fixed-prompt`, '') || ''),
+            fixedPromptEnd: String(this._get(`phone-image-comfyui-${scope}-fixed-prompt-end`, '') || ''),
+            negativePrompt: String(this._get(`phone-image-comfyui-${scope}-negative-prompt`, '') || '')
+        };
+    }
+
+    _getComfyUIActiveWorkflowId(app = '') {
+        const scope = this._normalizeImagePresetScope(app);
+        if (scope) {
+            const scopedValue = this.storage?.get?.(`phone-image-comfyui-${scope}-active-workflow`);
+            if (scopedValue !== null && typeof scopedValue !== 'undefined') {
+                return String(scopedValue || '').trim();
+            }
+        }
+        return String(this._get('phone-image-comfyui-active-workflow', '') || '').trim();
+    }
+
+    _getComfyUIWorkflowForApp(app = '') {
+        const activeId = this._getComfyUIActiveWorkflowId(app);
+        if (!activeId) return null;
+        const workflows = this._getStoredComfyUIWorkflows();
+        const workflow = workflows.find(item => String(item?.id || '').trim() === activeId) || null;
+        if (!workflow) return null;
+        const workflowText = String(workflow.workflow || '').trim();
+        return {
+            ...workflow,
+            id: String(workflow.id || '').trim(),
+            name: String(workflow.name || '').trim(),
+            fingerprint: this._buildComfyUIWorkflowFingerprint(workflowText)
+        };
+    }
+
+    resolveProvider(overrides = {}) {
+        const explicitProvider = String(overrides.provider || '').trim().toLowerCase();
+        if (explicitProvider) return explicitProvider;
+        const appKey = String(overrides.app || '').trim().toLowerCase();
+        return this.getBoundProviderForApp(appKey) || String(this._get('phone-image-provider', 'novelai')).trim() || 'novelai';
+    }
+
+    getSizeForApp(app = '') {
+        const appKey = String(app || '').trim().toLowerCase();
+        const defaults = this._getAppDefaultSize(appKey);
+        const normalizeSize = (width, height) => {
+            if (Number(width) <= 64 && Number(height) <= 64) {
+                return { width: defaults.width, height: defaults.height };
+            }
+            return { width, height };
+        };
+        if (!appKey) {
+            return normalizeSize(
+                this._getNumber('phone-image-width', defaults.width, 64, 2048),
+                this._getNumber('phone-image-height', defaults.height, 64, 2048)
+            );
+        }
+
+        return normalizeSize(
+            this._getNumber(`phone-image-${appKey}-width`, defaults.width, 64, 2048),
+            this._getNumber(`phone-image-${appKey}-height`, defaults.height, 64, 2048)
+        );
+    }
+
+    getConfig(overrides = {}) {
+        const provider = this.resolveProvider(overrides);
+        const appKey = String(overrides.app || '').trim().toLowerCase();
+        const legacySiliconflowKey = String(this._get('siliconflow_api_key', '') || '').trim();
+        const legacySiliconflowModel = String(this._get('image_generation_model', '') || '').trim();
+        const rawSize = this.getSizeForApp(appKey);
+        const size = { ...rawSize };
+        const rawSteps = this._getNumber('phone-image-steps', 28, 1, 50);
+        const promptAppKey = this._normalizeImagePresetScope(appKey);
+        const comfyuiAppWorkflow = this._getComfyUIWorkflowForApp(appKey);
+        const openaiPromptPreset = provider === 'openai' ? this._getActiveOpenAIImagePromptPreset(appKey) : null;
+        const comfyuiPromptPreset = provider === 'comfyui'
+            ? (this._getComfyUIPromptSettingsForApp(comfyuiAppWorkflow, appKey)
+                || (!comfyuiAppWorkflow ? this._getComfyUIBuiltInPromptSettings(appKey) : null))
+            : null;
+        const openaiPromptDraftInitialized = provider === 'openai' && promptAppKey
+            ? this._getBool(`phone-image-openai-${promptAppKey}-prompt-draft-initialized`, false)
+            : false;
+        if (openaiPromptPreset) {
+            const presetWidth = Number(openaiPromptPreset[`${appKey}Width`] ?? openaiPromptPreset.width);
+            const presetHeight = Number(openaiPromptPreset[`${appKey}Height`] ?? openaiPromptPreset.height);
+            if (Number.isFinite(presetWidth) && presetWidth >= 64) size.width = presetWidth;
+            if (Number.isFinite(presetHeight) && presetHeight >= 64) size.height = presetHeight;
+        }
+        const resolvePromptSetting = (overrideValue, presetKey, storageSuffix) => {
+            const storedValue = promptAppKey
+                ? this._get(
+                    openaiPromptDraftInitialized
+                        ? `phone-image-openai-${promptAppKey}-${storageSuffix}`
+                        : `phone-image-${promptAppKey}-${storageSuffix}`,
+                    ''
+                )
+                : '';
+            const activePromptPreset = openaiPromptPreset || comfyuiPromptPreset;
+            return String(overrideValue ?? (activePromptPreset ? activePromptPreset[presetKey] : storedValue) ?? '').trim();
+        };
+
+        const site = String(overrides.site || this._get('phone-image-novelai-site', 'official')).trim() || 'official';
+        const openaiSite = String(overrides.openaiSite || this._get('phone-image-openai-site', 'official')).trim() || 'official';
+        let apiKey = String(overrides.apiKey || this._get(`phone-image-${provider}-key`, '') || (provider === 'siliconflow' ? legacySiliconflowKey : '')).trim();
+        if (provider === 'novelai' && site === 'public') {
+            apiKey = String(overrides.apiKey || this._get('phone-image-novelai-public-key', '') || '').trim();
+        } else if (provider === 'novelai' && site === 'custom') {
+            const customKey = this.storage?.get?.('phone-image-novelai-custom-key');
+            const storedKey = customKey === null || customKey === undefined
+                ? this._get('phone-image-novelai-key', '')
+                : customKey;
+            apiKey = String(overrides.apiKey || storedKey || '').trim();
+        } else if (provider === 'openai' && openaiSite === 'public') {
+            apiKey = String(overrides.apiKey || this._get('phone-image-openai-public-key', '') || '').trim();
+        } else if (provider === 'openai' && openaiSite === 'custom') {
+            const customKey = this.storage?.get?.('phone-image-openai-custom-key');
+            const storedKey = customKey === null || customKey === undefined
+                ? this._get('phone-image-openai-key', '')
+                : customKey;
+            apiKey = String(overrides.apiKey || storedKey || '').trim();
+        }
+        const model = String(
+            overrides.model
+            || openaiPromptPreset?.openaiModel
+            || this._get(`phone-image-${provider}-model`, '')
+            || (provider === 'novelai'
+                ? 'nai-diffusion-4-5-full'
+                : (provider === 'siliconflow'
+                    ? legacySiliconflowModel || 'Kwai-Kolors/Kolors'
+                    : (provider === 'openai' ? 'gpt-image-2' : '')))
+        ).trim();
+
+        return {
+            enabled: overrides.enabled ?? this._getBool('phone-image-enabled', false),
+            provider,
+            apiKey,
+            site,
+            openaiSite,
+            openaiCustomUrl: String(overrides.openaiCustomUrl || this._get('phone-image-openai-url', '')).trim(),
+            openaiPublicUrl: String(overrides.openaiPublicUrl || this._get('phone-image-openai-public-url', '')).trim(),
+            openaiPublicRelayUrl: String(overrides.openaiPublicRelayUrl || this._get('phone-image-openai-public-relay-url', '')).trim(),
+            openaiMode: 'images',
+            openaiQuality: String(overrides.openaiQuality || openaiPromptPreset?.openaiQuality || this._get('phone-image-openai-quality', 'auto')).trim() || 'auto',
+            comfyuiMode: this._normalizeComfyUIMode(overrides.comfyuiMode || this._get('phone-image-comfyui-mode', 'local')),
+            comfyuiTransport: this._normalizeComfyUITransport(overrides.comfyuiTransport || this._get('phone-image-comfyui-transport', 'tavern')),
+            comfyuiUrl: this._getComfyUIEndpointUrl(overrides),
+            comfyuiLocalUrl: this._normalizeComfyUIBaseUrl(overrides.comfyuiUrl || this._get('phone-image-comfyui-url', 'http://127.0.0.1:8188')),
+            comfyuiRemoteUrl: this._normalizeComfyUIBaseUrl(overrides.comfyuiRemoteUrl || this._get('phone-image-comfyui-remote-url', '')),
+            comfyuiWorkflowId: String(overrides.comfyuiWorkflowId ?? comfyuiAppWorkflow?.id ?? '').trim(),
+            comfyuiWorkflowName: String(overrides.comfyuiWorkflowName ?? comfyuiAppWorkflow?.name ?? '').trim(),
+            comfyuiWorkflowFingerprint: String(overrides.comfyuiWorkflowFingerprint ?? comfyuiAppWorkflow?.fingerprint ?? '').trim(),
+            comfyuiWorkflow: String(overrides.comfyuiWorkflow ?? comfyuiAppWorkflow?.workflow ?? (promptAppKey ? '' : this._get('phone-image-comfyui-workflow', ''))).trim(),
+            comfyuiNodeMapping: String(overrides.comfyuiNodeMapping ?? comfyuiAppWorkflow?.nodeMapping ?? (promptAppKey ? '' : this._get('phone-image-comfyui-node-mapping', ''))).trim(),
+            comfyuiModel: String(overrides.comfyuiModel || comfyuiAppWorkflow?.comfyuiModel || comfyuiAppWorkflow?.model || this._get('phone-image-comfyui-model', '')).trim(),
+            comfyuiVae: String(overrides.comfyuiVae || comfyuiAppWorkflow?.comfyuiVae || comfyuiAppWorkflow?.vae || this._get('phone-image-comfyui-vae', '')).trim(),
+            comfyuiClip: String(overrides.comfyuiClip || comfyuiAppWorkflow?.comfyuiClip || comfyuiAppWorkflow?.clip || this._get('phone-image-comfyui-clip', '')).trim(),
+            comfyuiLoras: this._normalizeComfyUILoras(
+                overrides.comfyuiLoras
+                ?? comfyuiAppWorkflow?.comfyuiLoras
+                ?? this._get('phone-image-comfyui-loras', '[]')
+            ),
+            comfyuiSampler: String(overrides.comfyuiSampler || comfyuiAppWorkflow?.comfyuiSampler || comfyuiAppWorkflow?.sampler || this._get('phone-image-comfyui-sampler', 'euler')).trim() || 'euler',
+            comfyuiScheduler: String(overrides.comfyuiScheduler || comfyuiAppWorkflow?.comfyuiScheduler || comfyuiAppWorkflow?.scheduler || this._get('phone-image-comfyui-scheduler', 'normal')).trim() || 'normal',
+            sdUrl: this._normalizeSdBaseUrl(overrides.sdUrl || this._get('phone-image-sd-url', 'http://127.0.0.1:7860')),
+            sdAuth: String(overrides.sdAuth || this._get('phone-image-sd-auth', '')).trim(),
+            sdVae: String(overrides.sdVae || this._get('phone-image-sd-vae', '')).trim(),
+            sdScheduler: String(overrides.sdScheduler || this._get('phone-image-sd-scheduler', '')).trim(),
+            sdClipSkip: this._getNumber('phone-image-sd-clip-skip', 0, 0, 12),
+            sdLora: String(overrides.sdLora || this._get('phone-image-sd-lora', '')).trim(),
+            sdHiresFix: this._getBool('phone-image-sd-hires-fix', false),
+            sdHiresSteps: this._getNumber('phone-image-sd-hires-steps', 0, 0, 80),
+            sdUpscaler: String(overrides.sdUpscaler || this._get('phone-image-sd-upscaler', '')).trim(),
+            sdUpscaleFactor: this._getNumber('phone-image-sd-upscale-factor', 1.5, 1, 4),
+            sdDenoisingStrength: this._getNumber('phone-image-sd-denoising-strength', 0.45, 0, 1),
+            sdRestoreFaces: this._getBool('phone-image-sd-restore-faces', false),
+            sdADetailer: this._getBool('phone-image-sd-adetailer', false),
+            customUrl: String(overrides.customUrl || this._get('phone-image-novelai-url', '')).trim(),
+            publicKey: String(overrides.publicKey || this._get('phone-image-novelai-public-key', '')).trim(),
+            publicUrl: String(overrides.publicUrl || this._get('phone-image-novelai-public-url', '')).trim(),
+            queueUrl: site === 'official' ? String(overrides.queueUrl || this._get('phone-image-novelai-queue-url', '')).trim() : '',
+            model,
+            sampler: provider === 'sd'
+                ? String(overrides.sampler || this._get('phone-image-sd-sampler', 'Euler a')).trim() || 'Euler a'
+                : this._normalizeNovelAISampler(overrides.sampler || this._get('phone-image-novelai-sampler', 'k_euler')),
+            schedule: this._normalizeNovelAISchedule(
+                overrides.schedule || this._get('phone-image-novelai-schedule', 'native'),
+                model
+            ),
+            width: size.width,
+            height: size.height,
+            steps: rawSteps,
+            scale: this._getNumber('phone-image-scale', 6, 0, 50),
+            cfgRescale: this._getNumber('phone-image-cfg-rescale', 0.2, 0, 1),
+            seed: this._getNumber('phone-image-seed', -1, -1, 4294967295),
+            fixedPrompt: resolvePromptSetting(overrides.fixedPrompt, 'fixedPrompt', 'fixed-prompt'),
+            fixedPromptEnd: resolvePromptSetting(overrides.fixedPromptEnd, 'fixedPromptEnd', 'fixed-prompt-end'),
+            negativePrompt: resolvePromptSetting(overrides.negativePrompt, 'negativePrompt', 'negative-prompt'),
+            debugPayload: this._getBool('phone-image-debug-payload', false),
+            novelAISkipCfgCompat: this._getBoolDefaultTrue('phone-image-novelai-skip-cfg-compat'),
+            saveToBackgrounds: this._getBool('phone-image-save-backgrounds', false)
+        };
+    }
+
+    async generate(options = {}) {
+        const config = this.getConfig(options);
+        if (!config.enabled && options.ignoreEnabled !== true) throw new Error('生图功能未启用');
+        if (!['sd', 'comfyui'].includes(config.provider) && !config.apiKey) throw new Error('缺少生图 API Key');
+
+        if (config.provider === 'siliconflow') {
+            return this._generateSiliconflow(options, config);
+        }
+        if (config.provider === 'sd') {
+            return this._generateStableDiffusion(options, config);
+        }
+        if (config.provider === 'comfyui') {
+            return this._generateComfyUI(options, config);
+        }
+        if (config.provider === 'openai') {
+            return this._generateOpenAIImage(options, config);
+        }
+        if (config.provider === 'novelai') {
+            const novelAIOptions = await this._prepareNovelAIOptions(options);
+            return this._generateNovelAI(novelAIOptions, config);
+        }
+        throw new Error(`暂不支持的生图服务商：${config.provider}`);
+    }
+
+    _joinPrompt(parts = [], separator = ', ') {
+        return parts
+            .map(item => String(item || '').trim())
+            .filter(Boolean)
+            .join(separator);
+    }
+
+    _debugNovelAIRequest({ endpoint, payload, config, options }) {
+        if (!config?.debugPayload) return;
+        const originalPrompt = String(options?.rawPrompt || options?.prompt || '').trim();
+        const translatedPrompt = String(options?.translatedPrompt || '').trim();
+        const debugPayload = this._redactNovelAIDebugPayload(payload);
+        const positiveCharacterPrompts = (payload?.parameters?.v4_prompt?.caption?.char_captions || [])
+            .map(item => String(item?.char_caption || '').trim())
+            .filter(Boolean);
+        const negativeCharacterPrompts = (payload?.parameters?.v4_negative_prompt?.caption?.char_captions || [])
+            .map(item => String(item?.char_caption || '').trim())
+            .filter(Boolean);
+        const debugInfo = {
+            endpoint,
+            provider: 'novelai',
+            app: String(options?.app || '').trim(),
+            model: config.model,
+            sampler: config.sampler,
+            schedule: config.schedule,
+            width: payload?.parameters?.width,
+            height: payload?.parameters?.height,
+            steps: payload?.parameters?.steps,
+            scale: payload?.parameters?.scale,
+            cfgRescale: payload?.parameters?.cfg_rescale,
+            skipCfgAboveSigma: payload?.parameters?.skip_cfg_above_sigma,
+            novelAISkipCfgCompat: config.novelAISkipCfgCompat !== false,
+            seed: payload?.parameters?.seed,
+            originalPrompt,
+            translatedPrompt,
+            positivePrompt: payload?.input || '',
+            negativePrompt: payload?.parameters?.negative_prompt || '',
+            positiveCharacterPrompts,
+            negativeCharacterPrompts,
+            referenceCount: Array.isArray(payload?.parameters?.director_reference_images_cached)
+                ? payload.parameters.director_reference_images_cached.length
+                : (Array.isArray(payload?.parameters?.director_reference_images)
+                    ? payload.parameters.director_reference_images.length
+                    : 0),
+            vibeCount: Array.isArray(payload?.parameters?.reference_image_multiple)
+                ? payload.parameters.reference_image_multiple.length
+                : 0,
+            payload: debugPayload
+        };
+        try {
+            if (typeof window !== 'undefined') {
+                window.__lastNovelAIRequest = debugInfo;
+            }
+        } catch (e) {}
+        try {
+            const plainText = [
+                '[NovelAI Debug] 本次生图参数',
+                `App: ${debugInfo.app || '-'}`,
+                `模型: ${debugInfo.model}`,
+                `尺寸: ${debugInfo.width}x${debugInfo.height}`,
+                `Steps: ${debugInfo.steps}`,
+                `Sampler: ${debugInfo.sampler}`,
+                `Schedule: ${debugInfo.schedule}`,
+                `Scale: ${debugInfo.scale}`,
+                `CFG Rescale: ${debugInfo.cfgRescale}`,
+                `Skip CFG Above Sigma: ${debugInfo.skipCfgAboveSigma ?? '(未发送)'}`,
+                `自动兼容参数: ${debugInfo.novelAISkipCfgCompat ? '开启' : '关闭'}`,
+                `Seed: ${debugInfo.seed}`,
+                `参考图: ${debugInfo.referenceCount} 张`,
+                `Vibe: ${debugInfo.vibeCount} 个`,
+                '',
+                'AI 画面 tag（原样）:',
+                debugInfo.originalPrompt || '(空)',
+                ...(debugInfo.translatedPrompt ? [
+                    '',
+                    '自动转英文后的 NAI tag:',
+                    debugInfo.translatedPrompt
+                ] : []),
+                '',
+                '最终发送给 NAI 的正面提示词:',
+                debugInfo.positivePrompt || '(空)',
+                ...(debugInfo.positiveCharacterPrompts.length ? [
+                    '',
+                    '最终发送给 NAI 的角色正面提示词:',
+                    ...debugInfo.positiveCharacterPrompts.map((item, index) => `角色 ${index + 1}: ${item}`)
+                ] : []),
+                '',
+                '最终发送给 NAI 的负面提示词:',
+                debugInfo.negativePrompt || '(空)',
+                ...(debugInfo.negativeCharacterPrompts.length ? [
+                    '',
+                    '最终发送给 NAI 的角色负面提示词:',
+                    ...debugInfo.negativeCharacterPrompts.map((item, index) => `角色 ${index + 1}: ${item}`)
+                ] : []),
+                '',
+                '调试 payload 已保存到 window.__lastNovelAIRequest（参考图 base64 已脱敏）',
+                '复制完整调试信息: copy(JSON.stringify(window.__lastNovelAIRequest, null, 2))'
+            ].join('\n');
+            console.log(plainText);
+            console.groupCollapsed('[NovelAI Debug] generate-image payload');
+            console.info('summary', {
+                endpoint: debugInfo.endpoint,
+                app: debugInfo.app,
+                model: debugInfo.model,
+                size: `${debugInfo.width}x${debugInfo.height}`,
+                steps: debugInfo.steps,
+                sampler: debugInfo.sampler,
+                schedule: debugInfo.schedule,
+                scale: debugInfo.scale,
+                cfgRescale: debugInfo.cfgRescale,
+                skipCfgAboveSigma: debugInfo.skipCfgAboveSigma,
+                novelAISkipCfgCompat: debugInfo.novelAISkipCfgCompat,
+                seed: debugInfo.seed,
+                referenceCount: debugInfo.referenceCount,
+                vibeCount: debugInfo.vibeCount
+            });
+            console.info('AI 画面 tag（原样）', debugInfo.originalPrompt);
+            if (debugInfo.translatedPrompt) console.info('自动转英文后的 NAI tag', debugInfo.translatedPrompt);
+            console.info('positive prompt', debugInfo.positivePrompt);
+            console.info('positive character prompts', debugInfo.positiveCharacterPrompts);
+            console.info('negative prompt', debugInfo.negativePrompt);
+            console.info('negative character prompts', debugInfo.negativeCharacterPrompts);
+            console.info('full payload', debugInfo.payload);
+            console.info('copy helper', 'copy(JSON.stringify(window.__lastNovelAIRequest, null, 2))');
+            console.groupEnd();
+        } catch (e) {}
+    }
+
+    _redactNovelAIDebugPayload(payload) {
+        try {
+            const clone = JSON.parse(JSON.stringify(payload || {}));
+            const refs = clone?.parameters?.reference_image_multiple;
+            if (Array.isArray(refs)) {
+                clone.parameters.reference_image_multiple = refs.map((item, index) => {
+                    const length = String(item || '').length;
+                    return `[BASE64_REFERENCE_IMAGE_${index + 1}:${length}]`;
+                });
+            }
+            const cachedRefs = clone?.parameters?.reference_image_multiple_cached;
+            if (Array.isArray(cachedRefs)) {
+                clone.parameters.reference_image_multiple_cached = cachedRefs.map((item, index) => ({
+                    cache_secret_key: String(item?.cache_secret_key || ''),
+                    data: `[BASE64_REFERENCE_IMAGE_CACHED_${index + 1}:${String(item?.data || '').length}]`
+                }));
+            }
+            const directorRefs = clone?.parameters?.director_reference_images;
+            if (Array.isArray(directorRefs)) {
+                clone.parameters.director_reference_images = directorRefs.map((item, index) => {
+                    const length = String(item || '').length;
+                    return `[BASE64_DIRECTOR_REFERENCE_IMAGE_${index + 1}:${length}]`;
+                });
+            }
+            const cachedDirectorRefs = clone?.parameters?.director_reference_images_cached;
+            if (Array.isArray(cachedDirectorRefs)) {
+                clone.parameters.director_reference_images_cached = cachedDirectorRefs.map((item, index) => ({
+                    cache_secret_key: String(item?.cache_secret_key || ''),
+                    data: `[BASE64_DIRECTOR_REFERENCE_IMAGE_CACHED_${index + 1}:${String(item?.data || '').length}]`
+                }));
+            }
+            return clone;
+        } catch (e) {
+            return payload;
+        }
+    }
+
+    _redactComfyUIDebugWorkflow(workflow) {
+        try {
+            const clone = JSON.parse(JSON.stringify(workflow || {}));
+            Object.values(clone || {}).forEach((node) => {
+                Object.entries(node?.inputs || {}).forEach(([key, value]) => {
+                    if (typeof value !== 'string') return;
+                    if (/^data:image\//i.test(value) || /^[A-Za-z0-9+/=\s]{500,}$/.test(value)) {
+                        node.inputs[key] = `[BASE64_IMAGE:${value.length}]`;
+                    }
+                });
+            });
+            return clone;
+        } catch (e) {
+            return workflow;
+        }
+    }
+
+    _debugComfyUIRequest({
+        endpoint,
+        built,
+        workflow,
+        config,
+        options,
+        referenceImages = [],
+        uploadedReferenceImages = [],
+        promptId = ''
+    }) {
+        if (!config?.debugPayload) return;
+        const normalizedUploadedReferences = Array.isArray(uploadedReferenceImages)
+            ? uploadedReferenceImages.filter(Boolean)
+            : (uploadedReferenceImages ? [uploadedReferenceImages] : []);
+        const debugInfo = {
+            endpoint,
+            provider: 'comfyui',
+            app: String(options?.app || '').trim(),
+            model: config.comfyuiModel,
+            loras: this._normalizeComfyUILoras(config.comfyuiLoras),
+            sampler: config.comfyuiSampler,
+            scheduler: config.comfyuiScheduler,
+            width: built.width,
+            height: built.height,
+            steps: built.steps,
+            scale: built.scale,
+            cfgRescale: built.cfgRescale,
+            seed: built.seed,
+            originalPrompt: String(options?.rawPrompt || options?.prompt || '').trim(),
+            positivePrompt: built.positivePrompt || '',
+            negativePrompt: built.negativePrompt || '',
+            referenceCount: referenceImages.length,
+            uploadedReferenceCount: normalizedUploadedReferences.length,
+            uploadedReferenceImage: normalizedUploadedReferences[0] || null,
+            uploadedReferenceImages: normalizedUploadedReferences,
+            missingReferenceSubmitted: built.missingReferenceSubmitted === true,
+            promptId,
+            workflowId: config.comfyuiWorkflowId,
+            workflowName: config.comfyuiWorkflowName,
+            workflowFingerprint: config.comfyuiWorkflowFingerprint || this._buildComfyUIWorkflowFingerprint(config.comfyuiWorkflow),
+            workflow: this._redactComfyUIDebugWorkflow(workflow)
+        };
+        try {
+            if (typeof window !== 'undefined') {
+                window.__lastComfyUIRequest = debugInfo;
+            }
+        } catch (e) {}
+        try {
+            const plainText = [
+                '[ComfyUI Debug] 本次生图参数',
+                `App: ${debugInfo.app || '-'}`,
+                `工作流: ${debugInfo.workflowName || '(未命名/直接填写)'} ${debugInfo.workflowId ? `(${debugInfo.workflowId})` : ''}`.trim(),
+                `工作流指纹: ${debugInfo.workflowFingerprint || '-'}`,
+                `模型: ${debugInfo.model || '(工作流固定/未指定)'}`,
+                `LoRA: ${debugInfo.loras.length ? debugInfo.loras.map(item => `${item.name} (${item.strength})`).join('；') : '(未选择)'}`,
+                `尺寸: ${debugInfo.width}x${debugInfo.height}`,
+                `Steps: ${debugInfo.steps}`,
+                `Sampler: ${debugInfo.sampler}`,
+                `Scheduler: ${debugInfo.scheduler}`,
+                `Scale: ${debugInfo.scale}`,
+                `CFG Rescale: ${debugInfo.cfgRescale}`,
+                `Seed: ${debugInfo.seed}`,
+                `可用参考图: ${debugInfo.referenceCount} 张`,
+                `实际上传参考图: ${debugInfo.uploadedReferenceCount} 张`,
+                `无参考图按原工作流提交: ${debugInfo.missingReferenceSubmitted ? '是' : '否'}`,
+                `Prompt ID: ${debugInfo.promptId || '(提交前)'}`,
+                '',
+                'AI 画面 tag（原样）:',
+                debugInfo.originalPrompt || '(空)',
+                '',
+                '最终写入 ComfyUI 的正面提示词:',
+                debugInfo.positivePrompt || '(空)',
+                '',
+                '最终写入 ComfyUI 的负面提示词:',
+                debugInfo.negativePrompt || '(空)',
+                '',
+                '调试 workflow 已保存到 window.__lastComfyUIRequest（图片 base64 已脱敏）',
+                '复制完整调试信息: copy(JSON.stringify(window.__lastComfyUIRequest, null, 2))'
+            ].join('\n');
+            console.log(plainText);
+            console.groupCollapsed('[ComfyUI Debug] /prompt payload');
+            console.info('summary', {
+                endpoint: debugInfo.endpoint,
+                app: debugInfo.app,
+                workflowId: debugInfo.workflowId,
+                workflowName: debugInfo.workflowName,
+                workflowFingerprint: debugInfo.workflowFingerprint,
+                model: debugInfo.model,
+                size: `${debugInfo.width}x${debugInfo.height}`,
+                steps: debugInfo.steps,
+                sampler: debugInfo.sampler,
+                scheduler: debugInfo.scheduler,
+                scale: debugInfo.scale,
+                cfgRescale: debugInfo.cfgRescale,
+                seed: debugInfo.seed,
+                referenceCount: debugInfo.referenceCount,
+                promptId: debugInfo.promptId
+            });
+            console.info('AI 画面 tag（原样）', debugInfo.originalPrompt);
+            console.info('positive prompt', debugInfo.positivePrompt);
+            console.info('negative prompt', debugInfo.negativePrompt);
+            console.info('workflow', debugInfo.workflow);
+            console.info('copy helper', 'copy(JSON.stringify(window.__lastComfyUIRequest, null, 2))');
+            console.groupEnd();
+        } catch (e) {}
+    }
+
+    _redactOpenAIDebugPayload(payload) {
+        try {
+            const clone = JSON.parse(JSON.stringify(payload || {}));
+            const redactImages = (value) => {
+                if (Array.isArray(value)) {
+                    return value.map(redactImages);
+                }
+                if (value && typeof value === 'object') {
+                    Object.entries(value).forEach(([key, item]) => {
+                        value[key] = redactImages(item);
+                    });
+                    return value;
+                }
+                if (typeof value !== 'string') return value;
+                if (/^data:image\//i.test(value) || /^[A-Za-z0-9+/=\s]{500,}$/.test(value)) {
+                    return `[BASE64_IMAGE:${value.length}]`;
+                }
+                return value;
+            };
+            return redactImages(clone);
+        } catch (e) {
+            return payload;
+        }
+    }
+
+    _debugOpenAIRequest({
+        endpoint,
+        targetEndpoint = '',
+        payload,
+        config,
+        options,
+        requestMode = 'images/generations',
+        positivePrompt = '',
+        negativePrompt = '',
+        requestedSize = '',
+        quality = '',
+        attempt = 1
+    }) {
+        if (!config?.debugPayload) return;
+        const debugInfo = {
+            endpoint,
+            targetEndpoint: targetEndpoint || endpoint,
+            provider: 'openai',
+            app: String(options?.app || '').trim(),
+            model: String(payload?.model || config?.model || '').trim(),
+            requestMode,
+            requestedSize,
+            quality,
+            attempt,
+            originalPrompt: String(options?.rawPrompt || options?.prompt || '').trim(),
+            positivePrompt: String(positivePrompt || '').trim(),
+            negativePrompt: String(negativePrompt || '').trim(),
+            sentPrompt: String(
+                requestMode === 'chat/completions'
+                    ? payload?.messages?.[0]?.content
+                    : payload?.prompt
+            ).trim(),
+            payload: this._redactOpenAIDebugPayload(payload)
+        };
+        try {
+            if (typeof window !== 'undefined') {
+                window.__lastGPTImageRequest = debugInfo;
+                window.__lastOpenAIRequest = debugInfo;
+            }
+        } catch (e) {}
+        try {
+            const plainText = [
+                '[GPT Image Debug] 本次生图参数',
+                `App: ${debugInfo.app || '-'}`,
+                `接口: ${debugInfo.requestMode}`,
+                `模型: ${debugInfo.model || '-'}`,
+                `尺寸: ${debugInfo.requestedSize || '-'}`,
+                `质量: ${debugInfo.quality || '-'}`,
+                `请求尝试: ${debugInfo.attempt}`,
+                '',
+                'AI 画面 tag（原样）:',
+                debugInfo.originalPrompt || '(空)',
+                '',
+                '拼接固定词后的正向提示词:',
+                debugInfo.positivePrompt || '(空)',
+                '',
+                '负面提示词:',
+                debugInfo.negativePrompt || '(空)',
+                '',
+                '最终发送给 GPT 的 prompt:',
+                debugInfo.sentPrompt || '(空)',
+                '',
+                '调试 payload 已保存到 window.__lastGPTImageRequest（图片 base64 已脱敏）',
+                '复制完整调试信息: copy(JSON.stringify(window.__lastGPTImageRequest, null, 2))'
+            ].join('\n');
+            console.log(plainText);
+            console.groupCollapsed(`[GPT Image Debug] ${debugInfo.requestMode} payload`);
+            console.info('summary', {
+                endpoint: debugInfo.endpoint,
+                targetEndpoint: debugInfo.targetEndpoint,
+                app: debugInfo.app,
+                model: debugInfo.model,
+                size: debugInfo.requestedSize,
+                quality: debugInfo.quality,
+                attempt: debugInfo.attempt
+            });
+            console.info('AI 画面 tag（原样）', debugInfo.originalPrompt);
+            console.info('positive prompt', debugInfo.positivePrompt);
+            console.info('negative prompt', debugInfo.negativePrompt);
+            console.info('sent prompt', debugInfo.sentPrompt);
+            console.info('full payload', debugInfo.payload);
+            console.info('copy helper', 'copy(JSON.stringify(window.__lastGPTImageRequest, null, 2))');
+            console.groupEnd();
+        } catch (e) {}
+    }
+
+    _resolveSillyTavernCorsProxyUrl(value) {
+        const baseUrl = String(value || '').trim().replace(/\/+$/, '');
+        if (!baseUrl) return '';
+
+        const proxyMarker = '/proxy/';
+        if (baseUrl.startsWith(proxyMarker)) return baseUrl;
+
+        try {
+            const parsed = new URL(baseUrl, window.location.origin);
+            const proxyIndex = parsed.pathname.indexOf(proxyMarker);
+            if (proxyIndex >= 0) {
+                return `${parsed.pathname.slice(proxyIndex)}${parsed.search}${parsed.hash}`.replace(/\/+$/, '');
+            }
+        } catch (e) {}
+
+        return `${proxyMarker}${baseUrl}`;
+    }
+
+    _resolveNovelAIEndpoint(config) {
+        if (config.site === 'public') {
+            if (!config.publicUrl) throw new Error('缺少公益站 Base URL');
+            return this._resolveSillyTavernCorsProxyUrl(config.publicUrl);
+        }
+        if (config.site === 'custom' && config.customUrl) {
+            return config.customUrl.replace(/\/+$/, '');
+        }
+        return 'https://image.novelai.net';
+    }
+
+    _resolveNovelAIQueueUrl(config) {
+        return String(config?.queueUrl || '').trim().replace(/\/+$/, '');
+    }
+
+    _createQueueTaskId() {
+        return `phone-nai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    _getQueueUserId() {
+        if (this._queueUserId) return this._queueUserId;
+        const storageKey = 'phone_nai_queue_user_id';
+        try {
+            const stored = window.localStorage?.getItem(storageKey);
+            if (stored) {
+                this._queueUserId = stored;
+                return stored;
+            }
+            const cryptoApi = globalThis.crypto;
+            const randomPart = typeof cryptoApi?.randomUUID === 'function'
+                ? cryptoApi.randomUUID()
+                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+            const userId = `phone-${randomPart}`;
+            window.localStorage?.setItem(storageKey, userId);
+            this._queueUserId = userId;
+            return userId;
+        } catch (e) {
+            this._queueUserId = `phone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+            return this._queueUserId;
+        }
+    }
+
+    async _hashQueueKey(apiKey) {
+        const text = String(apiKey || '');
+        if (!text) throw new Error('缺少 NAI API Key，无法进入共享队列');
+        try {
+            const cryptoApi = globalThis.crypto;
+            if (typeof cryptoApi?.subtle?.digest === 'function' && typeof TextEncoder === 'function') {
+                const buffer = await cryptoApi.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+        } catch (e) {}
+
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+        }
+        return `fallback-${Math.abs(hash).toString(16)}`;
+    }
+
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    _getQueueToken(payload) {
+        return String(payload?.token || payload?.queue_token || payload?.queueToken || '').trim();
+    }
+
+    _getQueuePosition(payload) {
+        const raw = payload?.position ?? payload?.queue_position ?? payload?.rank;
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    _getQueueSize(payload) {
+        const raw = payload?.queue_size ?? payload?.queueSize ?? payload?.size;
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    _formatQueueStatus(payload) {
+        const position = this._getQueuePosition(payload);
+        const size = this._getQueueSize(payload);
+        if (position === null) return '';
+        const displayPosition = Math.max(1, position + 1);
+        if (size !== null && size > 0) return `NAI 队列排队中：第 ${displayPosition}/${size} 位`;
+        return `NAI 队列排队中：第 ${displayPosition} 位`;
+    }
+
+    _noticeQueueStatus(payload, force = false) {
+        const text = this._formatQueueStatus(payload);
+        if (!text || (!force && text === this._lastQueueNotice)) return;
+        this._lastQueueNotice = text;
+        console.log(`[NovelAI Queue] ${text}`);
+        try {
+            window.VirtualPhone?.phoneShell?.showNotification?.('NAI 共享队列', text, '🎨');
+        } catch (e) {}
+    }
+
+    async _queueRequest(baseUrl, path, { method = 'GET', body = null, query = null } = {}) {
+        const url = new URL(`${baseUrl}${path}`);
+        if (query && typeof query === 'object') {
+            Object.entries(query).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    url.searchParams.set(key, String(value));
+                }
+            });
+        }
+
+        const response = await fetch(url.toString(), {
+            method,
+            headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+            body: method === 'POST' ? JSON.stringify(body || {}) : undefined
+        });
+        const text = await response.text().catch(() => '');
+        let payload = null;
+        try { payload = text ? JSON.parse(text) : null; } catch (e) { payload = null; }
+        if (!response.ok) {
+            const message = payload?.message || payload?.error || text || '';
+            throw new Error(`NAI 队列服务请求失败 (${response.status})${message ? `: ${String(message).slice(0, 180)}` : ''}`);
+        }
+        return payload || {};
+    }
+
+    async _waitForNovelAIQueueTurn(config, options = {}) {
+        const baseUrl = this._resolveNovelAIQueueUrl(config);
+        if (!baseUrl) return null;
+
+        const keyHash = await this._hashQueueKey(config.apiKey);
+        const userId = this._getQueueUserId();
+        const taskId = String(options.queueTaskId || this._createQueueTaskId()).trim();
+        const queuePayload = { key_hash: keyHash, user_id: userId, task_id: taskId };
+        let token = '';
+        let joined = false;
+        let leftQueue = false;
+
+        const leave = async () => {
+            if (!joined || leftQueue) return;
+            leftQueue = true;
+            await this._queueRequest(baseUrl, '/leave-queue', {
+                method: 'POST',
+                body: { ...queuePayload, token }
+            }).catch((err) => console.warn('[NovelAI Queue] 离开队列失败:', err));
+        };
+
+        try {
+            const joinedInfo = await this._queueRequest(baseUrl, '/queue', {
+                method: 'POST',
+                body: queuePayload
+            });
+            joined = true;
+            token = this._getQueueToken(joinedInfo);
+            this._noticeQueueStatus(joinedInfo, true);
+            if (joinedInfo?.can_run && token) {
+                return { baseUrl, keyHash, userId, taskId, token };
+            }
+
+            const waitDeadline = Date.now() + NOVELAI_QUEUE_WAIT_MS;
+            while (Date.now() < waitDeadline) {
+                if (options?.signal?.aborted) {
+                    await leave();
+                    throw new Error('已取消 NAI 生图队列等待');
+                }
+                await this._sleep(NOVELAI_QUEUE_POLL_MS);
+                const turnInfo = await this._queueRequest(baseUrl, '/my-turn', {
+                    query: queuePayload
+                });
+                if (turnInfo?.queued === false) {
+                    throw new Error('NAI 队列任务已失效，请重新生成');
+                }
+                token = this._getQueueToken(turnInfo) || token;
+                this._noticeQueueStatus(turnInfo);
+                if (turnInfo?.can_run && token) {
+                    return { baseUrl, keyHash, userId, taskId, token };
+                }
+            }
+
+            await leave();
+            throw new Error('等待 NAI 共享队列超时，请稍后重试');
+        } catch (err) {
+            if (!String(err?.message || '').includes('已取消 NAI 生图队列等待')) {
+                await leave();
+            }
+            throw err;
+        }
+    }
+
+    _startNovelAIQueueHeartbeat(queueInfo) {
+        if (!queueInfo?.baseUrl || !queueInfo?.token) return () => {};
+
+        let stopped = false;
+        let pending = false;
+        const heartbeat = async () => {
+            if (stopped || pending) return;
+            pending = true;
+            try {
+                await this._queueRequest(queueInfo.baseUrl, '/heartbeat', {
+                    method: 'POST',
+                    body: {
+                        key_hash: queueInfo.keyHash,
+                        user_id: queueInfo.userId,
+                        task_id: queueInfo.taskId,
+                        token: queueInfo.token
+                    }
+                });
+            } catch (err) {
+                console.warn('[NovelAI Queue] 队列续租失败:', err);
+            } finally {
+                pending = false;
+            }
+        };
+        const timer = setInterval(heartbeat, NOVELAI_QUEUE_HEARTBEAT_MS);
+        return () => {
+            stopped = true;
+            clearInterval(timer);
+        };
+    }
+
+    async _finishNovelAIQueue(queueInfo) {
+        if (!queueInfo?.baseUrl || !queueInfo?.token) return;
+        await this._queueRequest(queueInfo.baseUrl, '/complete', {
+            method: 'POST',
+            body: {
+                key_hash: queueInfo.keyHash,
+                user_id: queueInfo.userId,
+                task_id: queueInfo.taskId,
+                token: queueInfo.token
+            }
+        }).catch((err) => console.warn('[NovelAI Queue] 完成队列任务失败:', err));
+    }
+
+    _normalizeImageResultString(value, { allowUrl = true } = {}) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        if (/^data:image\/[a-z0-9.+-]+;base64,/i.test(text)) return text;
+        if (allowUrl && /^(?:https?:|blob:|\/backgrounds\/)/i.test(text)) return text;
+        const compact = text.replace(/\s+/g, '');
+        if (compact.length >= 80 && /^[A-Za-z0-9+/]+={0,2}$/.test(compact)) {
+            return `data:image/png;base64,${compact}`;
+        }
+        return '';
+    }
+
+    _extractImageResult(payload, options = {}) {
+        if (!payload) return '';
+        if (typeof payload === 'string') {
+            const direct = this._normalizeImageResultString(payload, options);
+            if (direct) return direct;
+            const trimmed = payload.trim();
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                try {
+                    const nestedJson = JSON.parse(trimmed);
+                    const nestedImage = this._extractImageResult(nestedJson, options);
+                    if (nestedImage) return nestedImage;
+                } catch {
+                    // 不是完整 JSON 时继续按文本提取图片。
+                }
+            }
+            const markdownMatch = payload.match(/!\[[^\]]*]\(([^)\s]+)\)/);
+            if (markdownMatch) {
+                const markdownImage = this._normalizeImageResultString(markdownMatch[1], options);
+                if (markdownImage) return markdownImage;
+            }
+            const looseMatch = payload.match(/((?:https?:\/\/|\/)[^\s)"']+\.(?:png|jpe?g|webp|gif|bmp|svg)(?:\?[^\s)"']*)?)/i);
+            if (looseMatch) {
+                const looseImage = this._normalizeImageResultString(looseMatch[1], options);
+                if (looseImage) return looseImage;
+            }
+            return '';
+        }
+        if (Array.isArray(payload)) {
+            for (const item of payload) {
+                const nested = this._extractImageResult(item, options);
+                if (nested) return nested;
+            }
+            return '';
+        }
+        if (typeof payload !== 'object') return '';
+
+        const directCandidates = [
+            payload.b64_json,
+            payload.b64,
+            payload.base64,
+            payload.image_base64,
+            payload.imageBase64,
+            payload.dataUrl,
+            payload.data_url,
+            payload.image_url,
+            payload.imageUrl,
+            payload.url,
+            payload.image,
+            payload.imageData
+        ];
+        for (const item of directCandidates) {
+            const normalized = this._extractImageResult(item, options);
+            if (normalized) return normalized;
+        }
+
+        const nestedCandidates = [
+            payload.data,
+            payload.images,
+            payload.media,
+            payload.files,
+            payload.attachments,
+            payload.artifacts,
+            payload.output,
+            payload.outputs,
+            payload.choices,
+            payload.message,
+            payload.content,
+            payload.result,
+            payload.results,
+            payload.response
+        ];
+        for (const item of nestedCandidates) {
+            const nested = this._extractImageResult(item, options);
+            if (nested) return nested;
+        }
+        return '';
+    }
+
+    _extractBase64Image(payload) {
+        return this._extractImageResult(payload, { allowUrl: true });
+    }
+
+    _isZstdBytes(bytes) {
+        return !!bytes
+            && bytes.length >= 4
+            && bytes[0] === 0x28
+            && bytes[1] === 0xb5
+            && bytes[2] === 0x2f
+            && bytes[3] === 0xfd;
+    }
+
+    _maybeDecompressZstdBytes(bytes) {
+        if (!this._isZstdBytes(bytes)) return bytes;
+        try {
+            const decompressed = decompressZstd(bytes);
+            if (!(decompressed instanceof Uint8Array) || !decompressed.length) {
+                throw new Error('解压结果为空');
+            }
+            console.info('[NovelAI] 已解压酒馆代理返回的 zstd 数据');
+            return decompressed;
+        } catch (err) {
+            throw new Error(`NovelAI zstd 响应解压失败: ${err?.message || err}`);
+        }
+    }
+
+    _detectImageMime(bytes, fallback = '') {
+        if (!bytes || bytes.length < 4) return fallback || '';
+        if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+        if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+        if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return 'image/gif';
+        if (
+            bytes.length >= 12 &&
+            bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+            bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+        ) {
+            return 'image/webp';
+        }
+        return fallback || '';
+    }
+
+    _tryParseJsonBytes(bytes) {
+        try {
+            const text = new TextDecoder('utf-8').decode(bytes || new Uint8Array());
+            return text ? JSON.parse(text) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    _getBytesPreview(bytes, limit = 180) {
+        try {
+            return new TextDecoder('utf-8').decode((bytes || new Uint8Array()).slice(0, limit)).trim();
+        } catch (e) {
+            return '';
+        }
+    }
+
+    async _readNovelAIImageResponse(response) {
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        let arrayBuffer = await response.arrayBuffer();
+        if (!arrayBuffer || arrayBuffer.byteLength <= 0) throw new Error('NovelAI 返回空图片数据');
+        let bytes = new Uint8Array(arrayBuffer);
+        if (this._isZstdBytes(bytes)) {
+            bytes = this._maybeDecompressZstdBytes(bytes);
+            arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+        }
+
+        const parsedJson = contentType.includes('application/json') || contentType.includes('+json')
+            ? this._tryParseJsonBytes(bytes)
+            : null;
+        if (parsedJson) {
+            return this._extractBase64Image(parsedJson);
+        }
+
+        const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
+        if (isZip) {
+            return await this._readZipImageBytes(bytes, arrayBuffer);
+        }
+
+        const mime = this._detectImageMime(bytes, contentType.startsWith('image/') ? contentType.split(';')[0] : '');
+        if (mime) {
+            return await this._blobToDataUrl(new Blob([bytes], { type: mime }));
+        }
+
+        const fallbackJson = this._tryParseJsonBytes(bytes);
+        if (fallbackJson) {
+            const imageData = this._extractBase64Image(fallbackJson);
+            if (imageData) return imageData;
+        }
+
+        const preview = this._getBytesPreview(bytes);
+        throw new Error(`NovelAI 返回的不是图片数据${preview ? `: ${preview.slice(0, 120)}` : ''}`);
+    }
+
+    async _readZipImage(response) {
+        const blob = await response.blob();
+        if (!blob || blob.size <= 0) throw new Error('NovelAI 返回空图片数据');
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
+        if (!isZip) {
+            const mime = this._detectImageMime(bytes, blob.type && blob.type.startsWith('image/') ? blob.type : '');
+            if (!mime) throw new Error('NovelAI 返回的不是图片数据');
+            return await this._blobToDataUrl(new Blob([bytes], { type: mime }));
+        }
+        return this._readZipImageBytes(bytes, arrayBuffer);
+    }
+
+    async _readZipImageBytes(bytes, arrayBuffer) {
+        if (window.JSZip) {
+            const zip = await window.JSZip.loadAsync(arrayBuffer);
+            const imageFile = Object.values(zip.files)
+                .filter(file => !file.dir && /\.(png|jpg|jpeg|webp)$/i.test(file.name))
+                .sort((a, b) => {
+                    const sizeA = Number(a?._data?.uncompressedSize || a?._data?.compressedSize || 0);
+                    const sizeB = Number(b?._data?.uncompressedSize || b?._data?.compressedSize || 0);
+                    return sizeB - sizeA;
+                })[0];
+            if (!imageFile) throw new Error('NovelAI ZIP 中未找到图片文件');
+            const imageBlob = await imageFile.async('blob');
+            return await this._blobToDataUrl(imageBlob);
+        }
+
+        const imageBlob = await this._readZipImageNative(bytes, arrayBuffer);
+        return await this._blobToDataUrl(imageBlob);
+    }
+
+    _blobToDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(reader.error || new Error('图片读取失败'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    _dataUrlToBlob(dataUrl, fallbackMime = 'image/png') {
+        const raw = String(dataUrl || '').trim();
+        if (!raw) return null;
+        const match = raw.match(/^data:([^;,]+)?;base64,([\s\S]+)$/i);
+        const mime = String(match?.[1] || fallbackMime || 'image/png').trim() || 'image/png';
+        const base64 = match ? match[2] : raw;
+        try {
+            const binary = atob(base64.replace(/\s+/g, ''));
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return new Blob([bytes], { type: mime });
+        } catch (err) {
+            console.warn('[ComfyUI] 参考图 base64 解析失败:', err);
+            return null;
+        }
+    }
+
+    _waitForImageDecode(src, timeoutMs = 12000) {
+        return new Promise((resolve, reject) => {
+            if (!src) {
+                reject(new Error('图片数据为空'));
+                return;
+            }
+            const image = new Image();
+            let settled = false;
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                reject(new Error('图片解码超时'));
+            }, timeoutMs);
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                resolve({ width: image.naturalWidth || 0, height: image.naturalHeight || 0 });
+            };
+            image.onload = finish;
+            image.onerror = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                reject(new Error('图片解码失败'));
+            };
+            image.src = src;
+            if (typeof image.decode === 'function') {
+                image.decode().then(finish).catch(() => {
+                    if (image.complete && image.naturalWidth > 0) finish();
+                });
+            }
+        });
+    }
+
+    async _readZipImageNative(bytes, arrayBuffer) {
+        const entry = this._findZipImageEntry(bytes, arrayBuffer);
+        if (!entry) throw new Error('NovelAI ZIP 中未找到图片文件');
+
+        const compressed = bytes.slice(entry.dataStart, entry.dataStart + entry.compressedSize);
+        let fileBytes = compressed;
+        if (entry.method === 8) {
+            fileBytes = await this._inflateRawDeflate(compressed);
+        } else if (entry.method !== 0) {
+            throw new Error(`当前环境不支持 ZIP 压缩方式：${entry.method}`);
+        }
+
+        const lowerName = String(entry.name || '').toLowerCase();
+        const mime = lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')
+            ? 'image/jpeg'
+            : (lowerName.endsWith('.webp') ? 'image/webp' : 'image/png');
+        return new Blob([fileBytes], { type: mime });
+    }
+
+    _findZipImageEntry(bytes, arrayBuffer) {
+        const view = new DataView(arrayBuffer);
+        const decoder = new TextDecoder('utf-8');
+        const imageExtPattern = /\.(png|jpg|jpeg|webp)$/i;
+        let bestEntry = null;
+
+        for (let offset = 0; offset <= bytes.length - 46; offset++) {
+            if (view.getUint32(offset, true) !== 0x02014b50) continue;
+            const method = view.getUint16(offset + 10, true);
+            const compressedSize = view.getUint32(offset + 20, true);
+            const fileNameLength = view.getUint16(offset + 28, true);
+            const extraLength = view.getUint16(offset + 30, true);
+            const commentLength = view.getUint16(offset + 32, true);
+            const localHeaderOffset = view.getUint32(offset + 42, true);
+            const nameStart = offset + 46;
+            const nameEnd = nameStart + fileNameLength;
+            if (nameEnd > bytes.length) break;
+
+            const name = decoder.decode(bytes.slice(nameStart, nameEnd));
+            const nextOffset = nameEnd + extraLength + commentLength;
+            if (!imageExtPattern.test(name) || compressedSize <= 0) {
+                offset = Math.max(offset, nextOffset - 1);
+                continue;
+            }
+
+            if (localHeaderOffset < 0 || localHeaderOffset + 30 > bytes.length) continue;
+            if (view.getUint32(localHeaderOffset, true) !== 0x04034b50) continue;
+            const localNameLength = view.getUint16(localHeaderOffset + 26, true);
+            const localExtraLength = view.getUint16(localHeaderOffset + 28, true);
+            const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+            if (dataStart + compressedSize > bytes.length) continue;
+
+            const entry = { name, method, compressedSize, dataStart };
+            if (!bestEntry || compressedSize > bestEntry.compressedSize) {
+                bestEntry = entry;
+            }
+        }
+
+        return bestEntry || null;
+    }
+
+    async _inflateRawDeflate(bytes) {
+        if (typeof DecompressionStream !== 'function') {
+            throw new Error('NovelAI 返回 ZIP，但当前浏览器缺少原生解压能力');
+        }
+
+        const tryInflate = async (format) => {
+            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+            const buffer = await new Response(stream).arrayBuffer();
+            return new Uint8Array(buffer);
+        };
+
+        try {
+            return await tryInflate('deflate-raw');
+        } catch (err) {
+            try {
+                return await tryInflate('deflate');
+            } catch (fallbackErr) {
+                throw err;
+            }
+        }
+    }
+
+    _getNovelAISkipCfgAboveSigma(config) {
+        const sampler = String(config?.sampler || '').trim();
+        const schedule = String(config?.schedule || '').trim();
+        if (this._isNovelAIV5Model(config?.model)) return null;
+        if (sampler !== 'k_euler_ancestral') return null;
+        if (schedule !== 'karras' && schedule !== 'exponential') return null;
+        return this._isNovelAIV45Model(config?.model) ? 19 : 58;
+    }
+
+    _resolveNovelAICharacterPosition(value = '') {
+        const raw = String(value || '').trim().replace(/\s+/g, '');
+        if (!raw) return null;
+
+        const gridMatch = raw.match(/^([a-e])([1-5])$/i);
+        if (gridMatch) {
+            const axis = { a: 0.1, b: 0.3, c: 0.5, d: 0.7, e: 0.9 };
+            return {
+                x: axis[gridMatch[1].toLowerCase()] || 0.5,
+                y: axis[gridMatch[2]] || 0.5
+            };
+        }
+
+        const aliases = new Map([
+            ['中', [0.5, 0.5]],
+            ['中心', [0.5, 0.5]],
+            ['中央', [0.5, 0.5]],
+            ['左', [0.3, 0.5]],
+            ['右', [0.7, 0.5]],
+            ['上', [0.5, 0.3]],
+            ['下', [0.5, 0.7]],
+            ['前', [0.5, 0.7]],
+            ['前方', [0.5, 0.7]],
+            ['前景', [0.5, 0.7]],
+            ['后', [0.5, 0.3]],
+            ['後', [0.5, 0.3]],
+            ['后方', [0.5, 0.3]],
+            ['後方', [0.5, 0.3]],
+            ['背景', [0.5, 0.3]],
+            ['左上', [0.3, 0.3]],
+            ['上左', [0.3, 0.3]],
+            ['右上', [0.7, 0.3]],
+            ['上右', [0.7, 0.3]],
+            ['左下', [0.3, 0.7]],
+            ['下左', [0.3, 0.7]],
+            ['右下', [0.7, 0.7]],
+            ['下右', [0.7, 0.7]],
+            ['左左', [0.1, 0.5]],
+            ['右右', [0.9, 0.5]],
+            ['上上', [0.5, 0.1]],
+            ['下下', [0.5, 0.9]],
+            ['左左上上', [0.1, 0.1]],
+            ['上上左左', [0.1, 0.1]],
+            ['右右上上', [0.9, 0.1]],
+            ['上上右右', [0.9, 0.1]],
+            ['左左下下', [0.1, 0.9]],
+            ['下下左左', [0.1, 0.9]],
+            ['右右下下', [0.9, 0.9]],
+            ['下下右右', [0.9, 0.9]]
+        ]);
+        if (aliases.has(raw)) {
+            const [x, y] = aliases.get(raw);
+            return { x, y };
+        }
+
+        if (/^[左右上下]+$/.test(raw)) {
+            const clamp = (num) => Math.max(0.1, Math.min(0.9, Math.round(num * 10) / 10));
+            const left = (raw.match(/左/g) || []).length;
+            const right = (raw.match(/右/g) || []).length;
+            const up = (raw.match(/上/g) || []).length;
+            const down = (raw.match(/下/g) || []).length;
+            return {
+                x: clamp(0.5 + (right - left) * 0.2),
+                y: clamp(0.5 + (down - up) * 0.2)
+            };
+        }
+
+        const lower = raw.toLowerCase();
+        const englishAliases = new Map([
+            ['center', [0.5, 0.5]],
+            ['middle', [0.5, 0.5]],
+            ['left', [0.3, 0.5]],
+            ['right', [0.7, 0.5]],
+            ['top', [0.5, 0.3]],
+            ['upper', [0.5, 0.3]],
+            ['bottom', [0.5, 0.7]],
+            ['lower', [0.5, 0.7]],
+            ['front', [0.5, 0.7]],
+            ['foreground', [0.5, 0.7]],
+            ['back', [0.5, 0.3]],
+            ['background', [0.5, 0.3]],
+            ['upperleft', [0.3, 0.3]],
+            ['topleft', [0.3, 0.3]],
+            ['upperright', [0.7, 0.3]],
+            ['topright', [0.7, 0.3]],
+            ['lowerleft', [0.3, 0.7]],
+            ['bottomleft', [0.3, 0.7]],
+            ['lowerright', [0.7, 0.7]],
+            ['bottomright', [0.7, 0.7]]
+        ]);
+        const englishKey = lower.replace(/[-_\s]+/g, '');
+        if (englishAliases.has(englishKey)) {
+            const [x, y] = englishAliases.get(englishKey);
+            return { x, y };
+        }
+
+        return null;
+    }
+
+    _resolveNovelAICharacterDepthTag(value = '') {
+        const key = String(value || '').trim().toLowerCase().replace(/[-_\s]+/g, '');
+        if (['前', '前方', '前景', 'front', 'foreground'].includes(key)) return 'foreground';
+        if (['后', '後', '后方', '後方', '背景', 'back', 'background'].includes(key)) return 'background';
+        return '';
+    }
+
+    _extractNovelAICharacterPosition(text = '') {
+        let position = null;
+        const depthTags = [];
+        const content = String(text || '').replace(/\{\s*(?:位置|position)\s*[:：]?\s*([^{}]+?)\s*\}/gi, (match, value) => {
+            if (!position) position = this._resolveNovelAICharacterPosition(value);
+            const depthTag = this._resolveNovelAICharacterDepthTag(value);
+            if (depthTag && !depthTags.includes(depthTag)) depthTags.push(depthTag);
+            return '';
+        });
+        return {
+            content: [content, ...depthTags].filter(Boolean).join(', '),
+            position
+        };
+    }
+
+    _trimNovelAIPromptSeparators(text = '') {
+        return String(text || '')
+            .replace(/([,，、；;])(?:\s*[,，、；;])+/g, '$1')
+            .replace(/^\s*[,，、；;]+\s*|\s*[,，、；;]+\s*$/g, '')
+            .trim();
+    }
+
+    _parseNovelAICharacterPromptSyntax(prompt = '', negativePrompt = '') {
+        const source = String(prompt || '');
+        const characters = [];
+        const blockPattern = /\{\s*人物\s*([\s\S]*?)\s*人物\s*\}/g;
+        let match;
+
+        while ((match = blockPattern.exec(source)) && characters.length < 6) {
+            const rawBlock = String(match[1] || '');
+            const positionResult = this._extractNovelAICharacterPosition(rawBlock);
+            let charText = positionResult.content;
+            let charNegative = '';
+            const negativeMatch = charText.match(/(?:^|[,，]\s*)ntags\s*=\s*([\s\S]*)$/i);
+            if (negativeMatch) {
+                charNegative = negativeMatch[1] || '';
+                charText = charText.slice(0, negativeMatch.index);
+            }
+
+            const charCaption = this._trimNovelAIPromptSeparators(charText);
+            const negativeCaption = this._trimNovelAIPromptSeparators(charNegative);
+            if (!charCaption && !negativeCaption) continue;
+            characters.push({
+                charCaption,
+                negativeCaption,
+                center: positionResult.position
+            });
+        }
+
+        if (characters.length === 0) {
+            return {
+                baseCaption: source.trim(),
+                negativeBaseCaption: String(negativePrompt || '').trim(),
+                characters: [],
+                useCoords: false
+            };
+        }
+
+        const baseCaption = this._trimNovelAIPromptSeparators(source.replace(blockPattern, ''));
+        const useCoords = characters.every(item => item.center);
+        if (!useCoords) {
+            characters.forEach((item) => {
+                item.center = null;
+            });
+        }
+
+        return {
+            baseCaption,
+            negativeBaseCaption: String(negativePrompt || '').trim(),
+            characters,
+            useCoords
+        };
+    }
+
+    _buildNovelAICharCaptions(characters = [], key = 'charCaption') {
+        return (Array.isArray(characters) ? characters : [])
+            .map((item) => {
+                const entry = {
+                    char_caption: String(item?.[key] || '').trim()
+                };
+                if (item?.center) entry.centers = [item.center];
+                return entry;
+            });
+    }
+
+    async _buildNovelAIPayload(options, config) {
+        const appKey = String(options.app || '').trim().toLowerCase();
+        const aiPrompt = String(options.prompt || '').trim();
+        const parsedV4Prompt = this._isNovelAIV4PlusModel(config.model)
+            ? this._parseNovelAICharacterPromptSyntax(aiPrompt, '')
+            : null;
+        const rawPrompt = this._joinPrompt([
+            config.fixedPrompt,
+            parsedV4Prompt ? parsedV4Prompt.baseCaption : aiPrompt,
+            config.fixedPromptEnd
+        ]);
+        const rawNegativePrompt = this._joinPrompt([
+            config.negativePrompt,
+            options.negativePrompt
+        ]);
+        const prompt = rawPrompt;
+        const negativePrompt = rawNegativePrompt;
+        const seed = Number(options.seed ?? config.seed);
+        let width = Number(options.width || config.width);
+        let height = Number(options.height || config.height);
+        let scale = Number(options.scale ?? config.scale);
+        let steps = Number(options.steps || config.steps);
+        const cfgRescale = Number(options.cfgRescale ?? config.cfgRescale);
+        const novelAIReferences = this._normalizeNovelAIReferences(options);
+        const novelAIVibes = await this._resolveNovelAIVibeReferences(options, config);
+        const resolvedSeed = Number.isFinite(seed) && seed >= 0
+            ? Math.floor(seed)
+            : Math.floor(Math.random() * 4294967295);
+
+        const parameters = {
+            width,
+            height,
+            scale,
+            sampler: config.sampler,
+            steps,
+            n_samples: 1,
+            ucPreset: 0,
+            qualityToggle: false,
+            sm: false,
+            sm_dyn: false,
+            cfg_rescale: cfgRescale,
+            noise_schedule: config.schedule,
+            seed: resolvedSeed,
+            negative_prompt: negativePrompt
+        };
+
+        if (this._isNovelAIV4PlusModel(config.model)) {
+            Object.assign(parameters, {
+                params_version: 3,
+                dynamic_thresholding: false,
+                controlnet_strength: 1,
+                legacy: false,
+                add_original_image: false,
+                legacy_v3_extend: false,
+                deliberate_euler_ancestral_bug: false,
+                v4_prompt: {
+                    caption: {
+                        base_caption: prompt,
+                        char_captions: this._buildNovelAICharCaptions(parsedV4Prompt?.characters, 'charCaption')
+                    },
+                    use_coords: parsedV4Prompt?.useCoords === true,
+                    use_order: true,
+                    legacy_uc: false
+                },
+                v4_negative_prompt: {
+                    caption: {
+                        base_caption: negativePrompt,
+                        char_captions: this._buildNovelAICharCaptions(parsedV4Prompt?.characters, 'negativeCaption')
+                    },
+                    use_coords: parsedV4Prompt?.useCoords === true,
+                    use_order: true,
+                    legacy_uc: false
+                }
+            });
+            if (config.novelAISkipCfgCompat !== false) {
+                const skipCfgAboveSigma = this._getNovelAISkipCfgAboveSigma(config);
+                if (Number.isFinite(skipCfgAboveSigma)) {
+                    parameters.skip_cfg_above_sigma = skipCfgAboveSigma;
+                }
+            }
+
+            if (novelAIReferences.length > 0) {
+                Object.assign(parameters, {
+                    director_reference_images: novelAIReferences.map(item => item.image),
+                    director_reference_descriptions: novelAIReferences.map(() => ({
+                        caption: {
+                            base_caption: 'character&style',
+                            char_captions: []
+                        },
+                        legacy_uc: false
+                    })),
+                    director_reference_information_extracted: novelAIReferences.map(item => item.informationExtracted),
+                    director_reference_strength_values: novelAIReferences.map(item => item.strength),
+                    director_reference_secondary_strength_values: novelAIReferences.map(() => 0)
+                });
+            }
+
+            if (novelAIVibes.length > 0) {
+                Object.assign(parameters, {
+                    reference_image_multiple: novelAIVibes.map(item => item.image),
+                    reference_information_extracted_multiple: novelAIVibes.map(item => item.informationExtracted),
+                    reference_strength_multiple: novelAIVibes.map(item => item.strength),
+                    normalize_reference_strength_multiple: this._getBool('phone-image-novelai-vibe-normalize-strength', false)
+                });
+            }
+        }
+
+        return {
+            input: prompt,
+            model: config.model,
+            action: 'generate',
+            parameters
+        };
+    }
+
+    previewFinalPrompt(options = {}) {
+        const config = this.getConfig(options);
+        const prompt = String(options.prompt || '').trim();
+        return {
+            provider: config.provider,
+            app: String(options.app || '').trim().toLowerCase(),
+            model: config.model,
+            fixedPrompt: config.fixedPrompt,
+            aiPrompt: prompt,
+            fixedPromptEnd: config.fixedPromptEnd,
+            positivePrompt: config.provider === 'siliconflow'
+                ? this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd], '，')
+                : this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd]),
+            negativePrompt: this._joinPrompt([config.negativePrompt, options.negativePrompt]),
+            seed: Number(options.seed ?? config.seed)
+        };
+    }
+
+    async fetchSdModels(baseUrl) {
+        const normalizedUrl = this._normalizeSdBaseUrl(baseUrl || this._get('phone-image-sd-url', 'http://127.0.0.1:7860'));
+        if (!normalizedUrl) throw new Error('未配置 Stable Diffusion 服务地址');
+
+        const now = Date.now();
+        if (
+            this._sdModelsCache &&
+            this._sdModelsCacheUrl === normalizedUrl &&
+            now - this._sdModelsCacheTime < this._sdModelsCacheTtl
+        ) {
+            return this._sdModelsCache;
+        }
+
+        if (this._isSillyTavern()) {
+            try {
+                const response = await this._sdProxyRequest('models', { url: normalizedUrl });
+                if (response.ok) {
+                    const data = await response.json().catch(() => null);
+                    let models = Array.isArray(data) ? data : [];
+                    if (models.length > 0 && models[0]?.value !== undefined && models[0]?.text !== undefined) {
+                        models = models.map(item => ({
+                            title: String(item.value || item.text || ''),
+                            model_name: String(item.text || item.value || '').replace(/\.[^.]+$/, ''),
+                            hash: String(item.value || ''),
+                            config: null
+                        }));
+                    }
+                    if (models.length > 0) {
+                        this._sdModelsCache = models;
+                        this._sdModelsCacheUrl = normalizedUrl;
+                        this._sdModelsCacheTime = now;
+                        return models;
+                    }
+                }
+            } catch (err) {
+                console.warn('[SD] 代理获取模型列表失败，尝试直连:', err);
+            }
+        }
+
+        const endpoints = ['/sdapi/v1/sd-models', '/api/sd-models'];
+        let lastError = '';
+        for (const endpoint of endpoints) {
+            try {
+                const response = await this._sdDirectRequest(`${normalizedUrl}${endpoint}`, {
+                    method: 'GET',
+                    headers: this._buildSdHeaders({ Accept: 'application/json' })
+                });
+                if (!response.ok) {
+                    lastError = `HTTP ${response.status}: ${endpoint}`;
+                    continue;
+                }
+                const models = await response.json();
+                if (Array.isArray(models)) {
+                    this._sdModelsCache = models;
+                    this._sdModelsCacheUrl = normalizedUrl;
+                    this._sdModelsCacheTime = now;
+                    return models;
+                }
+                lastError = `${endpoint} 返回格式不是数组`;
+            } catch (err) {
+                lastError = `${endpoint}: ${err?.message || err}`;
+            }
+        }
+
+        throw new Error(`SD 模型列表获取失败${lastError ? `: ${lastError}` : ''}。请确认 SD WebUI 已启动并开启 --api。`);
+    }
+
+    async _fetchSdProxyList(baseUrl, proxyEndpoint, mapper = item => item) {
+        if (!this._isSillyTavern() || !proxyEndpoint) return [];
+        const normalizedUrl = this._normalizeSdBaseUrl(baseUrl || this._get('phone-image-sd-url', 'http://127.0.0.1:7860'));
+        if (!normalizedUrl) return [];
+        try {
+            const response = await this._sdProxyRequest(proxyEndpoint, {
+                url: normalizedUrl,
+                auth: this._get('phone-image-sd-auth', '')
+            });
+            if (!response.ok) return [];
+            const payload = await response.json().catch(() => null);
+            return this._mapSdListItems(payload, mapper);
+        } catch (err) {
+            console.warn(`[SD] 代理获取列表失败 ${proxyEndpoint}:`, err);
+            return [];
+        }
+    }
+
+    async _fetchSdList(baseUrl, endpoints, mapper = item => item, proxyEndpoint = '') {
+        const normalizedUrl = this._normalizeSdBaseUrl(baseUrl || this._get('phone-image-sd-url', 'http://127.0.0.1:7860'));
+        if (!normalizedUrl) return [];
+        const endpointList = Array.isArray(endpoints) ? endpoints : [endpoints];
+        for (const endpoint of endpointList) {
+            try {
+                const response = await this._sdDirectRequest(`${normalizedUrl}${endpoint}`, {
+                    method: 'GET',
+                    headers: this._buildSdHeaders({ Accept: 'application/json' })
+                });
+                if (!response.ok) continue;
+                const payload = await response.json();
+                const directItems = this._mapSdListItems(payload, mapper);
+                if (directItems.length) return directItems;
+            } catch (err) {
+                console.warn(`[SD] 获取列表失败 ${endpoint}:`, err);
+            }
+        }
+        const proxyItems = await this._fetchSdProxyList(normalizedUrl, proxyEndpoint, mapper);
+        if (proxyItems.length) return proxyItems;
+        return [];
+    }
+
+    async _refreshSdLoraIndex(baseUrl) {
+        const normalizedUrl = this._normalizeSdBaseUrl(baseUrl || this._get('phone-image-sd-url', 'http://127.0.0.1:7860'));
+        if (!normalizedUrl) return;
+        const endpoints = ['/sdapi/v1/refresh-loras', '/api/refresh-loras'];
+        for (const endpoint of endpoints) {
+            try {
+                const response = await this._sdDirectRequest(`${normalizedUrl}${endpoint}`, {
+                    method: 'POST',
+                    headers: this._buildSdHeaders({ Accept: 'application/json' })
+                });
+                if (response.ok) return;
+            } catch (err) {
+                console.warn(`[SD] 刷新 LoRA 索引失败 ${endpoint}:`, err);
+            }
+        }
+    }
+
+    async fetchSdSamplers(baseUrl) {
+        return this._fetchSdList(baseUrl, ['/sdapi/v1/samplers', '/api/samplers'], item => item?.name || item?.label || item?.value || item?.text, 'samplers');
+    }
+
+    async fetchSdSchedulers(baseUrl) {
+        return this._fetchSdList(baseUrl, ['/sdapi/v1/schedulers', '/api/schedulers'], item => item?.name || item?.label || item?.value || item?.text, 'schedulers');
+    }
+
+    async fetchSdVae(baseUrl) {
+        return this._fetchSdList(baseUrl, ['/sdapi/v1/sd-vae', '/api/sd-vae'], item => item?.model_name || item?.name || item?.filename || item?.value || item?.text, 'vaes');
+    }
+
+    async fetchSdUpscalers(baseUrl) {
+        return this._fetchSdList(baseUrl, ['/sdapi/v1/upscalers', '/api/upscalers'], item => item?.name || item?.label || item?.value || item?.text, 'upscalers');
+    }
+
+    async fetchSdLoras(baseUrl) {
+        await this._refreshSdLoraIndex(baseUrl).catch(() => {});
+        return this._fetchSdList(baseUrl, ['/sdapi/v1/loras', '/api/loras'], item => {
+            const name = item?.name || item?.alias || item?.metadata?.ss_output_name || item?.value || item?.text;
+            return name || String(item?.path || item?.filename || '').replace(/\\/g, '/').split('/').pop()?.replace(/\.(safetensors|ckpt|pt)$/i, '');
+        }, 'loras');
+    }
+
+    async fetchSdResources(baseUrl) {
+        const [models, samplers, schedulers, vae, upscalers, loras] = await Promise.all([
+            this.fetchSdModels(baseUrl).catch(() => []),
+            this.fetchSdSamplers(baseUrl).catch(() => []),
+            this.fetchSdSchedulers(baseUrl).catch(() => []),
+            this.fetchSdVae(baseUrl).catch(() => []),
+            this.fetchSdUpscalers(baseUrl).catch(() => []),
+            this.fetchSdLoras(baseUrl).catch(() => [])
+        ]);
+        return { models, samplers, schedulers, vae, upscalers, loras };
+    }
+
+    _getComfyUIInputOptions(objectInfo, classType, inputName) {
+        const input = objectInfo?.[classType]?.input?.required?.[inputName]
+            || objectInfo?.[classType]?.input?.optional?.[inputName]
+            || null;
+        const first = Array.isArray(input) ? input[0] : input;
+        if (!Array.isArray(first)) return [];
+        return first.map(item => String(item || '').trim()).filter(Boolean);
+    }
+
+    _getComfyUILoraOptions(objectInfo) {
+        const groups = [];
+        Object.entries(objectInfo || {}).forEach(([classType, definition]) => {
+            const displayName = String(definition?.display_name || definition?.name || classType || '');
+            if (!/lora/i.test(`${classType} ${displayName}`)) return;
+            const inputs = {
+                ...(definition?.input?.required || {}),
+                ...(definition?.input?.optional || {})
+            };
+            Object.entries(inputs).forEach(([inputName, input]) => {
+                if (!/lora/i.test(inputName)) return;
+                const options = Array.isArray(input) ? input[0] : null;
+                if (!Array.isArray(options) || !options.every(item => typeof item === 'string')) return;
+                groups.push(options);
+            });
+        });
+        return this._uniqueComfyUIItems(...groups);
+    }
+
+    _uniqueComfyUIItems(...groups) {
+        const seen = new Set();
+        const values = [];
+        groups.flat().forEach((item) => {
+            const value = String(item || '').trim();
+            if (!value || seen.has(value)) return;
+            seen.add(value);
+            values.push(value);
+        });
+        return values;
+    }
+
+    async fetchComfyUIResources(baseUrl = null, options = {}) {
+        const normalizedUrl = baseUrl
+            ? this._normalizeComfyUIBaseUrl(baseUrl)
+            : this._getComfyUIEndpointUrl(options);
+        if (!normalizedUrl) throw new Error('未配置 ComfyUI 服务地址');
+        const transport = this._normalizeComfyUITransport(
+            options.comfyuiTransport || this._get('phone-image-comfyui-transport', 'tavern')
+        );
+        const cacheKey = `${transport}:${normalizedUrl}`;
+
+        const now = Date.now();
+        if (
+            options.forceRefresh !== true &&
+            this._comfyUIResourcesCache &&
+            this._comfyUIResourcesCacheUrl === cacheKey &&
+            now - this._comfyUIResourcesCacheTime < this._comfyUIResourcesCacheTtl
+        ) {
+            return this._comfyUIResourcesCache;
+        }
+
+        if (transport === 'tavern') {
+            const readResource = async (endpoint) => {
+                const response = await this._sdProxyRequest(
+                    `comfy/${endpoint}`,
+                    { url: normalizedUrl },
+                    'POST',
+                    { signal: options.signal }
+                );
+                const text = await response.text().catch(() => '');
+                let payload = null;
+                try { payload = text ? JSON.parse(text) : null; } catch (e) { payload = null; }
+                if (!response.ok) {
+                    throw new Error(`酒馆 ComfyUI ${endpoint} 代理请求失败：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ''}`);
+                }
+                return payload;
+            };
+            const [models, samplers, schedulers, vae, proxyLoras] = await Promise.all([
+                readResource('models'),
+                readResource('samplers'),
+                readResource('schedulers'),
+                readResource('vaes'),
+                readResource('loras').catch(() => null)
+            ]);
+            let loras = this._mapSdListItems(proxyLoras, item => item?.value || item?.text || item);
+            if (!loras.length) {
+                try {
+                    const directResponse = await fetch(`${normalizedUrl}/object_info`, {
+                        method: 'GET',
+                        headers: { Accept: 'application/json' },
+                        signal: options.signal
+                    });
+                    if (directResponse.ok) {
+                        loras = this._getComfyUILoraOptions(await directResponse.json());
+                    }
+                } catch (e) {
+                    // Older SillyTavern versions do not proxy LoRA metadata. The UI still allows manual names.
+                }
+            }
+            const resources = {
+                models: this._mapSdListItems(models, item => item?.value || item?.text || item),
+                samplers: this._mapSdListItems(samplers),
+                schedulers: this._mapSdListItems(schedulers),
+                vae: this._mapSdListItems(vae),
+                clips: [],
+                loras
+            };
+            this._comfyUIResourcesCache = resources;
+            this._comfyUIResourcesCacheUrl = cacheKey;
+            this._comfyUIResourcesCacheTime = now;
+            return resources;
+        }
+
+        const response = await fetch(`${normalizedUrl}/object_info`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(`ComfyUI object_info 读取失败：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ''}`);
+        }
+        const objectInfo = await response.json();
+        const resources = {
+            models: this._uniqueComfyUIItems(
+                this._getComfyUIInputOptions(objectInfo, 'CheckpointLoaderSimple', 'ckpt_name'),
+                this._getComfyUIInputOptions(objectInfo, 'CheckpointLoader', 'ckpt_name'),
+                this._getComfyUIInputOptions(objectInfo, 'UNETLoader', 'unet_name')
+            ),
+            samplers: this._uniqueComfyUIItems(
+                this._getComfyUIInputOptions(objectInfo, 'KSampler', 'sampler_name'),
+                this._getComfyUIInputOptions(objectInfo, 'KSamplerAdvanced', 'sampler_name')
+            ),
+            schedulers: this._uniqueComfyUIItems(
+                this._getComfyUIInputOptions(objectInfo, 'KSampler', 'scheduler'),
+                this._getComfyUIInputOptions(objectInfo, 'KSamplerAdvanced', 'scheduler')
+            ),
+            vae: this._uniqueComfyUIItems(
+                this._getComfyUIInputOptions(objectInfo, 'VAELoader', 'vae_name')
+            ),
+            clips: this._uniqueComfyUIItems(
+                this._getComfyUIInputOptions(objectInfo, 'CLIPLoader', 'clip_name'),
+                this._getComfyUIInputOptions(objectInfo, 'DualCLIPLoader', 'clip_name1'),
+                this._getComfyUIInputOptions(objectInfo, 'DualCLIPLoader', 'clip_name2')
+            ),
+            loras: this._getComfyUILoraOptions(objectInfo)
+        };
+        this._comfyUIResourcesCache = resources;
+        this._comfyUIResourcesCacheUrl = cacheKey;
+        this._comfyUIResourcesCacheTime = now;
+        return resources;
+    }
+
+    _getDefaultComfyUIWorkflow() {
+        return {
+            "3": {
+                inputs: {
+                    seed: "%seed%",
+                    steps: "%steps%",
+                    cfg: "%cfg_scale%",
+                    sampler_name: "%sampler_name%",
+                    scheduler: "%scheduler%",
+                    denoise: 1,
+                    model: ["4", 0],
+                    positive: ["6", 0],
+                    negative: ["7", 0],
+                    latent_image: ["5", 0]
+                },
+                class_type: "KSampler"
+            },
+            "4": {
+                inputs: {
+                    ckpt_name: "%MODEL_NAME%"
+                },
+                class_type: "CheckpointLoaderSimple"
+            },
+            "5": {
+                inputs: {
+                    width: "%width%",
+                    height: "%height%",
+                    batch_size: 1
+                },
+                class_type: "EmptyLatentImage"
+            },
+            "6": {
+                inputs: {
+                    text: "%prompt%",
+                    clip: ["4", 1]
+                },
+                class_type: "CLIPTextEncode"
+            },
+            "7": {
+                inputs: {
+                    text: "%negative_prompt%",
+                    clip: ["4", 1]
+                },
+                class_type: "CLIPTextEncode"
+            },
+            "8": {
+                inputs: {
+                    samples: ["3", 0],
+                    vae: ["4", 2]
+                },
+                class_type: "VAEDecode"
+            },
+            "9": {
+                inputs: {
+                    filename_prefix: "YuzukiPhone",
+                    images: ["8", 0]
+                },
+                class_type: "SaveImage"
+            }
+        };
+    }
+
+    _parseComfyUIWorkflow(workflowText) {
+        const raw = String(workflowText || '').trim();
+        if (!raw) return this._getDefaultComfyUIWorkflow();
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (err) {
+            throw new Error(`ComfyUI 工作流 JSON 解析失败：${err?.message || err}`);
+        }
+        if (Array.isArray(parsed?.workflows) && parsed.workflows.length > 0) {
+            const first = parsed.workflows[0];
+            parsed = typeof first?.workflow === 'string'
+                ? JSON.parse(first.workflow)
+                : (first?.workflow ?? first?.prompt ?? first);
+        } else if (parsed?.workflow && typeof parsed.workflow === 'object') {
+            parsed = parsed.workflow;
+        } else if (typeof parsed?.workflow === 'string') {
+            parsed = JSON.parse(parsed.workflow);
+        }
+        if (parsed?.nodes && Array.isArray(parsed.nodes)) {
+            return this._convertComfyUIWorkflowToApiPrompt(parsed);
+        }
+        const prompt = parsed?.prompt && typeof parsed.prompt === 'object' ? parsed.prompt : parsed;
+        if (!prompt || typeof prompt !== 'object' || Array.isArray(prompt)) {
+            throw new Error('ComfyUI 工作流必须是 API 格式 JSON 对象');
+        }
+        return prompt;
+    }
+
+    _convertComfyUIWorkflowToApiPrompt(workflow) {
+        const nodes = Array.isArray(workflow?.nodes) ? workflow.nodes : [];
+        const links = Array.isArray(workflow?.links) ? workflow.links : [];
+        if (!nodes.length) throw new Error('ComfyUI UI 工作流缺少 nodes');
+
+        const nodeById = new Map(nodes.map(node => [String(node?.id || ''), node]).filter(([id]) => id));
+        const originByLinkId = new Map();
+        const bypassNodes = new Set();
+        nodes.forEach((node) => {
+            if (Number(node?.mode ?? 0) === 4) bypassNodes.add(String(node?.id || ''));
+        });
+
+        const linkMap = new Map();
+        links.forEach((link) => {
+            if (!Array.isArray(link) || link.length < 5) return;
+            const linkId = String(link[0]);
+            const originId = String(link[1]);
+            const originSlot = Number(link[2]) || 0;
+            linkMap.set(linkId, [originId, originSlot]);
+            originByLinkId.set(linkId, { originId, originSlot });
+        });
+
+        const findBypassSource = (bypassNode, originSlot, seen = new Set()) => {
+            const bypassId = String(bypassNode?.id || '');
+            if (!bypassId || seen.has(bypassId)) return null;
+            seen.add(bypassId);
+            const inputs = Array.isArray(bypassNode?.inputs) ? bypassNode.inputs : [];
+            const preferred = inputs[originSlot] || inputs.find(input => input?.link !== null && input?.link !== undefined);
+            const linkId = preferred?.link !== null && preferred?.link !== undefined ? String(preferred.link) : '';
+            const source = linkId ? originByLinkId.get(linkId) : null;
+            if (!source) return null;
+            if (!bypassNodes.has(source.originId)) return [source.originId, source.originSlot];
+            return findBypassSource(nodeById.get(source.originId), source.originSlot, seen);
+        };
+
+        const resolveLink = (linkId) => {
+            const source = linkMap.get(String(linkId));
+            if (!source) return null;
+            const [originId, originSlot] = source;
+            if (!bypassNodes.has(originId)) return source;
+            return findBypassSource(nodeById.get(originId), originSlot) || source;
+        };
+
+        const shouldSkipNode = (node) => {
+            const mode = Number(node?.mode ?? 0);
+            const classType = String(node?.type || '').trim();
+            // LiteGraph mode 2 = never, 4 = bypass. Bypass nodes are rewired through resolveLink().
+            return mode === 2
+                || mode === 4
+                || /^(note|markdownnote|label(?:\s*\(rgthree\))?)$/i.test(classType);
+        };
+        const widgetInputs = (node) => (Array.isArray(node?.inputs) ? node.inputs : [])
+            .filter(input => input?.widget && input?.name);
+        const seedInputNames = new Set(['seed', 'noise_seed']);
+        const controlAfterGenerateValues = new Set(['fixed', 'randomize', 'increment', 'decrement']);
+        const prompt = {};
+
+        nodes.forEach((node) => {
+            if (!node || shouldSkipNode(node)) return;
+            const id = String(node.id || '').trim();
+            const classType = String(node.type || '').trim();
+            if (!id || !classType) return;
+
+            const inputs = {};
+            const widgets = Array.isArray(node.widgets_values) ? node.widgets_values : [];
+            let widgetIndex = 0;
+
+            (Array.isArray(node.inputs) ? node.inputs : []).forEach((input) => {
+                const name = String(input?.name || '').trim();
+                if (!name) return;
+
+                const hasWidget = !!input?.widget;
+                const linked = input?.link !== null && input?.link !== undefined && linkMap.has(String(input.link));
+                if (linked) {
+                    const resolved = resolveLink(input.link);
+                    if (resolved) inputs[name] = resolved;
+                } else if (hasWidget && widgetIndex < widgets.length) {
+                    inputs[name] = widgets[widgetIndex];
+                }
+
+                if (hasWidget) {
+                    widgetIndex += 1;
+                    if (
+                        seedInputNames.has(name) &&
+                        widgetIndex < widgets.length &&
+                        controlAfterGenerateValues.has(String(widgets[widgetIndex] || '').toLowerCase())
+                    ) {
+                        widgetIndex += 1;
+                    }
+                }
+            });
+
+            // Some primitive/custom nodes expose widget values without declaring widget inputs.
+            if (Object.keys(inputs).length === 0 && widgetInputs(node).length === 0 && widgets.length > 0) {
+                const classKey = classType.toLowerCase();
+                if (/primitive|string|text/.test(classKey)) {
+                    inputs.value = widgets[0];
+                } else if (/seed/.test(classKey)) {
+                    inputs.seed = widgets[0];
+                }
+            }
+
+            prompt[id] = {
+                inputs,
+                class_type: classType
+            };
+            const title = String(node.title || node.properties?.['Node name for S&R'] || '').trim();
+            if (title) prompt[id]._meta = { title };
+        });
+
+        Object.entries(prompt).forEach(([nodeId, node]) => {
+            Object.entries(node.inputs || {}).forEach(([inputName, value]) => {
+                if (!Array.isArray(value) || value.length < 1) return;
+                if (!prompt[String(value[0])]) {
+                    delete node.inputs[inputName];
+                }
+            });
+            if (!node.inputs || typeof node.inputs !== 'object') node.inputs = {};
+            if (!node.class_type) delete prompt[nodeId];
+        });
+
+        if (Object.keys(prompt).length === 0) {
+            throw new Error('ComfyUI UI 工作流转换失败：没有可提交的节点');
+        }
+        return this._optimizeConvertedComfyUIPrompt(prompt);
+    }
+
+    _optimizeConvertedComfyUIPrompt(prompt) {
+        const graph = prompt && typeof prompt === 'object' && !Array.isArray(prompt) ? prompt : {};
+        const getNode = (id) => graph[String(id)] || null;
+        const getInput = (id, name) => getNode(id)?.inputs?.[name];
+        const resolveLink = (value) => {
+            if (!Array.isArray(value) || value.length < 1) return value;
+            const node = getNode(value[0]);
+            if (!node) return value;
+            const type = String(node.class_type || '');
+            if (/^(PrimitiveBoolean|BooleanConstant)$/i.test(type) && Object.prototype.hasOwnProperty.call(node.inputs || {}, 'value')) {
+                return Boolean(node.inputs.value);
+            }
+            if (/^(PrimitiveInt|IntConstant|PrimitiveFloat|FloatConstant)$/i.test(type) && Object.prototype.hasOwnProperty.call(node.inputs || {}, 'value')) {
+                return node.inputs.value;
+            }
+            return value;
+        };
+
+        Object.values(graph).forEach((node) => {
+            Object.entries(node.inputs || {}).forEach(([inputName, value]) => {
+                const resolved = resolveLink(value);
+                if (resolved !== value) node.inputs[inputName] = resolved;
+            });
+        });
+
+        Object.entries(graph).forEach(([nodeId, node]) => {
+            const type = String(node?.class_type || '');
+            if (!/input switch$/i.test(type)) return;
+            const booleanValue = resolveLink(node.inputs?.boolean);
+            if (typeof booleanValue !== 'boolean') return;
+            const selected = booleanValue
+                ? (node.inputs?.conditioning_a ?? node.inputs?.image_a ?? node.inputs?.input_a)
+                : (node.inputs?.conditioning_b ?? node.inputs?.image_b ?? node.inputs?.input_b);
+            if (selected === undefined) return;
+            Object.values(graph).forEach((targetNode) => {
+                Object.entries(targetNode.inputs || {}).forEach(([inputName, value]) => {
+                    if (Array.isArray(value) && String(value[0]) === nodeId) {
+                        targetNode.inputs[inputName] = selected;
+                    }
+                });
+            });
+            delete graph[nodeId];
+        });
+
+        let changed = true;
+        while (changed) {
+            changed = false;
+            const referenced = new Set();
+            Object.values(graph).forEach((node) => {
+                Object.values(node.inputs || {}).forEach((value) => {
+                    if (Array.isArray(value) && value.length > 0) referenced.add(String(value[0]));
+                });
+            });
+            Object.entries(graph).forEach(([nodeId, node]) => {
+                const type = String(node?.class_type || '');
+                const isUnreferencedHelper = !referenced.has(nodeId)
+                    && /^(Fast Bypasser \(rgthree\)|PrimitiveBoolean|BooleanConstant|PrimitiveInt|IntConstant|PrimitiveFloat|FloatConstant)$/i.test(type);
+                if (isUnreferencedHelper) {
+                    delete graph[nodeId];
+                    changed = true;
+                }
+            });
+        }
+
+        return graph;
+    }
+
+    _replaceComfyUIPlaceholders(value, replacements) {
+        if (Array.isArray(value)) {
+            return value.map(item => this._replaceComfyUIPlaceholders(item, replacements));
+        }
+        if (value && typeof value === 'object') {
+            const next = {};
+            Object.entries(value).forEach(([key, item]) => {
+                next[key] = this._replaceComfyUIPlaceholders(item, replacements);
+            });
+            return next;
+        }
+        if (typeof value !== 'string') return value;
+        if (Object.prototype.hasOwnProperty.call(replacements, value)) {
+            return replacements[value];
+        }
+        return value.replace(/%[A-Za-z0-9_\u3400-\u9fff]+%/g, token => {
+            if (!Object.prototype.hasOwnProperty.call(replacements, token)) return token;
+            const replacement = replacements[token];
+            return replacement === null || replacement === undefined ? '' : String(replacement);
+        });
+    }
+
+    _parseComfyUINodeMapping(mappingText) {
+        const raw = typeof mappingText === 'string' ? mappingText.trim() : mappingText;
+        if (!raw) return {};
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+        try {
+            const parsed = JSON.parse(String(raw));
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('映射配置必须是 JSON 对象');
+            }
+            return parsed;
+        } catch (err) {
+            throw new Error(`ComfyUI 节点映射 JSON 解析失败：${err?.message || err}`);
+        }
+    }
+
+    _normalizeComfyUIVideoOutputsForApp(workflow, appKey = '') {
+        const normalizedApp = String(appKey || '').trim().toLowerCase();
+        let videoOutputCount = 0;
+        let adjustedOutputCount = 0;
+
+        Object.values(workflow || {}).forEach((node) => {
+            if (String(node?.class_type || '').trim() !== 'VHS_VideoCombine') return;
+            const inputs = node?.inputs;
+            if (!inputs || typeof inputs !== 'object') return;
+
+            videoOutputCount += 1;
+            if (normalizedApp !== 'honey') return;
+
+            const format = String(inputs.format || '').trim().toLowerCase();
+            let changed = false;
+            if (format === 'video/h265-mp4' || format === 'video/hevc-mp4') {
+                inputs.format = 'video/h264-mp4';
+                changed = true;
+            }
+            if (String(inputs.format || '').trim().toLowerCase() === 'video/h264-mp4'
+                && String(inputs.pix_fmt || '').trim().toLowerCase() !== 'yuv420p') {
+                inputs.pix_fmt = 'yuv420p';
+                changed = true;
+            }
+            if (changed) adjustedOutputCount += 1;
+        });
+
+        return {
+            workflow,
+            videoOutputCount,
+            adjustedOutputCount
+        };
+    }
+
+    _canInjectComfyUIWanReferenceImage(workflow, appKey = '') {
+        if (String(appKey || '').trim().toLowerCase() !== 'honey') return false;
+        const visited = new Set();
+        const reachesLoadImage = (value) => {
+            if (!Array.isArray(value) || value.length < 2) return false;
+            const nodeId = String(value[0] || '').trim();
+            if (!nodeId || visited.has(nodeId)) return false;
+            visited.add(nodeId);
+            const node = workflow?.[nodeId];
+            if (!node || typeof node !== 'object') return false;
+            if (String(node.class_type || '').trim() === 'LoadImage') return true;
+            return Object.values(node.inputs || {}).some(reachesLoadImage);
+        };
+
+        return Object.values(workflow || {}).some((node) => (
+            String(node?.class_type || '').trim() === 'WanImageToVideo'
+            && reachesLoadImage(node?.inputs?.start_image)
+        ));
+    }
+
+    _injectComfyUIWanReferenceImage(workflow, referenceImage, appKey = '') {
+        const filename = String(referenceImage?.filename || '').trim();
+        if (!filename || !this._canInjectComfyUIWanReferenceImage(workflow, appKey)) return 0;
+
+        const visited = new Set();
+        let injectedCount = 0;
+        const visitUpstream = (value) => {
+            if (!Array.isArray(value) || value.length < 2) return;
+            const nodeId = String(value[0] || '').trim();
+            if (!nodeId || visited.has(nodeId)) return;
+            visited.add(nodeId);
+            const node = workflow?.[nodeId];
+            if (!node || typeof node !== 'object') return;
+
+            if (String(node.class_type || '').trim() === 'LoadImage' && node.inputs && typeof node.inputs === 'object') {
+                node.inputs.image = filename;
+                injectedCount += 1;
+            }
+            Object.values(node.inputs || {}).forEach(visitUpstream);
+        };
+
+        Object.values(workflow || {}).forEach((node) => {
+            if (String(node?.class_type || '').trim() !== 'WanImageToVideo') return;
+            visitUpstream(node?.inputs?.start_image);
+        });
+        return injectedCount;
+    }
+
+    _injectComfyUIEverywhereVae(workflow) {
+        const graph = workflow && typeof workflow === 'object' ? workflow : {};
+        const vaeEverywhere = Object.values(graph).find((node) => (
+            String(node?.class_type || '').trim() === 'Anything Everywhere'
+            && /vae/i.test(String(node?._meta?.title || ''))
+            && Array.isArray(node?.inputs?.anything)
+        ));
+        const vaeLink = vaeEverywhere?.inputs?.anything;
+        if (!Array.isArray(vaeLink) || vaeLink.length < 2 || !graph[String(vaeLink[0])]) return 0;
+
+        let injectedCount = 0;
+        Object.values(graph).forEach((node) => {
+            const classType = String(node?.class_type || '').trim();
+            if (classType !== 'WanImageToVideo' && !/^VAEDecode(?:Tiled)?$/i.test(classType)) return;
+            if (!node.inputs || typeof node.inputs !== 'object' || node.inputs.vae !== undefined) return;
+            node.inputs.vae = [...vaeLink];
+            injectedCount += 1;
+        });
+        return injectedCount;
+    }
+
+    _injectComfyUIHoneyRuntimeInputs(workflow, { appKey = '', positivePrompt = '', seed = 0 } = {}) {
+        if (String(appKey || '').trim().toLowerCase() !== 'honey') {
+            return { promptInjected: 0, seedInjected: 0 };
+        }
+
+        let promptInjected = 0;
+        let seedInjected = 0;
+        Object.values(workflow || {}).forEach((node) => {
+            const inputs = node?.inputs;
+            if (!inputs || typeof inputs !== 'object') return;
+            const classType = String(node.class_type || '').trim();
+            const title = String(node?._meta?.title || '').trim();
+
+            if (/^(?:positive|video|motion) prompt$/i.test(title)) {
+                if (Object.prototype.hasOwnProperty.call(inputs, 'value')) {
+                    inputs.value = positivePrompt;
+                    promptInjected += 1;
+                } else if (typeof inputs.text === 'string') {
+                    inputs.text = positivePrompt;
+                    promptInjected += 1;
+                }
+            }
+            if (/^Seed(?: \(rgthree\))?$/i.test(classType)
+                && Object.prototype.hasOwnProperty.call(inputs, 'seed')) {
+                inputs.seed = seed;
+                seedInjected += 1;
+            }
+        });
+        return { promptInjected, seedInjected };
+    }
+
+    _injectComfyUILoras(workflow, loras = []) {
+        const graph = workflow && typeof workflow === 'object' && !Array.isArray(workflow) ? workflow : {};
+        const normalizedLoras = this._normalizeComfyUILoras(loras);
+        if (!normalizedLoras.length) return { injectedCount: 0, nodeIds: [] };
+
+        const entries = Object.entries(graph);
+        const isLink = value => Array.isArray(value) && value.length >= 2 && graph[String(value[0])];
+        const normalizeLoraIdentity = (name) => String(name || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .replace(/\.(?:safetensors|ckpt|pt|bin)$/i, '')
+            .toLowerCase();
+        const toLoraManagerName = (name) => String(name || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .replace(/\.(?:safetensors|ckpt|pt|bin)$/i, '');
+        const formatStrength = (strength) => String(
+            Math.round((Number(strength) || 0) * 1000) / 1000
+        );
+
+        const loraManagerCandidates = entries
+            .filter(([, node]) => /^Lora Loader \(LoraManager\)$/i.test(String(node?.class_type || '').trim()))
+            .map(([nodeId, node]) => {
+                let downstreamLinks = 0;
+                let modelClipLinks = 0;
+                entries.forEach(([, candidate]) => {
+                    Object.entries(candidate?.inputs || {}).forEach(([inputName, value]) => {
+                        if (!isLink(value) || String(value[0]) !== String(nodeId)) return;
+                        downstreamLinks += 1;
+                        if (
+                            (inputName === 'model' && Number(value[1]) === 0)
+                            || (inputName === 'clip' && Number(value[1]) === 1)
+                        ) {
+                            modelClipLinks += 1;
+                        }
+                    });
+                });
+                return { nodeId, node, downstreamLinks, modelClipLinks };
+            })
+            .filter(item => item.modelClipLinks > 0)
+            .sort((a, b) => (
+                b.modelClipLinks - a.modelClipLinks
+                || b.downstreamLinks - a.downstreamLinks
+            ));
+
+        if (loraManagerCandidates.length) {
+            const { nodeId, node } = loraManagerCandidates[0];
+            const inputs = node.inputs && typeof node.inputs === 'object' ? node.inputs : (node.inputs = {});
+            const lorasValue = Array.isArray(inputs?.loras?.__value__)
+                ? inputs.loras.__value__
+                : (Array.isArray(inputs.loras) ? inputs.loras : []);
+            const mergedLoras = lorasValue.map(item => (
+                item && typeof item === 'object' ? { ...item } : item
+            ));
+            const selectedByIdentity = new Map(
+                normalizedLoras.map(lora => [normalizeLoraIdentity(lora.name), lora])
+            );
+            const appliedIdentities = new Set();
+
+            mergedLoras.forEach((item) => {
+                if (!item || typeof item !== 'object') return;
+                const identity = normalizeLoraIdentity(item.name);
+                const selected = selectedByIdentity.get(identity);
+                if (!selected || appliedIdentities.has(identity)) return;
+                const strength = formatStrength(selected.strength);
+                item.name = toLoraManagerName(selected.name);
+                item.strength = strength;
+                item.clipStrength = strength;
+                item.active = true;
+                appliedIdentities.add(identity);
+            });
+
+            normalizedLoras.forEach((lora) => {
+                const identity = normalizeLoraIdentity(lora.name);
+                if (appliedIdentities.has(identity)) return;
+                const strength = formatStrength(lora.strength);
+                mergedLoras.push({
+                    name: toLoraManagerName(lora.name),
+                    strength,
+                    active: true,
+                    expanded: false,
+                    clipStrength: strength,
+                    selected: false,
+                    locked: false
+                });
+                appliedIdentities.add(identity);
+            });
+
+            inputs.loras = { __value__: mergedLoras };
+            let managerText = String(inputs.text || '').trim();
+            normalizedLoras.forEach((lora) => {
+                const identity = normalizeLoraIdentity(lora.name);
+                const syntax = `<lora:${toLoraManagerName(lora.name)}:${formatStrength(lora.strength)}>`;
+                let replaced = false;
+                managerText = managerText.replace(/<lora:([^:>]+):[^>]+>/gi, (match, name) => {
+                    if (replaced || normalizeLoraIdentity(name) !== identity) return match;
+                    replaced = true;
+                    return syntax;
+                });
+                if (!replaced) managerText = [managerText, syntax].filter(Boolean).join(' ');
+            });
+            inputs.text = managerText;
+
+            return {
+                injectedCount: normalizedLoras.length,
+                nodeIds: [nodeId],
+                mode: 'lora-manager'
+            };
+        }
+
+        const findSource = (inputName, preferredTypePattern) => {
+            const preferred = entries.find(([, node]) => (
+                preferredTypePattern.test(String(node?.class_type || ''))
+                && isLink(node?.inputs?.[inputName])
+            ));
+            if (preferred) return [...preferred[1].inputs[inputName]];
+            const fallback = entries.find(([, node]) => (
+                !/lora/i.test(String(node?.class_type || ''))
+                && isLink(node?.inputs?.[inputName])
+            ));
+            return fallback ? [...fallback[1].inputs[inputName]] : null;
+        };
+        const modelSource = findSource('model', /KSampler|SamplerCustom|BasicGuider|CFGGuider/i);
+        const clipSource = findSource('clip', /CLIPTextEncode/i);
+        if (!modelSource || !clipSource) {
+            throw new Error('当前工作流找不到可连接 LoRA 的 MODEL/CLIP 输入；请使用标准 LoraLoader 节点工作流，或取消所选 LoRA');
+        }
+
+        let nextNumericId = Math.max(
+            99999,
+            ...Object.keys(graph).map(id => (/^\d+$/.test(id) ? Number(id) : 0))
+        ) + 1;
+        const nodeIds = [];
+        let currentModelLink = modelSource;
+        let currentClipLink = clipSource;
+        normalizedLoras.forEach((lora) => {
+            while (graph[String(nextNumericId)]) nextNumericId += 1;
+            const nodeId = String(nextNumericId++);
+            graph[nodeId] = {
+                inputs: {
+                    model: [...currentModelLink],
+                    clip: [...currentClipLink],
+                    lora_name: lora.name,
+                    strength_model: lora.strength,
+                    strength_clip: lora.strength
+                },
+                class_type: 'LoraLoader',
+                _meta: { title: `Yuzuki Phone LoRA ${nodeIds.length + 1}` }
+            };
+            nodeIds.push(nodeId);
+            currentModelLink = [nodeId, 0];
+            currentClipLink = [nodeId, 1];
+        });
+
+        const insertedIds = new Set(nodeIds);
+        Object.entries(graph).forEach(([nodeId, node]) => {
+            if (insertedIds.has(nodeId) || !node?.inputs) return;
+            Object.entries(node.inputs).forEach(([inputName, value]) => {
+                if (!isLink(value)) return;
+                if (inputName === 'model' && String(value[0]) === String(modelSource[0]) && Number(value[1]) === Number(modelSource[1])) {
+                    node.inputs[inputName] = [...currentModelLink];
+                } else if (inputName === 'clip' && String(value[0]) === String(clipSource[0]) && Number(value[1]) === Number(clipSource[1])) {
+                    node.inputs[inputName] = [...currentClipLink];
+                }
+            });
+        });
+        return { injectedCount: nodeIds.length, nodeIds, mode: 'standard-loader' };
+    }
+
+    _buildComfyUIWorkflow(options, config, referenceImages = []) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+        const normalizedReferenceImages = (Array.isArray(referenceImages) ? referenceImages : [referenceImages])
+            .filter(Boolean);
+        const primaryReferenceImage = normalizedReferenceImages[0] || null;
+
+        const appKey = String(options.app || '').trim().toLowerCase();
+        const appDefaults = this._getAppDefaultSize(appKey);
+        let width = Number(options.width || config.width);
+        let height = Number(options.height || config.height);
+        let steps = Number(options.steps || config.steps);
+        let scale = Number(options.scale ?? config.scale);
+        let cfgRescale = Number(options.cfgRescale ?? config.cfgRescale);
+        let seed = Number(options.seed ?? config.seed);
+
+        if (appKey === 'honey') {
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width < 512 || height < 768) {
+                width = appDefaults.width;
+                height = appDefaults.height;
+            }
+            if (!Number.isFinite(steps) || steps < 20) steps = 28;
+            if (!Number.isFinite(scale) || scale < 1) scale = 7;
+        }
+        width = Math.max(64, Math.min(2048, Math.round(width || appDefaults.width)));
+        height = Math.max(64, Math.min(2048, Math.round(height || appDefaults.height)));
+        steps = Math.max(1, Math.min(150, Math.round(steps || 28)));
+        scale = Number.isFinite(scale) ? Math.max(0, Math.min(50, scale)) : 7;
+        cfgRescale = Number.isFinite(cfgRescale) ? Math.max(0, Math.min(1, cfgRescale)) : 0;
+        if (!Number.isFinite(seed) || seed < 0) {
+            seed = Math.floor(Math.random() * 4294967295);
+        } else {
+            seed = Math.floor(seed);
+        }
+
+        const isVideoPrompt = String(options.comfyuiPromptKind || '').trim().toLowerCase() === 'video';
+        const positivePrompt = isVideoPrompt
+            ? prompt
+            : this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd]);
+        const negativePrompt = this._joinPrompt([config.negativePrompt, options.negativePrompt]);
+        const replacements = {
+            '%prompt%': positivePrompt,
+            '%positive_prompt%': positivePrompt,
+            '%fixed_prompt%': String(config.fixedPrompt || ''),
+            '%main_prompt%': prompt,
+            '%fixed_prompt_end%': String(config.fixedPromptEnd || ''),
+            '%video_prompt%': prompt,
+            '%VIDEO_PROMPT%': prompt,
+            '%motion_prompt%': prompt,
+            '%MOTION_PROMPT%': prompt,
+            '%honey_video_prompt%': prompt,
+            '%视频提示词%': prompt,
+            '%negative_prompt%': negativePrompt,
+            '%width%': width,
+            '%height%': height,
+            '%steps%': steps,
+            '%cfg_scale%': scale,
+            '%cfg%': scale,
+            '%cfg_rescale%': cfgRescale,
+            '%rescale_cfg%': cfgRescale,
+            '%guidance_rescale%': cfgRescale,
+            '%seed%': seed,
+            '%sampler_name%': config.comfyuiSampler,
+            '%scheduler%': config.comfyuiScheduler,
+            '%MODEL_NAME%': config.comfyuiModel,
+            '%model%': config.comfyuiModel,
+            '%VAE%': config.comfyuiVae,
+            '%vae%': config.comfyuiVae,
+            '%CLIP_NAME%': config.comfyuiClip,
+            '%clip_name%': config.comfyuiClip,
+            '%clip%': config.comfyuiClip,
+            '%ipa%': '',
+            '%c_quanzhong%': scale,
+            '%c_idquanzhong%': scale,
+            '%c_xijie%': scale,
+            '%c_fenwei%': scale,
+            '%reference_image%': primaryReferenceImage?.filename || '',
+            '%reference_image_filename%': primaryReferenceImage?.filename || '',
+            '%reference_image_subfolder%': primaryReferenceImage?.subfolder || '',
+            '%reference_image_type%': primaryReferenceImage?.type || 'input',
+            '%comfyui_reference_image%': primaryReferenceImage?.filename || '',
+            '%comfyuicankaoImage%': primaryReferenceImage?.filename || '',
+            '%comfyuicankaotupian%': primaryReferenceImage?.filename || ''
+        };
+        const workflowTemplate = this._parseComfyUIWorkflow(config.comfyuiWorkflow);
+        const referencePlaceholderInfo = this._getComfyUIReferencePlaceholderInfo(workflowTemplate);
+        for (let index = 1; index <= referencePlaceholderInfo.slotCount; index++) {
+            const fallbackIndex = Math.min(index - 1, Math.max(0, normalizedReferenceImages.length - 1));
+            const referenceImage = normalizedReferenceImages[fallbackIndex] || null;
+            const filename = referenceImage?.filename || '';
+            const subfolder = referenceImage?.subfolder || '';
+            const type = referenceImage?.type || 'input';
+            Object.assign(replacements, {
+                [`%reference_image_${index}%`]: filename,
+                [`%reference_image_filename_${index}%`]: filename,
+                [`%reference_image_${index}_filename%`]: filename,
+                [`%reference_image_subfolder_${index}%`]: subfolder,
+                [`%reference_image_${index}_subfolder%`]: subfolder,
+                [`%reference_image_type_${index}%`]: type,
+                [`%reference_image_${index}_type%`]: type,
+                [`%comfyui_reference_image_${index}%`]: filename,
+                [`%comfyuicankaoImage_${index}%`]: filename,
+                [`%comfyuicankaotupian_${index}%`]: filename
+            });
+        }
+        const requiresModel = !String(config.comfyuiWorkflow || '').trim()
+            || JSON.stringify(workflowTemplate).includes('%MODEL_NAME%')
+            || JSON.stringify(workflowTemplate).includes('%model%');
+        const requiresReferenceImage = referencePlaceholderInfo.hasAny;
+        const workflow = this._replaceComfyUIPlaceholders(workflowTemplate, replacements);
+        const loraInjection = this._injectComfyUILoras(workflow, config.comfyuiLoras);
+        const vaeInjectedCount = this._injectComfyUIEverywhereVae(workflow);
+        const runtimeInputs = this._injectComfyUIHoneyRuntimeInputs(workflow, {
+            appKey,
+            positivePrompt,
+            seed
+        });
+        const referenceImageInjectedCount = this._injectComfyUIWanReferenceImage(workflow, primaryReferenceImage, appKey);
+        const videoCompatibility = this._normalizeComfyUIVideoOutputsForApp(workflow, appKey);
+        return {
+            workflow: videoCompatibility.workflow,
+            positivePrompt,
+            negativePrompt,
+            width,
+            height,
+            steps,
+            scale,
+            cfgRescale,
+            seed,
+            requiresModel,
+            requiresReferenceImage,
+            referenceImageCount: normalizedReferenceImages.length,
+            referenceImageSlotCount: referencePlaceholderInfo.slotCount,
+            isVideoWorkflow: videoCompatibility.videoOutputCount > 0,
+            videoCompatibilityAdjusted: videoCompatibility.adjustedOutputCount > 0,
+            referenceImageInjected: referenceImageInjectedCount > 0,
+            loraInjectedCount: loraInjection.injectedCount,
+            vaeInjected: vaeInjectedCount > 0,
+            promptInjected: runtimeInputs.promptInjected > 0,
+            seedInjected: runtimeInputs.seedInjected > 0
+        };
+    }
+
+    _extractComfyUIMedia(historyPayload, promptId) {
+        const root = promptId && historyPayload?.[promptId] ? historyPayload[promptId] : historyPayload;
+        const outputs = root?.outputs || historyPayload?.outputs || {};
+        const candidates = [];
+        const videoExtensionPattern = /\.(?:mp4|webm|mov|mkv)(?:[?#].*)?$/i;
+
+        Object.entries(outputs || {}).forEach(([outputNodeId, output]) => {
+            [
+                ['images', 'image'],
+                ['videos', 'video'],
+                ['gifs', 'image']
+            ].forEach(([bucket, defaultMediaType]) => {
+                const items = Array.isArray(output?.[bucket]) ? output[bucket] : [];
+                items.forEach((item) => {
+                    const filename = String(item?.filename || '');
+                    if (!filename.trim()) return;
+                    const mediaType = defaultMediaType === 'video' || videoExtensionPattern.test(filename)
+                        ? 'video'
+                        : 'image';
+                    const lowerName = filename.toLowerCase();
+                    let priority = mediaType === 'video' ? 1000 : 100;
+                    if (lowerName.includes('final')) priority += 200;
+                    else if (lowerName.includes('combined')) priority += 100;
+                    if (String(item?.type || '').trim().toLowerCase() === 'output') priority += 10;
+                    candidates.push({
+                        filename,
+                        subfolder: String(item?.subfolder || '').trim(),
+                        type: String(item?.type || 'output').trim() || 'output',
+                        mediaType,
+                        outputNodeId: String(outputNodeId || '').trim(),
+                        priority
+                    });
+                });
+            });
+        });
+
+        candidates.sort((a, b) => b.priority - a.priority);
+        return candidates[0] || null;
+    }
+
+    _extractComfyUIMediaByClientId(historyPayload, clientId) {
+        const targetClientId = String(clientId || '').trim();
+        if (!targetClientId || !historyPayload || typeof historyPayload !== 'object') return null;
+
+        for (const [promptId, entry] of Object.entries(historyPayload).reverse()) {
+            const promptMeta = Array.isArray(entry?.prompt) ? entry.prompt[3] : null;
+            if (String(promptMeta?.client_id || '').trim() !== targetClientId) continue;
+            const media = this._extractComfyUIMedia(entry, promptId);
+            if (media?.filename) return { promptId, media };
+        }
+        return null;
+    }
+
+    async _waitForComfyUIHistoryByClientId(baseUrl, clientId, signal = null, timeoutMs = 8000) {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < Math.max(1000, Number(timeoutMs) || 8000)) {
+            if (signal?.aborted) throw new Error('ComfyUI 请求已取消');
+            const response = await fetch(`${baseUrl}/history`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                signal
+            });
+            if (response.ok) {
+                const payload = await response.json().catch(() => null);
+                const recovered = this._extractComfyUIMediaByClientId(payload, clientId);
+                if (recovered) return recovered;
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        return null;
+    }
+
+    async _waitForComfyUIHistory(baseUrl, promptId, signal = null, timeoutMs = 300000) {
+        const startedAt = Date.now();
+        const safeTimeoutMs = Math.max(30000, Math.min(30 * 60 * 1000, Number(timeoutMs) || 300000));
+        while (Date.now() - startedAt < safeTimeoutMs) {
+            if (signal?.aborted) throw new Error('ComfyUI 请求已取消');
+            const response = await fetch(`${baseUrl}/history/${encodeURIComponent(promptId)}`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                signal
+            });
+            if (response.ok) {
+                const payload = await response.json().catch(() => null);
+                const media = this._extractComfyUIMedia(payload, promptId);
+                if (media?.filename) return media;
+                const status = payload?.[promptId]?.status || payload?.status || {};
+                const messages = Array.isArray(status?.messages) ? status.messages : [];
+                const errorMessage = messages
+                    .map(item => Array.isArray(item) ? item.join(' ') : String(item || ''))
+                    .find(text => /error|exception/i.test(text));
+                if (errorMessage) throw new Error(`ComfyUI 执行失败：${errorMessage.slice(0, 240)}`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        throw new Error('ComfyUI 生成超时，请检查工作流或本地队列');
+    }
+
+    async _readComfyUIOutput(baseUrl, output, signal = null) {
+        const params = new URLSearchParams({
+            filename: output.filename,
+            subfolder: output.subfolder || '',
+            type: output.type || 'output'
+        });
+        const isVideoOutput = /\.(?:mp4|webm|mov|mkv)(?:[?#].*)?$/i.test(String(output.filename || ''));
+        const maxAttempts = isVideoOutput ? 12 : 3;
+        let lastStatus = 0;
+        let lastText = '';
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            if (signal?.aborted) throw new Error('ComfyUI 请求已取消');
+            const response = await fetch(`${baseUrl}/view?${params.toString()}`, {
+                method: 'GET',
+                signal
+            });
+            lastStatus = response.status;
+            if (response.ok) {
+                const blob = await response.blob();
+                if (blob && blob.size > 0) return blob;
+                lastText = 'ComfyUI 返回空输出';
+            } else {
+                lastText = await response.text().catch(() => '');
+                if (![404, 425, 503].includes(response.status)) break;
+            }
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, isVideoOutput ? 1000 : 350));
+            }
+        }
+
+        throw new Error(`ComfyUI 输出读取失败：HTTP ${lastStatus || '-'}${lastText ? ` ${lastText.slice(0, 120)}` : ''}`);
+    }
+
+    async _readComfyUIImage(baseUrl, image, signal = null) {
+        const blob = await this._readComfyUIOutput(baseUrl, image, signal);
+        return this._blobToDataUrl(blob);
+    }
+
+    async _buildComfyUIOutputResult({ baseUrl, mediaRef, promptId = '', prompt, config, built, signal = null }) {
+        const commonResult = {
+            provider: 'comfyui',
+            model: config.comfyuiModel,
+            prompt,
+            width: built.width,
+            height: built.height,
+            requestedWidth: built.width,
+            requestedHeight: built.height,
+            steps: built.steps,
+            sampler: config.comfyuiSampler,
+            scheduler: config.comfyuiScheduler,
+            scale: built.scale,
+            seed: built.seed,
+            promptId,
+            positivePrompt: built.positivePrompt,
+            negativePrompt: built.negativePrompt,
+            nodeMapping: null,
+            missingReferenceSubmitted: built.missingReferenceSubmitted
+        };
+
+        if (mediaRef.mediaType === 'video') {
+            const rawVideoBlob = await this._readComfyUIOutput(baseUrl, mediaRef, signal);
+            const extension = String(mediaRef.filename || '').split('.').pop()?.toLowerCase() || '';
+            const expectedMimeType = extension === 'webm' ? 'video/webm' : 'video/mp4';
+            const videoBlob = /^video\//i.test(String(rawVideoBlob.type || ''))
+                ? rawVideoBlob
+                : rawVideoBlob.slice(0, rawVideoBlob.size, expectedMimeType);
+            return {
+                ...commonResult,
+                mediaType: 'video',
+                videoBlob,
+                videoFilename: mediaRef.filename,
+                videoSubfolder: mediaRef.subfolder,
+                videoCompatibilityAdjusted: built.videoCompatibilityAdjusted
+            };
+        }
+
+        const imageData = await this._readComfyUIImage(baseUrl, mediaRef, signal);
+        const imageInfo = await this._waitForImageDecode(imageData).catch((err) => {
+            throw new Error(`ComfyUI 返回图片不可用: ${err?.message || err}`);
+        });
+        return {
+            ...commonResult,
+            mediaType: 'image',
+            width: imageInfo.width || built.width,
+            height: imageInfo.height || built.height,
+            imageData,
+            imageUrl: imageData
+        };
+    }
+
+    async _uploadComfyUIReferenceImage(baseUrl, imageData, signal = null) {
+        const blob = this._dataUrlToBlob(imageData);
+        if (!blob) return null;
+        const ext = /jpe?g/i.test(blob.type) ? 'jpg' : (/webp/i.test(blob.type) ? 'webp' : 'png');
+        const filename = `yuzuki_ref_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const formData = new FormData();
+        formData.append('image', blob, filename);
+        formData.append('type', 'input');
+        formData.append('overwrite', 'true');
+
+        const response = await fetch(`${baseUrl}/upload/image`, {
+            method: 'POST',
+            body: formData,
+            signal
+        });
+        const text = await response.text();
+        let payload = null;
+        try {
+            payload = text ? JSON.parse(text) : null;
+        } catch (err) {
+            payload = null;
+        }
+        if (!response.ok) {
+            const message = payload?.error || payload?.message || text;
+            throw new Error(`ComfyUI 参考图上传失败：HTTP ${response.status}${message ? ` ${String(message).slice(0, 160)}` : ''}`);
+        }
+        return {
+            filename: String(payload?.name || payload?.filename || filename).trim() || filename,
+            subfolder: String(payload?.subfolder || '').trim(),
+            type: String(payload?.type || 'input').trim() || 'input'
+        };
+    }
+
+    buildSdModelHashMap(models) {
+        const map = new Map();
+        (Array.isArray(models) ? models : []).forEach((model) => {
+            const names = [
+                model?.model_name,
+                model?.name,
+                model?.title,
+                model?.value,
+                model?.text
+            ].map(item => String(item || '').trim()).filter(Boolean);
+            const hash = String(model?.hash || model?.sha256 || '').trim();
+            if (!hash) return;
+            names.forEach((name) => {
+                map.set(name, hash);
+                map.set(name.toLowerCase(), hash);
+                map.set(name.replace(/\.[^.]+$/, ''), hash);
+                map.set(name.replace(/\.[^.]+$/, '').toLowerCase(), hash);
+            });
+        });
+        return map;
+    }
+
+    async getSdModelHash(baseUrl, modelName) {
+        const name = String(modelName || '').trim();
+        if (!name) return null;
+        const models = await this.fetchSdModels(baseUrl);
+        const map = this.buildSdModelHashMap(models);
+        return map.get(name) || map.get(name.toLowerCase()) || null;
+    }
+
+    _extractSdImage(payload) {
+        return this._extractImageResult(payload, { allowUrl: true });
+    }
+
+    _extractOpenAIImage(payload) {
+        return this._extractImageResult(payload, { allowUrl: true });
+    }
+
+    _resolveOpenAIEndpoint(config) {
+        const site = String(config.openaiSite || 'official').trim() || 'official';
+        const baseUrl = site === 'public'
+            ? this._normalizeApiBaseUrl(config.openaiPublicUrl)
+            : (site === 'custom'
+                ? this._normalizeApiBaseUrl(config.openaiCustomUrl)
+                : 'https://api.openai.com');
+        if (!baseUrl) throw new Error(site === 'public' ? '请先填写 GPT 公益站点 Base URL' : '请先填写 GPT 自定义 Base URL');
+        if (/\/(?:v1\/)?images\/generations$/i.test(baseUrl)) return baseUrl;
+        if (/\/images$/i.test(baseUrl)) return `${baseUrl}/generations`;
+        if (/\/v1$/i.test(baseUrl)) return `${baseUrl}/images/generations`;
+        return `${baseUrl}/v1/images/generations`;
+    }
+
+    _resolveOpenAIModelsEndpoint(config) {
+        const generationEndpoint = this._resolveOpenAIEndpoint(config);
+        return generationEndpoint.replace(/\/(?:images\/generations|images\/edits|images\/variations)$/i, '/models');
+    }
+
+    _resolveOpenAIChatEndpoint(config) {
+        const site = String(config.openaiSite || 'official').trim() || 'official';
+        const baseUrl = site === 'public'
+            ? this._normalizeApiBaseUrl(config.openaiPublicUrl)
+            : (site === 'custom'
+                ? this._normalizeApiBaseUrl(config.openaiCustomUrl)
+                : 'https://api.openai.com');
+        if (!baseUrl) throw new Error(site === 'public' ? '请先填写 GPT 公益站点 Base URL' : '请先填写 GPT 自定义 Base URL');
+        if (/\/(?:v1\/)?chat\/completions$/i.test(baseUrl)) return baseUrl;
+        if (/\/chat$/i.test(baseUrl)) return `${baseUrl}/completions`;
+        if (/\/v1$/i.test(baseUrl)) return `${baseUrl}/chat/completions`;
+        return `${baseUrl}/v1/chat/completions`;
+    }
+
+    _resolveOpenAIRelayEndpoint(config, endpoint) {
+        if (String(config.openaiSite || '').trim() !== 'public') return endpoint;
+        const relayBaseUrl = this._normalizeApiBaseUrl(config.openaiPublicRelayUrl);
+        if (!relayBaseUrl) return endpoint;
+        const relayPath = /\/models$/i.test(endpoint) ? '/v1/models' : '/v1/images/generations';
+        if (/\/v1\/models$/i.test(relayBaseUrl) || /\/v1\/images\/generations$/i.test(relayBaseUrl)) return relayBaseUrl;
+        if (/\/v1$/i.test(relayBaseUrl)) return `${relayBaseUrl}${relayPath.replace(/^\/v1/i, '')}`;
+        return `${relayBaseUrl}${relayPath}`;
+    }
+
+    _getOpenAIProxyBaseUrl(endpoint) {
+        return String(endpoint || '').trim().replace(/\/(?:chat\/completions|images\/generations|images\/edits|images\/variations|models)\/?$/i, '').replace(/\/+$/, '');
+    }
+
+    _getOpenAIAuthHeader(config) {
+        const apiKey = String(config.apiKey || '').trim();
+        return apiKey ? (apiKey.startsWith('Bearer ') ? apiKey : `Bearer ${apiKey}`) : '';
+    }
+
+    _buildOpenAIProxyPayload(config, endpoint, extra = {}) {
+        const authHeader = this._getOpenAIAuthHeader(config);
+        const baseUrl = this._getOpenAIProxyBaseUrl(endpoint);
+        const customHeaders = { 'Content-Type': 'application/json' };
+        if (authHeader) customHeaders.Authorization = authHeader;
+        return {
+            chat_completion_source: 'openai',
+            reverse_proxy: baseUrl || endpoint,
+            custom_url: endpoint,
+            proxy_password: String(config.apiKey || '').trim(),
+            custom_include_headers: customHeaders,
+            ...extra
+        };
+    }
+
+    async _fetchOpenAIViaSillyTavernProxy(config, endpoint, payload, options = {}) {
+        const proxyPayload = this._buildOpenAIProxyPayload(config, endpoint, payload);
+        let response = await this._stProxyRequest('/api/backends/chat-completions/generate', proxyPayload, {
+            signal: options.signal
+        });
+        if (!response.ok) {
+            const errText = await response.clone().text().catch(() => '');
+            if (/csrf|forbidden|unauthori[sz]ed|invalid token/i.test(`${response.status} ${errText}`)) {
+                response = await this._stProxyRequest('/api/backends/chat-completions/generate', proxyPayload, {
+                    forceRefresh: true,
+                    signal: options.signal
+                });
+            }
+        }
+        const text = await response.text();
+        let parsed = null;
+        try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }
+        if (!response.ok) {
+            const msg = parsed?.error?.message || parsed?.message || parsed?.error || text || '';
+            throw new Error(`酒馆后端代理请求失败 (${response.status})${msg ? `: ${String(msg).slice(0, 240)}` : ''}`);
+        }
+        return parsed || text;
+    }
+
+    async _fetchOpenAIModelsViaSillyTavernProxy(config, targetEndpoint, signal) {
+        const proxyPayload = this._buildOpenAIProxyPayload(config, targetEndpoint);
+        let response = await this._stProxyRequest('/api/backends/chat-completions/status', proxyPayload, { signal });
+        if (!response.ok) {
+            const errText = await response.clone().text().catch(() => '');
+            if (/csrf|forbidden|unauthori[sz]ed|invalid token/i.test(`${response.status} ${errText}`)) {
+                response = await this._stProxyRequest('/api/backends/chat-completions/status', proxyPayload, {
+                    forceRefresh: true,
+                    signal
+                });
+            }
+        }
+        const text = await response.text();
+        let parsed = null;
+        try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }
+        if (!response.ok) {
+            const msg = parsed?.error?.message || parsed?.message || parsed?.error || text || '';
+            throw new Error(`酒馆后端代理模型拉取失败 (${response.status})${msg ? `: ${String(msg).slice(0, 240)}` : ''}`);
+        }
+        return parsed;
+    }
+
+    _buildOpenAIHeaders(config, extra = {}) {
+        const headers = {
+            ...extra,
+            Authorization: `Bearer ${config.apiKey}`
+        };
+        if (String(config.openaiSite || '').trim() === 'public' && String(config.openaiPublicRelayUrl || '').trim()) {
+            headers['X-OpenAI-Image-Relay-Target'] = this._normalizeApiBaseUrl(config.openaiPublicUrl);
+        }
+        return headers;
+    }
+
+    _normalizeOpenAIModelItems(payload) {
+        const source = Array.isArray(payload)
+            ? payload
+            : (Array.isArray(payload?.data)
+                ? payload.data
+                : (Array.isArray(payload?.models)
+                    ? payload.models
+                    : (Array.isArray(payload?.result) ? payload.result : [])));
+        const seen = new Set();
+        return source
+            .map((item) => {
+                const id = typeof item === 'string'
+                    ? item
+                    : String(item?.id || item?.model || item?.name || '').trim();
+                if (!id || seen.has(id)) return null;
+                seen.add(id);
+                const name = typeof item === 'string'
+                    ? item
+                    : String(item?.display_name || item?.displayName || item?.name || item?.id || id).trim();
+                return { id, name: name || id };
+            })
+            .filter(Boolean);
+    }
+
+    _rankOpenAIImageModel(model) {
+        const id = String(model?.id || '').toLowerCase();
+        if (!id) return 999;
+        if (id === 'gpt-image-2') return 0;
+        if (/^gpt-image-2(?:-|$)/.test(id)) return 1;
+        if (id === 'gpt-image-1.5') return 2;
+        if (/^gpt-image-1\.5(?:-|$)/.test(id)) return 3;
+        if (id === 'gpt-image-1') return 4;
+        if (id === 'gpt-image-1-mini') return 5;
+        if (/image|dall-e|flux|kolors|stable|sdxl|midjourney|mj/i.test(id)) return 20;
+        return 100;
+    }
+
+    async fetchOpenAIModels(overrides = {}) {
+        const config = {
+            ...this.getConfig({ ...overrides, provider: 'openai' }),
+            ...overrides,
+            provider: 'openai'
+        };
+        if (!String(config.apiKey || '').trim()) throw new Error('请先填写 GPT 生图 API Key');
+        const targetEndpoint = this._resolveOpenAIModelsEndpoint(config);
+        const endpoint = this._resolveOpenAIRelayEndpoint(config, targetEndpoint);
+        let payload = null;
+        let proxyError = null;
+        if (this._isSillyTavern() && !String(config.openaiPublicRelayUrl || '').trim()) {
+            try {
+                payload = await this._fetchOpenAIModelsViaSillyTavernProxy(config, targetEndpoint, overrides.signal);
+            } catch (err) {
+                proxyError = err;
+            }
+        }
+        if (!payload) {
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: this._buildOpenAIHeaders(config, {
+                    Accept: 'application/json'
+                }),
+                signal: overrides.signal
+            });
+            const text = await response.text();
+            try { payload = text ? JSON.parse(text) : null; } catch (e) { payload = null; }
+            if (!response.ok) {
+                const msg = payload?.error?.message || payload?.message || payload?.error || text || '';
+                const proxyMsg = proxyError ? `后端代理失败: ${proxyError.message}\n` : '';
+                throw new Error(`${proxyMsg}GPT 模型列表拉取失败 (${response.status})${msg ? `: ${String(msg).slice(0, 180)}` : ''}`);
+            }
+        }
+        const allModels = this._normalizeOpenAIModelItems(payload);
+        const imageModels = allModels
+            .filter((item) => this._rankOpenAIImageModel(item) < 100)
+            .sort((a, b) => this._rankOpenAIImageModel(a) - this._rankOpenAIImageModel(b) || a.id.localeCompare(b.id));
+        return {
+            endpoint: targetEndpoint,
+            relayEndpoint: endpoint !== targetEndpoint ? endpoint : '',
+            models: imageModels.length ? imageModels : allModels,
+            allModels,
+            filtered: imageModels.length > 0
+        };
+    }
+
+    _getOpenAIImageSize(model, width, height) {
+        const modelName = String(model || '').trim().toLowerCase();
+        const w = Number(width) || 1024;
+        const h = Number(height) || 1024;
+        const ratio = w / Math.max(1, h);
+        if (/^dall-e-3$/i.test(modelName)) {
+            if (ratio > 1.2) return '1792x1024';
+            if (ratio < 0.8) return '1024x1792';
+            return '1024x1024';
+        }
+        if (/^dall-e-2$/i.test(modelName)) {
+            return '1024x1024';
+        }
+        if (ratio > 1.2) return '1536x1024';
+        if (ratio < 0.8) return '1024x1536';
+        return '1024x1024';
+    }
+
+    _normalizeOpenAIImageQuality(model, quality) {
+        const modelName = String(model || '').trim().toLowerCase();
+        const value = String(quality || 'auto').trim().toLowerCase();
+        if (!value || value === 'auto') return '';
+        if (modelName === 'dall-e-3') {
+            return value === 'high' ? 'hd' : 'standard';
+        }
+        if (modelName === 'dall-e-2') return '';
+        return ['low', 'medium', 'high'].includes(value) ? value : '';
+    }
+
+    _shouldPreferOpenAIBase64(config) {
+        const site = String(config?.openaiSite || '').trim().toLowerCase();
+        return site === 'public' || site === 'custom';
+    }
+
+    _withOpenAIBase64OutputHints(payload) {
+        return {
+            ...payload,
+            response_format: 'b64_json',
+            return_base64: true,
+            extra_body: {
+                ...(payload?.extra_body || {}),
+                response_format: 'b64_json'
+            }
+        };
+    }
+
+    _isOpenAIBase64HintRejected(status, payload, text = '') {
+        const detail = [
+            payload?.error?.message,
+            payload?.message,
+            payload?.error,
+            text
+        ].map(item => String(item || '')).join('\n');
+        return Number(status) >= 400 && Number(status) < 500
+            && /response_format|return_base64|extra_body|unknown parameter|unsupported parameter|unrecognized|invalid/i.test(detail);
+    }
+
+    _extractOpenAIChatImage(payload) {
+        const direct = this._extractOpenAIImage(payload);
+        if (direct) return direct;
+        const content = payload?.summary
+            || payload?.choices?.[0]?.message?.content
+            || payload?.choices?.[0]?.text
+            || payload?.data?.choices?.[0]?.message?.content
+            || payload?.response
+            || payload?.text
+            || '';
+        return this._extractOpenAIImage(content);
+    }
+
+    _summarizeOpenAIImagePayload(payload) {
+        try {
+            if (payload === null || payload === undefined) return '空响应';
+            if (typeof payload === 'string') return payload.replace(/\s+/g, ' ').slice(0, 300);
+            const content = payload?.summary
+                || payload?.choices?.[0]?.message?.content
+                || payload?.choices?.[0]?.text
+                || payload?.data?.choices?.[0]?.message?.content
+                || payload?.message
+                || payload?.error?.message
+                || payload?.message?.content
+                || payload?.response
+                || payload?.text
+                || '';
+            if (content) return String(content).replace(/\s+/g, ' ').slice(0, 300);
+            return JSON.stringify(payload).replace(/\s+/g, ' ').slice(0, 300);
+        } catch {
+            return '无法解析响应摘要';
+        }
+    }
+
+    async _generateOpenAIChatImage(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+        if (!String(config.apiKey || '').trim()) throw new Error('请先填写 GPT 生图 API Key');
+        if (!this._isSillyTavern()) throw new Error('GPT 聊天接口生图需要在 SillyTavern 内通过酒馆后端代理请求');
+
+        const width = Number(options.width || config.width);
+        const height = Number(options.height || config.height);
+        const model = String(config.model || 'gpt-image-2').trim() || 'gpt-image-2';
+        const requestedSize = this._getOpenAIImageSize(model, width, height);
+        const endpoint = this._resolveOpenAIChatEndpoint(config);
+        const fullPrompt = this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd], '\n');
+        const negativePrompt = this._joinPrompt([config.negativePrompt, options.negativePrompt]);
+        const userPrompt = [
+            '请根据以下提示词生成一张图片，并且只返回最终图片。',
+            `尺寸：${requestedSize}`,
+            negativePrompt ? `避免：${negativePrompt}` : '',
+            '',
+            fullPrompt
+        ].filter(Boolean).join('\n');
+        const payload = {
+            model,
+            messages: [{ role: 'user', content: userPrompt }],
+            stream: false,
+            temperature: 0.7,
+            max_tokens: 4096,
+            mode: 'chat',
+            instruction_mode: 'chat'
+        };
+        this._debugOpenAIRequest({
+            endpoint,
+            payload,
+            config,
+            options,
+            requestMode: 'chat/completions',
+            positivePrompt: fullPrompt,
+            negativePrompt,
+            requestedSize,
+            quality: 'chat'
+        });
+        const result = await this._fetchOpenAIViaSillyTavernProxy(config, endpoint, payload, {
+            signal: options.signal
+        });
+        const imageData = this._extractOpenAIChatImage(result);
+        if (!imageData) {
+            throw new Error(`GPT 聊天接口未返回可用图片。返回摘要：${this._summarizeOpenAIImagePayload(result)}`);
+        }
+        const imageInfo = imageData.startsWith('data:image/')
+            ? await this._waitForImageDecode(imageData).catch(() => ({ width: 0, height: 0 }))
+            : { width: 0, height: 0 };
+        const [requestedWidth, requestedHeight] = requestedSize.split('x').map(Number);
+        return {
+            provider: 'openai',
+            model,
+            prompt,
+            width: imageInfo.width || requestedWidth || width,
+            height: imageInfo.height || requestedHeight || height,
+            requestedWidth: requestedWidth || width,
+            requestedHeight: requestedHeight || height,
+            quality: 'chat',
+            imageData,
+            imageUrl: imageData
+        };
+    }
+
+    _buildOpenAIErrorMessage(status, result, text) {
+        const rawText = String(text || '').trim();
+        const parsedMessage = String(result?.error?.message || result?.message || result?.error || '').trim();
+        const safetyMessage = this._buildOpenAISafetyErrorMessage(result, rawText);
+        if (safetyMessage) return safetyMessage;
+        const isHtmlError = /<html[\s>]|<!doctype\s+html/i.test(rawText);
+        if (status === 524) {
+            return 'GPT 生图上游超时 (524)，通常是公益站或其代理等待官方生图太久。可以稍后重试，或换模型/质量/站点。';
+        }
+        if (status === 502 || status === 503 || status === 504) {
+            return `GPT 生图上游服务暂不可用 (${status})，请稍后重试或检查公益站/中转。`;
+        }
+        if (parsedMessage) return parsedMessage;
+        if (isHtmlError) return `GPT 生图接口返回了 HTML 错误页 (${status})，请检查站点或中转服务。`;
+        return rawText.slice(0, 180);
+    }
+
+    _buildOpenAISafetyErrorMessage(result, rawText = '') {
+        const parts = [];
+        const push = (value) => {
+            const text = String(value || '').trim();
+            if (text) parts.push(text);
+        };
+        push(result?.error?.message);
+        push(result?.error?.code);
+        push(result?.error?.type);
+        push(result?.error?.param);
+        push(result?.message);
+        push(result?.detail);
+        push(result?.code);
+        push(result?.type);
+        push(rawText);
+        const joined = parts.join(' ').replace(/\s+/g, ' ').trim();
+        if (!this._looksLikeOpenAISafetyRefusal(joined)) return '';
+        const detail = String(result?.error?.message || result?.message || '').replace(/\s+/g, ' ').trim();
+        return detail
+            ? `GPT 生图被安全策略拒绝：${detail.slice(0, 180)}`
+            : 'GPT 生图被安全策略拒绝：提示词包含模型不允许生成的内容，请调整后重试。';
+    }
+
+    _looksLikeOpenAISafetyRefusal(text = '') {
+        return /content[_\s-]?policy|content[_\s-]?filter|safety|moderation|policy[_\s-]?violation|unsafe|disallowed|not allowed|blocked|rejected|refus|violate|sexual|explicit|nsfw|安全|策略|政策|审核|违规|拒绝|拦截|敏感|露骨|色情|成人内容/i.test(String(text || ''));
+    }
+
+    _normalizeSdLoraPrompt(value) {
+        return String(value || '')
+            .split(/[\n,，]+/)
+            .map(item => item.trim())
+            .filter(Boolean)
+            .map((item) => {
+                if (/^<lora:[^>]+>$/i.test(item)) return item;
+                const match = item.match(/^(.+?)(?:[:：]\s*([0-9.]+))?$/);
+                const name = String(match?.[1] || item).trim();
+                const weight = Number.parseFloat(match?.[2]);
+                const safeWeight = Number.isFinite(weight) ? Math.max(0, Math.min(2, weight)) : 1;
+                return name ? `<lora:${name}:${safeWeight}>` : '';
+            })
+            .filter(Boolean)
+            .join(', ');
+    }
+
+    async _generateStableDiffusion(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+
+        const baseUrl = this._normalizeSdBaseUrl(config.sdUrl);
+        if (!baseUrl) throw new Error('未配置 Stable Diffusion 服务地址');
+
+        const appKey = String(options.app || '').trim().toLowerCase();
+        const appDefaults = this._getAppDefaultSize(appKey);
+        let width = Number(options.width || config.width);
+        let height = Number(options.height || config.height);
+        let steps = Number(options.steps || config.steps);
+        let scale = Number(options.scale ?? config.scale);
+        const seed = Number(options.seed ?? config.seed);
+        const cfgRescale = Number(options.cfgRescale ?? config.cfgRescale);
+
+        if (appKey === 'honey') {
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width < 512 || height < 768) {
+                width = appDefaults.width;
+                height = appDefaults.height;
+            }
+            if (!Number.isFinite(steps) || steps < 20) steps = 28;
+            if (!Number.isFinite(scale) || scale < 1) scale = 7;
+        }
+
+        const modelName = String(config.model || '').trim();
+        const modelHash = await this.getSdModelHash(baseUrl, modelName).catch(() => null);
+        const loraPrompt = this._normalizeSdLoraPrompt(config.sdLora);
+        const positivePrompt = this._joinPrompt([config.fixedPrompt, loraPrompt, prompt, config.fixedPromptEnd]);
+        const negativePrompt = this._joinPrompt([config.negativePrompt, options.negativePrompt]);
+        const sdReferenceImages = this._normalizeSdReferenceImages(options);
+        const useImg2Img = sdReferenceImages.length > 0;
+        const payload = {
+            prompt: positivePrompt,
+            negative_prompt: negativePrompt,
+            width,
+            height,
+            steps,
+            cfg_scale: scale,
+            seed: Number.isFinite(seed) && seed >= 0 ? Math.floor(seed) : -1,
+            sampler_name: String(config.sampler || 'Euler a').trim() || 'Euler a',
+            batch_size: 1,
+            n_iter: 1,
+            restore_faces: Boolean(config.sdRestoreFaces)
+        };
+        if (useImg2Img) {
+            payload.init_images = sdReferenceImages;
+            payload.denoising_strength = this._clampReferenceValue(
+                options.denoisingStrength ?? options.sdDenoisingStrength ?? config.sdDenoisingStrength,
+                0.45,
+                0,
+                1
+            );
+        }
+
+        const overrideSettings = {};
+        if (modelName) {
+            overrideSettings.sd_model_checkpoint = modelName;
+        }
+        if (config.sdVae) {
+            overrideSettings.sd_vae = config.sdVae;
+        }
+        if (Number(config.sdClipSkip) > 0) {
+            overrideSettings.CLIP_stop_at_last_layers = Math.round(Number(config.sdClipSkip));
+        }
+        if (Object.keys(overrideSettings).length > 0) {
+            payload.override_settings = overrideSettings;
+        }
+        if (cfgRescale > 0) {
+            payload.cfg_rescale = cfgRescale;
+        }
+        if (config.sdScheduler) {
+            payload.scheduler = config.sdScheduler;
+        }
+        if (config.sdHiresFix && !useImg2Img) {
+            payload.enable_hr = true;
+            payload.hr_scale = Number(config.sdUpscaleFactor) || 1.5;
+            payload.hr_second_pass_steps = Math.max(0, Math.round(Number(config.sdHiresSteps) || 0));
+            payload.denoising_strength = Number(config.sdDenoisingStrength) || 0.45;
+            if (config.sdUpscaler) payload.hr_upscaler = config.sdUpscaler;
+        }
+        if (config.sdADetailer) {
+            payload.alwayson_scripts = {
+                ...(payload.alwayson_scripts || {}),
+                ADetailer: {
+                    args: [
+                        true,
+                        false,
+                        {
+                            ad_model: 'face_yolov8n.pt'
+                        }
+                    ]
+                }
+            };
+        }
+
+        let result = null;
+        if (this._isSillyTavern() && !useImg2Img) {
+            try {
+                const response = await this._sdProxyRequest('generate', { ...payload, url: baseUrl });
+                if (response.ok) {
+                    const proxyResult = await response.json().catch(() => null);
+                    if (proxyResult && (proxyResult.images || proxyResult.image || proxyResult.result)) {
+                        result = proxyResult;
+                    }
+                } else {
+                    const text = await response.text().catch(() => '');
+                    console.warn('[SD] 代理生图失败，尝试直连:', response.status, text);
+                }
+            } catch (err) {
+                console.warn('[SD] 代理生图异常，尝试直连:', err);
+            }
+        }
+
+        if (!result) {
+            const endpoints = useImg2Img
+                ? ['/sdapi/v1/img2img', '/api/img2img']
+                : ['/sdapi/v1/txt2img', '/api/txt2img'];
+            let lastError = '';
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await this._sdDirectRequest(`${baseUrl}${endpoint}`, {
+                        method: 'POST',
+                        headers: this._buildSdHeaders({
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json'
+                        }, config),
+                        body: JSON.stringify(payload)
+                    });
+                    const text = await response.text();
+                    const parsed = text ? JSON.parse(text) : null;
+                    if (response.ok && parsed && (parsed.images || parsed.image || parsed.result)) {
+                        result = parsed;
+                        break;
+                    }
+                    lastError = `HTTP ${response.status}: ${endpoint}`;
+                    if (parsed?.error || parsed?.message) {
+                        lastError += ` ${String(parsed.error?.message || parsed.message || parsed.error).slice(0, 180)}`;
+                    }
+                } catch (err) {
+                    lastError = `${endpoint}: ${err?.message || err}`;
+                }
+            }
+            if (!result) {
+                throw new Error(`Stable Diffusion 请求失败${lastError ? `: ${lastError}` : ''}`);
+            }
+        }
+
+        const imageData = this._extractSdImage(result);
+        if (!imageData) throw new Error('Stable Diffusion 未返回可用图片');
+        const imageInfo = await this._waitForImageDecode(imageData).catch((err) => {
+            throw new Error(`SD 返回图片不可用: ${err?.message || err}`);
+        });
+
+        return {
+            provider: 'sd',
+            model: modelName,
+            modelHash,
+            prompt,
+            width: imageInfo.width,
+            height: imageInfo.height,
+            requestedWidth: width,
+            requestedHeight: height,
+            steps,
+            sampler: payload.sampler_name,
+            scale,
+            seed: payload.seed,
+            imageData,
+            imageUrl: imageData
+        };
+    }
+
+    async _generateComfyUI(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+
+        const baseUrl = this._normalizeComfyUIBaseUrl(config.comfyuiUrl);
+        if (!baseUrl) throw new Error('未配置 ComfyUI 服务地址');
+        const transport = this._normalizeComfyUITransport(config.comfyuiTransport);
+        const useTavernProxy = transport === 'tavern';
+
+        const referenceImages = this._normalizeComfyUIReferenceImages(options);
+        const workflowTemplate = this._parseComfyUIWorkflow(config.comfyuiWorkflow);
+        const isVideoPrompt = String(options.comfyuiPromptKind || '').trim().toLowerCase() === 'video';
+        const referencePlaceholderInfo = this._getComfyUIReferencePlaceholderInfo(workflowTemplate);
+        const hasReferencePlaceholder = referencePlaceholderInfo.hasAny;
+        const canInjectWanReference = referenceImages.length > 0
+            && this._canInjectComfyUIWanReferenceImage(workflowTemplate, options.app);
+        const needsReferenceUpload = hasReferencePlaceholder || canInjectWanReference;
+        const referenceSlotCount = hasReferencePlaceholder
+            ? referencePlaceholderInfo.slotCount
+            : (canInjectWanReference ? 1 : 0);
+        let uploadedReferenceImages = [];
+        if (needsReferenceUpload && referenceImages.length > 0) {
+            try {
+                uploadedReferenceImages = await Promise.all(
+                    referenceImages
+                        .slice(0, Math.max(1, referenceSlotCount))
+                        .map(image => this._uploadComfyUIReferenceImage(baseUrl, image, options.signal))
+                );
+            } catch (err) {
+                if (useTavernProxy) {
+                    throw new Error(`酒馆后端只代理 ComfyUI 生成，参考图仍需浏览器直传 /upload/image；请为 ComfyUI 开启跨域。原始错误：${err?.message || err}`);
+                }
+                throw err;
+            }
+            uploadedReferenceImages = uploadedReferenceImages.filter(Boolean);
+        }
+
+        const built = this._buildComfyUIWorkflow(options, {
+            ...config,
+            comfyuiWorkflow: JSON.stringify(workflowTemplate)
+        }, uploadedReferenceImages);
+        built.missingReferenceSubmitted = built.requiresReferenceImage
+            && uploadedReferenceImages.length === 0
+            && !isVideoPrompt;
+        if (built.requiresModel && !config.comfyuiModel) {
+            throw new Error('请先选择 ComfyUI 模型，或在工作流中去掉 %MODEL_NAME% 占位符');
+        }
+        if (built.requiresReferenceImage && uploadedReferenceImages.length === 0 && isVideoPrompt) {
+            throw new Error('当前 ComfyUI 工作流需要参考图，但本次没有可用的参考图');
+        }
+
+        const clientId = `yuzuki-phone-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const promptPayload = JSON.stringify({
+            prompt: built.workflow,
+            client_id: clientId
+        });
+        const endpoint = useTavernProxy ? '/api/sd/comfy/generate' : `${baseUrl}/prompt`;
+        this._debugComfyUIRequest({
+            endpoint,
+            built,
+            workflow: built.workflow,
+            config,
+            options,
+            referenceImages,
+            uploadedReferenceImages
+        });
+        if (useTavernProxy) {
+            const response = await this._sdProxyRequest(
+                'comfy/generate',
+                { url: baseUrl, prompt: promptPayload },
+                'POST',
+                { signal: options.signal }
+            );
+            const text = await response.text().catch(() => '');
+            let payload = null;
+            try { payload = text ? JSON.parse(text) : null; } catch (err) { payload = null; }
+            if (!response.ok) {
+                const message = payload?.error?.message || payload?.error || payload?.message || text;
+                if (/did not return any recognizable outputs/i.test(String(message || ''))) {
+                    try {
+                        const recovered = await this._waitForComfyUIHistoryByClientId(
+                            baseUrl,
+                            clientId,
+                            options.signal
+                        );
+                        if (recovered?.media) {
+                            console.warn('[ComfyUI] 酒馆后端未识别自定义输出，已从 ComfyUI 历史恢复结果', {
+                                promptId: recovered.promptId,
+                                output: recovered.media
+                            });
+                            return this._buildComfyUIOutputResult({
+                                baseUrl,
+                                mediaRef: recovered.media,
+                                promptId: recovered.promptId,
+                                prompt,
+                                config,
+                                built,
+                                signal: options.signal
+                            });
+                        }
+                    } catch (recoveryError) {
+                        console.warn('[ComfyUI] 从历史恢复酒馆后端未识别的输出失败', recoveryError);
+                    }
+                }
+                throw new Error(`酒馆 ComfyUI 后端生成失败：HTTP ${response.status}${message ? ` ${String(message).slice(0, 240)}` : ''}`);
+            }
+
+            const base64 = String(payload?.data || '').trim();
+            if (!base64) throw new Error('酒馆 ComfyUI 后端未返回媒体数据');
+            const format = String(payload?.format || 'png').trim().toLowerCase().replace(/^\./, '');
+            const isVideo = /^(?:mp4|webm|mov|mkv|avi)$/.test(format) || /^video\//.test(format);
+            const mimeType = isVideo
+                ? (format.includes('/') ? format : (format === 'mov' ? 'video/quicktime' : (format === 'mkv' ? 'video/x-matroska' : `video/${format}`)))
+                : (format.includes('/') ? format : (format === 'jpg' ? 'image/jpeg' : `image/${format}`));
+            const mediaData = /^data:/i.test(base64) ? base64 : `data:${mimeType};base64,${base64}`;
+            const commonResult = {
+                provider: 'comfyui',
+                model: config.comfyuiModel,
+                prompt,
+                width: built.width,
+                height: built.height,
+                requestedWidth: built.width,
+                requestedHeight: built.height,
+                steps: built.steps,
+                sampler: config.comfyuiSampler,
+                scheduler: config.comfyuiScheduler,
+                scale: built.scale,
+                seed: built.seed,
+                promptId: '',
+                positivePrompt: built.positivePrompt,
+                negativePrompt: built.negativePrompt,
+                nodeMapping: null,
+                missingReferenceSubmitted: built.missingReferenceSubmitted
+            };
+            if (isVideo) {
+                const videoBlob = this._dataUrlToBlob(mediaData, mimeType);
+                if (!videoBlob) throw new Error('酒馆 ComfyUI 后端返回的视频数据不可用');
+                return {
+                    ...commonResult,
+                    mediaType: 'video',
+                    videoBlob,
+                    videoFilename: `comfyui-output.${format.split('/').pop() || 'mp4'}`,
+                    videoSubfolder: '',
+                    videoCompatibilityAdjusted: built.videoCompatibilityAdjusted
+                };
+            }
+
+            const imageInfo = await this._waitForImageDecode(mediaData).catch((err) => {
+                throw new Error(`酒馆 ComfyUI 后端返回图片不可用: ${err?.message || err}`);
+            });
+            return {
+                ...commonResult,
+                mediaType: 'image',
+                width: imageInfo.width || built.width,
+                height: imageInfo.height || built.height,
+                imageData: mediaData,
+                imageUrl: mediaData
+            };
+        }
+
+        const response = await fetch(`${baseUrl}/prompt`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            body: promptPayload,
+            signal: options.signal
+        });
+        const text = await response.text();
+        let payload = null;
+        try {
+            payload = text ? JSON.parse(text) : null;
+        } catch (err) {
+            payload = null;
+        }
+        if (!response.ok) {
+            const message = payload?.error?.message || payload?.error || payload?.message || text;
+            throw new Error(`ComfyUI 提交失败：HTTP ${response.status}${message ? ` ${String(message).slice(0, 180)}` : ''}`);
+        }
+        const promptId = String(payload?.prompt_id || '').trim();
+        if (!promptId) throw new Error('ComfyUI 未返回 prompt_id');
+        this._debugComfyUIRequest({
+            endpoint,
+            built,
+            workflow: built.workflow,
+            config,
+            options,
+            referenceImages,
+            uploadedReferenceImages,
+            promptId
+        });
+
+        const mediaRef = await this._waitForComfyUIHistory(
+            baseUrl,
+            promptId,
+            options.signal,
+            built.isVideoWorkflow ? 20 * 60 * 1000 : 300000
+        );
+        return this._buildComfyUIOutputResult({
+            baseUrl,
+            mediaRef,
+            promptId,
+            prompt,
+            config,
+            built,
+            signal: options.signal
+        });
+    }
+
+    async _generateNovelAI(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+
+        const endpoint = `${this._resolveNovelAIEndpoint(config)}/ai/generate-image`;
+        const queueInfo = await this._waitForNovelAIQueueTurn(config, options);
+        const stopQueueHeartbeat = this._startNovelAIQueueHeartbeat(queueInfo);
+        const requestController = new AbortController();
+        const externalSignal = options?.signal;
+        const abortRequest = () => requestController.abort();
+        if (externalSignal?.aborted) abortRequest();
+        else externalSignal?.addEventListener?.('abort', abortRequest, { once: true });
+        const requestTimeout = setTimeout(abortRequest, NOVELAI_REQUEST_TIMEOUT_MS);
+        try {
+            const payload = await this._buildNovelAIPayload(options, config);
+            this._debugNovelAIRequest({ endpoint, payload, config, options });
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${config.apiKey}`,
+                    'Content-Type': 'application/json',
+                    Accept: 'application/x-zip-compressed, image/png, application/json'
+                },
+                body: JSON.stringify(payload),
+                signal: requestController.signal
+            });
+
+            if (!response.ok) {
+                const text = await response.text().catch(() => '');
+                const hint = response.status >= 500
+                    ? `；当前参数 model=${config.model}, sampler=${config.sampler}, schedule=${config.schedule}，可先用 native + k_euler 测试`
+                    : '';
+                throw new Error(`NovelAI 请求失败 (${response.status})${hint}${text ? `: ${text.slice(0, 180)}` : ''}`);
+            }
+
+            const imageData = await this._readNovelAIImageResponse(response);
+            if (!imageData) throw new Error('NovelAI 未返回可用图片');
+            const imageInfo = await this._waitForImageDecode(imageData).catch((err) => {
+                throw new Error(`NovelAI 返回图片不可用: ${err?.message || err}`);
+            });
+            return {
+                provider: 'novelai',
+                model: config.model,
+                prompt,
+                width: imageInfo.width,
+                height: imageInfo.height,
+                requestedWidth: Number(payload?.parameters?.width || config.width),
+                requestedHeight: Number(payload?.parameters?.height || config.height),
+                steps: Number(payload?.parameters?.steps || config.steps),
+                sampler: config.sampler,
+                schedule: config.schedule,
+                scale: Number(payload?.parameters?.scale ?? config.scale),
+                seed: Number(payload?.parameters?.seed ?? -1),
+                imageData,
+                imageUrl: imageData
+            };
+        } catch (err) {
+            if (requestController.signal.aborted && !externalSignal?.aborted) {
+                throw new Error('NovelAI 生图请求超时，请稍后重试');
+            }
+            throw err;
+        } finally {
+            clearTimeout(requestTimeout);
+            externalSignal?.removeEventListener?.('abort', abortRequest);
+            stopQueueHeartbeat();
+            await this._finishNovelAIQueue(queueInfo);
+        }
+    }
+
+    async _generateSiliconflow(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+
+        const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: config.model,
+                prompt: this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd], '，'),
+                negative_prompt: this._joinPrompt([config.negativePrompt, options.negativePrompt]),
+                image_size: `${Number(options.width || config.width)}x${Number(options.height || config.height)}`,
+                batch_size: 1,
+                num_inference_steps: Number(options.steps || config.steps),
+                guidance_scale: Number(options.scale ?? config.scale)
+            })
+        });
+        const text = await response.text();
+        let payload = null;
+        try { payload = text ? JSON.parse(text) : null; } catch (e) { payload = null; }
+        if (!response.ok) {
+            const msg = payload?.message || payload?.error?.message || payload?.error || text || '';
+            throw new Error(`SiliconFlow 请求失败 (${response.status})${msg ? `: ${String(msg).slice(0, 180)}` : ''}`);
+        }
+        const imageUrl = String(payload?.images?.[0]?.url || '').trim();
+        if (!imageUrl) throw new Error('SiliconFlow 未返回图片 URL');
+        return {
+            provider: 'siliconflow',
+            model: config.model,
+            prompt,
+            width: Number(options.width || config.width),
+            height: Number(options.height || config.height),
+            requestedWidth: Number(options.width || config.width),
+            requestedHeight: Number(options.height || config.height),
+            steps: Number(options.steps || config.steps),
+            scale: Number(options.scale ?? config.scale),
+            imageData: imageUrl,
+            imageUrl
+        };
+    }
+
+    async _generateOpenAIImage(options, config) {
+        const prompt = String(options.prompt || '').trim();
+        if (!prompt) throw new Error('缺少生图提示词');
+        if (!String(config.apiKey || '').trim()) throw new Error('请先填写 GPT 生图 API Key');
+
+        const width = Number(options.width || config.width);
+        const height = Number(options.height || config.height);
+        const model = String(config.model || 'gpt-image-2').trim() || 'gpt-image-2';
+        const requestedSize = this._getOpenAIImageSize(model, width, height);
+        const targetEndpoint = this._resolveOpenAIEndpoint(config);
+        const endpoint = this._resolveOpenAIRelayEndpoint(config, targetEndpoint);
+        const positivePrompt = this._joinPrompt([config.fixedPrompt, prompt, config.fixedPromptEnd], '\n');
+        const payload = {
+            model,
+            prompt: positivePrompt,
+            size: requestedSize,
+            n: 1
+        };
+        const normalizedQuality = this._normalizeOpenAIImageQuality(model, config.openaiQuality);
+        if (normalizedQuality) {
+            payload.quality = normalizedQuality;
+        }
+        const negativePrompt = this._joinPrompt([config.negativePrompt, options.negativePrompt]);
+        if (negativePrompt) {
+            payload.prompt = `${payload.prompt}\n\nAvoid: ${negativePrompt}`;
+        }
+
+        let result = null;
+        const requestPayloads = this._shouldPreferOpenAIBase64(config)
+            ? [this._withOpenAIBase64OutputHints(payload), payload]
+            : [payload];
+        for (let i = 0; i < requestPayloads.length; i++) {
+            const requestPayload = requestPayloads[i];
+            let response = null;
+            this._debugOpenAIRequest({
+                endpoint,
+                targetEndpoint,
+                payload: requestPayload,
+                config,
+                options,
+                requestMode: 'images/generations',
+                positivePrompt,
+                negativePrompt,
+                requestedSize,
+                quality: normalizedQuality || config.openaiQuality || 'auto',
+                attempt: i + 1
+            });
+            try {
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: this._buildOpenAIHeaders(config, {
+                        'Content-Type': 'application/json'
+                    }),
+                    body: JSON.stringify(requestPayload),
+                    signal: options.signal
+                });
+            } catch (err) {
+                const message = String(err?.message || err || '').trim();
+                if (/failed to fetch|networkerror|load failed/i.test(message)) {
+                    const siteLabel = config.openaiSite === 'public'
+                        ? 'GPT 公益站'
+                        : (config.openaiSite === 'custom' ? 'GPT 自定义站点' : 'OpenAI 官方站点');
+                    const relayHint = config.openaiSite === 'public'
+                        ? '请运行本地 imgrelay，并把 GPT 生图的本地中转 URL 填为 http://127.0.0.1:8787。'
+                        : '请让站点开启 CORS，或换支持浏览器跨域的中转站。';
+                    throw new Error(`${siteLabel} 请求被浏览器拦截或网络失败。若控制台提示 CORS，说明该站点没有给当前页面返回 Access-Control-Allow-Origin。${relayHint}`);
+                }
+                throw err;
+            }
+            const text = await response.text();
+            try { result = text ? JSON.parse(text) : null; } catch (e) { result = null; }
+            if (response.ok) {
+                break;
+            }
+            if (i === 0 && requestPayloads.length > 1 && this._isOpenAIBase64HintRejected(response.status, result, text)) {
+                console.warn('[GPT Image] 当前站点不接受 Base64 返回参数，已降级为标准 URL 请求。');
+                result = null;
+                continue;
+            }
+            const msg = this._buildOpenAIErrorMessage(response.status, result, text);
+            throw new Error(`GPT 生图请求失败 (${response.status})${msg ? `: ${String(msg).slice(0, 180)}` : ''}`);
+        }
+        let imageData = this._extractOpenAIImage(result);
+        if (!imageData) {
+            throw new Error(`GPT 生图未返回可用图片。返回摘要：${this._summarizeOpenAIImagePayload(result)}`);
+        }
+        const imageInfo = imageData.startsWith('data:image/')
+            ? await this._waitForImageDecode(imageData).catch(() => ({ width: 0, height: 0 }))
+            : { width: 0, height: 0 };
+        const [requestedWidth, requestedHeight] = requestedSize.split('x').map(Number);
+        return {
+            provider: 'openai',
+            model,
+            prompt,
+            width: imageInfo.width || requestedWidth || width,
+            height: imageInfo.height || requestedHeight || height,
+            requestedWidth: requestedWidth || width,
+            requestedHeight: requestedHeight || height,
+            quality: normalizedQuality || config.openaiQuality || 'auto',
+            imageData,
+            imageUrl: imageData
+        };
+    }
+}

@@ -1,0 +1,25 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "yuzuki-nai-queue",
+    "main": "./nai-queue-worker.js",
+    "compatibility_date": "2026-05-06",
+    "observability": {
+        "enabled": true
+    },
+    "durable_objects": {
+        "bindings": [
+            {
+                "name": "NAI_QUEUE_DO",
+                "class_name": "NaiQueueDO"
+            }
+        ]
+    },
+    "migrations": [
+        {
+            "tag": "v1",
+            "new_sqlite_classes": [
+                "NaiQueueDO"
+            ]
+        }
+    ]
+}

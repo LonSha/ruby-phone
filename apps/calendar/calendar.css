@@ -1,0 +1,1257 @@
+#phone-panel-content .phone-screen .yzp-calendar-app,
+#phone-panel-content .phone-screen .yzp-calendar-app * {
+    box-sizing: border-box !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app {
+    --yzp-cal-bg: #fbfcfb;
+    --yzp-cal-panel: rgba(255, 255, 255, 0.72);
+    --yzp-cal-soft: rgba(246, 248, 247, 0.86);
+    --yzp-cal-text: #171b1f;
+    --yzp-cal-muted: #a8b0b8;
+    --yzp-cal-line: rgba(23, 32, 42, 0.06);
+    --yzp-cal-accent: #6b9abd;
+    --yzp-cal-accent-2: #c9dce9;
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(255, 249, 231, 0.8), transparent 34%),
+        var(--yzp-cal-bg) !important;
+    color: var(--yzp-cal-text) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark {
+    --yzp-cal-bg: #0f1217;
+    --yzp-cal-panel: rgba(27, 31, 38, 0.9);
+    --yzp-cal-soft: #1d2530;
+    --yzp-cal-text: #f4f7fb;
+    --yzp-cal-muted: #8190a0;
+    --yzp-cal-line: rgba(255, 255, 255, 0.1);
+    --yzp-cal-accent: #8fb8d9;
+    --yzp-cal-accent-2: #516d8a;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-header {
+    flex: 0 0 auto !important;
+    display: grid !important;
+    grid-template-columns: 40px 1fr 40px !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 66px !important;
+    padding: 30px 12px 6px !important;
+    border-bottom: 0 !important;
+    background: color-mix(in srgb, var(--yzp-cal-bg) 72%, transparent) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+    z-index: 3 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-header-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-header-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-icon-btn,
+#phone-panel-content .phone-screen .yzp-calendar-small-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: var(--yzp-cal-panel) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-btn {
+    min-width: 0 !important;
+    height: 34px !important;
+    border: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 0 4px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 17px !important;
+    font-weight: 520 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn span,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn i {
+    color: #ffffff !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-header {
+    flex: 0 0 auto !important;
+    display: grid !important;
+    grid-template-columns: 40px 1fr 40px !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 66px !important;
+    padding: 30px 12px 6px !important;
+    background: color-mix(in srgb, var(--yzp-cal-bg) 72%, transparent) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+    z-index: 3 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-title {
+    min-width: 0 !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-main {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 0 20px 14px !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-main::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-settings-body::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-prompt-editor::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-type-menu::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-detail-body::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-detail-sheet::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-add-sheet::-webkit-scrollbar,
+#phone-panel-content .phone-screen .yzp-calendar-month-sheet::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    overflow-y: auto !important;
+    padding: 12px 14px 18px !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-section {
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 9px !important;
+    padding: 12px !important;
+    background: var(--yzp-cal-panel) !important;
+    color: var(--yzp-cal-text) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold {
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    background: var(--yzp-cal-soft) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-header {
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-main {
+    min-width: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-title {
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-desc {
+    margin-top: 3px !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-arrow {
+    flex: 0 0 auto !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 12px !important;
+    transition: transform 0.18s ease !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold.is-open .phone-prompt-fold-arrow {
+    transform: rotate(90deg) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold-content {
+    display: none !important;
+    padding: 0 10px 10px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app .phone-prompt-fold.is-open .phone-prompt-fold-content {
+    display: block !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-section-head {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-setting-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    width: 44px !important;
+    height: 26px !important;
+    display: inline-block !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch input {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch span {
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(142, 151, 160, 0.34) !important;
+    transition: background 0.18s ease !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch span::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 3px !important;
+    top: 3px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22) !important;
+    transition: transform 0.18s ease !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch input:checked + span {
+    background: var(--yzp-cal-accent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-switch input:checked + span::before {
+    transform: translateX(18px) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-label {
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-desc {
+    margin-top: 3px !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-reminder-advance-input {
+    flex: 0 0 76px !important;
+    width: 76px !important;
+    height: 30px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 0 8px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+    text-align: right !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-prompt-editor {
+    width: 100% !important;
+    height: 260px !important;
+    min-height: 260px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    caret-color: var(--yzp-cal-accent) !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+    resize: vertical !important;
+    outline: none !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-settings-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-row,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-add {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 38px 38px 28px 28px 28px !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-add {
+    grid-template-columns: minmax(0, 1fr) 38px 38px 56px !important;
+    margin: 2px 0 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-title,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-month,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-day {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 30px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 0 8px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 11px !important;
+    line-height: 30px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-month,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-day {
+    text-align: center !important;
+    padding: 0 4px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-alarm,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-save,
+#phone-panel-content .phone-screen .yzp-calendar-holiday-delete {
+    width: 28px !important;
+    height: 28px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-alarm.is-active {
+    color: var(--yzp-cal-accent) !important;
+    background: color-mix(in srgb, var(--yzp-cal-accent) 16%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-holiday-delete {
+    color: #dc6262 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-generate-btn {
+    width: 100% !important;
+    height: 38px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    padding: 0 12px !important;
+    background: var(--yzp-cal-accent) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 38px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-generate-btn.is-loading i {
+    animation: yzp-calendar-api-spin 1.1s linear infinite !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-hero {
+    height: 136px !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    margin: 0 0 -4px !important;
+    pointer-events: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-hero img {
+    width: auto !important;
+    height: 128px !important;
+    max-width: 76% !important;
+    display: block !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 10px 14px rgba(31, 41, 51, 0.08)) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-hero.is-holiday img {
+    height: 124px !important;
+    max-width: 82% !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-board {
+    padding: 0 0 6px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-week-row,
+#phone-panel-content .phone-screen .yzp-calendar-day-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-week-row {
+    min-height: 28px !important;
+    align-items: center !important;
+    border-radius: 8px !important;
+    background: rgba(170, 222, 139, 0.12) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-week-row {
+    background: rgba(187, 162, 105, 0.14) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-weekday {
+    height: 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day-empty {
+    pointer-events: none !important;
+    cursor: default !important;
+    visibility: hidden !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day-number {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+    font-weight: 520 !important;
+    line-height: 1 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-dot-mark {
+    position: absolute !important;
+    left: 50% !important;
+    top: calc(50% - 13px) !important;
+    width: 4px !important;
+    height: 4px !important;
+    border-radius: 50% !important;
+    display: block !important;
+    background: #5f9f45 !important;
+    transform: translateX(-50%) !important;
+    pointer-events: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-dot-mark {
+    background: #d8c08a !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-muted {
+    color: color-mix(in srgb, var(--yzp-cal-muted) 42%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-past .yzp-calendar-day-number {
+    color: color-mix(in srgb, var(--yzp-cal-text) 42%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-future .yzp-calendar-day-number {
+    color: color-mix(in srgb, var(--yzp-cal-text) 82%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-today .yzp-calendar-day-number {
+    color: var(--yzp-cal-text) !important;
+    font-weight: 650 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-weekday.is-weekend,
+#phone-panel-content .phone-screen .yzp-calendar-day.is-weekend .yzp-calendar-day-number,
+#phone-panel-content .phone-screen .yzp-calendar-day.is-weekend.is-future .yzp-calendar-day-number,
+#phone-panel-content .phone-screen .yzp-calendar-day.is-weekend.is-today .yzp-calendar-day-number {
+    color: #5f9f45 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-weekend.is-past .yzp-calendar-day-number {
+    color: #aade8b !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-weekday.is-weekend,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend .yzp-calendar-day-number,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-future .yzp-calendar-day-number,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-today .yzp-calendar-day-number {
+    color: #d8c08a !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-past .yzp-calendar-day-number {
+    color: #bba269 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-story-sticker {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    transform: translate(-50%, -82%) !important;
+    display: block !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-story-sticker img {
+    width: 100% !important;
+    height: 100% !important;
+    display: none !important;
+    object-fit: contain !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-story-sticker img.yzp-calendar-story-sticker-light {
+    display: block !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-story-sticker img.yzp-calendar-story-sticker-light {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-story-sticker img.yzp-calendar-story-sticker-dark {
+    display: block !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-featured-day .yzp-calendar-day-number {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 24px !important;
+    height: 24px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    font-weight: 760 !important;
+    line-height: 24px !important;
+    transform: translateY(5px) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-featured-day .yzp-calendar-day-number {
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.62) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-day.is-selected .yzp-calendar-day-number {
+    border: 1.5px solid #5f9f45 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    font-weight: 650 !important;
+    box-shadow: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-selected .yzp-calendar-day-number {
+    border-color: rgba(255, 255, 255, 0.9) !important;
+    color: #ffffff !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-panel {
+    border-radius: 8px !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+    margin: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-input,
+#phone-panel-content .phone-screen .yzp-calendar-time-input {
+    width: 100% !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 0 10px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-input {
+    height: 94px !important;
+    min-height: 94px !important;
+    max-height: 120px !important;
+    padding: 10px !important;
+    line-height: 1.45 !important;
+    resize: none !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-time-input {
+    height: 36px !important;
+    line-height: 36px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-type-wrap {
+    position: relative !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-type-select {
+    width: 100% !important;
+    height: 36px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 10px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    line-height: 36px !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-type-menu {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(100% + 6px) !important;
+    z-index: 4 !important;
+    max-height: 168px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    overflow-y: auto !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18) !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-type-menu {
+    background: rgba(27, 31, 38, 0.98) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-type-option {
+    width: 100% !important;
+    height: 32px !important;
+    border: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 12px !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    text-align: left !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-type-option.is-active {
+    background: rgba(107, 154, 189, 0.18) !important;
+    font-weight: 650 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-submit-btn {
+    height: 34px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    padding: 0 10px !important;
+    background: var(--yzp-cal-accent) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    line-height: 34px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-overlay,
+#phone-panel-content .phone-screen .yzp-calendar-month-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 36 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    background: rgba(9, 13, 18, 0.34) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-overlay {
+    align-items: center !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-sheet,
+#phone-panel-content .phone-screen .yzp-calendar-month-sheet {
+    width: 100% !important;
+    max-height: 78% !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    background: var(--yzp-cal-panel) !important;
+    color: var(--yzp-cal-text) !important;
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.24) !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-sheet {
+    max-height: 62% !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-head {
+    display: grid !important;
+    grid-template-columns: 34px 1fr 34px !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-picker-year {
+    text-align: center !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-choice {
+    height: 38px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    font-weight: 650 !important;
+    line-height: 38px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-choice.is-story-month {
+    border-color: var(--yzp-cal-accent-2) !important;
+    color: var(--yzp-cal-accent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-choice.is-active {
+    background: var(--yzp-cal-accent) !important;
+    border-color: var(--yzp-cal-accent) !important;
+    color: #fff !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-month-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-head {
+    display: grid !important;
+    grid-template-columns: 1fr 34px !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title-icon {
+    position: relative !important;
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-text) !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title-icon i {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title-icon b {
+    position: absolute !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    display: block !important;
+    color: var(--yzp-cal-accent) !important;
+    font-size: 7px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title-icon.is-loading {
+    opacity: 0.72 !important;
+    cursor: wait !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-title-icon.is-loading i {
+    animation: yzp-calendar-api-spin 1.1s linear infinite !important;
+}
+
+@keyframes yzp-calendar-api-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-date {
+    margin-top: 3px !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-add-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-cancel-btn {
+    height: 34px !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    padding: 0 10px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    line-height: 34px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+    max-height: 146px !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-list::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-item {
+    position: relative !important;
+    min-height: 42px !important;
+    display: grid !important;
+    grid-template-columns: 28px 1fr !important;
+    align-items: center !important;
+    gap: 7px !important;
+    border-radius: 8px !important;
+    padding: 7px !important;
+    background: var(--yzp-cal-soft) !important;
+    color: var(--yzp-cal-text) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-type-icon,
+#phone-panel-content .phone-screen .yzp-calendar-delete-btn,
+#phone-panel-content .phone-screen .yzp-calendar-global-reminder-btn {
+    width: 28px !important;
+    height: 28px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    background: transparent !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-type-icon {
+    pointer-events: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-type-icon img {
+    width: 24px !important;
+    height: 24px !important;
+    display: block !important;
+    object-fit: contain !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-delete-btn {
+    position: absolute !important;
+    right: 7px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    color: #dc6262 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-global-reminder-btn {
+    position: absolute !important;
+    right: 39px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    color: color-mix(in srgb, var(--yzp-cal-muted) 62%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-global-reminder-btn.is-active {
+    color: var(--yzp-cal-accent) !important;
+    background: color-mix(in srgb, var(--yzp-cal-accent) 16%, transparent) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-item.show-delete {
+    padding-right: 72px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-item.show-delete .yzp-calendar-delete-btn,
+#phone-panel-content .phone-screen .yzp-calendar-memo-item.show-delete .yzp-calendar-global-reminder-btn {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-copy {
+    min-width: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-text {
+    color: var(--yzp-cal-text) !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-time-inline,
+#phone-panel-content .phone-screen .yzp-calendar-memo-dot {
+    color: var(--yzp-cal-muted) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-memo-dot {
+    padding: 0 4px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 37 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    background: rgba(9, 13, 18, 0.34) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-sheet {
+    width: 100% !important;
+    max-height: 62% !important;
+    border: 1px solid var(--yzp-cal-line) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    background: var(--yzp-cal-panel) !important;
+    color: var(--yzp-cal-text) !important;
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.24) !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-head {
+    display: grid !important;
+    grid-template-columns: 34px 1fr auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-icon img {
+    width: 30px !important;
+    height: 30px !important;
+    display: block !important;
+    object-fit: contain !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-meta {
+    min-width: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-actions .yzp-calendar-icon-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-type {
+    color: var(--yzp-cal-text) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-date {
+    margin-top: 3px !important;
+    color: var(--yzp-cal-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-detail-body {
+    max-height: 210px !important;
+    overflow-y: auto !important;
+    color: var(--yzp-cal-text) !important;
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-settings-label,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-title,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-title span,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-title-icon,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-title-icon i,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-text,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-detail-type,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .phone-prompt-fold-title {
+    color: #f4f7fb !important;
+    -webkit-text-fill-color: #f4f7fb !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-settings-desc,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-date,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-time-inline,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-dot,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-detail-date,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .phone-prompt-fold-desc {
+    color: #9aa8b6 !important;
+    -webkit-text-fill-color: #9aa8b6 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-input,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-time-input,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-type-select,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-title,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-month,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-day,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-prompt-editor {
+    background: #1d2530 !important;
+    color: #f4f7fb !important;
+    -webkit-text-fill-color: #f4f7fb !important;
+    caret-color: #8fb8d9 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark input.yzp-calendar-holiday-title,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark input.yzp-calendar-holiday-month,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark input.yzp-calendar-holiday-day,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark textarea.yzp-calendar-memo-input,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark input.yzp-calendar-time-input,
+#phone-panel-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark textarea.yzp-calendar-prompt-editor {
+    background-color: #111923 !important;
+    background-image: none !important;
+    color: #f4f7fb !important;
+    -webkit-text-fill-color: #f4f7fb !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-input::placeholder,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-time-input::placeholder,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-title::placeholder,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-month::placeholder,
+#phone-panel-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-day::placeholder {
+    color: #8190a0 !important;
+    -webkit-text-fill-color: #8190a0 !important;
+    opacity: 1 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-edit-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-edit-input {
+    height: 104px !important;
+    min-height: 104px !important;
+}
+
+#phone-panel-content .phone-screen .yzp-calendar-edit-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}

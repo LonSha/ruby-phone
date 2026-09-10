@@ -1,0 +1,385 @@
+/* 百度贴吧 经典蓝白色调与深色模式适配 */
+.tb-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #11141a;
+  color: #e5eaf3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.tb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 42px;
+  padding: 0 14px;
+  background: #191f2b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.tb-back-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tb-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.tb-post-trigger {
+  background: #2563eb;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tb-bar-selector {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: #161b24;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  scrollbar-width: none;
+}
+.tb-bar-selector::-webkit-scrollbar { display: none; }
+.tb-bar-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tb-bar-chip.active {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.tb-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.tb-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tb-post-card {
+  background: #1c2331;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tb-post-card:hover {
+  background: #222b3d;
+}
+.tb-post-bar-tag {
+  font-size: 11px;
+  color: #38bdf8;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.tb-post-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+.tb-post-excerpt {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 8px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tb-post-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #64748b;
+}
+.tb-post-author-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tb-post-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.tb-post-stats {
+  display: flex;
+  gap: 12px;
+}
+.tb-post-stat-item.liked {
+  color: #3b82f6;
+}
+
+/* 详情全屏 */
+.tb-detail-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: #11141a;
+  display: flex;
+  flex-direction: column;
+}
+.tb-detail-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+.tb-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 14px;
+  background: #191f2b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tb-detail-back {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tb-detail-barname {
+  font-weight: 600;
+  font-size: 14px;
+}
+.tb-detail-like-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #94a3b8;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tb-detail-like-btn.liked {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.tb-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+.tb-floor-main {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tb-floor-title {
+  font-size: 16px;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.tb-floor-author-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.tb-floor-author-bar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.tb-floor-author-bar .author {
+  font-size: 13px;
+  font-weight: 600;
+  display: block;
+}
+.lz-tag {
+  font-size: 10px;
+  background: #2563eb;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+.tb-floor-author-bar .time {
+  font-size: 11px;
+  color: #64748b;
+}
+.tb-floor-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+}
+
+.tb-replies-section {
+  margin-top: 14px;
+}
+.tb-replies-count {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+.tb-reply-row {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.tb-reply-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.r-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.r-time {
+  font-size: 10px;
+  color: #475569;
+}
+
+.tb-detail-footer {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #191f2b;
+}
+.tb-reply-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 14px;
+  padding: 6px 12px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.tb-reply-send {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* 发帖弹窗 */
+.tb-compose-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+.tb-compose-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+.tb-compose-card {
+  position: relative;
+  width: 100%;
+  height: 80%;
+  background: #191f2b;
+  border-radius: 18px 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.tb-compose-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tb-compose-head h3 { font-size: 15px; margin: 0; }
+.tb-compose-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+}
+.tb-compose-submit {
+  background: #2563eb;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tb-compose-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.tb-compose-bar-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  outline: none;
+}
+.tb-compose-title {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+.tb-compose-content {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+}

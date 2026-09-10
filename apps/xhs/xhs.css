@@ -1,0 +1,365 @@
+/* 小红书 (RED / XHS) 标志性珊瑚红与双列瀑布流 */
+.xhs-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #0f0f11;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.xhs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 14px;
+  background: rgba(15, 15, 17, 0.95);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.xhs-back-btn, .xhs-post-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px;
+}
+.xhs-post-btn {
+  color: #ff2442;
+  font-size: 18px;
+}
+
+.xhs-header-tabs {
+  display: flex;
+  gap: 16px;
+}
+.xhs-tab {
+  font-size: 15px;
+  color: #888;
+  cursor: pointer;
+  font-weight: 500;
+  position: relative;
+  padding: 4px 0;
+}
+.xhs-tab.active {
+  color: #fff;
+  font-weight: 600;
+}
+.xhs-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: #ff2442;
+  border-radius: 1px;
+}
+
+.xhs-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.xhs-masonry {
+  column-count: 2;
+  column-gap: 10px;
+}
+
+.xhs-card {
+  break-inside: avoid;
+  background: #1c1c1e;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.xhs-card:hover {
+  transform: translateY(-2px);
+}
+
+.xhs-card-cover-wrap {
+  width: 100%;
+  max-height: 220px;
+  overflow: hidden;
+}
+.xhs-card-cover {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.xhs-card-info {
+  padding: 8px 10px 10px;
+}
+.xhs-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #eee;
+  margin: 0 0 6px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.xhs-card-author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #999;
+}
+.xhs-author-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+.xhs-author-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.xhs-author-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 65px;
+}
+
+.xhs-like-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.xhs-like-badge.liked {
+  color: #ff2442;
+}
+
+/* 详情弹窗 */
+.xhs-detail-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.xhs-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+.xhs-modal-card {
+  position: relative;
+  width: 100%;
+  height: 90%;
+  background: #18181a;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2;
+}
+.xhs-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.xhs-detail-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.xhs-detail-author img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.xhs-detail-author-meta .name {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+}
+.xhs-detail-author-meta .time {
+  font-size: 11px;
+  color: #888;
+}
+.xhs-detail-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.xhs-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 15px;
+}
+.xhs-detail-cover img {
+  width: 100%;
+  max-height: 350px;
+  object-fit: cover;
+}
+.xhs-detail-content {
+  padding: 14px 16px;
+}
+.xhs-detail-content .title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.xhs-detail-content .desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #ddd;
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+.xhs-detail-content .tag {
+  color: #1d72b8;
+  font-size: 13px;
+  margin-right: 6px;
+}
+
+.xhs-detail-comments {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.comments-count {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+.comment-item {
+  font-size: 13px;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.c-author {
+  color: #aaa;
+  margin-right: 6px;
+}
+
+.xhs-detail-footer {
+  padding: 8px 14px;
+  background: #202023;
+  display: flex;
+  gap: 8px;
+}
+.xhs-comment-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 16px;
+  padding: 6px 14px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.xhs-comment-send {
+  background: #ff2442;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* 发布抽屉 */
+.xhs-compose-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+.xhs-drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+.xhs-drawer-content {
+  position: relative;
+  width: 100%;
+  height: 85%;
+  background: #18181a;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.xhs-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.xhs-drawer-header h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.xhs-drawer-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+}
+.xhs-drawer-publish {
+  background: #ff2442;
+  border: none;
+  color: #fff;
+  border-radius: 14px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.xhs-drawer-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.xhs-input-title, .xhs-input-cover, .xhs-input-tags {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+.xhs-input-desc {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+}

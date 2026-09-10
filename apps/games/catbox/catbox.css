@@ -1,0 +1,1143 @@
+.games-catbox-app {
+    background: #1c2731;
+    color: #fff8e8;
+}
+
+.games-catbox-home {
+    background-position: center top;
+    background-size: cover;
+    image-rendering: pixelated;
+}
+
+.games-catbox-adoption {
+    background-position: center top;
+    background-size: cover;
+    image-rendering: pixelated;
+}
+
+.games-catbox-home::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(9, 16, 22, 0.24), rgba(9, 16, 22, 0.04) 28%, rgba(9, 16, 22, 0.32)),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.22), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.2));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.games-catbox-adoption::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(9, 16, 22, 0.28), rgba(9, 16, 22, 0.04) 28%, rgba(9, 16, 22, 0.42)),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.22), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.2));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.games-catbox-topbar {
+    background: linear-gradient(180deg, rgba(19, 25, 30, 0.86), rgba(19, 25, 30, 0));
+    z-index: 4;
+}
+
+.games-catbox-home .games-catbox-topbar {
+    background: transparent;
+    z-index: 5;
+}
+
+.games-catbox-adoption .games-catbox-topbar {
+    background: transparent;
+    z-index: 5;
+}
+
+.games-catbox-home .games-title {
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.games-catbox-adoption .games-title,
+.games-catbox-adoption .games-subtitle {
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+
+.games-catbox-content {
+    position: relative;
+    z-index: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 2px 14px 16px;
+    box-sizing: border-box;
+    overflow: auto;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.games-catbox-content::-webkit-scrollbar {
+    display: none;
+}
+
+.games-catbox-playfield {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 10px 12px 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: transparent;
+    background-position: center;
+    background-size: cover;
+    image-rendering: pixelated;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.games-catbox-playfield::after {
+    content: none;
+}
+
+.games-catbox-scene,
+.games-catbox-room {
+    position: relative;
+    min-height: 270px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #26333c;
+    background-position: center;
+    background-size: cover;
+    image-rendering: pixelated;
+    box-shadow: inset 0 -38px 68px rgba(0, 0, 0, 0.34);
+}
+
+.games-catbox-adopt-scene {
+    min-height: 238px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.games-catbox-adopt-scene::after {
+    content: none;
+}
+
+.games-catbox-room {
+    min-height: 292px;
+}
+
+.games-catbox-scene::after,
+.games-catbox-room::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34%;
+    background: linear-gradient(180deg, transparent, rgba(18, 23, 27, 0.34));
+    pointer-events: none;
+}
+
+.games-catbox-scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.04) 0,
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+    mix-blend-mode: soft-light;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.games-catbox-preview {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 14px;
+    box-sizing: border-box;
+    z-index: 3;
+}
+
+.games-catbox-adopt-bubble {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    z-index: 4;
+    max-width: calc(100% - 34px);
+    min-height: 26px;
+    padding: 6px 9px;
+    box-sizing: border-box;
+    border: 2px solid #2b2020;
+    border-radius: 0;
+    background: rgba(255, 248, 224, 0.94);
+    color: #2a1c19;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-align: center;
+    transform: translateX(-50%);
+    box-shadow:
+        0 0 0 2px rgba(255, 248, 224, 0.82),
+        4px 4px 0 rgba(0, 0, 0, 0.32);
+    image-rendering: pixelated;
+}
+
+.games-catbox-adopt-bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 248, 224, 0.94);
+    border-right: 2px solid #2b2020;
+    border-bottom: 2px solid #2b2020;
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.games-catbox-cat {
+    display: block;
+    max-width: 74%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.34));
+    user-select: none;
+    pointer-events: none;
+}
+
+.games-catbox-cat.is-preview {
+    max-height: 118px;
+    max-width: 44%;
+    animation: games-catbox-breathe 2.2s ease-in-out infinite;
+}
+
+.games-catbox-cat.is-home {
+    position: absolute;
+    left: 50%;
+    top: auto;
+    bottom: 248px;
+    z-index: 3;
+    max-height: 110px;
+    max-width: 40%;
+    transform: translate(-50%, -50%);
+    animation: games-catbox-idle 3.2s ease-in-out infinite;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+.games-catbox-cat.is-home.is-dragging {
+    animation: none;
+    cursor: grabbing;
+    filter: drop-shadow(0 15px 12px rgba(0, 0, 0, 0.42));
+}
+
+.games-catbox-cat-bubble {
+    position: absolute;
+    left: 50%;
+    bottom: 366px;
+    z-index: 4;
+    max-width: 168px;
+    min-height: 24px;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    border: 2px solid #2b2020;
+    border-radius: 0;
+    background: rgba(255, 248, 224, 0.94);
+    color: #2a1c19;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-align: center;
+    transform: translateX(-50%);
+    box-shadow:
+        0 0 0 2px rgba(255, 248, 224, 0.82),
+        4px 4px 0 rgba(0, 0, 0, 0.32);
+    image-rendering: pixelated;
+}
+
+.games-catbox-cat-bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 248, 224, 0.94);
+    border-right: 2px solid #2b2020;
+    border-bottom: 2px solid #2b2020;
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.games-catbox-sleep-countdown {
+    position: absolute;
+    left: 50%;
+    bottom: 222px;
+    z-index: 4;
+    min-width: 92px;
+    height: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    background: rgba(12, 18, 24, 0.58);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    transform: translateX(-50%);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.games-catbox-empty-cat {
+    width: 132px;
+    height: 132px;
+    border: 2px dashed rgba(255, 255, 255, 0.42);
+    border-radius: 8px;
+    background: rgba(20, 24, 29, 0.52);
+    color: rgba(255, 248, 232, 0.78);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 13px;
+}
+
+.games-catbox-empty-cat i {
+    font-size: 28px;
+}
+
+.games-catbox-adopt-panel,
+.games-catbox-status-panel {
+    margin-top: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.games-catbox-hud {
+    position: relative;
+    z-index: 4;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(9, 15, 20, 0.24);
+    backdrop-filter: blur(2px);
+    padding: 9px;
+    box-sizing: border-box;
+    color: #ffffff;
+}
+
+.games-catbox-hud.is-collapsed {
+    padding-bottom: 8px;
+}
+
+.games-catbox-hud.is-collapsed .games-catbox-hud-body {
+    display: none;
+}
+
+.games-catbox-profile {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    margin-bottom: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.games-catbox-exp-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.games-catbox-profile-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.games-catbox-exp-track {
+    position: relative;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 0;
+    background: rgba(11, 17, 23, 0.72);
+    box-shadow:
+        inset 0 0 0 2px rgba(0, 0, 0, 0.28),
+        2px 2px 0 rgba(0, 0, 0, 0.32);
+    overflow: hidden;
+    image-rendering: pixelated;
+}
+
+.games-catbox-exp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #8fe86a, #ffe16d);
+}
+
+.games-catbox-exp-pixels {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 7px,
+        rgba(0, 0, 0, 0.28) 7px,
+        rgba(0, 0, 0, 0.28) 9px
+    );
+    pointer-events: none;
+}
+
+.games-catbox-exp-text {
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.games-catbox-profile-side {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.games-catbox-profile-name {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-catbox-profile-gender {
+    flex: 0 0 auto;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.games-catbox-profile-meta {
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.games-catbox-level {
+    flex: 0 0 auto;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.1;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.games-catbox-adopt-panel {
+    display: grid;
+    gap: 6px;
+    position: relative;
+    z-index: 3;
+    margin-top: -4px;
+    padding: 7px;
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(9, 15, 20, 0.28);
+    backdrop-filter: blur(2px);
+}
+
+.games-catbox-primary,
+.games-catbox-adopt-btn,
+.games-catbox-actions button {
+    min-height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: #fff8e8;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.games-catbox-primary {
+    background: rgba(47, 126, 143, 0.54);
+    color: #ffffff !important;
+}
+
+.games-catbox-adopt-btn {
+    background: rgba(217, 93, 93, 0.68);
+    color: #ffffff !important;
+}
+
+.games-catbox-adopt-btn:disabled {
+    opacity: 0.48;
+    cursor: default;
+}
+
+.games-catbox-name-field,
+.games-catbox-gender-field {
+    display: grid;
+    gap: 4px;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.games-catbox-name-field > span,
+.games-catbox-gender-field > span {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.games-catbox-name-field input {
+    width: 100%;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #17212a;
+    padding: 0 11px;
+    box-sizing: border-box;
+    outline: none;
+    font-size: 12px;
+}
+
+.games-catbox-name-field input:focus {
+    border-color: rgba(255, 226, 128, 0.66);
+}
+
+.games-catbox-gender-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.games-catbox-gender-option {
+    min-width: 0;
+    height: 31px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(6, 11, 16, 0.44);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.games-catbox-gender-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.games-catbox-gender-option i {
+    font-size: 11px;
+}
+
+.games-catbox-gender-option span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-catbox-gender-option:has(input:checked) {
+    border-color: rgba(255, 226, 128, 0.62);
+    background: rgba(255, 226, 128, 0.22);
+    color: #fff8e8;
+}
+
+.games-catbox-gender-option i,
+.games-catbox-gender-option span,
+.games-catbox-primary i,
+.games-catbox-primary span,
+.games-catbox-adopt-btn i,
+.games-catbox-adopt-btn span {
+    color: #ffffff !important;
+}
+
+.games-catbox-nameplate {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 3;
+    max-width: calc(100% - 72px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(14, 19, 24, 0.64);
+    color: #fff8e8;
+    padding: 6px 9px;
+    box-sizing: border-box;
+    font-size: 12px;
+    font-weight: 900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.games-catbox-nameplate strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-catbox-nameplate span {
+    flex: 0 0 auto;
+    color: rgba(255, 248, 232, 0.7);
+    font-size: 10px;
+}
+
+.games-catbox-bg-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(14, 19, 24, 0.62);
+    color: #fff8e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.games-catbox-status-panel {
+    margin-top: 0;
+    border-color: rgba(255, 255, 255, 0.12);
+    background: transparent;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.games-catbox-stat-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    color: #ffffff !important;
+    font-size: 11px;
+    font-weight: 800;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.games-catbox-stat-head span,
+.games-catbox-stat-head strong {
+    color: #ffffff !important;
+    font-size: 12px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.games-catbox-stat-head span {
+    font-size: 11px;
+}
+
+.games-catbox-stat-track {
+    margin-top: 5px;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.26);
+    overflow: hidden;
+}
+
+.games-catbox-stat-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.22s ease;
+}
+
+.games-catbox-message {
+    margin-top: 9px;
+    min-height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(6, 11, 16, 0.24);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    box-sizing: border-box;
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.games-catbox-actions {
+    margin-top: 9px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.games-catbox-actions button {
+    min-width: 0;
+    min-height: 42px;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+    background: rgba(12, 18, 24, 0.38);
+    color: #ffffff !important;
+    padding: 4px 2px;
+    box-sizing: border-box;
+}
+
+.games-catbox-actions button i {
+    color: #ffffff !important;
+    font-size: 15px;
+}
+
+.games-catbox-actions button span {
+    color: #ffffff !important;
+}
+
+.games-catbox-actions button:disabled {
+    opacity: 0.46;
+    cursor: default;
+}
+
+.games-catbox-actions button.is-sleeping {
+    opacity: 0.52;
+}
+
+.games-catbox-actions .games-catbox-abandon-action {
+    background: rgba(88, 28, 31, 0.48);
+}
+
+.games-catbox-actions .games-catbox-coadopt-active {
+    background: rgba(148, 58, 96, 0.54);
+}
+
+.games-catbox-actions .games-catbox-coadopt-active i {
+    color: #ffd8e8 !important;
+}
+
+.games-catbox-letter-btn {
+    position: absolute;
+    right: 58px;
+    bottom: 314px;
+    z-index: 5;
+    width: 38px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.34));
+}
+
+.games-catbox-letter-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.games-catbox-letter-btn span {
+    position: absolute;
+    right: -3px;
+    top: -5px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #ff4f64;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.games-catbox-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    background: rgba(4, 8, 12, 0.44);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.games-catbox-confirm-panel {
+    width: 100%;
+    border: 2px solid rgba(255, 255, 255, 0.78);
+    border-radius: 0;
+    background: rgba(12, 18, 24, 0.9);
+    box-shadow:
+        inset 0 0 0 2px rgba(0, 0, 0, 0.34),
+        4px 4px 0 rgba(0, 0, 0, 0.36);
+    padding: 14px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.games-catbox-confirm-title {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.games-catbox-confirm-text {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.games-catbox-confirm-actions {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.games-catbox-confirm-actions button {
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.games-catbox-confirm-cancel {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.games-catbox-confirm-ok {
+    background: rgba(190, 58, 67, 0.76);
+}
+
+.games-catbox-inventory-overlay,
+.games-catbox-coadopt-overlay,
+.games-catbox-letters-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    background: rgba(4, 8, 12, 0.34);
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+    box-sizing: border-box;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+.games-catbox-letters-overlay {
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.games-catbox-inventory-panel,
+.games-catbox-coadopt-panel,
+.games-catbox-letter-paper {
+    width: 100%;
+    max-height: 62%;
+    border: 2px solid rgba(255, 255, 255, 0.76);
+    border-radius: 0;
+    background: rgba(12, 18, 24, 0.86);
+    box-shadow:
+        inset 0 0 0 2px rgba(0, 0, 0, 0.34),
+        4px 4px 0 rgba(0, 0, 0, 0.36);
+    padding: 9px;
+    box-sizing: border-box;
+    overflow: hidden;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+.games-catbox-coadopt-panel,
+.games-catbox-letter-paper {
+    max-height: 58%;
+}
+
+.games-catbox-coadopt-panel .games-catbox-inventory-head strong {
+    color: #ffffff !important;
+}
+
+.games-catbox-coadopt-hint,
+.games-catbox-coadopt-empty {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.games-catbox-coadopt-list,
+.games-catbox-letter-list {
+    display: grid;
+    gap: 7px;
+    max-height: 190px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.games-catbox-coadopt-list::-webkit-scrollbar,
+.games-catbox-letter-list::-webkit-scrollbar {
+    display: none;
+}
+
+.games-catbox-coadopt-target {
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.games-catbox-coadopt-target span {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.games-catbox-coadopt-target span img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.games-catbox-coadopt-target strong {
+    min-width: 0;
+    color: #ffffff;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-catbox-letter-paper {
+    width: min(88%, 300px);
+    max-height: 52%;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 224, 0.94), rgba(246, 228, 184, 0.94));
+    color: #2a1c19;
+}
+
+.games-catbox-letter-paper .games-catbox-inventory-head strong,
+.games-catbox-letter-paper .games-catbox-inventory-head button {
+    color: #2a1c19;
+}
+
+.games-catbox-letter-note {
+    border: 1px solid rgba(92, 64, 37, 0.24);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.36);
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.games-catbox-letter-note div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #2a1c19;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.games-catbox-letter-note p {
+    margin: 6px 0 0;
+    color: #473424;
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.games-catbox-inventory-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.games-catbox-inventory-head strong {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.games-catbox-inventory-head button {
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.games-catbox-inventory-list {
+    display: grid;
+    gap: 7px;
+    max-height: 240px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+.games-catbox-inventory-list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.games-catbox-item {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.games-catbox-buy {
+    width: 100%;
+    min-height: 30px;
+    margin-top: -4px;
+    border: 1px solid rgba(255, 226, 128, 0.32);
+    border-radius: 8px;
+    background: rgba(255, 226, 128, 0.14);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.games-catbox-buy span,
+.games-catbox-buy strong {
+    color: #ffffff !important;
+}
+
+.games-catbox-item:disabled {
+    opacity: 0.42;
+}
+
+.games-catbox-item-icon {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.games-catbox-item-main {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.games-catbox-item-main strong,
+.games-catbox-item-main em,
+.games-catbox-item-count {
+    color: #ffffff !important;
+}
+
+.games-catbox-item-main strong {
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.games-catbox-item-main em {
+    font-size: 10px;
+    font-style: normal;
+    opacity: 0.72;
+}
+
+.games-catbox-item-count {
+    font-size: 11px;
+    font-weight: 900;
+    text-align: right;
+}
+
+@keyframes games-catbox-breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-5px) scale(1.025); }
+}
+
+@keyframes games-catbox-idle {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+    36% { transform: translate(-50%, -50%) translateY(-3px); }
+    48% { transform: translate(-50%, -50%) translateY(0); }
+    60% { transform: translate(-50%, -50%) translateY(-2px); }
+}

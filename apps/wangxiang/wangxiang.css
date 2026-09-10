@@ -1,0 +1,3513 @@
+/* 万象 APP */
+#phone-panel-content .phone-screen .wangxiang-app,
+#phone-panel-content .phone-screen .wangxiang-background {
+    width: 100%;
+    height: 100%;
+}
+
+#wangxiang-progress-popup-root {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 2147483000;
+    display: flex !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 18px;
+    margin: 0 !important;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: rgba(1, 11, 18, 0.72);
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+    contain: none !important;
+    pointer-events: auto;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup {
+    width: min(420px, 100%);
+    max-height: min(78vh, 620px);
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 22px;
+    border: 1px solid rgba(108, 222, 255, 0.72);
+    border-radius: 7px;
+    background-color: #061a26;
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 18px 56px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(169, 237, 255, 0.12);
+    color: #e9faff;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(121, 219, 242, 0.32);
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-head > span {
+    display: grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid rgba(109, 229, 255, 0.7);
+    border-radius: 6px;
+    background: rgba(4, 38, 52, 0.86);
+    color: #75ebff;
+    font-size: 20px;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-head div {
+    min-width: 0;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-head strong {
+    display: block;
+    color: #f0fcff;
+    font-size: 19px;
+    line-height: 1.3;
+    letter-spacing: 0;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-head small {
+    display: block;
+    margin-top: 4px;
+    color: #8fc2cf;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-list {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item {
+    padding: 12px 13px;
+    border-left: 3px solid #56dff8;
+    background: rgba(2, 22, 31, 0.84);
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item > span,
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item > strong {
+    display: block;
+    overflow-wrap: anywhere;
+    letter-spacing: 0;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item > span {
+    color: #8fc2cf;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item > strong {
+    margin-top: 3px;
+    color: #f1fcff;
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 9px;
+    color: #6ce9ff;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item b,
+#wangxiang-progress-popup-root .wangxiang-progress-popup-item em {
+    font-size: 14px;
+    font-style: normal;
+    letter-spacing: 0;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-confirm {
+    display: flex;
+    width: 100%;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 0;
+    padding: 9px 14px;
+    border: 1px solid #65ddf5;
+    border-radius: 6px;
+    background: #0b5266;
+    color: #f4fdff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+    cursor: pointer;
+}
+
+#wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:hover,
+#wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:focus-visible {
+    background: #117087;
+    outline: 2px solid rgba(111, 231, 255, 0.42);
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    #wangxiang-progress-popup-root {
+        padding: 12px;
+    }
+
+    #wangxiang-progress-popup-root .wangxiang-progress-popup {
+        width: 100%;
+        max-height: 82vh;
+        padding: 18px;
+    }
+}
+
+#phone-panel-content .phone-screen .wangxiang-app {
+    position: relative;
+    overflow: hidden;
+    background: #101816;
+}
+
+#phone-panel-content .phone-screen .wangxiang-background {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+#phone-panel-content .phone-screen .wangxiang-title-image {
+    position: absolute;
+    top: 6%;
+    left: 8%;
+    z-index: 1;
+    display: block;
+    width: 42%;
+    max-width: 190px;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav {
+    position: absolute;
+    top: 16.5%;
+    left: 4%;
+    right: 4%;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+    min-height: 92px;
+    padding: 8px 4px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item {
+    position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    height: 76px;
+    margin: 0 !important;
+    padding: 2px 1px !important;
+    border: 0 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #eaf8ff !important;
+    font-family: inherit;
+    line-height: 1;
+    text-align: center;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item + .wangxiang-primary-nav-item::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(116, 209, 255, 0.2), transparent);
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-icon {
+    display: grid;
+    place-items: center;
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+    border: 1px solid rgba(146, 224, 255, 0.34);
+    border-radius: 6px;
+    background: rgba(17, 59, 82, 0.58);
+    color: #bcecff;
+    box-shadow:
+        inset 0 0 9px rgba(112, 210, 255, 0.08),
+        0 0 8px rgba(45, 178, 238, 0.1);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-icon i {
+    font-size: 14px;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-label {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    color: #dceef7;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 14px;
+    letter-spacing: 0;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-icon {
+    border-color: rgba(111, 221, 255, 0.9);
+    background: rgba(20, 93, 129, 0.78);
+    color: #e9fbff;
+    box-shadow:
+        inset 0 0 10px rgba(122, 226, 255, 0.18),
+        0 0 10px rgba(40, 184, 255, 0.46);
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-label {
+    color: #fff;
+    font-weight: 700;
+}
+
+#phone-panel-content .phone-screen .wangxiang-content-panel {
+    position: absolute;
+    top: 30.5%;
+    right: 4%;
+    bottom: 2%;
+    left: 4%;
+    z-index: 2;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    color: #eaf6ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-content-panel.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-header {
+    flex: 0 0 auto;
+    padding: 0 4px 10px;
+    border-bottom: 1px solid rgba(92, 198, 247, 0.24);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-heading-row {
+    display: flex;
+    min-height: 30px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-title-group {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-title {
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    padding-left: 10px;
+    color: #f3fbff;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-shadow: 0 0 9px rgba(96, 207, 255, 0.35);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-title::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 2px;
+    background: #4dd8ff;
+    box-shadow: 0 0 7px rgba(77, 216, 255, 0.8);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-settings-open,
+#phone-panel-content .phone-screen .wangxiang-settings-back {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(91, 205, 255, 0.48) !important;
+    border-radius: 4px !important;
+    background: rgba(10, 54, 77, 0.58) !important;
+    box-shadow: inset 0 0 10px rgba(73, 194, 245, 0.1) !important;
+    color: #8ee5ff !important;
+    font-size: 11px;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-settings-open:active,
+#phone-panel-content .phone-screen .wangxiang-settings-back:active {
+    background: rgba(38, 132, 174, 0.46) !important;
+}
+
+/* 任务大厅设置 */
+#phone-panel-content .phone-screen .wangxiang-task-settings-panel,
+#phone-panel-content .phone-screen .wangxiang-market-settings-panel {
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-header {
+    display: flex;
+    min-height: 42px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 9px;
+    padding: 0 3px 8px;
+    border-bottom: 1px solid rgba(92, 198, 247, 0.24);
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-header h1,
+#phone-panel-content .phone-screen .wangxiang-settings-header p,
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading h2,
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading p,
+#phone-panel-content .phone-screen .wangxiang-settings-message {
+    margin: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-header h1 {
+    color: #f2fbff;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-header p {
+    margin-top: 2px;
+    color: #7898aa;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-scroll {
+    gap: 10px;
+    padding: 0 1px 14px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-section {
+    flex: 0 0 auto;
+    padding: 10px;
+    border: 1px solid rgba(74, 182, 228, 0.36);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.9);
+    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading > div {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading h2 {
+    color: #eaf7fd;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-section-heading p,
+#phone-panel-content .phone-screen .wangxiang-settings-message {
+    margin-top: 3px;
+    color: #7893a4;
+    font-size: 7.5px;
+    line-height: 1.45;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-message.is-error {
+    color: #ff8b8b;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle {
+    position: relative;
+    display: block;
+    width: 32px;
+    height: 18px;
+    flex: 0 0 auto;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input {
+    position: absolute !important;
+    z-index: 2;
+    inset: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input::before,
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input::after {
+    display: none !important;
+    content: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle span {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(111, 153, 173, 0.65);
+    border-radius: 9px;
+    background: rgba(40, 65, 78, 0.9);
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle span::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #a9bdc7;
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input:checked + span {
+    border-color: #49cfff;
+    background: rgba(24, 137, 184, 0.72);
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input:checked + span::after {
+    background: #effcff;
+    transform: translateX(14px);
+}
+
+#phone-panel-content .phone-screen .wangxiang-settings-toggle input:focus-visible + span {
+    outline: 1px solid #b9efff;
+    outline-offset: 2px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold {
+    margin-top: 9px;
+    overflow: hidden;
+    border: 1px solid rgba(74, 182, 228, 0.24);
+    border-radius: 4px;
+    background: rgba(5, 27, 43, 0.64);
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header:focus-visible {
+    outline: 1px solid #75dcff;
+    outline-offset: -2px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-main {
+    min-width: 0;
+    flex: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-title {
+    color: #f2fbff !important;
+    -webkit-text-fill-color: #f2fbff !important;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-desc {
+    margin-top: 2px;
+    color: rgba(224, 243, 252, 0.68) !important;
+    -webkit-text-fill-color: rgba(224, 243, 252, 0.68) !important;
+    font-size: 8px;
+    line-height: 1.4;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-arrow {
+    flex: 0 0 auto;
+    color: #8ee5ff !important;
+    -webkit-text-fill-color: #8ee5ff !important;
+    font-size: 10px;
+    transition: transform 0.18s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold.is-open .phone-prompt-fold-arrow {
+    transform: rotate(90deg);
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-content {
+    display: none;
+    padding: 0 10px 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-fold.is-open .phone-prompt-fold-content {
+    display: block;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-list {
+    margin-top: 0;
+    border-top: 1px solid rgba(74, 182, 228, 0.2);
+}
+
+/* The shared worldbook manager renders phone-worldbook-* classes. Keep its
+   light default palette from disappearing against Wanxiang's dark panels. */
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row {
+    border-bottom-color: rgba(74, 182, 228, 0.13) !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row.is-selected {
+    border-left-color: #38c9ff !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-name {
+    color: #ddecf3 !important;
+    -webkit-text-fill-color: #ddecf3 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-meta,
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status {
+    color: #87a6b5 !important;
+    -webkit-text-fill-color: #87a6b5 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status.is-error {
+    color: #ff8b95 !important;
+    -webkit-text-fill-color: #ff8b95 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-entry-trigger {
+    border-color: rgba(93, 196, 235, 0.28) !important;
+    background: rgba(11, 46, 64, 0.82) !important;
+    color: #8ee5ff !important;
+    -webkit-text-fill-color: #8ee5ff !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-entry-trigger i {
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 1px;
+    border-bottom: 1px solid rgba(74, 182, 228, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item input {
+    width: 14px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    margin: 1px 0 0 !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+    accent-color: #38c9ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item > span {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item strong,
+#phone-panel-content .phone-screen .wangxiang-worldbook-item small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item strong {
+    color: #ddecf3;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
+#phone-panel-content .phone-screen .wangxiang-worldbook-item small {
+    margin-top: 2px;
+    color: #718b9a;
+    font-size: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools {
+    gap: 5px !important;
+    margin: 9px 0 6px !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-select {
+    width: 100% !important;
+    height: 29px !important;
+    padding: 0 7px !important;
+    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border-radius: 4px !important;
+    background: #071d2a !important;
+    color: #dceff7 !important;
+    font-size: 8px !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools > div {
+    gap: 5px !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools button {
+    min-width: 0;
+    height: 27px !important;
+    margin: 0 !important;
+    padding: 0 3px !important;
+    border: 1px solid rgba(73, 192, 240, 0.46) !important;
+    border-radius: 4px !important;
+    background: rgba(11, 66, 91, 0.64) !important;
+    box-shadow: none !important;
+    color: #dff7ff !important;
+    font-size: 7.5px !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-delete {
+    border-color: rgba(255, 111, 111, 0.4) !important;
+    color: #ffadad !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-textarea {
+    display: block;
+    width: 100% !important;
+    min-height: 210px;
+    margin: 0 !important;
+    padding: 9px !important;
+    resize: vertical;
+    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border-radius: 4px !important;
+    outline: none;
+    background: rgba(1, 13, 23, 0.94) !important;
+    background-image: none !important;
+    box-shadow: inset 0 0 14px rgba(38, 145, 191, 0.08) !important;
+    color: #dbeaf0 !important;
+    font-family: inherit;
+    font-size: 8px !important;
+    line-height: 1.55;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-prompt-textarea:focus {
+    border-color: #56d4ff !important;
+    box-shadow: 0 0 0 1px rgba(86, 212, 255, 0.12), inset 0 0 14px rgba(38, 145, 191, 0.08) !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-subtitle {
+    margin: 5px 0 0;
+    color: #849cad;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-content-scroll {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 9px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 9px 2px 18px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#phone-panel-content .phone-screen .wangxiang-content-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-scroll.wangxiang-content-scroll {
+    gap: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator {
+    display: grid;
+    height: 0;
+    min-height: 0;
+    flex: 0 0 auto;
+    overflow: hidden;
+    color: #78cce9;
+    transition: height 0.2s ease;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-inner {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-inner i {
+    font-size: 11px;
+    transition: transform 0.18s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-ready {
+    color: #d9f7ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-ready i {
+    transform: rotate(180deg);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-loading {
+    color: #67d8ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-success {
+    color: #64e3a8;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-error {
+    color: #ff8d8d;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-list {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-empty {
+    display: flex;
+    min-height: 180px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #56788c;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-empty i {
+    color: #4a91b0;
+    font-size: 22px;
+    filter: drop-shadow(0 0 7px rgba(73, 195, 239, 0.25));
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-empty strong {
+    font-size: 9px;
+    font-weight: 500;
+}
+
+#phone-panel-content .phone-screen .wangxiang-my-tasks-empty {
+    display: flex;
+    min-height: 210px;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #56788c;
+}
+
+#phone-panel-content .phone-screen .wangxiang-my-tasks-empty i {
+    color: #4a91b0;
+    font-size: 22px;
+    filter: drop-shadow(0 0 7px rgba(73, 195, 239, 0.25));
+}
+
+#phone-panel-content .phone-screen .wangxiang-my-tasks-empty strong {
+    font-size: 9px;
+    font-weight: 500;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card {
+    --wangxiang-task-accent: #59d7ff;
+    --wangxiang-task-accent-soft: rgba(89, 215, 255, 0.14);
+    position: relative;
+    display: grid;
+    min-height: 124px;
+    flex: 0 0 auto;
+    grid-template-columns: 52px minmax(0, 1fr) 76px;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    padding: 10px 9px;
+    border: 1px solid rgba(89, 215, 255, 0.58);
+    border-color: color-mix(in srgb, var(--wangxiang-task-accent) 58%, transparent);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.9);
+    box-shadow:
+        inset 0 0 18px var(--wangxiang-task-accent-soft),
+        0 5px 13px rgba(0, 4, 12, 0.34);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 12%;
+    left: 12%;
+    height: 1px;
+    background: var(--wangxiang-task-accent);
+    box-shadow: 0 0 8px var(--wangxiang-task-accent);
+    opacity: 0.75;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card.is-green {
+    --wangxiang-task-accent: #62e2ae;
+    --wangxiang-task-accent-soft: rgba(98, 226, 174, 0.12);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card.is-purple {
+    --wangxiang-task-accent: #ab7cff;
+    --wangxiang-task-accent-soft: rgba(171, 124, 255, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card.is-orange {
+    --wangxiang-task-accent: #ffad55;
+    --wangxiang-task-accent-soft: rgba(255, 173, 85, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-icon {
+    display: grid;
+    width: 50px;
+    height: 50px;
+    border: 1px solid var(--wangxiang-task-accent);
+    background: var(--wangxiang-task-accent-soft);
+    color: var(--wangxiang-task-accent);
+    filter: drop-shadow(0 0 5px var(--wangxiang-task-accent-soft));
+    place-items: center;
+    clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-icon i {
+    font-size: 20px;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-main {
+    align-self: stretch;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    overflow: hidden;
+    color: #f4f9fd;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-title > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-level {
+    flex: 0 0 auto;
+    padding: 2px 4px;
+    border: 1px solid var(--wangxiang-task-accent);
+    border-radius: 3px;
+    color: var(--wangxiang-task-accent);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-description {
+    display: -webkit-box;
+    margin: 5px 0 6px;
+    overflow: hidden;
+    color: #bed0da;
+    font-size: 12px;
+    line-height: 1.5;
+    letter-spacing: 0;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+    color: #91a9ba;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-meta span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-meta i {
+    width: 9px;
+    flex: 0 0 9px;
+    color: #528aad;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-card-side {
+    display: flex;
+    min-width: 0;
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-reward-label {
+    color: #829daf;
+    font-size: 10px;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-reward {
+    margin: 6px 0 8px;
+    color: var(--wangxiang-task-accent);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    text-shadow: 0 0 8px var(--wangxiang-task-accent-soft);
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-reward span {
+    margin-right: 2px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-action {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 31px;
+    margin: 0 !important;
+    padding: 0 4px !important;
+    border: 1px solid var(--wangxiang-task-accent) !important;
+    border-radius: 3px !important;
+    background: var(--wangxiang-task-accent-soft) !important;
+    box-shadow: 0 0 8px var(--wangxiang-task-accent-soft) !important;
+    color: #effbff !important;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-action.is-active {
+    color: #ffd6a5 !important;
+}
+
+/* 我的任务 */
+#phone-panel-content .phone-screen .wangxiang-my-tasks-scroll {
+    gap: 13px;
+    padding-top: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group {
+    flex: 0 0 auto;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group-header {
+    display: flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 5px;
+    border-bottom: 1px solid rgba(79, 186, 234, 0.28);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group-header h2 {
+    margin: 0;
+    color: #eaf7ff;
+    font-size: 16px;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group-header h2 span,
+#phone-panel-content .phone-screen .wangxiang-managed-group-header p {
+    color: #8299aa;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group-header p {
+    margin: 0;
+    text-align: right;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-top: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-card {
+    --wangxiang-managed-accent: #58d6ff;
+    --wangxiang-managed-soft: rgba(88, 214, 255, 0.13);
+    display: grid;
+    min-height: 112px;
+    grid-template-columns: 52px minmax(0, 1fr) 76px;
+    align-items: center;
+    gap: 9px;
+    padding: 9px;
+    border: 1px solid rgba(88, 214, 255, 0.5);
+    border-color: color-mix(in srgb, var(--wangxiang-managed-accent) 55%, transparent);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.91);
+    box-shadow: inset 0 0 17px var(--wangxiang-managed-soft);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-card.is-green {
+    --wangxiang-managed-accent: #63dfa9;
+    --wangxiang-managed-soft: rgba(99, 223, 169, 0.12);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-card.is-purple {
+    --wangxiang-managed-accent: #aa7aff;
+    --wangxiang-managed-soft: rgba(170, 122, 255, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-card.is-orange {
+    --wangxiang-managed-accent: #ffa84c;
+    --wangxiang-managed-soft: rgba(255, 168, 76, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-icon {
+    display: grid;
+    width: 50px;
+    height: 50px;
+    border: 1px solid var(--wangxiang-managed-accent);
+    background: var(--wangxiang-managed-soft);
+    color: var(--wangxiang-managed-accent);
+    place-items: center;
+    clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-icon i {
+    font-size: 20px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-main {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-main h3 {
+    margin: 0;
+    overflow: hidden;
+    color: #f3f9fd;
+    font-size: 14px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-main > p {
+    display: -webkit-box;
+    margin: 5px 0;
+    overflow: hidden;
+    color: #9eb2c0;
+    font-size: 9px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-progress {
+    display: grid;
+    grid-template-columns: auto minmax(35px, 1fr) auto;
+    align-items: center;
+    gap: 5px;
+    margin: 6px 0;
+    color: #91a8b8;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-progress > div {
+    height: 4px;
+    overflow: hidden;
+    background: rgba(82, 121, 145, 0.25);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-progress > div i {
+    display: block;
+    height: 100%;
+    background: var(--wangxiang-managed-accent);
+    box-shadow: 0 0 6px var(--wangxiang-managed-accent);
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-progress strong {
+    color: var(--wangxiang-managed-accent);
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-category-editor {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-category-editor label {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-category-editor label > span {
+    color: #7893a4;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-category-editor input {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 31px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border-radius: 4px !important;
+    background: #071d2a !important;
+    box-shadow: none !important;
+    color: #e6f5fd !important;
+    font-size: 10px !important;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-category-editor .is-locked input {
+    border-color: rgba(106, 137, 153, 0.3) !important;
+    color: #8195a0 !important;
+    opacity: 1 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-categories-save {
+    display: flex;
+    width: 100%;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 10px 0 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(73, 192, 240, 0.56) !important;
+    border-radius: 4px !important;
+    background: rgba(11, 66, 91, 0.72) !important;
+    box-shadow: none !important;
+    color: #dff7ff !important;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-meta {
+    display: flex;
+    gap: 8px;
+    color: #71899a;
+    font-size: 7.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-meta span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side {
+    display: flex;
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side > span {
+    color: #819bab;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side > strong {
+    margin: 6px 0 8px;
+    color: var(--wangxiang-managed-accent);
+    font-size: 19px;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side small {
+    margin-right: 2px;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side button {
+    width: 100%;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 3px !important;
+    border: 1px solid var(--wangxiang-managed-accent) !important;
+    border-radius: 3px !important;
+    background: var(--wangxiang-managed-soft) !important;
+    box-shadow: none !important;
+    color: #effaff !important;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-managed-task-side button:disabled {
+    border-color: rgba(111, 139, 156, 0.35) !important;
+    background: rgba(40, 59, 70, 0.18) !important;
+    color: #71818c !important;
+    opacity: 1;
+}
+
+/* 商品商场 */
+#phone-panel-content .phone-screen .wangxiang-market-panel {
+    gap: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-toolbar {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr) 68px;
+    gap: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-search {
+    display: flex;
+    height: 36px;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    border: 1px solid rgba(76, 176, 222, 0.42);
+    border-radius: 5px;
+    background: rgba(2, 17, 29, 0.84);
+    color: #86a5b9;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-market-search > input[type="search"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #e6f5fd !important;
+    -webkit-text-fill-color: #e6f5fd;
+    font-size: 10px;
+    outline: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-app .wangxiang-market-search > input[type="search"]::placeholder {
+    color: #718b9c !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #718b9c;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-settings-open {
+    display: flex;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(76, 176, 222, 0.48) !important;
+    border-radius: 5px !important;
+    background: rgba(2, 17, 29, 0.84) !important;
+    box-shadow: none !important;
+    color: #c1d7e5 !important;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-settings-open:active {
+    background: rgba(38, 132, 174, 0.4) !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-categories {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    border-bottom: 1px solid rgba(77, 180, 226, 0.3);
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-categories button {
+    position: relative;
+    height: 30px;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 1px !important;
+    overflow: hidden;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #9db0bd !important;
+    font-size: 12px;
+    line-height: 1.25;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-categories button.is-active {
+    color: #f2fbff !important;
+    font-weight: 700;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-categories button.is-active::after {
+    content: '';
+    position: absolute;
+    right: 16%;
+    bottom: 0;
+    left: 16%;
+    height: 2px;
+    background: #49c9ff;
+    box-shadow: 0 0 7px #49c9ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-scroll.wangxiang-content-scroll {
+    gap: 0;
+    padding-top: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator {
+    display: grid;
+    height: 0;
+    min-height: 0;
+    flex: 0 0 auto;
+    overflow: hidden;
+    color: #78cce9;
+    transition: height 0.2s ease;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-inner {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-inner i {
+    font-size: 11px;
+    transition: transform 0.18s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-ready {
+    color: #d9f7ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-ready i {
+    transform: rotate(180deg);
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-loading {
+    color: #67d8ff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-success {
+    color: #64e3a8;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-error {
+    color: #ff8d8d;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding-top: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-card {
+    --wangxiang-market-accent: #52d2ff;
+    display: flex;
+    min-width: 0;
+    min-height: 215px;
+    flex-direction: column;
+    padding: 10px;
+    border: 1px solid color-mix(in srgb, var(--wangxiang-market-accent) 62%, transparent);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.91);
+    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="2"] { --wangxiang-market-accent: #a67aff; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="3"] { --wangxiang-market-accent: #62dc9a; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="4"] { --wangxiang-market-accent: #69dcff; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="5"] { --wangxiang-market-accent: #f2b35f; }
+
+#phone-panel-content .phone-screen .wangxiang-market-product-card.is-hidden-by-filter {
+    display: none;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-icon {
+    display: grid;
+    height: 50px;
+    flex: 0 0 auto;
+    color: var(--wangxiang-market-accent);
+    font-size: 30px;
+    place-items: center;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--wangxiang-market-accent) 55%, transparent));
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-main {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    color: var(--wangxiang-market-accent);
+    font-size: 10.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-heading > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-tags {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 3px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-tags small {
+    padding: 1px 3px;
+    border: 1px solid color-mix(in srgb, var(--wangxiang-market-accent) 64%, transparent);
+    border-radius: 2px;
+    color: var(--wangxiang-market-accent);
+    font-size: 9px;
+    line-height: 1.25;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-main h2 {
+    display: -webkit-box;
+    min-height: 36px;
+    margin: 7px 0 4px;
+    overflow: hidden;
+    color: #f0f9fd;
+    font-size: 14px;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-description {
+    appearance: none;
+    -webkit-appearance: none;
+    display: -webkit-box !important;
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 49px;
+    height: auto !important;
+    margin: 0 0 8px;
+    padding: 0 !important;
+    overflow: hidden;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #a9beca !important;
+    -webkit-text-fill-color: #a9beca !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+    text-align: left;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-meta {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 5px;
+    margin-top: auto;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-meta strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--wangxiang-market-accent);
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-meta strong small {
+    display: block;
+    margin-bottom: 2px;
+    color: #78909f;
+    font-size: 9px;
+    font-weight: 400;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-meta > span {
+    flex: 0 0 auto;
+    color: #718897;
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-buy {
+    display: flex;
+    width: 100%;
+    height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 9px 0 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--wangxiang-market-accent) !important;
+    border-radius: 3px !important;
+    background: color-mix(in srgb, var(--wangxiang-market-accent) 16%, transparent) !important;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--wangxiang-market-accent) 18%, transparent) !important;
+    color: #f1fbff !important;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-market-product-buy:disabled {
+    border-color: rgba(110, 135, 150, 0.35) !important;
+    background: rgba(72, 86, 96, 0.15) !important;
+    box-shadow: none !important;
+    color: #748792 !important;
+}
+
+/* 我的订单 */
+#phone-panel-content .phone-screen .wangxiang-orders-scroll.wangxiang-content-scroll {
+    padding-top: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-account {
+    flex: 0 0 auto;
+    padding: 10px 2px 11px;
+    border-bottom: 1px solid rgba(74, 184, 230, 0.28);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-account-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-account-user span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #86a5b5;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-account-user strong {
+    overflow: hidden;
+    color: #f0f9fd;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid > div {
+    padding: 7px 9px;
+    border-left: 2px solid #51d2ff;
+    background: rgba(9, 44, 63, 0.56);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid span,
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid strong {
+    display: block;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid span {
+    color: #8199a8;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-balance-grid strong {
+    margin-top: 3px;
+    color: #65dcff;
+    font-size: 14px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses {
+    flex: 0 0 auto;
+    padding: 2px 2px 8px;
+    border-bottom: 1px solid rgba(74, 184, 230, 0.2);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses > header {
+    display: flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses h2,
+#phone-panel-content .phone-screen .wangxiang-order-addresses p {
+    margin: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses h2 {
+    color: #dff4fc;
+    font-size: 12px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses > header p {
+    margin-top: 2px;
+    color: #718b9a;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-addresses > header button {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(74, 198, 247, 0.52) !important;
+    border-radius: 3px !important;
+    background: rgba(12, 67, 94, 0.55) !important;
+    color: #82ddff !important;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-address-list article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid rgba(75, 167, 207, 0.3);
+    background: rgba(4, 27, 42, 0.72);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-address-list article.is-default {
+    border-color: rgba(76, 207, 255, 0.58);
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main {
+    display: block;
+    min-width: 0;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #dcecf2 !important;
+    text-align: left;
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main span,
+#phone-panel-content .phone-screen .wangxiang-address-main strong,
+#phone-panel-content .phone-screen .wangxiang-address-main p {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main span {
+    color: #66d4fa;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main span small {
+    margin-left: 5px;
+    padding: 1px 3px;
+    border: 1px solid #58c9ef;
+    color: #91e6ff;
+    font-size: 7px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main strong {
+    margin-top: 3px;
+    color: #e8f5fa;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-address-main p {
+    margin-top: 2px;
+    color: #829aa8;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+#phone-panel-content .phone-screen [data-wangxiang-address-remove] {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #b87979 !important;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card {
+    flex: 0 0 auto;
+    padding: 10px;
+    border: 1px solid rgba(76, 184, 231, 0.5);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.91);
+    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.08);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    color: #8299a8;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > header strong {
+    color: #ffbf62;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card.is-shipping > header strong {
+    color: #67dca0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card.is-delivered {
+    border-color: rgba(105, 221, 166, 0.52);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card.is-delivered > header strong {
+    color: #91efbd;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card.is-delivered .wangxiang-order-icon {
+    border-color: rgba(105, 221, 166, 0.45);
+    background: rgba(39, 126, 83, 0.2);
+    color: #84eab2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-body {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba(77, 188, 236, 0.4);
+    background: rgba(29, 94, 124, 0.18);
+    color: #67d7ff;
+    font-size: 20px;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-main {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-main h2 {
+    margin: 0 0 5px;
+    overflow: hidden;
+    color: #f0f8fc;
+    font-size: 13px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-main p,
+#phone-panel-content .phone-screen .wangxiang-order-main small {
+    display: block;
+    margin: 0;
+    color: #849ba9;
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(72, 170, 212, 0.18);
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > footer > div span {
+    display: block;
+    color: #78909f;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > footer > div strong {
+    display: block;
+    margin-top: 2px;
+    color: #5ad4ff;
+    font-size: 15px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > footer button {
+    display: flex;
+    min-width: 78px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    border: 1px solid #4acbff !important;
+    border-radius: 3px !important;
+    background: rgba(28, 121, 164, 0.34) !important;
+    box-shadow: none !important;
+    color: #effbff !important;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card > footer button:disabled {
+    border-color: rgba(86, 182, 132, 0.42) !important;
+    background: rgba(35, 112, 72, 0.18) !important;
+    color: #80c9a1 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-order-card.is-delivered > footer button:disabled {
+    border-color: rgba(103, 220, 164, 0.5) !important;
+    background: rgba(39, 126, 83, 0.22) !important;
+    color: #9aeec0 !important;
+}
+
+/* 我的背包 */
+#phone-panel-content .phone-screen .wangxiang-inventory-scroll.wangxiang-content-scroll {
+    padding-top: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-header {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 2px 10px;
+    border-bottom: 1px solid rgba(74, 184, 230, 0.28);
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-header span,
+#phone-panel-content .phone-screen .wangxiang-inventory-header h2 {
+    display: block;
+    margin: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-header span {
+    color: #6f91a4;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-header h2 {
+    margin-top: 2px;
+    color: #ecf8fc;
+    font-size: 15px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-header > strong {
+    flex: 0 0 auto;
+    color: #8ee8ff;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    padding: 10px;
+    border: 1px solid rgba(77, 188, 236, 0.42);
+    border-radius: 5px;
+    background: rgba(2, 18, 31, 0.9);
+    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item.is-task {
+    border-color: rgba(105, 221, 166, 0.48);
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(77, 188, 236, 0.4);
+    border-radius: 4px;
+    background: rgba(29, 94, 124, 0.18);
+    color: #67d7ff;
+    font-size: 18px;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item.is-task .wangxiang-inventory-item-icon {
+    border-color: rgba(105, 221, 166, 0.42);
+    background: rgba(39, 126, 83, 0.18);
+    color: #83e9b1;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main h3 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: #f0f8fc;
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main > div > strong {
+    flex: 0 0 auto;
+    color: #efc56a;
+    font-size: 14px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main p {
+    display: -webkit-box;
+    margin: 4px 0 0;
+    overflow: hidden;
+    color: #829aa8;
+    font-size: 9px;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    margin-top: 6px;
+    color: #6f8795;
+    font-size: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main footer span,
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main footer time {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-item-main footer span {
+    color: #79cde9;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-empty {
+    display: flex;
+    min-height: 180px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 7px;
+    color: #718b99;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-empty i {
+    color: #4c8ba8;
+    font-size: 28px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-inventory-empty strong {
+    color: #a8c7d5;
+    font-size: 12px;
+}
+
+/* 购买数量弹窗 */
+#phone-panel-content .phone-screen .wangxiang-purchase-overlay {
+    position: absolute;
+    z-index: 20;
+    inset: 0;
+    display: grid;
+    padding: 16px;
+    background: rgba(0, 8, 15, 0.72);
+    place-items: center;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-overlay.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog {
+    width: min(100%, 320px);
+    padding: 14px;
+    border: 1px solid rgba(77, 203, 255, 0.65);
+    border-radius: 6px;
+    background: #041827;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), inset 0 0 22px rgba(59, 180, 230, 0.08);
+    color: #effaff;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog h2,
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog p {
+    margin: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog h2 {
+    font-size: 15px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-product-name {
+    margin-top: 4px !important;
+    color: #9eb8c7;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog > header > button {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #91b5c7 !important;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-price {
+    margin-top: 12px;
+    color: #65d8ff;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper button,
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper input {
+    width: 100% !important;
+    height: 36px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(77, 188, 236, 0.5) !important;
+    border-radius: 3px !important;
+    background: rgba(5, 37, 55, 0.9) !important;
+    box-shadow: none !important;
+    color: #effaff !important;
+    -webkit-text-fill-color: #effaff !important;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper input {
+    font-size: 14px !important;
+    appearance: textfield;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper input::-webkit-inner-spin-button,
+#phone-panel-content .phone-screen .wangxiang-purchase-stepper input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog > footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog > footer button {
+    display: flex;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    border: 1px solid rgba(111, 158, 180, 0.5) !important;
+    border-radius: 3px !important;
+    background: rgba(22, 53, 69, 0.7) !important;
+    box-shadow: none !important;
+    color: #c7dbe5 !important;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-purchase-dialog > footer button.is-primary {
+    border-color: #4acbff !important;
+    background: rgba(28, 121, 164, 0.42) !important;
+    color: #f1fbff !important;
+}
+
+/* 地址与支付弹窗 */
+#phone-panel-content .phone-screen .wangxiang-form-overlay {
+    position: absolute;
+    z-index: 24;
+    inset: 0;
+    display: grid;
+    padding: 14px;
+    background: rgba(0, 8, 15, 0.78);
+    place-items: center;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-overlay.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog {
+    display: flex;
+    width: min(100%, 340px);
+    max-height: min(86vh, 560px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(77, 203, 255, 0.68);
+    border-radius: 6px;
+    background: #041827;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), inset 0 0 22px rgba(59, 180, 230, 0.08);
+    color: #effaff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px;
+    border-bottom: 1px solid rgba(73, 183, 228, 0.2);
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header h2,
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header p {
+    margin: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header h2 {
+    color: #f0faff;
+    font-size: 15px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header p {
+    margin-top: 3px;
+    color: #87a1af;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > header button {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #91b5c7 !important;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 13px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body > label {
+    display: grid;
+    gap: 4px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body > label span {
+    color: #8fa7b5;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body input[type="text"],
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body textarea {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    border: 1px solid rgba(76, 177, 221, 0.48) !important;
+    border-radius: 3px !important;
+    background: #061e2d !important;
+    box-shadow: none !important;
+    color: #effaff !important;
+    -webkit-text-fill-color: #effaff !important;
+    font-size: 11px !important;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body input[type="text"] {
+    height: 34px !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog-body textarea {
+    min-height: 76px;
+    resize: vertical;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > footer {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 11px 13px 13px;
+    border-top: 1px solid rgba(73, 183, 228, 0.2);
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > footer button {
+    height: 34px;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    border: 1px solid rgba(111, 158, 180, 0.5) !important;
+    border-radius: 3px !important;
+    background: rgba(22, 53, 69, 0.7) !important;
+    box-shadow: none !important;
+    color: #c7dbe5 !important;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-form-dialog > footer button.is-primary {
+    border-color: #4acbff !important;
+    background: rgba(28, 121, 164, 0.42) !important;
+    color: #f1fbff !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-amount {
+    color: #65d8ff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods legend,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses legend {
+    margin-bottom: 5px;
+    color: #8ea8b7;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods label,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses label {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    padding: 8px;
+    border: 1px solid rgba(75, 167, 207, 0.34);
+    background: rgba(4, 27, 42, 0.72);
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods label.is-disabled {
+    opacity: 0.46;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods input,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses input {
+    width: 15px !important;
+    min-width: 15px !important;
+    height: 15px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    accent-color: #47cfff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods span,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses span,
+#phone-panel-content .phone-screen .wangxiang-payment-methods strong,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses strong,
+#phone-panel-content .phone-screen .wangxiang-payment-methods small,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses small {
+    display: block;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods strong,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses strong {
+    color: #e4f3f8;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-methods small,
+#phone-panel-content .phone-screen .wangxiang-payment-addresses small {
+    margin-top: 2px;
+    color: #8198a6;
+    font-size: 8px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-addresses > div {
+    display: grid;
+    gap: 6px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-payment-no-address {
+    margin: 0;
+    padding: 10px;
+    color: #d99572;
+    font-size: 9px;
+    text-align: center;
+}
+
+/* 截断内容详情弹窗 */
+#phone-panel-content .phone-screen .wangxiang-detail-clickable,
+#phone-panel-content .phone-screen .wangxiang-market-product-description {
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .wangxiang-detail-clickable:focus-visible,
+#phone-panel-content .phone-screen .wangxiang-market-product-description:focus-visible {
+    outline: 1px solid #7bdcff;
+    outline-offset: 2px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-overlay {
+    position: absolute;
+    z-index: 22;
+    inset: 0;
+    display: grid;
+    padding: 16px;
+    background: rgba(0, 8, 15, 0.76);
+    place-items: center;
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-overlay.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-dialog {
+    width: min(100%, 330px);
+    overflow: hidden;
+    border: 1px solid rgba(77, 203, 255, 0.68);
+    border-radius: 6px;
+    background: #041827;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.58), inset 0 0 22px rgba(59, 180, 230, 0.08);
+    color: #effaff;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-dialog > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 14px 11px;
+    border-bottom: 1px solid rgba(73, 183, 228, 0.2);
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    overflow: hidden;
+    color: #6fcff2;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-dialog h2 {
+    margin: 0;
+    color: #f2fbff;
+    font-size: 16px;
+    line-height: 1.35;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-dialog > header button {
+    display: grid;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #91b5c7 !important;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-dialog-body {
+    max-height: min(58vh, 360px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 14px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-text {
+    margin: 0;
+    color: #d9e8ee;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(73, 183, 228, 0.2);
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress.is-hidden,
+#phone-panel-content .phone-screen .wangxiang-info-meta.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #8ea8b7;
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress-meta strong {
+    color: #dff7ff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress-track {
+    height: 8px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(35, 84, 108, 0.78);
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-progress-track i {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: #55d4ff;
+    box-shadow: 0 0 9px rgba(85, 212, 255, 0.8);
+    transition: width 0.2s ease;
+}
+
+#phone-panel-content .phone-screen .wangxiang-info-meta {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(73, 183, 228, 0.2);
+    color: #76ccec;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+/* 任务详情 */
+#phone-panel-content .phone-screen .wangxiang-task-detail-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: #020d17;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #ddecf4;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(1, 11, 20, 0.82);
+    pointer-events: none;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-panel.is-hidden {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 82px;
+    flex: 0 0 82px;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 14px 7px;
+    border-bottom: 1px solid rgba(58, 178, 232, 0.25);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-header img {
+    display: block;
+    width: 145px;
+    max-height: 55px;
+    object-fit: contain;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-back {
+    display: grid;
+    width: 31px;
+    min-width: 31px;
+    height: 31px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(66, 193, 246, 0.48) !important;
+    border-radius: 4px !important;
+    background: rgba(4, 39, 61, 0.78) !important;
+    box-shadow: inset 0 0 11px rgba(68, 192, 244, 0.12) !important;
+    color: #83ddff !important;
+    font-size: 12px;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-scroll.wangxiang-content-scroll {
+    position: relative;
+    z-index: 1;
+    gap: 0;
+    padding: 9px 10px 16px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-content {
+    --wangxiang-detail-accent: #57d3ff;
+    --wangxiang-detail-soft: rgba(87, 211, 255, 0.13);
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 7px;
+    padding-bottom: 3px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-content.is-green {
+    --wangxiang-detail-accent: #62e2ae;
+    --wangxiang-detail-soft: rgba(98, 226, 174, 0.12);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-content.is-purple {
+    --wangxiang-detail-accent: #ad7dff;
+    --wangxiang-detail-soft: rgba(173, 125, 255, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-content.is-orange {
+    --wangxiang-detail-accent: #ffad55;
+    --wangxiang-detail-soft: rgba(255, 173, 85, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-hero,
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher,
+#phone-panel-content .phone-screen .wangxiang-task-detail-section {
+    position: relative;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url('./wxrwxq.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    box-shadow: none;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-hero {
+    padding: 8px 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-title-row {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    padding: 7px 9px;
+    border-bottom: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-title-row h1 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: #effaff;
+    font-size: 15px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-title-row h1 span {
+    margin-right: 5px;
+    color: var(--wangxiang-detail-accent);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-status {
+    display: flex;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    padding: 0 7px;
+    border: 1px solid var(--wangxiang-detail-accent);
+    border-radius: 3px;
+    background: var(--wangxiang-detail-soft);
+    color: var(--wangxiang-detail-accent);
+    font-size: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher {
+    display: grid;
+    min-height: 104px;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 18px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--wangxiang-detail-accent);
+    background: var(--wangxiang-detail-soft);
+    color: var(--wangxiang-detail-accent);
+    font-size: 19px;
+    place-items: center;
+    clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher > div:nth-child(2) {
+    min-width: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher span,
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher p {
+    display: block;
+    margin: 0;
+    color: #9db2bf;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher h2 {
+    margin: 2px 0;
+    overflow: hidden;
+    color: #f0f8fc;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher strong {
+    display: block;
+    margin-top: 3px;
+    color: #63d998;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-publisher button {
+    height: 34px;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    border: 1px solid rgba(68, 198, 248, 0.58) !important;
+    border-radius: 3px !important;
+    background: rgba(12, 67, 94, 0.55) !important;
+    box-shadow: none !important;
+    color: #83ddff !important;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-section {
+    padding: 15px 18px 17px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-section > h2 {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 0 7px;
+    padding-bottom: 0;
+    border-bottom: 0;
+    color: #6fd5ff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-section > h2 span {
+    margin-left: auto;
+    color: #7f96a4;
+    font-size: 10.5px;
+    font-weight: 400;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-description {
+    margin: 0;
+    color: #d0dde3;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objectives {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective {
+    display: grid;
+    grid-template-columns: 22px minmax(78px, 0.8fr) minmax(76px, 1fr) 43px;
+    align-items: center;
+    gap: 6px;
+    color: #cbd9df;
+    font-size: 11.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective > i {
+    color: #91c9dd;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective > div {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgba(35, 84, 108, 0.68);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective > div i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--wangxiang-detail-accent);
+    box-shadow: 0 0 7px var(--wangxiang-detail-accent);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective > strong {
+    color: #a9bec8;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-align: right;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-objective.is-completed > strong {
+    color: #68dc8e;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-rewards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-rewards > div {
+    display: flex;
+    min-width: 0;
+    min-height: 60px;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid rgba(65, 167, 209, 0.32);
+    background: rgba(7, 35, 50, 0.72);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-rewards i {
+    flex: 0 0 auto;
+    color: var(--wangxiang-detail-accent);
+    font-size: 17px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-rewards span {
+    min-width: 0;
+    color: #9eb2bd;
+    font-size: 10.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-rewards strong {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    color: #dceef5;
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-info > span {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 16px 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 3px;
+    color: #9db1bc;
+    font-size: 10.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-info i {
+    color: #64c9f2;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-info strong {
+    min-width: 0;
+    overflow: visible;
+    color: #c5d6de;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article {
+    display: grid;
+    grid-template-columns: 33px minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(65, 166, 208, 0.13);
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article:last-child {
+    border-bottom: 0;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article > div {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(75, 181, 223, 0.4);
+    background: rgba(20, 62, 82, 0.52);
+    color: #7dcced;
+    font-size: 13px;
+    place-items: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p {
+    margin: 0;
+    color: #c3d0d6;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p > strong {
+    display: inline-block;
+    margin-right: 6px;
+    color: #dceaf0;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p small {
+    margin-left: 3px;
+    color: #68bce0;
+    font-size: 9.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p > span {
+    color: #718794;
+    font-size: 9.5px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p > span::after {
+    content: '';
+    display: block;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-no-comments {
+    margin: 0;
+    padding: 8px 0;
+    color: #69818f;
+    font-size: 11px;
+    text-align: center;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-actions {
+    display: flex;
+    gap: 7px;
+    padding-top: 2px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-actions button {
+    display: flex;
+    height: 42px;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    border: 1px solid #47c9ff !important;
+    border-radius: 4px !important;
+    background: rgba(10, 69, 100, 0.7) !important;
+    box-shadow: inset 0 0 15px rgba(57, 187, 240, 0.1), 0 0 8px rgba(49, 177, 230, 0.16) !important;
+    color: #ddf7ff !important;
+    font-size: 12px;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-actions button.is-danger {
+    border-color: #f15d61 !important;
+    background: rgba(93, 24, 30, 0.65) !important;
+    color: #ffb4b6 !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-task-detail-actions button.is-completed,
+#phone-panel-content .phone-screen .wangxiang-task-detail-actions button:disabled {
+    opacity: 0.62;
+}
+
+@media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel-content .phone-screen .wangxiang-primary-nav {
+        height: 58px;
+        min-height: 58px;
+        padding: 4px 3px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-item {
+        height: 50px;
+        gap: 3px;
+        padding: 1px !important;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-item + .wangxiang-primary-nav-item::before {
+        top: 6px;
+        bottom: 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-icon {
+        width: 24px;
+        height: 24px;
+        flex-basis: 24px;
+        border-radius: 5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-icon i {
+        font-size: 11px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-label {
+        font-size: 9px;
+        line-height: 11px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-content-panel {
+        top: 28%;
+        right: 3.5%;
+        left: 3.5%;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-header {
+        padding: 0 2px 7px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-heading-row {
+        min-height: 24px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-title {
+        padding-left: 8px;
+        font-size: 15px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-title-group {
+        gap: 5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-settings-open,
+    #phone-panel-content .phone-screen .wangxiang-settings-back {
+        height: 24px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-settings-open,
+    #phone-panel-content .phone-screen .wangxiang-settings-back {
+        width: 24px;
+        min-width: 24px;
+        font-size: 9px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-settings-header {
+        min-height: 35px;
+        gap: 7px;
+        padding-bottom: 7px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-settings-header h1 {
+        font-size: 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-settings-section {
+        padding: 8px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-prompt-textarea {
+        min-height: 190px;
+        font-size: 7.5px !important;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-subtitle {
+        margin-top: 3px;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-content-scroll {
+        gap: 7px;
+        padding: 7px 1px 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-scroll.wangxiang-content-scroll {
+        gap: 0;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-list {
+        gap: 7px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card {
+        min-height: 116px;
+        grid-template-columns: 42px minmax(0, 1fr) 64px;
+        gap: 6px;
+        padding: 8px 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card-icon i {
+        font-size: 15px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card-title {
+        font-size: 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card-description {
+        margin: 4px 0 5px;
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-card-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        font-size: 9.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-reward-label {
+        font-size: 9px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-reward {
+        margin: 5px 0 7px;
+        font-size: 17px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-reward span {
+        font-size: 9px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-task-action {
+        height: 29px;
+        padding: 0 2px !important;
+        font-size: 10.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-my-tasks-scroll {
+        gap: 10px;
+        padding-top: 0;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-group-header {
+        min-height: 28px;
+        padding: 0 3px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-group-header h2 {
+        font-size: 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-group-header h2 span,
+    #phone-panel-content .phone-screen .wangxiang-managed-group-header p {
+        font-size: 7px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-group-list {
+        gap: 6px;
+        padding-top: 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-card {
+        min-height: 95px;
+        grid-template-columns: 38px minmax(0, 1fr) 58px;
+        gap: 6px;
+        padding: 7px 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-icon {
+        width: 37px;
+        height: 37px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-icon i {
+        font-size: 15px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-main h3 {
+        font-size: 10.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-main > p {
+        margin: 4px 0;
+        font-size: 7.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-progress {
+        gap: 3px;
+        margin: 4px 0;
+        font-size: 6.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-meta {
+        flex-direction: column;
+        gap: 2px;
+        font-size: 6.5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-side > strong {
+        margin: 5px 0 7px;
+        font-size: 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-managed-task-side button {
+        height: 24px;
+        font-size: 8px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-panel {
+        gap: 5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-toolbar {
+        grid-template-columns: minmax(0, 1fr) 54px;
+        gap: 5px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-search,
+    #phone-panel-content .phone-screen .wangxiang-market-settings-open {
+        height: 30px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-search {
+        gap: 5px;
+        padding: 0 7px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-search input,
+    #phone-panel-content .phone-screen .wangxiang-market-settings-open {
+        font-size: 9px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-categories button {
+        min-height: 30px;
+        height: auto;
+        font-size: 11px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-category-editor {
+        gap: 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-category-editor input {
+        height: 29px !important;
+        font-size: 9px !important;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-list {
+        gap: 6px;
+        padding-top: 6px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-card {
+        min-height: 205px;
+        padding: 8px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-icon {
+        height: 46px;
+        font-size: 28px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-main h2 {
+        min-height: 34px;
+        font-size: 13px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-meta strong {
+        font-size: 15px;
+    }
+
+    #phone-panel-content .phone-screen .wangxiang-market-product-buy {
+        height: 30px;
+        font-size: 10.5px;
+    }
+
+}
+
+@media (hover: hover) and (pointer: fine) {
+    #phone-panel-content .phone-screen .wangxiang-primary-nav-item:hover {
+        background: rgba(79, 185, 232, 0.1) !important;
+        color: #fff !important;
+    }
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item:active {
+    background: rgba(79, 185, 232, 0.16) !important;
+}
+
+#phone-panel-content .phone-screen .wangxiang-primary-nav-item:focus-visible {
+    outline: 1px solid rgba(151, 227, 255, 0.9);
+    outline-offset: -2px;
+}
+
+/* 深色背景下保持手机状态栏清晰可见。 */
+#phone-panel-content .phone-body-panel-wangxiang .phone-statusbar .time,
+#phone-panel-content .phone-body-panel-wangxiang .statusbar-left .time {
+    color: #fff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+}
+
+#phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal,
+#phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal .fa-wifi {
+    color: #fff !important;
+}
+
+#phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+
+#phone-panel-content .phone-body-panel-wangxiang .battery-head {
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+#phone-panel-content .phone-body-panel-wangxiang .battery-body {
+    border-color: #fff !important;
+    background: rgba(0, 0, 0, 0.28) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+#phone-panel-content .phone-body-panel-wangxiang .battery-text {
+    color: #fff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
