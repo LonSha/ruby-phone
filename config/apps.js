@@ -22,7 +22,8 @@ export const DEFAULT_APP_ICONS = Object.freeze({
     album: new URL('../phone/相册.png', import.meta.url).href,
     calendar: new URL('../phone/日历.png', import.meta.url).href,
     games: new URL('../phone/游戏.png', import.meta.url).href,
-    settings: new URL('../phone/设置.png', import.meta.url).href
+    settings: new URL('../phone/设置.png', import.meta.url).href,
+    memory: new URL('../phone/记忆.png', import.meta.url).href
 });
 
 export const DEFAULT_PHONE_WALLPAPER = new URL('../phone/手机背景.jpg', import.meta.url).href;
@@ -195,6 +196,14 @@ export const APPS = [
         name: '健康',
         icon: '💗',
         color: '#f43f5e',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'memory',
+        name: '记忆',
+        icon: '🧠',
+        color: '#6366f1',
         badge: 0,
         data: {}
     },

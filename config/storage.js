@@ -48,6 +48,7 @@ export class PhoneStorage {
             /^wangxiang_/,        // 万象任务与订单数据
             /^phone_call_/,       // 通话记录数据
             /^music_/,            // 音乐播放列表数据
+            /^memory_/,           // 记忆系统数据（按聊天独立存储, 防串味）
         ];
 
         // ==================== 防抖：saveChat ====================

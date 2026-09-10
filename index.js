@@ -19,6 +19,7 @@ import { PhoneCallData, parseSmsMessagesFromText } from './apps/phone/phone-data
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
+import { MemoryCore } from './apps/memory/memory-data.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 const ST_PHONE_VERSION = '1.5.5';
@@ -1305,6 +1306,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         imageGenerationManager = new ImageGenerationManager(storage);
         worldbookManager = new WorldbookManager(storage);
         promptManager.ensureLoaded(); // 强制把所有提示词立即读入内存待命
+
+        // 记忆系统: 全局单例, 启动即活 (后台采集/巩固/AI注入 不依赖 App 打开)
+        try {
+            window.VirtualPhone.memoryCore = new MemoryCore(storage);
+            window.VirtualPhone.memoryCore.attachPromptHook();
+        } catch (e) {
+            console.warn('[Memory] 记忆系统初始化失败:', e);
+        }
 
         modulesLoaded = true;
 
@@ -8177,6 +8186,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 return;
             }
 
+            // 记忆系统: 记录 AI 最终楼层 (仅新楼层, 排除历史回放/流式中)
+            if (!isHistoryReplay && !message.is_user) {
+                try { window.VirtualPhone?.memoryCore?.record?.('ai', text); } catch (e) {}
+            }
+
             // 🔥 新增：生成当前解析批次ID，用于清洗流式输出导致的重复片段
             const currentContentKey = String(text.length || 0) + '_' + String(text || '').slice(0, 120);
             if (message._phone_batch_content_key !== currentContentKey) {
@@ -8198,6 +8212,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // 用户楼层同样参与微博自动触发判断
                 if (listenUserMessages) {
                     scheduleAutoWeiboIfDue({ reason: 'user_message' });
+                }
+                // 记忆系统: 记录用户发言 (仅新楼层)
+                if (!isHistoryReplay) {
+                    try { window.VirtualPhone?.memoryCore?.record?.('user', text); } catch (e) {}
                 }
                 return; // 用户消息处理完毕后退出，不走下面的 AI 标签解析链路
             }
@@ -9666,6 +9684,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载健康App失败:', err);
                             phoneShell?.showNotification('错误', '健康App加载失败', '❌');
                         }););
+                } else if (appId === 'memory') {
+                    import('./apps/memory/memory-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.memoryApp) {
+                                window.VirtualPhone.memoryApp = new module.MemoryApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.memoryApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载记忆App失败:', err);
+                            phoneShell?.showNotification('错误', '记忆App加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }
