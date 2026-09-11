@@ -1,3 +1,5 @@
+import { PetController } from './pet-controller.js';
+
 const FLOATING_ROOT_ID = 'phone-floating-entry-root';
 const FLOATING_BUTTON_ID = 'phone-floating-entry-button';
 
@@ -34,6 +36,7 @@ export class PhoneFloatingEntry {
         this.isPanelOpen = typeof options.isPanelOpen === 'function' ? options.isPanelOpen : () => false;
         this.resizeController = null;
         this.visibilityTimer = null;
+        this.pet = null;  // 桌面宠物控制器
         this._onPanelVisibility = event => {
             const open = event?.detail?.open;
             this.updateVisibility(typeof open === 'boolean' ? open : null);
@@ -318,6 +321,30 @@ export class PhoneFloatingEntry {
         }
         this.updateImage(button);
 
+        // 桌面宠物: 挂到悬浮按钮上, 点击宠物开手机
+        try {
+            if (!this.pet && typeof PetController !== 'undefined') {
+                const petRoot = document.createElement('button');
+                petRoot.type = 'button';
+                petRoot.className = 'phone-pet-root';
+                petRoot.id = 'phone-pet-root';
+                petRoot.title = '点我开手机';
+                root.appendChild(petRoot);
+                this.pet = new PetController(petRoot, () => {
+                    // 手机就绪回调: 触发打开手机
+                    this.onActivate();
+                });
+                petRoot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.pet) this.pet.toggle();
+                    else this.onActivate();
+                });
+            }
+        } catch (e) {
+            console.warn('[手机宠物] 桌面宠物创建失败:', e);
+            this.pet = null;
+        }
+
         if (!this.resizeController) {
             this.resizeController = new AbortController();
             const signal = this.resizeController.signal;
@@ -335,6 +362,11 @@ export class PhoneFloatingEntry {
     }
 
     unmount() {
+        if (this.pet) {
+            try { this.pet.destroy(); } catch (e) {}
+            this.pet = null;
+        }
+        document.getElementById('phone-pet-root')?.remove();
         this.resizeController?.abort?.();
         this.resizeController = null;
         window.clearInterval(this.visibilityTimer);

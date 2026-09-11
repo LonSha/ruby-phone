@@ -14,6 +14,7 @@
 // ========================================
 
 import { MusicData } from './music-data.js';
+import { MusicAmbience } from './music-ambience.js';
 import { MusicView } from './music-view.js';
 
 export class MusicApp {
@@ -23,8 +24,21 @@ export class MusicApp {
         this.musicData = new MusicData(storage);
         this.view = new MusicView(this);
 
+        // 音乐氛围增强: 桌面歌词 + MediaSession (挂到 audioPlayer 事件, 零侵入)
+        try {
+            this.ambience = new MusicAmbience(this.musicData);
+            this.ambience.attach();
+        } catch (e) {
+            console.warn('[音乐] 氛围增强初始化失败:', e);
+            this.ambience = null;
+        }
+
         // 数据变化时更新UI
-        this.musicData.onStateChange = () => this.view.updateDisplay();
+        this.musicData.onStateChange = () => {
+            this.view.updateDisplay();
+            // 同步桌面歌词/MediaSession
+            try { this.ambience?.syncFromSong?.(); } catch (e) {}
+        };
         this.musicData.onPlaybackStopped = (reason) => this.endWechatListening(reason);
 
         // 监听滑动返回。使用全局可替换 handler，避免热更新/重复实例留下旧的暂停监听。

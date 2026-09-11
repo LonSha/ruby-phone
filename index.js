@@ -5665,6 +5665,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         const pendingAt = parseInt(storage?.get?.(proactiveKeys.pendingAt), 10) || 0;
         const elapsed = lastAt > 0 ? now - lastAt : intervalMs;
         const isDue = force || pendingAt > 0 || elapsed >= intervalMs;
+        // 楼层锚定: 上一次主动触发的楼层若仍有效, 且未到下次间隔 → 避免重复触发
+        if (!force && isProactiveAnchorAlive() && elapsed < intervalMs) return false;
         if (!isDue) return false;
 
         if (isPhoneApiBusy() || isTavernPrimaryGenerationBusy()) {
@@ -5728,6 +5730,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         if (ok) {
             storage?.set?.(proactiveKeys.lastAt, now);
+            // 楼层锚定: 记录本次主动触发所在楼层, 供后续防重与回滚检测
+            anchorProactiveFloor({ reason: options.reason || 'timer' });
             syncWechatHomeBadge();
             if (force) wechatApp.phoneShell?.showNotification?.('线上主动触发', '已完成一次主动触发', '✅');
             return true;
@@ -5735,6 +5739,79 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         storage?.set?.(proactiveKeys.pendingAt, Date.now());
         return false;
+    }
+
+    // ========================================
+    // 主动消息楼层锚定 (吸收飞讯 last_floor 机制)
+    //   记录上次主动触发所在楼层; 若该楼层被删除/滑动/重生成 → 回滚标记, 允许重新触发
+    //   防: 触发后楼层消失导致的"孤儿消息"与重复注入
+    // ========================================
+    function getProactiveFloorAnchorKey() {
+        return 'wechat_online_proactive_floor_anchor';
+    }
+
+    function readProactiveFloorAnchor() {
+        try {
+            const raw = storage?.get?.(getProactiveFloorAnchorKey(), null);
+            if (!raw) return null;
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (e) { return null; }
+    }
+
+    function writeProactiveFloorAnchor(anchor) {
+        try { storage?.set?.(getProactiveFloorAnchorKey(), JSON.stringify(anchor || {})); } catch (e) {}
+    }
+
+    /** 主动触发成功后锚定到当前楼层 */
+    function anchorProactiveFloor(meta = {}) {
+        try {
+            const ctx = getContext();
+            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+            const floor = Math.max(0, chat.length - 1);
+            writeProactiveFloorAnchor({
+                floor,
+                chatId: getCurrentChatIdForQueue(),
+                at: Date.now(),
+                reason: meta.reason || 'timer'
+            });
+            return floor;
+        } catch (e) { return -1; }
+    }
+
+    /**
+     * 校验锚定楼层是否仍然有效
+     * 若楼层被删除/滑动/重生成 (内容与锚定哈希不符) → 清除锚点并允许重新触发
+     * @returns true = 锚点仍有效 (本次应跳过重复触发)
+     */
+    function isProactiveAnchorAlive() {
+        try {
+            const anchor = readProactiveFloorAnchor();
+            if (!anchor || typeof anchor.floor !== 'number') return false;
+            // 会话切换 → 锚点失效
+            if (anchor.chatId && anchor.chatId !== getCurrentChatIdForQueue()) return false;
+            const ctx = getContext();
+            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+            if (chat.length === 0) return false;
+            // 楼层被删除 (锚定楼层超出当前长度)
+            if (anchor.floor > chat.length - 1) {
+                writeProactiveFloorAnchor(null);
+                return false;
+            }
+            const msg = chat[anchor.floor];
+            if (!msg) { writeProactiveFloorAnchor(null); return false; }
+            // 滑动/重生成检测: 内容哈希变化
+            const text = String((Array.isArray(msg.swipes) && msg.swipes.length > 0 ? msg.swipes[msg.swipe_id || 0] : msg.mes) || '');
+            const hash = text.length + '_' + text.slice(0, 60);
+            if (anchor.hash && anchor.hash !== hash) {
+                writeProactiveFloorAnchor(null);
+                return false;
+            }
+            if (!anchor.hash) {
+                anchor.hash = hash;
+                writeProactiveFloorAnchor(anchor);
+            }
+            return true;
+        } catch (e) { return false; }
     }
 
     function startWechatOnlineProactiveScheduler() {
