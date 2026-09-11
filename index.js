@@ -142,6 +142,54 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let worldbookManager = null;
     let phoneFloatingEntry = null;
     let modulesLoaded = false;
+
+    // ========================================
+    // 事件监听治理 (防泄漏 / 防重复挂载)
+    //   - window 自定义事件统一挂到 _phoneEventController.signal
+    //   - eventSource 监听登记到 _phoneBoundListeners, 便于统一 off
+    //   - init 重入时 resetPhoneEventController() 先解绑再重建
+    // ========================================
+    let _phoneEventController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const _phoneBoundEventKeys = new Set();
+    const _phoneBoundListeners = [];
+
+    function resetPhoneEventController() {
+        if (_phoneEventController) {
+            try { _phoneEventController.abort(); } catch (e) {}
+        }
+        try {
+            const ctx = typeof getContext === 'function' ? getContext() : null;
+            const es = ctx && ctx.eventSource;
+            if (es && typeof es.removeListener === 'function') {
+                for (const item of _phoneBoundListeners) {
+                    try { es.removeListener(item.type, item.fn); } catch (e) {}
+                }
+            }
+        } catch (e) {}
+        _phoneBoundListeners.length = 0;
+        _phoneBoundEventKeys.clear();
+        if (typeof AbortController !== 'undefined') _phoneEventController = new AbortController();
+        return _phoneEventController;
+    }
+
+    function bindWindowEvent(key, type, fn, options = {}) {
+        if (_phoneBoundEventKeys.has(key)) return false;
+        _phoneBoundEventKeys.add(key);
+        const opts = { ...options };
+        if (_phoneEventController) opts.signal = _phoneEventController.signal;
+        window.addEventListener(type, fn, opts);
+        return true;
+    }
+
+    function bindEventSource(es, type, fn, key) {
+        const k = key || ('es:' + type);
+        if (_phoneBoundEventKeys.has(k)) return false;
+        if (!es || typeof es.on !== 'function') return false;
+        _phoneBoundEventKeys.add(k);
+        es.on(type, fn);
+        _phoneBoundListeners.push({ type, fn });
+        return true;
+    }
     let _lastWechatConversationId = null; // 防串味：角色卡 + 酒馆聊天文件联合标识
     let _globalCssLoadingPromise = null;
     let _phoneStableViewportHeight = 0;
@@ -9163,12 +9211,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 🔥 第二阶段：轮询等待酒馆加载界面消失后再注入 DOM，解决 WebKit 渲染残留 Bug
             async function injectWhenReady() {
+                // 🔥 泄漏治理: 重入保护 (防 setTimeout 递归重试重复挂载)
+                if (window.VirtualPhone && window.VirtualPhone._phoneInjected) {
+                    return;
+                }
                 const stLoader = document.getElementById('loader') || document.getElementById('loading_screen');
                 // 如果加载遮罩还在显示中，延迟 500ms 继续检查
                 if (stLoader && window.getComputedStyle(stLoader).display !== 'none') {
                     setTimeout(injectWhenReady, 500);
                 } else {
                     // 加载界面完全消失后，再安全地执行 DOM 注入
+                    // 重置事件控制器 (abort 旧 signal + off 旧 eventSource), 保证幂等
+                    resetPhoneEventController();
+                    if (window.VirtualPhone) window.VirtualPhone._phoneInjected = true;
                     await ensureGlobalPhoneCSS();
                     initColors();
                     bindPhonePanelViewportGuards();
@@ -9326,7 +9381,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
 
             // 监听返回主页
-            window.addEventListener('phone:goHome', () => {
+            bindWindowEvent('phone:goHome', 'phone:goHome', () => {
                 releasePhoneInactiveResources(null);
                 currentApp = null;
                 window.currentWechatApp = null;
@@ -9334,7 +9389,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             });
 
             // 🔥 监听全局红点更新事件
-            window.addEventListener('phone:updateGlobalBadge', () => {
+            bindWindowEvent('phone:updateGlobalBadge', 'phone:updateGlobalBadge', () => {
                 if (currentApps) {
                     totalNotifications = currentApps.reduce((sum, app) => sum + (app.badge || 0), 0);
                     updateNotificationBadge(totalNotifications);
@@ -9342,7 +9397,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             });
 
             // 监听打开APP
-            window.addEventListener('phone:openApp', (e) => {
+            bindWindowEvent('phone:openApp', 'phone:openApp', (e) => {
                 const { appId } = e.detail;
                 const homeGuardUntil = Number.parseInt(String(window.VirtualPhone?._homeReturnGuardUntil || '0'), 10) || 0;
                 if (Date.now() < homeGuardUntil) {
@@ -9714,7 +9769,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             });
 
             // 监听从微信发送到聊天的消息
-            window.addEventListener('phone:sendToChat', (e) => {
+            bindWindowEvent('phone:sendToChat', 'phone:sendToChat', (e) => {
                 const { message, chatId, chatName } = e.detail;
 
                 const textarea = document.querySelector('#send_textarea');
@@ -9808,7 +9863,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             };
 
             // 监听清空数据
-            window.addEventListener('phone:clearCurrentData', async () => { // 🔥 加上 async
+            bindWindowEvent('phone:clearCurrentData', 'phone:clearCurrentData', async () => { // 🔥 加上 async
                 await cleanupWechatManagedMessageImagesBeforeStorageClear();
                 if (window.VirtualPhone?.honeyApp) {
                     try {
@@ -9871,7 +9926,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ]);
             });
 
-            window.addEventListener('phone:clearAllData', async () => { // 🔥 加上 async
+            bindWindowEvent('phone:clearAllData', 'phone:clearAllData', async () => { // 🔥 加上 async
                 await cleanupWechatManagedMessageImagesBeforeStorageClear();
                 if (window.VirtualPhone?.honeyApp) {
                     try {
@@ -9944,33 +9999,39 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // 连接到酒馆
             const context = getContext();
             if (context && context.eventSource) {
-                context.eventSource.on(
+                bindEventSource(
+                    context.eventSource,
                     context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    onMessageReceived
+                    onMessageReceived,
+                    'es:CHARACTER_MESSAGE_RENDERED'
                 );
 
                 if (context.event_types.USER_MESSAGE_RENDERED) {
-                    context.eventSource.on(
+                    bindEventSource(
+                        context.eventSource,
                         context.event_types.USER_MESSAGE_RENDERED,
-                        onMessageReceived
+                        onMessageReceived,
+                        'es:USER_MESSAGE_RENDERED'
                     );
                 }
 
                 if (context.event_types.MESSAGE_DELETED) {
-                    context.eventSource.on(context.event_types.MESSAGE_DELETED, (eventData) => {
+                    bindEventSource(context.eventSource, context.event_types.MESSAGE_DELETED, (eventData) => {
                         const deletedFloor = Number(eventData?.messageId ?? eventData?.id ?? eventData);
                         if (Number.isFinite(deletedFloor)) rollbackPhoneSmsToFloor(deletedFloor, false);
-                    });
+                    }, 'es:MESSAGE_DELETED');
                 }
 
-                context.eventSource.on(
+                bindEventSource(
+                    context.eventSource,
                     context.event_types.CHAT_CHANGED,
-                    onChatChanged
+                    onChatChanged,
+                    'es:CHAT_CHANGED'
                 );
 
                 // ⏪⏪⏪ 核心修复 1：监听滑动事件，斩杀废案，并完美防抢跑 ⏪⏪⏪
                 if (context.event_types.MESSAGE_SWIPED) {
-                    context.eventSource.on(context.event_types.MESSAGE_SWIPED, function (id) {
+                    bindEventSource(context.eventSource, context.event_types.MESSAGE_SWIPED, function (id) {
                         markForcedReplayFloor(id, 180000);
                         markPromptCleanupFloor(id, 180000);
                         
@@ -10016,7 +10077,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                 console.warn('[手机插件] 滑动解析失败:', e);
                             }
                         }, 150); 
-                    });
+                    }, 'es:MESSAGE_SWIPED');
                 }
 
                 $(document).on('click', '.swipe_left, .swipe_right', function () {
@@ -12115,10 +12176,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         return eventData.chat; // 必须返回修改后的数组给酒馆
                     });
                 } else {
-                    // 旧版本酒馆兼容
-                    context.eventSource.on(
+                    // 旧版本酒馆兼容 (登记式挂载)
+                    bindEventSource(
+                        context.eventSource,
                         context.event_types.CHAT_COMPLETION_PROMPT_READY,
-                        (eventData) => runPhonePromptHandler(eventData, 'prompt_ready_event')
+                        (eventData) => runPhonePromptHandler(eventData, 'prompt_ready_event'),
+                        'es:CHAT_COMPLETION_PROMPT_READY'
                     );
                 }
 
