@@ -216,6 +216,30 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'peek',
+        name: '查手机',
+        icon: '🔍',
+        color: '#8b6914',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'bilibili',
+        name: 'B站',
+        icon: '📺',
+        color: '#00aeec',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'theater',
+        name: '小剧场',
+        icon: '🎭',
+        color: '#7c3aed',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置

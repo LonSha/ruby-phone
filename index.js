@@ -9880,6 +9880,42 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载图谱App失败:', err);
                             phoneShell?.showNotification('错误', '图谱App加载失败', '❌');
                         });
+                } else if (appId === 'peek') {
+                    import('./apps/peek/peek-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.peekApp) {
+                                window.VirtualPhone.peekApp = new module.PeekApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.peekApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载查手机失败:', err);
+                            phoneShell?.showNotification('错误', '查手机加载失败', '❌');
+                        });
+                } else if (appId === 'bilibili') {
+                    import('./apps/bilibili/bili-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.biliApp) {
+                                window.VirtualPhone.biliApp = new module.BiliApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.biliApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载B站失败:', err);
+                            phoneShell?.showNotification('错误', 'B站加载失败', '❌');
+                        });
+                } else if (appId === 'theater') {
+                    import('./apps/theater/theater-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.theaterApp) {
+                                window.VirtualPhone.theaterApp = new module.TheaterApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.theaterApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载小剧场失败:', err);
+                            phoneShell?.showNotification('错误', '小剧场加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }

@@ -11478,3 +11478,56 @@ input:checked + .toggle-slider:before {
     border-radius: 6px;
     letter-spacing: 0.4px;
 }
+
+/* 查手机 Peek */
+.pk-root { height:100%; display:flex; flex-direction:column; background:#f4f1ec; color:#2b241c; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+.pk-header { display:flex; align-items:center; gap:8px; padding:12px 12px 8px; }
+.pk-header h2 { flex:1; margin:0; font-size:18px; }
+.pk-nav { width:34px; height:34px; border:0; border-radius:50%; background:rgba(0,0,0,.06); }
+.pk-inject { font-size:11px; color:#6b6258; display:flex; align-items:center; gap:4px; }
+.pk-chips { display:flex; gap:8px; overflow-x:auto; padding:0 12px 8px; }
+.pk-chip { border:0; border-radius:16px; padding:6px 12px; background:#fff; color:#5a5148; white-space:nowrap; }
+.pk-chip.active { background:#2b241c; color:#fff; }
+.pk-body { flex:1; overflow:auto; padding:8px 12px 16px; display:flex; flex-direction:column; gap:10px; }
+.pk-card, .pk-item { border:0; text-align:left; background:#fff; border-radius:16px; padding:12px; box-shadow:0 8px 20px rgba(43,36,28,.06); }
+.pk-card-top, .pk-item-top { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.pk-card span, .pk-item-top span { margin-left:auto; font-size:11px; color:#8a7f74; }
+.pk-guess, .pk-real { font-size:10px; border-radius:999px; padding:2px 7px; }
+.pk-guess { background:#f3e2c5; color:#8a5a12; }
+.pk-real { background:#dceee0; color:#2f6b3a; }
+.pk-empty { color:#8a7f74; font-size:13px; padding:18px 8px; }
+.pk-back { align-self:flex-start; border:0; background:transparent; color:#5a5148; padding:4px 0 8px; }
+.pk-thumb { width:56px; height:56px; border-radius:10px; background-size:cover; background-position:center; margin-right:10px; float:left; }
+.pk-item p, .pk-card p, .pk-section-head p { margin:0; color:#5a5148; font-size:13px; line-height:1.5; white-space:pre-wrap; }
+
+.bl-root { height:100%; display:flex; flex-direction:column; background:#0b0c10; color:#f5f7fb; }
+.bl-header { display:flex; align-items:center; gap:8px; padding:12px; }
+.bl-header h2 { margin:0; flex:1; font-size:18px; }
+.bl-nav { width:34px; height:34px; border:0; border-radius:50%; background:rgba(255,255,255,.08); color:#fff; }
+.bl-search { display:flex; gap:8px; padding:0 12px 8px; }
+.bl-search input { flex:1; border:0; border-radius:12px; padding:10px 12px; background:#1b1e27; color:#fff; }
+.bl-search button { border:0; border-radius:12px; padding:0 14px; background:#00aeec; color:#041820; font-weight:700; }
+.bl-summary { margin:0 12px 8px; color:#9aa3b2; font-size:12px; }
+.bl-body { flex:1; overflow:auto; padding:0 12px 16px; display:flex; flex-direction:column; gap:10px; }
+.bl-card { display:flex; gap:10px; background:#161922; border-radius:16px; overflow:hidden; }
+.bl-cover { width:92px; min-height:92px; background:linear-gradient(180deg,#223,#102230); display:flex; align-items:flex-end; padding:8px; font-size:11px; }
+.bl-meta { padding:10px 10px 10px 0; }
+.bl-meta b { display:block; margin-bottom:4px; }
+.bl-meta span, .bl-meta em { display:block; color:#9aa3b2; font-size:12px; font-style:normal; }
+.bl-empty { color:#9aa3b2; padding:24px 8px; }
+
+.th-root { height:100%; display:flex; flex-direction:column; background:#f7f1e8; color:#2c241c; }
+.th-header { display:flex; align-items:center; gap:8px; padding:12px; }
+.th-header h2 { margin:0; flex:1; font-size:18px; }
+.th-nav { width:34px; height:34px; border:0; border-radius:50%; background:rgba(0,0,0,.06); }
+.th-form { padding:0 12px 8px; display:flex; flex-direction:column; gap:8px; }
+.th-form input, .th-form select, .th-form textarea { border:0; border-radius:12px; padding:10px 12px; background:#fff; color:#2c241c; }
+.th-form textarea { min-height:140px; resize:vertical; }
+.th-chips { display:flex; gap:6px; overflow-x:auto; }
+.th-chip { border:0; border-radius:16px; padding:6px 10px; background:#fff; }
+.th-chip.active { background:#2c241c; color:#fff; }
+.th-actions { display:flex; gap:8px; }
+.th-actions button { flex:1; border:0; border-radius:12px; padding:10px 8px; background:#2c241c; color:#fff; }
+.th-body { flex:1; overflow:auto; padding:8px 12px 16px; display:flex; flex-direction:column; gap:8px; }
+.th-story { background:#fff; border-radius:14px; padding:12px; }
+.th-empty { color:#8a7f74; padding:16px 4px; }

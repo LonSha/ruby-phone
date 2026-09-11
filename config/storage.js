@@ -49,6 +49,9 @@ export class PhoneStorage {
             /^phone_call_/,       // 通话记录数据
             /^music_/,            // 音乐播放列表数据
             /^memory_/,           // 记忆系统数据（按聊天独立存储, 防串味）
+            /^bili_/,             // B站条目
+            /^theater_/,          // 小剧场
+            /^life_events_/,      // 生活事件时间线
         ];
 
         // ==================== 防抖：saveChat ====================
