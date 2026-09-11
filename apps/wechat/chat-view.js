@@ -16,6 +16,7 @@ import { readPhoneContextLimit } from '../../config/context-settings.js';
 import { CatboxData } from '../games/catbox/catbox-data.js';
 import { parseWangxiangTaskTags, tokenizeWangxiangTaskTags } from '../wangxiang/wangxiang-task-parser.js';
 import { parseWechatVoiceContent } from './voice-text.js';
+import { GIFTS, GIFT_CATEGORIES, getGiftById, getGiftImageUrl, listGiftsByCategory } from './gift-catalog.js';
 import { detectImageMime, normalizeImageDataUrlMime, resolveImageMime } from '../../config/image-mime.js';
 import {
     getPhoneInlineEmoji,
@@ -3546,6 +3547,27 @@ renderChatRoom(chat) {
             `;
                 break;
             }
+            case 'gift': {
+                const giftName = this._escapeHtml(msg.giftName || msg.content || '礼物');
+                const giftPrice = Number(msg.amount || msg.price || 0);
+                const giftImg = this._escapeHtml(msg.giftImage || '');
+                const imgHtml = giftImg
+                    ? `<img class="gift-thumb" src="${giftImg}" alt="${giftName}">`
+                    : '<i class="fa-solid fa-gift"></i>';
+                messageBody = `
+                <div class="message-gift" data-msg-id="${this._escapeHtml(msg.id || '')}">
+                    <div class="gift-main">
+                        <div class="gift-icon">${imgHtml}</div>
+                        <div class="gift-content">
+                            <div class="gift-title">${giftName}</div>
+                            <div class="gift-subtitle">${isMe ? '你送出了礼物' : '送给你'}${giftPrice ? ` · ¥${giftPrice.toFixed(2)}` : ''}</div>
+                        </div>
+                    </div>
+                    <div class="gift-footer">微信礼物</div>
+                </div>
+            `;
+                break;
+            }
 
             case 'call_record': {
                 const callStatusText = msg.status === 'answered'
@@ -5610,6 +5632,12 @@ renderChatRoom(chat) {
                         </svg>
                     </div>
                     <div class="more-name">红包</div>
+                </div>
+                <div class="more-item" data-action="gift">
+                    <div class="more-icon">
+                        <i class="fa-solid fa-gift" style="font-size: 14px;"></i>
+                    </div>
+                    <div class="more-name">礼物</div>
                 </div>
             </div>
             <!-- 隐藏的文件上传input（相册用，不带capture） -->
@@ -12327,6 +12355,10 @@ renderChatRoom(chat) {
                 this.resetTransientInputPanels();
                 this.showRedPacketDialog();
                 break;
+            case 'gift':
+                this.resetTransientInputPanels();
+                this.showGiftDialog();
+                break;
         }
     }
 
@@ -12528,6 +12560,72 @@ renderChatRoom(chat) {
 
             setTimeout(() => this.app.render(), 1000);
         });
+    }
+
+    showGiftDialog() {
+        const chat = this.app.currentChat;
+        if (!chat) return;
+        const groups = listGiftsByCategory();
+        const sections = groups.map((cat) => {
+            const cards = cat.items.map((g) => {
+                const src = getGiftImageUrl(g.id);
+                return `<button type="button" class="gift-pick" data-gift-id="${g.id}">
+                    <img src="${src}" alt="${this._escapeHtml(g.name)}">
+                    <strong>${this._escapeHtml(g.name)}</strong>
+                    <span>¥${Number(g.price).toFixed(0)}</span>
+                </button>`;
+            }).join('');
+            return `<div class="gift-sec"><div class="gift-sec-title">${this._escapeHtml(cat.name)}</div><div class="gift-grid">${cards}</div></div>`;
+        }).join('');
+        const html = `
+        <div class="wechat-app">
+            <div style="background:#ededed;padding:34px 12px 10px;">
+                <button class="wechat-back-btn" id="back-from-gift" type="button" style="color:#000;background:none;border:none;font-size:14px;">
+                    <i class="fa-solid fa-chevron-left"></i> 礼物
+                </button>
+            </div>
+            <div class="wechat-content" style="background:#f5f5f5;overflow:auto;padding:8px 12px 20px;">${sections}</div>
+        </div>`;
+        this.app.phoneShell.setContent(html);
+        document.getElementById('back-from-gift')?.addEventListener('click', () => this.app.render());
+        document.querySelectorAll('[data-gift-id]').forEach((btn) => {
+            btn.addEventListener('click', () => this._sendGift(btn.getAttribute('data-gift-id')));
+        });
+    }
+
+    _sendGift(giftId) {
+        const gift = getGiftById(giftId);
+        const chat = this.app.currentChat;
+        if (!gift || !chat) return;
+        const giftMsgId = `gift_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const spendResult = this.app.wechatData.spendWalletBalance(gift.price, null, {
+            type: 'other',
+            title: `礼物-${gift.name}-${chat.name}`,
+            detail: gift.desc || gift.name,
+            source: 'wechat',
+            chatId: chat.id,
+            counterparty: chat.name,
+            messageId: giftMsgId,
+            referenceId: `wechat:gift:send:${giftMsgId}`
+        });
+        if (!spendResult?.success) {
+            this.app.phoneShell.showNotification('余额不足', `你的零钱只剩 ¥${Number(spendResult?.balanceBefore || 0).toFixed(2)} 啦`, '❌');
+            return;
+        }
+        this.app.wechatData.addMessage(chat.id, {
+            id: giftMsgId,
+            from: 'me',
+            type: 'gift',
+            content: `[礼物] ${gift.name}`,
+            giftId: gift.id,
+            giftName: gift.name,
+            giftImage: getGiftImageUrl(gift.id),
+            amount: gift.price,
+            ...(this._shouldUseRealTimeForOnlineChat() ? this._buildWechatRealTimeFields() : {})
+        });
+        this.app.phoneShell.showNotification('已送出', `送给${chat.name}：${gift.name}`, '🎁');
+        if (this.isOnlineMode()) this._enqueuePendingChat(chat.id);
+        setTimeout(() => this.app.render(), 400);
     }
 
     selectPhoto() {

@@ -46,6 +46,12 @@ const WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'wechat_online_proactive_enabled';
 const WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'wechat_online_proactive_interval_minutes';
 const WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY = 'wechat_online_proactive_last_trigger_at';
 const WECHAT_ONLINE_PROACTIVE_PENDING_KEY = 'wechat_online_proactive_pending_at';
+const WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'wechat_online_proactive_quiet_enabled';
+const WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'wechat_online_proactive_quiet_start';
+const WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'wechat_online_proactive_quiet_end';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_quiet_enabled';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'phone_lobby_wechat_online_proactive_quiet_start';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'phone_lobby_wechat_online_proactive_quiet_end';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_enabled';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'phone_lobby_wechat_online_proactive_interval_minutes';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY = 'phone_lobby_wechat_online_proactive_last_trigger_at';
@@ -5541,7 +5547,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             enabled: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_ENABLED_KEY : WECHAT_ONLINE_PROACTIVE_ENABLED_KEY,
             interval: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY : WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY,
             lastAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY : WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY,
-            pendingAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_PENDING_KEY : WECHAT_ONLINE_PROACTIVE_PENDING_KEY
+            pendingAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_PENDING_KEY : WECHAT_ONLINE_PROACTIVE_PENDING_KEY,
+            quietEnabled: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY,
+            quietStart: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY,
+            quietEnd: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY
         };
     }
 
@@ -5647,6 +5656,24 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
     }
 
+    function parseQuietHour(value, fallback) {
+        const n = Number.parseInt(value, 10);
+        if (!Number.isFinite(n)) return fallback;
+        return Math.max(0, Math.min(23, n));
+    }
+
+    function isWechatOnlineProactiveQuietHours(keys = getWechatOnlineProactiveKeys()) {
+        const enabledRaw = storage?.get?.(keys.quietEnabled);
+        const enabled = enabledRaw === true || enabledRaw === 'true' || enabledRaw === 1;
+        if (!enabled) return false;
+        const start = parseQuietHour(storage?.get?.(keys.quietStart), 23);
+        const end = parseQuietHour(storage?.get?.(keys.quietEnd), 7);
+        const hour = new Date().getHours();
+        if (start === end) return true;
+        if (start > end) return hour >= start || hour < end;
+        return hour >= start && hour < end;
+    }
+
     async function triggerWechatOnlineProactive(options = {}) {
         const force = !!options.force;
         const now = Date.now();
@@ -5663,6 +5690,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
         if (!force) {
             if (!isWechatOnlineProactiveEnabled(proactiveKeys)) return false;
+            if (isWechatOnlineProactiveQuietHours(proactiveKeys)) return false;
         }
 
         const intervalMs = getWechatOnlineProactiveIntervalMs(proactiveKeys);

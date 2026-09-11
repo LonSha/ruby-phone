@@ -11,6 +11,7 @@
  * ======================================================== */
 // 手机外壳
 import { PHONE_CONFIG } from '../config/apps.js';
+import { LockScreen } from './lock-screen.js';
 
 export class PhoneShell {
     constructor() {
@@ -27,6 +28,7 @@ export class PhoneShell {
         // 🔋 电池状态
         this.batteryLevel = 85;
         this.isCharging = false;
+        this.lockScreen = null;
         // 🔥 视觉历史栈（滑动返回用）
         this.viewHistory = [];
         // 🔔 通知队列管理
@@ -84,6 +86,8 @@ export class PhoneShell {
         this.bindTimeUpdateEvent();
         this.startClock();
         this.initBattery();  // 🔋 初始化电池
+        this.lockScreen = new LockScreen(this);
+        this._bindLockGesture();
 
         return this.container;
     }
@@ -787,9 +791,21 @@ export class PhoneShell {
     }
     
     toggleScreen() {
-        if (this.container) {
-            this.container.classList.toggle('screen-off');
-        }
+        if (!this.lockScreen) this.lockScreen = new LockScreen(this);
+        this.lockScreen.toggle();
+    }
+
+    _bindLockGesture() {
+        const punch = this.container?.querySelector('.phone-punch-hole');
+        if (!punch || punch.dataset.lockBound === '1') return;
+        punch.dataset.lockBound = '1';
+        punch.style.pointerEvents = 'auto';
+        punch.style.cursor = 'pointer';
+        punch.title = '点击锁屏';
+        punch.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleScreen();
+        });
     }
 
     showImageViewer(imageUrl, options = {}) {

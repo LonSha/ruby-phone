@@ -69,6 +69,12 @@ const WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'wechat_online_proactive_enabled';
 const WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'wechat_online_proactive_interval_minutes';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_enabled';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'phone_lobby_wechat_online_proactive_interval_minutes';
+const WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'wechat_online_proactive_quiet_enabled';
+const WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'wechat_online_proactive_quiet_start';
+const WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'wechat_online_proactive_quiet_end';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_quiet_enabled';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'phone_lobby_wechat_online_proactive_quiet_start';
+const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'phone_lobby_wechat_online_proactive_quiet_end';
 const WECHAT_ONLINE_ONLY_REAL_TIME_ENABLED_KEY = 'wechat_online_only_real_time_enabled';
 const LOBBY_WECHAT_ONLINE_ONLY_REAL_TIME_ENABLED_KEY = 'phone_lobby_wechat_online_only_real_time_enabled';
 const WECHAT_MESSAGE_SOUND_ENABLED_KEY = 'wechat_message_sound_enabled';
@@ -661,6 +667,15 @@ export class SettingsApp {
     _getWechatOnlineProactiveIntervalStorageKey(context = null) {
         return this._isLobbyMode(context) ? LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY : WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY;
     }
+    _getWechatOnlineProactiveQuietEnabledStorageKey(context = null) {
+        return this._isLobbyMode(context) ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY;
+    }
+    _getWechatOnlineProactiveQuietStartStorageKey(context = null) {
+        return this._isLobbyMode(context) ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY;
+    }
+    _getWechatOnlineProactiveQuietEndStorageKey(context = null) {
+        return this._isLobbyMode(context) ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY;
+    }
 
     _getWechatOnlineOnlyRealTimeStorageKey(context = null) {
         return this._isLobbyMode(context) ? LOBBY_WECHAT_ONLINE_ONLY_REAL_TIME_ENABLED_KEY : WECHAT_ONLINE_ONLY_REAL_TIME_ENABLED_KEY;
@@ -1094,12 +1109,18 @@ export class SettingsApp {
         const wechatOnlineOnlyModeKey = this._getWechatOnlineOnlyModeStorageKey(context);
         const wechatOnlineProactiveEnabledKey = this._getWechatOnlineProactiveEnabledStorageKey(context);
         const wechatOnlineProactiveIntervalKey = this._getWechatOnlineProactiveIntervalStorageKey(context);
+        const wechatOnlineProactiveQuietEnabledKey = this._getWechatOnlineProactiveQuietEnabledStorageKey(context);
+        const wechatOnlineProactiveQuietStartKey = this._getWechatOnlineProactiveQuietStartStorageKey(context);
+        const wechatOnlineProactiveQuietEndKey = this._getWechatOnlineProactiveQuietEndStorageKey(context);
         const wechatOnlineOnlyRealTimeKey = this._getWechatOnlineOnlyRealTimeStorageKey(context);
         const isWechatInteropMode = this._isStorageTruthy(wechatInteropModeKey);
         const isWechatOnlineOnlyMode = this._isStorageTruthy(wechatOnlineOnlyModeKey) && !isWechatInteropMode;
         const isWechatOnlineProactiveEnabled = isWechatOnlineOnlyMode && this._isStorageTruthy(wechatOnlineProactiveEnabledKey);
         const isWechatOnlineOnlyRealTimeEnabled = isWechatOnlineOnlyMode && this._isStorageEnabledByDefault(wechatOnlineOnlyRealTimeKey);
         const wechatOnlineProactiveInterval = readNonNegativeStorageNumber(this.storage, wechatOnlineProactiveIntervalKey, 10, 9999) || 10;
+        const isWechatOnlineProactiveQuietEnabled = this._isStorageTruthy(wechatOnlineProactiveQuietEnabledKey);
+        const wechatOnlineProactiveQuietStart = Math.max(0, Math.min(23, Number.parseInt(this.storage.get(wechatOnlineProactiveQuietStartKey, 23), 10) || 23));
+        const wechatOnlineProactiveQuietEnd = Math.max(0, Math.min(23, Number.parseInt(this.storage.get(wechatOnlineProactiveQuietEndKey, 7), 10) || 7));
         const currentTtsProvider = this._getCurrentTtsProvider();
         const currentTtsDefaults = this._getTtsProviderDefaults(currentTtsProvider);
         const currentTtsUrl = this._getTtsProviderValue(currentTtsProvider, 'url', 'phone-tts-url') || currentTtsDefaults.url || '';
@@ -1180,6 +1201,24 @@ export class SettingsApp {
                             </div>
 
                             <div class="setting-item setting-button" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
+                            <div class="setting-item setting-toggle" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
+                                <div>
+                                    <div class="setting-label">免打扰时段</div>
+                                    <div class="setting-desc">默认 23:00-07:00 不主动发消息，立即测试仍可触发</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="setting-wechat-online-proactive-quiet-enabled" ${isWechatOnlineProactiveQuietEnabled ? 'checked' : ''}>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item" style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
+                                <div class="setting-label">免打扰起止小时</div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <input type="number" id="setting-wechat-online-proactive-quiet-start" min="0" max="23" value="${wechatOnlineProactiveQuietStart}" style="width:52px;height:32px;text-align:center;">
+                                    <span>-</span>
+                                    <input type="number" id="setting-wechat-online-proactive-quiet-end" min="0" max="23" value="${wechatOnlineProactiveQuietEnd}" style="width:52px;height:32px;text-align:center;">
+                                </div>
+                            </div>
                                 <button id="setting-wechat-online-proactive-test" class="setting-btn" style="width: 100%; padding: 8px 12px; font-size: 12px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border: 1px solid rgba(7,193,96,0.25); color: #0b8f52; border-radius: 8px;">
                                     <i class="fa-solid fa-paper-plane"></i> 立即测试线上主动触发
                                 </button>
@@ -5945,6 +5984,20 @@ export class SettingsApp {
             const key = this._getWechatOnlineProactiveIntervalStorageKey(this.storage.getContext());
             await this.storage.set(key, validLimit);
         });
+
+        document.getElementById('setting-wechat-online-proactive-quiet-enabled')?.addEventListener('change', async (e) => {
+            const key = this._getWechatOnlineProactiveQuietEnabledStorageKey(this.storage.getContext());
+            await this.storage.set(key, !!e.target.checked);
+        });
+        const bindQuietHour = (id, getter) => {
+            document.getElementById(id)?.addEventListener('change', async (e) => {
+                const hour = Math.max(0, Math.min(23, Number.parseInt(e.target.value, 10) || 0));
+                e.target.value = hour;
+                await this.storage.set(getter(this.storage.getContext()), hour);
+            });
+        };
+        bindQuietHour('setting-wechat-online-proactive-quiet-start', (ctx) => this._getWechatOnlineProactiveQuietStartStorageKey(ctx));
+        bindQuietHour('setting-wechat-online-proactive-quiet-end', (ctx) => this._getWechatOnlineProactiveQuietEndStorageKey(ctx));
 
         document.getElementById('setting-wechat-online-proactive-test')?.addEventListener('click', async () => {
             const runner = window.VirtualPhone?.triggerWechatOnlineProactive;

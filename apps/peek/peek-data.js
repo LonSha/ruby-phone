@@ -49,6 +49,13 @@ function describeWechatMessage(message) {
   if (type === 'voice' || type === 'call_text') return compactText(content || '语音', 42);
   if (type === 'image' || type === 'image_prompt') return compactText(content || '图片', 42);
   if (type === 'sticker') return compactText(message.keyword || content || '表情', 42);
+  if (type === 'transfer') {
+    const amount = Number(message.amount || 0).toFixed(2);
+    const status = message.status === 'received' ? '已收款' : (message.status === 'refunded' ? '已退回' : '');
+    return '[转账]¥' + amount + (status ? '（' + status + '）' : '');
+  }
+  if (type === 'redpacket') return compactText('[红包]' + (message.wish || message.content || ''), 42);
+  if (type === 'gift') return compactText('[礼物]' + (message.giftName || content || ''), 42);
   if (type === 'location') return compactText(content || '位置', 42);
   return compactText(content || '文字消息', 42);
 }

@@ -1830,6 +1830,28 @@ export class WechatApp {
 }
 
 /* 底部透明分割线与文字 */
+ .message-gift {
+    width: 168px !important;
+    border-radius: 8px !important;
+    background: #fff7ed !important;
+    border: 1px solid rgba(247,156,62,.35) !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+.gift-main { display:flex; gap:8px; padding:8px 10px; align-items:center; }
+.gift-icon { width:42px; height:42px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.gift-icon img, .gift-thumb { width:42px; height:42px; object-fit:contain; }
+.gift-title { font-size:13px; font-weight:600; color:#7c2d12; }
+.gift-subtitle { font-size:11px; color:#9a3412; }
+.gift-footer { font-size:10px; color:#c2410c; padding:4px 10px 6px; border-top:1px solid rgba(247,156,62,.25); }
+.gift-sec { margin-bottom:12px; }
+.gift-sec-title { font-size:12px; color:#666; margin:8px 0; }
+.gift-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.gift-pick { border:1px solid #eee; background:#fff; border-radius:10px; padding:8px 4px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.gift-pick img { width:44px; height:44px; object-fit:contain; }
+.gift-pick strong { font-size:11px; color:#333; }
+.gift-pick span { font-size:11px; color:#c2410c; }
+
 .rp-footer {
     display: block !important;
     background-color: transparent !important;
