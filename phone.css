@@ -10530,6 +10530,64 @@ input:checked + .toggle-slider:before {
   align-items: center;
   gap: 4px;
 }
+.hl-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px 0;
+}
+.hl-tab {
+  flex: 1;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.06);
+  color: #e5d4e8;
+  border-radius: 999px;
+  padding: 6px 0;
+  font-size: 12px;
+}
+.hl-tab.on {
+  background: rgba(244,114,182,.22);
+  border-color: #f472b6;
+  color: #fce7f3;
+}
+.hl-need {
+  margin-bottom: 8px;
+}
+.hl-need-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #fbcfe8;
+  margin-bottom: 4px;
+}
+.hl-need-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.hl-need-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f472b6, #fb7185);
+}
+.hl-need-text {
+  font-size: 11px;
+  color: #c4b0c7;
+  margin-top: 3px;
+}
+.hl-child {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.hl-child-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
 
 /* ========================================================
  *  记忆 App 样式 (Memory App)

@@ -109,6 +109,19 @@ export class PokerView {
                         <i class="fa-solid fa-chevron-right games-game-chevron"></i>
                     </button>
 
+                    <button class="games-game-card games-board-card" id="games-open-board" type="button">
+                        <div class="games-game-art">
+                            <div class="games-board-lobby-art" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">对弈</div>
+                            <div class="games-game-desc">五子棋 / 象棋 / 斗兽棋 · 单机</div>
+                        </div>
+                            <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
+
                     <button class="games-game-card games-catbox-card" id="games-open-catbox" type="button">
                         <div class="games-game-art">
                             <div class="games-catbox-lobby-art" aria-hidden="true">
@@ -522,6 +535,9 @@ export class PokerView {
         });
         document.getElementById('games-open-sudoku')?.addEventListener('click', () => {
             this.app.openSudoku();
+        });
+        document.getElementById('games-open-board')?.addEventListener('click', () => {
+            this.app.openBoard();
         });
         document.getElementById('games-open-catbox')?.addEventListener('click', () => {
             this.app.openCatbox();

@@ -14,6 +14,8 @@ import { WerewolfData } from './werewolf/werewolf-data.js';
 import { WerewolfView } from './werewolf/werewolf-view.js';
 import { UndercoverData } from './undercover/undercover-data.js';
 import { UndercoverView } from './undercover/undercover-view.js';
+import { BoardData } from './board/board-data.js';
+import { BoardView } from './board/board-view.js';
 
 const CATBOX_CSS_URL = new URL('./catbox/catbox.css?v=1.0.0', import.meta.url).href;
 const WEREWOLF_CSS_URL = new URL('./werewolf/werewolf.css?v=1.0.49', import.meta.url).href;
@@ -55,6 +57,8 @@ export class GamesApp extends PokerApp {
         this.werewolfView = new WerewolfView(this);
         this.undercoverData = new UndercoverData(storage);
         this.undercoverView = new UndercoverView(this);
+        this.boardData = new BoardData(storage);
+        this.boardView = new BoardView(this);
         this._werewolfDriving = false;
         this._werewolfNightDriving = false;
         this._lastWerewolfApiRequestAt = 0;
@@ -776,6 +780,21 @@ export class GamesApp extends PokerApp {
         this.storage = storage || this.storage;
         this.catboxView?.destroy?.();
         this.catboxData = new CatboxData(this.storage);
+        this.boardData = new BoardData(this.storage);
+        this.boardView = new BoardView(this);
+    }
+
+    openBoard() {
+        this.applyPhoneChromeTheme();
+        this.currentView = 'board';
+        this.boardView.render();
+    }
+
+    startBoardGame(type, options = {}) {
+        this.boardData.newGame(type, options);
+        this.currentView = 'board';
+        this.applyPhoneChromeTheme();
+        this.boardView.render();
     }
 
     openWerewolf() {

@@ -27,6 +27,8 @@ import {
   listKnownRaces,
   EMBRYO_LORE,
 } from './bio-engine.js';
+import { normalizeNeeds, advanceNeeds, applyNeedEvent, describeNeeds, buildNeedsDirective } from './physio-core.js';
+import { emptyLineage, normalizeLineage, addBirth, removeBirth } from './family-core.js';
 
 const PHASE_META = {
   月经期: {
@@ -159,6 +161,10 @@ export class HealthData {
     this.recoveryDays = DEFAULT_RECOVERY_DAYS;
     this.naturalBirthExperience = 0;
     this.bornThisLabor = 0;
+    this.bornChildrenThisLabor = [];
+    this.needs = normalizeNeeds();
+    this.lineage = emptyLineage();
+    this.healthTab = 'cycle';
     this.lastNotify = '';
     this.loadState();
   }
@@ -211,6 +217,10 @@ export class HealthData {
       if (typeof d.recoveryDays === 'number') this.recoveryDays = clampNumber(d.recoveryDays, 1, 9999, DEFAULT_RECOVERY_DAYS);
       if (typeof d.naturalBirthExperience === 'number') this.naturalBirthExperience = clampNumber(d.naturalBirthExperience, 0, 99, 0);
       if (typeof d.bornThisLabor === 'number') this.bornThisLabor = clampNumber(d.bornThisLabor, 0, 6, 0);
+      if (Array.isArray(d.bornChildrenThisLabor)) this.bornChildrenThisLabor = d.bornChildrenThisLabor;
+      if (d.needs) this.needs = normalizeNeeds(d.needs);
+      if (d.lineage) this.lineage = normalizeLineage(d.lineage);
+      if (typeof d.healthTab === 'string') this.healthTab = d.healthTab;
       if (typeof d.lastNotify === 'string') this.lastNotify = d.lastNotify;
 
       // 旧档：只有周期天/孕周，没有阶段字段
@@ -265,6 +275,10 @@ export class HealthData {
         recoveryDays: this.recoveryDays,
         naturalBirthExperience: this.naturalBirthExperience,
         bornThisLabor: this.bornThisLabor,
+        bornChildrenThisLabor: this.bornChildrenThisLabor,
+        needs: this.needs,
+        lineage: this.lineage,
+        healthTab: this.healthTab,
         lastNotify: this.lastNotify,
         updatedAt: Date.now(),
       });
@@ -429,6 +443,7 @@ export class HealthData {
     this.laborPain = 0;
     this.prodromalRemainingHours = 0;
     this.bornThisLabor = 0;
+    this.bornChildrenThisLabor = [];
     this.fetuses = [];
     for (let i = 0; i < n; i += 1) {
       this.fetuses.push(createFetus({
@@ -458,6 +473,7 @@ export class HealthData {
     this.laborPain = 0;
     this.prodromalRemainingHours = 0;
     this.bornThisLabor = 0;
+    this.bornChildrenThisLabor = [];
     this.fetuses = [];
     this.stage = '卵泡期';
     this.stageDays = 0;
@@ -489,6 +505,7 @@ export class HealthData {
     if (!this.isPregnant) return;
     if (this.stage === '产兆前驱' || LABOR_STAGES.includes(this.stage) || this.stage === '产后恢复') return;
     this.bornThisLabor = 0;
+    this.bornChildrenThisLabor = [];
     this.stage = '产兆前驱';
     this.stageDays = 0;
     this.laborHours = 0;
@@ -501,9 +518,22 @@ export class HealthData {
 
   finishBirth({ surgical = false } = {}) {
     if (!this.isPregnant && this.stage !== '产后恢复') return;
-    const count = this.bornThisLabor + this.fetuses.length;
+    const remaining = this.fetuses.slice();
+    const born = this.bornChildrenThisLabor.concat(remaining);
+    const count = born.length;
     if (!surgical) this.naturalBirthExperience += 1;
+    for (const child of born) {
+      this.lineage = addBirth(this.lineage, {
+        name: (child.gender && child.gender !== '未知') ? (child.gender + '婴') : ('孩子' + (this.lineage.births.length + 1)),
+        gender: child.gender || '未知',
+        father: child.fathers || '未知',
+        race: child.race || this.race,
+        embryoType: child.embryoType || this.embryoType,
+        note: surgical ? '手术分娩' : '自然分娩',
+      });
+    }
     this.bornThisLabor = 0;
+    this.bornChildrenThisLabor = [];
     this.isPregnant = false;
     this.pregnantDays = 0;
     this.effectivePregnantDays = 0;
@@ -629,6 +659,7 @@ export class HealthData {
       if (phase === '胎体娩出') {
         const born = this.fetuses.shift();
         this.bornThisLabor += 1;
+        if (born) this.bornChildrenThisLabor.push(born);
         if (this.fetuses.length > 0) {
           this.laborPhase = '间歇期';
           this.laborHours = 0;
@@ -684,12 +715,40 @@ export class HealthData {
     else if (LABOR_STAGES.includes(this.stage)) this._advanceLabor(delta);
     else if (this.isPregnant) this._advancePregnancy(delta);
     else this._advanceMenstrual(delta);
+    this.needs = advanceNeeds(this.needs, delta * 24, this.stage);
     this.saveState();
     return this.getPhaseInfo();
   }
 
   advanceHours(hours = 1) {
     return this.advanceDays((Number(hours) || 0) / 24);
+  }
+
+  setHealthTab(tab) {
+    this.healthTab = ['cycle', 'needs', 'family'].includes(tab) ? tab : 'cycle';
+    this.saveState();
+  }
+
+  applyNeed(type) {
+    this.needs = applyNeedEvent(this.needs, type);
+    this.saveState();
+    return describeNeeds(this.needs);
+  }
+
+  describeNeeds() {
+    return describeNeeds(this.needs);
+  }
+
+  addChild(payload = {}) {
+    this.lineage = addBirth(this.lineage, { race: this.race, embryoType: this.embryoType, ...payload });
+    this.saveState();
+    return this.lineage;
+  }
+
+  removeChild(id) {
+    this.lineage = removeBirth(this.lineage, id);
+    this.saveState();
+    return this.lineage;
   }
 
   buildPromptDirective() {
@@ -716,6 +775,9 @@ export class HealthData {
     if (isLaborish(this.stage)) {
       lines.push(`- 产程: ${this.stage}${this.laborPhase ? '·' + this.laborPhase : ''}，宫缩痛感 ${this.laborPain}/10`);
     }
+    const needLines = buildNeedsDirective(this.needs);
+    if (needLines) lines.push('- 五维体征:', needLines);
+    if (this.lineage.births.length) lines.push(`- 子嗣: 已登记 ${this.lineage.births.length} 人`);
     if (this.lastNotify) lines.push(`- 最近变化: ${this.lastNotify}`);
     lines.push('描写时遵循上述体温、孕周/产程与种族胚胎类型，不要发明未发生的分娩或流产。');
     lines.push('</Physiological_Status>');

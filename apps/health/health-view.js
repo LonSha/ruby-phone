@@ -138,7 +138,30 @@ export class HealthView {
       ) +
       h("p", cls("hl-inject-hint"), "只注入阶段、孕周、产程与种族胚胎类型等事实体征，不请求模型演情感。")
     );
-    container.innerHTML = h("div", cls("hl-root"), header + h("main", cls("hl-body"), ring + cards + raceBox + controlBox + fetusSection + injectBox));
+    const tab = data.healthTab || "cycle";
+    const tabs = h("div", cls("hl-tabs"),
+      h("button", cls("hl-tab" + (tab === "cycle" ? " on" : "")) + " " + attr("data-tab", "cycle"), "周期") +
+      h("button", cls("hl-tab" + (tab === "needs" ? " on" : "")) + " " + attr("data-tab", "needs"), "体征") +
+      h("button", cls("hl-tab" + (tab === "family" ? " on" : "")) + " " + attr("data-tab", "family"), "家谱")
+    );
+    const needCards = (data.describeNeeds() || []).map((row) => {
+      return h("div", cls("hl-need"), h("div", cls("hl-need-top"), esc(row.label) + " " + row.value) + h("div", cls("hl-need-bar"), h("span", attr("style", "width:" + row.value + "%"), "")) + h("div", cls("hl-need-text"), esc(row.text)));
+    }).join("");
+    const needBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "五维体征（按小时累积）") + needCards +
+      h("div", cls("hl-btn-grid"),
+        h("button", cls("hl-action-btn") + " " + attr("data-need", "eat"), "进食") +
+        h("button", cls("hl-action-btn") + " " + attr("data-need", "drink"), "饮水") +
+        h("button", cls("hl-action-btn") + " " + attr("data-need", "void"), "如厕") +
+        h("button", cls("hl-action-btn") + " " + attr("data-need", "wash"), "洗漱")
+      )
+    );
+    const kids = (data.lineage?.births || []).map((child) => {
+      return h("div", cls("hl-child"), h("div", cls("hl-child-top"), esc(child.name) + h("button", cls("hl-mini") + " " + attr("data-del-child", child.id), "移除")) + h("div", cls("hl-card-desc"), esc(child.gender + " · " + child.father + " · " + child.race)));
+    }).join("") || h("div", cls("hl-card-desc"), "尚无子嗣记录。分娩完成后会自动登记。");
+    const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids);
+    const cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
+    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : cycleBody);
+    container.innerHTML = h("div", cls("hl-root"), header + tabs + h("main", cls("hl-body"), body));
     this._bindEvents();
   }
 
@@ -169,6 +192,16 @@ export class HealthView {
     root.querySelector("#hl-inject-now")?.addEventListener("click", () => {
       data.buildPromptDirective();
       window.toastr?.success("生理状态已准备，下一次生成时自动带入", "健康App");
+    });
+    root.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => { data.setHealthTab(btn.getAttribute("data-tab")); rerender(); });
+    });
+    root.querySelectorAll("[data-need]").forEach((btn) => {
+      btn.addEventListener("click", () => { data.applyNeed(btn.getAttribute("data-need")); rerender(); });
+    });
+    root.querySelector("#hl-add-child")?.addEventListener("click", () => { data.addChild(); rerender(); });
+    root.querySelectorAll("[data-del-child]").forEach((btn) => {
+      btn.addEventListener("click", () => { data.removeChild(btn.getAttribute("data-del-child")); rerender(); });
     });
     root.querySelectorAll("[data-del-fetus]").forEach((btn) => {
       btn.addEventListener("click", () => {
