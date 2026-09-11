@@ -1355,12 +1355,30 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         worldbookManager = new WorldbookManager(storage);
         promptManager.ensureLoaded(); // 强制把所有提示词立即读入内存待命
 
-        // 记忆系统: 全局单例, 启动即活 (后台采集/巩固/AI注入 不依赖 App 打开)
-        try {
-            window.VirtualPhone.memoryCore = new MemoryCore(storage);
-            window.VirtualPhone.memoryCore.attachPromptHook();
-        } catch (e) {
-            console.warn('[Memory] 记忆系统初始化失败:', e);
+        // 记忆系统: 全局单例, 空闲延迟初始化 (不阻塞核心模块加载)
+        // 用 requestIdleCallback 或 setTimeout 兜底, 保证后台采集/巩固/AI注入就绪
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(() => {
+                try {
+                    if (!window.VirtualPhone.memoryCore) {
+                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
+                        window.VirtualPhone.memoryCore.attachPromptHook();
+                    }
+                } catch (e) {
+                    console.warn('[Memory] 记忆系统空闲初始化失败:', e);
+                }
+            }, { timeout: 1500 });
+        } else {
+            setTimeout(() => {
+                try {
+                    if (!window.VirtualPhone.memoryCore) {
+                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
+                        window.VirtualPhone.memoryCore.attachPromptHook();
+                    }
+                } catch (e) {
+                    console.warn('[Memory] 记忆系统延迟初始化失败:', e);
+                }
+            }, 800);
         }
 
         modulesLoaded = true;
@@ -8236,7 +8254,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 记忆系统: 记录 AI 最终楼层 (仅新楼层, 排除历史回放/流式中)
             if (!isHistoryReplay && !message.is_user) {
-                try { window.VirtualPhone?.memoryCore?.record?.('ai', text); } catch (e) {}
+                try {
+                    if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
+                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
+                        window.VirtualPhone.memoryCore.attachPromptHook();
+                    }
+                    window.VirtualPhone?.memoryCore?.record?.('ai', text);
+                } catch (e) {}
             }
 
             // 🔥 新增：生成当前解析批次ID，用于清洗流式输出导致的重复片段
@@ -8261,9 +8285,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 if (listenUserMessages) {
                     scheduleAutoWeiboIfDue({ reason: 'user_message' });
                 }
-                // 记忆系统: 记录用户发言 (仅新楼层)
+                // 记忆系统: 记录用户发言 (仅新楼层; 若空闲初始化未完成则此刻兜底初始化)
                 if (!isHistoryReplay) {
-                    try { window.VirtualPhone?.memoryCore?.record?.('user', text); } catch (e) {}
+                    try {
+                        if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
+                            window.VirtualPhone.memoryCore = new MemoryCore(storage);
+                            window.VirtualPhone.memoryCore.attachPromptHook();
+                        }
+                        window.VirtualPhone?.memoryCore?.record?.('user', text);
+                    } catch (e) {}
                 }
                 return; // 用户消息处理完毕后退出，不走下面的 AI 标签解析链路
             }

@@ -68,7 +68,7 @@ export class MemoryView {
 
   _listTab() {
     const items = this.app.data.getTimeline(30);
-    const listHtml = items.length ? items.map(m => this._row(m)).join('') : '<div class="mem-none">对话积累到一定量后，记忆会自动沉淀到这里</div>';
+    const listHtml = items.length ? items.map(m => this._row(m)).join('') : '<div class="mem-empty-guide"><i class="fa-solid fa-seedling"></i><p>还没有沉淀记忆</p><ul><li>正常和角色对话即可，系统会自动采集</li><li>每隔一段时间自动「睡眠巩固」，把短期记忆沉淀为长期记忆</li><li>也可以点右上角月亮图标手动巩固</li><li>开启「自动注入」后，AI 生成时会记得这些过往</li></ul></div>';
     return [
       '  <div class="mem-section">',
       '    <div class="mem-section-title"><i class="fa-solid fa-magnifying-glass"></i> 检索记忆</div>',
