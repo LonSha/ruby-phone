@@ -1,7 +1,37 @@
 /**
- * 健康与生理 App (Health App) - 视图组件
- * 呈现 iOS 风格生理圆环、当前阶段指标卡与调节滑块
+ * Health view with BioTracker pregnancy, labor and race speed
  */
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function h(tag, attrs, html) {
+  const a = attrs ? (" " + attrs) : "";
+  return "<" + tag + a + ">" + (html || "") + "<" + "/" + tag + ">";
+}
+
+const FETUS_TAG_OPTIONS = [
+  ["chimera", "嵌合体"],
+  ["surrogacy", "代孕"],
+  ["selfing", "自交"],
+  ["identical", "同卵"],
+  ["superfetation", "异期复孕"],
+  ["nested", "孕中孕"],
+];
+
+function attr(name, val) {
+  const q = String.fromCharCode(34);
+  return name + "=" + q + val + q;
+}
+
+function cls(name) {
+  return attr("class", name);
+}
 
 export class HealthView {
   constructor(app) {
@@ -9,112 +39,167 @@ export class HealthView {
     this.container = null;
   }
 
+
   render(container) {
     this.container = container;
-    const info = this.app.data.getPhaseInfo();
-    const day = this.app.data.currentCycleDay;
-    const percent = Math.round((day / 28) * 100);
-
-    container.innerHTML = `
-      <div class="hl-root">
-        <header class="hl-header">
-          <button class="hl-back-btn" id="hl-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
-          <h2 class="hl-title">经期与身体健康</h2>
-          <div class="hl-spacer"></div>
-        </header>
-
-        <main class="hl-body">
-          <!-- 核心圆形仪表盘 -->
-          <div class="hl-ring-card">
-            <div class="hl-ring-outer" style="--ring-color: ${info.color}; --ring-pct: ${percent}%;">
-              <div class="hl-ring-inner">
-                <i class="fa-solid fa-droplet hl-droplet-icon" style="color: ${info.color};"></i>
-                <span class="hl-ring-day">Day ${day}</span>
-                <span class="hl-ring-phase" style="color: ${info.color};">${info.phase}</span>
-              </div>
-            </div>
-            <div class="hl-badge-pill" style="background: ${info.color}22; color: ${info.color}; border: 1px solid ${info.color}55;">
-              ${info.badge}
-            </div>
-          </div>
-
-          <!-- 生理体征详情卡片 -->
-          <div class="hl-info-cards">
-            <div class="hl-card">
-              <div class="hl-card-label"><i class="fa-solid fa-venus"></i> 受孕可能评估</div>
-              <div class="hl-card-val" style="color: ${info.color};">${info.fertility}</div>
-            </div>
-            <div class="hl-card">
-              <div class="hl-card-label"><i class="fa-solid fa-heart-pulse"></i> 敏感情绪与性欲</div>
-              <div class="hl-card-val">${info.arousalLevel}</div>
-            </div>
-            <div class="hl-card full-width">
-              <div class="hl-card-label"><i class="fa-solid fa-notes-medical"></i> 阶段特质与身心反应</div>
-              <div class="hl-card-desc">${info.desc}</div>
-            </div>
-          </div>
-
-          <!-- 快捷调节与注入 -->
-          <div class="hl-controls-section">
-            <div class="hl-section-title">快速推演与调节</div>
-            <div class="hl-slider-row">
-              <span class="hl-slider-label">调整周期第 ${day} 天:</span>
-              <input type="range" class="hl-slider" id="hl-day-slider" min="1" max="28" value="${day}" />
-            </div>
-
-            <div class="hl-btn-grid">
-              <button class="hl-action-btn" id="hl-step-prev"><i class="fa-solid fa-arrow-left"></i> 前一天</button>
-              <button class="hl-action-btn" id="hl-step-next">后一天 <i class="fa-solid fa-arrow-right"></i></button>
-              <button class="hl-action-btn ${this.app.data.isPregnant ? 'active' : ''}" id="hl-toggle-preg">
-                <i class="fa-solid fa-baby"></i> ${this.app.data.isPregnant ? '解密妊娠' : '模拟受孕'}
-              </button>
-            </div>
-
-            <div class="hl-inject-box">
-              <div class="hl-inject-top">
-                <span class="hl-inject-title">同步至大模型上下文</span>
-                <button class="hl-inject-now-btn" id="hl-inject-now"><i class="fa-solid fa-paper-plane"></i> 立即同步</button>
-              </div>
-              <p class="hl-inject-hint">同步后，AI 在生成接下来的剧情与亲密互动时，将严格遵循角色当前的排卵/易孕/经期体温与敏感特质。</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    `;
-
+    const data = this.app.data;
+    const info = data.getPhaseInfo();
+    const percent = Math.round(Math.max(0, Math.min(1, info.progress)) * 100);
+    const races = data.knownRaces();
+    const laborish = ["产兆前驱", "第一产程", "第二产程", "第三产程"].includes(info.phase);
+    const pregnant = data.isPregnant || info.phase === "产后恢复" || laborish;
+    const sliderMax = pregnant ? 42 : 28;
+    const sliderVal = pregnant ? Math.max(0, Math.min(42, data.gestationWeeks)) : data.currentCycleDay;
+    const sliderLabel = pregnant
+      ? ("孕周 " + data.gestationWeeks + " / 足月折算 " + Math.round(info.pregnancyTotalDays / 7) + " 周")
+      : ("周期第 " + data.currentCycleDay + " 天");
+    let ringMain;
+    if (pregnant && data.isPregnant) ringMain = "W" + data.gestationWeeks;
+    else if (info.phase === "产后恢复") ringMain = "D" + Math.floor(data.stageDays);
+    else ringMain = "Day " + data.currentCycleDay;
+    const raceOpts = races.map((n) => {
+      const sel = n === data.race ? " selected" : "";
+      return h("option", attr("value", esc(n)) + sel, esc(n));
+    }).join("");
+    const fetusCards = (info.fetuses || []).map((f, i) => {
+      const tags = new Set(f.tags || []);
+      const tagBtns = FETUS_TAG_OPTIONS.map(([id, label]) => {
+        const on = tags.has(id) ? " on" : "";
+        return h("button", attr("type", "button") + " " + cls("hl-tag" + on) + " " + attr("data-fetus", i) + " " + attr("data-tag", id), esc(label));
+      }).join("");
+      const del = info.fetuses.length > 1
+        ? h("button", attr("type", "button") + " " + cls("hl-mini") + " " + attr("data-del-fetus", i), "移除")
+        : "";
+      const genderInput = "<input " + attr("data-fgender", i) + " " + attr("value", esc(f.gender)) + " " + attr("maxlength", 8) + " />";
+      const fatherInput = "<input " + attr("data-ffather", i) + " " + attr("value", esc(f.fathers)) + " " + attr("maxlength", 24) + " />";
+      return h("div", cls("hl-fetus"),
+        h("div", cls("hl-fetus-top"), h("strong", "", "第" + (i + 1) + "胎") + h("span", "", esc(f.embryoType || info.embryoType)) + del) +
+        h("div", cls("hl-fetus-row"), h("label", "", "性别 " + genderInput) + h("label", "", "父源 " + fatherInput)) +
+        h("div", cls("hl-tag-row"), tagBtns));
+    }).join("");
+    const notifyHtml = info.lastNotify ? h("p", cls("hl-notify"), esc(info.lastNotify)) : "";
+    const icon = data.isPregnant ? "fa-baby" : "fa-droplet";
+    const pregClass = data.isPregnant ? " active" : "";
+    const pregLabel = data.isPregnant ? "解除妊娠" : "模拟受孕";
+    const disabled = data.isPregnant ? "" : " disabled";
+    const autoChecked = data.autoInject ? " checked" : "";
+    const fetusSection = data.isPregnant
+      ? h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "胎儿 " + info.fetuses.length + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-fetus"), "+加胎")) + fetusCards)
+      : "";
+    const ringStyle = "--ring-color: " + info.color + "; --ring-pct: " + percent + "%;";
+    const iconHtml = "<i class=" + String.fromCharCode(34) + "fa-solid " + icon + " hl-droplet-icon" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "color: " + info.color + ";" + String.fromCharCode(34) + "></i>";
+    const badgeStyle = "background: " + info.color + "22; color: " + info.color + "; border: 1px solid " + info.color + "55;";
+    const phaseStyle = "color: " + info.color + ";";
+    const fertStyle = "color: " + info.color + ";";
+    const header = h("header", cls("hl-header"),
+      h("button", cls("hl-back-btn") + " " + attr("id", "hl-back-btn"), "<i class=" + String.fromCharCode(34) + "fa-solid fa-chevron-left" + String.fromCharCode(34) + "></i>") +
+      h("h2", cls("hl-title"), "经期与身体健康") +
+      h("div", cls("hl-spacer"), "")
+    );
+    const ring = h("div", cls("hl-ring-card"),
+      h("div", cls("hl-ring-outer") + " " + attr("style", ringStyle),
+        h("div", cls("hl-ring-inner"), iconHtml + h("span", cls("hl-ring-day"), esc(ringMain)) + h("span", cls("hl-ring-phase") + " " + attr("style", phaseStyle), esc(info.phase)))
+      ) +
+      h("div", cls("hl-badge-pill") + " " + attr("style", badgeStyle), esc(info.badge)) +
+      notifyHtml
+    );
+    const cards = h("div", cls("hl-info-cards"),
+      h("div", cls("hl-card"), h("div", cls("hl-card-label"), "受孕评估") + h("div", cls("hl-card-val") + " " + attr("style", fertStyle), esc(info.fertility))) +
+      h("div", cls("hl-card"), h("div", cls("hl-card-label"), "体温 / 敏感") + h("div", cls("hl-card-val"), info.bodyTemp + "℃ · " + esc(info.arousalLevel))) +
+      h("div", cls("hl-card full-width"), h("div", cls("hl-card-label"), "阶段体征") + h("div", cls("hl-card-desc"), esc(info.desc))) +
+      h("div", cls("hl-card full-width"), h("div", cls("hl-card-label"), "种族 / 胚胎类型") + h("div", cls("hl-card-desc"), esc(info.race) + " · " + esc(info.embryoType) + " · 孕速 ×" + info.gestationSpeed.toFixed(2) + "<br>" + esc(info.embryoLore)))
+    );
+    const raceBox = h("div", cls("hl-controls-section"),
+      h("div", cls("hl-section-title"), "种族与孕速") +
+      h("label", cls("hl-select-row"), "母体种族" + h("select", attr("id", "hl-race"), raceOpts)) +
+      h("div", cls("hl-slider-row"), h("span", cls("hl-slider-label"), "孕速修正 ×" + data.gestationModifier.toFixed(2)) +
+        "<input type=" + String.fromCharCode(34) + "range" + String.fromCharCode(34) + " " + cls("hl-slider") + " " + attr("id", "hl-speed") + " min=" + String.fromCharCode(34) + "10" + String.fromCharCode(34) + " max=" + String.fromCharCode(34) + "400" + String.fromCharCode(34) + " " + attr("value", Math.round(data.gestationModifier * 100)) + " />")
+    );
+    const q = String.fromCharCode(34);
+    const daySlider = h("div", cls("hl-slider-row"), h("span", cls("hl-slider-label"), esc(sliderLabel)) +
+      "<input type=" + q + "range" + q + " " + cls("hl-slider") + " " + attr("id", "hl-day-slider") + " min=" + q + (pregnant ? 0 : 1) + q + " max=" + q + sliderMax + q + " " + attr("value", sliderVal) + " />");
+    const stepBtns = h("div", cls("hl-btn-grid hl-btn-grid-4"),
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-step-prev"), "前一天") +
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-step-next"), "后一天") +
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-hour-prev"), "-1h") +
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-hour-next"), "+1h")
+    );
+    const pregBtns = h("div", cls("hl-btn-grid"),
+      h("button", cls("hl-action-btn" + pregClass) + " " + attr("id", "hl-toggle-preg"), pregLabel) +
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-start-labor") + disabled, "进入产兆") +
+      h("button", cls("hl-action-btn") + " " + attr("id", "hl-finish-birth") + disabled, "完成分娩")
+    );
+    const controlBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "快速推演") + daySlider + stepBtns + pregBtns);
+    const injectBox = h("div", cls("hl-inject-box"),
+      h("div", cls("hl-inject-top"),
+        h("span", cls("hl-inject-title"), "同步至大模型上下文") +
+        h("label", cls("hl-inject-toggle"), "<input type=" + q + "checkbox" + q + " " + attr("id", "hl-auto-inject") + autoChecked + " /> 自动") +
+        h("button", cls("hl-inject-now-btn") + " " + attr("id", "hl-inject-now"), "立即同步")
+      ) +
+      h("p", cls("hl-inject-hint"), "只注入阶段、孕周、产程与种族胚胎类型等事实体征，不请求模型演情感。")
+    );
+    container.innerHTML = h("div", cls("hl-root"), header + h("main", cls("hl-body"), ring + cards + raceBox + controlBox + fetusSection + injectBox));
     this._bindEvents();
   }
 
   _bindEvents() {
-    this.container.querySelector('#hl-back-btn')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('phone:goHome'));
+    const root = this.container;
+    const data = this.app.data;
+    const rerender = () => this.render(this.container);
+    root.querySelector("#hl-back-btn")?.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("phone:goHome"));
     });
-
-    const slider = this.container.querySelector('#hl-day-slider');
-    slider?.addEventListener('input', (e) => {
-      this.app.data.setDay(e.target.value);
-      this.render(this.container);
+    root.querySelector("#hl-day-slider")?.addEventListener("change", (e) => { data.setDay(e.target.value); rerender(); });
+    root.querySelector("#hl-race")?.addEventListener("change", (e) => { data.setRace(e.target.value); rerender(); });
+    root.querySelector("#hl-speed")?.addEventListener("change", (e) => { data.setGestationModifier(Number(e.target.value) / 100); rerender(); });
+    root.querySelector("#hl-step-prev")?.addEventListener("click", () => { data.advanceDays(-1); rerender(); });
+    root.querySelector("#hl-step-next")?.addEventListener("click", () => { data.advanceDays(1); rerender(); });
+    root.querySelector("#hl-hour-prev")?.addEventListener("click", () => { data.advanceHours(-1); rerender(); });
+    root.querySelector("#hl-hour-next")?.addEventListener("click", () => { data.advanceHours(1); rerender(); });
+    root.querySelector("#hl-toggle-preg")?.addEventListener("click", () => {
+      const next = !data.isPregnant;
+      data.togglePregnancy(next, 4);
+      window.toastr?.info(next ? "已切换至妊娠（第4周）" : "已恢复常规生理周期", "健康App");
+      rerender();
     });
-
-    this.container.querySelector('#hl-step-prev')?.addEventListener('click', () => {
-      this.app.data.advanceDays(-1);
-      this.render(this.container);
+    root.querySelector("#hl-start-labor")?.addEventListener("click", () => { data.startLabor(); rerender(); });
+    root.querySelector("#hl-finish-birth")?.addEventListener("click", () => { data.finishBirth({ surgical: true }); rerender(); });
+    root.querySelector("#hl-add-fetus")?.addEventListener("click", () => { data.addFetus(); rerender(); });
+    root.querySelector("#hl-auto-inject")?.addEventListener("change", (e) => { data.setAutoInject(e.target.checked); });
+    root.querySelector("#hl-inject-now")?.addEventListener("click", () => {
+      data.buildPromptDirective();
+      window.toastr?.success("生理状态已准备，下一次生成时自动带入", "健康App");
     });
-    this.container.querySelector('#hl-step-next')?.addEventListener('click', () => {
-      this.app.data.advanceDays(1);
-      this.render(this.container);
+    root.querySelectorAll("[data-del-fetus]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        data.removeFetus(Number(btn.getAttribute("data-del-fetus")));
+        rerender();
+      });
     });
-
-    this.container.querySelector('#hl-toggle-preg')?.addEventListener('click', () => {
-      const nowPreg = !this.app.data.isPregnant;
-      this.app.data.togglePregnancy(nowPreg, 4);
-      this.render(this.container);
-      window.toastr?.info(nowPreg ? '已切换至妊娠状态（第4周）' : '已恢复常规生理周期', '健康App');
+    root.querySelectorAll("[data-fgender]").forEach((input) => {
+      input.addEventListener("change", () => {
+        data.updateFetus(Number(input.getAttribute("data-fgender")), { gender: input.value });
+      });
     });
-
-    this.container.querySelector('#hl-inject-now')?.addEventListener('click', () => {
-      const prompt = this.app.data.buildPromptDirective();
-      window.toastr?.success('生理状态已注入！将在下一次回复中生效', '健康App');
+    root.querySelectorAll("[data-ffather]").forEach((input) => {
+      input.addEventListener("change", () => {
+        data.updateFetus(Number(input.getAttribute("data-ffather")), { fathers: input.value });
+      });
+    });
+    root.querySelectorAll("[data-tag]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.getAttribute("data-fetus"));
+        const tag = btn.getAttribute("data-tag");
+        const fetus = data.fetuses[i];
+        if (!fetus) return;
+        const tags = new Set(fetus.tags || []);
+        if (tags.has(tag)) tags.delete(tag); else tags.add(tag);
+        data.updateFetus(i, { tags: [...tags] });
+        rerender();
+      });
     });
   }
 }
+
+export default HealthView;
+
