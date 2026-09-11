@@ -119,8 +119,58 @@ export class GraphView {
     box.innerHTML = hits.length ? hits.map(h => {
       const kind = h._kind === 'neighbor' ? '<span class="gph-kind nb">关联</span>' : '<span class="gph-kind">节点</span>';
       const via = h._via ? '<span class="gph-via">' + this._esc(h._via) + '</span>' : '';
-      return '<div class="gph-res-item">' + kind + '<span class="gph-res-name">' + this._esc(h.name || h.id || '') + '</span>' + via + '<div class="gph-res-text">' + this._esc(h.content || h.summary || '') + '</div><div class="gph-res-score">' + (h._score || 0).toFixed(2) + '</div></div>';
+      return '<div class="gph-res-item gph-clickable" data-node-id="' + this._esc(h.id || '') + '">' + kind + '<span class="gph-res-name">' + this._esc(h.name || h.id || '') + '</span>' + via + '<div class="gph-res-text">' + this._esc(h.content || h.summary || '') + '</div><div class="gph-res-score">' + (h._score || 0).toFixed(2) + '</div></div>';
     }).join('') : '<div class="gph-none">没有匹配的图谱节点</div>';
+    // B3: 绑定点击 → 展开节点详情
+    box.querySelectorAll('.gph-clickable').forEach(el => {
+      el.addEventListener('click', () => this._showNodeDetail(el.dataset.nodeId));
+    });
+  }
+
+  /** B3: 节点详情 — 关系链 + 相关记忆 */
+  _showNodeDetail(nodeId) {
+    if (!nodeId) return;
+    const bridge = this.app.data;
+    const q = (sel) => this.container.querySelector(sel);
+    const box = q('#gph-results');
+    if (!box) return;
+
+    // 找节点本体
+    const data = bridge.getData ? bridge.getData() : null;
+    const node = (data?.graph?.nodes || []).find(n => n.id === nodeId) || { id: nodeId, name: nodeId, content: '' };
+    const relations = bridge.getRelations ? bridge.getRelations(nodeId) : [];
+
+    // 手机侧相关记忆
+    let phoneHits = [];
+    try {
+      const core = window.VirtualPhone?.memoryCore;
+      if (core && node.name) phoneHits = (core.recall(node.name, 5) || []).slice(0, 5);
+    } catch (e) {}
+
+    const relHtml = relations.length ? relations.map(r => {
+      const dir = r.direction === 'out' ? '→' : '←';
+      return '<div class="gph-rel-item"><b>' + this._esc(r.from) + '</b> <span class="gph-rel-label">' + this._esc(r.label) + '</span> ' + dir + ' <b>' + this._esc(r.to) + '</b></div>';
+    }).join('') : '<div class="gph-none">暂无关联关系</div>';
+
+    const memHtml = phoneHits.length ? phoneHits.map(h =>
+      '<div class="gph-mem-item"><span class="gph-mem-layer">' + this._esc(h.layer || '') + '</span><div class="gph-mem-text">' + this._esc(String(h.content || '').slice(0, 120)) + '</div></div>'
+    ).join('') : '<div class="gph-none">手机侧暂无相关记忆</div>';
+
+    box.innerHTML = [
+      '<div class="gph-detail">',
+      '  <div class="gph-detail-head">',
+      '    <span class="gph-detail-name">' + this._esc(node.name || node.id) + '</span>',
+      '    <span class="gph-detail-type">' + this._esc(node.type || 'node') + '</span>',
+      '    <button class="gph-detail-back" id="gph-detail-back">返回</button>',
+      '  </div>',
+      node.content ? '  <div class="gph-detail-content">' + this._esc(node.content) + '</div>' : '',
+      '  <div class="gph-detail-section"><div class="gph-section-title">关系链 (' + relations.length + ')</div>' + relHtml + '</div>',
+      '  <div class="gph-detail-section"><div class="gph-section-title">手机侧相关记忆</div>' + memHtml + '</div>',
+      '</div>'
+    ].join('
+');
+
+    q('#gph-detail-back')?.addEventListener('click', () => this._doSearch());
   }
 }
 

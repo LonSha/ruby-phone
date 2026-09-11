@@ -222,15 +222,28 @@ export class GraphBridge {
         const core = window.VirtualPhone?.memoryCore;
         if (!core) return 0;
 
+        const graph = lm.engine.graph;
         let count = 0;
         try {
             const items = (core.longTerm || []).filter(m => (m.importance || 0) >= (options.minImportance || 7));
             const existing = new Set(
-                Array.from(lm.engine.graph.nodes?.values?.() || []).map(n => n.content)
+                Array.from(graph.nodes?.values?.() || []).map(n => n.content)
             );
+            // 已图谱节点池 (供连边)
+            const nodes = Array.from(graph.nodes?.values?.() || []);
+            const charNodes = nodes.filter(n => n.type === 'character' || n.type === '角色');
+            const placeNodes = nodes.filter(n => n.type === 'place' || n.type === '地点' || n.type === 'location');
+            const tagIndex = {};
+            for (const n of nodes) {
+                for (const tg of (n.tags || [])) {
+                    if (!tagIndex[String(tg).toLowerCase()]) tagIndex[String(tg).toLowerCase()] = [];
+                    tagIndex[String(tg).toLowerCase()].push(n);
+                }
+            }
+
             for (const m of items) {
                 if (existing.has(m.content)) continue;
-                lm.engine.graph.addNode({
+                const newNodeId = graph.addNode({
                     type: 'phone-memory',
                     name: (m.tags && m.tags[0]) || '手机记忆',
                     content: m.content,
@@ -238,6 +251,41 @@ export class GraphBridge {
                     metadata: { importance: m.importance, emotion: m.emotion, createdAt: m.createdAt }
                 });
                 count++;
+
+                // --- B1: 自动连边 ---
+                const text = String(m.content || '');
+                // 1) 角色锚点: 文本包含已知角色名 → 连 (角色 -经历→ 手机记忆)
+                for (const cn of charNodes) {
+                    if (cn.name && text.includes(cn.name)) {
+                        graph.addEdge({ from: newNodeId, to: cn.id, label: '相关经历' });
+                        graph.addEdge({ from: cn.id, to: newNodeId, label: '记得' });
+                    }
+                }
+                // 2) 地点锚点: 文本包含已知地点名 → 连 (手机记忆 -发生在→ 地点)
+                for (const pn of placeNodes) {
+                    if (pn.name && text.includes(pn.name)) {
+                        graph.addEdge({ from: newNodeId, to: pn.id, label: '发生在' });
+                    }
+                }
+                // 3) 同标签连边: 与已有同标签节点互联 (软关联)
+                const mTags = (m.tags || []).map(x => String(x).toLowerCase());
+                for (const tg of mTags) {
+                    const others = (tagIndex[tg] || []).filter(n => n.id !== newNodeId).slice(0, 3);
+                    for (const on of others) {
+                        graph.addEdge({ from: newNodeId, to: on.id, label: '同主题' });
+                    }
+                }
+                // 4) 时间邻近: 与同一天内写入的手机记忆互连
+                if (m.createdAt) {
+                    const t0 = new Date(m.createdAt).getTime();
+                    for (const n of nodes) {
+                        if (n.type !== 'phone-memory' || n.id === newNodeId) continue;
+                        const nt = n.metadata?.createdAt ? new Date(n.metadata.createdAt).getTime() : 0;
+                        if (nt && Math.abs(nt - t0) < 6 * 60 * 60 * 1000) { // 6 小时窗口
+                            graph.addEdge({ from: newNodeId, to: n.id, label: '同一时段' });
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.warn('[GraphBridge] 反向写入失败:', e);

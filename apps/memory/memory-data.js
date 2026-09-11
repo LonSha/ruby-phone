@@ -36,7 +36,8 @@ export class MemoryCore {
             minImportance: 4,       // 采集门槛 (低阈值保证玩家短句也能沉淀)
             sleepEveryMessages: 24, // 每 N 条消息触发一次睡眠巩固
             echoEnabled: false,        // 记忆回声 (需演技, 弱模型默认关)
-            misrememberEnabled: false  // 遗忘错记 (需演技, 弱模型默认关)
+            misrememberEnabled: false, // 遗忘错记 (需演技, 弱模型默认关)
+            llmSummaryEnabled: false   // LLM 增强摘要 (可选, 弱模型保持关闭; 开则调宿主静默生成)
         };
 
         this._load();
@@ -262,6 +263,30 @@ export class MemoryCore {
         return { phone, graph };
     }
 
+    /**
+     * B2: 可选 LLM 增强摘要 (默认关闭)
+     * 通过酒馆静默生成获取高质量概括, 失败时静默回退到纯本地摘要
+     * @param messages 消息数组 [{role:'user'|'ai', content}]
+     * @returns { summary, source: 'llm'|'local' }
+     */
+    async llmSummarize(messages) {
+        const local = buildMemorySummary(messages, {});
+        if (!this.config.llmSummaryEnabled) return { summary: local, source: 'local' };
+        if (!messages || !messages.length) return { summary: '', source: 'local' };
+        try {
+            const ctx = window.SillyTavern?.getContext?.();
+            const quiet = ctx?.generateQuietPrompt;
+            if (typeof quiet !== 'function') return { summary: local, source: 'local' };
+            const raw = messages.map(m => (m.role === 'user' ? '我' : '角色') + ':' + String(m.content || '').slice(0, 160)).join('\n');
+            const prompt = '用一句话客观概括这段对话发生了什么、关系有何变化（30-60字，只输出摘要本身，禁止照抄原文）：\n' + raw;
+            const out = await quiet({ quietPrompt: prompt, quietToLoud: false, skipWIAN: true });
+            const text = String(out || '').replace(/^["“「]+/, '').replace(/["”」]+$/, '').trim();
+            if (text.length >= 10 && text.length <= 200) return { summary: text, source: 'llm' };
+            return { summary: local, source: 'local' };
+        } catch (e) {
+            return { summary: local, source: 'local' };
+        }
+    }
     /** 把手机高价值记忆推入 LonSha 图谱 (手动/定时触发) */
     syncToGraph(options = {}) {
         try {
