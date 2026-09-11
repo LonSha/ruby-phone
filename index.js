@@ -1323,7 +1323,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             appsModule,
             storageModule,
             apiManagerModule,
-            timeManagerModule,      // 👈 新增：时间推算引擎
+            timeManagerModule,      // 👈 新增：时间推算引擎,
+            timeEnvModule,          // 👈 TPES 时间-环境
             promptManagerModule,    // 👈 新增：全局提示词中枢
             ttsManagerModule,
             imageGenerationManagerModule,
@@ -1333,6 +1334,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             import('./config/storage.js'),
             import('./config/api-manager.js'),
             import('./config/time-manager.js'),    // 👈 取消懒加载
+            import('./config/time-env.js'),        // 👈 TPES 时间-环境感知
         import('./config/prompt-manager.js?v=20260802-moments-named-images'),  // 👈 取消懒加载
             import('./config/tts-manager.js?v=20260607-mimo-relay-worker'),
         import('./config/image-generation-manager.js?v=20260828-nai-prompt-preserve'),
@@ -1356,6 +1358,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 🔥 立即实例化时间和提示词，拔除任何延迟隐患！
         timeManager = new TimeManager(storage);
+        timeEnvManager = new timeEnvModule.TimeEnvManager(storage);
+        timeEnvManager.attachPromptHook();
         promptManager = new PromptManager(storage);
         ttsManager = new TtsManager(storage);
         imageGenerationManager = new ImageGenerationManager(storage);
@@ -1395,6 +1399,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         modulesLoaded = true;
 
+        // 🔥 TPES 时间-环境感知：立即暴露 + 挂注入钩子
+        try {
+            if (window.VirtualPhone && timeEnvManager) {
+                window.VirtualPhone.timeEnv = timeEnvManager;
+                timeEnvManager.attachPromptHook();
+            }
+        } catch (e) { console.warn('[TimeEnv] 暴露失败:', e); }
+
         const endTime = performance.now();
         console.log(`✅ 虚拟手机核心模块加载完成 (${Math.round(endTime - startTime)}ms)`);
     }
@@ -1431,6 +1443,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // 🔥 按需加载 TimeManager
     async function loadTimeManager() {
         if (window.VirtualPhone) window.VirtualPhone.timeManager = timeManager;
+        if (timeEnvManager) window.VirtualPhone.timeEnv = timeEnvManager;
         return timeManager;
     }
 

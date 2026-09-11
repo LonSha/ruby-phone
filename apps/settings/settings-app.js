@@ -1121,6 +1121,7 @@ export class SettingsApp {
         const isWechatOnlineProactiveQuietEnabled = this._isStorageTruthy(wechatOnlineProactiveQuietEnabledKey);
         const wechatOnlineProactiveQuietStart = Math.max(0, Math.min(23, Number.parseInt(this.storage.get(wechatOnlineProactiveQuietStartKey, 23), 10) || 23));
         const wechatOnlineProactiveQuietEnd = Math.max(0, Math.min(23, Number.parseInt(this.storage.get(wechatOnlineProactiveQuietEndKey, 7), 10) || 7));
+        const isTimeEnvInjectEnabled = window.VirtualPhone?.timeEnv ? window.VirtualPhone.timeEnv.isEnabled() : true;
         const currentTtsProvider = this._getCurrentTtsProvider();
         const currentTtsDefaults = this._getTtsProviderDefaults(currentTtsProvider);
         const currentTtsUrl = this._getTtsProviderValue(currentTtsProvider, 'url', 'phone-tts-url') || currentTtsDefaults.url || '';
@@ -1200,7 +1201,18 @@ export class SettingsApp {
                                        style="width: 68px; height: 32px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; text-align: center; font-size: 14px; background: #fafafa;">
                             </div>
 
-                            <div class="setting-item setting-button" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
+                                                        <div class="setting-item setting-toggle" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(244,114,182,0.25);">
+                                <div>
+                                    <div class="setting-label">时间-环境感知注入</div>
+                                    <div class="setting-desc">TPES 规则：按时段联动光照与生理节律，时间只前进，离线期间角色照常生活；不输出时间戳元标注</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="setting-time-env-inject-enabled" ${isTimeEnvInjectEnabled ? 'checked' : ''}>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+<div class="setting-item setting-button" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
                             <div class="setting-item setting-toggle" style="margin-top: 8px; margin-left: 12px; padding-left: 10px; border-left: 2px solid rgba(7,193,96,0.18);">
                                 <div>
                                     <div class="setting-label">免打扰时段</div>
@@ -5983,6 +5995,13 @@ export class SettingsApp {
             e.target.value = validLimit;
             const key = this._getWechatOnlineProactiveIntervalStorageKey(this.storage.getContext());
             await this.storage.set(key, validLimit);
+        });
+
+        document.getElementById('setting-time-env-inject-enabled')?.addEventListener('change', async (e) => {
+            const manager = window.VirtualPhone?.timeEnv;
+            if (manager) await manager.setEnabled(e.target.checked);
+            else this.storage.set('time_env_auto_inject_enabled', !!e.target.checked);
+            window.toastr?.info(e.target.checked ? '时间-环境感知已开启' : '时间-环境感知已关闭', '健康生理');
         });
 
         document.getElementById('setting-wechat-online-proactive-quiet-enabled')?.addEventListener('change', async (e) => {
