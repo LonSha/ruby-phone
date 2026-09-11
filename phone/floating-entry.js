@@ -296,17 +296,20 @@ export class PhoneFloatingEntry {
     }
 
     updateVisibility(panelOpen = null) {
-        const button = document.getElementById(FLOATING_BUTTON_ID);
-        if (!button) return;
         const hidden = typeof panelOpen === 'boolean' ? panelOpen : !!this.isPanelOpen();
-        button.hidden = hidden;
-        button.setAttribute('aria-hidden', String(hidden));
-        if (!hidden) {
-            const saved = this.readPosition();
-            if (this.shouldUseSavedPosition(saved)) this.applyPosition(button, saved.left, saved.top);
-            else if (this.isMobileViewport()) this.position(button);
-            else this.ensureVisible(button);
+        const button = document.getElementById(FLOATING_BUTTON_ID);
+        const hasPet = !!this.pet;
+        if (button) {
+            button.hidden = hasPet || hidden;
+            button.setAttribute('aria-hidden', String(button.hidden));
+            if (!button.hidden) {
+                const saved = this.readPosition();
+                if (this.shouldUseSavedPosition(saved)) this.applyPosition(button, saved.left, saved.top);
+                else if (this.isMobileViewport()) this.position(button);
+                else this.ensureVisible(button);
+            }
         }
+        try { this.pet?.syncPanel?.(hidden); } catch (e) {}
     }
 
     mount() {
@@ -321,29 +324,7 @@ export class PhoneFloatingEntry {
         }
         this.updateImage(button);
 
-        // 桌面宠物: 挂到悬浮按钮上, 点击宠物开手机
-        try {
-            if (!this.pet && typeof PetController !== 'undefined') {
-                const petRoot = document.createElement('button');
-                petRoot.type = 'button';
-                petRoot.className = 'phone-pet-root';
-                petRoot.id = 'phone-pet-root';
-                petRoot.title = '点我开手机';
-                root.appendChild(petRoot);
-                this.pet = new PetController(petRoot, () => {
-                    // 手机就绪回调: 触发打开手机
-                    this.onActivate();
-                });
-                petRoot.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (this.pet) this.pet.toggle();
-                    else this.onActivate();
-                });
-            }
-        } catch (e) {
-            console.warn('[手机宠物] 桌面宠物创建失败:', e);
-            this.pet = null;
-        }
+        this.ensurePet();
 
         if (!this.resizeController) {
             this.resizeController = new AbortController();
@@ -376,8 +357,52 @@ export class PhoneFloatingEntry {
         if (root && !root.childElementCount) root.remove();
     }
 
+    ensurePet() {
+        if (this.pet) return;
+        try {
+            const root = this.getRoot();
+            let petRoot = document.getElementById('phone-pet-root');
+            if (!petRoot) {
+                petRoot = document.createElement('button');
+                petRoot.type = 'button';
+                petRoot.className = 'phone-pet-root';
+                petRoot.id = 'phone-pet-root';
+                petRoot.title = '点我开手机';
+                root.appendChild(petRoot);
+            }
+            this.pet = new PetController(petRoot, () => this.onActivate());
+            if (!petRoot._petClickBound) {
+                petRoot._petClickBound = true;
+                petRoot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const panelOpen = !!this.isPanelOpen();
+                    if (panelOpen) {
+                        this.pet?.closePhone();
+                        this.onActivate();
+                    } else {
+                        this.pet?.openPhone();
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('[手机宠物] 桌面宠物创建失败:', e);
+            this.pet = null;
+        }
+    }
+
     sync() {
         if (this.isEnabled()) this.mount();
-        else this.unmount();
+        else this.unmountButtonOnly();
+        this.ensurePet();
+        this.updateVisibility();
+    }
+
+    unmountButtonOnly() {
+        this.resizeController?.abort?.();
+        this.resizeController = null;
+        window.clearInterval(this.visibilityTimer);
+        this.visibilityTimer = null;
+        document.getElementById(FLOATING_BUTTON_ID)?.remove();
     }
 }
+

@@ -54,7 +54,12 @@ export class MusicAmbience {
     if (Array.isArray(lrc)) {
       return lrc
         .filter(x => x && (x.txt || x.text))
-        .map(x => ({ time: Number(x.t ?? x.time ?? 0), text: String(x.txt || x.text || '') }))
+        .map(x => {
+          const raw = Number(x.t ?? x.time ?? 0);
+          // MusicData._parseLrc 用秒; 若已是毫秒(>10000 且看起来不像 2.7 小时内的秒)保持原值
+          const ms = raw > 0 && raw < 10000 ? raw * 1000 : raw;
+          return { time: ms, text: String(x.txt || x.text || '') };
+        })
         .filter(x => x.text && isFinite(x.time))
         .sort((a, b) => a.time - b.time);
     }
@@ -150,6 +155,29 @@ export class MusicAmbience {
     this.audio.addEventListener('loadedmetadata', this._boundMeta);
     this._ensureLyricEl();
     this._updateMediaMetadata();
+    this._bindMediaSessionActions();
+  }
+
+  _bindMediaSessionActions() {
+    if (!('mediaSession' in navigator) || typeof navigator.mediaSession.setActionHandler !== 'function') return;
+    const md = this.musicData;
+    const bind = (action, fn) => {
+      try { navigator.mediaSession.setActionHandler(action, fn); } catch (e) {}
+    };
+    bind('play', () => {
+      try {
+        if (typeof md.resume === 'function') md.resume();
+        else this.audio?.play?.();
+      } catch (e) {}
+    });
+    bind('pause', () => { try { md.pause?.(); } catch (e) {} });
+    bind('previoustrack', () => { try { md.prev?.(); } catch (e) {} });
+    bind('nexttrack', () => { try { md.next?.(); } catch (e) {} });
+    bind('seekto', (d) => {
+      try {
+        if (d && typeof d.seekTime === 'number' && this.audio) this.audio.currentTime = d.seekTime;
+      } catch (e) {}
+    });
   }
 
   detach() {
@@ -228,10 +256,14 @@ export class MusicAmbience {
     const song = this._currentSong();
     if (!song) return;
     try {
+      const artwork = [];
+      const pic = song.pic || song.cover || song.Cover || '';
+      if (pic) artwork.push({ src: pic, sizes: '512x512', type: 'image/jpeg' });
       navigator.mediaSession.metadata = new MediaMetadata({
         title: song.name || '未知歌曲',
         artist: song.artist || 'RubyPhone',
-        album: 'RubyPhone 音乐'
+        album: 'RubyPhone 音乐',
+        artwork
       });
     } catch (e) {}
   }
@@ -255,6 +287,10 @@ export class MusicAmbience {
   _currentSong() {
     const md = this.musicData;
     if (!md) return null;
+    if (typeof md.getCurrentSong === 'function') {
+      const song = md.getCurrentSong();
+      if (song) return song;
+    }
     const list = md.getActiveList ? md.getActiveList() : null;
     if (Array.isArray(list) && md.currentIndex >= 0) return list[md.currentIndex] || null;
     if (md._cardData) return md._cardData;

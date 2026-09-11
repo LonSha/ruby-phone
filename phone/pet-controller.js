@@ -8,12 +8,16 @@
 
 const LOOPING_STATES = new Set(['Idle', 'PhoneLoop']);
 
+function petVideoUrl(file) {
+  try { return new URL('./pet/' + file, import.meta.url).href; }
+  catch (e) { return './phone/pet/' + file; }
+}
 export const PET_VIDEOS = {
-  Idle: './phone/pet/idle.webm',
-  TapReaction: './phone/pet/tap.webm',
-  PhoneEnter: './phone/pet/phone-enter.webm',
-  PhoneLoop: './phone/pet/phone-loop.webm',
-  PhoneExit: './phone/pet/phone-exit.webm'
+  Idle: petVideoUrl('idle.webm'),
+  TapReaction: petVideoUrl('tap.webm'),
+  PhoneEnter: petVideoUrl('phone-enter.webm'),
+  PhoneLoop: petVideoUrl('phone-loop.webm'),
+  PhoneExit: petVideoUrl('phone-exit.webm')
 };
 
 export class PetController {
@@ -73,6 +77,23 @@ export class PetController {
   toggle() {
     if (this.state === 'PhoneEnter' || this.state === 'PhoneLoop') this.closePhone();
     else this.openPhone();
+  }
+
+  isPhoneOpen() {
+    return this.state === 'PhoneEnter' || this.state === 'PhoneLoop';
+  }
+
+  /** 面板从其他入口开关时同步宠物动画, 不再触发 onPhoneReady (避免循环 toggle) */
+  syncPanel(open) {
+    if (this.destroyed) return;
+    if (open) {
+      if (this.state === 'Idle' || this.state === 'PhoneExit') {
+        this.clearTransitionTimer();
+        this.renderState('PhoneEnter');
+      }
+    } else if (this.isPhoneOpen()) {
+      this.closePhone();
+    }
   }
 
   destroy() {

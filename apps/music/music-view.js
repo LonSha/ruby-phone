@@ -172,6 +172,13 @@ export class MusicView {
                                 </div>
                                 <div class="music-toggle ${showFloating ? 'active' : ''}" id="music-toggle-floating"></div>
                             </div>
+                            <div class="music-settings-item">
+                                <div>
+                                    <div class="music-settings-item-label">桌面歌词</div>
+                                    <div class="music-settings-item-desc">播放时在屏幕上显示当前歌词（可拖动）</div>
+                                </div>
+                                <div class="music-toggle ${this.app.ambience?.settings?.desktopLyrics ? 'active' : ''}" id="music-toggle-desktop-lyrics"></div>
+                            </div>
                         </div>
 
                         <div class="music-settings-group">
@@ -241,6 +248,15 @@ export class MusicView {
                     // 🔥 新增：关掉悬浮窗时，立刻掐断后台音乐播放
                     this.app.musicData.pause();
                 }
+            };
+        }
+
+        const lyricsToggle = screen.querySelector('#music-toggle-desktop-lyrics');
+        if (lyricsToggle) {
+            lyricsToggle.onclick = () => {
+                const on = !(this.app.ambience?.settings?.desktopLyrics);
+                this.app.ambience?.setDesktopLyrics?.(on);
+                lyricsToggle.classList.toggle('active', on);
             };
         }
         
