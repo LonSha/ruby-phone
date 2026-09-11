@@ -46,12 +46,6 @@ const WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'wechat_online_proactive_enabled';
 const WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'wechat_online_proactive_interval_minutes';
 const WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY = 'wechat_online_proactive_last_trigger_at';
 const WECHAT_ONLINE_PROACTIVE_PENDING_KEY = 'wechat_online_proactive_pending_at';
-const WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'wechat_online_proactive_quiet_enabled';
-const WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'wechat_online_proactive_quiet_start';
-const WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'wechat_online_proactive_quiet_end';
-const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_quiet_enabled';
-const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY = 'phone_lobby_wechat_online_proactive_quiet_start';
-const LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY = 'phone_lobby_wechat_online_proactive_quiet_end';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'phone_lobby_wechat_online_proactive_enabled';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY = 'phone_lobby_wechat_online_proactive_interval_minutes';
 const LOBBY_WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY = 'phone_lobby_wechat_online_proactive_last_trigger_at';
@@ -149,54 +143,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let worldbookManager = null;
     let phoneFloatingEntry = null;
     let modulesLoaded = false;
-
-    // ========================================
-    // 事件监听治理 (防泄漏 / 防重复挂载)
-    //   - window 自定义事件统一挂到 _phoneEventController.signal
-    //   - eventSource 监听登记到 _phoneBoundListeners, 便于统一 off
-    //   - init 重入时 resetPhoneEventController() 先解绑再重建
-    // ========================================
-    let _phoneEventController = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const _phoneBoundEventKeys = new Set();
-    const _phoneBoundListeners = [];
-
-    function resetPhoneEventController() {
-        if (_phoneEventController) {
-            try { _phoneEventController.abort(); } catch (e) {}
-        }
-        try {
-            const ctx = typeof getContext === 'function' ? getContext() : null;
-            const es = ctx && ctx.eventSource;
-            if (es && typeof es.removeListener === 'function') {
-                for (const item of _phoneBoundListeners) {
-                    try { es.removeListener(item.type, item.fn); } catch (e) {}
-                }
-            }
-        } catch (e) {}
-        _phoneBoundListeners.length = 0;
-        _phoneBoundEventKeys.clear();
-        if (typeof AbortController !== 'undefined') _phoneEventController = new AbortController();
-        return _phoneEventController;
-    }
-
-    function bindWindowEvent(key, type, fn, options = {}) {
-        if (_phoneBoundEventKeys.has(key)) return false;
-        _phoneBoundEventKeys.add(key);
-        const opts = { ...options };
-        if (_phoneEventController) opts.signal = _phoneEventController.signal;
-        window.addEventListener(type, fn, opts);
-        return true;
-    }
-
-    function bindEventSource(es, type, fn, key) {
-        const k = key || ('es:' + type);
-        if (_phoneBoundEventKeys.has(k)) return false;
-        if (!es || typeof es.on !== 'function') return false;
-        _phoneBoundEventKeys.add(k);
-        es.on(type, fn);
-        _phoneBoundListeners.push({ type, fn });
-        return true;
-    }
     let _lastWechatConversationId = null; // 防串味：角色卡 + 酒馆聊天文件联合标识
     let _globalCssLoadingPromise = null;
     let _phoneStableViewportHeight = 0;
@@ -1323,8 +1269,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             appsModule,
             storageModule,
             apiManagerModule,
-            timeManagerModule,      // 👈 新增：时间推算引擎,
-            timeEnvModule,          // 👈 TPES 时间-环境
+            timeManagerModule,      // 👈 新增：时间推算引擎
             promptManagerModule,    // 👈 新增：全局提示词中枢
             ttsManagerModule,
             imageGenerationManagerModule,
@@ -1334,7 +1279,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             import('./config/storage.js'),
             import('./config/api-manager.js'),
             import('./config/time-manager.js'),    // 👈 取消懒加载
-            import('./config/time-env.js'),        // 👈 TPES 时间-环境感知
         import('./config/prompt-manager.js?v=20260802-moments-named-images'),  // 👈 取消懒加载
             import('./config/tts-manager.js?v=20260607-mimo-relay-worker'),
         import('./config/image-generation-manager.js?v=20260828-nai-prompt-preserve'),
@@ -1358,54 +1302,36 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 🔥 立即实例化时间和提示词，拔除任何延迟隐患！
         timeManager = new TimeManager(storage);
-        timeEnvManager = new timeEnvModule.TimeEnvManager(storage);
-        timeEnvManager.attachPromptHook();
         promptManager = new PromptManager(storage);
         ttsManager = new TtsManager(storage);
         imageGenerationManager = new ImageGenerationManager(storage);
         worldbookManager = new WorldbookManager(storage);
         promptManager.ensureLoaded(); // 强制把所有提示词立即读入内存待命
 
-        // 记忆系统: 全局单例, 空闲延迟初始化 (不阻塞核心模块加载)
-        // 用 requestIdleCallback 或 setTimeout 兜底, 保证后台采集/巩固/AI注入就绪
-        if (typeof window.requestIdleCallback === 'function') {
-            window.requestIdleCallback(() => {
+        // 记忆系统: 全局单例, 启动即活 (后台采集/巩固/AI注入 不依赖 App 打开)
+        try {
+            window.VirtualPhone.memoryCore = new MemoryCore(storage);
+            window.VirtualPhone.memoryCore.attachPromptHook();
+            // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
+            try {
+                mountLonShaBridge(storage, window.VirtualPhone.memoryCore);
+                // [RB] 协调注入: 生成前由桥统一把手机记忆注入最新楼层 (本地钩子自动让位)
                 try {
-                    if (!window.VirtualPhone.memoryCore) {
-                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
-                        window.VirtualPhone.memoryCore.attachPromptHook();
-                        // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
-                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
-                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
+                    const rbCtx = window.SillyTavern?.getContext?.();
+                    if (rbCtx?.eventSource && rbCtx?.event_types?.GENERATION_STARTED) {
+                        rbCtx.eventSource.on(rbCtx.event_types.GENERATION_STARTED, () => {
+                            try { window.VirtualPhone?.lonshaBridge?.applyCoordinatedInjection(); } catch (e) {}
+                        });
                     }
-                } catch (e) {
-                    console.warn('[Memory] 记忆系统空闲初始化失败:', e);
-                }
-            }, { timeout: 1500 });
-        } else {
-            setTimeout(() => {
-                try {
-                    if (!window.VirtualPhone.memoryCore) {
-                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
-                        window.VirtualPhone.memoryCore.attachPromptHook();
-                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
-                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
-                    }
-                } catch (e) {
-                    console.warn('[Memory] 记忆系统延迟初始化失败:', e);
-                }
-            }, 800);
+                } catch (e) { /* 静默 */ }
+            } catch (e) {
+                console.warn('[Memory] LonSha桥挂载失败:', e);
+            }
+        } catch (e) {
+            console.warn('[Memory] 记忆系统初始化失败:', e);
         }
 
         modulesLoaded = true;
-
-        // 🔥 TPES 时间-环境感知：立即暴露 + 挂注入钩子
-        try {
-            if (window.VirtualPhone && timeEnvManager) {
-                window.VirtualPhone.timeEnv = timeEnvManager;
-                timeEnvManager.attachPromptHook();
-            }
-        } catch (e) { console.warn('[TimeEnv] 暴露失败:', e); }
 
         const endTime = performance.now();
         console.log(`✅ 虚拟手机核心模块加载完成 (${Math.round(endTime - startTime)}ms)`);
@@ -1443,7 +1369,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // 🔥 按需加载 TimeManager
     async function loadTimeManager() {
         if (window.VirtualPhone) window.VirtualPhone.timeManager = timeManager;
-        if (timeEnvManager) window.VirtualPhone.timeEnv = timeEnvManager;
         return timeManager;
     }
 
@@ -5560,10 +5485,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             enabled: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_ENABLED_KEY : WECHAT_ONLINE_PROACTIVE_ENABLED_KEY,
             interval: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY : WECHAT_ONLINE_PROACTIVE_INTERVAL_KEY,
             lastAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY : WECHAT_ONLINE_PROACTIVE_LAST_AT_KEY,
-            pendingAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_PENDING_KEY : WECHAT_ONLINE_PROACTIVE_PENDING_KEY,
-            quietEnabled: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_ENABLED_KEY,
-            quietStart: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_START_KEY,
-            quietEnd: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY : WECHAT_ONLINE_PROACTIVE_QUIET_END_KEY
+            pendingAt: isLobby ? LOBBY_WECHAT_ONLINE_PROACTIVE_PENDING_KEY : WECHAT_ONLINE_PROACTIVE_PENDING_KEY
         };
     }
 
@@ -5669,24 +5591,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
     }
 
-    function parseQuietHour(value, fallback) {
-        const n = Number.parseInt(value, 10);
-        if (!Number.isFinite(n)) return fallback;
-        return Math.max(0, Math.min(23, n));
-    }
-
-    function isWechatOnlineProactiveQuietHours(keys = getWechatOnlineProactiveKeys()) {
-        const enabledRaw = storage?.get?.(keys.quietEnabled);
-        const enabled = enabledRaw === true || enabledRaw === 'true' || enabledRaw === 1;
-        if (!enabled) return false;
-        const start = parseQuietHour(storage?.get?.(keys.quietStart), 23);
-        const end = parseQuietHour(storage?.get?.(keys.quietEnd), 7);
-        const hour = new Date().getHours();
-        if (start === end) return true;
-        if (start > end) return hour >= start || hour < end;
-        return hour >= start && hour < end;
-    }
-
     async function triggerWechatOnlineProactive(options = {}) {
         const force = !!options.force;
         const now = Date.now();
@@ -5703,7 +5607,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
         if (!force) {
             if (!isWechatOnlineProactiveEnabled(proactiveKeys)) return false;
-            if (isWechatOnlineProactiveQuietHours(proactiveKeys)) return false;
         }
 
         const intervalMs = getWechatOnlineProactiveIntervalMs(proactiveKeys);
@@ -5712,8 +5615,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         const pendingAt = parseInt(storage?.get?.(proactiveKeys.pendingAt), 10) || 0;
         const elapsed = lastAt > 0 ? now - lastAt : intervalMs;
         const isDue = force || pendingAt > 0 || elapsed >= intervalMs;
-        // 楼层锚定: 上一次主动触发的楼层若仍有效, 且未到下次间隔 → 避免重复触发
-        if (!force && isProactiveAnchorAlive() && elapsed < intervalMs) return false;
         if (!isDue) return false;
 
         if (isPhoneApiBusy() || isTavernPrimaryGenerationBusy()) {
@@ -5777,8 +5678,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         if (ok) {
             storage?.set?.(proactiveKeys.lastAt, now);
-            // 楼层锚定: 记录本次主动触发所在楼层, 供后续防重与回滚检测
-            anchorProactiveFloor({ reason: options.reason || 'timer' });
             syncWechatHomeBadge();
             if (force) wechatApp.phoneShell?.showNotification?.('线上主动触发', '已完成一次主动触发', '✅');
             return true;
@@ -5786,79 +5685,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         storage?.set?.(proactiveKeys.pendingAt, Date.now());
         return false;
-    }
-
-    // ========================================
-    // 主动消息楼层锚定 (吸收飞讯 last_floor 机制)
-    //   记录上次主动触发所在楼层; 若该楼层被删除/滑动/重生成 → 回滚标记, 允许重新触发
-    //   防: 触发后楼层消失导致的"孤儿消息"与重复注入
-    // ========================================
-    function getProactiveFloorAnchorKey() {
-        return 'wechat_online_proactive_floor_anchor';
-    }
-
-    function readProactiveFloorAnchor() {
-        try {
-            const raw = storage?.get?.(getProactiveFloorAnchorKey(), null);
-            if (!raw) return null;
-            return typeof raw === 'string' ? JSON.parse(raw) : raw;
-        } catch (e) { return null; }
-    }
-
-    function writeProactiveFloorAnchor(anchor) {
-        try { storage?.set?.(getProactiveFloorAnchorKey(), JSON.stringify(anchor || {})); } catch (e) {}
-    }
-
-    /** 主动触发成功后锚定到当前楼层 */
-    function anchorProactiveFloor(meta = {}) {
-        try {
-            const ctx = getContext();
-            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
-            const floor = Math.max(0, chat.length - 1);
-            writeProactiveFloorAnchor({
-                floor,
-                chatId: getCurrentChatIdForQueue(),
-                at: Date.now(),
-                reason: meta.reason || 'timer'
-            });
-            return floor;
-        } catch (e) { return -1; }
-    }
-
-    /**
-     * 校验锚定楼层是否仍然有效
-     * 若楼层被删除/滑动/重生成 (内容与锚定哈希不符) → 清除锚点并允许重新触发
-     * @returns true = 锚点仍有效 (本次应跳过重复触发)
-     */
-    function isProactiveAnchorAlive() {
-        try {
-            const anchor = readProactiveFloorAnchor();
-            if (!anchor || typeof anchor.floor !== 'number') return false;
-            // 会话切换 → 锚点失效
-            if (anchor.chatId && anchor.chatId !== getCurrentChatIdForQueue()) return false;
-            const ctx = getContext();
-            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
-            if (chat.length === 0) return false;
-            // 楼层被删除 (锚定楼层超出当前长度)
-            if (anchor.floor > chat.length - 1) {
-                writeProactiveFloorAnchor(null);
-                return false;
-            }
-            const msg = chat[anchor.floor];
-            if (!msg) { writeProactiveFloorAnchor(null); return false; }
-            // 滑动/重生成检测: 内容哈希变化
-            const text = String((Array.isArray(msg.swipes) && msg.swipes.length > 0 ? msg.swipes[msg.swipe_id || 0] : msg.mes) || '');
-            const hash = text.length + '_' + text.slice(0, 60);
-            if (anchor.hash && anchor.hash !== hash) {
-                writeProactiveFloorAnchor(null);
-                return false;
-            }
-            if (!anchor.hash) {
-                anchor.hash = hash;
-                writeProactiveFloorAnchor(anchor);
-            }
-            return true;
-        } catch (e) { return false; }
     }
 
     function startWechatOnlineProactiveScheduler() {
@@ -8377,15 +8203,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
 
             // 记忆系统: 记录 AI 最终楼层 (仅新楼层, 排除历史回放/流式中)
+            // [RA] 带楼层锚点入库; 且回填/重写/swipe 楼层时, 把旧页与后续楼层的记忆条目整批失效
             if (!isHistoryReplay && !message.is_user) {
                 try {
-                    if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
-                        window.VirtualPhone.memoryCore = new MemoryCore(storage);
-                        window.VirtualPhone.memoryCore.attachPromptHook();
-                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
-                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
-                    }
-                    window.VirtualPhone?.memoryCore?.record?.('ai', text);
+                    const memMeta = { floor: index, swipe: swipeIndex };
+                    try {
+                        const stm = window.VirtualPhone?.timeManager?.getCurrentStoryTime?.();
+                        if (stm?.date && !stm.isReal) memMeta.storyTime = String(stm.date);
+                    } catch (e) {}
+                    try { window.VirtualPhone?.memoryCore?.invalidateFloorAt?.(index, swipeIndex); } catch (e) {}
+                    window.VirtualPhone?.memoryCore?.record?.('ai', text, {}, memMeta);
                 } catch (e) {}
             }
 
@@ -8411,16 +8238,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 if (listenUserMessages) {
                     scheduleAutoWeiboIfDue({ reason: 'user_message' });
                 }
-                // 记忆系统: 记录用户发言 (仅新楼层; 若空闲初始化未完成则此刻兜底初始化)
+                // 记忆系统: 记录用户发言 (仅新楼层)
                 if (!isHistoryReplay) {
                     try {
-                        if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
-                            window.VirtualPhone.memoryCore = new MemoryCore(storage);
-                            window.VirtualPhone.memoryCore.attachPromptHook();
-                            try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
-                            catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
-                        }
-                        window.VirtualPhone?.memoryCore?.record?.('user', text);
+                        const userMeta = { floor: index };
+                        try {
+                            const stm = window.VirtualPhone?.timeManager?.getCurrentStoryTime?.();
+                            if (stm?.date && !stm.isReal) userMeta.storyTime = String(stm.date);
+                        } catch (e) {}
+                        window.VirtualPhone?.memoryCore?.record?.('user', text, {}, userMeta);
                     } catch (e) {}
                 }
                 return; // 用户消息处理完毕后退出，不走下面的 AI 标签解析链路
@@ -9369,19 +9195,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 🔥 第二阶段：轮询等待酒馆加载界面消失后再注入 DOM，解决 WebKit 渲染残留 Bug
             async function injectWhenReady() {
-                // 🔥 泄漏治理: 重入保护 (防 setTimeout 递归重试重复挂载)
-                if (window.VirtualPhone && window.VirtualPhone._phoneInjected) {
-                    return;
-                }
                 const stLoader = document.getElementById('loader') || document.getElementById('loading_screen');
                 // 如果加载遮罩还在显示中，延迟 500ms 继续检查
                 if (stLoader && window.getComputedStyle(stLoader).display !== 'none') {
                     setTimeout(injectWhenReady, 500);
                 } else {
                     // 加载界面完全消失后，再安全地执行 DOM 注入
-                    // 重置事件控制器 (abort 旧 signal + off 旧 eventSource), 保证幂等
-                    resetPhoneEventController();
-                    if (window.VirtualPhone) window.VirtualPhone._phoneInjected = true;
                     await ensureGlobalPhoneCSS();
                     initColors();
                     bindPhonePanelViewportGuards();
@@ -9539,7 +9358,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
 
             // 监听返回主页
-            bindWindowEvent('phone:goHome', 'phone:goHome', () => {
+            window.addEventListener('phone:goHome', () => {
                 releasePhoneInactiveResources(null);
                 currentApp = null;
                 window.currentWechatApp = null;
@@ -9547,7 +9366,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             });
 
             // 🔥 监听全局红点更新事件
-            bindWindowEvent('phone:updateGlobalBadge', 'phone:updateGlobalBadge', () => {
+            window.addEventListener('phone:updateGlobalBadge', () => {
                 if (currentApps) {
                     totalNotifications = currentApps.reduce((sum, app) => sum + (app.badge || 0), 0);
                     updateNotificationBadge(totalNotifications);
@@ -9555,7 +9374,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             });
 
             // 监听打开APP
-            bindWindowEvent('phone:openApp', 'phone:openApp', (e) => {
+            window.addEventListener('phone:openApp', (e) => {
                 const { appId } = e.detail;
                 const homeGuardUntil = Number.parseInt(String(window.VirtualPhone?._homeReturnGuardUntil || '0'), 10) || 0;
                 if (Date.now() < homeGuardUntil) {
@@ -9909,61 +9728,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载记忆App失败:', err);
                             phoneShell?.showNotification('错误', '记忆App加载失败', '❌');
                         });
-                } else if (appId === 'graph') {
-                    import('./apps/memory/graph-app.js')
-                        .then(module => {
-                            if (!window.VirtualPhone.graphApp) {
-                                window.VirtualPhone.graphApp = new module.GraphApp(phoneShell, storage);
-                            }
-                            window.VirtualPhone.graphApp.render();
-                        })
-                        .catch(err => {
-                            console.error('❌ 加载图谱App失败:', err);
-                            phoneShell?.showNotification('错误', '图谱App加载失败', '❌');
-                        });
-                } else if (appId === 'peek') {
-                    import('./apps/peek/peek-app.js')
-                        .then(module => {
-                            if (!window.VirtualPhone.peekApp) {
-                                window.VirtualPhone.peekApp = new module.PeekApp(phoneShell, storage);
-                            }
-                            window.VirtualPhone.peekApp.render();
-                        })
-                        .catch(err => {
-                            console.error('❌ 加载查手机失败:', err);
-                            phoneShell?.showNotification('错误', '查手机加载失败', '❌');
-                        });
-                } else if (appId === 'bilibili') {
-                    import('./apps/bilibili/bili-app.js')
-                        .then(module => {
-                            if (!window.VirtualPhone.biliApp) {
-                                window.VirtualPhone.biliApp = new module.BiliApp(phoneShell, storage);
-                            }
-                            window.VirtualPhone.biliApp.render();
-                        })
-                        .catch(err => {
-                            console.error('❌ 加载B站失败:', err);
-                            phoneShell?.showNotification('错误', 'B站加载失败', '❌');
-                        });
-                } else if (appId === 'theater') {
-                    import('./apps/theater/theater-app.js')
-                        .then(module => {
-                            if (!window.VirtualPhone.theaterApp) {
-                                window.VirtualPhone.theaterApp = new module.TheaterApp(phoneShell, storage);
-                            }
-                            window.VirtualPhone.theaterApp.render();
-                        })
-                        .catch(err => {
-                            console.error('❌ 加载小剧场失败:', err);
-                            phoneShell?.showNotification('错误', '小剧场加载失败', '❌');
-                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }
             });
 
             // 监听从微信发送到聊天的消息
-            bindWindowEvent('phone:sendToChat', 'phone:sendToChat', (e) => {
+            window.addEventListener('phone:sendToChat', (e) => {
                 const { message, chatId, chatName } = e.detail;
 
                 const textarea = document.querySelector('#send_textarea');
@@ -10057,7 +9828,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             };
 
             // 监听清空数据
-            bindWindowEvent('phone:clearCurrentData', 'phone:clearCurrentData', async () => { // 🔥 加上 async
+            window.addEventListener('phone:clearCurrentData', async () => { // 🔥 加上 async
                 await cleanupWechatManagedMessageImagesBeforeStorageClear();
                 if (window.VirtualPhone?.honeyApp) {
                     try {
@@ -10120,7 +9891,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ]);
             });
 
-            bindWindowEvent('phone:clearAllData', 'phone:clearAllData', async () => { // 🔥 加上 async
+            window.addEventListener('phone:clearAllData', async () => { // 🔥 加上 async
                 await cleanupWechatManagedMessageImagesBeforeStorageClear();
                 if (window.VirtualPhone?.honeyApp) {
                     try {
@@ -10193,39 +9964,37 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // 连接到酒馆
             const context = getContext();
             if (context && context.eventSource) {
-                bindEventSource(
-                    context.eventSource,
+                context.eventSource.on(
                     context.event_types.CHARACTER_MESSAGE_RENDERED,
-                    onMessageReceived,
-                    'es:CHARACTER_MESSAGE_RENDERED'
+                    onMessageReceived
                 );
 
                 if (context.event_types.USER_MESSAGE_RENDERED) {
-                    bindEventSource(
-                        context.eventSource,
+                    context.eventSource.on(
                         context.event_types.USER_MESSAGE_RENDERED,
-                        onMessageReceived,
-                        'es:USER_MESSAGE_RENDERED'
+                        onMessageReceived
                     );
                 }
 
                 if (context.event_types.MESSAGE_DELETED) {
-                    bindEventSource(context.eventSource, context.event_types.MESSAGE_DELETED, (eventData) => {
+                    context.eventSource.on(context.event_types.MESSAGE_DELETED, (eventData) => {
                         const deletedFloor = Number(eventData?.messageId ?? eventData?.id ?? eventData);
-                        if (Number.isFinite(deletedFloor)) rollbackPhoneSmsToFloor(deletedFloor, false);
-                    }, 'es:MESSAGE_DELETED');
+                        if (Number.isFinite(deletedFloor)) {
+                            rollbackPhoneSmsToFloor(deletedFloor, false);
+                            // [RB] 楼层回滚联动: 手机记忆与 LonSha 记忆同步失效 (幂等)
+                            try { window.VirtualPhone?.lonshaBridge?.onFloorRollback(deletedFloor); } catch (e) {}
+                        }
+                    });
                 }
 
-                bindEventSource(
-                    context.eventSource,
+                context.eventSource.on(
                     context.event_types.CHAT_CHANGED,
-                    onChatChanged,
-                    'es:CHAT_CHANGED'
+                    onChatChanged
                 );
 
                 // ⏪⏪⏪ 核心修复 1：监听滑动事件，斩杀废案，并完美防抢跑 ⏪⏪⏪
                 if (context.event_types.MESSAGE_SWIPED) {
-                    bindEventSource(context.eventSource, context.event_types.MESSAGE_SWIPED, function (id) {
+                    context.eventSource.on(context.event_types.MESSAGE_SWIPED, function (id) {
                         markForcedReplayFloor(id, 180000);
                         markPromptCleanupFloor(id, 180000);
                         
@@ -10271,7 +10040,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                 console.warn('[手机插件] 滑动解析失败:', e);
                             }
                         }, 150); 
-                    }, 'es:MESSAGE_SWIPED');
+                    });
                 }
 
                 $(document).on('click', '.swipe_left, .swipe_right', function () {
@@ -12370,12 +12139,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         return eventData.chat; // 必须返回修改后的数组给酒馆
                     });
                 } else {
-                    // 旧版本酒馆兼容 (登记式挂载)
-                    bindEventSource(
-                        context.eventSource,
+                    // 旧版本酒馆兼容
+                    context.eventSource.on(
                         context.event_types.CHAT_COMPLETION_PROMPT_READY,
-                        (eventData) => runPhonePromptHandler(eventData, 'prompt_ready_event'),
-                        'es:CHAT_COMPLETION_PROMPT_READY'
+                        (eventData) => runPhonePromptHandler(eventData, 'prompt_ready_event')
                     );
                 }
 
