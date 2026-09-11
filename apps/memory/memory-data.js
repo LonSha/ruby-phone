@@ -9,6 +9,8 @@
  * ======================================================== */
 import { EmotionTagger, calculateDecayScore, consolidateMemories, searchMemories, buildMemorySummary } from './memory-engine.js';
 import { MemoryPool } from './memory-pool.js';
+import { GraphBridge } from './graph-bridge.js';
+import { AwakeningEngine } from './awakening-engine.js';
 
 export class MemoryCore {
     constructor(storage) {
@@ -17,6 +19,11 @@ export class MemoryCore {
 
         this.emotion = new EmotionTagger();
         this.pool = new MemoryPool();
+        // LonSha 知识图谱联动桥 (软降级: 未装插件时桥可用但返回空态)
+        this.graph = new GraphBridge(storage);
+        try { this.graph.probe(); } catch (e) { /* 忽略 */ }
+        // 记忆唤醒引擎 (昨日感受/情绪结晶/回声/错记)
+        this.awakening = new AwakeningEngine(this);
 
         // 状态
         this.longTerm = [];      // 巩固后的长期记忆
@@ -26,8 +33,10 @@ export class MemoryCore {
             shortTermCapacity: 60,
             autoInject: false,      // 是否自动携带记忆块进入 prompt
             injectTopN: 6,          // 注入前 N 条最相关记忆
-            minImportance: 5,       // 采集门槛
-            sleepEveryMessages: 24  // 每 N 条消息触发一次睡眠巩固
+            minImportance: 4,       // 采集门槛 (低阈值保证玩家短句也能沉淀)
+            sleepEveryMessages: 24, // 每 N 条消息触发一次睡眠巩固
+            echoEnabled: false,        // 记忆回声 (需演技, 弱模型默认关)
+            misrememberEnabled: false  // 遗忘错记 (需演技, 弱模型默认关)
         };
 
         this._load();
@@ -81,15 +90,23 @@ export class MemoryCore {
         const content = String(text || '').replace(/\s+/g, ' ').trim();
         if (!content) return null;
 
-        const emotion = this.emotion.analyze(content);
-        // 重要性启发: 长度 + 情感强度 + 角色权重 (AI 角色台词权重更高)
+        const emotion = this.emotion.analyze(content); // 仅作元数据存储 (UI/档案用), 不参与采集评分
+        // 重要性启发: 纯规则 (长度 + 角色权重 + 剧情关键词), 不依赖情感判断 —— 弱模型友好
         let importance = 3;
-        if (content.length >= 40) importance += 2;
+        if (content.length >= 30) importance += 1;
+        if (content.length >= 60) importance += 1;
         if (content.length >= 120) importance += 1;
-        const arousal = emotion.arousal || 0.5;
-        if (arousal > 0.7) importance += 2;
-        if (arousal < 0.35) importance += 1; // 平静时刻反而珍贵
         if (role === 'ai') importance += 1;
+        // 剧情关键词加权: 约定/承诺/地点/人物等实义词弥补情感盲区 (平实但重要的推进)
+        const PLOT_KEYWORDS = ['约定', '答应', '承诺', '说好', '下次', '以后', '记得', '忘记', '别忘',
+          '面馆', '海边', '河边', '学校', '家', '巷子', '车站', '公园', '咖啡馆', '广场',
+          '喜欢', '讨厌', '爱', '恨', '想', '愿意', '不肯', '生日', '礼物', '秘密', '发誓',
+          '第一次', '最后一次', '永远', '一定', '保证', '守约'];
+        for (const kw of PLOT_KEYWORDS) {
+            if (content.includes(kw)) { importance += 1; break; }
+        }
+        // 疑问句中的关键信息 (你/我 + 动词)
+        if (content.includes('你') && /(?:会|能|愿意|要|想|去|来|等|答应|记得)/.test(content)) importance += 1;
         importance = Math.max(1, Math.min(10, importance));
 
         if (importance < this.config.minImportance) return null; // 低价值消息不采集
@@ -163,6 +180,9 @@ export class MemoryCore {
         this.stats.archived += result.archived.length;
         this.stats.lastSleep = new Date().toISOString();
 
+        // 联动: 睡眠巩固后生成昨日感受 (情绪聚合结晶)
+        try { this.awakening.sleep(); } catch (e) { /* 忽略 */ }
+
         // 低分记忆清理 (防膨胀): 长期记忆上限 400 条, 超限按衰减分淘汰非 pinned/permanent
         const cap = 400;
         if (this.longTerm.length > cap) {
@@ -228,33 +248,116 @@ export class MemoryCore {
     }
 
     /**
+     * 图谱级召回: 先走本地记忆, 再叠加 LonSha 知识图谱关联记忆
+     * @returns { phone: [], graph: [] }
+     */
+    graphRecall(query, topN = 6) {
+        const phone = this.recall(query, topN);
+        let graph = [];
+        try {
+            if (this.graph && this.graph.available) {
+                graph = this.graph.search(query, topN);
+            }
+        } catch (e) { /* 软降级 */ }
+        return { phone, graph };
+    }
+
+    /** 把手机高价值记忆推入 LonSha 图谱 (手动/定时触发) */
+    syncToGraph(options = {}) {
+        try {
+            if (!this.graph || !this.graph.available) return { ok: false, reason: 'lonsha-unavailable' };
+            const n = this.graph.pushPhoneMemories(options);
+            return { ok: true, pushed: n };
+        } catch (e) {
+            return { ok: false, reason: e.message };
+        }
+    }
+
+    /**
      * 生成注入 prompt 的【记忆】块 (纯本地, 无 LLM)
+     *  ① 常驻层: pinned / permanent 铁律记忆 (必注入)
+     *  ② 相关层: 记忆池 + 长期关键词混合召回
+     *  ③ 近期层: 最新沉淀 (时间感锚点)
+     *  ④ 图谱层: LonSha 知识图谱关联记忆
+     * 回声/错记由 config.echoEnabled / misrememberEnabled 控制, 默认关闭
      * @param recentTexts 最近消息文本 (user/ai 交替), 用于相关性召回
      */
     buildPromptDirective(recentTexts = []) {
         const total = this.longTerm.length + this.shortTerm.length;
         if (total === 0 && !this.pool.getStats().perception) return '';
 
-        // 用最近上下文做召回锚点
         const anchor = (recentTexts || []).slice(-4).join(' ');
-        let items = this.recall(anchor, this.config.injectTopN);
-        // 召回不足时补最新记忆 (保证近期事件不丢)
-        if (items.length < 3) {
-            const newest = [...this.longTerm].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3)
-                .map(m => ({ layer: 'long-term', content: m.content, _score: 0.3, importance: m.importance }));
-            const have = new Set(items.map(x => x.content));
-            items = items.concat(newest.filter(n => !have.has(n.content)));
+        const seen = new Set();
+        const push = (arr, item, tier) => {
+            const key = String(item.content || '').slice(0, 40);
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            arr.push({ ...item, _tier: tier });
+        };
+
+        // ① 常驻层: pinned / permanent (铁律记忆, 必注入)
+        const pinned = [];
+        for (const m of this.longTerm) {
+            const meta = m.metadata || {};
+            if (meta.pinned || meta.type === 'permanent') {
+                push(pinned, { content: m.content, layer: 'pinned' }, 'pinned');
+            }
+            if (pinned.length >= 3) break;
         }
-        if (!items.length) return '';
+
+        // ② 相关层: 混合召回 (记忆池三级触发 + 长期关键词)
+        const relevant = [];
+        for (const it of this.recall(anchor, this.config.injectTopN)) push(relevant, it, 'relevant');
+
+        // ④ 近期层: 最新沉淀 (保证近期事件不丢)
+        const recent = [];
+        const newest = [...this.longTerm].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        for (const m of newest.slice(0, 4)) {
+            push(recent, { content: m.content, layer: 'recent' }, 'recent');
+        }
+
+        if (!pinned.length && !relevant.length && !recent.length) return '';
 
         let block = '【角色的长期记忆库 — 以下是角色在此聊天中沉淀的真实经历, 引用时须自然, 不得虚构】';
         const prem = this.pool.pool.premise;
         if (prem && prem.text) block += '\n◆ 背景前提: ' + prem.text;
-        block += '\n◆ 相关记忆片段:';
-        for (const it of items.slice(0, this.config.injectTopN)) {
-            block += '\n- ' + it.content.replace(/\s+/g, ' ').slice(0, 160);
+
+        if (pinned.length) {
+            block += '\n◆ 铁律记忆 (角色绝不会忘记, 可主动提起):';
+            for (const it of pinned) block += '\n- ' + String(it.content).replace(/\s+/g, ' ').slice(0, 160);
         }
-        block += '\n◆ 使用规则: 记忆与当前剧情冲突时以剧情为准; 记忆片段可触发角色的情绪反应, 但不得机械复读原文; 总引用不超过3条, 保持对话自然。';
+        if (relevant.length) {
+            block += '\n◆ 与当前情境相关的片段:';
+            for (const it of relevant.slice(0, this.config.injectTopN)) block += '\n- ' + String(it.content).replace(/\s+/g, ' ').slice(0, 160);
+        }
+        if (recent.length) {
+            block += '\n◆ 最近发生 (时间感锚点):';
+            for (const it of recent.slice(0, 3)) block += '\n- ' + String(it.content).replace(/\s+/g, ' ').slice(0, 140);
+        }
+
+        // ⑤ 图谱层: LonSha 知识图谱关联记忆 (软降级)
+        try {
+            if (this.graph && this.graph.available && anchor) {
+                const gb = this.graph.buildRecallBlock(anchor, 3);
+                if (gb) block += '\n' + gb;
+            }
+        } catch (e) {}
+
+        block += '\n◆ 使用规则: 记忆与当前剧情冲突时以剧情为准; 铁律记忆可自然提及, 其余按情境择机带出; 不得机械复读原文; 总引用不超过3条, 保持对话自然。';
+
+        // 记忆回声 / 遗忘错记: 需模型有演技, 默认关闭 (config 可开)
+        if (this.config.echoEnabled) {
+            try {
+                const echo = this.awakening.maybeEcho();
+                if (echo) block += '\n【记忆回声】角色此刻突然想起，自然带出：\n- ' + String(echo.content).slice(0, 120);
+            } catch (e) {}
+        }
+        if (this.config.misrememberEnabled) {
+            try {
+                const mis = this.awakening.maybeMisremember();
+                if (mis) block += '\n【记忆偏差】细节可能记错：\n- ' + String(mis.distorted).slice(0, 120);
+            } catch (e) {}
+        }
         return block;
     }
 
@@ -270,6 +373,29 @@ export class MemoryCore {
             config: { ...this.config }
         };
     }
+
+    /**
+     * 情感史曲线数据: 按时间聚合长期记忆的 valence/arousal
+     * @returns [{time, valence, arousal, label, content}]
+     */
+    getEmotionHistory(limit = 60) {
+        return [...(this.longTerm || [])]
+            .filter(m => m.emotion && (m.emotion.valence !== undefined || m.emotion.arousal !== undefined))
+            .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+            .slice(-limit)
+            .map(m => ({
+                time: m.createdAt,
+                valence: m.emotion.valence ?? 0.5,
+                arousal: m.emotion.arousal ?? 0.5,
+                label: m.emotion.label || '中性',
+                content: String(m.content || '').slice(0, 60)
+            }));
+    }
+
+    /** 感官回忆归档 (透传记忆池) */
+    getSensoryArchive() { return this.pool.getSensoryArchive(); }
+    /** 场景标签聚合 (透传记忆池) */
+    getSceneTags() { return this.pool.getSceneTags(); }
 
     /** 时间线视图: 长期记忆按时间倒序 */
     getTimeline(limit = 60) {

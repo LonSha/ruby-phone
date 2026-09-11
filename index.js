@@ -9696,6 +9696,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载记忆App失败:', err);
                             phoneShell?.showNotification('错误', '记忆App加载失败', '❌');
                         });
+                } else if (appId === 'graph') {
+                    import('./apps/memory/graph-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.graphApp) {
+                                window.VirtualPhone.graphApp = new module.GraphApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.graphApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载图谱App失败:', err);
+                            phoneShell?.showNotification('错误', '图谱App加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }

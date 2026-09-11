@@ -241,6 +241,38 @@ export class MemoryPool {
         }
     }
 
+    /**
+     * 感官分类归档: 按五感维度统计感知记忆
+     * @returns { smell: [...], touch: [...], sight: [...], sound: [...], taste: [...] }
+     */
+    getSensoryArchive() {
+        const out = { smell: [], touch: [], sight: [], sound: [], taste: [] };
+        for (const p of this.pool.perception || []) {
+            for (const sense of Object.keys(p.senses || {})) {
+                if (out[sense]) out[sense].push(p);
+            }
+        }
+        for (const k of Object.keys(out)) out[k].sort((a, b) => (b.weights?.[k] || 0) - (a.weights?.[k] || 0));
+        return out;
+    }
+
+    /**
+     * 场景标签聚合: 按 location 聚合感知/空间记忆
+     * @returns [{ place, items: [], senses: {} }]
+     */
+    getSceneTags() {
+        const map = {};
+        const all = (this.pool.perception || []).concat(this.pool.spatial || []);
+        for (const item of all) {
+            const place = item.place || item.location || '未知地点';
+            if (!map[place]) map[place] = { place, items: [], senses: {} };
+            map[place].items.push(item);
+            const senses = item.senses || (item._sensesDetected ? item._sensesDetected : null);
+            if (senses) for (const s of Object.keys(senses)) map[place].senses[s] = (map[place].senses[s] || 0) + 1;
+        }
+        return Object.values(map);
+    }
+
     getStats() {
         return {
             premise: !!this.pool.premise,

@@ -263,3 +263,113 @@
 }
 
 .mem-danger:active { background: rgba(239, 68, 68, 0.16); }
+
+/* ===== 记忆 App v2: tabs + 情感曲线 + 唤醒 ===== */
+.mem-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px 0;
+}
+
+.mem-tab {
+    flex: 1;
+    padding: 6px 0;
+    border: none;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #6b6b80;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.mem-tab.active {
+    background: #6366f1;
+    color: #fff;
+}
+
+.mem-chart-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 2px 10px rgba(80, 90, 160, 0.06);
+}
+
+.mem-chart {
+    width: 100%;
+    height: auto;
+}
+
+.mem-chart-legend {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.mem-chart-legend .lg { font-size: 10px; color: #8a8aa0; }
+.mem-chart-legend .lg::before { content: "●"; margin-right: 4px; }
+.mem-chart-legend .lg.pos::before { color: #f59e0b; }
+.mem-chart-legend .lg.neu::before { color: #9ca3af; }
+.mem-chart-legend .lg.neg::before { color: #60a5fa; }
+
+.mem-feels { display: flex; flex-direction: column; gap: 7px; }
+
+.mem-feel-item {
+    background: #fff;
+    border-radius: 11px;
+    padding: 8px 11px;
+    box-shadow: 0 1px 5px rgba(80, 90, 160, 0.06);
+}
+
+.mem-feel-label {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 1px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.mem-feel-text {
+    font-size: 12px;
+    color: #3a3a4e;
+    line-height: 1.55;
+}
+
+.mem-awake-stats {
+    background: #fff;
+    border-radius: 12px;
+    padding: 6px 12px;
+}
+
+.mem-awake-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    font-size: 12px;
+    color: #6b6b80;
+}
+
+.mem-awake-row:last-child { border-bottom: none; }
+.mem-awake-row b { color: #33334a; font-weight: 600; }
+
+
+/* ===== 感官回忆 ===== */
+.mem-sense-arch { display: flex; flex-direction: column; gap: 10px; }
+.mem-sense-block { background: #fff; border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 5px rgba(80,90,160,0.06); }
+.mem-sense-title { font-size: 12.5px; font-weight: 600; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+.mem-sense-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.03); }
+.mem-sense-item:last-child { border-bottom: none; }
+.mem-sense-w { font-size: 9px; color: #b0b0c4; font-family: "Times New Roman", serif; min-width: 26px; }
+.mem-sense-text { font-size: 11.5px; color: #3a3a4e; line-height: 1.5; flex: 1; }
+.mem-sense-none { font-size: 11px; color: #a0a0b8; padding: 4px 0; }
+.mem-scenes { display: flex; flex-wrap: wrap; gap: 8px; }
+.mem-scene-item { background: #fff; border-radius: 11px; padding: 8px 11px; box-shadow: 0 1px 5px rgba(80,90,160,0.06); min-width: 120px; }
+.mem-scene-place { font-size: 12px; font-weight: 600; color: #33334a; display: flex; align-items: center; gap: 5px; }
+.mem-scene-place i { color: #f43f5e; font-size: 10px; }
+.mem-scene-sense { display: inline-block; font-size: 9px; color: #6366f1; background: rgba(99,102,241,0.1); padding: 1px 6px; border-radius: 5px; margin: 4px 4px 0 0; }
+.mem-scene-count { font-size: 10px; color: #b0b0c4; margin-top: 3px; }
