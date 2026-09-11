@@ -20,8 +20,10 @@ export class MemoryView {
     const tag = emo.label ? '<span class="mem-emo" style="--emo:' + this._emoColor(emo.label) + '">' + emo.label + '</span>' : '';
     const role = m.role === 'user' ? '我' : 'TA';
     const roleCls = m.role === 'user' ? 'ru' : 'ra';
+    // LonSha 回填的提炼记忆加徽标 (内容带 [剧情]/[事件]/[关系] 前缀)
+    const lonshaTag = /^\[(剧情|事件|关系)\]/.test(m.content || '') ? '<span class="mem-lonsha">LLM</span>' : '';
     return '<div class="mem-item">' +
-      '<div class="mem-item-top"><span class="mem-role ' + roleCls + '">' + role + '</span>' + tag + '<span class="mem-time">' + this._fmt(m.createdAt) + '</span></div>' +
+      '<div class="mem-item-top"><span class="mem-role ' + roleCls + '">' + role + '</span>' + lonshaTag + tag + '<span class="mem-time">' + this._fmt(m.createdAt) + '</span></div>' +
       '<div class="mem-item-text">' + this._esc(m.content) + '</div>' +
       '</div>';
   }

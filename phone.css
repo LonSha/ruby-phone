@@ -11464,3 +11464,17 @@ input:checked + .toggle-slider:before {
         font-size: 13px;
     }
 }
+
+
+
+/* ===== LLM 徽标 (LonSha 回填记忆) ===== */
+.mem-lonsha {
+    font-size: 9px;
+    font-weight: 700;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.14);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 0 5px;
+    border-radius: 6px;
+    letter-spacing: 0.4px;
+}

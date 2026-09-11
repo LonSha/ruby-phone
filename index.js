@@ -20,6 +20,7 @@ import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
+import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 const ST_PHONE_VERSION = '1.5.5';
@@ -1363,6 +1364,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (!window.VirtualPhone.memoryCore) {
                         window.VirtualPhone.memoryCore = new MemoryCore(storage);
                         window.VirtualPhone.memoryCore.attachPromptHook();
+                        // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
+                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
+                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
                     }
                 } catch (e) {
                     console.warn('[Memory] 记忆系统空闲初始化失败:', e);
@@ -1374,6 +1378,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (!window.VirtualPhone.memoryCore) {
                         window.VirtualPhone.memoryCore = new MemoryCore(storage);
                         window.VirtualPhone.memoryCore.attachPromptHook();
+                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
+                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
                     }
                 } catch (e) {
                     console.warn('[Memory] 记忆系统延迟初始化失败:', e);
@@ -8335,6 +8341,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
                         window.VirtualPhone.memoryCore = new MemoryCore(storage);
                         window.VirtualPhone.memoryCore.attachPromptHook();
+                        try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
+                        catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
                     }
                     window.VirtualPhone?.memoryCore?.record?.('ai', text);
                 } catch (e) {}
@@ -8368,6 +8376,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         if (!window.VirtualPhone?.memoryCore && typeof MemoryCore !== 'undefined') {
                             window.VirtualPhone.memoryCore = new MemoryCore(storage);
                             window.VirtualPhone.memoryCore.attachPromptHook();
+                            try { mountLonShaBridge(storage, window.VirtualPhone.memoryCore); }
+                            catch (e) { console.warn('[Memory] LonSha桥挂载失败:', e); }
                         }
                         window.VirtualPhone?.memoryCore?.record?.('user', text);
                     } catch (e) {}
