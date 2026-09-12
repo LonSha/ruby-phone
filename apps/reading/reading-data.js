@@ -275,13 +275,14 @@ export class ReadingData {
         } catch (e) { /* 忽略 */ }
     }
     // 导入一本书到书架
-    addBook(text, fileName, encoding, mode = 'auto') {
-        const parsed = parseTxtContent(text, fileName, mode);
+    addBook(parsed, fileName, encoding, mode = 'auto') {
         const book = {
             id: 'rd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
             title: parsed.title,
             fileName: fileName || '',
+            author: parsed.author || '',
             encoding: encoding || 'utf-8',
+            format: parsed.format || 'txt',
             mode: mode,
             addedAt: Date.now(),
             chapterCount: parsed.chapters.length,
@@ -297,7 +298,7 @@ export class ReadingData {
         });
         this.shelf.unshift(book);
         this._save();
-        return { bookId: book.id, chapters: parsed.chapters, title: parsed.title, replaced };
+        return { bookId: book.id, chapters: parsed.chapters, title: parsed.title, author: parsed.author || '', format: parsed.format || 'txt', replaced };
     }
     removeBook(id) {
         this.shelf = this.shelf.filter(b => b.id !== id);

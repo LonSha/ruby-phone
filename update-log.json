@@ -1,5 +1,13 @@
 {
   "versions": {
+    "2.8.7": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】阅读 App 支持 EPUB 格式（零依赖）：内置极简 ZIP 只读解析器（EOCD 定位 + 中央目录 + DecompressionStream 原生解压，含 deflate-raw/deflate 双回退），EPUB 结构解析（container.xml → OPF → spine → manifest → XHTML 提取），自动提取书名/作者/章节，多章节沉浸式阅读。纯本地零 LLM。",
+        "【新增】阅读器排版增强：三档主题切换（☀羊皮纸/🌙夜间/⚫暗墨），作者显示，阅读进度条 + 百分比，主题随进度记忆持久化。",
+        "【优化】书架区分 TXT/EPUB 徽标，导入按钮支持 .txt/.epub 双格式。"
+      ]
+    },
     "2.8.6": {
       "date": "2026-09-12",
       "items": [

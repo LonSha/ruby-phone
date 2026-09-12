@@ -67,12 +67,14 @@ function assert(name, cond) {
     const st = new MockStorage();
     const rd = new ReadingData(st);
     const text = '第一章 起点\n\n正文内容一。\n\n第二章 前进\n\n正文内容二。';
-    const result = rd.addBook(text, 'mybook.txt', 'utf-8', 'auto');
+    const parsed = parseTxtContent(text, 'mybook.txt', 'auto');
+    const payload = { title: parsed.title, format: 'txt', chapters: parsed.chapters };
+    const result = rd.addBook(payload, 'mybook.txt', 'utf-8', 'auto');
     assert('addBook 返回 bookId', !!result.bookId);
     assert('addBook 章节=2', result.chapters.length === 2);
     assert('书架有 1 本书', rd.getBooks().length === 1);
     // 同名覆盖
-    const result2 = rd.addBook(text, 'mybook.txt', 'utf-8', 'auto');
+    const result2 = rd.addBook(payload, 'mybook.txt', 'utf-8', 'auto');
     assert('同名覆盖后仍 1 本', rd.getBooks().length === 1);
     // 删除（用最新 bookId）
     rd.removeBook(result2.bookId);
