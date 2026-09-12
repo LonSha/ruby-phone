@@ -25,7 +25,8 @@ export const DEFAULT_APP_ICONS = Object.freeze({
     settings: new URL('../phone/设置.png', import.meta.url).href,
     memory: new URL('../phone/记忆.png', import.meta.url).href,
     graph: new URL('../phone/图谱.png', import.meta.url).href,
-    mood: new URL('../phone/心境.png', import.meta.url).href
+    mood: new URL('../phone/心境.png', import.meta.url).href,
+    tarot: new URL('../phone/塔罗.png', import.meta.url).href
 });
 
 export const DEFAULT_PHONE_WALLPAPER = new URL('../phone/手机背景.jpg', import.meta.url).href;
@@ -246,6 +247,14 @@ export const APPS = [
         name: '心境',
         icon: '🌈',
         color: '#6366f1',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'tarot',
+        name: '塔罗',
+        icon: '🔮',
+        color: '#8b5cf6',
         badge: 0,
         data: {}
     },

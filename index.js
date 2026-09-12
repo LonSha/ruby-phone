@@ -9824,6 +9824,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载心境App失败:', err);
                             phoneShell?.showNotification('错误', '心境App加载失败', '❌');
                         });
+                } else if (appId === 'tarot') {
+                    import('./apps/tarot/tarot-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.tarotApp) {
+                                window.VirtualPhone.tarotApp = new module.TarotApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.tarotApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载塔罗App失败:', err);
+                            phoneShell?.showNotification('错误', '塔罗App加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }
