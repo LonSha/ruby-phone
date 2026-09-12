@@ -10,6 +10,7 @@
 import { EmotionTagger, calculateDecayScore, consolidateMemories, searchMemories, buildMemorySummary } from './memory-engine.js';
 import { MemoryPool } from './memory-pool.js';
 import { cleanFloorForSummary } from '../../config/message-clean.js';
+import { decorateRecall, pruneByLifecycle, RECALL_PERMISSION } from '../../config/recall-filter.js';
 
 export class MemoryCore {
     constructor(storage) {
@@ -194,6 +195,15 @@ export class MemoryCore {
             const keep = scored.slice(0, Math.max(0, cap - protectedMem.length)).map(x => x.m);
             this.longTerm = protectedMem.concat(keep);
         }
+        // 生命周期冷却 (MemoryConstellations 移植): 打 active/cooling/frozen 标签, 墓碑化超期且非保护条目
+        // 不破坏历史数据: 仅打 _lifecycle 标 + 墓碑化清空超期非保护条目的正文
+        {
+            const lc = pruneByLifecycle(this.longTerm);
+            this.longTerm = [...lc.active, ...lc.cooling, ...lc.frozen];
+            if (lc.tombstoned.length) {
+                this.stats.tombstoned = (this.stats.tombstoned || 0) + lc.tombstoned.length;
+            }
+        }
         this._save();
         return { consolidated: result.consolidated.length, patterns: result.patterns.length };
     }
@@ -201,21 +211,22 @@ export class MemoryCore {
     // ---------------- 检索与注入 ----------------
     /**
      * 混合检索: 记忆池三级触发 + 长期记忆关键词检索
-     * @returns [{layer, content, _score, meta}]
+     * 召回结果经过 decorateRecall: 分段衰减排序 + 回忆权限分级(可引用/需谨慎/仅联想)
+     * @returns [{layer, content, _score, _permission, permissionLabel, meta}]
      */
     recall(query, topN = 6) {
         const out = [];
         // 1) 记忆池触发 (感知优先)
         const poolRes = this.pool.trigger(query);
-        poolRes.matched.forEach(m => out.push({ layer: m._layer || 'pool', content: m.content, _score: m._score, emotion: m.emotion || null }));
+        poolRes.matched.forEach(m => out.push({ layer: m._layer || 'pool', content: m.content, _score: m._score, emotion: m.emotion || null, metadata: m.metadata || {}, createdAt: m.createdAt }));
         // 2) 长期记忆关键词
         const longRes = searchMemories(this.longTerm, query, {});
-        longRes.forEach(m => out.push({ layer: 'long-term', content: m.content, _score: m._score, importance: m.importance, emotion: m.emotion || null }));
-        // 去重 + 排序 + 截断
+        longRes.forEach(m => out.push({ layer: 'long-term', content: m.content, _score: m._score, importance: m.importance, emotion: m.emotion || null, metadata: m.metadata || {}, createdAt: m.createdAt }));
+        // 去重
         const seen = new Set();
         const uniq = out.filter(x => { if (!x.content || seen.has(x.content)) return false; seen.add(x.content); return true; });
-        uniq.sort((a, b) => (b._score || 0) - (a._score || 0));
-        return uniq.slice(0, topN);
+        // 权限分级 + 分段衰减排序 + 截断
+        return decorateRecall(uniq, { topN });
     }
 
     /**
@@ -273,14 +284,19 @@ export class MemoryCore {
         }
         if (!items.length) return '';
 
+        // 注入过滤: 仅联想(associate-only)级别不注入给模型陈述, 只作内部参考
+        const injectItems = items.filter(it => it._permission !== RECALL_PERMISSION.ASSOCIATE);
+        if (!injectItems.length) return '';
+
         let block = '【角色的长期记忆库 — 以下是角色在此聊天中沉淀的真实经历, 引用时须自然, 不得虚构】';
         const prem = this.pool.pool.premise;
         if (prem && prem.text) block += '\n◆ 背景前提: ' + prem.text;
         block += '\n◆ 相关记忆片段:';
-        for (const it of items.slice(0, this.config.injectTopN)) {
-            block += '\n- ' + it.content.replace(/\s+/g, ' ').slice(0, 160);
+        for (const it of injectItems.slice(0, this.config.injectTopN)) {
+            const permTag = it._permission === RECALL_PERMISSION.CITE ? '' : (it._permission === RECALL_PERMISSION.CAUTIOUS ? ' ~' : '');
+            block += '\n- ' + it.content.replace(/\s+/g, ' ').slice(0, 160) + permTag;
         }
-        block += '\n◆ 使用规则: 记忆与当前剧情冲突时以剧情为准; 记忆片段可触发角色的情绪反应, 但不得机械复读原文; 总引用不超过3条, 保持对话自然。';
+        block += '\n◆ 使用规则: 记忆与当前剧情冲突时以剧情为准; 记忆片段可触发角色的情绪反应, 但不得机械复读原文; 总引用不超过3条, 保持对话自然; 带 ~ 标记的记忆若要引用须用「好像记得…」等留有余地口吻。';
         return block;
     }
 
