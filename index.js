@@ -9848,6 +9848,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载阅读App失败:', err);
                             phoneShell?.showNotification('错误', '阅读App加载失败', '❌');
                         });
+                } else if (appId === 'gacha') {
+                    import('./apps/gacha/gacha-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.gachaApp) {
+                                window.VirtualPhone.gachaApp = new module.GachaApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.gachaApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载幸运转盘App失败:', err);
+                            phoneShell?.showNotification('错误', '幸运转盘App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {

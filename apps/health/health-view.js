@@ -142,6 +142,7 @@ export class HealthView {
     const tabs = h("div", cls("hl-tabs"),
       h("button", cls("hl-tab" + (tab === "cycle" ? " on" : "")) + " " + attr("data-tab", "cycle"), "周期") +
       h("button", cls("hl-tab" + (tab === "needs" ? " on" : "")) + " " + attr("data-tab", "needs"), "体征") +
+      h("button", cls("hl-tab" + (tab === "medical" ? " on" : "")) + " " + attr("data-tab", "medical"), "健康") +
       h("button", cls("hl-tab" + (tab === "family" ? " on" : "")) + " " + attr("data-tab", "family"), "家谱")
     );
     const needCards = (data.describeNeeds() || []).map((row) => {
@@ -158,9 +159,23 @@ export class HealthView {
     const kids = (data.lineage?.births || []).map((child) => {
       return h("div", cls("hl-child"), h("div", cls("hl-child-top"), esc(child.name) + h("button", cls("hl-mini") + " " + attr("data-del-child", child.id), "移除")) + h("div", cls("hl-card-desc"), esc(child.gender + " · " + child.father + " · " + child.race)));
     }).join("") || h("div", cls("hl-card-desc"), "尚无子嗣记录。分娩完成后会自动登记。");
-    const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids);
+const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids);
+    // ---- 健康档案（medical） ----
+    const medOv = data.illnessOverview ? data.illnessOverview() : { total: 0, active: 0, chronic: 0 };
+    const sevCn = s => s === 'mild' ? '轻度' : s === 'moderate' ? '中度' : s === 'severe' ? '重度' : s === 'critical' ? '危重' : s;
+    const medConds = (data.conditions || []).length ? data.conditions.map((c) => {
+      const sevTag = c.severity ? " <span class='hl-med-sev'>" + esc(sevCn(c.severity)) + "</span>" : "";
+      const outTag = c.outcome === 'recovered' ? " <span class='hl-med-out'>已痊愈</span>" : (c.outcome === 'chronic' ? " <span class='hl-med-chr'>慢性</span>" : "");
+      const expText = c.expiresAt ? " <span class='hl-med-exp'>" + esc(data.conditionLineText ? data.conditionLineText(c) : '') + "</span>" : "";
+      return h("div", cls("hl-med-item"),
+        h("div", cls("hl-med-top"), esc(c.name) + sevTag + outTag + h("button", cls("hl-mini") + " " + attr("data-del-med", c.id), "移除")) +
+        h("div", cls("hl-card-desc"), esc((c.stage || '') + (c.desc ? ' — ' + c.desc : '')) + expText));
+    }).join("") : h("div", cls("hl-card-desc"), "暂无病症记录。下方可从病症库中添加。");
+    const catOptions = (data.illnessCategories || []).map(c => "<option value='" + esc(c.id) + "'>" + esc(c.label) + "</option>").join("");
+    const medIllnessSel = h("div", cls("hl-med-add"), h("select", attr("id", "hl-med-cat"), catOptions) + h("select", attr("id", "hl-med-ill"), "<option value=''>选病症…</option>") + h("select", attr("id", "hl-med-sev"), "<option value=''>程度</option><option value='mild'>轻度</option><option value='moderate'>中度</option><option value='severe'>重度</option><option value='critical'>危重</option>") + h("button", cls("hl-mini") + " " + attr("id", "hl-add-med"), "添加"));
+    const medicalBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "健康档案 · " + medOv.active + " 进行中 / " + medOv.total + " 条 " + h("button", cls("hl-mini") + " " + attr("id", "hl-adv-med"), "每日推进")) + medConds + h("div", cls("hl-section-title"), "添加病症") + medIllnessSel);
     const cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
-    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : cycleBody);
+    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : tab === "medical" ? medicalBox : cycleBody);
     container.innerHTML = h("div", cls("hl-root"), header + tabs + h("main", cls("hl-body"), body));
     this._bindEvents();
   }
@@ -202,6 +217,37 @@ export class HealthView {
     root.querySelector("#hl-add-child")?.addEventListener("click", () => { data.addChild(); rerender(); });
     root.querySelectorAll("[data-del-child]").forEach((btn) => {
       btn.addEventListener("click", () => { data.removeChild(btn.getAttribute("data-del-child")); rerender(); });
+    });
+    // ---- 健康档案事件 ----
+    root.querySelector("#hl-med-cat")?.addEventListener("change", (e) => {
+      const cat = e.target.value;
+      const within = (data.searchIllness ? data.searchIllness("", cat) : []);
+      const opts = within.map(i => "<option value='" + esc(i.name) + "'>" + esc(i.name) + "</option>").join("");
+      const illSel = root.querySelector("#hl-med-ill");
+      if (illSel) illSel.innerHTML = "<option value=''>选病症…</option>" + opts;
+    });
+    root.querySelector("#hl-add-med")?.addEventListener("click", () => {
+      const nameVal = root.querySelector("#hl-med-ill")?.value;
+      const sevVal = root.querySelector("#hl-med-sev")?.value;
+      if (!nameVal) { window.toastr?.warning("请选择病症", "健康App"); return; }
+      const added = data.addCondition(nameVal, sevVal || "");
+      if (added) { window.toastr?.success("已添加「" + added.name + "」", "健康App"); rerender(); }
+      else window.toastr?.error("添加失败，未知病症", "健康App");
+    });
+    root.querySelectorAll("[data-del-med]").forEach((btn) => {
+      btn.addEventListener("click", () => { data.removeCondition(btn.getAttribute("data-del-med")); rerender(); });
+    });
+    root.querySelector("#hl-adv-med")?.addEventListener("click", () => {
+      const r = data.advanceMedical();
+      if (r.changed) {
+        const desc = (r.changes || []).slice(0, 3).map(c => c.name + "→" + (c.to || '痊愈')).join("、");
+        window.toastr?.info("病症推进: " + (desc || "状态变化"), "健康App");
+      } else if (r.reason === 'already') {
+        window.toastr?.info("今天已推进过", "健康App");
+      } else {
+        window.toastr?.info("病症状态无变化", "健康App");
+      }
+      rerender();
     });
     root.querySelectorAll("[data-del-fetus]").forEach((btn) => {
       btn.addEventListener("click", () => {

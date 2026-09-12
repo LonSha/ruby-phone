@@ -29,6 +29,10 @@ import {
 } from './bio-engine.js';
 import { normalizeNeeds, advanceNeeds, applyNeedEvent, describeNeeds, buildNeedsDirective } from './physio-core.js';
 import { emptyLineage, normalizeLineage, addBirth, removeBirth } from './family-core.js';
+import {
+  normalizeCondition, advanceConditions, filterIllnesses, libraryEntryByName,
+  conditionLine, IllnessLibrary,
+} from './medical-core.js';
 
 const PHASE_META = {
   月经期: {
@@ -166,6 +170,8 @@ export class HealthData {
     this.lineage = emptyLineage();
     this.healthTab = 'cycle';
     this.lastNotify = '';
+    this.conditions = [];
+    this.lastAdvance = '';
     this.loadState();
   }
 
@@ -220,6 +226,8 @@ export class HealthData {
       if (Array.isArray(d.bornChildrenThisLabor)) this.bornChildrenThisLabor = d.bornChildrenThisLabor;
       if (d.needs) this.needs = normalizeNeeds(d.needs);
       if (d.lineage) this.lineage = normalizeLineage(d.lineage);
+      if (Array.isArray(d.conditions)) this.conditions = d.conditions.map(c => normalizeCondition(c)).filter(c => c.name);
+      if (typeof d.lastAdvance === 'string') this.lastAdvance = d.lastAdvance;
       if (typeof d.healthTab === 'string') this.healthTab = d.healthTab;
       if (typeof d.lastNotify === 'string') this.lastNotify = d.lastNotify;
 
@@ -280,6 +288,8 @@ export class HealthData {
         lineage: this.lineage,
         healthTab: this.healthTab,
         lastNotify: this.lastNotify,
+        conditions: this.conditions,
+        lastAdvance: this.lastAdvance,
         updatedAt: Date.now(),
       });
     } catch (e) {
@@ -751,6 +761,77 @@ export class HealthData {
     return this.lineage;
   }
 
+  // ---- 健康档案（病症库） ----
+  addCondition(name, severity = '', opts = {}) {
+    const lib = libraryEntryByName(name);
+    if (!lib) return null;
+    const cond = normalizeCondition({
+      id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      name: lib.name,
+      libId: lib.id,
+      severity: severity || '',
+      stage: opts.stage || (lib.stages && lib.stages[0] && lib.stages[0].stage) || '',
+      stageStartedAt: this._todayIso(),
+      note: opts.note || '',
+    });
+    if (!cond.name) return null;
+    // 同名覆盖（更新病症而不是重复添加）
+    const ex = this.conditions.findIndex(c => c.name === cond.name);
+    if (ex >= 0) this.conditions[ex] = cond;
+    else this.conditions.unshift(cond);
+    this.saveState();
+    return cond;
+  }
+  removeCondition(id) {
+    this.conditions = this.conditions.filter(c => c.id !== id && !(id && c.name === id));
+    this.saveState();
+  }
+  advanceMedical() {
+    const today = this._todayIso();
+    if (this.lastAdvance === today) return { changed: false, reason: 'already' };
+    const res = advanceConditions({ conditions: this.conditions, today, seed: this._todayIso() + '|' + (this.race || '') });
+    this.conditions = res.conditions;
+    this.lastAdvance = today;
+    this.saveState();
+    return { changed: res.changes.length > 0, changes: res.changes, today };
+  }
+  _todayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  buildMedicalDirective() {
+    if (!this.conditions || !this.conditions.length) return '';
+    const active = this.conditions.filter(c => c.name && c.outcome !== 'recovered' && c.outcome !== 'deceased');
+    if (!active.length) return '';
+    const today = this._todayIso();
+    return active.map(c => {
+      const sev = c.severity ? `（${c.severity === 'mild' ? '轻度' : c.severity === 'moderate' ? '中度' : c.severity === 'severe' ? '重度' : c.severity === 'critical' ? '危重' : c.severity}）` : '';
+      const exp = c.expiresAt ? ` · ${conditionLine(c, { today })}` : '';
+      return `- ${c.name}${sev}${exp}${c.stage ? `，处于${c.stage}` : ''}`;
+    }).join('\n');
+  }
+  searchIllness(kw, cat) {
+    return filterIllnesses(kw, cat || 'all');
+  }
+  illnessOverview() {
+    return {
+      total: (this.conditions || []).length,
+      active: (this.conditions || []).filter(c => c.name && c.outcome === 'ongoing').length,
+      chronic: (this.conditions || []).filter(c => c.course === 'chronic').length,
+      byCategory: (this.conditions || []).reduce((acc, c) => {
+        const k = c.category || 'other';
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {}),
+    };
+  }
+  get illnessCategories() {
+    return IllnessLibrary ? IllnessLibrary.categories : [];
+  }
+  conditionLineText(c) {
+    return c && c.expiresAt ? conditionLine(c, { today: this._todayIso() }) : '';
+  }
+
   buildPromptDirective() {
     const info = this.getPhaseInfo();
     const lines = [
@@ -778,6 +859,8 @@ export class HealthData {
     const needLines = buildNeedsDirective(this.needs);
     if (needLines) lines.push('- 五维体征:', needLines);
     if (this.lineage.births.length) lines.push(`- 子嗣: 已登记 ${this.lineage.births.length} 人`);
+    const medLines = this.buildMedicalDirective();
+    if (medLines) lines.push('- 健康档案:', medLines);
     if (this.lastNotify) lines.push(`- 最近变化: ${this.lastNotify}`);
     lines.push('描写时遵循上述体温、孕周/产程与种族胚胎类型，不要发明未发生的分娩或流产。');
     lines.push('</Physiological_Status>');

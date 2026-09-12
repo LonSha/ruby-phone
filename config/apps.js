@@ -266,6 +266,14 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'gacha',
+        name: '幸运转盘',
+        icon: '🎰',
+        color: '#f59e0b',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置

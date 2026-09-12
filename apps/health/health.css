@@ -373,3 +373,59 @@
   gap: 8px;
   font-size: 13px;
 }
+.hl-med-item {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.hl-med-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+.hl-med-sev {
+  background: #f43f5e;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.hl-med-out {
+  background: #10b981;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.hl-med-chr {
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.hl-med-exp {
+  color: #94a3b8;
+  font-size: 11px;
+}
+.hl-med-add {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.hl-med-add select {
+  flex: 1;
+  min-width: 90px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 12px;
+}
