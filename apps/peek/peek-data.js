@@ -2,7 +2,9 @@
  *  查手机 (Peek) — 适配自 jiuyi777/xiao-shouji peekLogic.ts
  *  从 RubyPhone 已有 App 数据汇总角色手机痕迹：微信/日记/相册/日历/小红书/音乐
  *  有真实数据用真实数据；空缺时生成标记为「推测痕迹」的占位，不伪装成已发生
+ *  微信对话框体经 tidyConversation 整理（5分钟同发言人合并，来自糯叽叽 nuojiji 对话算法）
  * ======================================================== */
+import { tidyConversation } from '../../config/dialog-format.js';
 
 const SECTION_TITLES = {
   chats: '最近聊天',
@@ -168,10 +170,12 @@ export class PeekData {
         .filter((m) => m && m.isTimeMarker !== true && m.type !== 'time_marker')
         .slice(-6);
       const latest = messages[messages.length - 1];
-      const body = messages.map((m) => {
-        const who = this._sameName(m.from, name) ? name : (m.from || '对方');
-        return who + '：' + describeWechatMessage(m);
-      }).join('\n') || '这个会话还没有留下消息。';
+      const dialogText = tidyConversation(messages.map((m) => ({
+        speaker: this._sameName(m.from, name) ? name : (m.from || '对方'),
+        text: describeWechatMessage(m),
+        timestamp: Number(m.timestamp) || 0
+      })), { withMarkers: false, withTime: true });
+      const body = dialogText || '这个会话还没有留下消息。';
       return {
         id: chat.id,
         title: chat.name || '微信',
