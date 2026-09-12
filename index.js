@@ -22,6 +22,7 @@ import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 import { createInitialState as createDrivesState, advance as advanceDrives, formatVar as formatDrivesVar, classifyMessageText as classifyDrivesText } from './config/drives-engine.js';
+import { createJiwen } from './config/jiwen-engine.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 const ST_PHONE_VERSION = '1.5.5';
@@ -1330,6 +1331,81 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             console.warn('[Memory] 记忆系统初始化失败:', e);
         }
 
+        // ── 积温引擎 (jiwen 移植): 五轴主动意识, 后台漂移+阈值触发 ──────────────
+        try {
+            const jiwen = createJiwen({
+                persona: { subjectName: 'TA', selfName: '我', subjectPronoun: 'TA' },
+                rates: {
+                    connectionAccel: 1.2,          // 想念加速度
+                    accelDelay: 10,                 // 10 分钟后加速
+                    valenceConnectBoost: 1.4,
+                    valenceConnectBoostThreshold: -0.25,
+                    valenceConnectionDriftRate: 0.002, // 久未回应心情下沉
+                    valenceConnectionDriftThreshold: 0.30,
+                    prideDefendThreshold: 0.40,     // 被冷落触发骄傲防御
+                    prideDefendTarget: 0.45,
+                    prideDefendRate: 0.004,
+                    prideErosionRate: 0.003,        // 想念太重盔甲侵蚀
+                    prideArousalConflictRate: 0.002,
+                    arousalConnectionRiseThreshold: 0.45,
+                    arousalConnectionRiseRate: 0.003,
+                    activityConnectionRelief: 0.05,
+                    valenceDeltaScaling: true,
+                    arousalDeltaScaling: true,
+                    valenceDiminishWindow: 20,
+                    valenceDiminishFactor: 2.0,
+                    immersionDampenConnection: 1.0,
+                },
+                onLoad: async () => {
+                    try { return storage?.get?.('jiwen_state'); } catch (e) { return null; }
+                },
+                onSave: async (state) => {
+                    try { storage?.set?.('jiwen_state', state); } catch (e) {}
+                },
+                getLastMessage: () => {
+                    try {
+                        const ctx = window.SillyTavern?.getContext?.();
+                        const chat = ctx?.chat;
+                        if (!Array.isArray(chat) || !chat.length) return null;
+                        for (let i = chat.length - 1; i >= 0; i--) {
+                            const m = chat[i];
+                            const isUser = m?.role === 'user' || m?.is_user === true || m?.is_user === 'true';
+                            if (isUser && !m?.isPhoneMessage) {
+                                return { id: m.id || i, content: m.mes || m.content || '', timestamp: m.timestamp ? new Date(m.timestamp).getTime() : Date.now() };
+                            }
+                        }
+                        return null;
+                    } catch (e) { return null; }
+                },
+            });
+            // 载入一次性
+            jiwen.load().catch(() => {});
+            window.VirtualPhone.jiwen = jiwen;
+            // 定期 tick: 每 5 分钟推进, 若距上次 tick 超 8 分钟按实际分钟数快进
+            setInterval(() => {
+                try {
+                    const jw = window.VirtualPhone?.jiwen;
+                    if (!jw) return;
+                    const stRef = storage?.get?.('jiwen_state');
+                    const lastTick = stRef?.lastTick ? new Date(stRef.lastTick).getTime() : 0;
+                    const now = Date.now();
+                    const elapsedMin = Math.floor((now - lastTick) / 60000);
+                    if (!lastTick || elapsedMin >= 8) {
+                        jw.tick(Math.max(1, elapsedMin)).then((triggers) => {
+                            if (Array.isArray(triggers) && triggers.some((t) => t.action === 'contact')) {
+                                const ctx = window.SillyTavern?.getContext?.();
+                                if (ctx && ctx.chatMetadata) {
+                                    const directive = jw.getPromptContext() + '\n' + jw.getStyleGuidance();
+                                    ctx.chatMetadata['st_virtual_phone_jiwen'] = { proactive: directive, triggeredAt: new Date().toISOString(), triggers };
+                                }
+                            }
+                        }).catch(() => {});
+                    }
+                } catch (e) {}
+            }, 5 * 60 * 1000);
+        } catch (e) {
+            console.warn('[Jiwen] 积温引擎初始化失败:', e);
+        }
         modulesLoaded = true;
 
         const endTime = performance.now();
@@ -11787,6 +11863,38 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                         injectIntoMessages('{{DRIVES_STATE}}', drivesContent, 'drives_state');
                                     } else {
                                         injectIntoMessages('{{DRIVES_STATE}}', '', 'drives_state');
+                                    }
+
+                                    // ============================
+                                    // 🌙 {{JIWEN_PROACTIVE}} 积温主动意识注入 (jiwen 移植)
+                                    // ============================
+                                    let jiwenProactiveContent = '';
+                                    try {
+                                        const jCtx = getContext();
+                                        const jw = window.VirtualPhone?.jiwen;
+                                        if (jCtx && jCtx.chatMetadata && jw) {
+                                            const jStore = jCtx.chatMetadata['st_virtual_phone_jiwen'];
+                                            if (jStore && jStore.proactive) {
+                                                const triggeredAt = jStore.triggeredAt ? new Date(jStore.triggeredAt).getTime() : 0;
+                                                // 触发 30 分钟内有效
+                                                if (Date.now() - triggeredAt < 30 * 60 * 1000) {
+                                                    jiwenProactiveContent = '【此刻的主动想法（积温）】\n' + jStore.proactive;
+                                                    // 读取后清空, 避免重复注入
+                                                    delete jCtx.chatMetadata['st_virtual_phone_jiwen'];
+                                                } else {
+                                                    delete jCtx.chatMetadata['st_virtual_phone_jiwen'];
+                                                }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.warn('[Jiwen] 主动意识注入失败:', e);
+                                        jiwenProactiveContent = '';
+                                    }
+                                    if (jiwenProactiveContent) {
+                                        injectIntoMessages('{{JIWEN_PROACTIVE}}', jiwenProactiveContent, 'jiwen_proactive');
+                                    } else {
+                                        injectIntoMessages('{{JIWEN_PROACTIVE}}', '', 'jiwen_proactive');
+                                    }
                                     }
 
                                     // ============================
