@@ -19,6 +19,7 @@ ok('MemoryCore 含有 reload 方法', memDataSrc.includes('reload() {'));
 ok('onChatChanged 包含 memoryCore.reload 调用', idxSrc.includes('window.VirtualPhone.memoryCore.reload?.()'));
 ok('onChatChanged 包含 lonshaBridge.onChatChanged 调用', idxSrc.includes('window.VirtualPhone.lonshaBridge.onChatChanged?.()'));
 ok('clearCurrentData 包含 memoryCore.clearCurrentChat 调用', idxSrc.includes('window.VirtualPhone?.memoryCore?.clearCurrentChat?.()'));
+ok('clearAllData 监听器包含 memoryCore.clear 调用', idxSrc.includes('window.VirtualPhone?.memoryCore?.clear?.()'));
 ok('applyCoordinatedInjection 在无 directive 时清空槽位', bridgeSrc.includes("ctx.setExtensionPrompt('rubyphone_memory_coord', '', 1, 0)"));
 
 // 2. 运行时行为模拟：MemoryCore.reload
@@ -47,6 +48,15 @@ ok('reload 后隔离成功，加载聊天B记忆', core.longTerm.length === 1 &&
 storage.data = {};
 core.reload();
 ok('reload 空聊天后内存清空', core.longTerm.length === 0);
+
+// 3. 运行时行为模拟：pinned 剧情摘要豁免采集门槛
+// 构造一段短且平静的消息（正常情况下算出来重要性为 3~4，小于默认 minImportance=5）
+const calmShortText = '好的。';
+const normalRes = core.record('ai', calmShortText, {});
+ok('未 pinned 短句被低价值门槛过滤', normalRes === null);
+
+const pinnedRes = core.record('ai', '[剧情] ' + calmShortText, {}, { pinned: true });
+ok('pinned 摘要成功采集豁免门槛', pinnedRes !== null && pinnedRes.pinned === true && pinnedRes.importance >= 7);
 
 console.log(`
 [memory-isolation] ${pass} passed, ${fail} failed`);

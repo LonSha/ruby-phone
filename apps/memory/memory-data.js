@@ -107,8 +107,14 @@ export class MemoryCore {
         if (arousal < 0.35) importance += 1; // 平静时刻反而珍贵
         if (role === 'ai') importance += 1;
         importance = Math.max(1, Math.min(10, importance));
+        // [RA] 置顶/剧情/显式重要度保护: 避免 LonSha 回填的简报被启发式评分误杀
+        if (meta && meta.importance !== undefined && meta.importance !== null) {
+            importance = Math.max(1, Math.min(10, Number(meta.importance)));
+        } else if (meta && meta.pinned) {
+            importance = Math.max(importance, 7);
+        }
 
-        if (importance < this.config.minImportance) return null; // 低价值消息不采集
+        if (!meta?.pinned && importance < this.config.minImportance) return null; // 低价值普通消息不采集
 
         const entry = {
             id: 'stm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),

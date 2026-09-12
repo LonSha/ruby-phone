@@ -10092,6 +10092,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         console.warn('[ST-Phone] 清理 Honey 生成图片失败:', e);
                     }
                 }
+                try { window.VirtualPhone?.memoryCore?.clear?.(); } catch (e) {}
                 storage.clearAllData();
                 await clearGlobalCustomCssSettings();
                 currentApps = JSON.parse(JSON.stringify(APPS));
