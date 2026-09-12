@@ -11,6 +11,7 @@ import { EmotionTagger, calculateDecayScore, consolidateMemories, searchMemories
 import { MemoryPool } from './memory-pool.js';
 import { cleanFloorForSummary } from '../../config/message-clean.js';
 import { decorateRecall, pruneByLifecycle, RECALL_PERMISSION } from '../../config/recall-filter.js';
+import { scanSupersede, reviveSuperseded, SUPERSEDE_STATUS } from '../../config/supersede-engine.js';
 
 export class MemoryCore {
     constructor(storage) {
@@ -158,6 +159,7 @@ export class MemoryCore {
                 exist.metadata = { ...(exist.metadata || {}), reinforcementCount: (exist.metadata?.reinforcementCount || 0) + 1, lastActive: new Date().toISOString(), activationCount: (exist.metadata?.activationCount || 1) };
                 if (m.place) exist.place = m.place;
             } else {
+                m._newThisSleep = true; // [Paramecium] 标记本次新入, 供换代扫描识别
                 this.longTerm.push(m);
             }
             // 填充记忆池
@@ -195,6 +197,26 @@ export class MemoryCore {
             const keep = scored.slice(0, Math.max(0, cap - protectedMem.length)).map(x => x.m);
             this.longTerm = protectedMem.concat(keep);
         }
+        // 记忆换代 (Paramecium「原文是唯一真相」移植): 本次新入条目与既有长期记忆做高置信冲突检测,
+        // 冲突且新条目重要性足够 → 旧条目标 superseded 退出排名(不删原文, 可逆复活)
+        // 注: 须在 lifecycle prune 之前执行 —— prune 会重建对象导致 _newThisSleep 丢失
+        {
+            const newly = this.longTerm.filter(m => m._newThisSleep);
+            // 压制池 = 既有条目 (排除本次新入, 避免新条目互相误判换代)
+            const existingPool = this.longTerm.filter(m => !m._newThisSleep);
+            // 先清临时标记
+            this.longTerm.forEach(m => { delete m._newThisSleep; });
+            if (newly.length) {
+                const sc = scanSupersede(newly, existingPool);
+                if (sc.superseded.length) {
+                    this.stats.superseded = (this.stats.superseded || 0) + sc.superseded.length;
+                }
+                // 重建 longTerm: existingPool 已被 scan 原地标记换代 (元素被新对象替换), 必须用它重建
+                this.longTerm = [...existingPool, ...newly];
+                // 复活检查: 压制方被换代/消失时, 旧条目恢复参与排名
+                this.longTerm = reviveSuperseded(this.longTerm);
+            }
+        }
         // 生命周期冷却 (MemoryConstellations 移植): 打 active/cooling/frozen 标签, 墓碑化超期且非保护条目
         // 不破坏历史数据: 仅打 _lifecycle 标 + 墓碑化清空超期非保护条目的正文
         {
@@ -225,8 +247,22 @@ export class MemoryCore {
         // 去重
         const seen = new Set();
         const uniq = out.filter(x => { if (!x.content || seen.has(x.content)) return false; seen.add(x.content); return true; });
+        // [Paramecium] superseded 条目排出主动召回: 被换代压制时退出排名
+        // 仅当 revive 后(metadata._superseded 清除)才恢复参与
+        // 注: 记忆池(pool)里的副本不携带 metadata, 用 content 集合兜底过滤
+        const supersededContents = new Set(
+            this.longTerm
+                .filter(m => m.metadata && m.metadata._superseded === SUPERSEDE_STATUS.SUPERSEDED)
+                .map(m => m.content)
+                .filter(Boolean)
+        );
+        const rankedOut = uniq.filter(x => {
+            if (x.metadata && x.metadata._superseded === SUPERSEDE_STATUS.SUPERSEDED) return false;
+            if (x.content && supersededContents.has(x.content)) return false;
+            return true;
+        });
         // 权限分级 + 分段衰减排序 + 截断
-        return decorateRecall(uniq, { topN });
+        return decorateRecall(rankedOut, { topN });
     }
 
     /**
