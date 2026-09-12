@@ -404,6 +404,17 @@ export class MemoryCore {
         this._save();
     }
 
+    /** 切换会话时重载记忆数据，防止跨聊天串味 */
+    reload() {
+        if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
+        this.longTerm = [];
+        this.shortTerm = [];
+        this.stats = { consolidated: 0, archived: 0, lastSleep: null };
+        this.pool = new MemoryPool();
+        this.pool.initialize();
+        this._load();
+    }
+
     clearCurrentChat() {
         try { this.storage?.remove?.(this.KEY); } catch (e) {}
         if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }

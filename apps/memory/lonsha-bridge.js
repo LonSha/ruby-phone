@@ -266,7 +266,10 @@ export class LonShaBridge {
             const directive = this.memoryCore.buildPromptDirective(
                 this.memoryCore._recentTexts ? this.memoryCore._recentTexts(4) : []
             );
-            if (!directive) return false;
+            if (!directive) {
+                try { ctx.setExtensionPrompt('rubyphone_memory_coord', '', 1, 0); } catch (e) {}
+                return false;
+            }
             ctx.setExtensionPrompt('rubyphone_memory_coord', directive, 1, 0);
             this.stats.injectCount++;
             return true;
@@ -282,6 +285,9 @@ export class LonShaBridge {
      * LonSha 每楼提取提交后调用: 盖章记录该楼已被两端共同消费。
      * 同时清掉 > floor 的残留记忆 (保险丝: 正常情况下 RA 采集点已即时失效)。
      */
+    onChatChanged() {
+        this._bm25Dirty = true;
+    }
     onFloorCommitted(floor) {
         try {
             const f = Number(floor);

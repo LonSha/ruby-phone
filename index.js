@@ -8805,6 +8805,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (window.VirtualPhone.gamesApp) {
                 window.VirtualPhone.gamesApp.onChatChanged?.(storage);
             }
+            // 🧠 记忆系统: 切换会话时重载当前会话记忆，防止跨会话串味
+            if (window.VirtualPhone.memoryCore) {
+                window.VirtualPhone.memoryCore.reload?.();
+            }
+            if (window.VirtualPhone.lonshaBridge) {
+                window.VirtualPhone.lonshaBridge.onChatChanged?.();
+            }
         }
         window.currentWechatApp = null;
         window.ggp_currentWechatApp = null;
@@ -10021,6 +10028,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         console.warn('[ST-Phone] 清理 Honey 生成图片失败:', e);
                     }
                 }
+                try { window.VirtualPhone?.memoryCore?.clearCurrentChat?.(); } catch (e) {}
                 storage.clearCurrentData();
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
