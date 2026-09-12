@@ -10,7 +10,8 @@ const SECTION_TITLES = {
   gallery: '相册',
   calendar: '日历',
   xiaohongshu: '小红书',
-  music: '音乐'
+  music: '音乐',
+  douyin: '抖音'
 };
 
 function compactText(value, max = 64) {
@@ -271,6 +272,122 @@ export class PeekData {
     };
   }
 
+  _buildDouyin(name) {
+    const phone = this._phone();
+    const videoItems = [];
+    const seen = new Set();
+    const pushVideo = (v) => {
+      if (!v || !v.title) return;
+      const key = v.title;
+      if (seen.has(key)) return;
+      seen.add(key);
+      videoItems.push(v);
+    };
+    // 来源1: 小红书本人笔记 → 抖音作品
+    try {
+      const xhs = phone.xhsApp?.data || phone.xhsApp?.xhsData;
+      (xhs?.getNotes?.() || []).filter((note) => this._sameName(note.author, name)).slice(0, 6).forEach((note, i) => {
+        pushVideo({
+          id: 'dy-' + (note.id || i),
+          title: note.title || '短视频',
+          videoDescription: note.content || '',
+          createdAt: note.time || formatDateLabel(note.timestamp),
+          likeCount: 320 + ((seedFromName(note.title || '视频') * 7) % 9800),
+          commentCount: 12 + ((seedFromName(note.title || '视频') * 3) % 300),
+          saveCount: 8 + ((seedFromName(note.title || '视频') * 5) % 500),
+          coverIcon: note.cover || note.imageUrl || '',
+          tone: ['ivory', 'mist', 'blush', 'graphite'][i % 4],
+          comments: []
+        });
+      });
+    } catch (e) {}
+    // 来源2: 相册照片 → 作品(无封面用 emoji 占位)
+    try {
+      const album = phone.albumApp?.data || phone.albumApp?.albumData;
+      (album?.getImages?.() || album?.getMedia?.() || []).slice(0, 7).forEach((img, i) => {
+        pushVideo({
+          id: 'dy-album-' + (img.path || i),
+          title: img.note || img.title || img.filename || '随手拍',
+          videoDescription: img.description || '记录这一刻。',
+          createdAt: formatDateLabel(img.timestamp) || '刚刚',
+          likeCount: 90 + ((seedFromName(img.title || img.filename || 'x') * 5) % 3000),
+          commentCount: 5 + ((seedFromName(img.title || img.filename || 'x') * 2) % 120),
+          saveCount: 3 + ((seedFromName(img.title || img.filename || 'x') * 3) % 180),
+          coverIcon: img.src || img.path || img.url || '',
+          tone: ['ivory', 'mist', 'blush', 'graphite'][(i + 2) % 4],
+          comments: []
+        });
+      });
+    } catch (e) {}
+    // 来源3: 微博本人帖子 → 收藏/喜欢
+    try {
+      const weibo = phone.weiboApp?.data || phone.weiboApp?.weiboData;
+      const posts = (weibo?.getPosts?.() || []).filter((p) => this._sameName(p.author, name)).slice(0, 4);
+      posts.forEach((p, i) => {
+        pushVideo({
+          id: 'dy-wb-' + (p.id || i),
+          title: p.title || compactText(p.content || '微博', 24),
+          videoDescription: p.content || '',
+          createdAt: p.time || formatDateLabel(p.timestamp),
+          likeCount: 40 + ((seedFromName(p.title || 'w') * 3) % 800),
+          commentCount: 2 + ((seedFromName(p.title || 'w') * 2) % 60),
+          saveCount: 1 + ((seedFromName(p.title || 'w') * 2) % 40),
+          coverIcon: '',
+          tone: ['ivory', 'mist', 'blush', 'graphite'][(i + 1) % 4],
+          comments: []
+        });
+      });
+    } catch (e) {}
+    if (!videoItems.length) {
+      // 无真实痕迹 → 生成可辨识的推测作品(标记 generated)
+      for (let i = 0; i < 4; i++) {
+        videoItems.push({
+          id: 'dy-guess-' + i,
+          title: ['随手记录的一天', '和 TA 的回味', '深夜小片段', '今天的小确幸'][i % 4] + '（推测）',
+          videoDescription: '这是一段留在 ' + name + ' 抖音里的短视频，具体内容有待剧情发展。',
+          createdAt: '',
+          likeCount: 58,
+          commentCount: 6,
+          saveCount: 4,
+          coverIcon: '',
+          tone: ['ivory', 'mist', 'blush', 'graphite'][i % 4],
+          comments: []
+        });
+      }
+    }
+    // 拆成 works / saved / liked
+    const works = videoItems.filter((_, i) => i % 3 !== 1);
+    const savedVideos = videoItems.filter((_, i) => i % 3 === 1);
+    const likedVideos = videoItems.filter((_, i) => i % 3 === 2);
+    return {
+      id: 'douyin',
+      title: SECTION_TITLES.douyin,
+      count: videoItems.length,
+      generated: !videoItems.some((v) => !v.id.startsWith('dy-guess-')),
+      items: videoItems.map((v) => ({
+        id: v.id,
+        title: v.title,
+        subtitle: '❤ ' + (v.likeCount || 0) + '  💬 ' + (v.commentCount || 0),
+        body: v.videoDescription || '',
+        imageUrl: v.coverIcon || '',
+        meta: v.tone
+      })),
+      douyin: {
+        profile: {
+          name: name,
+          handle: 'douyin号：' + name.split('').slice(0, 4).join('_'),
+          bio: '记录生活，分享快乐。',
+          followingCount: 128,
+          followerCount: 3560,
+          likesTotal: 18420
+        },
+        works,
+        savedVideos,
+        likedVideos
+      },
+      description: joinItems(videoItems.slice(0, 4).map((v) => v.title))
+    };
+  }
   _buildMusic(name) {
     const phone = this._phone();
     const music = phone.musicApp?.musicData;
@@ -338,7 +455,8 @@ export class PeekData {
         this._buildGallery(selected),
         this._buildCalendar(selected),
         this._buildXiaohongshu(selected),
-        this._buildMusic(selected)
+        this._buildMusic(selected),
+        this._buildDouyin(selected)
       ]
     };
   }
