@@ -21,6 +21,7 @@ import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
+import { createInitialState as createDrivesState, advance as advanceDrives, formatVar as formatDrivesVar, classifyMessageText as classifyDrivesText } from './config/drives-engine.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 const ST_PHONE_VERSION = '1.5.5';
@@ -1788,6 +1789,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         const namespace = storage?.NAMESPACE || 'st_virtual_phone';
         if (!ctx.chatMetadata[namespace] && create) ctx.chatMetadata[namespace] = {};
         return ctx.chatMetadata[namespace] || null;
+    }
+
+    // ── 情绪驱动状态存取 (Drivesoid 移植, 独立 namespace 防串扰) ─────────────────
+    function getDrivesStoreFromContext(context = null, create = false) {
+        const ctx = context || getContext();
+        if (!ctx?.chatMetadata) return null;
+        const root = ctx.chatMetadata;
+        if (!root['st_virtual_phone_drives'] && create) root['st_virtual_phone_drives'] = {};
+        return root['st_virtual_phone_drives'] || null;
     }
 
     function getCurrentTavernChatIdentity(context = null) {
@@ -11732,6 +11742,52 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                     injectIntoMessages('{{CALENDAR_REMINDER}}', calendarReminderContent, 'calendar_system_reminder');
                                     injectIntoMessages('{{WANGXIANG_TASKS}}', wangxiangTaskContent, 'wangxiang_active_tasks', false);
                                     injectIntoMessages('{{WANGXIANG_ORDERS}}', wangxiangOrderContent, 'wangxiang_shipping_orders', false);
+
+                                    // ============================
+                                    // 💗 {{DRIVES_STATE}} 情绪状态注入 (Drivesoid 移植)
+                                    // ============================
+                                    let drivesContent = '';
+                                    try {
+                                        const dCtx = getContext();
+                                        const dStore = getDrivesStoreFromContext(dCtx, true);
+                                        if (dStore) {
+                                            let drivesState = dStore.state || null;
+                                            if (!drivesState) {
+                                                drivesState = createDrivesState(Date.now());
+                                                dStore.state = drivesState;
+                                            }
+                                            const drivesNow = Date.now();
+                                            const drivesEvents = [];
+                                            // 尝试从最近消息提取用户/AI 消息喂事件 (有则更新)
+                                            if (Array.isArray(messages)) {
+                                                const lastMsg = messages[messages.length - 1];
+                                                if (lastMsg) {
+                                                    const isUserMsg = lastMsg.role === 'user' || lastMsg.is_user === true;
+                                                    const text = lastMsg.content || lastMsg.mes || lastMsg.text || (lastMsg.parts && lastMsg.parts[0] ? lastMsg.parts[0].text : '') || '';
+                                                    if (text && typeof text === 'string' && !lastMsg.isPhoneMessage) {
+                                                        drivesEvents.push({
+                                                            type: isUserMsg ? 'msg_user' : 'msg_assistant',
+                                                            timestamp: drivesNow,
+                                                            event_id: 'drv-' + drivesNow,
+                                                            payload: { text }
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                            await advanceDrives(drivesState, drivesNow, drivesEvents);
+                                            drivesContent = formatDrivesVar(drivesState.display);
+                                            dStore.state = drivesState;
+                                            dStore.updated_at = new Date(drivesNow).toISOString();
+                                        }
+                                    } catch (e) {
+                                        console.warn('[ST-Phone] drives state update error:', e);
+                                        drivesContent = '';
+                                    }
+                                    if (drivesContent) {
+                                        injectIntoMessages('{{DRIVES_STATE}}', drivesContent, 'drives_state');
+                                    } else {
+                                        injectIntoMessages('{{DRIVES_STATE}}', '', 'drives_state');
+                                    }
 
                                     // ============================
                                     // 🎵 {{MUSIC_PROMPT}} 独立注入
