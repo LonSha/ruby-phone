@@ -1,6 +1,11 @@
 /**
  * 查手机 App - 视图
  */
+function formatCount(count) {
+  if (count >= 10000) return (count / 10000).toFixed(count >= 100000 ? 0 : 1).replace(/\.0$/, '') + '万';
+  if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(count);
+}
 export class PeekView {
   constructor(app) {
     this.app = app;
@@ -35,6 +40,12 @@ export class PeekView {
     let body = '';
     if (section && section.id === 'douyin' && section.douyin) {
       body = this._renderDouyin(view, section);
+    } else if (section && section.id === 'weibo' && section.weibo) {
+      body = this._renderWeibo(view, section);
+    } else if (section && section.id === 'bilibili' && section.bilibili) {
+      body = this._renderBilibili(view, section);
+    } else if (section && section.id === 'douban' && section.douban) {
+      body = this._renderDouban(view, section);
     } else if (section) {
       const items = (section.items || []).map((item) => {
         const mark = item.generated ? '<span class="pk-guess">推测</span>' : '';
@@ -140,6 +151,75 @@ export class PeekView {
     return video.comments.map((c) => {
       return '<div class="pk-dy-comment"><b>' + this._esc(c.authorName) + '</b><p>' + this._esc(c.text) + '</p></div>';
     }).join('');
+  }
+  _renderDouban(view, section) {
+    const d = section.douban || {};
+    const activities = d.activities || [];
+    const typeLabel = {
+      post: '广播',
+      movie_review: '影评',
+      book_review: '书评',
+      diary: '日记',
+      listened: '在听',
+      want_watch: '想看',
+      want_read: '想读'
+    };
+    const items = activities.map((a) => {
+      const tag = a.id && a.id.startsWith('db-guess-') ? '<span class="pk-guess">推测</span>' : '';
+      return '<article class="pk-db-item">'
+        + '<div class="pk-db-item-head"><span class="pk-db-type">' + (typeLabel[a.type] || a.type || '动态') + '</span>' + tag + '</div>'
+        + '<h4>' + this._esc(a.title) + '</h4>'
+        + (a.content ? '<p>' + this._esc(a.content) + '</p>' : '')
+        + '</article>';
+    }).join('') || '<div class="pk-empty">还没有广播</div>';
+    return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
+      + '<div class="pk-db-root">'
+      + '  <header class="pk-db-head"><div class="pk-db-logo">豆</div><div><b>豆瓣</b><span>记录 · 发现 · 讨论</span></div></header>'
+      + '  <div class="pk-db-feed">' + items + '</div>'
+      + '</div>';
+  }
+  _renderWeibo(view, section) {
+    const d = section.weibo || {};
+    const myPosts = d.myPosts || [];
+    const hotSearches = d.hotSearches || [];
+    const posts = myPosts.map((p) => {
+      const tag = p.id && p.id.startsWith('wb-guess-') ? '<span class="pk-guess">推测</span>' : '';
+      return '<article class="pk-wb-post">'
+        + '<div class="pk-wb-author"><div class="pk-wb-avatar">' + this._esc((p.authorName || '?').slice(0, 1)) + '</div>'
+        + '  <div><b>' + this._esc(p.authorName || '') + '</b>' + (p.authorBadge ? '<em>' + this._esc(p.authorBadge) + '</em>' : '') + '</div></div>'
+        + '<p class="pk-wb-body">' + this._esc(p.body) + '</p>'
+        + '<div class="pk-wb-actions"><span>🔁 ' + (p.repostCount || 0) + '</span><span>💬 ' + (p.commentCount || 0) + '</span><span>❤ ' + (p.likeCount || 0) + '</span></div>'
+        + tag + '</article>';
+    }).join('') || '<div class="pk-empty">还没发过微博</div>';
+    const hot = hotSearches.length ? hotSearches.map((h, i) => (
+      '<div class="pk-wb-hot"><span class="pk-wb-hot-no">' + (i + 1) + '</span><span class="pk-wb-hot-title">' + this._esc(h.title || '') + '</span><span class="pk-wb-hot-tag">' + this._esc(h.hot || '') + '</span></div>'
+    )).join('') : '';
+    return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
+      + '<div class="pk-wb-root">'
+      + '  <header class="pk-wb-head"><b>微博</b></header>'
+      + (hot ? '<section class="pk-wb-hotlist"><h5>热搜榜</h5>' + hot + '</section>' : '')
+      + '  <section class="pk-wb-feed"><h5>' + this._esc(view.selectedName || '我') + '的微博</h5>' + posts + '</section>'
+      + '</div>';
+  }
+  _renderBilibili(view, section) {
+    const d = section.bilibili || {};
+    const videos = d.videos || [];
+    const grid = videos.map((v) => {
+      const cover = v.coverIcon
+        ? ' style="background-image:url(' + JSON.stringify(String(v.coverIcon)) + ')"'
+        : '<div class="pk-bv-ph"><i class="fa-solid fa-play"></i></div>';
+      const tag = v.id && v.id.startsWith('bv-guess-') ? '<span class="pk-guess">推测</span>' : '';
+      return '<article class="pk-bv-card">'
+        + '<div class="pk-bv-cover">' + (v.coverIcon ? '' : cover.slice(5)) + '</div>'
+        + '<div class="pk-bv-info"><b>' + this._esc(v.title) + '</b>' + tag
+        + '  <span>' + this._esc(v.author || '') + ' · ' + formatCount(v.playCount) + '播放 · ' + v.danmakuCount + '弹幕</span>'
+        + '</div></article>';
+    }).join('') || '<div class="pk-empty">还没有观看记录</div>';
+    return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
+      + '<div class="pk-bv-root">'
+      + '  <header class="pk-bv-head"><div class="pk-bv-logo">B</div><div><b>哔哩哔哩</b><span>干杯 ~</span></div></header>'
+      + '  <div class="pk-bv-grid">' + grid + '</div>'
+      + '</div>';
   }
   _dyToneColor(tone) {
     return {

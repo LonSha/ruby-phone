@@ -11,7 +11,10 @@ const SECTION_TITLES = {
   calendar: '日历',
   xiaohongshu: '小红书',
   music: '音乐',
-  douyin: '抖音'
+  douyin: '抖音',
+  weibo: '微博',
+  bilibili: 'B站',
+  douban: '豆瓣'
 };
 
 function compactText(value, max = 64) {
@@ -30,6 +33,11 @@ function formatDateLabel(time) {
 
 function joinItems(items) {
   return items.filter(Boolean).join('；');
+}
+function formatCount(count) {
+  if (count >= 10000) return (count / 10000).toFixed(count >= 100000 ? 0 : 1).replace(/\.0$/, '') + '万';
+  if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(count);
 }
 
 function seedFromName(name) {
@@ -428,7 +436,161 @@ export class PeekData {
       description: joinItems(unique.slice(0, 4).map((item) => item.title))
     };
   }
-
+  _buildWeibo(name) {
+    const phone = this._phone();
+    const weibo = phone.weiboApp?.data || phone.weiboApp?.weiboData;
+    const myPosts = [];
+    const seen = new Set();
+    const pushPost = (p) => {
+      if (!p || !p.body && !p.content) return;
+      const key = String(p.body || p.content || '').slice(0, 24);
+      if (seen.has(key)) return;
+      seen.add(key);
+      myPosts.push({
+        id: p.id || ('wb-' + myPosts.length),
+        authorName: name,
+        authorBadge: '',
+        body: p.body || p.content || '',
+        mediaIcon: '',
+        tone: ['mist', 'ivory', 'blush'][myPosts.length % 3],
+        repostCount: ((seedFromName(key) || 1) * 3) % 90,
+        commentCount: ((seedFromName(key) || 1) * 2) % 200,
+        likeCount: ((seedFromName(key) || 1) * 5) % 1200,
+        comments: []
+      });
+    };
+    try {
+      (weibo?.getUserPosts?.() || []).forEach(pushPost);
+    } catch (e) {}
+    try {
+      (weibo?.getRecommendPosts?.() || []).filter(() => true).slice(0, 2).forEach(pushPost);
+    } catch (e) {}
+    if (!myPosts.length) {
+      myPosts.push(...[0, 1, 2].map((i) => ({
+        id: 'wb-guess-' + i,
+        authorName: name,
+        authorBadge: '',
+        body: ['今天也晒了太阳', '刚看完一部剧，后劲很大', '深夜碎碎念'] [i] + '（推测）',
+        mediaIcon: '',
+        tone: ['mist', 'ivory', 'blush'][i],
+        repostCount: 3, commentCount: 5, likeCount: 40,
+        comments: []
+      })));
+    }
+    // 微博热搜(他人)
+    const hotSearches = [];
+    try {
+      (weibo?.getHotSearches?.() || []).slice(0, 8).forEach((h, i) => {
+        hotSearches.push({
+          id: 'wb-hot-' + i,
+          title: h.title || h.tag || '',
+          hot: h.hot || h.tag || ''
+        });
+      });
+    } catch (e) {}
+    return {
+      id: 'weibo',
+      title: SECTION_TITLES.weibo,
+      count: myPosts.length,
+      generated: !myPosts.some((p) => !p.id.startsWith('wb-guess-')),
+      items: myPosts.map((p) => ({
+        id: p.id,
+        title: p.body.slice(0, 20),
+        subtitle: '🔁 ' + p.repostCount + '  ❤ ' + p.likeCount,
+        body: p.body,
+        meta: p.tone
+      })),
+      weibo: { myPosts, hotSearches },
+      description: joinItems(myPosts.slice(0, 3).map((p) => p.body.slice(0, 24)))
+    };
+  }
+  _buildBilibili(name) {
+    const phone = this._phone();
+    const bili = phone.biliApp?.data || phone.biliApp?.biliData;
+    const entries = (bili?.entries || bili?.getEntries?.() || []).slice(0, 8);
+    const videos = entries.map((e, i) => ({
+      id: e.id || ('bv-' + i),
+      title: e.title || '视频',
+      author: e.up || e.author || 'UP主',
+      bvid: e.bvid || e.url || '',
+      coverIcon: e.cover || e.pic || '',
+      playCount: 100000 + ((seedFromName(e.title || 'v') * 77) % 9000000),
+      danmakuCount: 500 + ((seedFromName(e.title || 'v') * 13) % 80000),
+      time: e.publishTime || e.time || ''
+    }));
+    if (!videos.length) {
+      for (let i = 0; i < 4; i++) {
+        videos.push({
+          id: 'bv-guess-' + i,
+          title: ['深夜刷到的甜剧', '猫咪混剪', '游戏实况', '美食探店'][i] + '（推测）',
+          author: '某UP主',
+          bvid: '',
+          coverIcon: '',
+          playCount: 60000,
+          danmakuCount: 800,
+          time: ''
+        });
+      }
+    }
+    return {
+      id: 'bilibili',
+      title: SECTION_TITLES.bilibili,
+      count: videos.length,
+      generated: !videos.some((v) => !v.id.startsWith('bv-guess-')),
+      items: videos.map((v) => ({
+        id: v.id,
+        title: v.title,
+        subtitle: v.author + ' · 👀 ' + formatCount(v.playCount),
+        body: 'B站观看记录。',
+        imageUrl: v.coverIcon || '',
+        meta: v.bvid
+      })),
+      bilibili: { videos },
+      description: joinItems(videos.slice(0, 4).map((v) => v.title))
+    };
+  }
+  _buildDouban(name) {
+    const phone = this._phone();
+    const activities = [];
+    const music = phone.musicApp?.musicData;
+    try {
+      const current = music?.getCurrentSong?.();
+      if (current) activities.push({ id: 'db-music', type: 'listened', title: '在听 · ' + (current.name || '歌'), content: '此刻耳机里放着这首歌。' });
+    } catch (e) {}
+    try {
+      const diary = phone.diaryApp?.data || phone.diaryApp?.diaryData;
+      (diary?.getEntries?.() || []).filter((en) => this._sameName(en.author, name)).slice(0, 2).forEach((en, i) => {
+        activities.push({ id: 'db-diary-' + i, type: 'diary', title: en.title || '日记', content: en.content || '' });
+      });
+    } catch (e) {}
+    try {
+      const reading = phone.readingApp?.data || phone.readingApp?.readingData;
+      (reading?.getBooks?.() || reading?.getHistory?.() || []).slice(0, 2).forEach((b, i) => {
+        activities.push({ id: 'db-book-' + i, type: 'book_review', title: '在读 · ' + (b.title || '书'), content: b.note || b.description || '看到一半。' });
+      });
+    } catch (e) {}
+    if (!activities.length) {
+      activities.push(
+        { id: 'db-guess-1', type: 'diary', title: '想去看海（推测）', content: '收藏了很久的一个念想。' },
+        { id: 'db-guess-2', type: 'want_watch', title: '想看 · 一部老电影（推测）', content: '在待看清单里躺了很久。' }
+      );
+    }
+    return {
+      id: 'douban',
+      title: SECTION_TITLES.douban,
+      count: activities.length,
+      generated: !activities.some((a) => !a.id.startsWith('db-guess-')),
+      items: activities.map((a) => ({
+        id: a.id,
+        title: a.title,
+        subtitle: a.type,
+        body: a.content || '',
+        meta: a.type
+      })),
+      douban: { activities },
+      description: joinItems(activities.slice(0, 3).map((a) => a.title))
+    };
+  }
   buildViewModel() {
     const names = this.listCharacters();
     const selected = this.getSelectedName();
@@ -456,7 +618,10 @@ export class PeekData {
         this._buildCalendar(selected),
         this._buildXiaohongshu(selected),
         this._buildMusic(selected),
-        this._buildDouyin(selected)
+        this._buildDouyin(selected),
+        this._buildWeibo(selected),
+        this._buildBilibili(selected),
+        this._buildDouban(selected)
       ]
     };
   }

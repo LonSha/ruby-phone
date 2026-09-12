@@ -56,4 +56,47 @@
 .pk-dy-comment b { color:#ffd6a5; flex-shrink:0; }
 .pk-dy-comment p { margin:0; color:#eee; max-height:none; }
 .pk-dy-comments-empty { font-size:12px; color:#ccc; font-style:italic; }
+/* ===== 微博平台页 ===== */
+.pk-wb-root { display:flex; flex-direction:column; gap:12px; }
+.pk-wb-head { background:#fff; border-radius:14px; padding:12px 14px; }
+.pk-wb-head b { font-size:16px; }
+.pk-wb-hotlist { background:#fff; border-radius:14px; padding:12px 14px; }
+.pk-wb-hotlist h5, .pk-wb-feed h5 { margin:0 0 10px; font-size:13px; color:#999; }
+.pk-wb-hot { display:flex; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid #f5f5f5; font-size:13px; }
+.pk-wb-hot-no { font-weight:700; color:#ff3852; width:18px; }
+.pk-wb-hot-title { flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.pk-wb-hot-tag { font-size:11px; color:#e63956; border:1px solid #ffd2db; border-radius:4px; padding:0 5px; flex-shrink:0; }
+.pk-wb-feed { background:#fff; border-radius:14px; padding:12px 14px; }
+.pk-wb-post { padding:12px 0; border-bottom:1px solid #f5f5f5; }
+.pk-wb-post:last-child { border-bottom:0; }
+.pk-wb-author { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+.pk-wb-avatar { width:34px; height:34px; border-radius:50%; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:600; }
+.pk-wb-author b { font-size:14px; }
+.pk-wb-author em { display:block; font-size:11px; color:#999; font-style:normal; }
+.pk-wb-body { margin:0 0 8px; font-size:14px; line-height:1.55; white-space:pre-wrap; }
+.pk-wb-actions { display:flex; gap:16px; font-size:12px; color:#7a8699; }
+/* ===== B站平台页 ===== */
+.pk-bv-root { display:flex; flex-direction:column; gap:12px; }
+.pk-bv-head { background:#fff; border-radius:14px; padding:12px 14px; display:flex; gap:10px; align-items:center; }
+.pk-bv-logo { width:34px; height:34px; border-radius:9px; background:#fb7299; color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; }
+.pk-bv-head b { font-size:16px; }
+.pk-bv-head span { font-size:11px; color:#999; }
+.pk-bv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.pk-bv-card { background:#fff; border-radius:14px; overflow:hidden; padding:8px; }
+.pk-bv-cover { aspect-ratio:16/10; border-radius:10px; background-size:cover; background-position:center; }
+.pk-bv-ph { width:100%; height:100%; background:linear-gradient(135deg,#fbd8e5,#fb7299); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; }
+.pk-bv-info b { display:block; font-size:13px; line-height:1.35; margin:6px 0 3px; }
+.pk-bv-info span { font-size:11px; color:#999; }
+/* ===== 豆瓣平台页 ===== */
+.pk-db-root { display:flex; flex-direction:column; gap:12px; }
+.pk-db-head { display:flex; gap:10px; align-items:center; background:#fff; border-radius:14px; padding:12px 14px; }
+.pk-db-logo { width:34px; height:34px; border-radius:9px; background:#2ea44f; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+.pk-db-head b { font-size:16px; }
+.pk-db-head span { font-size:11px; color:#999; }
+.pk-db-feed { display:flex; flex-direction:column; gap:10px; }
+.pk-db-item { background:#fff; border-radius:14px; padding:12px 14px; }
+.pk-db-item-head { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.pk-db-type { font-size:11px; color:#2ea44f; background:#e6f7ec; border-radius:6px; padding:2px 7px; }
+.pk-db-item h4 { margin:0 0 5px; font-size:15px; }
+.pk-db-item p { margin:0; font-size:13px; color:#555; line-height:1.5; }
 .pk-item p, .pk-card p, .pk-section-head p { margin:0; color:#5a5148; font-size:13px; line-height:1.5; white-space:pre-wrap; }
