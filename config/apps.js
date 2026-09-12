@@ -24,7 +24,8 @@ export const DEFAULT_APP_ICONS = Object.freeze({
     games: new URL('../phone/游戏.png', import.meta.url).href,
     settings: new URL('../phone/设置.png', import.meta.url).href,
     memory: new URL('../phone/记忆.png', import.meta.url).href,
-    graph: new URL('../phone/图谱.png', import.meta.url).href
+    graph: new URL('../phone/图谱.png', import.meta.url).href,
+    mood: new URL('../phone/心境.png', import.meta.url).href
 });
 
 export const DEFAULT_PHONE_WALLPAPER = new URL('../phone/手机背景.jpg', import.meta.url).href;
@@ -157,8 +158,8 @@ export const APPS = [
         icon: '⚙️',
         defaultIcon: DEFAULT_APP_ICONS.settings,
         color: '#8c8c8c',
-        data: {}
-    }
+        data: { }
+    },
     // 第四行：新增整合扩展生态 (灵感工坊/成就簿/小红书/贴吧)
     {
         id: 'playbook',
@@ -237,6 +238,14 @@ export const APPS = [
         name: '小剧场',
         icon: '🎭',
         color: '#7c3aed',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'mood',
+        name: '心境',
+        icon: '🌈',
+        color: '#6366f1',
         badge: 0,
         data: {}
     },

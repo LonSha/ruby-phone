@@ -9812,6 +9812,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载记忆App失败:', err);
                             phoneShell?.showNotification('错误', '记忆App加载失败', '❌');
                         });
+                } else if (appId === 'mood') {
+                    import('./apps/mood/mood-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.moodApp) {
+                                window.VirtualPhone.moodApp = new module.MoodApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.moodApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载心境App失败:', err);
+                            phoneShell?.showNotification('错误', '心境App加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }
