@@ -107,6 +107,13 @@
             "items": [
                 "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库，替代原继承自 gaigai315/yuzuki-phone 的失效地址，避免误拉原作者版本号。"
             ]
+        },
+        "2.7.3": {
+            "date": "2026-09-12",
+            "items": [
+                "【新增】消息文本去噪清洗: 移植自芋圆机 cleanFloorForSummary/stripStatusBlocks/stripWxTagLines, 记忆采集前自动剔除 horae 等插件注入的状态块/成对大写块/HTML/样式脚本/裸K=V状态行, 避免把系统状态当剧情记忆采进去; 代码围栏智能保留中文正文",
+                "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库 (v2.7.2)"
+            ]
         }
     }
 }

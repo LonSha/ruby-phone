@@ -9,6 +9,7 @@
  * ======================================================== */
 import { EmotionTagger, calculateDecayScore, consolidateMemories, searchMemories, buildMemorySummary } from './memory-engine.js';
 import { MemoryPool } from './memory-pool.js';
+import { cleanFloorForSummary } from '../../config/message-clean.js';
 
 export class MemoryCore {
     constructor(storage) {
@@ -88,7 +89,10 @@ export class MemoryCore {
      * @param context 可选 { place, senses, emotion }
      */
     record(role, text, context = {}, meta = {}) {
-        const content = String(text || '').replace(/\s+/g, ' ').trim();
+        let content = String(text || '');
+        // [芋圆] 采集前清洗: 剔除 horae 等插件注入的状态块/HTML/成对块/裸K=V行, 避免把系统状态当记忆采进去
+        try { content = cleanFloorForSummary(content); } catch (e) { /* 清洗失败保留原文 */ }
+        content = content.replace(/\s+/g, ' ').trim();
         if (!content) return null;
 
         const emotion = this.emotion.analyze(content);
