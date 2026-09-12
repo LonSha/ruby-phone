@@ -9,6 +9,7 @@ import { WangxiangView } from './wangxiang-view.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { WechatData } from '../wechat/wechat-data.js';
 import { parseWangxiangTaskTags } from './wangxiang-task-parser.js';
+import { PointsLedger } from './points.js';
 
 const WANGXIANG_TASK_VISUALS = [
     { accent: 'green', icon: 'fa-list-check' },
@@ -164,6 +165,7 @@ export class WangxiangApp {
         this.marketplaceOrders = this._loadMarketplaceOrders();
         this.inventoryItems = this._loadInventoryItems();
         this.creditBalance = this._loadCreditBalance();
+        this.points = new PointsLedger(storage); // Φ 积分/连击/成就 (Phosphene 移植)
         this.deliveryAddresses = this._loadDeliveryAddresses();
         this._reconcileGeneratedTaskStatuses();
         this._reconcilePersistedTaskAndInventoryState();
@@ -1303,9 +1305,25 @@ export class WangxiangApp {
             if (!creditAlreadyGranted) {
                 const rewardAmount = this._readMarketplaceAmount(task.reward);
                 const safeReward = Number.isFinite(rewardAmount) ? rewardAmount : 0;
-                this.creditBalance = this.getCreditBalance() + safeReward;
+                // Φ 积分引擎 (Phosphene 移植): 基础奖励 + 连击加成
+                const pointsResult = this.points?.completeTask?.({
+                    id: task.id,
+                    title: task.title,
+                    type: 'daily',
+                    difficulty: 'medium',
+                    basePoints: safeReward
+                }) || null;
+                const totalPoints = pointsResult?.total ?? safeReward;
+                this.creditBalance = this.getCreditBalance() + (Number.isFinite(totalPoints) ? totalPoints : 0);
                 task.creditRewardGranted = true;
-                task.creditRewardAmount = safeReward;
+                task.creditRewardAmount = Number.isFinite(totalPoints) ? totalPoints : 0;
+                if (pointsResult?.streak && pointsResult.streak >= 2) {
+                    task.pointsStreak = pointsResult.streak;
+                    task.pointsStreakBonus = pointsResult.streakBonus;
+                }
+                if (pointsResult?.achievements?.length) {
+                    task.pointsAchievements = (task.pointsAchievements || []).concat(pointsResult.achievements);
+                }
             }
             this._grantTaskRewardsToInventory(task);
         }
@@ -1810,6 +1828,7 @@ export class WangxiangApp {
         this.marketplaceOrders = this._loadMarketplaceOrders();
         this.inventoryItems = this._loadInventoryItems();
         this.creditBalance = this._loadCreditBalance();
+        this.points = new PointsLedger(this.storage);
         this.deliveryAddresses = this._loadDeliveryAddresses();
         this._reconcileGeneratedTaskStatuses();
         this._reconcilePersistedTaskAndInventoryState();
