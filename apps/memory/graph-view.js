@@ -167,8 +167,7 @@ export class GraphView {
       '  <div class="gph-detail-section"><div class="gph-section-title">关系链 (' + relations.length + ')</div>' + relHtml + '</div>',
       '  <div class="gph-detail-section"><div class="gph-section-title">手机侧相关记忆</div>' + memHtml + '</div>',
       '</div>'
-    ].join('
-');
+    ].join('\n');
 
     q('#gph-detail-back')?.addEventListener('click', () => this._doSearch());
   }

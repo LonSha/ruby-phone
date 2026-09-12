@@ -252,6 +252,7 @@ export class PeekView {
       graphite: '#3a3d42'
     }[tone] || '#f6ecd7';
   }
+  _bind() {
     const q = (sel) => this.container.querySelector(sel);
     q('#pk-home')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('phone:goHome')));
     q('#pk-auto')?.addEventListener('change', (e) => { this.app.data.autoInject = !!e.target.checked; });

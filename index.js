@@ -9836,6 +9836,54 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载塔罗App失败:', err);
                             phoneShell?.showNotification('错误', '塔罗App加载失败', '❌');
                         });
+                } else if (appId === 'peek') {
+                    import('./apps/peek/peek-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.peekApp) {
+                                window.VirtualPhone.peekApp = new module.PeekApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.peekApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载查手机App失败:', err);
+                            phoneShell?.showNotification('错误', '查手机App加载失败', '❌');
+                        });
+                } else if (appId === 'bilibili') {
+                    import('./apps/bilibili/bili-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.bilibiliApp) {
+                                window.VirtualPhone.bilibiliApp = new module.BiliApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.bilibiliApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载B站App失败:', err);
+                            phoneShell?.showNotification('错误', 'B站App加载失败', '❌');
+                        });
+                } else if (appId === 'theater') {
+                    import('./apps/theater/theater-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.theaterApp) {
+                                window.VirtualPhone.theaterApp = new module.TheaterApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.theaterApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载小剧场App失败:', err);
+                            phoneShell?.showNotification('错误', '小剧场App加载失败', '❌');
+                        });
+                } else if (appId === 'graph') {
+                    import('./apps/memory/graph-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.graphApp) {
+                                window.VirtualPhone.graphApp = new module.GraphApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.graphApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载图谱App失败:', err);
+                            phoneShell?.showNotification('错误', '图谱App加载失败', '❌');
+                        });
                 } else {
                     phoneShell?.showNotification('APP', `${appId} 功能开发中...`, '🚧');
                 }

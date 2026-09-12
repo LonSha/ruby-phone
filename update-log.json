@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.8.5": {
+      "date": "2026-09-12",
+      "items": [
+        "【修复】接通 4 个「做了但打不开」的 App 路由 —— 查手机(peek)/B站(bilibili)/小剧场(theater)/图谱(graph) 已在 APPS 数组注册，但 phone:openApp 缺路由分支，点图标只弹「功能开发中」。补齐 4 条懒加载分支后 24/24 App 全部可打开。",
+        "【修复】查手机视图 peek-view.js 缺方法头 —— `_dyToneColor` 方法后的事件绑定代码段丢失 `_bind() {` 声明，导致 `const q` 裸露在 class 体内 ESM 编译失败（Unexpected identifier 'q'），查手机 App 此前无法加载。补回 `_bind()` 方法声明。",
+        "【修复】图谱视图 graph-view.js `join('` 字符串未闭合 —— `].join('` 换行未闭合引号导致 ESM 编译失败（Invalid or unexpected token），图谱 App 此前无法加载。修复为 `].join('\\n')`。",
+        "【修复】路由补全后 24 个 App 全量语法门 + ESM import + 渲染冒烟测试全绿（peek/bilibili/theater/graph 实例化 render 均成功）。"
+      ]
+    },
     "2.8.4": {
       "date": "2026-09-12",
       "items": [
