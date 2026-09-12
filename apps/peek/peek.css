@@ -99,4 +99,19 @@
 .pk-db-type { font-size:11px; color:#2ea44f; background:#e6f7ec; border-radius:6px; padding:2px 7px; }
 .pk-db-item h4 { margin:0 0 5px; font-size:15px; }
 .pk-db-item p { margin:0; font-size:13px; color:#555; line-height:1.5; }
+/* ===== 角色日报 (dwell 12-日报 移值) ===== */
+.pk-dl-root { display:flex; flex-direction:column; gap:12px; }
+.pk-dl-head { text-align:center; background:#fffdf8; border-top:3px double #3d3d3d; border-bottom:1px solid #3d3d3d; padding:14px 10px; }
+.pk-dl-head h2 { margin:0 0 4px; font-family:Georgia,"Songti SC","SimSun",serif; font-size:20px; color:#2b2b2b; }
+.pk-dl-head span { font-size:12px; color:#7a7a7a; }
+.pk-dl-body { display:flex; flex-direction:column; gap:12px; }
+.pk-dl-sec { background:#fffdf8; border:1px solid #e5ddcc; border-radius:4px; padding:12px 14px; }
+.pk-dl-sec-head { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; border-bottom:1px solid #d9cfb8; padding-bottom:6px; }
+.pk-dl-name { font-family:Georgia,"Songti SC","SimSun",serif; font-size:16px; font-weight:700; color:#2b2b2b; }
+.pk-dl-sec-head em { font-size:11px; color:#999; font-style:normal; }
+.pk-dl-sec-body p { margin:0 0 6px; font-family:"Songti SC","SimSun",serif; font-size:13px; line-height:1.6; color:#3d3d3d; }
+.pk-dl-note { border-left:3px solid #b59a5a; background:#faf6ea; padding:10px 14px; margin:4px 0; }
+.pk-dl-note-tag { display:inline-block; font-size:11px; color:#8a6d1f; background:#f1e7c8; border-radius:4px; padding:1px 6px; margin-bottom:4px; }
+.pk-dl-note p { margin:0; font-size:13px; color:#5d4f2b; line-height:1.5; }
+.pk-dl-foot { text-align:center; font-size:11px; color:#999; padding:4px 0 8px; }
 .pk-item p, .pk-card p, .pk-section-head p { margin:0; color:#5a5148; font-size:13px; line-height:1.5; white-space:pre-wrap; }

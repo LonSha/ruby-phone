@@ -16,7 +16,8 @@ const SECTION_TITLES = {
   douyin: '抖音',
   weibo: '微博',
   bilibili: 'B站',
-  douban: '豆瓣'
+  douban: '豆瓣',
+  daily: '角色日报'
 };
 
 function compactText(value, max = 64) {
@@ -595,6 +596,85 @@ export class PeekData {
       description: joinItems(activities.slice(0, 3).map((a) => a.title))
     };
   }
+  _buildDaily(name) {
+    // 借鉴 dwell-on-something 12-日报 机制：版块化报纸 + 末尾夹一张便条
+    // 数据源全部为本会话已有痕迹（微信/日记/微博/小红书/日历），纯模板格式化，零 LLM
+    const phone = this._phone();
+    const now = new Date();
+    const today = now.getDate();
+    // 版块1: 今日聊天
+    const chatLines = [];
+    try {
+      const wechat = phone.wechatApp?.wechatData;
+      (wechat?.getChatList?.() || []).filter((c) => c?.type !== 'group' && this._sameName(c.name, name)).slice(0, 4).forEach((chat) => {
+        const msgs = (wechat?.getMessages?.(chat.id) || []).filter((m) => m && m.isTimeMarker !== true && Number(m.timestamp) && new Date(m.timestamp).getDate() === today);
+        if (msgs.length) {
+          chatLines.push('· 和 ' + chat.name + ' 聊了 ' + msgs.length + ' 条：' + compactText(describeWechatMessage(msgs[msgs.length - 1]), 40));
+        }
+      });
+    } catch (e) {}
+    // 版块2: 日记
+    const diaryLines = [];
+    try {
+      const diary = phone.diaryApp?.data || phone.diaryApp?.diaryData;
+      (diary?.getEntries?.() || []).filter((en) => this._sameName(en.author, name)).slice(-2).forEach((en) => {
+        diaryLines.push('· 《' + (en.title || compactText(en.content, 12) || '无题') + '》' + compactText(en.content || '', 46));
+      });
+    } catch (e) {}
+    // 版块3: 社交动态
+    const socialLines = [];
+    try {
+      const xhs = phone.xhsApp?.data || phone.xhsApp?.xhsData;
+      (xhs?.getNotes?.() || []).filter((n) => this._sameName(n.author, name)).slice(-2).forEach((n) => {
+        socialLines.push('· 小红书 · ' + (n.title || '笔记') + '：' + compactText(n.content || '', 40));
+      });
+    } catch (e) {}
+    try {
+      const weibo = phone.weiboApp?.data || phone.weiboApp?.weiboData;
+      (weibo?.getUserPosts?.() || []).slice(-2).forEach((p) => {
+        socialLines.push('· 微博 · ' + compactText(p.body || p.content || '', 44));
+      });
+    } catch (e) {}
+    // 版块4: 今日日程
+    const calLines = [];
+    try {
+      const calendar = phone.calendarApp?.data || phone.calendarApp?.calendarData;
+      (calendar?.getMemos?.() || []).filter((memo) => memo && String(memo.date || '').includes(String(now.getMonth() + 1) + '月' + today + '日')).forEach((memo) => {
+        calLines.push('· ' + (memo.title || memo.content || '日程'));
+      });
+    } catch (e) {}
+    // 版块定义: 每个版块配一句"这一版怎么写"(EXTRA 思想, 但这里用于注入模板说明)
+    const sections = [];
+    if (chatLines.length) sections.push({ name: '今日聊天', extra: '记录今天和谁说了话', lines: chatLines });
+    if (diaryLines.length) sections.push({ name: '今日日记', extra: '角色自己写的日子', lines: diaryLines });
+    if (socialLines.length) sections.push({ name: '今日动态', extra: '在社交平台留下的痕迹', lines: socialLines });
+    if (calLines.length) sections.push({ name: '今日日程', extra: '日历上排了的事', lines: calLines });
+    if (!sections.length) {
+      return generatedSection('daily', name);
+    }
+    // 便条: 从日记/最新动态提炼角色口吻一句话
+    let note = '今天也是平静的一天。';
+    if (diaryLines.length) {
+      note = '（翻到日记，好像昨天也在想这件事。）';
+    }
+    // 报纸文本
+    const dateStr = (now.getMonth() + 1) + '月' + today + '日';
+    const head = '== ' + name + ' 的角色日报 · ' + dateStr + ' ==\n';
+    const body = sections.map((s) => (
+      '【' + s.name + '】' + (s.extra ? '(' + s.extra + ')' : '') + '\n' + s.lines.join('\n')
+    )).join('\n\n');
+    const noteBlock = '— 便条 —\n' + note;
+    const full = head + '\n' + body + '\n\n' + noteBlock;
+    return {
+      id: 'daily',
+      title: SECTION_TITLES.daily,
+      count: sections.length,
+      generated: false,
+      items: sections.map((s) => ({ id: s.name, title: s.name, subtitle: s.lines.length + ' 条', body: s.lines.join('；'), meta: s.extra })),
+      daily: { dateStr, sections, note, full },
+      description: dateStr + ' · ' + sections.map((s) => s.name).join('/')
+    };
+  }
   buildViewModel() {
     const names = this.listCharacters();
     const selected = this.getSelectedName();
@@ -625,7 +705,8 @@ export class PeekData {
         this._buildDouyin(selected),
         this._buildWeibo(selected),
         this._buildBilibili(selected),
-        this._buildDouban(selected)
+        this._buildDouban(selected),
+        this._buildDaily(selected)
       ]
     };
   }

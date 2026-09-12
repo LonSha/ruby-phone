@@ -38,7 +38,9 @@ export class PeekView {
     }).join('') || '<span class="pk-empty">还没有可查的角色</span>';
 
     let body = '';
-    if (section && section.id === 'douyin' && section.douyin) {
+    if (section && section.id === 'daily' && section.daily) {
+      body = this._renderDaily(view, section);
+    } else if (section && section.id === 'douyin' && section.douyin) {
       body = this._renderDouyin(view, section);
     } else if (section && section.id === 'weibo' && section.weibo) {
       body = this._renderWeibo(view, section);
@@ -151,6 +153,27 @@ export class PeekView {
     return video.comments.map((c) => {
       return '<div class="pk-dy-comment"><b>' + this._esc(c.authorName) + '</b><p>' + this._esc(c.text) + '</p></div>';
     }).join('');
+  }
+  _renderDaily(view, section) {
+    const d = section.daily || {};
+    const dateStr = d.dateStr || '';
+    const sectionsHtml = (d.sections || []).map((s) => {
+      return '<section class="pk-dl-sec">'
+        + '<div class="pk-dl-sec-head"><span class="pk-dl-name">' + this._esc(s.name) + '</span>'
+        + (s.extra ? '<em>' + this._esc(s.extra) + '</em>' : '') + '</div>'
+        + '<div class="pk-dl-sec-body">' + (s.lines || []).map((l) => '<p>' + this._esc(l) + '</p>').join('') + '</div>'
+        + '</section>';
+    }).join('');
+    const noteHtml = d.note
+      ? '<aside class="pk-dl-note"><span class="pk-dl-note-tag">便条</span><p>' + this._esc(d.note) + '</p></aside>'
+      : '';
+    return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
+      + '<div class="pk-dl-root">'
+      + '  <header class="pk-dl-head"><h2>' + this._esc(view.selectedName || '角色') + ' 的角色日报</h2>'
+      + '    <span>' + this._esc(dateStr) + '</span></header>'
+      + '  <div class="pk-dl-body">' + sectionsHtml + noteHtml + '</div>'
+      + '  <footer class="pk-dl-foot">— 只给 ' + this._esc(view.selectedName || 'TA') + ' 看的报纸 —</footer>'
+      + '</div>';
   }
   _renderDouban(view, section) {
     const d = section.douban || {};
