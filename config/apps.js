@@ -258,6 +258,14 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'reading',
+        name: '阅读',
+        icon: '📖',
+        color: '#b08968',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置

@@ -9836,6 +9836,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载塔罗App失败:', err);
                             phoneShell?.showNotification('错误', '塔罗App加载失败', '❌');
                         });
+                } else if (appId === 'reading') {
+                    import('./apps/reading/reading-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.readingApp) {
+                                window.VirtualPhone.readingApp = new module.ReadingApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.readingApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载阅读App失败:', err);
+                            phoneShell?.showNotification('错误', '阅读App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
