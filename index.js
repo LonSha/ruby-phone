@@ -34,12 +34,10 @@ const ST_PHONE_HONEY_THEME_URL = new URL('./apps/honey/honeyzt.png', import.meta
 const ST_PHONE_GAMES_MODULE_URL = new URL('./apps/games/games-app.js', import.meta.url).href;
 const ST_PHONE_GAMES_CSS_URL = new URL('./apps/games/poker/poker.css?v=1.0.2', import.meta.url).href;
 const ST_PHONE_UPDATE_MANIFEST_URLS = [
-    'https://raw.githubusercontent.com/gaigai315/yuzuki-phone/main/manifest.json',
-    'https://raw.githubusercontent.com/gaigai315/yuzuki-phone/master/manifest.json'
+    'https://raw.githubusercontent.com/LonSha/ruby-phone/main/manifest.json'
 ];
 const ST_PHONE_UPDATE_LOG_URLS = [
-    'https://raw.githubusercontent.com/gaigai315/yuzuki-phone/main/update-log.json',
-    'https://raw.githubusercontent.com/gaigai315/yuzuki-phone/master/update-log.json'
+    'https://raw.githubusercontent.com/LonSha/ruby-phone/main/update-log.json'
 ];
 const ST_PHONE_LOCAL_UPDATE_LOG_URL = new URL('./update-log.json', import.meta.url).href;
 const WECHAT_ONLINE_PROACTIVE_ENABLED_KEY = 'wechat_online_proactive_enabled';
