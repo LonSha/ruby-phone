@@ -28,7 +28,8 @@ export class GraphBridge {
     probe() {
         try {
             const lm = window.LonShaMemory;
-            this.available = !!(lm && lm.engine);
+            // [v2.8.13] 优先官方门面探测, 降级到旧 engine 直访 (向后兼容旧版记忆插件)
+            this.available = !!(lm && (typeof lm.getPublicData === 'function' || lm.engine));
             return this.available;
         } catch (e) {
             this.available = false;
@@ -55,8 +56,12 @@ export class GraphBridge {
         let data = null;
         try {
             const lm = window.LonShaMemory;
-            const engine = lm?.engine;
-            if (engine && engine.graph) {
+            // [v2.8.13] 优先官方只读门面 getPublicData() (收敛私有耦合), 降级到旧深层直访
+            const pub = (typeof lm?.getPublicData === 'function') ? lm.getPublicData() : null;
+            if (pub && pub.graph) {
+                data = { source: 'runtime', ...pub };
+            } else if (lm?.engine && lm.engine.graph) {
+                const engine = lm.engine;
                 data = {
                     source: 'runtime',
                     graph: {
@@ -218,11 +223,11 @@ export class GraphBridge {
      */
     pushPhoneMemories(options = {}) {
         const lm = window.LonShaMemory;
-        if (!lm?.engine?.graph) return 0;
+        // [v2.8.13] 优先官方写入门面 getGraphWriter(), 降级到旧 engine.graph 直访
+        const graph = (typeof lm?.getGraphWriter === 'function' ? lm.getGraphWriter() : null) || lm?.engine?.graph;
+        if (!graph) return 0;
         const core = window.VirtualPhone?.memoryCore;
         if (!core) return 0;
-
-        const graph = lm.engine.graph;
         let count = 0;
         try {
             const items = (core.longTerm || []).filter(m => (m.importance || 0) >= (options.minImportance || 7));
