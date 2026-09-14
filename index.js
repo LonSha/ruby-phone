@@ -25,7 +25,11 @@ import { createInitialState as createDrivesState, advance as advanceDrives, form
 import { createJiwen } from './config/jiwen-engine.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
-const ST_PHONE_VERSION = '1.5.5';
+// [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
+// （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
+// 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
+// 导致升级后仍被判为「发现新版本」，每小时提示一次。
+const ST_PHONE_VERSION = '2.8.11';
 const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -60,14 +64,13 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: '2026-09-08',
+    date: '2026-09-14',
     items: [
-        '【修复】修复电子小猫存档未按酒馆会话隔离，切换角色或会话后错误共用同一只小猫的问题。',
-        '【优化】旧版全局猫盒存档会自动迁移到当前会话，并清理遗留全局数据，避免继续跨会话串档。',
-        '【优化】重做手机边框与全局文字颜色选择器，支持色相、饱和度、明度、RGB 和 HEX 精细调色，并在拖动时实时预览效果。',
-        '【修复】合并边框与文字颜色设置入口，修复移动端色相滑杆出现双轨道以及原生颜色面板不直观的问题。',
-        '【修复】修复部分 Android 高分屏设备上传头像或壁纸时，裁剪预览与最终保存结果缩放不一致的问题。',
-        '【优化】更新六套悬浮图标资源，优化图标显示效果与文件体积。'
+        '【修复·关键】修复入口脚本结构性语法损坏，该损坏会导致插件完全无法被浏览器解析加载。',
+        '【修复·关键】成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度改为按会话隔离，修复跨角色跨会话串味。',
+        '【修复】补齐 2048/数独/对弈/谁是卧底/扑克牌局存档的会话隔离迁移漏项。',
+        '【新增】聊天存档写入侧防膨胀熔断：数组按新条目方向感知限长，超大 Base64 图片拒写。',
+        '【修复】版本号对齐 manifest，停止升级后仍反复提示「发现新版本」。'
     ]
 };
 

@@ -150,6 +150,71 @@ export class PhoneStorage {
         }
     }
 
+    // ========================================
+    // 🛡️ [v2.8.11] 聊天存档防膨胀熔断
+    // ========================================
+    // 说明：仓库任何版本此前都不存在写入侧熔断
+    // （git log -S'_sanitizeChatData' 全历史为空），而 AI 可持续生成
+    // 小红书笔记/贴吧帖子，这些顶层裸数组会无节制写入 chatMetadata，
+    // 直接撑大聊天 jsonl 并拖慢保存。此处只做「最后防线」式限长，
+    // 常规裁剪仍由各 App 自己负责（如 gacha 30 条、tarot 50 条）。
+    //
+    // 重要：键表只登记「实测确为顶层数组」的键。
+    // 多数 App 以 JSON.stringify 字符串或对象存储（如 weibo_user_posts、
+    // bili_entries_v1、theater_stories_v1、memory_core_v1），数组分支对它们
+    // 永不生效——登记进去只会造成「看似有防护实为零引用」的假接线。
+    // 若后续某 App 改为裸数组写入，再在此登记并补方向断言测试。
+
+    // 新条目在头部的顶层数组键（unshift 语义）：必须保留「前 N 条」，
+    // 若统一按 slice(-N) 保留尾部，会把最新笔记/帖子整批删掉。
+    //   ruby_xhs_notes  <- xhs-data.js:93   this.notes.unshift(newNote)
+    //   ruby_tieba_posts<- tieba-data.js:103 this.posts.unshift(newPost)
+    static NEWEST_FIRST_KEYS = [
+        /^ruby_xhs_notes$/,
+        /^ruby_tieba_posts$/,
+    ];
+
+    // 顶层数组硬上限（超出才介入，正常玩法量不会触及）
+    static ARRAY_CEILING = 300;
+    // 单值 Base64 图片硬上限（100KB）：正常路径应已落盘为 /backgrounds 路径，
+    // 走到这里说明上传失败或外部直接塞了 data URL，拒写以防击穿存档。
+    static BASE64_IMAGE_CEILING = 102400;
+
+    _isArrayNewestFirst(key) {
+        return PhoneStorage.NEWEST_FIRST_KEYS.some(rx => rx.test(key));
+    }
+
+    /**
+     * 清洗并裁剪写入 chatMetadata 的数据
+     * @returns {*} 处理后的值
+     */
+    _sanitizeChatData(key, value) {
+        try {
+            if (value === null || value === undefined) return value;
+
+            // 1. 顶层数组限长（方向感知）
+            if (Array.isArray(value) && value.length > PhoneStorage.ARRAY_CEILING) {
+                const ceiling = PhoneStorage.ARRAY_CEILING;
+                const newestFirst = this._isArrayNewestFirst(key);
+                const kept = newestFirst ? value.slice(0, ceiling) : value.slice(-ceiling);
+                console.warn(`[PhoneStorage] 【${key}】数组超出上限(${value.length} > ${ceiling})，按${newestFirst ? '保留最新(头部)' : '保留最新(尾部)'}裁剪为 ${kept.length} 条`);
+                return kept;
+            }
+
+            // 2. 超大 Base64 图片拒写
+            if (typeof value === 'string'
+                && value.length > PhoneStorage.BASE64_IMAGE_CEILING
+                && /^data:image\//i.test(value)) {
+                console.error(`[PhoneStorage] 拒绝将超大图片 Base64 (${Math.round(value.length / 1024)}KB) 写入 chatMetadata【${key}】，应使用 /backgrounds 路径`);
+                return '[BLOCKED_LARGE_BASE64_IMAGE]';
+            }
+        } catch (e) {
+            // 熔断本身不得阻断正常写入
+            console.warn(`[PhoneStorage] 【${key}】清洗异常，跳过清洗:`, e);
+        }
+        return value;
+    }
+
     /**
      * 生成存储键名（兼容旧版）
      * @param {string} dataType - 数据类型
@@ -471,6 +536,8 @@ export class PhoneStorage {
             // ==================== 写入酒馆内存 ====================
             if (isChatData) {
                 // 聊天专属数据 → chatMetadata
+                // [v2.8.11] 写入前过防膨胀熔断（方向感知限长 + 超大 Base64 拒写）
+                value = this._sanitizeChatData(key, value);
                 const chatStore = this._getChatMetadataStore();
                 if (chatStore) {
                     chatStore[key] = value;

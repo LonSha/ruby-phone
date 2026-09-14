@@ -71,16 +71,18 @@ const ok = (name, cond, detail = '') => {
   }
 }
 
-// ========== 5. manifest/update-log 合法性 ==========
+// ========== 5. manifest/update-log 合法性（跨源自洽，不硬编码版本号） ==========
 {
   try {
     const m = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
-    ok('manifest 合法且版本 2.8.10', m.version === '2.8.10', m.version);
-  } catch (e) { ok('manifest 合法', false, e.message); }
-  try {
     const u = JSON.parse(fs.readFileSync(path.join(root, 'update-log.json'), 'utf8'));
-    ok('update-log 有 2.8.10 条目', '2.8.10' in u.versions);
-  } catch (e) { ok('update-log 合法', false, e.message); }
+    ok('manifest 合法', !!m.version && !!m.name, JSON.stringify(Object.keys(m)));
+    ok('update-log 合法', !!u.versions && typeof u.latest === 'string');
+    ok('manifest.version == update-log.latest', m.version === u.latest, `manifest=${m.version} latest=${u.latest}`);
+    ok('update-log 含当前版本条目', !!(u.versions || {})[m.version], m.version);
+    const cur = (u.versions || {})[m.version];
+    ok('当前版本条目含非空 items', !!(cur && Array.isArray(cur.items) && cur.items.length));
+  } catch (e) { ok('manifest/update-log 可解析', false, e.message); }
 }
 
 // ========== 6. 数据规模 ==========
