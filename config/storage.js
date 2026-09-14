@@ -52,6 +52,19 @@ export class PhoneStorage {
             /^bili_/,             // B站条目
             /^theater_/,          // 小剧场
             /^life_events_/,      // 生活事件时间线
+            // [v2.8.10 审计修复] 新增 App 的剧情状态此前未匹配任何 pattern，
+            // 被误判为全局配置写入 extensionSettings，导致换角色/换会话时
+            // 成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度互相串味。
+            // 这些均为随会话隔离的运行时状态（CONTEXT.md 零数据库铁律 #3）。
+            /^ruby_/,             // 新生态 App 会话状态（成就/抽卡/健康/玩法/塔罗/贴吧/小红书/阅读）
+            // [v2.8.10 审计修复] 游戏存档迁移漏项：catbox/werewolf 已迁到 chat_games_*，
+            // 以下牌局/棋盘状态仍留在 games_*。此处精确枚举，
+            // 刻意不捕获 games_*_ai_prompt / *_presets_migrated 等提示词模板（属全局配置）。
+            /^games_\d+_state$/,                          // 2048
+            /^games_sudoku_state$/,
+            /^games_board_state$/,                        // 五子棋/象棋/斗兽棋
+            /^games_undercover_state$/,                   // 谁是卧底
+            /^games_poker_(user_chips|player_count|chips_mode|selected_contact_ids)$/,
         ];
 
         // ==================== 防抖：saveChat ====================
@@ -400,6 +413,25 @@ export class PhoneStorage {
 
             if (value !== null && value !== undefined) {
                 return value;
+            }
+
+            // ==================== 第1.5优先级：修正历史误存 ====================
+            // [v2.8.10 审计修复] 会话键若此前因 pattern 缺失被写入 extensionSettings，
+            // 这里做一次性搬迁：搬回 chatMetadata 并从全局配置移除，避免继续跨会话串味。
+            if (isChatData && (value === null || value === undefined)) {
+                const strayStore = this._getExtensionSettingsStore();
+                if (strayStore && strayStore[key] !== undefined) {
+                    const strayValue = strayStore[key];
+                    delete strayStore[key];
+                    const chatStoreForMigrate = this._getChatMetadataStore();
+                    if (chatStoreForMigrate) {
+                        chatStoreForMigrate[key] = strayValue;
+                        this._debouncedSaveChat();
+                        this._queuedSaveExtensionSettings();
+                        console.info(`[PhoneStorage] 已将会话键【${key}】从全局配置迁移回当前会话`);
+                    }
+                    return strayValue;
+                }
             }
 
             // ==================== 第2优先级：从 localStorage 读取旧数据并自动迁移 ====================

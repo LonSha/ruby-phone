@@ -75,11 +75,11 @@ const ok = (name, cond, detail = '') => {
 {
   try {
     const m = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
-    ok('manifest 合法且版本 2.8.9', m.version === '2.8.9', m.version);
+    ok('manifest 合法且版本 2.8.10', m.version === '2.8.10', m.version);
   } catch (e) { ok('manifest 合法', false, e.message); }
   try {
     const u = JSON.parse(fs.readFileSync(path.join(root, 'update-log.json'), 'utf8'));
-    ok('update-log 有 2.8.9 条目', '2.8.9' in u.versions);
+    ok('update-log 有 2.8.10 条目', '2.8.10' in u.versions);
   } catch (e) { ok('update-log 合法', false, e.message); }
 }
 

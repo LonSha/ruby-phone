@@ -9795,7 +9795,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载贴吧失败:', err);
                             phoneShell?.showNotification('错误', '贴吧加载失败', '❌');
-                        }                } else if (appId === 'health') {
+                        });
+                } else if (appId === 'health') {
                     import('./apps/health/health-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.healthApp) {
@@ -9806,7 +9807,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载健康App失败:', err);
                             phoneShell?.showNotification('错误', '健康App加载失败', '❌');
-                        }););
+                        });
                 } else if (appId === 'memory') {
                     import('./apps/memory/memory-app.js')
                         .then(module => {
@@ -11999,7 +12000,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                         injectIntoMessages('{{JIWEN_PROACTIVE}}', jiwenProactiveContent, 'jiwen_proactive');
                                     } else {
                                         injectIntoMessages('{{JIWEN_PROACTIVE}}', '', 'jiwen_proactive');
-                                    }
                                     }
 
                                     // ============================
