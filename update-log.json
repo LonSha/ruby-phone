@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.11.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】状态追踪解析引擎，缝合自 Angx666/u4d-panel 的 status-parser 状态面板机制，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块。剥离 DOM 渲染（hideStatusMarkup/removeLegacyStatusMarkup），保留并通用化核心解析能力，非照抄。",
+        "【新增·手机状态】apps/phone/status-tracker.js：解析 AI 回复中的 [STATUS:字段=值|字段+=记录] 标记为结构化状态对象。中英字段别名规范化（normalizeKey: trim+小写+去_-空格 → FIELD_ALIASES 反查）；keyed 载荷（字段=值，| 分隔）+ legacy 定位置载荷（≥7段含数值校验）双格式；增量记录去重保序。",
+        "【核心算法】跨天状态滚动——getStoryDayKey 识别剧情日（日历日期/第N天含中文数字 parseChineseInteger/Day N），isStoryDayChange 检测切换后 applyStatusUpdate 仅携带 growth/form 等 DAILY_CARRY_FIELDS、其余重置、records 跨天保留。makeParser 工厂支持注入自定义字段别名表，通用化适配任意角色状态域。",
+        "【测试】新增 status-tracker 12 断言（归一化/中文数字/剧情日/跨天/keyed/legacy/数值校验/去重/跨天滚动/文本提取/自定义别名）。全量 165/165 绿（153 基线+12 新），语法门 208 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
     "2.10.0": {
       "date": "2026-09-15",
       "items": [
