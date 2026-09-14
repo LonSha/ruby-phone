@@ -253,7 +253,7 @@ export class PhoneStorage {
      * 防抖保存聊天数据到后端
      * 延迟执行，期间的多次调用会被合并
      */
-    _debouncedSaveChat() {
+    _debouncedSaveChat(immediate = false) {
         // 清除之前的定时器
         if (this._saveChatTimer) {
             clearTimeout(this._saveChatTimer);
@@ -263,7 +263,9 @@ export class PhoneStorage {
         const queuedConversationId = this.currentConversationId;
 
         // 设置新的定时器
-        this._saveChatTimer = setTimeout(async () => {
+        // [v2.8.13] 落盘体抽为具名 async 函数，供「防抖」与「立即」两条路径共用，
+        // 避免同一套重试/串行逻辑出现两份实现而漂移。以下函数体本身未改动。
+        const _runSaveChat = async () => {
             this._saveChatTimer = null;
             try {
                 const context = this.getContext();
@@ -305,7 +307,15 @@ export class PhoneStorage {
             } catch (e) {
                 console.error('[PhoneStorage] saveChat 失败:', e);
             }
-        }, this._saveChatDelay);
+        };
+
+        // [v2.8.13] immediate=true：绕过 _saveChatDelay 防抖，立即落盘，
+        // 返回可 await 的 Promise（历史上第三参数被 set() 签名丢弃，从未生效）。
+        if (immediate === true) {
+            return _runSaveChat();
+        }
+        // 设置新的定时器
+        this._saveChatTimer = setTimeout(() => { _runSaveChat(); }, this._saveChatDelay);
     }
 
     // ========================================
@@ -344,7 +354,24 @@ export class PhoneStorage {
      * 队列锁保存全局配置
      * 使用 Promise 链实现 Mutex，确保"获取->合并->保存"的原子性
      */
-    _queuedSaveExtensionSettings() {
+    _queuedSaveExtensionSettings(immediate = false) {
+        // [v2.8.13] immediate=true：不入队列、不等防抖，直接落盘全局配置。
+        // 优先使用酒馆自带的非防抖 saveSettings（自行处理 CSRF 与并发），
+        // 不可用时才退到手动 API 写入。
+        if (immediate === true) {
+            return (async () => {
+                try {
+                    const context = this.getContext();
+                    if (!context) return;
+                    if (typeof saveSettings === 'function') { await saveSettings(); return; }
+                    if (typeof context.saveSettings === 'function') { await context.saveSettings(); return; }
+                    await this._manualSaveSettings(context);
+                } catch (e) {
+                    console.error('[PhoneStorage] 立即保存全局配置失败:', e);
+                }
+            })();
+        }
+
         // 如果已有待执行的保存任务，直接返回（合并请求）
         if (this._settingsSaveQueued) {
             return;
@@ -528,8 +555,12 @@ export class PhoneStorage {
      *
      * @param {string} key - 存储键名
      * @param {*} value - 要存储的值
+     * @param {boolean} [immediate=false] - [v2.8.13] true=立即落盘，绕过防抖/队列。
+     *        注意：本参数**不改变**数据写入 chatMetadata 还是 extensionSettings，
+     *        那始终由 CHAT_DATA_PATTERNS（_isChatData）决定。
+     *        历史上它是被 set(key, value) 签名静默丢弃的死参数（全仓库 18 处调用点）。
      */
-    async set(key, value) {
+    async set(key, value, immediate = false) {
         try {
             const isChatData = this._isChatData(key);
 
@@ -541,16 +572,24 @@ export class PhoneStorage {
                 const chatStore = this._getChatMetadataStore();
                 if (chatStore) {
                     chatStore[key] = value;
-                    // 🔥 防抖保存到后端
-                    this._debouncedSaveChat();
+                    // 🔥 防抖保存到后端；immediate 时绕过防抖并等待落盘完成
+                    if (immediate === true) {
+                        await this._debouncedSaveChat(true);
+                    } else {
+                        this._debouncedSaveChat();
+                    }
                 }
             } else {
                 // 全局配置数据 → extensionSettings
                 const extStore = this._getExtensionSettingsStore();
                 if (extStore) {
                     extStore[key] = value;
-                    // 🔥 队列锁保存到后端
-                    this._queuedSaveExtensionSettings();
+                    // 🔥 队列锁保存到后端；immediate 时绕过队列直接落盘
+                    if (immediate === true) {
+                        await this._queuedSaveExtensionSettings(true);
+                    } else {
+                        this._queuedSaveExtensionSettings();
+                    }
                 }
             }
 
@@ -568,8 +607,9 @@ export class PhoneStorage {
     /**
      * 🔥 删除指定 key 的数据
      * @param {string} key - 存储键名
+     * @param {boolean} [immediate=false] - 同 set()：true=立即落盘
      */
-    async remove(key) {
+    async remove(key, immediate = false) {
         try {
             const isChatData = this._isChatData(key);
 
@@ -578,13 +618,23 @@ export class PhoneStorage {
                 const chatStore = this._getChatMetadataStore();
                 if (chatStore && chatStore[key] !== undefined) {
                     delete chatStore[key];
-                    this._debouncedSaveChat();
+                    // [v2.8.13] 与 set() 对齐
+                    if (immediate === true) {
+                        await this._debouncedSaveChat(true);
+                    } else {
+                        this._debouncedSaveChat();
+                    }
                 }
             } else {
                 const extStore = this._getExtensionSettingsStore();
                 if (extStore && extStore[key] !== undefined) {
                     delete extStore[key];
-                    this._queuedSaveExtensionSettings();
+                    // [v2.8.13] 与 set() 对齐
+                    if (immediate === true) {
+                        await this._queuedSaveExtensionSettings(true);
+                    } else {
+                        this._queuedSaveExtensionSettings();
+                    }
                 }
             }
 

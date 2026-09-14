@@ -1,5 +1,13 @@
 {
   "versions": {
+    "2.8.13": {
+      "date": "2026-09-14",
+      "items": [
+        "feat(storage): set()/remove() 第三参数实现 immediate 语义——true 绕过防抖立即落盘，false/缺省走合并防抖；落点不变量保持由 CHAT_DATA_PATTERNS 决定，第三参不改变存储位置",
+        "fix(storage): 修复 18 处历史调用点（8 处 true / 10 处 false）第三参数被静默忽略的意图断裂；此前 43 处系旧正则被嵌套括号截断的虚高数字，已由括号配平扫描器修正",
+        "test(storage): 新增 storage-immediate.test.mjs 21 项断言（立即/防抖/合并/绕队列/落点不变量/熔断两路径/并发），变异测试 7 体击杀验证"
+      ]
+    },
     "2.8.12": {
       "date": "2026-09-14",
       "items": [
@@ -256,5 +264,5 @@
       ]
     }
   },
-  "latest": "2.8.12"
+  "latest": "2.8.13"
 }
