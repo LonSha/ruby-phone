@@ -31,7 +31,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.8.13';
+const ST_PHONE_VERSION = '2.8.14';
 const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -66,13 +66,12 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: '2026-09-14',
+    date: '2026-09-15',
     items: [
-        '【修复·关键】修复入口脚本结构性语法损坏，该损坏会导致插件完全无法被浏览器解析加载。',
-        '【修复·关键】成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度改为按会话隔离，修复跨角色跨会话串味。',
-        '【修复】补齐 2048/数独/对弈/谁是卧底/扑克牌局存档的会话隔离迁移漏项。',
-        '【新增】聊天存档写入侧防膨胀熔断：数组按新条目方向感知限长，超大 Base64 图片拒写。',
-        '【修复】版本号对齐 manifest，停止升级后仍反复提示「发现新版本」。'
+        '【新增·原创超大升级】织光机 Timeweaver——跨 App 数字生活叙事引擎（第 29 个 App）。主动聚合日记/相册/成就/日历/微博/蜜约/剧场七源数据，把零散数字足迹织成一部可回顾的个人编年史。',
+        '【引擎】七源归一容错+时间归一、日/周/月分桶时间线、七类「第一次」里程碑识别、滑窗情绪曲线、亲密度榜（频次×情感×跨源广度）、数据驱动「时光信」叙事生成。',
+        '【界面】四 Tab——时光信（可导出 .txt）/生活流/里程碑/亲密度榜，琥珀金主题纯内联 CSS，零外部请求。',
+        '【测试】引擎 12 断言 + 收集器 7 断言（含脏数据容错）+ 路由冒烟。全量 117/117 绿，entry-integrity 23/23、audit 33/33 通过。'
     ]
 };
 
@@ -9424,6 +9423,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载幸运转盘App失败:', err);
                             phoneShell?.showNotification('错误', '幸运转盘App加载失败', '❌');
+                        });
+                } else if (appId === 'timeweaver') {
+                    import('./apps/timeweaver/timeweaver-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.timeweaverApp) {
+                                window.VirtualPhone.timeweaverApp = new module.TimeweaverApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.timeweaverApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载织光机App失败:', err);
+                            phoneShell?.showNotification('错误', '织光机App加载失败', '❌');
                         });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')

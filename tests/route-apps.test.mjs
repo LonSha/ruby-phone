@@ -42,6 +42,7 @@ const apps = [
   ['bilibili', '../apps/bilibili/bili-app.js', 'BiliApp'],
   ['theater', '../apps/theater/theater-app.js', 'TheaterApp'],
   ['graph', '../apps/memory/graph-app.js', 'GraphApp'],
+  ['timeweaver', '../apps/timeweaver/timeweaver-app.js', 'TimeweaverApp'],
 ];
 let fail = 0;
 for (const a of apps) { if (!(await smoke(a))) fail++; }

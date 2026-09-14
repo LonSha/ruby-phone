@@ -1,5 +1,15 @@
 {
   "versions": {
+    "2.8.14": {
+      "date": "2026-09-15",
+      "items": [
+        "【新增·原创超大升级】织光机 Timeweaver——跨 App 数字生活叙事引擎（第 29 个 App）。现有 28 个 App 是「当下的娱乐孤岛」：微信聊完即散、日记写完即存、照片拍过即忘，没有任何 App 把碎片整合成可回顾的叙事。织光机主动聚合日记/相册/成就/日历/微博/蜜约/剧场七源数据（顺带消费 life_events_v1 与 chatMetadata 兜底），把零散数字足迹织成一部可回顾的个人编年史。",
+        "【引擎】timeweaver-engine.js（352 行纯函数，ESM export 对齐 drives-engine/jiwen-engine 约定）：normalizeEvents 七源归一容错+时间归一（ms 优先、楼号回退）；buildTimeline 日/周/月分桶；detectMilestones 识别七类「第一次」与高光时刻；buildMoodCurve 滑窗情绪曲线；buildAffinityBoard 亲密度榜（频次×2+正情感×3+跨源广度×2）；composeLetter 数据驱动的「时光信」叙事生成。与 life-events.js（被动事件存储）差异化互补：织光机是主动聚合+叙事升华。",
+        "【界面】timeweaver-view.js 四 Tab——时光信（可 Blob 导出 .txt）/生活流/里程碑/亲密度榜，琥珀金 #e8a33d 主题纯内联 CSS，零外部请求。timeweaver-collector.js 主动读取各 App 存储键，readArr 兼容 string/object/对象包数组（records/entries/list/photos/items/data）多形态容错。",
+        "【接线】config/apps.js 注册（id:timeweaver，icon:🕰️）+ index.js openApp 路由分支（gacha 后）。entry-integrity 第 3 节「每个桌面 App 都有路由分支」自动校验覆盖，无需改测试。",
+        "【测试】timeweaver-engine.test.mjs 12 断言 + timeweaver-collector.test.mjs 7 断言（mock storage 含脏数据容错）+ route-apps 冒烟扩充。全量 117/117 绿，entry-integrity 23/23、audit 33/33 通过。"
+      ]
+    },
     "2.8.13": {
       "date": "2026-09-14",
       "items": [
@@ -265,5 +275,5 @@
       ]
     }
   },
-  "latest": "2.8.13"
+  "latest": "2.8.14"
 }

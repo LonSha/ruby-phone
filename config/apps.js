@@ -274,6 +274,14 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'timeweaver',
+        name: '织光机',
+        icon: '🕰️',
+        color: '#e8a33d',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置
