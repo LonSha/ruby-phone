@@ -1,5 +1,15 @@
 {
   "versions": {
+    "2.12.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】并发 LLM 调用首 chunk 屏障，缝合自 FunnyCups/Luker（SillyTavern 分叉）orchestrator 扩展的 dispatch-barrier，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，保留完整契约，非照抄。",
+        "【新增·基建】apps/phone/first-chunk-barrier.js：同 connection-profile 并发请求中，首个到达者为 lead 立即流式，其余为 follower 先 await lead 的首个上游 chunk 再发请求——给上游（如 Anthropic）时间预热 prompt 缓存，follower 命中 cache-read 而非竞争冷写，显著降低多并发调用的输入 token 成本与首 token 延迟。可被微信/世界脉搏/织光机等任意 App 的 apiManager 调用点复用。",
+        "【契约】acquire 同步原子（JS 单线程下 Promise.all 并发串行通过，首到赢 lead 无竞态）；signalFirstChunk 幂等；release fail-open（lead 出错未流式绝不挂起兄弟）；follower 只 resolve 不 reject；伪 key 完全退出协调；迟到 release 不破坏后续批次新 lead。新增 pendingFollowers/activeLeadCount 观测接口。",
+        "【修复】v2.11.0 遗留：update-log.json 顶层 latest 字段漏更新（仍 2.10.0）导致 entry-integrity 的『update-log latest == manifest.version』与 audit 各降 1。本版本同步 latest 并回补版本块。",
+        "【测试】新增 first-chunk-barrier 10 断言（角色分配/不同key独立/等待放行/幂等/清槽/fail-open/follower no-op/伪key退出/迟到release/并发无竞态）。全量 175/175 绿（165 基线+10 新），语法门 210 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
     "2.11.0": {
       "date": "2026-09-15",
       "items": [
@@ -306,5 +316,5 @@
       ]
     }
   },
-  "latest": "2.10.0"
+  "latest": "2.12.0"
 }
