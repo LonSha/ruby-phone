@@ -1,5 +1,15 @@
 {
   "versions": {
+    "2.10.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】群聊多角色发言调度引擎，缝合自 Windy-Sora/SillyTavern-GroupWorld 的群聊三 agent 机制（director/force-speak/critique），按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，非照抄 3624 行 agent 框架。",
+        "【新增·微信调度】apps/wechat/group-scheduler.js：director 发言者调度（LLM 选 speakers→名字映射回成员→去重保序→cap maxSpeakers→validate 过滤禁用）；force-speak 强制发言指令构造（@某人强制回复，中英双语+自定义模板）；critique 导演/角色表现批评（节奏/焦点/OOC 检测，JSON 输出）。",
+        "【核心算法】matchMemberByName 名字/别名/归一化模糊匹配（NFKC+去空白+小写，包含匹配取最短名优先防误中）；parseSpeakers 容错解析 LLM 返回（对象/字符串/带对象元素/裸名字，尾逗号修复）；parseCritique 剥代码块+尾逗号容错。",
+        "【修复】parseSpeakers 尾逗号 JSON 解析失败导致整串误判为裸名字的 bug（补尾逗号容错分支，与 parseCritique 对齐）。",
+        "【测试】新增 group-scheduler 9 断言（归一/匹配/解析/调度/校验/双模板/容错/端到端）。全量 153/153 绿（144 基线+9 新），语法门 206 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
     "2.9.0": {
       "date": "2026-09-15",
       "items": [
@@ -287,5 +297,5 @@
       ]
     }
   },
-  "latest": "2.9.0"
+  "latest": "2.10.0"
 }
