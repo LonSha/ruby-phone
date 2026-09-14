@@ -94,6 +94,9 @@ export class LonShaBridge {
         this.stats = { backfillCount: 0, injectCount: 0, rollbacks: 0, floorsIngested: 0, lastBackfill: null };
         this._bm25 = new BridgeBM25();
         this._bm25Dirty = true;
+        // [RB] 懒检测基线: 追踪 memoryCore 数据版本戳与记忆池条目数, 捕获桥外写入路径
+        this._seenVersion = -1;
+        this._seenPoolCount = -1;
         this._load();
         this._promoteInjection();
     }
@@ -146,10 +149,28 @@ export class LonShaBridge {
             }
             this._bm25.rebuild(docs);
             this._bm25Dirty = false;
+            this._seenVersion = this.memoryCore?.dataVersion ?? -1;
+            this._seenPoolCount = this._poolEntryCount();
         } catch (e) { /* 索引失败降级为空 */ }
     }
+    /** [RB] 记忆池 temporal/perception/spatial 三层条目总数 (懒检测池内 add* 内存级变更) */
+    _poolEntryCount() {
+        try {
+            const pool = this.memoryCore?.pool?.pool;
+            if (!pool) return -1;
+            let n = 0;
+            for (const key of ['temporal', 'perception', 'spatial']) n += (pool[key] || []).length;
+            return n;
+        } catch (e) { return -1; }
+    }
     _ensureIndex() {
-        if (this._bm25Dirty) this._rebuildIndex();
+        // 桥外写入路径(memoryCore.record/sleep/clear/reload 或 pool.add*)不经桥置 _bm25Dirty,
+        // 通过版本戳 + 池条目数双信号懒检测, 任一漂移即重建, 保证 BM25 索引不陈旧。
+        const ver = this.memoryCore?.dataVersion ?? -1;
+        const poolCount = this._poolEntryCount();
+        if (this._bm25Dirty || ver !== this._seenVersion || poolCount !== this._seenPoolCount) {
+            this._rebuildIndex();
+        }
     }
 
     // ---------------- ① 回填: LonSha 提取结果 → RubyPhone 记忆库 ----------------

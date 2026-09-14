@@ -5,7 +5,8 @@
       "items": [
         "feat(storage): set()/remove() 第三参数实现 immediate 语义——true 绕过防抖立即落盘，false/缺省走合并防抖；落点不变量保持由 CHAT_DATA_PATTERNS 决定，第三参不改变存储位置",
         "fix(storage): 修复 18 处历史调用点（8 处 true / 10 处 false）第三参数被静默忽略的意图断裂；此前 43 处系旧正则被嵌套括号截断的虚高数字，已由括号配平扫描器修正",
-        "test(storage): 新增 storage-immediate.test.mjs 21 项断言（立即/防抖/合并/绕队列/落点不变量/熔断两路径/并发），变异测试 7 体击杀验证"
+        "test(storage): 新增 storage-immediate.test.mjs 21 项断言（立即/防抖/合并/绕队列/落点不变量/熔断两路径/并发），变异测试 7 体击杀验证",
+        "feat(memory): 召回主权归记忆插件——手机侧 BM25 索引失效信号全覆盖。MemoryCore 在唯一持久化出口 _saveNow 递增 _dataVersion 版本戳, LonShaBridge._ensureIndex 懒检测版本戳+记忆池条目数双信号, 捕获 record/sleep/clear/reload/invalidateFloorAt 及 pool.add* 等桥外写入路径(此前 _bm25Dirty 仅桥内 4 处置位, 桥外写入导致索引陈旧)。新增 recall-sovereignty.test.mjs 19 断言, 变异测试 4/4 击杀。"
       ]
     },
     "2.8.12": {

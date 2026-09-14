@@ -20,6 +20,8 @@ export class MemoryCore {
 
         this.emotion = new EmotionTagger();
         this.pool = new MemoryPool();
+        // [RB] 数据版本戳: 任何落盘的记忆变更递增, 供 LonShaBridge 懒检测 BM25 索引失效
+        this._dataVersion = 0;
 
         // 状态
         this.longTerm = [];      // 巩固后的长期记忆
@@ -64,6 +66,7 @@ export class MemoryCore {
         this._saveTimer = setTimeout(() => { this._saveTimer = null; this._saveNow(); }, 800);
     }
     _saveNow() {
+        this._dataVersion = (this._dataVersion || 0) + 1;
         try {
             this.storage?.set?.(this.KEY, JSON.stringify({
                 longTerm: this.longTerm,
@@ -78,6 +81,8 @@ export class MemoryCore {
         }
     }
 
+    /** [RB] 记忆数据版本戳 (record/sleep/clear/reload/invalidate 等落盘变更单调递增) */
+    get dataVersion() { return this._dataVersion || 0; }
     updateConfig(patch = {}) {
         Object.assign(this.config, patch);
         this._save(true);
@@ -419,6 +424,7 @@ export class MemoryCore {
         this.pool = new MemoryPool();
         this.pool.initialize();
         this._load();
+        this._dataVersion = (this._dataVersion || 0) + 1;
     }
 
     clearCurrentChat() {
@@ -427,6 +433,7 @@ export class MemoryCore {
         this.longTerm = [];
         this.shortTerm = [];
         this.pool.clear();
+        this._dataVersion = (this._dataVersion || 0) + 1;
     }
 }
 
