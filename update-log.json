@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.8.12": {
+      "date": "2026-09-14",
+      "items": [
+        "【修复·关键】修复发布门禁本身失效：项目宪法要求的「node --check 全量语法校验」在仓库缺少 package.json 时按 CommonJS 解析 .js，对 ES Module 结构性损坏返回退出码 0（假绿）。index.js 正是据此一路「校验通过」却根本无法解析、插件完全不可加载，并连续发布了约 9 个版本。现新增 scripts/syntax-check.mjs 以 --input-type=module 强制按 ESM 逐文件解析，任一失败即非 0 退出并列出文件名与行号。",
+        "【新增】根目录 package.json（type=module、无任何依赖声明、private）：使宪法里裸 node --check 命令恢复真实拦截能力；扩展运行时不加载该文件，宿主也不会尝试安装依赖。scripts 提供 syntax / test / check。",
+        "【新增】tests/syntax-gate.test.mjs 含负控制用例：实测复现「无 package.json → 损坏文件退出码 0」的历史假绿机制，并验证语法门能拦住损坏、不误伤健康代码、覆盖面不低于 170 个文件（防止遍历逻辑被改坏导致门退化成空跑）。",
+        "【变更】CONTEXT.md 发布链路更新：改为 npm run syntax + npm test（或 npm run check）；记录三处版本号（manifest / index.js ST_PHONE_VERSION / package.json）需同步，且版本一致性断言不再硬编码具体版本号。"
+      ]
+    },
     "2.8.11": {
       "date": "2026-09-14",
       "items": [
@@ -247,5 +256,5 @@
       ]
     }
   },
-  "latest": "2.8.11"
+  "latest": "2.8.12"
 }
