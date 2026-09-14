@@ -32,6 +32,29 @@
     --phone-app-name-color: #ffffff;
     --phone-time-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
     --phone-app-name-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+
+    /* ====================================================
+       📱 iPhone 18 Pro Max 设计 token（2026 直角哑光钛）
+       ==================================================== */
+    /* 钛金属中框：哑光质感，深空黑钛 */
+    --iphone-frame: #2b2b2e;            /* 哑光钛主色（深空黑钛） */
+    --iphone-frame-edge: #4a4a4f;       /* 钛框边缘高光 */
+    --iphone-frame-inner: #17171a;      /* 屏幕与中框间的黑边 */
+    /* 灵动岛（缩小 35%，居中） */
+    --iphone-island-w: 88px;
+    --iphone-island-h: 24px;
+    --iphone-island-radius: 12px;
+    /* 圆角刻度：iPhone 连续曲率近似 */
+    --iphone-shell-radius: 47px;        /* 外壳 */
+    --iphone-screen-radius: 43px;       /* 屏幕（内缩 4px 边框） */
+    /* iOS 系统强调色（与记忆插件青蓝统一） */
+    --iphone-accent: #0a84ff;           /* iOS 系统蓝 */
+    --iphone-green: #30d158;
+    --iphone-red: #ff453a;
+    --iphone-yellow: #ffd60a;
+    /* 玻璃拟态参数 */
+    --iphone-blur: blur(28px) saturate(180%);
+    --iphone-blur-strong: blur(40px) saturate(180%);
 }
 
 /* ========================================
@@ -491,21 +514,28 @@
     aspect-ratio: auto !important; /* 宽高已由上方严格数学联动，不再需要此属性 */
 
     margin: 0 auto;
-    /* 🎨 极窄边框 - 深色金属质感 */
-    background: var(--phone-frame-color, #1a1a1a);
-    /* 🎨 圆润的全面屏圆角 */
-    border-radius: 40px !important;
+    /* 🎨 iPhone 18 Pro Max：哑光钛合金中框（深空黑钛） */
+    background: linear-gradient(160deg,
+        var(--iphone-frame-edge, #4a4a4f) 0%,
+        var(--iphone-frame, #2b2b2e) 22%,
+        var(--iphone-frame, #2b2b2e) 78%,
+        var(--iphone-frame-edge, #4a4a4f) 100%);
+    /* 🎨 iPhone 连续曲率圆角 */
+    border-radius: var(--iphone-shell-radius, 47px) !important;
 
-    /* 🎨 简洁的边框效果 */
+    /* 🎨 钛金属边框：边缘高光 + 内圈黑边 + 悬浮投影 */
     box-shadow:
-        /* 细边框 */
-        inset 0 0 0 1px color-mix(in srgb, var(--phone-frame-color, #1a1a1a) 82%, #ffffff),
-        /* 外部阴影 */
-        0 15px 50px rgba(0, 0, 0, 0.4),
-        0 5px 20px rgba(0, 0, 0, 0.3);
+        /* 钛框边缘细腻高光（哑光金属折射） */
+        inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+        inset 0 1px 1px rgba(255, 255, 255, 0.14),
+        /* 屏幕与中框之间的黑边 */
+        inset 0 0 0 4px var(--iphone-frame-inner, #17171a),
+        /* 外部悬浮投影（冷调分层） */
+        0 22px 60px rgba(0, 0, 0, 0.52),
+        0 8px 24px rgba(0, 0, 0, 0.36);
 
-    /* 🔥 适中边框：4px */
-    padding: 4px;
+    /* 🔥 钛框厚度：略收窄，屏占比更高 */
+    padding: 5px;
     position: relative;
     overflow: hidden !important;
     flex-shrink: 0;
@@ -551,55 +581,45 @@
 
 .phone-punch-hole {
     position: absolute;
-    top: 12px;
-    left: 25px;  /* 🔥 更靠右，远离边框 */
-    /* 🎨 药丸形状：双摄像头 */
-    width: 48px;
-    height: 16px;
+    top: 10px;
+    /* 🎨 iPhone 18 Pro Max：居中灵动岛（缩小 35%） */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: var(--iphone-island-w, 88px);
+    height: var(--iphone-island-h, 24px);
     background: #000000;
-    border-radius: 9px !important;
+    border-radius: var(--iphone-island-radius, 12px) !important;
     z-index: 15;
-    /* 🎨 柔和阴影 */
+    /* 🎨 灵动岛柔和内阴影 */
     box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 1px 4px rgba(0, 0, 0, 0.35),
+        inset 0 0 0 0.5px rgba(255, 255, 255, 0.04);
 }
 
-/* 🎨 主摄像头 */
+/* 🎨 灵动岛右侧：前置镜头（小而克制） */
 .phone-punch-hole::before {
     content: '';
     position: absolute;
     top: 50%;
-    left: 7px;
+    right: 10px;
     transform: translateY(-50%);
     width: 8px;
     height: 8px;
     background: radial-gradient(circle,
-        #1a3a52 0%,
-        #0a1a2a 50%,
+        #16202a 0%,
+        #0a0f16 55%,
         #000 100%
     );
     border-radius: 50% !important;
     box-shadow:
-        0 0 2px rgba(26, 77, 122, 0.5),
-        inset 0 1px 2px rgba(255, 255, 255, 0.15);
+        inset 0 0 2px rgba(30, 50, 70, 0.6),
+        inset 0 1px 1px rgba(255, 255, 255, 0.10);
 }
 
-/* 🎨 副摄像头/传感器 */
+/* 🎨 iPhone 18 灵动岛：隐藏多余传感器，正面更简洁 */
 .phone-punch-hole::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    width: 5px;
-    height: 5px;
-    background: radial-gradient(circle,
-        #2a2a2a 0%,
-        #0a0a0a 100%
-    );
-    border-radius: 50% !important;
-    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+    content: none;
+    display: none;
 }
 
 /* ========================================
@@ -620,14 +640,14 @@
     font-size: 12px;
     font-weight: 600;
     z-index: 50;  /* 🔥 提高层级，确保在APP内容之上 */
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'HarmonyOS Sans', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
     /* 🔥 透明背景，但点击穿透 */
     pointer-events: none;
 }
 
-/* 🔥 左侧时间 - 避开药丸摄像头，靠右一点 */
+/* 🎨 iPhone 18：灵动岛居中，时间回归左对齐 */
 .statusbar-left {
-    margin-left: 75px;  /* 🔥 跟着药丸摄像头往右 */
+    margin-left: 22px;  /* 距屏幕左缘留白，避开圆角 */
 }
 
 .statusbar-left .time {
@@ -637,12 +657,13 @@
     color: #000 !important;  /* 🔥 固定黑色 */
 }
 
+/* 🎨 home-layout 与主定义统一为 iPhone 18 灵动岛 token */
 #phone-panel-content .phone-in-panel.phone-card-home-layout .phone-punch-hole {
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: 72px !important;
-    height: 18px !important;
-    border-radius: 10px !important;
+    width: var(--iphone-island-w, 88px) !important;
+    height: var(--iphone-island-h, 24px) !important;
+    border-radius: var(--iphone-island-radius, 12px) !important;
 }
 
 #phone-panel-content .phone-in-panel.phone-card-home-layout .statusbar-left {
@@ -832,8 +853,8 @@
     width: auto;
     height: auto;
     background: #ffffff;
-    /* 🎨 圆角匹配外壳 */
-    border-radius: 38px !important;
+    /* 🎨 圆角匹配 iPhone 18 外壳（内缩边框厚度） */
+    border-radius: var(--iphone-screen-radius, 43px) !important;
     overflow: hidden !important;
     margin-top: 0;  /* 🔥 移除顶部间距 */
     /* 🎨 简洁的屏幕效果 */
@@ -7843,7 +7864,7 @@ input:checked + .toggle-slider:before {
 
 #phone-panel-content .phone-body-panel {
     background-image: none !important;
-    border-radius: 40px !important; /* 强制保住手机圆角 */
+    border-radius: var(--iphone-shell-radius, 47px) !important; /* 强制保住手机圆角（iPhone 18 token） */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
