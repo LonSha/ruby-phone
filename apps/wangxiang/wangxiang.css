@@ -41,7 +41,7 @@
     box-sizing: border-box;
     padding: 22px;
     border: 1px solid rgba(92, 200, 255, 0.72);
-    border-radius: 7px;
+    border-radius: 8px;
     background-color: #050d13;
     background-position: center;
     background-size: cover;
@@ -373,7 +373,7 @@
     left: 0;
     width: 2px;
     background: #5cc8ff;
-    box-shadow: 0 0 7px rgba(92, 200, 255, 0.8);
+    box-shadow: 0 0 10px rgba(92, 200, 255, 0.45);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-settings-open,
@@ -443,7 +443,7 @@
     flex: 0 0 auto;
     padding: 10px;
     border: 1px solid rgba(92, 200, 255, 0.36);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.9);
     box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
 }
@@ -513,7 +513,7 @@
     position: absolute;
     inset: 0;
     border: 1px solid rgba(92, 200, 255, 0.65);
-    border-radius: 9px;
+    border-radius: 8px;
     background: rgba(16, 34, 47, 0.9);
     transition: background 0.18s ease, border-color 0.18s ease;
 }
@@ -907,7 +907,7 @@
     padding: 10px 9px;
     border: 1px solid rgba(92, 200, 255, 0.58);
     border-color: color-mix(in srgb, var(--wangxiang-task-accent) 58%, transparent);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.9);
     box-shadow:
         inset 0 0 18px var(--wangxiang-task-accent-soft),
@@ -993,7 +993,7 @@
     flex: 0 0 auto;
     padding: 2px 4px;
     border: 1px solid var(--wangxiang-task-accent);
-    border-radius: 3px;
+    border-radius: 4px;
     color: var(--wangxiang-task-accent);
     font-size: 9px;
     font-weight: 600;
@@ -1079,7 +1079,7 @@
     margin: 0 !important;
     padding: 0 4px !important;
     border: 1px solid var(--wangxiang-task-accent) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: var(--wangxiang-task-accent-soft) !important;
     box-shadow: 0 0 8px var(--wangxiang-task-accent-soft) !important;
     color: #e6edf3 !important;
@@ -1155,7 +1155,7 @@
     padding: 9px;
     border: 1px solid rgba(92, 200, 255, 0.5);
     border-color: color-mix(in srgb, var(--wangxiang-managed-accent) 55%, transparent);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.91);
     box-shadow: inset 0 0 17px var(--wangxiang-managed-soft);
     box-sizing: border-box;
@@ -1349,7 +1349,7 @@
     margin: 0 !important;
     padding: 0 3px !important;
     border: 1px solid var(--wangxiang-managed-accent) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: var(--wangxiang-managed-soft) !important;
     box-shadow: none !important;
     color: #e6edf3 !important;
@@ -1382,7 +1382,7 @@
     gap: 7px;
     padding: 0 10px;
     border: 1px solid rgba(92, 200, 255, 0.42);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.84);
     color: #5cc8ff;
     box-sizing: border-box;
@@ -1422,7 +1422,7 @@
     margin: 0 !important;
     padding: 0 !important;
     border: 1px solid rgba(92, 200, 255, 0.48) !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     background: rgba(5, 13, 19, 0.84) !important;
     box-shadow: none !important;
     color: #9db4c4 !important;
@@ -1471,7 +1471,7 @@
     left: 16%;
     height: 2px;
     background: #5cc8ff;
-    box-shadow: 0 0 7px #5cc8ff;
+    box-shadow: 0 0 12px rgba(92, 200, 255, 0.35);
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-scroll.wangxiang-content-scroll {
@@ -1542,7 +1542,7 @@
     flex-direction: column;
     padding: 10px;
     border: 1px solid color-mix(in srgb, var(--wangxiang-market-accent) 62%, transparent);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.91);
     box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
     box-sizing: border-box;
@@ -1599,7 +1599,7 @@
 #phone-panel-content .phone-screen .wangxiang-market-product-tags small {
     padding: 1px 3px;
     border: 1px solid color-mix(in srgb, var(--wangxiang-market-accent) 64%, transparent);
-    border-radius: 2px;
+    border-radius: 4px;
     color: var(--wangxiang-market-accent);
     font-size: 9px;
     line-height: 1.25;
@@ -1683,7 +1683,7 @@
     margin: 9px 0 0 !important;
     padding: 0 !important;
     border: 1px solid var(--wangxiang-market-accent) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: color-mix(in srgb, var(--wangxiang-market-accent) 16%, transparent) !important;
     box-shadow: 0 0 8px color-mix(in srgb, var(--wangxiang-market-accent) 18%, transparent) !important;
     color: #e6edf3 !important;
@@ -1798,7 +1798,7 @@
     margin: 0 !important;
     padding: 0 !important;
     border: 1px solid rgba(92, 200, 255, 0.52) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(16, 34, 47, 0.55) !important;
     color: #8fe0ff !important;
     place-items: center;
@@ -1893,7 +1893,7 @@
     flex: 0 0 auto;
     padding: 10px;
     border: 1px solid rgba(92, 200, 255, 0.5);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.91);
     box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.08);
 }
@@ -2005,7 +2005,7 @@
     margin: 0 !important;
     padding: 0 10px !important;
     border: 1px solid #5cc8ff !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(16, 34, 47, 0.34) !important;
     box-shadow: none !important;
     color: #e6edf3 !important;
@@ -2077,7 +2077,7 @@
     gap: 9px;
     padding: 10px;
     border: 1px solid rgba(92, 200, 255, 0.42);
-    border-radius: 5px;
+    border-radius: 6px;
     background: rgba(5, 13, 19, 0.9);
     box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
 }
@@ -2268,7 +2268,7 @@
     margin: 0 !important;
     padding: 0 !important;
     border: 1px solid rgba(92, 200, 255, 0.5) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(10, 22, 32, 0.9) !important;
     box-shadow: none !important;
     color: #e6edf3 !important;
@@ -2303,7 +2303,7 @@
     margin: 0 !important;
     padding: 0 8px !important;
     border: 1px solid rgba(92, 200, 255, 0.5) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(10, 22, 32, 0.7) !important;
     box-shadow: none !important;
     color: #9db4c4 !important;
@@ -2416,7 +2416,7 @@
     margin: 0 !important;
     padding: 8px !important;
     border: 1px solid rgba(92, 200, 255, 0.48) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: #050d13 !important;
     box-shadow: none !important;
     color: #e6edf3 !important;
@@ -2448,7 +2448,7 @@
     margin: 0 !important;
     padding: 0 8px !important;
     border: 1px solid rgba(92, 200, 255, 0.5) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(10, 22, 32, 0.7) !important;
     box-shadow: none !important;
     color: #9db4c4 !important;
@@ -2680,7 +2680,7 @@
     height: 100%;
     border-radius: inherit;
     background: #5cc8ff;
-    box-shadow: 0 0 9px rgba(92, 200, 255, 0.8);
+    box-shadow: 0 0 9px rgba(92, 200, 255, 0.4);
     transition: width 0.2s ease;
 }
 
@@ -2844,7 +2844,7 @@
     gap: 4px;
     padding: 0 7px;
     border: 1px solid var(--wangxiang-detail-accent);
-    border-radius: 3px;
+    border-radius: 4px;
     background: var(--wangxiang-detail-soft);
     color: var(--wangxiang-detail-accent);
     font-size: 10px;
@@ -2906,7 +2906,7 @@
     margin: 0 !important;
     padding: 0 8px !important;
     border: 1px solid rgba(92, 200, 255, 0.58) !important;
-    border-radius: 3px !important;
+    border-radius: 4px !important;
     background: rgba(16, 34, 47, 0.55) !important;
     box-shadow: none !important;
     color: #8fe0ff !important;
@@ -2973,7 +2973,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-objective > div {
     height: 4px;
     overflow: hidden;
-    border-radius: 2px;
+    border-radius: 4px;
     background: rgba(16, 34, 47, 0.68);
 }
 
@@ -3186,7 +3186,7 @@
         width: 24px;
         height: 24px;
         flex-basis: 24px;
-        border-radius: 5px;
+        border-radius: 6px;
     }
 
     #phone-panel-content .phone-screen .wangxiang-primary-nav-icon i {
