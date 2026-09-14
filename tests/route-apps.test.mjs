@@ -43,6 +43,7 @@ const apps = [
   ['theater', '../apps/theater/theater-app.js', 'TheaterApp'],
   ['graph', '../apps/memory/graph-app.js', 'GraphApp'],
   ['timeweaver', '../apps/timeweaver/timeweaver-app.js', 'TimeweaverApp'],
+  ['worldpulse', '../apps/worldpulse/worldpulse-app.js', 'WorldpulseApp'],
 ];
 let fail = 0;
 for (const a of apps) { if (!(await smoke(a))) fail++; }

@@ -23,6 +23,7 @@ import {
     renderPhoneInlineEmoji,
     replacePhoneInlineEmojiTokens
 } from '../../config/phone-emoji.js';
+import { getMemory as getContactMemory, updateMemory as updateContactMemory } from '../../config/phone-chat-memory.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -2965,7 +2966,53 @@ renderChatRoom(chat) {
 
         const messages = this.app.wechatData.getMessages(chatId);
         const userInfo = this.app.wechatData.getUserInfo();
+
+        // ========================================
+        // [v2.9.0 缝合·mobile 仓 IncrementalRenderer] 增量渲染优化
+        // 全量 innerHTML 每次重建整个消息 DOM 树 + 全量重绑事件，长聊天卡顿。
+        // 优化：识别「纯尾部追加」场景（最常见：收发新消息），只渲染+追加新消息
+        // 的增量 HTML，复用既有 DOM，避免界面跳动与焦点/滚动位置丢失。
+        // 消息数减少/非追加变更（删除/编辑/撤回/重roll）时仍回退全量渲染。
+        // ========================================
+        const prevIds = this._lastRenderedMsgIds?.[chatId] || [];
+        const currIds = messages.map(m => String(m?.id ?? ''));
+        const isPureAppend = prevIds.length > 0
+            && currIds.length > prevIds.length
+            && prevIds.every((id, i) => id === currIds[i]);
+
+        if (isPureAppend) {
+            const newMessages = messages.slice(prevIds.length);
+            if (newMessages.length > 0) {
+                const appendedHtml = this.renderMessagesWithDateDividers(newMessages, userInfo);
+                // 用模板元素解析后逐个 append，保留既有 DOM 与事件绑定
+                const tpl = document.createElement('template');
+                tpl.innerHTML = appendedHtml.trim();
+                messagesDiv.appendChild(tpl.content.cloneNode(true));
+                this._lastRenderedMsgIds[chatId] = currIds;
+
+                // 仅对新追加节点绑定事件（全量 bind 幂等，代价远低于全量 innerHTML 重建）
+                this.bindMessageLongPressEvents();
+                this.bindManualTimeMarkerEvents();
+                this.bindSpecialMessageEvents();
+                this.bindInnerThoughtEvents();
+                this.bindMessageSelectionEvents();
+                this._syncMessageSelectionBar();
+
+                if (!keepScroll) return true;
+                if (wasNearBottom) {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                } else {
+                    const delta = messagesDiv.scrollHeight - previousHeight;
+                    messagesDiv.scrollTop = Math.max(0, previousTop + delta);
+                }
+                return true;
+            }
+        }
+
+        // 全量渲染回退路径（结构变更/删除/编辑/首次渲染）
         messagesDiv.innerHTML = this.renderMessagesWithDateDividers(messages, userInfo);
+        this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
+        this._lastRenderedMsgIds[chatId] = currIds;
 
         this.bindMessageLongPressEvents();
         this.bindManualTimeMarkerEvents();
@@ -10138,6 +10185,8 @@ renderChatRoom(chat) {
         }
 
         let success = false;
+        // [v2.9.0 缝合] 供 finally 回写滚动记忆摘要的本轮素材
+        let _memRound = null;
         const isProactive = !!options.proactive;
         const responseBatchId = `${isProactive ? 'wechat_proactive' : 'wechat_ai'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         this._resetAiReplyTimeCursor();
@@ -11143,6 +11192,8 @@ renderChatRoom(chat) {
                 }, 1500); // 延迟1.5秒，确保用户有时间看完最后一条微信消息
             }
 
+            // [v2.9.0 缝合] 记录本轮原文/回复，供 finally 回写滚动记忆
+            _memRound = { userText: String(message || ''), replyText: String(aiResponse || '') };
             success = true;
 
         } catch (error) {
@@ -11164,6 +11215,29 @@ renderChatRoom(chat) {
         } finally {
             if (success) {
                 this._dequeuePendingChat(savedChatId);
+                // [v2.9.0 缝合·葵葵机] 回写该联系人的滚动长期记忆摘要（异步不阻塞发送流程）
+                if (_memRound && (_memRound.userText || _memRound.replyText)) {
+                    try {
+                        const _st = this.app?.storage || window.VirtualPhone?.storage;
+                        const _am = window.VirtualPhone?.apiManager;
+                        const _logs = this.app?.wechatData?.getMessages?.(savedChatId) || [];
+                        // 归一化 role：wechat 记录 from='me' 是发送，其余为接收
+                        const _normLogs = (Array.isArray(_logs) ? _logs : []).map(m => ({
+                            role: m.from === 'me' ? 'send' : 'recv',
+                            name: m.sender || m.name || savedChatName,
+                            content: m.content || ''
+                        }));
+                        Promise.resolve(updateContactMemory({
+                            storage: _st,
+                            apiManager: _am,
+                            contactId: savedChatId,
+                            logs: _normLogs,
+                            userName: context?.name1 || '用户',
+                            userText: _memRound.userText,
+                            replyText: _memRound.replyText
+                        })).catch(e => console.warn('⚠️ 更新手机聊天记忆失败:', e));
+                    } catch (_e) { /* 静默，不影响发送 */ }
+                }
             }
             // 🔥 无论成功还是失败，都重置状态
             this.isSending = false;
@@ -11786,9 +11860,33 @@ renderChatRoom(chat) {
                         .replace(/\{\{customEmojiList\}\}/g, customEmojiList)
                         .replace(/\{\{personalImageTagInfo\}\}/g, personalImageTagInfo);
                 }
-            } catch (e) {
+                    } catch (e) {
                 console.warn('⚠️ 获取微信聊天提示词失败:', e);
             }
+        }
+
+        // ========================================
+        // 5.6️⃣ [v2.9.0 缝合·葵葵机] 联系人级长期记忆摘要注入
+        // 现有微信每轮塞全量（酒馆历史+微信记录），长聊天后关键事实被稀释。
+        // 这里注入该联系人/群聊的滚动记忆摘要（事实/承诺/称呼/关系变化/未解决事项），
+        // 让 AI 在有限的上下文窗口里优先记住「对这段关系真正重要的事」。
+        // ========================================
+        try {
+            const _memStorage = this.app?.storage || window.VirtualPhone?.storage;
+            const _memContactId = targetChat?.id || targetChatId;
+            if (_memStorage && _memContactId) {
+                const contactMemory = getContactMemory(_memStorage, _memContactId);
+                if (contactMemory) {
+                    messages.push({
+                        role: 'system',
+                        content: `【与 ${targetChat?.name || '对方'} 的长期手机聊天记忆】\n${contactMemory}`,
+                        name: 'SYSTEM (💭手机记忆)',
+                        isPhoneMessage: true
+                    });
+                }
+            }
+        } catch (_memErr) {
+            console.warn('⚠️ 读取手机聊天记忆摘要失败:', _memErr);
         }
 
         // ========================================

@@ -282,6 +282,14 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'worldpulse',
+        name: '世界脉搏',
+        icon: '🌍',
+        color: '#1f6feb',
+        badge: 0,
+        data: {}
+    },
 ];
 
 // 手机配置

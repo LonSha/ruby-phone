@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.9.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】六项缝合自两个小手机项目（葵葵机 TH脚本 + yexiaoxiaoye/mobile 扩展），全部按 ruby-phone 工程规范重写为可测 ESM 模块，非照抄。",
+        "【新增·基建】config/floor-store.js 楼层挂载存储引擎：数据挂在每条 ST 消息的 msg.data 上（葵葵机模式泛化为任意命名空间），删除楼层自动带走数据、重roll不残留、跨设备随聊天导出。两阶段批量写（先收集再一次 setChatMessages，取自 mobile 仓卡顿教训），按 id 撤回/按楼层回收/双源合并渲染。无 TH 环境降级内存影子层，全程可测。",
+        "【新增·微信记忆】config/phone-chat-memory.js 联系人级手机聊天长期记忆摘要引擎（葵葵机核心三件套工程化）：滚动摘要（300字约束）+ 无 API 降级拼接截断 + 单聊/群聊双模式 prompt 构建。摘要存 PhoneStorage 会话级分层（非 localStorage 裸 key），走 apiManager.callAI 统一通道。",
+        "【微信接入】buildMessagesArray 注入「与某人的长期手机聊天记忆」系统块，让 AI 在有限上下文里优先记住承诺/称呼/关系变化/未解决事项；sendToAI 成功后异步回写滚动摘要（不阻塞发送）。解决原微信每轮塞全量导致关键事实被稀释的问题。",
+        "【新增·第30个App】世界脉搏 Worldpulse：缝合 mobile 仓 parallel-events 机制（楼层变化监听→阈值队列→风格化 prompt→AI 生成），差异化落地为织光机姊妹——平行事件写成「手机推送/快讯」风格的世界动态，让背景世界在用户数字生活里呼吸而非污染正文。eventSource 优先+轮询兜底，六种风格+自定义，可手动脉冲。注册 worldpulse_ 会话级 pattern 防串味。",
+        "【优化·微信渲染】缝合 mobile 仓 IncrementalRenderer 思路：_refreshCurrentChatMessages 识别「纯尾部追加」场景，只渲染+追加新消息的增量 HTML、复用既有 DOM，避免全量 innerHTML 重建导致的界面跳动与焦点/滚动丢失；删除/编辑/撤回/重roll 时仍回退全量渲染。",
+        "【测试】新增 floor-store 7 断言 + phone-chat-memory 10 断言 + worldpulse-engine 10 断言（共 27），route-apps 冒烟扩充 worldpulse。全量 144/144 绿，语法门 204 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
     "2.8.14": {
       "date": "2026-09-15",
       "items": [
@@ -275,5 +287,5 @@
       ]
     }
   },
-  "latest": "2.8.14"
+  "latest": "2.9.0"
 }

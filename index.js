@@ -31,7 +31,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.8.14';
+const ST_PHONE_VERSION = '2.9.0';
 const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -68,10 +68,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-15',
     items: [
-        '【新增·原创超大升级】织光机 Timeweaver——跨 App 数字生活叙事引擎（第 29 个 App）。主动聚合日记/相册/成就/日历/微博/蜜约/剧场七源数据，把零散数字足迹织成一部可回顾的个人编年史。',
-        '【引擎】七源归一容错+时间归一、日/周/月分桶时间线、七类「第一次」里程碑识别、滑窗情绪曲线、亲密度榜（频次×情感×跨源广度）、数据驱动「时光信」叙事生成。',
-        '【界面】四 Tab——时光信（可导出 .txt）/生活流/里程碑/亲密度榜，琥珀金主题纯内联 CSS，零外部请求。',
-        '【测试】引擎 12 断言 + 收集器 7 断言（含脏数据容错）+ 路由冒烟。全量 117/117 绿，entry-integrity 23/23、audit 33/33 通过。'
+        '【缝合·原创整合】六项缝合自两个小手机项目（葵葵机 + yexiaoxiaoye/mobile），全部按工程规范重写为可测 ESM 模块。',
+        '【新增·基建】楼层挂载存储引擎 floor-store：数据挂在 ST 消息的 msg.data 上，删除楼层自动带走、重roll不残留、跨设备随聊天导出，可撤回。',
+        '【新增·微信记忆】联系人级长期记忆摘要引擎：buildMessagesArray 注入「与某人的长期记忆」，sendToAI 成功后滚动回写，解决全量上下文稀释关键事实。',
+        '【新增·第30个App】世界脉搏 Worldpulse：楼层监听→阈值队列→风格化平行事件，写成手机推送式世界动态，让背景世界呼吸。六种风格+手动脉冲。',
+        '【优化·微信渲染】增量渲染：纯尾部追加只渲染新消息、复用既有 DOM，避免全量重建导致的界面跳动。',
+        '【测试】新增 27 断言，全量 144/144 绿，语法门 204 文件、双门禁通过。'
     ]
 };
 
@@ -9435,6 +9437,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载织光机App失败:', err);
                             phoneShell?.showNotification('错误', '织光机App加载失败', '❌');
+                        });
+                } else if (appId === 'worldpulse') {
+                    import('./apps/worldpulse/worldpulse-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.worldpulseApp) {
+                                window.VirtualPhone.worldpulseApp = new module.WorldpulseApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.worldpulseApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载世界脉搏App失败:', err);
+                            phoneShell?.showNotification('错误', '世界脉搏App加载失败', '❌');
                         });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
