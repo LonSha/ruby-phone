@@ -26,7 +26,7 @@
     margin: 0 !important;
     overflow: hidden;
     box-sizing: border-box;
-    background: rgba(1, 11, 18, 0.72);
+    background: rgba(5, 13, 19, 0.72);
     transform: none !important;
     translate: none !important;
     scale: none !important;
@@ -40,13 +40,13 @@
     overflow: auto;
     box-sizing: border-box;
     padding: 22px;
-    border: 1px solid rgba(108, 222, 255, 0.72);
+    border: 1px solid rgba(92, 200, 255, 0.72);
     border-radius: 7px;
-    background-color: #061a26;
+    background-color: #050d13;
     background-position: center;
     background-size: cover;
-    box-shadow: 0 18px 56px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(169, 237, 255, 0.12);
-    color: #e9faff;
+    box-shadow: 0 18px 56px rgba(5, 13, 19, 0.55), inset 0 0 0 1px rgba(143, 224, 255, 0.12);
+    color: #e6edf3;
     touch-action: pan-y;
     overscroll-behavior: contain;
 }
@@ -56,7 +56,7 @@
     align-items: center;
     gap: 12px;
     padding-bottom: 14px;
-    border-bottom: 1px solid rgba(121, 219, 242, 0.32);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.32);
 }
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-head > span {
@@ -65,10 +65,10 @@
     width: 40px;
     height: 40px;
     place-items: center;
-    border: 1px solid rgba(109, 229, 255, 0.7);
+    border: 1px solid rgba(92, 200, 255, 0.7);
     border-radius: 6px;
-    background: rgba(4, 38, 52, 0.86);
-    color: #75ebff;
+    background: rgba(10, 22, 32, 0.86);
+    color: #8fe0ff;
     font-size: 20px;
 }
 
@@ -78,7 +78,7 @@
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-head strong {
     display: block;
-    color: #f0fcff;
+    color: #e6edf3;
     font-size: 19px;
     line-height: 1.3;
     letter-spacing: 0;
@@ -87,7 +87,7 @@
 #wangxiang-progress-popup-root .wangxiang-progress-popup-head small {
     display: block;
     margin-top: 4px;
-    color: #8fc2cf;
+    color: #5cc8ff;
     font-size: 13px;
     line-height: 1.4;
 }
@@ -100,8 +100,8 @@
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-item {
     padding: 12px 13px;
-    border-left: 3px solid #56dff8;
-    background: rgba(2, 22, 31, 0.84);
+    border-left: 3px solid #5cc8ff;
+    background: rgba(5, 13, 19, 0.84);
 }
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-item > span,
@@ -112,14 +112,14 @@
 }
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-item > span {
-    color: #8fc2cf;
+    color: #5cc8ff;
     font-size: 13px;
     line-height: 1.4;
 }
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-item > strong {
     margin-top: 3px;
-    color: #f1fcff;
+    color: #e6edf3;
     font-size: 16px;
     line-height: 1.45;
 }
@@ -130,7 +130,7 @@
     justify-content: space-between;
     gap: 12px;
     margin-top: 9px;
-    color: #6ce9ff;
+    color: #5cc8ff;
 }
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-item b,
@@ -149,10 +149,10 @@
     gap: 7px;
     margin: 0;
     padding: 9px 14px;
-    border: 1px solid #65ddf5;
+    border: 1px solid #5cc8ff;
     border-radius: 6px;
-    background: #0b5266;
-    color: #f4fdff;
+    background: #10222f;
+    color: #e6edf3;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 0;
@@ -161,8 +161,8 @@
 
 #wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:hover,
 #wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:focus-visible {
-    background: #117087;
-    outline: 2px solid rgba(111, 231, 255, 0.42);
+    background: #10222f;
+    outline: 2px solid rgba(92, 200, 255, 0.42);
     outline-offset: 2px;
 }
 
@@ -181,7 +181,7 @@
 #phone-panel-content .phone-screen .wangxiang-app {
     position: relative;
     overflow: hidden;
-    background: #101816;
+    background: #050d13;
 }
 
 #phone-panel-content .phone-screen .wangxiang-background {
@@ -247,7 +247,7 @@
     border-radius: 4px !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #eaf8ff !important;
+    color: #e6edf3 !important;
     font-family: inherit;
     line-height: 1;
     text-align: center;
@@ -263,7 +263,7 @@
     bottom: 8px;
     left: 0;
     width: 1px;
-    background: linear-gradient(to bottom, transparent, rgba(116, 209, 255, 0.2), transparent);
+    background: linear-gradient(to bottom, transparent, rgba(143, 224, 255, 0.2), transparent);
 }
 
 #phone-panel-content .phone-screen .wangxiang-primary-nav-icon {
@@ -272,13 +272,13 @@
     width: 31px;
     height: 31px;
     flex: 0 0 31px;
-    border: 1px solid rgba(146, 224, 255, 0.34);
+    border: 1px solid rgba(143, 224, 255, 0.34);
     border-radius: 6px;
-    background: rgba(17, 59, 82, 0.58);
-    color: #bcecff;
+    background: rgba(10, 22, 32, 0.58);
+    color: #e6edf3;
     box-shadow:
-        inset 0 0 9px rgba(112, 210, 255, 0.08),
-        0 0 8px rgba(45, 178, 238, 0.1);
+        inset 0 0 9px rgba(92, 200, 255, 0.08),
+        0 0 8px rgba(92, 200, 255, 0.1);
     box-sizing: border-box;
 }
 
@@ -291,7 +291,7 @@
     display: block;
     width: 100%;
     overflow: hidden;
-    color: #dceef7;
+    color: #e6edf3;
     font-size: 10px;
     font-weight: 500;
     line-height: 14px;
@@ -301,16 +301,16 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-icon {
-    border-color: rgba(111, 221, 255, 0.9);
-    background: rgba(20, 93, 129, 0.78);
-    color: #e9fbff;
+    border-color: rgba(92, 200, 255, 0.9);
+    background: rgba(16, 34, 47, 0.78);
+    color: #e6edf3;
     box-shadow:
-        inset 0 0 10px rgba(122, 226, 255, 0.18),
-        0 0 10px rgba(40, 184, 255, 0.46);
+        inset 0 0 10px rgba(143, 224, 255, 0.18),
+        0 0 10px rgba(92, 200, 255, 0.46);
 }
 
 #phone-panel-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-label {
-    color: #fff;
+    color: #e6edf3;
     font-weight: 700;
 }
 
@@ -324,7 +324,7 @@
     display: flex;
     min-height: 0;
     flex-direction: column;
-    color: #eaf6ff;
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-content-panel.is-hidden {
@@ -334,7 +334,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-header {
     flex: 0 0 auto;
     padding: 0 4px 10px;
-    border-bottom: 1px solid rgba(92, 198, 247, 0.24);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.24);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-heading-row {
@@ -357,12 +357,12 @@
     min-width: 0;
     margin: 0;
     padding-left: 10px;
-    color: #f3fbff;
+    color: #e6edf3;
     font-size: 18px;
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: 0;
-    text-shadow: 0 0 9px rgba(96, 207, 255, 0.35);
+    text-shadow: 0 0 9px rgba(92, 200, 255, 0.35);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-title::before {
@@ -372,8 +372,8 @@
     bottom: 2px;
     left: 0;
     width: 2px;
-    background: #4dd8ff;
-    box-shadow: 0 0 7px rgba(77, 216, 255, 0.8);
+    background: #5cc8ff;
+    box-shadow: 0 0 7px rgba(92, 200, 255, 0.8);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-settings-open,
@@ -384,18 +384,18 @@
     height: 28px;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(91, 205, 255, 0.48) !important;
+    border: 1px solid rgba(92, 200, 255, 0.48) !important;
     border-radius: 4px !important;
-    background: rgba(10, 54, 77, 0.58) !important;
-    box-shadow: inset 0 0 10px rgba(73, 194, 245, 0.1) !important;
-    color: #8ee5ff !important;
+    background: rgba(10, 22, 32, 0.58) !important;
+    box-shadow: inset 0 0 10px rgba(92, 200, 255, 0.1) !important;
+    color: #8fe0ff !important;
     font-size: 11px;
     place-items: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-settings-open:active,
 #phone-panel-content .phone-screen .wangxiang-settings-back:active {
-    background: rgba(38, 132, 174, 0.46) !important;
+    background: rgba(43, 127, 184, 0.46) !important;
 }
 
 /* 任务大厅设置 */
@@ -411,7 +411,7 @@
     align-items: center;
     gap: 9px;
     padding: 0 3px 8px;
-    border-bottom: 1px solid rgba(92, 198, 247, 0.24);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.24);
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-header h1,
@@ -423,14 +423,14 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-header h1 {
-    color: #f2fbff;
+    color: #e6edf3;
     font-size: 15px;
     line-height: 1.25;
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-header p {
     margin-top: 2px;
-    color: #7898aa;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
@@ -442,10 +442,10 @@
 #phone-panel-content .phone-screen .wangxiang-settings-section {
     flex: 0 0 auto;
     padding: 10px;
-    border: 1px solid rgba(74, 182, 228, 0.36);
+    border: 1px solid rgba(92, 200, 255, 0.36);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.9);
-    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+    background: rgba(5, 13, 19, 0.9);
+    box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-section-heading {
@@ -460,7 +460,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-section-heading h2 {
-    color: #eaf7fd;
+    color: #e6edf3;
     font-size: 11px;
     line-height: 1.35;
 }
@@ -468,13 +468,13 @@
 #phone-panel-content .phone-screen .wangxiang-settings-section-heading p,
 #phone-panel-content .phone-screen .wangxiang-settings-message {
     margin-top: 3px;
-    color: #7893a4;
+    color: #5cc8ff;
     font-size: 7.5px;
     line-height: 1.45;
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-message.is-error {
-    color: #ff8b8b;
+    color: #ff7a72;
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-toggle {
@@ -512,9 +512,9 @@
 #phone-panel-content .phone-screen .wangxiang-settings-toggle span {
     position: absolute;
     inset: 0;
-    border: 1px solid rgba(111, 153, 173, 0.65);
+    border: 1px solid rgba(92, 200, 255, 0.65);
     border-radius: 9px;
-    background: rgba(40, 65, 78, 0.9);
+    background: rgba(16, 34, 47, 0.9);
     transition: background 0.18s ease, border-color 0.18s ease;
 }
 
@@ -526,31 +526,31 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #a9bdc7;
+    background: #5cc8ff;
     transition: transform 0.18s ease, background 0.18s ease;
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-toggle input:checked + span {
-    border-color: #49cfff;
-    background: rgba(24, 137, 184, 0.72);
+    border-color: #5cc8ff;
+    background: rgba(43, 127, 184, 0.72);
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-toggle input:checked + span::after {
-    background: #effcff;
+    background: #e6edf3;
     transform: translateX(14px);
 }
 
 #phone-panel-content .phone-screen .wangxiang-settings-toggle input:focus-visible + span {
-    outline: 1px solid #b9efff;
+    outline: 1px solid #e6edf3;
     outline-offset: 2px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-fold {
     margin-top: 9px;
     overflow: hidden;
-    border: 1px solid rgba(74, 182, 228, 0.24);
+    border: 1px solid rgba(92, 200, 255, 0.24);
     border-radius: 4px;
-    background: rgba(5, 27, 43, 0.64);
+    background: rgba(5, 13, 19, 0.64);
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header {
@@ -564,7 +564,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header:focus-visible {
-    outline: 1px solid #75dcff;
+    outline: 1px solid #8fe0ff;
     outline-offset: -2px;
 }
 
@@ -574,8 +574,8 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-title {
-    color: #f2fbff !important;
-    -webkit-text-fill-color: #f2fbff !important;
+    color: #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
     font-size: 11px;
     font-weight: 600;
     line-height: 1.35;
@@ -583,16 +583,16 @@
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-desc {
     margin-top: 2px;
-    color: rgba(224, 243, 252, 0.68) !important;
-    -webkit-text-fill-color: rgba(224, 243, 252, 0.68) !important;
+    color: rgba(230, 237, 243, 0.68) !important;
+    -webkit-text-fill-color: rgba(230, 237, 243, 0.68) !important;
     font-size: 8px;
     line-height: 1.4;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-arrow {
     flex: 0 0 auto;
-    color: #8ee5ff !important;
-    -webkit-text-fill-color: #8ee5ff !important;
+    color: #8fe0ff !important;
+    -webkit-text-fill-color: #8fe0ff !important;
     font-size: 10px;
     transition: transform 0.18s ease;
 }
@@ -612,40 +612,40 @@
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-list {
     margin-top: 0;
-    border-top: 1px solid rgba(74, 182, 228, 0.2);
+    border-top: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 /* The shared worldbook manager renders phone-worldbook-* classes. Keep its
    light default palette from disappearing against Wanxiang's dark panels. */
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row {
-    border-bottom-color: rgba(74, 182, 228, 0.13) !important;
+    border-bottom-color: rgba(92, 200, 255, 0.13) !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row.is-selected {
-    border-left-color: #38c9ff !important;
+    border-left-color: #5cc8ff !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-name {
-    color: #ddecf3 !important;
-    -webkit-text-fill-color: #ddecf3 !important;
+    color: #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-meta,
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status {
-    color: #87a6b5 !important;
-    -webkit-text-fill-color: #87a6b5 !important;
+    color: #5cc8ff !important;
+    -webkit-text-fill-color: #5cc8ff !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status.is-error {
-    color: #ff8b95 !important;
-    -webkit-text-fill-color: #ff8b95 !important;
+    color: #ff7a72 !important;
+    -webkit-text-fill-color: #ff7a72 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-entry-trigger {
-    border-color: rgba(93, 196, 235, 0.28) !important;
-    background: rgba(11, 46, 64, 0.82) !important;
-    color: #8ee5ff !important;
-    -webkit-text-fill-color: #8ee5ff !important;
+    border-color: rgba(92, 200, 255, 0.28) !important;
+    background: rgba(10, 22, 32, 0.82) !important;
+    color: #8fe0ff !important;
+    -webkit-text-fill-color: #8fe0ff !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-entry-trigger i {
@@ -658,7 +658,7 @@
     align-items: flex-start;
     gap: 8px;
     padding: 8px 1px;
-    border-bottom: 1px solid rgba(74, 182, 228, 0.13);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-item input {
@@ -671,7 +671,7 @@
     opacity: 1 !important;
     appearance: auto !important;
     -webkit-appearance: checkbox !important;
-    accent-color: #38c9ff;
+    accent-color: #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-item > span {
@@ -685,7 +685,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-item strong {
-    color: #ddecf3;
+    color: #e6edf3;
     font-size: 9px;
     font-weight: 500;
     line-height: 1.35;
@@ -693,7 +693,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-worldbook-item small {
     margin-top: 2px;
-    color: #718b9a;
+    color: #2b7fb8;
     font-size: 7px;
 }
 
@@ -706,10 +706,10 @@
     width: 100% !important;
     height: 29px !important;
     padding: 0 7px !important;
-    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border: 1px solid rgba(92, 200, 255, 0.46) !important;
     border-radius: 4px !important;
-    background: #071d2a !important;
-    color: #dceff7 !important;
+    background: #050d13 !important;
+    color: #e6edf3 !important;
     font-size: 8px !important;
 }
 
@@ -722,17 +722,17 @@
     height: 27px !important;
     margin: 0 !important;
     padding: 0 3px !important;
-    border: 1px solid rgba(73, 192, 240, 0.46) !important;
+    border: 1px solid rgba(92, 200, 255, 0.46) !important;
     border-radius: 4px !important;
-    background: rgba(11, 66, 91, 0.64) !important;
+    background: rgba(10, 22, 32, 0.64) !important;
     box-shadow: none !important;
-    color: #dff7ff !important;
+    color: #e6edf3 !important;
     font-size: 7.5px !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-delete {
-    border-color: rgba(255, 111, 111, 0.4) !important;
-    color: #ffadad !important;
+    border-color: rgba(255, 122, 114, 0.4) !important;
+    color: #ff7a72 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-prompt-textarea {
@@ -742,13 +742,13 @@
     margin: 0 !important;
     padding: 9px !important;
     resize: vertical;
-    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border: 1px solid rgba(92, 200, 255, 0.46) !important;
     border-radius: 4px !important;
     outline: none;
-    background: rgba(1, 13, 23, 0.94) !important;
+    background: rgba(5, 13, 19, 0.94) !important;
     background-image: none !important;
-    box-shadow: inset 0 0 14px rgba(38, 145, 191, 0.08) !important;
-    color: #dbeaf0 !important;
+    box-shadow: inset 0 0 14px rgba(43, 127, 184, 0.08) !important;
+    color: #e6edf3 !important;
     font-family: inherit;
     font-size: 8px !important;
     line-height: 1.55;
@@ -756,13 +756,13 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-prompt-textarea:focus {
-    border-color: #56d4ff !important;
-    box-shadow: 0 0 0 1px rgba(86, 212, 255, 0.12), inset 0 0 14px rgba(38, 145, 191, 0.08) !important;
+    border-color: #5cc8ff !important;
+    box-shadow: 0 0 0 1px rgba(92, 200, 255, 0.12), inset 0 0 14px rgba(43, 127, 184, 0.08) !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-subtitle {
     margin: 5px 0 0;
-    color: #849cad;
+    color: #5cc8ff;
     font-size: 10px;
     line-height: 1.4;
     letter-spacing: 0;
@@ -800,7 +800,7 @@
     min-height: 0;
     flex: 0 0 auto;
     overflow: hidden;
-    color: #78cce9;
+    color: #5cc8ff;
     transition: height 0.2s ease;
     place-items: center;
 }
@@ -823,7 +823,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-ready {
-    color: #d9f7ff;
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-ready i {
@@ -831,15 +831,15 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-loading {
-    color: #67d8ff;
+    color: #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-success {
-    color: #64e3a8;
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-pull-indicator.is-error {
-    color: #ff8d8d;
+    color: #ff7a72;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-list {
@@ -857,13 +857,13 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #56788c;
+    color: #2b7fb8;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-empty i {
-    color: #4a91b0;
+    color: #2b7fb8;
     font-size: 22px;
-    filter: drop-shadow(0 0 7px rgba(73, 195, 239, 0.25));
+    filter: drop-shadow(0 0 7px rgba(92, 200, 255, 0.25));
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-empty strong {
@@ -879,13 +879,13 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #56788c;
+    color: #2b7fb8;
 }
 
 #phone-panel-content .phone-screen .wangxiang-my-tasks-empty i {
-    color: #4a91b0;
+    color: #2b7fb8;
     font-size: 22px;
-    filter: drop-shadow(0 0 7px rgba(73, 195, 239, 0.25));
+    filter: drop-shadow(0 0 7px rgba(92, 200, 255, 0.25));
 }
 
 #phone-panel-content .phone-screen .wangxiang-my-tasks-empty strong {
@@ -894,8 +894,8 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-card {
-    --wangxiang-task-accent: #59d7ff;
-    --wangxiang-task-accent-soft: rgba(89, 215, 255, 0.14);
+    --wangxiang-task-accent: #5cc8ff;
+    --wangxiang-task-accent-soft: rgba(92, 200, 255, 0.14);
     position: relative;
     display: grid;
     min-height: 124px;
@@ -905,13 +905,13 @@
     gap: 10px;
     overflow: hidden;
     padding: 10px 9px;
-    border: 1px solid rgba(89, 215, 255, 0.58);
+    border: 1px solid rgba(92, 200, 255, 0.58);
     border-color: color-mix(in srgb, var(--wangxiang-task-accent) 58%, transparent);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.9);
+    background: rgba(5, 13, 19, 0.9);
     box-shadow:
         inset 0 0 18px var(--wangxiang-task-accent-soft),
-        0 5px 13px rgba(0, 4, 12, 0.34);
+        0 5px 13px rgba(5, 13, 19, 0.34);
     box-sizing: border-box;
 }
 
@@ -928,18 +928,18 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-card.is-green {
-    --wangxiang-task-accent: #62e2ae;
-    --wangxiang-task-accent-soft: rgba(98, 226, 174, 0.12);
+    --wangxiang-task-accent: #4ade80;
+    --wangxiang-task-accent-soft: rgba(74, 222, 128, 0.12);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-card.is-purple {
-    --wangxiang-task-accent: #ab7cff;
-    --wangxiang-task-accent-soft: rgba(171, 124, 255, 0.13);
+    --wangxiang-task-accent: #6ea8fe;
+    --wangxiang-task-accent-soft: rgba(110, 168, 254, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-card.is-orange {
-    --wangxiang-task-accent: #ffad55;
-    --wangxiang-task-accent-soft: rgba(255, 173, 85, 0.13);
+    --wangxiang-task-accent: #f0b45a;
+    --wangxiang-task-accent-soft: rgba(240, 180, 90, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-card-icon {
@@ -974,7 +974,7 @@
     gap: 5px;
     margin: 0;
     overflow: hidden;
-    color: #f4f9fd;
+    color: #e6edf3;
     font-size: 14px;
     font-weight: 700;
     line-height: 1.25;
@@ -1004,7 +1004,7 @@
     display: -webkit-box;
     margin: 5px 0 6px;
     overflow: hidden;
-    color: #bed0da;
+    color: #9db4c4;
     font-size: 12px;
     line-height: 1.5;
     letter-spacing: 0;
@@ -1017,7 +1017,7 @@
     min-width: 0;
     align-items: center;
     gap: 9px;
-    color: #91a9ba;
+    color: #5cc8ff;
     font-size: 10px;
     line-height: 1.3;
 }
@@ -1035,7 +1035,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-card-meta i {
     width: 9px;
     flex: 0 0 9px;
-    color: #528aad;
+    color: #2b7fb8;
     text-align: center;
 }
 
@@ -1049,7 +1049,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-reward-label {
-    color: #829daf;
+    color: #5cc8ff;
     font-size: 10px;
     line-height: 1;
 }
@@ -1082,7 +1082,7 @@
     border-radius: 3px !important;
     background: var(--wangxiang-task-accent-soft) !important;
     box-shadow: 0 0 8px var(--wangxiang-task-accent-soft) !important;
-    color: #effbff !important;
+    color: #e6edf3 !important;
     font-family: inherit;
     font-size: 11px;
     font-weight: 700;
@@ -1093,7 +1093,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-action.is-active {
-    color: #ffd6a5 !important;
+    color: #f0b45a !important;
 }
 
 /* 我的任务 */
@@ -1113,12 +1113,12 @@
     justify-content: space-between;
     gap: 8px;
     padding: 0 5px;
-    border-bottom: 1px solid rgba(79, 186, 234, 0.28);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.28);
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-group-header h2 {
     margin: 0;
-    color: #eaf7ff;
+    color: #e6edf3;
     font-size: 16px;
     line-height: 1;
     letter-spacing: 0;
@@ -1126,7 +1126,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-managed-group-header h2 span,
 #phone-panel-content .phone-screen .wangxiang-managed-group-header p {
-    color: #8299aa;
+    color: #5cc8ff;
     font-size: 9px;
     font-weight: 400;
     letter-spacing: 0;
@@ -1145,35 +1145,35 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-card {
-    --wangxiang-managed-accent: #58d6ff;
-    --wangxiang-managed-soft: rgba(88, 214, 255, 0.13);
+    --wangxiang-managed-accent: #5cc8ff;
+    --wangxiang-managed-soft: rgba(92, 200, 255, 0.13);
     display: grid;
     min-height: 112px;
     grid-template-columns: 52px minmax(0, 1fr) 76px;
     align-items: center;
     gap: 9px;
     padding: 9px;
-    border: 1px solid rgba(88, 214, 255, 0.5);
+    border: 1px solid rgba(92, 200, 255, 0.5);
     border-color: color-mix(in srgb, var(--wangxiang-managed-accent) 55%, transparent);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.91);
+    background: rgba(5, 13, 19, 0.91);
     box-shadow: inset 0 0 17px var(--wangxiang-managed-soft);
     box-sizing: border-box;
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-card.is-green {
-    --wangxiang-managed-accent: #63dfa9;
-    --wangxiang-managed-soft: rgba(99, 223, 169, 0.12);
+    --wangxiang-managed-accent: #4ade80;
+    --wangxiang-managed-soft: rgba(74, 222, 128, 0.12);
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-card.is-purple {
-    --wangxiang-managed-accent: #aa7aff;
-    --wangxiang-managed-soft: rgba(170, 122, 255, 0.13);
+    --wangxiang-managed-accent: #6ea8fe;
+    --wangxiang-managed-soft: rgba(110, 168, 254, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-card.is-orange {
-    --wangxiang-managed-accent: #ffa84c;
-    --wangxiang-managed-soft: rgba(255, 168, 76, 0.13);
+    --wangxiang-managed-accent: #f0b45a;
+    --wangxiang-managed-soft: rgba(240, 180, 90, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-icon {
@@ -1198,7 +1198,7 @@
 #phone-panel-content .phone-screen .wangxiang-managed-task-main h3 {
     margin: 0;
     overflow: hidden;
-    color: #f3f9fd;
+    color: #e6edf3;
     font-size: 14px;
     line-height: 1.2;
     text-overflow: ellipsis;
@@ -1209,7 +1209,7 @@
     display: -webkit-box;
     margin: 5px 0;
     overflow: hidden;
-    color: #9eb2c0;
+    color: #5cc8ff;
     font-size: 9px;
     line-height: 1.35;
     -webkit-box-orient: vertical;
@@ -1222,14 +1222,14 @@
     align-items: center;
     gap: 5px;
     margin: 6px 0;
-    color: #91a8b8;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-progress > div {
     height: 4px;
     overflow: hidden;
-    background: rgba(82, 121, 145, 0.25);
+    background: rgba(43, 127, 184, 0.25);
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-progress > div i {
@@ -1258,7 +1258,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-category-editor label > span {
-    color: #7893a4;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
@@ -1269,18 +1269,18 @@
     height: 31px !important;
     margin: 0 !important;
     padding: 0 8px !important;
-    border: 1px solid rgba(79, 183, 226, 0.46) !important;
+    border: 1px solid rgba(92, 200, 255, 0.46) !important;
     border-radius: 4px !important;
-    background: #071d2a !important;
+    background: #050d13 !important;
     box-shadow: none !important;
-    color: #e6f5fd !important;
+    color: #e6edf3 !important;
     font-size: 10px !important;
     box-sizing: border-box;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-category-editor .is-locked input {
-    border-color: rgba(106, 137, 153, 0.3) !important;
-    color: #8195a0 !important;
+    border-color: rgba(43, 127, 184, 0.3) !important;
+    color: #5cc8ff !important;
     opacity: 1 !important;
 }
 
@@ -1293,18 +1293,18 @@
     gap: 6px;
     margin: 10px 0 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(73, 192, 240, 0.56) !important;
+    border: 1px solid rgba(92, 200, 255, 0.56) !important;
     border-radius: 4px !important;
-    background: rgba(11, 66, 91, 0.72) !important;
+    background: rgba(10, 22, 32, 0.72) !important;
     box-shadow: none !important;
-    color: #dff7ff !important;
+    color: #e6edf3 !important;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-meta {
     display: flex;
     gap: 8px;
-    color: #71899a;
+    color: #2b7fb8;
     font-size: 7.5px;
 }
 
@@ -1327,7 +1327,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-side > span {
-    color: #819bab;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
@@ -1352,14 +1352,14 @@
     border-radius: 3px !important;
     background: var(--wangxiang-managed-soft) !important;
     box-shadow: none !important;
-    color: #effaff !important;
+    color: #e6edf3 !important;
     font-size: 9px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-managed-task-side button:disabled {
-    border-color: rgba(111, 139, 156, 0.35) !important;
-    background: rgba(40, 59, 70, 0.18) !important;
-    color: #71818c !important;
+    border-color: rgba(43, 127, 184, 0.35) !important;
+    background: rgba(16, 34, 47, 0.18) !important;
+    color: #6b8394 !important;
     opacity: 1;
 }
 
@@ -1381,10 +1381,10 @@
     align-items: center;
     gap: 7px;
     padding: 0 10px;
-    border: 1px solid rgba(76, 176, 222, 0.42);
+    border: 1px solid rgba(92, 200, 255, 0.42);
     border-radius: 5px;
-    background: rgba(2, 17, 29, 0.84);
-    color: #86a5b9;
+    background: rgba(5, 13, 19, 0.84);
+    color: #5cc8ff;
     box-sizing: border-box;
 }
 
@@ -1401,16 +1401,16 @@
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
-    color: #e6f5fd !important;
-    -webkit-text-fill-color: #e6f5fd;
+    color: #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3;
     font-size: 10px;
     outline: 0;
 }
 
 #phone-panel-content .phone-screen .wangxiang-app .wangxiang-market-search > input[type="search"]::placeholder {
-    color: #718b9c !important;
+    color: #2b7fb8 !important;
     opacity: 1 !important;
-    -webkit-text-fill-color: #718b9c;
+    -webkit-text-fill-color: #2b7fb8;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-settings-open {
@@ -1421,23 +1421,23 @@
     gap: 5px;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(76, 176, 222, 0.48) !important;
+    border: 1px solid rgba(92, 200, 255, 0.48) !important;
     border-radius: 5px !important;
-    background: rgba(2, 17, 29, 0.84) !important;
+    background: rgba(5, 13, 19, 0.84) !important;
     box-shadow: none !important;
-    color: #c1d7e5 !important;
+    color: #9db4c4 !important;
     font-size: 11px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-settings-open:active {
-    background: rgba(38, 132, 174, 0.4) !important;
+    background: rgba(43, 127, 184, 0.4) !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-categories {
     display: grid;
     flex: 0 0 auto;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    border-bottom: 1px solid rgba(77, 180, 226, 0.3);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.3);
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-categories button {
@@ -1451,7 +1451,7 @@
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #9db0bd !important;
+    color: #5cc8ff !important;
     font-size: 12px;
     line-height: 1.25;
     text-overflow: clip;
@@ -1459,7 +1459,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-categories button.is-active {
-    color: #f2fbff !important;
+    color: #e6edf3 !important;
     font-weight: 700;
 }
 
@@ -1470,8 +1470,8 @@
     bottom: 0;
     left: 16%;
     height: 2px;
-    background: #49c9ff;
-    box-shadow: 0 0 7px #49c9ff;
+    background: #5cc8ff;
+    box-shadow: 0 0 7px #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-scroll.wangxiang-content-scroll {
@@ -1485,7 +1485,7 @@
     min-height: 0;
     flex: 0 0 auto;
     overflow: hidden;
-    color: #78cce9;
+    color: #5cc8ff;
     transition: height 0.2s ease;
     place-items: center;
 }
@@ -1508,7 +1508,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-ready {
-    color: #d9f7ff;
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-ready i {
@@ -1516,15 +1516,15 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-loading {
-    color: #67d8ff;
+    color: #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-success {
-    color: #64e3a8;
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-pull-indicator.is-error {
-    color: #ff8d8d;
+    color: #ff7a72;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-product-list {
@@ -1535,7 +1535,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-product-card {
-    --wangxiang-market-accent: #52d2ff;
+    --wangxiang-market-accent: #5cc8ff;
     display: flex;
     min-width: 0;
     min-height: 215px;
@@ -1543,15 +1543,15 @@
     padding: 10px;
     border: 1px solid color-mix(in srgb, var(--wangxiang-market-accent) 62%, transparent);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.91);
-    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+    background: rgba(5, 13, 19, 0.91);
+    box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
     box-sizing: border-box;
 }
 
-#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="2"] { --wangxiang-market-accent: #a67aff; }
-#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="3"] { --wangxiang-market-accent: #62dc9a; }
-#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="4"] { --wangxiang-market-accent: #69dcff; }
-#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="5"] { --wangxiang-market-accent: #f2b35f; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="2"] { --wangxiang-market-accent: #8fe0ff; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="3"] { --wangxiang-market-accent: #4ade80; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="4"] { --wangxiang-market-accent: #5cc8ff; }
+#phone-panel-content .phone-screen .wangxiang-market-product-card[data-market-category-index="5"] { --wangxiang-market-accent: #f0b45a; }
 
 #phone-panel-content .phone-screen .wangxiang-market-product-card.is-hidden-by-filter {
     display: none;
@@ -1610,7 +1610,7 @@
     min-height: 36px;
     margin: 7px 0 4px;
     overflow: hidden;
-    color: #f0f9fd;
+    color: #e6edf3;
     font-size: 14px;
     line-height: 1.3;
     -webkit-box-orient: vertical;
@@ -1632,8 +1632,8 @@
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #a9beca !important;
-    -webkit-text-fill-color: #a9beca !important;
+    color: #5cc8ff !important;
+    -webkit-text-fill-color: #5cc8ff !important;
     font-size: 11px !important;
     line-height: 1.5 !important;
     text-align: left;
@@ -1660,14 +1660,14 @@
 #phone-panel-content .phone-screen .wangxiang-market-product-meta strong small {
     display: block;
     margin-bottom: 2px;
-    color: #78909f;
+    color: #5cc8ff;
     font-size: 9px;
     font-weight: 400;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-product-meta > span {
     flex: 0 0 auto;
-    color: #718897;
+    color: #2b7fb8;
     font-size: 9px;
     white-space: nowrap;
 }
@@ -1686,15 +1686,15 @@
     border-radius: 3px !important;
     background: color-mix(in srgb, var(--wangxiang-market-accent) 16%, transparent) !important;
     box-shadow: 0 0 8px color-mix(in srgb, var(--wangxiang-market-accent) 18%, transparent) !important;
-    color: #f1fbff !important;
+    color: #e6edf3 !important;
     font-size: 11px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-market-product-buy:disabled {
-    border-color: rgba(110, 135, 150, 0.35) !important;
-    background: rgba(72, 86, 96, 0.15) !important;
+    border-color: rgba(43, 127, 184, 0.35) !important;
+    background: rgba(16, 34, 47, 0.15) !important;
     box-shadow: none !important;
-    color: #748792 !important;
+    color: #2b7fb8 !important;
 }
 
 /* 我的订单 */
@@ -1705,7 +1705,7 @@
 #phone-panel-content .phone-screen .wangxiang-order-account {
     flex: 0 0 auto;
     padding: 10px 2px 11px;
-    border-bottom: 1px solid rgba(74, 184, 230, 0.28);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.28);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-account-user {
@@ -1719,13 +1719,13 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    color: #86a5b5;
+    color: #5cc8ff;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-account-user strong {
     overflow: hidden;
-    color: #f0f9fd;
+    color: #e6edf3;
     font-size: 14px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1740,8 +1740,8 @@
 
 #phone-panel-content .phone-screen .wangxiang-order-balance-grid > div {
     padding: 7px 9px;
-    border-left: 2px solid #51d2ff;
-    background: rgba(9, 44, 63, 0.56);
+    border-left: 2px solid #5cc8ff;
+    background: rgba(10, 22, 32, 0.56);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-balance-grid span,
@@ -1750,20 +1750,20 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-balance-grid span {
-    color: #8199a8;
+    color: #5cc8ff;
     font-size: 9px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-balance-grid strong {
     margin-top: 3px;
-    color: #65dcff;
+    color: #5cc8ff;
     font-size: 14px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-addresses {
     flex: 0 0 auto;
     padding: 2px 2px 8px;
-    border-bottom: 1px solid rgba(74, 184, 230, 0.2);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-addresses > header {
@@ -1780,13 +1780,13 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-addresses h2 {
-    color: #dff4fc;
+    color: #e6edf3;
     font-size: 12px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-addresses > header p {
     margin-top: 2px;
-    color: #718b9a;
+    color: #2b7fb8;
     font-size: 8px;
 }
 
@@ -1797,10 +1797,10 @@
     height: 28px;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(74, 198, 247, 0.52) !important;
+    border: 1px solid rgba(92, 200, 255, 0.52) !important;
     border-radius: 3px !important;
-    background: rgba(12, 67, 94, 0.55) !important;
-    color: #82ddff !important;
+    background: rgba(16, 34, 47, 0.55) !important;
+    color: #8fe0ff !important;
     place-items: center;
 }
 
@@ -1816,12 +1816,12 @@
     align-items: center;
     gap: 5px;
     padding: 6px;
-    border: 1px solid rgba(75, 167, 207, 0.3);
-    background: rgba(4, 27, 42, 0.72);
+    border: 1px solid rgba(92, 200, 255, 0.3);
+    background: rgba(5, 13, 19, 0.72);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-address-list article.is-default {
-    border-color: rgba(76, 207, 255, 0.58);
+    border-color: rgba(92, 200, 255, 0.58);
 }
 
 #phone-panel-content .phone-screen .wangxiang-address-main {
@@ -1833,7 +1833,7 @@
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #dcecf2 !important;
+    color: #e6edf3 !important;
     text-align: left;
 }
 
@@ -1845,27 +1845,27 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-address-main span {
-    color: #66d4fa;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-address-main span small {
     margin-left: 5px;
     padding: 1px 3px;
-    border: 1px solid #58c9ef;
-    color: #91e6ff;
+    border: 1px solid #5cc8ff;
+    color: #8fe0ff;
     font-size: 7px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-address-main strong {
     margin-top: 3px;
-    color: #e8f5fa;
+    color: #e6edf3;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-address-main p {
     margin-top: 2px;
-    color: #829aa8;
+    color: #5cc8ff;
     font-size: 9px;
     line-height: 1.4;
 }
@@ -1879,7 +1879,7 @@
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
-    color: #b87979 !important;
+    color: #ff7a72 !important;
     place-items: center;
 }
 
@@ -1892,10 +1892,10 @@
 #phone-panel-content .phone-screen .wangxiang-order-card {
     flex: 0 0 auto;
     padding: 10px;
-    border: 1px solid rgba(76, 184, 231, 0.5);
+    border: 1px solid rgba(92, 200, 255, 0.5);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.91);
-    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.08);
+    background: rgba(5, 13, 19, 0.91);
+    box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.08);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card > header {
@@ -1904,31 +1904,31 @@
     justify-content: space-between;
     gap: 8px;
     padding-bottom: 8px;
-    color: #8299a8;
+    color: #5cc8ff;
     font-size: 9px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card > header strong {
-    color: #ffbf62;
+    color: #f0b45a;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card.is-shipping > header strong {
-    color: #67dca0;
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card.is-delivered {
-    border-color: rgba(105, 221, 166, 0.52);
+    border-color: rgba(74, 222, 128, 0.52);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card.is-delivered > header strong {
-    color: #91efbd;
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card.is-delivered .wangxiang-order-icon {
-    border-color: rgba(105, 221, 166, 0.45);
-    background: rgba(39, 126, 83, 0.2);
-    color: #84eab2;
+    border-color: rgba(74, 222, 128, 0.45);
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-body {
@@ -1942,9 +1942,9 @@
     display: grid;
     width: 46px;
     height: 46px;
-    border: 1px solid rgba(77, 188, 236, 0.4);
-    background: rgba(29, 94, 124, 0.18);
-    color: #67d7ff;
+    border: 1px solid rgba(92, 200, 255, 0.4);
+    background: rgba(16, 34, 47, 0.18);
+    color: #5cc8ff;
     font-size: 20px;
     place-items: center;
 }
@@ -1956,7 +1956,7 @@
 #phone-panel-content .phone-screen .wangxiang-order-main h2 {
     margin: 0 0 5px;
     overflow: hidden;
-    color: #f0f8fc;
+    color: #e6edf3;
     font-size: 13px;
     line-height: 1.3;
     text-overflow: ellipsis;
@@ -1967,7 +1967,7 @@
 #phone-panel-content .phone-screen .wangxiang-order-main small {
     display: block;
     margin: 0;
-    color: #849ba9;
+    color: #5cc8ff;
     font-size: 9px;
     line-height: 1.55;
 }
@@ -1979,19 +1979,19 @@
     gap: 8px;
     margin-top: 9px;
     padding-top: 8px;
-    border-top: 1px solid rgba(72, 170, 212, 0.18);
+    border-top: 1px solid rgba(92, 200, 255, 0.18);
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card > footer > div span {
     display: block;
-    color: #78909f;
+    color: #5cc8ff;
     font-size: 8px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card > footer > div strong {
     display: block;
     margin-top: 2px;
-    color: #5ad4ff;
+    color: #5cc8ff;
     font-size: 15px;
 }
 
@@ -2004,24 +2004,24 @@
     gap: 5px;
     margin: 0 !important;
     padding: 0 10px !important;
-    border: 1px solid #4acbff !important;
+    border: 1px solid #5cc8ff !important;
     border-radius: 3px !important;
-    background: rgba(28, 121, 164, 0.34) !important;
+    background: rgba(16, 34, 47, 0.34) !important;
     box-shadow: none !important;
-    color: #effbff !important;
+    color: #e6edf3 !important;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card > footer button:disabled {
-    border-color: rgba(86, 182, 132, 0.42) !important;
-    background: rgba(35, 112, 72, 0.18) !important;
-    color: #80c9a1 !important;
+    border-color: rgba(74, 222, 128, 0.42) !important;
+    background: rgba(74, 222, 128, 0.18) !important;
+    color: #4ade80 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-order-card.is-delivered > footer button:disabled {
-    border-color: rgba(103, 220, 164, 0.5) !important;
-    background: rgba(39, 126, 83, 0.22) !important;
-    color: #9aeec0 !important;
+    border-color: rgba(74, 222, 128, 0.5) !important;
+    background: rgba(74, 222, 128, 0.22) !important;
+    color: #4ade80 !important;
 }
 
 /* 我的背包 */
@@ -2036,7 +2036,7 @@
     justify-content: space-between;
     gap: 10px;
     padding: 4px 2px 10px;
-    border-bottom: 1px solid rgba(74, 184, 230, 0.28);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.28);
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-header span,
@@ -2046,19 +2046,19 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-header span {
-    color: #6f91a4;
+    color: #2b7fb8;
     font-size: 8px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-header h2 {
     margin-top: 2px;
-    color: #ecf8fc;
+    color: #e6edf3;
     font-size: 15px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-header > strong {
     flex: 0 0 auto;
-    color: #8ee8ff;
+    color: #8fe0ff;
     font-size: 10px;
     font-weight: 600;
 }
@@ -2076,32 +2076,32 @@
     align-items: center;
     gap: 9px;
     padding: 10px;
-    border: 1px solid rgba(77, 188, 236, 0.42);
+    border: 1px solid rgba(92, 200, 255, 0.42);
     border-radius: 5px;
-    background: rgba(2, 18, 31, 0.9);
-    box-shadow: inset 0 0 18px rgba(54, 160, 208, 0.07);
+    background: rgba(5, 13, 19, 0.9);
+    box-shadow: inset 0 0 18px rgba(92, 200, 255, 0.07);
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item.is-task {
-    border-color: rgba(105, 221, 166, 0.48);
+    border-color: rgba(74, 222, 128, 0.48);
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item-icon {
     display: grid;
     width: 44px;
     height: 44px;
-    border: 1px solid rgba(77, 188, 236, 0.4);
+    border: 1px solid rgba(92, 200, 255, 0.4);
     border-radius: 4px;
-    background: rgba(29, 94, 124, 0.18);
-    color: #67d7ff;
+    background: rgba(16, 34, 47, 0.18);
+    color: #5cc8ff;
     font-size: 18px;
     place-items: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item.is-task .wangxiang-inventory-item-icon {
-    border-color: rgba(105, 221, 166, 0.42);
-    background: rgba(39, 126, 83, 0.18);
-    color: #83e9b1;
+    border-color: rgba(74, 222, 128, 0.42);
+    background: rgba(74, 222, 128, 0.18);
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item-main {
@@ -2119,7 +2119,7 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: #f0f8fc;
+    color: #e6edf3;
     font-size: 12px;
     line-height: 1.35;
     text-overflow: ellipsis;
@@ -2128,7 +2128,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item-main > div > strong {
     flex: 0 0 auto;
-    color: #efc56a;
+    color: #f0b45a;
     font-size: 14px;
 }
 
@@ -2136,7 +2136,7 @@
     display: -webkit-box;
     margin: 4px 0 0;
     overflow: hidden;
-    color: #829aa8;
+    color: #5cc8ff;
     font-size: 9px;
     line-height: 1.45;
     -webkit-box-orient: vertical;
@@ -2149,7 +2149,7 @@
     justify-content: space-between;
     gap: 7px;
     margin-top: 6px;
-    color: #6f8795;
+    color: #2b7fb8;
     font-size: 8px;
 }
 
@@ -2162,7 +2162,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-item-main footer span {
-    color: #79cde9;
+    color: #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-empty {
@@ -2172,17 +2172,17 @@
     justify-content: center;
     flex-direction: column;
     gap: 7px;
-    color: #718b99;
+    color: #2b7fb8;
     text-align: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-empty i {
-    color: #4c8ba8;
+    color: #2b7fb8;
     font-size: 28px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-inventory-empty strong {
-    color: #a8c7d5;
+    color: #5cc8ff;
     font-size: 12px;
 }
 
@@ -2193,7 +2193,7 @@
     inset: 0;
     display: grid;
     padding: 16px;
-    background: rgba(0, 8, 15, 0.72);
+    background: rgba(5, 13, 19, 0.72);
     place-items: center;
     box-sizing: border-box;
 }
@@ -2205,11 +2205,11 @@
 #phone-panel-content .phone-screen .wangxiang-purchase-dialog {
     width: min(100%, 320px);
     padding: 14px;
-    border: 1px solid rgba(77, 203, 255, 0.65);
+    border: 1px solid rgba(92, 200, 255, 0.65);
     border-radius: 6px;
-    background: #041827;
-    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), inset 0 0 22px rgba(59, 180, 230, 0.08);
-    color: #effaff;
+    background: #050d13;
+    box-shadow: 0 16px 42px rgba(5, 13, 19, 0.55), inset 0 0 22px rgba(92, 200, 255, 0.08);
+    color: #e6edf3;
     box-sizing: border-box;
 }
 
@@ -2231,7 +2231,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-purchase-product-name {
     margin-top: 4px !important;
-    color: #9eb8c7;
+    color: #5cc8ff;
     font-size: 11px;
 }
 
@@ -2244,13 +2244,13 @@
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
-    color: #91b5c7 !important;
+    color: #5cc8ff !important;
     place-items: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-purchase-price {
     margin-top: 12px;
-    color: #65d8ff;
+    color: #5cc8ff;
     font-size: 11px;
 }
 
@@ -2267,12 +2267,12 @@
     height: 36px !important;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(77, 188, 236, 0.5) !important;
+    border: 1px solid rgba(92, 200, 255, 0.5) !important;
     border-radius: 3px !important;
-    background: rgba(5, 37, 55, 0.9) !important;
+    background: rgba(10, 22, 32, 0.9) !important;
     box-shadow: none !important;
-    color: #effaff !important;
-    -webkit-text-fill-color: #effaff !important;
+    color: #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
     text-align: center;
 }
 
@@ -2302,18 +2302,18 @@
     gap: 5px;
     margin: 0 !important;
     padding: 0 8px !important;
-    border: 1px solid rgba(111, 158, 180, 0.5) !important;
+    border: 1px solid rgba(92, 200, 255, 0.5) !important;
     border-radius: 3px !important;
-    background: rgba(22, 53, 69, 0.7) !important;
+    background: rgba(10, 22, 32, 0.7) !important;
     box-shadow: none !important;
-    color: #c7dbe5 !important;
+    color: #9db4c4 !important;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-purchase-dialog > footer button.is-primary {
-    border-color: #4acbff !important;
-    background: rgba(28, 121, 164, 0.42) !important;
-    color: #f1fbff !important;
+    border-color: #5cc8ff !important;
+    background: rgba(16, 34, 47, 0.42) !important;
+    color: #e6edf3 !important;
 }
 
 /* 地址与支付弹窗 */
@@ -2323,7 +2323,7 @@
     inset: 0;
     display: grid;
     padding: 14px;
-    background: rgba(0, 8, 15, 0.78);
+    background: rgba(5, 13, 19, 0.78);
     place-items: center;
     box-sizing: border-box;
 }
@@ -2338,11 +2338,11 @@
     max-height: min(86vh, 560px);
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(77, 203, 255, 0.68);
+    border: 1px solid rgba(92, 200, 255, 0.68);
     border-radius: 6px;
-    background: #041827;
-    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), inset 0 0 22px rgba(59, 180, 230, 0.08);
-    color: #effaff;
+    background: #050d13;
+    box-shadow: 0 16px 44px rgba(5, 13, 19, 0.6), inset 0 0 22px rgba(92, 200, 255, 0.08);
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > header {
@@ -2352,7 +2352,7 @@
     justify-content: space-between;
     gap: 10px;
     padding: 13px;
-    border-bottom: 1px solid rgba(73, 183, 228, 0.2);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > header h2,
@@ -2361,13 +2361,13 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > header h2 {
-    color: #f0faff;
+    color: #e6edf3;
     font-size: 15px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > header p {
     margin-top: 3px;
-    color: #87a1af;
+    color: #5cc8ff;
     font-size: 9px;
 }
 
@@ -2380,7 +2380,7 @@
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
-    color: #91b5c7 !important;
+    color: #5cc8ff !important;
     place-items: center;
 }
 
@@ -2404,7 +2404,7 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog-body > label span {
-    color: #8fa7b5;
+    color: #5cc8ff;
     font-size: 9px;
 }
 
@@ -2415,12 +2415,12 @@
     min-width: 0 !important;
     margin: 0 !important;
     padding: 8px !important;
-    border: 1px solid rgba(76, 177, 221, 0.48) !important;
+    border: 1px solid rgba(92, 200, 255, 0.48) !important;
     border-radius: 3px !important;
-    background: #061e2d !important;
+    background: #050d13 !important;
     box-shadow: none !important;
-    color: #effaff !important;
-    -webkit-text-fill-color: #effaff !important;
+    color: #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
     font-size: 11px !important;
     box-sizing: border-box;
 }
@@ -2440,29 +2440,29 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 11px 13px 13px;
-    border-top: 1px solid rgba(73, 183, 228, 0.2);
+    border-top: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > footer button {
     height: 34px;
     margin: 0 !important;
     padding: 0 8px !important;
-    border: 1px solid rgba(111, 158, 180, 0.5) !important;
+    border: 1px solid rgba(92, 200, 255, 0.5) !important;
     border-radius: 3px !important;
-    background: rgba(22, 53, 69, 0.7) !important;
+    background: rgba(10, 22, 32, 0.7) !important;
     box-shadow: none !important;
-    color: #c7dbe5 !important;
+    color: #9db4c4 !important;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-form-dialog > footer button.is-primary {
-    border-color: #4acbff !important;
-    background: rgba(28, 121, 164, 0.42) !important;
-    color: #f1fbff !important;
+    border-color: #5cc8ff !important;
+    background: rgba(16, 34, 47, 0.42) !important;
+    color: #e6edf3 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-payment-amount {
-    color: #65d8ff;
+    color: #5cc8ff;
     font-size: 15px;
     font-weight: 700;
 }
@@ -2479,7 +2479,7 @@
 #phone-panel-content .phone-screen .wangxiang-payment-methods legend,
 #phone-panel-content .phone-screen .wangxiang-payment-addresses legend {
     margin-bottom: 5px;
-    color: #8ea8b7;
+    color: #5cc8ff;
     font-size: 9px;
 }
 
@@ -2490,8 +2490,8 @@
     align-items: center;
     gap: 7px;
     padding: 8px;
-    border: 1px solid rgba(75, 167, 207, 0.34);
-    background: rgba(4, 27, 42, 0.72);
+    border: 1px solid rgba(92, 200, 255, 0.34);
+    background: rgba(5, 13, 19, 0.72);
 }
 
 #phone-panel-content .phone-screen .wangxiang-payment-methods label.is-disabled {
@@ -2505,7 +2505,7 @@
     height: 15px !important;
     margin: 0 !important;
     padding: 0 !important;
-    accent-color: #47cfff;
+    accent-color: #5cc8ff;
 }
 
 #phone-panel-content .phone-screen .wangxiang-payment-methods span,
@@ -2519,14 +2519,14 @@
 
 #phone-panel-content .phone-screen .wangxiang-payment-methods strong,
 #phone-panel-content .phone-screen .wangxiang-payment-addresses strong {
-    color: #e4f3f8;
+    color: #e6edf3;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-payment-methods small,
 #phone-panel-content .phone-screen .wangxiang-payment-addresses small {
     margin-top: 2px;
-    color: #8198a6;
+    color: #5cc8ff;
     font-size: 8px;
     line-height: 1.4;
     overflow-wrap: anywhere;
@@ -2540,7 +2540,7 @@
 #phone-panel-content .phone-screen .wangxiang-payment-no-address {
     margin: 0;
     padding: 10px;
-    color: #d99572;
+    color: #f0b45a;
     font-size: 9px;
     text-align: center;
 }
@@ -2553,7 +2553,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-detail-clickable:focus-visible,
 #phone-panel-content .phone-screen .wangxiang-market-product-description:focus-visible {
-    outline: 1px solid #7bdcff;
+    outline: 1px solid #8fe0ff;
     outline-offset: 2px;
 }
 
@@ -2563,7 +2563,7 @@
     inset: 0;
     display: grid;
     padding: 16px;
-    background: rgba(0, 8, 15, 0.76);
+    background: rgba(5, 13, 19, 0.76);
     place-items: center;
     box-sizing: border-box;
 }
@@ -2575,11 +2575,11 @@
 #phone-panel-content .phone-screen .wangxiang-info-dialog {
     width: min(100%, 330px);
     overflow: hidden;
-    border: 1px solid rgba(77, 203, 255, 0.68);
+    border: 1px solid rgba(92, 200, 255, 0.68);
     border-radius: 6px;
-    background: #041827;
-    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.58), inset 0 0 22px rgba(59, 180, 230, 0.08);
-    color: #effaff;
+    background: #050d13;
+    box-shadow: 0 16px 44px rgba(5, 13, 19, 0.58), inset 0 0 22px rgba(92, 200, 255, 0.08);
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-dialog > header {
@@ -2588,14 +2588,14 @@
     justify-content: space-between;
     gap: 10px;
     padding: 14px 14px 11px;
-    border-bottom: 1px solid rgba(73, 183, 228, 0.2);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-eyebrow {
     display: block;
     margin-bottom: 3px;
     overflow: hidden;
-    color: #6fcff2;
+    color: #5cc8ff;
     font-size: 9px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2603,7 +2603,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-info-dialog h2 {
     margin: 0;
-    color: #f2fbff;
+    color: #e6edf3;
     font-size: 16px;
     line-height: 1.35;
 }
@@ -2617,7 +2617,7 @@
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
-    color: #91b5c7 !important;
+    color: #5cc8ff !important;
     place-items: center;
 }
 
@@ -2633,7 +2633,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-info-text {
     margin: 0;
-    color: #d9e8ee;
+    color: #e6edf3;
     font-size: 13px;
     line-height: 1.7;
     overflow-wrap: anywhere;
@@ -2643,7 +2643,7 @@
 #phone-panel-content .phone-screen .wangxiang-info-progress {
     margin-top: 16px;
     padding-top: 12px;
-    border-top: 1px solid rgba(73, 183, 228, 0.2);
+    border-top: 1px solid rgba(92, 200, 255, 0.2);
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-progress.is-hidden,
@@ -2656,12 +2656,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    color: #8ea8b7;
+    color: #5cc8ff;
     font-size: 10px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-progress-meta strong {
-    color: #dff7ff;
+    color: #e6edf3;
     font-size: 11px;
     font-weight: 600;
 }
@@ -2671,7 +2671,7 @@
     margin-top: 8px;
     overflow: hidden;
     border-radius: 4px;
-    background: rgba(35, 84, 108, 0.78);
+    background: rgba(16, 34, 47, 0.78);
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-progress-track i {
@@ -2679,16 +2679,16 @@
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: #55d4ff;
-    box-shadow: 0 0 9px rgba(85, 212, 255, 0.8);
+    background: #5cc8ff;
+    box-shadow: 0 0 9px rgba(92, 200, 255, 0.8);
     transition: width 0.2s ease;
 }
 
 #phone-panel-content .phone-screen .wangxiang-info-meta {
     margin-top: 14px;
     padding-top: 11px;
-    border-top: 1px solid rgba(73, 183, 228, 0.2);
-    color: #76ccec;
+    border-top: 1px solid rgba(92, 200, 255, 0.2);
+    color: #5cc8ff;
     font-size: 11px;
     line-height: 1.55;
 }
@@ -2702,18 +2702,18 @@
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
-    background-color: #020d17;
+    background-color: #050d13;
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
-    color: #ddecf4;
+    color: #e6edf3;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-panel::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(1, 11, 20, 0.82);
+    background: rgba(5, 13, 19, 0.82);
     pointer-events: none;
 }
 
@@ -2730,7 +2730,7 @@
     align-items: center;
     gap: 12px;
     padding: 18px 14px 7px;
-    border-bottom: 1px solid rgba(58, 178, 232, 0.25);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.25);
     box-sizing: border-box;
 }
 
@@ -2748,11 +2748,11 @@
     height: 31px;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1px solid rgba(66, 193, 246, 0.48) !important;
+    border: 1px solid rgba(92, 200, 255, 0.48) !important;
     border-radius: 4px !important;
-    background: rgba(4, 39, 61, 0.78) !important;
-    box-shadow: inset 0 0 11px rgba(68, 192, 244, 0.12) !important;
-    color: #83ddff !important;
+    background: rgba(10, 22, 32, 0.78) !important;
+    box-shadow: inset 0 0 11px rgba(92, 200, 255, 0.12) !important;
+    color: #8fe0ff !important;
     font-size: 12px;
     place-items: center;
 }
@@ -2767,8 +2767,8 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-content {
-    --wangxiang-detail-accent: #57d3ff;
-    --wangxiang-detail-soft: rgba(87, 211, 255, 0.13);
+    --wangxiang-detail-accent: #5cc8ff;
+    --wangxiang-detail-soft: rgba(92, 200, 255, 0.13);
     display: flex;
     flex: 0 0 auto;
     flex-direction: column;
@@ -2777,18 +2777,18 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-content.is-green {
-    --wangxiang-detail-accent: #62e2ae;
-    --wangxiang-detail-soft: rgba(98, 226, 174, 0.12);
+    --wangxiang-detail-accent: #4ade80;
+    --wangxiang-detail-soft: rgba(74, 222, 128, 0.12);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-content.is-purple {
-    --wangxiang-detail-accent: #ad7dff;
-    --wangxiang-detail-soft: rgba(173, 125, 255, 0.13);
+    --wangxiang-detail-accent: #6ea8fe;
+    --wangxiang-detail-soft: rgba(110, 168, 254, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-content.is-orange {
-    --wangxiang-detail-accent: #ffad55;
-    --wangxiang-detail-soft: rgba(255, 173, 85, 0.13);
+    --wangxiang-detail-accent: #f0b45a;
+    --wangxiang-detail-soft: rgba(240, 180, 90, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-hero,
@@ -2824,7 +2824,7 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: #effaff;
+    color: #e6edf3;
     font-size: 15px;
     line-height: 1.25;
     text-overflow: ellipsis;
@@ -2879,7 +2879,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-publisher p {
     display: block;
     margin: 0;
-    color: #9db2bf;
+    color: #5cc8ff;
     font-size: 11px;
     line-height: 1.45;
 }
@@ -2887,7 +2887,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-publisher h2 {
     margin: 2px 0;
     overflow: hidden;
-    color: #f0f8fc;
+    color: #e6edf3;
     font-size: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2896,7 +2896,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-publisher strong {
     display: block;
     margin-top: 3px;
-    color: #63d998;
+    color: #4ade80;
     font-size: 11px;
     font-weight: 500;
 }
@@ -2905,11 +2905,11 @@
     height: 34px;
     margin: 0 !important;
     padding: 0 8px !important;
-    border: 1px solid rgba(68, 198, 248, 0.58) !important;
+    border: 1px solid rgba(92, 200, 255, 0.58) !important;
     border-radius: 3px !important;
-    background: rgba(12, 67, 94, 0.55) !important;
+    background: rgba(16, 34, 47, 0.55) !important;
     box-shadow: none !important;
-    color: #83ddff !important;
+    color: #8fe0ff !important;
     font-size: 11px;
 }
 
@@ -2924,21 +2924,21 @@
     margin: 0 0 7px;
     padding-bottom: 0;
     border-bottom: 0;
-    color: #6fd5ff;
+    color: #5cc8ff;
     font-size: 13px;
     font-weight: 600;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-section > h2 span {
     margin-left: auto;
-    color: #7f96a4;
+    color: #5cc8ff;
     font-size: 10.5px;
     font-weight: 400;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-description {
     margin: 0;
-    color: #d0dde3;
+    color: #9db4c4;
     font-size: 13px;
     line-height: 1.65;
     white-space: pre-wrap;
@@ -2955,12 +2955,12 @@
     grid-template-columns: 22px minmax(78px, 0.8fr) minmax(76px, 1fr) 43px;
     align-items: center;
     gap: 6px;
-    color: #cbd9df;
+    color: #9db4c4;
     font-size: 11.5px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-objective > i {
-    color: #91c9dd;
+    color: #5cc8ff;
     text-align: center;
 }
 
@@ -2974,7 +2974,7 @@
     height: 4px;
     overflow: hidden;
     border-radius: 2px;
-    background: rgba(35, 84, 108, 0.68);
+    background: rgba(16, 34, 47, 0.68);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-objective > div i {
@@ -2986,14 +2986,14 @@
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-objective > strong {
-    color: #a9bec8;
+    color: #5cc8ff;
     font-size: 10.5px;
     font-weight: 500;
     text-align: right;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-objective.is-completed > strong {
-    color: #68dc8e;
+    color: #4ade80;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-rewards {
@@ -3009,8 +3009,8 @@
     align-items: center;
     gap: 6px;
     padding: 6px;
-    border: 1px solid rgba(65, 167, 209, 0.32);
-    background: rgba(7, 35, 50, 0.72);
+    border: 1px solid rgba(92, 200, 255, 0.32);
+    background: rgba(10, 22, 32, 0.72);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-rewards i {
@@ -3021,7 +3021,7 @@
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-rewards span {
     min-width: 0;
-    color: #9eb2bd;
+    color: #5cc8ff;
     font-size: 10.5px;
 }
 
@@ -3029,7 +3029,7 @@
     display: block;
     margin-top: 2px;
     overflow: hidden;
-    color: #dceef5;
+    color: #e6edf3;
     font-size: 12.5px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3047,19 +3047,19 @@
     grid-template-columns: 16px 64px minmax(0, 1fr);
     align-items: center;
     gap: 3px;
-    color: #9db1bc;
+    color: #5cc8ff;
     font-size: 10.5px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-info i {
-    color: #64c9f2;
+    color: #5cc8ff;
     text-align: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-info strong {
     min-width: 0;
     overflow: visible;
-    color: #c5d6de;
+    color: #9db4c4;
     font-size: 10.5px;
     font-weight: 500;
     line-height: 1.4;
@@ -3073,7 +3073,7 @@
     grid-template-columns: 33px minmax(0, 1fr);
     gap: 7px;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(65, 166, 208, 0.13);
+    border-bottom: 1px solid rgba(92, 200, 255, 0.13);
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-discussion article:last-child {
@@ -3084,16 +3084,16 @@
     display: grid;
     width: 32px;
     height: 32px;
-    border: 1px solid rgba(75, 181, 223, 0.4);
-    background: rgba(20, 62, 82, 0.52);
-    color: #7dcced;
+    border: 1px solid rgba(92, 200, 255, 0.4);
+    background: rgba(10, 22, 32, 0.52);
+    color: #5cc8ff;
     font-size: 13px;
     place-items: center;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p {
     margin: 0;
-    color: #c3d0d6;
+    color: #9db4c4;
     font-size: 11px;
     line-height: 1.55;
 }
@@ -3101,18 +3101,18 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p > strong {
     display: inline-block;
     margin-right: 6px;
-    color: #dceaf0;
+    color: #e6edf3;
     font-size: 11px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p small {
     margin-left: 3px;
-    color: #68bce0;
+    color: #5cc8ff;
     font-size: 9.5px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-discussion article p > span {
-    color: #718794;
+    color: #2b7fb8;
     font-size: 9.5px;
 }
 
@@ -3124,7 +3124,7 @@
 #phone-panel-content .phone-screen .wangxiang-task-detail-no-comments {
     margin: 0;
     padding: 8px 0;
-    color: #69818f;
+    color: #2b7fb8;
     font-size: 11px;
     text-align: center;
 }
@@ -3145,18 +3145,18 @@
     gap: 6px;
     margin: 0 !important;
     padding: 0 8px !important;
-    border: 1px solid #47c9ff !important;
+    border: 1px solid #5cc8ff !important;
     border-radius: 4px !important;
-    background: rgba(10, 69, 100, 0.7) !important;
-    box-shadow: inset 0 0 15px rgba(57, 187, 240, 0.1), 0 0 8px rgba(49, 177, 230, 0.16) !important;
-    color: #ddf7ff !important;
+    background: rgba(16, 34, 47, 0.7) !important;
+    box-shadow: inset 0 0 15px rgba(92, 200, 255, 0.1), 0 0 8px rgba(92, 200, 255, 0.16) !important;
+    color: #e6edf3 !important;
     font-size: 12px;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-actions button.is-danger {
-    border-color: #f15d61 !important;
-    background: rgba(93, 24, 30, 0.65) !important;
-    color: #ffb4b6 !important;
+    border-color: #ff7a72 !important;
+    background: rgba(255, 122, 114, 0.65) !important;
+    color: #ff7a72 !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-task-detail-actions button.is-completed,
@@ -3466,48 +3466,48 @@
 
 @media (hover: hover) and (pointer: fine) {
     #phone-panel-content .phone-screen .wangxiang-primary-nav-item:hover {
-        background: rgba(79, 185, 232, 0.1) !important;
-        color: #fff !important;
+        background: rgba(92, 200, 255, 0.1) !important;
+        color: #e6edf3 !important;
     }
 }
 
 #phone-panel-content .phone-screen .wangxiang-primary-nav-item:active {
-    background: rgba(79, 185, 232, 0.16) !important;
+    background: rgba(92, 200, 255, 0.16) !important;
 }
 
 #phone-panel-content .phone-screen .wangxiang-primary-nav-item:focus-visible {
-    outline: 1px solid rgba(151, 227, 255, 0.9);
+    outline: 1px solid rgba(143, 224, 255, 0.9);
     outline-offset: -2px;
 }
 
 /* 深色背景下保持手机状态栏清晰可见。 */
 #phone-panel-content .phone-body-panel-wangxiang .phone-statusbar .time,
 #phone-panel-content .phone-body-panel-wangxiang .statusbar-left .time {
-    color: #fff !important;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+    color: #e6edf3 !important;
+    text-shadow: 0 1px 4px rgba(5, 13, 19, 0.75);
 }
 
 #phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal,
 #phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal .fa-wifi {
-    color: #fff !important;
+    color: #e6edf3 !important;
 }
 
 #phone-panel-content .phone-body-panel-wangxiang .phone-wifi-signal {
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+    filter: drop-shadow(0 1px 2px rgba(5, 13, 19, 0.55));
 }
 
 #phone-panel-content .phone-body-panel-wangxiang .battery-head {
-    background: #fff !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    background: #e6edf3 !important;
+    box-shadow: 0 1px 3px rgba(5, 13, 19, 0.55);
 }
 
 #phone-panel-content .phone-body-panel-wangxiang .battery-body {
-    border-color: #fff !important;
-    background: rgba(0, 0, 0, 0.28) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    border-color: #e6edf3 !important;
+    background: rgba(5, 13, 19, 0.28) !important;
+    box-shadow: 0 1px 3px rgba(5, 13, 19, 0.55);
 }
 
 #phone-panel-content .phone-body-panel-wangxiang .battery-text {
-    color: #fff !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+    color: #e6edf3 !important;
+    text-shadow: 0 1px 2px rgba(5, 13, 19, 0.85);
 }

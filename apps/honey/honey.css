@@ -14,8 +14,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #140f13;
-    color: #fff;
+    background: #0f0a0d;
+    color: #f5eef2;
     font-family: inherit;
     position: relative;
     overflow: hidden;
@@ -26,7 +26,7 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    background: #1a1217;
+    background: #0f0a0d;
     gap: 6px;
     padding-top: 4px;
 }
@@ -45,13 +45,13 @@
 
 /* 所有蜜语页面共用默认根背景，内容媒体仍由各页面自行覆盖 */
 #phone-panel-content .phone-screen .honey-app {
-    background: #080615 url('./honeyzt.png') center / cover no-repeat !important;
+    background: #b58aff url('./honeyzt.png') center / cover no-repeat !important;
     isolation: isolate;
 }
 
 #phone-panel-content .phone-screen .honey-app .honey-nav {
     background:
-        linear-gradient(180deg, rgba(54, 31, 50, 0.48), rgba(22, 13, 25, 0.3)) !important;
+        linear-gradient(180deg, rgba(26, 17, 22, 0.48), rgba(15, 10, 13, 0.3)) !important;
     backdrop-filter: blur(9px) saturate(130%);
     -webkit-backdrop-filter: blur(9px) saturate(130%);
 }
@@ -59,7 +59,7 @@
 #phone-panel-content .phone-screen .honey-app .honey-tabs {
     position: relative;
     z-index: 10;
-    background: rgba(18, 10, 21, 0.34) !important;
+    background: rgba(15, 10, 13, 0.34) !important;
     backdrop-filter: blur(7px) saturate(125%);
     -webkit-backdrop-filter: blur(7px) saturate(125%);
 }
@@ -131,18 +131,18 @@
 }
 
 .honey-live-status-green {
-    background: #34c759;
-    box-shadow: 0 0 4px rgba(52, 199, 89, 0.6);
+    background: #b58aff;
+    box-shadow: 0 0 4px rgba(181, 138, 255, 0.6);
 }
 
 .honey-live-status-yellow {
-    background: #ffcc00;
-    box-shadow: 0 0 4px rgba(255, 204, 0, 0.6);
+    background: #b58aff;
+    box-shadow: 0 0 4px rgba(181, 138, 255, 0.6);
 }
 
 .honey-live-status-red {
-    background: #ff3b30;
-    box-shadow: 0 0 4px rgba(255, 59, 48, 0.62);
+    background: #c94f7d;
+    box-shadow: 0 0 4px rgba(201, 79, 125, 0.62);
 }
 
 .honey-meta-host {
@@ -187,7 +187,7 @@
     display: inline-block;
     max-width: 100%;
     font-size: 10px;
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -258,7 +258,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-clip: padding-box;
-    background-color: #2a1d24;
+    background-color: #1a1116;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
@@ -268,22 +268,22 @@
 
 .honey-meta-audience-avatar.a1 {
     z-index: 3;
-    background-image: linear-gradient(135deg, #ff7db6, #d35f9e);
+    background-image: linear-gradient(135deg, #ff7ba9, #c94f7d);
 }
 
 .honey-meta-audience-avatar.a2 {
     z-index: 2;
-    background-image: linear-gradient(135deg, #7bc8ff, #6b89ff);
+    background-image: linear-gradient(135deg, #b58aff, #b58aff);
 }
 
 .honey-meta-audience-avatar.a3 {
     z-index: 1;
-    background-image: linear-gradient(135deg, #ffd071, #ff9e63);
+    background-image: linear-gradient(135deg, #b58aff, #e35d8f);
 }
 
 .honey-meta-audience-online {
     font-size: 10px;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
@@ -301,11 +301,11 @@
     max-width: 88px;
     border-radius: 7px;
     padding: 3px 4px;
-    background: linear-gradient(145deg, rgba(44, 31, 45, 0.5), rgba(18, 13, 22, 0.34));
-    border: 1px solid rgba(255, 216, 233, 0.16);
+    background: linear-gradient(145deg, rgba(26, 17, 22, 0.5), rgba(15, 10, 13, 0.34));
+    border: 1px solid rgba(245, 238, 242, 0.16);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 2px 8px rgba(8, 5, 11, 0.24);
+        0 2px 8px rgba(15, 10, 13, 0.24);
     backdrop-filter: blur(6px) saturate(120%);
     -webkit-backdrop-filter: blur(6px) saturate(120%);
     cursor: pointer;
@@ -318,11 +318,11 @@
     max-width: min(228px, calc(100vw - 120px));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.16),
-        0 4px 14px rgba(8, 5, 11, 0.34);
+        0 4px 14px rgba(15, 10, 13, 0.34);
 }
 
 .honey-live-rank-mini:focus-visible {
-    outline: 1px solid rgba(255, 214, 232, 0.75);
+    outline: 1px solid rgba(245, 238, 242, 0.75);
     outline-offset: 1px;
 }
 
@@ -330,7 +330,7 @@
     font-size: 7px;
     font-weight: 700;
     letter-spacing: 0.2px;
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
     opacity: 0.96;
     margin-bottom: 2px;
     text-align: center;
@@ -353,19 +353,19 @@
 .honey-live-rank-row.is-self {
     margin-top: 2px;
     padding-top: 2px;
-    border-top: 1px dashed rgba(255, 205, 227, 0.32);
+    border-top: 1px dashed rgba(255, 179, 205, 0.32);
 }
 
 .honey-live-rank-index {
     font-size: 7px;
-    color: #ffc7de !important;
+    color: #ffb3cd !important;
     opacity: 0.95;
     text-align: left;
 }
 
 .honey-live-rank-name {
     font-size: 7px;
-    color: #fff0f7 !important;
+    color: #f5eef2 !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -400,7 +400,7 @@
 
 .honey-live-rank-coins {
     font-size: 7px;
-    color: #ffd79a !important;
+    color: #e35d8f !important;
     white-space: nowrap;
     opacity: 0.98;
     text-align: right;
@@ -414,7 +414,7 @@
 
 .honey-live-rank-empty {
     font-size: 7px;
-    color: rgba(255, 221, 238, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
     text-align: left;
     white-space: nowrap;
 }
@@ -424,9 +424,9 @@
     max-width: 88px;
     height: 16px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 219, 235, 0.26);
-    background: linear-gradient(145deg, rgba(247, 118, 176, 0.24), rgba(97, 51, 79, 0.34));
-    color: #ffdff0 !important;
+    border: 1px solid rgba(245, 238, 242, 0.26);
+    background: linear-gradient(145deg, rgba(255, 123, 169, 0.24), rgba(36, 24, 32, 0.34));
+    color: #f5eef2 !important;
     font-size: 7px;
     font-weight: 600;
     line-height: 14px;
@@ -437,15 +437,15 @@
     text-overflow: ellipsis;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 2px 7px rgba(11, 7, 14, 0.24);
+        0 2px 7px rgba(15, 10, 13, 0.24);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
 }
 
 .honey-meta-collab-btn.is-empty {
-    background: linear-gradient(145deg, rgba(120, 108, 122, 0.24), rgba(54, 46, 58, 0.34));
-    border-color: rgba(203, 194, 206, 0.26);
-    color: #dfd7e4 !important;
+    background: linear-gradient(145deg, rgba(154, 130, 144, 0.24), rgba(26, 17, 22, 0.34));
+    border-color: rgba(255, 123, 169, 0.26);
+    color: #cbb0be !important;
 }
 
 .honey-meta-pill {
@@ -453,9 +453,9 @@
     min-width: 0;
     max-width: 56px;
     font-size: 7px;
-    color: #ffd9ea !important;
-    background: rgba(255, 71, 133, 0.16);
-    border: 1px solid rgba(255, 133, 181, 0.45);
+    color: #f5eef2 !important;
+    background: rgba(201, 79, 125, 0.16);
+    border: 1px solid rgba(255, 123, 169, 0.45);
     border-radius: 10px;
     padding: 1px 4px;
     white-space: nowrap;
@@ -505,9 +505,9 @@
 /* 占位页保留独立底板；其余主题页直接透出统一背景 */
 .honey-page-placeholder .honey-content {
     background:
-        radial-gradient(130% 90% at 12% -10%, rgba(255, 205, 224, 0.18), transparent 48%),
-        radial-gradient(140% 100% at 100% 0%, rgba(163, 186, 219, 0.16), transparent 52%),
-        linear-gradient(170deg, #1d161d 0%, #171217 46%, #120f14 100%);
+        radial-gradient(130% 90% at 12% -10%, rgba(255, 179, 205, 0.18), transparent 48%),
+        radial-gradient(140% 100% at 100% 0%, rgba(181, 138, 255, 0.16), transparent 52%),
+        linear-gradient(170deg, #0f0a0d 0%, #0f0a0d 46%, #0f0a0d 100%);
 }
 
 #phone-panel-content .phone-screen .honey-page-follow .honey-content,
@@ -517,7 +517,7 @@
 }
 
 #phone-panel-content .phone-screen .honey-page-mine .honey-settings-card {
-    background: linear-gradient(150deg, rgba(38, 27, 38, 0.76), rgba(24, 16, 27, 0.68));
+    background: linear-gradient(150deg, rgba(26, 17, 22, 0.76), rgba(15, 10, 13, 0.68));
     backdrop-filter: blur(7px) saturate(120%);
     -webkit-backdrop-filter: blur(7px) saturate(120%);
 }
@@ -535,7 +535,7 @@
     border-radius: 0;
     border: none;
     z-index: 1;
-    background: linear-gradient(150deg, rgba(20, 10, 15, 0.04), rgba(39, 30, 41, 0.22));
+    background: linear-gradient(150deg, rgba(15, 10, 13, 0.04), rgba(26, 17, 22, 0.22));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
         inset 0 -1px 0 rgba(0, 0, 0, 0.18);
@@ -569,31 +569,31 @@
     padding: 6px 12px;
     border-radius: 999px;
     font-size: 11px;
-    color: rgba(255, 226, 239, 0.82) !important;
-    background: rgba(36, 20, 31, 0.82);
-    border: 1px solid rgba(255, 191, 220, 0.18);
+    color: rgba(245, 238, 242, 0.82) !important;
+    background: rgba(15, 10, 13, 0.82);
+    border: 1px solid rgba(255, 179, 205, 0.18);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        0 4px 14px rgba(8, 5, 12, 0.24);
+        0 4px 14px rgba(15, 10, 13, 0.24);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
 
 .honey-pull-refresh-indicator.ready .honey-pull-refresh-inner {
-    color: #ff9fc8 !important;
-    border-color: rgba(255, 159, 200, 0.35);
+    color: #ffb3cd !important;
+    border-color: rgba(255, 179, 205, 0.35);
 }
 
 .honey-pull-refresh-indicator.loading .honey-pull-refresh-inner {
-    color: #ffb5d3 !important;
+    color: #ffb3cd !important;
 }
 
 .honey-pull-refresh-indicator.success .honey-pull-refresh-inner {
-    color: #8ff0ba !important;
+    color: #b58aff !important;
 }
 
 .honey-pull-refresh-indicator.error .honey-pull-refresh-inner {
-    color: #ff8f9c !important;
+    color: #ff7ba9 !important;
 }
 
 .honey-page-live .honey-live-pull-refresh-indicator {
@@ -635,7 +635,7 @@
     inset: 0;
     border: 0;
     padding: 0;
-    background: rgba(10, 6, 12, 0.48);
+    background: rgba(15, 10, 13, 0.48);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     cursor: pointer;
@@ -645,13 +645,13 @@
     position: relative;
     width: min(100%, 318px);
     border-radius: 14px;
-    border: 1px solid rgba(255, 199, 226, 0.26);
+    border: 1px solid rgba(255, 179, 205, 0.26);
     background:
-        radial-gradient(110% 90% at 12% 0%, rgba(255, 131, 181, 0.18), transparent 50%),
-        linear-gradient(155deg, rgba(55, 35, 50, 0.96), rgba(24, 17, 26, 0.97));
+        radial-gradient(110% 90% at 12% 0%, rgba(255, 123, 169, 0.18), transparent 50%),
+        linear-gradient(155deg, rgba(26, 17, 22, 0.96), rgba(15, 10, 13, 0.97));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.16),
-        0 18px 42px rgba(5, 2, 8, 0.46);
+        0 18px 42px rgba(15, 10, 13, 0.46);
     padding: 12px;
     box-sizing: border-box;
 }
@@ -667,7 +667,7 @@
 .honey-search-title {
     font-size: 14px;
     font-weight: 700;
-    color: #ffe6f2 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-search-close {
@@ -676,7 +676,7 @@
     border: 0;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
-    color: #ffd8e8 !important;
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -687,9 +687,9 @@
     width: 100%;
     height: 38px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 214, 234, 0.24);
+    border: 1px solid rgba(245, 238, 242, 0.24);
     background: rgba(255, 255, 255, 0.1);
-    color: #fff5fa !important;
+    color: #f5eef2 !important;
     outline: none;
     padding: 0 11px;
     box-sizing: border-box;
@@ -697,7 +697,7 @@
 }
 
 .honey-search-input::placeholder {
-    color: rgba(255, 226, 239, 0.48) !important;
+    color: rgba(245, 238, 242, 0.48) !important;
 }
 
 .honey-search-actions {
@@ -718,12 +718,12 @@
 
 .honey-search-btn.is-secondary {
     background: rgba(255, 255, 255, 0.11);
-    color: rgba(255, 231, 242, 0.86) !important;
+    color: rgba(245, 238, 242, 0.86) !important;
 }
 
 .honey-search-btn.is-primary {
-    background: linear-gradient(135deg, #ff6fa7, #ff8a5b);
-    color: #fff !important;
+    background: linear-gradient(135deg, #ff7ba9, #ff7ba9);
+    color: #f5eef2 !important;
 }
 
 .honey-hot-list {
@@ -747,8 +747,8 @@
 .honey-follow-item {
     position: relative;
     border-radius: 14px;
-    border: 1px solid rgba(255, 214, 234, 0.18);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(56, 34, 62, 0.68));
+    border: 1px solid rgba(245, 238, 242, 0.18);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(26, 17, 22, 0.68));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.16),
         inset 0 -1px 0 rgba(0, 0, 0, 0.3),
@@ -775,9 +775,9 @@
     border-radius: 50%;
     overflow: hidden;
     flex: 0 0 34px;
-    background: linear-gradient(135deg, #ff7db6, #a45ff0);
-    border: 1px solid rgba(255, 220, 236, 0.28);
-    box-shadow: 0 4px 12px rgba(35, 18, 43, 0.34);
+    background: linear-gradient(135deg, #ff7ba9, #ff7ba9);
+    border: 1px solid rgba(245, 238, 242, 0.28);
+    box-shadow: 0 4px 12px rgba(26, 17, 22, 0.34);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -817,7 +817,7 @@
     font-size: 12px;
     line-height: 1.2;
     font-weight: 700;
-    color: #ffe6f2 !important;
+    color: #f5eef2 !important;
     flex: 1 1 auto;
     min-width: 0;
     text-align: left;
@@ -828,8 +828,8 @@
 
 .honey-follow-host-figure {
     font-size: 9px;
-    color: #ffe7f3 !important;
-    border: 1px solid rgba(255, 212, 233, 0.32);
+    color: #f5eef2 !important;
+    border: 1px solid rgba(245, 238, 242, 0.32);
     background: rgba(255, 255, 255, 0.08);
     border-radius: 999px;
     padding: 1px 6px;
@@ -848,15 +848,15 @@
 }
 
 .honey-follow-badge.online {
-    background: rgba(52, 199, 89, 0.15);
-    color: #4cd964 !important;
-    border: 1px solid rgba(76, 217, 100, 0.3);
-    box-shadow: 0 0 8px rgba(76, 217, 100, 0.18);
+    background: rgba(181, 138, 255, 0.15);
+    color: #b58aff !important;
+    border: 1px solid rgba(181, 138, 255, 0.3);
+    box-shadow: 0 0 8px rgba(181, 138, 255, 0.18);
 }
 
 .honey-follow-badge.offline {
     background: rgba(255, 255, 255, 0.08);
-    color: #999 !important;
+    color: #9a8290 !important;
     border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
@@ -870,20 +870,20 @@
 }
 
 .honey-follow-host-status.is-online {
-    color: #cfffe0 !important;
-    background: rgba(58, 197, 118, 0.22);
-    border-color: rgba(101, 224, 150, 0.45);
+    color: #b58aff !important;
+    background: rgba(181, 138, 255, 0.22);
+    border-color: rgba(181, 138, 255, 0.45);
 }
 
 .honey-follow-host-status.is-offline {
-    color: #f0d8e6 !important;
-    background: rgba(124, 99, 116, 0.24);
-    border-color: rgba(193, 165, 181, 0.25);
+    color: #ffb3cd !important;
+    background: rgba(36, 24, 32, 0.24);
+    border-color: rgba(255, 123, 169, 0.25);
 }
 
 .honey-follow-host-count {
     font-size: 10px;
-    color: rgba(255, 211, 231, 0.8) !important;
+    color: rgba(245, 238, 242, 0.8) !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -901,7 +901,7 @@
 .honey-follow-favor-label {
     flex: 0 0 auto;
     font-size: 9px;
-    color: rgba(255, 218, 236, 0.92) !important;
+    color: rgba(245, 238, 242, 0.92) !important;
     letter-spacing: 0.2px;
 }
 
@@ -913,7 +913,7 @@
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)),
         rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 216, 237, 0.24);
+    border: 1px solid rgba(245, 238, 242, 0.24);
     box-shadow:
         inset 0 1px 2px rgba(255, 255, 255, 0.12),
         inset 0 -1px 2px rgba(0, 0, 0, 0.28);
@@ -925,9 +925,9 @@
     width: 0;
     border-radius: inherit;
     position: relative;
-    background: linear-gradient(90deg, #f44f9f 0%, #ff7cba 52%, #ffc4e3 100%);
+    background: linear-gradient(90deg, #ff7ba9 0%, #ff7ba9 52%, #ffb3cd 100%);
     box-shadow:
-        0 0 8px rgba(255, 122, 186, 0.36),
+        0 0 8px rgba(255, 123, 169, 0.36),
         inset 0 0 4px rgba(255, 255, 255, 0.42);
     transition: width 0.28s ease;
 }
@@ -940,12 +940,12 @@
     width: 22px;
     right: -12px;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(255, 240, 248, 0.95) 0%, rgba(255, 240, 248, 0) 75%);
+    background: radial-gradient(circle, rgba(245, 238, 242, 0.95) 0%, rgba(245, 238, 242, 0) 75%);
     opacity: 0.72;
 }
 
 .honey-follow-host-arrow {
-    color: rgba(255, 211, 231, 0.75) !important;
+    color: rgba(245, 238, 242, 0.75) !important;
     transition: transform 0.18s ease;
 }
 
@@ -970,38 +970,38 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 168, 213, 0.42);
+    border: 1px solid rgba(255, 179, 205, 0.42);
     border-radius: 999px;
     padding: 3px 9px;
     font-size: 9px;
-    color: #ffe7f3 !important;
-    background: linear-gradient(135deg, rgba(255, 86, 168, 0.8), rgba(166, 84, 214, 0.78));
-    box-shadow: 0 4px 10px rgba(34, 14, 47, 0.35);
+    color: #f5eef2 !important;
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.8), rgba(201, 79, 125, 0.78));
+    box-shadow: 0 4px 10px rgba(26, 17, 22, 0.35);
     cursor: pointer;
     animation: honeyFollowPulse 1.8s ease-in-out infinite;
 }
 
 @keyframes honeyFollowPulse {
     0%, 100% {
-        box-shadow: 0 4px 10px rgba(34, 14, 47, 0.35);
+        box-shadow: 0 4px 10px rgba(26, 17, 22, 0.35);
     }
     50% {
-        box-shadow: 0 6px 16px rgba(255, 115, 192, 0.42);
+        box-shadow: 0 6px 16px rgba(255, 123, 169, 0.42);
     }
 }
 
 .honey-follow-section-title {
     font-size: 10px;
     font-weight: 700;
-    color: rgba(255, 214, 232, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
     margin-top: 2px;
 }
 
 .honey-history-date-item {
-    border: 1px solid rgba(202, 147, 234, 0.28);
+    border: 1px solid rgba(255, 123, 169, 0.28);
     border-radius: 11px;
-    background: linear-gradient(145deg, rgba(94, 47, 130, 0.38), rgba(38, 20, 54, 0.52));
-    color: #ffffff !important;
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.38), rgba(26, 17, 22, 0.52));
+    color: #f5eef2 !important;
     padding: 9px 11px;
     display: flex;
     align-items: center;
@@ -1010,23 +1010,23 @@
     font-size: 10px;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.09),
-        0 6px 14px rgba(8, 4, 14, 0.28);
+        0 6px 14px rgba(15, 10, 13, 0.28);
 }
 
 .honey-history-date-left {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
 }
 
 .honey-history-date-right {
-    color: #ffffff !important;
+    color: #f5eef2 !important;
     font-size: 10px;
 }
 
 .honey-follow-history-empty {
-    color: rgba(255, 214, 232, 0.66) !important;
+    color: rgba(245, 238, 242, 0.66) !important;
     font-size: 10px;
     padding: 6px 2px 2px;
 }
@@ -1039,10 +1039,10 @@
 
 .honey-follow-video-picker-trigger {
     width: 100%;
-    border: 1px solid rgba(199, 150, 228, 0.28);
+    border: 1px solid rgba(255, 123, 169, 0.28);
     border-radius: 10px;
-    background: linear-gradient(145deg, rgba(88, 45, 120, 0.24), rgba(36, 19, 50, 0.4));
-    color: #f6deed !important;
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.24), rgba(26, 17, 22, 0.4));
+    color: #f5eef2 !important;
     padding: 8px 10px;
     display: flex;
     align-items: center;
@@ -1055,7 +1055,7 @@
     align-items: center;
     gap: 6px;
     font-size: 10px;
-    color: #f6deed !important;
+    color: #f5eef2 !important;
     flex: 0 0 auto;
 }
 
@@ -1066,20 +1066,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255, 216, 237, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
     font-size: 10px;
 }
 
 .honey-follow-video-picker-arrow {
-    color: rgba(255, 216, 237, 0.75) !important;
+    color: rgba(245, 238, 242, 0.75) !important;
     transition: transform 0.18s ease;
 }
 
 .honey-follow-video-item {
-    border: 1px solid rgba(199, 150, 228, 0.28);
+    border: 1px solid rgba(255, 123, 169, 0.28);
     border-radius: 10px;
-    background: linear-gradient(145deg, rgba(88, 45, 120, 0.33), rgba(36, 19, 50, 0.5));
-    color: #f6deed !important;
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.33), rgba(26, 17, 22, 0.5));
+    color: #f5eef2 !important;
     padding: 8px 10px;
     display: flex;
     align-items: center;
@@ -1089,8 +1089,8 @@
 }
 
 .honey-follow-video-item.is-bound {
-    border-color: rgba(248, 198, 225, 0.5);
-    background: linear-gradient(145deg, rgba(155, 78, 124, 0.44), rgba(62, 31, 73, 0.54));
+    border-color: rgba(255, 179, 205, 0.5);
+    background: linear-gradient(145deg, rgba(201, 79, 125, 0.44), rgba(26, 17, 22, 0.54));
 }
 
 .honey-follow-video-left {
@@ -1101,29 +1101,29 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #f6deed !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-video-left i {
-    color: #f6deed !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-video-right {
-    color: rgba(255, 216, 237, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
     flex: 0 0 auto;
     margin-left: 8px;
 }
 
 .honey-follow-video-empty {
-    color: rgba(255, 214, 232, 0.68) !important;
+    color: rgba(245, 238, 242, 0.68) !important;
     font-size: 10px;
     padding: 12px 2px;
 }
 
 .honey-follow-reference-card {
-    border: 1px solid rgba(199, 150, 228, 0.28);
+    border: 1px solid rgba(255, 123, 169, 0.28);
     border-radius: 10px;
-    background: linear-gradient(145deg, rgba(88, 45, 120, 0.24), rgba(36, 19, 50, 0.4));
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.24), rgba(26, 17, 22, 0.4));
     padding: 9px;
     display: flex;
     flex-direction: column;
@@ -1141,13 +1141,13 @@
     width: 46px;
     height: 46px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 216, 237, 0.24);
+    border: 1px solid rgba(245, 238, 242, 0.24);
     background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(44, 23, 58, 0.58)),
-        linear-gradient(135deg, rgba(255, 125, 182, 0.6), rgba(164, 95, 240, 0.5));
+        linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(26, 17, 22, 0.58)),
+        linear-gradient(135deg, rgba(255, 123, 169, 0.6), rgba(255, 123, 169, 0.5));
     background-size: cover;
     background-position: center;
-    color: rgba(255, 229, 242, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1158,7 +1158,7 @@
 .honey-follow-reference-preview i {
     font-size: 13px;
     line-height: 1;
-    color: rgba(255, 229, 242, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
 }
 
 .honey-follow-reference-meta {
@@ -1176,7 +1176,7 @@
     min-width: 0;
     font-size: 10px;
     font-weight: 700;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-reference-title span:first-child {
@@ -1184,25 +1184,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-reference-title i {
     margin-right: 4px;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-reference-state {
     flex: 0 0 auto;
     font-size: 9px;
     font-weight: 600;
-    color: rgba(255, 216, 237, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-follow-reference-desc {
     font-size: 9px;
     line-height: 1.45;
-    color: rgba(255, 216, 237, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-follow-reference-switch {
@@ -1227,22 +1227,22 @@
     align-items: center;
     gap: 8px;
     font-size: 10px;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-reference-strength-row span {
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-reference-strength-row b {
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
     font-weight: 700;
 }
 
 .honey-follow-reference-strength {
     width: 100%;
     min-width: 0;
-    accent-color: #ff7cba;
+    accent-color: #ff7ba9;
 }
 
 .honey-follow-video-modal {
@@ -1259,7 +1259,7 @@
 .honey-follow-video-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(5, 2, 9, 0.62);
+    background: rgba(15, 10, 13, 0.62);
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
 }
@@ -1271,8 +1271,8 @@
     bottom: 10px;
     max-height: 68%;
     border-radius: 14px;
-    border: 1px solid rgba(233, 189, 219, 0.28);
-    background: linear-gradient(160deg, rgba(54, 26, 68, 0.95), rgba(28, 15, 36, 0.95));
+    border: 1px solid rgba(255, 179, 205, 0.28);
+    background: linear-gradient(160deg, rgba(26, 17, 22, 0.95), rgba(15, 10, 13, 0.95));
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42);
     display: flex;
     flex-direction: column;
@@ -1284,22 +1284,22 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 216, 236, 0.18);
+    border-bottom: 1px solid rgba(245, 238, 242, 0.18);
 }
 
 .honey-follow-video-modal-title {
     font-size: 11px;
     font-weight: 700;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-video-modal-close {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 216, 236, 0.22);
+    border: 1px solid rgba(245, 238, 242, 0.22);
     background: rgba(255, 255, 255, 0.08);
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1313,7 +1313,7 @@
     gap: 8px;
     overflow-y: auto;
     min-height: 0;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
 }
 
 .honey-follow-actions {
@@ -1324,46 +1324,46 @@
 
 .honey-follow-action-btn {
     flex: 1 1 0;
-    border: 1px solid rgba(255, 216, 237, 0.24);
+    border: 1px solid rgba(245, 238, 242, 0.24);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.08);
-    color: #ffe4f2 !important;
+    color: #f5eef2 !important;
     font-size: 10px;
     padding: 8px 8px;
     cursor: pointer;
 }
 
 .honey-follow-action-btn.is-danger {
-    border-color: rgba(255, 150, 182, 0.4);
-    background: linear-gradient(145deg, rgba(120, 38, 68, 0.42), rgba(84, 28, 52, 0.54));
-    color: #ffd5e6 !important;
+    border-color: rgba(255, 123, 169, 0.4);
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.42), rgba(26, 17, 22, 0.54));
+    color: #f5eef2 !important;
 }
 
 .honey-follow-empty {
     border-radius: 14px;
-    border: 1px dashed rgba(255, 206, 228, 0.24);
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.08), rgba(48, 28, 58, 0.42));
+    border: 1px dashed rgba(245, 238, 242, 0.24);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.08), rgba(26, 17, 22, 0.42));
     padding: 26px 16px;
     text-align: center;
 }
 
 .honey-follow-empty-icon {
     font-size: 22px;
-    color: rgba(255, 190, 220, 0.76) !important;
+    color: rgba(255, 179, 205, 0.76) !important;
     margin-bottom: 8px;
 }
 
 .honey-follow-empty-title {
     font-size: 13px;
     font-weight: 700;
-    color: #ffe6f2 !important;
+    color: #f5eef2 !important;
     margin-bottom: 6px;
 }
 
 .honey-follow-empty-desc {
     font-size: 10px;
     line-height: 1.5;
-    color: rgba(255, 213, 232, 0.76) !important;
+    color: rgba(245, 238, 242, 0.76) !important;
 }
 
 .honey-page-mine .honey-content {
@@ -1408,13 +1408,13 @@
     height: 52px;
     border-radius: 50%;
     overflow: hidden;
-    border: 1px solid rgba(255, 214, 234, 0.26);
-    background: linear-gradient(145deg, rgba(255, 118, 184, 0.76), rgba(155, 89, 214, 0.68));
-    color: #fff3f8 !important;
+    border: 1px solid rgba(245, 238, 242, 0.26);
+    background: linear-gradient(145deg, rgba(255, 123, 169, 0.76), rgba(201, 79, 125, 0.68));
+    color: #f5eef2 !important;
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 8px 18px rgba(34, 16, 42, 0.28);
+    box-shadow: 0 8px 18px rgba(26, 17, 22, 0.28);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1443,7 +1443,7 @@
 .honey-mine-gender-label {
     margin: 0;
     font-size: 11px;
-    color: rgba(255, 223, 237, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-mine-gender-switch {
@@ -1457,9 +1457,9 @@
     height: 24px;
     padding: 0 10px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 175, 210, 0.2);
+    border: 1px solid rgba(255, 179, 205, 0.2);
     background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 228, 240, 0.82);
+    color: rgba(245, 238, 242, 0.82);
     font-size: 11px;
     font-weight: 700;
     line-height: 22px;
@@ -1468,9 +1468,9 @@
 }
 
 .honey-mine-gender-btn.is-active {
-    background: linear-gradient(135deg, rgba(255, 109, 167, 0.36), rgba(255, 148, 112, 0.28));
-    border-color: rgba(255, 183, 214, 0.46);
-    color: #fff5f9;
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.36), rgba(255, 123, 169, 0.28));
+    border-color: rgba(255, 179, 205, 0.46);
+    color: #f5eef2;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
 }
 
@@ -1486,11 +1486,11 @@
 
 #honey-mine-live-nickname.honey-settings-input,
 #honey-mine-live-title.honey-settings-input {
-    background: linear-gradient(145deg, rgba(18, 16, 24, 0.96), rgba(31, 20, 34, 0.92)) !important;
-    color: #fff3f8 !important;
-    -webkit-text-fill-color: #fff3f8 !important;
-    caret-color: #fff3f8 !important;
-    border-color: rgba(255, 165, 205, 0.34) !important;
+    background: linear-gradient(145deg, rgba(181, 138, 255, 0.96), rgba(15, 10, 13, 0.92)) !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
+    caret-color: #f5eef2 !important;
+    border-color: rgba(255, 179, 205, 0.34) !important;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -1501,7 +1501,7 @@
 
 #honey-mine-live-nickname.honey-settings-input::placeholder,
 #honey-mine-live-title.honey-settings-input::placeholder {
-    color: rgba(255, 221, 237, 0.58) !important;
+    color: rgba(245, 238, 242, 0.58) !important;
 }
 
 .honey-settings-btn.honey-mine-start-btn {
@@ -1525,8 +1525,8 @@
     margin-bottom: 12px;
     padding: 8px 10px;
     border-radius: 12px;
-    background: rgba(255, 182, 214, 0.08);
-    border: 1px solid rgba(255, 196, 223, 0.14);
+    background: rgba(255, 179, 205, 0.08);
+    border: 1px solid rgba(255, 179, 205, 0.14);
 }
 
 .honey-mine-account-stat {
@@ -1540,16 +1540,16 @@
 .honey-mine-account-stat-num {
     font-size: 15px;
     font-weight: 700;
-    color: #fff2f8 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-mine-account-stat-label {
     font-size: 11px;
-    color: rgba(255, 223, 237, 0.7) !important;
+    color: rgba(245, 238, 242, 0.7) !important;
 }
 
 .honey-mine-account-stat-topic {
-    border-left: 1px solid rgba(255, 210, 230, 0.12);
+    border-left: 1px solid rgba(245, 238, 242, 0.12);
     padding-left: 10px;
 }
 
@@ -1570,8 +1570,8 @@
 .honey-mine-request-item,
 .honey-mine-friend-item {
     border-radius: 14px;
-    border: 1px solid rgba(255, 214, 234, 0.18);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(48, 28, 58, 0.5));
+    border: 1px solid rgba(245, 238, 242, 0.18);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(26, 17, 22, 0.5));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.12),
         0 8px 16px rgba(8, 5, 10, 0.22);
@@ -1595,9 +1595,9 @@
     border-radius: 50%;
     overflow: hidden;
     flex: 0 0 36px;
-    background: linear-gradient(135deg, #ff7db6, #a45ff0);
-    border: 1px solid rgba(255, 220, 236, 0.28);
-    box-shadow: 0 4px 12px rgba(35, 18, 43, 0.3);
+    background: linear-gradient(135deg, #ff7ba9, #ff7ba9);
+    border: 1px solid rgba(245, 238, 242, 0.28);
+    box-shadow: 0 4px 12px rgba(26, 17, 22, 0.3);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1619,7 +1619,7 @@
     min-width: 0;
     font-size: 12px;
     font-weight: 700;
-    color: #ffe6f2 !important;
+    color: #f5eef2 !important;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -1637,7 +1637,7 @@
 .honey-mine-request-source {
     display: block;
     font-size: 9px;
-    color: rgba(255, 213, 232, 0.76) !important;
+    color: rgba(245, 238, 242, 0.76) !important;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -1651,10 +1651,10 @@
     margin-left: 6px;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(255, 105, 180, 0.18);
-    border: 1px solid rgba(255, 105, 180, 0.32);
-    color: #ff7cb8 !important;
-    -webkit-text-fill-color: #ff7cb8;
+    background: rgba(255, 123, 169, 0.18);
+    border: 1px solid rgba(255, 123, 169, 0.32);
+    color: #ff7ba9 !important;
+    -webkit-text-fill-color: #ff7ba9;
     font-size: 10px;
     line-height: 1;
     vertical-align: middle;
@@ -1672,7 +1672,7 @@
     margin: 6px 0 0;
     font-size: 10px;
     line-height: 1.55;
-    color: rgba(255, 232, 242, 0.86) !important;
+    color: rgba(245, 238, 242, 0.86) !important;
 }
 
 .honey-mine-request-inline-actions,
@@ -1697,7 +1697,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.35px;
-    color: rgba(255, 214, 232, 0.8) !important;
+    color: rgba(245, 238, 242, 0.8) !important;
     margin: 2px 2px -2px;
 }
 
@@ -1708,8 +1708,8 @@
     gap: 10px;
     padding: 10px 12px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 221, 236, 0.2);
-    background: linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(56, 40, 57, 0.7));
+    border: 1px solid rgba(245, 238, 242, 0.2);
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(26, 17, 22, 0.7));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.18),
         inset 0 -1px 0 rgba(0, 0, 0, 0.3),
@@ -1722,7 +1722,7 @@
 .honey-page-recommend .honey-hot-item {
     backdrop-filter: blur(2px) saturate(108%);
     -webkit-backdrop-filter: blur(2px) saturate(108%);
-    background: linear-gradient(140deg, rgba(20, 16, 22, 0.28), rgba(44, 32, 48, 0.42));
+    background: linear-gradient(140deg, rgba(15, 10, 13, 0.28), rgba(26, 17, 22, 0.42));
 }
 
 .honey-hot-item::before {
@@ -1739,7 +1739,7 @@
 
 .honey-hot-item:active {
     transform: translateY(1px) scale(0.996);
-    border-color: rgba(255, 193, 220, 0.34);
+    border-color: rgba(255, 179, 205, 0.34);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.16),
         inset 0 -1px 0 rgba(0, 0, 0, 0.32),
@@ -1797,11 +1797,11 @@
 }
 
 .honey-hot-follow-state.is-followed {
-    color: rgba(255, 205, 230, 0.95) !important;
+    color: rgba(245, 238, 242, 0.95) !important;
 }
 
 .honey-hot-follow-state.is-unfollowed {
-    color: rgba(220, 196, 210, 0.7) !important;
+    color: rgba(255, 123, 169, 0.7) !important;
 }
 
 .honey-hot-item-compact .honey-hot-online {
@@ -1839,15 +1839,15 @@
 }
 
 .honey-today-badge {
-    color: #fff0f7 !important;
-    background: linear-gradient(135deg, rgba(255, 95, 154, 0.86), rgba(255, 143, 191, 0.82));
-    border: 1px solid rgba(255, 199, 223, 0.45);
+    color: #f5eef2 !important;
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.86), rgba(255, 123, 169, 0.82));
+    border: 1px solid rgba(255, 179, 205, 0.45);
 }
 
 .honey-today-category {
-    color: #eef2ff !important;
-    background: rgba(120, 145, 197, 0.28);
-    border: 1px solid rgba(179, 199, 236, 0.36);
+    color: #b58aff !important;
+    background: rgba(181, 138, 255, 0.28);
+    border: 1px solid rgba(181, 138, 255, 0.36);
 }
 
 .honey-today-title {
@@ -1855,7 +1855,7 @@
     font-size: 14px;
     line-height: 1.28;
     font-weight: 700;
-    color: #fff2f8 !important;
+    color: #f5eef2 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
@@ -1863,7 +1863,7 @@
     margin-top: 6px;
     font-size: 10px;
     line-height: 1.45;
-    color: rgba(255, 224, 238, 0.92) !important;
+    color: rgba(245, 238, 242, 0.92) !important;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -1887,18 +1887,18 @@
     border-radius: 8px;
     font-size: 11px;
     font-weight: 800;
-    color: rgba(255, 229, 241, 0.8);
+    color: rgba(245, 238, 242, 0.8);
     text-align: center;
     flex-shrink: 0;
     line-height: 24px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(38, 30, 40, 0.8));
-    border: 1px solid rgba(255, 219, 236, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(26, 17, 22, 0.8));
+    border: 1px solid rgba(245, 238, 242, 0.22);
 }
 
 .honey-hot-rank.top3 {
-    color: #ffd3e7;
-    background: linear-gradient(180deg, rgba(255, 174, 212, 0.35), rgba(66, 38, 55, 0.82));
-    border-color: rgba(255, 182, 217, 0.4);
+    color: #f5eef2;
+    background: linear-gradient(180deg, rgba(255, 179, 205, 0.35), rgba(26, 17, 22, 0.82));
+    border-color: rgba(255, 179, 205, 0.4);
 }
 
 .honey-hot-info {
@@ -1916,7 +1916,7 @@
     flex: 1;
     min-width: 0;
     font-size: 12px;
-    color: #ffeaf3 !important;
+    color: #f5eef2 !important;
     line-height: 1.3;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -1925,7 +1925,7 @@
 
 .honey-hot-heat {
     font-size: 10px;
-    color: rgba(255, 220, 236, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
     margin-top: 3px;
 }
 
@@ -1949,9 +1949,9 @@
 }
 
 .honey-hot-category {
-    color: #e9f2ff !important;
-    background: rgba(111, 141, 197, 0.22);
-    border: 1px solid rgba(168, 191, 233, 0.28);
+    color: #b58aff !important;
+    background: rgba(181, 138, 255, 0.22);
+    border: 1px solid rgba(181, 138, 255, 0.28);
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
@@ -1962,15 +1962,15 @@
 }
 
 .honey-hot-host {
-    color: #ffdbe9 !important;
-    background: rgba(255, 135, 184, 0.18);
-    border: 1px solid rgba(255, 178, 209, 0.26);
+    color: #f5eef2 !important;
+    background: rgba(255, 123, 169, 0.18);
+    border: 1px solid rgba(255, 179, 205, 0.26);
 }
 
 .honey-hot-online {
-    color: #dfe8ff !important;
-    background: rgba(118, 148, 210, 0.2);
-    border: 1px solid rgba(174, 196, 238, 0.24);
+    color: #b58aff !important;
+    background: rgba(181, 138, 255, 0.2);
+    border: 1px solid rgba(181, 138, 255, 0.24);
 }
 
 .honey-hot-tag {
@@ -1979,38 +1979,38 @@
     border-radius: 999px;
     font-size: 9px;
     font-weight: 700;
-    color: #ffe2ef !important;
-    border: 1px solid rgba(255, 174, 210, 0.46);
-    background: rgba(255, 95, 153, 0.2);
+    color: #f5eef2 !important;
+    border: 1px solid rgba(255, 179, 205, 0.46);
+    background: rgba(255, 123, 169, 0.2);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .honey-hot-tag.tag-explosive {
-    color: #fff0f5 !important;
-    border-color: rgba(255, 150, 186, 0.68);
-    background: rgba(255, 86, 116, 0.3);
+    color: #f5eef2 !important;
+    border-color: rgba(255, 123, 169, 0.68);
+    background: rgba(201, 79, 125, 0.3);
 }
 
 .honey-hot-tag.tag-hot {
-    color: #fff0de !important;
-    border-color: rgba(255, 194, 135, 0.7);
-    background: rgba(255, 145, 62, 0.28);
+    color: #e35d8f !important;
+    border-color: rgba(227, 93, 143, 0.7);
+    background: rgba(227, 93, 143, 0.28);
 }
 
 .honey-hot-tag.tag-new {
-    color: #ecf4ff !important;
-    border-color: rgba(174, 202, 255, 0.66);
-    background: rgba(95, 151, 255, 0.26);
+    color: #b58aff !important;
+    border-color: rgba(181, 138, 255, 0.66);
+    background: rgba(181, 138, 255, 0.26);
 }
 
 .honey-hot-arrow {
-    color: rgba(255, 226, 239, 0.92) !important;
+    color: rgba(245, 238, 242, 0.92) !important;
     font-size: 9px;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 191, 221, 0.25);
+    border: 1px solid rgba(255, 179, 205, 0.25);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2086,14 +2086,14 @@
     padding: 44px 12px 10px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
-        linear-gradient(135deg, rgba(47, 30, 44, 0.74), rgba(22, 16, 24, 0.78));
+        linear-gradient(135deg, rgba(26, 17, 22, 0.74), rgba(15, 10, 13, 0.78));
     backdrop-filter: blur(18px) saturate(145%);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
     z-index: 100;
-    border-bottom: 1px solid rgba(255, 191, 220, 0.28);
+    border-bottom: 1px solid rgba(255, 179, 205, 0.28);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.2),
-        0 6px 16px rgba(9, 5, 12, 0.28);
+        0 6px 16px rgba(15, 10, 13, 0.28);
 }
 
 .honey-nav-title {
@@ -2106,11 +2106,11 @@
     font-size: 16px;
     font-weight: 700;
     letter-spacing: 0.1px;
-    color: #ffe9f4 !important;
+    color: #f5eef2 !important;
     background: none;
     border: none;
     box-shadow: none;
-    text-shadow: 0 1px 6px rgba(255, 124, 176, 0.35);
+    text-shadow: 0 1px 6px rgba(255, 123, 169, 0.35);
     pointer-events: none;
     z-index: 1;
 }
@@ -2151,7 +2151,7 @@
 .honey-icon-btn {
     background: none;
     border: none;
-    color: #ffd8e8 !important;
+    color: #f5eef2 !important;
     font-size: 13px;
     cursor: pointer;
     width: 24px;
@@ -2166,7 +2166,7 @@
 
 .honey-back-btn i,
 .honey-icon-btn i {
-    color: #ffd8e8 !important;
+    color: #f5eef2 !important;
     font-size: 13px !important;
 }
 
@@ -2176,8 +2176,8 @@
     overflow: hidden;
     padding: 7px 8px 7px;
     gap: 4px;
-    background: linear-gradient(180deg, rgba(244, 236, 246, 0.08), rgba(24, 18, 24, 0.72));
-    border-bottom: 1px solid rgba(255, 197, 224, 0.18);
+    background: linear-gradient(180deg, rgba(245, 238, 242, 0.08), rgba(15, 10, 13, 0.72));
+    border-bottom: 1px solid rgba(255, 179, 205, 0.18);
     backdrop-filter: blur(12px) saturate(130%);
     -webkit-backdrop-filter: blur(12px) saturate(130%);
     flex-shrink: 0;
@@ -2189,7 +2189,7 @@
 
 .honey-tab {
     font-size: 11px;
-    color: rgba(255, 225, 239, 0.84) !important;
+    color: rgba(245, 238, 242, 0.84) !important;
     white-space: nowrap;
     cursor: pointer;
     padding: 6px 4px;
@@ -2197,16 +2197,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     border-radius: 10px;
-    border: 1px solid rgba(255, 213, 233, 0.1);
+    border: 1px solid rgba(245, 238, 242, 0.1);
     background: rgba(255, 255, 255, 0.04);
     transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
 .honey-tab.active {
-    color: #ffd8e8 !important;
+    color: #f5eef2 !important;
     font-weight: 700;
-    border-color: rgba(255, 191, 220, 0.42);
-    background: linear-gradient(180deg, rgba(255, 141, 190, 0.24), rgba(72, 43, 62, 0.72));
+    border-color: rgba(255, 179, 205, 0.42);
+    background: linear-gradient(180deg, rgba(255, 123, 169, 0.24), rgba(36, 24, 32, 0.72));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.18),
         0 4px 10px rgba(11, 7, 12, 0.28);
@@ -2214,7 +2214,7 @@
 
 .honey-tab:active {
     background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 201, 227, 0.34);
+    border-color: rgba(255, 179, 205, 0.34);
 }
 
 .honey-live-room {
@@ -2253,7 +2253,7 @@
 }
 
 .honey-nai-placeholder.has-generated-image {
-    background: #100b10;
+    background: #0f0a0d;
     filter: none;
     -webkit-filter: none;
 }
@@ -2300,7 +2300,7 @@
     border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: 50%;
     background: rgba(10, 10, 14, 0.68);
-    color: #fff;
+    color: #f5eef2;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -2326,8 +2326,8 @@
     bottom: 0;
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(20, 10, 15, 0.25);
-    box-shadow: inset 0 0 100px rgba(255, 71, 133, 0.1);
+    background: rgba(15, 10, 13, 0.25);
+    box-shadow: inset 0 0 100px rgba(201, 79, 125, 0.1);
     z-index: 1;
 }
 
@@ -2349,7 +2349,7 @@
     background: rgba(255, 255, 255, 0.18);
     border: 1px solid rgba(255, 255, 255, 0.24);
     border-radius: 50%;
-    color: #fff;
+    color: #f5eef2;
     font-weight: 600;
     font-size: 10px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.26);
@@ -2367,7 +2367,7 @@
 }
 
 .honey-unlock-btn i {
-    color: #ffddeb !important;
+    color: #f5eef2 !important;
     font-size: 10px !important;
     line-height: 1 !important;
     width: 10px;
@@ -2400,15 +2400,15 @@
     z-index: 2;
     padding: 6px 8px;
     border-radius: 10px;
-    background: rgba(40, 18, 28, 0.68);
-    color: #fff;
+    background: rgba(15, 10, 13, 0.68);
+    color: #f5eef2;
     font-size: 10px;
     line-height: 1.35;
     text-align: center;
 }
 
 .honey-nai-status.is-error {
-    color: #ffd5df;
+    color: #f5eef2;
 }
 
 .honey-live-header {
@@ -2429,7 +2429,7 @@
     height: 26px;
     border-radius: 50%;
     overflow: hidden;
-    background: linear-gradient(135deg, #ff7db6, #d35f9e);
+    background: linear-gradient(135deg, #ff7ba9, #c94f7d);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -2449,7 +2449,7 @@
 .honey-host-name {
     font-size: 10px;
     font-weight: 600;
-    color: #fff0f6 !important;
+    color: #f5eef2 !important;
     line-height: 1.28;
     white-space: nowrap;
     overflow: hidden;
@@ -2458,7 +2458,7 @@
 
 .honey-host-viewers {
     font-size: 8.8px;
-    color: #ffd3e7 !important;
+    color: #f5eef2 !important;
     line-height: 1.22;
     white-space: nowrap;
     overflow: hidden;
@@ -2466,10 +2466,10 @@
 }
 
 .honey-follow-btn {
-    background: linear-gradient(135deg, rgba(236, 92, 156, 0.72), rgba(220, 86, 150, 0.68));
-    border: 1px solid rgba(228, 124, 176, 0.4);
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.72), rgba(201, 79, 125, 0.68));
+    border: 1px solid rgba(255, 123, 169, 0.4);
     border-radius: 8px;
-    color: #fff !important;
+    color: #f5eef2 !important;
     font-size: 8px;
     font-weight: 600;
     padding: 0 6px;
@@ -2483,7 +2483,7 @@
 .honey-follow-btn.is-followed {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffd3e7 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-live-self-badge {
@@ -2495,9 +2495,9 @@
     padding: 0 8px;
     margin-left: 2px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 160, 197, 0.26), rgba(176, 116, 221, 0.22));
-    border: 1px solid rgba(255, 208, 228, 0.3);
-    color: #ffe6f2 !important;
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.26), rgba(255, 123, 169, 0.22));
+    border: 1px solid rgba(245, 238, 242, 0.3);
+    color: #f5eef2 !important;
     font-size: 8px;
     font-weight: 700;
     white-space: nowrap;
@@ -2514,9 +2514,9 @@
 }
 
 .honey-tag {
-    background: rgba(255, 71, 133, 0.2);
-    border: 1px solid #ff4785;
-    color: #ff8fbd !important;
+    background: rgba(201, 79, 125, 0.2);
+    border: 1px solid #c94f7d;
+    color: #ff7ba9 !important;
     font-size: 9px;
     padding: 2px 6px;
     border-radius: 4px;
@@ -2558,8 +2558,8 @@
     bottom: 10px;
     z-index: 22;
     border-radius: 12px;
-    border: 1px solid rgba(255, 214, 234, 0.2);
-    background: linear-gradient(160deg, rgba(36, 22, 42, 0.82), rgba(18, 12, 22, 0.84));
+    border: 1px solid rgba(245, 238, 242, 0.2);
+    background: linear-gradient(160deg, rgba(26, 17, 22, 0.82), rgba(15, 10, 13, 0.84));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
         0 8px 18px rgba(0, 0, 0, 0.26);
@@ -2572,7 +2572,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.2px;
-    color: rgba(255, 214, 232, 0.82) !important;
+    color: rgba(245, 238, 242, 0.82) !important;
     margin-bottom: 4px;
 }
 
@@ -2586,7 +2586,7 @@
     white-space: pre-wrap;
     font-size: 10px;
     line-height: 1.55;
-    color: #fff0f8 !important;
+    color: #f5eef2 !important;
 }
 
 /* 允许弹幕列表自身接收点击 */
@@ -2627,7 +2627,7 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding: 10px;
-    border: 1px solid rgba(255, 133, 181, 0.35);
+    border: 1px solid rgba(255, 123, 169, 0.35);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
@@ -2655,9 +2655,9 @@
 
 .honey-live-gift-item {
     align-self: flex-start;
-    background: linear-gradient(135deg, rgba(255, 120, 176, 0.12), rgba(88, 38, 62, 0.14));
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.12), rgba(36, 24, 32, 0.14));
     border: none;
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
     border-radius: 8px;
     padding: 2px 6px;
     font-size: 11px;
@@ -2674,7 +2674,7 @@
     position: relative;
     isolation: isolate;
     min-height: var(--honey-gift-row-height, 24px);
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
 }
 
 .honey-live-gift-item::after {
@@ -2689,11 +2689,11 @@
 }
 
 .honey-live-gift-intro {
-    background: linear-gradient(135deg, rgba(255, 190, 100, 0.14), rgba(74, 48, 23, 0.16));
+    background: linear-gradient(135deg, rgba(227, 93, 143, 0.14), rgba(227, 93, 143, 0.16));
 }
 
 .honey-live-gift-reward {
-    background: linear-gradient(135deg, rgba(255, 85, 150, 0.14), rgba(112, 40, 73, 0.16));
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.14), rgba(36, 24, 32, 0.16));
     padding: 1px 6px;
     min-height: 0;
 }
@@ -2710,13 +2710,13 @@
     justify-content: center;
     font-size: 9px;
     line-height: 1;
-    background: linear-gradient(135deg, rgba(255, 236, 245, 0.32), rgba(255, 194, 224, 0.3));
-    border: 1px solid rgba(255, 214, 235, 0.62);
-    box-shadow: 0 1px 3px rgba(255, 128, 182, 0.2);
+    background: linear-gradient(135deg, rgba(245, 238, 242, 0.32), rgba(255, 179, 205, 0.3));
+    border: 1px solid rgba(245, 238, 242, 0.62);
+    box-shadow: 0 1px 3px rgba(255, 123, 169, 0.2);
 }
 
 .honey-live-gift-comment {
-    background: linear-gradient(135deg, rgba(108, 126, 152, 0.12), rgba(58, 68, 84, 0.14));
+    background: linear-gradient(135deg, rgba(181, 138, 255, 0.12), rgba(181, 138, 255, 0.14));
     width: min(100%, 248px);
     align-self: flex-start;
     padding: 1px 6px;
@@ -2735,10 +2735,10 @@
     line-height: 1;
     border-radius: 8px;
     padding: 3px 5px;
-    color: #fff8de !important;
-    background: linear-gradient(135deg, rgba(255, 197, 82, 0.48), rgba(255, 148, 54, 0.44));
-    border: 1px solid rgba(255, 208, 129, 0.32);
-    box-shadow: 0 1px 4px rgba(255, 166, 56, 0.14);
+    color: #b58aff !important;
+    background: linear-gradient(135deg, rgba(227, 93, 143, 0.48), rgba(227, 93, 143, 0.44));
+    border: 1px solid rgba(227, 93, 143, 0.32);
+    box-shadow: 0 1px 4px rgba(227, 93, 143, 0.14);
     text-shadow: none;
     margin-top: 1px;
 }
@@ -2750,7 +2750,7 @@
     min-width: 0;
     font-size: 10px;
     line-height: 1.28;
-    color: #f3f6fb !important;
+    color: #b58aff !important;
     white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -2760,7 +2760,7 @@
 .honey-live-comment-user {
     font-size: 10px;
     font-weight: 700;
-    color: #e8eef7 !important;
+    color: #b58aff !important;
     white-space: normal;
     display: inline;
     max-width: none;
@@ -2770,7 +2770,7 @@
 
 .honey-live-comment-content {
     font-size: 10px;
-    color: #f3f6fb !important;
+    color: #b58aff !important;
     white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -2788,21 +2788,21 @@
     line-height: 1;
     padding: 3px 5px;
     border-radius: 8px;
-    color: #fff !important;
+    color: #f5eef2 !important;
     letter-spacing: 0.3px;
     text-shadow: none;
 }
 
 .honey-live-gift-badge.is-gift {
-    background: linear-gradient(135deg, rgba(255, 78, 145, 0.44), rgba(255, 122, 179, 0.4));
-    border: 1px solid rgba(255, 172, 212, 0.28);
-    box-shadow: 0 1px 4px rgba(255, 78, 145, 0.14);
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.44), rgba(255, 123, 169, 0.4));
+    border: 1px solid rgba(255, 179, 205, 0.28);
+    box-shadow: 0 1px 4px rgba(255, 123, 169, 0.14);
 }
 
 .honey-live-gift-badge.is-comment {
-    background: linear-gradient(135deg, rgba(79, 143, 255, 0.42), rgba(125, 175, 255, 0.4));
-    border: 1px solid rgba(171, 205, 255, 0.26);
-    box-shadow: 0 1px 4px rgba(79, 143, 255, 0.13);
+    background: linear-gradient(135deg, rgba(181, 138, 255, 0.42), rgba(181, 138, 255, 0.4));
+    border: 1px solid rgba(181, 138, 255, 0.26);
+    box-shadow: 0 1px 4px rgba(181, 138, 255, 0.13);
 }
 
 .honey-gift-icon {
@@ -2844,7 +2844,7 @@
     max-width: none;
     text-overflow: clip;
     overflow: visible;
-    color: #ffe7f2 !important;
+    color: #f5eef2 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
 }
 
@@ -2909,7 +2909,7 @@
     position: relative;
     flex: 1;
     min-height: 0;
-    background: linear-gradient(180deg, rgba(28, 18, 26, 0.08), rgba(16, 10, 15, 0.32));
+    background: linear-gradient(180deg, rgba(15, 10, 13, 0.08), rgba(15, 10, 13, 0.32));
     padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
     z-index: 20;
     display: flex;
@@ -2975,7 +2975,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     align-items: center;
     justify-content: center;
     font-size: 10px !important;
-    color: #ffddeb !important;
+    color: #f5eef2 !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.26);
     cursor: pointer;
 }
@@ -2983,7 +2983,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-refresh-btn i,
 .honey-gift-btn i,
 .honey-scene-toggle-btn i {
-    color: #ffddeb !important;
+    color: #f5eef2 !important;
     font-size: 10px !important;
 }
 
@@ -3004,9 +3004,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     min-width: 28px;
     height: 28px !important;
     padding: 0 !important;
-    background: rgba(18, 10, 18, 0.86) !important;
-    border: 1px solid rgba(255, 230, 242, 0.78) !important;
-    color: #fff7fb !important;
+    background: rgba(15, 10, 13, 0.86) !important;
+    border: 1px solid rgba(245, 238, 242, 0.78) !important;
+    color: #f5eef2 !important;
     box-shadow:
         0 3px 10px rgba(0, 0, 0, 0.58),
         inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -3020,7 +3020,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 #phone-panel-content .phone-screen .honey-page-live .honey-gift-btn i {
     width: 12px;
     height: 12px;
-    color: #fff7fb !important;
+    color: #f5eef2 !important;
     font-size: 12px !important;
     line-height: 12px !important;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.72));
@@ -3032,15 +3032,15 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 #phone-panel-content .phone-screen .honey-page-live .honey-gift-btn:active,
 #phone-panel-content .phone-screen .honey-page-live.is-scene-modal-open .honey-scene-toggle-btn,
 #phone-panel-content .phone-screen .honey-page-live.is-gift-picker-open .honey-gift-btn {
-    background: rgba(212, 67, 126, 0.94) !important;
-    border-color: rgba(255, 244, 249, 0.96) !important;
+    background: rgba(201, 79, 125, 0.94) !important;
+    border-color: rgba(245, 238, 242, 0.96) !important;
 }
 
 #phone-panel-content .phone-screen .honey-page-live .honey-unlock-btn:focus-visible,
 #phone-panel-content .phone-screen .honey-page-live .honey-refresh-btn:focus-visible,
 #phone-panel-content .phone-screen .honey-page-live .honey-scene-toggle-btn:focus-visible,
 #phone-panel-content .phone-screen .honey-page-live .honey-gift-btn:focus-visible {
-    outline: 2px solid rgba(255, 128, 181, 0.94);
+    outline: 2px solid rgba(255, 123, 169, 0.94);
     outline-offset: 2px;
 }
 
@@ -3058,9 +3058,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     min-width: 68px;
     height: 26px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 176, 201, 0.4);
-    background: linear-gradient(135deg, rgba(255, 105, 155, 0.38), rgba(255, 129, 92, 0.34));
-    color: #fff1f7;
+    border: 1px solid rgba(255, 179, 205, 0.4);
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.38), rgba(255, 123, 169, 0.34));
+    color: #f5eef2;
     font-size: 11px;
     font-weight: 700;
     line-height: 24px;
@@ -3071,7 +3071,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-end-live-btn:active {
     transform: scale(0.98);
-    background: linear-gradient(135deg, rgba(255, 105, 155, 0.46), rgba(255, 129, 92, 0.42));
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.46), rgba(255, 123, 169, 0.42));
 }
 
 @keyframes honeyRefreshSpin {
@@ -3084,16 +3084,16 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     min-width: 0;
     width: 0;
     box-sizing: border-box;
-    background: rgba(14, 12, 20, 0.96) !important;
-    border: 1px solid rgba(255, 157, 202, 0.26) !important;
+    background: rgba(181, 138, 255, 0.96) !important;
+    border: 1px solid rgba(255, 179, 205, 0.26) !important;
     border-radius: 16px;
     padding: 8px 16px 8px 12px;
-    color: #fff !important;
-    -webkit-text-fill-color: #fff !important;
-    caret-color: #ffd7e7 !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
+    caret-color: #f5eef2 !important;
     font-size: 12px;
     outline: none;
-    box-shadow: inset 0 0 0 1000px rgba(14, 12, 20, 0.96) !important;
+    box-shadow: inset 0 0 0 1000px rgba(181, 138, 255, 0.96) !important;
     filter: none !important;
     opacity: 1 !important;
     -webkit-user-select: text;
@@ -3104,31 +3104,31 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-app .honey-chat-input,
 #honey-live-view .honey-chat-input {
-    background: rgba(14, 12, 20, 0.96) !important;
-    color: #fff !important;
-    -webkit-text-fill-color: #fff !important;
-    border-color: rgba(255, 157, 202, 0.26) !important;
-    box-shadow: inset 0 0 0 1000px rgba(14, 12, 20, 0.96) !important;
+    background: rgba(181, 138, 255, 0.96) !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
+    border-color: rgba(255, 179, 205, 0.26) !important;
+    box-shadow: inset 0 0 0 1000px rgba(181, 138, 255, 0.96) !important;
 }
 
 .honey-chat-input::placeholder {
-    color: rgba(255, 222, 236, 0.56) !important;
-    -webkit-text-fill-color: rgba(255, 222, 236, 0.56) !important;
+    color: rgba(245, 238, 242, 0.56) !important;
+    -webkit-text-fill-color: rgba(245, 238, 242, 0.56) !important;
 }
 
 .honey-chat-input:focus,
 .honey-chat-input:active {
-    background: rgba(12, 10, 18, 0.98) !important;
-    border-color: rgba(255, 176, 212, 0.38) !important;
-    color: #fff !important;
-    -webkit-text-fill-color: #fff !important;
+    background: rgba(181, 138, 255, 0.98) !important;
+    border-color: rgba(255, 179, 205, 0.38) !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
 }
 
 .honey-chat-input:-webkit-autofill,
 .honey-chat-input:-webkit-autofill:hover,
 .honey-chat-input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #fff !important;
-    box-shadow: 0 0 0 1000px rgba(14, 12, 20, 0.96) inset;
+    -webkit-text-fill-color: #f5eef2 !important;
+    box-shadow: 0 0 0 1000px rgba(181, 138, 255, 0.96) inset;
     transition: background-color 9999s ease-out 0s;
 }
 
@@ -3145,8 +3145,8 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 216px;
     padding: 6px;
     border-radius: 10px;
-    background: rgba(20, 12, 18, 0.95);
-    border: 1px solid rgba(255, 133, 181, 0.55);
+    background: rgba(15, 10, 13, 0.95);
+    border: 1px solid rgba(255, 123, 169, 0.55);
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
     max-height: min(54vh, 240px);
     overflow-y: auto;
@@ -3189,16 +3189,16 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     grid-column: 1 / -1;
     font-size: 9px;
     font-weight: 700;
-    color: #ffc3dc !important;
+    color: #ffb3cd !important;
     text-align: left;
     padding: 2px 2px 0;
     letter-spacing: 0.3px;
 }
 
 .honey-gift-option {
-    border: 1px solid rgba(255, 133, 181, 0.45);
+    border: 1px solid rgba(255, 123, 169, 0.45);
     background: rgba(255, 255, 255, 0.06);
-    color: #ffd7ea !important;
+    color: #f5eef2 !important;
     border-radius: 7px;
     padding: 5px 4px;
     font-size: 9px;
@@ -3219,12 +3219,12 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-gift-option .gift-label {
     font-size: 9px;
-    color: #ffe4f0 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-gift-option .gift-price {
     font-size: 8px;
-    color: #ffb9d6 !important;
+    color: #ffb3cd !important;
 }
 
 /* 电脑端礼物面板缩小一档，移动端保持原尺寸 */
@@ -3263,7 +3263,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     flex: 1;
     min-height: 0;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 133, 181, 0.35);
+    border: 1px solid rgba(255, 123, 169, 0.35);
     border-radius: 12px;
     padding: 8px 9px;
     display: flex;
@@ -3274,7 +3274,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-scene-title {
     font-size: 12px;
     font-weight: 700;
-    color: #ffc3dc !important;
+    color: #ffb3cd !important;
     margin-bottom: 0;
     flex-shrink: 0;
 }
@@ -3296,9 +3296,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 24px;
     height: 24px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 201, 224, 0.72);
-    background: rgba(255, 152, 196, 0.26);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.72);
+    background: rgba(255, 123, 169, 0.26);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3308,14 +3308,14 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-scene-tts-btn i {
-    color: #fff4fa !important;
+    color: #f5eef2 !important;
     font-size: 11px;
     line-height: 1;
 }
 
 .honey-scene-tts-btn:hover {
-    background: rgba(255, 162, 203, 0.36);
-    border-color: rgba(255, 214, 234, 0.9);
+    background: rgba(255, 179, 205, 0.36);
+    border-color: rgba(245, 238, 242, 0.9);
 }
 
 .honey-scene-tts-btn:active {
@@ -3323,9 +3323,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-scene-tts-btn.is-playing {
-    background: rgba(255, 132, 183, 0.48);
-    border-color: rgba(255, 226, 240, 0.95);
-    color: #ffffff !important;
+    background: rgba(255, 123, 169, 0.48);
+    border-color: rgba(245, 238, 242, 0.95);
+    color: #f5eef2 !important;
 }
 
 .honey-scene-tts-btn.is-loading {
@@ -3341,7 +3341,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.55;
-    color: #ffeef6 !important;
+    color: #f5eef2 !important;
     text-shadow: none !important;
     letter-spacing: 0;
     font-family: inherit !important;
@@ -3379,10 +3379,10 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     height: min(78%, 600px);
     max-height: calc(100% - 86px);
     border-radius: 16px;
-    border: 1px solid rgba(255, 174, 210, 0.4);
+    border: 1px solid rgba(255, 179, 205, 0.4);
     background:
-        linear-gradient(180deg, rgba(255, 224, 240, 0.14), rgba(255, 224, 240, 0.02) 18%, rgba(22, 15, 22, 0.96) 72%),
-        linear-gradient(160deg, rgba(52, 34, 47, 0.98), rgba(20, 13, 18, 0.98));
+        linear-gradient(180deg, rgba(245, 238, 242, 0.14), rgba(245, 238, 242, 0.02) 18%, rgba(15, 10, 13, 0.96) 72%),
+        linear-gradient(160deg, rgba(26, 17, 22, 0.98), rgba(15, 10, 13, 0.98));
     box-shadow:
         0 16px 40px rgba(0, 0, 0, 0.52),
         inset 0 1px 0 rgba(255, 255, 255, 0.24);
@@ -3398,15 +3398,15 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     justify-content: space-between;
     gap: 8px;
     padding: 10px 10px 8px;
-    border-bottom: 1px solid rgba(255, 173, 209, 0.26);
-    background: linear-gradient(180deg, rgba(255, 190, 220, 0.16), rgba(255, 190, 220, 0.05));
+    border-bottom: 1px solid rgba(255, 179, 205, 0.26);
+    background: linear-gradient(180deg, rgba(255, 179, 205, 0.16), rgba(255, 179, 205, 0.05));
     flex-shrink: 0;
 }
 
 .honey-scene-modal-title {
     font-size: 12px;
     font-weight: 700;
-    color: #ffe7f3 !important;
+    color: #f5eef2 !important;
     letter-spacing: 0.3px;
 }
 
@@ -3420,9 +3420,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 24px;
     height: 24px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 199, 224, 0.68);
-    background: rgba(255, 160, 201, 0.26);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.68);
+    background: rgba(255, 179, 205, 0.26);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3447,7 +3447,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     white-space: pre-wrap;
     font-size: 13px;
     line-height: 1.68;
-    color: #fff0f8 !important;
+    color: #f5eef2 !important;
     text-shadow: none;
     
     /* 🔥 新增：移动端原生丝滑滚动与防事件穿透 */
@@ -3485,8 +3485,8 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: min(92%, 340px);
     max-height: min(78%, 460px);
     border-radius: 12px;
-    border: 1px solid rgba(255, 192, 222, 0.42);
-    background: linear-gradient(160deg, rgba(40, 26, 38, 0.96), rgba(14, 10, 16, 0.96));
+    border: 1px solid rgba(255, 179, 205, 0.42);
+    background: linear-gradient(160deg, rgba(26, 17, 22, 0.96), rgba(15, 10, 13, 0.96));
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.52);
     display: flex;
     flex-direction: column;
@@ -3499,13 +3499,13 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     justify-content: space-between;
     gap: 8px;
     padding: 8px 10px;
-    border-bottom: 1px solid rgba(255, 183, 216, 0.24);
+    border-bottom: 1px solid rgba(255, 179, 205, 0.24);
 }
 
 .honey-scene-tag-history-title {
     font-size: 11px;
     font-weight: 700;
-    color: #ffe8f5 !important;
+    color: #f5eef2 !important;
     letter-spacing: 0.2px;
 }
 
@@ -3522,9 +3522,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     height: 24px;
     flex: 0 0 24px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 204, 228, 0.48);
-    background: rgba(255, 154, 200, 0.18);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.48);
+    background: rgba(255, 123, 169, 0.18);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3544,9 +3544,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-scene-tag-history-retag {
     min-height: 24px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 204, 228, 0.48);
-    background: rgba(255, 154, 200, 0.18);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.48);
+    background: rgba(255, 123, 169, 0.18);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3570,9 +3570,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 22px;
     height: 22px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 204, 228, 0.62);
-    background: rgba(255, 154, 200, 0.2);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.62);
+    background: rgba(255, 123, 169, 0.2);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3591,7 +3591,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-scene-tag-history-item {
-    border: 1px solid rgba(255, 194, 224, 0.22);
+    border: 1px solid rgba(255, 179, 205, 0.22);
     border-radius: 9px;
     background: rgba(255, 255, 255, 0.04);
     padding: 8px;
@@ -3608,7 +3608,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     gap: 0;
     margin-bottom: 6px;
     font-size: 10px;
-    color: rgba(255, 223, 238, 0.88) !important;
+    color: rgba(245, 238, 242, 0.88) !important;
 }
 
 .honey-scene-tag-history-index {
@@ -3617,14 +3617,14 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-scene-tag-history-time {
     opacity: 1;
-    color: rgba(255, 236, 245, 0.96) !important;
+    color: rgba(245, 238, 242, 0.96) !important;
     text-shadow: none !important;
 }
 
 .honey-scene-tag-history-prompt {
     font-size: 11px;
     line-height: 1.5;
-    color: #fff0f8 !important;
+    color: #f5eef2 !important;
     word-break: break-word;
 }
 
@@ -3632,7 +3632,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     padding: 16px 10px;
     text-align: center;
     font-size: 11px;
-    color: rgba(255, 229, 242, 0.86) !important;
+    color: rgba(245, 238, 242, 0.86) !important;
 }
 
 .honey-scene-tag-editor-overlay {
@@ -3650,9 +3650,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-scene-tag-editor-dialog {
     width: min(92%, 340px);
     max-height: min(78%, 460px);
-    border: 1px solid rgba(255, 192, 222, 0.48);
+    border: 1px solid rgba(255, 179, 205, 0.48);
     border-radius: 12px;
-    background: linear-gradient(160deg, rgba(40, 26, 38, 0.98), rgba(14, 10, 16, 0.98));
+    background: linear-gradient(160deg, rgba(26, 17, 22, 0.98), rgba(15, 10, 13, 0.98));
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.56);
     display: flex;
     flex-direction: column;
@@ -3666,14 +3666,14 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     justify-content: space-between;
     gap: 8px;
     padding: 7px 10px;
-    border-bottom: 1px solid rgba(255, 183, 216, 0.24);
+    border-bottom: 1px solid rgba(255, 179, 205, 0.24);
     box-sizing: border-box;
 }
 
 .honey-scene-tag-editor-title {
     font-size: 11px;
     font-weight: 700;
-    color: #ffe8f5 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-scene-tag-editor-close {
@@ -3681,9 +3681,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     height: 22px;
     flex: 0 0 22px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 204, 228, 0.62);
-    background: rgba(255, 154, 200, 0.2);
-    color: #fff4fa !important;
+    border: 1px solid rgba(255, 179, 205, 0.62);
+    background: rgba(255, 123, 169, 0.2);
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3706,10 +3706,10 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 100%;
     min-height: 176px;
     max-height: 290px;
-    border: 1px solid rgba(255, 194, 224, 0.34);
+    border: 1px solid rgba(255, 179, 205, 0.34);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.055);
-    color: #fff0f8 !important;
+    color: #f5eef2 !important;
     padding: 9px;
     box-sizing: border-box;
     resize: none;
@@ -3726,8 +3726,8 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-scene-tag-editor-textarea:focus {
-    border-color: rgba(255, 181, 219, 0.76);
-    box-shadow: 0 0 0 2px rgba(255, 143, 198, 0.12);
+    border-color: rgba(255, 179, 205, 0.76);
+    box-shadow: 0 0 0 2px rgba(255, 123, 169, 0.12);
 }
 
 .honey-scene-tag-editor-actions {
@@ -3741,7 +3741,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     min-width: 54px;
     min-height: 27px;
     border-radius: 7px;
-    border: 1px solid rgba(255, 204, 228, 0.4);
+    border: 1px solid rgba(255, 179, 205, 0.4);
     padding: 0 11px;
     font-size: 10px;
     font-weight: 700;
@@ -3750,12 +3750,12 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-scene-tag-editor-button.is-secondary {
     background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 235, 246, 0.9) !important;
+    color: rgba(245, 238, 242, 0.9) !important;
 }
 
 .honey-scene-tag-editor-button.is-primary {
-    background: rgba(255, 135, 193, 0.3);
-    color: #fff7fb !important;
+    background: rgba(255, 123, 169, 0.3);
+    color: #f5eef2 !important;
 }
 
 .honey-scene-tag-editor-button:disabled {
@@ -3779,7 +3779,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     position: absolute;
     inset: 0;
     border: none;
-    background: rgba(10, 6, 12, 0.08);
+    background: rgba(15, 10, 13, 0.08);
     pointer-events: auto;
 }
 
@@ -3787,11 +3787,11 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     position: relative;
     width: min(220px, calc(100% - 28px));
     border-radius: 9px;
-    border: 1px solid rgba(255, 216, 233, 0.16);
-    background: linear-gradient(145deg, rgba(44, 31, 45, 0.5), rgba(18, 13, 22, 0.34));
+    border: 1px solid rgba(245, 238, 242, 0.16);
+    background: linear-gradient(145deg, rgba(26, 17, 22, 0.5), rgba(15, 10, 13, 0.34));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 4px 14px rgba(8, 5, 11, 0.34);
+        0 4px 14px rgba(15, 10, 13, 0.34);
     backdrop-filter: blur(6px) saturate(120%);
     -webkit-backdrop-filter: blur(6px) saturate(120%);
     padding: 8px;
@@ -3811,7 +3811,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-live-collab-modal-title {
     font-size: 9px;
     font-weight: 700;
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
     letter-spacing: 0.2px;
     opacity: 0.96;
 }
@@ -3820,9 +3820,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 18px;
     height: 18px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 216, 233, 0.2);
+    border: 1px solid rgba(245, 238, 242, 0.2);
     background: rgba(255, 255, 255, 0.06);
-    color: #ffd9ea !important;
+    color: #f5eef2 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3837,7 +3837,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-live-collab-modal-desc {
     font-size: 8px;
     line-height: 1.4;
-    color: rgba(255, 221, 238, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-live-collab-modal-list {
@@ -3863,7 +3863,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     position: absolute;
     inset: 0;
     border: 0;
-    background: rgba(5, 5, 12, 0.58);
+    background: rgba(181, 138, 255, 0.58);
 }
 
 .honey-live-visibility-panel {
@@ -3872,10 +3872,10 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     border-radius: 14px;
     padding: 16px;
     box-sizing: border-box;
-    background: rgba(28, 18, 30, 0.96);
+    background: rgba(15, 10, 13, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
-    color: #fff;
+    color: #f5eef2;
     touch-action: manipulation;
 }
 
@@ -3901,10 +3901,10 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-live-visibility-btn {
     height: 38px;
-    border: 1px solid rgba(255, 216, 237, 0.24);
+    border: 1px solid rgba(245, 238, 242, 0.24);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.08);
-    color: #ffe4f2 !important;
+    color: #f5eef2 !important;
     font-size: 12px;
     font-weight: 700;
     display: inline-flex;
@@ -3919,7 +3919,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-live-visibility-btn,
 .honey-live-visibility-btn span,
 .honey-live-visibility-btn i {
-    color: #ffffff !important;
+    color: #f5eef2 !important;
 }
 
 .honey-live-visibility-btn:active {
@@ -3927,13 +3927,13 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-live-visibility-btn.is-private {
-    border-color: rgba(255, 216, 237, 0.24);
+    border-color: rgba(245, 238, 242, 0.24);
     background: rgba(255, 255, 255, 0.08);
 }
 
 .honey-live-visibility-btn.is-public {
-    border-color: rgba(255, 150, 182, 0.4);
-    background: linear-gradient(145deg, rgba(120, 38, 68, 0.42), rgba(84, 28, 52, 0.54));
+    border-color: rgba(255, 123, 169, 0.4);
+    background: linear-gradient(145deg, rgba(36, 24, 32, 0.42), rgba(26, 17, 22, 0.54));
 }
 
 .honey-host-wechat-reject-modal {
@@ -3956,16 +3956,16 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     word-break: break-word;
     font-size: 11px;
     line-height: 1.55;
-    color: #fff0f8 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-host-wechat-reject-ok {
     width: 100%;
     min-height: 28px;
-    border: 1px solid rgba(255, 105, 180, 0.38);
+    border: 1px solid rgba(255, 123, 169, 0.38);
     border-radius: 8px;
-    background: linear-gradient(135deg, rgba(255, 77, 148, 0.86), rgba(255, 128, 184, 0.72));
-    color: #fff !important;
+    background: linear-gradient(135deg, rgba(255, 123, 169, 0.86), rgba(255, 123, 169, 0.72));
+    color: #f5eef2 !important;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -3973,7 +3973,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-live-collab-request-item {
     width: 100%;
-    border: 1px solid rgba(255, 216, 233, 0.1);
+    border: 1px solid rgba(245, 238, 242, 0.1);
     border-radius: 7px;
     background: rgba(255, 255, 255, 0.03);
     padding: 5px 6px;
@@ -3992,7 +3992,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-live-collab-request-item:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 216, 233, 0.2);
+    border-color: rgba(245, 238, 242, 0.2);
 }
 
 .honey-live-collab-request-top {
@@ -4006,7 +4006,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     min-width: 0;
     font-size: 8px;
     font-weight: 700;
-    color: #fff0f7 !important;
+    color: #f5eef2 !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4019,38 +4019,38 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     font-size: 7px;
     font-weight: 700;
     line-height: 1.2;
-    border: 1px solid rgba(255, 216, 233, 0.18);
-    color: #ffd9ea !important;
+    border: 1px solid rgba(245, 238, 242, 0.18);
+    color: #f5eef2 !important;
     background: rgba(255, 255, 255, 0.04);
 }
 
 .honey-live-collab-request-badge.is-ranked {
-    background: rgba(255, 215, 154, 0.08);
-    border-color: rgba(255, 215, 154, 0.18);
-    color: #ffd79a !important;
+    background: rgba(227, 93, 143, 0.08);
+    border-color: rgba(227, 93, 143, 0.18);
+    color: #e35d8f !important;
 }
 
 .honey-live-collab-request-badge.is-unranked {
-    background: rgba(214, 229, 255, 0.06);
-    border-color: rgba(214, 229, 255, 0.14);
-    color: #dce9ff !important;
+    background: rgba(181, 138, 255, 0.06);
+    border-color: rgba(181, 138, 255, 0.14);
+    color: #b58aff !important;
 }
 
 .honey-live-collab-request-badge.is-host {
-    background: rgba(255, 199, 224, 0.08);
-    border-color: rgba(255, 199, 224, 0.16);
-    color: #ffe0ef !important;
+    background: rgba(255, 179, 205, 0.08);
+    border-color: rgba(255, 179, 205, 0.16);
+    color: #f5eef2 !important;
 }
 
 .honey-live-collab-request-sub {
     font-size: 7px;
-    color: rgba(255, 229, 240, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-live-collab-request-cta {
     font-size: 7px;
     font-weight: 700;
-    color: #ffd79a !important;
+    color: #e35d8f !important;
 }
 
 .honey-live-collab-end-actions {
@@ -4068,7 +4068,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .phone-view-layer[data-view-id="honey-settings"] {
-    background: #140f13;
+    background: #0f0a0d;
     contain: layout paint style;
 }
 
@@ -4076,7 +4076,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     overflow-y: auto;
     padding: 0 0 16px;
     gap: 8px;
-    background: #171218;
+    background: #0f0a0d;
 }
 
 .honey-settings-content {
@@ -4089,9 +4089,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-settings-card {
-    background: #211920;
-    border-top: 1px solid rgba(255, 156, 203, 0.12);
-    border-bottom: 1px solid rgba(255, 156, 203, 0.12);
+    background: #0f0a0d;
+    border-top: 1px solid rgba(255, 179, 205, 0.12);
+    border-bottom: 1px solid rgba(255, 179, 205, 0.12);
     border-left: none;
     border-right: none;
     border-radius: 0;
@@ -4104,9 +4104,9 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 #phone-panel-content .phone-screen .honey-page-settings .honey-settings-card {
-    background: linear-gradient(150deg, rgba(38, 27, 38, 0.76), rgba(22, 14, 25, 0.68)) !important;
-    border-top-color: rgba(255, 205, 229, 0.2);
-    border-bottom-color: rgba(255, 205, 229, 0.18);
+    background: linear-gradient(150deg, rgba(26, 17, 22, 0.76), rgba(15, 10, 13, 0.68)) !important;
+    border-top-color: rgba(245, 238, 242, 0.2);
+    border-bottom-color: rgba(245, 238, 242, 0.18);
     backdrop-filter: blur(7px) saturate(120%);
     -webkit-backdrop-filter: blur(7px) saturate(120%);
 }
@@ -4114,14 +4114,14 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-settings-card-title {
     font-size: 13px;
     font-weight: 700;
-    color: #ffd7ea !important;
+    color: #f5eef2 !important;
     margin-bottom: 10px;
 }
 
 /* 蜜语设置页：覆盖通用折叠提示词面板，保持深色统一风格 */
 .honey-page-settings .phone-prompt-fold {
-    background: #0e0c14 !important;
-    border: 1px solid rgba(255, 133, 181, 0.28) !important;
+    background: #b58aff !important;
+    border: 1px solid rgba(255, 123, 169, 0.28) !important;
     border-radius: 10px !important;
     box-shadow: none !important;
 }
@@ -4131,20 +4131,20 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-page-settings .phone-prompt-fold-title {
-    color: #ffe2f0 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-page-settings .phone-prompt-fold-desc {
-    color: rgba(255, 225, 239, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
 }
 
 .honey-page-settings .phone-prompt-fold-arrow {
-    color: rgba(255, 188, 217, 0.9) !important;
+    color: rgba(255, 179, 205, 0.9) !important;
 }
 
 .honey-page-settings .phone-prompt-fold-content {
-    background: rgba(18, 12, 20, 0.92) !important;
-    border-top: 1px solid rgba(255, 133, 181, 0.2);
+    background: rgba(15, 10, 13, 0.92) !important;
+    border-top: 1px solid rgba(255, 123, 169, 0.2);
     padding: 10px 10px 10px !important;
 }
 
@@ -4166,11 +4166,11 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     flex: 1;
     min-width: 0;
     height: 32px;
-    border: 1px solid rgba(255, 133, 181, 0.22);
+    border: 1px solid rgba(255, 123, 169, 0.22);
     border-radius: 8px;
-    background: #0e0c14;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
+    background: #b58aff;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
     font-size: 12px;
     padding: 0 14px 0 10px;
     box-sizing: border-box;
@@ -4183,26 +4183,26 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-settings-input:-webkit-autofill,
 .honey-settings-input:-webkit-autofill:hover,
 .honey-settings-input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-fill-color: #f5eef2 !important;
     transition: background-color 9999s ease-in-out 0s;
-    box-shadow: inset 0 0 0 1000px #0e0c14 !important;
+    box-shadow: inset 0 0 0 1000px #b58aff !important;
 }
 
 .honey-settings-input::placeholder {
-    color: rgba(255, 225, 239, 0.6) !important;
+    color: rgba(245, 238, 242, 0.6) !important;
 }
 
 #honey-user-nickname.honey-settings-input {
-    background: #0a0b10 !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
+    background: #b58aff !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
 }
 
 #honey-recharge-yuan.honey-settings-input {
-    background: #0a0b10 !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #ffffff;
+    background: #b58aff !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
+    caret-color: #f5eef2;
     -webkit-appearance: none;
     appearance: textfield;
     background-image: none !important;
@@ -4224,37 +4224,37 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     text-align: right;
     font-size: 16px;
     font-weight: 700;
-    color: #ffd7ea !important;
-    text-shadow: 0 1px 4px rgba(255, 102, 160, 0.28);
+    color: #f5eef2 !important;
+    text-shadow: 0 1px 4px rgba(255, 123, 169, 0.28);
 }
 
 .honey-settings-label {
     font-size: 12px;
     font-weight: 600;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .honey-settings-desc {
     font-size: 10px;
     line-height: 1.4;
-    color: rgba(255, 245, 251, 0.95) !important;
+    color: rgba(245, 238, 242, 0.95) !important;
     margin-top: 4px;
 }
 
 .phone-honey-worldbook-list {
-    color: rgba(255, 245, 251, 0.96) !important;
+    color: rgba(245, 238, 242, 0.96) !important;
 }
 
 #phone-panel-content .phone-screen .honey-app .phone-worldbook-source-name {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
 }
 
 #phone-panel-content .phone-screen .honey-app .phone-worldbook-entry-trigger,
 #phone-panel-content .phone-screen .honey-app .phone-worldbook-entry-trigger i {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
+    color: #f5eef2 !important;
+    -webkit-text-fill-color: #f5eef2 !important;
 }
 
 .honey-worldbook-fold {
@@ -4267,24 +4267,24 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     gap: 8px;
     padding: 8px 0;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 245, 251, 0.96) !important;
+    color: rgba(245, 238, 242, 0.96) !important;
 }
 
 .phone-honey-worldbook-text {
     min-width: 0;
-    color: rgba(255, 245, 251, 0.96) !important;
+    color: rgba(245, 238, 242, 0.96) !important;
 }
 
 .phone-honey-worldbook-name {
     display: block;
     font-size: 13px;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
 }
 
 .phone-honey-worldbook-meta {
     display: block;
     font-size: 11px;
-    color: rgba(255, 245, 251, 0.72) !important;
+    color: rgba(245, 238, 242, 0.72) !important;
     margin-top: 2px;
 }
 
@@ -4306,7 +4306,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     inset: 0;
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.22);
-    border: 1px solid rgba(255, 133, 181, 0.45);
+    border: 1px solid rgba(255, 123, 169, 0.45);
     transition: all 0.2s ease;
 }
 
@@ -4318,12 +4318,12 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     left: 2px;
     top: 2px;
     border-radius: 50%;
-    background: #fff;
+    background: #f5eef2;
     transition: transform 0.2s ease;
 }
 
 .honey-toggle-switch input:checked + .honey-toggle-slider {
-    background: rgba(255, 71, 133, 0.65);
+    background: rgba(201, 79, 125, 0.65);
 }
 
 .honey-toggle-switch input:checked + .honey-toggle-slider::before {
@@ -4334,11 +4334,11 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     width: 100%;
     min-height: 230px;
     margin-top: 10px;
-    background: #0a0b10 !important;
+    background: #b58aff !important;
     background-image: none !important;
-    border: 1px solid rgba(255, 133, 181, 0.45);
+    border: 1px solid rgba(255, 123, 169, 0.45);
     border-radius: 10px;
-    color: #ffffff !important;
+    color: #f5eef2 !important;
     font-size: 11px;
     line-height: 1.45;
     padding: 10px 14px 10px 10px;
@@ -4352,8 +4352,8 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 }
 
 .honey-prompt-editor:focus {
-    background: #0a0b10 !important;
-    color: #ffffff !important;
+    background: #b58aff !important;
+    color: #f5eef2 !important;
 }
 
 .honey-prompt-editor::placeholder {
@@ -4398,20 +4398,20 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 
 .honey-settings-btn-muted {
     background: rgba(255, 255, 255, 0.2);
-    color: #ffd8ea !important;
+    color: #f5eef2 !important;
 }
 
 .honey-settings-btn-primary {
-    background: linear-gradient(135deg, #ff4785, #ff6b9d);
-    color: #fff !important;
+    background: linear-gradient(135deg, #c94f7d, #ff7ba9);
+    color: #f5eef2 !important;
 }
 
 .honey-settings-btn-danger {
     margin-top: 10px;
     width: 100%;
-    background: linear-gradient(135deg, #ff5f72, #ff3d53);
-    color: #fff !important;
-    box-shadow: 0 4px 10px rgba(255, 61, 83, 0.32);
+    background: linear-gradient(135deg, #c94f7d, #c94f7d);
+    color: #f5eef2 !important;
+    box-shadow: 0 4px 10px rgba(201, 79, 125, 0.32);
 }
 
 .honey-recharge-modal {
@@ -4431,7 +4431,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-recharge-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(4, 3, 10, 0.62);
+    background: rgba(181, 138, 255, 0.62);
 }
 
 .honey-recharge-panel {
@@ -4442,27 +4442,27 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     transform: translateY(-50%);
     border-radius: 14px;
     padding: 12px;
-    background: linear-gradient(145deg, rgba(24, 18, 34, 0.96), rgba(18, 12, 25, 0.95));
-    border: 1px solid rgba(255, 133, 181, 0.35);
+    background: linear-gradient(145deg, rgba(15, 10, 13, 0.96), rgba(15, 10, 13, 0.95));
+    border: 1px solid rgba(255, 123, 169, 0.35);
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
 }
 
 .honey-recharge-title {
     font-size: 14px;
     font-weight: 700;
-    color: #ffd3e7 !important;
+    color: #f5eef2 !important;
     margin-bottom: 8px;
 }
 
 .honey-recharge-wallet-value {
-    color: #ffffff !important;
+    color: #f5eef2 !important;
     font-weight: 700;
 }
 
 .honey-recharge-preview-value {
-    color: #ffcee1 !important;
+    color: #ffb3cd !important;
     font-weight: 700;
-    text-shadow: 0 1px 4px rgba(255, 92, 157, 0.28);
+    text-shadow: 0 1px 4px rgba(255, 123, 169, 0.28);
 }
 
 .honey-refresh-btn:disabled,
@@ -4475,7 +4475,7 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 /* 自定义视频池列表：强制高对比可见 */
 .honey-custom-video-empty {
     font-size: 11px;
-    color: rgba(255, 245, 251, 0.95) !important;
+    color: rgba(245, 238, 242, 0.95) !important;
     text-align: center;
     padding: 10px 0;
 }
@@ -4487,12 +4487,12 @@ body.phone-input-active .honey-page-live .honey-input-bar {
     background: rgba(255, 255, 255, 0.05);
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 133, 181, 0.2);
+    border: 1px solid rgba(255, 123, 169, 0.2);
 }
 
 .honey-custom-video-name {
     font-size: 10px;
-    color: #fff2f8 !important;
+    color: #f5eef2 !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4502,20 +4502,20 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-custom-video-icon {
     margin-right: 4px;
     opacity: 0.8;
-    color: #fff2f8 !important;
+    color: #f5eef2 !important;
 }
 
 .honey-delete-custom-video-btn {
     background: none;
     border: none;
-    color: #ff87a9 !important;
+    color: #ff7ba9 !important;
     cursor: pointer;
     font-size: 12px;
     padding: 2px;
 }
 
 .honey-delete-custom-video-btn i {
-    color: #ff87a9 !important;
+    color: #ff7ba9 !important;
 }
 
 .honey-custom-video-hint {
@@ -4528,8 +4528,8 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 .honey-custom-video-toggle-btn {
     margin-top: 2px;
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 133, 181, 0.25);
-    color: #ffd2e6 !important;
+    border: 1px solid rgba(255, 123, 169, 0.25);
+    color: #f5eef2 !important;
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 11px;
@@ -4539,30 +4539,30 @@ body.phone-input-active .honey-page-live .honey-input-bar {
 /* 状态栏：蜜语模式下强制提亮时间/信号/电池 */
 .phone-body-panel-honey .phone-statusbar .time,
 .phone-body-panel-honey .statusbar-left .time {
-    color: #ffe9f4 !important;
-    text-shadow: 0 0 6px rgba(255, 123, 177, 0.35);
+    color: #f5eef2 !important;
+    text-shadow: 0 0 6px rgba(255, 123, 169, 0.35);
 }
 
 .phone-body-panel-honey .phone-wifi-signal,
 .phone-body-panel-honey .phone-wifi-signal .fa-wifi {
-    color: #ffd7ea !important;
+    color: #f5eef2 !important;
 }
 
 .phone-body-panel-honey .phone-wifi-signal {
-    filter: drop-shadow(0 0 3px rgba(255, 123, 177, 0.45));
+    filter: drop-shadow(0 0 3px rgba(255, 123, 169, 0.45));
 }
 
 .phone-body-panel-honey .battery-text {
-    color: #ffe9f4 !important;
+    color: #f5eef2 !important;
 }
 
 .phone-body-panel-honey .battery-body {
-    border-color: rgba(255, 216, 232, 0.95) !important;
-    background: rgba(41, 12, 28, 0.45) !important;
+    border-color: rgba(245, 238, 242, 0.95) !important;
+    background: rgba(15, 10, 13, 0.45) !important;
 }
 
 .phone-body-panel-honey .battery-head {
-    background: rgba(255, 216, 232, 0.95) !important;
+    background: rgba(245, 238, 242, 0.95) !important;
 }
 
 /* 蜜语直播输入栏在移动端软键盘弹起时需要额外避让，避免被系统键盘贴边遮挡 */

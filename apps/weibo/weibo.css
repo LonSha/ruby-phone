@@ -162,7 +162,7 @@
     padding: 0 9px;
     border: none;
     border-radius: 999px;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
     font-size: 11px;
     line-height: 24px;
@@ -184,7 +184,7 @@
     height: 48px;
     border-radius: 50%;
     border: 3px solid #fff;
-    background: linear-gradient(135deg, #ff8200, #e85d04);
+    background: linear-gradient(135deg, #f5730a, #d95f06);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -268,7 +268,7 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
     display: inline-flex;
     align-items: center;
@@ -279,7 +279,7 @@
 
 .weibo-verify-text {
     font-size: 11px !important;
-    color: #ff8200 !important;
+    color: #f5730a !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -347,7 +347,7 @@
 }
 
 .weibo-tab.active {
-    color: #ff8200 !important;
+    color: #f5730a !important;
     font-weight: 600;
 }
 
@@ -356,7 +356,7 @@
     bottom: 0;
     left: 0;
     height: 2px;
-    background: #ff8200;
+    background: #f5730a;
     border-radius: 1px 1px 0 0;
     transition: transform 0.3s ease, width 0.3s ease;
 }
@@ -401,7 +401,7 @@
 }
 
 .weibo-hot-rank.top3 {
-    color: #ff8200;
+    color: #f5730a;
 }
 
 .weibo-hot-info {
@@ -435,7 +435,7 @@
 
 .weibo-hot-tag.tag-hot {
     background: #fff3e0;
-    color: #ff8200;
+    color: #f5730a;
 }
 
 .weibo-hot-tag.tag-new {
@@ -509,7 +509,7 @@
     padding: 1px 3px;
     border-radius: 2px;
     background: #fff3e0;
-    color: #ff8200;
+    color: #f5730a;
     font-weight: 400;
 }
 
@@ -576,15 +576,15 @@
 
 /* Hover 状态互动色 */
 .weibo-stat-item:hover {
-    color: #ff8200 !important;
+    color: #f5730a !important;
 }
 .weibo-stat-item:hover .woo-icon {
-    color: #ff8200 !important;
+    color: #f5730a !important;
 }
 
 /* 已点赞状态样式重写 */
 .weibo-stat-item.liked {
-    color: #ff3852 !important; /* 微博爱心专属红 */
+    color: #ff4757 !important; /* 微博爱心专属红 */
 }
 
 .weibo-stat-item.liked .woo-like-outline {
@@ -593,7 +593,7 @@
 
 .weibo-stat-item.liked .woo-like-filled {
     display: inline-block; /* 显示实心 */
-    color: #ff3852 !important;
+    color: #ff4757 !important;
     animation: heart-burst 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 心跳爆开动画 */
 }
 
@@ -632,7 +632,7 @@
 
 .weibo-comment-send {
     background: transparent !important;
-    color: #ff8200 !important;
+    color: #f5730a !important;
     border: none;
     width: 24px;
     height: 24px;
@@ -651,7 +651,7 @@
 .weibo-comment-send,
 .weibo-comment-send i,
 .weibo-send-plane-icon {
-    color: #ff8200 !important;
+    color: #f5730a !important;
 }
 
 #fixed-comment-send,
@@ -671,7 +671,7 @@
 .weibo-topic-tag {
     font-size: 14px;
     font-weight: 700;
-    color: #ff8200;
+    color: #f5730a;
     margin-bottom: 3px;
 }
 
@@ -709,7 +709,7 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
 }
 
@@ -751,12 +751,12 @@
 }
 
 .weibo-pull-refresh-indicator.ready .weibo-pull-refresh-inner {
-    color: #ff8200;
-    border-color: rgba(255, 130, 0, 0.25);
+    color: #f5730a;
+    border-color: rgba(245, 115, 10, 0.25);
 }
 
 .weibo-pull-refresh-indicator.loading .weibo-pull-refresh-inner {
-    color: #ff8200;
+    color: #f5730a;
 }
 
 .weibo-pull-refresh-indicator.success .weibo-pull-refresh-inner {
@@ -771,7 +771,7 @@
     padding: 7px 18px;
     border: none;
     border-radius: 14px;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
     font-size: 11px;
     font-weight: 500;
@@ -895,7 +895,7 @@
     padding: 7px;
     border: none;
     border-radius: 5px;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
     font-size: 11px;
     font-weight: 500;
@@ -915,7 +915,7 @@
 .weibo-settings-btn[id^="weibo-save-"],
 label[for="weibo-settings-avatar-upload"].weibo-settings-btn,
 label[for="weibo-settings-banner-upload"].weibo-settings-btn {
-    background: #ff9f3d;
+    background: #ffb26b;
 }
 
 #phone-panel-content .phone-screen .weibo-clear-data-overlay {
@@ -1014,7 +1014,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
 }
 
 #phone-panel-content .phone-screen .weibo-clear-data-option > i {
-    color: #ff8200 !important;
+    color: #f5730a !important;
     font-size: 17px !important;
     text-align: center;
 }
@@ -1168,7 +1168,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
     width: 32px;
     height: 32px;
     border-radius: 5px;
-    background: #ff8200;
+    background: #f5730a;
     color: #fff;
     display: flex;
     align-items: center;
@@ -1368,7 +1368,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #ff9f3d;
+    background: #ffb26b;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1393,7 +1393,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
 /* ========================================
    展开全文提示   ======================================== */
 .weibo-expand-text {
-    color: #ff8200;
+    color: #f5730a;
     font-size: 11px;
     cursor: pointer;
 }
@@ -1662,7 +1662,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
 }
 
 .wnc-like-btn.liked {
-    color: #ff8200;
+    color: #f5730a;
 }
 
 .wnc-sub-like-btn {
@@ -1684,7 +1684,7 @@ label[for="weibo-settings-banner-upload"].weibo-settings-btn {
 }
 
 .wnc-sub-like-btn.liked {
-    color: #ff8200;
+    color: #f5730a;
 }
 
 /* ========================================
