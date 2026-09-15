@@ -31,7 +31,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.12.0';
+const ST_PHONE_VERSION = '2.13.0';
 const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,6 +127,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let PromptManager = null;      // 发消息时加载
     let SettingsApp = null;        // 打开设置时加载
     let TtsManager = null;         // 语音管理器
+    let AsrManager = null;         // [v2.13.0] 语音输入管理器 (ASR)
     let ImageGenerationManager = null; // 生图管理器
     let WorldbookManager = null;   // 世界书选择/注入管理器
 
@@ -145,6 +146,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let timeManager = null;
     let promptManager = null;
     let ttsManager = null;
+    let asrManager = null;         // [v2.13.0] ASR 实例
     let imageGenerationManager = null;
     let worldbookManager = null;
     let phoneFloatingEntry = null;
@@ -1277,6 +1279,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             timeManagerModule,      // 👈 新增：时间推算引擎
             promptManagerModule,    // 👈 新增：全局提示词中枢
             ttsManagerModule,
+            asrManagerModule,           // [v2.13.0] ASR
             imageGenerationManagerModule,
             worldbookManagerModule
         ] = await Promise.all([
@@ -1286,6 +1289,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             import('./config/time-manager.js'),    // 👈 取消懒加载
         import('./config/prompt-manager.js?v=20260802-moments-named-images'),  // 👈 取消懒加载
             import('./config/tts-manager.js?v=20260607-mimo-relay-worker'),
+            import('./config/asr-manager.js?v=20260915-asr-voice-input'),   // [v2.13.0] ASR
         import('./config/image-generation-manager.js?v=20260828-nai-prompt-preserve'),
             import('./config/worldbook-manager.js')
         ]);
@@ -1296,6 +1300,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         TimeManager = timeManagerModule.TimeManager;       // 👈 绑定类
         PromptManager = promptManagerModule.PromptManager; // 👈 绑定类
         TtsManager = ttsManagerModule.TtsManager;
+        AsrManager = asrManagerModule.AsrManager;      // [v2.13.0] ASR
         ImageGenerationManager = imageGenerationManagerModule.ImageGenerationManager;
         WorldbookManager = worldbookManagerModule.WorldbookManager;
 
@@ -1309,6 +1314,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         timeManager = new TimeManager(storage);
         promptManager = new PromptManager(storage);
         ttsManager = new TtsManager(storage);
+        asrManager = new AsrManager(storage);          // [v2.13.0] ASR
         imageGenerationManager = new ImageGenerationManager(storage);
         worldbookManager = new WorldbookManager(storage);
         promptManager.ensureLoaded(); // 强制把所有提示词立即读入内存待命
@@ -8793,6 +8799,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 apiManager: new ApiManager(storage),
                 promptManager: null,
                 ttsManager: ttsManager,
+                asrManager: asrManager,          // [v2.13.0] 语音输入
                 imageGenerationManager: imageGenerationManager,
                 worldbookManager: worldbookManager,
                 applyPhoneShellScale: applyPhoneShellScale,

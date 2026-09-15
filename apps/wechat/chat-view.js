@@ -2812,6 +2812,9 @@ renderChatRoom(chat) {
                                    placeholder="${this._escapeHtml(this._getQuickReplyInputPlaceholder())}" value="${this._escapeHtml(this.inputText)}">
                         </div>
                         <div style="display: flex; align-items: center; gap: 0px;">
+                            <button class="input-btn" id="voice-input-btn" title="按住说话 / 语音输入" style="position: relative; color: #555;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                            </button>
                             <button class="input-btn" id="emoji-btn" title="表情">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                             </button>
@@ -9128,6 +9131,48 @@ renderChatRoom(chat) {
             this.showQuickReplies = false;
             this.app.render();
         });
+
+        // 🎤 [v2.13.0] 语音输入按钮：点按说话，识别结果填入输入框（追加，不覆盖已有内容）
+        const voiceInputBtn = query('#voice-input-btn');
+        if (voiceInputBtn) {
+            const runVoiceInput = async (e) => {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+                if (voiceInputBtn.dataset.busy === '1') return;
+                const asrManager = window.VirtualPhone?.asrManager;
+                if (!asrManager || typeof asrManager.recognizeOnce !== 'function') {
+                    this.app.phoneShell?.showNotification('语音输入', 'ASR 管理器未初始化，请先在设置→TTS 页配置', '⚠️');
+                    return;
+                }
+                voiceInputBtn.dataset.busy = '1';
+                voiceInputBtn.style.color = '#07c160';
+                try {
+                    const text = await asrManager.recognizeOnce();
+                    const safeText = String(text || '').trim();
+                    if (safeText) {
+                        const chatInput = query('#chat-input');
+                        const prev = String(chatInput?.value || this.inputText || '').trim();
+                        // 追加而非覆盖：保留用户已输入的半句话
+                        const next = prev ? `${prev} ${safeText}` : safeText;
+                        this.inputText = next;
+                        if (chatInput) chatInput.value = next;
+                        // 同步触发输入事件，让发送按钮状态/倒计时等逻辑更新
+                        chatInput?.dispatchEvent(new Event('input', { bubbles: true }));
+                    } else {
+                        this.app.phoneShell?.showNotification('语音输入', '没有听到声音', '⚠️');
+                    }
+                } catch (err) {
+                    this.app.phoneShell?.showNotification('语音输入失败', String(err?.message || err || '识别失败').slice(0, 120), '❌');
+                } finally {
+                    voiceInputBtn.dataset.busy = '';
+                    voiceInputBtn.style.color = '#555';
+                }
+            };
+            // 移动端点按（touchend 触发，避免与长按冲突）
+            voiceInputBtn.addEventListener('touchend', (e) => { e.preventDefault(); runVoiceInput(e); }, { passive: false });
+            // 桌面端点击
+            voiceInputBtn.addEventListener('click', (e) => { runVoiceInput(e); });
+        }
 
         queryAll('.quick-reply-item').forEach(item => {
             item.addEventListener('click', (e) => {

@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.13.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【新增·语音输入】ASR 语音识别引擎 config/asr-manager.js：完全镜像 TTS manager 架构（provider 默认值表 + scoped storage key phone-asr-<provider>-<field> + legacy key 回落 + relay Worker 中转 + rawFetch 透传酒馆内部标记 + CSRF），支持 4 个 provider：local（浏览器原生 Web Speech API，零配置免费兜底）/ openai（gpt-4o-mini-transcribe）/ minimax_cn（speech-02-turbo）/ volcengine（bigmodel）。与 TTS 对称构成语音双向通道。",
+        "【核心能力】transcribe(audioBlob, options)：本地走 Web Speech 不需 blob；云端 multipart/form-data 直连或 relay 中转（base64 JSON 规避 CORS 与密钥暴露），25MB 上限校验，缺 key 且无 relay 时明确报错而非静默失败。recognizeOnce()：无 key 自动降级 local，有 key 走 startRecording→transcribe 云端链路，录音失败/识别失败均有可见错误。",
+        "【响应提取】_extractText 纯函数兼容多后端格式：OpenAI {text}/{transcript}/{segments:[]} 按原空格拼接、MiniMax {translations:[]} 空格 join、裸字符串透传、嵌套 {data:{}} 递归收敛，空 payload 返回空串。",
+        "【设置面板】apps/settings/settings-app.js：TTS tab 内新增可折叠『语音输入 ASR』区（provider 下拉 + 云配置显隐联动 + URL/Key/模型/中转/语言五字段 + 密码遮蔽 + 『🎤 说一句话试试』测试按钮 + 结果回显），事件绑定段新增 setAsrProviderField 与全套监听，与既有 TTS 配置交互完全对齐。",
+        "【微信接入】apps/wechat/chat-view.js：输入栏新增麦克风按钮，点按触发 recognizeOnce()，识别结果追加（非覆盖）到输入框并派发 input 事件同步发送按钮状态，不破坏用户已输入的文字。",
+        "【装配】index.js 四步接线：模块声明（AsrManager/asrManager）→ Promise.all 并行 import（asr-manager.js?v=<版本>）→ 类绑定 → new AsrManager(storage) 实例化 → window.VirtualPhone.asrManager 导出，与 TtsManager 装配链完全对称。",
+        "【测试】新增 asr-manager 50 断言（模块导出/provider 默认值/key 命名/配置解析/URL 推断/多后端响应提取/本地+直连+中转三链路/错误降级/recognizeOnce 自动选本地/接线审计）。"
+      ]
+    },
     "2.12.0": {
       "date": "2026-09-15",
       "items": [
@@ -316,5 +328,5 @@
       ]
     }
   },
-  "latest": "2.12.0"
+  "latest": "2.13.0"
 }

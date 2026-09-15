@@ -1146,6 +1146,37 @@ export class SettingsApp {
         const isTtsFallbackSectionOpen = this.storage.get('phone-tts-fallback-section-open') === true;
         const isTtsWechatSectionOpen = this.storage.get('phone-tts-wechat-section-open') === true;
         const isTtsHoneySectionOpen = this.storage.get('phone-tts-honey-section-open') === true;
+        // [v2.13.0] ASR 语音输入配置（架构对齐 TTS 的 provider/scoped key）
+        const currentAsrProvider = String(this.storage.get('phone-asr-provider') || 'openai').trim() || 'openai';
+        const asrProviderOptions = [
+            { id: 'local', label: '浏览器本地（免费）' },
+            { id: 'openai', label: 'OpenAI' },
+            { id: 'minimax_cn', label: 'MiniMax 国内' },
+            { id: 'volcengine', label: '豆包 / 火山引擎' }
+        ];
+        const asrDefaultsMap = {
+            local: { url: '', model: 'Web Speech API' },
+            openai: { url: 'https://api.openai.com/v1/audio/transcriptions', model: 'gpt-4o-mini-transcribe' },
+            minimax_cn: { url: 'https://api.minimaxi.com/v1/audio/translations', model: 'speech-02-turbo' },
+            volcengine: { url: 'https://openspeech.bytedance.com/api/v3/sauc/bigmodel', model: 'bigmodel' }
+        };
+        const currentAsrDefaults = asrDefaultsMap[currentAsrProvider] || asrDefaultsMap.openai;
+        const getAsrProviderValue = (provider, field, legacyKey = '') => {
+            const scoped = String(this.storage.get(`phone-asr-${provider}-${field}`) || '').trim();
+            if (scoped) return scoped;
+            if (legacyKey) return String(this.storage.get(legacyKey) || '').trim();
+            return '';
+        };
+        const currentAsrUrl = currentAsrProvider === 'local' ? '' : (getAsrProviderValue(currentAsrProvider, 'url', 'phone-asr-url') || currentAsrDefaults.url || '');
+        const currentAsrKey = currentAsrProvider === 'local' ? '' : getAsrProviderValue(currentAsrProvider, 'key', 'phone-asr-key');
+        const currentAsrModel = currentAsrProvider === 'local' ? 'Web Speech API' : (getAsrProviderValue(currentAsrProvider, 'model', 'phone-asr-model') || currentAsrDefaults.model || '');
+        const currentAsrLanguage = String(this.storage.get('phone-asr-language') || 'zh-CN').trim() || 'zh-CN';
+        const currentAsrRelayUrl = getAsrProviderValue(currentAsrProvider, 'relay-url');
+        const isAsrSectionOpen = this.storage.get('phone-asr-section-open') === true;
+        const asrLocalSupported = typeof window !== 'undefined'
+            && (typeof window.SpeechRecognition === 'function' || typeof window.webkitSpeechRecognition === 'function');
+        const renderAsrProviderOptions = (selectedProvider = '') => asrProviderOptions
+            .map(p => `<option value="${p.id}" ${selectedProvider === p.id ? 'selected' : ''}>${p.label}</option>`).join('');
         const ttsProviderOptions = [
             { id: 'minimax_cn', label: 'MiniMax 国内' },
             { id: 'minimax_intl', label: 'MiniMax 国际' },
@@ -3083,7 +3114,83 @@ export class SettingsApp {
                                         开启
                                     </label>
                                 </div>
-                            </div>
+                            </details>
+
+                            <!-- 🎤 [v2.13.0] 语音输入 (ASR) -->
+                            <details data-tts-fold-key="phone-asr-section-open" ${isAsrSectionOpen ? 'open' : ''} style="margin: 12px 0 8px; border: 1px solid #ececec; border-radius: 10px; background: #fff; overflow: hidden;">
+                                <summary style="height: 38px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: #333; background: #fafafa;">
+                                    <span>语音输入 ASR ${currentAsrProvider === 'local' ? '<span style="font-size: 10px; color: #16a34a; font-weight: 500;">免费</span>' : ''}</span>
+                                    ${SETTINGS_FOLD_ARROW_HTML}
+                                </summary>
+                                <div style="padding: 10px 10px 4px;">
+                                    <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="font-size: 14px; color: #000;">识别服务商</span>
+                                        <select id="phone-asr-provider" style="width: 150px; height: 30px; padding: 0 4px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 11px; background: #fafafa;">
+                                            ${renderAsrProviderOptions(currentAsrProvider)}
+                                        </select>
+                                    </div>
+                                    <div class="setting-desc" style="margin-top: 6px; display: ${currentAsrProvider === 'local' ? 'block' : 'none'};" id="phone-asr-local-hint">
+                                        ${asrLocalSupported
+                                            ? '本地模式调用浏览器原生 Web Speech API，无需 Key、不计费。识别准度取决于浏览器内核（Chrome/Edge 较好）。'
+                                            : '⚠️ 当前浏览器不支持 Web Speech API，请改用云端服务商。'}
+                                    </div>
+
+                                    <div id="phone-asr-cloud-config" style="display: ${currentAsrProvider === 'local' ? 'none' : 'block'};">
+                                        <div class="setting-item">
+                                            <span style="font-size: 14px; color: #000;">接口地址</span>
+                                            <input type="text" id="phone-asr-url"
+                                                   value="${currentAsrUrl}"
+                                                   placeholder="例如 https://api.openai.com/v1/audio/transcriptions"
+                                                   style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; margin-top: 6px; box-sizing: border-box;">
+                                        </div>
+
+                                        <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                                            <span style="font-size: 14px; color: #000;">API Key</span>
+                                            <div class="phone-secret-field" style="width: 150px; height: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;">
+                                                <input type="text" class="phone-secret-input phone-secret-masked" id="phone-asr-key"
+                                                       value="${currentAsrKey}"
+                                                       placeholder="ASR API Key"
+                                                       style="width: 100%; min-width: 0; height: 100%; padding: 0 34px 0 8px; border: none; outline: none; font-size: 12px; background: transparent; box-sizing: border-box;">
+                                                <button type="button" class="phone-password-toggle" data-toggle-password-target="phone-asr-key" aria-label="显示 ASR API Key" title="显示 ASR API Key">
+                                                    <i class="fa-regular fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="setting-item" style="margin-top: 8px;">
+                                            <span style="font-size: 14px; color: #000;">模型</span>
+                                            <input type="text" id="phone-asr-model"
+                                                   value="${currentAsrModel}"
+                                                   placeholder="选择或输入模型名"
+                                                   style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; margin-top: 6px; box-sizing: border-box;">
+                                        </div>
+
+                                        <div class="setting-item" style="margin-top: 8px;">
+                                            <span style="font-size: 14px; color: #000;">Worker 中转（可选）</span>
+                                            <input type="text" id="phone-asr-relay-url"
+                                                   value="${currentAsrRelayUrl}"
+                                                   placeholder="例如 https://xxx.workers.dev"
+                                                   style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; margin-top: 6px; box-sizing: border-box;">
+                                            <div class="setting-desc" style="margin-top: 6px;">云端服务商未开放 CORS 时，部署 ASR Worker 后把地址填在这里，请求经 Worker 中转。留空则浏览器直连。</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+                                        <span style="font-size: 14px; color: #000;">识别语言</span>
+                                        <select id="phone-asr-language" style="width: 150px; height: 30px; padding: 0 4px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 11px; background: #fafafa;">
+                                            <option value="zh-CN" ${currentAsrLanguage === 'zh-CN' ? 'selected' : ''}>中文（简体）</option>
+                                            <option value="zh-TW" ${currentAsrLanguage === 'zh-TW' ? 'selected' : ''}>中文（繁体）</option>
+                                            <option value="en-US" ${currentAsrLanguage === 'en-US' ? 'selected' : ''}>英语</option>
+                                            <option value="ja-JP" ${currentAsrLanguage === 'ja-JP' ? 'selected' : ''}>日语</option>
+                                            <option value="ko-KR" ${currentAsrLanguage === 'ko-KR' ? 'selected' : ''}>韩语</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="setting-item" style="margin-top: 10px;">
+                                        <button id="phone-asr-test" type="button" style="width: 100%; height: 34px; border: 1px solid #1677ff; border-radius: 8px; background: #1677ff; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">🎤 说一句话试试</button>
+                                        <div id="phone-asr-result" class="setting-desc" style="margin-top: 6px; min-height: 18px;"></div>
+                                    </div>
+                                </div>
                             </details>
                         </div>
                     </div>
@@ -10249,6 +10356,74 @@ export class SettingsApp {
                 await this.storage.set('phone-honey-tts-cache-enabled', !!e.target.checked);
             });
         }
+
+        // 🎤 [v2.13.0] ASR 语音输入事件绑定
+        const setAsrProviderField = async (field, value) => {
+            const provider = String(this.storage.get('phone-asr-provider') || 'openai').trim() || 'openai';
+            await this.storage.set(`phone-asr-${provider}-${field}`, String(value || '').trim());
+            if (['url', 'key', 'model'].includes(field)) {
+                // 同步写一份 legacy key，兼容只读 phone-asr-* 的旧分支
+                await this.storage.set(`phone-asr-${field}`, String(value || '').trim());
+            }
+        };
+        const asrProviderSelect = document.getElementById('phone-asr-provider');
+        const asrCloudConfig = document.getElementById('phone-asr-cloud-config');
+        const asrLocalHint = document.getElementById('phone-asr-local-hint');
+        const asrUrlInput = document.getElementById('phone-asr-url');
+        const asrKeyInput = document.getElementById('phone-asr-key');
+        const asrModelInput = document.getElementById('phone-asr-model');
+        const asrRelayInput = document.getElementById('phone-asr-relay-url');
+        const asrLanguageSelect = document.getElementById('phone-asr-language');
+        const asrTestBtn = document.getElementById('phone-asr-test');
+        const asrResultEl = document.getElementById('phone-asr-result');
+
+        if (asrProviderSelect) asrProviderSelect.addEventListener('change', async (e) => {
+            const provider = String(e.target.value || 'openai').trim() || 'openai';
+            await this.storage.set('phone-asr-provider', provider);
+            // 切换 provider 后重渲染当前 tab，让 scoped 配置与显隐状态同步
+            try { this.render(); } catch (_e) { }
+        });
+        if (asrUrlInput) asrUrlInput.addEventListener('change', async (e) => {
+            await setAsrProviderField('url', e.target.value);
+        });
+        if (asrKeyInput) asrKeyInput.addEventListener('change', async (e) => {
+            await setAsrProviderField('key', e.target.value);
+        });
+        if (asrModelInput) asrModelInput.addEventListener('change', async (e) => {
+            await setAsrProviderField('model', e.target.value);
+        });
+        if (asrRelayInput) asrRelayInput.addEventListener('change', async (e) => {
+            await setAsrProviderField('relay-url', e.target.value);
+        });
+        if (asrLanguageSelect) asrLanguageSelect.addEventListener('change', async (e) => {
+            await this.storage.set('phone-asr-language', String(e.target.value || 'zh-CN').trim() || 'zh-CN');
+        });
+        if (asrTestBtn) asrTestBtn.addEventListener('click', async () => {
+            const asrManager = window.VirtualPhone?.asrManager;
+            const setBusy = (busy, text = '') => {
+                if (!asrResultEl) return;
+                asrResultEl.textContent = busy ? '🎙️ 正在聆听…（说完后自动结束）' : text;
+                asrResultEl.style.color = busy ? '#1677ff' : (text.startsWith('✅') ? '#16a34a' : '#dc2626');
+                if (asrTestBtn) {
+                    asrTestBtn.disabled = busy;
+                    asrTestBtn.style.opacity = busy ? '0.6' : '1';
+                    asrTestBtn.textContent = busy ? '🎙️ 聆听中…' : '🎤 说一句话试试';
+                }
+            };
+            if (!asrManager || typeof asrManager.recognizeOnce !== 'function') {
+                setBusy(false, '❌ ASR 管理器未初始化');
+                return;
+            }
+            // 本地模式按钮文案提示用户它会自动结束
+            const provider = String(this.storage.get('phone-asr-provider') || 'openai').trim() || 'openai';
+            try {
+                setBusy(true);
+                const text = await asrManager.recognizeOnce({ provider });
+                setBusy(false, text ? `✅ ${text}` : '⚠️ 没有听到声音');
+            } catch (err) {
+                setBusy(false, `❌ ${String(err?.message || err || '识别失败').slice(0, 120)}`);
+            }
+        });
         if (ttsVoice) ttsVoice.addEventListener('change', async (e) => {
             const val = e.target.value.trim();
             await saveTtsVoice(val);
