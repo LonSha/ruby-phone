@@ -729,7 +729,7 @@ export class ImageGenerationManager {
         }
 
         const allowedApps = new Set(['honey', 'wechat', 'weibo', 'diary']);
-        const allowedProviders = new Set(['novelai', 'openai', 'siliconflow', 'sd', 'comfyui']);
+        const allowedProviders = new Set(['novelai', 'openai', 'siliconflow', 'sd', 'comfyui', 'runninghub']);
         const bindings = {};
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             Object.entries(parsed).forEach(([app, provider]) => {
@@ -1135,6 +1135,13 @@ export class ImageGenerationManager {
             sdDenoisingStrength: this._getNumber('phone-image-sd-denoising-strength', 0.45, 0, 1),
             sdRestoreFaces: this._getBool('phone-image-sd-restore-faces', false),
             sdADetailer: this._getBool('phone-image-sd-adetailer', false),
+            runninghubWorkflowId: String(overrides.runninghubWorkflowId || this._get('phone-image-runninghub-workflow-id', '')).trim(),
+            runninghubNodeInfoList: this._resolveRunningHubNodeInfoList(overrides),
+            runninghubInstanceType: String(overrides.runninghubInstanceType || this._get('phone-image-runninghub-instance-type', 'default')).trim() || 'default',
+            runninghubDuration: this._getNumber('phone-image-runninghub-duration', 5, 1, 60),
+            runninghubSteps: this._getNumber('phone-image-runninghub-steps', 30, 1, 100),
+            runninghubSeed: this._getNumber('phone-image-runninghub-seed', -1, -1, 4294967295),
+            runninghubSeedConfigured: this.storage?.get?.('phone-image-runninghub-seed') !== undefined && this.storage?.get?.('phone-image-runninghub-seed') !== null && this.storage?.get?.('phone-image-runninghub-seed') !== '',
             customUrl: String(overrides.customUrl || this._get('phone-image-novelai-url', '')).trim(),
             publicKey: String(overrides.publicKey || this._get('phone-image-novelai-public-key', '')).trim(),
             publicUrl: String(overrides.publicUrl || this._get('phone-image-novelai-public-url', '')).trim(),
@@ -1164,10 +1171,14 @@ export class ImageGenerationManager {
 
     async generate(options = {}) {
         const config = this.getConfig(options);
-        if (!config.enabled && options.ignoreEnabled !== true) throw new Error('生图功能未启用');
-        if (!['sd', 'comfyui'].includes(config.provider) && !config.apiKey) throw new Error('缺少生图 API Key');
+        const provider = String(config.provider || '').trim().toLowerCase();
+        const supportedProviders = ['siliconflow', 'sd', 'comfyui', 'openai', 'novelai', 'runninghub'];
+        if (!supportedProviders.includes(provider)) {
+            throw new Error(`暂不支持的生图服务商：${config.provider}`);
+        }
+        if (!['sd', 'comfyui'].includes(provider) && !config.apiKey) throw new Error('缺少生图 API Key');
 
-        if (config.provider === 'siliconflow') {
+        if (provider === 'siliconflow') {
             return this._generateSiliconflow(options, config);
         }
         if (config.provider === 'sd') {
@@ -1182,6 +1193,9 @@ export class ImageGenerationManager {
         if (config.provider === 'novelai') {
             const novelAIOptions = await this._prepareNovelAIOptions(options);
             return this._generateNovelAI(novelAIOptions, config);
+        }
+        if (config.provider === 'runninghub') {
+            return this._generateRunningHub(options, config);
         }
         throw new Error(`暂不支持的生图服务商：${config.provider}`);
     }
@@ -2054,13 +2068,20 @@ export class ImageGenerationManager {
         return await this._blobToDataUrl(imageBlob);
     }
 
-    _blobToDataUrl(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result || ''));
-            reader.onerror = () => reject(reader.error || new Error('图片读取失败'));
-            reader.readAsDataURL(blob);
-        });
+    async _blobToDataUrl(blob) {
+        if (typeof FileReader !== 'undefined') {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(reader.error || new Error('图片读取失败'));
+                reader.readAsDataURL(blob);
+            });
+        }
+        if (blob && typeof blob.arrayBuffer === 'function' && typeof Buffer !== 'undefined') {
+            const mime = String(blob.type || 'application/octet-stream');
+            return `data:${mime};base64,${Buffer.from(await blob.arrayBuffer()).toString('base64')}`;
+        }
+        throw new Error('当前环境不支持读取 Blob');
     }
 
     _dataUrlToBlob(dataUrl, fallbackMime = 'image/png') {
@@ -4893,6 +4914,318 @@ export class ImageGenerationManager {
             quality: normalizedQuality || config.openaiQuality || 'auto',
             imageData,
             imageUrl: imageData
+        };
+    }
+
+    // ===== RunningHub（云端 ComfyUI 工作流平台）=====
+    // 镜像自 st-chatu8 的 RunningHub 链路（utils/runninghubVideo.js / utils/runninghub.js），
+    // 按 ruby-phone 工程规范重写为可测纯函数，剥离 jQuery/toastr/taskQueue/keyPool，非照抄。
+    static get RUNNINGHUB_BASE() {
+        return 'https://www.runninghub.ai';
+    }
+    static get RUNNINGHUB_POLL_INTERVAL_MS() {
+        return 3000;
+    }
+    static get RUNNINGHUB_MAX_POLL_ATTEMPTS() {
+        return 300; // 15 分钟
+    }
+    get RUNNINGHUB_BASE() {
+        return ImageGenerationManager.RUNNINGHUB_BASE;
+    }
+    get RUNNINGHUB_POLL_INTERVAL_MS() {
+        return ImageGenerationManager.RUNNINGHUB_POLL_INTERVAL_MS;
+    }
+    get RUNNINGHUB_MAX_POLL_ATTEMPTS() {
+        return ImageGenerationManager.RUNNINGHUB_MAX_POLL_ATTEMPTS;
+    }
+
+    _resolveRunningHubNodeInfoList(overrides = {}) {
+        // 优先使用本次调用显式传入的节点覆盖
+        if (Array.isArray(overrides.runninghubNodeInfoList) && overrides.runninghubNodeInfoList.length > 0) {
+            return overrides.runninghubNodeInfoList
+                .map((item) => {
+                    if (!item || typeof item !== 'object') return null;
+                    const fieldName = String(item.fieldName || item.field || '').trim();
+                    const nodeId = String(item.nodeId || item.node || '').trim();
+                    if (!nodeId || !fieldName) return null;
+                    return {
+                        nodeId,
+                        fieldName,
+                        value: item.value
+                    };
+                })
+                .filter(Boolean);
+        }
+        // 其次使用持久化的节点覆盖表
+        try {
+            const raw = this._get('phone-image-runninghub-node-info-list', '[]');
+            const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw;
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .map((item) => {
+                    if (!item || typeof item !== 'object') return null;
+                    const fieldName = String(item.fieldName || '').trim();
+                    const nodeId = String(item.nodeId || '').trim();
+                    if (!nodeId || !fieldName) return null;
+                    return { nodeId, fieldName, value: item.value };
+                })
+                .filter(Boolean);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    _normalizeRunningHubWorkflow(workflowText) {
+        // 兼容对象或 JSON 字符串，返回 { nodeId -> node } 映射
+        if (!workflowText) return {};
+        let parsed = null;
+        try {
+            parsed = typeof workflowText === 'string'
+                ? JSON.parse(workflowText.trim() || '{}')
+                : workflowText;
+        } catch (e) {
+            throw new Error('RunningHub 工作流不是合法的 JSON');
+        }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('RunningHub 工作流格式无法识别');
+        }
+        return parsed;
+    }
+
+    _extractRunningHubNodeInfoList(workflowNodes) {
+        // 提取可被覆盖的文本类参数节点（prompt/seed/steps/duration 等常见字段名）
+        const coverableFields = new Set([
+            'prompt', 'positive_prompt', 'positive', 'text', 'string',
+            'seed', 'steps', 'step', 'duration', 'length', 'fps',
+            'width', 'height', 'batch_size', 'batch', 'frame',
+            'image', 'video', 'audio', 'filename', 'file'
+        ]);
+        const result = [];
+        Object.entries(workflowNodes || {}).forEach(([nodeId, node]) => {
+            if (!node || typeof node !== 'object') return;
+            const classType = String(node.class_type || node.classType || '').trim();
+            if (!classType) return;
+            const inputs = (node.inputs && typeof node.inputs === 'object') ? node.inputs : null;
+            if (!inputs) return;
+            Object.entries(inputs).forEach(([fieldName, value]) => {
+                if (typeof value === 'object' && value !== null) return; // 跳过连接引用
+                if (!coverableFields.has(String(fieldName || '').trim().toLowerCase())) return;
+                result.push({
+                    nodeId,
+                    fieldName,
+                    value: String(value ?? '')
+                });
+            });
+        });
+        return result;
+    }
+
+    async _uploadRunningHubFile(blob, filename, apiKey, signal) {
+        const endpoint = `${this.RUNNINGHUB_BASE}/task/openapi/upload`;
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { apiKey },
+            body: formData,
+            signal
+        });
+        const data = await response.json().catch(() => null);
+        const result = Array.isArray(data?.data) ? data.data[0] : data?.data;
+        const uploadedFilename = String(result?.fileName || result?.filename || data?.fileName || '').trim();
+        if (!uploadedFilename) {
+            throw new Error(`RunningHub 素材上传失败：${JSON.stringify(data).slice(0, 160)}`);
+        }
+        return uploadedFilename;
+    }
+
+    async _uploadRunningHubReferenceImage(referenceImage, apiKey, signal) {
+        // referenceImage: base64 字符串（无 data: 前缀）或 data: URL
+        const base64 = String(referenceImage || '').trim();
+        if (!base64) return '';
+        const dataUrl = base64.startsWith('data:')
+            ? base64
+            : `data:image/png;base64,${base64}`;
+        const blob = await this._dataUrlToBlob(dataUrl);
+        if (!blob) throw new Error('参考图解码失败');
+        return this._uploadRunningHubFile(blob, `ref-${Date.now()}.png`, apiKey, signal);
+    }
+
+    _buildRunningHubPayload({ workflowId, nodeInfoList, instanceType, addMetadata = true }) {
+        const payload = {
+            nodeInfoList: Array.isArray(nodeInfoList) ? nodeInfoList : [],
+            instanceType: String(instanceType || 'default').trim() || 'default',
+            addMetadata,
+            usePersonalQueue: false
+        };
+        return { workflowId: String(workflowId || '').trim(), payload };
+    }
+
+    _extractRunningHubOutputUrl(queryData) {
+        const results = Array.isArray(queryData?.results) ? queryData.results : [];
+        if (!results.length) return '';
+        const mainItem = results[0];
+        return String(mainItem?.url || '').trim();
+    }
+
+    async _generateRunningHub(options = {}, config = {}) {
+        const apiKey = String(config.apiKey || '').trim();
+        if (!apiKey) throw new Error('请先在设置中填写 RunningHub API Key');
+        const workflowId = String(config.runninghubWorkflowId || '').trim();
+        if (!workflowId) throw new Error('请先填写 RunningHub Workflow ID');
+        const signal = options.signal || undefined;
+
+        const prompt = String(options.prompt || '').trim();
+        const seed = Number(config.runninghubSeed ?? -1);
+        const resolvedSeed = seed < 0
+            ? Math.floor(Math.random() * 4294967295)
+            : seed;
+
+        const nodeInfoList = this._resolveRunningHubNodeInfoList(options);
+        const baseNodeInfoList = nodeInfoList.length > 0
+            ? nodeInfoList
+            : this._extractRunningHubNodeInfoList(this._normalizeRunningHubWorkflow(config.comfyuiWorkflow));
+
+        // 注入本次的 prompt/seed/steps/duration（若节点表中存在对应字段）
+        const injected = baseNodeInfoList.map((item) => {
+            const fieldName = String(item.fieldName || '').trim().toLowerCase();
+            if (fieldName === 'prompt' || fieldName === 'positive_prompt' || fieldName === 'positive' || fieldName === 'text') {
+                return { ...item, value: prompt || item.value };
+            }
+            if (fieldName === 'seed') {
+                return config.runninghubSeedConfigured
+                    ? { ...item, value: resolvedSeed }
+                    : item;
+            }
+            if (fieldName === 'steps' || fieldName === 'step') return { ...item, value: config.runninghubSteps };
+            if (fieldName === 'duration' || fieldName === 'length') return { ...item, value: config.runninghubDuration };
+            return item;
+        });
+
+        // 参考图（首帧）上传，并回填到首个图片类节点（LoadImage 的 image 字段）
+        const workflowNodes = this._normalizeRunningHubWorkflow(config.comfyuiWorkflow);
+        let uploadedReferenceFilename = '';
+        const referenceImages = this._normalizeComfyUIReferenceImages(options);
+        if (referenceImages.length > 0) {
+            try {
+                uploadedReferenceFilename = await this._uploadRunningHubReferenceImage(referenceImages[0], apiKey, signal);
+            } catch (err) {
+                throw new Error(`RunningHub 参考图上传失败：${err?.message || err}`);
+            }
+            if (uploadedReferenceFilename) {
+                const imageNodeIndex = injected.findIndex((item) => {
+                    const node = workflowNodes?.[item.nodeId];
+                    return /loadimage|load_image/i.test(String(node?.class_type || ''));
+                });
+                if (imageNodeIndex >= 0) {
+                    injected[imageNodeIndex] = {
+                        ...injected[imageNodeIndex],
+                        value: uploadedReferenceFilename
+                    };
+                }
+            }
+        }
+
+        const { payload } = this._buildRunningHubPayload({
+            workflowId,
+            nodeInfoList: injected,
+            instanceType: config.runninghubInstanceType
+        });
+        if (uploadedReferenceFilename) {
+            payload.retainSeconds = 24 * 60 * 60;
+        }
+
+        // 创建任务
+        const createResponse = await fetch(
+            `${this.RUNNINGHUB_BASE}/openapi/v2/run/workflow/${workflowId}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload),
+                signal
+            }
+        );
+        const createData = await createResponse.json().catch(() => null);
+        const taskId = String(createData?.taskId || '').trim();
+        if (!taskId) {
+            const message = String(createData?.errorMessage || createData?.message || '创建任务失败').trim();
+            throw new Error(`RunningHub 创建任务失败：${message}`);
+        }
+
+        // 轮询
+        let outputUrl = '';
+        for (let attempt = 0; attempt < this.RUNNINGHUB_MAX_POLL_ATTEMPTS; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, this.RUNNINGHUB_POLL_INTERVAL_MS));
+            const queryResponse = await fetch(
+                `${this.RUNNINGHUB_BASE}/openapi/v2/query`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ taskId }),
+                    signal
+                }
+            );
+            const queryData = await queryResponse.json().catch(() => null);
+            const status = String(queryData?.status || '').trim().toUpperCase();
+            if (status === 'SUCCESS') {
+                outputUrl = this._extractRunningHubOutputUrl(queryData);
+                if (!outputUrl) throw new Error('RunningHub 任务成功但未返回输出文件');
+                break;
+            }
+            if (status === 'FAILED') {
+                const message = String(queryData?.errorMessage || '任务执行失败').trim();
+                throw new Error(`RunningHub 任务失败：${message}`);
+            }
+            if (signal?.aborted) throw new Error('任务已取消');
+        }
+        if (!outputUrl) throw new Error('RunningHub 视频生成超时');
+
+        // 下载产物
+        const fileResponse = await fetch(outputUrl, { signal });
+        if (!fileResponse.ok) throw new Error(`RunningHub 输出下载失败 (${fileResponse.status})`);
+        const blob = await fileResponse.blob();
+        const isVideo = /\.(?:mp4|webm|mov|mkv)(?:[?#].*)?$/i.test(outputUrl)
+            || /^video\//i.test(String(blob.type || ''));
+        const extension = String(outputUrl.split('?')[0].split('/').pop() || '').split('.').pop()?.toLowerCase() || '';
+        const expectedMimeType = extension === 'webm' ? 'video/webm'
+            : (extension === 'mov' ? 'video/quicktime'
+                : (extension === 'mkv' ? 'video/x-matroska' : 'video/mp4'));
+
+        if (isVideo) {
+            const videoBlob = /^video\//i.test(String(blob.type || ''))
+                ? blob
+                : blob.slice(0, blob.size, expectedMimeType);
+            return {
+                provider: 'runninghub',
+                mediaType: 'video',
+                videoBlob,
+                videoUrl: outputUrl,
+                originalUrl: outputUrl,
+                seed: resolvedSeed,
+                steps: config.runninghubSteps,
+                duration: config.runninghubDuration,
+                prompt,
+                model: workflowId
+            };
+        }
+
+        const imageData = await this._blobToDataUrl(blob);
+        return {
+            provider: 'runninghub',
+            mediaType: 'image',
+            imageData,
+            imageUrl: imageData,
+            originalUrl: outputUrl,
+            seed: resolvedSeed,
+            steps: config.runninghubSteps,
+            prompt,
+            model: workflowId
         };
     }
 }

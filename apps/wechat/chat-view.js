@@ -4690,6 +4690,36 @@ renderChatRoom(chat) {
                 novelAIReferences,
                 referenceImages: novelAIReferences
             });
+            // 视频类 provider（RunningHub 等）返回 videoBlob，走视频持久化并标记媒体类型
+            const isVideoResult = result?.mediaType === 'video'
+                && (Number(result?.videoBlob?.size || 0) > 0 || String(result?.videoUrl || '').trim());
+            if (isVideoResult) {
+                const videoUrl = await this._persistWechatGeneratedVideo(result, {
+                    chatId,
+                    messageId: safeMessageId,
+                    promptText,
+                    generationId
+                });
+                if (!videoUrl) throw new Error('接口返回成功，但没有拿到视频地址');
+                const latestVideoMessage = this.app.wechatData.getMessages(chatId)
+                    .find((item) => String(item?.id || '').trim() === safeMessageId);
+                if (String(latestVideoMessage?.imageGenerationId || '') !== generationId) return;
+                this.app.wechatData.updateMessageById(chatId, safeMessageId, {
+                    mediaType: '视频',
+                    imagePrompt: promptText,
+                    imageDescription: descriptionText,
+                    generatedImageUrl: videoUrl,
+                    imageGenStatus: 'done',
+                    imageGenerationRuntimeId: '',
+                    imageGenError: '',
+                    imageModel: String(result?.model || '').trim(),
+                    imageProvider: String(result?.provider || '').trim(),
+                    imageGenerationWidth: Number(result?.width || result?.requestedWidth || 0) || '',
+                    imageGenerationHeight: Number(result?.height || result?.requestedHeight || 0) || ''
+                });
+                this._refreshVisibleChatMessages(chatId);
+                return;
+            }
             const rawImageUrl = String(result?.imageUrl || result?.imageData || '').trim();
             const imageUrl = await this._persistWechatGeneratedImage(rawImageUrl, {
                 chatId,
@@ -4703,8 +4733,8 @@ renderChatRoom(chat) {
             const latestMessage = this.app.wechatData.getMessages(chatId)
                 .find((item) => String(item?.id || '').trim() === safeMessageId);
             if (String(latestMessage?.imageGenerationId || '') !== generationId) return;
-
             this.app.wechatData.updateMessageById(chatId, safeMessageId, {
+                mediaType: '图片',
                 imagePrompt: promptText,
                 imageDescription: descriptionText,
                 generatedImageUrl: imageUrl,
@@ -4750,12 +4780,10 @@ renderChatRoom(chat) {
         const safeUrl = String(imageUrl || '').trim();
         if (!safeUrl) return '';
         if (/^\/backgrounds\/phone_[^?#]+/i.test(safeUrl)) return safeUrl;
-
         const imageUploader = window.VirtualPhone?.imageManager;
         if (!imageUploader?.uploadBlob) {
             throw new Error('图片上传管理器未初始化，无法保存微信生图');
         }
-
         const blob = await this._loadGeneratedWechatImageBlob(safeUrl);
         const uniquePart = String(generationId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
         const seed = `${chatId || 'chat'}_${messageId || 'msg'}_${this._simpleImageHash(promptText || safeUrl).toString(36)}_${uniquePart}`;
@@ -4763,6 +4791,29 @@ renderChatRoom(chat) {
         const normalized = String(uploadedUrl || '').trim();
         if (!/^\/backgrounds\/phone_[^?#]+/i.test(normalized)) {
             throw new Error('微信生图保存失败：未得到有效本地图片路径');
+        }
+        return normalized;
+    }
+    async _persistWechatGeneratedVideo(result, { chatId = '', messageId = '', promptText = '', generationId = '' } = {}) {
+        // 优先使用已就绪的 videoBlob；否则回落到远程 videoUrl 拉取
+        let blob = result?.videoBlob;
+        let sourceUrl = String(result?.videoUrl || result?.originalUrl || '').trim();
+        if ((!blob || Number(blob.size || 0) <= 0) && sourceUrl) {
+            const response = await fetch(sourceUrl, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`读取生成视频失败（HTTP ${response.status}）`);
+            blob = await response.blob();
+        }
+        if (!blob || Number(blob.size || 0) <= 0) throw new Error('生成视频为空');
+        const imageUploader = window.VirtualPhone?.imageManager;
+        if (!imageUploader?.uploadBlob) {
+            throw new Error('媒体上传管理器未初始化，无法保存微信生成视频');
+        }
+        const uniquePart = String(generationId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const seed = `${chatId || 'chat'}_${messageId || 'msg'}_${this._simpleImageHash(promptText || sourceUrl || 'video').toString(36)}_${uniquePart}`;
+        const uploadedUrl = await imageUploader.uploadBlob(blob, `wechat_video_${seed}`);
+        const normalized = String(uploadedUrl || '').trim();
+        if (!/^\/backgrounds\/phone_[^?#]+/i.test(normalized)) {
+            throw new Error('微信生成视频保存失败：未得到有效本地视频路径');
         }
         return normalized;
     }

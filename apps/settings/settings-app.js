@@ -3240,7 +3240,7 @@ export class SettingsApp {
             parsed = {};
         }
 
-        const allowedProviders = new Set(['novelai', 'openai', 'siliconflow', 'sd', 'comfyui']);
+        const allowedProviders = new Set(['novelai', 'openai', 'siliconflow', 'sd', 'comfyui', 'runninghub']);
         const bindings = {};
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             this._getImagePromptAppDefs().forEach((def) => {
@@ -3924,6 +3924,12 @@ export class SettingsApp {
         const siliconflowDisplay = provider === 'siliconflow' ? '' : 'display: none;';
         const sdDisplay = provider === 'sd' ? '' : 'display: none;';
         const comfyuiDisplay = provider === 'comfyui' ? '' : 'display: none;';
+        const runninghubDisplay = provider === 'runninghub' ? '' : 'display: none;';
+        const runninghubKey = String(this.storage.get('phone-image-runninghub-key') || '').trim();
+        const runninghubWorkflowId = String(this.storage.get('phone-image-runninghub-workflow-id') || '').trim();
+        const runninghubInstanceType = String(this.storage.get('phone-image-runninghub-instance-type') || 'default').trim() || 'default';
+        const runninghubDuration = Number(this.storage.get('phone-image-runninghub-duration') || 5) || 5;
+        const runninghubSteps = Number(this.storage.get('phone-image-runninghub-steps') || 30) || 30;
         const novelaiOnlyDisplay = provider === 'novelai' ? '' : 'display: none !important;';
 
         return `
@@ -3950,6 +3956,7 @@ export class SettingsApp {
                             <option value="sd" ${provider === 'sd' ? 'selected' : ''}>本地 SD</option>
                             <option value="comfyui" ${provider === 'comfyui' ? 'selected' : ''}>ComfyUI</option>
                             <option value="siliconflow" ${provider === 'siliconflow' ? 'selected' : ''}>硅基流动</option>
+                            <option value="runninghub" ${provider === 'runninghub' ? 'selected' : ''}>RunningHub 云端工作流</option>
                         </select>
                     </div>
                 </div>
@@ -4546,7 +4553,58 @@ export class SettingsApp {
                     <div class="setting-desc" id="phone-image-test-comfyui-result" style="margin-top: 6px;">使用当前 App 的 ComfyUI 工作流和尺寸生成测试媒体。</div>
                 </div>
             </div>
-
+            <div class="setting-section" id="phone-image-runninghub-section" style="${runninghubDisplay}">
+                <div class="setting-section-title">RunningHub 云端工作流</div>
+                ${this._renderImageProviderAppBinding('runninghub', imageProviderAppBindings)}
+                <div class="setting-item">
+                    <div class="setting-label">API Key</div>
+                    <div class="setting-desc">在 <a href="https://www.runninghub.ai" target="_blank" rel="noopener">runninghub.ai</a> 个人中心获取 OpenAPI Key。</div>
+                    <input type="password" class="phone-secret-input phone-secret-masked" id="phone-image-runninghub-key"
+                           value="${this._escapeHtml(runninghubKey)}"
+                           placeholder="rh-xxxx"
+                           autocomplete="off"
+                           style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; box-sizing: border-box; margin-top: 6px;">
+                    <button type="button" class="phone-password-toggle" data-toggle-password-target="phone-image-runninghub-key" aria-label="显示 API Key" title="显示 API Key">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Workflow ID</div>
+                    <div class="setting-desc">RunningHub 工作流详情页 URL 末段即为 Workflow ID（形如 uuid）。</div>
+                    <input type="text" id="phone-image-runninghub-workflow-id"
+                           value="${this._escapeHtml(runninghubWorkflowId)}"
+                           placeholder="工作流 ID"
+                           style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; box-sizing: border-box; margin-top: 6px;">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">机器类型</div>
+                    <select id="phone-image-runninghub-instance-type" style="width: 150px; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa;">
+                        <option value="default" ${runninghubInstanceType === 'default' ? 'selected' : ''}>默认</option>
+                        <option value="gpu_4090" ${runninghubInstanceType === 'gpu_4090' ? 'selected' : ''}>RTX 4090</option>
+                        <option value="gpu_a100" ${runninghubInstanceType === 'gpu_a100' ? 'selected' : ''}>A100</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div class="setting-item">
+                        <div class="setting-label">时长（秒）</div>
+                        <input type="number" id="phone-image-runninghub-duration" min="1" max="60" step="1"
+                               value="${runninghubDuration}"
+                               style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; box-sizing: border-box; margin-top: 6px;">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">Steps</div>
+                        <input type="number" id="phone-image-runninghub-steps" min="1" max="100" step="1"
+                               value="${runninghubSteps}"
+                               style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; box-sizing: border-box; margin-top: 6px;">
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <button id="phone-image-test-runninghub" class="phone-image-test-btn" style="width: 100%; height: 34px; border: none; border-radius: 8px; background: #10b981 !important; color: #fff !important; font-size: 13px; font-weight: 600; cursor: pointer;">
+                        测试 RunningHub 任务链路
+                    </button>
+                    <div class="setting-desc" id="phone-image-test-runninghub-result" style="margin-top: 6px;">用当前 Workflow ID 创建一个任务并轮询到完成（仅在能出图/出视频时算通过）。</div>
+                </div>
+            </div>
             <div class="setting-section">
                 <div class="setting-section-title">⚙️ 尺寸与通用参数</div>
 
@@ -6350,6 +6408,14 @@ export class SettingsApp {
         const imageSiliconflowSection = document.getElementById('phone-image-siliconflow-section');
         const imageSdSection = document.getElementById('phone-image-sd-section');
         const imageComfyUISection = document.getElementById('phone-image-comfyui-section');
+        const imageRunningHubSection = document.getElementById('phone-image-runninghub-section');
+        const imageRunningHubKey = document.getElementById('phone-image-runninghub-key');
+        const imageRunningHubWorkflowId = document.getElementById('phone-image-runninghub-workflow-id');
+        const imageRunningHubInstanceType = document.getElementById('phone-image-runninghub-instance-type');
+        const imageRunningHubDuration = document.getElementById('phone-image-runninghub-duration');
+        const imageRunningHubSteps = document.getElementById('phone-image-runninghub-steps');
+        const imageRunningHubTestBtn = document.getElementById('phone-image-test-runninghub');
+        const imageRunningHubTestResult = document.getElementById('phone-image-test-runninghub-result');
         const imageNovelaiSite = document.getElementById('phone-image-novelai-site');
         const imageNovelaiKey = document.getElementById('phone-image-novelai-key');
         const imageNovelaiKeyLabel = document.getElementById('phone-image-novelai-key-label');
@@ -6433,6 +6499,7 @@ export class SettingsApp {
             setSectionVisible(imageSiliconflowSection, provider === 'siliconflow');
             setSectionVisible(imageSdSection, provider === 'sd');
             setSectionVisible(imageComfyUISection, provider === 'comfyui');
+            setSectionVisible(imageRunningHubSection, provider === 'runninghub');
             imageNovelaiOnlyRows.forEach(row => {
                 const visibleDisplay = row.classList.contains('setting-toggle') ? 'flex' : 'block';
                 row.style.setProperty('display', provider === 'novelai' ? visibleDisplay : 'none', 'important');
@@ -9295,7 +9362,103 @@ export class SettingsApp {
                 }
             }
         });
-
+        // RunningHub 字段持久化
+        const saveRunningHubSettings = async () => {
+            const fields = [
+                ['phone-image-runninghub-key', ''],
+                ['phone-image-runninghub-workflow-id', ''],
+                ['phone-image-runninghub-instance-type', 'default']
+            ];
+            for (const [id, fallback] of fields) {
+                const input = document.getElementById(id);
+                if (!input) continue;
+                const value = String(input.value || '').trim() || fallback;
+                input.value = value;
+                await this.storage.set(id, value);
+            }
+            const numberFields = [
+                ['phone-image-runninghub-duration', 5, 1, 60],
+                ['phone-image-runninghub-steps', 30, 1, 100]
+            ];
+            for (const [id, fallback, min, max] of numberFields) {
+                const input = document.getElementById(id);
+                if (!input) continue;
+                await this.storage.set(id, clampNumberInput(input, fallback, min, max, true));
+            }
+        };
+        [
+            'phone-image-runninghub-key',
+            'phone-image-runninghub-workflow-id',
+            'phone-image-runninghub-instance-type'
+        ].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.addEventListener('change', saveRunningHubSettings);
+            input.addEventListener('blur', saveRunningHubSettings);
+        });
+        [
+            'phone-image-runninghub-duration',
+            'phone-image-runninghub-steps'
+        ].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.addEventListener('change', saveRunningHubSettings);
+            input.addEventListener('blur', saveRunningHubSettings);
+        });
+        imageRunningHubTestBtn?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const resultEl = imageRunningHubTestResult;
+            const setResult = (text, color = '#666') => {
+                if (resultEl) {
+                    resultEl.textContent = text;
+                    resultEl.style.color = color;
+                }
+            };
+            const oldText = btn?.textContent || '测试 RunningHub 任务链路';
+            try {
+                await saveRunningHubSettings();
+                const key = String(imageRunningHubKey?.value || '').trim();
+                const workflowId = String(imageRunningHubWorkflowId?.value || '').trim();
+                if (!key) throw new Error('请先填写 RunningHub API Key');
+                if (!workflowId) throw new Error('请先填写 Workflow ID');
+                const imageManager = window.VirtualPhone?.imageGenerationManager;
+                if (!imageManager?.generate) throw new Error('生图管理器未初始化');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = '测试中...';
+                }
+                setResult('已提交 RunningHub 任务，正在轮询（视频可能需要 1-5 分钟）...', '#10b981');
+                const result = await imageManager.generate({
+                    app: 'wechat',
+                    provider: 'runninghub',
+                    prompt: '1girl, solo, anime illustration, looking at viewer',
+                    ignoreEnabled: true
+                });
+                const receivedVideo = result?.mediaType === 'video' && Number(result?.videoBlob?.size || 0) > 0;
+                const receivedImage = !!(result?.imageUrl || result?.imageData);
+                if (!receivedVideo && !receivedImage) throw new Error('RunningHub 未返回可用媒体');
+                const mediaLabel = receivedVideo ? '视频' : '图片';
+                const sizeInfo = receivedVideo
+                    ? `${Number(result?.videoBlob?.size || 0) / 1024 / 1024}`.slice(0, 5)
+                    : '';
+                const detail = [
+                    receivedVideo && sizeInfo ? `${sizeInfo} MB` : '',
+                    result?.seed != null ? `seed ${result.seed}` : '',
+                    result?.steps ? `${result.steps} steps` : ''
+                ].filter(Boolean).join(' · ');
+                setResult(`RunningHub 连接成功，已收到${mediaLabel}${detail ? `：${detail}` : ''}。`, '#0f9f6e');
+                this.phoneShell?.showNotification?.('RunningHub 测试', `RunningHub ${mediaLabel}连接成功`, '✓');
+            } catch (err) {
+                const message = err?.message || String(err || '测试失败');
+                setResult(`测试失败：${message}`, '#d33');
+                this.phoneShell?.showNotification?.('RunningHub 测试失败', message, '⚠️');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = oldText;
+                }
+            }
+        });
         const saveSdSettings = async () => {
             const sdTextFields = [
                 ['phone-image-sd-url', 'http://127.0.0.1:7860'],
