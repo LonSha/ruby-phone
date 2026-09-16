@@ -11520,19 +11520,18 @@ renderChatRoom(chat) {
         //   注入为角色记忆块，让手机角色「记得」lonsha 正文里发生过的事（跨项目记忆协同）。
         try {
             const _lb = (typeof window !== 'undefined' && window.VirtualPhone?.lonshaBridge) || null;
-            if (_lb && typeof _lb.recall === 'function') {
+            if (_lb && typeof _lb.recallBlock === 'function' && targetChat?.type !== 'group') {
+                // [v2.15.0] 格式统一收敛到 bridge.recallBlock（单一真源）；本处只负责取查询与 push。
+                //   群聊判定用本地 targetChat?.type（此刻 isGroupChat 尚未声明，引用会踩 TDZ）。
                 const _q = [charName, prompt].filter(Boolean).join(' ').slice(0, 120);
-                const _mems = _lb.recall(_q, 3) || [];
-                if (_mems.length) {
-                    const _lines = _mems.map((mm, i) => `${i + 1}. ${String(mm?.content || mm?.text || '').slice(0, 80)}`).filter(x => !x.endsWith('. '));
-                    if (_lines.length) {
-                        messages.push({
-                            role: 'system',
-                             content: `【角色记忆 · 来自剧情】${charName} 记得这段往事：\n${_lines.join('\n')}\n（这些是你和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`,
-                            name: 'SYSTEM (角色记忆)',
-                            isPhoneMessage: true
-                        });
-                    }
+                const _blk = _lb.recallBlock(_q, { topN: 3, label: charName, userName });
+                if (_blk) {
+                    messages.push({
+                        role: 'system',
+                        content: _blk,
+                        name: 'SYSTEM (角色记忆)',
+                        isPhoneMessage: true
+                    });
                 }
             }
         } catch (_e) { /* lonsha 记忆注入静默失败，不影响发送 */ }
@@ -11554,6 +11553,26 @@ renderChatRoom(chat) {
             groupMembersArray = this._collectGroupParticipantsForFilter(targetChat, context);
         }
         const groupMembers = this._formatGroupMembersForPrompt(groupMembersArray).join('、');
+        // [v2.15.0] 群聊 lonsha 记忆注入：与单聊同一格式真源（bridge.recallBlock），
+        //   但走严格模式——只注入确实提到在场群成员的剧情记忆，避免把某个好友的私密往事
+        //   灌进群聊上下文（串味）。查无命中则整块跳过。
+        if (isGroupChat && groupMembersArray.length) {
+            try {
+                const _glb = (typeof window !== 'undefined' && window.VirtualPhone?.lonshaBridge) || null;
+                if (_glb && typeof _glb.recallBlock === 'function') {
+                    const _gq = [groupMembers, prompt].filter(Boolean).join(' ').slice(0, 140);
+                    const _gblk = _glb.recallBlock(_gq, { topN: 3, label: groupName, userName, actors: groupMembersArray, strictActors: true });
+                    if (_gblk) {
+                        messages.push({
+                            role: 'system',
+                            content: _gblk,
+                            name: 'SYSTEM (群聊角色记忆)',
+                            isPhoneMessage: true
+                        });
+                    }
+                }
+            } catch (_e) { /* lonsha 群聊记忆注入静默失败，不影响发送 */ }
+        }
 
         // ========================================
         // 2️⃣ 角色信息（从角色卡读取）

@@ -272,6 +272,43 @@ export class LonShaBridge {
         }
     }
 
+    // ---------------- ②b [v2.15.0] 召回 + 格式化（单一真源）----------------
+    /**
+     * 召回并把结果格式化为可直接 push 进 messages 的 system 文本块。
+     *  微信单聊 / 微信群聊 / 蜜语直播三处共用同一格式与去重裁剪，杜绝格式漂移；
+     *  也避免「同一个注入块在三处各写一遍、改一处漏两处」。
+     * @param {string} queryText 召回查询（角色名 / 群成员 / 主播名 + 用户输入）
+     * @param {{topN?:number,label?:string,userName?:string,actors?:string|string[],strictActors?:boolean}} [opts]
+     * @returns {string} 已格式化的 system 块；无可召回记忆时返回 ''（调用方据此跳过 push）
+     */
+    recallBlock(queryText, opts = {}) {
+        try {
+            const topN = Math.max(1, Math.min(5, Number(opts.topN) || 3));
+            const mems = this.recall(queryText, topN) || [];
+            if (!mems.length) return '';
+            const actors = Array.isArray(opts.actors)
+                ? opts.actors.filter(Boolean).map(a => String(a).trim()).filter(Boolean)
+                : String(opts.actors || '').split(/[\u3001,\uff0c]/).map(s => s.trim()).filter(Boolean);
+            const lines = [];
+            const seen = new Set();
+            for (const m of mems) {
+                const raw = String((m && (m.content || m.text)) || '').replace(/\s+/g, ' ').trim();
+                if (!raw) continue;
+                // 严格模式（群聊用）：只保留确实提到在场人物的记忆，防把 A 的往事灌给 B
+                if (opts.strictActors && actors.length && !actors.some(a => raw.includes(a))) continue;
+                const key = raw.slice(0, 24);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                lines.push(`- ${raw.slice(0, 80)}`);
+                if (lines.length >= 3) break;
+            }
+            if (!lines.length) return '';
+            const label = String(opts.label || '').trim() || actors[0] || '角色';
+            const userName = String(opts.userName || '').trim() || '你';
+            return `【角色记忆 · 来自剧情】${label}记得这些往事：\n${lines.join('\n')}\n（这些是 ${label} 和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`;
+        } catch (e) { return ''; }   // lonsha 记忆注入静默失败，不影响发送
+    }
+
     // ---------------- ③ 注入协调: 桥接管手机记忆的注入位 ----------------
     /**
      * 生成前由 RubyPhone 调用 (替代 memoryCore.attachPromptHook 的本地注入)。

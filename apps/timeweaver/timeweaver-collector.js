@@ -38,6 +38,34 @@ function readChatMetaArrays(ctx) {
 }
 
 /**
+ * [v2.15.0] 读取 LonSha 侧召回自检摘要（跨项目观测互喂）。
+ *  数据源：window.lonsha_memory_bridge_v1.snapshot.recallAudit
+ *  （lonsha v3.151 把 v3.150 召回自检账本压成只读摘要外供）。
+ *  产出「你最常回望的时光」维度：轮数 / 空结果轮数 / 平均命中 / 热点楼层 Top10。
+ *  插件未安装 / 未生成 / 旧版无该字段 → 返回 null（不影响织光机其它源）。
+ */
+export function collectLonshaRecall() {
+  try {
+    const bridge = (typeof window !== 'undefined' && window.lonsha_memory_bridge_v1) || null;
+    const ra = bridge && bridge.snapshot && bridge.snapshot.recallAudit;
+    if (!ra || !Number(ra.rounds)) return null;
+    const hotFloors = (Array.isArray(ra.hotFloors) ? ra.hotFloors : [])
+      .map(h => ({ floor: Number(h && h.floor), count: Number(h && h.count) || 0 }))
+      .filter(h => Number.isFinite(h.floor) && h.floor >= 0)
+      .slice(0, 10);
+    return {
+      rounds: Number(ra.rounds) || 0,
+      emptyRounds: Number(ra.emptyRounds) || 0,
+      avgHits: Number(ra.avgHits) || 0,
+      hotFloors,
+      lastQuery: String(ra.lastQuery || '').slice(0, 80),
+      lastTs: Number(ra.lastTs) || 0,
+      pluginVersion: String((bridge.snapshot && bridge.snapshot.pluginVersion) || '')
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -63,10 +91,13 @@ export function collectSources(storage) {
 export function buildNarrative(storage, opts = {}) {
   const raw = collectSources(storage);
   const events = TW.normalizeEvents(raw);
-  if (!events.length) return { events: [], empty: true };
+  // [v2.15.0] 跨项目观测：LonSha 召回自检（你最常回望的时光）。独立于生活事件，空时不影响 empty 判定。
+  const recall = (opts.withRecall === false) ? null : collectLonshaRecall();
+  if (!events.length) return { events: [], empty: true, recall };
   return {
     empty: false,
     events,
+    recall,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

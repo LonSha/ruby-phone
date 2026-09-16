@@ -35,7 +35,7 @@ export class TimeweaverView {
             <div class="tw-hero-sub">${m.events.length} 个碎片 · ${new Set(m.events.map(e=>e.source)).size} 个来源 · 已织成你的时光</div>
           </div>
           <div class="tw-tabs">
-            ${[['letter','💌 叙事信'],['timeline','🧵 生活流'],['mile','🌱 里程碑'],['board','❤️ 亲密度']].map(([k,l])=>
+            ${[['letter','💌 叙事信'],['timeline','🧵 生活流'],['mile','🌱 里程碑'],['board','❤️ 亲密度'],['recall','🔁 回望'],['album','📚 收藏册']].map(([k,l])=>
               `<button class="tw-tab ${this._tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}
           </div>
           <div class="tw-body">${this._panel(m)}</div>
@@ -46,6 +46,8 @@ export class TimeweaverView {
         if (this._tab === 'timeline') return this._timeline(m);
         if (this._tab === 'mile') return this._milestones(m);
         if (this._tab === 'board') return this._board(m);
+        if (this._tab === 'recall') return this._recall(m);
+        if (this._tab === 'album') return this._album(m);
         return this._letter(m);
     }
 
@@ -69,6 +71,12 @@ export class TimeweaverView {
         const aiBtn = ai && ai.loading
             ? '<button class="tw-export" disabled>✨ AI 升华中…</button>'
             : '<button class="tw-export" id="tw-ai">✨ 求 AI 升华这封信</button>';
+        const saveBtn = ai && ai.loading
+            ? ''
+            : '<button class="tw-export" id="tw-save" style="background:#3d2f1e;color:#e8a33d">📚 收藏这封信</button>';
+        const shareBtn = ai && ai.loading
+            ? ''
+            : '<button class="tw-export" id="tw-share" style="background:#2b3a2b;color:#8fd48f">📤 分享到朋友圈</button>';
         const aiErr = (ai && ai.error) ? `<div class="tw-hint" style="color:#f87171">${esc(ai.error)}</div>` : '';
         return `
         <div class="tw-curve">${this._curve(m)}</div>
@@ -78,6 +86,8 @@ export class TimeweaverView {
         ${aiErr}
         <div class="tw-actions">
           ${aiBtn}
+          ${saveBtn}
+          ${shareBtn}
           <button class="tw-export" id="tw-export">⬇ 导出本地规则版</button>
         </div>`;
     }
@@ -131,6 +141,64 @@ export class TimeweaverView {
           </div>`).join('');
     }
 
+    /* [v2.15.0] 收藏册面板：历次织成的信（AI 升华版与本地规则版都在册）。
+       与「叙事信」面板的区别：叙事信看的是「现在能织出什么」，收藏册看的是「已经留下过什么」——
+       信是按时间沉淀的，翻旧信能明显看出这段时光的走向。 */
+    _album() {
+        const list = (this.app.listLetters && this.app.listLetters()) || [];
+        if (!list.length) {
+            return `<div class="tw-hint">收藏册还空着。<br><br>
+              <span style="font-size:11px;line-height:1.9">在「💌 叙事信」里点「📚 收藏这封信」，<br>
+              或等定期织信自动留下痕迹，这里会攒成一部时光信集。</span></div>`;
+        }
+        const rows = list.map(x => {
+            const d = new Date(Number(x.ts) || Date.now());
+            const stamp = `${d.getMonth() + 1}月${d.getDate()}日`;
+            const tag = x.source === 'ai' ? '✨ AI' : '📄 本地';
+            return `<div class="tw-mile" data-letter="${esc(x.id || '')}" style="cursor:pointer;align-items:flex-start">
+              <span class="tw-mile-icon">💌</span>
+              <div style="flex:1;min-width:0">
+                <div class="tw-mile-label">${esc(x.title || '一段被织起的时光')} <span class="tw-person-meta" style="font-weight:400">${stamp} · ${tag}</span></div>
+                <div class="tw-mile-detail" style="line-height:1.7">${esc(String((x.paragraphs || [])[0] || '').slice(0, 70))}…</div>
+              </div>
+            </div>`;
+        }).join('');
+        return `<div class="tw-curve-label" style="margin:2px 0 10px">共收藏 ${list.length} 封信（点开可再分享到朋友圈）</div>${rows}`;
+    }
+    /* [v2.15.0] 回望面板：LonSha 召回自检的观测镜像（跨项目数据互喂）。
+       织光机原本只看得见「你生产了什么」（日记/照片/成就…），这里补上
+       「你回望了什么」（lonsha 正文每轮召回命中哪段剧情）——两端观测拼成完整一面。 */
+    _recall(m) {
+        const r = m.recall;
+        if (!r) {
+            return `<div class="tw-hint">还没有可回望的痕迹。<br><br>
+              <span style="font-size:11px;line-height:1.9">这一栏读取的是 LonSha 记忆引擎的「召回自检」——<br>
+              当正文生成时它每轮记录『想起了哪段剧情』。<br>
+              装上记忆插件并聊过几轮之后，这里会亮起你反复回望的时光。</span></div>`;
+        }
+        const emptyPct = r.rounds ? Math.round(r.emptyRounds / r.rounds * 100) : 0;
+        const maxCount = r.hotFloors[0]?.count || 1;
+        const floorRows = r.hotFloors.map((h, i) => `
+          <div class="tw-person">
+            <span class="tw-person-rank">${['🥇','🥈','🥉'][i] || (i + 1)}</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">第 ${h.floor} 楼 <span class="tw-person-meta">被想起 ${h.count} 次</span></div>
+              <div class="tw-person-bar"><div class="tw-person-fill" style="width:${Math.round(h.count / maxCount * 100)}%"></div></div>
+            </div>
+          </div>`).join('');
+        return `
+        <div class="tw-curve">
+          <div class="tw-curve-label">🔁 来自剧情侧的观测 · LonSha 召回自检${r.pluginVersion ? `（v${esc(r.pluginVersion)}）` : ''}</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip">观测 ${r.rounds} 轮</span>
+            <span class="tw-chip" style="color:${emptyPct > 30 ? '#f87171' : '#cbb89a'}">空召回 ${r.emptyRounds} 轮（${emptyPct}%）</span>
+            <span class="tw-chip">平均命中 ${r.avgHits}</span>
+          </div>
+          ${r.lastQuery ? `<div class="tw-hint" style="padding:12px 0 0;text-align:left">最近一次回望的是：「${esc(r.lastQuery)}」</div>` : ''}
+        </div>
+        ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
+        <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>`;
+    }
     _bind() {
         const root = this.app.phoneShell?.element;
         if (!root) return;
@@ -142,8 +210,53 @@ export class TimeweaverView {
         // [v2.14.0] AI 升华按钮：调 app.composeAILetter（无 API 时该方法已自处理降级）
         const aiBtn = root.querySelector('#tw-ai');
         if (aiBtn) aiBtn.addEventListener('click', () => { const p = this.app.composeAILetter?.(); if (p && typeof p.catch === 'function') p.catch(() => {}); });
+        // [v2.15.0] 收藏 / 分享按钮
+        const saveBtn = root.querySelector('#tw-save');
+        if (saveBtn) saveBtn.addEventListener('click', () => this._saveCurrent());
+        const shareBtn = root.querySelector('#tw-share');
+        if (shareBtn) shareBtn.addEventListener('click', () => this._shareCurrent());
+        root.querySelectorAll('[data-letter]').forEach(el => {
+            el.addEventListener('click', () => this._shareById(el.dataset.letter));
+        });
     }
 
+    /* [v2.15.0] 当前要收藏/分享的那封信：AI 升华版优先，否则本地规则版。 */
+    _currentLetter() {
+        const ai = this.app.aiLetter || null;
+        if (ai && Array.isArray(ai.paragraphs) && ai.paragraphs.length) {
+            return { title: '一封被 AI 织起的时光信', paragraphs: ai.paragraphs, source: 'ai', ts: Number(ai.ts) || Date.now() };
+        }
+        const m = buildNarrative(this.app.storage, { bucket: 'day' });
+        if (!m.letter) return null;
+        return { title: m.letter.title, paragraphs: m.letter.paragraphs, source: 'local', ts: Date.now() };
+    }
+    _saveCurrent() {
+        const letter = this._currentLetter();
+        if (!letter) { this._toast('碎片还太少，织不出一封信'); return; }
+        const p = this.app.saveLetter?.(letter);
+        Promise.resolve(p).then(res => {
+            if (res && res.ok) this._toast(`已收藏（共 ${res.total} 封）`);
+            else this._toast((res && res.reason) || '收藏失败');
+        }).catch(() => this._toast('收藏失败'));
+    }
+    _shareCurrent() {
+        const letter = this._currentLetter();
+        if (!letter) { this._toast('碎片还太少，没有可分享的内容'); return; }
+        const res = this.app.shareLetterToMoments?.(letter);
+        this._toast(res && res.ok ? '已分享到朋友圈' : ((res && res.reason) || '分享失败'));
+    }
+    _shareById(id) {
+        const hit = (this.app.listLetters?.() || []).find(x => String(x.id) === String(id));
+        if (!hit) return;
+        const res = this.app.shareLetterToMoments?.(hit);
+        this._toast(res && res.ok ? '已分享到朋友圈' : ((res && res.reason) || '分享失败'));
+    }
+    _toast(msg) {
+        try {
+            if (this.app.phoneShell?.showNotification) this.app.phoneShell.showNotification('织光机', msg, '💌');
+            else console.log('[织光机]', msg);
+        } catch (e) { console.log('[织光机]', msg); }
+    }
     _export() {
         const m = buildNarrative(this.app.storage, {});
         if (!m.letter) return;

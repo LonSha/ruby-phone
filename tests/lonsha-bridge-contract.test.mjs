@@ -34,11 +34,12 @@ test('=== 1. 桥方法行为契约（onFloorRollback / recall / applyCoordinated
 test('=== 2. 微信 buildMessagesArray 的 lonsha 记忆注入接线 ===', () => {
     // 注入代码块存在且调 lonshaBridge.recall
     ok(wechatSrc.includes('window.VirtualPhone?.lonshaBridge'), '微信引用 lonshaBridge');
-    ok(wechatSrc.includes('_lb.recall('), '微信调 lonshaBridge.recall');
-    ok(wechatSrc.includes('【角色记忆 · 来自剧情】'), '注入角色记忆 system 块');
+    ok(wechatSrc.includes('_lb.recallBlock('), '微信调 lonshaBridge.recallBlock（v2.15.0 收敛为单一真源）');
+    ok(wechatSrc.includes("from './apps/memory/lonsha-bridge.js'") || bridgeSrc.includes('recallBlock(queryText, opts = {})'), 'recallBlock 定义在桥内');
+    ok(bridgeSrc.includes('【角色记忆 · 来自剧情】'), 'v2.15.0 起统一块头收敛到桥内 recallBlock（单一真源）');
     // 注入点落在 buildMessagesArray 内（charName 定义之后、callAI 之前）
     const bmIdx = wechatSrc.indexOf('async buildMessagesArray(');
-    const injectIdx = wechatSrc.indexOf('【角色记忆 · 来自剧情】');
+    const injectIdx = wechatSrc.indexOf('_lb.recallBlock(');
     ok(bmIdx > 0 && injectIdx > bmIdx, '注入在 buildMessagesArray 内');
     // 静默失败不阻断发送
     ok(wechatSrc.includes('lonsha 记忆注入静默失败'), '注入静默失败兜底');

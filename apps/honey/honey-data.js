@@ -4556,6 +4556,19 @@ export class HoneyData {
             messages.push({ role: 'system', content: overridePrompt, isPhoneMessage: true });
         }
         messages.push({ role: 'system', content: systemPrompt, isPhoneMessage: true });
+        // [v2.15.0] 蜜语 lonsha 记忆注入：与微信同一格式真源（bridge.recallBlock）。
+        //   主播是剧情角色时，让它「记得」正文里和 {{user}} 共同经历过的事——
+        //   直播间台词就不再是空泛的营业话术，而是接得住前情的回应。查无命中整块跳过。
+        try {
+            const _hb = (typeof window !== 'undefined' && window.VirtualPhone?.lonshaBridge) || null;
+            if (_hb && typeof _hb.recallBlock === 'function' && safeHost) {
+                const _hblk = _hb.recallBlock([safeHost, safeUserMessage].filter(Boolean).join(' ').slice(0, 120),
+                    { topN: 3, label: safeHost, userName: honeyNickname });
+                if (_hblk) {
+                    messages.push({ role: 'system', content: _hblk, name: 'SYSTEM (蜜语角色记忆)', isPhoneMessage: true });
+                }
+            }
+        } catch (_e) { /* lonsha 蜜语记忆注入静默失败，不影响直播生成 */ }
         if (wechatLinkedCharacterContext) {
             messages.push({ role: 'system', content: wechatLinkedCharacterContext, isPhoneMessage: true });
         }

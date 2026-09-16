@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.15.0": {
+      "date": "2026-09-16",
+      "items": [
+        "【新增·原创】织光机收藏册 + 定期织信：saveLetter(letter) 把 AI 时光信落册（幂等：同 ts + 同首段拒重复；载荷裁剪：单段 600 字 / 12 段 / 册上限 60 封），listLetters() 倒序读取；autoWeaveIfDue({force}) 按间隔门（默认 7 天，游标 tw_last_auto）在打开 App 时自动织信，AI 优先、失败降级本地规则 composeLetter，无碎片不触发空信。",
+        "【新增·原创】时光信分享到朋友圈：shareLetterToMoments(letter) 经 wechatData.addMoment 以 isUserPost:true + visibility:{type:'public'} 发布用户帖，采用手机剧情时间（非真实时钟），并同步未读角标。",
+        "【新增·原创】织光机「🔁 回望」面板：消费 LonSha 侧召回自检数据（collectLonshaRecall 读 window.lonsha_memory_bridge_v1.snapshot.recallAudit），展示观测轮数 / 空召回比例 / 平均命中 / 热点楼层 Top10，两端观测互喂闭环。",
+        "【核心重构】跨端记忆注入收敛为单一真源 bridge.recallBlock(queryText, opts)：统一块头格式、首 24 字去重、每条裁 80 字、最多 3 条，新增 strictActors 严格模式（只注入提及在场人物的记忆）；微信单聊（原内联硬编码块）、微信群聊（严格模式，避免私密往事串味）、蜜语 honey 三处共用，替换此前各自漂移的格式化逻辑。",
+        "【新增·跨项目记忆协同】蜜语（honey）与微信群聊接入 LonSha 剧情记忆：蜜语在 generateUserLiveScene / generateLiveScene 的 callAI 上下文组装处注入；微信群聊在 groupMembersArray 收集后注入，以群名 + 在场成员为查询。",
+        "【工程防线】新增 tests/timeweaver-v215.test.mjs（8 项）：recallBlock 单一真源 / 去重裁剪严格模式 / 三处调用点接线 / 收藏册幂等与裁剪 / 定期织信间隔门 / 朋友圈结构对齐 / collectLonshaRecall 三态容灾 / 回望面板与存储分域；测试总数 213 → 221 全绿。",
+        "【存储分域】config/storage.js 的 CHAT_DATA_PATTERNS 增补 /^tw_/（tw_letters 收藏册、tw_last_auto 定期游标随会话隔离，避免跨会话串档）。"
+      ]
+    },
     "2.13.0": {
       "date": "2026-09-15",
       "items": [
@@ -336,5 +348,5 @@
       ]
     }
   },
-  "latest": "2.14.0"
+  "latest": "2.15.0"
 }
