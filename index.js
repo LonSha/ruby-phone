@@ -36,8 +36,8 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.17.0';
-const ST_PHONE_CSS_REVISION = '20260917-v2170-notification-interactions';
+const ST_PHONE_VERSION = '2.18.0';
+const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 const ST_PHONE_HONEY_MODULE_URL = new URL(`./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`, import.meta.url).href;
@@ -147,6 +147,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let totalNotifications = 0;
     // [v2.16.0] 系统通知落账层（通知中心单一真源），createInPanel 后实例化
     let notificationLog = null;
+    // [v2.18.0] 会话代号：换会话 / 清数据时自增；延迟通知（setTimeout 多消息队列）据此丢弃迟到项，
+    //   避免上一条微信触发的逐条延迟通知漏进新会话（会话隔离铁律 #3）。
+    let _chatSessionGeneration = 0;
     // [v2.16.0] 控制中心（顶部下拉 · 状态栏左半呼出）
     let controlCenter = null;
     let currentApps = null;
@@ -7642,8 +7645,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 支持多条消息
             if (data.messages && Array.isArray(data.messages)) {
+                // [v2.18.0] 捕获当前会话代号：逐条延迟展示途中若发生换会话 / 清数据，迟到的通知直接丢弃
+                const _msgGeneration = _chatSessionGeneration;
                 data.messages.forEach((msg, index) => {
                     setTimeout(() => {
+                        if (_chatSessionGeneration !== _msgGeneration) return;
                         const senderName = msg.from || data.from || '微信';
                         const msgText = String(msg.text || msg.message || '').replace(/\s+/g, ' ').trim() || '发来新消息';
                         showUnifiedPhoneNotification(
@@ -8889,6 +8895,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         loadData();
 
+        // [v2.18.0] 会话代号自增：使所有在途的延迟通知（逐条 setTimeout）失效
+        _chatSessionGeneration += 1;
+        // [v2.18.0] 会话隔离收口：失效通知落账层内存缓存（不落盘）。
+        //  修复真实缺陷：换会话时十余个 App 都清了缓存，唯独通知落账层从未失效——
+        //  通知中心/锁屏/角标会继续显示旧会话通知，且挂起的 800ms 防抖会把旧会话数据写进新会话。
+        //  旧会话数据在切走前已由防抖周期落盘，此处只丢内存层；下一行 loadData 后角标按新会话重算。
+        try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
+        syncNotificationsBadge();
         // 🔥 切换会话时，按需加载 TimeManager 和 PromptManager
         // 这样聊天时提示词能正常注入，不需要先打开手机面板
         loadTimeManager();
@@ -9858,6 +9872,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
                 try { window.VirtualPhone?.memoryCore?.clearCurrentChat?.(); } catch (e) {}
                 storage.clearCurrentData();
+                // [v2.18.0] 清数据时同步丢弃落账层内存缓存（含挂起防抖写入），防止已清通知复活
+                _chatSessionGeneration += 1;
+                try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);
@@ -9923,6 +9940,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 try { window.VirtualPhone?.memoryCore?.clear?.(); } catch (e) {}
                 storage.clearAllData();
                 await clearGlobalCustomCssSettings();
+                // [v2.18.0] 清数据时同步丢弃落账层内存缓存（含挂起防抖写入），防止已清通知复活
+                _chatSessionGeneration += 1;
+                try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);

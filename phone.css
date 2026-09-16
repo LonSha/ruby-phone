@@ -11757,6 +11757,8 @@ input:checked + .toggle-slider:before {
   font-size: 12px;
 }
 .phone-lockscreen .pls-track-icon { font-size: 13px; }
+.phone-lockscreen .pls-track { cursor: pointer; }
+.phone-lockscreen .pls-track:active { background: rgba(255,255,255,.22); }
 .phone-lockscreen .pls-track-title {
   max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-weight: 600;

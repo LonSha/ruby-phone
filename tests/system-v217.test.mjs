@@ -141,7 +141,9 @@ function mkStorage(seed = {}) {
     ok('index 实例化后立即注入横幅回调', /bindBannerInteractions\(phoneShell\)/.test(idx));
     ok('index 注入 onBannerDismiss（标已读）', /shell\.onBannerDismiss = \(notif\) =>/.test(idx));
     ok('index 注入 onBannerAction（跳 App）', /shell\.onBannerAction = \(appId\) =>/.test(idx));
-    ok('CSS 缓存版本号已更新', /ST_PHONE_CSS_REVISION = '20260917-v2170-notification-interactions'/.test(idx));
+    // 不绑定具体 revision 值（每次样式更新都会 bump）；只断言「已升级到 v2170 之后」
+    const revMatch = idx.match(/ST_PHONE_CSS_REVISION = '([^']+)'/);
+    ok('CSS 缓存版本号已升级（含 v2170-v2180 代号）', !!revMatch && /v21(7|8)0/.test(revMatch[1]), revMatch && revMatch[1]);
 }
 
 // ========== 6. 接线断言：角标消费（index.js） ==========

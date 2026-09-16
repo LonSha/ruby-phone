@@ -141,7 +141,7 @@ export class LockScreen {
          </div>`
       : '';
     const trackHtml = track
-      ? `<div class="pls-track"><span class="pls-track-icon">🎵</span><span class="pls-track-title">${_esc(track.title)}</span>${track.artist ? `<span class="pls-track-artist">${_esc(track.artist)}</span>` : ''}</div>`
+      ? `<div class="pls-track" data-app="music" role="button" title="打开音乐"><span class="pls-track-icon">🎵</span><span class="pls-track-title">${_esc(track.title)}</span>${track.artist ? `<span class="pls-track-artist">${_esc(track.artist)}</span>` : ''}</div>`
       : '';
     root.innerHTML =
       '<div class="pls-shade"></div>' +
@@ -213,6 +213,11 @@ export class LockScreen {
     root.querySelector('#pls-notes')?.addEventListener('click', (e) => {
       e.stopPropagation();
       _jump('notifications');
+    });
+    // [v2.18.0] 锁屏音乐卡 → 解锁并直达音乐 App（播放中才存在该块）
+    root.querySelector('.pls-track')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _jump('music');
     });
   }
 }

@@ -183,6 +183,24 @@ export class NotificationLog {
         return { removed, total: after.length };
     }
 
+    /**
+     * [v2.18.0] 切换会话 / 清空数据时调用：丢弃内存缓存与挂起的防抖写入。
+     *  不做任何落盘——当前 storage 已指向新会话（或已被清空），旧缓存写出去即串味；
+     *  旧会话数据在切走前已由各自的防抖周期落盘，此处仅作内存层失效。
+     *  旧缓存再次被读取时将从新会话 storage 重新加载（list() 惰性重建）。
+     * @returns {boolean} 是否丢弃了未落盘的脏缓存
+     */
+    reset() {
+        const wasDirty = !!this._dirty;
+        if (this._flushTimer) {
+            clearTimeout(this._flushTimer);
+            this._flushTimer = null;
+        }
+        this._dirty = false;
+        this._cache = null;
+        return wasDirty;
+    }
+
     /** 立即落盘（测试 / 退出前用） */
     flushNow() {
         if (this._flushTimer) {
