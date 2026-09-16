@@ -131,7 +131,7 @@ export class LockScreen {
       ? `<div class="pls-notes" id="pls-notes">
            <div class="pls-notes-head">通知 ${notes.length}</div>
            ${notes.map(n => `
-             <div class="pls-note">
+             <div class="pls-note" data-id="${_esc(n.id || '')}" data-app="${_esc(n.appId || '')}">
                <span class="pls-note-icon">${_esc(n.icon || '🔔')}</span>
                <span class="pls-note-body">
                  <span class="pls-note-title">${_esc(n.title || '')}</span>
@@ -188,15 +188,31 @@ export class LockScreen {
     window.addEventListener('mousemove', (e) => { if (this._dragging) onMove(e.clientY); });
     window.addEventListener('mouseup', (e) => { if (this._dragging) onEnd(e.clientY); });
     // [v2.16.0] 轻点通知速览 → 解锁并进通知中心（点击不产生位移，故不会误触解锁）
-    root.querySelector('#pls-notes')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const appId = 'notifications';
+    // [v2.17.0] 升级：单条通知各自直达其来源 App（单击条目），系统通知（__sys__）与空白区仍进通知中心。
+    //   点击不产生位移，故不会误触解锁；单条点击先标记该条已读并同步宿主角标。
+    const _jump = (appId) => {
       this.unlock();
       setTimeout(() => {
         try {
           window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
         } catch (_e) { /* 忽略 */ }
       }, 30);
+    };
+    root.querySelectorAll('.pls-note').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nid = String(el.dataset.id || '');
+        const appId = String(el.dataset.app || '');
+        try {
+          if (nid) window.VirtualPhone?.notificationLog?.markRead?.(nid);
+          window.VirtualPhone?.syncNotificationsBadge?.();
+        } catch (_e) { /* 忽略 */ }
+        _jump(appId && appId !== '__sys__' ? appId : 'notifications');
+      });
+    });
+    root.querySelector('#pls-notes')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _jump('notifications');
     });
   }
 }

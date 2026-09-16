@@ -78,11 +78,21 @@ export class NotificationCenterView {
             const k = n.appId || '__sys__';
             counts[k] = (counts[k] || 0) + 1;
         }
-        const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+        // [v2.17.0] 未读对齐：消费落账层 unreadByApp() 聚合（含 __sys__）—— chip 副数字优先显示
+        //   未读数（真机语义：徽标数 = 未读）；某分组无未读时回落总数，避免 chips 全 0 的空洞感。
+        let unread = {};
+        try {
+            const log = this.app?.log;
+            if (log && typeof log.unreadByApp === 'function') unread = log.unreadByApp() || {};
+        } catch (_e) { unread = {}; }
+        const unreadTotal = Object.keys(unread).reduce((s, k) => s + (Number(unread[k]) || 0), 0);
+        const keys = Object.keys(counts).sort((a, b) => ((unread[b] || 0) - (unread[a] || 0)) || counts[b] - counts[a]);
         if (!keys.length) return '';
         const chip = (key, label, count) => {
+            const un = key ? (Number(unread[key]) || 0) : unreadTotal;
+            const num = un > 0 ? un : count;
             const on = this._filter === key ? ' nc-chip-on' : '';
-            return `<button class="nc-chip${on}" data-filter="${esc(key)}">${esc(label)}<span class="nc-chip-num">${count}</span></button>`;
+            return `<button class="nc-chip${on}" data-filter="${esc(key)}">${esc(label)}<span class="nc-chip-num">${num}</span></button>`;
         };
         return chip('', '全部', all.length) + keys.map(k => chip(k, APP_LABEL[k] || k, counts[k])).join('');
     }
@@ -159,11 +169,13 @@ export class NotificationCenterView {
         root.querySelector('#nc-read-all')?.addEventListener('click', () => {
             const r = this.app.log.markAllRead();
             this._flash = r.count ? `已把 ${r.count} 条标记为已读` : '没有未读通知';
+            this._syncBadge();
             this.render();
         });
         root.querySelector('#nc-clear')?.addEventListener('click', () => {
             const r = this.app.log.clear();
             this._flash = r.removed ? `已清空 ${r.removed} 条通知` : '本来就是空的';
+            this._syncBadge();
             this.render();
         });
         const search = root.querySelector('#nc-search');
@@ -189,6 +201,11 @@ export class NotificationCenterView {
         this._bindItems();
     }
 
+    /** [v2.17.0] 已读 / 删除 / 清空后同步宿主桌面角标（落账层未读 → 通知中心图标角标）。 */
+    _syncBadge() {
+        try { window.VirtualPhone?.syncNotificationsBadge?.(); } catch (_e) { /* 忽略 */ }
+    }
+
     _bindItems() {
         const root = this.app.phoneShell?.screen;
         if (!root) return;
@@ -196,6 +213,7 @@ export class NotificationCenterView {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.app.log.remove(String(btn.dataset.del || ''));
+                this._syncBadge();
                 this.render();
             });
         });
@@ -204,6 +222,7 @@ export class NotificationCenterView {
                 const id = String(item.dataset.id || '');
                 const appId = String(item.dataset.app || '');
                 this.app.log.markRead(id);
+                this._syncBadge();
                 if (appId && appId !== '__sys__') {
                     try {
                         window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));

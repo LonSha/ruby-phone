@@ -31,6 +31,11 @@ export class PhoneShell {
         this.lockScreen = null;
         // 🔥 视觉历史栈（滑动返回用）
         this.viewHistory = [];
+        // [v2.17.0] 横幅交互回调（由 index.js 注入）：
+        //   onBannerAction(appId, notif)  点击横幅 → 跳转目标 App；未注入则点击仅收起横幅。
+        //   onBannerDismiss(notif)        点击收起时通知宿主（用于把该条落账标记已读）。
+        this.onBannerAction = null;
+        this.onBannerDismiss = null;
         // 🔔 通知队列管理
         this.notificationQueue = [];
         this.isShowingNotification = false;
@@ -1356,8 +1361,25 @@ export class PhoneShell {
         const targetContainer = phoneBody || this.container;
         targetContainer.appendChild(notification);
 
-        // 停留 4 秒后执行退出动画
-        setTimeout(() => {
+        // [v2.17.0] 横幅交互：点击直达目标 App（真机语义）。
+        //   appId 解析顺序：显式 meta.appId → senderKey/图标推断（复用落账层推断器）→ '__sys__'（仅收起）。
+        //   点击即收起并复位队列状态，让下一条立即可弹（不必干等满 4 秒）。
+        let _bannerDone = false;
+        const dismissBanner = (viaUser = true) => {
+            if (_bannerDone) return;
+            _bannerDone = true;
+            if (viaUser) {
+                try {
+                    const appId = String(data.meta?.appId || '') ||
+                        String(window.VirtualPhone?.notificationLog?._guessAppId?.(data.senderKey || '', data.icon) || '__sys__');
+                    if (typeof this.onBannerDismiss === 'function') {
+                        try { this.onBannerDismiss(data); } catch (_e) { /* 忽略 */ }
+                    }
+                    if (appId && appId !== '__sys__' && typeof this.onBannerAction === 'function') {
+                        try { this.onBannerAction(appId, data); } catch (_e) { /* 忽略 */ }
+                    }
+                } catch (_e) { /* 忽略 */ }
+            }
             notification.classList.add('fade-out');
             setTimeout(() => {
                 notification.remove();
@@ -1366,6 +1388,11 @@ export class PhoneShell {
                 // 继续处理队列中的下一个通知
                 this.processNotificationQueue();
             }, 300);
-        }, 4000);
+        };
+        notification.classList.add('phone-notification-tappable');
+        notification.addEventListener('click', () => dismissBanner(true));
+        // [v2.17.0] 超时收起复用 dismissBanner(false)：不算用户点击（不跳转/不标已读），
+        //   但同样复位队列状态，杜绝「点过之后状态残留」与「超时/点击双路径」两份实现漂移。
+        setTimeout(() => dismissBanner(false), 4000);
     }
 }

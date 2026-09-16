@@ -36,8 +36,8 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.16.1';
-const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
+const ST_PHONE_VERSION = '2.17.0';
+const ST_PHONE_CSS_REVISION = '20260917-v2170-notification-interactions';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 const ST_PHONE_HONEY_MODULE_URL = new URL(`./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`, import.meta.url).href;
@@ -1709,6 +1709,26 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         return avatarEl;
     }
 
+    /** [v2.17.0] 点击页面级横幅 → 打开手机面板并直达目标 App（与来电唤醒同路径）。
+     *  面板未创建时先补建手机壳，等一帧后再派发 openApp，避免 App 渲染进未就绪的容器。 */
+    async function _openPhoneAndJump(appId) {
+        try {
+            const phonePanel = document.getElementById('phone-panel');
+            const drawerIcon = document.getElementById('phoneDrawerIcon');
+            if (phonePanel && !phonePanel.classList.contains('phone-panel-open')) {
+                openPhonePanelWithOutsideClose(phonePanel, drawerIcon);
+                const content = document.getElementById('phone-panel-content');
+                if (content && !content.querySelector('.phone-in-panel')) {
+                    try { await createPhoneInPanel(); } catch (_e) { /* 忽略 */ }
+                }
+                await new Promise((r) => setTimeout(r, 60));
+            }
+        } catch (_e) { /* 打开面板失败不影响跳转尝试 */ }
+        try {
+            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+        } catch (_e) { /* 忽略 */ }
+    }
+
     function _drainFallbackNotificationQueue() {
         if (_isFallbackNotificationShowing) return;
         const next = _fallbackNotificationQueue.shift();
@@ -1749,7 +1769,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         notification.style.left = '50%';
         notification.style.transform = 'translateX(-50%)';
         notification.style.zIndex = '120000';
-        notification.style.pointerEvents = 'none';
+        notification.style.pointerEvents = 'auto'; // [v2.17.0] 横幅可点击（原 none：点击穿透、错过即错过）
+        notification.style.cursor = 'pointer';
 
         if (useRichLayout) {
             const avatarEl = _buildFallbackAvatarElement(meta, next.icon);
@@ -1804,7 +1825,27 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         _currentFallbackNotificationEl = notification;
         document.body.appendChild(notification);
 
-        setTimeout(() => {
+        // [v2.17.0] 兜底横幅交互：点击 → 标记已读 + 打开手机面板并直达目标 App；超时复用同一收起路径（幂等守卫防双实现漂移）。
+        let _fallbackDone = false;
+        const dismissFallback = (viaUser = false) => {
+            if (_fallbackDone) return;
+            _fallbackDone = true;
+            if (viaUser) {
+                try {
+                    const appId = String(next.appId || next.meta?.appId || '')
+                        || String(window.VirtualPhone?.notificationLog?._guessAppId?.(next.senderKey || '', next.icon) || '__sys__');
+                    try {
+                        const log = notificationLog;
+                        const items = (log && typeof log.list === 'function') ? (log.list() || []) : [];
+                        const target = (next.senderKey && items.find(n => !n.read && n.senderKey === next.senderKey))
+                            || (next.title && items.find(n => !n.read && String(n.title || '') === String(next.title || '')))
+                            || null;
+                        if (target && target.id) log.markRead(target.id);
+                        syncNotificationsBadge();
+                    } catch (_e) { /* 忽略 */ }
+                    if (appId && appId !== '__sys__') _openPhoneAndJump(appId);
+                } catch (_e) { /* 忽略 */ }
+            }
             notification.classList.add('fade-out');
             setTimeout(() => {
                 notification.remove();
@@ -1813,7 +1854,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 _currentFallbackNotificationEl = null;
                 _drainFallbackNotificationQueue();
             }, 320);
-        }, FALLBACK_NOTIFICATION_VISIBLE_MS);
+        };
+        notification.addEventListener('click', () => dismissFallback(true));
+        setTimeout(() => dismissFallback(false), FALLBACK_NOTIFICATION_VISIBLE_MS);
     }
 
     /**
@@ -1900,6 +1943,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 appId: String(meta.appId || '')
             });
         } catch (_e) { /* 落账失败不阻断通知 */ }
+        // [v2.17.0] 落账后同步通知中心角标（含免打扰静默通知：入账即点亮，未读变化即时可见）
+        syncNotificationsBadge();
+        // [v2.17.0] 通知中心正开着时实时刷新列表（搜索框聚焦中不打扰输入；免打扰场景也即时可见）
+        try {
+            const ncInput = document.getElementById('nc-search');
+            const typing = ncInput && document.activeElement === ncInput;
+            if (!typing && currentApp === 'notifications' && window.VirtualPhone?.notificationsApp?.render) {
+                window.VirtualPhone.notificationsApp.render();
+            }
+        } catch (_e) { /* 刷新失败不影响通知展示 */ }
         // [v2.16.0] 免打扰门：开启时通知只入账、不弹横幅（消息不会丢，只是不打断）
         try {
             if (isDndOnState(storage)) return;
@@ -1941,7 +1994,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             message: safeMessage,
             icon: icon,
             meta: meta,
-            senderKey: senderKey
+            senderKey: senderKey,
+            appId: String(meta.appId || '') // [v2.17.0] 供点击直达解析（缺省时由 senderKey/图标推断）
         });
         _drainFallbackNotificationQueue();
     }
@@ -5141,10 +5195,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         phoneShell = new PhoneShell();
         phoneShell.createInPanel(container);
+        // [v2.17.0] 横幅通知交互：点击横幅 → 标记已读 + 直达目标 App（注入失败不影响手机可用）
+        try { bindBannerInteractions(phoneShell); } catch (_e) { /* 忽略 */ }
         // [v2.16.0] 安装系统通知落账层（`sys_notifs` 命中 /^sys_/ → chatMetadata，随会话隔离）
         try {
             notificationLog = new NotificationLog(storage, { limit: 200 });
             window.VirtualPhone.notificationLog = notificationLog;
+            window.VirtualPhone.syncNotificationsBadge = syncNotificationsBadge; // [v2.17.0] 供通知中心/锁屏在已读变化后同步桌面角标
+            syncNotificationsBadge(); // [v2.17.0] 启动即对齐（历史未读 → 桌面角标）
         } catch (e) {
             console.warn('⚠️ [v2.16.0] 通知日志初始化失败:', e);
         }
@@ -5184,6 +5242,53 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             badge.style.display = 'none';
             badge.textContent = '';
         }
+    }
+
+    /** [v2.17.0] 通知中心角标同步：落账层未读聚合 → 桌面「通知中心」图标角标。
+     *  手机总角标 = 业务未读之和（排除通知中心自身，防止与业务角标双计）。
+     *  触发点：通知落账后 / 通知中心操作后 / 横幅与锁屏标记已读后（宿主与视图共同消费）。 */
+    function syncNotificationsBadge() {
+        try {
+            const log = notificationLog;
+            if (!log || typeof log.unreadCount !== 'function' || !Array.isArray(currentApps)) return;
+            const unread = Math.max(0, Number(log.unreadCount()) || 0);
+            const app = currentApps.find(a => a.id === 'notifications');
+            if (app && (Number(app.badge) || 0) !== unread) {
+                app.badge = unread;
+                saveData();
+                if (homeScreen && currentApp === null) {
+                    homeScreen.apps = currentApps;
+                    homeScreen.render();
+                }
+            }
+            totalNotifications = currentApps.reduce((sum, a) => sum + (a.id === 'notifications' ? 0 : (Number(a.badge) || 0)), 0);
+            updateNotificationBadge(totalNotifications);
+        } catch (_e) { /* 角标同步失败不影响通知功能 */ }
+    }
+
+    /** [v2.17.0] 横幅通知交互注入：点击横幅 → 该条标记已读 + 直达目标 App。
+     *  appId 缺失或 __sys__ 时仅收起（系统提示没有可跳转的目标）。 */
+    function bindBannerInteractions(shell) {
+        if (!shell) return;
+        shell.onBannerDismiss = (notif) => {
+            try {
+                const log = notificationLog;
+                if (!log || typeof log.list !== 'function') return;
+                const items = log.list() || [];
+                const sk = String(notif?.senderKey || '');
+                const title = String(notif?.title || '');
+                const target = (sk && items.find(n => !n.read && n.senderKey === sk))
+                    || (title && items.find(n => !n.read && String(n.title || '') === title))
+                    || null;
+                if (target && target.id) log.markRead(target.id);
+                syncNotificationsBadge();
+            } catch (_e) { /* 忽略 */ }
+        };
+        shell.onBannerAction = (appId) => {
+            try {
+                window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+            } catch (_e) { /* 忽略 */ }
+        };
     }
 
     // 🎵 解析 <Music> 卡片内容 (增强防呆版)
@@ -7633,7 +7738,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     function loadData() {
         currentApps = storage.loadApps(JSON.parse(JSON.stringify(APPS)));
-        totalNotifications = currentApps.reduce((sum, app) => sum + (app.badge || 0), 0);
+        totalNotifications = currentApps.reduce((sum, app) => sum + (app.id === 'notifications' ? 0 : (app.badge || 0)), 0);
         updateNotificationBadge(totalNotifications);
     }
 
@@ -9133,7 +9238,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // 🔥 监听全局红点更新事件
             window.addEventListener('phone:updateGlobalBadge', () => {
                 if (currentApps) {
-                    totalNotifications = currentApps.reduce((sum, app) => sum + (app.badge || 0), 0);
+                    totalNotifications = currentApps.reduce((sum, app) => sum + (app.id === 'notifications' ? 0 : (app.badge || 0)), 0);
                     updateNotificationBadge(totalNotifications);
                 }
             });
@@ -9151,10 +9256,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 const app = currentApps.find(a => a.id === appId);
                 if (app) {
                     const prevBadge = app.badge || 0;
-                    if (appId !== 'wechat') {
+                    if (appId !== 'wechat' && appId !== 'notifications') {
                         app.badge = 0;
                     }
-                    totalNotifications = currentApps.reduce((sum, a) => sum + (a.badge || 0), 0);
+                    totalNotifications = currentApps.reduce((sum, a) => sum + (a.id === 'notifications' ? 0 : (a.badge || 0)), 0);
                     updateNotificationBadge(totalNotifications);
                     if (prevBadge !== (app.badge || 0)) {
                         saveData();
