@@ -36,7 +36,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.18.0';
+const ST_PHONE_VERSION = '2.19.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -1409,12 +1409,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 try {
                     const jw = window.VirtualPhone?.jiwen;
                     if (!jw) return;
+                    // [v2.19.0] 会话代号守卫：tick 为异步任务（含 await save），完成时
+                    //   若已换会话，丢弃迟到的主动想法写入（防旧会话触发注入新会话 chatMetadata）。
+                    const _tickGeneration = _chatSessionGeneration;
                     const stRef = storage?.get?.('jiwen_state');
                     const lastTick = stRef?.lastTick ? new Date(stRef.lastTick).getTime() : 0;
                     const now = Date.now();
                     const elapsedMin = Math.floor((now - lastTick) / 60000);
                     if (!lastTick || elapsedMin >= 8) {
                         jw.tick(Math.max(1, elapsedMin)).then((triggers) => {
+                            if (_chatSessionGeneration !== _tickGeneration) return;
                             if (Array.isArray(triggers) && triggers.some((t) => t.action === 'contact')) {
                                 const ctx = window.SillyTavern?.getContext?.();
                                 if (ctx && ctx.chatMetadata) {
@@ -7572,9 +7576,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.ggp_currentWechatApp.addContacts(data.contacts);
         } else {
             // 暂存到存储，等微信APP加载后再添加
-            const pending = storage.get('ggp_pending_contacts') || [];
+            // [v2.19.0] 键名与本文件读取端统一为 pending-contacts（旧键 ggp_pending_contacts
+            //   从未被消费：写入后等不到微信 App，联系人静默丢失且跨会话滞留）。
+            const pending = storage.get('pending-contacts') || [];
             pending.push(...data.contacts);
-            storage.set('ggp_pending_contacts', pending);
+            storage.set('pending-contacts', pending);
         }
     }
 
@@ -8902,6 +8908,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         //  通知中心/锁屏/角标会继续显示旧会话通知，且挂起的 800ms 防抖会把旧会话数据写进新会话。
         //  旧会话数据在切走前已由防抖周期落盘，此处只丢内存层；下一行 loadData 后角标按新会话重算。
         try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
+        // [v2.19.0] 积温引擎：同批失效内存态（换会话后惰性从新会话 storage 重载，
+        //   防止旧角色的五轴漂移状态继续写进新会话）。
+        try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
         syncNotificationsBadge();
         // 🔥 切换会话时，按需加载 TimeManager 和 PromptManager
         // 这样聊天时提示词能正常注入，不需要先打开手机面板
@@ -9875,6 +9884,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // [v2.18.0] 清数据时同步丢弃落账层内存缓存（含挂起防抖写入），防止已清通知复活
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
+                try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);
@@ -9943,6 +9953,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // [v2.18.0] 清数据时同步丢弃落账层内存缓存（含挂起防抖写入），防止已清通知复活
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
+                try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);

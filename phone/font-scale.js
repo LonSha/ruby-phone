@@ -288,7 +288,11 @@ export function createFontScaleManager(deps) {
         // 只读取全局文字颜色（默认黑色）
         const globalTextColor = storage.get('phone-global-text') || '#000000';
         const phoneFrameColor = storage.get('phone-frame-color') || '#1a1a1a';
-        const phoneShellScale = storage.get('phone-shell-scale') || 100;
+        // [v2.19.0] 显示缩放单一真源：新键 sys_shell_scale 优先、旧键 phone-shell-scale 回落
+        const _sysScaleRaw = storage.get('sys_shell_scale');
+        const phoneShellScale = (_sysScaleRaw !== undefined && _sysScaleRaw !== null && _sysScaleRaw !== '')
+            ? _sysScaleRaw
+            : (storage.get('phone-shell-scale') || 100);
         const phoneFontScale = storage.get('phone-font-scale') || PHONE_FONT_SCALE_DEFAULT;
 
         // 设置CSS变量

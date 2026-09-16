@@ -54,6 +54,10 @@ export class PhoneStorage {
             /^life_events_/,      // 生活事件时间线
             /^worldpulse_/,       // [v2.9.0] 世界脉搏（设置/历史/队列状态，随会话隔离）
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
+            // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
+            //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，
+            //   换角色/换会话五轴状态跨会话串味（历史误存键由 get 的搬迁逻辑自动迁回）。
+            /^jiwen_/,
             // [v2.16.0] 系统层开关与通知落账（sys_notifs 通知历史 / sys_dnd 免打扰 /
             //   sys_shell_scale 显示缩放 / sys_flashlight 手电筒 / sys_wifi）：
             //   全部随会话隔离，避免跨角色/跨会话串味（CONTEXT.md 零数据库铁律 #3）。

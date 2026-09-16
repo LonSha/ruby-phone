@@ -16,6 +16,8 @@ import { AlbumData } from '../album/album-data.js';
 import { AlbumImagePicker } from '../album/album-image-picker.js';
 import { DEFAULT_APP_ICONS, PHONE_CONFIG } from '../../config/apps.js';
 import * as PhoneTagFilter from '../../config/tag-filter.js';
+// [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
+import { SYS_KEYS } from '../../config/system-controls.js';
 import {
     PHONE_FLOATING_ENTRY_DEFAULT_STYLE,
     PHONE_FLOATING_ENTRY_ENABLED_KEY,
@@ -1305,7 +1307,13 @@ export class SettingsApp {
         const cardTimeImage = this.storage.get('phone-card-time-image') || null;
         const globalTextColor = normalizePhoneHexColor(this.storage.get('phone-global-text'), PHONE_GLOBAL_TEXT_COLOR_DEFAULT);
         const phoneFrameColor = normalizePhoneHexColor(this.storage.get('phone-frame-color'), PHONE_FRAME_COLOR_DEFAULT);
-        const phoneShellScale = normalizePhoneShellScalePercent(this.storage.get('phone-shell-scale') || PHONE_SHELL_SCALE_DEFAULT);
+        // [v2.19.0] 新键 sys_shell_scale 优先、旧键 phone-shell-scale 回落（与控制中心双向一致）
+        const _sysScaleRaw = this.storage.get(SYS_KEYS.SCALE);
+        const phoneShellScale = normalizePhoneShellScalePercent(
+            (_sysScaleRaw !== undefined && _sysScaleRaw !== null && _sysScaleRaw !== '')
+                ? _sysScaleRaw
+                : (this.storage.get('phone-shell-scale') || PHONE_SHELL_SCALE_DEFAULT)
+        );
         const phoneFontScale = normalizePhoneFontScalePercent(this.storage.get('phone-font-scale') || PHONE_FONT_SCALE_DEFAULT);
         const html = `
             <div id="yzp-settings-app" class="settings-app yzp-settings-app ${useSettingsWallpaper ? 'settings-has-wallpaper' : ''} ${useSafeRenderMode ? 'yzp-settings-safe-render' : ''}" style="${wallpaperStyle}">
@@ -5879,12 +5887,15 @@ export class SettingsApp {
 
         phoneShellScaleSlider?.addEventListener('change', async (e) => {
             const percent = syncPhoneShellScaleDisplay(e.target.value);
+            // [v2.19.0] 双键同写：新旧键保持一致，控制中心读取新键优先不再错位
             await this.storage.set('phone-shell-scale', percent);
+            await this.storage.set(SYS_KEYS.SCALE, percent);
         });
 
         document.getElementById('phone-shell-scale-reset')?.addEventListener('click', async () => {
             const percent = syncPhoneShellScaleDisplay(PHONE_SHELL_SCALE_DEFAULT);
             await this.storage.set('phone-shell-scale', percent);
+            await this.storage.set(SYS_KEYS.SCALE, percent);
         });
 
         const phoneFontScaleSlider = document.getElementById('phone-font-scale-slider');

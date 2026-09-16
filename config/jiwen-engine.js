@@ -131,6 +131,18 @@ export function createJiwen(opts) {
     }
     _loaded = true;
   }
+  /**
+   * [v2.19.0] 会话隔离：丢弃内存态与加载标记，下次 ensureLoaded 从（切换后的）当前
+   *   storage 重新加载。刻意不落盘——旧数据已由 save 写入旧会话空间，此处只丢内存层。
+   *   @returns {boolean} 是否确实丢弃了已加载的内存态
+   */
+  function reset() {
+    const hadLoaded = _loaded;
+    state = { ...DEFAULT_STATE };
+    _loaded = false;
+    _valenceDeltaLog.length = 0;
+    return hadLoaded;
+  }
   async function save() {
     if (!opts.onSave) return;
     try { await opts.onSave({ ...state }); } catch (e) { console.error('[积温] save failed:', e.message); }
@@ -416,6 +428,8 @@ export function createJiwen(opts) {
     resetConnection, setActivity, checkThresholds,
     setLastChatMessageId, getLastChatMessageId, setLastBotMessageId, getLastBotMessageId,
     setUserStatus, getUserStatus, getStateSummary,
+    reset,
+    get state() { return { ...state }; },
     config: { axes, rates, thresholds, immersionMap, persona },
   };
 }

@@ -101,7 +101,9 @@ function mkSwitchableStorage() {
     const ocMark = idx.indexOf('function onChatChanged()');
     const resetMark = idx.indexOf('[v2.18.0] 会话隔离收口');
     ok('reset 块位于 onChatChanged 函数体内', ocMark >= 0 && resetMark > ocMark, `oc=${ocMark} r=${resetMark}`);
-    ok('onChatChanged 同步角标', /notificationLog\?\.reset\?\.\(\);[\s\S]{0,120}syncNotificationsBadge\(\)/.test(idx));
+    // [v2.19.0] 窗口放宽到 400：notificationLog.reset 与 syncNotificationsBadge
+    //   之间插入了同批次的 jiwen.reset 失效块（会话隔离第二波）。
+    ok('onChatChanged 同步角标', /notificationLog\?\.reset\?\.\(\);[\s\S]{0,400}syncNotificationsBadge\(\)/.test(idx));
 
     // 清数据两处 reset
     const resets = idx.split('try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }').length - 1;
