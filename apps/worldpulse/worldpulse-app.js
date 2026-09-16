@@ -59,6 +59,14 @@ export class WorldpulseApp {
     }
     _saveState(s) { try { this.storage?.set?.(STATE_KEY, JSON.stringify(s), false); } catch (_e) {} }
 
+    // [v2.20.0] 当前会话身份戳：优先 chatMetadata.file_name，再退 chatId，最后空串。
+    //   换会话（或清数据）后该值变化，用于丢弃迟到的异步生成结果。
+    _currentSessionStamp() {
+        try {
+            const ctx = this._ctx();
+            return String(ctx?.chatMetadata?.file_name || ctx?.chatId || '');
+        } catch (_e) { return ''; }
+    }
     _ctx() {
         try {
             return window.SillyTavern?.getContext?.() || window.parent?.SillyTavern?.getContext?.() || null;
@@ -121,10 +129,15 @@ export class WorldpulseApp {
         const st = this.getState();
         if (!st.queue.length) return;
         this._processing = true;
+        // [v2.20.0] 会话守卫：入口捕获本次处理链的会话身份（实例跨会话复用，
+        //   必须在每次调用时取当前值，完成时比对，不一致即丢弃落地）。
+        const stamp = this._currentSessionStamp();
         try {
             const ev = st.queue[0];
             const content = await this._generate(ev);
-            if (content) {
+            // [v2.20.0] 生成完成时若已换会话：整条丢弃（不写历史/不推微博），
+            //   仅清理旧队列状态（该状态属旧会话空间，写入无害且防止重试堆积）。
+            if (content && stamp === this._currentSessionStamp()) {
                 const h = WP.pushHistory(this.getHistory(), {
                     style: ev.style, content, floorCount: ev.floorCount
                 });
@@ -138,9 +151,11 @@ export class WorldpulseApp {
             this._saveState(st2);
         } finally {
             this._processing = false;
-            // 继续处理剩余（异步链）
+            // 继续处理剩余（异步链）；换会话后不再续链（避免旧队列在新会话继续生成）
             const st3 = this.getState();
-            if (st3.queue.length) setTimeout(() => this._processQueue(), 50);
+            if (st3.queue.length && stamp === this._currentSessionStamp()) {
+                setTimeout(() => { if (stamp === this._currentSessionStamp()) this._processQueue(); }, 50);
+            }
         }
     }
 
@@ -162,13 +177,35 @@ export class WorldpulseApp {
 
     _pushToWeibo(content, style) {
         try {
-            const weiboData = window.VirtualPhone?.weiboApp?.wechatData
-                || window.VirtualPhone?.weiboData
-                || null;
-            // 微博数据层在场则注入一条「世界脉搏」推荐动态；不在场静默跳过
-            if (weiboData && typeof weiboData.addRecommendPost === 'function') {
-                weiboData.addRecommendPost({ author: `世界脉搏·${style}`, content, source: 'worldpulse' });
-            }
+            // [v2.20.0] 修复三重调用错误（此功能自 v2.9.0 起为死代码）：
+            //   - weiboApp 的数据层属性名是 weiboData（不是 wechatData）
+            //   - VirtualPhone.weiboData 从未被赋值（永远 undefined）
+            //   - addRecommendPost 不存在，真实 API 是 saveRecommendPosts(数组)
+            const weiboData = window.VirtualPhone?.weiboApp?.weiboData || null;
+            if (!weiboData || typeof weiboData.getRecommendPosts !== 'function'
+                || typeof weiboData.saveRecommendPosts !== 'function') return;
+            const posts = weiboData.getRecommendPosts();
+            const list = Array.isArray(posts) ? posts.slice() : [];
+            // 格式对齐 _parseWeiboPost 产物（渲染字段：blogger/bloggerType/time/content/
+            //   images/forward/comments/likes/commentList/likeList；详情的评论/点赞逻辑依赖这两个数组）
+            list.push({
+                id: `wp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+                blogger: `世界脉搏·${style}`,
+                bloggerType: '世界脉搏',
+                time: new Date().toLocaleString('zh-CN', { hour12: false }),
+                device: '平行世界',
+                content: String(content),
+                images: [],
+                forward: 0,
+                comments: 0,
+                likes: 0,
+                commentList: [],
+                likeList: [],
+                source: 'worldpulse'
+            });
+            weiboData.saveRecommendPosts(list);
+            // 微博 App 在场时通知其刷新（推荐流标记更新）
+            try { window.VirtualPhone?.weiboApp?.handleExternalRecommendUpdate?.(); } catch (_e) {}
         } catch (_e) {}
     }
 

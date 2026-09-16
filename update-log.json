@@ -1,5 +1,13 @@
 {
   "versions": {
+    "2.20.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·世界脉搏跨会话泄漏】世界脉搏队列处理链为异步任务（LLM 生成可达数十秒），此前无会话守卫：换会话后生成结果（历史/队列状态）仍写进新会话空间，异步续链还会把旧会话队列在新会话继续处理。新增会话身份戳（chatMetadata.file_name → chatId）：处理链入口捕获，生成完成与续链时比对，不一致整条丢弃——与 v2.18 通知守护、v2.19 积温守卫同构，第三次复用同一守护模式。",
+        "【缺陷修复·世界脉搏推微博死代码】_pushToWeibo 三重调用错误（自 v2.9.0 起从未生效）：① weiboApp?.wechatData 属性不存在（微博数据层属性名是 weiboData）；② VirtualPhone.weiboData 从未被赋值（永远 undefined）；③ addRecommendPost 方法全仓库不存在。修复为按真实数据层解析 + saveRecommendPosts 追加一条格式对齐 _parseWeiboPost 产物的推荐帖（blogger/bloggerType/time/device/content/images/计数/评论赞列表，详情页与点赞逻辑依赖这些字段），并通知微博 App 刷新推荐流。",
+        "【工程防线】新增 tests/system-v220.test.mjs（19 项）：真实运行时断言（WorldpulseApp 实例 + 内存 storage 驱动——换会话丢弃/同会话落地/推送字段契约/数据层缺失静默）+ 接线断言（入口捕获先于生成、守卫先于写入、续链带比对、真实 API 替换）。测试总数 235 全绿。"
+      ]
+    },
     "2.19.0": {
       "date": "2026-09-17",
       "items": [
@@ -400,5 +408,5 @@
       ]
     }
   },
-  "latest": "2.19.0"
+  "latest": "2.20.0"
 }
