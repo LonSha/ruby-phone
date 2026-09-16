@@ -326,7 +326,15 @@
         "【修复】记忆清空数据联动：清空当前会话数据 (clearCurrentData) 同步清空 MemoryCore 内存状态，防止防抖持久化引发记忆僵尸复活。",
         "【修复】双向桥协调注入旧 Prompt 槽位悬挂：无可用记忆注入时显式清空 setExtensionPrompt 槽位，避免旧记忆指令长期占用上下文。"
       ]
+    },
+    "2.14.0": {
+      "date": "2026-09-16",
+      "items": [
+        "【新增·原创】织光机 Timeweaver AI 时光信（App 控制器层 composeAILetter）：本地规则 composeLetter 之上加 LLM 升华——把聚合出的编年数据（碎片数/情绪均值/第一次/亲密度榜首/高光片段/明暗时光）作为事实素材，交 apiManager.callAI 用「见证你这段时光的挚友」口吻写成 3-5 段有温度的信。引擎纯函数不动保持可测，本地规则版保留为离线/降级兜底；view 加「✨ 求 AI 升华这封信」按钮 + AI 信优先渲染 + 加载/错误态。",
+        "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
+        "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
+      ]
     }
   },
-  "latest": "2.13.0"
+  "latest": "2.14.0"
 }

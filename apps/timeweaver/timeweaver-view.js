@@ -52,19 +52,34 @@ export class TimeweaverView {
     _letter(m) {
         const L = m.letter;
         if (!L) return '<div class="tw-hint">碎片还太少，织不出一封完整的信。</div>';
+        const ai = this.app.aiLetter || null;
         const moodColor = L.stats.avgMood > 0.2 ? '#4ade80' : L.stats.avgMood < -0.2 ? '#f87171' : '#58a6ff';
+        // [v2.14.0] AI 升华层：有 AI 信优先渲染，本地规则版作离线/降级兜底
+        const letterBody = (ai && ai.paragraphs && ai.paragraphs.length)
+            ? `<div class="tw-letter-title">✨ 一封被 AI 织起的时光信</div>
+               ${ai.paragraphs.map(p => `<p class="tw-letter-p">${esc(p)}</p>`).join('')}
+               <div class="tw-letter-stats"><span class="tw-chip" style="color:#e8a33d">AI 升华 · 本地规则版可导出</span></div>`
+            : `<div class="tw-letter-title">${esc(L.title)}</div>
+               ${L.paragraphs.map(p => `<p class="tw-letter-p">${esc(p)}</p>`).join('')}
+               <div class="tw-letter-stats">
+                 <span class="tw-chip" style="color:${moodColor}">情绪 ${L.stats.avgMood>=0?'+':''}${L.stats.avgMood.toFixed(2)}</span>
+                 ${L.stats.topPerson?`<span class="tw-chip">❤️ ${esc(L.stats.topPerson)}</span>`:''}
+                 <span class="tw-chip">${L.stats.firsts} 个第一次</span>
+               </div>`;
+        const aiBtn = ai && ai.loading
+            ? '<button class="tw-export" disabled>✨ AI 升华中…</button>'
+            : '<button class="tw-export" id="tw-ai">✨ 求 AI 升华这封信</button>';
+        const aiErr = (ai && ai.error) ? `<div class="tw-hint" style="color:#f87171">${esc(ai.error)}</div>` : '';
         return `
         <div class="tw-curve">${this._curve(m)}</div>
         <div class="tw-letter">
-          <div class="tw-letter-title">${esc(L.title)}</div>
-          ${L.paragraphs.map(p => `<p class="tw-letter-p">${esc(p)}</p>`).join('')}
-          <div class="tw-letter-stats">
-            <span class="tw-chip" style="color:${moodColor}">情绪 ${L.stats.avgMood>=0?'+':''}${L.stats.avgMood.toFixed(2)}</span>
-            ${L.stats.topPerson?`<span class="tw-chip">❤️ ${esc(L.stats.topPerson)}</span>`:''}
-            <span class="tw-chip">${L.stats.firsts} 个第一次</span>
-          </div>
+          ${letterBody}
         </div>
-        <button class="tw-export" id="tw-export">⬇ 导出这封时光信</button>`;
+        ${aiErr}
+        <div class="tw-actions">
+          ${aiBtn}
+          <button class="tw-export" id="tw-export">⬇ 导出本地规则版</button>
+        </div>`;
     }
 
     _curve(m) {
@@ -124,6 +139,9 @@ export class TimeweaverView {
         });
         const ex = root.querySelector('#tw-export');
         if (ex) ex.addEventListener('click', () => this._export());
+        // [v2.14.0] AI 升华按钮：调 app.composeAILetter（无 API 时该方法已自处理降级）
+        const aiBtn = root.querySelector('#tw-ai');
+        if (aiBtn) aiBtn.addEventListener('click', () => { const p = this.app.composeAILetter?.(); if (p && typeof p.catch === 'function') p.catch(() => {}); });
     }
 
     _export() {

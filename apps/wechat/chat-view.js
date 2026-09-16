@@ -11516,6 +11516,27 @@ renderChatRoom(chat) {
         }
         let charName = targetChat?.name || context.name2 || '角色';
 
+        // [v2.14.0] LonSha 记忆注入：经 lonshaBridge.recall 取与当前角色相关的剧情记忆，
+        //   注入为角色记忆块，让手机角色「记得」lonsha 正文里发生过的事（跨项目记忆协同）。
+        try {
+            const _lb = (typeof window !== 'undefined' && window.VirtualPhone?.lonshaBridge) || null;
+            if (_lb && typeof _lb.recall === 'function') {
+                const _q = [charName, prompt].filter(Boolean).join(' ').slice(0, 120);
+                const _mems = _lb.recall(_q, 3) || [];
+                if (_mems.length) {
+                    const _lines = _mems.map((mm, i) => `${i + 1}. ${String(mm?.content || mm?.text || '').slice(0, 80)}`).filter(x => !x.endsWith('. '));
+                    if (_lines.length) {
+                        messages.push({
+                            role: 'system',
+                             content: `【角色记忆 · 来自剧情】${charName} 记得这段往事：\n${_lines.join('\n')}\n（这些是你和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`,
+                            name: 'SYSTEM (角色记忆)',
+                            isPhoneMessage: true
+                        });
+                    }
+                }
+            }
+        } catch (_e) { /* lonsha 记忆注入静默失败，不影响发送 */ }
+
         // 优先使用 characterId 获取真实角色名
         if (context.characterId !== undefined && context.characters && context.characters[context.characterId]) {
             charName = context.characters[context.characterId].name || context.name2 || '角色';
