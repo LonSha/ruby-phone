@@ -1,7 +1,22 @@
 /**
- * 锁屏
- * 交互参考 ovo066/kktest LockScreen：上滑解锁，显示时间/日期/电量
+ * 锁屏 [v2.16.0 升级]
+ * 交互参考 ovo066/kktest LockScreen：上滑解锁，显示时间/日期/电量。
+ *
+ * v2.16.0 新增（系统层补强的一部分）：
+ *  - 时段问候（凌晨/早上/中午/下午/傍晚/深夜）
+ *  - 通知速览：读取通知中心落账层（sys_notifs），锁屏即可见最近 5 条未读，
+ *    轻点整块跳转通知中心。此前通知一闪即逝，锁屏是唯一能「回看」的入口。
+ *  - 音乐卡：正在播放时展示曲目（与 MusicApp 真实联动）。
+ * 全部为可选能力：通知层/音乐层缺失时自动降级为原锁屏，不抛异常。
  */
+
+import { currentTrack as _currentTrack } from '../config/system-controls.js';
+
+function _esc(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\u0022/g, '&#34;').replace(/'/g, '&#39;');
+}
 
 export class LockScreen {
   constructor(phoneShell) {
@@ -53,7 +68,20 @@ export class LockScreen {
     return {
       time: d.getHours() + ':' + this._pad(d.getMinutes()),
       date: (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weeks[d.getDay()],
+      greeting: this._greeting(d.getHours())
     };
+  }
+
+  /** [v2.16.0] 时段问候 */
+  _greeting(hour) {
+    const h = Number(hour) || 0;
+    if (h < 5) return '夜深了';
+    if (h < 9) return '早上好';
+    if (h < 12) return '上午好';
+    if (h < 14) return '中午好';
+    if (h < 18) return '下午好';
+    if (h < 22) return '晚上好';
+    return '夜深了';
   }
 
   _wallpaper() {
@@ -71,6 +99,22 @@ export class LockScreen {
     return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 78;
   }
 
+  /** [v2.16.0] 最近未读通知（最多 5 条）；无通知层则返回空数组 */
+  _recentNotifications() {
+    try {
+      const log = window.VirtualPhone?.notificationLog;
+      if (!log || typeof log.list !== 'function') return [];
+      return (log.list() || []).filter(n => n && !n.read).slice(0, 5);
+    } catch (_e) { return []; }
+  }
+
+  /** [v2.16.0] 正在播放的曲目；无音乐则返回 null（复用 system-controls 单一真源） */
+  _nowPlaying() {
+    const t = _currentTrack();
+    if (!t || !t.playing) return null;
+    return { title: t.title || '未知曲目', artist: t.artist || '' };
+  }
+
   render() {
     const host = this.phoneShell?.container;
     if (!host) return;
@@ -78,14 +122,35 @@ export class LockScreen {
     const parts = this._nowParts();
     const wp = this._wallpaper();
     const bat = this._battery();
+    const notes = this._recentNotifications();
+    const track = this._nowPlaying();
     const root = document.createElement('div');
     root.className = 'phone-lockscreen';
-    if (wp) root.style.backgroundImage = "url('" + wp.replace(/'/g, '%27') + "')";
+    if (wp) root.style.backgroundImage = "url('" + String(wp).replace(/'/g, '%27') + "')";
+    const notesHtml = notes.length
+      ? `<div class="pls-notes" id="pls-notes">
+           <div class="pls-notes-head">通知 ${notes.length}</div>
+           ${notes.map(n => `
+             <div class="pls-note">
+               <span class="pls-note-icon">${_esc(n.icon || '🔔')}</span>
+               <span class="pls-note-body">
+                 <span class="pls-note-title">${_esc(n.title || '')}</span>
+                 <span class="pls-note-msg">${_esc(n.message || '')}</span>
+               </span>
+             </div>`).join('')}
+         </div>`
+      : '';
+    const trackHtml = track
+      ? `<div class="pls-track"><span class="pls-track-icon">🎵</span><span class="pls-track-title">${_esc(track.title)}</span>${track.artist ? `<span class="pls-track-artist">${_esc(track.artist)}</span>` : ''}</div>`
+      : '';
     root.innerHTML =
       '<div class="pls-shade"></div>' +
+      '<div class="pls-hello" id="pls-hello">' + _esc(parts.greeting) + '</div>' +
       '<div class="pls-date" id="pls-date">' + parts.date + '</div>' +
       '<div class="pls-time" id="pls-time">' + parts.time + '</div>' +
       '<div class="pls-battery">电量 ' + bat + '%</div>' +
+      trackHtml +
+      notesHtml +
       '<div class="pls-hint">上滑解锁</div>';
     host.appendChild(root);
     this._root = root;
@@ -95,8 +160,10 @@ export class LockScreen {
       const next = this._nowParts();
       const timeEl = root.querySelector('#pls-time');
       const dateEl = root.querySelector('#pls-date');
+      const helloEl = root.querySelector('#pls-hello');
       if (timeEl) timeEl.textContent = next.time;
       if (dateEl) dateEl.textContent = next.date;
+      if (helloEl) helloEl.textContent = next.greeting;
     }, 10000);
   }
 
@@ -120,6 +187,17 @@ export class LockScreen {
     root.addEventListener('mousedown', (e) => onStart(e.clientY));
     window.addEventListener('mousemove', (e) => { if (this._dragging) onMove(e.clientY); });
     window.addEventListener('mouseup', (e) => { if (this._dragging) onEnd(e.clientY); });
+    // [v2.16.0] 轻点通知速览 → 解锁并进通知中心（点击不产生位移，故不会误触解锁）
+    root.querySelector('#pls-notes')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const appId = 'notifications';
+      this.unlock();
+      setTimeout(() => {
+        try {
+          window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+        } catch (_e) { /* 忽略 */ }
+      }, 30);
+    });
   }
 }
 

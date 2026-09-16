@@ -54,6 +54,10 @@ export class PhoneStorage {
             /^life_events_/,      // 生活事件时间线
             /^worldpulse_/,       // [v2.9.0] 世界脉搏（设置/历史/队列状态，随会话隔离）
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
+            // [v2.16.0] 系统层开关与通知落账（sys_notifs 通知历史 / sys_dnd 免打扰 /
+            //   sys_shell_scale 显示缩放 / sys_flashlight 手电筒 / sys_wifi）：
+            //   全部随会话隔离，避免跨角色/跨会话串味（CONTEXT.md 零数据库铁律 #3）。
+            /^sys_/,
             // [v2.8.10 审计修复] 新增 App 的剧情状态此前未匹配任何 pattern，
             // 被误判为全局配置写入 extensionSettings，导致换角色/换会话时
             // 成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度互相串味。

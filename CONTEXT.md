@@ -51,3 +51,16 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - timeweaver-view.js：视图（织信 / 收藏册 📚 / 回望 🔁 三个 tab）。
 - 持久化：`tw_letters`（收藏册）、`tw_last_auto`（定期游标）—— 由 config/storage.js 的 `CHAT_DATA_PATTERNS` 的 `/^tw_/` 判定为聊天数据，随会话隔离。
 - 宿主兼容：App 控制器内取 `window.VirtualPhone` 一律经 `this._vp()`（`typeof window !== 'undefined' ? window : globalThis`），保证单测 / 非浏览器宿主下不抛 ReferenceError。
+
+## 系统层 (v2.16.0：通知 / 搜索 / 控制中心)
+- **通知落账层 `config/system-notifications.js`**：`NotificationLog`（KEY=`sys_notifs`，LIMIT=200，MERGE_WINDOW_MS=180000）。契约：`push()` 返回 `{id, merged}`；同 `senderKey` 3 分钟内合并累加 `count`，**合并不重置已读**；落盘 800ms 防抖 + `flushNow()` 兜底；`_normalize` 净化脏数据并倒序裁剪；**全部失败路径返回 `{error}`，绝不抛**。
+- **落账单一真源**：`index.js` 的 `showUnifiedPhoneNotification` 在展示前统一落账，`_resolveLog()` 优先复用 `window.VirtualPhone.notificationLog`，实例缺失时 App 自建。**新增通知入口必须走此函数，禁止绕过落账直接弹横幅**（否则历史会漏记）。
+- **落账在展示之前 + DND 门在落账之后**：顺序为 `落账 → isDndOn(storage) 早退 → 展示`。免打扰只拦横幅，**通知仍入账不丢**。
+- **检索内核 `apps/memory/global-search-engine.js`**：`scoreHit`（标题全等 +100 / 前缀 +80 / 包含 +60 / 仅正文 +30，再按位置与长度加权）/ `makeSnippet`（命中居中开窗）/ `GlobalSearchEngine`（`sourceIds` 过滤、`invalidate`、`lastErrors`）。每源独立 `try/catch`，坏源不拖垮整体。
+- **索引源必须与真实存储键/字段对齐**（写错即成死代码，测试已锁定）：微信消息**不在** `chats[].messages`，而在分片键 `wechat_msg_<chatId>`（大厅模式 `phone_wechat_msg_lobby_<chatId>`）；世界脉搏历史键 `worldpulse_history_v1`；阅读书架键 `ruby_reading_shelf`（字段 `title/author/addedAt/chapterCount`）；已解锁成就是 `{成就id: 时间戳}` **对象映射**（名称/说明需从 `data/achievements.json` 目录补全）；朋友圈字段 `name/text/commentList[{name,text}]/timestamp`；日历备忘无 `content`（只有 `title/dateKey/time`）；音乐歌单字段为 `name`。
+- **系统开关单一真源 `config/system-controls.js`**：`SYS_KEYS` = `sys_dnd` / `sys_shell_scale` / `sys_flashlight` / `sys_wifi`；缩放 SCALE_MIN 80 / MAX 120 / DEFAULT 100，**新键 `sys_shell_scale` 优先、旧键 `phone-shell-scale` 回落**（与设置页同一套 `--phone-shell-*` 通路，双向一致）。`musicControl` / `currentTrack` 直接操作 `MusicApp.musicData`（MusicData 实例）——**方法名 `next()/prev()/resume()/pause()`、曲目字段 `name`**，锁屏 `_nowPlaying()` 复用 `currentTrack()`，不重复实现。
+- **顶部下拉双热区分流**：`bindNotificationCenterPullDown` 按状态栏中线 `getBoundingClientRect()` 判定 —— 左半 → 控制中心（`controlCenter.toggle()`），右半与药丸 → 通知中心；统一 **46px 位移阈值**，故药丸的 click 锁屏（`_bindLockGesture`）不受影响。
+- **`/^sys_/` 归入聊天数据域**：`sys_notifs` / `sys_dnd` / `sys_shell_scale` / `sys_flashlight` / `sys_wifi` 随会话隔离，换角色不带上一角色的系统状态。
+- **锁屏速览层 `phone/lock-screen.js`**：`_greeting` / `_recentNotifications` / `_nowPlaying` 全部**可选缺失降级**，通知层或音乐层不存在时静默回落到原锁屏。
+- **文件名合规**：`apps/<dir>/` 控制器必须命名为 `<dir>-app.js`（bilibili 特例 `bili-app.js`），由 `tests/audit.test.mjs` 强制；`notifications` App 的控制器为 `notifications-app.js`，视图为 `notification-center-view.js`。
+- **防死代码防线**：`tests/system-v216.test.mjs` 用**真实形态 seed 数据**断言索引源可命中，另有一组「接线门」断言（模块必须被实例化并挂到 `window.VirtualPhone`、样式类名必须存在、`esc()` 不得退化为 no-op）。

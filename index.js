@@ -25,13 +25,18 @@ import { createInitialState as createDrivesState, advance as advanceDrives, form
 import { createJiwen } from './config/jiwen-engine.js';
 import { createUpdateChecker, compareSemver as _compareSemverMod } from './phone/update-checker.js';
 import { createFontScaleManager } from './phone/font-scale.js';
+// [v2.16.0] 系统通知落账层（通知中心单一真源；showUnifiedPhoneNotification 在展示时同步写入）
+import { NotificationLog } from './config/system-notifications.js';
+// [v2.16.0] 系统控制内核（免打扰门 / 缩放 / 开关状态；纯函数模块，无反向依赖）
+import { isDndOn as isDndOnState } from './config/system-controls.js';
+import { ControlCenter } from './phone/control-center.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.15.0';
+const ST_PHONE_VERSION = '2.16.0';
 const ST_PHONE_CSS_REVISION = '20260909-comfyui-workflow-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -140,6 +145,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     let homeScreen = null;
     let currentApp = null;
     let totalNotifications = 0;
+    // [v2.16.0] 系统通知落账层（通知中心单一真源），createInPanel 后实例化
+    let notificationLog = null;
+    // [v2.16.0] 控制中心（顶部下拉 · 状态栏左半呼出）
+    let controlCenter = null;
     let currentApps = null;
     let storage = null;
     let settings = null;
@@ -1807,12 +1816,94 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }, FALLBACK_NOTIFICATION_VISIBLE_MS);
     }
 
+    /**
+     * [v2.16.0] 顶部下拉呼出通知中心。
+     *   在状态栏 / 药丸（灵动岛）区域向下滑动触发；轻点药丸依旧走锁屏（点击不产生位移）。
+     *   仅绑定一次（dataset 守卫），避免重复初始化叠加监听。
+     */
+    function bindNotificationCenterPullDown() {
+        const host = phoneShell?.container;
+        if (!host || host.dataset?.ncPullBound === '1') return;
+        if (host.dataset) host.dataset.ncPullBound = '1';
+        // 顶部下拉分两个热区（对齐 iOS 手感）：
+        //   状态栏左半 → 控制中心；状态栏右半 / 药丸（灵动岛）→ 通知中心。
+        // 全部以「位移阈值」触发：点按无位移，故不影响轻点药丸锁屏。
+        const zones = [];
+        const bar = host.querySelector('.phone-statusbar');
+        const punch = host.querySelector('.phone-punch-hole');
+        if (bar) zones.push({ el: bar, split: true });
+        if (punch) zones.push({ el: punch, split: false });
+        for (const { el, split } of zones) {
+            let startY = 0, tracking = false;
+            const decide = (x) => {
+                if (!split) return openNotificationCenter;
+                let mid = 0;
+                try {
+                    const rect = el.getBoundingClientRect();
+                    mid = rect.left + rect.width / 2;
+                } catch (_e) { mid = 0; }
+                return (x && mid && x < mid) ? openControlCenter : openNotificationCenter;
+            };
+            el.addEventListener('touchstart', (e) => {
+                tracking = true;
+                startY = Number(e.touches?.[0]?.clientY) || 0;
+            }, { passive: true });
+            el.addEventListener('touchmove', (e) => {
+                if (!tracking) return;
+                const y = Number(e.touches?.[0]?.clientY) || 0;
+                if (y - startY > 46) {
+                    tracking = false;
+                    decide(Number(e.touches?.[0]?.clientX) || 0)();
+                }
+            }, { passive: true });
+            el.addEventListener('touchend', () => { tracking = false; }, { passive: true });
+            // 桌面端/无触摸环境：鼠标按住下拉同样可用
+            el.addEventListener('mousedown', (e) => {
+                tracking = true;
+                startY = Number(e.clientY) || 0;
+            });
+            el.addEventListener('mouseup', (e) => {
+                if (tracking && (Number(e.clientY) || 0) - startY > 46) decide(Number(e.clientX) || 0)();
+                tracking = false;
+            });
+        }
+    }
+
+    /** [v2.16.0] 切到通知中心（走统一 openApp 通路） */
+    function openNotificationCenter() {
+        try {
+            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'notifications' } }));
+        } catch (_e) { /* 忽略 */ }
+    }
+
+    /** [v2.16.0] 切到控制中心（状态栏左半下拉；未实例化则静默忽略） */
+    function openControlCenter() {
+        try {
+            if (controlCenter && typeof controlCenter.toggle === 'function') controlCenter.toggle();
+        } catch (_e) { /* 控制中心不可用时忽略 */ }
+    }
+
     function showUnifiedPhoneNotification(title, message, icon = '📱', options = {}) {
         const safeTitle = String(title || '系统提示');
         const safeMessage = String(message || '');
         const meta = (options && typeof options === 'object') ? options : {};
         const senderKey = String(meta.senderKey || `${safeTitle}:${safeMessage}:${icon}`);
-
+        // [v2.16.0] 通知中心落账：在展示的同时写入历史（单一真源，showNotification 与统一入口共用）
+        //   失败静默——落账绝不允许阻断通知展示。
+        try {
+            notificationLog?.push?.({
+                title: safeTitle,
+                message: safeMessage,
+                icon,
+                senderKey,
+                meta,
+                appId: String(meta.appId || '')
+            });
+        } catch (_e) { /* 落账失败不阻断通知 */ }
+        // [v2.16.0] 免打扰门：开启时通知只入账、不弹横幅（消息不会丢，只是不打断）
+        try {
+            if (isDndOnState(storage)) return;
+        } catch (_e) { /* 状态不可读时按未开启处理，保证通知仍可送达 */ }
         // 核心修复：检查手机面板是否真实可见
         const phonePanel = document.getElementById('phone-panel');
         const isPhoneOpen = phonePanel && phonePanel.classList.contains('phone-panel-open');
@@ -5050,6 +5141,22 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         phoneShell = new PhoneShell();
         phoneShell.createInPanel(container);
+        // [v2.16.0] 安装系统通知落账层（`sys_notifs` 命中 /^sys_/ → chatMetadata，随会话隔离）
+        try {
+            notificationLog = new NotificationLog(storage, { limit: 200 });
+            window.VirtualPhone.notificationLog = notificationLog;
+        } catch (e) {
+            console.warn('⚠️ [v2.16.0] 通知日志初始化失败:', e);
+        }
+        // [v2.16.0] 控制中心实例化（顶部下拉 · 状态栏左半呼出）
+        try {
+            controlCenter = new ControlCenter(phoneShell, storage);
+            window.VirtualPhone.controlCenter = controlCenter;
+        } catch (e) {
+            console.warn('⚠️ [v2.16.0] 控制中心初始化失败:', e);
+        }
+        // [v2.16.0] 顶部下拉呼出系统面板（左半 → 控制中心 / 右半与药丸 → 通知中心；轻点药丸锁屏不受影响）
+        try { bindNotificationCenterPullDown(); } catch (_e) { /* 手势绑定失败不影响手机可用 */ }
 
         // 🔥 关键修改：在这里立即赋值
         homeScreen = new HomeScreen(phoneShell, currentApps);
@@ -8813,6 +8920,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 mofoApp: null,
                 cachedMofoData: null,
                 notify: showUnifiedPhoneNotification,
+                notificationLog,                       // [v2.16.0] 系统通知落账层
+                controlCenter,                         // [v2.16.0] 控制中心面板
                 checkCalendarScheduleReminders: checkCalendarScheduleReminders,
                 playWechatMessageSound: playWechatMessageSound,
                 markWechatOnlineToOfflineTransferPending: markWechatOnlineToOfflineTransferPending,
@@ -9053,7 +9162,31 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
 
                 // 打开对应的APP
-                if (appId === 'settings') {
+                if (appId === 'notifications') {
+                    import('./apps/notifications/notifications-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.notificationsApp) {
+                                window.VirtualPhone.notificationsApp = new module.NotificationCenterApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.notificationsApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载通知中心App失败:', err);
+                            phoneShell?.showNotification('错误', '通知中心加载失败', '❌');
+                        });
+                } else if (appId === 'search') {
+                    import('./apps/search/search-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.searchApp) {
+                                window.VirtualPhone.searchApp = new module.SearchApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.searchApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载全局搜索App失败:', err);
+                            phoneShell?.showNotification('错误', '全局搜索加载失败', '❌');
+                        });
+                } else if (appId === 'settings') {
                     // 🔥 按需加载设置模块
                     loadSettingsModule().then(SettingsAppClass => {
                         // 🔥 单例模式：只在第一次打开时创建实例

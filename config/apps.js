@@ -290,8 +290,23 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        id: 'search',
+        name: '全局搜索',
+        icon: '🔎',
+        color: '#4c8bf5',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'notifications',
+        name: '通知中心',
+        icon: '🔔',
+        color: '#6c5ce7',
+        badge: 0,
+        data: {}
+    },
 ];
-
 // 手机配置
 export const PHONE_CONFIG = {
     brand: 'iPhone',

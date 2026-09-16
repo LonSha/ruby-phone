@@ -11726,3 +11726,202 @@ input:checked + .toggle-slider:before {
 .phone-lockscreen .pls-battery { margin-top: 10px; font-size: 12px; opacity: .82; }
 .phone-lockscreen .pls-hint { margin-top: auto; font-size: 12px; opacity: .75; }
 .phone-punch-hole { pointer-events: auto; }
+
+/* ==========================================================================
+ *  [v2.16.0] 系统层样式：锁屏速览 / 控制中心 / 手电筒
+ *  说明：通知中心与全局搜索的样式由各自 App 的 css() 内联注入（随视图切换销毁，
+ *        不污染全局）；此处只放「常驻于手机壳外层」的系统层 UI（锁屏 / 控制中心）。
+ * ========================================================================== */
+
+/* ---------- 锁屏：时段问候 / 音乐卡 / 通知速览 ---------- */
+.phone-lockscreen .pls-hello {
+  position: relative; z-index: 1;
+  font-size: 15px; letter-spacing: 1.5px; opacity: .88;
+  margin-bottom: 2px;
+}
+.phone-lockscreen .pls-track {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 7px;
+  max-width: 100%; margin-top: 16px;
+  padding: 7px 14px; border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  font-size: 12px;
+}
+.phone-lockscreen .pls-track-icon { font-size: 13px; }
+.phone-lockscreen .pls-track-title {
+  max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 600;
+}
+.phone-lockscreen .pls-track-artist {
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  opacity: .7;
+}
+.phone-lockscreen .pls-notes {
+  position: relative; z-index: 1;
+  width: 100%; max-height: 218px; overflow-y: auto;
+  margin-top: 16px; padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(16,18,24,.46);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.10);
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-overflow-scrolling: touch;
+}
+.phone-lockscreen .pls-notes::-webkit-scrollbar { width: 0; }
+.phone-lockscreen .pls-notes-head {
+  font-size: 11px; letter-spacing: .5px; opacity: .62;
+  margin-bottom: 8px; padding-left: 2px;
+}
+.phone-lockscreen .pls-note {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 7px 2px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.phone-lockscreen .pls-note:first-of-type { border-top: none; }
+.phone-lockscreen .pls-note-icon { flex: 0 0 auto; font-size: 14px; line-height: 1.4; }
+.phone-lockscreen .pls-note-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.phone-lockscreen .pls-note-title {
+  font-size: 12.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.phone-lockscreen .pls-note-msg {
+  font-size: 11.5px; opacity: .78; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-word;
+}
+
+/* ---------- 控制中心（顶部下拉 · 状态栏左半呼出） ---------- */
+.sys-cc-overlay {
+  position: absolute; inset: 0; z-index: 120;
+  display: flex; flex-direction: column;
+}
+.sys-cc-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.35);
+  animation: sys-cc-fade .18s ease-out;
+}
+@keyframes sys-cc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sys-cc-drop { from { transform: translateY(-102%); } to { transform: translateY(0); } }
+.sys-cc-panel {
+  position: relative; z-index: 1;
+  padding: 10px 16px 18px;
+  border-radius: 0 0 26px 26px;
+  background: rgba(22,24,31,.92);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  color: #e8eaed; box-sizing: border-box;
+  animation: sys-cc-drop .22s cubic-bezier(.22,.8,.3,1);
+  max-height: 100%; overflow-y: auto;
+}
+.sys-cc-panel::-webkit-scrollbar { width: 0; }
+.sys-cc-grip {
+  width: 38px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.22);
+  margin: 0 auto 10px;
+}
+.sys-cc-title {
+  font-size: 13px; font-weight: 700; letter-spacing: .5px;
+  opacity: .8; margin-bottom: 12px; text-align: center;
+}
+.sys-cc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sys-cc-tile {
+  --cc-tone: #4c8bf5;
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  padding: 14px 6px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  color: #c9ccd1; cursor: pointer;
+  font-size: 11.5px;
+  transition: background .16s ease, color .16s ease, transform .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.sys-cc-tile i { font-size: 19px; }
+.sys-cc-tile:active { transform: scale(.96); }
+.sys-cc-tile.sys-cc-on {
+  background: color-mix(in srgb, var(--cc-tone) 78%, #000 6%);
+  border-color: color-mix(in srgb, var(--cc-tone) 60%, #fff 12%);
+  color: #fff;
+  box-shadow: 0 6px 18px -8px var(--cc-tone);
+}
+.sys-cc-state { font-size: 10px; opacity: .75; font-style: normal; }
+.sys-cc-tile.sys-cc-on .sys-cc-state { opacity: .92; }
+
+.sys-cc-music {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 12px; padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.sys-cc-music-info { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sys-cc-music-icon { font-size: 15px; }
+.sys-cc-music-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sys-cc-music-title {
+  font-size: 12.5px; font-weight: 600; color: #f1f3f4;
+  max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sys-cc-music-artist {
+  font-size: 10.5px; opacity: .62;
+  max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sys-cc-music-ctrl { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.sys-cc-music-ctrl button {
+  width: 32px; height: 32px; border: none; border-radius: 50%;
+  background: rgba(255,255,255,.08); color: #dfe2e7; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.sys-cc-music-ctrl button:hover { background: rgba(255,255,255,.16); }
+.sys-cc-music-ctrl button.sys-cc-play { background: #4c8bf5; color: #fff; }
+
+.sys-cc-scale {
+  margin-top: 12px; padding: 11px 13px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.sys-cc-scale-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11.5px; opacity: .82; margin-bottom: 8px;
+}
+.sys-cc-scale input[type="range"] {
+  width: 100%; height: 16px; -webkit-appearance: none; appearance: none;
+  background: transparent; margin: 0;
+}
+.sys-cc-scale input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,.18);
+}
+.sys-cc-scale input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; margin-top: -6px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 5px rgba(0,0,0,.4);
+}
+.sys-cc-action {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 12px; padding: 11px;
+  border: none; border-radius: 16px;
+  background: rgba(255,255,255,.08); color: #dfe2e7;
+  font-size: 12.5px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sys-cc-action:hover { background: rgba(255,255,255,.15); }
+.sys-cc-hint {
+  margin-top: 12px; text-align: center;
+  font-size: 10.5px; opacity: .48;
+}
+
+/* ---------- 手电筒（手机壳暖光晕） ---------- */
+.phone-in-panel.sys-flashlight-on {
+  filter: drop-shadow(0 0 42px rgba(255, 214, 138, .55));
+}
+.phone-in-panel.sys-flashlight-on .phone-body-panel::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(120% 80% at 50% -18%, rgba(255,226,163,.28), transparent 62%);
+  z-index: 5;
+}

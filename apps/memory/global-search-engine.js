@@ -1,0 +1,520 @@
+/* ========================================================
+ * global-search-engine.js — 小手机全局搜索内核 [v2.16.0]
+ * --------------------------------------------------------
+ * 现状：29 个 App 各自为政，想找「上次那句台词 / 那个联系人 / 那篇日记 /
+ *   设过的那个闹钟」只能逐 App 翻。本模块是**跨 App 统一检索内核**。
+ *
+ * 设计原则：
+ *  1) 纯函数内核：所有数据源经 `sources` 注册表注入，不直接读 window/storage，
+ *     内核可单测、可移植（对齐 timeweaver-engine / memory-engine 的约定）。
+ *  2) 惰性索引：首次 query 时才拉取各源（每个源独立 try/catch，坏源不影响整体）。
+ *  3) 评分排序：标题命中 > 正文命中；前缀命中 > 中部命中；越新越靠前。
+ *  4) 截断安全：全部字符串化 + 长度上限，避免大对象把面板拖死。
+ * ======================================================== */
+'use strict';
+
+const MAX_SNIPPET = 120;
+const MAX_SCAN_PER_SOURCE = 600;
+
+/** 归一化：去首尾空白 + 折叠连续空白 + 小写（用于不区分大小写的匹配） */
+function norm(s) {
+    return String(s ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function lower(s) {
+    return norm(s).toLowerCase();
+}
+
+/**
+ * 命中评分。
+ * @returns {number} <0 表示未命中
+ */
+export function scoreHit(title, body, query) {
+    const q = lower(query);
+    if (!q) return -1;
+    const t = lower(title);
+    const b = lower(body);
+    let score = 0;
+    if (t === q) score += 100;
+    else if (t.startsWith(q)) score += 80;
+    else if (t.includes(q)) score += 60;
+    else if (b.includes(q)) score += 30;
+    else return -1;
+    // 命中越靠前加权
+    const pos = b.indexOf(q);
+    if (pos >= 0) score += Math.max(0, 12 - Math.floor(pos / 12));
+    const tpos = t.indexOf(q);
+    if (tpos >= 0) score += Math.max(0, 18 - tpos);
+    // 越短越精确（避免长文一段话把短标题压下去）
+    score += Math.max(0, 10 - Math.floor(b.length / 200));
+    return score;
+}
+
+/** 生成带高亮标记的摘要（返回 {text, hit} 便于调用方安全渲染） */
+export function makeSnippet(body, query, width = MAX_SNIPPET) {
+    const text = norm(body);
+    const q = lower(query);
+    if (!text) return { text: '', hit: false };
+    if (!q) return { text: text.slice(0, width), hit: false };
+    const idx = lower(text).indexOf(q);
+    if (idx < 0) return { text: text.slice(0, width), hit: false };
+    const start = Math.max(0, idx - Math.floor((width - q.length) / 2));
+    const end = Math.min(text.length, start + width);
+    const prefix = start > 0 ? '…' : '';
+    const suffix = end < text.length ? '…' : '';
+    return { text: prefix + text.slice(start, end) + suffix, hit: true, index: idx };
+}
+
+export class GlobalSearchEngine {
+    /**
+     * @param {{sources?:Array<object>}} [opts] sources: {id,label,icon,weight?,items:()=>Array}
+     */
+    constructor(opts = {}) {
+        this._sources = [];
+        this._index = null;
+        this._errors = [];
+        if (Array.isArray(opts.sources)) {
+            for (const s of opts.sources) this.registerSource(s);
+        }
+    }
+
+    /**
+     * 注册数据源。
+     * @param {{id:string,label:string,icon?:string,weight?:number,
+     *          items:()=>Array<{title?:string,body?:string,ts?:number,appId?:string,meta?:object}>}} src
+     */
+    registerSource(src) {
+        if (!src || typeof src.items !== 'function') return false;
+        this._sources.push({
+            id: String(src.id || ''),
+            label: String(src.label || src.id || ''),
+            icon: String(src.icon || '🔎'),
+            weight: Number(src.weight) || 1,
+            appId: String(src.appId || src.id || ''),
+            items: src.items
+        });
+        this._index = null;
+        return true;
+    }
+
+    listSources() {
+        return this._sources.map(s => ({ id: s.id, label: s.label, icon: s.icon, weight: s.weight }));
+    }
+
+    /** 上次索引期间各源的错误（用于自检面板） */
+    lastErrors() {
+        return this._errors.slice();
+    }
+
+    /** 丢掉缓存，下次 query 重新拉取 */
+    invalidate() {
+        this._index = null;
+    }
+
+    /**
+     * 惰性构建索引（每源独立容错）。
+     * @returns {Array<object>} 归一化后的条目
+     */
+    build() {
+        if (this._index) return this._index;
+        const out = [];
+        const errors = [];
+        for (const src of this._sources) {
+            try {
+                const raw = src.items() || [];
+                if (!Array.isArray(raw)) continue;
+                let n = 0;
+                for (const it of raw) {
+                    if (n >= MAX_SCAN_PER_SOURCE) break;
+                    if (!it || typeof it !== 'object') continue;
+                    const title = norm(it.title);
+                    const body = norm(it.body);
+                    if (!title && !body) continue;
+                    out.push({
+                        sourceId: src.id,
+                        sourceLabel: src.label,
+                        icon: String(it.icon || src.icon),
+                        appId: String(it.appId || src.appId),
+                        title: title.slice(0, 120),
+                        body: body.slice(0, 600),
+                        ts: Number(it.ts) || 0,
+                        meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
+                    });
+                    n++;
+                }
+            } catch (e) {
+                errors.push({ sourceId: src.id, error: String(e?.message || e) });
+            }
+        }
+        this._errors = errors;
+        this._index = out;
+        return out;
+    }
+
+    /**
+     * 检索。
+     * @param {string} query
+     * @param {{limit?:number, sourceIds?:string[]}} [opts]
+     * @returns {{query:string, results:Array, groups:Array, total:number, scanned:number, errors:Array}}
+     */
+    query(query, opts = {}) {
+        const q = norm(query);
+        const limit = Math.max(1, Number(opts.limit) || 60);
+        const allow = Array.isArray(opts.sourceIds) && opts.sourceIds.length
+            ? new Set(opts.sourceIds.map(String))
+            : null;
+        const all = this.build();
+        if (!q) {
+            return { query: '', results: [], groups: [], total: 0, scanned: all.length, errors: this._errors.slice() };
+        }
+        const weightOf = {};
+        for (const s of this._sources) weightOf[s.id] = s.weight;
+        const hits = [];
+        for (const it of all) {
+            if (allow && !allow.has(it.sourceId)) continue;
+            const score = scoreHit(it.title, it.body, q);
+            if (score < 0) continue;
+            const snip = makeSnippet(it.body, q);
+            hits.push({
+                ...it,
+                score: score * (weightOf[it.sourceId] || 1),
+                snippet: snip.text,
+                snippetHit: !!snip.hit
+            });
+        }
+        hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));
+        const results = hits.slice(0, limit);
+        // 按源分组（保留组内排序），便于面板分区展示
+        const groupMap = new Map();
+        for (const r of results) {
+            if (!groupMap.has(r.sourceId)) {
+                groupMap.set(r.sourceId, { sourceId: r.sourceId, label: r.sourceLabel, icon: r.icon, items: [] });
+            }
+            groupMap.get(r.sourceId).items.push(r);
+        }
+        const groups = Array.from(groupMap.values()).sort((a, b) => b.items[0].score - a.items[0].score);
+        return {
+            query: q,
+            results,
+            groups,
+            total: hits.length,
+            scanned: all.length,
+            errors: this._errors.slice()
+        };
+    }
+}
+
+/**
+ * 从 RubyPhone 各 App 已落盘数据构建默认源注册表。
+ *   每个源的 items() 都是惰性 + 独立 try/catch，任一 App 数据损坏不影响其他。
+ * @param {object} storage PhoneStorage（可为 null → 返回空源，便于单测）
+ * @param {{chatContext?:object}} [deps]
+ */
+export function buildDefaultSources(storage, deps = {}) {
+    const get = (key, dflt = null) => {
+        try { return storage?.get?.(key, dflt) ?? dflt; } catch (_e) { return dflt; }
+    };
+    const asArray = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch (_e) { return []; } }
+        return [];
+    };
+    const asObj = (v) => {
+        if (v && typeof v === 'object' && !Array.isArray(v)) return v;
+        if (typeof v === 'string') { try { const p = JSON.parse(v); return (p && typeof p === 'object') ? p : {}; } catch (_e) { return {}; } }
+        return {};
+    };
+    /** 时间解析：优先毫秒时间戳，其次 'HH:MM'（按今日折算），最后字符串日期 */
+    const tsOf = (...vals) => {
+        for (const v of vals) {
+            const n = Number(v);
+            if (Number.isFinite(n) && n > 1000000000) return n;
+        }
+        for (const v of vals) {
+            const str = String(v || '').trim();
+            if (!str) continue;
+            const m = str.match(/^(\d{1,2}):(\d{2})$/);
+            if (m) {
+                const d = new Date();
+                d.setHours(Number(m[1]) || 0, Number(m[2]) || 0, 0, 0);
+                return d.getTime();
+            }
+            const p = Date.parse(str);
+            if (Number.isFinite(p)) return p;
+        }
+        return 0;
+    };
+
+    const sources = [];
+
+    // ---- 微信：联系人 / 会话（含消息尾巴）----
+    sources.push({
+        id: 'wechat-chat', label: '微信会话', icon: '💬', appId: 'wechat', weight: 1.5,
+        items: () => {
+            const d = asObj(get('wechat_data', {}));
+            const out = [];
+            // 联系人：正文只有备注/关系/来源这类短字段（签名等长字段实际不存在，不留死代码）
+            for (const c of asArray(d.contacts)) {
+                if (!c) continue;
+                out.push({
+                    title: String(c.name || c.nickname || c.remark || '未命名联系人'),
+                    body: norm([c.remark, c.relation, c.sourceLabel].filter(Boolean).join(' · ')),
+                    ts: tsOf(c.updatedAt, c.lastTime),
+                    icon: '👤', appId: 'wechat'
+                });
+            }
+            // 会话：消息正文不在 chats[] 里，而在独立分片键 wechat_msg_<chatId>（大厅模式为
+            //   phone_wechat_msg_lobby_<chatId>），此处读分片取最近数条做尾巴（读不到则仅索引会话名）。
+            for (const ch of asArray(d.chats || d.conversations)) {
+                if (!ch) continue;
+                const chatId = String(ch.id || '').trim();
+                let msgs = asArray(ch.messages);
+                if (!msgs.length && chatId) {
+                    msgs = asArray(get(`wechat_msg_${chatId}`));
+                    if (!msgs.length) msgs = asArray(get(`phone_wechat_msg_lobby_${chatId}`));
+                }
+                const tail = msgs.slice(-8)
+                    .map(m => norm(m?.content || m?.text || m?.specialMessage?.content || ''))
+                    .filter(Boolean).join(' ');
+                out.push({
+                    title: String(ch.name || ch.title || '未命名会话'),
+                    body: tail,
+                    ts: tsOf(ch.timestamp, ch.updatedAt, ch.lastTime),
+                    icon: ch.type === 'group' ? '👥' : '💬', appId: 'wechat'
+                });
+            }
+            return out;
+        }
+    });
+
+    // ---- 朋友圈（字段实证：name / text / commentList[{name,text}] / timestamp）----
+    sources.push({
+        id: 'wechat-moments', label: '朋友圈', icon: '🖼️', appId: 'wechat', weight: 1.2,
+        items: () => {
+            const d = asObj(get('wechat_data', {}));
+            return asArray(d.moments).map(m => ({
+                title: String(m?.name || '') + (m?.isUserPost ? '（我）' : ''),
+                body: norm([
+                    m?.text,
+                    ...asArray(m?.commentList).map(c => [c?.name, c?.text].filter(Boolean).join('：'))
+                ].filter(Boolean).join(' ')),
+                ts: tsOf(m?.timestamp),
+                icon: '🖼️', appId: 'wechat'
+            }));
+        }
+    });
+
+    // ---- 日记（字段实证：title / date / content / author / createdAt）----
+    sources.push({
+        id: 'diary', label: '日记', icon: '📔', appId: 'diary', weight: 1.4,
+        items: () => asArray(get('diary_entries')).map(e => ({
+            title: String(e?.title || e?.date || '一篇日记'),
+            body: norm([e?.author, e?.content || e?.body].filter(Boolean).join(' · ')),
+            ts: tsOf(e?.createdAt, e?.ts),
+            icon: '📔', appId: 'diary'
+        }))
+    });
+
+    // ---- 短信（会话里 messages[].text；会话无 lastTime，用 messages 尾部时间兜底）----
+    sources.push({
+        id: 'phone-sms', label: '短信', icon: '📩', appId: 'phone', weight: 1.3,
+        items: () => asArray(get('phone_call_sms_conversations')).map(c => {
+            if (!c) return null;
+            const msgs = asArray(c.messages);
+            return {
+                title: String(c.name || c.contact || c.number || '短信会话'),
+                body: msgs.map(m => norm(m?.text || m?.content || '')).filter(Boolean).join(' '),
+                ts: tsOf(c.updatedAt, c.createdAt, msgs[msgs.length - 1]?.createdAt),
+                icon: '📩', appId: 'phone'
+            };
+        }).filter(Boolean)
+    });
+
+    // ---- 通话记录（字段实证：caller / time / date / status / transcript）----
+    sources.push({
+        id: 'phone-call', label: '通话记录', icon: '📞', appId: 'phone', weight: 1.1,
+        items: () => asArray(get('phone_call_history')).map(h => ({
+            title: String(h?.caller || h?.name || h?.number || '通话'),
+            body: norm([
+                h?.status,
+                Array.isArray(h?.transcript) ? h.transcript.map(t => t?.content || t?.text || '').join(' ') : ''
+            ].filter(Boolean).join(' · ')),
+            ts: tsOf(h?.ts, h?.timestamp, h?.date),
+            icon: '📞', appId: 'phone'
+        }))
+    });
+
+    // ---- 织光机收藏册（字段实证：title / paragraphs[] / ts / savedAt）----
+    sources.push({
+        id: 'timeweaver', label: '织光机', icon: '🕰️', appId: 'timeweaver', weight: 1.3,
+        items: () => asArray(get('tw_letters')).map(l => ({
+            title: String(l?.title || '一段被织起的时光'),
+            body: norm(asArray(l?.paragraphs).join(' ')),
+            ts: tsOf(l?.ts, l?.savedAt),
+            icon: '🕰️', appId: 'timeweaver'
+        }))
+    });
+
+    // ---- 日历备忘（字段实证：title / dateKey / time / createdAt；无 content 字段）----
+    sources.push({
+        id: 'calendar', label: '日历备忘', icon: '📅', appId: 'calendar', weight: 1.2,
+        items: () => asArray(get('calendar_memos')).map(m => ({
+            title: String(m?.title || '备忘'),
+            body: norm([m?.dateKey, m?.time, m?.source].filter(Boolean).join(' · ')),
+            ts: tsOf(m?.createdAt),
+            icon: '📅', appId: 'calendar'
+        }))
+    });
+
+    // ---- 音乐歌单（字段实证：name / artist；无 addedAt）----
+    sources.push({
+        id: 'music', label: '音乐', icon: '🎵', appId: 'music', weight: 1.0,
+        items: () => asArray(get('music_playlist')).map(s => ({
+            title: String(s?.name || s?.title || '歌曲'),
+            body: norm([s?.artist, s?.album].filter(Boolean).join(' · ')),
+            ts: tsOf(s?.addedAt),
+            icon: '🎵', appId: 'music'
+        }))
+    });
+
+    // ---- 世界脉搏历史：key 为 worldpulse_history_v1，元素 {style,content,floorCount,createdAt} ----
+    sources.push({
+        id: 'worldpulse', label: '世界脉搏', icon: '🌍', appId: 'worldpulse', weight: 1.2,
+        items: () => asArray(get('worldpulse_history_v1')).map(e => ({
+            title: String(e?.style || '世界事件') + (e?.floorCount ? ` · 第 ${e.floorCount} 楼` : ''),
+            body: norm(e?.content || e?.text || e?.summary || ''),
+            ts: tsOf(e?.createdAt, e?.ts),
+            icon: '🌍', appId: 'worldpulse'
+        }))
+    });
+
+    // ---- 微博（热搜 title / 推荐帖 blogger + content）----
+    sources.push({
+        id: 'weibo', label: '微博', icon: '👁️‍🗨️', appId: 'weibo', weight: 1.1,
+        items: () => {
+            const hs = asArray(get('weibo_hot_searches')).map(h => ({
+                title: String(h?.title || h?.word || h || '热搜'),
+                body: String(h?.tag || ''),
+                ts: 0, icon: '🔥', appId: 'weibo'
+            }));
+            const posts = asArray(get('weibo_recommend_posts')).map(p => ({
+                title: String(p?.blogger || p?.author || p?.user || '微博'),
+                body: norm(p?.content || p?.text || ''),
+                ts: tsOf(p?.ts),
+                icon: '👁️‍🗨️', appId: 'weibo'
+            }));
+            return [...posts, ...hs];
+        }
+    });
+
+    // ---- 记忆系统（longTerm 元素：content / role / floor / metadata）----
+    sources.push({
+        id: 'memory', label: '记忆', icon: '🧠', appId: 'memory', weight: 1.2,
+        items: () => {
+            const core = asObj(get('memory_core_v1')) || asObj(get('memory_core'));
+            return asArray(core.longTerm || core.memories).map(m => ({
+                title: String(m?.title || m?.place || (m?.role === 'user' ? '关于我' : '关于她') || '记忆条目'),
+                body: norm(m?.content || m?.text || ''),
+                ts: tsOf(m?.ts, m?.createdAt, Date.parse(String(m?.metadata?.lastActive || '')) || 0),
+                icon: '🧠', appId: 'memory'
+            }));
+        }
+    });
+
+    // ---- 阅读书架（key 为 ruby_reading_shelf；字段 title / author / addedAt / chapterCount）----
+    sources.push({
+        id: 'reading', label: '阅读', icon: '📖', appId: 'reading', weight: 1.0,
+        items: () => asArray(get('ruby_reading_shelf') ?? get('ruby_reading_books')).map(b => ({
+            title: String(b?.title || b?.name || '书籍'),
+            body: norm([b?.author, b?.fileName, b?.chapterCount ? `${b.chapterCount} 章` : ''].filter(Boolean).join(' · ')),
+            ts: tsOf(b?.addedAt, b?.updatedAt),
+            icon: '📖', appId: 'reading'
+        }))
+    });
+
+    // ---- 成就（ruby_unlocked_achievements 是 {成就id: 解锁时间戳} 映射，
+    //      成就名/说明在 data/achievements.json 目录里，运行时经 achievementApp 取目录）----
+    sources.push({
+        id: 'achievement', label: '成就', icon: '🏆', appId: 'achievement', weight: 1.0,
+        items: () => {
+            const map = asObj(get('ruby_unlocked_achievements'));
+            const catalog = _achievementCatalog();
+            return Object.keys(map).map(id => {
+                const meta = catalog.get(id) || null;
+                return {
+                    title: String(meta?.name || id),
+                    body: norm([meta?.cat, meta?.intro].filter(Boolean).join(' · ')),
+                    ts: tsOf(map[id]),
+                    icon: '🏆', appId: 'achievement',
+                    meta: { achievementId: id }
+                };
+            });
+        }
+    });
+
+    // ---- 小红书（title / content / author）----
+    sources.push({
+        id: 'xhs', label: '小红书', icon: '📕', appId: 'xhs', weight: 1.1,
+        items: () => asArray(get('ruby_xhs_notes')).map(n => ({
+            title: String(n?.title || '笔记'),
+            body: norm([n?.author, n?.content || n?.text].filter(Boolean).join(' · ')),
+            ts: tsOf(n?.ts),
+            icon: '📕', appId: 'xhs'
+        }))
+    });
+
+    // ---- 贴吧（title / content / author）----
+    sources.push({
+        id: 'tieba', label: '贴吧', icon: '💬', appId: 'tieba', weight: 1.1,
+        items: () => asArray(get('ruby_tieba_posts')).map(p => ({
+            title: String(p?.title || '帖子'),
+            body: norm([p?.author, p?.content || p?.text].filter(Boolean).join(' · ')),
+            ts: tsOf(p?.ts),
+            icon: '💬', appId: 'tieba'
+        }))
+    });
+
+    // ---- 通知中心（sys_notifs，含全部历史通知）----
+    sources.push({
+        id: 'notifications', label: '通知', icon: '🔔', appId: 'notifications', weight: 1.0,
+        items: () => asArray(get('sys_notifs')).map(n => ({
+            title: String(n?.title || '通知'),
+            body: norm([n?.meta?.name, n?.message].filter(Boolean).join(' · ')),
+            ts: tsOf(n?.ts),
+            icon: '🔔', appId: 'notifications'
+        }))
+    });
+
+    // ---- 酒馆正文楼层（若注入 chatContext）----
+    const ctx = deps.chatContext;
+    const chatMsgs = Array.isArray(ctx?.chat) ? ctx.chat : null;
+    if (chatMsgs) {
+        sources.push({
+            id: 'tavern', label: '酒馆正文', icon: '📜', appId: '', weight: 1.0,
+            items: () => chatMsgs.map((m, i) => ({
+                title: (m?.is_user ? '我' : (m?.name || 'AI')) + ` · 第 ${i + 1} 楼`,
+                body: norm(m?.mes || m?.content || ''),
+                ts: tsOf(m?.send_date ? Date.parse(m.send_date) : 0),
+                icon: '📜', appId: '', meta: { floor: i }
+            }))
+        });
+    }
+
+    return sources;
+}
+
+/** 成就目录（id → 名称/分类/说明）；运行时由成就 App 提供，缺失则只索引 id */
+function _achievementCatalog() {
+    try {
+        const app = (typeof window !== 'undefined') ? window.VirtualPhone?.achievementApp : null;
+        const data = app?.data || app?.achievementData || app || null;
+        const list = Array.isArray(data?.achievementsCatalog) ? data.achievementsCatalog : [];
+        const map = new Map();
+        for (const a of list) {
+            if (a && a.id) map.set(String(a.id), a);
+        }
+        return map;
+    } catch (_e) { return new Map(); }
+}
+
+export default GlobalSearchEngine;
