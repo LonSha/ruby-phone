@@ -36,7 +36,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.20.0';
+const ST_PHONE_VERSION = '2.21.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -8876,6 +8876,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (window.VirtualPhone.lonshaBridge) {
                 window.VirtualPhone.lonshaBridge.onChatChanged?.();
             }
+            // 🌍 世界脉搏：换会话重绑楼层监听并重校基线（实例跨会话复用；
+            //   旧监听挂在旧上下文、新会话基线为 0 会误触发一次脉冲）
+            if (window.VirtualPhone.worldpulseApp) {
+                window.VirtualPhone.worldpulseApp.onChatChanged?.();
+            }
         }
         window.currentWechatApp = null;
         window.ggp_currentWechatApp = null;
@@ -9885,6 +9890,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
+                // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
+                try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);
@@ -9954,6 +9961,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
+                // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
+                try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 totalNotifications = 0;
                 updateNotificationBadge(0);

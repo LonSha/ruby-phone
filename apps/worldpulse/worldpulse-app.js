@@ -79,7 +79,9 @@ export class WorldpulseApp {
 
     // ========== 楼层监听（eventSource 优先，轮询兜底） ==========
     startListening() {
-        if (this._listening) return;
+        // [v2.21.0] 先停后启：换会话重绑 / 重复调用时清理旧监听与轮询，
+        //   避免 MESSAGE_RECEIVED 监听器与 setInterval 双重挂载。
+        this.stopListening();
         this._listening = true;
         const ctx = this._ctx();
         // 初始化基线，避免启动即补一大段历史
@@ -107,6 +109,23 @@ export class WorldpulseApp {
         if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
     }
 
+    // [v2.21.0] 换会话：实例跨会话复用（index.js 仅在首次打开时 new），
+    //   旧监听闭包挂在旧上下文上、状态键按当前会话解析。
+    //   此前 onChatChanged 清理清单漏掉 worldpulse：换会话后监听不求值，
+    //   且新会话 lastFloorCount 基线为 0 会把「当前楼层-0」当作积压量误触发一次脉冲。
+    //   此处在换会话时停旧监听、按新会话重建并重校基线。
+    onChatChanged() {
+        this.stopListening();
+        if (this.getSettings().enabled) {
+            const st = this.getState();
+            // 基线重校：已是数值（含 0）都强制对齐到当前会话真实楼层，
+            //   避免旧会话遗留的 lastFloorCount 造成负偏差或新会话空状态造成正偏差。
+            st.lastFloorCount = this._floorCount();
+            this._saveState(st);
+            this.startListening();
+        }
+    }
+
     _onFloorMaybeChanged() {
         if (!this._listening || this._processing) return;
         const s = this.getSettings();
@@ -132,11 +151,19 @@ export class WorldpulseApp {
         // [v2.20.0] 会话守卫：入口捕获本次处理链的会话身份（实例跨会话复用，
         //   必须在每次调用时取当前值，完成时比对，不一致即丢弃落地）。
         const stamp = this._currentSessionStamp();
+        // [v2.21.0] 入口乐观出队：getState 与 _saveState 之间为同步区间（无 await），
+        //   此刻必为发起会话——同步移除待处理事件有三重收益：
+        //   ① 换会话后绝不误动新会话队列（修复前无条件出队会把新会话
+        //      自己的待处理事件悄悄砍掉一条）；
+        //   ② 旧会话队列同步清理，切回旧会话不会把已生成过的脉冲重复生成一遍；
+        //   ③ 行为与处理成败解耦：尝试过即出队，杜绝失败堆积（v2.20 语义不变）。
+        const ev = st.queue[0];
+        st.queue = st.queue.slice(1);
+        this._saveState(st);
         try {
-            const ev = st.queue[0];
             const content = await this._generate(ev);
-            // [v2.20.0] 生成完成时若已换会话：整条丢弃（不写历史/不推微博），
-            //   仅清理旧队列状态（该状态属旧会话空间，写入无害且防止重试堆积）。
+            // [v2.20.0] 生成完成时若已换会话：整条丢弃（不写历史/不推微博）。
+            //   队列已在入口乐观出队（v2.21.0），此处不再触碰存储。
             if (content && stamp === this._currentSessionStamp()) {
                 const h = WP.pushHistory(this.getHistory(), {
                     style: ev.style, content, floorCount: ev.floorCount
@@ -145,10 +172,6 @@ export class WorldpulseApp {
                 // 可选：推送为微博动态（世界在手机里呼吸）
                 this._pushToWeibo(content, ev.style);
             }
-            // 出队
-            const st2 = this.getState();
-            st2.queue = st2.queue.slice(1);
-            this._saveState(st2);
         } finally {
             this._processing = false;
             // 继续处理剩余（异步链）；换会话后不再续链（避免旧队列在新会话继续生成）
