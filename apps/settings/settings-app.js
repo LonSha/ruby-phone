@@ -4260,8 +4260,6 @@ export class SettingsApp {
                     <input type="file" id="phone-image-openai-preset-import-file" accept=".json,application/json,text/json" style="display: none;">
                 </div>
 
-                <input type="hidden" id="phone-image-openai-mode" value="images">
-
                 <div class="setting-item">
                     <div class="setting-label">质量</div>
                     <select id="phone-image-openai-quality" style="width: 100%; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; background: #fafafa; box-sizing: border-box; margin-top: 6px;">
@@ -6785,9 +6783,8 @@ export class SettingsApp {
                 if (imageOpenaiModelPreset) imageOpenaiModelPreset.value = model;
                 await this.storage.set('phone-image-openai-model', model);
             }
-            const modeInput = document.getElementById('phone-image-openai-mode');
-            if (modeInput) modeInput.value = 'images';
-            await this.storage.set('phone-image-openai-mode', 'images');
+            // [v2.26.0] 删除死写入：'phone-image-openai-mode' 此前有写入无读取者，
+            //   现由 image-generation-manager 作为权威源读取并归一，无需页面回写。
             if (preset.openaiQuality) {
                 const value = String(preset.openaiQuality || 'auto').trim() || 'auto';
                 if (imageOpenaiQuality) imageOpenaiQuality.value = value;
@@ -8328,7 +8325,6 @@ export class SettingsApp {
                 await this.storage.set('phone-image-openai-public-relay-url', publicRelayUrl);
                 await this.storage.set('phone-image-openai-url', customUrl);
                 await this.storage.set('phone-image-openai-model', String(document.getElementById('phone-image-openai-model')?.value || '').trim() || 'gpt-image-2');
-                await this.storage.set('phone-image-openai-mode', 'images');
                 await this.storage.set('phone-image-openai-quality', String(document.getElementById('phone-image-openai-quality')?.value || 'auto').trim() || 'auto');
 
                 const imageManager = window.VirtualPhone?.imageGenerationManager;

@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.26.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·手机壳重建时的运行时资源泄漏】createPhoneInPanel() 有 4 个调用点，其中 8706 行的 `!content.querySelector('.phone-in-panel') || !phoneShell` 分支明示可重入；而函数开头就 `container.innerHTML = ''` 并 `new PhoneShell()`。旧壳在长期存活对象上注册的资源全无解绑通路：bindSwipeGesture() 在 document 注册 pointermove（最高频）/pointerup(capture)/pointercancel(capture)、在 window 注册 blur，bindTimeUpdateEvent() 在 window 注册 phone:timeUpdated，另有一个 30s 时钟轮询——startClock() 连句柄都不存、无任何清理路径。重建一次净增 5 个监听器 + 1 个定时器，且其闭包钉住旧壳 container 与 DOM。经语义分析确认旧壳 phoneBody 已被 innerHTML 摘除 ⇒ pointerdown 不再触发 ⇒ isPointerDown 恒 false ⇒ 残留 handler 立即 return，故无行为错乱、纯内存与闭包泄漏。",
+        "【缺陷修复·组件级高频监听器泄漏（两处）】① image-cropper：`document.addEventListener('mousemove'/'mouseup')` 位于 bindEvents() 内且无解绑，而 `new ImageCropper` 有 6+ 个调用入口（settings-app 头像/壁纸 3 处、diary-view、wechat chat-view、wechat contacts-view）——每次裁剪净增 2 个 document 监听器，闭包钉住 canvas 与原图 dataURL，close() 只删容器从不解绑，是全仓最高频泄漏路径；② lock-screen：`window.addEventListener('mousemove'/'mouseup')` 位于 _bind() 内，而 _bind() 在 render() 中被调用（每次锁屏重建 root，phone-shell 两处 new LockScreen）——每次「锁屏→解锁」净增 2 个 window 监听器。修复：前者改为实例字段 this._onDocMouseMove/_onDocMouseUp 持有并由 close() 精确解绑（close 覆盖取消与确认两条结束路径，故一处即可全覆盖）；后者改为 remove-then-add 幂等重绑（与 v2.25 music-app 范式同构）。其 _clockTimer 已有 _clearClock 配对，非泄漏。",
+        "【新内核·跨模块事件契约单一真源】新增 config/phone-events.js（16 事件）。此前整个跨模块通信层建立在手写事件名字符串上：实测 29 处 addEventListener(手机事件) + 83 处 dispatchEvent(CustomEvent(手机事件))，散布在 42 个文件，无任何编译期/测试期约束——一处打错（如 panelVisiblity）不报错，只静默失联，这正是 v2.25 那类「结构上可能出错」的根。模块导出 PHONE_EVENTS（权威表）、PHONE_EVENT_KINDS（NAVIGATION/DATA/LIFECYCLE/COMMUNICATION）、PHONE_EVENT_CONTRACT（每事件 kind/target/note）、listPhoneEventNames/isPhoneEventName/phoneEventMeta/makePhoneEvent 辅助。由双向对账锁定：①全仓任何手机事件字面量必须能映射到契约（防漂移）；②契约每个事件必须至少有一处真实使用（防孤儿）。",
+        "【新内核·运行时资源登记与统一回收】新增 config/runtime-lifecycle.js。v2.25 证明「长期存活对象上的监听器漏一次即永久累积」，同一类失效在定时器上更隐蔽也更贵：一个 setInterval 只要持有已废弃实例的闭包，就把该实例的 data/DOM 全部钉在内存里永不释放，且仍按周期执行。模块提供 ManagedRuntime（登记 INTERVAL/TIMEOUT/OBSERVER/LISTENER 四类资源，addTimeout 触发后自动销账不留僵尸登记，dispose() 幂等且返回回收数，stats()/entries()/tagsOf() 供诊断定位「谁还在跑」）与 onceFlag/rebindGlobal 两个幂等原语（把仓库里已在用的 window._xxxBound 单次 guard 与 music 的 remove-then-add 收敛成一处实现）。所有方法在无宿主（Node 单测）下安全降级不抛。",
+        "【缺陷修复·死配置接回真源】`phone-image-openai-mode` 经全字面量 grep 确认 3 写 0 读：settings-app 在预设套用与保存两处硬编码写入，页面还挂了一个隐藏 input；根因是 config/image-generation-manager.js 把 `openaiMode: 'images'` 写死、端点决策从不读取该键。修复：管理端改读 `this._get('phone-image-openai-mode', 'images')` 并经新增 _normalizeOpenAIMode() 归一（任何脏值收敛到合法枚举），设置页删除 3 处死写入与隐藏 input。默认 'images' 对既有存档行为逐位等价；edits/multipart 端点分支涉及真实 API 语义（FormData、参考图字段），刻意留给后续版本。",
+        "【工程防线】新增 tests/system-v226.test.mjs（66 项，四层）：A 契约双向对账（登记数、唯一性、元数据齐全、字面量↔契约集合相等、辅助函数边界）+ B ManagedRuntime 行为（登记计数、addTimeout 自动销账、dispose 幂等与返回数、cancel 单项、dispose 后复用、无宿主降级不抛、onceFlag/rebindGlobal 语义）+ C 三处泄漏的行为级验证（mock 采用真实注册表语义：仅 handler 引用完全相等才移除——phone-shell 4 次重建不回收净增 20 监听器/4 定时器且 destroy 回收 24 项、干净基线 N 轮 create→destroy 净 0；cropper 6 轮 open→close 净 0 且对照不解绑时 3 轮累积 6 个；lock-screen 5 轮 lock() 恒为 2）+ D 死配置清零与范围自证。已注入失败验证红灯（node --test 退出码 1），排除假绿。语法门 236 文件通过。"
+      ]
+    },
     "2.25.0": {
       "date": "2026-09-18",
       "items": [
@@ -453,5 +464,5 @@
       ]
     }
   },
-  "latest": "2.25.0"
+  "latest": "2.26.0"
 }

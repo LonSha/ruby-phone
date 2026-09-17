@@ -1100,7 +1100,7 @@ export class ImageGenerationManager {
             openaiCustomUrl: String(overrides.openaiCustomUrl || this._get('phone-image-openai-url', '')).trim(),
             openaiPublicUrl: String(overrides.openaiPublicUrl || this._get('phone-image-openai-public-url', '')).trim(),
             openaiPublicRelayUrl: String(overrides.openaiPublicRelayUrl || this._get('phone-image-openai-public-relay-url', '')).trim(),
-            openaiMode: 'images',
+            openaiMode: this._normalizeOpenAIMode(overrides.openaiMode ?? this._get('phone-image-openai-mode', 'images')),
             openaiQuality: String(overrides.openaiQuality || openaiPromptPreset?.openaiQuality || this._get('phone-image-openai-quality', 'auto')).trim() || 'auto',
             comfyuiMode: this._normalizeComfyUIMode(overrides.comfyuiMode || this._get('phone-image-comfyui-mode', 'local')),
             comfyuiTransport: this._normalizeComfyUITransport(overrides.comfyuiTransport || this._get('phone-image-comfyui-transport', 'tavern')),
@@ -3905,6 +3905,20 @@ export class ImageGenerationManager {
         if (/\/images$/i.test(baseUrl)) return `${baseUrl}/generations`;
         if (/\/v1$/i.test(baseUrl)) return `${baseUrl}/images/generations`;
         return `${baseUrl}/v1/images/generations`;
+    }
+
+    /**
+     * [v2.26.0] GPT 生图形态归一（zod 式宽容转换：任何脏值都收敛到合法枚举）。
+     *   'images' = /v1/images/generations（文生图，默认）
+     *   'edits'  = 参考图生图形态（本轮仅登记枚举，端点/multipart 分支属后续版）
+     * 此前 `phone-image-openai-mode` 有 3 处硬编码写入却全仓无读取者（死配置），
+     * 端点决策被写死为 generations；本方法把该键接回真源。旧档非法值一律回落
+     * 'images'，故对既有用户行为逐位等价。
+     */
+    _normalizeOpenAIMode(value) {
+        const raw = String(value ?? '').trim().toLowerCase();
+        if (raw === 'edits' || raw === 'edit') return 'edits';
+        return 'images';
     }
 
     _resolveOpenAIModelsEndpoint(config) {

@@ -185,8 +185,16 @@ export class LockScreen {
     root.addEventListener('touchmove', (e) => onMove(e.touches[0].clientY), { passive: true });
     root.addEventListener('touchend', (e) => onEnd((e.changedTouches[0] || {}).clientY || this._startY));
     root.addEventListener('mousedown', (e) => onStart(e.clientY));
-    window.addEventListener('mousemove', (e) => { if (this._dragging) onMove(e.clientY); });
-    window.addEventListener('mouseup', (e) => { if (this._dragging) onEnd(e.clientY); });
+    // [v2.26.0] window 是长期存活对象，而 _bind() 在 render() 内（每次锁屏都会执行）：
+    //   原写法每次「锁屏→解锁」净增 2 个 window mousemove/mouseup 监听器，其闭包
+    //   钉住上一轮的 root 节点。改为实例字段持有 + 重绑前先解绑旧引用
+    //   （幂等，与 v2.25 music-app 的 remove-then-add 范式同构）。
+    if (this._onWinMouseMove) window.removeEventListener('mousemove', this._onWinMouseMove);
+    if (this._onWinMouseUp) window.removeEventListener('mouseup', this._onWinMouseUp);
+    this._onWinMouseMove = (e) => { if (this._dragging) onMove(e.clientY); };
+    this._onWinMouseUp = (e) => { if (this._dragging) onEnd(e.clientY); };
+    window.addEventListener('mousemove', this._onWinMouseMove);
+    window.addEventListener('mouseup', this._onWinMouseUp);
     // [v2.16.0] 轻点通知速览 → 解锁并进通知中心（点击不产生位移，故不会误触解锁）
     // [v2.17.0] 升级：单条通知各自直达其来源 App（单击条目），系统通知（__sys__）与空白区仍进通知中心。
     //   点击不产生位移，故不会误触解锁；单条点击先标记该条已读并同步宿主角标。

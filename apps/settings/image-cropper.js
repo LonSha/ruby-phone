@@ -579,18 +579,24 @@ export class ImageCropper {
             e.preventDefault();
         });
 
-        document.addEventListener('mousemove', (e) => {
+        // [v2.26.0] document 是长期存活对象，而本组件每次「打开裁剪器」都新建实例
+        //   （设置头像/壁纸、朋友圈、聊天图片、联系人、日记等 6 个入口）：原写法
+        //   每次裁剪都会在 document 上永久累积 mousemove/mouseup 两个监听器，其闭包
+        //   钉住本实例（canvas、原图 dataURL、裁剪参数）永不释放 —— 这是全仓最高频的
+        //   泄漏路径。改为实例字段持有，由 close() 统一精确解绑。
+        this._onDocMouseMove = (e) => {
             if (!this.isDragging) return;
             const coordinateScale = this._getPointerCoordinateScale(canvas);
             this.offsetX = startOffsetX + (e.clientX - startX) * coordinateScale.x;
             this.offsetY = startOffsetY + (e.clientY - startY) * coordinateScale.y;
             this.clampPosition();
             this.draw();
-        });
-
-        document.addEventListener('mouseup', () => {
+        };
+        this._onDocMouseUp = () => {
             this.isDragging = false;
-        });
+        };
+        document.addEventListener('mousemove', this._onDocMouseMove);
+        document.addEventListener('mouseup', this._onDocMouseUp);
 
         // 触摸拖拽
         canvas.addEventListener('touchstart', (e) => {
@@ -724,6 +730,14 @@ export class ImageCropper {
 
     // 关闭裁剪器
     close() {
+        // [v2.26.0] 解绑 document 端拖拽监听器（幂等：未绑定/已解绑时均为空操作）。
+        //   close() 覆盖取消与确认两条结束路径，故不必在别处重复解绑。
+        try {
+            if (this._onDocMouseMove) document.removeEventListener('mousemove', this._onDocMouseMove);
+            if (this._onDocMouseUp) document.removeEventListener('mouseup', this._onDocMouseUp);
+        } catch (_) { /* 解绑失败不阻断关闭 */ }
+        this._onDocMouseMove = null;
+        this._onDocMouseUp = null;
         if (this.container) {
             this.container.remove();
             this.container = null;

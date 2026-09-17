@@ -7,6 +7,7 @@
 
 import { AlbumData } from './album-data.js?v=1.4.2&r=20260726-album-media';
 import { ALBUM_CSS_URL, AlbumView } from './album-view.js?v=1.4.2&r=20260802-album-toolbar';
+import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
 
 export class AlbumApp {
     constructor(phoneShell, storage) {
@@ -32,10 +33,10 @@ export class AlbumApp {
         this._onDocVisibility = () => {
             if (document.hidden) this.albumView?.pausePreview?.();
         };
-        window.addEventListener('phone:swipeBack', this._onSwipeBack);
-        window.addEventListener('phone:albumImageDeleted', this._onImageDeleted);
-        window.addEventListener('phone:updateWallpaper', this._onWallpaper);
-        window.addEventListener('phone:panelVisibility', this._onPanelVisibility);
+        window.addEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
+        window.addEventListener(PHONE_EVENTS.ALBUM_IMAGE_DELETED, this._onImageDeleted);
+        window.addEventListener(PHONE_EVENTS.UPDATE_WALLPAPER, this._onWallpaper);
+        window.addEventListener(PHONE_EVENTS.PANEL_VISIBILITY, this._onPanelVisibility);
         document.addEventListener('visibilitychange', this._onDocVisibility);
     }
 
@@ -117,10 +118,10 @@ export class AlbumApp {
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的 5 个全局监听器（置 null 重建前调用）
     destroy() {
-        window.removeEventListener('phone:swipeBack', this._onSwipeBack);
-        window.removeEventListener('phone:albumImageDeleted', this._onImageDeleted);
-        window.removeEventListener('phone:updateWallpaper', this._onWallpaper);
-        window.removeEventListener('phone:panelVisibility', this._onPanelVisibility);
+        window.removeEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
+        window.removeEventListener(PHONE_EVENTS.ALBUM_IMAGE_DELETED, this._onImageDeleted);
+        window.removeEventListener(PHONE_EVENTS.UPDATE_WALLPAPER, this._onWallpaper);
+        window.removeEventListener(PHONE_EVENTS.PANEL_VISIBILITY, this._onPanelVisibility);
         document.removeEventListener('visibilitychange', this._onDocVisibility);
     }
 }

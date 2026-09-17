@@ -12,6 +12,8 @@
 // 手机外壳
 import { PHONE_CONFIG } from '../config/apps.js';
 import { LockScreen } from './lock-screen.js';
+import { ManagedRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0] 运行时资源登记与统一回收
+import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
 
 export class PhoneShell {
     constructor() {
@@ -97,10 +99,41 @@ export class PhoneShell {
         return this.container;
     }
 
+    /** [v2.26.0] 惰性取得本实例的运行时登记层 */
+    _rt() {
+        if (!this._runtime) this._runtime = new ManagedRuntime('phone-shell');
+        return this._runtime;
+    }
+
+    /**
+     * [v2.26.0] 长期存活对象监听器的统一登记入口。
+     * 与 addEventListener 同参（target/type/handler/opts），差别仅在于引用被登记层
+     * 持有，于是 destroy() 能精确解绑 —— 内联匿名 handler 同样能被持有，因为登记
+     * 发生在调用侧而非 handler 侧，无需重构回调本体。
+     * 元素自身（如 phoneBody，随 container.innerHTML='' 一起消失）不在此列：
+     * 其监听器随节点摘除自然回收，登记反而会让 destroy 去解绑已无用的监听。
+     */
+    bindGlobal(target, type, handler, opts = false) {
+        const short = String(type).split(':').pop();
+        this._rt().addListener(target, type, handler, opts, `shell:${short}`);
+    }
+
+    /**
+     * [v2.26.0] 实例销毁：回收本壳登记的全部全局监听器与定时器。
+     * 由 index.js createPhoneInPanel() 在重建前调用（幂等，可重复调用）。
+     * @returns {number} 实际回收项数
+     */
+    destroy() {
+        let n = 0;
+        try { n = this._runtime ? this._runtime.dispose() : 0; } catch (_) { /* 回收失败不阻断重建 */ }
+        this._timeUpdateEventBound = false;
+        return n;
+    }
+
     bindTimeUpdateEvent() {
         if (this._timeUpdateEventBound) return;
         this._timeUpdateEventBound = true;
-        window.addEventListener('phone:timeUpdated', () => {
+        this.bindGlobal(window, PHONE_EVENTS.TIME_UPDATED, () => {
             this.updateStatusBarTime();
         });
     }
@@ -497,7 +530,7 @@ export class PhoneShell {
             this.swipeAction = null;
         });
 
-        document.addEventListener('pointermove', (e) => {
+        this.bindGlobal(document, 'pointermove', (e) => {
             if (!isPointerDown || activeSwipePointerId !== e.pointerId) return;
             if (e.pointerType === 'mouse' && e.buttons === 0) {
                 cancelPointerSwipe();
@@ -553,7 +586,7 @@ export class PhoneShell {
             }
         });
 
-        document.addEventListener('pointerup', (e) => {
+        this.bindGlobal(document, 'pointerup', (e) => {
             if (!isPointerDown || activeSwipePointerId !== e.pointerId) return;
             isPointerDown = false;
             const deltaX = pointerCurrentX - pointerStartX;
@@ -600,12 +633,12 @@ export class PhoneShell {
             clearPointerSwipeState();
         }, true);
 
-        document.addEventListener('pointercancel', (e) => {
+        this.bindGlobal(document, 'pointercancel', (e) => {
             if (!isPointerDown || activeSwipePointerId !== e.pointerId) return;
             cancelPointerSwipe();
         }, true);
 
-        window.addEventListener('blur', () => cancelPointerSwipe());
+        this.bindGlobal(window, 'blur', () => cancelPointerSwipe());
     }
 
     _resetSwipeLayer(target, { animate = false, resetOpacity = true } = {}) {
@@ -763,13 +796,15 @@ export class PhoneShell {
 
     // 改为30秒更新一次（剧情时间不会秒秒变化）
     let lastTime = this.getCurrentTime();
-    setInterval(() => {
+    // [v2.26.0] 原写法既不存句柄也无清理路径：手机壳重建后旧轮询永久残留，
+    //   且其闭包钉住已废弃实例的 container 引用。改由登记层持有。
+    this._rt().addInterval(() => {
         const newTime = this.getCurrentTime();
         if (newTime !== lastTime) {  // 只在时间变化时更新DOM
             lastTime = newTime;
             this.updateStatusBarTime();
         }
-    }, 30000);  // 30秒检查一次
+    }, 30000, 'shell-clock');  // 30秒检查一次
 }
 
     // 🔥 强制刷新状态栏时间（供外部调用）
@@ -792,7 +827,7 @@ export class PhoneShell {
             // 返回桌面后短时间屏蔽一次图标点击导致的误 reopen
             window.VirtualPhone._homeReturnGuardUntil = Date.now() + 500;
         }
-        window.dispatchEvent(new CustomEvent('phone:goHome'));
+        window.dispatchEvent(new CustomEvent(PHONE_EVENTS.GO_HOME));
     }
     
     toggleScreen() {

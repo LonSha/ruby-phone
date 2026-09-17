@@ -6,6 +6,7 @@
 import { CalendarData } from './calendar-data.js?v=20260527-calendar-polish';
 import { CalendarView } from './calendar-view.js?v=20260527-calendar-polish';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
+import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
 
 export class CalendarApp {
     constructor(phoneShell, storage) {
@@ -19,7 +20,7 @@ export class CalendarApp {
         // [v2.25.0] 监听器改实例字段持有：calendarApp 清数据时置 null 重建，
         //   匿名 add 会随每次重建累积（与 album 同型缺陷，同 weibo 范式）
         this._onSwipeBack = () => this.handleSwipeBack();
-        window.addEventListener('phone:swipeBack', this._onSwipeBack);
+        window.addEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
     }
 
     render() {
@@ -71,7 +72,7 @@ export class CalendarApp {
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的全局监听器（置 null 重建前调用）
     destroy() {
-        window.removeEventListener('phone:swipeBack', this._onSwipeBack);
+        window.removeEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
     }
 
     checkScheduleReminders(currentTime = null, options = {}) {
