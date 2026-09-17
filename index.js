@@ -30,13 +30,17 @@ import { NotificationLog } from './config/system-notifications.js';
 // [v2.16.0] 系统控制内核（免打扰门 / 缩放 / 开关状态；纯函数模块，无反向依赖）
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
+// [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
+import { globalRuntime, globalRuntimeSnapshot, onceFlag } from './config/runtime-lifecycle.js';
+// [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
+import { PHONE_EVENTS } from './config/phone-events.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.26.0';
+const ST_PHONE_VERSION = '2.27.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -71,14 +75,15 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: '2026-09-15',
+    date: '2026-09-18',
     items: [
-        '【缝合·原创整合】六项缝合自两个小手机项目（葵葵机 + yexiaoxiaoye/mobile），全部按工程规范重写为可测 ESM 模块。',
-        '【新增·基建】楼层挂载存储引擎 floor-store：数据挂在 ST 消息的 msg.data 上，删除楼层自动带走、重roll不残留、跨设备随聊天导出，可撤回。',
-        '【新增·微信记忆】联系人级长期记忆摘要引擎：buildMessagesArray 注入「与某人的长期记忆」，sendToAI 成功后滚动回写，解决全量上下文稀释关键事实。',
-        '【新增·第30个App】世界脉搏 Worldpulse：楼层监听→阈值队列→风格化平行事件，写成手机推送式世界动态，让背景世界呼吸。六种风格+手动脉冲。',
-        '【优化·微信渲染】增量渲染：纯尾部追加只渲染新消息、复用既有 DOM，避免全量重建导致的界面跳动。',
-        '【测试】新增 27 断言，全量 144/144 绿，语法门 204 文件、双门禁通过。'
+        '【缺陷修复·快捷回复按钮的永久 1Hz 轮询】`setInterval(inject, 1000)` 无句柄、无清理路径、无终止条件——按钮早已注入仍每秒跑完 inject 全量逻辑（13 处 getElementById + 36 处 querySelector）。改为：轮询入登记层 + 建立 inject 返回值契约，就绪即自停，稳态成本 1Hz→0。',
+        '【缺陷修复·自停后可重新拉起】监听 phone:panelVisibility / phone:openApp 重新调度一轮（幂等），宿主被重建时按钮不会永久失联。',
+        '【缺陷修复·另两处无回收面的常驻轮询】极文 tick（5min，句柄不存）与微信线上主动（30s + 未持有的 3s 预热）改由登记层持有，保留「先停后启」语义。',
+        '【新内核·登记制推广面】v2.26 建的 runtime-lifecycle 此前只有 phone-shell 一个消费方（globalRuntime/onceFlag 全仓零消费）。本轮新增 cancelByTag 前缀批量回收与 globalRuntimeSnapshot，并把 index.js 三处常驻轮询接上。',
+        '【新内核·手写幂等 guard 收敛】7 处 `window._xxxBound` 手写 guard 收敛到 onceFlag，window 监听器纳入登记层（index.js + wechat/mofo/settings/honey 四 App）。',
+        '【可观测】新增 `window.VirtualPhone.runtimeStats()`，一行查看当前常驻资源总数、四类分布与全部 tag——先让泄漏可见。',
+        '【测试】新增 tests/system-v227.test.mjs（四层 60 断言），全量 241+ 绿，语法门 237 文件、双门禁通过。'
     ]
 };
 
@@ -1405,7 +1410,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             jiwen.load().catch(() => {});
             window.VirtualPhone.jiwen = jiwen;
             // 定期 tick: 每 5 分钟推进, 若距上次 tick 超 8 分钟按实际分钟数快进
-            setInterval(() => {
+            // [v2.27.0] 登记制：旧写法裸 setInterval 且句柄不存、无清理路径，
+            //   插件热重载/脚本重入即永久累积一个 5min 轮询（闭包钉住 storage/engine）。
+            globalRuntime.addInterval(() => {
                 try {
                     const jw = window.VirtualPhone?.jiwen;
                     if (!jw) return;
@@ -2151,8 +2158,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     function bindNewChatPhoneDataMigration() {
-        if (window.__stPhoneNewChatMigrationBound) return;
-        window.__stPhoneNewChatMigrationBound = true;
+        // [v2.27.0] 手写 once guard 收敛到 onceFlag（v2.26 建原语但全仓零消费）
+        if (!onceFlag('stPhoneNewChatMigration')) return;
 
         document.addEventListener('click', (event) => {
             const target = event.target;
@@ -2392,6 +2399,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     async function fetchRemoteUpdateNotes(version, cacheBust = Date.now()) { updateChecker.setStorage(storage); return updateChecker.fetchRemoteUpdateNotes(version, cacheBust); }
     function schedulePhoneUpdateNotices() { updateChecker.setStorage(storage); return updateChecker.schedulePhoneUpdateNotices(); }
 
+    // [v2.27.0] 常驻资源诊断入口：控制台执行 window.VirtualPhone.runtimeStats()
+    //   即可看到「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」，
+    //   用于定位漏回收（v2.25/v2.26 修的正是这类）。无登记项时 total 为 0。
+    function getRuntimeStats() {
+        try { return globalRuntimeSnapshot(); }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [] }; }
+    }
+
     async function getOrCreateMofoData() {
         if (!window.VirtualPhone) window.VirtualPhone = {};
         if (window.VirtualPhone.cachedMofoData) {
@@ -2525,6 +2540,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     //  新增：魔坊动态更新气泡 & 全局速览弹窗
     // ==========================================
     if (!window.VirtualPhone) window.VirtualPhone = {};
+    // [v2.27.0] 常驻资源诊断：window.VirtualPhone.runtimeStats()
+    window.VirtualPhone.runtimeStats = getRuntimeStats;
     window.VirtualPhone.showMofoUpdateBubble = async function (mofoId) {
         try {
             const mofoData = await getOrCreateMofoData();
@@ -3104,6 +3121,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     // 🔥 新增：在底部栏创建内嵌回复按钮（全局守护进程）
+    // [v2.27.0] inject 的返回值契约（供自停轮询判定，见函数尾部）：
+    //   true  = 已达终态（已注入 / 用户关闭），无需继续轮询；
+    //   false = 条件未就绪（宿主缺失 / 结构异常），应继续重试。
     function createInlineReplyButton() {
         const btnId = 'st-phone-inline-reply-btn';
         const legacyWrapperId = 'st-phone-inline-reply-wrapper';
@@ -3670,7 +3690,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 document.getElementById(legacyWrapperId)?.remove();
                 existingWrapper?.remove();
                 existingBtn?.remove();
-                return;
+                return true;   // [v2.27.0] 用户关掉了入口：已是终态，无需每秒重试
             }
 
             const host = getInlineReplyHost();
@@ -3679,7 +3699,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!host) {
                 existingWrapper?.remove();
                 existingBtn?.remove();
-                return;
+                return false;   // [v2.27.0] 宿主未就位：继续轮询等待（保留原重试意图）
             }
 
             // 已存在时做兼容修复：确保在目标容器中，交给 QR 白名单机制控制显示
@@ -3728,8 +3748,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (hasQrAssistantApi && shouldRefreshQr) {
                         applyQrWhitelist();
                     }
+                    // [v2.27.0] 稳态：按钮已存在且落在正确宿主上 —— 告知轮询可停。
+                    //   currentWrapper 为空说明按钮虽在 DOM 但结构异常，交下一轮继续修。
+                    return !!currentWrapper;
                 }
-                return;
+                return false;   // [v2.27.0] 有按钮但无容器：结构异常，继续重试
             }
 
             // 容器不存在则跳过，等待下一轮
@@ -4907,10 +4930,31 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (hasQrAssistantApi) {
                 applyQrWhitelist();
             }
+            return true;   // [v2.27.0] 本轮完成注入 —— 告知轮询可停
         };
 
-        setInterval(inject, 1000);
-        inject();
+        // [v2.27.0] 登记制 + 自停：旧写法 `setInterval(inject, 1000)` 是**永久**每秒轮询，
+        //   即使按钮已注入、宿主已就位也照跑（inject 内含 13 处 getElementById +
+        //   36 处 querySelector + registerQrAssistantButton 全量重算）。改为：
+        //   ① 轮询由登记层持有（可被 dispose/cancelByTag 回收，不再无限累积）；
+        //   ② 一旦本轮确认「按钮已存在且宿主正确」（inject 返回 true），即停止轮询
+        //      —— 后续由 phone:openApp / DOM 重建等事件按需重新拉起（见 scheduleInlineReplySync）。
+        //   这保留了「容器晚于脚本出现时持续重试」的原意图，但把稳态成本从 1Hz 降到 0。
+        const injectLoop = () => {
+            let done = false;
+            try { done = inject() === true; } catch (e) { done = false; }
+            if (done) globalRuntime.cancelByTag('inline-reply:poll');
+        };
+        globalRuntime.cancelByTag('inline-reply:poll');
+        globalRuntime.addInterval(injectLoop, 1000, 'inline-reply:poll');
+        injectLoop();
+        // [v2.27.0] 自停后需能重新拉起：宿主容器可能随面板关闭/主题切换被重建，
+        //   届时按钮虽在但已脱离正确宿主。监听面板可见性事件重新调度一轮（幂等）。
+        if (onceFlag('stPhoneInlineReplyResync')) {
+            const resync = () => { try { createInlineReplyButton(); } catch (e) {} };
+            globalRuntime.addListener(window, PHONE_EVENTS.PANEL_VISIBILITY, resync, false, 'inline-reply:resync');
+            globalRuntime.addListener(window, PHONE_EVENTS.OPEN_APP, resync, false, 'inline-reply:resync');
+        }
     }
 
     // 创建顶部面板按钮
@@ -5837,16 +5881,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     function startWechatOnlineProactiveScheduler() {
-        if (window.VirtualPhone?._wechatOnlineProactiveTimer) {
-            clearInterval(window.VirtualPhone._wechatOnlineProactiveTimer);
-        }
+        // [v2.27.0] 登记制：旧写法把句柄挂在 window.VirtualPhone 上 + 裸 setInterval，
+        //   句柄虽被复用但无统一回收面；且 setTimeout(tick,3000) 完全未持有。
+        //   改为：先 cancelByTag 停掉本调度器的旧登记（保留原「先停后启」语义，
+        //   防重复调用双挂），再由登记层持有 30s 轮询与首次 3s 预热。
+        globalRuntime.cancelByTag('wechat:online-proactive');
         const tick = () => {
             triggerWechatOnlineProactive({ reason: 'timer' }).catch(e => {
                 console.warn('[Wechat][OnlineProactive] 调度异常:', e);
             });
         };
-        window.VirtualPhone._wechatOnlineProactiveTimer = setInterval(tick, 30000);
-        setTimeout(tick, 3000);
+        window.VirtualPhone._wechatOnlineProactiveTimer = globalRuntime.addInterval(tick, 30000, 'wechat:online-proactive');
+        globalRuntime.addTimeout(tick, 3000, 'wechat:online-proactive-warmup');
     }
 
     async function runAutoWeiboQueueWorker() {

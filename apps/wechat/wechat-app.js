@@ -16,6 +16,10 @@ import { MomentsView } from './moments-view.js?v=20260802-chat-moments-feed';
 import { WechatData } from './wechat-data.js?v=20260906-global-chat-background-sync';
 import { ImageCropper } from '../settings/image-cropper.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
+// [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
+import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
+import { PHONE_EVENTS } from '../../config/phone-events.js';
+
 import {
     DEFAULT_WECHAT_CHAT_STYLE_ID,
     WECHAT_NATIVE_CHAT_STYLE_ID,
@@ -57,13 +61,14 @@ export class WechatApp {
         this._applyCustomChatStyle(this._getUserCustomChatCss());
 
         // 🔥 监听滑动返回事件 (防止切换聊天导致重复绑定)
-        if (!window._wechatSwipeBackBound) {
-            window._wechatSwipeBackBound = true;
-            window.addEventListener('phone:swipeBack', () => {
+        // [v2.27.0] 手写 window._xxxBound guard 收敛到 onceFlag，并把 window 监听器
+        //   纳入登记层（window 跨会话存活，旧写法一旦注册就无回收面）。
+        if (onceFlag('wechatSwipeBack')) {
+            globalRuntime.addListener(window, PHONE_EVENTS.SWIPE_BACK, () => {
                 if (window.VirtualPhone && window.VirtualPhone.wechatApp) {
                     window.VirtualPhone.wechatApp.handleSwipeBack();
                 }
-            });
+            }, false, 'wechat:swipe-back');
         }
     }
 

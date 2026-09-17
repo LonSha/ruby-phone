@@ -1,5 +1,18 @@
 {
   "versions": {
+    "2.27.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·快捷回复按钮的永久 1Hz 轮询】createInlineReplyButton() 尾部是 `setInterval(inject, 1000)` —— 无句柄、无清理路径、**无终止条件**：即使按钮早已注入、宿主早已就位，仍以每秒一次的频率跑完 inject 全量逻辑（实测该函数含 13 处 getElementById + 36 处 querySelector + registerQrAssistantButton 的重算，跨 1275 行）。这是全仓频率最高的一处稳态开销，且随插件重载无限累积。修复分两步：① 轮询改由 v2.26 的登记层持有（tag `inline-reply:poll`，可被统一回收）；② 给 inject 建立**返回值契约**——true = 已达终态（本轮完成注入 / 用户关掉了入口），false = 条件未就绪（宿主缺失 / 有按钮但容器结构异常）。轮询循环消费该返回值，一旦为 true 立即 cancelByTag 自停，**稳态成本从 1Hz 降到 0**。",
+        "【缺陷修复·自停后的重新拉起】自停必须可逆，否则「宿主随面板关闭/主题切换被重建」时按钮会永久失联。新增 resync 入口：监听 phone:panelVisibility 与 phone:openApp 两个事件重新调度一轮轮询（幂等，由 onceFlag 保护只注册一次）。这保留了原「容器晚于脚本出现时持续重试」的意图，只是把重试从「永久无脑轮询」改为「事件驱动 + 就绪即停」。",
+        "【缺陷修复·另两处无回收面的常驻轮询】① 极文 tick：`setInterval(..., 5 * 60 * 1000)` 句柄不存、无清理路径，其闭包钉住 storage 与极文引擎；② 微信线上主动调度器：句柄挂在 window.VirtualPhone 上虽可复用但无统一回收面，且配套的 `setTimeout(tick, 3000)` 首次预热**完全未持有**。两处均改由登记层持有（tag `wechat:online-proactive` / `-warmup`），并保留原有的「先停后启」语义（改用 cancelByTag 前缀回收实现，比手写 clearInterval 更不易漏）。",
+        "【新内核·登记制推广面】v2.26 建了 runtime-lifecycle 内核，但只把 phone-shell 一个消费方接上——`globalRuntime` / `onceFlag` / `rebindGlobal` 三个导出**全仓零消费**，即「内核建好了但没人用」。本轮补齐推广面：新增 `cancelByTag(tag)`（**前缀批量回收**，因为一次启动往往登记多个资源——轮询 + 预热 timeout，用同一前缀命名即可一并回收，不必逐个记 id）与 `globalRuntimeSnapshot()`（回答「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」）。",
+        "【新内核·手写幂等 guard 收敛】全仓散布着 7 处 `if (!window._xxxBound) { ... = true }` 手写 guard（index.js 新会话迁移、wechat/mofo/settings/honey 的滑动返回、honey 的面板可见性与文档可见性）。它们语义相同却各写各的：无法统一回收，也没有诊断可见性。全部收敛到 `onceFlag(key)`，并把注册的 **window 监听器纳入登记层**（window 跨会话存活，旧写法一旦注册就没有回收面）。honey-app 为第三方作者版权文件，仅做等价替换、不动其业务结构与注释风格。",
+        "【可观测·常驻资源诊断入口】新增 `window.VirtualPhone.runtimeStats()`，控制台一行即可看到当前常驻资源总数、四类分布与全部 tag。无登记项时返回零值结构而非抛错。这是 v2.25/v2.26 两轮「监听器/定时器泄漏」修复之后必须补上的那一环——**先让泄漏可见，才能确认它不再发生**。",
+        "【新内核·事件契约消费】v2.26 建立的 config/phone-events.js 契约表此前未被 index.js 消费（仍手写字面量）。本轮起 index.js 消费 `PHONE_EVENTS.PANEL_VISIBILITY` / `PHONE_EVENTS.OPEN_APP` 常量，与 v2.26 的双向对账防线接上。",
+        "【测试】新增 tests/system-v227.test.mjs（四层 60 断言）：A 内核行为（cancelByTag 前缀语义 / 空 tag 不误清 / 与 cancel 正交 / snapshot 聚合一致性与不泄漏）；B 接线（三处轮询入登记层 + 四处 guard 收敛 + 全仓 `window._xxxBound = true` 残留扫描）；C 自停语义（返回值契约六条路径 + 行为仿真五种状态 + 「就绪当轮即停」轮询仿真）；D 范围自证 + 契约消费 + 诊断入口 + 版本四处同步。同步更新 tests/system-v225.test.mjs 的三条断言：从断言「手写 Bound guard 存在」改为断言「幂等 guard 存在」这一不变量（载体已换为 onceFlag）。"
+      ]
+    },
     "2.26.0": {
       "date": "2026-09-18",
       "items": [
@@ -464,5 +477,5 @@
       ]
     }
   },
-  "latest": "2.26.0"
+  "latest": "2.27.0"
 }

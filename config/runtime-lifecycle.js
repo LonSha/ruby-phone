@@ -1,5 +1,5 @@
 /* ========================================================
- * runtime-lifecycle.js — 运行时资源登记与统一回收 [v2.26.0]
+ * runtime-lifecycle.js — 运行时资源登记与统一回收 [v2.26.0 / v2.27.0]
  * --------------------------------------------------------
  * 动机：v2.25 证明「长期存活对象上的监听器漏一次即永久累积」。
  * 同一类失效在定时器上更隐蔽也更贵：一个 setInterval 只要持有已废弃
@@ -13,6 +13,12 @@
  *   2) onceFlag / rebindGlobal：把仓库里已在用的两种幂等范式
  *      （window._xxxBound 单次 guard、music 的 remove-then-add）收敛成
  *      一处实现，避免各 App 各写一遍、各写各的。
+ *
+ * [v2.27.0] 登记制推广面：v2.26 只把 phone-shell 一个消费方接上，
+ * globalRuntime / onceFlag / rebindGlobal 三个导出全仓零消费 —— 即
+ * 「内核建好了但没人用」。本版把 index.js 的三处永久轮询（快捷回复注入
+ * 1s / 极文 tick 5min / 微信线上主动 30s）与三处手写 once guard 接上，
+ * 并把 globalRuntime 暴露给诊断入口，回答"现在有多少在跑"。
  *
  * 设计约束：
  *   - 所有方法在无宿主（Node 单测）下不抛错：拿不到 timer/observer 就只登记不启动。
@@ -136,6 +142,25 @@ export class ManagedRuntime {
         } catch (_) { /* 回收失败不能阻断其余项回收 */ }
     }
 
+    /**
+     * [v2.27.0] 按 tag 前缀批量回收：定位"某一类资源整体重建"场景
+     * （如调度器重复启动要先停后启、宿主换会话要清空某子系统）。
+     * 前缀匹配是刻意的：一次启动往往登记多个资源（轮询 + 预热 timeout），
+     * 用同一前缀命名即可一并回收，不必逐个记住 id。
+     * @returns {number} 实际回收项数
+     */
+    cancelByTag(tag) {
+        const t = String(tag || '');
+        if (!t) return 0;
+        let n = 0;
+        for (const [id, e] of [...this._entries.entries()]) {
+            if (!String(e.tag || '').startsWith(t)) continue;
+            this._entries.delete(id);
+            ManagedRuntime._release(e);
+            n += 1;
+        }
+        return n;
+    }
     /** 全量回收。幂等：重复调用不报错；调用后可继续登记新资源。 */
     dispose() {
         const ids = [...this._entries.keys()];
@@ -171,6 +196,20 @@ export class ManagedRuntime {
 
 /* ---------------- 全局登记层（宿主级资源，随插件一次回收） ---------------- */
 export const globalRuntime = new ManagedRuntime('global');
+/**
+ * [v2.27.0] 全局登记层诊断快照：宿主可直接挂到设置页/控制台，
+ * 回答"现在还有哪些常驻资源在跑、分别属于谁"。
+ * 无任何登记项时 total 为 0，调用方无需判空。
+ * @returns {{total:number, byKind:object, tags:Array<{kind:string, tag:string}>}}
+ */
+export function globalRuntimeSnapshot() {
+    const stats = globalRuntime.stats();
+    return {
+        total: stats.total,
+        byKind: { interval: stats.interval, timeout: stats.timeout, observer: stats.observer, listener: stats.listener },
+        tags: globalRuntime.entries().map(e => ({ kind: e.kind, tag: e.tag }))
+    };
+}
 
 /* ---------------- 幂等范式原语（收敛 v2.25 观察到的三种手写写法） ---------------- */
 

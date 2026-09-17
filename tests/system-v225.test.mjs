@@ -155,16 +155,25 @@ const { WeiboApp } = await import('../apps/weibo/weibo-app.js');
 // ========== 6. 非回归：既有安全范式不被本轮改动破坏 ==========
 {
     const sui = f => fs.readFileSync(path.join(root, f), 'utf8');
+    // [v2.27.0] 断言形式随实现收敛更新：手写 window._xxxBound guard 已迁移到
+    //   onceFlag（等价幂等语义）+ 登记层（window 监听器可回收）。此处断言的是
+    //   「幂等 guard 依然存在」这一不变量，而非旧的实现载体。
     const mofo = sui('apps/mofo/mofo-app.js');
-    ok('mofo: _mofoSwipeBackBound 幂等 guard 保持',
-        /if \(!window\._mofoSwipeBackBound\) \{/.test(mofo) && /window\._mofoSwipeBackBound = true;/.test(mofo));
+    ok('mofo: 幂等 guard 保持（onceFlag 形式）',
+        /if \(onceFlag\('mofoSwipeBack'\)\) \{/.test(mofo)
+        && /globalRuntime\.addListener\(window, PHONE_EVENTS\.SWIPE_BACK/.test(mofo)
+        && !/window\._mofoSwipeBackBound = true/.test(mofo));
     const wc = sui('apps/wechat/wechat-app.js');
-    ok('wechat: _wechatSwipeBackBound 幂等 guard 保持',
-        /if \(!window\._wechatSwipeBackBound\) \{/.test(wc) && /window\._wechatSwipeBackBound = true;/.test(wc));
+    ok('wechat: 幂等 guard 保持（onceFlag 形式）',
+        /if \(onceFlag\('wechatSwipeBack'\)\) \{/.test(wc)
+        && /globalRuntime\.addListener\(window, PHONE_EVENTS\.SWIPE_BACK/.test(wc)
+        && !/window\._wechatSwipeBackBound = true/.test(wc));
     const ho = sui('apps/honey/honey-app.js');
-    ok('honey: 三个 Bound 幂等 guard 保持',
-        ['_honeySwipeBackBound', '_honeyPanelVisibilityBound', '_honeyDocumentVisibilityBound']
-            .every(g => new RegExp(`if \\(!window\\.${g}\\)`).test(ho) && new RegExp(`window\\.${g} = true;`).test(ho)));
+    ok('honey: 三个幂等 guard 保持（onceFlag 形式）',
+        ['honeySwipeBack', 'honeyPanelVisibility', 'honeyDocumentVisibility']
+            .every(g => new RegExp(`if \\(onceFlag\\('${g}'\\)\\)`).test(ho))
+        && ['_honeySwipeBackBound', '_honeyPanelVisibilityBound', '_honeyDocumentVisibilityBound']
+            .every(g => !new RegExp(`window\\.${g} = true;`).test(ho)));
     const mu = sui('apps/music/music-app.js');
     ok('music: remove-then-add 幂等重绑保持',
         /if \(window\._musicSwipeBackHandler\) \{\s*\n\s*window\.removeEventListener\('phone:swipeBack', window\._musicSwipeBackHandler\)/.test(mu));

@@ -10,6 +10,9 @@
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
 // 设置APP
+// [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
+import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
+import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
 import { ImageCropper } from './image-cropper.js';
 import { AlbumData } from '../album/album-data.js';
@@ -221,13 +224,13 @@ export class SettingsApp {
         void ensurePhoneContextLimitSetting(this.storage);
 
         // 🔥 监听滑动返回事件 (防止实例重建导致重复绑定)
-        if (!window._settingsSwipeBackBound) {
-            window._settingsSwipeBackBound = true;
-            window.addEventListener('phone:swipeBack', () => {
+        // [v2.27.0] 同上：onceFlag + 登记层（window 监听器可回收）
+        if (onceFlag('settingsSwipeBack')) {
+            globalRuntime.addListener(window, PHONE_EVENTS.SWIPE_BACK, () => {
                 if (window.VirtualPhone && window.VirtualPhone.settingsApp) {
                     window.VirtualPhone.settingsApp.handleSwipeBack();
                 }
-            });
+            }, false, 'settings:swipe-back');
         }
     }
 

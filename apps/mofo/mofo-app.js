@@ -15,6 +15,10 @@
 
 import { MofoData } from './mofo-data.js';
 import { MofoView } from './mofo-view.js';
+// [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
+import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
+import { PHONE_EVENTS } from '../../config/phone-events.js';
+
 
 export class MofoApp {
     constructor(phoneShell, storage) {
@@ -24,14 +28,14 @@ export class MofoApp {
         this.mofoView = new MofoView(this);
 
         // 防止实例重建后重复绑定
-        if (!window._mofoSwipeBackBound) {
-            window._mofoSwipeBackBound = true;
-            window.addEventListener('phone:swipeBack', () => {
+        // [v2.27.0] 同上：onceFlag + 登记层（window 监听器可回收）
+        if (onceFlag('mofoSwipeBack')) {
+            globalRuntime.addListener(window, PHONE_EVENTS.SWIPE_BACK, () => {
                 const mofoApp = window.VirtualPhone?.mofoApp;
                 if (mofoApp && typeof mofoApp.handleSwipeBack === 'function') {
                     mofoApp.handleSwipeBack();
                 }
-            });
+            }, false, 'mofo:swipe-back');
         }
     }
 
