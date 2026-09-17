@@ -20,15 +20,23 @@ export class AlbumApp {
         this.albumData = new AlbumData(storage);
         this.albumView = new AlbumView(this);
 
-        window.addEventListener('phone:swipeBack', (e) => this.handleSwipeBack(e));
-        window.addEventListener('phone:albumImageDeleted', () => this.refreshIfVisible());
-        window.addEventListener('phone:updateWallpaper', () => this.refreshIfVisible());
-        window.addEventListener('phone:panelVisibility', event => {
+        // [v2.25.0] 监听器改由实例字段持有：albumApp 在清数据时被置 null 重建，
+        //   构造期直接 add 匿名函数会使每次重建净增 5 个全局监听器（泄漏）。
+        //   与 weibo-app（_swipeHandler + destroy）、music-app（remove-then-add）同构。
+        this._onSwipeBack = (e) => this.handleSwipeBack(e);
+        this._onImageDeleted = () => this.refreshIfVisible();
+        this._onWallpaper = () => this.refreshIfVisible();
+        this._onPanelVisibility = event => {
             if (event?.detail?.open === false) this.albumView?.pausePreview?.();
-        });
-        document.addEventListener('visibilitychange', () => {
+        };
+        this._onDocVisibility = () => {
             if (document.hidden) this.albumView?.pausePreview?.();
-        });
+        };
+        window.addEventListener('phone:swipeBack', this._onSwipeBack);
+        window.addEventListener('phone:albumImageDeleted', this._onImageDeleted);
+        window.addEventListener('phone:updateWallpaper', this._onWallpaper);
+        window.addEventListener('phone:panelVisibility', this._onPanelVisibility);
+        document.addEventListener('visibilitychange', this._onDocVisibility);
     }
 
     _preloadCSS() {
@@ -106,5 +114,13 @@ export class AlbumApp {
 
     deactivate() {
         this.albumView?.closePreview?.();
+    }
+    // [v2.25.0] 实例销毁：解绑构造期注册的 5 个全局监听器（置 null 重建前调用）
+    destroy() {
+        window.removeEventListener('phone:swipeBack', this._onSwipeBack);
+        window.removeEventListener('phone:albumImageDeleted', this._onImageDeleted);
+        window.removeEventListener('phone:updateWallpaper', this._onWallpaper);
+        window.removeEventListener('phone:panelVisibility', this._onPanelVisibility);
+        document.removeEventListener('visibilitychange', this._onDocVisibility);
     }
 }

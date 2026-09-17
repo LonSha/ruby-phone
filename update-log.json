@@ -1,5 +1,15 @@
 {
   "versions": {
+    "2.25.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·懒加载单例重建时的全局监听器泄漏】v2.23/v2.24 采用「保留实例、仅重建数据层」的理由正是「避免重建实例导致监听器累积泄漏」，但清数据路径上有三个懒加载 App 仍被直接置 null（下次打开重新 new）：相册（album）构造期向 window 注册 phone:swipeBack / phone:albumImageDeleted / phone:updateWallpaper / phone:panelVisibility 四个、向 document 注册 visibilitychange 一个，共 5 个匿名监听器；日历（calendar）构造期注册 phone:swipeBack 一个。二者均无幂等 guard、无解绑路径，每次「清当前会话数据 / 清全部数据」后重开都会永久残留一份旧实例的监听器——一次漏绑即终身累积，且旧闭包持有已废弃实例（含其 data 与 DOM 引用），后续新实例的响应还会与旧实例重复触发。",
+        "【范围界定·逐一取证后只修三处】对 7 个「被置 null 重建」的 App 逐个核查构造期监听器与解绑能力：mofo / wechat / honey 已用 window._xxxBound 幂等 guard + 动态取实例、music 已用 window._musicSwipeBackHandler 的 remove-then-add 幂等重绑，均为正确范式（本轮不动，仅作非回归基线）；weibo 类内 destroy() 早已实现（解绑 _swipeHandler），但 index.js 置 null 时从未调用，属「有解绑能力却没接线」，等价于泄漏。故本轮只处理 album / calendar（补能力）与 weibo（补接线）。",
+        "【修复方案·监听器由实例字段持有 + destroy 解绑】album 的 5 个监听器改由 this._onSwipeBack / _onImageDeleted / _onWallpaper / _onPanelVisibility / _onDocVisibility 持有，新增 destroy() 逐一 removeEventListener（覆盖 window 与 document 两端全部注册类型）；calendar 同构（this._onSwipeBack + destroy()）。以实例字段持有是解绑前提——注册用匿名函数则引用不可复现、物理上无法解绑。",
+        "【接线·四处置 null 站点先 destroy】index.js 在 clearCurrentData 站点（albumApp / calendarApp）与 clearAllData 站点（calendarApp / weiboApp）共 4 处于置 null 前调用 destroy?.()；clearAllData 站点置于 clearCache() 之后，保证「数据清空 → 监听解绑 → 实例释放」顺序。可选链调用使未定义 destroy 的历史实例也不会抛错。",
+        "【工程防线】新增 tests/system-v225.test.mjs（27 项）：真实 App 类在 Node + mock DOM 下可构造并验证行为——calendar/album/weibo 构造期注册数（1/5/1）与事件名齐全、destroy 后精确归零（mock 采用真实注册表语义：仅 handler 引用完全相等才移除，杜绝「destroy 里传错引用」的假绿）+ 泄漏对照（6 轮重建不 destroy 净增 36 个、后续每轮正确配平仍无法消除历史残留，证明「漏一次即永久」；干净基线上 N 轮 new→destroy 净 0，证明修复形态自洽）+ 接线断言（4 处 destroy→null 顺序与总数 = 4）+ 非回归（mofo/wechat/honey 幂等 guard 与 music remove-then-add 保持不变、music 未被误加接线）+ 范围自证（三 App 确在置 null 清单内、保留实例的 10 个 App 未被误加 destroy、所有置 null 站点要么 destroy 要么有幂等 guard）。语法门 233 文件通过。"
+      ]
+    },
     "2.24.0": {
       "date": "2026-09-17",
       "items": [
@@ -443,5 +453,5 @@
       ]
     }
   },
-  "latest": "2.24.0"
+  "latest": "2.25.0"
 }

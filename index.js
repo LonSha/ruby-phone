@@ -36,7 +36,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.24.0';
+const ST_PHONE_VERSION = '2.25.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -9937,7 +9937,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         window.VirtualPhone.mofoApp.clearCache();
                         window.VirtualPhone.mofoApp = null;
                     }
+                    // [v2.25.0] 置 null 前先 destroy：album/calendar 构造期注册的全局监听器
+                    //   无幂等 guard，实例重建即累积（泄漏）。与 weibo/music 同构收口。
+                    window.VirtualPhone.albumApp?.destroy?.();
                     window.VirtualPhone.albumApp = null;
+                    window.VirtualPhone.calendarApp?.destroy?.();
                     window.VirtualPhone.calendarApp = null;
                     if (window.VirtualPhone.musicApp) {
                         window.VirtualPhone.musicApp.clearCache();
@@ -10015,12 +10019,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (window.VirtualPhone.diaryApp) window.VirtualPhone.diaryApp.clearCache();
                     if (window.VirtualPhone.calendarApp) {
                         window.VirtualPhone.calendarApp.clearCache();
+                        window.VirtualPhone.calendarApp.destroy?.();   // [v2.25.0] 解绑全局监听器，防重建累积
                         window.VirtualPhone.calendarApp = null;
                     }
                     if (window.VirtualPhone.phoneApp) window.VirtualPhone.phoneApp.clearCache();
                     window.VirtualPhone.cachedPhoneCallData?.clearCache?.();
                     if (window.VirtualPhone.weiboApp) {
                         window.VirtualPhone.weiboApp.clearCache();
+                        window.VirtualPhone.weiboApp.destroy?.();   // [v2.25.0] 解绑 _swipeHandler（类内已有 destroy，此前从未接线）
                         window.VirtualPhone.weiboApp = null;
                     }
                     if (window.VirtualPhone.mofoApp) {
