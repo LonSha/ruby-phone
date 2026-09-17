@@ -163,6 +163,11 @@ export class ManagedRuntime {
     }
     /** 全量回收。幂等：重复调用不报错；调用后可继续登记新资源。 */
     dispose() {
+        // [v2.28.0] 宿主级域回收时级联回收全部实例级子域：
+        //   否则「实例被置 null 但没人调它的 dispose」会留下孤儿域（登记表被外部引用钉住）。
+        if (this._childOf === undefined && _childRuntimes.size) {
+            for (const rt of [..._childRuntimes]) rt.dispose();
+        }
         const ids = [...this._entries.keys()];
         for (const id of ids) {
             const e = this._entries.get(id);
@@ -170,6 +175,8 @@ export class ManagedRuntime {
             ManagedRuntime._release(e);
         }
         this._disposed = true;
+        // [v2.28.0] 实例级资源域自行注销，避免子域表无限增长
+        if (this._childOf) _childRuntimes.delete(this);
         return ids.length;
     }
 
@@ -196,6 +203,18 @@ export class ManagedRuntime {
 
 /* ---------------- 全局登记层（宿主级资源，随插件一次回收） ---------------- */
 export const globalRuntime = new ManagedRuntime('global');
+/* ---------------- [v2.28.0] 实例级资源域表 ----------------
+ * 动机：v2.27 把宿主级常驻资源接进 globalRuntime 后暴露了下一层问题——
+ *   大量资源属于**某个实例**而非宿主：一个 MVVM 视图、一个 App、一个组件。
+ *   它们只在实例存活期内应当存在，实例销毁/重建时必须精确回收该实例
+ *   自己登记的一切，而不该把宿主级资源一起清掉，也不该靠人工维护一份
+ *   「这个实例登记了哪几个句柄」的清单（v2.27 前的 6 处手写 clearInterval
+ *   正是这份清单的失败形态：漏一个就永久泄漏）。
+ * 设计：childRuntime(name) 返回一个挂在 globalRuntime 名下的独立域，
+ *   它自持 entries，但由 _childRuntimes 登记以便全量诊断；其 dispose()
+ *   只回收本域资源并自动从域表注销。父域 dispose() 会级联回收所有子域。
+ */
+const _childRuntimes = new Set();
 /**
  * [v2.27.0] 全局登记层诊断快照：宿主可直接挂到设置页/控制台，
  * 回答"现在还有哪些常驻资源在跑、分别属于谁"。
@@ -204,11 +223,54 @@ export const globalRuntime = new ManagedRuntime('global');
  */
 export function globalRuntimeSnapshot() {
     const stats = globalRuntime.stats();
+    const children = [..._childRuntimes].map(rt => ({
+        name: rt.name,
+        total: rt.size,
+        byKind: rt.stats()
+    }));
     return {
         total: stats.total,
         byKind: { interval: stats.interval, timeout: stats.timeout, observer: stats.observer, listener: stats.listener },
-        tags: globalRuntime.entries().map(e => ({ kind: e.kind, tag: e.tag }))
+        tags: globalRuntime.entries().map(e => ({ kind: e.kind, tag: e.tag })),
+        // [v2.28.0] 实例级资源域：回答「除宿主级之外，还有几个实例各持有多少资源」
+        children
     };
+}
+/* ---------------- [v2.28.0] 实例级资源域 ----------------
+ * 用法（视图/App/组件）：
+ *   const rt = childRuntime('music-view');
+ *   rt.addInterval(fn, 250, 'progress');
+ *   ...
+ *   rt.dispose();          // 实例销毁：一次性回收本实例全部资源
+ * 语义要点：
+ *   - 域内 tag 只在本域内匹配（cancelByTag 不会误伤别的实例）；
+ *   - 域 dispose 幂等，且会自动从域表注销（重复 dispose 不会二次累加）；
+ *   - 无宿主环境下所有方法安全降级不抛（Node 单测可直接调用）。
+ * @returns {ManagedRuntime} 独立资源域（已挂到全局域表以供诊断）
+ */
+export function childRuntime(name) {
+    const rt = new ManagedRuntime(String(name || 'child'));
+    rt._childOf = globalRuntime;
+    _childRuntimes.add(rt);
+    return rt;
+}
+/** 当前存活的实例级资源域数量（诊断/测试用） */
+export function childRuntimeCount() {
+    return _childRuntimes.size;
+}
+/**
+ * [v2.28.0] 按名（前缀）回收实例级资源域。
+ * 场景：宿主把实例置 null（清数据/换会话/换壳）而不走实例自身的 destroy 时，
+ *   域内的定时器/监听器会被全局域表引用钉住成为孤儿。此处按域名一次性收净。
+ * @param {string} namePrefix 域名前缀（如 'music-view'）；空串 = 回收全部实例域
+ * @returns {number} 被回收的域数
+ */
+export function disposeChildRuntimes(namePrefix) {
+    const p = String(namePrefix || '');
+    const victims = p ? [..._childRuntimes].filter(rt => rt.name.startsWith(p)) : [..._childRuntimes];
+    let n = 0;
+    for (const rt of victims) { rt.dispose(); n += 1; }
+    return n;
 }
 
 /* ---------------- 幂等范式原语（收敛 v2.25 观察到的三种手写写法） ---------------- */

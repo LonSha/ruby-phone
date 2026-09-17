@@ -8,6 +8,8 @@
 'use strict';
 import * as WP from './worldpulse-engine.js';
 import { WorldpulseView } from './worldpulse-view.js';
+// [v2.28.0] 实例级资源域（App 停止监听/换会话时一次性回收其登记的全部常驻资源）
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -18,6 +20,8 @@ export class WorldpulseApp {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.view = new WorldpulseView(this);
+        // [v2.28.0] 本 App 的常驻资源（兜底轮询）入实例域：stopListening 一次收净
+        this._rt = childRuntime('worldpulse-app');
         this._listening = false;
         this._processing = false;
         this._unsub = null;
@@ -98,15 +102,19 @@ export class WorldpulseApp {
         } catch (_e) { this._unsub = null; }
 
         // 兜底：轮询（mobile 仓 checkInterval 同款思路，3s）
+        // [v2.28.0] 入实例域（tag poll:），与 eventSource 订阅一起由 stopListening 收净
         if (!this._unsub) {
-            this._pollTimer = setInterval(() => this._onFloorMaybeChanged(), 3000);
+            this._rt.cancelByTag('poll:');
+            this._rt.addInterval(() => this._onFloorMaybeChanged(), 3000, 'poll:floor');
         }
     }
     stopListening() {
         this._listening = false;
         try { this._unsub?.(); } catch (_e) {}
         this._unsub = null;
-        if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+        // [v2.28.0] 兜底轮询由实例域统一回收（旧写法手写 clearInterval + 单字段清空）
+        this._rt.cancelByTag('poll:');
+        this._pollTimer = null;
     }
 
     // [v2.21.0] 换会话：实例跨会话复用（index.js 仅在首次打开时 new），

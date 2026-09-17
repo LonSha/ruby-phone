@@ -141,16 +141,21 @@ function makeEventSource() {
     try {
         const app = new WorldpulseApp(null, env.storage);
         app.startListening();
-        ok('无事件源时启用轮询兜底', si === 1 && app._pollTimer === 424242);
+        // [v2.28.0] 句柄不再存 _pollTimer 字段，改由实例域持有（tag poll:floor）
+        ok('无事件源时启用轮询兜底（[v2.28.0] 句柄入实例域）',
+            si === 1 && app._rt.size === 1 && app._rt.tagsOf('interval').includes('poll:floor'),
+            JSON.stringify({ si, size: app._rt.size, tags: app._rt.tagsOf('interval') }));
         app.startListening();
         ok('重复启动清理旧轮询（set=2 / clear=1）', si === 2 && ci === 1);
         // 换会话重绑：清旧定时器并重建
         env.setSession('B');
         app.onChatChanged();
-        ok('换会话重绑清理旧轮询并重建', ci === 2 && si === 3 && app._pollTimer === 424242,
-            JSON.stringify({ si, ci, t: app._pollTimer }));
+        ok('换会话重绑清理旧轮询并重建（[v2.28.0] 以域名持有句柄）',
+            ci === 2 && si === 3 && app._rt.size === 1,
+            JSON.stringify({ si, ci, size: app._rt.size }));
         app.stopListening();
-        ok('停止监听清理定时器', ci === 3 && app._pollTimer === null, JSON.stringify({ ci, t: app._pollTimer }));
+        ok('停止监听清理定时器', ci === 3 && app._rt.size === 0, JSON.stringify({ ci, size: app._rt.size }));
+        app._rt.dispose();
     } finally {
         globalThis.setInterval = realSI;
         globalThis.clearInterval = realCI;

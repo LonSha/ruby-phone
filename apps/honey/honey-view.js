@@ -9,9 +9,12 @@
  * 
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
+// [v2.28.0] 实例级资源域（视图内一次性轮询等常驻资源随实例回收）
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 export class HoneyView {
     constructor(app) {
         this.app = app;
+        this._rt = childRuntime('honey-view');
         this.currentPage = 'recommend';
         this.currentSceneData = null;
         this.selectedTopic = null;
@@ -3367,20 +3370,22 @@ export class HoneyView {
         window.dispatchEvent(new CustomEvent('phone:openApp', {
             detail: { appId: 'wechat' }
         }));
-
+        // [v2.28.0] 有界轮询（最多 20 次 × 150ms）入实例域：三个出口统一 cancelByTag，
+        //   旧写法在「找到并打开」与「超时」两个分支各写一次 clearInterval。
         let attempts = 0;
-        const timer = setInterval(() => {
+        this._rt.cancelByTag('honey:open-wechat');
+        this._rt.addInterval(() => {
             attempts += 1;
             const wechatApp = window.VirtualPhone?.wechatApp || window.currentWechatApp || window.ggp_currentWechatApp;
             if (wechatApp?.openChat && wechatApp?.wechatData?.getChat?.(safeChatId)) {
-                clearInterval(timer);
+                this._rt.cancelByTag('honey:open-wechat');
                 wechatApp.openChat(safeChatId);
                 return;
             }
             if (attempts >= 20) {
-                clearInterval(timer);
+                this._rt.cancelByTag('honey:open-wechat');
             }
-        }, 150);
+        }, 150, 'honey:open-wechat');
     }
 
     _showHostWechatFriendRejectDialog(hostName = '', message = '') {

@@ -1,5 +1,18 @@
 {
   "versions": {
+    "2.28.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【新内核·实例级资源域】v2.27 把宿主级常驻资源接进 globalRuntime 后暴露了下一层问题：大量资源属于**某个实例**而非宿主——一个 MVVM 视图、一个 App、一个组件。它们只应在实例存活期内存在，实例销毁/重建时必须精确回收该实例自己登记的一切，而不该把宿主级资源一起清掉，也不该靠人工维护一份「这个实例登记了哪几个句柄」的清单。新增 childRuntime(name)：返回挂在全局域名下的独立域，自持 entries、域内 tag 只在本域匹配（cancelByTag 不会误伤别的实例），dispose() 只回收本域并自动从域表注销、幂等。globalRuntimeSnapshot() 追加 children 字段回答「除宿主级外还有几个实例各持有多少资源」。",
+        "【缺陷修复·music-view 的双份手写回收】本文件并存两条互不相干的手写回收路径：_visibilityGuard（3s 自愈轮询）与 _progressTimer（250ms 进度轮询），各自 setInterval + 各自 clearInterval，另有一个裸 window.addEventListener('resize') 靠 _resizeHandler 字段手工解绑。三者分属两个字段、三处清理点（destroyFloatingWidget / _stopProgressTimer / _closePanel），任一为漏即永久泄漏——这正是「人工维护回收清单」的失败形态。改由实例域统一持有（tag `floating:` / `progress:`），destroyFloatingWidget 两个 cancelByTag 收干净，resize 监听器亦入登记层。",
+        "【缺陷修复·sudoku-view 计时器】_startTimer() 裸 setInterval 挂 this._timer，destroy() 手写 clearInterval；视图在任一楼被重建（render→_startTimer）时仅靠 `if (this._timer) clearInterval` 兜底。改为实例域持有（tag `timer:`），destroy() 一次 cancelByTag 收净，语义等价且不再依赖「记得清字段」的纪律。",
+        "【缺陷修复·worldpulse-app 兜底轮询】startListening() 在 eventSource 缺失时退化为 3s 轮询并挂 this._pollTimer，stopListening() 手写 clearInterval；该方法在换会话（onChatChanged）与重复调用时都会被触发，属「先停后启」路径——旧写法一旦漏掉 clearInterval 就会与新轮询双挂，每个周期触发两次楼层检查。改为实例域持有（tag `poll:`），stopListening 一次 cancelByTag 收净，并保留原有双挂防护。",
+        "【缺陷修复·floating-entry 的可见性轮询与两条卸载路径】mount() 用裸 window.setInterval 挂 this.visibilityTimer，unmount() 与 unmountButtonOnly() 各写一次 window.clearInterval(this.visibilityTimer)——同一个句柄的回收逻辑被复制到两处（sync() 会按开关在两者之间切换，任何一处漏改都变成泄漏）。改为实例域持有（tag `entry:`），两条卸载路径共用同一 cancelByTag 口径。",
+        "【缺陷修复·两处有界轮询的多出口回收】weibo-app 打开微信（最多 40×80ms）与 honey-view 跳转微信会话（最多 20×150ms）都是有界轮询，但都在「成功」与「超时」两个出口各写一次 clearInterval(timer)——局部 const 句柄无法被外部停止，App 被置 null（清数据路径）时轮询仍会跑到自然超时。改为实例域持有（tag `weibo:open-wechat` / `honey:open-wechat`），出口收敛为单个 cancelByTag，且随实例被丢弃一并回收。",
+        "【缺陷修复·实例被丢弃时的孤儿域】宿主在清数据/换会话路径上会把 musicApp / weiboApp / honeyApp 直接置 null 而不走实例自身的 destroy，此时实例域会被域表引用钉住成为孤儿（其定时器继续跑）。新增 disposeChildRuntimes(namePrefix) 按域名（前缀）批量注销，并在 index.js 的两条丢弃路径（onChatChanged 的 honey、清数据的 weibo/music/honey）接线；同时宿主级 dispose() 改为级联回收全部子域，避免「忘了调谁」再次成为泄漏源。",
+        "【测试与门禁】新增 tests/system-v228.test.mjs（四层）：A 内核行为（子域隔离、cancelByTag 域内语义、dispose 幂等与域表注销、级联回收、disposeChildRuntimes 前缀匹配与空串语义、snapshot.children 结构）；B 接线（6 个文件 8 类资源入域 + 全仓「只启不停」不变量与刻意保留站点回归护栏）；C 等价性（假装时钟行为仿真：sudoku 计时器重复启动不叠加、music 双前缀互不误伤、worldpulse 换会话重绑、floating-entry 两条卸载路径共用口径、两处有界轮询的四条出口）；D 范围自证 + 诊断字段 + 版本四处同步。同步更新三处旧测试断言以交新版接管（v221 轮询兜底改断言域名持有、v225 的 weibo clearCache→destroy→null 顺序放宽以容许中间插入域回收段、v227 的降级安全零值结构补 children: []）。另修一处装配回归：honey-view.js 本版首次引入相对 import，而 tests/honey-avatar-selection.test.mjs 经 data: URL 加载源码（data: URL 无 base，相对 specifier 直接抛 ERR_UNSUPPORTED_RESOLVE_REQUEST）——已改为装入前重写为绝对 file:// URL（等价加载不改语义），并在 D 层加通用护栏防复发。语法门 239 文件通过；全量门 243/243 绿；防假绿注入 7 处全部检出，恢复后逐字节一致。"
+      ]
+    },
     "2.27.0": {
       "date": "2026-09-18",
       "items": [
@@ -477,5 +490,5 @@
       ]
     }
   },
-  "latest": "2.27.0"
+  "latest": "2.28.0"
 }

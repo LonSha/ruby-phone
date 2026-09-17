@@ -147,7 +147,8 @@ const { WeiboApp } = await import('../apps/weibo/weibo-app.js');
     ok('index.js: clearAllData 站点 calendar clearCache→destroy→null 顺序',
         /calendarApp\.clearCache\(\);\s*\n\s*window\.VirtualPhone\.calendarApp\.destroy\?\.\(\);[^\n]*\n\s*window\.VirtualPhone\.calendarApp = null;/.test(isrc));
     ok('index.js: clearAllData 站点 weibo clearCache→destroy→null 顺序',
-        /weiboApp\.clearCache\(\);\s*\n\s*window\.VirtualPhone\.weiboApp\.destroy\?\.\(\);[^\n]*\n\s*window\.VirtualPhone\.weiboApp = null;/.test(isrc));
+        /weiboApp\.clearCache\(\);\s*\n\s*window\.VirtualPhone\.weiboApp\.destroy\?\.\(\);[^\n]*\n\s*(?:\/\/[^\n]*\n\s*)?try \{ disposeChildRuntimes\('weibo-app'\); \} catch \(_e\) \{ \/\* 忽略 \*\/ \}\s*\n\s*window\.VirtualPhone\.weiboApp = null;/.test(isrc),
+        '[v2.28.0] destroy 与置 null 之间新增实例域回收（顺序不变量保持）');
     const n = (isrc.match(/(albumApp|calendarApp|weiboApp)\??\.destroy\?\.\(\)/g) || []).length;
     ok('index.js: 三 App destroy 接线共 4 处', n === 4, String(n));
 }

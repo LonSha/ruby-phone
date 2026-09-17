@@ -3,11 +3,14 @@
  *  每日数独视图
  * ======================================================== */
 
+// [v2.28.0] 实例级资源域（视图销毁即回收本视图登记的全部常驻资源）
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 export class SudokuView {
     constructor(app) {
         this.app = app;
         this._cssLoaded = false;
         this._timer = null;
+        this._rt = childRuntime('sudoku-view');
     }
 
     render() {
@@ -80,10 +83,9 @@ export class SudokuView {
     }
 
     destroy() {
-        if (this._timer) {
-            clearInterval(this._timer);
-            this._timer = null;
-        }
+        // [v2.28.0] 计时器由实例域统一回收（旧写法手写 clearInterval + 单字段清空）
+        this._rt.cancelByTag('timer:');
+        this._timer = null;
         this.app.sudokuData.pauseTimer();
     }
 
@@ -191,8 +193,9 @@ export class SudokuView {
     }
 
     _startTimer() {
-        if (this._timer) clearInterval(this._timer);
-        this._timer = setInterval(() => {
+        // [v2.28.0] 入实例域：视图销毁（destroy）时由域统一回收，不再手写 clearInterval
+        this._rt.cancelByTag('timer:');
+        this._rt.addInterval(() => {
             if (this.app.currentView !== 'sudoku') {
                 this.destroy();
                 return;
@@ -201,7 +204,7 @@ export class SudokuView {
             const el = document.getElementById('games-sudoku-timer');
             if (el) el.textContent = this._formatTime(state.elapsedMs);
             if (state.completed || state.failed) this.destroy();
-        }, 1000);
+        }, 1000, 'timer:tick');
     }
 
     _loadCSS() {

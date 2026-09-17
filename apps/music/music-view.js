@@ -12,6 +12,8 @@
 // ========================================
 // 🎵 音乐APP - 视图层 (高级 SVG 图标库)
 // ========================================
+// [v2.28.0] 实例级资源域（视图销毁即回收本视图登记的全部常驻资源）
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 
 const SVG_NOTE = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" opacity="0.4"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
 const SVG_PLAY = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -31,6 +33,10 @@ const MUSIC_FLOATING_POSITION_KEY = 'global_music_floating_position';
 export class MusicView {
     constructor(musicApp) {
         this.app = musicApp;
+        // [v2.28.0] 实例级资源域：本视图登记的一切随视图销毁一次性回收
+        //   （旧写法靠人工维护 _visibilityGuard / _progressTimer 两个字段 + 各自 clearInterval，
+        //    漏一个即永久泄漏；现由域统一持有，destroyFloatingWidget 一次收干净。）
+        this._rt = childRuntime('music-view');
         this._floatingBtn = null;
         this._floatingPanel = null;
         this._progressTimer = null;
@@ -376,13 +382,16 @@ export class MusicView {
 
         // 动态定位
         this._positionFloatingBtn(btn);
+        // [v2.28.0] resize 监听器与自愈轮询一并入域：destroyFloatingWidget 一次收干净
         this._resizeHandler = () => this._positionFloatingBtn(btn);
-        window.addEventListener('resize', this._resizeHandler);
+        this._rt.addListener(window, 'resize', this._resizeHandler, false, 'floating:resize');
 
         // 自愈检查：每3秒确认按钮仍在视口内且可见
-        this._visibilityGuard = setInterval(() => {
+        // [v2.28.0] 旧写法裸 setInterval + 单字段 clearInterval（本文件另有 _progressTimer
+        //   同样裸持有）——两处各写各的回收，任一为漏即永久泄漏。现由域统一持有。
+        this._rt.addInterval(() => {
             this._ensureButtonVisible(btn);
-        }, 3000);
+        }, 3000, 'floating:visibility-guard');
 
         // 拖拽 + 点击（统一在pointer事件中处理，兼容移动端）
         this._initDrag(btn, () => {
@@ -1271,36 +1280,31 @@ export class MusicView {
 
     destroyFloatingWidget() {
         this._closePanel();
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler);
-            this._resizeHandler = null;
-        }
-        if (this._visibilityGuard) {
-            clearInterval(this._visibilityGuard);
-            this._visibilityGuard = null;
-        }
+        // [v2.28.0] resize 监听器、自愈轮询、进度轮询全部由实例域统一回收，
+        //   不再逐个手写 removeEventListener / clearInterval（旧写法漏一个即永久泄漏）。
+        this._resizeHandler = null;
+        this._stopProgressTimer();
+        this._rt.cancelByTag('floating:');
         if (this._floatingBtn) {
             this._floatingBtn.remove();
             this._floatingBtn = null;
         }
         this._userDragged = false;
-        this._stopProgressTimer();
     }
 
     // ========== 进度条更新 ==========
 
     _startProgressTimer() {
         this._stopProgressTimer();
-        this._progressTimer = setInterval(() => {
+        // [v2.28.0] 入实例域（tag 前缀 progress:），_stopProgressTimer 一次收净
+        this._rt.addInterval(() => {
             this._updateProgress();
-        }, 250);
+        }, 250, 'progress:tick');
     }
 
     _stopProgressTimer() {
-        if (this._progressTimer) {
-            clearInterval(this._progressTimer);
-            this._progressTimer = null;
-        }
+        this._rt.cancelByTag('progress:');
+        this._progressTimer = null;
     }
 
     _updateProgress() {

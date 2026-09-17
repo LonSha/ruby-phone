@@ -102,6 +102,12 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
     const snap0 = globalRuntimeSnapshot();
     ok('snapshot: 结构完整（total/byKind/tags）',
         typeof snap0.total === 'number' && typeof snap0.byKind === 'object' && Array.isArray(snap0.tags));
+    // [v2.28.0] 快照追加 children 字段（实例级资源域明细）；v2.27 只断言宿主级三字段
+    ok('snapshot: 结构含 children（实例级资源域明细，v2.28 追加）',
+        Array.isArray(snap0.children));
+    ok('snapshot: 宿主级 total 与 children 分离（子域不计入宿主级）',
+        snap0.children.every(c => c && typeof c.name === 'string'
+            && typeof c.total === 'number' && typeof c.byKind === 'object'));
     ok('snapshot: total 与 byKind 各项之和一致',
         snap0.total === snap0.byKind.interval + snap0.byKind.timeout
             + snap0.byKind.observer + snap0.byKind.listener);
@@ -274,7 +280,8 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
     ok('诊断: 提供 getRuntimeStats 且挂到 VirtualPhone',
         /function getRuntimeStats\(\)/.test(isrc) && /window\.VirtualPhone\.runtimeStats = getRuntimeStats;/.test(isrc));
     ok('诊断: 降级安全（异常时返回零值结构，不抛）',
-        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\] \}; \}/.test(isrc));
+        // [v2.28.0] 零值结构追加 children: []（实例级域明细）；此处只断言宿主级四字段仍齐备且 children 为数组
+        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\], children: \[\] \}; \}/.test(isrc));
     // 范围自证：本轮只动该动的文件
     const touched = ['index.js', 'config/runtime-lifecycle.js',
         'apps/wechat/wechat-app.js', 'apps/mofo/mofo-app.js',

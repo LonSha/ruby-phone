@@ -14,11 +14,14 @@
 // ========================================
 import { WeiboData } from './weibo-data.js';
 import { WeiboView } from './weibo-view.js';
+// [v2.28.0] 实例级资源域（App 内一次性轮询等常驻资源随实例回收）
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 
 export class WeiboApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
         this.storage = storage;
+        this._rt = childRuntime('weibo-app');
 
         // 预加载CSS，避免首次打开闪烁
         this._preloadCSS();
@@ -136,13 +139,16 @@ export class WeiboApp {
         if (restoreWechat()) return;
 
         window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'wechat' } }));
+        // [v2.28.0] 有界轮询（最多 40 次 × 80ms）入实例域：两个出口都走 cancelByTag，
+        //   旧写法两条 clearInterval 分支各写一次；且 App 被销毁时也会随域一并回收。
         let attempts = 0;
-        const timer = setInterval(() => {
+        this._rt.cancelByTag('weibo:open-wechat');
+        this._rt.addInterval(() => {
             attempts++;
             if (restoreWechat() || attempts >= 40) {
-                clearInterval(timer);
+                this._rt.cancelByTag('weibo:open-wechat');
             }
-        }, 80);
+        }, 80, 'weibo:open-wechat');
     }
 
     handleSwipeBack() {

@@ -31,7 +31,7 @@ import { NotificationLog } from './config/system-notifications.js';
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
-import { globalRuntime, globalRuntimeSnapshot, onceFlag } from './config/runtime-lifecycle.js';
+import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
 import { PHONE_EVENTS } from './config/phone-events.js';
 
@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.27.0';
+const ST_PHONE_VERSION = '2.28.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -2402,9 +2402,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // [v2.27.0] 常驻资源诊断入口：控制台执行 window.VirtualPhone.runtimeStats()
     //   即可看到「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」，
     //   用于定位漏回收（v2.25/v2.26 修的正是这类）。无登记项时 total 为 0。
+    // [v2.28.0] 追加 children 字段：实例级资源域明细（哪个视图/App 各持有多少资源）。
     function getRuntimeStats() {
         try { return globalRuntimeSnapshot(); }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [] }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [] }; }
     }
 
     async function getOrCreateMofoData() {
@@ -8912,6 +8913,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } catch (e) {
                     console.warn('[ST-Phone] 切换会话清理 Honey 实例失败:', e);
                 }
+                // [v2.28.0] 实例被丢弃时同步回收其实例级资源域（否则域表钉住其定时器成为孤儿）
+                try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                 window.VirtualPhone.honeyApp = null;
             }
             // 🪄 清空魔坊缓存
@@ -10079,6 +10082,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (window.VirtualPhone.weiboApp) {
                         window.VirtualPhone.weiboApp.clearCache();
                         window.VirtualPhone.weiboApp.destroy?.();   // [v2.25.0] 解绑 _swipeHandler（类内已有 destroy，此前从未接线）
+                        // [v2.28.0] 实例级资源域同步回收（含 open-wechat 有界轮询）
+                        try { disposeChildRuntimes('weibo-app'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.weiboApp = null;
                     }
                     if (window.VirtualPhone.mofoApp) {
@@ -10088,6 +10093,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (window.VirtualPhone.musicApp) {
                         window.VirtualPhone.musicApp.clearCache();
                         window.VirtualPhone.musicApp.view.destroyFloatingWidget();
+                        // [v2.28.0] 视图域随实例丢弃一并注销（destroyFloatingWidget 已收净资源）
+                        try { disposeChildRuntimes('music-view'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.musicApp = null;
                     }
                     if (window.VirtualPhone.honeyApp) {
@@ -10098,6 +10105,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         } catch (e) {
                             console.warn('[ST-Phone] 清理 Honey 缓存失败:', e);
                         }
+                        // [v2.28.0] 实例级资源域同步回收
+                        try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.honeyApp = null;
                     }
                 }

@@ -1,4 +1,6 @@
 import { PetController } from './pet-controller.js';
+// [v2.28.0] 实例级资源域：悬浮入口的常驻资源（轮询 + 3 个 resize 监听）随实例回收
+import { childRuntime } from '../config/runtime-lifecycle.js';
 
 const FLOATING_ROOT_ID = 'phone-floating-entry-root';
 const FLOATING_BUTTON_ID = 'phone-floating-entry-button';
@@ -35,6 +37,7 @@ export class PhoneFloatingEntry {
         this.onActivate = typeof options.onActivate === 'function' ? options.onActivate : () => {};
         this.isPanelOpen = typeof options.isPanelOpen === 'function' ? options.isPanelOpen : () => false;
         this.resizeController = null;
+        this._rt = childRuntime('floating-entry');
         this.visibilityTimer = null;
         this.pet = null;  // 桌面宠物控制器
         this._onPanelVisibility = event => {
@@ -337,8 +340,12 @@ export class PhoneFloatingEntry {
             window.addEventListener('phone:floatingEntrySettingsChanged', this._onSettingsChanged, { signal });
         }
 
-        window.clearInterval(this.visibilityTimer);
-        this.visibilityTimer = window.setInterval(() => this.ensureVisible(button), 3000);
+        // [v2.28.0] 自愈轮询入实例域（tag entry:）：unmount/unmountButtonOnly 一次收净。
+        //   旧写法用裸 window.setInterval + this.visibilityTimer，两条卸载路径各写一次
+        //   clearInterval，属「人工维护回收清单」的典型失败形态。
+        this._rt.cancelByTag('entry:');
+        this._rt.addInterval(() => this.ensureVisible(button), 3000, 'entry:visibility');
+        this.visibilityTimer = null;
         this.updateVisibility();
     }
 
@@ -350,7 +357,7 @@ export class PhoneFloatingEntry {
         document.getElementById('phone-pet-root')?.remove();
         this.resizeController?.abort?.();
         this.resizeController = null;
-        window.clearInterval(this.visibilityTimer);
+        this._rt.cancelByTag('entry:');
         this.visibilityTimer = null;
         document.getElementById(FLOATING_BUTTON_ID)?.remove();
         const root = document.getElementById(FLOATING_ROOT_ID);
@@ -400,7 +407,8 @@ export class PhoneFloatingEntry {
     unmountButtonOnly() {
         this.resizeController?.abort?.();
         this.resizeController = null;
-        window.clearInterval(this.visibilityTimer);
+        // [v2.28.0] 与 unmount 共用同一回收口径（实例域）
+        this._rt.cancelByTag('entry:');
         this.visibilityTimer = null;
         document.getElementById(FLOATING_BUTTON_ID)?.remove();
     }
