@@ -365,9 +365,12 @@ export class AsrManager {
      */
     async recognizeOnce(options = {}) {
         const config = this._resolveConfig(options);
+        // [v2.22.0] 自动回落开关：兼容布尔与字符串 'false'（与项目其它布尔键读取风格一致）
+        const autoLocalRaw = this.storage?.get?.('phone-asr-auto-local');
+        const autoLocalEnabled = autoLocalRaw !== false && autoLocalRaw !== 'false';
         const useLocal = options.forceLocal
             || (config.provider === 'local')
-            || (this.storage?.get?.('phone-asr-auto-local') !== false && !config.apiKey && !config.relayUrl);
+            || (autoLocalEnabled && !config.apiKey && !config.relayUrl);
         if (useLocal && this.isLocalAsrSupported()) {
             return this._recognizeLocal({ language: config.language, signal: options.signal });
         }

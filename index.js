@@ -36,7 +36,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.21.0';
+const ST_PHONE_VERSION = '2.22.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -11100,9 +11100,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                         if (isWechatInteropEnabled && momentsInjectEnabled && moments.length > 0) {
                                             const configuredLimit = Number.parseInt(storage?.get('wechat-moments-context-limit'), 10);
                                             const momentsLimit = Number.isFinite(configuredLimit)
-                                                ? Math.max(1, Math.min(100, configuredLimit))
+                                                ? Math.max(0, Math.min(100, configuredLimit))
                                                 : 30;
-                                            const recentMoments = moments.slice(0, momentsLimit);
+                                            // [v2.22.0] 0 = 关闭朋友圈线下注入（与线上 _readNonNegativeLimit 语义对齐）
+                                            const recentMoments = momentsLimit > 0 ? moments.slice(0, momentsLimit) : [];
                                             const formatMomentTime = (moment) => {
                                                 const date = String(moment?.date || '').trim();
                                                 const time = String(moment?.time || '').trim();
@@ -11160,7 +11161,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                                     lines.push('评论：无');
                                                 }
                                             });
-                                            momentsHistoryContent = lines.join('\n').trim();
+                                            // [v2.22.0] 无可注入动态（含 limit=0）时保持空串，避免只注入表头
+                                            momentsHistoryContent = recentMoments.length > 0 ? lines.join('\n').trim() : '';
                                         }
                                     } catch (e) {
                                         momentsHistoryContent = '';
@@ -11357,6 +11359,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                         if (callHistoryEnabled) {
                                             const phoneCallData = window.VirtualPhone?.phoneApp?.phoneCallData;
                                             const historyLimitRaw = parseInt(storage?.get('phone-call-limit'));
+                                            const smsLimitRaw = parseInt(storage?.get('phone-sms-limit'));
+                                            const smsLimit = Math.max(1, Math.min(9999, Number.isFinite(smsLimitRaw) ? smsLimitRaw : 20));
                                             const historyLimit = Math.max(1, Math.min(9999, Number.isFinite(historyLimitRaw) ? historyLimitRaw : 10));
                                             const userName = context?.name1 || '用户';
                                             let callHistory = [];
@@ -11450,7 +11454,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                                         const contactName = String(conversation?.name || '未知联系人').trim();
                                                         phoneAppHistoryContent += `━━━ 与 ${contactName} 的短信 ━━━\n`;
                                                         let lastDate = '';
-                                                        smsMessages.slice(-historyLimit).forEach(message => {
+                                                        smsMessages.slice(-smsLimit).forEach(message => {
                                                             const date = String(message?.date || '').trim();
                                                             const weekday = String(message?.weekday || '').trim();
                                                             if (date && date !== lastDate) {

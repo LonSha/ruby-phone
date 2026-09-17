@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.22.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·短信注入条数配置死角】phone-sms-limit（每个短信会话注入酒馆正文的最近消息条数）有 3 处消费端（phone-view 发送给 AI 的短信历史、chat-view 单聊上下文、index.js 线下 {{PHONE_APP_HISTORY}} 短信段）却全仓库零写入——值恒为默认 20，用户无法调整；同组电话 phone-call-limit 有设置 UI，且其描述「控制每段电话通话及每个短信会话注入酒馆正文的最近消息条数」谎称同时管短信，实际只写 phone-call-limit（假交付）。修复：设置页「📴 线下注入设置」新增「短信记录条数」输入框 + change 监听（写入 phone-sms-limit，1~9999）；通话条数描述改为「控制每段电话通话注入酒馆正文的最近消息条数」；index.js 线下短信段改用 phone-sms-limit（与线上两处消费端写读同名，消除键名错配）。",
+        "【缺陷修复·朋友圈上下文条数配置死角】wechat-moments-context-limit（朋友圈注入上下文条数）有 2 处消费端（chat-view 单聊朋友圈上下文 _readNonNegativeLimit(...,30,100)、index.js 线下朋友圈变量注入），但设置页「📱 手机内微信线上聊天」的 5 个 limit 输入框群（正文上下文/单聊/群聊/单人通话/群通话）独缺朋友圈——用户无法调整。修复：新增「朋友圈上下文条数」输入框 + change 监听（0~100，默认 30）；同时收口 index.js 线下注入的 0 值语义（原 Math.max(1,...) 使 0 无效、与线上 limit<=0 关闭不一致——现改为 Math.max(0,...)，limit=0 时 recentMoments 置空且不注入表头），保证线上/线下「0=关闭」语义一致。",
+        "【缺陷修复·ASR 自动本地回落开关悬空】phone-asr-auto-local（云端服务商无密钥且无 Worker 中转时自动回落到浏览器原生 Web Speech API）仅在 asr-manager.js recognizeOnce 被读取（`!== false` 判断），全仓库零写入——开关永远无法关闭（写死默认开），设置页语音输入 ASR 区亦无该控件。修复：设置页新增「无密钥时自动使用本地识别」开关（默认开启）+ change 监听写入；消费端读取加固为兼容布尔与字符串 'false'（与项目其它布尔键风格一致），使开关真正可关。",
+        "【工程防线】新增 tests/system-v222.test.mjs（26 项）：真实运行时断言（AsrManager + mock storage 驱动识别路径选择——缺省/true/false/字符串'false'、provider=local 优先级、有密钥或中转时不回落、切换存储键即切换路径）+ 接线断言（三键的设置页 UI 控件与写入监听器、五处消费端同名读取、误导描述已修正、index.js smsLimit 定义与截断切换、朋友圈 0=关闭与空集不注入）。测试总数 237 全绿。"
+      ]
+    },
     "2.21.0": {
       "date": "2026-09-17",
       "items": [
@@ -416,5 +425,5 @@
       ]
     }
   },
-  "latest": "2.21.0"
+  "latest": "2.22.0"
 }

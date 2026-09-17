@@ -2262,6 +2262,13 @@ export class SettingsApp {
                                        value="${readNonNegativeStorageNumber(this.storage, 'wechat-group-call-history-limit', 50)}"
                                        style="width: 55px; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; text-align: center; font-size: 14px; background: #fafafa;">
                             </div>
+
+                            <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
+                                <span style="font-size: 14px; color: #000;">朋友圈上下文条数</span>
+                                <input type="number" id="wechat-moments-context-limit" min="0" max="100"
+                                       value="${readNonNegativeStorageNumber(this.storage, 'wechat-moments-context-limit', 30, 100)}"
+                                       style="width: 55px; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; text-align: center; font-size: 14px; background: #fafafa;">
+                            </div>
                             </div>
                         </details>
 
@@ -2372,10 +2379,19 @@ export class SettingsApp {
                             <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
                                     <div class="setting-label">通话APP记录条数</div>
-                                    <div class="setting-desc">控制每段电话通话及每个短信会话注入酒馆正文的最近消息条数</div>
+                                    <div class="setting-desc">控制每段电话通话注入酒馆正文的最近消息条数</div>
                                 </div>
                                 <input type="number" id="phone-call-limit" min="1" max="9999"
                                        value="${this.storage.get('phone-call-limit') || 10}"
+                                       style="width: 55px; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; text-align: center; font-size: 14px; background: #fafafa;">
+                            </div>
+                            <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div class="setting-label">短信记录条数</div>
+                                    <div class="setting-desc">控制每个短信会话注入酒馆正文的最近消息条数</div>
+                                </div>
+                                <input type="number" id="phone-sms-limit" min="1" max="9999"
+                                       value="${this.storage.get('phone-sms-limit') || 20}"
                                        style="width: 55px; height: 30px; padding: 0 8px; border: 1px solid #e0e0e0; border-radius: 8px; text-align: center; font-size: 14px; background: #fafafa;">
                             </div>
 
@@ -3194,6 +3210,16 @@ export class SettingsApp {
                                         </select>
                                     </div>
 
+                                    <div class="setting-item setting-toggle">
+                                        <div>
+                                            <div class="setting-label">无密钥时自动使用本地识别</div>
+                                            <div class="setting-desc">云端服务商未填 API Key 且未配置 Worker 中转时，自动回落到浏览器原生 Web Speech API（免费、离线可用）；关闭后缺密钥将直接报错。该开关默认开启。</div>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="phone-asr-auto-local" ${this.storage.get('phone-asr-auto-local') !== false && this.storage.get('phone-asr-auto-local') !== 'false' ? 'checked' : ''}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
                                     <div class="setting-item" style="margin-top: 10px;">
                                         <button id="phone-asr-test" type="button" style="width: 100%; height: 34px; border: 1px solid #1677ff; border-radius: 8px; background: #1677ff; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer;">🎤 说一句话试试</button>
                                         <div id="phone-asr-result" class="setting-desc" style="margin-top: 6px; min-height: 18px;"></div>
@@ -6318,6 +6344,13 @@ export class SettingsApp {
             await this.storage.set('wechat-group-call-history-limit', validLimit);
         });
 
+        document.getElementById('wechat-moments-context-limit')?.addEventListener('change', async (e) => {
+            const limit = Number.parseInt(e.target.value, 10);
+            const validLimit = Math.max(0, Math.min(100, Number.isFinite(limit) ? limit : 30));
+            e.target.value = validLimit;
+            await this.storage.set('wechat-moments-context-limit', validLimit);
+        });
+
         // 🔥 线下单聊发送条数设置
         document.getElementById('offline-single-chat-enabled')?.addEventListener('change', async (e) => {
             if (this._isWechatOnlineOnlyModeEnabled()) {
@@ -6396,6 +6429,13 @@ export class SettingsApp {
             const validLimit = Math.max(1, Math.min(9999, limit));
             e.target.value = validLimit;
             await this.storage.set('phone-call-limit', validLimit);
+        });
+        // 📞 短信会话记录条数设置
+        document.getElementById('phone-sms-limit')?.addEventListener('change', async (e) => {
+            const limit = parseInt(e.target.value) || 20;
+            const validLimit = Math.max(1, Math.min(9999, limit));
+            e.target.value = validLimit;
+            await this.storage.set('phone-sms-limit', validLimit);
         });
 
         // 🧾 线下微博注入开关
@@ -10571,6 +10611,10 @@ export class SettingsApp {
         });
         if (asrLanguageSelect) asrLanguageSelect.addEventListener('change', async (e) => {
             await this.storage.set('phone-asr-language', String(e.target.value || 'zh-CN').trim() || 'zh-CN');
+        });
+        const asrAutoLocalInput = document.getElementById('phone-asr-auto-local');
+        if (asrAutoLocalInput) asrAutoLocalInput.addEventListener('change', async (e) => {
+            await this.storage.set('phone-asr-auto-local', !!e.target.checked);
         });
         if (asrTestBtn) asrTestBtn.addEventListener('click', async () => {
             const asrManager = window.VirtualPhone?.asrManager;
