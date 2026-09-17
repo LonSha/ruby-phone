@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.23.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·懒加载单例 App 跨会话串味】tieba/xhs/gacha/reading/tarot/health/achievement/playbook 八个 App 均为懒加载单例（index.js `if (!window.VirtualPhone.xxxApp) new XxxApp(...)`），构造期从会话键把数据载入实例内存（tieba posts / xhs notes / gacha coins+inventory+history / reading shelf / tarot history / health 生理状态 / achievement unlockedMap / playbook selectedPlays），且 load 只在构造器执行一次——换会话后实例被复用，内存数据仍属旧会话：读取端（render/统计/注入）展示旧会话数据，写入端（addNote/addPost/unlock/saveState）把旧会话数据写回新会话键，tarot buildInjection 还会把旧会话牌面注入新会话 prompt（与 v2.21 worldpulse 同源的实例级会话状态缺陷）。修复：各 App 新增 onChatChanged()（重建数据层从新会话键重新载入；tarot 清空 history/currentDraw 后 _load()）。",
+        "【修复方案·保留实例仅重建数据层】沿用 v2.21 的教训：tieba/xhs/health/playbook 构造器注册了常驻全局监听器（eventSource.on(MESSAGE_RECEIVED/GENERATE_BEFORE_COMBINE_PROMPTS)、window.addEventListener('ruby:unlockAchievement')），若置 null 重建实例会造成监听器累积泄漏；故采用「保留实例、仅重建 data 实例」方案（各 View 均经 this.app.data 动态引用，重建后自动指向新数据层），既不泄漏也不串味。",
+        "【工程防御·三处接入】index.js 在换会话（onChatChanged）与两处清数据（clearCurrentData / clearAllData）共 3 处调用八个 App 的 onChatChanged（与 v2.18 通知、v2.19 积温、v2.21 世界脉搏同构），清数据后内存不再持有已清数据。",
+        "【工程防线】新增 tests/system-v223.test.mjs（47 项）：真实数据层断言（会话路由内存 storage + TiebaData/XhsData/GachaData/ReadingData/AchievementData：构造期载入当前会话、换会话重建后读到新会话数据且不串味、新会话无存档时用默认值不回落旧会话）+ 接线断言（8 App 定义 onChatChanged 且重建数据层、保留实例不置 null、tarot 清空内存态重载、index.js 三处接入计数与位置）。测试总数 238 全绿。"
+      ]
+    },
     "2.22.0": {
       "date": "2026-09-17",
       "items": [
@@ -425,5 +434,5 @@
       ]
     }
   },
-  "latest": "2.22.0"
+  "latest": "2.23.0"
 }

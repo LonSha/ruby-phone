@@ -34,6 +34,12 @@ export class HealthApp {
     } catch (e) {}
   }
 
+  onChatChanged() {
+    // [v2.23.0] 换会话重绑：重建数据层从新会话键重新载入。
+    //   保留实例与构造期注册的常驻监听器，避免重建实例导致监听器累积。
+    this.data = new HealthData(this.storage);
+  }
+
   render() {
     this.view.render(this.phoneShell.screen);
   }

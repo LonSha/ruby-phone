@@ -16,6 +16,12 @@ export class ReadingApp {
         this._contentCache = new Map();
     }
 
+    onChatChanged() {
+        // [v2.23.0] 换会话重绑：重建数据层从新会话键重新载入。
+        //   保留实例与构造期注册的常驻监听器，避免重建实例导致监听器累积。
+        this.data = new ReadingData(this.storage);
+    }
+
     render() {
         if (!this.phoneShell?.screen) return;
         this.view.render();

@@ -36,7 +36,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.22.0';
+const ST_PHONE_VERSION = '2.23.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -8816,6 +8816,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 🔥 切换会话时彻底清空微信单例缓存，防止数据串味
         if (window.VirtualPhone) {
+            // [v2.23.0] 懒加载单例 App 换会话重绑：这些 App 采用
+            //   `if (!window.VirtualPhone.xxxApp) new XxxApp(...)` 单例，
+            //   构造期把当前会话数据载入实例内存且仅载入一次，换会话后复用
+            //   会把旧会话数据渲染/写回新会话。调用其 onChatChanged 重建数据层
+            //   （保留实例与常驻监听器，避免重建实例导致监听器累积泄漏）。
+            window.VirtualPhone.tiebaApp?.onChatChanged?.();
+            window.VirtualPhone.xhsApp?.onChatChanged?.();
+            window.VirtualPhone.gachaApp?.onChatChanged?.();
+            window.VirtualPhone.readingApp?.onChatChanged?.();
+            window.VirtualPhone.tarotApp?.onChatChanged?.();
+            window.VirtualPhone.healthApp?.onChatChanged?.();
+            window.VirtualPhone.achievementApp?.onChatChanged?.();
+            window.VirtualPhone.playbookApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -9897,6 +9910,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 updateNotificationBadge(0);
                 // 清空内存缓存
                 if (window.VirtualPhone) {
+                    // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
+                    window.VirtualPhone.tiebaApp?.onChatChanged?.();
+                    window.VirtualPhone.xhsApp?.onChatChanged?.();
+                    window.VirtualPhone.gachaApp?.onChatChanged?.();
+                    window.VirtualPhone.readingApp?.onChatChanged?.();
+                    window.VirtualPhone.tarotApp?.onChatChanged?.();
+                    window.VirtualPhone.healthApp?.onChatChanged?.();
+                    window.VirtualPhone.achievementApp?.onChatChanged?.();
+                    window.VirtualPhone.playbookApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -9968,6 +9990,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 updateNotificationBadge(0);
                 // 清空所有内存缓存
                 if (window.VirtualPhone) {
+                    // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
+                    window.VirtualPhone.tiebaApp?.onChatChanged?.();
+                    window.VirtualPhone.xhsApp?.onChatChanged?.();
+                    window.VirtualPhone.gachaApp?.onChatChanged?.();
+                    window.VirtualPhone.readingApp?.onChatChanged?.();
+                    window.VirtualPhone.tarotApp?.onChatChanged?.();
+                    window.VirtualPhone.healthApp?.onChatChanged?.();
+                    window.VirtualPhone.achievementApp?.onChatChanged?.();
+                    window.VirtualPhone.playbookApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

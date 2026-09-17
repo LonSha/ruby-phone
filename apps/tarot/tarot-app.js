@@ -51,6 +51,13 @@ export class TarotApp {
         return buildTarotInjection(this.currentDraw);
     }
 
+    onChatChanged() {
+        // [v2.23.0] 换会话重绑：清空内存态并按新会话键重新载入抽牌历史。
+        this.history = [];
+        this.currentDraw = null;
+        this._load();
+    }
+
     render() {
         if (!this.phoneShell?.setContent) return;
         this.view.render();
