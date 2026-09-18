@@ -5592,6 +5592,14 @@ renderChatRoom(chat) {
         if (window.VirtualPhone?.musicApp) return window.VirtualPhone.musicApp;
         try {
             const module = await import('../music/music-app.js');
+            // [v2.34.0] await 之后必须**重查**槽位：上面那次检查发生在 await 之前，
+            //   而 await 期间另一个入口（微信音乐卡片注入 / 应用面板打开音乐）可能
+            //   已经把实例建好并写回 —— check-then-act 竞态会在此构造出**第二个
+            //   同名实例**：旧实例的 music-view 域被域表钉住（250ms 进度轮询继续跑），
+            //   它在回收账本 / 过早账本 / 成因账 / 复原次数四本账上**一笔都记不到**
+            //   （重复建域这条路径上回收根本没发生过）。v2.34 的重复存活域读数就是
+            //   为这种形态准备的，但根治办法是在赋值前重查。
+            if (window.VirtualPhone?.musicApp) return window.VirtualPhone.musicApp;
             window.VirtualPhone.musicApp = new module.MusicApp(this.app.phoneShell, window.VirtualPhone?.storage || this.app.storage);
             window.VirtualPhone.musicApp.initFloatingWidget?.();
             return window.VirtualPhone.musicApp;
@@ -8077,10 +8085,18 @@ renderChatRoom(chat) {
     async _ensureHoneyAppReady() {
         if (window.VirtualPhone?.honeyApp) return window.VirtualPhone.honeyApp;
         const module = await import('../honey/honey-app.js');
+        // [v2.34.0] await 之后重查（同 _ensureMusicAppForInvite 的竞态：此处若不复查，
+        //   会与微信「蜜语邀约」入口各自 new 一个 HoneyApp，先建的那个实例的
+        //   honey-view 域从此无出口）。
+        if (window.VirtualPhone?.honeyApp) return window.VirtualPhone.honeyApp;
         const phoneShell = window.VirtualPhone?.phoneShell || this.app.phoneShell;
         const storage = window.VirtualPhone?.storage || this.app.storage;
         if (!window.VirtualPhone) window.VirtualPhone = {};
-        window.VirtualPhone.honeyApp = new module.HoneyApp(phoneShell, storage);
+        // 与 index.js 的 ensureHoneyAppReady 同款形态：赋值前再判一次（本次 await 期间
+        //   可能有别的入口刚写回），确保「同一时刻只有一个实例」。
+        if (!window.VirtualPhone.honeyApp) {
+            window.VirtualPhone.honeyApp = new module.HoneyApp(phoneShell, storage);
+        }
         return window.VirtualPhone.honeyApp;
     }
 
@@ -8429,9 +8445,15 @@ renderChatRoom(chat) {
                 const phoneShell = window.VirtualPhone?.phoneShell || this.app.phoneShell;
                 const storage = window.VirtualPhone?.storage || this.app.storage;
                 if (!phoneShell || !storage) return;
-                weiboApp = new module.WeiboApp(phoneShell, storage);
-                if (window.VirtualPhone) {
-                    window.VirtualPhone.weiboApp = weiboApp;
+                // [v2.34.0] await 之后重查：await 期间微博应用面板可能已经建好实例，
+                //   此处不复查就会 new 出第二个 WeiboApp（旧实例的 weibo-app 域被钉住，
+                //   而宿主指针指向新的那一个）。
+                weiboApp = window.VirtualPhone?.weiboApp || null;
+                if (!weiboApp) {
+                    weiboApp = new module.WeiboApp(phoneShell, storage);
+                    if (window.VirtualPhone) {
+                        window.VirtualPhone.weiboApp = weiboApp;
+                    }
                 }
             }
 

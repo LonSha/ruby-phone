@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.33.0';
+const ST_PHONE_VERSION = '2.34.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,16 +77,13 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-18',
     items: [
-        "【过早回收「谁造成的」从未被记录】v2.32 把**两本账**（回收账本与过早账本）并列读出，却从未记录**成因**。实测（探针在域上真执行，两种场景各跑一遍）：设计内的闲置出口 + 复用（honey-view 式：离开界面 dispose → 重进登记 → 再离开，3 次进出）记 **2 笔**过早；真正的宿主过早回收（宿主按名收掉仍在活跃使用的实例的域）记 **1 笔**——两者除域名外完全同形，「谁造成的」这件事在账面上不可见。",
-        "【健康装机上「有过早回收」恒成立，真缺陷被正常导航淹没】honey-view 的 exitHoneySurface 有 9 个调用点，其中 **6 个是界面内返回/回首页**（打开微信会话、三个 #honey-back 返回、系统返回、返首页）——都属正常导航，却全部计入过早回收。于是控制中心卡片那句「N 个域名过早回收 · 全部发生在实例销毁后」在健康装机上**恒为假**：它把正常导航说成「过早」，又断言「全部发生在实例销毁后」。",
-        "【实测缺陷：把遥测的用途搞反了】没有按成因分开读，这本账在正常用法下**永远非零**，读者只能学会忽略它。遥测一旦噪声化就不是审计而是配置——症状持续存在时人们会学会关掉它，而真正该看的宿主提前回收正好淹没在噪声里。",
-        "【修复：新增「成因账」，不动过早判据本身】过早判据与**回收账本**口径（`_reenteredAfterDispose > _prematureReleases`、只在回收时刻落账、按对象计一笔）**一字未改**——v2.32 的 A2/A3/A4/A6 语义原样保留。新增 `_childPrematureBy` / `childRuntimePrematureBy(name)` 与记账助手 `_bumpPrematureBy(name, cause)`，把笔数拆成因：`tidy`（实例自持出口，界面正常退出时自我注销）/ `host-prefix`（宿主按名回收）/ `host-exact`（按名精确回收）/ `host-all`（全域清零）/ `shutdown`（宿主级域级联）。只在「本次回收被计为一笔过早」时入账，未过早的回收不留痕。",
-        "【成因在唯一咽喉点内部推导，调用点一字不改】初版让每个调用点声明成因（`dispose(cause)` / `{ cause: 'host-prefix' }`），结果撞上 6 个既有测试（v225/v226/v228/v229/v230/v231 都把调用点字面量钉成了实现契约）。收敛后的形态更简且零回归：所有回收最终都经过 `ManagedRuntime.dispose()`，而宿主路径在 `disposeChildRuntimes` **函数内部**自造 `reason='host-*'`，自持出口按角色推断 `'tidy'` / `'shutdown'`——于是成因是推导出来的，不是二十多个调用点各自声明的。",
-        "【成因的时点：取上一次回收的发起者】过早是「**下一次**回收」时才被认定的事实（证据是 `_reenteredAfterDispose` 增长），故成因必须取**上一次**回收的发起者（`_lastDisposeCause`），而不是本次调用的 reason。初版取了本次，实测后果是**每个真过早都被事后那次正常回收洗掉**：宿主按名收掉活域（host-prefix）后实例再 `dispose()`，成因账里只剩 `tidy`，真凶消失。该缺陷由探针 /tmp/probe_v233.mjs 抓到（14 项里 5 项翻红），修正后全绿。",
-        "【读数诚实化：控制中心按成因拆分】「回收口径」卡不再把笔数直接当缺陷：只有 `host-*` 才计「被提前回收」（`flaws = rows.filter(r => r.hostile > 0)`），`tidy` 归为「界面退出时自持回收（正常）」。`data-release-tally` 改由 `flaws.length` 决定——于是「有缺陷时告警、没缺陷时安静」才成立，而不是恒亮。",
-        "【诊断面同步】`explainReleaseTally()` 增加第三参 `prematureBy`（缺省为空构成，v2.32 的既有两参调用仍可用），每行给出 `causes` 与 `hostPremature`（= 需要处理的那部分）并按其排序；`runtimeStats()` 新增 `releasedPrematureBy`（降级分支同步补字段）；`window.VirtualPhone.releaseTally()` 一行里给出成因明细与「需处理 N 次」；新增 `window.VirtualPhone.prematureCauses()` 测试钩子。",
-        "【测试】新增 tests/system-v233.test.mjs：成因账的五类归因各一条（含 exact 不误伤前缀域）、界面内正常返回不产出 host-* 缺陷、不变式（Σ成因 === Σ过早）、成因时点（真过早不被事后那次回收洗掉）、读数诚实化（主机成因才计缺陷）、负控制（每条核心判据配一次故意破坏）、发布卫生。",
-        "【自证与收敛记录】初版补丁先在 v2.32 探针上验过，再用本版探针取证，5 项翻红后抓出「成因时点」错误并修正；随后全量门禁暴露 6 个既有测试失败，全部源于「改了调用点字面形式」而非行为退化——这直接促成了上面的收敛设计（成因内部推导）。收敛后先单独验证「仅内核改动」= 247 pass / 0 fail，再补读取面，最终全量 247 pass / 0 fail 零回归。"
+        "【四条账目的共同盲区：回收根本没发生过的那条路径】v2.31 记「回收过几笔」、v2.32 把**两本账**（回收账本与过早账本）合读、分出「其中几笔过早」、v2.33 归因「是谁造成的」、v2.30 的 overDisposed 记「同一对象被回收后复活」——**四条账目全部只描述「回收以后」**。而宿主重建路径上还有第四种形态：**建了同名新域、旧域却没被收掉**。此时域表里同时活着两个同名域（旧域仍被域表钉住，其定时器/监听器继续跑、闭包钉住旧 DOM），而「回收」这件事**一次都没发生** —— 于是它在上面四本账上完全不可见。",
+        "【实测：正确重建与重复建域在四本账上完全同形】探针在真域上各跑一遍（正确路径＝建 3 只、每次先收后建；错误路径＝建 3 只、不收、事后统一收掉）：回收笔数 **3 / 3**、过早笔数 **0 / 0**、成因账 **{} / {}**、过度回收遥测 **0 / 0** —— 四本账逐项相等，唯一区分点是「同名域同时存活的个数」（正确 **0**、错误 **3**）。这就是本版要补的那个读数。",
+        "【真实触发路径不是假设：三处 await 竞态会构造同名实例】`chat-view.js` 的三处懒加载（`_ensureMusicAppForInvite` / `_ensureHoneyAppReady` / 微博卡片跳转的 WeiboApp）都是 **check-then-act**：先判 `if (!VirtualPhone.xxxApp)`，再 `await import(...)`，**await 之后直接 `new` 并写回**。await 期间另一个入口（音乐卡片注入 / 蜜语邀约 / 应用面板）已把实例建好时，这里就会 new 出第二个同名实例，旧实例的域从此无出口。本版在三处 `await` 之后补重查（根治竞态），并让重复存活域本身变成可见读数（兜住仍可能出现的其它路径）。",
+        "【修复一：把「几个才算错」这个判断写进读写口径】新增内核原语 `childRuntimeDuplicates(min = 2)`（只列同时存活 >= min 个的域名，非法阈值一律回落 2 而非放宽）与 `childRuntimeDuplicateDomains()`（键视图，按名排序），`globalRuntimeSnapshot()` 追加 `duplicates` 字段。此前全仓消费点（诊断面 domainCounts、控制中心、测试）都只把 `childRuntimeStats` 的**裸数字**原样展示，**没有任何一处对 >1 出过声** —— 事实有了、判断没写下，等于没有：**回收口径**里此前只有事实、没有判断。本版把判断固化：**空才是正常态**（先收后建），非空即重复存活。纯读、零副作用、不抛；刻意不制造噪声遥测（v2.33 的教训是「恒非零的告警会被读者学会忽略」，故本读数的健康态恒为空）。",
+        "【修复二：会话级数据槽位的唯一出口】v2.31 给三条「界面槽位」（homeScreen / controlCenter / notificationLog）建了统一出口，但数据实例里另有一类**随会话重生**的槽位不在那条出口里，于是三条清数据路径各写各的清单 —— 而漏写一个是静默缺陷：`worldpulseApp`（换会话 / 清当前数据 / 清全部数据 **三条全漏**；实例跨会话复用，3s 楼层轮询闭包挂在旧会话上下文上，而其实例出口 `destroy()` 全仓零调用点）与 `gamesApp`（**清全部数据漏**；`deactivate()` 级联 `stopUndercoverFlow` / `clearPokerSession` / 五个子视图，清全部数据后残留的是上一局的会话状态与一个**裸 setTimeout**，它会在已清数据的会话上继续触发一次 AI 出牌调用）。本版新增 `retireSessionScopedSlots()` 作为**唯一出口**，挂在 `reloadPhoneSurface()` 里 —— 三条路径都经过它，故**新增路径不必再补清单**。收口方式为：先走**实例自身的出口**（`destroy` / `deactivate`，语义化收尾），再置 null（引用消失时域名回收才是正确形态）。",
+        "【修复三：呈现面与消费点接线】控制中心新增「重复存活域」告警行：**健康态不渲染任何节点**（同名域恒为 1 个时该节点根本不存在），非空即标黄列出，口径为「有缺陷时告警、没缺陷时安静」；`data-dup-domains` 由重复域名数驱动。诊断面把内核的 `duplicates` 提升为**稳定契约字段**（降级/内核未提供时归一为 `{}`，字段恒在，消费方不必判 undefined，同 v2.30 `snap.overDisposed` 的做法）——刻意**不做二次记账**：宿主若另调 `childRuntimeDuplicateDomains()` 就是「同一本账的第二个名字」，正是本版批评的形态，探针 G7 对此设了自证判据（全仓零 `duplicateDomains` 残留）。样式新增 `.sys-cc-dups`（出现即缺陷，故无需区分形态）。",
+        "【测试与自证】探针 /tmp/probe_v234.mjs 共 42 项：A/B 段在真域上取证「正确重建 vs 重复建域」的四本账同形与唯一区分点，C 段钉 duplicates 的边界与口径（阈值回落、空态、多域名排序），D/E 段钉快照同源与过早/重复两条线互不干扰，F 段自证纯读无副作用（连续调用不改域表、不触发任何回收记账），G 段钉消费点接线与**反冗余**。过程记录：初版曾落盘「域世代」（releaseEpoch / firstReleaseEpoch）方案并通过全部门禁，随后自查判定它与既有 `_childReleaseLog` 同条件递增、两值恒等（换个名字的同一本账），遂 `git checkout` 完整撤销后改为 duplicates 口径；接线阶段又自查撤销了 `snap.duplicateDomains`（内核 `duplicates` 的键排序视图，同属冗余）——两次撤销均由判据而非印象驱动。全量门禁 **249 tests / 249 pass / 0 fail**（新增 tests/system-v234.test.mjs 计 90 项），语法门 245 个文件。",
     ]
 };
 
@@ -2456,6 +2453,56 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         return n;
     }
     /**
+     * [v2.34.0] 会话级数据槽位：**唯一出口**。
+     *
+     * 动机：v2.31 给三条「界面槽位」（homeScreen / controlCenter / notificationLog）建了
+     *   统一出口（destroyPhoneSurface ← reloadPhoneSurface），但数据实例里另有一类
+     *   **随会话重生**的槽位不在那条出口里 —— 于是三条清数据路径各写各的清单，
+     *   而「漏写一个槽位」是一个静默缺陷（清单式回收的固有形态）：
+     *     · worldpulseApp（P1 换会话 / P2 清当前数据 / P3 清全部数据 **三条全漏**）：
+     *       实例跨会话复用，3s 楼层轮询闭包挂在**旧会话**上下文上；v2.21 的
+     *       onChatChanged 只重校基线，没有 stopListening 的域回收，
+     *       而实例出口 destroy() 全仓零调用点，域一直被域表钉着。
+     *     · gamesApp（**P3 漏**）：deactivate() 级联 stopUndercoverFlow /
+     *       clearPokerSession / 五个子视图 destroy。清全部数据后残留的是上一局的
+     *       会话状态，以及一个**裸 setTimeout**（_undercoverUserTurnTimer 未登记进
+     *       域表，只能由 stopUndercoverFlow 清掉）——它会在已清数据的会话上继续
+     *       触发一次 AI 出牌调用。
+     *
+     * 为什么必须调用**实例自身的出口**而不是按域名回收（disposeChildRuntimes(名字)）：
+     *   域名回收只收资源，不会清掉实例持有的数据引用与内部状态（牌局、存档、
+     *   基数字段），下次复用会带着旧会话的数据回来；实例出口是作者为该实例写的
+     *   语义化收尾。域名回收只在实例**引用消失**（置 null）时才是正确形态 ——
+     *   本出口两者都做：先走实例出口，再置 null。
+     *
+     * 为什么挂在 reloadPhoneSurface 里（而不是三条路径各写一次）：
+     *   三条路径都调用 reloadPhoneSurface()，挂在唯一咽喉点上则**新增路径不必再补
+     *   清单** —— 这正是 v2.31 修 homeScreen 时学到的：清单式回收总会漏，出口式回收不会。
+     *
+     * 幂等、不抛；实例缺失时静默跳过（槽位本来可能就是空的：用户从未打开过游戏）。
+     * @returns {number} 实际回收的槽位数
+     */
+    function retireSessionScopedSlots() {
+        let n = 0;
+        try {
+            const phone = window.VirtualPhone;
+            if (!phone) return 0;
+            // 🌍 世界脉搏：实例出口收净自己的域（stopListening 清监听 + 域 dispose）。
+            if (phone.worldpulseApp) {
+                try { phone.worldpulseApp.destroy?.(); } catch (_e) { /* 忽略 */ }
+                phone.worldpulseApp = null;
+                n += 1;
+            }
+            // 🎮 猫盒：deactivate 级联五个子视图、牌局与卧底流程（含表外裸 setTimeout）。
+            if (phone.gamesApp) {
+                try { phone.gamesApp.deactivate?.(); } catch (_e) { /* 忽略 */ }
+                phone.gamesApp = null;
+                n += 1;
+            }
+        } catch (_e) { /* 回收失败不得阻断界面重建 */ }
+        return n;
+    }
+    /**
      * 界面槽位随会话重生：收掉旧的 → 建新的 → 渲染。
      * 壳不存在（手机从未打开）时只收不建 —— 没有槽位需要填。
      * 为什么数据实例不在此列：换会话是**会话作用域**操作，music / games / weibo /
@@ -2463,6 +2510,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   真正随会话重生的是上面那三条「界面槽位」。
      */
     function reloadPhoneSurface() {
+        try { retireSessionScopedSlots(); } catch (_e) { /* 忽略 */ }
         const n = destroyPhoneSurface();
         if (!phoneShell || !phoneShell.container) return n;
         try {
@@ -2543,6 +2591,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             //   children 只能看到「当前活着的域」，看不到「同名域有几个」；
             //   域泄漏的可观测形态恰恰是后者（同名的空壳域越堆越多）。
             snap.domainCounts = childRuntimeStats('');
+            // [v2.34.0] 重复存活域契约字段：domainCounts 给的是**事实**（某域名现在活着 2 个域），
+            //   而「几个才算错」是一个**判断** —— 判断不被写下来就等于没有：实测全仓消费点
+            //   （本诊断面、控制中心、测试）都只把 domainCounts 的数字原样展示，没有任何一处
+            //   对 >1 出过声。
+            //   上面四个回收读数（released / releasedPremature / releasedPrematureBy /
+            //   overDisposed）全部只描述「回收以后」：域建了却没收则一笔都不记，
+            //   「同名建了 2 个」与「只建了 1 个」在四本账上完全同形。
+            //   内容由内核 globalRuntimeSnapshot() 提供（**不做二次记账**：此处只是把该
+            //   field 提升为诊断面契约 —— 内核未提供或查询降级时归一为 {}，字段恒在，
+            //   消费方不必判 undefined。同 v2.30 `snap.overDisposed = ...` 的做法）。
+            //   口径：**空才是正常态**（先收后建），非空即「有人建了新域、旧域还活着」。
+            snap.duplicates = snap.duplicates || {};
             // [v2.30.0] 过度回收：回答「有几个域处于『被回收过又复活』状态」——
             //   v2.29 的孤儿域是「域活着、宿主忘了它」，这是它的镜像形态：
             //   「域被回收了、实例还在用」。两者都不该发生，且都需要可见。
@@ -2568,7 +2628,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             snap.releaseVerdict = explainReleaseTally(snap.released, snap.releasedPremature, snap.releasedPrematureBy);
             return snap;
         }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {}, releasedPremature: {}, releasedPrematureBy: {}, releasedAt: {}, releaseVerdict: { rows: [], ok: false, reason: '诊断入口异常，无法读出回收口径' } }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {}, releasedPremature: {}, releasedPrematureBy: {}, releasedAt: {}, releaseVerdict: { rows: [], ok: false, reason: '诊断入口异常，无法读出回收口径' }, duplicates: {} }; }
     }
 
     async function getOrCreateMofoData() {
@@ -10226,6 +10286,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.albumApp = null;
                     window.VirtualPhone.calendarApp?.destroy?.();
                     window.VirtualPhone.calendarApp = null;
+                    // [v2.34.0] 本路径此前漏掉的两个**会话级数据槽位**不在此处显式回收：
+                    //   worldpulseApp（3s 楼层轮询 / 旧会话上下文）与 gamesApp
+                    //   （卧底流程的裸 setTimeout / 上一局牌面）统一由下方
+                    //   reloadPhoneSurface() → retireSessionScopedSlots() 收口 ——
+                    //   三条清数据路径共用同一个出口，故新增路径不必再补清单。
                     if (window.VirtualPhone.musicApp) {
                         window.VirtualPhone.musicApp.clearCache();
                         window.VirtualPhone.musicApp.view.destroyFloatingWidget();
@@ -10339,6 +10404,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         try { disposeChildRuntimes('music-view'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.musicApp = null;
                     }
+                    // [v2.34.0] 同上：本路径漏掉的两个**会话级数据槽位**（worldpulseApp /
+                    //   gamesApp）不在内存缓存块里逐个手写，统一走下方
+                    //   reloadPhoneSurface() → retireSessionScopedSlots()。
+                    //   漏写清单正是 v2.30（P3 漏 albumApp）/ v2.33 那两轮修过的形态。
                     if (window.VirtualPhone.honeyApp) {
                         try {
                             window.VirtualPhone.honeyApp.honeyData?.clearGeneratedSessionData?.();

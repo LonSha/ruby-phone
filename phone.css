@@ -11934,6 +11934,15 @@ input:checked + .toggle-slider:before {
 .sys-cc-releases[data-release-tally="premature"] .sys-cc-scale-head span:last-child {
   color: #e3b341;
 }
+/* ---------- [v2.34.0] 重复存活域告警行 ----------
+ * 只在「同名域不止一个活着」时渲染（健康态该节点根本不存在），
+ * 故这里无需区分形态：出现即缺陷，一律标黄。 */
+.sys-cc-dups .sys-cc-scale-head span:last-child {
+  color: #e3b341;
+}
+.sys-cc-dups .sys-cc-rel-line {
+  white-space: normal;
+}
 
 /* ---------- 手电筒（手机壳暖光晕） ---------- */
 .phone-in-panel.sys-flashlight-on {

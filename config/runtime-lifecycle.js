@@ -423,6 +423,11 @@ export function globalRuntimeSnapshot() {
         tags: globalRuntime.entries().map(e => ({ kind: e.kind, tag: e.tag })),
         // [v2.28.0] 实例级资源域：回答「除宿主级之外，还有几个实例各持有多少资源」
         children,
+        // [v2.34.0] 重复存活域进快照：上面三个回收读数（released / releasedPremature
+        //   / prematureBy）全部只描述「回收以后」，而「域建了却没收」这条路径上
+        //   回收根本没发生过 —— 它在这些账目上完全不可见。此处补上那个读数：
+        //   duplicates 为空才是正常态（先收后建）；非空即「有人建了新域、旧域还活着」。
+        duplicates: childRuntimeDuplicates(),
         // [v2.33.0] 过早回收成因账进快照：诊断时最常问的是「这是谁造成的」，
         //   而此前只有总数（childRuntimePrematureLog），成因无处可读。
         prematureBy: Object.fromEntries([..._childPrematureBy].map(([k, v]) => [k, { ...v }]))
@@ -472,6 +477,53 @@ export function childRuntimeStats(name) {
     let c = 0;
     for (const rt of _childRuntimes) if (rt.name === n) c += 1;
     return c;
+}
+/**
+ * [v2.34.0] 同名域**重复存活**快照：只列出「同一个域名同时有 >= min 个域活着」的那些。
+ *
+ * 为什么单列一个入口（而不是让调用方自己看 childRuntimeStats）：
+ *   上面那个函数给的是**事实**（数字），而「数字是几才算错」是一个**判断** ——
+ *   判断不被写下来，就等于没有：实测全仓消费点（诊断面 domainCounts、控制中心、
+ *   测试）都只把数字原样展示，没有任何一处对 >1 出过声。
+ *   本函数把判断固化进读写口径：**空才是正常态**，非空即代表有人建了域
+ *   却没有收掉旧的那一只。
+ *
+ * 与既有四个读数的分工（这是本函数不可被它们替代的理由）：
+ *   · childRuntimeStats(name)        告诉你有 2 个；不告诉你是对是错；
+ *   · childRuntimeReleaseLog(name)   记「收掉过几笔」——域建了没收则恒为 0，
+ *                                    「建了 2 个」与「建了 1 个」在它上面同形；
+ *   · childRuntimePrematureLog      记「回收时实例还在用」——没回收就没有这一笔；
+ *   · childRuntimeOverDisposed      记「同一对象被回收后复活」——旧域从未被回收过，
+ *                                    故这条路径上恒为 0。
+ *   四条账目全部只描述「回收以后」；重复建域这条路径**回收根本没发生过**，
+ *   于是它在四本账上完全不可见。这正是本版要补的那个读数。
+ *
+ * 健康装机上恒为空的目的：避免变成噪声遥测（v2.33 的教训是「恒非零的告警
+ *   会被读者学会忽略」）。正确做法（先 dispose 再 new）下域表里始终只有 1 个。
+ * 纯读、零副作用、不抛：无宿主时域表为空 → 返回空对象。
+ * @param {number} [min=2] 判定阈值（>=2 才有意义；小于 2 一律按 2 处理）
+ * @returns {Object} { 域名: 存活个数 }
+ */
+export function childRuntimeDuplicates(min = 2) {
+    const floor = Math.max(2, Number(min) || 2);
+    const counts = {};
+    for (const rt of _childRuntimes) {
+        const n = rt.name;
+        counts[n] = (counts[n] || 0) + 1;
+    }
+    const out = {};
+    for (const [name, c] of Object.entries(counts)) {
+        if (c >= floor) out[name] = c;
+    }
+    return out;
+}
+/**
+ * [v2.34.0] 重复存活的域名清单（childRuntimeDuplicates 的键视图，按名排序）。
+ * 供告警行直接拼接，不必在调用方重复 Object.keys(...).sort() 这套写法。
+ * @returns {string[]}
+ */
+export function childRuntimeDuplicateDomains() {
+    return Object.keys(childRuntimeDuplicates()).sort();
 }
 /**
  * [v2.30.0] 过度回收快照：回答「现在有几个域处于『被回收过又复活』状态」。

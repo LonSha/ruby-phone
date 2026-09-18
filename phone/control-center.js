@@ -24,7 +24,7 @@ import {
 //   本版把「回收了几次、其中几次过早」这两本账并列显示在手机上 —— 它们此前分属
 //   两个 Map（childRuntimeReleaseLog / childRuntimePrematureLog），任何一本单独看
 //   都回答不了这个问题。只读这两本账，不新增状态、不触发任何回收。
-import { childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimePrematureBy } from '../config/runtime-lifecycle.js';
+import { childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimePrematureBy, childRuntimeDuplicateDomains } from '../config/runtime-lifecycle.js';
 
 function _esc(s) {
     return String(s ?? '')
@@ -71,6 +71,7 @@ export class ControlCenter {
                 ${this._musicHtml()}
                 ${this._scaleHtml()}
                 ${this._releaseHtml()}
+                ${this._dupHtml()}
                 <button class="sys-cc-action sys-cc-lock" id="sys-cc-lock">
                     <i class="fa-solid fa-lock"></i><span>立即锁屏</span>
                 </button>
@@ -196,6 +197,31 @@ export class ControlCenter {
                 : `<div class="sys-cc-rel-line">${released} 个域名被回收过 · ${tidyOnly.length} 个为界面退出时自持回收（正常）</div>`);
         const more = flaws.length > 3 ? `<div class="sys-cc-rel-line">…另有 ${flaws.length - 3} 个域名</div>` : '';
         return `<div class="sys-cc-scale sys-cc-releases" data-release-tally="${flaws.length ? 'premature' : 'clean'}">${head}${body}${more}</div>`;
+    }
+    /**
+     * [v2.34.0] 重复存活域告警行：此前面板的世界回收读数全部只描述「回收以后」。
+     *   而「宿主建了同名新域、旧域却没被收掉」这条路径上**回收根本没发生过** ——
+     *   实测（探针在域上真执行）：正确重建（先 dispose 再 new）与重复建域（建了不收）
+     *   在回收笔数、过早笔数、成因账、复活次数四本账上**完全同形**（3/3、0/0、{}、0），
+     *   唯一区分点就是「同名域同时活着几个」。
+     * 口径（与 runtimeStats().duplicates 同源，纯读不写）：
+     *   · 健康态（先收后建）下同名域恒为 1 个 → **本行不渲染任何节点**；
+     *   · 非空即「旧域的定时器/监听器仍在跑，而宿主已不再指向它」→ 标黄列出。
+     * 为什么默认不出声：v2.33 的教训是「恒非零的告警会被读者学会忽略」——
+     *   健康装机上这一行根本不出现，出现即为真缺陷。
+     * 读取失败一律降级为空（控制中心任何一块坏掉都不该拖垮整个面板）。
+     */
+    _dupHtml() {
+        let dupNames = [];
+        try { dupNames = childRuntimeDuplicateDomains() || []; } catch (_e) { dupNames = []; }
+        if (!dupNames.length) return '';
+        return `<div class="sys-cc-scale sys-cc-dups" data-dup-domains="${dupNames.length}">
+            <div class="sys-cc-scale-head"><span>重复存活域</span><span>${dupNames.length} 个域名</span></div>
+            ${dupNames.slice(0, 3).map(n =>
+                `<div class="sys-cc-rel-line sys-cc-rel-warn">${_esc(n)} · 同名域不止一个活着</div>`
+            ).join('')}
+            ${dupNames.length > 3 ? `<div class="sys-cc-rel-line">…另有 ${dupNames.length - 3} 个域名</div>` : ''}
+        </div>`;
     }
     // ---------------- 交互 ----------------
 
