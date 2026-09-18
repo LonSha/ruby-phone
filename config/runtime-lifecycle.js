@@ -65,6 +65,10 @@ export class ManagedRuntime {
         //   二者与账本（按对象计一笔）分工明确，任一都不再需要靠差值反推。
         this._releaseCount = 0;
         this._prematureReleases = 0;
+        // [v2.33.0] 上一次回收的发起者（成因）。「本次回收过早吗」这一判定发生在**本次**
+        //   回收时，但它描述的是**上一次**回收 —— 故成因必须随每次 dispose 留档，
+        //   否则真凶会被事后那次正常回收的成因覆盖（见 _childPrematureBy 注释）。
+        this._lastDisposeCause = '';
         /** @type {Map<string, {kind:string, tag:string, handle:*}>} */
         this._entries = new Map();
         this._disposed = false;
@@ -203,11 +207,15 @@ export class ManagedRuntime {
         return n;
     }
     /** 全量回收。幂等：重复调用不报错；调用后可继续登记新资源。 */
-    dispose() {
+    dispose(reason = '') {
+        // [v2.33.0] 成因归一：调用方没声明时按角色兜底 —— 宿主级域是被级联回收的（'shutdown'），
+        //   实例级域走自持出口（'tidy'）。域不知道谁在收它，知道的是调用方。
+        const cause = String(reason || '')
+            || (this._childOf === undefined ? 'shutdown' : 'tidy');
         // [v2.28.0] 宿主级域回收时级联回收全部实例级子域：
         //   否则「实例被置 null 但没人调它的 dispose」会留下孤儿域（登记表被外部引用钉住）。
         if (this._childOf === undefined && _childRuntimes.size) {
-            for (const rt of [..._childRuntimes]) rt.dispose();
+            for (const rt of [..._childRuntimes]) rt.dispose(cause);
         }
         const ids = [...this._entries.keys()];
         for (const id of ids) {
@@ -240,6 +248,13 @@ export class ManagedRuntime {
             if (this._reenteredAfterDispose > this._prematureReleases) {
                 this._prematureReleases += 1;
                 _childPrematureLog.set(this.name, (_childPrematureLog.get(this.name) || 0) + 1);
+                // [v2.33.0] 成因取**上一次**回收的发起者，不是本次。
+                //   本笔「过早」描述的是上一次回收（证据是 _reenteredAfterDispose 增长），
+                //   若在这里看本次 cause，每个真过早都会被事后那次正常回收洗成 'tidy' ——
+                //   实测：宿主按名收掉活域（host-prefix）后实例再 dispose('tidy')，
+                //   成因账里只剩 tidy，真凶消失。首次回收时 _lastDisposeCause 为空，
+                //   回退到本次 cause（此时两者本就同源）。
+                _bumpPrematureBy(this.name, this._lastDisposeCause || cause);
             }
             if (!this._releaseLogged) {
                 this._releaseLogged = true;
@@ -248,6 +263,8 @@ export class ManagedRuntime {
                 _childReleasedAt.set(this.name, this._releasedAt);
             }
         }
+        // [v2.33.0] 本次回收的发起者留档：下一次回收若判定「上一次过早」，用的正是它。
+        this._lastDisposeCause = cause;
         return ids.length;
     }
 
@@ -347,6 +364,37 @@ const _childPrematureLog = new Map();
  *   按域名记最后一次回收时刻，由 runtimeStats().releasedAt 对外可读。
  */
 const _childReleasedAt = new Map();
+/* ---------------- [v2.33.0] 过早回收成因账 ----------------
+ * 动机（v2.32 的下一层）：v2.32 把「回收了几次」与「其中几次过早」并列读出，却从未记录
+ *   **是谁造成的**。实测（探针在域上真执行，两种场景各跑一遍，两边都记成 1 笔「过早」）：
+ *     · 设计内的闲置出口 + 复用：honey-view 的 exitHoneySurface 在**界面内正常返回**时
+ *       注销本域，重进界面时域复活、下一次退出时按 v2.32 判据落账一笔「过早」——
+ *       而这一次回收发生时实例并没有在跑任何资源，属正常导航；
+ *     · 真正的宿主过早回收：宿主按名收掉活跃实例的域（实例仍在用），之后实例继续登记。
+ *   两者除域名外完全同形。而 v2.32 的控制中心卡片恰恰把这本账读成
+ *   「N 个域名过早回收 · 全部发生在实例销毁后」——honey-view 有 9 处调用点，
+ *   其中 6 处是界面内返回/回首页。于是健康装机上「过早回收」恒有读数，
+ *   真正的宿主过早回收被正常导航淹没。这是把遥测的用途搞反了：
+ *   **它不是审计，是配置** —— 症状持续存在时人们会学会关掉它。
+ *   本账按「回收路径 → 笔数」记录，成因由回收**发起点**显式声明（不靠反推）：
+ *     'tidy'        —— 实例自持出口（闲置/销毁出口，域自己收自己）
+ *     'host-prefix' —— 宿主按名回收，disposeChildRuntimes(name)
+ *     'host-exact'  —— 宿主按名精确回收，disposeChildRuntimes(name, { exact: true })
+ *     'host-all'    —— 宿主全域清零，disposeChildRuntimes('')
+ *     'shutdown'    —— 宿主级域级联回收（父域 dispose 收掉子域）
+ *   只在「本次回收被计为一笔过早」时入账，故未过早的回收不在成因账上留痕。
+ *   成因的**时点**：过早是「下一次回收」时才被认定的事实，故入账用的是上一次回收的
+ *   发起者（_lastDisposeCause），而不是本次调用的 reason —— 否则每个真过早都会被
+ *   事后那次正常回收的成因洗掉（v2.33 初版实测缺陷，探针 /tmp/probe_v233.mjs 抓到）。
+ */
+const _childPrematureBy = new Map();
+/** 记账助手：某域名某成因 +1（仅在本次回收真的新增了一笔过早时调用） */
+function _bumpPrematureBy(name, cause) {
+    const c = String(cause || 'unknown');
+    const h = _childPrematureBy.get(name) || {};
+    h[c] = (h[c] || 0) + 1;
+    _childPrematureBy.set(name, h);
+}
 /**
  * [v2.27.0] 全局登记层诊断快照：宿主可直接挂到设置页/控制台，
  * 回答"现在还有哪些常驻资源在跑、分别属于谁"。
@@ -364,14 +412,20 @@ export function globalRuntimeSnapshot() {
         byKind: rt.stats(),
         tags: rt.entries().map(e => ({ kind: e.kind, tag: e.tag })),
         releases: rt.releaseCount(),
-        premature: rt.prematureReleases()
+        premature: rt.prematureReleases(),
+        // [v2.33.0] 「本域重生过几次」此前只在 overDisposeStats() 里可读，
+        //   回收口径面读不到它 —— 于是过早回收的成因数只能反查另一个入口。
+        reentered: rt._reenteredAfterDispose || 0
     }));
     return {
         total: stats.total,
         byKind: { interval: stats.interval, timeout: stats.timeout, observer: stats.observer, listener: stats.listener },
         tags: globalRuntime.entries().map(e => ({ kind: e.kind, tag: e.tag })),
         // [v2.28.0] 实例级资源域：回答「除宿主级之外，还有几个实例各持有多少资源」
-        children
+        children,
+        // [v2.33.0] 过早回收成因账进快照：诊断时最常问的是「这是谁造成的」，
+        //   而此前只有总数（childRuntimePrematureLog），成因无处可读。
+        prematureBy: Object.fromEntries([..._childPrematureBy].map(([k, v]) => [k, { ...v }]))
     };
 }
 /* ---------------- [v2.28.0] 实例级资源域 ----------------
@@ -432,7 +486,21 @@ export function childRuntimeOverDisposed() {
         const n = rt._reenteredAfterDispose || 0;
         if (n > 0) { over += 1; reenters += n; names[rt.name] = (names[rt.name] || 0) + n; }
     }
-    return { total: _childRuntimes.size, overDisposed: over, reenters, names };
+    // [v2.33.0] 成因数与过早**笔数**必须能互相解释：一笔 premature 对应一次可指认的重生。
+    return {
+        total: _childRuntimes.size, overDisposed: over, reenters, names,
+        byCause: (() => {
+            const seen = new Set();
+            const out = {};
+            for (const rt of _childRuntimes) {
+                if (seen.has(rt.name)) continue;
+                seen.add(rt.name);
+                const h = _childPrematureBy.get(rt.name);
+                if (h) out[rt.name] = { ...h };
+            }
+            return out;
+        })()
+    };
 }
 /**
  * [v2.31.0] 回收账本快照：每个域名被回收过多少次（空串 = 返回全部分域计数）。
@@ -475,6 +543,26 @@ export function childRuntimePrematureLog(name) {
  * @param {string} name 域名；空串时返回 { name: ts }
  * @returns {number|Object|null} 传 name 且从未回收过时返回 0
  */
+/**
+ * [v2.33.0] 过早回收的**成因账**：每个域名按回收路径分账，回答本版的核心问题 ——
+ *   「这 N 笔过早回收里，几笔是界面正常退出、几笔是宿主真的收早了」。
+ * 与 childRuntimePrematureLog(name) 配对：后者给总数，本函数给构成。
+ * 为什么必须记录而不是反推：「是不是自持出口」无法从域侧判断 ——
+ *   honey-view / music-view / sudoku-view 三处复用实例的闲置出口都走自持路径，
+ *   靠反推会把正常导航一律算成宿主过早回收（本版实测到的读错形态）。
+ * @param {string} name 域名（精确匹配）；空串时返回 { name: { cause: count } }
+ * @returns {Object}
+ */
+export function childRuntimePrematureBy(name) {
+    const n = String(name || '');
+    if (!n) {
+        const out = {};
+        for (const [k, v] of _childPrematureBy) out[k] = { ...v };
+        return out;
+    }
+    const h = _childPrematureBy.get(n);
+    return h ? { ...h } : {};
+}
 export function childRuntimeReleasedAt(name) {
     const n = String(name || '');
     if (!n) {
@@ -503,15 +591,28 @@ export function childRuntimeReleasedAt(name) {
  *   「按名回收这一个域」），默认仍是前缀匹配（向后兼容，既有 5 处调用点行为不变）。
  * @param {string} namePrefix 域名（默认按前缀匹配）；空串 = 回收全部实例域
  * @param {{exact?: boolean}} [opts] exact=true 时按域名精确匹配
- * @returns {number} 被回收的域数
- */
+     * [v2.33.0] `opts.cause` 成因：由调用方声明本次回收发生在哪条路径上，
+     *   写入成因账（childRuntimePrematureBy）。缺省时按「按名 = 宿主」推断：
+     *   本函数一律是宿主在收别人的域，与域自持出口（'tidy'）天然不同。
+     * @returns {number} 被回收的域数
+     */
 export function disposeChildRuntimes(namePrefix, opts) {
     const p = String(namePrefix || '');
     const exact = !!(opts && opts.exact);
+    // [v2.33.0] 成因在**调用点**声明：按名回收是「宿主主动收别人的域」，
+    //   与实例自持出口（域自己收自己）在成因账上必须分得开 —— 前者才可能是真过早回收。
+    const reason = !p ? 'host-all' : (exact ? 'host-exact' : 'host-prefix');
     const victims = !p ? [..._childRuntimes]
         : [..._childRuntimes].filter(rt => (exact ? rt.name === p : rt.name.startsWith(p)));
     let n = 0;
-    for (const rt of victims) { rt.dispose(); n += 1; }
+    for (const rt of victims) {
+        // [v2.33.0] 成因不在此处补记：dispose() 对「上一次回收过早」这笔账取的是上一次的
+        //   _lastDisposeCause，而本次调用的 reason 正会成为**那一次**的成因。
+        //   初版在这里按差值额外补记一笔，等于把一个事实记两次（且时点错位）——
+        //   已由探针证伪，故移除。
+        rt.dispose(reason);
+        n += 1;
+    }
     return n;
 }
 
