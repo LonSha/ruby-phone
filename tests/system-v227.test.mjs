@@ -280,8 +280,11 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
     ok('诊断: 提供 getRuntimeStats 且挂到 VirtualPhone',
         /function getRuntimeStats\(\)/.test(isrc) && /window\.VirtualPhone\.runtimeStats = getRuntimeStats;/.test(isrc));
     ok('诊断: 降级安全（异常时返回零值结构，不抛）',
-        // [v2.28.0] 零值结构追加 children: []（实例级域明细）；此处只断言宿主级四字段仍齐备且 children 为数组
-        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\], children: \[\] \}; \}/.test(isrc));
+        // [v2.28.0] 零值结构追加 children: []；[v2.29.0] 再追加 domainCounts: {}。
+        //   判据改为「宿主级四字段齐备 + 两个新增字段按类型存在」，不再逐字面量比对整段 ——
+        //   整段比对会把「新增一个字段」判成缺陷。
+        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\], children: \[\]/.test(isrc)
+        && /domainCounts: \{\}/.test(isrc));
     // 范围自证：本轮只动该动的文件
     const touched = ['index.js', 'config/runtime-lifecycle.js',
         'apps/wechat/wechat-app.js', 'apps/mofo/mofo-app.js',

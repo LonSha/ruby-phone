@@ -87,6 +87,9 @@ export class SudokuView {
         this._rt.cancelByTag('timer:');
         this._timer = null;
         this.app.sudokuData.pauseTimer();
+        // [v2.29.0] 视图销毁同时注销自己的域：destroy 后域表里不再有本视图 ——
+        //   「视图已销毁但域还活着」正是孤儿域的定义。
+        this._rt.dispose();
     }
 
     _renderCells(state) {

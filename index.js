@@ -31,7 +31,7 @@ import { NotificationLog } from './config/system-notifications.js';
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
-import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes } from './config/runtime-lifecycle.js';
+import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
 import { PHONE_EVENTS } from './config/phone-events.js';
 
@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.28.0';
+const ST_PHONE_VERSION = '2.29.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -2404,8 +2404,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     //   用于定位漏回收（v2.25/v2.26 修的正是这类）。无登记项时 total 为 0。
     // [v2.28.0] 追加 children 字段：实例级资源域明细（哪个视图/App 各持有多少资源）。
     function getRuntimeStats() {
-        try { return globalRuntimeSnapshot(); }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [] }; }
+        try {
+            const snap = globalRuntimeSnapshot();
+            // [v2.29.0] 分域计数：回答「反复重建时某个域有没有累加」——
+            //   children 只能看到「当前活着的域」，看不到「同名域有几个」；
+            //   域泄漏的可观测形态恰恰是后者（同名的空壳域越堆越多）。
+            snap.domainCounts = childRuntimeStats('');
+            return snap;
+        }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {} }; }
     }
 
     async function getOrCreateMofoData() {
@@ -8916,6 +8923,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // [v2.28.0] 实例被丢弃时同步回收其实例级资源域（否则域表钉住其定时器成为孤儿）
                 try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                 window.VirtualPhone.honeyApp = null;
+                // [v2.29.0] 换会话后**全域清零**：不再逐名列清单（清单漏一个就漏一个域），
+                //   本轮剩余实例域（sudoku-view / worldpulse-app / floating-entry 等）
+                //   在旧写法里零出口；视图销毁路径已自持回收，此处是宿主侧的兜底口径。
+                try { disposeChildRuntimes(''); } catch (_e) { /* 忽略 */ }
             }
             // 🪄 清空魔坊缓存
             if (window.VirtualPhone.mofoApp) {

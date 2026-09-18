@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.29.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【域自持出口】v2.28 建了实例级资源域，但域的回收出口仍写在宿主侧的人工域名清单里（disposeChildRuntimes('honey-view') 一类），漏写一个就漏一个域 —— 实测 sudoku-view / worldpulse-app / floating-entry 三个域**零出口**。本版把出口交给域自己：域在 dispose 时按自身持有的表地址注销（_childLog），宿主无需知道任何域名。",
+        "【孤儿域的真实形态】旧写法只 cancelByTag（清空 entries）而不 dispose（不注销登记表）：视图已销毁、域却仍活在 _childRuntimes 里；每次重建数独/世界脁都会多留一个空壳域，永久累加。六个消费方（sudoku-view / worldpulse-app / weibo-app / music-view / honey-view / floating-entry）的销毁路径全部补上域注销。",
+        "【复活即重新登记】dispose 会从域表注销自身；若域随后被再次使用（视图实例复用、重进页面，实测 games-app 的 panelVisibility 路径正是 destroy→render 复用），新登记的资源会脱离域表 —— 泄漏以「表里看不见的域」形态回归。新增 _reenterIfNeeded()，四个登记入口（addInterval/addTimeout/addObserver/addListener）首行调用，保证不变量「域表 ⊇ 所有活着的域」。",
+        "【分域计数】新增 childRuntimeStats(name)：childRuntimeCount() 只回答「一共有几个域」，回答不了「反复重建时某个域有没有累加」——而后者才是泄漏的可观测形态。window.VirtualPhone.runtimeStats() 现带回 domainCounts 字段。",
+        "【宿主侧口径收口】disposeChildRuntimes 语义降级为「运维兜底」（不再是唯一出口）；换会话路径追加全域清零，不再逐名列清单；诊断入口追加分域计数。",
+        "【测试】新增 tests/system-v229.test.mjs（内核行为 + 复活重登记 + 域隔离 + 六消费方出口接线 + 宿主口径 + 版本自洽），不硬编码「唯一正确写法」。"
+      ]
+    },
     "2.28.0": {
       "date": "2026-09-18",
       "items": [
@@ -490,5 +501,5 @@
       ]
     }
   },
-  "latest": "2.28.0"
+  "latest": "2.29.0"
 }

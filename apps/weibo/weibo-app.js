@@ -227,5 +227,10 @@ export class WeiboApp {
 
     destroy() {
         window.removeEventListener('phone:swipeBack', this._swipeHandler);
+        // [v2.29.0] 域随 App 销毁一并注销。旧写法只解了 swipeHandler，域内登记的
+        //   open-wechat 有界轮询与域本身都要靠宿主侧手写 disposeChildRuntimes，
+        //   而手工清单漏一个就漏一个（sudoku/worldpulse 就是零出口的实例）。
+        this._rt.cancelByTag('weibo:open-wechat');
+        this._rt.dispose();
     }
 }

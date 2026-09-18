@@ -45,6 +45,12 @@ export class ManagedRuntime {
     constructor(name = 'runtime') {
         this.name = String(name || 'runtime');
         this._seq = 0;
+        // [v2.29.0] 实例级域名自持：childRuntime 建立的域由**自己**记住登记表地址，
+        //   宿主 dispose 时无需再维护一份「哪个实例要回收哪个域名」的清单。
+        //   v2.28 的失效形态就在这里：域建了、回收函数也在，但宿主侧仍要写
+        //   disposeChildRuntimes('honey-view') 这类字面量，漏写即孤儿域
+        //   （实测 sudoku-view / worldpulse-app / floating-entry 三个域零出口）。
+        this._childLog = null;
         /** @type {Map<string, {kind:string, tag:string, handle:*}>} */
         this._entries = new Map();
         this._disposed = false;
@@ -54,10 +60,24 @@ export class ManagedRuntime {
     get size() { return this._entries.size; }
 
     /**
+     * [v2.29.0] 复活即重新登记。
+     * dispose() 会从域表注销自身；若该域随后被再次使用（视图实例复用、重进页面），
+     *   新登记的资源必须在表内 —— 否则它不会被 disposeChildRuntimes 回收、也不会被
+     *   父域级联回收，泄漏以「表里看不见的域」形态回归。不变量：
+     *   **域表 ⊇ 所有活着的域**；注销不是终点，复活必须重新登记。
+     */
+    _reenterIfNeeded() {
+        if (this._childLog && this._disposed && !this._childLog.has(this)) {
+            this._childLog.add(this);
+            this._disposed = false;
+        }
+    }
+    /**
      * 周期定时器（可回收版 setInterval）。
      * @returns {string|null} 登记 id；宿主无 setInterval 时返回 null（不抛）
      */
     addInterval(fn, ms, tag = '') {
+        this._reenterIfNeeded();
         const host = globalThis;
         if (typeof host.setInterval !== 'function' || typeof fn !== 'function') return null;
         const id = nextId(this);
@@ -68,6 +88,7 @@ export class ManagedRuntime {
 
     /** 一次性定时器（自动在触发后销账，不留僵尸登记） */
     addTimeout(fn, ms, tag = '') {
+        this._reenterIfNeeded();
         const host = globalThis;
         if (typeof host.setTimeout !== 'function' || typeof fn !== 'function') return null;
         const id = nextId(this);
@@ -86,6 +107,7 @@ export class ManagedRuntime {
      * @returns {{id:string, observe:(node:Node)=>void, observer:MutationObserver}|null}
      */
     addObserver(callback, opts = {}, tag = '') {
+        this._reenterIfNeeded();
         const host = globalThis;
         if (typeof host.MutationObserver !== 'function' || typeof callback !== 'function') return null;
         const id = nextId(this);
@@ -108,6 +130,7 @@ export class ManagedRuntime {
      * @param {EventTarget} target 长期存活对象（window/document/元素）
      */
     addListener(target, type, handler, opts = false, tag = '') {
+        this._reenterIfNeeded();
         if (!target || typeof target.addEventListener !== 'function') return null;
         const id = nextId(this);
         target.addEventListener(type, handler, opts);
@@ -175,8 +198,14 @@ export class ManagedRuntime {
             ManagedRuntime._release(e);
         }
         this._disposed = true;
-        // [v2.28.0] 实例级资源域自行注销，避免子域表无限增长
-        if (this._childOf) _childRuntimes.delete(this);
+        // [v2.29.0] 实例级资源域注销：**唯一路径**，按域自己记住的表地址删（不查全表）。
+        //   v2.28 写的是 `if (this._childOf) _childRuntimes.delete(this)` —— 直接引用模块
+        //   内静态表。本版改为自持地址后两者等价，但保留两条会把其中一条变成**死码**：
+        //   防假绿注入实测证实了这一点（注入掉 _childOf 那条，行为无任何变化）。
+        //   死码比没有更坏：它让「这段逻辑有人管」的错觉成立，而真正生效的是另一条。
+        if (this._childLog) {
+            try { this._childLog.delete(this); } catch (_) { /* 忽略 */ }
+        }
         return ids.length;
     }
 
@@ -251,6 +280,10 @@ export function globalRuntimeSnapshot() {
 export function childRuntime(name) {
     const rt = new ManagedRuntime(String(name || 'child'));
     rt._childOf = globalRuntime;
+    // [v2.29.0] 域自持出口：域记住自己登记在哪张表里，dispose 时按地址注销。
+    //   于是「域被回收」这件事不再需要宿主侧写域名清单 —— 只有域自己知道
+    //   它是否还活着，宿主只知道「我把实例丢了」。
+    rt._childLog = _childRuntimes;
     _childRuntimes.add(rt);
     return rt;
 }
@@ -259,9 +292,32 @@ export function childRuntimeCount() {
     return _childRuntimes.size;
 }
 /**
+ * [v2.29.0] 按域名统计存活域数量。
+ * 动机：childRuntimeCount() 只回答「一共有几个域」，回答不了「**某个**视图反复
+ *   重建时域表有没有跟着涨」—— 而那才是泄漏的可见形态。例：反复打开/关闭数独，
+ *   sudoku-view 域数应恒为 1（旧实例被回收）而不是逐次累加。
+ * @param {string} name 域名（精确匹配）；空串 = 返回全部分域计数
+ * @returns {number|Object} 传 name 时返回该名存活域数；空串时返回 { name: count }
+ */
+export function childRuntimeStats(name) {
+    const n = String(name || '');
+    if (!n) {
+        const out = {};
+        for (const rt of _childRuntimes) out[rt.name] = (out[rt.name] || 0) + 1;
+        return out;
+    }
+    let c = 0;
+    for (const rt of _childRuntimes) if (rt.name === n) c += 1;
+    return c;
+}
+/**
  * [v2.28.0] 按名（前缀）回收实例级资源域。
  * 场景：宿主把实例置 null（清数据/换会话/换壳）而不走实例自身的 destroy 时，
  *   域内的定时器/监听器会被全局域表引用钉住成为孤儿。此处按域名一次性收净。
+ * [v2.29.0] 语义降级为「运维兜底」：正常路径应当由域自己 dispose（域自持出口）。
+ *   本函数保留给两类场景：① 宿主手上已无实例引用（拿不到 rt），只剩域名；
+ *   ② 诊断/测试要验「清空后域表是否归零」。它**不再是**唯一回收出口 ——
+ *   把唯一出口放在这里正是 v2.28 的缺陷（漏写一个域名就漏一个域）。
  * @param {string} namePrefix 域名前缀（如 'music-view'）；空串 = 回收全部实例域
  * @returns {number} 被回收的域数
  */

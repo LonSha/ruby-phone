@@ -9449,6 +9449,10 @@ export class HoneyView {
 
     removePhoneChromeTheme() {
         this.releaseInactiveResources();
+        // [v2.29.0] 离开蜜语一并注销本视图的域：releaseInactiveResources 只清条目，
+        //   域仍留在登记表里等宿主手写 disposeChildRuntimes('honey-view') ——
+        //   而「等宿主手写」正是漏写的来源。视图复用时会由 _reenterIfNeeded 重新入表。
+        this._rt.dispose();
         const panel = document.querySelector('.phone-body-panel');
         panel?.classList.remove('phone-body-panel-honey');
     }

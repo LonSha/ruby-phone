@@ -260,7 +260,13 @@ export class WorldpulseApp {
         this.view.render();
     }
 
-    destroy() { this.stopListening(); }
+    destroy() {
+        this.stopListening();
+        // [v2.29.0] 域随 App 销毁一并注销（stopListening 只清条目、不注销登记表）。
+        //   宿主侧实测从不写 disposeChildRuntimes('worldpulse-app')，故此前每次
+        //   App 被重建都会多留一个空壳域，永久累加。
+        this._rt.dispose();
+    }
 }
 
 export default WorldpulseApp;

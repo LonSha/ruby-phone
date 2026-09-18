@@ -1290,6 +1290,10 @@ export class MusicView {
             this._floatingBtn = null;
         }
         this._userDragged = false;
+        // [v2.29.0] 条目清空后还要注销域本身：cancelByTag 只清 entries，域仍活在
+        //   登记表里（实例已被丢弃、域却还在），宿主侧手写的 disposeChildRuntimes
+        //   一旦漏写它就是永久孤儿。
+        this._rt.dispose();
     }
 
     // ========== 进度条更新 ==========

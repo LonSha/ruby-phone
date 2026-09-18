@@ -362,6 +362,10 @@ export class PhoneFloatingEntry {
         document.getElementById(FLOATING_BUTTON_ID)?.remove();
         const root = document.getElementById(FLOATING_ROOT_ID);
         if (root && !root.childElementCount) root.remove();
+        // [v2.29.0] 卸载同时注销域（两条卸载路径共用同一出口，不必各写一次）：
+        //   cancelByTag 只清条目，域本身仍被登记表钉住；宿主侧实测未写
+        //   disposeChildRuntimes('floating-entry')，故此处由实例自己收尾。
+        this._rt.dispose();
     }
 
     ensurePet() {

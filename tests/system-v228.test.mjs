@@ -204,7 +204,10 @@ const {
     };
     for (const [f, name] of Object.entries(files)) {
         const s = read(f);
-        ok(`接线·${f}: 导入 childRuntime`, /import \{ childRuntime \} from '.*runtime-lifecycle\.js';/.test(s));
+        // [v2.29.0] 交棒：判据从「只导入 childRuntime 这一个符号」改为「从 runtime-lifecycle
+        //   导入了 childRuntime」—— 同一模块新增导出（如后续可能引入的域统计）不该让本判据翻红。
+        ok(`接线·${f}: 从 runtime-lifecycle 导入 childRuntime`,
+            /import \{[^}]*\bchildRuntime\b[^}]*\} from '.*runtime-lifecycle\.js';/.test(s));
         ok(`接线·${f}: 创建命名实例域 '${name}'`,
             new RegExp(`childRuntime\\('${name}'\\)`).test(s));
         ok(`接线·${f}: 域实例挂在 this._rt 上`,
@@ -266,8 +269,11 @@ const {
         const w = read('apps/weibo/weibo-app.js');
         ok('接线·weibo: 有界轮询入域（tag weibo:open-wechat, 80ms）',
             /\}, 80, 'weibo:open-wechat'\)/.test(w));
-        ok('接线·weibo: 两处出口（命中/超时）统一 cancelByTag',
-            (w.match(/this\._rt\.cancelByTag\('weibo:open-wechat'\)/g) || []).length === 2);
+        // [v2.29.0] 交棒：判据从「恰好 2 处」改为「至少 2 处」。本版在 destroy 里补了第三处
+        //   （域销毁前先收净该轮询）—— 回收点变多不是缺陷，把等值当不变量才是。
+        ok('接线·weibo: 有界轮询的出口（命中/超时）统一 cancelByTag，且销毁路径也收净',
+            (w.match(/this\._rt\.cancelByTag\('weibo:open-wechat'\)/g) || []).length >= 2,
+            `n=${(w.match(/this\._rt\.cancelByTag\('weibo:open-wechat'\)/g) || []).length}`);
         ok('接线·weibo: 旧 `const timer = setInterval` 已清零', !/const timer = setInterval\(/.test(w));
 
         const h = read('apps/honey/honey-view.js');
@@ -536,8 +542,11 @@ const {
     ok('诊断: index.js 导入 disposeChildRuntimes',
         /disposeChildRuntimes\s*\} from '\.\/config\/runtime-lifecycle\.js'/.test(isrc)
         || /disposeChildRuntimes\b/.test(isrc));
-    ok('诊断: getRuntimeStats 降级返回含 children: []',
-        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\], children: \[\] \}; \}/.test(isrc));
+    // [v2.29.0] 交棒：降级结构从「逐字面量比对整段」改为「字段齐备 + 类型正确」——
+    //   字面量比对会把「新增一个字段」判成缺陷（本版正好新增了 domainCounts）。
+    ok('诊断: getRuntimeStats 降级结构完整（宿主级四字段 + children/domainCounts）',
+        /catch \(e\) \{ return \{ total: 0, byKind: \{ interval: 0, timeout: 0, observer: 0, listener: 0 \}, tags: \[\], children: \[\]/
+            .test(isrc) && /domainCounts: \{\}/.test(isrc));
     ok('诊断: 注释说明 children 为实例级域明细', /children 字段：实例级资源域明细/.test(isrc));
     /* 接线：实例被丢弃的两条路径 */
     ok('接线·index: 换会话 honey 分支回收 honey-view 域',
@@ -613,8 +622,10 @@ const {
     ok('版本: update-log.versions 头部即当前版本', Object.keys(ul.versions)[0] === v,
         `head=${Object.keys(ul.versions)[0]}`);
     ok('版本: 不低于 2.28.0', vnum(v) >= vnum('2.28.0'), v);
-    ok('版本: update-log 当前版本条目含 8 条说明',
-        ul.versions[v] && ul.versions[v].items.length === 8, JSON.stringify({ n: ul.versions[v]?.items?.length }));
+    // [v2.29.0] 交棒：条目数从「恰好 8 条」改为「不少于 6 条」——
+    //   条目数是叙事体量，不是不变量；把它当不变量会让每次版本更新都翻红。
+    ok('版本: update-log 当前版本条目非空（>= 6 条说明）',
+        Boolean(ul.versions[v]) && ul.versions[v].items.length >= 6, JSON.stringify({ n: ul.versions[v]?.items?.length }));
     ok('版本: 条目覆盖实例域与六处回收点',
         ul.versions[v].items.join('\n').includes('实例级资源域'));
 }
