@@ -28,6 +28,7 @@ export class WorldpulseView {
             <div class="wp-hero-sub">主线之外，这个世界仍在运转 · ${history.length} 条动态</div>
           </div>
 
+          ${this._bridgeCard()}
           <div class="wp-card">
             <div class="wp-row">
               <span class="wp-label">自动脉搏</span>
@@ -62,6 +63,46 @@ export class WorldpulseView {
         </div>`;
     }
 
+    /**
+     * [v2.36.0] 跨插件世界桥卡片：把「桥通不通、通到哪一步、两个钟差多少」摆给用户看。
+     *
+     * 为什么需要它：本 App 的平行事件要么陈述真世界、要么退回 LLM 现编，而这个**分岔**
+     *   此前在界面上完全看不见——用户只看到「又是编的」，看不到原因（桥没装？桥没开？
+     *   对方引擎没就绪？两个钟对不上？）。可观测面就是把这段话摆出来。
+     * 只读：只调 app.bridgeStatus()（其内部只调两个桥的读取面），不写任何状态。
+     */
+    _bridgeCard() {
+        let st = null;
+        try { st = this.app.bridgeStatus(); } catch (_e) { st = null; }
+        const br = st && st.bridges ? st.bridges : null;
+        if (!br) {
+            return `<div class="wp-card wp-bridge"><div class="wp-label">跨插件世界桥</div>
+              <div class="wp-bridge-line wp-bridge-off">可观测面不可用（读取失败，已降级）</div></div>`;
+        }
+        const WA_TXT = {
+            'not-mounted': 'WorldAxis 未安装', 'disabled': '世界桥休眠（未开闸）',
+            'refused': '世界桥拒绝读取', 'no-snapshot': '桥在但尚无快照',
+            'ready': '就绪', 'probe-threw': '探针异常'
+        };
+        const LO_TXT = {
+            'not-mounted': 'LonSha 未安装', 'ready': '就绪',
+            'engine-absent': '插件在但引擎未就位', 'engine-empty': '引擎在位但返回空',
+            'thrown': '取快照抛错', 'no-snapshot': '桥在但尚未产出快照',
+            'probe-threw': '探针异常'
+        };
+        const wi = br.worldaxis || {}, lo = br.lonsha || {};
+        const bad = (wi.reason === 'refused' || wi.reason === 'no-snapshot' || lo.reason === 'thrown' || lo.reason === 'engine-empty');
+        return `<div class="wp-card wp-bridge">
+            <div class="wp-label">跨插件世界桥</div>
+            <div class="wp-bridge-line ${wi.mounted ? (wi.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
+              WorldAxis：${esc(WA_TXT[wi.reason] || wi.reason || '未知')}</div>
+            <div class="wp-bridge-line ${lo.mounted ? (lo.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
+              LonSha：${esc(LO_TXT[lo.reason] || lo.reason || '未知')}</div>
+            ${bad ? `<div class="wp-bridge-line wp-bridge-warn">读不到时本 App 会退回 LLM 生成——两个世界就此对不上</div>` : ''}
+            <div class="wp-bridge-hint">真世界可用时，平行事件陈述真事件、不调 LLM；桥休眠时退回生成（不编数据顶替真世界）。
+              「未安装」与「装了没开」是两件事——后者去 WorldAxis 面板开闸即可。</div>
+          </div>`;
+    }
     _bind() {
         const $ = id => document.getElementById(id);
         const rerender = () => this.render();
@@ -115,6 +156,12 @@ export class WorldpulseView {
 .wp-empty{text-align:center;padding:50px 20px;color:#8b949e;}
 .wp-empty-icon{font-size:40px;margin-bottom:10px;}
 .wp-empty-sub{font-size:12px;color:#6e7681;margin-top:8px;line-height:1.7;}
+.wp-bridge .wp-label{margin-bottom:6px;}
+.wp-bridge-line{font-size:12px;line-height:1.9;color:#8b949e;}
+.wp-bridge-ok{color:#3fb950;}
+.wp-bridge-warn{color:#d29922;}
+.wp-bridge-off{color:#6e7681;}
+.wp-bridge-hint{font-size:11px;color:#6e7681;margin-top:6px;line-height:1.7;}
 </style>`;
     }
 }

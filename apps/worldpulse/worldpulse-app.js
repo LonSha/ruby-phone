@@ -11,7 +11,7 @@ import { WorldpulseView } from './worldpulse-view.js';
 // [v2.28.0] 实例级资源域（App 停止监听/换会话时一次性回收其登记的全部常驻资源）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
 // [v2.35.0] 对外世界桥消费面（只读）：把「现编平行事件」换成「消费 WorldAxis 真世界状态」
-import { readWorldAxisSnapshot, readLonshaSnapshot, worldBridgeAvailability } from '../../config/world-bridge.js';
+import { readWorldAxisSnapshot, readLonshaSnapshot, worldBridgeAvailability, bridgeReport } from '../../config/world-bridge.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -269,14 +269,25 @@ export class WorldpulseApp {
         } catch (_e) { return ''; }
     }
 
-    /** [v2.35.0] 桥的在场/来源一览（供视图与诊断；纯读） */
+    /**
+     * [v2.35.0] 桥的在场/来源一览（供视图与诊断；纯读）
+     * [v2.36.0] 桥可观测面：除「在场」外再给出**读取归因**与**两个钟的对账**——
+     *   此前这里只有在场一览，且本方法全库无人调用（零消费），于是「桥是不是通着」
+     *   在界面上完全不可见。现在视图的桥卡片真的读它，诊断也能拿到一句话总述。
+     */
     bridgeStatus() {
         try {
+            const report = bridgeReport();
             return {
                 bridges: worldBridgeAvailability(),
+                report,
+                summary: (report && report.summary) || '',
                 lastRealReason: this._lastRealReason || null
             };
-        } catch (_e) { return { bridges: null, lastRealReason: null }; }
+        } catch (_e) {
+            try { return { bridges: worldBridgeAvailability(), report: null, summary: '', lastRealReason: this._lastRealReason || null }; }
+            catch (_e2) { return { bridges: null, report: null, summary: '', lastRealReason: null }; }
+        }
     }
 
     _pushToWeibo(content, style) {

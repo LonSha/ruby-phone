@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.35.0';
+const ST_PHONE_VERSION = '2.36.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,13 +77,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-19',
     items: [
-        "【两个世界对不上：同一场剧情里坐着两个「现在」】这套三插件体系里有两个**同规格的只读世界桥**：`window.lonsha_memory_bridge_v1`（记忆插件的剧情记忆/召回账本）与 `window.worldaxis_bridge_v1`（WorldAxis 的世界状态：世界钟/权威事实/暗流/舆情）。而 RubyPhone 侧实测**只消费了前者**——`apps/timeweaver/timeweaver-collector.js` 读 lonsha 桥的 `snapshot.recallAudit`，全库 grep `WorldAxis` / `worldaxis` 在产品代码里**零命中**。后果是真现场，不是假设。",
-        "【修前的真实现场：世界脉搏全由 LLM 现编，与真世界毫无关联】`apps/worldpulse` 自己队列化楼层变化、按阈值触发、调 LLM **现编**平行事件——它报的那个「世界」与 WorldAxis 已经推演出的真世界状态毫无关联，等于**凭空发明一个平行世界**；`config/time-manager.js` 则从正文状态栏标签、世界书「剧情时间起点」、手机消息时间戳里**猜**当前时间、取最晚者，而 WorldAxis 的世界钟（决策时间，进存档、参与判定）就躺在快照里**没人读**。同一场剧情于是有两个「现在」，且正文与手机可能互相矛盾。",
-        "【修复一：两个桥收敛成单一真源】新增 `config/world-bridge.js`（只读消费面）：导出两个桥的 id 常量（`WORLDAXIS_BRIDGE_ID` / `LONSHA_BRIDGE_ID`，与上游逐字一致——改一处即两端同时失联，故集中声明）、`getBridge` / `bridgeSource` / `readWorldAxisSnapshot` / `readWorldClock` / `readLonshaSnapshot` / `worldBridgeAvailability`。三条纪律：**只读**（绝不写世界状态，两桥本就不给写路径）、**不抛**（桥未装 / 未启用 / 旧版无字段 / 快照畸形一律降级）、**不猜**（拿不到就如实报不可用，绝不编数据顶替）。",
-        "【修复二：降级必须可归因——「桥没装」与「桥没开」不得同形】本项目反复治理的缺陷形态就是**静默降级**：拿不到数据与「这个世界是空的」长得一模一样，调用方只能一律当「没数据」，于是「未安装」「装了但没启用」「快照畸形」三种完全不同的处境在界面上**同形**。本版把三态显式分开：`reason` ∈ `not-mounted` / `disabled` / `refused` / `no-snapshot` / `pull-failed`。WorldAxis v2.16 的桥默认**休眠**，故「未启用」单独成态——用户能据此知道该去开哪个开关，而不是以为功能坏了。宿主抛异常也绝不外抛给调用方。",
-        "【修复三：世界脉搏改为真世界优先】`apps/worldpulse/worldpulse-engine.js` 新增真世界投影纯函数面：`projectWorldAxis`（把 `facts` / `currents` / `pulse` / `opinion.canon` / `opinion.forum` / `opinion.sandbox` 投成历史条目形态，条目 id 带 `wa:` 前缀——与 LLM 生成的 `wp…` 天然不撞，按 `existingIds` 去重，`counts` 如实记数、`dropped` 报截断量）、`worldAxisPromptBlock`（压成「本世界已发生的真实动态（不得与之矛盾、不得改写其事实）」一致性约束块）、`mergeWorldAxisHistory`。**论坛传闻显式标注「（传闻）」**——「已核实」与「纯传闻」在读者侧是两种事实强度，不得同形。`_generate` 改为真世界优先：有真事件就陈述真事件、不调 LLM；失败才退回生成并附上一致性块。",
-        "【修复四：世界钟接成权威源之一，但绝不让公历污染古历】`config/time-manager.js` 新增 `getWorldAxisTime()`（读桥 → 解析世界钟 iso → 与 `getCurrentStoryTime` 同形的时间对象），并在权威候选后新增「来源4」。世界钟是**推演结果**（决策时间），比从正文里猜更权威；但它是公历 ISO，故**只在剧情纪元相容时才参与**（由既有 `_isSameStoryEra` 统一判定：一侧古历一侧现代即不相容）——古历剧情下公历钟直接让路。只读：本方法不写任何状态。",
-        "【测试与自证】新增 `tests/system-v235.test.mjs`（117 项）：A 段钉桥消费面的在场归因与「不抛」（含 getter 抛异常的极端宿主），B 段钉世界钟解析的合法/非法/边界（古历非 ISO 串必须返回 null、越界时分夹取），C/D 段钉真世界投影的条目形态 / 去重 / 传闻标注 / 上限 / 畸形输入，E 段钉接线与只读契约，F 段负控制（文本级 + 行为级，真源码破坏 → 加载副本 → 同款判据翻红），G 段发布卫生。过程记录：F1 首版拿「非对象守卫」做负控制**不可测**——该守卫与函数外层的 `try/catch` 效果重合（无守卫时抛出的异常被 catch 吞掉仍返回 null），real 与 broken 两向都是 null ⇒ 负控制恒真，遂改钉**日期范围校验**（`ISO_RE` 的 `\\d{1,2}` 本就允许 13 月/40 日，该行是唯一防线）；判据 `judges.wired` 首版把两个消费者的 import 写在同一个函数里，导致「只断一个」时两向都为假 ⇒ 拆成 `wiredApp` / `wiredTm`。回归：既有三处受影响的测试按新契约对齐（`tests/time-manager.test.mjs` 的 data: URL 加载器显式重写相对 import——这正是 v2.28 回归护栏所要求的形态；`tests/system-v220.test.mjs` 的历史写入锚点交棒到改写后的实体调用），全量 **252 tests / 252 pass / 0 fail**（另在 `tests/time-manager.test.mjs` 补两条**行为级**判据：世界钟在现代剧情下真的参与「取最晚」并胜出、在古历剧情下真的让路）。"
+        "【同一件事在三个插件里各说一遍：桥通不通，手机上完全看不见】这套三插件体系里有两个**同规格的只读世界桥**（`window.worldaxis_bridge_v1` 世界状态快照 / `window.lonsha_memory_bridge_v1` 记忆召回账本）。v2.35.0 已经把「消费真世界」接上了：世界脉搏改成真世界优先、TimeManager 把世界钟接成权威源之一。但**「桥是不是通着」这件事在手机上仍然完全不可观测**——两个桥只在**各自被用到的那一刻**才被读一次（生成平行事件时、取剧情时间时），那一刻是业务路径，读不到就静默退回旧路，用户什么都看不到。于是用户能看到的只有结果（「世界脉搏又是编的」），看不到原因（桥没装？桥装了没开？对方引擎没就绪？两个钟对不上？）。",
+        "【修前的真实现场：v2.35.0 留下的可观测出口是**零消费**】`config/world-bridge.js` 里的 `worldBridgeAvailability()` 只被 `WorldpulseApp.bridgeStatus()` 调用，而 `bridgeStatus()` 全库**无人调用**（grep 实测）。两条出口都在，等于一个观测面搭好了却没接任何仪表——这正是本项目反复治理的「声明了却零消费」形态，且它发生在一个**专门用来解决不可观测**的版本里。",
+        "【修复一：可观测面收敛为 `bridgeReport()`】`config/world-bridge.js` 新增一份纯读报告，一次覆盖四件事：① 两个桥的**在场与闸门**（`mounted` / `enabled`，未装与未开分开）；② 我方读取归因（WorldAxis 侧的 `reason` 五态：not-mounted / disabled / refused / no-snapshot / ready）；③ **对方的自述**（新增 `lonshaSource()`，读 lonsha v3.174 建立的 `sourceState` 状态机 idle / ready / engine-absent / engine-empty / thrown，且 `lastError` 不吞——那台状态机本就是为了让消费者可归因而做的）；④ **两个钟的对账**（新增 `diffClocks()`）。另有 `summary` 一句话总述供 UI 直接显示。",
+        "【修复二：对账只报不判，且三种「不可比」必须分开】`diffClocks()` 六判定：same / world-ahead / world-behind / **world-uncomparable** / **lonsha-empty** / unparsable。**「本机没有公历钟」不是故障**（本机时间由正文/世界书/消息戳猜，本就不承诺公历），故单独成 `world-uncomparable`——绝不硬比出一个假的「不一致」；**「对方还没记时间」与「记了但读不出」处置相反**（前者等它，后者是两套历法），故 `lonsha-empty` 与 `unparsable` 不得同形。对账只报差异，不改任何一方。",
+        "【修复三：可观测面真被消费（消除零消费）】`apps/worldpulse/worldpulse-view.js` 新增「跨插件世界桥」卡片，直接读 `app.bridgeStatus()`（其内部调 `bridgeReport()`），把两个桥的状态与对账摆给用户；`bridgeStatus()` 相应带上 `report` / `summary`。`apps/timeweaver/timeweaver-collector.js` 的桥读取**改走 `config/world-bridge.js` 单一真源**（此前它自写了一份 `window.lonsha_memory_bridge_v1` 读取——同一份桥读取逻辑有两份实现必然漂移，且第二份不知道对方的 `sourceState` 可归因），本文件自此只负责「取 recallAudit 这一块业务数据」。",
+        "【测试与自证】新增 `tests/system-v236.test.mjs`（A 桥可观测面在场与归因含「未装≠未开」与只读契约 / B 两个钟对账六判定含「本机无公历钟不硬比」/ C 消费侧接线含「collector 不得自己摸桥全局」/ D 负控制 4 项：真源码破坏 → 独立装载副本 → 同款判据翻红，配原版对照 / E 发布卫生）。两处装置自纠：① D2 的锚点首版打在 `readWorldAxisSnapshot` 的闸门上，而判据读的是 `bridgeReport().worldaxis.reason`（来源是 `bridgeSource` 的归因链）——**锚点与判据不在同一条路上，负控制恒真**，锚点已移回判据真正经过的出口；② 三处破坏首版用「整行删掉」，导致后面的 `else if` 悬空（破坏副本装载即 SyntaxError）——破坏必须**保留语句结构**。回归：全量 253 tests 全绿。"
     ]
 };
 

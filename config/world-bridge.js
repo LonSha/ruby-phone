@@ -30,6 +30,18 @@
  *   WorldAxis v2.16.0 的桥默认**休眠**（settings.enabled === false ⇒ snapshot() 返回 null，
  *   由 stat().refused / lastRefusal 归因）。故本模块把「未启用」与「未安装」分开报，
  *   让调用方（以及用户）知道该去开哪个开关，而不是以为功能坏了。
+ *
+ * 【v2.36.0 桥可观测面】两个桥本来只在**各自被用到的那一刻**才被读一次（世界脉搏生成时、
+ *   TimeManager 取时间时）——那一刻是「业务路径」，读不到就静默退回旧路，用户看不到任何痕迹。
+ *   v2.35.0 留下的 `worldBridgeAvailability()` 与 `WorldpulseApp.bridgeStatus()` 也是**零消费**：
+ *   前者只被后者调用，后者全库无人调用（grep 实测）。于是「桥是不是通着」这件事在手机上
+ *   完全不可观测——用户能看到的只有「世界脉搏又是编的」这种结果，看不到原因。
+ *   本节把可观测面收敛为 `bridgeReport()`：一份可被 UI/诊断直接渲染的报告，覆盖
+ *     · 在场与闸门（mounted / enabled，未装与未开分开）
+ *     · 我方读取归因（worldaxis 的 reason 五态；lonsha 的来源态由对方 sourceState 映射）
+ *     · 对方的自述（lonsha v3.174 的 sourceState + lastError 不吞）
+ *     · 两个钟的对账（可比才比；「本机没有公历钟」与「对方没记」与「读不出」三者分开）
+ *   三条纪律不变：只读（只调对方的读取面）、不抛（任何畸形都降级）、不猜（不可用如实报）。
  * ======================================================== */
 'use strict';
 
@@ -189,6 +201,160 @@ export function worldBridgeAvailability(win) {
     };
 }
 
+/**
+ * [v2.36.0] lonsha 桥的**来源归因**（对方自述，不是我们猜的）。
+ *
+ * lonsha v3.174 把桥的来源做成显式状态机：sourceState ∈
+ *   idle / ready / engine-absent / engine-empty / thrown，且 lastError 不吞。
+ * 那台状态机就是为了让消费者可归因而做的——「对方还没就绪，稍后再读」与
+ * 「对方坏了，该报出来」必须分开，否则读者只能一律当「没数据」。
+ *
+ * @returns {{mounted:boolean, sourceState:string|null, lastError:string|null, hasSnapshot:boolean, reason:string}}
+ */
+export function lonshaSource(id, win) {
+    try {
+        const b = getBridge(id || LONSHA_BRIDGE_ID, win);
+        if (!b) return { mounted: false, sourceState: null, lastError: null, hasSnapshot: false, reason: 'not-mounted' };
+        let sourceState = null, lastError = null, hasSnapshot = false;
+        try { sourceState = (typeof b.sourceState === 'string') ? b.sourceState : null; } catch (_e) { sourceState = null; }
+        try { lastError = b.lastError ? String(b.lastError) : null; } catch (_e) { lastError = null; }
+        try { hasSnapshot = !!(b.snapshot && typeof b.snapshot === 'object'); } catch (_e) { hasSnapshot = false; }
+        let reason;
+        if (sourceState === 'thrown') reason = 'thrown';
+        else if (sourceState === 'engine-absent') reason = 'engine-absent';
+        else if (sourceState === 'engine-empty') reason = 'engine-empty';
+        else if (hasSnapshot) reason = 'ready';
+        else reason = 'no-snapshot';   // idle / 未知来源态 / 旧版无该字段：都还没有可读的快照
+        return { mounted: true, sourceState, lastError, hasSnapshot, reason };
+    } catch (_e) {
+        return { mounted: false, sourceState: null, lastError: null, hasSnapshot: false, reason: 'probe-threw' };
+    }
+}
+/**
+ * [v2.36.0] 两个钟的对账（纯函数，不读任何全局，便于判据独立驱动）。
+ *
+ * 为什么要对账：本机的时间由正文/世界书/消息戳**猜**（config/time-manager.js），
+ *   WorldAxis 的世界钟是**推演结果**（决策时间），LonSha 的 GameClock 由**正文**校准。
+ *   三个「现在」各走各的，此前在手机侧完全不可观测。对账只报差异，不改任何一方。
+ *
+ * @param {string} worldIso   WorldAxis 世界钟的 iso（无公历形态即空串）
+ * @param {string} lonshaDate LonSha GameClock 的 date（可能是古历串）
+ * @returns {{comparable:boolean, verdict:string, days:number|null, worldDate:string, lonshaDate:string}}
+ *   verdict ∈ { same, world-ahead, world-behind, world-uncomparable, lonsha-empty, unparsable }
+ *   · world-uncomparable —— 本机（WorldAxis 侧）**没有公历钟**（自由标签「第12日·黄昏」或
+ *       桥没开）：本就不该比，绝不硬比出一个假的「不一致」。
+ *   · lonsha-empty —— 对方**还没记录时间**（等它即可），与 unparsable（记了但读不出，
+ *       两套历法）处置相反，不得同形。
+ */
+export function diffClocks(worldIso, lonshaDate) {
+    const out = { comparable: false, verdict: 'unparsable', days: null, worldDate: String(worldIso || '').trim(), lonshaDate: String(lonshaDate || '').trim() };
+    try {
+        const wRaw = out.worldDate, sRaw = out.lonshaDate;
+        if (!sRaw) { out.verdict = 'lonsha-empty'; return out; }
+        if (!wRaw) { out.verdict = 'world-uncomparable'; return out; }
+        const parse = (s) => {
+            const m = /^(\d{1,4})\s*[-/年.]\s*(\d{1,2})\s*[-/月.]\s*(\d{1,2})/.exec(String(s || '').trim());
+            if (!m) return null;
+            const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+            if (!(y >= 1 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+            return Date.UTC(y, mo - 1, d) / 86400000;
+        };
+        const a = parse(wRaw), b = parse(sRaw);
+        if (a === null || b === null) { out.verdict = 'unparsable'; return out; }
+        const days = b - a;   // 正 = 对方记的日期在后（本机（世界钟）走在前 → world-ahead）
+        out.comparable = true; out.days = days;
+        out.verdict = (days === 0) ? 'same' : (days > 0 ? 'world-ahead' : 'world-behind');
+        return out;
+    } catch (_e) { return out; }
+}
+/**
+ * [v2.36.0] 两个桥的**可观测面报告**（纯读，供 UI / 诊断 / 测试直接渲染）。
+ *
+ * 这是本版的核心出口：把「桥通不通、通到哪一步、两个钟差多少」压成一份可读数据。
+ * 三条纪律：只读（只调对方读取面）、不抛（任何畸形都降级为 reason）、不猜（如实报）。
+ *
+ * @returns {{ worldaxis:{...}, lonsha:{...}, clock:{...}, summary:string, anyReadable:boolean }}
+ */
+export function bridgeReport(win) {
+    try { return bridgeReportInner(win); }
+    catch (_e) {
+        return {
+            worldaxis: { id: WORLDAXIS_BRIDGE_ID, mounted: false, enabled: null, reason: 'report-threw', stat: null },
+            lonsha: { id: LONSHA_BRIDGE_ID, mounted: false, sourceState: null, lastError: null, reason: 'report-threw' },
+            clock: { comparable: false, verdict: 'unparsable', days: null, worldDate: '', lonshaDate: '' },
+            summary: '桥可观测面读取失败（已降级，不外抛）',
+            anyReadable: false
+        };
+    }
+}
+function bridgeReportInner(win) {
+    // ── WorldAxis 侧：我方读取（含闸门与记账自述）──
+    const waSrc = bridgeSource(WORLDAXIS_BRIDGE_ID, win);
+    const waStat = waSrc.stat && typeof waSrc.stat === 'object' ? {
+        publishes: Number(waSrc.stat.publishes) || 0,
+        externalReads: Number(waSrc.stat.externalReads) || 0,
+        refused: Number(waSrc.stat.refused) || 0,
+        failures: Number(waSrc.stat.failures) || 0,
+        lastRefusal: (waSrc.stat.lastRefusal && waSrc.stat.lastRefusal.reason) || null,
+        lastFailure: (waSrc.stat.lastFailure && waSrc.stat.lastFailure.reason) || null,
+        subscribed: waSrc.stat.subscribed === true
+    } : null;
+    // ── lonsha 侧：对方的来源自述 ──
+    const loSrc = lonshaSource(LONSHA_BRIDGE_ID, win);
+    // ── 两个钟的对账（只在这两边都真读到时才有意义）──
+    let worldIso = '';
+    let lonshaDate = '';
+    try {
+        const rwa = readWorldAxisSnapshot({ win, reason: 'bridge-report' });
+        if (rwa && rwa.ok) {
+            const wc = readWorldClock(rwa.snapshot);
+            if (wc && wc.iso) worldIso = wc.iso;
+        }
+    } catch (_e) { /* 降级：worldIso 保持空串（对账会报 world-uncomparable） */ }
+    try {
+        const rlo = readLonshaSnapshot({ win });
+        if (rlo && rlo.ok && rlo.snapshot && rlo.snapshot.clock && typeof rlo.snapshot.clock === 'object') {
+            lonshaDate = String(rlo.snapshot.clock.date || '').trim();
+        }
+    } catch (_e) { /* 降级：lonshaDate 保持空串（对账会报 lonsha-empty） */ }
+    const clock = diffClocks(worldIso, lonshaDate);
+    const anyReadable = !!(waSrc.mounted || loSrc.mounted);
+    return {
+        worldaxis: {
+            id: WORLDAXIS_BRIDGE_ID, mounted: waSrc.mounted, enabled: waSrc.enabled,
+            hasSnapshot: waSrc.hasSnapshot, reason: waSrc.reason, stat: waStat
+        },
+        lonsha: {
+            id: LONSHA_BRIDGE_ID, mounted: loSrc.mounted, sourceState: loSrc.sourceState,
+            lastError: loSrc.lastError, hasSnapshot: loSrc.hasSnapshot, reason: loSrc.reason
+        },
+        clock,
+        summary: describeReport(waSrc, loSrc, clock),
+        anyReadable
+    };
+}
+/** 一句话总述（供 UI 直接显示；纯字符串拼接，无副作用） */
+function describeReport(waSrc, loSrc, clock) {
+    const WA_TXT = {
+        'not-mounted': 'WorldAxis 未安装', 'disabled': 'WorldAxis 世界桥休眠（未开闸）',
+        'refused': 'WorldAxis 世界桥拒绝读取', 'no-snapshot': 'WorldAxis 桥在但尚无快照',
+        'ready': 'WorldAxis 桥就绪', 'probe-threw': 'WorldAxis 桥探针异常'
+    };
+    const LO_TXT = {
+        'not-mounted': 'LonSha 记忆插件未安装', 'ready': 'LonSha 桥就绪',
+        'engine-absent': 'LonSha 插件在但记忆引擎未就位', 'engine-empty': 'LonSha 引擎在位但返回空',
+        'thrown': 'LonSha 桥取快照抛错', 'no-snapshot': 'LonSha 桥在但尚未产出快照',
+        'probe-threw': 'LonSha 桥探针异常'
+    };
+    const CK_TXT = {
+        'same': '两个钟同日', 'world-ahead': '世界钟在前 ' + Math.abs(Number(clock.days) || 0) + ' 天',
+        'world-behind': '世界钟在后 ' + Math.abs(Number(clock.days) || 0) + ' 天',
+        'world-uncomparable': '本机无公历钟（本就不比）', 'lonsha-empty': 'LonSha 尚未记录时间',
+        'unparsable': '日期串读不出'
+    };
+    return (WA_TXT[waSrc.reason] || waSrc.reason) + ' ｜ ' + (LO_TXT[loSrc.reason] || loSrc.reason)
+        + ' ｜ 对账：' + (CK_TXT[clock.verdict] || clock.verdict);
+}
 export default {
     WORLDAXIS_BRIDGE_ID,
     LONSHA_BRIDGE_ID,
@@ -197,5 +363,8 @@ export default {
     readWorldAxisSnapshot,
     readWorldClock,
     readLonshaSnapshot,
-    worldBridgeAvailability
+    worldBridgeAvailability,
+    lonshaSource,
+    diffClocks,
+    bridgeReport
 };

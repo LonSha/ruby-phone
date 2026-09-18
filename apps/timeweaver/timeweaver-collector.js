@@ -5,6 +5,11 @@
  * ======================================================== */
 'use strict';
 import TW from './timeweaver-engine.js';
+// [v2.36.0] 桥读取走 config/world-bridge.js 单一真源：
+//   本文件此前**自写**了一份 `window.lonsha_memory_bridge_v1` 读取（只取 snapshot.recallAudit）。
+//   同一份桥读取逻辑有两份实现必然漂移（且第二份不知道对方 v3.174 的 sourceState 可归因），
+//   故收敛到一处——本文件只负责「取 recallAudit 这一块业务数据」，桥怎么读由真源决定。
+import { readLonshaSnapshot } from '../../config/world-bridge.js';
 
 // 安全读 storage 键并解析为数组
 function readArr(storage, key) {
@@ -46,8 +51,11 @@ function readChatMetaArrays(ctx) {
  */
 export function collectLonshaRecall() {
   try {
-    const bridge = (typeof window !== 'undefined' && window.lonsha_memory_bridge_v1) || null;
-    const ra = bridge && bridge.snapshot && bridge.snapshot.recallAudit;
+    // [v2.36.0] 经单一真源读桥（只读、不抛、可归因）；本文件不再自己摸 window 全局。
+    const r = readLonshaSnapshot();
+    const snap = (r && r.ok && r.snapshot) ? r.snapshot : null;
+    if (!snap) return null;   // 桥未装 / 对方未就绪 / 无快照 ⇒ 返回 null（不影响织光机其它源）
+    const ra = snap.recallAudit;
     if (!ra || !Number(ra.rounds)) return null;
     const hotFloors = (Array.isArray(ra.hotFloors) ? ra.hotFloors : [])
       .map(h => ({ floor: Number(h && h.floor), count: Number(h && h.count) || 0 }))
@@ -60,7 +68,7 @@ export function collectLonshaRecall() {
       hotFloors,
       lastQuery: String(ra.lastQuery || '').slice(0, 80),
       lastTs: Number(ra.lastTs) || 0,
-      pluginVersion: String((bridge.snapshot && bridge.snapshot.pluginVersion) || '')
+      pluginVersion: String(snap.pluginVersion || '')
     };
   } catch (e) { return null; }
 }

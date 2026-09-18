@@ -182,11 +182,14 @@ test('collectLonshaRecall：桥缺失/旧版/正常三态', () => {
     globalThis.window = {};
     try {
         assert.equal(collectLonshaRecall(), null, '无 bridge 全局返回 null');
+        // [v2.36.0 交棒] 夹具形态随单一真源更新：桥对象须自带 sourceState（lonsha v3.174 契约），
+        //   否则来源态不可归因（旧夹具是裸 snapshot，真源不会把它当作可读快照）。
         // 旧版 lonsha（无 recallAudit 字段）→ null（向后兼容）
-        globalThis.window.lonsha_memory_bridge_v1 = { snapshot: { pluginVersion: '3.150.0' } };
+        globalThis.window.lonsha_memory_bridge_v1 = { sourceState: 'ready', snapshot: { pluginVersion: '3.150.0' } };
         assert.equal(collectLonshaRecall(), null, '旧版无 recallAudit 字段安全降级');
         // 正常态：字段透传 + 脏值过滤
         globalThis.window.lonsha_memory_bridge_v1 = {
+            sourceState: 'ready',
             snapshot: {
                 pluginVersion: '3.151.0',
                 recallAudit: {
@@ -210,7 +213,15 @@ test('collectLonshaRecall：桥缺失/旧版/正常三态', () => {
 
 test('回望面板接线 + 存储分域 + 视图 tab', () => {
     ok(colSrc.includes('export function collectLonshaRecall'), 'collector 导出采集器');
-    ok(colSrc.includes('window.lonsha_memory_bridge_v1'), '读公开快照桥');
+    // [v2.36.0 交棒] 原判据 `colSrc.includes('window.lonsha_memory_bridge_v1')` 现在只会命中注释
+    //   （说明文字不该满足文本判据）。改为钉真正的契约：经 config/world-bridge.js **单一真源**读桥，
+    //   且不在本文件里自己摸 window 全局（判据落在剥注释的代码行上）。
+    // 剥注释要**两种都剥**：只剥行注释会漏掉 JSDoc 块注释里以 ` * ` 开头的内容行
+    //   （原实现就因为漏了块注释，把文档里的全局名当成代码命中，判据假红）。
+    const colCode = colSrc.replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+    ok(colCode.includes("from '../../config/world-bridge.js'"), '桥读取走单一真源（config/world-bridge.js）');
+    ok(!/window\s*\.\s*lonsha_memory_bridge_v1/.test(colCode), '本文件不再自己摸桥全局（桥怎么读由真源决定）');
     ok(colSrc.includes('opts.withRecall === false') || colSrc.includes('recall,'), 'buildNarrative 模型带 recall');
     ok(viewSrc.includes("this._tab === 'recall'"), '回望 tab 路由在位');
     ok(viewSrc.includes('你最常回望的时光'), '回望面板渲染热点楼层');
