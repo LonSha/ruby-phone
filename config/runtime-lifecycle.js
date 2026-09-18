@@ -215,6 +215,14 @@ export class ManagedRuntime {
         //   死码比没有更坏：它让「这段逻辑有人管」的错觉成立，而真正生效的是另一条。
         if (this._childLog) {
             try { this._childLog.delete(this); } catch (_) { /* 忽略 */ }
+            // [v2.31.0] 回收账本：只在首次记账。重复 dispose 属幂等语义（v2.29 起
+            //   明确承诺「dispose 幂等，可重复调用」），重复计会让「重建 N 次」与
+            //   「回收 N 次」无法互相校验 —— 账本的价值全在可对账。
+            if (!this._releaseLogged) {
+                this._releaseLogged = true;
+                this._releasedAt = Date.now();
+                _childReleaseLog.set(this.name, (_childReleaseLog.get(this.name) || 0) + 1);
+            }
         }
         return ids.length;
     }
@@ -263,6 +271,17 @@ export const globalRuntime = new ManagedRuntime('global');
  *   只回收本域资源并自动从域表注销。父域 dispose() 会级联回收所有子域。
  */
 const _childRuntimes = new Set();
+/* ---------------- [v2.31.0] 回收账本 ----------------
+ * 动机（v2.30 的下一层）：v2.29 让域自持出口、v2.30 让过早回收可见，但
+ *   「宿主把实例丢掉了、有没有回收它的域」这件事仍然只在**单点**上可查：
+ *   childRuntimeCount() 回答「现在有几个域活着」，回答不了「谁被回收过」。
+ *   而重建路径上的正确性恰恰只体现在后者 —— 旧域被回收后表里只剩新域，
+ *   「重建前漏回收」与「重建前已回收」在**计数上完全同形**（都是 1 个域），
+ *   区别只在于：前者的旧域是孤儿、其 window 监听器永久累积。
+ * 口径：凡域被回收即记账一次（**只在首次**，保证幂等 dispose 不重复计），
+ *   与「活着的域」分开命名，避免把「曾经被回收」读成「现在还在」。
+ */
+const _childReleaseLog = new Map();
 /**
  * [v2.27.0] 全局登记层诊断快照：宿主可直接挂到设置页/控制台，
  * 回答"现在还有哪些常驻资源在跑、分别属于谁"。
@@ -343,6 +362,23 @@ export function childRuntimeOverDisposed() {
         if (n > 0) { over += 1; reenters += n; names[rt.name] = (names[rt.name] || 0) + n; }
     }
     return { total: _childRuntimes.size, overDisposed: over, reenters, names };
+}
+/**
+ * [v2.31.0] 回收账本快照：每个域名被回收过多少次（空串 = 返回全部分域计数）。
+ * 用途：与 childRuntimeStats(name) **配对**回答「重建前有没有回收旧实例的域」——
+ *   旧域回收后表里只剩新域（count 恒为 1，看不出漏没漏），
+ *   账本记的却是「这个域名到底被回收过几次」，漏回收即为 0。
+ * @param {string} name 域名（精确匹配）；空串时返回 { name: count }
+ * @returns {number|Object}
+ */
+export function childRuntimeReleaseLog(name) {
+    const n = String(name || '');
+    if (!n) {
+        const out = {};
+        for (const [k, v] of _childReleaseLog) out[k] = v;
+        return out;
+    }
+    return _childReleaseLog.get(n) || 0;
 }
 /**
  * [v2.28.0] 按名（前缀）回收实例级资源域。

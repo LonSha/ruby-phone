@@ -11,6 +11,7 @@
  * ======================================================== */
 // 主屏幕
 import { APPS, PHONE_CONFIG } from '../config/apps.js'; // 🔥🔥🔥 这一行必须改！
+import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
 
 const CARD_LAYOUT_CUSTOM_CSS_KEY = 'phone-card-layout-custom-css';
 const CARD_LAYOUT_CUSTOM_STYLE_ID = 'phone-card-layout-custom-css-style';
@@ -21,6 +22,14 @@ export class HomeScreen {
         this.phoneShell = phoneShell;
         this.apps = apps || APPS; // 🔥 修复：确保 apps 有默认值
         this._homeRenderVersion = 0;
+        // [v2.31.0] 实例级资源域：本实例在 window 上注册的 4 个长期存活监听器
+        //   （updateWallpaper / updateAppIcon / updateCardLayoutCss / timeUpdated）
+        //   彼此用 `if (!this._xxxEventBound)` 互相隔离 —— 于是**没有任何一处**
+        //   能在实例被丢弃时解绑它们。宿主每次 createPhoneInPanel() 都 new 一个
+        //   HomeScreen，旧实例的这 4 个监听器便永久累积（闭包还钉住旧
+        //   phoneShell.screen），且旧实例会继续响应新壳的事件、渲染进已废弃的 DOM。
+        //   登记进本实例的域后，宿主丢弃实例前只需 dispose 这个域。
+        this._rt = childRuntime('home-screen');
         
         // 🔥 修复：确保 window.VirtualPhone 存在
         const storage = window.VirtualPhone?.storage;
@@ -541,34 +550,52 @@ export class HomeScreen {
         });
 
         // 监听壁纸更新
+        // [v2.31.0] 四处 `window.addEventListener` 改为经实例域登记：`_xxxEventBound`
+        //   只解决「同一实例内不重复绑」，解决不了「实例被丢弃后仍在绑着」。
+        //   登记后 handler 由域持有，宿主可在丢弃实例前精确解绑（无需重构回调本体）。
         if (!this._wallpaperEventBound) {
             this._wallpaperEventBound = true;
-            window.addEventListener('phone:updateWallpaper', (e) => {
+            this._rt.addListener(window, 'phone:updateWallpaper', (e) => {
                 this.render({ forceDomRefresh: true });
-            });
+            }, false, 'home:updateWallpaper');
         }
 
         // 监听APP图标更新
         if (!this._appIconEventBound) {
             this._appIconEventBound = true;
-            window.addEventListener('phone:updateAppIcon', () => {
+            this._rt.addListener(window, 'phone:updateAppIcon', () => {
                 this.render({ forceDomRefresh: true });
-            });
+            }, false, 'home:updateAppIcon');
         }
 
         if (!this._cardLayoutCssEventBound) {
             this._cardLayoutCssEventBound = true;
-            window.addEventListener('phone:updateCardLayoutCss', () => {
+            this._rt.addListener(window, 'phone:updateCardLayoutCss', () => {
                 this.applyCardLayoutCustomCss();
-            });
+            }, false, 'home:updateCardLayoutCss');
         }
 
         if (!this._timeUpdateEventBound) {
             this._timeUpdateEventBound = true;
-            window.addEventListener('phone:timeUpdated', () => {
+            this._rt.addListener(window, 'phone:timeUpdated', () => {
                 this.updateTimeDisplay();
-            });
+            }, false, 'home:timeUpdated');
         }
+    }
+
+    /**
+     * [v2.31.0] 实例销毁：回收本实例在 window 上注册的全部长期存活监听器。
+     * 幂等；调用后实例不应再被使用（render 会重新登记）。
+     * @returns {number} 实际回收项数
+     */
+    destroy() {
+        let n = 0;
+        try { n = this._rt ? this._rt.dispose() : 0; } catch (_e) { /* 回收失败不阻断重建 */ }
+        this._wallpaperEventBound = false;
+        this._appIconEventBound = false;
+        this._cardLayoutCssEventBound = false;
+        this._timeUpdateEventBound = false;
+        return n;
     }
     
     openApp(appId) {

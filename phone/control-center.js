@@ -37,13 +37,22 @@ export class ControlCenter {
         this.storage = storage;
         this._root = null;
         this.open = false;
+        // [v2.31.0] 陈旧实例护栏：面板重建会让宿主指针改指新实例，而**旧实例仍可达**
+        //   （闭包、事件回调、外部持有的引用都还握着它）。此时若有人在旧实例上
+        //   toggle()/show()，它会用自己的 phoneShell 把 overlay 挂进**已被摘除的旧容器**
+        //   —— 用户看到的是「控制器没反应」，而对象图里多出一个谁也不认领的 overlay。
+        //   注意守卫必须落在 show()（唯一能造出界面的入口），只守 close() 等于没守。
+        this._disposed = false;
     }
 
     isOpen() { return this.open; }
 
-    toggle() { if (this.open) this.close(); else this.show(); }
+    toggle() { if (this._disposed) return; if (this.open) this.close(); else this.show(); }
 
     show() {
+        // [v2.31.0] 已销毁实例不得再挂界面。容器可能已被重建（host 存在），
+        //   挂上去就会出现两个控制中心面板，且旧实例的 toggle 与新实例互相看不见对方。
+        if (this._disposed) return;
         const host = this.phoneShell?.container;
         if (!host) return;
         this._root?.remove();
@@ -68,7 +77,21 @@ export class ControlCenter {
     }
 
     close() {
+        // [v2.31.0] 已销毁的实例不得再操作界面：close 本身幂等，早退只是省掉一次
+        //   无意义的 DOM 查询，同时让「陈旧实例还活着」这件事不至于静默成真。
+        if (this._disposed) { this._root = null; this.open = false; return; }
         this._root?.remove();
+        this._root = null;
+        this.open = false;
+    }
+    /**
+     * [v2.31.0] 实例销毁：宿主丢弃本实例时调用。
+     * 控制中心没有全局监听器（界面内监听器随 overlay 摘除自然回收，故不登记），
+     * 需要收的只有「界面本身」与「实例可用性标记」。
+     */
+    dispose() {
+        this._disposed = true;
+        try { this._root?.remove(); } catch (_e) { /* 忽略 */ }
         this._root = null;
         this.open = false;
     }

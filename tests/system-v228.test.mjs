@@ -566,8 +566,17 @@ const {
         touched.every(f => read(f).length > 0), JSON.stringify(touched.filter(f => !read(f).length)));
     ok('范围: 第三方版权文件（honey-view）仅等价替换，版权头保留',
         /Copyright \(c\) yuzuki\. All rights reserved\./.test(read('apps/honey/honey-view.js')));
-    ok('范围: 未越界改动 phone-shell（v2.26 已接，本轮不动）',
-        !/childRuntime/.test(read('phone/phone-shell.js')));
+    /* [v2.31.0] 交棒：原判据 `!/childRuntime/.test(phone-shell)` 是**范围自证**
+       （v2.28 本轮的“不动 phone-shell”记录），属可变状态 —— v2.31.0 有意
+       把壳层登记层从裸 ManagedRuntime 升级为 childRuntime('phone-shell')，
+       该字面断言必然翻红。改为钉 v2.28 起就不变的事实：壳层**代码取值**只能
+       来自登记层构造器（ManagedRuntime 仍被 import 只为 v2.26 类型引用与注释说明），
+       且不出现“裸 new”写法（即登记层必须经 childRuntime 建域、进程表）。 */
+    const shellSrc = read('phone/phone-shell.js');
+    ok('范围: phone-shell 登记层经构造器取得（无裸 new ManagedRuntime）',
+        !/new\s+ManagedRuntime\s*\(/.test(shellSrc)
+        && /childRuntime\s*\(\s*'phone-shell'\s*\)/.test(shellSrc),
+        'phone-shell 应当用 childRuntime 建域');
     ok('范围: 内核导出齐备（childRuntime / childRuntimeCount / disposeChildRuntimes）',
         ['export function childRuntime(', 'export function childRuntimeCount(',
             'export function disposeChildRuntimes('].every(k => read('config/runtime-lifecycle.js').includes(k)));

@@ -12,7 +12,7 @@
 // 手机外壳
 import { PHONE_CONFIG } from '../config/apps.js';
 import { LockScreen } from './lock-screen.js';
-import { ManagedRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0] 运行时资源登记与统一回收
+import { ManagedRuntime, childRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0/v2.31.0] 运行时资源登记与统一回收
 import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
 
 export class PhoneShell {
@@ -99,9 +99,13 @@ export class PhoneShell {
         return this.container;
     }
 
-    /** [v2.26.0] 惰性取得本实例的运行时登记层 */
+    /** [v2.31.0] 惰性取得本实例的运行时登记层（升级为**可诊断的实例域**）。
+     *  v2.26 建的是裸 ManagedRuntime：资源确实被回收了，但这个域不在全局域表里 ——
+     *  runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，
+     *  于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。
+     *  改用 childRuntime 后它与其它实例域同构：进域表、可计数、回收留痕。 */
     _rt() {
-        if (!this._runtime) this._runtime = new ManagedRuntime('phone-shell');
+        if (!this._runtime) this._runtime = childRuntime('phone-shell');
         return this._runtime;
     }
 
@@ -125,6 +129,12 @@ export class PhoneShell {
      */
     destroy() {
         let n = 0;
+        // [v2.31.0] 级联：锁屏实例随旧壳被**整体丢弃**（lockScreen 字段失去引用），
+        //   而它的 10s 时钟定时器与两个 window 鼠标监听器并不在壳的登记表里。
+        //   v2.26 只收了壳自己登记的资源，锁屏那一份没人收 —— 若重建瞬间正处
+        //   锁屏态，旧锁屏的定时器会永久累积，且其闭包钉住已废弃的 root 节点。
+        try { this.lockScreen?.dispose?.(); } catch (_e) { /* 忽略 */ }
+        this.lockScreen = null;
         try { n = this._runtime ? this._runtime.dispose() : 0; } catch (_) { /* 回收失败不阻断重建 */ }
         this._timeUpdateEventBound = false;
         return n;

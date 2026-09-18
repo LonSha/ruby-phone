@@ -31,7 +31,7 @@ import { NotificationLog } from './config/system-notifications.js';
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
-import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed } from './config/runtime-lifecycle.js';
+import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
 import { PHONE_EVENTS } from './config/phone-events.js';
 
@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.30.0';
+const ST_PHONE_VERSION = '2.31.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,14 +77,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-18',
     items: [
-        "【域出口时机契约】v2.29 把出口交给域自己，解决的是「域还活着、宿主已经忘了它」。本版盯住同一枚硬币的另一面 ——「域已被回收、实例却还在用」：宿主一条 disposeChildRuntimes('') 不看实例死活就把域一并回收，实例随后靠 _reenterIfNeeded 静默复活，于是同一个实例里「已被回收的旧资源」与「重新登记的新资源」并存，而旧资源再无回收出口。",
-        "【把过早回收变成可观测】新增 overDisposeStats() / childRuntimeOverDisposed()，runtimeStats() 追加 overDisposed 字段 —— 域在 dispose 之后又被登记（= 复活）即计数。反例对照「域随实例生命周期走」该值恒为 0，宿主级域不参与记账。",
-        "【换会话 ≠ 实例销毁】换会话是**会话作用域**操作：移除全域清零，实例域交由各自 onChatChanged() 处置（日历留住节假日与日程、音乐继续播、微博实例跨会话复用）；deactivate 与 clearCache 拆成独立 try，一处抛错不再连带让域回收静默不发生。",
-        "【三条丢弃路径对齐】换会话与清全部数据补 albumApp.destroy()（解绑它在构造期注册的 5 个全局监听器）；清全部数据补 honey 的实例级出口（停播放/动画/TTS）；清当前数据补 imageManager 丢弃（与清全部数据对齐）。",
-        "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前顺手注销整个视图域，而 9 个调用点都借这个「DOM 主题」名字获得域生命周期语义。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（完整出口，含域注销）。",
-        "【不做「统一化」】wechat-app 唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭，对它强行加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
-        "【测试】新增 tests/system-v230.test.mjs（四层 51 断言），全量 245/245 绿，语法门 241 个文件按 ES Module 解析通过。",
-        "【发布卫生】修正 update-log.latest 未随本版推进（曾致 5 个历史测试文件同时翻红）；并把 v228 / v229 / v230 里「用当前版本查本版关键词」的判据改钉历史版本条目 ——此后发新版不再必然翻红。",
+        "【重建路径：新界面接上了、旧界面还挂着】v2.30 让「域被过早回收」可见，本版盯住它的镜像面 ——「实例被丢弃了、它的资源没人收」。宿主 createPhoneInPanel() 有四条重入路径（首次打开 / 点击页面横幅直达 App / 微信来电唤醒 / 电话来电），每条都执行 `phoneShell?.destroy?.()` 后 `new PhoneShell()`。壳自己的登记表确实被收净了，但**同一作用域里还有三个实例被无声丢弃**：旧 homeScreen（4 个 window 监听器，用「同实例内不重复绑」的 guard 互相隔离，因此没有任何一处能在实例被丢弃时解绑）、旧 controlCenter（无收尾路径，overlay 可能留在已废弃容器里）、旧 phoneShell.lockScreen（10s 时钟定时器 + 2 个 window 鼠标监听器，不在壳的登记表里）。结果是旧 HomeScreen 会继续响应新壳派的 phone:updateWallpaper / phone:timeUpdated 并渲染进**已被摘除的旧 DOM**。",
+        "【收口位置必须与构造位置同址】这四类实例的构造点全部落在 createPhoneInPanel() 里，因此唯一正确的收尾点也在它附近：新增 releasePhoneSurface()（收可复用界面实例）、destroyPhoneSurface()（收随会话存在的界面槽位，含落账层「先落盘再丢定时器」）、reloadPhoneSurface()（收 + 重建 + 渲染）。一条实现原则：**同一个宿主函数既构造它们，就必须负责回收它们**，否则「谁该收」只能靠读代码推。",
+        "【壳层域升级为可诊断域】phoneShell 的登记层此前是裸 ManagedRuntime('phone-shell')：资源确实被回收了，但这个域不在全局域表里 —— runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。本版改用 childRuntime('phone-shell')，与 sudoku-view / music-view / honey-view 同构，并让 PhoneShell.destroy() 级联回收 lockScreen（此前该字段被置空时它的资源仍在跑）。",
+        "【域被回收了：现在能被数到】新增回收账本 _childReleaseLog 与 childRuntimeReleaseLog()，runtimeStats() 追加 released 字段。动机是 v2.29 的 childRuntimeStats 只能回答「现在有几个域活着」—— 而重建路径上「重建前漏回收」与「重建前已回收」在**计数上完全同形**（旧域收掉后表里都只剩 1 个新域），区别只在旧域是否成了孤儿。账本口径刻意只在**首次**回收时计一次：重复 dispose 是 v2.29 起承诺的幂等语义，重复计会让「重建 N 次」与「回收 N 次」无法对账。",
+        "【哪种不对称是对的】第一版实现把 P1 换会话写成「只收不建」，实测会留下悬空的 homeScreen：桌面时间停更、角标刷新失效 —— 「收干净」不能以「功能坏掉」为代价。定稿改为**界面槽位随会话重生、数据实例复用重绑**：homeScreen / controlCenter / notificationLog 三条槽位统一由 reloadPhoneSurface() 收掉旧的、建新的；music / games / weibo / honey / diary / calendar 等数据实例仍旧只 clearCache + onChatChanged（换会话是会话作用域操作，它们必须活下来）。此外，实例被丢弃时**同时清掉三个宿主级公开别名**（window.VirtualPhone.home / controlCenter / notificationLog）——它们自 v2.16 起就是「界面槽位」的公开引用（phone-view / wechat-app / weibo-data / lock-screen 都读它），只置内部变量会让旧别名继续指向已销毁实例，`window.VirtualPhone.home.render()` 于是把内容渲染进已废弃的 DOM。别名无资源可收，仅需引用复位。",
+        "【落账层：dispose 与 reset 是两个语义】NotificationLog 此前只有 reset()，且**刻意不落盘**（「当前 storage 已指向新会话、旧缓存写出去即串味」）。这对聊天数据是对的，对系统通知落账层是错的：通知存在 sys_notifs（随会话隔离的系统键），切换前那 800ms 防抖窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。本版新增 dispose()：先 flushNow() 再丢定时器，不变量为「dispose 不得静默吞掉已经入账的通知」。",
+        "【陈旧实例护栏：早退要挡能造出界面的那个入口】控制中心实例在面板重建后仍可达（闭包 / 事件回调 / 外部引用）。若无护栏，旧实例的 toggle()/show() 会用自己的 phoneShell 把 overlay 挂进已被摘除的容器 —— 用户看到「控制器没反应」，对象图里却多出一个没人认领的 overlay。护栏落在 show()/toggle()（唯一能造出界面的入口）而不只 close()：只守 close 等于没守。",
+        "【测试】新增 tests/system-v231.test.mjs：内核回收账本（含幂等 dispose 不重复计 / 父域级联必须记账两条反例对照）、重建总账对账（登记项数 = 现存项数 + 回收项数）、壳层与三实例的出口存在性与接线、三条丢弃路径与界面槽位重建、发布卫生（四处版本一致 + latest 指向本版 + 内置公告与本版日志同源）。",
     ]
 };
 
@@ -2400,6 +2400,86 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     async function fetchRemoteUpdateNotes(version, cacheBust = Date.now()) { updateChecker.setStorage(storage); return updateChecker.fetchRemoteUpdateNotes(version, cacheBust); }
     function schedulePhoneUpdateNotices() { updateChecker.setStorage(storage); return updateChecker.schedulePhoneUpdateNotices(); }
 
+    /* ---------------- [v2.31.0] 界面实例统一出口 ----------------
+     * 动机：v2.26 给 PhoneShell 建了资源登记层、v2.30 把「域被过早回收」变成可见，
+     *   但**同一批被丢弃的实例里只有壳在收**。这四个实例的构造点全部落在本文件的
+     *   createPhoneInPanel() 里，于是唯一正确的收口位置也在那里：
+     *     同一个宿主函数既构造它们，就必须负责回收它们。
+     * 三个语义必须分开命名（v2.30「出口不该藏在名字里」的延续）：
+     *   - releasePhoneSurface()  收可复用的界面实例
+     *   - destroyPhoneSurface()  收三条随会话存在的界面槽位（homeScreen /
+     *                            controlCenter / notificationLog）
+     *   - reloadPhoneSurface()   收 + 重建 + 渲染
+     * 注意**收与建必须同时存在**：只收不建会让 homeScreen 悬空为 null，桌面时间
+     *   停更、角标刷新失效 —— 回收不能以功能坏掉为代价（第一版实现踩过这个坑）。
+     * 三者都幂等、都不抛；返回实际回收项数便于诊断与断言。
+     */
+    function releasePhoneSurface({ home = null, controlCenter: cc = null } = {}) {
+        let n = 0;
+        try { if (home?.destroy?.()) n += 1; } catch (_e) { /* 忽略 */ }
+        try { if (cc?.dispose?.()) n += 1; } catch (_e) { /* 忽略 */ }
+        return n;
+    }
+    /**
+     * [v2.31.0] 复位三个宿主级**公开别名**（window.VirtualPhone.home /
+     *   controlCenter / notificationLog）。它们自 v2.16 起就是「界面槽位」的公开引用
+     *   （apps/phone/phone-view.js、apps/wechat/wechat-app.js、apps/weibo/weibo-data.js、
+     *   phone/lock-screen.js 都直接读它们），因此**只置内部变量是不够的**：
+     *   实例销毁后旧别名仍指向已销毁实例，`window.VirtualPhone.home.render()`
+     *   会把内容渲染进已废弃的 DOM。别名本身无资源可收，只需引用复位；重建路径
+     *   会把新实例写回（见 reloadPhoneSurface / createPhoneInPanel）。
+     * 纯赋值，且 window 上可能尚无 VirtualPhone，故整体 try。
+     */
+    function clearPhoneSurfaceAliases() {
+        try {
+            if (window.VirtualPhone) {
+                window.VirtualPhone.home = null;
+                window.VirtualPhone.controlCenter = null;
+                window.VirtualPhone.notificationLog = null;
+            }
+        } catch (_e) { /* 忽略 */ }
+    }
+    /** 收三条界面槽位（不重建）。落账层走 dispose：先落盘再丢定时器，避免防抖窗口内的通知被吞。 */
+    function destroyPhoneSurface() {
+        let n = 0;
+        const oldHome = homeScreen;
+        const oldCC = controlCenter;
+        homeScreen = null;
+        controlCenter = null;
+        try { n += releasePhoneSurface({ home: oldHome, controlCenter: oldCC }); } catch (_e) { /* 忽略 */ }
+        try { notificationLog?.dispose?.(); } catch (_e) { /* 忽略 */ }
+        // 别名必须在销毁点复位（而不是等重建）：P3 清全部数据会重置壳，
+        //   重开面板前的窗口期里，外部仍可能通过别名拿到已销毁实例。
+        clearPhoneSurfaceAliases();
+        return n;
+    }
+    /**
+     * 界面槽位随会话重生：收掉旧的 → 建新的 → 渲染。
+     * 壳不存在（手机从未打开）时只收不建 —— 没有槽位需要填。
+     * 为什么数据实例不在此列：换会话是**会话作用域**操作，music / games / weibo /
+     *   honey / diary / calendar 等实例必须活下来（各自 onChatChanged 重绑），
+     *   真正随会话重生的是上面那三条「界面槽位」。
+     */
+    function reloadPhoneSurface() {
+        const n = destroyPhoneSurface();
+        if (!phoneShell || !phoneShell.container) return n;
+        try {
+            homeScreen = new HomeScreen(phoneShell, currentApps);
+            window.VirtualPhone.home = homeScreen;
+            homeScreen.render();
+        } catch (e) { console.warn('[v2.31.0] 主屏幕实例重建失败:', e); }
+        try {
+            controlCenter = new ControlCenter(phoneShell, storage);
+            window.VirtualPhone.controlCenter = controlCenter;
+        } catch (e) { console.warn('[v2.31.0] 控制中心实例重建失败:', e); }
+        try {
+            notificationLog = new NotificationLog(storage, { limit: 200 });
+            window.VirtualPhone.notificationLog = notificationLog;
+            window.VirtualPhone.syncNotificationsBadge = syncNotificationsBadge;
+        } catch (e) { console.warn('[v2.31.0] 通知落账层重建失败:', e); }
+        return n;
+    }
+
     // [v2.27.0] 常驻资源诊断入口：控制台执行 window.VirtualPhone.runtimeStats()
     //   即可看到「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」，
     //   用于定位漏回收（v2.25/v2.26 修的正是这类）。无登记项时 total 为 0。
@@ -2415,9 +2495,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             //   v2.29 的孤儿域是「域活着、宿主忘了它」，这是它的镜像形态：
             //   「域被回收了、实例还在用」。两者都不该发生，且都需要可见。
             snap.overDisposed = childRuntimeOverDisposed();
+            // [v2.31.0] 回收账本：domainCounts 回答「现在有几个域活着」，本字段回答
+            //   「每个域名**总共被回收过几次**」——重建路径上「漏回收」与「已回收」
+            //   在计数上完全同形（旧域收掉后表里都只剩 1 个），只有账本能分开两者。
+            //   口径：只在首次回收时计一次（重复 dispose 属幂等语义，不重复计）。
+            snap.released = childRuntimeReleaseLog('');
             return snap;
         }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} } }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {} }; }
     }
 
     async function getOrCreateMofoData() {
@@ -5258,6 +5343,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         // [v2.26.0] 重建前先回收旧壳的运行时资源：旧壳在 document/window 上注册了
         //   pointermove 等 5 个监听器与一个 30s 时钟定时器，原实现全无解绑通路，
         //   重入本函数（8706 行的 `|| !phoneShell` 分支即重入路径）就会永久累积。
+        // [v2.31.0] 丢弃旧壳前，先把**同批被丢弃的另外三个实例**收掉。
+        //   实测四条重入路径（首次打开 / 页面横幅直达 / 微信来电 / 电话来电）都走到本函数，
+        //   而旧 homeScreen / controlCenter / lockScreen 在这里被静默丢弃：
+        //     - homeScreen：4 个 window 监听器靠「同实例内不重复绑」的 guard 隔离，
+        //       因此没有任何一处会在实例被丢弃时解绑 —— 旧实例会继续响应新壳广播的
+        //       phone:updateWallpaper / phone:timeUpdated，并渲染进已被摘除的旧 DOM；
+        //     - controlCenter：无任何收尾路径，overlay 可能留在废弃容器里；
+        //     - lockScreen：10s 时钟 + 2 个 window 鼠标监听器，不在壳的登记表里
+        //       （v2.26 的 destroy 只收壳自己登记的），故由 PhoneShell.destroy 级联。
+        //   顺序：先收旧界面实例（此刻 phoneShell 仍指旧壳），再 destroy 旧壳
+        //   （级联收 lockScreen），最后才 new —— 新实例在下方由本函数重新构造。
+        try { destroyPhoneSurface(); } catch (e) { console.warn('[v2.31.0] 旧界面实例资源回收失败:', e); }
         try { phoneShell?.destroy?.(); } catch (e) { console.warn('[v2.26.0] 旧手机壳资源回收失败:', e); }
         phoneShell = null;
 
@@ -8986,6 +9083,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 window.VirtualPhone.worldpulseApp.onChatChanged?.();
             }
         }
+        // [v2.31.0] 界面槽位随会话重生。此前本路径（P1 换会话）与 P2 都只做
+        //   `homeScreen.render()`（实例不换 → 旧实例的 4 个 window 监听器一直挂着），
+        //   而 P3 清全部数据更彻底：**什么都没做**。
+        //   三条路径此前各写各的 —— 本版起共用同一个出口。
+        //   注意不对称：**数据实例**（music/games/weibo/honey/diary/calendar）依旧
+        //   只 clearCache + onChatChanged 重绑，因为它们必须随会话活下来；
+        //   随会话重生的是 homeScreen / controlCenter / notificationLog 三条槽位。
+        try { reloadPhoneSurface(); } catch (_e) { /* 忽略 */ }
         window.currentWechatApp = null;
         window.ggp_currentWechatApp = null;
         _lastWechatConversationId = null;
@@ -10055,6 +10160,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         window.VirtualPhone.honeyApp = null;
                     }
                 }
+                // [v2.31.0] 界面槽位重生（与 P1/P3 同一出口）。清数据后旧实例持有的
+                //   角标/通知速览/壁纸缓存都是已清数据，且其 4 个 window 监听器必须解绑。
+                try { reloadPhoneSurface(); } catch (_e) { /* 忽略 */ }
                 window.currentWechatApp = null;
                 window.ggp_currentWechatApp = null;
                 if (homeScreen) {
@@ -10160,6 +10268,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         window.VirtualPhone.honeyApp = null;
                     }
                 }
+                // [v2.31.0] 与 P1/P2 对齐：本路径此前**完全不碰界面实例**，
+                //   于是清空全部数据后旧 homeScreen 仍在响应事件、旧 controlCenter
+                //   仍可达 —— 这正是「三条丢弃路径各写各的」遗留的第三条。
+                try { reloadPhoneSurface(); } catch (_e) { /* 忽略 */ }
                 window.currentWechatApp = null;
                 window.ggp_currentWechatApp = null;
                 if (homeScreen) {

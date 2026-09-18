@@ -57,6 +57,33 @@ export class LockScreen {
       this._clockTimer = null;
     }
   }
+  /**
+   * [v2.31.0] 实例销毁：宿主丢弃本实例时调用（面板重建 / 清数据 / 换会话）。
+   * 语义与 unlock() 的区别是**收多少**：
+   *   unlock() 是「用户解锁」这个交互 —— 只回滚界面，两个 window 监听器
+   *            **刻意保留**（锁屏复用同一实例，下一次 lock() 还要用，v2.26 已锁定该行为）；
+   *   dispose() 是「实例不再存在」—— 时钟、DOM、window 监听器三者都要收。
+   * 为什么必须解 _onWinMouseMove/_onWinMouseUp：它们是 window（长期存活对象）上的
+   *   监听器，闭包钉住本实例与上一轮的 root 节点；只 remove() DOM 而不解绑，
+   *   实例仍被 window 引用钉住 —— 这正是本版主题「实例被丢弃了、它的资源没人收」
+   *   在锁屏上的形态。幂等（重复 dispose 时引用已为 null，不重复解绑）。
+   */
+  dispose() {
+    if (this._onWinMouseMove) {
+      window.removeEventListener('mousemove', this._onWinMouseMove);
+      this._onWinMouseMove = null;
+    }
+    if (this._onWinMouseUp) {
+      window.removeEventListener('mouseup', this._onWinMouseUp);
+      this._onWinMouseUp = null;
+    }
+    this._clearClock();
+    this._root?.remove();
+    this._root = null;
+    this._dragging = false;
+    this._startY = 0;
+    this.locked = false;
+  }
 
   _pad(n) {
     return String(n).padStart(2, '0');

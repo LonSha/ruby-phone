@@ -184,6 +184,28 @@ export class NotificationLog {
     }
 
     /**
+     * [v2.31.0] 实例销毁：**先**把挂起的脏缓存落盘到当前 storage，**再**丢定时器。
+     * 与 reset() 的区别是语义而非实现细节：
+     *   reset()  假设「当前 storage 已指向新会话（或已被清空），旧缓存写出去即串味」，
+     *            因此**刻意不落盘** —— 这对着落账层是错的：通知落在 `sys_notifs`
+     *            （随会话隔离的系统键），落账时机与聊天切换没有关系，切换前那 800ms
+     *            窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。
+     *   dispose() 假设「实例即将不再存在」，于是唯一正确的顺序是先 flushNow 再丢定时器；
+     *            不变量：**dispose 不得静默吞掉已经入账的通知**。
+     * 返回 flushNow 的结果（有脏数据且落盘成功 = true）。
+     */
+    dispose() {
+        const flushed = this.flushNow();
+        if (this._flushTimer) {
+            clearTimeout(this._flushTimer);
+            this._flushTimer = null;
+        }
+        this._dirty = false;
+        this._cache = null;
+        return flushed;
+    }
+
+    /**
      * [v2.18.0] 切换会话 / 清空数据时调用：丢弃内存缓存与挂起的防抖写入。
      *  不做任何落盘——当前 storage 已指向新会话（或已被清空），旧缓存写出去即串味；
      *  旧会话数据在切走前已由各自的防抖周期落盘，此处仅作内存层失效。

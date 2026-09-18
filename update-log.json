@@ -1,5 +1,18 @@
 {
   "versions": {
+    "2.31.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【重建路径：新界面接上了、旧界面还挂着】v2.30 让「域被过早回收」可见，本版盯住它的镜像面 ——「实例被丢弃了、它的资源没人收」。宿主 createPhoneInPanel() 有四条重入路径（首次打开 / 点击页面横幅直达 App / 微信来电唤醒 / 电话来电），每条都执行 `phoneShell?.destroy?.()` 后 `new PhoneShell()`。壳自己的登记表确实被收净了，但**同一作用域里还有三个实例被无声丢弃**：旧 homeScreen（4 个 window 监听器，用「同实例内不重复绑」的 guard 互相隔离，因此没有任何一处能在实例被丢弃时解绑）、旧 controlCenter（无收尾路径，overlay 可能留在已废弃容器里）、旧 phoneShell.lockScreen（10s 时钟定时器 + 2 个 window 鼠标监听器，不在壳的登记表里）。结果是旧 HomeScreen 会继续响应新壳派的 phone:updateWallpaper / phone:timeUpdated 并渲染进**已被摘除的旧 DOM**。",
+        "【收口位置必须与构造位置同址】这四类实例的构造点全部落在 createPhoneInPanel() 里，因此唯一正确的收尾点也在它附近：新增 releasePhoneSurface()（收可复用界面实例）、destroyPhoneSurface()（收随会话存在的界面槽位，含落账层「先落盘再丢定时器」）、reloadPhoneSurface()（收 + 重建 + 渲染）。一条实现原则：**同一个宿主函数既构造它们，就必须负责回收它们**，否则「谁该收」只能靠读代码推。",
+        "【壳层域升级为可诊断域】phoneShell 的登记层此前是裸 ManagedRuntime('phone-shell')：资源确实被回收了，但这个域不在全局域表里 —— runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。本版改用 childRuntime('phone-shell')，与 sudoku-view / music-view / honey-view 同构，并让 PhoneShell.destroy() 级联回收 lockScreen（此前该字段被置空时它的资源仍在跑）。",
+        "【域被回收了：现在能被数到】新增回收账本 _childReleaseLog 与 childRuntimeReleaseLog()，runtimeStats() 追加 released 字段。动机是 v2.29 的 childRuntimeStats 只能回答「现在有几个域活着」—— 而重建路径上「重建前漏回收」与「重建前已回收」在**计数上完全同形**（旧域收掉后表里都只剩 1 个新域），区别只在旧域是否成了孤儿。账本口径刻意只在**首次**回收时计一次：重复 dispose 是 v2.29 起承诺的幂等语义，重复计会让「重建 N 次」与「回收 N 次」无法对账。",
+        "【哪种不对称是对的】第一版实现把 P1 换会话写成「只收不建」，实测会留下悬空的 homeScreen：桌面时间停更、角标刷新失效 —— 「收干净」不能以「功能坏掉」为代价。定稿改为**界面槽位随会话重生、数据实例复用重绑**：homeScreen / controlCenter / notificationLog 三条槽位统一由 reloadPhoneSurface() 收掉旧的、建新的；music / games / weibo / honey / diary / calendar 等数据实例仍旧只 clearCache + onChatChanged（换会话是会话作用域操作，它们必须活下来）。此外，实例被丢弃时**同时清掉三个宿主级公开别名**（window.VirtualPhone.home / controlCenter / notificationLog）——它们自 v2.16 起就是「界面槽位」的公开引用（phone-view / wechat-app / weibo-data / lock-screen 都读它），只置内部变量会让旧别名继续指向已销毁实例，`window.VirtualPhone.home.render()` 于是把内容渲染进已废弃的 DOM。别名无资源可收，仅需引用复位。",
+        "【落账层：dispose 与 reset 是两个语义】NotificationLog 此前只有 reset()，且**刻意不落盘**（「当前 storage 已指向新会话、旧缓存写出去即串味」）。这对聊天数据是对的，对系统通知落账层是错的：通知存在 sys_notifs（随会话隔离的系统键），切换前那 800ms 防抖窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。本版新增 dispose()：先 flushNow() 再丢定时器，不变量为「dispose 不得静默吞掉已经入账的通知」。",
+        "【陈旧实例护栏：早退要挡能造出界面的那个入口】控制中心实例在面板重建后仍可达（闭包 / 事件回调 / 外部引用）。若无护栏，旧实例的 toggle()/show() 会用自己的 phoneShell 把 overlay 挂进已被摘除的容器 —— 用户看到「控制器没反应」，对象图里却多出一个没人认领的 overlay。护栏落在 show()/toggle()（唯一能造出界面的入口）而不只 close()：只守 close 等于没守。",
+        "【测试】新增 tests/system-v231.test.mjs：内核回收账本（含幂等 dispose 不重复计 / 父域级联必须记账两条反例对照）、重建总账对账（登记项数 = 现存项数 + 回收项数）、壳层与三实例的出口存在性与接线、三条丢弃路径与界面槽位重建、发布卫生（四处版本一致 + latest 指向本版 + 内置公告与本版日志同源）。"
+      ]
+    },
     "2.30.0": {
       "date": "2026-09-18",
       "items": [
@@ -514,5 +527,5 @@
       ]
     }
   },
-  "latest": "2.30.0"
+  "latest": "2.31.0"
 }
