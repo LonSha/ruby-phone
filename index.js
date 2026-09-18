@@ -77,13 +77,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-18',
     items: [
-        '【缺陷修复·快捷回复按钮的永久 1Hz 轮询】`setInterval(inject, 1000)` 无句柄、无清理路径、无终止条件——按钮早已注入仍每秒跑完 inject 全量逻辑（13 处 getElementById + 36 处 querySelector）。改为：轮询入登记层 + 建立 inject 返回值契约，就绪即自停，稳态成本 1Hz→0。',
-        '【缺陷修复·自停后可重新拉起】监听 phone:panelVisibility / phone:openApp 重新调度一轮（幂等），宿主被重建时按钮不会永久失联。',
-        '【缺陷修复·另两处无回收面的常驻轮询】极文 tick（5min，句柄不存）与微信线上主动（30s + 未持有的 3s 预热）改由登记层持有，保留「先停后启」语义。',
-        '【新内核·登记制推广面】v2.26 建的 runtime-lifecycle 此前只有 phone-shell 一个消费方（globalRuntime/onceFlag 全仓零消费）。本轮新增 cancelByTag 前缀批量回收与 globalRuntimeSnapshot，并把 index.js 三处常驻轮询接上。',
-        '【新内核·手写幂等 guard 收敛】7 处 `window._xxxBound` 手写 guard 收敛到 onceFlag，window 监听器纳入登记层（index.js + wechat/mofo/settings/honey 四 App）。',
-        '【可观测】新增 `window.VirtualPhone.runtimeStats()`，一行查看当前常驻资源总数、四类分布与全部 tag——先让泄漏可见。',
-        '【测试】新增 tests/system-v227.test.mjs（四层 60 断言），全量 241+ 绿，语法门 237 文件、双门禁通过。'
+        "【域出口时机契约】v2.29 把出口交给域自己，解决的是「域还活着、宿主已经忘了它」。本版盯住同一枚硬币的另一面 ——「域已被回收、实例却还在用」：宿主一条 disposeChildRuntimes('') 不看实例死活就把域一并回收，实例随后靠 _reenterIfNeeded 静默复活，于是同一个实例里「已被回收的旧资源」与「重新登记的新资源」并存，而旧资源再无回收出口。",
+        "【把过早回收变成可观测】新增 overDisposeStats() / childRuntimeOverDisposed()，runtimeStats() 追加 overDisposed 字段 —— 域在 dispose 之后又被登记（= 复活）即计数。反例对照「域随实例生命周期走」该值恒为 0，宿主级域不参与记账。",
+        "【换会话 ≠ 实例销毁】换会话是**会话作用域**操作：移除全域清零，实例域交由各自 onChatChanged() 处置（日历留住节假日与日程、音乐继续播、微博实例跨会话复用）；deactivate 与 clearCache 拆成独立 try，一处抛错不再连带让域回收静默不发生。",
+        "【三条丢弃路径对齐】换会话与清全部数据补 albumApp.destroy()（解绑它在构造期注册的 5 个全局监听器）；清全部数据补 honey 的实例级出口（停播放/动画/TTS）；清当前数据补 imageManager 丢弃（与清全部数据对齐）。",
+        "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前顺手注销整个视图域，而 9 个调用点都借这个「DOM 主题」名字获得域生命周期语义。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（完整出口，含域注销）。",
+        "【不做「统一化」】wechat-app 唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭，对它强行加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
+        "【测试】新增 tests/system-v230.test.mjs（四层 51 断言），全量 245/245 绿，语法门 241 个文件按 ES Module 解析通过。",
+        "【发布卫生】修正 update-log.latest 未随本版推进（曾致 5 个历史测试文件同时翻红）；并把 v228 / v229 / v230 里「用当前版本查本版关键词」的判据改钉历史版本条目 ——此后发新版不再必然翻红。",
     ]
 };
 

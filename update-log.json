@@ -9,6 +9,7 @@
         "【丢弃实例的路径必须三条对齐】三条「丢弃/复位全部 App 实例」的路径（换会话 / 清当前数据 / 清全部数据）此前各写各的，实测三类错位：① 换会话会回收**仍活着**实例的域（过度回收，见上条）；② 清当前数据丢弃 honeyApp 却从不回收其实例域（回收不足）；③ 三条路径对专辑实例口径不一 —— albumApp.destroy() 解绑的是它在构造期注册的 5 个全局监听器（SWIPE_BACK / ALBUM_IMAGE_DELETED / UPDATE_WALLPAPER / PANEL_VISIBILITY / visibilitychange），清当前数据做了、清全部数据与换会话都没做。本版把三处补齐；清全部数据另补 honey 的实例级出口（停播放/动画/TTS），清当前数据另补 imageManager 丢弃（与清全部数据对齐，属数据残留而非泄漏）。",
         "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前同时做三件事：清瞬态资源 + 摘掉 DOM 主题类 + **注销整个视图域**。名字只描述第三件，而 9 个调用点（6 处导航出口 + honey-app 的 swipe-back/destroy/deactivate）全都借这个「DOM 主题」名字获得域生命周期语义 —— 连 honey-app.destroy() 读起来都像在解绑主题而不是在回收域。这是 v2.29「出口却写在别人手里」的下一层形态：出口在，但没人能从名字上看出它在。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（离开蜜语界面的完整出口，含域注销），调用点全部改调后者。",
         "【不做「统一化」的理由】同一批实例里，wechat-app **不该**被强行加 destroy：它唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭。对没有销毁面的实例添加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
+        "【内置离线公告与本版同源】实测发现 index.js 的 ST_PHONE_CURRENT_UPDATE 三版未更新：version 取 ST_PHONE_VERSION（标题永远显示当前版本），items 却停在 v2.27 时代 ——用户点「已更新」看到的是三版前的说明，「版本号对了、内容是旧的」比没有更误导。本版重写公告并与 update-log 同源，同时补判据（从本版条目标签抽词比对公告，随版本自动换词、不需交棒）。附带实测：本仓库为私有，远端通道（raw.githubusercontent 的 manifest/update-log）匿名拉取恒 404，因此 local 公告就是用户唯一能看到的更新说明 —— 它必须准。",
         "【测试】新增 tests/system-v230.test.mjs（内核遥测含反例对照 / 宿主三条路径对齐 / 命名即文档 / 发布卫生），并把 tests/system-v225.test.mjs 的「恰好 4 处 destroy 接线」棘轮交棒为「不少于 4 处」+ 两条新增站点的显式断言（防再次漏路径）。"
       ]
     },

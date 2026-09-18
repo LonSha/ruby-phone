@@ -319,6 +319,24 @@ const {
     ok('D6 update-log.latest 指向当前版本', log.latest === v, `${log.latest} vs ${v}`);
     ok('D7 update-log.versions 头部即当前版本', Object.keys(log.versions || {})[0] === v,
         Object.keys(log.versions || {})[0]);
+    /* [v2.30.0] 内置离线公告必须与本版同源。
+       动机：本轮实测发现公告三版未更新 —— version 取 ST_PHONE_VERSION（标题
+       永远显示当前版本），items 却停在 v2.27 时代。而仓库私有时远端通道
+       （raw.githubusercontent）恒 404，local 公告就是用户唯一能看到的更新说明，
+       「版本号对了、内容是旧的」比没有更误导。
+       判据刻意不写死关键词：从本版 update-log 条目的【标签】里抽词，要求公告命中
+       其一 —— 随版本自动换词，既不需要交棒，也不会放过「推进版本却没改公告」。 */
+    const ann = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];
+    const labelWords = (((log.versions?.[v] || {}).items) || [])
+        .map(s => (/^【([^】]+)】/.exec(s) || [])[1] || '')
+        .filter(Boolean)
+        .flatMap(t => t.split(/[：:·、\s\-—]+/).filter(w => w.length >= 3));
+    ok('D8 内置离线公告与本版更新日志同源', labelWords.length > 0
+        && labelWords.some(w => ann.includes(w)),
+        `labels=${labelWords.slice(0, 4).join('|')} annLen=${ann.length}`);
+    ok('D9 内置离线公告条目数 >= 4',
+        (ann.match(/^ {8}["']/gm) || []).length >= 4,
+        String((ann.match(/^ {8}["']/gm) || []).length));
 }
 
 function resetAll() {
