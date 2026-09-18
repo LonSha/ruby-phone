@@ -31,7 +31,7 @@ import { NotificationLog } from './config/system-notifications.js';
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
-import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog } from './config/runtime-lifecycle.js';
+import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimeReleasedAt } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
 import { PHONE_EVENTS } from './config/phone-events.js';
 
@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.31.0';
+const ST_PHONE_VERSION = '2.32.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,14 +77,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: '2026-09-18',
     items: [
-        "【重建路径：新界面接上了、旧界面还挂着】v2.30 让「域被过早回收」可见，本版盯住它的镜像面 ——「实例被丢弃了、它的资源没人收」。宿主 createPhoneInPanel() 有四条重入路径（首次打开 / 点击页面横幅直达 App / 微信来电唤醒 / 电话来电），每条都执行 `phoneShell?.destroy?.()` 后 `new PhoneShell()`。壳自己的登记表确实被收净了，但**同一作用域里还有三个实例被无声丢弃**：旧 homeScreen（4 个 window 监听器，用「同实例内不重复绑」的 guard 互相隔离，因此没有任何一处能在实例被丢弃时解绑）、旧 controlCenter（无收尾路径，overlay 可能留在已废弃容器里）、旧 phoneShell.lockScreen（10s 时钟定时器 + 2 个 window 鼠标监听器，不在壳的登记表里）。结果是旧 HomeScreen 会继续响应新壳派的 phone:updateWallpaper / phone:timeUpdated 并渲染进**已被摘除的旧 DOM**。",
-        "【收口位置必须与构造位置同址】这四类实例的构造点全部落在 createPhoneInPanel() 里，因此唯一正确的收尾点也在它附近：新增 releasePhoneSurface()（收可复用界面实例）、destroyPhoneSurface()（收随会话存在的界面槽位，含落账层「先落盘再丢定时器」）、reloadPhoneSurface()（收 + 重建 + 渲染）。一条实现原则：**同一个宿主函数既构造它们，就必须负责回收它们**，否则「谁该收」只能靠读代码推。",
-        "【壳层域升级为可诊断域】phoneShell 的登记层此前是裸 ManagedRuntime('phone-shell')：资源确实被回收了，但这个域不在全局域表里 —— runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。本版改用 childRuntime('phone-shell')，与 sudoku-view / music-view / honey-view 同构，并让 PhoneShell.destroy() 级联回收 lockScreen（此前该字段被置空时它的资源仍在跑）。",
-        "【域被回收了：现在能被数到】新增回收账本 _childReleaseLog 与 childRuntimeReleaseLog()，runtimeStats() 追加 released 字段。动机是 v2.29 的 childRuntimeStats 只能回答「现在有几个域活着」—— 而重建路径上「重建前漏回收」与「重建前已回收」在**计数上完全同形**（旧域收掉后表里都只剩 1 个新域），区别只在旧域是否成了孤儿。账本口径刻意只在**首次**回收时计一次：重复 dispose 是 v2.29 起承诺的幂等语义，重复计会让「重建 N 次」与「回收 N 次」无法对账。",
-        "【哪种不对称是对的】第一版实现把 P1 换会话写成「只收不建」，实测会留下悬空的 homeScreen：桌面时间停更、角标刷新失效 —— 「收干净」不能以「功能坏掉」为代价。定稿改为**界面槽位随会话重生、数据实例复用重绑**：homeScreen / controlCenter / notificationLog 三条槽位统一由 reloadPhoneSurface() 收掉旧的、建新的；music / games / weibo / honey / diary / calendar 等数据实例仍旧只 clearCache + onChatChanged（换会话是会话作用域操作，它们必须活下来）。此外，实例被丢弃时**同时清掉三个宿主级公开别名**（window.VirtualPhone.home / controlCenter / notificationLog）——它们自 v2.16 起就是「界面槽位」的公开引用（phone-view / wechat-app / weibo-data / lock-screen 都读它），只置内部变量会让旧别名继续指向已销毁实例，`window.VirtualPhone.home.render()` 于是把内容渲染进已废弃的 DOM。别名无资源可收，仅需引用复位。",
-        "【落账层：dispose 与 reset 是两个语义】NotificationLog 此前只有 reset()，且**刻意不落盘**（「当前 storage 已指向新会话、旧缓存写出去即串味」）。这对聊天数据是对的，对系统通知落账层是错的：通知存在 sys_notifs（随会话隔离的系统键），切换前那 800ms 防抖窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。本版新增 dispose()：先 flushNow() 再丢定时器，不变量为「dispose 不得静默吞掉已经入账的通知」。",
-        "【陈旧实例护栏：早退要挡能造出界面的那个入口】控制中心实例在面板重建后仍可达（闭包 / 事件回调 / 外部引用）。若无护栏，旧实例的 toggle()/show() 会用自己的 phoneShell 把 overlay 挂进已被摘除的容器 —— 用户看到「控制器没反应」，对象图里却多出一个没人认领的 overlay。护栏落在 show()/toggle()（唯一能造出界面的入口）而不只 close()：只守 close 等于没守。",
-        "【测试】新增 tests/system-v231.test.mjs：内核回收账本（含幂等 dispose 不重复计 / 父域级联必须记账两条反例对照）、重建总账对账（登记项数 = 现存项数 + 回收项数）、壳层与三实例的出口存在性与接线、三条丢弃路径与界面槽位重建、发布卫生（四处版本一致 + latest 指向本版 + 内置公告与本版日志同源）。",
+        "【回收口径面：两本账，谁也没把它们合起来读】v2.30 让「域被回收了、实例还在用」可见（childRuntimeOverDisposed），v2.31 让「回收过几次」可对账（childRuntimeReleaseLog）——本版盯住这两本账之间的缝：**它们在同一个域上各自为政，且口径互不相同**。实测（探针在域上真执行）：同一个域对象 `dispose(); 复活; dispose();` → 回收账本记 **1** 笔（按对象计，为「重建 N 轮 = N 笔」可对账），而它实际被回收了 **2** 次；「回收了几次」与「回收是否过早」只能靠两个不同来源拼，且没有任何一处代码或面板把它们并列读出。",
+        "【实测缺陷 1：过早回收的观测寄居在被观测对象里】childRuntimeOverDisposed() 数的是 `_reenteredAfterDispose`——**域对象上的实例字段**，且只有仍在域表里的域才会被数到。于是域一旦被正常回收（离表），「这个域名曾经过早回收过」就**彻底消失**：实测同一域活着时 overDisposed=1，dispose 后=0，与「从未发生」完全同形。**这块遥测的宿主与被观测对象同生共死，却用来回答关于历史的问题**。修复：新增过早回收账本 `_childPrematureLog` / `childRuntimePrematureLog(name)`——在回收**时刻**判定并落账，域死后永久可查；判据为「dispose 之后又发生过再登记，则下一次回收即证明上一次过早」，天然区分 `dispose(); dispose();`（幂等空调用）与真实复活。",
+        "【实测缺陷 2：「回收了几次」这个数此前读不出来】账本按域对象记一笔（这是对的、且被 v2.31 的测试锁定），但它同时意味着「本域对象实际被回收几次」在账面不可读——`_releaseCount` 不存在，只能靠 overDisposed 的差值反推，而那种反推需要读者自己知道两套遥测的内部字段。修复：域上新增 `_releaseCount` / `prematureReleases()` / `releaseTrace()`，三个口径各自命名、各自可读：账本（按对象一笔）、实际次数、其中过早次数。",
+        "【实测缺陷 3：v2.31 写下 _releasedAt，全仓零读点】`dispose()` 里 `this._releasedAt = Date.now()` 写得好好的，但 grep 全仓**没有任何消费点**——「回收发生在何时」看起来已经可查，实际不可查。字段写出来没人看，与没写等价，却让这件事显得已经有人管。修复：新增 `_childReleasedAt` / `childRuntimeReleasedAt(name)` 并接进 `runtimeStats().releasedAt`，把该字段真正消费掉。",
+        "【实测缺陷 4：子域只剩计数，回答不了「还剩哪几个 tag 在跑」】globalRuntimeSnapshot().children 此前每项只有 `{name, total, byKind}` —— 而宿主级有完整 `tags` 明细。于是诊断里最常用的那个动作（打开控制台看「手机壳域里还剩什么在跑」）在**子域**上做不到，只能看到计数。修复：子域补 `tags` 明细，并顺带带上 `releases` / `premature`，两侧口径就地对齐。",
+        "【实测缺陷 5：按名回收的前缀语义只写在文档里】`disposeChildRuntimes(name)` 文档写「按名（前缀）回收」，实现走 `startsWith` —— 实测传 'probe-d' 会连带回收 'probe-d-extra'（1 个名字收掉 2 个域）。**当前无实际误伤**（仓库现有域名互不为前缀，如实说明），但「传短名就多收」既不可见也无精确手段。修复：新增第二参 `{ exact: true }` 走精确匹配；默认仍前缀匹配（5 处既有调用点行为不变）。",
+        "【把两本账合起来读】新增 `explainReleaseTally()` 纯函数与 `window.VirtualPhone.releaseTally()` 一行入口：输出「某域名 回收 N 次（其中过早 M 次）」。判词刻意保守——只对两本账都出现过的域名出词，未过早的不逐条列出；并做读数自洽检查（过早回收必留下一次后续回收，故 premature 不可能等于 released），出现这种自相矛盾的形状时**报出来而非吞掉**（fail-closed）。",
+        "【控制中心：回收口径卡】控制中心此前完全没有运行时诊断入口（诊断只能靠控制台）。新增「回收口径」卡，把两本账并列成一行：全洁时显示「N 个域名被回收过 · 无过早回收」，有过早时显示前几项并标黄——于是「回收了几次、其中几次过早」这个本版的核心问题，在手机上**直接看得见**，不必开控制台。",
+        "【测试】新增 tests/system-v232.test.mjs：内核分账（回收次数 vs 账本口径 vs 过早次数三者各自独立可读 · 幂等空调用不误判为过早 · 过早账本在域死后仍可查 · 与 overDisposed 的差别对照）、releasedAt 可读、子域 tags 明细、exact 语义、宿主接线（诊断入口分账 + 判词自洽检查 + 一行入口）、控制中心卡片接线、负控制（每条核心判据配一次故意破坏）、发布卫生。",
+        "【首轮自证：新套件里三处负控制假绿】tests/system-v232.test.mjs 第一次运行是 69/79。失败分两类：A4c / E7 是我把期望值写错（过早账本在回收**时刻**才落账，两次回收之间读到 0 是对的；样式断言读错了文件——`data-release-tally=\"premature\"` 只在 CSS 选择器里而不在模板串上）；另一类是**负控制自身假绿**：F4 / F7 / F8 三处把断言对象写成了**原文件**而不是破坏后的副本，于是「条件恒真」或「条件恒假」，破坏根本没发生也不报错——判据声称在检查、实际没在检查、且不报错。修法：F4 改为源码级破坏（抹掉子域 `tags` 明细字段，再在破坏副本上断言判据失效）；F7 / F8 一律改成在破坏副本上断言；并新增 F9 剥注释工具的两向自证（剥注释后不得残留本版注释独有字样 · 不得吞掉代码本体），保证所有文本判据都做在代码行上而不被注释字样满足。修后套件 79/79，另跑一轮**外部注入**（真改磁盘文件 → 跑套件 → 逐字节还原）12 组，全部真响。"
     ]
 };
 
@@ -2484,6 +2486,41 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     //   即可看到「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」，
     //   用于定位漏回收（v2.25/v2.26 修的正是这类）。无登记项时 total 为 0。
     // [v2.28.0] 追加 children 字段：实例级资源域明细（哪个视图/App 各持有多少资源）。
+    /**
+     * [v2.32.0] 把两本账**合起来读**：`released`（回收次数）与 `releasedPremature`
+     *   （其中过早的次数）分属两个 Map，任何一本单独看都回答不了本版的核心问题。
+     * 判词口径（刻意保守，不制造假警报）：
+     *   · 只对**两个账本都出现过的域名**出判词 —— 未过早的域名不必逐条列出；
+     *   · 差值的解释有且只有一种「过早回收」：过早回收必然导致随后再次回收
+     *     （域被收掉后实例继续用即复活，复活后终会再收一次），故 premature > 0
+     *     ⇒ released > premature 恒成立；若出现 released === premature 这种不该有的形状，
+     *     报出来而不是吞掉（fail-closed：读数自相矛盾时必须可见）。
+     * 纯函数、不抛、不修改任何账本。
+     */
+    function explainReleaseTally(released, premature) {
+        const rows = [];
+        try {
+            const rel = released && typeof released === 'object' ? released : {};
+            const pre = premature && typeof premature === 'object' ? premature : {};
+            const names = new Set([...Object.keys(rel), ...Object.keys(pre)]);
+            for (const name of names) {
+                const p = Number(pre[name] || 0);
+                if (p <= 0) continue;
+                const r = Number(rel[name] || 0);
+                rows.push({
+                    name,
+                    releases: r,
+                    premature: p,
+                    // 读数的自洽性检查：过早次数不可能达到回收次数（过早必留下一次后续回收）
+                    coherent: r > p
+                });
+            }
+            rows.sort((a, b) => b.premature - a.premature || a.name.localeCompare(b.name));
+            return { rows, ok: rows.every(x => x.coherent), reason: '' };
+        } catch (e) {
+            return { rows: [], ok: false, reason: '回收口径读取失败：' + String(e?.message || e) };
+        }
+    }
     function getRuntimeStats() {
         try {
             const snap = globalRuntimeSnapshot();
@@ -2500,9 +2537,20 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             //   在计数上完全同形（旧域收掉后表里都只剩 1 个），只有账本能分开两者。
             //   口径：只在首次回收时计一次（重复 dispose 属幂等语义，不重复计）。
             snap.released = childRuntimeReleaseLog('');
+            // [v2.32.0] 回收口径面：上面三个字段各自回答一个问题，此前**没有任何一处
+            //   把它们合起来读** —— 而「回收了几次、其中几次过早」恰恰只能从两者并列得出。
+            //   released 记「域对象被回收过几次」（按对象一笔，为重建对账）；
+            //   releasedPremature 记「其中回收时实例仍在使用的次数」——
+            //     与 overDisposed 的关键差别：overDisposed 观测的是**活着的域**
+            //     （域一离表就归零，实测 overDisposed=1 → dispose 后=0），
+            //     本账本在回收时刻落账，域死后仍可查。两者不可互相替代。
+            //   releasedAt 消费 v2.31 写入却全仓零读点的 _releasedAt（有字段无消费）。
+            snap.releasedPremature = childRuntimePrematureLog('');
+            snap.releasedAt = childRuntimeReleasedAt('');
+            snap.releaseVerdict = explainReleaseTally(snap.released, snap.releasedPremature);
             return snap;
         }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {} }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {}, releasedPremature: {}, releasedAt: {}, releaseVerdict: { rows: [], ok: false, reason: '诊断入口异常，无法读出回收口径' } }; }
     }
 
     async function getOrCreateMofoData() {
@@ -2640,6 +2688,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     if (!window.VirtualPhone) window.VirtualPhone = {};
     // [v2.27.0] 常驻资源诊断：window.VirtualPhone.runtimeStats()
     window.VirtualPhone.runtimeStats = getRuntimeStats;
+    // [v2.32.0] 回收口径一句话：控制台执行 window.VirtualPhone.releaseTally()
+    //   即得「哪个域回收了几次、其中几次过早」的人类可读一行，不必自己拼两本账。
+    window.VirtualPhone.releaseTally = function releaseTally() {
+        try {
+            const s = getRuntimeStats();
+            const rs = s.releaseVerdict?.rows || [];
+            if (!rs.length) return `回收口径：${Object.keys(s.released || {}).length} 个域名被回收过，无过早回收`;
+            return '回收口径：' + rs.map(x => `${x.name} 回收 ${x.releases} 次（其中过早 ${x.premature} 次）`).join(' · ');
+        } catch (e) { return '回收口径读取失败：' + String(e?.message || e); }
+    };
     window.VirtualPhone.showMofoUpdateBubble = async function (mofoId) {
         try {
             const mofoData = await getOrCreateMofoData();

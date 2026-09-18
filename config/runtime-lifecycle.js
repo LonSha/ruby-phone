@@ -57,6 +57,14 @@ export class ManagedRuntime {
         //   后果是「谁被过度回收了、回收了几次」在门禁与运行期都不可见。
         this._reenteredAfterDispose = 0;
         this._overDisposed = false;
+        // [v2.32.0] 回收口径分账：v2.31 的账本按**域名 + 域对象**各记一笔（为可对账），
+        //   于是「同一个域对象被回收过 2 次」这件事在账本里看不出来（账本 = 1），
+        //   而它恰恰是「上一次回收过早」的唯一证据。此处把两个口径分开命名：
+        //     _releaseCount      —— 本域对象**实际**被回收了几次（含复活后再次回收）
+        //     _prematureReleases —— 其中「回收时实例仍在使用」的次数（过早回收）
+        //   二者与账本（按对象计一笔）分工明确，任一都不再需要靠差值反推。
+        this._releaseCount = 0;
+        this._prematureReleases = 0;
         /** @type {Map<string, {kind:string, tag:string, handle:*}>} */
         this._entries = new Map();
         this._disposed = false;
@@ -218,10 +226,26 @@ export class ManagedRuntime {
             // [v2.31.0] 回收账本：只在首次记账。重复 dispose 属幂等语义（v2.29 起
             //   明确承诺「dispose 幂等，可重复调用」），重复计会让「重建 N 次」与
             //   「回收 N 次」无法互相校验 —— 账本的价值全在可对账。
+            // [v2.32.0] 账本口径分账（v2.31 的「按对象计一笔」保留为 released）：
+            //   1) released            —— 域**对象**被回收过（每个对象一笔，保证「重建 N 轮
+            //                              → N 笔」可对账）；
+            //   2) releasedPremature    —— 其中「回收发生在实例仍在使用时」的笔数。
+            //      判定：dispose 之后又发生过再登记（_reenteredAfterDispose 增长），
+            //      则在**下一次**回收时证明上一次回收过早。此判据天然区分两件事——
+            //      `dispose(); dispose();`（幂等空调用，无复活）**不**记为过早，
+            //      只有真实复活后的回收才记。
+            //   3) releasedAt           —— 最后一次回收时刻（消费 v2.31 写入却无人读的
+            //                              _releasedAt 字段：「回收发生在何时」此前不可查）。
+            this._releaseCount += 1;
+            if (this._reenteredAfterDispose > this._prematureReleases) {
+                this._prematureReleases += 1;
+                _childPrematureLog.set(this.name, (_childPrematureLog.get(this.name) || 0) + 1);
+            }
             if (!this._releaseLogged) {
                 this._releaseLogged = true;
                 this._releasedAt = Date.now();
                 _childReleaseLog.set(this.name, (_childReleaseLog.get(this.name) || 0) + 1);
+                _childReleasedAt.set(this.name, this._releasedAt);
             }
         }
         return ids.length;
@@ -237,6 +261,29 @@ export class ManagedRuntime {
      */
     overDisposeStats() {
         return { name: this.name, reentered: this._reenteredAfterDispose, overDisposed: this._overDisposed };
+    }
+    /**
+     * [v2.32.0] 本域对象的**实际回收次数**（含复活后再次回收）。
+     * 与 childRuntimeReleaseLog(name) 的分工：账本按对象只记一笔（为「重建 N 轮 = N 笔」可
+     * 对账），本方法回答「这一个域对象被回收过几次」—— `dispose(); 复活; dispose();`
+     * 时账本是 1、本值是 2。两者不等**不是**矛盾，而是两个不同的问题；此前只有前者
+     * 可读，于是「回收了 2 次」在账面上与「回收了 1 次」完全同形。
+     */
+    releaseCount() { return this._releaseCount; }
+    /**
+     * [v2.32.0] 本域对象中「回收时实例仍在使用」的次数（过早回收）。
+     * 判据：dispose 后发生过再登记，则下一次回收即证明上一次过早。
+     * 幂等空调用（无复活的重复 dispose）不计入。
+     */
+    prematureReleases() { return this._prematureReleases; }
+    /** [v2.32.0] 回收口径一行自述：实际次数 / 过早次数 / 末次时刻。 */
+    releaseTrace() {
+        return {
+            name: this.name,
+            releases: this._releaseCount,
+            premature: this._prematureReleases,
+            lastAt: this._releasedAt || null
+        };
     }
 
     /** 分类计数：{ interval, timeout, observer, listener, total } */
@@ -282,6 +329,24 @@ const _childRuntimes = new Set();
  *   与「活着的域」分开命名，避免把「曾经被回收」读成「现在还在」。
  */
 const _childReleaseLog = new Map();
+/* ---------------- [v2.32.0] 过早回收账本 ----------------
+ * 动机（v2.30/v2.31 的下一层）：v2.30 引入 childRuntimeOverDisposed() 让「域被回收了、
+ *   实例还在用」可见，v2.31 引入回收账本让「回收过几次」可对账 —— 但两套账**互不相通**：
+ *   · 过度回收遥测**寄居在域对象上**（_reenteredAfterDispose 是实例字段，且只有进了域表
+ *     的域才会被 childRuntimeOverDisposed() 数到）；
+ *   · 域一旦被正常回收即离表 —— 于是「这个域名曾经过早回收过」在域死后**彻底消失**，
+ *     诊断归零，与「从未发生」完全同形（实测：域活着时 overDisposed=1，dispose 后=0）。
+ *   本账本在**回收时刻**判定并落账，口径是「按域名聚合的历史事实」，不依赖任何活着的对象：
+ *     `dispose(); 复活; dispose();` → releasedPremature[name] += 1，且此后永久可查。
+ *   于是「这 5 次回收里有几次过早」这一个问题，终于有一本账能直接回答。
+ */
+const _childPrematureLog = new Map();
+/* ---------------- [v2.32.0] 末次回收时刻 ----------------
+ * v2.31 在 dispose 里写了 this._releasedAt，但**全仓零读点**（写而无人读 = 有字段无消费）。
+ *   字段写出来没人看，与没写等价，却让「回收发生在何时」看起来已经可查。此处把它消费掉：
+ *   按域名记最后一次回收时刻，由 runtimeStats().releasedAt 对外可读。
+ */
+const _childReleasedAt = new Map();
 /**
  * [v2.27.0] 全局登记层诊断快照：宿主可直接挂到设置页/控制台，
  * 回答"现在还有哪些常驻资源在跑、分别属于谁"。
@@ -290,10 +355,16 @@ const _childReleaseLog = new Map();
  */
 export function globalRuntimeSnapshot() {
     const stats = globalRuntime.stats();
+    // [v2.32.0] 子域补 tags 明细：此前子域只有 byKind 计数，宿主级有 tags 明细 ——
+    //   于是「phone-shell 域里还剩哪几个 tag 在跑」这个定位问题在子域上**回答不了**
+    //   （实测 children 字段只有 name/total/byKind）。两侧口径就此对齐。
     const children = [..._childRuntimes].map(rt => ({
         name: rt.name,
         total: rt.size,
-        byKind: rt.stats()
+        byKind: rt.stats(),
+        tags: rt.entries().map(e => ({ kind: e.kind, tag: e.tag })),
+        releases: rt.releaseCount(),
+        premature: rt.prematureReleases()
     }));
     return {
         total: stats.total,
@@ -381,6 +452,39 @@ export function childRuntimeReleaseLog(name) {
     return _childReleaseLog.get(n) || 0;
 }
 /**
+ * [v2.32.0] 过早回收账本快照：每个域名「回收发生在实例仍在使用时」的次数。
+ * 与 childRuntimeReleaseLog(name) **配对**回答本版的核心问题：
+ *   「这个域名被回收过 release 次，其中 premature 次是过早的」。
+ * 关键差异（本函数存在的理由）：childRuntimeOverDisposed() 是**活域**的观测，
+ *   域被回收后即归零；本账本在回收时刻落账，域死后仍可查 —— 这两者的差别实测过：
+ *   同一域「活着时 overDisposed=1 → 回收后=0」，而本账本恒定递增。
+ * @param {string} name 域名（精确匹配）；空串时返回 { name: count }
+ * @returns {number|Object}
+ */
+export function childRuntimePrematureLog(name) {
+    const n = String(name || '');
+    if (!n) {
+        const out = {};
+        for (const [k, v] of _childPrematureLog) out[k] = v;
+        return out;
+    }
+    return _childPrematureLog.get(n) || 0;
+}
+/**
+ * [v2.32.0] 每个域名最后一次被回收的时刻（消费 v2.31 写入却无人读的 _releasedAt）。
+ * @param {string} name 域名；空串时返回 { name: ts }
+ * @returns {number|Object|null} 传 name 且从未回收过时返回 0
+ */
+export function childRuntimeReleasedAt(name) {
+    const n = String(name || '');
+    if (!n) {
+        const out = {};
+        for (const [k, v] of _childReleasedAt) out[k] = v;
+        return out;
+    }
+    return _childReleasedAt.get(n) || 0;
+}
+/**
  * [v2.28.0] 按名（前缀）回收实例级资源域。
  * 场景：宿主把实例置 null（清数据/换会话/换壳）而不走实例自身的 destroy 时，
  *   域内的定时器/监听器会被全局域表引用钉住成为孤儿。此处按域名一次性收净。
@@ -392,12 +496,20 @@ export function childRuntimeReleaseLog(name) {
  *   会把仍有引用的实例的域一并回收 —— 此后该实例再登记资源即触发复活，
  *   旧资源失去归属（childRuntimeOverDisposed() 会数到）。宿主应优先按名回收，
  *   或调用实例自身的 destroy/deactivate（出口自持）。
- * @param {string} namePrefix 域名前缀（如 'music-view'）；空串 = 回收全部实例域
+ * [v2.32.0] 前缀语义**显式化**（此前只写在文档里、实现上无区分手段）：
+ *   实测 disposeChildRuntimes('probe-d') 会连带回收 'probe-d-extra'（1 个名字收掉 2 个域）。
+ *   本仓库现有域名互不为前缀，故当前**没有**实际误伤；但「传短名就多收」这件事此前
+ *   既不可见、也无精确手段。现提供第二参 `{ exact: true }` 走精确匹配（语义等价于
+ *   「按名回收这一个域」），默认仍是前缀匹配（向后兼容，既有 5 处调用点行为不变）。
+ * @param {string} namePrefix 域名（默认按前缀匹配）；空串 = 回收全部实例域
+ * @param {{exact?: boolean}} [opts] exact=true 时按域名精确匹配
  * @returns {number} 被回收的域数
  */
-export function disposeChildRuntimes(namePrefix) {
+export function disposeChildRuntimes(namePrefix, opts) {
     const p = String(namePrefix || '');
-    const victims = p ? [..._childRuntimes].filter(rt => rt.name.startsWith(p)) : [..._childRuntimes];
+    const exact = !!(opts && opts.exact);
+    const victims = !p ? [..._childRuntimes]
+        : [..._childRuntimes].filter(rt => (exact ? rt.name === p : rt.name.startsWith(p)));
     let n = 0;
     for (const rt of victims) { rt.dispose(); n += 1; }
     return n;

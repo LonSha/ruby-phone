@@ -411,7 +411,7 @@ const {
     const pkg = JSON.parse(read('package.json'));
     const log = JSON.parse(read('update-log.json'));
     const v = /const ST_PHONE_VERSION = '([\d.]+)'/.exec(idx)?.[1];
-    ok('E1 index.js 版本 >= 2.31.0', vnum(v) >= vnum('2.31.0'), v);
+    ok('E1 index.js 版本 >= 2.31.0', vnum(v) >= vnum('2.32.0'), v);
     ok('E2 manifest 同版', manifest.version === v, `${manifest.version} vs ${v}`);
     ok('E3 package.json 同版', pkg.version === v, `${pkg.version} vs ${v}`);
     ok('E4 update-log 有本版条目', !!log.versions?.[v], Object.keys(log.versions || {}).slice(0, 3).join(','));

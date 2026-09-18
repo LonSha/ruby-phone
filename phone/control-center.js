@@ -20,6 +20,11 @@ import {
     applyWifiIndicator, applyFlashlightVisual, lockNow,
     musicControl, currentTrack
 } from '../config/system-controls.js';
+// [v2.32.0] 回收口径卡：控制中心此前**完全没有**运行时诊断入口（诊断只能靠控制台）。
+//   本版把「回收了几次、其中几次过早」这两本账并列显示在手机上 —— 它们此前分属
+//   两个 Map（childRuntimeReleaseLog / childRuntimePrematureLog），任何一本单独看
+//   都回答不了这个问题。只读这两本账，不新增状态、不触发任何回收。
+import { childRuntimeReleaseLog, childRuntimePrematureLog } from '../config/runtime-lifecycle.js';
 
 function _esc(s) {
     return String(s ?? '')
@@ -65,6 +70,7 @@ export class ControlCenter {
                 ${this._togglesHtml()}
                 ${this._musicHtml()}
                 ${this._scaleHtml()}
+                ${this._releaseHtml()}
                 <button class="sys-cc-action sys-cc-lock" id="sys-cc-lock">
                     <i class="fa-solid fa-lock"></i><span>立即锁屏</span>
                 </button>
@@ -143,6 +149,31 @@ export class ControlCenter {
         </div>`;
     }
 
+    /**
+     * [v2.32.0] 回收口径卡：把两本账**合起来读**。
+     * 口径（与 runtimeStats().releaseVerdict 同源，纯读不写）：
+     *   · 全部域名都没过早回收 → 「N 个域名被回收过 · 无过早回收」；
+     *   · 有过早 → 列出前三项，标黄，并给出「回收 N 次 / 其中过早 M 次」。
+     * 读取失败一律降级为一行提示，绝不抛（控制中心任何一块坏掉都不该拖垮整个面板）。
+     */
+    _releaseHtml() {
+        let names = {}, pre = {};
+        try { names = childRuntimeReleaseLog('') || {}; } catch (_e) { names = {}; }
+        try { pre = childRuntimePrematureLog('') || {}; } catch (_e) { pre = {}; }
+        const released = Object.keys(names).length;
+        const rows = Object.entries(pre).filter(([, v]) => Number(v) > 0)
+            .map(([n, v]) => ({ name: n, premature: Number(v), releases: Number(names[n] || 0) }))
+            .sort((a, b) => b.premature - a.premature || a.name.localeCompare(b.name));
+        const clean = rows.length === 0;
+        const head = `<div class="sys-cc-scale-head"><span>回收口径</span><span>${clean ? '无过早回收' : rows.length + ' 个域名过早回收'}</span></div>`;
+        const body = clean
+            ? `<div class="sys-cc-rel-line">${released} 个域名被回收过 · 全部发生在实例销毁后</div>`
+            : rows.slice(0, 3).map(r =>
+                `<div class="sys-cc-rel-line sys-cc-rel-warn">${_esc(r.name)} 回收 ${r.releases} 次 · 其中过早 ${r.premature} 次</div>`
+            ).join('');
+        const more = rows.length > 3 ? `<div class="sys-cc-rel-line">…另有 ${rows.length - 3} 个域名</div>` : '';
+        return `<div class="sys-cc-scale sys-cc-releases" data-release-tally="${clean ? 'clean' : 'premature'}">${head}${body}${more}</div>`;
+    }
     // ---------------- 交互 ----------------
 
     _bind() {
