@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.34.0';
+const ST_PHONE_VERSION = '2.35.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -75,15 +75,15 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: '2026-09-18',
+    date: '2026-09-19',
     items: [
-        "【四条账目的共同盲区：回收根本没发生过的那条路径】v2.31 记「回收过几笔」、v2.32 把**两本账**（回收账本与过早账本）合读、分出「其中几笔过早」、v2.33 归因「是谁造成的」、v2.30 的 overDisposed 记「同一对象被回收后复活」——**四条账目全部只描述「回收以后」**。而宿主重建路径上还有第四种形态：**建了同名新域、旧域却没被收掉**。此时域表里同时活着两个同名域（旧域仍被域表钉住，其定时器/监听器继续跑、闭包钉住旧 DOM），而「回收」这件事**一次都没发生** —— 于是它在上面四本账上完全不可见。",
-        "【实测：正确重建与重复建域在四本账上完全同形】探针在真域上各跑一遍（正确路径＝建 3 只、每次先收后建；错误路径＝建 3 只、不收、事后统一收掉）：回收笔数 **3 / 3**、过早笔数 **0 / 0**、成因账 **{} / {}**、过度回收遥测 **0 / 0** —— 四本账逐项相等，唯一区分点是「同名域同时存活的个数」（正确 **0**、错误 **3**）。这就是本版要补的那个读数。",
-        "【真实触发路径不是假设：三处 await 竞态会构造同名实例】`chat-view.js` 的三处懒加载（`_ensureMusicAppForInvite` / `_ensureHoneyAppReady` / 微博卡片跳转的 WeiboApp）都是 **check-then-act**：先判 `if (!VirtualPhone.xxxApp)`，再 `await import(...)`，**await 之后直接 `new` 并写回**。await 期间另一个入口（音乐卡片注入 / 蜜语邀约 / 应用面板）已把实例建好时，这里就会 new 出第二个同名实例，旧实例的域从此无出口。本版在三处 `await` 之后补重查（根治竞态），并让重复存活域本身变成可见读数（兜住仍可能出现的其它路径）。",
-        "【修复一：把「几个才算错」这个判断写进读写口径】新增内核原语 `childRuntimeDuplicates(min = 2)`（只列同时存活 >= min 个的域名，非法阈值一律回落 2 而非放宽）与 `childRuntimeDuplicateDomains()`（键视图，按名排序），`globalRuntimeSnapshot()` 追加 `duplicates` 字段。此前全仓消费点（诊断面 domainCounts、控制中心、测试）都只把 `childRuntimeStats` 的**裸数字**原样展示，**没有任何一处对 >1 出过声** —— 事实有了、判断没写下，等于没有：**回收口径**里此前只有事实、没有判断。本版把判断固化：**空才是正常态**（先收后建），非空即重复存活。纯读、零副作用、不抛；刻意不制造噪声遥测（v2.33 的教训是「恒非零的告警会被读者学会忽略」，故本读数的健康态恒为空）。",
-        "【修复二：会话级数据槽位的唯一出口】v2.31 给三条「界面槽位」（homeScreen / controlCenter / notificationLog）建了统一出口，但数据实例里另有一类**随会话重生**的槽位不在那条出口里，于是三条清数据路径各写各的清单 —— 而漏写一个是静默缺陷：`worldpulseApp`（换会话 / 清当前数据 / 清全部数据 **三条全漏**；实例跨会话复用，3s 楼层轮询闭包挂在旧会话上下文上，而其实例出口 `destroy()` 全仓零调用点）与 `gamesApp`（**清全部数据漏**；`deactivate()` 级联 `stopUndercoverFlow` / `clearPokerSession` / 五个子视图，清全部数据后残留的是上一局的会话状态与一个**裸 setTimeout**，它会在已清数据的会话上继续触发一次 AI 出牌调用）。本版新增 `retireSessionScopedSlots()` 作为**唯一出口**，挂在 `reloadPhoneSurface()` 里 —— 三条路径都经过它，故**新增路径不必再补清单**。收口方式为：先走**实例自身的出口**（`destroy` / `deactivate`，语义化收尾），再置 null（引用消失时域名回收才是正确形态）。",
-        "【修复三：呈现面与消费点接线】控制中心新增「重复存活域」告警行：**健康态不渲染任何节点**（同名域恒为 1 个时该节点根本不存在），非空即标黄列出，口径为「有缺陷时告警、没缺陷时安静」；`data-dup-domains` 由重复域名数驱动。诊断面把内核的 `duplicates` 提升为**稳定契约字段**（降级/内核未提供时归一为 `{}`，字段恒在，消费方不必判 undefined，同 v2.30 `snap.overDisposed` 的做法）——刻意**不做二次记账**：宿主若另调 `childRuntimeDuplicateDomains()` 就是「同一本账的第二个名字」，正是本版批评的形态，探针 G7 对此设了自证判据（全仓零 `duplicateDomains` 残留）。样式新增 `.sys-cc-dups`（出现即缺陷，故无需区分形态）。",
-        "【测试与自证】探针 /tmp/probe_v234.mjs 共 42 项：A/B 段在真域上取证「正确重建 vs 重复建域」的四本账同形与唯一区分点，C 段钉 duplicates 的边界与口径（阈值回落、空态、多域名排序），D/E 段钉快照同源与过早/重复两条线互不干扰，F 段自证纯读无副作用（连续调用不改域表、不触发任何回收记账），G 段钉消费点接线与**反冗余**。过程记录：初版曾落盘「域世代」（releaseEpoch / firstReleaseEpoch）方案并通过全部门禁，随后自查判定它与既有 `_childReleaseLog` 同条件递增、两值恒等（换个名字的同一本账），遂 `git checkout` 完整撤销后改为 duplicates 口径；接线阶段又自查撤销了 `snap.duplicateDomains`（内核 `duplicates` 的键排序视图，同属冗余）——两次撤销均由判据而非印象驱动。全量门禁 **249 tests / 249 pass / 0 fail**（新增 tests/system-v234.test.mjs 计 90 项），语法门 245 个文件。",
+        "【两个世界对不上：同一场剧情里坐着两个「现在」】这套三插件体系里有两个**同规格的只读世界桥**：`window.lonsha_memory_bridge_v1`（记忆插件的剧情记忆/召回账本）与 `window.worldaxis_bridge_v1`（WorldAxis 的世界状态：世界钟/权威事实/暗流/舆情）。而 RubyPhone 侧实测**只消费了前者**——`apps/timeweaver/timeweaver-collector.js` 读 lonsha 桥的 `snapshot.recallAudit`，全库 grep `WorldAxis` / `worldaxis` 在产品代码里**零命中**。后果是真现场，不是假设。",
+        "【修前的真实现场：世界脉搏全由 LLM 现编，与真世界毫无关联】`apps/worldpulse` 自己队列化楼层变化、按阈值触发、调 LLM **现编**平行事件——它报的那个「世界」与 WorldAxis 已经推演出的真世界状态毫无关联，等于**凭空发明一个平行世界**；`config/time-manager.js` 则从正文状态栏标签、世界书「剧情时间起点」、手机消息时间戳里**猜**当前时间、取最晚者，而 WorldAxis 的世界钟（决策时间，进存档、参与判定）就躺在快照里**没人读**。同一场剧情于是有两个「现在」，且正文与手机可能互相矛盾。",
+        "【修复一：两个桥收敛成单一真源】新增 `config/world-bridge.js`（只读消费面）：导出两个桥的 id 常量（`WORLDAXIS_BRIDGE_ID` / `LONSHA_BRIDGE_ID`，与上游逐字一致——改一处即两端同时失联，故集中声明）、`getBridge` / `bridgeSource` / `readWorldAxisSnapshot` / `readWorldClock` / `readLonshaSnapshot` / `worldBridgeAvailability`。三条纪律：**只读**（绝不写世界状态，两桥本就不给写路径）、**不抛**（桥未装 / 未启用 / 旧版无字段 / 快照畸形一律降级）、**不猜**（拿不到就如实报不可用，绝不编数据顶替）。",
+        "【修复二：降级必须可归因——「桥没装」与「桥没开」不得同形】本项目反复治理的缺陷形态就是**静默降级**：拿不到数据与「这个世界是空的」长得一模一样，调用方只能一律当「没数据」，于是「未安装」「装了但没启用」「快照畸形」三种完全不同的处境在界面上**同形**。本版把三态显式分开：`reason` ∈ `not-mounted` / `disabled` / `refused` / `no-snapshot` / `pull-failed`。WorldAxis v2.16 的桥默认**休眠**，故「未启用」单独成态——用户能据此知道该去开哪个开关，而不是以为功能坏了。宿主抛异常也绝不外抛给调用方。",
+        "【修复三：世界脉搏改为真世界优先】`apps/worldpulse/worldpulse-engine.js` 新增真世界投影纯函数面：`projectWorldAxis`（把 `facts` / `currents` / `pulse` / `opinion.canon` / `opinion.forum` / `opinion.sandbox` 投成历史条目形态，条目 id 带 `wa:` 前缀——与 LLM 生成的 `wp…` 天然不撞，按 `existingIds` 去重，`counts` 如实记数、`dropped` 报截断量）、`worldAxisPromptBlock`（压成「本世界已发生的真实动态（不得与之矛盾、不得改写其事实）」一致性约束块）、`mergeWorldAxisHistory`。**论坛传闻显式标注「（传闻）」**——「已核实」与「纯传闻」在读者侧是两种事实强度，不得同形。`_generate` 改为真世界优先：有真事件就陈述真事件、不调 LLM；失败才退回生成并附上一致性块。",
+        "【修复四：世界钟接成权威源之一，但绝不让公历污染古历】`config/time-manager.js` 新增 `getWorldAxisTime()`（读桥 → 解析世界钟 iso → 与 `getCurrentStoryTime` 同形的时间对象），并在权威候选后新增「来源4」。世界钟是**推演结果**（决策时间），比从正文里猜更权威；但它是公历 ISO，故**只在剧情纪元相容时才参与**（由既有 `_isSameStoryEra` 统一判定：一侧古历一侧现代即不相容）——古历剧情下公历钟直接让路。只读：本方法不写任何状态。",
+        "【测试与自证】新增 `tests/system-v235.test.mjs`（117 项）：A 段钉桥消费面的在场归因与「不抛」（含 getter 抛异常的极端宿主），B 段钉世界钟解析的合法/非法/边界（古历非 ISO 串必须返回 null、越界时分夹取），C/D 段钉真世界投影的条目形态 / 去重 / 传闻标注 / 上限 / 畸形输入，E 段钉接线与只读契约，F 段负控制（文本级 + 行为级，真源码破坏 → 加载副本 → 同款判据翻红），G 段发布卫生。过程记录：F1 首版拿「非对象守卫」做负控制**不可测**——该守卫与函数外层的 `try/catch` 效果重合（无守卫时抛出的异常被 catch 吞掉仍返回 null），real 与 broken 两向都是 null ⇒ 负控制恒真，遂改钉**日期范围校验**（`ISO_RE` 的 `\\d{1,2}` 本就允许 13 月/40 日，该行是唯一防线）；判据 `judges.wired` 首版把两个消费者的 import 写在同一个函数里，导致「只断一个」时两向都为假 ⇒ 拆成 `wiredApp` / `wiredTm`。回归：既有三处受影响的测试按新契约对齐（`tests/time-manager.test.mjs` 的 data: URL 加载器显式重写相对 import——这正是 v2.28 回归护栏所要求的形态；`tests/system-v220.test.mjs` 的历史写入锚点交棒到改写后的实体调用），全量 **252 tests / 252 pass / 0 fail**（另在 `tests/time-manager.test.mjs` 补两条**行为级**判据：世界钟在现代剧情下真的参与「取最晚」并胜出、在古历剧情下真的让路）。"
     ]
 };
 

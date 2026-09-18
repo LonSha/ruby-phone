@@ -490,8 +490,10 @@ function negative(fn, label) {
     ok('G6 versions 头部即当前版本', Object.keys(log.versions || {})[0] === v,
         Object.keys(log.versions || {})[0]);
     const items = ((log.versions?.[v] || {}).items) || [];
-    ok('G7 本版条目覆盖主线（回收口径 / 两本账）',
-        /回收口径/.test(items.join('\n')) && /两本账/.test(items.join('\n')), String(items.length));
+    /* [v2.35.0] 交棒：改钉 2.32.0 历史条目（原用当前版本 v 查本版叙事词，每发一版必翻红）。 */
+    const v232Items = ((log.versions?.['2.32.0'] || {}).items || []).join('\n');
+    ok('G7 本版条目覆盖主线（钉 2.32.0 历史条目：回收口径 / 两本账）',
+        /回收口径/.test(v232Items) && /两本账/.test(v232Items), String(v232Items.length));
     ok('G8 条目数 >= 4', items.length >= 4, String(items.length));
     /* G9 内置公告与日志逐字同源（仓库私有时远端恒 404，公告是用户唯一能看到的说明） */
     const blk = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];

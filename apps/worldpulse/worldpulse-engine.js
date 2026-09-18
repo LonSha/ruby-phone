@@ -33,7 +33,14 @@ export function defaultSettings() {
         customPrefix: '',
         threshold: DEFAULT_THRESHOLD,
         autoGenerate: true,
-        maxQueueSize: MAX_QUEUE
+        maxQueueSize: MAX_QUEUE,
+        // [v2.35.0] 真世界优先：脉冲时**先消费 WorldAxis 的真世界状态**（不调 LLM），
+        //   有真事件就陈述真事件；只有在真世界不可用（桥未装/未启用/无快照）时，
+        //   才退回原「调 LLM 现编平行事件」的路径。默认开启——凭空发明平行世界
+        //   本来就是这套体系最该修的那处「两个世界对不上」。
+        useRealWorld: true,
+        // 一次脉冲最多落几条真世界条目（封顶靠投影层 maxEntries，与队列容量同一量级）
+        realWorldMax: 6
     };
 }
 
@@ -164,4 +171,169 @@ export function recentStoryDigest(ctx, n = 6) {
             return clean.length > 3 ? `${speaker}：${clean.slice(0, 120)}` : '';
         }).filter(Boolean).join('\n');
     } catch (_e) { return ''; }
+}
+
+/* ============================================================
+ * [v2.35.0] 真世界状态投影面
+ * ------------------------------------------------------------
+ * 修前实测：本 App 的平行事件**全部由 LLM 现编**（buildEventPrompt → callAI），
+ * 而 WorldAxis 已经推演出一个真·世界状态（世界钟 / 权威事实 / 暗流 / 舆情）
+ * 却零消费。结果「世界脉搏」报的是一个**凭空发明的平行世界**——它与正文里
+ * 真正发生过的世界变化无关，甚至互相矛盾（同一个剧情里两个世界对不上）。
+ *
+ * 本节把 WorldAxis 快照投影成本 App 的历史条目形态（纯函数、无副作用），
+ * 使「世界脉搏」可以**陈述真事件**而不是编事件。语言模型的活留给「风格化改写」，
+ * 事实来源换成真推演结果——这是本版的核心转向。
+ * ============================================================ */
+
+/** 投影条目种类 → 展示用风格名（view 的 STYLE_ICON 会为未知键兜底为 🌍） */
+export const WA_KINDS = {
+    fact: '世界事实',
+    current: '暗流',
+    pulse: '世界压力',
+    news: '已核实新闻',
+    rumor: '论坛传闻',
+    sandbox: '闲逛见闻'
+};
+
+/** 条目截断（与 sanitizeEvent 同量级，防止一条超长事实撑爆历史卡片） */
+function clip(v, n = 200) {
+    const s = String(v === undefined || v === null ? '' : v).replace(/\s+/g, ' ').trim();
+    return (n && s.length > n) ? (s.slice(0, n).replace(/[,，、;；\s]+$/, '') + '…') : s;
+}
+
+/**
+ * 把 WorldAxis 快照投影成世界脉搏条目。
+ *
+ * @param {object|null} snapshot WorldAxis 的只读快照（worldClock/pulse/digest/currents/facts/people/opinion）
+ * @param {{maxEntries?:number, maxLen?:number, kindFilter?:string[]|null, existingIds?:string[]}} opts
+ * @returns {{ ok:boolean, entries:Array, counts:object, dropped:number }}
+ *   entries[].id 带 `wa:` 前缀 —— 与 LLM 生成条目（`wp…`）天然不撞，去重只看历史既有 id。
+ *   任何字段缺失/畸形都不抛：缺的就少投一条，counts 如实记数。
+ */
+export function projectWorldAxis(snapshot, opts = {}) {
+    const counts = { fact: 0, current: 0, pulse: 0, news: 0, rumor: 0, sandbox: 0 };
+    const out = [];
+    if (!snapshot || typeof snapshot !== 'object') return { ok: false, entries: out, counts, dropped: 0 };
+    const maxEntries = Math.max(1, Number(opts.maxEntries) || 8);
+    const maxLen = Math.max(40, Number(opts.maxLen) || 200);
+    const filter = Array.isArray(opts.kindFilter) && opts.kindFilter.length ? new Set(opts.kindFilter) : null;
+    const seen = new Set(Array.isArray(opts.existingIds) ? opts.existingIds.map(String) : []);
+    const floorCount = Number(snapshot.floor) || 0;
+    const at0 = Number(snapshot.exportedAt) || 0;
+    const push = (kind, id, content, extra = {}) => {
+        if (filter && !filter.has(kind)) return;
+        counts[kind] += 1;
+        const c = clip(content, maxLen);
+        if (!c) return;                       // 空内容不投（与 pushHistory 的空内容不入册同规格）
+        const full = String(id || `${kind}`);
+        if (seen.has(full)) return;           // 历史里已有 ⇒ 不重复
+        seen.add(full);
+        out.push({
+            id: full,
+            style: WA_KINDS[kind] || '世界动态',
+            content: c,
+            floorCount,
+            source: 'worldaxis',
+            kind,
+            at: at0,
+            ...extra
+        });
+    };
+
+    // ① 权威事实（已结算、不再变——外部引用世界事实时的唯一真源）
+    for (const f of (Array.isArray(snapshot.facts) ? snapshot.facts : [])) {
+        if (!f || typeof f !== 'object') continue;
+        push('fact', `wa:fact:${clip(f.key, 48)}`, f.value, { scope: clip(f.scope, 20) });
+    }
+    // ② 暗流（进行中、还会变的世界线）
+    for (const c of (Array.isArray(snapshot.currents) ? snapshot.currents : [])) {
+        if (!c || typeof c !== 'object') continue;
+        const title = clip(c.title, 60);
+        const summary = clip(c.summary, maxLen - title.length > 10 ? maxLen - title.length - 2 : maxLen);
+        push('current', `wa:current:${clip(c.id, 40)}`,
+            title && summary ? `${title}——${summary}` : (title || summary),
+            { visibility: clip(c.visibility, 16), stage: clip(c.stage, 20) });
+    }
+    // ③ 世界压力（pulse：地球侧舆情温度/趋势；若宿主没推这一项则缺席）
+    if (snapshot.pulse && typeof snapshot.pulse === 'object') {
+        const note = clip(snapshot.pulse.note, maxLen);
+        const trend = clip(snapshot.pulse.trend, 16);
+        if (note || trend) push('pulse', `wa:pulse:${Number(snapshot.pulse.at) || 0}`,
+            note || `当前世界压力趋势：${trend}`, { trend });
+    }
+    // ④ 舆情三源：canon=已核实新闻、forum=论坛传闻、sandbox=NON-CANON 闲逛
+    const op = (snapshot.opinion && typeof snapshot.opinion === 'object') ? snapshot.opinion : {};
+    for (const o of (Array.isArray(op.canon) ? op.canon : [])) {
+        if (!o || typeof o !== 'object') continue;
+        const title = clip(o.title, 80);
+        const body = clip(o.body, maxLen - title.length > 10 ? maxLen - title.length - 2 : maxLen);
+        push('news', `wa:news:${title}:${Number(o.at) || 0}`,
+            title && body ? `${title}｜${body}` : (title || body),
+            { claim: clip(o.claim, 12) });
+    }
+    for (const o of (Array.isArray(op.forum) ? op.forum : [])) {
+        if (!o || typeof o !== 'object') continue;
+        const board = clip(o.board, 40);
+        const topic = clip(o.topic, 80);
+        // 论坛传闻必须**显式标注其为传闻**——「已核实」与「纯传闻」在读者侧是两种事实强度
+        const claim = clip(o.claim, 12);
+        const mark = claim ? `（${claim}）` : '（传闻）';
+        push('rumor', `wa:rumor:${board}:${topic}:${Number(o.at) || 0}`,
+            `【${board || '论坛'}】${topic}${mark}`,
+            { claim });
+    }
+    for (const o of (Array.isArray(op.sandbox) ? op.sandbox : [])) {
+        if (!o || typeof o !== 'object') continue;
+        const kind = clip(o.kind, 20);
+        const text = clip(o.text, maxLen);
+        push('sandbox', `wa:sandbox:${kind}:${text}`,
+            `（非正史·闲逛）${text}`, { mood: clip(o.mood, 20) });
+    }
+
+    // 排序：新的在前（at 降序），条数封顶
+    out.sort((a, b) => (b.at || 0) - (a.at || 0));
+    const dropped = Math.max(0, out.length - maxEntries);
+    return { ok: true, entries: out.slice(0, maxEntries), counts, dropped };
+}
+
+/**
+ * 把真世界状态压成一段「一致性约束」文本，供 LLM 风格化改写时参考。
+ * 目的：LLM 可以润色口吻，但**不得编造与真世界矛盾的事件**。
+ * 无可用内容时返回 ''（调用方据此退回纯生成路径）。
+ */
+export function worldAxisPromptBlock(snapshot, opts = {}) {
+    if (!snapshot || typeof snapshot !== 'object') return '';
+    const proj = projectWorldAxis(snapshot, {
+        maxEntries: Math.max(1, Number(opts.maxEntries) || 6),
+        maxLen: Math.max(40, Number(opts.maxLen) || 120)
+    });
+    if (!proj.entries.length) return '';
+    const lines = proj.entries.map(e => `- [${e.style}] ${e.content}`);
+    return `【本世界已发生的真实动态（世界轴推演结果，不得与之矛盾、不得改写其事实）】\n${lines.join('\n')}`;
+}
+
+/**
+ * 把投影条目并入历史（按 id 去重，上限沿用 MAX_HISTORY）。
+ * 返回新历史数组；不修改入参。
+ */
+export function mergeWorldAxisHistory(history, entries) {
+    const h = Array.isArray(history) ? history.slice() : [];
+    const have = new Set(h.map(e => String(e && e.id)));
+    for (const e of (Array.isArray(entries) ? entries : [])) {
+        if (!e || !e.content) continue;
+        if (have.has(String(e.id))) continue;
+        have.add(String(e.id));
+        h.push({
+            id: String(e.id),
+            style: e.style || '世界动态',
+            content: String(e.content),
+            floorCount: Number(e.floorCount) || 0,
+            createdAt: Number(e.createdAt) || Number(e.at) || Date.now(),
+            source: e.source || 'worldaxis',
+            kind: e.kind || ''
+        });
+    }
+    while (h.length > MAX_HISTORY) h.shift();
+    return h;
 }

@@ -498,11 +498,14 @@ const SC_pairAlarm = (m) => {             // B2 同款：恰 2 只必须命中�
         String(Object.keys(log.versions || {})[0]));
     const items = (log.versions?.[v]?.items) || [];
     const joined = items.join('\n');
-    ok('G7a 本版条目覆盖主线（重复存活 / 同名域）',
-        /重复存活/.test(joined) && /同名域/.test(joined), String(items.length));
+    /* [v2.35.0] 交棒：G7a/G7b 原用**当前版本** v 的条目查本版叙事词 —— 每发一版必翻红。
+       改钉 2.34.0 这条历史条目（历史叙事不会变）。 */
+    const v234Joined = ((log.versions?.['2.34.0'] || {}).items || []).join('\n');
+    ok('G7a 本版条目覆盖主线（钉 2.34.0 历史条目：重复存活 / 同名域）',
+        /重复存活/.test(v234Joined) && /同名域/.test(v234Joined), String(v234Joined.length));
     ok('G7b 承接历史主线关键词（回收口径 / 两本账 / 成因 / 重建路径）',
-        /回收口径/.test(joined) && /两本账/.test(joined)
-        && /成因/.test(joined) && /重建路径|实例被丢弃|回收账本/.test(joined));
+        /回收口径/.test(v234Joined) && /两本账/.test(v234Joined)
+        && /成因/.test(v234Joined) && /重建路径|实例被丢弃|回收账本/.test(v234Joined));
     ok('G8 条目数 >= 4', items.length >= 4, String(items.length));
     /* G9 内置公告与日志逐字同源（仓库私有时远端恒 404，公告是用户唯一能看到的说明） */
     const blk = (IDX_SRC.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];

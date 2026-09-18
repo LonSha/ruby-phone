@@ -10,6 +10,7 @@
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
 // 剧情时间管理器
+import { readWorldClock, readWorldAxisSnapshot } from './world-bridge.js';
 export class TimeManager {
     constructor(storage) {
         this.storage = storage;
@@ -208,7 +209,6 @@ export class TimeManager {
         if (timeData?.isAncient !== true && !parsedDate?.isAncient) return 'modern';
         return `ancient:${String(timeData?.era || parsedDate?.era || 'unknown').trim()}`;
     }
-
     _isSameStoryEra(left, right) {
         if (!left || !right) return true;
         const leftAncient = this.isAncientTimeData(left);
@@ -220,6 +220,43 @@ export class TimeManager {
         const rightKey = this._getEraKey(right);
         return leftKey.endsWith(':unknown') || rightKey.endsWith(':unknown') || leftKey === rightKey;
     }
+
+    /**
+     * [v2.35.0] 从 WorldAxis 的**世界钟**取当前剧情时间。
+     *
+     * 修前实测：本管理器的时间**全部靠猜**——正文状态栏标签、世界书「剧情时间起点」、
+     *   手机消息时间戳、保存的手动同步值，最后再取最晚者。而 WorldAxis 已经维护着一个
+     *   世界钟（决策时间，进存档、参与判定），它就在 `window.worldaxis_bridge_v1` 的快照里
+     *   躺着没人读。同一场剧情于是有两个「现在」，且正文与手机可能互相矛盾。
+     *
+     * 本节把世界钟接成**权威源之一**（与正文时间同级参与「取最晚」），而不是唯一的源：
+     *   · 桥未装 / 未启用 / 快照无 worldClock / iso 非法 ⇒ 返回 null（退回原路径，不猜）；
+     *   · 世界钟是公历 ISO ⇒ 古历剧情（大明/大清…）下不会被误用（isAncient 判定拦住）；
+     *   · 只读：本方法不写任何状态。
+     *
+     * @returns {object|null} 与 getCurrentStoryTime 同形的时间对象；不可用即 null。
+     */
+    getWorldAxisTime() {
+        try {
+            const r = readWorldAxisSnapshot({ reason: 'time-manager' });
+            if (!r || !r.ok) return null;
+            const wc = readWorldClock(r.snapshot);
+            if (!wc) return null;
+            return {
+                time: wc.time,
+                date: wc.date,
+                weekday: wc.weekday,
+                timestamp: wc.timestamp,
+                isAncient: false,
+                era: '',
+                calendarDate: wc.calendarDate,
+                source: 'worldaxis',
+                worldClockLabel: wc.label,
+                worldClockSource: wc.source
+            };
+        } catch (_e) { return null; }
+    }
+
 
     _getRecentManualSyncTime() {
         try {
@@ -382,6 +419,17 @@ export class TimeManager {
             ...timeFromChat,
             source: timeFromChat.source || 'chat'
         });
+    }
+
+    // [v2.35.0] 来源4：WorldAxis 世界钟。它是**推演结果**（决策时间），比正文里猜的更权威。
+    //   但它是公历 ISO —— 只在剧情纪元相容时才参与，绝不让公历钟污染古历剧情
+    //   （era 判定由 _isSameStoryEra 统一负责：一侧 ancient、一侧现代即不相容）。
+    const worldAxisTime = this.getWorldAxisTime();
+    if (worldAxisTime) {
+        const eraRef = timeFromChat || manualSyncTime || authoritativeCandidates[0] || null;
+        if (this._isSameStoryEra(worldAxisTime, eraRef)) {
+            authoritativeCandidates.push(worldAxisTime);
+        }
     }
 
     const candidates = [...authoritativeCandidates];

@@ -10,10 +10,18 @@ import * as WP from './worldpulse-engine.js';
 import { WorldpulseView } from './worldpulse-view.js';
 // [v2.28.0] 实例级资源域（App 停止监听/换会话时一次性回收其登记的全部常驻资源）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
+// [v2.35.0] 对外世界桥消费面（只读）：把「现编平行事件」换成「消费 WorldAxis 真世界状态」
+import { readWorldAxisSnapshot, readLonshaSnapshot, worldBridgeAvailability } from '../../config/world-bridge.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
 const STATE_KEY = 'worldpulse_state_v1';          // { lastFloorCount, queue }
+
+// [v2.35.0] LLM 兜底路径的条目 id：与 WP.pushHistory 的原默认（`wp_${Date.now()}`）同形，
+//   但显式在生成完成后取，避免「同一批多条」拿到同一个 id。真世界条目自带 `wa:` id，不走这里。
+function entryId(ev) {
+    return `wp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+}
 
 export class WorldpulseApp {
     constructor(phoneShell, storage) {
@@ -173,12 +181,26 @@ export class WorldpulseApp {
             // [v2.20.0] 生成完成时若已换会话：整条丢弃（不写历史/不推微博）。
             //   队列已在入口乐观出队（v2.21.0），此处不再触碰存储。
             if (content && stamp === this._currentSessionStamp()) {
-                const h = WP.pushHistory(this.getHistory(), {
-                    style: ev.style, content, floorCount: ev.floorCount
-                });
+                // [v2.35.0] 真世界路径返回的是**条目数组**（一次脉冲可落多条真动态），
+                //   旧 LLM 路径返回单条字符串。两条都归一为数组处理，落地语义一致。
+                const list = Array.isArray(content)
+                    ? content
+                    : [{ id: entryId(ev), style: ev.style, content, floorCount: ev.floorCount }];
+                let h = this.getHistory();
+                for (const it of list) {
+                    if (!it || !it.content) continue;
+                    if (it.source === 'worldaxis') {
+                        // 真世界条目按 id 去重并入（不重复陈述同一条已落过的动态）
+                        h = WP.mergeWorldAxisHistory(h, [it]);
+                    } else {
+                        h = WP.pushHistory(h, { id: it.id, style: it.style || ev.style, content: it.content, floorCount: it.floorCount ?? ev.floorCount });
+                    }
+                }
                 this._saveHistory(h);
-                // 可选：推送为微博动态（世界在手机里呼吸）
-                this._pushToWeibo(content, ev.style);
+                // 可选：推送为微博动态（世界在手机里呼吸）。真世界只推第一条，避免刷屏。
+                for (const it of list.slice(0, 1)) {
+                    if (it && it.content) this._pushToWeibo(it.content, it.style || ev.style);
+                }
             }
         } finally {
             this._processing = false;
@@ -191,10 +213,20 @@ export class WorldpulseApp {
     }
 
     async _generate(ev) {
+        // [v2.35.0] **真世界优先**：先读 WorldAxis 的只读快照。有真事件就陈述真事件，
+        //   不调 LLM（既不花钱，也不会编出与真世界矛盾的东西）。
+        //   这正是本版要修的缺陷：修前本 App 的平行事件**全部由 LLM 现编**，
+        //   与 WorldAxis 已经推演出的真世界状态毫无关联。
+        const real = this._renderRealWorld(ev);
+        if (real) return real;
         const am = window.VirtualPhone?.apiManager;
         if (!am || typeof am.callAI !== 'function') return null;
         const digest = WP.recentStoryDigest(this._ctx(), 6);
-        const prompt = WP.buildEventPrompt(ev.style, ev.customPrefix, digest);
+        // 真世界不可用时，若桥**在位但没开/没快照**，把归因块一并交给 LLM：
+        //   让生成带着「本世界已有哪些真实动态」的约束，而不是完全凭空编。
+        const consistency = this._worldAxisBlock();
+        const prompt = WP.buildEventPrompt(ev.style, ev.customPrefix, digest)
+            + (consistency ? `\n\n${consistency}` : '');
         try {
             const result = await am.callAI([
                 { role: 'system', content: '你是世界脉搏平行事件生成器。只输出事件正文。' },
@@ -204,6 +236,47 @@ export class WorldpulseApp {
             if (result?.success === false) return null;
             return WP.sanitizeEvent(raw) || null;
         } catch (_e) { return null; }
+    }
+
+    /**
+     * [v2.35.0] 真世界渲染：读桥 → 投影 → 落地条目。成功返回条目数组，否则 null。
+     *   只读、不写世界状态；无真数据时返回 null 让调用方退回生成路径（不编数据顶替）。
+     */
+    _renderRealWorld(ev) {
+        const s = this.getSettings();
+        if (s.useRealWorld === false) return null;
+        let r = null;
+        try { r = readWorldAxisSnapshot({ reason: 'worldpulse-pulse' }); } catch (_e) { r = null; }
+        if (!r || !r.ok) { this._lastRealReason = (r && r.reason) || 'read-failed'; return null; }
+        let proj = null;
+        try {
+            proj = WP.projectWorldAxis(r.snapshot, {
+                maxEntries: Math.max(1, Number(s.realWorldMax) || 6),
+                existingIds: this.getHistory().map(h => String(h && h.id))
+            });
+        } catch (_e) { proj = null; }
+        if (!proj || !proj.ok || !proj.entries.length) { this._lastRealReason = 'no-real-entries'; return null; }
+        this._lastRealReason = 'ok';
+        return proj.entries.map(e => ({ ...e, style: e.style, content: e.content }));
+    }
+
+    /** [v2.35.0] 真世界一致性约束块（供 LLM 兜底路径参考；无内容返回 ''） */
+    _worldAxisBlock() {
+        try {
+            const r = readWorldAxisSnapshot({ reason: 'worldpulse-consistency' });
+            if (!r || !r.ok) return '';
+            return WP.worldAxisPromptBlock(r.snapshot, { maxEntries: 6, maxLen: 120 });
+        } catch (_e) { return ''; }
+    }
+
+    /** [v2.35.0] 桥的在场/来源一览（供视图与诊断；纯读） */
+    bridgeStatus() {
+        try {
+            return {
+                bridges: worldBridgeAvailability(),
+                lastRealReason: this._lastRealReason || null
+            };
+        } catch (_e) { return { bridges: null, lastRealReason: null }; }
     }
 
     _pushToWeibo(content, style) {

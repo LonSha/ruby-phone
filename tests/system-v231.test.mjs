@@ -419,8 +419,12 @@ const {
     ok('E6 versions 头部即当前版本', Object.keys(log.versions || {})[0] === v,
         Object.keys(log.versions || {})[0]);
     const items = ((log.versions?.[v] || {}).items) || [];
-    ok('E7 本版条目覆盖主线（重建路径与实例回收）',
-        /重建路径|实例被丢弃|回收账本/.test(items.join('\n')), String(items.length));
+    /* [v2.35.0] 交棒：原判据用**当前版本** v 去查 v2.31 特有的关键词 —— 本版叙事不含
+       那些词，于是每发一版、新条目不含旧词就必然翻红（判据绑了可变形状，v2.30 批评过的形态）。
+       改为钉 2.31.0 这条历史条目：历史叙事不会变，才是真正的不变量。 */
+    const v231Items = ((log.versions?.['2.31.0'] || {}).items || []).join('\n');
+    ok('E7 本版条目覆盖主线（钉 2.31.0 历史条目：重建路径与实例回收）',
+        /重建路径|实例被丢弃|回收账本/.test(v231Items), String(v231Items.length));
 
     /* E8 内置公告与日志逐字同源。
        动机：仓库私有时远端更新检查恒 404，内置公告是用户唯一能看到的更新说明；

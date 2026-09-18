@@ -139,7 +139,10 @@ const ok = (name, cond, detail = '') => {
     const cap = src.indexOf('const stamp = this._currentSessionStamp();');
     const gen = src.indexOf('await this._generate(ev)');
     const guard = src.indexOf('if (content && stamp === this._currentSessionStamp())');
-    const histWrite = src.indexOf('WP.pushHistory(this.getHistory()');
+    /* [v2.35.0] 交棒：历史写入点由「一次内联 WP.pushHistory(this.getHistory()…)」改写为
+       「先取 h = this.getHistory()，再按条目来源并入（真世界 mergeWorldAxisHistory /
+       LLM pushHistory）」——判据本意（守卫必须先于写入）不变，故锚点改钉写入实体调用本身。 */
+    const histWrite = src.indexOf('WP.pushHistory(h, { id: it.id');
     ok('入口捕获先于生成调用', cap > 0 && cap < gen, `cap=${cap} gen=${gen}`);
     ok('守卫先于历史写入', guard > 0 && gen < guard && guard < histWrite, `guard=${guard} hist=${histWrite}`);
     ok('异步续链也带会话比对', /setTimeout\(\(\) => \{ if \(stamp === this\._currentSessionStamp\(\)\) this\._processQueue\(\); \}, 50\);/.test(src));

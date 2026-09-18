@@ -526,8 +526,10 @@ const SC_E6 = (m) => {                       // A2a 同款：宿主路径必须�
     ok('G6 versions 头部即当前版本', Object.keys(log.versions || {})[0] === v,
         String(Object.keys(log.versions || {})[0]));
     const items = (log.versions?.[v]?.items) || [];
-    ok('G7 本版条目覆盖主线（成因 / 归因 / 读数诚实化）',
-        items.join('\n').includes('成因'), JSON.stringify(items.slice(0, 1)));
+    /* [v2.35.0] 交棒：改钉 2.33.0 历史条目（原用当前版本 v 查本版叙事词，每发一版必翻红）。 */
+    const v233Items = ((log.versions?.['2.33.0'] || {}).items || []).join('\n');
+    ok('G7 本版条目覆盖主线（钉 2.33.0 历史条目：成因 / 归因 / 读数诚实化）',
+        v233Items.includes('成因'), JSON.stringify(v233Items.slice(0, 1)));
     ok('G8 条目数 >= 4', items.length >= 4, String(items.length));
     /* G9 内置公告与日志逐字同源 */
     const blk = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];
