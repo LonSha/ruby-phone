@@ -3365,7 +3365,7 @@ export class HoneyView {
     _openWechatChatFromHoney(chatId) {
         const safeChatId = String(chatId || '').trim();
         if (!safeChatId) return;
-        this.removePhoneChromeTheme();
+        this.exitHoneySurface();
 
         window.dispatchEvent(new CustomEvent('phone:openApp', {
             detail: { appId: 'wechat' }
@@ -3504,7 +3504,7 @@ export class HoneyView {
 
         root.querySelector('#honey-back')?.addEventListener('click', () => {
             this._silenceRecommendSpeaker();
-            this.removePhoneChromeTheme();
+            this.exitHoneySurface();
             window.dispatchEvent(new CustomEvent('phone:goHome'));
         });
         root.querySelector('#honey-settings-btn')?.addEventListener('click', () => {
@@ -4517,7 +4517,7 @@ export class HoneyView {
         };
 
         root.querySelector('#honey-back')?.addEventListener('click', () => {
-            this.removePhoneChromeTheme();
+            this.exitHoneySurface();
             window.dispatchEvent(new CustomEvent('phone:goHome'));
         });
         root.querySelector('#honey-settings-btn')?.addEventListener('click', () => {
@@ -4750,7 +4750,7 @@ export class HoneyView {
         const isFollowPage = root.classList.contains('honey-page-follow');
 
         root.querySelector('#honey-back')?.addEventListener('click', () => {
-            this.removePhoneChromeTheme();
+            this.exitHoneySurface();
             window.dispatchEvent(new CustomEvent('phone:goHome'));
         });
         root.querySelector('#honey-settings-btn')?.addEventListener('click', () => {
@@ -5662,7 +5662,7 @@ export class HoneyView {
         }
 
         this._silenceRecommendSpeaker();
-        this.removePhoneChromeTheme();
+        this.exitHoneySurface();
         return false;
     }
 
@@ -6885,7 +6885,7 @@ export class HoneyView {
             this.render();
             return;
         }
-        this.removePhoneChromeTheme();
+        this.exitHoneySurface();
         window.dispatchEvent(new CustomEvent('phone:goHome'));
     }
 
@@ -9448,12 +9448,25 @@ export class HoneyView {
     }
 
     removePhoneChromeTheme() {
+        // [v2.30.0] 只做名字承诺的事：摘掉 DOM 主题 + 清瞬态资源。
+        //   此前这里顺手 dispose 了整个视图域 —— 名字是「DOM 主题」，
+        //   实际是「回收视图生命周期」，9 个调用点都借这个错位的名字获得域语义，
+        //   连 honey-app.destroy() 读起来都像在解绑主题而不是在回收域。
         this.releaseInactiveResources();
-        // [v2.29.0] 离开蜜语一并注销本视图的域：releaseInactiveResources 只清条目，
-        //   域仍留在登记表里等宿主手写 disposeChildRuntimes('honey-view') ——
-        //   而「等宿主手写」正是漏写的来源。视图复用时会由 _reenterIfNeeded 重新入表。
-        this._rt.dispose();
         const panel = document.querySelector('.phone-body-panel');
         panel?.classList.remove('phone-body-panel-honey');
+    }
+
+    /**
+     * [v2.30.0] 离开蜜语界面的完整出口：清瞬态资源 + 摘主题 + **注销本视图的域**。
+     * 为什么单独一个名字：域的回收责任必须能在调用处看出来。
+     *   本视图的域只持有一条有界轮询（tag 'honey:open-wechat'，自带 ≤20 次上限），
+     *   离开界面即应当释放 —— 因此这里是「闲置出口」而不是「销毁出口」，
+     *   视图实例复用、重新进入页面时由 _reenterIfNeeded 自动重新入表。
+     */
+    exitHoneySurface() {
+        this.removePhoneChromeTheme();
+        // v2.29.0：域自持注销（不依赖宿主侧手写 disposeChildRuntimes('honey-view')）。
+        this._rt.dispose();
     }
 }

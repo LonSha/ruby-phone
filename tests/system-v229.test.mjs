@@ -274,8 +274,10 @@ const {
     ok('版本: 不低于 2.29.0', vnum(v) >= vnum('2.29.0'), v);
     const items = (ul.versions[v] && ul.versions[v].items) || [];
     ok('条目: update-log 当前版本条目非空', items.length >= 4, String(items.length));
-    ok('条目: 覆盖域自持出口与复活重登记',
-        items.join('\n').includes('域自持出口') && items.join('\n').includes('复活即重新登记'));
+    // [v2.30.0] 交棒：同上 —— 这两个词属 v2.29 的叙事，改钉 2.29.0 历史条目。
+    const v229Items = ((ul.versions['2.29.0'] || {}).items || []).join('\n');
+    ok('条目: 覆盖域自持出口与复活重登记（钉 2.29.0 历史条目）',
+        v229Items.includes('域自持出口') && v229Items.includes('复活即重新登记'));
 }
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

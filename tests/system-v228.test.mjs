@@ -626,8 +626,11 @@ const {
     //   条目数是叙事体量，不是不变量；把它当不变量会让每次版本更新都翻红。
     ok('版本: update-log 当前版本条目非空（>= 6 条说明）',
         Boolean(ul.versions[v]) && ul.versions[v].items.length >= 6, JSON.stringify({ n: ul.versions[v]?.items?.length }));
-    ok('版本: 条目覆盖实例域与六处回收点',
-        ul.versions[v].items.join('\n').includes('实例级资源域'));
+    // [v2.30.0] 交棒：原断言用「当前版本 v」去查 v2.28 特有的关键词，
+    //   于是每发一版、新条目不含旧词就必然翻红 —— 判据绑了可变形状。
+    //   改为钉住 2.28.0 这条历史条目：历史叙事不会变，才是真正的不变量。
+    ok('版本: 条目覆盖实例域与六处回收点（钉 2.28.0 历史条目）',
+        ((ul.versions['2.28.0'] || {}).items || []).join('\n').includes('实例级资源域'));
 }
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

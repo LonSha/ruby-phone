@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.30.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【过度回收：孤儿域的镜像面】v2.29 把出口交给域自己，解决的是「域还活着、宿主已经忘了它」。本版盯住同一枚硬币的另一面 ——「域已被回收、实例却还在用」。宿主一条 disposeChildRuntimes('') 就能做到这件事：它不看实例是否还活着，把仍有引用的实例的域一并回收；实例随后再登记资源时靠 v2.29 为「视图复用」引入的 _reenterIfNeeded 静默复活，于是同一个实例里「已被回收的旧资源」与「重新登记的新资源」并存，而旧资源再无回收出口。实测 index.js 换会话路径正是这条写法，同一时刻 musicApp / gamesApp / worldpulseApp 都还活着（紧接着就是它们的 onChatChanged 重绑）。",
+        "【把过早回收变成可观测】新增 _reenteredAfterDispose / overDisposeStats()，以及全域名快照 childRuntimeOverDisposed()：域在 dispose 之后又被登记（= 复活）时计数，这正是不看实例死活就直接回收的直接证据。反例对照是「域随实例生命周期走」（视图销毁时 dispose）——这种域该值恒为 0。window.VirtualPhone.runtimeStats() 追加 overDisposed 字段，运行期即可回答「有几个域被过度回收过」。",
+        "【换会话 ≠ 实例销毁】换会话是 **会话作用域** 操作：实测此刻 calendarApp / musicApp / weiboApp 都保留实例并靠 clearCache + onChatChanged 重绑（日历要留住节假日与日程、音乐要继续播、微博实例跨会话复用），因此不该回收它们的域。移除换会话路径的 disposeChildRuntimes('') 全域清零，实例域交由各自 onChatChanged() 处置；honeyApp 也不再重复按域名清理（deactivate → exitHoneySurface → _rt.dispose() 已是实例级出口），并把 deactivate 与 clearCache 拆成独立 try，一处抛错不再连带让域回收静默不发生。",
+        "【丢弃实例的路径必须三条对齐】三条「丢弃/复位全部 App 实例」的路径（换会话 / 清当前数据 / 清全部数据）此前各写各的，实测三类错位：① 换会话会回收**仍活着**实例的域（过度回收，见上条）；② 清当前数据丢弃 honeyApp 却从不回收其实例域（回收不足）；③ 三条路径对专辑实例口径不一 —— albumApp.destroy() 解绑的是它在构造期注册的 5 个全局监听器（SWIPE_BACK / ALBUM_IMAGE_DELETED / UPDATE_WALLPAPER / PANEL_VISIBILITY / visibilitychange），清当前数据做了、清全部数据与换会话都没做。本版把三处补齐；清全部数据另补 honey 的实例级出口（停播放/动画/TTS），清当前数据另补 imageManager 丢弃（与清全部数据对齐，属数据残留而非泄漏）。",
+        "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前同时做三件事：清瞬态资源 + 摘掉 DOM 主题类 + **注销整个视图域**。名字只描述第三件，而 9 个调用点（6 处导航出口 + honey-app 的 swipe-back/destroy/deactivate）全都借这个「DOM 主题」名字获得域生命周期语义 —— 连 honey-app.destroy() 读起来都像在解绑主题而不是在回收域。这是 v2.29「出口却写在别人手里」的下一层形态：出口在，但没人能从名字上看出它在。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（离开蜜语界面的完整出口，含域注销），调用点全部改调后者。",
+        "【不做「统一化」的理由】同一批实例里，wechat-app **不该**被强行加 destroy：它唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭。对没有销毁面的实例添加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
+        "【测试】新增 tests/system-v230.test.mjs（内核遥测含反例对照 / 宿主三条路径对齐 / 命名即文档 / 发布卫生），并把 tests/system-v225.test.mjs 的「恰好 4 处 destroy 接线」棘轮交棒为「不少于 4 处」+ 两条新增站点的显式断言（防再次漏路径）。"
+      ]
+    },
     "2.29.0": {
       "date": "2026-09-18",
       "items": [
@@ -501,5 +513,5 @@
       ]
     }
   },
-  "latest": "2.29.0"
+  "latest": "2.30.0"
 }

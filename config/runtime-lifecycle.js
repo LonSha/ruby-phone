@@ -51,6 +51,12 @@ export class ManagedRuntime {
         //   disposeChildRuntimes('honey-view') 这类字面量，漏写即孤儿域
         //   （实测 sudoku-view / worldpulse-app / floating-entry 三个域零出口）。
         this._childLog = null;
+        // [v2.30.0] 过度回收遥测：域被回收、实例却还活着。
+        //   复活（dispose 后又登记资源）就是这件事的直接证据 —— v2.29 只把复活当
+        //   正常路径处理（_reenterIfNeeded 静默重新入表），没有任何地方数它。
+        //   后果是「谁被过度回收了、回收了几次」在门禁与运行期都不可见。
+        this._reenteredAfterDispose = 0;
+        this._overDisposed = false;
         /** @type {Map<string, {kind:string, tag:string, handle:*}>} */
         this._entries = new Map();
         this._disposed = false;
@@ -70,6 +76,10 @@ export class ManagedRuntime {
         if (this._childLog && this._disposed && !this._childLog.has(this)) {
             this._childLog.add(this);
             this._disposed = false;
+            // [v2.30.0] 记账：这个域是被 dispose 过、又被重新登记的。
+            //   即「它的回收发生得比它的生命周期结束更早」——宿主侧过早回收的证据。
+            this._reenteredAfterDispose += 1;
+            this._overDisposed = true;
         }
     }
     /**
@@ -212,6 +222,15 @@ export class ManagedRuntime {
     /** 是否曾被 dispose 过（供宿主判断是否需要重建） */
     get disposed() { return this._disposed; }
 
+    /**
+     * [v2.30.0] 过度回收遥测：本域是否曾被回收过而后又复活，以及复活次数。
+     * 语义：reentered > 0 ⇒ 至少有一次「域被回收时实例还活着」。
+     * 反例对照：域的资源随实例生命周期走（视图销毁时 dispose）时该值恒为 0。
+     */
+    overDisposeStats() {
+        return { name: this.name, reentered: this._reenteredAfterDispose, overDisposed: this._overDisposed };
+    }
+
     /** 分类计数：{ interval, timeout, observer, listener, total } */
     stats() {
         const out = { interval: 0, timeout: 0, observer: 0, listener: 0, total: this._entries.size };
@@ -311,6 +330,21 @@ export function childRuntimeStats(name) {
     return c;
 }
 /**
+ * [v2.30.0] 过度回收快照：回答「现在有几个域处于『被回收过又复活』状态」。
+ *   v2.29 解决了孤儿域（域还活着、宿主已忘），本函数观测它的镜像形态：
+ *   域已被回收、实例却还在用（宿主回收过早）。二者都不该发生，且都需要可见。
+ * @returns {{total:number, overDisposed:number, reenters:number, names:Object}}
+ */
+export function childRuntimeOverDisposed() {
+    const names = {};
+    let over = 0, reenters = 0;
+    for (const rt of _childRuntimes) {
+        const n = rt._reenteredAfterDispose || 0;
+        if (n > 0) { over += 1; reenters += n; names[rt.name] = (names[rt.name] || 0) + n; }
+    }
+    return { total: _childRuntimes.size, overDisposed: over, reenters, names };
+}
+/**
  * [v2.28.0] 按名（前缀）回收实例级资源域。
  * 场景：宿主把实例置 null（清数据/换会话/换壳）而不走实例自身的 destroy 时，
  *   域内的定时器/监听器会被全局域表引用钉住成为孤儿。此处按域名一次性收净。
@@ -318,6 +352,10 @@ export function childRuntimeStats(name) {
  *   本函数保留给两类场景：① 宿主手上已无实例引用（拿不到 rt），只剩域名；
  *   ② 诊断/测试要验「清空后域表是否归零」。它**不再是**唯一回收出口 ——
  *   把唯一出口放在这里正是 v2.28 的缺陷（漏写一个域名就漏一个域）。
+ * [v2.30.0] 空串（全域清零）的语义风险必须显式登记：它不看实例是否还活着，
+ *   会把仍有引用的实例的域一并回收 —— 此后该实例再登记资源即触发复活，
+ *   旧资源失去归属（childRuntimeOverDisposed() 会数到）。宿主应优先按名回收，
+ *   或调用实例自身的 destroy/deactivate（出口自持）。
  * @param {string} namePrefix 域名前缀（如 'music-view'）；空串 = 回收全部实例域
  * @returns {number} 被回收的域数
  */

@@ -83,7 +83,7 @@ export class HoneyApp {
         if (backBtn) {
             backBtn.click();
         } else {
-            this.honeyView?.removePhoneChromeTheme?.();
+            this.honeyView?.exitHoneySurface?.();
             window.dispatchEvent(new CustomEvent('phone:goHome'));
         }
 
@@ -96,11 +96,11 @@ export class HoneyApp {
     }
 
     destroy() {
-        this.honeyView?.removePhoneChromeTheme?.();
+        this.honeyView?.exitHoneySurface?.();
     }
 
     deactivate() {
         this.honeyView?.releaseInactiveResources?.();
-        this.honeyView?.removePhoneChromeTheme?.();
+        this.honeyView?.exitHoneySurface?.();
     }
 }

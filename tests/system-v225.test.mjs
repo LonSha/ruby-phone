@@ -149,8 +149,17 @@ const { WeiboApp } = await import('../apps/weibo/weibo-app.js');
     ok('index.js: clearAllData 站点 weibo clearCache→destroy→null 顺序',
         /weiboApp\.clearCache\(\);\s*\n\s*window\.VirtualPhone\.weiboApp\.destroy\?\.\(\);[^\n]*\n\s*(?:\/\/[^\n]*\n\s*)?try \{ disposeChildRuntimes\('weibo-app'\); \} catch \(_e\) \{ \/\* 忽略 \*\/ \}\s*\n\s*window\.VirtualPhone\.weiboApp = null;/.test(isrc),
         '[v2.28.0] destroy 与置 null 之间新增实例域回收（顺序不变量保持）');
+    // [v2.30.0] 交棒：条数从「恰好 4」改为「不少于 4」。
+    //   写死等值是形状而非不变量 —— v2.30 把同一模式推广到原本漏掉的两条路径
+    //   （换会话、清全部数据都补了 albumApp 的 destroy→null），条数增长应被允许；
+    //   真正要守的是「接线不许变少」。新增的接线点由下面两条显式断言钉住。
     const n = (isrc.match(/(albumApp|calendarApp|weiboApp)\??\.destroy\?\.\(\)/g) || []).length;
-    ok('index.js: 三 App destroy 接线共 4 处', n === 4, String(n));
+    ok('index.js: 三 App destroy 接线不少于 4 处', n >= 4, String(n));
+    // [v2.30.0] 新增接线点：换会话站点（P1）与清全部数据站点（P3）的 album destroy→null
+    ok('index.js: 换会话站点 album destroy→null 相邻（v2.30 补齐）',
+        /window\.VirtualPhone\.albumApp\.destroy\?\.\(\); \} catch \(_e\) \{ \/\* 忽略 \*\/ \}\s*\n\s*window\.VirtualPhone\.albumApp = null;/.test(isrc));
+    const clearAllCount = (isrc.match(/window\.VirtualPhone\.albumApp\?\.destroy\?\.\(\);\s*\n\s*window\.VirtualPhone\.albumApp = null;/g) || []).length;
+    ok('index.js: album destroy→null 相邻至少 2 处（clearCurrentData + clearAllData）', clearAllCount >= 2, String(clearAllCount));
 }
 
 // ========== 6. 非回归：既有安全范式不被本轮改动破坏 ==========

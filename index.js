@@ -31,7 +31,7 @@ import { NotificationLog } from './config/system-notifications.js';
 import { isDndOn as isDndOnState } from './config/system-controls.js';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
-import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats } from './config/runtime-lifecycle.js';
+import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
 import { PHONE_EVENTS } from './config/phone-events.js';
 
@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.29.0';
+const ST_PHONE_VERSION = '2.30.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -2410,9 +2410,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             //   children 只能看到「当前活着的域」，看不到「同名域有几个」；
             //   域泄漏的可观测形态恰恰是后者（同名的空壳域越堆越多）。
             snap.domainCounts = childRuntimeStats('');
+            // [v2.30.0] 过度回收：回答「有几个域处于『被回收过又复活』状态」——
+            //   v2.29 的孤儿域是「域活着、宿主忘了它」，这是它的镜像形态：
+            //   「域被回收了、实例还在用」。两者都不该发生，且都需要可见。
+            snap.overDisposed = childRuntimeOverDisposed();
             return snap;
         }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {} }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} } }; }
     }
 
     async function getOrCreateMofoData() {
@@ -8916,17 +8920,34 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (window.VirtualPhone.honeyApp) {
                 try {
                     window.VirtualPhone.honeyApp.honeyData?.clearCache?.();
+                } catch (e) {
+                    console.warn('[ST-Phone] 切换会话清理 Honey 缓存失败:', e);
+                }
+                // [v2.30.0] 域回收改由**实例自己**负责：deactivate → releaseInactiveResources
+                //   → exitHoneySurface → _rt.dispose()（v2.29 起域自持出口）。
+                //   与 clearCache 拆成独立 try：一处抛错不再掩掉另一处，
+                //   否则缓存清理失败会连带让域回收静默不发生。
+                try {
                     window.VirtualPhone.honeyApp.deactivate?.();
                 } catch (e) {
-                    console.warn('[ST-Phone] 切换会话清理 Honey 实例失败:', e);
+                    console.warn('[ST-Phone] 切换会话回收 Honey 实例资源失败:', e);
                 }
-                // [v2.28.0] 实例被丢弃时同步回收其实例级资源域（否则域表钉住其定时器成为孤儿）
-                try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                 window.VirtualPhone.honeyApp = null;
-                // [v2.29.0] 换会话后**全域清零**：不再逐名列清单（清单漏一个就漏一个域），
-                //   本轮剩余实例域（sudoku-view / worldpulse-app / floating-entry 等）
-                //   在旧写法里零出口；视图销毁路径已自持回收，此处是宿主侧的兜底口径。
-                try { disposeChildRuntimes(''); } catch (_e) { /* 忽略 */ }
+                // [v2.30.0] 移除原本的 disposeChildRuntimes('')「全域清零」。
+                //   换会话是**会话作用域**操作，不是实例销毁：实测此刻 musicApp /
+                //   gamesApp / worldpulseApp 都还活着（紧接着就有它们的 onChatChanged 调用），
+                //   全域清零会把它们的域一并回收 —— 之后它们登记新资源时靠
+                //   _reenterIfNeeded 复活，同一个实例里「已被回收的旧资源」与
+                //   「重新登记的新资源」并存，而旧资源再无回收出口。
+                //   这正是新增的 childRuntimeOverDisposed() 所度量的形态。
+                //   实例域的正确处置是各自 onChatChanged() 重绑（见下方 music/games/worldpulse）。
+            }
+            // 🖼️ [v2.30.0] 专辑：解绑构造期注册的 5 个全局监听器后再丢弃。
+            //   P2 清当前数据与 P3 清全部数据都做了这件事，唯独换会话漏掉 ——
+            //   而换会话后专辑实例持有的正是旧会话的壁纸/图片数据。
+            if (window.VirtualPhone.albumApp) {
+                try { window.VirtualPhone.albumApp.destroy?.(); } catch (_e) { /* 忽略 */ }
+                window.VirtualPhone.albumApp = null;
             }
             // 🪄 清空魔坊缓存
             if (window.VirtualPhone.mofoApp) {
@@ -9994,6 +10015,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
+                    // [v2.30.0] 与 P3 清全部数据对齐：清掉当前数据后不应继续持有
+                    //   已删帖子的图片对象（纯缓存，无监听无定时器，是数据残留而非泄漏）。
+                    window.VirtualPhone.imageManager = null;
                     if (window.VirtualPhone.diaryApp) window.VirtualPhone.diaryApp.clearCache();
                     if (window.VirtualPhone.calendarApp) window.VirtualPhone.calendarApp.clearCache();
                     if (window.VirtualPhone.phoneApp) window.VirtualPhone.phoneApp.clearCache();
@@ -10021,6 +10045,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         } catch (e) {
                             console.warn('[ST-Phone] 清理 Honey 缓存失败:', e);
                         }
+                        // [v2.30.0] 实例级出口：deactivate 会走 exitHoneySurface 回收视图域。
+                        //   此前本路径直接置 null，域没有任何出口 —— 而本路径与导航无关，
+                        //   拿不到 exitHoneySurface 的顺带回收。
+                        try { window.VirtualPhone.honeyApp.deactivate?.(); } catch (_e) { /* 忽略 */ }
+                        // 宿主兜底：实例引用即将消失，若域仍未注销则按域名收净。
+                        try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.honeyApp = null;
                     }
                 }
@@ -10082,6 +10112,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
                     window.VirtualPhone.imageManager = null;
+                    // [v2.30.0] 专辑：与 P2 清当前数据对齐。此前 P3 丢弃了其余全部实例，
+                    //   独独漏掉 albumApp —— 它的 5 个构造期全局监听器没人解绑，
+                    //   实例重建即累积（正是 v2.25 修过的形态，漏了一条路径）。
+                    window.VirtualPhone.albumApp?.destroy?.();
+                    window.VirtualPhone.albumApp = null;
                     if (window.VirtualPhone.diaryApp) window.VirtualPhone.diaryApp.clearCache();
                     if (window.VirtualPhone.calendarApp) {
                         window.VirtualPhone.calendarApp.clearCache();
@@ -10116,7 +10151,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         } catch (e) {
                             console.warn('[ST-Phone] 清理 Honey 缓存失败:', e);
                         }
-                        // [v2.28.0] 实例级资源域同步回收
+                        // [v2.30.0] 与 P2 清当前数据对齐：先走实例级出口（停播放/动画/TTS
+                        //   并回收视图域），再按域名兜底 —— 清空全部数据时残留播放比残留缓存更显眼。
+                        try { window.VirtualPhone.honeyApp.deactivate?.(); } catch (_e) { /* 忽略 */ }
+                        // [v2.28.0] 实例级资源域同步回收（宿主兜底）
                         try { disposeChildRuntimes('honey-view'); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.honeyApp = null;
                     }
