@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.37.0';
+const ST_PHONE_VERSION = '2.38.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,11 +77,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-19",
     items: [
-        "【可观测面的第一行在撒谎：v2.36.0 的桥报告自相矛盾】上一版刚建好「桥通不通可见」的 `bridgeReport()`，实测它对着一个**开着闸但从没发布过快照**的拉取型桥，第一行却写着「WorldAxis 桥就绪」，而同一份报告里的实际读取结果是 `readWorldAxisSnapshot().ok === false`——两个读数对不上。一个专门解决不可观测的版本，自己的读数先坏了——这是「读数写在恒真判据上」与「可观测面自相矛盾」两种老形态的叠加，第二次现场复现（SELF-CONTRADICTION = true）。",
-        "【病根：拿「snapshot 是不是对象」量「对方有没有物」，对拉取型桥必然恒真】两个桥同规格但不同**发布方式**：lonsha 是**推送型**（`snapshot` 是对象，没有就是 null），这么判是对的；WorldAxis 世界桥是**拉取型**（`snapshot` 是**函数**，外部读取入口，属性永远存在），于是 `hasSnapshot` 恒为 true、`reason` 恒为 'ready'，与它自己的发布记账 `stat().published / stat().invalidated` 完全脱钩。修复新增桥形态适配层 `readPublished()`：推送型看对象、拉取型问对方自己的记账（已作废优先于已发布）、都没有自述 ⇒ kind='unknown'、has=false——**不硬猜，少报胜过多报**。",
-        "【修复二：把「对方自述」与「这一次真拉到的」分开报】`bridgeReport()` 新增 `worldaxis.read / lonsha.read`（这一次真去拉的结果 {ok, reason}）与顶层 `consistent`（来源态说 ready 就必须真读得到，同真同假才算自洽）；自述「已发布」而实拉为 null（竞态/快照被作废）时，`summary` 里如实拼上「（实际拉取失败：…）」——用户看到的第一行不再是假的好消息。`worldaxis.stat` 白名单补上 `published / invalidated` 两项，区分「从未发布」与「已作废待重建」。",
-        "【修复三：兜底分支形状对齐 + 消费侧接线】`bridgeReport()` 的 catch 兜底分支补齐 `read / hasSnapshot`（降级返回与正常分支同形，调用方不必判 undefined，且降级不得自称自洽：consistent=false）；世界脉搏的桥卡片（真世界显示处）改读报告条目——把「来源态就绪但实际拉取失败」也算读不到、单独渲染一条「来源态与实际读取不一致：桥自述可用、这一次却拉不到——按实际读取失败处置」，并显示 summary。",
-        "【测试与自证】新增 `tests/system-v237.test.mjs`（A 形态适配四情形 + 报告自洽 / B 兜底形状 / C 消费侧接线 / D 负控制 3 组破坏 + 工具自证 + 判据纯度 / E 发布卫生），共 50 条。两处测试自伤当场抓出修正：A6 期望值首版写反（never/invalidated 的自述本就是 no-snapshot，与实拉同假，**恰恰是自洽**）；A11 用 IIFE 构造破坏参数，异常在进被测代码**之前**就抛——改用 getter 让炸点落在被测路径上。负向自证：D2–D7 三组真源码破坏（拆「作废优先」⇒已作废被报成有物；拆「已发布即就绪」⇒已发布被报成无物；拆自洽性出口⇒矛盾被吞；拆读取记录⇒拿不到实拉结果）均以独立装载副本翻红，配原版对照与「不存在的锚点必须抛」。回归：全量 253+ tests 全绿。"
+        "小剧场世界书随机接线：rollWorldBookEntries 纯函数终于被消费，新增 rollWorldBook() 方法从 worldbookManager 取条目并写入 draft.rollResult",
+        "新增清除按钮：clearRollResult() 一键清空已抽取的世界书结果",
+        "视图层新增 th-roll 面板：按钮 / 状态文字 / 清除 / 预览，与表单融为一体",
+        "theater.css 追加 th-roll 样式：圆角卡片 / 状态色 / 预览滚动区",
+        "buildPrompt 已预留的 rollResult 读取入口现在真正有数据可读了"
     ]
 };
 

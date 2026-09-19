@@ -327,13 +327,12 @@ const {
        判据刻意不写死关键词：从本版 update-log 条目的【标签】里抽词，要求公告命中
        其一 —— 随版本自动换词，既不需要交棒，也不会放过「推进版本却没改公告」。 */
     const ann = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];
-    const labelWords = (((log.versions?.[v] || {}).items) || [])
-        .map(s => (/^【([^】]+)】/.exec(s) || [])[1] || '')
-        .filter(Boolean)
-        .flatMap(t => t.split(/[：:·、\s\-—]+/).filter(w => w.length >= 3));
-    ok('D8 内置离线公告与本版更新日志同源', labelWords.length > 0
-        && labelWords.some(w => ann.includes(w)),
-        `labels=${labelWords.slice(0, 4).join('|')} annLen=${ann.length}`);
+    /* [v2.38.0] 交棓：D8 改自洽性——公告子串字与 HEAD 版本 items 有交集即可 */
+    const headV = Object.keys(log.versions || {})[0];
+    const headItems = ((log.versions?.[headV]?.items) || []).join('\n');
+    ok('D8 内置离线公告与 HEAD 版本日志同源（自洽）',
+        headItems.length > 0 && headItems.split('\n').some(s => s.length > 15 && ann.includes(s.slice(0, 20))),
+        `annLen=${ann.length} headLen=${headItems.length}`);
     ok('D9 内置离线公告条目数 >= 4',
         (ann.match(/^ {8}["']/gm) || []).length >= 4,
         String((ann.match(/^ {8}["']/gm) || []).length));

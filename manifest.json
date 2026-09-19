@@ -3,7 +3,7 @@
   "name": "ruby-phone",
   "description": "三方集大成独立手机插件：融合 yuzuki 物理手势双轨通信底座 + 瑟瑟小手机(小红书/贴吧/风闻) + 色色灵感状态栏(458玩法按需注入/666全量成就簿/实时HUD)。彻底摆脱外部数据库依赖，全原生即装即用，并内置零依赖本地记忆系统（采集/巩固/衰减/注入）。",
   "author": "yuzuki × Ruby宇宙 × LonSha",
-  "version": "2.37.0",
+  "version": "2.38.0",
   "loading_order": 200,
   "requires": [],
   "optional": [],

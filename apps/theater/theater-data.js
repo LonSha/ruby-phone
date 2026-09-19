@@ -139,6 +139,47 @@ export class TheaterData {
     this.draft.content = isContinue ? appendTheaterContinuation(this.draft.content, next) : next;
     this._save();
   }
+
+  /**
+   * [v2.38.0] 世界书概率抽取：从已选（或全部可用）世界书中按概率随机抽取条目，
+   *   写入 draft.rollResult（buildPrompt 已预留读取此字段的入口）。
+   *   调用同文件 rollWorldBookEntries 纯函数：按 probability 过滤（默认 100%）、
+   *   解析 {{random:...}} 宏、取前 8 条、每条截断 1200 字。
+   *   返回 { ok, reason?, count? } —— 永不抛。
+   */
+  async rollWorldBook() {
+    const manager = (typeof window !== 'undefined') ? window.VirtualPhone?.worldbookManager : null;
+    if (!manager) return { ok: false, reason: 'no-manager' };
+    const appKey = 'theater';
+    if (!manager.getEnabled(appKey)) return { ok: false, reason: 'disabled' };
+    const sel = manager.getSelectionState(appKey);
+    let sources = [];
+    try { sources = await manager.listAvailableWorldbooks({ includeEntries: true }); } catch (_e) { return { ok: false, reason: 'list-failed' }; }
+    const allEntries = [];
+    for (const src of (sources || [])) {
+      const state = manager.getSourceEntrySelectionState(appKey, src);
+      if (state.sourceSelected && state.selectedEntries.length > 0) {
+        for (const e of state.selectedEntries) {
+          if (e && e.content) allEntries.push({ content: e.content, comment: e.comment || src.name || '世界书', probability: 100 });
+        }
+      } else if (!sel.initialized || sel.ids.length === 0) {
+        for (const e of (src.entries || [])) {
+          if (e && e.content) allEntries.push({ content: e.content, comment: e.comment || src.name || '世界书', probability: 100 });
+        }
+      }
+    }
+    if (!allEntries.length) return { ok: false, reason: 'no-entries' };
+    const rolled = rollWorldBookEntries(allEntries);
+    if (!rolled.length) return { ok: false, reason: 'rolled-empty' };
+    this.draft.rollResult = rolled.join('\n\n');
+    this._save();
+    return { ok: true, count: rolled.length };
+  }
+
+  clearRollResult() {
+    this.draft.rollResult = '';
+    this._save();
+  }
 }
 
 export default TheaterData;

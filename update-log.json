@@ -1,606 +1,615 @@
 {
-    "versions": {
-        "2.37.0": {
-            "date": "2026-09-19",
-            "items": [
-                "【可观测面的第一行在撒谎：v2.36.0 的桥报告自相矛盾】上一版刚建好「桥通不通可见」的 `bridgeReport()`，实测它对着一个**开着闸但从没发布过快照**的拉取型桥，第一行却写着「WorldAxis 桥就绪」，而同一份报告里的实际读取结果是 `readWorldAxisSnapshot().ok === false`——两个读数对不上。一个专门解决不可观测的版本，自己的读数先坏了——这是「读数写在恒真判据上」与「可观测面自相矛盾」两种老形态的叠加，第二次现场复现（SELF-CONTRADICTION = true）。",
-                "【病根：拿「snapshot 是不是对象」量「对方有没有物」，对拉取型桥必然恒真】两个桥同规格但不同**发布方式**：lonsha 是**推送型**（`snapshot` 是对象，没有就是 null），这么判是对的；WorldAxis 世界桥是**拉取型**（`snapshot` 是**函数**，外部读取入口，属性永远存在），于是 `hasSnapshot` 恒为 true、`reason` 恒为 'ready'，与它自己的发布记账 `stat().published / stat().invalidated` 完全脱钩。修复新增桥形态适配层 `readPublished()`：推送型看对象、拉取型问对方自己的记账（已作废优先于已发布）、都没有自述 ⇒ kind='unknown'、has=false——**不硬猜，少报胜过多报**。",
-                "【修复二：把「对方自述」与「这一次真拉到的」分开报】`bridgeReport()` 新增 `worldaxis.read / lonsha.read`（这一次真去拉的结果 {ok, reason}）与顶层 `consistent`（来源态说 ready 就必须真读得到，同真同假才算自洽）；自述「已发布」而实拉为 null（竞态/快照被作废）时，`summary` 里如实拼上「（实际拉取失败：…）」——用户看到的第一行不再是假的好消息。`worldaxis.stat` 白名单补上 `published / invalidated` 两项，区分「从未发布」与「已作废待重建」。",
-                "【修复三：兜底分支形状对齐 + 消费侧接线】`bridgeReport()` 的 catch 兜底分支补齐 `read / hasSnapshot`（降级返回与正常分支同形，调用方不必判 undefined，且降级不得自称自洽：consistent=false）；世界脉搏的桥卡片（真世界显示处）改读报告条目——把「来源态就绪但实际拉取失败」也算读不到、单独渲染一条「来源态与实际读取不一致：桥自述可用、这一次却拉不到——按实际读取失败处置」，并显示 summary。",
-                "【测试与自证】新增 `tests/system-v237.test.mjs`（A 形态适配四情形 + 报告自洽 / B 兜底形状 / C 消费侧接线 / D 负控制 3 组破坏 + 工具自证 + 判据纯度 / E 发布卫生），共 50 条。两处测试自伤当场抓出修正：A6 期望值首版写反（never/invalidated 的自述本就是 no-snapshot，与实拉同假，**恰恰是自洽**）；A11 用 IIFE 构造破坏参数，异常在进被测代码**之前**就抛——改用 getter 让炸点落在被测路径上。负向自证：D2–D7 三组真源码破坏（拆「作废优先」⇒已作废被报成有物；拆「已发布即就绪」⇒已发布被报成无物；拆自洽性出口⇒矛盾被吞；拆读取记录⇒拿不到实拉结果）均以独立装载副本翻红，配原版对照与「不存在的锚点必须抛」。回归：全量 253+ tests 全绿。"
-            ]
-        },
-        "2.36.0": {
-            "date": "2026-09-19",
-            "items": [
-                "【同一件事在三个插件里各说一遍：桥通不通，手机上完全看不见】这套三插件体系里有两个**同规格的只读世界桥**（`window.worldaxis_bridge_v1` 世界状态快照 / `window.lonsha_memory_bridge_v1` 记忆召回账本）。v2.35.0 已经把「消费真世界」接上了：世界脉搏改成真世界优先、TimeManager 把世界钟接成权威源之一。但**「桥是不是通着」这件事在手机上仍然完全不可观测**——两个桥只在**各自被用到的那一刻**才被读一次（生成平行事件时、取剧情时间时），那一刻是业务路径，读不到就静默退回旧路，用户什么都看不到。于是用户能看到的只有结果（「世界脉搏又是编的」），看不到原因（桥没装？桥装了没开？对方引擎没就绪？两个钟对不上？）。",
-                "【修前的真实现场：v2.35.0 留下的可观测出口是**零消费**】`config/world-bridge.js` 里的 `worldBridgeAvailability()` 只被 `WorldpulseApp.bridgeStatus()` 调用，而 `bridgeStatus()` 全库**无人调用**（grep 实测）。两条出口都在，等于一个观测面搭好了却没接任何仪表——这正是本项目反复治理的「声明了却零消费」形态，且它发生在一个**专门用来解决不可观测**的版本里。",
-                "【修复一：可观测面收敛为 `bridgeReport()`】`config/world-bridge.js` 新增一份纯读报告，一次覆盖四件事：① 两个桥的**在场与闸门**（`mounted` / `enabled`，未装与未开分开）；② 我方读取归因（WorldAxis 侧的 `reason` 五态：not-mounted / disabled / refused / no-snapshot / ready）；③ **对方的自述**（新增 `lonshaSource()`，读 lonsha v3.174 建立的 `sourceState` 状态机 idle / ready / engine-absent / engine-empty / thrown，且 `lastError` 不吞——那台状态机本就是为了让消费者可归因而做的）；④ **两个钟的对账**（新增 `diffClocks()`）。另有 `summary` 一句话总述供 UI 直接显示。",
-                "【修复二：对账只报不判，且三种「不可比」必须分开】`diffClocks()` 六判定：same / world-ahead / world-behind / **world-uncomparable** / **lonsha-empty** / unparsable。**「本机没有公历钟」不是故障**（本机时间由正文/世界书/消息戳猜，本就不承诺公历），故单独成 `world-uncomparable`——绝不硬比出一个假的「不一致」；**「对方还没记时间」与「记了但读不出」处置相反**（前者等它，后者是两套历法），故 `lonsha-empty` 与 `unparsable` 不得同形。对账只报差异，不改任何一方。",
-                "【修复三：可观测面真被消费（消除零消费）】`apps/worldpulse/worldpulse-view.js` 新增「跨插件世界桥」卡片，直接读 `app.bridgeStatus()`（其内部调 `bridgeReport()`），把两个桥的状态与对账摆给用户；`bridgeStatus()` 相应带上 `report` / `summary`。`apps/timeweaver/timeweaver-collector.js` 的桥读取**改走 `config/world-bridge.js` 单一真源**（此前它自写了一份 `window.lonsha_memory_bridge_v1` 读取——同一份桥读取逻辑有两份实现必然漂移，且第二份不知道对方的 `sourceState` 可归因），本文件自此只负责「取 recallAudit 这一块业务数据」。",
-                "【测试与自证】新增 `tests/system-v236.test.mjs`（A 桥可观测面在场与归因含「未装≠未开」与只读契约 / B 两个钟对账六判定含「本机无公历钟不硬比」/ C 消费侧接线含「collector 不得自己摸桥全局」/ D 负控制 4 项：真源码破坏 → 独立装载副本 → 同款判据翻红，配原版对照 / E 发布卫生）。两处装置自纠：① D2 的锚点首版打在 `readWorldAxisSnapshot` 的闸门上，而判据读的是 `bridgeReport().worldaxis.reason`（来源是 `bridgeSource` 的归因链）——**锚点与判据不在同一条路上，负控制恒真**，锚点已移回判据真正经过的出口；② 三处破坏首版用「整行删掉」，导致后面的 `else if` 悬空（破坏副本装载即 SyntaxError）——破坏必须**保留语句结构**。回归：全量 253 tests 全绿。"
-            ]
-        },
-        "2.35.0": {
-            "date": "2026-09-19",
-            "items": [
-                "【两个世界对不上：同一场剧情里坐着两个「现在」】这套三插件体系里有两个**同规格的只读世界桥**：`window.lonsha_memory_bridge_v1`（记忆插件的剧情记忆/召回账本）与 `window.worldaxis_bridge_v1`（WorldAxis 的世界状态：世界钟/权威事实/暗流/舆情）。而 RubyPhone 侧实测**只消费了前者**——`apps/timeweaver/timeweaver-collector.js` 读 lonsha 桥的 `snapshot.recallAudit`，全库 grep `WorldAxis` / `worldaxis` 在产品代码里**零命中**。后果是真现场，不是假设。",
-                "【修前的真实现场：世界脉搏全由 LLM 现编，与真世界毫无关联】`apps/worldpulse` 自己队列化楼层变化、按阈值触发、调 LLM **现编**平行事件——它报的那个「世界」与 WorldAxis 已经推演出的真世界状态毫无关联，等于**凭空发明一个平行世界**；`config/time-manager.js` 则从正文状态栏标签、世界书「剧情时间起点」、手机消息时间戳里**猜**当前时间、取最晚者，而 WorldAxis 的世界钟（决策时间，进存档、参与判定）就躺在快照里**没人读**。同一场剧情于是有两个「现在」，且正文与手机可能互相矛盾。",
-                "【修复一：两个桥收敛成单一真源】新增 `config/world-bridge.js`（只读消费面）：导出两个桥的 id 常量（`WORLDAXIS_BRIDGE_ID` / `LONSHA_BRIDGE_ID`，与上游逐字一致——改一处即两端同时失联，故集中声明）、`getBridge` / `bridgeSource` / `readWorldAxisSnapshot` / `readWorldClock` / `readLonshaSnapshot` / `worldBridgeAvailability`。三条纪律：**只读**（绝不写世界状态，两桥本就不给写路径）、**不抛**（桥未装 / 未启用 / 旧版无字段 / 快照畸形一律降级）、**不猜**（拿不到就如实报不可用，绝不编数据顶替）。",
-                "【修复二：降级必须可归因——「桥没装」与「桥没开」不得同形】本项目反复治理的缺陷形态就是**静默降级**：拿不到数据与「这个世界是空的」长得一模一样，调用方只能一律当「没数据」，于是「未安装」「装了但没启用」「快照畸形」三种完全不同的处境在界面上**同形**。本版把三态显式分开：`reason` ∈ `not-mounted` / `disabled` / `refused` / `no-snapshot` / `pull-failed`。WorldAxis v2.16 的桥默认**休眠**，故「未启用」单独成态——用户能据此知道该去开哪个开关，而不是以为功能坏了。宿主抛异常也绝不外抛给调用方。",
-                "【修复三：世界脉搏改为真世界优先】`apps/worldpulse/worldpulse-engine.js` 新增真世界投影纯函数面：`projectWorldAxis`（把 `facts` / `currents` / `pulse` / `opinion.canon` / `opinion.forum` / `opinion.sandbox` 投成历史条目形态，条目 id 带 `wa:` 前缀——与 LLM 生成的 `wp…` 天然不撞，按 `existingIds` 去重，`counts` 如实记数、`dropped` 报截断量）、`worldAxisPromptBlock`（压成「本世界已发生的真实动态（不得与之矛盾、不得改写其事实）」一致性约束块）、`mergeWorldAxisHistory`。**论坛传闻显式标注「（传闻）」**——「已核实」与「纯传闻」在读者侧是两种事实强度，不得同形。`_generate` 改为真世界优先：有真事件就陈述真事件、不调 LLM；失败才退回生成并附上一致性块。",
-                "【修复四：世界钟接成权威源之一，但绝不让公历污染古历】`config/time-manager.js` 新增 `getWorldAxisTime()`（读桥 → 解析世界钟 iso → 与 `getCurrentStoryTime` 同形的时间对象），并在权威候选后新增「来源4」。世界钟是**推演结果**（决策时间），比从正文里猜更权威；但它是公历 ISO，故**只在剧情纪元相容时才参与**（由既有 `_isSameStoryEra` 统一判定：一侧古历一侧现代即不相容）——古历剧情下公历钟直接让路。只读：本方法不写任何状态。",
-                "【测试与自证】新增 `tests/system-v235.test.mjs`（117 项）：A 段钉桥消费面的在场归因与「不抛」（含 getter 抛异常的极端宿主），B 段钉世界钟解析的合法/非法/边界（古历非 ISO 串必须返回 null、越界时分夹取），C/D 段钉真世界投影的条目形态 / 去重 / 传闻标注 / 上限 / 畸形输入，E 段钉接线与只读契约，F 段负控制（文本级 + 行为级，真源码破坏 → 加载副本 → 同款判据翻红），G 段发布卫生。过程记录：F1 首版拿「非对象守卫」做负控制**不可测**——该守卫与函数外层的 `try/catch` 效果重合（无守卫时抛出的异常被 catch 吞掉仍返回 null），real 与 broken 两向都是 null ⇒ 负控制恒真，遂改钉**日期范围校验**（`ISO_RE` 的 `\\d{1,2}` 本就允许 13 月/40 日，该行是唯一防线）；判据 `judges.wired` 首版把两个消费者的 import 写在同一个函数里，导致「只断一个」时两向都为假 ⇒ 拆成 `wiredApp` / `wiredTm`。回归：既有三处受影响的测试按新契约对齐（`tests/time-manager.test.mjs` 的 data: URL 加载器显式重写相对 import——这正是 v2.28 回归护栏所要求的形态；`tests/system-v220.test.mjs` 的历史写入锚点交棒到改写后的实体调用），全量 **252 tests / 252 pass / 0 fail**（另在 `tests/time-manager.test.mjs` 补两条**行为级**判据：世界钟在现代剧情下真的参与「取最晚」并胜出、在古历剧情下真的让路）。"
-            ]
-        },
-        "2.34.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【四条账目的共同盲区：回收根本没发生过的那条路径】v2.31 记「回收过几笔」、v2.32 把**两本账**（回收账本与过早账本）合读、分出「其中几笔过早」、v2.33 归因「是谁造成的」、v2.30 的 overDisposed 记「同一对象被回收后复活」——**四条账目全部只描述「回收以后」**。而宿主重建路径上还有第四种形态：**建了同名新域、旧域却没被收掉**。此时域表里同时活着两个同名域（旧域仍被域表钉住，其定时器/监听器继续跑、闭包钉住旧 DOM），而「回收」这件事**一次都没发生** —— 于是它在上面四本账上完全不可见。",
-                "【实测：正确重建与重复建域在四本账上完全同形】探针在真域上各跑一遍（正确路径＝建 3 只、每次先收后建；错误路径＝建 3 只、不收、事后统一收掉）：回收笔数 **3 / 3**、过早笔数 **0 / 0**、成因账 **{} / {}**、过度回收遥测 **0 / 0** —— 四本账逐项相等，唯一区分点是「同名域同时存活的个数」（正确 **0**、错误 **3**）。这就是本版要补的那个读数。",
-                "【真实触发路径不是假设：三处 await 竞态会构造同名实例】`chat-view.js` 的三处懒加载（`_ensureMusicAppForInvite` / `_ensureHoneyAppReady` / 微博卡片跳转的 WeiboApp）都是 **check-then-act**：先判 `if (!VirtualPhone.xxxApp)`，再 `await import(...)`，**await 之后直接 `new` 并写回**。await 期间另一个入口（音乐卡片注入 / 蜜语邀约 / 应用面板）已把实例建好时，这里就会 new 出第二个同名实例，旧实例的域从此无出口。本版在三处 `await` 之后补重查（根治竞态），并让重复存活域本身变成可见读数（兜住仍可能出现的其它路径）。",
-                "【修复一：把「几个才算错」这个判断写进读写口径】新增内核原语 `childRuntimeDuplicates(min = 2)`（只列同时存活 >= min 个的域名，非法阈值一律回落 2 而非放宽）与 `childRuntimeDuplicateDomains()`（键视图，按名排序），`globalRuntimeSnapshot()` 追加 `duplicates` 字段。此前全仓消费点（诊断面 domainCounts、控制中心、测试）都只把 `childRuntimeStats` 的**裸数字**原样展示，**没有任何一处对 >1 出过声** —— 事实有了、判断没写下，等于没有：**回收口径**里此前只有事实、没有判断。本版把判断固化：**空才是正常态**（先收后建），非空即重复存活。纯读、零副作用、不抛；刻意不制造噪声遥测（v2.33 的教训是「恒非零的告警会被读者学会忽略」，故本读数的健康态恒为空）。",
-                "【修复二：会话级数据槽位的唯一出口】v2.31 给三条「界面槽位」（homeScreen / controlCenter / notificationLog）建了统一出口，但数据实例里另有一类**随会话重生**的槽位不在那条出口里，于是三条清数据路径各写各的清单 —— 而漏写一个是静默缺陷：`worldpulseApp`（换会话 / 清当前数据 / 清全部数据 **三条全漏**；实例跨会话复用，3s 楼层轮询闭包挂在旧会话上下文上，而其实例出口 `destroy()` 全仓零调用点）与 `gamesApp`（**清全部数据漏**；`deactivate()` 级联 `stopUndercoverFlow` / `clearPokerSession` / 五个子视图，清全部数据后残留的是上一局的会话状态与一个**裸 setTimeout**，它会在已清数据的会话上继续触发一次 AI 出牌调用）。本版新增 `retireSessionScopedSlots()` 作为**唯一出口**，挂在 `reloadPhoneSurface()` 里 —— 三条路径都经过它，故**新增路径不必再补清单**。收口方式为：先走**实例自身的出口**（`destroy` / `deactivate`，语义化收尾），再置 null（引用消失时域名回收才是正确形态）。",
-                "【修复三：呈现面与消费点接线】控制中心新增「重复存活域」告警行：**健康态不渲染任何节点**（同名域恒为 1 个时该节点根本不存在），非空即标黄列出，口径为「有缺陷时告警、没缺陷时安静」；`data-dup-domains` 由重复域名数驱动。诊断面把内核的 `duplicates` 提升为**稳定契约字段**（降级/内核未提供时归一为 `{}`，字段恒在，消费方不必判 undefined，同 v2.30 `snap.overDisposed` 的做法）——刻意**不做二次记账**：宿主若另调 `childRuntimeDuplicateDomains()` 就是「同一本账的第二个名字」，正是本版批评的形态，探针 G7 对此设了自证判据（全仓零 `duplicateDomains` 残留）。样式新增 `.sys-cc-dups`（出现即缺陷，故无需区分形态）。",
-                "【测试与自证】探针 /tmp/probe_v234.mjs 共 42 项：A/B 段在真域上取证「正确重建 vs 重复建域」的四本账同形与唯一区分点，C 段钉 duplicates 的边界与口径（阈值回落、空态、多域名排序），D/E 段钉快照同源与过早/重复两条线互不干扰，F 段自证纯读无副作用（连续调用不改域表、不触发任何回收记账），G 段钉消费点接线与**反冗余**。过程记录：初版曾落盘「域世代」（releaseEpoch / firstReleaseEpoch）方案并通过全部门禁，随后自查判定它与既有 `_childReleaseLog` 同条件递增、两值恒等（换个名字的同一本账），遂 `git checkout` 完整撤销后改为 duplicates 口径；接线阶段又自查撤销了 `snap.duplicateDomains`（内核 `duplicates` 的键排序视图，同属冗余）——两次撤销均由判据而非印象驱动。全量门禁 **249 tests / 249 pass / 0 fail**（新增 tests/system-v234.test.mjs 计 90 项），语法门 245 个文件。"
-            ]
-        },
-        "2.33.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【过早回收「谁造成的」从未被记录】v2.32 把**两本账**（回收账本与过早账本）并列读出，却从未记录**成因**。实测（探针在域上真执行，两种场景各跑一遍）：设计内的闲置出口 + 复用（honey-view 式：离开界面 dispose → 重进登记 → 再离开，3 次进出）记 **2 笔**过早；真正的宿主过早回收（宿主按名收掉仍在活跃使用的实例的域）记 **1 笔**——两者除域名外完全同形，「谁造成的」这件事在账面上不可见。",
-                "【健康装机上「有过早回收」恒成立，真缺陷被正常导航淹没】honey-view 的 exitHoneySurface 有 9 个调用点，其中 **6 个是界面内返回/回首页**（打开微信会话、三个 #honey-back 返回、系统返回、返首页）——都属正常导航，却全部计入过早回收。于是控制中心卡片那句「N 个域名过早回收 · 全部发生在实例销毁后」在健康装机上**恒为假**：它把正常导航说成「过早」，又断言「全部发生在实例销毁后」。",
-                "【实测缺陷：把遥测的用途搞反了】没有按成因分开读，这本账在正常用法下**永远非零**，读者只能学会忽略它。遥测一旦噪声化就不是审计而是配置——症状持续存在时人们会学会关掉它，而真正该看的宿主提前回收正好淹没在噪声里。",
-                "【修复：新增「成因账」，不动过早判据本身】过早判据与**回收账本**口径（`_reenteredAfterDispose > _prematureReleases`、只在回收时刻落账、按对象计一笔）**一字未改**——v2.32 的 A2/A3/A4/A6 语义原样保留。新增 `_childPrematureBy` / `childRuntimePrematureBy(name)` 与记账助手 `_bumpPrematureBy(name, cause)`，把笔数拆成因：`tidy`（实例自持出口，界面正常退出时自我注销）/ `host-prefix`（宿主按名回收）/ `host-exact`（按名精确回收）/ `host-all`（全域清零）/ `shutdown`（宿主级域级联）。只在「本次回收被计为一笔过早」时入账，未过早的回收不留痕。",
-                "【成因在唯一咽喉点内部推导，调用点一字不改】初版让每个调用点声明成因（`dispose(cause)` / `{ cause: 'host-prefix' }`），结果撞上 6 个既有测试（v225/v226/v228/v229/v230/v231 都把调用点字面量钉成了实现契约）。收敛后的形态更简且零回归：所有回收最终都经过 `ManagedRuntime.dispose()`，而宿主路径在 `disposeChildRuntimes` **函数内部**自造 `reason='host-*'`，自持出口按角色推断 `'tidy'` / `'shutdown'`——于是成因是推导出来的，不是二十多个调用点各自声明的。",
-                "【成因的时点：取上一次回收的发起者】过早是「**下一次**回收」时才被认定的事实（证据是 `_reenteredAfterDispose` 增长），故成因必须取**上一次**回收的发起者（`_lastDisposeCause`），而不是本次调用的 reason。初版取了本次，实测后果是**每个真过早都被事后那次正常回收洗掉**：宿主按名收掉活域（host-prefix）后实例再 `dispose()`，成因账里只剩 `tidy`，真凶消失。该缺陷由探针 /tmp/probe_v233.mjs 抓到（14 项里 5 项翻红），修正后全绿。",
-                "【读数诚实化：控制中心按成因拆分】「回收口径」卡不再把笔数直接当缺陷：只有 `host-*` 才计「被提前回收」（`flaws = rows.filter(r => r.hostile > 0)`），`tidy` 归为「界面退出时自持回收（正常）」。`data-release-tally` 改由 `flaws.length` 决定——于是「有缺陷时告警、没缺陷时安静」才成立，而不是恒亮。",
-                "【诊断面同步】`explainReleaseTally()` 增加第三参 `prematureBy`（缺省为空构成，v2.32 的既有两参调用仍可用），每行给出 `causes` 与 `hostPremature`（= 需要处理的那部分）并按其排序；`runtimeStats()` 新增 `releasedPrematureBy`（降级分支同步补字段）；`window.VirtualPhone.releaseTally()` 一行里给出成因明细与「需处理 N 次」；新增 `window.VirtualPhone.prematureCauses()` 测试钩子。",
-                "【测试】新增 tests/system-v233.test.mjs：成因账的五类归因各一条（含 exact 不误伤前缀域）、界面内正常返回不产出 host-* 缺陷、不变式（Σ成因 === Σ过早）、成因时点（真过早不被事后那次回收洗掉）、读数诚实化（主机成因才计缺陷）、负控制（每条核心判据配一次故意破坏）、发布卫生。",
-                "【自证与收敛记录】初版补丁先在 v2.32 探针上验过，再用本版探针取证，5 项翻红后抓出「成因时点」错误并修正；随后全量门禁暴露 6 个既有测试失败，全部源于「改了调用点字面形式」而非行为退化——这直接促成了上面的收敛设计（成因内部推导）。收敛后先单独验证「仅内核改动」= 247 pass / 0 fail，再补读取面，最终全量 247 pass / 0 fail 零回归。"
-            ]
-        },
-        "2.32.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【回收口径面：两本账，谁也没把它们合起来读】v2.30 让「域被回收了、实例还在用」可见（childRuntimeOverDisposed），v2.31 让「回收过几次」可对账（childRuntimeReleaseLog）——本版盯住这两本账之间的缝：**它们在同一个域上各自为政，且口径互不相同**。实测（探针在域上真执行）：同一个域对象 `dispose(); 复活; dispose();` → 回收账本记 **1** 笔（按对象计，为「重建 N 轮 = N 笔」可对账），而它实际被回收了 **2** 次；「回收了几次」与「回收是否过早」只能靠两个不同来源拼，且没有任何一处代码或面板把它们并列读出。",
-                "【实测缺陷 1：过早回收的观测寄居在被观测对象里】childRuntimeOverDisposed() 数的是 `_reenteredAfterDispose`——**域对象上的实例字段**，且只有仍在域表里的域才会被数到。于是域一旦被正常回收（离表），「这个域名曾经过早回收过」就**彻底消失**：实测同一域活着时 overDisposed=1，dispose 后=0，与「从未发生」完全同形。**这块遥测的宿主与被观测对象同生共死，却用来回答关于历史的问题**。修复：新增过早回收账本 `_childPrematureLog` / `childRuntimePrematureLog(name)`——在回收**时刻**判定并落账，域死后永久可查；判据为「dispose 之后又发生过再登记，则下一次回收即证明上一次过早」，天然区分 `dispose(); dispose();`（幂等空调用）与真实复活。",
-                "【实测缺陷 2：「回收了几次」这个数此前读不出来】账本按域对象记一笔（这是对的、且被 v2.31 的测试锁定），但它同时意味着「本域对象实际被回收几次」在账面不可读——`_releaseCount` 不存在，只能靠 overDisposed 的差值反推，而那种反推需要读者自己知道两套遥测的内部字段。修复：域上新增 `_releaseCount` / `prematureReleases()` / `releaseTrace()`，三个口径各自命名、各自可读：账本（按对象一笔）、实际次数、其中过早次数。",
-                "【实测缺陷 3：v2.31 写下 _releasedAt，全仓零读点】`dispose()` 里 `this._releasedAt = Date.now()` 写得好好的，但 grep 全仓**没有任何消费点**——「回收发生在何时」看起来已经可查，实际不可查。字段写出来没人看，与没写等价，却让这件事显得已经有人管。修复：新增 `_childReleasedAt` / `childRuntimeReleasedAt(name)` 并接进 `runtimeStats().releasedAt`，把该字段真正消费掉。",
-                "【实测缺陷 4：子域只剩计数，回答不了「还剩哪几个 tag 在跑」】globalRuntimeSnapshot().children 此前每项只有 `{name, total, byKind}` —— 而宿主级有完整 `tags` 明细。于是诊断里最常用的那个动作（打开控制台看「手机壳域里还剩什么在跑」）在**子域**上做不到，只能看到计数。修复：子域补 `tags` 明细，并顺带带上 `releases` / `premature`，两侧口径就地对齐。",
-                "【实测缺陷 5：按名回收的前缀语义只写在文档里】`disposeChildRuntimes(name)` 文档写「按名（前缀）回收」，实现走 `startsWith` —— 实测传 'probe-d' 会连带回收 'probe-d-extra'（1 个名字收掉 2 个域）。**当前无实际误伤**（仓库现有域名互不为前缀，如实说明），但「传短名就多收」既不可见也无精确手段。修复：新增第二参 `{ exact: true }` 走精确匹配；默认仍前缀匹配（5 处既有调用点行为不变）。",
-                "【把两本账合起来读】新增 `explainReleaseTally()` 纯函数与 `window.VirtualPhone.releaseTally()` 一行入口：输出「某域名 回收 N 次（其中过早 M 次）」。判词刻意保守——只对两本账都出现过的域名出词，未过早的不逐条列出；并做读数自洽检查（过早回收必留下一次后续回收，故 premature 不可能等于 released），出现这种自相矛盾的形状时**报出来而非吞掉**（fail-closed）。",
-                "【控制中心：回收口径卡】控制中心此前完全没有运行时诊断入口（诊断只能靠控制台）。新增「回收口径」卡，把两本账并列成一行：全洁时显示「N 个域名被回收过 · 无过早回收」，有过早时显示前几项并标黄——于是「回收了几次、其中几次过早」这个本版的核心问题，在手机上**直接看得见**，不必开控制台。",
-                "【测试】新增 tests/system-v232.test.mjs：内核分账（回收次数 vs 账本口径 vs 过早次数三者各自独立可读 · 幂等空调用不误判为过早 · 过早账本在域死后仍可查 · 与 overDisposed 的差别对照）、releasedAt 可读、子域 tags 明细、exact 语义、宿主接线（诊断入口分账 + 判词自洽检查 + 一行入口）、控制中心卡片接线、负控制（每条核心判据配一次故意破坏）、发布卫生。",
-                "【首轮自证：新套件里三处负控制假绿】tests/system-v232.test.mjs 第一次运行是 69/79。失败分两类：A4c / E7 是我把期望值写错（过早账本在回收**时刻**才落账，两次回收之间读到 0 是对的；样式断言读错了文件——`data-release-tally=\"premature\"` 只在 CSS 选择器里而不在模板串上）；另一类是**负控制自身假绿**：F4 / F7 / F8 三处把断言对象写成了**原文件**而不是破坏后的副本，于是「条件恒真」或「条件恒假」，破坏根本没发生也不报错——判据声称在检查、实际没在检查、且不报错。修法：F4 改为源码级破坏（抹掉子域 `tags` 明细字段，再在破坏副本上断言判据失效）；F7 / F8 一律改成在破坏副本上断言；并新增 F9 剥注释工具的两向自证（剥注释后不得残留本版注释独有字样 · 不得吞掉代码本体），保证所有文本判据都做在代码行上而不被注释字样满足。修后套件 79/79，另跑一轮**外部注入**（真改磁盘文件 → 跑套件 → 逐字节还原）12 组，全部真响。"
-            ]
-        },
-        "2.31.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【重建路径：新界面接上了、旧界面还挂着】v2.30 让「域被过早回收」可见，本版盯住它的镜像面 ——「实例被丢弃了、它的资源没人收」。宿主 createPhoneInPanel() 有四条重入路径（首次打开 / 点击页面横幅直达 App / 微信来电唤醒 / 电话来电），每条都执行 `phoneShell?.destroy?.()` 后 `new PhoneShell()`。壳自己的登记表确实被收净了，但**同一作用域里还有三个实例被无声丢弃**：旧 homeScreen（4 个 window 监听器，用「同实例内不重复绑」的 guard 互相隔离，因此没有任何一处能在实例被丢弃时解绑）、旧 controlCenter（无收尾路径，overlay 可能留在已废弃容器里）、旧 phoneShell.lockScreen（10s 时钟定时器 + 2 个 window 鼠标监听器，不在壳的登记表里）。结果是旧 HomeScreen 会继续响应新壳派的 phone:updateWallpaper / phone:timeUpdated 并渲染进**已被摘除的旧 DOM**。",
-                "【收口位置必须与构造位置同址】这四类实例的构造点全部落在 createPhoneInPanel() 里，因此唯一正确的收尾点也在它附近：新增 releasePhoneSurface()（收可复用界面实例）、destroyPhoneSurface()（收随会话存在的界面槽位，含落账层「先落盘再丢定时器」）、reloadPhoneSurface()（收 + 重建 + 渲染）。一条实现原则：**同一个宿主函数既构造它们，就必须负责回收它们**，否则「谁该收」只能靠读代码推。",
-                "【壳层域升级为可诊断域】phoneShell 的登记层此前是裸 ManagedRuntime('phone-shell')：资源确实被回收了，但这个域不在全局域表里 —— runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。本版改用 childRuntime('phone-shell')，与 sudoku-view / music-view / honey-view 同构，并让 PhoneShell.destroy() 级联回收 lockScreen（此前该字段被置空时它的资源仍在跑）。",
-                "【域被回收了：现在能被数到】新增回收账本 _childReleaseLog 与 childRuntimeReleaseLog()，runtimeStats() 追加 released 字段。动机是 v2.29 的 childRuntimeStats 只能回答「现在有几个域活着」—— 而重建路径上「重建前漏回收」与「重建前已回收」在**计数上完全同形**（旧域收掉后表里都只剩 1 个新域），区别只在旧域是否成了孤儿。账本口径刻意只在**首次**回收时计一次：重复 dispose 是 v2.29 起承诺的幂等语义，重复计会让「重建 N 次」与「回收 N 次」无法对账。",
-                "【哪种不对称是对的】第一版实现把 P1 换会话写成「只收不建」，实测会留下悬空的 homeScreen：桌面时间停更、角标刷新失效 —— 「收干净」不能以「功能坏掉」为代价。定稿改为**界面槽位随会话重生、数据实例复用重绑**：homeScreen / controlCenter / notificationLog 三条槽位统一由 reloadPhoneSurface() 收掉旧的、建新的；music / games / weibo / honey / diary / calendar 等数据实例仍旧只 clearCache + onChatChanged（换会话是会话作用域操作，它们必须活下来）。此外，实例被丢弃时**同时清掉三个宿主级公开别名**（window.VirtualPhone.home / controlCenter / notificationLog）——它们自 v2.16 起就是「界面槽位」的公开引用（phone-view / wechat-app / weibo-data / lock-screen 都读它），只置内部变量会让旧别名继续指向已销毁实例，`window.VirtualPhone.home.render()` 于是把内容渲染进已废弃的 DOM。别名无资源可收，仅需引用复位。",
-                "【落账层：dispose 与 reset 是两个语义】NotificationLog 此前只有 reset()，且**刻意不落盘**（「当前 storage 已指向新会话、旧缓存写出去即串味」）。这对聊天数据是对的，对系统通知落账层是错的：通知存在 sys_notifs（随会话隔离的系统键），切换前那 800ms 防抖窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。本版新增 dispose()：先 flushNow() 再丢定时器，不变量为「dispose 不得静默吞掉已经入账的通知」。",
-                "【陈旧实例护栏：早退要挡能造出界面的那个入口】控制中心实例在面板重建后仍可达（闭包 / 事件回调 / 外部引用）。若无护栏，旧实例的 toggle()/show() 会用自己的 phoneShell 把 overlay 挂进已被摘除的容器 —— 用户看到「控制器没反应」，对象图里却多出一个没人认领的 overlay。护栏落在 show()/toggle()（唯一能造出界面的入口）而不只 close()：只守 close 等于没守。",
-                "【测试】新增 tests/system-v231.test.mjs：内核回收账本（含幂等 dispose 不重复计 / 父域级联必须记账两条反例对照）、重建总账对账（登记项数 = 现存项数 + 回收项数）、壳层与三实例的出口存在性与接线、三条丢弃路径与界面槽位重建、发布卫生（四处版本一致 + latest 指向本版 + 内置公告与本版日志同源）。"
-            ]
-        },
-        "2.30.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【过度回收：孤儿域的镜像面】v2.29 把出口交给域自己，解决的是「域还活着、宿主已经忘了它」。本版盯住同一枚硬币的另一面 ——「域已被回收、实例却还在用」。宿主一条 disposeChildRuntimes('') 就能做到这件事：它不看实例是否还活着，把仍有引用的实例的域一并回收；实例随后再登记资源时靠 v2.29 为「视图复用」引入的 _reenterIfNeeded 静默复活，于是同一个实例里「已被回收的旧资源」与「重新登记的新资源」并存，而旧资源再无回收出口。实测 index.js 换会话路径正是这条写法，同一时刻 musicApp / gamesApp / worldpulseApp 都还活着（紧接着就是它们的 onChatChanged 重绑）。",
-                "【把过早回收变成可观测】新增 _reenteredAfterDispose / overDisposeStats()，以及全域名快照 childRuntimeOverDisposed()：域在 dispose 之后又被登记（= 复活）时计数，这正是不看实例死活就直接回收的直接证据。反例对照是「域随实例生命周期走」（视图销毁时 dispose）——这种域该值恒为 0。window.VirtualPhone.runtimeStats() 追加 overDisposed 字段，运行期即可回答「有几个域被过度回收过」。",
-                "【换会话 ≠ 实例销毁】换会话是 **会话作用域** 操作：实测此刻 calendarApp / musicApp / weiboApp 都保留实例并靠 clearCache + onChatChanged 重绑（日历要留住节假日与日程、音乐要继续播、微博实例跨会话复用），因此不该回收它们的域。移除换会话路径的 disposeChildRuntimes('') 全域清零，实例域交由各自 onChatChanged() 处置；honeyApp 也不再重复按域名清理（deactivate → exitHoneySurface → _rt.dispose() 已是实例级出口），并把 deactivate 与 clearCache 拆成独立 try，一处抛错不再连带让域回收静默不发生。",
-                "【丢弃实例的路径必须三条对齐】三条「丢弃/复位全部 App 实例」的路径（换会话 / 清当前数据 / 清全部数据）此前各写各的，实测三类错位：① 换会话会回收**仍活着**实例的域（过度回收，见上条）；② 清当前数据丢弃 honeyApp 却从不回收其实例域（回收不足）；③ 三条路径对专辑实例口径不一 —— albumApp.destroy() 解绑的是它在构造期注册的 5 个全局监听器（SWIPE_BACK / ALBUM_IMAGE_DELETED / UPDATE_WALLPAPER / PANEL_VISIBILITY / visibilitychange），清当前数据做了、清全部数据与换会话都没做。本版把三处补齐；清全部数据另补 honey 的实例级出口（停播放/动画/TTS），清当前数据另补 imageManager 丢弃（与清全部数据对齐，属数据残留而非泄漏）。",
-                "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前同时做三件事：清瞬态资源 + 摘掉 DOM 主题类 + **注销整个视图域**。名字只描述第三件，而 9 个调用点（6 处导航出口 + honey-app 的 swipe-back/destroy/deactivate）全都借这个「DOM 主题」名字获得域生命周期语义 —— 连 honey-app.destroy() 读起来都像在解绑主题而不是在回收域。这是 v2.29「出口却写在别人手里」的下一层形态：出口在，但没人能从名字上看出它在。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（离开蜜语界面的完整出口，含域注销），调用点全部改调后者。",
-                "【不做「统一化」的理由】同一批实例里，wechat-app **不该**被强行加 destroy：它唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭。对没有销毁面的实例添加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
-                "【内置离线公告与本版同源】实测发现 index.js 的 ST_PHONE_CURRENT_UPDATE 三版未更新：version 取 ST_PHONE_VERSION（标题永远显示当前版本），items 却停在 v2.27 时代 ——用户点「已更新」看到的是三版前的说明，「版本号对了、内容是旧的」比没有更误导。本版重写公告并与 update-log 同源，同时补判据（从本版条目标签抽词比对公告，随版本自动换词、不需交棒）。附带实测：本仓库为私有，远端通道（raw.githubusercontent 的 manifest/update-log）匿名拉取恒 404，因此 local 公告就是用户唯一能看到的更新说明 —— 它必须准。",
-                "【测试】新增 tests/system-v230.test.mjs（内核遥测含反例对照 / 宿主三条路径对齐 / 命名即文档 / 发布卫生），并把 tests/system-v225.test.mjs 的「恰好 4 处 destroy 接线」棘轮交棒为「不少于 4 处」+ 两条新增站点的显式断言（防再次漏路径）。"
-            ]
-        },
-        "2.29.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【域自持出口】v2.28 建了实例级资源域，但域的回收出口仍写在宿主侧的人工域名清单里（disposeChildRuntimes('honey-view') 一类），漏写一个就漏一个域 —— 实测 sudoku-view / worldpulse-app / floating-entry 三个域**零出口**。本版把出口交给域自己：域在 dispose 时按自身持有的表地址注销（_childLog），宿主无需知道任何域名。",
-                "【孤儿域的真实形态】旧写法只 cancelByTag（清空 entries）而不 dispose（不注销登记表）：视图已销毁、域却仍活在 _childRuntimes 里；每次重建数独/世界脁都会多留一个空壳域，永久累加。六个消费方（sudoku-view / worldpulse-app / weibo-app / music-view / honey-view / floating-entry）的销毁路径全部补上域注销。",
-                "【复活即重新登记】dispose 会从域表注销自身；若域随后被再次使用（视图实例复用、重进页面，实测 games-app 的 panelVisibility 路径正是 destroy→render 复用），新登记的资源会脱离域表 —— 泄漏以「表里看不见的域」形态回归。新增 _reenterIfNeeded()，四个登记入口（addInterval/addTimeout/addObserver/addListener）首行调用，保证不变量「域表 ⊇ 所有活着的域」。",
-                "【分域计数】新增 childRuntimeStats(name)：childRuntimeCount() 只回答「一共有几个域」，回答不了「反复重建时某个域有没有累加」——而后者才是泄漏的可观测形态。window.VirtualPhone.runtimeStats() 现带回 domainCounts 字段。",
-                "【宿主侧口径收口】disposeChildRuntimes 语义降级为「运维兜底」（不再是唯一出口）；换会话路径追加全域清零，不再逐名列清单；诊断入口追加分域计数。",
-                "【测试】新增 tests/system-v229.test.mjs（内核行为 + 复活重登记 + 域隔离 + 六消费方出口接线 + 宿主口径 + 版本自洽），不硬编码「唯一正确写法」。"
-            ]
-        },
-        "2.28.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【新内核·实例级资源域】v2.27 把宿主级常驻资源接进 globalRuntime 后暴露了下一层问题：大量资源属于**某个实例**而非宿主——一个 MVVM 视图、一个 App、一个组件。它们只应在实例存活期内存在，实例销毁/重建时必须精确回收该实例自己登记的一切，而不该把宿主级资源一起清掉，也不该靠人工维护一份「这个实例登记了哪几个句柄」的清单。新增 childRuntime(name)：返回挂在全局域名下的独立域，自持 entries、域内 tag 只在本域匹配（cancelByTag 不会误伤别的实例），dispose() 只回收本域并自动从域表注销、幂等。globalRuntimeSnapshot() 追加 children 字段回答「除宿主级外还有几个实例各持有多少资源」。",
-                "【缺陷修复·music-view 的双份手写回收】本文件并存两条互不相干的手写回收路径：_visibilityGuard（3s 自愈轮询）与 _progressTimer（250ms 进度轮询），各自 setInterval + 各自 clearInterval，另有一个裸 window.addEventListener('resize') 靠 _resizeHandler 字段手工解绑。三者分属两个字段、三处清理点（destroyFloatingWidget / _stopProgressTimer / _closePanel），任一为漏即永久泄漏——这正是「人工维护回收清单」的失败形态。改由实例域统一持有（tag `floating:` / `progress:`），destroyFloatingWidget 两个 cancelByTag 收干净，resize 监听器亦入登记层。",
-                "【缺陷修复·sudoku-view 计时器】_startTimer() 裸 setInterval 挂 this._timer，destroy() 手写 clearInterval；视图在任一楼被重建（render→_startTimer）时仅靠 `if (this._timer) clearInterval` 兜底。改为实例域持有（tag `timer:`），destroy() 一次 cancelByTag 收净，语义等价且不再依赖「记得清字段」的纪律。",
-                "【缺陷修复·worldpulse-app 兜底轮询】startListening() 在 eventSource 缺失时退化为 3s 轮询并挂 this._pollTimer，stopListening() 手写 clearInterval；该方法在换会话（onChatChanged）与重复调用时都会被触发，属「先停后启」路径——旧写法一旦漏掉 clearInterval 就会与新轮询双挂，每个周期触发两次楼层检查。改为实例域持有（tag `poll:`），stopListening 一次 cancelByTag 收净，并保留原有双挂防护。",
-                "【缺陷修复·floating-entry 的可见性轮询与两条卸载路径】mount() 用裸 window.setInterval 挂 this.visibilityTimer，unmount() 与 unmountButtonOnly() 各写一次 window.clearInterval(this.visibilityTimer)——同一个句柄的回收逻辑被复制到两处（sync() 会按开关在两者之间切换，任何一处漏改都变成泄漏）。改为实例域持有（tag `entry:`），两条卸载路径共用同一 cancelByTag 口径。",
-                "【缺陷修复·两处有界轮询的多出口回收】weibo-app 打开微信（最多 40×80ms）与 honey-view 跳转微信会话（最多 20×150ms）都是有界轮询，但都在「成功」与「超时」两个出口各写一次 clearInterval(timer)——局部 const 句柄无法被外部停止，App 被置 null（清数据路径）时轮询仍会跑到自然超时。改为实例域持有（tag `weibo:open-wechat` / `honey:open-wechat`），出口收敛为单个 cancelByTag，且随实例被丢弃一并回收。",
-                "【缺陷修复·实例被丢弃时的孤儿域】宿主在清数据/换会话路径上会把 musicApp / weiboApp / honeyApp 直接置 null 而不走实例自身的 destroy，此时实例域会被域表引用钉住成为孤儿（其定时器继续跑）。新增 disposeChildRuntimes(namePrefix) 按域名（前缀）批量注销，并在 index.js 的两条丢弃路径（onChatChanged 的 honey、清数据的 weibo/music/honey）接线；同时宿主级 dispose() 改为级联回收全部子域，避免「忘了调谁」再次成为泄漏源。",
-                "【测试与门禁】新增 tests/system-v228.test.mjs（四层）：A 内核行为（子域隔离、cancelByTag 域内语义、dispose 幂等与域表注销、级联回收、disposeChildRuntimes 前缀匹配与空串语义、snapshot.children 结构）；B 接线（6 个文件 8 类资源入域 + 全仓「只启不停」不变量与刻意保留站点回归护栏）；C 等价性（假装时钟行为仿真：sudoku 计时器重复启动不叠加、music 双前缀互不误伤、worldpulse 换会话重绑、floating-entry 两条卸载路径共用口径、两处有界轮询的四条出口）；D 范围自证 + 诊断字段 + 版本四处同步。同步更新三处旧测试断言以交新版接管（v221 轮询兜底改断言域名持有、v225 的 weibo clearCache→destroy→null 顺序放宽以容许中间插入域回收段、v227 的降级安全零值结构补 children: []）。另修一处装配回归：honey-view.js 本版首次引入相对 import，而 tests/honey-avatar-selection.test.mjs 经 data: URL 加载源码（data: URL 无 base，相对 specifier 直接抛 ERR_UNSUPPORTED_RESOLVE_REQUEST）——已改为装入前重写为绝对 file:// URL（等价加载不改语义），并在 D 层加通用护栏防复发。语法门 239 文件通过；全量门 243/243 绿；防假绿注入 7 处全部检出，恢复后逐字节一致。"
-            ]
-        },
-        "2.27.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【缺陷修复·快捷回复按钮的永久 1Hz 轮询】createInlineReplyButton() 尾部是 `setInterval(inject, 1000)` —— 无句柄、无清理路径、**无终止条件**：即使按钮早已注入、宿主早已就位，仍以每秒一次的频率跑完 inject 全量逻辑（实测该函数含 13 处 getElementById + 36 处 querySelector + registerQrAssistantButton 的重算，跨 1275 行）。这是全仓频率最高的一处稳态开销，且随插件重载无限累积。修复分两步：① 轮询改由 v2.26 的登记层持有（tag `inline-reply:poll`，可被统一回收）；② 给 inject 建立**返回值契约**——true = 已达终态（本轮完成注入 / 用户关掉了入口），false = 条件未就绪（宿主缺失 / 有按钮但容器结构异常）。轮询循环消费该返回值，一旦为 true 立即 cancelByTag 自停，**稳态成本从 1Hz 降到 0**。",
-                "【缺陷修复·自停后的重新拉起】自停必须可逆，否则「宿主随面板关闭/主题切换被重建」时按钮会永久失联。新增 resync 入口：监听 phone:panelVisibility 与 phone:openApp 两个事件重新调度一轮轮询（幂等，由 onceFlag 保护只注册一次）。这保留了原「容器晚于脚本出现时持续重试」的意图，只是把重试从「永久无脑轮询」改为「事件驱动 + 就绪即停」。",
-                "【缺陷修复·另两处无回收面的常驻轮询】① 极文 tick：`setInterval(..., 5 * 60 * 1000)` 句柄不存、无清理路径，其闭包钉住 storage 与极文引擎；② 微信线上主动调度器：句柄挂在 window.VirtualPhone 上虽可复用但无统一回收面，且配套的 `setTimeout(tick, 3000)` 首次预热**完全未持有**。两处均改由登记层持有（tag `wechat:online-proactive` / `-warmup`），并保留原有的「先停后启」语义（改用 cancelByTag 前缀回收实现，比手写 clearInterval 更不易漏）。",
-                "【新内核·登记制推广面】v2.26 建了 runtime-lifecycle 内核，但只把 phone-shell 一个消费方接上——`globalRuntime` / `onceFlag` / `rebindGlobal` 三个导出**全仓零消费**，即「内核建好了但没人用」。本轮补齐推广面：新增 `cancelByTag(tag)`（**前缀批量回收**，因为一次启动往往登记多个资源——轮询 + 预热 timeout，用同一前缀命名即可一并回收，不必逐个记 id）与 `globalRuntimeSnapshot()`（回答「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」）。",
-                "【新内核·手写幂等 guard 收敛】全仓散布着 7 处 `if (!window._xxxBound) { ... = true }` 手写 guard（index.js 新会话迁移、wechat/mofo/settings/honey 的滑动返回、honey 的面板可见性与文档可见性）。它们语义相同却各写各的：无法统一回收，也没有诊断可见性。全部收敛到 `onceFlag(key)`，并把注册的 **window 监听器纳入登记层**（window 跨会话存活，旧写法一旦注册就没有回收面）。honey-app 为第三方作者版权文件，仅做等价替换、不动其业务结构与注释风格。",
-                "【可观测·常驻资源诊断入口】新增 `window.VirtualPhone.runtimeStats()`，控制台一行即可看到当前常驻资源总数、四类分布与全部 tag。无登记项时返回零值结构而非抛错。这是 v2.25/v2.26 两轮「监听器/定时器泄漏」修复之后必须补上的那一环——**先让泄漏可见，才能确认它不再发生**。",
-                "【新内核·事件契约消费】v2.26 建立的 config/phone-events.js 契约表此前未被 index.js 消费（仍手写字面量）。本轮起 index.js 消费 `PHONE_EVENTS.PANEL_VISIBILITY` / `PHONE_EVENTS.OPEN_APP` 常量，与 v2.26 的双向对账防线接上。",
-                "【测试】新增 tests/system-v227.test.mjs（四层 60 断言）：A 内核行为（cancelByTag 前缀语义 / 空 tag 不误清 / 与 cancel 正交 / snapshot 聚合一致性与不泄漏）；B 接线（三处轮询入登记层 + 四处 guard 收敛 + 全仓 `window._xxxBound = true` 残留扫描）；C 自停语义（返回值契约六条路径 + 行为仿真五种状态 + 「就绪当轮即停」轮询仿真）；D 范围自证 + 契约消费 + 诊断入口 + 版本四处同步。同步更新 tests/system-v225.test.mjs 的三条断言：从断言「手写 Bound guard 存在」改为断言「幂等 guard 存在」这一不变量（载体已换为 onceFlag）。"
-            ]
-        },
-        "2.26.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【缺陷修复·手机壳重建时的运行时资源泄漏】createPhoneInPanel() 有 4 个调用点，其中 8706 行的 `!content.querySelector('.phone-in-panel') || !phoneShell` 分支明示可重入；而函数开头就 `container.innerHTML = ''` 并 `new PhoneShell()`。旧壳在长期存活对象上注册的资源全无解绑通路：bindSwipeGesture() 在 document 注册 pointermove（最高频）/pointerup(capture)/pointercancel(capture)、在 window 注册 blur，bindTimeUpdateEvent() 在 window 注册 phone:timeUpdated，另有一个 30s 时钟轮询——startClock() 连句柄都不存、无任何清理路径。重建一次净增 5 个监听器 + 1 个定时器，且其闭包钉住旧壳 container 与 DOM。经语义分析确认旧壳 phoneBody 已被 innerHTML 摘除 ⇒ pointerdown 不再触发 ⇒ isPointerDown 恒 false ⇒ 残留 handler 立即 return，故无行为错乱、纯内存与闭包泄漏。",
-                "【缺陷修复·组件级高频监听器泄漏（两处）】① image-cropper：`document.addEventListener('mousemove'/'mouseup')` 位于 bindEvents() 内且无解绑，而 `new ImageCropper` 有 6+ 个调用入口（settings-app 头像/壁纸 3 处、diary-view、wechat chat-view、wechat contacts-view）——每次裁剪净增 2 个 document 监听器，闭包钉住 canvas 与原图 dataURL，close() 只删容器从不解绑，是全仓最高频泄漏路径；② lock-screen：`window.addEventListener('mousemove'/'mouseup')` 位于 _bind() 内，而 _bind() 在 render() 中被调用（每次锁屏重建 root，phone-shell 两处 new LockScreen）——每次「锁屏→解锁」净增 2 个 window 监听器。修复：前者改为实例字段 this._onDocMouseMove/_onDocMouseUp 持有并由 close() 精确解绑（close 覆盖取消与确认两条结束路径，故一处即可全覆盖）；后者改为 remove-then-add 幂等重绑（与 v2.25 music-app 范式同构）。其 _clockTimer 已有 _clearClock 配对，非泄漏。",
-                "【新内核·跨模块事件契约单一真源】新增 config/phone-events.js（16 事件）。此前整个跨模块通信层建立在手写事件名字符串上：实测 29 处 addEventListener(手机事件) + 83 处 dispatchEvent(CustomEvent(手机事件))，散布在 42 个文件，无任何编译期/测试期约束——一处打错（如 panelVisiblity）不报错，只静默失联，这正是 v2.25 那类「结构上可能出错」的根。模块导出 PHONE_EVENTS（权威表）、PHONE_EVENT_KINDS（NAVIGATION/DATA/LIFECYCLE/COMMUNICATION）、PHONE_EVENT_CONTRACT（每事件 kind/target/note）、listPhoneEventNames/isPhoneEventName/phoneEventMeta/makePhoneEvent 辅助。由双向对账锁定：①全仓任何手机事件字面量必须能映射到契约（防漂移）；②契约每个事件必须至少有一处真实使用（防孤儿）。",
-                "【新内核·运行时资源登记与统一回收】新增 config/runtime-lifecycle.js。v2.25 证明「长期存活对象上的监听器漏一次即永久累积」，同一类失效在定时器上更隐蔽也更贵：一个 setInterval 只要持有已废弃实例的闭包，就把该实例的 data/DOM 全部钉在内存里永不释放，且仍按周期执行。模块提供 ManagedRuntime（登记 INTERVAL/TIMEOUT/OBSERVER/LISTENER 四类资源，addTimeout 触发后自动销账不留僵尸登记，dispose() 幂等且返回回收数，stats()/entries()/tagsOf() 供诊断定位「谁还在跑」）与 onceFlag/rebindGlobal 两个幂等原语（把仓库里已在用的 window._xxxBound 单次 guard 与 music 的 remove-then-add 收敛成一处实现）。所有方法在无宿主（Node 单测）下安全降级不抛。",
-                "【缺陷修复·死配置接回真源】`phone-image-openai-mode` 经全字面量 grep 确认 3 写 0 读：settings-app 在预设套用与保存两处硬编码写入，页面还挂了一个隐藏 input；根因是 config/image-generation-manager.js 把 `openaiMode: 'images'` 写死、端点决策从不读取该键。修复：管理端改读 `this._get('phone-image-openai-mode', 'images')` 并经新增 _normalizeOpenAIMode() 归一（任何脏值收敛到合法枚举），设置页删除 3 处死写入与隐藏 input。默认 'images' 对既有存档行为逐位等价；edits/multipart 端点分支涉及真实 API 语义（FormData、参考图字段），刻意留给后续版本。",
-                "【工程防线】新增 tests/system-v226.test.mjs（66 项，四层）：A 契约双向对账（登记数、唯一性、元数据齐全、字面量↔契约集合相等、辅助函数边界）+ B ManagedRuntime 行为（登记计数、addTimeout 自动销账、dispose 幂等与返回数、cancel 单项、dispose 后复用、无宿主降级不抛、onceFlag/rebindGlobal 语义）+ C 三处泄漏的行为级验证（mock 采用真实注册表语义：仅 handler 引用完全相等才移除——phone-shell 4 次重建不回收净增 20 监听器/4 定时器且 destroy 回收 24 项、干净基线 N 轮 create→destroy 净 0；cropper 6 轮 open→close 净 0 且对照不解绑时 3 轮累积 6 个；lock-screen 5 轮 lock() 恒为 2）+ D 死配置清零与范围自证。已注入失败验证红灯（node --test 退出码 1），排除假绿。语法门 236 文件通过。"
-            ]
-        },
-        "2.25.0": {
-            "date": "2026-09-18",
-            "items": [
-                "【缺陷修复·懒加载单例重建时的全局监听器泄漏】v2.23/v2.24 采用「保留实例、仅重建数据层」的理由正是「避免重建实例导致监听器累积泄漏」，但清数据路径上有三个懒加载 App 仍被直接置 null（下次打开重新 new）：相册（album）构造期向 window 注册 phone:swipeBack / phone:albumImageDeleted / phone:updateWallpaper / phone:panelVisibility 四个、向 document 注册 visibilitychange 一个，共 5 个匿名监听器；日历（calendar）构造期注册 phone:swipeBack 一个。二者均无幂等 guard、无解绑路径，每次「清当前会话数据 / 清全部数据」后重开都会永久残留一份旧实例的监听器——一次漏绑即终身累积，且旧闭包持有已废弃实例（含其 data 与 DOM 引用），后续新实例的响应还会与旧实例重复触发。",
-                "【范围界定·逐一取证后只修三处】对 7 个「被置 null 重建」的 App 逐个核查构造期监听器与解绑能力：mofo / wechat / honey 已用 window._xxxBound 幂等 guard + 动态取实例、music 已用 window._musicSwipeBackHandler 的 remove-then-add 幂等重绑，均为正确范式（本轮不动，仅作非回归基线）；weibo 类内 destroy() 早已实现（解绑 _swipeHandler），但 index.js 置 null 时从未调用，属「有解绑能力却没接线」，等价于泄漏。故本轮只处理 album / calendar（补能力）与 weibo（补接线）。",
-                "【修复方案·监听器由实例字段持有 + destroy 解绑】album 的 5 个监听器改由 this._onSwipeBack / _onImageDeleted / _onWallpaper / _onPanelVisibility / _onDocVisibility 持有，新增 destroy() 逐一 removeEventListener（覆盖 window 与 document 两端全部注册类型）；calendar 同构（this._onSwipeBack + destroy()）。以实例字段持有是解绑前提——注册用匿名函数则引用不可复现、物理上无法解绑。",
-                "【接线·四处置 null 站点先 destroy】index.js 在 clearCurrentData 站点（albumApp / calendarApp）与 clearAllData 站点（calendarApp / weiboApp）共 4 处于置 null 前调用 destroy?.()；clearAllData 站点置于 clearCache() 之后，保证「数据清空 → 监听解绑 → 实例释放」顺序。可选链调用使未定义 destroy 的历史实例也不会抛错。",
-                "【工程防线】新增 tests/system-v225.test.mjs（27 项）：真实 App 类在 Node + mock DOM 下可构造并验证行为——calendar/album/weibo 构造期注册数（1/5/1）与事件名齐全、destroy 后精确归零（mock 采用真实注册表语义：仅 handler 引用完全相等才移除，杜绝「destroy 里传错引用」的假绿）+ 泄漏对照（6 轮重建不 destroy 净增 36 个、后续每轮正确配平仍无法消除历史残留，证明「漏一次即永久」；干净基线上 N 轮 new→destroy 净 0，证明修复形态自洽）+ 接线断言（4 处 destroy→null 顺序与总数 = 4）+ 非回归（mofo/wechat/honey 幂等 guard 与 music remove-then-add 保持不变、music 未被误加接线）+ 范围自证（三 App 确在置 null 清单内、保留实例的 10 个 App 未被误加 destroy、所有置 null 站点要么 destroy 要么有幂等 guard）。语法门 233 文件通过。"
-            ]
-        },
-        "2.24.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·懒加载单例 App 跨会话串味（第二批）】B站条目（bilibili）与小剧场（theater）两个 App 同为懒加载单例（index.js `if (!window.VirtualPhone.bilibiliApp) new BiliApp(...)` / `theaterApp`），构造期 new BiliData / TheaterData 从会话键（`bili_entries_v1` / `theater_stories_v1`）把数据载入实例内存，`_load()` 只在构造器执行一次。换会话后实例被复用：B站 ReadingView 展示旧会话条目并把旧条目写回新会话键，小剧场展示/续写旧会话剧本与草稿——与 v2.23 的八 App 同类（实例级会话状态未随会话重绑），属 v2.23 覆盖矩阵遗漏项。",
-                "【修复方案·保留实例仅重建数据层】沿用 v2.21/v2.23 模板：两 App 新增 onChatChanged() 仅重建数据层（`this.data = new BiliData(this.storage)` / `new TheaterData(this.storage)`），保留实例与 View（两 View 均经 this.app.data 动态引用，重建后自动指向新数据层）；未置 null 重建实例，避免监听器累积泄漏。",
-                "【工程防御·三处接入】index.js 在换会话（onChatChanged）与两处清数据（clearCurrentData / clearAllData）共 3 处调用两 App 的 onChatChanged（与 v2.18/v2.19/v2.21/v2.23 同构），清数据后内存不再持有已清数据。",
-                "【工程防线】新增 tests/system-v224.test.mjs（30 项）：真实数据层断言（会话路由内存 storage + BiliData/TheaterData：构造期载入当前会话、换会话重建后读到新会话数据且不串味、新会话无存档时为空不回落旧会话）+ 接线断言（两 App 定义 onChatChanged 且重建数据层、保留实例不置 null、View 经 this.app.data 动态引用、index.js 三处接入计数与位置）。测试总数 239 全绿。"
-            ]
-        },
-        "2.23.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·懒加载单例 App 跨会话串味】tieba/xhs/gacha/reading/tarot/health/achievement/playbook 八个 App 均为懒加载单例（index.js `if (!window.VirtualPhone.xxxApp) new XxxApp(...)`），构造期从会话键把数据载入实例内存（tieba posts / xhs notes / gacha coins+inventory+history / reading shelf / tarot history / health 生理状态 / achievement unlockedMap / playbook selectedPlays），且 load 只在构造器执行一次——换会话后实例被复用，内存数据仍属旧会话：读取端（render/统计/注入）展示旧会话数据，写入端（addNote/addPost/unlock/saveState）把旧会话数据写回新会话键，tarot buildInjection 还会把旧会话牌面注入新会话 prompt（与 v2.21 worldpulse 同源的实例级会话状态缺陷）。修复：各 App 新增 onChatChanged()（重建数据层从新会话键重新载入；tarot 清空 history/currentDraw 后 _load()）。",
-                "【修复方案·保留实例仅重建数据层】沿用 v2.21 的教训：tieba/xhs/health/playbook 构造器注册了常驻全局监听器（eventSource.on(MESSAGE_RECEIVED/GENERATE_BEFORE_COMBINE_PROMPTS)、window.addEventListener('ruby:unlockAchievement')），若置 null 重建实例会造成监听器累积泄漏；故采用「保留实例、仅重建 data 实例」方案（各 View 均经 this.app.data 动态引用，重建后自动指向新数据层），既不泄漏也不串味。",
-                "【工程防御·三处接入】index.js 在换会话（onChatChanged）与两处清数据（clearCurrentData / clearAllData）共 3 处调用八个 App 的 onChatChanged（与 v2.18 通知、v2.19 积温、v2.21 世界脉搏同构），清数据后内存不再持有已清数据。",
-                "【工程防线】新增 tests/system-v223.test.mjs（47 项）：真实数据层断言（会话路由内存 storage + TiebaData/XhsData/GachaData/ReadingData/AchievementData：构造期载入当前会话、换会话重建后读到新会话数据且不串味、新会话无存档时用默认值不回落旧会话）+ 接线断言（8 App 定义 onChatChanged 且重建数据层、保留实例不置 null、tarot 清空内存态重载、index.js 三处接入计数与位置）。测试总数 238 全绿。"
-            ]
-        },
-        "2.22.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·短信注入条数配置死角】phone-sms-limit（每个短信会话注入酒馆正文的最近消息条数）有 3 处消费端（phone-view 发送给 AI 的短信历史、chat-view 单聊上下文、index.js 线下 {{PHONE_APP_HISTORY}} 短信段）却全仓库零写入——值恒为默认 20，用户无法调整；同组电话 phone-call-limit 有设置 UI，且其描述「控制每段电话通话及每个短信会话注入酒馆正文的最近消息条数」谎称同时管短信，实际只写 phone-call-limit（假交付）。修复：设置页「📴 线下注入设置」新增「短信记录条数」输入框 + change 监听（写入 phone-sms-limit，1~9999）；通话条数描述改为「控制每段电话通话注入酒馆正文的最近消息条数」；index.js 线下短信段改用 phone-sms-limit（与线上两处消费端写读同名，消除键名错配）。",
-                "【缺陷修复·朋友圈上下文条数配置死角】wechat-moments-context-limit（朋友圈注入上下文条数）有 2 处消费端（chat-view 单聊朋友圈上下文 _readNonNegativeLimit(...,30,100)、index.js 线下朋友圈变量注入），但设置页「📱 手机内微信线上聊天」的 5 个 limit 输入框群（正文上下文/单聊/群聊/单人通话/群通话）独缺朋友圈——用户无法调整。修复：新增「朋友圈上下文条数」输入框 + change 监听（0~100，默认 30）；同时收口 index.js 线下注入的 0 值语义（原 Math.max(1,...) 使 0 无效、与线上 limit<=0 关闭不一致——现改为 Math.max(0,...)，limit=0 时 recentMoments 置空且不注入表头），保证线上/线下「0=关闭」语义一致。",
-                "【缺陷修复·ASR 自动本地回落开关悬空】phone-asr-auto-local（云端服务商无密钥且无 Worker 中转时自动回落到浏览器原生 Web Speech API）仅在 asr-manager.js recognizeOnce 被读取（`!== false` 判断），全仓库零写入——开关永远无法关闭（写死默认开），设置页语音输入 ASR 区亦无该控件。修复：设置页新增「无密钥时自动使用本地识别」开关（默认开启）+ change 监听写入；消费端读取加固为兼容布尔与字符串 'false'（与项目其它布尔键风格一致），使开关真正可关。",
-                "【工程防线】新增 tests/system-v222.test.mjs（26 项）：真实运行时断言（AsrManager + mock storage 驱动识别路径选择——缺省/true/false/字符串'false'、provider=local 优先级、有密钥或中转时不回落、切换存储键即切换路径）+ 接线断言（三键的设置页 UI 控件与写入监听器、五处消费端同名读取、误导描述已修正、index.js smsLimit 定义与截断切换、朋友圈 0=关闭与空集不注入）。测试总数 237 全绿。"
-            ]
-        },
-        "2.21.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·世界脉搏换会话监听泄漏+幻影脉冲】worldpulse 实例跨会话复用（index.js 仅在首次打开时 new），_listening/_unsub/_pollTimer 为实例级内存态：换会话后旧监听仍挂在旧上下文闭包上，且状态键 worldpulse_state_v1 属会话隔离键（CHAT_DATA_PATTERNS），新会话读取为空基线（lastFloorCount=0），会把「新会话当前楼层-0」当作积压量误触发一次幻影脉冲；onChatChanged 清理清单（十余个 App 均被清理）独漏 worldpulse。修复：WorldpulseApp 新增 onChatChanged()（停旧监听→基线重校→按新会话重建），startListening() 改为先停后启（幂等，防事件监听与轮询定时器重复挂载），index.js 在换会话与两处清数据共 3 处接入重绑。",
-                "【缺陷修复·换会话误砍新会话队列】v2.20 修复的残余漏洞：_processQueue 的出队步在生成完成后无条件执行，getState/_saveState 按当前会话解析——换会话后读到的是新会话队列，会把新会话自己的待处理事件悄悄砍掉一条；切回旧会话还会把已生成过的事件重复生成一遍。修复为「入口乐观出队」：getState 与 _saveState 之间为同步区间（无 await，此刻必为发起会话），同步移除待处理事件——换会话后绝不误动新会话队列、旧队列同步清理杜绝重复生成、行为与处理成败解耦（尝试过即出队）。",
-                "【工程防线】新增 tests/system-v221.test.mjs（30 项）：真实运行时断言（会话路由内存 storage + 事件源桩：换会话基线重校与幻影消除含负控制、幂等重建计数、轮询兜底先停后启、入口乐观出队时序、换会话不误伤新会话队列/不误续链）+ 接线断言（onChatChanged 方法体、先停后启、入口出队先于生成、三处接入）。测试总数 236 全绿。"
-            ]
-        },
-        "2.20.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·世界脉搏跨会话泄漏】世界脉搏队列处理链为异步任务（LLM 生成可达数十秒），此前无会话守卫：换会话后生成结果（历史/队列状态）仍写进新会话空间，异步续链还会把旧会话队列在新会话继续处理。新增会话身份戳（chatMetadata.file_name → chatId）：处理链入口捕获，生成完成与续链时比对，不一致整条丢弃——与 v2.18 通知守护、v2.19 积温守卫同构，第三次复用同一守护模式。",
-                "【缺陷修复·世界脉搏推微博死代码】_pushToWeibo 三重调用错误（自 v2.9.0 起从未生效）：① weiboApp?.wechatData 属性不存在（微博数据层属性名是 weiboData）；② VirtualPhone.weiboData 从未被赋值（永远 undefined）；③ addRecommendPost 方法全仓库不存在。修复为按真实数据层解析 + saveRecommendPosts 追加一条格式对齐 _parseWeiboPost 产物的推荐帖（blogger/bloggerType/time/device/content/images/计数/评论赞列表，详情页与点赞逻辑依赖这些字段），并通知微博 App 刷新推荐流。",
-                "【工程防线】新增 tests/system-v220.test.mjs（19 项）：真实运行时断言（WorldpulseApp 实例 + 内存 storage 驱动——换会话丢弃/同会话落地/推送字段契约/数据层缺失静默）+ 接线断言（入口捕获先于生成、守卫先于写入、续链带比对、真实 API 替换）。测试总数 235 全绿。"
-            ]
-        },
-        "2.19.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·积温跨会话串味】jiwen_state 自 v2.8.0 移植起未匹配任何会话隔离 pattern，被当作全局配置写入 extensionSettings——换角色/换会话时五轴状态（想念/骄傲/愉悦/唤醒/沉浸）跨会话串味，旧角色的漂移状态会继续影响新角色。修复：CHAT_DATA_PATTERNS 收录 /^jiwen_/（历史误存键由 get 的搬迁逻辑自动迁回当前会话）；引擎新增 reset()（丢弃内存态与加载标记、不落盘），换会话与两处清数据共 3 处调用，reset 后惰性从新会话重新加载。",
-                "【缺陷修复·积温迟到注入守卫】积温 tick 为异步任务（含 await 落盘），完成时若已换会话，其主动想法会写进新会话 chatMetadata。新增会话代号守卫：tick 发起时捕获代号，完成时比对，不一致整条丢弃。",
-                "【缺陷修复·待处理联系人静默丢失】微信联系人暂存写入键 ggp_pending_contacts、读取键 pending-contacts 不配对——暂存联系人从未被消费（v2.8.0 起），且跨会话滞留。写入端统一为 pending-contacts，与读取端配对。",
-                "【缺陷修复·显示缩放双源分裂】设置页只写 phone-shell-scale、控制中心只写 sys_shell_scale，两侧互相看不见：控制中心调整后设置页显示旧值、重启恢复时也读不到控制中心的设定。设置页引入 SYS_KEYS 双键同写（滑杆+重置），初始化新键优先回落旧键；font-scale.initColors 同步新键优先。",
-                "【缺陷修复·心境积温卡假交付】心境 App 积温五轴卡读 window.VirtualPhone.jiwen.state，但引擎从未暴露该属性——卡片永远显示「积温引擎尚未初始化」。引擎新增 state getter（返回快照副本），真实数据上屏。",
-                "【工程防线】新增 tests/system-v219.test.mjs（27 项）：真实运行时断言（jiwen_ 路由、reset 契约/不落盘/幂等/惰性重载、state 快照隔离）+ 接线断言（3 处 reset、tick 守卫生效序、键名配对、双源统一、引擎导出）。测试总数 234 全绿。",
-                "【兼容】v218 测试中 onChatChanged 角标同步断言窗口放宽（其间插入了同批次 jiwen 失效块），语义不变。"
-            ]
-        },
-        "2.18.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【缺陷修复·会话隔离收口】通知落账层跨会话串味：换会话时十余个 App 缓存全部清理，唯独 NotificationLog 内存缓存从未失效——旧会话通知会继续显示给新会话（通知中心/锁屏/角标三处可见），且挂起的 800ms 防抖落盘会把旧会话缓存写进新会话 chatMetadata。新增 NotificationLog.reset()（丢弃内存缓存与挂起定时器，不落盘——旧会话数据已由防抖周期落盘、当前 storage 已指向新会话），并在换会话（onChatChanged）与清数据（clearCurrentData/clearAllData）三处调用；reset 后惰性从新会话 storage 重建。",
-                "【缺陷修复·延迟通知守卫】微信多消息以 1.5s 间隔逐条 setTimeout 展示，展示途中换会话时，迟到的通知会漏进新会话。新增会话代号 _chatSessionGeneration：多消息块捕获发起时代号，逐条展示前比对，不一致即整条丢弃；代号在换会话与两处清数据时自增。",
-                "【新增·锁屏音乐卡直达】锁屏正在播放的音乐卡此前仅展示不可点。挂 data-app 并绑定点击：解锁并直达音乐 App；补可点光标与按压反馈样式。",
-                "【工程防线】新增 tests/system-v218.test.mjs（28 项）：真实运行时断言（reset 的脏缓存标志/新会话空历史/不落盘/幂等/惰性重建、flushNow 后 reset 语义）+ 接线断言（三处失效点、延迟守卫先于文案构造、音乐卡直达、CSS revision 升级），锁定会话隔离铁律。测试总数 233 全绿。",
-                "【兼容】v217 测试中 CSS revision 断言改为版本无关（每次样式更新都会 bump，不再绑定具体值）。"
-            ]
-        },
-        "2.17.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【新增·通知交互补全】横幅通知点击直达：此前所有通知横幅弹出后只能干等 4 秒淡出，点击无任何响应（真机语义缺失）。本轮为手机壳横幅与页面级兜底横幅统一注入点击交互：点击即收起并直达目标 App（appId 解析链：显式 meta.appId → senderKey/图标推断 → __sys__ 仅收起），同时把该条落账标记已读并同步桌面角标；收起逻辑统一为幂等 dismissBanner/dismissFallback，点击与超时共用同一路径（杜绝双实现漂移）。兜底横幅额外补「打开手机面板 → 等一帧 → 派发 openApp」链路，与来电唤醒同路径，App 不会渲染进未就绪容器。",
-                "【新增·角标消费】通知中心角标闭环：v2.16.0 定义的 unreadByApp() 此前全仓库零消费（死代码）。本轮以落账层未读为单一真源（unreadCount）驱动桌面「通知中心」图标角标：通知落账后、通知中心已读/删除/清空后、横幅与锁屏标记已读后三路同步；手机总角标重算统一排除通知中心自身（防止与微信/微博等业务角标双计）；打开通知中心不清零其角标（未读语义：读到才算读，逐条点击与已读操作才回落）。",
-                "【新增·锁屏单条直达】锁屏通知速览升级：此前只能整块点击跳通知中心，无法从锁屏直接回原 App。现在每条速览各自可点（data-id/data-app），单击即解锁并直达其来源 App（系统通知回落通知中心），同时标记该条已读并同步角标；保留整块点击兜底与上滑解锁手势互不干扰。",
-                "【新增·chips 未读对齐】通知中心筛选 chips 消费 unreadByApp() 聚合：副数字优先显示未读数（真机语义：徽标数 = 未读），无未读分组回落总数；分组排序改为未读优先。已读/删除/清空操作后同步回落桌面角标。",
-                "【新增·实时刷新】通知中心正开着时新通知即时入列（免打扰静默通知同样即时可见）；搜索框聚焦中不打断输入。",
-                "【工程防线】新增 tests/system-v217.test.mjs（63 项）：真实运行时断言（unreadByApp 聚合与已读语义、合并去重口径、_guessAppId 回退链、chips 未读对齐与降级、_syncBadge 宿主钩子）+ 接线断言（横幅回调注入点、兜底横幅可点击、锁屏单条 bind、角标同步调用点、CSS 新增样式与缓存版本号），防止「方法写好没人调」的假交付。测试总数 232 全绿。",
-                "【样式】可点击横幅光标与按压反馈（.phone-notification-tappable）、锁屏单条按压反馈；CSS 缓存版本号更新为 20260917-v2170-notification-interactions。"
-            ]
-        },
-        "2.16.1": {
-            "date": "2026-09-17",
-            "items": [
-                "【工程防线·正向审计】新增 tests/system-v2161-e2e.test.mjs（9 项端到端断言）：与既有「接线门」源码文本断言互补，本文件用**真实形态 seed 数据**直接运行模块 —— 微信主数据/消息分片均为 JSON 字符串形态、成就为 {id:时间戳} 映射、记忆为对象形态。断言 16 个索引源在真实数据下全部产出条目（键对了字段错也会立刻读空报警）、跨源检索 18 项命中预期源、大厅分片键 phone_wechat_msg_lobby_* 回落生效、成就目录缺失时优雅回落只索引 id、酒馆楼层源仅在注入 chatContext 时出现、单源抛异常不拖垮整体、通知落账与搜索源经同一 storage 真源闭环（落账即可检索）、免打扰只拦横幅不丢历史、缩放钳制 80-120 落盘。零产品代码变更，测试总数 231 全绿。"
-            ]
-        },
-        "2.16.0": {
-            "date": "2026-09-17",
-            "items": [
-                "【新增·原创】系统通知落账层 config/system-notifications.js：通知此前只有「瞬时横幅 + 队列防刷屏」，一闪即逝、错过即永久丢失。NotificationLog 把每条通知在展示的同时写入环形历史（sys_notifs，上限 200 条），同 senderKey 3 分钟内合并为一条并累加 ×N（不重置已读），落盘 800ms 防抖 + flushNow 兜底；_normalize 对脏数据净化（非对象跳过、缺 id 补号、按时间倒序、环形裁剪），全部失败路径返回 {error} 绝不抛，落账失败不阻断通知展示。",
-                "【新增·原创】通知中心 App（下拉 / 锁屏 / 桌面三入口）：按 App 筛选 chips（带计数、按数量排序）、关键词搜索、未读高亮、×N 合并计数、单条删除、一键全部已读 / 清空、点击结果跳回原 App；时间按「今天 HH:MM / 昨天 HH:MM / M/D HH:MM」智能显示。顶部下拉手势按热区分流：状态栏左半 → 控制中心，右半与药丸（灵动岛）→ 通知中心，全部以 46px 位移阈值触发，故轻点药丸锁屏不受影响。",
-                "【新增·原创】全局搜索 App + 检索内核 apps/memory/global-search-engine.js：17 个来源统一索引（微信会话含联系人、朋友圈、日记、短信、通话、织光机收藏册、日历备忘、音乐歌单、世界脉搏、微博热搜与推荐帖、记忆长期层、阅读书架、成就、小红书、贴吧、通知历史，注入 chatContext 时另含酒馆正文楼层）。评分：标题全等 +100 / 前缀 +80 / 包含 +60 / 仅正文 +30，并按命中位置与文本长度加权；命中片段居中开窗高亮；每源独立 try/catch，坏源不影响整体并上报 lastErrors。",
-                "【新增·原创】控制中心 phone/control-center.js：免打扰（真实拦横幅、通知仍入账不丢）、Wi-Fi（联动状态栏图标）、手电筒（手机壳暖光晕）、显示缩放滑块 80–120%（复用设置页同一套 --phone-shell-* 通路，新键 sys_shell_scale 优先、旧键 phone-shell-scale 回落，双向一致）、立即锁屏、音乐卡（上一首 / 播放暂停 / 下一首，真实操作 MusicData）。",
-                "【核心升级】锁屏从纯时间页升级为「速览层」：时段问候（夜深了 / 早上好 / 上午好 / 中午好 / 下午好 / 晚上好）、最近 5 条未读通知速览（轻点解锁并直达通知中心）、正在播放音乐条；全部能力可选缺失降级，通知层或音乐层不存在时自动回到原锁屏。",
-                "【工程防线】新增 tests/system-v216.test.mjs（132 断言）：通知落账合并 / 环形上限 / 已读语义 / 检索 / 脏数据与异常注入容错；搜索评分排序 / 摘要开窗 / 坏源隔离 / 权重与截断；17 个索引源与真实存储键字段对齐（含微信消息分片键 wechat_msg_*、世界脉搏 worldpulse_history_v1、阅读 ruby_reading_shelf、成就映射形态 —— 均为此前写错会成死代码的键）；系统控制归一化与旧键回落、锁屏回落链、音乐真实接口调用序列；以及一组「接线门」断言（模块必须真的被实例化、样式必须真的存在、esc() 不得退化为 no-op）。测试总数 222 全绿。",
-                "【存储分域】config/storage.js 的 CHAT_DATA_PATTERNS 增补 /^sys_/（sys_notifs 通知历史 / sys_dnd 免打扰 / sys_shell_scale 显示缩放 / sys_flashlight 手电筒 / sys_wifi 网络开关，全部随会话隔离，避免换角色时把某个角色的系统状态带过去）。"
-            ]
-        },
-        "2.15.0": {
-            "date": "2026-09-16",
-            "items": [
-                "【新增·原创】织光机收藏册 + 定期织信：saveLetter(letter) 把 AI 时光信落册（幂等：同 ts + 同首段拒重复；载荷裁剪：单段 600 字 / 12 段 / 册上限 60 封），listLetters() 倒序读取；autoWeaveIfDue({force}) 按间隔门（默认 7 天，游标 tw_last_auto）在打开 App 时自动织信，AI 优先、失败降级本地规则 composeLetter，无碎片不触发空信。",
-                "【新增·原创】时光信分享到朋友圈：shareLetterToMoments(letter) 经 wechatData.addMoment 以 isUserPost:true + visibility:{type:'public'} 发布用户帖，采用手机剧情时间（非真实时钟），并同步未读角标。",
-                "【新增·原创】织光机「🔁 回望」面板：消费 LonSha 侧召回自检数据（collectLonshaRecall 读 window.lonsha_memory_bridge_v1.snapshot.recallAudit），展示观测轮数 / 空召回比例 / 平均命中 / 热点楼层 Top10，两端观测互喂闭环。",
-                "【核心重构】跨端记忆注入收敛为单一真源 bridge.recallBlock(queryText, opts)：统一块头格式、首 24 字去重、每条裁 80 字、最多 3 条，新增 strictActors 严格模式（只注入提及在场人物的记忆）；微信单聊（原内联硬编码块）、微信群聊（严格模式，避免私密往事串味）、蜜语 honey 三处共用，替换此前各自漂移的格式化逻辑。",
-                "【新增·跨项目记忆协同】蜜语（honey）与微信群聊接入 LonSha 剧情记忆：蜜语在 generateUserLiveScene / generateLiveScene 的 callAI 上下文组装处注入；微信群聊在 groupMembersArray 收集后注入，以群名 + 在场成员为查询。",
-                "【工程防线】新增 tests/timeweaver-v215.test.mjs（8 项）：recallBlock 单一真源 / 去重裁剪严格模式 / 三处调用点接线 / 收藏册幂等与裁剪 / 定期织信间隔门 / 朋友圈结构对齐 / collectLonshaRecall 三态容灾 / 回望面板与存储分域；测试总数 213 → 221 全绿。",
-                "【存储分域】config/storage.js 的 CHAT_DATA_PATTERNS 增补 /^tw_/（tw_letters 收藏册、tw_last_auto 定期游标随会话隔离，避免跨会话串档）。"
-            ]
-        },
-        "2.13.0": {
-            "date": "2026-09-15",
-            "items": [
-                "【新增·语音输入】ASR 语音识别引擎 config/asr-manager.js：完全镜像 TTS manager 架构（provider 默认值表 + scoped storage key phone-asr-<provider>-<field> + legacy key 回落 + relay Worker 中转 + rawFetch 透传酒馆内部标记 + CSRF），支持 4 个 provider：local（浏览器原生 Web Speech API，零配置免费兜底）/ openai（gpt-4o-mini-transcribe）/ minimax_cn（speech-02-turbo）/ volcengine（bigmodel）。与 TTS 对称构成语音双向通道。",
-                "【核心能力】transcribe(audioBlob, options)：本地走 Web Speech 不需 blob；云端 multipart/form-data 直连或 relay 中转（base64 JSON 规避 CORS 与密钥暴露），25MB 上限校验，缺 key 且无 relay 时明确报错而非静默失败。recognizeOnce()：无 key 自动降级 local，有 key 走 startRecording→transcribe 云端链路，录音失败/识别失败均有可见错误。",
-                "【响应提取】_extractText 纯函数兼容多后端格式：OpenAI {text}/{transcript}/{segments:[]} 按原空格拼接、MiniMax {translations:[]} 空格 join、裸字符串透传、嵌套 {data:{}} 递归收敛，空 payload 返回空串。",
-                "【设置面板】apps/settings/settings-app.js：TTS tab 内新增可折叠『语音输入 ASR』区（provider 下拉 + 云配置显隐联动 + URL/Key/模型/中转/语言五字段 + 密码遮蔽 + 『🎤 说一句话试试』测试按钮 + 结果回显），事件绑定段新增 setAsrProviderField 与全套监听，与既有 TTS 配置交互完全对齐。",
-                "【微信接入】apps/wechat/chat-view.js：输入栏新增麦克风按钮，点按触发 recognizeOnce()，识别结果追加（非覆盖）到输入框并派发 input 事件同步发送按钮状态，不破坏用户已输入的文字。",
-                "【装配】index.js 四步接线：模块声明（AsrManager/asrManager）→ Promise.all 并行 import（asr-manager.js?v=<版本>）→ 类绑定 → new AsrManager(storage) 实例化 → window.VirtualPhone.asrManager 导出，与 TtsManager 装配链完全对称。",
-                "【测试】新增 asr-manager 50 断言（模块导出/provider 默认值/key 命名/配置解析/URL 推断/多后端响应提取/本地+直连+中转三链路/错误降级/recognizeOnce 自动选本地/接线审计）。"
-            ]
-        },
-        "2.12.0": {
-            "date": "2026-09-15",
-            "items": [
-                "【缝合·原创整合】并发 LLM 调用首 chunk 屏障，缝合自 FunnyCups/Luker（SillyTavern 分叉）orchestrator 扩展的 dispatch-barrier，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，保留完整契约，非照抄。",
-                "【新增·基建】apps/phone/first-chunk-barrier.js：同 connection-profile 并发请求中，首个到达者为 lead 立即流式，其余为 follower 先 await lead 的首个上游 chunk 再发请求——给上游（如 Anthropic）时间预热 prompt 缓存，follower 命中 cache-read 而非竞争冷写，显著降低多并发调用的输入 token 成本与首 token 延迟。可被微信/世界脉搏/织光机等任意 App 的 apiManager 调用点复用。",
-                "【契约】acquire 同步原子（JS 单线程下 Promise.all 并发串行通过，首到赢 lead 无竞态）；signalFirstChunk 幂等；release fail-open（lead 出错未流式绝不挂起兄弟）；follower 只 resolve 不 reject；伪 key 完全退出协调；迟到 release 不破坏后续批次新 lead。新增 pendingFollowers/activeLeadCount 观测接口。",
-                "【修复】v2.11.0 遗留：update-log.json 顶层 latest 字段漏更新（仍 2.10.0）导致 entry-integrity 的『update-log latest == manifest.version』与 audit 各降 1。本版本同步 latest 并回补版本块。",
-                "【测试】新增 first-chunk-barrier 10 断言（角色分配/不同key独立/等待放行/幂等/清槽/fail-open/follower no-op/伪key退出/迟到release/并发无竞态）。全量 175/175 绿（165 基线+10 新），语法门 210 文件、entry-integrity 23/23、audit 33/33。"
-            ]
-        },
-        "2.11.0": {
-            "date": "2026-09-15",
-            "items": [
-                "【缝合·原创整合】状态追踪解析引擎，缝合自 Angx666/u4d-panel 的 status-parser 状态面板机制，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块。剥离 DOM 渲染（hideStatusMarkup/removeLegacyStatusMarkup），保留并通用化核心解析能力，非照抄。",
-                "【新增·手机状态】apps/phone/status-tracker.js：解析 AI 回复中的 [STATUS:字段=值|字段+=记录] 标记为结构化状态对象。中英字段别名规范化（normalizeKey: trim+小写+去_-空格 → FIELD_ALIASES 反查）；keyed 载荷（字段=值，| 分隔）+ legacy 定位置载荷（≥7段含数值校验）双格式；增量记录去重保序。",
-                "【核心算法】跨天状态滚动——getStoryDayKey 识别剧情日（日历日期/第N天含中文数字 parseChineseInteger/Day N），isStoryDayChange 检测切换后 applyStatusUpdate 仅携带 growth/form 等 DAILY_CARRY_FIELDS、其余重置、records 跨天保留。makeParser 工厂支持注入自定义字段别名表，通用化适配任意角色状态域。",
-                "【测试】新增 status-tracker 12 断言（归一化/中文数字/剧情日/跨天/keyed/legacy/数值校验/去重/跨天滚动/文本提取/自定义别名）。全量 165/165 绿（153 基线+12 新），语法门 208 文件、entry-integrity 23/23、audit 33/33。"
-            ]
-        },
-        "2.10.0": {
-            "date": "2026-09-15",
-            "items": [
-                "【缝合·原创整合】群聊多角色发言调度引擎，缝合自 Windy-Sora/SillyTavern-GroupWorld 的群聊三 agent 机制（director/force-speak/critique），按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，非照抄 3624 行 agent 框架。",
-                "【新增·微信调度】apps/wechat/group-scheduler.js：director 发言者调度（LLM 选 speakers→名字映射回成员→去重保序→cap maxSpeakers→validate 过滤禁用）；force-speak 强制发言指令构造（@某人强制回复，中英双语+自定义模板）；critique 导演/角色表现批评（节奏/焦点/OOC 检测，JSON 输出）。",
-                "【核心算法】matchMemberByName 名字/别名/归一化模糊匹配（NFKC+去空白+小写，包含匹配取最短名优先防误中）；parseSpeakers 容错解析 LLM 返回（对象/字符串/带对象元素/裸名字，尾逗号修复）；parseCritique 剥代码块+尾逗号容错。",
-                "【修复】parseSpeakers 尾逗号 JSON 解析失败导致整串误判为裸名字的 bug（补尾逗号容错分支，与 parseCritique 对齐）。",
-                "【测试】新增 group-scheduler 9 断言（归一/匹配/解析/调度/校验/双模板/容错/端到端）。全量 153/153 绿（144 基线+9 新），语法门 206 文件、entry-integrity 23/23、audit 33/33。"
-            ]
-        },
-        "2.9.0": {
-            "date": "2026-09-15",
-            "items": [
-                "【缝合·原创整合】六项缝合自两个小手机项目（葵葵机 TH脚本 + yexiaoxiaoye/mobile 扩展），全部按 ruby-phone 工程规范重写为可测 ESM 模块，非照抄。",
-                "【新增·基建】config/floor-store.js 楼层挂载存储引擎：数据挂在每条 ST 消息的 msg.data 上（葵葵机模式泛化为任意命名空间），删除楼层自动带走数据、重roll不残留、跨设备随聊天导出。两阶段批量写（先收集再一次 setChatMessages，取自 mobile 仓卡顿教训），按 id 撤回/按楼层回收/双源合并渲染。无 TH 环境降级内存影子层，全程可测。",
-                "【新增·微信记忆】config/phone-chat-memory.js 联系人级手机聊天长期记忆摘要引擎（葵葵机核心三件套工程化）：滚动摘要（300字约束）+ 无 API 降级拼接截断 + 单聊/群聊双模式 prompt 构建。摘要存 PhoneStorage 会话级分层（非 localStorage 裸 key），走 apiManager.callAI 统一通道。",
-                "【微信接入】buildMessagesArray 注入「与某人的长期手机聊天记忆」系统块，让 AI 在有限上下文里优先记住承诺/称呼/关系变化/未解决事项；sendToAI 成功后异步回写滚动摘要（不阻塞发送）。解决原微信每轮塞全量导致关键事实被稀释的问题。",
-                "【新增·第30个App】世界脉搏 Worldpulse：缝合 mobile 仓 parallel-events 机制（楼层变化监听→阈值队列→风格化 prompt→AI 生成），差异化落地为织光机姊妹——平行事件写成「手机推送/快讯」风格的世界动态，让背景世界在用户数字生活里呼吸而非污染正文。eventSource 优先+轮询兜底，六种风格+自定义，可手动脉冲。注册 worldpulse_ 会话级 pattern 防串味。",
-                "【优化·微信渲染】缝合 mobile 仓 IncrementalRenderer 思路：_refreshCurrentChatMessages 识别「纯尾部追加」场景，只渲染+追加新消息的增量 HTML、复用既有 DOM，避免全量 innerHTML 重建导致的界面跳动与焦点/滚动丢失；删除/编辑/撤回/重roll 时仍回退全量渲染。",
-                "【测试】新增 floor-store 7 断言 + phone-chat-memory 10 断言 + worldpulse-engine 10 断言（共 27），route-apps 冒烟扩充 worldpulse。全量 144/144 绿，语法门 204 文件、entry-integrity 23/23、audit 33/33。"
-            ]
-        },
-        "2.8.14": {
-            "date": "2026-09-15",
-            "items": [
-                "【新增·原创超大升级】织光机 Timeweaver——跨 App 数字生活叙事引擎（第 29 个 App）。现有 28 个 App 是「当下的娱乐孤岛」：微信聊完即散、日记写完即存、照片拍过即忘，没有任何 App 把碎片整合成可回顾的叙事。织光机主动聚合日记/相册/成就/日历/微博/蜜约/剧场七源数据（顺带消费 life_events_v1 与 chatMetadata 兜底），把零散数字足迹织成一部可回顾的个人编年史。",
-                "【引擎】timeweaver-engine.js（352 行纯函数，ESM export 对齐 drives-engine/jiwen-engine 约定）：normalizeEvents 七源归一容错+时间归一（ms 优先、楼号回退）；buildTimeline 日/周/月分桶；detectMilestones 识别七类「第一次」与高光时刻；buildMoodCurve 滑窗情绪曲线；buildAffinityBoard 亲密度榜（频次×2+正情感×3+跨源广度×2）；composeLetter 数据驱动的「时光信」叙事生成。与 life-events.js（被动事件存储）差异化互补：织光机是主动聚合+叙事升华。",
-                "【界面】timeweaver-view.js 四 Tab——时光信（可 Blob 导出 .txt）/生活流/里程碑/亲密度榜，琥珀金 #e8a33d 主题纯内联 CSS，零外部请求。timeweaver-collector.js 主动读取各 App 存储键，readArr 兼容 string/object/对象包数组（records/entries/list/photos/items/data）多形态容错。",
-                "【接线】config/apps.js 注册（id:timeweaver，icon:🕰️）+ index.js openApp 路由分支（gacha 后）。entry-integrity 第 3 节「每个桌面 App 都有路由分支」自动校验覆盖，无需改测试。",
-                "【测试】timeweaver-engine.test.mjs 12 断言 + timeweaver-collector.test.mjs 7 断言（mock storage 含脏数据容错）+ route-apps 冒烟扩充。全量 117/117 绿，entry-integrity 23/23、audit 33/33 通过。"
-            ]
-        },
-        "2.8.13": {
-            "date": "2026-09-14",
-            "items": [
-                "feat(storage): set()/remove() 第三参数实现 immediate 语义——true 绕过防抖立即落盘，false/缺省走合并防抖；落点不变量保持由 CHAT_DATA_PATTERNS 决定，第三参不改变存储位置",
-                "fix(storage): 修复 18 处历史调用点（8 处 true / 10 处 false）第三参数被静默忽略的意图断裂；此前 43 处系旧正则被嵌套括号截断的虚高数字，已由括号配平扫描器修正",
-                "test(storage): 新增 storage-immediate.test.mjs 21 项断言（立即/防抖/合并/绕队列/落点不变量/熔断两路径/并发），变异测试 7 体击杀验证",
-                "feat(memory): 召回主权归记忆插件——手机侧 BM25 索引失效信号全覆盖。MemoryCore 在唯一持久化出口 _saveNow 递增 _dataVersion 版本戳, LonShaBridge._ensureIndex 懒检测版本戳+记忆池条目数双信号, 捕获 record/sleep/clear/reload/invalidateFloorAt 及 pool.add* 等桥外写入路径(此前 _bm25Dirty 仅桥内 4 处置位, 桥外写入导致索引陈旧)。新增 recall-sovereignty.test.mjs 19 断言, 变异测试 4/4 击杀。"
-            ]
-        },
-        "2.8.12": {
-            "date": "2026-09-14",
-            "items": [
-                "【修复·关键】修复发布门禁本身失效：项目宪法要求的「node --check 全量语法校验」在仓库缺少 package.json 时按 CommonJS 解析 .js，对 ES Module 结构性损坏返回退出码 0（假绿）。index.js 正是据此一路「校验通过」却根本无法解析、插件完全不可加载，并连续发布了约 9 个版本。现新增 scripts/syntax-check.mjs 以 --input-type=module 强制按 ESM 逐文件解析，任一失败即非 0 退出并列出文件名与行号。",
-                "【新增】根目录 package.json（type=module、无任何依赖声明、private）：使宪法里裸 node --check 命令恢复真实拦截能力；扩展运行时不加载该文件，宿主也不会尝试安装依赖。scripts 提供 syntax / test / check。",
-                "【新增】tests/syntax-gate.test.mjs 含负控制用例：实测复现「无 package.json → 损坏文件退出码 0」的历史假绿机制，并验证语法门能拦住损坏、不误伤健康代码、覆盖面不低于 170 个文件（防止遍历逻辑被改坏导致门退化成空跑）。",
-                "【变更】CONTEXT.md 发布链路更新：改为 npm run syntax + npm test（或 npm run check）；记录三处版本号（manifest / index.js ST_PHONE_VERSION / package.json）需同步，且版本一致性断言不再硬编码具体版本号。"
-            ]
-        },
-        "2.8.11": {
-            "date": "2026-09-14",
-            "items": [
-                "【新增】存储层聊天存档防膨胀熔断（仓库历史上首次存在写入侧熔断）：顶层裸数组超限限长，并按「新条目方向」感知——小红书笔记/贴吧帖子为 unshift 语义（新在头部）故保留头部，联系人/歌单等 push 语义故保留尾部，避免统一 slice(-N) 把最新内容整批删掉；同时拒写超大 Base64 图片（正常路径应已落盘为 /backgrounds 路径）。键表仅登记实测确为顶层数组的键，未收录以 JSON 字符串/对象存储的键（如 weibo_user_posts、bili_entries_v1、theater_stories_v1、memory_core_v1），避免形成零引用的假接线。",
-                "【修复】版本号单源化：入口版本常量与 manifest.json 对齐（此前长期停留 1.5.5，使远程更新检查把已升级状态误判为「发现新版本」，每小时提示且升级后仍提示）。新增测试断言锁定两者一致。",
-                "【优化】内置离线更新公告文案同步为本轮审计内容，避免离线时展示过期说明。",
-                "【测试】entry-integrity 回归门扩展：存储熔断方向语义、未超限不介入、非数组透传、Base64 拦截边界、版本双源一致性。"
-            ]
-        },
-        "2.8.10": {
-            "date": "2026-09-14",
-            "items": [
-                "【修复·关键】修复入口文件 index.js 的 3 处结构性语法损坏（tieba 分支 .catch 未闭合、health 分支多余右括号、多余右花括号提前闭合 if 块）。该问题导致 index.js 无法被解析，插件自 v2.1.0 起连续约 9 个版本完全无法加载；此前测试仅做正则文本匹配、从不解析入口文件，故 75 个测试全绿仍未能发现。",
-                "【修复·关键】修复新增 App 会话状态被误判为全局配置的问题：ruby_* 前缀未登记进存储路由表，导致成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度被写入 extensionSettings，换角色或换会话时互相串味（与 CONTEXT.md 零数据库铁律 #3「随会话隔离」相悖）。现已归入 chatMetadata，并加入一次性搬迁逻辑，将历史误存的会话键从全局配置搬回当前会话。",
-                "【修复】补齐游戏存档迁移漏项：2048/数独/对弈/谁是卧底/扑克牌局状态此前仍存于全局键，现按会话隔离（catbox/werewolf 此前已迁移）。精确枚举键名，不误伤 games_*_ai_prompt 等全局提示词模板。",
-                "【新增】测试基建 tests/entry-integrity.test.mjs：全仓库 ESM 模块级语法门（含入口 index.js）+ 存储路由回归门（会话键/全局键分类断言）+ App 路由一致性 + 版本一致性。修复 `node --check` 走 CommonJS 分支导致 ESM 语法损坏漏报的问题。"
-            ]
-        },
-        "2.8.8": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】健康 App「健康档案」tab（源自 LA-0.6.84 medical-core）：140 种病症库（20 大分类）内置，支持从分类选择添加病症（含严重度/阶段）、每日推进（急性病按阶段进展、慢性病随机波动、到期康复）、病症移除、健康档案注入生成上下文。纯本地零 LLM。",
-                "【新增】「幸运转盘」App（id: gacha，🎰）：5 卡池 × 630 道具（源自 V3.759 状态栏 GACHA_DATA 扭蛋库），品质 6 级（神话/传说/史诗/稀有/优秀/普通）权重抽卡，单抽 100 / 十连 900 幸运币，背包库存 + 抽卡记录 + 幸运币账本，最高品质可分享到聊天让角色互动。纯本地零 LLM。",
-                "【优化】健康 App 现状：周期/体征/健康/家谱 四 tab 齐全，生理（妊娠/周期/生理五维/家谱）+ 病症档案（健康档案）全生命周期管理。"
-            ]
-        },
-        "2.8.7": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】阅读 App 支持 EPUB 格式（零依赖）：内置极简 ZIP 只读解析器（EOCD 定位 + 中央目录 + DecompressionStream 原生解压，含 deflate-raw/deflate 双回退），EPUB 结构解析（container.xml → OPF → spine → manifest → XHTML 提取），自动提取书名/作者/章节，多章节沉浸式阅读。纯本地零 LLM。",
-                "【新增】阅读器排版增强：三档主题切换（☀羊皮纸/🌙夜间/⚫暗墨），作者显示，阅读进度条 + 百分比，主题随进度记忆持久化。",
-                "【优化】书架区分 TXT/EPUB 徽标，导入按钮支持 .txt/.epub 双格式。"
-            ]
-        },
-        "2.8.6": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】「阅读」App（id: reading，📖）：纯本地 TXT 小说阅读器。多编码自动探测（UTF-8/GB18030/GBK/Big5/UTF-16，BOM 优先 + 评分制），章节智能切分（第X章/卷/回 + Chapter + Markdown 标题），段落格式自动探测（空行分段/段首缩进/一行一段），书架化管理（导入/删除/同名覆盖），阅读器仿纸质书排版（首行缩进 + 字号可调 + 进度记忆），支持上一章/下一章/章节下拉跳转。零 LLM 零依赖。",
-                "【说明】阅读 App 书架只存书目元数据，正文存会话内存；重启后需重新导入原书（避免 chatMetadata 存档膨胀）。"
-            ]
-        },
-        "2.8.5": {
-            "date": "2026-09-12",
-            "items": [
-                "【修复】接通 4 个「做了但打不开」的 App 路由 —— 查手机(peek)/B站(bilibili)/小剧场(theater)/图谱(graph) 已在 APPS 数组注册，但 phone:openApp 缺路由分支，点图标只弹「功能开发中」。补齐 4 条懒加载分支后 24/24 App 全部可打开。",
-                "【修复】查手机视图 peek-view.js 缺方法头 —— `_dyToneColor` 方法后的事件绑定代码段丢失 `_bind() {` 声明，导致 `const q` 裸露在 class 体内 ESM 编译失败（Unexpected identifier 'q'），查手机 App 此前无法加载。补回 `_bind()` 方法声明。",
-                "【修复】图谱视图 graph-view.js `join('` 字符串未闭合 —— `].join('` 换行未闭合引号导致 ESM 编译失败（Invalid or unexpected token），图谱 App 此前无法加载。修复为 `].join('\\n')`。",
-                "【修复】路由补全后 24 个 App 全量语法门 + ESM import + 渲染冒烟测试全绿（peek/bilibili/theater/graph 实例化 render 均成功）。"
-            ]
-        },
-        "2.8.4": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】「塔罗」App（id: tarot，🔮）：78 张韦特牌（大阿卡那 22 + 小阿卡那 56）+ 5 种牌阵（单张指引/三张过去现在未来/凯尔特十字/金字塔/心形情感），可输入问题、点牌洗牌抽牌、逐张翻牌看正逆位释义、占卜历史存档。纯本地规则，AI 解读通过「求 AI 解读」按钮注入剧情自然输出。",
-                "【协议】<TAROT> 占卜协议：抽牌结果以牌阵+牌名+正逆位格式注入，AI 以角色口吻解读，不暴露系统提示。"
-            ]
-        },
-        "2.8.3": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】修复 config/apps.js 数组缺逗号致 ESM import 崩溃 —— 第四行起 playbook/成就簿/小红书/贴吧/健康/记忆/图谱/查手机/B站/小剧场 等 10 个 App 之前全部无法注册加载，现 22+1=23 个 App 全部可用。",
-                "【新增】「心境」App（id: mood，🌈）：把后台三大引擎做成手机内可感知界面 —— ①情绪引擎(Drivesoid)主导情绪色卡 + Top3 维度 + 清醒/睡眠态；②积温五轴可视化(连接需求/骄傲/愉悦/唤醒/沉浸) + 主动想法气泡；③记忆系统统计(长期/短期/已巩固/已换代/可引用/需谨慎/仅联想)。零 LLM，只读聚合引擎状态。",
-                "【优化】心境 App 单例路由接入 phone:openApp，图标暂用记忆图占位，后续可换专属图标。"
-            ]
-        },
-        "2.8.2": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】记忆换代失效机制（移植自 Paramecium 草履虫「原文是唯一真相」记忆设计）：longTerm 睡眠巩固时对新入条目与既有长期记忆做高置信冲突检测（词面相似度闸门 + 主题锚点反义立场判定），新条目重要性达标且冲突 → 旧条目标记 superseded 退出主动召回（原文保留可逆，pinned/剧情条目不参与换代）。",
-                "【新增】superseded 链式换代与复活：被压制旧条目可被更新的状态替换（supersededBy 走链更新）；当压制方条目被再次换代或消失时，旧条目自动解除压制复活重新参与召回。",
-                "【新增】召回过滤增强：recall 同时排除 metadata 标记 superseded 与记忆池副本中已被镇压的 content（双通道兜底过滤），被换代记忆不再进入注入上下文。",
-                "【优化】记忆换代扫描置于 lifecycle 冷却之前执行，新入条目互不误判（压制池排除本次新入），避免同批新记忆互相换代。",
-                "【优化】冲突判定词表覆盖奶茶/住所/饮食/工作/宠物/情感 6 组主题锚点 + 轻量反义立场词表（含戒不掉豁免、强恢复信号识别），全部零 LLM 纯规则。"
-            ]
-        },
-        "1.5.5": {
-            "date": "2026-09-09",
-            "items": [
-                "【新增】微信生图卡片与蜜语直播 AI 生图 Tag 记录支持编辑；微信可修改中文描述和英文 Tag 后保存或重新生成，蜜语可修改最新 Tag 并继续沿用原有生图流程。",
-                "【修复】修复电子小猫存档未按酒馆会话隔离，切换角色或会话后错误共用同一只小猫的问题。",
-                "【修复】合并边框与文字颜色设置入口，修复移动端色相滑杆出现双轨道以及原生颜色面板不直观的问题。",
-                "【修复】修复部分 Android 高分屏设备上传头像或壁纸时，裁剪预览与最终保存结果缩放不一致的问题。",
-                "【修复】修复部分酒馆美化使用全局 textarea 样式时，ComfyUI 工作流 JSON 与节点映射被强制展开的问题。",
-                "【优化】旧版全局猫盒存档会自动迁移到当前会话，并清理遗留全局数据，避免继续跨会话串档。",
-                "【优化】重做手机边框与全局文字颜色选择器，支持色相、饱和度、明度、RGB 和 HEX 精细调色，并在拖动时实时预览效果。",
-                "【优化】更新六套悬浮图标资源，优化图标显示效果与文件体积。",
-                "【优化】优化兼容古代时间状态栏的解析，支持朝代纪年、中文日期与时辰格式，古代时间自动隐藏星期显示。",
-                "【优化】ComfyUI 工作流支持拉取 LoRA 列表，可在弹窗内滚动勾选单个或多个 LoRA 并分别调整权重；生成时优先写入现有 LoraManager，无管理器时自动追加标准 LoraLoader。"
-            ]
-        },
-        "2.1.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】记忆 App：移植 sxiphone 记忆体系精华，零外部依赖。对话自动采集为短期记忆，睡眠巩固为长期记忆，按聊天隔离防串味。",
-                "【新增】Ebbinghaus 衰减评分引擎：重要性×激活次数×时间衰减×情绪权重×强化保护，pinned/permanent 记忆永不衰减。",
-                "【新增】四层记忆池：前提/感知/空间/时间，三级触发检索（感官→关键词→文本相关），感官命中权重最高。",
-                "【新增】本地情感词典（valence/arousal 二维模型）：中英混合词库，强度词增强/弱化修正，无需任何 API。",
-                "【新增】记忆注入：开启“自动注入 AI 上下文”后，每次生成自动携带最相关记忆块进入 prompt（纯本地，召回不足自动补最新记忆）。",
-                "【新增】记忆检索：关键词混合排序（重叠度 0.6 + 时间接近度 0.25 + 重要性 0.15），支持跨层检索。",
-                "【优化】记忆 App UI：iOS 风格概览卡 + 时间线 + 检索 + 立即巩固 + 一键清空，自动注入开关。"
-            ]
-        },
-        "2.2.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【优化】事件监听泄漏治理：window 自定义事件与酒馆 eventSource 监听改为幂等挂载（重复挂载自动拦截），init 重入时统一解绑重建；修复了此前 index.js 拼接污染导致的代码双份执行问题。",
-                "【优化】记忆系统改为空闲延迟初始化（requestIdleCallback），不再拖慢手机核心模块加载；消息到达时自带兜底初始化，保证不丢记忆。",
-                "【新增】记忆 App 首次打开引导：提示开启「自动注入 AI 上下文」，并给出空态使用指引。",
-                "【新增】LonSha 知识图谱自动连边：手机记忆写入图谱时，自动识别角色名/地点名/同标签/同时间窗生成关系边，图谱从孤立节点变为关系网。",
-                "【新增】图谱节点详情：点击检索结果可展开该节点的完整关系链与手机侧相关记忆。",
-                "【新增】可选 LLM 增强摘要（默认关闭）：开启后调用酒馆静默生成高质量概括，失败自动回退纯本地摘要。",
-                "【优化】记忆注入彻底去除情感维度，改为纯规则采集 + 直白记忆片段，对弱模型更友好。"
-            ]
-        },
-        "2.3.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】桌面宠物：移植自道渊小手机的桌面宠物系统，webm 动画状态机（Idle→点击反应→手机开启→循环→关闭），双 video 交叉淡化 + 透明通道检测兜底，点击宠物即可开关手机。",
-                "【新增】桌面歌词 + 系统媒体会话：移植自 Selene Music，音乐播放时浮动显示当前歌词句（LRC/数组双格式解析、时间轴推进、可拖拽定位），并在系统媒体中心/锁屏显示歌名与进度。",
-                "【优化】主动消息楼层锚定：吸收飞讯 last_floor 机制，微信线上主动触发记录楼层锚点，楼层被删除/滑动/重生成时自动失效，杜绝重复触发与孤儿消息。"
-            ]
-        },
-        "2.3.1": {
-            "date": "2026-09-11",
-            "items": [
-                "【修复】桌面宠物 webm 资源改为 import.meta.url 解析，避免按酒馆页面路径 404。",
-                "【修复】桌面宠物与悬浮入口解耦：不再依赖「悬浮入口」开关，默认出现；点击宠物开关手机并与面板动画同步。",
-                "【修复】桌面歌词时间轴：MusicData 歌词为秒，推进器误当毫秒导致歌词不跟，已按秒转毫秒。",
-                "【新增】锁屏/系统媒体键：play/pause/上一首/下一首/拖动进度 + 封面。",
-                "【新增】音乐设置页「桌面歌词」开关。"
-            ]
-        },
-        "2.4.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】查手机：适配自 jiuyi777/xiao-shouji。汇总微信/日记/相册/日历/小红书/音乐的角色手机痕迹；空缺时生成带「推测痕迹」标记的占位，可选注入上下文。",
-                "【新增】B站：不抓真实网页，只生成 B 站或 phone://bilibili/ 模拟条目；外站链接会被过滤。",
-                "【新增】小剧场：支持酒馆 {{random:...}}、字数规则、续写拼接与提示词复制。",
-                "【新增】生活事件时间线库 life-events.js，供微信/日记等模块写入高价值痕迹。"
-            ]
-        },
-        "2.5.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】健康 App 缝入 Liuuuu54/st_bs_biotracker 纯本地妊妆/产程算法：孕早期84/孕中期105/孕晚期63/临产期28天按种族孕速折算，逾期后进入产兆。",
-                "【新增】产程三阶段（潜伏/活跃/过渡 → 胎体下降/娩出/间歇 → 供养器官娩出/产后观察）+产后恢复 56 天，全部本地推进，不绑 OpenAI/MVU。",
-                "【新增】67 个种族生理表与五类胚胎类型（胎生/卵生/卵胎生/胎转卵生/不定型），可调孕速修正系数与多胎标签。",
-                "【优化】旧存档自动迁移：原 28 天周期与粗粒度孕周仍可读；注入块只事实体征，弱模型友好。"
-            ]
-        },
-        "2.6.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】游戏大厅「对弈」：缝自瑟瑟小手机游戏扩展 V0.1.0 的五子棋/象棋/斗兽棋纯本地引擎，可与本机 AI 落子，不绑神数据库与 ubp-root。",
-                "【新增】健康 App 体征页：缝自 LA-0.6.37 的饥/渴/洁/尿/便五维，按小时累积，可进食/饮水/如厕/洗漱回落；超阈值时写入注入块。",
-                "【新增】健康 App 家谱页：分娩后自动登记子嗣，本地存档，不写世界书。",
-                "【取舍】不替换现有狼人杀；不搬 LA 悬浮壳/世界书投影/生育重复引擎；不进记忆插件。"
-            ]
-        },
-        "2.7.0": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】微信礼物：缝自 ovo066/kktest 礼物目录与 24 枚 SVG，加号面板新增「礼物」，走零钱扣款，气泡/查手机可识别。",
-                "【新增】线上主动触发免打扰时段（缝自 kktest liveness quietHours）：默认 23-7 点不自动触发，起止小时可调，立即测试不受限。",
-                "【新增】锁屏：参考 kktest LockScreen，点击摄像头药丸锁屏，上滑解锁，显示时间/日期/电量。",
-                "【优化】查手机消息摘要补齐 [转账]¥x / [红包] / [礼物] 格式（对齐瑟瑟小手机 V0.255）。",
-                "【取舍】不搬 kktest 独立 App 壳/API 管线/记忆系统（RubyPhone 已有）；不搬 V0.255 主题化上下文命名成套体系。"
-            ]
-        },
-        "2.7.1": {
-            "date": "2026-09-11",
-            "items": [
-                "【新增】时间-环境感知注入（缝自 TPES 时间感知增强系统 1.0 精简版）：读取剧情时间 → 时段/光照/生理节点绑定，随生成注入 <Time_Env> 块，默认开启，设置页可关。",
-                "【规则】时间只前进、交互间隔即剧情流逝、离线期间角色按人设作息生活、时间感只走叙事不输出元标注；兼容古代纪时（按小时数映射昼夜光线）。",
-                "【取舍】TPES 的强制优先级宣言/三态模型长文不整体照搬，只保留可执行规则；世界书零写入，不新增 API 管线。"
-            ]
-        },
-        "2.7.2": {
-            "date": "2026-09-12",
-            "items": [
-                "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库，替代原继承自 gaigai315/yuzuki-phone 的失效地址，避免误拉原作者版本号。"
-            ]
-        },
-        "2.7.3": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】消息文本去噪清洗: 移植自芋圆机 cleanFloorForSummary/stripStatusBlocks/stripWxTagLines, 记忆采集前自动剔除 horae 等插件注入的状态块/成对大写块/HTML/样式脚本/裸K=V状态行, 避免把系统状态当剧情记忆采进去; 代码围栏智能保留中文正文",
-                "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库 (v2.7.2)"
-            ]
-        },
-        "2.7.4": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】查手机新增抖音平台页: 借鉴 ai-virtual-phone checkphone 的高仿抖音个人主页(头像/关注/粉丝/获赞统计 + 作品/收藏/喜欢三tab作品三宫格 + 视频详情弹层带文案/爱心评论收藏/评论)。数据直接取本人小红书笔记/相册照片/微博帖子本地生成, 零 LLM; 无真实痕迹时降级为标[推测]的占位作品。"
-            ]
-        },
-        "2.7.5": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】查手机新增微博/B站/豆瓣三个高仿平台页(借鉴 ai-virtual-phone checkphone): 微博页含热搜榜+本人微博流(作者头像/转发评论点赞), B站页含观看记录视频流(封面/UP主/播放/弹幕), 豆瓣页含动态时间线(在听/读过/日记等分类)。数据全部取本人现有痕迹(微博帖子/热搜、B站观看条目、音乐播放/日记)本地生成, 零 LLM, 无痕迹时降级为标[推测]占位。"
-            ]
-        },
-        "2.7.6": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】对话整理格式化(移植自糯叽叽 nuojiji-tools 对话合并算法): 新增 config/dialog-format.js, 5分钟同发言人连续消息自动合并为引用块(避免刷屏式重复), 支持 ## 📱线上/📝线下 模式标记与 HH:MM 时间锚定; 已接入查手机微信对话框体, 聊天痕迹从逐条堆叠改为整理后的可读对话。"
-            ]
-        },
-        "2.7.7": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】查手机新增「角色日报」(借鉴 dwell-on-something 12-日报机制): 每天一份只给角色看的报纸, 版块化排版(今日聊天/今日日记/今日动态/今日日程 可整版增减), 每版配一句写法说明(EXTRA思想), 末尾夹一张角色口吻便条(独立竖线标注不混入正文)。数据源全部为本会话已有痕迹(微信/日记/微博/小红书/日历), 纯模板格式化零 LLM; 无痕迹时降级空版。"
-            ]
-        },
-        "2.7.8": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】情绪驱动引擎 (config/drives-engine.js, 移植自 awesome-ai-companion 聚合清单中的 Drivesoid 情绪动力学 v2): 16 心理维度(活力/思念/亲密/占有欲/欲望/嫉妒/焦虑/保护欲/满足/欢欣/渴望/玩心/低落/烦躁/恐惧)+疲劳, 三层情绪链 base→mood→temperament(双时间尺度衰减/唤醒门控整合/睡眠加速恢复), 昼夜节律高斯峰, 状态依赖影响, 习惯化衰减(同标签15分钟×0.7ⁿ), 负性偏差, 未回复里程碑(30m/1h/2h 焦虑), 疲劳-活力耦合, 突发 whim。剥离原版 LLM 分类器, 替换为纯规则中文情绪分类器(关键词/中性词保护)零 LLM; 注入 {{DRIVES_STATE}}(如 [情绪状态] 思念 49% / 亲密 45%), 持久化走 chatMetadata 独立命名空间防串扰。所有消息(用户/AI)自动喂事件推进状态。"
-            ]
-        },
-        "2.7.9": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】记忆召回过滤 (config/recall-filter.js, 移植自 MemoryConstellations 远程记忆星图设计的纯规则部分, 零 LLM): ① 分段衰减排序——3天内新鲜度主导, 3天后情感强度主导, 低于阈值静默丢弃; ② 回忆权限分级——双通道命中+近30天内→可引用引用、单通道/30-90天→需谨慎(注入带 ~ 标记、引用须留余地)、超90天→仅联想(不注入, 仅内部参考); ③ 生命周期冷却——14天→冷却、30-90天→冻结(仅可检索不注入)、超90天→墓碑(清空正文保留剪影), 受保护条目(pinned/剧情/永久)永不墓碑。已接入 memory-data: recall() 召回经 decorateRecall 打权限分级+分段衰减排序; sleep() 合并后执行 pruneByLifecycle 分级清理; buildPromptDirective() 注入时过滤 associate-only 并给 cautious 带 ~ 标记。"
-            ]
-        },
-        "2.8.0": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】积温主动意识引擎 (config/jiwen-engine.js, 移植自 jiwen 积温, MIT): 五个连续数值轴(连接需求/骄傲/愉悦度/唤醒度/沉浸度) 随时间数学漂移、互相制衡、到阈值自然触发行为——不靠随机概率骰子。核心机制: 连接需求时间分段加速(久未回应想念累积)、骄傲防御(被冷落嘴硬)、盔甲侵蚀(想念太重放下骄傲)、Pride×Connection 内心战争升温 arousal、Valence 回归设定点+低情绪自我调节、Arousal 等待焦躁、沉浸度缓冲(做别的事缓解想念)、Saga 偏置与昼夜偏置钩子、边际递减与状态相关缩放(防情绪无限堆高)。已接入 index.js: 启动即活后台每5分钟 tick, 触发 contact 时生成「此刻的主动想法(积温)」注入块供 {{JIWEN_PROACTIVE}} 携带(30分钟内有效, 读后即清防重复); 状态持久化走 storage (jiwen_state)。与 v2.7.8 情绪引擎(Drivesoid 16维)互为补充: 情绪引擎管长期情感曲线, 积温管主动开口的时机与别扭感。"
-            ]
-        },
-        "2.8.1": {
-            "date": "2026-09-12",
-            "items": [
-                "【新增】积分/连击/成就系统 (config/points-engine.js 纯算法 + apps/wangxiang/points.js 接入层, 移植自 Phosphene 任务/积分/奖励空间核心算法, MIT): ① 任务完成奖励——基础积分 × 难度倍率(easy=1/medium=2/hard=3); ② 连击奖励——连续 2-5 天每天完成+1分, 6-7天+2分, ≥8天+3分, 断签清零, 同日多条不重复加; ③ 失败惩罚——ceil(奖励×0.5), 受余额+每日限额(50分)双重约束; ④ 成就系统——11项成就(初光/稳步/熟手/一周之约/月月有约/十日谈/习惯成自然/硬骨头/挑战者/小富婆/慷慨)按累计阈值自动解锁; ⑤ 积分流水账本——不可变 ledger(type/amount/reason/date)记录每笔收支, 余额=sum(amount)。已接入万象: 任务完成时结算 基础奖励+连击加成 进信用点, 解锁成就记录在任务上; 独立 storage key(wangxiang_points_*)不干扰现有信用点体系。"
-            ]
-        },
-        "2.8.9": {
-            "date": "2026-09-13",
-            "items": [
-                "【修复】记忆系统跨会话隔离：修复切换会话 (onChatChanged) 未重置 MemoryCore 内存导致不同会话间记忆穿透覆写的严重缺陷。",
-                "【修复】记忆清空数据联动：清空当前会话数据 (clearCurrentData) 同步清空 MemoryCore 内存状态，防止防抖持久化引发记忆僵尸复活。",
-                "【修复】双向桥协调注入旧 Prompt 槽位悬挂：无可用记忆注入时显式清空 setExtensionPrompt 槽位，避免旧记忆指令长期占用上下文。"
-            ]
-        },
-        "2.14.0": {
-            "date": "2026-09-16",
-            "items": [
-                "【新增·原创】织光机 Timeweaver AI 时光信（App 控制器层 composeAILetter）：本地规则 composeLetter 之上加 LLM 升华——把聚合出的编年数据（碎片数/情绪均值/第一次/亲密度榜首/高光片段/明暗时光）作为事实素材，交 apiManager.callAI 用「见证你这段时光的挚友」口吻写成 3-5 段有温度的信。引擎纯函数不动保持可测，本地规则版保留为离线/降级兜底；view 加「✨ 求 AI 升华这封信」按钮 + AI 信优先渲染 + 加载/错误态。",
-                "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
-                "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
-            ]
-        }
+  "versions": {
+    "2.38.0": {
+      "items": [
+        "小剧场世界书随机接线：rollWorldBookEntries 纯函数终于被消费，新增 rollWorldBook() 方法从 worldbookManager 取条目并写入 draft.rollResult",
+        "新增清除按钮：clearRollResult() 一键清空已抽取的世界书结果",
+        "视图层新增 th-roll 面板：按钮 / 状态文字 / 清除 / 预览，与表单融为一体",
+        "theater.css 追加 th-roll 样式：圆角卡片 / 状态色 / 预览滚动区",
+        "buildPrompt 已预留的 rollResult 读取入口现在真正有数据可读了"
+      ]
     },
-    "latest": "2.37.0"
+    "2.37.0": {
+      "date": "2026-09-19",
+      "items": [
+        "【可观测面的第一行在撒谎：v2.36.0 的桥报告自相矛盾】上一版刚建好「桥通不通可见」的 `bridgeReport()`，实测它对着一个**开着闸但从没发布过快照**的拉取型桥，第一行却写着「WorldAxis 桥就绪」，而同一份报告里的实际读取结果是 `readWorldAxisSnapshot().ok === false`——两个读数对不上。一个专门解决不可观测的版本，自己的读数先坏了——这是「读数写在恒真判据上」与「可观测面自相矛盾」两种老形态的叠加，第二次现场复现（SELF-CONTRADICTION = true）。",
+        "【病根：拿「snapshot 是不是对象」量「对方有没有物」，对拉取型桥必然恒真】两个桥同规格但不同**发布方式**：lonsha 是**推送型**（`snapshot` 是对象，没有就是 null），这么判是对的；WorldAxis 世界桥是**拉取型**（`snapshot` 是**函数**，外部读取入口，属性永远存在），于是 `hasSnapshot` 恒为 true、`reason` 恒为 'ready'，与它自己的发布记账 `stat().published / stat().invalidated` 完全脱钩。修复新增桥形态适配层 `readPublished()`：推送型看对象、拉取型问对方自己的记账（已作废优先于已发布）、都没有自述 ⇒ kind='unknown'、has=false——**不硬猜，少报胜过多报**。",
+        "【修复二：把「对方自述」与「这一次真拉到的」分开报】`bridgeReport()` 新增 `worldaxis.read / lonsha.read`（这一次真去拉的结果 {ok, reason}）与顶层 `consistent`（来源态说 ready 就必须真读得到，同真同假才算自洽）；自述「已发布」而实拉为 null（竞态/快照被作废）时，`summary` 里如实拼上「（实际拉取失败：…）」——用户看到的第一行不再是假的好消息。`worldaxis.stat` 白名单补上 `published / invalidated` 两项，区分「从未发布」与「已作废待重建」。",
+        "【修复三：兜底分支形状对齐 + 消费侧接线】`bridgeReport()` 的 catch 兜底分支补齐 `read / hasSnapshot`（降级返回与正常分支同形，调用方不必判 undefined，且降级不得自称自洽：consistent=false）；世界脉搏的桥卡片（真世界显示处）改读报告条目——把「来源态就绪但实际拉取失败」也算读不到、单独渲染一条「来源态与实际读取不一致：桥自述可用、这一次却拉不到——按实际读取失败处置」，并显示 summary。",
+        "【测试与自证】新增 `tests/system-v237.test.mjs`（A 形态适配四情形 + 报告自洽 / B 兜底形状 / C 消费侧接线 / D 负控制 3 组破坏 + 工具自证 + 判据纯度 / E 发布卫生），共 50 条。两处测试自伤当场抓出修正：A6 期望值首版写反（never/invalidated 的自述本就是 no-snapshot，与实拉同假，**恰恰是自洽**）；A11 用 IIFE 构造破坏参数，异常在进被测代码**之前**就抛——改用 getter 让炸点落在被测路径上。负向自证：D2–D7 三组真源码破坏（拆「作废优先」⇒已作废被报成有物；拆「已发布即就绪」⇒已发布被报成无物；拆自洽性出口⇒矛盾被吞；拆读取记录⇒拿不到实拉结果）均以独立装载副本翻红，配原版对照与「不存在的锚点必须抛」。回归：全量 253+ tests 全绿。"
+      ]
+    },
+    "2.36.0": {
+      "date": "2026-09-19",
+      "items": [
+        "【同一件事在三个插件里各说一遍：桥通不通，手机上完全看不见】这套三插件体系里有两个**同规格的只读世界桥**（`window.worldaxis_bridge_v1` 世界状态快照 / `window.lonsha_memory_bridge_v1` 记忆召回账本）。v2.35.0 已经把「消费真世界」接上了：世界脉搏改成真世界优先、TimeManager 把世界钟接成权威源之一。但**「桥是不是通着」这件事在手机上仍然完全不可观测**——两个桥只在**各自被用到的那一刻**才被读一次（生成平行事件时、取剧情时间时），那一刻是业务路径，读不到就静默退回旧路，用户什么都看不到。于是用户能看到的只有结果（「世界脉搏又是编的」），看不到原因（桥没装？桥装了没开？对方引擎没就绪？两个钟对不上？）。",
+        "【修前的真实现场：v2.35.0 留下的可观测出口是**零消费**】`config/world-bridge.js` 里的 `worldBridgeAvailability()` 只被 `WorldpulseApp.bridgeStatus()` 调用，而 `bridgeStatus()` 全库**无人调用**（grep 实测）。两条出口都在，等于一个观测面搭好了却没接任何仪表——这正是本项目反复治理的「声明了却零消费」形态，且它发生在一个**专门用来解决不可观测**的版本里。",
+        "【修复一：可观测面收敛为 `bridgeReport()`】`config/world-bridge.js` 新增一份纯读报告，一次覆盖四件事：① 两个桥的**在场与闸门**（`mounted` / `enabled`，未装与未开分开）；② 我方读取归因（WorldAxis 侧的 `reason` 五态：not-mounted / disabled / refused / no-snapshot / ready）；③ **对方的自述**（新增 `lonshaSource()`，读 lonsha v3.174 建立的 `sourceState` 状态机 idle / ready / engine-absent / engine-empty / thrown，且 `lastError` 不吞——那台状态机本就是为了让消费者可归因而做的）；④ **两个钟的对账**（新增 `diffClocks()`）。另有 `summary` 一句话总述供 UI 直接显示。",
+        "【修复二：对账只报不判，且三种「不可比」必须分开】`diffClocks()` 六判定：same / world-ahead / world-behind / **world-uncomparable** / **lonsha-empty** / unparsable。**「本机没有公历钟」不是故障**（本机时间由正文/世界书/消息戳猜，本就不承诺公历），故单独成 `world-uncomparable`——绝不硬比出一个假的「不一致」；**「对方还没记时间」与「记了但读不出」处置相反**（前者等它，后者是两套历法），故 `lonsha-empty` 与 `unparsable` 不得同形。对账只报差异，不改任何一方。",
+        "【修复三：可观测面真被消费（消除零消费）】`apps/worldpulse/worldpulse-view.js` 新增「跨插件世界桥」卡片，直接读 `app.bridgeStatus()`（其内部调 `bridgeReport()`），把两个桥的状态与对账摆给用户；`bridgeStatus()` 相应带上 `report` / `summary`。`apps/timeweaver/timeweaver-collector.js` 的桥读取**改走 `config/world-bridge.js` 单一真源**（此前它自写了一份 `window.lonsha_memory_bridge_v1` 读取——同一份桥读取逻辑有两份实现必然漂移，且第二份不知道对方的 `sourceState` 可归因），本文件自此只负责「取 recallAudit 这一块业务数据」。",
+        "【测试与自证】新增 `tests/system-v236.test.mjs`（A 桥可观测面在场与归因含「未装≠未开」与只读契约 / B 两个钟对账六判定含「本机无公历钟不硬比」/ C 消费侧接线含「collector 不得自己摸桥全局」/ D 负控制 4 项：真源码破坏 → 独立装载副本 → 同款判据翻红，配原版对照 / E 发布卫生）。两处装置自纠：① D2 的锚点首版打在 `readWorldAxisSnapshot` 的闸门上，而判据读的是 `bridgeReport().worldaxis.reason`（来源是 `bridgeSource` 的归因链）——**锚点与判据不在同一条路上，负控制恒真**，锚点已移回判据真正经过的出口；② 三处破坏首版用「整行删掉」，导致后面的 `else if` 悬空（破坏副本装载即 SyntaxError）——破坏必须**保留语句结构**。回归：全量 253 tests 全绿。"
+      ]
+    },
+    "2.35.0": {
+      "date": "2026-09-19",
+      "items": [
+        "【两个世界对不上：同一场剧情里坐着两个「现在」】这套三插件体系里有两个**同规格的只读世界桥**：`window.lonsha_memory_bridge_v1`（记忆插件的剧情记忆/召回账本）与 `window.worldaxis_bridge_v1`（WorldAxis 的世界状态：世界钟/权威事实/暗流/舆情）。而 RubyPhone 侧实测**只消费了前者**——`apps/timeweaver/timeweaver-collector.js` 读 lonsha 桥的 `snapshot.recallAudit`，全库 grep `WorldAxis` / `worldaxis` 在产品代码里**零命中**。后果是真现场，不是假设。",
+        "【修前的真实现场：世界脉搏全由 LLM 现编，与真世界毫无关联】`apps/worldpulse` 自己队列化楼层变化、按阈值触发、调 LLM **现编**平行事件——它报的那个「世界」与 WorldAxis 已经推演出的真世界状态毫无关联，等于**凭空发明一个平行世界**；`config/time-manager.js` 则从正文状态栏标签、世界书「剧情时间起点」、手机消息时间戳里**猜**当前时间、取最晚者，而 WorldAxis 的世界钟（决策时间，进存档、参与判定）就躺在快照里**没人读**。同一场剧情于是有两个「现在」，且正文与手机可能互相矛盾。",
+        "【修复一：两个桥收敛成单一真源】新增 `config/world-bridge.js`（只读消费面）：导出两个桥的 id 常量（`WORLDAXIS_BRIDGE_ID` / `LONSHA_BRIDGE_ID`，与上游逐字一致——改一处即两端同时失联，故集中声明）、`getBridge` / `bridgeSource` / `readWorldAxisSnapshot` / `readWorldClock` / `readLonshaSnapshot` / `worldBridgeAvailability`。三条纪律：**只读**（绝不写世界状态，两桥本就不给写路径）、**不抛**（桥未装 / 未启用 / 旧版无字段 / 快照畸形一律降级）、**不猜**（拿不到就如实报不可用，绝不编数据顶替）。",
+        "【修复二：降级必须可归因——「桥没装」与「桥没开」不得同形】本项目反复治理的缺陷形态就是**静默降级**：拿不到数据与「这个世界是空的」长得一模一样，调用方只能一律当「没数据」，于是「未安装」「装了但没启用」「快照畸形」三种完全不同的处境在界面上**同形**。本版把三态显式分开：`reason` ∈ `not-mounted` / `disabled` / `refused` / `no-snapshot` / `pull-failed`。WorldAxis v2.16 的桥默认**休眠**，故「未启用」单独成态——用户能据此知道该去开哪个开关，而不是以为功能坏了。宿主抛异常也绝不外抛给调用方。",
+        "【修复三：世界脉搏改为真世界优先】`apps/worldpulse/worldpulse-engine.js` 新增真世界投影纯函数面：`projectWorldAxis`（把 `facts` / `currents` / `pulse` / `opinion.canon` / `opinion.forum` / `opinion.sandbox` 投成历史条目形态，条目 id 带 `wa:` 前缀——与 LLM 生成的 `wp…` 天然不撞，按 `existingIds` 去重，`counts` 如实记数、`dropped` 报截断量）、`worldAxisPromptBlock`（压成「本世界已发生的真实动态（不得与之矛盾、不得改写其事实）」一致性约束块）、`mergeWorldAxisHistory`。**论坛传闻显式标注「（传闻）」**——「已核实」与「纯传闻」在读者侧是两种事实强度，不得同形。`_generate` 改为真世界优先：有真事件就陈述真事件、不调 LLM；失败才退回生成并附上一致性块。",
+        "【修复四：世界钟接成权威源之一，但绝不让公历污染古历】`config/time-manager.js` 新增 `getWorldAxisTime()`（读桥 → 解析世界钟 iso → 与 `getCurrentStoryTime` 同形的时间对象），并在权威候选后新增「来源4」。世界钟是**推演结果**（决策时间），比从正文里猜更权威；但它是公历 ISO，故**只在剧情纪元相容时才参与**（由既有 `_isSameStoryEra` 统一判定：一侧古历一侧现代即不相容）——古历剧情下公历钟直接让路。只读：本方法不写任何状态。",
+        "【测试与自证】新增 `tests/system-v235.test.mjs`（117 项）：A 段钉桥消费面的在场归因与「不抛」（含 getter 抛异常的极端宿主），B 段钉世界钟解析的合法/非法/边界（古历非 ISO 串必须返回 null、越界时分夹取），C/D 段钉真世界投影的条目形态 / 去重 / 传闻标注 / 上限 / 畸形输入，E 段钉接线与只读契约，F 段负控制（文本级 + 行为级，真源码破坏 → 加载副本 → 同款判据翻红），G 段发布卫生。过程记录：F1 首版拿「非对象守卫」做负控制**不可测**——该守卫与函数外层的 `try/catch` 效果重合（无守卫时抛出的异常被 catch 吞掉仍返回 null），real 与 broken 两向都是 null ⇒ 负控制恒真，遂改钉**日期范围校验**（`ISO_RE` 的 `\\d{1,2}` 本就允许 13 月/40 日，该行是唯一防线）；判据 `judges.wired` 首版把两个消费者的 import 写在同一个函数里，导致「只断一个」时两向都为假 ⇒ 拆成 `wiredApp` / `wiredTm`。回归：既有三处受影响的测试按新契约对齐（`tests/time-manager.test.mjs` 的 data: URL 加载器显式重写相对 import——这正是 v2.28 回归护栏所要求的形态；`tests/system-v220.test.mjs` 的历史写入锚点交棒到改写后的实体调用），全量 **252 tests / 252 pass / 0 fail**（另在 `tests/time-manager.test.mjs` 补两条**行为级**判据：世界钟在现代剧情下真的参与「取最晚」并胜出、在古历剧情下真的让路）。"
+      ]
+    },
+    "2.34.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【四条账目的共同盲区：回收根本没发生过的那条路径】v2.31 记「回收过几笔」、v2.32 把**两本账**（回收账本与过早账本）合读、分出「其中几笔过早」、v2.33 归因「是谁造成的」、v2.30 的 overDisposed 记「同一对象被回收后复活」——**四条账目全部只描述「回收以后」**。而宿主重建路径上还有第四种形态：**建了同名新域、旧域却没被收掉**。此时域表里同时活着两个同名域（旧域仍被域表钉住，其定时器/监听器继续跑、闭包钉住旧 DOM），而「回收」这件事**一次都没发生** —— 于是它在上面四本账上完全不可见。",
+        "【实测：正确重建与重复建域在四本账上完全同形】探针在真域上各跑一遍（正确路径＝建 3 只、每次先收后建；错误路径＝建 3 只、不收、事后统一收掉）：回收笔数 **3 / 3**、过早笔数 **0 / 0**、成因账 **{} / {}**、过度回收遥测 **0 / 0** —— 四本账逐项相等，唯一区分点是「同名域同时存活的个数」（正确 **0**、错误 **3**）。这就是本版要补的那个读数。",
+        "【真实触发路径不是假设：三处 await 竞态会构造同名实例】`chat-view.js` 的三处懒加载（`_ensureMusicAppForInvite` / `_ensureHoneyAppReady` / 微博卡片跳转的 WeiboApp）都是 **check-then-act**：先判 `if (!VirtualPhone.xxxApp)`，再 `await import(...)`，**await 之后直接 `new` 并写回**。await 期间另一个入口（音乐卡片注入 / 蜜语邀约 / 应用面板）已把实例建好时，这里就会 new 出第二个同名实例，旧实例的域从此无出口。本版在三处 `await` 之后补重查（根治竞态），并让重复存活域本身变成可见读数（兜住仍可能出现的其它路径）。",
+        "【修复一：把「几个才算错」这个判断写进读写口径】新增内核原语 `childRuntimeDuplicates(min = 2)`（只列同时存活 >= min 个的域名，非法阈值一律回落 2 而非放宽）与 `childRuntimeDuplicateDomains()`（键视图，按名排序），`globalRuntimeSnapshot()` 追加 `duplicates` 字段。此前全仓消费点（诊断面 domainCounts、控制中心、测试）都只把 `childRuntimeStats` 的**裸数字**原样展示，**没有任何一处对 >1 出过声** —— 事实有了、判断没写下，等于没有：**回收口径**里此前只有事实、没有判断。本版把判断固化：**空才是正常态**（先收后建），非空即重复存活。纯读、零副作用、不抛；刻意不制造噪声遥测（v2.33 的教训是「恒非零的告警会被读者学会忽略」，故本读数的健康态恒为空）。",
+        "【修复二：会话级数据槽位的唯一出口】v2.31 给三条「界面槽位」（homeScreen / controlCenter / notificationLog）建了统一出口，但数据实例里另有一类**随会话重生**的槽位不在那条出口里，于是三条清数据路径各写各的清单 —— 而漏写一个是静默缺陷：`worldpulseApp`（换会话 / 清当前数据 / 清全部数据 **三条全漏**；实例跨会话复用，3s 楼层轮询闭包挂在旧会话上下文上，而其实例出口 `destroy()` 全仓零调用点）与 `gamesApp`（**清全部数据漏**；`deactivate()` 级联 `stopUndercoverFlow` / `clearPokerSession` / 五个子视图，清全部数据后残留的是上一局的会话状态与一个**裸 setTimeout**，它会在已清数据的会话上继续触发一次 AI 出牌调用）。本版新增 `retireSessionScopedSlots()` 作为**唯一出口**，挂在 `reloadPhoneSurface()` 里 —— 三条路径都经过它，故**新增路径不必再补清单**。收口方式为：先走**实例自身的出口**（`destroy` / `deactivate`，语义化收尾），再置 null（引用消失时域名回收才是正确形态）。",
+        "【修复三：呈现面与消费点接线】控制中心新增「重复存活域」告警行：**健康态不渲染任何节点**（同名域恒为 1 个时该节点根本不存在），非空即标黄列出，口径为「有缺陷时告警、没缺陷时安静」；`data-dup-domains` 由重复域名数驱动。诊断面把内核的 `duplicates` 提升为**稳定契约字段**（降级/内核未提供时归一为 `{}`，字段恒在，消费方不必判 undefined，同 v2.30 `snap.overDisposed` 的做法）——刻意**不做二次记账**：宿主若另调 `childRuntimeDuplicateDomains()` 就是「同一本账的第二个名字」，正是本版批评的形态，探针 G7 对此设了自证判据（全仓零 `duplicateDomains` 残留）。样式新增 `.sys-cc-dups`（出现即缺陷，故无需区分形态）。",
+        "【测试与自证】探针 /tmp/probe_v234.mjs 共 42 项：A/B 段在真域上取证「正确重建 vs 重复建域」的四本账同形与唯一区分点，C 段钉 duplicates 的边界与口径（阈值回落、空态、多域名排序），D/E 段钉快照同源与过早/重复两条线互不干扰，F 段自证纯读无副作用（连续调用不改域表、不触发任何回收记账），G 段钉消费点接线与**反冗余**。过程记录：初版曾落盘「域世代」（releaseEpoch / firstReleaseEpoch）方案并通过全部门禁，随后自查判定它与既有 `_childReleaseLog` 同条件递增、两值恒等（换个名字的同一本账），遂 `git checkout` 完整撤销后改为 duplicates 口径；接线阶段又自查撤销了 `snap.duplicateDomains`（内核 `duplicates` 的键排序视图，同属冗余）——两次撤销均由判据而非印象驱动。全量门禁 **249 tests / 249 pass / 0 fail**（新增 tests/system-v234.test.mjs 计 90 项），语法门 245 个文件。"
+      ]
+    },
+    "2.33.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【过早回收「谁造成的」从未被记录】v2.32 把**两本账**（回收账本与过早账本）并列读出，却从未记录**成因**。实测（探针在域上真执行，两种场景各跑一遍）：设计内的闲置出口 + 复用（honey-view 式：离开界面 dispose → 重进登记 → 再离开，3 次进出）记 **2 笔**过早；真正的宿主过早回收（宿主按名收掉仍在活跃使用的实例的域）记 **1 笔**——两者除域名外完全同形，「谁造成的」这件事在账面上不可见。",
+        "【健康装机上「有过早回收」恒成立，真缺陷被正常导航淹没】honey-view 的 exitHoneySurface 有 9 个调用点，其中 **6 个是界面内返回/回首页**（打开微信会话、三个 #honey-back 返回、系统返回、返首页）——都属正常导航，却全部计入过早回收。于是控制中心卡片那句「N 个域名过早回收 · 全部发生在实例销毁后」在健康装机上**恒为假**：它把正常导航说成「过早」，又断言「全部发生在实例销毁后」。",
+        "【实测缺陷：把遥测的用途搞反了】没有按成因分开读，这本账在正常用法下**永远非零**，读者只能学会忽略它。遥测一旦噪声化就不是审计而是配置——症状持续存在时人们会学会关掉它，而真正该看的宿主提前回收正好淹没在噪声里。",
+        "【修复：新增「成因账」，不动过早判据本身】过早判据与**回收账本**口径（`_reenteredAfterDispose > _prematureReleases`、只在回收时刻落账、按对象计一笔）**一字未改**——v2.32 的 A2/A3/A4/A6 语义原样保留。新增 `_childPrematureBy` / `childRuntimePrematureBy(name)` 与记账助手 `_bumpPrematureBy(name, cause)`，把笔数拆成因：`tidy`（实例自持出口，界面正常退出时自我注销）/ `host-prefix`（宿主按名回收）/ `host-exact`（按名精确回收）/ `host-all`（全域清零）/ `shutdown`（宿主级域级联）。只在「本次回收被计为一笔过早」时入账，未过早的回收不留痕。",
+        "【成因在唯一咽喉点内部推导，调用点一字不改】初版让每个调用点声明成因（`dispose(cause)` / `{ cause: 'host-prefix' }`），结果撞上 6 个既有测试（v225/v226/v228/v229/v230/v231 都把调用点字面量钉成了实现契约）。收敛后的形态更简且零回归：所有回收最终都经过 `ManagedRuntime.dispose()`，而宿主路径在 `disposeChildRuntimes` **函数内部**自造 `reason='host-*'`，自持出口按角色推断 `'tidy'` / `'shutdown'`——于是成因是推导出来的，不是二十多个调用点各自声明的。",
+        "【成因的时点：取上一次回收的发起者】过早是「**下一次**回收」时才被认定的事实（证据是 `_reenteredAfterDispose` 增长），故成因必须取**上一次**回收的发起者（`_lastDisposeCause`），而不是本次调用的 reason。初版取了本次，实测后果是**每个真过早都被事后那次正常回收洗掉**：宿主按名收掉活域（host-prefix）后实例再 `dispose()`，成因账里只剩 `tidy`，真凶消失。该缺陷由探针 /tmp/probe_v233.mjs 抓到（14 项里 5 项翻红），修正后全绿。",
+        "【读数诚实化：控制中心按成因拆分】「回收口径」卡不再把笔数直接当缺陷：只有 `host-*` 才计「被提前回收」（`flaws = rows.filter(r => r.hostile > 0)`），`tidy` 归为「界面退出时自持回收（正常）」。`data-release-tally` 改由 `flaws.length` 决定——于是「有缺陷时告警、没缺陷时安静」才成立，而不是恒亮。",
+        "【诊断面同步】`explainReleaseTally()` 增加第三参 `prematureBy`（缺省为空构成，v2.32 的既有两参调用仍可用），每行给出 `causes` 与 `hostPremature`（= 需要处理的那部分）并按其排序；`runtimeStats()` 新增 `releasedPrematureBy`（降级分支同步补字段）；`window.VirtualPhone.releaseTally()` 一行里给出成因明细与「需处理 N 次」；新增 `window.VirtualPhone.prematureCauses()` 测试钩子。",
+        "【测试】新增 tests/system-v233.test.mjs：成因账的五类归因各一条（含 exact 不误伤前缀域）、界面内正常返回不产出 host-* 缺陷、不变式（Σ成因 === Σ过早）、成因时点（真过早不被事后那次回收洗掉）、读数诚实化（主机成因才计缺陷）、负控制（每条核心判据配一次故意破坏）、发布卫生。",
+        "【自证与收敛记录】初版补丁先在 v2.32 探针上验过，再用本版探针取证，5 项翻红后抓出「成因时点」错误并修正；随后全量门禁暴露 6 个既有测试失败，全部源于「改了调用点字面形式」而非行为退化——这直接促成了上面的收敛设计（成因内部推导）。收敛后先单独验证「仅内核改动」= 247 pass / 0 fail，再补读取面，最终全量 247 pass / 0 fail 零回归。"
+      ]
+    },
+    "2.32.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【回收口径面：两本账，谁也没把它们合起来读】v2.30 让「域被回收了、实例还在用」可见（childRuntimeOverDisposed），v2.31 让「回收过几次」可对账（childRuntimeReleaseLog）——本版盯住这两本账之间的缝：**它们在同一个域上各自为政，且口径互不相同**。实测（探针在域上真执行）：同一个域对象 `dispose(); 复活; dispose();` → 回收账本记 **1** 笔（按对象计，为「重建 N 轮 = N 笔」可对账），而它实际被回收了 **2** 次；「回收了几次」与「回收是否过早」只能靠两个不同来源拼，且没有任何一处代码或面板把它们并列读出。",
+        "【实测缺陷 1：过早回收的观测寄居在被观测对象里】childRuntimeOverDisposed() 数的是 `_reenteredAfterDispose`——**域对象上的实例字段**，且只有仍在域表里的域才会被数到。于是域一旦被正常回收（离表），「这个域名曾经过早回收过」就**彻底消失**：实测同一域活着时 overDisposed=1，dispose 后=0，与「从未发生」完全同形。**这块遥测的宿主与被观测对象同生共死，却用来回答关于历史的问题**。修复：新增过早回收账本 `_childPrematureLog` / `childRuntimePrematureLog(name)`——在回收**时刻**判定并落账，域死后永久可查；判据为「dispose 之后又发生过再登记，则下一次回收即证明上一次过早」，天然区分 `dispose(); dispose();`（幂等空调用）与真实复活。",
+        "【实测缺陷 2：「回收了几次」这个数此前读不出来】账本按域对象记一笔（这是对的、且被 v2.31 的测试锁定），但它同时意味着「本域对象实际被回收几次」在账面不可读——`_releaseCount` 不存在，只能靠 overDisposed 的差值反推，而那种反推需要读者自己知道两套遥测的内部字段。修复：域上新增 `_releaseCount` / `prematureReleases()` / `releaseTrace()`，三个口径各自命名、各自可读：账本（按对象一笔）、实际次数、其中过早次数。",
+        "【实测缺陷 3：v2.31 写下 _releasedAt，全仓零读点】`dispose()` 里 `this._releasedAt = Date.now()` 写得好好的，但 grep 全仓**没有任何消费点**——「回收发生在何时」看起来已经可查，实际不可查。字段写出来没人看，与没写等价，却让这件事显得已经有人管。修复：新增 `_childReleasedAt` / `childRuntimeReleasedAt(name)` 并接进 `runtimeStats().releasedAt`，把该字段真正消费掉。",
+        "【实测缺陷 4：子域只剩计数，回答不了「还剩哪几个 tag 在跑」】globalRuntimeSnapshot().children 此前每项只有 `{name, total, byKind}` —— 而宿主级有完整 `tags` 明细。于是诊断里最常用的那个动作（打开控制台看「手机壳域里还剩什么在跑」）在**子域**上做不到，只能看到计数。修复：子域补 `tags` 明细，并顺带带上 `releases` / `premature`，两侧口径就地对齐。",
+        "【实测缺陷 5：按名回收的前缀语义只写在文档里】`disposeChildRuntimes(name)` 文档写「按名（前缀）回收」，实现走 `startsWith` —— 实测传 'probe-d' 会连带回收 'probe-d-extra'（1 个名字收掉 2 个域）。**当前无实际误伤**（仓库现有域名互不为前缀，如实说明），但「传短名就多收」既不可见也无精确手段。修复：新增第二参 `{ exact: true }` 走精确匹配；默认仍前缀匹配（5 处既有调用点行为不变）。",
+        "【把两本账合起来读】新增 `explainReleaseTally()` 纯函数与 `window.VirtualPhone.releaseTally()` 一行入口：输出「某域名 回收 N 次（其中过早 M 次）」。判词刻意保守——只对两本账都出现过的域名出词，未过早的不逐条列出；并做读数自洽检查（过早回收必留下一次后续回收，故 premature 不可能等于 released），出现这种自相矛盾的形状时**报出来而非吞掉**（fail-closed）。",
+        "【控制中心：回收口径卡】控制中心此前完全没有运行时诊断入口（诊断只能靠控制台）。新增「回收口径」卡，把两本账并列成一行：全洁时显示「N 个域名被回收过 · 无过早回收」，有过早时显示前几项并标黄——于是「回收了几次、其中几次过早」这个本版的核心问题，在手机上**直接看得见**，不必开控制台。",
+        "【测试】新增 tests/system-v232.test.mjs：内核分账（回收次数 vs 账本口径 vs 过早次数三者各自独立可读 · 幂等空调用不误判为过早 · 过早账本在域死后仍可查 · 与 overDisposed 的差别对照）、releasedAt 可读、子域 tags 明细、exact 语义、宿主接线（诊断入口分账 + 判词自洽检查 + 一行入口）、控制中心卡片接线、负控制（每条核心判据配一次故意破坏）、发布卫生。",
+        "【首轮自证：新套件里三处负控制假绿】tests/system-v232.test.mjs 第一次运行是 69/79。失败分两类：A4c / E7 是我把期望值写错（过早账本在回收**时刻**才落账，两次回收之间读到 0 是对的；样式断言读错了文件——`data-release-tally=\"premature\"` 只在 CSS 选择器里而不在模板串上）；另一类是**负控制自身假绿**：F4 / F7 / F8 三处把断言对象写成了**原文件**而不是破坏后的副本，于是「条件恒真」或「条件恒假」，破坏根本没发生也不报错——判据声称在检查、实际没在检查、且不报错。修法：F4 改为源码级破坏（抹掉子域 `tags` 明细字段，再在破坏副本上断言判据失效）；F7 / F8 一律改成在破坏副本上断言；并新增 F9 剥注释工具的两向自证（剥注释后不得残留本版注释独有字样 · 不得吞掉代码本体），保证所有文本判据都做在代码行上而不被注释字样满足。修后套件 79/79，另跑一轮**外部注入**（真改磁盘文件 → 跑套件 → 逐字节还原）12 组，全部真响。"
+      ]
+    },
+    "2.31.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【重建路径：新界面接上了、旧界面还挂着】v2.30 让「域被过早回收」可见，本版盯住它的镜像面 ——「实例被丢弃了、它的资源没人收」。宿主 createPhoneInPanel() 有四条重入路径（首次打开 / 点击页面横幅直达 App / 微信来电唤醒 / 电话来电），每条都执行 `phoneShell?.destroy?.()` 后 `new PhoneShell()`。壳自己的登记表确实被收净了，但**同一作用域里还有三个实例被无声丢弃**：旧 homeScreen（4 个 window 监听器，用「同实例内不重复绑」的 guard 互相隔离，因此没有任何一处能在实例被丢弃时解绑）、旧 controlCenter（无收尾路径，overlay 可能留在已废弃容器里）、旧 phoneShell.lockScreen（10s 时钟定时器 + 2 个 window 鼠标监听器，不在壳的登记表里）。结果是旧 HomeScreen 会继续响应新壳派的 phone:updateWallpaper / phone:timeUpdated 并渲染进**已被摘除的旧 DOM**。",
+        "【收口位置必须与构造位置同址】这四类实例的构造点全部落在 createPhoneInPanel() 里，因此唯一正确的收尾点也在它附近：新增 releasePhoneSurface()（收可复用界面实例）、destroyPhoneSurface()（收随会话存在的界面槽位，含落账层「先落盘再丢定时器」）、reloadPhoneSurface()（收 + 重建 + 渲染）。一条实现原则：**同一个宿主函数既构造它们，就必须负责回收它们**，否则「谁该收」只能靠读代码推。",
+        "【壳层域升级为可诊断域】phoneShell 的登记层此前是裸 ManagedRuntime('phone-shell')：资源确实被回收了，但这个域不在全局域表里 —— runtimeStats() 看不见它、childRuntimeStats('phone-shell') 也数不到它，于是「手机壳重建时旧壳的监听器与时钟收净了没有」既不可见、也无法被判据锁定。本版改用 childRuntime('phone-shell')，与 sudoku-view / music-view / honey-view 同构，并让 PhoneShell.destroy() 级联回收 lockScreen（此前该字段被置空时它的资源仍在跑）。",
+        "【域被回收了：现在能被数到】新增回收账本 _childReleaseLog 与 childRuntimeReleaseLog()，runtimeStats() 追加 released 字段。动机是 v2.29 的 childRuntimeStats 只能回答「现在有几个域活着」—— 而重建路径上「重建前漏回收」与「重建前已回收」在**计数上完全同形**（旧域收掉后表里都只剩 1 个新域），区别只在旧域是否成了孤儿。账本口径刻意只在**首次**回收时计一次：重复 dispose 是 v2.29 起承诺的幂等语义，重复计会让「重建 N 次」与「回收 N 次」无法对账。",
+        "【哪种不对称是对的】第一版实现把 P1 换会话写成「只收不建」，实测会留下悬空的 homeScreen：桌面时间停更、角标刷新失效 —— 「收干净」不能以「功能坏掉」为代价。定稿改为**界面槽位随会话重生、数据实例复用重绑**：homeScreen / controlCenter / notificationLog 三条槽位统一由 reloadPhoneSurface() 收掉旧的、建新的；music / games / weibo / honey / diary / calendar 等数据实例仍旧只 clearCache + onChatChanged（换会话是会话作用域操作，它们必须活下来）。此外，实例被丢弃时**同时清掉三个宿主级公开别名**（window.VirtualPhone.home / controlCenter / notificationLog）——它们自 v2.16 起就是「界面槽位」的公开引用（phone-view / wechat-app / weibo-data / lock-screen 都读它），只置内部变量会让旧别名继续指向已销毁实例，`window.VirtualPhone.home.render()` 于是把内容渲染进已废弃的 DOM。别名无资源可收，仅需引用复位。",
+        "【落账层：dispose 与 reset 是两个语义】NotificationLog 此前只有 reset()，且**刻意不落盘**（「当前 storage 已指向新会话、旧缓存写出去即串味」）。这对聊天数据是对的，对系统通知落账层是错的：通知存在 sys_notifs（随会话隔离的系统键），切换前那 800ms 防抖窗口里的通知是**属于旧会话的既成事实**，丢掉即历史缺失。本版新增 dispose()：先 flushNow() 再丢定时器，不变量为「dispose 不得静默吞掉已经入账的通知」。",
+        "【陈旧实例护栏：早退要挡能造出界面的那个入口】控制中心实例在面板重建后仍可达（闭包 / 事件回调 / 外部引用）。若无护栏，旧实例的 toggle()/show() 会用自己的 phoneShell 把 overlay 挂进已被摘除的容器 —— 用户看到「控制器没反应」，对象图里却多出一个没人认领的 overlay。护栏落在 show()/toggle()（唯一能造出界面的入口）而不只 close()：只守 close 等于没守。",
+        "【测试】新增 tests/system-v231.test.mjs：内核回收账本（含幂等 dispose 不重复计 / 父域级联必须记账两条反例对照）、重建总账对账（登记项数 = 现存项数 + 回收项数）、壳层与三实例的出口存在性与接线、三条丢弃路径与界面槽位重建、发布卫生（四处版本一致 + latest 指向本版 + 内置公告与本版日志同源）。"
+      ]
+    },
+    "2.30.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【过度回收：孤儿域的镜像面】v2.29 把出口交给域自己，解决的是「域还活着、宿主已经忘了它」。本版盯住同一枚硬币的另一面 ——「域已被回收、实例却还在用」。宿主一条 disposeChildRuntimes('') 就能做到这件事：它不看实例是否还活着，把仍有引用的实例的域一并回收；实例随后再登记资源时靠 v2.29 为「视图复用」引入的 _reenterIfNeeded 静默复活，于是同一个实例里「已被回收的旧资源」与「重新登记的新资源」并存，而旧资源再无回收出口。实测 index.js 换会话路径正是这条写法，同一时刻 musicApp / gamesApp / worldpulseApp 都还活着（紧接着就是它们的 onChatChanged 重绑）。",
+        "【把过早回收变成可观测】新增 _reenteredAfterDispose / overDisposeStats()，以及全域名快照 childRuntimeOverDisposed()：域在 dispose 之后又被登记（= 复活）时计数，这正是不看实例死活就直接回收的直接证据。反例对照是「域随实例生命周期走」（视图销毁时 dispose）——这种域该值恒为 0。window.VirtualPhone.runtimeStats() 追加 overDisposed 字段，运行期即可回答「有几个域被过度回收过」。",
+        "【换会话 ≠ 实例销毁】换会话是 **会话作用域** 操作：实测此刻 calendarApp / musicApp / weiboApp 都保留实例并靠 clearCache + onChatChanged 重绑（日历要留住节假日与日程、音乐要继续播、微博实例跨会话复用），因此不该回收它们的域。移除换会话路径的 disposeChildRuntimes('') 全域清零，实例域交由各自 onChatChanged() 处置；honeyApp 也不再重复按域名清理（deactivate → exitHoneySurface → _rt.dispose() 已是实例级出口），并把 deactivate 与 clearCache 拆成独立 try，一处抛错不再连带让域回收静默不发生。",
+        "【丢弃实例的路径必须三条对齐】三条「丢弃/复位全部 App 实例」的路径（换会话 / 清当前数据 / 清全部数据）此前各写各的，实测三类错位：① 换会话会回收**仍活着**实例的域（过度回收，见上条）；② 清当前数据丢弃 honeyApp 却从不回收其实例域（回收不足）；③ 三条路径对专辑实例口径不一 —— albumApp.destroy() 解绑的是它在构造期注册的 5 个全局监听器（SWIPE_BACK / ALBUM_IMAGE_DELETED / UPDATE_WALLPAPER / PANEL_VISIBILITY / visibilitychange），清当前数据做了、清全部数据与换会话都没做。本版把三处补齐；清全部数据另补 honey 的实例级出口（停播放/动画/TTS），清当前数据另补 imageManager 丢弃（与清全部数据对齐，属数据残留而非泄漏）。",
+        "【出口不该藏在名字里】honey-view 的 removePhoneChromeTheme() 此前同时做三件事：清瞬态资源 + 摘掉 DOM 主题类 + **注销整个视图域**。名字只描述第三件，而 9 个调用点（6 处导航出口 + honey-app 的 swipe-back/destroy/deactivate）全都借这个「DOM 主题」名字获得域生命周期语义 —— 连 honey-app.destroy() 读起来都像在解绑主题而不是在回收域。这是 v2.29「出口却写在别人手里」的下一层形态：出口在，但没人能从名字上看出它在。现拆为 removePhoneChromeTheme()（只做名字承诺的事）与 exitHoneySurface()（离开蜜语界面的完整出口，含域注销），调用点全部改调后者。",
+        "【不做「统一化」的理由】同一批实例里，wechat-app **不该**被强行加 destroy：它唯一的 document 监听是 { once: true } 自解绑的菜单外点关闭。对没有销毁面的实例添加 destroy 属虚假声明 —— 判据要区分「缺什么」和「本来就不需要」。",
+        "【内置离线公告与本版同源】实测发现 index.js 的 ST_PHONE_CURRENT_UPDATE 三版未更新：version 取 ST_PHONE_VERSION（标题永远显示当前版本），items 却停在 v2.27 时代 ——用户点「已更新」看到的是三版前的说明，「版本号对了、内容是旧的」比没有更误导。本版重写公告并与 update-log 同源，同时补判据（从本版条目标签抽词比对公告，随版本自动换词、不需交棒）。附带实测：本仓库为私有，远端通道（raw.githubusercontent 的 manifest/update-log）匿名拉取恒 404，因此 local 公告就是用户唯一能看到的更新说明 —— 它必须准。",
+        "【测试】新增 tests/system-v230.test.mjs（内核遥测含反例对照 / 宿主三条路径对齐 / 命名即文档 / 发布卫生），并把 tests/system-v225.test.mjs 的「恰好 4 处 destroy 接线」棘轮交棒为「不少于 4 处」+ 两条新增站点的显式断言（防再次漏路径）。"
+      ]
+    },
+    "2.29.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【域自持出口】v2.28 建了实例级资源域，但域的回收出口仍写在宿主侧的人工域名清单里（disposeChildRuntimes('honey-view') 一类），漏写一个就漏一个域 —— 实测 sudoku-view / worldpulse-app / floating-entry 三个域**零出口**。本版把出口交给域自己：域在 dispose 时按自身持有的表地址注销（_childLog），宿主无需知道任何域名。",
+        "【孤儿域的真实形态】旧写法只 cancelByTag（清空 entries）而不 dispose（不注销登记表）：视图已销毁、域却仍活在 _childRuntimes 里；每次重建数独/世界脁都会多留一个空壳域，永久累加。六个消费方（sudoku-view / worldpulse-app / weibo-app / music-view / honey-view / floating-entry）的销毁路径全部补上域注销。",
+        "【复活即重新登记】dispose 会从域表注销自身；若域随后被再次使用（视图实例复用、重进页面，实测 games-app 的 panelVisibility 路径正是 destroy→render 复用），新登记的资源会脱离域表 —— 泄漏以「表里看不见的域」形态回归。新增 _reenterIfNeeded()，四个登记入口（addInterval/addTimeout/addObserver/addListener）首行调用，保证不变量「域表 ⊇ 所有活着的域」。",
+        "【分域计数】新增 childRuntimeStats(name)：childRuntimeCount() 只回答「一共有几个域」，回答不了「反复重建时某个域有没有累加」——而后者才是泄漏的可观测形态。window.VirtualPhone.runtimeStats() 现带回 domainCounts 字段。",
+        "【宿主侧口径收口】disposeChildRuntimes 语义降级为「运维兜底」（不再是唯一出口）；换会话路径追加全域清零，不再逐名列清单；诊断入口追加分域计数。",
+        "【测试】新增 tests/system-v229.test.mjs（内核行为 + 复活重登记 + 域隔离 + 六消费方出口接线 + 宿主口径 + 版本自洽），不硬编码「唯一正确写法」。"
+      ]
+    },
+    "2.28.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【新内核·实例级资源域】v2.27 把宿主级常驻资源接进 globalRuntime 后暴露了下一层问题：大量资源属于**某个实例**而非宿主——一个 MVVM 视图、一个 App、一个组件。它们只应在实例存活期内存在，实例销毁/重建时必须精确回收该实例自己登记的一切，而不该把宿主级资源一起清掉，也不该靠人工维护一份「这个实例登记了哪几个句柄」的清单。新增 childRuntime(name)：返回挂在全局域名下的独立域，自持 entries、域内 tag 只在本域匹配（cancelByTag 不会误伤别的实例），dispose() 只回收本域并自动从域表注销、幂等。globalRuntimeSnapshot() 追加 children 字段回答「除宿主级外还有几个实例各持有多少资源」。",
+        "【缺陷修复·music-view 的双份手写回收】本文件并存两条互不相干的手写回收路径：_visibilityGuard（3s 自愈轮询）与 _progressTimer（250ms 进度轮询），各自 setInterval + 各自 clearInterval，另有一个裸 window.addEventListener('resize') 靠 _resizeHandler 字段手工解绑。三者分属两个字段、三处清理点（destroyFloatingWidget / _stopProgressTimer / _closePanel），任一为漏即永久泄漏——这正是「人工维护回收清单」的失败形态。改由实例域统一持有（tag `floating:` / `progress:`），destroyFloatingWidget 两个 cancelByTag 收干净，resize 监听器亦入登记层。",
+        "【缺陷修复·sudoku-view 计时器】_startTimer() 裸 setInterval 挂 this._timer，destroy() 手写 clearInterval；视图在任一楼被重建（render→_startTimer）时仅靠 `if (this._timer) clearInterval` 兜底。改为实例域持有（tag `timer:`），destroy() 一次 cancelByTag 收净，语义等价且不再依赖「记得清字段」的纪律。",
+        "【缺陷修复·worldpulse-app 兜底轮询】startListening() 在 eventSource 缺失时退化为 3s 轮询并挂 this._pollTimer，stopListening() 手写 clearInterval；该方法在换会话（onChatChanged）与重复调用时都会被触发，属「先停后启」路径——旧写法一旦漏掉 clearInterval 就会与新轮询双挂，每个周期触发两次楼层检查。改为实例域持有（tag `poll:`），stopListening 一次 cancelByTag 收净，并保留原有双挂防护。",
+        "【缺陷修复·floating-entry 的可见性轮询与两条卸载路径】mount() 用裸 window.setInterval 挂 this.visibilityTimer，unmount() 与 unmountButtonOnly() 各写一次 window.clearInterval(this.visibilityTimer)——同一个句柄的回收逻辑被复制到两处（sync() 会按开关在两者之间切换，任何一处漏改都变成泄漏）。改为实例域持有（tag `entry:`），两条卸载路径共用同一 cancelByTag 口径。",
+        "【缺陷修复·两处有界轮询的多出口回收】weibo-app 打开微信（最多 40×80ms）与 honey-view 跳转微信会话（最多 20×150ms）都是有界轮询，但都在「成功」与「超时」两个出口各写一次 clearInterval(timer)——局部 const 句柄无法被外部停止，App 被置 null（清数据路径）时轮询仍会跑到自然超时。改为实例域持有（tag `weibo:open-wechat` / `honey:open-wechat`），出口收敛为单个 cancelByTag，且随实例被丢弃一并回收。",
+        "【缺陷修复·实例被丢弃时的孤儿域】宿主在清数据/换会话路径上会把 musicApp / weiboApp / honeyApp 直接置 null 而不走实例自身的 destroy，此时实例域会被域表引用钉住成为孤儿（其定时器继续跑）。新增 disposeChildRuntimes(namePrefix) 按域名（前缀）批量注销，并在 index.js 的两条丢弃路径（onChatChanged 的 honey、清数据的 weibo/music/honey）接线；同时宿主级 dispose() 改为级联回收全部子域，避免「忘了调谁」再次成为泄漏源。",
+        "【测试与门禁】新增 tests/system-v228.test.mjs（四层）：A 内核行为（子域隔离、cancelByTag 域内语义、dispose 幂等与域表注销、级联回收、disposeChildRuntimes 前缀匹配与空串语义、snapshot.children 结构）；B 接线（6 个文件 8 类资源入域 + 全仓「只启不停」不变量与刻意保留站点回归护栏）；C 等价性（假装时钟行为仿真：sudoku 计时器重复启动不叠加、music 双前缀互不误伤、worldpulse 换会话重绑、floating-entry 两条卸载路径共用口径、两处有界轮询的四条出口）；D 范围自证 + 诊断字段 + 版本四处同步。同步更新三处旧测试断言以交新版接管（v221 轮询兜底改断言域名持有、v225 的 weibo clearCache→destroy→null 顺序放宽以容许中间插入域回收段、v227 的降级安全零值结构补 children: []）。另修一处装配回归：honey-view.js 本版首次引入相对 import，而 tests/honey-avatar-selection.test.mjs 经 data: URL 加载源码（data: URL 无 base，相对 specifier 直接抛 ERR_UNSUPPORTED_RESOLVE_REQUEST）——已改为装入前重写为绝对 file:// URL（等价加载不改语义），并在 D 层加通用护栏防复发。语法门 239 文件通过；全量门 243/243 绿；防假绿注入 7 处全部检出，恢复后逐字节一致。"
+      ]
+    },
+    "2.27.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·快捷回复按钮的永久 1Hz 轮询】createInlineReplyButton() 尾部是 `setInterval(inject, 1000)` —— 无句柄、无清理路径、**无终止条件**：即使按钮早已注入、宿主早已就位，仍以每秒一次的频率跑完 inject 全量逻辑（实测该函数含 13 处 getElementById + 36 处 querySelector + registerQrAssistantButton 的重算，跨 1275 行）。这是全仓频率最高的一处稳态开销，且随插件重载无限累积。修复分两步：① 轮询改由 v2.26 的登记层持有（tag `inline-reply:poll`，可被统一回收）；② 给 inject 建立**返回值契约**——true = 已达终态（本轮完成注入 / 用户关掉了入口），false = 条件未就绪（宿主缺失 / 有按钮但容器结构异常）。轮询循环消费该返回值，一旦为 true 立即 cancelByTag 自停，**稳态成本从 1Hz 降到 0**。",
+        "【缺陷修复·自停后的重新拉起】自停必须可逆，否则「宿主随面板关闭/主题切换被重建」时按钮会永久失联。新增 resync 入口：监听 phone:panelVisibility 与 phone:openApp 两个事件重新调度一轮轮询（幂等，由 onceFlag 保护只注册一次）。这保留了原「容器晚于脚本出现时持续重试」的意图，只是把重试从「永久无脑轮询」改为「事件驱动 + 就绪即停」。",
+        "【缺陷修复·另两处无回收面的常驻轮询】① 极文 tick：`setInterval(..., 5 * 60 * 1000)` 句柄不存、无清理路径，其闭包钉住 storage 与极文引擎；② 微信线上主动调度器：句柄挂在 window.VirtualPhone 上虽可复用但无统一回收面，且配套的 `setTimeout(tick, 3000)` 首次预热**完全未持有**。两处均改由登记层持有（tag `wechat:online-proactive` / `-warmup`），并保留原有的「先停后启」语义（改用 cancelByTag 前缀回收实现，比手写 clearInterval 更不易漏）。",
+        "【新内核·登记制推广面】v2.26 建了 runtime-lifecycle 内核，但只把 phone-shell 一个消费方接上——`globalRuntime` / `onceFlag` / `rebindGlobal` 三个导出**全仓零消费**，即「内核建好了但没人用」。本轮补齐推广面：新增 `cancelByTag(tag)`（**前缀批量回收**，因为一次启动往往登记多个资源——轮询 + 预热 timeout，用同一前缀命名即可一并回收，不必逐个记 id）与 `globalRuntimeSnapshot()`（回答「现在还有多少 interval/timeout/observer/listener 在跑、分别属于谁」）。",
+        "【新内核·手写幂等 guard 收敛】全仓散布着 7 处 `if (!window._xxxBound) { ... = true }` 手写 guard（index.js 新会话迁移、wechat/mofo/settings/honey 的滑动返回、honey 的面板可见性与文档可见性）。它们语义相同却各写各的：无法统一回收，也没有诊断可见性。全部收敛到 `onceFlag(key)`，并把注册的 **window 监听器纳入登记层**（window 跨会话存活，旧写法一旦注册就没有回收面）。honey-app 为第三方作者版权文件，仅做等价替换、不动其业务结构与注释风格。",
+        "【可观测·常驻资源诊断入口】新增 `window.VirtualPhone.runtimeStats()`，控制台一行即可看到当前常驻资源总数、四类分布与全部 tag。无登记项时返回零值结构而非抛错。这是 v2.25/v2.26 两轮「监听器/定时器泄漏」修复之后必须补上的那一环——**先让泄漏可见，才能确认它不再发生**。",
+        "【新内核·事件契约消费】v2.26 建立的 config/phone-events.js 契约表此前未被 index.js 消费（仍手写字面量）。本轮起 index.js 消费 `PHONE_EVENTS.PANEL_VISIBILITY` / `PHONE_EVENTS.OPEN_APP` 常量，与 v2.26 的双向对账防线接上。",
+        "【测试】新增 tests/system-v227.test.mjs（四层 60 断言）：A 内核行为（cancelByTag 前缀语义 / 空 tag 不误清 / 与 cancel 正交 / snapshot 聚合一致性与不泄漏）；B 接线（三处轮询入登记层 + 四处 guard 收敛 + 全仓 `window._xxxBound = true` 残留扫描）；C 自停语义（返回值契约六条路径 + 行为仿真五种状态 + 「就绪当轮即停」轮询仿真）；D 范围自证 + 契约消费 + 诊断入口 + 版本四处同步。同步更新 tests/system-v225.test.mjs 的三条断言：从断言「手写 Bound guard 存在」改为断言「幂等 guard 存在」这一不变量（载体已换为 onceFlag）。"
+      ]
+    },
+    "2.26.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·手机壳重建时的运行时资源泄漏】createPhoneInPanel() 有 4 个调用点，其中 8706 行的 `!content.querySelector('.phone-in-panel') || !phoneShell` 分支明示可重入；而函数开头就 `container.innerHTML = ''` 并 `new PhoneShell()`。旧壳在长期存活对象上注册的资源全无解绑通路：bindSwipeGesture() 在 document 注册 pointermove（最高频）/pointerup(capture)/pointercancel(capture)、在 window 注册 blur，bindTimeUpdateEvent() 在 window 注册 phone:timeUpdated，另有一个 30s 时钟轮询——startClock() 连句柄都不存、无任何清理路径。重建一次净增 5 个监听器 + 1 个定时器，且其闭包钉住旧壳 container 与 DOM。经语义分析确认旧壳 phoneBody 已被 innerHTML 摘除 ⇒ pointerdown 不再触发 ⇒ isPointerDown 恒 false ⇒ 残留 handler 立即 return，故无行为错乱、纯内存与闭包泄漏。",
+        "【缺陷修复·组件级高频监听器泄漏（两处）】① image-cropper：`document.addEventListener('mousemove'/'mouseup')` 位于 bindEvents() 内且无解绑，而 `new ImageCropper` 有 6+ 个调用入口（settings-app 头像/壁纸 3 处、diary-view、wechat chat-view、wechat contacts-view）——每次裁剪净增 2 个 document 监听器，闭包钉住 canvas 与原图 dataURL，close() 只删容器从不解绑，是全仓最高频泄漏路径；② lock-screen：`window.addEventListener('mousemove'/'mouseup')` 位于 _bind() 内，而 _bind() 在 render() 中被调用（每次锁屏重建 root，phone-shell 两处 new LockScreen）——每次「锁屏→解锁」净增 2 个 window 监听器。修复：前者改为实例字段 this._onDocMouseMove/_onDocMouseUp 持有并由 close() 精确解绑（close 覆盖取消与确认两条结束路径，故一处即可全覆盖）；后者改为 remove-then-add 幂等重绑（与 v2.25 music-app 范式同构）。其 _clockTimer 已有 _clearClock 配对，非泄漏。",
+        "【新内核·跨模块事件契约单一真源】新增 config/phone-events.js（16 事件）。此前整个跨模块通信层建立在手写事件名字符串上：实测 29 处 addEventListener(手机事件) + 83 处 dispatchEvent(CustomEvent(手机事件))，散布在 42 个文件，无任何编译期/测试期约束——一处打错（如 panelVisiblity）不报错，只静默失联，这正是 v2.25 那类「结构上可能出错」的根。模块导出 PHONE_EVENTS（权威表）、PHONE_EVENT_KINDS（NAVIGATION/DATA/LIFECYCLE/COMMUNICATION）、PHONE_EVENT_CONTRACT（每事件 kind/target/note）、listPhoneEventNames/isPhoneEventName/phoneEventMeta/makePhoneEvent 辅助。由双向对账锁定：①全仓任何手机事件字面量必须能映射到契约（防漂移）；②契约每个事件必须至少有一处真实使用（防孤儿）。",
+        "【新内核·运行时资源登记与统一回收】新增 config/runtime-lifecycle.js。v2.25 证明「长期存活对象上的监听器漏一次即永久累积」，同一类失效在定时器上更隐蔽也更贵：一个 setInterval 只要持有已废弃实例的闭包，就把该实例的 data/DOM 全部钉在内存里永不释放，且仍按周期执行。模块提供 ManagedRuntime（登记 INTERVAL/TIMEOUT/OBSERVER/LISTENER 四类资源，addTimeout 触发后自动销账不留僵尸登记，dispose() 幂等且返回回收数，stats()/entries()/tagsOf() 供诊断定位「谁还在跑」）与 onceFlag/rebindGlobal 两个幂等原语（把仓库里已在用的 window._xxxBound 单次 guard 与 music 的 remove-then-add 收敛成一处实现）。所有方法在无宿主（Node 单测）下安全降级不抛。",
+        "【缺陷修复·死配置接回真源】`phone-image-openai-mode` 经全字面量 grep 确认 3 写 0 读：settings-app 在预设套用与保存两处硬编码写入，页面还挂了一个隐藏 input；根因是 config/image-generation-manager.js 把 `openaiMode: 'images'` 写死、端点决策从不读取该键。修复：管理端改读 `this._get('phone-image-openai-mode', 'images')` 并经新增 _normalizeOpenAIMode() 归一（任何脏值收敛到合法枚举），设置页删除 3 处死写入与隐藏 input。默认 'images' 对既有存档行为逐位等价；edits/multipart 端点分支涉及真实 API 语义（FormData、参考图字段），刻意留给后续版本。",
+        "【工程防线】新增 tests/system-v226.test.mjs（66 项，四层）：A 契约双向对账（登记数、唯一性、元数据齐全、字面量↔契约集合相等、辅助函数边界）+ B ManagedRuntime 行为（登记计数、addTimeout 自动销账、dispose 幂等与返回数、cancel 单项、dispose 后复用、无宿主降级不抛、onceFlag/rebindGlobal 语义）+ C 三处泄漏的行为级验证（mock 采用真实注册表语义：仅 handler 引用完全相等才移除——phone-shell 4 次重建不回收净增 20 监听器/4 定时器且 destroy 回收 24 项、干净基线 N 轮 create→destroy 净 0；cropper 6 轮 open→close 净 0 且对照不解绑时 3 轮累积 6 个；lock-screen 5 轮 lock() 恒为 2）+ D 死配置清零与范围自证。已注入失败验证红灯（node --test 退出码 1），排除假绿。语法门 236 文件通过。"
+      ]
+    },
+    "2.25.0": {
+      "date": "2026-09-18",
+      "items": [
+        "【缺陷修复·懒加载单例重建时的全局监听器泄漏】v2.23/v2.24 采用「保留实例、仅重建数据层」的理由正是「避免重建实例导致监听器累积泄漏」，但清数据路径上有三个懒加载 App 仍被直接置 null（下次打开重新 new）：相册（album）构造期向 window 注册 phone:swipeBack / phone:albumImageDeleted / phone:updateWallpaper / phone:panelVisibility 四个、向 document 注册 visibilitychange 一个，共 5 个匿名监听器；日历（calendar）构造期注册 phone:swipeBack 一个。二者均无幂等 guard、无解绑路径，每次「清当前会话数据 / 清全部数据」后重开都会永久残留一份旧实例的监听器——一次漏绑即终身累积，且旧闭包持有已废弃实例（含其 data 与 DOM 引用），后续新实例的响应还会与旧实例重复触发。",
+        "【范围界定·逐一取证后只修三处】对 7 个「被置 null 重建」的 App 逐个核查构造期监听器与解绑能力：mofo / wechat / honey 已用 window._xxxBound 幂等 guard + 动态取实例、music 已用 window._musicSwipeBackHandler 的 remove-then-add 幂等重绑，均为正确范式（本轮不动，仅作非回归基线）；weibo 类内 destroy() 早已实现（解绑 _swipeHandler），但 index.js 置 null 时从未调用，属「有解绑能力却没接线」，等价于泄漏。故本轮只处理 album / calendar（补能力）与 weibo（补接线）。",
+        "【修复方案·监听器由实例字段持有 + destroy 解绑】album 的 5 个监听器改由 this._onSwipeBack / _onImageDeleted / _onWallpaper / _onPanelVisibility / _onDocVisibility 持有，新增 destroy() 逐一 removeEventListener（覆盖 window 与 document 两端全部注册类型）；calendar 同构（this._onSwipeBack + destroy()）。以实例字段持有是解绑前提——注册用匿名函数则引用不可复现、物理上无法解绑。",
+        "【接线·四处置 null 站点先 destroy】index.js 在 clearCurrentData 站点（albumApp / calendarApp）与 clearAllData 站点（calendarApp / weiboApp）共 4 处于置 null 前调用 destroy?.()；clearAllData 站点置于 clearCache() 之后，保证「数据清空 → 监听解绑 → 实例释放」顺序。可选链调用使未定义 destroy 的历史实例也不会抛错。",
+        "【工程防线】新增 tests/system-v225.test.mjs（27 项）：真实 App 类在 Node + mock DOM 下可构造并验证行为——calendar/album/weibo 构造期注册数（1/5/1）与事件名齐全、destroy 后精确归零（mock 采用真实注册表语义：仅 handler 引用完全相等才移除，杜绝「destroy 里传错引用」的假绿）+ 泄漏对照（6 轮重建不 destroy 净增 36 个、后续每轮正确配平仍无法消除历史残留，证明「漏一次即永久」；干净基线上 N 轮 new→destroy 净 0，证明修复形态自洽）+ 接线断言（4 处 destroy→null 顺序与总数 = 4）+ 非回归（mofo/wechat/honey 幂等 guard 与 music remove-then-add 保持不变、music 未被误加接线）+ 范围自证（三 App 确在置 null 清单内、保留实例的 10 个 App 未被误加 destroy、所有置 null 站点要么 destroy 要么有幂等 guard）。语法门 233 文件通过。"
+      ]
+    },
+    "2.24.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·懒加载单例 App 跨会话串味（第二批）】B站条目（bilibili）与小剧场（theater）两个 App 同为懒加载单例（index.js `if (!window.VirtualPhone.bilibiliApp) new BiliApp(...)` / `theaterApp`），构造期 new BiliData / TheaterData 从会话键（`bili_entries_v1` / `theater_stories_v1`）把数据载入实例内存，`_load()` 只在构造器执行一次。换会话后实例被复用：B站 ReadingView 展示旧会话条目并把旧条目写回新会话键，小剧场展示/续写旧会话剧本与草稿——与 v2.23 的八 App 同类（实例级会话状态未随会话重绑），属 v2.23 覆盖矩阵遗漏项。",
+        "【修复方案·保留实例仅重建数据层】沿用 v2.21/v2.23 模板：两 App 新增 onChatChanged() 仅重建数据层（`this.data = new BiliData(this.storage)` / `new TheaterData(this.storage)`），保留实例与 View（两 View 均经 this.app.data 动态引用，重建后自动指向新数据层）；未置 null 重建实例，避免监听器累积泄漏。",
+        "【工程防御·三处接入】index.js 在换会话（onChatChanged）与两处清数据（clearCurrentData / clearAllData）共 3 处调用两 App 的 onChatChanged（与 v2.18/v2.19/v2.21/v2.23 同构），清数据后内存不再持有已清数据。",
+        "【工程防线】新增 tests/system-v224.test.mjs（30 项）：真实数据层断言（会话路由内存 storage + BiliData/TheaterData：构造期载入当前会话、换会话重建后读到新会话数据且不串味、新会话无存档时为空不回落旧会话）+ 接线断言（两 App 定义 onChatChanged 且重建数据层、保留实例不置 null、View 经 this.app.data 动态引用、index.js 三处接入计数与位置）。测试总数 239 全绿。"
+      ]
+    },
+    "2.23.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·懒加载单例 App 跨会话串味】tieba/xhs/gacha/reading/tarot/health/achievement/playbook 八个 App 均为懒加载单例（index.js `if (!window.VirtualPhone.xxxApp) new XxxApp(...)`），构造期从会话键把数据载入实例内存（tieba posts / xhs notes / gacha coins+inventory+history / reading shelf / tarot history / health 生理状态 / achievement unlockedMap / playbook selectedPlays），且 load 只在构造器执行一次——换会话后实例被复用，内存数据仍属旧会话：读取端（render/统计/注入）展示旧会话数据，写入端（addNote/addPost/unlock/saveState）把旧会话数据写回新会话键，tarot buildInjection 还会把旧会话牌面注入新会话 prompt（与 v2.21 worldpulse 同源的实例级会话状态缺陷）。修复：各 App 新增 onChatChanged()（重建数据层从新会话键重新载入；tarot 清空 history/currentDraw 后 _load()）。",
+        "【修复方案·保留实例仅重建数据层】沿用 v2.21 的教训：tieba/xhs/health/playbook 构造器注册了常驻全局监听器（eventSource.on(MESSAGE_RECEIVED/GENERATE_BEFORE_COMBINE_PROMPTS)、window.addEventListener('ruby:unlockAchievement')），若置 null 重建实例会造成监听器累积泄漏；故采用「保留实例、仅重建 data 实例」方案（各 View 均经 this.app.data 动态引用，重建后自动指向新数据层），既不泄漏也不串味。",
+        "【工程防御·三处接入】index.js 在换会话（onChatChanged）与两处清数据（clearCurrentData / clearAllData）共 3 处调用八个 App 的 onChatChanged（与 v2.18 通知、v2.19 积温、v2.21 世界脉搏同构），清数据后内存不再持有已清数据。",
+        "【工程防线】新增 tests/system-v223.test.mjs（47 项）：真实数据层断言（会话路由内存 storage + TiebaData/XhsData/GachaData/ReadingData/AchievementData：构造期载入当前会话、换会话重建后读到新会话数据且不串味、新会话无存档时用默认值不回落旧会话）+ 接线断言（8 App 定义 onChatChanged 且重建数据层、保留实例不置 null、tarot 清空内存态重载、index.js 三处接入计数与位置）。测试总数 238 全绿。"
+      ]
+    },
+    "2.22.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·短信注入条数配置死角】phone-sms-limit（每个短信会话注入酒馆正文的最近消息条数）有 3 处消费端（phone-view 发送给 AI 的短信历史、chat-view 单聊上下文、index.js 线下 {{PHONE_APP_HISTORY}} 短信段）却全仓库零写入——值恒为默认 20，用户无法调整；同组电话 phone-call-limit 有设置 UI，且其描述「控制每段电话通话及每个短信会话注入酒馆正文的最近消息条数」谎称同时管短信，实际只写 phone-call-limit（假交付）。修复：设置页「📴 线下注入设置」新增「短信记录条数」输入框 + change 监听（写入 phone-sms-limit，1~9999）；通话条数描述改为「控制每段电话通话注入酒馆正文的最近消息条数」；index.js 线下短信段改用 phone-sms-limit（与线上两处消费端写读同名，消除键名错配）。",
+        "【缺陷修复·朋友圈上下文条数配置死角】wechat-moments-context-limit（朋友圈注入上下文条数）有 2 处消费端（chat-view 单聊朋友圈上下文 _readNonNegativeLimit(...,30,100)、index.js 线下朋友圈变量注入），但设置页「📱 手机内微信线上聊天」的 5 个 limit 输入框群（正文上下文/单聊/群聊/单人通话/群通话）独缺朋友圈——用户无法调整。修复：新增「朋友圈上下文条数」输入框 + change 监听（0~100，默认 30）；同时收口 index.js 线下注入的 0 值语义（原 Math.max(1,...) 使 0 无效、与线上 limit<=0 关闭不一致——现改为 Math.max(0,...)，limit=0 时 recentMoments 置空且不注入表头），保证线上/线下「0=关闭」语义一致。",
+        "【缺陷修复·ASR 自动本地回落开关悬空】phone-asr-auto-local（云端服务商无密钥且无 Worker 中转时自动回落到浏览器原生 Web Speech API）仅在 asr-manager.js recognizeOnce 被读取（`!== false` 判断），全仓库零写入——开关永远无法关闭（写死默认开），设置页语音输入 ASR 区亦无该控件。修复：设置页新增「无密钥时自动使用本地识别」开关（默认开启）+ change 监听写入；消费端读取加固为兼容布尔与字符串 'false'（与项目其它布尔键风格一致），使开关真正可关。",
+        "【工程防线】新增 tests/system-v222.test.mjs（26 项）：真实运行时断言（AsrManager + mock storage 驱动识别路径选择——缺省/true/false/字符串'false'、provider=local 优先级、有密钥或中转时不回落、切换存储键即切换路径）+ 接线断言（三键的设置页 UI 控件与写入监听器、五处消费端同名读取、误导描述已修正、index.js smsLimit 定义与截断切换、朋友圈 0=关闭与空集不注入）。测试总数 237 全绿。"
+      ]
+    },
+    "2.21.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·世界脉搏换会话监听泄漏+幻影脉冲】worldpulse 实例跨会话复用（index.js 仅在首次打开时 new），_listening/_unsub/_pollTimer 为实例级内存态：换会话后旧监听仍挂在旧上下文闭包上，且状态键 worldpulse_state_v1 属会话隔离键（CHAT_DATA_PATTERNS），新会话读取为空基线（lastFloorCount=0），会把「新会话当前楼层-0」当作积压量误触发一次幻影脉冲；onChatChanged 清理清单（十余个 App 均被清理）独漏 worldpulse。修复：WorldpulseApp 新增 onChatChanged()（停旧监听→基线重校→按新会话重建），startListening() 改为先停后启（幂等，防事件监听与轮询定时器重复挂载），index.js 在换会话与两处清数据共 3 处接入重绑。",
+        "【缺陷修复·换会话误砍新会话队列】v2.20 修复的残余漏洞：_processQueue 的出队步在生成完成后无条件执行，getState/_saveState 按当前会话解析——换会话后读到的是新会话队列，会把新会话自己的待处理事件悄悄砍掉一条；切回旧会话还会把已生成过的事件重复生成一遍。修复为「入口乐观出队」：getState 与 _saveState 之间为同步区间（无 await，此刻必为发起会话），同步移除待处理事件——换会话后绝不误动新会话队列、旧队列同步清理杜绝重复生成、行为与处理成败解耦（尝试过即出队）。",
+        "【工程防线】新增 tests/system-v221.test.mjs（30 项）：真实运行时断言（会话路由内存 storage + 事件源桩：换会话基线重校与幻影消除含负控制、幂等重建计数、轮询兜底先停后启、入口乐观出队时序、换会话不误伤新会话队列/不误续链）+ 接线断言（onChatChanged 方法体、先停后启、入口出队先于生成、三处接入）。测试总数 236 全绿。"
+      ]
+    },
+    "2.20.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·世界脉搏跨会话泄漏】世界脉搏队列处理链为异步任务（LLM 生成可达数十秒），此前无会话守卫：换会话后生成结果（历史/队列状态）仍写进新会话空间，异步续链还会把旧会话队列在新会话继续处理。新增会话身份戳（chatMetadata.file_name → chatId）：处理链入口捕获，生成完成与续链时比对，不一致整条丢弃——与 v2.18 通知守护、v2.19 积温守卫同构，第三次复用同一守护模式。",
+        "【缺陷修复·世界脉搏推微博死代码】_pushToWeibo 三重调用错误（自 v2.9.0 起从未生效）：① weiboApp?.wechatData 属性不存在（微博数据层属性名是 weiboData）；② VirtualPhone.weiboData 从未被赋值（永远 undefined）；③ addRecommendPost 方法全仓库不存在。修复为按真实数据层解析 + saveRecommendPosts 追加一条格式对齐 _parseWeiboPost 产物的推荐帖（blogger/bloggerType/time/device/content/images/计数/评论赞列表，详情页与点赞逻辑依赖这些字段），并通知微博 App 刷新推荐流。",
+        "【工程防线】新增 tests/system-v220.test.mjs（19 项）：真实运行时断言（WorldpulseApp 实例 + 内存 storage 驱动——换会话丢弃/同会话落地/推送字段契约/数据层缺失静默）+ 接线断言（入口捕获先于生成、守卫先于写入、续链带比对、真实 API 替换）。测试总数 235 全绿。"
+      ]
+    },
+    "2.19.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·积温跨会话串味】jiwen_state 自 v2.8.0 移植起未匹配任何会话隔离 pattern，被当作全局配置写入 extensionSettings——换角色/换会话时五轴状态（想念/骄傲/愉悦/唤醒/沉浸）跨会话串味，旧角色的漂移状态会继续影响新角色。修复：CHAT_DATA_PATTERNS 收录 /^jiwen_/（历史误存键由 get 的搬迁逻辑自动迁回当前会话）；引擎新增 reset()（丢弃内存态与加载标记、不落盘），换会话与两处清数据共 3 处调用，reset 后惰性从新会话重新加载。",
+        "【缺陷修复·积温迟到注入守卫】积温 tick 为异步任务（含 await 落盘），完成时若已换会话，其主动想法会写进新会话 chatMetadata。新增会话代号守卫：tick 发起时捕获代号，完成时比对，不一致整条丢弃。",
+        "【缺陷修复·待处理联系人静默丢失】微信联系人暂存写入键 ggp_pending_contacts、读取键 pending-contacts 不配对——暂存联系人从未被消费（v2.8.0 起），且跨会话滞留。写入端统一为 pending-contacts，与读取端配对。",
+        "【缺陷修复·显示缩放双源分裂】设置页只写 phone-shell-scale、控制中心只写 sys_shell_scale，两侧互相看不见：控制中心调整后设置页显示旧值、重启恢复时也读不到控制中心的设定。设置页引入 SYS_KEYS 双键同写（滑杆+重置），初始化新键优先回落旧键；font-scale.initColors 同步新键优先。",
+        "【缺陷修复·心境积温卡假交付】心境 App 积温五轴卡读 window.VirtualPhone.jiwen.state，但引擎从未暴露该属性——卡片永远显示「积温引擎尚未初始化」。引擎新增 state getter（返回快照副本），真实数据上屏。",
+        "【工程防线】新增 tests/system-v219.test.mjs（27 项）：真实运行时断言（jiwen_ 路由、reset 契约/不落盘/幂等/惰性重载、state 快照隔离）+ 接线断言（3 处 reset、tick 守卫生效序、键名配对、双源统一、引擎导出）。测试总数 234 全绿。",
+        "【兼容】v218 测试中 onChatChanged 角标同步断言窗口放宽（其间插入了同批次 jiwen 失效块），语义不变。"
+      ]
+    },
+    "2.18.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【缺陷修复·会话隔离收口】通知落账层跨会话串味：换会话时十余个 App 缓存全部清理，唯独 NotificationLog 内存缓存从未失效——旧会话通知会继续显示给新会话（通知中心/锁屏/角标三处可见），且挂起的 800ms 防抖落盘会把旧会话缓存写进新会话 chatMetadata。新增 NotificationLog.reset()（丢弃内存缓存与挂起定时器，不落盘——旧会话数据已由防抖周期落盘、当前 storage 已指向新会话），并在换会话（onChatChanged）与清数据（clearCurrentData/clearAllData）三处调用；reset 后惰性从新会话 storage 重建。",
+        "【缺陷修复·延迟通知守卫】微信多消息以 1.5s 间隔逐条 setTimeout 展示，展示途中换会话时，迟到的通知会漏进新会话。新增会话代号 _chatSessionGeneration：多消息块捕获发起时代号，逐条展示前比对，不一致即整条丢弃；代号在换会话与两处清数据时自增。",
+        "【新增·锁屏音乐卡直达】锁屏正在播放的音乐卡此前仅展示不可点。挂 data-app 并绑定点击：解锁并直达音乐 App；补可点光标与按压反馈样式。",
+        "【工程防线】新增 tests/system-v218.test.mjs（28 项）：真实运行时断言（reset 的脏缓存标志/新会话空历史/不落盘/幂等/惰性重建、flushNow 后 reset 语义）+ 接线断言（三处失效点、延迟守卫先于文案构造、音乐卡直达、CSS revision 升级），锁定会话隔离铁律。测试总数 233 全绿。",
+        "【兼容】v217 测试中 CSS revision 断言改为版本无关（每次样式更新都会 bump，不再绑定具体值）。"
+      ]
+    },
+    "2.17.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【新增·通知交互补全】横幅通知点击直达：此前所有通知横幅弹出后只能干等 4 秒淡出，点击无任何响应（真机语义缺失）。本轮为手机壳横幅与页面级兜底横幅统一注入点击交互：点击即收起并直达目标 App（appId 解析链：显式 meta.appId → senderKey/图标推断 → __sys__ 仅收起），同时把该条落账标记已读并同步桌面角标；收起逻辑统一为幂等 dismissBanner/dismissFallback，点击与超时共用同一路径（杜绝双实现漂移）。兜底横幅额外补「打开手机面板 → 等一帧 → 派发 openApp」链路，与来电唤醒同路径，App 不会渲染进未就绪容器。",
+        "【新增·角标消费】通知中心角标闭环：v2.16.0 定义的 unreadByApp() 此前全仓库零消费（死代码）。本轮以落账层未读为单一真源（unreadCount）驱动桌面「通知中心」图标角标：通知落账后、通知中心已读/删除/清空后、横幅与锁屏标记已读后三路同步；手机总角标重算统一排除通知中心自身（防止与微信/微博等业务角标双计）；打开通知中心不清零其角标（未读语义：读到才算读，逐条点击与已读操作才回落）。",
+        "【新增·锁屏单条直达】锁屏通知速览升级：此前只能整块点击跳通知中心，无法从锁屏直接回原 App。现在每条速览各自可点（data-id/data-app），单击即解锁并直达其来源 App（系统通知回落通知中心），同时标记该条已读并同步角标；保留整块点击兜底与上滑解锁手势互不干扰。",
+        "【新增·chips 未读对齐】通知中心筛选 chips 消费 unreadByApp() 聚合：副数字优先显示未读数（真机语义：徽标数 = 未读），无未读分组回落总数；分组排序改为未读优先。已读/删除/清空操作后同步回落桌面角标。",
+        "【新增·实时刷新】通知中心正开着时新通知即时入列（免打扰静默通知同样即时可见）；搜索框聚焦中不打断输入。",
+        "【工程防线】新增 tests/system-v217.test.mjs（63 项）：真实运行时断言（unreadByApp 聚合与已读语义、合并去重口径、_guessAppId 回退链、chips 未读对齐与降级、_syncBadge 宿主钩子）+ 接线断言（横幅回调注入点、兜底横幅可点击、锁屏单条 bind、角标同步调用点、CSS 新增样式与缓存版本号），防止「方法写好没人调」的假交付。测试总数 232 全绿。",
+        "【样式】可点击横幅光标与按压反馈（.phone-notification-tappable）、锁屏单条按压反馈；CSS 缓存版本号更新为 20260917-v2170-notification-interactions。"
+      ]
+    },
+    "2.16.1": {
+      "date": "2026-09-17",
+      "items": [
+        "【工程防线·正向审计】新增 tests/system-v2161-e2e.test.mjs（9 项端到端断言）：与既有「接线门」源码文本断言互补，本文件用**真实形态 seed 数据**直接运行模块 —— 微信主数据/消息分片均为 JSON 字符串形态、成就为 {id:时间戳} 映射、记忆为对象形态。断言 16 个索引源在真实数据下全部产出条目（键对了字段错也会立刻读空报警）、跨源检索 18 项命中预期源、大厅分片键 phone_wechat_msg_lobby_* 回落生效、成就目录缺失时优雅回落只索引 id、酒馆楼层源仅在注入 chatContext 时出现、单源抛异常不拖垮整体、通知落账与搜索源经同一 storage 真源闭环（落账即可检索）、免打扰只拦横幅不丢历史、缩放钳制 80-120 落盘。零产品代码变更，测试总数 231 全绿。"
+      ]
+    },
+    "2.16.0": {
+      "date": "2026-09-17",
+      "items": [
+        "【新增·原创】系统通知落账层 config/system-notifications.js：通知此前只有「瞬时横幅 + 队列防刷屏」，一闪即逝、错过即永久丢失。NotificationLog 把每条通知在展示的同时写入环形历史（sys_notifs，上限 200 条），同 senderKey 3 分钟内合并为一条并累加 ×N（不重置已读），落盘 800ms 防抖 + flushNow 兜底；_normalize 对脏数据净化（非对象跳过、缺 id 补号、按时间倒序、环形裁剪），全部失败路径返回 {error} 绝不抛，落账失败不阻断通知展示。",
+        "【新增·原创】通知中心 App（下拉 / 锁屏 / 桌面三入口）：按 App 筛选 chips（带计数、按数量排序）、关键词搜索、未读高亮、×N 合并计数、单条删除、一键全部已读 / 清空、点击结果跳回原 App；时间按「今天 HH:MM / 昨天 HH:MM / M/D HH:MM」智能显示。顶部下拉手势按热区分流：状态栏左半 → 控制中心，右半与药丸（灵动岛）→ 通知中心，全部以 46px 位移阈值触发，故轻点药丸锁屏不受影响。",
+        "【新增·原创】全局搜索 App + 检索内核 apps/memory/global-search-engine.js：17 个来源统一索引（微信会话含联系人、朋友圈、日记、短信、通话、织光机收藏册、日历备忘、音乐歌单、世界脉搏、微博热搜与推荐帖、记忆长期层、阅读书架、成就、小红书、贴吧、通知历史，注入 chatContext 时另含酒馆正文楼层）。评分：标题全等 +100 / 前缀 +80 / 包含 +60 / 仅正文 +30，并按命中位置与文本长度加权；命中片段居中开窗高亮；每源独立 try/catch，坏源不影响整体并上报 lastErrors。",
+        "【新增·原创】控制中心 phone/control-center.js：免打扰（真实拦横幅、通知仍入账不丢）、Wi-Fi（联动状态栏图标）、手电筒（手机壳暖光晕）、显示缩放滑块 80–120%（复用设置页同一套 --phone-shell-* 通路，新键 sys_shell_scale 优先、旧键 phone-shell-scale 回落，双向一致）、立即锁屏、音乐卡（上一首 / 播放暂停 / 下一首，真实操作 MusicData）。",
+        "【核心升级】锁屏从纯时间页升级为「速览层」：时段问候（夜深了 / 早上好 / 上午好 / 中午好 / 下午好 / 晚上好）、最近 5 条未读通知速览（轻点解锁并直达通知中心）、正在播放音乐条；全部能力可选缺失降级，通知层或音乐层不存在时自动回到原锁屏。",
+        "【工程防线】新增 tests/system-v216.test.mjs（132 断言）：通知落账合并 / 环形上限 / 已读语义 / 检索 / 脏数据与异常注入容错；搜索评分排序 / 摘要开窗 / 坏源隔离 / 权重与截断；17 个索引源与真实存储键字段对齐（含微信消息分片键 wechat_msg_*、世界脉搏 worldpulse_history_v1、阅读 ruby_reading_shelf、成就映射形态 —— 均为此前写错会成死代码的键）；系统控制归一化与旧键回落、锁屏回落链、音乐真实接口调用序列；以及一组「接线门」断言（模块必须真的被实例化、样式必须真的存在、esc() 不得退化为 no-op）。测试总数 222 全绿。",
+        "【存储分域】config/storage.js 的 CHAT_DATA_PATTERNS 增补 /^sys_/（sys_notifs 通知历史 / sys_dnd 免打扰 / sys_shell_scale 显示缩放 / sys_flashlight 手电筒 / sys_wifi 网络开关，全部随会话隔离，避免换角色时把某个角色的系统状态带过去）。"
+      ]
+    },
+    "2.15.0": {
+      "date": "2026-09-16",
+      "items": [
+        "【新增·原创】织光机收藏册 + 定期织信：saveLetter(letter) 把 AI 时光信落册（幂等：同 ts + 同首段拒重复；载荷裁剪：单段 600 字 / 12 段 / 册上限 60 封），listLetters() 倒序读取；autoWeaveIfDue({force}) 按间隔门（默认 7 天，游标 tw_last_auto）在打开 App 时自动织信，AI 优先、失败降级本地规则 composeLetter，无碎片不触发空信。",
+        "【新增·原创】时光信分享到朋友圈：shareLetterToMoments(letter) 经 wechatData.addMoment 以 isUserPost:true + visibility:{type:'public'} 发布用户帖，采用手机剧情时间（非真实时钟），并同步未读角标。",
+        "【新增·原创】织光机「🔁 回望」面板：消费 LonSha 侧召回自检数据（collectLonshaRecall 读 window.lonsha_memory_bridge_v1.snapshot.recallAudit），展示观测轮数 / 空召回比例 / 平均命中 / 热点楼层 Top10，两端观测互喂闭环。",
+        "【核心重构】跨端记忆注入收敛为单一真源 bridge.recallBlock(queryText, opts)：统一块头格式、首 24 字去重、每条裁 80 字、最多 3 条，新增 strictActors 严格模式（只注入提及在场人物的记忆）；微信单聊（原内联硬编码块）、微信群聊（严格模式，避免私密往事串味）、蜜语 honey 三处共用，替换此前各自漂移的格式化逻辑。",
+        "【新增·跨项目记忆协同】蜜语（honey）与微信群聊接入 LonSha 剧情记忆：蜜语在 generateUserLiveScene / generateLiveScene 的 callAI 上下文组装处注入；微信群聊在 groupMembersArray 收集后注入，以群名 + 在场成员为查询。",
+        "【工程防线】新增 tests/timeweaver-v215.test.mjs（8 项）：recallBlock 单一真源 / 去重裁剪严格模式 / 三处调用点接线 / 收藏册幂等与裁剪 / 定期织信间隔门 / 朋友圈结构对齐 / collectLonshaRecall 三态容灾 / 回望面板与存储分域；测试总数 213 → 221 全绿。",
+        "【存储分域】config/storage.js 的 CHAT_DATA_PATTERNS 增补 /^tw_/（tw_letters 收藏册、tw_last_auto 定期游标随会话隔离，避免跨会话串档）。"
+      ]
+    },
+    "2.13.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【新增·语音输入】ASR 语音识别引擎 config/asr-manager.js：完全镜像 TTS manager 架构（provider 默认值表 + scoped storage key phone-asr-<provider>-<field> + legacy key 回落 + relay Worker 中转 + rawFetch 透传酒馆内部标记 + CSRF），支持 4 个 provider：local（浏览器原生 Web Speech API，零配置免费兜底）/ openai（gpt-4o-mini-transcribe）/ minimax_cn（speech-02-turbo）/ volcengine（bigmodel）。与 TTS 对称构成语音双向通道。",
+        "【核心能力】transcribe(audioBlob, options)：本地走 Web Speech 不需 blob；云端 multipart/form-data 直连或 relay 中转（base64 JSON 规避 CORS 与密钥暴露），25MB 上限校验，缺 key 且无 relay 时明确报错而非静默失败。recognizeOnce()：无 key 自动降级 local，有 key 走 startRecording→transcribe 云端链路，录音失败/识别失败均有可见错误。",
+        "【响应提取】_extractText 纯函数兼容多后端格式：OpenAI {text}/{transcript}/{segments:[]} 按原空格拼接、MiniMax {translations:[]} 空格 join、裸字符串透传、嵌套 {data:{}} 递归收敛，空 payload 返回空串。",
+        "【设置面板】apps/settings/settings-app.js：TTS tab 内新增可折叠『语音输入 ASR』区（provider 下拉 + 云配置显隐联动 + URL/Key/模型/中转/语言五字段 + 密码遮蔽 + 『🎤 说一句话试试』测试按钮 + 结果回显），事件绑定段新增 setAsrProviderField 与全套监听，与既有 TTS 配置交互完全对齐。",
+        "【微信接入】apps/wechat/chat-view.js：输入栏新增麦克风按钮，点按触发 recognizeOnce()，识别结果追加（非覆盖）到输入框并派发 input 事件同步发送按钮状态，不破坏用户已输入的文字。",
+        "【装配】index.js 四步接线：模块声明（AsrManager/asrManager）→ Promise.all 并行 import（asr-manager.js?v=<版本>）→ 类绑定 → new AsrManager(storage) 实例化 → window.VirtualPhone.asrManager 导出，与 TtsManager 装配链完全对称。",
+        "【测试】新增 asr-manager 50 断言（模块导出/provider 默认值/key 命名/配置解析/URL 推断/多后端响应提取/本地+直连+中转三链路/错误降级/recognizeOnce 自动选本地/接线审计）。"
+      ]
+    },
+    "2.12.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】并发 LLM 调用首 chunk 屏障，缝合自 FunnyCups/Luker（SillyTavern 分叉）orchestrator 扩展的 dispatch-barrier，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，保留完整契约，非照抄。",
+        "【新增·基建】apps/phone/first-chunk-barrier.js：同 connection-profile 并发请求中，首个到达者为 lead 立即流式，其余为 follower 先 await lead 的首个上游 chunk 再发请求——给上游（如 Anthropic）时间预热 prompt 缓存，follower 命中 cache-read 而非竞争冷写，显著降低多并发调用的输入 token 成本与首 token 延迟。可被微信/世界脉搏/织光机等任意 App 的 apiManager 调用点复用。",
+        "【契约】acquire 同步原子（JS 单线程下 Promise.all 并发串行通过，首到赢 lead 无竞态）；signalFirstChunk 幂等；release fail-open（lead 出错未流式绝不挂起兄弟）；follower 只 resolve 不 reject；伪 key 完全退出协调；迟到 release 不破坏后续批次新 lead。新增 pendingFollowers/activeLeadCount 观测接口。",
+        "【修复】v2.11.0 遗留：update-log.json 顶层 latest 字段漏更新（仍 2.10.0）导致 entry-integrity 的『update-log latest == manifest.version』与 audit 各降 1。本版本同步 latest 并回补版本块。",
+        "【测试】新增 first-chunk-barrier 10 断言（角色分配/不同key独立/等待放行/幂等/清槽/fail-open/follower no-op/伪key退出/迟到release/并发无竞态）。全量 175/175 绿（165 基线+10 新），语法门 210 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
+    "2.11.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】状态追踪解析引擎，缝合自 Angx666/u4d-panel 的 status-parser 状态面板机制，按 ruby-phone 工程规范重写为可测纯函数 ESM 模块。剥离 DOM 渲染（hideStatusMarkup/removeLegacyStatusMarkup），保留并通用化核心解析能力，非照抄。",
+        "【新增·手机状态】apps/phone/status-tracker.js：解析 AI 回复中的 [STATUS:字段=值|字段+=记录] 标记为结构化状态对象。中英字段别名规范化（normalizeKey: trim+小写+去_-空格 → FIELD_ALIASES 反查）；keyed 载荷（字段=值，| 分隔）+ legacy 定位置载荷（≥7段含数值校验）双格式；增量记录去重保序。",
+        "【核心算法】跨天状态滚动——getStoryDayKey 识别剧情日（日历日期/第N天含中文数字 parseChineseInteger/Day N），isStoryDayChange 检测切换后 applyStatusUpdate 仅携带 growth/form 等 DAILY_CARRY_FIELDS、其余重置、records 跨天保留。makeParser 工厂支持注入自定义字段别名表，通用化适配任意角色状态域。",
+        "【测试】新增 status-tracker 12 断言（归一化/中文数字/剧情日/跨天/keyed/legacy/数值校验/去重/跨天滚动/文本提取/自定义别名）。全量 165/165 绿（153 基线+12 新），语法门 208 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
+    "2.10.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】群聊多角色发言调度引擎，缝合自 Windy-Sora/SillyTavern-GroupWorld 的群聊三 agent 机制（director/force-speak/critique），按 ruby-phone 工程规范重写为可测纯函数 ESM 模块，非照抄 3624 行 agent 框架。",
+        "【新增·微信调度】apps/wechat/group-scheduler.js：director 发言者调度（LLM 选 speakers→名字映射回成员→去重保序→cap maxSpeakers→validate 过滤禁用）；force-speak 强制发言指令构造（@某人强制回复，中英双语+自定义模板）；critique 导演/角色表现批评（节奏/焦点/OOC 检测，JSON 输出）。",
+        "【核心算法】matchMemberByName 名字/别名/归一化模糊匹配（NFKC+去空白+小写，包含匹配取最短名优先防误中）；parseSpeakers 容错解析 LLM 返回（对象/字符串/带对象元素/裸名字，尾逗号修复）；parseCritique 剥代码块+尾逗号容错。",
+        "【修复】parseSpeakers 尾逗号 JSON 解析失败导致整串误判为裸名字的 bug（补尾逗号容错分支，与 parseCritique 对齐）。",
+        "【测试】新增 group-scheduler 9 断言（归一/匹配/解析/调度/校验/双模板/容错/端到端）。全量 153/153 绿（144 基线+9 新），语法门 206 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
+    "2.9.0": {
+      "date": "2026-09-15",
+      "items": [
+        "【缝合·原创整合】六项缝合自两个小手机项目（葵葵机 TH脚本 + yexiaoxiaoye/mobile 扩展），全部按 ruby-phone 工程规范重写为可测 ESM 模块，非照抄。",
+        "【新增·基建】config/floor-store.js 楼层挂载存储引擎：数据挂在每条 ST 消息的 msg.data 上（葵葵机模式泛化为任意命名空间），删除楼层自动带走数据、重roll不残留、跨设备随聊天导出。两阶段批量写（先收集再一次 setChatMessages，取自 mobile 仓卡顿教训），按 id 撤回/按楼层回收/双源合并渲染。无 TH 环境降级内存影子层，全程可测。",
+        "【新增·微信记忆】config/phone-chat-memory.js 联系人级手机聊天长期记忆摘要引擎（葵葵机核心三件套工程化）：滚动摘要（300字约束）+ 无 API 降级拼接截断 + 单聊/群聊双模式 prompt 构建。摘要存 PhoneStorage 会话级分层（非 localStorage 裸 key），走 apiManager.callAI 统一通道。",
+        "【微信接入】buildMessagesArray 注入「与某人的长期手机聊天记忆」系统块，让 AI 在有限上下文里优先记住承诺/称呼/关系变化/未解决事项；sendToAI 成功后异步回写滚动摘要（不阻塞发送）。解决原微信每轮塞全量导致关键事实被稀释的问题。",
+        "【新增·第30个App】世界脉搏 Worldpulse：缝合 mobile 仓 parallel-events 机制（楼层变化监听→阈值队列→风格化 prompt→AI 生成），差异化落地为织光机姊妹——平行事件写成「手机推送/快讯」风格的世界动态，让背景世界在用户数字生活里呼吸而非污染正文。eventSource 优先+轮询兜底，六种风格+自定义，可手动脉冲。注册 worldpulse_ 会话级 pattern 防串味。",
+        "【优化·微信渲染】缝合 mobile 仓 IncrementalRenderer 思路：_refreshCurrentChatMessages 识别「纯尾部追加」场景，只渲染+追加新消息的增量 HTML、复用既有 DOM，避免全量 innerHTML 重建导致的界面跳动与焦点/滚动丢失；删除/编辑/撤回/重roll 时仍回退全量渲染。",
+        "【测试】新增 floor-store 7 断言 + phone-chat-memory 10 断言 + worldpulse-engine 10 断言（共 27），route-apps 冒烟扩充 worldpulse。全量 144/144 绿，语法门 204 文件、entry-integrity 23/23、audit 33/33。"
+      ]
+    },
+    "2.8.14": {
+      "date": "2026-09-15",
+      "items": [
+        "【新增·原创超大升级】织光机 Timeweaver——跨 App 数字生活叙事引擎（第 29 个 App）。现有 28 个 App 是「当下的娱乐孤岛」：微信聊完即散、日记写完即存、照片拍过即忘，没有任何 App 把碎片整合成可回顾的叙事。织光机主动聚合日记/相册/成就/日历/微博/蜜约/剧场七源数据（顺带消费 life_events_v1 与 chatMetadata 兜底），把零散数字足迹织成一部可回顾的个人编年史。",
+        "【引擎】timeweaver-engine.js（352 行纯函数，ESM export 对齐 drives-engine/jiwen-engine 约定）：normalizeEvents 七源归一容错+时间归一（ms 优先、楼号回退）；buildTimeline 日/周/月分桶；detectMilestones 识别七类「第一次」与高光时刻；buildMoodCurve 滑窗情绪曲线；buildAffinityBoard 亲密度榜（频次×2+正情感×3+跨源广度×2）；composeLetter 数据驱动的「时光信」叙事生成。与 life-events.js（被动事件存储）差异化互补：织光机是主动聚合+叙事升华。",
+        "【界面】timeweaver-view.js 四 Tab——时光信（可 Blob 导出 .txt）/生活流/里程碑/亲密度榜，琥珀金 #e8a33d 主题纯内联 CSS，零外部请求。timeweaver-collector.js 主动读取各 App 存储键，readArr 兼容 string/object/对象包数组（records/entries/list/photos/items/data）多形态容错。",
+        "【接线】config/apps.js 注册（id:timeweaver，icon:🕰️）+ index.js openApp 路由分支（gacha 后）。entry-integrity 第 3 节「每个桌面 App 都有路由分支」自动校验覆盖，无需改测试。",
+        "【测试】timeweaver-engine.test.mjs 12 断言 + timeweaver-collector.test.mjs 7 断言（mock storage 含脏数据容错）+ route-apps 冒烟扩充。全量 117/117 绿，entry-integrity 23/23、audit 33/33 通过。"
+      ]
+    },
+    "2.8.13": {
+      "date": "2026-09-14",
+      "items": [
+        "feat(storage): set()/remove() 第三参数实现 immediate 语义——true 绕过防抖立即落盘，false/缺省走合并防抖；落点不变量保持由 CHAT_DATA_PATTERNS 决定，第三参不改变存储位置",
+        "fix(storage): 修复 18 处历史调用点（8 处 true / 10 处 false）第三参数被静默忽略的意图断裂；此前 43 处系旧正则被嵌套括号截断的虚高数字，已由括号配平扫描器修正",
+        "test(storage): 新增 storage-immediate.test.mjs 21 项断言（立即/防抖/合并/绕队列/落点不变量/熔断两路径/并发），变异测试 7 体击杀验证",
+        "feat(memory): 召回主权归记忆插件——手机侧 BM25 索引失效信号全覆盖。MemoryCore 在唯一持久化出口 _saveNow 递增 _dataVersion 版本戳, LonShaBridge._ensureIndex 懒检测版本戳+记忆池条目数双信号, 捕获 record/sleep/clear/reload/invalidateFloorAt 及 pool.add* 等桥外写入路径(此前 _bm25Dirty 仅桥内 4 处置位, 桥外写入导致索引陈旧)。新增 recall-sovereignty.test.mjs 19 断言, 变异测试 4/4 击杀。"
+      ]
+    },
+    "2.8.12": {
+      "date": "2026-09-14",
+      "items": [
+        "【修复·关键】修复发布门禁本身失效：项目宪法要求的「node --check 全量语法校验」在仓库缺少 package.json 时按 CommonJS 解析 .js，对 ES Module 结构性损坏返回退出码 0（假绿）。index.js 正是据此一路「校验通过」却根本无法解析、插件完全不可加载，并连续发布了约 9 个版本。现新增 scripts/syntax-check.mjs 以 --input-type=module 强制按 ESM 逐文件解析，任一失败即非 0 退出并列出文件名与行号。",
+        "【新增】根目录 package.json（type=module、无任何依赖声明、private）：使宪法里裸 node --check 命令恢复真实拦截能力；扩展运行时不加载该文件，宿主也不会尝试安装依赖。scripts 提供 syntax / test / check。",
+        "【新增】tests/syntax-gate.test.mjs 含负控制用例：实测复现「无 package.json → 损坏文件退出码 0」的历史假绿机制，并验证语法门能拦住损坏、不误伤健康代码、覆盖面不低于 170 个文件（防止遍历逻辑被改坏导致门退化成空跑）。",
+        "【变更】CONTEXT.md 发布链路更新：改为 npm run syntax + npm test（或 npm run check）；记录三处版本号（manifest / index.js ST_PHONE_VERSION / package.json）需同步，且版本一致性断言不再硬编码具体版本号。"
+      ]
+    },
+    "2.8.11": {
+      "date": "2026-09-14",
+      "items": [
+        "【新增】存储层聊天存档防膨胀熔断（仓库历史上首次存在写入侧熔断）：顶层裸数组超限限长，并按「新条目方向」感知——小红书笔记/贴吧帖子为 unshift 语义（新在头部）故保留头部，联系人/歌单等 push 语义故保留尾部，避免统一 slice(-N) 把最新内容整批删掉；同时拒写超大 Base64 图片（正常路径应已落盘为 /backgrounds 路径）。键表仅登记实测确为顶层数组的键，未收录以 JSON 字符串/对象存储的键（如 weibo_user_posts、bili_entries_v1、theater_stories_v1、memory_core_v1），避免形成零引用的假接线。",
+        "【修复】版本号单源化：入口版本常量与 manifest.json 对齐（此前长期停留 1.5.5，使远程更新检查把已升级状态误判为「发现新版本」，每小时提示且升级后仍提示）。新增测试断言锁定两者一致。",
+        "【优化】内置离线更新公告文案同步为本轮审计内容，避免离线时展示过期说明。",
+        "【测试】entry-integrity 回归门扩展：存储熔断方向语义、未超限不介入、非数组透传、Base64 拦截边界、版本双源一致性。"
+      ]
+    },
+    "2.8.10": {
+      "date": "2026-09-14",
+      "items": [
+        "【修复·关键】修复入口文件 index.js 的 3 处结构性语法损坏（tieba 分支 .catch 未闭合、health 分支多余右括号、多余右花括号提前闭合 if 块）。该问题导致 index.js 无法被解析，插件自 v2.1.0 起连续约 9 个版本完全无法加载；此前测试仅做正则文本匹配、从不解析入口文件，故 75 个测试全绿仍未能发现。",
+        "【修复·关键】修复新增 App 会话状态被误判为全局配置的问题：ruby_* 前缀未登记进存储路由表，导致成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度被写入 extensionSettings，换角色或换会话时互相串味（与 CONTEXT.md 零数据库铁律 #3「随会话隔离」相悖）。现已归入 chatMetadata，并加入一次性搬迁逻辑，将历史误存的会话键从全局配置搬回当前会话。",
+        "【修复】补齐游戏存档迁移漏项：2048/数独/对弈/谁是卧底/扑克牌局状态此前仍存于全局键，现按会话隔离（catbox/werewolf 此前已迁移）。精确枚举键名，不误伤 games_*_ai_prompt 等全局提示词模板。",
+        "【新增】测试基建 tests/entry-integrity.test.mjs：全仓库 ESM 模块级语法门（含入口 index.js）+ 存储路由回归门（会话键/全局键分类断言）+ App 路由一致性 + 版本一致性。修复 `node --check` 走 CommonJS 分支导致 ESM 语法损坏漏报的问题。"
+      ]
+    },
+    "2.8.8": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】健康 App「健康档案」tab（源自 LA-0.6.84 medical-core）：140 种病症库（20 大分类）内置，支持从分类选择添加病症（含严重度/阶段）、每日推进（急性病按阶段进展、慢性病随机波动、到期康复）、病症移除、健康档案注入生成上下文。纯本地零 LLM。",
+        "【新增】「幸运转盘」App（id: gacha，🎰）：5 卡池 × 630 道具（源自 V3.759 状态栏 GACHA_DATA 扭蛋库），品质 6 级（神话/传说/史诗/稀有/优秀/普通）权重抽卡，单抽 100 / 十连 900 幸运币，背包库存 + 抽卡记录 + 幸运币账本，最高品质可分享到聊天让角色互动。纯本地零 LLM。",
+        "【优化】健康 App 现状：周期/体征/健康/家谱 四 tab 齐全，生理（妊娠/周期/生理五维/家谱）+ 病症档案（健康档案）全生命周期管理。"
+      ]
+    },
+    "2.8.7": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】阅读 App 支持 EPUB 格式（零依赖）：内置极简 ZIP 只读解析器（EOCD 定位 + 中央目录 + DecompressionStream 原生解压，含 deflate-raw/deflate 双回退），EPUB 结构解析（container.xml → OPF → spine → manifest → XHTML 提取），自动提取书名/作者/章节，多章节沉浸式阅读。纯本地零 LLM。",
+        "【新增】阅读器排版增强：三档主题切换（☀羊皮纸/🌙夜间/⚫暗墨），作者显示，阅读进度条 + 百分比，主题随进度记忆持久化。",
+        "【优化】书架区分 TXT/EPUB 徽标，导入按钮支持 .txt/.epub 双格式。"
+      ]
+    },
+    "2.8.6": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】「阅读」App（id: reading，📖）：纯本地 TXT 小说阅读器。多编码自动探测（UTF-8/GB18030/GBK/Big5/UTF-16，BOM 优先 + 评分制），章节智能切分（第X章/卷/回 + Chapter + Markdown 标题），段落格式自动探测（空行分段/段首缩进/一行一段），书架化管理（导入/删除/同名覆盖），阅读器仿纸质书排版（首行缩进 + 字号可调 + 进度记忆），支持上一章/下一章/章节下拉跳转。零 LLM 零依赖。",
+        "【说明】阅读 App 书架只存书目元数据，正文存会话内存；重启后需重新导入原书（避免 chatMetadata 存档膨胀）。"
+      ]
+    },
+    "2.8.5": {
+      "date": "2026-09-12",
+      "items": [
+        "【修复】接通 4 个「做了但打不开」的 App 路由 —— 查手机(peek)/B站(bilibili)/小剧场(theater)/图谱(graph) 已在 APPS 数组注册，但 phone:openApp 缺路由分支，点图标只弹「功能开发中」。补齐 4 条懒加载分支后 24/24 App 全部可打开。",
+        "【修复】查手机视图 peek-view.js 缺方法头 —— `_dyToneColor` 方法后的事件绑定代码段丢失 `_bind() {` 声明，导致 `const q` 裸露在 class 体内 ESM 编译失败（Unexpected identifier 'q'），查手机 App 此前无法加载。补回 `_bind()` 方法声明。",
+        "【修复】图谱视图 graph-view.js `join('` 字符串未闭合 —— `].join('` 换行未闭合引号导致 ESM 编译失败（Invalid or unexpected token），图谱 App 此前无法加载。修复为 `].join('\\n')`。",
+        "【修复】路由补全后 24 个 App 全量语法门 + ESM import + 渲染冒烟测试全绿（peek/bilibili/theater/graph 实例化 render 均成功）。"
+      ]
+    },
+    "2.8.4": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】「塔罗」App（id: tarot，🔮）：78 张韦特牌（大阿卡那 22 + 小阿卡那 56）+ 5 种牌阵（单张指引/三张过去现在未来/凯尔特十字/金字塔/心形情感），可输入问题、点牌洗牌抽牌、逐张翻牌看正逆位释义、占卜历史存档。纯本地规则，AI 解读通过「求 AI 解读」按钮注入剧情自然输出。",
+        "【协议】<TAROT> 占卜协议：抽牌结果以牌阵+牌名+正逆位格式注入，AI 以角色口吻解读，不暴露系统提示。"
+      ]
+    },
+    "2.8.3": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】修复 config/apps.js 数组缺逗号致 ESM import 崩溃 —— 第四行起 playbook/成就簿/小红书/贴吧/健康/记忆/图谱/查手机/B站/小剧场 等 10 个 App 之前全部无法注册加载，现 22+1=23 个 App 全部可用。",
+        "【新增】「心境」App（id: mood，🌈）：把后台三大引擎做成手机内可感知界面 —— ①情绪引擎(Drivesoid)主导情绪色卡 + Top3 维度 + 清醒/睡眠态；②积温五轴可视化(连接需求/骄傲/愉悦/唤醒/沉浸) + 主动想法气泡；③记忆系统统计(长期/短期/已巩固/已换代/可引用/需谨慎/仅联想)。零 LLM，只读聚合引擎状态。",
+        "【优化】心境 App 单例路由接入 phone:openApp，图标暂用记忆图占位，后续可换专属图标。"
+      ]
+    },
+    "2.8.2": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】记忆换代失效机制（移植自 Paramecium 草履虫「原文是唯一真相」记忆设计）：longTerm 睡眠巩固时对新入条目与既有长期记忆做高置信冲突检测（词面相似度闸门 + 主题锚点反义立场判定），新条目重要性达标且冲突 → 旧条目标记 superseded 退出主动召回（原文保留可逆，pinned/剧情条目不参与换代）。",
+        "【新增】superseded 链式换代与复活：被压制旧条目可被更新的状态替换（supersededBy 走链更新）；当压制方条目被再次换代或消失时，旧条目自动解除压制复活重新参与召回。",
+        "【新增】召回过滤增强：recall 同时排除 metadata 标记 superseded 与记忆池副本中已被镇压的 content（双通道兜底过滤），被换代记忆不再进入注入上下文。",
+        "【优化】记忆换代扫描置于 lifecycle 冷却之前执行，新入条目互不误判（压制池排除本次新入），避免同批新记忆互相换代。",
+        "【优化】冲突判定词表覆盖奶茶/住所/饮食/工作/宠物/情感 6 组主题锚点 + 轻量反义立场词表（含戒不掉豁免、强恢复信号识别），全部零 LLM 纯规则。"
+      ]
+    },
+    "1.5.5": {
+      "date": "2026-09-09",
+      "items": [
+        "【新增】微信生图卡片与蜜语直播 AI 生图 Tag 记录支持编辑；微信可修改中文描述和英文 Tag 后保存或重新生成，蜜语可修改最新 Tag 并继续沿用原有生图流程。",
+        "【修复】修复电子小猫存档未按酒馆会话隔离，切换角色或会话后错误共用同一只小猫的问题。",
+        "【修复】合并边框与文字颜色设置入口，修复移动端色相滑杆出现双轨道以及原生颜色面板不直观的问题。",
+        "【修复】修复部分 Android 高分屏设备上传头像或壁纸时，裁剪预览与最终保存结果缩放不一致的问题。",
+        "【修复】修复部分酒馆美化使用全局 textarea 样式时，ComfyUI 工作流 JSON 与节点映射被强制展开的问题。",
+        "【优化】旧版全局猫盒存档会自动迁移到当前会话，并清理遗留全局数据，避免继续跨会话串档。",
+        "【优化】重做手机边框与全局文字颜色选择器，支持色相、饱和度、明度、RGB 和 HEX 精细调色，并在拖动时实时预览效果。",
+        "【优化】更新六套悬浮图标资源，优化图标显示效果与文件体积。",
+        "【优化】优化兼容古代时间状态栏的解析，支持朝代纪年、中文日期与时辰格式，古代时间自动隐藏星期显示。",
+        "【优化】ComfyUI 工作流支持拉取 LoRA 列表，可在弹窗内滚动勾选单个或多个 LoRA 并分别调整权重；生成时优先写入现有 LoraManager，无管理器时自动追加标准 LoraLoader。"
+      ]
+    },
+    "2.1.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】记忆 App：移植 sxiphone 记忆体系精华，零外部依赖。对话自动采集为短期记忆，睡眠巩固为长期记忆，按聊天隔离防串味。",
+        "【新增】Ebbinghaus 衰减评分引擎：重要性×激活次数×时间衰减×情绪权重×强化保护，pinned/permanent 记忆永不衰减。",
+        "【新增】四层记忆池：前提/感知/空间/时间，三级触发检索（感官→关键词→文本相关），感官命中权重最高。",
+        "【新增】本地情感词典（valence/arousal 二维模型）：中英混合词库，强度词增强/弱化修正，无需任何 API。",
+        "【新增】记忆注入：开启“自动注入 AI 上下文”后，每次生成自动携带最相关记忆块进入 prompt（纯本地，召回不足自动补最新记忆）。",
+        "【新增】记忆检索：关键词混合排序（重叠度 0.6 + 时间接近度 0.25 + 重要性 0.15），支持跨层检索。",
+        "【优化】记忆 App UI：iOS 风格概览卡 + 时间线 + 检索 + 立即巩固 + 一键清空，自动注入开关。"
+      ]
+    },
+    "2.2.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【优化】事件监听泄漏治理：window 自定义事件与酒馆 eventSource 监听改为幂等挂载（重复挂载自动拦截），init 重入时统一解绑重建；修复了此前 index.js 拼接污染导致的代码双份执行问题。",
+        "【优化】记忆系统改为空闲延迟初始化（requestIdleCallback），不再拖慢手机核心模块加载；消息到达时自带兜底初始化，保证不丢记忆。",
+        "【新增】记忆 App 首次打开引导：提示开启「自动注入 AI 上下文」，并给出空态使用指引。",
+        "【新增】LonSha 知识图谱自动连边：手机记忆写入图谱时，自动识别角色名/地点名/同标签/同时间窗生成关系边，图谱从孤立节点变为关系网。",
+        "【新增】图谱节点详情：点击检索结果可展开该节点的完整关系链与手机侧相关记忆。",
+        "【新增】可选 LLM 增强摘要（默认关闭）：开启后调用酒馆静默生成高质量概括，失败自动回退纯本地摘要。",
+        "【优化】记忆注入彻底去除情感维度，改为纯规则采集 + 直白记忆片段，对弱模型更友好。"
+      ]
+    },
+    "2.3.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】桌面宠物：移植自道渊小手机的桌面宠物系统，webm 动画状态机（Idle→点击反应→手机开启→循环→关闭），双 video 交叉淡化 + 透明通道检测兜底，点击宠物即可开关手机。",
+        "【新增】桌面歌词 + 系统媒体会话：移植自 Selene Music，音乐播放时浮动显示当前歌词句（LRC/数组双格式解析、时间轴推进、可拖拽定位），并在系统媒体中心/锁屏显示歌名与进度。",
+        "【优化】主动消息楼层锚定：吸收飞讯 last_floor 机制，微信线上主动触发记录楼层锚点，楼层被删除/滑动/重生成时自动失效，杜绝重复触发与孤儿消息。"
+      ]
+    },
+    "2.3.1": {
+      "date": "2026-09-11",
+      "items": [
+        "【修复】桌面宠物 webm 资源改为 import.meta.url 解析，避免按酒馆页面路径 404。",
+        "【修复】桌面宠物与悬浮入口解耦：不再依赖「悬浮入口」开关，默认出现；点击宠物开关手机并与面板动画同步。",
+        "【修复】桌面歌词时间轴：MusicData 歌词为秒，推进器误当毫秒导致歌词不跟，已按秒转毫秒。",
+        "【新增】锁屏/系统媒体键：play/pause/上一首/下一首/拖动进度 + 封面。",
+        "【新增】音乐设置页「桌面歌词」开关。"
+      ]
+    },
+    "2.4.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】查手机：适配自 jiuyi777/xiao-shouji。汇总微信/日记/相册/日历/小红书/音乐的角色手机痕迹；空缺时生成带「推测痕迹」标记的占位，可选注入上下文。",
+        "【新增】B站：不抓真实网页，只生成 B 站或 phone://bilibili/ 模拟条目；外站链接会被过滤。",
+        "【新增】小剧场：支持酒馆 {{random:...}}、字数规则、续写拼接与提示词复制。",
+        "【新增】生活事件时间线库 life-events.js，供微信/日记等模块写入高价值痕迹。"
+      ]
+    },
+    "2.5.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】健康 App 缝入 Liuuuu54/st_bs_biotracker 纯本地妊妆/产程算法：孕早期84/孕中期105/孕晚期63/临产期28天按种族孕速折算，逾期后进入产兆。",
+        "【新增】产程三阶段（潜伏/活跃/过渡 → 胎体下降/娩出/间歇 → 供养器官娩出/产后观察）+产后恢复 56 天，全部本地推进，不绑 OpenAI/MVU。",
+        "【新增】67 个种族生理表与五类胚胎类型（胎生/卵生/卵胎生/胎转卵生/不定型），可调孕速修正系数与多胎标签。",
+        "【优化】旧存档自动迁移：原 28 天周期与粗粒度孕周仍可读；注入块只事实体征，弱模型友好。"
+      ]
+    },
+    "2.6.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】游戏大厅「对弈」：缝自瑟瑟小手机游戏扩展 V0.1.0 的五子棋/象棋/斗兽棋纯本地引擎，可与本机 AI 落子，不绑神数据库与 ubp-root。",
+        "【新增】健康 App 体征页：缝自 LA-0.6.37 的饥/渴/洁/尿/便五维，按小时累积，可进食/饮水/如厕/洗漱回落；超阈值时写入注入块。",
+        "【新增】健康 App 家谱页：分娩后自动登记子嗣，本地存档，不写世界书。",
+        "【取舍】不替换现有狼人杀；不搬 LA 悬浮壳/世界书投影/生育重复引擎；不进记忆插件。"
+      ]
+    },
+    "2.7.0": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】微信礼物：缝自 ovo066/kktest 礼物目录与 24 枚 SVG，加号面板新增「礼物」，走零钱扣款，气泡/查手机可识别。",
+        "【新增】线上主动触发免打扰时段（缝自 kktest liveness quietHours）：默认 23-7 点不自动触发，起止小时可调，立即测试不受限。",
+        "【新增】锁屏：参考 kktest LockScreen，点击摄像头药丸锁屏，上滑解锁，显示时间/日期/电量。",
+        "【优化】查手机消息摘要补齐 [转账]¥x / [红包] / [礼物] 格式（对齐瑟瑟小手机 V0.255）。",
+        "【取舍】不搬 kktest 独立 App 壳/API 管线/记忆系统（RubyPhone 已有）；不搬 V0.255 主题化上下文命名成套体系。"
+      ]
+    },
+    "2.7.1": {
+      "date": "2026-09-11",
+      "items": [
+        "【新增】时间-环境感知注入（缝自 TPES 时间感知增强系统 1.0 精简版）：读取剧情时间 → 时段/光照/生理节点绑定，随生成注入 <Time_Env> 块，默认开启，设置页可关。",
+        "【规则】时间只前进、交互间隔即剧情流逝、离线期间角色按人设作息生活、时间感只走叙事不输出元标注；兼容古代纪时（按小时数映射昼夜光线）。",
+        "【取舍】TPES 的强制优先级宣言/三态模型长文不整体照搬，只保留可执行规则；世界书零写入，不新增 API 管线。"
+      ]
+    },
+    "2.7.2": {
+      "date": "2026-09-12",
+      "items": [
+        "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库，替代原继承自 gaigai315/yuzuki-phone 的失效地址，避免误拉原作者版本号。"
+      ]
+    },
+    "2.7.3": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】消息文本去噪清洗: 移植自芋圆机 cleanFloorForSummary/stripStatusBlocks/stripWxTagLines, 记忆采集前自动剔除 horae 等插件注入的状态块/成对大写块/HTML/样式脚本/裸K=V状态行, 避免把系统状态当剧情记忆采进去; 代码围栏智能保留中文正文",
+        "【修复】远程更新检查 URL 改指向 LonSha/ruby-phone 自身仓库 (v2.7.2)"
+      ]
+    },
+    "2.7.4": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】查手机新增抖音平台页: 借鉴 ai-virtual-phone checkphone 的高仿抖音个人主页(头像/关注/粉丝/获赞统计 + 作品/收藏/喜欢三tab作品三宫格 + 视频详情弹层带文案/爱心评论收藏/评论)。数据直接取本人小红书笔记/相册照片/微博帖子本地生成, 零 LLM; 无真实痕迹时降级为标[推测]的占位作品。"
+      ]
+    },
+    "2.7.5": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】查手机新增微博/B站/豆瓣三个高仿平台页(借鉴 ai-virtual-phone checkphone): 微博页含热搜榜+本人微博流(作者头像/转发评论点赞), B站页含观看记录视频流(封面/UP主/播放/弹幕), 豆瓣页含动态时间线(在听/读过/日记等分类)。数据全部取本人现有痕迹(微博帖子/热搜、B站观看条目、音乐播放/日记)本地生成, 零 LLM, 无痕迹时降级为标[推测]占位。"
+      ]
+    },
+    "2.7.6": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】对话整理格式化(移植自糯叽叽 nuojiji-tools 对话合并算法): 新增 config/dialog-format.js, 5分钟同发言人连续消息自动合并为引用块(避免刷屏式重复), 支持 ## 📱线上/📝线下 模式标记与 HH:MM 时间锚定; 已接入查手机微信对话框体, 聊天痕迹从逐条堆叠改为整理后的可读对话。"
+      ]
+    },
+    "2.7.7": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】查手机新增「角色日报」(借鉴 dwell-on-something 12-日报机制): 每天一份只给角色看的报纸, 版块化排版(今日聊天/今日日记/今日动态/今日日程 可整版增减), 每版配一句写法说明(EXTRA思想), 末尾夹一张角色口吻便条(独立竖线标注不混入正文)。数据源全部为本会话已有痕迹(微信/日记/微博/小红书/日历), 纯模板格式化零 LLM; 无痕迹时降级空版。"
+      ]
+    },
+    "2.7.8": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】情绪驱动引擎 (config/drives-engine.js, 移植自 awesome-ai-companion 聚合清单中的 Drivesoid 情绪动力学 v2): 16 心理维度(活力/思念/亲密/占有欲/欲望/嫉妒/焦虑/保护欲/满足/欢欣/渴望/玩心/低落/烦躁/恐惧)+疲劳, 三层情绪链 base→mood→temperament(双时间尺度衰减/唤醒门控整合/睡眠加速恢复), 昼夜节律高斯峰, 状态依赖影响, 习惯化衰减(同标签15分钟×0.7ⁿ), 负性偏差, 未回复里程碑(30m/1h/2h 焦虑), 疲劳-活力耦合, 突发 whim。剥离原版 LLM 分类器, 替换为纯规则中文情绪分类器(关键词/中性词保护)零 LLM; 注入 {{DRIVES_STATE}}(如 [情绪状态] 思念 49% / 亲密 45%), 持久化走 chatMetadata 独立命名空间防串扰。所有消息(用户/AI)自动喂事件推进状态。"
+      ]
+    },
+    "2.7.9": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】记忆召回过滤 (config/recall-filter.js, 移植自 MemoryConstellations 远程记忆星图设计的纯规则部分, 零 LLM): ① 分段衰减排序——3天内新鲜度主导, 3天后情感强度主导, 低于阈值静默丢弃; ② 回忆权限分级——双通道命中+近30天内→可引用引用、单通道/30-90天→需谨慎(注入带 ~ 标记、引用须留余地)、超90天→仅联想(不注入, 仅内部参考); ③ 生命周期冷却——14天→冷却、30-90天→冻结(仅可检索不注入)、超90天→墓碑(清空正文保留剪影), 受保护条目(pinned/剧情/永久)永不墓碑。已接入 memory-data: recall() 召回经 decorateRecall 打权限分级+分段衰减排序; sleep() 合并后执行 pruneByLifecycle 分级清理; buildPromptDirective() 注入时过滤 associate-only 并给 cautious 带 ~ 标记。"
+      ]
+    },
+    "2.8.0": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】积温主动意识引擎 (config/jiwen-engine.js, 移植自 jiwen 积温, MIT): 五个连续数值轴(连接需求/骄傲/愉悦度/唤醒度/沉浸度) 随时间数学漂移、互相制衡、到阈值自然触发行为——不靠随机概率骰子。核心机制: 连接需求时间分段加速(久未回应想念累积)、骄傲防御(被冷落嘴硬)、盔甲侵蚀(想念太重放下骄傲)、Pride×Connection 内心战争升温 arousal、Valence 回归设定点+低情绪自我调节、Arousal 等待焦躁、沉浸度缓冲(做别的事缓解想念)、Saga 偏置与昼夜偏置钩子、边际递减与状态相关缩放(防情绪无限堆高)。已接入 index.js: 启动即活后台每5分钟 tick, 触发 contact 时生成「此刻的主动想法(积温)」注入块供 {{JIWEN_PROACTIVE}} 携带(30分钟内有效, 读后即清防重复); 状态持久化走 storage (jiwen_state)。与 v2.7.8 情绪引擎(Drivesoid 16维)互为补充: 情绪引擎管长期情感曲线, 积温管主动开口的时机与别扭感。"
+      ]
+    },
+    "2.8.1": {
+      "date": "2026-09-12",
+      "items": [
+        "【新增】积分/连击/成就系统 (config/points-engine.js 纯算法 + apps/wangxiang/points.js 接入层, 移植自 Phosphene 任务/积分/奖励空间核心算法, MIT): ① 任务完成奖励——基础积分 × 难度倍率(easy=1/medium=2/hard=3); ② 连击奖励——连续 2-5 天每天完成+1分, 6-7天+2分, ≥8天+3分, 断签清零, 同日多条不重复加; ③ 失败惩罚——ceil(奖励×0.5), 受余额+每日限额(50分)双重约束; ④ 成就系统——11项成就(初光/稳步/熟手/一周之约/月月有约/十日谈/习惯成自然/硬骨头/挑战者/小富婆/慷慨)按累计阈值自动解锁; ⑤ 积分流水账本——不可变 ledger(type/amount/reason/date)记录每笔收支, 余额=sum(amount)。已接入万象: 任务完成时结算 基础奖励+连击加成 进信用点, 解锁成就记录在任务上; 独立 storage key(wangxiang_points_*)不干扰现有信用点体系。"
+      ]
+    },
+    "2.8.9": {
+      "date": "2026-09-13",
+      "items": [
+        "【修复】记忆系统跨会话隔离：修复切换会话 (onChatChanged) 未重置 MemoryCore 内存导致不同会话间记忆穿透覆写的严重缺陷。",
+        "【修复】记忆清空数据联动：清空当前会话数据 (clearCurrentData) 同步清空 MemoryCore 内存状态，防止防抖持久化引发记忆僵尸复活。",
+        "【修复】双向桥协调注入旧 Prompt 槽位悬挂：无可用记忆注入时显式清空 setExtensionPrompt 槽位，避免旧记忆指令长期占用上下文。"
+      ]
+    },
+    "2.14.0": {
+      "date": "2026-09-16",
+      "items": [
+        "【新增·原创】织光机 Timeweaver AI 时光信（App 控制器层 composeAILetter）：本地规则 composeLetter 之上加 LLM 升华——把聚合出的编年数据（碎片数/情绪均值/第一次/亲密度榜首/高光片段/明暗时光）作为事实素材，交 apiManager.callAI 用「见证你这段时光的挚友」口吻写成 3-5 段有温度的信。引擎纯函数不动保持可测，本地规则版保留为离线/降级兜底；view 加「✨ 求 AI 升华这封信」按钮 + AI 信优先渲染 + 加载/错误态。",
+        "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
+        "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
+      ]
+    }
+  },
+  "latest": "2.38.0"
 }

@@ -515,10 +515,12 @@ async function loadBroken(src) {
         String(Object.keys(log.versions || {})[0]));
     const items = (log.versions?.[v]?.items) || [];
     const joined = items.join('\n');
-    ok('G7a 本版条目覆盖主线（世界桥 / 真世界）',
-        /世界桥|世界轴/.test(joined) && /真世界|世界钟/.test(joined), String(items.length));
-    ok('G7b 本版条目点出「两个世界对不上」的原始现场',
-        /两个世界|现编|对不上/.test(joined), joined.slice(0, 60));
+    /* [v2.38.0] 交棓：G7a/G7b 原用当前版本条目查 v2.35 特有词，每发一版必翻红。改为钉 2.35.0 历史条目。 */
+    const v235Items = ((log.versions?.['2.35.0'] || {}).items || []).join('\n');
+    ok('G7a 钉 2.35.0 历史条目覆盖主线（世界桥 / 真世界）',
+        /世界桥|世界轴/.test(v235Items) && /真世界|世界钟/.test(v235Items), String(v235Items.length));
+    ok('G7b 钉 2.35.0 历史条目点出「两个世界对不上」的原始现场',
+        /两个世界|现编|对不上/.test(v235Items), v235Items.slice(0, 60));
     ok('G8 条目数 >= 4', items.length >= 4, String(items.length));
     /* G9 内置公告与日志逐字同源（仓库私有时远端恒 404，公告是用户唯一能看到的说明） */
     const blk = (IDX_SRC.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];

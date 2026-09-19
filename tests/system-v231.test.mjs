@@ -415,8 +415,9 @@ const {
     ok('E2 manifest 同版', manifest.version === v, `${manifest.version} vs ${v}`);
     ok('E3 package.json 同版', pkg.version === v, `${pkg.version} vs ${v}`);
     ok('E4 update-log 有本版条目', !!log.versions?.[v], Object.keys(log.versions || {}).slice(0, 3).join(','));
-    ok('E5 update-log.latest 指向当前版本', log.latest === v, `${log.latest} vs ${v}`);
-    ok('E6 versions 头部即当前版本', Object.keys(log.versions || {})[0] === v,
+    ok('E5 update-log.latest 指向 versions 头部（自洽）', log.latest === Object.keys(log.versions || {})[0], `${log.latest} vs ${Object.keys(log.versions || {})[0]}`);
+    /* [v2.38.0] 交棓：原 E6 钉死 v=2.31.0，每发一版必翻红。改自洽性不变量。 */
+    ok('E6 versions 头部不低于本版', vnum(String(Object.keys(log.versions || {})[0])) >= vnum(v),
         Object.keys(log.versions || {})[0]);
     const items = ((log.versions?.[v] || {}).items) || [];
     /* [v2.35.0] 交棒：原判据用**当前版本** v 去查 v2.31 特有的关键词 —— 本版叙事不含

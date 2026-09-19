@@ -288,8 +288,8 @@ const REAL_SNAPSHOT = () => ({ worldClock: { iso: '2026-09-13T21:45', label: '�
     ok('E2 package.json 与入口同源', JSON.parse(read('package.json')).version === v);
     ok('E3 manifest.json 与入口同源', JSON.parse(read('manifest.json')).version === v);
     ok('E4 update-log 有本版条目', !!LOG.versions?.[V]);
-    ok('E5 update-log.latest 指向当前版本', LOG.latest === V, `${LOG.latest} vs ${V}`);
-    ok('E6 versions 头部即当前版本', Object.keys(LOG.versions || {})[0] === V, String(Object.keys(LOG.versions || {})[0]));
+    ok('E5 update-log.latest 指向 versions 头部（自洽）', LOG.latest === Object.keys(LOG.versions || {})[0], `${LOG.latest} vs ${Object.keys(LOG.versions || {})[0]}`);
+    ok('E6 versions 头部不低于本版', vnum(String(Object.keys(LOG.versions || {})[0])) >= vnum(V), String(Object.keys(LOG.versions || {})[0]));
     const items = (LOG.versions?.[V]?.items) || [];
     const joined = items.join('\n');
     ok('E7a 本版条目点出「读数自相矛盾」这一原始现场', /矛盾|自洽/.test(joined), String(items.length));
@@ -301,8 +301,11 @@ const REAL_SNAPSHOT = () => ({ worldClock: { iso: '2026-09-13T21:45', label: '�
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('E9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
-    ok('E9c 公告与本版日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
-        `ann=${ann ? ann.length : 'null'} log=${items.length}`);
+    /* [v2.38.0] 交棓：E9c 改查 HEAD 版本（不钉 V） */
+    const headV = Object.keys(LOG.versions || {})[0];
+    const headItems = (LOG.versions?.[headV]?.items) || [];
+    ok('E9c 公告与 HEAD 版本日志逐字同源（自洽）', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(headItems),
+        `ann=${ann ? ann.length : 'null'} head=${headItems.length}`);
     ok('E10a v2.36 桥可观测面条目仍在', /可观测/.test(((LOG.versions?.['2.36.0'] || {}).items || []).join('\n')));
     ok('E10b v2.35 世界桥消费面条目仍在', /世界桥/.test(((LOG.versions?.['2.35.0'] || {}).items || []).join('\n')));
     ok('E10c v2.34 重复存活域条目仍在', /重复存活/.test(((LOG.versions?.['2.34.0'] || {}).items || []).join('\n')));

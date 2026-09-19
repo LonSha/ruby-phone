@@ -45,6 +45,14 @@ export class TheaterView {
       '      <option value="custom"' + (draft.length === 'custom' ? ' selected' : '') + '>自由设置</option>',
       '    </select>',
       '    <textarea id="th-content" placeholder="生成或粘贴正文后可保存 / 续写">' + this._esc(draft.content) + '</textarea>',
+      '    <div class="th-roll">',
+      '      <div class="th-roll-head">',
+      '        <button class="th-roll-btn" id="th-roll">世界书随机</button>',
+      '        <span class="th-roll-status" id="th-roll-status">' + this._esc(draft.rollResult ? '已抽 ' + draft.rollResult.split('\n\n').length + ' 条' : '') + '</span>',
+      '        <button class="th-roll-clear" id="th-roll-clear">清除</button>',
+      '      </div>',
+      '      <pre class="th-roll-preview" id="th-roll-preview">' + this._esc(draft.rollResult || '') + '</pre>',
+      '    </div>',
       '    <div class="th-actions">',
       '      <button id="th-copy">复制提示词</button>',
       '      <button id="th-continue">复制续写提示词</button>',
@@ -66,6 +74,22 @@ export class TheaterView {
     q('#th-content')?.addEventListener('input', (e) => { data.draft.content = e.target.value; data._save(); });
     this.container.querySelectorAll('.th-chip').forEach((btn) => {
       btn.addEventListener('click', () => { data.draft.style = btn.dataset.style; data._save(); this._draw(); });
+    });
+    q('#th-roll')?.addEventListener('click', async () => {
+      const status = q('#th-roll-status');
+      status.textContent = '抽取中…';
+      const res = await data.rollWorldBook();
+      if (res.ok) {
+        status.textContent = '已抽 ' + res.count + ' 条';
+        q('#th-roll-preview').textContent = data.draft.rollResult || '';
+      } else {
+        status.textContent = res.reason || '失败';
+      }
+    });
+    q('#th-roll-clear')?.addEventListener('click', () => {
+      data.clearRollResult();
+      q('#th-roll-status').textContent = '';
+      q('#th-roll-preview').textContent = '';
     });
     q('#th-copy')?.addEventListener('click', async () => {
       const prompt = data.buildPrompt(false);
