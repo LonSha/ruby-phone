@@ -90,15 +90,23 @@ export class WorldpulseView {
             'thrown': '取快照抛错', 'no-snapshot': '桥在但尚未产出快照',
             'probe-threw': '探针异常'
         };
-        const wi = br.worldaxis || {}, lo = br.lonsha || {};
-        const bad = (wi.reason === 'refused' || wi.reason === 'no-snapshot' || lo.reason === 'thrown' || lo.reason === 'engine-empty');
+        // [v2.37.0] 优先用 bridgeReport() 的条目（worldBridgeAvailability 只报在场，没有读取结果）；
+        const rep = (st && st.report) || null;
+        const wi = (rep && rep.worldaxis) || br.worldaxis || {}, lo = (rep && rep.lonsha) || br.lonsha || {};
+        const waRead = wi.read || null, loRead = lo.read || null;
+        // 「来源态说就绪、这一次却拉不到」也算读不到——不能只看 reason。
+        const bad = (wi.reason === 'refused' || wi.reason === 'no-snapshot' || lo.reason === 'thrown' || lo.reason === 'engine-empty'
+            || (wi.reason === 'ready' && waRead && waRead.ok === false)
+            || (lo.reason === 'ready' && loRead && loRead.ok === false));
         return `<div class="wp-card wp-bridge">
             <div class="wp-label">跨插件世界桥</div>
             <div class="wp-bridge-line ${wi.mounted ? (wi.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
-              WorldAxis：${esc(WA_TXT[wi.reason] || wi.reason || '未知')}</div>
+              WorldAxis：${esc(WA_TXT[wi.reason] || wi.reason || '未知')}${wi.reason === 'ready' && waRead && waRead.ok === false ? '（实际拉取失败：' + esc(waRead.reason || 'unknown') + '）' : ''}</div>
             <div class="wp-bridge-line ${lo.mounted ? (lo.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
-              LonSha：${esc(LO_TXT[lo.reason] || lo.reason || '未知')}</div>
+              LonSha：${esc(LO_TXT[lo.reason] || lo.reason || '未知')}${lo.reason === 'ready' && loRead && loRead.ok === false ? '（实际拉取失败：' + esc(loRead.reason || 'unknown') + '）' : ''}</div>
             ${bad ? `<div class="wp-bridge-line wp-bridge-warn">读不到时本 App 会退回 LLM 生成——两个世界就此对不上</div>` : ''}
+            ${rep && rep.consistent === false ? `<div class="wp-bridge-line wp-bridge-warn">来源态与实际读取不一致：桥自述可用、这一次却拉不到——按「实际读取失败」处置</div>` : ''}
+            ${rep && rep.summary ? `<div class="wp-bridge-hint">${esc(rep.summary)}</div>` : ''}
             <div class="wp-bridge-hint">真世界可用时，平行事件陈述真事件、不调 LLM；桥休眠时退回生成（不编数据顶替真世界）。
               「未安装」与「装了没开」是两件事——后者去 WorldAxis 面板开闸即可。</div>
           </div>`;

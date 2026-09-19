@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.36.0';
+const ST_PHONE_VERSION = '2.37.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -75,14 +75,13 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: '2026-09-19',
+    date: "2026-09-19",
     items: [
-        "【同一件事在三个插件里各说一遍：桥通不通，手机上完全看不见】这套三插件体系里有两个**同规格的只读世界桥**（`window.worldaxis_bridge_v1` 世界状态快照 / `window.lonsha_memory_bridge_v1` 记忆召回账本）。v2.35.0 已经把「消费真世界」接上了：世界脉搏改成真世界优先、TimeManager 把世界钟接成权威源之一。但**「桥是不是通着」这件事在手机上仍然完全不可观测**——两个桥只在**各自被用到的那一刻**才被读一次（生成平行事件时、取剧情时间时），那一刻是业务路径，读不到就静默退回旧路，用户什么都看不到。于是用户能看到的只有结果（「世界脉搏又是编的」），看不到原因（桥没装？桥装了没开？对方引擎没就绪？两个钟对不上？）。",
-        "【修前的真实现场：v2.35.0 留下的可观测出口是**零消费**】`config/world-bridge.js` 里的 `worldBridgeAvailability()` 只被 `WorldpulseApp.bridgeStatus()` 调用，而 `bridgeStatus()` 全库**无人调用**（grep 实测）。两条出口都在，等于一个观测面搭好了却没接任何仪表——这正是本项目反复治理的「声明了却零消费」形态，且它发生在一个**专门用来解决不可观测**的版本里。",
-        "【修复一：可观测面收敛为 `bridgeReport()`】`config/world-bridge.js` 新增一份纯读报告，一次覆盖四件事：① 两个桥的**在场与闸门**（`mounted` / `enabled`，未装与未开分开）；② 我方读取归因（WorldAxis 侧的 `reason` 五态：not-mounted / disabled / refused / no-snapshot / ready）；③ **对方的自述**（新增 `lonshaSource()`，读 lonsha v3.174 建立的 `sourceState` 状态机 idle / ready / engine-absent / engine-empty / thrown，且 `lastError` 不吞——那台状态机本就是为了让消费者可归因而做的）；④ **两个钟的对账**（新增 `diffClocks()`）。另有 `summary` 一句话总述供 UI 直接显示。",
-        "【修复二：对账只报不判，且三种「不可比」必须分开】`diffClocks()` 六判定：same / world-ahead / world-behind / **world-uncomparable** / **lonsha-empty** / unparsable。**「本机没有公历钟」不是故障**（本机时间由正文/世界书/消息戳猜，本就不承诺公历），故单独成 `world-uncomparable`——绝不硬比出一个假的「不一致」；**「对方还没记时间」与「记了但读不出」处置相反**（前者等它，后者是两套历法），故 `lonsha-empty` 与 `unparsable` 不得同形。对账只报差异，不改任何一方。",
-        "【修复三：可观测面真被消费（消除零消费）】`apps/worldpulse/worldpulse-view.js` 新增「跨插件世界桥」卡片，直接读 `app.bridgeStatus()`（其内部调 `bridgeReport()`），把两个桥的状态与对账摆给用户；`bridgeStatus()` 相应带上 `report` / `summary`。`apps/timeweaver/timeweaver-collector.js` 的桥读取**改走 `config/world-bridge.js` 单一真源**（此前它自写了一份 `window.lonsha_memory_bridge_v1` 读取——同一份桥读取逻辑有两份实现必然漂移，且第二份不知道对方的 `sourceState` 可归因），本文件自此只负责「取 recallAudit 这一块业务数据」。",
-        "【测试与自证】新增 `tests/system-v236.test.mjs`（A 桥可观测面在场与归因含「未装≠未开」与只读契约 / B 两个钟对账六判定含「本机无公历钟不硬比」/ C 消费侧接线含「collector 不得自己摸桥全局」/ D 负控制 4 项：真源码破坏 → 独立装载副本 → 同款判据翻红，配原版对照 / E 发布卫生）。两处装置自纠：① D2 的锚点首版打在 `readWorldAxisSnapshot` 的闸门上，而判据读的是 `bridgeReport().worldaxis.reason`（来源是 `bridgeSource` 的归因链）——**锚点与判据不在同一条路上，负控制恒真**，锚点已移回判据真正经过的出口；② 三处破坏首版用「整行删掉」，导致后面的 `else if` 悬空（破坏副本装载即 SyntaxError）——破坏必须**保留语句结构**。回归：全量 253 tests 全绿。"
+        "【可观测面的第一行在撒谎：v2.36.0 的桥报告自相矛盾】上一版刚建好「桥通不通可见」的 `bridgeReport()`，实测它对着一个**开着闸但从没发布过快照**的拉取型桥，第一行却写着「WorldAxis 桥就绪」，而同一份报告里的实际读取结果是 `readWorldAxisSnapshot().ok === false`——两个读数对不上。一个专门解决不可观测的版本，自己的读数先坏了——这是「读数写在恒真判据上」与「可观测面自相矛盾」两种老形态的叠加，第二次现场复现（SELF-CONTRADICTION = true）。",
+        "【病根：拿「snapshot 是不是对象」量「对方有没有物」，对拉取型桥必然恒真】两个桥同规格但不同**发布方式**：lonsha 是**推送型**（`snapshot` 是对象，没有就是 null），这么判是对的；WorldAxis 世界桥是**拉取型**（`snapshot` 是**函数**，外部读取入口，属性永远存在），于是 `hasSnapshot` 恒为 true、`reason` 恒为 'ready'，与它自己的发布记账 `stat().published / stat().invalidated` 完全脱钩。修复新增桥形态适配层 `readPublished()`：推送型看对象、拉取型问对方自己的记账（已作废优先于已发布）、都没有自述 ⇒ kind='unknown'、has=false——**不硬猜，少报胜过多报**。",
+        "【修复二：把「对方自述」与「这一次真拉到的」分开报】`bridgeReport()` 新增 `worldaxis.read / lonsha.read`（这一次真去拉的结果 {ok, reason}）与顶层 `consistent`（来源态说 ready 就必须真读得到，同真同假才算自洽）；自述「已发布」而实拉为 null（竞态/快照被作废）时，`summary` 里如实拼上「（实际拉取失败：…）」——用户看到的第一行不再是假的好消息。`worldaxis.stat` 白名单补上 `published / invalidated` 两项，区分「从未发布」与「已作废待重建」。",
+        "【修复三：兜底分支形状对齐 + 消费侧接线】`bridgeReport()` 的 catch 兜底分支补齐 `read / hasSnapshot`（降级返回与正常分支同形，调用方不必判 undefined，且降级不得自称自洽：consistent=false）；世界脉搏的桥卡片（真世界显示处）改读报告条目——把「来源态就绪但实际拉取失败」也算读不到、单独渲染一条「来源态与实际读取不一致：桥自述可用、这一次却拉不到——按实际读取失败处置」，并显示 summary。",
+        "【测试与自证】新增 `tests/system-v237.test.mjs`（A 形态适配四情形 + 报告自洽 / B 兜底形状 / C 消费侧接线 / D 负控制 3 组破坏 + 工具自证 + 判据纯度 / E 发布卫生），共 50 条。两处测试自伤当场抓出修正：A6 期望值首版写反（never/invalidated 的自述本就是 no-snapshot，与实拉同假，**恰恰是自洽**）；A11 用 IIFE 构造破坏参数，异常在进被测代码**之前**就抛——改用 getter 让炸点落在被测路径上。负向自证：D2–D7 三组真源码破坏（拆「作废优先」⇒已作废被报成有物；拆「已发布即就绪」⇒已发布被报成无物；拆自洽性出口⇒矛盾被吞；拆读取记录⇒拿不到实拉结果）均以独立装载副本翻红，配原版对照与「不存在的锚点必须抛」。回归：全量 253+ tests 全绿。"
     ]
 };
 

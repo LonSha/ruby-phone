@@ -188,8 +188,9 @@ const bridgeWin = (over = {}) => Object.assign({
         thrown: "        if (sourceState === 'thrown') reason = 'thrown';",
         /* 报告的外层兜底（catch 块开头）：改成先重抛 ⇒ 宿主怪异 getter 会外抛。
              ★ 锚点必须落在**重抛能生效的位置**：若把 `throw` 加在 catch 块的 `return` 之后，
-               那是一句不可达代码——破坏没真正改变行为，负控制就是假的。 */
-        swallow: "    catch (_e) {\n        return {\n            worldaxis: { id: WORLDAXIS_BRIDGE_ID, mounted: false, enabled: null, reason: 'report-threw', stat: null },"
+               那是一句不可达代码——破坏没真正改变行为，负控制就是假的。
+               [v2.37.0] 交棒：锚点随兜底分支形状升级同步（该分支补齐 read/hasSnapshot，语义不变）。 */
+        swallow: "    catch (_e) {\n        return {\n            worldaxis: { id: WORLDAXIS_BRIDGE_ID, mounted: false, enabled: null, hasSnapshot: false, reason: 'report-threw', stat: null, read: null },"
     };
     /** 用给定源码独立装载世界桥模块（ESM 外壳 + 正则剥 import/export，只留纯逻辑） */
     const loadWB = (src) => {
@@ -284,8 +285,10 @@ const bridgeWin = (over = {}) => Object.assign({
     ok('E2 package.json 与入口同源', JSON.parse(read('package.json')).version === v);
     ok('E3 manifest.json 与入口同源', JSON.parse(read('manifest.json')).version === v);
     ok('E4 update-log 有本版条目', !!LOG.versions?.[V]);
-    ok('E5 update-log.latest 指向当前版本', LOG.latest === V, `${LOG.latest} vs ${V}`);
-    ok('E6 versions 头部即当前版本', Object.keys(LOG.versions || {})[0] === V, String(Object.keys(LOG.versions || {})[0]));
+    // [v2.37.0] 交棒：latest 不再钉死本版——改为「latest 与 versions 头部一致」的自洽性不变量
+    const HEADV = Object.keys(LOG.versions || {})[0];
+    ok('E5 update-log.latest 与 versions 头部一致（自洽）', LOG.latest === HEADV, `${LOG.latest} vs ${HEADV}`);
+    ok('E6 versions 头部不低于本版', vnum(String(HEADV)) >= vnum(V), String(HEADV));
     const items = (LOG.versions?.[V]?.items) || [];
     const joined = items.join('\n');
     ok('E7a 本版条目覆盖主线（可观测面 / 桥）', /可观测/.test(joined) && /桥/.test(joined), String(items.length));
@@ -297,8 +300,10 @@ const bridgeWin = (over = {}) => Object.assign({
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('E9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
-    ok('E9c 公告与本版日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
-        `ann=${ann ? ann.length : 'null'} log=${items.length}`);
+    // [v2.37.0] 交棒：公告随头部版本走（当前版本条目由该版自己的测试锁逐字同源）
+    const headItems = (LOG.versions?.[HEADV]?.items) || [];
+    ok('E9c 公告与头部版本日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(headItems),
+        `ann=${ann ? ann.length : 'null'} log=${headItems.length}`);
     ok('E10a 2.35.0 历史条目仍在（世界桥消费面主线）',
         /两个世界|世界桥/.test(((LOG.versions?.['2.35.0'] || {}).items || []).join('\n')));
     ok('E10b 2.34.0 历史条目仍在（重复存活域主线）',

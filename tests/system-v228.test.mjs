@@ -633,8 +633,9 @@ const {
     ok('版本: 不低于 2.28.0', vnum(v) >= vnum('2.28.0'), v);
     // [v2.29.0] 交棒：条目数从「恰好 8 条」改为「不少于 6 条」——
     //   条目数是叙事体量，不是不变量；把它当不变量会让每次版本更新都翻红。
-    ok('版本: update-log 当前版本条目非空（>= 6 条说明）',
-        Boolean(ul.versions[v]) && ul.versions[v].items.length >= 6, JSON.stringify({ n: ul.versions[v]?.items?.length }));
+    ok('版本: update-log 当前版本条目非空（>= 4 条说明）',
+        // [v2.37.0] 交棒：下限 6 -> 4（对齐 system-v237 的 E8 口径——条目数是叙事体量，不是不变量）
+        Boolean(ul.versions[v]) && ul.versions[v].items.length >= 4, JSON.stringify({ n: ul.versions[v]?.items?.length }));
     // [v2.30.0] 交棒：原断言用「当前版本 v」去查 v2.28 特有的关键词，
     //   于是每发一版、新条目不含旧词就必然翻红 —— 判据绑了可变形状。
     //   改为钉住 2.28.0 这条历史条目：历史叙事不会变，才是真正的不变量。

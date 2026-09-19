@@ -65,6 +65,41 @@ export function getBridge(id, win) {
 }
 
 /**
+ * 对方**有没有**可外供的物——**必须按桥的形态判**，不能一律拿 `snapshot` 是不是对象去量。
+ *
+ * 【为什么单列这一层】两个桥是同规格接口，但不是同一种**发布方式**：
+ *   · 推送型（lonsha）：`snapshot` 是**对象**（生成管线里 refresh 覆盖），没有就是 null；
+ *   · 拉取型（WorldAxis）：`snapshot` 是**函数**（外部入口，调一次返回深拷贝），
+ *     这个属性**永远存在** ⇒ 用「属性在不在」判必然恒真，等于把「有物/没物」写成常数。
+ *     拉取型的「有没有物」只能问它**自己记账**：`stat().published`（已发布过）/ `stat().invalidated`（已作废待重建）。
+ * 这正是本项目反复治理的形态：「读了一个恒真的判据，于是读数看着像真读数」。
+ *
+ * @returns {{ kind:'push'|'pull'|'unknown', has:boolean }}
+ *   kind='unknown' 表示这版桥没有自述能力，has 一律 false（不硬猜「有」）。
+ */
+function readPublished(id, win) {
+    try {
+        const b = getBridge(id, win);
+        if (!b) return { kind: 'unknown', has: false };
+        let raw;
+        try { raw = b.snapshot; } catch (_e) { raw = null; }
+        if (raw && typeof raw === 'object') return { kind: 'push', has: true };
+        if (typeof raw === 'function') {
+            let st = null;
+            try { st = (typeof b.stat === 'function') ? (b.stat() || null) : null; } catch (_e) { st = null; }
+            // 拉取型：published=已产出过快照；invalidated=已作废（下一次读必然重建）。
+            //   两项都不报 ⇒ 不硬报有/无，按「暂无」处理（少报胜过多报）。
+            if (st && typeof st === 'object') {
+                if (st.invalidated === true) return { kind: 'pull', has: false };
+                if (st.published === true) return { kind: 'pull', has: true };
+            }
+            return { kind: 'pull', has: false };
+        }
+        return { kind: 'unknown', has: false };
+    } catch (_e) { return { kind: 'unknown', has: false }; }
+}
+
+/**
  * 桥的**来源归因**读数（只读，不拉快照）。
  * @returns {{ mounted:boolean, enabled:boolean|null, hasSnapshot:boolean, stat:object|null, refused:boolean, refuses:number, reason:string|null }}
  *   mounted  —— 桥对象在不在全局上（不在 ⇒ 插件未安装/未加载）
@@ -88,7 +123,7 @@ export function bridgeSource(id, win) {
     let stat = null;
     try { stat = (typeof b.stat === 'function') ? (b.stat() || null) : null; } catch (_e) { stat = null; }
     let hasSnapshot = false;
-    try { hasSnapshot = !!(b.snapshot !== undefined && b.snapshot !== null); } catch (_e) { hasSnapshot = false; }
+    try { hasSnapshot = readPublished(id, win).has; } catch (_e) { hasSnapshot = false; }
     const refused = !!(stat && stat.lastRefusal);
     const refuses = (stat && Number(stat.refused)) || 0;
     let reason = 'ready';
@@ -218,7 +253,7 @@ export function lonshaSource(id, win) {
         let sourceState = null, lastError = null, hasSnapshot = false;
         try { sourceState = (typeof b.sourceState === 'string') ? b.sourceState : null; } catch (_e) { sourceState = null; }
         try { lastError = b.lastError ? String(b.lastError) : null; } catch (_e) { lastError = null; }
-        try { hasSnapshot = !!(b.snapshot && typeof b.snapshot === 'object'); } catch (_e) { hasSnapshot = false; }
+        try { hasSnapshot = readPublished(id || LONSHA_BRIDGE_ID, win).has; } catch (_e) { hasSnapshot = false; }
         let reason;
         if (sourceState === 'thrown') reason = 'thrown';
         else if (sourceState === 'engine-absent') reason = 'engine-absent';
@@ -273,15 +308,22 @@ export function diffClocks(worldIso, lonshaDate) {
  * 这是本版的核心出口：把「桥通不通、通到哪一步、两个钟差多少」压成一份可读数据。
  * 三条纪律：只读（只调对方读取面）、不抛（任何畸形都降级为 reason）、不猜（如实报）。
  *
+ * 【为什么还要单独报 `read`】`bridgeSource()` 的 reason 是**来源归因**（按对方自述的发布记账推出来），
+ *   它刻意**不拉快照**；而 `read` 是**这一次真去拉**的结果。两者必须分开报，因为会不一致：
+ *   对方自述「已发布」，但这一次拉回来的是 null（旧桥/竞态/快照被作废）——此时报告里
+ *   「来源就绪 + 读取失败」并列存在，用户才能知道是「桥说它行、实际不行」。
+ *   这正是本项目反复治理的形态：**可观测面自己不得自相矛盾**。
+ *
  * @returns {{ worldaxis:{...}, lonsha:{...}, clock:{...}, summary:string, anyReadable:boolean }}
  */
 export function bridgeReport(win) {
     try { return bridgeReportInner(win); }
     catch (_e) {
         return {
-            worldaxis: { id: WORLDAXIS_BRIDGE_ID, mounted: false, enabled: null, reason: 'report-threw', stat: null },
-            lonsha: { id: LONSHA_BRIDGE_ID, mounted: false, sourceState: null, lastError: null, reason: 'report-threw' },
+            worldaxis: { id: WORLDAXIS_BRIDGE_ID, mounted: false, enabled: null, hasSnapshot: false, reason: 'report-threw', stat: null, read: null },
+            lonsha: { id: LONSHA_BRIDGE_ID, mounted: false, sourceState: null, lastError: null, hasSnapshot: false, reason: 'report-threw', read: null },
             clock: { comparable: false, verdict: 'unparsable', days: null, worldDate: '', lonshaDate: '' },
+            consistent: false,
             summary: '桥可观测面读取失败（已降级，不外抛）',
             anyReadable: false
         };
@@ -297,15 +339,21 @@ function bridgeReportInner(win) {
         failures: Number(waSrc.stat.failures) || 0,
         lastRefusal: (waSrc.stat.lastRefusal && waSrc.stat.lastRefusal.reason) || null,
         lastFailure: (waSrc.stat.lastFailure && waSrc.stat.lastFailure.reason) || null,
-        subscribed: waSrc.stat.subscribed === true
+        subscribed: waSrc.stat.subscribed === true,
+        published: waSrc.stat.published === true,
+        invalidated: waSrc.stat.invalidated === true
     } : null;
     // ── lonsha 侧：对方的来源自述 ──
     const loSrc = lonshaSource(LONSHA_BRIDGE_ID, win);
     // ── 两个钟的对账（只在这两边都真读到时才有意义）──
     let worldIso = '';
     let lonshaDate = '';
+    // 实际读取的结果也要报：来源态说「就绪」不等于「这一次真读到了」（见下方注释）
+    let waRead = null;
+    let loRead = null;
     try {
         const rwa = readWorldAxisSnapshot({ win, reason: 'bridge-report' });
+        if (rwa) waRead = { ok: rwa.ok === true, reason: String(rwa.reason || '') };
         if (rwa && rwa.ok) {
             const wc = readWorldClock(rwa.snapshot);
             if (wc && wc.iso) worldIso = wc.iso;
@@ -313,6 +361,7 @@ function bridgeReportInner(win) {
     } catch (_e) { /* 降级：worldIso 保持空串（对账会报 world-uncomparable） */ }
     try {
         const rlo = readLonshaSnapshot({ win });
+        if (rlo) loRead = { ok: rlo.ok === true, reason: String(rlo.reason || '') };
         if (rlo && rlo.ok && rlo.snapshot && rlo.snapshot.clock && typeof rlo.snapshot.clock === 'object') {
             lonshaDate = String(rlo.snapshot.clock.date || '').trim();
         }
@@ -322,19 +371,23 @@ function bridgeReportInner(win) {
     return {
         worldaxis: {
             id: WORLDAXIS_BRIDGE_ID, mounted: waSrc.mounted, enabled: waSrc.enabled,
-            hasSnapshot: waSrc.hasSnapshot, reason: waSrc.reason, stat: waStat
+            hasSnapshot: waSrc.hasSnapshot, reason: waSrc.reason, stat: waStat, read: waRead
         },
         lonsha: {
             id: LONSHA_BRIDGE_ID, mounted: loSrc.mounted, sourceState: loSrc.sourceState,
-            lastError: loSrc.lastError, hasSnapshot: loSrc.hasSnapshot, reason: loSrc.reason
+            lastError: loSrc.lastError, hasSnapshot: loSrc.hasSnapshot, reason: loSrc.reason, read: loRead
         },
         clock,
-        summary: describeReport(waSrc, loSrc, clock),
+        // 自洽性：来源态说 ready 就必须真读得到（否则可观测面自己打自己脸）。
+        //   真出现不一致（对方自述已发布、实际拉回 null）时如实置 false，不掩盖。
+        consistent: ((waSrc.reason === 'ready') === !!(waRead && waRead.ok === true))
+            && ((loSrc.reason === 'ready') === !!(loRead && loRead.ok === true)),
+        summary: describeReport(waSrc, loSrc, clock, waRead, loRead),
         anyReadable
     };
 }
 /** 一句话总述（供 UI 直接显示；纯字符串拼接，无副作用） */
-function describeReport(waSrc, loSrc, clock) {
+function describeReport(waSrc, loSrc, clock, waRead, loRead) {
     const WA_TXT = {
         'not-mounted': 'WorldAxis 未安装', 'disabled': 'WorldAxis 世界桥休眠（未开闸）',
         'refused': 'WorldAxis 世界桥拒绝读取', 'no-snapshot': 'WorldAxis 桥在但尚无快照',
@@ -352,7 +405,10 @@ function describeReport(waSrc, loSrc, clock) {
         'world-uncomparable': '本机无公历钟（本就不比）', 'lonsha-empty': 'LonSha 尚未记录时间',
         'unparsable': '日期串读不出'
     };
-    return (WA_TXT[waSrc.reason] || waSrc.reason) + ' ｜ ' + (LO_TXT[loSrc.reason] || loSrc.reason)
+    // 「说就绪、实际拉不到」必须出现在这一句话里——否则用户看到的第一行就是好消息。
+    const waNote = (waSrc.reason === 'ready' && !(waRead && waRead.ok)) ? '（实际拉取失败：' + ((waRead && waRead.reason) || 'unknown') + '）' : '';
+    const loNote = (loSrc.reason === 'ready' && !(loRead && loRead.ok)) ? '（实际拉取失败：' + ((loRead && loRead.reason) || 'unknown') + '）' : '';
+    return (WA_TXT[waSrc.reason] || waSrc.reason) + waNote + ' ｜ ' + (LO_TXT[loSrc.reason] || loSrc.reason) + loNote
         + ' ｜ 对账：' + (CK_TXT[clock.verdict] || clock.verdict);
 }
 export default {
