@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.42.0';
+const ST_PHONE_VERSION = '2.43.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-20",
     items: [
-        "【工程防线·修门禁自身假阴性】零消费导出门禁 E6：消费判定改为**基于真代码**。此前用裸词正则扫全文，注释里的 TODO、JSDoc 的 @param、字符串里的 key 名、模板串的文本部分统统算「已消费」——真死导出能被一句 `// TODO: eventually call X` 掩盖，门禁静默放过（探测器自己在漏报）。新增 `stripNonCode(src)` 剥离注释与字符串字面量，内部消费按真代码行判定、跨文件消费按真代码判定。",
-        "【口径难点·回归锁定】模板串的 `${...}` 插值**必须按真代码处理**：本仓大量「模板串拼 HTML + `${fn()}` 里真调用」，若把整串当非代码会误抹真消费（第一版实测在 wangxiang-app.js 清空 930 行，把两个真有同文件调用的导出误判死）。另需识别正则字面量起始（`return /re/`、`typeof /re/`、`case /re/`），否则正则体收尾的 `/` 会被当成新起点吞掉后续代码。tests/system-v242.test.mjs B 组同时锁「不该漏」与「不该误」两侧。",
-        "【实测现形】真实仓库零消费 22 → 25，暴露 3 个此前被注释掩盖的真死导出：`config/phone-chat-memory.js:74 recentStoryContext`（产品端未接线，buildReplyPrompt 未注入 storyCtx）、`config/runtime-lifecycle.js:459 childRuntimeCount`（已被更细的 childRuntimeStats 空串调用取代——后者既能回答总数、又能回答某视图反复重建时域数有没有跟着涨）、`config/runtime-lifecycle.js:690 rebindGlobal`（文件头自陈全仓零消费，v2.27 声称接线实则只接了 onceFlag）。三条均已登记进冻结账本并写明理由，接线后应删除对应条目。",
-        "【测试】tests/system-v242.test.mjs（37 项）：A 组结构性锁 E6 落地 + 反向锁「不得退回裸词扫全文」；B 组夹具负控制（注释/字符串/模板文本提及全判死，真调用与 `${}` 插值调用不判死，零消费数恰为 4）；C 组真源码破坏双语料双向自证（消费点降为注释 → 判死；改回真调用 → 不判死）；D 组账本 3 条新条目理由非占位；E 组真实仓库口径完备（内部+跨文件+零消费=声明总数）且三条被判死。"
+        "【工程防线·枚举面 fail-open】零消费导出门禁 E7：export 大括号成块转出的**跨行**写法必须被枚举。此前用单行正则匹配 export 加大括号取键，于是「左花括号后换行、每行一个成员名、右花括号收尾」这种多行成块转出**整块 0 枚举**——文件里声明的导出在门禁眼里根本不存在，块内的死导出既不报红灯也不进账本（fail-open 静默放行）。实测：config/drives-engine.js 真实导出 7 项，门禁只枚举到 1 项（多行块里 6 项全隐形）；夹具复现：导出 2 项（1 真消费 + 1 真死）的多行块文件被报成 0 个 export 声明并 exit 0。修法：见到 export 加左花括号即向后累积到右花括号再取键。扫描面 510 页 516。",
+        "【同族咬合点一】跨行块只跳首行 ⇒ 成员行 `a,` / `b,` 自身含名字，块内每个名字都被算成「已消费」。修为：记录整段导出语句区间 declEnd，内部消费扫描跳过 [declLine, declEnd] 全区间。",
+        "【同族咬合点二】「声明行」不等于「export 行」⇒ `function X(){} export { X }` 里 X 的声明行把它自己算成「内部消费」，零消费的真死导出被静默隐藏。修为：凡本名字的正规声明行一律跳过（声明不算消费）。",
+        "【测试】tests/system-v243.test.mjs（28 项）：A 组结构性锁 E7 落地（旧单行正则已废弃、declEnd 在场、区间跳过在场、文档头登记）；B 组夹具负控制（跨行块被枚举、块内死导出判死、有消费成员免死、零消费恰为 1、未登记红灯 exit 1、--update 后转绿）；C 组配套静默点（声明行不算消费、单行 export 同判、块外真调用免死 + 调用者自身零消费仍判死）；D 组真实仓库（口径完备、扫描面 ≥ 516、零消费不虚增、现场锚点）。"
     ]
 };
 
