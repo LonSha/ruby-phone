@@ -273,7 +273,7 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
 {
     const isrc = read('index.js');
     // 契约消费：index.js 用 PHONE_EVENTS 而非字面量（本轮引入的两处）
-    ok('契约消费: index.js 已导入 PHONE_EVENTS', /import \{ PHONE_EVENTS \} from '\.\/config\/phone-events\.js';/.test(isrc));
+    ok('契约消费: index.js 已导入 PHONE_EVENTS', /import \{ PHONE_EVENTS[^}]*\} from '\.\/config\/phone-events\.js';/.test(isrc));
     ok('契约消费: 新增接线使用常量而非字面量',
         /PHONE_EVENTS\.PANEL_VISIBILITY/.test(isrc) && /PHONE_EVENTS\.OPEN_APP/.test(isrc));
     // 诊断入口

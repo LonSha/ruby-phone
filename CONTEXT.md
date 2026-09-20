@@ -21,6 +21,14 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完两者。
+- `npm run check` = 三道子门串联：`syntax` → `test` → `dead-exports`。
+  - **零消费导出门禁**（v2.41.0，`scripts/dead-export-check.mjs`）：判据为「本模块内部零使用 **且** 其它非测试文件零引用」。
+    本仓反复出现「机制建好却零消费」的欠债（v2.12 首 chunk 屏障 / v2.26-2.27 运行时登记制 / v2.34 重复存活域 / v2.35 对外世界桥 / v2.38 世界书随机 / v2.39 群聊发言调度），此前**没有任何一道门能拦住新的一例**。
+  - 退出码三档：`0` 通过 / `1` 出现未登记的零消费导出 / `2` 结构漂移（扫描面低于下限 `MIN_EXPORTS` 或路径不存在）——后者 fail-closed，防探测器失效后以全绿通过。
+  - 冻结账本 `scripts/dead-export-baseline.json`：已知零消费导出须逐条登记理由（接线预留 / 主动放弃 / 可删除兼容壳）。
+    新增未登记即红灯；条目被消费或删除只提示不判错（**漏报比误报更伤**，清理账本是洁癖、不阻塞发布）。
+  - 消费域不含 `tests/`（只有测试引用 = 产品端零消费，正是本仓欠债的共同形态）； `assets/vendor/**` 与 `workers/**` 因消费者不在仓库内整体豁免。
+  - 新增真正需要对外暴露的导出时，先接线；确属对外接口则跑 `node scripts/dead-export-check.mjs --update` 并**写明理由**。
 - ⚠️ 不要再单独依赖裸 `node --check <文件>.js`。实测：仓库缺少 package.json（或无 `"type": "module"`）时，它会把 `.js` 按脚本/CommonJS 解析，对 ES Module 的结构性损坏返回退出码 0（假绿）。index.js 曾据此"校验通过"，实际根本无法解析、插件全量不可加载，并连续发布了约 9 个版本（v2.1.0 → v2.8.9）。
   - 语法门以 `--input-type=module` 从 stdin 强制按 ESM 解析，不依赖该配置；根目录 package.json 的 `"type": "module"` 则让裸 `node --check` 也恢复有效。两者由 `tests/syntax-gate.test.mjs` 的负控制用例共同锁定。
   - 性能层（v2.40.0）：门改为**本进程内 vm 批量解析**（251 文件单次 ~0.6s，旧逐文件 spawn 为 ~16.7s），仅对快筛失败的文件回退 per-file `--check` 取精确 stderr。`vm.SourceTextModule` 需 `--experimental-vm-modules`，缺标志时门自 re-exec 一次（`RP_SYNTAX_GATE_REEXEC` 防递归）。判定等价性由 `tests/syntax-gate-perf.test.mjs`（含负控制）锁定，改动门时须重跑。

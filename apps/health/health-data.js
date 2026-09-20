@@ -31,7 +31,7 @@ import { normalizeNeeds, advanceNeeds, applyNeedEvent, describeNeeds, buildNeeds
 import { emptyLineage, normalizeLineage, addBirth, removeBirth } from './family-core.js';
 import {
   normalizeCondition, advanceConditions, filterIllnesses, libraryEntryByName,
-  conditionLine, IllnessLibrary,
+  conditionLine, IllnessLibrary, severityLabel,
 } from './medical-core.js';
 
 const PHASE_META = {
@@ -805,7 +805,8 @@ export class HealthData {
     if (!active.length) return '';
     const today = this._todayIso();
     return active.map(c => {
-      const sev = c.severity ? `（${c.severity === 'mild' ? '轻度' : c.severity === 'moderate' ? '中度' : c.severity === 'severe' ? '重度' : c.severity === 'critical' ? '危重' : c.severity}）` : '';
+      // [v2.41.0] 严重度中文名走 medical-core 单一真源（此前与 health-view 各手写一份，两处必须同步改）
+      const sev = c.severity ? `（${severityLabel(c.severity)}）` : '';
       const exp = c.expiresAt ? ` · ${conditionLine(c, { today })}` : '';
       return `- ${c.name}${sev}${exp}${c.stage ? `，处于${c.stage}` : ''}`;
     }).join('\n');

@@ -33,14 +33,17 @@ import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
 import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimeReleasedAt, childRuntimePrematureBy } from './config/runtime-lifecycle.js';
 // [v2.27.0] 跨模块事件契约单一真源（v2.26 建表，本版起 index.js 消费而非手写字面量）
-import { PHONE_EVENTS } from './config/phone-events.js';
+// [v2.41.0] 派发侧接入契约单源：v2.26 建了 PHONE_EVENTS 表，v2.27 只把订阅侧（addListener）接上，
+//   派发侧仍是 7 处手写 `new CustomEvent('phone:未登记名', ...)` 字面量 —— 表与用法各写一份，
+//   改表不改用即静默失联（本仓「建好不消费」的又一例）。本版把派发侧也接到 makePhoneEvent。
+import { PHONE_EVENTS, makePhoneEvent, phoneEventFireReport, resetPhoneEventFireLog } from './config/phone-events.js'; // [v2.41.0] 契约报告 + 落账复位
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.40.0';
+const ST_PHONE_VERSION = '2.41.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,11 +80,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-20",
     items: [
-        "语法门性能层：scripts/syntax-check.mjs 旧实现逐文件 spawn `node --input-type=module --check`（251 文件 = 251 个子进程，单次扫描实测 16.7s），改为本进程内 vm 批量解析（vm.SourceTextModule），失败文件才回退 per-file --check 取精确 stderr——单次扫描 16.7s → 0.592s（28x）",
-        "判定等价性实测：对照 251 个真实文件的 per-file 判定，逐文件比对 0 处不一致（files:251 mismatch:0）",
-        "vm.SourceTextModule 需 --experimental-vm-modules；缺标志时门自 re-exec 一次（spawnSync + stdio: inherit），以 RP_SYNTAX_GATE_REEXEC 环境变量防无限递归",
-        "vm 抛出的 SyntaxError 不含行号/文件名，故失败路径必须回退 per-file 取权威结论——回退分支保留「权威放行则不改判」的不误报逻辑",
-        "新增 tests/syntax-gate-perf.test.mjs（18 项断言）：A 性能不退化（<6000ms + 源码结构）/ B 与 per-file 逐文件等价 / C 能力六态（文件名·行号·损坏 ESM·健康 ESM·IIFE 不误伤·假片段不误伤·rc=2）/ D 负控制（真源码破坏锚点恰中 1 次 → 快筛恒过副本必放行 → 原版必拒绝）/ E 版本三源一致"
+        "零消费导出门禁：新建 scripts/dead-export-check.mjs（三档退出：0 通过 / 1 新增未登记零消费导出 / 2 结构漂移 fail-closed），判据为「本模块内部零使用 且 其它非测试文件零引用」——本仓反复出现「机制建好却零消费」的欠债（v2.12 首 chunk 屏障 / v2.26-2.27 运行时登记制 / v2.34 重复存活域 / v2.35 对外世界桥 / v2.38 世界书随机 / v2.39 群聊发言调度），此前无任何一道门能拦住新的一例",
+        "冻结账本 scripts/dead-export-baseline.json：22 条已知零消费导出逐条写明理由（接线预留 / 主动放弃 / 可删除兼容壳）；新增未登记即红灯，条目被消费后仅提示不判错（漏报比误报更伤）",
+        "接线① severityLabel 单一真源：health-view 与 health-data 此前各手写一份严重度中文三元链（新增一档严重度须三处同改，漏一处即显示英文原文），现统一转发 medical-core 的 severityLabel",
+        "接线② makePhoneEvent 派发侧接入：v2.26 建契约表、v2.27 只接了订阅侧，派发侧长期是 8 处手写 new CustomEvent 字面量（表与用法各写一份，改表不改用即静默失联），现全部走 makePhoneEvent(PHONE_EVENTS.X)",
+        "事件契约落账：phone-events 新增 _fireLog/_unknownFires 与 phoneEventFireReport()/resetPhoneEventFireLog()，报告回答「契约里声明了却从没发出的事件有哪几个」与「谁派发了未登记名」（私自扩大协议），并接进 index.js 诊断面的 eventContract 字段；两处清数据路径同步复位落账（否则污染下一会话）",
+        "npm run check 新增第三道子门 dead-exports；新增 tests/system-v241.test.mjs（48 项断言）：门禁结构 / 账本可用 / 负控制（合成夹具真源码破坏→exit 1、结构失效→exit 2、登记后同判据转绿）/ 两处接线断言 / 落账与报告行为 / 诊断面接入"
     ]
 };
 
@@ -1737,7 +1741,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
         } catch (_e) { /* 打开面板失败不影响跳转尝试 */ }
         try {
-            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId }));
         } catch (_e) { /* 忽略 */ }
     }
 
@@ -1927,7 +1931,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     /** [v2.16.0] 切到通知中心（走统一 openApp 通路） */
     function openNotificationCenter() {
         try {
-            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'notifications' } }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId: 'notifications' }));
         } catch (_e) { /* 忽略 */ }
     }
 
@@ -2283,7 +2287,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const hostName = host?.name || safeContactName;
             wechatData.recordHoneyInviteDecision?.(safeContactName, 'accepted', { message });
             if (chatId) wechatData.setHoneyHistoryInjectionForChat?.(chatId, true);
-            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'honey' } }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId: 'honey' }));
             setTimeout(() => {
                 const app = window.VirtualPhone?.honeyApp;
                 app?.openFollowedHostLive?.(hostName, {
@@ -2624,9 +2628,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             snap.releasedPrematureBy = childRuntimePrematureBy('');
             snap.releasedAt = childRuntimeReleasedAt('');
             snap.releaseVerdict = explainReleaseTally(snap.released, snap.releasedPremature, snap.releasedPrematureBy);
+            // [v2.41.0] eventContract
+            try { snap.eventContract = phoneEventFireReport(); }
+            catch (_e) { snap.eventContract = { contractSize: 0, fired: {}, neverFired: [], unknownFired: {}, unknownDomains: [], targetDomains: [], ok: false }; }
             return snap;
         }
-        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {}, releasedPremature: {}, releasedPrematureBy: {}, releasedAt: {}, releaseVerdict: { rows: [], ok: false, reason: '诊断入口异常，无法读出回收口径' }, duplicates: {} }; }
+        catch (e) { return { total: 0, byKind: { interval: 0, timeout: 0, observer: 0, listener: 0 }, tags: [], children: [], domainCounts: {}, overDisposed: { total: 0, overDisposed: 0, reenters: 0, names: {} }, released: {}, releasedPremature: {}, releasedPrematureBy: {}, releasedAt: {}, releaseVerdict: { rows: [], ok: false, reason: '诊断入口异常，无法读出回收口径' }, duplicates: {}, eventContract: { contractSize: 0, fired: {}, neverFired: [], unknownFired: {}, unknownDomains: [], targetDomains: [], ok: false } }; }
     }
 
     async function getOrCreateMofoData() {
@@ -5392,7 +5399,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             panel.classList.add('phone-panel-hidden');
             // 🔥 关闭时添加强力隐藏样式
             panel.style.cssText = 'display:none !important; visibility:hidden !important; opacity:0 !important; pointer-events:none !important; position:absolute !important; width:0 !important; height:0 !important; overflow:hidden !important;';
-            window.dispatchEvent(new CustomEvent('phone:panelVisibility', { detail: { open: false } }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.PANEL_VISIBILITY, { open: false }));
         } else {
             await ensureGlobalPhoneCSS();
             initColors();
@@ -5411,7 +5418,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 手机 DOM 已准备好后再正式弹出，避免首次加载时白块和错位。
             openPhonePanelWithOutsideClose(panel, icon);
-            window.dispatchEvent(new CustomEvent('phone:panelVisibility', { detail: { open: true } }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.PANEL_VISIBILITY, { open: true }));
 
             // 🔥 展开手机时，如果刚好停留在微信某聊天界面，立刻刷新消除红点
             if (currentApp === 'wechat' && window.VirtualPhone?.wechatApp) {
@@ -5598,7 +5605,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         };
         shell.onBannerAction = (appId) => {
             try {
-                window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+                window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId }));
             } catch (_e) { /* 忽略 */ }
         };
     }
@@ -6033,7 +6040,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!wechatAppIcon) return;
             const chatList = wechatData.getChatList?.() || [];
             wechatAppIcon.badge = chatList.reduce((sum, c) => sum + (parseInt(c?.unread, 10) || 0), 0);
-            window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
         } catch (e) {
             // ignore
         }
@@ -9107,9 +9114,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             currentApp = 'phone';
 
             // 派发来电事件
-            window.dispatchEvent(new CustomEvent('phone:incomingCall', {
-                detail: { callerName }
-            }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.INCOMING_CALL, { callerName }));
         }).catch(err => {
             console.error('❌ 加载通话模块失败:', err);
         });
@@ -10244,6 +10249,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
+                try { resetPhoneEventFireLog(); } catch (_e) { /* 忽略 */ }
                 // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
                 try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
@@ -10348,6 +10354,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 _chatSessionGeneration += 1;
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
+                try { resetPhoneEventFireLog(); } catch (_e) { /* 忽略 */ }
                 // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
                 try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));

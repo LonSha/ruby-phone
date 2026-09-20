@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.41.0": {
+      "date": "2026-09-20",
+      "items": [
+        "零消费导出门禁：新建 scripts/dead-export-check.mjs（三档退出：0 通过 / 1 新增未登记零消费导出 / 2 结构漂移 fail-closed），判据为「本模块内部零使用 且 其它非测试文件零引用」——本仓反复出现「机制建好却零消费」的欠债（v2.12 首 chunk 屏障 / v2.26-2.27 运行时登记制 / v2.34 重复存活域 / v2.35 对外世界桥 / v2.38 世界书随机 / v2.39 群聊发言调度），此前无任何一道门能拦住新的一例",
+        "冻结账本 scripts/dead-export-baseline.json：22 条已知零消费导出逐条写明理由（接线预留 / 主动放弃 / 可删除兼容壳）；新增未登记即红灯，条目被消费后仅提示不判错（漏报比误报更伤）",
+        "接线① severityLabel 单一真源：health-view 与 health-data 此前各手写一份严重度中文三元链（新增一档严重度须三处同改，漏一处即显示英文原文），现统一转发 medical-core 的 severityLabel",
+        "接线② makePhoneEvent 派发侧接入：v2.26 建契约表、v2.27 只接了订阅侧，派发侧长期是 8 处手写 new CustomEvent 字面量（表与用法各写一份，改表不改用即静默失联），现全部走 makePhoneEvent(PHONE_EVENTS.X)",
+        "事件契约落账：phone-events 新增 _fireLog/_unknownFires 与 phoneEventFireReport()/resetPhoneEventFireLog()，报告回答「契约里声明了却从没发出的事件有哪几个」与「谁派发了未登记名」（私自扩大协议），并接进 index.js 诊断面的 eventContract 字段；两处清数据路径同步复位落账（否则污染下一会话）",
+        "npm run check 新增第三道子门 dead-exports；新增 tests/system-v241.test.mjs（48 项断言）：门禁结构 / 账本可用 / 负控制（合成夹具真源码破坏→exit 1、结构失效→exit 2、登记后同判据转绿）/ 两处接线断言 / 落账与报告行为 / 诊断面接入"
+      ]
+    },
     "2.40.0": {
       "date": "2026-09-20",
       "items": [
@@ -630,5 +641,5 @@
       ]
     }
   },
-  "latest": "2.40.0"
+  "latest": "2.41.0"
 }

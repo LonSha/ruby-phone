@@ -152,6 +152,12 @@ export function makePhoneEvent(name, detail = {}, opts = {}) {
     const payload = (detail && typeof detail === 'object' && !Array.isArray(detail))
         ? detail
         : { value: detail === undefined ? null : detail };
+    // [v2.41.0] 派发即落账：让契约自带的事件名查询面（isPhoneEventName /
+    //   phoneEventMeta / listPhoneEventNames / PHONE_EVENT_TARGETS）从只有测试引用
+    //   变为**生产侧真消费** —— 此前它们四个全是「建了没人用」的死导出。
+    //   落账本身回答一个测试答不了的问题：**运行时到底哪些契约事件真的在发**，
+    //   以及「有没有人手写了一个没登记的 phone:未登记名」。
+    _recordFire(String(name));
     return new CustomEvent(String(name), {
         bubbles: opts.bubbles !== false,
         cancelable: opts.cancelable === true,
@@ -161,3 +167,65 @@ export function makePhoneEvent(name, detail = {}, opts = {}) {
 
 /** 在当前长期存活对象上登记/派发（供生命周期守卫与诊断使用）。 */
 export const PHONE_EVENT_TARGETS = Object.freeze(['window', 'document', 'element']);
+
+/* ---------------- [v2.41.0] 派发落账与契约一致性自检 ----------------
+ * 动机（本仓反复出现的病）：v2.26 建了 PHONE_EVENTS 契约表，但表里给的四个查询面
+ *   （isPhoneEventName / phoneEventMeta / listPhoneEventNames / PHONE_EVENT_TARGETS）
+ *   全仓只有测试引用 —— 契约的作用因此全靠「测试跑过了」保证，运行期无人问津。
+ *   本段把它们接进一条真实消费链：makePhoneEvent 落账 → 报告读落账 + 用四个查询面
+ *   判定 → index.js 诊断面展示。于是契约不再是只能看不能用的文档。
+ *
+ * 报告回答两个此前**不可见**的问题：
+ *   ① 契约里哪些事件在运行时真的发过（未发的即「声明了但没人发」的静默项）；
+ *   ② 有没有人派发了**未登记**的 phone:* 名（此前无任何运行时信号）。
+ * 两向都只报告不抛：落账层异常绝不能影响派发本身（派发路径在 UI 热路径上）。
+ */
+const _fireLog = new Map();      // eventName -> count
+const _unknownFires = new Map(); // 未登记的 eventName -> count
+
+function _recordFire(name) {
+    try {
+        if (isPhoneEventName(name)) {
+            _fireLog.set(name, (_fireLog.get(name) || 0) + 1);
+        } else {
+            _unknownFires.set(name, (_unknownFires.get(name) || 0) + 1);
+        }
+    } catch (_e) { /* 落账失败不得阻断派发 */ }
+}
+
+/**
+ * 契约一致性运行时报告。
+ * @returns {{contractSize:number, fired:Object, neverFired:string[], unknownFired:Object,
+ *            unknownDomains:string[], targetDomains:string[], ok:boolean}}
+ */
+export function phoneEventFireReport() {
+    const names = listPhoneEventNames();                                    // ← 消费 listPhoneEventNames
+    const fired = {};
+    const neverFired = [];
+    for (const n of names) {
+        const c = _fireLog.get(n) || 0;
+        if (c > 0) fired[n] = c; else neverFired.push(n);
+    }
+    const unknownFired = {};
+    for (const [n, c] of _unknownFires) unknownFired[n] = c;
+    const unknownDomains = Object.keys(unknownFired).sort();
+    return {
+        contractSize: names.length,
+        fired,
+        neverFired,
+        unknownFired,
+        // 未登记事件名所属的域（取 phone: 之后一段）——便于定位是谁在私自扩大协议
+        unknownDomains,
+        // 合法目标域（消费 PHONE_EVENT_TARGETS；元数据里 target 越界即为契约腐坏）
+        targetDomains: [...PHONE_EVENT_TARGETS],
+        // 健康态定义：无未登记派发、且每个契约事件都至少有一个明确的合法目标域
+        ok: unknownDomains.length === 0
+            && names.every(n => PHONE_EVENT_TARGETS.includes((phoneEventMeta(n) || {}).target))
+    };
+}
+
+/** 清空落账（测试/换会话用）。不影响派发能力。 */
+export function resetPhoneEventFireLog() {
+    _fireLog.clear();
+    _unknownFires.clear();
+}

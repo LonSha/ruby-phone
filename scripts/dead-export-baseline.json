@@ -1,0 +1,137 @@
+{
+  "note": "零消费导出冻结账本：新增项必须显式登记理由；条目被消费后应清理。",
+  "entries": [
+    {
+      "file": "apps/games/games-data.js",
+      "name": "GamesData",
+      "line": 6,
+      "reason": "拆分时的兼容旧路径转发壳（export { PokerData as GamesData } from poker/poker-data），全仓含 tests 零引用，可直接删除；保留仅为不破坏外部引用路径。"
+    },
+    {
+      "file": "apps/games/games-view.js",
+      "name": "GamesView",
+      "line": 6,
+      "reason": "同上，PokerView 的旧路径转发壳，全仓含 tests 零引用，可删除。"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "SPECIAL_STAGES",
+      "line": 17,
+      "reason": "生理阶段数据表（特殊阶段定义），属机制数据面：产品读取路径尚未接入，仅回归测试引用。接入点未定，暂冻结。"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "MENSTRUAL_STAGE_DAYS",
+      "line": 19,
+      "reason": "同上，周期天数常量，数据面预留。"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "HUMAN_PREGNANCY_DAYS",
+      "line": 53,
+      "reason": "同上，妊娠天数常量，数据面预留。"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "isPregnancyish",
+      "line": 255,
+      "reason": "妊娠近义判定辅助，引擎对外小工具，仅测试引用；接入点未定。"
+    },
+    {
+      "file": "apps/health/bio-races.js",
+      "name": "EMBRYO_TYPES",
+      "line": 686,
+      "reason": "种族胎养类型表，数据面预留，仅测试引用。"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "ACUTE_TO_CHRONIC_P",
+      "line": 28,
+      "reason": "急性转慢性的概率阈值常量，数据面；当前引擎未读。"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "clampInt",
+      "line": 107,
+      "reason": "整数夹取通用小工具，仅测试引用；可在真有消费方时再提升为对外接口。"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "cnStatus",
+      "line": 116,
+      "reason": "状态中文映射，与 severityLabel 同族；当前显示路径已走 SEVERITY_LABELS，本项为冗余面（建议后续删除）。"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "severityGrade",
+      "line": 118,
+      "reason": "严重度分级映射，与 severityLabel 同族；当前显示路径走 severityLabel，本项为冗余面（建议后续删除）。"
+    },
+    {
+      "file": "apps/phone/first-chunk-barrier.js",
+      "name": "createFirstChunkBarrier",
+      "line": 39,
+      "reason": "主动放弃项：接入 api-manager.callAI 必须钩住 _callIndependentAPI/_callTavernAPI/_callTavernGenerateRawFallback 三条后端路径各自的流式首包，否则 follower 等 lead 全量完成会造成恶性串行化，风险过高。"
+    },
+    {
+      "file": "apps/settings/image-cropper.js",
+      "name": "cropImage",
+      "line": 750,
+      "reason": "裁剪逻辑已内联在 image-cropper 的交互流程中，本导出为拆分时可复用面，全仓仅声明行。"
+    },
+    {
+      "file": "config/floor-store.js",
+      "name": "isFloorStoreLive",
+      "line": 258,
+      "reason": "floor-store 整个模块（TH 五档降级链 + 内存影子层 + 两阶段批量写）当前零消费，接入点未定，暂整体冻结。"
+    },
+    {
+      "file": "config/life-events.js",
+      "name": "isHighValueChatLifeEventInput",
+      "line": 34,
+      "reason": "life-events 模块消费面未定，本项为高价值输入筛选判据，随模块冻结。"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
+      "name": "phoneReplySystemPrompt",
+      "line": 93,
+      "reason": "主动放弃项：wechat/chat-view 用 promptManager.getPromptForFeature 内联构建（11993-12020），改核心回复管线风险高。"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
+      "name": "buildReplyPrompt",
+      "line": 116,
+      "reason": "同上，属核心回复管线的内联替代面，接线风险高。"
+    },
+    {
+      "file": "config/phone-emoji.js",
+      "name": "getPhoneInlineEmojis",
+      "line": 13,
+      "reason": "内联表情取用面，当前表情渲染走其他路径，接入点未定。"
+    },
+    {
+      "file": "config/points-engine.js",
+      "name": "TASK_TYPES",
+      "line": 15,
+      "reason": "任务类型表，数据面：积分引擎内部消费路径未读，仅测试引用。"
+    },
+    {
+      "file": "config/points-engine.js",
+      "name": "DIFFICULTIES",
+      "line": 16,
+      "reason": "难度表，同上。"
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "resetOnceFlags",
+      "line": 702,
+      "reason": "已知缺口：onceFlag 有 8 处调用，而复位面零消费（幂等标记可设不可清）；但清除时机未定，贸然接线会破坏幂等语义，待专项处理。"
+    },
+    {
+      "file": "config/tag-filter.js",
+      "name": "hasGaigaiTagFilter",
+      "line": 65,
+      "reason": "探测 window.Gaigai / window.YuzukiMemory 的能力判定，属宿主环境相关的可选能力面，接入点未定。"
+    }
+  ]
+}

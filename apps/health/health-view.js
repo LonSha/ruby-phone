@@ -1,6 +1,10 @@
 /**
  * Health view with BioTracker pregnancy, labor and race speed
  */
+// [v2.41.0] 严重度中文名改由 medical-core 单一真源供给。
+//   此前此处手写三连三元（mild/中/重/危重），与 medical-core 的
+//   SEVERITY_LABELS 各写一份：新增一档严重度时两处必须同步改，漏一处即显示英文原文。
+import { severityLabel } from './medical-core.js';
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -162,7 +166,7 @@ export class HealthView {
 const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids);
     // ---- 健康档案（medical） ----
     const medOv = data.illnessOverview ? data.illnessOverview() : { total: 0, active: 0, chronic: 0 };
-    const sevCn = s => s === 'mild' ? '轻度' : s === 'moderate' ? '中度' : s === 'severe' ? '重度' : s === 'critical' ? '危重' : s;
+    const sevCn = severityLabel;   // [v2.41.0] 单一真源（medical-core）
     const medConds = (data.conditions || []).length ? data.conditions.map((c) => {
       const sevTag = c.severity ? " <span class='hl-med-sev'>" + esc(sevCn(c.severity)) + "</span>" : "";
       const outTag = c.outcome === 'recovered' ? " <span class='hl-med-out'>已痊愈</span>" : (c.outcome === 'chronic' ? " <span class='hl-med-chr'>慢性</span>" : "");
