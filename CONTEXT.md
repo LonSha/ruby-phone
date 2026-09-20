@@ -22,7 +22,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完两者。
 - `npm run check` = 三道子门串联：`syntax` → `test` → `dead-exports`。
-  - **零消费导出门禁**（v2.41.0，`scripts/dead-export-check.mjs`）：判据为「本模块内部零使用 **且** 其它非测试文件零引用」。
+  - **零消费导出门禁**（v2.41.0 建，v2.42.0 加 E6，`scripts/dead-export-check.mjs`）：判据为「本模块内部零使用 **且** 其它非测试文件零引用」。
+    **E6（v2.42.0）消费判定必须基于真代码**：`stripNonCode()` 剔除注释与字符串字面量后再做词匹配。此前裸词正则扫全文 = 「注释/字符串里提一嘴就算已消费」，真死导出会被一句 `// TODO: call X` 掩盖（漏报）。口径要点：模板串 `${...}` 插值**按真代码**处理（本仓大量 `${fn()}` 真调用，整串清空会误抹消费）、正则字面量起始须识别 `return`/`typeof`/`case` 等关键词。回归锁在 `tests/system-v242.test.mjs`。
     本仓反复出现「机制建好却零消费」的欠债（v2.12 首 chunk 屏障 / v2.26-2.27 运行时登记制 / v2.34 重复存活域 / v2.35 对外世界桥 / v2.38 世界书随机 / v2.39 群聊发言调度），此前**没有任何一道门能拦住新的一例**。
   - 退出码三档：`0` 通过 / `1` 出现未登记的零消费导出 / `2` 结构漂移（扫描面低于下限 `MIN_EXPORTS` 或路径不存在）——后者 fail-closed，防探测器失效后以全绿通过。
   - 冻结账本 `scripts/dead-export-baseline.json`：已知零消费导出须逐条登记理由（接线预留 / 主动放弃 / 可删除兼容壳）。

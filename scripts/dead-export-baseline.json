@@ -93,6 +93,12 @@
     },
     {
       "file": "config/phone-chat-memory.js",
+      "name": "recentStoryContext",
+      "line": 74,
+      "reason": "最近正文剧情上下文装配器（剥标签后「说话人：内容」行长拼装，供手机回复参考剧情走向）。产品端未接线：buildReplyPrompt 只注入 phoneReplySystemPrompt + recentPhoneHistory，未把 storyCtx 拼进 system prompt；全仓仅 export 声明、:114 注释提及与 tests/phone-chat-memory.test.mjs 引用。属本仓「机制建好却零消费」的典型形态，接入点已定（buildReplyPrompt 装配段），接线后应删除本条。"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
       "name": "phoneReplySystemPrompt",
       "line": 93,
       "reason": "主动放弃项：wechat/chat-view 用 promptManager.getPromptForFeature 内联构建（11993-12020），改核心回复管线风险高。"
@@ -120,6 +126,18 @@
       "name": "DIFFICULTIES",
       "line": 16,
       "reason": "难度表，同上。"
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "childRuntimeCount",
+      "line": 459,
+      "reason": "实例级资源域存活总数（_childRuntimes.size）。它已被更细的 childRuntimeStats('') 取代——后者既能回答总数、又能回答「某视图反复重建时域数有没有跟着涨」（那才是泄漏的可见形态），由 index.js:2595 提升为 snap.domainCounts。本函数退回为最小旧出口，全仓仅 export 声明与 :341/:464 注释提及（含 tests）。属机制收敛后的残留出口，待确认诊断面不再需要单值总数后删除。"
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "rebindGlobal",
+      "line": 690,
+      "reason": "remove-then-add 幂等重绑原语（music-app 范式的通用化）。文件头 :18 自陈 v2.26 时「globalRuntime / onceFlag / rebindGlobal 三个导出全仓零消费」，v2.27.0 声称已把三处手写 once guard 接线——实测 index.js 只导入 onceFlag，rebindGlobal 至今全仓零消费：music 侧仍是各 App 自写 remove-then-add。属「机制建好却零消费」的漏项，候选消费方为 music-app / 各 view 的事件重绑路径，接线后应删除本条。"
     },
     {
       "file": "config/runtime-lifecycle.js",

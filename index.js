@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.41.0';
+const ST_PHONE_VERSION = '2.42.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,12 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-20",
     items: [
-        "零消费导出门禁：新建 scripts/dead-export-check.mjs（三档退出：0 通过 / 1 新增未登记零消费导出 / 2 结构漂移 fail-closed），判据为「本模块内部零使用 且 其它非测试文件零引用」——本仓反复出现「机制建好却零消费」的欠债（v2.12 首 chunk 屏障 / v2.26-2.27 运行时登记制 / v2.34 重复存活域 / v2.35 对外世界桥 / v2.38 世界书随机 / v2.39 群聊发言调度），此前无任何一道门能拦住新的一例",
-        "冻结账本 scripts/dead-export-baseline.json：22 条已知零消费导出逐条写明理由（接线预留 / 主动放弃 / 可删除兼容壳）；新增未登记即红灯，条目被消费后仅提示不判错（漏报比误报更伤）",
-        "接线① severityLabel 单一真源：health-view 与 health-data 此前各手写一份严重度中文三元链（新增一档严重度须三处同改，漏一处即显示英文原文），现统一转发 medical-core 的 severityLabel",
-        "接线② makePhoneEvent 派发侧接入：v2.26 建契约表、v2.27 只接了订阅侧，派发侧长期是 8 处手写 new CustomEvent 字面量（表与用法各写一份，改表不改用即静默失联），现全部走 makePhoneEvent(PHONE_EVENTS.X)",
-        "事件契约落账：phone-events 新增 _fireLog/_unknownFires 与 phoneEventFireReport()/resetPhoneEventFireLog()，报告回答「契约里声明了却从没发出的事件有哪几个」与「谁派发了未登记名」（私自扩大协议），并接进 index.js 诊断面的 eventContract 字段；两处清数据路径同步复位落账（否则污染下一会话）",
-        "npm run check 新增第三道子门 dead-exports；新增 tests/system-v241.test.mjs（48 项断言）：门禁结构 / 账本可用 / 负控制（合成夹具真源码破坏→exit 1、结构失效→exit 2、登记后同判据转绿）/ 两处接线断言 / 落账与报告行为 / 诊断面接入"
+        "【工程防线·修门禁自身假阴性】零消费导出门禁 E6：消费判定改为**基于真代码**。此前用裸词正则扫全文，注释里的 TODO、JSDoc 的 @param、字符串里的 key 名、模板串的文本部分统统算「已消费」——真死导出能被一句 `// TODO: eventually call X` 掩盖，门禁静默放过（探测器自己在漏报）。新增 `stripNonCode(src)` 剥离注释与字符串字面量，内部消费按真代码行判定、跨文件消费按真代码判定。",
+        "【口径难点·回归锁定】模板串的 `${...}` 插值**必须按真代码处理**：本仓大量「模板串拼 HTML + `${fn()}` 里真调用」，若把整串当非代码会误抹真消费（第一版实测在 wangxiang-app.js 清空 930 行，把两个真有同文件调用的导出误判死）。另需识别正则字面量起始（`return /re/`、`typeof /re/`、`case /re/`），否则正则体收尾的 `/` 会被当成新起点吞掉后续代码。tests/system-v242.test.mjs B 组同时锁「不该漏」与「不该误」两侧。",
+        "【实测现形】真实仓库零消费 22 → 25，暴露 3 个此前被注释掩盖的真死导出：`config/phone-chat-memory.js:74 recentStoryContext`（产品端未接线，buildReplyPrompt 未注入 storyCtx）、`config/runtime-lifecycle.js:459 childRuntimeCount`（已被更细的 childRuntimeStats 空串调用取代——后者既能回答总数、又能回答某视图反复重建时域数有没有跟着涨）、`config/runtime-lifecycle.js:690 rebindGlobal`（文件头自陈全仓零消费，v2.27 声称接线实则只接了 onceFlag）。三条均已登记进冻结账本并写明理由，接线后应删除对应条目。",
+        "【测试】tests/system-v242.test.mjs（37 项）：A 组结构性锁 E6 落地 + 反向锁「不得退回裸词扫全文」；B 组夹具负控制（注释/字符串/模板文本提及全判死，真调用与 `${}` 插值调用不判死，零消费数恰为 4）；C 组真源码破坏双语料双向自证（消费点降为注释 → 判死；改回真调用 → 不判死）；D 组账本 3 条新条目理由非占位；E 组真实仓库口径完备（内部+跨文件+零消费=声明总数）且三条被判死。"
     ]
 };
 

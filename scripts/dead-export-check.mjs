@@ -17,6 +17,10 @@
  *   E4 基线条目若已被消费（或已被删除）属「账本腐坏」，仅提示不判错
  *      （漏报比误报更伤；清理账本是洁癖而非缺陷，不应阻塞发布）；
  *   E5 结构健康标记：扫描面低于下限即 exit 2（防探测器失效后以全绿通过）。
+ *   E6（v2.42.0）消费判定必须**基于真代码**：剔除注释与字符串字面量后再做词匹配。
+ *      此前用裸词正则扫全文，**注释/字符串里提一嘴就算「已消费」**——真死导出
+ *      被一句 `// TODO: eventually call X` 掩盖，门禁静默放过（假阴性）。
+ *      本仓最危险的是漏报（漏报比误报更伤），故 E6 修的是「探测器的诚实度」。
  *
  * 消费域定义（谁算消费）：
  *   · 测试（tests/**）**不算**消费 —— 只有测试引用 = 产品端零消费，
@@ -94,13 +98,120 @@ function exportsOf(src) {
   }
   return out;
 }
+// v2.42.0（E6）: 剔除注释与字符串字面量，只留**真代码**用于消费判定。
+//   为什么必须做：消费判定此前是「裸词全文正则匹配」——注释里的 TODO、JSDoc 的 @param、
+//   字符串里的 key 名都算命中，于是真死导出能被一句注释掩盖（实测：fixture 中
+//   `// TODO: eventually call onlyInComment` 让 onlyInComment 被判为「已消费」）。
+//   本仓最危险的是漏报（漏报比误报更伤），故这里修的是「探测器的诚实度」。
+//
+//   实现要点（第一版踩过的坑，务必保留）：**模板串的 `${...}` 插值必须按真代码处理**。
+//   本仓大量用模板串拼 HTML，并在 `${fn()}` 里**真实调用**函数——若把整个模板串都当
+//   非代码，会把真消费误抹（实测第一版在 wangxiang-app.js 清空 930 行，导致两个真有
+//   同文件调用的导出被误判死）。故模板串文本部分置空、插值递归按代码扫描。
+//   其余：单/双引号字符串同款跳过；块注释保留换行以维持行号；正则字面量在其起始
+//   「前一有效字符是运算符/开括号」时识别，体内按字符串跳过（防其中引号破坏状态）。
+function stripNonCode(src) {
+  const out = [];
+  const n = src.length;
+  const prevMeaningful = () => {
+    for (let k = out.length - 1; k >= 0; k--) {
+      const ch = out[k];
+      if (ch === ' ' || ch === '\n' || ch === '\t' || ch === '\r') continue;
+      return ch;
+    }
+    return '';
+  };
+  // 末尾的标识符（用于「关键词后跟的 / 是正则起始」判定：return /re/、typeof /re/、case /re/）
+  const prevWord = () => {
+    let k = out.length - 1;
+    while (k >= 0 && (out[k] === ' ' || out[k] === '\n' || out[k] === '\t' || out[k] === '\r')) k--;
+    let e = k;
+    while (k >= 0 && /[\w$]/.test(out[k])) k--;
+    return out.slice(k + 1, e + 1).join('');
+  };
+  const REGEX_KW = /^(return|typeof|case|in|of|new|delete|void|instanceof|do|else|yield|await)$/;
+  // scan(i, stopAtBrace)：处理 [i, ...)；stopAtBrace=true 时在**配对**的 `}` 处停（模板插值用）
+  function scan(i, stopAtBrace) {
+    let depth = 0;   // stopAtBrace 时的花括号配平（对象字面量/嵌套块内的 } 不算插值结束）
+    while (i < n) {
+      const c = src[i], c2 = src[i + 1];
+      if (stopAtBrace) {
+        if (c === '{') depth++;
+        else if (c === '}') { if (depth === 0) return i; depth--; }
+      }
+      if (c === '/' && c2 === '/') {            // 行注释
+        while (i < n && src[i] !== '\n') { out.push(' '); i++; }
+        continue;
+      }
+      if (c === '/' && c2 === '*') {            // 块注释
+        out.push(' ', ' '); i += 2;
+        while (i < n && !(src[i] === '*' && src[i + 1] === '/')) {
+          out.push(src[i] === '\n' ? '\n' : ' '); i++;
+        }
+        if (i < n) { out.push(' ', ' '); i += 2; }
+        continue;
+      }
+      if (c === '`') {                          // 模板串：文本置空，${...} 插值内按代码处理
+        out.push(' '); i++;
+        while (i < n && src[i] !== '`') {
+          if (src[i] === '\\') { out.push(' ', ' '); i += 2; continue; }
+          if (src[i] === '$' && src[i + 1] === '{') {
+            out.push(' ', ' '); i += 2;
+            i = scan(i, true);
+            if (i < n && src[i] === '}') { out.push(' '); i++; }
+            continue;
+          }
+          if (src[i] === '\n') { out.push('\n'); i++; continue; }
+          out.push(' '); i++;
+        }
+        if (i < n) { out.push(' '); i++; }
+        continue;
+      }
+      if (c === '\'' || c === '"') {            // 普通字符串
+        const q = c; out.push(' '); i++;
+        while (i < n && src[i] !== q) {
+          if (src[i] === '\\') { out.push(' ', ' '); i += 2; continue; }
+          if (src[i] === '\n') { out.push('\n'); i++; continue; }
+          out.push(' '); i++;
+        }
+        if (i < n) { out.push(' '); i++; }
+        continue;
+      }
+      const pc = prevMeaningful();
+      if (c === '/' && (/[=(,:;[!&|?{}+\-*%<>~^]/.test(pc) || REGEX_KW.test(prevWord()))) {
+        // 正则字面量——体内按字符串跳过，防止其中的引号/括号破坏状态
+        out.push(' '); i++;
+        let inClass = false;
+        while (i < n) {
+          const d = src[i];
+          if (d === '\\') { out.push(' ', ' '); i += 2; continue; }
+          if (d === '[') inClass = true;
+          else if (d === ']') inClass = false;
+          else if (d === '/' && !inClass) { out.push(' '); i++; break; }
+          else if (d === '\n') { out.push('\n'); i++; continue; }
+          out.push(' '); i++;
+        }
+        continue;
+      }
+      out.push(c); i++;
+    }
+    return i;
+  }
+  scan(0, false);
+  return out.join('');
+}
 const wordRe = (n) => new RegExp(`\\b${n.replace(/[$]/g, '\\$&')}\\b`);
 
 const files = [];
 for (const f of walk(root)) files.push(f);
 const texts = new Map();
+const codeTexts = new Map();   // v2.42.0: 去注释/字符串后的真代码（消费判定用）
 for (const f of files) {
-  try { texts.set(f.rel, fs.readFileSync(f.abs, 'utf8')); } catch { /* 读不到按不存在算 */ }
+  try {
+    const raw = fs.readFileSync(f.abs, 'utf8');
+    texts.set(f.rel, raw);
+    codeTexts.set(f.rel, stripNonCode(raw));
+  } catch { /* 读不到按不存在算 */ }
 }
 
 const isExternalConsumer = (rel) => EXTERNAL_CONSUMER_DIRS.some(d => rel.startsWith(d));
@@ -121,16 +232,18 @@ for (const f of files) {
     stat.exports += 1;
     if (isExternalConsumer(f.rel)) { stat.internal += 1; continue; } // 豁免域直接算作已消费
     const re = wordRe(e.name);
+    // v2.42.0（E6）: 内部消费按**真代码行**判定——注释/字符串里的同名提及不算消费
+    const codeLines = (codeTexts.get(f.rel) || src).split('\n');
     let internal = 0;
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < codeLines.length; i++) {
       if (i === e.declLine) continue;                 // 跳过声明行自身
-      if (re.test(lines[i])) internal++;
+      if (re.test(codeLines[i])) internal++;
     }
     if (internal > 0) { stat.internal += 1; continue; }
     let cross = 0;
     for (const g of files) {
       if (g.rel === f.rel) continue;
-      const t = texts.get(g.rel);
+      const t = codeTexts.get(g.rel);   // v2.42.0: 只认真代码里的消费
       if (typeof t !== 'string') continue;
       if (re.test(t)) { cross++; break; }
     }
