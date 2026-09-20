@@ -1,5 +1,14 @@
 {
   "versions": {
+    "2.50.0": {
+      "date": "2026-09-21",
+      "items": [
+        "【微信链路补齐·四新App】地点/钱袋/档案/剧情线四个 v2.46-v2.49 新 App 的 promptBlock 此前和撩语当年一样是孤岛——只挂 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子，微信单聊走 buildMessagesArray 独立路径完全失效，装配的地点/金钱/档案/剧情约束在微信聊天里一律不生效。本版把表驱动注入扩展到全部装配类 App，微信里与主钩子行为对齐。",
+        "【表驱动重构·统一治理】微信注入块从逐 App 堆写重构为单一 _injectApps 表 + for 循环统一 push：撩语/金手指/地点/钱袋/档案/剧情线 6 个装配类 App 各占表一行，从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），promptBlock() 受各自 injectToPrompt 开关控制、空块不 push、注入失败静默不影响发送。后续新增装配类 App 只需在表里加一行，不再重复写注入逻辑。",
+        "【空块契约·实测锁定】四新 App 的纯函数（scenePromptBlock / walletPromptBlock / profilePromptBlock / plotlinePromptBlock）对 null 与空对象一律返回空串、不抛——无内容不产生空注入块由 v250 B 组逐函数逐入参实测锁住，杜绝微信里冒出无意义空 SYSTEM 消息。",
+        "【测试与版本】v249 E 组演进为表驱动断言（验证 dt/cheat 仍在注入表 + 位置正确）；新增 tests/system-v250.test.mjs（A 表驱动补齐四新 App / B 四纯函数空内容返回空串 / C 版本同源 2.50.0）；v249 G 组版本同源改动态跟随当前版（对齐 v246 模式），不再硬编码具体版本号。全量门禁绿。"
+      ]
+    },
     "2.49.0": {
       "date": "2026-09-21",
       "items": [
@@ -732,5 +741,5 @@
       ]
     }
   },
-  "latest": "2.49.0"
+  "latest": "2.50.0"
 }

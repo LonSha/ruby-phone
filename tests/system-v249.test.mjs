@@ -171,18 +171,17 @@ test('v249 D* 场景联动纯函数（不猜不编）', async () => {
     assert.ok(c.styles.length <= 2, 'D*6 max 上限');
 });
 
-test('v249 E: 微信链路注入补 dt+cheat', () => {
+test('v249 E: 微信链路注入补 dt+cheat（v2.50 起演进为表驱动）', () => {
     const cv = read('apps/wechat/chat-view.js');
-    assert.match(cv, /\[v2\.49\.0\][\s\S]{0,300}?撩语\/金手指：微信链路走独立注入路径/, 'E1');
-    assert.match(cv, /const _dtBlk = _vp\?\.dtApp\?\.promptBlock\?\.\(\);/, 'E2');
-    assert.match(cv, /name: 'SYSTEM \(撩语\)'/, 'E3');
-    assert.match(cv, /const _cheatBlk = _vp\?\.cheatApp\?\.promptBlock\?\.\(\);/, 'E4');
-    assert.match(cv, /name: 'SYSTEM \(金手指\)'/, 'E5');
-    assert.match(cv, /撩语\/金手指注入静默失败，不影响发送/, 'E6');
+    assert.match(cv, /微信链路走独立注入路径/, 'E1 表驱动注入注释');
+    assert.match(cv, /const _injectApps = \[/, 'E2 表驱动表存在');
+    assert.match(cv, /app: _vp\.dtApp, name: 'SYSTEM \(撩语\)'/, 'E3 撩语在表');
+    assert.match(cv, /app: _vp\.cheatApp, name: 'SYSTEM \(金手指\)'/, 'E4 金手指在表');
+    assert.match(cv, /装配类 App 注入静默失败，不影响发送/, 'E5 静默 catch');
     const i = cv.indexOf('async buildMessagesArray');
     const j = cv.indexOf('lonsha 记忆注入静默失败');
     const k = cv.indexOf('SYSTEM (撩语)');
-    assert.ok(i > 0 && j > i && k > j, 'E7 注入点位置正确');
+    assert.ok(i > 0 && j > i && k > j, 'E6 注入点位置正确');
 });
 
 test('v249 F: 三处 onChatChanged 接线（wallet/profile/plotline）', () => {
@@ -202,15 +201,15 @@ test('v249 F: 三处 onChatChanged 接线（wallet/profile/plotline）', () => {
     }
 });
 
-test('v249 G: 版本同源 2.49.0', () => {
+test('v249 G: 版本同源（四源一致，动态跟随当前版）', () => {
     const pkg = JSON.parse(read('package.json'));
     const manifest = JSON.parse(read('manifest.json'));
     const idx = read('index.js');
     const upd = JSON.parse(read('update-log.json'));
-    assert.equal(pkg.version, '2.49.0', 'G1');
-    assert.equal(manifest.version, '2.49.0', 'G2');
-    assert.match(idx, /const ST_PHONE_VERSION = '2\.49\.0';/, 'G3');
-    assert.equal(upd.latest, '2.49.0', 'G4');
-    assert.ok(upd.versions['2.49.0'], 'G5');
-    assert.ok(Array.isArray(upd.versions['2.49.0'].items) && upd.versions['2.49.0'].items.length >= 4, 'G6');
+    const v = String(manifest.version);
+    assert.equal(pkg.version, v, 'G1 package.json 同源');
+    assert.match(idx, new RegExp(`const ST_PHONE_VERSION = '${v.replace(/\./g, '\\.')}';`), 'G2 入口常量同源');
+    assert.equal(String(upd.latest), v, 'G3 update-log.latest 同源');
+    assert.ok(upd.versions[v], 'G4 update-log 有当前版条目');
+    assert.ok(Array.isArray(upd.versions[v].items) && upd.versions[v].items.length >= 4, 'G5 当前版 items 非空');
 });

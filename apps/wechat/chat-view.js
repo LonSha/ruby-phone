@@ -11558,20 +11558,30 @@ renderChatRoom(chat) {
             }
         } catch (_e) { /* lonsha 记忆注入静默失败，不影响发送 */ }
 
-        // [v2.49.0] 撩语/金手指：微信链路走独立注入路径（不经过 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子），
-        //   否则装配的撩语模块/金手指在微信聊天里完全失效（v2.48.0 撩语「孤岛 App」缺口）。
-        //   从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），注入失败静默不影响发送。
+        // [v2.49.0→v2.50.0] 装配类 App 的生成侧一致性块：微信链路走独立注入路径（不经过
+        //   GENERATE_BEFORE_COMBINE_PROMPTS 主钩子），否则这些 App 装配的约束在微信聊天里完全失效
+        //   （「孤岛 App」缺口：v2.48 撩语已补，v2.50 补齐地点/钱袋/档案/剧情线四个 v2.46-v2.49 新 App）。
+        //   表驱动：每个 App 从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），
+        //   promptBlock() 受各自 injectToPrompt 开关控制、空块不 push，注入失败静默不影响发送。
         try {
             const _vp = (typeof window !== 'undefined' && window.VirtualPhone) || null;
-            const _dtBlk = _vp?.dtApp?.promptBlock?.();
-            if (_dtBlk) {
-                messages.push({ role: 'system', content: _dtBlk, name: 'SYSTEM (撩语)', isPhoneMessage: true });
+            if (_vp) {
+                const _injectApps = [
+                    { app: _vp.dtApp, name: 'SYSTEM (撩语)' },
+                    { app: _vp.cheatApp, name: 'SYSTEM (金手指)' },
+                    { app: _vp.placeApp, name: 'SYSTEM (地点)' },
+                    { app: _vp.walletApp, name: 'SYSTEM (钱袋)' },
+                    { app: _vp.profileApp, name: 'SYSTEM (档案)' },
+                    { app: _vp.plotlineApp, name: 'SYSTEM (剧情线)' },
+                ];
+                for (const _item of _injectApps) {
+                    const _blk = _item.app?.promptBlock?.();
+                    if (_blk) {
+                        messages.push({ role: 'system', content: _blk, name: _item.name, isPhoneMessage: true });
+                    }
+                }
             }
-            const _cheatBlk = _vp?.cheatApp?.promptBlock?.();
-            if (_cheatBlk) {
-                messages.push({ role: 'system', content: _cheatBlk, name: 'SYSTEM (金手指)', isPhoneMessage: true });
-            }
-        } catch (_e) { /* 撩语/金手指注入静默失败，不影响发送 */ }
+        } catch (_e) { /* 装配类 App 注入静默失败，不影响发送 */ }
 
         // 优先使用 characterId 获取真实角色名
         if (context.characterId !== undefined && context.characters && context.characters[context.characterId]) {

@@ -121,6 +121,13 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **五态 vs 六态**：place 有 `module-absent`（上游 SceneBookFallback 带 absent:true）；三个新面上游无退路对象，故为五态。`profile` 内审修过一处：`hasFace` 与 `empty` 判定曾互斥导致 empty 不可达，现 `hasFace = protagonist||Array.isArray(lifeDetails)`，`hasContent` 单独判。
 - **注册**：apps.js 36 条目（新色 #eab308 / #818cf8 / #b08d57）；storage `/^wallet_/ /^profile_/ /^plotline_/`；index.js 路由 3 分支 + 三处 onChatChanged 各 +3 行。v224「bilibili→wechatApp=null」窗口随接线增长 400→600（实测 500/572/569）。
 - **撩语场景联动**：`dt-data.js` 增 `SCENE_STYLE_MAP` + `sceneStyleHints(chain)` 纯函数；控制器 `sceneStyleHints()` 读桥 `snapshot.scene` 经 `currentChainOf`（import 自 place-data，不造第二套）；视图 `_sceneCard()` 置词库页顶部，无链整卡隐藏。
-- **微信注入补口**：`chat-view.js buildMessagesArray` 在 lonsha recallBlock 之后补 push `dtApp.promptBlock()` / `cheatApp.promptBlock()`（取已存在实例，不触发懒加载；空块不 push；try/catch 静默）。**注意**：place/wallet/profile/plotline 的 promptBlock 尚未接入微信链路（下一轮候选）。
+- **微信注入补口**：`chat-view.js buildMessagesArray` 在 lonsha recallBlock 之后补 push 装配类 App 的 promptBlock（v2.49 初版只补 dt/cheat 两 App）。
+- **v2.50.0 演进为表驱动**：同一注入块重构为 `_injectApps` 表（撩语/金手指/地点/钱袋/档案/剧情线 6 项）+ for 循环统一 push，补齐 v2.46-v2.49 四个新 App 的微信链路（它们此前和撩语当年一样是「孤岛」——只挂主钩子、微信独立路径失效）。取已存在实例不触发懒加载；`promptBlock()` 受各自 `injectToPrompt` 开关控制；空块不 push；try/catch 静默。后续新增装配类 App 只需在表里加一行。
 - **门禁**：tests/system-v249.test.mjs 11 项；`npm run check` 287 文件 / 276 测试 / 无新增零消费。
 
+## 微信链路表驱动注入 (chat-view.js buildMessagesArray，v2.50.0)
+
+- **背景**：v2.49 只把 dt/cheat 的 promptBlock 补进微信独立路径；place/wallet/profile/plotline 四个 v2.46-v2.49 新 App 的 promptBlock 仍只挂 `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子，微信 `buildMessagesArray` 路径完全失效——与撩语 v2.48 前的「孤岛 App」形态一模一样。
+- **表驱动重构**：注入块从「逐 App 堆写」改为单一 `_injectApps` 表（6 项：dtApp/cheatApp/placeApp/walletApp/profileApp/plotlineApp，各带 `SYSTEM (名称)` 标签）+ for 循环统一 push。从 `window.VirtualPhone` 取已存在实例（未打开 App 则无实例、不触发懒加载）；`promptBlock()` 受各自 `injectToPrompt` 开关控制、空块不 push、注入失败静默不影响发送。
+- **空块契约**：四新 App 纯函数（`scenePromptBlock`/`walletPromptBlock`/`profilePromptBlock`/`plotlinePromptBlock`）对 null 与空对象一律返回空串、不抛，由 v250 B 组逐函数逐入参实测锁定。
+- **测试**：v249 E 组演进为表驱动断言（dt/cheat 仍在表 + 位置正确）；v249 G 组版本同源改动态跟随当前版（对齐 v246 模式，不再硬编码版本号）；新增 tests/system-v250.test.mjs（A 表驱动补齐四新 App / B 四纯函数空内容返回空串 / C 版本同源 2.50.0）。

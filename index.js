@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.49.0';
+const ST_PHONE_VERSION = '2.50.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,14 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "【新增 App·钱袋 apps/wallet/】记忆插件桥面 13 个资源里，手机侧此前只消费 4 个（scene/recallAudit/clock/floor），『金钱账』（snapshot.moneyLedger）外供已久却全库零消费——『现在有多少钱』『最近一笔怎么花的』在手机上答不出。本版按 place 同规（只读桥 + 五态归因 + 不落库 + 懒加载单例）把账户余额与最近流水做成可查询界面，并把当前账上金额交给生成侧，让正文里的钱数与账本是同一笔。",
-        "【新增 App·档案 apps/profile/】同桥面的『主角档案』（snapshot.protagonist）与『生活小档案』（snapshot.lifeDetails）此前零消费。主角字段如实平铺（嵌套对象不展开、不翻译不猜测），生活细节按 pinned/active/archive 三层展示、层内保持上游叙事顺序不重排；档案与生活细节经生成前钩子交给正文，让主角与记忆插件记的主角是同一个。内审修过一处归因逻辑：『面在但内容空』原来不可达，现在 empty 态与 no-profile-face 态正确分开。",
-        "【新增 App·剧情线 apps/plotline/】同桥面的『大纲』（snapshot.outline）与『世界推进』（snapshot.worldProg：承诺/认知/支线）此前零消费。当前阶段/节点、承诺账（未兑现优先、期限如实）、支线（推进中优先）、角色认知（已知/未意识到两栏）四块投影；注入块只带『当前阶段 + 未兑现承诺 + 推进中支线』，让正文节奏与记忆插件推进的世界不各写各的。",
-        "【撩语×场景联动】撩语不再是孤岛 App：词库页顶部新增『当前所在』卡，位置链解析复用 place 侧唯一真源（currentChainOf 纯函数，跨 App 只读复用不造第二套），场所名命中关键词表（公共场所→高压 / 私密空间→甜撩 / 秩序场所→规训 / 氛围场所→沉浸）即推荐对应风格。未命中返回空（不编推荐），桥不在/无快照整卡隐藏。",
-        "【微信链路补注入缺口】侦察发现微信单聊/群聊走 buildMessagesArray 独立注入路径，不经过 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子——撩语与金手指在微信聊天里完全失效。本版在 recallBlock 注入之后补 push 两块的 promptBlock：从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），空块不 push，注入失败静默不影响发送。",
-        "【三 App 同规工程纪律】① 只读：只取桥 snapshot/refresh()，绝不写上游；② 不抛：桥未装/无快照/旧版无面/面畸形一律降级为归因文案（五态与 place 六态同规格，读不到不一律画成灰）；③ 不猜：拿不到就如实说拿不到，绝不编造金额/档案/阶段顶替。实例不持读数副本（每次现取），onChatChanged() 只丢探针归因；设置键 wallet_settings_v1 / profile_settings_v1 / plotline_settings_v1 各随会话隔离。",
-        "【四处注册 + 三处接线】① config/apps.js 增 3 桌面条目（金币金 #eab308 / 靛 #818cf8 / 卷轴棕金 #b08d57，与既有 31 色逐一比对取唯一）；② phone.css 合并 .wl-*/.pf-*/.pn-* 样式（同时保留各 App 源 css）；③ index.js 增 3 个懒加载单例路由（实例复用、失败兜底可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 /^wallet_/、/^profile_/、/^plotline_/。index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 3 个新 App 的 onChatChanged；v224 的换会话窗口随接线增长 400→600（实测最大 572）。",
-        "【测试】tests/system-v249.test.mjs（A–G 七组 11 项）：A/B/C 组三 App 四件套与注册 + 内核纯函数（五态归因逐态实测 / empty 态可达性 / 投影字段如实 / 注入块空则空串 / 畸形不抛）；D 组场景联动（SCENE_STYLE_MAP 纯函数不猜不编 + 控制器 + 视图卡 + CSS 同源）；E 组微信注入（位置正确 / 不触发加载 / 静默失败）；F 组三处接线（各 3 次 / 缩进与 dtApp 行一致 / 清理路径 4000 窗口内可达）；G 组版本同源 2.49.0 四源一致。",
+        "【微信链路补齐·四新App】地点/钱袋/档案/剧情线四个 v2.46-v2.49 新 App 的 promptBlock 此前和撩语当年一样是孤岛——只挂 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子，微信单聊走 buildMessagesArray 独立路径完全失效，装配的地点/金钱/档案/剧情约束在微信聊天里一律不生效。本版把表驱动注入扩展到全部装配类 App，微信里与主钩子行为对齐。",
+        "【表驱动重构·统一治理】微信注入块从逐 App 堆写重构为单一 _injectApps 表 + for 循环统一 push：撩语/金手指/地点/钱袋/档案/剧情线 6 个装配类 App 各占表一行，从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），promptBlock() 受各自 injectToPrompt 开关控制、空块不 push、注入失败静默不影响发送。后续新增装配类 App 只需在表里加一行，不再重复写注入逻辑。",
+        "【空块契约·实测锁定】四新 App 的纯函数（scenePromptBlock / walletPromptBlock / profilePromptBlock / plotlinePromptBlock）对 null 与空对象一律返回空串、不抛——无内容不产生空注入块由 v250 B 组逐函数逐入参实测锁住，杜绝微信里冒出无意义空 SYSTEM 消息。",
+        "【测试与版本】v249 E 组演进为表驱动断言（验证 dt/cheat 仍在注入表 + 位置正确）；新增 tests/system-v250.test.mjs（A 表驱动补齐四新 App / B 四纯函数空内容返回空串 / C 版本同源 2.50.0）；v249 G 组版本同源改动态跟随当前版（对齐 v246 模式），不再硬编码具体版本号。全量门禁绿。"
     ]
 };
 
