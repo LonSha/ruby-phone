@@ -11,7 +11,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ## App 架构规范
 - 每个App独立目录 apps/<name>/，含 <name>-app.js (控制器) / <name>-data.js (数据) / <name>-view.js (视图) / <name>.css (样式)。
 - 新增App必须完成四处注册：config/apps.js 桌面图标、phone.css 样式合并、index.js phone:openApp 路由分支、（可选）AI标签解析监听。
-- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)。
+- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)/地点图景青(#14b8a6)。
 
 ## AI 联动标签协议
 - 小红书：<RED>{JSON}</RED> 或 <xhs>{JSON}</xhs>
@@ -65,6 +65,17 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - timeweaver-view.js：视图（织信 / 收藏册 📚 / 回望 🔁 三个 tab）。
 - 持久化：`tw_letters`（收藏册）、`tw_last_auto`（定期游标）—— 由 config/storage.js 的 `CHAT_DATA_PATTERNS` 的 `/^tw_/` 判定为聊天数据，随会话隔离。
 - 宿主兼容：App 控制器内取 `window.VirtualPhone` 一律经 `this._vp()`（`typeof window !== 'undefined' ? window : globalThis`），保证单测 / 非浏览器宿主下不抛 ReferenceError。
+
+## 地点图景 (apps/place/，v2.46.0)
+- 消费上游记忆插件（lonsha-memory-plugin v3.181.0）外供的场所图景面：只读桥 `window.lonsha_memory_bridge_v1.snapshot.scene`（`SceneBook.summary()` 的 `deep()` 拷贝）。**本仓此前对该面全库零消费**——上游把「地点」做成可查询面并外供了，手机端却看得到剧情、看不到「人在哪儿」。
+- 与 `config/world-bridge.js`（上游世界桥）同规格的三条纪律：**只读**（只取 snapshot 对象，对象缺失才回落 `refresh()`，绝不写上游状态）、**不抛**（桥未装/无快照/面畸形一律降级为归因文案）、**不猜**（拿不到就如实说拿不到，绝不编造地点或人数顶替）。
+- **归因六态必须分开报**（`readSceneFace()`）：`bridge-absent`（插件未装）/ `no-snapshot`（装了但还没产出快照）/ `no-scene-face`（快照是旧版没有场所面，**只有这一态能给「去升级」的指引**）/ `module-absent`（A 侧 `SceneBookFallback` 在跑，读数一律为空而非「没有场所」）/ `empty`（这个会话还没登记过场所）/ `ready`。六种完全不同的处境不得在界面上同形（本仓反复治理的静默降级）。视图对未知 reason **如实显示原值，不吞**。
+- **不变量三态不得塌两态**：`ok` / `warn` / `broken` 三种字样互不相同，`absent` 单列第四态并明写「不算通过」（缺席不得伪装成 ok）；违例逐条按 kind 可读化（八种 kind），未知 kind 如实显示原始 kind。
+- **覆盖度拒绝只报百分比**：逐楼列号 + 缺口 steps（「第 N 楼 → 第 M 楼之间缺几楼」）+ 未登记到访单列。「有缺口」无法行动，「缺哪几楼、缺多少」才能直接去补。
+- **读数不落库、每次现取**：本 App **不持有任何读数副本**，`onChatChanged()` 只丢弃旧会话的探针归因（任何实例级缓存在换会话/删楼回滚后必成陈旧数据）。非数值如实 `null`（不补 0 冒充「世界是空的」）、位置链缺失给 `[]`（不编一条）。
+- 生成侧一致性注入：`scenePromptBlock()` 经 `GENERATE_BEFORE_COMBINE_PROMPTS` 注入「【本世界已登记的场所与在场…】」system 块，让正文地点与记忆插件记的地点是同一个。与 worldpulse 的 `worldAxisPromptBlock` 同规格：**内容为空返回 `''`**（不产生空块）、注入失败静默且绝不阻断生成。
+- 设置：`place_settings_v1`（`injectToPrompt` / `maxInject` 1–20 / `showDiagnostics`），由 `config/storage.js` 的 `/^place_/` 判定为会话数据。桌面主色地理青 `#14b8a6`；样式合并进 `phone.css` 并保留 `apps/place/place.css` 源文件（与 bilibili / theater 同规）。
+- 回归锁：`tests/system-v246.test.mjs`（98 项，含真源码破坏负控制）。
 
 ## 系统层 (v2.16.0：通知 / 搜索 / 控制中心)
 - **通知落账层 `config/system-notifications.js`**：`NotificationLog`（KEY=`sys_notifs`，LIMIT=200，MERGE_WINDOW_MS=180000）。契约：`push()` 返回 `{id, merged}`；同 `senderKey` 3 分钟内合并累加 `count`，**合并不重置已读**；落盘 800ms 防抖 + `flushNow()` 兜底；`_normalize` 净化脏数据并倒序裁剪；**全部失败路径返回 `{error}`，绝不抛**。

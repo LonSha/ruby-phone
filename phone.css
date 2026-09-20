@@ -11956,3 +11956,209 @@ input:checked + .toggle-slider:before {
   background: radial-gradient(120% 80% at 50% -18%, rgba(255,226,163,.28), transparent 62%);
   z-index: 5;
 }
+
+/* ---------- [v2.46.0] 地点图景 App（.pl-*） ----------
+ * 消费上游记忆插件的场所图景面：当前位置链 / 在场分组 / 规模 / 覆盖度 / 不变量。
+ * 主色取地理青 #14b8a6（与既有 App 主色均不冲突）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.pl-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.pl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.pl-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.pl-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.pl-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pl-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.pl-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pl-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.pl-reason {
+  border-left: 3px solid #14b8a6;
+}
+.pl-reason-ok { border-left-color: #14b8a6; }
+.pl-reason-warn { border-left-color: #e3b341; }
+.pl-reason-off { border-left-color: #64748b; }
+.pl-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.pl-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 规模 ---- */
+.pl-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pl-stat {
+  flex: 1 0 60px;
+  background: rgba(20, 184, 166, .08);
+  border: 1px solid rgba(20, 184, 166, .18);
+  border-radius: 12px;
+  padding: 8px 6px;
+  text-align: center;
+}
+.pl-stat b {
+  display: block;
+  font-size: 17px;
+  color: #5eead4;
+}
+.pl-stat span {
+  display: block;
+  font-size: 10px;
+  color: #7d8ea3;
+  margin-top: 2px;
+}
+/* ---- 当前位置链 ---- */
+.pl-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.pl-chip {
+  background: rgba(20, 184, 166, .14);
+  border: 1px solid rgba(20, 184, 166, .28);
+  color: #99f6e4;
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.pl-chain-sep {
+  color: #475569;
+  font-style: normal;
+  font-size: 12px;
+}
+/* ---- 在场分组 ---- */
+.pl-group {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.pl-group:first-of-type { border-top: 0; }
+.pl-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.pl-group-place {
+  font-size: 12px;
+  color: #7dd3fc;
+  font-weight: 600;
+}
+.pl-group-floor {
+  font-size: 10px;
+  color: #64748b;
+}
+.pl-group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.pl-member {
+  background: rgba(255, 255, 255, .06);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+/* ---- 设置 ---- */
+.pl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pl-row:last-child { margin-bottom: 0; }
+.pl-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.pl-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pl-switch.on {
+  background: #14b8a6;
+  border-color: #14b8a6;
+  color: #04211d;
+  font-weight: 700;
+}
+.pl-range { width: 46%; }
+/* ---- 诊断（覆盖度 / 不变量） ---- */
+.pl-diag .pl-diag-line {
+  font-size: 11px;
+  color: #8ea1b6;
+  line-height: 1.8;
+  word-break: break-all;
+}
+.pl-diag-warn { color: #e3b341; }
+.pl-diag-bad { color: #f87171; }
+.pl-iv-ok { border-left: 3px solid #14b8a6; }
+.pl-iv-warn { border-left: 3px solid #e3b341; }
+.pl-iv-bad { border-left: 3px solid #f87171; }
+/* ---- 空态 ---- */
+.pl-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}

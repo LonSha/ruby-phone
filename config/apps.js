@@ -290,6 +290,15 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    // [v2.46.0] 地点图景：消费记忆插件的场所面（人在哪儿/谁在这个地方/到访与覆盖）
+    {
+        id: 'place',
+        name: '地点图景',
+        icon: '🗺️',
+        color: '#14b8a6',
+        badge: 0,
+        data: {}
+    },
     {
         id: 'search',
         name: '全局搜索',

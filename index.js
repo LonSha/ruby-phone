@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.45.0';
+const ST_PHONE_VERSION = '2.46.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-20",
     items: [
-        "【工程防线·枚举面完整性】零消费导出门禁 E9：把「枚举面完整性」变成门禁自证的不变量。E7（跨行成块转出）与 E8（解构转出）本是**同一缺口类别的两个个案**——某条抽取路径没覆盖某种写法，该写法导出的名字在门禁眼里就根本不存在，既不报红灯也不进账本（fail-open 静默放行）；补掉两个个案，类别本身依然无守卫，下一次用上第三种写法会原样重演。本版判据：把真代码里每条 export 语句与既有抽取路径硬挂钩，凡未被任一路径命中的语句一律 fail-closed 拒判（exit 2），确无具名成员可对账的（当前只有 export default）须进 UNHANDLED_ALLOWLIST 并写明理由。",
-        "【实现】抽取路径集中登记为可回答的清单 HANDLED_LINE_PATHS（block/decl/destruct 三条，与 DECL_RE / DESTRUCT_RE 共用同一份正则，不得各自复制）；新增 unhandledKind() 分类器以 UNHANDLED 为兜底；完整性闸在扫描面下限之前执行（未识别即 exit 2，不被后续判定掩盖）；--list 与常规运行各打印一行「导出语句识别 N 条（声明/成块/解构/无具名成员）· 未识别 M」。夹具模式（RP_DEAD_EXPORT_FIXTURE）跳过该闸，保证单测仍可构造任意合成语料。",
-        "【实测现场】179 文件 / 567 条导出语句全部被识别（声明 499 · 成块 6 · 解构 1 · 无具名成员 61）· 未识别 0 ⇒ 本版**不改扫描面**（521 个 export 声明、零消费 25、账本 25 条均不变）、不引入新债务，只把「已经成立的事实」变成「跑不掉的门槛」。E9 只会增加红灯（拒绝未识别写法），不会放行任何原本判死的导出。",
-        "【测试】tests/system-v245.test.mjs（48 项）：A 组结构锁（清单/白名单/分类器/fail-closed/判定口径未放宽）；B 组分类器语义（具名/成块/解构被认领、export default 经白名单准入、生成器与 export * as 被兜住、多声明符不影响语句认领、白名单恰好一项）；C 组真实仓库完整性自证（未识别 0、四类之和等于语句总数、语句总数 ≥ 567、解构命中未丢）；D 组不扩面不欠债（521/25/25 不变、口径未放宽）；E 组夹具模式跳过该闸；F 组真源码破坏（抽掉 decl 路径 ⇒ exit 2 并点名真实文件，同判据在原版上不成立）；H 组真实场景复现（独立合成 root 注入生成器写法 ⇒ exit 2 并逐条点名；注释夹在 export 与声明之间经剥离归一后属已覆盖写法，不误报；同目录普通声明不受牵连；真实仓库未被触碰仍绿灯）；G 组类别证明（同一语料门禁枚举器 0 个名字 / 分类器 3 条 UNHANDLED，且不改变真死导出的判定）。",
+        "【新增 App·地点图景 apps/place/】消费上游 lonsha-memory-plugin v3.181.0 外供的场所图景面（`lonsha_memory_bridge_v1.snapshot.scene`）。修前实测：该面在本仓**全库零消费**——上游把「地点」从一句注记做成可查询面（场景树 / 到访史 / 在场索引 / 地点挂账 / 覆盖度 / 不变量）并外供到只读桥上了，手机端却仍看得到剧情、看不到「人在哪儿」；这正是 v2.41 建零消费导出门禁要拦的欠债形态，而门禁只管「导出有没有人用」，管不到「上游外供的面有没有人用」。本版补上消费点：place-data.js（纯函数内核，255 行）/ place-app.js（控制器，含生成侧注入钩子）/ place-view.js（视图）/ place.css（源文件，运行时走 phone.css 合并段）。",
+        "【投影五块】projectScene() 把 scene 面变成可直接渲染的数据：① scale 规模（场所数 / 细写数 / 最深层级 / 到访史条数 / 在场人数）；② current 当前位置链（由粗到细，按 › 拆，回落 current 按 / 拆）；③ presence 在场分组（按地点 key 聚合、成员稳定排序、按人数降序、保留「第 N 楼」）；④ coverage 覆盖度（逐楼列号 + 缺口 steps + 未登记到访）；⑤ invariants 树的自检（三态 + 逐条 kind 可读化）。只读、绝不抛，缺项如实置空。",
+        "【工程防线·归因六态不得塌态】readSceneFace() 六态分开报：bridge-absent（插件未装）/ no-snapshot（装了但还没产出快照）/ no-scene-face（快照是旧版没有场所面，只有这一态能给「去升级」的指引）/ module-absent（A 侧 SceneBookFallback 在跑，读数一律为空而非「没有场所」）/ empty（这个会话还没登记过场所）/ ready。修前这六种在界面上同形为「没数据」，「去装 / 去等 / 去升级」三种行动指引全给不出（本仓反复治理的静默降级）。视图对未知 reason 如实显示原值，不吞。",
+        "【工程防线·三态不塌两态 + 拒绝只报百分比】不变量 ok / warn / broken 必须三种不同字样，缺席单列第四态并明写「不算通过」（absent 不得伪装成 ok）；八种 kind 逐条可读化（bad-node / key-path-mismatch / bad-desc / broken-chain / visit-unregistered / track-unregistered / presence-bad / invariant-threw），未知 kind 如实显示原始 kind；覆盖度逐楼列号 + 「第 N 楼 → 第 M 楼之间缺几楼」+ 未登记到访单列——「有缺口」无法行动，「缺哪几楼、缺多少」才能直接去补，故明确拒绝把覆盖度压成一个百分比。",
+        "【工程纪律·读数不落库、只读不猜】本 App **不持有任何读数副本**（本仓治理过多轮的形态：实例级缓存在换会话/删楼回滚后必成陈旧数据）：probeBridge() 只读桥的 snapshot 对象，对象缺失时回落 refresh()；onChatChanged() 只丢弃旧会话的探针归因，下一次渲染现取。桥未装 / 无快照 / 面畸形一律降级为归因文案，绝不抛、绝不编造地点或人数顶替（非数值如实 null，不补 0 冒充「世界是空的」；位置链缺失给 []，不编一条）。",
+        "【生成侧一致性注入】scenePromptBlock() 把「本世界已登记的场所与在场」交给生成侧（GENERATE_BEFORE_COMBINE_PROMPTS → prompt.push system 块），让正文里的地点与记忆插件记的地点是同一个，而不是各写各的。与 worldpulse 的 worldAxisPromptBlock 同规格：内容为空返回空串（不产生空块）、注入失败静默且绝不阻断生成；开关与限行（maxInject 1–20）由 place_settings_v1 控制。",
+        "【四处注册 + 会话隔离】① config/apps.js 桌面条目（地理青 #14b8a6，不与既有 App 主色撞色）；② phone.css 合并 .pl-* 样式（同时保留 apps/place/place.css 源文件，与 bilibili / theater 同规）；③ index.js 的 phone:openApp 懒加载单例路由（实例复用、不持副本，故换会话只走 onChatChanged）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 `/^place_/`（place_settings_v1 属会话态，若落全局会跨会话串味）。另在 index.js 三处路径（换会话 + clearCurrentData + clearAllData）同步接入 onChatChanged。",
+        "【测试】tests/system-v246.test.mjs（98 项 / C 组…K 组共 11 组）：A 组结构锁与四处注册（含路由懒加载单例、源文件不得多于运行时载体）；B 组归因六态全可达且文案互不相同；C 组不变量三态不塌两态 + 未知 kind 不吞 + 缺席不算通过；D 组投影只读不抛、缺项如实置空；E 组在场按 key 聚合 / 稳定排序 / 脏记录过滤；F 组覆盖度拒绝百分比化；G 组注入块空则空串、限行生效；H 组**真源码破坏负控制**（把「缺席」并入「空」⇒ 同一判据在破坏副本上必须不成立，且在原版上必须成立）；I 组三处接线 + 插入点缩进未被写坏 + 实例不置 null + onChatChanged 不持读数副本；J 组端到端六种桥形态串联（未装 / 旧版快照 / 真桥 / 开关 / 换会话 / refresh 回落）+ 转义面回归锁（v2.46 修复的 _esc 引号转义写成转义成自身 ＝ 无转义的注入面）；K 组版本跨源自洽。",
     ]
 };
 
@@ -9142,6 +9146,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // [v2.24.0] 第二批懒加载单例重绑：B站条目（bili_entries_v1）/ 小剧场（theater_stories_v1）
             window.VirtualPhone.bilibiliApp?.onChatChanged?.();
             window.VirtualPhone.theaterApp?.onChatChanged?.();
+            // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
+            window.VirtualPhone.placeApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10080,6 +10086,21 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载世界脉搏App失败:', err);
                             phoneShell?.showNotification('错误', '世界脉搏App加载失败', '❌');
                         });
+                } else if (appId === 'place') {
+                    // [v2.46.0] 地点图景：消费上游记忆插件的场所图景面（只读快照桥）。
+                    //   懒加载单例（与 worldpulse/peek 同构）；实例不持有读数副本，
+                    //   故换会话只走 onChatChanged（见下方三条清数据路径的调用）。
+                    import('./apps/place/place-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.placeApp) {
+                                window.VirtualPhone.placeApp = new module.PlaceApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.placeApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载地点图景App失败:', err);
+                            phoneShell?.showNotification('错误', '地点图景App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10267,6 +10288,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // [v2.24.0] 第二批懒加载单例重绑（清数据后内存不再持有已清数据）
                     window.VirtualPhone.bilibiliApp?.onChatChanged?.();
                     window.VirtualPhone.theaterApp?.onChatChanged?.();
+                    // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
+                    window.VirtualPhone.placeApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10372,6 +10395,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // [v2.24.0] 第二批懒加载单例重绑（清数据后内存不再持有已清数据）
                     window.VirtualPhone.bilibiliApp?.onChatChanged?.();
                     window.VirtualPhone.theaterApp?.onChatChanged?.();
+                    // [v2.46.0] 地点图景：同 P1/P2 —— 仅丢弃旧会话探针归因
+                    window.VirtualPhone.placeApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

@@ -53,6 +53,9 @@ export class PhoneStorage {
             /^theater_/,          // 小剧场
             /^life_events_/,      // 生活事件时间线
             /^worldpulse_/,       // [v2.9.0] 世界脉搏（设置/历史/队列状态，随会话隔离）
+            // [v2.46.0] 地点图景（place_settings_v1：注入开关/行数/诊断显示）。
+            //   场所读数本身每次现取（不落库），但设置若落全局会跨会话串味。
+            /^place_/,
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
             // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
             //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，
