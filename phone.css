@@ -13190,3 +13190,182 @@ input:checked + .toggle-slider:before {
   color: #9d7fa8;
   font-style: normal;
 }
+
+/* ---------- [v2.51.0] 群像 App（.cs-*） ----------
+*/
+/* ---------- [v2.51.0] 群像 App（.cs-*） ----------
+ * 消费上游记忆插件的角色状态表：被追踪的角色列表（字段 / 待办 / 楼层）。
+ * 主色取天空蓝 #38bdf8（与既有 App 主色均不冲突：profile 靛 #818cf8 是紫调，此处是蓝调）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.cs-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.cs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.cs-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.cs-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.cs-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cs-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.cs-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cs-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.cs-reason { border-left: 3px solid #38bdf8; }
+.cs-reason-ok { border-left-color: #38bdf8; }
+.cs-reason-warn { border-left-color: #e3b341; }
+.cs-reason-off { border-left-color: #64748b; }
+.cs-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.cs-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 角色卡片 ---- */
+.cs-role {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 10px 0;
+}
+.cs-role:first-of-type { border-top: 0; }
+.cs-role-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.cs-role-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e0edf8;
+}
+.cs-role-floor {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+/* ---- 字段 chips ---- */
+.cs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cs-chip {
+  background: rgba(56, 189, 248, .12);
+  border: 1px solid rgba(56, 189, 248, .24);
+  color: #7dd3fc;
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+/* ---- 待办 ---- */
+.cs-todos {
+  margin-top: 7px;
+}
+.cs-todo {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.6;
+  padding-left: 12px;
+  position: relative;
+}
+.cs-todo::before {
+  content: '•';
+  position: absolute;
+  left: 2px;
+  color: #38bdf8;
+}
+.cs-todo-date {
+  color: #64748b;
+  font-size: 10px;
+}
+/* ---- 设置 ---- */
+.cs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.cs-row:last-child { margin-bottom: 0; }
+.cs-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.cs-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cs-switch.on {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #04202e;
+  font-weight: 700;
+}
+.cs-range { width: 46%; }
+/* ---- 空态 / 溢出 ---- */
+.cs-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
+.cs-more {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #64748b;
+}

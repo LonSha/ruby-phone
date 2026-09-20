@@ -1,6 +1,6 @@
 {
   "name": "ruby-phone",
-  "version": "2.50.0",
+  "version": "2.51.0",
   "private": true,
   "type": "module",
   "description": "工程配置，仅供本地/CI 校验使用。SillyTavern 扩展清单见 manifest.json；本文件不参与运行时加载，且刻意不声明任何依赖（避免宿主尝试安装）。",

@@ -47,15 +47,15 @@ test('v250 B: 四新 App 纯函数空内容返回空串（不产生空注入块�
     }
 });
 
-test('v250 C: 版本同源 2.50.0', () => {
+test('v250 C: 版本同源（四源一致，动态跟随当前版）', () => {
     const pkg = JSON.parse(read('package.json'));
     const manifest = JSON.parse(read('manifest.json'));
     const idx = read('index.js');
     const upd = JSON.parse(read('update-log.json'));
-    assert.equal(pkg.version, '2.50.0', 'C1');
-    assert.equal(manifest.version, '2.50.0', 'C2');
-    assert.match(idx, /const ST_PHONE_VERSION = '2\.50\.0';/, 'C3');
-    assert.equal(upd.latest, '2.50.0', 'C4');
-    assert.ok(upd.versions['2.50.0'], 'C5');
-    assert.ok(Array.isArray(upd.versions['2.50.0'].items) && upd.versions['2.50.0'].items.length >= 3, 'C6');
+    const v = String(manifest.version);
+    assert.equal(pkg.version, v, 'C1 package.json 同源');
+    assert.match(idx, new RegExp(`const ST_PHONE_VERSION = '${v.replace(/\./g, '\\.')}';`), 'C2 入口常量同源');
+    assert.equal(String(upd.latest), v, 'C3 update-log.latest 同源');
+    assert.ok(upd.versions[v], 'C4 update-log 有当前版条目');
+    assert.ok(Array.isArray(upd.versions[v].items) && upd.versions[v].items.length >= 3, 'C5 当前版 items 非空');
 });

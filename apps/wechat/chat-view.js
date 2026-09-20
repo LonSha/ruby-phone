@@ -11573,6 +11573,7 @@ renderChatRoom(chat) {
                     { app: _vp.walletApp, name: 'SYSTEM (钱袋)' },
                     { app: _vp.profileApp, name: 'SYSTEM (档案)' },
                     { app: _vp.plotlineApp, name: 'SYSTEM (剧情线)' },
+                    { app: _vp.charsApp, name: 'SYSTEM (群像)' },
                 ];
                 for (const _item of _injectApps) {
                     const _blk = _item.app?.promptBlock?.();

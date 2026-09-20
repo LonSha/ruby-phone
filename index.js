@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.50.0';
+const ST_PHONE_VERSION = '2.51.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "【微信链路补齐·四新App】地点/钱袋/档案/剧情线四个 v2.46-v2.49 新 App 的 promptBlock 此前和撩语当年一样是孤岛——只挂 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子，微信单聊走 buildMessagesArray 独立路径完全失效，装配的地点/金钱/档案/剧情约束在微信聊天里一律不生效。本版把表驱动注入扩展到全部装配类 App，微信里与主钩子行为对齐。",
-        "【表驱动重构·统一治理】微信注入块从逐 App 堆写重构为单一 _injectApps 表 + for 循环统一 push：撩语/金手指/地点/钱袋/档案/剧情线 6 个装配类 App 各占表一行，从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），promptBlock() 受各自 injectToPrompt 开关控制、空块不 push、注入失败静默不影响发送。后续新增装配类 App 只需在表里加一行，不再重复写注入逻辑。",
-        "【空块契约·实测锁定】四新 App 的纯函数（scenePromptBlock / walletPromptBlock / profilePromptBlock / plotlinePromptBlock）对 null 与空对象一律返回空串、不抛——无内容不产生空注入块由 v250 B 组逐函数逐入参实测锁住，杜绝微信里冒出无意义空 SYSTEM 消息。",
-        "【测试与版本】v249 E 组演进为表驱动断言（验证 dt/cheat 仍在注入表 + 位置正确）；新增 tests/system-v250.test.mjs（A 表驱动补齐四新 App / B 四纯函数空内容返回空串 / C 版本同源 2.50.0）；v249 G 组版本同源改动态跟随当前版（对齐 v246 模式），不再硬编码具体版本号。全量门禁绿。"
+        "【群像 App·多角色状态面板】新增「群像」App（🎭），消费 snapshot.characters 面展示多角色动态状态：字段（好感/情绪/重要度等动态键值）、待办（含日期）、楼层。与档案 App 互补——档案投影主角单人，群像投影被追踪的其他角色。",
+        "【五态归因 + 活动度排序】charsFace 五态判定（ready/empty/no-chars-face/no-snapshot/bridge-absent），投影按活动度打分排序（字段+1/个封顶5、待办+2/个封顶4），让活跃角色优先展示。纯函数零 window 依赖，v251 B 组逐态逐入参实测锁定。",
+        "【微信注入表第 7 项】_injectApps 表追加 charsApp，注入块随 injectToPrompt 开关自动生效。三处 onChatChanged 接线齐全（换会话/clearCurrentData/clearAllData），切会话与清数据时角色面板自动刷新。",
+        "【测试与版本】新增 tests/system-v251.test.mjs（A 四件套+注册 / B 内核纯函数五态+排序+注入块 / C 微信注入+三处接线 / D 版本同源 2.51.0）。全量门禁绿。"
     ]
 };
 
@@ -9149,6 +9149,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.VirtualPhone.walletApp?.onChatChanged?.();
             window.VirtualPhone.profileApp?.onChatChanged?.();
             window.VirtualPhone.plotlineApp?.onChatChanged?.();
+            window.VirtualPhone.charsApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10172,6 +10173,20 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载剧情线App失败:', err);
                             phoneShell?.showNotification('错误', '剧情线App加载失败', '❌');
                         });
+                } else if (appId === 'chars') {
+                    // [v2.51.0] 群像：消费记忆插件角色状态表（只读桥，五态归因，注入走表驱动）。
+                    //   懒加载单例（与 plotline 同构）；设置随会话隔离（/^chars_/）。
+                    import('./apps/chars/chars-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.charsApp) {
+                                window.VirtualPhone.charsApp = new module.CharsApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.charsApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载群像App失败:', err);
+                            phoneShell?.showNotification('错误', '群像App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10366,6 +10381,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.walletApp?.onChatChanged?.();
                     window.VirtualPhone.profileApp?.onChatChanged?.();
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
+                    window.VirtualPhone.charsApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10478,6 +10494,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.walletApp?.onChatChanged?.();
                     window.VirtualPhone.profileApp?.onChatChanged?.();
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
+                    window.VirtualPhone.charsApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

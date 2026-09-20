@@ -195,6 +195,14 @@
 重启 SillyTavern 即可生效。
 
 ---
+
+## 🎭 群像 App (apps/chars/，v2.51.0)
+消费记忆插件 `snapshot.characters` 面，展示多角色动态状态：
+- **五态归因**：ready / empty / no-chars-face / no-snapshot / bridge-absent
+- **活动度投影排序**：字段 +1/个（封顶5）、待办 +2/个（封顶4），活跃角色优先
+- **注入**：微信 `_injectApps` 表第 7 项 + `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子
+- **设置隔离**：`/^chars_/`，随会话独立
+
 *Created with ❤️ by LonSha & Ruby宇宙*
 
 ## 🧠 记忆系统 (v2.1.0)

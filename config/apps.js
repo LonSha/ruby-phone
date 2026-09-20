@@ -342,6 +342,14 @@ export const APPS = [
         data: {}
     },
     {
+        id: 'chars',
+        name: '群像',
+        icon: '🎭',
+        color: '#38bdf8',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'search',
         name: '全局搜索',
         icon: '🔎',

@@ -131,3 +131,11 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **表驱动重构**：注入块从「逐 App 堆写」改为单一 `_injectApps` 表（6 项：dtApp/cheatApp/placeApp/walletApp/profileApp/plotlineApp，各带 `SYSTEM (名称)` 标签）+ for 循环统一 push。从 `window.VirtualPhone` 取已存在实例（未打开 App 则无实例、不触发懒加载）；`promptBlock()` 受各自 `injectToPrompt` 开关控制、空块不 push、注入失败静默不影响发送。
 - **空块契约**：四新 App 纯函数（`scenePromptBlock`/`walletPromptBlock`/`profilePromptBlock`/`plotlinePromptBlock`）对 null 与空对象一律返回空串、不抛，由 v250 B 组逐函数逐入参实测锁定。
 - **测试**：v249 E 组演进为表驱动断言（dt/cheat 仍在表 + 位置正确）；v249 G 组版本同源改动态跟随当前版（对齐 v246 模式，不再硬编码版本号）；新增 tests/system-v250.test.mjs（A 表驱动补齐四新 App / B 四纯函数空内容返回空串 / C 版本同源 2.50.0）。
+## 群像 App (apps/chars/，v2.51.0)
+- **起点**：`snapshot.characters` 是 13 个外供面中唯一的多角色动态状态表（结构 `{角色名: {fields, todos, updatedAt, floor}}`），此前全库零消费。与 `profile`（投影主角单人 `snapshot.protagonist`）互补：profile 管主角、chars 管其他被追踪角色。
+- **四件套同构**：`chars-data.js`（`CHARS_REASONS` 五态 / `readCharsFace(probe)` / `projectChars(chars)` 活动度打分排序 / `charsPromptBlock(chars)`）、`chars-app.js`（`CharsApp` 控制器：probeBridge → charsFace → projection → summaryLine → promptBlock → _initHook → onChatChanged → render）、`chars-view.js`（归因卡 + 角色卡列表 + 设置卡）、`chars.css`（主色天空蓝 #38bdf8，`.cs-*` 前缀，合并进 phone.css 尾部）。
+- **五态**：ready / empty / no-chars-face（旧版快照无该面）/ no-snapshot / bridge-absent。与 wallet/profile/plotline 同规格（五态），与 place 区分（place 独有第六态 module-absent）。
+- **活动度打分**：每角色 score = min(fieldsCount, 5) + min(todosCount * 2, 4)。活跃角色优先展示；空角色沉底。
+- **接线**：apps.js 第 37 条目（icon 🎭、color #38bdf8）；storage `/^chars_/`；index.js 路由分支在 plotline 后（懒加载单例）；三处 onChatChanged（换会话/clearCurrentData/clearAllData）；微信 `_injectApps` 表第 7 项 `{app:_vp.charsApp, name:'SYSTEM (群像)'}`。
+- **纯函数契约**：`charsPromptBlock(null)` 和 `charsPromptBlock({})` 均返回 `''`（空注入不产生无意义 SYSTEM 消息）。v251 B 组逐态逐入参实测锁定。
+- **测试**：tests/system-v251.test.mjs（A 四件套+注册 37 条目 / B 内核纯函数五态+排序+注入块 / C 微信注入表+三处 onChatChanged / D 版本同源 2.51.0）。

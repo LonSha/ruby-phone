@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.51.0": {
+      "version": "2.51.0",
+      "date": "2026-09-21",
+      "title": "群像 App — 多角色状态面板",
+      "items": [
+        "【群像 App·多角色状态面板】新增「群像」App（🎭），消费 snapshot.characters 面展示多角色动态状态：字段（好感/情绪/重要度等动态键值）、待办（含日期）、楼层。与档案 App 互补——档案投影主角单人，群像投影被追踪的其他角色。",
+        "【五态归因 + 活动度排序】charsFace 五态判定（ready/empty/no-chars-face/no-snapshot/bridge-absent），投影按活动度打分排序（字段+1/个封顶5、待办+2/个封顶4），让活跃角色优先展示。纯函数零 window 依赖，v251 B 组逐态逐入参实测锁定。",
+        "【微信注入表第 7 项】_injectApps 表追加 charsApp，注入块随 injectToPrompt 开关自动生效。三处 onChatChanged 接线齐全（换会话/clearCurrentData/clearAllData），切会话与清数据时角色面板自动刷新。",
+        "【测试与版本】新增 tests/system-v251.test.mjs（A 四件套+注册 / B 内核纯函数五态+排序+注入块 / C 微信注入+三处接线 / D 版本同源 2.51.0）。全量门禁绿。"
+      ]
+    },
     "2.50.0": {
       "date": "2026-09-21",
       "items": [
@@ -741,5 +752,5 @@
       ]
     }
   },
-  "latest": "2.50.0"
+  "latest": "2.51.0"
 }
