@@ -17,6 +17,15 @@
  *   E4 基线条目若已被消费（或已被删除）属「账本腐坏」，仅提示不判错
  *      （漏报比误报更伤；清理账本是洁癖而非缺陷，不应阻塞发布）；
  *   E5 结构健康标记：扫描面低于下限即 exit 2（防探测器失效后以全绿通过）。
+ *   E9（v2.45.0）枚举面**完整性**必须由门禁自证，而不是靠逐个补语法：
+ *      E7（跨行块）与 E8（解构转出）本是**同一缺口类别的两个个案**——某条抽取路径没覆盖某种
+ *      写法 ⇒ 该写法导出的名字在门禁眼里根本不存在 ⇒ 不报红灯也不进账本（fail-open 静默放行）。
+ *      补掉两个个案，**类别本身依然无守卫**：下一次用上新写法，同样的静默漏面会原样重演。
+ *      本版判据：把真代码里每条 `export` 语句与既有抽取路径硬挂钩——**凡未被任一路径命中的语句，
+ *      一律 fail-closed**（exit 2 拒判）。不预见更多语法，只**拒绝**预见不到的语法：
+ *      新增写法要么补抽取路径、要么进 UNHANDLED_ALLOWLIST 并写明「为什么没有具名成员可对账」。
+ *      实测现场：179 文件 / 566 条导出语句全部被识别（未识别 0），故本版不改扫描面、不引入新债务，
+ *      只把「已经成立的事实」变成「跑不掉的门槛」。
  *   E8（v2.44.0）导出枚举必须覆盖**解构转出**与**枚举源**两处缺口，二者后果同一（名字在门禁
  *      眼里根本不存在 ⇒ 不报红灯也不进账本，fail-open 静默放行）：
  *      ① `export const { A, B } = expr;`（对象/数组解构，可跨行）此前**整块 0 枚举**——DECL_RE
@@ -124,6 +133,31 @@ function* walk(dir, base = '') {
 const DECL_RE = /^\s*export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/;
 // v2.44.0（E8）: `export const { A, B } = expr` / `export let [a, b] = x`（解构转出，可跨行）
 const DESTRUCT_RE = /^\s*export\s+(?:const|let|var)\s*([\[{])/;
+/* v2.45.0（E9）: 枚举面完整性自证 —— 与上面两条正则**一一对应**的「单行抽取路径」表。
+ *   判定纪律：真代码里每条 `export` 语句都必须被下表中任一条命中，或命中独立的
+ *   `export {` 块路径（源码里那个 `/^\s*export\s*\{/`），否则 fail-closed（exit 2）。
+ *   为什么必须显式写出来：E7/E8 的漏面之所以能长期潜伏，正是因为「抽取路径」散落在
+ *   代码里、没有任何一处能回答「一共认得几种写法」。此表就是那份可回答的清单——
+ *   **新增抽取路径必须同步登记**，否则测试节的锁会立刻失败（见 UNHANDLED_ALLOWLIST 下方断言）。 */
+const HANDLED_LINE_PATHS = [
+  { kind: 'block', re: /^\s*export\s*\{/ },   // `export { A, B }` / `export { A as B } from ...`
+  { kind: 'decl', re: DECL_RE },               // `export function|const|let|var|class NAME`
+  { kind: 'destruct', re: DESTRUCT_RE }        // `export const { A, B } = expr`
+];
+/* 未处理 export 语句的**白名单**（必须写明「为什么没有具名成员可对账」，且逐条给例子）。
+ *   当前唯一准入项是 `export default`——默认导出没有稳定名字，本门禁对它的立场是
+ *   「刻意不处理」而非「不认识」（全仓 61 处，均在平台入口/单例位）。
+ *   ⚠️ 白名单是准入闸，不是放行条：往这里加任何别的东西，等同于承认「这类导出不受门禁约束」，
+ *   必须同时说明为何不可能有具名消费方可对账，并由测试节的锁逐条复核。 */
+const UNHANDLED_ALLOWLIST = [
+  { label: 'export-default', re: /^\s*export\s+default\b/,
+    why: '默认导出无稳定名字可对账（平台入口/单例位），本门禁刻意不处理；全仓公开面均由具名导出承载' }
+];
+function unhandledKind(line) {
+  for (const p of HANDLED_LINE_PATHS) if (p.re.test(line)) return null;   // 已被某条抽取路径命中
+  for (const a of UNHANDLED_ALLOWLIST) if (a.re.test(line)) return null;  // 白名单准入
+  return 'UNHANDLED';
+}
 function exportsOf(src) {
   const out = [];
   const lines = src.split('\n');
@@ -361,6 +395,41 @@ for (const f of files) {
 
 dead.sort((a, b) => (a.file === b.file ? a.line - b.line : a.file.localeCompare(b.file)));
 
+/* ---------- E9 结构健康：枚举面完整性（未识别的导出写法一律拒判）----------
+ * 为什么放在这里：E7/E8 的教训是「抽取路径没覆盖某种写法 ⇒ 名字在门禁眼里不存在 ⇒
+ *   fail-open 静默放行」。逐个补语法只能治个案，本段把**类别的残余**一并堵死。
+ * 判据：对每个文件的真代码，数出全部以 `export` 起首的语句，逐条问「被哪条抽取路径认领」；
+ *   答不上来的（既不在 HANDLED_LINE_PATHS，也不在 UNHANDLED_ALLOWLIST）即 exit 2。
+ * 方向性说明：这里只会**增加**红灯，不会放行任何原本判死的导出；漏报比误报更伤，故从严。
+ * 夹具模式跳过（单测要能构造任意合成本文件；真实仓库才需要这道闸）。 */
+const handled = { block: 0, decl: 0, destruct: 0, allowed: 0, total: 0 };
+const unhandled = [];
+if (!FIXTURE_MODE) {
+  for (const f of files) {
+    const code = codeTexts.get(f.rel);
+    if (typeof code !== 'string') continue;
+    const ls = code.split('\n');
+    for (let i = 0; i < ls.length; i++) {
+      if (!/^\s*export\b/.test(ls[i])) continue;
+      handled.total += 1;
+      const hit = HANDLED_LINE_PATHS.find(p => p.re.test(ls[i]));
+      if (hit) { handled[hit.kind] += 1; continue; }
+      const allow = UNHANDLED_ALLOWLIST.find(a => a.re.test(ls[i]));
+      if (allow) { handled.allowed += 1; continue; }
+      unhandled.push({ file: f.rel, line: i + 1, text: ls[i].trim().slice(0, 120) });
+    }
+  }
+  if (unhandled.length) {
+    console.error(`[dead-export] 枚举面不完整：${unhandled.length} 条 export 语句未被任何抽取路径识别` +
+      '（这些名字在门禁眼里根本不存在，既不报红灯也不进账本）—— fail-closed 拒判：');
+    for (const u of unhandled.slice(0, 20)) console.error(`    ${u.file}:${u.line}  ${u.text}`);
+    if (unhandled.length > 20) console.error(`    … 其余 ${unhandled.length - 20} 条`);
+    console.error('  修法二选一：① 给该写法补抽取路径并同步登记进 HANDLED_LINE_PATHS；' +
+      '② 若确无具名成员可对账，写进 UNHANDLED_ALLOWLIST 并说明理由。');
+    process.exit(2);
+  }
+}
+
 /* ---------- E5 结构健康：扫描面低于下限即探测器失效 ---------- */
 if (!FIXTURE_MODE && totalExports < MIN_EXPORTS) {
   console.error(`[dead-export] 只抽到 ${totalExports} 个 export 声明（低于下限 ${MIN_EXPORTS}），` +
@@ -387,6 +456,10 @@ const stale = baseline.entries.filter(e => !deadKeys.has(`${e.file}::${e.name}`)
 if (listMode) {
   console.log(`扫描 ${stat.files} 个文件 / ${stat.exports} 个 export 声明`);
   console.log(`内部消费 ${stat.internal} · 跨文件消费 ${stat.crossFile} · 零消费 ${dead.length}`);
+  if (!FIXTURE_MODE) {
+    console.log(`导出语句识别 ${handled.total} 条（声明 ${handled.decl} · 成块 ${handled.block} · ` +
+      `解构 ${handled.destruct} · 无具名成员 ${handled.allowed}）· 未识别 ${unhandled.length}`);
+  }
   for (const e of dead) console.log(`  ${e.file}:${e.line}  ${e.name}${baseKeys.has(`${e.file}::${e.name}`) ? '  [已登记]' : '  [新]'}`);
   process.exit(0);
 }
@@ -414,6 +487,12 @@ let fail = 0;
 console.log(`[dead-export] 扫描 ${stat.files} 个文件 / ${stat.exports} 个 export 声明` +
   `（内部消费 ${stat.internal} · 跨文件消费 ${stat.crossFile} · 零消费 ${dead.length}）`);
 console.log(`[dead-export] 基线账本：${baseline.entries.length} 条冻结项`);
+if (!FIXTURE_MODE) {
+  // E9：枚举面完整性自证（识别分布 + 未识别数）。未识别数恒为 0，否则上面已 exit 2。
+  console.log(`[dead-export] 枚举面完整性：${handled.total} 条 export 语句全部被识别` +
+    `（声明 ${handled.decl} · 成块 ${handled.block} · 解构 ${handled.destruct} · ` +
+    `无具名成员 ${handled.allowed}）· 未识别 ${unhandled.length}`);
+}
 
 if (stale.length) {
   // E4：账本腐坏只提示不判错（漏报比误报更伤；清理账本是洁癖）
