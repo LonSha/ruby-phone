@@ -51,7 +51,9 @@ const deadNames = (out, fileRel) => out.split('\n')
     ok('A1 新增 stripNonCode 剥离器', /function stripNonCode\s*\(/.test(src));
     ok('A2 建立真代码文本表（与原文分开存）',
         /const codeTexts = new Map\(\)/.test(src) && /codeTexts\.set\(f\.rel, stripNonCode\(raw\)\)/.test(src));
-    ok('A3 内部消费判定改读真代码行', /const codeLines = \(codeTexts\.get\(f\.rel\) \|\| src\)/.test(src));
+    // v2.44.0（E8）刷新：`|| src` 的静默回退已被移除（剥离器失效现为 fail-closed），
+    //   故此处断言改读**纯真代码**取行——比旧式「回退原文」更强，不是放宽。
+    ok('A3 内部消费判定改读真代码行', /const codeLines = codeTexts\.get\(f\.rel\)\.split\('\\n'\)/.test(src));
     ok('A4 跨文件消费判定改读真代码', /const t = codeTexts\.get\(g\.rel\)/.test(src));
     ok('A5 模板串插值按代码递归处理（防「整串清空」误抹真消费）',
         /scan\(i, true\)/.test(src) && /stopAtBrace/.test(src));

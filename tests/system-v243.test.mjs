@@ -62,8 +62,10 @@ const summary = (out) => {
 {
     const src = read('scripts/dead-export-check.mjs');
     ok('A1 已废弃单行 brace 正则（BRACE_RE 不再存在）', !/BRACE_RE/.test(src));
+    // v2.44.0（E8）刷新：跨行累积逻辑已抽为通用配对累积器 collectBlock（花括号/方括号共用），
+    //   断言随之追踪新形态——判据意图（见过 `export {` 即向后累积到配对 `}`）不变。
     ok('A2 见到 `export {` 即向后累积到 `}`（跨行块）',
-        /\/\^\\s\*export\\s\*\\\/\{\//.test(src) || /acc\.indexOf\('\}'\) < 0/.test(src));
+        /\/\^\\s\*export\\s\*\\\/\{\//.test(src) || /collectBlock\(i, '\{', '\}'\)/.test(src));
     ok('A3 记录整段导出语句区间 declEnd', /declEnd/.test(src));
     ok('A4 内部消费扫描跳过整个语句区间（含跨行块成员行）',
         /i >= e\.declLine && i <= stmtEnd/.test(src));

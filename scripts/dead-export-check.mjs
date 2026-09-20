@@ -17,6 +17,19 @@
  *   E4 基线条目若已被消费（或已被删除）属「账本腐坏」，仅提示不判错
  *      （漏报比误报更伤；清理账本是洁癖而非缺陷，不应阻塞发布）；
  *   E5 结构健康标记：扫描面低于下限即 exit 2（防探测器失效后以全绿通过）。
+ *   E8（v2.44.0）导出枚举必须覆盖**解构转出**与**枚举源**两处缺口，二者后果同一（名字在门禁
+ *      眼里根本不存在 ⇒ 不报红灯也不进账本，fail-open 静默放行）：
+ *      ① `export const { A, B } = expr;`（对象/数组解构，可跨行）此前**整块 0 枚举**——DECL_RE
+ *         只认 `const NAME`，`const {` 直接落下。实测 apps/phone/status-tracker.js:286 转出 5 个
+ *         名字全是隐形，而该模块除测试外零引用＝产品端零消费，正是本仓最典型的欠债形态。
+ *      ② 枚举此前跑在**原文**上，被注释掉的 `export { ... };` 备份块会把并不存在的名字算作
+ *         本模块真实导出（幽灵导出）。修法：枚举与消费判定共用**同一份真代码**——
+ *         「判据的输入面与结论面必须是同一件事」。
+ *   E7（v2.43.0）导出枚举必须覆盖 `export { ... }` 的**跨行**写法：此前单行正则让多行块整块
+ *      0 枚举，块内死导出既不报红灯也不进账本（fail-open 静默放行）。配套：`声明行` 不等于
+ *      `export 行`——`function X(){} export { X }` 中 X 的声明行不含消费，须一并跳过，
+ *      否则「零消费的真死导出」会被它自己的声明行伪装成「内部消费」；跨行 `export {}` 还要跳过
+ *      **整个语句区间**——成员行 `a,` / `b,` 本身也含名字，只跳首行会把块内每个名字都算成已消费。
  *   E7（v2.43.0）导出枚举必须覆盖 `export { ... }` 的**跨行**写法：此前单行正则让多行块整块
  *      0 枚举，块内死导出既不报红灯也不进账本（fail-open 静默放行）。配套：`声明行` 不等于
  *      `export 行`——`function X(){} export { X }` 中 X 的声明行不含消费，须一并跳过，
@@ -89,32 +102,84 @@ function* walk(dir, base = '') {
 //   实测现场：config/drives-engine.js 真实导出 7 项，门禁只枚举到 1 项（多行块里的 6 项全隐形）；
 //   夹具复现：导出 2 项（1 真消费 + 1 真死）的多行块文件被报成「0 个 export 声明」并 exit 0。
 //   修法：见到 `export {` 即向后累积到 `}`，再按同一套分段逻辑取键。
+// 导出名抽取：export function/const/let/var/class NAME + export { A, B as C }（可跨行）
+//             + export const { A, B } = expr（对象/数组解构转出，可跨行）
+// 刻意不处理 `export default`（默认导出常用于平台入口/单例，无稳定名字可对账）
+//
+// v2.44.0（E8）：两处枚举缺口，形态不同、后果同一——**导出的名字在门禁眼里根本不存在**，
+//   于是既不报红灯、也进不了账本（fail-open 静默放行）。
+//   ① 解构转出：`export const { A, B } = expr;` 此前**整块 0 枚举**（DECL_RE 只认 `const NAME`，
+//      `const {` 直接落下）。实测 apps/phone/status-tracker.js:286 转出 5 个名字全是隐形，
+//      而该模块除测试外零引用＝产品端零消费，属本仓最典型的欠债形态，却无人报警。
+//   ② 枚举源：枚举此前跑在**原文**上，被注释掉的 `export { ... };` 备份块会把并不存在的名字
+//      当成本模块的真实导出（幽灵导出）。修法：枚举与消费判定共用**同一份真代码**——
+//      「判据的输入面与结论面必须是同一件事」；剥离只可能让注释里的伪声明消失，方向安全。
+//
+// v2.43.0（E7）: `export { ... }` 必须支持**跨行**。此前用一个单行正则 `export\s*\{([^}]*)\}`，
+//   于是 `export {\n  a,\n  b,\n};` 这种多行写法**整块 0 枚举**——文件里声明的导出在门禁眼里
+//   根本不存在，其中的死导出既不报红灯、也不进账本（fail-open 静默放行）。
+//   实测现场：config/drives-engine.js 真实导出 7 项，门禁只枚举到 1 项（多行块里的 6 项全隐形）；
+//   夹具复现：导出 2 项（1 真消费 + 1 真死）的多行块文件被报成「0 个 export 声明」并 exit 0。
+//   修法：见到 `export {` 即向后累积到 `}`，再按同一套分段逻辑取键。
 const DECL_RE = /^\s*export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/;
+// v2.44.0（E8）: `export const { A, B } = expr` / `export let [a, b] = x`（解构转出，可跨行）
+const DESTRUCT_RE = /^\s*export\s+(?:const|let|var)\s*([\[{])/;
 function exportsOf(src) {
   const out = [];
   const lines = src.split('\n');
+  // 取块成员名：支持 `A`、`A as B`（export 块）、`A: B`（解构重命名）、`...rest`、`A = 默认值`
   const addBraceBody = (body, lineNo, endLine) => {
     for (const part of body.split(',')) {
-      const seg = part.trim();
+      let seg = part.trim();
       if (!seg) continue;
       const as = /\bas\s+([A-Za-z_$][\w$]*)\s*$/.exec(seg);
-      const name = as ? as[1] : seg.replace(/^type\s+/, '').trim();
+      if (as) {
+        out.push({ name: as[1], line: lineNo, declLine: lineNo - 1, declEnd: endLine });
+        continue;
+      }
+      seg = seg.replace(/\s*=[^=][\s\S]*$/, '').trim();   // 丢弃默认值（`= expr`，不碰 `==`）
+      const colon = seg.lastIndexOf(':');
+      if (colon >= 0) seg = seg.slice(colon + 1).trim();  // 解构重命名取右侧本地名
+      seg = seg.replace(/^\.\.\./, '').replace(/^type\s+/, '').trim();
       // declEnd：本导出语句占用的**最后一行**（跨行块 > 起始行）。成员行本身不含消费，
       //   内部消费扫描必须跳过整个语句区间，否则 `export {\n a,\n b,\n}` 会把 a/b 都算成「已消费」。
-      if (/^[A-Za-z_$][\w$]*$/.test(name)) out.push({ name, line: lineNo, declLine: lineNo - 1, declEnd: endLine });
+      if (/^[A-Za-z_$][\w$]*$/.test(seg)) {
+        out.push({ name: seg, line: lineNo, declLine: lineNo - 1, declEnd: endLine });
+      }
     }
+  };
+  // 从行 i 的 open 起累积到配对的 close，返回块体与结束行（跨行块的关键：不能只看首行）
+  const collectBlock = (i, open, close) => {
+    const matchIdx = (s) => {
+      let d = 0;
+      for (let k = 0; k < s.length; k++) {
+        if (s[k] === open) d++;
+        else if (s[k] === close) { d--; if (d < 0) return k; }
+      }
+      return -1;
+    };
+    let acc = lines[i].slice(lines[i].indexOf(open) + 1);
+    let j = i;
+    while (matchIdx(acc) < 0 && j + 1 < lines.length) acc += '\n' + lines[++j];
+    const cut = matchIdx(acc);
+    if (cut >= 0) acc = acc.slice(0, cut);
+    return { body: acc, endLine: j };
   };
   for (let i = 0; i < lines.length; i++) {
     const m = DECL_RE.exec(lines[i]);
     if (m) { out.push({ name: m[1], line: i + 1, declLine: i, declEnd: i }); continue; }
+    const d = DESTRUCT_RE.exec(lines[i]);
+    if (d) {
+      const open = d[1], close = open === '{' ? '}' : ']';
+      const { body, endLine } = collectBlock(i, open, close);
+      addBraceBody(body, i + 1, endLine);
+      i = endLine;                     // 跳过已被本块消费的后续行
+      continue;
+    }
     if (/^\s*export\s*\{/.test(lines[i])) {
-      let acc = lines[i].slice(lines[i].indexOf('{') + 1);
-      let j = i;
-      while (acc.indexOf('}') < 0 && j + 1 < lines.length) { acc += '\n' + lines[++j]; }
-      const close = acc.indexOf('}');
-      if (close >= 0) acc = acc.slice(0, close);
-      addBraceBody(acc, i + 1, j);
-      i = j;                       // 跳过已被本块消费的后续行
+      const { body, endLine } = collectBlock(i, '{', '}');
+      addBraceBody(body, i + 1, endLine);
+      i = endLine;                     // 跳过已被本块消费的后续行
     }
   }
   return out;
@@ -235,6 +300,18 @@ for (const f of files) {
   } catch { /* 读不到按不存在算 */ }
 }
 
+/* ---------- 结构健康：真代码文本必须与原文一一对应 ----------
+ * 为什么放在这里：枚举与消费判定都跑在 stripNonCode 的产物上。若该函数因任何原因缺失/失效，
+ *   `codeTexts.get(rel)` 会返回 undefined，而 `|| src` 的写法会**静默退回原文口径**——
+ *   门禁不会报错，只会把「注释/字符串里的提及」重新算成消费，跨文件消费整片消失、
+ *   判定结果面目全非（本版开发中真实踩到：误删 stripNonCode 后跨文件消费 191 → 0）。
+ *   故这里显式 fail-closed：两侧数量不等即 exit 2（探测器失效，拒判）。 */
+if (codeTexts.size !== texts.size) {
+  console.error(`[dead-export] 真代码文本 ${codeTexts.size} 份 ≠ 原文文本 ${texts.size} 份` +
+    '（stripNonCode 未对每个文件生效）—— 消费判定会退回原文口径，fail-closed 拒判');
+  process.exit(2);
+}
+
 const isExternalConsumer = (rel) => EXTERNAL_CONSUMER_DIRS.some(d => rel.startsWith(d));
 
 let totalExports = 0;
@@ -244,7 +321,9 @@ for (const f of files) {
   const src = texts.get(f.rel);
   if (typeof src !== 'string') continue;
   stat.files += 1;
-  const exps = exportsOf(src);
+  // v2.44.0（E8）: 枚举跑在**真代码**上（与消费判定同一份输入面）。此前枚举跑原文，
+  //   被注释掉的 `export { ... };` 备份块会把并不存在的名字当成本模块真实导出（幽灵导出）。
+  const exps = exportsOf(codeTexts.get(f.rel));
   if (!exps.length) continue;
   totalExports += exps.length;
   // 本文件「除导出声明行以外」的正文：用于判定模块内部是否真的用了它
@@ -254,7 +333,7 @@ for (const f of files) {
     if (isExternalConsumer(f.rel)) { stat.internal += 1; continue; } // 豁免域直接算作已消费
     const re = wordRe(e.name);
     // v2.42.0（E6）: 内部消费按**真代码行**判定——注释/字符串里的同名提及不算消费
-    const codeLines = (codeTexts.get(f.rel) || src).split('\n');
+    const codeLines = codeTexts.get(f.rel).split('\n');
     // v2.43.0（E7 配套）: 「声明行」不等于「export 行」。`function X(){} export { X }` 这类
     //   先声明后成块转出的写法里，X 的**声明行**本身含名字但不构成消费——此前只跳过 export 行，
     //   于是该声明行把它自己算成「内部消费」，真死导出被静默隐藏（夹具实测：0 消费的
