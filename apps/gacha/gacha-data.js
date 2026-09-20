@@ -7,6 +7,8 @@
 import { gachaPools, gachaItems } from '../../data/gacha-items.js';
 // [v2.47.0] 金手指：外挂以独立卡池并入扭蛋（池 + 道具由 cheat-data 从轻量索引派生）
 import { cheatGachaItems, cheatGachaPool } from '../cheat/cheat-data.js';
+// [v2.48.0] 撩语：词库以独立卡池并入扭蛋（池 + 道具由 dt-data 从轻量索引派生，不拖正文）
+import { dtGachaItems, dtGachaPool } from '../dirtytalk/dt-data.js';
 // 品质 → 中文显示 + 权重 + 颜色
 export const QUALITY_META = {
   '神话': { weight: 1, color: '#f59e0b', order: 0 },
@@ -73,17 +75,20 @@ export class GachaData {
    * 否则 157 个外挂会稀释既有 630 道具的概率，且外挂本该是一件难求而非日常消耗品）。 */
   _itemList() {
     if (!this._items) {
-      const cheat = cheatGachaItems();
-      this._items = cheat.length ? gachaItems.concat(cheat) : gachaItems.slice();
+      const extra = []
+        .concat(cheatGachaItems() || [])
+        .concat(dtGachaItems() || []);
+      this._items = extra.length ? gachaItems.concat(extra) : gachaItems.slice();
     }
     return this._items;
   }
   _poolList() {
     if (!this._pools) {
-      const pool = cheatGachaPool();
-      const has = gachaPools.some(p => p && p.id === pool.id);
+      const extra = [cheatGachaPool(), dtGachaPool()].filter(Boolean);
       const merged = gachaPools.slice();
-      if (!has) merged.push(pool);
+      for (const pool of extra) {
+        if (!merged.some(p => p && p.id === pool.id)) merged.push(pool);
+      }
       this._pools = merged.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
     }
     return this._pools;

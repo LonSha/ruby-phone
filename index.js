@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.47.0';
+const ST_PHONE_VERSION = '2.49.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -78,18 +78,16 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-20",
+    date: "2026-09-21",
     items: [
-        "【新增 App·金手指 apps/cheat/】消费上游外供的《万界武库V4》世界书（185 条 / 508,555 字）。落地前先做形态判定，不按「用户给了素材就全量塞进上下文」办：其中 174/185 条带 `disable=true`——它是一部**武库**（可选外挂的目录），不是每轮都该在场的人设。故本版把「拥有」与「生效」拆开：武库落成 157 个可抽卡包 + 3 个装配位（可调 1–5）+ 生成前一次性注入块。全量注入 500K 字等于自杀，装配上限才是这个 App 的核心机制。",
-        "【归并与品阶】185 条按 `·` 切分取主条合并为 157 包（`sub > 1` 的 8 条是被合并的家族条，家族成员不丢、并入同一包）；品阶按**包总字数**分六档：≥6000 神话 8 / ≥4500 传说 19 / ≥3500 史诗 12 / ≥2600 稀有 44 / ≥1800 优秀 48 / <1800 普通 26。「长」不等于「强」，但长的确更值得抽卡权重上更稀缺——档位与权重同向，避免出现「稀有但只有三行」的空壳神话。",
-        "【同源契约·正文与索引分两份】data/cheats.js（1,362,093 字节，全量正文，只给金手指 App 装配与注入用）/ data/cheat-index.js（36,428 字节，轻量索引 id/名称/品阶/字数/类型，给抽卡侧与品阶权重表用）。理由：抽卡 20 连抽不该把 1.36MB 正文拖进内存，而品阶权重表必须只有一处定义（否则「抽到神话」和「显示为神话」会漂移）。索引里另存 `CHEAT_ITEM_PREFIX = 'cheat_'`：前缀真源唯一，抽卡背包 id 与其反解都经 cheat-data.js re-export 取用，任何地方手写 `slice(6)` 都算漂移。",
-        "【装配语义·到顶如实拒绝】装配位不是「后装顶掉先装」：到顶时如实返回拒绝并给出提示，不静默替换（静默替换会让玩家以为装上了，实际生效的是另一条）。装配列表读取时重跑一遍归一（去重 / 丢未知 id / 保持原次序），上限夹在 1..5——写脏 + 读时净化是多一层终将被绕过的兜底，故 `toggleInstall` 在**写入前**就校验 id 是否存在，未知 id 如实回 `未知外挂（key）`、不落存储。",
-        "【生成侧注入】buildCheatPromptBlock() 经 GENERATE_BEFORE_COMBINE_PROMPTS 钩子推一条 system 块，语义是「已装配的外挂是**既定事实**」——不是「可以这样做」的许可，而是设定就位（洗白「怎么会这个」的解释链，避免模型每轮自作解释）。块头标注〔品阶·名称〕，正文逐字来自武库原文不改写、不摘要。内容为空返回**空串**（绝不产生只有块头的空块）；注入失败静默、绝不阻断生成；条数受装配上限约束。",
-        "【抽卡联动】外挂以 `cheat_<packId>` 形式入包（`unique: true` + `stackable: false`：抽到即拥有，重复抽不再入包，不占背包格子）。外挂池独立于既有六池、`includeInAll: false`，**本版顺手修掉一处自相矛盾**：`getItemsOfPool('all')` 此前直接返回全量道具，导致「全部」池既能列出也能抽出外挂，与它自己的 `includeInAll=false` 打架；现改为按池表推导排除集（新池只要标 false 即自动生效），把「列出」与「抽取」两条路径一起收敛。",
-        "【工程纪律】只持久化 `cheat_state_v1`（装配列表 + 上限），**不持有任何武库副本**；背包现取不复制（换会话/删楼回滚后实例级缓存必成陈旧数据）；前缀反解走唯一真源 cheatPackIdOfItem()；onChatChanged() 只丢弃浏览位置与当前卷展状态，不动装配。同源契约由 v247 的 A 组逐字锁住（六字段、chars 非虚报、品阶表逐项等价、前缀往返）。",
-        "【四处注册 + 会话隔离】① config/apps.js 桌面条目（**鎏金 #d4af37**，与既有 29 个 App 主色逐一比对后取唯一值，E3 锁其唯一性）；② phone.css 合并 `.ch-*` 样式（同时保留 apps/cheat/cheat.css 源文件，与 bilibili / theater / place 同规）；③ index.js 的 phone:openApp 懒加载单例路由（实例复用、不持副本，失败兜底给可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 `/^cheat_/`（cheat_state_v1 属会话态，落全局会跨会话串味）。另在 index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 onChatChanged。",
-        "【顺手清掉两处真实缺陷】① `esc()` 把双引号「转义」成了转义成自身（等于没转义）——属性注入面。根因经探针实测定位：写入路径会把 HTML 具名实体解码成裸字符，**数字实体**（`&#34;` / `&#39;`）才原样保留；故把 esc() 里的具名实体一律改写成数字实体，cheat-view.js 与既有 gacha-view.js 同缺陷一并修（v247 的 F11 以真转义为判据）。② 三处门禁红灯：v223 与 v246 各有一条**钉死字符距离/紧邻关系**的断言（新增一行 App 重绑即误报），改为「结构化区间成员核对」——锁语义（这些重绑调用确实落在换会话清理块内、且在 `wechatApp = null` 之前），而非锁字节距离。",
-        "【测试】tests/system-v247.test.mjs（98 项 / A–H 八组）：A 组数据同源 13 项（id 集合 / 六字段逐字 / chars 非虚报 / 品阶表逐项等价 / 前缀往返 / 非外挂 id 反解空串）；B 组装配语义 13 项（去重丢未知保次序 / 超限截断上报 / 非法入参降级 / limit 夹 1..5 / 未知品阶排末位不塌档 / allCheats 是副本）；C 组注入块 10 项（空则空串 / 开关 / 块头语义 / 品阶名称 / 正文逐字 / 超限截条 / 未知 id 不拖垮整块）；D 组抽卡映射 13 项（前缀 / 权重=品阶权重 / 不可叠加 / includeInAll / 60 连抽不泄漏 / 20 连全中）；E 组四处注册 12 项（含鎏金唯一性、源样式与运行时载体规则数一致、路由懒加载单例）；F 组接线 11 项（三处接入 / 缩进 / 不置 null / 只读背包 / 反解走唯一真源 / 钩子静默 / esc 真转义）；G 组控制器真行为 13 项（落库 / 卸下 / 未知拒绝 / 到顶不替换 / 上限可调 / 换会话只丢浏览位置 / 另一会话不串味）；H 组**真源码破坏负控制** 10 项（上限判据与空清单双重防线，破坏须可观测改行为、原版同判据须真成立、临时副本零残留）。",
+        "【新增 App·钱袋 apps/wallet/】记忆插件桥面 13 个资源里，手机侧此前只消费 4 个（scene/recallAudit/clock/floor），『金钱账』（snapshot.moneyLedger）外供已久却全库零消费——『现在有多少钱』『最近一笔怎么花的』在手机上答不出。本版按 place 同规（只读桥 + 五态归因 + 不落库 + 懒加载单例）把账户余额与最近流水做成可查询界面，并把当前账上金额交给生成侧，让正文里的钱数与账本是同一笔。",
+        "【新增 App·档案 apps/profile/】同桥面的『主角档案』（snapshot.protagonist）与『生活小档案』（snapshot.lifeDetails）此前零消费。主角字段如实平铺（嵌套对象不展开、不翻译不猜测），生活细节按 pinned/active/archive 三层展示、层内保持上游叙事顺序不重排；档案与生活细节经生成前钩子交给正文，让主角与记忆插件记的主角是同一个。内审修过一处归因逻辑：『面在但内容空』原来不可达，现在 empty 态与 no-profile-face 态正确分开。",
+        "【新增 App·剧情线 apps/plotline/】同桥面的『大纲』（snapshot.outline）与『世界推进』（snapshot.worldProg：承诺/认知/支线）此前零消费。当前阶段/节点、承诺账（未兑现优先、期限如实）、支线（推进中优先）、角色认知（已知/未意识到两栏）四块投影；注入块只带『当前阶段 + 未兑现承诺 + 推进中支线』，让正文节奏与记忆插件推进的世界不各写各的。",
+        "【撩语×场景联动】撩语不再是孤岛 App：词库页顶部新增『当前所在』卡，位置链解析复用 place 侧唯一真源（currentChainOf 纯函数，跨 App 只读复用不造第二套），场所名命中关键词表（公共场所→高压 / 私密空间→甜撩 / 秩序场所→规训 / 氛围场所→沉浸）即推荐对应风格。未命中返回空（不编推荐），桥不在/无快照整卡隐藏。",
+        "【微信链路补注入缺口】侦察发现微信单聊/群聊走 buildMessagesArray 独立注入路径，不经过 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子——撩语与金手指在微信聊天里完全失效。本版在 recallBlock 注入之后补 push 两块的 promptBlock：从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），空块不 push，注入失败静默不影响发送。",
+        "【三 App 同规工程纪律】① 只读：只取桥 snapshot/refresh()，绝不写上游；② 不抛：桥未装/无快照/旧版无面/面畸形一律降级为归因文案（五态与 place 六态同规格，读不到不一律画成灰）；③ 不猜：拿不到就如实说拿不到，绝不编造金额/档案/阶段顶替。实例不持读数副本（每次现取），onChatChanged() 只丢探针归因；设置键 wallet_settings_v1 / profile_settings_v1 / plotline_settings_v1 各随会话隔离。",
+        "【四处注册 + 三处接线】① config/apps.js 增 3 桌面条目（金币金 #eab308 / 靛 #818cf8 / 卷轴棕金 #b08d57，与既有 31 色逐一比对取唯一）；② phone.css 合并 .wl-*/.pf-*/.pn-* 样式（同时保留各 App 源 css）；③ index.js 增 3 个懒加载单例路由（实例复用、失败兜底可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 /^wallet_/、/^profile_/、/^plotline_/。index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 3 个新 App 的 onChatChanged；v224 的换会话窗口随接线增长 400→600（实测最大 572）。",
+        "【测试】tests/system-v249.test.mjs（A–G 七组 11 项）：A/B/C 组三 App 四件套与注册 + 内核纯函数（五态归因逐态实测 / empty 态可达性 / 投影字段如实 / 注入块空则空串 / 畸形不抛）；D 组场景联动（SCENE_STYLE_MAP 纯函数不猜不编 + 控制器 + 视图卡 + CSS 同源）；E 组微信注入（位置正确 / 不触发加载 / 静默失败）；F 组三处接线（各 3 次 / 缩进与 dtApp 行一致 / 清理路径 4000 窗口内可达）；G 组版本同源 2.49.0 四源一致。",
     ]
 };
 
@@ -9151,6 +9149,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
             window.VirtualPhone.placeApp?.onChatChanged?.();
             window.VirtualPhone.cheatApp?.onChatChanged?.();
+            window.VirtualPhone.dtApp?.onChatChanged?.();
+            window.VirtualPhone.walletApp?.onChatChanged?.();
+            window.VirtualPhone.profileApp?.onChatChanged?.();
+            window.VirtualPhone.plotlineApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10118,6 +10120,62 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载金手指App失败:', err);
                             phoneShell?.showNotification('错误', '金手指App加载失败', '❌');
                         });
+                } else if (appId === 'dirtytalk') {
+                    // [v2.48.0] 撩语：聊骚语料词库（装配清单随会话隔离，注入走生成前钩子）。
+                    //   懒加载单例（与 cheat/place 同构）；语料正文为内置静态事实源 data/dirtytalk.js。
+                    import('./apps/dirtytalk/dirtytalk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.dtApp) {
+                                window.VirtualPhone.dtApp = new module.DtApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.dtApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载撩语App失败:', err);
+                            phoneShell?.showNotification('错误', '撩语App加载失败', '❌');
+                        });
+                } else if (appId === 'wallet') {
+                    // [v2.49.0] 钱袋：消费记忆插件金钱账面（只读桥，五态归因，注入走生成前钩子）。
+                    //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^wallet_/）。
+                    import('./apps/wallet/wallet-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.walletApp) {
+                                window.VirtualPhone.walletApp = new module.WalletApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.walletApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载钱袋App失败:', err);
+                            phoneShell?.showNotification('错误', '钱袋App加载失败', '❌');
+                        });
+                } else if (appId === 'profile') {
+                    // [v2.49.0] 档案：消费记忆插件主角档案+生活小档案（只读桥，五态归因，注入走生成前钩子）。
+                    //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^profile_/）。
+                    import('./apps/profile/profile-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.profileApp) {
+                                window.VirtualPhone.profileApp = new module.ProfileApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.profileApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载档案App失败:', err);
+                            phoneShell?.showNotification('错误', '档案App加载失败', '❌');
+                        });
+                } else if (appId === 'plotline') {
+                    // [v2.49.0] 剧情线：消费记忆插件大纲+世界推进（只读桥，五态归因，注入走生成前钩子）。
+                    //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^plotline_/）。
+                    import('./apps/plotline/plotline-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.plotlineApp) {
+                                window.VirtualPhone.plotlineApp = new module.PlotlineApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.plotlineApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载剧情线App失败:', err);
+                            phoneShell?.showNotification('错误', '剧情线App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10308,6 +10366,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
                     window.VirtualPhone.placeApp?.onChatChanged?.();
                     window.VirtualPhone.cheatApp?.onChatChanged?.();
+                    window.VirtualPhone.dtApp?.onChatChanged?.();
+                    window.VirtualPhone.walletApp?.onChatChanged?.();
+                    window.VirtualPhone.profileApp?.onChatChanged?.();
+                    window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10416,6 +10478,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // [v2.46.0] 地点图景：同 P1/P2 —— 仅丢弃旧会话探针归因
                     window.VirtualPhone.placeApp?.onChatChanged?.();
                     window.VirtualPhone.cheatApp?.onChatChanged?.();
+                    window.VirtualPhone.dtApp?.onChatChanged?.();
+                    window.VirtualPhone.walletApp?.onChatChanged?.();
+                    window.VirtualPhone.profileApp?.onChatChanged?.();
+                    window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

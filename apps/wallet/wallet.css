@@ -1,0 +1,176 @@
+/* ---------- [v2.49.0] 钱袋 App（.wl-*） ----------
+ * 消费上游记忆插件的金钱账面：账户余额 / 流水。
+ * 主色取金币金 #eab308（与既有 App 主色均不冲突）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.wl-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.wl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.wl-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.wl-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.wl-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wl-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.wl-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wl-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.wl-reason { border-left: 3px solid #eab308; }
+.wl-reason-ok { border-left-color: #eab308; }
+.wl-reason-warn { border-left-color: #e3b341; }
+.wl-reason-off { border-left-color: #64748b; }
+.wl-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.wl-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 账户余额 ---- */
+.wl-acct {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wl-acct:first-of-type { border-top: 0; }
+.wl-acct-name {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.wl-acct-amount {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fde047;
+}
+.wl-acct-amount.neg { color: #f87171; }
+.wl-acct-meta {
+  font-size: 10px;
+  color: #64748b;
+}
+/* ---- 流水 ---- */
+.wl-tx {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.wl-tx:first-of-type { border-top: 0; }
+.wl-tx-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.wl-tx-name {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.wl-tx-delta {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.wl-tx-delta.pos { color: #4ade80; }
+.wl-tx-delta.neg { color: #f87171; }
+.wl-tx-desc {
+  font-size: 11px;
+  color: #8ea1b6;
+  margin-top: 3px;
+  line-height: 1.6;
+}
+.wl-tx-time {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 3px;
+}
+/* ---- 设置 ---- */
+.wl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wl-row:last-child { margin-bottom: 0; }
+.wl-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.wl-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wl-switch.on {
+  background: #eab308;
+  border-color: #eab308;
+  color: #1a1503;
+  font-weight: 700;
+}
+.wl-range { width: 46%; }
+/* ---- 空态 ---- */
+.wl-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
+.wl-more {
+  margin-top: 8px;
+  font-size: 11px;
+}

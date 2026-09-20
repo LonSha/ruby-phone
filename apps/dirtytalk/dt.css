@@ -1,0 +1,244 @@
+/* ---------- [v2.48.0] 撩语 App（.dt-*） ----------
+ * 聊骚语料词库：已装配 / 全库浏览 / 设置。
+ * 主色取品红 #e879f9（与既有 App 主色均不冲突），深色毛玻璃底与既有 App 同规。 */
+.dt-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(170deg, #1a1018, #161018 60%, #0e0a10);
+  color: #f4e8f2;
+}
+.dt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+}
+.dt-title { font-size: 18px; font-weight: 700; letter-spacing: .5px; color: #fce7f3; }
+.dt-badge { text-align: right; line-height: 1.25; }
+.dt-badge-main { display: block; font-size: 15px; font-weight: 700; color: #e879f9; }
+.dt-badge-sub { display: block; font-size: 10px; color: #9b8294; }
+.dt-tabs { display: flex; gap: 6px; padding: 0 12px 8px; }
+.dt-tab {
+  flex: 1;
+  border: 1px solid rgba(232, 121, 249, .18);
+  background: rgba(255, 255, 255, .04);
+  color: #b8a0b0;
+  border-radius: 10px;
+  padding: 7px 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dt-tab.on { background: rgba(232, 121, 249, .16); color: #fce7f3; font-weight: 700; border-color: rgba(232, 121, 249, .5); }
+.dt-body { flex: 1; overflow: auto; padding: 0 12px 24px; }
+.dt-note { font-size: 11px; color: #9b8294; margin: 4px 0 10px; }
+.dt-note b { color: #e879f9; }
+
+/* ---- 搜索 / 类别芯片 ---- */
+.dt-search { display: flex; gap: 6px; margin-bottom: 8px; }
+.dt-input {
+  flex: 1;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 10px;
+  color: #f4e8f2;
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+.dt-input::placeholder { color: #6f5b69; }
+.dt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.dt-chip {
+  border: 1px solid rgba(232, 121, 249, .22);
+  background: rgba(255, 255, 255, .04);
+  color: #cbb0c4;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dt-chip.on { background: rgba(232, 121, 249, .22); color: #fce7f3; border-color: rgba(232, 121, 249, .5); font-weight: 700; }
+
+/* ---- 档位徽标 ---- */
+.dt-q {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  color: #1a0814;
+  font-weight: 700;
+}
+.dt-cat { font-size: 10px; color: #c084c8; }
+.dt-cat-lab { font-size: 12px; color: #fce7f3; font-weight: 700; }
+
+/* ---- 已装配卡片 ---- */
+.dt-card {
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .045);
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.dt-card-top { display: flex; align-items: center; gap: 6px; }
+.dt-name { flex: 1; font-size: 14px; font-weight: 600; color: #fdf2f8; }
+.dt-chars { font-size: 10px; color: #8c7280; }
+.dt-desc { font-size: 11px; color: #a8929e; margin: 6px 0 0; line-height: 1.6; }
+.dt-card-ops { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ---- 库列表行 ---- */
+.dt-group { margin-bottom: 14px; }
+.dt-group-head { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9b8294; margin-bottom: 6px; }
+.dt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  padding: 8px 2px;
+}
+.dt-row-main { flex: 1; cursor: pointer; min-width: 0; }
+.dt-row-op { flex: none; }
+.dt-lock-tag { font-size: 9px; color: #7a5f72; font-style: normal; margin-left: 6px; }
+
+/* ---- 按钮 ---- */
+.dt-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #1a0814;
+}
+.dt-btn-on { background: linear-gradient(90deg, #c026d3, #e879f9); }
+.dt-btn-off { background: rgba(255, 255, 255, .12); color: #cbB0c4; }
+.dt-btn-ghost { background: rgba(255, 255, 255, .06); color: #cbb0c4; }
+.dt-btn-lock { background: rgba(255, 255, 255, .06); color: #6f5b69; cursor: not-allowed; }
+.dt-btn-danger { background: rgba(248, 113, 113, .18); color: #fca5a5; }
+.dt-wide { width: 100%; margin-top: 6px; padding: 9px; font-size: 12px; }
+
+/* ---- 详情 ---- */
+.dt-detail-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
+.dt-detail-meta { font-size: 10px; color: #8c7280; margin-bottom: 8px; }
+.dt-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.75;
+  color: #cfc0c8;
+  background: rgba(0, 0, 0, .32);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 46vh;
+  overflow: auto;
+  margin: 0 0 8px;
+}
+
+/* ---- 设置 ---- */
+.dt-set { display: flex; flex-direction: column; gap: 2px; }
+.dt-set-row {
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  padding: 10px 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.dt-set-label { flex: 1; font-size: 13px; color: #fdf2f8; }
+.dt-set-desc { width: 100%; font-size: 11px; color: #9b8294; line-height: 1.6; }
+.dt-slider { display: flex; align-items: center; gap: 8px; }
+.dt-slider input { width: 110px; accent-color: #e879f9; }
+.dt-slider span { font-size: 13px; color: #e879f9; font-weight: 700; min-width: 16px; text-align: center; }
+.dt-switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+.dt-switch input { opacity: 0; width: 0; height: 0; }
+.dt-switch span {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  transition: .2s;
+}
+.dt-switch span::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #cfc0c8;
+  border-radius: 50%;
+  transition: .2s;
+}
+.dt-switch input:checked + span { background: rgba(232, 121, 249, .55); }
+.dt-switch input:checked + span::before { transform: translateX(18px); background: #fce7f3; }
+
+/* ---- 诊断 / 概览 / 空态 ---- */
+.dt-diag {
+  font-size: 11px;
+  color: #b68ea8;
+  line-height: 1.8;
+  word-break: break-all;
+  background: rgba(0, 0, 0, .28);
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.dt-ov { margin-top: 12px; }
+.dt-ov-q { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dt-empty { text-align: center; padding: 44px 12px; color: #9b8294; }
+.dt-empty-icon { font-size: 30px; margin-bottom: 8px; }
+.dt-empty-title { font-size: 14px; color: #cfc0c8; margin-bottom: 6px; }
+.dt-empty-desc { font-size: 11px; line-height: 1.7; }
+/* ---------- [v2.49.0] 场景联动推荐（词库页顶部） ---------- */
+.dt-scene {
+  background: rgba(232, 121, 249, .07);
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.dt-scene-loc {
+  font-size: 12px;
+  color: #e8d5f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dt-scene-label {
+  font-size: 10px;
+  color: #b98cc9;
+  background: rgba(232, 121, 249, .16);
+  border-radius: 8px;
+  padding: 1px 7px;
+  flex: 0 0 auto;
+}
+.dt-scene-sep {
+  color: #6d5a75;
+  font-style: normal;
+}
+.dt-scene-rec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.dt-scene-chip {
+  background: rgba(232, 121, 249, .14);
+  border: 1px solid rgba(232, 121, 249, .3);
+  border-radius: 10px;
+  padding: 3px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dt-scene-chip b {
+  font-size: 12px;
+  color: #e9b8f5;
+}
+.dt-scene-chip i {
+  font-size: 10px;
+  color: #9d7fa8;
+  font-style: normal;
+}

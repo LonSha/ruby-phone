@@ -1,0 +1,185 @@
+/* ---------- [v2.49.0] 档案 App（.pf-*） ----------
+ * 消费上游记忆插件的主角档案 + 生活小档案：字段行 / 三层生活细节。
+ * 主色取档案墨蓝 #6366f1 系中的靛 #818cf8 作强调（与既有 App 主色均不冲突；
+ *   主色在 config/apps.js 登记为 #818cf8）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.pf-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.pf-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.pf-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.pf-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.pf-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pf-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.pf-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pf-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.pf-reason { border-left: 3px solid #818cf8; }
+.pf-reason-ok { border-left-color: #818cf8; }
+.pf-reason-warn { border-left-color: #e3b341; }
+.pf-reason-off { border-left-color: #64748b; }
+.pf-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.pf-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 主角档案字段 ---- */
+.pf-field {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pf-field:first-of-type { border-top: 0; }
+.pf-field-key {
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: .4px;
+}
+.pf-field-val {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.6;
+  word-break: break-all;
+}
+/* ---- 生活小档案（分层） ---- */
+.pf-tier {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.pf-tier:first-of-type { border-top: 0; }
+.pf-tier-head {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+.pf-tier-n {
+  font-weight: 400;
+  color: #64748b;
+}
+.pf-life {
+  background: rgba(129, 140, 248, .06);
+  border: 1px solid rgba(129, 140, 248, .14);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.pf-life:last-child { margin-bottom: 0; }
+.pf-life-pinned { border-left: 3px solid #818cf8; }
+.pf-life-active { border-left: 3px solid #38bdf8; }
+.pf-life-archive { border-left: 3px solid #475569; opacity: .72; }
+.pf-life-text {
+  font-size: 12px;
+  color: #dbe4f0;
+  line-height: 1.7;
+  word-break: break-all;
+}
+.pf-life-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pf-topic {
+  background: rgba(255, 255, 255, .06);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+.pf-life-until {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+}
+/* ---- 设置 ---- */
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pf-row:last-child { margin-bottom: 0; }
+.pf-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.pf-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pf-switch.on {
+  background: #818cf8;
+  border-color: #818cf8;
+  color: #0f1023;
+  font-weight: 700;
+}
+.pf-range { width: 46%; }
+/* ---- 空态 ---- */
+.pf-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}

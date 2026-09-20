@@ -11,7 +11,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ## App 架构规范
 - 每个App独立目录 apps/<name>/，含 <name>-app.js (控制器) / <name>-data.js (数据) / <name>-view.js (视图) / <name>.css (样式)。
 - 新增App必须完成四处注册：config/apps.js 桌面图标、phone.css 样式合并、index.js phone:openApp 路由分支、（可选）AI标签解析监听。
-- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)/地点图景青(#14b8a6)/金手指鎏金(#d4af37)。
+- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)/地点图景青(#14b8a6)/金手指鎏金(#d4af37)/撩语品红(#e879f9)。
 
 ## AI 联动标签协议
 - 小红书：<RED>{JSON}</RED> 或 <xhs>{JSON}</xhs>
@@ -90,6 +90,18 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 回归锁：`tests/system-v247.test.mjs`（98 项，A–H 八组，含真源码破坏负控制）。
 - 数据再生成：`scripts/gen-cheats.mjs`（源世界书路径经 argv 传入 → cheats.js + cheat-index.js 双输出同源；改源后重跑并由 v247 的 A 组同源断言把关）。
 
+
+## 撩语 (apps/dirtytalk/，v2.48.0)
+- 消费上游外供的《Adult Romance DirtyTalk》世界书（673 条 / 71.3 万字）。形态判定先于实现：0 禁用 / 0 常驻，key 全为精确方括号绿灯标签——它是**词库**（可选说话方式目录）而非人设。**「拥有」与「生效」拆开**：199 个可抽模块 + 4 个装配位（1–8 可调）+ 生成前一次性注入；全量注入 26.2 万字等于自杀，装配上限是核心机制。
+- **同源契约三文件**：`data/dirtytalk.js`（全量正文，只给撩语 App）/ `data/dirtytalk-index.js`（轻量索引，抽卡侧 + 档位权重单一真源）/ `data/dirtytalk-corpus.js`（语料档只读参考，不参与注入）。`DT_ITEM_PREFIX = 'dt_'` 只在索引定义一次，抽卡背包 id 与反解都经 `dt-data.js` re-export；非 `dt_` 前缀反解为空串（不猜）。
+- **归并与档位**：DT_STYLE 8 风格 force=0 拼合；HUM_METHOD+OTHER 去编号归并；PLAY_*/ACTION_* 进 play；QUOTE_BANK 进 quote；机制条丢弃。档位按模块总字数：≥1200 重 34 / ≥600 中 107 / 其余轻 58。扭蛋六档映射：重→稀有 / 中→优秀 / 轻→普通。
+- **装配语义**：到顶如实拒绝不静默替换；读取时重跑归一；`toggleInstall` **写入前**校验 id，未知 id 如实拒绝不落存储。默认上限 4 条（1–8）。
+- **生成侧注入**：`buildDtPromptBlock()` 经 `GENERATE_BEFORE_COMBINE_PROMPTS` 注入 system 块，语义是「已装配说话方式是**既定风格**」；块头 `〔类别·名称〕`、正文逐字不改写；空清单返回**空串**（双重防线：装配归一空 / 块拼装空各一道）。
+- **抽卡联动**：以自身 `dt_<hash>` id 入包（`unique:true` / `stackable:false`）；池 `pool_dt` `includeInAll:false`；道具表从轻量索引派生，不拖 686KB 正文。
+- **工程纪律**：只持久化 `dt_state_v1`（`/^dt_/` 会话隔离）；不持词库副本、背包现取；`onChatChanged()` 只丢浏览位置不动装配；index.js 三处清理路径同步接入。
+- **四处注册**：`config/apps.js` 桌面条目（品红 `#e879f9`）/ `phone.css` 合并 `.dt-*`（保留 `apps/dirtytalk/dt.css` 源文件）/ `phone:openApp` 懒加载单例路由（失败兜底提示）/ `CHAT_DATA_PATTERNS` 增 `/^dt_/`。
+- 回归锁：`tests/system-v248.test.mjs`（A–H 八组，含真源码破坏负控制）。
+- 数据再生成：`tools/gen-dirtytalk.py`（默认源 `.sourcematerial/Adult_Romance_DirtyTalk_WorldInfo_v927.json` → dirtytalk.js + dirtytalk-index.js + dirtytalk-corpus.js 三输出同源；改源后重跑并由 v248 的 A 组同源断言把关）。
 ## 系统层 (v2.16.0：通知 / 搜索 / 控制中心)
 - **通知落账层 `config/system-notifications.js`**：`NotificationLog`（KEY=`sys_notifs`，LIMIT=200，MERGE_WINDOW_MS=180000）。契约：`push()` 返回 `{id, merged}`；同 `senderKey` 3 分钟内合并累加 `count`，**合并不重置已读**；落盘 800ms 防抖 + `flushNow()` 兜底；`_normalize` 净化脏数据并倒序裁剪；**全部失败路径返回 `{error}`，绝不抛**。
 - **落账单一真源**：`index.js` 的 `showUnifiedPhoneNotification` 在展示前统一落账，`_resolveLog()` 优先复用 `window.VirtualPhone.notificationLog`，实例缺失时 App 自建。**新增通知入口必须走此函数，禁止绕过落账直接弹横幅**（否则历史会漏记）。
@@ -102,3 +114,13 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **锁屏速览层 `phone/lock-screen.js`**：`_greeting` / `_recentNotifications` / `_nowPlaying` 全部**可选缺失降级**，通知层或音乐层不存在时静默回落到原锁屏。
 - **文件名合规**：`apps/<dir>/` 控制器必须命名为 `<dir>-app.js`（bilibili 特例 `bili-app.js`），由 `tests/audit.test.mjs` 强制；`notifications` App 的控制器为 `notifications-app.js`，视图为 `notification-center-view.js`。
 - **防死代码防线**：`tests/system-v216.test.mjs` 用**真实形态 seed 数据**断言索引源可命中，另有一组「接线门」断言（模块必须被实例化并挂到 `window.VirtualPhone`、样式类名必须存在、`esc()` 不得退化为 no-op）。
+
+## 钱袋 / 档案 / 剧情线 (apps/wallet/ apps/profile/ apps/plotline/，v2.49.0)
+- **起点**：记忆插件桥 `lonsha_memory_bridge_v1` 外供 13 资源，手机侧此前仅消费 scene/recallAudit/clock/floor；moneyLedger / protagonist / lifeDetails / outline / worldProg 全库零消费——「上游做了面、下游一个消费点都没有」是本仓最典型欠债形态。
+- **三 App 均为 place 同规四件套**：`*-data.js` 纯函数内核（`read*Face` 五态归因 / 投影 / `*PromptBlock`）、`*-app.js` 控制器（probeBridge → face → projection；`_initHook` 挂 GENERATE_BEFORE_COMBINE_PROMPTS；`onChatChanged` 只丢探针归因）、`*-view.js`（归因卡先说读不到）、`*.css`（合并进 phone.css 尾部，源文件保留）。
+- **五态 vs 六态**：place 有 `module-absent`（上游 SceneBookFallback 带 absent:true）；三个新面上游无退路对象，故为五态。`profile` 内审修过一处：`hasFace` 与 `empty` 判定曾互斥导致 empty 不可达，现 `hasFace = protagonist||Array.isArray(lifeDetails)`，`hasContent` 单独判。
+- **注册**：apps.js 36 条目（新色 #eab308 / #818cf8 / #b08d57）；storage `/^wallet_/ /^profile_/ /^plotline_/`；index.js 路由 3 分支 + 三处 onChatChanged 各 +3 行。v224「bilibili→wechatApp=null」窗口随接线增长 400→600（实测 500/572/569）。
+- **撩语场景联动**：`dt-data.js` 增 `SCENE_STYLE_MAP` + `sceneStyleHints(chain)` 纯函数；控制器 `sceneStyleHints()` 读桥 `snapshot.scene` 经 `currentChainOf`（import 自 place-data，不造第二套）；视图 `_sceneCard()` 置词库页顶部，无链整卡隐藏。
+- **微信注入补口**：`chat-view.js buildMessagesArray` 在 lonsha recallBlock 之后补 push `dtApp.promptBlock()` / `cheatApp.promptBlock()`（取已存在实例，不触发懒加载；空块不 push；try/catch 静默）。**注意**：place/wallet/profile/plotline 的 promptBlock 尚未接入微信链路（下一轮候选）。
+- **门禁**：tests/system-v249.test.mjs 11 项；`npm run check` 287 文件 / 276 测试 / 无新增零消费。
+

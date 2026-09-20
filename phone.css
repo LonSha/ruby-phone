@@ -12342,3 +12342,851 @@ input:checked + .toggle-slider:before {
 .ch-empty-icon { font-size: 30px; margin-bottom: 8px; }
 .ch-empty-title { font-size: 14px; color: #cfc8b4; margin-bottom: 6px; }
 .ch-empty-desc { font-size: 11px; line-height: 1.7; }
+
+/* ---------- [v2.48.0] 撩语 App（.dt-*） ----------
+ * 聊骚语料词库：已装配 / 全库浏览 / 设置。
+ * 主色取品红 #e879f9（与既有 App 主色均不冲突），深色毛玻璃底与既有 App 同规。 */
+.dt-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(170deg, #1a1018, #161018 60%, #0e0a10);
+  color: #f4e8f2;
+}
+.dt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+}
+.dt-title { font-size: 18px; font-weight: 700; letter-spacing: .5px; color: #fce7f3; }
+.dt-badge { text-align: right; line-height: 1.25; }
+.dt-badge-main { display: block; font-size: 15px; font-weight: 700; color: #e879f9; }
+.dt-badge-sub { display: block; font-size: 10px; color: #9b8294; }
+.dt-tabs { display: flex; gap: 6px; padding: 0 12px 8px; }
+.dt-tab {
+  flex: 1;
+  border: 1px solid rgba(232, 121, 249, .18);
+  background: rgba(255, 255, 255, .04);
+  color: #b8a0b0;
+  border-radius: 10px;
+  padding: 7px 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dt-tab.on { background: rgba(232, 121, 249, .16); color: #fce7f3; font-weight: 700; border-color: rgba(232, 121, 249, .5); }
+.dt-body { flex: 1; overflow: auto; padding: 0 12px 24px; }
+.dt-note { font-size: 11px; color: #9b8294; margin: 4px 0 10px; }
+.dt-note b { color: #e879f9; }
+
+/* ---- 搜索 / 类别芯片 ---- */
+.dt-search { display: flex; gap: 6px; margin-bottom: 8px; }
+.dt-input {
+  flex: 1;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 10px;
+  color: #f4e8f2;
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+.dt-input::placeholder { color: #6f5b69; }
+.dt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.dt-chip {
+  border: 1px solid rgba(232, 121, 249, .22);
+  background: rgba(255, 255, 255, .04);
+  color: #cbb0c4;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dt-chip.on { background: rgba(232, 121, 249, .22); color: #fce7f3; border-color: rgba(232, 121, 249, .5); font-weight: 700; }
+
+/* ---- 档位徽标 ---- */
+.dt-q {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  color: #1a0814;
+  font-weight: 700;
+}
+.dt-cat { font-size: 10px; color: #c084c8; }
+.dt-cat-lab { font-size: 12px; color: #fce7f3; font-weight: 700; }
+
+/* ---- 已装配卡片 ---- */
+.dt-card {
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .045);
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.dt-card-top { display: flex; align-items: center; gap: 6px; }
+.dt-name { flex: 1; font-size: 14px; font-weight: 600; color: #fdf2f8; }
+.dt-chars { font-size: 10px; color: #8c7280; }
+.dt-desc { font-size: 11px; color: #a8929e; margin: 6px 0 0; line-height: 1.6; }
+.dt-card-ops { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ---- 库列表行 ---- */
+.dt-group { margin-bottom: 14px; }
+.dt-group-head { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9b8294; margin-bottom: 6px; }
+.dt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  padding: 8px 2px;
+}
+.dt-row-main { flex: 1; cursor: pointer; min-width: 0; }
+.dt-row-op { flex: none; }
+.dt-lock-tag { font-size: 9px; color: #7a5f72; font-style: normal; margin-left: 6px; }
+
+/* ---- 按钮 ---- */
+.dt-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #1a0814;
+}
+.dt-btn-on { background: linear-gradient(90deg, #c026d3, #e879f9); }
+.dt-btn-off { background: rgba(255, 255, 255, .12); color: #cbB0c4; }
+.dt-btn-ghost { background: rgba(255, 255, 255, .06); color: #cbb0c4; }
+.dt-btn-lock { background: rgba(255, 255, 255, .06); color: #6f5b69; cursor: not-allowed; }
+.dt-btn-danger { background: rgba(248, 113, 113, .18); color: #fca5a5; }
+.dt-wide { width: 100%; margin-top: 6px; padding: 9px; font-size: 12px; }
+
+/* ---- 详情 ---- */
+.dt-detail-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
+.dt-detail-meta { font-size: 10px; color: #8c7280; margin-bottom: 8px; }
+.dt-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.75;
+  color: #cfc0c8;
+  background: rgba(0, 0, 0, .32);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 46vh;
+  overflow: auto;
+  margin: 0 0 8px;
+}
+
+/* ---- 设置 ---- */
+.dt-set { display: flex; flex-direction: column; gap: 2px; }
+.dt-set-row {
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  padding: 10px 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.dt-set-label { flex: 1; font-size: 13px; color: #fdf2f8; }
+.dt-set-desc { width: 100%; font-size: 11px; color: #9b8294; line-height: 1.6; }
+.dt-slider { display: flex; align-items: center; gap: 8px; }
+.dt-slider input { width: 110px; accent-color: #e879f9; }
+.dt-slider span { font-size: 13px; color: #e879f9; font-weight: 700; min-width: 16px; text-align: center; }
+.dt-switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+.dt-switch input { opacity: 0; width: 0; height: 0; }
+.dt-switch span {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  transition: .2s;
+}
+.dt-switch span::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #cfc0c8;
+  border-radius: 50%;
+  transition: .2s;
+}
+.dt-switch input:checked + span { background: rgba(232, 121, 249, .55); }
+.dt-switch input:checked + span::before { transform: translateX(18px); background: #fce7f3; }
+
+/* ---- 诊断 / 概览 / 空态 ---- */
+.dt-diag {
+  font-size: 11px;
+  color: #b68ea8;
+  line-height: 1.8;
+  word-break: break-all;
+  background: rgba(0, 0, 0, .28);
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.dt-ov { margin-top: 12px; }
+.dt-ov-q { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dt-empty { text-align: center; padding: 44px 12px; color: #9b8294; }
+.dt-empty-icon { font-size: 30px; margin-bottom: 8px; }
+.dt-empty-title { font-size: 14px; color: #cfc0c8; margin-bottom: 6px; }
+.dt-empty-desc { font-size: 11px; line-height: 1.7; }
+
+/* ---------- [v2.49.0] 钱袋 App（.wl-*） ----------
+ * 消费上游记忆插件的金钱账面：账户余额 / 流水。
+ * 主色取金币金 #eab308（与既有 App 主色均不冲突）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.wl-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.wl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.wl-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.wl-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.wl-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wl-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.wl-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wl-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.wl-reason { border-left: 3px solid #eab308; }
+.wl-reason-ok { border-left-color: #eab308; }
+.wl-reason-warn { border-left-color: #e3b341; }
+.wl-reason-off { border-left-color: #64748b; }
+.wl-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.wl-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 账户余额 ---- */
+.wl-acct {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wl-acct:first-of-type { border-top: 0; }
+.wl-acct-name {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.wl-acct-amount {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fde047;
+}
+.wl-acct-amount.neg { color: #f87171; }
+.wl-acct-meta {
+  font-size: 10px;
+  color: #64748b;
+}
+/* ---- 流水 ---- */
+.wl-tx {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.wl-tx:first-of-type { border-top: 0; }
+.wl-tx-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.wl-tx-name {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.wl-tx-delta {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.wl-tx-delta.pos { color: #4ade80; }
+.wl-tx-delta.neg { color: #f87171; }
+.wl-tx-desc {
+  font-size: 11px;
+  color: #8ea1b6;
+  margin-top: 3px;
+  line-height: 1.6;
+}
+.wl-tx-time {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 3px;
+}
+/* ---- 设置 ---- */
+.wl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wl-row:last-child { margin-bottom: 0; }
+.wl-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.wl-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wl-switch.on {
+  background: #eab308;
+  border-color: #eab308;
+  color: #1a1503;
+  font-weight: 700;
+}
+.wl-range { width: 46%; }
+/* ---- 空态 ---- */
+.wl-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
+.wl-more {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+/* ---------- [v2.49.0] 档案 App（.pf-*） ----------
+ * 消费上游记忆插件的主角档案 + 生活小档案：字段行 / 三层生活细节。
+ * 主色取档案墨蓝 #6366f1 系中的靛 #818cf8 作强调（与既有 App 主色均不冲突；
+ *   主色在 config/apps.js 登记为 #818cf8）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.pf-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.pf-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.pf-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.pf-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.pf-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pf-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.pf-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pf-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.pf-reason { border-left: 3px solid #818cf8; }
+.pf-reason-ok { border-left-color: #818cf8; }
+.pf-reason-warn { border-left-color: #e3b341; }
+.pf-reason-off { border-left-color: #64748b; }
+.pf-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.pf-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 主角档案字段 ---- */
+.pf-field {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pf-field:first-of-type { border-top: 0; }
+.pf-field-key {
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: .4px;
+}
+.pf-field-val {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.6;
+  word-break: break-all;
+}
+/* ---- 生活小档案（分层） ---- */
+.pf-tier {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.pf-tier:first-of-type { border-top: 0; }
+.pf-tier-head {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+.pf-tier-n {
+  font-weight: 400;
+  color: #64748b;
+}
+.pf-life {
+  background: rgba(129, 140, 248, .06);
+  border: 1px solid rgba(129, 140, 248, .14);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.pf-life:last-child { margin-bottom: 0; }
+.pf-life-pinned { border-left: 3px solid #818cf8; }
+.pf-life-active { border-left: 3px solid #38bdf8; }
+.pf-life-archive { border-left: 3px solid #475569; opacity: .72; }
+.pf-life-text {
+  font-size: 12px;
+  color: #dbe4f0;
+  line-height: 1.7;
+  word-break: break-all;
+}
+.pf-life-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pf-topic {
+  background: rgba(255, 255, 255, .06);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+.pf-life-until {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+}
+/* ---- 设置 ---- */
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pf-row:last-child { margin-bottom: 0; }
+.pf-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.pf-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pf-switch.on {
+  background: #818cf8;
+  border-color: #818cf8;
+  color: #0f1023;
+  font-weight: 700;
+}
+.pf-range { width: 46%; }
+/* ---- 空态 ---- */
+.pf-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
+
+/* ---------- [v2.49.0] 剧情线 App（.pn-*） ----------
+ * 消费上游记忆插件的大纲 + 世界推进：当前阶段 / 承诺账 / 支线 / 角色认知。
+ * 主色取卷轴棕金 #b08d57（与既有 App 主色均不冲突）。
+ * 归因态用三档色调（ok / warn / off），读不到**不一律画成灰**——
+ * 「未安装」与「装了但还没快照」在视觉上必须能分开。 */
+.pn-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.pn-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.pn-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.pn-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.pn-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pn-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.pn-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pn-count {
+  font-weight: 400;
+  color: #64748b;
+}
+/* ---- 归因卡（三档色调，形态可分辨） ---- */
+.pn-reason { border-left: 3px solid #b08d57; }
+.pn-reason-ok { border-left-color: #b08d57; }
+.pn-reason-warn { border-left-color: #e3b341; }
+.pn-reason-off { border-left-color: #64748b; }
+.pn-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.pn-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+/* ---- 当前大纲 ---- */
+.pn-stage-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8d5b5;
+}
+.pn-stage-goal {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.pn-stage-tempo {
+  font-size: 11px;
+  color: #7d8ea3;
+  margin-top: 4px;
+}
+.pn-nodes {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pn-node {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.pn-node-n {
+  flex: 0 0 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(176, 141, 87, .18);
+  border: 1px solid rgba(176, 141, 87, .4);
+  color: #e8d5b5;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pn-node-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #dbe4f0;
+}
+.pn-node-goal {
+  font-size: 11px;
+  color: #8ea1b6;
+  line-height: 1.6;
+  margin-top: 2px;
+}
+/* ---- 承诺账 / 支线 ---- */
+.pn-sub {
+  font-size: 11px;
+  color: #7d8ea3;
+  margin-bottom: 6px;
+}
+.pn-item {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.pn-item:first-of-type { border-top: 0; }
+.pn-item-open { border-left: 3px solid #e3b341; padding-left: 8px; }
+.pn-item-done { opacity: .55; }
+.pn-item-active { border-left: 3px solid #4ade80; padding-left: 8px; }
+.pn-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pn-item-who {
+  font-size: 11px;
+  color: #7dd3fc;
+  font-weight: 600;
+}
+.pn-item-text {
+  font-size: 12px;
+  color: #dbe4f0;
+  line-height: 1.6;
+  word-break: break-all;
+}
+.pn-item-clue {
+  font-size: 11px;
+  color: #8ea1b6;
+  line-height: 1.6;
+  margin-top: 3px;
+}
+.pn-item-meta {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+}
+/* ---- 角色认知 ---- */
+.pn-know {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.pn-know:first-of-type { border-top: 0; }
+.pn-know-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+.pn-know-line {
+  font-size: 11px;
+  color: #8ea1b6;
+  line-height: 1.7;
+  margin-top: 3px;
+}
+.pn-know-tag {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-size: 10px;
+  margin-right: 5px;
+}
+.pn-know-tag.ok {
+  background: rgba(74, 222, 128, .12);
+  color: #4ade80;
+}
+.pn-know-tag.blind {
+  background: rgba(248, 113, 113, .12);
+  color: #f87171;
+}
+/* ---- 设置 ---- */
+.pn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pn-row:last-child { margin-bottom: 0; }
+.pn-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.pn-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pn-switch.on {
+  background: #b08d57;
+  border-color: #b08d57;
+  color: #1a130a;
+  font-weight: 700;
+}
+.pn-range { width: 46%; }
+/* ---- 空态 ---- */
+.pn-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
+
+/* ---------- [v2.49.0] 撩语 · 场景联动推荐（词库页顶部，与 apps/dirtytalk/dt.css 同源） ---------- */
+.dt-scene {
+  background: rgba(232, 121, 249, .07);
+  border: 1px solid rgba(232, 121, 249, .22);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.dt-scene-loc {
+  font-size: 12px;
+  color: #e8d5f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dt-scene-label {
+  font-size: 10px;
+  color: #b98cc9;
+  background: rgba(232, 121, 249, .16);
+  border-radius: 8px;
+  padding: 1px 7px;
+  flex: 0 0 auto;
+}
+.dt-scene-sep {
+  color: #6d5a75;
+  font-style: normal;
+}
+.dt-scene-rec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.dt-scene-chip {
+  background: rgba(232, 121, 249, .14);
+  border: 1px solid rgba(232, 121, 249, .3);
+  border-radius: 10px;
+  padding: 3px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dt-scene-chip b {
+  font-size: 12px;
+  color: #e9b8f5;
+}
+.dt-scene-chip i {
+  font-size: 10px;
+  color: #9d7fa8;
+  font-style: normal;
+}

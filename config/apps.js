@@ -308,6 +308,39 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    // [v2.48.0] 撩语：聊骚语料词库（抽出即入包，装配即生效）
+    {
+        id: 'dirtytalk',
+        name: '撩语',
+        icon: '💬',
+        color: '#e879f9',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'wallet',
+        name: '钱袋',
+        icon: '💰',
+        color: '#eab308',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'profile',
+        name: '档案',
+        icon: '🪪',
+        color: '#818cf8',
+        badge: 0,
+        data: {}
+    },
+    {
+        id: 'plotline',
+        name: '剧情线',
+        icon: '📜',
+        color: '#b08d57',
+        badge: 0,
+        data: {}
+    },
     {
         id: 'search',
         name: '全局搜索',

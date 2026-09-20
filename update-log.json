@@ -1,5 +1,32 @@
 {
   "versions": {
+    "2.49.0": {
+      "date": "2026-09-21",
+      "items": [
+        "【新增 App·钱袋 apps/wallet/】记忆插件桥面 13 个资源里，手机侧此前只消费 4 个（scene/recallAudit/clock/floor），『金钱账』（snapshot.moneyLedger）外供已久却全库零消费——『现在有多少钱』『最近一笔怎么花的』在手机上答不出。本版按 place 同规（只读桥 + 五态归因 + 不落库 + 懒加载单例）把账户余额与最近流水做成可查询界面，并把当前账上金额交给生成侧，让正文里的钱数与账本是同一笔。",
+        "【新增 App·档案 apps/profile/】同桥面的『主角档案』（snapshot.protagonist）与『生活小档案』（snapshot.lifeDetails）此前零消费。主角字段如实平铺（嵌套对象不展开、不翻译不猜测），生活细节按 pinned/active/archive 三层展示、层内保持上游叙事顺序不重排；档案与生活细节经生成前钩子交给正文，让主角与记忆插件记的主角是同一个。内审修过一处归因逻辑：『面在但内容空』原来不可达，现在 empty 态与 no-profile-face 态正确分开。",
+        "【新增 App·剧情线 apps/plotline/】同桥面的『大纲』（snapshot.outline）与『世界推进』（snapshot.worldProg：承诺/认知/支线）此前零消费。当前阶段/节点、承诺账（未兑现优先、期限如实）、支线（推进中优先）、角色认知（已知/未意识到两栏）四块投影；注入块只带『当前阶段 + 未兑现承诺 + 推进中支线』，让正文节奏与记忆插件推进的世界不各写各的。",
+        "【撩语×场景联动】撩语不再是孤岛 App：词库页顶部新增『当前所在』卡，位置链解析复用 place 侧唯一真源（currentChainOf 纯函数，跨 App 只读复用不造第二套），场所名命中关键词表（公共场所→高压 / 私密空间→甜撩 / 秩序场所→规训 / 氛围场所→沉浸）即推荐对应风格。未命中返回空（不编推荐），桥不在/无快照整卡隐藏。",
+        "【微信链路补注入缺口】侦察发现微信单聊/群聊走 buildMessagesArray 独立注入路径，不经过 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子——撩语与金手指在微信聊天里完全失效。本版在 recallBlock 注入之后补 push 两块的 promptBlock：从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），空块不 push，注入失败静默不影响发送。",
+        "【三 App 同规工程纪律】① 只读：只取桥 snapshot/refresh()，绝不写上游；② 不抛：桥未装/无快照/旧版无面/面畸形一律降级为归因文案（五态与 place 六态同规格，读不到不一律画成灰）；③ 不猜：拿不到就如实说拿不到，绝不编造金额/档案/阶段顶替。实例不持读数副本（每次现取），onChatChanged() 只丢探针归因；设置键 wallet_settings_v1 / profile_settings_v1 / plotline_settings_v1 各随会话隔离。",
+        "【四处注册 + 三处接线】① config/apps.js 增 3 桌面条目（金币金 #eab308 / 靛 #818cf8 / 卷轴棕金 #b08d57，与既有 31 色逐一比对取唯一）；② phone.css 合并 .wl-*/.pf-*/.pn-* 样式（同时保留各 App 源 css）；③ index.js 增 3 个懒加载单例路由（实例复用、失败兜底可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 /^wallet_/、/^profile_/、/^plotline_/。index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 3 个新 App 的 onChatChanged；v224 的换会话窗口随接线增长 400→600（实测最大 572）。",
+        "【测试】tests/system-v249.test.mjs（A–G 七组 11 项）：A/B/C 组三 App 四件套与注册 + 内核纯函数（五态归因逐态实测 / empty 态可达性 / 投影字段如实 / 注入块空则空串 / 畸形不抛）；D 组场景联动（SCENE_STYLE_MAP 纯函数不猜不编 + 控制器 + 视图卡 + CSS 同源）；E 组微信注入（位置正确 / 不触发加载 / 静默失败）；F 组三处接线（各 3 次 / 缩进与 dtApp 行一致 / 清理路径 4000 窗口内可达）；G 组版本同源 2.49.0 四源一致。"
+      ]
+    },
+    "2.48.0": {
+      "date": "2026-09-21",
+      "items": [
+        "【新增 App·撩语 apps/dirtytalk/】消费上游外供的《Adult Romance DirtyTalk》世界书（673 条 / 71.3 万字）。落地前先做形态判定：0 禁用 / 0 常驻，key 全为精确方括号绿灯标签——它是一部**词库**（可选说话方式的目录），不是每轮都该在场的人设。故本版把「拥有」与「生效」拆开：词库落成 199 个可抽模块 + 4 个装配位（可调 1–8）+ 生成前一次性注入块。全量注入 26.2 万字模块正文等于自杀，装配上限才是这个 App 的核心机制。",
+        "【归并与档位】673 条按类别归并：DT_STYLE 8 风格 force=0 拼合；HUM_METHOD+OTHER 去编号归并 force=1；PLAY_*/ACTION_* 进 play；QUOTE_BANK 进 quote；CC0/CORPUS 等进语料档只读不注入；机制条丢弃。产出 199 模块（26.2 万字）+ 80 语料条（9.3 万字）+ 跳过 217。档位按模块总字数分三档：≥1200 重 34 / ≥600 中 107 / 其余轻 58。转蛋 QUALITY_META 只有六档，轻/中/重映射为 普通/优秀/稀有，避免上色塌档。",
+        "【同源契约·正文与索引分两份】data/dirtytalk.js（全量正文，只给撩语 App 装配与注入用）/ data/dirtytalk-index.js（轻量索引 id/名称/类别/档位/字数，给抽卡侧与档位权重表用）/ data/dirtytalk-corpus.js（语料档只读参考，不参与注入）。理由：抽卡 20 连抽不该把 686KB 正文拖进内存，而档位权重表必须只有一处定义。索引里另存 `DT_ITEM_PREFIX = 'dt_'`：前缀真源唯一，抽卡背包 id 与其反解都经 dt-data.js re-export 取用，任何地方手写 `slice` 都算漂移。非 `dt_` 前缀的 itemId 反解为空串（不猜）。",
+        "【装配语义·到顶如实拒绝】装配位不是「后装顶掉先装」：到顶时如实返回拒绝并给出提示，不静默替换。装配列表读取时重跑一遍归一（去重 / 丢未知 id / 保持原次序），上限夹在 1..8——写脏 + 读时净化是多一层终将被绕过的兜底，故 `toggleInstall` 在**写入前**就校验 id 是否存在，未知 id 如实回「未知模块」、不落存储。语料比外挂轻，默认上限 4 条（金手指是 3）。",
+        "【生成侧注入】buildDtPromptBlock() 经 GENERATE_BEFORE_COMBINE_PROMPTS 钩子推一条 system 块，语义是「已装配的说话方式是**既定风格**」——不是建议，除剧情中被明确改口外始终生效。块头标注〔类别·名称〕，正文逐字来自词库原文不改写、不摘要。内容为空返回**空串**（绝不产生只有块头的空块）；注入失败静默、绝不阻断生成；条数受装配上限约束。",
+        "【抽卡联动】模块以自身 `dt_<hash>` id 入包（`unique: true` + `stackable: false`：抽到即拥有，重复抽不再入包）。撩语池独立于既有池、`includeInAll: false`，新池只要标 false 即自动不进「全部」——否则 199 个模块会稀释既有 630+157 概率。抽卡道具表从轻量索引派生，不把 686KB 正文拖进转盘。",
+        "【工程纪律】只持久化 `dt_state_v1`（装配列表 + 上限），**不持有任何词库副本**；背包现取不复制（换会话/删楼回滚后实例级缓存必成陈旧数据）；前缀反解走唯一真源 dtModuleIdOfItem()；onChatChanged() 只丢弃浏览位置（详情/搜索/标签/类别），不动装配。同源契约由 v248 的 A 组逐字锁住。",
+        "【四处注册 + 会话隔离】① config/apps.js 桌面条目（**品红 #e879f9**，与既有 App 主色逐一比对后取唯一值）；② phone.css 合并 `.dt-*` 样式（同时保留 apps/dirtytalk/dt.css 源文件，与 cheat / place / bilibili 同规）；③ index.js 的 phone:openApp 懒加载单例路由（实例复用、不持副本，失败兜底给可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 `/^dt_/`（dt_state_v1 属会话态，落全局会跨会话串味）。另在 index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 onChatChanged。",
+        "【测试】tests/system-v248.test.mjs（A–H 八组）：A 组数据同源（id 集合 / 字段逐字 / chars 非虚报 / 8 风格 / 档位自洽 / 前缀往返 / 非 dt_ 反解空串）；B 组装配语义（去重丢未知保次序 / 超限截断 / limit 夹 1..8）；C 组注入块（空则空串 / 开关 / 块头【当前撩语】 / 正文逐字 / 未知 id 不拖垮）；D 组抽卡映射（dt_ 前缀 / weight=档位权重 / unique / pool_dt / includeInAll false / 60 连不泄漏）；E 组四处注册（品红唯一、源 css 与 phone.css 规则数一致、懒加载单例）；F 组接线（三处接入 / 缩进 / 不置 null / 只读背包 / 反解走唯一真源 / esc 真转义）；G 组控制器真行为（落库 dt_state_v1 / 卸下 / 未知拒绝 / 到顶不替换 / 换会话只丢浏览位置）；H 组**真源码破坏负控制**（上限判据与空清单双重防线）。"
+      ]
+    },
     "2.47.0": {
       "date": "2026-09-20",
       "items": [
@@ -705,5 +732,5 @@
       ]
     }
   },
-  "latest": "2.47.0"
+  "latest": "2.49.0"
 }

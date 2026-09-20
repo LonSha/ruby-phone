@@ -25,3 +25,6 @@ test/
 *.zip
 *.tar.gz
 *.rar
+
+# 源素材（体积大且版权含混，只保留生成产物）
+.sourcematerial/

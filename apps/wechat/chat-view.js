@@ -11558,6 +11558,21 @@ renderChatRoom(chat) {
             }
         } catch (_e) { /* lonsha 记忆注入静默失败，不影响发送 */ }
 
+        // [v2.49.0] 撩语/金手指：微信链路走独立注入路径（不经过 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子），
+        //   否则装配的撩语模块/金手指在微信聊天里完全失效（v2.48.0 撩语「孤岛 App」缺口）。
+        //   从 window.VirtualPhone 取已存在实例（未打开 App 则无实例、不触发加载），注入失败静默不影响发送。
+        try {
+            const _vp = (typeof window !== 'undefined' && window.VirtualPhone) || null;
+            const _dtBlk = _vp?.dtApp?.promptBlock?.();
+            if (_dtBlk) {
+                messages.push({ role: 'system', content: _dtBlk, name: 'SYSTEM (撩语)', isPhoneMessage: true });
+            }
+            const _cheatBlk = _vp?.cheatApp?.promptBlock?.();
+            if (_cheatBlk) {
+                messages.push({ role: 'system', content: _cheatBlk, name: 'SYSTEM (金手指)', isPhoneMessage: true });
+            }
+        } catch (_e) { /* 撩语/金手指注入静默失败，不影响发送 */ }
+
         // 优先使用 characterId 获取真实角色名
         if (context.characterId !== undefined && context.characters && context.characters[context.characterId]) {
             charName = context.characters[context.characterId].name || context.name2 || '角色';
