@@ -162,28 +162,24 @@ const LOG = JSON.parse(read('update-log.json'));
 
 const V = '2.38.0';
 const HEADV = LOG.latest;
-
-// E1: 版本三处同源
-ok('E1 index.js 版本', IDX.includes(`ST_PHONE_VERSION = '${V}'`));
-ok('E2 manifest.json 版本', MANIFEST.version === V);
-ok('E3 package.json 版本', PKG.version === V);
-
-// E4: update-log
-ok('E4 latest 指向当前版本', HEADV === V);
-ok('E4b versions 头部是当前版本', Object.keys(LOG.versions)[0] === V);
-ok('E4c 当前版本条目非空', LOG.versions[V] && Array.isArray(LOG.versions[V].items) && LOG.versions[V].items.length >= 4);
-
-// E5: 公告块与 update-log 逐字同源
+/* [v2.39.0] 交棓：原 E1-E5c 钉死 V=2.38.0，每发一版必翻红。
+   改自洽性不变量（三处版本同源 + latest=头部 + 公告与 HEAD 逐字同源）。 */
+const VNUM = (s) => { const m = /^([0-9]+)\.([0-9]+)\.([0-9]+)/.exec(String(s || '').trim()); return m ? Number(m[1]) * 1000000 + Number(m[2]) * 1000 + Number(m[3]) : NaN; };
+const idxVer = (/ST_PHONE_VERSION = '([^']+)'/.exec(IDX) || [])[1];
+ok('E1 三处版本同源', idxVer && idxVer === MANIFEST.version && idxVer === PKG.version, `${idxVer}/${MANIFEST.version}/${PKG.version}`);
+ok('E2 版本不低于 2.38.0', VNUM(idxVer) >= VNUM(V), String(idxVer));
+ok('E3 update-log.latest 指向 versions 头部（自洽）', HEADV === Object.keys(LOG.versions)[0], `${HEADV}`);
+ok('E4 HEAD 条目非空', LOG.versions[HEADV] && Array.isArray(LOG.versions[HEADV].items) && LOG.versions[HEADV].items.length >= 4);
 const annMatch = /ST_PHONE_CURRENT_UPDATE\s*=\s*\{([\s\S]*?)\n\};/.exec(IDX);
 ok('E5 公告块存在', !!annMatch);
-if (annMatch && LOG.versions[V]) {
+if (annMatch && LOG.versions[HEADV]) {
     const annItems = [...annMatch[1].matchAll(/["'](.*?)["']/g)].map(m => m[1]).filter(s => s.length > 10);
-    const logItems = LOG.versions[V].items;
+    const logItems = LOG.versions[HEADV].items;
     ok('E5b 公告条数一致', annItems.length === logItems.length);
-    ok('E5c 公告逐字同源', logItems.every((item, i) => annItems[i] === item));
+    ok('E5c 公告与 HEAD 逐字同源', logItems.every((item, i) => annItems[i] === item));
 } else {
-    ok('E5b 公告条数一致', false, 'skipped: versions entry not yet');
-    ok('E5c 公告逐字同源', false, 'skipped: versions entry not yet');
+    ok('E5b 公告条数一致', false, 'skipped');
+    ok('E5c 公告与 HEAD 逐字同源', false, 'skipped');
 }
 
 // E6: rollWorldBookEntries 真被消费（非定义行）

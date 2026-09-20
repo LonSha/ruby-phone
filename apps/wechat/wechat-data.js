@@ -12,6 +12,15 @@
 // 微信数据管理
 import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseWechatVoiceContent } from './voice-text.js';
+import {
+    matchMemberByName,
+    parseSpeakers,
+    scheduleSpeakers,
+    validateSpeakers,
+    buildForceSpeakInstruction,
+    buildCritiquePrompt,
+    parseCritique
+} from './group-scheduler.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -2347,6 +2356,75 @@ export class WechatData {
         const safeChatId = String(chatId || '').trim();
         if (!safeChatId) return null;
         return this._normalizeChatList(this.data?.chats || []).find(c => String(c.id || '') === safeChatId) || null;
+    }
+
+    /**
+     * [v2.39.0] 群聊发言调度引擎接线（消费 group-scheduler.js 纯函数）。
+     *   此前 group-scheduler 的 director/force-speak/critique 三 agent 纯函数全部零消费——
+     *   缝合了完整引擎但群聊回复链路（triggerAI→sendToAI）从不询问「谁该发言」。
+     *   数据层补齐消费入口，把群成员字符串数组归一化为 { id, name } 后喂给纯函数。
+     */
+    /** 群成员归一化：字符串数组 → [{ id, name }]（用户自己排除，调度只针对 AI 成员） */
+    getGroupMembers(chatId) {
+        const chat = this.getChat(chatId);
+        if (!chat || chat.type !== 'group') return [];
+        const raw = Array.isArray(chat.members) ? chat.members : [];
+        return raw.map((m, i) => {
+            if (m && typeof m === 'object') {
+                return { id: m.id || ('m-' + i), name: String(m.name || '').trim() || ('成员' + i), aliases: m.aliases || [] };
+            }
+            const name = String(m || '').trim();
+            return name ? { id: name, name, aliases: [] } : null;
+        }).filter(Boolean);
+    }
+
+    /**
+     * 群成员匹配：把 LLM/用户给的名字映射回群成员对象。
+     * 消费 group-scheduler.matchMemberByName。未命中返回 null（永不抛）。
+     */
+    resolveGroupSpeaker(chatId, name) {
+        const members = this.getGroupMembers(chatId);
+        if (!members.length) return null;
+        try { return matchMemberByName(name, members); }
+        catch (_e) { return null; }
+    }
+
+    /**
+     * 群发言调度：容错解析 LLM 返回的 speakers → 映射回成员 → 去重保序 → cap → 校验可用成员。
+     * 消费 parseSpeakers + scheduleSpeakers + validateSpeakers 三个纯函数。
+     * @returns {{ ok, speakers, names, skipped, reason }} 永不抛
+     */
+    planGroupSpeakers(chatId, rawSpeakers, opts = {}) {
+        const members = this.getGroupMembers(chatId);
+        if (!members.length) return { ok: false, reason: 'no-members', speakers: [], names: [], skipped: [] };
+        let parsed;
+        try { parsed = parseSpeakers(rawSpeakers); }
+        catch (_e) { parsed = { speakers: [], reason: '', scripts: null }; }
+        const decision = scheduleSpeakers(parsed.speakers, members, opts);
+        const validated = validateSpeakers(decision, members);
+        if (!validated) return { ok: false, reason: 'no-valid-speakers', speakers: [], names: [], skipped: decision.skipped || [] };
+        return { ok: true, speakers: validated.speakers, names: validated.names, skipped: validated.skipped || [], reason: parsed.reason || '' };
+    }
+
+    /**
+     * 强制发言指令：@某人强制本轮只由 ta 发言。
+     * 消费 buildForceSpeakInstruction。memberName 为空时返回通用占位。
+     */
+    buildGroupForceSpeakInstruction(memberName, opts = {}) {
+        try { return buildForceSpeakInstruction({ name: memberName || '' }, opts); }
+        catch (_e) { return buildForceSpeakInstruction({ name: memberName || '' }, {}); }
+    }
+
+    /** 群聊导演批判 prompt。消费 buildCritiquePrompt。 */
+    buildGroupCritiquePrompt(opts = {}) {
+        try { return buildCritiquePrompt(opts); }
+        catch (_e) { return buildCritiquePrompt({}); }
+    }
+
+    /** 容错解析导演批判输出。消费 parseCritique。未命中返回 null（永不抛）。 */
+    parseGroupCritique(raw) {
+        try { return parseCritique(raw); }
+        catch (_e) { return null; }
     }
 
     getChatBackground(chatId, fallback = '') {

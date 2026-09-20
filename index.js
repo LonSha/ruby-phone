@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.38.0';
+const ST_PHONE_VERSION = '2.39.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -77,11 +77,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-19",
     items: [
-        "小剧场世界书随机接线：rollWorldBookEntries 纯函数终于被消费，新增 rollWorldBook() 方法从 worldbookManager 取条目并写入 draft.rollResult",
-        "新增清除按钮：clearRollResult() 一键清空已抽取的世界书结果",
-        "视图层新增 th-roll 面板：按钮 / 状态文字 / 清除 / 预览，与表单融为一体",
-        "theater.css 追加 th-roll 样式：圆角卡片 / 状态色 / 预览滚动区",
-        "buildPrompt 已预留的 rollResult 读取入口现在真正有数据可读了"
+        "群聊发言调度引擎接线：group-scheduler.js 的 7 个纯函数（director 选发言者 / force-speak 强制接管 / critique 导演批判）终于被消费，WechatData 新增 6 个消费方法",
+        "data 层新增 getGroupMembers：群成员字符串数组归一化为 { id, name }，getChat 取群聊后喂给调度引擎",
+        "data 层新增 planGroupSpeakers：parseSpeakers 容错解析 LLM 输出 → scheduleSpeakers 去重保序 cap → validateSpeakers 过滤可用成员，永不抛",
+        "data 层新增 buildGroupForceSpeakInstruction / buildGroupCritiquePrompt / parseGroupCritique：@强制发言与导演批判链路",
+        "此前群聊回复链路（triggerAI→sendToAI）从不询问谁该发言，缝合引擎全零消费——本版补齐数据层消费入口"
     ]
 };
 
