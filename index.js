@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.46.0';
+const ST_PHONE_VERSION = '2.47.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,14 +80,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-20",
     items: [
-        "【新增 App·地点图景 apps/place/】消费上游 lonsha-memory-plugin v3.181.0 外供的场所图景面（`lonsha_memory_bridge_v1.snapshot.scene`）。修前实测：该面在本仓**全库零消费**——上游把「地点」从一句注记做成可查询面（场景树 / 到访史 / 在场索引 / 地点挂账 / 覆盖度 / 不变量）并外供到只读桥上了，手机端却仍看得到剧情、看不到「人在哪儿」；这正是 v2.41 建零消费导出门禁要拦的欠债形态，而门禁只管「导出有没有人用」，管不到「上游外供的面有没有人用」。本版补上消费点：place-data.js（纯函数内核，255 行）/ place-app.js（控制器，含生成侧注入钩子）/ place-view.js（视图）/ place.css（源文件，运行时走 phone.css 合并段）。",
-        "【投影五块】projectScene() 把 scene 面变成可直接渲染的数据：① scale 规模（场所数 / 细写数 / 最深层级 / 到访史条数 / 在场人数）；② current 当前位置链（由粗到细，按 › 拆，回落 current 按 / 拆）；③ presence 在场分组（按地点 key 聚合、成员稳定排序、按人数降序、保留「第 N 楼」）；④ coverage 覆盖度（逐楼列号 + 缺口 steps + 未登记到访）；⑤ invariants 树的自检（三态 + 逐条 kind 可读化）。只读、绝不抛，缺项如实置空。",
-        "【工程防线·归因六态不得塌态】readSceneFace() 六态分开报：bridge-absent（插件未装）/ no-snapshot（装了但还没产出快照）/ no-scene-face（快照是旧版没有场所面，只有这一态能给「去升级」的指引）/ module-absent（A 侧 SceneBookFallback 在跑，读数一律为空而非「没有场所」）/ empty（这个会话还没登记过场所）/ ready。修前这六种在界面上同形为「没数据」，「去装 / 去等 / 去升级」三种行动指引全给不出（本仓反复治理的静默降级）。视图对未知 reason 如实显示原值，不吞。",
-        "【工程防线·三态不塌两态 + 拒绝只报百分比】不变量 ok / warn / broken 必须三种不同字样，缺席单列第四态并明写「不算通过」（absent 不得伪装成 ok）；八种 kind 逐条可读化（bad-node / key-path-mismatch / bad-desc / broken-chain / visit-unregistered / track-unregistered / presence-bad / invariant-threw），未知 kind 如实显示原始 kind；覆盖度逐楼列号 + 「第 N 楼 → 第 M 楼之间缺几楼」+ 未登记到访单列——「有缺口」无法行动，「缺哪几楼、缺多少」才能直接去补，故明确拒绝把覆盖度压成一个百分比。",
-        "【工程纪律·读数不落库、只读不猜】本 App **不持有任何读数副本**（本仓治理过多轮的形态：实例级缓存在换会话/删楼回滚后必成陈旧数据）：probeBridge() 只读桥的 snapshot 对象，对象缺失时回落 refresh()；onChatChanged() 只丢弃旧会话的探针归因，下一次渲染现取。桥未装 / 无快照 / 面畸形一律降级为归因文案，绝不抛、绝不编造地点或人数顶替（非数值如实 null，不补 0 冒充「世界是空的」；位置链缺失给 []，不编一条）。",
-        "【生成侧一致性注入】scenePromptBlock() 把「本世界已登记的场所与在场」交给生成侧（GENERATE_BEFORE_COMBINE_PROMPTS → prompt.push system 块），让正文里的地点与记忆插件记的地点是同一个，而不是各写各的。与 worldpulse 的 worldAxisPromptBlock 同规格：内容为空返回空串（不产生空块）、注入失败静默且绝不阻断生成；开关与限行（maxInject 1–20）由 place_settings_v1 控制。",
-        "【四处注册 + 会话隔离】① config/apps.js 桌面条目（地理青 #14b8a6，不与既有 App 主色撞色）；② phone.css 合并 .pl-* 样式（同时保留 apps/place/place.css 源文件，与 bilibili / theater 同规）；③ index.js 的 phone:openApp 懒加载单例路由（实例复用、不持副本，故换会话只走 onChatChanged）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 `/^place_/`（place_settings_v1 属会话态，若落全局会跨会话串味）。另在 index.js 三处路径（换会话 + clearCurrentData + clearAllData）同步接入 onChatChanged。",
-        "【测试】tests/system-v246.test.mjs（98 项 / C 组…K 组共 11 组）：A 组结构锁与四处注册（含路由懒加载单例、源文件不得多于运行时载体）；B 组归因六态全可达且文案互不相同；C 组不变量三态不塌两态 + 未知 kind 不吞 + 缺席不算通过；D 组投影只读不抛、缺项如实置空；E 组在场按 key 聚合 / 稳定排序 / 脏记录过滤；F 组覆盖度拒绝百分比化；G 组注入块空则空串、限行生效；H 组**真源码破坏负控制**（把「缺席」并入「空」⇒ 同一判据在破坏副本上必须不成立，且在原版上必须成立）；I 组三处接线 + 插入点缩进未被写坏 + 实例不置 null + onChatChanged 不持读数副本；J 组端到端六种桥形态串联（未装 / 旧版快照 / 真桥 / 开关 / 换会话 / refresh 回落）+ 转义面回归锁（v2.46 修复的 _esc 引号转义写成转义成自身 ＝ 无转义的注入面）；K 组版本跨源自洽。",
+        "【新增 App·金手指 apps/cheat/】消费上游外供的《万界武库V4》世界书（185 条 / 508,555 字）。落地前先做形态判定，不按「用户给了素材就全量塞进上下文」办：其中 174/185 条带 `disable=true`——它是一部**武库**（可选外挂的目录），不是每轮都该在场的人设。故本版把「拥有」与「生效」拆开：武库落成 157 个可抽卡包 + 3 个装配位（可调 1–5）+ 生成前一次性注入块。全量注入 500K 字等于自杀，装配上限才是这个 App 的核心机制。",
+        "【归并与品阶】185 条按 `·` 切分取主条合并为 157 包（`sub > 1` 的 8 条是被合并的家族条，家族成员不丢、并入同一包）；品阶按**包总字数**分六档：≥6000 神话 8 / ≥4500 传说 19 / ≥3500 史诗 12 / ≥2600 稀有 44 / ≥1800 优秀 48 / <1800 普通 26。「长」不等于「强」，但长的确更值得抽卡权重上更稀缺——档位与权重同向，避免出现「稀有但只有三行」的空壳神话。",
+        "【同源契约·正文与索引分两份】data/cheats.js（1,362,093 字节，全量正文，只给金手指 App 装配与注入用）/ data/cheat-index.js（36,428 字节，轻量索引 id/名称/品阶/字数/类型，给抽卡侧与品阶权重表用）。理由：抽卡 20 连抽不该把 1.36MB 正文拖进内存，而品阶权重表必须只有一处定义（否则「抽到神话」和「显示为神话」会漂移）。索引里另存 `CHEAT_ITEM_PREFIX = 'cheat_'`：前缀真源唯一，抽卡背包 id 与其反解都经 cheat-data.js re-export 取用，任何地方手写 `slice(6)` 都算漂移。",
+        "【装配语义·到顶如实拒绝】装配位不是「后装顶掉先装」：到顶时如实返回拒绝并给出提示，不静默替换（静默替换会让玩家以为装上了，实际生效的是另一条）。装配列表读取时重跑一遍归一（去重 / 丢未知 id / 保持原次序），上限夹在 1..5——写脏 + 读时净化是多一层终将被绕过的兜底，故 `toggleInstall` 在**写入前**就校验 id 是否存在，未知 id 如实回 `未知外挂（key）`、不落存储。",
+        "【生成侧注入】buildCheatPromptBlock() 经 GENERATE_BEFORE_COMBINE_PROMPTS 钩子推一条 system 块，语义是「已装配的外挂是**既定事实**」——不是「可以这样做」的许可，而是设定就位（洗白「怎么会这个」的解释链，避免模型每轮自作解释）。块头标注〔品阶·名称〕，正文逐字来自武库原文不改写、不摘要。内容为空返回**空串**（绝不产生只有块头的空块）；注入失败静默、绝不阻断生成；条数受装配上限约束。",
+        "【抽卡联动】外挂以 `cheat_<packId>` 形式入包（`unique: true` + `stackable: false`：抽到即拥有，重复抽不再入包，不占背包格子）。外挂池独立于既有六池、`includeInAll: false`，**本版顺手修掉一处自相矛盾**：`getItemsOfPool('all')` 此前直接返回全量道具，导致「全部」池既能列出也能抽出外挂，与它自己的 `includeInAll=false` 打架；现改为按池表推导排除集（新池只要标 false 即自动生效），把「列出」与「抽取」两条路径一起收敛。",
+        "【工程纪律】只持久化 `cheat_state_v1`（装配列表 + 上限），**不持有任何武库副本**；背包现取不复制（换会话/删楼回滚后实例级缓存必成陈旧数据）；前缀反解走唯一真源 cheatPackIdOfItem()；onChatChanged() 只丢弃浏览位置与当前卷展状态，不动装配。同源契约由 v247 的 A 组逐字锁住（六字段、chars 非虚报、品阶表逐项等价、前缀往返）。",
+        "【四处注册 + 会话隔离】① config/apps.js 桌面条目（**鎏金 #d4af37**，与既有 29 个 App 主色逐一比对后取唯一值，E3 锁其唯一性）；② phone.css 合并 `.ch-*` 样式（同时保留 apps/cheat/cheat.css 源文件，与 bilibili / theater / place 同规）；③ index.js 的 phone:openApp 懒加载单例路由（实例复用、不持副本，失败兜底给可读提示）；④ config/storage.js 的 CHAT_DATA_PATTERNS 增 `/^cheat_/`（cheat_state_v1 属会话态，落全局会跨会话串味）。另在 index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入 onChatChanged。",
+        "【顺手清掉两处真实缺陷】① `esc()` 把双引号「转义」成了转义成自身（等于没转义）——属性注入面。根因经探针实测定位：写入路径会把 HTML 具名实体解码成裸字符，**数字实体**（`&#34;` / `&#39;`）才原样保留；故把 esc() 里的具名实体一律改写成数字实体，cheat-view.js 与既有 gacha-view.js 同缺陷一并修（v247 的 F11 以真转义为判据）。② 三处门禁红灯：v223 与 v246 各有一条**钉死字符距离/紧邻关系**的断言（新增一行 App 重绑即误报），改为「结构化区间成员核对」——锁语义（这些重绑调用确实落在换会话清理块内、且在 `wechatApp = null` 之前），而非锁字节距离。",
+        "【测试】tests/system-v247.test.mjs（98 项 / A–H 八组）：A 组数据同源 13 项（id 集合 / 六字段逐字 / chars 非虚报 / 品阶表逐项等价 / 前缀往返 / 非外挂 id 反解空串）；B 组装配语义 13 项（去重丢未知保次序 / 超限截断上报 / 非法入参降级 / limit 夹 1..5 / 未知品阶排末位不塌档 / allCheats 是副本）；C 组注入块 10 项（空则空串 / 开关 / 块头语义 / 品阶名称 / 正文逐字 / 超限截条 / 未知 id 不拖垮整块）；D 组抽卡映射 13 项（前缀 / 权重=品阶权重 / 不可叠加 / includeInAll / 60 连抽不泄漏 / 20 连全中）；E 组四处注册 12 项（含鎏金唯一性、源样式与运行时载体规则数一致、路由懒加载单例）；F 组接线 11 项（三处接入 / 缩进 / 不置 null / 只读背包 / 反解走唯一真源 / 钩子静默 / esc 真转义）；G 组控制器真行为 13 项（落库 / 卸下 / 未知拒绝 / 到顶不替换 / 上限可调 / 换会话只丢浏览位置 / 另一会话不串味）；H 组**真源码破坏负控制** 10 项（上限判据与空清单双重防线，破坏须可观测改行为、原版同判据须真成立、临时副本零残留）。",
     ]
 };
 
@@ -9148,6 +9150,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.VirtualPhone.theaterApp?.onChatChanged?.();
             // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
             window.VirtualPhone.placeApp?.onChatChanged?.();
+            window.VirtualPhone.cheatApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10101,6 +10104,20 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载地点图景App失败:', err);
                             phoneShell?.showNotification('错误', '地点图景App加载失败', '❌');
                         });
+                } else if (appId === 'cheat') {
+                    // [v2.47.0] 金手指：万界武库外挂库（装配清单随会话隔离，注入走生成前钩子）。
+                    //   懒加载单例（与 place/worldpulse 同构）；外挂正文为内置静态事实源 data/cheats.js。
+                    import('./apps/cheat/cheat-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.cheatApp) {
+                                window.VirtualPhone.cheatApp = new module.CheatApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.cheatApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载金手指App失败:', err);
+                            phoneShell?.showNotification('错误', '金手指App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10290,6 +10307,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.theaterApp?.onChatChanged?.();
                     // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
                     window.VirtualPhone.placeApp?.onChatChanged?.();
+                    window.VirtualPhone.cheatApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10397,6 +10415,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.theaterApp?.onChatChanged?.();
                     // [v2.46.0] 地点图景：同 P1/P2 —— 仅丢弃旧会话探针归因
                     window.VirtualPhone.placeApp?.onChatChanged?.();
+                    window.VirtualPhone.cheatApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

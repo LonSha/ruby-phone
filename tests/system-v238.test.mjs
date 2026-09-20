@@ -173,7 +173,13 @@ ok('E4 HEAD 条目非空', LOG.versions[HEADV] && Array.isArray(LOG.versions[HEA
 const annMatch = /ST_PHONE_CURRENT_UPDATE\s*=\s*\{([\s\S]*?)\n\};/.exec(IDX);
 ok('E5 公告块存在', !!annMatch);
 if (annMatch && LOG.versions[HEADV]) {
-    const annItems = [...annMatch[1].matchAll(/["'](.*?)["']/g)].map(m => m[1]).filter(s => s.length > 10);
+    /* [v2.47.0] 交棒：原判据用 /["'](.*?)["']/g 粗暴抓引号对，条目正文里出现成对引号
+       （如 markdown 的 `CHEAT_ITEM_PREFIX = 'cheat_'`）就会多抓一条 —— 判据与「本版写了
+       什么」无关地翻红。改为把公告对象字面量整体当 JS 求值：精确，且顺带验证公告块
+       确实是合法字面量（原写法对这一条并无约束）。 */
+    const annObj = new Function('ST_PHONE_VERSION',
+        'return (' + annMatch[0].slice(annMatch[0].indexOf('=') + 1).trim().replace(/;$/, '') + ');')('0.0.0');
+    const annItems = (annObj && Array.isArray(annObj.items)) ? annObj.items : [];
     const logItems = LOG.versions[HEADV].items;
     ok('E5b 公告条数一致', annItems.length === logItems.length);
     ok('E5c 公告与 HEAD 逐字同源', logItems.every((item, i) => annItems[i] === item));

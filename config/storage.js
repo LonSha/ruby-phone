@@ -56,6 +56,10 @@ export class PhoneStorage {
             // [v2.46.0] 地点图景（place_settings_v1：注入开关/行数/诊断显示）。
             //   场所读数本身每次现取（不落库），但设置若落全局会跨会话串味。
             /^place_/,
+            // [v2.47.0] 金手指（cheat_state_v1：装配清单 installed[] + 设置）。
+            //   外挂正文是内置静态事实源（data/cheats.js，不随会话变），
+            //   但「本会话装了哪几个」必须随会话隔离，否则换角色会带着上一个角色的外挂。
+            /^cheat_/,
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
             // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
             //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，

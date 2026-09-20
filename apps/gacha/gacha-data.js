@@ -5,7 +5,8 @@
  * ======================================================== */
 'use strict';
 import { gachaPools, gachaItems } from '../../data/gacha-items.js';
-
+// [v2.47.0] 金手指：外挂以独立卡池并入扭蛋（池 + 道具由 cheat-data 从轻量索引派生）
+import { cheatGachaItems, cheatGachaPool } from '../cheat/cheat-data.js';
 // 品质 → 中文显示 + 权重 + 颜色
 export const QUALITY_META = {
   '神话': { weight: 1, color: '#f59e0b', order: 0 },
@@ -27,8 +28,8 @@ export class GachaData {
     this.inventory = {};        // itemId -> count
     this.history = [];          // 最近抽卡记录
     this.pullCount = 0;
-    this._pools = gachaPools;
-    this._items = gachaItems;
+    this._pools = null;         // 惰性合并（含外挂池）
+    this._items = null;
     this._load();
   }
 
@@ -55,17 +56,45 @@ export class GachaData {
     } catch (e) { /* 忽略 */ }
   }
 
-  getPools() { return this._pools.slice(); }
+  getPools() { return this._poolList().slice(); }
   getItemsOfPool(poolId) {
-    if (poolId === 'all') return this._items;
-    return this._items.filter(i => (i.poolTags || []).includes(poolId));
+    if (poolId === 'all') {
+      /* [v2.47.0] 「全部」= 仅 includeInAll 的池的并集。外挂池 includeInAll=false，
+       *   若在此直接返回全量 _itemList()，157 个外挂会混进「全部」，既有 630 道具的概率被稀释
+       *   （外挂本该是一件难求，不是日常消耗品）。排除集由池表推导，新池只要标 false 就自动生效。 */
+      const excluded = new Set(this._poolList()
+        .filter(p => p && p.includeInAll === false).map(p => p.id));
+      if (!excluded.size) return this._itemList();
+      return this._itemList().filter(i => !(i.poolTags || []).some(t => excluded.has(t)));
+    }
+    return this._itemList().filter(i => (i.poolTags || []).includes(poolId));
+  }
+  /* 惰性合并静态道具库与金手指外挂库（外挂池独立，不混进「全部」：
+   * 否则 157 个外挂会稀释既有 630 道具的概率，且外挂本该是一件难求而非日常消耗品）。 */
+  _itemList() {
+    if (!this._items) {
+      const cheat = cheatGachaItems();
+      this._items = cheat.length ? gachaItems.concat(cheat) : gachaItems.slice();
+    }
+    return this._items;
+  }
+  _poolList() {
+    if (!this._pools) {
+      const pool = cheatGachaPool();
+      const has = gachaPools.some(p => p && p.id === pool.id);
+      const merged = gachaPools.slice();
+      if (!has) merged.push(pool);
+      this._pools = merged.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+    }
+    return this._pools;
   }
 
   // 加权随机抽一件（按品质权重）
   _rollOne(poolId) {
-    let pool = this._items;
-    if (poolId && poolId !== 'all') pool = this.getItemsOfPool(poolId);
-    if (!pool.length) pool = this._items;
+    /* [v2.47.0] 'all' 或缺省也走 getItemsOfPool（带上 includeInAll 过滤）：
+     *   此前直接取 _itemList()，会让「全部」把外挂一并抽出来（与池的 includeInAll=false 自相矛盾）。 */
+    let pool = this.getItemsOfPool(poolId || 'all');
+    if (!pool.length) pool = this.getItemsOfPool('all');
     // 按权重选一件（quality 权重 × item.weight）
     const weighted = [];
     for (const item of pool) {
@@ -126,7 +155,7 @@ export class GachaData {
   getInventory() {
     const out = [];
     for (const [id, count] of Object.entries(this.inventory)) {
-      const item = this._items.find(i => i.id === id) || { id, name: id, quality: '普通', description: '', type: '道具' };
+      const item = this._itemList().find(i => i.id === id) || { id, name: id, quality: '普通', description: '', type: '道具' };
       if (count > 0) out.push({ ...item, count });
     }
     // 按品质排序

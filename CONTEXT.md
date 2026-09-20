@@ -11,7 +11,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ## App 架构规范
 - 每个App独立目录 apps/<name>/，含 <name>-app.js (控制器) / <name>-data.js (数据) / <name>-view.js (视图) / <name>.css (样式)。
 - 新增App必须完成四处注册：config/apps.js 桌面图标、phone.css 样式合并、index.js phone:openApp 路由分支、（可选）AI标签解析监听。
-- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)/地点图景青(#14b8a6)。
+- 样式采用深色毛玻璃现代风，遵循各App既定主色：灵感工坊紫(#9333ea)/成就簿金(#f59e0b)/小红书红(#ff2442)/贴吧蓝(#2563eb)/健康粉(#f43f5e)/地点图景青(#14b8a6)/金手指鎏金(#d4af37)。
 
 ## AI 联动标签协议
 - 小红书：<RED>{JSON}</RED> 或 <xhs>{JSON}</xhs>
@@ -76,6 +76,19 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 生成侧一致性注入：`scenePromptBlock()` 经 `GENERATE_BEFORE_COMBINE_PROMPTS` 注入「【本世界已登记的场所与在场…】」system 块，让正文地点与记忆插件记的地点是同一个。与 worldpulse 的 `worldAxisPromptBlock` 同规格：**内容为空返回 `''`**（不产生空块）、注入失败静默且绝不阻断生成。
 - 设置：`place_settings_v1`（`injectToPrompt` / `maxInject` 1–20 / `showDiagnostics`），由 `config/storage.js` 的 `/^place_/` 判定为会话数据。桌面主色地理青 `#14b8a6`；样式合并进 `phone.css` 并保留 `apps/place/place.css` 源文件（与 bilibili / theater 同规）。
 - 回归锁：`tests/system-v246.test.mjs`（98 项，含真源码破坏负控制）。
+
+## 金手指 (apps/cheat/，v2.47.0)
+- 消费上游外供的《万界武库V4》世界书（185 条 / 508,555 字）。形态判定先于实现：174/185 条带 `disable=true`，它是**武库**（可选外挂目录）而非人设——**「拥有」与「生效」拆开**：157 个可抽卡包 + 3 个装配位（1–5 可调）+ 生成前一次性注入；全量注入 500K 字等于自杀，装配上限是核心机制。
+- **同源契约双文件**：`data/cheats.js`（1.36MB 全量正文，只给金手指 App）/ `data/cheat-index.js`（36KB 轻量索引，抽卡侧 + 品阶权重单一真源）。`CHEAT_ITEM_PREFIX = 'cheat_'` 只在索引定义一次，抽卡背包 id 与反解都经 `cheat-data.js` re-export（`CHEAT_ITEM_PREFIX` 本身不导出，否则被零消费门禁判死导出）；任何地方手写前缀截取都算漂移。
+- **品阶按包总字数分六档**（≥6000 神话 8 / ≥4500 传说 19 / ≥3500 史诗 12 / ≥2600 稀有 44 / ≥1800 优秀 48 / <1800 普通 26），权重即品阶权重（神话 1 … 普通 30）；185 条按 `·` 切分取主条归并（`sub > 1` 的 8 条为家族条）。
+- **装配语义**：到顶如实拒绝不静默替换；读取时重跑归一（去重 / 丢未知 / 保次序）；`toggleInstall` **写入前**校验 id（写脏 + 读时净化是终将被绕过的兜底），未知 id 如实拒绝不落存储。
+- **生成侧注入**：`buildCheatPromptBlock()` 经 `GENERATE_BEFORE_COMBINE_PROMPTS` 注入 system 块，语义是「已装配外挂是**既定事实**」（非许可，堵「怎么会这个」的自作解释链）；块头 `〔品阶·名称〕`、正文逐字不改写；空清单返回**空串**（有双重防线：装配归一空 / 块拼装空各一道，破坏须两道全破才可观测——负控制按此锁）。
+- **抽卡联动**：以 `cheat_<packId>` 入包（`unique:true` / `stackable:false`，重复抽不再入包）；外挂池 `includeInAll:false`；`getItemsOfPool('all')` **按池表推导排除集**（新池标 false 即自动生效），「列出」与「抽取」两路同时收敛——本版修掉「全部池混入外挂」的自相矛盾。
+- **工程纪律**：只持久化 `cheat_state_v1`（`/^cheat_/` 会话隔离）；不持武库副本、背包现取；`onChatChanged()` 只丢浏览位置不动装配；index.js 三处清理路径（换会话 + clearCurrentData + clearAllData）同步接入。
+- **四处注册**：`config/apps.js` 桌面条目（鎏金 `#d4af37`，与既有 29 主色唯一不撞）/ `phone.css` 合并 `.ch-*`（保留 `apps/cheat/cheat.css` 源文件，与 bilibili / theater / place 同规）/ `phone:openApp` 懒加载单例路由（失败兜底提示）/ `CHAT_DATA_PATTERNS` 增 `/^cheat_/`。
+- **顺手修复的两处真实缺陷**：① `esc()` 双引号「转义」成转义成自身 = 无转义（cheat-view 与既有 gacha-view 同修）。根因经探针实测：**写入路径把 HTML 具名实体解码成裸字符，数字实体（`&#34;` / `&#39;`）才原样保留**——转义函数一律用数字实体。② v223 / v246 两条钉死字符距离/紧邻关系的门禁判据改为「结构化区间成员核对」（锁语义：重绑调用落在换会话清理块内且在 `wechatApp = null` 之前）；v238/v239 的公告同源判据改为对公告对象字面量整体求值后逐字比对（裸引号对扫描会被正文里的引号多抓条目）；v246 K3 的版本专属词判据改为版本无关自洽性。**新判据必须附负控制：篡改一字须被抓到。**
+- 回归锁：`tests/system-v247.test.mjs`（98 项，A–H 八组，含真源码破坏负控制）。
+- 数据再生成：`scripts/gen-cheats.mjs`（源世界书路径经 argv 传入 → cheats.js + cheat-index.js 双输出同源；改源后重跑并由 v247 的 A 组同源断言把关）。
 
 ## 系统层 (v2.16.0：通知 / 搜索 / 控制中心)
 - **通知落账层 `config/system-notifications.js`**：`NotificationLog`（KEY=`sys_notifs`，LIMIT=200，MERGE_WINDOW_MS=180000）。契约：`push()` 返回 `{id, merged}`；同 `senderKey` 3 分钟内合并累加 `count`，**合并不重置已读**；落盘 800ms 防抖 + `flushNow()` 兜底；`_normalize` 净化脏数据并倒序裁剪；**全部失败路径返回 `{error}`，绝不抛**。

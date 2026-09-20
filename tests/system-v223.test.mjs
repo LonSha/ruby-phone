@@ -167,8 +167,18 @@ function makeEnv(bucketKey) {
         ok(`index.js: ${a} 三处接入`, cnt === 3, String(cnt));
     }
     // 换会话接入点位于 onChatChanged 清理块内
-    ok('index.js: 换会话路径接入（wechatApp=null 之前）',
-        /tiebaApp\?\.onChatChanged\?\.\(\);[\s\S]{0,800}window\.VirtualPhone\.wechatApp = null;/.test(isrc));
+    // [v2.47.0] 判据由「tieba→wechatApp=null 的字符距离 <=800」改为**区间成员核对**：
+    //   距离式判据在清理块里每新增一个 App 就会误报（本版新增 cheatApp 后实测 865/946/943 > 800 = 假红），
+    //   而它本来要守的是「这些重绑调用真的落在换会话清理块内、且在 wechatApp = null 之前」。
+    const chatFrom = isrc.indexOf('彻底清空微信单例缓存');
+    const chatTo = isrc.indexOf('window.VirtualPhone.wechatApp = null;', chatFrom);
+    const chatBlock = (chatFrom >= 0 && chatTo > chatFrom) ? isrc.slice(chatFrom, chatTo) : '';
+    const rebindApps = ['tiebaApp', 'xhsApp', 'gachaApp', 'readingApp', 'tarotApp', 'healthApp',
+        'achievementApp', 'playbookApp', 'bilibiliApp', 'theaterApp', 'placeApp', 'cheatApp'];
+    const rebindMissing = rebindApps.filter((a) => !chatBlock.includes(`window.VirtualPhone.${a}?.onChatChanged?.()`));
+    ok('index.js: 换会话清理块含全部重绑调用（wechatApp = null 之前）',
+        chatFrom >= 0 && chatTo > chatFrom && rebindMissing.length === 0,
+        `block=${chatBlock.length} 缺失=${rebindMissing.join(',') || '无'}`);
     // 清数据路径接入
     ok('index.js: clearCurrentData 路径接入',
         /clearCurrentData[\s\S]{0,3000}playbookApp\?\.onChatChanged\?\.\(\)/.test(isrc));

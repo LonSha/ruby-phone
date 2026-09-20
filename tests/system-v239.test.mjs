@@ -151,7 +151,13 @@ ok('D4c HEAD 条目数 >= 4', ((LOG.versions[HEADV] || {}).items || []).length >
 const annMatch = /ST_PHONE_CURRENT_UPDATE\s*=\s*\{([\s\S]*?)\n\};/.exec(IDX);
 ok('D5 \u516c\u544a\u5757\u5b58\u5728', !!annMatch);
 if (annMatch && LOG.versions[HEADV]) {
-    const annItems = [...annMatch[1].matchAll(/["'](.*?)["']/g)].map(m => m[1]).filter(s => s.length > 10);
+    /* [v2.47.0] 交棒：原判据用 /["'](.*?)["']/g 粗暴抓引号对，条目正文里出现成对引号
+       （如 markdown 的 `CHEAT_ITEM_PREFIX = 'cheat_'`）就会多抓一条 —— 判据与「本版写了
+       什么」无关地翻红。改为把公告对象字面量整体当 JS 求值：精确，且顺带验证公告块
+       确实是合法字面量（原写法对这一条并无约束）。 */
+    const annObj = new Function('ST_PHONE_VERSION',
+        'return (' + annMatch[0].slice(annMatch[0].indexOf('=') + 1).trim().replace(/;$/, '') + ');')('0.0.0');
+    const annItems = (annObj && Array.isArray(annObj.items)) ? annObj.items : [];
     const logItems = LOG.versions[HEADV].items;
     ok('D5b \u516c\u544a\u6761\u6570\u4e00\u81f4', annItems.length === logItems.length, `ann=${annItems.length} log=${logItems.length}`);
     ok('D5c \u516c\u544a\u9010\u5b57\u540c\u6e90', logItems.every((it, i) => annItems[i] === it));

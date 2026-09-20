@@ -1,6 +1,8 @@
 // Gacha 抽卡数据层测试
 import { GachaData, QUALITY_META, SINGLE_COST, TEN_COST } from '../apps/gacha/gacha-data.js';
 import { gachaPools, gachaItems } from '../data/gacha-items.js';
+// [v2.47.0] 金手指：外挂池并入扭蛋，判据需读轻量索引与外挂 id 映射（不重复硬编码 'cheat_'）
+import { cheatIndex, cheatItemId, cheatPackIdOfItem } from '../data/cheat-index.js';
 
 let pass = 0, fail = 0;
 const assert = (n, c) => { if (c) { pass++; console.log(`✓ ${n}`); } else { fail++; console.log(`✗ ${n}`); } };
@@ -59,7 +61,21 @@ assert('十连品质在合法集合', [...quals].every(q => q in QUALITY_META));
 assert('erotic 池 210', g.getItemsOfPool('pool_erotic').length === 210);
 
 // 10. 卡池输出
-assert('getPools 返回 5', g.getPools().length === 5);
+// [v2.47.0] 不再钉死池数量：`getPools()` 是运行时合并面（内置 5 池 + 金手指「万界武库」池），
+//   钉死具体数字会让合法增长变成红灯（v2.45.0 D2 同类修正：门禁只可能拒判、不可能放行）。
+//   改为下界 + 不重复 + 必须含外挂池，既容忍增长又锁住「外挂池真的被合并进来了」。
+const pools = g.getPools();
+assert('getPools 至少含 5 个内置池', pools.length >= 5, String(pools.length));
+assert('getPools 含外挂池 pool_cheat', pools.some(p => p.id === 'pool_cheat'));
+assert('getPools 池 id 不重复', new Set(pools.map(p => p.id)).size === pools.length);
+assert('getPools 按 order 排序', pools.every((p, i) => i === 0
+  || (Number(pools[i - 1].order) || 0) <= (Number(p.order) || 0)));
+// 外挂池必须独立：不进「全部」混杂池（否则 157 个外挂会稀释既有 630 道具概率）
+assert('外挂池 includeInAll=false', pools.find(p => p.id === 'pool_cheat').includeInAll === false);
+assert('「全部」不混入外挂', !g.getItemsOfPool('all').some(i => String(i.id).startsWith('cheat_')));
+assert('外挂池道具数 == 外挂包数', g.getItemsOfPool('pool_cheat').length === cheatIndex.length);
+assert('外挂池道具 id 均带 cheat_ 前缀',
+  g.getItemsOfPool('pool_cheat').every(i => i.id === cheatItemId(cheatPackIdOfItem(i.id))));
 
 console.log(`\n${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);

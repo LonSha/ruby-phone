@@ -45,6 +45,7 @@ const apps = [
   ['timeweaver', '../apps/timeweaver/timeweaver-app.js', 'TimeweaverApp'],
   ['worldpulse', '../apps/worldpulse/worldpulse-app.js', 'WorldpulseApp'],
   ['place', '../apps/place/place-app.js', 'PlaceApp'],
+  ['cheat', '../apps/cheat/cheat-app.js', 'CheatApp'],
 ];
 let fail = 0;
 for (const a of apps) { if (!(await smoke(a))) fail++; }

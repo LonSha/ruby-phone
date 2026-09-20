@@ -231,8 +231,17 @@ void defaultPlaceSettings;
     const idx = read('index.js');
     const cnt = (idx.match(/window\.VirtualPhone\.placeApp\?\.onChatChanged\?\.\(\)/g) || []).length;
     ok('I1 index.js 三处接入（换会话 + 两处清数据）', cnt === 3, String(cnt));
+    // [v2.47.0] I2 由「theater→place 的行距紧邻断言」改为**区间成员核对**：
+    //   本版在 place 之后新增 cheatApp 重绑，紧邻式判据立刻失配；而它本来要守的是
+    //   「theater / place / cheat 三个重绑都在换会话块内、且在 wechatApp = null 之前」。
+    const v246From = idx.indexOf('window.VirtualPhone.theaterApp?.onChatChanged?.();');
+    const v246To = idx.indexOf('window.VirtualPhone.wechatApp = null;', v246From);
+    const v246Block = (v246From >= 0 && v246To > v246From) ? idx.slice(v246From, v246To) : '';
     ok('I2 换会话路径接入（theaterApp 之后、wechatApp = null 之前）',
-        /theaterApp\?\.onChatChanged\?\.\(\);\n\s*\/\/ \[v2\.46\.0\][^\n]*\n\s*window\.VirtualPhone\.placeApp\?\.onChatChanged\?\.\(\);\n\s*window\.VirtualPhone\.wechatApp = null;/.test(idx));
+        v246From >= 0 && v246To > v246From
+        && v246Block.includes('window.VirtualPhone.placeApp?.onChatChanged?.();')
+        && v246Block.includes('window.VirtualPhone.cheatApp?.onChatChanged?.();'),
+        `block=${v246Block.length}`);
     ok('I3 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}placeApp\?\.onChatChanged\?\.\(\)/.test(idx));
     ok('I4 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}placeApp\?\.onChatChanged\?\.\(\)/.test(idx));
     // 缩进未被写坏：插入点缩进必须与同块内的 bilibili 调用一致
@@ -343,8 +352,12 @@ void defaultPlaceSettings;
         `${manifest.version}/${pkg.version}/${log.latest}`);
     const cur = (log.versions || {})[manifest.version];
     ok('K2 当前版本条目含非空 items', !!(cur && Array.isArray(cur.items) && cur.items.length));
-    ok('K3 本版条目写明地点图景（v2.46 的变更可回溯）',
-        !!cur && cur.items.some((x) => x.includes('地点图景')));
+    /* [v2.47.0] 交棒：原判据钉死 HEAD 条目里出现「地点图景」（v2.46 的版本专属词），
+       每发一版必翻红。改为版本无关的自洽性：HEAD 条目逐条为非空文案，不得留空串占位。 */
+    ok('K3 HEAD 条目逐条为非空文案（非占位）',
+        !!cur && cur.items.length > 0
+        && cur.items.every((x) => typeof x === 'string' && x.trim().length >= 10),
+        cur ? String(cur.items.length) : 'missing');
 }
 
 console.log(`\n\u7ed3\u679c: ${pass} \u901a\u8fc7, ${fail} \u5931\u8d25`);

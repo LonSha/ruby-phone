@@ -299,6 +299,15 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    // [v2.47.0] 金手指：万界武库外挂库（抽出即入包，装配即生效）
+    {
+        id: 'cheat',
+        name: '金手指',
+        icon: '🪄',
+        color: '#d4af37',
+        badge: 0,
+        data: {}
+    },
     {
         id: 'search',
         name: '全局搜索',
