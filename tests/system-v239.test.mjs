@@ -137,19 +137,22 @@ const IDX = read('index.js');
 const MANIFEST = JSON.parse(read('manifest.json'));
 const PKG = JSON.parse(read('package.json'));
 const LOG = JSON.parse(read('update-log.json'));
+/* [v2.40.0] 交棒：原 D1-D4b 钉死 V=2.39.0，每发一版必翻红。
+ * 改为「三源同源 + 不低于本版 + HEAD 自洽」——与本版条目是否仍是 HEAD 无关。 */
 const V = '2.39.0';
-
-ok('D1 index.js \u7248\u672c', IDX.includes(`ST_PHONE_VERSION = '${V}'`));
-ok('D2 manifest.json', MANIFEST.version === V);
-ok('D3 package.json', PKG.version === V);
-ok('D4 latest', LOG.latest === V);
-ok('D4b versions \u5934\u90e8', Object.keys(LOG.versions)[0] === V);
-ok('D4c \u6761\u76ee\u6570 >= 4', (LOG.versions[V]?.items || []).length >= 4);
+const idxVer = (/ST_PHONE_VERSION = '([^']+)'/.exec(IDX) || [])[1];
+const HEADV = LOG.latest;
+ok('D1 三处版本同源', !!idxVer && idxVer === MANIFEST.version && idxVer === PKG.version, `${idxVer}/${MANIFEST.version}/${PKG.version}`);
+ok('D2 版本不低于 2.39.0', vnum(idxVer) >= vnum(V), String(idxVer));
+ok('D3 package.json 与 manifest 一致', PKG.version === MANIFEST.version, `${PKG.version}/${MANIFEST.version}`);
+ok('D4 update-log.latest 指向 versions 头部（自洽）', HEADV === Object.keys(LOG.versions)[0], `${HEADV}`);
+ok('D4b latest 不低于 2.39.0', vnum(HEADV) >= vnum(V), String(HEADV));
+ok('D4c HEAD 条目数 >= 4', ((LOG.versions[HEADV] || {}).items || []).length >= 4);
 const annMatch = /ST_PHONE_CURRENT_UPDATE\s*=\s*\{([\s\S]*?)\n\};/.exec(IDX);
 ok('D5 \u516c\u544a\u5757\u5b58\u5728', !!annMatch);
-if (annMatch && LOG.versions[V]) {
+if (annMatch && LOG.versions[HEADV]) {
     const annItems = [...annMatch[1].matchAll(/["'](.*?)["']/g)].map(m => m[1]).filter(s => s.length > 10);
-    const logItems = LOG.versions[V].items;
+    const logItems = LOG.versions[HEADV].items;
     ok('D5b \u516c\u544a\u6761\u6570\u4e00\u81f4', annItems.length === logItems.length, `ann=${annItems.length} log=${logItems.length}`);
     ok('D5c \u516c\u544a\u9010\u5b57\u540c\u6e90', logItems.every((it, i) => annItems[i] === it));
 } else {

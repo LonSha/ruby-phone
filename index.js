@@ -40,7 +40,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.39.0';
+const ST_PHONE_VERSION = '2.40.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -75,13 +75,13 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-19",
+    date: "2026-09-20",
     items: [
-        "群聊发言调度引擎接线：group-scheduler.js 的 7 个纯函数（director 选发言者 / force-speak 强制接管 / critique 导演批判）终于被消费，WechatData 新增 6 个消费方法",
-        "data 层新增 getGroupMembers：群成员字符串数组归一化为 { id, name }，getChat 取群聊后喂给调度引擎",
-        "data 层新增 planGroupSpeakers：parseSpeakers 容错解析 LLM 输出 → scheduleSpeakers 去重保序 cap → validateSpeakers 过滤可用成员，永不抛",
-        "data 层新增 buildGroupForceSpeakInstruction / buildGroupCritiquePrompt / parseGroupCritique：@强制发言与导演批判链路",
-        "此前群聊回复链路（triggerAI→sendToAI）从不询问谁该发言，缝合引擎全零消费——本版补齐数据层消费入口"
+        "语法门性能层：scripts/syntax-check.mjs 旧实现逐文件 spawn `node --input-type=module --check`（251 文件 = 251 个子进程，单次扫描实测 16.7s），改为本进程内 vm 批量解析（vm.SourceTextModule），失败文件才回退 per-file --check 取精确 stderr——单次扫描 16.7s → 0.592s（28x）",
+        "判定等价性实测：对照 251 个真实文件的 per-file 判定，逐文件比对 0 处不一致（files:251 mismatch:0）",
+        "vm.SourceTextModule 需 --experimental-vm-modules；缺标志时门自 re-exec 一次（spawnSync + stdio: inherit），以 RP_SYNTAX_GATE_REEXEC 环境变量防无限递归",
+        "vm 抛出的 SyntaxError 不含行号/文件名，故失败路径必须回退 per-file 取权威结论——回退分支保留「权威放行则不改判」的不误报逻辑",
+        "新增 tests/syntax-gate-perf.test.mjs（18 项断言）：A 性能不退化（<6000ms + 源码结构）/ B 与 per-file 逐文件等价 / C 能力六态（文件名·行号·损坏 ESM·健康 ESM·IIFE 不误伤·假片段不误伤·rc=2）/ D 负控制（真源码破坏锚点恰中 1 次 → 快筛恒过副本必放行 → 原版必拒绝）/ E 版本三源一致"
     ]
 };
 

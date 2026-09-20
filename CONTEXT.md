@@ -23,6 +23,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完两者。
 - ⚠️ 不要再单独依赖裸 `node --check <文件>.js`。实测：仓库缺少 package.json（或无 `"type": "module"`）时，它会把 `.js` 按脚本/CommonJS 解析，对 ES Module 的结构性损坏返回退出码 0（假绿）。index.js 曾据此"校验通过"，实际根本无法解析、插件全量不可加载，并连续发布了约 9 个版本（v2.1.0 → v2.8.9）。
   - 语法门以 `--input-type=module` 从 stdin 强制按 ESM 解析，不依赖该配置；根目录 package.json 的 `"type": "module"` 则让裸 `node --check` 也恢复有效。两者由 `tests/syntax-gate.test.mjs` 的负控制用例共同锁定。
+  - 性能层（v2.40.0）：门改为**本进程内 vm 批量解析**（251 文件单次 ~0.6s，旧逐文件 spawn 为 ~16.7s），仅对快筛失败的文件回退 per-file `--check` 取精确 stderr。`vm.SourceTextModule` 需 `--experimental-vm-modules`，缺标志时门自 re-exec 一次（`RP_SYNTAX_GATE_REEXEC` 防递归）。判定等价性由 `tests/syntax-gate-perf.test.mjs`（含负控制）锁定，改动门时须重跑。
   - 注：显式写 `"type": "commonjs"` 并不等价于"没有 package.json"——含 `export` 的文件会因模块语法直接报错（另一种失败机制）。
 - 新增/改动 App 时同步三处版本号：`manifest.json`、`index.js` 的 `ST_PHONE_VERSION`、`package.json`；`update-log.json` 需含当前版本条目且 `latest` 指向它。版本跨源自洽由测试断言锁定，不要把具体版本号硬编码进测试。
 - release 附带离线 zip。
