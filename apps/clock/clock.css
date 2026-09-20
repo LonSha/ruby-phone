@@ -1,0 +1,24 @@
+/* [v2.52.0] 时计 App（.cl-*） */
+.cl-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.cl-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.cl-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.cl-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.cl-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.cl-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.cl-face-icon { font-size: 18px; }
+.cl-time-card { background: rgba(255,255,255,.04); border-radius: 12px; padding: 16px; }
+.cl-date { font-size: 22px; font-weight: 600; color: #e2e8f0; font-family: 'Times New Roman', serif; }
+.cl-label { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+.cl-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.cl-chip { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,.08); color: #cbd5e1; }
+.cl-chip-prec { background: rgba(96,165,250,.15); color: #60a5fa; }
+.cl-chip-fb { background: rgba(168,85,247,.15); color: #c084fc; }
+.cl-flashback { margin-top: 10px; font-size: 12px; color: #c084fc; padding: 6px 10px; background: rgba(168,85,247,.08); border-radius: 6px; }
+.cl-diag-card { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.cl-diag-card h3 { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
+.cl-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,.04); }
+.cl-stat-warn span:last-child { color: #fbbf24; }
+.cl-settings { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.cl-settings h3 { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
+.cl-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1; padding: 6px 0; cursor: pointer; }
+.cl-toggle input { accent-color: #60a5fa; }

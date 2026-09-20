@@ -81,15 +81,16 @@ test('v251 C: 微信注入表补齐群像 + 三处 onChatChanged 接线', () => 
     }
 });
 
-test('v251 D: 版本同源 2.51.0', () => {
+test('v251 D: 版本同源', () => {
+    const v = String(JSON.parse(read('manifest.json')).version);
     const pkg = JSON.parse(read('package.json'));
     const manifest = JSON.parse(read('manifest.json'));
     const idx = read('index.js');
     const upd = JSON.parse(read('update-log.json'));
-    assert.equal(pkg.version, '2.51.0', 'D1');
-    assert.equal(manifest.version, '2.51.0', 'D2');
-    assert.match(idx, /const ST_PHONE_VERSION = '2\.51\.0';/, 'D3');
-    assert.equal(upd.latest, '2.51.0', 'D4');
-    assert.ok(upd.versions['2.51.0'], 'D5');
-    assert.ok(Array.isArray(upd.versions['2.51.0'].items) && upd.versions['2.51.0'].items.length >= 3, 'D6');
+    assert.equal(pkg.version, v, 'D1');
+    assert.equal(manifest.version, v, 'D2');
+    assert.match(idx, new RegExp(`const ST_PHONE_VERSION = '${v.replace(/\\./g, '\\\\.')}';`), 'D3');
+    assert.equal(upd.latest, v, 'D4');
+    assert.ok(upd.versions[v], 'D5');
+    assert.ok(Array.isArray(upd.versions[v].items) && upd.versions[v].items.length >= 3, 'D6');
 });

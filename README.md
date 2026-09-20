@@ -218,3 +218,11 @@
 - **去噪清洗（v2.7.3）**：采集前自动剔除 horae 等插件注入的状态块/成对大写块/HTML/裸K=V状态行，代码围栏智能保留中文正文，避免把系统状态当剧情记忆采进去（移植自芋圆机清洗算法）
 - **跨端记忆协同（v2.15.0）**：经 `lonshaBridge.recallBlock` 单一真源，把 LonSha 记忆插件里的剧情记忆注入到微信单聊 / 微信群聊 / 蜜语三条链路；群聊走 `strictActors` 严格模式，只带提及在场成员的记忆，不把某人私密往事灌进群聊。
 
+
+
+## 🕓️ 时计 App (apps/clock/，v2.52.0)
+消费记忆插件 `snapshot.clock` 面，展示剧情时间轴：
+- **五态归因**：ready / empty / no-clock-face / no-snapshot / bridge-absent
+- **时间轴卡片**：日期 / 时段 / 精确度 / 楼层 / 闪回
+- **诊断面板**（可选开关）：时间标签统计 / 世界钟对读 / 锚点
+- **注入**：微信 `_injectApps` 表第 8 项 + `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子

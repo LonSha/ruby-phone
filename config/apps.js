@@ -350,6 +350,14 @@ export const APPS = [
         data: {}
     },
     {
+        id: 'clock',
+        name: '时计',
+        icon: '🕓️',
+        color: '#60a5fa',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'search',
         name: '全局搜索',
         icon: '🔎',

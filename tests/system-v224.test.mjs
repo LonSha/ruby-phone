@@ -137,7 +137,7 @@ function makeEnv(bucketKey) {
     }
     // 换会话接入点位于 onChatChanged 清理块内（wechatApp=null 之前）
     ok('index.js: 换会话路径接入（wechatApp=null 之前）',
-        /bilibiliApp\?\.onChatChanged\?\.\(\);[\s\S]{0,600}window\.VirtualPhone\.wechatApp = null;/.test(isrc));
+        /bilibiliApp\?\.onChatChanged\?\.\(\);[\s\S]{0,1000}window\.VirtualPhone\.wechatApp = null;/.test(isrc));
     ok('index.js: theaterApp 与 bilibiliApp 相邻接入',
         /bilibiliApp\?\.onChatChanged\?\.\(\);\s*\n\s*window\.VirtualPhone\.theaterApp\?\.onChatChanged\?\.\(\);/.test(isrc));
     // 清数据路径接入

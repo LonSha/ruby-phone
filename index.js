@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.51.0';
+const ST_PHONE_VERSION = '2.52.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "【群像 App·多角色状态面板】新增「群像」App（🎭），消费 snapshot.characters 面展示多角色动态状态：字段（好感/情绪/重要度等动态键值）、待办（含日期）、楼层。与档案 App 互补——档案投影主角单人，群像投影被追踪的其他角色。",
-        "【五态归因 + 活动度排序】charsFace 五态判定（ready/empty/no-chars-face/no-snapshot/bridge-absent），投影按活动度打分排序（字段+1/个封顶5、待办+2/个封顶4），让活跃角色优先展示。纯函数零 window 依赖，v251 B 组逐态逐入参实测锁定。",
-        "【微信注入表第 7 项】_injectApps 表追加 charsApp，注入块随 injectToPrompt 开关自动生效。三处 onChatChanged 接线齐全（换会话/clearCurrentData/clearAllData），切会话与清数据时角色面板自动刷新。",
-        "【测试与版本】新增 tests/system-v251.test.mjs（A 四件套+注册 / B 内核纯函数五态+排序+注入块 / C 微信注入+三处接线 / D 版本同源 2.51.0）。全量门禁绿。"
+        "新增「时计」App：消费 snapshot.clock 面展示剧情时间轴（日期/时段/精确度/楼层/闪回）与诊断数据（时间标签统计/世界钟对读/锚点）。",
+        "五态归因（ready/empty/no-clock-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 无有效内容时返回空串。",
+        "微信 _injectApps 表第 8 项（clockApp），三处 onChatChanged 接线齐全。",
+        "新增 tests/system-v252.test.mjs（A四件套+注册 / B内核纯函数五态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
     ]
 };
 
@@ -9150,6 +9150,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.VirtualPhone.profileApp?.onChatChanged?.();
             window.VirtualPhone.plotlineApp?.onChatChanged?.();
             window.VirtualPhone.charsApp?.onChatChanged?.();
+            window.VirtualPhone.clockApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10187,6 +10188,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载群像App失败:', err);
                             phoneShell?.showNotification('错误', '群像App加载失败', '❌');
                         });
+                } else if (appId === 'clock') {
+                    // [v2.52.0] 时计：消费记忆插件剧情时钟（只读桥，五态归因，注入走表驱动）。
+                    import('./apps/clock/clock-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.clockApp) {
+                                window.VirtualPhone.clockApp = new module.ClockApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.clockApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载时计App失败:', err);
+                            phoneShell?.showNotification('错误', '时计App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10382,6 +10396,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.profileApp?.onChatChanged?.();
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.charsApp?.onChatChanged?.();
+                    window.VirtualPhone.clockApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10495,6 +10510,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.profileApp?.onChatChanged?.();
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.charsApp?.onChatChanged?.();
+                    window.VirtualPhone.clockApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

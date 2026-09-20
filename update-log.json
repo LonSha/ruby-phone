@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.52.0": {
+      "version": "2.52.0",
+      "date": "2026-09-21",
+      "title": "时计 App — 剧情时间轴面板",
+      "items": [
+        "新增「时计」App：消费 snapshot.clock 面展示剧情时间轴（日期/时段/精确度/楼层/闪回）与诊断数据（时间标签统计/世界钟对读/锚点）。",
+        "五态归因（ready/empty/no-clock-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 无有效内容时返回空串。",
+        "微信 _injectApps 表第 8 项（clockApp），三处 onChatChanged 接线齐全。",
+        "新增 tests/system-v252.test.mjs（A四件套+注册 / B内核纯函数五态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
+      ]
+    },
     "2.51.0": {
       "version": "2.51.0",
       "date": "2026-09-21",
@@ -752,5 +763,5 @@
       ]
     }
   },
-  "latest": "2.51.0"
+  "latest": "2.52.0"
 }

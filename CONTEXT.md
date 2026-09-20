@@ -139,3 +139,9 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **接线**：apps.js 第 37 条目（icon 🎭、color #38bdf8）；storage `/^chars_/`；index.js 路由分支在 plotline 后（懒加载单例）；三处 onChatChanged（换会话/clearCurrentData/clearAllData）；微信 `_injectApps` 表第 7 项 `{app:_vp.charsApp, name:'SYSTEM (群像)'}`。
 - **纯函数契约**：`charsPromptBlock(null)` 和 `charsPromptBlock({})` 均返回 `''`（空注入不产生无意义 SYSTEM 消息）。v251 B 组逐态逐入参实测锁定。
 - **测试**：tests/system-v251.test.mjs（A 四件套+注册 37 条目 / B 内核纯函数五态+排序+注入块 / C 微信注入表+三处 onChatChanged / D 版本同源 2.51.0）。
+## 时计 App (apps/clock/，v2.52.0)
+- **起点**：`snapshot.clock` 是 GameClock.export() 的结构化输出（日期/时段/精确度/楼层/闪回/时间标签统计/世界钟对读/锚点），此前全库零消费。用户不具体感到剧情时间推进——本版补上可视化面板。
+- **四件套**：`clock-data.js`（五态归因 + 投影 + promptBlock）/ `clock-app.js`（控制器）/ `clock-view.js`（归因卡 + 时间卡 + 诊断卡 + 设置卡）/ `clock.css`（主色蓝 #60a5fa，`.cl-*` 前缀）。
+- **五态**：ready / empty / no-clock-face / no-snapshot / bridge-absent。判定逻辑：有 date 或 label 为非空字符串则 ready，否则 empty。
+- **接线**：apps.js 第 38 条目（icon 🕓️、color #60a5fa）；storage `/^clock_/`；index.js 路由分支；三处 onChatChanged；微信 `_injectApps` 表第 8 项。
+- **测试**：tests/system-v252.test.mjs（A 四件套+注册 / B 内核纯函数五态+投影+注入块 / C 微信注入+接线 / D 版本同源）。v251 D 组同步改为动态跟随。v224 窗口从 600 扩到 1000。
