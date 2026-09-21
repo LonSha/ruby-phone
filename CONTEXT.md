@@ -186,3 +186,19 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 踩坑当场抓回：重写视图时 `_esc` 的双引号转义一度退化成「转义成自身」（`" → "`，等于没转，v246 J15 同款缺陷），已修回 `"`，F3 用例立回归锁断言四转义齐备且禁止「引号→引号」形态。
 - 测试：`tests/system-v257.test.mjs`（23 用例）：A-E 组**直接 ESM 导入纯内核做真功能测试**（非只 grep 源码），F 组源码不变量锁定（消费闭环 / 六面容错 / 转义 / 分页 / 巩固单一入口 / CSS 落点 / 不缓存副本），G 组版本四源同源。
 - 维护惯例落实：`system-v256.test.mjs` 的 C4 同款「读动态当前版本」漂移缺陷，锚定 `log.versions['2.56.0']`（C2/C3 的动态版本断言是「index items 与 update-log 头部同源」检查，升版后两边同升、天然通过，保留不动）。
+## v2.58.0 育种推演（Breeding Simulator）
+- **动机**：移植上游 `Liuuuu54/st_bs_biotracker` v0.9.9 的异种繁殖算法链，把「自然受精 / 后代核型 / 衍生遗传」三组**只读推演**落到健康 App——纯本地数学、零 LLM、不写状态，与既有 `bio-engine.js`（28 天周期 + 妊娠/产程/种族孕速）同规格。
+- **新增 `apps/health/bio-propagation.js`**（468 行纯算法层，`SPERM_DECAY_PER_DAY=10` / `CROSS_RACE_DIFFICULTY_MULTIPLIER=1.5` / `DERIVED_INHERITANCE_THRESHOLD=75`）：
+  - `calculateSpermExposure(value, elapsedDays, decayPerDay)` —— 精液衰减，返回**对象** `{startingValue, endingValue, exposureDays, exposureAmountDays}`（非裸数字，读 `.endingValue`）。
+  - `calculateFertilizationPreview({spermSources:[{race,value}], ...})` —— 多精源归属概率 / 受孕率（`spermSources` 是**数组**，传裸 `spermValue` 会默认 `[]` 走空）。
+  - `calculateOffspringPreview` / `calculateClutchPreview` —— 后代核型 + 卵群规模推演。
+  - `calculateDerivedInheritancePreview` —— 12 类衍生类型遗传进度 / 到判定线天数。
+  - `calculateImplantationPreview` / `calculateRaceImplantationDays` —— 着床窗口。
+- **卵群字典增量缝合**：本地 `RACE_PHYSIOLOGY` 无 `clutchSizeMean` 字段，卵群推演恒退化 1。从远程 v0.9.9 `race_config.js` 移植 `RACE_CLUTCH_SIZE_MEANS`（25 个多产种族 → 过滤为 21 个本地存在种族）注入本文件，`getClutchSizeMeanByRace` 改为**字典优先、回落内置字段**。
+- **UI 第 5 页签「育种」**：`health-view.js` 新增 `breedBox`（5 张推演卡：同种后代 / 跨种推演 / 受精窗口 / 着床窗口 / 衍生遗传），`body` 三元加 `tab === "breeding"` 分支，tabs 加育种按钮；`health.css` 补 `.hl-breed-*` + `.hl-tabs { flex-wrap: wrap }`。
+- **死导出全真接线**：5 个算法 API（`calculateImplantationPreview` / `calculateRaceImplantationDays` / `getFetusInheritanceTag` / `getDerivedInheritanceSeed` / `DERIVED_TYPE_FLUX_PROFILES+METABOLISM_EXEMPTIONS`）全部接进育种页（着床天数卡 / 核型标签行 / 亲和种子行 / 流变+代谢豁免计数），跨文件消费 241→246，**不走账本豁免**。`MENSTRUAL_STAGE_DAYS` 因被 `calculateRaceImplantationDays` 消费而清理（账本 25→24）。
+- **顺带修复既有 bug**：`setHealthTab` 白名单原为 `['cycle','needs','family']`，漏 `medical`——「健康」页签点击被强制回 cycle。补齐为 `['cycle','needs','medical','family','breeding']`。
+- **测试**：`tests/system-v258.test.mjs`（167 行，13 用例）——A1-A7 直接 import 纯内核做真功能测试（精液衰减对象结构 / 多精源受精 / 后代核型 / 卵群字典 / 衍生遗传越线 / 混血 / 着床），F1-F5 源码不变量（算法导出 / 字典注入 / 零退化 / 5 页签白名单 / view 消费闭环），G1 版本四源。
+- **旧锚点接管**：升版四源（index.js `ST_PHONE_VERSION` + `ST_PHONE_CURRENT_UPDATE` 5 条 / manifest / package.json / update-log 新版本插头部）后，v243 E4 / v244 G4（账本 25→24）、v245 D3/D4（零消费+账本 25→24）、v257 G1/G2（改锚定 `update-log[2.57.0]` 条目，不随升版漂移）。
+- **门禁**：全量 2683 pass / 0 真回归（v246 99 pass 确认非回归）；死导出 ✓ 无新增。
+- **踩坑**：终端 `node --test` 触发 spawn 隔离建临时目录偶发 `Failed to create directory: Current ROOT unavailable`——解法复制为 `tests/_xxx_run.mjs` 单进程直跑。写入通道对 `"` 实体解码不一致破坏 JS 引号——一律 Python 脚本落盘执行（`ast.parse` 校验）。

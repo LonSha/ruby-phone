@@ -250,3 +250,11 @@
 * **记忆 App 视图分页化**：概览 / 五感 / 场景 / 体检 四页 + 时间线常驻；条目行带降温/冻结/墓碑/已换代徽标，检索结果带回忆权限标签（cite/cautious/associate-only）。
 * **单一出口与容错**：控制器 `insights()` 是唯一取数口，六面逐面独立 try/catch（一面失败只空该面、不连坐整页）；`sleepNow()` 是巩固唯一入口，视图不直摸 `core.sleep`。
 * **「看一眼 vs 改一把」纪律**：界面只调纯读 `lifecycleStage()`，绝不触发会墓碑化清正文的 `pruneByLifecycle()`（那是 sleep 巩固管线的副作用）。
+
+## 🧬 育种推演 (Breeding Simulator, v2.58.0)
+* **异种繁殖三组只读推演**：移植上游 `Liuuuu54/st_bs_biotracker v0.9.9` 的繁殖算法链为纯本地推演（`apps/health/bio-propagation.js`，零 LLM / 不写状态）—— 自然受精预测（多精源归属概率 / 受孕率 / 有效精液暴露）/ 后代预测（胎儿种族 / 胚型 / 孕期 / 卵群规模）/ 衍生遗传预测（12 类衍生类型进度 / 到判定线天数）/ 着床窗口（种族着床天数 + 已推进 / 剩余）。
+* **卵群规模字典增量缝合**：远程 `race_config.RACE_CLUTCH_SIZE_MEANS`（25 个多产种族均值）移植为本地 `RACE_CLUTCH_SIZE_MEANS`，过滤为仅本地 `RACE_PHYSIOLOGY` 已存在的种族；`getClutchSizeMeanByRace` 改为字典优先、回落内置字段 —— 此前本地无 `clutchSizeMean` 字段，卵群推演恒退化为 1。
+* **健康 App 第 5 页签「育种」**：5 张推演卡（同种后代 / 跨种推演 / 受精窗口 / 着床窗口 / 衍生遗传），母体取当前种族，纯展示「若操作会如何」，不触碰任何推进 / 受孕 / 写状态路径。
+* **顺带修复既有 bug**：`setHealthTab` 白名单长期漏了 `medical`（点「健康」页签被强制回 cycle），本版补齐 5 页签并立 F4 回归锁。
+* **零死导出**：5 个算法 API（着床 / 核型标签 / 亲和种子 / 流变 / 代谢豁免）全部真接线进育种页，而非登记账本豁免。
+
