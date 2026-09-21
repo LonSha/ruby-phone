@@ -187,17 +187,14 @@ test('v249 E: 微信链路注入补 dt+cheat（v2.50 起演进为表驱动）', 
 test('v249 F: 三处 onChatChanged 接线（wallet/profile/plotline）', () => {
     const idx = read('index.js');
     for (const a of ['walletApp', 'profileApp', 'plotlineApp']) {
-        const cnt = (idx.match(new RegExp(`window\\.VirtualPhone\\.${a}\\?\\.onChatChanged\\?\\.\\(\\)`, 'g')) || []).length;
-        assert.equal(cnt, 3, `F-${a} 三处接入（实际 ${cnt}）`);
+        const _tbl = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+        assert.ok(_tbl.includes(`'${a}'`), `F-${a} 在懒加载重绑表（P1/P2/P3 单一真源）`);
     }
-    const rxInd = new RegExp('( *)window\\.VirtualPhone\\.dtApp\\?\\.onChatChanged\\?\\.\\(\\);\\n'
-        + '( *)window\\.VirtualPhone\\.walletApp\\?\\.onChatChanged\\?\\.\\(\\);', 'g');
-    const inds = [...idx.matchAll(rxInd)];
-    assert.equal(inds.length, 3, 'F4 三处 dt→wallet 相邻');
-    assert.ok(inds.every((mm) => mm[1].length === mm[2].length), 'F5 缩进一致');
+    const _rinds = [...idx.matchAll(/( *)(?:window\.VirtualPhone\.)?rebindLazyApps\(\);/g)];
+    assert.equal(_rinds.length, 3, 'F4 rebindLazyApps() 三处接入');
+    assert.ok(_rinds.every((mm) => mm[1].length % 4 === 0), 'F5 缩进合法');
     for (const key of ['clearCurrentData', 'clearAllData']) {
-        assert.ok(new RegExp(`${key}[\\s\\S]{0,4000}walletApp\\?\\.onChatChanged\\?\\.\\(\\)`).test(idx), `F6 ${key} 接入`);
-        assert.ok(new RegExp(`${key}[\\s\\S]{0,4000}plotlineApp\\?\\.onChatChanged\\?\\.\\(\\)`).test(idx), `F7 ${key} 末位接入`);
+        assert.ok(new RegExp(`${key}[\\s\\S]{0,4000}rebindLazyApps\\(\\);`).test(idx), `F6 ${key} 接入`);
     }
 });
 

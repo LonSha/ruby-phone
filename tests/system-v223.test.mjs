@@ -163,8 +163,10 @@ function makeEnv(bucketKey) {
     const isrc = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
     const apps = ['tiebaApp', 'xhsApp', 'gachaApp', 'readingApp', 'tarotApp', 'healthApp', 'achievementApp', 'playbookApp'];
     for (const a of apps) {
-        const cnt = (isrc.match(new RegExp(`window\\.VirtualPhone\\.${a}\\?\\.onChatChanged\\?\\.\\(\\)`, 'g')) || []).length;
-        ok(`index.js: ${a} 三处接入`, cnt === 3, String(cnt));
+        const _tbl = (isrc.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+        ok(`index.js: ${a} 在懒加载重绑表（P1/P2/P3 单一真源）`, _tbl.includes(`'${a}'`));
+        ok('index.js: rebindLazyApps() 三处接入（换会话/清当前/清全部）',
+            (isrc.match(/rebindLazyApps\(\);/g) || []).length === 3);
     }
     // 换会话接入点位于 onChatChanged 清理块内
     // [v2.47.0] 判据由「tieba→wechatApp=null 的字符距离 <=800」改为**区间成员核对**：
@@ -173,17 +175,19 @@ function makeEnv(bucketKey) {
     const chatFrom = isrc.indexOf('彻底清空微信单例缓存');
     const chatTo = isrc.indexOf('window.VirtualPhone.wechatApp = null;', chatFrom);
     const chatBlock = (chatFrom >= 0 && chatTo > chatFrom) ? isrc.slice(chatFrom, chatTo) : '';
+    ok('index.js: 换会话清理块含 rebindLazyApps()（wechatApp = null 之前）',
+        chatFrom >= 0 && chatTo > chatFrom && chatBlock.includes('rebindLazyApps();'),
+        `block=${chatBlock.length}`);
+    const _tbl2 = (isrc.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
     const rebindApps = ['tiebaApp', 'xhsApp', 'gachaApp', 'readingApp', 'tarotApp', 'healthApp',
         'achievementApp', 'playbookApp', 'bilibiliApp', 'theaterApp', 'placeApp', 'cheatApp'];
-    const rebindMissing = rebindApps.filter((a) => !chatBlock.includes(`window.VirtualPhone.${a}?.onChatChanged?.()`));
-    ok('index.js: 换会话清理块含全部重绑调用（wechatApp = null 之前）',
-        chatFrom >= 0 && chatTo > chatFrom && rebindMissing.length === 0,
-        `block=${chatBlock.length} 缺失=${rebindMissing.join(',') || '无'}`);
+    const rebindMissing = rebindApps.filter((a) => !_tbl2.includes(`'${a}'`));
+    ok('index.js: 重绑表覆盖 v2.23/v2.24/v2.46/v2.47 全部 App', rebindMissing.length === 0, rebindMissing.join(','));
     // 清数据路径接入
     ok('index.js: clearCurrentData 路径接入',
-        /clearCurrentData[\s\S]{0,3000}playbookApp\?\.onChatChanged\?\.\(\)/.test(isrc));
+        /clearCurrentData[\s\S]{0,3000}rebindLazyApps\(\);/.test(isrc));
     ok('index.js: clearAllData 路径接入',
-        /clearAllData[\s\S]{0,3000}playbookApp\?\.onChatChanged\?\.\(\)/.test(isrc));
+        /clearAllData[\s\S]{0,3000}rebindLazyApps\(\);/.test(isrc));
 }
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

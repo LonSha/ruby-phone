@@ -132,19 +132,22 @@ function makeEnv(bucketKey) {
 {
     const isrc = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
     for (const a of ['bilibiliApp', 'theaterApp']) {
-        const cnt = (isrc.match(new RegExp(`window\\.VirtualPhone\\.${a}\\?\\.onChatChanged\\?\\.\\(\\)`, 'g')) || []).length;
-        ok(`index.js: ${a} 三处接入`, cnt === 3, String(cnt));
+        const _tbl = (isrc.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+        ok(`index.js: ${a} 在懒加载重绑表（P1/P2/P3 单一真源）`, _tbl.includes(`'${a}'`));
+        ok('index.js: rebindLazyApps() 三处接入（换会话/清当前/清全部）',
+            (isrc.match(/rebindLazyApps\(\);/g) || []).length === 3);
     }
     // 换会话接入点位于 onChatChanged 清理块内（wechatApp=null 之前）
-    ok('index.js: 换会话路径接入（wechatApp=null 之前）',
-        /bilibiliApp\?\.onChatChanged\?\.\(\);[\s\S]{0,1000}window\.VirtualPhone\.wechatApp = null;/.test(isrc));
-    ok('index.js: theaterApp 与 bilibiliApp 相邻接入',
-        /bilibiliApp\?\.onChatChanged\?\.\(\);\s*\n\s*window\.VirtualPhone\.theaterApp\?\.onChatChanged\?\.\(\);/.test(isrc));
+    ok('index.js: 换会话路径接入（rebindLazyApps 在 wechatApp=null 之前）',
+        /rebindLazyApps\(\);\s*\n\s*window\.VirtualPhone\.wechatApp = null;/.test(isrc));
+    const _tblB = (isrc.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    ok('index.js: 重绑表含 bilibili/theater（两 App 共用同一入口）',
+        _tblB.includes("'bilibiliApp'") && _tblB.includes("'theaterApp'"));
     // 清数据路径接入
     ok('index.js: clearCurrentData 路径接入',
-        /clearCurrentData[\s\S]{0,3500}bilibiliApp\?\.onChatChanged\?\.\(\)/.test(isrc));
+        /clearCurrentData[\s\S]{0,3500}rebindLazyApps\(\);/.test(isrc));
     ok('index.js: clearAllData 路径接入',
-        /clearAllData[\s\S]{0,3500}bilibiliApp\?\.onChatChanged\?\.\(\)/.test(isrc));
+        /clearAllData[\s\S]{0,3500}rebindLazyApps\(\);/.test(isrc));
 }
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

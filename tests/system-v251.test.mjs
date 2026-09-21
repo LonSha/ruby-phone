@@ -74,10 +74,11 @@ test('v251 C: 微信注入表补齐群像 + 三处 onChatChanged 接线', () => 
     const idx = read('index.js');
     assert.match(idx, /appId === 'chars'/, 'C2 懒加载路由');
     assert.match(idx, /new module\.CharsApp\(phoneShell, storage\)/, 'C3 单例构造');
-    const cnt = (idx.match(/window\.VirtualPhone\.charsApp\?\.onChatChanged\?\.?\(\)/g) || []).length;
-    assert.equal(cnt, 3, `C4 三处 onChatChanged 接线（实际 ${cnt}）`);
+    const _tbl = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    assert.ok(_tbl.includes("'charsApp'"), 'C4 群像在懒加载重绑表（P1/P2/P3 单一真源）');
+    assert.equal((idx.match(/rebindLazyApps\(\);/g) || []).length, 3, 'C4 rebindLazyApps() 三处接入');
     for (const key of ['clearCurrentData', 'clearAllData']) {
-        assert.ok(new RegExp(`${key}[\\s\\S]{0,4000}charsApp\\?\\.onChatChanged\\?\\.\\(\\)`).test(idx), `C5 ${key} 窗口内可达`);
+        assert.ok(new RegExp(`${key}[\\s\\S]{0,4000}rebindLazyApps\\(\\);`).test(idx), `C5 ${key} 窗口内可达`);
     }
 });
 

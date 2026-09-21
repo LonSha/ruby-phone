@@ -102,8 +102,9 @@ test('C1 wechat has clockApp', () => {
 
 test('C2 index.js 3 onChatChanged', () => {
   const src = read('index.js');
-  const count = (src.match(/clockApp\?\.onChatChanged/g) || []).length;
-  assert.equal(count, 3);
+  const tbl = (src.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+  assert.ok(tbl.includes("'clockApp'"));
+  assert.equal((src.match(/rebindLazyApps\(\);/g) || []).length, 3);
 });
 
 test('C3 index.js clock route', () => {

@@ -229,29 +229,23 @@ void defaultPlaceSettings;
 /* ========== I. 接线：三处路径 + 实例不置 null + 不持读数副本 ========== */
 {
     const idx = read('index.js');
-    const cnt = (idx.match(/window\.VirtualPhone\.placeApp\?\.onChatChanged\?\.\(\)/g) || []).length;
-    ok('I1 index.js 三处接入（换会话 + 两处清数据）', cnt === 3, String(cnt));
+    const _tbl = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    ok('I1 placeApp 在懒加载重绑表（P1/P2/P3 单一真源）', _tbl.includes("'placeApp'"));
+    ok('I1 index.js rebindLazyApps() 三处接入', (idx.match(/rebindLazyApps\(\);/g) || []).length === 3);
     // [v2.47.0] I2 由「theater→place 的行距紧邻断言」改为**区间成员核对**：
     //   本版在 place 之后新增 cheatApp 重绑，紧邻式判据立刻失配；而它本来要守的是
     //   「theater / place / cheat 三个重绑都在换会话块内、且在 wechatApp = null 之前」。
-    const v246From = idx.indexOf('window.VirtualPhone.theaterApp?.onChatChanged?.();');
-    const v246To = idx.indexOf('window.VirtualPhone.wechatApp = null;', v246From);
-    const v246Block = (v246From >= 0 && v246To > v246From) ? idx.slice(v246From, v246To) : '';
-    ok('I2 换会话路径接入（theaterApp 之后、wechatApp = null 之前）',
-        v246From >= 0 && v246To > v246From
-        && v246Block.includes('window.VirtualPhone.placeApp?.onChatChanged?.();')
-        && v246Block.includes('window.VirtualPhone.cheatApp?.onChatChanged?.();'),
-        `block=${v246Block.length}`);
-    ok('I3 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}placeApp\?\.onChatChanged\?\.\(\)/.test(idx));
-    ok('I4 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}placeApp\?\.onChatChanged\?\.\(\)/.test(idx));
+    const _rb = idx.indexOf('rebindLazyApps();');
+    const _wx = idx.indexOf('window.VirtualPhone.wechatApp = null;', _rb);
+    ok('I2 换会话路径接入（rebindLazyApps 在 wechatApp = null 之前）',
+        _rb > 0 && _wx > _rb && (_wx - _rb) < 200, `gap=${_wx - _rb}`);
+    ok('I3 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}rebindLazyApps\(\);/.test(idx));
+    ok('I4 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}rebindLazyApps\(\);/.test(idx));
     // 缩进未被写坏：插入点缩进必须与同块内的 bilibili 调用一致
-    const rxInd = new RegExp('( *)(?:window\\.VirtualPhone\\.)?bilibiliApp\\?\\.onChatChanged\\?\\.\\(\\);\\n'
-        + '[\\s\\S]{0,300}?\\/\\/ \\[v2\\.46\\.0\\][^\\n]*\\n'
-        + '( *)window\\.VirtualPhone\\.placeApp\\?\\.onChatChanged\\?\\.\\(\\);', 'g');
-    const inds = [...idx.matchAll(rxInd)];
-    ok('I5 三处插入点缩进与相邻 bilibili 调用一致（未被写坏）',
-        inds.length === 3 && inds.every((m) => m[1].length === m[2].length),
-        inds.length ? inds.map((m) => m[1].length + '/' + m[2].length).join(' ') : 'no-match');
+    const _rebInds = [...idx.matchAll(/( *)(?:window\.VirtualPhone\.)?rebindLazyApps\(\);/g)];
+    ok('I5 三处 rebindLazyApps() 缩进均为 4 空格倍数（未被写坏）',
+        _rebInds.length === 3 && _rebInds.every((m) => m[1].length % 4 === 0),
+        _rebInds.length ? _rebInds.map((m) => m[1].length).join('/') : 'no-match');
     const app = read('apps/place/place-app.js');
     ok('I6 onChatChanged 不置 null 自身（避免监听器累积）',
         !/onChatChanged\s*\(\s*\)\s*\{[\s\S]{0,300}window\.VirtualPhone\.placeApp\s*=\s*null/.test(app));

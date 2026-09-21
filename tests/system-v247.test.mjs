@@ -223,16 +223,15 @@ const { GachaData } = await import('../apps/gacha/gacha-data.js');
 /* ========== F. 三处接线（换会话 + 两处清数据） ========== */
 {
     const idx = read('index.js');
-    const cnt = (idx.match(/window\.VirtualPhone\.cheatApp\?\.onChatChanged\?\.\(\)/g) || []).length;
-    ok('F1 cheatApp 三处接入', cnt === 3, String(cnt));
-    ok('F2 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}cheatApp\?\.onChatChanged\?\.\(\)/.test(idx));
-    ok('F3 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}cheatApp\?\.onChatChanged\?\.\(\)/.test(idx));
-    // 缩进未被写坏：cheat 调用缩进必须与同块 bilibili 调用一致
-    const rxInd = new RegExp('( *)window\\.VirtualPhone\\.bilibiliApp\\?\\.onChatChanged\\?\\.\\(\\);\\n'
-        + '[\\s\\S]{0,320}?( *)window\\.VirtualPhone\\.cheatApp\\?\\.onChatChanged\\?\\.\\(\\);', 'g');
-    const inds = [...idx.matchAll(rxInd)];
-    ok('F4 三处插入点缩进与相邻 bilibili 一致', inds.length === 3 && inds.every((m) => m[1].length === m[2].length),
-        inds.length ? inds.map((m) => m[1].length + '/' + m[2].length).join(' ') : 'no-match');
+    const _tbl = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    ok('F1 cheatApp 在懒加载重绑表（P1/P2/P3 单一真源）', _tbl.includes("'cheatApp'"));
+    ok('F1 index.js rebindLazyApps() 三处接入', (idx.match(/rebindLazyApps\(\);/g) || []).length === 3);
+    ok('F2 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}rebindLazyApps\(\);/.test(idx));
+    ok('F3 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}rebindLazyApps\(\);/.test(idx));
+    // 缩进未被写坏：三处 rebindLazyApps() 缩进均为 4 空格倍数
+    const _inds = [...idx.matchAll(/( *)(?:window\.VirtualPhone\.)?rebindLazyApps\(\);/g)];
+    ok('F4 三处 rebindLazyApps() 缩进合法', _inds.length === 3 && _inds.every((m) => m[1].length % 4 === 0),
+        _inds.length ? _inds.map((m) => m[1].length).join('/') : 'no-match');
 
     const app = read('apps/cheat/cheat-app.js');
     ok('F5 控制器真实 import 了视图与内核', app.includes("from './cheat-view.js'") && app.includes("from './cheat-data.js'"));

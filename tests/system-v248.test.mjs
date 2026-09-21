@@ -191,15 +191,14 @@ const { GachaData } = await import('../apps/gacha/gacha-data.js');
 /* ========== F. 三处接线 ========= */
 {
     const idx = read('index.js');
-    const cnt = (idx.match(/window\.VirtualPhone\.dtApp\?\.onChatChanged\?\.\(\)/g) || []).length;
-    ok('F1 dtApp 三处接入', cnt === 3, String(cnt));
-    ok('F2 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}dtApp\?\.onChatChanged\?\.\(\)/.test(idx));
-    ok('F3 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}dtApp\?\.onChatChanged\?\.\(\)/.test(idx));
-    const rxInd = new RegExp('( *)window\\.VirtualPhone\\.cheatApp\\?\\.onChatChanged\\?\\.\\(\\);\\n'
-        + '( *)window\\.VirtualPhone\\.dtApp\\?\\.onChatChanged\\?\\.\\(\\);', 'g');
-    const inds = [...idx.matchAll(rxInd)];
-    ok('F4 三处插入点缩进与相邻 cheat 一致', inds.length === 3 && inds.every((m) => m[1].length === m[2].length),
-        inds.length ? inds.map((m) => m[1].length + '/' + m[2].length).join(' ') : 'no-match');
+    const _tbl = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    ok('F1 dtApp 在懒加载重绑表（P1/P2/P3 单一真源）', _tbl.includes("'dtApp'"));
+    ok('F1 index.js rebindLazyApps() 三处接入', (idx.match(/rebindLazyApps\(\);/g) || []).length === 3);
+    ok('F2 clearCurrentData 路径接入', /clearCurrentData[\s\S]{0,4000}rebindLazyApps\(\);/.test(idx));
+    ok('F3 clearAllData 路径接入', /clearAllData[\s\S]{0,4000}rebindLazyApps\(\)/.test(idx));
+    const _inds = [...idx.matchAll(/( *)(?:window\.VirtualPhone\.)?rebindLazyApps\(\);/g)];
+    ok('F4 三处 rebindLazyApps() 缩进合法', _inds.length === 3 && _inds.every((m) => m[1].length % 4 === 0),
+        _inds.length ? _inds.map((m) => m[1].length).join('/') : 'no-match');
     const app = read('apps/dirtytalk/dirtytalk-app.js');
     ok('F5 控制器真实 import 了视图与内核', app.includes("from './dt-view.js'") && app.includes("from './dt-data.js'"));
     ok('F6 控制器不置 null 自身', !/onChatChanged\s*\(\s*\)\s*\{[\s\S]{0,300}window\.VirtualPhone\.dtApp\s*=\s*null/.test(app));

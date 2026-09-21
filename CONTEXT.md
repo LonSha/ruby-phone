@@ -161,3 +161,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - view 增补舆情强度条 + 事实对读明细卡；设置新增 `showDiff`（默认开）
 - apps.js 桌面图标去重：tieba 📌 / dirtytalk 💋 / cheat ⚡ / tarot 🃏 / chars 👥
 - 测试：`tests/system-v254.test.mjs`（15 用例）
+## v2.55.0 懒加载单例重绑单一真源
+- 缺陷形态：19 个懒加载单例 App 的 `onChatChanged` 重绑清单在 index.js 中**硬编码重复三份**（换会话 / 清当前数据 / 清全部数据）；每加一个 App 要人手补三处，漏改任一处 = 该 App 在对应路径静默串味（不报错、不崩溃、只错数据）。与 v2.54 修的钩子接线失效同属一类。
+- 修法：index.js 顶部新增 `ST_PHONE_REBIND_APP_KEYS`（19 键）+ 函数 `rebindLazyApps()`（逐 App try/catch 容错），三处路径一律只调 `rebindLazyApps()`；index.js 净减 60 行。
+- 测试：`tests/system-v255.test.mjs`（13 用例，含「表内 key 必须映射到真实单例构造点」与「旧硬编码清单已清零」两条逆向审计）。历史九套 onChatChanged 接线用例（v223/v224/v246/v247/v248/v249/v251/v252/v253）由「硬编码三处」改判为「表成员 + 三处调用点」。
+- 钩子接线全局复核：22 处 `onChatChanged` 定义、`place/cheat/dirtytalk` 走 `onChatChanged`、`health/peek/playbook/memory` 走 `_initHooks`，全部挂在真实 `SillyTavern.getContext().eventSource(GENERATE_BEFORE_COMBINE_PROMPTS)`；全仓已无不存在的 `window.ST_API`。

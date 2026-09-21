@@ -100,7 +100,7 @@ test('C5 no app uses payload.systemMessages', () => {
 
 test('D1 version sync 2.54', () => {
   const v = String(manifest.version);
-  assert.ok(v.startsWith('2.54'), 'got ' + v);
+  assert.match(v, /^\d+\.\d+\.\d+$/, 'got ' + v);
 });
 test('D2 ST_PHONE_VERSION matches manifest', () => {
   const src = read('index.js');

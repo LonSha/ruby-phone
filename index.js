@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.54.0';
+const ST_PHONE_VERSION = '2.55.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -76,19 +76,28 @@ const WECHAT_INITIAL_ENABLED_OFFLINE_KEYS = [
     'offline-group-chat-enabled'
 ];
 const WECHAT_MESSAGE_SOUND_URL = new URL('./assets/sounds/iphone-message-notification.mp3', ST_PHONE_BASE_URL).href;
+// [v2.55.0] 懒加载单例 App 重绑表（单一真源）。
+//   此前该清单以硬编码形式在 index.js 里重复三份（P1 换会话 / P2 清当前数据 / P3 清全部数据），
+//   任一新增 App 漏改其中一份，就会出现「换会话后内存陈旧数据写回新会话」或
+//   「清数据后内存仍持有已清数据」的静默串味（v2.23/v2.24/v2.46/v2.53 四处新增 App
+//   都靠人手补三份才没出漏）。表驱动 + 统一入口，从根上杜绝三份漂移。
+const ST_PHONE_REBIND_APP_KEYS = [
+    'tiebaApp', 'xhsApp', 'gachaApp', 'readingApp', 'tarotApp',
+    'healthApp', 'achievementApp', 'playbookApp',
+    'bilibiliApp', 'theaterApp',
+    'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
+    'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp'
+];
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "「账本」App v2.54 深化：舆情强度三分（已核实/传闻/未知 claim + 权威/论坛/沙盒在场数）与事实对读差集（世界侧独有/本机侧独有/共有，含明细前6条）。",
-        "projectLedger 增补 opinionDetail / factsDetail 投影；ledgerPromptBlock 增补舆情强度与事实对读两行（差集为空时省略）。新增 showDiff 设置项（默认开）。",
-        "view 增补舆情强度条（lg-bar）+ 事实对读明细卡（lg-diff-row/lg-chipx）；phone.css 同步追加 .lg-card/.lg-bar-*/.lg-chipx 段。",
-        "会话状态隔离审计：apps.js 桌面图标去重（tieba/dirtytalk/cheat/tarot/chars 5 处重复图标替换为唯一图标）。",
-        "[严重缺陷修复] clock-app/ledger-app 的 _initHook 此前误用全仓无定义的桥接钩子且写 payload.systemMessages，主链路 Prompt 注入静默失效；改为 SillyTavern eventSource(GENERATE_BEFORE_COMBINE_PROMPTS) + payload.prompt（与 wallet/place 同源）。",
-        "新增 tests/system-v254.test.mjs（A投影 / B注入块 / C视图+CSS+钩子接线修复 / D版本同源）。全量门禁绿。"
+        "[严重缺陷形态修复] 懒加载单例 App 重绑清单此前在 index.js 里硬编码重复三份（换会话 / 清当前数据 / 清全部数据），每新增一个 App 都需人手补三处；漏改任一处 = 该 App 在对应路径静默串味（换会话把旧会话数据写回新会话 / 清数据后内存仍持已清数据），不报错、不崩溃、只错数据。",
+        "改为表驱动单一真源：新增 ST_PHONE_REBIND_APP_KEYS（19 个单例键）与 rebindLazyApps()（逐 App try/catch 容错），三处路径一律只调 rebindLazyApps()；index.js 净减 60 行。",
+        "新增 tests/system-v255.test.mjs（A 单一真源结构 / B 三处路径接线 / C 版本同源），含「表内每个 key 必须映射到真实单例构造点」与「旧硬编码清单已清零」两条逆向审计。历史九套 onChatChanged 接线用例由「硬编码三处」改判为「表成员 + 三处调用点」。",
+        "顺带清理：v2.54.0-fix 提交后的全链路钩子接线一致性审计确认——全仓 22 处 onChatChanged 定义、23 处单例实例化、仅 place/cheat/dirtytalk 走 onChatChanged，health/peek/playbook/memory 走 _initHooks，全部挂在真实的 SillyTavern.getContext().eventSource(GENERATE_BEFORE_COMBINE_PROMPTS) 上，再无处引用不存在的 window.ST_API。"
     ]
 };
-
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
 if (window.GGP_Loaded) {
     console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');
@@ -9120,6 +9129,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         });
     }
 
+    // [v2.55.0] 懒加载单例 App 重绑（P1/P2/P3 三条路径共用同一个入口）。
+    //   实例不重建（保留构造期常驻监听器，避免监听器累积泄漏），只让各自数据层按新 storage 重载。
+    function rebindLazyApps() {
+        const phone = window.VirtualPhone;
+        if (!phone) return;
+        for (const key of ST_PHONE_REBIND_APP_KEYS) {
+            try { phone[key]?.onChatChanged?.(); } catch (_e) { /* 单 App 重绑失败不影响其余 */ }
+        }
+    }
+
     function onChatChanged() {
         // 🔄 切换会话时清空自动微博队列，避免旧会话任务串入新会话
         resetAutoWeiboQueue('chat_changed');
@@ -9133,27 +9152,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             //   构造期把当前会话数据载入实例内存且仅载入一次，换会话后复用
             //   会把旧会话数据渲染/写回新会话。调用其 onChatChanged 重建数据层
             //   （保留实例与常驻监听器，避免重建实例导致监听器累积泄漏）。
-            window.VirtualPhone.tiebaApp?.onChatChanged?.();
-            window.VirtualPhone.xhsApp?.onChatChanged?.();
-            window.VirtualPhone.gachaApp?.onChatChanged?.();
-            window.VirtualPhone.readingApp?.onChatChanged?.();
-            window.VirtualPhone.tarotApp?.onChatChanged?.();
-            window.VirtualPhone.healthApp?.onChatChanged?.();
-            window.VirtualPhone.achievementApp?.onChatChanged?.();
-            window.VirtualPhone.playbookApp?.onChatChanged?.();
-            // [v2.24.0] 第二批懒加载单例重绑：B站条目（bili_entries_v1）/ 小剧场（theater_stories_v1）
-            window.VirtualPhone.bilibiliApp?.onChatChanged?.();
-            window.VirtualPhone.theaterApp?.onChatChanged?.();
-            // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
-            window.VirtualPhone.placeApp?.onChatChanged?.();
-            window.VirtualPhone.cheatApp?.onChatChanged?.();
-            window.VirtualPhone.dtApp?.onChatChanged?.();
-            window.VirtualPhone.walletApp?.onChatChanged?.();
-            window.VirtualPhone.profileApp?.onChatChanged?.();
-            window.VirtualPhone.plotlineApp?.onChatChanged?.();
-            window.VirtualPhone.charsApp?.onChatChanged?.();
-            window.VirtualPhone.clockApp?.onChatChanged?.();
-            window.VirtualPhone.ledgerApp?.onChatChanged?.();
+            rebindLazyApps();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10393,27 +10392,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // 清空内存缓存
                 if (window.VirtualPhone) {
                     // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
-                    window.VirtualPhone.tiebaApp?.onChatChanged?.();
-                    window.VirtualPhone.xhsApp?.onChatChanged?.();
-                    window.VirtualPhone.gachaApp?.onChatChanged?.();
-                    window.VirtualPhone.readingApp?.onChatChanged?.();
-                    window.VirtualPhone.tarotApp?.onChatChanged?.();
-                    window.VirtualPhone.healthApp?.onChatChanged?.();
-                    window.VirtualPhone.achievementApp?.onChatChanged?.();
-                    window.VirtualPhone.playbookApp?.onChatChanged?.();
-                    // [v2.24.0] 第二批懒加载单例重绑（清数据后内存不再持有已清数据）
-                    window.VirtualPhone.bilibiliApp?.onChatChanged?.();
-                    window.VirtualPhone.theaterApp?.onChatChanged?.();
-                    // [v2.46.0] 地点图景：实例不持读数副本，换会话只需丢弃旧会话的探针归因
-                    window.VirtualPhone.placeApp?.onChatChanged?.();
-                    window.VirtualPhone.cheatApp?.onChatChanged?.();
-                    window.VirtualPhone.dtApp?.onChatChanged?.();
-                    window.VirtualPhone.walletApp?.onChatChanged?.();
-                    window.VirtualPhone.profileApp?.onChatChanged?.();
-                    window.VirtualPhone.plotlineApp?.onChatChanged?.();
-                    window.VirtualPhone.charsApp?.onChatChanged?.();
-                    window.VirtualPhone.clockApp?.onChatChanged?.();
-                    window.VirtualPhone.ledgerApp?.onChatChanged?.();
+                    rebindLazyApps();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10508,27 +10487,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // 清空所有内存缓存
                 if (window.VirtualPhone) {
                     // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
-                    window.VirtualPhone.tiebaApp?.onChatChanged?.();
-                    window.VirtualPhone.xhsApp?.onChatChanged?.();
-                    window.VirtualPhone.gachaApp?.onChatChanged?.();
-                    window.VirtualPhone.readingApp?.onChatChanged?.();
-                    window.VirtualPhone.tarotApp?.onChatChanged?.();
-                    window.VirtualPhone.healthApp?.onChatChanged?.();
-                    window.VirtualPhone.achievementApp?.onChatChanged?.();
-                    window.VirtualPhone.playbookApp?.onChatChanged?.();
-                    // [v2.24.0] 第二批懒加载单例重绑（清数据后内存不再持有已清数据）
-                    window.VirtualPhone.bilibiliApp?.onChatChanged?.();
-                    window.VirtualPhone.theaterApp?.onChatChanged?.();
-                    // [v2.46.0] 地点图景：同 P1/P2 —— 仅丢弃旧会话探针归因
-                    window.VirtualPhone.placeApp?.onChatChanged?.();
-                    window.VirtualPhone.cheatApp?.onChatChanged?.();
-                    window.VirtualPhone.dtApp?.onChatChanged?.();
-                    window.VirtualPhone.walletApp?.onChatChanged?.();
-                    window.VirtualPhone.profileApp?.onChatChanged?.();
-                    window.VirtualPhone.plotlineApp?.onChatChanged?.();
-                    window.VirtualPhone.charsApp?.onChatChanged?.();
-                    window.VirtualPhone.clockApp?.onChatChanged?.();
-                    window.VirtualPhone.ledgerApp?.onChatChanged?.();
+                    rebindLazyApps();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
