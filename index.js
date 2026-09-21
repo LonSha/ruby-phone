@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.65.0';
+const ST_PHONE_VERSION = '2.66.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,11 +104,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "新增生命周期接线门禁（scripts/lifecycle-audit.mjs），把连续九版反复修的「会话生命周期接线漏一处」固化为发布门：L1 查「定义了生命周期出口却无任何接线路径」，L2 查「槽位只在换会话路径被回收」。",
-        "白名单从真源码派生而非硬编码：泛化调用清单解析 releasePhoneInactiveResources 的 appEntries 数组，咽喉点清单解析 retireSessionScopedSlots 函数体；派生前提一旦消失即 fail-closed 拒判（exit 2），杜绝白名单腐化成放行条。",
-        "门禁串进 npm run check，与语法门/全量测试/零消费导出门并列；新增 tests/system-v265.test.mjs 做正负控制（夹具仓库 + 真源码破坏 + 退出码断言）。",
-        "开发期修复三处判据自身缺陷（均由负控制逼出）：显式调用正则漏认 `?.()` 形态与局部句柄前缀、函数体抽取依赖缩进假设（改为花括号配平）。",
-        "版本升至 2.65.0。"
+        "新增注册联动门禁（scripts/registry-audit.mjs）：新增 App 要动的三处（桌面图标 / 懒加载分支 / 会话键前缀）此前没有任何一处能回答「配齐了吗」，漏配即「点击无反应」或「数据落全局串味」，属不报错只见错的形态。",
+        "R1 双向覆盖（零豁免硬判据）：APPS id 集合与懒加载分支集合必须互为子集，任一侧孤儿即红灯；真仓库当前 40 ↔ 40，完全干净。",
+        "R2 宽匹配登记：会话键前缀里带量词/字符类/分组/或的条目必须登记理由（会吞掉一批键，使逐 App 对账不适用）；锚定符 ^ 与 $ 不计入（收尾精确键不算宽匹配）。明确不判「某 App 缺前缀」——读侧聚合器与共享桶成员属设计内，硬判会产生假阳性，故只报告不判定。",
+        "门禁串进 npm run check（现为五道门）；新增 tests/system-v266.test.mjs（10 条：正控制 + 5 例真源码破坏负控制 + 判据纯度自证）。",
+        "版本升至 2.66.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
