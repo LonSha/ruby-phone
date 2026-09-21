@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.63.0';
+const ST_PHONE_VERSION = '2.64.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -87,7 +87,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'bilibiliApp', 'theaterApp',
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
-    'graphApp', 'memoryApp', 'timeweaverApp'
+    'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp'
 ];
 // [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
 //   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
@@ -104,11 +104,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "会话生命周期接线审计：脚本枚举全仓 App 生命周期出口（重绑/清缓存/销毁/停用/重载）再反查调用路径，7 个「定义但零调用」候选中辨伪出 3 处真缺陷（其余为数组泛化调用/更强出口覆盖，非缺陷）。",
-        "记忆 App 的 onChatChanged 接入 REBIND 表：该出口早已实现却从未接线，换会话后降级读数与跨会话记忆引用不重绑。",
-        "织光机新增 onChatChanged：丢弃实例级 AI 信缓存与草稿、复位「自动织信只查一次」标志；此前视图直读该缓存，换角色后首屏渲染的仍是上一段剧情被 AI 织起的信。",
-        "日历提醒实例回收收口为单一真源：此前三处会话路径对独立提醒实例的处置没有一处完整（只清缓存不解绑 / 完全零处理），且槽位被活动实例顶替后原实例的 SWIPE_BACK 监听器永久泄漏；另修「打开日历覆盖单例前未解绑」同型缺陷。",
-        "新增 tests/system-v263.test.mjs（8 条：实例域行为 + 视图端到端 + 接线单一真源 + 防漂移）；版本升至 2.63.0。"
+        "会话级「槽位 × 三路径」审计（审计面从方法出口下沉到实例槽位）：对每个持实例的 App 槽位，逐条核对换会话 / 清当前数据 / 清全部数据是否都做了回收或重绑；方法级审计漏得掉的形态在此暴露。",
+        "修复万象 App 的会话隔离缺口：它持有整套会话级实例数组（任务 / 委托 / 市场商品 / 订单 / 库存 / 信用余额 / 收货地址），但清理只在换会话路径被显式调用一次，两条清数据路径零处理 —— 清完数据后仍持已删任务与订单。已补 onChatChanged 并接入重绑单一真源。",
+        "按本仓单一真源纪律修法：不往两条路径各补一次手抄调用（那正是 v2.23~v2.55 反复漏改的形态），而是接入 ST_PHONE_REBIND_APP_KEYS，三路自动覆盖；同时把换会话路径里原有的显式调用收敛掉，消除第二条真相与重复执行。",
+        "新增 tests/system-v264.test.mjs（5 条：实例域行为 + 重绑语义 + 单一真源接线 + 覆盖矩阵防回归），v255 A5 登记表同步扩展。",
+        "版本升至 2.64.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -9203,10 +9203,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (window.VirtualPhone.weiboApp) {
                 window.VirtualPhone.weiboApp.clearCache();
             }
-            // 🌐 清空万象任务缓存，切换后重新读取当前聊天文件
-            if (window.VirtualPhone.wangxiangApp) {
-                window.VirtualPhone.wangxiangApp.clearCache();
-            }
+            // 🌐 万象任务缓存：[v2.64.0] 原为在此处显式 clearCache()，现由上方
+            //   rebindLazyApps() 经 ST_PHONE_REBIND_APP_KEYS 统一覆盖（该 App 已补
+            //   onChatChanged），三条路径共用单一真源，故此处不再重复调用。
+            //   修前缺陷：清当前数据 / 清全部数据两条路径对 wangxiangApp 零处理，
+            //   清数据后仍持已删任务与订单（同类缺陷在本仓已是第七例）。
             // 🍯 清空蜜语实例，避免切换会话后复用未绑定当前手机壳/旧会话数据的懒加载实例
             if (window.VirtualPhone.honeyApp) {
                 try {

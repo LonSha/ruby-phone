@@ -79,38 +79,117 @@
 
 ---
 
-## 迭代 2 — v2.64.0 生命周期审计门禁固化 + 假阳性白名单
+## 迭代 2 — v2.64.0 会话级「槽位 × 三路径」审计（审计面下沉）
 
 - **日期**：2026-09-22
-- **类型**：测试基建 / 防回归（把一次性审计脚本变成常驻门禁）
-- **动机**：迭代 1 的审计能力若只活在 `/tmp/`，下一次同类缺陷仍要重写脚本。
-  本仓已有 `scripts/dead-export-check.mjs` + `dead-export-baseline.json` 的成熟范式
-  （冻结基线 + 零新增判定 + 枚举面完整性自证），生命周期审计宜照此收编。
-- **计划改动**：
-  1. `scripts/lifecycle-audit.mjs`——重写审计器：出口枚举 + 单例 key 反查 +
-     三张白名单（**数组泛化调用**、**更强出口覆盖**、**纯只读聚合无缓存**）；
-  2. `scripts/lifecycle-baseline.json`——冻结「已知零调用」基线（预期为 0 条真缺陷）；
-  3. `package.json` 的 `check` 串进门禁，与语法/测试/死导出并列；
-  4. `tests/system-v264.test.mjs`——审计器自身的正/负控制（真源码破坏 → 副本上判据必须报警；
-     判据纯度自证：负控制层内锚点字面量只准声明一次）。
-- **状态**：进行中（见 `TODO.md`）。
+- **类型**：稳定性 / 缺陷修复（会话隔离数据残留）
+- **动机**：迭代 1 审的是「生命周期**方法出口**是否被调用」。但本轮实测证明
+  **方法级审计漏得掉**另一类形态：出口被调用了（所以方法级看不见缺口），
+  但只在**其中一条**会话路径上被调用。故审计面下沉一层：不看方法，看**槽位**。
+
+### 审计方法（精确判据）
+
+对 `index.js` 上每个持有实例的 App 槽位（`VirtualPhone.X = new ...`），
+逐条核对三条会话路径块内是否出现其回收/重绑调用：
+
+| 路径 | 区间锚点 |
+|---|---|
+| P1 换会话 | `function onChatChanged()` → `function getContext()` |
+| P2 清当前数据 | `addEventListener('phone:clearCurrentData')` → 下一个监听器 |
+| P3 清全部数据 | `addEventListener('phone:clearAllData')` → 块尾 |
+
+**区间边界必须用函数/监听器边界精确划定**。首版探针用「近似区间」导致 P2 与 P1 区间重叠，
+把 P1 的行误算成 P2 命中，差点漏判（踩坑记录）。
+
+### 审计结果
+
+| 槽位 | P1 | P2 | P3 | 判定 |
+|---|---|---|---|---|
+| albumApp / calendarApp / diaryApp / honeyApp / memoryCore / mofoApp / musicApp / phoneApp / weiboApp | ✓ | ✓ | ✓ | 三路覆盖 |
+| gamesApp / worldpulseApp | ✓ | ✓✳ | ✓✳ | **假阳性**：由 P2/P3 咽喉点 `reloadPhoneSurface() → retireSessionScopedSlots()` 统一收口（探针只认本处字面量，故列入白名单） |
+| **wangxiangApp** | ✓ | ✗ | ✗ | **真缺陷** ← 本版修复 |
+
+`WangxiangApp` 持有一整套会话级实例数组（`generatedTasks` / `managedTasks` /
+`taskProgressHistory` / `marketplace*` / `inventoryItems` / `creditBalance` / `deliveryAddresses`），
+`clearCache()` 会逐个清空并 `_syncTaskDataScope()` 重载；
+但它**只**在换会话路径被显式调用一次，两条清数据路径对 `wangxiangApp` 零处理 ——
+清完数据后手机仍持已删任务与订单，直到某次深层操作偶然触发 `_syncTaskDataScope()`
+（比较键取自 storage，故清数据后才会命中去重）才收敛。
+
+### 改动
+
+1. `apps/wangxiang/wangxiang-app.js` 新增 **`onChatChanged()`**（转调 `clearCache()`），
+   并写明动机与「为什么不由两条路径各写一次」。
+2. `index.js` 的 `ST_PHONE_REBIND_APP_KEYS` 表**补 `'wangxiangApp'`** → 三条路径自动覆盖。
+3. `index.js` 换会话路径里原有的 `wangxiangApp.clearCache()` 显式块**收敛掉**
+   （否则换会话会跑两遍，且留下与 REBIND 表并存的第二条真相）。
+4. 测试：新增 `tests/system-v264.test.mjs`（5 条，含**覆盖矩阵防回归**）；
+   `tests/system-v255.test.mjs` 的 A5 `dirMap` 补 `wangxiangApp: 'wangxiang'`。
+5. 版本四源升 `2.64.0` + `ST_PHONE_CURRENT_UPDATE` 换条目。
+
+### 影响范围
+
+- **用户可见**：清当前数据 / 清全部数据后，万象 App 的任务、委托、订单、库存、信用余额、
+  收货地址不再残留旧会话数据（此前要等到下一次深层操作才收敛）。
+- **数据面**：无 schema 变更；修的是「内存副本未被清」，不触碰 storage 清空链路。
+- **风险面**：`onChatChanged()` 只是 `clearCache()` 的别名转调，语义与 P1 原调用完全一致；
+  收敛 P1 显式块不改变行为（同一次换会话只少跑一遍等价清理）。
+
+### 验证
+
+- `node --test tests/system-v264.test.mjs` → 5 pass（含覆盖矩阵断言）
+- `node --test tests/system-v255.test.mjs tests/system-v263.test.mjs` → 无回归
+- `npm run check` → 语法门 **334 文件通过**；全量测试 **482 pass / 0 fail**；死导出零新增
+- **测试断言与实现语义的对齐（开发中修正两处）**：
+  ① 首版测试 seed 带数据，而 `clearCache()` 末尾 `_syncTaskDataScope()` 会从 storage 重载 →
+     断言失败。真实时序是**宿主先清 storage**，故测试改为已清 storage，并把这个语义写进注释
+     （它恰好解释了为什么「内存那份没被清」是个真问题）。
+  ② `marketplaceCategories` 有内置默认类目兜底（清空后返回默认集），不属「必须为空」，
+     从断言列表移出、另立「应为数组」断言。
+
+### 遗留项
+
+- 迭代 1 与迭代 2 的审计脚本（`probe_lifecycle.mjs` / `probe_slots.mjs` / `probe_slots2.mjs`）
+  仍是 `/tmp/` 下一次性的。**固化门禁**顺延为迭代 3（见 `TODO.md`）。
 
 ---
 
-## 迭代 3 — 会话级数据槽位「出口完整性」审计（待启动）
+## 迭代 3 — v2.65.0 生命周期审计门禁固化（待启动）
 
-- **方向**：迭代 1 审计的是**方法出口是否被调用**；本迭代审计**槽位是否被完整回收**。
-  即：对 `window.VirtualPhone` 上每个持有实例的槽位，核对三条会话路径
-  （P1 换会话 / P2 清当前数据 / P3 清全部数据）是否都做了「解绑 → 置 null / 或重绑」。
-- **依据**：本次三处真缺陷中有两处（`memoryApp`、`_calendarReminderApp`）正是**槽位级**而非方法级问题；
-  若只审方法出口会漏掉「槽位被顶替而旧实例失去引用」这类形态。
-- **状态**：待启动。
+- **类型**：测试基建 / 防回归
+- **动机**：迭代 1、2 各修了一类会话生命周期缺陷，但**能力本身没留在仓里**——
+  两个探针都在 `/tmp/`，下一次同类缺陷仍要重写脚本。本仓已有成熟范式可照抄：
+  `scripts/dead-export-check.mjs` + `dead-export-baseline.json`（冻结基线 + 零新增判定 +
+  枚举面完整性自证 + `--list` / `--update` / `--root` 三态）。
+- **计划改动**：
+  1. `scripts/lifecycle-audit.mjs`——合并迭代 1（方法出口）与迭代 2（槽位覆盖）两个判据：
+     出口枚举 + 单例 key 反查 + 槽位 × 三路径矩阵 + 三张白名单
+     （**数组泛化调用** `appEntries`、**更强出口覆盖** `deactivate ⊃ destroy`、
+     **咽喉点收口** `reloadPhoneSurface → retireSessionScopedSlots`）；
+  2. `scripts/lifecycle-baseline.json`——冻结「已知缺口」基线（预期 0 条真缺陷）；
+  3. `package.json` 的 `check` 串进门禁（与 syntax / test / dead-exports 并列）；
+  4. `tests/system-v265.test.mjs`——审计器自身的正/负控制。
+- **负控制纪律（源自既有教训，必须遵守）**：
+  真源码破坏（锚点恰中 1 次）→ 加载破坏副本 → **在副本上重跑同款真判据**；
+  禁止「对原文件断言」（破坏没发生也绿）、禁止「破坏写死成模拟常量」（真判据没被调用）、
+  禁止「破坏把判据自己删了」（自我指涉）。另加判据纯度自证：负控制层内锚点字面量只准声明一次。
+- **状态**：待启动（`TODO.md` P0-1）。
+
+---
+
+## 迭代 4 — 其它已知方向（待评估）
+
+- **README 版本段落补账**：README 段落止于 v2.60.0，v2.61.0 / v2.62.0 / v2.63.0 / v2.64.0 未收录。
+- **会话键前缀宽匹配收紧**：`/^ruby_/`、`/^games_*/` 覆盖过宽，使「APPS id ↔ 会话键前缀」
+  对账无法逐项核对（长期靠人工辨伪）。收紧前须先盘点存量键。
+- **生命周期出口声明式注册**（架构级）：让 App 自声明出口与覆盖关系，框架统一调用，
+  从根上消除「写了出口没人调」与「槽位没人回收」两类形态。
 
 ---
 
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.63.0`（四源同源）
-- **门禁基线**：语法 333 文件 / 测试 **477 pass · 0 fail** / 死导出零新增（冻结 24 条）
+- **当前版本**：`2.64.0`（四源同源）
+- **门禁基线**：语法 334 文件 / 测试 **482 pass · 0 fail** / 死导出零新增（冻结 24 条）
 - **三条硬纪律**：只读（不写上游、不造双份真相）/ 不抛（畸形数据降级不阻断）/ 不猜（取不到如实分态报告）

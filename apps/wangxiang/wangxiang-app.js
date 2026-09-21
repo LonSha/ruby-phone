@@ -197,7 +197,6 @@ export class WangxiangApp {
             await this.wangxiangView.showMarketplaceDeliveryPopup(deliveredOrders);
         }
     }
-
     clearCache() {
         this._taskDataScopeKey = '';
         this.generatedTasks = [];
@@ -212,6 +211,29 @@ export class WangxiangApp {
         this.wangxiangView.currentTaskId = '';
         this._syncTaskDataScope();
     }
+
+    /**
+     * [v2.64.0] 换会话重绑：丢弃实例级缓存，防上一段聊天的任务/订单/积分「串」进新会话。
+     *
+     * 【修前实测缺陷】本 App 持有一整套会话级实例数组（generatedTasks / managedTasks /
+     *   taskProgressHistory / marketplaceCategories / marketplaceProducts / marketplaceOrders /
+     *   inventoryItems / creditBalance / deliveryAddresses，见 `clearCache()`），
+     *   但 `clearCache()` **只在换会话路径（onChatChanged → rebindLazyApps）被显式调用一次**，
+     *   两条清数据路径（清当前数据 / 清全部数据）对它**零处理** ——
+     *   清完数据后手机仍持有已删任务与订单，直到某个深层级操作偶然触发 `_syncTaskDataScope()`
+     *   才收敛（`_syncTaskDataScope` 的比较键来自 storage，故清数据后才会命中去重）。
+     *   同型缺陷在本仓修过多次（v2.30 album / v2.33 / v2.34），此处是**漏登记的第七例**。
+     *
+     * 【为什么以 onChatChanged 承载而不是再往两条路径各写一次】
+     *   v2.55 已把「换会话 / 清当前数据 / 清全部数据」的重绑收敛为单一真源
+     *   （index.js 的 ST_PHONE_REBIND_APP_KEYS + rebindLazyApps()）。补一个显式调用点
+     *   等于重新引入「三处手抄、漏一处即静默串味」的形态；接入该表后两条清数据路径自动覆盖。
+     *   （注：`_syncTaskDataScope` 走 this.storage，不碰 window，故无需 phoneShell。）
+     */
+    onChatChanged() {
+        this.clearCache();
+    }
+
 
     getMarketplaceCategories() {
         return Array.isArray(this.marketplaceCategories) && this.marketplaceCategories.length === WANGXIANG_DEFAULT_MARKET_CATEGORIES.length
