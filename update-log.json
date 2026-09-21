@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.60.0": {
+      "version": "2.60.0",
+      "date": "2026-09-21",
+      "title": "起名台 + 手术库（LA 纯数据模块移植）",
+      "items": [
+        "把上游 LA-0.7.68 拓展版中 name-data（人名库）与 surgery-library（手术术式库）两块零宿主依赖纯数据模块解耦移植进 health App。",
+        "家谱页签新增起名台（三语言随机起名 / 固定姓 / 分性别），健康页签新增手术库（59 术式 · 章节分组 · 分级分布 · 点击展开阶段+并发症）。",
+        "纯本地只读，不写状态；service 封装层统一 LA 数据结构差异。",
+        "LA 解耦手法：单文件 IIFE 按 `/* src/xxx.js */` 注释分界 + `__LA_XXX__` 全局单例耦合，按括号配平切片提取目标模块、剥 IIFE 外壳与 window 导出、前置 export 落盘。",
+        "新增 name-data.js / name-service.js / surgery-library.js / surgery-service.js + health-view 接线 + health.css；tests/system-v260.test.mjs 15 用例。"
+      ]
+    },
     "2.59.0": {
       "version": "2.59.0",
       "date": "2026-09-21",
@@ -846,6 +858,6 @@
       ]
     }
   },
-  "latest": "2.59.0",
+  "latest": "2.60.0",
   "head": "2.56.0"
 }

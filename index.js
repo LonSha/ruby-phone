@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.59.0';
+const ST_PHONE_VERSION = '2.60.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -103,12 +103,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "[新功能] 对弈棋种扩列：国际象棋 + 日本将棋。把上游瑟瑟小手机游戏扩展 V0.2.0 的 ChessEngine / ShogiEngine 两个自包含引擎（alpha-beta + 置换表 + 残局搜索，零宿主依赖）纯本地移植接入 games/board，对弈棋种 3 → 5（五子/象棋/斗兽 → 新增国际象棋/日本将棋）。",
-        "国际象棋引擎：完整走法生成（含王车易位/吃过路兵/升变 Q/R/B/N）+ 将军检测 + 三次重复判和，棋盘 8x8，白先。",
-        "日本将棋引擎：完整走法 + 打步詰/二歩禁止 + 成桂（成/不成双选项）+ 落子（drop）+ 千日手判和，棋盘 9x9，含手牌计数。",
-        "board-data 扩为 5 棋种：快照/恢复类型感知（chess 保留易位权+吃过路兵格，shogi 保留手牌），走法分发按类型路由（升变 promo / 成桂 promote / 落子 makeDrop），新增 shogiHand / legalDrops 手牌出口。",
-        "board-view 扩渲染：chess 用 Unicode 棋子 + 深浅棋盘，shogi 用手牌栏（点选落子）+ 升变/成桂选择条；board.css 补 .gb-chs/.gb-shg/.gb-shogi-hand/.gb-promo。",
-        "新增 tests/system-v259.test.mjs（16 用例）：A 组两引擎真功能（走法/升变/成桂/二歩/判和），B 组 BoardData 集成（5 棋种/快照/手牌），F 组源码不变量（引擎零宿主依赖/view 消费闭环/CSS 落点），G 组版本四源同源。"
+        "把上游 LA-0.7.68 拓展版中 name-data（人名库）与 surgery-library（手术术式库）两块零宿主依赖纯数据模块解耦移植进 health App。",
+        "家谱页签新增起名台（三语言随机起名 / 固定姓 / 分性别），健康页签新增手术库（59 术式 · 章节分组 · 分级分布 · 点击展开阶段+并发症）。",
+        "纯本地只读，不写状态；service 封装层统一 LA 数据结构差异。",
+        "LA 解耦手法：单文件 IIFE 按 `/* src/xxx.js */` 注释分界 + `__LA_XXX__` 全局单例耦合，按括号配平切片提取目标模块、剥 IIFE 外壳与 window 导出、前置 export 落盘。",
+        "新增 name-data.js / name-service.js / surgery-library.js / surgery-service.js + health-view 接线 + health.css；tests/system-v260.test.mjs 15 用例。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

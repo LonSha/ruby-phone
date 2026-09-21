@@ -13,6 +13,9 @@ import {
   getDerivedInheritanceSeed,
   DERIVED_TYPE_RACES, DERIVED_TYPE_FLUX_PROFILES, DERIVED_TYPE_METABOLISM_EXEMPTIONS,
 } from './bio-propagation.js';
+// [v2.60.0] 起名台 + 手术库：纯本地只读数据源（人名库 / 手术术式库），不写状态
+import { nameLangs, nameStats, generateName } from './name-service.js';
+import { surgeryChapters, surgeryByChapter, surgeryStats, surgerySummary } from './surgery-service.js';
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -172,7 +175,27 @@ export class HealthView {
     const kids = (data.lineage?.births || []).map((child) => {
       return h("div", cls("hl-child"), h("div", cls("hl-child-top"), esc(child.name) + h("button", cls("hl-mini") + " " + attr("data-del-child", child.id), "移除")) + h("div", cls("hl-card-desc"), esc(child.gender + " · " + child.father + " · " + child.race)));
     }).join("") || h("div", cls("hl-card-desc"), "尚无子嗣记录。分娩完成后会自动登记。");
-const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids);
+    // ---- [v2.60.0] 起名台（本地人名库，只读，不写状态）----
+    const LANG_CN = { chinese: "中文", japanese: "日文", western: "西方" };
+    const nl = this._nameLang || "chinese";
+    const ng = this._nameGender || "female";
+    const nst = nameStats();
+    if (!this._lastName) this._lastName = generateName({ lang: nl, gender: ng });
+    const nameResult = this._lastName;
+    const nameLangOpts = nameLangs().map((l) => "<option value='" + esc(l) + "'" + (l === nl ? " selected" : "") + ">" + esc(LANG_CN[l] || l) + "</option>").join("");
+    const namePoolText = nameLangs().map((l) => (LANG_CN[l] || l) + " 姓" + nst[l].surnames + "·女" + nst[l].female + "·男" + nst[l].male).join("  /  ");
+    const nameBox = h("div", cls("hl-name-box"),
+      h("div", cls("hl-section-title"), "起名台 · 本地人名库（只读）") +
+      h("div", cls("hl-name-ctrl"),
+        h("select", attr("id", "hl-name-lang"), nameLangOpts) +
+        h("select", attr("id", "hl-name-gender"), "<option value='female'" + (ng === "female" ? " selected" : "") + ">女</option><option value='male'" + (ng === "male" ? " selected" : "") + ">男</option>") +
+        "<input " + attr("id", "hl-name-surname") + " type='text' placeholder='固定姓(可空)'>" +
+        h("button", cls("hl-mini") + " " + attr("id", "hl-name-gen"), "生成")
+      ) +
+      h("div", cls("hl-name-result"), esc(nameResult ? nameResult.full : "—") + (nameResult ? " <span class='hl-name-sub'>（" + esc(nameResult.surname) + " + " + esc(nameResult.given) + "）</span>" : "")) +
+      h("div", cls("hl-name-foot"), esc(namePoolText))
+    );
+    const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "子嗣 " + ((data.lineage && data.lineage.births && data.lineage.births.length) || 0) + " " + h("button", cls("hl-mini") + " " + attr("id", "hl-add-child"), "+登记")) + kids) + nameBox;
     // ---- 健康档案（medical） ----
     const medOv = data.illnessOverview ? data.illnessOverview() : { total: 0, active: 0, chronic: 0 };
     const sevCn = severityLabel;   // [v2.41.0] 单一真源（medical-core）
@@ -187,6 +210,35 @@ const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-
     const catOptions = (data.illnessCategories || []).map(c => "<option value='" + esc(c.id) + "'>" + esc(c.label) + "</option>").join("");
     const medIllnessSel = h("div", cls("hl-med-add"), h("select", attr("id", "hl-med-cat"), catOptions) + h("select", attr("id", "hl-med-ill"), "<option value=''>选病症…</option>") + h("select", attr("id", "hl-med-sev"), "<option value=''>程度</option><option value='mild'>轻度</option><option value='moderate'>中度</option><option value='severe'>重度</option><option value='critical'>危重</option>") + h("button", cls("hl-mini") + " " + attr("id", "hl-add-med"), "添加"));
     const medicalBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "健康档案 · " + medOv.active + " 进行中 / " + medOv.total + " 条 " + h("button", cls("hl-mini") + " " + attr("id", "hl-adv-med"), "每日推进")) + medConds + h("div", cls("hl-section-title"), "添加病症") + medIllnessSel);
+    // ---- [v2.60.0] 手术库（本地术式库，只读，不写状态）----
+    const stt = surgeryStats();
+    const chList = surgeryChapters();
+    const sc = this._surgChapter && chList.some((x) => x.name === this._surgChapter) ? this._surgChapter : (chList[0] ? chList[0].name : "");
+    const surgStatsLine = "共 " + stt.total + " 术式 / " + stt.chapters + " 章 · 一级 " + stt.byGrade[1] + " 二级 " + stt.byGrade[2] + " 三级 " + stt.byGrade[3] + " 四级 " + stt.byGrade[4] + " · 均值 " + stt.avgStageMinutes + " 分钟";
+    const chOpts = chList.map((x) => "<option value='" + esc(x.name) + "'" + (x.name === sc ? " selected" : "") + ">" + esc(x.name) + "（" + x.count + "）</option>").join("");
+    const openId = this._surgOpen || "";
+    const surgItems = surgeryByChapter(sc).map((s) => {
+      const sum = surgerySummary(s);
+      const isSel = s.id === openId;
+      const detail = isSel ? (
+        h("div", cls("hl-surg-detail"),
+          h("div", cls("hl-surg-stage"), (s.stages || []).map((st) => esc(st.name + " " + st.typicalMinutes + "m")).join(" → ")) +
+          (s.complications && s.complications.length ? h("div", cls("hl-surg-comp"), "并发症：" + s.complications.map((c) => esc(c.name + "(" + c.whenDays + "d)")).join("、")) : "") +
+          (s.note ? h("div", cls("hl-surg-note"), esc(s.note)) : "")
+        )
+      ) : "";
+      return h("div", cls("hl-surg-item" + (isSel ? " on" : "")) + " " + attr("data-surg-id", s.id),
+        h("div", cls("hl-surg-top"), esc(s.name) + " <span class='hl-surg-id'>" + esc(s.id) + "</span>") +
+        h("div", cls("hl-card-desc"), esc(sum.gradeLabel + " · 麻醉 " + esc(s.anesthesia) + " · 恢复 " + sum.recoveryDays + "d · " + sum.stageMinutes + "min(" + sum.stageCount + "段)")) +
+        detail
+      );
+    }).join("");
+    const surgBox = h("div", cls("hl-surg-box"),
+      h("div", cls("hl-section-title"), "手术库 · 本地术式库（只读）") +
+      h("div", cls("hl-surg-ctrl"), h("select", attr("id", "hl-surg-ch"), chOpts)) +
+      h("div", cls("hl-surg-foot"), esc(surgStatsLine)) +
+      h("div", cls("hl-surg-list"), surgItems || h("div", cls("hl-card-desc"), "本章无术式。"))
+    );
     const cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
     // ---- 育种推演（breeding）----
     // [v2.58.0] 纯只读展示：用当前母体种族做蛋方，分别对「同种/跨种」推演三类结果。零 LLM、不写状态。
@@ -247,7 +299,7 @@ const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-
       ]) +
       h("div", cls("hl-breed-foot"), "可选衍生类型 " + DERIVED_TYPE_RACES.length + " 类（流变模型 " + breedFluxCount + " / 代谢豁免 " + breedMetabolicExempt + "）：修炼 / 魔导 / 妖怪 / 神祇 / 不死 / 血族 / 星际 / 机械 / 器灵 / 变异 / 序列 / 兽化")
     );
-    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : tab === "medical" ? medicalBox : tab === "breeding" ? breedBox : cycleBody);
+    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : tab === "medical" ? (medicalBox + surgBox) : tab === "breeding" ? breedBox : cycleBody);
     container.innerHTML = h("div", cls("hl-root"), header + tabs + h("main", cls("hl-body"), body));
     this._bindEvents();
   }
@@ -346,6 +398,23 @@ const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-
         const tags = new Set(fetus.tags || []);
         if (tags.has(tag)) tags.delete(tag); else tags.add(tag);
         data.updateFetus(i, { tags: [...tags] });
+        rerender();
+      });
+    });
+    // ---- [v2.60.0] 起名台 ----
+    root.querySelector("#hl-name-lang")?.addEventListener("change", (e) => { this._nameLang = e.target.value; this._lastName = generateName({ lang: this._nameLang, gender: this._nameGender || "female" }); rerender(); });
+    root.querySelector("#hl-name-gender")?.addEventListener("change", (e) => { this._nameGender = e.target.value; this._lastName = generateName({ lang: this._nameLang || "chinese", gender: this._nameGender }); rerender(); });
+    root.querySelector("#hl-name-gen")?.addEventListener("click", () => {
+      const surname = root.querySelector("#hl-name-surname")?.value.trim();
+      this._lastName = generateName({ lang: this._nameLang || "chinese", gender: this._nameGender || "female", surname: surname || undefined });
+      rerender();
+    });
+    // ---- [v2.60.0] 手术库 ----
+    root.querySelector("#hl-surg-ch")?.addEventListener("change", (e) => { this._surgChapter = e.target.value; this._surgOpen = null; rerender(); });
+    root.querySelectorAll("[data-surg-id]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.getAttribute("data-surg-id");
+        this._surgOpen = (this._surgOpen === id) ? null : id;
         rerender();
       });
     });
