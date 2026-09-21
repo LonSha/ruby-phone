@@ -166,3 +166,12 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 修法：index.js 顶部新增 `ST_PHONE_REBIND_APP_KEYS`（19 键）+ 函数 `rebindLazyApps()`（逐 App try/catch 容错），三处路径一律只调 `rebindLazyApps()`；index.js 净减 60 行。
 - 测试：`tests/system-v255.test.mjs`（13 用例，含「表内 key 必须映射到真实单例构造点」与「旧硬编码清单已清零」两条逆向审计）。历史九套 onChatChanged 接线用例（v223/v224/v246/v247/v248/v249/v251/v252/v253）由「硬编码三处」改判为「表成员 + 三处调用点」。
 - 钩子接线全局复核：22 处 `onChatChanged` 定义、`place/cheat/dirtytalk` 走 `onChatChanged`、`health/peek/playbook/memory` 走 `_initHooks`，全部挂在真实 `SillyTavern.getContext().eventSource(GENERATE_BEFORE_COMBINE_PROMPTS)`；全仓已无不存在的 `window.ST_API`。
+## v2.56.0 注入钩子活性修复 + 序列化器收敛
+- 缺陷形态（同一「静默失效」族第三例）：
+  1. `playbook-app.js` 的 `_initHooks()` 把 `this._boundGenerationHook = true;` 放在检查 `SillyTavern.getContext()` **之前** —— 构造期宿主未就绪时 guard 已锁死，此后 `render()` 重试也被 `return` 挡掉，注入**永久静默失效**。
+  2. `health-app.js` / `peek-app.js` 守卫置位位置正确（在 `if (eventSource && event_types)` 分支内），但**没有任何重试路径** —— 构造期未就绪即永久不挂载。
+  三者共同特征：不报错、不崩溃、只失效。
+- 修法：playbook 把置位语句移到「两条 `eventSource.on` 都挂载成功之后」；health / peek 在 `render()` 开头幂等重试一次 `_initHooks()`（App 首次被用户打开时宿主必然就绪）。
+- 顺带收敛：`stringifyState` / `stringifyValue` 三份逐字相同的就地定义（离线提示词拼装 / 用户态拼装 / 作用域 token 生成）合并为模块级 `stStringifyState` 单一实现，避免三处各自漂移出不一致的 null / undefined / object 处理。
+- 测试：`tests/system-v256.test.mjs`（14 用例）：A 钩子活性（置位顺序 / 置位次数 / 置位晚于最后一条 on / 重试路径 / 置位在宿主分支内 / 注入目标为 `payload.prompt` 且不写 `systemMessages`）、B 序列化器单一真源（内联定义清零 / 唯一实现 / 三处引用）、C 版本四源同源。
+- 维护惯例落实：`system-v255.test.mjs` 的 C4 由「读当前版本条目」改为**显式锚定 `log.versions['2.55.0']`**，历史套件不再随升版漂移；v254 D1 版本断言改为格式正则 `/^\d+\.\d+\.\d+$/`。

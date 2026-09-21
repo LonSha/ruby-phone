@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.55.0';
+const ST_PHONE_VERSION = '2.56.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -88,14 +88,25 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp'
 ];
+// [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
+//   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
+//   收敛为单一模块级实现，避免三处各自演化出不一致的 null/undefined/object 处理。
+function stStringifyState(value) {
+    if (value === null) return 'null';
+    if (typeof value === 'undefined') return '';
+    if (typeof value === 'object') {
+        try { return JSON.stringify(value); } catch (e) { return '[object]'; }
+    }
+    return String(value);
+}
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "[严重缺陷形态修复] 懒加载单例 App 重绑清单此前在 index.js 里硬编码重复三份（换会话 / 清当前数据 / 清全部数据），每新增一个 App 都需人手补三处；漏改任一处 = 该 App 在对应路径静默串味（换会话把旧会话数据写回新会话 / 清数据后内存仍持已清数据），不报错、不崩溃、只错数据。",
-        "改为表驱动单一真源：新增 ST_PHONE_REBIND_APP_KEYS（19 个单例键）与 rebindLazyApps()（逐 App try/catch 容错），三处路径一律只调 rebindLazyApps()；index.js 净减 60 行。",
-        "新增 tests/system-v255.test.mjs（A 单一真源结构 / B 三处路径接线 / C 版本同源），含「表内每个 key 必须映射到真实单例构造点」与「旧硬编码清单已清零」两条逆向审计。历史九套 onChatChanged 接线用例由「硬编码三处」改判为「表成员 + 三处调用点」。",
-        "顺带清理：v2.54.0-fix 提交后的全链路钩子接线一致性审计确认——全仓 22 处 onChatChanged 定义、23 处单例实例化、仅 place/cheat/dirtytalk 走 onChatChanged，health/peek/playbook/memory 走 _initHooks，全部挂在真实的 SillyTavern.getContext().eventSource(GENERATE_BEFORE_COMBINE_PROMPTS) 上，再无处引用不存在的 window.ST_API。"
+        "[严重缺陷修复] 注入钩子幂等 guard 与宿主就绪检查顺序写反：playbook-app 把 _boundGenerationHook = true 放在检查 SillyTavern context 之前，构造期宿主未就绪时 guard 已锁死，此后 render() 再调 _initHooks 也被 return 挡掉，注入永久静默失效（与 v2.54 修的钩子接线失效同属「不报错、只失效」一类）。修法：置位移至「两条监听都挂载成功之后」。",
+        "health-app / peek-app 同类活性缺口：guard 置位虽在宿主就绪分支内（正确），但没有任何重试路径 —— 构造期未就绪即永久不挂载。修法：render()（App 首次真正被用户打开、宿主必然就绪）重试一次幂等 _initHooks。",
+        "顺带收敛重复实现：stringifyState / stringifyValue 三份逐字相同的就地定义（离线提示词拼装 / 用户态拼装 / 作用域 token 生成）合并为模块级 stStringifyState 单一实现，避免三处各自漂移出不一致的 null / undefined / object 处理。",
+        "新增 tests/system-v256.test.mjs（14 用例）：A 钩子活性（置位顺序 / 置位次数 / 重试路径 / 注入目标）、B 序列化器单一真源、C 版本同源。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -3312,14 +3323,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             if (!Array.isArray(items) || items.length === 0) return '';
 
-            const stringifyState = (value) => {
-                if (value === null) return 'null';
-                if (typeof value === 'undefined') return '';
-                if (typeof value === 'object') {
-                    try { return JSON.stringify(value); } catch (e) { return '[object]'; }
-                }
-                return String(value);
-            };
+            const stringifyState = stStringifyState;
             const buildStateLines = (stateObj) => {
                 const entries = Object.entries(stateObj || {});
                 if (entries.length === 0) return '暂无状态';
@@ -4122,14 +4126,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         return '用户';
                     };
 
-                    const stringifyState = (value) => {
-                        if (value === null) return 'null';
-                        if (typeof value === 'undefined') return '';
-                        if (typeof value === 'object') {
-                            try { return JSON.stringify(value); } catch (e) { return '[object]'; }
-                        }
-                        return String(value);
-                    };
+                    const stringifyState = stStringifyState;
                     const sanitizePreviewHtml = (html) => {
                         return String(html || '')
                             .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -4510,14 +4507,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             }
                         })();
 
-                        const stringifyValue = (value) => {
-                            if (value === null) return 'null';
-                            if (typeof value === 'undefined') return '';
-                            if (typeof value === 'object') {
-                                try { return JSON.stringify(value); } catch (e) { return '[object]'; }
-                            }
-                            return String(value);
-                        };
+                        const stringifyValue = stStringifyState;
 
                         const toScopeToken = (value, fallback = 'item') => {
                             const raw = String(value || '').trim().toLowerCase();

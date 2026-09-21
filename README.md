@@ -240,3 +240,8 @@
 ## 🧱 会话作用域单一真源 (v2.55.0)
 
 * **懒加载单例重绑表**：19 个单例 App 的 `onChatChanged` 重绑统一走 `ST_PHONE_REBIND_APP_KEYS` + `rebindLazyApps()`，换会话 / 清当前数据 / 清全部数据三条路径共用同一入口（此前三份手抄清单，漏补一份即静默串味）。
+
+## 🩺 注入钩子活性 (v2.56.0)
+* **guard 置位不得早于宿主就绪检查**：`playbook-app` 的 `_boundGenerationHook = true` 移至两条 `eventSource.on` 之后；构造期宿主未就绪时不再锁死 guard，`render()` 重试可正常挂载。
+* **幂等重试路径**：`health-app` / `peek-app` 在 `render()` 开头重试一次 `_initHooks()`，消除「构造期未就绪即永久不挂载」。
+* **序列化器收敛**：`stringifyState` / `stringifyValue` 三份就地定义合并为模块级 `stStringifyState` 单一真源（null / undefined / object 处理不再三处漂移）。

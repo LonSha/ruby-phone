@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.56.0": {
+      "version": "2.56.0",
+      "date": "2026-09-21",
+      "title": "注入钩子活性修复 + 序列化器单一真源",
+      "items": [
+        "[严重缺陷修复] 注入钩子幂等 guard 与宿主就绪检查顺序写反：playbook-app 把 _boundGenerationHook = true 放在检查 SillyTavern context 之前，构造期宿主未就绪时 guard 已锁死，此后 render() 再调 _initHooks 也被 return 挡掉，注入永久静默失效（与 v2.54 修的钩子接线失效同属「不报错、只失效」一类）。修法：置位移至「两条监听都挂载成功之后」。",
+        "health-app / peek-app 同类活性缺口：guard 置位虽在宿主就绪分支内（正确），但没有任何重试路径 —— 构造期未就绪即永久不挂载。修法：render()（App 首次真正被用户打开、宿主必然就绪）重试一次幂等 _initHooks。",
+        "顺带收敛重复实现：stringifyState / stringifyValue 三份逐字相同的就地定义（离线提示词拼装 / 用户态拼装 / 作用域 token 生成）合并为模块级 stStringifyState 单一实现，避免三处各自漂移出不一致的 null / undefined / object 处理。",
+        "新增 tests/system-v256.test.mjs（14 用例）：A 钩子活性（置位顺序 / 置位次数 / 重试路径 / 注入目标）、B 序列化器单一真源、C 版本同源。"
+      ]
+    },
     "2.55.0": {
       "version": "2.55.0",
       "date": "2026-09-21",
@@ -798,6 +809,6 @@
       ]
     }
   },
-  "latest": "2.55.0",
-  "head": "2.55.0"
+  "latest": "2.56.0",
+  "head": "2.56.0"
 }

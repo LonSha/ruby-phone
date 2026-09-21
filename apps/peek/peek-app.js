@@ -34,6 +34,10 @@ export class PeekApp {
   }
 
   render() {
+    // [v2.56.0] 渲染是 App 首次真正被用户打开的时刻，宿主必然已就绪；此处重试一次
+    //   _initHooks（内部幂等），覆盖构造期 SillyTavern context 尚未就绪、
+    //   导致注入钩子静默未挂载的窗口。
+    this._initHooks();
     this.view.render(this.phoneShell.screen);
   }
 }

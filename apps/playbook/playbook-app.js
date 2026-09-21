@@ -19,7 +19,9 @@ export class PlaybookApp {
 
   _initHooks() {
     if (this._boundGenerationHook) return;
-    this._boundGenerationHook = true;
+    // [v2.56.0] 幂等 guard 必须在**两条监听都挂载成功之后**才置位：原实现先置位再检查宿主，
+    //   一旦构造期 SillyTavern context 尚未就绪，guard 已锁、后续 render() 重试被 return 掉，
+    //   注入静默永久失效（与 v2.54 修的钩子接线失效同属一类）。
 
     // 监听酒馆原生生成前事件：注入灵感指引
     try {
@@ -49,6 +51,8 @@ export class PlaybookApp {
             this.view._renderPlays();
           }
         });
+        // 两条监听都挂上了，才算挂载成功
+        this._boundGenerationHook = true;
       }
     } catch (e) {
       console.warn('[PlaybookApp] 挂载 SillyTavern 生成钩子失败:', e);
