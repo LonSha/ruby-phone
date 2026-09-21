@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.56.0';
+const ST_PHONE_VERSION = '2.57.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -103,10 +103,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "[严重缺陷修复] 注入钩子幂等 guard 与宿主就绪检查顺序写反：playbook-app 把 _boundGenerationHook = true 放在检查 SillyTavern context 之前，构造期宿主未就绪时 guard 已锁死，此后 render() 再调 _initHooks 也被 return 挡掉，注入永久静默失效（与 v2.54 修的钩子接线失效同属「不报错、只失效」一类）。修法：置位移至「两条监听都挂载成功之后」。",
-        "health-app / peek-app 同类活性缺口：guard 置位虽在宿主就绪分支内（正确），但没有任何重试路径 —— 构造期未就绪即永久不挂载。修法：render()（App 首次真正被用户打开、宿主必然就绪）重试一次幂等 _initHooks。",
-        "顺带收敛重复实现：stringifyState / stringifyValue 三份逐字相同的就地定义（离线提示词拼装 / 用户态拼装 / 作用域 token 生成）合并为模块级 stStringifyState 单一实现，避免三处各自漂移出不一致的 null / undefined / object 处理。",
-        "新增 tests/system-v256.test.mjs（14 用例）：A 钩子活性（置位顺序 / 置位次数 / 重试路径 / 注入目标）、B 序列化器单一真源、C 版本同源。"
+        "[新功能] 记忆洞察（Memory Insights）：记忆引擎里早已备好、但界面上**一条都看不到**的六面读数，本版全部做出界面。新增 apps/memory/memory-insights.js 纯函数洞察层——五感归档（消费 MemoryPool.getSensoryArchive，此前全仓零调用）、场景聚合（消费 getSceneTags，此前全仓零调用）、生命周期四段（active/cooling/frozen/tombstone）、换代压制对读（旧↔新配对，压制方缺失如实报 byMissing）、情感轨迹（按天分桶 arousal/importance 均值，空白天不补零）、记忆体检（七类确定性判据 + 可执行建议）。",
+        "记忆 App 视图重构为分页结构：概览 / 五感 / 场景 / 体检 四页 + 时间线常驻；条目行新增降温/冻结/墓碑/已换代徽标，检索结果带回忆权限标签（cite/cautious/associate-only）。控制器 insights() 是单一取数出口，六面逐面独立 try/catch（任一面失败只空该面、不连坐整页）；sleepNow() 为巩固唯一入口，视图不得直摸 core.sleep。",
+        "确立「看一眼 vs 改一把」纪律：洞察层只调纯读的 lifecycleStage()，绝不调会墓碑化清正文的 pruneByLifecycle()（墓碑化是 sleep 巩固管线的副作用，界面渲染绝不触发）——C2 用例锁住「200 天前条目正文原样保留」。",
+        "重写时复发的转义缺陷当场抓回：memory-view 的 _esc 一度把双引号「转义成自身」（等于没转），已修回 HTML 实体，并立 F3 回归锁断言四转义齐备、且禁止「引号到引号」的无效形态。",
+        "新增 tests/system-v257.test.mjs：A-E 组直接 ESM 导入纯内核做真功能测试（非只 grep 源码），F 组源码不变量锁定（消费闭环 / 六面容错 / 转义 / 分页 / 巩固单一入口 / CSS 落点），G 组版本四源同源。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

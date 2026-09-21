@@ -175,3 +175,14 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 顺带收敛：`stringifyState` / `stringifyValue` 三份逐字相同的就地定义（离线提示词拼装 / 用户态拼装 / 作用域 token 生成）合并为模块级 `stStringifyState` 单一实现，避免三处各自漂移出不一致的 null / undefined / object 处理。
 - 测试：`tests/system-v256.test.mjs`（14 用例）：A 钩子活性（置位顺序 / 置位次数 / 置位晚于最后一条 on / 重试路径 / 置位在宿主分支内 / 注入目标为 `payload.prompt` 且不写 `systemMessages`）、B 序列化器单一真源（内联定义清零 / 唯一实现 / 三处引用）、C 版本四源同源。
 - 维护惯例落实：`system-v255.test.mjs` 的 C4 由「读当前版本条目」改为**显式锚定 `log.versions['2.55.0']`**，历史套件不再随升版漂移；v254 D1 版本断言改为格式正则 `/^\d+\.\d+\.\d+$/`。
+## v2.57.0 记忆洞察（Memory Insights）
+- 动机：记忆引擎侧能力远厚于界面 —— `MemoryPool.getSensoryArchive()`（五感归档）与 `getSceneTags()`（场景聚合）在产品代码**全仓零调用**；生命周期四段（active/cooling/frozen/tombstone）、换代压制（superseded，可逆）、回忆权限三级（cite/cautious/associate-only）无任何 UI 落点，视图只显示 4 个计数 + 1 个列表。本版把六面「数据已在内存里、只是没人显示」的读数全部做出界面。
+- 新增 `apps/memory/memory-insights.js`（纯函数洞察层，六面投影，三条纪律写进注释：纯函数/时间由参数注入、畸形输入降级不抛、算不出就 0/空不猜）：
+  - `senseRows`（消费 getSensoryArchive，空感维不出现、按条数降序）· `sceneRows`（消费 getSceneTags，未标注地点归「未标注地点」不丢数据）
+  - `lifecycleRows`（**只调纯读 `lifecycleStage()`，绝不调会墓碑化的 `pruneByLifecycle()`** —— 立「看一眼 vs 改一把」纪律：界面渲染绝不触发巩固管线副作用）· `supersedePairs`（旧↔新配对，压制方不在池如实报 byMissing）
+  - `emotionTrace`（按天分桶 arousal/importance 均值，空白天不补零 —— 补零会把「没聊」画成「情绪为零」）· `auditMemory`（七类确定性判据 + 可执行建议）· `insightSummary`
+- 重写 `memory-app.js`（49→168）：`insights()` 单一取数出口，六面**逐面独立 try/catch**（任一面失败只空该面、不连坐整页）；`sleepNow()` 巩固唯一入口；`onChatChanged` 重新指向 memoryCore 且不持有数据副本（防缓存陈旧）。
+- 重写 `memory-view.js`（136→344）：`MemoryView.TABS` 静态冻结四分页（概览/五感/场景/体检）+ 时间线常驻；条目行新增降温/冻结/墓碑/已换代徽标；检索结果带回忆权限标签；容器级委托 + `_delegated` 幂等标志。
+- 踩坑当场抓回：重写视图时 `_esc` 的双引号转义一度退化成「转义成自身」（`" → "`，等于没转，v246 J15 同款缺陷），已修回 `"`，F3 用例立回归锁断言四转义齐备且禁止「引号→引号」形态。
+- 测试：`tests/system-v257.test.mjs`（23 用例）：A-E 组**直接 ESM 导入纯内核做真功能测试**（非只 grep 源码），F 组源码不变量锁定（消费闭环 / 六面容错 / 转义 / 分页 / 巩固单一入口 / CSS 落点 / 不缓存副本），G 组版本四源同源。
+- 维护惯例落实：`system-v256.test.mjs` 的 C4 同款「读动态当前版本」漂移缺陷，锚定 `log.versions['2.56.0']`（C2/C3 的动态版本断言是「index items 与 update-log 头部同源」检查，升版后两边同升、天然通过，保留不动）。

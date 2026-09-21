@@ -245,3 +245,8 @@
 * **guard 置位不得早于宿主就绪检查**：`playbook-app` 的 `_boundGenerationHook = true` 移至两条 `eventSource.on` 之后；构造期宿主未就绪时不再锁死 guard，`render()` 重试可正常挂载。
 * **幂等重试路径**：`health-app` / `peek-app` 在 `render()` 开头重试一次 `_initHooks()`，消除「构造期未就绪即永久不挂载」。
 * **序列化器收敛**：`stringifyState` / `stringifyValue` 三份就地定义合并为模块级 `stStringifyState` 单一真源（null / undefined / object 处理不再三处漂移）。
+## 🧠 记忆洞察 (Memory Insights, v2.57.0)
+* **六面投影首次落到界面**：引擎里早已备好、但界面零消费的能力全部做出读数 —— 五感归档（`getSensoryArchive`）/ 场景聚合（`getSceneTags`）/ 生命周期四段 / 换代压制对读 / 情感轨迹 / 记忆体检，纯函数洞察层 `apps/memory/memory-insights.js`（畸形输入降级不抛、算不出就空不猜）。
+* **记忆 App 视图分页化**：概览 / 五感 / 场景 / 体检 四页 + 时间线常驻；条目行带降温/冻结/墓碑/已换代徽标，检索结果带回忆权限标签（cite/cautious/associate-only）。
+* **单一出口与容错**：控制器 `insights()` 是唯一取数口，六面逐面独立 try/catch（一面失败只空该面、不连坐整页）；`sleepNow()` 是巩固唯一入口，视图不直摸 `core.sleep`。
+* **「看一眼 vs 改一把」纪律**：界面只调纯读 `lifecycleStage()`，绝不触发会墓碑化清正文的 `pruneByLifecycle()`（那是 sleep 巩固管线的副作用）。

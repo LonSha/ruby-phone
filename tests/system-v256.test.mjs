@@ -125,9 +125,8 @@ test('C3 items 逐字同源（index.js 与 update-log）', () => {
   assert.deepEqual(log.versions[v].items.slice(0, items.length), items, 'items 未逐字同源');
 });
 
-test('C4 当前版本条目含本轮变更', () => {
-  const v = JSON.parse(read('manifest.json')).version;
-  const items = JSON.parse(read('update-log.json')).versions[v].items.join('\n');
+test('C4 本版(2.56.0)条目含本轮变更（锚定自身版本，不随升版漂移）', () => {
+  const items = JSON.parse(read('update-log.json')).versions['2.56.0'].items.join('\n');
   assert.match(items, /_initHooks|钩子|幂等/);
 });
 
