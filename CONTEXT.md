@@ -145,3 +145,11 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **五态**：ready / empty / no-clock-face / no-snapshot / bridge-absent。判定逻辑：有 date 或 label 为非空字符串则 ready，否则 empty。
 - **接线**：apps.js 第 38 条目（icon 🕓️、color #60a5fa）；storage `/^clock_/`；index.js 路由分支；三处 onChatChanged；微信 `_injectApps` 表第 8 项。
 - **测试**：tests/system-v252.test.mjs（A 四件套+注册 / B 内核纯函数五态+投影+注入块 / C 微信注入+接线 / D 版本同源）。v251 D 组同步改为动态跟随。v224 窗口从 600 扩到 1000。
+
+## v2.53.0 世界账本（Ledger）
+
+- 消费面：`snapshot.worldLedgerRead`（`{ok, reason, describe, shape, gap, opinion, counts, peopleDiff, factsDiff, at}`）
+- 内核：`apps/ledger/ledger-data.js`（六态归因 `LEDGER_REASONS` + `projectLedger` + `ledgerPromptBlock`）
+- 控制器/视图：`ledger-app.js` / `ledger-view.js`（`.lg-*` 类），主色 `#c084fc`
+- 接线：`config/apps.js`（第 39 条）· `config/storage.js`（`/^ledger_/`）· `index.js` 路由 + 三处 onChatChanged · 微信注入表第 9 项
+- 测试：`tests/system-v253.test.mjs`（24 用例）

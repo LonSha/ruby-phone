@@ -358,6 +358,14 @@ export const APPS = [
         data: {}
     },
     {
+        id: 'ledger',
+        name: '账本',
+        icon: '🧾',
+        color: '#c084fc',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'search',
         name: '全局搜索',
         icon: '🔎',

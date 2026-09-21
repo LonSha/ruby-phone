@@ -73,6 +73,8 @@ export class PhoneStorage {
             /^chars_/,
             // [v2.52.0] 时计（clock_settings_v1：注入开关 + 诊断显示）。只读桥消费，设置随会话隔离。
             /^clock_/,
+            // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
+            /^ledger_/,
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
             // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
             //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，

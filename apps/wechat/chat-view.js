@@ -11575,6 +11575,7 @@ renderChatRoom(chat) {
                     { app: _vp.plotlineApp, name: 'SYSTEM (剧情线)' },
                     { app: _vp.charsApp, name: 'SYSTEM (群像)' },
                     { app: _vp.clockApp, name: 'SYSTEM (时计)' },
+                    { app: _vp.ledgerApp, name: 'SYSTEM (世界账本)' },
                 ];
                 for (const _item of _injectApps) {
                     const _blk = _item.app?.promptBlock?.();

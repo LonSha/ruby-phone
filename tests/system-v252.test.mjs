@@ -111,7 +111,7 @@ test('C3 index.js clock route', () => {
   assert.match(src, /appId === 'clock'/);
 });
 
-test('D1 version sync', () => {
+test('D1 version sync (format only, latest pinned by newest suite)', () => {
   const v = String(manifest.version);
-  assert.ok(v.startsWith('2.52'), 'got ' + v);
+  assert.match(v, /^\d+\.\d+\.\d+$/, 'got ' + v);
 });

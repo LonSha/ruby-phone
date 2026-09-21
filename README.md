@@ -226,3 +226,11 @@
 - **时间轴卡片**：日期 / 时段 / 精确度 / 楼层 / 闪回
 - **诊断面板**（可选开关）：时间标签统计 / 世界钟对读 / 锚点
 - **注入**：微信 `_injectApps` 表第 8 项 + `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子
+
+### 账本（Ledger）
+
+消费 `snapshot.worldLedgerRead`（记忆插件 + WorldAxis 三方对读），展示暗流/事实/人物/舆情计数、未外供缺口与人物位置冲突。
+
+- 六态归因：ready / empty / no-worldaxis / no-ledger-face / no-snapshot / bridge-absent
+- 纯函数内核 `ledger-data.js`（readLedgerFace / projectLedger / ledgerPromptBlock），ready 态可注入 Prompt
+- 主色 `#c084fc`，`.lg-*` 命名空间

@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.52.0';
+const ST_PHONE_VERSION = '2.53.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "新增「时计」App：消费 snapshot.clock 面展示剧情时间轴（日期/时段/精确度/楼层/闪回）与诊断数据（时间标签统计/世界钟对读/锚点）。",
-        "五态归因（ready/empty/no-clock-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 无有效内容时返回空串。",
-        "微信 _injectApps 表第 8 项（clockApp），三处 onChatChanged 接线齐全。",
-        "新增 tests/system-v252.test.mjs（A四件套+注册 / B内核纯函数五态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
+        "新增「账本」App：消费 snapshot.worldLedgerRead 面展示「三方对读闭环」（暗流/事实/人物/舆情计数 + 未外供缺口 + 人物位置冲突）。",
+        "六态归因（ready/empty/no-worldaxis/no-ledger-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 仅 ready 态产出，无有效内容返回空串。",
+        "微信 _injectApps 表第 9 项（ledgerApp），三处 onChatChanged 接线齐全。",
+        "新增 tests/system-v253.test.mjs（A四件套+注册 / B内核纯函数六态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
     ]
 };
 
@@ -9151,6 +9151,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.VirtualPhone.plotlineApp?.onChatChanged?.();
             window.VirtualPhone.charsApp?.onChatChanged?.();
             window.VirtualPhone.clockApp?.onChatChanged?.();
+            window.VirtualPhone.ledgerApp?.onChatChanged?.();
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
             window.VirtualPhone.cachedMofoData = null;
@@ -10201,6 +10202,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载时计App失败:', err);
                             phoneShell?.showNotification('错误', '时计App加载失败', '❌');
                         });
+                } else if (appId === 'ledger') {
+                    // [v2.53.0] 世界账本：消费记忆插件世界账本读数（只读桥，六态归因，注入走表驱动）。
+                    import('./apps/ledger/ledger-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.ledgerApp) {
+                                window.VirtualPhone.ledgerApp = new module.LedgerApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.ledgerApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载世界账本App失败:', err);
+                            phoneShell?.showNotification('错误', '世界账本App加载失败', '❌');
+                        });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')
                         .then(module => {
@@ -10397,6 +10411,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.charsApp?.onChatChanged?.();
                     window.VirtualPhone.clockApp?.onChatChanged?.();
+                    window.VirtualPhone.ledgerApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10511,6 +10526,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.plotlineApp?.onChatChanged?.();
                     window.VirtualPhone.charsApp?.onChatChanged?.();
                     window.VirtualPhone.clockApp?.onChatChanged?.();
+                    window.VirtualPhone.ledgerApp?.onChatChanged?.();
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

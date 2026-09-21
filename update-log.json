@@ -1,5 +1,16 @@
 {
   "versions": {
+    "2.53.0": {
+      "version": "2.53.0",
+      "date": "2026-09-21",
+      "title": "世界账本 App — 消费 snapshot.worldLedgerRead 三方对读闭环",
+      "items": [
+        "新增「账本」App：消费 snapshot.worldLedgerRead 面展示「三方对读闭环」（暗流/事实/人物/舆情计数 + 未外供缺口 + 人物位置冲突）。",
+        "六态归因（ready/empty/no-worldaxis/no-ledger-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 仅 ready 态产出，无有效内容返回空串。",
+        "微信 _injectApps 表第 9 项（ledgerApp），三处 onChatChanged 接线齐全。",
+        "新增 tests/system-v253.test.mjs（A四件套+注册 / B内核纯函数六态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
+      ]
+    },
     "2.52.0": {
       "version": "2.52.0",
       "date": "2026-09-21",
@@ -763,5 +774,5 @@
       ]
     }
   },
-  "latest": "2.52.0"
+  "latest": "2.53.0"
 }
