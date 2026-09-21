@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.62.0';
+const ST_PHONE_VERSION = '2.63.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -87,7 +87,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'bilibiliApp', 'theaterApp',
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
-    'graphApp'
+    'graphApp', 'memoryApp', 'timeweaverApp'
 ];
 // [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
 //   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
@@ -104,10 +104,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "全局搜索补源 12 个：武库/撩语/幸运转盘/生理/相册走本地键，档案/剧情线/群像/时计/世界账本/钱袋/地点走只读桥快照，桥缺时安全空转不抛。",
-        "图谱 App 补 onChatChanged 重绑并接入 REBIND 表，丢弃 3 秒陈旧缓存重指当前会话，换会话后图谱不再错读上一段剧情。",
-        "记忆 App 新增覆盖度分页：楼层账本现算读数（盖章数/覆盖率/缺口逐楼列号按因归因），模块缺席三态如实报告，绝不编数顶替。",
-        "新增 tests/system-v262.test.mjs（搜索补源 + 覆盖度），v257 分页锚点升到五页；版本升至 2.62.0。"
+        "会话生命周期接线审计：脚本枚举全仓 App 生命周期出口（重绑/清缓存/销毁/停用/重载）再反查调用路径，7 个「定义但零调用」候选中辨伪出 3 处真缺陷（其余为数组泛化调用/更强出口覆盖，非缺陷）。",
+        "记忆 App 的 onChatChanged 接入 REBIND 表：该出口早已实现却从未接线，换会话后降级读数与跨会话记忆引用不重绑。",
+        "织光机新增 onChatChanged：丢弃实例级 AI 信缓存与草稿、复位「自动织信只查一次」标志；此前视图直读该缓存，换角色后首屏渲染的仍是上一段剧情被 AI 织起的信。",
+        "日历提醒实例回收收口为单一真源：此前三处会话路径对独立提醒实例的处置没有一处完整（只清缓存不解绑 / 完全零处理），且槽位被活动实例顶替后原实例的 SWIPE_BACK 监听器永久泄漏；另修「打开日历覆盖单例前未解绑」同型缺陷。",
+        "新增 tests/system-v263.test.mjs（8 条：实例域行为 + 视图端到端 + 接线单一真源 + 防漂移）；版本升至 2.63.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -2038,6 +2039,41 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     let _lastCalendarReminderCheckTime = null;
+    /**
+     * [v2.63.0] 日历提醒实例域回收（单一真源）。
+     *
+     * 【修前实测缺陷】`_calendarReminderApp` 是一个**独立的 `CalendarApp` 实例**
+     *   （构造参数 `phoneShell = null`，只为在手机未打开时也能后台检测日程提醒），
+     *   它的回收此前散落在三条会话生命周期路径上，且没有一条是完整的：
+     *   · P1 换会话：只 `clearCache()` —— 构造期注册的 SWIPE_BACK 监听器与槽位引用都还在；
+     *   · P2 清当前数据 / P3 清全部数据：只处理 `calendarApp`，对 `_calendarReminderApp` 零处理；
+     *   · 槽位在自动补全日程处（`window.VirtualPhone.calendarApp || …`）会被**活动实例顶替**，
+     *     被顶替的原独立实例从此没有任何引用可达，其 SWIPE_BACK 监听器永久泄漏
+     *     （换会话/清数据后旧实例仍会响应回退手势）——与 v2.25 / v2.30 修过的
+     *     album / weibo 「置 null 前先 destroy」同型，只是这次漏的是一条**不曾被登记进清单**的槽位。
+     *   `_lastCalendarReminderCheckTime` 同样只有 P1 复位：P2/P3 之后首次提醒检查会把
+     *   旧会话的时间点当作「上一个时间点」参与比较，跨会话可能漏报或重报线上日程提醒。
+     *
+     * 【调用时机约定】`options.preserveActiveInstance`：
+     *   P1 换会话保留活动 `calendarApp`（仅 clearCache），传 true；
+     *   P2/P3 会把活动实例 destroy 并置 null，传 false（缺省）即可将其一并回收。
+     */
+    function disposeCalendarReminderApp(options = {}) {
+        try {
+            const preserveActive = options.preserveActiveInstance === true;
+            const slot = window.VirtualPhone?._calendarReminderApp;
+            if (slot && !(preserveActive && slot === window.VirtualPhone?.calendarApp)) {
+                // 注意：此处刻意写成**直接属性链**而非经局部句柄 `slot.destroy?.()` ——
+                //   v225 的静态门禁按 `VirtualPhone.<name>.destroy` 形态识别「置 null 站点
+                //   是否配了解绑」，经句柄调用会被判为「未处理」（实测踩中）。
+                try { window.VirtualPhone._calendarReminderApp.destroy?.(); } catch (_e) { /* 忽略 */ }
+            }
+            window.VirtualPhone._calendarReminderApp = null;
+            _lastCalendarReminderCheckTime = null;
+        } catch (e) {
+            console.warn('[Calendar] 提醒实例回收失败:', e);
+        }
+    }
     let _pendingNewChatPhoneDataMigration = null;
 
     function clonePhoneDataForMigration(value) {
@@ -6299,6 +6335,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (task.chatId && task.chatId !== getCurrentChatIdForQueue()) return false;
 
             const module = await import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish');
+            // [v2.63.0] 写回槽位前先看该槽位是否已被占：被占的若是**独立提醒实例**
+            //   （phoneShell 为 null，而非活动 calendarApp），顶替后它失去全部引用，
+            //   构造期 SWIPE_BACK 监听器无人解绑 → 永久泄漏（换会话后旧实例仍吃回退手势）。
+            const _reminderSlotHolder = window.VirtualPhone._calendarReminderApp;
+            if (_reminderSlotHolder && _reminderSlotHolder !== window.VirtualPhone.calendarApp) {
+                try { _reminderSlotHolder.destroy?.(); } catch (_e) { /* 忽略 */ }
+            }
             const calendarApp = window.VirtualPhone.calendarApp || window.VirtualPhone._calendarReminderApp || new module.CalendarApp(null, storage);
             window.VirtualPhone._calendarReminderApp = calendarApp;
 
@@ -9205,10 +9248,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (window.VirtualPhone.calendarApp) {
                 window.VirtualPhone.calendarApp.clearCache();
             }
-            if (window.VirtualPhone._calendarReminderApp) {
-                window.VirtualPhone._calendarReminderApp.clearCache();
-            }
-            _lastCalendarReminderCheckTime = null;
+            // [v2.63.0] 提醒实例回收收口：此前只 clearCache，构造期注册的 SWIPE_BACK
+            //   监听器与槽位引用都留在原地；检查游标也在本段单独复位（逻辑已并入回收函数）。
+            //   preserveActiveInstance=true：活动 calendarApp 由上一段负责 clearCache，此处不动它。
+            disposeCalendarReminderApp({ preserveActiveInstance: true });
             const autoCalendarState = ensureAutoCalendarState();
             autoCalendarState._autoCalendarGeneration += 1;
             autoCalendarState._autoCalendarQueued = false;
@@ -9924,6 +9967,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.calendarApp || !window.VirtualPhone.calendarApp.phoneShell?.setContent) {
+                                    // [v2.63.0] 走本分支即是**覆盖**既有实例：不先 destroy 则旧实例的
+                                    //   构造期 SWIPE_BACK 监听器永久残留，每次重建累积一个（v2.25 同型）。
+                                    try { window.VirtualPhone.calendarApp?.destroy?.(); } catch (_e) { /* 忽略 */ }
                                     window.VirtualPhone.calendarApp = new module.CalendarApp(phoneShell, storage);
                                 } else {
                                     window.VirtualPhone.calendarApp.attachPhoneShell?.(phoneShell);
@@ -10418,6 +10464,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.albumApp = null;
                     window.VirtualPhone.calendarApp?.destroy?.();
                     window.VirtualPhone.calendarApp = null;
+                    // [v2.63.0] 提醒实例同步回收：本路径此前只处理 calendarApp，对
+                    //   _calendarReminderApp 零处理（槽位引用 + SWIPE_BACK 监听 + 检查游标全残留）。
+                    disposeCalendarReminderApp();
                     // [v2.34.0] 本路径此前漏掉的两个**会话级数据槽位**不在此处显式回收：
                     //   worldpulseApp（3s 楼层轮询 / 旧会话上下文）与 gamesApp
                     //   （卧底流程的裸 setTimeout / 上一局牌面）统一由下方
@@ -10507,6 +10556,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         window.VirtualPhone.calendarApp.destroy?.();   // [v2.25.0] 解绑全局监听器，防重建累积
                         window.VirtualPhone.calendarApp = null;
                     }
+                    // [v2.63.0] 提醒实例同步回收（与 P2 对齐，此前对该槽位零处理）
+                    disposeCalendarReminderApp();
                     if (window.VirtualPhone.phoneApp) window.VirtualPhone.phoneApp.clearCache();
                     window.VirtualPhone.cachedPhoneCallData?.clearCache?.();
                     if (window.VirtualPhone.weiboApp) {

@@ -20,6 +20,26 @@ export class TimeweaverApp {
         this.composeDraft = '';
     }
     /**
+     * [v2.63.0] 换会话重绑：丢弃实例级缓存，防止上一段剧情生成的信「串」进新会话。
+     *
+     * 【修前实测缺陷】`aiLetter` 是构造期起的实例字段（AI 升华信缓存），视图的
+     *   `_letter()` 与 `_currentLetter()` 都**直读**它。三条会话切换路径
+     *   （换会话 / 清当前数据 / 清全部数据）都没有任何一处在换绑时丢弃它——
+     *   换角色后打开织光机，首屏渲染的仍是"上一段剧情"被 AI 织起的信，
+     *   与「视图只吃投影、实例不持有跨会话数据副本」的工程纪律相悖
+     *   （对比 memory-app / graph-app 同规格 onChatChanged 收口）。
+     *
+     * 【为什么同时复位 _autoChecked】
+     *   `_maybeAutoWeave()` 靠 `_autoChecked` 保证「每个 App 实例生命周期内只检查一次」。
+     *   实例跨会话复用（不重建），若不复位，新会话永远走不到自动织信检查——
+     *   而 `tw_last_auto` 游标已按新会话隔离为空，理应允许重新评估「新会话是否该织信」。
+     */
+    onChatChanged() {
+        this.aiLetter = null;
+        this.composeDraft = '';
+        this._autoChecked = false;
+    }
+    /**
      * [v2.15.0] 收藏册：把一封信存进 tw_letters（随会话隔离，上限由 PhoneStorage 熔断兜底）。
      *  idempotent：同一封信（同 ts + 同首段）重复收藏不产生第二条。
      * @param {{title:string, paragraphs:string[], meta?:object}} letter

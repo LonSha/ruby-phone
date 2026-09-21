@@ -53,11 +53,12 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     bilibiliApp: 'bilibili', theaterApp: 'theater', placeApp: 'place', cheatApp: 'cheat',
     dtApp: 'dirtytalk', walletApp: 'wallet', profileApp: 'profile', plotlineApp: 'plotline',
     charsApp: 'chars', clockApp: 'clock', ledgerApp: 'ledger', assetApp: 'asset',
-    graphApp: 'memory'
+    graphApp: 'memory', memoryApp: 'memory',
+    timeweaverApp: 'timeweaver'
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。
-  const fileOverride = { graphApp: 'graph-app.js' };
+  const fileOverride = { graphApp: 'graph-app.js', memoryApp: 'memory-app.js' };
   const missing = [];
   for (const k of KEYS) {
     const dir = dirMap[k];
