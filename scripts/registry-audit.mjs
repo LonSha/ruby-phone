@@ -133,12 +133,88 @@ const branchesWithoutApp = [...B].filter((x) => !A.has(x));
 /* ---------- R2：宽匹配登记 ---------- */
 const unregisteredWide = prefixes.filter((p) => WIDE_META.test(p) && !isRegisteredWide(p));
 
+/* ---------- R3：样式投递覆盖 ----------
+ * 每个 App 的 `.css` 必须被**两种投递机制之一**覆盖，否则样式从不生效（界面裸奔，且不报错）：
+ *   · 机制 A —— 被打包进全局 `phone.css`（类前缀族能在其中找到）；
+ *   · 机制 B —— 由某 JS 文件按文件名引用（自注入 `<link>`，见 diary / honey / music / weibo）。
+ * 口径说明（为什么用「两种机制之一」而不是「必须进 phone.css」）：
+ *   实测本仓**并存两种投递机制**，且都是有意为之。若只认 phone.css，会把四个自注入 App
+ *   判成缺口（假阳性）。判据必须覆盖真实存在的全部合法机制。
+ * 豁免清单：仅收「有意识的转发壳 / 兼容壳」，逐条写明理由。 */
+const CSS_DELIVERY_EXEMPT = [
+  { file: 'apps/games/games.css', why: '转发壳：正文已拆到 poker/poker.css，本文件只留 @import 防旧缓存路径 404（见文件头注释）。它无需被引用即已生效。' }
+];
+const cssNotes = [];
+{
+  // 收集全仓 JS（排除 tests）用于「机制 B」判定
+  const jsTexts = [];
+  const walkJs = (dir, base = '') => {
+    let ents = [];
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.name === '.git' || e.name === 'node_modules' || e.name === 'tests' || e.name.startsWith('.')) continue;
+      const rel = base ? `${base}/${e.name}` : e.name;
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) walkJs(abs, rel);
+      else if (/\.(js|mjs)$/.test(e.name)) {
+        try { jsTexts.push({ rel, txt: fs.readFileSync(abs, 'utf8') }); } catch { /* 忽略 */ }
+      }
+    }
+  };
+  walkJs(root);
+  const appsRoot = path.join(root, 'apps');
+  if (!fs.existsSync(appsRoot)) {
+    console.error('[registry] apps/ 目录不存在 —— fail-closed 拒判');
+    process.exit(2);
+  }
+  let cssTotal = 0;
+  for (const d of fs.readdirSync(appsRoot)) {
+    const dirAbs = path.join(appsRoot, d);
+    let isDir = false;
+    try { isDir = fs.statSync(dirAbs).isDirectory(); } catch { /* 忽略 */ }
+    if (!isDir) continue;
+    for (const cf of fs.readdirSync(dirAbs).filter((f) => f.endsWith('.css'))) {
+      cssTotal += 1;
+      const rel = `apps/${d}/${cf}`;
+      if (CSS_DELIVERY_EXEMPT.some((e) => e.file === rel)) { cssNotes.push({ rel, mode: 'exempt' }); continue; }
+      let src = '';
+      try { src = fs.readFileSync(path.join(dirAbs, cf), 'utf8'); } catch { continue; }
+      // 机制 A：类前缀族是否能在 phone.css 里找到
+      const counts = new Map();
+      for (const m of src.matchAll(/\.([a-z][a-z0-9]{1,6})-[a-z0-9-]+/g)) {
+        counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+      }
+      const fams = [...counts.entries()].filter(([, n]) => n >= 5).map(([k]) => k);
+      const phoneCss = read('phone.css') || '';
+      const viaBundle = fams.length > 0 && fams.every((k) => new RegExp('\\.' + k + '-').test(phoneCss));
+      // 机制 B：有 JS 按文件名引用
+      const viaLink = jsTexts.some((j) => j.rel !== rel && j.txt.includes(cf));
+      const mode = viaBundle ? 'bundle' : (viaLink ? 'link' : 'missing');
+      cssNotes.push({ rel, mode, fams: fams.length });
+    }
+  }
+  if (!FIXTURE_MODE && cssTotal < 15) {
+    console.error(`[registry] 只枚举到 ${cssTotal} 个 App 样式文件（低于下限 15）—— fail-closed 拒判`);
+    process.exit(2);
+  }
+  var cssMissing = cssNotes.filter((c) => c.mode === 'missing');
+  var cssStats = {
+    total: cssTotal,
+    bundle: cssNotes.filter((c) => c.mode === 'bundle').length,
+    link: cssNotes.filter((c) => c.mode === 'link').length,
+    exempt: cssNotes.filter((c) => c.mode === 'exempt').length
+  };
+}
+
 /* ---------- 输出 ---------- */
 const bucketPrefixes = prefixes.filter((p) => !WIDE_META.test(p));
 console.log(`[registry] APPS id ${appIds.length} · 懒加载分支 ${branchIds.length} · 会话键前缀 ${prefixes.length}` +
   `（其中宽匹配 ${prefixes.filter((p) => WIDE_META.test(p)).length} 条，已登记 ${REGEX_WIDE_ALLOWLIST.length} 类）`);
+console.log(`[registry] 样式投递 ${cssStats.total} 个 · phone.css 打包 ${cssStats.bundle} · JS 自注入 ${cssStats.link} · 豁免 ${cssStats.exempt} · 未覆盖 ${cssMissing.length}`);
 
 if (listMode) {
+  console.log('\n── R3 样式投递（未覆盖才是缺口） ──');
+  for (const c of cssNotes) console.log(`  ${c.rel}  ${c.mode}`);
   console.log('\n── R1 双向覆盖 ──');
   console.log('  有 App 无分支:', appsWithoutBranch.length ? appsWithoutBranch.join(', ') : '（无）');
   console.log('  有分支无 App:', branchesWithoutApp.length ? branchesWithoutApp.join(', ') : '（无）');
@@ -176,7 +252,15 @@ if (unregisteredWide.length) {
   console.error('  修法二选一：① 若可写成固定前缀（单 App 的键族），就改成固定前缀；' +
     '② 确需宽匹配，登记进 REGEX_WIDE_ALLOWLIST 并写明「为什么无法逐键列举」。');
 }
+if (cssMissing.length) {
+  fail = 1;
+  console.error(`[registry] ✗ R3 有 ${cssMissing.length} 个 App 样式文件从未被投递` +
+    '（既不进 phone.css 也无 JS 引用 ⇒ 界面裸奔且不报错）：');
+  for (const c of cssMissing) console.error(`    ${c.rel}`);
+  console.error('  修法二选一：① 把类前缀族合并进 phone.css；② 在 App 内自注入 <link>（见 diary/weibo）。' +
+    '确属兼容转发壳请登记进 CSS_DELIVERY_EXEMPT。');
+}
 console.log(fail === 0
-  ? '[registry] ✓ 注册三方对账无孤儿 / 宽匹配前缀均已登记'
+  ? '[registry] ✓ 注册三方对账无孤儿 / 宽匹配前缀均已登记 / 样式投递无未覆盖'
   : '[registry] ✗ 门禁未通过');
 process.exit(fail);

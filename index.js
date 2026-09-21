@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.66.0';
+const ST_PHONE_VERSION = '2.67.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,11 +104,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "新增注册联动门禁（scripts/registry-audit.mjs）：新增 App 要动的三处（桌面图标 / 懒加载分支 / 会话键前缀）此前没有任何一处能回答「配齐了吗」，漏配即「点击无反应」或「数据落全局串味」，属不报错只见错的形态。",
-        "R1 双向覆盖（零豁免硬判据）：APPS id 集合与懒加载分支集合必须互为子集，任一侧孤儿即红灯；真仓库当前 40 ↔ 40，完全干净。",
-        "R2 宽匹配登记：会话键前缀里带量词/字符类/分组/或的条目必须登记理由（会吞掉一批键，使逐 App 对账不适用）；锚定符 ^ 与 $ 不计入（收尾精确键不算宽匹配）。明确不判「某 App 缺前缀」——读侧聚合器与共享桶成员属设计内，硬判会产生假阳性，故只报告不判定。",
-        "门禁串进 npm run check（现为五道门）；新增 tests/system-v266.test.mjs（10 条：正控制 + 5 例真源码破坏负控制 + 判据纯度自证）。",
-        "版本升至 2.66.0。"
+        "注册门禁补第四面（R3 样式投递覆盖）：每个 App 的样式表必须被两种投递机制之一覆盖——打包进全局 phone.css，或由 App 内自注入 <link>；两者皆无则样式从不生效、界面裸奔且不报错。实测 30 个样式文件：打包 25 / 自注入 4 / 兼容壳豁免 1 / 未覆盖 0。",
+        "口径按实测机制而定，而非想当然：本仓并存两种样式投递机制（diary / honey / music / weibo 走自注入），只认 phone.css 会把它们误判为缺口（假阳性）；判据必须覆盖真实存在的全部合法机制。",
+        "「两机制皆无」确实存在过：apps/games/games.css 是转发壳（正文已拆到 poker/poker.css，只留 @import 防旧缓存 404），已登记进显式豁免清单并注明理由，防后人误改。",
+        "测试扩展至 11 条（新增 R3 负控制：抹掉某 App 的样式引用 → 门禁点名该文件并 exit 1）。",
+        "版本升至 2.67.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

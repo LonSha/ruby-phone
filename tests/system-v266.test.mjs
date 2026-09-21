@@ -39,7 +39,8 @@ const FIXTURE_APPS = `export const APPS = [
 ];
 `;
 
-const FIXTURE_INDEX = `const openApp = (appId) => {
+const FIXTURE_INDEX = `const CSS_URL = new URL('./apps/beta/beta.css?v=1', import.meta.url).href;
+const openApp = (appId) => {
     if (appId === 'alpha') {
         return 'alpha';
     } else if (appId === 'beta') {
@@ -60,12 +61,25 @@ const FIXTURE_STORAGE = `export class PhoneStorage {
 }
 `;
 
+/** 夹具样式：
+ *   alpha 的 css 走**机制 A**（类前缀族 ≥5 次，且能在 phone.css 里找到同名族）；
+ *   beta 的 css 走**机制 B**（phone.css 无该族，但 index.js 按文件名引用了它）。 */
+const FIXTURE_PHONE_CSS = '.alpha-box{} .alpha-btn{} .alpha-head{} .alpha-list{} .alpha-foot{}\n';
+const FIXTURE_ALPHA_CSS = '.alpha-box{}\n.alpha-btn{}\n.alpha-head{}\n.alpha-list{}\n.alpha-foot{}\n';
+const FIXTURE_BETA_CSS = '.beta-card{}\n.beta-head{}\n';
+
 function makeFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-reg-fx-'));
   fs.mkdirSync(path.join(dir, 'config'));
   fs.writeFileSync(path.join(dir, 'config', 'apps.js'), FIXTURE_APPS);
   fs.writeFileSync(path.join(dir, 'config', 'storage.js'), FIXTURE_STORAGE);
   fs.writeFileSync(path.join(dir, 'index.js'), FIXTURE_INDEX);
+  // 样式投递面：alpha 走 phone.css 打包；beta 由 index.js 按文件名引用（机制 B）
+  fs.writeFileSync(path.join(dir, 'phone.css'), FIXTURE_PHONE_CSS);
+  fs.mkdirSync(path.join(dir, 'apps', 'alpha'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'apps', 'beta'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'apps', 'alpha', 'alpha.css'), FIXTURE_ALPHA_CSS);
+  fs.writeFileSync(path.join(dir, 'apps', 'beta', 'beta.css'), FIXTURE_BETA_CSS);
   return dir;
 }
 
@@ -154,6 +168,16 @@ test('v266-N4 结构守卫：APPS 数组锚点被破坏 → fail-closed exit 2�
   });
 });
 
+test('v266-N6 R3 有效：某 App 的样式从未被投递 → exit 1 并点名', () => {
+  withFixture((dir) => {
+    // 让 beta 的两种投递机制同时失效：phone.css 里本就没有 beta，再删掉 index.js 的引用
+    breakOnce(path.join(dir, 'index.js'), 'beta.css', 'beta-renamed.css');
+    const r = runAudit(dir);
+    assert.equal(r.code, 1, 'R3 未报警：' + r.out);
+    assert.match(r.out, /apps\/beta\/beta\.css/, '未点名未投递的样式');
+  });
+});
+
 test('v266-N5 结构守卫：会话键前缀数组被改名 → fail-closed exit 2', () => {
   withFixture((dir) => {
     breakOnce(path.join(dir, 'config', 'storage.js'), 'this.CHAT_DATA_PATTERNS = [', 'this.CHAT_PATTERNS_RENAMED = [');
@@ -169,8 +193,8 @@ test('v266-S1 负控制纯度：破坏只落在夹具上，且不经由真仓库
   const defLines = src.split('\n').filter((l) => /^function breakOnce\(/.test(l)).length;
   assert.equal(defLines, 1, 'breakOnce 定义应恰 1 处');
   const callLines = src.split('\n').filter((l) => /^\s*breakOnce\(/.test(l)).length;
-  assert.equal(callLines, 6, 'breakOnce 调用行应为 6（N1..N5 五例 + S1b 先绿后红对照）');
-  assert.equal((src.match(/assert\.equal\(r\.code, [12],/g) || []).length, 5, '退出码断言应为 5 处');
+  assert.equal(callLines, 7, 'breakOnce 调用行应为 7（N1..N6 六例 + S1b 先绿后红对照）');
+  assert.equal((src.match(/assert\.equal\(r\.code, [12],/g) || []).length, 6, '退出码断言应为 6 处');
   assert.ok(!/execFileSync\(\s*'cp'|spawnSync\(\s*'cp'|'cp',\s*\['/.test(src), '出现调用 cp 复制文件树');
   assert.ok(!/writeFileSync\(\s*path\.join\(ROOT/.test(src), '出现对仓库原件的写操作');
   assert.match(src, /fs\.mkdtempSync\(/, '缺少夹具临时目录');
