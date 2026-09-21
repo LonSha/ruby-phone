@@ -20,8 +20,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 玩法注入：由灵感工坊经同一钩子注入 <Scene_Inspiration> 块，发后自清开关控制 MESSAGE_RECEIVED 清空
 
 ## 发布链路
-- 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完两者。
-- `npm run check` = 三道子门串联：`syntax` → `test` → `dead-exports`。
+- 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
+- `npm run check` = **五道子门**串联：`syntax` → `test` → `dead-exports` → `lifecycle` → `registry`。
   - **零消费导出门禁**（v2.41.0 建，v2.42.0 加 E6，`scripts/dead-export-check.mjs`）：判据为「本模块内部零使用 **且** 其它非测试文件零引用」。
     **E6（v2.42.0）消费判定必须基于真代码**：`stripNonCode()` 剔除注释与字符串字面量后再做词匹配。此前裸词正则扫全文 = 「注释/字符串里提一嘴就算已消费」，真死导出会被一句 `// TODO: call X` 掩盖（漏报）。口径要点：模板串 `${...}` 插值**按真代码**处理（本仓大量 `${fn()}` 真调用，整串清空会误抹消费）、正则字面量起始须识别 `return`/`typeof`/`case` 等关键词。回归锁在 `tests/system-v242.test.mjs`。
     **E7（v2.43.0）导出枚举必须覆盖跨行 export 大括号块**：此前单行正则让多行成块转出**整块 0 枚举**，块内死导出既不报红灯也不进账本（fail-open）。实测 `config/drives-engine.js` 真实 7 项只枚举到 1 项。配套两处咬合静默点：跨行块须跳过**整段语句区间**（成员行自身含名字，只跳首行会让块内名字全部被算成已消费）、「声明行」不等于「export 行」（先声明后成块转出的写法里，声明行不算消费）。回归锁在 `tests/system-v243.test.mjs`。
@@ -41,6 +41,19 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 新增/改动 App 时同步三处版本号：`manifest.json`、`index.js` 的 `ST_PHONE_VERSION`、`package.json`；`update-log.json` 需含当前版本条目且 `latest` 指向它。版本跨源自洽由测试断言锁定，不要把具体版本号硬编码进测试。
 - release 附带离线 zip。
 - README.md 安装指引指向 GitHub 仓库 LonSha/ruby-phone。
+
+## 生命周期与注册门禁（v2.65.0 / v2.66.0）
+- **动机**：本仓最贵的缺陷形态是「**不报错、不崩溃、只错数据或只漏资源**」。v2.63/v2.64 两轮审计（写脚本枚举全仓缺口）一次性挖出 4 处真缺陷，此后把审计能力固化为常驻门禁，杜绝「下次同类缺陷仍要人肉排查」。
+- **`scripts/lifecycle-audit.mjs`**（v2.65.0，`npm run lifecycle`）：三条会话路径 = **P1 换会话**（`function onChatChanged()`）、**P2 清当前数据**、**P3 清全部数据**（两个 `addEventListener`）。区间边界必须按函数/监听器边界精确划定（用近似区间会导致 P1/P2 重叠而漏判）。
+  - **L1 方法出口**：App 类定义了生命周期出口（`onChatChanged`/`clearCache`/`destroy`/`deactivate`/`reload`）且能反查到 `VirtualPhone.X = new module.Class` 的，必须至少有一处接线（REBIND 表 / 显式调用 / 泛化调用清单）。
+  - **L2 槽位覆盖**：槽位若在 P1 被回收，P2/P3 至少须有一处覆盖，或落在咽喉点清单。
+  - **L3 白名单从真源码派生**：泛化调用清单 ← `releasePhoneInactiveResources` 的 `appEntries`；咽喉点清单 ← `retireSessionScopedSlots` 函数体。**派生前提消失即 fail-closed（exit 2）**——写死的白名单会在机制被删除后继续放行，门禁变吉祥物。
+  - 踩坑：`explicitCall` 正则须匹配真实书写（`?.()` 与局部句柄 `phone.xxx` 都要认）；函数体抽取用**花括号配平**而非缩进假设。
+- **`scripts/registry-audit.mjs`**（v2.66.0，`npm run registry`）：新增 App 的注册三件套 = APPS 桌面条目（`config/apps.js`）/ 懒加载分支（`index.js` 的 `appId === 'xxx'`）/ 会话键前缀（`config/storage.js`）。
+  - **R1 双向覆盖（零豁免）**：两侧集合互为子集；有 App 无分支 = 点击无反应，有分支无 App = 死代码或改名漏改。实测真仓库 40 ↔ 40。
+  - **R2 宽匹配登记**：键前缀里带量词/字符类/分组/或的条目须登记理由（宽匹配吞多键，逐 App 对账不适用）；`^` `$` 是锚定符不计入。**明确不判「App 缺前缀」**——读侧聚合器与 `ruby_` 共享桶成员属设计内，硬判即假阳性，故只报告不判定。
+- **负控制纪律（两道门共用，测试节强制）**：真源码破坏（锚点恰中 1 次）→ 在**夹具副本**上重跑**真门禁进程**。夹具走环境变量通道（`RP_LIFECYCLE_FIXTURE` / `RP_REGISTRY_FIXTURE`），只放宽最低计数闸、不放宽结构锚点。三种假绿必须全部排掉：对原文件断言 / 破坏写成模拟常量 / 判据自指。
+- ⚠️ **禁止对真仓库执行 `cp -al`（血泪教训）**：本环境该操作会把已跟踪文件替换为指向临时 l2s 收容所名字的符号链接（实测 425 个文件损坏，靠 `git checkout -- .` 恢复）。需要副本请用合成夹具；恢复判据是 `git status` **只显示 `T`（类型变化）而无 `M`（内容修改）**，此时内容可信。
 
 ## 候选技术储备（已侦察未移植）
 - moyunphone（墨韵手机）：核心代码 JS 混淆，无法直接移植；其 NovelAI v4 多角色生图 + 角色一致性、上下文总结、hooks 生命周期、host-performance 宿主性能守护为后续演进方向。
