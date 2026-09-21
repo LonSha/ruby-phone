@@ -226,6 +226,11 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ## LA-0.7.68 剩余模块解耦面评估（已侦察未移植，v2.60.0 结论）
 - **判定口径**：本项目移植门槛 = 纯本地 / 零宿主依赖 / 真接线（非登记账本豁免）。达标才搬，否则记录判断依据避免重复评估。
 - **已移植（v2.60.0）**：`family/name-data.js`（74KB 纯数据，零依赖）✓ / `medical/surgery-library.js`（80KB 纯数据+纯函数，零依赖）✓。
-- **未移植——asset 资产经济（12 文件 ~603KB）**：核心模拟层是**紧耦合逻辑簇**，asset-core↔asset-terms/keys/ledger↔asset-market↔asset-project↔asset-settlement↔asset-holdings 成环，且 asset-library 耦合 localStorage、asset-market 依赖 `util/calendar-grid`、asset-extract-spec 依赖 `extract/extract-core`（又拉新模块进来）。解耦 = 重造一个资产 app，违背移植门槛。另与 wallet 现有「消费记忆插件 moneyLedger 只读快照」路线冲突（wallet 有意不建本地资产模拟）。→ **不搬**。
+- **已移植（v2.61.0）——asset 资产经济**：引擎 13 文件已零转录进 `apps/asset/engine/`（IIFE 外层只套 module/require/window=undefined）。本版补 App 层接线（data/app/view/css）与四处注册。与钱袋分工：钱袋显示记忆插件金钱账，资产 App 管理本地角色账本 / 行情 / 投影 / 结算；公开层走 `renderAssetText`，结算走 `planSettlement`，剧情日只认 TimeManager 转 ISO。
 - **未移植——批次 C 地图/事件/日程/饮食**：① 各 `*-theme.js` 顶层仅 `const CSS`（纯 CSS 字符串，无逻辑，单独搬无意义）；② `map-core`/`event-core` 顶层是 `_xxxRuntime`+`STATE_KEY/CONFIG_KEY`，耦合 **localStorage 状态机**（非纯数据，搬来要重写持久层）；③ event-core 还依赖 `__LA_ACTOR_DYNAMICS__`（actor-dynamics 模块，又一环）；④ `util/calendar-grid`（7KB）虽可独立但价值极低（仅日历格子辅助）。→ **不搬**。
-- **结论**：LA 真正"零宿主依赖纯数据"的可移植面就是 name-data + surgery-library 两块，已在 v2.60.0 收口。其余模块要么紧耦合逻辑簇、要么 localStorage 状态机、要么纯 CSS，均不达移植门槛。
+- **结论（v2.61.0 更正）**：name-data + surgery-library 已在 v2.60.0 以纯数据路径落地；asset 引擎簇随后以零转录 IIFE 包装移植，并在本版接到 App 层。批次 C 地图/事件/日程/饮食仍不达门槛（localStorage 状态机 / 纯 CSS / actor-dynamics 环）。
+## v2.61.0 资产 App（引擎接到桌面）
+- **动机**：引擎层已锁定，本版把投影 / 结算签名接到 App 层并完成四处注册，推翻 v2.60.0「asset 不搬」旧结论。
+- **App 四件套**：`asset-data.js`（纯函数：剧情日转 ISO / 四态归因 / 面板投影 / 公开层注入块 / due→appendFlow）+ `asset-app.js`（store 宿主桥、引导、建条目、结算、行情推进、生成前钩子）+ `asset-view.js`（词从 terms 来）+ `asset.css`（`.as-*`，主色 `#34d399`）。
+- **四处注册**：`config/apps.js` 桌面图标 / `index.js` 懒加载单例+`ST_PHONE_REBIND_APP_KEYS` / `config/storage.js` `/^asset_/`+`/^__la_asset_/` / 微信 `_injectApps` / `phone.css` 尾部。
+- **测试**：`tests/system-v261.test.mjs`。

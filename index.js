@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.60.0';
+const ST_PHONE_VERSION = '2.62.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -86,7 +86,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'healthApp', 'achievementApp', 'playbookApp',
     'bilibiliApp', 'theaterApp',
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
-    'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp'
+    'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
+    'graphApp'
 ];
 // [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
 //   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
@@ -101,13 +102,12 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-21",
+    date: "2026-09-22",
     items: [
-        "把上游 LA-0.7.68 拓展版中 name-data（人名库）与 surgery-library（手术术式库）两块零宿主依赖纯数据模块解耦移植进 health App。",
-        "家谱页签新增起名台（三语言随机起名 / 固定姓 / 分性别），健康页签新增手术库（59 术式 · 章节分组 · 分级分布 · 点击展开阶段+并发症）。",
-        "纯本地只读，不写状态；service 封装层统一 LA 数据结构差异。",
-        "LA 解耦手法：单文件 IIFE 按 `/* src/xxx.js */` 注释分界 + `__LA_XXX__` 全局单例耦合，按括号配平切片提取目标模块、剥 IIFE 外壳与 window 导出、前置 export 落盘。",
-        "新增 name-data.js / name-service.js / surgery-library.js / surgery-service.js + health-view 接线 + health.css；tests/system-v260.test.mjs 15 用例。"
+        "全局搜索补源 12 个：武库/撩语/幸运转盘/生理/相册走本地键，档案/剧情线/群像/时计/世界账本/钱袋/地点走只读桥快照，桥缺时安全空转不抛。",
+        "图谱 App 补 onChatChanged 重绑并接入 REBIND 表，丢弃 3 秒陈旧缓存重指当前会话，换会话后图谱不再错读上一段剧情。",
+        "记忆 App 新增覆盖度分页：楼层账本现算读数（盖章数/覆盖率/缺口逐楼列号按因归因），模块缺席三态如实报告，绝不编数顶替。",
+        "新增 tests/system-v262.test.mjs（搜索补源 + 覆盖度），v257 分页锚点升到五页；版本升至 2.62.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -10206,6 +10206,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载世界账本App失败:', err);
                             phoneShell?.showNotification('错误', '世界账本App加载失败', '❌');
+                        });
+                } else if (appId === 'asset') {
+                    // [v2.61.0] 资产：本地角色账本 / 行情 / 投影 / 结算（引擎零转录，App 层只接线）。
+                    import('./apps/asset/asset-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.assetApp) {
+                                window.VirtualPhone.assetApp = new module.AssetApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.assetApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载资产App失败:', err);
+                            phoneShell?.showNotification('错误', '资产App加载失败', '❌');
                         });
                 } else if (appId === 'peek') {
                     import('./apps/peek/peek-app.js')

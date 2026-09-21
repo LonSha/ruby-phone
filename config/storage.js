@@ -75,6 +75,11 @@ export class PhoneStorage {
             /^clock_/,
             // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
             /^ledger_/,
+            // [v2.61.0] 资产 App：设置走 asset_settings_v1；引擎唯一读写门的聊天变量
+            //   是 __la_asset_*（config/ledger/market/extract/snapshots/projection/override）。
+            //   两条都要进会话隔离，否则账本会落到全局 extensionSettings 串味。
+            /^asset_/,
+            /^__la_asset_/,
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
             // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
             //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，

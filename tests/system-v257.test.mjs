@@ -240,10 +240,10 @@ test('F3 视图 _esc 四转义齐备（引号转成实体，不得转义成自�
   assert.ok(!viewSrc.includes('.replace(/' + DQ + '/g,' + SP + SQ + DQ + SQ + ')'), '" 到 " 是无转义（转义成自身=没转）');
 });
 
-test('F4 分页结构：四页 id 唯一 + 非法分页回落 overview', () => {
+test('F4 分页结构：页 id 唯一 + 非法分页回落 overview（v2.62.0 起五页，新增覆盖度）', () => {
   const viewSrc = read('apps/memory/memory-view.js');
   const ids = [...viewSrc.matchAll(/id:\s*'([a-z]+)'/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(ids)].sort(), ['audit', 'overview', 'scene', 'sense'].sort());
+  assert.deepEqual([...new Set(ids)].sort(), ['audit', 'coverage', 'overview', 'scene', 'sense'].sort());
   assert.ok(viewSrc.includes("this._tab = 'overview'"), '非法 _tab 必须回落 overview');
 });
 

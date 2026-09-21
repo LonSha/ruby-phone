@@ -499,3 +499,28 @@
     border-radius: 5px; padding: 0 5px; font-size: 9px; margin-left: 4px;
     text-transform: none; letter-spacing: 0;
 }
+/* ---------- 覆盖度页（[v2.62.0] 楼层账本现算读数） ---------- */
+.mem-cov-hero {
+    background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+    box-shadow: 0 1px 5px rgba(80, 90, 160, 0.05);
+    border-left: 4px solid var(--ag, #9ca3af);
+    display: flex; align-items: center; gap: 12px;
+}
+.mem-cov-rate {
+    font-size: 26px; font-weight: 700; color: var(--ag, #9ca3af);
+    min-width: 64px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.mem-cov-line { font-size: 11px; line-height: 1.55; color: #55556e; flex: 1; }
+.mem-cov-why-row {
+    display: flex; align-items: center; gap: 7px;
+    background: #fff; border-radius: 9px; padding: 7px 10px; margin-bottom: 6px;
+    box-shadow: 0 1px 4px rgba(80, 90, 160, 0.05); font-size: 11px;
+}
+.mem-cov-why-row i { color: #8a8aa0; font-size: 11px; width: 14px; text-align: center; }
+.mem-cov-why-label { color: #33334a; flex: 1; }
+.mem-cov-why-count { color: #6366f1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mem-cov-missing { display: flex; flex-wrap: wrap; gap: 5px; }
+.mem-cov-floor {
+    background: rgba(245, 158, 11, 0.12); color: #b45309;
+    border-radius: 6px; padding: 2px 7px; font-size: 10px; font-variant-numeric: tabular-nums;
+}

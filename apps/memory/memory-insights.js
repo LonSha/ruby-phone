@@ -374,6 +374,87 @@ export function auditMemory(input, opts = {}) {
     } catch (_e) { return emptyResult; }
 }
 
+/* ---------------- 楼层覆盖度投影（[v2.62.0] 覆盖度分页） ---------------- */
+/** 缺口原因展示元数据（键与 floor-ledger 的 why 值逐字一致，未知原因按原样显示） */
+const COVERAGE_WHY_META = Object.freeze({
+    'absent':               { label: '未落笔', icon: 'fa-feather' },
+    'fingerprint-mismatch': { label: '指纹不符（楼已改动）', icon: 'fa-fingerprint' },
+    'version-mismatch':     { label: '附注版本不符', icon: 'fa-code-branch' },
+    'malformed':            { label: '附注损坏', icon: 'fa-file-circle-question' },
+    'thrown':               { label: '读取异常', icon: 'fa-bug' }
+});
+/**
+ * 楼层覆盖度投影：把 `LonShaFloorLedger.coverage()` 的现算读数读成可渲染面。
+ *
+ * 【口径（与上游引擎 `_floorLedgerCoverage` 一致）】
+ *   只数 AI 楼；番外楼（lonsha_omit）与空楼不计；缺口逐楼列号并按 why 归因。
+ *   纯读、不入快照存盘——每次打开都是当下真值。
+ *
+ * 【分态（不猜）】
+ *   state='ok'          —— 拿到了真读数（哪怕 total=0，也是「0 楼参与统计」这一真值）；
+ *   state='unavailable' —— 引擎给了 enabled:false（reason 如 module-unavailable）；
+ *   state='absent'      —— 取数层返回 null / 非对象（模块未挂载等）。
+ *
+ * @param {object|null} cov floor-ledger.coverage() 的原始读数（含引擎附带的 enabled/reason 亦可）
+ * @param {{maxMissing?:number, maxByWhy?:number}} [opts]
+ */
+export function coverageRows(cov, opts = {}) {
+    try {
+        const maxMissing = Math.max(1, Number(opts.maxMissing) || 40);
+        const maxByWhy = Math.max(1, Number(opts.maxByWhy) || 6);
+        const out = {
+            state: 'absent', reason: null,
+            total: 0, stamped: 0, missingCount: 0, rate: null,
+            complete: false, missing: [], byWhy: [], line: ''
+        };
+        if (!cov || typeof cov !== 'object') {
+            out.reason = '覆盖度模块未挂载（floor-ledger.js）';
+            return out;
+        }
+        if (cov.enabled === false) {
+            out.state = 'unavailable';
+            out.reason = String(cov.reason || 'unknown');
+            return out;
+        }
+        // 楼号清洗：仅收「真·非负整数」（null/字符串/NaN 一律丢弃——null 转数是 0，
+        // 而第 0 楼是合法楼号，两者不可混）
+        const num = (v) => (Number.isInteger(v) && v >= 0) ? v : null;
+        const total = num(cov.total), stamped = num(cov.stamped);
+        if (total === null || stamped === null) {
+            out.reason = '覆盖度读数形状异常（缺 total/stamped）';
+            return out;
+        }
+        const missing = Array.isArray(cov.missing)
+            ? cov.missing.map(num).filter((n) => n !== null)
+            : [];
+        const byWhyRaw = (cov.byWhy && typeof cov.byWhy === 'object' && !Array.isArray(cov.byWhy)) ? cov.byWhy : {};
+        out.state = 'ok';
+        out.total = total;
+        out.stamped = stamped;
+        out.missingCount = missing.length;
+        out.rate = total > 0 ? Math.round(stamped / total * 100) / 100 : null;
+        out.complete = missing.length === 0;
+        out.missing = missing.slice(0, maxMissing);
+        out.byWhy = Object.keys(byWhyRaw)
+            .map((why) => {
+                const meta = COVERAGE_WHY_META[why] || { label: why, icon: 'fa-circle-question' };
+                return { why, count: Math.max(0, Number(byWhyRaw[why]) || 0), label: meta.label, icon: meta.icon };
+            })
+            .filter((b) => b.count > 0)
+            .sort((a, b) => (b.count - a.count) || a.why.localeCompare(b.why))
+            .slice(0, maxByWhy);
+        // 一行读数（与上游诊断面同构：计数 + 缺口 + 归因）
+        out.line = out.complete
+            ? `${out.stamped}/${out.total} 楼已盖章（无缺口）`
+            : `${out.stamped}/${out.total} 楼已盖章 · 缺 ${out.missingCount}` +
+              (out.missing.length ? `（第 ${out.missing.slice(0, 6).join(',')} 楼${out.missingCount > 6 ? '…' : ''}）` : '') +
+              (out.byWhy.length ? ' · ' + out.byWhy.map((b) => `${b.label}×${b.count}`).join(' ') : '');
+        return out;
+    } catch (_e) {
+        return { state: 'unavailable', reason: 'coverage-rows-thrown', total: 0, stamped: 0, missingCount: 0, rate: null, complete: false, missing: [], byWhy: [], line: '' };
+    }
+}
+
 /* ---------------- 总述（供 App 的 summaryLine 与头部一行） ---------------- */
 /**
  * 一行总述：把上面几面压成一句人话。
@@ -398,5 +479,6 @@ export function insightSummary(pkg) {
 
 export default {
     SENSE_META, LIFECYCLE_META, AUDIT_GRADE,
-    senseRows, sceneRows, lifecycleRows, supersedePairs, emotionTrace, auditMemory, insightSummary
+    senseRows, sceneRows, lifecycleRows, supersedePairs, emotionTrace, auditMemory, insightSummary,
+    coverageRows
 };

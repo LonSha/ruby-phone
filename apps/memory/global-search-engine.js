@@ -13,6 +13,11 @@
  * ======================================================== */
 'use strict';
 
+// [v2.62.0] 补源补名纯函数：cheat/dt 装配清单只存 id，经纯函数补回名字/说明（不读 window，
+// 底层 cheatPacks / dirtyTalkModules 顶层纯数据，Node 可测）。
+import { getCheatById } from '../cheat/cheat-data.js';
+import { getModuleById } from '../dirtytalk/dt-data.js';
+
 const MAX_SNIPPET = 120;
 const MAX_SCAN_PER_SOURCE = 600;
 
@@ -243,6 +248,24 @@ export function buildDefaultSources(storage, deps = {}) {
             if (Number.isFinite(p)) return p;
         }
         return 0;
+    };
+
+    /**
+     * [v2.62.0] 现取记忆插件只读快照（lonsha_memory_bridge_v1）。
+     * 与 chars/wallet/place/profile 等 App 的 probeBridge 同规格：先读推型 snapshot，
+     * 缺失再调 refresh()。**不复制副本到手机键**（防双份真相），不写上游，只读。
+     * 无桥 / 无快照 / 宿主未注入 window 时一律安全返回 null（不抛）。
+     */
+    const bridgeSnapshot = () => {
+        try {
+            const w = (typeof window !== 'undefined') ? window : null;
+            const b = w && w['lonsha_memory_bridge_v1'];
+            if (!b || typeof b !== 'object') return null;
+            let snap = null;
+            try { snap = (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null; } catch (_e) { snap = null; }
+            if (!snap && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
+            return (snap && typeof snap === 'object') ? snap : null;
+        } catch (_e) { return null; }
     };
 
     const sources = [];
@@ -499,6 +522,235 @@ export function buildDefaultSources(storage, deps = {}) {
             }))
         });
     }
+
+    // ============ [v2.62.0] 补源：此前 29 个 App 中以下 12 个各自为政、全库零搜索接入 ============
+    // 纪律：本地键源走 storage.get（容错），桥面源走 bridgeSnapshot() 现取（不复制副本到手机键，
+    //   不写上游，无桥/无快照/无宿主 window 一律安全返回 []，坏数据不拖垮整体）。
+
+    // ---- 万界武库：装配清单（cheat_state_v1.installed[]，id 经纯函数补名）----
+    sources.push({
+        id: 'cheat', label: '武库', icon: '🗡️', appId: 'cheat', weight: 1.0,
+        items: () => {
+            const state = asObj(get('cheat_state_v1'));
+            const ids = asArray(state.installed).map(x => String(x)).filter(Boolean);
+            const out = [];
+            for (const id of ids) {
+                const p = getCheatById(id);
+                if (!p) continue; // 未知 id 如实丢弃（与 cheat-app 的 sanitize 口径一致）
+                out.push({ title: String(p.name || id), body: norm([p.type, p.quality, p.desc].filter(Boolean).join(' · ')), icon: '🗡️', appId: 'cheat', meta: { id } });
+            }
+            return out;
+        }
+    });
+
+    // ---- 撩语：装配清单（dt_state_v1.installed[]，id 经纯函数补名）----
+    sources.push({
+        id: 'dirtytalk', label: '撩语', icon: '💋', appId: 'dirtytalk', weight: 1.0,
+        items: () => {
+            const state = asObj(get('dt_state_v1'));
+            const ids = asArray(state.installed).map(x => String(x)).filter(Boolean);
+            const out = [];
+            for (const id of ids) {
+                const m = getModuleById(id);
+                if (!m) continue;
+                out.push({ title: String(m.name || id), body: norm([m.cat, m.label, m.tier, m.desc].filter(Boolean).join(' · ')), icon: '💋', appId: 'dirtytalk', meta: { id } });
+            }
+            return out;
+        }
+    });
+
+    // ---- 幸运转盘：抽卡记录（ruby_gacha_state.history[]，带道具名/品质/花费/时间）----
+    sources.push({
+        id: 'gacha', label: '幸运转盘', icon: '🎰', appId: 'gacha', weight: 0.9,
+        items: () => {
+            const d = asObj(get('ruby_gacha_state'));
+            const hist = Array.isArray(d.history) ? d.history : [];
+            const out = [];
+            for (const h of hist.slice(-20)) {
+                if (!h || typeof h !== 'object') continue;
+                const got = asArray(h.got).map(g => g && [g.name, g.quality].filter(Boolean).join(':')).filter(Boolean).join('、');
+                out.push({
+                    title: got ? ('抽卡：' + got.slice(0, 30)) : '抽卡记录',
+                    body: norm([h.poolId, h.cost ? '花费 ' + h.cost : ''].filter(Boolean).join(' · ')),
+                    ts: tsOf(h.at), icon: '🎰', appId: 'gacha'
+                });
+            }
+            return out;
+        }
+    });
+
+    // ---- 生理：周期/妊娠/病症/胎儿（ruby_health_cycle，独立会话键，对象形态）----
+    sources.push({
+        id: 'health', label: '生理', icon: '🩺', appId: 'health', weight: 1.0,
+        items: () => {
+            const d = asObj(get('ruby_health_cycle'));
+            if (!Object.keys(d).length) return [];
+            const out = [];
+            const parts = [];
+            if (d.stage) parts.push('阶段 ' + d.stage);
+            if (Number.isFinite(d.cycleDay)) parts.push('周期第 ' + d.cycleDay + ' 天');
+            if (d.isPregnant) parts.push('妊娠' + (d.pregnantDays != null ? ' 第 ' + d.pregnantDays + ' 天' : ''));
+            if (d.race) parts.push(d.race);
+            if (parts.length) out.push({ title: '生理状态', body: norm(parts.join(' · ')), icon: '🩺', appId: 'health' });
+            for (const c of asArray(d.conditions)) {
+                if (c && typeof c === 'object' && c.name) out.push({ title: '病症：' + norm(c.name), body: norm([c.severity, c.desc].filter(Boolean).join(' · ')), icon: '🤒', appId: 'health' });
+            }
+            for (const f of asArray(d.fetuses)) {
+                if (f && typeof f === 'object') out.push({ title: '胎儿', body: norm([f.race, f.name].filter(Boolean).join(' · ')), icon: '👶', appId: 'health' });
+            }
+            return out;
+        }
+    });
+
+    // ---- 相册：本地上传索引（phone_album_upload_index，数组 {path,prefix,createdAt}）----
+    sources.push({
+        id: 'album', label: '相册', icon: '🖼️', appId: 'album', weight: 0.9,
+        items: () => {
+            const list = asArray(get('phone_album_upload_index'));
+            const out = [];
+            for (const item of list) {
+                const path = typeof item === 'string' ? item : (item && item.path) || '';
+                if (!path) continue;
+                const fname = String(path).split('/').pop() || '媒体';
+                const prefix = (typeof item === 'object' && item.prefix) ? item.prefix : '';
+                out.push({ title: fname, body: norm(prefix), ts: tsOf(typeof item === 'object' ? item.createdAt : 0), icon: '🖼️', appId: 'album' });
+            }
+            return out;
+        }
+    });
+
+    // ---- 档案：主角档案 + 生活小档案（桥 snapshot.protagonist / lifeDetails）----
+    sources.push({
+        id: 'profile', label: '档案', icon: '🪪', appId: 'profile', weight: 1.2,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap) return [];
+            const out = [];
+            const prot = (snap.protagonist && typeof snap.protagonist === 'object') ? snap.protagonist : null;
+            if (prot && Object.keys(prot).length) {
+                const kv = Object.entries(prot).filter(([k, v]) => v != null && v !== '' && typeof v !== 'object').map(([k, v]) => k + ': ' + v).join(' · ');
+                if (kv) out.push({ title: '主角档案', body: norm(kv), icon: '🪪', appId: 'profile' });
+            }
+            for (const d of asArray(snap.lifeDetails)) {
+                if (!d || typeof d !== 'object') continue;
+                out.push({ title: norm(d.text).slice(0, 30) || '生活细节', body: norm([d.tier, (d.topics || []).join('、')].filter(Boolean).join(' · ')), ts: tsOf(d.until), icon: '🪪', appId: 'profile' });
+            }
+            return out;
+        }
+    });
+
+    // ---- 剧情线：大纲阶段 + 承诺 + 支线（桥 snapshot.outline / worldProg）----
+    sources.push({
+        id: 'plotline', label: '剧情线', icon: '🎬', appId: 'plotline', weight: 1.2,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap) return [];
+            const out = [];
+            const outline = (snap.outline && typeof snap.outline === 'object') ? snap.outline : null;
+            const stage = (outline && outline.stage && typeof outline.stage === 'object') ? outline.stage : null;
+            if (stage && (stage.title || stage.goal)) {
+                out.push({ title: norm(stage.title) || '当前阶段', body: norm([stage.goal, stage.tempo].filter(Boolean).join(' · ')), icon: '🎬', appId: 'plotline' });
+                for (const n of asArray(stage.nodes)) {
+                    if (n && typeof n === 'object' && (n.title || n.goal)) out.push({ title: norm(n.title) || '节点', body: norm(n.goal), icon: '🎬', appId: 'plotline' });
+                }
+            }
+            const wp = (snap.worldProg && typeof snap.worldProg === 'object') ? snap.worldProg : null;
+            if (wp) {
+                for (const p of asArray(wp.promises)) {
+                    if (p && typeof p === 'object') out.push({ title: '承诺：' + (norm(p.content).slice(0, 26) || '—'), body: norm([p.character, p.status, p.deadlineFloor ? '第 ' + p.deadlineFloor + ' 楼' : ''].filter(Boolean).join(' · ')), icon: '🤝', appId: 'plotline' });
+                }
+                for (const a of asArray(wp.plotArcs)) {
+                    if (a && typeof a === 'object' && (a.title || a.clue)) out.push({ title: norm(a.title) || '支线', body: norm([a.clue, a.status].filter(Boolean).join(' · ')), icon: '🧵', appId: 'plotline' });
+                }
+            }
+            return out;
+        }
+    });
+
+    // ---- 群像：被追踪角色状态表（桥 snapshot.characters）----
+    sources.push({
+        id: 'chars', label: '群像', icon: '🎭', appId: 'chars', weight: 1.1,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap || !snap.characters || typeof snap.characters !== 'object') return [];
+            const out = [];
+            for (const [name, raw] of Object.entries(snap.characters)) {
+                const e = raw && typeof raw === 'object' ? raw : {};
+                const fields = (e.fields && typeof e.fields === 'object') ? Object.entries(e.fields).map(([k, v]) => v == null ? '' : k + ':' + v).filter(Boolean).join(' · ') : '';
+                const todos = asArray(e.todos).map(t => t && t.text).filter(Boolean).join('、');
+                out.push({ title: String(name), body: norm([fields, todos ? '待办:' + todos : ''].filter(Boolean).join(' · ')), ts: tsOf(e.updatedAt), icon: '🎭', appId: 'chars', meta: { floor: e.floor } });
+            }
+            return out;
+        }
+    });
+
+    // ---- 时计：剧情时间 + 闪回（桥 snapshot.clock）----
+    sources.push({
+        id: 'clock', label: '时计', icon: '⏰', appId: 'clock', weight: 1.0,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap || !snap.clock || typeof snap.clock !== 'object') return [];
+            const c = snap.clock;
+            const out = [];
+            if (c.date || c.label) out.push({ title: norm(c.date) || '剧情时间', body: norm([c.label, c.precision, c.turn ? '第 ' + c.turn + ' 层' : ''].filter(Boolean).join(' · ')), icon: '⏰', appId: 'clock' });
+            if (c.lastFlashback && c.lastFlashback.date) out.push({ title: '闪回：' + norm(c.lastFlashback.date), body: norm([c.lastFlashback.label, c.lastFlashback.floor ? '第 ' + c.lastFlashback.floor + ' 楼' : ''].filter(Boolean).join(' · ')), icon: '↩️', appId: 'clock' });
+            return out;
+        }
+    });
+
+    // ---- 世界账本：账本读数（桥 snapshot.worldLedgerRead）----
+    sources.push({
+        id: 'ledger', label: '世界账本', icon: '📚', appId: 'ledger', weight: 1.0,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap || !snap.worldLedgerRead || typeof snap.worldLedgerRead !== 'object') return [];
+            const w = snap.worldLedgerRead;
+            if (!w.ok) return [];
+            const counts = (w.counts && typeof w.counts === 'object') ? ('暗流 ' + (w.counts.currents || 0) + ' / 事实 ' + (w.counts.facts || 0) + ' / 人物 ' + (w.counts.people || 0)) : '';
+            return [{ title: '世界账本', body: norm([w.describe, counts].filter(Boolean).join(' · ')), ts: tsOf(w.at), icon: '📚', appId: 'ledger' }];
+        }
+    });
+
+    // ---- 钱袋：账户余额 + 流水（桥 snapshot.moneyLedger）----
+    sources.push({
+        id: 'wallet', label: '钱袋', icon: '💰', appId: 'wallet', weight: 1.1,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap || !snap.moneyLedger || typeof snap.moneyLedger !== 'object') return [];
+            const ml = snap.moneyLedger;
+            const out = [];
+            const money = (ml.money && typeof ml.money === 'object') ? ml.money : {};
+            for (const [k, a] of Object.entries(money)) {
+                const acc = a && typeof a === 'object' ? a : {};
+                out.push({ title: String(acc.name || k), body: norm([acc.amount != null ? acc.amount + ' 元' : '', acc.floor ? '第 ' + acc.floor + ' 楼记账' : ''].filter(Boolean).join(' · ')), icon: '💰', appId: 'wallet' });
+            }
+            const log = Array.isArray(ml.moneyLog) ? ml.moneyLog : [];
+            for (const x of log.slice(-20)) {
+                if (!x || typeof x !== 'object') continue;
+                out.push({ title: String(x.name || x.key || '流水'), body: norm([x.desc, x.delta != null ? (x.delta >= 0 ? '+' : '') + x.delta + ' 元' : '', x.floor ? '第 ' + x.floor + ' 楼' : ''].filter(Boolean).join(' · ')), ts: tsOf(x.timestamp), icon: '💰', appId: 'wallet' });
+            }
+            return out;
+        }
+    });
+
+    // ---- 地点：位置链 + 在场（桥 snapshot.scene）----
+    sources.push({
+        id: 'place', label: '地点', icon: '📍', appId: 'place', weight: 1.1,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap || !snap.scene || typeof snap.scene !== 'object') return [];
+            const sc = snap.scene;
+            if (sc.empty === true || sc.absent === true) return [];
+            const out = [];
+            const chain = (typeof sc.currentLine === 'string' ? sc.currentLine : (typeof sc.current === 'string' ? sc.current : ''));
+            if (chain) out.push({ title: '当前位置', body: norm(chain), icon: '📍', appId: 'place' });
+            for (const rec of asArray(sc.presence)) {
+                if (!rec || typeof rec !== 'object') continue;
+                out.push({ title: String(rec.name || '在场'), body: norm([rec.key, rec.atFloor ? '第 ' + rec.atFloor + ' 楼' : ''].filter(Boolean).join(' · ')), icon: '📍', appId: 'place' });
+            }
+            return out;
+        }
+    });
 
     return sources;
 }

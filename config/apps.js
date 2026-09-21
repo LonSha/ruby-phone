@@ -366,6 +366,14 @@ export const APPS = [
         data: {}
     },
     {
+        id: 'asset',
+        name: '资产',
+        icon: '🏦',
+        color: '#34d399',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'search',
         name: '全局搜索',
         icon: '🔎',

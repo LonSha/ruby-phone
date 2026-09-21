@@ -27,7 +27,8 @@ export class MemoryView {
     { id: 'overview', label: '概览', icon: 'fa-chart-simple' },
     { id: 'sense', label: '五感', icon: 'fa-hand-sparkles' },
     { id: 'scene', label: '场景', icon: 'fa-location-dot' },
-    { id: 'audit', label: '体检', icon: 'fa-stethoscope' }
+    { id: 'audit', label: '体检', icon: 'fa-stethoscope' },
+    { id: 'coverage', label: '覆盖度', icon: 'fa-layer-group' }
   ]);
   render(container) {
     this.container = container;
@@ -220,6 +221,60 @@ export class MemoryView {
     return parts.join('\n');
   }
 
+  /* ================= 覆盖度页 ================= */
+  /**
+   * [v2.62.0] 楼层覆盖度页：把「记忆系统对聊天的覆盖情况」读成有名有数的界面。
+   * 只读分态报告：ok（真读数）/ unavailable（模块未挂载或取数抛错）/ absent（宿主上下文不可得），
+   * 绝不编数顶替。数据经 `app.coverage()` 单一出口，视图不摸 window。
+   */
+  _coverageHtml(pkg) {
+    const c = (pkg && typeof pkg === 'object') ? pkg.coverage : null;
+    if (!c || typeof c !== 'object') {
+      return '<div class="mem-none">覆盖度读数不可用（已降级，不影响已有记忆）</div>';
+    }
+    if (c.state === 'absent') {
+      return '<div class="mem-none">宿主聊天上下文不可得，暂无法统计覆盖度</div>';
+    }
+    if (c.state === 'unavailable') {
+      return '<div class="mem-none">覆盖度模块未加载（floor-ledger.js）<br>' +
+        '<span class="mem-hint">记忆引擎的楼层账本模块未随插件载入，装好后这里会显示逐楼盖章情况</span></div>';
+    }
+    const parts = [];
+    // 顶部读数条：覆盖率大数 + 一行归因
+    const ratePct = (c.rate === null || c.rate === undefined) ? null : Math.round(c.rate * 100);
+    const color = c.complete ? '#10b981' : (ratePct !== null && ratePct >= 80 ? '#f59e0b' : '#ef4444');
+    parts.push('<div class="mem-cov-hero" style="--ag:' + color + '">' +
+      '<div class="mem-cov-rate">' + (ratePct === null ? '—' : ratePct + '%') + '</div>' +
+      '<div class="mem-cov-line">' + this._esc(c.line || '—') + '</div></div>');
+    // 缺口归因分布
+    if (Array.isArray(c.byWhy) && c.byWhy.length) {
+      parts.push('<div class="mem-cov-why"><div class="mem-section-title"><i class="fa-solid fa-clipboard-question"></i> 缺口归因（' +
+        c.missingCount + ' 楼未盖章）</div>' +
+        c.byWhy.map((b) =>
+          '<div class="mem-cov-why-row"><i class="fa-solid ' + this._esc(b.icon || 'fa-circle-question') + '"></i>' +
+          '<span class="mem-cov-why-label">' + this._esc(b.label) + '</span>' +
+          '<span class="mem-cov-why-count">×' + b.count + '</span></div>').join('') +
+        '</div>');
+    }
+    // 缺楼清单（逐楼列号；被 maxMissing 截断时如实标注）
+    if (Array.isArray(c.missing) && c.missing.length) {
+      const chips = c.missing.map((n) => '<span class="mem-cov-floor">第' + n + '楼</span>').join('');
+      parts.push('<div class="mem-section"><div class="mem-section-title"><i class="fa-solid fa-list-check"></i> 缺口楼号</div>' +
+        '<div class="mem-cov-missing">' + chips + '</div>' +
+        (c.missingCount > c.missing.length
+          ? '<div class="mem-hint">共 ' + c.missingCount + ' 楼有缺口，此处显示前 ' + c.missing.length + ' 个</div>'
+          : '') +
+        '</div>');
+    }
+    if (c.complete) {
+      parts.push('<div class="mem-none" style="color:#10b981">当前所有参与统计的楼层都已被记忆系统盖章，无缺口</div>');
+    }
+    if (c.total === 0) {
+      parts.push('<div class="mem-none">还没有可统计的 AI 楼层<br><span class="mem-hint">番外楼与空楼不计入覆盖度</span></div>');
+    }
+    return parts.join('\n');
+  }
+
   /* ================= 记忆条目行 ================= */
   _row(m) {
     const emo = m.emotion || {};
@@ -243,6 +298,10 @@ export class MemoryView {
   /* ================= 主绘制 ================= */
   _draw() {
     const pkg = this.app.insights({ perSense: 4, perScene: 2, perStage: 3, traceDays: 14 });
+    // 覆盖度单独特数（现算纯读，不与 insights 混取——模块缺席不连坐其他页）
+    let coverage = null;
+    try { coverage = this.app.coverage(); } catch (_e) { coverage = null; }
+    pkg.coverage = coverage || { state: 'unavailable', reason: 'coverage-thrown', cov: null };
     if (!pkg.data) {
       this.container.innerHTML = '<div class="mem-root"><div class="mem-none">记忆系统未初始化，请刷新酒馆后重试</div></div>';
       return;
@@ -254,6 +313,7 @@ export class MemoryView {
     if (this._tab === 'sense') body = this._senseHtml(pkg);
     else if (this._tab === 'scene') body = this._sceneHtml(pkg);
     else if (this._tab === 'audit') body = this._auditHtml(pkg);
+    else if (this._tab === 'coverage') body = this._coverageHtml(pkg);
     else body = this._overviewHtml(pkg);
 
     const core = pkg.data;

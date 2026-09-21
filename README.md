@@ -237,6 +237,14 @@
 
 - **v2.54 深化**：舆情强度三分（已核实/传闻/未知 + 权威/论坛/沙盒）与事实对读差集（世界侧/本机侧独有明细，`showDiff` 开关）
 
+
+## 🏦 资产 App (apps/asset/，v2.61.0)
+本地角色账本 / 行情 / 投影 / 结算，消费已零转录移植的 LA-0.7.68 资产引擎：
+- **与钱袋分工**：钱袋只读记忆插件 `snapshot.moneyLedger`；资产 App 管本地账本，不建第二份量级词 / 周期增量 / 流水符号。
+- **剧情日**：只认 `TimeManager.getCurrentStoryTime()` 转 ISO `YYYY-MM-DD`；`isReal` / 古历 / 缺字段 → 不结、不推进，绝不读系统时钟。
+- **公开层**：`renderAssetText(..., { layer: 'public' })`，禁止阿拉伯数字，量级词只用汉字。
+- **接线**：桌面图标 `#34d399`、懒加载单例 `assetApp` 进 `ST_PHONE_REBIND_APP_KEYS`、会话键 `/^asset_/` + `/^__la_asset_/`、微信 `_injectApps`、`.as-*` 写入 `phone.css`。
+
 ## 🧱 会话作用域单一真源 (v2.55.0)
 
 * **懒加载单例重绑表**：19 个单例 App 的 `onChatChanged` 重绑统一走 `ST_PHONE_REBIND_APP_KEYS` + `rebindLazyApps()`，换会话 / 清当前数据 / 清全部数据三条路径共用同一入口（此前三份手抄清单，漏补一份即静默串味）。

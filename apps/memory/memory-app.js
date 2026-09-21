@@ -20,7 +20,7 @@
 import { MemoryView } from './memory-view.js';
 import {
   senseRows, sceneRows, lifecycleRows, supersedePairs,
-  emotionTrace, auditMemory, insightSummary
+  emotionTrace, auditMemory, insightSummary, coverageRows
 } from './memory-insights.js';
 
 export class MemoryApp {
@@ -127,6 +127,48 @@ export class MemoryApp {
       const pkg = this.insights({ perSense: 1, perScene: 1, perStage: 0 });
       return pkg.summary;
     } catch (_e) { return '记忆总述失败（已降级）'; }
+  }
+
+  /* ========== 覆盖度取数：楼层账本现算读数（单一出口） ========== */
+  /**
+   * [v2.62.0] 楼层覆盖度读数。
+   *
+   * 【数据源】`window.LonShaFloorLedger.coverage(chat, opts)` 现算纯读——与上游引擎
+   *   `_floorLedgerCoverage()` 同一真源、同一口径：只数 AI 楼，番外楼（lonsha_omit）
+   *   与空楼不计，缺口逐楼列号并按 why 归因。**不缓存**：读数随楼层增删/重生成变，
+   *   实例级缓存会陈旧，故每次打开现算（与其他消费面 App 同规格）。
+   *
+   * 【三态（不猜）】
+   *   ok          —— 模块在位且拿到读数（total=0 亦是真值，如实报告）；
+   *   unavailable —— 模块未加载（window.LonShaFloorLedger 不可用，reason='module-unavailable'）
+   *                  或 coverage() 抛错（reason='thrown:…'）；
+   *   absent      —— 存在 chat 的宿主上下文不可得。
+   * @returns {{state:'ok'|'unavailable'|'absent', reason:string|null, cov:object}}
+   */
+  coverage() {
+    try {
+      const L = (typeof window !== 'undefined') ? window.LonShaFloorLedger : null;
+      if (!L || typeof L.coverage !== 'function') {
+        return { state: 'unavailable', reason: 'module-unavailable', cov: coverageRows(null) };
+      }
+      let chat = null;
+      try {
+        // 与上游引擎同形：SillyTavern 缺席时落到 {}，chat 取 [] —— 0 楼读数也是真值
+        chat = (window.SillyTavern && window.SillyTavern.getContext && window.SillyTavern.getContext() || {}).chat || [];
+      } catch (_e) { chat = null; }   // getContext() 抛错：宿主上下文不可得
+      if (!Array.isArray(chat)) {
+        return { state: 'absent', reason: 'chat-context-unavailable', cov: coverageRows(null) };
+      }
+      const cov = L.coverage(chat, {
+        upTo: chat.length - 1,
+        assistantOnly: true,
+        omitFunction: (m) => !!(m && m.extra && m.extra.lonsha_omit === true),
+        skipFunction: (m) => !m || typeof m.mes !== 'string' || !m.mes.trim()
+      });
+      return { state: 'ok', reason: null, cov: coverageRows(cov) };
+    } catch (e) {
+      return { state: 'unavailable', reason: 'thrown:' + String((e && e.message) || e), cov: coverageRows(null) };
+    }
   }
 
   /** 立即巩固（视图 🌙 按钮与体检建议共用同一入口，避免两处各写一遍） */

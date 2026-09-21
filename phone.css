@@ -13436,3 +13436,168 @@ input:checked + .toggle-slider:before {
 .lg-diff-world { background: rgba(96,165,250,.15); color: #60a5fa; }
 .lg-diff-local { background: rgba(251,191,36,.15); color: #fbbf24; }
 .lg-chipx { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.06); color: #cbd5e1; }
+
+/* ---------- [v2.61.0] 资产 App（.as-*） ----------
+ * 本地角色账本 / 行情 / 投影 / 结算。
+ * 主色取翡翠绿 #34d399（与钱袋金 #eab308、账本紫 #c084fc、地点青 #14b8a6 均不冲突）。
+ * 归因态用三档色调（ok / warn / off），未引导与空账必须能分开。 */
+.as-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  color: #e8eef6;
+}
+.as-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.as-header h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: .5px;
+}
+.as-nav {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+}
+.as-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.as-card {
+  background: rgba(22, 29, 38, .86);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 16px;
+  padding: 12px;
+}
+.as-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93a4b8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.as-count {
+  font-weight: 400;
+  color: #64748b;
+}
+.as-reason { border-left: 3px solid #34d399; }
+.as-reason-ok { border-left-color: #34d399; }
+.as-reason-warn { border-left-color: #e3b341; }
+.as-reason-off { border-left-color: #64748b; }
+.as-reason-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8eef6;
+}
+.as-reason-hint {
+  font-size: 11px;
+  color: #7d8ea3;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.as-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.as-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, .05);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.as-chip input { accent-color: #34d399; }
+.as-actor {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding: 8px 0;
+}
+.as-actor:first-of-type { border-top: 0; }
+.as-actor-name {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.as-actor-text {
+  font-size: 12px;
+  color: #8ea1b6;
+  line-height: 1.7;
+  margin-top: 4px;
+  white-space: pre-wrap;
+}
+.as-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .10);
+  color: #e8eef6;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.as-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: #34d399;
+  border: 0;
+  color: #042016;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.as-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.as-row:last-child { margin-bottom: 0; }
+.as-label {
+  font-size: 12px;
+  color: #93a4b8;
+}
+.as-switch {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.as-switch.on {
+  background: #34d399;
+  border-color: #34d399;
+  color: #042016;
+  font-weight: 700;
+}
+.as-era { width: 46%; }
+.as-empty {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.8;
+}
