@@ -149,19 +149,12 @@ test('F5 不变量：view 第 5 页签「育种」落点 + 三组推演函数被
 });
 
 // ============================================================
-// G. 版本四源同源（当前应已升到 2.58.0）
+// G. 版本锚定（锚定自身 update-log 条目，不随升版漂移）
 // ============================================================
-test('G1 版本四源同源为 2.58.0', () => {
-  const V = '2.58.0';
-  const settingsUpdateItem = (() => {
-    const i = idx.indexOf('ST_PHONE_VERSION');
-    const seg = idx.slice(i, i + 4000);
-    const m = seg.match(/CURRENT_UPDATE\s*=\s*\{[^}]*?items\s*:\s*\[([\s\S]*?)\]/);
-    return m ? m[1] : '';
-  })();
-  assert.equal(idx.includes(`'${V}'`), true, 'index.js 含版本号');
+test('G1 2.58.0 条目在账且结构完整（锚定自身版本，不随升版漂移）', () => {
   const log = JSON.parse(read('update-log.json'));
-  assert.equal(log.versions[V].version, V, 'update-log.json 头部为 ' + V);
-  assert.equal(JSON.parse(read('manifest.json')).version, V, 'manifest.json 版本');
-  assert.equal(JSON.parse(read('package.json')).version, V, 'package.json 版本');
+  assert.ok(log.versions['2.58.0'], 'update-log 缺 2.58.0 条目');
+  assert.equal(log.versions['2.58.0'].version, '2.58.0');
+  const items = log.versions['2.58.0'].items;
+  assert.ok(Array.isArray(items) && items.length >= 4, '2.58.0 条目含 >=4 条说明');
 });

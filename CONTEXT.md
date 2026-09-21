@@ -202,3 +202,15 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **旧锚点接管**：升版四源（index.js `ST_PHONE_VERSION` + `ST_PHONE_CURRENT_UPDATE` 5 条 / manifest / package.json / update-log 新版本插头部）后，v243 E4 / v244 G4（账本 25→24）、v245 D3/D4（零消费+账本 25→24）、v257 G1/G2（改锚定 `update-log[2.57.0]` 条目，不随升版漂移）。
 - **门禁**：全量 2683 pass / 0 真回归（v246 99 pass 确认非回归）；死导出 ✓ 无新增。
 - **踩坑**：终端 `node --test` 触发 spawn 隔离建临时目录偶发 `Failed to create directory: Current ROOT unavailable`——解法复制为 `tests/_xxx_run.mjs` 单进程直跑。写入通道对 `"` 实体解码不一致破坏 JS 引号——一律 Python 脚本落盘执行（`ast.parse` 校验）。
+## v2.59.0 对弈棋种扩列（Chess + Shogi）
+- **动机**：games/board 对弈数据层自 V0.1.0 起移植五子/象棋/斗兽棋，本轮把上游瑟瑟小手机游戏扩展 V0.2.0 的 `ChessEngine` / `ShogiEngine` 两个**自包含引擎**（alpha-beta + 置换表 + 残局搜索，纯 JS 零宿主依赖）纯本地移植接入，对弈棋种 3 → 5。
+- **引擎落盘**：从源 JSON 按 `class XXX {` 括号配平切片提取原始字节，前置 header 注释 + `export` 关键字落盘（`chess-engine.js` 18KB / `shogi-engine.js` 19KB），零转录风险。
+  - 国际象棋：完整走法（王车易位 / 吃过路兵 / 升变 Q/R/B/N）+ 将军检测 + 三次重复判和，8×8，turn W/B（大写白=用户下方）。
+  - 日本将棋：完整走法 + 打步詰 / 二歩禁止 + 成桂（成/不成双选项）+ 落子（drop）+ 千日手判和，9×9，turn S/G，含 `hand` 手牌计数。
+- **board-data 类型感知**：`BOARD_GAMES` 3→5；快照/恢复保留 chess `castling`+`enPassantTarget`、shogi `hand`、两者 `positionCount`（判和累计）；`createEngine`/`_applyMove`/`playAi` 按类型路由（升变 `promo` / 成桂 `promote` / 落子 `makeDrop`）；新增 `userColor()` / `shogiHand()` / `legalDrops(pieceKey)`；`legalTargets` 按格子去重（chess 升变多候补同格 / shogi 成桂双选项同格）。
+- **board-view 扩渲染**：`CHESS_PIECE`（Unicode ♔♕♖♗♘♙/♚♛♜♝♞♟）+ 深浅棋盘；`SHOGI_LABEL`（王/玉/飞/角/银/桂/香/金/步/龙/马/成银/成桂/成香）；将棋手牌栏（点选手牌→点盘面落子，`.gb-shogi-hand`）；升变/成桂选择条（`.gb-promo`，chess 出 Q/R/B/N、shogi 出 成/不成，单一候选直接走不弹条）；`_pendingPromo`/`_selectedDrop` 两态机。
+- **CSS**：`.gb-chs.light/.dark` + `.cpc.white/.black` + `.gb-shg.odd/.even` + `.gb-shogi-hand`/`.gb-hand`/`.gb-hand.em` + `.gb-promo` 系列。
+- **踩坑当场抓回**：① 引擎 header 注释里直写 `localStorage / fetch / SillyTavern` 等词，朴素 `includes` 门禁判据误判为「含依赖」——改中性措辞「纯 JS 类，不引用任何浏览器对象/存储/网络 API」（引擎本就零引用，audit「新增模块零外部请求」独立通过）。② 冒烟断言初版把 e1 白王走法写成 2（实为 0，被己方兵/马围死）、b1 马写成 3（实为 2，a3/c3 被兵占）、shogi 手牌 P 写成 9（实为 0，兵全在盘面）——全是断言写错非引擎 bug，探针实测修正。
+- **测试**：`tests/system-v259.test.mjs`（16 用例）——A1-A7 两引擎真功能（走法/升变/成桂/二歩/判和），B1-B4 BoardData 集成（5 棋种/快照/手牌/非将棋手牌 null），F1-F4 源码不变量（引擎零宿主依赖 / data 注册+类型路由 / view 消费闭环 / CSS 落点），G1 版本四源动态跟随 + G2 锚定 2.59.0 条目。
+- **旧锚点接管**：`system-v258.test.mjs` G1 由「版本四源同源为 2.58.0」（硬编码 index.js 含 2.58.0）改锚定 `update-log.versions['2.58.0']` 条目（不随升版漂移，对齐 v256 C4 / v257 G1 模式）。
+- **门禁**：全量 `npm run check` EXIT=0，各套件 0 失败，死导出 24 无新增，audit「新增模块零外部请求」✓。

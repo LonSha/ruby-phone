@@ -1,5 +1,18 @@
 {
   "versions": {
+    "2.59.0": {
+      "version": "2.59.0",
+      "date": "2026-09-21",
+      "title": "对弈棋种扩列：国际象棋 + 日本将棋（Chess/Shogi 引擎移植）",
+      "items": [
+        "[新功能] 对弈棋种扩列：国际象棋 + 日本将棋。把上游瑟瑟小手机游戏扩展 V0.2.0 的 ChessEngine / ShogiEngine 两个自包含引擎（alpha-beta + 置换表 + 残局搜索，零宿主依赖）纯本地移植接入 games/board，对弈棋种 3 → 5（五子/象棋/斗兽 → 新增国际象棋/日本将棋）。",
+        "国际象棋引擎：完整走法生成（含王车易位/吃过路兵/升变 Q/R/B/N）+ 将军检测 + 三次重复判和，棋盘 8x8，白先。",
+        "日本将棋引擎：完整走法 + 打步詰/二歩禁止 + 成桂（成/不成双选项）+ 落子（drop）+ 千日手判和，棋盘 9x9，含手牌计数。",
+        "board-data 扩为 5 棋种：快照/恢复类型感知（chess 保留易位权+吃过路兵格，shogi 保留手牌），走法分发按类型路由（升变 promo / 成桂 promote / 落子 makeDrop），新增 shogiHand / legalDrops 手牌出口。",
+        "board-view 扩渲染：chess 用 Unicode 棋子 + 深浅棋盘，shogi 用手牌栏（点选落子）+ 升变/成桂选择条；board.css 补 .gb-chs/.gb-shg/.gb-shogi-hand/.gb-promo。",
+        "新增 tests/system-v259.test.mjs（16 用例）：A 组两引擎真功能（走法/升变/成桂/二歩/判和），B 组 BoardData 集成（5 棋种/快照/手牌），F 组源码不变量（引擎零宿主依赖/view 消费闭环/CSS 落点），G 组版本四源同源。"
+      ]
+    },
     "2.58.0": {
       "version": "2.58.0",
       "date": "2026-09-21",
@@ -833,6 +846,6 @@
       ]
     }
   },
-  "latest": "2.58.0",
+  "latest": "2.59.0",
   "head": "2.56.0"
 }

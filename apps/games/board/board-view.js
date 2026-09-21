@@ -1,5 +1,5 @@
 /**
- * 对弈视图：五子棋 / 象棋 / 斗兽棋
+ * 对弈视图：五子棋 / 象棋 / 斗兽棋 / 国际象棋 / 日本将棋
  */
 import { BOARD_GAMES } from "./board-data.js";
 
@@ -28,12 +28,41 @@ const JUNGLE_LABEL = {
   E: "象", L: "狮", T: "虎", P: "豹", W: "狼", D: "狗", C: "猫", R: "鼠",
   e: "象", l: "狮", t: "虎", p: "豹", w: "狼", d: "狗", c: "猫", r: "鼠",
 };
+const CHESS_PIECE = {
+  K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
+  k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
+};
+const CHESS_PROMO_LABEL = { Q: "后", R: "车", B: "象", N: "马" };
+const SHOGI_LABEL = {
+  K: "王", k: "玉",
+  R: "飞", r: "飞",
+  B: "角", b: "角",
+  S: "银", s: "银",
+  N: "桂", n: "桂",
+  L: "香", l: "香",
+  G: "金", g: "金",
+  P: "步", p: "步",
+  D: "龙", d: "龙",
+  H: "马", h: "马",
+  M: "成银", m: "成银",
+  E: "成桂", e: "成桂",
+  Y: "成香", y: "成香",
+  T: "T", t: "T",
+};
+
+function isOwnPiece(piece, userColor) {
+  if (!piece) return false;
+  const up = userColor === String(userColor).toUpperCase();
+  return up ? piece === piece.toUpperCase() : piece === piece.toLowerCase();
+}
 
 export class BoardView {
   constructor(app) {
     this.app = app;
     this._cssLoaded = false;
     this._selected = null;
+    this._selectedDrop = null;
+    this._pendingPromo = null;
     this._aiTimer = null;
   }
 
@@ -43,7 +72,7 @@ export class BoardView {
     const link = document.createElement("link");
     link.id = "games-board-css";
     link.rel = "stylesheet";
-    link.href = new URL("./board.css?v=1.0.0", import.meta.url).href;
+    link.href = new URL("./board.css?v=1.1.0", import.meta.url).href;
     document.head.appendChild(link);
     this._cssLoaded = true;
   }
@@ -85,11 +114,10 @@ export class BoardView {
     if (w != null) {
       if (type === "gomoku") {
         if (w === 3) return "平局";
-        const userPlayer = data.state.userFirst ? 1 : 2;
-        return w === userPlayer ? "你赢了" : "你输了";
+        return w === data.userColor() ? "你赢了" : "你输了";
       }
-      const userColor = data.state.userFirst ? "R" : "B";
-      return String(w) === userColor ? "你赢了" : "你输了";
+      if (w === "draw") return "和棋";
+      return String(w) === String(data.userColor()) ? "你赢了" : "你输了";
     }
     if (data.state.thinking) return "对方思考中";
     return data.isUserTurn() ? "轮到你" : "等待对方";
@@ -97,22 +125,49 @@ export class BoardView {
 
   _renderPlay() {
     const data = this.app.boardData;
+    const type = data.state.type;
     const meta = data.meta();
     const engine = data.getEngine();
     const status = this._statusText(data);
     const boardHtml = this._renderBoard(data, engine);
-    const html = h("div", cls("games-app gb-app gb-play"),
-      h("div", cls("gb-top"),
-        h("button", cls("gb-icon") + " " + attr("id", "gb-back-picker") + " " + attr("type", "button"), "<i class=" + String.fromCharCode(34) + "fa-solid fa-chevron-left" + String.fromCharCode(34) + "></i>") +
-        h("div", "", h("div", cls("gb-title"), esc(meta.title)) + h("div", cls("gb-sub"), esc(status))) +
-        h("button", cls("gb-icon") + " " + attr("id", "gb-undo") + " " + attr("type", "button"), "悔") +
-        h("button", cls("gb-icon") + " " + attr("id", "gb-new") + " " + attr("type", "button"), "新")
-      ) +
-      h("div", cls("gb-stage"), boardHtml)
+    const top = h("div", cls("gb-top"),
+      h("button", cls("gb-icon") + " " + attr("id", "gb-back-picker") + " " + attr("type", "button"), "<i class=" + String.fromCharCode(34) + "fa-solid fa-chevron-left" + String.fromCharCode(34) + "></i>") +
+      h("div", "", h("div", cls("gb-title"), esc(meta.title)) + h("div", cls("gb-sub"), esc(status))) +
+      h("button", cls("gb-icon") + " " + attr("id", "gb-undo") + " " + attr("type", "button"), "悔") +
+      h("button", cls("gb-icon") + " " + attr("id", "gb-new") + " " + attr("type", "button"), "新")
     );
+    let inner = h("div", cls("gb-stage"), boardHtml);
+    if (type === "shogi") inner += this._renderShogiHand(data);
+    if (this._pendingPromo) inner += this._renderPromoBar(type);
+    const html = h("div", cls("games-app gb-app gb-play"), top + inner);
     this.app.phoneShell.setContent(html, "games-board");
     this._bindPlay(data);
     this._maybeAi(data);
+  }
+
+  _renderShogiHand(data) {
+    const hand = data.shogiHand();
+    if (!hand) return "";
+    const up = hand.color === hand.color.toUpperCase();
+    const items = Object.keys(hand.counts).map((k) => {
+      const cnt = hand.counts[k] || 0;
+      if (!cnt) return "";
+      const sel = this._selectedDrop === k;
+      return h("button", cls("gb-hand") + (sel ? " sel" : "") + " " + attr("data-hand", k) + " " + attr("type", "button"),
+        h("span", cls("piece " + (up ? "red" : "black")), esc(SHOGI_LABEL[k] || k)) + h("em", "", String(cnt)));
+    }).join("");
+    return h("div", cls("gb-shogi-hand"), h("span", cls("gb-hand-lbl"), "手牌（点击选子再点盘面落子）") + items);
+  }
+
+  _renderPromoBar(type) {
+    const cands = this._pendingPromo.cands;
+    const btns = cands.map((m, i) => {
+      const label = type === "chess" ? (CHESS_PROMO_LABEL[m.promo] || m.promo) : (m.promote ? "成" : "不成");
+      return h("button", cls("gb-promo-opt") + " " + attr("data-promo", i) + " " + attr("type", "button"), esc(label));
+    }).join("");
+    return h("div", cls("gb-promo"),
+      h("span", cls("gb-promo-lbl"), type === "chess" ? "选择升变棋子" : "是否成子？") + btns +
+      h("button", cls("gb-promo-cancel") + " " + attr("data-promo-cancel", "1") + " " + attr("type", "button"), "取消"));
   }
 
   _cellClass(type, r, c, piece, selected, targets) {
@@ -126,36 +181,50 @@ export class BoardView {
       if (eng.isTrap(r, c)) bits.push("trap");
       if (eng.isDen(r, c)) bits.push("den");
     }
+    if (type === "chess") bits.push("gb-chs", (r + c) % 2 ? "dark" : "light");
+    if (type === "shogi") bits.push("gb-shg", (r + c) % 2 ? "odd" : "even");
     if (selected && selected.r === r && selected.c === c) bits.push("sel");
     if (targets.some((t) => t.r === r && t.c === c)) bits.push("tgt");
     return bits.join(" ");
   }
 
-  _pieceHtml(type, piece) {
+  _pieceHtml(type, piece, userColor) {
     if (!piece) return "";
     if (type === "gomoku") {
       return h("span", cls(piece === 1 ? "stone black" : "stone white"), "");
     }
-    const red = piece === piece.toUpperCase();
+    if (type === "chess") {
+      const white = piece === piece.toUpperCase();
+      return h("span", cls("cpc " + (white ? "white" : "black")), esc(CHESS_PIECE[piece] || piece));
+    }
+    const up = piece === piece.toUpperCase();
+    if (type === "shogi") {
+      return h("span", cls("piece " + (up ? "red" : "black")), esc(SHOGI_LABEL[piece] || piece));
+    }
     const label = type === "xiangqi" ? (XIANGQI_LABEL[piece] || piece) : (JUNGLE_LABEL[piece] || piece);
-    return h("span", cls(red ? "piece red" : "piece black"), esc(label));
+    return h("span", cls("piece " + (up ? "red" : "black")), esc(label));
   }
 
   _renderBoard(data, engine) {
     const type = data.state.type;
     const selected = this._selected;
-    const targets = selected && type !== "gomoku" ? data.legalTargets(selected.r, selected.c) : [];
+    const userColor = data.userColor();
     let rows = 15, cols = 15, getPiece = (r, c) => engine.get(r, c);
     if (type === "xiangqi") { rows = 10; cols = 9; getPiece = (r, c) => engine.board[r][c]; }
     if (type === "jungle") { rows = 9; cols = 7; getPiece = (r, c) => engine.board[r][c]; }
+    if (type === "chess") { rows = 8; cols = 8; getPiece = (r, c) => engine.board[r][c]; }
+    if (type === "shogi") { rows = 9; cols = 9; getPiece = (r, c) => engine.board[r][c]; }
+    let targets;
+    if (this._selectedDrop && type === "shogi") targets = data.legalDrops(this._selectedDrop);
+    else if (selected && type !== "gomoku") targets = data.legalTargets(selected.r, selected.c);
+    else targets = [];
     const cells = [];
     for (let r = 0; r < rows; r += 1) {
       for (let c = 0; c < cols; c += 1) {
         const piece = getPiece(r, c);
-        const stone = type === "gomoku" ? piece : piece;
         cells.push(h("button",
           cls(this._cellClass(type, r, c, piece, selected, targets)) + " " + attr("type", "button") + " " + attr("data-r", r) + " " + attr("data-c", c),
-          this._pieceHtml(type, type === "gomoku" ? (stone || 0) : piece)
+          this._pieceHtml(type, piece, userColor)
         ));
       }
     }
@@ -164,18 +233,43 @@ export class BoardView {
 
   _bindPlay(data) {
     document.getElementById("gb-back-picker")?.addEventListener("click", () => {
-      this._selected = null;
+      this._selected = null; this._selectedDrop = null; this._pendingPromo = null;
       data.openPicker();
       this.render();
     });
     document.getElementById("gb-undo")?.addEventListener("click", () => {
-      this._selected = null;
+      this._selected = null; this._selectedDrop = null; this._pendingPromo = null;
       data.undo();
       this.render();
     });
     document.getElementById("gb-new")?.addEventListener("click", () => {
-      this._selected = null;
+      this._selected = null; this._selectedDrop = null; this._pendingPromo = null;
       data.newGame(data.state.type, { vsAi: data.state.vsAi, userFirst: data.state.userFirst });
+      this.render();
+    });
+    document.querySelectorAll("[data-hand]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-hand");
+        this._selected = null;
+        this._selectedDrop = this._selectedDrop === k ? null : k;
+        this.render();
+      });
+    });
+    document.querySelectorAll("[data-promo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-promo"));
+        const m = this._pendingPromo.cands[idx];
+        if (!m) return;
+        const { fromR, fromC } = this._pendingPromo;
+        const toR = Array.isArray(m) ? m[0] : m.toR;
+        const toC = Array.isArray(m) ? m[1] : m.toC;
+        const res = data.playUser({ fromR, fromC, toR, toC, promo: m.promo, promote: m.promote });
+        this._pendingPromo = null; this._selected = null;
+        if (res.ok) this.render();
+      });
+    });
+    document.querySelector("[data-promo-cancel]")?.addEventListener("click", () => {
+      this._pendingPromo = null;
       this.render();
     });
     document.querySelectorAll(".gb-cell").forEach((btn) => {
@@ -188,20 +282,32 @@ export class BoardView {
   }
 
   _onCell(data, r, c) {
-    if (!data.isUserTurn() || data.winner() || data.state.thinking) return;
+    if (data.state.thinking || data.winner()) return;
+    if (this._pendingPromo) return; // 升变/成桂选择中，忽略盘面
     const type = data.state.type;
     if (type === "gomoku") {
       const res = data.playUser({ r, c });
       if (res.ok) this.render();
       return;
     }
+    // 将棋落子模式
+    if (this._selectedDrop) {
+      const dts = data.legalDrops(this._selectedDrop);
+      if (dts.some((t) => t.r === r && t.c === c)) {
+        const res = data.playUser({ drop: true, pieceKey: this._selectedDrop, toR: r, toC: c });
+        if (res.ok) this._selectedDrop = null;
+        this.render();
+        return;
+      }
+    }
     const engine = data.getEngine();
     const piece = engine.board[r][c];
-    const userColor = data.state.userFirst ? "R" : "B";
-    const isOwn = piece && ((userColor === "R" && piece === piece.toUpperCase()) || (userColor === "B" && piece === piece.toLowerCase()));
+    const userColor = data.userColor();
+    const isOwn = isOwnPiece(piece, userColor);
     if (!this._selected) {
       if (!isOwn) return;
       this._selected = { r, c };
+      this._selectedDrop = null;
       this.render();
       return;
     }
@@ -212,11 +318,27 @@ export class BoardView {
     }
     if (isOwn) {
       this._selected = { r, c };
+      this._selectedDrop = null;
       this.render();
       return;
     }
-    const res = data.playUser({ fromR: this._selected.r, fromC: this._selected.c, toR: r, toC: c });
-    if (res.ok) this._selected = null;
+    const fromR = this._selected.r, fromC = this._selected.c;
+    const moves = engine.getLegalMoves(fromR, fromC) || [];
+    const cands = moves.filter((m) => {
+      const tr = Array.isArray(m) ? m[0] : m.toR;
+      const tc = Array.isArray(m) ? m[1] : m.toC;
+      return tr === r && tc === c;
+    });
+    if (!cands.length) { this._selected = null; this.render(); return; }
+    if (cands.length === 1) {
+      const m = cands[0];
+      const res = data.playUser({ fromR, fromC, toR: r, toC: c, promo: m.promo, promote: m.promote });
+      if (res.ok) this._selected = null;
+      this.render();
+      return;
+    }
+    this._pendingPromo = { fromR, fromC, cands };
+    this._selected = null;
     this.render();
   }
 
@@ -226,10 +348,10 @@ export class BoardView {
     data.state.thinking = true;
     this._aiTimer = setTimeout(() => {
       data.playAi();
+      this._selected = null; this._selectedDrop = null; this._pendingPromo = null;
       this.render();
     }, 280);
   }
 }
 
 export default BoardView;
-

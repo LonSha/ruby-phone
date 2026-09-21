@@ -258,3 +258,11 @@
 * **顺带修复既有 bug**：`setHealthTab` 白名单长期漏了 `medical`（点「健康」页签被强制回 cycle），本版补齐 5 页签并立 F4 回归锁。
 * **零死导出**：5 个算法 API（着床 / 核型标签 / 亲和种子 / 流变 / 代谢豁免）全部真接线进育种页，而非登记账本豁免。
 
+## ♟️ 对弈棋种扩列（Chess + Shogi, v2.59.0)
+* **国际象棋 + 日本将棋接入**：把上游瑟瑟小手机游戏扩展 V0.2.0 的 `ChessEngine` / `ShogiEngine` 两个自包含引擎（alpha-beta + 置换表 + 残局搜索，纯 JS 零宿主依赖）移植进 `games/board`，对弈棋种 3 → 5。
+* **国际象棋**：完整走法生成（王车易位 / 吃过路兵 / 升变 Q/R/B/N）+ 将军检测 + 三次重复判和，8×8 棋盘白先。
+* **日本将棋**：完整走法 + 打步詰 / 二歩禁止 + 成桂（成 / 不成双选项）+ 落子（drop）+ 千日手判和，9×9 棋盘 + 手牌计数。
+* **board-data 类型感知**：快照 / 恢复保留 chess 易位权与吃过路兵格、shogi 手牌；走法分发按类型路由（升变 promo / 成桂 promote / 落子 makeDrop）；新增 `shogiHand` / `legalDrops` 手牌出口。
+* **board-view 扩渲染**：chess 用 Unicode 棋子 + 深浅棋盘，shogi 用手牌栏（点选落子）+ 升变 / 成桂选择条；`board.css` 补 `.gb-chs` / `.gb-shg` / `.gb-shogi-hand` / `.gb-promo`。
+* **测试**：`tests/system-v259.test.mjs`（16 用例）—— A 组两引擎真功能 / B 组 BoardData 集成 / F 组源码不变量（引擎零宿主依赖 + view 消费闭环 + CSS 落点）/ G 组版本四源同源。
+
