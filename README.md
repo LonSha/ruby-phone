@@ -266,3 +266,10 @@
 * **board-view 扩渲染**：chess 用 Unicode 棋子 + 深浅棋盘，shogi 用手牌栏（点选落子）+ 升变 / 成桂选择条；`board.css` 补 `.gb-chs` / `.gb-shg` / `.gb-shogi-hand` / `.gb-promo`。
 * **测试**：`tests/system-v259.test.mjs`（16 用例）—— A 组两引擎真功能 / B 组 BoardData 集成 / F 组源码不变量（引擎零宿主依赖 + view 消费闭环 + CSS 落点）/ G 组版本四源同源。
 
+## 📖 起名台 + 手术库（LA 纯数据模块移植, v2.60.0)
+* **解耦移植 LA 纯数据模块**：把上游 LA-0.7.68 拓展版（单文件 IIFE 大插件，67 虚拟模块靠 `/* src/xxx.js */` 注释分界、模块间靠 `__LA_XXX__` 全局单例耦合）中两块**零宿主依赖纯数据**模块解耦移植进 health App，纯本地只读、不写状态。
+* **起名台（家谱页签）**：`name-data.js`（NAME_DATA 人名库，中文/日文/西方三语言，姓池 499/2925/1557 + 给名池）+ `name-service.js` 封装层统一三语言结构差异，支持随机起名 / 固定姓 / 分性别。
+* **手术库（健康页签）**：`surgery-library.js`（SURGERY_LIBRARY 59 术式，ICD 编码 + 章节/类目/分级/麻醉/恢复期/阶段/并发症）+ `surgery-service.js` 封装层，提供章节分组 / 分级分布 / 阶段分钟合计，点击展开阶段 + 并发症。
+* **解耦手法**：按括号配平切片提取目标模块字节，剥 IIFE 外壳与 `window`/`module.exports` 导出、前置 `export` 落盘，零转录风险；service 层统一 LA 数据结构差异后接进 health-view，导出面收紧到恰好被 view 消费的集合（零死导出）。
+* **测试**：`tests/system-v260.test.mjs`（15 用例）—— A 组起名真数据 / B 组手术库真数据 / F 组源码不变量（数据零宿主依赖 + 血缘注释 + view 消费闭环 + CSS 落点）/ G 组版本锚定。
+

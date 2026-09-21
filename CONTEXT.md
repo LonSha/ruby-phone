@@ -214,3 +214,18 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - **测试**：`tests/system-v259.test.mjs`（16 用例）——A1-A7 两引擎真功能（走法/升变/成桂/二歩/判和），B1-B4 BoardData 集成（5 棋种/快照/手牌/非将棋手牌 null），F1-F4 源码不变量（引擎零宿主依赖 / data 注册+类型路由 / view 消费闭环 / CSS 落点），G1 版本四源动态跟随 + G2 锚定 2.59.0 条目。
 - **旧锚点接管**：`system-v258.test.mjs` G1 由「版本四源同源为 2.58.0」（硬编码 index.js 含 2.58.0）改锚定 `update-log.versions['2.58.0']` 条目（不随升版漂移，对齐 v256 C4 / v257 G1 模式）。
 - **门禁**：全量 `npm run check` EXIT=0，各套件 0 失败，死导出 24 无新增，audit「新增模块零外部请求」✓。
+## v2.60.0 起名台 + 手术库（LA 纯数据模块移植）
+- **动机**：把上游 LA-0.7.68 拓展版（单文件 IIFE 大插件，2.9MB content，67 虚拟模块靠 `/* src/xxx.js */` 注释分界、模块间靠 `__LA_XXX__` 全局单例耦合）中**零宿主依赖纯数据**模块解耦移植进 health App。本轮落两块最纯的：人名库 + 手术术式库。
+- **解耦手法（可复用）**：① 按 `/* src/xxx.js */` 注释分界定位模块字节边界；② 括号配平切片提取；③ 剥 IIFE 外壳 `(function(){…})();` 与尾部 `if(typeof module…)`/`window.__LA_*__` 导出段；④ 前置 `export` 落盘为 ESM；⑤ 加 service 封装层统一 LA 数据结构差异后接进现有 view。全程 Python 脚本生成（零转录风险），`node --check` 验 ESM 语法。
+- **起名台（家谱页签）**：`name-data.js`（NAME_DATA 人名库，chinese/japanese/western 三语言，姓池 499/2925/1557；给名 western/japanese 扁平 `{female,male}`、chinese 嵌套 `{female:{single,double}}`）+ `name-service.js`（`nameLangs/nameStats/generateName`，`_givenPool` 把 chinese nested 展平统一成池）。view 用 `this._nameLang/_nameGender/_lastName` 存 UI 态，不写 storage。
+- **手术库（健康页签）**：`surgery-library.js`（SURGERY_LIBRARY 59 术式，ICD 编码/章节/类目/分级1-4/麻醉/恢复期/stages/complications；stages 由 `stageTable(template,mainName,{drop,rename,minutes,add})` 生成）+ `surgery-service.js`（`surgeryChapters/surgeryByChapter/surgeryStats/surgerySummary`）。view 用 `this._surgChapter/_surgOpen` 存章节+展开态，点击条目展开阶段+并发症。
+- **死导出治理（关键）**：门禁 `scripts/dead-export-check.mjs` 口径——**tests/ 不算消费，仅 apps/ 产品端消费计**。故 service 导出面必须收紧到恰好被 view 消费的集合，view 不直接调的 API 降级为文件内私有（surgerySearch/surgeryStageMinutes/GRADE_LABELS/SURGERY_CATALOGS 等），否则报零消费新增。LA 源文件里 SURGERY_CATALOGS 只是 2 个标题字符串、非数据本体，直接删。
+- **版本四源同源铁律（踩坑）**：旧测试 v255/v256 C3 要求 index.js `ST_PHONE_CURRENT_UPDATE.items` 与 update-log 当前版本条目 items **逐字同源**（C3 判据：index.js items 行须双引号开头 + 含 `。`，rstrip 尾逗号后与 update-log 逐字比对）。升版脚本若两处 items 措辞不一致会触发 13 处「items 未逐字同源」失败——必须从 update-log 反推 index.js 的 items 数组（双引号 JS 字符串）。
+- **测试**：`tests/system-v260.test.mjs`（15 用例）—— A 组起名真数据（池规模/三语言/固定姓/50 次稳定）/ B 组手术库真数据（59 条 schema/stageTable 纯函数/章节分组自洽/分级之和）/ F 组不变量（数据零宿主依赖 + LA 血缘注释 + view 消费闭环 + CSS 落点）/ G 组版本锚定（2.60.0 条目记起名+手术 + 2.59.0 历史条目保留）。
+- **门禁**：全量 `npm run check` EXIT=0，440 测试 0 失败，死导出 24 无新增。
+## LA-0.7.68 剩余模块解耦面评估（已侦察未移植，v2.60.0 结论）
+- **判定口径**：本项目移植门槛 = 纯本地 / 零宿主依赖 / 真接线（非登记账本豁免）。达标才搬，否则记录判断依据避免重复评估。
+- **已移植（v2.60.0）**：`family/name-data.js`（74KB 纯数据，零依赖）✓ / `medical/surgery-library.js`（80KB 纯数据+纯函数，零依赖）✓。
+- **未移植——asset 资产经济（12 文件 ~603KB）**：核心模拟层是**紧耦合逻辑簇**，asset-core↔asset-terms/keys/ledger↔asset-market↔asset-project↔asset-settlement↔asset-holdings 成环，且 asset-library 耦合 localStorage、asset-market 依赖 `util/calendar-grid`、asset-extract-spec 依赖 `extract/extract-core`（又拉新模块进来）。解耦 = 重造一个资产 app，违背移植门槛。另与 wallet 现有「消费记忆插件 moneyLedger 只读快照」路线冲突（wallet 有意不建本地资产模拟）。→ **不搬**。
+- **未移植——批次 C 地图/事件/日程/饮食**：① 各 `*-theme.js` 顶层仅 `const CSS`（纯 CSS 字符串，无逻辑，单独搬无意义）；② `map-core`/`event-core` 顶层是 `_xxxRuntime`+`STATE_KEY/CONFIG_KEY`，耦合 **localStorage 状态机**（非纯数据，搬来要重写持久层）；③ event-core 还依赖 `__LA_ACTOR_DYNAMICS__`（actor-dynamics 模块，又一环）；④ `util/calendar-grid`（7KB）虽可独立但价值极低（仅日历格子辅助）。→ **不搬**。
+- **结论**：LA 真正"零宿主依赖纯数据"的可移植面就是 name-data + surgery-library 两块，已在 v2.60.0 收口。其余模块要么紧耦合逻辑簇、要么 localStorage 状态机、要么纯 CSS，均不达移植门槛。
