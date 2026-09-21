@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.53.0';
+const ST_PHONE_VERSION = '2.54.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -80,10 +80,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "新增「账本」App：消费 snapshot.worldLedgerRead 面展示「三方对读闭环」（暗流/事实/人物/舆情计数 + 未外供缺口 + 人物位置冲突）。",
-        "六态归因（ready/empty/no-worldaxis/no-ledger-face/no-snapshot/bridge-absent）+ 纯函数预投影。promptBlock 仅 ready 态产出，无有效内容返回空串。",
-        "微信 _injectApps 表第 9 项（ledgerApp），三处 onChatChanged 接线齐全。",
-        "新增 tests/system-v253.test.mjs（A四件套+注册 / B内核纯函数六态+投影+注入块 / C微信注入+三处接线 / D版本同源）。全量门禁绿。"
+        "「账本」App v2.54 深化：舆情强度三分（已核实/传闻/未知 claim + 权威/论坛/沙盒在场数）与事实对读差集（世界侧独有/本机侧独有/共有，含明细前6条）。",
+        "projectLedger 增补 opinionDetail / factsDetail 投影；ledgerPromptBlock 增补舆情强度与事实对读两行（差集为空时省略）。新增 showDiff 设置项（默认开）。",
+        "view 增补舆情强度条（lg-bar）+ 事实对读明细卡（lg-diff-row/lg-chipx）；phone.css 同步追加 .lg-card/.lg-bar-*/.lg-chipx 段。",
+        "会话状态隔离审计：apps.js 桌面图标去重（tieba/dirtytalk/cheat/tarot/chars 5 处重复图标替换为唯一图标）。",
+        "新增 tests/system-v254.test.mjs（A投影 / B注入块 / C视图+CSS / D版本同源）。全量门禁绿。"
     ]
 };
 

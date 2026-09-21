@@ -189,7 +189,7 @@ export const APPS = [
     {
         id: 'tieba',
         name: '贴吧',
-        icon: '💬',
+        icon: '📌',
         color: '#2563eb',
         badge: 0,
         data: {}
@@ -253,7 +253,7 @@ export const APPS = [
     {
         id: 'tarot',
         name: '塔罗',
-        icon: '🔮',
+        icon: '🃏',
         color: '#8b5cf6',
         badge: 0,
         data: {}
@@ -303,7 +303,7 @@ export const APPS = [
     {
         id: 'cheat',
         name: '金手指',
-        icon: '🪄',
+        icon: '⚡',
         color: '#d4af37',
         badge: 0,
         data: {}
@@ -312,7 +312,7 @@ export const APPS = [
     {
         id: 'dirtytalk',
         name: '撩语',
-        icon: '💬',
+        icon: '💋',
         color: '#e879f9',
         badge: 0,
         data: {}
@@ -344,7 +344,7 @@ export const APPS = [
     {
         id: 'chars',
         name: '群像',
-        icon: '🎭',
+        icon: '👥',
         color: '#38bdf8',
         badge: 0,
         data: {}

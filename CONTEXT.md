@@ -153,3 +153,11 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 - 控制器/视图：`ledger-app.js` / `ledger-view.js`（`.lg-*` 类），主色 `#c084fc`
 - 接线：`config/apps.js`（第 39 条）· `config/storage.js`（`/^ledger_/`）· `index.js` 路由 + 三处 onChatChanged · 微信注入表第 9 项
 - 测试：`tests/system-v253.test.mjs`（24 用例）
+
+## v2.54.0 世界账本深化
+
+- `projectLedger` 增补 `opinionDetail`（canon/forum/sandbox + verified/rumor/unknown）与 `factsDetail`（shared/worldOnly*/localOnly*，明细前 6 条）
+- `ledgerPromptBlock` 增补舆情强度与事实对读两行（差集为空时省略）
+- view 增补舆情强度条 + 事实对读明细卡；设置新增 `showDiff`（默认开）
+- apps.js 桌面图标去重：tieba 📌 / dirtytalk 💋 / cheat ⚡ / tarot 🃏 / chars 👥
+- 测试：`tests/system-v254.test.mjs`（15 用例）

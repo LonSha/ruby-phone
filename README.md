@@ -234,3 +234,5 @@
 - 六态归因：ready / empty / no-worldaxis / no-ledger-face / no-snapshot / bridge-absent
 - 纯函数内核 `ledger-data.js`（readLedgerFace / projectLedger / ledgerPromptBlock），ready 态可注入 Prompt
 - 主色 `#c084fc`，`.lg-*` 命名空间
+
+- **v2.54 深化**：舆情强度三分（已核实/传闻/未知 + 权威/论坛/沙盒）与事实对读差集（世界侧/本机侧独有明细，`showDiff` 开关）

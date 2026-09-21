@@ -114,9 +114,9 @@ test('C3 index.js ledger route', () => {
   assert.match(src, /appId === 'ledger'/);
 });
 
-test('D1 version sync 2.53', () => {
+test('D1 version format (latest pinned by newest suite)', () => {
   const v = String(manifest.version);
-  assert.ok(v.startsWith('2.53'), 'got ' + v);
+  assert.match(v, /^\d+\.\d+\.\d+$/, 'got ' + v);
 });
 test('D2 ST_PHONE_VERSION matches manifest', () => {
   const src = read('index.js');

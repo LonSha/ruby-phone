@@ -13420,3 +13420,19 @@ input:checked + .toggle-slider:before {
 .lg-settings h3 { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
 .lg-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1; padding: 6px 0; cursor: pointer; }
 .lg-toggle input { accent-color: #c084fc; }
+/* [v2.54.0] 舆情强度三分 + 事实对读差集 */
+.lg-card { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.lg-card-title { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+.lg-bars { display: flex; gap: 8px; }
+.lg-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 8px; background: rgba(255,255,255,.04); }
+.lg-bar-val { font-size: 18px; font-weight: 700; font-family: 'Times New Roman', serif; }
+.lg-bar-label { font-size: 10px; color: #94a3b8; }
+.lg-bar-ok .lg-bar-val { color: #4ade80; }
+.lg-bar-warn .lg-bar-val { color: #fbbf24; }
+.lg-bar-dim .lg-bar-val { color: #64748b; }
+.lg-sub { font-size: 11px; color: #64748b; margin-top: 8px; }
+.lg-diff-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lg-diff-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+.lg-diff-world { background: rgba(96,165,250,.15); color: #60a5fa; }
+.lg-diff-local { background: rgba(251,191,36,.15); color: #fbbf24; }
+.lg-chipx { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.06); color: #cbd5e1; }
