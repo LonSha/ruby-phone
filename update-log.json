@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.58.0": {
+      "version": "2.58.0",
+      "date": "2026-09-21",
+      "title": "育种推演（Breeding Simulator）：异种繁殖三组只读推演落地健康App第5页签",
+      "items": [
+        "[新功能] 育种推演（Breeding Simulator）：健康 App 新增第 5 页签「育种」，把上游 Liuuuu54/st_bs_biotracker v0.9.9 的**异种繁殖推演算法链**纯本地移植落地。新增 apps/health/bio-propagation.js 纯算法层——自然受精预测（多精源归属概率 / 受孕率 / 有效精液暴露）、后代预测（胎儿种族 / 胚型 / 孕期 / 卵群规模）、衍生遗传预测（12 类衍生类型遗传进度 / 到判定线天数），全部纯函数只读推演、零 LLM、不写状态。",
+        "卵群规模字典增量缝合：远程 v0.9.9 race_config.RACE_CLUTCH_SIZE_MEANS（25 个多产种族的卵群均值）移植为本地 RACE_CLUTCH_SIZE_MEANS，过滤为仅本地 RACE_PHYSIOLOGY 已存在的种族；getClutchSizeMeanByRace 改为字典优先、回落内置字段——此前本地 RACE_PHYSIOLOGY 无 clutchSizeMean 字段，卵群推演恒退化为 1。",
+        "顺带修复既有 bug：setHealthTab 白名单长期漏了 medical（点击「健康」页签被强制回 cycle），本版补齐全部 5 页签 cycle / needs / medical / family / breeding，并立 F4 回归锁断言。",
+        "确立「看一眼 vs 改一把」纪律的繁殖侧延伸：育种页只用 calculateXxxPreview 纯推演展示「若操作会如何」，不触碰 health-data 任何推进 / 受孕 / 写状态路径——F3 用例锁住 bio-propagation 零 window / DOM / localStorage / openai / fetch 依赖。",
+        "新增 tests/system-v258.test.mjs：A 组直接 ESM 导入纯内核做真功能测试（精液衰减 / 受精 / 后代 / 卵群字典 / 衍生遗传越线 / 混血），F 组源码不变量（算法导出 / 字典注入 / 零退化 / 5 页签白名单 / view 消费闭环），G 组版本四源同源。"
+      ]
+    },
     "2.57.0": {
       "version": "2.57.0",
       "date": "2026-09-21",
@@ -821,6 +833,6 @@
       ]
     }
   },
-  "latest": "2.57.0",
+  "latest": "2.58.0",
   "head": "2.56.0"
 }

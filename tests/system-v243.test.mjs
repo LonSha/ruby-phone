@@ -171,8 +171,8 @@ const summary = (out) => {
     ok('E2 每条都有非空理由（无 TODO 占位）',
         raw.entries.every(e => typeof e.reason === 'string' && !/^TODO/.test(e.reason)));
     ok('E3 条目键唯一', new Set(raw.entries.map(key)).size === raw.entries.length);
-    ok('E4 本版未新增账本条目（E7 修的是枚举面，不引入新死导出）',
-        raw.entries.length === 25, `${raw.entries.length}`);
+    ok('E4 账本条目数（v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS，基线 25→24）',
+        raw.entries.length === 24, `${raw.entries.length}`);
 }
 
 console.log(`\n\u7ed3\u679c: ${pass} \u901a\u8fc7, ${fail} \u5931\u8d25`);

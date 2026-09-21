@@ -5,6 +5,14 @@
 //   此前此处手写三连三元（mild/中/重/危重），与 medical-core 的
 //   SEVERITY_LABELS 各写一份：新增一档严重度时两处必须同步改，漏一处即显示英文原文。
 import { severityLabel } from './medical-core.js';
+// [v2.58.0] 育种推演：异种繁殖三组只读推演（纯本地，零 LLM，不写状态）
+import {
+  calculateFertilizationPreview, calculateOffspringPreview, calculateDerivedInheritancePreview,
+  calculateImplantationPreview, calculateRaceImplantationDays, getFetusInheritanceTag,
+  getClutchSizeMeanByRace, getSpermDoseClutchMultiplier, getSpermDoseDifficultyBonus,
+  getDerivedInheritanceSeed,
+  DERIVED_TYPE_RACES, DERIVED_TYPE_FLUX_PROFILES, DERIVED_TYPE_METABOLISM_EXEMPTIONS,
+} from './bio-propagation.js';
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -147,7 +155,8 @@ export class HealthView {
       h("button", cls("hl-tab" + (tab === "cycle" ? " on" : "")) + " " + attr("data-tab", "cycle"), "周期") +
       h("button", cls("hl-tab" + (tab === "needs" ? " on" : "")) + " " + attr("data-tab", "needs"), "体征") +
       h("button", cls("hl-tab" + (tab === "medical" ? " on" : "")) + " " + attr("data-tab", "medical"), "健康") +
-      h("button", cls("hl-tab" + (tab === "family" ? " on" : "")) + " " + attr("data-tab", "family"), "家谱")
+      h("button", cls("hl-tab" + (tab === "family" ? " on" : "")) + " " + attr("data-tab", "family"), "家谱") +
+      h("button", cls("hl-tab" + (tab === "breeding" ? " on" : "")) + " " + attr("data-tab", "breeding"), "育种")
     );
     const needCards = (data.describeNeeds() || []).map((row) => {
       return h("div", cls("hl-need"), h("div", cls("hl-need-top"), esc(row.label) + " " + row.value) + h("div", cls("hl-need-bar"), h("span", attr("style", "width:" + row.value + "%"), "")) + h("div", cls("hl-need-text"), esc(row.text)));
@@ -179,7 +188,66 @@ const familyBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-
     const medIllnessSel = h("div", cls("hl-med-add"), h("select", attr("id", "hl-med-cat"), catOptions) + h("select", attr("id", "hl-med-ill"), "<option value=''>选病症…</option>") + h("select", attr("id", "hl-med-sev"), "<option value=''>程度</option><option value='mild'>轻度</option><option value='moderate'>中度</option><option value='severe'>重度</option><option value='critical'>危重</option>") + h("button", cls("hl-mini") + " " + attr("id", "hl-add-med"), "添加"));
     const medicalBox = h("div", cls("hl-controls-section"), h("div", cls("hl-section-title"), "健康档案 · " + medOv.active + " 进行中 / " + medOv.total + " 条 " + h("button", cls("hl-mini") + " " + attr("id", "hl-adv-med"), "每日推进")) + medConds + h("div", cls("hl-section-title"), "添加病症") + medIllnessSel);
     const cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
-    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : tab === "medical" ? medicalBox : cycleBody);
+    // ---- 育种推演（breeding）----
+    // [v2.58.0] 纯只读展示：用当前母体种族做蛋方，分别对「同种/跨种」推演三类结果。零 LLM、不写状态。
+    const breedEgg = data.race || '人类';
+    const breedSame = calculateOffspringPreview({ eggRace: breedEgg, spermRace: breedEgg });
+    const breedCross = calculateOffspringPreview({ eggRace: breedEgg, spermRace: '精灵' });
+    const breedFert = calculateFertilizationPreview({ eggRace: breedEgg, spermSources: [{ race: breedEgg, value: 20 }] });
+    const breedDer = calculateDerivedInheritancePreview({ motherDerivedType: '修炼', fatherDerivedType: null, fetusRace: breedEgg, affinity: 0, passedDays: 200 });
+    const breedImplant = calculateImplantationPreview({ cycleLength: 28, vitality: 100, elapsedDays: 6 });
+    const breedImplantDays = calculateRaceImplantationDays(breedEgg);
+    const breedNucleusTag = getFetusInheritanceTag(breedEgg, '精灵');
+    const breedSeed = getDerivedInheritanceSeed('修炼', '修炼');
+    const breedFluxCount = Object.keys(DERIVED_TYPE_FLUX_PROFILES || {}).length;
+    const breedMetabolicExempt = Object.keys(DERIVED_TYPE_METABOLISM_EXEMPTIONS || {}).length;
+    const breedCard = (title, rows) => h("div", cls("hl-breed-card"),
+      h("div", cls("hl-section-title"), title) +
+      rows.map((r) => h("div", cls("hl-breed-row"), h("span", cls("hl-breed-k"), esc(r.k)) + h("span", cls("hl-breed-v"), esc(r.v)))).join(""));
+    const breedSameLine = breedSame.fetusRace === breedEgg
+      ? "同种稳定 → 纯血后代 " + esc(breedSame.fetusRace)
+      : "存在混血，后代 " + esc(breedSame.fetusRace);
+    const breedBox = h("div", cls("hl-controls-section"),
+      h("div", cls("hl-section-title"), "育种推演 · 母体 " + esc(breedEgg)),
+      h("p", cls("hl-breed-hint"), "纯本地只读推演（移植自 BioTracker v0.9.9）：预测受精、后代与衍生遗传，可先「看一眼」再决定是否实操。") +
+      breedCard("同种后代", [
+        ["后代种族", breedSame.fetusRace],
+        ["胚型", breedSame.embryoType],
+        ["孕期", breedSame.gestationDays + " 天"],
+        ["卵群均值", breedSame.clutchSizeMean + " (典型 " + breedSame.clutchRange.typical + ")"],
+        ["胚型来源", breedSame.embryoTypeSource],
+        ["结论", breedSameLine],
+      ]) +
+      breedCard("跨种推演（×精灵）", [
+        ["混血后代", breedCross.fetusRace],
+        ["胚型", breedCross.embryoType],
+        ["孕期", breedCross.gestationDays + " 天"],
+        ["卵群均值", breedCross.clutchSizeMean],
+        ["核型标签", breedNucleusTag || "普通混血（双方核型一致）"],
+      ]) +
+      breedCard("受精窗口（精液20 · 1天）", [
+        ["有效精源", breedFert.sources.length],
+        ["受孕率", (breedFert.successChance * 100).toFixed(1) + "%"],
+        ["失败率", (breedFert.failureChance * 100).toFixed(1) + "%"],
+        ["精液倍率", getSpermDoseClutchMultiplier(20).toFixed(2) + "×"],
+      ]) +
+      breedCard("着床窗口", [
+        ["种族着床天数", breedImplantDays.toFixed(1) + " 天"],
+        ["已推进 / 需求", breedImplant.elapsedDays + " / " + breedImplant.requiredDays.toFixed(1) + " 天"],
+        ["剩余", breedImplant.remainingDays.toFixed(1) + " 天"],
+        ["已就绪", breedImplant.ready ? "是" : "否"],
+      ]) +
+      breedCard("衍生遗传（200天 · 母方修炼）", [
+        ["方向", breedDer.direction > 0 ? "正向（母方）" : "负向（父方）"],
+        ["激活类型", breedDer.activeDerivedType || "—"],
+        ["进度", breedDer.nextProgress + " / ±" + 75],
+        ["到判定线", breedDer.wholeDaysToInherit === null ? "—" : breedDer.wholeDaysToInherit + " 天"],
+        ["越线继承", breedDer.inheritedType || "尚未继承"],
+        ["同源亲和种子", "亲和 " + breedSeed.affinity + " / 进度 " + breedSeed.progress],
+      ]) +
+      h("div", cls("hl-breed-foot"), "可选衍生类型 " + DERIVED_TYPE_RACES.length + " 类（流变模型 " + breedFluxCount + " / 代谢豁免 " + breedMetabolicExempt + "）：修炼 / 魔导 / 妖怪 / 神祇 / 不死 / 血族 / 星际 / 机械 / 器灵 / 变异 / 序列 / 兽化")
+    );
+    const body = tab === "needs" ? needBox : (tab === "family" ? familyBox : tab === "medical" ? medicalBox : tab === "breeding" ? breedBox : cycleBody);
     container.innerHTML = h("div", cls("hl-root"), header + tabs + h("main", cls("hl-body"), body));
     this._bindEvents();
   }

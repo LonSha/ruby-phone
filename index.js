@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.57.0';
+const ST_PHONE_VERSION = '2.58.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -103,11 +103,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-21",
     items: [
-        "[新功能] 记忆洞察（Memory Insights）：记忆引擎里早已备好、但界面上**一条都看不到**的六面读数，本版全部做出界面。新增 apps/memory/memory-insights.js 纯函数洞察层——五感归档（消费 MemoryPool.getSensoryArchive，此前全仓零调用）、场景聚合（消费 getSceneTags，此前全仓零调用）、生命周期四段（active/cooling/frozen/tombstone）、换代压制对读（旧↔新配对，压制方缺失如实报 byMissing）、情感轨迹（按天分桶 arousal/importance 均值，空白天不补零）、记忆体检（七类确定性判据 + 可执行建议）。",
-        "记忆 App 视图重构为分页结构：概览 / 五感 / 场景 / 体检 四页 + 时间线常驻；条目行新增降温/冻结/墓碑/已换代徽标，检索结果带回忆权限标签（cite/cautious/associate-only）。控制器 insights() 是单一取数出口，六面逐面独立 try/catch（任一面失败只空该面、不连坐整页）；sleepNow() 为巩固唯一入口，视图不得直摸 core.sleep。",
-        "确立「看一眼 vs 改一把」纪律：洞察层只调纯读的 lifecycleStage()，绝不调会墓碑化清正文的 pruneByLifecycle()（墓碑化是 sleep 巩固管线的副作用，界面渲染绝不触发）——C2 用例锁住「200 天前条目正文原样保留」。",
-        "重写时复发的转义缺陷当场抓回：memory-view 的 _esc 一度把双引号「转义成自身」（等于没转），已修回 HTML 实体，并立 F3 回归锁断言四转义齐备、且禁止「引号到引号」的无效形态。",
-        "新增 tests/system-v257.test.mjs：A-E 组直接 ESM 导入纯内核做真功能测试（非只 grep 源码），F 组源码不变量锁定（消费闭环 / 六面容错 / 转义 / 分页 / 巩固单一入口 / CSS 落点），G 组版本四源同源。"
+        "[新功能] 育种推演（Breeding Simulator）：健康 App 新增第 5 页签「育种」，把上游 Liuuuu54/st_bs_biotracker v0.9.9 的**异种繁殖推演算法链**纯本地移植落地。新增 apps/health/bio-propagation.js 纯算法层——自然受精预测（多精源归属概率 / 受孕率 / 有效精液暴露）、后代预测（胎儿种族 / 胚型 / 孕期 / 卵群规模）、衍生遗传预测（12 类衍生类型遗传进度 / 到判定线天数），全部纯函数只读推演、零 LLM、不写状态。",
+        "卵群规模字典增量缝合：远程 v0.9.9 race_config.RACE_CLUTCH_SIZE_MEANS（25 个多产种族的卵群均值）移植为本地 RACE_CLUTCH_SIZE_MEANS，过滤为仅本地 RACE_PHYSIOLOGY 已存在的种族；getClutchSizeMeanByRace 改为字典优先、回落内置字段——此前本地 RACE_PHYSIOLOGY 无 clutchSizeMean 字段，卵群推演恒退化为 1。",
+        "顺带修复既有 bug：setHealthTab 白名单长期漏了 medical（点击「健康」页签被强制回 cycle），本版补齐全部 5 页签 cycle / needs / medical / family / breeding，并立 F4 回归锁断言。",
+        "确立「看一眼 vs 改一把」纪律的繁殖侧延伸：育种页只用 calculateXxxPreview 纯推演展示「若操作会如何」，不触碰 health-data 任何推进 / 受孕 / 写状态路径——F3 用例锁住 bio-propagation 零 window / DOM / localStorage / openai / fetch 依赖。",
+        "新增 tests/system-v258.test.mjs：A 组直接 ESM 导入纯内核做真功能测试（精液衰减 / 受精 / 后代 / 卵群字典 / 衍生遗传越线 / 混血），F 组源码不变量（算法导出 / 字典注入 / 零退化 / 5 页签白名单 / view 消费闭环），G 组版本四源同源。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

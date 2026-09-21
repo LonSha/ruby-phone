@@ -21,12 +21,6 @@
     },
     {
       "file": "apps/health/bio-engine.js",
-      "name": "MENSTRUAL_STAGE_DAYS",
-      "line": 19,
-      "reason": "同上，周期天数常量，数据面预留。"
-    },
-    {
-      "file": "apps/health/bio-engine.js",
       "name": "HUMAN_PREGNANCY_DAYS",
       "line": 53,
       "reason": "同上，妊娠天数常量，数据面预留。"

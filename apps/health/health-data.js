@@ -735,7 +735,7 @@ export class HealthData {
   }
 
   setHealthTab(tab) {
-    this.healthTab = ['cycle', 'needs', 'family'].includes(tab) ? tab : 'cycle';
+    this.healthTab = ['cycle', 'needs', 'medical', 'family', 'breeding'].includes(tab) ? tab : 'cycle';
     this.saveState();
   }
 

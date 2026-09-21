@@ -108,8 +108,8 @@ return { exportsOf, stripNonCode, unhandledKind, HANDLED_LINE_PATHS, UNHANDLED_A
     // 钉死具体数字会让「加了一个 App」变成门禁红灯（v2.46 加 apps/place/ 时真实踩到）。
     const declN = Number((out.match(/扫描 \d+ 个文件 \/ (\d+) 个 export 声明/) || [])[1] || 0);
     ok('D2 扫描面不少于 E8 时代的 521 声明（E9 不缩面、不退回旧口径）', declN >= 521, String(declN));
-    ok('D3 零消费仍为 25（不新增债务）', /零消费 25/.test(out));
-    ok('D4 基线账本仍为 25 条冻结项', /基线账本：25 条冻结项/.test(out));
+    ok('D3 零消费仍为 24（不新增债务；v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS，账本 25→24）', /零消费 24/.test(out));
+    ok('D4 基线账本仍为 24 条冻结项', /基线账本：24 条冻结项/.test(out));
     ok('D5 判定口径未被放宽（仍打印 ✓ 无新增零消费导出）', /✓ 无新增零消费导出/.test(out));
 }
 
