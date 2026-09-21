@@ -9,7 +9,8 @@
         "projectLedger 增补 opinionDetail / factsDetail 投影；ledgerPromptBlock 增补舆情强度与事实对读两行（差集为空时省略）。新增 showDiff 设置项（默认开）。",
         "view 增补舆情强度条（lg-bar）+ 事实对读明细卡（lg-diff-row/lg-chipx）；phone.css 同步追加 .lg-card/.lg-bar-*/.lg-chipx 段。",
         "会话状态隔离审计：apps.js 桌面图标去重（tieba/dirtytalk/cheat/tarot/chars 5 处重复图标替换为唯一图标）。",
-        "新增 tests/system-v254.test.mjs（A投影 / B注入块 / C视图+CSS / D版本同源）。全量门禁绿。"
+        "[严重缺陷修复] clock-app/ledger-app 的 _initHook 此前误用全仓无定义的桥接钩子且写 payload.systemMessages，主链路 Prompt 注入静默失效；改为 SillyTavern eventSource(GENERATE_BEFORE_COMBINE_PROMPTS) + payload.prompt（与 wallet/place 同源）。",
+        "新增 tests/system-v254.test.mjs（A投影 / B注入块 / C视图+CSS+钩子接线修复 / D版本同源）。全量门禁绿。"
       ]
     },
     "2.53.0": {

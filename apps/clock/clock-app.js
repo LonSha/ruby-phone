@@ -60,19 +60,28 @@ export class ClockApp {
     return clockPromptBlock(this._probe ? this._probe.clock : null);
   }
 
+  _win() {
+    try { return (typeof window !== 'undefined') ? window : globalThis; } catch (_e) { return globalThis; }
+  }
+  /** [v2.55.0 修复] 主链路挂钩：此前误用不存在的 window.ST_API 桥接钩子且 push 到
+   *  systemMessages 字段，导致时计注入块在主链路静默失效；改为与 wallet/place 同源的
+   *  SillyTavern.getContext().eventSource.on(GENERATE_BEFORE_COMBINE_PROMPTS) + payload.prompt。 */
   _initHook() {
     if (this._hookBound) return;
-    this._hookBound = true;
-    const api = window.ST_API || window.StApi || null;
-    if (!api || typeof api.registerHook !== 'function') return;
-    api.registerHook('GENERATE_BEFORE_COMBINE_PROMPTS', (payload) => {
-      try {
-        const blk = this.promptBlock();
-        if (blk && payload && Array.isArray(payload.systemMessages)) {
-          payload.systemMessages.push({ role: 'system', content: blk });
-        }
-      } catch (e) { /* silent */ }
-    });
+    try {
+      const ctx = this._win().SillyTavern?.getContext?.();
+      const es = ctx?.eventSource;
+      const et = ctx?.event_types;
+      if (!es || !et?.GENERATE_BEFORE_COMBINE_PROMPTS) return;
+      es.on(et.GENERATE_BEFORE_COMBINE_PROMPTS, (payload) => {
+        try {
+          if (!payload || !Array.isArray(payload.prompt)) return;
+          const blk = this.promptBlock();
+          if (blk) payload.prompt.push({ role: 'system', content: blk });
+        } catch (_e) { /* 静默失败：生成照常进行 */ }
+      });
+      this._hookBound = true;
+    } catch (_e) { /* 宿主无事件源：不挂钩子 */ }
   }
 
   onChatChanged() {

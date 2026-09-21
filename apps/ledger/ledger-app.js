@@ -54,19 +54,26 @@ export class LedgerApp {
     return ledgerPromptBlock(this._probe ? this._probe.ledger : null);
   }
 
+  _win() {
+    try { return (typeof window !== 'undefined') ? window : globalThis; } catch (_e) { return globalThis; }
+  }
+  /** [v2.55.0 修复] 同 clock：改用 SillyTavern eventSource + payload.prompt（原桥接钩子全仓无定义）。 */
   _initHook() {
     if (this._hookBound) return;
-    this._hookBound = true;
-    const api = window.ST_API || window.StApi || null;
-    if (!api || typeof api.registerHook !== 'function') return;
-    api.registerHook('GENERATE_BEFORE_COMBINE_PROMPTS', (payload) => {
-      try {
-        const blk = this.promptBlock();
-        if (blk && payload && Array.isArray(payload.systemMessages)) {
-          payload.systemMessages.push({ role: 'system', content: blk });
-        }
-      } catch (e) { /* silent */ }
-    });
+    try {
+      const ctx = this._win().SillyTavern?.getContext?.();
+      const es = ctx?.eventSource;
+      const et = ctx?.event_types;
+      if (!es || !et?.GENERATE_BEFORE_COMBINE_PROMPTS) return;
+      es.on(et.GENERATE_BEFORE_COMBINE_PROMPTS, (payload) => {
+        try {
+          if (!payload || !Array.isArray(payload.prompt)) return;
+          const blk = this.promptBlock();
+          if (blk) payload.prompt.push({ role: 'system', content: blk });
+        } catch (_e) { /* 静默失败：生成照常进行 */ }
+      });
+      this._hookBound = true;
+    } catch (_e) { /* 宿主无事件源：不挂钩子 */ }
   }
 
   onChatChanged() {

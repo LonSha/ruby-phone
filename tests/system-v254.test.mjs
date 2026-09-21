@@ -81,6 +81,23 @@ test('C2 phone.css has new segments', () => {
   assert.match(src, /\.lg-chipx/);
 });
 
+test('C3 clock-app uses eventSource hook (not dead ST_API.registerHook)', () => {
+  const src = read('apps/clock/clock-app.js');
+  assert.match(src, /eventSource/);
+  assert.match(src, /payload\.prompt\.push/);
+  assert.ok(!/registerHook/.test(src), 'should not use non-existent registerHook');
+});
+test('C4 ledger-app uses eventSource hook (not dead ST_API.registerHook)', () => {
+  const src = read('apps/ledger/ledger-app.js');
+  assert.match(src, /eventSource/);
+  assert.match(src, /payload\.prompt\.push/);
+  assert.ok(!/registerHook/.test(src), 'should not use non-existent registerHook');
+});
+test('C5 no app uses payload.systemMessages', () => {
+  const src = read('apps/clock/clock-app.js') + read('apps/ledger/ledger-app.js');
+  assert.ok(!/payload\.systemMessages/.test(src));
+});
+
 test('D1 version sync 2.54', () => {
   const v = String(manifest.version);
   assert.ok(v.startsWith('2.54'), 'got ' + v);
