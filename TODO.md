@@ -7,29 +7,19 @@
 
 ## P0 · 缺陷 / 防回归（优先做）
 
-- [ ] **生命周期审计门禁固化**（迭代 3，v2.65.0 目标）
-  - 现状：迭代 1/2 的三个探针（`probe_lifecycle.mjs` / `probe_slots.mjs` / `probe_slots2.mjs`）
-        仅存在于 `/tmp/`，一次性。
-  - 目标：`scripts/lifecycle-audit.mjs` + `scripts/lifecycle-baseline.json`，
-        串进 `npm run check`（与 `syntax` / `test` / `dead-exports` 并列）。
-  - 判据合并两个审计面：**方法出口**（迭代 1）+ **槽位 × 三路径矩阵**（迭代 2）。
-  - **难点（已实测）**：需先建三张白名单，否则常驻假阳性：
-    1. **数组泛化调用**：`releasePhoneInactiveResources()` 的 `appEntries` 数组
-       （wechat / phone / honey / games / music / weibo / diary / calendar / album / mofo / settings）
-       以 `[id, app]` 元组形式间接调用 `deactivate`，静态正则识别不到；
-    2. **更强出口覆盖**：`deactivate` ⊃ `destroy`（如 `honeyApp`）；
-    3. **咽喉点收口**：`gamesApp` / `worldpulseApp` 由 P2/P3 的
-       `reloadPhoneSurface() → retireSessionScopedSlots()` 统一回收，不在本处三路径写字面量。
-  - **区间边界必须精确**：探针首版用近似区间导致 P2 与 P1 重叠、把 P1 的行误算成 P2 命中。
-    P1 的锚点是 `function onChatChanged()` → `function getContext()`（P1 是被调用的函数，不是监听器）。
-  - 附加要求（源自既有教训）：负控制必须是**真源码破坏 → 在破坏副本上重跑同款真判据**，
-    不得对原文件断言、不得把破坏写成模拟常量、判据不得引用锚点串（三种假绿形态）。
+- [ ] **注册联动审计固化**（迭代 4 候选，v2.66.0 目标）
+  - 现状：迭代 1 的 `audit_registrations.mjs`（APPS id ↔ `index.js` 懒加载分支 ↔
+        `config/storage.js` 会话键前缀，三方对账）只在 `/tmp/`，一次性。
+  - 目标：并入 `scripts/lifecycle-audit.mjs` 或另立 `scripts/registry-audit.mjs` 并串进 check。
+  - 难点：`/^ruby_/`、`/^games_*/` 等**宽匹配**覆盖过多，逐项对账会被判「无前缀」；
+        需先把宽匹配展开为等价字面量集合（或允许前缀到 APPS id 的多对一映射）。
 
 ## P1 · 体验 / 一致性
 
 - [ ] **README 版本段落补账**：README 现有段落止于 v2.60.0，v2.61.0（资产 App）/
       v2.62.0（搜索补源 + 覆盖度分页）/ v2.63.0（会话生命周期接线收口）/
-      v2.64.0（槽位审计 + 万象隔离缺口）四段未收录。补账时保持既有「功能小节 + 要点列表」体例。
+      v2.64.0（槽位审计 + 万象隔离缺口）/ v2.65.0（生命周期接线门禁）五段未收录。
+      补账时保持既有「功能小节 + 要点列表」体例。
 - [ ] **`config/storage.js` 会话键前缀宽匹配收紧**：`/^ruby_/` 与 `/^games_*/` 覆盖过多，
       使注册对账审计（APPS id ↔ 键前缀）无法逐项精确核对，长期靠人工辨伪。
       收紧前须先盘点存量键，避免把历史数据判为「无前缀」而误清。
@@ -49,3 +39,18 @@
       `_calendarReminderApp` 回收单一真源（含两处实例覆盖点前置回收）
 - [x] **v2.64.0** 会话级「槽位 × 三路径」审计：修 `wangxiangApp` 只在换会话路径被清理
       （补 `onChatChanged` 并接入 REBIND 单一真源，收敛 P1 重复显式调用）
+- [x] **v2.65.0** 生命周期接线门禁固化：`scripts/lifecycle-audit.mjs`（L1 方法出口 / L2 槽位覆盖 /
+      L3 白名单源码派生 / L4 枚举面自证）+ `tests/system-v265.test.mjs`（10 条，含 5 例真源码破坏）
+
+---
+
+## ⚠️ 事故与纪律（务必遵守）
+
+- **血泪教训（v2.65.0 开发期）**：**绝不对真仓库执行 `cp -al` / 硬链接复制**。
+  本环境该操作会把已跟踪文件替换成指向临时 l2s 收容所名字的符号链接，造成工作区大面积损坏
+  （本次 425 个文件；`git status` 全报 `Operation not permitted`）。
+  - 需要副本做破坏性负控制时：走**夹具通道**（合成最小仓库 + `RP_*_FIXTURE=1`），
+    与 `scripts/dead-export-check.mjs` / `scripts/lifecycle-audit.mjs` 同款；
+  - 确实需要整树副本时先 `tar` 备份，并优先只用判据的真实输入面（如 `index.js` + `apps/**/*-app.js`）；
+  - 恢复路径：`git status` 若只显示 `T`（类型变化）而无 `M`（内容修改），
+    内容可信，可直接 `git checkout -- .` 从索引恢复。

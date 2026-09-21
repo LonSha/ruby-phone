@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.64.0';
+const ST_PHONE_VERSION = '2.65.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,11 +104,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "会话级「槽位 × 三路径」审计（审计面从方法出口下沉到实例槽位）：对每个持实例的 App 槽位，逐条核对换会话 / 清当前数据 / 清全部数据是否都做了回收或重绑；方法级审计漏得掉的形态在此暴露。",
-        "修复万象 App 的会话隔离缺口：它持有整套会话级实例数组（任务 / 委托 / 市场商品 / 订单 / 库存 / 信用余额 / 收货地址），但清理只在换会话路径被显式调用一次，两条清数据路径零处理 —— 清完数据后仍持已删任务与订单。已补 onChatChanged 并接入重绑单一真源。",
-        "按本仓单一真源纪律修法：不往两条路径各补一次手抄调用（那正是 v2.23~v2.55 反复漏改的形态），而是接入 ST_PHONE_REBIND_APP_KEYS，三路自动覆盖；同时把换会话路径里原有的显式调用收敛掉，消除第二条真相与重复执行。",
-        "新增 tests/system-v264.test.mjs（5 条：实例域行为 + 重绑语义 + 单一真源接线 + 覆盖矩阵防回归），v255 A5 登记表同步扩展。",
-        "版本升至 2.64.0。"
+        "新增生命周期接线门禁（scripts/lifecycle-audit.mjs），把连续九版反复修的「会话生命周期接线漏一处」固化为发布门：L1 查「定义了生命周期出口却无任何接线路径」，L2 查「槽位只在换会话路径被回收」。",
+        "白名单从真源码派生而非硬编码：泛化调用清单解析 releasePhoneInactiveResources 的 appEntries 数组，咽喉点清单解析 retireSessionScopedSlots 函数体；派生前提一旦消失即 fail-closed 拒判（exit 2），杜绝白名单腐化成放行条。",
+        "门禁串进 npm run check，与语法门/全量测试/零消费导出门并列；新增 tests/system-v265.test.mjs 做正负控制（夹具仓库 + 真源码破坏 + 退出码断言）。",
+        "开发期修复三处判据自身缺陷（均由负控制逼出）：显式调用正则漏认 `?.()` 形态与局部句柄前缀、函数体抽取依赖缩进假设（改为花括号配平）。",
+        "版本升至 2.65.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
