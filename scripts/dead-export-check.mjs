@@ -157,17 +157,21 @@ const HANDLED_LINE_PATHS = [
  *     ③ **多行对象字面量 9 处**（apps/cheat/cheat-data.js 18 成员、apps/dirtytalk/dt-data.js
  *        26 成员、config/world-bridge.js 10 成员、apps/health/medical-core.js 8 成员…）
  *        ——这些成员名其实是**稳定且有具名的**，把它们一并放行属本白名单的**边界外覆盖**。
- *   为什么 ③ **不**直接纳入枚举（不是懒，是不能）：`export default { A, B }` 的成员是 default
- *     对象的**属性名**，不是模块导出名。消费形态是 `import M from './m.js'; M.A`——按「名字 A
- *     是否在全仓出现」判定消费，命中与 A 无关的同名符号会造成**假阳性**；要准确判定必须解析
- *     default 导入的绑定名再从绑定名取属性，属另一量级的静态分析（需数据流）。
- *     故本版**如实声明这条边界**（而非含糊宣称「均在平台入口」），并把收窄前提记入 TODO。
+ *   为什么 ③ **不**纳入导出枚举（v2.68.0 的理由，v2.73.0 实测**部分证伪**）：
+ *     成员是 default 对象的**属性名**、不是模块导出名，本枚举器（只抽模块导出名）确实不该收
+ *     —— 这一半成立；但当时据以拒绝的**代价判断错了**。原文写「消费形态是 `import M from
+ *     './m.js'; M.A`，要准确判定必须解析 default 导入的绑定名，属另一量级的静态分析（需数据
+ *     流）」；v2.73.0 实测指向这些模块的 **default 导入点为 0**，成员消费**全走具名 import**，
+ *     指向它们的 `.default` 访问**只出现在测试里** ⇒ **可静态对账、不需要数据流分析**。
+ *     v2.73.0 据此新增 **E11（default 面的消费通道对账，见下）**：属性名仍不进导出枚举
+ *     （分工不变），但 default 面的**消费通道**另立判据并逐条对账进 TEST_ONLY_DEFAULT_LEDGER。
+ *     故 ③ 已不再属于「边界外覆盖」——边界说明保留在此，账目由 E11 承担。
  *   E10（v2.68.0）**条目存活自证**：白名单里每一条都必须在真仓库里至少认领到 1 条语句，
  *   否则它已不指向任何真实存在的东西——继续留着就是为「不存在的情形」背书（幽灵放行条）。
  *   与 lifecycle 的「派生前提消失即 fail-closed」同族：准入清单的合法性来自「它确实在放行某物」。 */
 const UNHANDLED_ALLOWLIST = [
   { label: 'export-default', re: /^\s*export\s+default\b/,
-    why: '默认导出无稳定名字可对账（平台入口/单例位），本门禁刻意不处理；全仓公开面均由具名导出承载' }
+    why: '默认导出无稳定名字可对账（平台入口/单例位），故不进导出枚举；其上的具名成员不在此放行范围——按【消费通道】另由 E11 对账（见 TEST_ONLY_DEFAULT_LEDGER）' }
 ];
 function unhandledKind(line) {
   for (const p of HANDLED_LINE_PATHS) if (p.re.test(line)) return null;   // 已被某条抽取路径命中
@@ -467,6 +471,259 @@ if (!FIXTURE_MODE) {
   }
 }
 
+/* ---------- E11：default 面的消费通道对账（v2.73.0）----------
+ * 为什么必须有：UNHANDLED_ALLOWLIST 放行 `export default` 的依据是「无具名成员可对账」。
+ *   v2.73.0 实测该依据**只对 76/90 处成立**：另有 17 处带具名成员（多行对象 9 + 单行对象 8），
+ *   其中 2 个模块的 default 面是**产品端零消费、仅测试经 `.default` 取**
+ *   （apps/cheat/cheat-data.js 的 QUALITY_META / QUALITY_ORDER、
+ *     apps/dirtytalk/dt-data.js 的 TIER_META / TIER_ORDER）。
+ *   这正是本仓六次欠债的共同形态（「只有测试引用 = 产品端零消费」），却因整条
+ *   `export default` 被白名单放行，**既不报红灯、也不进账本** = 白名单的边界外覆盖。
+ *   本仓纪律：如实声明边界不算过关，边界的**每一条都要能自证**。
+ * 判定（三面，全部基于可复算的静态事实，不猜运行时）：
+ *   D2 登记：模块 M 上若存在经 `.default` 取的成员，而 M 的**产品侧通道为 0**
+ *      （无 default 导入点 · 无 `import * as` · 无本文件 `window|self|globalThis.X =`），
+ *      则该 (模块, default.成员) 必须进 TEST_ONLY_DEFAULT_LEDGER，否则报红灯。
+ *      报错时附带成员「有无依据」（真具名导出 / default 对象成员 / 别名）——成员名拼错的
+ *      phantom 访问点会在这里现形（否则它会静默取到 undefined）。
+ *   D3 存活自证：账本每条必须在真仓库里命中 ≥1 个 `X.default.Y` 访问点，0 命中即 exit 2
+ *      （幽灵放行条，与 E10 同族）。
+ *   D4 成员存在性：账本条的成员必须仍有依据；成员被删/改名 ⇒ 账本腐坏，exit 2
+ *      （堵「删掉成员 + 留着账本」的假绿）。
+ *   ⚠️ 刻意**没有**一条独立的「访问点无依据」判据：它永远轮不到自己决定结果
+ *      （未登记的访问点先被 D2 抓住，已登记的先被 D4 抓住），留着就是一个不起决定作用的
+ *      死判据——本仓对「写了却无效」的形态零容忍。成员依据只作为 D2 的报错信息与 D4 的
+ *      判据存在，各司其职。
+ *   ⚠️ D3/D4 只对「模块本身在本仓扫描面内」的账本条目生效：合成夹具里不存在真仓库的模块，
+ *      此时属**无从观测**而非「零命中」——让观测不到伪装成判死是另一种不诚实。
+ * 夹具通道：--root <dir> 指向的合成仓库同样生效（负控制靠它造真破坏）。
+ *   测试目录名固定为 `tests`；该目录缺失时不判 D2/D3（无从观测），但账本非空仍会因
+ *   D3 零命中而 exit 2 —— 不让「观测不到」伪装成「没问题」。 */
+let failE11 = false;
+const TEST_ONLY_DEFAULT_LEDGER = [
+  { module: 'apps/cheat/cheat-data.js', member: 'QUALITY_META',
+    reason: '别名导入（CHEAT_QUALITY_META as QUALITY_META）只经 default 对象外露；产品侧只用 qualityColorOf/qualityOrderOf，故产品端零消费。守的是与 cheat-index 的数值漂移，不要求产品接线' },
+  { module: 'apps/cheat/cheat-data.js', member: 'QUALITY_ORDER',
+    reason: '同上（对标 CHEAT_QUALITY_ORDER 的逐项等价）' },
+  { module: 'apps/dirtytalk/dt-data.js', member: 'TIER_META',
+    reason: '同上族：dt 侧品阶表只经 default 对象外露，产品侧零消费；测试守与 cheat 侧六档的一致' },
+  { module: 'apps/dirtytalk/dt-data.js', member: 'TIER_ORDER',
+    reason: '同上（对标 TIER_ORDER 的逐项等价）' },
+];
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// 收集 default 对象字面量的成员名（`export default { A, B, … }`，单行与多行）
+function defaultObjectMembers(src) {
+  const out = [];
+  const lines = src.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const multi = /^\s*export\s+default\s*\{\s*$/.test(lines[i]);
+    const single = !multi && /^\s*export\s+default\s*\{[\s\S]*\}\s*;?\s*$/.test(lines[i]);
+    if (!multi && !single) continue;
+    let body;
+    if (single) body = lines[i].replace(/^\s*export\s+default\s*\{/, '').replace(/\}\s*;?\s*$/, '');
+    else { body = ''; for (let j = i + 1; j < lines.length; j++) { if (/^\s*\};?\s*$/.test(lines[j])) break; body += lines[j] + ','; } }
+    for (const part of body.split(',')) {
+      const s = part.trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(s)) out.push(s);
+    }
+  }
+  return out;
+}
+// 本文件内的「别名名集合」：`import { X as Y }` 的 Y、`const { X: Y } = …` 的 Y
+//   ⚠️ 输入是**剔字符串后**的真代码（E6/E8 纪律：判据的输入面与结论面同一份），
+//   故 `from '...'` 的引号已被置空 —— import 块的正则**不能要求带引号的 specifier**，
+//   否则一条别名都匹配不到（v2.73.0 踩过：成员依据被误判为「无依据」，账本校验假红）。
+function aliasNames(src) {
+  const s = new Set();
+  for (const m of src.matchAll(/import\s*\{([\s\S]*?)\}\s*from\b/g)) {
+    for (const p of m[1].split(',')) {
+      const parts = p.trim().split(/\s+as\s+/);
+      if (parts[1] && /^[A-Za-z_$][\w$]*$/.test(parts[1].trim())) s.add(parts[1].trim());
+    }
+  }
+  for (const m of src.matchAll(/(?:const|let|var)\s*\{([\s\S]*?)\}\s*=/g)) {
+    for (const p of m[1].split(',')) {
+      const parts = p.trim().split(/:\s*/);
+      if (parts[1] && /^[A-Za-z_$][\w$]*$/.test(parts[1].trim())) s.add(parts[1].trim());
+    }
+  }
+  return s;
+}
+// 模块 M 的产品侧通道是否存在（default 导入点 / import * as / 本文件 window 自挂载）
+//   ⚠️ 这里刻意用**原文**（texts）而不是剔除后的真代码：import 的 specifier 本身就是字符串，
+//   剔除后无法判断它指向哪个模块。残留风险（注释里恰好写着一条 import）在形态上极小，
+//   且后果方向安全（只会让某面被当作「有产品通道」而不报红灯，不会造成误报红灯）。
+function hasProdChannel(moduleRel) {
+  const own = codeTexts.get(moduleRel);
+  if (typeof own === 'string' && /\b(?:window|self|globalThis)\s*\.\s*[A-Za-z_$]/.test(own)) return true;
+  const base = path.basename(moduleRel).replace(/\.js$/, '');
+  const reDef = new RegExp("^\\s*import\\s+[A-Za-z_$][\\w$]*\\s*(?:,\\s*\\{[^}]*\\})?\\s+from\\s+['\"][^'\"]*" + escRe(base) + "\\.js['\"]", 'm');
+  const reStar = new RegExp("^\\s*import\\s+\\*\\s+as\\s+[A-Za-z_$][\\w$]*\\s+from\\s+['\"][^'\"]*" + escRe(base) + "\\.js['\"]", 'm');
+  for (const f of files) {
+    const t = texts.get(f.rel);
+    if (typeof t !== 'string' || !t.includes(base)) continue;
+    if (reDef.test(t) || reStar.test(t)) return true;
+  }
+  return false;
+}
+// 成员 Y 是否在模块 M 里有依据（真具名导出 / default 对象成员 / 别名）
+function memberBackedBy(moduleRel, member) {
+  const src = codeTexts.get(moduleRel);
+  if (typeof src !== 'string') return null;                 // 不在扫描面：无从判定，返回 null 表示「不猜」
+  if (exportsOf(src).some((e) => e.name === member)) return true;
+  if (defaultObjectMembers(src).includes(member)) return true;
+  if (aliasNames(src).has(member)) return true;
+  return false;
+}
+// 账本条目的**严格**依据：必须是真具名导出或别名。
+//   刻意**不含**「default 对象成员」——账本条目说的就是 default 面的成员，
+//   拿 default 面自己引用自己当依据是自我指涉：成员被删后 default 面若仍写着它，
+//   宽松判定会继续判「有依据」，账本腐坏就永远抓不到（正是本仓最忌的自证形态）。
+function strictMemberBacked(moduleRel, member) {
+  const src = codeTexts.get(moduleRel);
+  if (typeof src !== 'string') return null;
+  if (exportsOf(src).some((e) => e.name === member)) return true;
+  if (aliasNames(src).has(member)) return true;
+  return false;
+}
+// 收集 tests 下的 `X.default.Y` 访问点，并把绑定名解析回模块
+function collectTestDefaultAccesses(rootDir) {
+  const out = [];
+  const testsDir = path.join(rootDir, 'tests');
+  if (!fs.existsSync(testsDir)) return out;
+  const stack = [testsDir];
+  const testFiles = [];
+  while (stack.length) {
+    const d = stack.pop();
+    let ents = [];
+    try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of ents) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) stack.push(p);
+      else if (/\.m?js$/.test(e.name)) testFiles.push(p);
+    }
+  }
+  for (const tf of testFiles) {
+    let src;
+    try { src = fs.readFileSync(tf, 'utf8'); } catch { continue; }
+    const lines = src.split('\n');
+    const bindTo = new Map();
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      let m = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]\s*\)/.exec(l);
+      if (m) { bindTo.set(m[1], m[2]); continue; }
+      if (/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+import\(\s*(?:path\.)?join\(/.test(l)) {
+        let acc = l, k = i;
+        while (!/\.js['"]\s*\)/.test(acc) && k + 1 < lines.length) acc += ' ' + lines[++k];
+        const mm = /['"]([^'"]+\.js)['"]/.exec(acc);
+        const bm = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/.exec(l);
+        if (mm && bm) bindTo.set(bm[1], mm[1]);
+        continue;
+      }
+      m = /^\s*import\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+['"]([^'"]+)['"]/.exec(l);
+      if (m) { bindTo.set(m[1], m[2]); continue; }
+      m = /^\s*import\s+([A-Za-z_$][\w$]*)\s+from\s+['"]([^'"]+)['"]/.exec(l);
+      if (m) { bindTo.set(m[1], m[2]); continue; }
+    }
+    const relOfTest = path.relative(rootDir, tf).split(path.sep).join('/');
+    for (let i = 0; i < lines.length; i++) {
+      for (const mm of lines[i].matchAll(/\b([A-Za-z_$][\w$]*)\s*\.\s*default\s*\.\s*([A-Za-z_$][\w$]*)/g)) {
+        const spec = bindTo.get(mm[1]);
+        if (!spec) continue;
+        const moduleRel = resolveSpec(rootDir, relOfTest, spec);
+        if (!moduleRel) continue;
+        out.push({ testRel: relOfTest, line: i + 1, bind: mm[1], moduleRel, member: mm[2] });
+      }
+    }
+  }
+  return out;
+}
+function resolveSpec(rootDir, fromRel, spec) {
+  if (/\.js$/.test(spec) && !spec.startsWith('.')) {
+    // path.join(root, 'apps/x.js') 形态：已是 root 相对
+    const abs = path.resolve(rootDir, spec);
+    const r = path.relative(rootDir, abs);
+    return r.startsWith('..') ? null : r.split(path.sep).join('/');
+  }
+  if (!spec.startsWith('.')) return null;                   // 裸包名，不属本仓
+  const fromDir = path.dirname(path.join(rootDir, fromRel));
+  const abs = path.resolve(fromDir, spec);
+  const r = path.relative(rootDir, abs);
+  return r.startsWith('..') ? null : r.split(path.sep).join('/');
+}
+
+const defaultAccesses = collectTestDefaultAccesses(root);
+if (args.includes('--e11-dump')) {
+  console.log(`[dead-export] E11 访问点明细：${defaultAccesses.length} 个`);
+  for (const a of defaultAccesses) {
+    const modOk = codeTexts.has(a.moduleRel);
+    const chan = modOk && hasProdChannel(a.moduleRel);
+    console.log(`  ${a.testRel}:${a.line}  ${a.bind}.default.${a.member}  → ${a.moduleRel}` +
+      `  [在扫描面 ${modOk ? 'Y' : 'N'} · 产品通道 ${chan ? '有' : '无'} · 成员依据 ${memberBackedBy(a.moduleRel, a.member)}]`);
+  }
+  process.exit(0);
+}
+const testOnlyFaces = new Map();     // 'module::member' → 访问点数
+for (const a of defaultAccesses) {
+  if (isExternalConsumer(a.moduleRel)) continue;            // 外部平台消费域豁免
+  if (!codeTexts.has(a.moduleRel)) continue;                // 不在扫描面（如 tests 内模块）
+  if (hasProdChannel(a.moduleRel)) continue;                // 产品侧有通道 ⇒ 不是仅测试消费
+  const k = a.moduleRel + '::' + a.member;
+  testOnlyFaces.set(k, (testOnlyFaces.get(k) || 0) + 1);
+}
+const ledgerKeys = new Set(TEST_ONLY_DEFAULT_LEDGER.map((e) => `${e.module}::${e.member}`));
+const unregisteredFaces = [...testOnlyFaces.keys()].filter((k) => !ledgerKeys.has(k));
+if (unregisteredFaces.length) {
+  failE11 = true;
+  console.error(`[dead-export] ✗ 发现 ${unregisteredFaces.length} 个「仅测试消费的 default 面」未登记：`);
+  for (const k of unregisteredFaces) {
+    const [mod, mem] = k.split('::');
+    const backed = memberBackedBy(mod, mem);
+    console.error(`    ${k}  （${testOnlyFaces.get(k)} 个 .default 访问点）`
+      + (backed === false ? '  ⚠️ 该成员在模块里找不到依据——成员名拼错/已改名（.default 访问会取到 undefined）' : ''));
+  }
+  console.error('  含义：该成员在产品端零消费、只有测试经 `.default` 取它——正是本仓欠债的共同形态，' +
+    '只因整条 export default 被白名单放行而既不报红灯也不进账本。');
+  console.error('  修法二选一：① 产品端真接线（用它，或把它接进真实代码路径）；' +
+    '② 若它刻意只为「一致性守卫」而存在，登记进 TEST_ONLY_DEFAULT_LEDGER 并写明理由。');
+}
+const ledgerHits = new Map(TEST_ONLY_DEFAULT_LEDGER.map((e) => [`${e.module}::${e.member}`, 0]));
+for (const a of defaultAccesses) {
+  const k = a.moduleRel + '::' + a.member;
+  if (ledgerHits.has(k)) ledgerHits.set(k, ledgerHits.get(k) + 1);
+}
+// D3/D4 合并为**一个**账本校验（两条归因，而非两条判据）：
+//   为什么合并——若拆成两条独立判据，「成员无依据」那条永远抢不到决定权：
+//   成员名一旦改错/消失，同一条目的 `.default` 访问点通常也随之归零 ⇒ 先被「零命中」拦下，
+//   「成员依据」判据永不决定结果，就是一个写了却无效的死判据（本仓零容忍）。
+//   合并后两个分支都可达、都可被负控制证明（见 system-v273 N4 / N4b）。
+//   只对「模块在本仓扫描面内」的条目生效：夹具/子集仓库里模块不存在 = 无从观测，
+//   不是「零命中」——让观测不到伪装成判死，是与漏报对称的不诚实。
+const observableLedger = TEST_ONLY_DEFAULT_LEDGER.filter((e) => codeTexts.has(e.module));
+const ledgerProblems = [];
+for (const e of observableLedger) {
+  const k = `${e.module}::${e.member}`;
+  const hits = ledgerHits.get(k) || 0;
+  if (hits === 0) {
+    ledgerProblems.push({ k, kind: 'no-hit',
+      msg: '在真仓库里**零命中**（不再有测试经 .default 取它）⇒ 已退化为幽灵放行条' });
+  } else if (strictMemberBacked(e.module, e.member) === false) {
+    ledgerProblems.push({ k, kind: 'gone',
+      msg: `有 ${hits} 个 .default 访问点，但该成员在模块里已找不到依据（真具名导出 / 别名均无）` +
+        '⇒ 账本腐坏 / 成员被删改名' });
+  }
+}
+if (ledgerProblems.length) {
+  console.error(`[dead-export] default 面账本校验失败：${ledgerProblems.length} 条 TEST_ONLY_DEFAULT_LEDGER 项失效` +
+    ' —— fail-closed 拒判：');
+  for (const p of ledgerProblems) console.error(`    ${p.k}  ${p.msg}`);
+  console.error('  修法：① 该面已不再被测试消费 ⇒ 删掉这条账本；' +
+    '② 成员已接线到产品端 ⇒ 同样删掉（它不再是「仅测试消费」）；③ 成员改名/删除 ⇒ 同步修正账本条目。');
+  process.exit(2);
+}
+const testOnlyLedgerTotal = TEST_ONLY_DEFAULT_LEDGER.length;
+const testOnlyHitsTotal = [...ledgerHits.values()].reduce((a, b) => a + b, 0);
+
 /* ---------- E5 结构健康：扫描面低于下限即探测器失效 ---------- */
 if (!FIXTURE_MODE && totalExports < MIN_EXPORTS) {
   console.error(`[dead-export] 只抽到 ${totalExports} 个 export 声明（低于下限 ${MIN_EXPORTS}），` +
@@ -520,7 +777,7 @@ if (updateMode) {
 }
 
 /* ---------- 判定 ---------- */
-let fail = 0;
+let fail = failE11 ? 1 : 0;
 console.log(`[dead-export] 扫描 ${stat.files} 个文件 / ${stat.exports} 个 export 声明` +
   `（内部消费 ${stat.internal} · 跨文件消费 ${stat.crossFile} · 零消费 ${dead.length}）`);
 console.log(`[dead-export] 基线账本：${baseline.entries.length} 条冻结项`);
@@ -529,6 +786,16 @@ if (!FIXTURE_MODE) {
   console.log(`[dead-export] 枚举面完整性：${handled.total} 条 export 语句全部被识别` +
     `（声明 ${handled.decl} · 成块 ${handled.block} · 解构 ${handled.destruct} · ` +
     `无具名成员 ${handled.allowed}）· 未识别 ${unhandled.length}`);
+}
+// E11（v2.73.0）：default 面的消费通道对账（补白名单边界外的漏面）
+//   读数里区分「本仓模块 / 非本仓扫描面」：测试用例里出现的合成夹具路径（如 apps/x/m.js）
+//   会被同一个正则采集到，但它们不在本仓扫描面、也不参与登记判定——把它们混进总数
+//   会让读数看着像漂移（下一次维护者会怀疑数字错了），故如实拆开报。
+{
+  const inScopeAcc = defaultAccesses.filter((a) => codeTexts.has(a.moduleRel)).length;
+  console.log(`[dead-export] default 面（E11）：.default 访问点 ${defaultAccesses.length} 个` +
+    `（本仓 ${inScopeAcc} / 非本仓扫描面 ${defaultAccesses.length - inScopeAcc}）· ` +
+    `仅测试消费面 ${testOnlyFaces.size} 个 · 账本 ${testOnlyLedgerTotal} 条（命中 ${testOnlyHitsTotal} 次）`);
 }
 
 if (stale.length) {

@@ -330,3 +330,28 @@
 * **抽取面纯度 + 结构性收编**：只认 storage 句柄上的读写（宽口径会把 `Map.get('active')` 这类状态标记当成键，实测 86 个里 40 个假阳性）；排除 `scripts/`（那里是描述不是使用）；排除形似键名的 JSON 字段（`WORTH_KEY = 'worth'` 读的是 `stock.worth`）。同时**收编本地包装层**（`const get = (key) => storage?.get?.(key)` 之后的裸 `get('...')`），否则真键会被误报成「登记失效」——收编后新暴露 3 个此前完全未被枚举的真键。
 * **测试**：`tests/system-v269.test.mjs`（16 条：正控制 3 + 负控制 8 + 纯度与接线自证 5）。负控制全程走「真源码破坏（锚点恰中 1 次）→ 临时副本 → `--root` 指向真仓库（只读）」通道。
 * **同轮修复两类判据缺陷**：① 四处 items 同源判据（v253/v254/v255/v256）原用「剥引号 / 全局取引号」实现，隐含假设「条目内不含引号」——内容含 `.get("active")` 这类写法时会劈段错位（假红灯），条目跨行时还会漏比（假绿灯）；已全部改为 JSON.parse 真解析并加守卫测试。② v268-N6 原依赖「当版公告里的散文串」当伪证据，换公告即失效；已改为**夹具自造证据**，并给注册门补「夹具可覆盖豁免清单」通道，使该机制在合成仓库上也能被负控制覆盖。
+## 🩺 生理状态交接适配层 (v2.70.0)
+* **补上「生成后回写」这半条链**：健康 App 此前只有「生成前注入」一条链——本地状态单向喂给模型，正文里已经发生的饮水 / 进食 / 如厕 / 睡眠 / 病症与时间流逝**没有任何回写通道**，状态只能靠手动按钮推进。本版新增 `apps/health/health-state-bridge.js`，回复落地后提取 `<state_handoff>` 交接块，把已发生事实投递给本地确定性状态机。
+* **事实校验铁律**：只认**已发生事实**。未知类型、缺字段、超限数值一律拒绝；说明里出现意图/未完成标记（打算、希望、没能…）的条目按「**愿望不是事实**」拒绝；畸形输入降级不抛，绝不阻断消息渲染（本仓「不抛」纪律）。
+* **确定性投递边界**：交接层只能调用 `HealthData` 既有方法（`applyNeed` / `addCondition` / `removeCondition` / `advanceHours`），**不能**直接覆盖周期日、孕周、胎儿等本地状态机字段。部分缓解类事实（喝了一口水）只入账不投递，避免被误判成全量清零。
+* **交接账本 `ruby_health_handoff`**：去重 + 50 条上限，作为会话隔离键同步登记进 `config/storage.js` 与 keys 门禁登记表（13 个 `ruby_` 键逐一显式枚举），换会话不串味。
+* **测试**：`tests/system-v270.test.mjs`——提取 / 剥离 / 校验 / 确定性应用 / 部分缓解 / 账本去重与上限 / 端到端 / 存储归属 / 接线自证 / 版权纯度。
+## 🧰 工具调用中的最终回复正文提取 (v2.71.0)
+* **静默错数据，而非崩溃**：`ApiManager` 此前只认 `choices[0].delta.content` 一族字段。当上游按 OpenAI function calling / Gemini `functionCall` 协议把最终回复装进**工具调用**里（本仓常见的 `emit_complete_response` 约定）时，标准 `content` 通道是**空的**——配了工具调用预设的用户，微信 / 蜜语 / 微博等所有走 `apiManager.callAI` 的 App 会拿到空文本并报「API 返回内容为空」。
+* **零依赖纯函数模块 `config/tool-call-content.js`**：`extractToolCallFragments` 覆盖 OpenAI `tool_calls`、旧版 `function_call`、Gemini `functionCall` 三种协议形态与 `payload.data` 外层包裹；`mergeToolCallFragments` 按 index 合并跨分片调用（流式 `arguments` 增量累积、完整态覆写）；`extractFinalResponseToolContent` 识别最终回复约定名并取出正文（字符串 / parts 数组两种形态）。
+* **四处接线，全部保持「正文通道优先」**：`_extractStreamContent` 返回值追加 `toolCalls`；`_parseApiResponse` 流式分支与非流式 content 候选各接一处；`_parseChunkedApiText` 与 `_readUniversalStream` 在收尾时用累积的调用表兜底。正文通道非空时**永远不**走工具调用兜底，避免两种通道同时存在时行为漂移。
+* **测试**：`tests/system-v271.test.mjs`——工具名识别 / 三种协议形态 / 流式累积与完整态覆写语义 / 端到端兜底 / 四处接线自证 / 版权纯度（无水印、无网络请求、无 npm 依赖）。
+## 📐 表格更新锚点 (v2.72.0)
+* **把「落后几楼」从不可见变为可读**：新增 `config/update-gap.js`（零依赖纯函数模块），用 `chatMetadata + sendDate + swipeId` 三元组记住表格最后一次更新落在哪一楼；`readUnupdatedFloorCount` 只数锚点楼之后的 **AI 楼**（user 楼与系统楼不计）。
+* **锚点失效三态，绝不给出错数**：删楼 / `sendDate` 变 / `swipeId` 变**任一命中即返回 `null`**——锚点楼被删或那条回复被换成另一条时，读数返回「未知」而不是一个错数。缺口数可以错，**错的方向必须是「不知道」而不是「已追平」**。
+* **scope 隔离 + 幂等 + 上限**：同一顶层键下按 scope 分表，多个表格 App 各记各的锚点不串账，且带 scope 的调用方不会读到旧版裸锚点；同 `{floorId,sendDate,swipeId}` 重复记不触发 `saveMetadataDebounced`；超过 50 份按 `floorId` 淘汰最旧。
+* **三态读数**：`unknown`（锚点失效，需重建）/ `clear`（已追平）/ `behind`（落后 N 楼）——把「没有读数」与「读数为 0」分成两种东西。向后兼容旧版裸锚点，升级不清历史数据。
+* **测试**：`tests/system-v272.test.mjs`——锚点记读闭环 / 三类失效判定 / 计数口径 / scope 隔离 / 幂等 / 上限收敛 / 三态读数 / 畸形输入不抛 / 旧版兼容 / 负控制 / 版权纯度。
+## 🕳️ default 面的消费通道对账 (v2.73.0)
+* **治理「白名单的边界外覆盖」**：`UNHANDLED_ALLOWLIST` 只放行 `export default` 的**写法形态**，不覆盖其上的**具名成员**。v2.68.0 写下的理由是「9 处多行对象字面量的成员须数据流分析才能对账」——于是这批成员**既不报红灯、也不进账本**，与既有六次欠债同形：*有机制、有账目，但账目覆盖不到它*。
+* **先把立论证伪再动手**（本版最有价值的一步）：TODO 称消费形态为 `import M from './m.js'; M.A`。实测指向这 9 处多行 default 对象的 **default 导入点为 0 / 9**，成员消费**全走具名 import**；全仓真正经 `.default` 取成员的只有 **6 个访问点 / 2 模块 / 4 成员**，**且只在测试里**。⇒ 该缺口**可静态对账、不需要数据流分析**，原「不能做」的结论建立在错误前提上（TODO 已据实改写归档）。
+* **新增 dead-export E11（两面判据，全部基于可复算的静态事实）**：① **登记**——模块的产品侧通道为 0（无 default 导入点 · 无 `import * as` · 无本文件 `window|self|globalThis.X =`）而存在经 `.default` 取的成员时，该 `(模块, default.成员)` 必须进 `TEST_ONLY_DEFAULT_LEDGER`，否则报红灯（报错附「成员有无依据」，使成员名拼错的 **phantom 访问点**当场现形）；② **账本校验**——条目须仍命中 ≥1 个访问点（零命中 = **幽灵放行条**）且成员须仍有依据（= **账本腐坏**），两条归因同处一个校验，fail-closed（`exit 2`）。
+* **账本 4 条冻结项**：`apps/cheat/cheat-data.js::QUALITY_META` `::QUALITY_ORDER`、`apps/dirtytalk/dt-data.js::TIER_META` `::TIER_ORDER`——消费形态是**别名导入**只经 default 对象外露，产品侧只用 `qualityColorOf` / `qualityOrderOf`，故产品端零消费；测试守的是与 `cheat-index` 的**数值漂移**。
+* **审计器自身三条缺陷被负控制抓出并修掉**：① `aliasNames` 跑在**剔字符串后**的真代码上而 import 的 `from '…'` 引号已置空 ⇒ 一条别名都匹配不到（**假红**），改为不依赖引号；`hasProdChannel` 同理改用**原文**扫描；② 初版另有一条独立的「访问点无依据」判据，**结论永远轮不到自己决定**（死判据）⇒ 删除并配 `v273-S2` 守卫；③ 账本成员依据**刻意不含**「default 对象成员」（**自我指涉** ⇒ 成员被删后账本腐坏永远抓不到），改用 `strictMemberBacked` 并配 `v273-S1` 守卫。
+* **观测不到 ≠ 判死**：只对「模块在本仓扫描面内」的账本条目生效；夹具里模块不存在属**无从观测**，不判 fail-closed。诊断面 `--e11-dump` 分开报告「本仓访问点 / 非本仓扫描面」，防夹具字面量混进主读数。
+* **测试**：`tests/system-v273.test.mjs`（14 条：正控制 4 + 负控制 8 + 结构锁 2）。负控制沿用本仓三形态假绿纪律：真源码破坏（锚点恰中 1 次）→ 加载破坏副本 → 在副本上重跑同款真判据；夹具只写 `os.tmpdir()`，**绝不**复制真仓库文件树、**绝不**对真仓库写字节。
