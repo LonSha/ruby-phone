@@ -1,15 +1,16 @@
 {
   "name": "ruby-phone",
-  "version": "2.68.0",
+  "version": "2.69.0",
   "private": true,
   "type": "module",
   "description": "工程配置，仅供本地/CI 校验使用。SillyTavern 扩展清单见 manifest.json；本文件不参与运行时加载，且刻意不声明任何依赖（避免宿主尝试安装）。",
   "scripts": {
-    "check": "npm run syntax && npm run test && npm run dead-exports && npm run lifecycle && npm run registry",
+    "check": "npm run syntax && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys",
     "syntax": "node scripts/syntax-check.mjs",
     "test": "node --test tests/*.test.mjs",
     "dead-exports": "node scripts/dead-export-check.mjs",
     "lifecycle": "node scripts/lifecycle-audit.mjs",
-    "registry": "node scripts/registry-audit.mjs"
+    "registry": "node scripts/registry-audit.mjs",
+    "keys": "node scripts/keys-audit.mjs"
   }
 }

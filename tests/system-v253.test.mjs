@@ -136,7 +136,12 @@ test('D4 current-update items match log', () => {
   const logItems = log.versions[String(manifest.version)].items;
   const m = src.match(/const ST_PHONE_CURRENT_UPDATE = \{([\s\S]*?)\n\};/);
   assert.ok(m, 'current-update block not found');
-  const strs = [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]).filter((s) => s !== log.versions[String(manifest.version)].date);
+  // [v2.69.0 修复] 原用 /"([^"]+)"/g 全局取引号内容：条目内自带引号（如 ".get(\"active\")"）
+  //   会把一条 item 劈成多段 ⇒ strs 错位 ⇒ 假红灯。改为逐行 JSON.parse 真解析字符串字面量。
+  const strs = m[1].split('\n').map((l) => l.trim())
+    .filter((l) => l.startsWith('"'))
+    .map((l) => JSON.parse(l.replace(/,\s*$/, '')))
+    .filter((s) => s !== log.versions[String(manifest.version)].date);
   assert.equal(strs.length, logItems.length);
   for (let i = 0; i < logItems.length; i++) assert.equal(strs[i], logItems[i]);
 });

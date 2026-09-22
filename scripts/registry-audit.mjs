@@ -77,6 +77,14 @@ if (rootIdx >= 0 && !fs.existsSync(root)) {
 const read = (rel) => {
   try { return fs.readFileSync(path.join(root, rel), 'utf8'); } catch { return null; }
 };
+/* ---------- 最小计数闸（结构守卫用）----------
+ * 口径：夹具模式只放宽「最低计数」，**不放宽结构锚点**（数组边界、白名单派生、机制判定）。
+ *   v2.69.0 把原先散落四处的内联数字集中为常量，使「放宽了什么」一眼可见；
+ *   这也让负控制能显式地把阈值调到 1 来在合成仓库上复现机制路径（见 system-v268 的 N6）。 */
+const MIN_APPS = FIXTURE_MODE ? 1 : 30;
+const MIN_BRANCHES = FIXTURE_MODE ? 1 : 30;
+const MIN_PREFIXES = FIXTURE_MODE ? 1 : 20;
+const MIN_CSS = FIXTURE_MODE ? 1 : 15;
 
 /* ---------- R2 白名单：真正「能匹配多个字面键」的宽匹配条目（新增必须登记理由）----------
  * 口径：只看**量词 / 字符类 / 分组 / 或 / 通配**（`\d` `[...]` `(...)` `|` `*` `+` `?` `.`）。
@@ -132,15 +140,15 @@ const prefixes = [...prefixBody.matchAll(/\/\^([^/]+)\//g)].map((m) => m[1]);
 
 /* ---------- R3：结构自证 ---------- */
 if (!FIXTURE_MODE) {
-  if (appIds.length < 30) {
+  if (appIds.length < MIN_APPS) {
     console.error(`[registry] 只解析到 ${appIds.length} 个 APPS id（低于下限 30）—— 枚举器或数组结构已失效，fail-closed 拒判`);
     process.exit(2);
   }
-  if (branchIds.length < 30) {
+  if (branchIds.length < MIN_BRANCHES) {
     console.error(`[registry] 只解析到 ${branchIds.length} 个懒加载分支（低于下限 30）—— fail-closed 拒判`);
     process.exit(2);
   }
-  if (prefixes.length < 20) {
+  if (prefixes.length < MIN_PREFIXES) {
     console.error(`[registry] 只解析到 ${prefixes.length} 条会话键前缀（低于下限 20）—— fail-closed 拒判`);
     process.exit(2);
   }
@@ -173,9 +181,21 @@ const deadWide = FIXTURE_MODE ? []
  *   实测本仓**并存两种投递机制**，且都是有意为之。若只认 phone.css，会把四个自注入 App
  *   判成缺口（假阳性）。判据必须覆盖真实存在的全部合法机制。
  * 豁免清单：仅收「有意识的转发壳 / 兼容壳」，逐条写明理由。 */
-const CSS_DELIVERY_EXEMPT = [
-  { file: 'apps/games/games.css', why: '转发壳：正文已拆到 poker/poker.css，本文件只留 @import 防旧缓存路径 404（见文件头注释）。它无需被引用即已生效。' }
-];
+const CSS_DELIVERY_EXEMPT = (() => {
+  /* 夹具可自带 config/css-exempt.json 覆盖本清单，使 R3b 的机制代码在合成仓库上可复现
+   *   （内置清单是按真仓库固定路径写的，夹具天然不含）。非夹具下恒定使用内置清单。 */
+  if (FIXTURE_MODE) {
+    try {
+      const raw = fs.readFileSync(path.join(root, 'config', 'css-exempt.json'), 'utf8');
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return arr;
+    } catch { /* 无夹具清单 ⇒ 空 */ }
+    return [];
+  }
+  return [
+    { file: 'apps/games/games.css', why: '转发壳：正文已拆到 poker/poker.css，本文件只留 @import 防旧缓存路径 404（见文件头注释）。它无需被引用即已生效。' }
+  ];
+})();
 const cssNotes = [];
 {
   // 收集全仓 JS（排除 tests）用于「机制 B」判定
@@ -279,7 +299,7 @@ const cssNotes = [];
       cssNotes.push({ rel, mode, fams: fams.length });
     }
   }
-  if (!FIXTURE_MODE && cssTotal < 15) {
+  if (cssTotal < MIN_CSS) {
     console.error(`[registry] 只枚举到 ${cssTotal} 个 App 样式文件（低于下限 15）—— fail-closed 拒判`);
     process.exit(2);
   }
@@ -293,12 +313,15 @@ const cssNotes = [];
    *   文件已被删除/改名，而豁免条目留着 ⇒ 它在为一个不存在的文件背书，且 R3 永远不报警
    *   （R3 只扫真实存在的 .css，删掉的文件根本不会进入枚举面）。
    *   夹具模式跳过（理由同 R2b）：豁免清单是内置的、按真仓库固定路径写的，合成夹具不带它。 */
-  var deadCssExempt = FIXTURE_MODE ? []
-    : CSS_DELIVERY_EXEMPT.filter((e) => !fs.existsSync(path.join(root, e.file)));
+  var deadCssExempt = CSS_DELIVERY_EXEMPT
+    .filter((e) => !fs.existsSync(path.join(root, e.file)));
   /* 反向：豁免的应当是「真存在但两种机制都不适用」的文件。若某豁免文件其实已被 phone.css 打包
    *   （或已被 JS 引用），说明豁免理由已失效，该条目应当撤掉——否则它掩盖了一个本可被判定的文件。 */
   var obsoleteCssExempt = [];
-  if (!FIXTURE_MODE) {
+  /* 夹具模式也执行本段（v2.69.0）：负控制需要在**合成仓库**上复现「散文串冒充投递证据」路径。
+   *   夹具下 CSS_DELIVERY_EXEMPT 由夹具自带的 config/css-exempt.json 提供（无则空清单），
+   *   这样内置的真仓库路径不会污染夹具判定，而机制代码 100% 同源。 */
+  if (true) {
     for (const e of CSS_DELIVERY_EXEMPT) {
       const abs = path.join(root, e.file);
       if (!fs.existsSync(abs)) continue;

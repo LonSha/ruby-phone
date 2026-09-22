@@ -89,11 +89,26 @@ export class PhoneStorage {
             //   sys_shell_scale 显示缩放 / sys_flashlight 手电筒 / sys_wifi）：
             //   全部随会话隔离，避免跨角色/跨会话串味（CONTEXT.md 零数据库铁律 #3）。
             /^sys_/,
-            // [v2.8.10 审计修复] 新增 App 的剧情状态此前未匹配任何 pattern，
-            // 被误判为全局配置写入 extensionSettings，导致换角色/换会话时
-            // 成就/抽卡/生理周期/玩法/塔罗/贴吧/小红书/阅读进度互相串味。
-            // 这些均为随会话隔离的运行时状态（CONTEXT.md 零数据库铁律 #3）。
-            /^ruby_/,             // 新生态 App 会话状态（成就/抽卡/健康/玩法/塔罗/贴吧/小红书/阅读）
+            // [v2.8.10 审计修复，v2.69.0 收紧] 新生态 App 的会话状态此前用一条 `/^ruby_/`
+            //   **兜底**匹配。兜底能防串味，但代价是**归属不可知**：任何以 `ruby_` 开头的键
+            //   都会被静默收纳进会话隔离，于是「这个键属于谁、该不该隔离」没有任何地方能回答，
+            //   只能靠人肉 grep。v2.69.0 改为**逐键显式枚举**并配 keys 归属门禁（scripts/keys-audit.mjs）
+            //   ——枚举清单一旦与真实键脱钩，门禁直接红灯（双向判定，见该脚本）。
+            //
+            // 口径：以下 12 个键**全部实测确认**为随会话隔离的运行时状态（CONTEXT.md 零数据库铁律 #3）。
+            //   逐键枚举的价值不止于「可核对」：它让「新增一个 `ruby_` 键」必须显式登记，
+            //   否则被判定为全局数据落进 extensionSettings——正是 v2.8.10 那轮串味事故的成因。
+            /^ruby_gacha_state$/,              // 幸运转盘（cheat / dirtytalk / memory 只读共享背包）
+            /^ruby_health_cycle$/,             // 生理周期/妊娠/病症
+            /^ruby_playbook_state$/,           // 玩法剧本
+            /^ruby_tarot_history$/,            // 塔罗抽牌记录
+            /^ruby_unlocked_achievements$/,    // 成就解锁表（timeweaver / memory 只读消费）
+            /^ruby_xhs_notes$/,                // 小红书笔记
+            /^ruby_tieba_posts$/,              // 贴吧帖子
+            /^ruby_reading_shelf$/,            // 阅读书架
+            /^ruby_reading_books$/,            // 阅读书架（历史键名，与 shelf 同义，读侧回落兼容）
+            /^ruby_reading_progress_/,         // 阅读进度（前缀型：reading-view 按 bookId 拼接）
+            /^ruby_phone_lyrics_settings$/,    // 歌词/氛围设置（music-ambience）
             // [v2.8.10 审计修复] 游戏存档迁移漏项：catbox/werewolf 已迁到 chat_games_*，
             // 以下牌局/棋盘状态仍留在 games_*。此处精确枚举，
             // 刻意不捕获 games_*_ai_prompt / *_presets_migrated 等提示词模板（属全局配置）。

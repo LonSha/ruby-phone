@@ -42,7 +42,7 @@ const DEAD = path.join(ROOT, 'scripts', 'dead-export-check.mjs');
 const REG = path.join(ROOT, 'scripts', 'registry-audit.mjs');
 
 /* ---------- 通用：在临时目录里放一份门禁源码的**破坏副本**，对着真仓库跑 ---------- */
-function runWithBrokenCopy(srcPath, breakFn, args = []) {
+function runWithBrokenCopy(srcPath, breakFn, args = [], env = null) {
   const src = fs.readFileSync(srcPath, 'utf8');
   const broken = breakFn(src);
   assert.notEqual(broken, src, '破坏未改变源码（非空转）');
@@ -50,8 +50,12 @@ function runWithBrokenCopy(srcPath, breakFn, args = []) {
   const copy = path.join(dir, path.basename(srcPath));
   fs.writeFileSync(copy, broken);
   try {
-    const stdout = execFileSync(process.execPath, [copy, '--root', ROOT, ...args],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    /* [v2.69.0] args 若自带 `--root <dir>` 就不再追加真仓库；
+     *   env 用于夹具模式（RP_REGISTRY_FIXTURE=1）等场景。 */
+    const hasRoot = args.includes('--root');
+    const argv = [copy, ...(hasRoot ? args : ['--root', ROOT, ...args])];
+    const stdout = execFileSync(process.execPath, argv,
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: env || process.env });
     return { code: 0, out: stdout };
   } catch (e) {
     return { code: e.status, out: String(e.stdout || '') + String(e.stderr || '') };
@@ -164,18 +168,63 @@ test('v268-N6 R3 机制 B 证据面：散文串里的文件名不得冒充投递
   /* 判据的两面（见 registry-audit 的 cssLiteralRe / jsRefsCss 注释）：
    *   ① 引用必须出现在**字符串/模板字面量**里（不是任意正文）；
    *   ② 该字面量的**内容本身**必须是一条 css 路径（文件名处在路径边界、后接 `?` 或结束）。
-   *   本用例拆掉判据第 ② 面（把「路径边界」正则退化成「子串包含」），验证它确实在起效：
-   *   退回后 `index.js` 里那句更新说明散文（含 `apps/games/games.css`）会命中，
-   *   games.css 被判「已有 JS 引用」→ R3b 的「理由已失效」分支触发 → 拒判。 */
-  const ANCHOR = "  const cssLiteralRe = (base) => new RegExp(";
-  const r = runWithBrokenCopy(REG, (src) => {
-    assert.equal(countOf(src, ANCHOR), 1, '锚点须恰中 1 次');
-    // 退化为「子串包含」：任何提到该文件名的字面量都算命中（散文串因此混入证据面）
-    return src.replace(ANCHOR, "  const cssLiteralRe = (base) => ({ test: (s) => String(s).includes(base) }); // ");
-  });
-  assert.equal(r.code, 2, '退回子串包含语义后应当拒判：' + r.out);
-  assert.match(r.out, /R3b/, '未暴露散文串污染路径');
-  assert.match(r.out, /games\.css/, '未点名被散文串「引用」的文件');
+   * 本用例拆掉判据第 ② 面（把「路径边界」正则退化成「子串包含」），验证它确实在起效。
+   *
+   * [v2.69.0 修复] 原用例依赖 `index.js` 当版公告里那句含 `apps/games/games.css` 的更新说明散文
+   *   作为**伪证据**。v2.69.0 换掉了公告内容，伪证据随之消失，用例变成假红灯
+   *   —— 这是「测试依赖了会自然过期的前置数据」的典型形态。
+   * 修法：**自造证据**。在夹具里放一个自带散文串的 JS 文件（内容提到转发壳文件名），
+   *   这样判据是否正确与「当版公告写了什么」彻底解耦。
+   *   故意包含 `.` 与 `/` 等正则元字符，顺带验证路径字面量正则的转义（cssAlias 含点号）。 */
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v268-pn6-'));
+  fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'apps', 'games'), { recursive: true });
+  // 夹具：games.css 是转发壳（登记进 CSS_DELIVERY_EXEMPT），另有一个 JS 只以**散文**提到它
+  fs.writeFileSync(path.join(dir, 'config', 'apps.js'),
+    "export const APPS = [\n    {\n        id: 'games',\n        name: '游戏',\n        icon: '🎮'\n    }\n];\n");
+  fs.writeFileSync(path.join(dir, 'index.js'),
+    "const openApp = (appId) => {\n" +
+    "    if (appId === 'games') {\n" +
+    "        // 维护说明：apps/games/games.css 是转发壳，正文已拆到 poker/poker.css\n" +
+    "        return 'games';\n" +
+    "    }\n" +
+    "};\n" +
+    "export const NOTE = 'apps/games/games.css 是转发壳，正文已拆到 poker/poker.css，仅留 @import 防旧缓存 404';\n");
+  fs.writeFileSync(path.join(dir, 'config', 'storage.js'),
+    'export class PhoneStorage {\n    constructor() {\n        this.CHAT_DATA_PATTERNS = [\n            /^games_/\n        ];\n    }\n}\n');
+  fs.writeFileSync(path.join(dir, 'phone.css'), '.phone-shell{}\n');
+  fs.writeFileSync(path.join(dir, 'apps', 'games', 'games.css'),
+    "@import url('./poker/poker.css?v=1.0.2');\n");
+  fs.mkdirSync(path.join(dir, 'apps', 'games', 'poker'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'apps', 'games', 'poker', 'poker.css'),
+    '.poker-table{}\n');
+  // 夹具自带豁免清单：机制代码与真仓库 100% 同源，只有清单数据来自夹具（见 registry-audit 注释）
+  fs.writeFileSync(path.join(dir, 'config', 'css-exempt.json'),
+    JSON.stringify([{ file: 'apps/games/games.css', why: '转发壳（夹具）' }], null, 2));
+  try {
+    const env = { ...process.env, RP_REGISTRY_FIXTURE: '1' };
+    // 先证基线：正确判据下，散文串**不**构成投递证据 ⇒ games.css 仍属豁免、无 obsolete 告警
+    let baseOut = '', baseCode = 0;
+    try {
+      baseOut = execFileSync(process.execPath, [REG, '--root', dir],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env });
+    } catch (e) { baseCode = e.status; baseOut = String(e.stdout || '') + String(e.stderr || ''); }
+    assert.equal(baseCode, 0, '夹具基线应为绿（散文串不得冒充证据）：' + baseOut);
+    assert.doesNotMatch(baseOut, /理由已失效/, '正确判据下不应报「豁免理由已失效」');
+
+    // 再破坏：退化为「子串包含」语义，散文串混入证据面 ⇒ 应触发拒判
+    const ANCHOR = '  const cssLiteralRe = (base) => new RegExp(';
+    const r = runWithBrokenCopy(REG, (src) => {
+      assert.equal(countOf(src, ANCHOR), 1, '锚点须恰中 1 次');
+      return src.replace(ANCHOR,
+        "  const cssLiteralRe = (base) => ({ test: (s) => String(s).includes(base) }); // ");
+    }, ['--root', dir], env);
+    assert.equal(r.code, 2, '退回子串包含语义后应当拒判：' + r.out);
+    assert.match(r.out, /R3b/, '未暴露散文串污染路径');
+    assert.match(r.out, /games\.css/, '未点名被散文串「引用」的文件');
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* 忽略 */ }
+  }
 });
 
 // ══════════════ 负控制 E：R3c 样式内本地引用必须存在 ══════════════

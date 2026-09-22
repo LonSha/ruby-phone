@@ -113,7 +113,9 @@ function withFixture(fn) {
 test('v266-P1 门禁在真仓库上通过（40 App ↔ 40 分支，宽匹配全登记）', () => {
   const r = execFileSync(process.execPath, [AUDIT, '--root', ROOT],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  assert.match(r, /APPS id 40 · 懒加载分支 40 · 会话键前缀 39/);
+  // [v2.69.0] 不再锁「会话键前缀」条数：那是实现细节，v2.69.0 把 /^ruby_/ 兜底桶收紧成 11 条
+  //   逐键枚举后条数从 39 变 50（合法增长）。这里只锁**设计常量**：40 App ↔ 40 分支（R1 零豁免）。
+  assert.match(r, /APPS id 40 · 懒加载分支 40 · 会话键前缀 \d+/);
   assert.match(r, /✓ 注册三方对账无孤儿/);
 });
 
