@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.75.0';
+const ST_PHONE_VERSION = '2.76.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,10 +106,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "约定状态变化写入生活事件时间线，记下确认、改期、完成和取消。",
-        "同一约定的同一状态按来源去重，重复同步不新增事件。",
-        "没有摘要的约定不写入时间线，不把缺失内容补成已发生事实。",
-        "版本升至 2.75.0（四源同源）。",
+        "日历中的工作、学业和出行备忘写入生活事件时间线。",
+        "同一备忘按来源去重，重复保存不新增事件。",
+        "日常备忘不写入时间线，避免把普通记录当成生活领域事件。",
+        "版本升至 2.76.0（四源同源）。",
     ]
 };
 

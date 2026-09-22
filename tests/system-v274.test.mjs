@@ -100,3 +100,16 @@ test('确认和改期各写一条生活事件，重复同步不新增', async ()
   assert.equal(raw.some(item => item.title === '确认约定'), true);
   assert.equal(raw.some(item => item.summary.includes('2026-09-26')), true);
 });
+
+test('工作、学业、出行写入生活事件，日常备忘不写入', () => {
+  const calendar = new CalendarData(memoryStorage());
+  calendar.addMemo({ dateKey: '2026-09-25', title: '日常买菜', type: 'daily' });
+  calendar.addMemo({ dateKey: '2026-09-25', title: '项目评审', time: '10:00', type: 'work' });
+  calendar.addMemo({ dateKey: '2026-09-26', title: '补习线性代数', type: 'study' });
+  calendar.addMemo({ dateKey: '2026-09-27', title: '去火车站', time: '08:30', type: 'travel' });
+  const saved = calendar.storage.get('life_events_v1');
+  const raw = typeof saved === 'string' ? JSON.parse(saved) : saved;
+  assert.deepEqual(raw.map(item => item.title), ['出行', '学业', '工作']);
+  assert.equal(raw.some(item => item.summary.includes('日常买菜')), false);
+  assert.equal(raw[2].summary.includes('10:00'), true);
+});

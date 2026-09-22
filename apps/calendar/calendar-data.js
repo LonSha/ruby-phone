@@ -3,6 +3,7 @@
  *  日历数据层
  * ======================================================== */
 
+import { LifeEventStore } from '../../config/life-events.js';
 export class CalendarData {
     constructor(storage) {
         this.storage = storage;
@@ -103,6 +104,7 @@ export class CalendarData {
 
         this.getMemos().push(memo);
         this.saveMemos();
+        this.recordDomainLifeEvent(memo);
         return memo;
     }
 
@@ -531,6 +533,22 @@ export class CalendarData {
 
     saveMemos() {
         this.storage?.set?.(this.memoKey, JSON.stringify(this.getMemos()));
+    }
+    recordDomainLifeEvent(memo) {
+        const labels = { work: '工作', study: '学业', travel: '出行' };
+        const label = labels[this.normalizeType(memo?.type)];
+        const title = String(memo?.title || '').trim();
+        if (!label || !title || !memo?.id) return null;
+        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        const when = [memo.dateKey, memo.time].filter(Boolean).join(' ');
+        return this._lifeEvents.add({
+            type: 'calendar',
+            app: 'calendar',
+            title: label,
+            summary: title + (when ? '（' + when + '）' : ''),
+            importance: 3,
+            sourceId: 'calendar:' + memo.id + ':' + this.normalizeType(memo.type)
+        });
     }
 
     isReminderEnabled() {
