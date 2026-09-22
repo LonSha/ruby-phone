@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.70.0';
+const ST_PHONE_VERSION = '2.71.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,16 +104,15 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "生理状态交接适配层（本轮主任务）：健康 App 此前只有「生成前注入」一条链——本地状态单向喂给模型，模型正文里已经发生的饮水、进食、如厕、睡眠、病症与时间流逝没有任何回写通道，状态只能靠手动按钮推进。本版新增 apps/health/health-state-bridge.js，回复落地后（MESSAGE_RECEIVED）提取 <state_handoff> 交接块，把已发生事实投递给本地确定性状态机。",
-        "协议独立重写：设计思路参考外部生理状态引擎的「正文事实 → 交接块 → 规范化 → 校验 → 本地应用」流水线，但本层为完全独立实现，不包含、不依赖该引擎的任何代码、提示词、水印或完整性机制。",
-        "事实校验铁律：只认已发生事实。未知类型、缺字段、超限数值一律拒绝；说明里出现意图/未完成标记（打算、希望、没能等）的条目按「愿望不是事实」拒绝；畸形输入一律降级不抛，绝不阻断消息渲染。",
-        "确定性投递边界：交接层只能调用 HealthData 既有方法（applyNeed / addCondition / removeCondition / advanceHours），不能直接覆盖周期日、孕周、胎儿等本地状态机字段。部分缓解类事实（喝了一口水）只入账不投递，避免被误判成全量清零。",
-        "交接账本 ruby_health_handoff：去重 + 50 条上限，新增为会话隔离键并同步登记进 config/storage.js 与 keys 门禁登记表（13 个 ruby 键逐一显式枚举），换会话不串味。",
-        "回写钩子幂等：与生成前注入钩子各自独立标记，render 期重试挂载不会重复注册监听器。",
-        "测试新增 tests/system-v270.test.mjs：提取/剥离/校验/确定性应用/部分缓解/账本去重与上限/端到端/存储归属/接线自证/版权纯度全覆盖。",
-        "版本升至 2.70.0（四源同源）。",
+        "工具调用中的最终回复正文提取（本轮主任务）：ApiManager 此前只认 `choices[0].delta.content` 一族字段。当上游按 OpenAI function calling / Gemini functionCall 协议把最终回复装进工具调用里（本仓常见的 `emit_complete_response` 约定）时，标准 content 通道是**空的**——配了工具调用预设的用户，微信/蜜语/微博等所有走 apiManager.callAI 的 App 拿到空文本并报「API 返回内容为空」，是**静默错数据**而非崩溃。",
+        "新增 `config/tool-call-content.js`（零依赖纯函数模块）：`extractToolCallFragments` 覆盖 OpenAI `tool_calls`、旧版 `function_call`、Gemini `functionCall` 三种协议形态与 `payload.data` 外层包裹；`mergeToolCallFragments` 按 index 合并跨分片调用，流式分片 arguments 增量累积、完整态覆写；`extractFinalResponseToolContent` 识别最终回复约定名并取出正文（字符串或 parts 数组两种 content 形态）。",
+        "四处接线（全部保持「正文通道优先」）：`_extractStreamContent` 返回值追加 `toolCalls`；`_parseApiResponse` 流式分支与非流式 content 候选各接一处；`_parseChunkedApiText` 与 `_readUniversalStream` 在收尾时用累积的调用表兜底。正文通道非空时**永远不**走工具调用兜底，避免两种通道同时存在时行为漂移。",
+        "设计来源：参考 yuzuki-phone 1.5.6（config/api-manager.js，提交 45f37e5）的工具调用兼容实现，按 RubyPhone 工程规范重写为零依赖纯函数模块——剥离其对 ApiManager 实例方法的依赖，使判定逻辑可在无 SillyTavern 环境下单测。",
+        "测试新增 `tests/system-v271.test.mjs`：工具名识别 / 三种协议形态 / 流式累积与完整态覆写语义 / 端到端兜底 / 四处接线自证 / 版权纯度（无水印、无网络请求、无 npm 依赖）。",
+        "版本升至 2.71.0（四源同源）。",
     ]
 };
+
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
 if (window.GGP_Loaded) {
     console.warn('⚠️ 虚拟手机已加载，跳过重复初始化');

@@ -186,11 +186,15 @@ function memStorage() {
 
 // ========== 10. 版本同源 ==========
 {
+  // [v2.71.0] 改为跟随 manifest 动态取值：写死版本号会让每个新版本都来这里改一次，
+  //   而版本同源的正确判据本来就是「四处一致」，不是「等于某个具体数字」。
   const mf = JSON.parse(read('manifest.json'));
-  ok('版本 2.70.0', mf.version === '2.70.0');
-  ok('入口同源', /const ST_PHONE_VERSION = '2\.70\.0'/.test(read('index.js')));
+  const v = String(mf.version);
+  ok('manifest 版本格式', /^\d+\.\d+\.\d+$/.test(v), v);
+  ok('入口同源', read('index.js').includes("const ST_PHONE_VERSION = '" + v + "'"));
+  ok('package.json 同源', JSON.parse(read('package.json')).version === v);
   const log = JSON.parse(read('update-log.json'));
-  ok('update-log 指向 2.70.0', log.latest === '2.70.0' && !!(log.versions || {})['2.70.0']);
+  ok('update-log 指向当前版本', log.latest === v && !!(log.versions || {})[v]);
 }
 
 console.log('\n' + pass + ' 通过');

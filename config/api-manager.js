@@ -16,6 +16,8 @@
 // ========================================
 
 import { getMemoryTagFilterInfo } from './tag-filter.js';
+// @@ 工具调用中的最终回复正文提取（OpenAI tool_calls / function_call / Gemini functionCall）
+import { extractToolCallFragments, mergeToolCallFragments, extractFinalResponseToolContent } from './tool-call-content.js';
 
 export class ApiManager {
     constructor(storage) {
@@ -1298,8 +1300,11 @@ export class ApiManager {
             || normalizeContent(payload.content_block?.text)
             || (payload.object !== 'chat.completion.chunk' ? normalizeContent(payload.content) : '')
             || '';
+        // @@ 工具调用片段随 content 一起返回：上游把最终回复装进 emit_complete_response
+        //   时标准 content 通道为空，调用方靠这些片段兜底。
+        const toolCalls = extractToolCallFragments(payload);
 
-        return { content, reasoning, finishReason, error: null };
+        return { content, reasoning, finishReason, error: null, toolCalls };
     }
 
     _isTokenLimitFinishReason(finishReason = '') {
@@ -1485,9 +1490,11 @@ export class ApiManager {
             throw new Error(data.error.message || JSON.stringify(data.error));
         }
         if (this._looksLikeStreamChunk(data)) {
-            const { content, reasoning, finishReason, error } = this._extractStreamContent(data);
+            const { content, reasoning, finishReason, error, toolCalls } = this._extractStreamContent(data);
             if (error) throw new Error(error);
-            const summary = String(content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
+            const toolCallState = new Map();
+            mergeToolCallFragments(toolCallState, toolCalls);
+            const summary = String(content || extractFinalResponseToolContent(toolCallState) || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
             if (summary) {
                 const truncated = this._isTokenLimitFinishReason(finishReason);
                 return {
@@ -1524,6 +1531,8 @@ export class ApiManager {
             data?.output_text ||
             data?.response ||
             normalizedArrayContent ||
+            // @@ 工具调用兜底：正文通道全空时才走，避免两种通道同时存在时行为漂移。
+            extractFinalResponseToolContent(data) ||
             '';
 
         content = String(content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
@@ -1575,18 +1584,21 @@ export class ApiManager {
         let fullText = '';
         let fullReasoning = '';
         let isTruncated = false;
+        // @@ 工具调用片段跨分片累积：流式 arguments 增量拼接，收尾时统一取正文。
+        const toolCallState = new Map();
         for (const chunk of chunks) {
             if (!this._looksLikeStreamChunk(chunk)) continue;
             sawChunk = true;
-            const { content, reasoning, finishReason, error } = this._extractStreamContent(chunk);
+            const { content, reasoning, finishReason, error, toolCalls } = this._extractStreamContent(chunk);
             if (error) throw new Error(error);
             if (this._isTokenLimitFinishReason(finishReason)) isTruncated = true;
             if (content) fullText += content;
             if (reasoning) fullReasoning += reasoning;
+            mergeToolCallFragments(toolCallState, toolCalls);
         }
         if (!sawChunk) return null;
 
-        let summary = String(fullText || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
+        let summary = String(fullText || extractFinalResponseToolContent(toolCallState) || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
         if (summary) {
             if (isTruncated) summary += '\n\n[⚠️ 内容已因达到最大Token限制而截断]';
             return { success: true, summary, truncated: isTruncated };
@@ -1611,6 +1623,8 @@ export class ApiManager {
         let rawResponse = '';
         let sawFirstChunk = false;
         let reachedProtocolEnd = false;
+        // @@ 真流式路径同样累积工具调用片段，[DONE] 后统一取最终回复正文。
+        const toolCallState = new Map();
 
         try {
             while (true) {
@@ -1645,11 +1659,12 @@ export class ApiManager {
 
                     try {
                         const chunk = JSON.parse(rawData);
-                        const { content, reasoning, finishReason, error } = this._extractStreamContent(chunk);
+                        const { content, reasoning, finishReason, error, toolCalls } = this._extractStreamContent(chunk);
                         if (error) throw new Error(`${logPrefix} ${error}`.trim());
                         if (this._isTokenLimitFinishReason(finishReason)) isTruncated = true;
                         if (reasoning) fullReasoning += reasoning;
                         if (content) fullText += content;
+                        mergeToolCallFragments(toolCallState, toolCalls);
                     } catch (error) {
                         if (/安全策略|内容被|unauthori|csrf|forbidden/i.test(String(error?.message || ''))) throw error;
                         // 坏分片留给原始响应兜底；不因单个兼容分片触发整次请求重试。
@@ -1669,7 +1684,7 @@ export class ApiManager {
                 console.log(`⏱️ [ApiManager]${logPrefix} 收到 [DONE]: ${Date.now() - streamReadStartedAt}ms`);
             }
 
-            let summary = String(fullText || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
+            let summary = String(fullText || extractFinalResponseToolContent(toolCallState) || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
             if (!summary && !fullReasoning && rawResponse.trim() && !/(^|\r?\n)\s*data:/.test(rawResponse)) {
                 return {
                     ...this._parseApiResponse(rawResponse),
