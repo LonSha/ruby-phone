@@ -1,5 +1,22 @@
 {
   "versions": {
+    "2.72.0": {
+      "version": "2.72.0",
+      "date": "2026-09-22",
+      "title": "表格更新锚点（落后正文几楼变成有名有数的读数）",
+      "items": [
+        "新增 config/update-gap.js（零依赖纯函数模块）：用 chatMetadata + sendDate + swipeId 三元组记住表格最后一次更新落在哪一楼，使「表格落后正文几楼」从不可见变为可读。readUnupdatedFloorCount 只数锚点楼之后的 AI 楼（user 楼与系统楼不计）。",
+        "锚点失效三态判定（删楼 / sendDate 变 / swipeId 变任一命中即返回 null）：锚点楼被删或那条回复被换成另一条时，读数返回「未知」而不是一个错数——绝不把另一条回复误认为已更新。这是原方案的核心价值：缺口数可以错，错的方向必须是「不知道」而不是「已追平」。",
+        "scope 维度隔离（同一顶层键下按 scope 分表）：多个表格/状态 App 各记各的锚点，互不串账；带 scope 的调用方不会读到无 scope 的旧版裸锚点（那正是跨模块串账的入口）。",
+        "幂等写入（同 {floorId,sendDate,swipeId} 重复记不触发 saveMetadataDebounced）与上限收敛（超过 50 份按 floorId 淘汰最旧），防长会话锚点无限膨胀。",
+        "updateGapLine 三态读数：unknown（锚点失效，需重建）/ clear（已追平）/ behind（落后 N 楼）——把「没有读数」与「读数为 0」分成两种东西，本项目一贯的三态可分辨纪律。",
+        "向后兼容：旧版裸锚点 {floorId,sendDate,swipeId} 读路径仍认，升级不清历史数据。",
+        "存储归属：锚点写 ctx.chatMetadata 顶层键（随聊天走、随聊天删），不新增 PhoneStorage 键，故不触发 keys-audit 登记要求；保存失败只 warn 不打断更新数据链。",
+        "设计来源：参考 yuzi83/st-yuzi-phone 2.3.0 的 modules/table-update-review/update-gap.js，按 RubyPhone 工程规范重写——剥离其对 Logger 单例的依赖、补 scope 隔离与上限收敛、把「数字」升级为三态读数，并加 59 项测试（含 4 组反向审计负控制：破坏真判据后行为必须可观测地改变，防测试对空实现假绿）。",
+        "测试新增 tests/system-v272.test.mjs：锚点记读闭环 / 三类失效判定 / 计数口径 / scope 隔离 / 幂等 / 上限收敛 / 三态读数 / 畸形输入不抛 / 旧版兼容 / 负控制 / 版权纯度。",
+        "版本升至 2.72.0（四源同源）。"
+      ]
+    },
     "2.71.0": {
       "version": "2.71.0",
       "date": "2026-09-22",
@@ -1001,6 +1018,6 @@
       ]
     }
   },
-  "latest": "2.71.0",
+  "latest": "2.72.0",
   "head": "2.56.0"
 }

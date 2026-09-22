@@ -101,6 +101,10 @@ export class PhoneStorage {
             /^ruby_gacha_state$/,              // 幸运转盘（cheat / dirtytalk / memory 只读共享背包）
             /^ruby_health_cycle$/,             // 生理周期/妊娠/病症
             /^ruby_health_handoff$/,           // [v2.70.0] 生理状态交接账本（随会话隔离）
+            // [v2.72.0] 表格更新锚点（chatMetadata 顶层键）。锚点记的是「哪一楼那一页」，
+            //   换角色后旧锚点指向的楼根本不存在，若落全局会让新角色读到「未知」或错数，
+            //   故必须随会话隔离。
+            /^rubyTableUpdateReviewAnchor$/,   // 表格更新锚点（落后正文几楼的三态读数）
             /^ruby_playbook_state$/,           // 玩法剧本
             /^ruby_tarot_history$/,            // 塔罗抽牌记录
             /^ruby_unlocked_achievements$/,    // 成就解锁表（timeweaver / memory 只读消费）

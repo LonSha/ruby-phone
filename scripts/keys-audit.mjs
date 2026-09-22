@@ -224,6 +224,7 @@ const KEY_REGISTRY = [
   { key: 'ruby_gacha_state', scope: 'chat', note: '幸运转盘（cheat/dirtytalk/memory 只读共享）' },
   { key: 'ruby_health_cycle', scope: 'chat', note: '生理周期' },
   { key: 'ruby_health_handoff', scope: 'chat', note: '生理状态交接账本（v2.70.0）' },
+  { key: 'rubyTableUpdateReviewAnchor', scope: 'chat', note: '表格更新锚点（落后正文几楼的三态读数，v2.72.0）' },
   { key: 'ruby_playbook_state', scope: 'chat', note: '玩法剧本' },
   { key: 'ruby_tarot_history', scope: 'chat', note: '塔罗抽牌' },
   { key: 'ruby_unlocked_achievements', scope: 'chat', note: '成就解锁表' },

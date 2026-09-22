@@ -37,13 +37,15 @@ import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, c
 //   派发侧仍是 7 处手写 `new CustomEvent('phone:未登记名', ...)` 字面量 —— 表与用法各写一份，
 //   改表不改用即静默失联（本仓「建好不消费」的又一例）。本版把派发侧也接到 makePhoneEvent。
 import { PHONE_EVENTS, makePhoneEvent, phoneEventFireReport, resetPhoneEventFireLog } from './config/phone-events.js'; // [v2.41.0] 契约报告 + 落账复位
+// [v2.72.0] 表格更新锚点：落后正文几楼的三态读数（未知/已追平/落后 N 楼）
+import { UPDATE_GAP_KEY, readUnupdatedFloorCount, recordTableUpdateFloor, updateGapLine } from './config/update-gap.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.71.0';
+const ST_PHONE_VERSION = '2.72.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,12 +106,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "工具调用中的最终回复正文提取（本轮主任务）：ApiManager 此前只认 `choices[0].delta.content` 一族字段。当上游按 OpenAI function calling / Gemini functionCall 协议把最终回复装进工具调用里（本仓常见的 `emit_complete_response` 约定）时，标准 content 通道是**空的**——配了工具调用预设的用户，微信/蜜语/微博等所有走 apiManager.callAI 的 App 拿到空文本并报「API 返回内容为空」，是**静默错数据**而非崩溃。",
-        "新增 `config/tool-call-content.js`（零依赖纯函数模块）：`extractToolCallFragments` 覆盖 OpenAI `tool_calls`、旧版 `function_call`、Gemini `functionCall` 三种协议形态与 `payload.data` 外层包裹；`mergeToolCallFragments` 按 index 合并跨分片调用，流式分片 arguments 增量累积、完整态覆写；`extractFinalResponseToolContent` 识别最终回复约定名并取出正文（字符串或 parts 数组两种 content 形态）。",
-        "四处接线（全部保持「正文通道优先」）：`_extractStreamContent` 返回值追加 `toolCalls`；`_parseApiResponse` 流式分支与非流式 content 候选各接一处；`_parseChunkedApiText` 与 `_readUniversalStream` 在收尾时用累积的调用表兜底。正文通道非空时**永远不**走工具调用兜底，避免两种通道同时存在时行为漂移。",
-        "设计来源：参考 yuzuki-phone 1.5.6（config/api-manager.js，提交 45f37e5）的工具调用兼容实现，按 RubyPhone 工程规范重写为零依赖纯函数模块——剥离其对 ApiManager 实例方法的依赖，使判定逻辑可在无 SillyTavern 环境下单测。",
-        "测试新增 `tests/system-v271.test.mjs`：工具名识别 / 三种协议形态 / 流式累积与完整态覆写语义 / 端到端兜底 / 四处接线自证 / 版权纯度（无水印、无网络请求、无 npm 依赖）。",
-        "版本升至 2.71.0（四源同源）。",
+        "新增 config/update-gap.js（零依赖纯函数模块）：用 chatMetadata + sendDate + swipeId 三元组记住表格最后一次更新落在哪一楼，使「表格落后正文几楼」从不可见变为可读。readUnupdatedFloorCount 只数锚点楼之后的 AI 楼（user 楼与系统楼不计）。",
+        "锚点失效三态判定（删楼 / sendDate 变 / swipeId 变任一命中即返回 null）：锚点楼被删或那条回复被换成另一条时，读数返回「未知」而不是一个错数——绝不把另一条回复误认为已更新。这是原方案的核心价值：缺口数可以错，错的方向必须是「不知道」而不是「已追平」。",
+        "scope 维度隔离（同一顶层键下按 scope 分表）：多个表格/状态 App 各记各的锚点，互不串账；带 scope 的调用方不会读到无 scope 的旧版裸锚点（那正是跨模块串账的入口）。",
+        "幂等写入（同 {floorId,sendDate,swipeId} 重复记不触发 saveMetadataDebounced）与上限收敛（超过 50 份按 floorId 淘汰最旧），防长会话锚点无限膨胀。",
+        "updateGapLine 三态读数：unknown（锚点失效，需重建）/ clear（已追平）/ behind（落后 N 楼）——把「没有读数」与「读数为 0」分成两种东西，本项目一贯的三态可分辨纪律。",
+        "向后兼容：旧版裸锚点 {floorId,sendDate,swipeId} 读路径仍认，升级不清历史数据。",
+        "存储归属：锚点写 ctx.chatMetadata 顶层键（随聊天走、随聊天删），不新增 PhoneStorage 键，故不触发 keys-audit 登记要求；保存失败只 warn 不打断更新数据链。",
+        "设计来源：参考 yuzi83/st-yuzi-phone 2.3.0 的 modules/table-update-review/update-gap.js，按 RubyPhone 工程规范重写——剥离其对 Logger 单例的依赖、补 scope 隔离与上限收敛、把「数字」升级为三态读数，并加 59 项测试（含 4 组反向审计负控制：破坏真判据后行为必须可观测地改变，防测试对空实现假绿）。",
+        "测试新增 tests/system-v272.test.mjs：锚点记读闭环 / 三类失效判定 / 计数口径 / scope 隔离 / 幂等 / 上限收敛 / 三态读数 / 畸形输入不抛 / 旧版兼容 / 负控制 / 版权纯度。",
+        "版本升至 2.72.0（四源同源）。",
     ]
 };
 
@@ -2828,6 +2834,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     //  新增：魔坊动态更新气泡 & 全局速览弹窗
     // ==========================================
     if (!window.VirtualPhone) window.VirtualPhone = {};
+    // [v2.72.0] 表格更新锚点（update-gap）：把「表格落后正文几楼」挂到运行时。
+    //   挂在 VirtualPhone 上而不是某个 App 内部，是为了让任意表格/状态类 App 都能
+    //   用同一套锚点口径（window.VirtualPhone.updateGap.read/record/line），
+    //   而不是每个 App 各写一份「我落后几楼」的近似算法——那正是各说各话的入口。
+    //   入参 context 由调用方从 ST 宿主取：{ chat, chatMetadata, saveMetadataDebounced, scope }。
+    try {
+        window.VirtualPhone.updateGap = {
+            KEY: UPDATE_GAP_KEY,
+            read: (ctx) => readUnupdatedFloorCount(ctx),
+            record: (ctx, floor) => recordTableUpdateFloor(ctx, floor),
+            line: (ctx) => updateGapLine(ctx),
+        };
+    } catch (_e) { /* 全局不可写时不阻断初始化 */ }
     // [v2.27.0] 常驻资源诊断：window.VirtualPhone.runtimeStats()
     window.VirtualPhone.runtimeStats = getRuntimeStats;
     // [v2.33.0] 过早回收**成因**（供测试与控制台单独查）：回答「这些过早回收是谁造成的」——

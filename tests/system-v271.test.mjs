@@ -168,11 +168,16 @@ const ok = (name, cond, extra) => {
 
 // ========== 6. 版本同源 ==========
 {
+  // 从 manifest 读版本而非硬编码：本仓每个版本都会新增测试，硬编码会让
+  // 下一轮改版本时旧测试集体假红（那是测试自己的债，不是工程的债）。
   const mf = JSON.parse(read('manifest.json'));
-  ok('版本 2.71.0', mf.version === '2.71.0');
-  ok('入口同源', /const ST_PHONE_VERSION = '2\.71\.0'/.test(read('index.js')));
+  const v = mf.version;
+  ok('manifest 版本形如 x.y.z', /^\d+\.\d+\.\d+$/.test(v), v);
+  ok('入口同源', read('index.js').includes(`const ST_PHONE_VERSION = '${v}'`), v);
   const log = JSON.parse(read('update-log.json'));
-  ok('update-log 指向 2.71.0', log.latest === '2.71.0' && !!(log.versions || {})['2.71.0']);
+  ok('update-log 指向同版本', log.latest === v && !!(log.versions || {})[v], v);
+  ok('package.json 同源', JSON.parse(read('package.json')).version === v);
+  ok('update-log 首键为当前版本', Object.keys(log.versions)[0] === v);
 }
 
 console.log('\n' + pass + ' 通过');
