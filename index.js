@@ -43,7 +43,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.67.0';
+const ST_PHONE_VERSION = '2.68.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,11 +104,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-22",
     items: [
-        "注册门禁补第四面（R3 样式投递覆盖）：每个 App 的样式表必须被两种投递机制之一覆盖——打包进全局 phone.css，或由 App 内自注入 <link>；两者皆无则样式从不生效、界面裸奔且不报错。实测 30 个样式文件：打包 25 / 自注入 4 / 兼容壳豁免 1 / 未覆盖 0。",
-        "口径按实测机制而定，而非想当然：本仓并存两种样式投递机制（diary / honey / music / weibo 走自注入），只认 phone.css 会把它们误判为缺口（假阳性）；判据必须覆盖真实存在的全部合法机制。",
-        "「两机制皆无」确实存在过：apps/games/games.css 是转发壳（正文已拆到 poker/poker.css，只留 @import 防旧缓存 404），已登记进显式豁免清单并注明理由，防后人误改。",
-        "测试扩展至 11 条（新增 R3 负控制：抹掉某 App 的样式引用 → 门禁点名该文件并 exit 1）。",
-        "版本升至 2.67.0。"
+        "准入清单存活自证（dead-export E10 + registry R2b/R3b）：三道门里的三张硬编码白名单（未处理导出写法 / 宽匹配会话键前缀 / 样式豁免）此前只有「准入校验」——新条目必须登记，否则红灯——但没有任何东西检查登记的是否还活着。条目所指对象一旦消失就静默退化为「放行条」，为不存在的情形背书而门禁永不报警。现补齐存活自证：零命中即 fail-closed 拒判。",
+        "把 v2.65.0 立下的纪律从文本落成机制：「白名单是准入闸，不是放行条」。这与 lifecycle 门 L3 的「派生前提消失即 fail-closed」同族——准入清单的合法性来自「它确实在放行某物」，而不是来自「它被写下来了」。",
+        "证据面纯度修复（实测踩到两处）：registry 的样式自注入判定原用「正文里提到过文件名」，结果 ① index.js 里那句更新说明散文把从未被任何 JS 引用的 games.css 伪装成「已投递」；② scripts/ 下门禁自己的豁免清单字面量被读成「有 JS 引用它」——自指伪证。判据已收紧为「路径字面量」并把门禁自身排除出引用面，与本仓「注释/字符串里的提及不算消费」同一纪律。",
+        "新增 R3c：样式文件内部的本地 url()/@import 必须指向真实存在的目标。此前豁免项（转发壳）被 R3 直接跳过，内容是判定盲区——若被转发目标改名，壳会静默指向虚空而无人察觉。实测全仓 18 条本地引用零失效。",
+        "如实修正注释中的数字与形态（不粉饰）：UNHANDLED_ALLOWLIST 原注释称「全仓 61 处，均在平台入口/单例位」，实测已是 90 处，且其中 9 处是多行对象字面量（成员名其实稳定可对账）。该边界为何暂不纳入枚举（default 对象的属性名判定消费需数据流分析，按名字匹配会产生假阳性）已在源码注释中写明。",
+        "apps/games/games.css 转发壳保留，但修正其版本号漂移（原写 ?v=1.0.0，实际转发目标为 ?v=1.0.2）。经查本仓无 Service Worker，不存在预缓存清单同步风险。",
+        "测试新增 tests/system-v268.test.mjs（13 条）：三条存活自证的正/负控制、证据面收紧的两面复现、R3c 正反例，以及负控制纯度自证（破坏只落在临时副本上，绝不经由真仓库文件树复制）。",
+        "版本升至 2.68.0。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

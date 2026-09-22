@@ -1,2 +1,5 @@
-/* 德州扑克样式已拆分到 ./poker/poker.css。保留此文件避免旧缓存路径 404。 */
-@import url('./poker/poker.css?v=1.0.0');
+/* 德州扑克样式已拆分到 ./poker/poker.css。保留此文件避免旧缓存路径 404。
+ * 版本号与 index.js / poker-view.js 的真实引用（?v=1.0.2）保持一致：早前这里写的是 1.0.0，
+ * 与转发的资源实际版本不符，属「账目不如实」（query 只用于破缓存、不影响功能，
+ * 但一个写着旧版本的转发壳本身就是误导）。 */
+@import url('./poker/poker.css?v=1.0.2');

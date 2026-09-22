@@ -145,10 +145,26 @@ const HANDLED_LINE_PATHS = [
   { kind: 'destruct', re: DESTRUCT_RE }        // `export const { A, B } = expr`
 ];
 /* 未处理 export 语句的**白名单**（必须写明「为什么没有具名成员可对账」，且逐条给例子）。
- *   当前唯一准入项是 `export default`——默认导出没有稳定名字，本门禁对它的立场是
- *   「刻意不处理」而非「不认识」（全仓 61 处，均在平台入口/单例位）。
+ *   当前唯一准入项是 `export default`——本门禁对它的立场是「刻意不处理」而非「不认识」。
  *   ⚠️ 白名单是准入闸，不是放行条：往这里加任何别的东西，等同于承认「这类导出不受门禁约束」，
- *   必须同时说明为何不可能有具名消费方可对账，并由测试节的锁逐条复核。 */
+ *   必须同时说明为何不可能有具名消费方可对账，并由测试节的锁逐条复核。
+ *   ⚠️ 数字与形态都必须如实：此前注释写「全仓 61 处，均在平台入口/单例位」（v2.45.0 写就），
+ *   v2.68.0 实测已是 **90 处**，而且**形态远超当初的假设**。逐条查清的现状是三类：
+ *     ① **裸标识符 60 处 + 单行对象字面量 8 处**（`export default AssetApp;`、
+ *        `export default { a, b };`）——确实无具名成员可对账，白名单名副其实；
+ *     ② IIFE 13 处（`export default (function () { … })()`，集中在 apps/asset/engine/）——
+ *        同上；
+ *     ③ **多行对象字面量 9 处**（apps/cheat/cheat-data.js 18 成员、apps/dirtytalk/dt-data.js
+ *        26 成员、config/world-bridge.js 10 成员、apps/health/medical-core.js 8 成员…）
+ *        ——这些成员名其实是**稳定且有具名的**，把它们一并放行属本白名单的**边界外覆盖**。
+ *   为什么 ③ **不**直接纳入枚举（不是懒，是不能）：`export default { A, B }` 的成员是 default
+ *     对象的**属性名**，不是模块导出名。消费形态是 `import M from './m.js'; M.A`——按「名字 A
+ *     是否在全仓出现」判定消费，命中与 A 无关的同名符号会造成**假阳性**；要准确判定必须解析
+ *     default 导入的绑定名再从绑定名取属性，属另一量级的静态分析（需数据流）。
+ *     故本版**如实声明这条边界**（而非含糊宣称「均在平台入口」），并把收窄前提记入 TODO。
+ *   E10（v2.68.0）**条目存活自证**：白名单里每一条都必须在真仓库里至少认领到 1 条语句，
+ *   否则它已不指向任何真实存在的东西——继续留着就是为「不存在的情形」背书（幽灵放行条）。
+ *   与 lifecycle 的「派生前提消失即 fail-closed」同族：准入清单的合法性来自「它确实在放行某物」。 */
 const UNHANDLED_ALLOWLIST = [
   { label: 'export-default', re: /^\s*export\s+default\b/,
     why: '默认导出无稳定名字可对账（平台入口/单例位），本门禁刻意不处理；全仓公开面均由具名导出承载' }
@@ -404,6 +420,8 @@ dead.sort((a, b) => (a.file === b.file ? a.line - b.line : a.file.localeCompare(
  * 夹具模式跳过（单测要能构造任意合成本文件；真实仓库才需要这道闸）。 */
 const handled = { block: 0, decl: 0, destruct: 0, allowed: 0, total: 0 };
 const unhandled = [];
+// E10：白名单逐条的认领计数（label → 命中数）。用它做「存活自证」。
+const allowHits = new Map(UNHANDLED_ALLOWLIST.map(a => [a.label, 0]));
 if (!FIXTURE_MODE) {
   for (const f of files) {
     const code = codeTexts.get(f.rel);
@@ -415,7 +433,7 @@ if (!FIXTURE_MODE) {
       const hit = HANDLED_LINE_PATHS.find(p => p.re.test(ls[i]));
       if (hit) { handled[hit.kind] += 1; continue; }
       const allow = UNHANDLED_ALLOWLIST.find(a => a.re.test(ls[i]));
-      if (allow) { handled.allowed += 1; continue; }
+      if (allow) { handled.allowed += 1; allowHits.set(allow.label, allowHits.get(allow.label) + 1); continue; }
       unhandled.push({ file: f.rel, line: i + 1, text: ls[i].trim().slice(0, 120) });
     }
   }
@@ -426,6 +444,25 @@ if (!FIXTURE_MODE) {
     if (unhandled.length > 20) console.error(`    … 其余 ${unhandled.length - 20} 条`);
     console.error('  修法二选一：① 给该写法补抽取路径并同步登记进 HANDLED_LINE_PATHS；' +
       '② 若确无具名成员可对账，写进 UNHANDLED_ALLOWLIST 并说明理由。');
+    process.exit(2);
+  }
+  /* ---------- E10：白名单条目存活自证（v2.68.0）----------
+   * 为什么必须有这一条：UNHANDLED_ALLOWLIST 是**准入闸**。它的合法性不是来自「被写下来」，
+   *   而是来自「它确实在放行某些真实存在的语句」。一旦某条目零命中（比如未来 export default
+   *   被全部消灭、或该正则被改写成永不匹配），它就从「准入闸」退化为「放行条」——
+   *   为一种本仓已不存在的情形背书，且静默、无红灯、无人会去删。
+   *   这与 lifecycle L3「派生前提消失即 fail-closed」是同一族缺陷：**清单的存活必须自证**。
+   * 判据：每条 entry 的认领数必须 ≥ 1；0 命中即 exit 2 拒判（不是 exit 1——这不是数据缺陷，
+   *   是**门禁自身的账目错了**，拒判才符合「不猜」纪律）。
+   * 为什么不用固定数字（如「必须 == 90」）：数字漂移本身无害（写代码天经地义），若把 90 写死
+   *   则每次新增一个平台入口都要改门禁，属自找的维护税；真正致命的是**零命中**。 */ 
+  const deadAllow = [...allowHits.entries()].filter(([, n]) => n === 0);
+  if (deadAllow.length) {
+    console.error(`[dead-export] 白名单条目存活自证失败：${deadAllow.length} 条 UNHANDLED_ALLOWLIST 项` +
+      '在真仓库里**零命中**（它不再放行任何语句，已退化为幽灵放行条）—— fail-closed 拒判：');
+    for (const [label] of deadAllow) console.error(`    ${label}`);
+    console.error('  修法：① 该写法确已从仓库消失 ⇒ 删掉这条白名单；' +
+      '② 正则写错导致永不匹配 ⇒ 修正它。留着的唯一后果是给不存在的情形背书。');
     process.exit(2);
   }
 }
