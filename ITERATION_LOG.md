@@ -605,77 +605,37 @@ TODO 称消费形态为 `import M from './m.js'; M.A`，故「须先解析 defau
 
 ---
 
-## 迭代 10 — v2.77.0 生活事件跟随源头
-### 本轮目标
-把「源头改了 / 删了之后下游读数还停在旧值」这一类静默错数据收掉。
-v2.74~v2.76 连续给生活事件时间线接入了新源头（约定状态，工作/学业/出行备忘），
-但接入只做了**新建**这一条路径：`LifeEventStore.add()` 命中同 `sourceId` 时直接返回旧条目、
-不更新字段；`updateMemo` / `deleteMemo` 都没有通知时间线。
+## 迭代 11 — v2.79.0 备忘改到另一天真的会改 + 契约常驻化
+### 目标（承迭代 10 的 TODO P0）
+对「源头变更后下游是否跟着变」做一轮普查。第一个命中点是日历备忘本身：
+`updateMemo` 认识 title / time / type / remindedKeys / globalReminder，
+**唯独不认识 `dateKey`**。
 
-### 缺陷（均为静默：不抛、不红灯，只错读数）
-1. **陈旧条目**：把「项目评审」改成「项目终审」、或改日期时间后，时间线永远显示第一次写入的文本；
-   timeweaver 的 generic 源（`readArr('life_events_v1')`）继续拿旧句子参与召回与情绪打分。
-2. **幽灵条目**：删掉一条工作/学业/出行备忘后，它的事件仍留在时间线上，继续冒充一件已不存在的事。
-3. **改回日常**：把领域类型改成 `daily` 后，那条事件同样不退役。
+### 缺陷（静默漏改 + 误报成功）
+调用方传 `{ dateKey: '另一天' }` 时：字段不匹配任何分支 → 一个字都不改 → 末尾 `return true`。
+调用方看到 true 以为改成功了。这是「静默错数据」与「假成功」的叠加形态。
+证据：`syncCommitmentProjection` 本来就用 `Object.assign` 按天移动备忘，
+说明数据模型允许改日期，只有直改路径忘了这个字段。
 
 ### 落地
-- `config/life-events.js`：新增 `updateBySource(sourceId, fields)`（就地更新；找不到回落为新增）
-  与 `removeBySource(sourceId)`（只删命中的源、返回条数）。空 `summary` 拒绝覆盖并返回 `null`——
-  不让「改成了空」冒充「还是老样子」。
-- `apps/calendar/calendar-data.js`：新增 `domainLifeEventSourceId`（源键单一真源，
-  消除两种 `normalizeType` 写法造成的双键）、`refreshDomainLifeEvent`（编辑后重算，
-  领域间换类型时旧条目先退役）、`forgetDomainLifeEvent`（删除后回收）；
-  接入 `updateMemo` / `deleteMemo` 与约定投影移除三处。
-- `tests/system-v277.test.mjs`（8 条，新套件接管本版版本锚点）。
+- `updateMemo` 补 `dateKey` 分支，按 `addMemo` 同一规则校验（空日期拒改、返回 false）。
+- 改日期后顺着 v2.77 的对齐链自动重算事件 summary（不新增第二条）。
+- **把 v2.77 的一次性修复固化成常驻契约**：`tests/system-v279.test.mjs` 第 6 条是全仓结构判据——
+  凡定义了 `add()` 且提到 `sourceId` 的模块，必须同时提供 `updateBySource` 与 `removeBySource`。
+  下次新增同类派生库缺出口会直接红灯，而不是等用户发现陈旧条目。
+  判据同时要求「至少命中一处」并点名 `config/life-events.js`，防探测器失效后假绿。
 
-### 教训（值得记下）
-- **新测试当场拓出实现层两个真缺陷**：测试 4（领域间换类型）与测试 5（删除回收）第一版是红的，
-  根因在我自己的实现（源键形态不一致、换类型未退役），同轮修正。
-- **门禁也否决了我一次**：`system-v256` C3 要求 `ST_PHONE_CURRENT_UPDATE.items` 与
-  `update-log.json` 的 items **逐字同源**，而我按「应用内简写 / 日志详细」分头写了两份。
-  修法是从 update-log 反生成 index.js 的块，让两份不可能漂移（单一真源，不是两份靠自觉对齐）。
-- **补丁重复应用**：`refreshDomainLifeEvent` 曾被写入两次。同名方法 JS 取后者，行为看似不变，
-  但那是「同一件事的第二份拷贝」。已按字节比对确认后删掉重复块；
-  今后每次改动后核对 `grep -c '<方法名>('` 应为 1。
+### 教训
+- 一次性修复 ≠ 缺陷类别已消。v2.77 修好了生活事件库，但「按 sourceId 去重」这个形状本身
+  才是缺陷温床；本版把它变成结构红灯，才算真正关上。
+- 再次出现「补丁重复应用」（`dateKey` 块写入两次）。JS 同名属性后者取胜、行为不变，
+  但已按字节比对确认并去重。今后每次改动后应核对 `grep -c` 为 1。
 
 ---
 
-## 迭代 10 — v2.77.0 生活事件跟随源头
-### 本轮目标
-把「源头改了 / 删了之后下游读数还停在旧值」这一类静默错数据收掉。
-v2.74~v2.76 连续给生活事件时间线接入了新源头（约定状态，工作/学业/出行备忘），
-但接入只做了**新建**这一条路径：`LifeEventStore.add()` 命中同 `sourceId` 时直接返回旧条目、
-不更新字段；`updateMemo` / `deleteMemo` 都没有通知时间线。
-
-### 缺陷（均为静默：不抛、不红灯，只错读数）
-1. **陈旧条目**：把「项目评审」改成「项目终审」、或改日期时间后，时间线永远显示第一次写入的文本；
-   timeweaver 的 generic 源（`readArr('life_events_v1')`）继续拿旧句子参与召回与情绪打分。
-2. **幽灵条目**：删掉一条工作/学业/出行备忘后，它的事件仍留在时间线上，继续冒充一件已不存在的事。
-3. **改回日常**：把领域类型改成 `daily` 后，那条事件同样不退役。
-
-### 落地
-- `config/life-events.js`：新增 `updateBySource(sourceId, fields)`（就地更新；找不到回落为新增）
-  与 `removeBySource(sourceId)`（只删命中的源、返回条数）。空 `summary` 拒绝覆盖并返回 `null`——
-  不让「改成了空」冒充「还是老样子」。
-- `apps/calendar/calendar-data.js`：新增 `domainLifeEventSourceId`（源键单一真源，
-  消除两种 `normalizeType` 写法造成的双键）、`refreshDomainLifeEvent`（编辑后重算，
-  领域间换类型时旧条目先退役）、`forgetDomainLifeEvent`（删除后回收）；
-  接入 `updateMemo` / `deleteMemo` 与约定投影移除三处。
-- `tests/system-v277.test.mjs`（8 条，新套件接管本版版本锚点）。
-
-### 教训（值得记下）
-- **新测试当场拓出实现层两个真缺陷**：测试 4（领域间换类型）与测试 5（删除回收）第一版是红的，
-  根因在我自己的实现（源键形态不一致、换类型未退役），同轮修正。
-- **门禁也否决了我一次**：`system-v256` C3 要求 `ST_PHONE_CURRENT_UPDATE.items` 与
-  `update-log.json` 的 items **逐字同源**，而我按「应用内简写 / 日志详细」分头写了两份。
-  修法是从 update-log 反生成 index.js 的块，让两份不可能漂移（单一真源，不是两份靠自觉对齐）。
-- **补丁重复应用**：`refreshDomainLifeEvent` 曾被写入两次。同名方法 JS 取后者，行为看似不变，
-  但那是「同一件事的第二份拷贝」。已按字节比对确认后删掉重复块；
-  今后每次改动后核对 `grep -c '<方法名>('` 应为 1。
-
----
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.77.0`（四源同源）
-- **迭代历史**：迭代 1~9 见本文件上文（架构/门禁建设为主）；迭代 10 起为功能层缺陷收敛。
+- **当前版本**：`2.79.0`（四源同源）
+- **门禁基线**：语法 352 文件 / 测试 **571 pass · 0 fail** / 死导出零新增 / 生命周期零缺口 /
+  注册三方对账无孤儿 / keys 142 键全登记。

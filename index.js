@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.77.0';
+const ST_PHONE_VERSION = '2.79.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,14 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "修一个静默错数据缺陷：日历备忘的工作/学业/出行事件只在**新建**时写入时间线，且 `LifeEventStore.add()` 命中同 sourceId 时直接返回旧条目——改标题、改日期、改时间后时间线永远显示旧内容；改标签不复述新事实。",
-        "修同类第二处：删除备忘、或把备忘从领域类型改成日常后，原先那条事件仍留在时间线上，继续冒充一件已经不存在的事。",
-        "新增 `LifeEventStore.updateBySource(sourceId, fields)`（找得到就地更新、找不到回落为新增）与 `removeBySource(sourceId)`（只删命中的源，返回撤掉条数），都是纯本地操作。",
-        "空内容不得覆盖旧读数：`updateBySource` 遇到空 summary 返回 null 且不落盘，不让「改成了空」冒充「还是老样子」。",
-        "日历数据层新增三个对齐口：`domainLifeEventSourceId`（源标识单一真源，消除两种写法造成的双键）、`refreshDomainLifeEvent`（编辑后重新对齐）、`forgetDomainLifeEvent`（删除后回收）；三处均只作用于领域类型（work/study/travel），约定事件按状态分开存在、不受影响。",
-        "领域之间换类型（如工作→学业）时旧条目先退役，不并存两条自称是同一件备忘的记录。",
-        "新增 tests/system-v277.test.mjs（8 条）：覆盖改标题/改时间/清空时间/领域→日常/领域间换类型/删除回收/store 层两法/重建后落盘一致；其中测试 4 与 5 当场拓出实现层两个真缺陷（源键形态不一致、换类型未退役）并同轮修正。",
-        "版本升至 2.77.0（四源同源）。",
+        "修一个静默漏改缺陷：`updateMemo` 认识 title / time / type / remindedKeys / globalReminder，唯独不认识 `dateKey`——调用方把备忘改到另一天时既不改也不报错，还返回 true。而约定投影（syncCommitmentProjection）本来就用 Object.assign 按天移动备忘，说明数据模型允许改日期，只有直改路径忘了这个字段。",
+        "修后按 `addMemo` 同一规则校验：空日期拒改并如实返回 false，不让「被拒」冒充「已改」。",
+        "改日期会顺着 v2.77 的对齐链自动重算它的事件（summary 里的日期跟着变，不新增第二条）。",
+        "把 v2.77 的一次性修复固化成常驻契约：tests/system-v279.test.mjs 第 6 条是全仓结构判据——凡定义了 add() 且提到 sourceId 的模块，必须同时提供 updateBySource 与 removeBySource。下次新增第二个按 sourceId 去重的派生库时，缺出口会直接红灯，而不是等用户发现陈旧条目。",
+        "版本升至 2.79.0（四源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

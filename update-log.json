@@ -1,5 +1,17 @@
 {
   "versions": {
+    "2.79.0": {
+      "version": "2.79.0",
+      "date": "2026-09-23",
+      "title": "备忘改到另一天真的会改（此前静默漏改还报成功）",
+      "items": [
+        "修一个静默漏改缺陷：`updateMemo` 认识 title / time / type / remindedKeys / globalReminder，唯独不认识 `dateKey`——调用方把备忘改到另一天时既不改也不报错，还返回 true。而约定投影（syncCommitmentProjection）本来就用 Object.assign 按天移动备忘，说明数据模型允许改日期，只有直改路径忘了这个字段。",
+        "修后按 `addMemo` 同一规则校验：空日期拒改并如实返回 false，不让「被拒」冒充「已改」。",
+        "改日期会顺着 v2.77 的对齐链自动重算它的事件（summary 里的日期跟着变，不新增第二条）。",
+        "把 v2.77 的一次性修复固化成常驻契约：tests/system-v279.test.mjs 第 6 条是全仓结构判据——凡定义了 add() 且提到 sourceId 的模块，必须同时提供 updateBySource 与 removeBySource。下次新增第二个按 sourceId 去重的派生库时，缺出口会直接红灯，而不是等用户发现陈旧条目。",
+        "版本升至 2.79.0（四源同源）。"
+      ]
+    },
     "2.77.0": {
       "version": "2.77.0",
       "date": "2026-09-23",
@@ -1084,6 +1096,6 @@
       ]
     }
   },
-  "latest": "2.77.0",
+  "latest": "2.79.0",
   "head": "2.56.0"
 }

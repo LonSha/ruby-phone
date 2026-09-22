@@ -117,6 +117,13 @@ export class CalendarData {
             if (!safeTitle) return false;
             memo.title = safeTitle.slice(0, 160);
         }
+        if (Object.prototype.hasOwnProperty.call(updates, 'dateKey')) {
+            // [v2.78.0] 日期是可改的（约定投影本来就按天移动备忘），但直改路径此前不认识这个字段：
+            //   传了 dateKey 既不改也不报错，还返回 true——静默漏改。按 addMemo 的同一规则校验。
+            const nextDateKey = String(updates.dateKey || '').trim();
+            if (!nextDateKey) return false;
+            memo.dateKey = nextDateKey;
+        }
         if (Object.prototype.hasOwnProperty.call(updates, 'time')) {
             memo.time = String(updates.time || '').trim().slice(0, 16);
         }
