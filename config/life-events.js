@@ -62,6 +62,10 @@ export class LifeEventStore {
   add(event) {
     const item = buildLifeEvent(event);
     if (!item.summary) return null;
+    if (item.sourceId) {
+      const same = this.events.find((entry) => entry.sourceId === item.sourceId && entry.type === item.type);
+      if (same) return same;
+    }
     this.events.unshift(item);
     this.events = this.events.slice(0, 200);
     this._save();

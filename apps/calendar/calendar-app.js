@@ -7,6 +7,7 @@ import { CalendarData } from './calendar-data.js?v=20260527-calendar-polish';
 import { CalendarView } from './calendar-view.js?v=20260527-calendar-polish';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
+import { LifeEventStore } from '../../config/life-events.js';
 import {
     normalizeCommitments,
     proposeCommitment,
@@ -81,6 +82,7 @@ export class CalendarApp {
     clearCache() {
         this.calendarData.clearCache();
         this._commitments = null;
+        this._lifeEvents = null;
         this._lastReminderStoryTime = null;
     }
     loadCommitments() {
@@ -113,6 +115,7 @@ export class CalendarApp {
         if (result.changed) {
             this.saveCommitments(result.state);
             this.syncCommitmentsToCalendar();
+            this.recordCommitmentLifeEvent(result.item);
             if (successText) this.phoneShell?.showNotification?.('日历', successText, '📅');
         }
         return result;
@@ -151,6 +154,20 @@ export class CalendarApp {
     }
     commitmentSummary() {
         return summarizeCommitments(this.loadCommitments());
+    }
+    recordCommitmentLifeEvent(item) {
+        if (!item?.id || !item.content) return null;
+        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        const verb = { proposed: '记下约定', confirmed: '确认约定', rescheduled: '改期约定', fulfilled: '完成约定', cancelled: '取消约定' }[item.status] || '更新约定';
+        const who = item.with ? item.actor + '与' + item.with : item.actor;
+        return this._lifeEvents.add({
+            type: 'calendar',
+            app: 'calendar',
+            title: verb,
+            summary: who + '：' + item.content + (item.dateKey ? '（' + item.dateKey + '）' : ''),
+            importance: item.status === 'fulfilled' || item.status === 'cancelled' ? 4 : 3,
+            sourceId: 'commitment:' + item.id + ':' + item.status + ':' + item.revision
+        });
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的全局监听器（置 null 重建前调用）
     destroy() {

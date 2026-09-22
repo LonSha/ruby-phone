@@ -81,3 +81,22 @@ test('日历控制器把约定走完确认、改期、完成，并保留手工�
   app.clearCache();
   assert.equal(app.loadCommitments().items[0].status, 'fulfilled');
 });
+
+test('确认和改期各写一条生活事件，重复同步不新增', async () => {
+  const { CalendarApp } = await import('../apps/calendar/calendar-app.js');
+  const app = Object.create(CalendarApp.prototype);
+  app.phoneShell = { showNotification() {} };
+  app.storage = memoryStorage();
+  app.calendarData = new CalendarData(app.storage);
+  app.storageKey = 'calendar_commitments';
+  app.proposeCommitmentFromMemo({ actor: '林夏', with: '玩家', content: '咖啡馆见面', dateKey: '2026-09-25', time: '19:00', eventKey: 'propose-life' });
+  const created = app.loadCommitments().items.at(-1);
+  app.confirmCommitmentById(created.id, 'confirm-life');
+  app.confirmCommitmentById(created.id, 'confirm-life');
+  app.rescheduleCommitmentById(created.id, { dateKey: '2026-09-26', reason: '改期', eventKey: 'move-life' });
+  const saved = app.storage.get('life_events_v1');
+  const raw = typeof saved === 'string' ? JSON.parse(saved) : saved;
+  assert.equal(raw.filter(item => String(item.sourceId).startsWith('commitment:' + created.id)).length, 3);
+  assert.equal(raw.some(item => item.title === '确认约定'), true);
+  assert.equal(raw.some(item => item.summary.includes('2026-09-26')), true);
+});
