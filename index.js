@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.73.0';
+const ST_PHONE_VERSION = '2.74.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,16 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "【本轮主任务·白名单边界外覆盖】`UNHANDLED_ALLOWLIST` 放行 `export default` 的书面依据是「无具名成员可对账」。本版实测该依据**只对 76/90 处成立**：另有 26 处带具名成员（多行对象字面量 9 + 单行对象字面量 8 + 裸标识符等）。其中 `apps/cheat/cheat-data.js` 的 QUALITY_META / QUALITY_ORDER 与 `apps/dirtytalk/dt-data.js` 的 TIER_META / TIER_ORDER 是**产品端零消费、仅测试经 `.default` 取**——正是本仓六次欠债的共同形态（「只有测试引用 = 产品端零消费」），却因整条 `export default` 被白名单放行而既不报红灯也不进账本。",
-        "【TODO 立论被实测证伪】TODO 的 P0「多行对象字面量的成员对账」称「消费形态为 `import M from './m.js'; M.A`，须数据流分析」。实测：这 9 处多行 default 对象的 **default 导入点为 0**，成员消费全走**具名 import**；指向它们的 `.default` 访问只在测试里出现。故该缺口**可静态对账、不需要数据流分析**——TODO 的「不能做」结论建立在错误前提上，本版据实改写。",
-        "【新增 dead-export E11：default 面的消费通道对账】两面判据（全部基于可复算的静态事实）：① **登记**：模块 M 上存在经 `.default` 取的成员、而 M 的产品侧通道为 0（无 default 导入点 · 无 `import * as` · 无本文件 `window|self|globalThis.X =`）时，该 (模块, default.成员) 必须进 `TEST_ONLY_DEFAULT_LEDGER`，否则报红灯并附「成员有无依据」（成员名拼错的 phantom 访问点会在这里现形，否则它会静默取到 undefined）。② **账本校验**：条目必须在真仓库命中 ≥1 个 `.default` 访问点（零命中 = 幽灵放行条），且成员必须仍有依据（成员被删改名 = 账本腐坏）；两条归因同处一个校验，fail-closed（exit 2）。",
-        "【审计器自身两条缺陷被负控制抓出并修掉】（a）`aliasNames` 跑在**剔字符串后**的真代码上，而 import 语句的 `from '…'` 引号已被置空，正则要求带引号的 specifier 导致**一条别名都匹配不到** ⇒ `cheat-data` 的别名成员被误判「无依据」，账本校验**假红**。修法：别名提取不依赖引号。（b）`hasProdChannel` 同理无法在剔字符串后判断 import 指向哪个模块 ⇒ 改用**原文**扫描（specifier 本就是字符串），并锚到行首的 import 语句，避免匹配到注释里的示例。",
-        "【死判据守卫（本仓零容忍「写了却无效」）】初版曾有一条独立的「default 面访问点无依据」判据。它的结论**永远轮不到自己决定**：未登记的访问点先被「登记」判据抓住，已登记的先被「账本成员依据」抓住 ⇒ 是一条不起决定作用的死判据。本版把它**删掉**，成员依据只作为「登记」判据的报错信息与账本校验的分支存在，并配 `v273-S2` 源码守卫：该字符串不得再作为独立判据出现。",
-        "【账本自我指涉被排除】账本成员依据判定**刻意不含**「default 对象成员」：账本说的就是 default 面的成员，拿 default 面引用自己当依据是自我指涉——成员被删后 default 面若仍写着它，宽松判定会继续判「有依据」，账本腐坏将永远抓不到。故用 `strictMemberBacked`（只认真具名导出 / 别名），并配 `v273-S1` 守卫。",
-        "【诊断面】新增 `--e11-dump`：逐条打印 `.default` 访问点及其绑定名、解析出的模块、是否在扫描面 / 有无产品通道 / 成员有无依据。读数行同时**分开报告**「本仓访问点」与「非本仓扫描面」（测试用例里的合成夹具路径会被同一正则采集到，混进总数会让读数看着像漂移）。",
-        "【测试】新增 `tests/system-v273.test.mjs`（14 项）：正控制 4（真仓库通过 / 不破坏 E9 枚举面 / --list 可用 / 诊断面读数）+ 负控制 8（夹具「未登记即红灯」「产品侧有通道则不判」「账本零命中 fail-closed」；真仓库只读破坏副本「条目改名→零命中分支」「成员依据恒假→四条全判腐坏」「原版不响」；真源码破坏探针「hasProdChannel 恒真→面清单塌 0」「strictMemberBacked 恒真→依据串消失」）+ 结构锁 2（E11 段与账本在场 / 死判据守卫）。负控制沿用本仓三形态假绿纪律：真源码破坏（锚点恰中 1 次）→ 加载破坏副本 → 在副本上重跑同款真判据；夹具只写 os.tmpdir()，**绝不**复制真仓库文件树、**绝不**对真仓库写字节。",
-        "【门禁】六道门全绿（语法 / 测试 / 死导出 / 生命周期 / 注册 / 键）；死导出新读数：`.default` 访问点（本仓 6 / 非本仓扫描面若干）· 仅测试消费面 4 · 账本 4 条（命中 6 次）· 未识别 0。",
-        "版本升至 2.73.0（四源同源）。",
+        "新增约定流程：proposed、confirmed、rescheduled、fulfilled、cancelled 五态，保留改期原因与事件历史。",
+        "重复事件不重复生效，完成或取消后的迟到确认不会回退状态。",
+        "日历按 sourceId 同步已确认和改期约定；取消、完成后移除投影，不删除手工日程。",
+        "缺少人物、内容或合法日期时拒绝，不把推测内容写成已发生约定。",
+        "版本升至 2.74.0（四源同源）。",
     ]
 };
 

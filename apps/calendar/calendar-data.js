@@ -143,6 +143,58 @@ export class CalendarData {
         return true;
     }
 
+    syncCommitmentProjection(items) {
+        const wanted = new Map();
+        for (const item of Array.isArray(items) ? items : []) {
+            const sourceId = String(item?.sourceId || '').trim();
+            const dateKey = String(item?.dateKey || '').trim();
+            const title = String(item?.title || '').trim();
+            if (!sourceId || !dateKey || !title || wanted.has(sourceId)) continue;
+            wanted.set(sourceId, {
+                dateKey,
+                title: title.slice(0, 160),
+                time: String(item?.time || '').trim().slice(0, 16),
+                place: String(item?.place || '').trim().slice(0, 80)
+            });
+        }
+        const memos = this.getMemos();
+        let changed = false;
+        for (let index = memos.length - 1; index >= 0; index -= 1) {
+            const sourceId = String(memos[index]?.commitmentSourceId || '');
+            if (sourceId && !wanted.has(sourceId)) {
+                memos.splice(index, 1);
+                changed = true;
+            }
+        }
+        for (const [sourceId, item] of wanted) {
+            const memo = memos.find(entry => String(entry?.commitmentSourceId || '') === sourceId);
+            if (!memo) {
+                memos.push({
+                    id: `calendar_commitment_${sourceId}`,
+                    commitmentSourceId: sourceId,
+                    dateKey: item.dateKey,
+                    title: item.title,
+                    time: item.time,
+                    place: item.place,
+                    color: 'blue',
+                    type: 'daily',
+                    source: 'commitment',
+                    globalReminder: false,
+                    createdAt: Date.now(),
+                    pinned: false
+                });
+                changed = true;
+                continue;
+            }
+            const same = memo.dateKey === item.dateKey && memo.title === item.title && memo.time === item.time && memo.place === item.place;
+            if (same) continue;
+            Object.assign(memo, item, { updatedAt: Date.now() });
+            changed = true;
+        }
+        if (changed) this.saveMemos();
+        return { changed, count: wanted.size };
+    }
+
     togglePinned(id) {
         const memo = this.getMemos().find(item => String(item?.id || '') === String(id || ''));
         if (!memo) return false;

@@ -527,10 +527,35 @@ export class CalendarView {
                         </form>
                     ` : `
                         <div class="yzp-calendar-detail-body">${this.escapeHtml(memo.title)}</div>
+                        ${this.renderCommitmentActions(memo)}
                     `}
                 </section>
             </div>
         `;
+    }
+
+    commitmentForMemo(memo) {
+        const sourceId = String(memo?.commitmentSourceId || '');
+        if (!sourceId) return null;
+        return this.app.loadCommitments?.().items?.find(item => item.id === sourceId) || null;
+    }
+
+    renderCommitmentActions(memo) {
+        const item = this.commitmentForMemo(memo);
+        if (!item) return '';
+        const statusText = { confirmed: '已确认', rescheduled: '已改期' }[item.status] || item.status;
+        return `
+            <div class="yzp-calendar-commitment-box" data-commitment-id="${this.escapeAttr(item.id)}">
+                <div class="yzp-calendar-commitment-status">约定 · ${this.escapeHtml(statusText)}</div>
+                <label class="yzp-calendar-commitment-field">改到
+                    <input class="yzp-calendar-time-input" id="yzp-calendar-commitment-date" maxlength="32" value="${this.escapeAttr(item.dateKey)}" inputmode="numeric">
+                </label>
+                <div class="yzp-calendar-commitment-actions">
+                    <button type="button" data-commitment-action="reschedule" data-commitment-id="${this.escapeAttr(item.id)}">改期</button>
+                    <button type="button" data-commitment-action="fulfill" data-commitment-id="${this.escapeAttr(item.id)}">完成</button>
+                    <button type="button" data-commitment-action="cancel" data-commitment-id="${this.escapeAttr(item.id)}">取消约定</button>
+                </div>
+            </div>`;
     }
 
     bindEvents() {
@@ -714,12 +739,23 @@ export class CalendarView {
                 titleInput?.focus?.();
                 return;
             }
-            this.app.calendarData.addMemo({
-                dateKey: this.toDateKey(this.selectedDate),
-                title,
-                time: String(timeInput?.value || '').trim(),
-                type: this.selectedMemoType || 'daily'
-            });
+            const dateKey = this.toDateKey(this.selectedDate);
+            const time = String(timeInput?.value || '').trim();
+            const type = this.selectedMemoType || 'daily';
+            this.app.calendarData.addMemo({ dateKey, title, time, type });
+            if (type === 'date') {
+                const context = this.app._getContext?.() || {};
+                this.app.proposeCommitmentFromMemo?.({
+                    actor: context.name2 || '角色',
+                    with: context.name1 || '玩家',
+                    content: title,
+                    dateKey,
+                    time,
+                    place: ''
+                });
+                const created = this.app.loadCommitments?.().items?.slice(-1)[0];
+                if (created?.status === 'proposed') this.app.confirmCommitmentById?.(created.id);
+            }
             this.addPanelOpen = false;
             this.typePickerOpen = false;
             this.selectedMemoType = 'daily';
@@ -821,6 +857,33 @@ export class CalendarView {
         root.querySelector('#yzp-calendar-detail-close')?.addEventListener('click', () => {
             this.closeMemoDetail();
             this.render();
+        });
+        root.querySelectorAll('[data-commitment-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = btn.dataset.commitmentId;
+                const action = btn.dataset.commitmentAction;
+                if (action === 'reschedule') {
+                    const dateKey = String(root.querySelector('#yzp-calendar-commitment-date')?.value || '').trim();
+                    const result = this.app.rescheduleCommitmentById?.(id, { dateKey, reason: '日历改期' });
+                    if (result?.ok && result.changed) {
+                        const parts = this.parseDateKey(dateKey);
+                        if (parts) {
+                            this.selectedDate = parts;
+                            this.visibleYear = parts.year;
+                            this.visibleMonth = parts.month;
+                        }
+                    }
+                } else if (action === 'fulfill') {
+                    this.app.fulfillCommitmentById?.(id);
+                    this.closeMemoDetail();
+                } else if (action === 'cancel') {
+                    this.app.cancelCommitmentById?.(id, '日历取消');
+                    this.closeMemoDetail();
+                }
+                this.render();
+            });
         });
         root.querySelector('#yzp-calendar-detail-edit')?.addEventListener('click', () => {
             this.startMemoEdit(this.detailMemoId);

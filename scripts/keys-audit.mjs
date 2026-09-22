@@ -177,6 +177,7 @@ const KEY_REGISTRY = [
   { key: 'diary_auto_last_floor', scope: 'chat', note: '日记自动织信游标' },
   { key: 'calendar_auto_schedule_last_empty_date', scope: 'chat', note: '日历自动排程游标' },
   { key: 'calendar_memos', scope: 'chat', note: '日历备忘（经 global-search-engine 的 get 包装层读取）' },
+  { key: 'calendar_commitments', scope: 'chat', note: '日历约定流程（确认/改期/完成/取消）' },
   { key: 'sys_notifs', scope: 'chat', note: '系统通知落账（经包装层读取）' },
   { key: 'memory_core', scope: 'chat', note: '记忆核心（历史键名，与 memory_core_v1 并存）' },
   { key: 'music_playlist', scope: 'chat', note: '播放列表' },

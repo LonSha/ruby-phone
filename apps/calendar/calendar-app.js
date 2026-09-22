@@ -7,12 +7,23 @@ import { CalendarData } from './calendar-data.js?v=20260527-calendar-polish';
 import { CalendarView } from './calendar-view.js?v=20260527-calendar-polish';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
+import {
+    normalizeCommitments,
+    proposeCommitment,
+    confirmCommitment,
+    fulfillCommitment,
+    cancelCommitment,
+    rescheduleCommitment,
+    commitmentCalendarProjection,
+    summarizeCommitments
+} from '../../config/commitment-flow.js';
 
 export class CalendarApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.calendarData = new CalendarData(storage);
+        this.storageKey = 'calendar_commitments';
         this.calendarView = new CalendarView(this);
         this.isGeneratingSchedule = false;
         this._lastReminderStoryTime = null;
@@ -29,6 +40,7 @@ export class CalendarApp {
             return;
         }
         this.cleanupExpiredAutoMemos();
+        this.syncCommitmentsToCalendar();
         this.calendarView.render({ syncStoryDate: true });
     }
 
@@ -68,7 +80,77 @@ export class CalendarApp {
 
     clearCache() {
         this.calendarData.clearCache();
+        this._commitments = null;
         this._lastReminderStoryTime = null;
+    }
+    loadCommitments() {
+        if (!this._commitments) {
+            let parsed = null;
+            try {
+                const saved = this.storage?.get?.(this.storageKey, null);
+                parsed = typeof saved === 'string' ? JSON.parse(saved || 'null') : saved;
+            } catch (error) {
+                console.warn('[Calendar] 约定读取失败:', error);
+            }
+            this._commitments = normalizeCommitments(parsed);
+        }
+        return this._commitments;
+    }
+    saveCommitments(state) {
+        this._commitments = state || { version: 1, items: [] };
+        this.storage?.set?.(this.storageKey, JSON.stringify(this._commitments));
+        return this._commitments;
+    }
+    syncCommitmentsToCalendar() {
+        const projection = commitmentCalendarProjection(this.loadCommitments());
+        return this.calendarData.syncCommitmentProjection(projection);
+    }
+    applyCommitmentResult(result, successText) {
+        if (!result?.ok) {
+            this.phoneShell?.showNotification?.('日历', result?.reason === 'invalid-date' ? '日期需要年-月-日' : '约定缺少人物、内容或合法日期', '📅');
+            return result;
+        }
+        if (result.changed) {
+            this.saveCommitments(result.state);
+            this.syncCommitmentsToCalendar();
+            if (successText) this.phoneShell?.showNotification?.('日历', successText, '📅');
+        }
+        return result;
+    }
+    proposeCommitmentFromMemo(input = {}) {
+        const now = Date.now();
+        return this.applyCommitmentResult(proposeCommitment(this.loadCommitments(), {
+            ...input,
+            eventKey: input.eventKey || `propose:${input.actor || ''}:${input.content || ''}:${input.dateKey || ''}:${now}`
+        }), '已记下待确认约定');
+    }
+    confirmCommitmentById(id, eventKey = '') {
+        return this.applyCommitmentResult(confirmCommitment(this.loadCommitments(), {
+            id, eventKey: eventKey || `confirm:${id}:${Date.now()}`
+        }), '约定已确认，已写入日历');
+    }
+    rescheduleCommitmentById(id, input = {}) {
+        return this.applyCommitmentResult(rescheduleCommitment(this.loadCommitments(), {
+            id,
+            dateKey: input.dateKey,
+            time: input.time,
+            place: input.place,
+            reason: input.reason || '改期',
+            eventKey: input.eventKey || `reschedule:${id}:${input.dateKey || ''}:${Date.now()}`
+        }), '约定已改期');
+    }
+    fulfillCommitmentById(id, eventKey = '') {
+        return this.applyCommitmentResult(fulfillCommitment(this.loadCommitments(), {
+            id, eventKey: eventKey || `fulfill:${id}:${Date.now()}`
+        }), '约定已完成');
+    }
+    cancelCommitmentById(id, reason = '取消', eventKey = '') {
+        return this.applyCommitmentResult(cancelCommitment(this.loadCommitments(), {
+            id, reason, eventKey: eventKey || `cancel:${id}:${Date.now()}`
+        }), '约定已取消');
+    }
+    commitmentSummary() {
+        return summarizeCommitments(this.loadCommitments());
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的全局监听器（置 null 重建前调用）
     destroy() {
