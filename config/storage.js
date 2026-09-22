@@ -95,11 +95,12 @@ export class PhoneStorage {
             //   只能靠人肉 grep。v2.69.0 改为**逐键显式枚举**并配 keys 归属门禁（scripts/keys-audit.mjs）
             //   ——枚举清单一旦与真实键脱钩，门禁直接红灯（双向判定，见该脚本）。
             //
-            // 口径：以下 12 个键**全部实测确认**为随会话隔离的运行时状态（CONTEXT.md 零数据库铁律 #3）。
+            // 口径：以下 13 个键**全部实测确认**为随会话隔离的运行时状态（CONTEXT.md 零数据库铁律 #3）。
             //   逐键枚举的价值不止于「可核对」：它让「新增一个 `ruby_` 键」必须显式登记，
             //   否则被判定为全局数据落进 extensionSettings——正是 v2.8.10 那轮串味事故的成因。
             /^ruby_gacha_state$/,              // 幸运转盘（cheat / dirtytalk / memory 只读共享背包）
             /^ruby_health_cycle$/,             // 生理周期/妊娠/病症
+            /^ruby_health_handoff$/,           // [v2.70.0] 生理状态交接账本（随会话隔离）
             /^ruby_playbook_state$/,           // 玩法剧本
             /^ruby_tarot_history$/,            // 塔罗抽牌记录
             /^ruby_unlocked_achievements$/,    // 成就解锁表（timeweaver / memory 只读消费）

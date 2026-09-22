@@ -4,6 +4,8 @@
  */
 import { HealthData } from './health-data.js';
 import { HealthView } from './health-view.js';
+// [v2.70.0] 生理状态交接适配层：正文里的 <state_handoff> 事实回写本地状态机
+import { processReply, HandoffLedger } from './health-state-bridge.js';
 
 export class HealthApp {
   constructor(phoneShell, storage) {
@@ -12,6 +14,7 @@ export class HealthApp {
     this.data = new HealthData(storage);
     this.view = new HealthView(this);
     this._hooked = false;
+    this._handoffHooked = false;
     this._initHooks();
   }
 
@@ -30,6 +33,26 @@ export class HealthApp {
           } catch (e) {}
         });
         this._hooked = true;
+      }
+      // [v2.70.0] 生成后回写：回复落地后提取交接块，把已发生事实投递给本地状态机。
+      //   无交接块时 processReply 返回 null（零成本跳过）；任何异常静默，
+      //   绝不阻断消息渲染。只投递确定性事件，不覆盖周期/妊娠等本地状态。
+      if (!this._handoffHooked && eventSource && event_types?.MESSAGE_RECEIVED) {
+        this._handoffHooked = true;
+        eventSource.on(event_types.MESSAGE_RECEIVED, (messageId) => {
+          try {
+            const ctx = window.SillyTavern?.getContext?.();
+            const chat = ctx?.chat;
+            const msg = Array.isArray(chat) ? chat[messageId] : null;
+            const text = msg && typeof msg.mes === 'string' ? msg.mes : '';
+            if (!text || !text.includes('state_handoff')) return;
+            const ledger = new HandoffLedger(this.storage);
+            const result = processReply(text, this.data, ledger);
+            if (result && (result.applied.length || result.recorded.length)) {
+              this.view?.rerender?.();
+            }
+          } catch (e) {}
+        });
       }
     } catch (e) {}
   }

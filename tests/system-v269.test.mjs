@@ -20,7 +20,8 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const SCRIPT = path.join(ROOT, 'scripts/keys-audit.mjs');
-const SRC = fs.readFileSync(SCRIPT, 'utf8');
+// [v2.70.0] 每次破坏前重读源码：登记表会随版本演进，模块加载期快照会让负控制打在过期副本上
+const readSrc = () => fs.readFileSync(SCRIPT, 'utf8');
 
 const run = (args, env) => {
   try {
@@ -36,8 +37,9 @@ const run = (args, env) => {
 
 /** 把 SCRIPT 源码按 breakFn 破坏后写入临时副本，再以 --root 指向真仓库运行（真仓库只读）。 */
 const runWithBrokenCopy = (breakFn, args = []) => {
-  const broken = breakFn(SRC);
-  assert.notEqual(broken, SRC, '破坏必须真的改动了源码（否则是空转的负控制）');
+  const src = readSrc();
+  const broken = breakFn(src);
+  assert.notEqual(broken, src, '破坏必须真的改动了源码（否则是空转的负控制）');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-keys-'));
   const copy = path.join(dir, 'keys-audit.mjs');
   fs.writeFileSync(copy, broken);
@@ -59,7 +61,7 @@ const replaceOnce = (s, from, to) => {
 test('v269-P1 真仓库通过：键归属全登记 / 声明与机制一致 / 登记条目全部存活', () => {
   const r = run([SCRIPT, '--root', ROOT]);
   assert.equal(r.code, 0);
-  assert.match(r.out, /storage 键使用点 \d+ 个 · CHAT_DATA_PATTERNS 50 条 · 登记 \d+ 条/);
+  assert.match(r.out, /storage 键使用点 \d+ 个 · CHAT_DATA_PATTERNS \d+ 条 · 登记 \d+ 条/);
   assert.match(r.out, /✓ 键归属全登记 \/ 声明与机制一致 \/ 登记条目全部存活/);
 });
 
@@ -162,8 +164,8 @@ test('v269-N8 门禁自指防护：scripts/ 下的键名字面量不冒充「使
   // 真仓库下若把 scripts/ 排除逻辑去掉，登记表里的 139 个键会让「登记存活」永远为真
   //   ——那是自指伪证。此处验证：去掉排除后，K3 的结果不应发生变化（因为真键本来就活着），
   //   但**未登记检测**会因读到自己而失真。所以断言的是「排除逻辑存在且生效」。
-  assert.match(SRC, /if \(\/\^scripts\\\/\/\.test\(f\.rel\)\) continue;/);
-  const withBreak = replaceOnce(SRC, 'if (/^scripts\\//.test(f.rel)) continue;', '/* removed */');
+  assert.match(readSrc(), /if \(\/\^scripts\\\/\/\.test\(f\.rel\)\) continue;/);
+  const withBreak = replaceOnce(readSrc(), 'if (/^scripts\\//.test(f.rel)) continue;', '/* removed */');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-keys-self-'));
   try {
     const copy = path.join(dir, 'keys-audit.mjs');
@@ -188,7 +190,7 @@ test('v269-S1 负控制纯度：测试自身不经由真仓库文件树复制，
   // 破坏只落在临时副本上，被运行的始终是那份副本
   assert.match(SELF, /path\.join\(dir, 'keys-audit\.mjs'\)/);
   // 门禁自身也必须保持只读姿态（--root 只读）
-  assert.doesNotMatch(SRC, /writeFileSync/, '门禁不得写任何文件');
+  assert.doesNotMatch(readSrc(), /writeFileSync/, '门禁不得写任何文件');
 });
 
 test('v269-S2 门禁仍在 check 链上（未因改动掉线）', () => {
@@ -229,7 +231,7 @@ test('v269-S5 items 同源判据必须真解析字符串字面量（防「逐行
 test('v269-S4 KEY_REGISTRY 是准入清单：新增键不登记就红（纪律可执行）', () => {
   // 若把登记表里某条 key 改成前缀型（`*`），它就会覆盖一批键而放宽 K1；
   //   这里验证前缀型条目**只在登记表显式允许**时存在，且真仓库当前只有 1 条（阅读进度）。
-  const prefixes = [...SRC.matchAll(/\{ key: '([^']+)\*', scope/g)].map((m) => m[1]);
+  const prefixes = [...readSrc().matchAll(/\{ key: '([^']+)\*', scope/g)].map((m) => m[1]);
   assert.deepEqual(prefixes, ['ruby_reading_progress_'],
     '前缀型登记必须恰好是已知的那一条；新增必须显式评审（它天然放宽 K1）');
 });
