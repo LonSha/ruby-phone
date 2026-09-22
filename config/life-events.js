@@ -72,6 +72,80 @@ export class LifeEventStore {
     return item;
   }
 
+  /* 以 sourceId 定位并**就地更新**同一件事：
+   *   日历备忘改了标题/日期/时间后，时间线显示的必须是改后的内容。
+   *   旧实现让 add() 直接返回旧条目，于是时间线永远停在第一次写入的读数——
+   *   不报错、不崩溃，只错数据（本仓最贵的形态）。找不到则回落为新增。 */
+  updateBySource(sourceId, fields = {}) {
+    const sid = cleanText(sourceId);
+    if (!sid) return null;
+    const entry = this.events.find((item) => item.sourceId === sid);
+    if (!entry) return this.add({ ...fields, sourceId: sid });
+    if (Object.prototype.hasOwnProperty.call(fields, 'title')) {
+      entry.title = cleanText(fields.title) || entry.title;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'summary')) {
+      const summary = cleanText(fields.summary);
+      if (!summary) return null;          // 内容空了就不能留着旧读数冒充现状
+      entry.summary = summary;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'importance')) {
+      entry.importance = normalizeImportance(fields.importance);
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'type')) {
+      entry.type = VALID_TYPES.has(fields.type) ? fields.type : entry.type;
+    }
+    entry.updatedAt = Date.now();
+    this._save();
+    return entry;
+  }
+  /* 以 sourceId 移除：源头（日历备忘）被删后，时间线不得再持有它。 */
+  removeBySource(sourceId) {
+    const sid = cleanText(sourceId);
+    if (!sid) return 0;
+    const before = this.events.length;
+    this.events = this.events.filter((item) => item.sourceId !== sid);
+    const removed = before - this.events.length;
+    if (removed) this._save();
+    return removed;
+  }
+  /* 以 sourceId 定位并**就地更新**同一件事：
+   *   日历备忘改了标题/日期/时间后，时间线显示的必须是改后的内容。
+   *   旧实现让 add() 直接返回旧条目，于是时间线永远停在第一次写入的读数——
+   *   不报错、不崩溃，只错数据（本仓最贵的形态）。找不到则回落为新增。 */
+  updateBySource(sourceId, fields = {}) {
+    const sid = cleanText(sourceId);
+    if (!sid) return null;
+    const entry = this.events.find((item) => item.sourceId === sid);
+    if (!entry) return this.add({ ...fields, sourceId: sid });
+    if (Object.prototype.hasOwnProperty.call(fields, 'title')) {
+      entry.title = cleanText(fields.title) || entry.title;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'summary')) {
+      const summary = cleanText(fields.summary);
+      if (!summary) return null;          // 内容空了就不能留着旧读数冒充现状
+      entry.summary = summary;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'importance')) {
+      entry.importance = normalizeImportance(fields.importance);
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'type')) {
+      entry.type = VALID_TYPES.has(fields.type) ? fields.type : entry.type;
+    }
+    entry.updatedAt = Date.now();
+    this._save();
+    return entry;
+  }
+  /* 以 sourceId 移除：源头（日历备忘）被删后，时间线不得再持有它。 */
+  removeBySource(sourceId) {
+    const sid = cleanText(sourceId);
+    if (!sid) return 0;
+    const before = this.events.length;
+    this.events = this.events.filter((item) => item.sourceId !== sid);
+    const removed = before - this.events.length;
+    if (removed) this._save();
+    return removed;
+  }
   timeline(filter = {}) {
     return this.events
       .filter((event) => !filter.characterId || event.characterId === filter.characterId)

@@ -121,7 +121,9 @@ export class CalendarData {
             memo.time = String(updates.time || '').trim().slice(0, 16);
         }
         if (Object.prototype.hasOwnProperty.call(updates, 'type')) {
-            memo.type = this.normalizeType(updates.type);
+            const nextType = this.normalizeType(updates.type);
+            if (nextType !== memo.type) memo.typeBeforeChange = memo.type;   // [v2.77.0] 换类型时旧条目要退役
+            memo.type = nextType;
         }
         if (Object.prototype.hasOwnProperty.call(updates, 'remindedKeys')) {
             memo.remindedKeys = Array.isArray(updates.remindedKeys) ? updates.remindedKeys : [];
@@ -131,6 +133,8 @@ export class CalendarData {
         }
         memo.updatedAt = Date.now();
         this.saveMemos();
+        this.refreshDomainLifeEvent(memo);   // [v2.77.0] 时间线跟着改，而不是停在第一次写入
+        delete memo.typeBeforeChange;
         return true;
     }
 
@@ -140,8 +144,10 @@ export class CalendarData {
         const memos = this.getMemos();
         const idx = memos.findIndex(memo => String(memo?.id || '') === safeId);
         if (idx < 0) return false;
+        const removed = memos[idx];
         memos.splice(idx, 1);
         this.saveMemos();
+        this.forgetDomainLifeEvent(removed);   // [v2.77.0] 源头没了，时间线不得留幽灵
         return true;
     }
 
@@ -164,6 +170,7 @@ export class CalendarData {
         for (let index = memos.length - 1; index >= 0; index -= 1) {
             const sourceId = String(memos[index]?.commitmentSourceId || '');
             if (sourceId && !wanted.has(sourceId)) {
+                this.forgetDomainLifeEvent(memos[index]);   // [v2.77.0] 投影移除同样要回收
                 memos.splice(index, 1);
                 changed = true;
             }
@@ -534,6 +541,18 @@ export class CalendarData {
     saveMemos() {
         this.storage?.set?.(this.memoKey, JSON.stringify(this.getMemos()));
     }
+    // [v2.77.0] 源标识：一条日历备忘在时间线上的身份（同一备忘同一领域类型）。
+    domainLifeEventSourceId(memo) {
+        const label = { work: '工作', study: '学业', travel: '出行' }[this.normalizeType(memo?.type)];
+        if (!label || !memo?.id) return null;
+        return 'calendar:' + memo.id + ':' + this.normalizeType(memo.type);
+    }
+    // [v2.77.0] 源标识：一条日历备忘在时间线上的身份（同一备忘同一领域类型）。
+    domainLifeEventSourceId(memo) {
+        const label = { work: '工作', study: '学业', travel: '出行' }[this.normalizeType(memo?.type)];
+        if (!label || !memo?.id) return null;
+        return 'calendar:' + memo.id + ':' + this.normalizeType(memo.type);
+    }
     recordDomainLifeEvent(memo) {
         const labels = { work: '工作', study: '学业', travel: '出行' };
         const label = labels[this.normalizeType(memo?.type)];
@@ -549,6 +568,51 @@ export class CalendarData {
             importance: 3,
             sourceId: 'calendar:' + memo.id + ':' + this.normalizeType(memo.type)
         });
+    }
+    /* [v2.77.0] 备忘被改动后重新对齐它在时间线上的那一条：
+     *   日期/时间/标题/领域类型任一变化，时间线都要跟着改；
+     *   若改后不再是领域类型（work/study/travel），原先那条必须撤掉，
+     *   否则时间线会拿一条日常备忘冒充生活事件。 */
+    refreshDomainLifeEvent(memo) {
+        if (!memo?.id) return null;
+        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        // 领域之间换类型时，旧类型的那条 sourceId 与新的是两个键：
+        //   不先退役就会并存两条（一条旧工作、一条新学业），两条都自称是这件备忘。
+        if (memo.typeBeforeChange && memo.typeBeforeChange !== memo.type) {
+            const prevLabel = { work: '工作', study: '学业', travel: '出行' }[this.normalizeType(memo.typeBeforeChange)];
+            if (prevLabel) {
+                this._lifeEvents.removeBySource('calendar:' + memo.id + ':' + this.normalizeType(memo.typeBeforeChange));
+            }
+        }
+        const label = { work: '工作', study: '学业', travel: '出行' }[this.normalizeType(memo?.type)];
+        const title = String(memo?.title || '').trim();
+        const sid = this.domainLifeEventSourceId(memo);
+        if (!label || !title) {
+            // 类型被改成非领域（或标题清空）——撤掉可能存在的旧条目，不留幽灵。
+            // 形态与创建时一致：领域判定用 normalizeType，源键也必须用同一个归一化结果，
+            //   否则同一件事在两种写法下是两个键，退役时删不掉。
+            return this._lifeEvents.removeBySource('calendar:' + memo.id + ':' + String(memo.typeBeforeChange || memo.type || '').trim());
+        }
+        const when = [memo.dateKey, memo.time].filter(Boolean).join(' ');
+        return this._lifeEvents.updateBySource(sid, {
+            type: 'calendar',
+            app: 'calendar',
+            title: label,
+            summary: title + (when ? '（' + when + '）' : ''),
+            importance: 3
+        });
+    }
+    /* [v2.77.0] 备忘被删后回收它的事件：源头不存在了，时间线不得继续持有。 */
+    forgetDomainLifeEvent(memo) {
+        if (!memo?.id) return 0;
+        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        const type = this.normalizeType(memo.typeBeforeChange || memo.type);
+        let n = this._lifeEvents.removeBySource('calendar:' + memo.id + ':' + type);
+        // 类型可能在编辑中被改过，旧 sourceId 也一并收拾。
+        if (memo.typeBeforeChange && memo.typeBeforeChange !== memo.type) {
+            n += this._lifeEvents.removeBySource('calendar:' + memo.id + ':' + this.normalizeType(memo.typeBeforeChange));
+        }
+        return n;
     }
 
     isReminderEnabled() {
