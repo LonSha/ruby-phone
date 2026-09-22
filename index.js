@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.79.0';
+const ST_PHONE_VERSION = '2.80.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,11 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "修一个静默漏改缺陷：`updateMemo` 认识 title / time / type / remindedKeys / globalReminder，唯独不认识 `dateKey`——调用方把备忘改到另一天时既不改也不报错，还返回 true。而约定投影（syncCommitmentProjection）本来就用 Object.assign 按天移动备忘，说明数据模型允许改日期，只有直改路径忘了这个字段。",
-        "修后按 `addMemo` 同一规则校验：空日期拒改并如实返回 false，不让「被拒」冒充「已改」。",
-        "改日期会顺着 v2.77 的对齐链自动重算它的事件（summary 里的日期跟着变，不新增第二条）。",
-        "把 v2.77 的一次性修复固化成常驻契约：tests/system-v279.test.mjs 第 6 条是全仓结构判据——凡定义了 add() 且提到 sourceId 的模块，必须同时提供 updateBySource 与 removeBySource。下次新增第二个按 sourceId 去重的派生库时，缺出口会直接红灯，而不是等用户发现陈旧条目。",
-        "版本升至 2.79.0（四源同源）。",
+        "修三类文档层缺陷（都不是代码错，但会让人拿错读数）：迭代日志出现同一编号两段；元信息仍声称旧版本号（2.73.0）而仓库已到 2.79.0；TODO 里同一项可同时被标进行中与已完成。",
+        "文档说谎不报错——这与「数据错但不抛」是同一个病。本版把它变成红灯而非靠人记得更新。",
+        "新增 tests/system-v280.test.mjs（5 条）：① 迭代日志不得有重号迭代段；② 元信息声明的版本必须等于 manifest 版本；③ 当前版本的 release note 必须非空、必须含本版号、必须保留「版本升至 X」收尾条；④ latest 与 versions 首键一致且不低于 2.80.0；⑤ 同一 TODO 项不得既是进行中又是已完成。",
+        "迭代日志重编号：将本轮的「生活事件跟随源头」与「备忘改到另一天」两段从撞号的 10/11 改为 11/12，与既有「迭代 10（v2.73.0）」不再冲突。",
+        "版本升至 2.80.0（四源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
