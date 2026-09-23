@@ -22,6 +22,8 @@ export class MemoryCore {
         this.pool = new MemoryPool();
         // [RB] 数据版本戳: 任何落盘的记忆变更递增, 供 LonShaBridge 懒检测 BM25 索引失效
         this._dataVersion = 0;
+        // [v2.82.0] prompt 钩子单次挂载标记（见 attachPromptHook 注释）
+        this._hooked = false;
 
         // 状态
         this.longTerm = [];      // 巩固后的长期记忆
@@ -281,6 +283,17 @@ export class MemoryCore {
      * 在 core 创建后调用一次, 后台持续生效 (无需打开记忆 App)
      */
     attachPromptHook() {
+        // [v2.82.0] 幂等 guard（本仓六处 prompt 钩子里唯一缺的一处）。
+        //   实测口径：health / peek / playbook / time-env 四处都是
+        //   `if (this._hooked) return ...` 先判后挂，唯独 MemoryCore 没有 ——
+        //   重复调用会往 eventSource 上叠第二个一模一样的 GENERATE_BEFORE_COMBINE_PROMPTS
+        //   监听器，而 eventSource 是宿主级长期对象、这些监听器**没有解绑出口**，
+        //   叠上去就永久留着 → 每次生成会把同一份【记忆】块注入两次。
+        //   当前调用点唯一（index.js loadCoreModules 内，且该函数有 modulesLoaded
+        //   早返回），故属**潜伏**形态而非现行故障 —— 但守卫的缺失本身就是
+        //   与另四处的不一致，且 v2.54/v2.56 两轮修的正是「guard 位置/缺失」这一类。
+        //   语义与 time-env 对齐：已挂过则直接返回 true（幂等）。
+        if (this._hooked) return true;
         try {
             const context = window.SillyTavern?.getContext?.();
             const eventSource = context?.eventSource;
@@ -295,6 +308,7 @@ export class MemoryCore {
                     if (directive) payload.prompt.push({ role: 'system', content: directive });
                 } catch (e) { /* 静默 */ }
             });
+            this._hooked = true;   // 仅在真的挂上之后置位（先置位会让失败静默且不可重试）
             return true;
         } catch (e) {
             console.warn('[MemoryCore] prompt 钩子挂载失败:', e);

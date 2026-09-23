@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.81.0';
+const ST_PHONE_VERSION = '2.82.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "修一个「不报错、不崩溃，只是读数永远停在旧值」的缺陷类别：搜索索引与结果都停在上一次打开搜索那一刻。① SearchApp 是单例、索引源表只在构造时建一次，宿主上下文（SillyTavern）就绪晚于构造时「酒馆正文」源**永久缺席**，面板重开一百次也不补；② 换会话后仍读旧会话数组；③ 结果快照只在输入/换 chip 时清，源头改了以后重开面板仍显示旧正文。",
-        "根因是「派生读数没有出口」：源表只能登记不能换/摘，所以「换宿主上下文」只能靠再叠一份实现；结果快照只在两条路径上作废，第三条路径（重开面板）漏了。",
-        "GlobalSearchEngine 新增 replaceSource / removeSource，registerSource 改为幂等（同 id 重复登记被拒，否则同一份数据在结果里出现两遍）；tavern 源改由 makeTavernSource(ctx) 工厂**每次现取**，不再在构造那一刻内联 chat 快照；tsOf 提到模块级，杜绝第二份实现。",
-        "SearchApp 每次 render 调用 _syncHostSources()：宿主未就绪保持现状、就绪则换新引用、上下文消失（退出会话）则摘掉，只碰自己负责的源；SearchView.render 作废上一轮结果快照（输入过程中仍复用同一份内存索引，不重扫全库）。",
-        "新增 tests/system-v281.test.mjs（9 条）：三个行为探针 + 源表登记面契约 + 负控制。负控制下真源码破坏（去掉对齐 / 去掉作废）后，在副本上重跑**同一批**行为判据必须转红（实测复现「源表冻结」与「重开仍给旧读数」），并带变异工具两向自证（锚点不存在/不唯一必须抛）。",
-        "版本升至 2.81.0（四源同源）。",
+        "修一个「语法门永远看不见、跑起来才炸」的缺陷类别：**静态 import 路径指错**。apps/games/sudoku/sudoku-view.js 写 `'../../config/runtime-lifecycle.js'`，而它位于 apps/games/sudoku/ —— 真实需三层 `'../../../config/…'`。语法 100% 正确，但浏览器加载该模块时解析失败，games-app.js 的 import 链整条断掉 → **游戏大厅 App 直接打不开**。",
+        "该行写于 v2.28.0，此后 v2.29~v2.81 五十余版全绿通过。根因不是没跑门禁，而是**没有任何门禁看 import 路径**：syntax 门只做 node --check（问「文件自身能不能解析」），不回答「它 import 的东西存不存在」。",
+        "新增第七道门 `npm run import-resolve`（scripts/import-resolve-check.mjs）：产品侧 230 个文件 / 289 条静态相对导入必须全部解析到真实文件。刻意排除三类噪声源（避免恒非零告警被学会忽略）：带缓存串的说明符（./x.js?v=…，浏览器合法）、裸说明符（宿主负责）、**动态** import('…')（本仓用来写多路兜底，设计上允许失败）。结构漂移与枚举面不足一律 fail-closed exit 2 拒判。",
+        "同轮修第二类：**构造期全局监听器重建即沉淀**。GamesApp / PokerApp 构造函数里的 window 监听器是匿名内联、无人持有、无解绑出口、无幂等 guard，且闭包直接钉住 this（旧实例）。实测（零依赖最小宿主夹具）：5 轮「构造 → deactivate → sudokuView.destroy」后 window 上沉淀 **10** 个永不消失的监听器（每轮 2 个，线性增长）。",
+        "修法沿用本仓 honey/mofo/wechat 同款：onceFlag 单次 guard + 登记进 globalRuntime（宿主级、可回收），handler 内经 window.VirtualPhone?.gamesApp **动态取活实例**，不再钉住旧实例；行为等价（判据仍是活实例的 currentView）。修后同款探针 5 轮重建 **0** 增长。",
+        "同轮修第三类：**prompt 钩子幂等 guard 不一致**。本仓六处生成前钩子里，health / peek / playbook / time-env 四处都有 `if (this._hooked) return`，唯独 MemoryCore.attachPromptHook() 没有 —— 重复调用会往宿主 eventSource 上叠第二个同款监听器，而该监听器没有解绑出口。当前调用点唯一，故属潜伏形态；已补齐守卫并在 on() **之后**置位（先置位会让失败静默且不可重试）。",
+        "新增 tests/_runtime_host.mjs：**零依赖最小宿主夹具**（运行时冒烟层基础设施）。本环境实测无 node_modules、无 playwright/puppeteer/jsdom、无网络，故 `计划.txt` 建议的真浏览器层**不可执行** —— 改为进程内最小宿主 + 加载真实模块，登记每一次 addEventListener，使「重建 N 轮后还剩几个监听器」可直接断言。夹具不渲染真实 DOM（querySelector 恒 null），边界写在 docs/runtime-verification-boundary.md。",
+        "新增 tests/system-v282.test.mjs（15 条）：导入门基线 + 修复点定点判据 + 两类负控制（少退一层 / 目标文件改名，均在整树副本上重跑真门禁，含 H6 工具两向自证与复原回 0）+ 缓存串不得误判且不得漏真断链 + 监听器零沉淀（含首轮基线语义）+ 源码面守卫 + 钩子 guard 普查 + 门禁已接入 npm run check + 夹具自身可用性与边界诚实性。",
+        "门禁：语法 356 文件 / 导入 289 条可解析 / 测试 **600 pass · 0 fail** / dead-exports · lifecycle · registry · keys 四道既有门全绿；`npm run check` 全链 exit 0。",
+        "版本升至 2.82.0（四源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

@@ -4,6 +4,9 @@
  * ======================================================== */
 
 import { PokerApp } from './poker/poker-app.js';
+// [v2.82.0] 构造期全局监听器收口所需：单次 guard 与宿主级登记层（可回收）。
+import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
+import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { Game2048Data } from './game2048/game2048-data.js';
 import { Game2048View } from './game2048/game2048-view.js';
 import { SudokuData } from './sudoku/sudoku-data.js';
@@ -73,16 +76,26 @@ export class GamesApp extends PokerApp {
         this._preloadCatboxAssets();
         this._preloadWerewolfAssets();
         this.undercoverView.preload();
-        window.addEventListener('phone:panelVisibility', event => {
-            const open = !!event.detail?.open;
-            if (this.currentView !== 'sudoku') return;
-            if (open) {
-                this.sudokuData.resumeTimer();
-                this.sudokuView.render();
-            } else {
-                this.sudokuView.destroy();
-            }
-        });
+        // [v2.82.0] 构造期全局监听器入登记层（可回收）+ 单次 guard（重建不累积）。
+        //   修前形态：匿名 handler 内联在构造函数里，无人持有、无解绑出口、无幂等
+        //   guard；且闭包直接钉住 `this`（旧实例）—— 实例被丢弃后旧闭包仍活着，
+        //   每次重建都在 window 上沉淀一个。实测（零依赖最小宿主探针）：
+        //   5 轮「构造 → deactivate → sudokuView.destroy」后残留 10 个监听器。
+        //   改法与 honey/mofo/wechat/poker 同款：onceFlag 只绑一次 + 进 globalRuntime
+        //   （宿主级登记，可回收），handler 内经 window.VirtualPhone?.gamesApp
+        //   **动态取活实例**，不再钉住旧实例。行为等价：判据仍是活实例的 currentView。
+        if (onceFlag('gamesPanelVisibility')) {
+            globalRuntime.addListener(window, PHONE_EVENTS.PANEL_VISIBILITY, (event) => {
+                const app = window.VirtualPhone?.gamesApp;
+                if (!app || app.currentView !== 'sudoku') return;
+                if (event?.detail?.open) {
+                    app.sudokuData?.resumeTimer?.();
+                    app.sudokuView?.render?.();
+                } else {
+                    app.sudokuView?.destroy?.();
+                }
+            }, false, 'games:panel-visibility');
+        }
     }
 
     open2048() {

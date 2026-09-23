@@ -25,6 +25,13 @@
       幂等登记，已固化为 `tests/system-v281.test.mjs`（含真源码破坏型负控制）。
       未查：各 App 看板计数的重算时机；其余按 sourceId 去重的派生库（普查仍在进行中）。
 
+      进度（v2.82.0）：本轮普查**换了失效面**（从「派生读数」转到「加载链与资源沉淀」），
+      抓到三类新形态，已修并固化：① 静态 import 路径指错（`apps/games/sudoku/sudoku-view.js`
+      少退一层 ⇒ 游戏大厅 App 打不开；新增第七道门 `npm run import-resolve`，289 条说明符
+      全解析）；② 构造期全局监听器重建即沉淀（GamesApp/PokerApp 实测 5 轮 +10，已修至 0）；
+      ③ prompt 钩子幂等 guard 不一致（MemoryCore 是六处里唯一缺守卫的，已补齐）。
+      下游对齐这条主线本身仍在（看板计数重算时机未查）。
+
 
 - [x] **多行对象字面量的成员对账** —— **已于 v2.73.0 落地（E11）**，原立项理由被实测证伪，见下。
   - **原立项理由（已证伪）**：称消费形态为 `import M from './m.js'; M.A`，
@@ -41,9 +48,44 @@
 
 ## P1 · 体验 / 一致性
 
-- [ ] （空）—— 原「会话键前缀宽匹配收紧」已于 **v2.69.0** 落地（见下方归档）。
+- [ ] **剩余「构造期裸全局监听器」逐项收口（v2.82.0 普查出的余量）** ——
+      v2.82.0 修的是 GamesApp / PokerApp 两处；同形态（构造函数里内联匿名 handler、
+      无 onceFlag、无 globalRuntime 登记、闭包钉住 this）经静态普查在下列位置**仍在**：
+      `apps/achievement/achievement-app.js`（`ruby:unlockAchievement`）、
+      `apps/diary/diary-app.js`、`apps/wangxiang/wangxiang-app.js`
+      （`phone:swipeBack` + `phone:timeUpdated`）、
+      `apps/phone/phone-app.js`（`phone:incomingCall` + `phone:swipeBack`）。
+      **严重性分层（实测）**：只有会**被重建的槽位**才会真的沉淀。
+      `achievementApp` / `diaryApp` / `wangxiangApp` / `phoneApp` 目前全仓
+      **没有置 null 的重建点**（逐键 `grep -c` 实测全为 0），故这些属**潜伏**
+      （一旦将来某条路径开始重建它们，立刻变成真泄漏）。
+      做法：复用 v2.82.0 的 `onceFlag + globalRuntime.addListener + 动态取活实例` 三件套，
+      并把 `tests/system-v282.test.mjs` 的源码面判据扩到这份清单（先固化潜伏，再逐个改）。
+      原「会话键前缀宽匹配收紧」已于 **v2.69.0** 落地（见下方归档）。
 
 ## P2 · 功能 / 架构
+
+- [x] **`计划.txt` 第 386~394 行「四项优先」的落地状态（v2.82.0 结算）**：
+      - [x] ① 浏览器运行时冒烟基础设施 —— **已落地但诚实降级**。
+        实测无 `node_modules`、无 playwright/puppeteer/jsdom、无网络，真浏览器层
+        **不可执行**；改为交付 `tests/_runtime_host.mjs`（进程内零依赖最小宿主夹具
+        + 加载真实模块 + 登记每次监听器增删），并在
+        `docs/runtime-verification-boundary.md` 里**逐条列出不能验证的东西**。
+        将来拿到可运行浏览器的环境，按该文档第四节的四步法补真实层即可。
+      - [x] ② 事件监听器 / 生命周期重复注册检测 —— **已落地**：
+        `_runtime_host.mjs` 的登记面使「重建 N 轮后还剩几个监听器」可断言；
+        `system-v282` 第 7 条即该判据（修前 5 轮 +10，修后 0）。
+        余量见 P1 的「剩余构造期裸全局监听器逐项收口」。
+      - [ ] ③ 关键 App 的存储增长与恢复测试 —— **未做**。
+        需要长期会话模拟器（1000 楼 / 100 次切角色 / 100 次开关手机 /
+        50 次流式中断重试 / 50 次 chatMetadata 保存失败 / storage 损坏与版本落后），
+        指标含内存快照增长、listener 数量、chatMetadata 字节数、单次渲染耗时、
+        状态恢复幂等性、跨会话残留。本版只交付了其中「listener 数量」一维。
+        建议下一版起专门做，且**先只做一维**（chatMetadata 字节数增长 + 恢复幂等），
+        避免一次性堆一个庞大模拟器。
+      - [ ] ④ 更新文档中的运行时验证边界 —— **未做**（本版只写了
+        `docs/runtime-verification-boundary.md`；还没把它接进 `update-log.json`
+        面向用户的说明里，因为那属于「对用户说什么」而非「工程事实」，留给下一版）。
 
 - [ ] （待评估）会话切换生命周期出口的**声明式注册**：让每个 App 自声明其出口与
       覆盖关系（如 `static lifecycleExits = { onChatChanged: {...} }`），

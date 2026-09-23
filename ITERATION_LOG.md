@@ -713,10 +713,82 @@ v2.74~v2.76 连续给生活事件时间线接入了新源头（约定状态，�
 - Windows 风格 CRLF 会让字面量锚点整体失配：读入后统一 `\r\n` → `\n` 再匹配。
 
 ---
+## 迭代 14 — v2.82.0 加载链不许断在 import 路径上，重建不许沉淀监听器
+### 目标（承 `计划.txt` 第 386~394 行的四项优先）
+计划建议「新增一个浏览器运行时冒烟层，使用独立的 Playwright / 浏览器环境运行」。
+本环境实测**跑不了浏览器**（无 node_modules、无 playwright/puppeteer/jsdom、无网络），
+故本版的原则是：**可验证的部分做扎实，不可验证的部分显式登记**，
+并把边界写进 `docs/runtime-verification-boundary.md`（不声称跑过浏览器）。
+
+### 缺陷（三条，都不报错、不崩溃，只是「跑起来才炸」或「静默累积」）
+| 形态 | 表现 | 根因 |
+|---|---|---|
+| 静态 import 路径指错 | 游戏大厅 App **完全打不开**（不是数独单独坏） | `apps/games/sudoku/sudoku-view.js` 写 `'../../config/runtime-lifecycle.js'`，而它位于 `apps/games/sudoku/` —— 真实需三层 `'../../../config/…'`；模块解析失败 ⇒ `games-app.js` 的 import 链整条断 |
+| 构造期监听器沉淀 | 每重建一轮，window 上多 2 个永不消失的监听器（闭包还钉住旧实例） | `GamesApp` / `PokerApp` 构造函数里内联匿名 handler：无解绑出口、无幂等 guard、闭包钉住 `this` |
+| 钩子 guard 不一致 | 潜伏：重复挂载会把同一份【记忆】块注入两次 | 本仓六处生成前钩子里，health/peek/playbook/time-env 都有 `if (this._hooked) return`，唯独 `MemoryCore.attachPromptHook()` 没有 |
+
+### 证据（探针实测，修复前后对照）
+**D1**：写了个只查静态相对导入可解析性的探针，全仓 355 文件 / 502 条说明符 →
+去掉「缓存串 / 注释 / 动态兜底」三类噪声后剩 **1 条真断链**，正是 sudoku-view。
+这条线写于 v2.28.0，此后 v2.29~v2.81 **五十余版全绿通过** —— 因为语法门只做
+`node --check`（问「文件自身能不能解析」），**不回答「它 import 的东西存不存在」**。
+
+**D2**：用零依赖最小宿主夹具（登记每次 `addEventListener`）实测：
+```
+轮次1 构造后 全局监听器: ["window:phone:swipeBack","window:phone:panelVisibility"]
+deactivate → 2/2，destroy → 2/2（deactivate/destroy 都收不掉它们）
+5 轮「构造→deactivate→sudokuView.destroy」后残留: 10  ← 修前
+5 轮后残留: 0                                            ← 修后
+```
+
+### 落地
+- 新增**第七道门** `scripts/import-resolve-check.mjs`（`npm run import-resolve`，
+  已接进 `npm run check` 紧随 syntax）：产品侧 230 文件 / **289 条**静态相对导入
+  必须解析到真实文件。刻意排除三类噪声源（带缓存串 / 裸说明符 / **动态** import）——
+  本仓大量用 `import('./x.js?v=时间戳')` 与 `.catch(() => import(兜底))`，
+  不排除就会出现几十条恒假告警，而恒非零告警会被读者学会忽略（v2.33 的教训）。
+  结构漂移（找不到 index.js）与枚举面不足（<150 说明符 / <100 文件）一律
+  **fail-closed exit 2 拒判**，防「探针坏了还发合格证」。
+- **D1 修复**：`sudoku-view.js` 改为 `'../../../config/runtime-lifecycle.js'`。
+- **D2 修复**：`GamesApp` / `PokerApp` 的构造期监听器改用本仓既有范式
+  `onceFlag(...)` + `globalRuntime.addListener(...)`（带 tag），
+  handler 内经 `window.VirtualPhone?.gamesApp` **动态取活实例**，不再钉住旧实例；
+  行为等价（判据仍是活实例的 `currentView`）。
+- **D3 修复**：`MemoryCore.attachPromptHook()` 补 `if (this._hooked) return true`，
+  并在 `eventSource.on(...)` **之后**置位（先置位会让失败静默且不可重试 ——
+  这正是 v2.54/v2.56 两轮修过的形态）。
+- 新增 `tests/_runtime_host.mjs`：**零依赖最小宿主夹具**（运行时冒烟层基础设施）。
+  提供 window/document/CustomEvent/MutationObserver/SillyTavern.getContext()/
+  localStorage，并登记每次监听器增删，使「重建 N 轮后还剩几个」可直接断言。
+  夹具**不渲染真实 DOM**（querySelector 恒 null）—— 这条边界本身也被测试锁定，
+  防任何依赖真实排版的判据在夹具上假通过。
+- 新增 `tests/system-v282.test.mjs`（**15 条**）：导入门基线 + 修复点定点判据 +
+  **两类负控制**（少退一层 / 目标文件改名，均用整树副本重跑真门禁，含 H6 工具两向
+  自证与「复原回 0」）+ 缓存串不得误判**且不得漏真断链** + 监听器零沉淀
+  （含首轮基线语义）+ 源码面守卫 + 钩子 guard 普查 + 门禁已接入 check 链 +
+  夹具自身可用性与边界诚实性。
+- 新增 `docs/runtime-verification-boundary.md`：把「已具备的验证层」与
+  「本版**不能**验证的东西」逐条列表（切角色状态清理、清数据残留、跨会话串味、
+  窄屏深色主题溢出等一律标注**未验证**，并写明为什么）。
+
+### 教训
+- **门禁的覆盖面要按「故障在哪一层」设计**：syntax 门回答「文件能不能被解析」，
+  它答不了「加载链通不通」。两者是不同的失效面，前者绿了后者可以全红。
+- **探针第一版不完整不算失败，算信息**：D1 的负控制首版只复制 `config/` + `apps/`，
+  基线直接红了 12 条**假断链** —— 那是**夹具缺陷**（`data/` `phone/` `assets/` 缺席），
+  不是门禁缺陷。改整树复制后基线回 0。**夹具不完整会让负控制给出错误结论**，
+  比不做负控制更危险。
+- **测试自己也会错**：本轮 3 条首跑失败中，2 条是测试语义写错（把注释里引用的
+  旧写法当成「代码里还在用」→ 假红；把「首轮首次绑定」当成泄漏 → 假红），
+  1 条是夹具踩到 Node 24 的 `navigator` 只读 getter。判定顺序应是
+  **先分清「被测对象的语义」与「测试的假设」，再决定改谁**。
+
+---
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.81.0`（四源同源）
+- **当前版本**：`2.82.0`（四源同源）
 - **门禁基线**：语法 353 文件 / 测试 **576 pass · 0 fail** / 死导出零新增 / 生命周期零缺口 /
   注册三方对账无孤儿 / keys 142 键全登记。
-  最近一轮（v2.81.0）门禁基线：语法 353 文件 / 测试 **585 pass · 0 fail**。
+  最近一轮（v2.82.0）门禁基线：语法 356 文件 / 导入可解析门 289 条说明符 /
+  测试 **600 pass · 0 fail**；`npm run check` 全链 exit 0。

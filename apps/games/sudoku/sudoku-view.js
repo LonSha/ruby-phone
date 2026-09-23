@@ -4,7 +4,7 @@
  * ======================================================== */
 
 // [v2.28.0] 实例级资源域（视图销毁即回收本视图登记的全部常驻资源）
-import { childRuntime } from '../../config/runtime-lifecycle.js';
+import { childRuntime } from '../../../config/runtime-lifecycle.js';
 export class SudokuView {
     constructor(app) {
         this.app = app;

@@ -6,6 +6,16 @@ import { PokerData } from './poker-data.js';
 import { PokerView } from './poker-view.js';
 import { WechatData } from '../../wechat/wechat-data.js';
 import { buildGameSillyTavernContextMessages } from '../common/games-ai-context.js';
+// [v2.82.0] 构造期全局监听器入登记层（可回收）+ 单次 guard（重建不累积）。
+//   修前形态：`window.addEventListener('phone:swipeBack', () => this.handleSwipeBack())`
+//   写在构造函数里，匿名 handler 无人持有、无解绑出口、无幂等 guard ——
+//   实测：GamesApp 每被重建一轮（换会话 / 清当前数据 / 清全部数据三条路径都会
+//   置 null 后重建），window 上就多一个永不消失的监听器，且闭包钉住旧实例。
+//   这正是 v2.25/v2.28 修过的形态（本仓第 N 例），改法沿用 honey/mofo/wechat 同款：
+//   onceFlag 保证只绑一次 + 登记进 globalRuntime（宿主级，可回收），
+//   handler 内经 window.VirtualPhone?.gamesApp 动态取活实例，不再钉住旧实例。
+import { onceFlag, globalRuntime } from '../../../config/runtime-lifecycle.js';
+import { PHONE_EVENTS } from '../../../config/phone-events.js';
 
 export class PokerApp {
     constructor(phoneShell, storage) {
@@ -26,7 +36,11 @@ export class PokerApp {
         this._pokerChatHasPendingReply = false;
         this._pendingUserPokerActionContext = null;
 
-        window.addEventListener('phone:swipeBack', () => this.handleSwipeBack());
+        if (onceFlag('gamesSwipeBack')) {
+            globalRuntime.addListener(window, PHONE_EVENTS.SWIPE_BACK, () => {
+                window.VirtualPhone?.gamesApp?.handleSwipeBack?.();
+            }, false, 'games:swipe-back');
+        }
     }
 
     getDefaultPokerPrompt() {
