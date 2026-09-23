@@ -290,16 +290,66 @@ export class PhoneStorage {
      * 获取 chatMetadata 中的命名空间对象
      * @returns {Object|null}
      */
+    /**
+     * [v2.83.0] 命名空间守卫：确保拿到的是**可承载键值存储的普通对象**。
+     *
+     * 为什么不能只判 `!x`（原实现）：
+     *   `!x` 只挡 undefined/null/''/0/false。而以下三种值「非空但不可用」，
+     *   全部会被放行 —— 其中**数组最危险**：字符串键能挂上、能读回（本会话正常），
+     *   但 `JSON.stringify` 不序列化数组的字符串属性，**一落盘就全丢**，
+     *   下次打开会话读到空。表现为「不崩溃、不报错，只是数据错」。
+     *
+     * 实测矩阵（探针 probe_storage_corrupt.mjs，六个场景）：
+     *   {} → 正常；'str' → set 报错+写不进；42 → set 报错+写不进；
+     *   [1,2,3] → **set 不报错、内存读得到、落盘丢失**（最危险）；
+     *   null / 缺失 → 被旧 `!x` 接住，正常。
+     *
+     * 处置：原值**备份**到命名空间内 `__corrupt_backup`（绝不静默丢用户数据），
+     * 再重建空对象。只在本方法内改动，不动调用方。
+     * @param {object} container 宿主容器（chatMetadata / extensionSettings）
+     * @param {string} label 诊断用名称
+     * @returns {object|null}
+     */
+    _ensureNamespaceStore(container, label) {
+        try {
+            if (!container || typeof container !== 'object') return null;
+            const cur = container[this.NAMESPACE];
+            const usable = cur !== null
+                && typeof cur === 'object'
+                && !Array.isArray(cur);
+            if (usable) return cur;
+            // 区分「缺席/空」与「在场但类型错」：
+            //   前者（undefined / null）是正常初值，静默建空对象即可 ——
+            //   对它也报 warn 会制造恒非零噪声，而恒非零的告警会被读者学会忽略（v2.33 教训）。
+            //   后者（字符串/数字/布尔/数组）才是真损坏，必须留档并出声。
+            const fresh = {};
+            if (cur !== undefined && cur !== null) {
+                const kind = Array.isArray(cur) ? 'array' : typeof cur;
+                // 数组是最危险的一种：写入不报错、内存读得回、落盘全丢（见方法头注释）
+                //
+                // 备份放在**重建后的命名空间内部**（键名 __corrupt_backup），不是宿主容器顶层。
+                // 取舍理由：① 顶层会污染宿主 chatMetadata，并与 keys-audit 的「键归属」门冲突；
+                //   ② 放在命名空间内则随命名空间一起持久化、路径可预期，且只影响本插件自己的命名空间。
+                try { fresh.__corrupt_backup = cur; } catch (_e) { /* 忽略 */ }
+                console.warn(`[PhoneStorage] ${label} 命名空间【${this.NAMESPACE}】不是普通对象` +
+                    `（${kind}），已备份至命名空间内 __corrupt_backup 并重建空对象` +
+                    (kind === 'array' ? '（数组：写入不报错但落盘会丢，属静默数据损失）' : ''));
+            }
+            container[this.NAMESPACE] = fresh;
+            return fresh;
+        } catch (e) {
+            console.warn(`[PhoneStorage] 准备 ${label} 命名空间失败:`, e);
+            return null;
+        }
+    }
     _getChatMetadataStore() {
         try {
             const context = this.getContext();
             if (!context || !context.chatMetadata) return null;
 
             // 确保命名空间存在
-            if (!context.chatMetadata[this.NAMESPACE]) {
-                context.chatMetadata[this.NAMESPACE] = {};
-            }
-            return context.chatMetadata[this.NAMESPACE];
+            // [v2.83.0] 命名空间守卫（必须是普通对象，见 _ensureNamespaceStore）
+            return this._ensureNamespaceStore(context.chatMetadata, 'chatMetadata');
         } catch (e) {
             console.warn('[PhoneStorage] 获取 chatMetadata 失败:', e);
             return null;
@@ -389,10 +439,8 @@ export class PhoneStorage {
             if (!context || !context.extensionSettings) return null;
 
             // 确保命名空间存在
-            if (!context.extensionSettings[this.NAMESPACE]) {
-                context.extensionSettings[this.NAMESPACE] = {};
-            }
-            return context.extensionSettings[this.NAMESPACE];
+            // [v2.83.0] 命名空间守卫（与 chatMetadata 同款，见 _ensureNamespaceStore）
+            return this._ensureNamespaceStore(context.extensionSettings, 'extensionSettings');
         } catch (e) {
             console.warn('[PhoneStorage] 获取 extensionSettings 失败:', e);
             return null;

@@ -1,5 +1,20 @@
 {
   "versions": {
+    "2.83.0": {
+      "version": "2.83.0",
+      "date": "2026-09-23",
+      "title": "命名空间坏了不能静默丢数据（损坏自愈 + 长期会话增长基线）",
+      "items": [
+        "修一个「不崩溃、不报错，只是数据错」的缺陷：**存储命名空间被写成非普通对象时，写入静默丢失**。修前实现（chatMetadata 与 extensionSettings 两处同构）是 `if (!context.<container>[NAMESPACE]) context.<container>[NAMESPACE] = {}` —— `!x` 只挡 undefined/null/''/0/false。",
+        "实测矩阵（零依赖最小宿主夹具 + 真 PhoneStorage，六个场景）：字符串 → `set()` 抛错且只进 console.error（调用方拿到的是已 resolve 的 Promise，**丢掉且不报**）；数字 → 同上；**数组 → 最危险**：字符串键挂在数组上能赋值、能读回（本会话内一切正常），但 `JSON.stringify([1,2,3])` 只序列化下标元素、不序列化字符串属性 ⇒ **一落盘全丢**，下次开会话读到空。",
+        "修法：抽共用守卫 `_ensureNamespaceStore(container, label)`，判据从 falsy 收紧为「必须是普通对象」（非数组、非 null、typeof 'object'），不合格则把原值留档到**重建后命名空间内部**的 `__corrupt_backup` 后重建空对象 —— 留档是关键，不留档等于静默丢用户数据。chatMetadata 与 extensionSettings 两处共用同一口径。",
+        "刻意区分「缺席/空」与「在场但类型错」：undefined / null 属正常初值，静默建空对象、**不留档也不出声**（否则每次首启都留一条垃圾、造出恒非零告警 —— v2.33 的教训是恒非零的告警会被读者学会忽略）；只有字符串/数字/布尔/数组才留档并 warn。循环 20 轮读/写实测备份键恒为 1 份、无嵌套备份键。",
+        "新增 tests/system-v283.test.mjs（15 条）：六个损坏场景逐一断言（健康 / 字符串 / 数组 / 数字 / null 与缺席 / extensionSettings 侧）+ 读取面同样自愈 + 行为面负控制（显式锁住「数组的字符串属性不进 JSON」这一机理，证明修复不是空转）+ 防回退源码判据 + 长期会话第一维基线（幂等写入 50 次不膨胀、数组熔断方向断言保留头部、超大 Base64 拒写、自愈幂等）+ 版本五源同源 + 边界文档存活。",
+        "长期会话状态增长（计划 ③）本版只交付**第一维**：chatMetadata 键数与字节数基线。listener 数量维度已在 v2.82.0 交付（最小宿主夹具的登记面）。剩余维度（1000 楼 / 100 次切角色 / 流式中断重试 / chatMetadata 保存失败注入 / 内存快照增长 / 单次渲染耗时）尚未做，已登记在 TODO，下一版起分维推进。",
+        "门禁：语法 358 文件 / 导入 289 条说明符全解析 / 测试 **615 pass · 0 fail** / dead-exports · lifecycle · registry · keys 四道既有门全绿；`npm run check` 全链 exit 0。",
+        "版本升至 2.83.0（五源同源）。"
+      ]
+    },
     "2.82.0": {
       "version": "2.82.0",
       "date": "2026-09-23",
@@ -1138,6 +1153,6 @@
       ]
     }
   },
-  "latest": "2.82.0",
+  "latest": "2.83.0",
   "head": "2.56.0"
 }

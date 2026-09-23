@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.82.0';
+const ST_PHONE_VERSION = '2.83.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,16 +106,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "修一个「语法门永远看不见、跑起来才炸」的缺陷类别：**静态 import 路径指错**。apps/games/sudoku/sudoku-view.js 写 `'../../config/runtime-lifecycle.js'`，而它位于 apps/games/sudoku/ —— 真实需三层 `'../../../config/…'`。语法 100% 正确，但浏览器加载该模块时解析失败，games-app.js 的 import 链整条断掉 → **游戏大厅 App 直接打不开**。",
-        "该行写于 v2.28.0，此后 v2.29~v2.81 五十余版全绿通过。根因不是没跑门禁，而是**没有任何门禁看 import 路径**：syntax 门只做 node --check（问「文件自身能不能解析」），不回答「它 import 的东西存不存在」。",
-        "新增第七道门 `npm run import-resolve`（scripts/import-resolve-check.mjs）：产品侧 230 个文件 / 289 条静态相对导入必须全部解析到真实文件。刻意排除三类噪声源（避免恒非零告警被学会忽略）：带缓存串的说明符（./x.js?v=…，浏览器合法）、裸说明符（宿主负责）、**动态** import('…')（本仓用来写多路兜底，设计上允许失败）。结构漂移与枚举面不足一律 fail-closed exit 2 拒判。",
-        "同轮修第二类：**构造期全局监听器重建即沉淀**。GamesApp / PokerApp 构造函数里的 window 监听器是匿名内联、无人持有、无解绑出口、无幂等 guard，且闭包直接钉住 this（旧实例）。实测（零依赖最小宿主夹具）：5 轮「构造 → deactivate → sudokuView.destroy」后 window 上沉淀 **10** 个永不消失的监听器（每轮 2 个，线性增长）。",
-        "修法沿用本仓 honey/mofo/wechat 同款：onceFlag 单次 guard + 登记进 globalRuntime（宿主级、可回收），handler 内经 window.VirtualPhone?.gamesApp **动态取活实例**，不再钉住旧实例；行为等价（判据仍是活实例的 currentView）。修后同款探针 5 轮重建 **0** 增长。",
-        "同轮修第三类：**prompt 钩子幂等 guard 不一致**。本仓六处生成前钩子里，health / peek / playbook / time-env 四处都有 `if (this._hooked) return`，唯独 MemoryCore.attachPromptHook() 没有 —— 重复调用会往宿主 eventSource 上叠第二个同款监听器，而该监听器没有解绑出口。当前调用点唯一，故属潜伏形态；已补齐守卫并在 on() **之后**置位（先置位会让失败静默且不可重试）。",
-        "新增 tests/_runtime_host.mjs：**零依赖最小宿主夹具**（运行时冒烟层基础设施）。本环境实测无 node_modules、无 playwright/puppeteer/jsdom、无网络，故 `计划.txt` 建议的真浏览器层**不可执行** —— 改为进程内最小宿主 + 加载真实模块，登记每一次 addEventListener，使「重建 N 轮后还剩几个监听器」可直接断言。夹具不渲染真实 DOM（querySelector 恒 null），边界写在 docs/runtime-verification-boundary.md。",
-        "新增 tests/system-v282.test.mjs（15 条）：导入门基线 + 修复点定点判据 + 两类负控制（少退一层 / 目标文件改名，均在整树副本上重跑真门禁，含 H6 工具两向自证与复原回 0）+ 缓存串不得误判且不得漏真断链 + 监听器零沉淀（含首轮基线语义）+ 源码面守卫 + 钩子 guard 普查 + 门禁已接入 npm run check + 夹具自身可用性与边界诚实性。",
-        "门禁：语法 356 文件 / 导入 289 条可解析 / 测试 **600 pass · 0 fail** / dead-exports · lifecycle · registry · keys 四道既有门全绿；`npm run check` 全链 exit 0。",
-        "版本升至 2.82.0（四源同源）。",
+        "修一个「不崩溃、不报错，只是数据错」的缺陷：**存储命名空间被写成非普通对象时，写入静默丢失**。修前实现（chatMetadata 与 extensionSettings 两处同构）是 `if (!context.<container>[NAMESPACE]) context.<container>[NAMESPACE] = {}` —— `!x` 只挡 undefined/null/''/0/false。",
+        "实测矩阵（零依赖最小宿主夹具 + 真 PhoneStorage，六个场景）：字符串 → `set()` 抛错且只进 console.error（调用方拿到的是已 resolve 的 Promise，**丢掉且不报**）；数字 → 同上；**数组 → 最危险**：字符串键挂在数组上能赋值、能读回（本会话内一切正常），但 `JSON.stringify([1,2,3])` 只序列化下标元素、不序列化字符串属性 ⇒ **一落盘全丢**，下次开会话读到空。",
+        "修法：抽共用守卫 `_ensureNamespaceStore(container, label)`，判据从 falsy 收紧为「必须是普通对象」（非数组、非 null、typeof 'object'），不合格则把原值留档到**重建后命名空间内部**的 `__corrupt_backup` 后重建空对象 —— 留档是关键，不留档等于静默丢用户数据。chatMetadata 与 extensionSettings 两处共用同一口径。",
+        "刻意区分「缺席/空」与「在场但类型错」：undefined / null 属正常初值，静默建空对象、**不留档也不出声**（否则每次首启都留一条垃圾、造出恒非零告警 —— v2.33 的教训是恒非零的告警会被读者学会忽略）；只有字符串/数字/布尔/数组才留档并 warn。循环 20 轮读/写实测备份键恒为 1 份、无嵌套备份键。",
+        "新增 tests/system-v283.test.mjs（15 条）：六个损坏场景逐一断言（健康 / 字符串 / 数组 / 数字 / null 与缺席 / extensionSettings 侧）+ 读取面同样自愈 + 行为面负控制（显式锁住「数组的字符串属性不进 JSON」这一机理，证明修复不是空转）+ 防回退源码判据 + 长期会话第一维基线（幂等写入 50 次不膨胀、数组熔断方向断言保留头部、超大 Base64 拒写、自愈幂等）+ 版本五源同源 + 边界文档存活。",
+        "长期会话状态增长（计划 ③）本版只交付**第一维**：chatMetadata 键数与字节数基线。listener 数量维度已在 v2.82.0 交付（最小宿主夹具的登记面）。剩余维度（1000 楼 / 100 次切角色 / 流式中断重试 / chatMetadata 保存失败注入 / 内存快照增长 / 单次渲染耗时）尚未做，已登记在 TODO，下一版起分维推进。",
+        "门禁：语法 358 文件 / 导入 289 条说明符全解析 / 测试 **615 pass · 0 fail** / dead-exports · lifecycle · registry · keys 四道既有门全绿；`npm run check` 全链 exit 0。",
+        "版本升至 2.83.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
