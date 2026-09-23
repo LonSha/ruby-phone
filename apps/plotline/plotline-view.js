@@ -56,6 +56,8 @@ export class PlotlineView {
             this._promiseCard(face, promises),
             this._arcCard(face, arcs),
             this._knowledgeCard(face, knowledge),
+            this._parallelCard(face, (pkg && pkg.parallels) || []),
+            this._secretCard(face, (pkg && pkg.secrets) || []),
             this._settingsCard(),
             '  </div>',
             '</div>'
@@ -175,6 +177,57 @@ export class PlotlineView {
         return [
             '<div class="pn-card">',
             '  <div class="pn-card-title">角色认知<span class="pn-count">' + (ready ? knowledge.length + ' 位' : '—') + '</span></div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+    /**
+     * [v2.86] 平行事实卡：别处正在发生的事。
+     * overheard（已传开）显事实；hidden（暗线）**只显地点+标题，不显事实正文**——
+     * 这张卡是玩家可见面，暗线事实直接摆出来等于剧透。
+     */
+    _parallelCard(face, parallels) {
+        const ready = face.reason === 'ready';
+        let body;
+        if (!ready) {
+            body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有平行事件' : '读不到平行事件') + '</div>';
+        } else if (!parallels.length) {
+            body = '<div class="pn-empty">别处暂时风平浪静</div>';
+        } else {
+            body = parallels.map((p) => {
+                if (p.audience === 'overheard') {
+                    return '<div class="pn-parallel"><span class="pn-know-tag ok">已传开</span> '
+                        + this._esc(p.title) + '（' + this._esc(p.place) + '）：' + this._esc(p.fact) + '</div>';
+                }
+                return '<div class="pn-parallel"><span class="pn-know-tag blind">暗线</span> '
+                    + this._esc(p.title) + '（' + this._esc(p.place) + '）</div>';
+            }).join('\n');
+        }
+        return [
+            '<div class="pn-card">',
+            '  <div class="pn-card-title">别处正在发生<span class="pn-count">' + (ready ? parallels.length + ' 件' : '—') + '</span></div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+    /**
+     * [v2.86] 秘密卡：**只显持有者与推进度，绝不显秘密内容**（内容只进生成侧 promptBlock）。
+     */
+    _secretCard(face, secrets) {
+        const ready = face.reason === 'ready';
+        const open = secrets.filter((x) => x.status === 'sealed' || x.status === 'advancing');
+        let body;
+        if (!ready) {
+            body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有秘密' : '读不到秘密') + '</div>';
+        } else if (!open.length) {
+            body = '<div class="pn-empty">暂无未揭露的秘密</div>';
+        } else {
+            body = open.map((x) => '<div class="pn-secret"><span class="pn-know-tag blind">未揭露</span> '
+                + this._esc(x.keeper) + ' 守着（进度 ' + x.progress + '%）</div>').join('\n');
+        }
+        return [
+            '<div class="pn-card">',
+            '  <div class="pn-card-title">秘密<span class="pn-count">' + (ready ? open.length + ' 桩' : '—') + '</span></div>',
             '  ' + body,
             '</div>'
         ].join('\n');

@@ -120,13 +120,14 @@ test('v285 5. 会话键删除不碰 localStorage，全局键删除会清兜底',
   }
 });
 
-test('v285 6. 五源同源 2.85.0', () => {
+test('v285 6. 五源同源 2.85.0 起步（下限锚点，本版后由新套件接管）', () => {
+  // [v2.86] 硬等号改下限：五源同源判定已由 system-v286 接管精确等号
   const version = '2.85.0';
-  assert.match(read('package.json'), new RegExp(`"version": "${version}"`));
-  assert.match(read('manifest.json'), new RegExp(`"version": "${version}"`));
-  assert.match(read('index.js'), new RegExp(`const ST_PHONE_VERSION = '${version}'`));
-  const log = JSON.parse(read('update-log.json'));
-  assert.equal(log.latest, version);
-  assert.equal(Object.keys(log.versions)[0], version);
-  assert.match(read('index.js'), new RegExp(`版本升至 ${version}`));
+  const idxSrc = read('index.js');
+  const m = /const ST_PHONE_VERSION = '([0-9.]+)'/.exec(idxSrc);
+  assert.ok(m, 'index.js 必须有 ST_PHONE_VERSION');
+  const v = m[1];
+  const n = (x) => x.split('.').map(Number).reduce((a, b) => a * 1000 + b, 0);
+  assert.ok(n(v) >= n(version), 'ST_PHONE_VERSION ' + v + ' >= 2.85.0');
+  assert.match(read('index.js'), new RegExp(`版本升至 ${v.replace(/\./g, '\\.')}（五源同源）`));
 });

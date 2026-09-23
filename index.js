@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.85.0';
+const ST_PHONE_VERSION = '2.86.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,13 +104,12 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-24",
+    date: "2026-09-25",
     items: [
-        "五条机制里属于本仓的三条落地：平行事件按近场/远场分层（enqueue 记下 layer，缺省近场；splitLayers 切开队列，远场只作背景）、好感与信任分列（信任只吃事件上显式给出的 extra.trust，没有样本时 trust 为 null、不编成 0）、剧情线只注入未回收伏笔（open / advancing），已回收不进正文。伏笔账本、召回只读边界与场景头在记忆插件 3.195.0。",
-        "P1 监听器收口：成就、日记、万象、通话四处构造期裸 window.addEventListener 改为 onceFlag + globalRuntime.addListener，handler 动态取活实例，不再钉住旧 this。这四处目前没有置 null 的重建点，属潜伏；先收口，避免将来一重建就沉淀。",
-        "P1 存储键空间收口：会话键没有 localStorage 兜底。remove() 对会话键显式跳过 localStorage.removeItem，不再靠「键本来就不存在」碰巧无害。全局键的兜底删除保持不变。判据是键表前后对比，不是注释。",
-        "新增 tests/system-v285.test.mjs：分层、分列、伏笔注入、四份监听器源码面、会话键删除不发 localStorage、五源同源。",
-        "版本升至 2.85.0（五源同源）。"
+        "剧情线接入记忆插件 3.196.0 的两本新账本：平行事实（audience 区分「已传开 / 暗线」）与秘密（keeper 持有者 + 推进度）。手机面板新增「别处正在发生」「秘密」两卡；暗线只显地点与标题、秘密只显持有者与进度——面板是玩家可见面，事实与秘密内容本体只进生成侧一致性块。",
+        "生成侧 plotlinePromptBlock 新增三类注入行：已传开事实（全量）、别处暗线（标注在场角色不得直接知晓，需经传闻或目击自然触及）、未揭露秘密（标注除持有者外无人知晓、不得无来由泄露）。只注入未了结条目，settled/revealed/dropped 不进正文。",
+        "新增 tests/system-v286.test.mjs：两投影取数、注入行口径、面板防剧透、v285 硬等号改下限锚点、五源同源。",
+        "版本升至 2.86.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

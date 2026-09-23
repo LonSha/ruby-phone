@@ -17,7 +17,7 @@
  *   故 onChatChanged() 只丢弃上一次的探针归因，不持有任何数据副本。
  * ======================================================== */
 'use strict';
-import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, plotlinePromptBlock } from './plotline-data.js';
+import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, parallelList, secretList, plotlinePromptBlock } from './plotline-data.js';
 import { PlotlineView } from './plotline-view.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^plotline_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'plotline_settings_v1';
@@ -85,7 +85,9 @@ export class PlotlineApp {
         const promises = promiseList(face.worldProg);
         const arcs = arcList(face.worldProg);
         const knowledge = knowledgeList(face.worldProg);
-        return { face, stage, promises, arcs, knowledge };
+        const parallels = parallelList(face.worldProg);
+        const secrets = secretList(face.worldProg);
+        return { face, stage, promises, arcs, knowledge, parallels, secrets };
     }
     /** 一行总述（供视图/host 诊断） */
     summaryLine() {

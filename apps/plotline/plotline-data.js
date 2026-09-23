@@ -201,6 +201,64 @@ export function knowledgeList(worldProg) {
     } catch (_e) { return out; }
 }
 /**
+ * 平行事实投影：读记忆插件 worldProg.parallelLedger（parallel-ledger 的 normalize 形态）。
+ * 「别处正在发生的事」：audience 区分 hidden（在场角色不得知晓）/ overheard（已传开）。
+ * 账本缺失如实返回 []。状态原样透传，不把未知编成 open。
+ * @param {object|null} worldProg
+ * @returns {Array<{id:string, title:string, fact:string, place:string, audience:string, status:string}>}
+ */
+export function parallelList(worldProg) {
+    const out = [];
+    try {
+        if (!worldProg || typeof worldProg !== 'object') return out;
+        const ledger = worldProg.parallelLedger;
+        const items = ledger && Array.isArray(ledger.items) ? ledger.items : [];
+        for (const item of items) {
+            if (!item || typeof item !== 'object') continue;
+            const title = clip(item.title, 80);
+            if (!title) continue;
+            out.push({
+                id: clip(item.id, 80),
+                title,
+                fact: clip(item.fact, 160),
+                place: clip(item.place, 80),
+                audience: item.audience === 'overheard' ? 'overheard' : 'hidden',
+                status: typeof item.status === 'string' ? item.status : 'open'
+            });
+        }
+        return out;
+    } catch (_e) { return out; }
+}
+/**
+ * 秘密投影：读记忆插件 worldProg.secretLedger（secret-ledger 的 normalize 形态）。
+ * 「某角色此刻不该被知晓的事」：keeper 点名持有者。**注意防剧透口径：**
+ * 面板层只应显示持有者与推进度，秘密内容本体只进生成侧（见 plotlinePromptBlock）。
+ * @param {object|null} worldProg
+ * @returns {Array<{id:string, secret:string, keeper:string, progress:number, status:string}>}
+ */
+export function secretList(worldProg) {
+    const out = [];
+    try {
+        if (!worldProg || typeof worldProg !== 'object') return out;
+        const ledger = worldProg.secretLedger;
+        const items = ledger && Array.isArray(ledger.items) ? ledger.items : [];
+        for (const item of items) {
+            if (!item || typeof item !== 'object') continue;
+            const secret = clip(item.secret, 160);
+            if (!secret) continue;
+            const prog = Number(item.progress);
+            out.push({
+                id: clip(item.id, 80),
+                secret,
+                keeper: clip(item.keeper, 80),
+                progress: Number.isFinite(prog) ? prog : 0,
+                status: typeof item.status === 'string' ? item.status : 'sealed'
+            });
+        }
+        return out;
+    } catch (_e) { return out; }
+}
+/**
  * 一致性块：把「当前阶段 + 未兑现承诺 + 推进中支线」交给生成侧，
  * 让正文里的剧情节奏与记忆插件推进的世界**是同一个**（无内容返回 ''，不产生空块）。
  * @param {{outline?:object|null, worldProg?:object|null}} face
@@ -228,6 +286,19 @@ export function plotlinePromptBlock(face, opts = {}) {
         for (const s of seeds.slice(0, 5)) {
             const tag = s.layer === 'far' ? '远场' : (s.status === 'advancing' ? '回收中' : '近场');
             lines.push('- 未回收伏笔〔' + tag + '〕：' + s.hook);
+        }
+        // [v2.86] 平行事实：已传开的给全量事实，隐藏的只给地点+标题（正文不得让在场角色直接知晓）
+        const parallels = parallelList(face.worldProg).filter((p) => p.status === 'open' || p.status === 'touched');
+        for (const p of parallels.filter((x) => x.audience === 'overheard').slice(0, 3)) {
+            lines.push('- 别处已传开：' + p.title + '（' + p.place + '）' + p.fact);
+        }
+        for (const p of parallels.filter((x) => x.audience === 'hidden').slice(0, 3)) {
+            lines.push('- 别处暗线〔在场角色不得直接知晓，需经传闻/目击自然触及〕：' + p.title + '（' + p.place + '）');
+        }
+        // [v2.86] 秘密：只给持有者+推进度+内容（正文按 keeper 是否在场决定是否触及，不得无来由泄露）
+        const secrets = secretList(face.worldProg).filter((x) => x.status === 'sealed' || x.status === 'advancing');
+        for (const x of secrets.slice(0, 3)) {
+            lines.push('- 未揭露秘密（持有者：' + x.keeper + '，进度 ' + x.progress + '%，除持有者外无人知晓，不得无来由泄露）：' + x.secret);
         }
         if (!lines.length) return '';
         return '【本世界的剧情推进（记忆插件大纲/世界推进，正文节奏不得与之矛盾）】\n' + lines.slice(0, maxLines).join('\n');
