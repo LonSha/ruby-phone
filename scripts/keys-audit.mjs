@@ -296,7 +296,11 @@ const KEY_REGISTRY = [
   { key: 'lonsha_bridge_v1', scope: 'global', note: 'LonSha 桥配置' },
   { key: 'lonsha_memory', scope: 'global', note: 'LonSha 记忆（全局）' },
   { key: 'queue_state', scope: 'global', note: 'NAI 队列状态' },
-  { key: 'virtual_phone', scope: 'global', note: '旧版顶层容器键（storage.js 命名空间）' }
+  { key: 'virtual_phone', scope: 'global', note: '旧版顶层容器键（storage.js 命名空间）' },
+  // [v2.89.0] 存储层迁移账本：记录「哪些旧键已迁进新架构」，防重复搬运。
+  //   键名不匹配任何 CHAT_DATA_PATTERNS → 默认落全局命名空间（isChatData=false）；
+  //   写端会按 isChatData 选 store，但**键名归属**以 pattern 匹配为准，故登记 global。
+  { key: '__migration_ledger', scope: 'global', note: '存储层迁移留痕账本（version+keys）' }
 ];
 
 const matches = (entry, key) => entry.key.endsWith('*')

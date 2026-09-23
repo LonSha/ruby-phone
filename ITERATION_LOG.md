@@ -1008,13 +1008,48 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 - **验证**：system-v288 17/17 全绿；system-v247 / gacha-data 同源锁定套件全绿；全量门禁见门禁基线。
 - **遗留**：无。
 
+---
+## 迭代 21 — v2.89.0 存储层 schema 版本化与迁移留痕（TODO P2「版本落后」）
+- **日期**：2026-09-25
+- **类型**：稳定性 / 缺陷修复（存储层版本机制 + 类型漂移）
+- **动机**：TODO P2「storage 损坏与版本落后」写明——损坏**自愈**已于 v2.83.0 落地，
+  但「版本落后」仍缺：本仓存储层**没有**统一 schema 版本号，且旧架构迁移
+  （`_migrateToNewArchitecture`）**不留痕、不清旧 localStorage 键**。
+  四处迁移（storage 旧架构搬迁 / drives 的 schema_version / honey 旧全局键 /
+  wechat 旧消息）各自为政，无一回答「这份存档属于哪个存储时代」。
+- **探针先行（不凭读代码下结论）**：`tests/probe_v289b.mjs` 实测锚定两条真缺陷——
+  ① 迁移后旧 localStorage 键未清除 → 每次 `get(旧键)` 重走迁移分支、重复搬运；
+  ② localStorage **读出未解析 JSON**（写入侧 `JSON.stringify`，读出侧原样返回字符串）→ 类型漂移。
+  （首版探针 `probe_v289.mjs` 给出假阳性：A3「迁移留痕」命中的是 `*_presets_migrated` 注释字符串；
+  改真实例探针后才收敛。键名规则、chatData 模式亦各误判一次，均由实测修正。）
+- **实现（`config/storage.js`）**：
+  - `STORAGE_SCHEMA_VERSION = 2`（1=旧架构无留痕 / 2=迁移留痕+读出解析）+ `MIGRATION_LEDGER_KEY = '__migration_ledger'`。
+  - 新增 `_readMigrationLedger(isChatData)` / `_writeMigrationLedger(isChatData, ledger)` /
+    `_isKeyMigrated(key, isChatData)` / `_parseLegacyValue(raw)`（仅结构/字面量才解析，纯文本/坏 JSON 原样）。
+  - `_migrateToNewArchitecture` 末尾登记账本 + `localStorage.removeItem(legacyKey)`；
+    `get()` 迁移分支改 `if (!isChatData && !this._isKeyMigrated(key, isChatData))` 并用 `_parseLegacyValue` 解析。
+- **踩坑（本轮最大收获：阳性对照抓住第二处真缺陷）**：
+  D2 负控制首版「再塞一份旧值」判不出差异——首迁后新架构 store 已持有该键，
+  `get` 第 0 优先级直接命中 return，破坏账本短路观测不到（破坏与判据不对齐的假绿）。
+  改为「先删 store 里的键、再塞回旧键」后加**阳性对照**（原版必须短路返回 default），
+  阳性对照立刻红灯：`_readMigrationLedger` 写成 `_getChatMetadataStore() || _getExtensionSettingsStore()`，
+  而 chatMetadata 命名空间**即使为空也是真值对象** → `||` 短路，
+  全局键的账本（写在 extensionSettings）**永远读不到**，`_isKeyMigrated` 恒 false、
+  **账本短路形同虚设**。修法：读端与写端同构，按 `isChatData` 三目选同一个 store。
+  → 教训沉淀：负控制必须配阳性对照，否则「红灯」不代表判据真的测到了机制。
+- **验证**：`tests/system-v289.test.mjs` 7/7 全绿（A 源码面 / B 行为面 / C 解析面 /
+  D1+D2 负控制含阳性对照 / E 版本锚点）；`scripts/keys-audit.mjs` 登记
+  `__migration_ledger`（global，143 键全登记、声明与机制一致）；
+  全量门禁 655 tests / 651 pass（4 个红均由本轮改动触发并已修）。
+- **遗留**：无。
+
 
 ---
 
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.88.0`（五源同源）
+- **当前版本**：`2.89.0`（五源同源）
 - **门禁基线**：语法 353 文件 / 测试 **576 pass · 0 fail** / 死导出零新增 / 生命周期零缺口 /
   注册三方对账无孤儿 / keys 142 键全登记。
   最近一轮（v2.84.0）门禁基线（实测）：语法 360 文件 / 导入可解析门 289 条说明符 /

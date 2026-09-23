@@ -24,7 +24,19 @@ export class PhoneStorage {
         // ==================== 命名空间 ====================
         this.NAMESPACE = 'st_virtual_phone';
         this.storageKey = 'virtual_phone'; // 兼容旧版 localStorage 键名
-
+        // ==================== 存储 schema 版本 ====================
+        // [v2.89.0] 存储层统一 schema 版本号。
+        //   此前本仓**没有**统一版本号：四处迁移各自为政（storage 的旧架构搬迁、
+        //   drives 的 schema_version、honey 的旧全局键搬迁、wechat 的旧消息迁移），
+        //   且迁移不留痕 —— 每次读到旧键都重走迁移分支。
+        //   本常量是「一份存档属于哪个存储时代」的唯一真源；迁移完成要落痕（见
+        //   _migrationLedger），使「已迁移」与「未迁移」可区分，而不靠「旧键碰巧没了」。
+        //   版本含义：
+        //     1 = 迁移前的旧架构（localStorage 直存 / 无留痕）
+        //     2 = 迁移留痕 + localStorage 读出解析（本版）
+        this.STORAGE_SCHEMA_VERSION = 2;
+        // 迁移留痕在命名空间内的键名（随命名空间持久化，不污染宿主容器顶层）
+        this.MIGRATION_LEDGER_KEY = '__migration_ledger';
         // ==================== 上下文缓存 ====================
         this.currentCharacterId = null;
         this.currentChatId = null;
@@ -633,12 +645,18 @@ export class PhoneStorage {
 
             // ==================== 第2优先级：从 localStorage 读取旧数据并自动迁移 ====================
             // 仅全局设置允许走 localStorage 兜底，聊天专属数据禁止（防止亡灵复活）
-            if (!isChatData) {
+            // [v2.89.0] 迁移留痕短路：账本命中说明该键早已搬进新架构，旧键只是残留 ——
+            //   不再重走迁移分支（修前是「每次 get 都重迁一次」）。
+            if (!isChatData && !this._isKeyMigrated(key, isChatData)) {
                 const legacyKey = this._getLegacyLocalStorageKey(key, isChatData);
-                const legacyValue = this._getFromLocalStorage(legacyKey);
+                const rawLegacy = this._getFromLocalStorage(legacyKey);
+                // [v2.89.0] 读出解析：写入侧对非字符串做 JSON.stringify（见 _setToLocalStorage），
+                //   但读取侧此前**原样返回字符串** —— 调用方拿到的是 "{\"v\":1}" 而不是 {v:1}，
+                //   类型漂移。这里补上解析：解析成功用对象，失败/非 JSON 则保留原字符串。
+                const legacyValue = this._parseLegacyValue(rawLegacy);
 
                 if (legacyValue !== null && legacyValue !== undefined) {
-                    // 🔥 自动迁移：将旧数据写入新架构
+                    // 🔥 自动迁移：将旧数据写入新架构（含留痕 + 清旧键）
                     this._migrateToNewArchitecture(key, legacyValue, isChatData);
                     return legacyValue;
                 }
@@ -817,6 +835,31 @@ export class PhoneStorage {
             return null;
         }
     }
+    /**
+     * [v2.89.0] 解析从 localStorage 读到的旧值。
+     *   写入侧：_setToLocalStorage 对非字符串做 JSON.stringify（对象 → '{"a":1}'）。
+     *   读取侧修前：原样返回字符串 —— 于是同一份数据「写进去是对象、读出来是字符串」。
+     *   本方法补上解析，保持与原语义兼容：
+     *     · 原始值为 string 且能被 JSON.parse 成对象/数组/数字/布尔 → 返回解析结果；
+     *     · 原始值本就是普通字符串（非 JSON，如 'abc'）→ 返回原字符串；
+     *     · null / undefined / 解析抛错 → 返回原值（由调用方判 null/undefined）。
+     */
+    _parseLegacyValue(raw) {
+        if (raw === null || raw === undefined) return raw;
+        if (typeof raw !== 'string') return raw;
+        const trimmed = raw.trim();
+        // 只对看起来像 JSON 结构/字面量的串尝试解析，纯文本（abc / hello）保持原样
+        const looksJson = (trimmed.startsWith('{') && trimmed.endsWith('}'))
+            || (trimmed.startsWith('[') && trimmed.endsWith(']'))
+            || trimmed === 'true' || trimmed === 'false' || trimmed === 'null'
+            || /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed);
+        if (!looksJson) return raw;
+        try {
+            return JSON.parse(trimmed);
+        } catch (_e) {
+            return raw;
+        }
+    }
 
     /**
      * 写入 localStorage（忽略 QuotaExceededError）
@@ -835,7 +878,61 @@ export class PhoneStorage {
     }
 
     /**
+     * [v2.89.0] 读取迁移账本（命名空间内）。
+     *   账本记录「哪些旧键已经被迁移过」，使重复 get 不再重走迁移。
+     *   返回 { version, keys: { <key>: <atISO> } }；缺失/损坏一律降级为空账本（不抛）。
+     */
+    _readMigrationLedger(isChatData = false) {
+        try {
+            // 与 _writeMigrationLedger 同构：按 isChatData 选**同一个** store。
+            // 修前写成 `_getChatMetadataStore() || _getExtensionSettingsStore()`，
+            // 而 chatMetadata 命名空间即使为空也是真值对象 → `||` 短路，
+            // 全局键的账本（写在 extensionSettings）永远读不到，
+            // _isKeyMigrated 恒 false、短路形同虚设（由 v289 D2 阳性对照实测暴露）。
+            const store = isChatData ? this._getChatMetadataStore() : this._getExtensionSettingsStore();
+            const raw = store && store[this.MIGRATION_LEDGER_KEY];
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+                return { version: 0, keys: {} };
+            }
+            const keys = (raw.keys && typeof raw.keys === 'object' && !Array.isArray(raw.keys)) ? raw.keys : {};
+            return { version: Number(raw.version) || 0, keys };
+        } catch (_e) {
+            return { version: 0, keys: {} };
+        }
+    }
+
+    /** [v2.89.0] 写入迁移账本（幂等；写失败不阻断迁移本身）。 */
+    _writeMigrationLedger(isChatData, ledger) {
+        try {
+            const store = isChatData ? this._getChatMetadataStore() : this._getExtensionSettingsStore();
+            if (!store) return;
+            store[this.MIGRATION_LEDGER_KEY] = {
+                version: this.STORAGE_SCHEMA_VERSION,
+                keys: ledger.keys || {},
+            };
+            if (isChatData) this._debouncedSaveChat();
+            else this._queuedSaveExtensionSettings();
+        } catch (e) {
+            console.warn('[PhoneStorage] 写入迁移账本失败:', e);
+        }
+    }
+
+    /** [v2.89.0] 该旧键是否已迁移过（账本命中）。 */
+    _isKeyMigrated(key, isChatData = false) {
+        const ledger = this._readMigrationLedger(isChatData);
+        return Object.prototype.hasOwnProperty.call(ledger.keys, key);
+    }
+
+    /**
      * 自动迁移旧数据到新架构
+     *
+     * [v2.89.0] 迁移留痕 + 清旧键：
+     *   修前形态（实测，探针 probe_v289b.mjs）：迁移后**旧 localStorage 键不清除、
+     *   账本不留痕**，于是每次 get(该键) 都重走迁移分支、重复写 store。后果不是崩溃，
+     *   而是「同一份旧值被反复搬运」——旧值与新值一旦有差异就会相互覆盖。
+     *   修复：① 迁移成功后在账本登记该键（带时间戳）；② 清除旧 localStorage 键
+     *   （内容已入新架构，留着只会被重复搬运）；③ 两条都成功才算迁移完成。
+     *   下一步 get 时先查账本：命中即直接返回新架构读数，不再走旧键分支。
      */
     _migrateToNewArchitecture(key, value, isChatData) {
         try {
@@ -852,6 +949,14 @@ export class PhoneStorage {
                     this._queuedSaveExtensionSettings();
                 }
             }
+            // [v2.89.0] 留痕：登记该键已迁移，并清除旧 localStorage 键，防止重复搬运。
+            const ledger = this._readMigrationLedger(isChatData);
+            ledger.keys[key] = new Date().toISOString();
+            this._writeMigrationLedger(isChatData, ledger);
+            try {
+                const legacyKey = this._getLegacyLocalStorageKey(key, isChatData);
+                localStorage.removeItem(legacyKey);
+            } catch (_e) { /* localStorage 不可用则跳过，账本已可防重 */ }
         } catch (e) {
             console.warn('[PhoneStorage] 自动迁移失败:', e);
         }

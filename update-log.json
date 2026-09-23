@@ -1,6 +1,19 @@
 {
-  "latest": "2.88.0",
+  "latest": "2.89.0",
   "versions": {
+    "2.89.0": {
+      "date": "2026-09-25",
+      "title": "存储层 schema 版本化与迁移留痕",
+      "items": [
+        "存储层补齐统一 schema 版本号：新增 STORAGE_SCHEMA_VERSION=2（1=旧架构无留痕 / 2=迁移留痕+读出解析），本仓此前无版本号、四处迁移各自为政。",
+        "旧架构迁移留痕：新增命名空间内 __migration_ledger（version+keys+时间戳），迁移成功即登记，重复 get 命中账本即短路、不再重跑迁移。",
+        "迁移后清除 localStorage 旧键 + localStorage 读出补 JSON 解析（修前写对象读字符串的类型漂移），纯文本/坏 JSON 一律原样返回。",
+        "修掉账本短路读错 store 的缺陷（读端 `chatMetadata || extensionSettings` 因前者恒为真值对象而短路），读端改为与写端同构按 isChatData 选 store。",
+        "新增 tests/system-v289.test.mjs：源码面/行为面/解析面/负控制×2（含阳性对照）/版本锚点，破坏与判据一一对齐。",
+        "版本升至 2.89.0（五源同源）。"
+      ],
+      "version": "2.89.0"
+    },
     "2.88.0": {
       "date": "2026-09-25",
       "title": "万界武库 V4.1 合并式更新（157→165 包，不砍原有）",
