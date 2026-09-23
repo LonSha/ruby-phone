@@ -58,6 +58,7 @@ export class PlotlineView {
             this._knowledgeCard(face, knowledge),
             this._parallelCard(face, (pkg && pkg.parallels) || []),
             this._secretCard(face, (pkg && pkg.secrets) || []),
+            this._echoCard(face, (pkg && pkg.recallEchoes) || [], (pkg && pkg.echoLives) || []),
             this._settingsCard(),
             '  </div>',
             '</div>'
@@ -228,6 +229,43 @@ export class PlotlineView {
         return [
             '<div class="pn-card">',
             '  <div class="pn-card-title">秘密<span class="pn-count">' + (ready ? open.length + ' 桩' : '—') + '</span></div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+    /**
+     * [v2.87] 回声卡：前文回扣候选 + 角色生活回声（合并一张卡）。
+     * 回扣候选显 detail/kind/floor（回扣本身就是玩家应看到的「旧细节新意义」）；
+     * 生活回声只显角色与模式（fields/os 氛围本体只进生成侧）。
+     */
+    _echoCard(face, recallEchoes, echoLives) {
+        const ready = face.reason === 'ready';
+        let body;
+        if (!ready) {
+            body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有回扣与回声' : '读不到回扣与回声') + '</div>';
+        } else if (!recallEchoes.length && !echoLives.length) {
+            body = '<div class="pn-empty">暂无回扣候选与生活回声</div>';
+        } else {
+            const echoLines = recallEchoes.slice(0, 3).map((e) => {
+                const kindTag = { clue: '线索', item: '物品', behavior: '行为', quote: '原话' }[e.kind] || '细节';
+                return '<div class="pn-echo"><span class="pn-know-tag ok">可回扣</span> '
+                    + '〔' + this._esc(kindTag) + '〕' + this._esc(e.detail)
+                    + (e.floor != null ? '（第' + e.floor + '楼）' : '') + '</div>';
+            });
+            const lifeLines = echoLives.slice(0, 3).map((x) => {
+                const modeTag = {
+                    askbox: '提问箱', pocket: '口袋小物', fridge: '冰箱留言', parcel: '快递包裹',
+                    draft: '未发草稿', science: '乱科普', clip: '迷情剪辑', tabloid: '谣言小报',
+                    scene: '名场面回放', misunderstand: '今日误会', trash: '垃圾桶残留'
+                }[x.mode] || x.mode;
+                return '<div class="pn-echo"><span class="pn-know-tag blind">回声</span> '
+                    + this._esc(x.char) + '：' + this._esc(modeTag) + '</div>';
+            });
+            body = echoLines.concat(lifeLines).join('\n');
+        }
+        return [
+            '<div class="pn-card">',
+            '  <div class="pn-card-title">前文回声<span class="pn-count">' + (ready ? (recallEchoes.length + echoLives.length) + ' 条' : '—') + '</span></div>',
             '  ' + body,
             '</div>'
         ].join('\n');

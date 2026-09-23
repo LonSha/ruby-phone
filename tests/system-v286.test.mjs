@@ -95,12 +95,17 @@ test('v286 3. 面板防剧透：暗线卡不显事实正文、秘密卡不显内
   assert.ok(app.includes('parallelList') && app.includes('secretList'), 'app 层接入两投影');
 });
 
-test('v286 4. 五源同源 2.86.0', () => {
-  const version = '2.86.0';
+test('v286 4. 五源同源（下限锚点 ≥ 2.86.0，硬等号由当版套件接管）', () => {
   const idxSrc = read('index.js');
-  assert.match(read('package.json'), new RegExp(`"version": "${version}"`));
-  assert.match(read('manifest.json'), new RegExp(`"version": "${version}"`));
-  assert.match(idxSrc, new RegExp(`const ST_PHONE_VERSION = '${version}'`));
+  const pkg = JSON.parse(read('package.json'));
+  const man = JSON.parse(read('manifest.json'));
+  const mVer = /const ST_PHONE_VERSION = '([\d.]+)'/.exec(idxSrc);
+  assert.ok(mVer, 'ST_PHONE_VERSION 可提取');
+  const version = mVer[1];
+  const vnum = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
+  assert.ok(vnum(version) >= vnum('2.86.0'), `版本 ${version} < 2.86.0`);
+  assert.equal(pkg.version, version, 'package 同源');
+  assert.equal(man.version, version, 'manifest 同源');
   const log = JSON.parse(read('update-log.json'));
   assert.equal(log.latest, version);
   assert.equal(Object.keys(log.versions)[0], version);

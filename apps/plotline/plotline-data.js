@@ -259,6 +259,58 @@ export function secretList(worldProg) {
     } catch (_e) { return out; }
 }
 /**
+ * [v2.87] 回扣投影：读记忆插件 worldProg.recallEcho（recall-echo 的 normalize 形态）。
+ * 面板层只显示 detail/kind/floor，已回扣/已跳过的不进面板（回扣是生成侧事件）。
+ * @param {object|null} worldProg
+ * @returns {Array<{id:string, detail:string, kind:string, floor:number}>}
+ */
+export function recallEchoList(worldProg) {
+    const out = [];
+    try {
+        if (!worldProg || typeof worldProg !== 'object') return out;
+        const ledger = worldProg.recallEcho;
+        const items = ledger && Array.isArray(ledger.items) ? ledger.items : [];
+        for (const item of items) {
+            if (!item || typeof item !== 'object') continue;
+            if (item.status !== 'pending') continue;
+            const detail = clip(item.detail, 120);
+            if (!detail) continue;
+            out.push({
+                id: clip(item.id, 80),
+                detail,
+                kind: typeof item.kind === 'string' ? item.kind : 'clue',
+                floor: Number.isFinite(Number(item.floor)) ? Number(item.floor) : null
+            });
+        }
+        return out;
+    } catch (_e) { return out; }
+}
+/**
+ * [v2.87] 回声投影：读记忆插件 worldProg.echoLedger（echo-ledger 的 normalize 形态）。
+ * 面板层只显示角色/模式/楼层，fields 与 os 本体只进生成侧（回声是氛围层不是事实层）。
+ * @param {object|null} worldProg
+ * @returns {Array<{mode:string, char:string, floor:number|null}>}
+ */
+export function echoLifeList(worldProg) {
+    const out = [];
+    try {
+        if (!worldProg || typeof worldProg !== 'object') return out;
+        const ledger = worldProg.echoLedger;
+        const items = ledger && Array.isArray(ledger.items) ? ledger.items : [];
+        for (const item of items) {
+            if (!item || typeof item !== 'object') continue;
+            const char = clip(item.char, 40);
+            if (!char) continue;
+            out.push({
+                mode: typeof item.mode === 'string' ? item.mode : 'askbox',
+                char,
+                floor: Number.isFinite(Number(item.floor)) ? Number(item.floor) : null
+            });
+        }
+        return out;
+    } catch (_e) { return out; }
+}
+/**
  * 一致性块：把「当前阶段 + 未兑现承诺 + 推进中支线」交给生成侧，
  * 让正文里的剧情节奏与记忆插件推进的世界**是同一个**（无内容返回 ''，不产生空块）。
  * @param {{outline?:object|null, worldProg?:object|null}} face
@@ -299,6 +351,17 @@ export function plotlinePromptBlock(face, opts = {}) {
         const secrets = secretList(face.worldProg).filter((x) => x.status === 'sealed' || x.status === 'advancing');
         for (const x of secrets.slice(0, 3)) {
             lines.push('- 未揭露秘密（持有者：' + x.keeper + '，进度 ' + x.progress + '%，除持有者外无人知晓，不得无来由泄露）：' + x.secret);
+        }
+        // [v2.87] 回扣候选：给五回合前的细节，正文自然契合才重现（不强行解释为伏笔）
+        const echoes = recallEchoList(face.worldProg);
+        for (const e of echoes.slice(0, 2)) {
+            lines.push('- 前文可回扣〔' + e.kind + '，出现在第' + e.floor + '楼，若与当前情境自然契合才重现，不篡改原意〕：' + e.detail);
+        }
+        // [v2.87] 角色生活回声：只给模式与角色（fields/os 本体在插件注入面，正文按氛围补全，不改写为既定事实）
+        const lifeEchos = echoLifeList(face.worldProg);
+        const echoChars = [...new Set(lifeEchos.map((x) => x.char))].slice(0, 3);
+        if (echoChars.length) {
+            lines.push('- 角色生活回声已有产出（' + echoChars.join('、') + '），可自然化用其氛围，不得改写为剧情既定事实');
         }
         if (!lines.length) return '';
         return '【本世界的剧情推进（记忆插件大纲/世界推进，正文节奏不得与之矛盾）】\n' + lines.slice(0, maxLines).join('\n');

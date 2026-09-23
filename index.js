@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.86.0';
+const ST_PHONE_VERSION = '2.87.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,10 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "剧情线接入记忆插件 3.196.0 的两本新账本：平行事实（audience 区分「已传开 / 暗线」）与秘密（keeper 持有者 + 推进度）。手机面板新增「别处正在发生」「秘密」两卡；暗线只显地点与标题、秘密只显持有者与进度——面板是玩家可见面，事实与秘密内容本体只进生成侧一致性块。",
-        "生成侧 plotlinePromptBlock 新增三类注入行：已传开事实（全量）、别处暗线（标注在场角色不得直接知晓，需经传闻或目击自然触及）、未揭露秘密（标注除持有者外无人知晓、不得无来由泄露）。只注入未了结条目，settled/revealed/dropped 不进正文。",
-        "新增 tests/system-v286.test.mjs：两投影取数、注入行口径、面板防剧透、v285 硬等号改下限锚点、五源同源。",
-        "版本升至 2.86.0（五源同源）。"
+        "剧情线 App 新增「前文回声」卡：上半是前文回扣候选（五回合前的旧细节与出现楼层，供玩家 expecting 重现），下半是角色生活回声（11 种微场景，只显角色与模式）。",
+        "生成侧 plotlinePromptBlock 新增两类注入行：前文可回扣（标注自然契合才重现、不篡改原意、不强行解释为伏笔）与角色生活回声氛围标注（可自然化用、不得改写为剧情既定事实）。",
+        "防剧透口径延续：回扣候选是玩家可见面显细节；生活回声的 fields/os 本体只进记忆插件注入面，面板不泄氛围文本。消费 worldProg.recallEcho / worldProg.echoLedger 两新账本（记忆插件 3.197.0）。",
+        "新增 tests/system-v287.test.mjs：两投影取数、注入行口径、面板防剧透、v286 硬等号改下限锚点、五源同源。",
+        "版本升至 2.87.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
