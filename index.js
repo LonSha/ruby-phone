@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.87.0';
+const ST_PHONE_VERSION = '2.88.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,11 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "剧情线 App 新增「前文回声」卡：上半是前文回扣候选（五回合前的旧细节与出现楼层，供玩家 expecting 重现），下半是角色生活回声（11 种微场景，只显角色与模式）。",
-        "生成侧 plotlinePromptBlock 新增两类注入行：前文可回扣（标注自然契合才重现、不篡改原意、不强行解释为伏笔）与角色生活回声氛围标注（可自然化用、不得改写为剧情既定事实）。",
-        "防剧透口径延续：回扣候选是玩家可见面显细节；生活回声的 fields/os 本体只进记忆插件注入面，面板不泄氛围文本。消费 worldProg.recallEcho / worldProg.echoLedger 两新账本（记忆插件 3.197.0）。",
-        "新增 tests/system-v287.test.mjs：两投影取数、注入行口径、面板防剧透、v286 硬等号改下限锚点、五源同源。",
-        "版本升至 2.87.0（五源同源）。",
+        "万界武库数据升级至 V4.1（合并式更新）：金手指库 157 → 165 包 / 576921 字。",
+        "63 同名包覆盖为 V4.1 新版正文、8 新包追加（思维链V2/通用选项栏/完满与破限/上位替代/武魂/神象镇狱劲/神圣几何/图书馆）、V4 独有 94 包全保留。",
+        "id 稳定性铁律：cheat_<packId> 不重排不删除，玩家抽卡存档全兼容。",
+        "版本升至 2.88.0（五源同源）。",
+
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

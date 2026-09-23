@@ -82,22 +82,23 @@ test('v287 4. v286 五源断言已改下限锚点', () => {
   assert.ok(t.includes('vnum') && t.includes('2.86.0'), '下限锚点保留');
 });
 
-test('v287 5. 五源同源 2.87.0', () => {
-  const version = '2.87.0';
+test('v287 5. 五源同源（动态锚定 latest，下限 2.87.0）', () => {
+  const log = JSON.parse(read('update-log.json'));
+  const version = log.latest;
+  const vnum = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
+  assert.ok(vnum(version) >= vnum('2.87.0'), `版本 ${version} < 2.87.0`);
   const idxSrc = read('index.js');
   assert.match(read('package.json'), new RegExp(`"version": "${version}"`));
   assert.match(read('manifest.json'), new RegExp(`"version": "${version}"`));
   assert.match(idxSrc, new RegExp(`const ST_PHONE_VERSION = '${version}'`));
-  const log = JSON.parse(read('update-log.json'));
-  assert.equal(log.latest, version);
   assert.equal(Object.keys(log.versions)[0], version);
   assert.ok(log.versions[version], '本版条目存在');
   assert.match(idxSrc, new RegExp(`版本升至 ${version.replace(/\./g, '\\.')}（五源同源）`));
-  // 弹窗逐字同源
+  // 弹窗逐字同源（对 latest 条目）
   const m = idxSrc.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/);
   assert.ok(m, 'ST_PHONE_CURRENT_UPDATE 可提取');
   for (const item of log.versions[version].items) {
-    assert.ok(m[0].includes(JSON.stringify(item)), '弹窗 items 逐字同源：' + item.slice(0, 20) + '…');
+assert.ok(m[0].includes(JSON.stringify(item)), '弹窗 items 逐字同源：' + item.slice(0, 20) + '…');
   }
   // 数据源登记
   assert.ok(dataSrc.includes('recallEchoList') && dataSrc.includes('echoLifeList'), '两投影已定义');

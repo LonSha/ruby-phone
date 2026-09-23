@@ -62,7 +62,7 @@ export class GachaData {
   getItemsOfPool(poolId) {
     if (poolId === 'all') {
       /* [v2.47.0] 「全部」= 仅 includeInAll 的池的并集。外挂池 includeInAll=false，
-       *   若在此直接返回全量 _itemList()，157 个外挂会混进「全部」，既有 630 道具的概率被稀释
+       *   若在此直接返回全量 _itemList()，165 个外挂会混进「全部」，既有 630 道具的概率被稀释
        *   （外挂本该是一件难求，不是日常消耗品）。排除集由池表推导，新池只要标 false 就自动生效。 */
       const excluded = new Set(this._poolList()
         .filter(p => p && p.includeInAll === false).map(p => p.id));
@@ -72,7 +72,7 @@ export class GachaData {
     return this._itemList().filter(i => (i.poolTags || []).includes(poolId));
   }
   /* 惰性合并静态道具库与金手指外挂库（外挂池独立，不混进「全部」：
-   * 否则 157 个外挂会稀释既有 630 道具的概率，且外挂本该是一件难求而非日常消耗品）。 */
+   * 否则 165 个外挂会稀释既有 630 道具的概率，且外挂本该是一件难求而非日常消耗品）。 */
   _itemList() {
     if (!this._items) {
       const extra = []
