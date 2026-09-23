@@ -188,7 +188,7 @@ export function normalizeEvents(rawSources = {}) {
         actors: who ? [who] : (h.actors || []),
         moodScore: h.moodScore ?? Math.max(0.3, scoreMood(content)),
         weight: 2,
-        extra: { affinity: h.affinity || h.intimacy }
+        extra: { affinity: h.affinity || h.intimacy, trust: h.trust }
       });
     } catch (e) {}
   }
@@ -307,9 +307,46 @@ export function buildAffinityBoard(events) {
     interactions: b.interactions,
     avgMood: b.interactions ? b.moodSum / b.interactions : 0,
     breadth: b.sources.size,
-    // 亲密度 = 频次(归一)×情感(转正)×广度
+    // 亲密度 = 频次(归一)×情感(转正)×广度。这是好感，不是信任。
     score: clamp(b.interactions * 2 + (b.moodSum > 0 ? b.moodSum : 0) * 3 + b.sources.size * 2, 0, 999)
   })).sort((a, b) => b.score - a.score);
+}
+
+/**
+ * [v2.85] 好感与信任分列。
+ * 好感沿用 buildAffinityBoard 的互动分（相处多、情绪正 → 高）。
+ * 信任只吃事件上显式给出的 extra.trust（0..1）。没有就不编：
+ *   trust=null、samples=0，与「信任为 0」可分辨。
+ * 两条轴不得互相填补。相处频繁不等于可靠。
+ */
+export function buildRelationAxes(events) {
+  const affinity = buildAffinityBoard(events);
+  const trustBag = {};
+  for (const ev of (Array.isArray(events) ? events : [])) {
+    const raw = ev && ev.extra ? ev.extra.trust : undefined;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) continue;
+    const value = Math.max(0, Math.min(1, n));
+    for (const actor of (ev.actors || [])) {
+      if (!trustBag[actor]) trustBag[actor] = { sum: 0, samples: 0 };
+      trustBag[actor].sum += value;
+      trustBag[actor].samples += 1;
+    }
+  }
+  const names = new Set([...affinity.map(a => a.name), ...Object.keys(trustBag)]);
+  const rows = [...names].map((name) => {
+    const aff = affinity.find(a => a.name === name);
+    const bag = trustBag[name];
+    return {
+      name,
+      affinity: aff ? aff.score : 0,
+      interactions: aff ? aff.interactions : 0,
+      trust: bag ? bag.sum / bag.samples : null,
+      trustSamples: bag ? bag.samples : 0
+    };
+  });
+  rows.sort((a, b) => b.affinity - a.affinity || String(a.name).localeCompare(String(b.name)));
+  return rows;
 }
 
 /* ================================================================
@@ -346,6 +383,6 @@ export function composeLetter(events, opts = {}) {
 }
 
 // ── 导出 ─────────────────────────────────────────────
-const api = { normalizeEvents, buildTimeline, detectMilestones, buildMoodCurve, buildAffinityBoard, composeLetter, scoreMood, parseMaybe };
+const api = { normalizeEvents, buildTimeline, detectMilestones, buildMoodCurve, buildAffinityBoard, buildRelationAxes, composeLetter, scoreMood, parseMaybe };
 if (typeof window !== 'undefined') window.LonShaTimeweaver = api;
 export default api;

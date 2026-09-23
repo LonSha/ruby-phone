@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.84.0';
+const ST_PHONE_VERSION = '2.85.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,14 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-24",
     items: [
-        "修一个「不崩溃、不报错、只是数据读不对」的缺陷：**`set(key, null)` 不是删除，而是把 null 写进存档**。实测（真 PhoneStorage + 最小宿主夹具，探针 probe_setnull.mjs）：调用后键**仍在** store 里（`key in store === true`）、值为 null，并且**真的进 JSON**（存档里出现 `\"key\":null`）—— 而 `remove(key)` 才是真删除（键不在、JSON 里也没有）。",
-        "危害不在「多存了个 null」，而在**全仓对同一个键存在两套结论相反的判据**：`get()` 用 `chatStore[key] !== undefined` ⇒ 判定「键存在」并返回这个 null，于是 **defaultValue 永远不生效**（调用方拿不到默认值）；`loadApps()` 用 `if (chatStore[key])` ⇒ null 为假，判定「没有存档」，转去读 extensionSettings / localStorage 兜底。同一份存档被两条路径读出不同结果 —— 与本仓主线「源头一份、下游各读各的」同形态，只是分歧发生在存储层内部。",
-        "调用点实测 3 处，**全部本意就是删除**（apps/wechat/wechat-data.js）：:542「已清空损坏的数据，将创建新数据」、:1754 删独立消息存储（清联系人与群组）、:4794 删独立消息存储（删除单个聊天）。旧实现只是把 null 存了进去：既是无效载荷，又给上面两套判据留了分歧。",
-        "修法：`set()` 开头把 `null` / `undefined` 交给 `remove()` —— 真删除 + 一并清 localStorage 兜底，与调用点意图一致，并收敛到同一条删除出口。刻意**不**写成 `if (!value)`：0 / 空串 / false 是合法载荷，写成 falsy 判据会把它们一起静默删掉（正是 v2.83 那个 `!x` 判据的翻版，已用测试 7 锁死）。",
-        "新增 tests/system-v284.test.mjs（16 条）：删除语义行为面（键缺席 / 不进 JSON / defaultValue 生效 / undefined 同语义 / extensionSettings 侧 / 与 remove() 状态等价）+ 合法 falsy 载荷不受伤 + **真源码破坏型负控制**（把 storage.js 复制两份，A 原样、B 删掉早退块还原旧行为，在**两个真模块**上跑同一段判据，断言 A 绿 B 红）+ H6 工具两向自证（锚点不存在/不唯一必须抛、破坏必须可观测改行为）+ 防回退源码判据 + 五源同源。",
-        "负控制方法上的一点收敛：v2.82 曾因夹具只复制部分目录而给出错误的红（12 条假断链）。本版改用**单文件副本**（storage.js 自包含、零 import，已实测确认），既避开整树复制的体积与遗漏风险，也让「破坏副本上必须红」这件事本身成为可执行断言。",
-        "门禁：语法 / 导入解析 / 测试 / dead-exports / lifecycle / registry / keys 七道全绿；`npm run check` 全链 exit 0。",
-        "版本升至 2.84.0（五源同源）。"
+        "五条机制里属于本仓的三条落地：平行事件按近场/远场分层（enqueue 记下 layer，缺省近场；splitLayers 切开队列，远场只作背景）、好感与信任分列（信任只吃事件上显式给出的 extra.trust，没有样本时 trust 为 null、不编成 0）、剧情线只注入未回收伏笔（open / advancing），已回收不进正文。伏笔账本、召回只读边界与场景头在记忆插件 3.195.0。",
+        "P1 监听器收口：成就、日记、万象、通话四处构造期裸 window.addEventListener 改为 onceFlag + globalRuntime.addListener，handler 动态取活实例，不再钉住旧 this。这四处目前没有置 null 的重建点，属潜伏；先收口，避免将来一重建就沉淀。",
+        "P1 存储键空间收口：会话键没有 localStorage 兜底。remove() 对会话键显式跳过 localStorage.removeItem，不再靠「键本来就不存在」碰巧无害。全局键的兜底删除保持不变。判据是键表前后对比，不是注释。",
+        "新增 tests/system-v285.test.mjs：分层、分列、伏笔注入、四份监听器源码面、会话键删除不发 localStorage、五源同源。",
+        "版本升至 2.85.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

@@ -1,5 +1,18 @@
 {
+  "latest": "2.85.0",
   "versions": {
+    "2.85.0": {
+      "version": "2.85.0",
+      "date": "2026-09-24",
+      "title": "五条机制落地，两条 P1 收口",
+      "items": [
+        "五条机制里属于本仓的三条落地：平行事件按近场/远场分层（enqueue 记下 layer，缺省近场；splitLayers 切开队列，远场只作背景）、好感与信任分列（信任只吃事件上显式给出的 extra.trust，没有样本时 trust 为 null、不编成 0）、剧情线只注入未回收伏笔（open / advancing），已回收不进正文。伏笔账本、召回只读边界与场景头在记忆插件 3.195.0。",
+        "P1 监听器收口：成就、日记、万象、通话四处构造期裸 window.addEventListener 改为 onceFlag + globalRuntime.addListener，handler 动态取活实例，不再钉住旧 this。这四处目前没有置 null 的重建点，属潜伏；先收口，避免将来一重建就沉淀。",
+        "P1 存储键空间收口：会话键没有 localStorage 兜底。remove() 对会话键显式跳过 localStorage.removeItem，不再靠「键本来就不存在」碰巧无害。全局键的兜底删除保持不变。判据是键表前后对比，不是注释。",
+        "新增 tests/system-v285.test.mjs：分层、分列、伏笔注入、四份监听器源码面、会话键删除不发 localStorage、五源同源。",
+        "版本升至 2.85.0（五源同源）。"
+      ]
+    },
     "2.84.0": {
       "version": "2.84.0",
       "date": "2026-09-24",
@@ -1168,6 +1181,5 @@
       ]
     }
   },
-  "latest": "2.84.0",
   "head": "2.56.0"
 }

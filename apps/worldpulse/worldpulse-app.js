@@ -173,8 +173,11 @@ export class WorldpulseApp {
         //      自己的待处理事件悄悄砍掉一条）；
         //   ② 旧会话队列同步清理，切回旧会话不会把已生成过的脉冲重复生成一遍；
         //   ③ 行为与处理成败解耦：尝试过即出队，杜绝失败堆积（v2.20 语义不变）。
-        const ev = st.queue[0];
-        st.queue = st.queue.slice(1);
+        // [v2.85] 近场优先。远场只在近场空时才出一条，且只作背景，不抢主线。
+        const split = WP.splitLayers(st.queue);
+        const ev = split.near[0] || split.far[0];
+        if (!ev) { this._processing = false; return; }
+        st.queue = st.queue.filter((item) => item && item.id !== ev.id);
         this._saveState(st);
         try {
             const content = await this._generate(ev);
@@ -225,8 +228,12 @@ export class WorldpulseApp {
         // 真世界不可用时，若桥**在位但没开/没快照**，把归因块一并交给 LLM：
         //   让生成带着「本世界已有哪些真实动态」的约束，而不是完全凭空编。
         const consistency = this._worldAxisBlock();
+        const layerNote = ev.layer === 'far'
+            ? '\n\n【远场】这条只是背景呼吸，不得写成正在主线现场发生的事，不得让主角当场遭遇。'
+            : '';
         const prompt = WP.buildEventPrompt(ev.style, ev.customPrefix, digest)
-            + (consistency ? `\n\n${consistency}` : '');
+            + (consistency ? `\n\n${consistency}` : '')
+            + layerNote;
         try {
             const result = await am.callAI([
                 { role: 'system', content: '你是世界脉搏平行事件生成器。只输出事件正文。' },

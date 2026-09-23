@@ -5,6 +5,7 @@
 
 import { AchievementData } from './achievement-data.js';
 import { AchievementView } from './achievement-view.js';
+import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 
 export class AchievementApp {
   constructor(phoneShell, storage) {
@@ -17,13 +18,15 @@ export class AchievementApp {
   }
 
   _initGlobalEventListener() {
-    // 暴露全局解锁事件，允许任何模块/手机应用触发成就
-    window.addEventListener('ruby:unlockAchievement', (e) => {
-      const achId = e.detail?.id;
-      if (achId) {
-        this.tryUnlock(achId);
-      }
-    });
+    // [v2.85] 构造期监听器入登记层。onceFlag 保证重建不累积，
+    // handler 动态取活实例，不再把旧 this 钉在 window 上。
+    if (onceFlag('achievementUnlock')) {
+      globalRuntime.addListener(window, 'ruby:unlockAchievement', (e) => {
+        const app = window.VirtualPhone?.achievementApp;
+        const achId = e.detail?.id;
+        if (app && achId) app.tryUnlock(achId);
+      }, false, 'achievement:unlock');
+    }
   }
 
   tryUnlock(achId) {

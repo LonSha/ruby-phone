@@ -78,35 +78,23 @@
 
 ## P1 · 体验 / 一致性
 
-- [ ] **剩余「构造期裸全局监听器」逐项收口（v2.82.0 普查出的余量）** ——
-      v2.82.0 修的是 GamesApp / PokerApp 两处；同形态（构造函数里内联匿名 handler、
-      无 onceFlag、无 globalRuntime 登记、闭包钉住 this）经静态普查在下列位置**仍在**：
+- [x] **剩余「构造期裸全局监听器」逐项收口（v2.85.0 收口）** ——
+      v2.82.0 修的是 GamesApp / PokerApp。同形态四处于 v2.85.0 收进
+      `onceFlag + globalRuntime.addListener + 动态取活实例`：
       `apps/achievement/achievement-app.js`（`ruby:unlockAchievement`）、
-      `apps/diary/diary-app.js`、`apps/wangxiang/wangxiang-app.js`
-      （`phone:swipeBack` + `phone:timeUpdated`）、
+      `apps/diary/diary-app.js`（`phone:swipeBack`）、
+      `apps/wangxiang/wangxiang-app.js`（`phone:swipeBack` + `phone:timeUpdated`）、
       `apps/phone/phone-app.js`（`phone:incomingCall` + `phone:swipeBack`）。
-      **严重性分层（实测）**：只有会**被重建的槽位**才会真的沉淀。
-      `achievementApp` / `diaryApp` / `wangxiangApp` / `phoneApp` 目前全仓
-      **没有置 null 的重建点**（逐键 `grep -c` 实测全为 0），故这些属**潜伏**
-      （一旦将来某条路径开始重建它们，立刻变成真泄漏）。
-      做法：复用 v2.82.0 的 `onceFlag + globalRuntime.addListener + 动态取活实例` 三件套，
-      并把 `tests/system-v282.test.mjs` 的源码面判据扩到这份清单（先固化潜伏，再逐个改）。
+      收口前这四个槽位没有置 null 的重建点，属潜伏而非已泄漏。
+      源码面判据在 `tests/system-v285.test.mjs` 第 4 条（四文件不得再有裸 `window.addEventListener`）。
       原「会话键前缀宽匹配收紧」已于 **v2.69.0** 落地（见下方归档）。
 
-- [ ] **存储层其余「同义出口」普查（v2.84.0 新识别，P0 主线的下一层）** ——
-      v2.84.0 修掉了 `set(key, null)` 与 `remove(key)` 这一对同义不同形，并顺手证伪了
-      两条候选（`clearCurrentData` 的备份键、`saveExtensionSettings` 的入队语义，见 P0 段）。
-      **实测剩下的一条真分歧**：`localStorage` 兜底的**键空间不对齐** ——
-        · 写入侧：`_setToLocalStorage()` 只在 `!isChatData` 时被调用（实测：写会话键后
-          localStorage 为空；写全局键后出现 `virtual_phone_global_global_phone_settings`）；
-        · 删除侧：`remove()` 里的 `localStorage.removeItem(fullKey)` **无条件执行**，
-          会话键也会走这一步（实测 `remove(会话键)` 确实尝试删了它）。
-      即：**会话键从不写进 localStorage，却会被删** —— 现行为不害人（本来就没有，删不存在的
-      键是空操作），但这是「同一个出口对同一个键空间两套规则」。需要回答的是**设计意图**：
-      会话键到底该不该有 localStorage 兜底？（若该有，则 `set()` 侧漏写是真缺陷；
-      若不该有，则 `remove()` 侧的删除是多余动作，应显式标注「刻意为之」而不是碰巧无害。）
-      **注意取证纪律**：这一条结论来自探针实测（键表实际变化），不是读码推断 ——
-      后续任何结论都必须同样落在「键表前后对比」这种可执行读数上。
+- [x] **存储层其余「同义出口」普查（v2.85.0 收口键空间）** ——
+      v2.84.0 修掉了 `set(key, null)` 与 `remove(key)` 这一对。剩下的真分歧是
+      `localStorage` 兜底的键空间不对齐：写入侧只在 `!isChatData` 时写，删除侧此前无条件 `removeItem`。
+      **设计意图已定：会话键不该有 localStorage 兜底。** `remove()` 对会话键显式跳过
+      `localStorage.removeItem`，不再靠「键本来就不存在」碰巧无害。全局键仍写仍删。
+      判据是键表前后对比（`tests/system-v285.test.mjs` 第 5 条），不是注释。
 
 ## P2 · 功能 / 架构
 

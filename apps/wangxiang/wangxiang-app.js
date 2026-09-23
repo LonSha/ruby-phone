@@ -10,6 +10,7 @@ import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { WechatData } from '../wechat/wechat-data.js';
 import { parseWangxiangTaskTags } from './wangxiang-task-parser.js';
 import { PointsLedger } from './points.js';
+import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 
 const WANGXIANG_TASK_VISUALS = [
     { accent: 'green', icon: 'fa-list-check' },
@@ -170,10 +171,17 @@ export class WangxiangApp {
         this._reconcileGeneratedTaskStatuses();
         this._reconcilePersistedTaskAndInventoryState();
 
-        window.addEventListener('phone:swipeBack', () => this.handleSwipeBack());
-        window.addEventListener('phone:timeUpdated', () => {
-            this._handlePhoneTimeUpdated().catch(error => console.warn('[Wangxiang] 配送状态检查失败:', error));
-        });
+        if (onceFlag('wangxiangSwipeBack')) {
+            globalRuntime.addListener(window, 'phone:swipeBack', () => {
+                window.VirtualPhone?.wangxiangApp?.handleSwipeBack();
+            }, false, 'wangxiang:swipe-back');
+        }
+        if (onceFlag('wangxiangTimeUpdated')) {
+            globalRuntime.addListener(window, 'phone:timeUpdated', () => {
+                const app = window.VirtualPhone?.wangxiangApp;
+                app?._handlePhoneTimeUpdated()?.catch(error => console.warn('[Wangxiang] 配送状态检查失败:', error));
+            }, false, 'wangxiang:time-updated');
+        }
     }
 
     attachRuntime(phoneShell, storage) {

@@ -543,8 +543,9 @@ async function loadBroken(src) {
         /export function childRuntimeDuplicates\(/.test(codeOf(read('config/runtime-lifecycle.js'))));
     ok('G11b v2.20 锁定的会话守卫仍在（worldpulse 落地段）',
         /if \(content && stamp === this\._currentSessionStamp\(\)\)/.test(APP_CODE));
-    ok('G11c v2.21 锁定的入口乐观出队仍在',
-        /const ev = st\.queue\[0\];/.test(APP_CODE));
+    ok('G11c v2.21 锁定的入口乐观出队仍在（v2.85 改为近场优先，出队仍在生成之前）',
+        /const split = WP\.splitLayers\(st\.queue\);/.test(APP_CODE)
+        && /st\.queue = st\.queue\.filter\(\(item\) => item && item\.id !== ev\.id\);/.test(APP_CODE));
     /* G12 本版不得引入对上游桥的写路径（只读契约） */
     ok('G12 全版零桥写入（产品代码里无桥赋值）',
         !/window\.worldaxis_bridge_v1\s*=[^=]/.test(read('index.js') + APP_SRC + TM_SRC + WB_SRC));

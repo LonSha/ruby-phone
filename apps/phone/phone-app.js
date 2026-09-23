@@ -14,6 +14,7 @@
 // ========================================
 import { PhoneCallData } from './phone-data.js';
 import { PhoneCallView } from './phone-view.js';
+import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 
 export class PhoneApp {
     constructor(phoneShell, storage) {
@@ -28,16 +29,19 @@ export class PhoneApp {
         }
         this.phoneCallView = new PhoneCallView(this);
 
-        // 监听来电事件
-        window.addEventListener('phone:incomingCall', (e) => {
-            const { callerName } = e.detail || {};
-            if (callerName) {
-                this.phoneCallView.renderIncomingCall(callerName);
-            }
-        });
-
-        // 监听滑动返回
-        window.addEventListener('phone:swipeBack', (e) => this.handleSwipeBack(e));
+        // [v2.85] 来电与滑动返回入登记层。只绑一次，取活实例。
+        if (onceFlag('phoneIncomingCall')) {
+            globalRuntime.addListener(window, 'phone:incomingCall', (e) => {
+                const { callerName } = e.detail || {};
+                const app = window.VirtualPhone?.phoneApp;
+                if (callerName && app) app.phoneCallView.renderIncomingCall(callerName);
+            }, false, 'phoneIncomingCall');
+        }
+        if (onceFlag('phoneSwipeBack')) {
+            globalRuntime.addListener(window, 'phone:swipeBack', (e) => {
+                window.VirtualPhone?.phoneApp?.handleSwipeBack(e);
+            }, false, 'phoneSwipeBack');
+        }
     }
 
     render() {

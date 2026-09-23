@@ -152,6 +152,32 @@ export function arcList(worldProg) {
     } catch (_e) { return out; }
 }
 /**
+ * 伏笔投影：读记忆插件 worldProg.seedLedger（seed-ledger 的 normalize 形态）。
+ * 账本缺失如实返回 []。状态原样透传，不把未知编成 open。
+ * @param {object|null} worldProg
+ * @returns {Array<{id:string, hook:string, layer:string, status:string}>}
+ */
+export function seedList(worldProg) {
+    const out = [];
+    try {
+        if (!worldProg || typeof worldProg !== 'object') return out;
+        const ledger = worldProg.seedLedger;
+        const items = ledger && Array.isArray(ledger.items) ? ledger.items : [];
+        for (const item of items) {
+            if (!item || typeof item !== 'object') continue;
+            const hook = clip(item.hook, 160);
+            if (!hook) continue;
+            out.push({
+                id: clip(item.id, 80),
+                hook,
+                layer: item.layer === 'far' ? 'far' : 'near',
+                status: typeof item.status === 'string' ? item.status : 'open'
+            });
+        }
+        return out;
+    } catch (_e) { return out; }
+}
+/**
  * 认知投影：逐角色列出「已知 / 尚未意识到」两栏。
  * 只读、绝不抛；knowledge 缺失如实返回 []。
  * @param {object|null} worldProg
@@ -197,6 +223,11 @@ export function plotlinePromptBlock(face, opts = {}) {
         }
         for (const a of arcs.slice(0, 4)) {
             lines.push('- 推进中支线：' + a.title + (a.clue ? '（线索：' + a.clue + '）' : ''));
+        }
+        const seeds = seedList(face.worldProg).filter((s) => s.status === 'open' || s.status === 'advancing');
+        for (const s of seeds.slice(0, 5)) {
+            const tag = s.layer === 'far' ? '远场' : (s.status === 'advancing' ? '回收中' : '近场');
+            lines.push('- 未回收伏笔〔' + tag + '〕：' + s.hook);
         }
         if (!lines.length) return '';
         return '【本世界的剧情推进（记忆插件大纲/世界推进，正文节奏不得与之矛盾）】\n' + lines.slice(0, maxLines).join('\n');

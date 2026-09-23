@@ -168,8 +168,8 @@ function makeEventSource() {
     const app = new WorldpulseApp(null, env.storage);
     // A 会话：队列里两个事件
     const st0 = app.getState();
-    st0.queue.push({ style: '都市日常', customPrefix: '', floorCount: 1 });
-    st0.queue.push({ style: '都市日常', customPrefix: '', floorCount: 2 });
+    st0.queue.push({ id: 'a1', style: '都市日常', customPrefix: '', floorCount: 1, layer: 'near' });
+    st0.queue.push({ id: 'a2', style: '都市日常', customPrefix: '', floorCount: 2, layer: 'near' });
     app._saveState(st0);
     // 受控生成：挂起（模拟 LLM 数十秒）
     let release = null;
@@ -185,7 +185,7 @@ function makeEventSource() {
     env.setSession('B');
     env.ctxHolder.chat = new Array(6).fill({});
     const stB = app.getState();
-    stB.queue.push({ style: '财经头条', customPrefix: '', floorCount: 3 });
+    stB.queue.push({ id: 'b1', style: '财经头条', customPrefix: '', floorCount: 3, layer: 'near' });
     app._saveState(stB);
     // 放行旧生成 → 完成时守卫应丢弃内容、且不触碰 B 队列
     release(null);
@@ -214,7 +214,7 @@ function makeEventSource() {
         /onChatChanged\(\) \{[\s\S]{0,500}st\.lastFloorCount = this\._floorCount\(\);/.test(wsrc));
     ok('startListening 先停后启', /this\.stopListening\(\);\s*\n\s*this\._listening = true;/.test(wsrc));
     ok('不再有 _listening 早退（旧监听必被清理）', !/if \(this\._listening\) return;/.test(wsrc));
-    const deq = wsrc.indexOf('st.queue = st.queue.slice(1);');
+    const deq = wsrc.indexOf('st.queue = st.queue.filter((item) => item && item.id !== ev.id);');
     const gen = wsrc.indexOf('await this._generate(ev)');
     ok('入口乐观出队先于生成调用', deq > 0 && gen > 0 && deq < gen, `deq=${deq} gen=${gen}`);
     ok('完成时不再有二次出队（st2 已移除）', !wsrc.includes('const st2 = this.getState();'));

@@ -774,11 +774,17 @@ export class PhoneStorage {
             }
 
             // ==================== 从 localStorage 删除 ====================
-            const fullKey = this._getLegacyLocalStorageKey(key, isChatData);
-            try {
-                localStorage.removeItem(fullKey);
-            } catch (e) {
-                // 忽略 localStorage 错误
+            // [v2.85] 键空间对齐：会话键从不写入 localStorage（_setToLocalStorage 只在
+            //   !isChatData 时调用）。删除侧若无条件 removeItem，就是「同一个出口对同一个
+            //   键空间两套规则」。设计意图：会话键没有 localStorage 兜底。所以这里显式跳过，
+            //   不再靠「键本来就不存在、删了也是空操作」碰巧成立。
+            if (!isChatData) {
+                const fullKey = this._getLegacyLocalStorageKey(key, isChatData);
+                try {
+                    localStorage.removeItem(fullKey);
+                } catch (e) {
+                    // 忽略 localStorage 错误
+                }
             }
 
         } catch (e) {

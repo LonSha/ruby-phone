@@ -63,19 +63,39 @@ export function shouldTrigger(lastFloorCount, currentFloorCount, threshold = DEF
  * @param {object} event { style, customPrefix, manual, floorCount, id, enqueuedAt }
  * @param {number} maxQueue 容量
  */
+/** [v2.85] 平行事件分层。near=近场（同场景可被主线瞥见），far=远场（只作背景呼吸）。缺省 near。 */
+export const WP_LAYERS = Object.freeze(['near', 'far']);
+
 export function enqueue(queue, event, maxQueue = MAX_QUEUE) {
     const q = Array.isArray(queue) ? [...queue] : [];
+    const layer = WP_LAYERS.includes(event.layer) ? event.layer : 'near';
     q.push({
         id: event.id || `wp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         style: event.style || '都市日常',
         customPrefix: event.customPrefix || '',
         manual: !!event.manual,
+        layer,
         floorCount: Number(event.floorCount) || 0,
         enqueuedAt: Number(event.enqueuedAt) || Date.now()
     });
     const cap = Math.max(1, Number(maxQueue) || MAX_QUEUE);
     while (q.length > cap) q.shift();   // 丢最旧（mobile 仓同款）
     return q;
+}
+
+/**
+ * [v2.85] 按层切开队列。未知层并入 near，不另造第三层。
+ * 近场可被主线消费；远场只留在背景，不得当成正在发生的事。
+ */
+export function splitLayers(queue) {
+    const near = [];
+    const far = [];
+    for (const item of (Array.isArray(queue) ? queue : [])) {
+        if (!item || typeof item !== 'object') continue;
+        if (item.layer === 'far') far.push(item);
+        else near.push(item);
+    }
+    return { near, far };
 }
 
 /**

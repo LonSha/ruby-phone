@@ -15,6 +15,7 @@
 
 import { DiaryData } from './diary-data.js';
 import { DiaryView } from './diary-view.js';
+import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 
 export class DiaryApp {
     constructor(phoneShell, storage) {
@@ -23,8 +24,12 @@ export class DiaryApp {
         this.diaryData = new DiaryData(storage);
         this.diaryView = new DiaryView(this);
 
-        // 监听滑动返回
-        window.addEventListener('phone:swipeBack', (e) => this.handleSwipeBack(e));
+        // [v2.85] 滑动返回入登记层：只绑一次，handler 取活实例。
+        if (onceFlag('diarySwipeBack')) {
+            globalRuntime.addListener(window, 'phone:swipeBack', (e) => {
+                window.VirtualPhone?.diaryApp?.handleSwipeBack(e);
+            }, false, 'diary:swipe-back');
+        }
     }
 
     render() {
