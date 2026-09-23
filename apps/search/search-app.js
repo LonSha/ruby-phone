@@ -9,14 +9,19 @@
  * ======================================================== */
 'use strict';
 
-import { GlobalSearchEngine, buildDefaultSources } from '../memory/global-search-engine.js';
+import { GlobalSearchEngine, buildDefaultSources, makeTavernSource } from '../memory/global-search-engine.js';
 import { SearchView } from './search-view.js';
 
 export class SearchApp {
-    constructor(phoneShell, storage) {
+    constructor(phoneShell, storage, deps = {}) {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.VIEW_ID = 'search-main';
+        // [v2.81.0] 宿主上下文的取用方式可注入（内联 = 每次现问宿主；快照 = 固定一份）。
+        //   默认内联：否则宿主就绪晚于本 App 构造时，「酒馆正文」源会永久缺席。
+        this._chatContextProvider = (typeof deps.chatContextProvider === 'function')
+            ? deps.chatContextProvider
+            : () => this._chatContext();
         this.engine = this._buildEngine();
         this.view = new SearchView(this);
     }
@@ -30,9 +35,28 @@ export class SearchApp {
         } catch (_e) { return null; }
     }
 
+    /**
+     * [v2.81.0] 把宿主侧源与当前宿主上下文对齐。
+     * 面板每次打开时调用：宿主还没就绪 → 保持现状；就绪 → 换上新引用；
+     * 上下文消失（退出会话）→ 摘掉。只碰自己负责的源，不碰 App 本地键源。
+     */
+    _syncHostSources() {
+        try {
+            const src = makeTavernSource(this._chatContextProvider());
+            const has = this.engine.listSources().some(s => s.id === 'tavern');
+            if (!src) {
+                if (has) this.engine.removeSource('tavern');
+                return;
+            }
+            if (has) this.engine.replaceSource(src);
+            else this.engine.registerSource(src);
+        } catch (e) {
+            console.warn('[v2.81.0] 宿主源同步失败:', e);
+        }
+    }
     _buildEngine() {
         try {
-            const sources = buildDefaultSources(this.storage, { chatContext: this._chatContext() });
+            const sources = buildDefaultSources(this.storage, { chatContext: this._chatContextProvider() });
             return new GlobalSearchEngine({ sources });
         } catch (e) {
             console.warn('[v2.16.0] 全局搜索索引源构建失败:', e);
@@ -52,6 +76,8 @@ export class SearchApp {
     render() {
         // 每次打开都重扫（数据可能刚变化）；检索本身仍在内存索引上完成
         this.engine.invalidate();
+        // [v2.81.0] 顺带对齐宿主侧源：宿主上下文刚就绪 / 刚换会话时，源表不能停在构造那一刻
+        this._syncHostSources();
         this.view.render();
     }
 

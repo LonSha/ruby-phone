@@ -90,16 +90,50 @@ export class GlobalSearchEngine {
      */
     registerSource(src) {
         if (!src || typeof src.items !== 'function') return false;
-        this._sources.push({
+        const id = String(src.id || '');
+        // 幂等：同 id 重复登记会让同一份数据在结果里出现两遍。
+        // （旧行为是纯 push，于是「换宿主上下文」只能靠再叠一份来实现。）
+        if (id && this._sources.some(s => s.id === id)) return false;
+        this._sources.push(this._normalizeSource(src));
+        this._index = null;
+        return true;
+    }
+    /**
+     * 以同 id 整体换掉一个源（宿主侧数据换了新引用时用）。
+     * 找不到同 id 时退化为登记。
+     * @returns {boolean} true = 发生了「换」；false = 退化成了新增
+     */
+    replaceSource(src) {
+        if (!src || typeof src.items !== 'function') return false;
+        const id = String(src.id || '');
+        const i = id ? this._sources.findIndex(s => s.id === id) : -1;
+        if (i < 0) { this.registerSource(src); return false; }
+        this._sources[i] = this._normalizeSource(src);
+        this._index = null;
+        return true;
+    }
+    /**
+     * 摘掉一个源（宿主上下文从「有」变「无」，如退出会话）。
+     * @returns {boolean} 是否真的摘掉了
+     */
+    removeSource(id) {
+        const key = String(id || '');
+        const i = key ? this._sources.findIndex(s => s.id === key) : -1;
+        if (i < 0) return false;
+        this._sources.splice(i, 1);
+        this._index = null;
+        return true;
+    }
+    /** 源描述归一化（登记 / 替换共用同一份口径，避免两份真相） */
+    _normalizeSource(src) {
+        return {
             id: String(src.id || ''),
             label: String(src.label || src.id || ''),
             icon: String(src.icon || '🔎'),
             weight: Number(src.weight) || 1,
             appId: String(src.appId || src.id || ''),
             items: src.items
-        });
-        this._index = null;
-        return true;
+        };
     }
 
     listSources() {
@@ -209,6 +243,47 @@ export class GlobalSearchEngine {
     }
 }
 
+/** 时间解析：优先毫秒时间戳，其次 'HH:MM'（按今日折算），最后字符串日期 */
+function tsOf(...vals) {
+    for (const v of vals) {
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 1000000000) return n;
+    }
+    for (const v of vals) {
+        const str = String(v || '').trim();
+        if (!str) continue;
+        const m = str.match(/^(\d{1,2}):(\d{2})$/);
+        if (m) {
+            const d = new Date();
+            d.setHours(Number(m[1]) || 0, Number(m[2]) || 0, 0, 0);
+            return d.getTime();
+        }
+        const p = Date.parse(str);
+        if (Number.isFinite(p)) return p;
+    }
+    return 0;
+}
+/**
+ * 酒馆正文源：每次调用都现取宿主上下文里的 chat 数组。
+ * 之所以做成导出工厂而不是在 buildDefaultSources 里内联一次：
+ *   内联版只认「调用那一刻」的数组引用，而搜索 App 是单例、索引源表只在
+ *   构造时建一次 —— 宿主上下文晚于构造就绪会永久少这个源，
+ *   换会话（数组换成新实例）后又会一直读旧会话。
+ * @param {{chat?:Array}} [ctx] 宿主上下文（无宿主 / 结构不符 → null）
+ * @returns {{id:string,label:string,icon:string,appId:string,weight:number,items:Function}|null}
+ */
+export function makeTavernSource(ctx) {
+    if (!Array.isArray(ctx?.chat)) return null;
+    return {
+        id: 'tavern', label: '酒馆正文', icon: '📜', appId: '', weight: 1.0,
+        items: () => ctx.chat.map((m, i) => ({
+            title: (m?.is_user ? '我' : (m?.name || 'AI')) + ` · 第 ${i + 1} 楼`,
+            body: norm(m?.mes || m?.content || ''),
+            ts: tsOf(m?.send_date ? Date.parse(m.send_date) : 0),
+            icon: '📜', appId: '', meta: { floor: i }
+        }))
+    };
+}
 /**
  * 从 RubyPhone 各 App 已落盘数据构建默认源注册表。
  *   每个源的 items() 都是惰性 + 独立 try/catch，任一 App 数据损坏不影响其他。
@@ -228,26 +303,6 @@ export function buildDefaultSources(storage, deps = {}) {
         if (v && typeof v === 'object' && !Array.isArray(v)) return v;
         if (typeof v === 'string') { try { const p = JSON.parse(v); return (p && typeof p === 'object') ? p : {}; } catch (_e) { return {}; } }
         return {};
-    };
-    /** 时间解析：优先毫秒时间戳，其次 'HH:MM'（按今日折算），最后字符串日期 */
-    const tsOf = (...vals) => {
-        for (const v of vals) {
-            const n = Number(v);
-            if (Number.isFinite(n) && n > 1000000000) return n;
-        }
-        for (const v of vals) {
-            const str = String(v || '').trim();
-            if (!str) continue;
-            const m = str.match(/^(\d{1,2}):(\d{2})$/);
-            if (m) {
-                const d = new Date();
-                d.setHours(Number(m[1]) || 0, Number(m[2]) || 0, 0, 0);
-                return d.getTime();
-            }
-            const p = Date.parse(str);
-            if (Number.isFinite(p)) return p;
-        }
-        return 0;
     };
 
     /**
@@ -509,19 +564,8 @@ export function buildDefaultSources(storage, deps = {}) {
     });
 
     // ---- 酒馆正文楼层（若注入 chatContext）----
-    const ctx = deps.chatContext;
-    const chatMsgs = Array.isArray(ctx?.chat) ? ctx.chat : null;
-    if (chatMsgs) {
-        sources.push({
-            id: 'tavern', label: '酒馆正文', icon: '📜', appId: '', weight: 1.0,
-            items: () => chatMsgs.map((m, i) => ({
-                title: (m?.is_user ? '我' : (m?.name || 'AI')) + ` · 第 ${i + 1} 楼`,
-                body: norm(m?.mes || m?.content || ''),
-                ts: tsOf(m?.send_date ? Date.parse(m.send_date) : 0),
-                icon: '📜', appId: '', meta: { floor: i }
-            }))
-        });
-    }
+    const tavernSrc = makeTavernSource(deps.chatContext);
+    if (tavernSrc) sources.push(tavernSrc);
 
     // ============ [v2.62.0] 补源：此前 29 个 App 中以下 12 个各自为政、全库零搜索接入 ============
     // 纪律：本地键源走 storage.get（容错），桥面源走 bridgeSnapshot() 现取（不复制副本到手机键，

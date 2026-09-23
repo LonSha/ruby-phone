@@ -39,6 +39,10 @@ export class SearchView {
     render() {
         const shell = this.app?.phoneShell;
         if (!shell?.setContent) return;
+        // [v2.81.0] 面板重开 = 一次新检索：丢掉上一轮的结果快照。
+        //   否则源头改了以后，重开面板仍按旧索引给旧结果（_paint 那条路保持不变，
+        //   输入过程中照样复用同一份内存索引，不重扫全库）。
+        this._result = null;
         const html = `
         <div class="gs-wrap">
             <div class="gs-topbar">

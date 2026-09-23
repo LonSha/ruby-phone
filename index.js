@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.80.0';
+const ST_PHONE_VERSION = '2.81.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,11 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-23",
     items: [
-        "修三类文档层缺陷（都不是代码错，但会让人拿错读数）：迭代日志出现同一编号两段；元信息仍声称旧版本号（2.73.0）而仓库已到 2.79.0；TODO 里同一项可同时被标进行中与已完成。",
-        "文档说谎不报错——这与「数据错但不抛」是同一个病。本版把它变成红灯而非靠人记得更新。",
-        "新增 tests/system-v280.test.mjs（5 条）：① 迭代日志不得有重号迭代段；② 元信息声明的版本必须等于 manifest 版本；③ 当前版本的 release note 必须非空、必须含本版号、必须保留「版本升至 X」收尾条；④ latest 与 versions 首键一致且不低于 2.80.0；⑤ 同一 TODO 项不得既是进行中又是已完成。",
-        "迭代日志重编号：将本轮的「生活事件跟随源头」与「备忘改到另一天」两段从撞号的 10/11 改为 11/12，与既有「迭代 10（v2.73.0）」不再冲突。",
-        "版本升至 2.80.0（四源同源）。",
+        "修一个「不报错、不崩溃，只是读数永远停在旧值」的缺陷类别：搜索索引与结果都停在上一次打开搜索那一刻。① SearchApp 是单例、索引源表只在构造时建一次，宿主上下文（SillyTavern）就绪晚于构造时「酒馆正文」源**永久缺席**，面板重开一百次也不补；② 换会话后仍读旧会话数组；③ 结果快照只在输入/换 chip 时清，源头改了以后重开面板仍显示旧正文。",
+        "根因是「派生读数没有出口」：源表只能登记不能换/摘，所以「换宿主上下文」只能靠再叠一份实现；结果快照只在两条路径上作废，第三条路径（重开面板）漏了。",
+        "GlobalSearchEngine 新增 replaceSource / removeSource，registerSource 改为幂等（同 id 重复登记被拒，否则同一份数据在结果里出现两遍）；tavern 源改由 makeTavernSource(ctx) 工厂**每次现取**，不再在构造那一刻内联 chat 快照；tsOf 提到模块级，杜绝第二份实现。",
+        "SearchApp 每次 render 调用 _syncHostSources()：宿主未就绪保持现状、就绪则换新引用、上下文消失（退出会话）则摘掉，只碰自己负责的源；SearchView.render 作废上一轮结果快照（输入过程中仍复用同一份内存索引，不重扫全库）。",
+        "新增 tests/system-v281.test.mjs（9 条）：三个行为探针 + 源表登记面契约 + 负控制。负控制下真源码破坏（去掉对齐 / 去掉作废）后，在副本上重跑**同一批**行为判据必须转红（实测复现「源表冻结」与「重开仍给旧读数」），并带变异工具两向自证（锚点不存在/不唯一必须抛）。",
+        "版本升至 2.81.0（四源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
