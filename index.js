@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.83.0';
+const ST_PHONE_VERSION = '2.84.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -104,16 +104,16 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-23",
+    date: "2026-09-24",
     items: [
-        "修一个「不崩溃、不报错，只是数据错」的缺陷：**存储命名空间被写成非普通对象时，写入静默丢失**。修前实现（chatMetadata 与 extensionSettings 两处同构）是 `if (!context.<container>[NAMESPACE]) context.<container>[NAMESPACE] = {}` —— `!x` 只挡 undefined/null/''/0/false。",
-        "实测矩阵（零依赖最小宿主夹具 + 真 PhoneStorage，六个场景）：字符串 → `set()` 抛错且只进 console.error（调用方拿到的是已 resolve 的 Promise，**丢掉且不报**）；数字 → 同上；**数组 → 最危险**：字符串键挂在数组上能赋值、能读回（本会话内一切正常），但 `JSON.stringify([1,2,3])` 只序列化下标元素、不序列化字符串属性 ⇒ **一落盘全丢**，下次开会话读到空。",
-        "修法：抽共用守卫 `_ensureNamespaceStore(container, label)`，判据从 falsy 收紧为「必须是普通对象」（非数组、非 null、typeof 'object'），不合格则把原值留档到**重建后命名空间内部**的 `__corrupt_backup` 后重建空对象 —— 留档是关键，不留档等于静默丢用户数据。chatMetadata 与 extensionSettings 两处共用同一口径。",
-        "刻意区分「缺席/空」与「在场但类型错」：undefined / null 属正常初值，静默建空对象、**不留档也不出声**（否则每次首启都留一条垃圾、造出恒非零告警 —— v2.33 的教训是恒非零的告警会被读者学会忽略）；只有字符串/数字/布尔/数组才留档并 warn。循环 20 轮读/写实测备份键恒为 1 份、无嵌套备份键。",
-        "新增 tests/system-v283.test.mjs（15 条）：六个损坏场景逐一断言（健康 / 字符串 / 数组 / 数字 / null 与缺席 / extensionSettings 侧）+ 读取面同样自愈 + 行为面负控制（显式锁住「数组的字符串属性不进 JSON」这一机理，证明修复不是空转）+ 防回退源码判据 + 长期会话第一维基线（幂等写入 50 次不膨胀、数组熔断方向断言保留头部、超大 Base64 拒写、自愈幂等）+ 版本五源同源 + 边界文档存活。",
-        "长期会话状态增长（计划 ③）本版只交付**第一维**：chatMetadata 键数与字节数基线。listener 数量维度已在 v2.82.0 交付（最小宿主夹具的登记面）。剩余维度（1000 楼 / 100 次切角色 / 流式中断重试 / chatMetadata 保存失败注入 / 内存快照增长 / 单次渲染耗时）尚未做，已登记在 TODO，下一版起分维推进。",
-        "门禁：语法 358 文件 / 导入 289 条说明符全解析 / 测试 **615 pass · 0 fail** / dead-exports · lifecycle · registry · keys 四道既有门全绿；`npm run check` 全链 exit 0。",
-        "版本升至 2.83.0（五源同源）。",
+        "修一个「不崩溃、不报错、只是数据读不对」的缺陷：**`set(key, null)` 不是删除，而是把 null 写进存档**。实测（真 PhoneStorage + 最小宿主夹具，探针 probe_setnull.mjs）：调用后键**仍在** store 里（`key in store === true`）、值为 null，并且**真的进 JSON**（存档里出现 `\"key\":null`）—— 而 `remove(key)` 才是真删除（键不在、JSON 里也没有）。",
+        "危害不在「多存了个 null」，而在**全仓对同一个键存在两套结论相反的判据**：`get()` 用 `chatStore[key] !== undefined` ⇒ 判定「键存在」并返回这个 null，于是 **defaultValue 永远不生效**（调用方拿不到默认值）；`loadApps()` 用 `if (chatStore[key])` ⇒ null 为假，判定「没有存档」，转去读 extensionSettings / localStorage 兜底。同一份存档被两条路径读出不同结果 —— 与本仓主线「源头一份、下游各读各的」同形态，只是分歧发生在存储层内部。",
+        "调用点实测 3 处，**全部本意就是删除**（apps/wechat/wechat-data.js）：:542「已清空损坏的数据，将创建新数据」、:1754 删独立消息存储（清联系人与群组）、:4794 删独立消息存储（删除单个聊天）。旧实现只是把 null 存了进去：既是无效载荷，又给上面两套判据留了分歧。",
+        "修法：`set()` 开头把 `null` / `undefined` 交给 `remove()` —— 真删除 + 一并清 localStorage 兜底，与调用点意图一致，并收敛到同一条删除出口。刻意**不**写成 `if (!value)`：0 / 空串 / false 是合法载荷，写成 falsy 判据会把它们一起静默删掉（正是 v2.83 那个 `!x` 判据的翻版，已用测试 7 锁死）。",
+        "新增 tests/system-v284.test.mjs（16 条）：删除语义行为面（键缺席 / 不进 JSON / defaultValue 生效 / undefined 同语义 / extensionSettings 侧 / 与 remove() 状态等价）+ 合法 falsy 载荷不受伤 + **真源码破坏型负控制**（把 storage.js 复制两份，A 原样、B 删掉早退块还原旧行为，在**两个真模块**上跑同一段判据，断言 A 绿 B 红）+ H6 工具两向自证（锚点不存在/不唯一必须抛、破坏必须可观测改行为）+ 防回退源码判据 + 五源同源。",
+        "负控制方法上的一点收敛：v2.82 曾因夹具只复制部分目录而给出错误的红（12 条假断链）。本版改用**单文件副本**（storage.js 自包含、零 import，已实测确认），既避开整树复制的体积与遗漏风险，也让「破坏副本上必须红」这件事本身成为可执行断言。",
+        "门禁：语法 / 导入解析 / 测试 / dead-exports / lifecycle / registry / keys 七道全绿；`npm run check` 全链 exit 0。",
+        "版本升至 2.84.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

@@ -666,6 +666,36 @@ export class PhoneStorage {
      *        历史上它是被 set(key, value) 签名静默丢弃的死参数（全仓库 18 处调用点）。
      */
     async set(key, value, immediate = false) {
+        // [v2.84.0] null / undefined 一律按「删除该键」处理，不再把它写进存档。
+        //
+        // 为什么（实测，探针 probe_setnull.mjs）：
+        //   `chatStore[key] = null` 会让键**留在存档里**（JSON 里出现 `"key":null`），
+        //   而全仓对同一个键存在两套**结论相反**的判据（同一个键、同一份存档）：
+        //     · 判据 A `chatStore[key] !== undefined` —— get()/set()/remove() 用，
+        //       对存进去的 null 判「键存在」（为真）；
+        //     · 判据 B `if (chatStore[key])` —— loadApps() 用，对同一个 null
+        //       判「没有存档」（为假），转去读 extensionSettings / localStorage 兜底。
+        //   同一份存档因此可能被两条路径读出完全不同的结果 —— 正是本仓主线
+        //   「源头变了，下游读数停在旧值」的同一形态，只是这次分歧发生在存储层内部。
+        //
+        //   注意：分歧面**不是** defaultValue。get() 内另有第二道
+        //   `if (value !== null && value !== undefined) return value;` 兜底，
+        //   所以即使写进 null，get(key, 默认值) 也照样返回默认值
+        //   （v2.84.0 反向审计实测结论，见 /tmp/probe_reverse.mjs）。
+        //   真正的分歧是上面两条判据本身结论相反。
+        //
+        // 实测调用点（3 处，全部本意就是删除）：
+        //   apps/wechat/wechat-data.js:542  「已清空损坏的数据，将创建新数据」
+        //   apps/wechat/wechat-data.js:1754 删独立消息存储（清联系人与群组）
+        //   apps/wechat/wechat-data.js:4794 删独立消息存储（删除单个聊天）
+        //   旧实现只是把 null 存了进去：既是无效载荷，又给上面两套判据留了分歧。
+        //
+        // 处置：委托 remove() —— 真删除 + 一并清 localStorage 兜底，
+        //   与调用点意图一致，且与 remove() 收敛到同一条「删除」出口。
+        if (value === null || value === undefined) {
+            await this.remove(key, immediate);
+            return;
+        }
         try {
             const isChatData = this._isChatData(key);
 
@@ -892,6 +922,11 @@ export class PhoneStorage {
             if (saved && typeof saved === 'string' && saved.trim() !== '') {
                 try {
                     const savedApps = JSON.parse(saved);
+                    // [v2.84.0] 注意本函数外层用的是 truthy 判据 `chatStore[key]`，
+                    //   而 get()/set()/remove() 用的是 `!== undefined` —— 两者对 null 的
+                    //   结论相反。v2.84.0 起 set() 不再写入 null（改走 remove()），
+                    //   因此 null 只可能来自**更早版本写下的旧存档**；这里保持 truthy
+                    //   判据不变，正好让旧存档的 null 落到下面的兜底分支（属恢复路径）。
 
                     // 🔥 始终使用最新的应用列表配置，只恢复用户数据
                     return defaultApps.map(defaultApp => {

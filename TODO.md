@@ -40,6 +40,27 @@
       已修：共用守卫 `_ensureNamespaceStore`（判据收紧为「必须是普通对象」+ 原值留档
       `__corrupt_backup`），chatMetadata 与 extensionSettings 两处同口径；
       `tests/system-v283.test.mjs` 共 15 条固化。
+      进度（v2.84.0）：继续沿存储层再下一层，抓到 **D2 —— 「删除」出口同义不同形**：
+      `set(key, null)` 实测**不是删除**，而是把 null 写进存档（键仍在 store 里、
+      值为 null、并且**真的进 JSON**）。危害不在多存了个 null，而在全仓对同一个键
+      存在**两套结论相反的判据**（同一个键、同一份存档：判据 A 说「在」、判据 B
+      说「不在」）：`get()`/`set()`/`remove()` 用 `!== undefined` ⇒ 认为「键存在」；
+      `loadApps()` 用 truthy 判据 ⇒ 认为「没有存档」，转去读兜底。
+      注意分歧面**不是 defaultValue** —— `get()` 另有第二道 `value !== null` 兜底，
+      修前它也返回默认值（初稿论断被负控制测试 9 证伪，已据实改正，
+      判据改落 `criteriaDisagree`）。
+      调用点实测 3 处（`wechat-data.js:542 / :1754 / :4794`），**全部本意就是删除**。
+      已修：`set()` 把 null/undefined 交给 `remove()`，收敛到同一条删除出口，
+      并刻意不写成 `if (!value)`（0/''/false 是合法载荷，已用测试 7 锁死）。
+      `tests/system-v284.test.mjs` 共 16 条固化。
+      同轮**证伪**两条看起来像缺陷的候选（避免后续重复投入，探针 probe_sameexit.mjs）：
+      ① `clearCurrentData()` / `clearAllData()` 都**会**清掉命名空间内的
+         `__corrupt_backup`（实测清后键表为 `[]`）—— 之前担心的「一处清一处不清」不存在；
+      ② `saveExtensionSettings()` 虽然是 `async` 且走队列，但实测**入队即触发**
+         （计数 1 → 1，不等 60ms 也已发生），与 `_queuedSaveExtensionSettings(true)`
+         在「是否已经发生保存调用」上无差别 —— 不构成「以为保存了其实没保存」。
+      同轮第三条候选（`localStorage` 兜底的键空间不对齐）**未被证伪**，
+      已提升为 P1 待答项（见下方 P1「存储层其余同义出口普查」）。
 
 
 - [x] **多行对象字面量的成员对账** —— **已于 v2.73.0 落地（E11）**，原立项理由被实测证伪，见下。
@@ -71,6 +92,21 @@
       做法：复用 v2.82.0 的 `onceFlag + globalRuntime.addListener + 动态取活实例` 三件套，
       并把 `tests/system-v282.test.mjs` 的源码面判据扩到这份清单（先固化潜伏，再逐个改）。
       原「会话键前缀宽匹配收紧」已于 **v2.69.0** 落地（见下方归档）。
+
+- [ ] **存储层其余「同义出口」普查（v2.84.0 新识别，P0 主线的下一层）** ——
+      v2.84.0 修掉了 `set(key, null)` 与 `remove(key)` 这一对同义不同形，并顺手证伪了
+      两条候选（`clearCurrentData` 的备份键、`saveExtensionSettings` 的入队语义，见 P0 段）。
+      **实测剩下的一条真分歧**：`localStorage` 兜底的**键空间不对齐** ——
+        · 写入侧：`_setToLocalStorage()` 只在 `!isChatData` 时被调用（实测：写会话键后
+          localStorage 为空；写全局键后出现 `virtual_phone_global_global_phone_settings`）；
+        · 删除侧：`remove()` 里的 `localStorage.removeItem(fullKey)` **无条件执行**，
+          会话键也会走这一步（实测 `remove(会话键)` 确实尝试删了它）。
+      即：**会话键从不写进 localStorage，却会被删** —— 现行为不害人（本来就没有，删不存在的
+      键是空操作），但这是「同一个出口对同一个键空间两套规则」。需要回答的是**设计意图**：
+      会话键到底该不该有 localStorage 兜底？（若该有，则 `set()` 侧漏写是真缺陷；
+      若不该有，则 `remove()` 侧的删除是多余动作，应显式标注「刻意为之」而不是碰巧无害。）
+      **注意取证纪律**：这一条结论来自探针实测（键表实际变化），不是读码推断 ——
+      后续任何结论都必须同样落在「键表前后对比」这种可执行读数上。
 
 ## P2 · 功能 / 架构
 
