@@ -1009,6 +1009,15 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 - **遗留**：无。
 
 ---
+## 迭代 22 — v2.90.0 生活事件跨会话残留与双副本修复 + 键门禁扩展
+
+- **D1 跨会话残留**：`CalendarData.clearCache()` 原本只清 `_memos`/`_holidays`，不清懒建的 `_lifeEvents`。换会话后旧 store 携带旧事件数组，`add()` 时把旧会话事件写进新会话。修复：`clearCache()` 补 `this._lifeEvents = null`。
+- **D2 双副本 lost update**：`CalendarApp._lifeEvents` 与 `CalendarData._lifeEvents` 是两个独立实例。备忘写 data 层、约定写 app 层，交错写入时后写者的旧内存快照覆盖前者。修复：`recordCommitmentLifeEvent` 改为共享 `this.calendarData._lifeEvents`。
+- **D3 重复方法定义**：`domainLifeEventSourceId` / `updateBySource` / `removeBySource` 各重复一份逐字节相同定义（源自 `e880b63` 补丁重复落盘）。已删除每处的第二份。
+- **D4 keys-audit 门禁盲区**：14 个 storage 键以 `this.<prop> = '<lit>'` + `storage.x(this.<prop>)` 间接形态使用，旧抽取面看不见。新增 `PROP_ASSIGN_RE`/`PROP_CALL_RE`，登记 14 键（11 chat + 3 global，其中 `music_favorites` 标 legacy）。
+- **测试**：新增 `tests/system-v290.test.mjs`（源码面 / 行为面 / 结构面 / 负控制×3 / 版本锚点）。
+- **版本**：五源同源升至 `2.90.0`。
+
 ## 迭代 21 — v2.89.0 存储层 schema 版本化与迁移留痕（TODO P2「版本落后」）
 - **日期**：2026-09-25
 - **类型**：稳定性 / 缺陷修复（存储层版本机制 + 类型漂移）
@@ -1049,7 +1058,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.89.0`（五源同源）
+- **当前版本**：`2.90.0`（五源同源）
 - **门禁基线**：语法 353 文件 / 测试 **576 pass · 0 fail** / 死导出零新增 / 生命周期零缺口 /
   注册三方对账无孤儿 / keys 142 键全登记。
   最近一轮（v2.84.0）门禁基线（实测）：语法 360 文件 / 导入可解析门 289 条说明符 /

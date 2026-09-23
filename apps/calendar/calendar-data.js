@@ -554,12 +554,6 @@ export class CalendarData {
         if (!label || !memo?.id) return null;
         return 'calendar:' + memo.id + ':' + this.normalizeType(memo.type);
     }
-    // [v2.77.0] 源标识：一条日历备忘在时间线上的身份（同一备忘同一领域类型）。
-    domainLifeEventSourceId(memo) {
-        const label = { work: '工作', study: '学业', travel: '出行' }[this.normalizeType(memo?.type)];
-        if (!label || !memo?.id) return null;
-        return 'calendar:' + memo.id + ':' + this.normalizeType(memo.type);
-    }
     recordDomainLifeEvent(memo) {
         const labels = { work: '工作', study: '学业', travel: '出行' };
         const label = labels[this.normalizeType(memo?.type)];
@@ -857,5 +851,8 @@ export class CalendarData {
     clearCache() {
         this._memos = null;
         this._holidays = null;
+        // [v2.90.0] 补清懒建的 LifeEventStore：此前漏清，换会话后旧 store 携带
+        //   旧事件数组并写进新会话（探针实证 A 会话事件污染 B 会话）。
+        this._lifeEvents = null;
     }
 }

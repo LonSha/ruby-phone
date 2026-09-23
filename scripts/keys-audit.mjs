@@ -68,6 +68,16 @@ const CONST_RE = /(?:storageKey|\bconst KEY\b|\b[A-Z][A-Z0-9_]*_KEY|this\.KEY)\s
  *   刻意只认「参数名就是 key」且「体内确实调 storage.get」的定义，避免把普通 Map 包装误收。 */
 const WRAPPER_DEF_RE = /=\s*\(?[\w\s,={}]*\)?\s*=>[\s\S]{0,300}?storage\??\.get\??\.\s*\(\s*key|function\s+get\s*\([\s\S]{0,300}?storage\??\.get\??\.\s*\(\s*key/;
 const LOCAL_GET_RE = /\bget\s*\(\s*['"`]([A-Za-z_][A-Za-z0-9_]*)['"`]/g;
+/* 间接属性键（v2.90.0 补）：本仓另有一类形态——
+ *     this.key = 'life_events_v1';   // 构造期把键名存进实例属性
+ *     this.storage?.get?.(this.key);  // 之后经 this.<prop> 间接读写
+ *   旧抽取面只认字面量实参（'life_events_v1' 从不作为字面量出现），
+ *   于是 life_events_v1 等 14 个键**从未进入登记面**：K1/K2/K3 对它全部失效。
+ *   规则：同文件内出现 `this.<prop> = '<lit>'` 且存在 `storage…(this.<prop>` 调用时，
+ *   把 <lit> 收编为该文件的 storage 键。刻意要求「同文件确有间接调用」——
+ *   避免把只是赋值未使用、或仅作常量描述的字面量误收。 */
+const PROP_ASSIGN_RE = /this\.([A-Za-z_$][\w$]*)\s*=\s*['"`]([A-Za-z_][A-Za-z0-9_]*)['"`]/g;
+const PROP_CALL_RE = /(?:storage|VirtualPhone(?:\?)?\.storage)\??\.(?:set|get|remove)\??\.?\s*\(\s*this\.([A-Za-z_$][\w$]*)\b/g;
 /* `worth` 例外（实测踩到）：`const WORTH_KEY = 'worth'` 里的 `'worth'` 是 **JSON 字段名**
  *   （asset-project.js 用它读 `stock.worth`），不是 storage 键，也没有任何 storage 调用点。
  *   它靠 `_KEY` 后缀形似键名，无法从语法上区分开同类命名；故显式排除并写明理由——
@@ -102,6 +112,16 @@ for (const f of jsFiles) {
   for (const m of txt.matchAll(CONST_RE)) {
     if (NON_KEY_LITERALS.has(m[1])) continue;
     bump(m[1], f.rel, 'const');
+  }
+  /* 间接属性键（v2.90.0）：先收集本文件经 this.<prop> 调 storage 的属性名，
+   *   再收编同文件 `this.<prop> = '<lit>'` 的字面量。 */
+  const propCalls = new Set([...txt.matchAll(PROP_CALL_RE)].map((m) => m[1]));
+  if (propCalls.size > 0) {
+    for (const m of txt.matchAll(PROP_ASSIGN_RE)) {
+      if (!propCalls.has(m[1])) continue;
+      if (NON_KEY_LITERALS.has(m[2])) continue;
+      bump(m[2], f.rel, 'prop-key');
+    }
   }
   /* 收编条件（v2.69.0 实测踩到歧义后收紧）：仅当该文件**恰有一处** `get` 包装器定义时才收编裸 get。
  *   反例（真仓库实测）：`index.js` 同时含 storage 包装器与音乐卡片标签解析器 `parseMusicCard`
@@ -178,6 +198,20 @@ const KEY_REGISTRY = [
   { key: 'calendar_auto_schedule_last_empty_date', scope: 'chat', note: '日历自动排程游标' },
   { key: 'calendar_memos', scope: 'chat', note: '日历备忘（经 global-search-engine 的 get 包装层读取）' },
   { key: 'calendar_commitments', scope: 'chat', note: '日历约定流程（确认/改期/完成/取消）' },
+  // [v2.90.0] 以下 11 键此前经 `this.<prop> = 'lit' + storage.x(this.<prop>)` 形态使用，
+  //   旧抽取面看不见它们（K1/K2/K3 失效）。keys-audit 补间接属性键面后强制登记：
+  //   全部命中会话前缀（^calendar_ / ^life_events_ / ^weibo_ / ^music_）。
+  { key: 'life_events_v1', scope: 'chat', note: '生活事件时间线（life-events.js）' },
+  { key: 'calendar_holidays', scope: 'chat', note: '日历节假日表' },
+  { key: 'calendar_holiday_defaults_version', scope: 'chat', note: '日历默认节假日版本' },
+  { key: 'calendar_theme', scope: 'chat', note: '日历主题' },
+  { key: 'calendar_reminder_enabled', scope: 'chat', note: '日历提醒开关' },
+  { key: 'calendar_reminder_advance_minutes', scope: 'chat', note: '日历提醒提前分钟' },
+  { key: 'calendar_auto_schedule_enabled', scope: 'chat', note: '日历自动排程开关' },
+  { key: 'music_favorites', scope: 'chat', legacy: true, note: '音乐收藏（旧版按会话存储，读侧迁移到 global_music_favorites 后废弃）' },
+  { key: 'weibo_profile', scope: 'chat', note: '微博个人资料' },
+  { key: 'weibo_liked_recommend_posts', scope: 'chat', note: '微博点赞推荐流' },
+  { key: 'weibo_liked_hot_search_index', scope: 'chat', note: '微博点赞热搜索引' },
   { key: 'sys_notifs', scope: 'chat', note: '系统通知落账（经包装层读取）' },
   { key: 'memory_core', scope: 'chat', note: '记忆核心（历史键名，与 memory_core_v1 并存）' },
   { key: 'music_playlist', scope: 'chat', note: '播放列表' },
@@ -296,6 +330,10 @@ const KEY_REGISTRY = [
   { key: 'lonsha_bridge_v1', scope: 'global', note: 'LonSha 桥配置' },
   { key: 'lonsha_memory', scope: 'global', note: 'LonSha 记忆（全局）' },
   { key: 'queue_state', scope: 'global', note: 'NAI 队列状态' },
+  // [v2.90.0] 间接属性键面补登记：以下 3 键无会话前缀命中，按实际落点归全局。
+  { key: 'global_music_favorites', scope: 'global', note: '音乐收藏（全局共享，跨会话）' },
+  { key: 'global_social_store_v1', scope: 'global', note: '全局社交存档（跨会话）' },
+  { key: 'phone_album_deleted_paths', scope: 'global', note: '相册已删路径记录（跨会话）' },
   { key: 'virtual_phone', scope: 'global', note: '旧版顶层容器键（storage.js 命名空间）' },
   // [v2.89.0] 存储层迁移账本：记录「哪些旧键已迁进新架构」，防重复搬运。
   //   键名不匹配任何 CHAT_DATA_PATTERNS → 默认落全局命名空间（isChatData=false）；

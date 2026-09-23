@@ -80,9 +80,10 @@ export class CalendarApp {
     }
 
     clearCache() {
+        // [v2.90.0] _lifeEvents 共享自 calendarData（见 recordCommitmentLifeEvent），
+        //   calendarData.clearCache() 已一并清它，不再自持第二个实例。
         this.calendarData.clearCache();
         this._commitments = null;
-        this._lifeEvents = null;
         this._lastReminderStoryTime = null;
     }
     loadCommitments() {
@@ -157,10 +158,14 @@ export class CalendarApp {
     }
     recordCommitmentLifeEvent(item) {
         if (!item?.id || !item.content) return null;
-        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        // [v2.90.0] 与 CalendarData 共享同一个 LifeEventStore 实例：
+        //   此前本类自持 this._lifeEvents（第二个 store），备忘走 calendarData._lifeEvents，
+        //   交错写入时后写者的旧内存快照覆盖前者（lost update，约定事件被备忘覆盖丢失）。
+        if (!this.calendarData._lifeEvents) this.calendarData._lifeEvents = new LifeEventStore(this.storage);
+        const store = this.calendarData._lifeEvents;
         const verb = { proposed: '记下约定', confirmed: '确认约定', rescheduled: '改期约定', fulfilled: '完成约定', cancelled: '取消约定' }[item.status] || '更新约定';
         const who = item.with ? item.actor + '与' + item.with : item.actor;
-        return this._lifeEvents.add({
+        return store.add({
             type: 'calendar',
             app: 'calendar',
             title: verb,

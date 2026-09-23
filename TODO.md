@@ -126,7 +126,7 @@
         - [ ] **内存快照增长 / 单次渲染耗时**：需要 `process.memoryUsage()` 与
           真实渲染计时 —— 夹具不渲染 DOM，**渲染耗时这一维在本环境不可测**
           （已登记在 `docs/runtime-verification-boundary.md`）。
-        - [ ] **跨会话残留**：夹具可切 `chatId`/`chatMetadata` 实例，属可做项。
+        - [x] **跨会话残留**：夹具可切 `chatId`/`chatMetadata` 实例，属可做项。**v2.90.0 已落地**：`CalendarData.clearCache()` 补清 `_lifeEvents`，`tests/system-v290.test.mjs` B1 固化。
         推进原则：一版只做一维、每维都能单独证伪，避免一次性堆庞大模拟器。
       - [ ] ④ 更新文档中的运行时验证边界 —— **未做**（本版只写了
         `docs/runtime-verification-boundary.md`；还没把它接进 `update-log.json`

@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.89.0';
+const ST_PHONE_VERSION = '2.90.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "存储层补齐统一 schema 版本号：新增 STORAGE_SCHEMA_VERSION=2（1=旧架构无留痕 / 2=迁移留痕+读出解析），本仓此前无版本号、四处迁移各自为政。",
-        "旧架构迁移留痕：新增命名空间内 __migration_ledger（version+keys+时间戳），迁移成功即登记，重复 get 命中账本即短路、不再重跑迁移。",
-        "迁移后清除 localStorage 旧键 + localStorage 读出补 JSON 解析（修前写对象读字符串的类型漂移），纯文本/坏 JSON 一律原样返回。",
-        "修掉账本短路读错 store 的缺陷（读端 `chatMetadata || extensionSettings` 因前者恒为真值对象而短路），读端改为与写端同构按 isChatData 选 store。",
-        "新增 tests/system-v289.test.mjs：源码面/行为面/解析面/负控制×2（含阳性对照）/版本锚点，破坏与判据一一对齐。",
-        "版本升至 2.89.0（五源同源）。"
+        "修复生活事件跨会话残留：CalendarData.clearCache() 补清懒建的 LifeEventStore，换会话后旧事件不再污染新会话。",
+        "修复生活事件双副本 lost update：CalendarApp 与 CalendarData 共享同一个 LifeEventStore 实例，交错写入不再互相覆盖。",
+        "清理历史重复方法定义：domainLifeEventSourceId / updateBySource / removeBySource 各保留一份。",
+        "扩展 keys-audit 门禁：新增间接属性键抽取面，登记此前看不见的 14 个 storage 键。",
+        "新增 tests/system-v290.test.mjs：源码面/行为面/结构面/负控制×3/版本锚点。",
+        "版本升至 2.90.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

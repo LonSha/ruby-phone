@@ -1,6 +1,19 @@
 {
-  "latest": "2.89.0",
+  "latest": "2.90.0",
   "versions": {
+    "2.90.0": {
+      "date": "2026-09-25",
+      "title": "生活事件跨会话残留与双副本修复 + 键门禁扩展",
+      "items": [
+        "修复生活事件跨会话残留：CalendarData.clearCache() 补清懒建的 LifeEventStore，换会话后旧事件不再污染新会话。",
+        "修复生活事件双副本 lost update：CalendarApp 与 CalendarData 共享同一个 LifeEventStore 实例，交错写入不再互相覆盖。",
+        "清理历史重复方法定义：domainLifeEventSourceId / updateBySource / removeBySource 各保留一份。",
+        "扩展 keys-audit 门禁：新增间接属性键抽取面，登记此前看不见的 14 个 storage 键。",
+        "新增 tests/system-v290.test.mjs：源码面/行为面/结构面/负控制×3/版本锚点。",
+        "版本升至 2.90.0（五源同源）。"
+      ],
+      "version": "2.90.0"
+    },
     "2.89.0": {
       "date": "2026-09-25",
       "title": "存储层 schema 版本化与迁移留痕",
