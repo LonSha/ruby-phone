@@ -7,7 +7,7 @@
  * 只投影已确认或改期后的约定，调用方再决定是否写入日历。
  */
 const STATES = new Set(['proposed', 'confirmed', 'rescheduled', 'fulfilled', 'cancelled']);
-const TERMINAL = new Set(['fulfilled', 'cancelled']);
+export const TERMINAL = new Set(['fulfilled', 'cancelled']);
 const MAX_ITEMS = 100;
 const MAX_HISTORY = 12;
 

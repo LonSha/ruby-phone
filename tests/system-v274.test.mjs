@@ -82,7 +82,12 @@ test('日历控制器把约定走完确认、改期、完成，并保留手工�
   assert.equal(app.loadCommitments().items[0].status, 'fulfilled');
 });
 
-test('确认和改期各写一条生活事件，重复同步不新增', async () => {
+/* [v2.93.0] 本条判据原先断言的是「每推进一次状态就多一条事件」（3 条）。
+ *   那是**把缺陷当成预期**：源键含状态与 revision，同一条约定每走一步就换一个源身份，
+ *   于是时间线上并存 5 条同源事件，且终态那条也不回收（源头已不存在）。
+ *   改为断言交付意图：**无论推进多少步，同一条约定在时间线上始终恰 1 条**，
+ *   正文跟随最新状态，终态（完成/取消）后撤掉。 */
+test('一条约定在时间线上始终只占 1 条，正文跟随状态、终态回收', async () => {
   const { CalendarApp } = await import('../apps/calendar/calendar-app.js');
   const app = Object.create(CalendarApp.prototype);
   app.phoneShell = { showNotification() {} };
@@ -96,9 +101,18 @@ test('确认和改期各写一条生活事件，重复同步不新增', async ()
   app.rescheduleCommitmentById(created.id, { dateKey: '2026-09-26', reason: '改期', eventKey: 'move-life' });
   const saved = app.storage.get('life_events_v1');
   const raw = typeof saved === 'string' ? JSON.parse(saved) : saved;
-  assert.equal(raw.filter(item => String(item.sourceId).startsWith('commitment:' + created.id)).length, 3);
-  assert.equal(raw.some(item => item.title === '确认约定'), true);
-  assert.equal(raw.some(item => item.summary.includes('2026-09-26')), true);
+  // 步骤：propose → confirm → （重复 confirm 同一 eventKey）→ reschedule
+  const mine = raw.filter(item => String(item.sourceId) === 'commitment:' + created.id);
+  assert.equal(mine.length, 1, '同一条约定只占 1 条事件（不是每步各留一条）');
+  assert.equal(mine[0].title, '改期约定', '正文跟随最新状态');
+  assert.equal(mine[0].summary.includes('2026-09-26'), true, '正文带改期后的日期');
+  assert.equal(mine[0].summary.includes('咖啡馆见面'), true, '正文仍是那件事');
+  // 终态：源头退出投影，条目必须撤掉（此前 5 条全部留在时间线上）
+  app.fulfillCommitmentById(created.id, 'done-life');
+  const after = app.storage.get('life_events_v1');
+  const rawAfter = typeof after === 'string' ? JSON.parse(after) : after;
+  assert.equal(rawAfter.filter(item => String(item.sourceId) === 'commitment:' + created.id).length, 0,
+    '约定完成后不得留在时间线上');
 });
 
 test('工作、学业、出行写入生活事件，日常备忘不写入', () => {

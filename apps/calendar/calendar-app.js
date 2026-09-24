@@ -9,6 +9,7 @@ import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
 import { LifeEventStore } from '../../config/life-events.js';
 import {
+    TERMINAL,
     normalizeCommitments,
     proposeCommitment,
     confirmCommitment,
@@ -116,7 +117,9 @@ export class CalendarApp {
         if (result.changed) {
             this.saveCommitments(result.state);
             this.syncCommitmentsToCalendar();
-            this.recordCommitmentLifeEvent(result.item);
+            // [v2.93.0] 不再「每步新增一条」：同一条约定在时间线上始终只占 1 条，
+            //   推进状态写入的是改写，终态写入的是回收。
+            this.refreshCommitmentLifeEvent(result.item);
             if (successText) this.phoneShell?.showNotification?.('日历', successText, '📅');
         }
         return result;
@@ -156,13 +159,56 @@ export class CalendarApp {
     commitmentSummary() {
         return summarizeCommitments(this.loadCommitments());
     }
+    /* [v2.90.0] 生活事件 store 共享自 calendarData（真源是 life_events_v1，不自持第二实例）。
+     *   [v2.93.0] 收口成单一取用出口：三处懒建会让「共享」这件事有三个可漂移的副本，
+     *   也让 v290 的负控制失去唯锚点。 */
+    _commitmentLifeEventStore() {
+        if (!this.calendarData._lifeEvents) this.calendarData._lifeEvents = new LifeEventStore(this.storage);
+        const store = this.calendarData._lifeEvents;
+        return store;
+    }
+    /* [v2.93.0] 一条约定的时间线身份：`commitment:<id>`。
+     *   注意**不含**状态与 revision —— 那是历史身份，用它当源键会让同一条约定
+     *   每推进一次状态就在时间线上多留下一条（proposed/confirmed/confirmed/rescheduled/
+     *   fulfilled 全部并存，且没有任何一条会被回收）。 */
+    commitmentLifeEventSourceId(id) {
+        const sid = String(id || '').trim();
+        return sid ? 'commitment:' + sid : null;
+    }
+    /* [v2.93.0] 把一条约定的时间线条目对齐到当前状态：
+     *   · 正文/日历字段改了 → updateBySource 就地改写（时间线显示改后的读数）
+     *   · 终态（fulfilled / cancelled）或不再进日历 → 整族撤掉
+     *     （源头已不存在，时间线不得留幽灵事件） */
+    refreshCommitmentLifeEvent(item) {
+        const sid = this.commitmentLifeEventSourceId(item?.id);
+        if (!sid) return 0;
+        const store = this._commitmentLifeEventStore();
+        if (!item?.content || TERMINAL.has(item.status)) {
+            const n = store.removeBySourceBase(sid);
+            return n ? -n : 0;
+        }
+        const verb = { proposed: '记下约定', confirmed: '确认约定', rescheduled: '改期约定' }[item.status] || '更新约定';
+        const who = item.with ? item.actor + '与' + item.with : item.actor;
+        return store.updateBySource(sid, {
+            type: 'calendar',
+            app: 'calendar',
+            title: verb,
+            summary: who + '：' + item.content + (item.dateKey ? '（' + item.dateKey + '）' : ''),
+            importance: 3
+        });
+    }
+    /* [v2.93.0] 源已消失时整族撤掉（与 refreshCommitmentLifeEvent 的终态分支同一出口）。 */
+    forgetCommitmentLifeEvent(id) {
+        const sid = this.commitmentLifeEventSourceId(id);
+        if (!sid) return 0;
+        return this._commitmentLifeEventStore().removeBySourceBase(sid);
+    }
     recordCommitmentLifeEvent(item) {
         if (!item?.id || !item.content) return null;
         // [v2.90.0] 与 CalendarData 共享同一个 LifeEventStore 实例：
         //   此前本类自持 this._lifeEvents（第二个 store），备忘走 calendarData._lifeEvents，
         //   交错写入时后写者的旧内存快照覆盖前者（lost update，约定事件被备忘覆盖丢失）。
-        if (!this.calendarData._lifeEvents) this.calendarData._lifeEvents = new LifeEventStore(this.storage);
-        const store = this.calendarData._lifeEvents;
+        const store = this._commitmentLifeEventStore();
         const verb = { proposed: '记下约定', confirmed: '确认约定', rescheduled: '改期约定', fulfilled: '完成约定', cancelled: '取消约定' }[item.status] || '更新约定';
         const who = item.with ? item.actor + '与' + item.with : item.actor;
         return store.add({
@@ -171,7 +217,9 @@ export class CalendarApp {
             title: verb,
             summary: who + '：' + item.content + (item.dateKey ? '（' + item.dateKey + '）' : ''),
             importance: item.status === 'fulfilled' || item.status === 'cancelled' ? 4 : 3,
-            sourceId: 'commitment:' + item.id + ':' + item.status + ':' + item.revision
+            // [v2.93.0] 源键 = commitment:<id>（不含状态/revision）：
+            //   每推进一次状态都换键 = 时间线上每步各留一条，且终态也不会被回收。
+            sourceId: this.commitmentLifeEventSourceId(item.id)
         });
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的全局监听器（置 null 重建前调用）

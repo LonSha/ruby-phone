@@ -155,6 +155,10 @@ export class CalendarData {
         memos.splice(idx, 1);
         this.saveMemos();
         this.forgetDomainLifeEvent(removed);   // [v2.77.0] 源头没了，时间线不得留幽灵
+        // [v2.93.0] 约定投影备忘（source='commitment'）走的是另一族源键，
+        //   forgetDomainLifeEvent 认不出它 —— 删掉投影备忘同样要把约定条目收走。
+        const owner = String(removed?.commitmentSourceId || '').trim();
+        if (owner) this.forgetCommitmentLifeEvent(owner);
         return true;
     }
 
@@ -173,11 +177,17 @@ export class CalendarData {
             });
         }
         const memos = this.getMemos();
+        const replaced = new Set();   // [v2.93.0] 被顶替掉的约定源（其事件须回收）
         let changed = false;
         for (let index = memos.length - 1; index >= 0; index -= 1) {
             const sourceId = String(memos[index]?.commitmentSourceId || '');
             if (sourceId && !wanted.has(sourceId)) {
                 this.forgetDomainLifeEvent(memos[index]);   // [v2.77.0] 投影移除同样要回收
+                // [v2.93.0] 约定投影（source='commitment'）的生活事件源键不属于领域族，
+                //   forgetDomainLifeEvent 认不出它 —— 源头（约定退出投影）没了，
+                //   对应的 commitment:<id> 条目必须一并撤掉，否则时间线留幽灵。
+                const owner = String(memos[index]?.commitmentSourceId || '').trim();
+                if (owner) this.forgetCommitmentLifeEvent?.(owner);
                 memos.splice(index, 1);
                 changed = true;
             }
@@ -204,8 +214,19 @@ export class CalendarData {
             }
             const same = memo.dateKey === item.dateKey && memo.title === item.title && memo.time === item.time && memo.place === item.place;
             if (same) continue;
+            const previousOwner = String(memo.commitmentSourceId || '').trim();
+            if (previousOwner && previousOwner !== sourceId) replaced.add(previousOwner);
             Object.assign(memo, item, { updatedAt: Date.now() });
             changed = true;
+        }
+        // [v2.93.0] 进投影那一侧同样要回收：备忘此前可能挂着**另一个**约定
+        //   （改期路径会 Object.assign 覆盖 commitmentSourceId，见下方 replaced），
+        //   被顶替的约定若不同步撤掉，它的事件就留在时间线上永不回收。
+        //   注意**不能**改成「凡不在 wanted 里的约定事件一律撤掉」：proposed 阶段的
+        //   约定本来就不进投影，那样写会把等确认的约定事件一起误删。
+        for (const stale of replaced) {
+            if (wanted.has(stale)) continue;
+            this.forgetCommitmentLifeEvent(stale);
         }
         if (changed) this.saveMemos();
         return { changed, count: wanted.size };
@@ -621,6 +642,16 @@ export class CalendarData {
         return n;
     }
 
+    /* [v2.93.0] 约定投影的生活事件回收：
+     *   备忘数组是真源，时间线是派生。凡是备忘里**不再挂**的 committed 源键，
+     *   对应的事件都必须撤掉（否则删备忘/换挂靠/约定退出投影之后，时间线永远留着那条）。 */
+    forgetCommitmentLifeEvent(commitmentId) {
+        const sid = String(commitmentId || '').trim();
+        if (!sid) return 0;
+        // 懒建时不接 app 层：与 recordDomainLifeEvent 同一形态，只操作共享 store。
+        if (!this._lifeEvents) this._lifeEvents = new LifeEventStore(this.storage);
+        return this._lifeEvents.removeBySourceBase('commitment:' + sid);
+    }
     isReminderEnabled() {
         const raw = this.storage?.get?.(this.reminderEnabledKey, false);
         return raw === true || raw === 'true' || raw === 1 || raw === '1';

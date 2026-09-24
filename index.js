@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.92.0';
+const ST_PHONE_VERSION = '2.93.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,10 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修复过期自动备忘批量删除漏回收：clearExpiredAutoMemos 清掉领域备忘后走 forgetDomainLifeEvent，时间线不再留下源头已不存在的生活事件。",
-        "保留原过滤语义：非自动、循环纪念日、日期无法解析、未过期的备忘仍留下；只对真正被删掉的条目回收。",
-        "新增 tests/system-v292.test.mjs：源码面 / 真模块行为面 / 真源码破坏型负控制 / 版本下限锚点。",
-        "版本升至 2.92.0（五源同源）。"
+        "修复约定支的生活事件源键：原为 commitment:<id>:<status>:<revision>，同一条约定每推进一次状态就换一个源身份，时间线上最多并存 5 条同源条目（proposed/confirmed/rescheduled/fulfilled 全部留下），且终态也不回收。",
+        "源键改为稳定身份 commitment:<id>；新增 removeBySourceBase（基名或 `基名:` 族，兼容旧档带后缀的源键），打通新增/改写/回收三条出口，推进状态走对齐、终态（完成或取消）走回收。",
+        "补齐两条回收路径：删掉日历投影备忘、投影被顶替（改期换了挂靠）时，对应约定的事件一并收走；并刻意不做「凡不在投影里的约定事件全撤」，否则未确认的 proposed 会被误删。",
+        "新增 tests/system-v293.test.mjs（10 条）：结构面 / 真模块行为面 / 旧档迁移 / 删备忘 / 两条真源码破坏型负控制 / 版本锚点。",
+        "修正一条把缺陷当预期的历史判据：system-v274 原先断言「确认+改期后应有 3 条事件」，改为断言交付意图——同一条约定全程恰 1 条、正文跟随状态、终态回收。",
+        "版本升至 2.93.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

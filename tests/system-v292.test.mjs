@@ -160,6 +160,7 @@ test('v292 C. 负控制：删掉回收调用 → 幽灵事件复现', async () =
   assert.equal(CAL_SRC.split(anchor).length - 1, 1, '锚点恰中 1 次');
   const broken = CAL_SRC.replace(anchor, '');
   const dir = stageTree({
+    'package.json': JSON.stringify({ type: 'module' }),
     'apps/calendar/calendar-data.js': broken,
     'config/life-events.js': read('config/life-events.js'),
     'config/storage.js': read('config/storage.js'),

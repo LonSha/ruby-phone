@@ -109,6 +109,25 @@ export class LifeEventStore {
     if (removed) this._save();
     return removed;
   }
+  /* [v2.93.0] 前缀移除：源头以 `前缀:...` 成族存在时（约定的事件源是
+   *   `commitment:<id>:<status>:<revision>`，每推进一次状态就换一个键），
+   *   按**单个** sourceId 删只收拾得掉其中一条，同族的其余条目会永远留在时间线上。
+   *   与 removeBySource 一样认空串为无操作，返回实际撤掉的条数。 */
+  removeBySourceBase(base) {
+    const b = cleanText(base);
+    if (!b) return 0;
+    const head = b + ':';
+    const before = this.events.length;
+    // 等于基名本身，或是 `基名:` 族的成员。两者都收：源键格式换过代，
+    //   旧档里仍是带后缀的 `base:...` 形态，只认精确会漏掉它们（幽灵留在时间线上）。
+    this.events = this.events.filter((item) => {
+      const sid = String(item.sourceId || '');
+      return sid !== b && !sid.startsWith(head);
+    });
+    const removed = before - this.events.length;
+    if (removed) this._save();
+    return removed;
+  }
   timeline(filter = {}) {
     return this.events
       .filter((event) => !filter.characterId || event.characterId === filter.characterId)
