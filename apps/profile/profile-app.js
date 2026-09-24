@@ -19,10 +19,9 @@
 'use strict';
 import { defaultProfileSettings, readProfileFace, protagonistFields, lifeDetailsGroups, profilePromptBlock } from './profile-data.js';
 import { ProfileView } from './profile-view.js';
+import { readPushProbe } from '../../config/world-bridge.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^profile_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'profile_settings_v1';
-/** 上游桥的全局挂载名（与 lonsha_memory_bridge_v1 逐字一致，改一处即两边失联） */
-const BRIDGE_ID = 'lonsha_memory_bridge_v1';
 export class ProfileApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
@@ -57,20 +56,8 @@ export class ProfileApp {
      * @returns {{mounted:boolean, hasSnapshot:boolean, snapshot:object|null}}
      */
     probeBridge() {
-        try {
-            const w = this._win();
-            const b = w && w[BRIDGE_ID];
-            if (!b || typeof b !== 'object') return { mounted: false, hasSnapshot: false, snapshot: null };
-            let snap = null;
-            try { snap = (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null; } catch (_e) { snap = null; }
-            if (!snap && typeof b.refresh === 'function') {
-                try { snap = b.refresh(); } catch (_e) { snap = null; }
-            }
-            const ok = !!(snap && typeof snap === 'object');
-            return { mounted: true, hasSnapshot: ok, snapshot: ok ? snap : null };
-        } catch (_e) {
-            return { mounted: false, hasSnapshot: false, snapshot: null };
-        }
+        const p = readPushProbe(this._win());
+        return { mounted: p.mounted, hasSnapshot: p.hasSnapshot, snapshot: p.snapshot };
     }
     /** 来源归因（五态）：{state, reason, protagonist, lifeDetails, text} */
     profileFace() {

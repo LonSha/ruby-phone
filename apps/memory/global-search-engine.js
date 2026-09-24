@@ -17,6 +17,7 @@
 // 底层 cheatPacks / dirtyTalkModules 顶层纯数据，Node 可测）。
 import { getCheatById } from '../cheat/cheat-data.js';
 import { getModuleById } from '../dirtytalk/dt-data.js';
+import { readPushProbe } from '../../config/world-bridge.js';
 
 const MAX_SNIPPET = 120;
 const MAX_SCAN_PER_SOURCE = 600;
@@ -306,21 +307,12 @@ export function buildDefaultSources(storage, deps = {}) {
     };
 
     /**
-     * [v2.62.0] 现取记忆插件只读快照（lonsha_memory_bridge_v1）。
-     * 与 chars/wallet/place/profile 等 App 的 probeBridge 同规格：先读推型 snapshot，
-     * 缺失再调 refresh()。**不复制副本到手机键**（防双份真相），不写上游，只读。
-     * 无桥 / 无快照 / 宿主未注入 window 时一律安全返回 null（不抛）。
+     * [v2.97.0] 现取记忆插件只读快照。
+     * 读法收敛到 config/world-bridge.js 的 readPushProbe：本文件不再自己摸桥全局、也不再自判快照形态。
+     * **不复制副本到手机键**（防双份真相），不写上游，只读；无桥 / 无快照一律安全返回 null（不抛）。
      */
     const bridgeSnapshot = () => {
-        try {
-            const w = (typeof window !== 'undefined') ? window : null;
-            const b = w && w['lonsha_memory_bridge_v1'];
-            if (!b || typeof b !== 'object') return null;
-            let snap = null;
-            try { snap = (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null; } catch (_e) { snap = null; }
-            if (!snap && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
-            return (snap && typeof snap === 'object') ? snap : null;
-        } catch (_e) { return null; }
+        try { return readPushProbe().snapshot; } catch (_e) { return null; }
     };
 
     const sources = [];

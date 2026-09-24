@@ -116,6 +116,9 @@ const TMP_ROOT = mkdtempSync(path.join(os.tmpdir(), 'rp-v281-'));
 // 依赖闭包（只含搜索链路真正会 import 的文件；cheat/dirtytalk 是 buildDefaultSources 的纯数据依赖）
 const CLOSURE = [
     ENGINE_REL, APP_REL, VIEW_REL,
+    // [v2.97.0] 搜索内核改走单一真源读桥（readPushProbe），破坏副本必须带上该依赖，
+    //   否则副本 import 直接 ERR_MODULE_NOT_FOUND，负控制变成「因缺文件而红」而不是「因破坏而红」。
+    'config/world-bridge.js',
     'apps/cheat/cheat-data.js',
     'apps/dirtytalk/dt-data.js',
     'data/cheats.js', 'data/cheat-index.js',

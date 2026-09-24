@@ -10,6 +10,135 @@
 
 ---
 
+## 迭代 29 — v2.97.0 桥消费面收敛到单一真源（修 clock/ledger 桥读取真缺陷）
+
+- **日期**：2026-09-25
+- **类型**：真缺陷修复（联动侧读数恒假）+ 机制收口（第九道门）+ 测试自身缺陷修复
+- **动机**：用户的原始判断是「另一个插件没有跟上，两者联动的东西呢」。顺着联动面往下查，
+  第一个落点是 RubyPhone 怎么读上游两个只读世界桥（lonsha 记忆插件 / WorldAxis）。
+  查完发现：**7 份同构的 `probeBridge()` + 2 份自写读取**，而其中 **2 份是错的**。
+
+### 一、缺陷取证（先量，不凭读代码下结论）
+
+| 对象 | 修前实测 |
+| --- | --- |
+| 桥里到底有没有快照 | `桥梁实际有快照: true`（快照完整） |
+| `clock-app` 的 `probeBridge()` | `{hasBridge:true, hasSnapshot:false}` ⇒ face = `no-snapshot` |
+| `ledger-app` 的 `probeBridge()` | `{hasBridge:true, hasSnapshot:false}` ⇒ face = `no-snapshot` |
+
+逐字比对 5 个正确 App（place / wallet / profile / plotline / chars）与 2 个错误 App（clock / ledger）
+后确认成因只有一个字符：
+
+```js
+// 正确（5 份）：快照是对象，直接取本体
+snap = (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null;
+// 错误（2 份）：把对象当函数调用 ⇒ 必然抛 TypeError
+snap = bridge.snapshot ? bridge.snapshot() : null;   // ⇒ catch (_e) { snap = null; } 吞掉
+```
+
+**根因不是手滑，是没人知道桥有两种发布方式**：
+
+- lonsha 桥 = **推送型**：`snapshot` 是**对象**（生成管线里 `refresh()` 覆盖）；
+- WorldAxis 桥 = **拉取型**：`snapshot` 是**函数**（外部入口，调一次返回深拷贝）——
+  这个属性**永远存在**，所以「用属性在不在判有没有物」必然恒真。
+
+于是 snap 恒为 null，两个 App 永久显示「桥在但没快照」。与本仓最贵的缺陷形态同形：
+**不报错、不崩溃、只错结果**。
+
+### 二、收口：单一真源 `readPushProbe(win)`
+
+`config/world-bridge.js` 新增统一出口，形态判定只写这一份：
+
+- 对象 ⇒ `kind='push'`，直接用本体；
+- 函数 ⇒ `kind='pull'`，且**只在 `readPublished().has === true` 时才真拉**
+  （空拉一次会把对方的拒绝记账刷脏）；
+- 其余 ⇒ `kind='unknown'`（不硬猜）；
+- 随后 `refresh()` 兜底（旧版桥不静默丢数据）。
+- 三条纪律：**只读**（不写上游）、**不抛**（任何畸形都降级）、**不猜**（拿不到就如实说拿不到）。
+- 如实带出上游自述的 `sourceState` / `lastError`（lonsha v3.174 的状态机字段；旧版桥无 ⇒ null，不伪造）。
+- **两台桥都探**并按固定序取第一台真有快照的，返回值带 `id` 标明快照是谁家的
+  （一台装了两桥的环境里能读到任一台都不算「没数据」；但不许把两台混成一份读数）。
+
+9 个消费方全部改走该出口：place / wallet / profile / plotline / chars / clock / ledger /
+搜索内核（`global-search-engine`）/ 撩语（`dirtytalk-app`）。
+
+**收敛前后实测（同一门禁量的）**：
+
+| 判据 | 修前 | 修后 |
+| --- | --- | --- |
+| 桥名字面量自持点（真源外） | 9 处 | **0** |
+| `.snapshot(` 调用式（真源外） | 2 处 | **0** |
+| 自写形态判据（真源外） | 7 处 | **0** |
+| `readPushProbe` 消费点 | 0（出口尚不存在） | **9** |
+
+### 三、第九道门 `scripts/bridge-contract-audit.mjs`
+
+把「同一口径只许一份实现」从当轮纪律变成**常驻判据**（已接入 `npm run check`）：
+
+| 判据 | 内容 | 失败说明什么 |
+| --- | --- | --- |
+| J1 | 两个桥名的字面量只允许在真源各 1 次，产品面 0 次 | 有人又在自己抄桥名 |
+| J2 | 产品代码不得出现 `.snapshot(` 调用式（真源拉取型分支白名单） | 本版修掉的那个缺陷形态回来了 |
+| J3 | 真源须导出 `readPushProbe`，且产品侧消费点 ≥ 7（实测 9） | 出口被抽掉，或「抽出来只有两三处用」= 摆设 |
+| J4 | 不得再自写 `x.snapshot && typeof x.snapshot === 'object'`（真源除外） | 8 处重复的种子又发芽 |
+| J5 | 扫描面下限 100（实测 218），低于即 exit 2 拒判 | 探测器失效时不许「零命中 = 全绿」 |
+
+**门禁内置注释剥离器**：本仓大量注释逐字提到桥名与旧写法（如 `place-data.js` 开头的说明），
+在原文上判会产生本仓明令禁止的**文本包含式假红**。故 J1/J2/J4 一律在**去注释**的源码上判
+（字符串内容保留 —— J1 数的就是字面量）。
+
+**两个已知陷阱（均在本轮踩到并修）**：
+
+1. `sourceHasExport` 首版写成 `new RegExp('export\s+function\s+' + …)`，
+   经 Python 写盘后成了 `\\s+`（**过度转义**）⇒ 真源出口明明在场却判「缺出口」；
+   改为按转义层数显式拼接后正常。
+   同轮套件侧也踩了同一形态（A3：`/\.snapshot\\s\*\(/` 匹配的是反斜杠本身），
+   修法是与门禁源码**逐字一致**的 `includes` 断言。
+2. 成功消息里的「真源拉取型分支 1 处」是**硬编码**，已改为动态读数
+   （`sourceCallCount`）—— 硬编码的读数会与实现漂移，与本门禁要治的病同形。
+
+### 四、测试自身的四个缺陷（同轮修掉，不留假红）
+
+| 条 | 首跑症状 | 真因 |
+| --- | --- | --- |
+| A3 | 判据锚点假红 | 套件内正则**过度转义**（匹配的是反斜杠），与门禁源码不逐字一致 |
+| C4 | `place-app mounted: false !== true` | `withWin` **非 async-aware**：`try { return fn(); } finally {…}` 在回调为 async 时**立刻**执行 finally，`await import()` 一挂起就还原了 window ⇒ 探针读到空全局 |
+| C5 | `dta.DirtyTalkApp is not a constructor` | 撩语真类名是 **`DtApp`** |
+| B3 | 只覆盖 lonsha 的拉取型分支 | 漏了「统一探针要探**两个**桥」这件事，补 B3b/B3c/B3d |
+
+**教训沉淀**：包 window 的工具函数要么 `await` 回调，要么别用 `finally` 还原；
+判据锚点必须与被判对象逐字一致，否则「判据在场」与「判据缺失」分不开。
+
+### 五、既有负控制的依赖闭包修复
+
+`npm test` 首跑出现 2 条失败，全在 `tests/system-v281.test.mjs` 的 D1/D2，错误是
+`ERR_MODULE_NOT_FOUND: …/config/world-bridge.js` —— 副本树的 `CLOSURE` 只复制了搜索链路原有依赖，
+新增的 `config/world-bridge.js` 没被复制。已补进 `CLOSURE` 并写明理由：
+
+> 否则副本 import 直接 ERR_MODULE_NOT_FOUND，负控制变成「因缺文件而红」而不是「因破坏而红」。
+
+本仓纪律：负控制必须断言**因破坏而红**，不能容忍任何其它红灯来源。
+
+### 六、验证
+
+- `tests/system-v297.test.mjs` **24/24 全绿**（A 结构面 4 · B 真源行为面 8 ·
+  C 端到端 5 · D 负控制 6 · E 版本锚点 1）；
+- 全量 `npm test`：**755 tests / 754 pass**，唯一红是 `v280` 的「元信息必须声明真实版本」
+  （本条文档写完即消）；
+- `npm run check` 全九道门见「元信息」节的实测基线。
+
+### 七、遗留 / 下一步
+
+- 本版治的是**单仓内的桥消费面**；用户计划书里的 **L-F5 跨仓投影契约**
+  （`projectionVersion / generatedAt / conversationId / sceneId / worldId / items /
+  visibility / sourceLedger / revision / expiresAt`，RubyPhone 只消费投影、不依赖账本内部字段）
+  **尚未启动** —— 本版把上游自述面（`sourceState` / `lastError`）如实带到了消费侧，
+  正是那份契约的读侧前置。
+- 门禁 J3 只钉「出口真被消费」，**不钉**「下游有没有真的消费上游归因面」
+  （属功能面，见 TODO）。
+
+---
+
 ## 迭代 28 — v2.96.0 派生读数源身份台账门禁（P0 下游对齐普查正式收口）
 
 - **日期**：2026-09-25
@@ -1383,8 +1512,12 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.96.0`（五源同源）
-- **门禁基线**（v2.95.0 实测，`npm run check` exit 0）：语法 373 文件 /
-  导入可解析门 231 文件 299 条说明符 / 测试 **721 pass · 0 fail** / 死导出零新增（758 个声明、24 条冻结项）/
-  生命周期 35 个 App 类 48 个槽位零缺口 / 注册三方对账无孤儿、样式投递 30 个未覆盖 0 /
-  keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）。
+- **当前版本**：`2.97.0`（五源同源）
+- **门禁基线**（v2.97.0 实测，`npm run check` exit 0）：语法 377 文件 /
+  导入可解析门 231 文件 308 条静态说明符（动态 import 97 条不计入判据）/ 测试 **755 pass · 0 fail** /
+  死导出零新增（249 个文件、760 个 export 声明、零消费 24 条冻结、枚举面 828 条全部识别）/
+  生命周期 35 个 App 类 48 个槽位零缺口 / 注册 APPS id 40、样式投递 30 个未覆盖 0 /
+  keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）/
+  派生读数台账 枚举面 10 文件 · 台账 10 条（派生库 3）/
+  **桥消费面契约**（第九道门）：扫描面 218 个 .js · 桥名自持点 0 · `.snapshot(` 调用式 0
+  （真源拉取型分支 2 处）· 自写形态 0 · `readPushProbe` 消费点 9（下限 7）。

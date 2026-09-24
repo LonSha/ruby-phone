@@ -27,6 +27,7 @@ import {
   dtModuleIdOfItem,
   sceneStyleHints,
 } from './dt-data.js';
+import { readPushProbe } from '../../config/world-bridge.js';
 // [v2.49.0] 场景联动：位置链解析复用 place 侧唯一真源（纯函数，跨 App 只读复用不造第二套）
 import { currentChainOf } from '../place/place-data.js';
 import { DtView } from './dt-view.js';
@@ -153,12 +154,8 @@ export class DtApp {
    */
   sceneStyleHints() {
     try {
-      const w = (typeof window !== 'undefined') ? window : globalThis;
-      const b = w && w['lonsha_memory_bridge_v1'];
-      if (!b || typeof b !== 'object') return { chain: [], styles: [] };
-      let snap = null;
-      try { snap = (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null; } catch (_e) { snap = null; }
-      if (!snap && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
+      // [v2.97.0] 读法收敛到真源 readPushProbe（不再自摸全局、不再自判快照形态）
+      const snap = readPushProbe().snapshot;
       if (!snap || typeof snap !== 'object') return { chain: [], styles: [] };
       const face = snap.scene;
       if (!face || typeof face !== 'object') return { chain: [], styles: [] };

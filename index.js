@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.96.0';
+const ST_PHONE_VERSION = '2.97.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "把 TODO P0「源头变更后的下游对齐普查」**收口为常驻门禁**。这一支从 v2.77 一路手查到 v2.95（生活事件 → 搜索索引 → 桌面角标 → 万象背包），每轮都是「读代码找形态」，于是两个问题始终没有答案：还有哪些库属于同一形态？查过的库，判据下轮还成立吗？新增 `scripts/source-derivation-audit.mjs`（第八道门，已接入 `npm run check`）持续回答三件事：① 枚举面有没有新增未登记的库；② 已登记派生库的出口是否仍在；③ 已登记条目是否仍然存活（防僵尸条目）。",
-        "枚举面（实测口径）：`apps/**` + `config/**` 的 `.js` 中同一行同时出现「源身份字段（sourceId / sourceKey / commitmentSourceId）」与「集合操作（filter/find/some/map/…）」，实测命中 10 个文件。口径刻意**不要求**源字段落在参数括号内 —— 本仓大量配对写作 `String(x?.sourceKey || '') === sourceKey` 与 `.map(([sourceId, …]) => …)`，收紧口径会直接漏掉它们（负控制专门覆盖该形态）。",
-        "台账 10 条，分三层判定：**派生库 3**（生活事件库 / 万象背包 / 世界书来源选择，逐条写必须齐备的出口并对源头侧出口同样做在场检查）、**非派生库 7**（相册来源标签、搜索来源标签、时间线视图、提示词导入预设的 sourceId 等，逐条给出「为什么不是派生库」）。这样下一轮不必再手查同一批文件。",
-        "台账同时**留住判定结论**：删订单**记录**不回收 = 设计本意（v2.95 证伪）；世界书来源选择 = 已查、判定为非缺陷（勾选框在 UI 上无法取消，且条目悬空不由本仓路径制造）；提示词导入预设的 sourceId 语义不是源头身份。防止这些已证伪项在后续轮次被当成缺陷重新投入。",
-        "新增 tests/system-v296.test.mjs（10 条）：结构面（接入 check 链、真仓库全绿、台账自证）＋ 负控制五条（副本树自身必须全绿的前置自证；拆掉登记出口 → 红灯点名该出口；**新增未登记的派生库 → 枚举面红灯**，且刻意用本仓最常见的配对写法以证明口径无开口；枚举面文件消失 → 僵尸条目红灯；台账被清空 → fail-closed 红灯）＋ 台账内容守卫＋版本锚点。负控制一律在副本树上重跑真门禁并断言退出码与信息指向真原因。",
-        "版本升至 2.96.0（五源同源）。",
+        "修一个**真缺陷**（已取证）：`apps/clock/clock-app.js` 与 `apps/ledger/ledger-app.js` 的 `probeBridge()` 把**推送型**世界桥的 `snapshot`（对象）当函数调用 —— `bridge.snapshot ? bridge.snapshot() : null` —— 必然抛 TypeError 并被 `catch (_e) { snap = null; }` 吞掉，于是 snap 恒为 null：**桥里躺着完整快照，两个 App 却永久显示「桥在但没快照」**。取证（修复前实测）：`桥梁实际有快照: true`，而 CLOCK / LEDGER 报 `hasSnapshot:false`、face = `no-snapshot`；修后两条端到端回归转绿。该形态与本仓最贵的缺陷同形：不报错、不崩溃、只错结果。",
+        "根因是**同一个口径被抄了 7 份**：两个只读世界桥是同规格接口但**发布方式不同** —— lonsha 桥是推送型（`snapshot` 是对象，生成管线里 `refresh()` 覆盖）、WorldAxis 桥是拉取型（`snapshot` 是函数，调一次返回深拷贝）。抄写者不知道这件事，于是「快照怎么读」在 7 个 App + 搜索内核 + 撩语里各写一遍；写对的 5 份与写错的 2 份只差一个字符（`b.snapshot` vs `b.snapshot()`）。实测漂移：桥名字面量 9 处、`.snapshot(` 调用式 2 处、自写形态判据 7 处。",
+        "收口为**单一真源**：`config/world-bridge.js` 新增统一出口 `readPushProbe(win)`，形态判定只此一份（对象 ⇒ `push` 直接用本体；函数 ⇒ `pull`，且只在 `readPublished().has === true` 时才真拉 —— 否则空拉一次会把对方的拒绝记账刷脏；其余 ⇒ `unknown`），并如实带出上游自述的 `sourceState` / `lastError`（旧版桥无此字段 ⇒ null，不伪造）。两台桥都探，返回值带 `id` 标明快照是谁家的。9 个消费方（place / wallet / profile / plotline / chars / clock / ledger / 搜索内核 / 撩语）全部改走该出口，桥名字面量自持点归零。",
+        "新增**第九道门** `scripts/bridge-contract-audit.mjs`（已接入 `npm run check`），把「同一口径只许一份实现」从当轮纪律变成常驻判据：J1 桥名单一真源（两个桥名的字面量只允许在真源各 1 次）；J2 产品代码不得出现 `.snapshot(` 调用式（真源拉取型分支白名单）；J3 出口须在场**且真被消费**（消费点下限 7，实测 9 —— 拦「抽出来只有两三处用」的摆设出口）；J4 自写形态判据绝迹；J5 扫描面下限 fail-closed（扫到的产品文件少于 100 即拒判，`RP_BRIDGE_FIXTURE=1` 只放宽本条）。门禁内置注释剥离器：本仓注释大量逐字提到桥名与旧写法，在原文上判会产生「文本包含式假红」。",
+        "新增 `tests/system-v297.test.mjs`（25 条）：真源行为面（推送 / refresh 回落 / 拉取型只自述已发布才拉 / 无桥畸形与 getter 抛错 / 上游自述如实带出 / 两台桥的探测序）× 端到端（clock · ledger 缺陷回归 + 无桥仍如实报 `bridge-absent` + 五 App 探针同形 + 搜索内核与撩语经真源读桥）× 负控制五条（恢复自持桥名 / 恢复 `.snapshot(` 调用式 / 抽掉真源出口 / 重新自写形态判据 / 门禁自己的桥名口径被改坏，一律在副本树上重跑真门禁并断言红灯点名真原因）。测试自身的四个缺陷同轮修掉：A3 判据锚点与门禁源码不逐字一致（过度转义 ⇒ 假红）、C4 `withWin` 非 async-aware（`await import()` 一挂起就还原 window ⇒ 探针读到空全局）、C5 撩语真类名是 `DtApp`、B3 未覆盖第二台桥。",
+        "版本升至 2.97.0（五源同源）。同轮还修了既有负控制的依赖闭包：搜索链路的副本树 `CLOSURE` 补上新增依赖 `config/world-bridge.js` —— 否则副本里 `ERR_MODULE_NOT_FOUND`，负控制红的是「缺文件」而不是「破坏」（判据必须因破坏而红，不能容忍任何其它红灯来源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

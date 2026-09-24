@@ -2,6 +2,7 @@
 
 import { LEDGER_REASONS, defaultLedgerSettings, readLedgerFace, projectLedger, ledgerPromptBlock } from './ledger-data.js';
 import { LedgerView } from './ledger-view.js';
+import { readPushProbe } from '../../config/world-bridge.js';
 
 export class LedgerApp {
   constructor(phoneShell, storage) {
@@ -17,23 +18,10 @@ export class LedgerApp {
   }
 
   probeBridge() {
-    const bridge = window.lonsha_memory_bridge_v1 || null;
-    if (!bridge) {
-      this._probe = { hasBridge: false, hasSnapshot: false, ledger: null };
-      this._face = LEDGER_REASONS.bridge_absent;
-      this._proj = null;
-      return;
-    }
-    let snap = null;
-    try { snap = bridge.snapshot ? bridge.snapshot() : null; } catch (e) { snap = null; }
-    if (!snap || typeof snap !== 'object') {
-      this._probe = { hasBridge: true, hasSnapshot: false, ledger: null };
-      this._face = LEDGER_REASONS.no_snapshot;
-      this._proj = null;
-      return;
-    }
-    const wlr = snap.worldLedgerRead;
-    this._probe = { hasBridge: true, hasSnapshot: true, ledger: wlr };
+    const p = readPushProbe(this._win());
+    const snap = p.snapshot;
+    const wlr = (snap && typeof snap === 'object') ? snap.worldLedgerRead : null;
+    this._probe = { hasBridge: p.mounted, hasSnapshot: p.hasSnapshot, ledger: wlr };
     this._face = readLedgerFace(this._probe);
     this._proj = (this._face === LEDGER_REASONS.ready) ? projectLedger(wlr) : null;
   }

@@ -5,6 +5,7 @@
 
 import { CLOCK_REASONS, defaultClockSettings, readClockFace, projectClock, clockPromptBlock } from './clock-data.js';
 import { ClockView } from './clock-view.js';
+import { readPushProbe } from '../../config/world-bridge.js';
 
 export class ClockApp {
   constructor(phoneShell, storage) {
@@ -20,23 +21,10 @@ export class ClockApp {
   }
 
   probeBridge() {
-    const bridge = window.lonsha_memory_bridge_v1 || null;
-    if (!bridge) {
-      this._probe = { hasBridge: false, hasSnapshot: false, clock: null };
-      this._face = CLOCK_REASONS.bridge_absent;
-      this._proj = null;
-      return;
-    }
-    let snap = null;
-    try { snap = bridge.snapshot ? bridge.snapshot() : null; } catch (e) { snap = null; }
-    if (!snap || typeof snap !== 'object') {
-      this._probe = { hasBridge: true, hasSnapshot: false, clock: null };
-      this._face = CLOCK_REASONS.no_snapshot;
-      this._proj = null;
-      return;
-    }
-    const clock = snap.clock;
-    this._probe = { hasBridge: true, hasSnapshot: true, clock };
+    const p = readPushProbe(this._win());
+    const snap = p.snapshot;
+    const clock = (snap && typeof snap === 'object') ? snap.clock : null;
+    this._probe = { hasBridge: p.mounted, hasSnapshot: p.hasSnapshot, clock };
     this._face = readClockFace(this._probe);
     this._proj = (this._face === CLOCK_REASONS.ready) ? projectClock(clock) : null;
   }

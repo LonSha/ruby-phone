@@ -226,6 +226,79 @@ export function readLonshaSnapshot(opts = {}) {
     return { ok: true, reason: 'ok', source: src, snapshot: snap };
 }
 
+/**
+ * [v2.97.0] 世界桥的**统一探针**：一次读出「桥在不在 / 有没有可读快照 / 快照本体」，形态判定只写这一份。
+ *
+ * 【为什么需要这个出口】（真实缺陷成因，不是设计洁癖）
+ *   RubyPhone 侧实测有 **7 份同构的 probeBridge()**（place / wallet / profile / plotline /
+ *   chars / clock / ledger）+ 两份自写读取（global-search-engine 与 dirtytalk）。
+ *   它们抄的时候没人知道桥有**两种发布方式**：
+ *     · lonsha 桥 = **推送型**：`snapshot` 是**对象**（生成管线里 refresh 覆盖）；
+ *     · WorldAxis 桥 = **拉取型**：`snapshot` 是**函数**（外部入口，调一次返回深拷贝）。
+ *   于是 clock / ledger 那两份写成了 `bridge.snapshot ? bridge.snapshot() : null`：
+ *   把**对象**当函数调用 ⇒ 必然抛 TypeError ⇒ 被 `catch (_e) { snap = null; }` 吞掉
+ *   ⇒ snap 恒为 null ⇒ 两个 App 永久显示「桥在但没快照」，哪怕桥里躺着完整快照。
+ *   这正是本仓最贵的缺陷形态（不报错、不崩溃、只错结果）在桥读取侧的翻版。
+ *
+ * 三条纪律：只读（不写上游）、不抛（任何畸形都降级）、不猜（拿不到就如实说拿不到）。
+ * 形态判定本身也不猜：对象就是对象（推型），函数才调（拉取型），两者都不是则当「没有可外供的物」。
+ *
+ * 【两个桥都探】lonsha（记忆插件）与 WorldAxis 是同规格**只读**世界桥，RubyPhone 侧一律经本探针读；
+ *   一台装了两者的环境里，能读到任一台的快照都不算「没数据」。
+ *   但**不许把两台混成一份读数**：返回值带 `id` 标明快照是谁家的（否则下游无法归因）。
+ *
+ * @param {object} [win] 显式注入 window（无头测试用），不传即取全局
+ * @returns {{ id, mounted, hasSnapshot, snapshot, kind, reason, sourceState, lastError }}
+ *   kind ∈ { push, pull, unknown }；reason ∈ { not-mounted, no-snapshot, ready }
+ *   sourceState / lastError 为上游 v3.174 自述（旧版桥无此字段 ⇒ 如实 null，不伪造）
+ */
+const PROBE_ORDER = Object.freeze([LONSHA_BRIDGE_ID, WORLDAXIS_BRIDGE_ID]);
+
+function probeOne(id, win) {
+    const base = { id, mounted: false, hasSnapshot: false, snapshot: null, kind: 'unknown', reason: 'not-mounted', sourceState: null, lastError: null };
+    try {
+        const w = resolveWin(win);
+        let b = null;
+        try { b = w ? w[id] : null; } catch (_e) { b = null; }
+        if (!b || typeof b !== 'object') return base;
+        let sourceState = null;
+        try { sourceState = (typeof b.sourceState === 'string') ? b.sourceState : null; } catch (_e) { sourceState = null; }
+        let lastError = null;
+        try { lastError = b.lastError ? String(b.lastError) : null; } catch (_e) { lastError = null; }
+        // 形态判定（与 readPublished 同口径，但这里要把快照**本体**带回去）
+        let raw = null;
+        try { raw = b.snapshot; } catch (_e) { raw = null; }
+        const kind = (raw && typeof raw === 'object') ? 'push' : (typeof raw === 'function' ? 'pull' : 'unknown');
+        let snap = null;
+        if (kind === 'push') snap = raw;
+        else if (kind === 'pull') {
+            // 拉取型：只在它自己说「已发布」时才真去拉（否则空拉一次只会把对方的记账刷脏）
+            const pub = readPublished(id, win);
+            if (pub.has) { try { snap = b.snapshot(); } catch (_e) { snap = null; } }
+        }
+        if (!snap && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
+        const ok = !!(snap && typeof snap === 'object');
+        return { id, mounted: true, hasSnapshot: ok, snapshot: ok ? snap : null, kind, reason: ok ? 'ready' : 'no-snapshot', sourceState, lastError };
+    } catch (_e) { return base; }
+}
+
+/**
+ * 统一探针：按 PROBE_ORDER 逐台探，取**第一台真读出快照**的桥；
+ * 都不行时退回第一台的如实读数（谁在场报谁）。
+ * 不抛（任何畸形都降级）、只读（不写上游）。
+ * @param {object} [win]
+ * @returns {{ id, mounted, hasSnapshot, snapshot, kind, reason, sourceState, lastError }}
+ */
+export function readPushProbe(win) {
+    let first = null;
+    for (const id of PROBE_ORDER) {
+        const p = probeOne(id, win);
+        if (p.hasSnapshot) return p;
+        if (!first && p.mounted) first = p;
+    }
+    return first || probeOne(PROBE_ORDER[0], win);
+}
+
 /** 两个桥的在场一览（供诊断面板/测试；纯读） */
 export function worldBridgeAvailability(win) {
     const wa = bridgeSource(WORLDAXIS_BRIDGE_ID, win);
@@ -419,6 +492,7 @@ export default {
     readWorldAxisSnapshot,
     readWorldClock,
     readLonshaSnapshot,
+    readPushProbe,
     worldBridgeAvailability,
     lonshaSource,
     diffClocks,

@@ -7,6 +7,31 @@
 
 ## P0 · 缺陷 / 防回归（优先做）
 
+- [x] **上游桥读取面的「同一口径被抄 7 份」—— v2.97.0 收口**
+      —— 联动侧查到真缺陷：`clock` / `ledger` 的 `probeBridge()` 把**推送型**桥的
+      `snapshot`（对象）当函数调用（`bridge.snapshot ? bridge.snapshot() : null`），
+      必然抛 TypeError 并被 catch 吞掉 ⇒ snap 恒为 null ⇒ 两个 App 永久显示
+      「桥在但没快照」，而桥里躺着完整快照（修前实测 `桥梁实际有快照: true`）。
+      根因是「桥有两种发布方式」这件事没人在机制上防：lonsha 桥 = 推送型（对象）、
+      WorldAxis 桥 = 拉取型（函数），于是 9 个消费方各写一遍读取。
+      收口为单一真源 `config/world-bridge.js` 的 `readPushProbe(win)`（形态判定只此一份、
+      两台桥都探、如实带出上游 `sourceState` / `lastError`），9 个消费方全部改走，
+      并新增**第九道门** `scripts/bridge-contract-audit.mjs` 把「同一口径只许一份实现」
+      变成常驻判据（桥名单一真源 / 禁 `.snapshot(` 调用式 / 出口真被消费 / 禁自写形态判据 /
+      扫描面 fail-closed）。实测：桥名自持点 9 → 0、调用式 2 → 0、自写形态 7 → 0，
+      消费点 9。详见 `ITERATION_LOG.md` 迭代 29。
+
+- [ ] （下一步）**跨仓投影契约（L-F5）**：用户计划书要求 lonsha 侧提供面向 RubyPhone 的
+      **稳定投影 API** —— `projectionVersion / generatedAt / conversationId / sceneId /
+      worldId / items / visibility / sourceLedger / revision / expiresAt`，
+      RubyPhone **只消费投影、不依赖账本内部字段**。v2.97.0 已把上游自述面
+      （`sourceState` / `lastError`）如实带到消费侧，是这份契约的读侧前置；
+      契约本体与两侧接线尚未启动。
+      另：第九道门只钉「出口真被消费」，**不钉**「下游有没有真的消费上游归因面」。
+      实测口径：`readPushProbe` 的 `sourceState` / `lastError` 字段**目前尚无消费点**
+      （归因面由 worldpulse 经 `bridgeReport()` / `lonshaSource()` 消费，走的是另一条出口）——
+      属功能面，接线后应补一条消费判据，否则这两个字段就是「抽出来没人用」的摆设。
+
 - [x] **源头变更后的下游对齐普查（v2.77.0 只做了生活事件这一支）** ——
       **已于 v2.96.0 收口**：不再逐轮手查，改为常驻门禁
       `scripts/source-derivation-audit.mjs`（第八道门）+ 三层台账（派生库 3 / 非派生库 7），
