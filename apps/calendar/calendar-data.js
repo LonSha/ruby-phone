@@ -530,19 +530,24 @@ export class CalendarData {
         if (!currentParts) return 0;
         const currentSerial = this.dateSerial(currentParts);
         const memos = this.getMemos();
-        const before = memos.length;
-        this._memos = memos.filter(memo => {
-            if (String(memo?.source || '') !== 'auto_schedule') return true;
-            if (this.isRecurringMemo(memo)) return true;
+        const keep = [];
+        const dropped = [];
+        for (const memo of memos) {
+            if (String(memo?.source || '') !== 'auto_schedule') { keep.push(memo); continue; }
+            if (this.isRecurringMemo(memo)) { keep.push(memo); continue; }
             const memoParts = this.parseDateKey(memo?.dateKey);
-            if (!memoParts) return true;
-            if (this.dateSerial(memoParts) >= currentSerial) return true;
-            if (!this.isReminderEnabled()) return false;
-            return !this.hasMemoReminderFired(memo, memo.dateKey);
-        });
-        const removed = before - this._memos.length;
-        if (removed > 0) this.saveMemos();
-        return removed;
+            if (!memoParts) { keep.push(memo); continue; }
+            if (this.dateSerial(memoParts) >= currentSerial) { keep.push(memo); continue; }
+            if (!this.isReminderEnabled()) { dropped.push(memo); continue; }
+            if (!this.hasMemoReminderFired(memo, memo.dateKey)) { keep.push(memo); continue; }
+            dropped.push(memo);
+        }
+        this._memos = keep;
+        // [v2.92.0] 批量删除与 deleteMemo 同一条回收出口：源头没了，
+        //   时间线不得继续持有这条生活事件（此前 filter 只改备忘数组）。
+        for (const memo of dropped) this.forgetDomainLifeEvent(memo);
+        if (dropped.length > 0) this.saveMemos();
+        return dropped.length;
     }
 
     saveMemos() {

@@ -30,7 +30,11 @@
       已收口为唯一写出口 `setAppBadge`、只读真源的 `getAppBadge`、以及重建/清数据后的
       `mirrorBadgesToHome`（通知中心、微信、微博、扑克分享、打开 App 清零全部改走写出口），
       固化为 `tests/system-v291.test.mjs`。
-      仍未查：其余按 sourceId 去重的派生库（普查仍在进行中）。
+      进度（v2.92.0）：继续查按 sourceId 去重的派生库，抓到日历这一支的漏网路径——
+      `deleteMemo` 与约定投影移除都会 `forgetDomainLifeEvent`，但 `clearExpiredAutoMemos`
+      批量删过期自动备忘时只改备忘数组。领域类型（work/study/travel）的过期条目被清掉后，
+      时间线仍持有 `calendar:<id>:<type>`。已改走同一条回收出口，固化为 `tests/system-v292.test.mjs`。
+      仍未查：日历以外、按 sourceId 去重的其余派生库。
 
       进度（v2.82.0）：本轮普查**换了失效面**（从「派生读数」转到「加载链与资源沉淀」），
       抓到三类新形态，已修并固化：① 静态 import 路径指错（`apps/games/sudoku/sudoku-view.js`

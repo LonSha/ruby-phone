@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.91.0';
+const ST_PHONE_VERSION = '2.92.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修复桌面角标双数组漂移：新增唯一写出口 setAppBadge / 读出口 getAppBadge / 镜像 mirrorBadgesToHome，先写持久真源 currentApps，再镜像渲染副本 home.apps。",
-        "修复增量与全量重算互相抹数：通知中心、微信、微博、扑克分享与打开 App 清零全部改走 setAppBadge；微博增量基数改读 getAppBadge，不再用 home.apps 当基数。",
-        "修复换会话丢角标与清数据幽灵红点：loadData / reloadPhoneSurface 重建后镜像回渲染副本，clearCurrentData / clearAllData 重置后同步归零。",
-        "角标写入钳制：负数与非数字钳为 0，数值未变化不落盘不派发；派发统一走 makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE)。",
-        "新增 tests/system-v291.test.mjs：源码面 / 抽真函数真跑 / 真源码破坏型负控制×2 / 版本下限锚点。",
-        "版本升至 2.91.0（五源同源）。"
+        "修复过期自动备忘批量删除漏回收：clearExpiredAutoMemos 清掉领域备忘后走 forgetDomainLifeEvent，时间线不再留下源头已不存在的生活事件。",
+        "保留原过滤语义：非自动、循环纪念日、日期无法解析、未过期的备忘仍留下；只对真正被删掉的条目回收。",
+        "新增 tests/system-v292.test.mjs：源码面 / 真模块行为面 / 真源码破坏型负控制 / 版本下限锚点。",
+        "版本升至 2.92.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
