@@ -93,7 +93,8 @@ function isPlainObject(v) {
  *   「没给」与「给了 0」塌成同形，正是本仓最贵的那一类错读数。
  */
 function numOrNull(v) {
-    if (v === null || v === undefined || v === '') return null;
+    if (typeof v !== 'number' && typeof v !== 'string') return null;
+    if (typeof v === 'string' && !v.trim()) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
 }
@@ -122,6 +123,7 @@ export function contractOf(env) {
         if (api === null) { out.state = 'malformed'; out.reason = 'malformed'; return out; }
         if (api > SUPPORTED_API_VERSION) { out.state = 'ahead'; out.reason = 'ahead'; out.extraApi = true; return out; }
         if (api < SUPPORTED_API_VERSION) { out.state = 'behind'; out.reason = 'behind'; return out; }
+        if (!isPlainObject(env.items) || !isPlainObject(env.visibility) || !isPlainObject(env.sourceLedger)) return out;
         out.state = 'ok';
         out.reason = 'ok';
         return out;
@@ -222,12 +224,15 @@ export function readProjection(win, opts = {}) {
         const withheld = [];
         for (const id of Object.keys(vis)) {
             const v = vis[id];
-            if (v === 'withheld') {
+            if (v === 'given') {
+                shown[id] = 'given';
+                if (Object.prototype.hasOwnProperty.call(items, id)) given[id] = items[id];
+            } else if (v === 'withheld') {
                 withheld.push({ id, reason: String(withheldReasonOf(raw, id) || 'absent') });
                 delete shown[id];
             } else {
-                shown[id] = (v === undefined || v === null) ? 'given' : String(v);
-                if (Object.prototype.hasOwnProperty.call(items, id)) given[id] = items[id];
+                withheld.push({ id, reason: 'invalid-visibility' });
+                delete shown[id];
             }
         }
         const sl = isPlainObject(raw.sourceLedger) ? raw.sourceLedger : null;
