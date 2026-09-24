@@ -321,6 +321,28 @@ export class WangxiangApp {
         return this.inventoryItems.length !== previousLength;
     }
 
+    /**
+     * [v2.95.0] 按「源基名」整族回收：等于基名本身、或属于 `基名:` 族。
+     *
+     * 【为什么需要族回收】任务奖励的源键是 `task:<id>:<index>` —— 同一条任务的
+     *   多份奖励各占一个键（`_parseTaskInventoryRewards` 最多 10 份）。按精确键
+     *   回收时手头只有任务 id，凑不出 `<index>`，于是只能一条都收不掉。
+     *   与 calendar 的 `removeBySourceBase` **同口径**（v2.93.0 立的判据：
+     *   回收出口要认基名与 `基名:` 族两种形态，旧档里两种都可能有）。
+     */
+    _removeInventoryItemsBySourceBase(base) {
+        const b = String(base || '').trim();
+        if (!b) return false;
+        if (!Array.isArray(this.inventoryItems)) this.inventoryItems = [];
+        const head = b + ':';
+        const previousLength = this.inventoryItems.length;
+        this.inventoryItems = this.inventoryItems.filter(item => {
+            const sid = String(item?.sourceKey || '');
+            return sid !== b && !sid.startsWith(head);
+        });
+        return this.inventoryItems.length !== previousLength;
+    }
+
     _parseTaskInventoryRewards(value) {
         const text = String(value || '').replace(/\s+/g, ' ').trim();
         if (!text || /^(?:无|暂无|没有|none|null|0)$/i.test(text)) return [];
@@ -1296,10 +1318,21 @@ export class WangxiangApp {
             return !shouldRemove;
         });
         if (!removedIds.size) return progressRolledBack;
+        // [v2.95.0] 被回滚掉的任务若已完成过，其奖励物品还留在背包里 —— 源头（任务）
+        //   已被移除，派生条目无人回收（v2.77 立下的判据形状）。这里按任务逐条整族回收。
+        //   注意只收**确实被移除**的那些：范围外（如手动完成）的任务一条不动。
+        let inventoryChanged = false;
+        for (const taskId of removedIds) {
+            if (this._removeInventoryItemsBySourceBase(`task:${taskId}`)) inventoryChanged = true;
+        }
         this.generatedTasks.forEach(task => {
             if (removedIds.has(String(task?.id || ''))) task.status = 'available';
         });
-        Promise.all([this._saveGeneratedTasks(), this._saveManagedTasks()]).catch(error => {
+        Promise.all([
+            this._saveGeneratedTasks(),
+            this._saveManagedTasks(),
+            inventoryChanged ? this._saveInventoryItems() : Promise.resolve()
+        ]).catch(error => {
             console.error('[Wangxiang] 回滚微信确认派发状态失败:', error);
         });
         return true;
@@ -1383,9 +1416,15 @@ export class WangxiangApp {
         this.managedTasks = this.managedTasks.filter(item => String(item?.id || '') !== id);
         const generatedTask = this.generatedTasks.find(item => String(item?.id || '') === id);
         if (generatedTask) generatedTask.status = 'available';
+        // [v2.95.0] 源头一致性：本出口删除的是 managedTasks 里的任务，任务一没，
+        //   由它派生的 `task:<id>:<index>` 背包奖励就再无源头。此前未回收，
+        //   而回滚路径（rollbackWechatAssignmentsToFloor）走的是同一批 finished 任务，
+        //   两条路径必须同口径 —— 否则同一种「任务消失、奖励留下」在两条路上一个修一个漏。
+        const inventoryChanged = this._removeInventoryItemsBySourceBase(`task:${id}`);
         await Promise.all([
             this._saveGeneratedTasks(),
-            this._saveManagedTasks()
+            this._saveManagedTasks(),
+            inventoryChanged ? this._saveInventoryItems() : Promise.resolve()
         ]);
         return task;
     }
