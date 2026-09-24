@@ -1,6 +1,19 @@
 {
-  "latest": "2.90.0",
+  "latest": "2.91.0",
   "versions": {
+    "2.91.0": {
+      "date": "2026-09-25",
+      "title": "桌面角标单一真源：双数组漂移收口",
+      "items": [
+        "修复桌面角标双数组漂移：新增唯一写出口 setAppBadge / 读出口 getAppBadge / 镜像 mirrorBadgesToHome，先写持久真源 currentApps，再镜像渲染副本 home.apps。",
+        "修复增量与全量重算互相抹数：通知中心、微信、微博、扑克分享与打开 App 清零全部改走 setAppBadge；微博增量基数改读 getAppBadge，不再用 home.apps 当基数。",
+        "修复换会话丢角标与清数据幽灵红点：loadData / reloadPhoneSurface 重建后镜像回渲染副本，clearCurrentData / clearAllData 重置后同步归零。",
+        "角标写入钳制：负数与非数字钳为 0，数值未变化不落盘不派发；派发统一走 makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE)。",
+        "新增 tests/system-v291.test.mjs：源码面 / 抽真函数真跑 / 真源码破坏型负控制×2 / 版本下限锚点。",
+        "版本升至 2.91.0（五源同源）。"
+      ],
+      "version": "2.91.0"
+    },
     "2.90.0": {
       "date": "2026-09-25",
       "title": "生活事件跨会话残留与双副本修复 + 键门禁扩展",

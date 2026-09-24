@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.90.0';
+const ST_PHONE_VERSION = '2.91.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修复生活事件跨会话残留：CalendarData.clearCache() 补清懒建的 LifeEventStore，换会话后旧事件不再污染新会话。",
-        "修复生活事件双副本 lost update：CalendarApp 与 CalendarData 共享同一个 LifeEventStore 实例，交错写入不再互相覆盖。",
-        "清理历史重复方法定义：domainLifeEventSourceId / updateBySource / removeBySource 各保留一份。",
-        "扩展 keys-audit 门禁：新增间接属性键抽取面，登记此前看不见的 14 个 storage 键。",
-        "新增 tests/system-v290.test.mjs：源码面/行为面/结构面/负控制×3/版本锚点。",
-        "版本升至 2.90.0（五源同源）。"
+        "修复桌面角标双数组漂移：新增唯一写出口 setAppBadge / 读出口 getAppBadge / 镜像 mirrorBadgesToHome，先写持久真源 currentApps，再镜像渲染副本 home.apps。",
+        "修复增量与全量重算互相抹数：通知中心、微信、微博、扑克分享与打开 App 清零全部改走 setAppBadge；微博增量基数改读 getAppBadge，不再用 home.apps 当基数。",
+        "修复换会话丢角标与清数据幽灵红点：loadData / reloadPhoneSurface 重建后镜像回渲染副本，clearCurrentData / clearAllData 重置后同步归零。",
+        "角标写入钳制：负数与非数字钳为 0，数值未变化不落盘不派发；派发统一走 makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE)。",
+        "新增 tests/system-v291.test.mjs：源码面 / 抽真函数真跑 / 真源码破坏型负控制×2 / 版本下限锚点。",
+        "版本升至 2.91.0（五源同源）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -2578,6 +2578,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         try {
             homeScreen = new HomeScreen(phoneShell, currentApps);
             window.VirtualPhone.home = homeScreen;
+            mirrorBadgesToHome(); // [v2.91.0] 重建的 home.apps 是 APPS 默认值，角标须从 currentApps 镜像回来
             homeScreen.render();
         } catch (e) { console.warn('[v2.31.0] 主屏幕实例重建失败:', e); }
         try {
@@ -5623,15 +5624,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const log = notificationLog;
             if (!log || typeof log.unreadCount !== 'function' || !Array.isArray(currentApps)) return;
             const unread = Math.max(0, Number(log.unreadCount()) || 0);
-            const app = currentApps.find(a => a.id === 'notifications');
-            if (app && (Number(app.badge) || 0) !== unread) {
-                app.badge = unread;
-                saveData();
-                if (homeScreen && currentApp === null) {
-                    homeScreen.apps = currentApps;
-                    homeScreen.render();
-                }
-            }
+            setAppBadge('notifications', unread);
             totalNotifications = currentApps.reduce((sum, a) => sum + (a.id === 'notifications' ? 0 : (Number(a.badge) || 0)), 0);
             updateNotificationBadge(totalNotifications);
         } catch (_e) { /* 角标同步失败不影响通知功能 */ }
@@ -6083,16 +6076,77 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         return !!(apiManager?.isBusy?.() || (apiManager?.getActiveRequestCount?.() > 0));
     }
 
+    /** [v2.91.0] 桌面角标的唯一写出口。
+     *  修复前全仓有 12 处各自写 `.badge =`，且分属两套数组：
+     *    · currentApps（saveData 持久化的那份）
+     *    · window.VirtualPhone.home.apps（reloadPhoneSurface 每次新建 HomeScreen 时换一份新数组）
+     *  两份互不同步，于是出现三种漂移：
+     *    1. 增量写 currentApps、全量重算写 home.apps —— 后写者把前者抹掉；
+     *    2. home 重建后新数组从 APPS 默认值起算 —— 已有角标丢失；
+     *    3. 清数据只重置 currentApps —— home.apps 残留旧角标（幽灵红点）。
+     *  收口规则：所有写入都先落到 currentApps（持久真源），再镜像到 home.apps
+     *  （渲染真源），最后统一派发 UPDATE_GLOBAL_BADGE 让总角标重算。
+     *  @param {string} appId
+     *  @param {number} value 目标值（非增量）
+     *  @param {{persist?: boolean}} [opts] persist=false 时只改内存不落盘（批量写入时用）
+     *  @returns {boolean} 值是否发生变化
+     */
+    function setAppBadge(appId, value, opts = {}) {
+        const next = Math.max(0, Number(value) || 0);
+        if (!Array.isArray(currentApps)) return false;
+        const app = currentApps.find(a => a.id === appId);
+        if (!app) return false;
+        const changed = (Number(app.badge) || 0) !== next;
+        app.badge = next;
+        // 镜像到渲染真源：home.apps 可能是另一份数组（home 重建后必然是）
+        try {
+            const homeApps = window.VirtualPhone?.home?.apps;
+            if (Array.isArray(homeApps) && homeApps !== currentApps) {
+                const mirror = homeApps.find(a => a.id === appId);
+                if (mirror) mirror.badge = next;
+            }
+        } catch (_e) { /* 渲染面缺失不影响真源 */ }
+        if (changed) {
+            if (opts.persist !== false) {
+                try { saveData(); } catch (_e) { /* 落盘失败不阻断角标更新 */ }
+            }
+            try { window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE)); } catch (_e) { /* 忽略 */ }
+            if (homeScreen && currentApp === null) {
+                try { homeScreen.apps = currentApps; homeScreen.render(); } catch (_e) { /* 忽略 */ }
+            }
+        }
+        return changed;
+    }
+
+    /** [v2.91.0] 把 currentApps 的角标镜像到 home.apps。
+     *  reloadPhoneSurface 重建 HomeScreen 时传入的是 APPS 默认值（badge 全 0），
+     *  不镜像的话桌面角标会在每次会话切换 / 清数据后归零或残留。 */
+    /** [v2.91.0] 读角标现值（持久真源 currentApps）。增量写入必须以此为基数，
+     *  不得读 home.apps —— 那是重建后的渲染副本，可能滞后或已被清零。 */
+    function getAppBadge(appId) {
+        if (!Array.isArray(currentApps)) return 0;
+        const app = currentApps.find(a => a.id === appId);
+        return app ? (Number(app.badge) || 0) : 0;
+    }
+
+    function mirrorBadgesToHome() {
+        try {
+            const homeApps = window.VirtualPhone?.home?.apps;
+            if (!Array.isArray(homeApps) || !Array.isArray(currentApps) || homeApps === currentApps) return;
+            for (const app of currentApps) {
+                const mirror = homeApps.find(a => a.id === app.id);
+                if (mirror) mirror.badge = Number(app.badge) || 0;
+            }
+        } catch (_e) { /* 镜像失败不影响界面重建 */ }
+    }
+
     function syncWechatHomeBadge() {
         try {
             const wechatData = window.VirtualPhone?.wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData;
-            const apps = window.VirtualPhone?.home?.apps;
-            if (!wechatData || !Array.isArray(apps)) return;
-            const wechatAppIcon = apps.find(a => a.id === 'wechat');
-            if (!wechatAppIcon) return;
+            if (!wechatData) return;
             const chatList = wechatData.getChatList?.() || [];
-            wechatAppIcon.badge = chatList.reduce((sum, c) => sum + (parseInt(c?.unread, 10) || 0), 0);
-            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
+            const total = chatList.reduce((sum, c) => sum + (parseInt(c?.unread, 10) || 0), 0);
+            setAppBadge('wechat', total);
         } catch (e) {
             // ignore
         }
@@ -8105,16 +8159,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     function updateAppBadge(appId, increment = 1) {
-        const app = currentApps.find(a => a.id === appId);
-        if (app) {
-            app.badge = (app.badge || 0) + increment;
-            if (homeScreen && currentApp === null) {
-                homeScreen.apps = currentApps;
-                homeScreen.render();
-            }
-            // 🔥 核心修复：更新全局徽章时必须持久化到 storage，防止刷新后死灰复燃
-            saveData();
-        }
+        // [v2.91.0] 增量入口收敛到唯一写出口：先读真源现值再相加，
+        //   不再各自写 currentApps（与全量重算写 home.apps 互相覆盖）。
+        const app = Array.isArray(currentApps) ? currentApps.find(a => a.id === appId) : null;
+        const base = app ? (Number(app.badge) || 0) : 0;
+        setAppBadge(appId, base + (Number(increment) || 0));
     }
 
     function saveData() {
@@ -8875,8 +8924,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                 weiboData.saveRecommendPosts(parsed.posts);
                                 if (parsed.hotSearches.length > 0) weiboData.saveHotSearches(parsed.hotSearches);
                                 window.VirtualPhone?.weiboApp?.handleExternalRecommendUpdate?.();
-                                const weiboApp = currentApps.find(a => a.id === 'weibo');
-                                if (weiboApp) { weiboApp.badge = parsed.posts.length; saveData(); }
+                                setAppBadge('weibo', parsed.posts.length); // [v2.91.0] 唯一写出口
                                 showUnifiedPhoneNotification('微博', `收到 ${parsed.posts.length} 条新微博`, '📱', {
                                     ...WEIBO_NOTIFY_AVATAR,
                                     name: '微博',
@@ -8993,11 +9041,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             window.VirtualPhone?.weiboApp?.handleExternalRecommendUpdate?.();
 
                             // 更新badge
-                            const weiboApp = currentApps.find(a => a.id === 'weibo');
-                            if (weiboApp) {
-                                weiboApp.badge = parsed.posts.length;
-                                saveData();
-                            }
+                            setAppBadge('weibo', parsed.posts.length); // [v2.91.0] 唯一写出口
 
                             showUnifiedPhoneNotification('微博', `收到 ${parsed.posts.length} 条新微博`, '📱', {
                                 ...WEIBO_NOTIFY_AVATAR,
@@ -9467,6 +9511,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 applyGlobalTextColor: applyGlobalTextColor,
                 refreshGlobalTextColorStyle: ensureGlobalTextColorOverrideStyle,
                 syncFloatingEntry: syncPhoneFloatingEntry,
+                setAppBadge,                               // [v2.91.0] 桌面角标唯一写出口
+                getAppBadge,                               // [v2.91.0] 角标现值读取（增量写入的基数）
+                mirrorBadgesToHome,                        // [v2.91.0] currentApps → home.apps 角标镜像
                 home: null,
                 wechatApp: null,
                 mofoApp: null,
@@ -9702,14 +9749,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
                 const app = currentApps.find(a => a.id === appId);
                 if (app) {
-                    const prevBadge = app.badge || 0;
+                    // [v2.91.0] 打开即清零走唯一写出口（wechat/notifications 由各自真源重算，不清）
                     if (appId !== 'wechat' && appId !== 'notifications') {
-                        app.badge = 0;
-                    }
-                    totalNotifications = currentApps.reduce((sum, a) => sum + (a.id === 'notifications' ? 0 : (a.badge || 0)), 0);
-                    updateNotificationBadge(totalNotifications);
-                    if (prevBadge !== (app.badge || 0)) {
-                        saveData();
+                        setAppBadge(appId, 0);
+                    } else {
+                        totalNotifications = currentApps.reduce((sum, a) => sum + (a.id === 'notifications' ? 0 : (Number(a.badge) || 0)), 0);
+                        updateNotificationBadge(totalNotifications);
                     }
                 }
 
@@ -10454,6 +10499,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
                 try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
+                mirrorBadgesToHome(); // [v2.91.0] 清数据后把归零镜像到 home.apps，防幽灵红点
                 totalNotifications = 0;
                 updateNotificationBadge(0);
                 // 清空内存缓存
@@ -10552,6 +10598,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
                 try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
                 currentApps = JSON.parse(JSON.stringify(APPS));
+                mirrorBadgesToHome(); // [v2.91.0] 清数据后把归零镜像到 home.apps，防幽灵红点
                 totalNotifications = 0;
                 updateNotificationBadge(0);
                 // 清空所有内存缓存

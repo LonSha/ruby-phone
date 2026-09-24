@@ -15,7 +15,7 @@ import { buildGameSillyTavernContextMessages } from '../common/games-ai-context.
 //   onceFlag 保证只绑一次 + 登记进 globalRuntime（宿主级，可回收），
 //   handler 内经 window.VirtualPhone?.gamesApp 动态取活实例，不再钉住旧实例。
 import { onceFlag, globalRuntime } from '../../../config/runtime-lifecycle.js';
-import { PHONE_EVENTS } from '../../../config/phone-events.js';
+import { PHONE_EVENTS, makePhoneEvent } from '../../../config/phone-events.js';
 
 export class PokerApp {
     constructor(phoneShell, storage) {
@@ -298,12 +298,19 @@ export class PokerApp {
 
     _syncWechatHomeBadge(wechatData = this.getWechatData()) {
         try {
+            if (!wechatData) return;
+            const total = (wechatData.getChatList?.() || []).reduce((sum, chat) => sum + (Number(chat.unread) || 0), 0);
+            // [v2.91.0] 唯一写出口：写入 currentApps 真源并镜像渲染面
+            if (typeof window.VirtualPhone?.setAppBadge === 'function') {
+                window.VirtualPhone.setAppBadge('wechat', total);
+                return;
+            }
             const apps = window.VirtualPhone?.home?.apps;
-            if (!wechatData || !Array.isArray(apps)) return;
+            if (!Array.isArray(apps)) return;
             const wechatAppIcon = apps.find(app => app.id === 'wechat');
             if (!wechatAppIcon) return;
-            wechatAppIcon.badge = (wechatData.getChatList?.() || []).reduce((sum, chat) => sum + (Number(chat.unread) || 0), 0);
-            window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
+            wechatAppIcon.badge = total;
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
             this.storage?.saveApps?.(apps);
         } catch (error) {
             console.warn('[Games] 同步微信桌面角标失败:', error);

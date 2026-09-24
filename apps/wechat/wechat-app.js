@@ -18,7 +18,7 @@ import { ImageCropper } from '../settings/image-cropper.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
-import { PHONE_EVENTS } from '../../config/phone-events.js';
+import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 
 import {
     DEFAULT_WECHAT_CHAT_STYLE_ID,
@@ -4401,14 +4401,15 @@ export class WechatApp {
         if (window.VirtualPhone?.home) {
             const apps = window.VirtualPhone.home.apps;
             if (apps) {
-                const wechatAppIcon = apps.find(a => a.id === 'wechat');
-                if (wechatAppIcon && wechatAppIcon.badge !== unreadCount) {
-                    wechatAppIcon.badge = unreadCount;
-                    window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
-
-                    // 🔥 核心修复：必须持久化存储修改后的全局角标，否则页面刷新又会把旧的错误角标读出来
-                    if (window.VirtualPhone.storage) {
-                        window.VirtualPhone.storage.saveApps(apps);
+                // [v2.91.0] 唯一写出口：写入 currentApps 并镜像到 home.apps，不再各自写一份
+                if (typeof window.VirtualPhone.setAppBadge === 'function') {
+                    window.VirtualPhone.setAppBadge('wechat', unreadCount);
+                } else {
+                    const wechatAppIcon = apps.find(a => a.id === 'wechat');
+                    if (wechatAppIcon && wechatAppIcon.badge !== unreadCount) {
+                        wechatAppIcon.badge = unreadCount;
+                        window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
+                        if (window.VirtualPhone.storage) window.VirtualPhone.storage.saveApps(apps);
                     }
                 }
             }
@@ -7509,17 +7510,15 @@ export class WechatApp {
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
 
-            // 🔥 核心修复：同步清除桌面图标上的微信角标，防止幽灵红点残留
-            if (window.VirtualPhone.home && window.VirtualPhone.home.apps) {
+            // [v2.91.0] 清角标走唯一写出口（写 currentApps + 镜像 home.apps + 落盘 + 派发）
+            if (typeof window.VirtualPhone.setAppBadge === 'function') {
+                window.VirtualPhone.setAppBadge('wechat', 0);
+            } else if (window.VirtualPhone.home && window.VirtualPhone.home.apps) {
                 const wechatIcon = window.VirtualPhone.home.apps.find(a => a.id === 'wechat');
-                if (wechatIcon) {
-                    wechatIcon.badge = 0;
-                }
-                if (window.VirtualPhone.storage) {
-                    window.VirtualPhone.storage.saveApps(window.VirtualPhone.home.apps);
-                }
+                if (wechatIcon) wechatIcon.badge = 0;
+                if (window.VirtualPhone.storage) window.VirtualPhone.storage.saveApps(window.VirtualPhone.home.apps);
+                window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
             }
-            window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
         }
         window.currentWechatApp = null;
         window.ggp_currentWechatApp = null;

@@ -23,14 +23,21 @@
       ② 结果快照 `SearchView._result` 在「重开面板」这条路径上漏了作废，源头改了仍显示旧读数。
       两条均已修，并给出源注册表的「换 / 摘」出口（`replaceSource` / `removeSource`）+
       幂等登记，已固化为 `tests/system-v281.test.mjs`（含真源码破坏型负控制）。
-      未查：各 App 看板计数的重算时机；其余按 sourceId 去重的派生库（普查仍在进行中）。
+      进度（v2.91.0）：已查**桌面角标**（各 App 看板未读计数的重算时机）。
+      真缺陷不是「重算时机」，而是持久真源 `currentApps` 与渲染副本 `home.apps` 两套数组：
+      `loadData()` 换新数组后，微信/微博/扑克写渲染副本、`updateAppBadge`/`saveData` 写真源，
+      后写者抹掉未读或留下幽灵红点，下一次 `saveData()` 还可能用过期数组覆盖存储。
+      已收口为唯一写出口 `setAppBadge`、只读真源的 `getAppBadge`、以及重建/清数据后的
+      `mirrorBadgesToHome`（通知中心、微信、微博、扑克分享、打开 App 清零全部改走写出口），
+      固化为 `tests/system-v291.test.mjs`。
+      仍未查：其余按 sourceId 去重的派生库（普查仍在进行中）。
 
       进度（v2.82.0）：本轮普查**换了失效面**（从「派生读数」转到「加载链与资源沉淀」），
       抓到三类新形态，已修并固化：① 静态 import 路径指错（`apps/games/sudoku/sudoku-view.js`
       少退一层 ⇒ 游戏大厅 App 打不开；新增第七道门 `npm run import-resolve`，289 条说明符
       全解析）；② 构造期全局监听器重建即沉淀（GamesApp/PokerApp 实测 5 轮 +10，已修至 0）；
       ③ prompt 钩子幂等 guard 不一致（MemoryCore 是六处里唯一缺守卫的，已补齐）。
-      下游对齐这条主线本身仍在（看板计数重算时机未查）。
+      下游对齐这条主线本身仍在（看板计数重算时机已于 v2.91.0 收口，见上）。
 
       进度（v2.83.0）：换到「存储层损坏恢复」这一面，抓到 D1 —— 命名空间被写成
       **非普通对象**时写入静默丢失（`!x` 判据只挡 undefined/null/''/0/false）。

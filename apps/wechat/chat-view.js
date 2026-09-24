@@ -10,6 +10,7 @@
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
 import { ImageCropper } from '../settings/image-cropper.js';
+import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { captureWechatChatSnapshot } from './chat-snapshot.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
@@ -11256,11 +11257,17 @@ renderChatRoom(chat) {
                         if (window.VirtualPhone?.home) {
                             const apps = window.VirtualPhone.home.apps;
                             if (apps) {
-                                const wechatAppIcon = apps.find(a => a.id === 'wechat');
-                                if (wechatAppIcon) {
-                                    const chatList = this.app.wechatData.getChatList();
-                                    wechatAppIcon.badge = chatList.reduce((sum, c) => sum + c.unread, 0);
-                                    window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
+                                // [v2.91.0] 唯一写出口（未读合计是 NaN 安全的：缺省按 0 计）
+                                const chatList = this.app.wechatData.getChatList();
+                                const unreadTotal = chatList.reduce((sum, c) => sum + (Number(c.unread) || 0), 0);
+                                if (typeof window.VirtualPhone.setAppBadge === 'function') {
+                                    window.VirtualPhone.setAppBadge('wechat', unreadTotal);
+                                } else {
+                                    const wechatAppIcon = apps.find(a => a.id === 'wechat');
+                                    if (wechatAppIcon) {
+                                        wechatAppIcon.badge = unreadTotal;
+                                        window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
+                                    }
                                 }
                             }
                         }

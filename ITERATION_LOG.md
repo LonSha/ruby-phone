@@ -1009,6 +1009,30 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 - **遗留**：无。
 
 ---
+## 迭代 23 — v2.91.0 桌面角标单一真源（双数组漂移收口）
+
+- **日期**：2026-09-25
+- **类型**：缺陷修复（派生读数的写出口收口）
+- **动机**：TODO P0「源头变更后的下游对齐普查」末项「各 App 看板计数的重算时机」此前未查。
+  全仓 `.badge =` 直写 12 处，分属两套数组：持久真源 `currentApps`（`saveData()` → `storage.saveApps`）
+  与渲染副本 `window.VirtualPhone.home.apps`。`loadData()` 换成新数组后两份分裂——
+  微信/微博/扑克写渲染副本，`updateAppBadge` 与 `saveData` 写真源。
+- **探针先行**：修前探针抽取真函数真跑，三个漂移场景全部成立——
+  增量写真源后再全量重算渲染副本 → `drifted`；重建桌面 → `lost`；清数据只换真源 → `stale`。
+- **实现（`index.js`）**：
+  - 唯一写出口 `setAppBadge(appId, value, opts)`：负数与非数字钳为 0，先写 `currentApps`，
+    渲染副本不是同一引用时镜像；数值变化才 `saveData()` 并 `makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE)`。
+  - 只读真源的 `getAppBadge`（禁止用 `home.apps` 当增量基数）与 `mirrorBadgesToHome`。
+  - 宿主内旧写入（通知中心重算、微信全量重算、增量 `updateAppBadge`、打开 App 清零）改走写出口。
+  - `clearCurrentData` / `clearAllData` 重置后、`reloadPhoneSurface` 重建后调用镜像。
+- **外部写入点**：`wechat-app.js` ×2、`chat-view.js` ×1（未读合计改 `Number(c.unread)||0` 防 NaN）、
+  `weibo-data.js` ×2（微博增量基数改 `getAppBadge?.('weibo')`）、`poker-app.js` ×1。
+  宿主未就绪时的兜底分支仍直写，但派发改走 `makePhoneEvent`，不再手写事件名字符串。
+  `games-app.js` 只有方法调用、没有赋值，未改。
+- **验证**：修后探针七场景全 PASS；`tests/system-v291.test.mjs` 源码面 / 行为面 / 负控制×2 / 版本下限。
+  五源同源升至 `2.91.0`。
+- **遗留**：按 sourceId 去重的其余派生库仍未普查。本项只收口桌面角标这一支。
+
 ## 迭代 22 — v2.90.0 生活事件跨会话残留与双副本修复 + 键门禁扩展
 
 - **D1 跨会话残留**：`CalendarData.clearCache()` 原本只清 `_memos`/`_holidays`，不清懒建的 `_lifeEvents`。换会话后旧 store 携带旧事件数组，`add()` 时把旧会话事件写进新会话。修复：`clearCache()` 补 `this._lifeEvents = null`。
@@ -1058,7 +1082,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.90.0`（五源同源）
+- **当前版本**：`2.91.0`（五源同源）
 - **门禁基线**：语法 353 文件 / 测试 **576 pass · 0 fail** / 死导出零新增 / 生命周期零缺口 /
   注册三方对账无孤儿 / keys 142 键全登记。
   最近一轮（v2.84.0）门禁基线（实测）：语法 360 文件 / 导入可解析门 289 条说明符 /

@@ -13,6 +13,7 @@
 // 微博数据引擎 - 存储、AI调用、解析、队列
 // ========================================
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
+import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
 
 export class WeiboData {
@@ -2149,11 +2150,17 @@ export class WeiboData {
             // 实时点亮桌面上微信的红点（即使微信没开）
             if (window.VirtualPhone?.home?.apps) {
                 const apps = window.VirtualPhone.home.apps;
-                const wechatAppIcon = apps.find(a => a.id === 'wechat');
-                if (wechatAppIcon) {
-                    wechatAppIcon.badge = wechatData.getChatList().reduce((sum, c) => sum + c.unread, 0);
-                    window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
-                    this.storage.saveApps(apps);
+                // [v2.91.0] 唯一写出口（写 currentApps 真源，不再写 home.apps 这一份副本）
+                const unreadTotal = wechatData.getChatList().reduce((sum, c) => sum + (Number(c.unread) || 0), 0);
+                if (typeof window.VirtualPhone?.setAppBadge === 'function') {
+                    window.VirtualPhone.setAppBadge('wechat', unreadTotal);
+                } else {
+                    const wechatAppIcon = apps.find(a => a.id === 'wechat');
+                    if (wechatAppIcon) {
+                        wechatAppIcon.badge = unreadTotal;
+                        window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
+                        this.storage.saveApps(apps);
+                    }
                 }
             }
         }
@@ -2539,13 +2546,18 @@ export class WeiboData {
                 try {
                     const apps = window.VirtualPhone?.home?.apps;
                     if (Array.isArray(apps)) {
-                        const weiboAppIcon = apps.find(a => a.id === 'weibo');
-                        if (weiboAppIcon) {
-                            weiboAppIcon.badge = (weiboAppIcon.badge || 0) + newPostCount;
-                            if (typeof this.storage?.saveApps === 'function') {
-                                this.storage.saveApps(apps);
+                        // [v2.91.0] 增量累加收敛到唯一写出口：基数读真源，不再在 home.apps 上自增
+                        if (typeof window.VirtualPhone?.setAppBadge === 'function') {
+                            // [v2.91.0] 基数读持久真源 getAppBadge（home.apps 是渲染副本，不可作基数）
+                            const current = Number(window.VirtualPhone.getAppBadge?.('weibo')) || 0;
+                            window.VirtualPhone.setAppBadge('weibo', current + newPostCount);
+                        } else {
+                            const weiboAppIcon = apps.find(a => a.id === 'weibo');
+                            if (weiboAppIcon) {
+                                weiboAppIcon.badge = (Number(weiboAppIcon.badge) || 0) + newPostCount;
+                                if (typeof this.storage?.saveApps === 'function') this.storage.saveApps(apps);
+                                window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.UPDATE_GLOBAL_BADGE));
                             }
-                            window.dispatchEvent(new CustomEvent('phone:updateGlobalBadge'));
                         }
                     }
                 } catch (e) {
