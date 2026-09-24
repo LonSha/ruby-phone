@@ -79,9 +79,10 @@ const countOf = (s, sub) => s.split(sub).length - 1;
 test('v268-P1 真仓库 E10：UNHANDLED_ALLOWLIST 存活（export-default 仍被认领 95 处）', () => {
   const r = runOriginal(DEAD);
   assert.equal(r.code, 0, '死导出门禁在真仓库上未通过：' + r.out);
-  // 95 = 90（v2.73.0 基线）+ 5（v2.99.0 新增 5 个文件各 1 处 export default：两个 config 模块 +
-  //   apps/diagnose 三文件）。此处锁的是「白名单真在认领某物」（E10 存活自证），故必须跟随真实数。
-  assert.match(r.out, /无具名成员 95/, '白名单认领数应为 95（注释与实测必须一致）');
+  // 96 = 90（v2.73.0 基线）+ 5（v2.99.0 新增 5 文件）+ 1（v3.0.0 新增 config/projection-contract.js）。
+  //   [v3.0.0] 交棒：当版精确读数由 tests/system-v300.test.mjs 的 D4 接管。此处锁的是
+  //   「白名单真在认领某物」（E10 存活自证），故必须跟随真实数。
+  assert.match(r.out, /无具名成员 96/, '白名单认领数应为 96（注释与实测必须一致）');
   assert.match(r.out, /未识别 0/);
 });
 

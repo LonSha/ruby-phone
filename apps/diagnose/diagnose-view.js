@@ -8,7 +8,8 @@
  * ======================================================== */
 'use strict';
 
-import { collectDiagnose, fieldReasonText, bridgeReasonText, summarizeDiagnose } from './diagnose-data.js';
+import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, summarizeDiagnose } from './diagnose-data.js';
+import { projectionLine } from '../../config/projection-contract.js';
 
 const Q = String.fromCharCode(34);
 
@@ -140,6 +141,27 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v3.0.0] 投影契约面：上游投影的「有值 / 空 / 缺席」分面展示 */
+    _projHtml(pkg) {
+        const pj = pkg.projection || null;
+        if (!pj) return '<div class=' + Q + 'dg-note' + Q + '>投影面读取失败（已降级）</div>';
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(projectionLine(pj)) + '</div>';
+        if (pj.reason !== 'ready') return html;
+        html += '<div class=' + Q + 'dg-sub' + Q + '>身份：会话 ' + escapeHtml(pj.identity.conversationId == null ? '（未提供）' : pj.identity.conversationId)
+            + ' · 场景 ' + escapeHtml(pj.identity.sceneId == null ? '（未提供）' : pj.identity.sceneId)
+            + ' · 世界 ' + escapeHtml(pj.identity.worldId == null ? '（未提供）' : pj.identity.worldId)
+            + ' · 修订 ' + escapeHtml(pj.revision == null ? '（未提供）' : String(pj.revision)) + '</div>';
+        const items = Array.isArray(pkg.projItems) ? pkg.projItems : [];
+        html += '<div class=' + Q + 'dg-table' + Q + '>' + items.map((it) => {
+            const isW = it.visibility === 'withheld';
+            const tone = isW ? 'warn' : (it.present ? 'ok' : 'muted');
+            const label = isW ? ('上游扣下：' + projAbsentText(it.reason)) : (it.present ? ('有值（' + it.kind + '）') : '上游明说：这项是空');
+            return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(it.id) + '</code>'
+                + this._chip(label, tone) + '</div>';
+        }).join('') + '</div>';
+        return html;
+    }
+
     render(container) {
         if (!container) return;
         this.loadCSS();
@@ -154,6 +176,7 @@ export class DiagnoseView {
         h.push('  </div>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游桥</h3>' + this._bridgesHtml(pkg.bridgeReport || {}) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('</div>');

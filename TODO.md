@@ -36,28 +36,26 @@
       视图键改计算属性名 + 兜底如实报未知态，门禁追加 J6/J7。
       详见 `ITERATION_LOG.md` 迭代 30。
 
-- [ ] （下一步）**跨仓投影契约（L-F5）**：用户计划书要求 lonsha 侧提供面向 RubyPhone 的
-      **稳定投影 API** —— `projectionVersion / generatedAt / conversationId / sceneId /
-      worldId / items / visibility / sourceLedger / revision / expiresAt`，
-      RubyPhone **只消费投影、不依赖账本内部字段**。v2.97.0 把上游自述面
-      （`sourceState` / `lastError`）如实带到消费侧，v2.98.0 又把上游**已经存在的**
-      字段三态自述（`meta.fieldTypes`）真正读起来（门禁 J6/J7 常驻）——
-      两者合起来是这份契约的**读侧前置**；契约本体与两侧接线尚未启动。
-      上游侧可复用基础已就位：`projection-pipeline.js`（声明式 `PROJECTIONS` 表 +
-      三态 `ok`/`empty`/`absent` + `reason` 归因）、`public-interface.js`（三入口）。
-      另：第九道门只钉「出口真被消费 / 字段三态真被消费」，**不钉**
-      「下游有没有真的消费上游归因面」。实测口径：`readPushProbe` 的 `sourceState` /
-      `lastError` 字段**目前尚无消费点**（归因面由 worldpulse 经 `bridgeReport()` /
-      `lonshaSource()` 消费，走的是另一条出口）—— 属功能面，接线后应补一条消费判据，
-      否则这两个字段就是「抽出来没人用」的摆设。
-      【v2.99.0 补注】读侧前置再向前一步：新增的诊断中心（`apps/diagnose/`）把上述三层读数
-      （桥自述与实际读取一致性 / 字段三态清单 / 返回栈与源键现场）收敛到一个**可看的出口**，并由
-      `tests/system-v299.test.mjs` 的 A4 **逐键对账**常驻拦住清单与真源码脱节。该 A4 当场捐到一个真缺陷：
-      清单初版写 `chars`，而真实消费点写的是 `characters`（上游契约字段名），且漏了
-      `worldProg` —— 诊断页会把一个不存在的字段显示成「源里没这项」。这是 L-F5 契约
-      落地前必须先有的对账基础（没有它，契约上线后无法判断下游真的消费了哪些字段）。
-      另：`readPushProbe` 的 `sourceState` / `lastError` **仍无消费点**（本版未接，属功能面），
-      契约本体与两侧接线尚未启动。
+- [x] **跨仓投影契约（L-F5）—— v3.0.0 收口（下游一半）**
+      上游侧：lonsha-memory-plugin v3.208.0 已有投影管线（声明式 `PROJECTIONS` 表 +
+      三态 `ok`/`empty`/`absent` + `reason` 归因），但读数退化成 `this._lastProjection`
+      之后**零外供**；**v3.212.0** 补上出口（`buildEnvelope()` + `_buildProjectionEnvelope()`，
+      随桥快照 `projection` 字段外供），提交 `a6bdc56`，全量门禁 191/191 文件、1673 断言、
+      审计 42/42。
+      下游侧（本版）：新增 `config/projection-contract.js` 作为**消费侧单一真源**，把 envelope
+      读成手机端可用的面（`contractOf` 五态 / `readProjection` 结构恒定 / given 与 withheld
+      **分面** / `projectionValue` 只对 given 面给值 / `projectionLine` 总述），并落成诊断中心
+      **第六面**（`collectDiagnose` 的 `projection` + `projItems`、`summarizeDiagnose` 的投影坏消息、
+      视图 `_projHtml()`）。字段清单在下游**有意重复一份**（跨仓不能 import + 消费者必须能独立判
+      「我认不认得这份结构」），并由 `tests/system-v300.test.mjs` 当跨仓契约快照锁住。
+      套件当场捐到一个真缺陷：数值归一 `Number.isFinite(Number(x))` 会把上游**没给**的
+      `revision` / `generatedAt` / `expiresAt`（null）报成 **0**（0 全是合法值 ⇒「没给」与「给了 0」
+      塌成同形，「从没给过有效期」被算成已过期），已单列 `numOrNull()` 修掉。
+      **遗留观察项**：① 投影目前只接进**诊断面**；业务 App（place / chars / plotline / clock）仍
+      各自经 `faceFieldState` 读旧面，**尚未**改为直接消费投影 —— 这是有意的（先有可信读数出口、
+      再逐 App 迁移），迁移时须补一条「投影真被业务面消费」的判据，否则又是一次「抽出来没人用」；
+      ② `readPushProbe` 的 `sourceState` / `lastError` **仍无消费点**（v2.97.0 起挂账至今），
+      归因面子集与投影面有重叠，迁移时应一并收口而不是再开一条通路。
 
 - [x] **源头变更后的下游对齐普查（v2.77.0 只做了生活事件这一支）** ——
       **已于 v2.96.0 收口**：不再逐轮手查，改为常驻门禁

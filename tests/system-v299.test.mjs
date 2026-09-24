@@ -360,7 +360,7 @@ test('v299 E2. 源键词表单一真源（全仓只许一处定义）', () => {
     assert.deepEqual(hits, [SK], '词表被抄了第二份：' + hits.join(','));
 });
 
-test('v299 E3. 版本不低于 2.99.0 且五源同源', () => {
+test('v299 E3. 版本不低于 2.99.0 且五源同源（[v3.0.0] 交棒：硬结构断言改下限锚点）', () => {
     const log = JSON.parse(read('update-log.json'));
     const manifest = JSON.parse(read('manifest.json'));
     const pkg = JSON.parse(read('package.json'));
@@ -374,15 +374,23 @@ test('v299 E3. 版本不低于 2.99.0 且五源同源', () => {
     const b = num('2.99.0');
     let ge = false;
     for (let i = 0; i < 3; i += 1) { if (a[i] !== b[i]) { ge = a[i] > b[i]; break; } }
-    assert.equal(a[0] === b[0] && a[1] === b[1] && a[2] >= b[2], true, '版本 ' + log.latest + ' < 2.99.0');
-    assert.ok(ge || (a[0] === b[0] && a[1] === b[1] && a[2] === b[2]));
+    // [v3.0.0] 交棒：原判据写作 a[0]===b[0] && a[1]===b[1] && a[2]>=b[2] —— 那是**硬结构断言**，
+    //   主版本从 2 跳到 3 时必红（3 ≠ 2），而它想表达的只是「不低于 2.99.0」。
+    //   按仓内交棒惯例改成纯下限锚点；当版精确判定（主次版本为 3.0）由
+    //   tests/system-v300.test.mjs 的 D1 接管。
+    assert.ok(ge || (a[0] === b[0] && a[1] === b[1] && a[2] === b[2]), '版本 ' + log.latest + ' < 2.99.0');
 });
 
 test('v299 E4. 变更日志与实现同域（不是只改了版本号）', () => {
+    /* [v3.0.0] 交棒：原判据用**当前版本**条目去查 v2.99 特有的关键词（返回/源键/诊断），
+     *   于是**每发一版必翻红**（新版本的条目本来就不会提 v2.99 的落地项）。
+     *   本仓已有五处同类交棒先例（system-v230/v232/v233/v234/v235 的 D5/G7 段都改钉
+     *   自己的历史条目）。此处改钉 v2.99.0 条目本身 —— 它要表达的正是
+     *   「v2.99 的变更说明与 v2.99 的实现同域」，与「当前版本是谁」无关。 */
     const log = JSON.parse(read('update-log.json'));
-    const entry = log.versions[log.latest];
-    assert.ok(entry && Array.isArray(entry.items) && entry.items.length > 0, '当前版本节须有条目');
-    assert.equal(entry.version, log.latest);
+    const entry = log.versions['2.99.0'];
+    assert.ok(entry && Array.isArray(entry.items) && entry.items.length > 0, 'v2.99.0 条目须在（历史条目不得被删）');
+    assert.equal(entry.version, '2.99.0');
     const all = entry.items.join('\n');
     for (const kw of ['返回', '源键', '诊断']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);

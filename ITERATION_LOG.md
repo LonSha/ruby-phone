@@ -10,6 +10,44 @@
 
 ---
 
+## 迭代 32 — v3.0.0 跨仓投影契约落地：消费侧单一真源 + 诊断中心第六面（L-F5 的下游一半）
+
+- **任务**：按两仓联合计划推进，ruby-phone 的 v3.0 落点取 L-F5「面向 RubyPhone 的稳定投影 API」。
+  上游半（lonsha-memory-plugin v3.212.0）已先交付并推送（提交 `a6bdc56`）；本轮交付**下游**半。
+- **为什么必须先改上游**（与计划书的偏差已确证）：侦察发现上游 v3.208.0 **早就把投影管线做完了**
+  （6 项投影 / 三态读数 / 缺席原因），缺的不是「设计新契约」而是**出口** —— 产物退化成
+  `this._lastProjection` 之后没有任何消费者拿得到。故本轮第一步是给上游补出口、第二步才是下游读。
+- **侦察**（读侧接入点选址）：本仓一切「上游读数」的可见出口只有诊断中心（v2.99.0 新建），而投影
+  **全库零消费**；`config/world-bridge.js` 已有统一探针 `readPushProbe`（第九道门锁住桥名与形态判据
+  单一真源），投影取快照必须走它、不得自摸桥全局。
+- **落地**：
+  - `config/projection-contract.js`（新增，消费侧单一真源）：`SUPPORTED_API_VERSION`、
+    `ENVELOPE_FIELDS`（11 项跨仓契约快照，有意重复）、`CONTRACT_STATES` 五态、`PROJECTION_REASONS`
+    八态文案、`contractOf(env)`、`readProjection(win, opts)`、`projectionValue(proj, id)`、
+    `projectionLine(proj)`。
+  - `apps/diagnose/diagnose-data.js`：`collectDiagnose` 增 `projection` / `projItems` 两面与
+    `kindOf`，`summarizeDiagnose` 增投影四类坏消息，增 `PROJ_ABSENT_TEXT` / `projAbsentText`。
+  - `apps/diagnose/diagnose-view.js`：新增 `_projHtml(pkg)` 第六面卡片（状态行 / 身份三键 + 修订 /
+    given 与 withheld 分面表），并接进 `render()`。
+  - `tests/system-v300.test.mjs`（新增，29 条）。
+- **本版修的真缺陷（由本版套件当场捐到）**：`readProjection` 四处数值归一写作
+  `Number.isFinite(Number(x)) ? Number(x) : null`，而 `Number(null) === 0` —— 上游给 null
+  （没给这项）时本仓报成 **0**，而 `revision` / `generatedAt` / `expiresAt` 的 0 都是合法值
+  （栅栏号 0 / 1970 时间戳 ⇒ `stale` 误报「已过期」）。已单列 `numOrNull()`（null / undefined /
+  空串 / 非数值一律 null）。
+- **版本仪式（主版本跳跃 2.99.0 → 3.0.0，实测 7 处，无一是功能缺陷）**：`v280 2` / `v280 3`
+  （文档与 release note 写当前版本）、`v285 6` / `v286 4` / `v287 5`（五源同源下限锚点）、
+  `v286 5`（弹窗逐字同源），以及 **`v299 E3`** 的硬结构断言
+  （`a[0]===b[0] && a[1]===b[1] && a[2]>=b[2]`：它想表达的只是「不低于 2.99.0」，但主版本 3≠2 必红）。
+  按仓内交棒惯例：历史套件只锁**自己的出生下限**，当版精确判定（主次版本为 3.0）由
+  `tests/system-v300.test.mjs` 的 D1 接管。同批交棒：死导出白名单认领数 `95 → 96`（v268-P1 / v273-P2
+  改跟随真实数，当版精确读数由 v300-D4 接管，门禁注释同步核销构成）。
+- **验证**：`npm run check` 九道门全绿（数字见下方元信息）；`tests/system-v300.test.mjs` 29/29，
+  含 5 条负控制（真源码破坏 → 浅镜像副本 → 在副本上重跑同款真判据必须转红且指向真因，并配阳性对照）
+  与 F0 镜像自证（未破坏的镜像树上五条判据全为真，否则 E 组是假绿）。
+- **遗留**：① 投影目前只接进诊断面（业务 App 迁移挂账，见 TODO 观察项）；② `readPushProbe` 的
+  `sourceState` / `lastError` 仍无消费点。
+
 ## 迭代 31 — v2.99.0 缝入上游返回键守卫（并修三个实测缺陷）+ 源键规则单一真源 + 统一诊断中心
 
 - **任务**：用户上传两份上游插件更新（瑟瑟小手机 V1.059 / 色色灵感状态栏 V3.782），
@@ -1708,18 +1746,20 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
   全量门禁 655 tests / 651 pass（4 个红均由本轮改动触发并已修）。
 - **遗留**：无。
 
-
 ---
 
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.99.0`（五源同源）
-- **门禁基线**（v2.99.0 实测，`npm run check` exit 0）：语法 383 文件 /
-  导入可解析门 236 文件 322 条静态说明符（动态 import 97 条不计入判据）/ 测试 **806 pass · 0 fail** /
-  死导出零新增（254 个文件、777 个 export 声明、零消费 24 条冻结、枚举面 850 条全部识别）/
+- **当前版本**：`3.0.0`（五源同源）
+- **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
+  导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
+  死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/
   生命周期 36 个 App 类 49 个槽位零缺口 / 注册 APPS id 41、样式投递 31 个未覆盖 0 /
   keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）/
   派生读数台账 枚举面 10 文件 · 台账 10 条（派生库 3）/
-  **桥消费面契约**（第九道门）：`.snapshot(` 调用式 0 · `readPushProbe` 消费点 9 ·
+  **桥消费面契约**（第九道门）：`.snapshot(` 调用式 0 · `readPushProbe` 消费点 11 ·
   `faceFieldState` 消费点 8（下限 5）· 归因文案表手写键 0。
+- **上一版基线（v2.99.0，留档对照）**：语法 383 / 导入门 236 文件 322 条 / 806 pass ·
+  0 fail / 死导出 254 文件 · 777 声明 · 枚举面 850 / `readPushProbe` 消费点 9 —— 本版增量即
+  「新增 1 个配置模块 + 1 个套件 + 诊断面接一层面」，**无一处是既有读数倒退**。

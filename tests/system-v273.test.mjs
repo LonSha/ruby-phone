@@ -114,9 +114,10 @@ test('v273-P2 E11 未破坏 E9 枚举面（未识别仍为 0、白名单仍认�
   const r = runOriginal();
   assert.equal(r.code, 0);
   assert.match(r.out, /· 未识别 0/);
-  // 90 → 95：v2.99.0 新增 5 文件（config/back-guard · config/source-key-rules · apps/diagnose ×3）各 1 处
-  //   `export default`，形态均为「无具名成员可对账」，故白名单认领数同步上浮。
-  assert.match(r.out, /无具名成员 95/);
+  // 90 → 95 → 96：v2.99.0 新增 5 文件各 1 处 `export default`；[v3.0.0] 再 +1
+  //   （config/projection-contract.js）。形态均为「无具名成员可对账」，故白名单认领数同步上浮；
+  //   当版精确读数由 tests/system-v300.test.mjs 的 D4 接管。
+  assert.match(r.out, /无具名成员 96/);
 });
 test('v273-P3 真仓库 --list 模式仍可用（E11 不拦列表）', () => {
   const r = runOriginal(['--list']);

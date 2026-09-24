@@ -31,6 +31,10 @@ import {
 } from '../../config/world-bridge.js';
 import { backGuardReport } from '../../config/back-guard.js';
 import { validateSourceKey, auditSourceKeys, sourceKeyRulebook } from '../../config/source-key-rules.js';
+/* [v3.0.0] 上游投影契约（L-F5 的消费侧）：把记忆插件 v3.212.0 新外供的投影 envelope
+ *   读成手机端可看的面。接在这里的理由：本仓一切「上游读数」的可见出口就是诊断中心，
+ *   而投影此前**全库零消费**——出口做出来了，下游没人读，等于白做（本仓六次欠债的同形）。 */
+import { readProjection, projectionValue, projectionLine } from '../../config/projection-contract.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -127,7 +131,41 @@ export function collectDiagnose(win) {
     const audit = safe(() => auditSourceKeys(SOURCE_KEY_SITES.map((s) => s.sample)), { total: 0, ok: 0, bad: [], reasons: {} })
         || { total: 0, ok: 0, bad: [], reasons: {} };
 
-    return { at, bridges, bridgeReport: report, fields, backStack, sourceKeys, rulebook, audit };
+    // ── [v3.0.0] 投影契约面（L-F5 消费侧）──
+    //   刻意**只经 readProjection**：它内部走 readPushProbe 取快照（形态判定唯一真源），
+    //   故这里不再自摸桥全局、也不自判推/拉型（第九道门 J1/J4 的纪律）。
+    //   投影的「有值 / 空 / 缺席」三态由上游给，本仓只做**分面展示**：given 显值、
+    //   withheld 显原因（绝不把缺席渲染成「这里没人」——那是最贵的错读数形态）。
+    const projection = safe(() => readProjection(w), null) || null;
+    const projItems = [];
+    if (projection && projection.reason === 'ready') {
+        for (const id of Object.keys(projection.visibility || {})) {
+            const r = safe(() => projectionValue(projection, id), { present: false, value: undefined, reason: 'read-threw' });
+            projItems.push({
+                id,
+                visibility: String(projection.visibility[id] || 'given'),
+                present: r.present === true,
+                kind: (r.present ? kindOf(r.value) : 'withheld'),
+                reason: String(r.reason || '')
+            });
+        }
+        for (const x of (projection.withheld || [])) {
+            if (!projItems.some((p) => p.id === x.id)) {
+                projItems.push({ id: x.id, visibility: 'withheld', present: false, kind: 'withheld', reason: String(x.reason || '') });
+            }
+        }
+    }
+
+    return { at, bridges, bridgeReport: report, fields, backStack, sourceKeys, rulebook, audit, projection, projItems };
+}
+
+/** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
+function kindOf(v) {
+    try {
+        if (v === null) return 'null';
+        if (Array.isArray(v)) return 'array';
+        return typeof v;
+    } catch (_e) { return 'unknown'; }
 }
 
 const BRIDGE_REASON_TEXT = Object.freeze({
@@ -146,11 +184,23 @@ const FIELD_REASON_TEXT = Object.freeze({
 export function fieldReasonText(reason) {
     return FIELD_REASON_TEXT[reason] || String(reason || '未知');
 }
-
 /** 桥归因文案（未知原因如实输出原值） */
 export function bridgeReasonText(reason) {
     return BRIDGE_REASON_TEXT[reason] || String(reason || '未知');
 }
+
+/** [v3.0.0] 投影缺席原因文案（上游 sourceLedger.absent 的 reason；未知原因如实输出原值） */
+const PROJ_ABSENT_TEXT = Object.freeze({
+    'no-provider': '上游没注册这个投影的取值器（不是「没有数据」，是这项压根没接）',
+    'thrown': '上游取值器抛错（读数已降级，原因见上游）',
+    'skipped': '本会话关掉了这个投影（配置面，不是故障）',
+    'absent': '上游标为缺席（未给原因）'
+});
+
+export function projAbsentText(reason) {
+    return PROJ_ABSENT_TEXT[reason] || String(reason || '未知');
+}
+
 
 /**
  * 一句话总述（供视图头部与宿主诊断）。
@@ -161,6 +211,19 @@ export function summarizeDiagnose(pkg) {
     const bad = [];
     const rep = p.bridgeReport || {};
     if (rep.consistent !== true) bad.push('桥自述与实际读取不一致');
+    // [v3.0.0] 投影面的坏消息（有坏消息先说坏消息）：
+    //   · 投影在场却结构超前/畸形 ⇒ 本机读不懂，必须说（不是「没数据」）
+    //   · 管线缺席（上游明说没跑）⇒ 与「跑了但空」处置相反，必须分开说
+    //   · 有投影被扣下 ⇒ 用户会看到「这项没有」，必须说清是上游没给
+    const pj = p.projection || null;
+    if (pj) {
+        if (pj.reason === 'contract-ahead') bad.push('上游投影结构版高于本机（请升级手机端）');
+        else if (pj.reason === 'contract-malformed') bad.push('上游投影结构不完整：缺 ' + ((pj.contract && pj.contract.missing) || []).join('、'));
+        else if (pj.reason === 'pipeline-absent') bad.push('上游投影管线缺席（没跑，不是空的）');
+        else if (pj.reason === 'ready' && Array.isArray(pj.withheld) && pj.withheld.length) {
+            bad.push('上游扣下 ' + pj.withheld.length + ' 项投影（' + pj.withheld.map((x) => x.id).join('、') + '）');
+        }
+    }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
     if (bad.length) return '需注意：' + bad.join(' · ');
@@ -176,5 +239,6 @@ export default {
     collectDiagnose,
     fieldReasonText,
     bridgeReasonText,
+    projAbsentText,
     summarizeDiagnose
 };

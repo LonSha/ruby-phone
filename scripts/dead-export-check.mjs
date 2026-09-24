@@ -155,7 +155,9 @@ const HANDLED_LINE_PATHS = [
  *     · v2.99.0 实测 **95**，增量 +5 经逐个核对：本版新增的 5 个文件
  *       各自有 1 处 `export default`（config/back-guard.js 对象 · config/source-key-rules.js 对象 ·
  *       apps/diagnose/diagnose-data.js 对象 · diagnose-view.js 裸标识符 · diagnose-app.js 裸标识符），
- *       形态全落在下述①②两类（无具名成员可对账），不涉及新的边界外情形。逐条查清的现状是三类：
+ *       形态全落在下述①②两类（无具名成员可对账），不涉及新的边界外情形；
+ *     · v3.0.0 实测 **96**，增量 +1 经核对：config/projection-contract.js 的 `export default { … }`
+ *       （对象字面量，同上①②类）。逐条查清的现状是三类：
  *     ① **裸标识符 60 处 + 单行对象字面量 8 处**（`export default AssetApp;`、
  *        `export default { a, b };`）——确实无具名成员可对账，白名单名副其实；
  *     ② IIFE 13 处（`export default (function () { … })()`，集中在 apps/asset/engine/）——
