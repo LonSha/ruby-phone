@@ -21,16 +21,35 @@
       扫描面 fail-closed）。实测：桥名自持点 9 → 0、调用式 2 → 0、自写形态 7 → 0，
       消费点 9。详见 `ITERATION_LOG.md` 迭代 29。
 
+- [x] **上游字段三态零消费 + 归因文案表键形漂移 —— v2.98.0 收口**
+      —— 沿「上游桥读取面」继续往下看自述面：上游 lonsha（v3.174 起）已在
+      `snapshot.meta.fieldTypes` 里为每个顶层字段声明 `{present, kind}`，明确区分
+      「源里根本没这项」与「源里给了这项、值是空」，而本仓实测**零消费**：7 个消费方一律
+      写成「按对象形取值、取不到就 null」，两种处境压成同一个 `no-*-face`，
+      文案还告诉用户「需插件较新版本」（对后一种处境是事实错误的归因）。
+      同族第二处更隐蔽：`clock-view` / `ledger-view` 的 `FACE_META` 键写作
+      `no_clock_face`（下划线形），真源常量值是 `no-clock-face`（连字符形），
+      兜底又指 bridge_absent ⇒ 三种不同处境**一律显示「桥未连接」**，而当时判据全绿。
+      落地：真源新增 `readPushField` / `faceFieldState`（面级裁定优先级
+      present > absent > legacy-unknown > declared-empty，旧版桥如实报 legacy-null），
+      7 个内核接入（粗态 state 为 empty + 细态 reason 为 upstream-empty），
+      视图键改计算属性名 + 兜底如实报未知态，门禁追加 J6/J7。
+      详见 `ITERATION_LOG.md` 迭代 30。
+
 - [ ] （下一步）**跨仓投影契约（L-F5）**：用户计划书要求 lonsha 侧提供面向 RubyPhone 的
       **稳定投影 API** —— `projectionVersion / generatedAt / conversationId / sceneId /
       worldId / items / visibility / sourceLedger / revision / expiresAt`，
-      RubyPhone **只消费投影、不依赖账本内部字段**。v2.97.0 已把上游自述面
-      （`sourceState` / `lastError`）如实带到消费侧，是这份契约的读侧前置；
-      契约本体与两侧接线尚未启动。
-      另：第九道门只钉「出口真被消费」，**不钉**「下游有没有真的消费上游归因面」。
-      实测口径：`readPushProbe` 的 `sourceState` / `lastError` 字段**目前尚无消费点**
-      （归因面由 worldpulse 经 `bridgeReport()` / `lonshaSource()` 消费，走的是另一条出口）——
-      属功能面，接线后应补一条消费判据，否则这两个字段就是「抽出来没人用」的摆设。
+      RubyPhone **只消费投影、不依赖账本内部字段**。v2.97.0 把上游自述面
+      （`sourceState` / `lastError`）如实带到消费侧，v2.98.0 又把上游**已经存在的**
+      字段三态自述（`meta.fieldTypes`）真正读起来（门禁 J6/J7 常驻）——
+      两者合起来是这份契约的**读侧前置**；契约本体与两侧接线尚未启动。
+      上游侧可复用基础已就位：`projection-pipeline.js`（声明式 `PROJECTIONS` 表 +
+      三态 `ok`/`empty`/`absent` + `reason` 归因）、`public-interface.js`（三入口）。
+      另：第九道门只钉「出口真被消费 / 字段三态真被消费」，**不钉**
+      「下游有没有真的消费上游归因面」。实测口径：`readPushProbe` 的 `sourceState` /
+      `lastError` 字段**目前尚无消费点**（归因面由 worldpulse 经 `bridgeReport()` /
+      `lonshaSource()` 消费，走的是另一条出口）—— 属功能面，接线后应补一条消费判据，
+      否则这两个字段就是「抽出来没人用」的摆设。
 
 - [x] **源头变更后的下游对齐普查（v2.77.0 只做了生活事件这一支）** ——
       **已于 v2.96.0 收口**：不再逐轮手查，改为常驻门禁

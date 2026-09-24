@@ -1,13 +1,18 @@
 /* [v2.53.0] 世界账本 App 视图 */
 /* [v2.54.0] 深化：舆情强度三分（已核实/传闻/未知）+ 事实对读差集明细 */
 import { LEDGER_REASONS } from './ledger-data.js';
+/* [v2.98.0] 同 clock-view：键取 LEDGER_REASONS 的**值**，不另写一套下划线形。
+   修前同样塔缩：六态里四态查不到，一律显示「桥未连接」。
+   另：ready 的图标原写作 '\u1f9fe'（超出 \uXXXX 四位），实际不是合法转义，
+   渲染出来是乱码，一并修正为真实字符。 */
 const FACE_META = {
-  ready: { icon: '\u1f9fe', label: '世界账本已读', tone: 'ok' },
-  empty: { icon: '\u2615', label: '账本尚空', tone: 'warn' },
-  no_worldaxis: { icon: '\u2b50', label: '世界桥未启用', tone: 'warn' },
-  no_ledger_face: { icon: '\u26d4', label: '快照无账本面', tone: 'warn' },
-  no_snapshot: { icon: '\u26d4', label: '快照不可用', tone: 'err' },
-  bridge_absent: { icon: '\u26a1', label: '桥未连接', tone: 'err' },
+  [LEDGER_REASONS.ready]: { icon: '🧾', label: '世界账本已读', tone: 'ok' },
+  [LEDGER_REASONS.empty]: { icon: '☕', label: '账本尚空', tone: 'warn' },
+  [LEDGER_REASONS.upstream_empty]: { icon: '☕', label: '上游报该项为空', tone: 'warn' },
+  [LEDGER_REASONS.no_worldaxis]: { icon: '⭐', label: '世界桥未启用', tone: 'warn' },
+  [LEDGER_REASONS.no_ledger_face]: { icon: '⛔', label: '这版快照无账本面', tone: 'warn' },
+  [LEDGER_REASONS.no_snapshot]: { icon: '⛔', label: '快照不可用', tone: 'err' },
+  [LEDGER_REASONS.bridge_absent]: { icon: '⚡', label: '桥未连接', tone: 'err' },
 };
 export class LedgerView {
   constructor(app, shell, storage) {
@@ -34,7 +39,8 @@ export class LedgerView {
   _buildHTML() {
     const face = this.app.ledgerFace();
     const proj = this.app.projection();
-    const meta = FACE_META[face] || FACE_META.bridge_absent;
+    // [v2.98.0] 未识别的状态如实报出（带原值），不冒充「桥未连接」。
+    const meta = FACE_META[face] || { icon: '❓', label: '未识别的状态：' + String(face), tone: 'warn' };
     const parts = [];
     parts.push('<div class="lg-header"><h2>\u1f9fe 世界账本</h2></div>');
     parts.push('<div class="lg-face lg-face-' + meta.tone + '">');

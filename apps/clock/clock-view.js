@@ -5,12 +5,20 @@
 
 import { CLOCK_REASONS } from './clock-data.js';
 
+/* [v2.98.0] 键必须取 CLOCK_REASONS 的**值**（连字符形），不得另写一套下划线形。
+   修前实测：本表键写作 no_clock_face / no_snapshot / bridge_absent，
+   而 CLOCK_REASONS 的值是 no-clock-face / no-snapshot / bridge-absent ⇒
+   五态里三态查不到，而下一行的兜底又是 FACE_META.bridge_absent，于是
+   「快照不可用」「这版快照没时钟面」「桥未连接」三种完全不同的处境
+   **一律显示成「桥未连接」**。与本仓最贵的缺陷形态同形。
+   改用常量做键：形状由真源决定，真源改了这里跟着变，不会再静默塔缩。 */
 const FACE_META = {
-  ready: { icon: '\u23f1\ufe0f', label: '已同步', tone: 'ok' },
-  empty: { icon: '\u2615', label: '尚无时间', tone: 'warn' },
-  no_clock_face: { icon: '\u2b50', label: '快照无时钟面', tone: 'warn' },
-  no_snapshot: { icon: '\u26d4', label: '快照不可用', tone: 'err' },
-  bridge_absent: { icon: '\u26a1', label: '桥未连接', tone: 'err' },
+  [CLOCK_REASONS.ready]: { icon: '\u23f1\ufe0f', label: '已同步', tone: 'ok' },
+  [CLOCK_REASONS.empty]: { icon: '\u2615', label: '尚无时间', tone: 'warn' },
+  [CLOCK_REASONS.upstream_empty]: { icon: '\u2615', label: '上游报该项为空', tone: 'warn' },
+  [CLOCK_REASONS.no_clock_face]: { icon: '\u2b50', label: '这版快照无时钟面', tone: 'warn' },
+  [CLOCK_REASONS.no_snapshot]: { icon: '\u26d4', label: '快照不可用', tone: 'err' },
+  [CLOCK_REASONS.bridge_absent]: { icon: '\u26a1', label: '桥未连接', tone: 'err' },
 };
 
 export class ClockView {
@@ -41,7 +49,8 @@ export class ClockView {
   _buildHTML() {
     const face = this.app.clockFace();
     const proj = this.app.projection();
-    const meta = FACE_META[face] || FACE_META.bridge_absent;
+    // [v2.98.0] 未识别的状态如实报出（带原值），不冒充「桥未连接」。
+    const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
     const parts = [];
 
     // Header

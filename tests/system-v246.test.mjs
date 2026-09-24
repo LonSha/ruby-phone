@@ -9,7 +9,8 @@
  *   —— 上游把面做出来了、下游一个消费点都没有，这正是 v2.41 建门禁要拦的那一类。
  *
  * 本版判据（照抄 config/world-bridge.js 的消费面先例：只读、不抛、不猜）：
- *   ① 归因必须**六态分开**：桥未装 / 桥装了没快照 / 快照是旧版没有场所面 /
+ *   ① 归因必须**七态分开**：桥未装 / 桥装了没快照 / 快照是旧版没有场所面 /
+ *      上游声明了该面但值为空（[v2.98.0] 新增，与「没这面」不是一回事） /
  *      场所模块缺席（退路在跑）/ 这个会话还没登记过场所 / 就绪 —— 六种完全不同的
  *      处境不得塌成同一种「没数据」（本仓反复治理的静默降级）。
  *   ② 不变量三态不得塌两态：ok / warn / broken 必须给出三种不同字样，
@@ -19,7 +20,7 @@
  *   ④ 缺项如实置空、绝不编 0：读不到位置链给 []（不是编一条），
  *      非数值如实 null（不是补 0 冒充「世界是空的」）。
  *
- * 负控制在 H 组：真源码破坏（把「缺席」并入「空」）⇒ 六态判据必须报红，
+ * 负控制在 H 组：真源码破坏（把「缺席」并入「空」）⇒ 七态判据必须报红，
  *   同一判据在原版上不成立。
  * ============================================================ */
 import fs from 'node:fs';
@@ -74,7 +75,7 @@ void defaultPlaceSettings;
         read('apps/place/place-app.js').includes("const SETTINGS_KEY = 'place_settings_v1'"));
 }
 
-/* ========== B. 归因六态：六种处境不得同形 ========== */
+/* ========== B. 归因七态：七种处境不得同形 ========== */
 {
     const R = readSceneFace({ mounted: false, hasSnapshot: false, snapshot: null });
     ok('B1 桥未装 → bridge-absent', R.reason === 'bridge-absent' && R.state === 'absent');
@@ -89,10 +90,18 @@ void defaultPlaceSettings;
     ok('B5 会话没登记过场所 → empty', E.reason === 'empty' && E.state === 'empty');
     const Y = readSceneFace({ mounted: true, hasSnapshot: true, snapshot: { scene: { scale: {}, presence: [], coverage: {} } } });
     ok('B6 就绪 → ready', Y.reason === 'ready' && Y.state === 'ready');
-    ok('B7 六态文案恰好六个键', Object.keys(PLACE_REASONS).length === 6, Object.keys(PLACE_REASONS).join(','));
-    ok('B8 六态文案互不相同（不得同形）', new Set(Object.values(PLACE_REASONS)).size === 6);
-    ok('B9 六个 reason 全部可达（readSceneFace 分支齐全）',
-        new Set([R.reason, N.reason, O.reason, M.reason, E.reason, Y.reason]).size === 6);
+    // [v2.98.0] 由「恰好 N 个键」升级为**逐名核对键集**：裸计数只能拦「多/少一个」，
+    //   拦不住「键名被改写」（本仓刚在 clock/ledger 的 FACE_META 上栽过这一跤：
+    //   形状漂移后查不到键、静默走兜底，而计数判据全绿）。
+    const KEYS = Object.keys(PLACE_REASONS).sort();
+    const WANT = ['bridge-absent', 'empty', 'module-absent', 'no-scene-face', 'no-snapshot', 'ready', 'upstream-empty'];
+    ok('B7 七态键集逐名核齐', JSON.stringify(KEYS) === JSON.stringify(WANT), KEYS.join(','));
+    ok('B8 七态文案互不相同（不得同形）', new Set(Object.values(PLACE_REASONS)).size === 7);
+    const U = readSceneFace({ mounted: true, hasSnapshot: true, snapshot: { scene: null, meta: { fieldTypes: { scene: { present: true, kind: 'null' } } } } });
+    ok('B3b 上游声明了场所面、值为空 → upstream-empty（不是 no-scene-face：插件已最新，不该提示升级）',
+        U.reason === 'upstream-empty' && U.state === 'empty');
+    ok('B9 七个 reason 全部可达（readSceneFace 分支齐全）',
+        new Set([R.reason, N.reason, O.reason, M.reason, E.reason, Y.reason, U.reason]).size === 7);
     ok('B10 未知 reason 由视图如实显示（不吞）',
         read('apps/place/place-view.js').includes('未知归因（如实显示原值，不吞）'));
     ok('B11 探针异常入参不抛（undefined / null）',
@@ -204,7 +213,7 @@ void defaultPlaceSettings;
     ok('G8 畸形入参不抛', scenePromptBlock('x') === '' && scenePromptBlock(123) === '');
 }
 
-/* ========== H. 负控制：真源码破坏（六态塌态必须报红） ========== */
+/* ========== H. 负控制：真源码破坏（七态塌态必须报红） ========== */
 {
     const src = read('apps/place/place-data.js');
     const anchor = 'if (face.absent === true) {';

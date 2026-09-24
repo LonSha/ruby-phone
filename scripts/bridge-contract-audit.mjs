@@ -15,7 +15,7 @@
  *   于是 snap 恒为 null、两个 App 永久显示「桥在但没快照」，哪怕桥里躺着完整快照。
  *   这与本仓最贵的缺陷形态（不报错、不崩溃、只错结果）完全同形。
  *
- * 判据（三条契约 + 两条自证）：
+ * 判据（[v2.97.0] J1~J5 四条契约 + 一条自证；[v2.98.0] 追加 J6/J7）：
  *   J1（单一真源）两个桥的**全局挂载名字面量**只允许出现在 config/world-bridge.js（各 1 次）。
  *      其余产品文件（apps/**、config/**）一律 0 次 —— 要桥名就 import 真源常量。
  *   J2（形态纪律）产品代码里不得出现 `.snapshot(` 调用式读取，真源里的**拉取型**分支除外。
@@ -29,10 +29,21 @@
  *      这种自己判形态的写法（真源除外）。它正是 8 处重复的种子。
  *   J5（扫描面下限）扫到的产品文件少于下限即 exit 2 拒判：探测器失效时不许「零命中=全绿」。
  *      RP_BRIDGE_FIXTURE=1 只放宽本条（负控制副本树用），不放宽 J1~J4。
+ *   J6（[v2.98.0] 字段三态出口在场 + 真被消费）真源必须导出 readPushField / faceFieldState，
+ *      且产品侧调用点不得少于 FACE_READER_MIN_CONSUMERS。上游 v3.174 专门把
+ *      「源里没这项」与「有这项、值是空」写进了 snapshot.meta.fieldTypes，
+ *      下游若零消费，那份三态等于白做——而实测修前正是零消费。
+ *   J7（[v2.98.0] 归因文案表不得手写键）*_META / *_TEXT 这类「状态→文案」表的键
+ *      必须取真源常量的值，不得手写一套标识符形。这一条不是洁癖，是刚兑现的真缺陷：
+ *      clock-view / ledger-view 的 FACE_META 键写作 no_clock_face（下划线形），
+ *      而 CLOCK_REASONS 的值是 no-clock-face（连字符形）⇒ 五态里三态查不到，
+ *      兜底又指向 bridge_absent ⇒「快照不可用」「这版没这面」「桥未连接」
+ *      一律显示成「桥未连接」。**而当时的判据全绿**——因为没有任何判据看键形。
  *
  * 判据边界（本门**不**说的事）：
  *   · 不说「归因阶梯对不对」（那是各 App 套件的活：system-v246/v249/v251/v235~v237）；
- *   · 不说「下游有没有消费上游 sourceState / lastError 归因面」（属功能面，见 TODO）。
+ *   · 不说「下游有没有消费上游 sourceState / lastError 归因面」（属功能面，见 TODO）；
+ *     [v2.98.0] 起只保证 **meta.fieldTypes** 这面被消费（J6），另两面同族同待。
  *   · 不扫 tests/** 与 scripts/**（测试与门禁引用桥名是必须的），只扫产品面。
  *
  * 用法：
@@ -66,6 +77,15 @@ const PUSH_READER = 'readPushProbe';
 const PUSH_READER_MIN_CONSUMERS = 7;
 /** 扫描面下限（fail-closed）：产品 .js 文件数低于此即视为扫描器失效。 */
 const MIN_PRODUCT_FILES = 100;
+/** [v2.98.0] J6：字段三态出口名与产品侧消费点下限（实测 7：五内核 + clock + ledger）。
+ *  写 5 而不是 7：留出重构空间，但拦住「出口抽出来只有一两处用」的摆设形态。 */
+const FIELD_READER = 'readPushField';
+const FACE_STATE_READER = 'faceFieldState';
+const FACE_READER_MIN_CONSUMERS = 5;
+/** [v2.98.0] J7：归因文案表的命名面（表名后缀）。 */
+const META_TABLE_RE = /const\s+([A-Z][A-Z0-9_]*(?:_META|_TEXT|_TABLE|_LABEL|_MAP))\s*=\s*(?:Object\.freeze\()?\s*\{/g;
+/** 表内裸标识符形键（下划线形）：*_META 这类表若手写键，几乎一定是这种形状。 */
+const BARE_SNAKE_KEY_RE = /^\s+([a-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\s*:/gm;
 
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
@@ -142,6 +162,27 @@ for (const [rel, code] of stripped) {
     const c = (code.match(/\bsnapshot\s*&&\s*typeof\s+[\w$.]+\.snapshot\s*===\s*'object'/g) || []).length;
     if (c > 0) selfProbeHits.push({ rel, count: c });
 }
+/* J7：归因文案表的裸标识符键（只扫产品面；真源自己不受此限） */
+const bareKeyHits = [];
+for (const [rel, code] of stripped) {
+    if (rel === SOURCE_REL) continue;
+    META_TABLE_RE.lastIndex = 0;
+    let m;
+    while ((m = META_TABLE_RE.exec(code)) !== null) {
+        const open = code.indexOf('{', m.index);
+        let depth = 0, j = open;
+        for (; j < code.length; j++) {
+            if (code[j] === '{') depth++;
+            else if (code[j] === '}') { depth--; if (depth === 0) break; }
+        }
+        const block = code.slice(open, j + 1);
+        BARE_SNAKE_KEY_RE.lastIndex = 0;
+        let k;
+        const keys = [];
+        while ((k = BARE_SNAKE_KEY_RE.exec(block)) !== null) keys.push(k[1]);
+        if (keys.length) bareKeyHits.push({ rel, table: m[1], keys });
+    }
+}
 const sourceCode = stripped.get(SOURCE_REL) || '';
 const sourceHasExport = new RegExp('export\\s+function\\s+' + PUSH_READER + '\\s*\\(').test(sourceCode);
 let consumerCount = 0;
@@ -152,6 +193,16 @@ for (const [rel, code] of stripped) {
     if (c > 0) { consumerCount += c; consumerFiles.push(rel); }
 }
 const sourceLiteralOk = BRIDGE_LITERALS.every((lit) => countOf(sourceCode, lit) === 1);
+/* J6：两个字段三态出口各自「恰 1 次 export function」 */
+const sourceFieldExportOk = new RegExp('export\\s+function\\s+' + FIELD_READER + '\\s*\\(').test(sourceCode);
+const sourceFaceExportOk = new RegExp('export\\s+function\\s+' + FACE_STATE_READER + '\\s*\\(').test(sourceCode);
+let faceConsumerCount = 0;
+const faceConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (rel === SOURCE_REL) continue;
+    const c = countOf(code, FACE_STATE_READER + '(');
+    if (c > 0) { faceConsumerCount += c; faceConsumerFiles.push(rel); }
+}
 const sourceCallCount = (sourceCode.match(/.snapshot\s*\(/g) || []).length;
 
 /* ------------------------------------------------------------
@@ -171,6 +222,11 @@ if (LIST) {
     if (!selfProbeHits.length) console.log('  （无）');
     console.log('\n── J3 ' + PUSH_READER + ' 消费点：' + consumerCount + '（下限 ' + PUSH_READER_MIN_CONSUMERS + '）──');
     for (const f of consumerFiles) console.log('  ' + f);
+    console.log('\n── J6 ' + FACE_STATE_READER + ' 消费点：' + faceConsumerCount + '（下限 ' + FACE_READER_MIN_CONSUMERS + '）──');
+    for (const f of faceConsumerFiles) console.log('  ' + f);
+    console.log('\n── J7 归因文案表的手写键（应为 0）──');
+    for (const h of bareKeyHits) console.log('  ' + h.rel + '  ' + h.table + '  x' + h.keys.length + '  [' + h.keys.join(', ') + ']');
+    if (!bareKeyHits.length) console.log('  （无）');
     process.exit(0);
 }
 
@@ -221,6 +277,30 @@ if (consumerCount < PUSH_READER_MIN_CONSUMERS) {
     for (const f of consumerFiles) console.error('    ' + f);
 }
 
+/* ── J6 / J7 [v2.98.0] ── */
+if (!sourceFieldExportOk) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J6 真源缺少 export function ' + FIELD_READER + '( —— 拒判。');
+}
+if (!sourceFaceExportOk) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J6 真源缺少 export function ' + FACE_STATE_READER + '( —— 拒判。');
+}
+if (faceConsumerCount < FACE_READER_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J6 ' + FACE_STATE_READER + ' 只有 ' + faceConsumerCount + ' 个产品侧调用点（下限 ' + FACE_READER_MIN_CONSUMERS + '）');
+    console.error('  说明：上游 v3.174 把「源里没这项」与「有这项、值是空」写进了 snapshot.meta.fieldTypes，');
+    console.error('        下游不读 ⇒ 两种处境同形，文案还会错误地让用户去升级插件。');
+    for (const f of faceConsumerFiles) console.error('    ' + f);
+}
+if (bareKeyHits.length) {
+    fail = 1;
+    console.error('[bridge-contract] x J7 有 ' + bareKeyHits.length + ' 张归因文案表在**手写键**（应取真源常量的值）：');
+    for (const h of bareKeyHits) console.error('    ' + h.rel + '  ' + h.table + '  [' + h.keys.join(', ') + ']');
+    console.error('  说明：手写的标识符形键与真源常量的值形（连字符形）不同 ⇒ 查不到、静默走兜底，');
+    console.error('        多种处境会显示成同一句话。修法：键写作 [REASONS.xxx]。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -228,5 +308,6 @@ if (fail) {
 }
 console.log('[bridge-contract] 扫描面 apps/** + config/** 共 ' + productFiles.length + ' 个 .js · 桥名自持点 0（真源逐名 1 次）· .snapshot( 调用式 0（真源拉取型分支 ' + sourceCallCount + ' 处）· 自写形态 0');
 console.log('[bridge-contract] ' + PUSH_READER + ' 消费点 ' + consumerCount + ' 个（' + consumerFiles.length + ' 文件，下限 ' + PUSH_READER_MIN_CONSUMERS + '）');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费');
+console.log('[bridge-contract] ' + FACE_STATE_READER + ' 消费点 ' + faceConsumerCount + ' 个（' + faceConsumerFiles.length + ' 文件，下限 ' + FACE_READER_MIN_CONSUMERS + '）· 归因文案表手写键 ' + bareKeyHits.length + ' 张');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写');
 process.exit(0);

@@ -20,11 +20,13 @@
  *   纯 ESM export，纯函数无 window 依赖，保证可测。
  * ======================================================== */
 'use strict';
+import { faceFieldState } from '../../config/world-bridge.js';
 /** 归因文案（五态；与 readProfileFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PROFILE_REASONS = Object.freeze({
     'ready': '档案就绪',
     'empty': '这个会话还没有主角档案',
     'no-profile-face': '记忆插件在，但这版快照没有档案面（需插件较新版本）',
+    'upstream-empty': '记忆插件已声明档案面为空（不是没这面，是这次没内容）',
     'no-snapshot': '桥在，但还没产出过快照',
     'bridge-absent': 'LonSha 记忆插件未安装'
 });
@@ -72,8 +74,15 @@ export function readProfileFace(probe) {
     // 「档案面」存在 = protagonist 为对象 或 lifeDetails 为数组（旧版快照两项皆无 ⇒ 没这面）
     const hasFace = !!(protagonist || Array.isArray(snap.lifeDetails));
     if (!hasFace) {
-        out.reason = 'no-profile-face'; out.text = PROFILE_REASONS['no-profile-face'];
         out.protagonist = protagonist; out.lifeDetails = lifeDetails;
+        // [v2.98.0] 「没给这面」与「给了、就是空」必須分开：上游 v3.174 在
+        //   snapshot.meta.fieldTypes 里如实声明了每个字段的在场。此前一律当「没这面」
+        //   并提示用户升级插件——对「声明了、就是空」是错误归因。判定只此一份。
+        if (faceFieldState(snap, ['protagonist', 'lifeDetails']) === 'declared-empty') {
+            out.state = 'empty'; out.reason = 'upstream-empty'; out.text = PROFILE_REASONS['upstream-empty'];
+            return out;
+        }
+        out.reason = 'no-profile-face'; out.text = PROFILE_REASONS['no-profile-face'];
         return out;
     }
     // 面在但无内容：protagonist 空对象/缺失 且 lifeDetails 空 ⇒ 「这个会话没档案」（与「没这面」分开）

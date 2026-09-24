@@ -1,6 +1,19 @@
 {
-  "latest": "2.97.0",
+  "latest": "2.98.0",
   "versions": {
+    "2.98.0": {
+      "version": "2.98.0",
+      "date": "2026-09-25",
+      "title": "上游字段三态真正被消费：修「声明了值与值缺席同形」+ 归因文案表键形漂移 + 门禁 J6/J7",
+      "items": [
+        "修一个**真缺陷**（已取证）：**上游字段三态零消费**。上游 lonsha（v3.174 起）在 `snapshot.meta.fieldTypes` 里为每个顶层字段如实声明了 `{present, kind}` —— 明确区分「源里根本没这项（present=false）」与「源里给了这项、值是空（present=true、kind 为空）」。而本仓实测：**零消费**。7 个消费方一律写成「按对象形取值、取不到就 null」，于是上述两种处境被压成同一个 `no-*-face`，文案还告诉用户「需插件较新版本」—— 对后一种处境是**事实错误**的归因（插件已是最新，只是这一项为空）。取证（可复现）：构造 A=字段缺席 / B=字段显式空两种上游快照，修前 7 个 App 对二者输出**逐字相同**的 reason；修后分离为 `no-*-face` 与 `upstream-empty`。",
+        "同根因的第二个**真缺陷**（更隐蔽）：**归因文案表键形漂移**。`apps/clock/clock-view.js` 与 `apps/ledger/ledger-view.js` 的 `FACE_META` 键写作 `no_clock_face`（下划线形），而真源常量 `CLOCK_REASONS` / `LEDGER_REASONS` 的值是 `no-clock-face`（连字符形），消费处又兜底到「桥未连接」⇒ 五态（ledger 六态）里三至四态**查不到**：「快照不可用」「这版没这面」「桥未连接」三种完全不同的处境**一律显示成「桥未连接」**。而当时**所有判据全绿** —— 因为没有任何判据看键形。修法：键改为**计算属性名**（形状由真源常量决定，真源改了这里跟着变），兜底改为**如实报出未识别状态**；同轮还把 ledger `ready` 图标误写成超长 Unicode 转义（超出四位，渲染成乱码）改为真实字符。",
+        "真源 `config/world-bridge.js` 新增两个出口：`readPushField(snapshot, key)` 返回 `{present, kind, value, reason}`（reason 六态：value / declared-null / absent / legacy-null / legacy-value / no-snapshot），`faceFieldState(snapshot, keys)` 做面级裁定（优先级 present 大于 absent 大于 legacy-unknown 大于 declared-empty —— 「有值」总是最强证据，「明说没这面」比「旧版读不出」更确定）。设计要点：旧版桥没有 `meta.fieldTypes` 时**如实报 legacy-null**（两种处境本就无从分辨，不硬猜成 declared-null）；畸形入参（快照非对象 / 键非字符串 / meta 非对象 / getter 抛错）一律返回 `no-snapshot`，绝不外抛。",
+        "7 个消费方接入三态判据：profile / wallet / chars / place / plotline 五内核在无面分支里加 `faceFieldState(...) === declared-empty` 判定 ⇒ 采用**粗态 state 为 empty + 细态 reason 为 upstream-empty**（粗态保持下游分支不变，细态可分辨，避开「声明了不用 = 摆设出口」）；clock / ledger 的 `readClockFace(probe, snapshot)` / `readLedgerFace(probe, snapshot)` 增设**可选第二参**（不传时行为与旧版一致，v252 / v253 既有断言不受影响），由 App 侧把快照本体传进去。",
+        "第九道门追加 **J6 / J7**（不新开一道：桥消费面本来就该一处收口）：J6 = 真源必须导出 `readPushField` 与 `faceFieldState`，且产品侧调用点不得少于 5（实测 7）—— 拦「抽出来没人用」的摆设出口；J7 = 产品面 `*_META` / `*_TEXT` / `*_TABLE` / `*_LABEL` / `*_MAP` 表内不得手写裸下划线标识符键（真源不受此限）。同轮把 `tests/system-v246.test.mjs` 由「六态恰好六个键」升级为**七态逐名核对键集**（裸计数拦不住「键名被改写」—— 本仓刚在 `FACE_META` 上栽过这一跤），并新增「上游声明了该面、值为空 ⇒ 必须报 upstream-empty 而非 no-*-face」一条。",
+        "新增 `tests/system-v298.test.mjs`：A 结构面（J6/J7 落在同一道门、真仓库全绿并给出两组读数、产品面不得直接摸 `meta.fieldTypes`、视图键取真源常量且键引用数与 reason 值数逐一对应）× B 真源行为面（`readPushField` 六态 + `faceFieldState` 优先级裁定 + 畸形不抛）× C 七面端到端三态分离（**修前必红**：断言「声明了值为空」必须与「没这面」不同形）× D 负控制四条（视图键改回手写 ⇒ J7 红、消费点降到 4 ⇒ J6 红、真源出口被改名 ⇒ J6 拒判、内核判据被删 ⇒ 副本退回旧错报）× E 版本与申明同域。版本升至 2.98.0（五源同源）。"
+      ]
+    },
     "2.97.0": {
       "version": "2.97.0",
       "date": "2026-09-25",

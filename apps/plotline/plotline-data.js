@@ -20,11 +20,13 @@
  *   纯 ESM export，纯函数无 window 依赖，保证可测。
  * ======================================================== */
 'use strict';
+import { faceFieldState } from '../../config/world-bridge.js';
 /** 归因文案（五态；与 readPlotlineFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PLOTLINE_REASONS = Object.freeze({
     'ready': '剧情线就绪',
     'empty': '这个会话还没有大纲或世界推进记录',
     'no-plot-face': '记忆插件在，但这版快照没有大纲/世界推进面（需插件较新版本）',
+    'upstream-empty': '记忆插件已声明大纲/世界推进面为空（不是没这面，是这次还没记录）',
     'no-snapshot': '桥在，但还没产出过快照',
     'bridge-absent': 'LonSha 记忆插件未安装'
 });
@@ -74,7 +76,13 @@ export function readPlotlineFace(probe) {
     const worldProg = (snap.worldProg && typeof snap.worldProg === 'object') ? snap.worldProg : null;
     out.outline = outline; out.worldProg = worldProg;
     const hasFace = !!(outline || worldProg);
-    if (!hasFace) { out.reason = 'no-plot-face'; out.text = PLOTLINE_REASONS['no-plot-face']; return out; }
+    if (!hasFace) {
+        // [v2.98.0] 同 profile：先问上游是否声明过这项。判定只此一份。
+        if (faceFieldState(snap, ['outline', 'worldProg']) === 'declared-empty') {
+            out.state = 'empty'; out.reason = 'upstream-empty'; out.text = PLOTLINE_REASONS['upstream-empty']; return out;
+        }
+        out.reason = 'no-plot-face'; out.text = PLOTLINE_REASONS['no-plot-face']; return out;
+    }
     const stage = outline && typeof outline.stage === 'object' ? outline.stage : null;
     const promises = worldProg && Array.isArray(worldProg.promises) ? worldProg.promises : [];
     const arcs = worldProg && Array.isArray(worldProg.plotArcs) ? worldProg.plotArcs : [];

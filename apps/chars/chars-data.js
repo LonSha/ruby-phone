@@ -22,11 +22,13 @@
  *   纯 ESM export，纯函数无 window 依赖，保证可测。
  * ======================================================== */
 'use strict';
+import { faceFieldState } from '../../config/world-bridge.js';
 /** 归因文案（五态；与 readCharsFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const CHARS_REASONS = Object.freeze({
     'ready': '群像就绪',
     'empty': '这个会话还没有被追踪的角色',
     'no-chars-face': '记忆插件在，但这版快照没有角色状态表（需插件较新版本）',
+    'upstream-empty': '记忆插件已声明角色状态表为空（不是没这面，是这次没追踪到角色）',
     'no-snapshot': '桥在，但还没产出过快照',
     'bridge-absent': 'LonSha 记忆插件未安装'
 });
@@ -66,6 +68,10 @@ export function readCharsFace(probe) {
     // 旧版快照没有 `characters` 这一项 ⇒ 「没这面」与「这面是空的」必须分开（升级提示只有前者能给）。
     const chars = snap.characters;
     if (!chars || typeof chars !== 'object' || Array.isArray(chars)) {
+        // [v2.98.0] 同 profile：先问上游是否声明过这项。判定只此一份。
+        if (faceFieldState(snap, ['characters']) === 'declared-empty') {
+            out.state = 'empty'; out.reason = 'upstream-empty'; out.text = CHARS_REASONS['upstream-empty']; return out;
+        }
         out.reason = 'no-chars-face'; out.text = CHARS_REASONS['no-chars-face']; return out;
     }
     if (!Object.keys(chars).length) {

@@ -1,3 +1,5 @@
+import { faceFieldState } from '../../config/world-bridge.js';
+
 /* ========================================================
  * ledger-data.js — [v2.53.0] 世界账本 App 纯函数内核
  * [v2.54.0] 深化：舆情强度三分（已核实/传闻/未知）+ 事实对读差集
@@ -9,6 +11,7 @@ export const LEDGER_REASONS = Object.freeze({
   empty: 'empty',
   no_worldaxis: 'no-worldaxis',
   no_ledger_face: 'no-ledger-face',
+  upstream_empty: 'upstream-empty',
   no_snapshot: 'no-snapshot',
   bridge_absent: 'bridge-absent',
 });
@@ -24,11 +27,15 @@ export function defaultLedgerSettings() {
  * @param {object|null|undefined} probe - { hasBridge, hasSnapshot, ledger }
  * @returns {string} LEDGER_REASONS 之一
  */
-export function readLedgerFace(probe) {
+export function readLedgerFace(probe, snapshot) {
   if (!probe || probe.hasBridge === false) return LEDGER_REASONS.bridge_absent;
   if (!probe.hasSnapshot) return LEDGER_REASONS.no_snapshot;
   const wlr = probe.ledger;
-  if (wlr === undefined || wlr === null) return LEDGER_REASONS.no_ledger_face;
+  if (wlr === undefined || wlr === null) {
+    // [v2.98.0] 同 clock：上游声明了这项、值为空 ⇒ 不是「这版没这面」。判定只此一份。
+    if (snapshot && faceFieldState(snapshot, ['worldLedgerRead']) === 'declared-empty') return LEDGER_REASONS.upstream_empty;
+    return LEDGER_REASONS.no_ledger_face;
+  }
   if (!wlr.ok) {
     if (NO_WORLDAXIS_REASONS.has(wlr.reason)) return LEDGER_REASONS.no_worldaxis;
     return LEDGER_REASONS.empty;

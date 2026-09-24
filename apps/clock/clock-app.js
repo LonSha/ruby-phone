@@ -25,7 +25,8 @@ export class ClockApp {
     const snap = p.snapshot;
     const clock = (snap && typeof snap === 'object') ? snap.clock : null;
     this._probe = { hasBridge: p.mounted, hasSnapshot: p.hasSnapshot, clock };
-    this._face = readClockFace(this._probe);
+    // [v2.98.0] 第二参传快照本体：三态判定（「没这面」vs「声明了但空」）要看上游自述
+    this._face = readClockFace(this._probe, snap);
     this._proj = (this._face === CLOCK_REASONS.ready) ? projectClock(clock) : null;
   }
 

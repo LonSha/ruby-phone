@@ -1,3 +1,5 @@
+import { faceFieldState } from '../../config/world-bridge.js';
+
 /* ========================================================
  * clock-data.js — [v2.52.0] 时计 App 纯函数内核
  * 消费 snapshot.clock（GameClock.export()）
@@ -7,6 +9,7 @@ export const CLOCK_REASONS = Object.freeze({
   ready: 'ready',
   empty: 'empty',
   no_clock_face: 'no-clock-face',
+  upstream_empty: 'upstream-empty',
   no_snapshot: 'no-snapshot',
   bridge_absent: 'bridge-absent',
 });
@@ -18,11 +21,17 @@ export function defaultClockSettings() {
   });
 }
 
-export function readClockFace(probe) {
+export function readClockFace(probe, snapshot) {
   if (!probe || probe.hasBridge === false) return CLOCK_REASONS.bridge_absent;
   if (!probe.hasSnapshot) return CLOCK_REASONS.no_snapshot;
   const clock = probe.clock;
-  if (clock === undefined || clock === null) return CLOCK_REASONS.no_clock_face;
+  if (clock === undefined || clock === null) {
+    // [v2.98.0] 「上游声明了 clock 这项、值为空」与「这版快照没有时钟面」是两回事：
+    //   前者不该提示用户升级插件（插件已是最新，只是这一项为空）。
+    //   判定只此一份（config/world-bridge.js 的 faceFieldState）。
+    if (snapshot && faceFieldState(snapshot, ['clock']) === 'declared-empty') return CLOCK_REASONS.upstream_empty;
+    return CLOCK_REASONS.no_clock_face;
+  }
   const hasDate = typeof clock.date === 'string' && clock.date.length > 0;
   const hasLabel = typeof clock.label === 'string' && clock.label.length > 0;
   if (!hasDate && !hasLabel) return CLOCK_REASONS.empty;

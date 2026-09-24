@@ -299,6 +299,85 @@ export function readPushProbe(win) {
     return first || probeOne(PROBE_ORDER[0], win);
 }
 
+/**
+ * [v2.98.0] 读上游快照的一个**字段**，把「没有这项」与「有这项、值是空」分开。
+ *
+ * 【为何需要（真实缺口，不是设计洁癖）】
+ *   上游 v3.174 专门为读者做了一份**字段类型三态自述** `snapshot.meta.fieldTypes`:
+ *     present=false            ⇒ 源里没这项（读者应当作「没有」）
+ *     present=true, kind='null' ⇒ 源里给了这项、值是空（读者应当作「空」）
+ *     其余 kind               ⇒ 真有值
+ *   而 RubyPhone 侧实测：**这份自述零消费**。各 App 的 `read*Face()` 一律写成
+ *   `const x = (snap.k && typeof snap.k === 'object') ? snap.k : null;` ——
+ *   于是上述两种完全不同的处境压成同一个 reason（`no-*-face`），
+ *   而文案还告诉用户「需插件较新版本」——对后一种处境而言，
+ *   这是一句**事实错误**的归因（插件已是最新，只是这一项为空）。
+ *
+ * 申明与实现同域不得互相矛盾：上游把这三态写进了自述，下游却不读，
+ * 等于上游的“三态”做了也白做。本函数就是下游读这份自述的**唯一真源**。
+ *
+ * @param {object|null} snapshot 上游快照本体
+ * @param {string} key 顶层字段名
+ * @returns {{ present:boolean, kind:string|null, value:*, reason:string }}
+ *   reason ∈ { value, declared-null, absent, legacy-null, legacy-value, no-snapshot }
+ *   · declared-null —— 上游明确声明：给了这项，值是空
+ *   · absent        —— 上游明确声明：源里根本没这项（真的“没这面”）
+ *   · legacy-null   —— 旧版桥无 fieldTypes，且值是 null/undefined：
+ *                     **两种处境本就无从分辨**，如实标出来，不硬猜。
+ */
+export function readPushField(snapshot, key) {
+    const miss = { present: false, kind: null, value: undefined, reason: 'no-snapshot' };
+    try {
+        if (!snapshot || typeof snapshot !== 'object') return miss;
+        if (typeof key !== 'string' || !key) return miss;
+        const meta = snapshot.meta;
+        const ft = (meta && typeof meta === 'object' && meta.fieldTypes && typeof meta.fieldTypes === 'object')
+            ? meta.fieldTypes : null;
+        const d = ft ? ft[key] : null;
+        if (d && typeof d === 'object' && typeof d.present === 'boolean') {
+            if (d.present === false) return { present: false, kind: String(d.kind || 'undefined'), value: undefined, reason: 'absent' };
+            const kind = String(d.kind || '');
+            if (kind === 'null') return { present: true, kind: 'null', value: null, reason: 'declared-null' };
+            return { present: true, kind, value: snapshot[key], reason: 'value' };
+        }
+        // 旧版桥（无 meta.fieldTypes）：只能按值本体如实报，不伪造三态
+        const v = snapshot[key];
+        if (v === undefined || v === null) return { present: false, kind: (v === null ? 'null' : 'undefined'), value: v, reason: 'legacy-null' };
+        return { present: true, kind: (Array.isArray(v) ? 'array' : typeof v), value: v, reason: 'legacy-value' };
+    } catch (_e) { return miss; }
+}
+
+/**
+ * [v2.98.0] 把多个字段的三态合成一个**面级**结论，供 `read*Face()` 直接用。
+ *
+ * 为何面级而不是字段级：一个“面”（档案面 = protagonist + lifeDetails）
+ * 通常由多个字段组成，而读者关心的是「这一面是空还是根本没这面」。
+ *
+ * 裁定（严格，不模糊）：
+ *   · 任一字段真有值              ⇒ present        （这面在，下游照常走）
+ *   · 任一字段被声明 absent        ⇒ absent         （上游没给这面）
+ *   · 全部字段被声明 declared-null ⇒ declared-empty （声明了、就是空）
+ *   · 任一字段无从分辨（legacy-null） ⇒ legacy-unknown （旧版桥，不硬猜）
+ *   优先级：present > absent > legacy-unknown > declared-empty
+ *   （“有值”总是最强证据；“明说没这面”比“旧版读不出”更确定）
+ *
+ * @param {object|null} snapshot
+ * @param {string[]} keys
+ * @returns {string}
+ */
+export function faceFieldState(snapshot, keys) {
+    try {
+        const list = Array.isArray(keys) ? keys : [];
+        if (!list.length) return 'legacy-unknown';
+        const reads = list.map((k) => readPushField(snapshot, k));
+        if (reads.some((r) => r.reason === 'value')) return 'present';
+        if (reads.some((r) => r.reason === 'absent')) return 'absent';
+        if (reads.some((r) => r.reason === 'legacy-null' || r.reason === 'no-snapshot')) return 'legacy-unknown';
+        if (reads.every((r) => r.reason === 'declared-null')) return 'declared-empty';
+        return 'legacy-unknown';
+    } catch (_e) { return 'legacy-unknown'; }
+}
+
 /** 两个桥的在场一览（供诊断面板/测试；纯读） */
 export function worldBridgeAvailability(win) {
     const wa = bridgeSource(WORLDAXIS_BRIDGE_ID, win);
@@ -493,6 +572,8 @@ export default {
     readWorldClock,
     readLonshaSnapshot,
     readPushProbe,
+    readPushField,
+    faceFieldState,
     worldBridgeAvailability,
     lonshaSource,
     diffClocks,

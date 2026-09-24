@@ -10,6 +10,135 @@
 
 ---
 
+## 迭代 30 — v2.98.0 上游字段三态真正被消费（修「声明了值与值缺席同形」+ 归因文案表键形漂移）
+
+- **日期**：2026-09-25
+- **类型**：真缺陷修复（归因文案错报）+ 联动侧读面向下同步 + 门禁扩展（J6/J7）+ 测试自身缺陷修复
+- **动机**：TODO P0 头两项是「上游桥读取面收口（v2.97.0 已完成）」与「（下一步）跨仓投影契约 L-F5」。
+  按「先修缺陷 → 再优化体验 → 后加功能」的排序，本版没直接动 L-F5 契约本体（跨仓 API 设计，
+  成本与风险都高），而是先侦察两侧接缝。侦察到的事实是：上游 lonsha 早已把「字段三态」写进
+  `snapshot.meta.fieldTypes` 并为此写了一段长注释，**而 RubyPhone 侧实测零消费**。
+  申明与实现同域却互相矛盾：上游把三态郑重写进自述，下游不读，等于上游的三态做了也白做。
+
+### 一、缺陷取证（先量，不凭读代码下结论）
+
+上游（lonsha v3.174 起）在 `buildBridgeSnapshot()` 里为每个顶层字段声明 `{present, kind}`：
+
+- `present: false` ⇒ **源里根本没这项**；
+- `present: true, kind: ''` ⇒ **源里给了这项、值是空**；
+- 其余 ⇒ 真有值。
+
+而本仓 7 个消费方一律写成 `const x = (snap.k && typeof snap.k === 'object') ? snap.k : null;`
+⇒ 前两种处境被压成同一个 reason。构造两种上游快照实测（可复现）：
+
+| 输入 | 修前 7 个 App 报出的 reason |
+| --- | --- |
+| A：字段缺席（无 `meta`） | `no-profile-face` / `no-ledger-face` / `no-chars-face` / `no-scene-face` / `no-plot-face` / `no-clock-face` / `no-ledger-face` |
+| B：字段显式空（`present:true, kind:''`） | **与 A 逐字相同** |
+
+而 `no-*-face` 的文案告诉用户「需插件较新版本」—— 对 B 是**事实错误**的归因（插件已最新）。
+
+**第二处真缺陷（同一族、更隐蔽）**：`apps/clock/clock-view.js` 与 `apps/ledger/ledger-view.js` 的
+`FACE_META` 键写作 `no_clock_face`（下划线形），而真源常量 `CLOCK_REASONS` / `LEDGER_REASONS`
+的值是 `no-clock-face`（连字符形），消费处又写 `FACE_META[face] || FACE_META.bridge_absent`：
+
+| 真源 reason | 修前 FACE_META 命中 | 用户看到 |
+| --- | --- | --- |
+| `no-clock-face` | ✗ | 「桥未连接」 |
+| `no-snapshot` | ✗ | 「桥未连接」 |
+| `bridge-absent` | ✓ | 「桥未连接」 |
+| `empty` / `ready` | ✓ | 正确 |
+
+⇒ 「快照不可用」「这版没这面」「桥未连接」三种完全不同的处境**一律显示成「桥未连接」**，
+而**当时所有判据全绿** —— 因为没有任何判据看键形。
+
+### 二、真源两个出口（形态判定仍只这一份）
+
+`config/world-bridge.js` 新增：
+
+- `readPushField(snapshot, key)` → `{present, kind, value, reason}`，reason 六态：
+  `value` / `declared-null` / `absent` / `legacy-null` / `legacy-value` / `no-snapshot`；
+- `faceFieldState(snapshot, keys)` 面级裁定，优先级 **`present` > `absent` > `legacy-unknown` > `declared-empty`**
+  （「有值」总是最强证据；「明说没这面」比「旧版读不出」更确定）。
+
+两个设计要点：
+
+1. 旧版桥无 `meta.fieldTypes` 时**如实报 `legacy-null`**，不硬猜成 `declared-null`
+   —— 这两种处境本就无从分辨，伪造一种就是新的「只错结果」；
+2. 畸形入参（快照非对象 / 键非字符串 / `meta.fieldTypes` 非对象 / getter 抛错）一律 `no-snapshot`，**绝不外抛**。
+
+### 三、7 个消费方接入
+
+- profile / wallet / chars / place / plotline 五内核在 `!hasFace` 分支里加
+  `faceFieldState(...) === 'declared-empty'` 判定 ⇒ 采用**粗态 `state='empty'` + 细态 `reason='upstream-empty'`**。
+  粗态不动下游分支，细态让用户看到「上游说这项是空的」而不是「没这面」。
+- clock / ledger 的 `readClockFace(probe, snapshot)` / `readLedgerFace(probe, snapshot)` 增设**可选第二参**
+  —— 不传时行为与旧版逐字一致，v252 / v253 既有断言不受影响；由 App 侧把快照本体传进去。
+- 视图侧：`FACE_META` 键改为**计算属性名** `[CLOCK_REASONS.xxx]`（形状由真源决定，真源改这里跟着变），
+  兜底由 `FACE_META.bridge_absent` 改为**如实报出未知态**（`未识别的状态：xxx`）；
+  同轮修掉 ledger `ready` 图标的非法转义（超长 `\u` 转义渲染成乱码）。
+
+### 四、第九道门追加 J6 / J7
+
+不新开一道（桥消费面本来就该一处收口）：
+
+| 判据 | 内容 |
+| --- | --- |
+| J6 | 真源必须导出 `readPushField` / `faceFieldState`，且产品侧调用点 ≥ 5（实测 7）—— 拦「抽出来没人用」 |
+| J7 | 产品面 `*_META` / `*_TEXT` / `*_TABLE` / `*_LABEL` / `*_MAP` 表内不得手写裸下划线标识符键（真源不受此限） |
+
+实测读数：扫描面 218 个 .js · 桥名自持点 0 · 调用式 0（真源拉取型分支 2 处）· 自写形态 0 ·
+`readPushProbe` 消费点 9 · `faceFieldState` 消费点 7 · 文案表手写键 0。
+判据边界同步写明：本门从 v2.98.0 起只保证 `meta.fieldTypes` 这面被消费，
+`sourceState` / `lastError` 同族同待（它们目前由 worldpulse 经另一条出口走）。
+
+### 五、既有套件同步升级（不是新写一份）
+
+`tests/system-v246.test.mjs` 由「六态恰好六个键」升级为**七态逐名核对键集**：
+
+> 裸计数只能拦「多一个 / 少一个」，拦不住「键名被改写」—— 本仓刚在 `FACE_META` 上栽过这一跤。
+
+并新增 B3b：「上游声明了该面、值为空 ⇒ 必须报 `upstream-empty` 而非 `no-scene-face`」。
+该条首跑红灯时暴露了本轮的**第三处自身缺陷**：批 2 给五内核写的是 `out.reason = 'empty'`，
+使新增的 `upstream-empty` 文案键**永不返回**（「声明了不用 = 摆设」）。修法：粗态仍为 `empty`，
+细态改为 `upstream-empty`。
+
+### 六、两个陷阱（均在本轮踩到并修）
+
+1. **代理对清空文件**：补丁脚本用 `'\ud83e\uddfe'`（代理对）写 `ledger-view.js`，
+   Python 抛 `UnicodeEncodeError: surrogates not allowed`，而 `io.open(p,'w')` **先截断文件再抛错**
+   ⇒ 文件被清成 **0 字节**。恢复路径是 `git checkout -- <path>`（改前刚提交过 v2.97.0，索引里有干净版）。
+   教训：emoji 一律写真实字符或 `\U0001F9FE`，不写代理对。
+2. **正则过度转义**（与上一轮同族）：`new RegExp('export\\s+function\\s+' + …)` 写成四层反斜杠
+   ⇒ `SyntaxError: Unterminated group`。修法不是重新数转义层数，而是**照抄同文件里已验证可用的写法**
+   （`sourceHasExport` 那一行的形态）。
+
+### 七、测试自身的两个缺陷（首跑红灯，不留假红）
+
+| 条 | 首跑症状 | 真因 |
+| --- | --- | --- |
+| D0 | 未破坏的副本树就红：`J3 readPushProbe 只有 0 个产品侧调用点` | `STAGE_FILES` 只放了 FACES/VIEWS，没放 9 个真实消费方 ⇒ 副本树**因缺文件而红**（本仓禁止的形态），负控制成假绿 |
+| D1 | 锛点命中 0 次 | 套件里写的是 4 空格缩进，源码实际是 **2 空格** —— 锛点必须与源码逐字一致 |
+
+### 八、验证
+
+- `tests/system-v298.test.mjs` **21/21 全绿**（A 结构面 5 · B 真源行为面 6 · C 端到端三态分离 3 · D 负控制 5 · E 版本与申明 2）；
+- `tests/system-v246.test.mjs` 七态化后全绿；`system-v252` / `system-v253` 单跑 RC 0；
+- 全量 `npm test`：**776 tests / 776 pass / 0 fail**（初跑唯一红是 v280 的文档元信息，文档写完即消）；
+- 取证脚本三态对照：A（无 meta）⇒ 全 `no-*-face`；B（声明空）⇒ 全 `upstream-empty`；C（有值）⇒ `ready`（place 因 `scene:{empty:true}` 为 `empty`）;
+- `node scripts/bridge-contract-audit.mjs` RC 0；两组负控制均证明**因破坏而红**（J7：键改回手写 ⇒ 红并点名该表；J6：消费点降到 4 ⇒ 红且读数真为 4；出口改名 ⇒ RC 2 拒判）。
+
+### 九、遗留 / 下一步
+
+- **L-F5 跨仓投影契约本体未启动**（`projectionVersion / generatedAt / conversationId / sceneId / worldId /
+  items / visibility / sourceLedger / revision / expiresAt`）—— 本版只做了它的**读侧前置**：
+  把上游**已经存在**的自述（`meta.fieldTypes`）真正读起来。上游侧可复用基础已就位：
+  `projection-pipeline.js`（声明式 `PROJECTIONS` 表 + 三态 `ok`/`empty`/`absent` + `reason` 归因）。
+- `readPushProbe` 的 `sourceState` / `lastError` 两字段**目前仍无消费点**（归因面由 worldpulse 经
+  `bridgeReport()` / `lonshaSource()` 走另一条出口）。J6 只管住 `meta.fieldTypes` 这一面，另两面同族同待。
+
+---
+
 ## 迭代 29 — v2.97.0 桥消费面收敛到单一真源（修 clock/ledger 桥读取真缺陷）
 
 - **日期**：2026-09-25
@@ -1512,12 +1641,13 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`2.97.0`（五源同源）
-- **门禁基线**（v2.97.0 实测，`npm run check` exit 0）：语法 377 文件 /
-  导入可解析门 231 文件 308 条静态说明符（动态 import 97 条不计入判据）/ 测试 **755 pass · 0 fail** /
-  死导出零新增（249 个文件、760 个 export 声明、零消费 24 条冻结、枚举面 828 条全部识别）/
+- **当前版本**：`2.98.0`（五源同源）
+- **门禁基线**（v2.98.0 实测，`npm run check` exit 0）：语法 378 文件 /
+  导入可解析门 231 文件 315 条静态说明符（动态 import 96 条不计入判据）/ 测试 **776 pass · 0 fail** /
+  死导出零新增（249 个文件、731 个具名 export 声明、零消费 24 条冻结、枚举面 830 条全部识别）/
   生命周期 35 个 App 类 48 个槽位零缺口 / 注册 APPS id 40、样式投递 30 个未覆盖 0 /
   keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）/
   派生读数台账 枚举面 10 文件 · 台账 10 条（派生库 3）/
   **桥消费面契约**（第九道门）：扫描面 218 个 .js · 桥名自持点 0 · `.snapshot(` 调用式 0
-  （真源拉取型分支 2 处）· 自写形态 0 · `readPushProbe` 消费点 9（下限 7）。
+  （真源拉取型分支 2 处）· 自写形态 0 · `readPushProbe` 消费点 9（下限 7）·
+  `faceFieldState` 消费点 7（下限 5）· 归因文案表手写键 0。

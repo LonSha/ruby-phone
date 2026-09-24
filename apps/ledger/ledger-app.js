@@ -22,7 +22,8 @@ export class LedgerApp {
     const snap = p.snapshot;
     const wlr = (snap && typeof snap === 'object') ? snap.worldLedgerRead : null;
     this._probe = { hasBridge: p.mounted, hasSnapshot: p.hasSnapshot, ledger: wlr };
-    this._face = readLedgerFace(this._probe);
+    // [v2.98.0] 第二参传快照本体：三态判定要看上游自述
+    this._face = readLedgerFace(this._probe, snap);
     this._proj = (this._face === LEDGER_REASONS.ready) ? projectLedger(wlr) : null;
   }
 

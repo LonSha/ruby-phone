@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.97.0';
+const ST_PHONE_VERSION = '2.98.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修一个**真缺陷**（已取证）：`apps/clock/clock-app.js` 与 `apps/ledger/ledger-app.js` 的 `probeBridge()` 把**推送型**世界桥的 `snapshot`（对象）当函数调用 —— `bridge.snapshot ? bridge.snapshot() : null` —— 必然抛 TypeError 并被 `catch (_e) { snap = null; }` 吞掉，于是 snap 恒为 null：**桥里躺着完整快照，两个 App 却永久显示「桥在但没快照」**。取证（修复前实测）：`桥梁实际有快照: true`，而 CLOCK / LEDGER 报 `hasSnapshot:false`、face = `no-snapshot`；修后两条端到端回归转绿。该形态与本仓最贵的缺陷同形：不报错、不崩溃、只错结果。",
-        "根因是**同一个口径被抄了 7 份**：两个只读世界桥是同规格接口但**发布方式不同** —— lonsha 桥是推送型（`snapshot` 是对象，生成管线里 `refresh()` 覆盖）、WorldAxis 桥是拉取型（`snapshot` 是函数，调一次返回深拷贝）。抄写者不知道这件事，于是「快照怎么读」在 7 个 App + 搜索内核 + 撩语里各写一遍；写对的 5 份与写错的 2 份只差一个字符（`b.snapshot` vs `b.snapshot()`）。实测漂移：桥名字面量 9 处、`.snapshot(` 调用式 2 处、自写形态判据 7 处。",
-        "收口为**单一真源**：`config/world-bridge.js` 新增统一出口 `readPushProbe(win)`，形态判定只此一份（对象 ⇒ `push` 直接用本体；函数 ⇒ `pull`，且只在 `readPublished().has === true` 时才真拉 —— 否则空拉一次会把对方的拒绝记账刷脏；其余 ⇒ `unknown`），并如实带出上游自述的 `sourceState` / `lastError`（旧版桥无此字段 ⇒ null，不伪造）。两台桥都探，返回值带 `id` 标明快照是谁家的。9 个消费方（place / wallet / profile / plotline / chars / clock / ledger / 搜索内核 / 撩语）全部改走该出口，桥名字面量自持点归零。",
-        "新增**第九道门** `scripts/bridge-contract-audit.mjs`（已接入 `npm run check`），把「同一口径只许一份实现」从当轮纪律变成常驻判据：J1 桥名单一真源（两个桥名的字面量只允许在真源各 1 次）；J2 产品代码不得出现 `.snapshot(` 调用式（真源拉取型分支白名单）；J3 出口须在场**且真被消费**（消费点下限 7，实测 9 —— 拦「抽出来只有两三处用」的摆设出口）；J4 自写形态判据绝迹；J5 扫描面下限 fail-closed（扫到的产品文件少于 100 即拒判，`RP_BRIDGE_FIXTURE=1` 只放宽本条）。门禁内置注释剥离器：本仓注释大量逐字提到桥名与旧写法，在原文上判会产生「文本包含式假红」。",
-        "新增 `tests/system-v297.test.mjs`（25 条）：真源行为面（推送 / refresh 回落 / 拉取型只自述已发布才拉 / 无桥畸形与 getter 抛错 / 上游自述如实带出 / 两台桥的探测序）× 端到端（clock · ledger 缺陷回归 + 无桥仍如实报 `bridge-absent` + 五 App 探针同形 + 搜索内核与撩语经真源读桥）× 负控制五条（恢复自持桥名 / 恢复 `.snapshot(` 调用式 / 抽掉真源出口 / 重新自写形态判据 / 门禁自己的桥名口径被改坏，一律在副本树上重跑真门禁并断言红灯点名真原因）。测试自身的四个缺陷同轮修掉：A3 判据锚点与门禁源码不逐字一致（过度转义 ⇒ 假红）、C4 `withWin` 非 async-aware（`await import()` 一挂起就还原 window ⇒ 探针读到空全局）、C5 撩语真类名是 `DtApp`、B3 未覆盖第二台桥。",
-        "版本升至 2.97.0（五源同源）。同轮还修了既有负控制的依赖闭包：搜索链路的副本树 `CLOSURE` 补上新增依赖 `config/world-bridge.js` —— 否则副本里 `ERR_MODULE_NOT_FOUND`，负控制红的是「缺文件」而不是「破坏」（判据必须因破坏而红，不能容忍任何其它红灯来源）。",
+        "修一个**真缺陷**（已取证）：**上游字段三态零消费**。上游 lonsha（v3.174 起）在 `snapshot.meta.fieldTypes` 里为每个顶层字段如实声明了 `{present, kind}` —— 明确区分「源里根本没这项（present=false）」与「源里给了这项、值是空（present=true、kind 为空）」。而本仓实测：**零消费**。7 个消费方一律写成「按对象形取值、取不到就 null」，于是上述两种处境被压成同一个 `no-*-face`，文案还告诉用户「需插件较新版本」—— 对后一种处境是**事实错误**的归因（插件已是最新，只是这一项为空）。取证（可复现）：构造 A=字段缺席 / B=字段显式空两种上游快照，修前 7 个 App 对二者输出**逐字相同**的 reason；修后分离为 `no-*-face` 与 `upstream-empty`。",
+        "同根因的第二个**真缺陷**（更隐蔽）：**归因文案表键形漂移**。`apps/clock/clock-view.js` 与 `apps/ledger/ledger-view.js` 的 `FACE_META` 键写作 `no_clock_face`（下划线形），而真源常量 `CLOCK_REASONS` / `LEDGER_REASONS` 的值是 `no-clock-face`（连字符形），消费处又兜底到「桥未连接」⇒ 五态（ledger 六态）里三至四态**查不到**：「快照不可用」「这版没这面」「桥未连接」三种完全不同的处境**一律显示成「桥未连接」**。而当时**所有判据全绿** —— 因为没有任何判据看键形。修法：键改为**计算属性名**（形状由真源常量决定，真源改了这里跟着变），兜底改为**如实报出未识别状态**；同轮还把 ledger `ready` 图标误写成超长 Unicode 转义（超出四位，渲染成乱码）改为真实字符。",
+        "真源 `config/world-bridge.js` 新增两个出口：`readPushField(snapshot, key)` 返回 `{present, kind, value, reason}`（reason 六态：value / declared-null / absent / legacy-null / legacy-value / no-snapshot），`faceFieldState(snapshot, keys)` 做面级裁定（优先级 present 大于 absent 大于 legacy-unknown 大于 declared-empty —— 「有值」总是最强证据，「明说没这面」比「旧版读不出」更确定）。设计要点：旧版桥没有 `meta.fieldTypes` 时**如实报 legacy-null**（两种处境本就无从分辨，不硬猜成 declared-null）；畸形入参（快照非对象 / 键非字符串 / meta 非对象 / getter 抛错）一律返回 `no-snapshot`，绝不外抛。",
+        "7 个消费方接入三态判据：profile / wallet / chars / place / plotline 五内核在无面分支里加 `faceFieldState(...) === declared-empty` 判定 ⇒ 采用**粗态 state 为 empty + 细态 reason 为 upstream-empty**（粗态保持下游分支不变，细态可分辨，避开「声明了不用 = 摆设出口」）；clock / ledger 的 `readClockFace(probe, snapshot)` / `readLedgerFace(probe, snapshot)` 增设**可选第二参**（不传时行为与旧版一致，v252 / v253 既有断言不受影响），由 App 侧把快照本体传进去。",
+        "第九道门追加 **J6 / J7**（不新开一道：桥消费面本来就该一处收口）：J6 = 真源必须导出 `readPushField` 与 `faceFieldState`，且产品侧调用点不得少于 5（实测 7）—— 拦「抽出来没人用」的摆设出口；J7 = 产品面 `*_META` / `*_TEXT` / `*_TABLE` / `*_LABEL` / `*_MAP` 表内不得手写裸下划线标识符键（真源不受此限）。同轮把 `tests/system-v246.test.mjs` 由「六态恰好六个键」升级为**七态逐名核对键集**（裸计数拦不住「键名被改写」—— 本仓刚在 `FACE_META` 上栽过这一跤），并新增「上游声明了该面、值为空 ⇒ 必须报 upstream-empty 而非 no-*-face」一条。",
+        "新增 `tests/system-v298.test.mjs`：A 结构面（J6/J7 落在同一道门、真仓库全绿并给出两组读数、产品面不得直接摸 `meta.fieldTypes`、视图键取真源常量且键引用数与 reason 值数逐一对应）× B 真源行为面（`readPushField` 六态 + `faceFieldState` 优先级裁定 + 畸形不抛）× C 七面端到端三态分离（**修前必红**：断言「声明了值为空」必须与「没这面」不同形）× D 负控制四条（视图键改回手写 ⇒ J7 红、消费点降到 4 ⇒ J6 红、真源出口被改名 ⇒ J6 拒判、内核判据被删 ⇒ 副本退回旧错报）× E 版本与申明同域。版本升至 2.98.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

@@ -24,12 +24,14 @@
  *   纯 ESM export，纯函数无 window 依赖，时间戳由调用方注入，保证可测。
  * ======================================================== */
 'use strict';
+import { faceFieldState } from '../../config/world-bridge.js';
 
 /** 归因文案（六态；与 readSceneFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PLACE_REASONS = Object.freeze({
     'ready': '地点图景就绪',
     'empty': '这个会话还没有登记过场所',
     'no-scene-face': '记忆插件在，但这版快照没有场所面（需 v3.181+）',
+    'upstream-empty': '记忆插件已声明场所面为空（不是没这面，是这次还没登记场所）',
     'module-absent': '记忆插件里场所模块缺席（退路在跑，读数一律为空）',
     'no-snapshot': '桥在，但还没产出过快照',
     'bridge-absent': 'LonSha 记忆插件未安装'
@@ -75,6 +77,10 @@ export function readSceneFace(probe) {
     // 记忆插件 v3.181 起在桥快照里带 `scene`（summary() 纯数据面）。
     // 旧版没有这一项 ⇒ 「没这面」与「这面是空的」必须分开（升级提示只有前者能给）。
     if (!snap.scene || typeof snap.scene !== 'object') {
+        // [v2.98.0] 同 profile：先问上游是否声明过这项。判定只此一份。
+        if (faceFieldState(snap, ['scene']) === 'declared-empty') {
+            out.state = 'empty'; out.reason = 'upstream-empty'; out.text = PLACE_REASONS['upstream-empty']; return out;
+        }
         out.reason = 'no-scene-face'; out.text = PLACE_REASONS['no-scene-face']; return out;
     }
     const face = snap.scene;
