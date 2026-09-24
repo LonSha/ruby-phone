@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.93.0';
+const ST_PHONE_VERSION = '2.94.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -106,12 +106,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修复约定支的生活事件源键：原为 commitment:<id>:<status>:<revision>，同一条约定每推进一次状态就换一个源身份，时间线上最多并存 5 条同源条目（proposed/confirmed/rescheduled/fulfilled 全部留下），且终态也不回收。",
-        "源键改为稳定身份 commitment:<id>；新增 removeBySourceBase（基名或 `基名:` 族，兼容旧档带后缀的源键），打通新增/改写/回收三条出口，推进状态走对齐、终态（完成或取消）走回收。",
-        "补齐两条回收路径：删掉日历投影备忘、投影被顶替（改期换了挂靠）时，对应约定的事件一并收走；并刻意不做「凡不在投影里的约定事件全撤」，否则未确认的 proposed 会被误删。",
-        "新增 tests/system-v293.test.mjs（10 条）：结构面 / 真模块行为面 / 旧档迁移 / 删备忘 / 两条真源码破坏型负控制 / 版本锚点。",
-        "修正一条把缺陷当预期的历史判据：system-v274 原先断言「确认+改期后应有 3 条事件」，改为断言交付意图——同一条约定全程恰 1 条、正文跟随状态、终态回收。",
-        "版本升至 2.93.0（五源同源）。",
+        "缝合「符号级 JSON 修复器」（来源 atonal519/ST-MyriadKnots 千千结的 json-symbol-repair）：本仓解析大模型 JSON 的地方很多，容错手段却只有一句朴素的尾逗号正则（replace(/,\\s*([\\]}])/g,'$1')），模型输出一旦是「缺分隔逗号」「缺冒号」或裸键，整批数据直接被丢弃——而本仓最贵的形态正是「不报错、不崩溃，只错数据」。新模块严格优先、只在符号层面改动，并保留素材的四条纪律：严格优先（原样能解析就绝不动）/ 截断语义（length、max_tokens）下不做符号修复 / 零改动不得冒充修复 / 重复键不得被修成看起来没事。",
+        "四个消费点接线：健康状态桥（模型交接块是典型的半合规 JSON 产地，不再一次解析失败就整块落到按行解析而丢事实）、蜜语（弹幕/榜单缺分隔逗号不再整批丢弃）、通话接听判定（不再退化成关键词猜测）、设置导入（图片预设导入串带尾逗号或缺分隔逗号不再整批拒绝）。",
+        "同轮自查修掉缝合自带的一处错读缺陷（纪律 6）：括号配平器原先在首个容器未配平时会**往后跳**去找下一个候选，于是一个被截断的大对象会被读成它内层的某个小对象——调用方拿到「形状合法、内容错位」的结果，仍是不报错只错数据。改为 fail-closed：容器没配平就整体拒判，绝不退读内层；同时起读点不再被正文里的成对短括号（如 [注]）挡掉。",
+        "新增 tests/system-v294.test.mjs（16 条）：纯函数行为面（每条纪律正反两面）/ 接线面（四个消费点真的走这条路，不是新添一座死岛）/ 三条真源码破坏型负控制（抽掉截断闸门、拆掉 fail-closed、删掉重复键纪律，均在破坏副本上重跑同款真判据并断言转红）/ 版本锚点。",
+        "版本升至 2.94.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

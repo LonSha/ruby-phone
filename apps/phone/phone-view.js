@@ -12,6 +12,7 @@
 // ========================================
 // 通话APP视图层（核心文件）
 // ========================================
+import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
 import { PHONE_CONFIG } from '../../config/apps.js';
@@ -2772,11 +2773,12 @@ export class PhoneCallView {
                 };
             }
 
-            const jsonText = raw.match(/\{[\s\S]*\}/)?.[0] || raw;
-            let parsed = null;
-            try {
-                parsed = JSON.parse(jsonText);
-            } catch (e) {
+            // [v2.94.0] 接听判定同样吃模型输出的 JSON；旧实现用贪婪正则截 `{...}`
+            //   再裸 JSON.parse，一旦是缺逗号/裸键就只能退化成关键词猜测。
+            //   改走符号级修复器（含字符串感知的括号配平，不会把后面的正文吃进来）。
+            const tolerant = parseJsonTolerant(raw);
+            let parsed = tolerant.ok ? tolerant.value : null;
+            if (!tolerant.ok) {
                 const negative = /不接|拒接|没接|挂断|no|false|decline|reject/i.test(raw);
                 return {
                     answered: !negative,

@@ -11,6 +11,7 @@
  * ======================================================== */
 import { WechatData } from '../wechat/wechat-data.js';
 import { GlobalSocialStore } from '../../config/global-social-store.js';
+import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 
 export class HoneyData {
@@ -3942,25 +3943,17 @@ export class HoneyData {
         const source = String(honeyMatch?.[1] || raw).trim();
         if (!source) return null;
 
+        // [v2.94.0] 缝合千千结的符号级修复器：原有容错只有一句尾逗号正则，
+        //   模型输出一旦是「缺分隔逗号」或「缺冒号」，整批弹幕/榜单数据直接丢弃。
+        //   新实现严格优先、只在符号层面改动，并把「改了什么」记在 operations 里。
         const codeBlockMatch = source.match(/```json\s*([\s\S]*?)\s*```/i);
         const codeJson = String(codeBlockMatch?.[1] || '').trim();
-        if (codeJson) {
-            try {
-                return JSON.parse(codeJson.replace(/,\s*([\]}])/g, '$1'));
-            } catch (e) {
-                // ignore and fallback
-            }
+        const candidates = codeJson ? [codeJson, source] : [source];
+        for (const candidate of candidates) {
+            const parsed = parseJsonTolerant(candidate);
+            if (parsed.ok) return parsed.value;
         }
-
-        const directMatch = source.match(/\{[\s\S]*\}/);
-        const directJson = String(directMatch?.[0] || '').trim();
-        if (!directJson) return null;
-
-        try {
-            return JSON.parse(directJson.replace(/,\s*([\]}])/g, '$1'));
-        } catch (e) {
-            return null;
-        }
+        return null;
     }
 
     _normalizeHoneyCommentObjects(list = []) {

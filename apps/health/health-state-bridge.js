@@ -20,6 +20,8 @@
  *   - 本地算法是唯一真源：本层只投递事件，不计算生理数值。
  */
 
+import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
+
 export const BRIDGE_VERSION = '1';
 const HANDOFF_TAG = 'state_handoff';
 export const LEDGER_LIMIT = 50;
@@ -70,14 +72,19 @@ export function parseHandoffBody(body) {
   if (!text) return [];
   const jsonStart = text.indexOf('{') >= 0 ? text.indexOf('{') : text.indexOf('[');
   if (jsonStart >= 0) {
-    try {
-      const parsed = JSON.parse(text.slice(jsonStart));
+    // [v2.94.0] 模型交接块是典型的「半合规 JSON」产地（尾逗号、缺分隔逗号、
+    //   裸键）。旧实现 JSON.parse 一失败就整块落到按行解析，交接事实可能被丢掉。
+    //   改走符号级修复器：仍严格优先，只在符号层面改动；铁律（只认已发生事实、
+    //   本地算法是唯一真源）不受影响 —— 这里只负责「把块读出来」。
+    const tolerant = parseJsonTolerant(text.slice(jsonStart));
+    if (tolerant.ok) {
+      const parsed = tolerant.value;
       if (Array.isArray(parsed)) return parsed;
       if (parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.facts)) return parsed.facts;
         if (parsed.type) return [parsed];
       }
-    } catch (e) { /* 落到行解析 */ }
+    }
   }
   const facts = [];
   for (const rawLine of text.split(/\r?\n/)) {

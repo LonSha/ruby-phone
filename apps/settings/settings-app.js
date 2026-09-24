@@ -11,6 +11,7 @@
  * ======================================================== */
 // 设置APP
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
+import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
@@ -7403,12 +7404,11 @@ export class SettingsApp {
         const parseImagePromptPresetImportText = (rawText = '') => {
             const text = String(rawText || '').trim();
             if (!text) return [];
-            let payload = null;
-            try {
-                payload = JSON.parse(text);
-            } catch (err) {
-                throw new Error('导入内容不是有效 JSON');
-            }
+            // [v2.94.0] 导入串常是从聊天/文档里复制来的，容易带尾逗号或
+            //   缺分隔逗号。旧实现一次 JSON.parse 失败就整批拒绝，改走容错解析。
+            const tolerant = parseJsonTolerant(text);
+            if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
+            const payload = tolerant.value;
 
             const candidates = Array.isArray(payload)
                 ? payload
@@ -7447,12 +7447,10 @@ export class SettingsApp {
         const parseOpenAIImagePresetImportText = (rawText = '') => {
             const text = String(rawText || '').trim();
             if (!text) return [];
-            let payload = null;
-            try {
-                payload = JSON.parse(text);
-            } catch (err) {
-                throw new Error('导入内容不是有效 JSON');
-            }
+            // [v2.94.0] 同上：容错解析取代一次性 JSON.parse。
+            const tolerant = parseJsonTolerant(text);
+            if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
+            const payload = tolerant.value;
 
             const candidates = Array.isArray(payload)
                 ? payload
