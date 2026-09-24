@@ -110,11 +110,13 @@ test('v273-P1 真仓库 E11 通过：本仓 6 个访问点 / 仅测试消费面 
     'E11 读数行缺席或数字漂移：\n' + r.out.slice(0, 800));
   assert.match(r.out, /\[dead-export\] ✓ 无新增零消费导出/);
 });
-test('v273-P2 E11 未破坏 E9 枚举面（未识别仍为 0、白名单仍认领 90 处）', () => {
+test('v273-P2 E11 未破坏 E9 枚举面（未识别仍为 0、白名单仍认领 95 处）', () => {
   const r = runOriginal();
   assert.equal(r.code, 0);
   assert.match(r.out, /· 未识别 0/);
-  assert.match(r.out, /无具名成员 90/);
+  // 90 → 95：v2.99.0 新增 5 文件（config/back-guard · config/source-key-rules · apps/diagnose ×3）各 1 处
+  //   `export default`，形态均为「无具名成员可对账」，故白名单认领数同步上浮。
+  assert.match(r.out, /无具名成员 95/);
 });
 test('v273-P3 真仓库 --list 模式仍可用（E11 不拦列表）', () => {
   const r = runOriginal(['--list']);

@@ -76,10 +76,12 @@ function runOriginal(srcPath, args = []) {
 const countOf = (s, sub) => s.split(sub).length - 1;
 
 // ══════════════ 正控制：三张清单在真仓库上都通过 ══════════════
-test('v268-P1 真仓库 E10：UNHANDLED_ALLOWLIST 存活（export-default 仍被认领 90 处）', () => {
+test('v268-P1 真仓库 E10：UNHANDLED_ALLOWLIST 存活（export-default 仍被认领 95 处）', () => {
   const r = runOriginal(DEAD);
   assert.equal(r.code, 0, '死导出门禁在真仓库上未通过：' + r.out);
-  assert.match(r.out, /无具名成员 90/, '白名单认领数应为 90（注释与实测必须一致）');
+  // 95 = 90（v2.73.0 基线）+ 5（v2.99.0 新增 5 个文件各 1 处 export default：两个 config 模块 +
+  //   apps/diagnose 三文件）。此处锁的是「白名单真在认领某物」（E10 存活自证），故必须跟随真实数。
+  assert.match(r.out, /无具名成员 95/, '白名单认领数应为 95（注释与实测必须一致）');
   assert.match(r.out, /未识别 0/);
 });
 
@@ -87,7 +89,7 @@ test('v268-P2 真仓库 R2b/R3b：宽匹配白名单与样式豁免清单全部�
   const r = runOriginal(REG);
   assert.equal(r.code, 0, '注册门禁在真仓库上未通过：' + r.out);
   assert.match(r.out, /两张准入清单存活/);
-  assert.match(r.out, /样式投递 30 个/);
+  assert.match(r.out, /样式投递 31 个/);
 });
 
 // ══════════════ 负控制 A：E10 存活性 ══════════════

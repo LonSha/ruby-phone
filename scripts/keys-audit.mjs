@@ -82,7 +82,13 @@ const PROP_CALL_RE = /(?:storage|VirtualPhone(?:\?)?\.storage)\??\.(?:set|get|re
  *   （asset-project.js 用它读 `stock.worth`），不是 storage 键，也没有任何 storage 调用点。
  *   它靠 `_KEY` 后缀形似键名，无法从语法上区分开同类命名；故显式排除并写明理由——
  *   这是本门禁**唯一**的口径例外，新增例外必须同规格写明「为什么它不是键」。 */
-const NON_KEY_LITERALS = new Set(['worth']);
+const NON_KEY_LITERALS = new Set(['worth', '__ubBackGuard']);
+/* `__ubBackGuard`（v2.99.0 新增，实测踩到）：它是 **window 上的运行时状态槽名**，
+ *   由 config/back-guard.js 写入 window[BACK_GUARD_KEY]，与 storage 无关
+ *   （back-guard 不调 storage 的任何方法，全仓也无人把它当 storage 键读）。
+ *   它命中 CONST_RE 是同形巧合：`const BACK_GUARD_KEY = '__ubBackGuard'` 长得像
+ *   `XXX_KEY = '...'`（键常量）。故按 `worth` 的先例显式排除并写明理由 ——
+ *   **它不是键**：没有 scope 可声明，登记进 KEY_REGISTRY 才是真的错（K3 会判它幽灵）。 */
 
 const jsFiles = [];
 (function walk(dir, base = '') {

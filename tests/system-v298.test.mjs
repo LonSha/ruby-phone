@@ -410,8 +410,13 @@ test('v298 E1. 版本不低于 2.98.0 且五源同源', () => {
 });
 
 test('v298 E2. 发布说明与本版实现同域（申明里不得漏掉新增出口与新增判据）', () => {
+    /* 【实测修】原写 `log.versions[log.latest]`：那把「v2.98 的发布说明必须提到 J6/J7」
+     *   变成了**对以后每一版的永久约束**（v2.99 的说明里自然不会重复上一版的判据名）。
+     *   契约：发布说明的同域性必须**锚它自己的版本**，不随升版漂移（同 v255 C4 / v256 C4 的「锚自身版本」口径）。 */
     const log = JSON.parse(read('update-log.json'));
-    const items = log.versions[log.latest].items.join('\n');
+    const own = log.versions['2.98.0'];
+    assert.ok(own && Array.isArray(own.items), 'v2.98.0 条目必须仍在（本判据钉的是历史事实）');
+    const items = own.items.join('\n');
     assert.match(items, /readPushField|faceFieldState|字段三态/, '发布说明未提及字段三态消费');
     assert.match(items, /J6|J7/, '发布说明未提及新增判据');
 });

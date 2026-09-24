@@ -1,0 +1,22 @@
+/* 诊断中心样式 [v2.99.0] */
+.dg-root { padding: 12px 12px 24px; font-size: 13px; color: var(--phone-text-color, #e8e8e8); }
+.dg-head { margin-bottom: 10px; }
+.dg-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.dg-summary { padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.06); line-height: 1.5; }
+.dg-card { margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); }
+.dg-card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.dg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.dg-name { font-weight: 600; min-width: 120px; }
+.dg-sub { flex-basis: 100%; font-size: 12px; opacity: .75; line-height: 1.5; }
+.dg-note { margin-top: 6px; font-size: 12px; line-height: 1.6; opacity: .8; }
+.dg-bad { color: #ffb4a2; opacity: 1; }
+.dg-chip { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; line-height: 1.7; background: rgba(255,255,255,.12); }
+.dg-ok { background: rgba(82,196,26,.22); }
+.dg-warn { background: rgba(250,173,20,.22); }
+.dg-bad.dg-chip, .dg-chip.dg-bad { background: rgba(255,77,79,.25); }
+.dg-muted { opacity: .6; }
+.dg-table { display: flex; flex-direction: column; gap: 4px; }
+.dg-trow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dg-key { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.dg-face { font-size: 12px; opacity: .7; }
+.dg-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; font-size: 12px; }

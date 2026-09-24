@@ -14,6 +14,10 @@ import { PHONE_CONFIG } from '../config/apps.js';
 import { LockScreen } from './lock-screen.js';
 import { ManagedRuntime, childRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0/v2.31.0] 运行时资源登记与统一回收
 import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
+// [v2.99.0] 返回键守卫：缝合自上游「瑟瑟小手机 V1.059」的 __ubBackGuard。
+//   本仓此前全库零 popstate —— 物理返回键与浏览器返回完全不响应；
+//   右滑手势（SWIPE_BACK）只退视图、不关浮层。两者分工见 config/back-guard.js 头注。
+import { installBackGuard, registerBackCloser } from '../config/back-guard.js';
 
 export class PhoneShell {
     constructor() {
@@ -53,6 +57,10 @@ export class PhoneShell {
 
         this.container = document.createElement('div');
         this.container.className = 'phone-in-panel';
+        // [v2.99.0] 外壳建起即接管返回键：压一层哨兵，于是「有浮层时按返回」
+        //   会先被手机接住、逐层关闭，而不是直接退出宿主页面。
+        //   幂等；无 history（沙箱）时内部静默降级，不影响外壳创建。
+        try { installBackGuard(); } catch (_e) { /* 降级：返回键不接管，外壳照常 */ }
 
         this.container.innerHTML = `
     <div class="phone-body-panel">
@@ -905,7 +913,21 @@ export class PhoneShell {
         img.src = safeUrl;
         img.alt = String(options.alt || '图片预览');
 
-        const close = () => overlay.remove();
+        // [v2.99.0] 返回键可关：把「关闭本浮层」注册进返回栈（后开的先关）。
+        //   为什么用闭包变量而不是直接 registerBackCloser(close)：close 定义在后面，
+        //   而注册必须在 overlay 进 DOM 前完成（否则中间一段时间返回键关不到它）。
+        let releaseBackCloser = () => {};
+        const close = () => {
+            try { releaseBackCloser(); } catch (_e) { /* 注销失败不得阻断关闭 */ }
+            overlay.remove();
+        };
+        try {
+            releaseBackCloser = registerBackCloser(() => {
+                if (!overlay.isConnected) return false;   // 已经不在了：不是我的（交下一层）
+                close();
+                return true;
+            }, { tag: 'image-viewer' });
+        } catch (_e) { /* 注册失败：返回键关不到本浮层，但浮层本身照常可用（降级） */ }
         const closeFromControl = (e) => {
             e?.preventDefault?.();
             e?.stopPropagation?.();

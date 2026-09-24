@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '2.98.0';
+const ST_PHONE_VERSION = '2.99.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -89,7 +89,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'bilibiliApp', 'theaterApp',
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
-    'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp'
+    'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp',
+    'diagnoseApp'   // [v2.99.0] 诊断中心：无状态，但仍进表（下帧现取，防将来加缓存时漏重绑）
 ];
 // [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
 //   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
@@ -106,12 +107,15 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "修一个**真缺陷**（已取证）：**上游字段三态零消费**。上游 lonsha（v3.174 起）在 `snapshot.meta.fieldTypes` 里为每个顶层字段如实声明了 `{present, kind}` —— 明确区分「源里根本没这项（present=false）」与「源里给了这项、值是空（present=true、kind 为空）」。而本仓实测：**零消费**。7 个消费方一律写成「按对象形取值、取不到就 null」，于是上述两种处境被压成同一个 `no-*-face`，文案还告诉用户「需插件较新版本」—— 对后一种处境是**事实错误**的归因（插件已是最新，只是这一项为空）。取证（可复现）：构造 A=字段缺席 / B=字段显式空两种上游快照，修前 7 个 App 对二者输出**逐字相同**的 reason；修后分离为 `no-*-face` 与 `upstream-empty`。",
-        "同根因的第二个**真缺陷**（更隐蔽）：**归因文案表键形漂移**。`apps/clock/clock-view.js` 与 `apps/ledger/ledger-view.js` 的 `FACE_META` 键写作 `no_clock_face`（下划线形），而真源常量 `CLOCK_REASONS` / `LEDGER_REASONS` 的值是 `no-clock-face`（连字符形），消费处又兜底到「桥未连接」⇒ 五态（ledger 六态）里三至四态**查不到**：「快照不可用」「这版没这面」「桥未连接」三种完全不同的处境**一律显示成「桥未连接」**。而当时**所有判据全绿** —— 因为没有任何判据看键形。修法：键改为**计算属性名**（形状由真源常量决定，真源改了这里跟着变），兜底改为**如实报出未识别状态**；同轮还把 ledger `ready` 图标误写成超长 Unicode 转义（超出四位，渲染成乱码）改为真实字符。",
-        "真源 `config/world-bridge.js` 新增两个出口：`readPushField(snapshot, key)` 返回 `{present, kind, value, reason}`（reason 六态：value / declared-null / absent / legacy-null / legacy-value / no-snapshot），`faceFieldState(snapshot, keys)` 做面级裁定（优先级 present 大于 absent 大于 legacy-unknown 大于 declared-empty —— 「有值」总是最强证据，「明说没这面」比「旧版读不出」更确定）。设计要点：旧版桥没有 `meta.fieldTypes` 时**如实报 legacy-null**（两种处境本就无从分辨，不硬猜成 declared-null）；畸形入参（快照非对象 / 键非字符串 / meta 非对象 / getter 抛错）一律返回 `no-snapshot`，绝不外抛。",
-        "7 个消费方接入三态判据：profile / wallet / chars / place / plotline 五内核在无面分支里加 `faceFieldState(...) === declared-empty` 判定 ⇒ 采用**粗态 state 为 empty + 细态 reason 为 upstream-empty**（粗态保持下游分支不变，细态可分辨，避开「声明了不用 = 摆设出口」）；clock / ledger 的 `readClockFace(probe, snapshot)` / `readLedgerFace(probe, snapshot)` 增设**可选第二参**（不传时行为与旧版一致，v252 / v253 既有断言不受影响），由 App 侧把快照本体传进去。",
-        "第九道门追加 **J6 / J7**（不新开一道：桥消费面本来就该一处收口）：J6 = 真源必须导出 `readPushField` 与 `faceFieldState`，且产品侧调用点不得少于 5（实测 7）—— 拦「抽出来没人用」的摆设出口；J7 = 产品面 `*_META` / `*_TEXT` / `*_TABLE` / `*_LABEL` / `*_MAP` 表内不得手写裸下划线标识符键（真源不受此限）。同轮把 `tests/system-v246.test.mjs` 由「六态恰好六个键」升级为**七态逐名核对键集**（裸计数拦不住「键名被改写」—— 本仓刚在 `FACE_META` 上栽过这一跤），并新增「上游声明了该面、值为空 ⇒ 必须报 upstream-empty 而非 no-*-face」一条。",
-        "新增 `tests/system-v298.test.mjs`：A 结构面（J6/J7 落在同一道门、真仓库全绿并给出两组读数、产品面不得直接摸 `meta.fieldTypes`、视图键取真源常量且键引用数与 reason 值数逐一对应）× B 真源行为面（`readPushField` 六态 + `faceFieldState` 优先级裁定 + 畸形不抛）× C 七面端到端三态分离（**修前必红**：断言「声明了值为空」必须与「没这面」不同形）× D 负控制四条（视图键改回手写 ⇒ J7 红、消费点降到 4 ⇒ J6 红、真源出口被改名 ⇒ J6 拒判、内核判据被删 ⇒ 副本退回旧错报）× E 版本与申明同域。版本升至 2.98.0（五源同源）。",
+        "缝合上游「瑟瑟小手机 V1.059」的返回键守卫（上游 `__ubBackGuard`），新增 `config/back-guard.js`。为什么缝（实测真缺口，非设计洁癖）：本仓全库**零 popstate / 零 history.pushState**，返回只有 `PHONE_EVENTS.SWIPE_BACK` 一条通路（右滑手势），且 `_dispatchSwipeBackWithFallback` 是时间兜底；两个后果：① **安卓物理返回键 / 浏览器返回完全不响应**；② 右滑时 App 只知道退视图，**打开着的浮层/模态不参与**（用户按返回期望关掉图片查看器，实际整页退出）。实现与上游形制逐条对齐：状态对象挂 window（`armed` / `selfNav` / `bound` / `closers[]` / `probe`）、armed 时压哨兵、popstate 里反向遍历 closers（**LIFO**：后开的先关，返回 falsy 表示「不是我的」继续往下），关完用 `probe()` 问「还有东西可关吗」，有则**重新压哨兵**⇒ 连续按返回可逐层关闭。",
+        "本仓适配（刻意与上游不同的三处，均为上游移植时必须重写的部分）：① 上游 closers 是模块内数组，本仓改**注册制** `registerBackCloser(closeFn, {tag})` 返回幂等注销函数 —— 本仓是 41 个懒加载单例 App，没有单一模块能知道「当前开着的浮层」；② **没有关闭器时不许压哨兵**（否则用户按一次返回只会把哨兵弹掉、什么都不关）；③ 关闭器数量**封顶 30**，超限拒绝注册并如实记数（`dropped`，诊断中心可见）：浮层泄漏会使 probe 恒为真⇒哨兵被无限重压⇒**用户的返回键永远被幻影浮层吃掉、宿主页面再也退不出**。堆积期修的三个真缺陷（均由本版新增套件捐到）：**(a)** popstate 处理器在重新压哨兵前就置 `selfNav=true`，而 `history.pushState` **不会触发 popstate**，于是该标记一直留到用户下一次真实按返回、把它静默吞掉 ⇒ **每关一层要按两次返回**（已修：selfNav 改为在 `arm()` 成功后置位，且仅在栈顶仍是自家哨兵时才忽略）；**(b)** 深度上限检查写在 `arm()` 的 `if (s.armed) return true` **之后** —— 首次压入后 armed 恒为真，那条检查是**永远不会执行的死代码**（探针实测：连续注册 40 个关闭器，dropped 恒为 0），且哨兵本是单实例、本来就不会无限压入 —— 真正需要封顶的是**关闭器数量**，故封顶改写在注册处；**(c)** 浮层被点 X 关掉（而非按返回）时，注销函数只从 closers 里移除条目、**没有清理已压上去的哨兵** ⇒ 事后第一次按返回被这层孤儿哨兵静默吃掉（已修：注销后若已无物可关且栈顶仍是自家哨兵，则 `history.back()` 弹回去，全段 try/catch）。三个实测缺陷能被捐到，正是因为 C 组用了**忠实模型的 history 栈桩**（旧探针用简化桩会把它们全盖住）。",
+        "缝合上游「色色灵感状态栏 V3.782」的源键规则教训，新增 `config/source-key-rules.js`（**单一真源 + 校验器**）。背景：v2.93.0 用一条真缺陷（约定支活动事件源键写作 `commitment:<id>:<status>:<revision>`，状态与修订号进了身份 ⇒ 同一条约定每推进一次就换一个源身份、回收永远找不到）换来教训「派生库的源键里不放可变状态」，但当时**只落在代码与测试里，没有任何东西能拦住下一例**。现将其落成机制：① 规则声明（`KNOWN_SOURCE_TYPES` 8 类 / `VOLATILE_SEGMENTS` 15 词 / `ALLOWED_TAIL` 7 项）；② `validateSourceKey(key)` 返回 `{ok, type, segments, violations, warnings, reason}`，reason 五态（`ok` / `empty` / `unknown-type` / `volatile-segment` / `malformed-segment`）；③ `auditSourceKeys(keys)` 批量校验且**畸形键不中断其它键**；④ `sourceKeyRulebook()` 返回词表**副本**（消费方改了不污染真源）。判定从下标 2 起（下标 1 是 id 本体，不参与状态判定）；尾段在 `ALLOWED_TAIL` 白名单内的词（work/study/travel/text/image/sfw/nsfw）是**分类而非状态**，故 `calendar:m1:work` 合规而 `calendar:m1:done` 违规。",
+        "新增统一诊断中心 App `apps/diagnose/`（四文件：data / view / app / css），对齐用户计划书里 ruby-phone v2.99 的落点「派生库登记表、源键规则和统一诊断」（前两项落成 `scripts/source-derivation-audit.mjs` 台账与上述规则）。为什么需要：现状是桥归因只活在 worldpulse 卡片里、字段三态只活在 7 个内核的 reason 里、**返回栈与源键规则根本没有界面出口** —— 用户看不见，工程师也不容易看见。`collectDiagnose(win)` 一次取齐五面（桥自述与实际读取一致性、字段三态清单、返回栈、源键现场自检、词表快照），**每面单独 try/catch 降级、返回结构恒定**（缺字段一律给空形，消费方不必判 undefined）；`summarizeDiagnose` **有坏消息先说坏消息**（桥不一致 / 返回栈拒压 / 源键违规）；未知原因**如实输出原值**。刻意不做的事**不是遗漏是纪律**：不显示构建期门禁（`npm run check`）的结果（那是「上一次构建的结论」，摆在诊断页上就是拿旧结论当新事实）、不缓存读数（每次 render 现取）。",
+        "诊断中心自己带出一个**真缺陷**并在本版修掉：`CONSUMED_FIELDS`（已消费字段清单）初版写作 `chars`，而真实消费点（`apps/chars/chars-data.js:72`）写的是 `faceFieldState(snap, [characters])` —— 上游契约里的字段名就是 `characters`；同样漏了 plotline 的 `worldProg`（`plotline-data.js:81` 的两键调用只登了 outline）。后果：诊断页会把**一个根本不存在的字段**显示成「上游明说源里没这项」，而真正的 `characters` 反而不在清单里 —— 诊断页自己给出一个错读数，正是本仓最贵形态。已改为 `characters` 并补 `worldProg`（9 键），并由新增套件 A4 的**逐键对账**常驻拦截（扫描各内核的 `faceFieldState` 调用与清单逐键比对，多一个少一个都红）。",
+        "四处接线：① `config/apps.js` 登记 `{ id: diagnose, name: 诊断, icon: 🩺 }`（APPS 40→41）；② `index.js` 加懒加载分支（照 worldpulse/place 形状，注明它**不消费 storage**、读的是当前运行时事实）；③ `ST_PHONE_REBIND_APP_KEYS` 追加 `diagnoseApp`（24→25 key）；④ `phone/phone-shell.js` 接入返回键守卫（import + `createInPanel` 里 `installBackGuard()`）并把图片查看器注册进返回栈（`tag: image-viewer`，关闭时先注销再 `overlay.remove()`）。**刻意不替换右滑手势**：物理手势底座属 yuzuki-phone 缝入面，改动风险高；两者分工为「右滑 = 视图层后退（已有兜底）、返回键 = 先关浮层再退视图（新增）」。",
+        "诊断样式走「App 内自注入 `<link>`」这一交付机制（同 album/diary 先例），而非合并进 `phone.css`：R3 门禁实测本仓**并存两种合法机制**（打包入 phone.css / JS 按路径字面量引用），只认一种会把已自注入的 App 判成缺口；`dg-` 类前缀族尚不在 phone.css，故选自注入（带幂等 id `diagnose-css`，防同页多次 render 重复插 link），整体包 try/catch（CSS 注入失败不得阻断渲染）。",
+        "新增 `tests/system-v299.test.mjs`（30 条）：A 结构面（三模块落地与导出面收敛 / 四处接线 / 样式有投递路径 / **已消费字段清单与真源码逐键对账** / 源键现场锚点存活）、B 诊断内核降级与归因（结构恒定 / 未知原因如实输出 / 有坏消息先说坏消息）、C 返回键行为（**忠实模型 history 栈桩**：无物可关不压哨兵 / LIFO 逐层关 / falsy 继续往下 / 注销自清孤儿哨兵 / 注销幂等 / 封顶如实记数）、D 源键规则（八类合法 / 五类违规各有专属 reason / 畸形不中断）、E 职责边界与版本（右滑手势与返回键共存 / 词表单一真源 / 五源同源 / 变更说明同域），以及 F 组负控制（真源码破坏 → **全量镜像树**上重跑同款真判据必须转红且指向真因：样式投递路径抹掉⇒R3 / 状态槽名未登记⇒K1 / 重绑表删 key⇒L1 / 方法名改回 snapshot⇒J2 / 新增零消费导出⇒dead-exports / 三态判定写死⇒副本退回旧行为），并配 G0 **镜像树自证**（未破坏时五道门全绿，否则负控制是假绿）。负控制用**全量镜像树**而非手写文件清单：本仓历史上两次因「副本树缺文件」而红（v2.98 的 STAGE_FILES 只放了内核与视图、没放消费方），那种红是**假绿**；本仓零依赖（无 npm 依赖、无 node_modules）、整仓 59MB，全量镜像约 2 秒，从根上消掉这一类假绿。",
+        "版本升至 2.99.0（五源同源）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -10204,6 +10208,23 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载地点图景App失败:', err);
                             phoneShell?.showNotification('错误', '地点图景App加载失败', '❌');
+                        });
+                } else if (appId === 'diagnose') {
+                    // [v2.99.0] 诊断中心：上游桥归因 / 字段三态 / 返回栈 / 源键规则。
+                    //   懒加载单例（与 place/worldpulse 同构）；**不持有读数副本**、
+                    //   不持久化任何状态，故换会话只走 onChatChanged（空实现）。
+                    //   与另外 22 个懒加载 App 的差别在于它**不消费 storage**：
+                    //   诊断读的是当前**运行时事实**，不是会话数据。
+                    import('./apps/diagnose/diagnose-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.diagnoseApp) {
+                                window.VirtualPhone.diagnoseApp = new module.DiagnoseApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.diagnoseApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载诊断中心App失败:', err);
+                            phoneShell?.showNotification('错误', '诊断中心App加载失败', '❌');
                         });
                 } else if (appId === 'cheat') {
                     // [v2.47.0] 金手指：万界武库外挂库（装配清单随会话隔离，注入走生成前钩子）。

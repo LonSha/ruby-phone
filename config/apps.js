@@ -389,6 +389,16 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v2.99.0] 诊断中心：上游桥归因 / 字段三态 / 返回栈 / 源键规则，
+        //   全部现取，不持久化任何状态（故无 storage 键、无需会话隔离登记）。
+        id: 'diagnose',
+        name: '诊断',
+        icon: '🩺',
+        color: '#0ea5a4',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

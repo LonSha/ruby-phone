@@ -54,7 +54,8 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     dtApp: 'dirtytalk', walletApp: 'wallet', profileApp: 'profile', plotlineApp: 'plotline',
     charsApp: 'chars', clockApp: 'clock', ledgerApp: 'ledger', assetApp: 'asset',
     graphApp: 'memory', memoryApp: 'memory',
-    timeweaverApp: 'timeweaver', wangxiangApp: 'wangxiang'
+    timeweaverApp: 'timeweaver', wangxiangApp: 'wangxiang',
+    diagnoseApp: 'diagnose'   // [v2.99.0] 诊断中心（无状态，但仍实现了空的 onChatChanged）
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。
