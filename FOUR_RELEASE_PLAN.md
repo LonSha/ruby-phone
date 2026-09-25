@@ -140,7 +140,23 @@
   **消费侧待办（未授权，不在本档范围内）**：手机端尚未消费上游快照的 `evidence` 字段（九账对账面），
   也尚未接入桥的 `repair` 受控写入面（发起 / 预览 / 落定 / 放弃）。这两项若要落地，须先取得
   RubyPhone 侧的写入授权与预算，并按本仓「先红后绿 + 九门」口径推进。
-- R2/R3/R4：待实施。
+- R2（准确记忆与受控行动）：**已落三段** —— R2-A 注入读数真实性（lonsha v3.215.0）、
+  R2-B 迟到隔离（lonsha v3.216.0）、R2-C 注入读数消费侧接入（RubyPhone v3.0.2）、
+  R2-D 无主暂存不得被别的代捡起（lonsha v3.217.0）。
+  **R2 剩余（已取证、待实施）**：
+  ① **取消留痕**：`GENERATION_ENDED`（用户 Esc 中止）当前只做一件事 ——
+     复位 `_generationActive = false`（v3.12 的兜底，防自愈永久延后）。
+     于是**读数上「被中止」与「正常完成」同形**：中止那一轮同样有 `_lastInjection`
+     （注入确实发生过：STARTED 已写槽位、模型也确实收到了 prompt），
+     但没有任何格子说「这一轮没产出回复」。而两者的处置相反 ——
+     前者该重发，后者该看回复。收口方向：给读数加**结局**维度
+     （`outcome ∈ {completed, aborted, pending}`，由 `MESSAGE_RECEIVED` / `GENERATION_ENDED` 分别落笔），
+     **注意跨仓**：该字段一旦进 `buildInjectionReadout()` 就必须同步接进下游
+     `config/injection-contract.js`（否则又是「上游给了没人读」—— 本仓点名的第七次形态），
+     故两边须同一轮抬版。证据落点：`index.js` 的 `_h6`（GENERATION_ENDED 处理器）与
+     `onMessageReceived` 头部的 `_generationActive = false`。
+  ② **双向关系 / 知情网络**：属 R2 原始范围，未启动。
+- R3/R4：待实施。
 - 真实SillyTavern宿主验证：未验（上游写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验；
   下游两仓同步跑过 `npm run check`：lonsha 全量 RC=0、RubyPhone 九门 RC=0）。
 - 两仓计划书同步：本档为 RubyPhone 侧副本，R1-C 段与 R1-D 记录已补齐（此前缺 R1-C 段）。
