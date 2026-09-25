@@ -10,6 +10,10 @@ import TW from './timeweaver-engine.js';
 //   同一份桥读取逻辑有两份实现必然漂移（且第二份不知道对方 v3.174 的 sourceState 可归因），
 //   故收敛到一处——本文件只负责「取 recallAudit 这一块业务数据」，桥怎么读由真源决定。
 import { readLonshaSnapshot } from '../../config/world-bridge.js';
+// [v3.0.2] R2-C：上游**注入读数**的消费侧单一真源（与上面那条桥读取并列，
+//   但读的是**不同的一面**：readLonshaSnapshot 取 recallAudit「召回了什么」，
+//   本函数取 injection「最终送进上下文的是什么」——中间隔着预算裁剪与去重）。
+import { readInjection, injectionLine } from '../../config/injection-contract.js';
 
 // 安全读 storage 键并解析为数组
 function readArr(storage, key) {
@@ -74,6 +78,41 @@ export function collectLonshaRecall() {
 }
 
 /**
+ * [v3.0.2] R2-C：读取 LonSha 侧的**注入读数**（本轮最终实际注入）。
+ *
+ * 与 `collectLonshaRecall` 的分工（两者常被混为一谈，是两个不同的问题）：
+ *   · collectLonshaRecall —— 召回侧：「想起了哪段剧情」（recallAudit）；
+ *   · collectLonshaInjection —— 送达侧：「哪几块**真的**进了上下文」（injection）。
+ *   中间隔着预算裁剪与去重，故两边数字本就不该相等；少的那部分正是「被裁掉」的。
+ *
+ * 插件未装 / 未就绪 / 旧版无该字段 → 返回 null（不影响织光机其它源）。
+ * 刻意**不在这里拼结论文案**：那是真源 injectionLine() 的活（单一出口）。
+ */
+export function collectLonshaInjection(win) {
+  try {
+    /* 显式注入 window（无头测试用；运行时不传即取全局）—— 与 config/world-bridge.js
+       的 read* 同规格：消费方要能在无宿主环境下被独立驱动，否则行为面判据只能靠全局状态，
+       而那正是本仓 v2.97 之前 7 份重复实现各自为政的温床。 */
+    const r = readInjection(win);
+    if (!r || r.reason !== 'ready') return null;
+    return {
+      verdict: r.verdict,
+      line: injectionLine(r),
+      round: r.round,
+      origin: r.origin,
+      strayOrigin: r.strayOrigin,
+      total: r.total,
+      kept: r.kept,
+      dropped: r.dropped,
+      chars: r.chars,
+      tokens: r.tokens,
+      ts: r.ts,
+      blocks: r.blocks
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -101,11 +140,16 @@ export function buildNarrative(storage, opts = {}) {
   const events = TW.normalizeEvents(raw);
   // [v2.15.0] 跨项目观测：LonSha 召回自检（你最常回望的时光）。独立于生活事件，空时不影响 empty 判定。
   const recall = (opts.withRecall === false) ? null : collectLonshaRecall();
-  if (!events.length) return { events: [], empty: true, recall };
+  // [v3.0.2] R2-C：注入面与召回面**并列**（各答一个问题，不互相顶替）。
+  //   注：刻意**不**并入 empty 判定 —— 生活事件为空时注入读数仍可能有效，
+  //   把它算进 empty 会让「有剧情侧观测、没生活碎片」被误报成「什么都没有」。
+  const injection = (opts.withRecall === false) ? null : collectLonshaInjection(opts.win);
+  if (!events.length) return { events: [], empty: true, recall, injection };
   return {
     empty: false,
     events,
     recall,
+    injection,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

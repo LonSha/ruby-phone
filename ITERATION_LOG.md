@@ -10,6 +10,68 @@
 
 ---
 
+## 迭代 34 — v3.0.2 注入读数消费侧接入 + 两类零块分态 + 第九道门 J10（R2-C）
+
+- **任务**：按两仓联合计划推进 R2 的第三段。上游侧已完成两段：v3.215.0（Gate R2-A，注入读数真实性）
+  与 v3.216.0（Gate R2-B，迟到隔离）。本仓这一段接的是**消费侧**——上游做出来的读数**没人读**。
+  这也是 R1 遗留清单里与注入面直接相关、且**只读**（无需 RubyPhone 侧写入授权）的一项。
+- **侦察（先证再改）**：`snapshot.injection` 在 `apps/**` + `config/**` 全库**零消费**
+  （唯一的 `injection` 命中全是本仓自己的「注入开关」UI 字面量，与上游读数无关）。
+  上游读数形状逐键核对：顶层 9 键（`origin/round/ts/tokens/chars/html/total/kept/blocks`）、
+  逐块 6 键（`ref/id/label/kept/chars/reason`），与上游 `tests/v3216` 组 9 的键面锁一致。
+- **设计结论（本版最重要的一条）**：消费侧接入的价值**不是把数字搬过来**，而是把上游已给、
+  但没人读的那层分态读出来。上游做到了第一层分态（「跑过、真的 0 块」≠「还没跑过」），
+  而**「0 块」内部还有第二义**：
+  `total === 0` = 召回压根没给出可用素材；`total > 0 && kept === 0` = 素材有、全被预算裁掉。
+  两者处置方向相反（前者查召回键 / 上游编辑 / 键漂移，后者调 `injectionBudget` / 看预算策略），
+  压成一态就是最贵的错读数。故本版把零块拆成 `candidates-empty` / `all-dropped` 两态，
+  连**总述文案也不许同形**（有判据守）。
+- **落地**：
+  - `config/injection-contract.js`（新增，313 行）：消费侧单一真源。`readInjection(win, opts)`
+    结构恒定（22 键，缺字段一律给空形）、`injectionBlocksOf` 逐块归一（键面 7 项、
+    畸形项跳过而不是产出半成品）、`injectionLine` 四类处境四句话、`injectionStateText` /
+    `injectionVerdictText` / `blockReasonText`（未知原因**如实输出原值**）/ `blockLine`。
+    取快照一律经 `config/world-bridge.js` 的 `readPushProbe`（不自摸桥全局、不自判形态，第九道门 J1/J4）。
+    **刻意不给 `export default`**：本面没有 default 形态的产品侧消费者，加了等于凭空欠一条 E11 账目。
+  - 缺席两态裁定（可判而不猜）：`fieldTypes` 明说 `present=false` ⇒ `no-injection-face`；
+    明说 `present=true` + 值 null ⇒ `never-run`；没有自述（旧版桥）⇒ 按**较保守**的一边报「没这面」，
+    不硬猜成「没跑过」（误报后者会让用户白等一轮）。数值归一走 `numOrNull`：
+    `round` / `ts` / `tokens` 的「没给」与「给了 0」严格分开（`ts=0` 是 1970 的合法值）。
+  - **归属复核** `strayOrigin`：经快照外供的读数只该由真生成写（`origin === 'generation'`）。
+    一旦非 generation，即说明上游归属又塌陷了（诊断路径写回了「AI 真实所见」），
+    本仓如实标红而不是当成正常读数用——这是消费侧对上游 R2-A 契约的**独立再判**。
+  - `apps/diagnose/diagnose-data.js`：新增 `injection` 面 + `injBlocks` 逐块读数并入返回值；
+    `summarizeDiagnose` 增两类零块的坏消息（**措辞不同**，全被裁点明「全部被注入预算裁掉」）
+    与归属异常；「没这面」「没跑过」**不构成坏消息**（那是等升级 / 等跑一轮），不入首行。
+  - `apps/diagnose/diagnose-view.js`：新增「注入读数（本轮实际注入）」卡（诊断页**七卡变八卡**），
+    逐块渲染 `ref / 保留或裁掉 / 字符数 / 归因`，归属异常单独标红。
+  - `apps/timeweaver/timeweaver-collector.js`：新增 `collectLonshaInjection(win)`
+    （刻意只回就绪态，未就绪一律 null，与 `collectLonshaRecall` 同规格）；
+    `buildNarrative` 把注入面与召回面**并列**挂上进行，且**不进 empty 判定**
+    （生活事件为空时注入读数仍可能有效，算进 empty 会把「有剧情侧观测、没生活碎片」误报成「什么都没有」）。
+  - `apps/timeweaver/timeweaver-view.js`：回望页新增「送达侧观测 · 本轮实际注入」区块。
+    与「回望」卡的分工是本版明确的边界：回望答「想起了什么」（召回侧 `recallAudit`），
+    送达答「送进去了什么」（`injection`）——中间隔着预算裁剪与去重，少的那部分正是用户在别处看不到的。
+  - `scripts/bridge-contract-audit.mjs`：第九道门新增 **J10**（不新开一道门）：扫 `apps/**` 的
+    `readInjection(` 消费点，下限 2（实测 2：诊断内核 + 织光机收集器）。下限**不留余量**是刻意的——
+    少一个就意味着某一面又回到零消费，而那正是本判据要拦的形态。
+  - `tests/system-v302.test.mjs`（新增，21 条）。
+- **本套件当场捐到的三处自查缺陷（都是本仓假绿清单里的老形态）**：
+  ① **判据写成字面量形态**：`jConsumed` 用 `injection:\s` 判「并入返回值」，
+     而真源码用的是**简写属性**（`return { …, injection, injBlocks }`）⇒ 断言永远红（测的是写法不是接线）；
+  ② **假绿第②形变体**：同处用 `!/injBlocks/` 判「落下成面」，会被 `const injBlocks = [];`（读完就丢）骗过
+     ⇒ 改判**派生表达式**本身（`injBlocks = (injection && Array.isArray(injection.blocks))`）；
+  ③ **判错了对象**：织光机出口刻意只回就绪态（未就绪 null），原判据却断言它的 `reason`（判一个不存在的格子）。
+  另修一处**夹具缺陷**：`hostWin(null)` 的 `fieldTypes` 语义写反（上游 `typeOf` 的语义是
+  「给了这项、值是 null ⇒ `present=true` + `kind='null'`」，**不是** `present=false`）——
+  夹具不照真源写，测的就是夹具缺陷而非产品回归（v3.0.1 已踩过一次同形）。
+- **验证**：`tests/system-v302.test.mjs` 21/21（C0 镜像树自证 + 5 条负控制 + D 门禁面）；
+  第九道门全绿，读数 `readInjection 消费点 2 个（2 文件，下限 2）`。
+- **边界如实声明**：① 本 Gate 属**只读**消费面，不涉及 RubyPhone 侧写入授权（R1 结论：写面授权仍待确认）；
+  ② 真实 SillyTavern 宿主实机未验（无头门禁只证模块间契约成立，不证浏览器里能跑）；
+  ③ 上游 R2-B 已声明的那条边界照旧：**不声称**消除注入槽位之外的其它迟到写（charMem / 各账本），
+  属后续 Gate。
+
 ## 迭代 33 — v3.0.1 业务面消费投影（归属面）+ 探针自述面收口 + 第九道门 J8/J9（L-F5 遗留观察项收口）
 
 - **任务**：按两仓联合计划推进，把 v3.0.0 迭代 32 留下的两条**遗留观察项**一次收口：
@@ -1794,7 +1856,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.0.1`（五源同源）
+- **当前版本**：`3.0.2`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/

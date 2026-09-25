@@ -442,11 +442,17 @@ test('v300 D2. release note 与内置弹窗逐字同源 + 写到本版 + 保留�
     const entry = log.versions[log.latest];
     assert.ok(entry && Array.isArray(entry.items) && entry.items.length > 0, '当前版本节须有条目');
     assert.equal(entry.version, log.latest);
-    const all = entry.items.join('\n');
+    /* [v3.0.2] 「发布说明须提到本版落地项」必须锚**本套件的出生版本**，不能锚 `log.latest`：
+     *   锚当版等于对**以后每一版**下一次永久约束（v3.0.2 的说明自然不会重复「投影/契约/诊断」
+     *   这三个词），每次抬版都要回来改历史测试 —— 本仓 v298 E2 已立同一口径。
+     *   而「弹窗逐字同源」那半仍锚**当版**（它比的是此刻 index.js 里的弹窗与该版条目）。 */
+    const own = log.versions['3.0.0'];
+    assert.ok(own && Array.isArray(own.items), 'v3.0.0 条目必须仍在（本判据钉的是历史事实）');
+    const all = own.items.join('\n');
     for (const kw of ['投影', '契约', '诊断']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);
     }
-    assert.ok(all.includes(log.latest), 'release note 须出现当前版本号');
+    assert.ok(all.includes(own.version), 'release note 须出现本版版本号');
     assert.ok(/版本升至/.test(all), '须保留「版本升至 X」的收尾条（仓内一贯格式）');
     const idxSrc = read(IDX);
     const blk = idxSrc.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/);

@@ -450,11 +450,15 @@ test('v301 D2. 变更说明与实现同域（提投影/业务/探针/判据）+ 
     const entry = log.versions[log.latest];
     assert.ok(entry && Array.isArray(entry.items) && entry.items.length > 0, '当前版本节须有条目');
     assert.equal(entry.version, log.latest);
-    const all = entry.items.join('\n');
+    /* [v3.0.2] 同 v300 D2 / v298 E2 的口径：落地项关键词锚**本套件出生版本**，
+     *   不锚 `log.latest`（否则每次抬版都要回来改历史测试，而它钉的其实是历史事实）。 */
+    const own = log.versions['3.0.1'];
+    assert.ok(own && Array.isArray(own.items), 'v3.0.1 条目必须仍在（本判据钉的是历史事实）');
+    const all = own.items.join('\n');
     for (const kw of ['投影', '业务', '探针', '判据']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);
     }
-    assert.ok(all.includes(log.latest), 'release note 须出现当前版本号');
+    assert.ok(all.includes(own.version), 'release note 须出现本版版本号');
     assert.ok(/版本升至/.test(all), '须保留「版本升至 X」的收尾条（仓内一贯格式）');
     const blk = read(IDX).match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/);
     assert.ok(blk, 'ST_PHONE_CURRENT_UPDATE 可提取');

@@ -297,6 +297,10 @@ const STAGE_FILES = [
     // —— 那正是 v298 D 组注释明令禁止的「因缺文件而红」（会让 D0 自证失败、整组负控制变成假绿）。
     // 教训：门禁每长一条判据，所有「白名单暂存」型套件都要同步补上该判据的读数来源。
     'apps/diagnose/diagnose-data.js',
+    // [v3.0.2] 第九道门新增 J10（上游注入读数真被业务面消费），本仓两个消费点里的
+    // 第二个就在这里。白名单暂存型套件必须同步补上每条判据的读数来源，
+    // 否则未破坏的副本树会在 J10 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
+    'apps/timeweaver/timeweaver-collector.js',
 ];
 
 function stageTree(extra = {}) {

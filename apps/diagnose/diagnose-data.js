@@ -35,6 +35,10 @@ import { validateSourceKey, auditSourceKeys, sourceKeyRulebook } from '../../con
  *   读成手机端可看的面。接在这里的理由：本仓一切「上游读数」的可见出口就是诊断中心，
  *   而投影此前**全库零消费**——出口做出来了，下游没人读，等于白做（本仓六次欠债的同形）。 */
 import { readProjection, projectionValue, projectionLine } from '../../config/projection-contract.js';
+/* [v3.0.2] R2-C 上游注入读数的消费侧单一真源（Gate R2-A/R2-B 的外供面）。
+ *   接在这里的理由与本仓一切「上游读数」的可见出口相同：投影接诊断、探针自述接诊断，
+ *   注入面同族 —— 而它此前**全库零消费**（上游 v3.215.0 做出来，下游没人读）。 */
+import { readInjection, injectionLine, injectionVerdictText, blockLine } from '../../config/injection-contract.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -171,7 +175,17 @@ export function collectDiagnose(win) {
         }
     }
 
-    return { at, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems };
+    /* ── [v3.0.2] R2-C：上游**注入读数**面（本轮实际注入，此前零消费）──
+     *   为什么接在诊断中心：这里是本仓所有「上游读数」的可见出口。
+     *   与「召回自检」的分工（两面常被混为一谈，是两个不同的问题）：
+     *     召回自检说「召回了什么」（读 recallAudit，织光机面）；
+     *     本面说「**最终送进上下文的是什么**」—— 中间隔着预算裁剪与去重。
+     *   四类处境必须分开（没这面 / 没跑过 / 候选空 / 全被裁），故只透传归一后的面，
+     *   不在这里再拼结论（结论的唯一真源是 config/injection-contract.js）。 */
+    const injection = safe(() => readInjection(w), null) || null;
+    const injBlocks = (injection && Array.isArray(injection.blocks)) ? injection.blocks : [];
+
+    return { at, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks };
 }
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
@@ -264,6 +278,17 @@ export function summarizeDiagnose(pkg) {
         else if (ps.sourceState === 'engine-absent') bad.push('上游桥自述：记忆引擎未就位');
         else if (ps.sourceState === 'engine-empty') bad.push('上游桥自述：引擎在位但返回空');
     }
+    /* [v3.0.2] R2-C 注入面的坏消息也要先说，且**两种「0 块」措辞必须不同**：
+     *   · 候选空  ⇒ 召回没给出素材（查召回键 / 上游编辑 / 键漂移）
+     *   · 全被裁  ⇒ 素材有、预算关门（调注入预算）
+     *   两者处置方向相反，压成同一句话就是错读数 —— 这正是本 Gate 要治的形态。
+     *   另：「没这面」「没跑过」**不构成坏消息**（那是等升级 / 等跑一轮），不入首行。 */
+    const inj = p.injection || null;
+    if (inj && inj.reason === 'ready') {
+        if (inj.verdict === 'all-dropped') bad.push('最近一轮注入：候选 ' + inj.total + ' 块全部被注入预算裁掉（0 块进入上下文）');
+        else if (inj.verdict === 'candidates-empty') bad.push('最近一轮注入：读到 0 块候选（召回没给出可用素材，0 块进入上下文）');
+        if (inj.strayOrigin) bad.push('注入读数不是真生成写的（origin=' + String(inj.origin) + '）');
+    }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
     if (bad.length) return '需注意：' + bad.join(' · ');
@@ -281,5 +306,8 @@ export default {
     bridgeReasonText,
     projAbsentText,
     sourceStateText,
+    injectionLine,
+    injectionVerdictText,
+    blockLine,
     summarizeDiagnose
 };

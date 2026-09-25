@@ -43,6 +43,10 @@
  * 判据边界（本门**不**说的事）：
  *   · 不说「归因阶梯对不对」（那是各 App 套件的活：system-v246/v249/v251/v235~v237）；
  *   · 不说「下游有没有消费上游 sourceState / lastError 归因面」（属功能面，见 TODO）；
+ *   · [v3.0.2] 起 J10 说「下游有没有消费上游**注入读数**面」——
+ *     上游 v3.215.0/v3.216.0（Gate R2-A/R2-B）把「AI 这一轮实际看到了什么」外供成
+ *     快照 `injection`（9 键 + 逐块 6 键，落地不早于代际确认），而下游实测**全库零消费**。
+ *     这是本仓第七次「建好不消费」，故立为常驻判据。
  *     [v2.98.0] 起只保证 **meta.fieldTypes** 这面被消费（J6），另两面同族同待。
  *   · 不扫 tests/** 与 scripts/**（测试与门禁引用桥名是必须的），只扫产品面。
  *
@@ -114,6 +118,21 @@ const PROBE_SELF_SITES = Object.freeze([
     { rel: 'apps/diagnose/diagnose-data.js', anchor: 'const probeSelf = {' }
 ]);
 const PROBE_SELF_MIN = 1;
+
+/* ── [v3.0.2] J10：上游**注入读数**（Gate R2-A/R2-B 的外供面）必须真被业务面消费 ──
+ * 【为什么必须有】上游 v3.215.0 把「AI 这一轮实际看到了什么」做成读数
+ *   （快照 `injection`：origin/round/ts/tokens/chars/html/total/kept/blocks 九键，
+ *    逐块 ref/id/label/kept/chars/reason 六键），v3.216.0 又把落地时机收紧到
+ *   代际确认之后（轮次号只由提交推进）。而下游实测：`snapshot.injection` **零消费** ——
+ *   用户既看不出「AI 到底收到几块」，也看不出「哪几块被预算裁掉了」。
+ *   出口做出来没人读，等于没做（本仓六次欠债的同形）。
+ * 【本判据不说的事】不说「产品面把读数渲染成什么样」（那是各套件的活），
+ *   只保证**消费通道在场**：产品侧必须存在读它的调用点。
+ * 【为什么下限是 2】实测两个业务面：诊断内核（读数可见出口）与织光机收集器
+ *   （送达侧观测）。写 2 不留余量是刻意的 —— 少一个就意味着「某一面又回到零消费」，
+ *   而那正是本判据要拦的形态；若将来某一面被重构掉，应当**显式**来改这里并写明理由。 */
+const INJECTION_READER = 'readInjection';
+const INJECTION_READER_MIN_CONSUMERS = 2;
 
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
@@ -255,6 +274,15 @@ const probeSelfSites = PROBE_SELF_SITES.filter((s) => {
     return !!code && code.includes(s.anchor);
 });
 
+/* ── [v3.0.2] J10：产品侧 readInjection( 消费点（只扫 apps/**，config/ 是出口自身） ── */
+let injConsumerCount = 0;
+const injConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c = countOf(code, INJECTION_READER + '(');
+    if (c > 0) { injConsumerCount += c; injConsumerFiles.push(rel); }
+}
+
 /* ------------------------------------------------------------
  * 开关：--list 只报告不判定
  * ------------------------------------------------------------ */
@@ -283,6 +311,9 @@ if (LIST) {
     console.log('\n── J9 探针自述面（sourceState / lastError）消费点：' + probeSelfReads + ' 处 / 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）──');
     for (const f of probeSelfFiles) console.log('  ' + f);
     if (!probeSelfSites.length) console.log('  （无结构化面 —— 只读一眼就丢不算消费）');
+    console.log('\n── J10 ' + INJECTION_READER + ' 消费点（只计 apps/**）：' + injConsumerCount + '（下限 ' + INJECTION_READER_MIN_CONSUMERS + '）──');
+    for (const f of injConsumerFiles) console.log('  ' + f);
+    if (!injConsumerFiles.length) console.log('  （无 —— 上游注入读数没人读就是白做）');
     process.exit(0);
 }
 
@@ -380,6 +411,17 @@ if (probeSelfReads < PROBE_SELF_MIN) {
     console.error('        下游不读 ⇒ 「没挂载」与「挂了但引擎坏了」被说成同一句话，用户会朝错方向修。');
 }
 
+/* ── J10 [v3.0.2] ── */
+if (injConsumerCount < INJECTION_READER_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J10 ' + INJECTION_READER + ' 只有 ' + injConsumerCount + ' 个产品侧消费点（下限 ' + INJECTION_READER_MIN_CONSUMERS + '）：');
+    for (const f of injConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 v3.215.0 起把「AI 这一轮实际看到了什么」外供成快照 injection，');
+    console.error('        下游不读 ⇒ 用户永远看不到「哪几块真的进了上下文、哪几块被预算裁掉」，');
+    console.error('        也看不到「读到 0 块候选」与「候选全被裁」是两件处置方向相反的事。');
+    console.error('  修法：产品面接 config/injection-contract.js 的 readInjection。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -390,5 +432,6 @@ console.log('[bridge-contract] ' + PUSH_READER + ' 消费点 ' + consumerCount +
 console.log('[bridge-contract] ' + FACE_STATE_READER + ' 消费点 ' + faceConsumerCount + ' 个（' + faceConsumerFiles.length + ' 文件，下限 ' + FACE_READER_MIN_CONSUMERS + '）· 归因文案表手写键 ' + bareKeyHits.length + ' 张');
 console.log('[bridge-contract] ' + PROJECTION_READER + ' 消费点 ' + projConsumerCount + ' 个（' + projConsumerFiles.length + ' 文件，下限 ' + PROJECTION_READER_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] sourceState/lastError 消费点 ' + probeSelfReads + ' 处 · 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面');
+console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsumerCount + ' 个（' + injConsumerFiles.length + ' 文件，下限 ' + INJECTION_READER_MIN_CONSUMERS + '）');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费');
 process.exit(0);

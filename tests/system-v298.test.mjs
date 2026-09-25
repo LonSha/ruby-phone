@@ -274,6 +274,10 @@ const STAGE_FILES = [
     // （不是 v299 起的全量镜像），不放它就会在未破坏的副本树上读到「J9 消费点 0」而红
     // —— 那正是本组注释开头明令禁止的「因缺文件而红」，会让 D0 自证失败、整组负控制变假绿。
     'apps/diagnose/diagnose-data.js',
+    // [v3.0.2] 第九道门新增 J10（上游注入读数真被业务面消费），本仓两个消费点里的
+    // 第二个就在这里。白名单暂存型套件必须同步补上每条判据的读数来源，
+    // 否则未破坏的副本树会在 J10 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
+    'apps/timeweaver/timeweaver-collector.js',
 ];
 
 function stageTree(extra = {}) {

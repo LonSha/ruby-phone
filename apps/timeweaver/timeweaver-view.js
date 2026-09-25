@@ -3,6 +3,9 @@
  * ======================================================== */
 'use strict';
 import { buildNarrative } from './timeweaver-collector.js';
+// [v3.0.2] R2-C：注入读数（送达侧）的文案出口。刻意**不在视图里拼结论** ——
+//   本仓反复踩到「视图自己兜底推出一个结论」，于是不同面给出互相矛盾的说法。
+import { injectionLine, blockLine } from '../../config/injection-contract.js';
 
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"');
@@ -197,8 +200,34 @@ export class TimeweaverView {
           ${r.lastQuery ? `<div class="tw-hint" style="padding:12px 0 0;text-align:left">最近一次回望的是：「${esc(r.lastQuery)}」</div>` : ''}
         </div>
         ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
-        <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>`;
+        <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>
+        ${this._injectionBlock(m)}`;
     }
+    /* [v3.0.2] R2-C 送达侧：本轮**真的**进了上下文的是哪几块、哪几块被预算裁掉。
+       为什么和上面的「回望」分两块：那张卡答「想起了什么」（召回侧），
+       这张卡答「送进去了什么」（送达侧）—— 中间隔着预算裁剪与去重，
+       少的那部分恰恰是用户在别处看不到的信息（本仓第七次「建好不消费」的那一面）。 */
+    _injectionBlock(m) {
+        const inj = m && m.injection;
+        if (!inj) return '';
+        const rows = (inj.blocks || []).map(b => `
+          <div class="tw-person">
+            <span class="tw-person-rank">${b.kept ? '\u2713' : '\u2717'}</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(b.label || b.ref || '一块记忆')} <span class="tw-person-meta">${esc(blockLine(b))}</span></div>
+            </div>
+          </div>`).join('');
+        const warn = inj.verdict !== 'injected';
+        return `
+        <div class="tw-curve" style="margin-top:14px">
+          <div class="tw-curve-label">\ud83d\udcee 送达侧观测 · 本轮实际注入</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip" style="color:${warn ? '#f87171' : '#cbb89a'}">${esc(injectionLine(inj))}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }
+
     _bind() {
         const root = this.app.phoneShell?.element;
         if (!root) return;

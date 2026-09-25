@@ -8,7 +8,7 @@
  * ======================================================== */
 'use strict';
 
-import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, summarizeDiagnose } from './diagnose-data.js';
+import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
 import { projectionLine } from '../../config/projection-contract.js';
 
 const Q = String.fromCharCode(34);
@@ -184,6 +184,40 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v3.0.2] R2-C 注入读数卡：本轮**最终实际注入**（此前全库零消费）。
+     *  与织光机「回望」卡的分工：那张读的是召回侧（想起了什么），
+     *  这张读的是**送达侧**（真正进了上下文的块 / 被预算裁掉的块）。 */
+    _injectionHtml(pkg) {
+        const inj = pkg.injection || null;
+        if (!inj) return '<div class=' + Q + 'dg-note' + Q + '>注入面读取失败（已降级）</div>';
+        const tone = (inj.reason !== 'ready') ? 'muted'
+            : (inj.verdict === 'injected' ? 'ok' : 'warn');
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(injectionLine(inj)) + '</div>';
+        html += '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>裁定</span>'
+            + this._chip(inj.reason === 'ready' ? injectionVerdictText(inj.verdict) : inj.reason, tone) + '</div>';
+        if (inj.reason === 'ready') {
+            html += '<div class=' + Q + 'dg-sub' + Q + '>来源：' + escapeHtml(String(inj.origin == null ? '（未给）' : inj.origin))
+                + ' · 轮次 ' + escapeHtml(String(inj.round == null ? '（未给）' : inj.round))
+                + ' · 候选 ' + escapeHtml(String(inj.total)) + ' 块 · 保留 ' + escapeHtml(String(inj.kept))
+                + ' · 裁掉 ' + escapeHtml(String(inj.dropped)) + '</div>';
+            if (inj.strayOrigin) {
+                html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>【注意】这份读数**不是真生成写的**（origin=' + escapeHtml(String(inj.origin))
+                    + '）—— 「AI 真实所见」被别的东西改写过，读数不可信。</div>';
+            }
+            const blocks = Array.isArray(pkg.injBlocks) ? pkg.injBlocks : [];
+            if (blocks.length) {
+                html += '<div class=' + Q + 'dg-table' + Q + '>' + blocks.map((b) => {
+                    return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(b.ref || ('#' + b.id)) + '</code>'
+                        + this._chip(b.kept ? '进了上下文' : '被预算裁掉', b.kept ? 'ok' : 'warn')
+                        + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(blockLine(b)) + '</span></div>';
+                }).join('') + '</div>';
+            }
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>上游记忆插件的「最终实际注入」读数（v3.215.0 起外供，v3.216.0 起落地不早于代际确认）。'
+            + '「读到 0 块候选（召回没给素材）」与「候选全被预算裁掉（素材有、预算关门）」是两件处置方向相反的事，本页分开报。</div>';
+        return html;
+    }
+
     render(container) {
         if (!container) return;
         this.loadCSS();
@@ -200,6 +234,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>探针自述（sourceState / lastError）</h3>' + this._probeSelfHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>注入读数（本轮实际注入）</h3>' + this._injectionHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('</div>');
