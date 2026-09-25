@@ -56,9 +56,26 @@
 - R1-D（下游归属面落地）：**已交付并推送**（RubyPhone v3.0.1，提交 `d6c1041`）。做的是把投影的
   **归属面**补进四个业务面而不是换数据源（理由见 Gate 段），并收口探针自述面、新增第九道门 J8/J9。
   验证：v301 18/18、v297+v298+v299+v301 93/93、`npm run check` EXIT 0（856 pass / 0 fail）。
-- R1业务投影/工作台/证据修复：**业务投影一半已完成**（R1-D）；工作台与证据查询、修复预览回执未完成。
+- R1-E（上游九账只读对账面）：**已交付并推送**（lonsha-memory-plugin v3.214.0，提交 `579bcd9`）。
+  新增 `evidence-workbench.js`（413 行，九账登记表单一真源 + 三态读数 ok/empty/absent 且 absent 分
+  `module-unavailable` / `state-missing` + 出处投影 ref/ledger/floor，楼层取不到一律 `null` 不写 0）
+  + 宿主接线（`_evidenceWorkbench` / `searchEvidence` / `_ledgerApis` + 快照 `evidence` 字段）。
+  验证：v3214 11 项先红后绿；全量 194/194 文件、42/42 审计 RC=0。
+- R1-F（上游修复预览与受控写入面）：**已交付并推送**（lonsha-memory-plugin v3.214.0，提交 `579bcd9`）。
+  `repair-loop.js` 新增 `preview(input)`（签名无 rawState，结构上只算不改）与 `validate(input)`
+  （request/preview 共用判据）；`request()` 增 `dedupeKey` 幂等（只按「未放弃」判重）。
+  桥**分两面**：只读面逐字未动；受控写入面只收在**唯一命名空间** `repair`
+  （`preview` / `apply` / `settle` / `abandon`），写入过两道门（`idempotencyKey` 必填 +
+  `expectRevision` 对表），拒即不改账；回执 9 键恒定。
+  验证：v3215 13 项先红后绿；全量 195/195 文件、1706 断言 0 失败、42/42 审计 RC=0。
+- R1业务投影/工作台/证据修复：**上游读面（R1-A/C/E）与写面（R1-F）均已落地**；下游侧
+  业务投影一半已完成（R1-D，v3.0.1）。
+  **消费侧待办（未授权，不在本档范围内）**：手机端尚未消费上游快照的 `evidence` 字段（九账对账面），
+  也尚未接入桥的 `repair` 受控写入面（发起 / 预览 / 落定 / 放弃）。这两项若要落地，须先取得
+  RubyPhone 侧的写入授权与预算，并按本仓「先红后绿 + 九门」口径推进。
 - R2/R3/R4：待实施。
-- 真实SillyTavern宿主验证：未验。
+- 真实SillyTavern宿主验证：未验（上游写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验；
+  下游两仓同步跑过 `npm run check`：lonsha 全量 RC=0、RubyPhone 九门 RC=0）。
 - 两仓计划书同步：本档为 RubyPhone 侧副本，R1-C 段与 R1-D 记录已补齐（此前缺 R1-C 段）。
 
 ## Gate R1-B：消费侧输入收紧
