@@ -30,7 +30,7 @@ const PV_SRC = read(PV);
 const PC_SRC = read(PC);
 const IDX_SRC = read(IDX);
 const vnum = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
-const CURRENT = '3.1.0';
+const CURRENT = '3.1.0';  // 本套件出生版本（不随抬版上抬）
 
 /** 上游 v3.220 的 scene 面夹具（三新面 + 旧面）。 */
 function sceneFace(over = {}) {
@@ -219,7 +219,15 @@ test('v310 E2. ★ 变更说明真讲本版（提场所三面）且与弹窗逐�
     const log = JSON.parse(read('update-log.json'));
     const entry = log.versions[log.latest];
     assert.ok(entry && Array.isArray(entry.items) && entry.items.length, '当前版本节须有条目');
-    const all = entry.items.join('\n');
+    /* [v3.2.0] 交棒：原判据拿 `log.latest` 的条目比「层级 / 到访 / 场景头」三个词，
+     *   是**当版精确判定**（本套件出生版本 v3.1.0 的说明自然写这三个词）。
+     *   锚 `log.latest` 等于对以后每一版下永久约束 —— v3.2.0 的说明写的是「场景头覆盖度」，
+     *   「层级 / 到访」两词不再出现，判据随即翻红。改为仓内既定口径（同 v298-E2 / v300-D2 /
+     *   v301-D2 / v302-E2 / v303-D2）：落地项关键词锚**本套件出生版本**，
+     *   而「弹窗逐字同源」那半仍锚当版。这不是放宽 —— v311 的 E1/E2 已对当版 3.2.0 精确判定。 */
+    const own = log.versions['3.1.0'];
+    assert.ok(own && Array.isArray(own.items), 'v3.1.0 条目必须仍在（本判据钉的是历史事实）');
+    const all = own.items.join('\n');
     for (const kw of ['层级', '到访', '场景头']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);
     }

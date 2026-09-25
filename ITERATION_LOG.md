@@ -3,10 +3,65 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （121 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （130 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
+
+---
+
+## 迭代 37 — v3.2.0 接入上游 R3-D 场所覆盖度补面（删楼 / 前移对本楼场景头的处理）
+
+- **任务**：R3 第一批次（长线生活与社交生态）的 D 项 —— 「场所三面在**回读与回滚面**上的收口」。
+  上一版（v3.1.0）按跨仓纪律把上游 R3-A 的三新面接进了消费侧；本条治的是三面**出去之后**的账：
+  删楼（`removeFloor`）、前移（`rollbackFrom` / `rollbackFloorOnly`）、导入（`import`）、重建（`_rebuild`）
+  四条路径上，三面会不会跟丢、会不会被清成「没给」的形态。
+- **上游修前的真实处境（lonsha v3.221.0 实测）**：
+  - `scene-book.js` 明明有 `MAX_HEADERS`（400），但它写在 `setHeader` 方法体内，`import` 路径
+    **没有任何上限** —— 载入一份超量存档可以无界增长；同理 `headers` 在导入时不做同楼去重。
+  - 删楼只清 `track` / `opsLog` / `presence`，**本楼场景头不进这套回滚账**：楼层连带被删，
+    场景头仍挂在已消失的楼层号上（「那天什么天气」停在了一个不存在的楼层）。
+  - 前移（`shiftFloorRefs`）只平移 `track` / `opsLog`，场景头与在场**不跟着平移**。
+  - `_rebuild` 在无真源（`opsLog` 为空）时走「清空式重建」，会把导入进来的三面一起抹平 ——
+    导入存档反而被清空，是比不修更坏的形态。
+  - `coverage()` 只报「有变更的楼层」与「未登记到访」两类，**场景头覆盖度无读数面**。
+- **实现（上游 v3.221.0）**：
+  - `scene-book.js`：`MAX_HEADERS` 提为模块常量并同时被写侧与载入侧消费；新增 `clearHeader(floor)`
+    与 `shiftFloorRefs(deleted)`（清本楼残留 → 平移 `track` / `opsLog` / `headers` → 在场按
+    `af === d` 出局、`af > d` 减一）；`setHeader` / `headerAt` 的取数改走 `numOrNull`
+    （`Number(null) === 0` 会把「没给」读成「第 0 楼」，同仓老账）；`rollbackFrom` /
+    `rollbackFloorOnly` 按同语义撤本楼场景头；`_rebuild` 增「无真源」降级护栏（只摘被删那楼的
+    登记节点 + 按 `track` 重建 visits，**不清空式重建**）；`import` 七格 + `headers` 键值全改
+    `numOrNull` 并加同楼先去重 + `MAX_HEADERS` 上限；`coverage()` 增 `headerFloors` /
+    `headerCount` 两格。
+  - `index.js`：删掉宿主侧的一刀切 `clearPresence?.()`（粒度收回到模块内**按楼层**清）；
+    `SceneBookFallback` 补同形的 `clearHeader` / `shiftFloorRefs` / 覆盖度两键。
+  - `ledger-replay.js`：`drop` 走 `scene.rollbackFloorOnly(f)`、`shift` 走
+    `scene.shiftFloorRefs(d)`（旧模块不认新方法时才退到 `clearPresence`）。
+- **落地（下游 v3.2.0）**：
+  - `apps/place/place-data.js`：`coverageLines()` 返回体增 `headers`（列号行 / 「尚未登记」/ 空串
+    三态），`projectScene` 增 `hasHeaderFloorsFace`（判**格子在不在**），空模型与缺省同步；
+  - `apps/place/place-view.js`：诊断卡增一行 —— 有面有数报列号；没这面如实说「需插件 v3.221
+    或更新」；有面为空说「尚未登记」。**复用既有样式类，不新增 CSS**（规避「源文件不得多于
+    运行时载体」那道门）。
+- **本版当场捐到两处真缺陷并修掉（都在测试侧，且都是本轮新写判据自己的毛病）**：
+  ① `withMirror` 写成 `try { return fn(dir); } finally { rmSync(dir) }` —— `fn` 是异步用例，
+     Promise 还挂着时镜像就被删掉 ⇒ 动态 import 报 `ERR_MODULE_NOT_FOUND`，跑出的是**假红**
+     （不是判据翻红，是一次加载失败）。改 `return await fn(dir)`。
+  ② 面存在性判据 `jHeaderCovFace` 只有「有面有数 / 没这面」两个探针；把 `Array.isArray`
+     破坏成「内容非空才算有面」时有数那支仍为 `true` ⇒ **破坏不可观测（假绿）**。补
+     「有面但 0 条仍算有这面」探针后两向都成立。
+- **验证**：新增 `tests/system-v311.test.mjs` 18 项全绿（A 数据层真解析 4 / B 两态分域 2 /
+  C 视图真渲染 3 / D 消费点下限 2 / E 五源同源 2 / F 负控制 5，含镜像自证与三条同款判据的
+  破坏副本对照）；九道门 `npm run check` 全绿。
+- **当版锚交棒**：`tests/system-v310.test.mjs` 的 E2（读 `log.versions[log.latest]` 并要求含
+  「层级 / 到访 / 场景头」），抬版后 `log.latest` 指向 v3.2.0、其说明自然不重复这三个词 ⇒
+  按仓内既定口径（同 v298-E2 / v300-D2 / v301-D2 / v302-E2 / v303-D2）改为**锚本套件出生版本**，
+  「弹窗逐字同源」那半仍锚当版。这不是放宽：`v311` E1/E2 已对当版 3.2.0 做精确判定。
+- **边界如实声明**：上游只收回读 / 回滚 / 重建三条路径，**未改场所图景对外语义**
+  （`count` 仍是「去过的不同楼层数」、`depth` 仍是真实层级、`summary()` 键面与 R3-A 逐字一致）；
+  重复调用 `shiftFloorRefs(d)` 仍会**再次平移**（平移语义，已在上游登记为观察项 T17）；
+  真实 SillyTavern 宿主实机仍未验证，无头门禁只证明模块间契约。
 
 ---
 
@@ -1928,7 +1983,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.1.0`（五源同源）
+- **当前版本**：`3.2.0`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/

@@ -258,6 +258,11 @@
 
 ## 已完成（归档，详见 ITERATION_LOG.md）
 
+- [x] **v3.2.0** 接入上游 R3-D 场所覆盖度补面：`coverageLines()` 增场景头列号行（三态：
+      没这面 / 有面为空 / 有数），`projectScene` 增 `hasHeaderFloorsFace`（判格子在不在）；
+      `tests/system-v311.test.mjs` 18 项全绿；同轮捐到测试侧两处真缺陷（`withMirror` 抢跑
+      删镜像造成假红、`jHeaderCovFace` 缺探针造成假绿）并修掉。详见 `ITERATION_LOG.md` 迭代 37。
+
 - [x] **v2.63.0** 会话生命周期接线收口：`memoryApp` 接线 + `timeweaverApp.onChatChanged` +
       `_calendarReminderApp` 回收单一真源（含两处实例覆盖点前置回收）
 - [x] **v2.64.0** 会话级「槽位 × 三路径」审计：修 `wangxiangApp` 只在换会话路径被清理

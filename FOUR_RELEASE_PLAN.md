@@ -2,8 +2,9 @@
 
 状态：实施中，未发布。用户已授权四批及后续自主迭代；不把代码、自动化、实机验收混同。
 基线：LonSha 3.212.0 / RubyPhone 3.0.0，工作区原始干净；1673断言+42审计、835测试+九门日志通过。旧启动未记录退出码，新门禁必须记录。
-当前：LonSha 3.220.0（R3-A 场所三面外供：层级树 + 到访史 + 本楼场景头，外供面 7 → 11 键）/
-RubyPhone 3.1.0（R3-A 消费侧同轮接入：三卡 + 三格分域 + numOrNull 修「没给被读成 0」）。
+当前：LonSha 3.221.0（R3-D 场所三面的回滚面收口：import / 删楼 / 前移 / 重建四条路径真认三面，
+覆盖度新增场景头两键；外供面 11 键与 R3-A 逐字一致，本轮改的是**回读读数**而非外供面）/
+RubyPhone 3.2.0（R3-D 消费侧同轮接入：场景头覆盖度行 + 覆盖度面逐键对账）。
 
 ## 全范围与验收
 1. **可信数据与可查记忆**（O1、O2基础、O6、F1/F2）：业务字段需求表；投影同源身份/修订/时间/权限；工作台与证据查询、修复预览确认及真实传播回执。隐藏不可旧桥回退，缺席≠空，切会话和过期不能冒充当前正常。
@@ -280,7 +281,62 @@ RubyPhone 3.1.0（R3-A 消费侧同轮接入：三卡 + 三格分域 + numOrNull
   ③ 真实 SillyTavern 宿主实机未验，无头门禁只证明模块间契约。
 - 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
 
+## Gate R3-D：场所三面的回滚面收口（**已完成**，lonsha v3.221.0 + RubyPhone v3.2.0）
+
+主题：R3（长线生活与社交生态）第一批次的第二项。R3-A 只把层级树 / 到访史 / 本楼场景头
+「写出去」，而三面在 **import / 删楼 / 前移 / 重建** 四条路径上全部脱钩 —— 后果是**读数撒谎**
+（`headerAt(7)` 照样答「8月2日 · 暴雨」而那一天已被删掉），比缺读数更糟。
+
+- 归属仓：**lonsha-memory-plugin**（回读与回滚面）+ **ruby-phone**（诊断面，跨仓纪律同轮）。
+- 侦察（先证再改，逐条在真模块上实测）：七项真缺陷 ——
+  ① `import()` 全路径 `num(x) ?? 0` 把「没给」编成第 0 楼（`Number(null) === 0`），
+     `headers` 的 `[null, ...]` / `['', ...]` 键同病；
+  ② `setHeader(null)` 返回 `true` 并真写进第 0 楼、`headerAt('')` 读得出第 0 楼；
+  ③ 删楼时 `headers` 一格不动，而宿主无条件 `clearPresence?.()` 把在场**整表全清**
+     （单楼语义被悄悄扩成全清）；
+  ④ 前移时 `headers` / `presence` 不跟，且不认「被删楼自身的残留」——第 8 楼前移成 7 楼后
+     与残留撞成两条 7 楼（连做两次得 `track=[3,7,7]`）；
+  ⑤ 导入旧格式存档（无 `opsLog`）后第一次单楼编辑把**整棵树清成 0 个节点**；
+  ⑥ `coverage()` 不含任何场景头读数 ⇒ 删楼/前移对 `headers` 的处理**没有任何判据面**；
+  ⑦ 退路 `SceneBookFallback.coverage()` 与真实现键面不同形（真 15 键 / 退路 13 键）。
+- 上游收口（v3.221.0）：
+  · 新增 `clearHeader(floor)`（单楼撤场景头，非数值如实 `false`）与
+    `shiftFloorRefs(deleted)`（先清被删楼自身在 `track` / `opsLog` 的残留，再**同时**平移
+    `track` / `opsLog` / `headers` / `presence` 四面；非有限数如实返回 0）；
+  · `rollbackFloorOnly` / `rollbackFrom` 按同一语义撤场景头（单楼 / 级联），
+    `setHeader` / `headerAt` / `import` 全路径改走 `numOrNull`；
+  · `_rebuild(removedFloor)` 在**无 `opsLog` 真源**时不再清空式重建（如实降级：只摘掉被删那楼的登记）；
+  · 场景头上限提为常量 `MAX_HEADERS = 400`（**载入侧此前无上限**）并进导出面；
+  · `coverage()` 增 `headerFloors` / `headerCount`；宿主 `index.js` 删掉 `clearPresence?.()` 全清一句，
+    `ledger-replay.js` 的 `scene` 登记项 drop 走 `rollbackFloorOnly`、shift 走 `shiftFloorRefs`
+    （不再手抄循环 —— 手抄的那份必然漏掉后来新增的面）。
+- 下游同轮接上（v3.2.0）：`coverageLines` 增场景头楼层行（第 N 楼逐楼列号，`headerCount` 只当前者缺位时的
+  兜底），`projectScene` 增 `hasHeaderFloorsFace`（判**格子在不在**）并把覆盖度键面单列一格，
+  诊断卡据此分开「上游这版没有场景头覆盖度」与「这版有面、这个会话还没有场景头」两种相反文案。
+- 跨仓纪律的判据化：上游 `tests/v3222` 的 G3 守「退路覆盖度与真实现**逐键**同形」；
+  下游 `tests/system-v311` 的 B/D 组守「场景头覆盖度真读进来 + 面缺席不与空同形」。
+- 同轮接管的既有判据（**收紧，未放宽**）：`v3181` E2 由「宿主全清是在场清理方式」改为
+  两条更强的正/反判据；`scan_v3181` N1 的 scene 面锚点随语义搬家并新增两组接线判据；
+  `v39` 对 scene 面由「字面提到字段名」改为**真加载真跑一次 shift** 的行为验证；
+  `v3203` todo 指针随抬版前移。
+- 验证：上游 `v3222` 25/25（先 19/24 红 → 全绿）；全量 **202/202 文件 / 1814 断言 0 失败、42/42 审计 RC=0**
+  （`dead_code_budget` 余量内，无需 `--bump`）。下游 `system-v311` 全绿；`npm run check` 九门全绿。
+- 边界如实声明：① 上游只修**回读 / 回滚 / 重建**三条路径，未改场所图景对外语义
+  （`count` 仍是「去过的不同楼层数」、`depth` 仍是真实层级、三面键面与 R3-A 一致）；
+  ② 重复调用 `shiftFloorRefs` 仍会**再次平移**（平移语义，非 drop 侧幂等契约；`scan_v3190` 明确
+  「不断言 shift 幂等」），已登记为观察项 T17；
+  ③ 真实 SillyTavern 宿主实机未验，无头门禁只证明模块间契约。
+- 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
+
 ## 状态检查点
+- **R3-D：已完成**（lonsha v3.221.0 + RubyPhone v3.2.0）；三面在 import / 删楼 / 前移 / 重建四条路径上
+  收口：新增 `clearHeader(floor)` / `shiftFloorRefs(deleted)`（先清被删楼残留，再同时平移四面），
+  `rollbackFloorOnly` / `rollbackFrom` 按同一语义撤场景头，`_rebuild` 无真源时不再清空式重建，
+  `numOrNull` 铺到 `import` 七格 + `headers` 键，新增 `MAX_HEADERS`（载入侧此前无上限），
+  `coverage()` 增 `headerFloors` / `headerCount`，宿主不再全清在场，登记表 scene 面交给模块。
+  验证：上游 v3222 25/25；全量 202/202 文件 / 1814 断言 0 失败、42/42 审计 RC=0。
+  下游 system-v311 全绿；`npm run check` 九门全绿。
+  边界：不改对外语义（三面键面与 R3-A 逐字一致）；`shiftFloorRefs` 重复调用仍会再次平移（T17）；宿主实机未验。
 - **R3-A：已完成**（lonsha v3.220.0 + RubyPhone v3.1.0）；`summary()` 外供面 7 → 11 键
   （增 `currentChain` / `tree` / `visits` / `header`，旧键未动），新增 `tree()` / `visitHistory()` /
   `headerFace()` 三方法与上限 `MAX_TREE_ROWS=240`，新增 `numOrNull()` 把「没给」与「给了 0」判开，
@@ -341,6 +397,7 @@ RubyPhone 3.1.0（R3-A 消费侧同轮接入：三卡 + 三格分域 + numOrNull
   ② **双向关系 / 知情网络**：**已完成**（R2-F，lonsha v3.219.0）——
      详见下文 Gate R2-F 与状态检查点。
 - R3：**已启动** —— 第一批次 A 项（场所三面外供）**已完成**（R3-A，见上）；
+  B 项（三面的回滚与回读面收口）**已完成**（R3-D，见上）；
   其余（到访冲突、跨平台事件、O5 性能、F5/F6）待实施。
 - R4：待实施。
 - 真实SillyTavern宿主验证：未验（写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验）。

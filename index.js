@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.1.0';
+const ST_PHONE_VERSION = '3.2.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -107,12 +107,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "接入上游 R3-A 的**场所三新面**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.220.0 把场所面从「当前链末级字符串 + 规模四数」扩到**带层级树 / 到访史 / 本楼场景头**（`summary()` 新增 `currentChain` / `tree` / `visits` / `header` 四格）。修前本 App 实测只能显示「当前：梧桐市 › 老城区 › 钟楼 › 顶层」一句与「已登记场所 N 处」，而「这店在市里哪一区」「这地方去过几次」「那天什么天气」三个最常问的问题**全部答不出** —— 数据早就在手边。本版投影层 `projectScene` 增 `tree` / `history` / `header` / `chainFace` 四块可渲染数据（各自带畸形守卫与行数上限），视图侧新增「场所层级」「到访史」「本楼场景头」三张卡。",
-        "三面严格分开「上游这版没这面」与「有这面但这个会话是空的」：`hasTreeFace` / `hasVisitFace` / `hasHeaderFace` 判的是**格子在不在**（`Array.isArray` 与 `hasOwnProperty`），而不是判内容非空，视图据此渲染两种相反文案（「上游这版没有层级面…」vs「这个会话还没登记场所」）。这与本仓 v3.0.0 起六态归因同一条原则 —— 缺格要等上游升级，空格要用户去补，处置相反。",
-        "**本版当场捐到一处真缺陷并修掉**：`apps/place/place-data.js` 的取数函数原名 `num`，实现为 `Number.isFinite(Number(v)) ? Number(v) : null` —— 而 `Number(null) === 0`、`Number('') === 0`，于是**上游「没给这一格」与「给了 0」在本函数里塌成同一个读数**（同文件注释写的就是「非数值如实 null，不编 0」，实现漏了这一格）。到访史正好踩在上面：`firstFloor: null`（未跨楼层）会被渲染成「第 0 楼」。修法沿用本仓既定命名与语义：改名 `numOrNull` 并补 `null` / `undefined` / `''` 三态直返，与 `config/projection-contract.js`、`config/injection-contract.js` 的同名函数同因同法。",
-        "到访史条目区分**登记**与**未登记**：`registered:false` 的孤儿到访（去过、但场所树里没登记）显式标注「未登记」—— 真缺陷不问不响，但也不能被静默吞掉。",
-        "新增 `tests/system-v310.test.mjs`（A 投影层真解析 / B 三面分域 / C 视图真渲染 / D 消费点下限 / E 五源同源 / F 负控制）：负控制沿用本仓 v2.99.0 起的约定 —— `cpSync` **整仓镜像**后在镜像里改写目标文件。首版负控制把破坏副本单独写进 `os.tmpdir()`，`place-data.js` 顶部的相对 import `../../config/world-bridge.js` 于是被解析成 `/config/world-bridge.js`，跑出的是 ERR_MODULE_NOT_FOUND 而不是判据翻红（假红），由本套件当场捐到并改为镜像。",
-        "版本升至 3.1.0（五源同源）。"
+        "接入上游 R3-D 的**场所覆盖度补面**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.221.0 把「删楼 / 前移对**本楼场景头**（`headers`）做了什么」做成读数外供（`coverage` 新增 `headerFloors` / `headerCount` 两格），并让模块缺席时退路覆盖度与真实现**逐键同形**。修前本 App 实测：`coverageLines()` 只消费 `floors` / `floorCount` / `steps` / `unregistered` 四格，于是「那次删楼是不是把第 9 楼的天气记录也带走了」这个问题在下游**没有任何读数面** —— 列号上游早已备好。",
+        "三态严格分开（本仓一贯口径）：`headerFloors` **不是数组** ⇒ 上游这版还没这面 ⇒ 本行留空、视图另给「上游这版没有场景头覆盖度（需插件 v3.221 或更新）」；是数组但为空 ⇒ 有这面、这个会话还没登记场景头 ⇒ 如实说「尚未登记任何楼层的场景头（日期/时段/天气）」；有数 ⇒ 逐楼列号行（含条数）。面存在性判的是**格子在不在**（`Array.isArray`），不是判内容非空 —— 写成「非空才算有面」会把「有面但 0 条」读成「上游没这面」，而两者处置相反：一个要等升级，一个要去补。",
+        "**本版当场捐到一处真缺陷并修掉**（测试侧）：新增套件的负控制包装 `withMirror` 原写成 `try { return fn(dir); } finally { rmSync(dir) }`，而 `fn` 是异步用例（要 dynamic import 副本里的模块）—— Promise 还挂着时镜像就被删掉，跑出 `ERR_MODULE_NOT_FOUND` 而不是判据翻红（**假红**：跑的不是判据，是一次加载失败）。改为 `return await fn(dir)`。",
+        "**同轮抓到的第二处真缺陷**：面存在性判据 `jHeaderCovFace` 原只有「有面有数 / 没这面」两个探针，把 `Array.isArray` 破坏成「内容非空才算有面」时有数那一支仍为 `true` ⇒ **破坏不可观测（假绿）**。补「有面但 0 条仍算有这面」探针后，同款判据在原件与破坏副本两向上都成立。",
+        "新增 `tests/system-v311.test.mjs`（A 数据层真解析 / B 两态分域 / C 视图真渲染 / D 消费点下限 / E 五源同源 / F 负控制含镜像自证与三条同款判据的破坏副本对照）。视图侧新增一行诊断读数，**复用既有样式类**（`pl-diag-line` / `pl-diag-warn`）不新增 CSS —— 「源文件不得多于运行时载体」的门禁因此不受影响。",
+        "版本升至 3.2.0（五源同源）。"
     ]
 };
 

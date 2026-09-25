@@ -298,11 +298,20 @@ export class PlaceView {
     }
 
     _diagCards(proj) {
-        const cov = (proj && proj.coverage) || { head: '', steps: [], unregistered: [] };
+        const cov = (proj && proj.coverage) || { head: '', steps: [], unregistered: [], headers: '' };
         const iv = (proj && proj.invariants) || { state: 'absent', text: '', broken: [], warnings: [] };
         const stateCls = iv.state === 'ok' ? 'ok' : (iv.state === 'broken' ? 'bad' : 'warn');
+        // [v3.2.0] R3-D：场景头覆盖度一行。上游没这面 ⇒ 明说「需 v3.221+」；
+        //   有面但不为 0 / 有数 ⇒ 列号行（含 0）。两种相反处境不同文案 ——
+        //   「这版没有这个面」要等升级，「这个会话没有场景头」要去补。
+        const hdrCov = (cov.headers
+            ? '<div class="pl-diag-line">' + this._esc(cov.headers) + '</div>'
+            : (proj && proj.hasHeaderFloorsFace === false
+                ? '<div class="pl-diag-line pl-diag-warn">上游这版没有场景头覆盖度（需插件 v3.221 或更新）</div>'
+                : '<div class="pl-diag-line">尚未登记任何楼层的场景头</div>'));
         const covLines = [
             '<div class="pl-diag-line">' + this._esc(cov.head) + '</div>',
+            hdrCov,
             ...(cov.steps || []).map((x) => '<div class="pl-diag-line pl-diag-warn">' + this._esc(x) + '</div>'),
             ...(cov.unregistered || []).map((k) => '<div class="pl-diag-line pl-diag-warn">到访过但未登记：' + this._esc(k) + '</div>')
         ].join('\n');

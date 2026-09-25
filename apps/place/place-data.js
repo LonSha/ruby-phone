@@ -164,7 +164,21 @@ export function coverageLines(coverage) {
         .map((s) => `第${numOrNull(s.after)}楼 → 第${numOrNull(s.before)}楼之间缺 ${numOrNull(s.missing)} 楼未登记`);
     const unregistered = (Array.isArray(c.unregistered) ? c.unregistered : [])
         .map((k) => clip(k, 80)).filter(Boolean);
-    return { head, steps, unregistered };
+    /* [v3.2.0] R3-D：**场景头覆盖度**（上游 v3.221.0 的 `coverage.headerFloors` / `headerCount`）。
+     *   修前实测：本函数只列「有变更的楼层」与「未登记到访」两类，于是删楼 / 前移对
+     *   **本楼场景头**（headers）的处理在下游**没有任何读数面** —— 「那天什么天气」可以停在
+     *   一个已被删掉的楼层上，而本页照报「就绪」。上游已把列号与条数外供，这里如实读出来。
+     *   两态严格分开（本仓一贯口径）：
+     *     `headerFloors` **不是数组** ⇒ 上游这版还没这面 ⇒ 本行为空串（视图另有「需 v3.221+」文案）；
+     *     是数组但为空     ⇒ 有这面、这个会话还没登记场景头 ⇒ 如实说「尚未登记」。
+     */
+    const hFloors = Array.isArray(c.headerFloors) ? c.headerFloors.filter((f) => numOrNull(f) !== null) : [];
+    const hCount = numOrNull(c.headerCount);
+    const headers = !Array.isArray(c.headerFloors) ? ''
+        : (hFloors.length
+            ? `场景头覆盖 ${hCount === null ? hFloors.length : hCount} 楼：${hFloors.slice(-12).map((f) => '第' + f + '楼').join('、')}`
+            : '尚未登记任何楼层的场景头（日期/时段/天气）');
+    return { head, steps, unregistered, headers };
 }
 
 /**
@@ -285,7 +299,8 @@ export function projectScene(face, opts = {}) {
         //   三面与 current 同一读取时刻，同修订下必然自洽；读不到就是空（不编）。
         tree: [], history: [], header: null,
         chainFace: [],
-        coverage: { head: '', steps: [], unregistered: [] },
+        coverage: { head: '', steps: [], unregistered: [], headers: '' },
+        hasHeaderFloorsFace: false,
         invariants: { state: 'absent', text: IV_TEXT['absent'], broken: [], warnings: [] }
     };
     try {
@@ -302,6 +317,11 @@ export function projectScene(face, opts = {}) {
         //   单点读数（首次/最近/次数）在记忆插件内部；桥上只外供了规模与覆盖度两面，
         //   故这里如实报「到访史 N 处」，不假装能读单点的「去过几次」。
         out.coverage = coverageLines(face.coverage);
+        // [v3.2.0] R3-D：覆盖度**面**在不在（判格子在不在，不判内容非空）。
+        //   与 hasTreeFace / hasVisitFace / hasHeaderFace 同一口径：缺格要等上游升级，
+        //   空格要用户去补 —— 处置相反，故不得同形。
+        out.hasHeaderFloorsFace = !!(face.coverage && typeof face.coverage === 'object'
+            && Array.isArray(face.coverage.headerFloors));
         out.invariants = invariantLines({
             state: (face.coverage && face.coverage.state) || 'ok',
             broken: (face.coverage && face.coverage.broken) || [],
