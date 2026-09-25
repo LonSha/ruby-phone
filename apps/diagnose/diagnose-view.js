@@ -262,6 +262,24 @@ export class DiagnoseView {
         return rows.join('');
     }
 
+    /** [v3.4.3 · F-6] 上游口径自述卡：只转述上游声明，不加任何本仓判断。
+     *  没有这面（上游旧版 / 没装场景模块）⇒ 明说「这版上游没带」。 */
+    _notesHtml(pkg) {
+        const notes = (pkg && pkg.obsNotes) || null;
+        if (!notes || !notes.length) {
+            return '<div class=' + Q + 'dg-sub' + Q + '>上游这版没有口径自述面（需记忆插件 v3.232 或更新）。</div>';
+        }
+        const rows = notes.map((x) => [
+            '<div class=' + Q + 'dg-row' + Q + '>',
+            '  <span class=' + Q + 'dg-name' + Q + '>' + escapeHtml(x.id) + '</span>',
+            '  <div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(x.subject + ' · ' + x.kind) + '</div>',
+            '  <div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(x.statement) + '</div>',
+            '  <div class=' + Q + 'dg-sub' + Q + '>调用方职责：' + escapeHtml(x.callerDuty) + '</div>',
+            '</div>'
+        ].join(''));
+        return rows.join('');
+    }
+
     /** [v3.4.2 · F-5] 重置沉默台账（用户显式动作：看完告警后清一次计数）。
      *  为什么给出口而不是留给测试：台账是**进程内**的，若没有清零点，用户重开诊断页
      *  只会在同一份计数上继续累加，「刚清零过」这个动作在界面上无处可做。 */
@@ -301,6 +319,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>注入读数（本轮实际注入）</h3>' + this._injectionHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('</div>');

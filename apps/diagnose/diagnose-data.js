@@ -198,7 +198,31 @@ export function collectDiagnose(win) {
         } catch (_e) { return null; }
     })();
 
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks };
+/* ── F-6 上游口径自述（`observationNotes`）──
+     *   上游 v3.232.0 把两条一直只写在注释里的观察项做成了**机器可读自述**
+     *   （T17 `shiftFloorRefs` 重复调用会再次平移 / T16 未收结局事件时如实 pending）。
+     *   本仓把它如实转述在这里：如实声明的价值在于「读者能看到」——
+     *   留在上游注释里，下游用户一辈子看不到。**只转述，不改口径**（上游明确不改，
+     *   因为 T17 加重去重需要「记住哪些楼层已平移过」，那份记忆会成为第二个真源）。 */
+    const obsNotes = (() => {
+        try {
+            const s = readPushField(snapshot, 'scene');
+            const v = s && s.present ? s.value : null;
+            const notes = (v && typeof v === 'object' && v.observationNotes && Array.isArray(v.observationNotes.notes))
+                ? v.observationNotes.notes : null;
+            if (!notes) return null;
+            return notes.map((x) => ({
+                id: String((x && x.id) || ''),
+                subject: String((x && x.subject) || ''),
+                kind: String((x && x.kind) || ''),
+                statement: String((x && x.statement) || ''),
+                callerDuty: String((x && x.caller_duty) || ''),
+                severity: String((x && x.severity) || '')
+            })).filter((x) => x.id);
+        } catch (_e) { return null; }
+    })();
+
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes };
 }
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */

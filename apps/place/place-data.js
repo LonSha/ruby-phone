@@ -286,6 +286,47 @@ function headerFace(h) {
 }
 
 /**
+ * [v3.4.3 · F-3] 同楼同刻行（上游 scene.coPresence）。
+ *
+ * 上游 v3.232.0 新增的事实面：**同一层楼同一地点里 ≥2 在场**。
+ * ★ 边界（与上游同一条纪律，本仓不做任何扩写）：**只呈现事实，不呈现判断**。
+ *   本页只说「这几个人此刻都在这里」，**不说**他们之间有没有冲突、关系如何、会怎样 ——
+ *   那些不是账本能回答的；在这里加一句「疑似冲突」就是把猜测渲染成事实（本仓最贵形态）。
+ *
+ * 三态（与 tree/visits/header 同一口径，缺格与空格处置相反）：
+ *   · 上游这版没这面（`face.coPresence` 不是对象）⇒ `hasCoPresenceFace=false`，页面说「这版上游没带」；
+ *   · 有面但没有人同楼（rows 空且 count=0）⇒ 页面说「此刻没有两处以上同楼同刻」；
+ *   · 有面且有 ⇒ 逐条列出（楼层 / 地点 / 名单）。
+ */
+function coPresenceRows(cp, maxRows) {
+    if (!cp || typeof cp !== 'object') return { face: null, rows: [] };
+    const list = Array.isArray(cp.rows) ? cp.rows : [];
+    const max = Math.max(1, Number(maxRows) || 20);
+    const rows = [];
+    for (const r of list) {
+        if (!r || typeof r !== 'object') continue;
+        const names = Array.isArray(r.names) ? r.names.map((x) => String(x)).filter((x) => x) : [];
+        if (names.length < 2) continue;                 // 与上游同口径：≥2 才算「同楼同刻」
+        rows.push({
+            floor: numOrNull(r.floor),
+            key: String(r.key || ''),
+            path: Array.isArray(r.path) ? r.path.map((x) => String(x)) : [],
+            names,
+            count: Number.isFinite(Number(r.count)) ? Number(r.count) : names.length
+        });
+        if (rows.length >= max) break;
+    }
+    return {
+        face: {
+            count: Number.isFinite(Number(cp.count)) ? Number(cp.count) : rows.length,
+            totalPresent: numOrNull(cp.totalPresent),
+            skippedUnknownFloor: numOrNull(cp.skippedUnknownFloor)
+        },
+        rows
+    };
+}
+
+/**
  * 投影：把 scene 面变成可直接渲染的五块数据。
  * 只读、绝不抛；缺失的块如实置空（不抛也不编）。
  *
@@ -305,6 +346,8 @@ export function projectScene(face, opts = {}) {
         //   「那天什么天气」在**账本里早有**（tree/visitsList/headerAt），却从没出过仓。
         //   三面与 current 同一读取时刻，同修订下必然自洽；读不到就是空（不编）。
         tree: [], history: [], header: null,
+        /* [v3.4.3 · F-3] 同楼同刻事实面（缺格时如实为空 + hasCoPresenceFace=false）。 */
+        coPresence: [], coPresenceFace: null, hasCoPresenceFace: false,
         chainFace: [],
         coverage: { head: '', steps: [], unregistered: [], headers: '' },
         hasHeaderFloorsFace: false,
@@ -342,6 +385,12 @@ export function projectScene(face, opts = {}) {
         out.tree = treeRows(face.tree, maxEntries);
         out.history = visitRows(face.visits, maxEntries);
         out.header = headerFace(face.header);
+        /* [v3.4.3 · F-3] 同楼同刻事实面（上游 v3.232.0 的 scene.coPresence）。
+         *   只搬事实，不加判断；三态与 tree/visits/header 同口径（缺格 vs 空格处置相反）。 */
+        const cp = coPresenceRows(face.coPresence, maxEntries);
+        out.coPresence = cp.rows;
+        out.coPresenceFace = cp.face;
+        out.hasCoPresenceFace = !!(face.coPresence && typeof face.coPresence === 'object');
         out.chainFace = Array.isArray(face.currentChain)
             ? face.currentChain.map((n) => ({
                 key: String((n && n.key) || ''),

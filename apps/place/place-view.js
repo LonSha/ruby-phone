@@ -58,6 +58,10 @@ export class PlaceView {
             this._treeCard(proj, face),
             this._visitHistoryCard(proj, face),
             this._presenceCard(proj, face),
+            /* [v3.4.3 · F-3] 同楼同刻（事实面）：紧跟在「谁在这个地方」之后 ——
+             *   它读的是同一份 presence 的另一种切法（按「同一处 ≥2 人」分组），
+             *   两块放一起读者才能对照「谁在哪」与「哪处有两人以上」。 */
+            this._coPresenceCard(proj, face),
             this._settingsCard(),
             (this._showDiag() ? this._diagCards(proj) : ''),
             '  </div>',
@@ -276,6 +280,62 @@ export class PlaceView {
         return [
             '<div class="pl-card">',
             '  <div class="pl-card-title">谁在这个地方<span class="pl-count">' + groups.length + ' 处</span></div>',
+            '  ' + items,
+            '</div>'
+        ].join('\n');
+    }
+
+    /**
+     * [v3.4.3 · F-3] 同楼同刻（≥2 在场）三态卡。
+     *
+     * ★ 只呈现**事实**：这一层楼、这一处地点，此刻有这几个人在。
+     *   本卡**不写**「冲突」「对峙」「碰面风险」这类判断词 ——
+     *   账本能回答「两人都在钟楼」，不能回答「他们会不会打起来」；
+     *   在这里加一句判断就是把猜测渲染成事实（本仓最贵的那类错读数）。
+     *
+     * 三态（与层级 / 到访史 / 场景头同口径：缺格要等上游升级，空格要用户去补，处置相反）：
+     *   · 上游这版没这面 ⇒ 明说「需插件 v3.232 或更新」；
+     *   · 有面但零行 ⇒ 「此刻没有同楼同刻（≥2 人在同一处）」；
+     *   · 有面且有 ⇒ 逐条列出。
+     */
+    _coPresenceCard(proj, face) {
+        const rows = (proj && proj.coPresence) || [];
+        const hasFace = !!(proj && proj.hasCoPresenceFace);
+        if (!hasFace) {
+            return [
+                '<div class="pl-card">',
+                '  <div class="pl-card-title">同楼同刻</div>',
+                '  <div class="pl-empty">' + this._esc('上游这版没有同楼同刻面（需插件 v3.232 或更新）') + '</div>',
+                '</div>'
+            ].join('\n');
+        }
+        if (!rows.length) {
+            const meta = (proj && proj.coPresenceFace) || {};
+            const extra = [];
+            if (meta.totalPresent !== null && meta.totalPresent !== undefined) extra.push('在场共 ' + meta.totalPresent + ' 人');
+            if (meta.skippedUnknownFloor) extra.push('其中 ' + meta.skippedUnknownFloor + ' 人未记楼层');
+            return [
+                '<div class="pl-card">',
+                '  <div class="pl-card-title">同楼同刻</div>',
+                '  <div class="pl-empty">' + this._esc('此刻没有同楼同刻（同一处地点 ≥2 人）'
+                    + (extra.length ? '（' + extra.join(' · ') + '）' : '')) + '</div>',
+                '</div>'
+            ].join('\n');
+        }
+        const items = rows.map((r) => {
+            const path = (r.path && r.path.length ? r.path : String(r.key || '').split('/').filter(Boolean)).join(' › ');
+            const at = (r.floor === null || r.floor === undefined) ? '' : '第' + r.floor + '楼';
+            return [
+                '<div class="pl-group">',
+                '  <div class="pl-group-head"><span class="pl-group-place">' + this._esc(path || r.key) + '</span>'
+                + (at ? '<span class="pl-group-floor">' + this._esc(at) + '</span>' : '') + '</div>',
+                '  <div class="pl-group-members">' + r.names.map((m) => '<span class="pl-member">' + this._esc(m) + '</span>').join('') + '</div>',
+                '</div>'
+            ].join('\n');
+        }).join('');
+        return [
+            '<div class="pl-card">',
+            '  <div class="pl-card-title">同楼同刻<span class="pl-count">' + rows.length + ' 处</span></div>',
             '  ' + items,
             '</div>'
         ].join('\n');
