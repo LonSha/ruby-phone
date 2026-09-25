@@ -179,10 +179,21 @@ test('v312 E1. ★ 版本四源同源（入口 / manifest / update-log.latest / 
 const vnum = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
 
 test('v312 E2. ★ 当版读数如实：CURRENT_UPDATE 记的是本版这件事', () => {
+    // [v3.3.2] 当版锚交棒：本条原拿 log.latest 的条目比「取值门|没给|第 0 楼」
+    //   —— 那是本套件出生版本 v3.3.0 的**当版精确判定**；抬版后 log.latest 指向新版本，
+    //   其说明自然不重复这三个词。改为仓内既定口径（同 v311-E2 / v310-E2 等）：
+    //   事件关键词锚**本套件出生版本**，「弹窗逐字同源」那半仍锚**当版**。
+    //   当版精确判定由当版 frontier 套件接管（本版即 v314）。
+    const log = JSON.parse(read('update-log.json'));
+    const own = log.versions['3.3.0'];
+    assert.ok(own && Array.isArray(own.items), 'v3.3.0 条目必须仍在（本判据钉的是历史事实）');
+    assert.ok(own.items.join('\n').match(/取值门|没给|第 0 楼/), '★ 出生版本的条目须点名那次收的是什么');
     const seg = IDX_SRC.slice(IDX_SRC.indexOf('const ST_PHONE_CURRENT_UPDATE'));
-    const head = seg.slice(0, seg.indexOf('const ST_PHONE_CURRENT_UPDATE') + 4000);
-    assert.ok(/version: ST_PHONE_VERSION/.test(head), '版本键指向常量');
-    assert.ok(/取值门|没给|第 0 楼/.test(head), '★ 本版条目须点名这次收的是什么');
+    const head = seg.slice(0, seg.indexOf(']') + 1);
+    assert.ok(/version: ST_PHONE_VERSION/.test(head), '版本键指向常量（当版）');
+    for (const it of log.versions[log.latest].items) {
+        assert.ok(head.includes(JSON.stringify(it)), '弹窗 items 逐字同源（当版）：' + it.slice(0, 20));
+    }
 });
 
 // ══════════ F 负控制（真源码破坏 → 整仓镜像 → 同款真判据转红） ══════════

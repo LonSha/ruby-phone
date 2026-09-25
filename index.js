@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.3.1';
+const ST_PHONE_VERSION = '3.3.2';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,12 +127,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**三份同名 `numOrNull` 口径统一**（O-8：同一条口径不许在一个仓里存在两种严格度）。本仓此前有三份同名函数，实测只有 `apps/place/place-data.js:99` 那份是**弱一格**的：只挡 `null` / `undefined` / `''`，而 `'  '` / `[]` / `true` / `false` / `[5]` 全部被 `Number()` 读成数（`'  ' → 0`、`[] → 0`、`true → 1`、`false → 0`、`[5] → 5`）。",
-        "为什么本轮才收：v3.3.0（O-1 轮）判它「可达性为零」未动 —— 怪值只能来自上游外供面，而上游 lonsha 已把场所面收口为 `number | null`。**O-8 收它的理由**：本仓不该靠上游自觉；「可达性为零」是**上游的状态**、不是本仓的保证，而同一个仓里两种严格度的同名函数会让读者无法判断该信哪一份。",
-        "修法：`place-data.js` 的 `numOrNull` 改为与 `config/projection-contract.js:95` / `config/injection-contract.js:118` **逐字同形**的强口径（先看类型：只认数字与非空数字字符串）。三份仍**各自持门**（不跨层共享，避免 `apps/*` ↔ `config/*` 反向依赖），并在注释里互指同族。",
-        "**判开是双向的**：真给 `0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 一律照常出数（实测真给 0 的在场读数仍是 `0`，不会被误判成「没给」）。",
-        "新增 `tests/system-v313.test.mjs`（A 三份实现逐条同口径 / B 真模块行为走导出面 / C 结构面 / D 版本四源同源 / E 负控制含镜像自证与三条破坏副本对照 + 互不掩护）。",
-        "版本升至 3.3.1（五源同源）。",
+        "**门禁「缺输入仍判通过」普查**（O-3 下游侧：审计的审计）。把**门禁脚本自身也搬进镜像**再执行（首版拿「真仓里的脚本 + cwd=退化树」当夹具，一律从自身路径推根的脚本量到的还是真仓 —— 矩阵是假的），对 10 个门禁做了四档退化（根 .js 全删 / 全掏空 / apps 掏空 / config 掏空）。",
+        "**实测到的真缺陷两处**：① `scripts/syntax-check.mjs` 在根 .js 全删、`index.js` 掏空、或 apps / config 整目录掏空时仍 **exit 0**，报「395 个文件均可按 ES Module 解析」—— 而本门存在的唯一理由写在它自己文件头：`index.js` 坏掉时整个扩展不会被浏览器加载；旧代码只有 `total === 0` 一道，兜不住。② `scripts/import-resolve-check.mjs` 有「找不到 index.js ⇒ exit 2」守卫，但**入口被掏空**（只剩一行注释）时仍能从 `apps/` 枚举到 100+ 文件与 150+ 说明符，两道下限都过 ⇒ exit 0（把「入口没了」读成「都解析得开」）。",
+        "修法：两门各补「入口在场 + 非退化」守卫（`MIN_ENTRY_BYTES = 1000`），**只作用于默认根** —— 显式 `--root` 是夹具通道（`tests/system-v282` 等用合成小仓库），语义逐字不动；失败码 2（结构漂移 = 没得判）与 1（真语法失败 = 判出坏了）分开。",
+        "**另有三个候选经逐条压实后判定为「夹具错配」而非缺陷**（如实记下，避免误修）：`bridge-contract-audit` 在 config 掏空时 exit 2（真源读不到即拒判）；`source-derivation-audit` 在 config 掏空或删关键文件时 exit 1；`dead-export-check` / `lifecycle-audit` 都有扫描面下限（500 声明 / 20 个 App 类），apps 掏空后 exit 2。",
+        "新增 `tests/system-v314.test.mjs`（A 守卫在场 / B 退化必转红与反坐实 / C 三条夹具错配如实记账 / D 版本四源同源 / E 三条负控制含「拆掉守卫 ⇒ 退化树上又判通过」与「下限归零 ⇒ 又放行」）。",
+        "版本升至 3.3.2（五源同源）。",
     ]
 };
 

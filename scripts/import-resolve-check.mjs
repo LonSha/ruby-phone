@@ -94,6 +94,16 @@ if (!FIXTURE_MODE) {
     console.error(`[import-resolve] 在 ${root} 找不到 index.js —— 扫描面不存在，fail-closed 拒判`);
     process.exit(2);
   }
+  /* [v3.3.2 · O-3 下游侧] **入口被掏空**这一档原先漏了：index.js 若只剩一行注释，
+   *   本门仍能从 apps/ 里枚举到 100+ 个文件与 150+ 个说明符 ⇒ 两道下限都过 ⇒ exit 0。
+   *   实测：掏空 index.js 后本门报「✓ 全部静态相对导入均可解析」（把「入口没了」读成「都解析得开」）。
+   *   补「入口非退化」守卫（与 scripts/syntax-check.mjs 同口径、同失败码语义）。 */
+  const MIN_ENTRY_BYTES = 1000;
+  const entrySize = fs.statSync(idxAbs).size;
+  if (entrySize < MIN_ENTRY_BYTES) {
+    console.error(`[import-resolve] index.js 仅 ${entrySize} 字节（下限 ${MIN_ENTRY_BYTES}）—— 入口已退化，fail-closed 拒判`);
+    process.exit(2);
+  }
 }
 if (!files.length) {
   console.error('[import-resolve] 未枚举到任何待检文件 —— 探测器失效，fail-closed 拒判');

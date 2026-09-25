@@ -59,6 +59,34 @@ if (rootIdx >= 0 && !fs.existsSync(root)) {
   process.exit(2);
 }
 
+/* ---------- 输入在场性守卫（v3.3.2 · O-3 下游侧） ----------
+ * 实测缺口（整仓镜像，三种退化）：
+ *   · 根 .js 全删 ⇒ 本门仍 **exit 0**，报「395 个文件均可按 ES Module 解析」；
+ *   · apps/ 或 config/ 整目录掏空 ⇒ 同样 exit 0。
+ *   「剩下的文件都能解析」为真，但与本门存在的唯一理由无关 —— 文件头写着：
+ *   `index.js` 坏掉时整个扩展不会被浏览器加载（所有 App 不可用）。
+ *   旧代码只有 `total === 0` 一道，而删/掏空根 .js 后 apps/ 里仍有 300+ 个 .js，那道兜不住。
+ *
+ * 只作用于**默认根**（未显式给 --root）：显式 --root 是夹具通道
+ *   （`tests/system-v282` 等用它塞合成小仓库），语义逐字不动。
+ * 失败码 2（结构漂移 = 没得判）与 1（真语法失败 = 判出坏了）分开。 */
+if (rootIdx < 0) {
+  const ENTRY = 'index.js';
+  const MIN_ENTRY_BYTES = 1000;
+  const entryAbs = path.join(root, ENTRY);
+  if (!fs.existsSync(path.join(root, 'manifest.json')) || !fs.existsSync(entryAbs)) {
+    console.error(`✗ 结构漂移：默认根缺 manifest.json 或 ${ENTRY}（root=${root}）`);
+    console.error('  本门只为入口文件而存在；入口不在场时「N 个文件均可解析」不具证明力。');
+    process.exit(2);
+  }
+  const entrySize = fs.statSync(entryAbs).size;
+  if (entrySize < MIN_ENTRY_BYTES) {
+    console.error(`✗ 输入退化：${ENTRY} 仅 ${entrySize} 字节（下限 ${MIN_ENTRY_BYTES}），本门无法据此断言扩展可加载`);
+    console.error('  若确有需要（如夹具），请显式传 --root <dir> 走目录级判定。');
+    process.exit(2);
+  }
+}
+
 // 仅 ESM 需要本门；.cjs 显式 CommonJS（如 workers/openai-image-local-relay.cjs）
 const ESM_EXT = new Set(['.js', '.mjs']);
 const SKIP_DIRS = new Set(['node_modules', '.git', '.wrangler']);
