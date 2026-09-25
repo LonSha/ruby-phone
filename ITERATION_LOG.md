@@ -3,10 +3,68 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （130 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （131 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
+
+---
+
+## 迭代 38 — v3.3.0 删楼回滚族的楼层取值门收口（O-2 下游侧）
+
+- **任务**：优化方向 O 批第二项 —— 「同一条根因在全仓到底还有几处」。根因是**用一个被 `Number()` 强转过的值当门**：
+  `Number(null) === Number('') === Number('  ') === Number([]) === 0`、`Number(true) === 1`，
+  而 0 在两侧都是**合法楼层**（SillyTavern 楼层 0 基；本仓同族写法 `rollbackPhoneSmsToFloor(index, …)`
+  收到的正是 0 基 index）⇒「没给」与「就在第 0 楼」必然塌成同形。
+- **上游修前的真实处境（lonsha v3.223.0 之后的实测）**：上游 O-1 只把**场所面**的真判开收干净；
+  回放/前移层（`ledger-replay.js`）里同一处写法仍在，实测 `replayShift(host, '')` 会把 `floor: 9` 的条目搬成 8。
+- **上游收口（v3.224.0）**：唯一取值门 `floorOrNull(v)`（先看类型：只认数字与非空数字字符串，其余如实 `null`）；
+  `replaySide` 入口对「没给」落 `skipped: 'floor-not-given'` 且**逐字节不动**；同族六面一并收
+  （`ledgerOwner` 工厂的 drop/shift、`shiftLedgerItemFloors` 本体、`floor-ledger` / `archived` / `inject-cursor`
+  的 drop+shift 入参）；宿主 `index.js` 四处（`numOr(v, fallback)` 增 `typeof v === 'object'` 回退、
+  `rollbackFloor` / `shiftFloorsFrom` 开头走门、`MESSAGE_DELETED` 改走门）。`LEDGER_REPLAY_VERSION` **保持 1**
+  （纯收口，不抬版仪式）。上游同轮抓到并修掉四处**判据自身缺陷**：修复引入变量遮蔽（「门开过头」，B 组全绿而真回放全废，
+  被反坐实组抓住）/ 判据挂错路径（内层门退化在 `replayShift` 路径上不可观测，改打导出面 `FLOOR_OWNERS` 的直接调用）/
+  注释说得比实现更满（「门只有一道」→「回放这条路径上门只有一道」）/「只验不许动的判据必须有配对的正向判据」。
+- **下游判定（本轮的关键：推翻上游自述的「下游不抬版」结论）**：上游 CHANGELOG 写「下游不抬版
+  （新增外供面只有 `skipped` 字段，下游无消费点）」。逐条核实后 —— **前半是对的、结论是错的**：
+  · 真的：「`skipped` 字段下游零消费」，全仓实测该串 0 命中；
+  · 错的：**同一条根因在下游独立发病三处**，与上游给不给 `skipped` 无关（外供面没变，本仓自己的门就没做对）。
+- **下游修前实测（真模块，不是推演）**：
+  - `MemoryCore.prototype.invalidateFloorAt('')` 把 longTerm 5 条 + shortTerm 2 条**全清**（n=6，只剩
+    `floor === null` 那条）—— 一次误调用清空整份记忆。判据 `Number(f) >= Number(floor)` 在 `floor` 取 0 / `''` / `[]` 时**恒真**；
+  - `index.js` 的 `MESSAGE_DELETED` 是**半收口**：`Number(eventData?.messageId ?? …)` + `Number.isFinite(...)`
+    只挡 `undefined` / `NaN` / 非数字串，实测 `''` / `'  '` / `[]` 全部通关被读成**第 0 楼**、`true` 读成第 1 楼；
+  - `apps/memory/lonsha-bridge.js` 的 `onFloorRollback(floor)` 用 `Number(floor)` 直通 memoryCore，是同一半收口的第一道。
+- **落地（下游 v3.3.0）**：三处各持一份本地 `floorOrNull`（**各边界自持同口径门**，不跨层共享，避免
+  `index.js` ↔ `apps/*` 循环依赖；宿主侧用 `stFloorOrNull` 前缀防与 `apps/*` 的门混同，有判据锁着）。
+  修法与本仓既有强口径逐字同口径：`config/projection-contract.js:95` / `config/injection-contract.js:118` 的 `numOrNull`、
+  `apps/place/place-data.js:99` 同名函数、上游 `ledger-replay.js` 的 `floorOrNull`、`scene-book.js` 的 `numOrNull`。
+  **判开是双向的**：真给 `0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 一律照常动手（实测真给 0 仍清 6 条、真给 5 清 2 条；
+  桥层真给 `' 5 '` 下传的就是数值 `5`）。
+- **测试**：新增 `tests/system-v312.test.mjs`（A 门本体三份实现逐条同口径 / B 数据层真模块行为 / C 桥层真模块行为 /
+  D 宿主入口形态 / E 版本四源同源 / F 负控制含镜像自证与三条同款判据的破坏副本对照 + 互不掩护）。
+  负控制用**整仓镜像**（仓内统一口径）。**先 12/16 红，三轮自纠后 16/16 全绿。**
+- **同轮捐到并修掉三处测试侧缺陷**（都是新写判据自己的毛病，与实现无关）：
+  ① 抬版脚本把 `update-log.json` 的新版本块 **append 到末尾**，而仓内约定 `versions` **首键即当前版本**
+     ⇒ 32 条既有判据当场翻红（版本同源族全在读 `Object.keys(versions)[0]`；历史抬版 `e74e672` = v3.2.0
+     确实是插在首位的）。改插首键（纯文本搬移 + `json.loads` 双证 + 字符数不变）；
+  ② **观测错对象 ⇒ 假绿**：B 组把临时接收者丢给 `invalidateFloorAt`、回头读**原数组** —— 而该方法是在**接收者**
+     上重写 `this.longTerm` / `this.shortTerm` 的，那个数组从头到尾没被碰过。于是「没给 ⇒ 一条不清」恒绿（假绿），
+     「真给 0 ⇒ 清 6 条」永远看不到；由负控制 N0/N4 当场抓出。修法：引入 `mkReceiver(store)`，判据一律读接收者。
+     —— 这是「判据要挂在有差异的那条路径上」的**第三种形态：路径对了、观测点错了**；
+  ③ **断言过严**：D2 原禁止下游模块**提及**宿主门名，而在 `lonsha-bridge.js` 注释里写「与 index.js 的
+     `stFloorOrNull` 同因同法」是**好事**（读者顺着名字能找到同族）。改为只判**定义**（`function stFloorOrNull`），不管提及。
+- **与 R3-E / O-1 两轮判定口径的差异（必须写明，防后人照旧结论抄）**：那两轮的结论是「上游改了内部 / 改了取值域，
+  本仓无待读之物 ⇒ 不抬版」；本轮不同 —— 上游收的是**「取门」这件事本身的写法**，而门写错**下游自己也有一份**。
+  「上游给了就必须有人读」这条纪律管的是外供面，**管不到「本仓自己有没有把同一处根本写对」**；
+  本轮把后者单独立成判据（不靠上游自觉），故抬版。
+- **验证**：`tests/system-v312.test.mjs` 16/16 全绿；九道门 `npm run check` RC=0；`update-log.json` 131 版本、
+  `latest` 与 `versions` 首键同为 3.3.0、弹窗 items 7 条与当版条目逐字同源。
+- **边界如实声明**：① 真实 SillyTavern 宿主实机未验（无头门禁只证明模块间契约，不证明宿主真会传怪值进来）；
+  ② 三处门只覆盖**本仓删楼回滚链路**的取值点；本仓另有 `apps/place/place-data.js:99` 的弱口径 `numOrNull`
+  仍挂在 O-8（可达性为零，本轮未动）；③ 上游宿主侧其余 `removeByFloor` 系列（`charMem` / `diary` / `cards` /
+  `status` / …）各有自己的 `Number()` 门，不在上游本轮外供面内。
 
 ---
 
@@ -1983,7 +2041,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.2.0`（五源同源）
+- **当前版本**：`3.3.0`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/

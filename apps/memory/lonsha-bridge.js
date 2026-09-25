@@ -13,6 +13,20 @@
 
 export const LONSHA_BRIDGE_KEY = 'lonsha_bridge_v1';
 
+/** [v3.3.0] 楼层取值门（删楼回滚族）：只认数字与非空数字字符串，其余如实 null。
+ *  与 index.js 的 `stFloorOrNull`、`apps/place/place-data.js` 与 `config/*` 的 `numOrNull`
+ *  同因同法 —— 本仓约定「各边界自持同口径门」，不跨层共享（避免 index.js ↔ apps 的循环依赖）。 */
+function floorOrNull(v) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (typeof v === 'string') {
+        const t = v.trim();
+        if (!t) return null;
+        const n = Number(t);
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
+}
+
 // ---------------- [RB] 轻量 BM25 (中文 bigram + 英文分词, 与 lonsha 同参) ----------------
 class BridgeBM25 {
     constructor() { this.docs = []; this.df = new Map(); this.N = 0; this._tCache = new Map(); }
@@ -361,7 +375,12 @@ export class LonShaBridge {
      */
     onFloorRollback(floor) {
         try {
-            const n = this.memoryCore?.invalidateFloorAt?.(Number(floor));
+            // [v3.3.0] 取值门：`Number(floor)` 让「没给楼层」被读成第 0 楼（`Number('') === 0`、
+            //   `Number([]) === 0`），而 0 是合法楼层 —— 与上游 `ledger-replay.js` 的
+            //   `floorOrNull`、本仓 `config/projection-contract.js` 的 `numOrNull` 同因同法。
+            const f0 = floorOrNull(floor);
+            if (f0 === null) return;
+            const n = this.memoryCore?.invalidateFloorAt?.(f0);
             if (n > 0) {
                 this.stats.rollbacks++;
                 this._bm25Dirty = true;

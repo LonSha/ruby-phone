@@ -174,7 +174,15 @@ test('v311 E2. ★ 变更说明真讲本版（提场景头覆盖度）且与弹�
     const log = JSON.parse(read('update-log.json'));
     const entry = log.versions[log.latest];
     assert.ok(entry && Array.isArray(entry.items) && entry.items.length, '当前版本节须有条目');
-    const all = entry.items.join('\n');
+    /* [v3.3.0] 交棒：原判据拿 `log.latest` 的条目比「场景头 / 覆盖度」两词，是 **当版精确判定**
+     *   （本套件出生版本 v3.2.0 的说明自然写这两个词）。抬版后 `log.latest` 指向 v3.3.0，
+     *   而那一版的说明讲的是取值门，本判据随即翻红。改为仓内既定口径（同 v298-E2 / v300-D2 /
+     *   v301-D2 / v302-E2 / v303-D2 / v310-E2）：落地项关键词锚**本套件出生版本**，
+     *   「弹窗逐字同源」那半仍锚**当版**（它比的是此刻 index.js 里的弹窗与该版条目）。
+     *   这不是放宽 —— 当版的精确判定已由 `tests/system-v312.test.mjs` 的 E1/E2 接管。 */
+    const own = log.versions['3.2.0'];
+    assert.ok(own && Array.isArray(own.items), 'v3.2.0 条目必须仍在（本判据钉的是历史事实）');
+    const all = own.items.join('\n');
     for (const kw of ['场景头', '覆盖度']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);
     }

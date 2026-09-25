@@ -13,6 +13,20 @@ import { cleanFloorForSummary } from '../../config/message-clean.js';
 import { decorateRecall, pruneByLifecycle, RECALL_PERMISSION } from '../../config/recall-filter.js';
 import { scanSupersede, reviveSuperseded, SUPERSEDE_STATUS } from '../../config/supersede-engine.js';
 
+/** [v3.3.0] 楼层取值门（删楼回滚族）：只认数字与非空数字字符串，其余如实 null。
+ *  与 `config/projection-contract.js` / `config/injection-contract.js` 的 `numOrNull`、
+ *  `apps/place/place-data.js` 的同名函数同因同法（本仓约定各边界自持同口径门）。 */
+function floorOrNull(v) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (typeof v === 'string') {
+        const t = v.trim();
+        if (!t) return null;
+        const n = Number(t);
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
+}
+
 export class MemoryCore {
     constructor(storage) {
         this.storage = storage;
@@ -370,8 +384,13 @@ export class MemoryCore {
      */
     invalidateFloorAt(floor, swipe = null) {
         try {
+            // [v3.3.0] 先过取值门（同族收口）。修前 `Number(floor)` 把「没给」读成第 0 楼，
+            //   而 `Number(f) >= 0` **恒真** ⇒ 一次误调用清空**整份**记忆
+            //   （实测：6 条全被清掉，只剩 floor=null 那条）。0 是合法楼层，判开是双向的。
+            const d0 = floorOrNull(floor);
+            if (d0 === null) return 0;
             let n = 0;
-            const hit = (f) => f !== null && f !== undefined && Number(f) >= Number(floor);
+            const hit = (f) => { const f0 = floorOrNull(f); return f0 !== null && f0 >= d0; };
             this.longTerm = this.longTerm.filter(m => { if (hit(m.floor)) { n++; return false; } return true; });
             this.shortTerm = this.shortTerm.filter(m => { if (hit(m.floor)) { n++; return false; } return true; });
             const pool = this.pool?.pool;

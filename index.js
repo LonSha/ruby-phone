@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.2.0';
+const ST_PHONE_VERSION = '3.3.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -92,6 +92,26 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp',
     'diagnoseApp'   // [v2.99.0] 诊断中心：无状态，但仍进表（下帧现取，防将来加缓存时漏重绑）
 ];
+// [v3.3.0] 楼层取值门（删楼回滚族）。
+//   存在理由：`Number(null) === Number('') === Number([]) === 0`、`Number(true) === 1`，
+//   而 **0 在本仓是合法楼层**（SillyTavern 楼层 0 基；同族写法 `rollbackPhoneSmsToFloor(index, ...)`
+//   收到的正是 0 基 index）。凡以 `Number()` 结果当门的取值点，「没给」与「就在第 0 楼」必然塌成同形。
+//   本仓既有约定是**各边界自持同口径门**（`config/projection-contract.js` 与
+//   `config/injection-contract.js` 各有一份 `numOrNull`，注释里写明「同因同法」），故本处同办。
+//   上游同族：`lonsha-memory-plugin` 的 `scene-book.js` `numOrNull`（v3.223.0）、
+//   `ledger-replay.js` `floorOrNull`（v3.224.0）—— 本条根因在两侧各发病一次。
+/** 只认数字与非空数字字符串；其余如实 null（「没给」）。真给 0 照常是 0。 */
+function stFloorOrNull(v) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (typeof v === 'string') {
+        const t = v.trim();
+        if (!t) return null;
+        const n = Number(t);
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
+}
+
 // [v2.56.0] 状态值序列化：此前在 index.js 内以 stringifyState / stringifyValue 两个名字
 //   重复定义三份（离线提示词拼装 / 用户态拼装 / 作用域 token 生成），逻辑逐字相同。
 //   收敛为单一模块级实现，避免三处各自演化出不一致的 null/undefined/object 处理。
@@ -105,14 +125,15 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-25",
+    date: "2026-09-26",
     items: [
-        "接入上游 R3-D 的**场所覆盖度补面**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.221.0 把「删楼 / 前移对**本楼场景头**（`headers`）做了什么」做成读数外供（`coverage` 新增 `headerFloors` / `headerCount` 两格），并让模块缺席时退路覆盖度与真实现**逐键同形**。修前本 App 实测：`coverageLines()` 只消费 `floors` / `floorCount` / `steps` / `unregistered` 四格，于是「那次删楼是不是把第 9 楼的天气记录也带走了」这个问题在下游**没有任何读数面** —— 列号上游早已备好。",
-        "三态严格分开（本仓一贯口径）：`headerFloors` **不是数组** ⇒ 上游这版还没这面 ⇒ 本行留空、视图另给「上游这版没有场景头覆盖度（需插件 v3.221 或更新）」；是数组但为空 ⇒ 有这面、这个会话还没登记场景头 ⇒ 如实说「尚未登记任何楼层的场景头（日期/时段/天气）」；有数 ⇒ 逐楼列号行（含条数）。面存在性判的是**格子在不在**（`Array.isArray`），不是判内容非空 —— 写成「非空才算有面」会把「有面但 0 条」读成「上游没这面」，而两者处置相反：一个要等升级，一个要去补。",
-        "**本版当场捐到一处真缺陷并修掉**（测试侧）：新增套件的负控制包装 `withMirror` 原写成 `try { return fn(dir); } finally { rmSync(dir) }`，而 `fn` 是异步用例（要 dynamic import 副本里的模块）—— Promise 还挂着时镜像就被删掉，跑出 `ERR_MODULE_NOT_FOUND` 而不是判据翻红（**假红**：跑的不是判据，是一次加载失败）。改为 `return await fn(dir)`。",
-        "**同轮抓到的第二处真缺陷**：面存在性判据 `jHeaderCovFace` 原只有「有面有数 / 没这面」两个探针，把 `Array.isArray` 破坏成「内容非空才算有面」时有数那一支仍为 `true` ⇒ **破坏不可观测（假绿）**。补「有面但 0 条仍算有这面」探针后，同款判据在原件与破坏副本两向上都成立。",
-        "新增 `tests/system-v311.test.mjs`（A 数据层真解析 / B 两态分域 / C 视图真渲染 / D 消费点下限 / E 五源同源 / F 负控制含镜像自证与三条同款判据的破坏副本对照）。视图侧新增一行诊断读数，**复用既有样式类**（`pl-diag-line` / `pl-diag-warn`）不新增 CSS —— 「源文件不得多于运行时载体」的门禁因此不受影响。",
-        "版本升至 3.2.0（五源同源）。"
+        "**删楼回滚族的楼层取值门收口**（跨仓纪律：上游 O-2 逐条判定后，本仓在本轮同族里实测到自己这一面的真缺陷）。上游记忆插件 v3.224.0 把「用 `Number()` 结果当门」这条根因在回放/前移层收干净；本版在本仓删楼链路上实测到**同一条根因的下游面**，而且是三处。修前实测（真模块）：`MemoryCore.prototype.invalidateFloorAt('')` 把 longTerm 5 条 + shortTerm 2 条**全清**（n=6、只剩 `floor === null` 那条）—— 一次误调用清空整份记忆。",
+        "根因：`Number(null) === Number('') === Number('  ') === Number([]) === 0`、`Number(true) === 1`，而 **0 在本仓是合法楼层**（SillyTavern 楼层 0 基；本文件同族写法 `rollbackPhoneSmsToFloor(index, …)` 收到的正是 0 基 index）。凡以 `Number()` 结果当门的取值点，「没给」与「就在第 0 楼」必然塌成同形。三处：① `index.js` 的 `MESSAGE_DELETED` 处理器写成 `Number(eventData?.messageId ?? …)` + `Number.isFinite(...)` —— **半收口**，只挡 `undefined` / `NaN` / 非数字串，`''` / `'  '` / `[]` 全部通关（伪装成「删了第 0 楼」）；② `apps/memory/memory-data.js` `invalidateFloorAt(floor)` 里 `Number(f) >= Number(floor)`，`floor` 取 0 时**恒真**，且逐条 `Number(f)` 会把 `f = ''` 的条目算成第 0 楼而卷入；③ `apps/memory/lonsha-bridge.js` `onFloorRollback(floor)` 的 `Number(floor)` 直通 memoryCore，是同一半收口的第一道。",
+        "修法：三处各持一份本地 `floorOrNull`（**先看类型**：只认数字与非空数字字符串，其余如实 `null` = 「没给」）—— 与本仓 `config/projection-contract.js` / `config/injection-contract.js` 的 `numOrNull`（v3.0.0 / v3.0.3 老账，注释里写明「同因同法」）、`apps/place/place-data.js` 的同名函数、上游 `ledger-replay.js` 的 `floorOrNull` 逐字同口径。本仓约定是**各边界自持同口径门**，故不跨层共享（避免 `index.js` ↔ `apps/*` 的循环依赖）；宿主侧用 `stFloorOrNull` 前缀，防与 `apps/*` 的门混同（有判据锁着）。",
+        "**判开是双向的**（只做前一半就是把门关成「谁都清不动」）：真给 `0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 一律照常动手 —— 实测真给 0 仍清 6 条、真给 5 清 2 条；桥层真给 `' 5 '` 下传的就是数值 `5`。",
+        "新增 `tests/system-v312.test.mjs`（A 门本体三份实现逐条同口径 / B 数据层真模块行为 / C 桥层真模块行为 / D 宿主入口形态 / E 版本四源同源 / F 负控制含镜像自证与三条同款判据的破坏副本对照 + 互不掩护）。**负控制用整仓镜像**（仓内统一口径）：把破坏写进副本、在副本上跑同款真判据，避免「对原文件断言」「破坏写死成模拟常量」「判据引用锚点串」三种假绿形态。",
+        "**同轮捐到并修掉三处测试侧缺陷**（都是新写判据自己的毛病，与实现无关）：① 抬版脚本把 `update-log.json` 的新版本块 **append 到末尾**，而仓内约定 `versions` **首键即当前版本** ⇒ 32 条既有判据当场翻红（版本同源族全在读 `Object.keys(versions)[0]`），改插首键（纯文本搬移 + `json.loads` 双证）；② 新增套件 B 组**观测错了对象** —— `invalidateFloorAt` 是在接收者（`this`）上重写 `this.longTerm` 的，而判据把临时接收者丢进去、回头读**原数组**（那个数组从头到尾没被碰过）⇒「没给 ⇒ 一条不清」恒绿（假绿）、「真给 0 ⇒ 清 6 条」永远看不到，由负控制 N0/N4 当场抓出 —— 这是「判据要挂在有差异的那条路径上」的第三种形态：**路径对了、观测点错了**；③ D2 断言过严（禁模块**提及**宿主门名，而注释里写「与 index.js 的 `stFloorOrNull` 同因同法」是好事），改为只判**定义**。",
+        "版本升至 3.3.0（五源同源）。",
     ]
 };
 
@@ -10718,8 +10739,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
                 if (context.event_types.MESSAGE_DELETED) {
                     context.eventSource.on(context.event_types.MESSAGE_DELETED, (eventData) => {
-                        const deletedFloor = Number(eventData?.messageId ?? eventData?.id ?? eventData);
-                        if (Number.isFinite(deletedFloor)) {
+                        // [v3.3.0] 改走取值门：修前 `Number(...)` + `isFinite` 是半收口 ——
+                        //   `''` / `'  '` / `[]` 被读成第 0 楼（`Number('') === 0` 且有限），
+                        //   于是「事件没带楼层」会伪装成「删了第 0 楼」并把整份记忆清空。
+                        const deletedFloor = stFloorOrNull(eventData?.messageId ?? eventData?.id ?? eventData);
+                        if (deletedFloor !== null) {
                             rollbackPhoneSmsToFloor(deletedFloor, false);
                             // [RB] 楼层回滚联动: 手机记忆与 LonSha 记忆同步失效 (幂等)
                             try { window.VirtualPhone?.lonshaBridge?.onFloorRollback(deletedFloor); } catch (e) {}
