@@ -2,6 +2,7 @@
 
 状态：实施中，未发布。用户已授权四批及后续自主迭代；不把代码、自动化、实机验收混同。
 基线：LonSha 3.212.0 / RubyPhone 3.0.0，工作区原始干净；1673断言+42审计、835测试+九门日志通过。旧启动未记录退出码，新门禁必须记录。
+当前：LonSha 3.212.0（R1-A/R1-C 已落，提交 `9d14ec0` / `012bd2f` 已推送）/ RubyPhone 3.0.1（R1-D 已落，提交 `d6c1041` 已推送）。
 
 ## 全范围与验收
 1. **可信数据与可查记忆**（O1、O2基础、O6、F1/F2）：业务字段需求表；投影同源身份/修订/时间/权限；工作台与证据查询、修复预览确认及真实传播回执。隐藏不可旧桥回退，缺席≠空，切会话和过期不能冒充当前正常。
@@ -23,12 +24,42 @@
 - 回滚：仅逆转该小补丁及新增测试；出现历史契约冲突回AUDIT，不放宽门禁。
 - 子agent：DeepSeek R1-A提供候选，我方真实模块复现。API Key不写入仓库。
 
+## Gate R1-C：投影的导出期新鲜度（比「归属」，不比「时刻」）
+- Structural: Local Fix；Execution: Local Fix Only；授权：approved local fix（四批授权内）。
+- 归属仓：**lonsha-memory-plugin**（上游导出侧）。本档在两边同步留痕：该 Gate 的改动面全在上游，
+  但**消费侧（RubyPhone）是唯一受害者** —— 下游读到的「谁的投影」由上游导出期决定，故两侧各留一份。
+- 证据：`_lastProjectionEnvelope` 的归属（conversationId + revision）只在 `readWorldLedger()` →
+  `_buildProjectionEnvelope()` 写入的那一刻成立。切聊（CHAT_CHANGED）换 chatId、回滚/恢复（`_bumpEpoch`）
+  只递增 `_mutationEpoch`，两条路径**都不清该缓存**；`buildBridgeSnapshot()` 于是把旧会话/旧代数的
+  投影当作当下读数导出（不报错、只错结果）。
+- 契约：同会话同代数 ⇒ 照常导出；会话或代数不符 ⇒ 不导出（`projection` 为 undefined ⇒ 自述 present=false）
+  并留痕；取不到 chatId ⇒ 放行，原契约不变（拿不到判据不等于证伪）。`generatedAt` 只记生成时刻、
+  不携带归属，改时间戳等于把陈旧内容伪装成新鲜，故只比对会话+代数。
+- 允许：index.js（buildBridgeSnapshot 新鲜度守卫 + `snap.meta.projectionFreshness` 归因字段）、
+  tests/v3213_projection_cache_freshness.test.mjs、catalog_reference_consumers.tsv 一行、本计划文档。
+  上游预算 3 文件 / 60 行。
+- 验证：新回归先红后绿；v3212/v3174/projection-absence 联合 35 项通过；全量 test:audit RC=0。
+- 回滚：仅逆转该小补丁及新增测试；出现历史契约冲突回 AUDIT，不放宽门禁。
+- 子agent：DeepSeek R1-C 提供候选（主张**读取期校验**而非新增清理点：`_mutationEpoch` 递增点十处以上，
+  逐点清缓存必漏；用 undefined 表「不可用」以与「无会话」区分），我方逐行复核并在真实模块上复现。
+- 「扔掉了」与「本来就没这面」分开：前者等宿主重跑、后者等上游升级，处置相反，压成一态即错读数。
+- **消费侧配套（RubyPhone v3.0.1 落地）**：下游新增的 `projectionScopeLine()` 正好把这份归属面显式化 ——
+  业务视图的「数据来源」卡直接显示「会话 X · 场景 Y · 世界 Z · 修订 N · 未过期/已过期（可重取）」，
+  于是上游这条守卫生效时（导出 undefined），下游如实报「桥在但没投影面」而不是继续显示旧会话的读数。
+  两侧判据互相独立：上游 v3213 判导出期，下游 system-v301 B3 判消费期。
+
 ## 状态检查点
 - R1-A：已修复；先红后绿22项定向通过；全量1675断言、42审计通过（补齐测试登记后RC=0）。
 - R1-B：已修复；先红后绿32项定向通过；手机838项测试及九门RC=0。
-- R1业务投影/工作台/证据修复：未完成。
+- R1-C：已修复（上游 lonsha，提交 `012bd2f`）；先红后绿35项定向通过；全量193文件/1682断言/0失败、
+  42审计RC=0（新测试已登记进参考基准）。消费侧配套见下条。
+- R1-D（下游归属面落地）：**已交付并推送**（RubyPhone v3.0.1，提交 `d6c1041`）。做的是把投影的
+  **归属面**补进四个业务面而不是换数据源（理由见 Gate 段），并收口探针自述面、新增第九道门 J8/J9。
+  验证：v301 18/18、v297+v298+v299+v301 93/93、`npm run check` EXIT 0（856 pass / 0 fail）。
+- R1业务投影/工作台/证据修复：**业务投影一半已完成**（R1-D）；工作台与证据查询、修复预览回执未完成。
 - R2/R3/R4：待实施。
 - 真实SillyTavern宿主验证：未验。
+- 两仓计划书同步：本档为 RubyPhone 侧副本，R1-C 段与 R1-D 记录已补齐（此前缺 R1-C 段）。
 
 ## Gate R1-B：消费侧输入收紧
 - Local Fix / Local Fix Only。已授权；三条真实回归在旧代码全部失败。
