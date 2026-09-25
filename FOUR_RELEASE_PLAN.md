@@ -2,14 +2,14 @@
 
 状态：实施中，未发布。用户已授权四批及后续自主迭代；不把代码、自动化、实机验收混同。
 基线：LonSha 3.212.0 / RubyPhone 3.0.0，工作区原始干净；1673断言+42审计、835测试+九门日志通过。旧启动未记录退出码，新门禁必须记录。
-当前：LonSha 3.222.0（R3-E 短期长期记忆在**前移**面上的脱钩：新增 `stm-ltm.shiftFloorRefs`
-把单点 / 集合 / 区间三类楼层引用接回前移路径，登记表 `stm-ltm` 的 `shift: null` 改为真调用；
-改的是**两模块内部位移**，`summary()` 与快照外供键面未见变化）/
-RubyPhone 3.2.0（R3-E 消费侧**本轮不抬版** —— 判定依据见下 Gate R3-E 节：本仓对
-`ledger-replay` / `replayShift` / `stmLtm` / `短期长期` 全仓**零命中**，且本仓消费的是另一本账
-`floor-ledger.js` 的 `LonShaFloorLedger.coverage`，与上游 `ledger-replay.js` 的
-`coverage(host, registry)` 不是同一面；跨仓纪律要求「上游给了就必须同轮有人读」，本轮上游
-**没有新增任何外供面**，故无待读之物）。
+当前：LonSha 3.223.0（**O-1 优化批**：场所面「没给」与「给了 0」的真判开 —— R3-D 声称的
+「`import()` 七格改走 `numOrNull`」实测只是**改名**（`numOrNull(null) === null` ⇒ `null ?? 0 === 0`，
+与修前 `num(null) === 0` 同值）；本轮把**门本体**改成「先看类型」并连同同族六面一次收干净）/
+RubyPhone 3.2.0（O-1 消费侧**仍不抬版** —— 判定依据见下 Gate O-1 节：上游本轮**未新增外供键**，
+变的是既有键的**取值域**（`presence[].atFloor` / `visits[].firstFloor|lastFloor` / `tree[].floor` /
+`currentChain[].floor` 由「总是 number」变 `number | null`）；而本仓**早就在读这一态**：
+`apps/place/place-data.js` 各消费点全部过 `numOrNull`，`apps/place/place-view.js` 第 235-236 / 266 行
+本就按 `null ⇒ 不出行`、`0 ⇒ 第 0 楼` 分流，故**无需改代码**）。
 
 ## 全范围与验收
 1. **可信数据与可查记忆**（O1、O2基础、O6、F1/F2）：业务字段需求表；投影同源身份/修订/时间/权限；工作台与证据查询、修复预览确认及真实传播回执。隐藏不可旧桥回退，缺席≠空，切会话和过期不能冒充当前正常。
@@ -361,7 +361,56 @@ RubyPhone 3.2.0（R3-E 消费侧**本轮不抬版** —— 判定依据见下 Ga
 - 边界如实声明：真实 SillyTavern 宿主实机未验；本判定只覆盖「上游本轮外供面的变化」，
   不承诺上游**内部**语义变化对本仓投影零影响（本仓不读那条路径，故无从受影响）。
 
+## Gate O-1：场所面取值域由「总是 number」变 `number | null`（上游 lonsha v3.223.0；本仓**仍不抬版**）
+
+主题：**优化方向**第一批次第一项。上游 R3-D（v3.221.0）在 CHANGELOG 里声称「`import()` 七格 +
+`headers` 键统一改走 `numOrNull`，把『没给』与『给了 0』判开」—— `headers` 键那一半是真的，
+而 `import()` 七格那一半**是改名**：`numOrNull(null) === null` ⇒ `null ?? 0 === 0`，
+与修前 `num(null) === 0`（`Number(null) === 0` 且有限）**同值**。本轮上游把**门本体**
+（`numOrNull` / `num` 由 `Number.isFinite(Number(v))` 改为先看类型：只认数字与非空数字字符串）
+连同同族残留六面（列号 / 外供 `tree` + `currentChain` / 回滚三法 / `visits.floors`）一次收干净，
+修前实测 `[] → 0`、`true → 1`、`'  ' → 0`、`false → 0`；最贵的一处是 `rollbackFrom(null)`
+被读成「删第 0 楼及以上」，把 `opsLog` / `track` / `headers` 一次清空且返回正数。
+
+- 为什么本仓**不**随轮抬版（跨仓纪律是「上游外供了就必须同轮有人读」，不是「上游一动就抬」）：
+  ① **本轮未新增外供键**。`summary()` / `tree()` / `visitHistory()` / `headerFace()` / `coverage()`
+     的键面与 R3-A / R3-D 逐字一致；变的是**既有键的取值域**：`presence[].atFloor`、
+     `visits[].firstFloor|lastFloor`、`tree[].floor`、`currentChain[].floor` 由「总是 number」
+     变为 `number | null`（「没给」不再冒充第 0 楼）。
+  ② **本仓已经在读这一态，且 `null` 与 `0` 本就分开渲染**（逐点实测，不是「大概没问题」）：
+     · 取数（`apps/place/place-data.js`）：第 232 行 `floor: numOrNull(n.floor)`（层级树）、
+       第 255-256 行 `firstFloor` / `lastFloor`（到访史）、第 343 行 `floor: numOrNull(n && n.floor)`
+       （当前链）、第 140 行 `atFloor: numOrNull(rec.atFloor)`（在场分组）、
+       第 157 / 175 行 `floors` / `headerFloors`（覆盖度列号，且 `filter(f => numOrNull(f) !== null)`）。
+     · 渲染（`apps/place/place-view.js`）：第 235-236 行 `v.firstFloor !== null && v.lastFloor !== null`
+       才出行（`null` 如实不出行、`0` 照常出「第 0 楼」）、第 266 行
+       `(g.atFloor === null || g.atFloor === undefined) ? '' : '第' + g.atFloor + '楼'`。
+     即：上游这一版把「没给」如实标成 `null` 之后，下游**恰好**按既有写法分流。
+  ③ **风险面已被前几轮对账过**。R3-A（接三面）与 R3-D（接覆盖度补面）已把场所面的键逐一对过；
+     本轮只改取值口径，故**没有新的待读之物**。
+- 本仓本版**无代码改动**（`package.json` / `manifest.json` / `update-log.json` / `index.js` 均不动）。
+- **同轮核到的一条不对称（如实登记，非本轮缺陷）**：本仓同名函数 `numOrNull` 有三份实现 ——
+  `config/projection-contract.js`（第 95 行）与 `config/injection-contract.js`（第 118 行）是**强口径**
+  （`typeof` 先挡非 number / 非 string，故 `'  '` / `[]` / `true` 一律 `null`），而
+  `apps/place/place-data.js`（第 99 行）那份是**弱一格**（只挡 `null` / `undefined` / `''`），
+  实测 `'  ' → 0`、`[] → 0`、`true → 1`、`false → 0`、`[3] → 3`。
+  本轮判**可达性为零**故不动它：这些怪值只能来自上游外供面，而上游 v3.223.0 的场所面已收口为
+  `number | null`（旧版上游即便给怪值也会被它自己的 `Number()` 强转成数字，吐不出数组 / 布尔）。
+  已登记为**观察项**：交 O-8（下游 keys / 取值域判据化）或同族普查批次把三份实现对齐，
+  并让本仓**自带**的行为判据把「怪值 ⇒ 不得出数」钉住（不靠上游自觉）。
+- 门禁：`tests/system-v311.test.mjs`（消费点下限 / 两态分域）与 `npm run check` 九门不受本轮上游改动影响
+  （上游改动不进本仓运行时）；仍照常跑一次作为「不抬版」的回归对照 —— 本判定不是「没找到就说不抬」。
+- 边界如实声明：真实 SillyTavern 宿主实机未验；上游宿主侧各子系统自己的 `removeByFloor` 系列
+  （`charMem` / `diary` / `cards` / `status` / …）仍是各自的 `Number()` 门、**不在**本轮外供面内，
+  本仓无从受影响；本判定只覆盖「上游本版外供面」的变化，不承诺上游**内部**语义变化对本仓投影零影响。
+
 ## 状态检查点
+- **O-1：已完成**（lonsha v3.223.0；下游**仍不抬版**，判定依据见上 Gate O-1 节）；
+  上游场所面全路径真判开「没给」与「给了 0」：门本体（`numOrNull` / `num` 改先看类型）+ `import` 七格如实 `null`
+  + 写侧三处「取不到即拒绝」+ 同族残留六面（列号 / 外供 `tree`+`currentChain` / 回滚三法 / `visits.floors`）。
+  上游验证：五套件 144/144；全量 204 文件 / 1881 断言 0 失败、42/42 审计 RC=0；版本守卫 0 问题。
+  本仓**无代码改动**；同期核到本仓同名函数三份实现**强弱不一**（`config/*` 强、`place-data.js` 弱一格，
+  怪值会出数），可达性为零故本轮不动，已登记为观察项交 O-8 批次。
 - **R3-D：已完成**（lonsha v3.221.0 + RubyPhone v3.2.0）；三面在 import / 删楼 / 前移 / 重建四条路径上
   收口：新增 `clearHeader(floor)` / `shiftFloorRefs(deleted)`（先清被删楼残留，再同时平移四面），
   `rollbackFloorOnly` / `rollbackFrom` 按同一语义撤场景头，`_rebuild` 无真源时不再清空式重建，
@@ -432,6 +481,10 @@ RubyPhone 3.2.0（R3-E 消费侧**本轮不抬版** —— 判定依据见下 Ga
 - R3：**已启动** —— 第一批次 A 项（场所三面外供）**已完成**（R3-A，见上）；
   B 项（三面的回滚与回读面收口）**已完成**（R3-D，见上）；
   其余（到访冲突、跨平台事件、O5 性能、F5/F6）待实施。
+- 优化方向（O 批）：**已启动** —— O-1（场所面「没给」与「给了 0」的真判开）**已完成**（上游 v3.223.0，见上）；
+  下游侧同轮判定**不抬版**（本轮无新增外供键、既有键取值域变化已被既有读法覆盖），
+  并核出一条同名函数口径不对称观察项（`place-data.js` 弱于 `config/*`，可达性为零未动，交 O-8）；
+  其余（O-2 同族普查 / O-3 判据灵敏度体检 / O-4 门禁隔离与耗时 / O-5 性能取证 / O-6 死代码方法级扫描）待实施。
 - R4：待实施。
 - 真实SillyTavern宿主验证：未验（写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验）。
 
