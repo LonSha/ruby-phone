@@ -891,13 +891,21 @@ export class PhoneStorage {
             // _isKeyMigrated 恒 false、短路形同虚设（由 v289 D2 阳性对照实测暴露）。
             const store = isChatData ? this._getChatMetadataStore() : this._getExtensionSettingsStore();
             const raw = store && store[this.MIGRATION_LEDGER_KEY];
-            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-                return { version: 0, keys: {} };
+            /* [v3.4.0] P-4：**缺失**（从来没写过账本）与**损坏**（写了但不是账本形状）
+             *   此前压成同一个 `{ version: 0, keys: {} }` —— 又是「三态塌成两态」。
+             *   读者由此无法区分「这份存档从没迁移过」与「账本被写坏了」，
+             *   而两者处置方向相反（前者是正常旧档，后者是数据事故）。
+             *   现如实分面：absent / corrupt 各自成字段，version 与 keys 的兜底值不变
+             *   （既有消费者只读这两个字段，故零破坏）。 */
+            if (!raw) return { version: 0, keys: {}, absent: true, corrupt: false };
+            if (typeof raw !== 'object' || Array.isArray(raw)) {
+                return { version: 0, keys: {}, absent: false, corrupt: true };
             }
             const keys = (raw.keys && typeof raw.keys === 'object' && !Array.isArray(raw.keys)) ? raw.keys : {};
-            return { version: Number(raw.version) || 0, keys };
+            const badKeys = !(raw.keys && typeof raw.keys === 'object' && !Array.isArray(raw.keys)) && raw.keys !== undefined;
+            return { version: Number(raw.version) || 0, keys, absent: false, corrupt: badKeys };
         } catch (_e) {
-            return { version: 0, keys: {} };
+            return { version: 0, keys: {}, absent: false, corrupt: true };
         }
     }
 
@@ -921,6 +929,72 @@ export class PhoneStorage {
     _isKeyMigrated(key, isChatData = false) {
         const ledger = this._readMigrationLedger(isChatData);
         return Object.prototype.hasOwnProperty.call(ledger.keys, key);
+    }
+
+    // ========================================
+    // 🗓 存储代际（schema）裁定面 [v3.4.0 · P-4]
+    // ========================================
+    /**
+     * [v3.4.0] 存储代际裁定：**这份存档是哪个存储时代写的**。
+     *
+     * 为什么需要它（实测，非推演）：本仓 v2.89.0 起就落了 `STORAGE_SCHEMA_VERSION` 与迁移账本，
+     *   但**版本号只被写入、从不被裁定** —— 全仓对 `ledger.version` 零消费。
+     *   于是「旧档 / 当档 / 更新版插件写的档」在机制上无从区分，一律被静默按当前口径读。
+     *   这不是「缺一个常量」（常量早就在），而是**缺一个把常量变成结论的地方**。
+     *
+     * 四态**分面**（不是「旧/不旧」二分）：
+     *   current  ver === STORAGE_SCHEMA_VERSION   当前代
+     *   legacy   ver <  当前                      旧档（本方法如实上报，**不做迁移**）
+     *   future   ver >  当前                      更新版插件写的档 —— 按当前口径读**可能误读**，必须说出来
+     *   unknown  ver === 0 或账本缺失/损坏         无从判断（corrupt/absent 另带细因）
+     *
+     * 口径纪律（与上游 T9「旧档迁移默认不执行」同族）：**裁定不等于迁移**。
+     *   本方法只回答「它是哪个时代」；迁移必须由调用方显式发起。
+     *   刻意不在这里顺手迁移 —— 读取路径上做破坏性写操作，是所有「打开一下就改了数据」事故的同一个形状。
+     *
+     * @param {boolean} isChatData 读聊天档（chatMetadata）还是全局档（extensionSettings）
+     * @returns {{state:string, version:number, current:number, absent:boolean, corrupt:boolean}}
+     */
+    schemaFace(isChatData = false) {
+        const ledger = this._readMigrationLedger(isChatData);
+        const current = this.STORAGE_SCHEMA_VERSION;
+        const ver = Number(ledger.version) || 0;
+        let state;
+        if (ver === 0) state = 'unknown';
+        else if (ver < current) state = 'legacy';
+        else if (ver > current) state = 'future';
+        else state = 'current';
+        return {
+            state,
+            version: ver,
+            current,
+            absent: ledger.absent === true,
+            corrupt: ledger.corrupt === true,
+        };
+    }
+
+    /**
+     * [v3.4.0] 迁移账本逐条读取面（谁、什么时候被迁移过）。
+     *
+     * 为什么需要它：账本此前只有「某个键迁移过没有」这一个内部布尔出口（`_isKeyMigrated`），
+     *   读者拿不到**逐条**读数，也就无法回答「这份存档一共搬过几条旧键、有没有时间戳坏掉的」。
+     *   时间戳坏掉（非字符串 / 不可解析）的条目**如实计数**，不当成 0 条，也不丢弃。
+     */
+    migrationLedgerFace(isChatData = false) {
+        const ledger = this._readMigrationLedger(isChatData);
+        const entries = Object.keys(ledger.keys).map((k) => {
+            const at = ledger.keys[k];
+            const atValid = typeof at === 'string' && !Number.isNaN(Date.parse(at));
+            return { key: k, at, atValid };
+        }).sort((a, b) => a.key.localeCompare(b.key));
+        return {
+            count: entries.length,
+            unparsableAt: entries.filter((e) => !e.atValid).length,
+            version: Number(ledger.version) || 0,
+            absent: ledger.absent === true,
+            corrupt: ledger.corrupt === true,
+            entries,
+        };
     }
 
     /**

@@ -1,0 +1,33 @@
+# tests/audit/migration_points.tsv —— 迁移点登记台账 [v3.4.0 · P-4]
+#
+# 为什么要有这个文件（实测，非推演）：
+#   本仓的存储迁移是**散状**的：storage 层有一套统一账本（`__migration_ledger`），
+#   各 App 又各自在自己家里搬旧数据（werewolf / catbox / honey / wechat / diary /
+#   image-upload / games-undercover / drives-engine）。此前没有任何一处登记「一共几套迁移」，
+#   于是「这份存档被搬过什么」只能靠通读全仓回答 —— 而迁移是**破坏性写**，
+#   读漏一处就可能给出错误结论。
+#
+# 判据形状（tests/system-v317.test.mjs 的 C1/C2）：
+#   ① 每条占一行，制表符分四列：文件 / 锚点 / 类型 / 说明；
+#   ② **锚点必须仍存活**（在文件里 includes 命中）—— 迁移点被删掉或改名后本条即红，
+#      这是防止「台账长霉」的唯一办法：台账自己也会过期，过期而无人知比没有更危险；
+#   ③ 说明 ≥ 8 字，不许写空话（「一些迁移」不算说明）。
+#
+# 类型口径：
+#   统一 = storage 层的统一机制（版本常量 / 统一账本 / 统一迁移入口）
+#   局部 = 各 App 自持的一次性搬迁（不经过统一账本，各自留痕）
+#
+# 注意：本台账**不声称完备**。它登记的是本版（v3.4.0）实测到的迁移点；
+#   新增迁移点时须同步登记，否则 C1 的「锚点存活」判据覆盖不到新点。
+#
+config/storage.js	this.STORAGE_SCHEMA_VERSION = 2;	统一	v2.89.0 引入的存储代际常量；被写进账本却长期无人裁定（本版新增 schemaFace 裁定面）
+config/storage.js	this.MIGRATION_LEDGER_KEY = '__migration_ledger';	统一	统一迁移账本键；命名空间守卫后存于 chatMetadata / extensionSettings 两处
+config/storage.js	_migrateToNewArchitecture(key, value, isChatData) {	统一	统一迁移入口：搬值 → 登记账本（带时间戳）→ 清旧 localStorage 键，三步缺一不算完成
+config/drives-engine.js	if ((state.schema_version ?? 1) < 2) {	局部	drives 自持代际升代（schema_version 1→2）；与统一账本无关，不登记在 __migration_ledger
+apps/games/werewolf/werewolf-data.js	_migrateState(state) {	局部	狼人杀旧存档结构搬迁；读旧档时按需转换，失败回退空态
+apps/games/catbox/catbox-data.js	this._normalizeState(legacySaved)	局部	猫箱旧存档归一化（legacySaved 分支）；与 werewolf 同族「读时归一」形状
+apps/honey/honey-data.js	_migrateLegacyGlobalHoneyDataToChatStore() {	局部	蜜语旧全局档搬进聊天档；一次性、延迟 800ms 触发
+apps/games/games-app.js	_migrateLegacyUndercoverPrompt(promptManager = this._getUndercoverPromptManager()) {	局部	谁是卧底提示词模板旧存储搬迁；以 games_undercover_prompt_presets_migrated 标记为幂等闸门
+apps/diary/diary-data.js	const bgKeys = [	局部	日记背景图旧键搬迁（每项 [新键, 旧键] 成对）；await 全部完成后才算迁移结束
+apps/settings/image-upload.js	async _migrateOldData() {	局部	图片上传旧数据搬迁（含 _migrateImageSet 逐集转换）
+apps/wechat/wechat-data.js	_migrateOldMessages(oldMessages, chats) {	局部	微信旧消息结构搬迁；在读取路径上按需触发
