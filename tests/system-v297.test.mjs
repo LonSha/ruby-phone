@@ -291,6 +291,12 @@ const STAGE_FILES = [
     'apps/profile/profile-data.js',
     'apps/plotline/plotline-data.js',
     'apps/chars/chars-data.js',
+    // [v3.0.1] 第九道门新增 J9（探针自述面真被读出并落下成面），它的**唯一**结构化落点就在
+    // 本文件里。副本树是**显式白名单暂存**（不是 v299 起的全量镜像），故门禁读到的消费面
+    // 完全取决于白名单里放了什么：不放本文件，J9 就会在未破坏的副本树上读到「0 个消费点」而红
+    // —— 那正是 v298 D 组注释明令禁止的「因缺文件而红」（会让 D0 自证失败、整组负控制变成假绿）。
+    // 教训：门禁每长一条判据，所有「白名单暂存」型套件都要同步补上该判据的读数来源。
+    'apps/diagnose/diagnose-data.js',
 ];
 
 function stageTree(extra = {}) {

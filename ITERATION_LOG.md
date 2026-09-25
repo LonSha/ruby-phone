@@ -10,6 +10,49 @@
 
 ---
 
+## 迭代 33 — v3.0.1 业务面消费投影（归属面）+ 探针自述面收口 + 第九道门 J8/J9（L-F5 遗留观察项收口）
+
+- **任务**：按两仓联合计划推进，把 v3.0.0 迭代 32 留下的两条**遗留观察项**一次收口：
+  ① 投影只接进诊断面、业务面仍只读旧面；② `readPushProbe` 的 `sourceState` / `lastError` 零消费。
+- **设计结论（本版最重要的一条，写进了新出口的文件头与四个 App 的导入注释）**：
+  迁移的形态是「**补归属面**」而不是「**换数据源**」。上游投影只外供 6 项窄面，而四个业务面要的是
+  **整面**（场所树 / 角色字段表 / 大纲与六账本 / 时计全量）；把整面塞进投影等于把跨仓稳定契约
+  变成上游内部结构的镜像（上游每改一个内部字段都得抬 `projectionApiVersion`），恰好违背
+  「结构版只在字段增删时抬」的设计初衷。故：数据面照旧读只读快照、三态归因**一个字未动**，
+  另加一面回答「这份读数是**谁的** / **哪一代** / **什么时候** / **能不能用**」。
+- **落地**：
+  - `config/projection-contract.js`：新增 `projectionScopeLine(proj)`（+68 行），返回面恒九键
+    （`usable` / `line` / `reason` / `identity` 三键 / `revision` / `generatedAt` / `expiresAt` /
+    `stale` / `scopeBound`）；非就绪态**原样透传** `proj.text` 且身份与修订一律 null（不二次归因）；
+    `stale` 与 `scopeBound` 均三态（没给即 null，不给冒充值）；并入 `default` 导出。
+  - 四个业务 App（place / chars / plotline / clock）：各增 `sourceFace()`（`try` 包
+    `projectionScopeLine(readProjection(this._win()))`，异常回落 `projectionScopeLine(null)`），
+    前三个并入 `projection()` 的 `src` 键；clock 保留原有 `clockFace()` / `projection()` 原形另加。
+  - 四个业务视图：各增「数据来源」卡（`pl-src` / `cs-src` / `pn-src` / `cl-src`），`tone` 三态。
+    时计特别注明「**不在视图里重取投影** —— 两次读数会给出两份来源」。
+  - `apps/diagnose/diagnose-data.js`：新增结构化面 `probeSelf`（复用同一份 `probe`，不新开读数通路）、
+    `SOURCE_STATE_TEXT` 五态文案表与 `sourceStateText()`、`summarizeDiagnose` 增四类自述坏消息（进首行）。
+  - `apps/diagnose/diagnose-view.js`：新增 `_probeSelfHtml()` 与「探针自述」卡（诊断页六卡变七卡）。
+  - `scripts/bridge-contract-audit.mjs`：J7 之后新增 J8/J9 —— 常量（`PROJECTION_READER`、
+    `PROJECTION_READER_MIN_CONSUMERS = 4`、`PROBE_SELF_FIELDS` / `PROBE_SELF_RE` /
+    `PROBE_SELF_SITES` / `PROBE_SELF_MIN = 1`）、扫描段、`--list` 报告段、判定段与成功输出行。
+  - `tests/system-v301.test.mjs`（新增，18 条）。
+- **本版由套件当场捐到的两处自查缺陷（都是本仓「假绿」清单里的老形态）**：
+  ① **形状判据写成单行字面量**：A4 原用单行对象字面量正则判 `probeSelf`，而本仓收口面
+     一律是**逐行键值**的块，断言永远红。改为「判块在场（`const probeSelf = { ... };`）+ 五个键齐」。
+  ② **破坏没被触到（假绿第②形的变体）**：C2 原只把取值分支改成 `null`，而 J9 数的是
+     **读取点出现次数**，值分支怎么写都还是一次读，于是破坏后门禁仍绿、负控制无从红。
+     改为「把两个字段的取数一并摘掉」，让读取点真归零。
+  另修一处**夹具缺陷**：B5 原用的快照夹具没给 `scene` 面，place 的归因走到 `no-scene-face`，
+     于是 `face.reason === 'ready'` 测的是「夹具不全」而非「数据面照旧读快照」（夹具缺陷会被
+     误读成产品回归），已补一份最小可用场所面。
+- **验证**：`tests/system-v301.test.mjs` 18/18（C0 镜像自证 + 4 条负控制 + 4 条版本/文档面）；
+  `node scripts/bridge-contract-audit.mjs` 全绿，J8 读数 `readProjection 消费点 6 个`（下限 4）、
+  J9 读数 `sourceState/lastError 消费点 4 处 · 结构化面 1 个`。
+- **遗留**：① 真实 SillyTavern 宿主实机未验（无头门禁只证模块间契约成立，不证浏览器里能跑）；
+  ② 四个业务视图新增的来源卡类名**未配样式规则**（沿用既有卡样式，视觉上不新增装饰）；
+  ③ 两仓联合计划书的 ruby-phone 侧副本仍缺 Gate R1-C 段（成因是该 Gate 为 lonsha 单仓修复）。
+
 ## 迭代 32 — v3.0.0 跨仓投影契约落地：消费侧单一真源 + 诊断中心第六面（L-F5 的下游一半）
 
 - **任务**：按两仓联合计划推进，ruby-phone 的 v3.0 落点取 L-F5「面向 RubyPhone 的稳定投影 API」。
@@ -1751,7 +1794,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.0.0`（五源同源）
+- **当前版本**：`3.0.1`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/

@@ -49,6 +49,9 @@ export class ClockView {
   _buildHTML() {
     const face = this.app.clockFace();
     const proj = this.app.projection();
+    /* [v3.0.1] 归属面：从控制器取（不在视图里重取投影 —— 两次读数会给出两份「来源」）。 */
+    let src = null;
+    try { src = this.app.sourceFace(); } catch (_e) { src = null; }
     // [v2.98.0] 未识别的状态如实报出（带原值），不冒充「桥未连接」。
     const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
     const parts = [];
@@ -61,6 +64,15 @@ export class ClockView {
     parts.push('<span class="cl-face-icon">' + meta.icon + '</span>');
     parts.push('<span class="cl-face-label">' + meta.label + '</span>');
     parts.push('</div>');
+
+    // Source card (v3.0.1: 这份读数是哪一次的)
+    if (src) {
+      const tone = src.usable === true ? (src.stale === true ? 'warn' : 'ok') : 'off';
+      parts.push('<div class="cl-src cl-src-' + tone + '">');
+      parts.push('<div class="cl-src-title">数据来源</div>');
+      parts.push('<div class="cl-src-line">' + this._esc(src.line) + '</div>');
+      parts.push('</div>');
+    }
 
     // Time card (ready only)
     if (face === CLOCK_REASONS.ready && proj) {

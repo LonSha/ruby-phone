@@ -107,6 +107,21 @@ export function collectDiagnose(win) {
     // ── 上游自述面：字段三态（v2.98 的消费面，这里把它变得可见）──
     const probe = safe(() => readPushProbe(w), {}) || {};
     const snapshot = probe.snapshot || null;
+    /* [v3.0.1] 探针自述面收口：`readPushProbe` 的 `sourceState` / `lastError` 自 v2.97.0 起
+     *   挂账至今**零消费**（第九道门文件头「本门不说的事」里点名的那一条）。这里把它收成
+     *   **结构化的一面**，而不是散着塞进桥面或字段面：
+     *     · 不新开读数通路 —— 复用同一份 `probe`（该探针已是取快照的唯一真源）；
+     *     · 与 `bridgeReport` 的 `sourceState` 不重复：那份是**账本汇总**（含 enabled/read 等
+     *       合成字段），这一面是**裸探针自述**（id/mounted/reason/sourceState/lastError），
+     *       用途不同：账本面答「这台桥现在什么样」，本面答「这次读快照时它说了什么」。
+     *   取不到一律 null（旧版桥无此字段 ⇒ 如实 null，不伪造）——与下游一贯纪律同源。 */
+    const probeSelf = {
+        id: (typeof probe.id === 'string') ? probe.id : null,
+        mounted: probe.mounted === true,
+        reason: String(probe.reason || 'not-mounted'),
+        sourceState: (typeof probe.sourceState === 'string') ? probe.sourceState : null,
+        lastError: probe.lastError ? String(probe.lastError) : null
+    };
     const fields = CONSUMED_FIELDS.map((f) => {
         const r = safe(() => readPushField(snapshot, f.key), { present: false, kind: null, reason: 'no-snapshot' });
         const faceState = safe(() => faceFieldState(snapshot, [f.key]), 'legacy-unknown');
@@ -156,7 +171,7 @@ export function collectDiagnose(win) {
         }
     }
 
-    return { at, bridges, bridgeReport: report, fields, backStack, sourceKeys, rulebook, audit, projection, projItems };
+    return { at, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems };
 }
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
@@ -201,6 +216,21 @@ export function projAbsentText(reason) {
     return PROJ_ABSENT_TEXT[reason] || String(reason || '未知');
 }
 
+/** [v3.0.1] 桥**自述态**文案（上游 v3.174 的 `sourceState`；未知原因如实输出原值）。
+ *  键必须是带连字符的**字面量**（真源值形），不得写作裸标识符形 —— 那是 J7 拦下的
+ *  「查不到就静默走兜底、多种处境显示成同一句话」的种子（v2.98 的 clock-view 实例）。 */
+const SOURCE_STATE_TEXT = Object.freeze({
+    'idle': '未开始（尚未取过快照）',
+    'ready': '就绪（上游说这轮读数可用）',
+    'engine-absent': '记忆引擎未就位（桥在，引擎不在）',
+    'engine-empty': '引擎在位但返回空（不是故障）',
+    'thrown': '取值抛错（原因见 lastError）'
+});
+
+export function sourceStateText(state) {
+    return SOURCE_STATE_TEXT[state] || String(state || '未知');
+}
+
 
 /**
  * 一句话总述（供视图头部与宿主诊断）。
@@ -224,6 +254,16 @@ export function summarizeDiagnose(pkg) {
             bad.push('上游扣下 ' + pj.withheld.length + ' 项投影（' + pj.withheld.map((x) => x.id).join('、') + '）');
         }
     }
+    /* [v3.0.1] 探针自述面的坏消息也要先说：上游 v3.174 起把「记忆引擎没就位 / 返回空 / 取值抛错」
+     *   写进了桥自己的 `sourceState`，并让 `lastError` 不吞。这两件事此前**零消费** ⇒ 用户只能
+     *   看到一个笼统的「不可读」。既然自述就在手上，坏消息必须进首行（与投影面同规格）。 */
+    const ps = p.probeSelf || null;
+    if (ps) {
+        if (ps.lastError) bad.push('上游桥自报错误：' + ps.lastError);
+        else if (ps.sourceState === 'thrown') bad.push('上游桥自述：取快照抛错');
+        else if (ps.sourceState === 'engine-absent') bad.push('上游桥自述：记忆引擎未就位');
+        else if (ps.sourceState === 'engine-empty') bad.push('上游桥自述：引擎在位但返回空');
+    }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
     if (bad.length) return '需注意：' + bad.join(' · ');
@@ -240,5 +280,6 @@ export default {
     fieldReasonText,
     bridgeReasonText,
     projAbsentText,
+    sourceStateText,
     summarizeDiagnose
 };

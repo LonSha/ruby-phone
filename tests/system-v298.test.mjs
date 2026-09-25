@@ -269,6 +269,11 @@ const STAGE_FILES = [
     'apps/ledger/ledger-app.js',
     'apps/memory/global-search-engine.js',
     'apps/dirtytalk/dirtytalk-app.js',
+    // [v3.0.1] 第九道门新增 J8/J9 后的同步：J9 的**唯一**结构化落点在本文件，
+    // J8 的四个业务消费点里也有本文件（诊断内核）一个。副本树是**显式白名单暂存**
+    // （不是 v299 起的全量镜像），不放它就会在未破坏的副本树上读到「J9 消费点 0」而红
+    // —— 那正是本组注释开头明令禁止的「因缺文件而红」，会让 D0 自证失败、整组负控制变假绿。
+    'apps/diagnose/diagnose-data.js',
 ];
 
 function stageTree(extra = {}) {
@@ -331,8 +336,15 @@ test('v298 D1. 负控制：视图键改回手写形 → J7 红灯并点名该表
 });
 
 test('v298 D2. 负控制：faceFieldState 消费点降到下限以下 → J6 红灯', () => {
+    /* [v3.0.1] 破坏面须随**真消费点数**同步：本案是「把消费点数压到下限 5 以下」，
+     *   而下限是绝对值、真消费点数却会长 —— 本版白名单补入 `apps/diagnose/diagnose-data.js`
+     *   （J9 的落点，见 STAGE_FILES 注释）后，副本树上的消费点由 7 升到 8，
+     *   原来破坏 3 个只剩 5，恰好**不低于**下限 5 ⇒ 负控制静默失效（红不了）。
+     *   故破坏面同步加到 4 个：8 - 4 = 4 < 5，判据才真被触到。
+     *   这类「判据阈值与真读数之间的余量被侵蚀」是负控制最常见的静默失效形态之一。 */
     const extra = {};
-    for (const f of ['apps/chars/chars-data.js', 'apps/place/place-data.js', 'apps/plotline/plotline-data.js']) {
+    for (const f of ['apps/chars/chars-data.js', 'apps/place/place-data.js',
+        'apps/plotline/plotline-data.js', 'apps/clock/clock-data.js']) {
         extra[f] = read(f).split('faceFieldState(').join('__removed__(');
     }
     const dir = stageTree(extra);
@@ -340,7 +352,7 @@ test('v298 D2. 负控制：faceFieldState 消费点降到下限以下 → J6 红
         const r = runGate(dir);
         assert.equal(r.ok, false, '消费点不足必须红灯');
         assert.match(r.err, /J6/, '红灯须指向 J6 判据');
-        assert.match(r.err, /只有 4 个产品侧调用点/, '读数应真降到 4（7-3）');
+        assert.match(r.err, /只有 4 个产品侧调用点/, '读数应真降到 4（8-4）');
     } finally {
         fs.rmSync(dir, { recursive: true, force: true });
     }

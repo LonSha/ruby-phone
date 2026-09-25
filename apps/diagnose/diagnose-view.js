@@ -8,7 +8,7 @@
  * ======================================================== */
 'use strict';
 
-import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, summarizeDiagnose } from './diagnose-data.js';
+import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, summarizeDiagnose } from './diagnose-data.js';
 import { projectionLine } from '../../config/projection-contract.js';
 
 const Q = String.fromCharCode(34);
@@ -162,6 +162,28 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v3.0.1] 探针自述面：`readPushProbe` 的 `sourceState` / `lastError`（此前零消费）。
+     *  与「上游桥」卡的分工：那张卡读的是 `bridgeReport` 的**汇总**（含 enabled / read 等合成字段），
+     *  这张卡读的是**裸探针自述**（这次取快照时上游说了什么）。两者不同源、不互相顶替。 */
+    _probeSelfHtml(pkg) {
+        const s = pkg.probeSelf || null;
+        if (!s) return '<div class=' + Q + 'dg-note' + Q + '>探针自述面读取失败（已降级）</div>';
+        const tone = !s.mounted ? 'muted' : (s.lastError || s.sourceState === 'thrown' ? 'bad' : (s.sourceState === 'ready' ? 'ok' : 'warn'));
+        let html = '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>统一探针</span>'
+            + this._chip(s.mounted ? '在场' : '未装', s.mounted ? 'ok' : 'muted')
+            + this._chip(String(s.id == null ? '（未报 id）' : s.id), 'muted') + '</div>';
+        html += '<div class=' + Q + 'dg-sub' + Q + '>探针归因：' + escapeHtml(bridgeReasonText(s.reason)) + '</div>';
+        html += '<div class=' + Q + 'dg-sub' + Q + '>上游自述 sourceState：'
+            + this._chip(s.sourceState == null ? '（未提供）' : sourceStateText(s.sourceState), tone) + '</div>';
+        html += '<div class=' + Q + 'dg-sub' + Q + '>' + (s.lastError
+            ? ('lastError：' + escapeHtml(s.lastError))
+            : 'lastError：（未提供）') + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>上游 v3.174 起把「记忆引擎没就位 / 返回空 / 取值抛错」'
+            + '写进桥自己的 sourceState，并让 lastError 不吞。这一面自 v2.97.0 起下游零消费 —— '
+            + '用户只能看到一个笼统的「不可读」；v3.0.1 起收进本页并进总述首行（坏消息先说）。</div>';
+        return html;
+    }
+
     render(container) {
         if (!container) return;
         this.loadCSS();
@@ -175,6 +197,7 @@ export class DiagnoseView {
         h.push('    <div class=' + Q + 'dg-summary' + (bad ? ' dg-bad' : '') + Q + '>' + escapeHtml(summary) + '</div>');
         h.push('  </div>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游桥</h3>' + this._bridgesHtml(pkg.bridgeReport || {}) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>探针自述（sourceState / lastError）</h3>' + this._probeSelfHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');

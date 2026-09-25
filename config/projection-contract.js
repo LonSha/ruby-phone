@@ -315,6 +315,72 @@ export function projectionLine(proj) {
     return parts.join(' · ');
 }
 
+/**
+ * 归属面（[v3.0.1]）：把「这份读数是**谁的** / **哪一代** / **什么时候** / **能不能用**」
+ * 整理成一行可读文案 + 一个结构化对象，供四个业务面（place / chars / plotline / clock）
+ * 在**数据面之外**如实贴出来源。
+ *
+ * 【为什么是「新增一面」而不是「用投影替换业务数据源」（本版最重要的设计结论）】
+ *   上游投影只外供 **6 项窄面**（`peopleLocations` / `factKeys` / `characterNames` /
+ *   `clockDay` / `promiseKeys` / `knowledgeOwners`），而四个业务面要的是**整面**
+ *   （场所树 / 角色字段表 / 大纲与六账本 / 时计全量）。
+ *   若把整面硬塞进投影，等于把「跨仓稳定契约」变成「上游内部结构的镜像」：上游每改一个
+ *   内部字段都得抬 `projectionApiVersion` —— 而结构版的**设计初衷**恰恰是「只在字段增删时抬」。
+ *   故本版口径：**数据面照旧**读只读快照（各内核的 `faceFieldState` 三态归因一律不动），
+ *   投影面只补「归属」这一面。这也决定了它是**新增出口**，不是改造 `projectionValue()`。
+ *
+ * 【三条纪律（与 readProjection 同源）】
+ *   ① 只读：只读 `proj` 已算好的字段，**不重取快照、不摸桥全局**（本仓第九道门 J1/J4 口径）；
+ *   ② 不抛：任何畸形入参一律降级成「不可用 + 一行如实文案」，结构恒定；
+ *   ③ 不猜：非就绪态**原样透传** `proj.text` —— 各业务内核的归因态与文案是等价契约，
+ *      不许在这里另编一套（多编一套就是「同一种处境两处不同说法」的种子）；
+ *      取不到的字段一律 `null`，与「真的 0」分开（`revision === 0` 是合法栅栏号，
+ *      `expiresAt === 0` 是 1970 —— 这两个值被「没给」吞掉正是 numOrNull 修掉的那类错读数）。
+ *
+ * @param {object} [proj] readProjection() 的返回值
+ * @returns {{ usable:boolean, line:string, reason:string,
+ *             identity:{conversationId:*,sceneId:*,worldId:*},
+ *             revision:*, generatedAt:*, expiresAt:*, stale:*, scopeBound:* }}
+ */
+export function projectionScopeLine(proj) {
+    const empty = {
+        usable: false,
+        line: PROJECTION_REASONS['bridge-absent'],
+        reason: 'bridge-absent',
+        identity: { conversationId: null, sceneId: null, worldId: null },
+        revision: null, generatedAt: null, expiresAt: null, stale: null, scopeBound: null
+    };
+    try {
+        if (!isPlainObject(proj)) return { ...empty };
+        const reason = String(proj.reason || '');
+        if (reason !== 'ready') {
+            // 非就绪态：**原样透传**归因文案（本面不做第二次归因）
+            return { ...empty, reason, line: String(proj.text || reason || PROJECTION_REASONS['bridge-absent']) };
+        }
+        const id = isPlainObject(proj.identity) ? proj.identity : {};
+        const nv = (v) => (v === undefined ? null : v);
+        const exp = numOrNull(proj.expiresAt);
+        const line = '来源：会话 ' + (id.conversationId == null ? '（未提供）' : String(id.conversationId))
+            + ' · 场景 ' + (id.sceneId == null ? '（未提供）' : String(id.sceneId))
+            + ' · 世界 ' + (id.worldId == null ? '（未提供）' : String(id.worldId))
+            + ' · 修订 ' + (proj.revision == null ? '（未提供）' : String(proj.revision))
+            + (exp === null ? '' : (proj.stale === true ? ' · 已过期（可重取）' : ' · 未过期'))
+            + (proj.scopeBound === false ? ' · 未绑定会话' : '');
+        return {
+            usable: true, line, reason,
+            identity: { conversationId: nv(id.conversationId), sceneId: nv(id.sceneId), worldId: nv(id.worldId) },
+            revision: numOrNull(proj.revision),
+            generatedAt: numOrNull(proj.generatedAt),
+            expiresAt: exp,
+            // 过期**不等于**失效：本面只如实报 stale（与 readProjection 同口径，不在这里重算）
+            stale: (exp === null) ? null : (proj.stale === true),
+            scopeBound: (proj.scopeBound === undefined) ? null : (proj.scopeBound === true)
+        };
+    } catch (_e) {
+        return { ...empty, reason: 'probe-threw', line: '来源读取异常（已降级，不外抛）' };
+    }
+}
+
 export default {
     SUPPORTED_API_VERSION,
     ENVELOPE_FIELDS,
@@ -323,5 +389,6 @@ export default {
     contractOf,
     readProjection,
     projectionValue,
-    projectionLine
+    projectionLine,
+    projectionScopeLine
 };

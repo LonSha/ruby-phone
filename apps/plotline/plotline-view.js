@@ -43,6 +43,7 @@ export class PlotlineView {
         const promises = (pkg && pkg.promises) || [];
         const arcs = (pkg && pkg.arcs) || [];
         const knowledge = (pkg && pkg.knowledge) || [];
+        const src = (pkg && pkg.src) || null;
         const html = [
             '<div class="pn-root">',
             '  <header class="pn-header">',
@@ -52,6 +53,7 @@ export class PlotlineView {
             '  </header>',
             '  <div class="pn-body">',
             this._reasonCard(face),
+            this._sourceCard(src),
             this._stageCard(face, stage),
             this._promiseCard(face, promises),
             this._arcCard(face, arcs),
@@ -80,6 +82,19 @@ export class PlotlineView {
             '<div class="pn-card pn-reason pn-reason-' + tone + '">',
             '  <div class="pn-reason-head">' + this._esc(face.text || face.reason) + '</div>',
             '  <div class="pn-reason-hint">' + this._esc(hint) + '</div>',
+            '</div>'
+        ].join('\n');
+    }
+    /** 来源卡（[v3.0.1]）：把「这份读数是哪一次的」贴出来（投影契约的归属面）。
+     *  与归因卡分工：归因卡说「读不读得到」（五态），本卡说「读到的那份是谁的」；
+     *  两者可同时成立（例如「大纲面读到了，但那份读数已过期 / 未绑定会话」）。 */
+    _sourceCard(src) {
+        if (!src) return '';
+        const tone = src.usable === true ? (src.stale === true ? 'warn' : 'ok') : 'off';
+        return [
+            '<div class="pn-card pn-src pn-src-' + tone + '">',
+            '  <div class="pn-card-title">数据来源</div>',
+            '  <div class="pn-src-line">' + this._esc(src.line) + '</div>',
             '</div>'
         ].join('\n');
     }

@@ -87,6 +87,34 @@ const META_TABLE_RE = /const\s+([A-Z][A-Z0-9_]*(?:_META|_TEXT|_TABLE|_LABEL|_MAP
 /** 表内裸标识符形键（下划线形）：*_META 这类表若手写键，几乎一定是这种形状。 */
 const BARE_SNAKE_KEY_RE = /^\s+([a-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\s*:/gm;
 
+/* ── [v3.0.1] J8：投影契约的**消费出口**必须真被业务面用起来 ──
+ * 【为什么必须有（本仓最贵形态在这里的翻版）】
+ *   v3.0.0 把跨仓投影契约的出口做出来了，但只接进**诊断面**：四个业务 App
+ *   （place / chars / plotline / clock）仍各自经 `faceFieldState` 读旧面。
+ *   若到此为止，「投影」就是第七次「建好不消费」——有读数、有归因、有出口，**没有用户**。
+ *   故本门从 v3.0.1 起判「业务面真消费」：`readProjection` 在产品侧（apps/**）的调用点
+ *   不得少于下限。注意它**不**要求业务面把投影当数据源（那是错的：投影只外供 6 项窄面，
+ *   业务面要的是整面 —— 见上游 README 与 config/projection-contract.js 的 projectionScopeLine
+ *   文件头）；本判据要的是「归属面真的接上了」。 */
+const PROJECTION_READER = 'readProjection';
+/** 产品侧 readProjection( 调用点下限（v3.0.1 实测 5：四个业务 App + 诊断内核）。
+ *  写 4 = 实测减一：留一个 App 被重构掉的余量，但拦住「只有诊断面一处」的摆设形态。 */
+const PROJECTION_READER_MIN_CONSUMERS = 4;
+
+/* ── [v3.0.1] J9：统一探针的**自述面**（sourceState / lastError）必须真被消费 ──
+ * 【为什么必须有】本门文件头自 v2.97.0 起就写着「本门**不**说『下游有没有消费上游
+ *   sourceState / lastError 归因面』（属功能面，见 TODO）」——那条挂账从 v2.97 挂到 v3.0.0。
+ *   上游 v3.174 专门把「记忆引擎没就位 / 返回空 / 取值抛错」写进桥自己的 sourceState，
+ *   并让 lastError 不吞；下游零消费 ⇒ 这三种完全不同的处境在手机端同形（只有一句笼统的
+ *   「不可读」），正是本仓反复点名的形态。本判据开判：产品侧必须存在读这两个字段的调用点。 */
+const PROBE_SELF_FIELDS = Object.freeze(['sourceState', 'lastError']);
+/** J9 的判据是「真读出并落下」：必须有一个**结构化面**把两个字段接住（不是只提一句注释）。 */
+const PROBE_SELF_RE = /probe\.(sourceState|lastError)\b/g;
+const PROBE_SELF_SITES = Object.freeze([
+    { rel: 'apps/diagnose/diagnose-data.js', anchor: 'const probeSelf = {' }
+]);
+const PROBE_SELF_MIN = 1;
+
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
  *   为什么必须去注释：本仓大量注释逐字提到桥名与旧写法
@@ -205,6 +233,28 @@ for (const [rel, code] of stripped) {
 }
 const sourceCallCount = (sourceCode.match(/.snapshot\s*\(/g) || []).length;
 
+/* ── [v3.0.1] J8：产品侧 readProjection( 消费点（只扫 apps/**，config/ 是出口自身） ── */
+let projConsumerCount = 0;
+const projConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c = countOf(code, PROJECTION_READER + '(');
+    if (c > 0) { projConsumerCount += c; projConsumerFiles.push(rel); }
+}
+/* ── [v3.0.1] J9：探针自述面（sourceState / lastError）产品侧消费点 ── */
+let probeSelfReads = 0;
+const probeSelfFiles = [];
+for (const [rel, code] of stripped) {
+    PROBE_SELF_RE.lastIndex = 0;
+    const n = (code.match(PROBE_SELF_RE) || []).length;
+    if (n > 0) { probeSelfReads += n; probeSelfFiles.push(rel); }
+}
+/* 只「读到」不够，必须**落下成面**：每个登记点须有结构化锚点（否则只是顺手读一眼就丢） */
+const probeSelfSites = PROBE_SELF_SITES.filter((s) => {
+    const code = stripped.get(s.rel);
+    return !!code && code.includes(s.anchor);
+});
+
 /* ------------------------------------------------------------
  * 开关：--list 只报告不判定
  * ------------------------------------------------------------ */
@@ -227,6 +277,12 @@ if (LIST) {
     console.log('\n── J7 归因文案表的手写键（应为 0）──');
     for (const h of bareKeyHits) console.log('  ' + h.rel + '  ' + h.table + '  x' + h.keys.length + '  [' + h.keys.join(', ') + ']');
     if (!bareKeyHits.length) console.log('  （无）');
+    console.log('\n── J8 ' + PROJECTION_READER + ' 消费点（只计 apps/**）：' + projConsumerCount + '（下限 ' + PROJECTION_READER_MIN_CONSUMERS + '）──');
+    for (const f of projConsumerFiles) console.log('  ' + f);
+    if (!projConsumerFiles.length) console.log('  （无 —— 投影出口没人用就是摆设）');
+    console.log('\n── J9 探针自述面（sourceState / lastError）消费点：' + probeSelfReads + ' 处 / 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）──');
+    for (const f of probeSelfFiles) console.log('  ' + f);
+    if (!probeSelfSites.length) console.log('  （无结构化面 —— 只读一眼就丢不算消费）');
     process.exit(0);
 }
 
@@ -301,6 +357,29 @@ if (bareKeyHits.length) {
     console.error('        多种处境会显示成同一句话。修法：键写作 [REASONS.xxx]。');
 }
 
+/* ── J8 / J9 [v3.0.1] ── */
+if (projConsumerCount < PROJECTION_READER_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J8 ' + PROJECTION_READER + ' 只有 ' + projConsumerCount + ' 个产品侧消费点（下限 ' + PROJECTION_READER_MIN_CONSUMERS + '）：');
+    for (const f of projConsumerFiles) console.error('    ' + f);
+    console.error('  说明：投影出口的全部价值是「让每个业务面说清这份读数是哪来的」；');
+    console.error('        只有诊断面在读 = 用户永远在业务页看不到来源，只能倒着去诊断页查，等于没做归属面。');
+    console.error('  修法：每个业务 App 的 projection() 出口附上 readProjection + projectionScopeLine 的读数。');
+}
+const missingProbeSites = PROBE_SELF_SITES.filter((s) => !probeSelfSites.includes(s));
+if (missingProbeSites.length) {
+    fail = 1;
+    console.error('[bridge-contract] x J9 探针自述面缺结构化落点（' + missingProbeSites.length + ' 处）：');
+    for (const s of missingProbeSites) console.error('    ' + s.rel + '  缺锚点  ' + s.anchor);
+    console.error('  说明：只「读到」 ' + PROBE_SELF_FIELDS.join(' / ') + ' 不够，必须落成一个结构化面把两个字段接住。');
+}
+if (probeSelfReads < PROBE_SELF_MIN) {
+    fail = 1;
+    console.error('[bridge-contract] x J9 产品侧没有任何 probe.(' + PROBE_SELF_FIELDS.join('|') + ') 读取点（下限 ' + PROBE_SELF_MIN + '）');
+    console.error('  说明：上游桥把「引擎未就位 / 引擎在位但返回空 / 取快照抛错」三类自述写在这两个字段上；');
+    console.error('        下游不读 ⇒ 「没挂载」与「挂了但引擎坏了」被说成同一句话，用户会朝错方向修。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -309,5 +388,7 @@ if (fail) {
 console.log('[bridge-contract] 扫描面 apps/** + config/** 共 ' + productFiles.length + ' 个 .js · 桥名自持点 0（真源逐名 1 次）· .snapshot( 调用式 0（真源拉取型分支 ' + sourceCallCount + ' 处）· 自写形态 0');
 console.log('[bridge-contract] ' + PUSH_READER + ' 消费点 ' + consumerCount + ' 个（' + consumerFiles.length + ' 文件，下限 ' + PUSH_READER_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + FACE_STATE_READER + ' 消费点 ' + faceConsumerCount + ' 个（' + faceConsumerFiles.length + ' 文件，下限 ' + FACE_READER_MIN_CONSUMERS + '）· 归因文案表手写键 ' + bareKeyHits.length + ' 张');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写');
+console.log('[bridge-contract] ' + PROJECTION_READER + ' 消费点 ' + projConsumerCount + ' 个（' + projConsumerFiles.length + ' 文件，下限 ' + PROJECTION_READER_MIN_CONSUMERS + '）');
+console.log('[bridge-contract] sourceState/lastError 消费点 ' + probeSelfReads + ' 处 · 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面');
 process.exit(0);

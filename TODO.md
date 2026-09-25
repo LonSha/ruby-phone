@@ -36,7 +36,7 @@
       视图键改计算属性名 + 兜底如实报未知态，门禁追加 J6/J7。
       详见 `ITERATION_LOG.md` 迭代 30。
 
-- [x] **跨仓投影契约（L-F5）—— v3.0.0 收口（下游一半）**
+- [x] **跨仓投影契约（L-F5）—— v3.0.1 收口（下游一半，含两条遗留观察项）**
       上游侧：lonsha-memory-plugin v3.208.0 已有投影管线（声明式 `PROJECTIONS` 表 +
       三态 `ok`/`empty`/`absent` + `reason` 归因），但读数退化成 `this._lastProjection`
       之后**零外供**；**v3.212.0** 补上出口（`buildEnvelope()` + `_buildProjectionEnvelope()`，
@@ -51,11 +51,13 @@
       套件当场捐到一个真缺陷：数值归一 `Number.isFinite(Number(x))` 会把上游**没给**的
       `revision` / `generatedAt` / `expiresAt`（null）报成 **0**（0 全是合法值 ⇒「没给」与「给了 0」
       塌成同形，「从没给过有效期」被算成已过期），已单列 `numOrNull()` 修掉。
-      **遗留观察项**：① 投影目前只接进**诊断面**；业务 App（place / chars / plotline / clock）仍
-      各自经 `faceFieldState` 读旧面，**尚未**改为直接消费投影 —— 这是有意的（先有可信读数出口、
-      再逐 App 迁移），迁移时须补一条「投影真被业务面消费」的判据，否则又是一次「抽出来没人用」；
-      ② `readPushProbe` 的 `sourceState` / `lastError` **仍无消费点**（v2.97.0 起挂账至今），
-      归因面子集与投影面有重叠，迁移时应一并收口而不是再开一条通路。
+      **两条遗留观察项已于 v3.0.1 收口**（详见 `ITERATION_LOG.md` 迭代 33）：① 业务 App
+      （place / chars / plotline / clock）各增 `sourceFace()` 归属面并把读数并入 `projection()`，
+      四个视图各增「数据来源」卡 —— 迁移形态是「**补归属面**」而不是「换数据源」（上游投影只外供
+      6 项窄面，整面塞进投影等于把跨仓稳定契约变成上游内部结构的镜像），数据面与三态归因一个字未动；
+      并补上「投影真被业务面消费」的判据（第九道门 J8，消费点下限 4）；② `readPushProbe` 的
+      `sourceState` / `lastError` 已收成结构化面 `probeSelf`（诊断页第七卡 + 坏消息先说 + J9 判
+      「真读出并落下成面」），与 `bridgeReport` 的账本汇总面刻意不重复。
 
 - [x] **源头变更后的下游对齐普查（v2.77.0 只做了生活事件这一支）** ——
       **已于 v2.96.0 收口**：不再逐轮手查，改为常驻门禁

@@ -6,6 +6,11 @@
 import { CLOCK_REASONS, defaultClockSettings, readClockFace, projectClock, clockPromptBlock } from './clock-data.js';
 import { ClockView } from './clock-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
+ *   数据面照旧读只读快照的时计面（`readClockFace` 的三态归因一个字不动）；
+ *   投影只补「这份读数是哪一次的」（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
+ *   不替换数据源的理由见 config/projection-contract.js 的 projectionScopeLine 文件头。 */
+import { readProjection, projectionScopeLine } from '../../config/projection-contract.js';
 
 export class ClockApp {
   constructor(phoneShell, storage) {
@@ -32,6 +37,19 @@ export class ClockApp {
 
   clockFace() { return this._face; }
   projection() { return this._proj; }
+
+  /**
+   * 归属面（[v3.0.1]）：这份读数是**哪一次的**（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
+   * 与数据面分开取（`_face` / `_proj` 由 probeBridge 现取，本面只回答「能不能用、是谁的」）；
+   * 不抛、结构恒定。
+   */
+  sourceFace() {
+    try {
+      return projectionScopeLine(readProjection(this._win()));
+    } catch (_e) {
+      return projectionScopeLine(null);
+    }
+  }
 
   summaryLine() {
     if (!this._proj) return '';

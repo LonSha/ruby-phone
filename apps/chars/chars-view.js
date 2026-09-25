@@ -36,6 +36,7 @@ export class CharsView {
         this._pkg = pkg;
         const face = (pkg && pkg.face) || { reason: 'bridge-absent', text: '群像不可读', state: 'absent' };
         const proj = (pkg && pkg.proj) || { roles: [], count: 0 };
+        const src = (pkg && pkg.src) || null;
         const html = [
             '<div class="cs-root">',
             '  <header class="cs-header">',
@@ -45,6 +46,7 @@ export class CharsView {
             '  </header>',
             '  <div class="cs-body">',
             this._reasonCard(face),
+            this._sourceCard(src),
             this._rolesCard(face, proj),
             this._settingsCard(),
             '  </div>',
@@ -67,6 +69,19 @@ export class CharsView {
             '<div class="cs-card cs-reason cs-reason-' + tone + '">',
             '  <div class="cs-reason-head">' + this._esc(face.text || face.reason) + '</div>',
             '  <div class="cs-reason-hint">' + this._esc(hint) + '</div>',
+            '</div>'
+        ].join('\n');
+    }
+    /** 来源卡（[v3.0.1]）：把「这份读数是哪一次的」贴出来（投影契约的归属面）。
+     *  与归因卡分工：归因卡说「读不读得到」，本卡说「读到的那份是谁的」（可同时成立：
+     *  例如「角色状态表读到了，但那份读数已过期 / 未绑定会话」）。 */
+    _sourceCard(src) {
+        if (!src) return '';
+        const tone = src.usable === true ? (src.stale === true ? 'warn' : 'ok') : 'off';
+        return [
+            '<div class="cs-card cs-src cs-src-' + tone + '">',
+            '  <div class="cs-card-title">数据来源</div>',
+            '  <div class="cs-src-line">' + this._esc(src.line) + '</div>',
             '</div>'
         ].join('\n');
     }

@@ -40,6 +40,7 @@ export class PlaceView {
         this._pkg = pkg;
         const face = (pkg && pkg.face) || { reason: 'bridge-absent', text: '地点图景不可读', state: 'absent' };
         const proj = (pkg && pkg.proj) || null;
+        const src = (pkg && pkg.src) || null;
 
         const html = [
             '<div class="pl-root">',
@@ -50,6 +51,7 @@ export class PlaceView {
             '  </header>',
             '  <div class="pl-body">',
             this._reasonCard(face),
+            this._sourceCard(src),
             this._summaryCard(face, proj),
             this._currentCard(proj, face),
             this._presenceCard(proj, face),
@@ -82,6 +84,25 @@ export class PlaceView {
             '<div class="pl-card pl-reason pl-reason-' + tone + '">',
             '  <div class="pl-reason-head">' + this._esc(face.text || face.reason) + '</div>',
             '  <div class="pl-reason-hint">' + this._esc(hint) + '</div>',
+            '</div>'
+        ].join('\n');
+    }
+
+    /**
+     * 来源卡（[v3.0.1]）：把「这份读数是哪一次的」贴出来（投影契约的归属面）。
+     *
+     * 【为什么单独成卡而不是并进归因卡】归因卡回答的是**本面读不读得到**（六态，与数据的
+     *   有无同域）；来源卡回答的是**读到的那份是谁的**（会话/场景/世界/修订/时效/权限）。
+     *   两者可以同时成立：例如「场所面读到了（ready），但那份读数已过期 / 未绑定会话」。
+     *   并进一张卡会把两种不同的坏消息压成一句，正是本仓反复治理的形态。
+     */
+    _sourceCard(src) {
+        if (!src) return '';
+        const tone = src.usable === true ? (src.stale === true ? 'warn' : 'ok') : 'off';
+        return [
+            '<div class="pl-card pl-src pl-src-' + tone + '">',
+            '  <div class="pl-card-title">数据来源</div>',
+            '  <div class="pl-src-line">' + this._esc(src.line) + '</div>',
             '</div>'
         ].join('\n');
     }

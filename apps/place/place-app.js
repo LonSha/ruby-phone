@@ -19,6 +19,12 @@
 import { defaultPlaceSettings, readSceneFace, projectScene, scenePromptBlock } from './place-data.js';
 import { PlaceView } from './place-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
+ *   本 App 的数据面照旧读只读快照的场所面（`readSceneFace` 的三态归因一个字不动）——
+ *   理由写死在 config/projection-contract.js 的 projectionScopeLine 文件头：
+ *   上游投影只外供 6 项窄面，而本面要的是**整面场所树**，用投影替换数据源等于把
+ *   跨仓稳定契约变成上游内部结构的镜像。故这里接的是**「这份读数是哪一次的」**这一面。 */
+import { readProjection, projectionScopeLine } from '../../config/projection-contract.js';
 
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^place_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'place_settings_v1';
@@ -71,11 +77,24 @@ export class PlaceApp {
         return readSceneFace(probe);
     }
 
-    /** 一次取齐「归因 + 五块投影」（视图用它，保证同一次读数的脸与数据是同一份） */
+    /**
+     * 归属面（[v3.0.1]）：这份读数是**哪一次的**（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
+     * 与数据面**分开取**：投影只回答「能不能用、是谁的」，不替换场所数据（见文件头导入注释）。
+     * 不抛、结构恒定（拿不到就是「不可用 + 一行如实文案」）。
+     */
+    sourceFace() {
+        try {
+            return projectionScopeLine(readProjection(this._win()));
+        } catch (_e) {
+            return projectionScopeLine(null);
+        }
+    }
+
+    /** 一次取齐「归因 + 五块投影 + 归属面」（视图用它，保证同一份读数上的三面同源） */
     projection() {
         const face = this.sceneFace();
         const proj = projectScene(face.snapshot, { maxEntries: 12 });
-        return { face, proj };
+        return { face, proj, src: this.sourceFace() };
     }
 
     /** 一行总述（供视图/host 诊断；传入已取好的 pkg 可避免重复读桥） */

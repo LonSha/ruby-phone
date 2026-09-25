@@ -20,6 +20,11 @@
 import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, parallelList, secretList, recallEchoList, echoLifeList, plotlinePromptBlock } from './plotline-data.js';
 import { PlotlineView } from './plotline-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
+ *   数据面照旧读只读快照的大纲面与世界推进面（`readPlotlineFace` 的三态归因一个字不动）；
+ *   投影只补「这份读数是哪一次的」（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
+ *   不替换数据源的理由见 config/projection-contract.js 的 projectionScopeLine 文件头。 */
+import { readProjection, projectionScopeLine } from '../../config/projection-contract.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^plotline_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'plotline_settings_v1';
 export class PlotlineApp {
@@ -65,7 +70,18 @@ export class PlotlineApp {
         this._lastProbe = probe;
         return readPlotlineFace(probe);
     }
-    /** 一次取齐「归因 + 四块投影」（视图用它，保证同一次读数的脸与数据是同一份） */
+    /**
+     * 归属面（[v3.0.1]）：这份读数是**哪一次的**（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
+     * 只回答「能不能用、是谁的」，不替换数据面（见文件头导入注释）；不抛、结构恒定。
+     */
+    sourceFace() {
+        try {
+            return projectionScopeLine(readProjection(this._win()));
+        } catch (_e) {
+            return projectionScopeLine(null);
+        }
+    }
+    /** 一次取齐「归因 + 四块投影 + 归属面」（视图用它，保证同一份读数上的三面同源） */
     projection() {
         const face = this.plotlineFace();
         const stage = outlineStage(face.outline);
@@ -76,7 +92,7 @@ export class PlotlineApp {
         const secrets = secretList(face.worldProg);
         const recallEchoes = recallEchoList(face.worldProg);
         const echoLives = echoLifeList(face.worldProg);
-        return { face, stage, promises, arcs, knowledge, parallels, secrets, recallEchoes, echoLives };
+        return { face, stage, promises, arcs, knowledge, parallels, secrets, recallEchoes, echoLives, src: this.sourceFace() };
     }
     /** 一行总述（供视图/host 诊断） */
     summaryLine() {
