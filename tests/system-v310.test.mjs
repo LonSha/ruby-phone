@@ -324,10 +324,15 @@ test('v310 N2. ★ 负控制：把「没给」与「给了空」压成一态 ⇒
 });
 
 test('v310 N3. ★ 负控制：「没给该格」被读成 0 ⇒ **同款判据 J3** 转红（本版真缺陷的守门人）', async () => {
+    /* [v3.3.1·O-8] 破坏锚点交棒：原锚点 `if (v === null || v === undefined || v === '') return null;`
+     *   正是 O-8 修掉的那行**弱口径**，已不复存在（锚点消失属于正常交棒，不是判据失效）。
+     *   改为更彻底的破坏形态：把门换成 `Number()` 兜底（`Number(null) === 0`、`Number('') === 0`）——
+     *   这是本判据要守的那一类缺陷的**最原始形态**，比原来那行弱口径更能代表「没给被读成 0」。 */
     await withMirror({
         [PD]: (s) => mutateOnce(s,
-            '    if (v === null || v === undefined || v === \'\') return null;',
-            '    if (v === undefined) return null;')
+            "    if (typeof v !== 'number' && typeof v !== 'string') return null;\n    if (typeof v === 'string' && !v.trim()) return null;",
+            "    if (v === undefined) return null;",
+            "    const n = Number(v);")
     }, async (dir) => {
         const broken = await import(pathToFileURL(path.join(dir, PD)).href + '?m=' + Date.now());
         assert.equal(jNullNotZero(broken), false, '★ 同款判据（J3）在副本上必须为 false（null 又被读成 0）');

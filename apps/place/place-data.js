@@ -97,12 +97,19 @@ export function readSceneFace(probe) {
 
 /** 取数（不抛；非数值如实 null，不编 0） */
 function numOrNull(v) {
-    /* 【修的是什么】`Number(null)===0` 与 `Number('')===0`，于是「上游没给这格」
-     *   与「上游给了 0」在本函数里塌成同一个读数 —— 而两者处置相反（没给 ⇒ 等升级；
-     *   给了 0 ⇒ 真读数）。本文件第 98 行的口径写的就是「非数值如实 null，不编 0」，
-     *   实现却漏了这一格。与 config/projection-contract.js、config/injection-contract.js
-     *   的同名函数同因同法（该两条教训在本仓是 v3.0.0 / v3.0.3 的老账）。 */
-    if (v === null || v === undefined || v === '') return null;
+    /* 【修的是什么】`Number(null) === Number('') === Number([]) === 0`、`Number(true) === 1`，
+     *   于是「上游没给这格」与「上游给了 0」在本函数里塌成同一个读数 —— 而两者处置相反
+     *   （没给 ⇒ 等升级；给了 0 ⇒ 真读数）。本文件第 98 行的口径写的就是「非数值如实 null，
+     *   不编 0」，实现却漏了这一格。
+     *
+     *   [v3.3.1·O-8] **与 config/* 的两份同名函数对齐为强口径**。此前本份是**弱一格**的：
+     *   只挡 `null` / `undefined` / `''`，而实测 `'  ' → 0`、`[] → 0`、`true → 1`、`false → 0`、`[3] → 3`。
+     *   这条不对称在 v3.3.0（O-1 轮）被判为「可达性为零」故未动（怪值只能来自上游外供面，
+     *   而上游已收口为 `number | null`）；O-8 把它收掉的理由是：**本仓不该靠上游自觉** ——
+     *   同一条口径在同一个仓里存在两种严格度，读代码的人无法判断该信哪一份。
+     *   口径逐字同 config/projection-contract.js:95 与 config/injection-contract.js:118。 */
+    if (typeof v !== 'number' && typeof v !== 'string') return null;
+    if (typeof v === 'string' && !v.trim()) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
 }

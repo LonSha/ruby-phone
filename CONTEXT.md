@@ -133,6 +133,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 ### 跨端记忆协同（LonSha 插件 ⇄ RubyPhone）
 - **ruby → lonsha**（内存桥 `window.VirtualPhone.lonshaBridge`，apps/memory/lonsha-bridge.js）：`recall(query, topN)` 取剧情记忆 / `onFloorRollback(floor)` 删楼回滚 / `applyCoordinatedInjection` / `onChatChanged`。
   **取值门纪律（v3.3.0 起）**：楼层类入参在每个边界**入口**过一份本地 `(st)floorOrNull`（先看类型：只认数字与非空数字字符串，其余如实「没给」）—— `0` 是**合法楼层**，而 `Number(null) === Number('') === Number([]) === 0`，故「没给」与「就在第 0 楼」不得塌成同形；宿主 `index.js` 用 `stFloorOrNull` 前缀，`apps/*` 各持同名 `floorOrNull`，判据见 `tests/system-v312.test.mjs`。
+  另：`numOrNull` 三份实现（`config/projection-contract.js` / `config/injection-contract.js` /
+  `apps/place/place-data.js`）自 v3.3.1 起**逐字同口径**（强：先看类型），判据见 `tests/system-v313.test.mjs`。
 - **lonsha → ruby**（两条通路）：① 官方门面 `window.LonShaMemory.getPublicData()`（图谱/摘要/日记/POV/时间线/状态/账本/向量，由 apps/memory/graph-bridge.js 消费）；② 只读快照桥 `window.lonsha_memory_bridge_v1.snapshot`（v3.88 起，含 protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit）。
 - **注入格式化单一真源**：`LonShaBridge.prototype.recallBlock(queryText, opts)` —— `opts = { topN, label, userName, actors, strictActors }`。统一块头、首 24 字去重、每条裁 80 字、最多 3 条；`strictActors: true` 只保留提及在场人物的记忆（群聊防串味）；无命中返回 `''`（不产生空块）。**新增注入点必须走此方法，禁止在调用方另拼格式**（微信单聊 / 微信群聊 / 蜜语 honey 三处已统一）。
 

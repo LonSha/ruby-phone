@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.3.0';
+const ST_PHONE_VERSION = '3.3.1';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,13 +127,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**删楼回滚族的楼层取值门收口**（跨仓纪律：上游 O-2 逐条判定后，本仓在本轮同族里实测到自己这一面的真缺陷）。上游记忆插件 v3.224.0 把「用 `Number()` 结果当门」这条根因在回放/前移层收干净；本版在本仓删楼链路上实测到**同一条根因的下游面**，而且是三处。修前实测（真模块）：`MemoryCore.prototype.invalidateFloorAt('')` 把 longTerm 5 条 + shortTerm 2 条**全清**（n=6、只剩 `floor === null` 那条）—— 一次误调用清空整份记忆。",
-        "根因：`Number(null) === Number('') === Number('  ') === Number([]) === 0`、`Number(true) === 1`，而 **0 在本仓是合法楼层**（SillyTavern 楼层 0 基；本文件同族写法 `rollbackPhoneSmsToFloor(index, …)` 收到的正是 0 基 index）。凡以 `Number()` 结果当门的取值点，「没给」与「就在第 0 楼」必然塌成同形。三处：① `index.js` 的 `MESSAGE_DELETED` 处理器写成 `Number(eventData?.messageId ?? …)` + `Number.isFinite(...)` —— **半收口**，只挡 `undefined` / `NaN` / 非数字串，`''` / `'  '` / `[]` 全部通关（伪装成「删了第 0 楼」）；② `apps/memory/memory-data.js` `invalidateFloorAt(floor)` 里 `Number(f) >= Number(floor)`，`floor` 取 0 时**恒真**，且逐条 `Number(f)` 会把 `f = ''` 的条目算成第 0 楼而卷入；③ `apps/memory/lonsha-bridge.js` `onFloorRollback(floor)` 的 `Number(floor)` 直通 memoryCore，是同一半收口的第一道。",
-        "修法：三处各持一份本地 `floorOrNull`（**先看类型**：只认数字与非空数字字符串，其余如实 `null` = 「没给」）—— 与本仓 `config/projection-contract.js` / `config/injection-contract.js` 的 `numOrNull`（v3.0.0 / v3.0.3 老账，注释里写明「同因同法」）、`apps/place/place-data.js` 的同名函数、上游 `ledger-replay.js` 的 `floorOrNull` 逐字同口径。本仓约定是**各边界自持同口径门**，故不跨层共享（避免 `index.js` ↔ `apps/*` 的循环依赖）；宿主侧用 `stFloorOrNull` 前缀，防与 `apps/*` 的门混同（有判据锁着）。",
-        "**判开是双向的**（只做前一半就是把门关成「谁都清不动」）：真给 `0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 一律照常动手 —— 实测真给 0 仍清 6 条、真给 5 清 2 条；桥层真给 `' 5 '` 下传的就是数值 `5`。",
-        "新增 `tests/system-v312.test.mjs`（A 门本体三份实现逐条同口径 / B 数据层真模块行为 / C 桥层真模块行为 / D 宿主入口形态 / E 版本四源同源 / F 负控制含镜像自证与三条同款判据的破坏副本对照 + 互不掩护）。**负控制用整仓镜像**（仓内统一口径）：把破坏写进副本、在副本上跑同款真判据，避免「对原文件断言」「破坏写死成模拟常量」「判据引用锚点串」三种假绿形态。",
-        "**同轮捐到并修掉三处测试侧缺陷**（都是新写判据自己的毛病，与实现无关）：① 抬版脚本把 `update-log.json` 的新版本块 **append 到末尾**，而仓内约定 `versions` **首键即当前版本** ⇒ 32 条既有判据当场翻红（版本同源族全在读 `Object.keys(versions)[0]`），改插首键（纯文本搬移 + `json.loads` 双证）；② 新增套件 B 组**观测错了对象** —— `invalidateFloorAt` 是在接收者（`this`）上重写 `this.longTerm` 的，而判据把临时接收者丢进去、回头读**原数组**（那个数组从头到尾没被碰过）⇒「没给 ⇒ 一条不清」恒绿（假绿）、「真给 0 ⇒ 清 6 条」永远看不到，由负控制 N0/N4 当场抓出 —— 这是「判据要挂在有差异的那条路径上」的第三种形态：**路径对了、观测点错了**；③ D2 断言过严（禁模块**提及**宿主门名，而注释里写「与 index.js 的 `stFloorOrNull` 同因同法」是好事），改为只判**定义**。",
-        "版本升至 3.3.0（五源同源）。",
+        "**三份同名 `numOrNull` 口径统一**（O-8：同一条口径不许在一个仓里存在两种严格度）。本仓此前有三份同名函数，实测只有 `apps/place/place-data.js:99` 那份是**弱一格**的：只挡 `null` / `undefined` / `''`，而 `'  '` / `[]` / `true` / `false` / `[5]` 全部被 `Number()` 读成数（`'  ' → 0`、`[] → 0`、`true → 1`、`false → 0`、`[5] → 5`）。",
+        "为什么本轮才收：v3.3.0（O-1 轮）判它「可达性为零」未动 —— 怪值只能来自上游外供面，而上游 lonsha 已把场所面收口为 `number | null`。**O-8 收它的理由**：本仓不该靠上游自觉；「可达性为零」是**上游的状态**、不是本仓的保证，而同一个仓里两种严格度的同名函数会让读者无法判断该信哪一份。",
+        "修法：`place-data.js` 的 `numOrNull` 改为与 `config/projection-contract.js:95` / `config/injection-contract.js:118` **逐字同形**的强口径（先看类型：只认数字与非空数字字符串）。三份仍**各自持门**（不跨层共享，避免 `apps/*` ↔ `config/*` 反向依赖），并在注释里互指同族。",
+        "**判开是双向的**：真给 `0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 一律照常出数（实测真给 0 的在场读数仍是 `0`，不会被误判成「没给」）。",
+        "新增 `tests/system-v313.test.mjs`（A 三份实现逐条同口径 / B 真模块行为走导出面 / C 结构面 / D 版本四源同源 / E 负控制含镜像自证与三条破坏副本对照 + 互不掩护）。",
+        "版本升至 3.3.1（五源同源）。",
     ]
 };
 
