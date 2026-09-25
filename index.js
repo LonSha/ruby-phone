@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.3.2';
+const ST_PHONE_VERSION = '3.3.3';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,12 +127,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**门禁「缺输入仍判通过」普查**（O-3 下游侧：审计的审计）。把**门禁脚本自身也搬进镜像**再执行（首版拿「真仓里的脚本 + cwd=退化树」当夹具，一律从自身路径推根的脚本量到的还是真仓 —— 矩阵是假的），对 10 个门禁做了四档退化（根 .js 全删 / 全掏空 / apps 掏空 / config 掏空）。",
-        "**实测到的真缺陷两处**：① `scripts/syntax-check.mjs` 在根 .js 全删、`index.js` 掏空、或 apps / config 整目录掏空时仍 **exit 0**，报「395 个文件均可按 ES Module 解析」—— 而本门存在的唯一理由写在它自己文件头：`index.js` 坏掉时整个扩展不会被浏览器加载；旧代码只有 `total === 0` 一道，兜不住。② `scripts/import-resolve-check.mjs` 有「找不到 index.js ⇒ exit 2」守卫，但**入口被掏空**（只剩一行注释）时仍能从 `apps/` 枚举到 100+ 文件与 150+ 说明符，两道下限都过 ⇒ exit 0（把「入口没了」读成「都解析得开」）。",
-        "修法：两门各补「入口在场 + 非退化」守卫（`MIN_ENTRY_BYTES = 1000`），**只作用于默认根** —— 显式 `--root` 是夹具通道（`tests/system-v282` 等用合成小仓库），语义逐字不动；失败码 2（结构漂移 = 没得判）与 1（真语法失败 = 判出坏了）分开。",
-        "**另有三个候选经逐条压实后判定为「夹具错配」而非缺陷**（如实记下，避免误修）：`bridge-contract-audit` 在 config 掏空时 exit 2（真源读不到即拒判）；`source-derivation-audit` 在 config 掏空或删关键文件时 exit 1；`dead-export-check` / `lifecycle-audit` 都有扫描面下限（500 声明 / 20 个 App 类），apps 掏空后 exit 2。",
-        "新增 `tests/system-v314.test.mjs`（A 守卫在场 / B 退化必转红与反坐实 / C 三条夹具错配如实记账 / D 版本四源同源 / E 三条负控制含「拆掉守卫 ⇒ 退化树上又判通过」与「下限归零 ⇒ 又放行」）。",
-        "版本升至 3.3.2（五源同源）。",
+        "**门禁隔离与耗时基线**（O-4 下游侧：先量再决定改不改）。九道门串行合计 **84.9s**，其中 `test` 段 **70.9s（83%）**，其余 8 门合计 14s —— 所以「优化门禁耗时」实质就是「优化 tests 段」；而 8 个门禁各自独立、串行仅 14s，段间并行的收益上限就是它的一部分，**不值当**。",
+        "**隔离实测成立**：跑批前后对仓做快照（文件集合 + size + mtime）+ `git status` 对照，`npm run test` 跑完 0 差异、git 干净。",
+        "立项：`tests/gate_timing_baseline.json` 四面对外可读 —— 逐门耗时 / 主导项（test 段 83%）/ 隔离方法与实测漂移 / **`not_done`（本轮明确不做什么，逐条写理由）**。",
+        "新增 `tests/system-v315.test.mjs`（A 基线四件齐备 / A2「没做什么」逐条可读 / A3 口径不得被当成实机 / B1 隔离零漂移 / B2 两组子集墙钟上界 / C 版本四源同源 / D 三条负控制）。",
+        "版本升至 3.3.3（五源同源）。",
     ]
 };
 
