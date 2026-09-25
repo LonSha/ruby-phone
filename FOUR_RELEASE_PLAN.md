@@ -2,7 +2,7 @@
 
 状态：实施中，未发布。用户已授权四批及后续自主迭代；不把代码、自动化、实机验收混同。
 基线：LonSha 3.212.0 / RubyPhone 3.0.0，工作区原始干净；1673断言+42审计、835测试+九门日志通过。旧启动未记录退出码，新门禁必须记录。
-当前：LonSha 3.218.0（R2-E 取消留痕：读数增结局面 + 唯一标注入口 + 外供面 9→10 键）/
+当前：LonSha 3.219.0（R2-F 双向关系对账 + 知情网络：四态对账 + 同一件事三级判据 + 疑似档）/
 RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消息首行）。
 
 ## 全范围与验收
@@ -27,27 +27,101 @@ RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消
 
 ## Gate R1-C：投影的导出期新鲜度（比「归属」，不比「时刻」）
 - Structural: Local Fix；Execution: Local Fix Only；授权：approved local fix（四批授权内）。
-- 归属仓：**lonsha-memory-plugin**（上游导出侧）。本档在两边同步留痕：该 Gate 的改动面全在上游，
-  但**消费侧（RubyPhone）是唯一受害者** —— 下游读到的「谁的投影」由上游导出期决定，故两侧各留一份。
-- 证据：`_lastProjectionEnvelope` 的归属（conversationId + revision）只在 `readWorldLedger()` →
-  `_buildProjectionEnvelope()` 写入的那一刻成立。切聊（CHAT_CHANGED）换 chatId、回滚/恢复（`_bumpEpoch`）
-  只递增 `_mutationEpoch`，两条路径**都不清该缓存**；`buildBridgeSnapshot()` 于是把旧会话/旧代数的
-  投影当作当下读数导出（不报错、只错结果）。
-- 契约：同会话同代数 ⇒ 照常导出；会话或代数不符 ⇒ 不导出（`projection` 为 undefined ⇒ 自述 present=false）
-  并留痕；取不到 chatId ⇒ 放行，原契约不变（拿不到判据不等于证伪）。`generatedAt` 只记生成时刻、
-  不携带归属，改时间戳等于把陈旧内容伪装成新鲜，故只比对会话+代数。
-- 允许：index.js（buildBridgeSnapshot 新鲜度守卫 + `snap.meta.projectionFreshness` 归因字段）、
-  tests/v3213_projection_cache_freshness.test.mjs、catalog_reference_consumers.tsv 一行、本计划文档。
-  上游预算 3 文件 / 60 行。
-- 验证：新回归先红后绿；v3212/v3174/projection-absence 联合 35 项通过；全量 test:audit RC=0。
+- 证据：`_lastProjectionEnvelope` 的归属（conversationId + revision）只在 `readWorldLedger()`→`_buildProjectionEnvelope()` 写入的那一刻成立。
+  切聊（CHAT_CHANGED）换 chatId、回滚/恢复（`_bumpEpoch`）只递增 `_mutationEpoch`，两条路径**都不清该缓存**；
+  `buildBridgeSnapshot()` 于是把旧会话/旧代数的投影当作当下读数导出（不报错、只错结果）。
+- 契约：同会话同代数 ⇒ 照常导出；会话或代数不符 ⇒ 不导出（`projection` 为 undefined ⇒ 自述 present=false）并留痕；
+  取不到 chatId ⇒ 放行，原契约不变（拿不到判据不等于证伪）。`generatedAt` 只记生成时刻、不携带归属，改时间戳等于把陈旧内容伪装成新鲜，故只比对会话+代数。
+- 允许：index.js（buildBridgeSnapshot 新鲜度守卫 + `snap.meta.projectionFreshness` 归因字段）、tests/v3213_projection_cache_freshness.test.mjs、catalog_reference_consumers.tsv 一行、本计划文档。上游预算 3 文件 / 60 行。
+- 验证：新回归先红后绿（首跑 4a/4b/4c 因锚点不存在报红，实现后转绿）、v3212/v3174/projection-absence 联合35项通过、全量 test:audit RC=0；不删除功能。
 - 回滚：仅逆转该小补丁及新增测试；出现历史契约冲突回 AUDIT，不放宽门禁。
-- 子agent：DeepSeek R1-C 提供候选（主张**读取期校验**而非新增清理点：`_mutationEpoch` 递增点十处以上，
-  逐点清缓存必漏；用 undefined 表「不可用」以与「无会话」区分），我方逐行复核并在真实模块上复现。
+- 子agent：DeepSeek R1-C 提供候选（主张**读取期校验**而非新增清理点：`_mutationEpoch` 递增点十处以上，逐点清缓存必漏；用 undefined 表「不可用」以与「无会话」区分），我方逐行复核并在真实模块上复现。API Key 不写入仓库。
 - 「扔掉了」与「本来就没这面」分开：前者等宿主重跑、后者等上游升级，处置相反，压成一态即错读数。
-- **消费侧配套（RubyPhone v3.0.1 落地）**：下游新增的 `projectionScopeLine()` 正好把这份归属面显式化 ——
-  业务视图的「数据来源」卡直接显示「会话 X · 场景 Y · 世界 Z · 修订 N · 未过期/已过期（可重取）」，
-  于是上游这条守卫生效时（导出 undefined），下游如实报「桥在但没投影面」而不是继续显示旧会话的读数。
-  两侧判据互相独立：上游 v3213 判导出期，下游 system-v301 B3 判消费期。
+
+## Gate R1-E：九账只读对账面（工作台与证据查询的上游出口）
+- Structural: Local Fix；Execution: Local Fix Only；授权：approved local fix（四批授权内）。
+- 证据：本仓九本账（伏笔 seed / 约定 commitment / 平行事实 parallel / 秘密 secret / 回扣 recall-echo /
+  回声 echo / 事实版本 fact-version / 事件完整性 event-completeness / 修复闭环 repair）各自有
+  `list()` / `summarize()`，但**对外是一排孤立文本行**：`ledger-replay.js` 的 `FLOOR_OWNERS` 只登记
+  「谁有楼层归属」，不含条目正文、状态与引用键；快照 15 字段里**无一本账**（`worldProg` 只带四本账的
+  原始状态，且不含 `_factVersionState` / `_eventThreadState` / `_repairState`）。下游要回答
+  「她现在住哪里 / 这个承诺是哪一楼说的」只能逐 App 翻，且**拿不到出处**（无楼层、无来源账、无修订）。
+- 契约：新增 `evidence-workbench.js`（纯函数、零依赖、双导出），把九账收成**一份可查对账面**：
+  · `LEDGERS` 登记表是单一真源（id / label / 取状态 / 取账本 API / 列表过滤 / 引用前缀）；
+  · 每账三态 `ok` / `empty` / `absent`（模块未挂载、状态取不到、条目为空**三者不得同形**）；
+  · 每条条目带 `ref`（稳定引用键，如 `seed:sp_3`）+ `ledger`（来自哪本账）+ `floor`（出处楼层，
+    取不到即 `null`，**不写 0** —— 0 是「第 0 楼」这个真实读数）；
+  · `search()` 纯函数在面内检索，返回命中**与未命中的账**（「这本账里没有」≠「这本账不存在」）。
+  不改既有账本 API、不改 `ledger-replay` 登记表、不写任何账本状态。
+- 允许：evidence-workbench.js（新增）、index.js（`_evidenceWorkbench()` + 快照 `evidence` 字段）、
+  manifest.json（extra_js 一行）、tests/v3214_evidence_workbench.test.mjs、
+  tests/audit/catalog_reference_consumers.tsv 一行、dead_code_budget.json 抬 ceiling、本计划文档。预算 4 文件 / 260 行。
+- 验证：新回归先红后绿；v3212/v3213/projection-absence 联合通过；全量 test:audit RC=0；不删除功能。
+- 回滚：仅逆转该新增模块与快照接线；出现历史契约冲突回 AUDIT，不放宽门禁。
+
+## Gate R1-F：修复预览与受控写入回执
+- Structural: Local Fix；Execution: Local Fix Only；授权：approved local fix（四批授权内）。
+- 证据：`repair-loop.js` 三类修复动作（retarget / split / revoke）与宿主 `requestRepair` / `settleRepair`
+  已实现（v3.194），但**零真实调用点**：全库 grep `requestRepair` 只有两处定义与一条测试扫签名
+  （`tests/v3194` 的字符串断言），产品代码**没有任何一处调用**。于是「撤销一条错误事实」在用户面前
+  不存在入口，而它正是本仓治理过多轮的「源头改了、下游没跟着改」的唯一收口。
+  另：`request()` **不幂等**（同一次修复重试会新增一条记录），且桥无写入口，下游无从发起。
+- 契约：
+  · `preview(rawState, input)`（新增纯函数）：只算 `affectedBy` 命中面，**不落账**、不改 state；
+  · `request()` 增 `dedupeKey` 幂等（同键且未 abandoned ⇒ `replayed:true`，不新增记录；缺键时行为逐字同旧版）；
+  · 桥新增**受控写入面** `window.lonsha_memory_bridge_v1.repair`（与只读 `snapshot` 分离）：
+    `preview(input)` 只读预览；`apply(input, {idempotencyKey, expectRevision})` 落账并返回回执；
+    `settle(input)` / `abandon(input)` 逐项落定与放弃。
+  · 回执形状恒定：`{ok, reason, repairId, action, affected, total, revision, replayed, at}`；
+    `expectRevision` 不符即拒（`reason='revision-mismatch'`）且**不改账**；缺 `idempotencyKey` 即拒
+    （`reason='missing-idempotency-key'`）。
+  · 只读面不变：`snapshot` 仍是只读，不含任何写入方法（既有注释纪律保持）。
+- 允许：repair-loop.js（preview + dedupeKey）、index.js（previewRepair + 桥 repair 命名空间）、
+  tests/v3215_repair_write_channel.test.mjs、catalog_reference_consumers.tsv 一行、dead_code_budget.json、本计划文档。
+  预算 3 文件 / 220 行。
+- 验证：新回归先红后绿（先证 request 不幂等、preview 不改账、修订不符拒写）；v3194/v3202 回归；全量 test:audit RC=0。
+- 回滚：仅逆转本补丁；出现历史契约冲突回 AUDIT，不放宽门禁。
+- 边界：**不自动改派生件**（改哪一处是产品决定，自动改会累积幻觉删改 —— repair-loop 原注释已立）。
+  人工点「纠正归属」≠ 正文已发生；回执只记「账上落定了什么」，不推断剧情已经发生。
+
+## Gate R2-A：注入读数真实性（**已完成**，v3.215.0）
+
+主题：**最终实际注入**的读数只能由生成路径写；诊断必须另存；代际过期必须留痕；
+零块必须有读数；注入面必须外供。
+
+- 修前实测四条真缺陷：①**归属塌陷**（`_lastInjection` 被真注入与 selfCheck 的
+  「召回管线 dry-run（**不注入**，只验证链路通）」同时写，而面板文案是「即 AI 真实所见」）；
+  ②**迟到污染**（代际守卫在 await 之后判定，写入点在 await 内部无条件执行，过期只打一行日志）；
+  ③**零块未定义**（`if (inj2)` 短路使「本轮 0 块」与「还没跑」同形）；
+  ④**注入面不外供**（快照 15 字段里没有注入面）。
+- 收口：唯一构造点 `_injectionRecord`（恒定 10 键）/ 诊断 `_diagnostics.dryRun` /
+  零块落地（`blocks:[] total:0` 且 `round` 照常推进）/ 逐块读数 `_injectionBlocksOf`
+  （`kept` vs `dropped-budget`）/ 块引用键 `_injectionRefOf` / 过期留痕 `_injectionDiscardStale`
+  （**不碰读数**）/ 外供面 `buildInjectionReadout()` 进快照 + 桥 `injectionRefOf`。
+- 验证：v3216（T1-T10 + N1-N4，先红后绿；负控制一律真源码破坏 → 载入破坏副本 → 重跑同款判据）；
+  全量 196/196 文件、1721 断言、42/42 审计 RC=0。
+- 边界：**不声称**消除「过期代在 await 期间已写脏」——那要把记录延迟到 await 之后，属 R2-B；
+  本 Gate 只保证「过期必留读数」与「读数只有一个构造点」成立且可分。
+- 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
+
+## Gate R2-B：迟到隔离（读数落地不早于代际确认）（**已完成**，v3.216.0）
+
+主题：R2-A 已如实声明的那条边界的收口 —— 迟到的结果不得写脏读数。
+
+- 修前实测：`onBeforeGeneration()` 在 `await` **内部**无条件落地 `_injectionRecord`，
+  而代际守卫在 await **之后**才判定。快速连发时先发那一轮已写脏读数，守卫只拦住
+  `writeInjectSlot`，拦不住读数；面板上「最近一次实际注入」可能是**一次从未生效的注入**，
+  而旁边写槽位的结果恰说明这轮没生效 —— 两行读数互相矛盾。
+- 收口：`_injectionStage`（await 内只**暂存** `_injectionPending`，绝不动 `_lastInjection`）
+  + `_injectionCommit(myGen)`（守卫**之后**的唯一落地点，内部再做一道代际核对，
+  不符即返回 null 不静默落别的代的载荷）；**轮次号只由提交推进**（被丢弃那代不占号，
+  于是「第 N 轮」恒等于「真正生效过的第 N 次注入」）；过期分支**必须清暂存**
+  （不清则下一轮捡起旧载荷落成读数 —— 张冠李戴比不落地更坏），并把被丢弃载荷读数
+  （`pendingDiscarded`/`payloadChars`/`payloadBlocks`）记进 `_lastInjectionDiscard`。
+- 验证：v3217（11 条，先红后绿）；全量 197/197 文件、1732 断言、42/42 审计 RC=0。
+- 边界：只保证「读数落地不早于代际确认」与「过期载荷不得被下一轮捡起」；
+  **不声称**消除注入槽位之外的其它迟到写（charMem / 各账本），属后续 Gate。
+- 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
 
 ## Gate R2-C：消费侧接入注入面读数（**已完成**，RubyPhone v3.0.2）
 
@@ -98,6 +172,21 @@ RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消
   **不声称**解决「两条发布路径同时活跃时谁赢」（宿主集成面，取决于 ST 版本实际走哪条路），
   也不声称消除注入槽位之外的其它迟到写（charMem / 各账本写入）。
 - 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
+
+## Gate R2-F：双向关系对账 + 知情网络（**已完成**，lonsha v3.219.0）
+- 修前实测（真源码重放）：
+  ① 关系边单向主观，注入侧只原样列出召回边，**没有一格说「对侧那条在不在」**——
+  「乙对甲是警惕」与「乙对甲从未登记」同形，而后者是提取漏了一条（该补记）。
+  「对侧不在」有三种来源（本轮被披露条件挡下 / 已失效 / 压根没登记），压成一态会让模型去补一条不该补的关系。
+  ② 认知隔离用 includes / !== 逐字比较：同一件事三种措辞记 **3 条**，用告知式措辞去解除**一条都清不掉**（认知隔离永不解除）；
+  getReEntryNotice 只取前 3 条，前 3 格被旧措辞占死，真实新增的认知边界永远挤不进去。
+- 收口：新增 `relation-mutual.js`（四态对账 mutual / mutualGated / mutualExpired / oneSided，只有末态该补记，注入只标 one-sided）与
+  `knowledge-network.js`（三级同一性判据，判不开一律判不同；疑似档只报候选不合并）。
+  宿主接线：markUnaware 同事实不重复登记、已知侧有同事实不再登记为「不知道」；revealKnowledge 按下标删；模块缺席回落逐字口径。
+  诊断面增「双向对账」「知情网络」两行，报警只认真损失（oneSided / suspect）。
+- 测试：`tests/v3220_relation_mutual_knowledge.test.mjs` 18 条（含四条真源码破坏负控制）；既有 v341 / v3184 全绿。
+- 门禁：全量 200/200 文件 / 1772 断言 0 失败、42/42 审计 RC=0。
+- 跨仓：本 Gate **无新增外供字段**（读数落在插件内诊断面），故下游本轮不接入、不抬版。
 
 ## Gate R2-E：取消留痕（**已完成**，lonsha v3.218.0 + RubyPhone v3.0.3）
 
@@ -170,47 +259,34 @@ RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消
   验证：v302 21/21（含镜像树自证 C0 + 5 条负控制）；`npm run check` 全绿。
   边界：只读消费面、不涉及写入授权；宿主实机未验；注入槽位之外的迟到写属后续 Gate。
 
+- **R2-B：已完成**（v3.216.0）；`_injectionStage` / `_injectionCommit` 两段式（暂存 → 代际确认后提交），
+  轮次只由提交推进，过期清暂存并记载荷读数；v3217（11 条，先红后绿）；
+  全量 197/197 文件 / 1732 断言 0 失败、42/42 审计 RC=0。
+- **R2-A：已完成**（v3.215.0）；注入读数收口到唯一构造点 `_injectionRecord`（恒定 10 键），
+  逐块读数 `_injectionBlocksOf`（kept/dropped-budget 两态）、代际过期留痕 `_injectionDiscardStale`
+  （累计计数、刻意不碰读数）、外供面 `buildInjectionReadout()` 进快照 + 桥 `injectionRefOf(i)`；
+  面板为真生成读数作证并单独一格展示诊断（明写「没有进入 AI 上下文」）；v3216（14 项，先红后绿）；
+  全量 196/196 文件 / 1721 断言 0 失败、42/42 审计 RC=0（新测试已登记进参考基准）。
+  边界：**不声称**消除「过期代在 await 期间已写脏」（记录延迟到 await 之后属 R2-B）。
+- R1-E：**已完成**；新增 evidence-workbench.js（413 行）+ 宿主接线 + v3214（11 项，先红后绿）；
+  全量 194/194 文件、42/42 审计 RC=0（新测试已登记进参考基准）。
+- R1-F：**已完成**；repair-loop preview/validate + dedupeKey 幂等；index.js abandonRepair /
+  repairRevision / 桥 `repair` 受控写入面（恒定回执 9 键 + 两道门）；v3215（12 项，先红后绿）；
+  全量 195/195 文件 / 1705 断言 0 失败、42/42 审计 RC=0。
 - R1-A：已修复；先红后绿22项定向通过；全量1675断言、42审计通过（补齐测试登记后RC=0）。
 - R1-B：已修复；先红后绿32项定向通过；手机838项测试及九门RC=0。
-- R1-C：已修复（上游 lonsha，提交 `012bd2f`）；先红后绿35项定向通过；全量193文件/1682断言/0失败、
-  42审计RC=0（新测试已登记进参考基准）。消费侧配套见下条。
-- R1-D（下游归属面落地）：**已交付并推送**（RubyPhone v3.0.1，提交 `d6c1041`）。做的是把投影的
-  **归属面**补进四个业务面而不是换数据源（理由见 Gate 段），并收口探针自述面、新增第九道门 J8/J9。
-  验证：v301 18/18、v297+v298+v299+v301 93/93、`npm run check` EXIT 0（856 pass / 0 fail）。
-- R1-E（上游九账只读对账面）：**已交付并推送**（lonsha-memory-plugin v3.214.0，提交 `579bcd9`）。
-  新增 `evidence-workbench.js`（413 行，九账登记表单一真源 + 三态读数 ok/empty/absent 且 absent 分
-  `module-unavailable` / `state-missing` + 出处投影 ref/ledger/floor，楼层取不到一律 `null` 不写 0）
-  + 宿主接线（`_evidenceWorkbench` / `searchEvidence` / `_ledgerApis` + 快照 `evidence` 字段）。
-  验证：v3214 11 项先红后绿；全量 194/194 文件、42/42 审计 RC=0。
-- R1-F（上游修复预览与受控写入面）：**已交付并推送**（lonsha-memory-plugin v3.214.0，提交 `579bcd9`）。
-  `repair-loop.js` 新增 `preview(input)`（签名无 rawState，结构上只算不改）与 `validate(input)`
-  （request/preview 共用判据）；`request()` 增 `dedupeKey` 幂等（只按「未放弃」判重）。
-  桥**分两面**：只读面逐字未动；受控写入面只收在**唯一命名空间** `repair`
-  （`preview` / `apply` / `settle` / `abandon`），写入过两道门（`idempotencyKey` 必填 +
-  `expectRevision` 对表），拒即不改账；回执 9 键恒定。
-  验证：v3215 14 项先红后绿；全量 195/195 文件、1707 断言 0 失败、42/42 审计 RC=0。
-  逆向审计补口（提交 `a2187a7`）：`settle` / `abandon` 同为写动作，一样过修订门——记录 id 是每条
-  state 自己的 seq（`rp_1`），切聊后新会话的 `rp_1` 与旧会话同号，陈旧 settle 会把新会话那条标成 done。
-- R1业务投影/工作台/证据修复：**上游读面（R1-A/C/E）与写面（R1-F）均已落地**；下游侧
-  业务投影一半已完成（R1-D，v3.0.1）。
-  **消费侧待办（未授权，不在本档范围内）**：手机端尚未消费上游快照的 `evidence` 字段（九账对账面），
-  也尚未接入桥的 `repair` 受控写入面（发起 / 预览 / 落定 / 放弃）。这两项若要落地，须先取得
-  RubyPhone 侧的写入授权与预算，并按本仓「先红后绿 + 九门」口径推进。
+- R1-C：已修复；先红后绿35项定向通过；全量193文件/1682断言/0失败、42审计RC=0（新测试已登记进参考基准）。
+- R1业务投影/工作台/证据修复：**读面（R1-A/C/E）与写面（R1-F）均已落地**。
 - R2（准确记忆与受控行动）：**已落四段** —— R2-A 注入读数真实性（lonsha v3.215.0）、
   R2-B 迟到隔离（lonsha v3.216.0）、R2-C 注入读数消费侧接入（RubyPhone v3.0.2）、
   R2-D 无主暂存不得被别的代捡起（lonsha v3.217.0）、R2-E 取消留痕（lonsha v3.218.0 + RubyPhone v3.0.3）。
+  R2-F 双向关系对账 + 知情网络（lonsha v3.219.0）。
   **R2 剩余（已取证、待实施）**：
   ① **取消留痕**：**已完成**（R2-E，lonsha v3.218.0 + RubyPhone v3.0.3）——
      详见上文 Gate R2-E 与状态检查点。
-  ② **双向关系 / 知情网络**：属 R2 原始范围，未启动。
+  ② **双向关系 / 知情网络**：**已完成**（R2-F，lonsha v3.219.0）——
+     详见下文 Gate R2-F 与状态检查点。
 - R3/R4：待实施。
-- 真实SillyTavern宿主验证：未验（上游写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验；
-  下游两仓同步跑过 `npm run check`：lonsha 全量 RC=0、RubyPhone 九门 RC=0）。
-- 两仓计划书同步：本档为 RubyPhone 侧副本，R1-C 段与 R1-D 记录已补齐（此前缺 R1-C 段）。
+- 真实SillyTavern宿主验证：未验（写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验）。
 
-## Gate R1-B：消费侧输入收紧
-- Local Fix / Local Fix Only。已授权；三条真实回归在旧代码全部失败。
-- 只允许given公开值；未知可见性归withheld/invalid-visibility；时间和修订只认有限数字或非空数字串；三对象字段类型须正确。
-- 允许config/projection-contract.js和tests/projection-input-contract.test.mjs；局部预算100行，连计划文档总预算150行/3文件。
-- 不改结构版/公开函数形状/过期只报告语义，不加依赖、不动业务存储。
-- 门禁：新测试先红后绿、v300、全量九门。失败回退本补丁，不删旧测试。
+- R1-A追加GATE：全量失败根因为新增测试未按仓内纪律登记，允许catalog_reference_consumers.tsv追加一行；不放宽守卫。上游预算4文件/150行。
