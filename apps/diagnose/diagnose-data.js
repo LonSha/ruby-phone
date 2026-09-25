@@ -38,7 +38,7 @@ import { readProjection, projectionValue, projectionLine } from '../../config/pr
 /* [v3.0.2] R2-C 上游注入读数的消费侧单一真源（Gate R2-A/R2-B 的外供面）。
  *   接在这里的理由与本仓一切「上游读数」的可见出口相同：投影接诊断、探针自述接诊断，
  *   注入面同族 —— 而它此前**全库零消费**（上游 v3.215.0 做出来，下游没人读）。 */
-import { readInjection, injectionLine, injectionVerdictText, blockLine } from '../../config/injection-contract.js';
+import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockLine } from '../../config/injection-contract.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -288,6 +288,11 @@ export function summarizeDiagnose(pkg) {
         if (inj.verdict === 'all-dropped') bad.push('最近一轮注入：候选 ' + inj.total + ' 块全部被注入预算裁掉（0 块进入上下文）');
         else if (inj.verdict === 'candidates-empty') bad.push('最近一轮注入：读到 0 块候选（召回没给出可用素材，0 块进入上下文）');
         if (inj.strayOrigin) bad.push('注入读数不是真生成写的（origin=' + String(inj.origin) + '）');
+        /* [v3.0.3] R2-E：**被中止**是坏消息 —— 用户看到「最近一次实际注入」会以为回复在路上，
+         *   其实那一轮被 Esc 中止了（该重发）。而「已完成」不是坏消息（回复已经在那儿了），
+         *   刻意不进首行 —— 那会把「需要用户做的事」稀释掉（本仓「坏消息先说」纪律的反面）。
+         *   「结局未定」同样不入：它是等宿主发事件，不是用户该做的事。 */
+        if (inj.outcome === 'aborted') bad.push('最近一轮生成被中止：注入已发生但回复未产出（可重发）');
     }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');

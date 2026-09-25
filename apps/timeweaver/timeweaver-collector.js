@@ -100,6 +100,9 @@ export function collectLonshaInjection(win) {
       line: injectionLine(r),
       round: r.round,
       origin: r.origin,
+      // [v3.0.3] R2-E：结局带出（回望页要显示「这一轮有没有出稿」）
+      outcome: r.outcome,
+      outcomeAt: r.outcomeAt,
       strayOrigin: r.strayOrigin,
       total: r.total,
       kept: r.kept,

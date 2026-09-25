@@ -33,6 +33,13 @@
  *   ③ 不猜：「没这面」「没跑过」「跑了但候选空」「跑了但全被裁」四者**必须分开报**；
  *      判不开的一律 null，不给冒充值。
  *
+ * 【[v3.0.3] R2-E：接上游 v3.218.0 的 `outcome`】
+ *   上游修前「被中止」与「正常完成」同形（`GENERATION_ENDED` 只复位一个标志），
+ *   v3.218.0 给读数加了结局并为它立了三态。下游按**跨仓纪律**同轮接上：
+ *   读出面增 `outcome` / `outcomeAt` / `faceDrift`，并把结局写进总述与诊断坏消息首行 ——
+ *   「被中止」是用户真正需要立刻知道的（回复没出稿，该重发），
+ *   而「已完成」不是坏消息（不占首行）。
+ *
  * 【为什么不提供 export default】
  *   本文件与 config/projection-contract.js 并列，但**不**跟着加 `export default`：
  *   本面没有 default 形态的产品侧消费者（同仓 dead-export 门禁的 E11 专门对 default 面
@@ -41,6 +48,16 @@
 'use strict';
 
 import { readPushProbe } from './world-bridge.js';
+
+/* 【跨仓契约快照】上游 `injection` 面的**顶层键**（v3.218.0 起 10 键）。
+ *   为什么在下游有意重复一份：跨仓不能 import（上游是酒馆插件、本仓是扩展），
+ *   消费者必须能**独立判**「我认不认得这份结构」。上游改字段 ⇒ 本仓据此现形，
+ *   而不是把新字段读成 undefined 当成「没有这项」（与 config/projection-contract.js
+ *   的 ENVELOPE_FIELDS 同动机）。
+ *   v3.215.0（R2-A）9 键；v3.218.0（R2-E）追加 `outcome` —— 中止与完成必须可分。 */
+const INJECTION_FACE_KEYS = Object.freeze([
+    'origin', 'outcome', 'round', 'ts', 'tokens', 'chars', 'html', 'total', 'kept', 'blocks'
+]);
 
 /**
  * 面级归因（**五态**，处置方向互不相同；这是本模块的对外裁定面之一）。
@@ -63,6 +80,20 @@ const INJECTION_VERDICTS = Object.freeze({
     'injected': '有块进入了上下文',
     'candidates-empty': '真生成跑了，但**读到 0 块候选**（召回没给出可用素材）',
     'all-dropped': '真生成跑了，候选**全部**被预算裁掉（0 块进入上下文）'
+});
+
+/**
+ * 读数的**结局**三态（[v3.0.3] 接入上游 v3.218.0 的 `outcome`）。
+ *
+ *   为什么必须单独成面：上游修前**中止与完成同形**（`GENERATION_ENDED` 只复位一个标志），
+ *   于是下游只能看到「最近一次实际注入」而读不出「这一轮到底有没有出稿」——
+ *   而两者处置相反：**被中止 ⇒ 该重发；已完成 ⇒ 该看回复**。
+ *   压成一态正是本仓反复点名的错读数形态，故下游把它做成独立一格并进坏消息首行。
+ */
+const OUTCOME_TEXT = Object.freeze({
+    'completed': '已完成（回复已落层）',
+    'aborted': '被中止（本轮无回复，可重发）',
+    'pending': '结局未定（生成进行中，或宿主未发结束事件）'
 });
 
 /** 逐块读数的两态（上游 `reason` 的两个取值；未知取值如实输出原值，不静默兜底） */
@@ -140,6 +171,20 @@ export function injectionVerdictText(verdict) {
 }
 
 /**
+ * 结局文案（未知结局**如实输出原值**）。
+ *   刻意不把未知值兜底成 'pending'：那会把「上游给了个没见过的结局」伪装成
+ *   「正常的进行中」，让本仓失去发现上游契约变更的能力。
+ */
+export function outcomeText(outcome) {
+    return OUTCOME_TEXT[outcome] || String(outcome || '未知');
+}
+
+/** 【跨仓契约快照】只读一份副本（测试据此钉住上游键面；改上游键此值必须同步） */
+export function injectionFaceKeys() {
+    return INJECTION_FACE_KEYS.slice();
+}
+
+/**
  * 读上游注入读数（本仓一切注入面消费的唯一入口）。
  *
  * @param {object} [win] 显式注入 window（无头测试用；不传取全局）
@@ -160,6 +205,11 @@ export function readInjection(win, opts = {}) {
         declaredKind: null,
         strayOrigin: false,
         origin: null,
+        /* [v3.0.3] R2-E：结局面（上游 v3.218.0 起外供）。未就绪时如实 null，
+         *   不预填 'pending' —— 那会把「没读到这一格」伪装成「正在进行中」。 */
+        outcome: null,
+        outcomeAt: null,
+        faceDrift: [],
         round: null,
         ts: null,
         ageMs: null,
@@ -268,6 +318,12 @@ export function readInjection(win, opts = {}) {
              *   （诊断路径写回了「AI 真实所见」）—— 必须在下游现形，而不是当成正常读数用。 */
             strayOrigin: !!(origin && origin !== 'generation'),
             origin: origin || null,
+            /* [v3.0.3] R2-E：结局面。缺 `outcome`（旧版上游，v3.217 及以前）⇒ 如实 null
+             *   并计入 `faceDrift` —— 「这版上游没这格」与「这格是空的」必须分开，
+             *   前者等升级、后者等生成跑完，处置相反。 */
+            outcome: (typeof raw.outcome === 'string' && raw.outcome) ? raw.outcome : null,
+            outcomeAt: numOrNull(raw.outcomeAt),
+            faceDrift: INJECTION_FACE_KEYS.filter((k) => !Object.prototype.hasOwnProperty.call(raw, k)),
             round: numOrNull(raw.round),
             ts,
             ageMs: (ts === null) ? null : (now - ts),
@@ -310,6 +366,10 @@ export function injectionLine(inj) {
     }
     if (p.chars !== null) parts.push(p.chars + ' 字符');
     if (p.tokens !== null) parts.push('约 ' + p.tokens + ' token');
+    /* [v3.0.3] R2-E：结局必须进总述 —— 「被中止（本轮无回复，可重发）」与
+     *   「已完成（回复已落层）」处置相反，不写出来用户就要自己去别处推断。 */
+    if (p.outcome) parts.push('结局：' + outcomeText(p.outcome));
+    else parts.push('结局：未提供（上游这版还没外供 outcome）');
     if (p.strayOrigin) parts.push('【注意】该读数不是真生成写的（origin=' + String(p.origin) + '）');
     return parts.join(' · ');
 }

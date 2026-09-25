@@ -223,6 +223,7 @@ export class TimeweaverView {
           <div class="tw-curve-label">\ud83d\udcee 送达侧观测 · 本轮实际注入</div>
           <div class="tw-letter-stats" style="margin-top:8px">
             <span class="tw-chip" style="color:${warn ? '#f87171' : '#cbb89a'}">${esc(injectionLine(inj))}</span>
+            <span class="tw-chip" style="color:${inj.outcome === 'aborted' ? '#f87171' : (inj.outcome === 'completed' ? '#cbb89a' : '#6e7681')}">${inj.outcome === 'aborted' ? '\u26a0\ufe0f 被中止（本轮无回复）' : (inj.outcome === 'completed' ? '\u2713 已完成' : '结局未定')}</span>
           </div>
           ${rows}
         </div>`;

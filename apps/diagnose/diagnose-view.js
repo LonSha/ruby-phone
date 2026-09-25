@@ -9,6 +9,7 @@
 'use strict';
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
+import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 
 const Q = String.fromCharCode(34);
@@ -195,6 +196,26 @@ export class DiagnoseView {
         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(injectionLine(inj)) + '</div>';
         html += '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>裁定</span>'
             + this._chip(inj.reason === 'ready' ? injectionVerdictText(inj.verdict) : inj.reason, tone) + '</div>';
+        /* [v3.0.3] R2-E：结局单独一格 —— 「被中止」与「已完成」处置相反
+         *   （前者该重发、后者该看回复），压成一格就是本仓最贵的错读数。
+         *   上游没外供该格（v3.217 及以前）时如实说「未提供」，不预填成「进行中」。 */
+        if (inj.reason === 'ready') {
+            const _ocTone = inj.outcome === 'completed' ? 'ok' : (inj.outcome === 'aborted' ? 'bad' : 'muted');
+            html += '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>结局</span>'
+                + this._chip(inj.outcome ? outcomeText(inj.outcome) : '未提供（上游这版还没外供 outcome）', _ocTone) + '</div>';
+            if (Array.isArray(inj.faceDrift) && inj.faceDrift.length) {
+                /* [v3.0.3] 契约快照**必须在这里真消费**（本仓 dead-export 门禁当场捐到：
+                 *   `injectionFaceKeys` 建好却产品端零消费 = 又一次「建好不消费」）。
+                 *   而且它在这里是**用户能不能自证**的关键：只说「缺了 outcome」，
+                 *   用户无从判断是上游旧版还是本机认错了格子；说出本机认得的整份键面，
+                 *   他才能自己核对。 */
+                const faceKeys = injectionFaceKeys();
+                html += '<div class=' + Q + 'dg-note' + Q + '>上游注入面缺少本机认得的格子：'
+                    + escapeHtml(inj.faceDrift.join('、')) + '（契约快照对账，非故障——旧版上游缺新格属正常）。'
+                    + '本机认得的注入面共 ' + faceKeys.length + ' 格：'
+                    + escapeHtml(faceKeys.join('、')) + '。</div>';
+            }
+        }
         if (inj.reason === 'ready') {
             html += '<div class=' + Q + 'dg-sub' + Q + '>来源：' + escapeHtml(String(inj.origin == null ? '（未给）' : inj.origin))
                 + ' · 轮次 ' + escapeHtml(String(inj.round == null ? '（未给）' : inj.round))
