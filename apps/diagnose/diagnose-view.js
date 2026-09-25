@@ -11,6 +11,7 @@
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
+import { noteSilenceCycle, silenceAlerts, silenceLedgerFace, resetSilenceLedger } from '../../config/silence-guard.js';
 
 const Q = String.fromCharCode(34);
 
@@ -239,10 +240,45 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v3.4.2 · F-5] 沉默降级卡：每类一句话 + 证据（阈值与实测值并列，便于判断「差多少」）。
+     *  纯渲染：结论与文案全部来自 `config/silence-guard.js`，本方法不做任何判断。
+     *  卡尾附**台账面**（计数与轮次身份）：它回答「这几轮是怎么数出来的」——
+     *  没有它，用户看到「连续 4 轮」却不知道这 4 轮是怎么来的，也就无法判断该不该信。 */
+    _silenceHtml(alerts) {
+        const rows = [];
+        for (const a of alerts) {
+            const ev = a.evidence || {};
+            const evText = Object.keys(ev).map((k) => k + '=' + String(ev[k])).join(' · ');
+            rows.push('<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>' + escapeHtml(a.id) + '</span>'
+                + '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(a.text) + '</div>'
+                + '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(evText) + '</div></div>');
+        }
+        const face = silenceLedgerFace(typeof window !== 'undefined' ? window : null);
+        rows.push('<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>台账</span>'
+            + '<div class=' + Q + 'dg-sub' + Q + '>累计 ' + escapeHtml(face.cycles) + ' 轮 · pending 连续 ' + escapeHtml(face.pendingStreak)
+            + '（末轮 ' + escapeHtml(face.pendingLastRound === null ? '—' : face.pendingLastRound) + '）'
+            + ' · empty 连续 ' + escapeHtml(face.emptyStreak) + '（末次 ' + escapeHtml(face.emptyLastRoundKey === null ? '—' : face.emptyLastRoundKey) + '）</div>'
+            + '<div class=' + Q + 'dg-sub' + Q + '>重载页面即从零计数（台账在内存里）；只记计数与轮次身份，不存读数内容。</div></div>');
+        return rows.join('');
+    }
+
+    /** [v3.4.2 · F-5] 重置沉默台账（用户显式动作：看完告警后清一次计数）。
+     *  为什么给出口而不是留给测试：台账是**进程内**的，若没有清零点，用户重开诊断页
+     *  只会在同一份计数上继续累加，「刚清零过」这个动作在界面上无处可做。 */
+    resetSilence() {
+        try { resetSilenceLedger(typeof window !== 'undefined' ? window : null); } catch (_e) { /* 不抛 */ }
+    }
+
     render(container) {
         if (!container) return;
         this.loadCSS();
         const pkg = collectDiagnose();
+        /* [v3.4.2 · F-5] 沉默降级告警面：先记这一轮（跨轮计数），再算告警。
+         *   顺序不能反 —— 反了的话「连续 3 轮」永远差一轮（当轮还没记）。
+         *   本卡**只进诊断页、不弹窗**：三类沉默都是上游或宿主那边的事，
+         *   弹窗提示用户也做不了什么，只会把「安静地降级」换成「吵闹地降级」。 */
+        noteSilenceCycle(typeof window !== 'undefined' ? window : null, pkg);
+        const silence = silenceAlerts(typeof window !== 'undefined' ? window : null, pkg);
         const summary = summarizeDiagnose(pkg);
         const bad = /^需注意/.test(summary);
         const h = [];
@@ -251,6 +287,15 @@ export class DiagnoseView {
         h.push('    <div class=' + Q + 'dg-title' + Q + '>诊断中心</div>');
         h.push('    <div class=' + Q + 'dg-summary' + (bad ? ' dg-bad' : '') + Q + '>' + escapeHtml(summary) + '</div>');
         h.push('  </div>');
+        /* 沉默告警卡放**最前**：有坏消息先说坏消息（本仓 v2.36 桥卡片学到的教训）。
+         *   零告警时**不出卡片** —— 不给「一切正常」的绿灯结论（那是另一个判据面的事）。 */
+        if (silence.length > 0) {
+            h.push('  <section class=' + Q + 'dg-card dg-bad' + Q + '><h3>沉默降级告警</h3>'
+                + this._silenceHtml(silence) + '</section>');
+        } else if (bad) {
+            h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>沉默降级告警</h3>'
+                + '<div class=' + Q + 'dg-sub' + Q + '>本轮未观察到三类沉默（快照久未更新 / 注入连续 pending / 投影长期 empty）。</div></section>');
+        }
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游桥</h3>' + this._bridgesHtml(pkg.bridgeReport || {}) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>探针自述（sourceState / lastError）</h3>' + this._probeSelfHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');

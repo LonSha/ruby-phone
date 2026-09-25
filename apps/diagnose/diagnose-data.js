@@ -185,7 +185,20 @@ export function collectDiagnose(win) {
     const injection = safe(() => readInjection(w), null) || null;
     const injBlocks = (injection && Array.isArray(injection.blocks)) ? injection.blocks : [];
 
-    return { at, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks };
+    /* ── [v3.4.2 · F-5] 快照导出时刻（供「沉默降级」判「久未更新」用）──
+     *   为什么要在这里取、而不是让 silence-guard 自己摸桥：诊断中心是**本仓一切上游读数的
+     *   唯一取数口**（本文件头三条纪律之一「只读真源出口」）。让告警模块自己去读快照，
+     *   就会多出第二个取数点 —— 而「同一口径被抄 N 份」正是 v2.97.0 收敛掉的那条路径。
+     *   如实取不到即 null（silence-guard 见到 null 就不判，不猜）。 */
+    const snapshotAt = (() => {
+        try {
+            const exp = snapshot && snapshot.exportedAt;
+            const n = Number(exp);
+            return Number.isFinite(n) ? n : null;
+        } catch (_e) { return null; }
+    })();
+
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks };
 }
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
