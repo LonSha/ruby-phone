@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.4.0';
+const ST_PHONE_VERSION = '3.4.1';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,12 +127,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**存储代际裁定面**（P-4：把「版本戳」从**被写入**变成**被裁定**）。实测纠正一条**陈旧记载**：`TODO.md` 里「本仓存储层没有 schema 版本号」**已过期** —— `STORAGE_SCHEMA_VERSION = 2` 自 v2.89.0 起就在（`config/storage.js:37`）。真缺口更难看见：**版本被写入、从不被裁定**（全仓 `grep -rn 'ledger.version'` 零命中），于是「旧档 / 当档 / 更新版插件写的档」在机制上无从回答，一律被静默按当前口径读。",
-        "新增 `schemaFace(isChatData)` 四态裁定：`current` / `legacy`（旧档，如实上报、**不迁移**）/ `future`（更新版插件写的档 —— 按当前口径读**可能误读**，必须说出来）/ `unknown`（ver 为 0 或账本缺失损坏，另带 `absent` / `corrupt` 细因）。口径纪律：**裁定不等于迁移** —— 读取路径上顺手做破坏性写操作，是所有「打开一下就改了数据」事故的同一个形状。",
-        "同族第二处一并收：`_readMigrationLedger` 把「账本缺失」「账本损坏」「账本抛错」压成同一个 `{version:0,keys:{}}`（三态塌成两态，而两者处置方向相反）。现如实分面（`absent` / `corrupt` 各自成字段），`version` / `keys` 兜底值**一字未动**（既有消费者零破坏）。另新增 `migrationLedgerFace(isChatData)` 逐条读取面：`count` / `unparsableAt` / 条目按 key 稳定排序，坏时间戳**如实计数不丢弃**。",
-        "落地：`tests/audit/migration_points.tsv`（迁移点登记台账 11 条＝统一 3 + 局部 8；判据是「**锚点必须仍存活**」—— 台账自己也会过期，过期而无人知比没有更危险）+ `tests/system-v317.test.mjs`（13 项：A 源码面 / B 行为面四态 × 八形态矩阵与「裁定不写」逐字节不变 / C 台账 / D 三条负控制 / E 版本五源同源）。",
-        "同轮捐到两处**判据自身缺陷**并修掉：① 负控制**复制**判据（首版 D1/D2 另写一份简化判据 ⇒ 验证的是简化判据，不是产品判据）—— 抽成共用判据体，负控制改跑**同款真判据**并断言抛出 `AssertionError`；② 夹具 `opts.settings` 入参是**装饰性**的（`extensionSettings` 是硬编码最小面、不接线），照它写判据会得到「读不到全局账本」的假红。",
-        "版本升至 3.4.0（五源同源）。"
+        "**saveChat 失败注入**（P-5：把「存档没落盘」与「用户没发现」之间唯一的一道手续变成可观察的）。`_debouncedSaveChat` 有一套**串行队列 + 四档退避重试（0/350/900/1800ms）+ 放弃**的逻辑，而它此前**从来没有被任何判据观察过** —— 夹具默认 `saveChat: async () => {}` 永远成功，「重试了几次」「放弃后是什么状态」全是空白。而它跑在**数据丢失路径**上。",
+        "**实测纠正一条不准确的记载**：TODO 写着「需要让夹具里的 `saveChat` 可控失败（当前是 `async () => {}`）」。实测发现**该记载不准确** —— `installRuntimeHost` 返回的 `host.context` 就是那个活对象，`host.context.saveChat = async () => { throw … }` **当场生效**（探针第 1 例实测 1 次调用）。所以缺的不是能力，而是**把它做成一眼可读的用法与判据**。据此把交付重新定义为：夹具补显式 `saveChatFails` 入参 + `saveChatCalls()` 读数 + 一整套行为判据。",
+        "实测读数（真源码 + 真宿主）：全失败 ⇒ **恰好重试 4 次**、总耗 3057ms（≈ 四档退避之和 3050ms）、**绝不外抛**；第 2 次成功 ⇒ 2 次即停（351ms）；退避实测 **0 / 352 / 901 / 1803ms**；并发三次立即保存 ⇒ **同时在飞峰值恒为 1**（串行化生效，正是防 EPERM rename 撞车的那个形态）；等待重试期间切会话 ⇒ 后续重试被身份守卫拦下（**不会把旧会话数据写进新会话**）。",
+        "落地：`tests/_runtime_host.mjs` 补 `saveChatFails`（**默认 0 ⇒ 与加它之前逐字同行为**）+ `saveChatCalls()` 读数 + `tests/system-v318.test.mjs`（14 项：A 夹具面 / B 重试与放弃 / C 串行化 / D 隔离与队列复位 / E 三条真源码破坏负控制 / F 版本五源同源）。",
+        "同轮捐到一处**负控制设计缺陷**并修掉：N2 首版把「去掉串行」破坏成**脱手执行**（`(async () => {…})();`）—— 那切断的是「等待」而不是「串行」，`Promise.all` 在保存体跑完前就返回，判据读到「在飞 0 个」，属**无效破坏**。改为「每个调用各自起一条链」后，同时在飞真的出现多个，同款判据正确转红。",
+        "版本升至 3.4.1（五源同源）。"
     ]
 };
 

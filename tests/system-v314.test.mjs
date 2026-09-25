@@ -36,9 +36,27 @@ const GATE = 'scripts/syntax-check.mjs';
 const IR = 'scripts/import-resolve-check.mjs';
 
 const SKIP = new Set(['.git', 'node_modules']);
+/* [v3.4.1 · P-5] 镜像必须能容忍「瞬态文件在复制途中消失」。
+ *   实测缺陷：`fs.cpSync(ROOT, dir)` 对整仓逐项 lstat，若某个文件在 readdir 之后、
+ *   lstat 之前被别的东西删掉，就抛 `ENOENT: lstat '<file>'` ⇒ **偶发假红**，
+ *   而报错点指向一个用户从没听说过的临时文件名（实测：`.tmp_v315_probe_<ts>.js`）。
+ *   它此前被归为「环境抖动」，真因是 v315 N1 的负控制往**仓根**写探针文件
+ *   （与 O-4 修掉的「临时产物落仓根」同一形态；v315 那侧已改到 tests/audit/ 下）。
+ *   这里仍加一道防线：cpSync 失败时**重试一次** —— 镜像类测试要观察的是「门禁在退化输入上的行为」，
+ *   不是「仓库在那一瞬间的文件集合」，为一条瞬态竞态让整个套件转红是**测量误差被当成了测量结果**。
+ *   重试仍失败则抛出（不吞错：真·持续失败必须看得见）。 */
+function cpWithRetry(src, dest) {
+    try {
+        return fs.cpSync(src, dest, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)) });
+    } catch (e) {
+        if (!/ENOENT/.test(String(e && e.code))) throw e;
+        try { fs.rmSync(dest, { recursive: true, force: true }); } catch (_e2) { /* 首次可能只建了一半 */ }
+        return fs.cpSync(src, dest, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)) });
+    }
+}
 function mirror(gut = [], gone = []) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v314-mir-'));
-    fs.cpSync(ROOT, dir, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)) });
+    cpWithRetry(ROOT, dir);
     for (const sub of gut) {
         const p = path.join(dir, sub);
         if (fs.statSync(p).isFile()) fs.writeFileSync(p, '// gutted' + String.fromCharCode(10));

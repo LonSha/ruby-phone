@@ -138,13 +138,22 @@ test('v315 C1. ★ 版本四源同源（入口 / manifest / update-log.latest / 
 
 // ══════════ D 负控制 ══════════
 test('v315 N1. ★★ 负控制·隔离：往仓里写一个文件 ⇒ 快照比对必须抓到漂移', () => {
+    /* [v3.4.1] 与本套件自己主张的口径对齐：探针文件**不落在仓根**。
+     *   原写法 `path.join(ROOT, '.tmp_v315_probe_<ts>.js')` 一边主张「跑批零改仓」，
+     *   一边往仓根写文件 —— 跑批期间它确实有零点几秒存在，而并行的整仓镜像类测试
+     *   （system-v314 的 `cpSync(ROOT, …)`）正好会 cpSync 到它，碰上它被 unlink 的瞬间
+     *   就抛 `ENOENT: lstat '.../.tmp_v315_probe_<ts>.js'` ⇒ **偶发假红**，
+     *   与 O-4 修掉的「5 个测试把临时产物落仓根」是**同一个形态**。
+     *   注意：本判据点名仓根**不是**为了拦它（那是别的门禁的事），
+     *   而是因为要观测的漂移必须发生在被快照的树里。 */
+    const victim = path.join(ROOT, 'tests', 'audit', '.tmp_v315_probe_' + Date.now() + '.js');
     const before = snapshot(ROOT);
-    const victim = path.join(ROOT, '.tmp_v315_probe_' + Date.now() + '.js');
     fs.writeFileSync(victim, '// probe' + String.fromCharCode(10));
     try {
         const after = snapshot(ROOT);
         const drift = diff(before, after);
         assert.ok(drift.length >= 1, '快照比对必须抓到新增文件（否则 B1 的隔离判据是空跑）');
+        assert.ok(drift.some((d) => d.includes('.tmp_v315_probe_')), '抓到的漂移必须就是那个探针文件');
     } finally { fs.unlinkSync(victim); }
 });
 

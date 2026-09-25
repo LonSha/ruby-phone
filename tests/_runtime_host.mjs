@@ -87,7 +87,14 @@ function makeTarget(name, registry) {
 /**
  * 安装最小宿主。
  * @param {{chatLength?:number, chatMetadata?:object, chatId?:string,
- *          settings?:object, storage?:object}} [opts]
+ *          settings?:object, storage?:object, saveChatFails?:number}} [opts]
+ *   [v3.4.1 · P-5] `saveChatFails: N` —— 让**前 N 次** `saveChat()` 抛错（默认 0 ⇒ 行为与加它之前逐字一致）。
+ *     为什么加它：`config/storage.js` 的 `_debouncedSaveChat` 有一整套「串行队列 + 四档退避重试
+ *     （0/350/900/1800ms）+ 放弃」的逻辑，而它在 P-5 之前**从来没有被任何判据观察过** ——
+ *     默认的 `saveChat: async () => {}` 永远成功，于是「重试了几次」「放弃后是什么状态」全是空白。
+ *     实测确认：夹具**本来就可以**通过 `host.context.saveChat = …` 换掉（所以「夹具不可控」是条错记载），
+ *     但把这件事做成显式入参，使「注入失败」成为一眼可读的一等用法，而不是各测试各写一遍替换。
+ *   另暴露 `host.saveChatCalls()`：真实调用次数（含重试），判据据此断言而不是靠外部闭包。
  * @returns {object} 宿主句柄
  */
 export function installRuntimeHost(opts = {}) {
@@ -168,6 +175,11 @@ export function installRuntimeHost(opts = {}) {
   const chatMetadata = { ...(opts.chatMetadata || {}) };
   const settings = opts.settings || {};
 
+  /* [v3.4.1 · P-5] saveChat 失败注入：前 N 次抛错，第 N+1 次起成功。
+   *   默认 saveChatFails=0 ⇒ 与加它之前逐字同行为（永远成功）。
+   *   `_saveChatCalls` 记录真实调用次数（含重试），由 host.saveChatCalls() 读出。 */
+  let _saveChatCalls = 0;
+  const saveChatFails = Number(opts.saveChatFails) || 0;
   const ctx = {
     chat,
     chatMetadata,
@@ -188,7 +200,12 @@ export function installRuntimeHost(opts = {}) {
       CHAT_COMPLETION_PROMPT_READY: 'chat_completion_prompt_ready'
     },
     extensionSettings: { st_virtual_phone: {} },
-    saveChat: async () => {},
+    saveChat: async () => {
+      _saveChatCalls += 1;
+      if (_saveChatCalls <= saveChatFails) {
+        throw new Error('injected-saveChat-failure#' + _saveChatCalls);
+      }
+    },
     saveSettingsDebounced: () => {},
     saveMetadata: async () => {}
   };
@@ -263,6 +280,8 @@ export function installRuntimeHost(opts = {}) {
     eventSource,
     localStorage: localStorageStub,
     storage: opts.storage || null,
+    /** [v3.4.1 · P-5] saveChat 的真实调用次数（含重试） */
+    saveChatCalls: () => _saveChatCalls,
     /** 当前登记的全局监听器（window/document/visualViewport 上的） */
     listeners: () => registry.map((r) => ({ target: r.target, type: r.type })),
     listenerCount: () => registry.length,
