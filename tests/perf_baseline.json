@@ -1,0 +1,30 @@
+{
+  "file": "tests/perf_baseline.json",
+  "note": "O-5 下游侧性能基线。**合成数据 + 真模块**（无浏览器 / 无 SillyTavern 宿主）—— 不代表实机性能，只用于回归时看量级是否漂移。",
+  "measured_at": "v3.3.4",
+  "node_version": "v24.18.0",
+  "probe": "tests/perf_probe.mjs",
+  "warmup": true,
+  "readings_ms": {
+    "projectScene_1000_presence": 0.554,
+    "projectScene_200_presence": 0.337,
+    "injectionBlocksOf_2000_blocks": 0.214,
+    "injectionBlocksOf_500_blocks": 0.021,
+    "scoreHit_2000_docs": 0.321,
+    "makeSnippet_2000_docs": 2.355
+  },
+  "scaling": {
+    "note": "projectScene 200 → 1000 在场：0.337 → 0.554 ms（5 倍输入 ~1.6 倍耗时）；injectionBlocksOf 500 → 2000 块：0.021 → 0.214 ms（4 倍输入 ~10 倍耗时，含每块对象构造）。",
+    "verdict": "未观察到超线性到需要干预的程度；两个面都在亚毫秒级"
+  },
+  "corrections": [
+    "首版未预热：JIT 冷启动被算进首测 ⇒ 「projectScene 200 在场」报 3.335ms，反而比「1000 在场」的 1.328ms 慢 —— 那不是算法特征。加预热后为 0.337 / 0.554ms。",
+    "setup 不计时（上游 O-5 同款纪律：把夹具成本算进被测调用会差一个数量级以上）。"
+  ],
+  "not_done": [
+    "未做实机取证：无浏览器、无宿主、无真实长会话；合成数据只覆盖场所在场、注入块归一、检索打分三个纯函数面。",
+    "未做优化：本版只取证与立基线（任何优化都要先有可比基线）。",
+    "未覆盖 IO 与网络路径：LLM 调用、图片生成、CDN 资源加载、localStorage/IndexedDB 读写（这些受宿主与外部服务影响，合成探针测不出意义）。",
+    "未覆盖 UI 渲染路径：本仓有大量 DOM 渲染与 CSS 动画代码，它们在无头探针里根本不执行。"
+  ]
+}

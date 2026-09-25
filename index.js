@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.3.3';
+const ST_PHONE_VERSION = '3.3.4';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,11 +127,11 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**门禁隔离与耗时基线**（O-4 下游侧：先量再决定改不改）。九道门串行合计 **84.9s**，其中 `test` 段 **70.9s（83%）**，其余 8 门合计 14s —— 所以「优化门禁耗时」实质就是「优化 tests 段」；而 8 个门禁各自独立、串行仅 14s，段间并行的收益上限就是它的一部分，**不值当**。",
-        "**隔离实测成立**：跑批前后对仓做快照（文件集合 + size + mtime）+ `git status` 对照，`npm run test` 跑完 0 差异、git 干净。",
-        "立项：`tests/gate_timing_baseline.json` 四面对外可读 —— 逐门耗时 / 主导项（test 段 83%）/ 隔离方法与实测漂移 / **`not_done`（本轮明确不做什么，逐条写理由）**。",
-        "新增 `tests/system-v315.test.mjs`（A 基线四件齐备 / A2「没做什么」逐条可读 / A3 口径不得被当成实机 / B1 隔离零漂移 / B2 两组子集墙钟上界 / C 版本四源同源 / D 三条负控制）。",
-        "版本升至 3.3.3（五源同源）。",
+        "**性能取证与量级基线**（O-5 下游侧：先有可比基线才谈优化）。三条纯函数热路径的合成读数：`projectScene` 1000 在场 **0.554ms**（200 在场 0.337ms）/ `injectionBlocksOf` 2000 块 **0.214ms**（500 块 0.021ms）/ `scoreHit` 2000 文档 **0.321ms** / `makeSnippet` 2000 文档 **2.355ms** —— 都在亚毫秒到毫秒级，**未观察到需要干预的超线性**。",
+        "**口径纪律（两条，都是教训换来的）**：① `setup` 不计时（上游 O-5 的 290 倍教训：把夹具成本算进被测调用会差一个数量级）；② **先预热** —— 首版没预热把 JIT 冷启动算进首测，报出「`projectScene` 200 在场 3.335ms」反而比「1000 在场 1.328ms」慢，那不是算法特征。",
+        "立项：`tests/perf_probe.mjs`（可复跑探针，输出自带 `synth: true` 与 `warmup: true` 声明，预热段排在第一次计时之前）+ `tests/perf_baseline.json`（四件：读数 / 缩放 / 口径修正 / **没做什么**）。",
+        "新增 `tests/system-v316.test.mjs`（A 基线四件齐备 / A2 口径不得被当成实机 / A3 缩放读数自洽（大输入不得更快——反例正是首版没预热）/ B1 探针须预热且 setup 不计时 / B2 真跑探针读数同量级 / C 版本四源同源 / D 三条负控制）。",
+        "版本升至 3.3.4（五源同源）。",
     ]
 };
 
