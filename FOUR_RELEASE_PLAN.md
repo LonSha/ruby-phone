@@ -2,8 +2,8 @@
 
 状态：实施中，未发布。用户已授权四批及后续自主迭代；不把代码、自动化、实机验收混同。
 基线：LonSha 3.212.0 / RubyPhone 3.0.0，工作区原始干净；1673断言+42审计、835测试+九门日志通过。旧启动未记录退出码，新门禁必须记录。
-当前：LonSha 3.219.0（R2-F 双向关系对账 + 知情网络：四态对账 + 同一件事三级判据 + 疑似档）/
-RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消息首行）。
+当前：LonSha 3.220.0（R3-A 场所三面外供：层级树 + 到访史 + 本楼场景头，外供面 7 → 11 键）/
+RubyPhone 3.1.0（R3-A 消费侧同轮接入：三卡 + 三格分域 + numOrNull 修「没给被读成 0」）。
 
 ## 全范围与验收
 1. **可信数据与可查记忆**（O1、O2基础、O6、F1/F2）：业务字段需求表；投影同源身份/修订/时间/权限；工作台与证据查询、修复预览确认及真实传播回执。隐藏不可旧桥回退，缺席≠空，切会话和过期不能冒充当前正常。
@@ -234,7 +234,61 @@ RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消
   也不声称解决注入槽位之外的其它迟到写。真实 SillyTavern 宿主实机未验。
 - 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
 
+## Gate R3-A：场所三面外供（**已完成**，lonsha v3.220.0 + RubyPhone v3.1.0）
+
+主题：R3（长线生活与社交生态）第一批次的第一项。场所图景在账本**内部**早就有三面能力，
+`summary()` 却只外供「当前链末级字符串 + 规模四数」—— 手机端由此成为「有表无实」。
+
+- 归属仓：**lonsha-memory-plugin**（外供面）+ **ruby-phone**（消费侧，跨仓纪律同轮抬版）。
+- 侦察（先证再改）：`scene-book.js` 内部已有层级树（`outlineOf` / `chainOf`）、到访史
+  （`visitsOf` / `visitsList`，含次数 / 首末楼层 / 重访标记）、本楼场景头（`headerAt` / `headerLine`，
+  含日期 / 时段 / 天气）；而 `summary()` 只返回 `current`（**末级键字符串**）+ `scale` 四数。
+  ⇒ 只读快照桥 `snapshot.scene` 里**没有任何一格**能回答「这店在市里哪一区」「去过哪些、去过几次」
+  「那天什么天气」。三问全部答不出，而数据就在手边 —— 这是「做了不外供」，不是没做。
+- 上游收口（v3.220.0）：
+  · 新增 `tree(limit)`（pre-order 扁平，逐行 key / path / name / **真实 depth** / desc / floor / visited / visits）、
+    `visitHistory(limit)`（key / path / count / firstFloor / lastFloor / revisit / registered / desc）、
+    `headerFace(floor)`（{floor, date, period, weather} 或 `null`）；三者只读、不抛、有界；
+  · 新增上限常量 `MAX_TREE_ROWS = 240`（防单次读数无界，同 `MAX_BRIEF_LINES` 一类）；
+  · `summary()` 外供面 7 → 11 键（增 `currentChain` **结构化数组** / `tree` / `visits` / `header`），
+    **旧键一个未动** —— 旧消费方读数不变；
+  · 新增 `numOrNull(v)`：`null` / `undefined` / `''` 三态直返 `null`，把「没给」与「给了 0」判开
+    （`Number(null) === 0` 是 v3.212 线已吃过一次的老账），`tree.floor` 与
+    `visitHistory` 的三个数值格全部改走它并按 `null` 排序（不当作第 0 楼）；
+  · 宿主 `SceneBookFallback` 补 `tree()` / `visitHistory()` / `headerFace()` 三个**同形空方法**
+    并同步补齐 `summary()` 四格 —— 模块缺席时必须与真实现同形，否则「这版没这面」在下游又塌成「这面是空的」。
+- 下游同轮接上（v3.1.0）：`projectScene` 增 `tree` / `history` / `header` / `chainFace` 四块与
+  `hasTreeFace` / `hasVisitFace` / `hasHeaderFace` 三格（判**格子在不在**，不判内容非空）；
+  视图新增「场所层级」「到访史」「本楼场景头」三卡，三面各自分开「上游这版没这面…」与
+  「有这面但这个会话是空的」两种相反文案；`registered:false` 的孤儿到访显式标「未登记」。
+- 跨仓纪律的判据化：上游 v3221 组 B/G 守「三面均外供 + 退路同形」；下游 v310 组 B/D 守
+  「三面分域 + 每面都有真消费点」——任一侧改名或摘掉一格，两侧各有一处会红。
+- 本轮当场捐到并修掉的真缺陷（两处，均在下游）：
+  ① `apps/place/place-data.js` 取数函数名 `num`，实现 `Number.isFinite(Number(v)) ? Number(v) : null`
+     —— `Number(null) === 0` 与 `Number('') === 0` 双踩，「没给」与「给了 0」塌成同一读数
+     （同文件注释写的就是「非数值如实 null，不编 0」，实现漏了这一格）。到访史正踩在上面：
+     `firstFloor: null`（未跨楼层）被渲染成「第 0 楼」。改名 `numOrNull` 并补三态直返。
+  ② 三张新卡的样式**只写进源文件 `apps/place/place.css`，没合并进运行时载体 `phone.css`**
+     —— 运行时真正载入的是后者，实机会渲染成无样式裸标记。由 v246-A8「源文件不得多于运行时载体」
+     当场捐到（修前 src=43 / phone=35，缺 8 类）。
+- 验证：上游 v3221 17/17（先红后绿）；全量 **201/201 文件 / 1789 断言 0 失败、42/42 审计 RC=0**。
+  下游 v310 19/19（先红后绿，含 F0 阳性对照 + 3 条镜像破坏负控制）；`npm run check` 九门全绿
+  （首跑 8 红，均为抬版触发的既有当版锚与文档一致性守卫，已按仓内交棒口径逐条接管）。
+- 边界如实声明：① 上游只把三面**外供**，未改场所图景内部语义（事实 / 覆盖度不动）；
+  ② `count` 口径是**去过的不同楼层数**、`depth` 是**真实层级**（不按路径长度推断），
+  这是如实外供而非新口径，「按楼层累加的次数」若要另开一格；
+  ③ 真实 SillyTavern 宿主实机未验，无头门禁只证明模块间契约。
+- 回滚：仅逆转本补丁；门禁失败只回滚不放宽。
+
 ## 状态检查点
+- **R3-A：已完成**（lonsha v3.220.0 + RubyPhone v3.1.0）；`summary()` 外供面 7 → 11 键
+  （增 `currentChain` / `tree` / `visits` / `header`，旧键未动），新增 `tree()` / `visitHistory()` /
+  `headerFace()` 三方法与上限 `MAX_TREE_ROWS=240`，新增 `numOrNull()` 把「没给」与「给了 0」判开，
+  宿主 `SceneBookFallback` 补三个同形空方法；下游同轮接三面并渲染三卡（缺席 / 空两种文案分开）。
+  验证：上游 v3221 17/17；全量 201/201 文件 / 1789 断言 0 失败、42/42 审计 RC=0。
+  下游 v310 19/19；`npm run check` 九门全绿（两处真缺陷由既存判据当场捐到并修掉：
+  `num(null) === 0`、新样式未合并进 `phone.css`）。
+  边界：不改场所内部语义；真实宿主实机未验。
 - **R2-E：已完成**（lonsha v3.218.0 + RubyPhone v3.0.3）；`_injectionRecord` 键面 10 → 11（增 `outcome`），
   新增 `_injectionEnd(kind)` 唯一标注入口（只从 `'pending'` 迁出，幂等），
   `_h1` 落 `received → completed`、`_h6` 落 `ended → aborted`（先复位标志后标结局），
@@ -286,7 +340,9 @@ RubyPhone 3.0.3（R2-E 消费侧同轮接入：结局面 + 契约快照 + 坏消
      详见上文 Gate R2-E 与状态检查点。
   ② **双向关系 / 知情网络**：**已完成**（R2-F，lonsha v3.219.0）——
      详见下文 Gate R2-F 与状态检查点。
-- R3/R4：待实施。
+- R3：**已启动** —— 第一批次 A 项（场所三面外供）**已完成**（R3-A，见上）；
+  其余（到访冲突、跨平台事件、O5 性能、F5/F6）待实施。
+- R4：待实施。
 - 真实SillyTavern宿主验证：未验（写入面的两道门与回执形状已在无头环境逐条验证，宿主侧实机未验）。
 
 - R1-A追加GATE：全量失败根因为新增测试未按仓内纪律登记，允许catalog_reference_consumers.tsv追加一行；不放宽守卫。上游预算4文件/150行。

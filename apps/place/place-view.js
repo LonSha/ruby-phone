@@ -54,6 +54,9 @@ export class PlaceView {
             this._sourceCard(src),
             this._summaryCard(face, proj),
             this._currentCard(proj, face),
+            this._headerCard(proj),
+            this._treeCard(proj, face),
+            this._visitHistoryCard(proj, face),
             this._presenceCard(proj, face),
             this._settingsCard(),
             (this._showDiag() ? this._diagCards(proj) : ''),
@@ -136,6 +139,114 @@ export class PlaceView {
             '<div class="pl-card">',
             '  <div class="pl-card-title">当前所在</div>',
             '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+
+    /**
+     * 本楼场景头（[v3.1.0] R3-A）：日期 / 时段 / 天气。
+     * 上游没登记过这楼的头 ⇒ 显式说「没登记」，而不是渲染成空白行——
+     * 「这天没写」与「这版没有这个面」处置不同（前者可补，后者等升级）。
+     */
+    _headerCard(proj) {
+        const h = proj && proj.header;
+        const hasFace = !!(proj && proj.hasHeaderFace);
+        let body;
+        if (h) {
+            const chips = [
+                h.date ? ['日期', h.date] : null,
+                h.period ? ['时段', h.period] : null,
+                h.weather ? ['天气', h.weather] : null
+            ].filter(Boolean).map((c) => '<span class="pl-chip">' + this._esc(c[1]) + '</span>').join('');
+            body = '<div class="pl-chain">' + chips + '</div>';
+        } else {
+            body = '<div class="pl-empty">' + this._esc(
+                hasFace ? '这一楼还没登记场景头（日期/时段/天气）' : '上游这版没有场景头面（需插件 v3.220 或更新）'
+            ) + '</div>';
+        }
+        return [
+            '<div class="pl-card">',
+            '  <div class="pl-card-title">本楼场景头</div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+
+    /**
+     * 场所层级（[v3.1.0] R3-A）：城市 → 区域 → 场所 → 房间。
+     * 缩进由上游 depth 决定（不本地重算层级：本地猜父节点会把别人的子节点算串）。
+     */
+    _treeCard(proj, face) {
+        const rows = (proj && proj.tree) || [];
+        const hasFace = !!(proj && proj.hasTreeFace);
+        if (!rows.length) {
+            return [
+                '<div class="pl-card">',
+                '  <div class="pl-card-title">场所层级</div>',
+                '  <div class="pl-empty">' + this._esc(
+                    hasFace ? (face.reason === 'ready' ? '这个会话还没登记场所' : '读不到场所层级') : '上游这版没有层级面（需插件 v3.220 或更新）'
+                ) + '</div>',
+                '</div>'
+            ].join('\n');
+        }
+        const items = rows.map((n) => {
+            const pad = Math.max(0, (n.depth || 1) - 1) * 14;
+            const marks = [];
+            if (n.visited) marks.push(n.visits > 1 ? '去过' + n.visits + '次' : '去过');
+            if (n.floor !== null) marks.push('第' + n.floor + '楼');
+            return [
+                '<div class="pl-node" style="padding-left:' + pad + 'px">',
+                '  <span class="pl-node-name">' + this._esc(n.name || n.key) + '</span>',
+                (n.desc ? '<span class="pl-node-desc">' + this._esc(n.desc) + '</span>' : ''),
+                (marks.length ? '<span class="pl-node-mark">' + this._esc(marks.join(' · ')) + '</span>' : ''),
+                '</div>'
+            ].join('\n');
+        }).join('');
+        return [
+            '<div class="pl-card">',
+            '  <div class="pl-card-title">场所层级<span class="pl-count">' + rows.length + ' 处</span></div>',
+            '  ' + items,
+            '</div>'
+        ].join('\n');
+    }
+
+    /**
+     * 到访史（[v3.1.0] R3-A）：去过哪儿、去过几次、最后是哪一楼。
+     * count 现在**真的有值**（上游 visitsList 给了），不再只能报条目数。
+     * registered=false 是真缺陷（到访过但树里没这个节点）⇒ 显式标注，不问不响。
+     */
+    _visitHistoryCard(proj, face) {
+        const rows = (proj && proj.history) || [];
+        const hasFace = !!(proj && proj.hasVisitFace);
+        if (!rows.length) {
+            return [
+                '<div class="pl-card">',
+                '  <div class="pl-card-title">到访史</div>',
+                '  <div class="pl-empty">' + this._esc(
+                    hasFace ? (face.reason === 'ready' ? '还没有到访记录' : '读不到到访史') : '上游这版没有到访史面（需插件 v3.220 或更新）'
+                ) + '</div>',
+                '</div>'
+            ].join('\n');
+        }
+        const items = rows.map((v) => {
+            const path = (v.path && v.path.length ? v.path : String(v.key || '').split('/').filter(Boolean)).join(' › ');
+            const marks = [];
+            if (v.count !== null) marks.push(v.count + ' 次');
+            if (v.firstFloor !== null && v.lastFloor !== null) {
+                marks.push(v.firstFloor === v.lastFloor ? '第' + v.lastFloor + '楼' : '第' + v.firstFloor + '–' + v.lastFloor + '楼');
+            }
+            return [
+                '<div class="pl-visit">',
+                '  <span class="pl-visit-place">' + this._esc(path) + '</span>',
+                '  <span class="pl-visit-mark">' + this._esc(marks.join(' · '))
+                + (v.registered ? '' : '<b class="pl-visit-bad">未登记</b>') + '</span>',
+                '</div>'
+            ].join('\n');
+        }).join('');
+        return [
+            '<div class="pl-card">',
+            '  <div class="pl-card-title">到访史<span class="pl-count">' + rows.length + ' 处</span></div>',
+            '  ' + items,
             '</div>'
         ].join('\n');
     }

@@ -12163,6 +12163,43 @@ input:checked + .toggle-slider:before {
   line-height: 1.8;
 }
 
+
+/* ---- [v3.1.0] 场所三新面（层级树 / 到访史 / 本楼场景头）的样式 ----
+ * 【为什么必须写在这里】apps/place/place.css 是**源文件**，运行时真正被载入的是本文件
+ *   （index.js 以 `phone.css?v=…` 注入）。首版只改了源文件便把三张卡渲染出来，
+ *   实际运行时会落成**无样式裸标记**——本仓 v2.46.0 立 A8「源文件不得多于运行时载体」
+ *   就是给这一次踩的。B8 类样式合并不得只改一半。 */
+.pl-node {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 2;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-node-name { color: #e2e8f0; }
+.pl-node-desc { color: #7c8ea3; font-size: 11px; }
+.pl-node-mark { margin-left: auto; color: #5eead4; font-size: 10px; }
+.pl-visit {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 2;
+}
+.pl-visit-place {
+  color: #cbd5e1;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pl-visit-mark { color: #8ea1b6; font-size: 11px; white-space: nowrap; }
+.pl-visit-bad { color: #f87171; margin-left: 4px; }
+
 /* ---------- [v2.47.0] 金手指 App（.ch-*） ----------
  * 万界武库外挂库：已装配 / 全库浏览 / 设置。
  * 主色取鎏金 #d4af37（与既有 App 主色均不冲突），深色毛玻璃底与既有 App 同规。 */

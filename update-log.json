@@ -1,6 +1,19 @@
 {
-  "latest": "3.0.3",
+  "latest": "3.1.0",
   "versions": {
+    "3.1.0": {
+      "version": "3.1.0",
+      "date": "2026-09-25",
+      "title": "接入上游 R3-A 场所三新面（层级树 / 到访史 / 本楼场景头）",
+      "items": [
+        "接入上游 R3-A 的**场所三新面**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.220.0 把场所面从「当前链末级字符串 + 规模四数」扩到**带层级树 / 到访史 / 本楼场景头**（`summary()` 新增 `currentChain` / `tree` / `visits` / `header` 四格）。修前本 App 实测只能显示「当前：梧桐市 › 老城区 › 钟楼 › 顶层」一句与「已登记场所 N 处」，而「这店在市里哪一区」「这地方去过几次」「那天什么天气」三个最常问的问题**全部答不出** —— 数据早就在手边。本版投影层 `projectScene` 增 `tree` / `history` / `header` / `chainFace` 四块可渲染数据（各自带畸形守卫与行数上限），视图侧新增「场所层级」「到访史」「本楼场景头」三张卡。",
+        "三面严格分开「上游这版没这面」与「有这面但这个会话是空的」：`hasTreeFace` / `hasVisitFace` / `hasHeaderFace` 判的是**格子在不在**（`Array.isArray` 与 `hasOwnProperty`），而不是判内容非空，视图据此渲染两种相反文案（「上游这版没有层级面…」vs「这个会话还没登记场所」）。这与本仓 v3.0.0 起六态归因同一条原则 —— 缺格要等上游升级，空格要用户去补，处置相反。",
+        "**本版当场捐到一处真缺陷并修掉**：`apps/place/place-data.js` 的取数函数原名 `num`，实现为 `Number.isFinite(Number(v)) ? Number(v) : null` —— 而 `Number(null) === 0`、`Number('') === 0`，于是**上游「没给这一格」与「给了 0」在本函数里塌成同一个读数**（同文件注释写的就是「非数值如实 null，不编 0」，实现漏了这一格）。到访史正好踩在上面：`firstFloor: null`（未跨楼层）会被渲染成「第 0 楼」。修法沿用本仓既定命名与语义：改名 `numOrNull` 并补 `null` / `undefined` / `''` 三态直返，与 `config/projection-contract.js`、`config/injection-contract.js` 的同名函数同因同法。",
+        "到访史条目区分**登记**与**未登记**：`registered:false` 的孤儿到访（去过、但场所树里没登记）显式标注「未登记」—— 真缺陷不问不响，但也不能被静默吞掉。",
+        "新增 `tests/system-v310.test.mjs`（A 投影层真解析 / B 三面分域 / C 视图真渲染 / D 消费点下限 / E 五源同源 / F 负控制）：负控制沿用本仓 v2.99.0 起的约定 —— `cpSync` **整仓镜像**后在镜像里改写目标文件。首版负控制把破坏副本单独写进 `os.tmpdir()`，`place-data.js` 顶部的相对 import `../../config/world-bridge.js` 于是被解析成 `/config/world-bridge.js`，跑出的是 ERR_MODULE_NOT_FOUND 而不是判据翻红（假红），由本套件当场捐到并改为镜像。",
+        "版本升至 3.1.0（五源同源）。"
+      ]
+    },
     "3.0.3": {
       "version": "3.0.3",
       "date": "2026-09-25",

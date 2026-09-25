@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.0.3';
+const ST_PHONE_VERSION = '3.1.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -107,12 +107,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-25",
     items: [
-        "接入上游 R2-E 的**结局读数**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.218.0 把「这一轮生成到底有没有出稿」做成读数的 `outcome` 并加进快照外供面（注入面 9 → 10 键）。而在那之前，上游**被用户 Esc 中止**与**正常完成**在读数上**同形**（`GENERATION_ENDED` 只复位一个标志）—— 下游能看到「最近一次实际注入」却读不出「这一轮有没有回复」，而两者处置相反：**被中止 ⇒ 该重发；已完成 ⇒ 该看回复**。本版把结局面读出来并单独成格：`readInjection` 增 `outcome` / `outcomeAt` / `faceDrift`，新增 `outcomeText()`（未知结局**如实输出原值**，不兜底成 pending —— 那会把「上游给了个没见过的结局」伪装成「正常的进行中」，让本仓失去发现上游契约变更的能力）。",
-        "「上游没给这格」与「给了 pending」严格分开：`outcome` 缺失（旧版上游，v3.217 及以前）如实读成 `null` 并计入 `faceDrift`（跨仓契约对账），而**不预填成** `pending`。两者处置相反 —— 前者等升级、后者等生成跑完。总述里也分开写：缺格时写「结局：未提供（上游这版还没外供 outcome）」，给了 pending 时写「结局未定（生成进行中…）」。",
-        "诊断中心：「被中止」进**坏消息首行**（`最近一轮生成被中止：注入已发生但回复未产出（可重发）`）——那是用户真正需要立刻知道的；而「已完成」**不进**首行（回复已经在那儿了，写进去只会稀释「需要用户做的事」，与「坏消息先说」纪律是一体两面）。注入读数卡新增「结局」单独一格，色阶三态（完成绿 / 中止红 / 未定灰），并在 `faceDrift` 非空时显示跨仓契约对账提示（明写「非故障——旧版上游缺新格属正常」）。",
-        "织光机回望页「送达侧观测」块同样显示结局（⚠️ 被中止 / ✓ 已完成 / 结局未定）：收集器 `collectLonshaInjection` 带出 `outcome` / `outcomeAt`。与「回望」卡的分工不变：回望答「想起了什么」，送达答「送进去了什么、这一轮有没有出稿」。",
-        "新增 `tests/system-v303.test.mjs`（17 条）：A 结构面（读出面结构恒定 + 跨仓契约快照逐键核对）；B 行为面（三态互不相同且总述文案不同 / 「没给」≠「给了」/ 未知结局如实输出原值 / 诊断坏消息首行只收「被中止」/ 织光机真消费）；C 负控制六条（真源码破坏 → 载入破坏副本 → 在副本上重跑**同款判据**，含镜像树自证 C0）；D 版本与文档面。**本套件当场捐到两处自查缺陷并修掉**：① `Object.assign` 遇显式 `undefined` 仍会建出该键（`hasOwnProperty` 为真）⇒ 模拟不出「旧版上游根本没这格」，而「没这格」与「这格是空」恰恰是本判据要分的两态；改为把显式 undefined 的键删掉；② 契约快照 `injectionFaceKeys` 建好、导出、测试也引，但**产品端零消费** —— 正是本仓「建好不消费」的第八次形态，由同轮 dead-export 门禁当场捐到（只有测试引用不算消费）。修法**不是**登记进冻结账本，而是让产品面真读它：诊断卡的契约漂移提示现在会列出**本机认得的整份注入面键面**（用户据此才能自证「是上游旧版，还是本机认错了格子」），并补一条 C6 负控制守它（破坏产品面消费 ⇒ 判据必须转红）。",
-        "版本升至 3.0.3（五源同源）。"
+        "接入上游 R3-A 的**场所三新面**（跨仓纪律：上游给了就必须同轮有人读）。上游记忆插件 v3.220.0 把场所面从「当前链末级字符串 + 规模四数」扩到**带层级树 / 到访史 / 本楼场景头**（`summary()` 新增 `currentChain` / `tree` / `visits` / `header` 四格）。修前本 App 实测只能显示「当前：梧桐市 › 老城区 › 钟楼 › 顶层」一句与「已登记场所 N 处」，而「这店在市里哪一区」「这地方去过几次」「那天什么天气」三个最常问的问题**全部答不出** —— 数据早就在手边。本版投影层 `projectScene` 增 `tree` / `history` / `header` / `chainFace` 四块可渲染数据（各自带畸形守卫与行数上限），视图侧新增「场所层级」「到访史」「本楼场景头」三张卡。",
+        "三面严格分开「上游这版没这面」与「有这面但这个会话是空的」：`hasTreeFace` / `hasVisitFace` / `hasHeaderFace` 判的是**格子在不在**（`Array.isArray` 与 `hasOwnProperty`），而不是判内容非空，视图据此渲染两种相反文案（「上游这版没有层级面…」vs「这个会话还没登记场所」）。这与本仓 v3.0.0 起六态归因同一条原则 —— 缺格要等上游升级，空格要用户去补，处置相反。",
+        "**本版当场捐到一处真缺陷并修掉**：`apps/place/place-data.js` 的取数函数原名 `num`，实现为 `Number.isFinite(Number(v)) ? Number(v) : null` —— 而 `Number(null) === 0`、`Number('') === 0`，于是**上游「没给这一格」与「给了 0」在本函数里塌成同一个读数**（同文件注释写的就是「非数值如实 null，不编 0」，实现漏了这一格）。到访史正好踩在上面：`firstFloor: null`（未跨楼层）会被渲染成「第 0 楼」。修法沿用本仓既定命名与语义：改名 `numOrNull` 并补 `null` / `undefined` / `''` 三态直返，与 `config/projection-contract.js`、`config/injection-contract.js` 的同名函数同因同法。",
+        "到访史条目区分**登记**与**未登记**：`registered:false` 的孤儿到访（去过、但场所树里没登记）显式标注「未登记」—— 真缺陷不问不响，但也不能被静默吞掉。",
+        "新增 `tests/system-v310.test.mjs`（A 投影层真解析 / B 三面分域 / C 视图真渲染 / D 消费点下限 / E 五源同源 / F 负控制）：负控制沿用本仓 v2.99.0 起的约定 —— `cpSync` **整仓镜像**后在镜像里改写目标文件。首版负控制把破坏副本单独写进 `os.tmpdir()`，`place-data.js` 顶部的相对 import `../../config/world-bridge.js` 于是被解析成 `/config/world-bridge.js`，跑出的是 ERR_MODULE_NOT_FOUND 而不是判据翻红（假红），由本套件当场捐到并改为镜像。",
+        "版本升至 3.1.0（五源同源）。"
     ]
 };
 

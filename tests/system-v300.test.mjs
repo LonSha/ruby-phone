@@ -432,8 +432,13 @@ test('v300 D1. 五源同源且主次版本为 3.0（当版精确判定；补丁�
     assert.equal(man.version, pkg.version, 'package 与 manifest 同源');
     assert.equal(pkg.version, m[1], '入口常量与 manifest 同源');
     assert.equal(Object.keys(log.versions)[0], log.latest, 'versions 首键即当前版本');
+    /* [v3.1.0] 交棒：原判据钉死「次版本恰为 0」，是**当版精确判定**（v3.0.0 当版时成立）。
+     *   它把「本套件出生时是 3.0 线首版」这一历史事实，变成了对以后每一版的永久约束 ——
+     *   v3.1.0 是首个次版本跨线，本判据随即翻红。改为版本无关的自洽性断言：**主版本不动**
+     *   （3.x 线），次/补丁位交给当版套件精确判定（同 v246-K1 / v298-E1 的交棒口径）。 */
     const a = String(log.latest).split('.').map((n) => Number.parseInt(n, 10) || 0);
-    assert.equal(a[0] === 3 && a[1] === 0 && a[2] >= 0, true, '本版是主版本跳跃：实得 ' + log.latest);
+    assert.equal(a[0] === 3, true, '本仓仍在 3.x 线：实得 ' + log.latest);
+    assert.ok(a[1] >= 0 && a[2] >= 0, '次/补丁位为合法非负整数：实得 ' + log.latest);
     assert.ok(vnum(log.latest) >= vnum(CURRENT), '不低于 ' + CURRENT);
 });
 

@@ -96,7 +96,16 @@ export function readSceneFace(probe) {
 }
 
 /** 取数（不抛；非数值如实 null，不编 0） */
-function num(v) { return Number.isFinite(Number(v)) ? Number(v) : null; }
+function numOrNull(v) {
+    /* 【修的是什么】`Number(null)===0` 与 `Number('')===0`，于是「上游没给这格」
+     *   与「上游给了 0」在本函数里塌成同一个读数 —— 而两者处置相反（没给 ⇒ 等升级；
+     *   给了 0 ⇒ 真读数）。本文件第 98 行的口径写的就是「非数值如实 null，不编 0」，
+     *   实现却漏了这一格。与 config/projection-contract.js、config/injection-contract.js
+     *   的同名函数同因同法（该两条教训在本仓是 v3.0.0 / v3.0.3 的老账）。 */
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
 /** 纯文本裁剪（防单条无界） */
 function clip(v, max = 200) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -128,7 +137,7 @@ export function presenceGroups(presence) {
         const name = clip(rec.name, 40);
         const key = clip(rec.key, 160);
         if (!name || !key) continue;
-        const g = map.get(key) || { key, members: [], atFloor: num(rec.atFloor) };
+        const g = map.get(key) || { key, members: [], atFloor: numOrNull(rec.atFloor) };
         if (!g.members.includes(name)) g.members.push(name);
         map.set(key, g);
     }
@@ -145,14 +154,14 @@ export function presenceGroups(presence) {
  */
 export function coverageLines(coverage) {
     const c = coverage && typeof coverage === 'object' ? coverage : {};
-    const floors = Array.isArray(c.floors) ? c.floors.filter((f) => num(f) !== null) : [];
-    const n = num(c.floorCount);
+    const floors = Array.isArray(c.floors) ? c.floors.filter((f) => numOrNull(f) !== null) : [];
+    const n = numOrNull(c.floorCount);
     const head = floors.length
         ? `变更覆盖 ${n === null ? floors.length : n} 楼：${floors.slice(-12).map((f) => '第' + f + '楼').join('、')}`
         : '尚未观测到任何楼层变更';
     const steps = (Array.isArray(c.steps) ? c.steps : [])
-        .filter((s) => s && num(s.missing) > 0)
-        .map((s) => `第${num(s.after)}楼 → 第${num(s.before)}楼之间缺 ${num(s.missing)} 楼未登记`);
+        .filter((s) => s && numOrNull(s.missing) > 0)
+        .map((s) => `第${numOrNull(s.after)}楼 → 第${numOrNull(s.before)}楼之间缺 ${numOrNull(s.missing)} 楼未登记`);
     const unregistered = (Array.isArray(c.unregistered) ? c.unregistered : [])
         .map((k) => clip(k, 80)).filter(Boolean);
     return { head, steps, unregistered };
@@ -190,6 +199,72 @@ function describeIssue(item, fatal) {
 }
 
 /**
+ * [v3.1.0] R3-A：层级树行（上游 scene.tree）。
+ * 上游给的是**由粗到细的扁平行**（带 depth），这里原样保留层级关系，
+ * 只做三件事：裁剪、去畸形、**把「没给」与「给了空的」分开**。
+ * 不重排（顺序就是上游登记顺序，重排会让层级读起来错位），不猜父节点。
+ */
+function treeRows(tree, maxRows) {
+    if (!Array.isArray(tree)) return [];
+    const out = [];
+    for (const n of tree) {
+        if (!n || typeof n !== 'object') continue;
+        const depth = Number.isFinite(Number(n.depth)) ? Number(n.depth) : 1;
+        out.push({
+            key: String(n.key || ''),
+            name: String(n.name || ''),
+            desc: String(n.desc || ''),
+            depth: Math.max(1, Math.min(depth, 4)),
+            floor: numOrNull(n.floor),
+            visited: n.visited === true,
+            visits: Number.isFinite(Number(n.visits)) ? Number(n.visits) : 0
+        });
+        if (out.length >= maxRows) break;
+    }
+    return out;
+}
+
+/**
+ * [v3.1.0] R3-A：到访史行（上游 scene.visits）。
+ * 「去过几次」现在**能答了**（count），不再只报条目数；
+ * registered=false 表示「到访过但树里没这个节点」——那是真缺陷，要显式标出。
+ */
+function visitRows(visits, maxRows) {
+    if (!Array.isArray(visits)) return [];
+    const out = [];
+    for (const v of visits) {
+        if (!v || typeof v !== 'object') continue;
+        out.push({
+            key: String(v.key || ''),
+            path: Array.isArray(v.path) ? v.path.map((x) => String(x)) : [],
+            count: Number.isFinite(Number(v.count)) ? Number(v.count) : null,
+            firstFloor: numOrNull(v.firstFloor),
+            lastFloor: numOrNull(v.lastFloor),
+            revisit: v.revisit === true,
+            registered: v.registered !== false
+        });
+        if (out.length >= maxRows) break;
+    }
+    return out;
+}
+
+/**
+ * [v3.1.0] R3-A：本楼场景头（上游 scene.header）。
+ * 没登记过就是 null（不是空字符串三连）——「这天没写天气」与「这版没这面」分开。
+ */
+function headerFace(h) {
+    if (!h || typeof h !== 'object') return null;
+    const out = {
+        floor: numOrNull(h.floor),
+        date: String(h.date || ''),
+        period: String(h.period || ''),
+        weather: String(h.weather || '')
+    };
+    if (!out.date && !out.period && !out.weather) return null;
+    return out;
+}
+
+/**
  * 投影：把 scene 面变成可直接渲染的五块数据。
  * 只读、绝不抛；缺失的块如实置空（不抛也不编）。
  *
@@ -203,6 +278,13 @@ export function projectScene(face, opts = {}) {
         ok: false, state: 'absent',
         scale: { nodes: null, detailed: null, depth: null, visits: null, presence: null },
         current: [], presence: [], visits: [],
+        // [v3.1.0] R3-A：本世界场所的**层级树 / 到访史 / 本楼场景头**三面。
+        //   修前实测：上游 summary() 只吐 current（末级键字符串）与规模四数，本页于是
+        //   只能说「当前位置 + 19 处场所」；「这店在城里哪一区」「去过哪些、去过几次」
+        //   「那天什么天气」在**账本里早有**（tree/visitsList/headerAt），却从没出过仓。
+        //   三面与 current 同一读取时刻，同修订下必然自洽；读不到就是空（不编）。
+        tree: [], history: [], header: null,
+        chainFace: [],
         coverage: { head: '', steps: [], unregistered: [] },
         invariants: { state: 'absent', text: IV_TEXT['absent'], broken: [], warnings: [] }
     };
@@ -211,8 +293,8 @@ export function projectScene(face, opts = {}) {
         const maxEntries = Math.max(1, Number(opts.maxEntries) || 20);
         const sc = face.scale && typeof face.scale === 'object' ? face.scale : {};
         out.scale = {
-            nodes: num(sc.nodes), detailed: num(sc.detailed), depth: num(sc.depth),
-            visits: num(sc.visits), presence: num(sc.presence)
+            nodes: numOrNull(sc.nodes), detailed: numOrNull(sc.detailed), depth: numOrNull(sc.depth),
+            visits: numOrNull(sc.visits), presence: numOrNull(sc.presence)
         };
         out.current = currentChainOf(face);
         out.presence = presenceGroups(face.presence).slice(0, maxEntries);
@@ -226,7 +308,23 @@ export function projectScene(face, opts = {}) {
             warnings: (face.coverage && face.coverage.warnings) || []
         });
         out.visits = Array.isArray(face.coverage && face.coverage.trackFloors)
-            ? face.coverage.trackFloors.map((f) => ({ floor: num(f) })) : [];
+            ? face.coverage.trackFloors.map((f) => ({ floor: numOrNull(f) })) : [];
+        // [v3.1.0] R3-A：三新面。每个字段都按「没给 ⇒ 空」处理，
+        //   绝不把「上游这版没这面」渲染成「世界就是这样」——
+        //   tree 缺 → 空数组（本页显示「这版上游没带层级」而不是「没有下级」）。
+        out.tree = treeRows(face.tree, maxEntries);
+        out.history = visitRows(face.visits, maxEntries);
+        out.header = headerFace(face.header);
+        out.chainFace = Array.isArray(face.currentChain)
+            ? face.currentChain.map((n) => ({
+                key: String((n && n.key) || ''),
+                name: String((n && n.name) || ''),
+                desc: String((n && n.desc) || ''),
+                floor: numOrNull(n && n.floor)
+            })).filter((n) => n.name || n.key) : [];
+        out.hasTreeFace = Array.isArray(face.tree);
+        out.hasVisitFace = Array.isArray(face.visits);
+        out.hasHeaderFace = Object.prototype.hasOwnProperty.call(face, 'header');
         out.ok = true;
         out.state = face.empty === true ? 'empty' : 'ready';
         return out;
@@ -250,10 +348,10 @@ export function scenePromptBlock(face, opts = {}) {
             lines.push('- ' + g.key.split('/').join(' › ') + '：' + g.members.join('、'));
         }
         const sc = face.scale && typeof face.scale === 'object' ? face.scale : {};
-        if (num(sc.nodes) !== null) {
-            lines.push('- 已登记场所 ' + num(sc.nodes) + ' 处（细写 ' + (num(sc.detailed) || 0)
-                + ' / 最深 ' + (num(sc.depth) || 0) + ' 层）· 到访 ' + (num(sc.visits) || 0)
-                + ' 处 · 在场 ' + (num(sc.presence) || 0) + ' 人');
+        if (numOrNull(sc.nodes) !== null) {
+            lines.push('- 已登记场所 ' + numOrNull(sc.nodes) + ' 处（细写 ' + (numOrNull(sc.detailed) || 0)
+                + ' / 最深 ' + (numOrNull(sc.depth) || 0) + ' 层）· 到访 ' + (numOrNull(sc.visits) || 0)
+                + ' 处 · 在场 ' + (numOrNull(sc.presence) || 0) + ' 人');
         }
         if (!lines.length) return '';
         return '【本世界已登记的场所与在场（记忆插件场所图景，不得与之矛盾）】\n' + lines.slice(0, maxLines + 2).join('\n');

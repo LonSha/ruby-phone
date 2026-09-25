@@ -10,6 +10,51 @@
 
 ---
 
+## 迭代 36 — v3.1.0 接入上游 R3-A 场所三新面（层级树 / 到访史 / 本楼场景头）
+
+- **任务**：R3 第一批次（长线生活与社交生态）的 A 项。上游 lonsha v3.220.0 把场所面
+  从「当前链末级字符串 + 规模四数」扩到三个新面，下游必须**同一轮**接上（跨仓纪律）。
+- **上游修前的真实处境**：`scene-book.js` **内部**早就有层级树（`outlineOf`）、到访史
+  （`visitsList`）、本楼场景头（`headerAt`）三面能力，`summary()` 却只外供 `current`
+  （末级键字符串）与规模四数。于是手机端「地点图景」在数据上**有表无实**：
+  「这店在市里哪一区」「这地方去过几次」「那天什么天气」三个最常问的问题全部答不出，
+  而数据就在手边。这是本仓反复点名的同族形态：不是没做，是**做了没人供 / 供了没人读**。
+- **落地（上游 v3.220.0）**：
+  - `scene-book.js`：新增 `tree(limit)` / `visitHistory(limit)` / `headerFace(floor)` 三方法
+    与上限常量 `MAX_TREE_ROWS = 240`；`summary()` 增 `currentChain`（结构化数组，带 desc/floor）、
+    `tree`（pre-order 扁平，带 depth/visited/visits/floor）、`visits`、`header` 四格。
+  - 新增 `numOrNull()`：`Number(null) === 0` 会把「没给」读成「第 0 楼」（同仓 v3.0.0 的老账）。
+    上游 `index.js` 的 `SceneBookFallback` 补三个同形空方法并把 `summary()` 返回对象同步扩展 ——
+    **缺席与真实现同形**（否则「上游这版没这面」与「这面是空的」在下游又塌成一态）。
+- **落地（下游 v3.1.0）**：
+  - `apps/place/place-data.js`：`projectScene` 增 `tree` / `history` / `header` / `chainFace`
+    四块 + `hasTreeFace` / `hasVisitFace` / `hasHeaderFace` 三格；新增 `treeRows` / `visitRows` /
+    `headerFace` 三个带畸形守卫与上限的辅助。
+  - `apps/place/place-view.js`：新增「场所层级」「到访史」「本楼场景头」三卡（插在当前链与在场之间），
+    三面严格分开「上游这版没这面」与「有这面但这会话是空的」两种相反文案。
+  - `apps/place/place.css` + **`phone.css`**：新样式必须**同时**落源文件与运行时载体（见下）。
+- **本版当场捐到两处真缺陷并修掉**：
+  ① `place-data.js` 取数函数名为 `num`，实现 `Number.isFinite(Number(v)) ? Number(v) : null`
+     —— `Number(null) === 0` 与 `Number('') === 0` 双踩，「没给这格」与「给了 0」塌成同一读数
+     （同文件注释写的就是「非数值如实 null，不编 0」，实现漏了这一格）。到访史正踩在上面：
+     `firstFloor: null`（未跨楼层）会被渲染成「第 0 楼」。改名 `numOrNull` 并补三态直返，
+     与 `config/projection-contract.js` / `config/injection-contract.js` 同因同法。
+  ② 三张新卡的样式**只写进了源文件 `apps/place/place.css`，没合并进运行时载体 `phone.css`**
+     —— 运行时真正载入的是后者（`index.js` 注入 `phone.css?v=…`），实机会渲染成无样式裸标记。
+     由 v246-A8「源文件不得多于运行时载体」当场捐到（修前 src=43 / phone=35，缺 8 类）。
+     这条正是「源文件与载体两处只改一半」的老形态，合并基建不齐时**不会有人在编译期报错**。
+- **负控制的形态修正（本套件自身）**：首版把破坏副本单独写进 `os.tmpdir()`，而
+  `place-data.js` 顶部 `import ... from '../../config/world-bridge.js'` 是**相对路径** ⇒
+  按副本自身位置解析成 `/config/world-bridge.js` ⇒ ERR_MODULE_NOT_FOUND。跑出来的红
+  **不是判据翻红而是加载失败**（假红）。改为本仓 v2.99.0 起的约定：`cpSync` 整仓镜像 →
+  在镜像里改写目标文件 → 从镜像加载，并补 F0 阳性对照（未破坏时判据必须为真）。
+- **验证**：`tests/system-v310.test.mjs` 19/19（A 投影 / B 分域 / C 视图真渲染 / D 消费点 /
+  E 五源 / F 负控制含阳性对照）；上游 `tests/v3221_scene_face_migration.test.mjs` 17/17；
+  两仓全量门禁见提交说明。
+- **边界如实声明**：① 上游只把三面**外供**，并未改变场所图景的内部语义（既有事实/覆盖度不动）；
+  ② 真实 SillyTavern 宿主实机未验，无头门禁只证明模块间契约；③ R3 其余（到访冲突、
+  跨平台事件、O5 性能、F5/F6）与 R4 全部仍未启动。
+
 ## 迭代 35 — v3.0.3 接入上游 R2-E 结局读数（outcome）
 
 - **任务**：按两仓纪律，上游把新字段加进快照外供面时，**下游必须同一轮接上**。
@@ -1883,7 +1928,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.0.3`（五源同源）
+- **当前版本**：`3.1.0`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/

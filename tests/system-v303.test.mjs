@@ -346,11 +346,18 @@ test('v303 D2. 变更说明与实现同域（提结局/中止/跨仓）+ 弹窗�
     const log = JSON.parse(read('update-log.json'));
     const entry = log.versions[log.latest];
     assert.ok(entry && Array.isArray(entry.items) && entry.items.length > 0, '当前版本节须有条目');
-    const all = entry.items.join('\n');
+    /* [v3.1.0] 交棒：原判据拿 `log.latest` 的条目比「结局/中止/上游」三个词，
+     *   是**当版精确判定**（本套件出生版本 v3.0.3 的说明自然写这三个词）。
+     *   锚 `log.latest` 等于对以后每一版下永久约束 —— v3.1.0 的说明写的是「场所三面」，
+     *   本判据随即翻红。改为仓内既定口径（同 v298-E2 / v300-D2 / v301-D2 / v302-E2）：
+     *   落地项关键词锚**本套件出生版本**，而「弹窗逐字同源」那半仍锚当版。 */
+    const own = log.versions['3.0.3'];
+    assert.ok(own && Array.isArray(own.items), 'v3.0.3 条目必须仍在（本判据钉的是历史事实）');
+    const all = own.items.join('\n');
     for (const kw of ['结局', '中止', '上游']) {
         assert.ok(all.includes(kw), '变更说明未提到本版落地项：' + kw);
     }
-    assert.ok(all.includes(log.latest), 'release note 须出现当前版本号');
+    assert.ok(all.includes(own.version), 'release note 须出现本版版本号');
     assert.ok(/版本升至/.test(all), '须保留「版本升至 X」的收尾条（仓内一贯格式）');
     const blk = read(IDX).match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/);
     assert.ok(blk, 'ST_PHONE_CURRENT_UPDATE 可提取');

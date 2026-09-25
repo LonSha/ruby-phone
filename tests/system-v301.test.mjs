@@ -441,7 +441,9 @@ test('v301 D1. 五源同源且不低于 3.0.1（补丁位：本版是迁移，�
     assert.equal(Object.keys(log.versions)[0], log.latest, 'versions 首键即当前版本');
     assert.ok(vnum(log.latest) >= vnum(CURRENT), '不低于 ' + CURRENT + '，实得 ' + log.latest);
     const a = String(log.latest).split('.').map((n) => Number.parseInt(n, 10) || 0);
-    assert.equal(a[0] === 3 && a[1] === 0, true, '本版仍是 3.0 线：实得 ' + log.latest);
+    /* [v3.1.0] 交棒：原判据钉死「次版本恰为 0」（本套件出生时是 3.0 线）。
+     *   同 v300-D1 的处境：那是当版精确判定，不能当永久约束。改为「主版本不动」。 */
+    assert.equal(a[0] === 3, true, '本仓仍在 3.x 线：实得 ' + log.latest);
     assert.equal(PC_MOD.SUPPORTED_API_VERSION, 1, '本版不动结构版（迁移不换数据源）');
 });
 
