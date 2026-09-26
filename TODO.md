@@ -289,9 +289,14 @@
           （已登记在 `docs/runtime-verification-boundary.md`）。
         - [x] **跨会话残留**：夹具可切 `chatId`/`chatMetadata` 实例，属可做项。**v2.90.0 已落地**：`CalendarData.clearCache()` 补清 `_lifeEvents`，`tests/system-v290.test.mjs` B1 固化。
         推进原则：一版只做一维、每维都能单独证伪，避免一次性堆庞大模拟器。
-      - [ ] ④ 更新文档中的运行时验证边界 —— **未做**（本版只写了
-        `docs/runtime-verification-boundary.md`；还没把它接进 `update-log.json`
-        面向用户的说明里，因为那属于「对用户说什么」而非「工程事实」，留给下一版）。
+      - [x] ④ 更新文档中的运行时验证边界 —— **v3.9.2 完成**：把边界压成
+        「一句话版本」写进 `docs/runtime-verification-boundary.md`，并让它出现在
+        `update-log.json` 当前版本条目（即 App 内「本版更新」弹窗）里，用户第一次
+        真的能读到「门禁保证什么 / 不保证什么」。同轮把该文档**复校到当版实测**
+        （语法 412 文件 / 导入 239 文件 338 条），并新增「当版实测数字」节作为
+        **机器可读的复校契约**（判据 `tests/system-v328.test.mjs` 12 项会真跑两道门
+        比对数字，不一致即转红）。判据纪律：用户可见条与文档必须共用同一句标志语，
+        防「工程写下边界、用户侧另说一套」。
 
 - [x] （已取证评估）会话切换生命周期出口的**声明式注册**：让每个 App 自声明其出口与
       覆盖关系（如 `static lifecycleExits = { onChatChanged: {...} }`），

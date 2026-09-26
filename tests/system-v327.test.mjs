@@ -300,12 +300,47 @@ test('D3 把取证对象写进公告 ⇒ 计数与判据必须一动不动（判
 });
 
 /* ══════════ E ── 版本锚 ══════════ */
-test('E1 版本锚（下限形）+ 基线与 manifest 同源', () => {
+/* ★ 判据脆性修复（v3.9.2 期间抓到，本类第 5 例）：
+ *   原版 E1 把「基线里的历史冻结值」直接等于「当前 manifest 版本」
+ *   （`assert.equal(base.measured_at, 'v' + mv)`）。基线的语义是**首测时的历史事实**，
+ *   抬版后必然过期 ⇒ 抬版即红，而它要防的东西（探针版本漂移）与此毫无关系。
+ *   同族前例：v326 B1（判据挂在会被迭代改写的公告散文上）、v328 B2（挂在复校版本上）。
+ *   修法：把「首测版是冻结的历史值」与「探针版本必须现读」拆成两条独立判据。
+ *   命中本类脆性时的自检问句：**这条断言在正常抬版后还会成立吗？** 不会 ⇒ 形状错。 */
+const FIRST_MEASURED_AT = 'v3.9.1'; /* 基线首测版：历史冻结值，抬版**不得**改写 */
+/** 探针必须从 manifest 现读版本，不得硬编码（抽成纯函数：可对破坏副本复用） */
+const probeReadsVersionLive = (src) => src.includes("'v' + MANIFEST.version");
+/** 基线首测版必须冻结在历史值（不是「当前版本」这个移动靶） */
+const baselineFrozenAt = (b, first) => b.measured_at === first;
+
+test('E1 版本锚（下限形）+ 基线与探针同源', () => {
   const mv = JSON.parse(read(path.join(ROOT, 'manifest.json'))).version;
   const parts = mv.split('.').map(Number);
   const ok = parts[0] > 3 || (parts[0] === 3 && parts[1] >= 9);
   assert.ok(ok, '本套件成立于 RubyPhone 3.9.0 及以后，当前 ' + mv);
-  assert.equal(base.measured_at, rep.measured_at, '基线与探针读数必须同源（版本从 manifest 读）');
-  assert.equal(base.measured_at, 'v' + mv, '基线首测版必须等于当前 manifest 版本');
+  /* ① 基线首测版 = 冻结的历史值（抬版不改写；改成「当前版本」反而要红） */
+  assert.ok(baselineFrozenAt(base, FIRST_MEASURED_AT),
+    '基线首测版必须冻结在 ' + FIRST_MEASURED_AT + '（历史事实），实测 ' + base.measured_at);
+  assert.notEqual(base.measured_at, 'v' + mv,
+    '基线首测版不得被改写成「当前版本」—— 那是移动靶，会让判据随抬版漂移');
+  /* ② 探针的版本必须**现读** manifest（结构性自证，不查具体版本号） */
+  assert.ok(probeReadsVersionLive(PROBE_SRC),
+    '探针的 measured_at 必须现读 MANIFEST.version，不得硬编码版本号');
+  /* ③ 当前读数必须与当前 manifest 同源（这条是活的：探针现读 ⇒ 永远成立） */
+  assert.equal(rep.measured_at, 'v' + mv, '探针读数必须与当前 manifest 同源');
   assert.equal(base.probe, 'tests/audit/long_chat_probe.cjs', '基线必须指名探针路径');
+});
+
+/* ══════════ E ── 负控制（版本面） ══════════ */
+test('E2 负控制：探针硬编码版本 / 基线改成当前版本 ⇒ E1 同款真判据必须转红', () => {
+  /* 真源码破坏：对**探针文件的真实副本**做替换，同款判据作用在副本上 */
+  const damaged = PROBE_SRC.split("'v' + MANIFEST.version").join("'v3.9.1'");
+  assert.notEqual(damaged, PROBE_SRC, '破坏必须真的发生（锚点须命中探针源码）');
+  assert.equal(probeReadsVersionLive(damaged), false, '负控制：硬编码版本后「现读」判据必须转红');
+  assert.equal(probeReadsVersionLive(PROBE_SRC), true, '对照：真探针仍为真');
+  /* 基线面：把首测版改成「移动靶」必须被同款判据挡住 */
+  const mv = JSON.parse(read(path.join(ROOT, 'manifest.json'))).version;
+  assert.equal(baselineFrozenAt({ measured_at: 'v' + mv }, FIRST_MEASURED_AT), false,
+    '负控制：把基线改成当前版本必须转红');
+  assert.equal(baselineFrozenAt(base, FIRST_MEASURED_AT), true, '对照：真基线仍为真');
 });
