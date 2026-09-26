@@ -1,0 +1,185 @@
+{
+ "file": "tests/audit/long_chat_probe.cjs",
+ "probe": "tests/audit/long_chat_probe.cjs",
+ "note": "长会话（1000 楼）楼层消费路径取证：静态四类站点 + 活体缩放。合成宿主 + 真模块，非实机。",
+ "measured_at": "v3.9.1",
+ "host": {
+  "fixture": "tests/_runtime_host.mjs",
+  "chat_lengths": [
+   10,
+   100,
+   400,
+   1000,
+   2000
+  ],
+  "announcement_stripped": true
+ },
+ "readings": {
+  "floor_count_n10": 10,
+  "materialize_items_n10": 10,
+  "materialize_chars_n10": 141,
+  "engine_index_len_n10": 10,
+  "recent_story_context_lines_n10": 8,
+  "recent_story_context_chars_n10": 63,
+  "recent_story_digest_lines_n10": 6,
+  "update_gap_floors_n10": 9,
+  "floor_count_n100": 100,
+  "materialize_items_n100": 100,
+  "materialize_chars_n100": 1582,
+  "engine_index_len_n100": 100,
+  "recent_story_context_lines_n100": 8,
+  "recent_story_context_chars_n100": 71,
+  "recent_story_digest_lines_n100": 6,
+  "update_gap_floors_n100": 99,
+  "floor_count_n400": 400,
+  "materialize_items_n400": 400,
+  "materialize_chars_n400": 6982,
+  "engine_index_len_n400": 400,
+  "recent_story_context_lines_n400": 8,
+  "recent_story_context_chars_n400": 79,
+  "recent_story_digest_lines_n400": 6,
+  "update_gap_floors_n400": 399,
+  "floor_count_n1000": 1000,
+  "materialize_items_n1000": 1000,
+  "materialize_chars_n1000": 17783,
+  "engine_index_len_n1000": 600,
+  "recent_story_context_lines_n1000": 8,
+  "recent_story_context_chars_n1000": 79,
+  "recent_story_digest_lines_n1000": 6,
+  "update_gap_floors_n1000": 999,
+  "floor_count_n2000": 2000,
+  "materialize_items_n2000": 2000,
+  "materialize_chars_n2000": 37783,
+  "engine_index_len_n2000": 600,
+  "recent_story_context_lines_n2000": 8,
+  "recent_story_context_chars_n2000": 87,
+  "recent_story_digest_lines_n2000": 6,
+  "update_gap_floors_n2000": 1999
+ },
+ "timing": {
+  "materialize_ms_n10": 0.56,
+  "engine_build_ms_n10": 0.38,
+  "recent_story_context_ms_n10": 0.27,
+  "update_gap_ms_n10": 0.13,
+  "materialize_ms_n100": 0.12,
+  "engine_build_ms_n100": 0.36,
+  "recent_story_context_ms_n100": 0.03,
+  "update_gap_ms_n100": 0.03,
+  "materialize_ms_n400": 0.59,
+  "engine_build_ms_n400": 0.99,
+  "recent_story_context_ms_n400": 0.01,
+  "update_gap_ms_n400": 0.06,
+  "materialize_ms_n1000": 0.67,
+  "engine_build_ms_n1000": 1.35,
+  "recent_story_context_ms_n1000": 0.01,
+  "update_gap_ms_n1000": 0.04,
+  "materialize_ms_n2000": 2.97,
+  "engine_build_ms_n2000": 2.49,
+  "recent_story_context_ms_n2000": 0.02,
+  "update_gap_ms_n2000": 0.07
+ },
+ "scan": {
+  "files": 227,
+  "full_materialize": 8,
+  "bounded_slice": 5,
+  "indexed_loop": 18,
+  "length_read": 47
+ },
+ "sites": {
+  "full_materialize": [
+   "apps/honey/honey-data.js:3907",
+   "apps/memory/global-search-engine.js:280",
+   "apps/wechat/chat-view.js:10357",
+   "apps/wechat/wechat-data.js:4014",
+   "apps/weibo/weibo-data.js:2385",
+   "config/api-manager.js:397",
+   "index.js:2837",
+   "index.js:10449"
+  ],
+  "bounded_slice": [
+   "apps/games/werewolf/werewolf-view.js:643",
+   "apps/memory/memory-data.js:338",
+   "apps/phone/phone-view.js:2718",
+   "apps/worldpulse/worldpulse-engine.js:185",
+   "config/phone-chat-memory.js:78"
+  ],
+  "length_read_sample": [
+   "apps/calendar/calendar-app.js:504",
+   "apps/diary/diary-data.js:1485",
+   "apps/diary/diary-data.js:1553",
+   "apps/diary/diary-data.js:1556",
+   "apps/games/common/games-ai-context.js:68",
+   "apps/games/common/games-ai-context.js:72",
+   "apps/games/werewolf/werewolf-view.js:643",
+   "apps/memory/memory-app.js:163",
+   "apps/music/music-app.js:176",
+   "apps/phone/phone-view.js:1381",
+   "apps/phone/phone-view.js:2875",
+   "apps/phone/phone-view.js:2877"
+  ]
+ },
+ "criteria": [
+  {
+   "id": "L1",
+   "desc": "有界消费者（最近 n 楼摘要）的输出形态不随楼层数增长",
+   "pass": true,
+   "got_text": "recentStoryContext 行数=8/8/8/8/8，recentStoryDigest 行数=6/6/6/6/6（N=10/100/400/1000/2000）"
+  },
+  {
+   "id": "L2",
+   "desc": "存在「全表物化」站点：物化对象数 == 楼层数（截断发生在物化之后）",
+   "pass": true,
+   "got_text": "Tavern 源 items() 长度=10/100/400/1000/2000（N=10/100/400/1000/2000）"
+  },
+  {
+   "id": "L3",
+   "desc": "下游索引上限（MAX_SCAN_PER_SOURCE=600）存在，且作用在物化之后",
+   "pass": true,
+   "got_text": "引擎索引长度=10/100/400/600/600，期望=10/100/400/600/600"
+  },
+  {
+   "id": "L5",
+   "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
+   "pass": true,
+   "got_text": "files=227，全表物化=8，slice(-n)=5，下标直取=18，长度读=47"
+  }
+ ],
+ "timing_criteria": [
+  {
+   "id": "L4",
+   "desc": "物化耗时随楼层数增长未观察到超线性（5 倍楼层 ≤ 8 倍耗时 + 常数）",
+   "pass": true,
+   "got_text": "n400=0.59ms，n2000=2.97ms（计时读数不可复算，只比同量级）"
+  }
+ ],
+ "verdict": {
+  "question": "1000 楼长会话下，楼层消费路径有没有真实的、可立的优化面？",
+  "answer": "**本版判定：有一个面，而且只有一个 —— 「截断发生在物化之后」。它按读数成立，不靠感觉；本版只登记与立判据，形态决策留给后续版本。**",
+  "reasons": [
+   "**有界消费者确实有界**：`recentStoryContext` 行数 8/8/8/8/8、`recentStoryDigest` 行数 6/6/6/6/6（N=10/100/400/1000/2000）—— 最近 n 楼抽取类路径全程输出形态恒定。这条**否掉了「长会话下本地摘要会退化」的猜测**。",
+   "**全表物化站点确实存在且对象数 == 楼层数**：Tavern 源 `items()` 长度 10/100/400/1000/2000（静态面实测 8 个站点）。代表性证据：`makeTavernSource()` 是 `ctx.chat.map(...)`；wechat/honey 是 `chat.forEach` 建**全量**行数组后再 `slice(-10)`。",
+   "**上限存在，但设在物化之后**：引擎索引长度 10/100/400/600/600（`MAX_SCAN_PER_SOURCE = 600`）—— 引擎侧是安全的；代价在**源侧**：即便最终只用 600 条，源侧也已把 N 条全部映成了对象（每条含最多 600 字正文）。",
+   "**未观察到超线性**（实测值见 `timing_criteria` 块：计时读数不可复算，故不写进结论文本）。所以这不是性能危机，而是「代价随会话长度无界增长」的**形态**问题：今天 1000 楼 1~2ms，但真实单楼可达数千字、真机比这里慢，再叠加多个消费点，才是要防的。",
+   "**视图层站点未实测**：4 处视图层的全表物化（`wechat/chat-view.js` / `wechat/wechat-data.js` / `honey/honey-data.js` / `weibo/weibo-data.js`）需真 DOM 与 App 实例，本探针只做静态归类 —— 如实登记，不假装覆盖。"
+  ],
+  "only_axis": "**把截断前移到取数口（只改取数口，惰性取数）** —— 改的是 `items()` 与 `forEach` 建全量数组这两类站点，目标形态是「先取 N 条，再产出」；不改 UI 结构、不改任何跨仓契约、不改 App 清单。判据：改前改后「有界消费者输出」「引擎可见条目集」「用户可见搜索结果」三面逐项等价。",
+  "not_blocked_by": "不阻任何其他项；与 OPT-D2（气泡渲染性能）正交（那是视图层测时，本项是取数层形态）。本项为决策输入，不是契约。"
+ },
+ "modules": {
+  "quote_full_materialize": true,
+  "wpe_loaded": true
+ },
+ "corrections": [
+  "本探针第一版把「全表物化」正则写成 `(?:context|ctx)\\.chat`，实测 0 命中 —— 因为真实写法里接收者叫 `chat`（`const chat = ctx?.chat`）、且有的站点是 `probe.chat.forEach`。口径修正：接收者改为「任意以 context/ctx 结尾的成员链，或裸 chat」，实测 8 个站点。",
+  "「物化」不能只看 forEach/map/filter：`chat.slice(-8).map(...)` 也是 O(8) 物化，但它**有界**。故四类分开计（full / bounded / indexed / length），不混成一个「消费点数」。",
+  "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
+  "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。"
+ ],
+ "not_done": [
+  "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",
+  "**未验证实机**：无浏览器、无 SillyTavern 宿主、无真实聊天记录。合成楼层每条约 6 字（`楼层 N`），而真实长会话单楼可达数千字 —— 本基线量的是**形态**（对象数/索引长度是否随 N 走），不是真实体量的字节数。",
+  "**内存快照增长 / 单次渲染耗时这一维仍未测**（TODO P2 同一格）：夹具不渲染 DOM、无布局与命中测试，`process.memoryUsage()` 在本环境噪声远大于信号（实测 heapUsed 抖动 GB 级，且探针自身即为大对象宿主）。这一维按既有口径继续登记在 docs/runtime-verification-boundary.md。",
+  "**未覆盖视图层站点的运行代价**：`phone-view / chat-view / moments-view / settings-app` 的消费点需要真 DOM 与 App 实例方能驱动，本探针只做静态归类，不驱动它们。",
+  "**未做 AST 级归属**：静态计数是文本形态（与 O-6 / P-1 同口径），同名接收者会混算；要精确须单独立一版换工具。"
+ ]
+}

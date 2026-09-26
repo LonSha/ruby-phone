@@ -188,7 +188,19 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
     return s.slice(0, at) + s.slice(at, end + 2).replace(/[^\n]/g, '') + s.slice(end + 2);
   };
   const IDX_CODE = strip(IDX_SRC);
-  assert.ok(IDX_SRC.includes('持久检查点'), '本版公告须描述取证对象（自证剥离面确实非空）');
+  /* ★ 自证「剥离面确实非空」不得硬钉当版公告的**具体词**：公告每版都会改写，
+   *   钉词等于把判据挂在会被正常迭代修改的散文上（v3.9.1 抬版即翻红的真实事故）。
+   *   改为**结构性**自证：公告块的 item 数组必须非空、且剥离后行数不变（行号仍指向真文件）。 */
+  const annAt = IDX_SRC.indexOf('const ST_PHONE_CURRENT_UPDATE');
+  assert.ok(annAt > 0, '公告块必须存在（剥离面前提）');
+  const annEnd = IDX_SRC.indexOf('};', annAt);
+  assert.ok(annEnd > annAt, '公告块必须有收尾');
+  const annBlock = IDX_SRC.slice(annAt, annEnd + 2);
+  const annItems = (annBlock.match(/"[^"]{10,}"/g) || []).length;
+  assert.ok(annItems >= 4, '本版公告须描述取证对象（自证剥离面确实非空），实测条目 ' + annItems);
+  assert.equal(IDX_CODE.split('\n').length, IDX_SRC.split('\n').length,
+    '剥离必须保留行数（行号仍指向真实文件）');
+  assert.equal(IDX_CODE.indexOf('const ST_PHONE_CURRENT_UPDATE'), -1, '剥离后代码面不得再含公告块');
   for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint', 'restoreCheckpoint',
     'previewRollback', 'rollbackPreview', 'dryRunRollback', 'RollbackPreview', '回滚预览',
     'branchCompare', '分支对照', '分支只读']) {
