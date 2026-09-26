@@ -10,6 +10,40 @@
 
 ---
 
+## 迭代 50 — v3.7.0 P-6 声明式生命周期注册可行性取证（按读数否掉）
+
+- **任务**：TODO P 批的 P-6 一直是「先取证再定」的空位，准入判据（覆盖率 ≥ 80% 才实施）从未被算过。
+  本轮的活儿就是把它算出来 —— 并给出实施 / 不实施的**判定**。
+- **结论：不实施（not_done），且不是因为差那 0.3%**：
+  - ① 覆盖率 **79.7%**（47 / 59）：12 个接线点的目标不是 App 实例（cachedWechatData / cachedMofoData /
+    cachedPhoneCallData / imageManager / `_autoWeibo*Keys` / memoryCore / lonshaBridge / storage / version /
+    _pendingImages），没有「实例」可挂声明。
+  - ② **决定性否决**：三路径语义一致率 **45.5%**（5 / 11 槽位）。差异经追因**全是设计意图，没有一条是遗漏** ——
+    `gamesApp` / `worldpulseApp` 在 P2/P3 有意走咽喉点回收（`reloadPhoneSurface()` →
+    `retireSessionScopedSlots()`，index.js:2600，三条路径都经它：9372 / 10603 / 10710）；
+    P1「换会话」实例必须**活**、P2/P3「清数据」实例必须**死**，语义互斥。
+  - ③ onChatChanged 参数契约不可统一：`MusicApp(newStorage)` 是**必选参**（体内直接读，传 undefined 即抛），
+    而 `rebindLazyApps()` 是无参调用；`GamesApp(storage = this.storage)` 是第三态。
+  - ④ 非 App 接线点占 20.3% —— 留成例外清单等于「统一框架 + 一张与今天同样长的例外表」。
+- **★ 本轮最重的一次自我纠正（已写进基线 corrections，套件 C2 常驻守）**：基线初稿把 `gamesApp` 只在 P1 有
+  `onChatChanged` 读成「清数据路径漏了重绑」（本仓历史上确实反复出现过那个缺陷形态）。追
+  `releasePhoneInactiveResources` / `retireSessionScopedSlots` / `reloadPhoneSurface` 调用链后**推翻**：
+  那是有意走咽喉点回收。教训：**「某槽位在某路径零处理」有且只有两种成因（遗漏 / 有意分档），
+  取证不能只读「缺没缺」、必须追「为什么缺」** —— 误读会直接反转结论（初稿理由指向「补上就好」，
+  真相是「两者语义互斥、不能归并」）。
+- **替代轴（有读数支持的方向）**：不要「声明式注册出口」，改立「**按路径分档的处置矩阵**」
+  （每条路径 × 每个槽位声明本路径该做什么）—— 同样消除手写散点，且不要求三路径语义相同。本版只立读数与判据。
+- **现有门禁不动**：`scripts/lifecycle-audit.mjs`（L1 出口接线 / L2 槽位 × 三路径 + 咽喉点 /
+  L3 白名单源码派生 / L4 枚举面自证）原样保留，仍在九门链里（套件 B2 守）。**否决一个候选不等于放过现状。**
+- **探针纪律**：只读、可复算（两次跑逐字节相同，套件 A3 断言）、锚点缺失 / 枚举面不足一律 fail-closed
+  `exit 2`（套件 D1 真源码破坏验：改名 P2 锚点 ⇒ 拒判；D2 删 app 文件至跌破下限 ⇒ 拒判；
+  D3 删一行出口调用 ⇒ 接线点恰少 1；D4 改 MusicApp 参数契约 ⇒ R2 由 fail 翻 pass，证明它是活判据）。
+- **落盘**：`tests/audit/lifecycle_declarative_probe.cjs`（探针）+ `tests/audit/lifecycle_declarative_baseline.json`
+  （基线，读数由 `--json` 直接落盘、零手抄）+ `tests/system-v324.test.mjs`（15 项）。
+- **产品代码零改动**（本版只取证）；**未验实机**（无头环境跑不了 index.js 的 DOM 依赖段）。
+
+---
+
 ## 迭代 49 — v3.6.0 九账证据面与投影新鲜度归因（R1-E / R1-C 下游消费侧）
 
 - **任务**：本批两件（计划最后一轮，把剩余项全部做完）：① 上游 lonsha v3.214.0（R1-E）外供的
@@ -262,7 +296,7 @@
   （串行化生效 —— 正是防 Windows EPERM rename 撞车的那个形态）；等待重试期间切会话 ⇒
   后续重试被身份守卫拦下（**不会把旧会话数据写进新会话**）；一次失败不污染队列（下次照常落盘）。
 - **落地**：`tests/_runtime_host.mjs` 补 `saveChatFails`（**默认 0 ⇒ 与加它之前逐字同行为**）
-  + `saveChatCalls()` 读数；`tests/system-v318.test.mjs`（14 项：A 夹具面 / B 重试与放弃 /
+  + `saveChatCalls()` 读数；`tests/system-v318.test.mjs`（15 项：A 夹具面 / B 重试与放弃 /
   C 串行化 / D 隔离与队列复位 / E 三条真源码破坏负控制 / F 版本五源同源）。
 - **同轮捐到一处「负控制设计缺陷」并修掉**：N2 首版把「去掉串行」破坏成**脱手执行**
   （`(async () => { … })();`）—— 那切断的是「等待」而不是「串行」：调用方 await 的
@@ -2464,8 +2498,8 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.6.0`（五源同源）
-- **门禁基线**（v3.6.0 实测，`npm run check` 全绿）：语法 406 文件 /
+- **当前版本**：`3.7.0`（五源同源）
+- **门禁基线**（v3.7.0 实测，`npm run check` 全绿，RC=0）：语法 **408 文件** /
   导入可解析门 239 文件 338 条静态说明符（动态 import 97 条不计入判据）/
   死导出零新增（257 个文件、818 个 export 声明、零消费 24 条冻结、枚举面 892 条全部识别）/
   生命周期 36 个 App 类 49 个槽位零缺口 / 注册 APPS id 41、样式投递 31 个未覆盖 0 /
@@ -2474,6 +2508,10 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
   `readPushProbe` 消费点 12 · `faceFieldState` 消费点 8（下限 5）· 归因文案表手写键 0 ·
   `readLonshaEventPlatforms` 2（下限 1）· `readInjection` 2（下限 2）·
   **`readLonshaEvidence` / `evidenceFaceOf` 3（下限 3）· `readProjectionFreshness` 1（下限 1）**。
+  测试 **1096 / 1096 pass / 0 fail**（新增 v324 套件 15 项至 16 项）。
+- **v3.6.0 基线（留档对照）**：语法 406 文件 / 导入门 239 文件 338 条 / 死导出 818 声明 /
+  `readPushProbe` 消费点 12 —— 本版增量为「2 个取证文件 + 1 个套件（v3.7.0）」，
+  产品代码零改动，无一处是既有读数倒退。
 - **v3.5.1 基线（留档对照）**：语法 405 文件 / 导入门 239 文件 338 条 / 死导出 810 声明 /
   `readPushProbe` 消费点 12 —— 本版增量为「两面消费侧 + J12 + 1 个套件」，无一处是既有读数倒退。
 - **上一版基线（v2.99.0，留档对照）**：语法 383 / 导入门 236 文件 322 条 / 806 pass ·

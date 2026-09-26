@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.6.0';
+const ST_PHONE_VERSION = '3.7.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,14 +127,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**九账证据面（R1-E）的下游消费侧**：上游记忆插件 v3.214.0 把九本账（伏笔 / 约定 / 平行事实 / 秘密 / 前文回扣 / 回声 / 事实版本 / 事件完整性 / 修复闭环）收成一份可查对账面（稳定引用键 + 出处楼层）并外供 `snapshot.evidence`，而下游**全库零消费** —— 用户点「证据」看到的是空壳。本版接进三个独立业务面：诊断中心「九账证据面」卡、全局搜索「证据」源（可跨 App 搜那个承诺 / 那条伏笔）、织光机「出处侧观测」卡。",
-        "★ 「读不到」与「没条目」不许同形：九账一本也读不到（模块没挂上 / 读面抛错 ⇒ 等上游修）与「账都在位、确实没条目」（真读数 ⇒ 等剧情推进）**处置相反**，本版按五态分开（bridge-absent / face-absent / unusable / empty / ok），行文案五句各不相同；缺席账逐本带真归因（多因时给 `mixed`，不挑一个当全部）。",
-        "★ 出处楼层取不到写「—」、**绝不写 0**：0 是「第 0 楼」这个真实读数，楼层未知必须保持未知 —— 上游 `finiteFloor(null) === null` 就是为这个；视图与搜索源两侧都显式挡 null（搜索源在楼层未知时不出该段）。",
-        "**投影新鲜度归因（R1-C）的下游消费侧 —— 修掉一句真实存在的错读数**：上游 v3.213.0 的新鲜度守卫把切聊 / 回滚后的旧投影**扣下不导出**，原因留在 `snapshot.meta.projectionFreshness`；下游此前零消费，`projection` 缺席即报「这版快照没有投影面（需记忆插件 v3.212+）」—— 把「有面但被守卫扣下（**重发一轮就好**）」谎报成「本版没这面（只能等升级）」。本版读出真因：诊断中心新增「投影新鲜度归因」卡，并在投影卡上**当场纠正**那句在本轮不成立的文案；「投影被扣下」还进总述首行（那是用户**能处理**的事）。",
-        "★ 同一轮不得有两个取数点：诊断内核已握快照 ⇒ 走纯函数 `evidenceFaceOf(snapshot)` / `readProjectionFreshness(snapshot)`（不重取）；织光机手上没有快照 ⇒ 才走取数式 `readLonshaEvidence(win)`。两个新面各只有一份归一实现，消费方不得自己解 `snap.evidence`（本仓「7 份 probeBridge 各自为政」的同形教训）。",
-        "**第九道门 J12 常驻守**：`scripts/bridge-contract-audit.mjs` 新增 J12 —— 出口在场（四个函数缺一即**拒判**）与真被消费（证据面下限 3 个业务面 / 新鲜度面下限 1 个业务面）**分别判**；计数按**去重文件数**而非调用次数（同一业务面数两遍会掩盖另一面归零）。这是本仓「建好不消费」防治的第九、第十条常驻判据。",
-        "落地：`config/world-bridge.js`（`EVIDENCE_STATES` / `readLonshaEvidence` / `evidenceFaceOf` / `evidenceFaceLine` / `readProjectionFreshness` / `projectionFreshnessText`）+ 诊断中心两张卡与总述两条坏消息 + 全局搜索「证据」源 + 织光机出处侧观测 + `scripts/bridge-contract-audit.mjs`（J12）+ `tests/system-v323.test.mjs`（14 项，含四条真源码破坏负控制）。",
-        "**版本升至 3.6.0（五源同源）**。"
+        "**P-6 声明式生命周期注册：取证后按读数否掉（not_done）** —— TODO 的准入判据「覆盖率 ≥ 80% 才实施」第一次被真正算出来：59 个手写接线点里 47 个指向 App 实例（**79.7%**）、另 12 个指向非 App 目标（缓存对象 / 桥 / 记忆内核 / 图片管理器 —— 没有「实例」可挂声明）。把 20.3% 留成例外清单，等于「统一框架 + 一张与今天同样长的例外表」。",
+        "★ 比覆盖率更硬的一条：**三条会话路径的差异不是「写得重复」，而是「有意分档」**——11 个槽位里只有 5 个在三条路径上动作集完全相同（**45.5%**），6 个不同；而真跑追因后六条差异**没有一条是遗漏**：`gamesApp` / `worldpulseApp` 只在 P1 有 `onChatChanged`，P2/P3 是**有意**走咽喉点回收（`reloadPhoneSurface()` → `retireSessionScopedSlots()`，三条路径都经它）。P1「换会话」要实例**活下来** vs P2/P3「清数据」要实例**死掉**，是语义互斥的两档。**声明式注册的前提「三条路径干同一件事」实测不成立。**（这条我初版把 gamesApp 读成了「清数据路径漏了重绑」—— 本仓历史上确实反复出现过那个缺陷形态；追调用链后推翻，教训写进基线 `corrections`。）",
+        "**onChatChanged 参数契约不可统一**：26 个无参 + 1 个带默认值（`GamesApp(storage = this.storage)`）+ 1 个**必选参**（`MusicApp(newStorage)` —— 体内直接读参，传 undefined 即抛）；而 `rebindLazyApps()` 逐键做**无参**调用（`phone.<键>?.onChatChanged?.()`），两套调用纪律并存。统一声明的第一步就得改 MusicApp 的参数契约。",
+        "**回归取证**：`node tests/audit/lifecycle_declarative_probe.cjs`（只读、可复算「两次跑逐字节相同」、锚点缺失 / 枚举面不足一律 fail-closed `exit 2`），基线落 `tests/audit/lifecycle_declarative_baseline.json`（读数由脚本 `--json` 直接落盘、**零手抄**）。",
+        "**现有 lifecycle 门禁不受影响**：本版判定是「不实施」，故 `scripts/lifecycle-audit.mjs` 的三层判据（L1 出口接线 / L2 槽位 × 三路径 + 咽喉点 / L3 白名单源码派生 / L4 枚举面自证）**原样保留** —— 否决一个候选不等于放过现状（套件 B2 常驻守它仍在九门链里）。",
+        "**有读数支持的方向（替代轴）**：把三路径差异显式化为「**按路径分档的处置矩阵**」（每条路径 × 每个槽位声明本路径该做什么）—— 同样能消除手写散点，且**不要求**三条路径语义相同。本版只立读数与判据，不动手。",
+        "落地：`tests/audit/lifecycle_declarative_probe.cjs`（探针）+ `tests/audit/lifecycle_declarative_baseline.json`（基线）+ `tests/system-v324.test.mjs`（15 项，含四条真源码破坏负控制）。",
+        "**版本升至 3.7.0（五源同源）**。"
     ]
 };
 

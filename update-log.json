@@ -1,6 +1,21 @@
 {
-  "latest": "3.6.0",
+  "latest": "3.7.0",
   "versions": {
+    "3.7.0": {
+      "version": "3.7.0",
+      "date": "2026-09-26",
+      "title": "P-6 声明式生命周期注册：取证后按读数否掉",
+      "items": [
+        "**P-6 声明式生命周期注册：取证后按读数否掉（not_done）** —— TODO 的准入判据「覆盖率 ≥ 80% 才实施」第一次被真正算出来：59 个手写接线点里 47 个指向 App 实例（**79.7%**）、另 12 个指向非 App 目标（缓存对象 / 桥 / 记忆内核 / 图片管理器 —— 没有「实例」可挂声明）。把 20.3% 留成例外清单，等于「统一框架 + 一张与今天同样长的例外表」。",
+        "★ 比覆盖率更硬的一条：**三条会话路径的差异不是「写得重复」，而是「有意分档」**——11 个槽位里只有 5 个在三条路径上动作集完全相同（**45.5%**），6 个不同；而真跑追因后六条差异**没有一条是遗漏**：`gamesApp` / `worldpulseApp` 只在 P1 有 `onChatChanged`，P2/P3 是**有意**走咽喉点回收（`reloadPhoneSurface()` → `retireSessionScopedSlots()`，三条路径都经它）。P1「换会话」要实例**活下来** vs P2/P3「清数据」要实例**死掉**，是语义互斥的两档。**声明式注册的前提「三条路径干同一件事」实测不成立。**（这条我初版把 gamesApp 读成了「清数据路径漏了重绑」—— 本仓历史上确实反复出现过那个缺陷形态；追调用链后推翻，教训写进基线 `corrections`。）",
+        "**onChatChanged 参数契约不可统一**：26 个无参 + 1 个带默认值（`GamesApp(storage = this.storage)`）+ 1 个**必选参**（`MusicApp(newStorage)` —— 体内直接读参，传 undefined 即抛）；而 `rebindLazyApps()` 逐键做**无参**调用（`phone.<键>?.onChatChanged?.()`），两套调用纪律并存。统一声明的第一步就得改 MusicApp 的参数契约。",
+        "**回归取证**：`node tests/audit/lifecycle_declarative_probe.cjs`（只读、可复算「两次跑逐字节相同」、锚点缺失 / 枚举面不足一律 fail-closed `exit 2`），基线落 `tests/audit/lifecycle_declarative_baseline.json`（读数由脚本 `--json` 直接落盘、**零手抄**）。",
+        "**现有 lifecycle 门禁不受影响**：本版判定是「不实施」，故 `scripts/lifecycle-audit.mjs` 的三层判据（L1 出口接线 / L2 槽位 × 三路径 + 咽喉点 / L3 白名单源码派生 / L4 枚举面自证）**原样保留** —— 否决一个候选不等于放过现状（套件 B2 常驻守它仍在九门链里）。",
+        "**有读数支持的方向（替代轴）**：把三路径差异显式化为「**按路径分档的处置矩阵**」（每条路径 × 每个槽位声明本路径该做什么）—— 同样能消除手写散点，且**不要求**三条路径语义相同。本版只立读数与判据，不动手。",
+        "落地：`tests/audit/lifecycle_declarative_probe.cjs`（探针）+ `tests/audit/lifecycle_declarative_baseline.json`（基线）+ `tests/system-v324.test.mjs`（15 项，含四条真源码破坏负控制）。",
+        "**版本升至 3.7.0（五源同源）**。"
+      ]
+    },
     "3.6.0": {
       "version": "3.6.0",
       "date": "2026-09-26",

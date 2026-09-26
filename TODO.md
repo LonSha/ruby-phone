@@ -60,7 +60,7 @@
       三个业务面真消费（诊断内核 / 全局搜索「证据」源 / 织光机出处侧观测——第 4 个同族观测面，
       同时把「取数式出口在 apps 侧零消费」的摆设形态消灭在 J12 落地之前）。
       第九道门新增 **J12** 常驻守（五个出口缺一即 corrupt；消费下限按去重文件数分别判：
-      证据面 3 / 新鲜度面 1）；`tests/system-v323.test.mjs`（14 项，含四条真源码破坏负控制）。
+      证据面 3 / 新鲜度面 1）；`tests/system-v323.test.mjs`（15 项，含四条真源码破坏负控制）。
       详见 `ITERATION_LOG.md` 迭代 49。
       边界：只读消费面（不写上游任何状态）；未验实机；上游 T8 观察项（各账 `copyItem` 的
       `finite(updatedFloor)` 把 null 读成 0）属上游单独一版的事，下游只保证不二次塌陷。
@@ -273,7 +273,7 @@
            真缺口：`_debouncedSaveChat` 的「串行队列 + 四档退避重试（0/350/900/1800ms）+ 放弃」
            **从来没有被任何判据观察过**（默认永远成功），而它跑在**数据丢失路径**上。
            已落：夹具补 `saveChatFails`（默认 0 ⇒ 与加它前逐字同行为）+ `saveChatCalls()` 读数；
-           `tests/system-v318.test.mjs`（14 项）。实测读数：全失败恰好重试 4 次 / 总耗 3057ms /
+           `tests/system-v318.test.mjs`（15 项）。实测读数：全失败恰好重试 4 次 / 总耗 3057ms /
            **绝不外抛**；第 2 次成功即停（351ms）；退避实测 0/352/901/1803ms；
            并发三次立即保存 ⇒ **同时在飞峰值恒为 1**；等待重试期间切会话 ⇒ 被身份守卫拦下
            （不会把旧会话数据写进新会话）。详见 `ITERATION_LOG.md` 迭代 44。
@@ -330,10 +330,31 @@
 - [x] **P-5 运行时模拟器剩余三维（首选 `saveChat` 失败注入）—— v3.4.1 完成**：
       见上方 P2 的「流式中断重试 / chatMetadata 保存失败注入」条（含**陈旧记载纠正**：
       夹具本来就可控，缺的是显式用法与判据）。
-- [ ] **P-6 声明式生命周期注册可行性取证**：让每个 App 自声明出口（`static lifecycleExits`）由框架统一调用，
-      从根上消除「写了出口但没人调」与「槽位没人回收」。**先取证再定**：覆盖率 ≥80% 才实施，
-      否则在 `FOUR_RELEASE_PLAN.md` 记 `not_done` 并写清代价（当前 36 App / 49 槽位由
-      `lifecycle-audit` 门禁守着，声明式改造的收益必须大过门禁重写成本）。
+- [x] **P-6 声明式生命周期注册可行性取证 —— v3.7.0 完成（判定 `not_done`，按读数否掉）**：
+      准入判据（覆盖率 ≥80% 才实施）第一次被真正算出来，**四条判据全不达**：
+      ① 覆盖率 **79.7%**（47 / 59 个手写接线点指向 App 实例）；另 12 个目标不是 App 实例
+      （cachedWechatData / cachedMofoData / cachedPhoneCallData / imageManager / `_autoWeibo*Keys` /
+      memoryCore / lonshaBridge / storage / version / _pendingImages）—— 没有「实例」可挂声明。
+      ② **决定性否决**：三路径语义一致率 **45.5%**（5 / 11 槽位），而追因后**六条差异全是设计意图、
+      一条也不是遗漏**：`gamesApp` / `worldpulseApp` 在 P2/P3 是**有意**走咽喉点回收
+      （`reloadPhoneSurface()` → `retireSessionScopedSlots()`，index.js:2600，三路径都经它）——
+      P1「换会话」实例必须**活**、P2/P3「清数据」实例必须**死**，语义互斥。
+      **声明式注册的前提「三条路径干同一件事」实测不成立。**
+      ③ onChatChanged 参数契约不可统一：`MusicApp(newStorage)` 是**必选参**（体内直接读，传 undefined 即抛），
+      而 `rebindLazyApps()` 是无参调用（`phone[key]?.onChatChanged?.()`）；`GamesApp(storage = this.storage)` 是第三态。
+      ④ 非 App 接线点占 20.3% —— 留成例外清单等于「统一框架 + 一张与今天同样长的例外表」。
+      **★ 本轮最重的一次自我纠正**：基线初稿把 `gamesApp` 只在 P1 有 `onChatChanged` 读成「清数据路径漏了重绑」
+      （本仓历史反复出现过的缺陷形态），追调用链后**推翻** —— 那是有意走咽喉点回收。
+      教训：**「某槽位在某路径零处理」只有两种成因（遗漏 / 有意分档），取证不能只读「缺没缺」、
+      必须追「为什么缺」**；误读会直接反转结论（初稿指向「补上就好」，真相是「互斥、不能归并」）。
+      **替代轴（有读数支持的方向）**：不要「声明式注册出口」，改立「**按路径分档的处置矩阵**」
+      （每条路径 × 每个槽位声明本路径该做什么）—— 同样消除手写散点，且不要求三路径语义相同。
+      **现有门禁不动**：`scripts/lifecycle-audit.mjs` 的四层判据原样保留、仍在九门链里
+      —— **否决一个候选不等于放过现状**。
+      落地：`tests/audit/lifecycle_declarative_probe.cjs`（只读、可复算、锚点缺失与枚举面不足一律 fail-closed）
+      + `tests/audit/lifecycle_declarative_baseline.json`（读数由 `--json` 直接落盘、零手抄）
+      + `tests/system-v324.test.mjs`（15 项，含四条真源码破坏负控制）。产品代码零改动；未验实机。
+      详见 `ITERATION_LOG.md` 迭代 50。
 
 ## F 批 · 功能拓展拓宽（登记，未启动）
 
