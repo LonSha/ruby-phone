@@ -93,7 +93,11 @@ function hostWindow(win) {
  * @param {object} [win]
  * @returns {{ bridges, bridgeReport, fields, backStack, sourceKeys, rulebook, at }}
  */
-export function collectDiagnose(win) {
+export function collectDiagnose(win, storage) {
+    /* [v3.5.1 · F-8] 第二个入参是 storage（PhoneStorage 实例）。
+     *   为什么放在诊断内核而不是让视图自己取：本文件头三条纪律的第一条就是
+     *   「只读真源出口」—— 诊断中心是**本仓一切读数面的唯一可见出口**，
+     *   存储健康面（P-4 的裁定读数）同理。 */
     const w = hostWindow(win);
     const at = Date.now();
 
@@ -222,7 +226,69 @@ export function collectDiagnose(win) {
         } catch (_e) { return null; }
     })();
 
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes };
+    /* ── [v3.5.1 · F-8] 存档健康面（P-4 的两个裁定读数，此前**零消费**）──
+     *   P-4 落了 `schemaFace` / `migrationLedgerFace` 两个裁定出口，但全库只有测试在读：
+     *   用户看不到「这份存档属于哪个存储时代」「一共搬过几条旧键、有没有时间戳坏掉的」。
+     *   **机制做完却没人看**，与「建好不消费」同形 —— 本项只做**呈现**，不做任何判定与迁移。
+     *   三条约束与全页一致：
+     *     ① 只读：只用 storage 的两个裁定出口（它们本就不写）；证据是 F8 组的「零写入」判据；
+     *     ② 不抛：storage 不可用 / 接口缺失 / 抛错，一律降级成 `ok:false` + 归因；
+     *     ③ 不猜：两个**分域**（本会话档 / 全局档）分开报 —— 它们是两本不同的账，
+     *        合成一个读数就会出现「聊天档旧、全局档当」这类互相矛盾的结论被抹平。
+     */
+    const storageFace = (() => {
+        const one = (isChatData) => {
+            const s = safe(() => storage.schemaFace(isChatData), null);
+            const l = safe(() => storage.migrationLedgerFace(isChatData), null);
+            if (!s || !l) return { ok: false, reason: 'storage-absent', schema: null, ledger: null };
+            return {
+                ok: true, reason: 'ok',
+                schema: {
+                    state: String(s.state || 'unknown'),
+                    version: Number(s.version) || 0,
+                    current: Number(s.current) || 0,
+                    absent: s.absent === true,
+                    corrupt: s.corrupt === true
+                },
+                ledger: {
+                    count: Number(l.count) || 0,
+                    unparsableAt: Number(l.unparsableAt) || 0,
+                    version: Number(l.version) || 0,
+                    absent: l.absent === true,
+                    corrupt: l.corrupt === true
+                }
+            };
+        };
+        if (!storage) return { ok: false, reason: 'no-storage', chat: null, global: null };
+        return { ok: true, reason: 'ok', chat: one(true), global: one(false) };
+    })();
+
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace };
+}
+
+/** 存储时代的中文（未知取值**如实输出原值**，不静默兜底成某个具体结论） */
+export function schemaStateText(state) {
+    return SCHEMA_STATES[state] || String(state == null ? '' : state) || '未知';
+}
+
+const SCHEMA_STATES = Object.freeze({
+    current: '当前代',
+    legacy: '旧档（本方法只上报，不做迁移）',
+    future: '更新版插件写的档（按当前口径读可能误读）',
+    unknown: '无从判断（账本缺失或损坏）'
+});
+
+/** 存档健康面的一行读数（**不拼结论**：只做单位与分隔，判断归读者） */
+export function storageFaceLine(face) {
+    const f = face || {};
+    if (f.ok !== true) return '存档健康：读不到（' + String(f.reason || 'unknown') + '）';
+    const one = (x) => {
+        if (!x || x.ok !== true) return '读不到';
+        const s = x.schema || {}, l = x.ledger || {};
+        return schemaStateText(s.state) + ' · 已搬 ' + (l.count || 0) + ' 条键'
+            + (l.unparsableAt ? '（其中 ' + l.unparsableAt + ' 条时间戳坏了）' : '');
+    };
+    return '本会话档：' + one(f.chat) + ' ／ 全局档：' + one(f.global);
 }
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
@@ -342,6 +408,8 @@ export function summarizeDiagnose(pkg) {
 
 export default {
     CONSUMED_FIELDS,
+    schemaStateText,
+    storageFaceLine,
     SOURCE_KEY_SITES,
     collectDiagnose,
     fieldReasonText,

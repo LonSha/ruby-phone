@@ -33,7 +33,9 @@ export class DiagnoseApp {
      * 「真违规被噪声淹没」。
      */
     collect() {
-        return collectDiagnose();
+        /* [v3.5.1 · F-8] 存档健康面要读 storage（P-4 的两个只读裁定出口）；
+         *   本 App 不自持副本，直接把宿主注入的那个实例传下去（纯读，不写）。 */
+        return collectDiagnose(null, this.storage);
     }
 
     /** 一行总述（供宿主诊断与通知） */
@@ -58,7 +60,7 @@ export class DiagnoseApp {
              *   另：注释里也**不引那个标识符形**（引了同样会被锚点扫描数到）。
              *   本方法也支持调用方把已取好的包直接传进来（诊断视图就是这么用的），
              *   避免同一次渲染里取两遍数。 */
-            const p = pkg || collectDiagnose();
+            const p = pkg || collectDiagnose(null, this.storage);
             return silenceAlerts(typeof window !== 'undefined' ? window : null, p);
         } catch (_e) { return []; }
     }

@@ -9,6 +9,7 @@
 'use strict';
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
+import { schemaStateText, storageFaceLine } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { noteSilenceCycle, silenceAlerts, silenceLedgerFace, resetSilenceLedger } from '../../config/silence-guard.js';
@@ -283,6 +284,42 @@ export class DiagnoseView {
     /** [v3.4.2 · F-5] 重置沉默台账（用户显式动作：看完告警后清一次计数）。
      *  为什么给出口而不是留给测试：台账是**进程内**的，若没有清零点，用户重开诊断页
      *  只会在同一份计数上继续累加，「刚清零过」这个动作在界面上无处可做。 */
+    /** [v3.5.1 · F-8] 存档健康面：P-4 的两个裁定读数（存储时代 / 迁移账本）**首次可见**。
+     *  只呈现，不判定也不迁移：卡片上写下的每一个字都来自 storage 的两个只读出口，
+     *  两个分域（本会话档 / 全局档）分开列 —— 它们是两本不同的账。 */
+    _storageHtml(pkg) {
+        const f = (pkg && pkg.storageFace) || {};
+        if (f.ok !== true) {
+            /* 读不到就说读不到（不是「一切正常」）：存储实例没接上 / 接口缺失 / 抛错。 */
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>存档健康：读不到（归因 '
+                + escapeHtml(String(f.reason || 'unknown')) + '）—— 这只说明本页取不到读数，不代表存档有问题。</div>';
+        }
+        const one = (label, x) => {
+            if (!x || x.ok !== true) {
+                return '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>' + escapeHtml(label) + '</span>'
+                    + this._chip('读不到（' + String((x && x.reason) || 'unknown') + '）', 'muted') + '</div>';
+            }
+            const sc = x.schema || {}, lg = x.ledger || {};
+            const tone = sc.state === 'current' ? 'ok' : (sc.state === 'future' ? 'warn' : 'muted');
+            const corrupt = (sc.corrupt || lg.corrupt) ? '<div class=' + Q + 'dg-sub dg-bad' + Q + '>账本形状损坏（已降级为空账本读）</div>' : '';
+            const noted = lg.unparsableAt
+                ? '<div class=' + Q + 'dg-sub' + Q + '>其中 ' + lg.unparsableAt + ' 条时间戳不可解析（<b>如实计数</b>，不当成 0 条，也不丢弃）</div>'
+                : '';
+            return '<div class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-name' + Q + '>' + escapeHtml(label) + '</span>'
+                + this._chip(schemaStateText(sc.state), tone)
+                + this._chip('存储版 ' + sc.version + ' / 本机 ' + sc.current, 'muted')
+                + this._chip('已搬 ' + (lg.count || 0) + ' 条键', (lg.count ? 'muted' : 'muted'))
+                + '<div class=' + Q + 'dg-sub' + Q + '>账本：' + (lg.absent ? '从未写过（正常旧档）' : ('在位，版本 ' + lg.version))
+                + (sc.absent ? ' · 存储版本账从未写过' : '') + '</div>' + noted + corrupt + '</div>';
+        };
+        return '<div class=' + Q + 'dg-table' + Q + '>'
+            + one('本会话档', f.chat) + one('全局档', f.global) + '</div>'
+            + '<div class=' + Q + 'dg-note' + Q + '>' + escapeHtml(storageFaceLine(f)) + '</div>'
+            + '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>裁定不等于迁移</b> —— 本卡只回答「这份存档属于哪个存储时代」'
+            + '与「一共搬过几条旧键」，迁移必须由调用方显式发起（读取路径上顺手做破坏性写操作，'
+            + '是所有「打开一下就改了数据」事故的同一个形状）。</div>';
+    }
+
     resetSilence() {
         try { resetSilenceLedger(typeof window !== 'undefined' ? window : null); } catch (_e) { /* 不抛 */ }
     }
@@ -290,7 +327,9 @@ export class DiagnoseView {
     render(container) {
         if (!container) return;
         this.loadCSS();
-        const pkg = collectDiagnose();
+        /* [v3.5.1 · F-8] 存档健康面要读 storage（P-4 的两个裁定出口）；
+         *   本 App 不自持副本，storage 由宿主注入到构造器（与其它 App 同规格）。 */
+        const pkg = collectDiagnose(null, this.app && this.app.storage);
         /* [v3.4.2 · F-5] 沉默降级告警面：先记这一轮（跨轮计数），再算告警。
          *   顺序不能反 —— 反了的话「连续 3 轮」永远差一轮（当轮还没记）。
          *   本卡**只进诊断页、不弹窗**：三类沉默都是上游或宿主那边的事，
@@ -322,6 +361,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('</div>');
         container.innerHTML = h.join('');
     }
