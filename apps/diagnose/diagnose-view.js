@@ -9,9 +9,10 @@
 'use strict';
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
-import { schemaStateText, storageFaceLine } from './diagnose-data.js';
+import { schemaStateText, storageFaceLine, evidenceFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
+import { projectionFreshnessText } from '../../config/world-bridge.js';
 import { noteSilenceCycle, silenceAlerts, silenceLedgerFace, resetSilenceLedger } from '../../config/silence-guard.js';
 
 const Q = String.fromCharCode(34);
@@ -149,6 +150,16 @@ export class DiagnoseView {
         const pj = pkg.projection || null;
         if (!pj) return '<div class=' + Q + 'dg-note' + Q + '>投影面读取失败（已降级）</div>';
         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(projectionLine(pj)) + '</div>';
+        /* [v3.6.0 · R1-C] 「投影缺席」必须先回答「是扔掉了还是本来就没这面」：
+         *   本卡上方原样显示上游给的那句话（`no-projection-face` 的文案），
+         *   但若 `meta.projectionFreshness` 说它被守卫扣下了，这里必须**当场纠正**，
+         *   否则用户读到的是「需记忆插件 v3.212+」——一句对「被扣下」处境**事实错误**的归因。 */
+        const fresh = pkg.freshness || null;
+        if (fresh && fresh.dropped === true) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>【注意】上面这句话在本轮**不成立**：'
+                + escapeHtml(projectionFreshnessText(fresh)) + '。这不是「本版没这面」，'
+                + '重发一轮（或切回原会话再切回来）即会重取。</div>';
+        }
         if (pj.reason !== 'ready') return html;
         html += '<div class=' + Q + 'dg-sub' + Q + '>身份：会话 ' + escapeHtml(pj.identity.conversationId == null ? '（未提供）' : pj.identity.conversationId)
             + ' · 场景 ' + escapeHtml(pj.identity.sceneId == null ? '（未提供）' : pj.identity.sceneId)
@@ -284,6 +295,68 @@ export class DiagnoseView {
     /** [v3.4.2 · F-5] 重置沉默台账（用户显式动作：看完告警后清一次计数）。
      *  为什么给出口而不是留给测试：台账是**进程内**的，若没有清零点，用户重开诊断页
      *  只会在同一份计数上继续累加，「刚清零过」这个动作在界面上无处可做。 */
+    /** [v3.6.0 · R1-E] 九账证据面卡：上游 v3.214.0 把九本账收成一份可查表（此前**全库零消费**）。
+     *  纯渲染：五态归因与文案全部来自真源（`evidenceFaceText`），本方法不做任何判断。
+     *  卡尾附**逐账读数表**：用户据此看到「哪本读到、哪本缺席、缺席的两种原因分别是什么」
+     *  —— 没有它，用户看到「读不到」也无从判断该等升级还是该等重跑。 */
+    _evidenceHtml(pkg) {
+        const ev = (pkg && pkg.evidence) || null;
+        if (!ev) return '<div class=' + Q + 'dg-note' + Q + '>证据面读取失败（已降级）</div>';
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(evidenceFaceText(ev)) + '</div>';
+        const ledgers = Array.isArray(ev.ledgers) ? ev.ledgers : [];
+        if (ledgers.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + ledgers.map((l) => {
+                const tone = l.state === 'ok' ? 'ok' : (l.state === 'empty' ? 'muted' : 'warn');
+                const label = l.state === 'ok' ? ('条目 ' + l.count + (l.truncated ? '（已截断）' : ''))
+                    : (l.state === 'empty' ? '空账（在位，无条目）' : ('取不到：' + l.reason));
+                return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(l.id) + '</code>'
+                    + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(l.label) + '</span>'
+                    + this._chip(label, tone) + '</div>';
+            }).join('') + '</div>';
+        }
+        const items = Array.isArray(ev.items) ? ev.items : [];
+        if (items.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + items.slice(0, 20).map((it) => {
+                /* ★ 楼层「取不到」显示「—」而**绝不显示 0**：0 是「第 0 楼」这个真实读数。 */
+                const f = (it.floor === null || it.floor === undefined) ? '—' : String(it.floor);
+                return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(it.ref) + '</code>'
+                    + this._chip(it.status || '（无状态）', it.status === 'open' ? 'warn' : 'muted')
+                    + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(it.ledgerLabel + ' · 出处 ' + f + ' 楼') + '</span></div>'
+                    + '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(it.title) + '</div>';
+            }).join('') + '</div>';
+            if (items.length > 20) {
+                html += '<div class=' + Q + 'dg-sub' + Q + '>（共 ' + items.length + ' 条，此处只列前 20 条）</div>';
+            }
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>本卡只答「能查到几条证据、还有几本账读不到、为什么」，'
+            + '<b>不复述上游的九账对账结论</b>（那是上游工作台的职责）。'
+            + '「九本账一本也读不到」（模块没挂，等上游修）与「账在位但没有条目」（真读数，等剧情推进）'
+            + '是两件处置相反的事，本卡分开报。出处楼层取不到时显示「—」—— <b>不写 0</b>（0 是「第 0 楼」这个真实读数）。</div>';
+        return html;
+    }
+
+    /** [v3.6.0 · R1-C] 投影新鲜度归因卡：上游 v3.213.0 的新鲜度守卫扣下的旧投影**此前被谎报成「本版没这面」**。
+     *  两种处境处置相反：被扣下 ⇒ 等宿主重跑一轮（用户可重发）；本版没这面 ⇒ 等上游升级。 */
+    _freshnessHtml(pkg) {
+        const f = (pkg && pkg.freshness) || null;
+        if (!f || f.present !== true) {
+            return '<div class=' + Q + 'dg-sub' + Q + '>本轮没有投影被新鲜度守卫扣下'
+                + '（或上游这版还没外供该归因面 —— 那与「扣下了」是两件事，本卡不混报）。</div>';
+        }
+        const dropped = f.dropped === true;
+        const line = dropped
+            ? (projectionFreshnessText(f) || ('投影已被扣下（原因 ' + String(f.reason || '未知') + '）'))
+            : ('新鲜度归因在场，但本轮未扣下任何投影（dropped=false，原因 ' + String(f.reason || '—') + '）');
+        return '<div class=' + Q + 'dg-row' + Q + '>'
+            + this._chip(dropped ? '投影被扣下' : '未扣下', dropped ? 'warn' : 'muted') + '</div>'
+            + '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(line) + '</div>'
+            + '<div class=' + Q + 'dg-sub' + Q + '>归属：从 ' + escapeHtml(f.from === null ? '（未提供）' : String(f.from))
+            + ' → 到 ' + escapeHtml(f.to === null ? '（未提供）' : String(f.to)) + '</div>'
+            + '<div class=' + Q + 'dg-note' + Q + '>上游 v3.213.0 起，切聊 / 回滚后的旧投影缓存**不再导出**'
+            + '（它属于别的会话或上一代）。修前这条归因下游零消费，于是「有面但被守卫扣下」与'
+            + '「本版没这面」同形 —— 前者<b>重发一轮就好</b>，后者只能等升级，压成一态就是错读数。</div>';
+    }
+
     /** [v3.5.1 · F-8] 存档健康面：P-4 的两个裁定读数（存储时代 / 迁移账本）**首次可见**。
      *  只呈现，不判定也不迁移：卡片上写下的每一个字都来自 storage 的两个只读出口，
      *  两个分域（本会话档 / 全局档）分开列 —— 它们是两本不同的账。 */
@@ -357,7 +430,9 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>探针自述（sourceState / lastError）</h3>' + this._probeSelfHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影新鲜度归因</h3>' + this._freshnessHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>注入读数（本轮实际注入）</h3>' + this._injectionHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>九账证据面</h3>' + this._evidenceHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');

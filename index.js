@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.5.1';
+const ST_PHONE_VERSION = '3.6.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,13 +127,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**存档健康面板（F-8）**：把 P-4 的两个只读裁定出口（`schemaFace` / `migrationLedgerFace`）接进诊断中心 —— 用户此前看不到「这份存档属于哪个存储时代」「一共搬过几条旧键、有没有时间戳坏掉的」，机制做完却只有测试在读。",
-        "★ 只做**呈现**，不做任何判定与迁移。P-4 当时把这条纪律写在 storage.js 的注释里，本项第一次把它呈现给用户：**裁定不等于迁移** —— 读取路径上顺手做破坏性写操作，是所有「打开一下就改了数据」事故的同一个形状。",
-        "**两个分域分开报**（本会话档 / 全局档）：它们写在两个命名空间里，是**两本不同的账**。合成一个读数，就会把「聊天档是旧档、全局档是当档」这类互相矛盾的结论抹平 —— 与上游「空账 vs 模块没挂上」压成一态是同一种错读数。",
-        "逐条读数如实：**时间戳坏掉的条目如实计数**（不当成 0 条，也不丢弃），账本形状损坏如实报「已降级为空账本读」；**从未写过账本（正常旧档）与账本损坏（数据事故）严格分开** —— 两者处置方向相反。",
-        "读不到时说读不到：存储实例没接上 / 接口缺失 / 抛错，一律降级成 ok:false + 归因，并在卡片上明说「**这只说明本页取不到读数，不代表存档有问题**」（把「读不到」写成「一切正常」是同一个形状的反面）。",
-        "落地：`apps/diagnose/diagnose-data.js`（`collectDiagnose(win, storage)` 第二参 + `storageFace` 面 + `schemaStateText` / `SCHEMA_STATES` / `storageFaceLine`）+ 诊断中心「存档健康」卡 + 控制器两条路径都真传 storage（少传的那条会静默退化成「读不到」）+ `tests/system-v322.test.mjs`（12 项，含零写入逐字对账与三条真源码破坏负控制）。",
-        "**版本升至 3.5.1（五源同源）**。",
+        "**九账证据面（R1-E）的下游消费侧**：上游记忆插件 v3.214.0 把九本账（伏笔 / 约定 / 平行事实 / 秘密 / 前文回扣 / 回声 / 事实版本 / 事件完整性 / 修复闭环）收成一份可查对账面（稳定引用键 + 出处楼层）并外供 `snapshot.evidence`，而下游**全库零消费** —— 用户点「证据」看到的是空壳。本版接进三个独立业务面：诊断中心「九账证据面」卡、全局搜索「证据」源（可跨 App 搜那个承诺 / 那条伏笔）、织光机「出处侧观测」卡。",
+        "★ 「读不到」与「没条目」不许同形：九账一本也读不到（模块没挂上 / 读面抛错 ⇒ 等上游修）与「账都在位、确实没条目」（真读数 ⇒ 等剧情推进）**处置相反**，本版按五态分开（bridge-absent / face-absent / unusable / empty / ok），行文案五句各不相同；缺席账逐本带真归因（多因时给 `mixed`，不挑一个当全部）。",
+        "★ 出处楼层取不到写「—」、**绝不写 0**：0 是「第 0 楼」这个真实读数，楼层未知必须保持未知 —— 上游 `finiteFloor(null) === null` 就是为这个；视图与搜索源两侧都显式挡 null（搜索源在楼层未知时不出该段）。",
+        "**投影新鲜度归因（R1-C）的下游消费侧 —— 修掉一句真实存在的错读数**：上游 v3.213.0 的新鲜度守卫把切聊 / 回滚后的旧投影**扣下不导出**，原因留在 `snapshot.meta.projectionFreshness`；下游此前零消费，`projection` 缺席即报「这版快照没有投影面（需记忆插件 v3.212+）」—— 把「有面但被守卫扣下（**重发一轮就好**）」谎报成「本版没这面（只能等升级）」。本版读出真因：诊断中心新增「投影新鲜度归因」卡，并在投影卡上**当场纠正**那句在本轮不成立的文案；「投影被扣下」还进总述首行（那是用户**能处理**的事）。",
+        "★ 同一轮不得有两个取数点：诊断内核已握快照 ⇒ 走纯函数 `evidenceFaceOf(snapshot)` / `readProjectionFreshness(snapshot)`（不重取）；织光机手上没有快照 ⇒ 才走取数式 `readLonshaEvidence(win)`。两个新面各只有一份归一实现，消费方不得自己解 `snap.evidence`（本仓「7 份 probeBridge 各自为政」的同形教训）。",
+        "**第九道门 J12 常驻守**：`scripts/bridge-contract-audit.mjs` 新增 J12 —— 出口在场（四个函数缺一即**拒判**）与真被消费（证据面下限 3 个业务面 / 新鲜度面下限 1 个业务面）**分别判**；计数按**去重文件数**而非调用次数（同一业务面数两遍会掩盖另一面归零）。这是本仓「建好不消费」防治的第九、第十条常驻判据。",
+        "落地：`config/world-bridge.js`（`EVIDENCE_STATES` / `readLonshaEvidence` / `evidenceFaceOf` / `evidenceFaceLine` / `readProjectionFreshness` / `projectionFreshnessText`）+ 诊断中心两张卡与总述两条坏消息 + 全局搜索「证据」源 + 织光机出处侧观测 + `scripts/bridge-contract-audit.mjs`（J12）+ `tests/system-v323.test.mjs`（14 项，含四条真源码破坏负控制）。",
+        "**版本升至 3.6.0（五源同源）**。"
     ]
 };
 

@@ -203,7 +203,7 @@ export class TimeweaverView {
         </div>
         ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
         <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>
-        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}`;
+        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}${this._evidenceBlock(m)}`;
     }
     /* [v3.0.2] R2-C 送达侧：本轮**真的**进了上下文的是哪几块、哪几块被预算裁掉。
        为什么和上面的「回望」分两块：那张卡答「想起了什么」（召回侧），
@@ -267,6 +267,71 @@ export class TimeweaverView {
           </div>
           ${rows}
           <div class="tw-hint" style="font-size:11px;line-height:1.8">平台标签由记忆插件侧登记方**显式给出**，不做文本猜测归类；<br>本栏只列被标过的平台，不排哪个平台更重要。</div>
+        </div>`;
+    }
+
+    /* [v3.6.0] R1-E 出处侧：这条承诺出自哪本账、哪一楼（九账证据对账面）。
+       与上三块并列的**第四个问题**：
+         · 回望  答 想起了哪段剧情（召回侧）；
+         · 送达  答 哪几块真的进了上下文（送达侧）；
+         · 来源  答 这件事是谁记的（来源侧）；
+         · 本块答 **她说过的话在哪一楼、出自哪本账**（出处侧）。
+       前三块说的都是「模型这一侧发生了什么」，本块第一次让上游九本账本身可读。
+       缺席时不显示（收集器那层已不建卡）——读不到就是读不到，不写「0 条证据」。 */
+    _evidenceBlock(m) {
+        const ev = m && m.evidence;
+        if (!ev) return '';
+        /* 三态各有各的话（真源已把五态分好，此处只做转述，**不重判形态**）：
+         *   unusable ⇒ 一本账也读不到（本机的问题面，须点名）；
+         *   empty    ⇒ 九账在位、确实没条目（真读数，等剧情推进）；
+         *   ok       ⇒ 有可查条目。 */
+        const tag = ev.state === 'unusable' ? '（本版读不出该面）'
+            : (ev.state === 'empty' ? '（九账在位，此刻还没有条目）' : '');
+        /* 逐账读数：三态标签**各不相同**，不许都显示成一个数 ——
+         * 「条目 0（已截断）」与「空账（在位、无条目）」与「取不到：<原因>」是三种事。 */
+        const ledgerRows = (ev.ledgers || []).map((L) => {
+            const detail = L.state === 'ok'
+                ? `条目 ${L.count}${L.truncated ? '（已截断）' : ''}`
+                : (L.state === 'empty' ? '空账（在位、无条目）' : `取不到：${esc(L.reason || 'absent')}`);
+            return `
+          <div class="tw-person">
+            <span class="tw-person-rank">\u00b7</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(L.label || L.id)} <span class="tw-person-meta">${detail}</span></div>
+            </div>
+          </div>`;
+        }).join('');
+        /* 条目表只列前 20 条（视图不做分页；截断与否由上面的计数说清）。
+         * 出处楼层取不到显示「—」，**绝不显示 0**（0 是「第 0 楼」这个真实读数）。 */
+        const cap = 20;
+        const shown = (ev.items || []).slice(0, cap);
+        const itemRows = shown.map((it) => {
+            const floorTxt = (it.floor === null || it.floor === undefined) ? '\u2014' : String(it.floor);
+            const meta = [it.ledgerLabel || it.ledger, it.status, `出处 ${floorTxt} 楼`].filter(Boolean).join(' · ');
+            return `
+          <div class="tw-person">
+            <span class="tw-person-rank">\u25c6</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(it.title || it.ref || '一条证据')} <span class="tw-person-meta">${esc(meta)}</span></div>
+            </div>
+          </div>`;
+        }).join('');
+        const more = (ev.items || []).length > cap
+            ? `<div class="tw-hint" style="font-size:11px">另有 ${(ev.items || []).length - cap} 条未在此列出（上表计数为全量）。</div>` : '';
+        const absent = (ev.absentCount && Array.isArray(ev.absentReasons) && ev.absentReasons.length)
+            ? `<div class="tw-hint" style="font-size:11px;line-height:1.8">缺席 ${ev.absentCount} 本：${esc(ev.absentReasons.map((a) => `${a.label}（${a.reason}）`).join('、'))}<br>「这本账读不到」与「这本账里没有条目」是两件事，本表分开列。</div>` : '';
+        return `
+        <div class="tw-curve" style="margin-top:14px">
+          <div class="tw-curve-label">\ud83d\udd16 出处侧观测 · 九账证据对账面${tag}</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip">${esc(ev.line || '')}</span>
+            ${ev.version ? `<span class="tw-chip">对账面 v${ev.version}</span>` : ''}
+          </div>
+          ${ledgerRows}
+          ${itemRows}
+          ${more}
+          ${absent}
+          <div class="tw-hint" style="font-size:11px;line-height:1.8">引用键与出处楼层由记忆插件侧给出；本栏只转述，不去猜「这条算不算伏笔」。</div>
         </div>`;
     }
 

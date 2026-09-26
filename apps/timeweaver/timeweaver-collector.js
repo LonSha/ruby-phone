@@ -9,7 +9,7 @@ import TW from './timeweaver-engine.js';
 //   本文件此前**自写**了一份 `window.lonsha_memory_bridge_v1` 读取（只取 snapshot.recallAudit）。
 //   同一份桥读取逻辑有两份实现必然漂移（且第二份不知道对方 v3.174 的 sourceState 可归因），
 //   故收敛到一处——本文件只负责「取 recallAudit 这一块业务数据」，桥怎么读由真源决定。
-import { readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine } from '../../config/world-bridge.js';
+import { readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine, readLonshaEvidence, evidenceFaceLine } from '../../config/world-bridge.js';
 // [v3.0.2] R2-C：上游**注入读数**的消费侧单一真源（与上面那条桥读取并列，
 //   但读的是**不同的一面**：readLonshaSnapshot 取 recallAudit「召回了什么」，
 //   本函数取 injection「最终送进上下文的是什么」——中间隔着预算裁剪与去重）。
@@ -157,6 +157,52 @@ export function collectLonshaEventPlatforms(win) {
 }
 
 /**
+ * [v3.6.0] R1-E 下游侧：读取**九账证据对账面**（这个承诺是哪一楼说的）。
+ *
+ * 与上面三个读数的分工（四个问题，各答一个，互不顶替）：
+ *   · `collectLonshaRecall`           —— 召回侧：想起了哪段剧情（recallAudit）；
+ *   · `collectLonshaInjection`        —— 送达侧：哪几块真的进了上下文（injection）；
+ *   · `collectLonshaEventPlatforms`   —— 来源侧：事件是谁记的（eventPlatforms）；
+ *   · `collectLonshaEvidence`         —— **出处侧：她说过的话在哪一楼、出自哪本账**（evidence）。
+ *   前三个都在说「模型这一侧发生了什么」，本面第一次让**上游九本账本身**可读：
+ *   伏笔 / 约定 / 平行事实 / 秘密 / 前文回扣 / 回声 / 事实版本 / 事件完整性 / 修复闭环，
+ *   并且每条带**稳定引用键与出处楼层** —— 此前下游要回答「这个承诺是哪一楼说的」只能逐 App 翻且拿不到出处。
+ *
+ * 五态归因由真源给出（bridge-absent / face-absent / unusable / empty / ok），此处**不重判**：
+ *   本仓 v2.97 的教训正是每个消费点自写形态判定（7 份 probeBridge 各自为政）。
+ *
+ * 哪两态**不建卡**（返回 null）：桥未装 / 本版没有这一面 —— 那不是本机用户的问题面，
+ *   每张卡都刷一行「尚未读到」只是噪声；而其余三态照旧建卡：
+ *   · `unusable` —— 一本账也读不到（上游模块没挂上 / 读面抛错，必须说出来，否则又是一次静默降级）；
+ *   · `empty`    —— 九账都在位、确实一条证据都没有（**真读数**，不是错误）；
+ *   · `ok`       —— 有可查条目。
+ * 【为什么这里可以调取数式出口 `readLonshaEvidence`】织光机是**独立业务面**、手上没有现成快照，
+ *   与诊断内核（已握快照，走 `evidenceFaceOf` 纯函数）处境不同 —— 同一轮里不存在第二个取数点。
+ */
+export function collectLonshaEvidence(win) {
+  try {
+    const r = readLonshaEvidence(win);
+    if (!r) return null;
+    if (r.state === 'bridge-absent' || r.state === 'face-absent') return null;
+    return {
+      state: r.state,
+      reason: r.reason,
+      line: evidenceFaceLine(r),
+      version: r.version,
+      total: r.total,
+      okCount: r.okCount,
+      emptyCount: r.emptyCount,
+      absentCount: r.absentCount,
+      itemCount: r.itemCount,
+      selfConsistent: r.selfConsistent,
+      ledgers: r.ledgers,
+      items: r.items,
+      absentReasons: r.absentReasons
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -191,13 +237,17 @@ export function buildNarrative(storage, opts = {}) {
   // [v3.5.0] F-2：来源侧与上面两个并列（第三个问题：那件事是谁记的）。
   //   同样**不并入 empty 判定**：本机还没有生活碎片，不代表剧情侧没有来源构成可读。
   const eventPlatforms = (opts.withRecall === false) ? null : collectLonshaEventPlatforms(opts.win);
-  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms };
+  // [v3.6.0] R1-E：出处侧与上面三个并列（第四个问题：这条承诺出自哪本账、哪一楼）。
+  //   同样**不并入 empty 判定**：本机没有生活碎片，不代表上游九账里没有可查条目。
+  const evidence = (opts.withRecall === false) ? null : collectLonshaEvidence(opts.win);
+  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms, evidence };
   return {
     empty: false,
     events,
     recall,
     injection,
     eventPlatforms,
+    evidence,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

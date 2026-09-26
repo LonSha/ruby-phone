@@ -362,6 +362,285 @@ export function eventPlatformsLine(win) {
     }
 }
 
+/* ── [v3.6.0] R1-E 下游侧：九账证据面（上游 evidence-workbench 的对账面） ──
+ *
+ * 上游 lonsha v3.214.0 把九本账（伏笔 / 约定 / 平行事实 / 秘密 / 前文回扣 /
+ * 回声 / 事实版本 / 事件完整性 / 修复闭环）收成**一份可查对账面**并写进快照
+ * `evidence` 字段（`index.js` 的 `_evidenceWorkbench()`）。上游把它定位成
+ * 「这个承诺是哪一楼说的」的唯一答案面；而实测下游**零消费**（全仓无 `.evidence`
+ * 读取）——「建好不消费」的又一例。
+ *
+ * 【下游要答的是另一个问题（不是重复上游读数）】
+ *   · 上游答：「九本账各自多少条、哪本没接上」（面内对账）。
+ *   · 下游答：「这台设备上现在能查到几条证据、还有几本账读不到、为什么」——
+ *     直接决定用户点开「证据」时看到的是一份可查的表还是一个空壳。
+ *
+ * 【五态纪律】（与事件来源面同规格：缺席与空读数必须可分，且处置相反）
+ *   · 桥未装 / 无快照        ⇒ bridge-absent（等装桥 / 等生成跑一轮）
+ *   · 有快照、旧版没这一面    ⇒ face-absent（等上游升级）
+ *   · 有面、九账一本也读不到  ⇒ unusable（归因 module-unavailable / thrown / mixed；
+ *                                 「模块没挂」与「账里没条目」处置相反，压成一态就是错读数）
+ *   · 有面、账在位但零条目    ⇒ empty（**真读数**：九本账都还没记东西，等剧情推进）
+ *   · 有面、有条目            ⇒ ok
+ *
+ * ★ 上游兜底形态是**真跑取证**得来的（`_evidenceWorkbench()` 的两条 catch）：
+ *   模块未挂 ⇒ `{version:0, ledgers:{}, summary:{total:0,...}, selfConsistent:false,
+ *   reason:'module-unavailable'}`；抛错 ⇒ 同形但 `reason:'thrown'`。
+ *   两者 `summary.total` 都是 0 —— 归因只能看顶层 `reason`（拿计数去猜必猜错）。
+ *
+ * 两条硬约束：
+ *   ① **不调用上游模块**：本面只读快照数据（`snapshot.evidence`），不摸
+ *      `window.LonShaEvidenceWorkbench`（第九道门 J1/J4 同纪律：下游不重造上游口径）。
+ *      故上游的 `line()` / `search()` 一律不复用 —— 本文件另给纯串行文案与扁平条目表。
+ *   ② **不猜楼层**：`floor` / `updatedFloor` 取不到即 `null`，**不写 0**（0 是「第 0 楼」
+ *      这个真实读数；上游 `finiteFloor` 已立此契约，下游原样透传，不二次归一）。
+ */
+const EVIDENCE_STATES = Object.freeze({
+    BRIDGE_ABSENT: 'bridge-absent',
+    FACE_ABSENT: 'face-absent',
+    UNUSABLE: 'unusable',
+    EMPTY: 'empty',
+    OK: 'ok'
+});
+
+/** 缺席形态的恒定键面（读者不必再判 undefined；`state`/`reason` 之外的键都有确定零值） */
+function emptyEvidenceFace(state, reason) {
+    return {
+        state, reason,
+        version: 0, at: 0,
+        total: 0, okCount: 0, emptyCount: 0, absentCount: 0, itemCount: 0,
+        selfConsistent: null,
+        ledgers: [], items: [], absentReasons: []
+    };
+}
+
+/**
+ * 读上游九账证据面（单一真源：config/world-bridge.js）。
+ * @param {object} [win] 显式注入 window（无头测试用），不传即取全局
+ * @returns {{ state:string, reason:string, version:number, at:number,
+ *             total:number, okCount:number, emptyCount:number, absentCount:number,
+ *             itemCount:number, selfConsistent:boolean|null,
+ *             ledgers:Array, items:Array, absentReasons:Array }}
+ *   state ∈ { bridge-absent, face-absent, unusable, empty, ok }
+ *   ledgers[i] —— `{id, label, state, reason, count, truncated, apiGlobal}`（逐账读数）
+ *   items[i]   —— `{ref, ledger, ledgerLabel, title, detail, status, floor, updatedFloor, source, revision}`
+ *   absentReasons[i] —— `{id, label, reason}`（缺席两因**如实带出**，不合并成一态）
+ *   任何形态下本函数都**不抛**，且键面恒定（读者不必再判 undefined）。
+ */
+export function readLonshaEvidence(win) {
+    try {
+        const r = readLonshaSnapshot({ win });
+        if (!r || !r.ok || !r.snapshot) {
+            return emptyEvidenceFace(EVIDENCE_STATES.BRIDGE_ABSENT, String((r && r.reason) || 'not-mounted'));
+        }
+        return evidenceFaceOf(r.snapshot);
+    } catch (_e) {
+        return emptyEvidenceFace(EVIDENCE_STATES.UNUSABLE, 'thrown');
+    }
+}
+
+/**
+ * 由**已有快照**构建九账证据面（纯函数：只读传入对象，不摸桥、不取快照）。
+ *
+ * 为什么必须拆出来：诊断中心与全局搜索**各自已经握着快照**（诊断经 `readPushProbe`、
+ * 搜索经 `bridgeSnapshot()`）。若它们为了这一面再调一次 `readLonshaEvidence(win)`，
+ * 同一轮里就有两个取数点 —— 而上游快照是**推送型**（生成管线里 refresh 覆盖），
+ * 两次取到的可能不是同一份（本仓「同一读数的两个来源必然漂移」的根因形态）。
+ * 故：取数留在调用方，构建口径只此一份。
+ *
+ * @param {object|null} snapshot 上游快照本体
+ * @returns 与 `readLonshaEvidence` 同形（state/reason/计数/ledgers/items/absentReasons）
+ */
+export function evidenceFaceOf(snapshot) {
+    try {
+        const face = (snapshot && typeof snapshot === 'object') ? snapshot.evidence : null;
+        // 旧版快照没有这一面 ⇒ 如实说「这版没这面」，不是「九账全空」。
+        if (!face || typeof face !== 'object' || Array.isArray(face)) {
+            return emptyEvidenceFace(EVIDENCE_STATES.FACE_ABSENT, 'face-absent');
+        }
+        const why = String(face.reason || '');
+        // 上游两条兜底（模块未就位 / 读面抛错）⇒ 本机读不出，与「账里没条目」相反。
+        if (why === 'module-unavailable' || why === 'thrown') {
+            const out = emptyEvidenceFace(EVIDENCE_STATES.UNUSABLE, why);
+            out.version = Number(face.version) || 0;
+            return out;
+        }
+        const summary = (face.summary && typeof face.summary === 'object') ? face.summary : {};
+        const counts = (summary.counts && typeof summary.counts === 'object') ? summary.counts : {};
+        const raw = (face.ledgers && typeof face.ledgers === 'object' && !Array.isArray(face.ledgers)) ? face.ledgers : {};
+        const ledgers = [];
+        const items = [];
+        const absentReasons = [];
+        for (const id of Object.keys(raw)) {
+            const L = raw[id];
+            if (!L || typeof L !== 'object') continue;
+            const st = String(L.state || 'absent');
+            const reason = String(L.reason || '');
+            const label = String(L.label || id);
+            ledgers.push({
+                id, label, state: st,
+                reason: (st === 'absent' ? (reason || 'absent') : ''),
+                count: Number(L.count) || 0,
+                truncated: L.truncated === true,
+                apiGlobal: String(L.apiGlobal || '')
+            });
+            if (st === 'absent') { absentReasons.push({ id, label, reason: reason || 'absent' }); continue; }
+            if (st !== 'ok') continue;
+            const list = Array.isArray(L.items) ? L.items : [];
+            for (const it of list) {
+                if (!it || typeof it !== 'object') continue;
+                items.push({
+                    ref: String(it.ref || ''),
+                    ledger: String(it.ledger || id),
+                    ledgerLabel: String(it.ledgerLabel || label),
+                    title: String(it.title || ''),
+                    detail: String(it.detail || ''),
+                    status: String(it.status || ''),
+                    // ★ 不写 0：null 表示「楼层未知」，0 表示「第 0 楼」，两者相反（上游契约）。
+                    floor: (it.floor === undefined ? null : it.floor),
+                    updatedFloor: (it.updatedFloor === undefined ? null : it.updatedFloor),
+                    source: String(it.source || ''),
+                    revision: (it.revision === undefined ? null : it.revision)
+                });
+            }
+        }
+        const total = Number(summary.total) || ledgers.length;
+        const itemCount = Number(summary.items) || items.length;
+        const okCount = Number(counts.ok) || 0;
+        const emptyCount = Number(counts.empty) || 0;
+        const absentCount = Number(counts.absent) || 0;
+        /* 三态分流（**不许压成一态**）：
+         *   有条目                     ⇒ ok
+         *   无条目、但有账被真读到      ⇒ empty（账在位、确实没有条目 —— 真读数）
+         *   无条目、且无一本账被读到    ⇒ unusable（本机读不出，等上游/宿主） */
+        let state = EVIDENCE_STATES.EMPTY;
+        let reason = 'no-items';
+        if (itemCount > 0) { state = EVIDENCE_STATES.OK; reason = 'ok'; }
+        else if (okCount + emptyCount === 0 && absentCount > 0) {
+            state = EVIDENCE_STATES.UNUSABLE;
+            const kinds = {};
+            for (const a of absentReasons) kinds[a.reason] = (kinds[a.reason] || 0) + 1;
+            const ks = Object.keys(kinds);
+            reason = (ks.length === 1) ? ks[0] : (ks.length ? 'mixed' : 'absent');
+        }
+        return {
+            state, reason,
+            version: Number(face.version) || 0,
+            at: Number(face.at) || 0,
+            total, okCount, emptyCount, absentCount, itemCount,
+            // 自洽性**原样透传**（上游自报；取不到即 null，不替它下结论）
+            selfConsistent: (typeof face.selfConsistent === 'boolean') ? face.selfConsistent : null,
+            ledgers, items, absentReasons
+        };
+    } catch (_e) {
+        return emptyEvidenceFace(EVIDENCE_STATES.UNUSABLE, 'thrown');
+    }
+}
+
+/**
+ * 一行可读的九账读数（**不拼结论文案**，只做单位与分隔：判断归读者）。
+ * 五态各有自己的句子；「九本账一本也读不到」与「账在职但没有条目」**措辞必须不同**
+ * —— 前者等上游修，后者等剧情推进。
+ */
+export function evidenceLine(win) {
+    try {
+        return evidenceFaceLine(readLonshaEvidence(win));
+    } catch (_e) {
+        return '证据：尚未读取（读取异常，已降级）';
+    }
+}
+
+/**
+ * 纯 face 版文案（**唯一实现**，`evidenceLine(win)` 也走这里）。
+ * 为什么拆出来：诊断中心**已经**读到了 face 对象，若为了拿一行文案再调
+ * `evidenceLine(win)`，就是**重取一次快照**（同一轮里两个取数点 —— 本仓反复
+ * 收敛掉的形态：同口径被抄 N 份）。故文案只写一份，取数在调用方。
+ */
+export function evidenceFaceLine(face) {
+    try {
+        const r = face;
+        if (!r || typeof r !== 'object') return '证据：尚未读取（无读数）';
+        if (r.state === EVIDENCE_STATES.BRIDGE_ABSENT) return '证据：尚未读到（记忆插件未接上，或还没生成过快照）';
+        if (r.state === EVIDENCE_STATES.FACE_ABSENT) return '证据：本版没有这一面（需记忆插件 v3.214 或更新）';
+        if (r.state === EVIDENCE_STATES.UNUSABLE) {
+            return '证据：九本账一本也读不到（归因 ' + String(r.reason || '') + '）—— 这不是「账里没有条目」';
+        }
+        if (r.state === EVIDENCE_STATES.EMPTY) return '证据：九本账都在位，但一条证据也没有（真读数，等剧情推进）';
+        const parts = ['证据：九账 ' + (r.okCount || 0) + '/' + (r.total || 0) + ' 读到', '条目 ' + (r.itemCount || 0)];
+        if (r.emptyCount) parts.push('空账 ' + r.emptyCount);
+        if (r.absentCount) {
+            const why = (Array.isArray(r.absentReasons) ? r.absentReasons : [])
+                .map((a) => a.label + '（' + a.reason + '）').join('、');
+            parts.push('缺席 ' + r.absentCount + (why ? '：' + why : ''));
+        }
+        return parts.join(' · ');
+    } catch (_e) {
+        return '证据：尚未读取（读取异常，已降级）';
+    }
+}
+
+/**
+ * [v3.6.0] R1-C 下游侧：投影的**导出期新鲜度归因**（上游 `meta.projectionFreshness`）。
+ *
+ * 【修前的真实错读数】
+ *   上游 v3.213.0 给投影加了导出期新鲜度守卫：切聊（会话不符）或回滚（代数不符）时的
+ *   旧缓存**不再导出**，`projection` 缺席，原因留在 `snap.meta.projectionFreshness`。
+ *   而上游快照的 `meta.fieldTypes.projection.present` 此时同样为 **false**
+ *   —— 因为字段确实没进快照。
+ *   下游 `config/projection-contract.js` 的 `readProjection()` 见 `raw` 缺席就报
+ *   `reason: 'no-projection-face'`（文案：「这版快照没有投影面（需记忆插件 v3.212+）」）。
+ *   ⇒ **两种处置相反的处境被压成一态**：
+ *     · 本版真没这面        ⇒ 等上游升级（用户什么都做不了）
+ *     · 有面但被守卫扣下了  ⇒ **等宿主重跑一轮**（用户重发消息就好）
+ *   本函数把后者的真因读出来，让读者能区分「扔掉了」与「本来就没这面」。
+ *
+ * 【为什么不复用 readPushField / faceFieldState】
+ *   那两个读的是 `meta.fieldTypes`（字段在场三态），而新鲜度归因**不在 fieldTypes 里**
+ *   ——它在 `meta.projectionFreshness`，且只有 `{dropped, reason, from, to}` 四键。
+ *   拿 fieldTypes 去推这件事必然推错（present=false 两种原因同形）。
+ *
+ * 纪律：只读（不重取快照、不写上游）、不抛（任何畸形都降级）、不猜
+ *   （`reason` 未知取值**如实输出原值**，不静默兜底成某个具体结论；
+ *    `from`/`to` 取不到即 null，与「真的是空串」分开）。
+ *
+ * @param {object|null} snapshot 上游快照本体
+ * @returns {{ present:boolean, dropped:boolean, reason:string, from:*, to:* }}
+ *   present=false ⇒ 上游没给这份归因（旧版快照 / 本轮回放未扣下任何投影）
+ *   dropped=true  ⇒ 确实有一份投影因归属不符被扣下（reason ∈ stale-conversation / stale-revision）
+ */
+export function readProjectionFreshness(snapshot) {
+    const miss = { present: false, dropped: false, reason: '', from: null, to: null };
+    try {
+        if (!snapshot || typeof snapshot !== 'object') return miss;
+        const meta = snapshot.meta;
+        const d = (meta && typeof meta === 'object') ? meta.projectionFreshness : null;
+        if (!d || typeof d !== 'object' || Array.isArray(d)) return miss;
+        return {
+            present: true,
+            dropped: d.dropped === true,
+            // 未知原因如实输出原值（不静默兜底 —— 静默兜底会把将来的新原因显示成旧结论）
+            reason: String(d.reason == null ? '' : d.reason),
+            from: (d.from === undefined ? null : d.from),
+            to: (d.to === undefined ? null : d.to)
+        };
+    } catch (_e) { return miss; }
+}
+
+/**
+ * 新鲜度归因的中文文案（未知原因**如实输出原值**）。
+ * 「扔掉了」与「本来就没这面」必须读到两句不同的话（本面存在的唯一理由）。
+ */
+const FRESHNESS_TEXT = Object.freeze({
+    'stale-conversation': '投影已被新鲜度守卫扣下：它属于**另一个会话**（切聊后旧缓存不得当作当前读数）',
+    'stale-revision': '投影已被新鲜度守卫扣下：它属于**上一代**（回滚/恢复后旧代数不得当作当前读数）'
+});
+
+export function projectionFreshnessText(fresh) {
+    const f = fresh || {};
+    if (f.dropped !== true) return '';
+    return FRESHNESS_TEXT[f.reason] || ('投影已被新鲜度守卫扣下（原因 ' + String(f.reason || '未知') + '）');
+}
+
 /**
  * [v2.97.0] 世界桥的**统一探针**：一次读出「桥在不在 / 有没有可读快照 / 快照本体」，形态判定只写这一份。
  *
@@ -710,6 +989,13 @@ export default {
     eventPlatformsLine,
     readLonshaEventPlatforms,
     EVENT_PLATFORM_STATES,
+    readLonshaEvidence,
+    evidenceLine,
+    evidenceFaceLine,
+    evidenceFaceOf,
+    EVIDENCE_STATES,
+    readProjectionFreshness,
+    projectionFreshnessText,
     readPushProbe,
     readPushField,
     faceFieldState,

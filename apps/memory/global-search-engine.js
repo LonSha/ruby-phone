@@ -17,7 +17,7 @@
 // 底层 cheatPacks / dirtyTalkModules 顶层纯数据，Node 可测）。
 import { getCheatById } from '../cheat/cheat-data.js';
 import { getModuleById } from '../dirtytalk/dt-data.js';
-import { readPushProbe } from '../../config/world-bridge.js';
+import { readPushProbe, evidenceFaceOf } from '../../config/world-bridge.js';
 
 const MAX_SNIPPET = 120;
 const MAX_SCAN_PER_SOURCE = 600;
@@ -766,6 +766,40 @@ export function buildDefaultSources(storage, deps = {}) {
                 out.push({ title: String(x.name || x.key || '流水'), body: norm([x.desc, x.delta != null ? (x.delta >= 0 ? '+' : '') + x.delta + ' 元' : '', x.floor ? '第 ' + x.floor + ' 楼' : ''].filter(Boolean).join(' · ')), ts: tsOf(x.timestamp), icon: '💰', appId: 'wallet' });
             }
             return out;
+        }
+    });
+
+    // ---- [v3.6.0] 证据：九账对账面（桥 snapshot.evidence，经真源纯函数归一）----
+    //   上游 v3.214.0 把九本账收成一份可查表（`evidence-workbench.js`）并写进快照，
+    //   此前下游**零消费**。这里把它接成可检索源：用户能搜「那个承诺 / 那条伏笔」。
+    //
+    //   ★ 只经 `evidenceFaceOf(snap)` 归一，**不在这里自己解 `snap.evidence`**：
+    //     五态判定（缺席 / 没这面 / 读不出 / 空 / 有条目）的唯一真源在 world-bridge，
+    //     抄第二份必然漂移（本仓 J1/J4 与 v2.97「7 份 probeBridge」的同形教训）。
+    //     另：本源用的是**同一次** `bridgeSnapshot()` 取到的快照（不额外取数）。
+    //
+    //   ★ 三态的门槛：只有 `ok` 才建条目 —— `unusable`（九账一本也读不到）与
+    //     `empty`（账在位、没条目）都**不建卡**，但理由完全不同（前者等上游修、
+    //     后者等剧情推进），故两者在诊断页各有各的话；此处是**检索面**，不重复叙述。
+    sources.push({
+        id: 'evidence', label: '证据', icon: '🔖', appId: 'diagnose', weight: 1.0,
+        items: () => {
+            const snap = bridgeSnapshot();
+            if (!snap) return [];
+            const face = evidenceFaceOf(snap);
+            if (!face || face.state !== 'ok') return [];
+            return (Array.isArray(face.items) ? face.items : []).map((it) => ({
+                title: it.title || it.ref || '（无标题）',
+                body: norm([
+                    it.ledgerLabel ? ('来自 ' + it.ledgerLabel) : '',
+                    it.detail,
+                    it.status ? ('状态 ' + it.status) : '',
+                    /* ★ 楼层未知写「未知」而**不写 0**：0 是「第 0 楼」这个真实读数。 */
+                    (it.floor === null || it.floor === undefined) ? '' : ('出处 ' + it.floor + ' 楼')
+                ].filter(Boolean).join(' · ')),
+                icon: '🔖', appId: 'diagnose',
+                meta: { ref: it.ref, ledger: it.ledger, floor: it.floor }
+            }));
         }
     });
 

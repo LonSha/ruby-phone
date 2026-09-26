@@ -51,6 +51,17 @@
  *   · [v3.5.0] 起 J11 说「下游有没有消费上游**事件来源构成**面」——上游 lonsha v3.233.0
  *     （F-2 跨平台事件）把「这条事件是谁记的」折成受控分级四态并外供 `snapshot.eventPlatforms`，
  *     而下游实测**全库零消费**。这是本仓第八次「建好不消费」，故立为常驻判据。
+ *   · [v3.6.0] 起 J12 说两个**同族**的面：
+ *     ① 「下游有没有消费上游**九账证据面**」——上游 lonsha v3.214.0（R1-E）把九本账
+ *        （伏笔/约定/平行事实/秘密/前文回扣/回声/事实版本/事件完整性/修复闭环）收成
+ *        一份可查表并外供 `snapshot.evidence`，而下游实测**全库零 `.evidence` 读取**。
+ *        这是本仓第九次「建好不消费」。
+ *     ② 「下游有没有消费上游**投影新鲜度归因**」——上游 lonsha v3.213.0（R1-C）把
+ *        切聊/回滚时被守卫扣下的旧投影的**原因**外供成 `snapshot.meta.projectionFreshness`，
+ *        而下游零消费 ⇒ 「有面但被扣下」（重发一轮即可）与「本版没这面」（等升级）
+ *        在诊断页显示成同一句话 —— 这是**实际发生的错读数**，不只是「建好不消费」。
+ *     两者共用一个下限（都是同一次下游接线的产物），但**分别判出口在场**：
+ *     出口被人删掉与出口没人读是两种故障，压成一条会互相顶替。
  *   · 不扫 tests/** 与 scripts/**（测试与门禁引用桥名是必须的），只扫产品面。
  *
  * 用法：
@@ -151,6 +162,46 @@ const INJECTION_READER_MIN_CONSUMERS = 2;
 const EVENT_PLATFORM_READER = 'readLonshaEventPlatforms';
 const EVENT_PLATFORM_LINE_READER = 'eventPlatformsLine';
 const EVENT_PLATFORM_MIN_CONSUMERS = 1;
+
+/* ── [v3.6.0] J12：上游**九账证据面**与**投影新鲜度归因**必须真被业务面消费 ──
+ * 【为什么必须有 · ①证据面】上游 lonsha v3.214.0（R1-E）把九本账收成一份可查表
+ *   （`evidence-workbench.js` 的 LEDGERS 登记表 + 三态 + ref/floor 出处）并外供
+ *   快照 `evidence`。上游定位它是「这个承诺是哪一楼说的」的唯一答案面；而下游实测
+ *   **全库零 `.evidence` 读取** —— 用户点「证据」看到的是空壳。本仓「建好不消费」第九例。
+ * 【为什么必须有 · ②新鲜度归因】上游 lonsha v3.213.0（R1-C）给投影加了导出期新鲜度守卫：
+ *   切聊 / 回滚后的旧缓存**不再导出**，原因留在 `snapshot.meta.projectionFreshness`。
+ *   下游零消费 ⇒ 该字段缺席时 `fieldTypes.projection.present` 同样为 false，
+ *   于是 `readProjection()` 一律报 `no-projection-face`（文案「需记忆插件 v3.212+」）
+ *   —— 把「有面但被守卫扣下（**重发一轮就好**）」谎报成「本版没这面（只能等升级）」。
+ *   这不是「建好不消费」的浪费问题，是**已经发生的错读数**，故一并立为常驻判据。
+ * 【判据口径】三条同时判：
+ *   ① 真源必须导出 `readLonshaEvidence` / `evidenceFaceLine`；
+ *   ② 真源必须导出 `readProjectionFreshness` / `projectionFreshnessText`；
+ *   ③ 产品面 apps/** 的消费点不得少于下限（config/ 是出口自身，不计）。
+ * 【为什么下限是这两个数】两个读面的消费面**不同**，故下限分别取实测值，**不共用**：
+ *   ① 证据面 = 3：实测三个独立业务面 —— 诊断内核（读数可见出口，走纯函数 `evidenceFaceOf`）、
+ *      全局搜索源（九账条目可被跨 App 检索，走纯函数 `evidenceFaceOf`）、
+ *      织光机出处侧观测（无现成快照，走取数式 `readLonshaEvidence`）。全仓 3 个消费文件。
+ *      写 3 不留余量是刻意的 —— 少一个就意味着「某一面又回到零消费」，而那正是本判据要拦的形态。
+ *   ② 新鲜度归因面 = 1：实测只有一个独立业务面（诊断内核；它归一后给视图与其他面用）。
+ *      写 1 同样不留余量；将来落第二个面（某个业务 App 自己读归因）时应当**显式**抬高这里并写明理由。
+ *   出口在场四个函数**分别判**（缺一即 corrupt）：出口被删与出口没人读是两种故障，压成一条会互相顶替。
+ *   文案函数（evidenceFaceLine / projectionFreshnessText）只判**出口在场**、**不计入消费点**：
+ *   它们是下游自己的呈现层，计入会把「有人读上游面」灌水成「有人用下游文案」。
+ * 【计数单位：去重文件数，不是出现次数】本门其余判据（J3/J6/J8/J10/J11）数的是「调用点个数」，
+ *   J12 刻意改成「**去重后的产品文件名数**」：诊断内核一个文件里就有两处证据面调用
+ *   （主读数 + null 兜底），按次数计等于把同一个业务面数两遍 ⇒ 织光机面被删掉时
+ *   计数只从 4 掉到 3，仍在下限之上，而那正是本判据要拦的「某一面回到零消费」。
+ *   按文件计则「删掉一个业务面」必然掉到下限之下，判据才真的守得住。
+ *   证据面的两个出口（取数式 / 纯函数式）**合并去重**成「哪些产品文件读过这一面」：
+ *   一面对外有几个入口是实现选择，判据只问「这一面有没有真被业务面读」。 */
+const EVIDENCE_READER = 'readLonshaEvidence';
+const EVIDENCE_LINE_READER = 'evidenceFaceLine';
+const EVIDENCE_FACE_READER = 'evidenceFaceOf';
+const EVIDENCE_MIN_CONSUMERS = 3;
+const FRESHNESS_READER = 'readProjectionFreshness';
+const FRESHNESS_TEXT_READER = 'projectionFreshnessText';
+const FRESHNESS_MIN_CONSUMERS = 1;
 
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
@@ -312,6 +363,36 @@ for (const [rel, code] of stripped) {
     if (c > 0) { eventPlatformConsumerCount += c; eventPlatformConsumerFiles.push(rel); }
 }
 
+/* ── [v3.6.0] J12：九账证据面的出口在场 + 产品侧消费面（只扫 apps/**） ──
+ * 【为什么这里数「文件数」而不是「调用点个数」】见常量区注释：诊断内核一个文件里就有两处
+ * 证据面调用（主读数 + null 兜底），按次数计会把同一个业务面数两遍，掩盖另一个面归零。
+ * 【为什么证据面把两个出口合并去重】`readLonshaEvidence`（取数式）与 `evidenceFaceOf`（纯函数式）
+ * 是**同一面**的两个入口，选哪个是调用方的实现选择（已握快照就走纯函数，避免同一轮两个取数点）；
+ * 判据只问「这一面有没有真被业务面读」，故两个出口的命中文件合并成一个集合去重。 */
+const evidenceExportOk = new RegExp('export\\s+function\\s+' + EVIDENCE_READER + '\\s*\\(').test(sourceCode);
+const evidenceFaceExportOk = new RegExp('export\\s+function\\s+' + EVIDENCE_FACE_READER + '\\s*\\(').test(sourceCode);
+const evidenceLineExportOk = new RegExp('export\\s+function\\s+' + EVIDENCE_LINE_READER + '\\s*\\(').test(sourceCode);
+const evidenceConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    if (countOf(code, EVIDENCE_READER + '(') > 0 || countOf(code, EVIDENCE_FACE_READER + '(') > 0) {
+        evidenceConsumerFiles.push(rel);
+    }
+}
+const evidenceConsumerCount = evidenceConsumerFiles.length;
+
+/* ── [v3.6.0] J12：投影新鲜度归因面的出口在场 + 产品侧消费面（只扫 apps/**） ──
+ * 与证据面分别判：出口被删（corrupt）与出口没人读（fail）是两种故障。
+ * 这里数与面同规（去重文件数），理由同上 —— 同一面被一个业务面读两处不该算两面。 */
+const freshnessExportOk = new RegExp('export\\s+function\\s+' + FRESHNESS_READER + '\\s*\\(').test(sourceCode);
+const freshnessTextExportOk = new RegExp('export\\s+function\\s+' + FRESHNESS_TEXT_READER + '\\s*\\(').test(sourceCode);
+const freshnessConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    if (countOf(code, FRESHNESS_READER + '(') > 0) freshnessConsumerFiles.push(rel);
+}
+const freshnessConsumerCount = freshnessConsumerFiles.length;
+
 /* ------------------------------------------------------------
  * 开关：--list 只报告不判定
  * ------------------------------------------------------------ */
@@ -342,8 +423,14 @@ if (LIST) {
     if (!probeSelfSites.length) console.log('  （无结构化面 —— 只读一眼就丢不算消费）');
     console.log('\n── J10 ' + INJECTION_READER + ' 消费点（只计 apps/**）：' + injConsumerCount + '（下限 ' + INJECTION_READER_MIN_CONSUMERS + '）──');
     console.log('\n── J11 ' + EVENT_PLATFORM_READER + ' 消费点（只计 apps/**）：' + eventPlatformConsumerCount + '（下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）──');
-    for (const f of injConsumerFiles) console.log('  ' + f);
-    if (!injConsumerFiles.length) console.log('  （无 —— 上游注入读数没人读就是白做）');
+    for (const f of eventPlatformConsumerFiles) console.log('  ' + f);
+    if (!eventPlatformConsumerFiles.length) console.log('  （无 —— 上游事件来源构成没人读就是白做）');
+    console.log('\n── J12 ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 消费面（只计 apps/**，按文件去重）：' + evidenceConsumerCount + '（下限 ' + EVIDENCE_MIN_CONSUMERS + '）──');
+    for (const f of evidenceConsumerFiles) console.log('  ' + f);
+    if (!evidenceConsumerFiles.length) console.log('  （无 —— 上游九账证据面没人读就是第九次「建好不消费」）');
+    console.log('── J12 ' + FRESHNESS_READER + ' 消费面（只计 apps/**，按文件去重）：' + freshnessConsumerCount + '（下限 ' + FRESHNESS_MIN_CONSUMERS + '）──');
+    for (const f of freshnessConsumerFiles) console.log('  ' + f);
+    if (!freshnessConsumerFiles.length) console.log('  （无 —— 「有面但被扣下」与「本版没这面」又会被显示成同一句话）');
     process.exit(0);
 }
 
@@ -466,6 +553,39 @@ if (eventPlatformConsumerCount < EVENT_PLATFORM_MIN_CONSUMERS) {
     console.error('  修法：产品面接 config/world-bridge.js 的 readLonshaEventPlatforms / eventPlatformsLine。');
 }
 
+/* ── J12 [v3.6.0] ── */
+/* 出口在场**分别判**：四个函数缺一即 corrupt。合成一条会互相顶替 ——
+ * 「证据面读不出但新鲜度面在」与「证据面在但新鲜度面读不出」是两种完全不同的故障。 */
+const missingExports = [];
+if (!evidenceExportOk) missingExports.push(EVIDENCE_READER);
+if (!evidenceFaceExportOk) missingExports.push(EVIDENCE_FACE_READER);
+if (!evidenceLineExportOk) missingExports.push(EVIDENCE_LINE_READER);
+if (!freshnessExportOk) missingExports.push(FRESHNESS_READER);
+if (!freshnessTextExportOk) missingExports.push(FRESHNESS_TEXT_READER);
+if (missingExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J12 真源缺出口（' + missingExports.length + ' 个）：' + missingExports.join(' / '));
+    console.error('  说明：这些出口是 v3.6.0 落的下游消费侧入口，被人删掉就等于那一面又回到「读不出」。');
+}
+if (evidenceConsumerCount < EVIDENCE_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J12 ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 只被 ' + evidenceConsumerCount + ' 个产品面消费（下限 ' + EVIDENCE_MIN_CONSUMERS + '，按文件去重）：');
+    for (const f of evidenceConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.214.0 把九本账收成一份可查对账面（引用键 + 出处楼层）并外供快照 evidence，');
+    console.error('        下游不读 ⇒ 「这个承诺是哪一楼说的」在这台设备上无据可查，那份对账面等于白做（第九次「建好不消费」）。');
+    console.error('  修法：产品面接 config/world-bridge.js 的 readLonshaEvidence（无现成快照）或 evidenceFaceOf（已握快照）。');
+}
+if (freshnessConsumerCount < FRESHNESS_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J12 ' + FRESHNESS_READER + ' 只被 ' + freshnessConsumerCount + ' 个产品面消费（下限 ' + FRESHNESS_MIN_CONSUMERS + '，按文件去重）：');
+    for (const f of freshnessConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.213.0 给投影加了导出期新鲜度守卫，切聊/回滚时的旧缓存不再导出，');
+    console.error('        原因留在 snapshot.meta.projectionFreshness。下游不读 ⇒ 该字段缺席时 fieldTypes.projection.present');
+    console.error('        也为 false，于是 readProjection() 一律报 no-projection-face（文案「需记忆插件 v3.212+」）——');
+    console.error('        把「有面但被守卫扣下（**重发一轮就好**）」谎报成「本版没这面（只能等升级）」。这是**已发生的错读数**，不是浪费。');
+    console.error('  修法：产品面接 config/world-bridge.js 的 readProjectionFreshness / projectionFreshnessText。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -478,5 +598,6 @@ console.log('[bridge-contract] ' + PROJECTION_READER + ' 消费点 ' + projConsu
 console.log('[bridge-contract] sourceState/lastError 消费点 ' + probeSelfReads + ' 处 · 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）');
 console.log('[bridge-contract] ' + EVENT_PLATFORM_READER + ' 消费点 ' + eventPlatformConsumerCount + ' 个（' + eventPlatformConsumerFiles.length + ' 文件，下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsumerCount + ' 个（' + injConsumerFiles.length + ' 文件，下限 ' + INJECTION_READER_MIN_CONSUMERS + '）');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费');
+console.log('[bridge-contract] ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 消费面 ' + evidenceConsumerCount + ' 个（按文件去重，下限 ' + EVIDENCE_MIN_CONSUMERS + '）· ' + FRESHNESS_READER + ' 消费面 ' + freshnessConsumerCount + ' 个（下限 ' + FRESHNESS_MIN_CONSUMERS + '）');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费');
 process.exit(0);

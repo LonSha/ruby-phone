@@ -10,6 +10,72 @@
 
 ---
 
+## 迭代 49 — v3.6.0 九账证据面与投影新鲜度归因（R1-E / R1-C 下游消费侧）
+
+- **任务**：本批两件（计划最后一轮，把剩余项全部做完）：① 上游 lonsha v3.214.0（R1-E）外供的
+  九账证据面 `snapshot.evidence`、② 上游 v3.213.0（R1-C）外供的投影新鲜度归因
+  `snapshot.meta.projectionFreshness` —— 两面下游此前**全库零消费**，由第九道门 **J12** 常驻守。
+- **两面各是什么问题（一面是浪费，一面是已发生的错读数）**：
+  ① 证据面：上游把九本账（伏笔 / 约定 / 平行事实 / 秘密 / 前文回扣 / 回声 / 事实版本 /
+     事件完整性 / 修复闭环）收成一份可查对账面（稳定引用键 `seed:sp_1` 形 + 出处楼层），
+     而下游**全库零 `.evidence` 读取** —— 用户点「证据」看到的是空壳（第九次「建好不消费」）。
+  ② 新鲜度归因：上游的导出期新鲜度守卫把切聊 / 回滚后的旧投影**扣下不导出**，
+     `projection` 缺席时 `fieldTypes.projection.present` 同样为 false，于是下游
+     `readProjection()` 一律报 `no-projection-face`（文案「需记忆插件 v3.212+」）——
+     把「有面但被守卫扣下（**重发一轮就好**）」谎报成「本版没这面（只能等升级）」。
+     **两者处置相反，压成一态就是错读数** —— 这是本轮要治的核心缺陷，不只是浪费。
+- **实现**：
+  - `config/world-bridge.js`：新增 `EVIDENCE_STATES`（冻结五态 bridge-absent / face-absent /
+    unusable / empty / ok）、`emptyEvidenceFace`（恒定键面）、`readLonshaEvidence(win)`（取数式，
+    内部走统一探针，不摸桥全局）、`evidenceFaceOf(snapshot)`（**纯函数**，只读传入对象）、
+    `evidenceFaceLine(face)`（文案**唯一实现**）、`evidenceLine(win)`（取数 + 走上面那份文案）；
+    另加 `readProjectionFreshness(snapshot)`（四键恒定 `present/dropped/reason/from/to`）、
+    `FRESHNESS_TEXT`（冻结两条中文）、`projectionFreshnessText(fresh)`（未扣下 ⇒ 空串）。
+  - **三态分流**（不许压成一态）：有条目 ⇒ ok；无条目但一本账都被真读到 ⇒ empty（真读数）；
+    一本账也读不到 ⇒ unusable（本机读不出，等上游修 / 宿主）—— 归因单一时取该因、多种时 `mixed`。
+  - **楼层契约**：`floor: (it.floor === undefined ? null : it.floor)` —— 取不到即 null，
+    **绝不写 0**（0 是「第 0 楼」这个真实读数）；视图显示「—」、搜索源楼层未知时不出该段。
+  - **两个消费面**：诊断内核（`evidenceFaceOf(snapshot)` / `readProjectionFreshness(snapshot)`，
+    用诊断**已握的同一份快照**，不额外取数）+ 全局搜索「证据」源（同一纯函数归一，
+    只有 `state === 'ok'` 才建条目）+ 织光机「出处侧观测」卡（无现成快照 ⇒ 走取数式
+    `readLonshaEvidence`）；诊断视图新增「九账证据面」「投影新鲜度归因」两卡。
+  - **投影卡当场纠正**：卡上原样显示的上游文案若在本轮不成立（`freshness.dropped === true`），
+    紧跟一块 `dg-bad`：「【注意】上面这句话在本轮**不成立**：…这不是「本版没这面」，
+    重发一轮（或切回原会话再切回来）即会重取。」
+  - **总述首行**（坏消息先说）：加两条 —— 「投影被扣下」（用户**能处理**的处境）与
+    「九账一本也读不到」（上游 / 宿主的事）；**「账里没条目」不入首行**（它是真读数，
+    塞进去会把「需要用户做的事」稀释掉）。
+  - `scripts/bridge-contract-audit.mjs`：新增 **J12** —— 出口在场（四个函数缺一即 **corrupt**）
+    与真被消费（证据面下限 3 / 新鲜度面下限 1）**分别判**；计数按**去重文件数**而非调用次数
+    （诊断内核一个文件里有主读数 + null 兜底两处调用，按次数计会把同一业务面数两遍，
+    掩盖另一面归零）。J11 的 `--list` 段顺手修掉一个既有笔误（列表错用 `injConsumerFiles`）。
+- **取值形状来自真跑取证（不是推演）**：`EVIDENCE_VERSION = 2` / `MAX_ITEMS_PER_LEDGER = 200`；
+  九账 id 依次 `seed / commitment / parallel / secret / recall-echo / echo / fact-version /
+  event-completeness / repair`；无 api 时面读数 `{total:9, counts:{ok:0,empty:0,absent:9}, items:0}`；
+  上游**两条兜底同形**（连 `summary.total` 都是 0，归因只能看顶层 `reason` —— 拿计数去猜必猜错）；
+  `finiteFloor(null) === null`、`finiteFloor([]) === null`、`finiteFloor('') === null`。
+- **同轮抓到的三处自身缺陷（都不在实现里）**：
+  ① 消费面初稿只落两个（诊断 + 搜索），`readLonshaEvidence` / `evidenceLine` 两个出口
+     在 apps 侧**零消费** —— 正是本门要拦的摆设形态；补织光机出处侧面（与既有召回侧 /
+     送达侧 / 来源侧三面并列的第四个观测面）后才真过 J12。
+  ② 负控制 N1 的夹具选错：`DEAD_FACE` 带顶层 `reason`，会走上游兜底分支**早返回**，
+     根本到不了三态分流那条分支 ⇒ 破坏分流判据后仍绿（期望例外的否定式）。改用
+     `ALL_ABSENT_FACE`（逐账缺席、顶层无兜底原因）后破坏真转红。
+  ③ 测试 B2 初稿用裸 `includes('snap.evidence')` 断言「搜索源不得自己解 raw 面」，
+     而**注释里逐字写着这句话** ⇒ 文本包含式假红；改为只看代码行（剔 `//` `*` 行首）。
+- **验证**：本轮九门全跑；`npm run syntax` 406 文件 / `import-resolve` 239 文件 338 条 /
+  `dead-exports` 817→818 声明零新增；v323 单跑全绿（含四条真源码破坏负控制）；
+  先行回归 v300/v317/v321/v322/v323 五套件全绿。
+- **影响范围**：`config/world-bridge.js` + 诊断内核 / 视图 + 全局搜索 + 织光机采集 / 视图 +
+  第九道门 + 新建 v323；五源抬版（`index.js` 版本常量与内置公告 / `manifest.json` /
+  `package.json` / `update-log.json`）。
+- **同步文档**：`TODO.md`；`FOUR_RELEASE_PLAN.md`。
+- **遗留**：① 未验实机（无头门禁全绿只证明结构契约成立）；② 只读，不写上游任何状态；
+  ③ 上游「各账 `copyItem` 把 `finite(item.updatedFloor)` 的 null 读成 0」属上游单独一版的事
+  （T8 观察项），下游只保证不二次塌陷。
+
+---
+
 ## 迭代 48 — v3.5.1 存档健康面板（F-8）
 
 - **任务**：把 P-4（v3.4.0）落的两个只读裁定出口（`schemaFace` / `migrationLedgerFace`）
@@ -2398,15 +2464,18 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.5.1`（五源同源）
-- **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
-  导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
-  死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/
+- **当前版本**：`3.6.0`（五源同源）
+- **门禁基线**（v3.6.0 实测，`npm run check` 全绿）：语法 406 文件 /
+  导入可解析门 239 文件 338 条静态说明符（动态 import 97 条不计入判据）/
+  死导出零新增（257 个文件、818 个 export 声明、零消费 24 条冻结、枚举面 892 条全部识别）/
   生命周期 36 个 App 类 49 个槽位零缺口 / 注册 APPS id 41、样式投递 31 个未覆盖 0 /
-  keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）/
-  派生读数台账 枚举面 10 文件 · 台账 10 条（派生库 3）/
-  **桥消费面契约**（第九道门）：`.snapshot(` 调用式 0 · `readPushProbe` 消费点 11 ·
-  `faceFieldState` 消费点 8（下限 5）· 归因文案表手写键 0。
+  keys 157 键全登记 /
+  **桥消费面契约**（第九道门，v3.6.0 新增 J12）：`.snapshot(` 调用式 0 ·
+  `readPushProbe` 消费点 12 · `faceFieldState` 消费点 8（下限 5）· 归因文案表手写键 0 ·
+  `readLonshaEventPlatforms` 2（下限 1）· `readInjection` 2（下限 2）·
+  **`readLonshaEvidence` / `evidenceFaceOf` 3（下限 3）· `readProjectionFreshness` 1（下限 1）**。
+- **v3.5.1 基线（留档对照）**：语法 405 文件 / 导入门 239 文件 338 条 / 死导出 810 声明 /
+  `readPushProbe` 消费点 12 —— 本版增量为「两面消费侧 + J12 + 1 个套件」，无一处是既有读数倒退。
 - **上一版基线（v2.99.0，留档对照）**：语法 383 / 导入门 236 文件 322 条 / 806 pass ·
   0 fail / 死导出 254 文件 · 777 声明 · 枚举面 850 / `readPushProbe` 消费点 9 —— 本版增量即
   「新增 1 个配置模块 + 1 个套件 + 诊断面接一层面」，**无一处是既有读数倒退**。

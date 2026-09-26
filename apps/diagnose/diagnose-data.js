@@ -27,7 +27,11 @@ import {
     worldBridgeAvailability,
     readPushProbe,
     readPushField,
-    faceFieldState
+    faceFieldState,
+    evidenceFaceOf,
+    evidenceFaceLine,
+    readProjectionFreshness,
+    projectionFreshnessText
 } from '../../config/world-bridge.js';
 import { backGuardReport } from '../../config/back-guard.js';
 import { validateSourceKey, auditSourceKeys, sourceKeyRulebook } from '../../config/source-key-rules.js';
@@ -226,6 +230,23 @@ export function collectDiagnose(win, storage) {
         } catch (_e) { return null; }
     })();
 
+    /* ── [v3.6.0 · R1-E] 九账证据面（上游 v3.214.0 的对账面，此前**全库零消费**）──
+     *   上游把九本账（伏笔/约定/平行事实/秘密/前文回扣/回声/事实版本/事件完整性/修复闭环）
+     *   收成一份可查表并写进快照 `evidence`；下游全仓无 `.evidence` 读取 ——
+     *   「建好不消费」，与投影面 / 注入面 / 探针自述面**同一族**（本仓第九次）。
+     *   只经真源出口读（`readLonshaEvidence` 内部走统一探针，本文件不自摸桥全局）。 */
+    const evidence = safe(() => evidenceFaceOf(snapshot), null)
+        || evidenceFaceOf(null);
+
+    /* ── [v3.6.0 · R1-C] 投影的**导出期新鲜度归因**（上游 `meta.projectionFreshness`）──
+     *   修前的真实错读数：上游 v3.213.0 的新鲜度守卫把「切聊 / 回滚后的旧缓存」扣下，
+     *   `projection` 缺席、`fieldTypes.projection.present` 也为 false ⇒ 下游一律报
+     *   `no-projection-face`（文案「需记忆插件 v3.212+」）——把「有面但被扣下了」
+     *   （等宿主重跑一轮）**谎报成**「本版没这面」（等上游升级）。两者处置相反。
+     *   本面把真因读出来，并让它在总述首行可见（那是用户能做的事）。 */
+    const freshness = safe(() => readProjectionFreshness(snapshot), null)
+        || { present: false, dropped: false, reason: '', from: null, to: null };
+
     /* ── [v3.5.1 · F-8] 存档健康面（P-4 的两个裁定读数，此前**零消费**）──
      *   P-4 落了 `schemaFace` / `migrationLedgerFace` 两个裁定出口，但全库只有测试在读：
      *   用户看不到「这份存档属于哪个存储时代」「一共搬过几条旧键、有没有时间戳坏掉的」。
@@ -263,7 +284,7 @@ export function collectDiagnose(win, storage) {
         return { ok: true, reason: 'ok', chat: one(true), global: one(false) };
     })();
 
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness };
 }
 
 /** 存储时代的中文（未知取值**如实输出原值**，不静默兜底成某个具体结论） */
@@ -397,6 +418,20 @@ export function summarizeDiagnose(pkg) {
          *   「结局未定」同样不入：它是等宿主发事件，不是用户该做的事。 */
         if (inj.outcome === 'aborted') bad.push('最近一轮生成被中止：注入已发生但回复未产出（可重发）');
     }
+    /* [v3.6.0 · R1-C] 投影**被新鲜度守卫扣下**必须进首行：这是用户**能处理**的处境
+     *   （重发一轮 / 切回原会话），而「本版没这面」只能等升级 —— 两者此前同形。
+     *   注：「管线缺席 / 投影空 / 没这面」都不是坏消息（等上游或等跑一轮），不入首行。 */
+    if (p.freshness && p.freshness.dropped === true) {
+        const ftxt = projectionFreshnessText(p.freshness);
+        bad.push(ftxt || '投影被新鲜度守卫扣下（原因未给）');
+    }
+    /* [v3.6.0 · R1-E] 九账证据面的坏消息：**九本账一本也读不到**必须说
+     *   （模块没挂 = 上游/宿主的事）；而「账在位但没条目」是**真读数**，不是坏消息 ——
+     *   把后者塞进首行会把「需要用户做的事」稀释掉（本仓「坏消息先说」纪律的反面）。 */
+    const ev = p.evidence || null;
+    if (ev && ev.state === 'unusable') {
+        bad.push('九账证据面：一本账也读不到（归因 ' + String(ev.reason || 'unknown') + '）');
+    }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
     if (bad.length) return '需注意：' + bad.join(' · ');
@@ -406,10 +441,17 @@ export function summarizeDiagnose(pkg) {
     return '正常：' + ok.join(' · ');
 }
 
+/** [v3.6.0 · R1-E] 九账证据面的一行读数（**唯一实现**在真源：`evidenceFaceLine`）。
+ *  这里只做转发 —— 诊断内核持有 face，不再重取快照（同轮两个取数点即错记录形态）。 */
+export function evidenceFaceText(face) {
+    return evidenceFaceLine(face);
+}
+
 export default {
     CONSUMED_FIELDS,
     schemaStateText,
     storageFaceLine,
+    evidenceFaceText,
     SOURCE_KEY_SITES,
     collectDiagnose,
     fieldReasonText,
