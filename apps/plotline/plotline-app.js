@@ -17,7 +17,7 @@
  *   故 onChatChanged() 只丢弃上一次的探针归因，不持有任何数据副本。
  * ======================================================== */
 'use strict';
-import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, parallelList, secretList, recallEchoList, echoLifeList, plotlinePromptBlock } from './plotline-data.js';
+import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, parallelList, secretList, recallEchoList, echoLifeList, plotlinePromptBlock, characterBoundary } from './plotline-data.js';
 import { PlotlineView } from './plotline-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
 /* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
@@ -92,7 +92,17 @@ export class PlotlineApp {
         const secrets = secretList(face.worldProg);
         const recallEchoes = recallEchoList(face.worldProg);
         const echoLives = echoLifeList(face.worldProg);
-        return { face, stage, promises, arcs, knowledge, parallels, secrets, recallEchoes, echoLives, src: this.sourceFace() };
+        /* [v3.10.0 · G-3] 每位角色的**认知边界性格面**：账里到底有没有他的认知记录。
+         *   为什么必须在渲染包里带上它：`knowledgeList()` 只列「账里有什么」，
+         *   读者看到某角色没有 `unaware` 条目时会自然读成「他知道」，
+         *   而真实含义可能是「账里没记」——两者处置相反（前者可直接写，
+         *   后者必须回避断言）。这一格就是把那个区别变得**可见**。 */
+        const boundaries = (() => {
+            try {
+                return knowledge.map((k) => characterBoundary(knowledge, k.character));
+            } catch (_e) { return []; }
+        })();
+        return { face, stage, promises, arcs, knowledge, boundaries, parallels, secrets, recallEchoes, echoLives, src: this.sourceFace() };
     }
     /** 一行总述（供视图/host 诊断） */
     summaryLine() {

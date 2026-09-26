@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.9.3';
+const ST_PHONE_VERSION = '3.10.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,14 +127,18 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-28",
     items: [
-        "**世界书干跑取数层（v3.9.3 新增能力）** —— 此前 ruby-phone 各 App 只能读到**用户在设置里手选的**世界书条目（`WorldbookManager.appendWorldbookMessages`），从来不知道主 AI 在**此刻**实际会看到哪些条目——即「用户以为会看到的设定」与「真正会被触发的设定」不是同一件事。本版新增 `config/worldbook-dryrun.js`：用宿主的 `getWorldInfoPrompt` **干跑一次**取回真实触发结果。",
-        "**取数层的五条口径纪律**：① 干跑不污染（返回值用完即弃，不写设置 / 会话元数据 / 任何全局）；② 宿主接口**每次现取**，不做模块级缓存；③ **四态必须分形**（`unsupported` / `unavailable` 时条目为 `null` 而非空数组——「没给」与「给了 0 条」必须不同形）；④ **降级要留名**（兜底记 `activated-fallback`，不冒充 `ok`）；⑤ 纯函数化可注入，便于夹具证伪。",
-        "**兜底路径**：干跑失败时改用 `WORLD_INFO_ACTIVATED` 事件记录（**条件订阅**，不猜事件类型名、不硬编码字符串），并明确标注这是「上一次」的读数；两者都拿不到时记为 `unavailable`。",
-        "**接线点唯一**：`apps/worldpulse/worldpulse-app.js` 的生成路径多一层「此刻生效的设定」。取不到时该块为空串，**请求与接线前逐字相同**；换会话时监听与读数一并收净（不跨会话串味，且刻意不落持久存储——它是「此刻」的读数）。",
-        "**判据纪律**：`tests/system-v329.test.mjs`（14 项）含三条**真源码破坏**负控制——把 `null` 改成空数组、把 `isDryRun` 位改成 `false`、把兜底状态冒充 `ok`，每条都必须在破坏副本上转红；另断言取数**不污染**（三次调用后 chat / 会话元数据 / 设置 / localStorage / 监听器数逐字节不变）。",
-        "**运行时验证边界（与 `docs/runtime-verification-boundary.md` 同源）**：门禁保证的是结构正确与接线完整，以及无浏览器最小宿主里的行为读数；它**不能**保证真机排版、真实网络、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属登记在案的第二类，需在真机复现后再修。",
-        "**复校纪律**：边界文档实测数字必须随门禁一起复校（本次 412 文件 / 239 文件 338 条 → **414 文件 / 240 文件 339 条**），文档复校标记同步为 v3.9.3。",
-        "落地：`config/worldbook-dryrun.js` + `tests/system-v329.test.mjs` + 夹具 `tests/_runtime_host.mjs`（新增 `worldInfo` 入参与事件类型名）+ `apps/worldpulse/worldpulse-app.js`。**版本升至 3.9.3（五源同源）**。"
+        "**知情边界（v3.10.0 新增能力）** —— 此前上游投影里的「谁知道什么」在本仓只有 `apps/plotline/plotline-data.js` 的 `knowledgeList()` 一个**列表出口**，没有任何一处把它当**约束**用：想让「不知道的角色」别说出内情，只能靠模型自觉。本版新增 `config/knowledge-contract.js`，把认知记录做成可注入的**约束面**（`knowledgeFace` / `matchFact` / `whoKnows` / `boundaryOf` / `unawareBlock` / `knowledgeLine`），并接进生成路径。",
+        "**三档必须分形（本版最重要的一条口径）**：`silent`（账里没记这个事实）/ `unaware`（账里明确记着「不知道」）/ `unrecorded`（这个人一条记录都没有）三者**互不混淆**，且 `unrecorded` **只计数不列名** —— 把「没记录」当「不知道」来断言，是对角色形象的凭空捏造；`silent` 绝不并进 `unaware`。",
+        "**匹配强度如实报、读不到 ≠ 空**：`matchFact` 只允许 `exact` / `substring` / `none` 三值，`exact` 与 `substring` 必须可分（防「宽泛命中当逐字结论」）；两人各出一条结论时合取取**最弱**的那一侧。`knowledgeFace` 返回五态（`ok` / `declared-empty` / `face-absent` / `no-snapshot` / `bridge-absent`）——「桥没装」「装了但投影里没这个面」「有面但一条记录都没有」必须落在不同态上，`no-snapshot` 不得冒充 `declared-empty`。",
+        "**跨 App 时间编排（v3.10.0 新增能力）** —— 此前本仓没有任何一处把「剧情现在是什么时候」当成一个**可交叉验证的读数**：各 App 各拿各的日期。本版新增 `config/story-clock.js`，把 WorldAxis 世界钟 / lonsha `clock` 面 / 日历当天三源放在一起对照，返回 `{present, agree, conflict, basis, primary, primaryDate}`，并新增 `calendar-app.js` 只读出口 `currentStoryDate()`。",
+        "**一致性三态必须分形**：`agree === null`（给出日期的来源**少于两个**，没能比）/ `agree === true`（比过且一致）/ `agree === false` 且 `conflict === true`（比过且**不一致**，用户必须被告知）三者不同形；粒度相容（如世界钟带年份「2026-03-15」与日历只有月日「3月15日」）记为 `suffix-compatible` 而**不判冲突**，但对外仍如实标注这是粒度相容而非逐字相等。",
+        "**绝不猜**：三源全缺时 `primary === null`，文案明写「三处时间读数全缺（不是「今天是某天」）」；`Date.now()` 在本模块严格**只出现一次**（只在返回对象的 `at` 字段上，且判据在**剥注释后**的源码上计数），绝不用现实时间顶替剧情时间。",
+        "**下游接线与位置纪律**：知情边界接进 `plotline`（生成块新增「知情边界」段、视图新增「账里未记录 / 无从分辨」中性灰标签）、`diary`（干跑取数块）、`diagnose`（新增 `knowledge` 与 `storyClock` 两张诊断卡 + `knowledgeFaceText` / `storyClockFaceText` 转发）。**本轮抓到的真缺陷**：`plotlinePromptBlock` 的 `if (!lines.length) return ''` 早退守卫原本在知情段**之前**，会让「只有认知记录、没有剧情线」的整块被丢弃 —— 已把早退移到知情段之后，并在源码写下位置纪律注释。",
+        "**内存 / 耗时取证（TODO 唯一悬挂项收口）**：新增探针 `tests/audit/memory_growth_probe.cjs`，四段读数 —— 模块面堆趋势（预热后取样、按后半段斜率判 `linear-acceptable` / `leak-candidate`）、事件源 handler 回收、串生成单次耗时、以及**诚实登记不能测的四条**（真实 DOM 渲染排版、宿主注入对象内存、小时级堆增长、V8 之外运行时内存）。基线落 `tests/audit/memory_growth_baseline.json`。",
+        "**内存读数的两条纪律**：① 读数必须带**噪声声明**，只判**跨轮趋势**，单次字节数不作结论；② 冒烟必须自证「**峰值高于基线**」—— 否则是「根本没订上」的假绿（本探针首版只看全局监听器得恒 0，追查发现 App 走 `ctx.eventSource.on` 而非 `window.addEventListener`）。串生成读数显式带 `not_render: true`，标明它不是 DOM 渲染耗时。",
+        "**判据纪律**：`tests/system-v3210.test.mjs`（23 项）含四条**真源码破坏**负控制（silent 并进 unaware / 单源报 `agree` 为 true / 冲突不报 / 约束块塞 silent），每条都必须在**带同目录依赖的破坏副本**上转红 —— 破坏副本缺依赖导致的红是「环境没搭好」，不算判据转红。",
+        "**运行时验证边界（v3.10.0 复校）**：本版新增的三条读数都属「形态与计数」，门禁**不能保证**它们等同于真机表现 —— 知情边界的可验面是三档分形与五态分形，**不能**验真机上主 AI 是否真的遵从这段约束（约束在提示词层，遵从度取决于模型）；时间编排的可验面是一致性三态分形与「绝不猜」，**不能**验三源是否真的指向同一条时间线；内存探针只判跨轮趋势、单次字节数不作结论，真实 DOM 渲染排版 / 宿主注入对象内存 / 小时级堆增长 / V8 之外运行时内存四条**不可测**、诚实登记在案。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修。**复校纪律**：边界文档实测数字随门禁一起复校（语法 414 → **417** 文件、导入 240 文件 339 条 → **242 文件 345 条**），文档复校标记同步为 v3.10.0。",
+        "落地：`config/knowledge-contract.js` + `config/story-clock.js` + `tests/audit/memory_growth_probe.cjs` + `tests/audit/memory_growth_baseline.json` + `tests/system-v3210.test.mjs` + `apps/plotline/*` + `apps/diary/diary-data.js` + `apps/diagnose/*` + `apps/calendar/calendar-app.js`。**版本升至 3.10.0（五源同源）**。"
     ]
 };
 

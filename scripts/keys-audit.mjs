@@ -201,6 +201,9 @@ const KEY_REGISTRY = [
   { key: 'diary_settings', scope: 'chat', note: '日记设置' },
   { key: 'diary_auto_settings', scope: 'chat', note: '日记自动织信设置' },
   { key: 'diary_auto_last_floor', scope: 'chat', note: '日记自动织信游标' },
+  /* [v3.10.0 · G-3] 日记侧「此刻生效的设定」块开关。刻意用 `diary_` 前缀（会话级）：
+   *   干跑取数是「此刻这个会话会触发哪些设定」，跨会话留存即变成旧读数。 */
+  { key: 'diary_dryrun_enabled', scope: 'chat', note: '日记注入世界书干跑取数开关' },
   { key: 'calendar_auto_schedule_last_empty_date', scope: 'chat', note: '日历自动排程游标' },
   { key: 'calendar_memos', scope: 'chat', note: '日历备忘（经 global-search-engine 的 get 包装层读取）' },
   { key: 'calendar_commitments', scope: 'chat', note: '日历约定流程（确认/改期/完成/取消）' },

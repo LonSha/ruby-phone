@@ -43,6 +43,7 @@ export class PlotlineView {
         const promises = (pkg && pkg.promises) || [];
         const arcs = (pkg && pkg.arcs) || [];
         const knowledge = (pkg && pkg.knowledge) || [];
+        const boundaries = (pkg && pkg.boundaries) || [];
         const src = (pkg && pkg.src) || null;
         const html = [
             '<div class="pn-root">',
@@ -57,7 +58,7 @@ export class PlotlineView {
             this._stageCard(face, stage),
             this._promiseCard(face, promises),
             this._arcCard(face, arcs),
-            this._knowledgeCard(face, knowledge),
+            this._knowledgeCard(face, knowledge, boundaries),
             this._parallelCard(face, (pkg && pkg.parallels) || []),
             this._secretCard(face, (pkg && pkg.secrets) || []),
             this._echoCard(face, (pkg && pkg.recallEchoes) || [], (pkg && pkg.echoLives) || []),
@@ -174,21 +175,31 @@ export class PlotlineView {
             '</div>'
         ].join('\n');
     }
-    _knowledgeCard(face, knowledge) {
+    _knowledgeCard(face, knowledge, boundaries) {
         const ready = face.reason === 'ready';
+        const bmap = new Map((Array.isArray(boundaries) ? boundaries : []).map((b) => [b.character, b]));
         let body;
         if (!ready) {
             body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有认知记录' : '读不到认知') + '</div>';
         } else if (!knowledge.length) {
             body = '<div class="pn-empty">还没有角色认知记录</div>';
         } else {
-            body = knowledge.map((k) => [
-                '<div class="pn-know">',
-                '  <div class="pn-know-name">' + this._esc(k.character) + '</div>',
-                (k.known.length ? '  <div class="pn-know-line"><span class="pn-know-tag ok">已知</span> ' + this._esc(k.known.join('；')) + '</div>' : ''),
-                (k.unaware.length ? '  <div class="pn-know-line"><span class="pn-know-tag blind">未意识到</span> ' + this._esc(k.unaware.join('；')) + '</div>' : ''),
-                '</div>'
-            ].join('\n')).join('\n');
+            body = knowledge.map((k) => {
+                /* [v3.10.0 · G-3] 边界格：账里**一条认知记录都没有**的角色，
+                 *   与「有记录但没有本条事实」的角色必须长得不一样。
+                 *   前者显示「账里未记录」——那是**无从分辨**，不是「他不知道」。 */
+                const b = bmap.get(k.character);
+                const unrecorded = b && b.boundary === 'unrecorded';
+                return [
+                    '<div class="pn-know">',
+                    '  <div class="pn-know-name">' + this._esc(k.character) + '</div>',
+                    (unrecorded ? '  <div class="pn-know-line"><span class="pn-know-tag other">账里未记录</span> 这位角色在认知账里没有任何记录 —— 不是「他不知道」，是「无从分辨」</div>' : ''),
+                    (k.known.length ? '  <div class="pn-know-line"><span class="pn-know-tag ok">已知</span> ' + this._esc(k.known.join('；')) + '</div>' : ''),
+                    (k.unaware.length ? '  <div class="pn-know-line"><span class="pn-know-tag blind">未意识到</span> ' + this._esc(k.unaware.join('；')) + '</div>' : ''),
+                    (b && b.recorded && !k.unaware.length ? '  <div class="pn-know-line"><span class="pn-know-tag other">未记录不知情</span> 账里没有本条不知情记录，不等于他知道</div>' : ''),
+                    '</div>'
+                ].join('\n');
+            }).join('\n');
         }
         return [
             '<div class="pn-card">',

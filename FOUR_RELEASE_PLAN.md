@@ -8,6 +8,12 @@
 当前：LonSha 3.224.0（**O-2 优化批**：楼道取值门同族普查 —— 上游把「用 `Number()` 结果当门」这条根因在
 **回放 / 前移层**（`ledger-replay.js`）连同同族六面一次收干净，修前实测 `replayShift(host, '')` 会把 `floor: 9`
 的条目搬成 8）/
+RubyPhone 3.10.0（**G 批 G-3 / G-4 / Q-1 三合一**：知情边界三层下游化 —— 上游投影的「谁知道什么」
+从列表出口升级为**约束面**（`config/knowledge-contract.js`，三档分形 silent / unaware / unrecorded 互不混淆、
+五态分形读不到 ≠ 空）；跨 App 时间编排 —— 三源对照（`config/story-clock.js`，`agree === null` 与 `true` 不同形、
+三源全缺时 `primary === null` 绝不猜）；内存/耗时取证 —— TODO 唯一悬挂项拆成「能测的一段 + 诚实登记不能测的一段」
+（`tests/audit/memory_growth_probe.cjs`）。同轮抓到一处**真缺陷**：`plotlinePromptBlock` 的早退守卫位于知情段之前，
+会让「只有认知记录」的整块被丢弃）/
 RubyPhone 3.9.3（**O-3 对外吸收批：世界书干跑取数层**——两个外部仓库里只有 PA（MIT 同构）
 对应真缺口：本仓 `getWorldInfoPrompt` 零命中，App 只能读「用户手选的设定集」。新增取数层四态分形 +
 三条真源码破坏负控制，接线点唯一且取不到时请求逐字不变；XLDB 为自定义许可禁止衍生且形态不同构，不缝）

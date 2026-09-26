@@ -79,11 +79,11 @@
   "update_gap_ms_n2000": 0.07
  },
  "scan": {
-  "files": 228,
+  "files": 230,
   "full_materialize": 9,
   "bounded_slice": 5,
   "indexed_loop": 18,
-  "length_read": 47
+  "length_read": 48
  },
  "sites": {
   "full_materialize": [
@@ -94,8 +94,8 @@
    "apps/weibo/weibo-data.js:2385",
    "config/api-manager.js:397",
    "config/worldbook-dryrun.js:155",
-   "index.js:2837",
-   "index.js:10449"
+   "index.js:2842",
+   "index.js:10454"
   ],
   "bounded_slice": [
    "apps/games/werewolf/werewolf-view.js:643",
@@ -105,18 +105,18 @@
    "config/phone-chat-memory.js:78"
   ],
   "length_read_sample": [
-   "apps/calendar/calendar-app.js:504",
-   "apps/diary/diary-data.js:1485",
-   "apps/diary/diary-data.js:1553",
-   "apps/diary/diary-data.js:1556",
+   "apps/calendar/calendar-app.js:528",
+   "apps/diary/diary-data.js:1127",
+   "apps/diary/diary-data.js:1574",
+   "apps/diary/diary-data.js:1642",
+   "apps/diary/diary-data.js:1645",
    "apps/games/common/games-ai-context.js:68",
    "apps/games/common/games-ai-context.js:72",
    "apps/games/werewolf/werewolf-view.js:643",
    "apps/memory/memory-app.js:163",
    "apps/music/music-app.js:176",
    "apps/phone/phone-view.js:1381",
-   "apps/phone/phone-view.js:2875",
-   "apps/phone/phone-view.js:2877"
+   "apps/phone/phone-view.js:2875"
   ]
  },
  "criteria": [
@@ -142,7 +142,7 @@
    "id": "L5",
    "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
    "pass": true,
-   "got_text": "files=228，全表物化=9，slice(-n)=5，下标直取=18，长度读=47"
+   "got_text": "files=230，全表物化=9，slice(-n)=5，下标直取=18，长度读=48"
   }
  ],
  "timing_criteria": [
@@ -175,7 +175,8 @@
   "「物化」不能只看 forEach/map/filter：`chat.slice(-8).map(...)` 也是 O(8) 物化，但它**有界**。故四类分开计（full / bounded / indexed / length），不混成一个「消费点数」。",
   "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
   "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。",
-  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。"
+  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2，故 files 228 → 230）；并真实改了 `apps/diary/diary-data.js`（+89 行），其中一处 `chat[chat.length - 1]` 取「最后一楼的时间戳」用于**陈旧快照判定**（读长度 + 下标直取，O(1)，不物化）⇒ 长度读 47 → 48。★ 归因经实测核对：同上口径扫 HEAD 树得 28 处、工作树得 29 处，唯一差异就在这个文件（3 → 4）；两个新 config 文件对四类站点**零命中**（它们经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`）。同时 `index.js` 公告块因本版条目变长，两个全表物化站点的行号整体 +5；站点**数量与文件归属未变**。活体读数 `readings` 与结论 `verdict` 本轮真跑与基线逐项一致，故未改写；首测版语义仍保留在 measured_at。"
  ],
  "not_done": [
   "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",

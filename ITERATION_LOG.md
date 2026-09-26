@@ -3,10 +3,79 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （148 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （149 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
+
+---
+
+## 迭代 56 — v3.10.0 知情边界三层下游化 + 跨 App 时间编排 + 内存/耗时取证
+
+- **任务来源**：本轮为 G 批与 Q 项的合版交付。三件事都指向同一个病根：**上游已经
+  把话说清楚了，本仓却没把它当约束用**。
+  · G-3「知情边界」—— 上游投影里的「谁知道什么」在本仓只有
+    `apps/plotline/plotline-data.js` 的 `knowledgeList()` 一个**列表出口**，
+    零处当**约束**消费；想让「不知道的角色」别说出内情，只能靠模型自觉。
+  · G-4「跨 App 时间编排」—— 全仓没有任何一处把「剧情现在是什么时候」当作可
+    交叉验证的**读数**：各 App 各拿各的日期，冲突了也没人知道。
+  · Q-1「内存 / 耗时取证」—— `TODO.md` 唯一悬挂项，此前整条登记为「本环境不可测」。
+- **真缺口取证（立项依据）**：`config/` 目录下无 `knowledge-contract.js` 与
+  `story-clock.js`（`world-bridge.js` 58238 字节、`worldbook-dryrun.js` 12163 字节）；
+  `knowledgeList()` 的消费侧零约束；`storyClock` 类出口零命中。
+- **本版落三件事**：
+  ① `config/knowledge-contract.js`（305 行）—— 认知记录从列表升级为**约束面**。
+     ★ 核心口径：`silent`（账里没记）/ `unaware`（账里明确记着不知道）/ `unrecorded`
+     （一条记录都没有）**三档互不混淆**，且 `unrecorded` **只计数不列名** ——
+     把「没记录」当「不知道」来断言，是对角色形象的凭空捏造。`matchFact` 只允许
+     `exact` / `substring` / `none`（防「宽泛命中当逐字结论」），两人合取取**最弱**一侧。
+     `knowledgeFace` 五态分形（`ok` / `declared-empty` / `face-absent` / `no-snapshot` /
+     `bridge-absent`）——「桥没装」「没这个面」「一条都没有」必须落在不同态上。
+  ② `config/story-clock.js`（205 行）—— 三源对照（WorldAxis 世界钟 / lonsha `clock` 面 /
+     日历当天）。★ `agree === null`（来源不足两个，**没能比**）与 `agree === true`
+     （比过且一致）**不同形**；粒度相容（世界钟带年份 vs 日历只有月日）记
+     `suffix-compatible` 而**不判冲突**，但对外如实标注这是相容而非逐字相等；
+     三源全缺时 `primary === null`，**`Date.now()` 严格只出现 1 次**（只在 `at` 字段）。
+  ③ `tests/audit/memory_growth_probe.cjs`（239 行）+ 基线 —— 把「不可测」一坨拆成
+     「**能测的一段 + 诚实登记不能测的一段**」。
+- **下游接线**：`plotline`（生成块新增「知情边界」段 + 视图新增「账里未记录 / 无从分辨」
+  **中性灰**标签 —— 刻意不用红，因为「没记录」不是错误）、`diary`（干跑取数块 +
+  跨会话陈旧防护 `_isStaleDryRun()`）、`diagnose`（新增 `knowledge` 与 `storyClock`
+  两张诊断卡）、`calendar-app.js`（只读出口 `currentStoryDate()`）。
+- **本轮抓到的真缺陷（1 处，靠新判据才现形）**：`plotlinePromptBlock` 的
+  `if (!lines.length) return ''` **早退守卫位于「知情边界」段之前** —— 于是
+  「只有认知记录、没有任何剧情线」的世界，整块（含知情约束）被静默丢弃。
+  已把早退移到知情段之后，并在源码写下位置纪律注释。
+  ★ 这是本仓第 N 次「顺序即语义」型缺陷：判据只查「内容在不在」抓不到它，
+  必须查「**在谁之前/之后**」。
+- **内存探针的两处口径事故（如实留痕）**：
+  · 首版只看 `window.addEventListener` 得**恒 0**——追查 `tests/_runtime_host.mjs`
+    发现 App 走 `ctx.eventSource.on`。修正为双口径（`listenerCount()` +
+    `eventSource.total()`），并新增「**峰值必须高于基线**」断言：否则那是
+    「根本没订上」的假绿，不是「没有泄漏」。
+  · 串生成读数显式带 `not_render: true` —— 标明它**不是** DOM 渲染耗时，
+    避免下游把它读成「渲染只要 0.074ms」。
+- **验证方式**：`tests/system-v3210.test.mjs`（23 项，A~G 七组），含**四条真源码破坏**
+  负控制（silent 并进 unaware / 单源报 `agree` 为 true / 冲突不报 / 约束块塞 silent）。
+  破坏副本必须**带同目录依赖**（`story-clock.js` import 了 `./world-bridge.js`），
+  否则红的是「环境没搭好」而不是「判据真转红」。
+  同轮修 3 处旧判据脆性：F2 锚点用了跨行长锚（插行即失配）、C3 的 `Date.now()`
+  计数含注释（须先剥注释）、C2/F3 的桩形态写错（拉取型桥的 `snapshot` 是**函数**）。
+- **门禁**：`syntax` 417 文件 / `import-resolve` 242 文件 345 条 / `dead-exports`
+  260 文件 848 声明零新增 / `keys` 158 键全登记 / `bridge-contract` 九道门全绿 /
+  `lifecycle` / `registry` / `source-derivation` 全绿。
+- **陈旧文档顺路复校（三处）**：边界文档「当版实测数字」414/240-339 → **417/242-345**、
+  复校标记 v3.9.3 → v3.10.0（判据 `tests/system-v328.test.mjs` 会真跑两道门比对）；
+  `long_chat_baseline.json` 枚举面 228 → 230（复校说明追加在 `corrections`，
+  `measured_at` 保持冻结的 v3.9.1）；两份活基线（v325/v326）枚举面 227 → 229。
+  ★ 四份基线**只改枚举面，其余读数逐项不变** —— 两个新模块经 `world-bridge.js` 读桥，
+  不直接摸 `ctx.chat`，站点数零漂移。
+- **同族脆性第 6~9 例（旧套件写死当版读数）**：`v268-P1` / `v273-P2` / `v290-F2` /
+  `v300-D4` 四处写死「无具名成员 96」「键使用点 157 个」。按仓内既定处置**交棒**：
+  旧套件改锁**结构性**事实（认领数 ≥ 90 量级、抽取量 == 登记量），当版精确数字由当版套件接管。
+  ★ 自检问句（沿用 v326-B1 / v327-E1 / v328-B2 的记录）：**这条断言在正常抬版后还会成立吗？**
+- **遗留**：无。四项不可测（真实 DOM 渲染排版 / 宿主注入对象内存 / 小时级堆增长 /
+  V8 之外运行时内存）按纪律登记，不算遗留。
 
 ---
 
@@ -2705,20 +2774,24 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.9.3`（五源同源）
-- **门禁基线**（v3.9.2 实测，`npm run check` 全绿，RC=0）：语法 **412 文件** /
-  导入可解析门 239 文件 338 条静态说明符（动态 import 97 条不计入判据）/
-  死导出零新增（257 个文件、818 个 export 声明、内部消费 503 · 跨文件消费 291 · 零消费 24 条冻结、
-  枚举面 892 条全部识别）/
+- **当前版本**：`3.10.0`（五源同源）
+- **门禁基线**（v3.10.0 实测，`npm run check` 全绿，RC=0）：语法 **417 文件** /
+  导入可解析门 242 文件 345 条静态说明符（动态 import 97 条不计入判据）/
+  死导出零新增（260 个文件、848 个 export 声明、内部消费 525 · 跨文件消费 299 · 零消费 24 条冻结、
+  枚举面 924 条全部识别（声明 817 · 成块 8 · 解构 1 · 无具名成员 98）· 未识别 0）/
   生命周期 36 个 App 类 49 个实例槽位零缺口 / 注册 APPS id 41、样式投递 31 个未覆盖 0 /
-  keys 157 键全登记（会话隔离 105 · 全局 49 · 历史键 3）· CHAT_DATA_PATTERNS 52 条 /
+  keys 158 键全登记（会话隔离 106 · 全局 49 · 历史键 3）· CHAT_DATA_PATTERNS 52 条 /
   源头派生台账 10 条（派生库 3）/
   **桥消费面契约**（第九道门）：`.snapshot(` 调用式 0 · 桥名自持 0 · 自写形态 0 ·
-  `readPushProbe` 消费点 12 · `faceFieldState` 消费点 8（下限 5）· 归因文案表手写键 0 张 ·
+  `readPushProbe` 消费点 13 · `faceFieldState` 消费点 10（下限 5）· 归因文案表手写键 0 张 ·
   `readProjection` 6（下限 4）· `sourceState`/`lastError` 4 处 · `readLonshaEventPlatforms` 2（下限 1）·
   `readInjection` 2（下限 2）· `readLonshaEvidence` / `evidenceFaceOf` 3（下限 3）·
   `readProjectionFreshness` 1（下限 1）。
-  测试 **1151 / 1151 pass / 0 fail**（新增 v328 套件 10 项）。
+  测试 **1189 / 1189 pass / 0 fail**（v3210 套件 23 项；3.9.3 时为 1166）。
+- **v3.9.3 基线（留档对照）**：语法 414 文件 / 导入门 240 文件 339 条 / keys 157 键 /
+  `readPushProbe` 消费点 12 / `faceFieldState` 8 —— 本版增量为「2 个配置模块 + 1 个探针 + 1 个套件」，
+  并**真实改了产品代码**（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、
+  `apps/calendar/calendar-app.js`），故死导出与 keys 读数同步上浮。
 - **v3.8.0 基线（留档对照）**：语法 409 文件 / 测试 1110 / 死导出 818 声明 —— 本版增量为
   「2 个取证文件 + 1 个套件（v3.9.0）」，产品代码零改动，无一处是既有读数倒退。
 - **v3.7.0 基线（留档对照）**：语法 408 文件 / 测试 1096 / 死导出 818 声明 —— 本版增量为

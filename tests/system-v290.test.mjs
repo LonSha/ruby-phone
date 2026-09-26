@@ -290,11 +290,17 @@ test('v290 F1. 结构：间接属性键面两条正则齐备并被接线', () =>
   assert.ok(KEYS_SRC.includes('if (!propCalls.has(m[1])) continue;'), '仅收编确有间接调用的属性名');
   assert.ok(KEYS_SRC.includes("bump(m[2], f.rel, 'prop-key');"), '以 prop-key 种类收编');
 });
-test('v290 F2. 行为：真仓库抽取 157 键、14 个新增键全登记、K1 零未登记', () => {
+test('v290 F2. 行为：真仓库抽键量与登记量相等（本套件守 14 个新键全登记 + K1 零未登记）', () => {
   const r = runKeys(['--root', ROOT]);
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /storage 键使用点 157 个/);
-  assert.match(r.out, /登记 157 条/);
+  /* [v3.10.0 交棒] 原判据写死「157 个 / 157 条」—— 那是**当版精确读数**，抬版即过期。
+   *   本套件要守的是「抽取面与登记面**逐量相等**」（这才是 K1/K2/K3 零未登记的前提），
+   *   不是某个具体数字。改为从读数行现取两个数再比 —— 数字换代不再翻红，口径消失才翻红。 */
+  const uses = /storage 键使用点 (\d+) 个/.exec(r.out);
+  const regd = /登记 (\d+) 条/.exec(r.out);
+  assert.ok(uses && regd, '两条读数行都必须在场（口径不得静默消失）：' + r.out.slice(0, 200));
+  assert.equal(uses[1], regd[1], '抽取量必须等于登记量（实测 ' + uses[1] + ' vs ' + regd[1] + '）');
+  assert.ok(Number(uses[1]) >= 139, '抽取量必须 ≥ 139（v2.58 时的真实量级）');
   assert.match(r.out, /✓ 键归属全登记 \/ 声明与机制一致 \/ 登记条目全部存活/);
   assert.doesNotMatch(r.out, /K1 有/);
   assert.doesNotMatch(r.out, /K2 有/);

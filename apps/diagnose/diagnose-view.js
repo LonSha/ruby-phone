@@ -9,7 +9,7 @@
 'use strict';
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
-import { schemaStateText, storageFaceLine, evidenceFaceText } from './diagnose-data.js';
+import { schemaStateText, storageFaceLine, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -295,7 +295,77 @@ export class DiagnoseView {
     /** [v3.4.2 · F-5] 重置沉默台账（用户显式动作：看完告警后清一次计数）。
      *  为什么给出口而不是留给测试：台账是**进程内**的，若没有清零点，用户重开诊断页
      *  只会在同一份计数上继续累加，「刚清零过」这个动作在界面上无处可做。 */
-    /** [v3.6.0 · R1-E] 九账证据面卡：上游 v3.214.0 把九本账收成一份可查表（此前**全库零消费**）。
+    /**
+     * [v3.10.0 · G-4] 当前剧情时刻卡：三处时间读数的**唯一对照面**。
+     * 纯渲染（归因与文案来自真源 `storyClockFaceText`）。三条必须可见：
+     *   · 每个来源的**原值或在场性**（缺就是缺，不补默认值）；
+     *   · 一致性三态：一致 / **不一致（冲突）** / **无法验证**（给出日期的来源不足两个）；
+     *   · 「无法验证」与「一致」在界面上必须长得不一样 —— 处置相反（前者去补数据，后者可放心用）。
+     */
+    _storyClockHtml(pkg) {
+        const sc = (pkg && pkg.storyClock) || null;
+        if (!sc) return '<div class=' + Q + 'dg-note' + Q + '>剧情时刻读取失败（已降级）</div>';
+        const line = storyClockFaceText(sc);
+        const tone = sc.conflict ? 'warn' : (sc.agree === true ? 'ok' : 'muted');
+        const label = sc.conflict ? '不一致' : (sc.agree === true ? '一致' : '无法验证');
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>'
+            + escapeHtml('当前剧情时刻：' + (sc.primaryDate || '—')) + ' ' + this._chip(label, tone) + '</div>';
+        if (sc.conflict) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>三处读数互不相同 —— 正文时间与手机时间此刻**不是同一个**，先确认哪个才是当前。</div>';
+        } else if (sc.agree === null) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>给出日期的来源少于两个 ⇒ **无法交叉验证**（不是「已确认一致」）。</div>';
+        }
+        const rows = [['worldaxis', '世界钟（WorldAxis）'], ['lonsha', '记忆插件剧情日期'], ['calendar', '手机日历当天']];
+        html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.map(([k, name]) => {
+            const s = (sc.sources && sc.sources[k]) || { state: 'source-missing', date: null };
+            const ok = s.state === 'ok';
+            const text = ok ? String(s.date) : ('取不到：' + s.state);
+            return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(k) + '</code>'
+                + this._chip(ok ? (s.precision ? s.precision : '有日期') : '缺', ok ? 'ok' : 'muted')
+                + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(name + ' · ' + text) + '</span></div>';
+        }).join('') + '</div>';
+        html += '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(line.detail) + '</div>';
+        return html;
+    }
+
+    /**
+     * [v3.10.0 · G-3] 知情网络卡：三档边界（known / unaware / silent）的**可视面**。
+     * 纯渲染：归因与文案全部来自真源（`knowledgeFaceText`），本方法不做任何判断。
+     * 三条必须看见的东西（缺一条这张卡就失去意义）：
+     *   · `silent` —— **不是**「不知道」，是「账里没记，无从分辨」；
+     *   · `silentCapable === false` —— 账里一条 unaware 记录都没有，
+     *     此时「谁不知道」在数据上无从回答（与「没人不知道」处置相反）；
+     *   · 明确的不知情事实逐条列出（这是用户唯一能据以纠正正文的东西）。
+     */
+    _knowledgeHtml(pkg) {
+        const k = (pkg && pkg.knowledge) || null;
+        if (!k) return '<div class=' + Q + 'dg-note' + Q + '>知情网络读取失败（已降级）</div>';
+        const line = knowledgeFaceText(k);
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(line.label + ' · ' + line.detail) + '</div>';
+        if (k.state === 'ok') {
+            if (k.silentCapable !== true) {
+                html += '<div class=' + Q + 'dg-note' + Q + '>账里**没有**任何「明确不知情」记录 —— 问「谁不知道」只能得到「没记录」，'
+                    + '这不是「没人不知道」。</div>';
+            }
+            const rows = [];
+            for (const p of k.people) {
+                const u = Array.isArray(p.unaware) ? p.unaware : [];
+                for (const fact of u) rows.push({ fact, who: p.character, kind: 'unaware' });
+            }
+            if (rows.length) {
+                html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.slice(0, 20).map((r) => {
+                    return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.who) + '</code>'
+                        + this._chip('明确不知情', 'warn')
+                        + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(r.fact) + '</span></div>';
+                }).join('') + '</div>';
+                if (rows.length > 20) html += '<div class=' + Q + 'dg-sub' + Q + '>（共 ' + rows.length + ' 条，此处只列前 20 条）</div>';
+            }
+        }
+        return html;
+    }
+
+    /**
+     * [v3.6.0 · R1-E] 九账证据面卡：上游 v3.214.0 把九本账收成一份可查表（此前**全库零消费**）。
      *  纯渲染：五态归因与文案全部来自真源（`evidenceFaceText`），本方法不做任何判断。
      *  卡尾附**逐账读数表**：用户据此看到「哪本读到、哪本缺席、缺席的两种原因分别是什么」
      *  —— 没有它，用户看到「读不到」也无从判断该等升级还是该等重跑。 */
@@ -427,12 +497,19 @@ export class DiagnoseView {
                 + '<div class=' + Q + 'dg-sub' + Q + '>本轮未观察到三类沉默（快照久未更新 / 注入连续 pending / 投影长期 empty）。</div></section>');
         }
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游桥</h3>' + this._bridgesHtml(pkg.bridgeReport || {}) + '</section>');
+        /* [v3.10.0 · G-4] 当前剧情时刻卡放桥之后、其余读数之前：
+         *   「现在是哪一天」是所有其它读数（投影新鲜度 / 账龄 / 承诺期限）的解释前提 ——
+         *   它若不一致，后面每一格的相对时间都不可信。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>当前剧情时刻（三源对照）</h3>' + this._storyClockHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>探针自述（sourceState / lastError）</h3>' + this._probeSelfHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游自述面 · 字段三态</h3>' + this._fieldsHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影契约（上游投影面）</h3>' + this._projHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>投影新鲜度归因</h3>' + this._freshnessHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>注入读数（本轮实际注入）</h3>' + this._injectionHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>九账证据面</h3>' + this._evidenceHtml(pkg) + '</section>');
+        /* [v3.10.0 · G-3] 知情网络卡：放在剧情/证据两族之后 —— 它回答的是
+         *   「为什么某个角色像是知道了不该知道的事」，属于「解读型」读数而非「在场型」。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>知情网络（谁不知道某件事）</h3>' + this._knowledgeHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');

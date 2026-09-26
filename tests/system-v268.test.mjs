@@ -79,10 +79,14 @@ const countOf = (s, sub) => s.split(sub).length - 1;
 test('v268-P1 真仓库 E10：UNHANDLED_ALLOWLIST 存活（export-default 仍被认领 95 处）', () => {
   const r = runOriginal(DEAD);
   assert.equal(r.code, 0, '死导出门禁在真仓库上未通过：' + r.out);
-  // 96 = 90（v2.73.0 基线）+ 5（v2.99.0 新增 5 文件）+ 1（v3.0.0 新增 config/projection-contract.js）。
-  //   [v3.0.0] 交棒：当版精确读数由 tests/system-v300.test.mjs 的 D4 接管。此处锁的是
-  //   「白名单真在认领某物」（E10 存活自证），故必须跟随真实数。
-  assert.match(r.out, /无具名成员 96/, '白名单认领数应为 96（注释与实测必须一致）');
+  /* [v3.10.0 交棒] 原判据写死「无具名成员 96」，抬版必然过期 —— 那是**当版精确读数**，
+   *   不是本套件要守的东西。本套件守的是「白名单真在认领某物」（E10 存活自证），
+   *   故改为**结构性**断言：认领数必须为正整数且与「枚举面全部识别」自洽。
+   *   仓内既定处置见 v300-D4 / v328-B2 / v327-E1 三处同族记录：
+   *   精确数字交给当版套件接管，旧套件只留形态。 */
+  const allowed = /无具名成员 (\d+)/.exec(r.out);
+  assert.ok(allowed, '读数行必须报出白名单认领数（口径不得静默消失）：' + r.out.slice(0, 200));
+  assert.ok(Number(allowed[1]) >= 90, '白名单认领数必须 ≥ 90（曾经的真实量级），实测 ' + allowed[1]);
   assert.match(r.out, /未识别 0/);
 });
 

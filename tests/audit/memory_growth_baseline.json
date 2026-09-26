@@ -1,0 +1,76 @@
+{
+ "file": "tests/audit/memory_growth_probe.cjs",
+ "note": "内存快照增长 / 渲染耗时取证。**无浏览器 / 无 DOM**：计时读数一律不是实机渲染耗时。",
+ "measured_at": "v3.10.0",
+ "node_version": "v24.18.0",
+ "gc_forced": true,
+ "noise_note": "已用 --expose-gc 强制回收后取样；单点仍不可判泄漏，只判**跨轮趋势**。",
+ "rounds": 8,
+ "ops_per_round": 400,
+ "readings": {
+  "heap_samples_kb": [
+   4169,
+   4180,
+   4183,
+   4183,
+   4180,
+   4183,
+   4185,
+   4185
+  ],
+  "heap_first_kb": 4169,
+  "heap_last_kb": 4185,
+  "heap_total_growth_kb": 16,
+  "heap_tail_growth_kb": 5,
+  "heap_tail_kb_per_round": 1.25
+ },
+ "timings": {
+  "string_build": {
+   "not_render": true,
+   "warn": "★ 这是「视图串生成」耗时，**不是 DOM 渲染耗时** —— 本环境无布局引擎。",
+   "reps": 400,
+   "total_ms": 29.644,
+   "per_op_ms": 0.074,
+   "html_chars": 1739,
+   "threw": 0
+  }
+ },
+ "listeners": {
+  "base": 0,
+  "peak": 0,
+  "after": 0,
+  "leaked": 0,
+  "event_base": 0,
+  "event_peak": 2,
+  "event_after": 0,
+  "event_leaked": 0,
+  "rounds": 8
+ },
+ "verdict": {
+  "module_heap": "linear-acceptable",
+  "module_heap_note": "后半段每轮增长 1.25KB（< 32KB/轮）—— 属「线性且微小」，不立优化候选",
+  "listeners": "ok",
+  "listeners_note": "构造-启动-停止 8 轮后全局监听器回到基线（0）",
+  "event_source": "ok",
+  "event_source_note": "构造-启动-停止 8 轮后事件源 handler 回到基线（0）；峰值 2 ⇒ 订阅确实发生了，且被收净（不是「没订上」的假绿）",
+  "render": "string-build-ok"
+ },
+ "unmeasurable": [
+  {
+   "item": "真实 DOM 渲染 / 排版 / 合成耗时",
+   "why": "无布局引擎；夹具不渲染 DOM"
+  },
+  {
+   "item": "宿主（SillyTavern）注入对象的内存占用",
+   "why": "无真实宿主"
+  },
+  {
+   "item": "跨会话长时间运行的堆增长（小时级）",
+   "why": "本探针只跑分钟级；长时应由真机观测"
+  },
+  {
+   "item": "V8 之外的运行时内存",
+   "why": "process.memoryUsage 只覆盖当前进程"
+  }
+ ]
+}

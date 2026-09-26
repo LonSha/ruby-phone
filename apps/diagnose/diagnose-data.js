@@ -43,6 +43,21 @@ import { readProjection, projectionValue, projectionLine } from '../../config/pr
  *   接在这里的理由与本仓一切「上游读数」的可见出口相同：投影接诊断、探针自述接诊断，
  *   注入面同族 —— 而它此前**全库零消费**（上游 v3.215.0 做出来，下游没人读）。 */
 import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockLine } from '../../config/injection-contract.js';
+/* [v3.10.0 · G-3] 知情网络的消费侧真源（上游 worldProg.knowledge 的「谁不知道」面）。
+ *   接在诊断中心的理由与投影面/注入面/证据面**同一族**：本仓一切「上游读数」的
+ *   可见出口就是这里。修前实测：`worldProg.knowledge` 只有 plotline 的列表出口在读，
+ *   而「这条事实谁不知道」**全库零消费** —— 于是用户永远看不到「为什么某个角色
+ *   表现得像是知道了一件他本不该知道的事」。 */
+import { knowledgeLine } from '../../config/knowledge-contract.js';
+/* [v3.10.0 · G-3] 面级三态的**唯一入口**走剧情线内核的 `knowledgeBoundary()` —— 那里
+ *   已经把 `faceFieldState` 与知识面拼好了；诊断侧不再自己拼一次（否则「同一口径两份实现」
+ *   会在某一天分叉，而分叉是无声的）。本文件只消费它的输出。 */
+import { knowledgeBoundary } from '../plotline/plotline-data.js';
+/* [v3.10.0 · G-4] 跨 App 时间编排：把三处「时间」收成**单一当前剧情时刻读数面**。
+ *   修前：世界钟（WorldAxis）、插件剧情日期（lonsha `clock` 面）、手机日历三者各说各的，
+ *   没有任何出口回答「现在到底是哪一天」，更不会告诉用户「它们互相矛盾」。
+ *   本模块只归一与陈述（两源/三源对比 + 确定性 primary 规则），不选边、不猜。 */
+import { storyClock, storyClockLine } from '../../config/story-clock.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -284,7 +299,51 @@ export function collectDiagnose(win, storage) {
         return { ok: true, reason: 'ok', chat: one(true), global: one(false) };
     })();
 
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness };
+    /* ── [v3.10.0 · G-3] 知情网络面（上游 v3.219.0 的 `worldProg.knowledge`）──
+     *   修前的真实处境：`knowledgeList()` 把账里的认知列出来了（有渲染出口），
+     *   但**「谁不知道某件事」全库零消费** —— 手机里的对话/动态只凭「角色名出现了」说话，
+     *   不看账里明确记着的 `unaware`。本面把三档边界（known / unaware / silent）
+     *   与**能不能回答这个问题**（`silentCapable`）一并摆出来：
+     *     · silent —— 这人有认知记录，但这条事实两边都没记 ⇒ **无从分辨**，不是「不知道」；
+     *     · silentCapable === false —— 账里一条 unaware 记录都没有，
+     *       此时「谁不知道」在数据上无从回答（与「没人不知道」是两件事，处置相反）。
+     *   面级三态仍走 `faceFieldState`（同一个快照、同一份真源），本文件不自写形状判据。 */
+    const knowledge = (() => {
+        try { return knowledgeBoundary(snapshot); }
+        catch (_e) { return knowledgeBoundary(null); }
+    })();
+
+    /* ── [v3.10.0 · G-4] 当前剧情时刻（跨 App 时间编排的**单一读数面**）──
+     *   为什么接在诊断中心：三处时间读数（世界钟 / 插件剧情日期 / 日历当天）
+     *   修前**没有任何一处把它们摆在一起**，用户只能看到互相矛盾的日期而无从判断。
+     *   本面把「一致性」与「谁是当前」一次说清，并在不一致时**显式报冲突**。
+     *   日历取数走注入式只读探针（本内核不 import 任何 App）：宿主没提供该面就如实
+     *   报 `source-missing` —— 那是「这一层没给」，不是「读不到」。 */
+    const clockSc = (() => {
+        const calendarSource = () => {
+            try {
+                const app = w && w.VirtualPhone ? w.VirtualPhone.calendarApp : null;
+                const s = (app && typeof app.currentStoryDate === 'function') ? app.currentStoryDate() : null;
+                if (!s) return null;
+                return (typeof s === 'string') ? { date: s, label: s, source: 'calendar' } : (s && typeof s === 'object' ? s : null);
+            } catch (_e) { return null; }
+        };
+        try { return storyClock({ win: w, calendarSource }); }
+        catch (_e) { return storyClock({}); }
+    })();
+
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc };
+}
+
+/** [v3.10.0 · G-4] 当前剧情时刻一行读数（**唯一实现**在真源：`storyClockLine`）。 */
+export function storyClockFaceText(sc) {
+    return storyClockLine(sc);
+}
+
+/** [v3.10.0 · G-3] 知情网络一行读数（**唯一实现**在真源：`knowledgeLine`）。
+ *  这里只做转发 —— 诊断内核持有 face，视图不再重取快照（同轮两个取数口即「错读数记录」形态）。 */
+export function knowledgeFaceText(face) {
+    return knowledgeLine(face);
 }
 
 /** 存储时代的中文（未知取值**如实输出原值**，不静默兜底成某个具体结论） */

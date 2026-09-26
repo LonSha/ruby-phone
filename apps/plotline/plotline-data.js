@@ -21,6 +21,11 @@
  * ======================================================== */
 'use strict';
 import { faceFieldState } from '../../config/world-bridge.js';
+/* [v3.10.0 · G-3] 知情网络的**消费侧真源**（上游 v3.219.0 的 `worldProg.knowledge`）。
+ *   本文件此前只把它**列出来**（`knowledgeList()`），从不拿它当**约束**用；
+ *   于是「谁不知道某件事」在本仓是零消费。本版接上：三档分形（known / unaware / silent）
+ *   与匹配方式如实归因全部走 `config/knowledge-contract.js` 这一份实现，本文件不重写。 */
+import { knowledgeFace, whoKnows, boundaryOf, unawareBlock, knowledgeLine } from '../../config/knowledge-contract.js';
 /** 归因文案（五态；与 readPlotlineFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PLOTLINE_REASONS = Object.freeze({
     'ready': '剧情线就绪',
@@ -319,7 +324,102 @@ export function echoLifeList(worldProg) {
     } catch (_e) { return out; }
 }
 /**
- * 一致性块：把「当前阶段 + 未兑现承诺 + 推进中支线」交给生成侧，
+ * [v3.10.0 · G-3] 知情网络的**边界面**：三档分形 + 面级五态归因。
+ *
+ * 与 `knowledgeList()` 的分工：那个函数只把「账里有什么」列出来（渲染用）；
+ * 本函数回答「**谁不知道**」以及「这个问题此刻能不能被回答」——
+ *   ① 面级三态一律走 `faceFieldState`（本仓唯一真源，本文件不另写形状判据）；
+ *   ② `silentCapable === false` 表示账里**一条 unaware 记录都没有**：
+ *      此时「谁不知道」在数据上无从回答，UI/生成侧**必须**区分「没记录」与「没入记录的人」。
+ *
+ * @param {object|null} snapshot 上游快照（与 readPlotlineFace 同一个快照）
+ * @returns {{ state:string, line:object, silentCapable:boolean, people:Array }}
+ */
+export function knowledgeBoundary(snapshot) {
+    try {
+        const hasFace = !!snapshot;
+        const faceState = hasFace ? faceFieldState(snapshot, ['worldProg']) : '';
+        const world = (snapshot && typeof snapshot === 'object' && snapshot.worldProg && typeof snapshot.worldProg === 'object')
+            ? snapshot.worldProg : null;
+        const f = knowledgeFace({ worldProg: world, faceState, hasSnapshot: hasFace });
+        return { state: f.state, line: knowledgeLine(f), silentCapable: f.silentCapable === true, people: f.people };
+    } catch (_e) {
+        const f = knowledgeFace({ mounted: false });
+        return { state: f.state, line: knowledgeLine(f), silentCapable: false, people: [] };
+    }
+}
+
+/**
+ * [v3.10.0 · G-3] 「这条事实此刻谁（不）知道」—— 三档分形，**silent 绝不并进 unaware**。
+ * 由 `knowledgePromptLines()`（生成侧约束）与 `characterBoundary()` 共同消费。
+ *
+ * @param {Array} people `knowledgeBoundary().people`
+ * @param {string} fact
+ * @returns {{ known:Array, unaware:Array, silent:Array, matched:string, unrecorded:number }}
+ *   `matched` 是**结论强度**：`exact` 逐字对上 / `substring` 宽泛命中 / `none` 两边都没命中。
+ *   调用方必须能看见它 —— 拿宽泛命中当逐字结论，正是本仓 F-4 抓过的假阳性形态。
+ */
+function whoKnowsFact(people, fact) {
+    try { return whoKnows(people, fact); }
+    catch (_e) { return { fact: '', known: [], unaware: [], silent: [], matched: 'none', unrecorded: 0 }; }
+}
+
+/**
+ * [v3.10.0 · G-3] 单角色视角的边界（`boundary` 是**性格面**，不是单条事实的结论）。
+ * 由剧情线 App 的 `projection()` 消费，让「这位角色账里到底有没有认知记录」可见。
+ */
+export function characterBoundary(people, character) {
+    try { return boundaryOf(people, character); }
+    catch (_e) { return { character: String(character || ''), known: [], unaware: [], recorded: false, knownCount: 0, unawareCount: 0, boundary: 'unrecorded' }; }
+}
+
+/**
+ * [v3.10.0 · G-3] 把「账里明确记着不知情」的事实收成一组（按事实聚合去重）—— 供
+ * `knowledgePromptLines()` 逐条生成约束行。只在两档都有记录时才有意义：
+ * 全账零 unaware 时返回 `[]`（**不是**「没人不知道」，是「账里没记，问不出来」；
+ * 两条语义的差别由 `knowledgeBoundary().silentCapable` 承担）。
+ *
+ * @returns {Array<{fact:string, people:string[]}>}
+ */
+function unawareFacts(people) {
+    try {
+        const list = Array.isArray(people) ? people : [];
+        const map = new Map();
+        for (const p of list) {
+            if (!p || !p.character) continue;
+            for (const fact of (Array.isArray(p.unaware) ? p.unaware : [])) {
+                const k = String(fact);
+                if (!k) continue;
+                if (!map.has(k)) map.set(k, []);
+                const arr = map.get(k);
+                if (!arr.includes(p.character)) arr.push(p.character);
+            }
+        }
+        return [...map.entries()].map(([fact, ppl]) => ({ fact, people: ppl }));
+    } catch (_e) { return []; }
+}
+
+/**
+ * [v3.10.0 · G-3] 生成侧约束行：把「谁明确不知情」交给模型，让正文不越界。
+ * **只列账里有记录的**：silent 与「一条记录都没有的人」一个字都不写 ——
+ * 把「没记录」写成约束，模型会把它当事实陈述出去（本仓最贵的那类错读数）。
+ * 无可列时返回 `[]`（不产生空块）。
+ */
+export function knowledgePromptLines(people, opts = {}) {
+    try {
+        const max = Math.max(1, Number(opts.maxFacts) || 4);
+        const rows = unawareFacts(people);
+        const out = [];
+        for (const r of rows.slice(0, max)) {
+            const line = unawareBlock(people, r.fact, { maxChars: 200 });
+            if (line) out.push(line);
+        }
+        return out;
+    } catch (_e) { return []; }
+}
+
+/**
+ * 生成侧一致性块：把「当前阶段 + 未兑现承诺 + 推进中支线」交给生成侧，
  * 让正文里的剧情节奏与记忆插件推进的世界**是同一个**（无内容返回 ''，不产生空块）。
  * @param {{outline?:object|null, worldProg?:object|null}} face
  * @param {{maxLines?:number}} [opts]
@@ -370,6 +470,26 @@ export function plotlinePromptBlock(face, opts = {}) {
         const echoChars = [...new Set(lifeEchos.map((x) => x.char))].slice(0, 3);
         if (echoChars.length) {
             lines.push('- 角色生活回声已有产出（' + echoChars.join('、') + '），可自然化用其氛围，不得改写为剧情既定事实');
+        }
+        /* [v3.10.0 · G-3] 知情边界约束：把「账里明确记着不知情的人」交给生成侧。
+         *   只列**有记录**的那一档；silent（有认知记录但这条事实两边都没记）与
+         *   「一条记录都没有的人」**一个字都不写** —— 把「没记录」写成约束，
+         *   模型会把它当事实陈述出去（本仓最贵的那类错读数）。
+         *   零 unaware 记录时本段为空，块与接线前逐字相同。
+         *
+         * ★ 位置纪律：本段必须在 `if (!lines.length) return ''` **之前**。
+         *   一个世界可能只登记了认知、没有任何承诺/支线/伏笔 —— 若把本段放在早退之后，
+         *   「只有认知记录」的世界会因为 `lines` 还空着而被整个丢掉，
+         *   于是这一面在最需要它的场合恰好静默失效（首版就是这么写的，已被 B2 判据抓住）。 */
+        const kn = (() => {
+            try {
+                const f = knowledgeFace({ worldProg: face.worldProg, faceState: 'present' });
+                return f.state === 'ok' ? knowledgePromptLines(f.people, { maxFacts: 3 }) : [];
+            } catch (_e) { return []; }
+        })();
+        if (kn.length) {
+            lines.push('- 知情边界（账里**明确记着**不知情的人，正文不得让他们表现出知情）：');
+            for (const l of kn) lines.push('  ' + l);
         }
         if (!lines.length) return '';
         return '【本世界的剧情推进（记忆插件大纲/世界推进，正文节奏不得与之矛盾）】\n' + lines.slice(0, maxLines).join('\n');

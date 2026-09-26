@@ -284,9 +284,19 @@
            （不会把旧会话数据写进新会话）。详见 `ITERATION_LOG.md` 迭代 44。
            **仍余**：`内存快照增长 / 单次渲染耗时`一维未做（本环境不可测，
            已登记在 `docs/runtime-verification-boundary.md`）。`1000 楼长会话`已在 v3.9.1 收口。
-        - [ ] **内存快照增长 / 单次渲染耗时**：需要 `process.memoryUsage()` 与
-          真实渲染计时 —— 夹具不渲染 DOM，**渲染耗时这一维在本环境不可测**
-          （已登记在 `docs/runtime-verification-boundary.md`）。
+        - [x] **内存快照增长 / 单次渲染耗时 —— v3.10.0 拆分收口（能测的那一段已测，不能测的诚实登记）**：
+          新增探针 `tests/audit/memory_growth_probe.cjs` 与基线 `tests/audit/memory_growth_baseline.json`，
+          把这一维拆成**两段**：
+          ① **能测的一段**（本环境读数）：模块面堆**跨轮趋势**（预热后取样、按后半段斜率判
+          `linear-acceptable` / `leak-candidate`，阈值 32KB/轮；实测 1.25KB/轮 ⇒ 无泄漏候选）、
+          事件源 handler 回收（`listenerCount()` 与 `eventSource.total()` 双口径，实测峰值 2 → 收净 0）、
+          串生成单次耗时（实测 0.074ms/op）。
+          ② **不能测的一段**（诚实登记，不再含糊成「不可测」一坨）：真实 DOM 渲染排版、
+          宿主注入对象内存、小时级堆增长、V8 之外运行时内存 —— 四条写进基线的 `unmeasurable` 段。
+          ★ 两条纪律：读数必须带**噪声声明**，只判跨轮趋势、**单次字节数不作结论**；
+          冒烟必须自证「**峰值高于基线**」，否则是「根本没订上」的假绿
+          （本探针首版只看全局监听器得恒 0 —— App 走 `ctx.eventSource.on` 而非 `window.addEventListener`）。
+          判据 `tests/system-v3210.test.mjs` E1/E2。
         - [x] **跨会话残留**：夹具可切 `chatId`/`chatMetadata` 实例，属可做项。**v2.90.0 已落地**：`CalendarData.clearCache()` 补清 `_lifeEvents`，`tests/system-v290.test.mjs` B1 固化。
         推进原则：一版只做一维、每维都能单独证伪，避免一次性堆庞大模拟器。
       - [x] ④ 更新文档中的运行时验证边界 —— **v3.9.2 完成**：把边界压成

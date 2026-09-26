@@ -13,6 +13,10 @@
 // 📔 日记数据引擎 - 存储与AI调用
 // ========================================
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
+/* [v3.10.0 · G-3] 日记侧接干跑取数：让「这一天真正生效的设定」也进日记请求。
+ *   刻意**不新建取数实现** —— 与 worldpulse 共用 `config/worldbook-dryrun.js` 同一份
+ *   （同一口径只许一份实现；本仓第九道门对「同一口径抄 N 份」有常驻判据）。 */
+import * as DR from '../../config/worldbook-dryrun.js';
 
 export class DiaryData {
     constructor(storage) {
@@ -1012,6 +1016,13 @@ export class DiaryData {
 
         const messages = [];
         await window.VirtualPhone?.worldbookManager?.appendWorldbookMessages?.(messages, 'diary');
+        /* [v3.10.0 · G-3] 上面那一步给的是**用户在设置里手选的设定集**。
+         *   日记要写「这一天发生了什么」，因此还必须知道**此刻真正会被触发的设定**
+         *   （关键词命中 / 常驻 / 深度）—— 两者不是同一件事：手选的条目此刻可能不命中
+         *   （**假在场**），此刻命中的条目可能没被手选（**真缺席**）。
+         *   本步把干跑取数结果作为**补充块**追加，取不到时返回 ''（请求与接线前逐字相同）。 */
+        const loreBlock = await this._buildDiaryDryRunBlock();
+        if (loreBlock) messages.push(loreBlock);
         if (wechatHistoryMessage) messages.push(wechatHistoryMessage);
         messages.push(...chatMessages);
         this._appendDiaryPromptAtMessageEnd(messages, filledPrompt);
@@ -1040,6 +1051,84 @@ export class DiaryData {
 
         // 使用新的多日记解析方法
         return this.parseMultipleDiaries(rawContent);
+    }
+
+    /**
+     * [v3.10.0 · G-3] 日记侧的「此刻真正生效的设定」块。
+     *
+     * 为什么接在日记：日记写的是「这一天」，而**这一天里哪些设定是活的**只有干跑能答。
+     * 手选设定集答的是「用户以为该看哪些」，两者不同（假在场 / 真缺席）。
+     *
+     * 口径纪律（三条）：
+     *   ① **只取数不注入**：本方法只读 localStorage 里 worldpulse 已取好的快照，
+     *      或现取一次；它**不写**任何存储、不改 `WorldbookManager` 的选书面。
+     *   ② **读不到就不加块**：`unsupported` / `unavailable` 一律返回 `null`，
+     *      请求与接线前**逐字相同**（绝不假装有设定，也不说「没有设定」）。
+     *   ③ **不跨会话串味**：快照带 `at`；早于本次会话起点的快照直接不用（陈旧读数比没有更坏）。
+     *      这条是本仓治理过多轮的形态 —— 拿旧会话的读数喂新会话的生成。
+     *
+     * @returns {Promise<object|null>} `{role, content, name, isPhoneMessage}`；无内容时 null
+     */
+    async _buildDiaryDryRunBlock() {
+        try {
+            if (this._dryRunBlockEnabled() === false) return null;
+            const src = await this._resolveDryRunSnapshot();
+            if (!src) return null;
+            const block = DR.dryRunLoreBlock(src, { maxChars: 2000 });
+            if (!block) return null;
+            return {
+                role: 'system',
+                content: '【此刻真正生效的设定（世界书干跑取数；与上面手选设定集互补，冲突时以本块为准）】\n' + block,
+                name: 'SYSTEM (世界书·干跑)',
+                isPhoneMessage: true
+            };
+        } catch (_e) { return null; }
+    }
+
+    /** 日记侧开关（**随会话隔离**：键必须是 `/^diary_/`，与日记本体的存储归属一致）。
+     *  为什么用会话级而不是全局：干跑取数说的是「**此刻**这个会话会触发哪些设定」——
+     *  它跨会话留存即变成旧读数（本仓治理过多轮的形态）。 */
+    _dryRunBlockEnabled() {
+        try {
+            const v = this.storage?.get?.('diary_dryrun_enabled', true);
+            if (v === false || v === 'false') return false;
+            return true;
+        } catch (_e) { return true; }
+    }
+
+    /**
+     * 取一份可用的干跑快照。优先复用 worldpulse 刚取好的那一份（同一台设备上「此刻」只有一份），
+     * 没有或已陈旧时**现取一次**。两条路径都只读。
+     */
+    async _resolveDryRunSnapshot() {
+        /* 路径一：worldpulse 实例上已有的快照（同一次生成的窗口内，两者说的是同一个「此刻」） */
+        try {
+            const wp = window.VirtualPhone?.worldpulseApp;
+            const snap = wp && wp._loreDry;
+            if (snap && typeof snap === 'object' && !this._isStaleDryRun(snap)) return snap;
+        } catch (_e) { /* 落到现取 */ }
+        /* 路径二：现取（与 worldpulse 同一条取数口，不另写一份实现） */
+        try {
+            const ctx = this._getContext();
+            return await DR.collectDryRunEntries({ ctx: ctx, at: Date.now() });
+        } catch (_e) { return null; }
+    }
+
+    /**
+     * 陈旧判定：快照的 `at` 早于**本次会话**的起点即弃用。
+     * 会话起点取 `chat` 里最后一条消息的时间戳下界（取不到就不做此判 —— 拿不到证据不硬猜）。
+     */
+    _isStaleDryRun(snap) {
+        try {
+            const at = Number(snap && snap.at);
+            if (!Number.isFinite(at) || at <= 0) return false;   /* 无时间戳：不据此丢弃（不猜） */
+            const ctx = this._getContext();
+            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+            const last = chat[chat.length - 1];
+            const lastAt = Number(last?.send_date) || Number(last?.create_date) || 0;
+            /* 快照早于**最后一楼**的时间戳且超过一分钟，视为旧会话残留 */
+            return lastAt > 0 && at + 60000 < lastAt;
+        } catch (_e) { return false; }
     }
 
     _appendDiaryPromptAtMessageEnd(messages = [], promptContent = '') {

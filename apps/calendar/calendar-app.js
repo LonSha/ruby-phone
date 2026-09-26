@@ -227,6 +227,30 @@ export class CalendarApp {
         window.removeEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
     }
 
+    /**
+     * [v3.10.0 · G-4] 日历这一层的「当前剧情时刻」只读出口（供跨 App 时间编排面调用）。
+     *
+     * 为什么是**只读探针**而不是让 `config/story-clock.js` 自己 import 日历：
+     *   ① 本仓纪律「同一口径只许一份实现」—— 剧情日期的取数口是 `timeManager.getCurrentStoryTime()`，
+     *      由日历 App 自己持有一份调用；时间编排层只消费**归一后的形状**，不重取一次。
+     *   ② 日历是会话级数据，取数路径随宿主变化；把这条路放在 App 里，跨 App 面就不必知道它。
+     *
+     * 三条纪律：不写任何状态 / 不抛（取不到返回 null）/ **不猜**（拿不到就 null，
+     * 绝不用 `Date.now()` 顶替剧情日期 —— 现实时间与剧情时间不是同一件事）。
+     *
+     * @returns {{date:string, label:string, source:string}|null}
+     */
+    currentStoryDate() {
+        try {
+            const tm = window.VirtualPhone?.timeManager;
+            const cur = tm?.getCurrentStoryTime?.();
+            const date = String((cur && cur.date) || '').trim();
+            if (!date) return null;
+            const time = String((cur && cur.time) || '').trim();
+            return { date, label: time ? date + ' ' + time : date, source: 'calendar' };
+        } catch (_e) { return null; }
+    }
+
     checkScheduleReminders(currentTime = null, options = {}) {
         if (!this.calendarData.isReminderEnabled()) return null;
         const tm = window.VirtualPhone?.timeManager;
