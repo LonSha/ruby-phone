@@ -79,8 +79,8 @@
   "update_gap_ms_n2000": 0.07
  },
  "scan": {
-  "files": 227,
-  "full_materialize": 8,
+  "files": 228,
+  "full_materialize": 9,
   "bounded_slice": 5,
   "indexed_loop": 18,
   "length_read": 47
@@ -93,6 +93,7 @@
    "apps/wechat/wechat-data.js:4014",
    "apps/weibo/weibo-data.js:2385",
    "config/api-manager.js:397",
+   "config/worldbook-dryrun.js:155",
    "index.js:2837",
    "index.js:10449"
   ],
@@ -141,7 +142,7 @@
    "id": "L5",
    "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
    "pass": true,
-   "got_text": "files=227，全表物化=8，slice(-n)=5，下标直取=18，长度读=47"
+   "got_text": "files=228，全表物化=9，slice(-n)=5，下标直取=18，长度读=47"
   }
  ],
  "timing_criteria": [
@@ -157,7 +158,7 @@
   "answer": "**本版判定：有一个面，而且只有一个 —— 「截断发生在物化之后」。它按读数成立，不靠感觉；本版只登记与立判据，形态决策留给后续版本。**",
   "reasons": [
    "**有界消费者确实有界**：`recentStoryContext` 行数 8/8/8/8/8、`recentStoryDigest` 行数 6/6/6/6/6（N=10/100/400/1000/2000）—— 最近 n 楼抽取类路径全程输出形态恒定。这条**否掉了「长会话下本地摘要会退化」的猜测**。",
-   "**全表物化站点确实存在且对象数 == 楼层数**：Tavern 源 `items()` 长度 10/100/400/1000/2000（静态面实测 8 个站点）。代表性证据：`makeTavernSource()` 是 `ctx.chat.map(...)`；wechat/honey 是 `chat.forEach` 建**全量**行数组后再 `slice(-10)`。",
+   "**全表物化站点确实存在且对象数 == 楼层数**：Tavern 源 `items()` 长度 10/100/400/1000/2000（静态面实测 9 个站点）。代表性证据：`makeTavernSource()` 是 `ctx.chat.map(...)`；wechat/honey 是 `chat.forEach` 建**全量**行数组后再 `slice(-10)`。",
    "**上限存在，但设在物化之后**：引擎索引长度 10/100/400/600/600（`MAX_SCAN_PER_SOURCE = 600`）—— 引擎侧是安全的；代价在**源侧**：即便最终只用 600 条，源侧也已把 N 条全部映成了对象（每条含最多 600 字正文）。",
    "**未观察到超线性**（实测值见 `timing_criteria` 块：计时读数不可复算，故不写进结论文本）。所以这不是性能危机，而是「代价随会话长度无界增长」的**形态**问题：今天 1000 楼 1~2ms，但真实单楼可达数千字、真机比这里慢，再叠加多个消费点，才是要防的。",
    "**视图层站点未实测**：4 处视图层的全表物化（`wechat/chat-view.js` / `wechat/wechat-data.js` / `honey/honey-data.js` / `weibo/weibo-data.js`）需真 DOM 与 App 实例，本探针只做静态归类 —— 如实登记，不假装覆盖。"
@@ -173,7 +174,8 @@
   "本探针第一版把「全表物化」正则写成 `(?:context|ctx)\\.chat`，实测 0 命中 —— 因为真实写法里接收者叫 `chat`（`const chat = ctx?.chat`）、且有的站点是 `probe.chat.forEach`。口径修正：接收者改为「任意以 context/ctx 结尾的成员链，或裸 chat」，实测 8 个站点。",
   "「物化」不能只看 forEach/map/filter：`chat.slice(-8).map(...)` 也是 O(8) 物化，但它**有界**。故四类分开计（full / bounded / indexed / length），不混成一个「消费点数」。",
   "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
-  "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。"
+  "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。",
+  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。"
  ],
  "not_done": [
   "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",

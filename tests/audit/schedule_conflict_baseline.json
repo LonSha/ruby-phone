@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 226,
+    "files_scanned": 227,
     "consume_points": 22,
     "consume_files": 4,
     "local_engine_hits": 0
@@ -75,7 +75,8 @@
     "**探针首版把内部调度器误报成「上游有日程面」**：初版按裸子串搜 `schedule`，命中上游 index.js 的 `_scheduleFloorHeal(f)`（注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）—— 那是**内部楼层修复调度器**，既不是外供面、也与剧情日程无关。修正为只认**对象键形态**（`schedule:` / `timetable:`）后为 0 命中。教训：判据必须匹配**真实书写**（同 lifecycle 门禁的踩坑：漏认/多认都会翻转结论）。",
     "**探针首版只搜整文件，把 T16/T17 自述里的 `severity` 误报成「coPresence 面含判断字段」**：`scene-book.js` 的 `observationNotes()`（v3.232.0 的 F-6 口径自述）里有 `severity: 'observation'` 两条，与 coPresence 无关。修正为只在 **`coPresence()` 函数体（花括号配平抽取）** 内搜，实测 0 命中。教训：**范围粒度错会造成假阳性**，而假阳性会直接翻转 R3 的结论。",
     "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
-    "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。"
+    "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
+    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

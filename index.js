@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.9.2';
+const ST_PHONE_VERSION = '3.9.3';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,13 +127,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-28",
     items: [
-        "**运行时验证边界首次接入面向用户的说明（TODO P2 ④ 收口）** —— 工程侧一直有 `docs/runtime-verification-boundary.md`，但用户看不到它。本版把边界压成一句话接进 App 内「本版更新」弹窗。",
-        "**能保证什么**：结构正确与接线完整（语法 411 文件 / 导入 239 文件 338 条可解析 / 无新增死导出 / 生命周期与键归属 / 契约对账），以及**无浏览器最小宿主**里能观测到的行为读数（监听器数量、存储幂等、长会话取数形态）。",
-        "**不能保证什么（一句话版本）**：它不能保证真机排版、真实网络、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属登记在案的第二类，需在真机复现后再修。",
-        "**新登记一维**：长会话下「单次渲染耗时 / 内存快照增长」仍不可测（夹具不渲染 DOM）。已验的是**形态与计数**：全表物化站点 8 个、物化对象数是否等于楼层数、引擎侧上限 600 是否生效。",
-        "**判据钉法**：边界文档的「用户可见一句话」与更新说明必须**同源**（同步两侧，否则 `tests/system-v328.test.mjs` 转红）—— 防止工程写下边界、用户侧另说一套。",
-        "**复校纪律**：边界文档里的实测数字必须随门禁一起复校（本次把 230 文件 / 289 条等旧读数更新为当版实测 411 / 239 文件 338 条）。",
-        "落地：`docs/runtime-verification-boundary.md`（复校 + 新增用户可见节）+ `tests/system-v328.test.mjs`。产品代码零改动。**版本升至 3.9.2（五源同源）**。"
+        "**世界书干跑取数层（v3.9.3 新增能力）** —— 此前 ruby-phone 各 App 只能读到**用户在设置里手选的**世界书条目（`WorldbookManager.appendWorldbookMessages`），从来不知道主 AI 在**此刻**实际会看到哪些条目——即「用户以为会看到的设定」与「真正会被触发的设定」不是同一件事。本版新增 `config/worldbook-dryrun.js`：用宿主的 `getWorldInfoPrompt` **干跑一次**取回真实触发结果。",
+        "**取数层的五条口径纪律**：① 干跑不污染（返回值用完即弃，不写设置 / 会话元数据 / 任何全局）；② 宿主接口**每次现取**，不做模块级缓存；③ **四态必须分形**（`unsupported` / `unavailable` 时条目为 `null` 而非空数组——「没给」与「给了 0 条」必须不同形）；④ **降级要留名**（兜底记 `activated-fallback`，不冒充 `ok`）；⑤ 纯函数化可注入，便于夹具证伪。",
+        "**兜底路径**：干跑失败时改用 `WORLD_INFO_ACTIVATED` 事件记录（**条件订阅**，不猜事件类型名、不硬编码字符串），并明确标注这是「上一次」的读数；两者都拿不到时记为 `unavailable`。",
+        "**接线点唯一**：`apps/worldpulse/worldpulse-app.js` 的生成路径多一层「此刻生效的设定」。取不到时该块为空串，**请求与接线前逐字相同**；换会话时监听与读数一并收净（不跨会话串味，且刻意不落持久存储——它是「此刻」的读数）。",
+        "**判据纪律**：`tests/system-v329.test.mjs`（14 项）含三条**真源码破坏**负控制——把 `null` 改成空数组、把 `isDryRun` 位改成 `false`、把兜底状态冒充 `ok`，每条都必须在破坏副本上转红；另断言取数**不污染**（三次调用后 chat / 会话元数据 / 设置 / localStorage / 监听器数逐字节不变）。",
+        "**运行时验证边界（与 `docs/runtime-verification-boundary.md` 同源）**：门禁保证的是结构正确与接线完整，以及无浏览器最小宿主里的行为读数；它**不能**保证真机排版、真实网络、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属登记在案的第二类，需在真机复现后再修。",
+        "**复校纪律**：边界文档实测数字必须随门禁一起复校（本次 412 文件 / 239 文件 338 条 → **414 文件 / 240 文件 339 条**），文档复校标记同步为 v3.9.3。",
+        "落地：`config/worldbook-dryrun.js` + `tests/system-v329.test.mjs` + 夹具 `tests/_runtime_host.mjs`（新增 `worldInfo` 入参与事件类型名）+ `apps/worldpulse/worldpulse-app.js`。**版本升至 3.9.3（五源同源）**。"
     ]
 };
 

@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 226,
+    "files_scanned": 227,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
@@ -120,7 +120,8 @@
     "**探针 v1 把「外供」等同于「进 bridge 快照」（口径错 ⇒ R3 假阴性）**：下游本来就在**直读上游模块全局**（`window.LonShaFloorLedger` / `window.LonShaMemory` / `window.LonShaEvidenceWorkbench`，实测 8 个站点），所以「不在快照里」根本推不出「拿不到」。修法：改为**可达性实测** —— 把模块源码在隔离沙箱里真加载、真调用，量出「能不能读、读到什么、状态跨不跨实例」。教训：**不要用推断代替测量**；外供形式有三种（快照 / 模块全局 / 都不给），不能先把答案限定成一种再算命中率。",
     "**探针 v2 的预检判据未限定域（假阳性）**：对全模块裸搜 `dryRun` 会命中上游 3 个模块（index.js×25、settings-ui.js×15、schema-migration.js×8）——那是**注入链路的诊断 dry-run**（「这段内容没有进入 AI 上下文，只回答召回→注入链路通不通」）与**恢复管线预检**，与「回滚预览」不是一个域。修法：域由**文件名模式**派生（branch|ledger|replay|guard|snapshot|checkpoint|restore|changeset|version|closure|shift ⇒ 18 个模块），判据只在域内算。教训同族：**范围粒度错会造成假阳性**。",
     "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
-    "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。"
+    "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
+    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

@@ -197,7 +197,10 @@ export function installRuntimeHost(opts = {}) {
       CHAT_CHANGED: 'chat_changed',
       GENERATION_STARTED: 'generation_started',
       GENERATE_BEFORE_COMBINE_PROMPTS: 'generate_before_combine_prompts',
-      CHAT_COMPLETION_PROMPT_READY: 'chat_completion_prompt_ready'
+      CHAT_COMPLETION_PROMPT_READY: 'chat_completion_prompt_ready',
+      /* [v3.9.3] 世界书激活事件：消费侧（`config/worldbook-dryrun.js`）的
+       *   降级兜底走它。默认只是登记了类型名，**不会自己发**（发了就等于伪造宿主行为）。 */
+      WORLD_INFO_ACTIVATED: 'world_info_activated'
     },
     extensionSettings: { st_virtual_phone: {} },
     saveChat: async () => {
@@ -209,6 +212,22 @@ export function installRuntimeHost(opts = {}) {
     saveSettingsDebounced: () => {},
     saveMetadata: async () => {}
   };
+
+  /* [v3.9.3] 世界书干跑取数：把「宿主有没有这个接口」做成**显式入参**。
+   *   不传 ⇒ 夹具**不挂** `getWorldInfoPrompt` ⇒ 消费侧读到 `unsupported`（真实态之一，
+   *     正是要能覆盖的那一态；夹具默认假装接口存在会让这一态永远测不到）。
+   *   传对象 ⇒ 当干跑返回值（每次深拷贝一份，防测试间共享同一对象被改）。
+   *   传函数 ⇒ 当 `getWorldInfoPrompt` 本体（用来测抛错、测入参）。
+   *   `worldInfoCalls()` 记真实调用与最近一次入参：判据据此断言，不靠外部闭包。 */
+  const _wiCalls = [];
+  const wiSrc = opts.worldInfo;
+  if (wiSrc !== undefined && wiSrc !== null) {
+    ctx.getWorldInfoPrompt = async (chatForWI, maxContext, isDryRun, scanData) => {
+      _wiCalls.push({ chatForWI, maxContext, isDryRun, scanData });
+      if (typeof wiSrc === 'function') return wiSrc(chatForWI, maxContext, isDryRun, scanData);
+      return JSON.parse(JSON.stringify(wiSrc));
+    };
+  }
 
   const localStorageStub = {
     _m: new Map(),
@@ -282,6 +301,8 @@ export function installRuntimeHost(opts = {}) {
     storage: opts.storage || null,
     /** [v3.4.1 · P-5] saveChat 的真实调用次数（含重试） */
     saveChatCalls: () => _saveChatCalls,
+    /** [v3.9.3] 干跑取数的真实调用记录（入参含 `isDryRun` / `maxContext`） */
+    worldInfoCalls: () => _wiCalls.slice(),
     /** 当前登记的全局监听器（window/document/visualViewport 上的） */
     listeners: () => registry.map((r) => ({ target: r.target, type: r.type })),
     listenerCount: () => registry.length,

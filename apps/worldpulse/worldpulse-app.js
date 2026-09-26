@@ -12,6 +12,7 @@ import { WorldpulseView } from './worldpulse-view.js';
 import { childRuntime } from '../../config/runtime-lifecycle.js';
 // [v2.35.0] 对外世界桥消费面（只读）：把「现编平行事件」换成「消费 WorldAxis 真世界状态」
 import { readWorldAxisSnapshot, readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine, worldBridgeAvailability, bridgeReport } from '../../config/world-bridge.js';
+import { collectDryRunEntries, recordActivated, dryRunLoreBlock, dryRunFace } from '../../config/worldbook-dryrun.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -34,6 +35,11 @@ export class WorldpulseApp {
         this._processing = false;
         this._unsub = null;
         this._pollTimer = null;
+        /* [v3.9.3] 世界书干跑：最近一次取数快照 + 事件兜底记录。
+         *   刻意**不放 storage** —— 它是「此刻」的读数，跨会话留存即变成旧读数（本仓同族缺陷）。 */
+        this._loreDry = null;
+        this._loreActivated = [];
+        this._loreUnsub = null;
     }
 
     // ========== 设置/状态读写（容错） ==========
@@ -96,6 +102,15 @@ export class WorldpulseApp {
         this.stopListening();
         this._listening = true;
         const ctx = this._ctx();
+        /* [v3.9.3] 订阅 `WORLD_INFO_ACTIVATED`：这是干跑失败时的**降级兜底**来源。
+         *   若宿主没有这个事件类型名（旧版酒馆），就不订 —— 不猜类型名、不硬编码字符串。 */
+        try {
+            if (ctx?.eventSource && ctx?.event_types?.WORLD_INFO_ACTIVATED) {
+                const wh = (payload) => { this._loreActivated = recordActivated(this._loreActivated, payload); };
+                ctx.eventSource.on(ctx.event_types.WORLD_INFO_ACTIVATED, wh);
+                this._loreUnsub = () => { try { ctx.eventSource.removeListener?.(ctx.event_types.WORLD_INFO_ACTIVATED, wh); } catch (_e) {} };
+            }
+        } catch (_e) { this._loreUnsub = null; }
         // 初始化基线，避免启动即补一大段历史
         const st = this.getState();
         if (!st.lastFloorCount) { st.lastFloorCount = this._floorCount(); this._saveState(st); }
@@ -122,7 +137,31 @@ export class WorldpulseApp {
         this._unsub = null;
         // [v2.28.0] 兜底轮询由实例域统一回收（旧写法手写 clearInterval + 单字段清空）
         this._rt.cancelByTag('poll:');
+        /* [v3.9.3] 世界书事件订阅与快照一并收净：快照是「此刻」的读数，换会话即失效，
+         *   留着会让新会话读到旧会话的条目（本仓抓过的「跨会话串味」同族）。 */
+        try { this._loreUnsub?.(); } catch (_e) {}
+        this._loreUnsub = null;
+        this._loreDry = null;
+        this._loreActivated = [];
         this._pollTimer = null;
+    }
+
+    /* [v3.9.3] 刷新「此刻会触发的世界书」读数。只取数（零副作用），失败由 `state` 如实分态。
+     *   刻意**不抛**：取数拿不到不是致命错，App 主体必须照常工作（此前的行为一字不变）。 */
+    async _refreshLoreDry() {
+        try {
+            const snap = await collectDryRunEntries({ ctx: this._ctx(), activated: this._loreActivated, at: Date.now() });
+            this._loreDry = snap;
+            return snap;
+        } catch (_e) {
+            this._loreDry = { state: 'unavailable', reason: '取数调用本身抛错', entries: null, dropped: 0, floorCount: 0, at: Date.now() };
+            return this._loreDry;
+        }
+    }
+
+    /** 给 UI 读的一句话面（四态各有各的话；未取过 ⇒ unsupported，不猜成「0 条」）。 */
+    loreDryRunFace() {
+        return dryRunFace(this._loreDry);
     }
 
     // [v2.21.0] 换会话：实例跨会话复用（index.js 仅在首次打开时 new），
@@ -225,6 +264,13 @@ export class WorldpulseApp {
         const am = window.VirtualPhone?.apiManager;
         if (!am || typeof am.callAI !== 'function') return null;
         const digest = WP.recentStoryDigest(this._ctx(), 6);
+        /* [v3.9.3] 干跑取数接进真生成路径：让平行事件也受「**此刻真正生效的设定**」约束。
+         *   与 digest 互补 —— digest 说「刚发生了什么」（最近正文），
+         *   这一面说「哪些设定此刻正在生效」（世界书干跑结果）。
+         *   取不到（unsupported/unavailable）时 `dryRunLoreBlock` 返回 ''，
+         *   请求与接线前**逐字相同**（不再凭空编，也不假装有设定）。 */
+        await this._refreshLoreDry();
+        const loreBlock = dryRunLoreBlock(this._loreDry, { maxChars: 2000 });
         // 真世界不可用时，若桥**在位但没开/没快照**，把归因块一并交给 LLM：
         //   让生成带着「本世界已有哪些真实动态」的约束，而不是完全凭空编。
         const consistency = this._worldAxisBlock();
@@ -232,6 +278,7 @@ export class WorldpulseApp {
             ? '\n\n【远场】这条只是背景呼吸，不得写成正在主线现场发生的事，不得让主角当场遭遇。'
             : '';
         const prompt = WP.buildEventPrompt(ev.style, ev.customPrefix, digest)
+            + (loreBlock ? `\n\n【此刻生效的设定（世界书干跑取数）】\n${loreBlock}` : '')
             + (consistency ? `\n\n${consistency}` : '')
             + layerNote;
         try {
