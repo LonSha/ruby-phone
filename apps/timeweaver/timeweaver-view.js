@@ -12,6 +12,7 @@ import { eventPlatformsLine } from '../../config/world-bridge.js';
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+const CLOCK_SRC_NAME = { worldaxis: '世界钟', lonsha: '插件剧情日期', calendar: '日历当天' };
 const SRC_ICON = { diary:'📔', album:'🖼️', achievement:'🏆', calendar:'📅', weibo:'💬', honey:'🍯', theater:'🎭', life:'✨', chat:'💬', misc:'✨', unknown:'✨' };
 
 export class TimeweaverView {
@@ -203,7 +204,7 @@ export class TimeweaverView {
         </div>
         ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
         <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>
-        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}${this._evidenceBlock(m)}`;
+        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}${this._evidenceBlock(m)}${this._storyClockBlock(m)}`;
     }
     /* [v3.0.2] R2-C 送达侧：本轮**真的**进了上下文的是哪几块、哪几块被预算裁掉。
        为什么和上面的「回望」分两块：那张卡答「想起了什么」（召回侧），
@@ -332,6 +333,55 @@ export class TimeweaverView {
           ${more}
           ${absent}
           <div class="tw-hint" style="font-size:11px;line-height:1.8">引用键与出处楼层由记忆插件侧给出；本栏只转述，不去猜「这条算不算伏笔」。</div>
+        </div>`;
+    }
+
+    /* [v3.10.2 · G-4 余量] 时间侧：这些事发生在**哪一天**（三源对照的单一读数面）。
+       与上四块并列的**第五个问题**：
+         · 回望  答 想起了哪段剧情（召回侧）；
+         · 送达  答 哪几块真的进了上下文（送达侧）；
+         · 来源  答 这件事是谁记的（来源侧）；
+         · 出处  答 她说过的话在哪一楼、出自哪本账（出处侧）；
+         · 本块答 **现在算哪一天**（时间侧）—— 前四块给的是内容，本块给的是判读内容的**基准**。
+       本仓最贵的错读数之一就是「拿现实时间当剧情时间」：没有这一块时，
+       三月的日记与六月的约定哪个在前，界面上无据可判，只能靠现实日期猜。
+       缺席时不显示（收集器那层已不建卡）——读不到就是读不到，不写「今天是 0 号」。
+       三源一致性由真源给出（一致 / 不一致 / 无法验证），本块**只转述，不重判**。 */
+    _storyClockBlock(m) {
+        const sc = m && m.storyClock;
+        if (!sc) return '';
+        /* 徽标取真源三态（conflict / agree===true / 其余）——**不在这里重算一致性**：
+         *   「没能比」（agree === null）与「比过、一致」（true）必须显示成两句话。 */
+        const VERDICT_CLS = { '不一致': 'color:#f87171', '一致': 'color:#7ee787', '无法验证': 'color:#9c8b7a' };
+        const vStyle = VERDICT_CLS[sc.verdict] || 'color:#9c8b7a';
+        /* 逐源行：state 与归因文案都来自真源（`reasonText`），本块不拼结论。
+         *   原值取不到时显示「—」，**绝不显示 0**（0 是「第 0 天」这个真实读数）。 */
+        const rows = (sc.sources || []).map((s) => {
+            const name = CLOCK_SRC_NAME[s.key] || s.key;
+            const val = (s.state === 'ok' && s.date) ? s.date : '\u2014';
+            const detail = (s.state === 'ok')
+                ? [s.label && s.label !== s.date ? s.label : '', s.precision ? '粒度 ' + s.precision : '', (s.turn === null || s.turn === undefined) ? '' : '第 ' + s.turn + ' 轮'].filter(Boolean).join(' · ')
+                : esc(s.reasonText || s.reason || '');
+            const col = (s.state === 'ok') ? '' : (s.state === 'unusable' ? 'color:#f87171' : 'color:#6e7681');
+            return `
+          <div class="tw-person">
+            <span class="tw-person-rank">${s.state === 'ok' ? '\u25c6' : '\u25c7'}</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(name)} <span class="tw-person-meta" style="${col}">${esc(val)}${detail ? ' · ' + detail : ''}</span></div>
+            </div>
+          </div>`;
+        }).join('');
+        return `
+        <div class="tw-curve" style="margin-top:14px">
+          <div class="tw-curve-label">\ud83d\udd52 时间侧观测 · 现在算哪一天</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip" style="${vStyle}">${esc(sc.verdict)}${sc.primaryDate ? '：' + esc(sc.primaryDate) : ''}</span>
+            <span class="tw-chip">${esc(sc.present)} 处给出日期</span>
+            ${sc.primary ? `<span class="tw-chip">以 ${esc(CLOCK_SRC_NAME[sc.primary] || sc.primary)} 为准</span>` : ''}
+          </div>
+          ${rows}
+          <div class="tw-hint" style="font-size:11px;line-height:1.8;text-align:left">${esc(sc.text || '')}</div>
+          <div class="tw-hint" style="font-size:11px;line-height:1.8">三处时间读数（世界钟 / 插件剧情日期 / 日历当天）各说各话时**必须显式报冲突**；<br>只有一处给得出日期时按「无法验证」处置，绝不用现实时间顶替剧情时间。</div>
         </div>`;
     }
 

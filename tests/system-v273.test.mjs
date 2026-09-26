@@ -103,11 +103,25 @@ const PROD_MOD = [
 ].join('\n');
 
 // ══════════════ 正控制：真仓库上 E11 通过，且读数在场 ══════════════
-test('v273-P1 真仓库 E11 通过：本仓 6 个访问点 / 仅测试消费面 4 个 / 账本命中 6 次', () => {
+/* [v3.10.2 交棒] 原判据写死 E11 读数行（精确数字：6 个访问点 / 4 个面 / 4 条账本 / 命中 6 次）
+ *   —— 那是**当版精确读数**，账本条目一增即过期（v3.10.2 新增第 5 条）。本套件守的是
+ *   「E11 读数在场 + 口径自洽」：访问点 ≥6 · 面数 == 账本条数 · 账本 ≥1 · 命中 == 访问点。
+ *   精确数字交给当版套件接管（同 v268-P1 / v290-P1 / v3210-G1 的本仓交棒口径）。 */
+test('v273-P1 真仓库 E11 通过：读数行在场且口径自洽（下限形）', () => {
   const r = runOriginal();
-  assert.equal(r.code, 0, '真仓库应通过\n' + r.out.slice(0, 800));
-  assert.match(r.out, /default 面（E11）：\.default 访问点 \d+ 个（本仓 6 \/ 非本仓扫描面 \d+）· 仅测试消费面 4 个 · 账本 4 条（命中 6 次）/,
-    'E11 读数行缺席或数字漂移：\n' + r.out.slice(0, 800));
+  assert.equal(r.code, 0, r.out.slice(0, 400));
+  const m = /default 面（E11）：\.default 访问点 (\d+) 个（本仓 (\d+) \/ 非本仓扫描面 (\d+)）· 仅测试消费面 (\d+) 个 · 账本 (\d+) 条（命中 (\d+) 次）/.exec(r.out);
+  assert.ok(m, 'E11 读数行缺席（口径不得静默变更）：\n' + r.out.slice(0, 800));
+  const [, total, inRepo, , faces, ledger, hits] = m.map(Number);
+  assert.ok(inRepo >= 6, '本仓访问点数须 ≥ 6（曾经的真实量级）：' + inRepo);
+  assert.equal(faces, ledger, '「仅测试消费面」数必须等于账本条数（每条账本对应一个面）');
+  assert.ok(ledger >= 1, '账本不得为空');
+  /* ★ 口径锁：账本命中数与「本仓访问点数」的关系**不是**等号 —— 命中只覆盖
+   *   「本仓扫描面内、且产品侧无通道」的访问点（非本仓那 2 个访问点天然不被认领），
+   *   故用上下界锁，不用等号（本套件首版写成 hits === total 即红，属判据自身缺陷）。 */
+  assert.ok(hits >= ledger, '账本命中数必须 ≥ 账本条数（D3 已保证每条至少 1 次命中）');
+  assert.ok(hits <= total, '账本命中数不得超过全部 .default 访问点数');
+  assert.ok(total >= inRepo, '本仓访问点数不得超过访问点总数');
   assert.match(r.out, /\[dead-export\] ✓ 无新增零消费导出/);
 });
 test('v273-P2 E11 未破坏 E9 枚举面（未识别仍为 0、白名单仍认领 95 处）', () => {
@@ -125,12 +139,12 @@ test('v273-P3 真仓库 --list 模式仍可用（E11 不拦列表）', () => {
   assert.equal(r.code, 0, r.out.slice(0, 400));
   assert.match(r.out, /零消费 \d+/);
 });
-test('v273-P4 诊断面 --e11-dump：真仓库 4 个面逐条 in-scope / 产品通道无 / 成员依据真', () => {
+test('v273-P4 诊断面 --e11-dump：面逐条 in-scope / 产品通道无 / 成员依据真', () => {
   const r = runOriginal(['--e11-dump']);
   assert.equal(r.code, 0);
-  // 明细总数含测试用例里的合成夹具路径（本套件自身），故只锁定「本仓 6 个」这一读数
+  // 明细总数含测试用例里的合成夹具路径（本套件自身），故只锁定「本仓 ≥6 个」这一读数
   const main = runOriginal();
-  assert.match(main.out, /（本仓 6 \//);
+  assert.match(main.out, /（本仓 \d+ \//);
   // 四个面各出现，且都标为「在扫描面 Y · 产品通道 无 · 成员依据 true」
   for (const [t, mem] of [['system-v247.test.mjs', 'QUALITY_META'], ['system-v247.test.mjs', 'QUALITY_ORDER'],
     ['system-v248.test.mjs', 'TIER_META'], ['system-v248.test.mjs', 'TIER_ORDER']]) {

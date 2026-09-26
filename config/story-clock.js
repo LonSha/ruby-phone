@@ -229,6 +229,49 @@ export function storyClockLine(sc) {
     return { present: c.present, verdict, detail: marks.join(' · ') };
 }
 
+/**
+ * 跨 App 的「当前剧情时刻」**只读取数口**（真源，单一实现；由调用方注入宿主 window）。
+ *
+ * 【为什么必须有这一份（本仓第九道门 J4 的同族形态）】
+ *   三个来源里只有「日历当天」需要**由 App 侧取数**（剧情日期的取数口是
+ *   `timeManager.getCurrentStoryTime()`，由日历 App 自己持有）。G-4 首版把这段探针
+ *   写在诊断内核里；本版让世界脉搏与织光机也读同一面 —— 若三处各写一份，
+ *   必然漂移（本仓 v2.97 的教训：7 份 probeBridge 各自为政，同一读数三个说法）。
+ *   故取数口上收到本模块：**少一个取数点，就少一处分歧**。
+ *
+ * 【为什么是注入式而不是本模块 import 日历 App】
+ *   ① 本仓纪律「同一口径只许一份实现」—— 本模块只做**归一**，不承担别的 App 的取数路径；
+ *   ② 日历是会话级数据、取数路径随宿主变化，把那条路放在 App 里，跨 App 面就不必知道它。
+ *
+ * 【三条纪律】纯读（不写任何状态）/ 不抛（拿不到即 null）/ 不猜
+ *   （拿不到就 null，**绝不**用 `Date.now()` 顶替剧情日期 —— 现实时间与剧情时间不是同一件事）。
+ *
+ * @param {object} [win] 宿主 window；缺省取全局（无头环境下为 null，探针如返回 null）
+ * @returns {{ win:object, calendarSource:Function }} 可直接交给 `storyClock(o)` 的两个入参
+ */
+export function storyClockProbe(win) {
+    const w = (win && typeof win === 'object') ? win
+        : ((typeof window !== 'undefined') ? window : null);
+    const calendarSource = () => {
+        try {
+            const app = (w && w.VirtualPhone) ? w.VirtualPhone.calendarApp : null;
+            const s = (app && typeof app.currentStoryDate === 'function') ? app.currentStoryDate() : null;
+            /* 字符串形（G-4 首版的写法）归一成契约形状。**空白串不算读数** ——
+             *   「取到了但全是空格」与「取不到」在本面是同一件事（都不得变成一个日期）。 */
+            if (typeof s === 'string') {
+                const t = s.trim();
+                return t ? { date: t, label: t, source: 'calendar' } : null;
+            }
+            if (!s || typeof s !== 'object') return null;
+            const d = String(s.date == null ? '' : s.date).trim();
+            const lb = String(s.label == null ? '' : s.label).trim();
+            if (!d && !lb) return null;
+            return s;
+        } catch (_e) { return null; }
+    };
+    return { win: w, calendarSource };
+}
+
 export default {
     CLOCK_SOURCES,
     CLOCK_REASONS,
@@ -236,5 +279,6 @@ export default {
     lonshaClock,
     calendarClock,
     storyClock,
-    storyClockLine
+    storyClockLine,
+    storyClockProbe
 };

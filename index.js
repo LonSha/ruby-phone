@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.10.1';
+const ST_PHONE_VERSION = '3.10.2';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,12 +127,13 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-28",
     items: [
-        "**属性转义恒等替换收干（本版主治）** —— 全仓 7 处 `esc()` 把引号转义写成了 `.replace(/\"/g, '\"')`：右边那个所谓「实体」是**裸引号本身**，于是这条替换是**恒等替换**，属性转义形同虚设、HTML 属性注入面敞开。7 处为 `apps/memory/graph-view.js`、`apps/mood/mood-view.js`、`apps/reading/reading-epub.js`、`apps/reading/reading-view.js`、`apps/tarot/tarot-view.js`、`apps/timeweaver/timeweaver-view.js`、`apps/worldpulse/worldpulse-view.js`（其中 5 处可追到 v2.8.x 的老账，2 处为无历史来源）。",
-        "**为什么两年没人发现（病根，写进判据防再犯）**：实体字面量在**补丁脚本/写盘层**会被就地解码成裸字符，于是「修一处、扩散一处」—— 本版因此同时钉住**两种合法写法**：① 运行时生成（`String.fromCharCode(38)` 拼接）；② 反斜杠转义序列（`\\x26quot;` / `\\u0022` 一类），使字面量在源码里不被解码。全仓普查（424 个 `.js`/`.mjs`/`.cjs`，其中 55 个含 `esc()` 实现）在**剥注释后**归零。",
-        "**判据套件 `tests/system-v3211.test.mjs`（9 项，真跑 `node --test` 读数）**：A 全仓普查 ×2（归零 + **自证扫描面真在扫**，防「空集合上的判据永远成立」）；B 七处真转义 ×2（**真抽 `esc()` 函数体跑一遍**：输入 `a\"b` 输出必须不等于输入 —— 恒等替换恰好会让它相等，这就是本版的分界点）；C 参照面 ×2；D 负控制 ×2；E 版本锚。",
-        "**判据自身的缺陷优先于实现缺陷（本版连抓三条）**：① A1 首版把**讨论这条纪律的注释**也判红（`// .replace(/\\\"/g, '\\\"')` 写在文件头）⇒ 增加剥注释；② D2 首版拿一个**恰好唯一命中**的锚点去证「锚点不唯一必须抛」⇒ 该判据自己成了假绿（假绿第三形：破坏把判据自己废掉）⇒ 改为按实测计数挑锚点（重复锚点 + 不存在锚点 + 真锚点唯一命中不得抛，两向自证）；③ B2 样本项残留无用参数与 `String_` 变量 ⇒ 清除。",
-        "**运行时验证边界（v3.10.1 复校）**：本版的全部结论都属**静态结构面**（源码文本 + 真跑 `esc()` 的纯函数行为），门禁**不能保证**它们在真机 DOM 上的效果 —— 本版修的是「转义本身被写废」，而「转义是否覆盖到每一个属性拼接点」「宿主渲染时是否有别的注入通道」两条**不可测**，诚实登记在案。边界文档实测数字随门禁一起复校（语法 417 → **418** 文件、导入 242 文件 345 条不变），文档复校标记同步为 v3.10.1。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修。",
-        "落地：`apps/memory/graph-view.js` + `apps/mood/mood-view.js` + `apps/reading/reading-epub.js` + `apps/reading/reading-view.js` + `apps/tarot/tarot-view.js` + `apps/timeweaver/timeweaver-view.js` + `apps/worldpulse/worldpulse-view.js` + `tests/system-v3211.test.mjs`（并交棒 `tests/system-v3210.test.mjs` G1：旧套件只锁下限，精确版本判定由当版套件接管）。**版本升至 3.10.1（五源同源）**。",
+        "**主治：G-4 余量的下游接线 —— 「建好不消费」第九例**。v3.10.0 的 G-4 把三处时间读数（WorldAxis 世界钟 / 插件剧情日期 / 日历当天）收成单一读数面 `config/story-clock.js`，实测**只有诊断中心在读**，织光机与世界脉搏零消费 —— 于是「这些事发生在哪一天」在两处业务面上无据可判，只能拿现实日期猜。本版把这一面接到两处业务面的读数里（织光机「时间侧观测 · 现在算哪一天」卡、世界脉搏桥卡片剧情时刻行），并**不并入 empty 判定**（剧情侧有时间读数、本机没有生活碎片，不是「什么都没有」）。",
+        "**运行时验证边界**（本版复校，工程事实也对用户说清）：本版结论都属**静态结构面 + 纯函数行为**，门禁**不能保证**它们在真机 DOM 上呈现正确 —— 遇到「看起来没坏但显示不对」的问题，属于登记在案的不可测项，需在真机复现后再修（本层能验的是「面接上了、读数逐字同源、缺席与读不出不同形」，**不能**验真机上三个时间来源是否指向同一条时间线）。",
+        "**取数口上收（同一口径只许一份实现）**。日历取数探针（读 `calendarApp.currentStoryDate()`）原本写在诊断内核里；本版世界脉搏与织光机也要读同一面 ⇒ 三处各写一份必然漂移（v2.97 的 7 份 `probeBridge` 各自为政就是前例）。故新增真源 `storyClockProbe(win)`，返回 `{win, calendarSource}`；空白串不算读数、宿主抛错即 null、**不得自造 `date`/`today` 字段**（那是「拿现实时间顶替剧情时间」的入口）。诊断内核改为走它，全仓该调用点归零至两处（日历 App 自持一份 + 真源一份）。",
+        "**建卡契约：不建卡 ≠ 显示 0**。收集器只在三源**全部**落在「不是本机用户问题面」的缺席档（`bridge-absent` / `source-missing`）时返回 null（不建卡）；只要有任何一源**有面**（`ok` / `unusable` / `face-absent` / `no-snapshot`）就建卡并逐源带出归因 —— 缺席时不画一张写着「0」的卡，而「读到但读不出」必须说出来，不得与「桥没装」同形（静默降级）。原设计把建卡挂在 `unusable` 上，实测该态在探针路径上**不可达**（上游每层都有 try/catch 兜底），属**空集合上的判据**，已改钉可验证的「有面」档。",
+        "**判据套件 `tests/system-v3212.test.mjs`（八段 A–H，真跑 `node --test`）**：A 真源探针（具名 + default 双导出、真调用宿主取数口防「桩没被调」假绿、空白即 null、不得自造字段）；B 建卡三态 + 非 ok 源 `date` 必须 null；C 一致性三态透传且收集器不得自算 `conflict`/`agree`；D 织光机接线（两条返回路径 + 视图真消费 + 渲染串）；E 世界脉动接线（两条返回路径 + 取数口剥注释后唯一）；F 全仓 `currentStoryDate` 只许两处；G 两条**真源码破坏**负控制（破坏落真文件文本、判据在破坏副本上重跑必须转红）；H 版本锚。",
+        "**判据与门禁自身的缺陷优先于实现缺陷（本版连抓四条）**：① 原设计的 `unusable` 建卡条件实测不可达 ⇒ 改钉「有面」档（空集合上的判据永远成立）；② 探针未 trim 空白串（`'   '` 被当成读数）⇒ 字符串形与对象形都先 trim；③ E1 的取数口计数把**注释里的提及**也数了进去 ⇒ 剥注释后再计数；④ 新增具名导出触发死导出门 E11「仅测试消费的 default 面」（`.default` 访问点只在测试的一致性守卫里）—— 该门预设修法②正是此情形，已登记 `TEST_ONLY_DEFAULT_LEDGER` 并写明理由（产品侧三处经具名导入真消费）。",
+        "落地：`config/story-clock.js` + `apps/timeweaver/timeweaver-collector.js` + `apps/timeweaver/timeweaver-view.js` + `apps/worldpulse/worldpulse-app.js` + `apps/worldpulse/worldpulse-view.js` + `apps/diagnose/diagnose-data.js` + `scripts/dead-export-check.mjs` + `tests/system-v3212.test.mjs`（并交棒 `tests/system-v3211.test.mjs` E1 与 `tests/system-v273.test.mjs` P1/P4：旧套件只锁下限，精确版本与精确读数由当版套件接管）。**版本升至 3.10.2（五源同源）**。",
     ]
 };
 

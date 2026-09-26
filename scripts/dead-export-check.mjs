@@ -515,6 +515,11 @@ const TEST_ONLY_DEFAULT_LEDGER = [
     reason: '同上（对标 CHEAT_QUALITY_ORDER 的逐项等价）' },
   { module: 'apps/dirtytalk/dt-data.js', member: 'TIER_META',
     reason: '同上族：dt 侧品阶表只经 default 对象外露，产品侧零消费；测试守与 cheat 侧六档的一致' },
+  { module: 'config/story-clock.js', member: 'storyClockProbe',
+    reason: '取数口上收：日历取数探针的唯一真源。产品侧三处（诊断内核 / 织光机收集器 /'
+      + ' 世界脉动 app）全部经**具名导入**消费，default 面的 .default 访问点只在 tests/system-v3212 A1'
+      + ' —— 那里守的是「default 出口也要带」（漏了会静默 undefined，是白名单放行的整条 export default'
+      + ' 的边界外覆盖）。产品端不需要经 default 拿它，故不计为欠债' },
   { module: 'apps/dirtytalk/dt-data.js', member: 'TIER_ORDER',
     reason: '同上（对标 TIER_ORDER 的逐项等价）' },
 ];

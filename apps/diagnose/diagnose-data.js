@@ -57,7 +57,7 @@ import { knowledgeBoundary } from '../plotline/plotline-data.js';
  *   修前：世界钟（WorldAxis）、插件剧情日期（lonsha `clock` 面）、手机日历三者各说各的，
  *   没有任何出口回答「现在到底是哪一天」，更不会告诉用户「它们互相矛盾」。
  *   本模块只归一与陈述（两源/三源对比 + 确定性 primary 规则），不选边、不猜。 */
-import { storyClock, storyClockLine } from '../../config/story-clock.js';
+import { storyClock, storyClockLine, storyClockProbe } from '../../config/story-clock.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -317,19 +317,17 @@ export function collectDiagnose(win, storage) {
      *   为什么接在诊断中心：三处时间读数（世界钟 / 插件剧情日期 / 日历当天）
      *   修前**没有任何一处把它们摆在一起**，用户只能看到互相矛盾的日期而无从判断。
      *   本面把「一致性」与「谁是当前」一次说清，并在不一致时**显式报冲突**。
-     *   日历取数走注入式只读探针（本内核不 import 任何 App）：宿主没提供该面就如实
-     *   报 `source-missing` —— 那是「这一层没给」，不是「读不到」。 */
+     *   日历取数走真源 `storyClockProbe()`（本内核不 import 任何 App）：宿主没提供该面就如实
+     *   报 `source-missing` —— 那是「这一层没给」，不是「读不到」。
+     *   [v3.10.2] 探针上收到 `config/story-clock.js`（本版世界脉搏与织光机读同一面）。 */
     const clockSc = (() => {
-        const calendarSource = () => {
-            try {
-                const app = w && w.VirtualPhone ? w.VirtualPhone.calendarApp : null;
-                const s = (app && typeof app.currentStoryDate === 'function') ? app.currentStoryDate() : null;
-                if (!s) return null;
-                return (typeof s === 'string') ? { date: s, label: s, source: 'calendar' } : (s && typeof s === 'object' ? s : null);
-            } catch (_e) { return null; }
-        };
-        try { return storyClock({ win: w, calendarSource }); }
-        catch (_e) { return storyClock({}); }
+        /* [v3.10.2] 探针**上收到真源** `storyClockProbe()`：G-4 首版把这段日历取数写在
+         *   本内核里，本版世界脉搏与织光机也要读同一面 —— 三处各写一份必然漂移
+         *   （本仓 v2.97 的教训：7 份 probeBridge 各自为政，同一读数三个说法）。 */
+        try {
+            const probe = storyClockProbe(w);
+            return storyClock({ win: probe.win, calendarSource: probe.calendarSource });
+        } catch (_e) { return storyClock({}); }
     })();
 
     return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc };

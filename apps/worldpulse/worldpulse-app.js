@@ -13,6 +13,11 @@ import { childRuntime } from '../../config/runtime-lifecycle.js';
 // [v2.35.0] 对外世界桥消费面（只读）：把「现编平行事件」换成「消费 WorldAxis 真世界状态」
 import { readWorldAxisSnapshot, readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine, worldBridgeAvailability, bridgeReport } from '../../config/world-bridge.js';
 import { collectDryRunEntries, recordActivated, dryRunLoreBlock, dryRunFace } from '../../config/worldbook-dryrun.js';
+/* [v3.10.2 · G-4 余量] 跨 App 时间编排面的**第二处业务消费**（第三处是诊断中心）。
+ *   本 App 此前只在桥卡片里看「桥通不通、两个钟差多少」（`bridgeReport.clock` 只比
+ *   WorldAxis 与插件两边）；而「这三处时间到底对不对得上、以哪个为准」在业务面上不可见 ——
+ *   平行事件**正需要这一天**才能与主线对得上，否则只能拿现实日期猜。 */
+import { storyClock, storyClockLine, storyClockProbe } from '../../config/story-clock.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -345,6 +350,22 @@ export class WorldpulseApp {
                 };
             } catch (_e) { return null; }
         };
+        /* [v3.10.2 · G-4 余量] 时间侧：世界钟 / 插件剧情日期 / 日历当天三源对照的**单一读数面**。
+         *   一致性由真源给出（`storyClock` 的 agree / conflict / primary），此处**不重判** ——
+         *   本仓 v2.97 的教训正是每个消费点自写形态判定（7 份 probeBridge 各自为政）。
+         *   取数口也走真源 `storyClockProbe()`（本文件不自摸宿主对象；三处各写一份必然漂移）。 */
+        const clockBlock = () => {
+            try {
+                const probe = storyClockProbe();
+                const sc = storyClock({ win: probe.win, calendarSource: probe.calendarSource });
+                const line = storyClockLine(sc);
+                return {
+                    present: line.present, verdict: line.verdict, detail: line.detail,
+                    agree: sc.agree, conflict: sc.conflict, primary: sc.primary,
+                    primaryDate: sc.primaryDate, text: sc.text
+                };
+            } catch (_e) { return null; }
+        };
         try {
             const report = bridgeReport();
             return {
@@ -352,11 +373,12 @@ export class WorldpulseApp {
                 report,
                 summary: (report && report.summary) || '',
                 lastRealReason: this._lastRealReason || null,
-                eventPlatforms: epBlock()
+                eventPlatforms: epBlock(),
+                storyClock: clockBlock()
             };
         } catch (_e) {
-            try { return { bridges: worldBridgeAvailability(), report: null, summary: '', lastRealReason: this._lastRealReason || null, eventPlatforms: epBlock() }; }
-            catch (_e2) { return { bridges: null, report: null, summary: '', lastRealReason: null, eventPlatforms: null }; }
+            try { return { bridges: worldBridgeAvailability(), report: null, summary: '', lastRealReason: this._lastRealReason || null, eventPlatforms: epBlock(), storyClock: clockBlock() }; }
+            catch (_e2) { return { bridges: null, report: null, summary: '', lastRealReason: null, eventPlatforms: null, storyClock: clockBlock() }; }
         }
     }
 

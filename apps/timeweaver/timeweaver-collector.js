@@ -14,6 +14,12 @@ import { readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine, readL
 //   但读的是**不同的一面**：readLonshaSnapshot 取 recallAudit「召回了什么」，
 //   本函数取 injection「最终送进上下文的是什么」——中间隔着预算裁剪与去重）。
 import { readInjection, injectionLine } from '../../config/injection-contract.js';
+/* [v3.10.2 · G-4 余量] 跨 App 时间编排面的**第一处业务消费**。
+ *   上游 G-4 把三处时间读数（WorldAxis 世界钟 / 插件剧情日期 / 日历当天）收成单一读数面，
+ *   但**只有诊断中心在读** —— 业务面零消费（本仓第九次同形：「建好不消费」）。
+ *   接在织光机：这一栏此前能答「想起了什么 / 送进去了什么 / 谁记的 / 出自哪本账」，
+ *   独独答不出「这些事发生在**哪一天**」—— 缺的正是判读整条时间线的基准。 */
+import { storyClock, storyClockLine, storyClockProbe, CLOCK_SOURCES, CLOCK_REASONS } from '../../config/story-clock.js';
 
 // 安全读 storage 键并解析为数组
 function readArr(storage, key) {
@@ -203,6 +209,72 @@ export function collectLonshaEvidence(win) {
 }
 
 /**
+ * [v3.10.2 · G-4 余量] 第五面：**当前剧情时刻**（这些事发生在哪一天）。
+ *
+ * 与上面四个读数的分工（五个问题，各答一个，互不顶替）：
+ *   · `collectLonshaRecall`           —— 召回侧：想起了哪段剧情（recallAudit）；
+ *   · `collectLonshaInjection`        —— 送达侧：哪几块真的进了上下文（injection）；
+ *   · `collectLonshaEventPlatforms`   —— 来源侧：事件是谁记的（eventPlatforms）；
+ *   · `collectLonshaEvidence`         —— 出处侧：出自哪本账、哪一楼（evidence）；
+ *   · `collectStoryClock`             —— **时间侧：现在算哪一天**（storyClock）。
+ *   前四个说的都是「发生了什么/模型看到了什么」，本面给的是**判读基准** ——
+ *   没有它，「三月的日记与六月的约定哪个在前」只能靠现实时间猜，而那正是本仓最贵的错读数之一。
+ *
+ * 三源一致性由真源给出（`storyClock` 的 agree / conflict / primary 与逐源 state），此处**不重判**：
+ *   本仓 v2.97 的教训正是每个消费点自写形态判定（7 份 probeBridge 各自为政）。
+ * 取数口也走真源 `storyClockProbe()`（本文件不自摸宿主对象 —— 三处各写一份必然漂移）。
+ *
+ * 什么时候**不建卡**（返回 null）：三源**全部**落在「不是本机用户的问题面」的缺席档上 ——
+ *   即 `bridge-absent`（这一层的桥没装）与 `source-missing`（这一层没给时间读数）。
+ *   每张卡都刷一行「本机没装插件」只是噪声（与上面两面同一取舍）。
+ * 什么时候**照旧建卡**（只要有任何一源「**有面**」）：
+ *   · `ok`            —— 真读数（可能不止一处，一致性由真源判）；
+ *   · `unusable`      —— 有面却读不出（**必须说出来**，否则又是一次静默降级）；
+ *   · `face-absent`   —— 快照在、这一版没有时间面（读者据此知道「升级插件才有」）；
+ *   · `no-snapshot`   —— 桥在、还没产出过快照（读者据此知道「再聊一轮就有」）。
+ *   ★ 判据不写成「存在 unusable 才建卡」：实测该态在探针路径上几乎不可达
+ *     （上游每层都有 try/catch 兜底），把建卡挂在它上面等于**在空集合上立判据**。
+ *     改判「是否有面」—— 可达、可证伪，且语义更准：**本机/本版的事实必须可见**。
+ */
+export function collectStoryClock(win) {
+  try {
+    const probe = storyClockProbe(win);
+    const sc = storyClock({ win: probe.win, calendarSource: probe.calendarSource });
+    const line = storyClockLine(sc);
+    /* 「不是本机问题面」的缺席两态（与上面两面同一取舍：不建卡） */
+    const FACELESS = { 'bridge-absent': 1, 'source-missing': 1 };
+    const faceless = CLOCK_SOURCES.every((k) => FACELESS[sc.sources[k].state] === 1);
+    if (!line.present && faceless) return null;   // 三源全是「本机没装 / 这一层没给」⇒ 不建卡
+    return {
+      present: line.present,
+      agree: sc.agree,
+      conflict: sc.conflict,
+      basis: sc.basis,
+      primary: sc.primary,
+      primaryDate: sc.primaryDate,
+      verdict: line.verdict,
+      detail: line.detail,
+      text: sc.text,
+      /* 逐源行：state / reason / 原值三者都带出，视图不重判也不拼结论。
+       *   `reason` 用真源 CLOCK_REASONS 的文案（缺项即原样显示 state，不静默）。 */
+      sources: CLOCK_SOURCES.map((k) => {
+        const s = sc.sources[k];
+        return {
+          key: k,
+          state: s.state,
+          reason: s.reason,
+          reasonText: CLOCK_REASONS[s.reason] || s.reason,
+          date: s.date,
+          label: s.label,
+          precision: s.precision,
+          turn: s.turn
+        };
+      })
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -240,7 +312,11 @@ export function buildNarrative(storage, opts = {}) {
   // [v3.6.0] R1-E：出处侧与上面三个并列（第四个问题：这条承诺出自哪本账、哪一楼）。
   //   同样**不并入 empty 判定**：本机没有生活碎片，不代表上游九账里没有可查条目。
   const evidence = (opts.withRecall === false) ? null : collectLonshaEvidence(opts.win);
-  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms, evidence };
+  // [v3.10.2 · G-4 余量] 时间侧与上面四个并列（第五个问题：这些事发生在哪一天）。
+  //   同样**不并入 empty 判定**：本机没有生活碎片，不代表读不出当前剧情时刻；
+  //   算进 empty 会让「有剧情侧时间读数、没生活碎片」被误报成「什么都没有」。
+  const clockFace = (opts.withRecall === false) ? null : collectStoryClock(opts.win);
+  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms, evidence, storyClock: clockFace };
   return {
     empty: false,
     events,
@@ -248,6 +324,7 @@ export function buildNarrative(storage, opts = {}) {
     injection,
     eventPlatforms,
     evidence,
+    storyClock: clockFace,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

@@ -117,6 +117,19 @@ export class WorldpulseView {
         } else if (st) {
             epHtml = `<div class="wp-bridge-line wp-bridge-off">事件来源：读取失败</div>`;
         }
+        /* [v3.10.2 · G-4 余量] 时间侧：三源剧情时刻对照（世界钟 / 插件剧情日期 / 日历当天）。
+         *   一致性三态（一致 / 不一致 / 无法验证）与逐源归因**全部取真源**，视图不重判；
+         *   不一致时用告警色 —— 三处时间对不上这件事，用户必须看得见。 */
+        let clockHtml = '';
+        if (st && st.storyClock) {
+            const ck = st.storyClock;
+            const cls = ck.conflict ? ' wp-bridge-warn' : (ck.present ? ' wp-bridge-ok' : '');
+            clockHtml = `<div class="wp-bridge-line${cls}">剧情时刻：${esc(ck.verdict)}`
+                + (ck.primaryDate ? '（' + esc(ck.primaryDate) + '）' : '') + `</div>`
+                + `<div class="wp-bridge-hint">${esc(ck.detail || '')}</div>`;
+        } else if (st) {
+            clockHtml = `<div class="wp-bridge-line wp-bridge-off">剧情时刻：读取失败</div>`;
+        }
         return `<div class="wp-card wp-bridge">
             <div class="wp-label">跨插件世界桥</div>
             <div class="wp-bridge-line ${wi.mounted ? (wi.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
@@ -126,7 +139,7 @@ export class WorldpulseView {
             ${bad ? `<div class="wp-bridge-line wp-bridge-warn">读不到时本 App 会退回 LLM 生成——两个世界就此对不上</div>` : ''}
             ${rep && rep.consistent === false ? `<div class="wp-bridge-line wp-bridge-warn">来源态与实际读取不一致：桥自述可用、这一次却拉不到——按「实际读取失败」处置</div>` : ''}
             ${rep && rep.summary ? `<div class="wp-bridge-hint">${esc(rep.summary)}</div>` : ''}
-            ${epHtml}
+            ${epHtml}            ${clockHtml}
             <div class="wp-bridge-hint">真世界可用时，平行事件陈述真事件、不调 LLM；桥休眠时退回生成（不编数据顶替真世界）。
               「未安装」与「装了没开」是两件事——后者去 WorldAxis 面板开闸即可。</div>
           </div>`;
