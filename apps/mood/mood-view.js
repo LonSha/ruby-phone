@@ -34,7 +34,7 @@ const JIWEN_AXES = {
 function esc(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '"');
+        .replace(/"/g, '&quot;');
 }
 function pct(v, min = 0, max = 1) {
     const p = ((Number(v) - min) / (max - min)) * 100;

@@ -354,18 +354,26 @@ test('F4 把约束块里的 silent 也塞进去 ⇒ 「只列有记录的」判�
 });
 
 /* ══════════ G ── 版本与接线 ══════════ */
-test('G1 版本五源同源为 3.10.0，且 update-log 条目非空', () => {
+test('G1 版本五源同源（下限形），且当版条目非空', () => {
+    /* [v3.10.1 交棒] 原判据硬写 '3.10.0' —— 那是**当版精确读数**，抬版即过期，
+     *   而本套件要守的是「五源同源 + 当版条目非空」这条**口径**，不是某个版本字面量。
+     *   同族前例（仓内已记录四次脆性）：v326-B1 / v327-E1 / v328-B2 / v268-P1。
+     *   命中本类脆性时的自检问句：**这条断言在正常抬版后还会成立吗？** 不会 ⇒ 形状错。
+     *   精确版本判定交给当版套件（v3211-E1）接管。 */
     const man = JSON.parse(readRel('manifest.json'));
     const pkg = JSON.parse(readRel('package.json'));
     const log = JSON.parse(readRel('update-log.json'));
     const idx = readRel('index.js');
-    assert.equal(man.version, '3.10.0', 'manifest 版本');
-    assert.equal(pkg.version, '3.10.0', 'package 版本');
-    assert.equal(log.latest, '3.10.0', 'update-log latest');
-    assert.ok(log.versions['3.10.0'], 'update-log 必须有当版条目');
-    assert.ok(Array.isArray(log.versions['3.10.0'].items) && log.versions['3.10.0'].items.length >= 4,
+    const mv = String(man.version);
+    const parts = mv.split('.').map(Number);
+    assert.ok(parts[0] > 3 || (parts[0] === 3 && parts[1] >= 10),
+        '本套件成立于 RubyPhone 3.10.0 及以后，当前 ' + mv);
+    assert.equal(pkg.version, mv, 'package 与 manifest 同源');
+    assert.equal(log.latest, mv, 'update-log latest 与 manifest 同源');
+    assert.ok(log.versions[mv], 'update-log 必须有当版条目');
+    assert.ok(Array.isArray(log.versions[mv].items) && log.versions[mv].items.length >= 4,
         '当版条目至少 4 条说明（App 内更新弹窗读它）');
-    assert.ok(/const ST_PHONE_VERSION = '3\.10\.0'/.test(idx), '入口版本常量');
+    assert.ok(new RegExp("const ST_PHONE_VERSION = '" + mv + "'").test(idx), '入口版本常量与 manifest 同源');
 });
 
 test('G2 消费侧不自写快照形态判据（第九道门 J4：同一口径只许一份实现）', () => {

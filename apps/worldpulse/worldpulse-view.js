@@ -5,7 +5,7 @@
 import { WP_STYLES } from './worldpulse-engine.js';
 
 function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 const STYLE_ICON = { '都市日常':'🏙️', '财经头条':'📈', '娱乐八卦':'🍉', '科幻未来':'🚀', '悬疑异闻':'🕵️', '自定义':'✍️' };
 

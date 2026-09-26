@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.10.0';
+const ST_PHONE_VERSION = '3.10.1';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,18 +127,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-28",
     items: [
-        "**知情边界（v3.10.0 新增能力）** —— 此前上游投影里的「谁知道什么」在本仓只有 `apps/plotline/plotline-data.js` 的 `knowledgeList()` 一个**列表出口**，没有任何一处把它当**约束**用：想让「不知道的角色」别说出内情，只能靠模型自觉。本版新增 `config/knowledge-contract.js`，把认知记录做成可注入的**约束面**（`knowledgeFace` / `matchFact` / `whoKnows` / `boundaryOf` / `unawareBlock` / `knowledgeLine`），并接进生成路径。",
-        "**三档必须分形（本版最重要的一条口径）**：`silent`（账里没记这个事实）/ `unaware`（账里明确记着「不知道」）/ `unrecorded`（这个人一条记录都没有）三者**互不混淆**，且 `unrecorded` **只计数不列名** —— 把「没记录」当「不知道」来断言，是对角色形象的凭空捏造；`silent` 绝不并进 `unaware`。",
-        "**匹配强度如实报、读不到 ≠ 空**：`matchFact` 只允许 `exact` / `substring` / `none` 三值，`exact` 与 `substring` 必须可分（防「宽泛命中当逐字结论」）；两人各出一条结论时合取取**最弱**的那一侧。`knowledgeFace` 返回五态（`ok` / `declared-empty` / `face-absent` / `no-snapshot` / `bridge-absent`）——「桥没装」「装了但投影里没这个面」「有面但一条记录都没有」必须落在不同态上，`no-snapshot` 不得冒充 `declared-empty`。",
-        "**跨 App 时间编排（v3.10.0 新增能力）** —— 此前本仓没有任何一处把「剧情现在是什么时候」当成一个**可交叉验证的读数**：各 App 各拿各的日期。本版新增 `config/story-clock.js`，把 WorldAxis 世界钟 / lonsha `clock` 面 / 日历当天三源放在一起对照，返回 `{present, agree, conflict, basis, primary, primaryDate}`，并新增 `calendar-app.js` 只读出口 `currentStoryDate()`。",
-        "**一致性三态必须分形**：`agree === null`（给出日期的来源**少于两个**，没能比）/ `agree === true`（比过且一致）/ `agree === false` 且 `conflict === true`（比过且**不一致**，用户必须被告知）三者不同形；粒度相容（如世界钟带年份「2026-03-15」与日历只有月日「3月15日」）记为 `suffix-compatible` 而**不判冲突**，但对外仍如实标注这是粒度相容而非逐字相等。",
-        "**绝不猜**：三源全缺时 `primary === null`，文案明写「三处时间读数全缺（不是「今天是某天」）」；`Date.now()` 在本模块严格**只出现一次**（只在返回对象的 `at` 字段上，且判据在**剥注释后**的源码上计数），绝不用现实时间顶替剧情时间。",
-        "**下游接线与位置纪律**：知情边界接进 `plotline`（生成块新增「知情边界」段、视图新增「账里未记录 / 无从分辨」中性灰标签）、`diary`（干跑取数块）、`diagnose`（新增 `knowledge` 与 `storyClock` 两张诊断卡 + `knowledgeFaceText` / `storyClockFaceText` 转发）。**本轮抓到的真缺陷**：`plotlinePromptBlock` 的 `if (!lines.length) return ''` 早退守卫原本在知情段**之前**，会让「只有认知记录、没有剧情线」的整块被丢弃 —— 已把早退移到知情段之后，并在源码写下位置纪律注释。",
-        "**内存 / 耗时取证（TODO 唯一悬挂项收口）**：新增探针 `tests/audit/memory_growth_probe.cjs`，四段读数 —— 模块面堆趋势（预热后取样、按后半段斜率判 `linear-acceptable` / `leak-candidate`）、事件源 handler 回收、串生成单次耗时、以及**诚实登记不能测的四条**（真实 DOM 渲染排版、宿主注入对象内存、小时级堆增长、V8 之外运行时内存）。基线落 `tests/audit/memory_growth_baseline.json`。",
-        "**内存读数的两条纪律**：① 读数必须带**噪声声明**，只判**跨轮趋势**，单次字节数不作结论；② 冒烟必须自证「**峰值高于基线**」—— 否则是「根本没订上」的假绿（本探针首版只看全局监听器得恒 0，追查发现 App 走 `ctx.eventSource.on` 而非 `window.addEventListener`）。串生成读数显式带 `not_render: true`，标明它不是 DOM 渲染耗时。",
-        "**判据纪律**：`tests/system-v3210.test.mjs`（23 项）含四条**真源码破坏**负控制（silent 并进 unaware / 单源报 `agree` 为 true / 冲突不报 / 约束块塞 silent），每条都必须在**带同目录依赖的破坏副本**上转红 —— 破坏副本缺依赖导致的红是「环境没搭好」，不算判据转红。",
-        "**运行时验证边界（v3.10.0 复校）**：本版新增的三条读数都属「形态与计数」，门禁**不能保证**它们等同于真机表现 —— 知情边界的可验面是三档分形与五态分形，**不能**验真机上主 AI 是否真的遵从这段约束（约束在提示词层，遵从度取决于模型）；时间编排的可验面是一致性三态分形与「绝不猜」，**不能**验三源是否真的指向同一条时间线；内存探针只判跨轮趋势、单次字节数不作结论，真实 DOM 渲染排版 / 宿主注入对象内存 / 小时级堆增长 / V8 之外运行时内存四条**不可测**、诚实登记在案。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修。**复校纪律**：边界文档实测数字随门禁一起复校（语法 414 → **417** 文件、导入 240 文件 339 条 → **242 文件 345 条**），文档复校标记同步为 v3.10.0。",
-        "落地：`config/knowledge-contract.js` + `config/story-clock.js` + `tests/audit/memory_growth_probe.cjs` + `tests/audit/memory_growth_baseline.json` + `tests/system-v3210.test.mjs` + `apps/plotline/*` + `apps/diary/diary-data.js` + `apps/diagnose/*` + `apps/calendar/calendar-app.js`。**版本升至 3.10.0（五源同源）**。"
+        "**属性转义恒等替换收干（本版主治）** —— 全仓 7 处 `esc()` 把引号转义写成了 `.replace(/\"/g, '\"')`：右边那个所谓「实体」是**裸引号本身**，于是这条替换是**恒等替换**，属性转义形同虚设、HTML 属性注入面敞开。7 处为 `apps/memory/graph-view.js`、`apps/mood/mood-view.js`、`apps/reading/reading-epub.js`、`apps/reading/reading-view.js`、`apps/tarot/tarot-view.js`、`apps/timeweaver/timeweaver-view.js`、`apps/worldpulse/worldpulse-view.js`（其中 5 处可追到 v2.8.x 的老账，2 处为无历史来源）。",
+        "**为什么两年没人发现（病根，写进判据防再犯）**：实体字面量在**补丁脚本/写盘层**会被就地解码成裸字符，于是「修一处、扩散一处」—— 本版因此同时钉住**两种合法写法**：① 运行时生成（`String.fromCharCode(38)` 拼接）；② 反斜杠转义序列（`\\x26quot;` / `\\u0022` 一类），使字面量在源码里不被解码。全仓普查（424 个 `.js`/`.mjs`/`.cjs`，其中 55 个含 `esc()` 实现）在**剥注释后**归零。",
+        "**判据套件 `tests/system-v3211.test.mjs`（9 项，真跑 `node --test` 读数）**：A 全仓普查 ×2（归零 + **自证扫描面真在扫**，防「空集合上的判据永远成立」）；B 七处真转义 ×2（**真抽 `esc()` 函数体跑一遍**：输入 `a\"b` 输出必须不等于输入 —— 恒等替换恰好会让它相等，这就是本版的分界点）；C 参照面 ×2；D 负控制 ×2；E 版本锚。",
+        "**判据自身的缺陷优先于实现缺陷（本版连抓三条）**：① A1 首版把**讨论这条纪律的注释**也判红（`// .replace(/\\\"/g, '\\\"')` 写在文件头）⇒ 增加剥注释；② D2 首版拿一个**恰好唯一命中**的锚点去证「锚点不唯一必须抛」⇒ 该判据自己成了假绿（假绿第三形：破坏把判据自己废掉）⇒ 改为按实测计数挑锚点（重复锚点 + 不存在锚点 + 真锚点唯一命中不得抛，两向自证）；③ B2 样本项残留无用参数与 `String_` 变量 ⇒ 清除。",
+        "**运行时验证边界（v3.10.1 复校）**：本版的全部结论都属**静态结构面**（源码文本 + 真跑 `esc()` 的纯函数行为），门禁**不能保证**它们在真机 DOM 上的效果 —— 本版修的是「转义本身被写废」，而「转义是否覆盖到每一个属性拼接点」「宿主渲染时是否有别的注入通道」两条**不可测**，诚实登记在案。边界文档实测数字随门禁一起复校（语法 417 → **418** 文件、导入 242 文件 345 条不变），文档复校标记同步为 v3.10.1。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修。",
+        "落地：`apps/memory/graph-view.js` + `apps/mood/mood-view.js` + `apps/reading/reading-epub.js` + `apps/reading/reading-view.js` + `apps/tarot/tarot-view.js` + `apps/timeweaver/timeweaver-view.js` + `apps/worldpulse/worldpulse-view.js` + `tests/system-v3211.test.mjs`（并交棒 `tests/system-v3210.test.mjs` G1：旧套件只锁下限，精确版本判定由当版套件接管）。**版本升至 3.10.1（五源同源）**。",
     ]
 };
 

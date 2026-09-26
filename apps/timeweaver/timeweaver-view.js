@@ -10,7 +10,7 @@ import { injectionLine, blockLine } from '../../config/injection-contract.js';
 import { eventPlatformsLine } from '../../config/world-bridge.js';
 
 function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 const SRC_ICON = { diary:'📔', album:'🖼️', achievement:'🏆', calendar:'📅', weibo:'💬', honey:'🍯', theater:'🎭', life:'✨', chat:'💬', misc:'✨', unknown:'✨' };
 

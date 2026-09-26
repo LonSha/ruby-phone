@@ -6,7 +6,7 @@
 import { SPREADS } from './tarot-data.js';
 
 function esc(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '"');
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function dateStr(ts) {
     const d = new Date(Number(ts) || Date.now());
