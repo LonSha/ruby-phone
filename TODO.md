@@ -60,7 +60,7 @@
       三个业务面真消费（诊断内核 / 全局搜索「证据」源 / 织光机出处侧观测——第 4 个同族观测面，
       同时把「取数式出口在 apps 侧零消费」的摆设形态消灭在 J12 落地之前）。
       第九道门新增 **J12** 常驻守（五个出口缺一即 corrupt；消费下限按去重文件数分别判：
-      证据面 3 / 新鲜度面 1）；`tests/system-v323.test.mjs`（15 项，含四条真源码破坏负控制）。
+      证据面 3 / 新鲜度面 1）；`tests/system-v323.test.mjs`（14 项，含四条真源码破坏负控制）。
       详见 `ITERATION_LOG.md` 迭代 49。
       边界：只读消费面（不写上游任何状态）；未验实机；上游 T8 观察项（各账 `copyItem` 的
       `finite(updatedFloor)` 把 null 读成 0）属上游单独一版的事，下游只保证不二次塌陷。
@@ -273,7 +273,7 @@
            真缺口：`_debouncedSaveChat` 的「串行队列 + 四档退避重试（0/350/900/1800ms）+ 放弃」
            **从来没有被任何判据观察过**（默认永远成功），而它跑在**数据丢失路径**上。
            已落：夹具补 `saveChatFails`（默认 0 ⇒ 与加它前逐字同行为）+ `saveChatCalls()` 读数；
-           `tests/system-v318.test.mjs`（15 项）。实测读数：全失败恰好重试 4 次 / 总耗 3057ms /
+           `tests/system-v318.test.mjs`（14 项）。实测读数：全失败恰好重试 4 次 / 总耗 3057ms /
            **绝不外抛**；第 2 次成功即停（351ms）；退避实测 0/352/901/1803ms；
            并发三次立即保存 ⇒ **同时在飞峰值恒为 1**；等待重试期间切会话 ⇒ 被身份守卫拦下
            （不会把旧会话数据写进新会话）。详见 `ITERATION_LOG.md` 迭代 44。
@@ -288,10 +288,13 @@
         `docs/runtime-verification-boundary.md`；还没把它接进 `update-log.json`
         面向用户的说明里，因为那属于「对用户说什么」而非「工程事实」，留给下一版）。
 
-- [ ] （待评估）会话切换生命周期出口的**声明式注册**：让每个 App 自声明其出口与
+- [x] （已取证评估）会话切换生命周期出口的**声明式注册**：让每个 App 自声明其出口与
       覆盖关系（如 `static lifecycleExits = { onChatChanged: {...} }`），
       由框架统一调用，从根上消除「写了出口但没人调」与「槽位没人回收」两类形态。
       与 v2.55 的 REBIND 表驱动同源思路，但覆盖面从「重绑」扩到「回收」。
+      **→ 本条已在 v3.7.0 取证并判定 `not_done`**（准入判据四项全不达：覆盖 79.7% /
+      参数契约三态不可统一 / 三路径语义一致率 45.5% / 非 App 接线占 20.3%）；
+      详见下方 P 批的「P-6 声明式生命周期注册可行性取证」条与 `ITERATION_LOG.md` 迭代 50。
 
 ---
 
@@ -367,7 +370,39 @@
       并由第九道门 **J11** 常驻守「该出口真被业务面消费」（下限 1）。
       落地：`config/world-bridge.js` + `timeweaver-collector.js` + `timeweaver-view.js`
       + `worldpulse-app.js` / `worldpulse-view.js` + `tests/system-v321.test.mjs`（12 项）。
-- [ ] **F-4 剧情日程冲突**（登记，未启动）：与地点层级 / 在场面的冲突判定。先取证再立 Gate。
+- [x] **F-4 剧情日程冲突 —— v3.8.0 完成（取证后判定 `not_now`，按读数否掉）**：
+      TODO 一直挂着「先取证再立 Gate」，本版第一次真跑 —— **要接的面不存在**，
+      而不是「面存在但工作量不够」。四条读数：
+      ① 上游**无任何「日程 / 时刻表」外供面**（对象键形态搜 schedule / timetable / agenda /
+      calendarFace / dayPlan 全部 0 命中；唯一带 `schedule` 之名的东西是**内部周期调度器**
+      `_scheduleFloorHeal`，注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）；
+      ② 上游时间轴**只有楼层这一条**：promises 条目形状 `{id, character, content, deadlineFloor,
+      status, floor}`，`scheduledAt` / `dueTime` 缺席；时间推进只有整体跳日 `time_advance_days`，
+      **无日内时刻轴**、`story_date` 是自由文本；
+      ③ 上游把「冲突**判断**」刻意留给下游：`scene-book.js` 的 `coPresence()` **函数体内**零
+      判断字段；上游 CHANGELOG v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答
+      『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」；
+      ④ 下游已有基础：4 个文件 / 22 个消费点已在读承诺 `deadlineFloor` 与 `status`
+      （plotline-data / plotline-app / plotline-view / global-search-engine）⇒ 增量只剩「撞车提醒」。
+      **为什么不立 Gate 的理由不是工作量**：要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型**
+      （含数据模型 / 存储 / UI / 与承诺面一致性维护），那就从「接外供面」变成「新做一个业务域」；
+      而且**上游与下游两侧都已明确拒绝判断面**（同 F-3 在卡片上守住的「不写冲突 / 对峙 / 碰面风险」，
+      由判据钉在剥注释后的代码上）。
+      **替代轴（有读数支持）**：把上游已给的 `status` 三态（pending / imminent / overdue）与
+      `deadlineFloor` 在 plotline 面按紧迫度显式分档（上游 `describePromise` 已有三档文案），
+      「同楼层截止的承诺」做**并排呈现**而非冲突判定。本版只立读数与判据，不动手。
+      **同轮抓到两条假阳性并修正判据**：① 裸子串搜 `schedule` 把内部调度器误报成「有日程面」；
+      ② 只搜整文件把 `observationNotes()` 里 T16/T17 自述的 `severity` 误报成「coPresence 面含判断字段」
+      ⇒ 改为只在**函数体（花括号配平抽取）**内搜。教训同族：**范围粒度错会造成假阳性**。
+      另两条同轮缺陷：③ 探针初版 **O(n²)**（`index.js` 行切分写在 for 条件与体内 ⇒ 单次 24 秒、      全量门禁超时；改为只切一次后 0.64 秒，读数逐项不变）；
+      ④ 负控制 D3 初版**假绿**（用「改名 deadlineFloor」作破坏，而判据 token 是子串匹配 ⇒ 同行为另一
+      token 命中、点数不变，判据看起来通过其实没被测到；改为摘**整行**后点数恰好少 1）。
+      **探针位置无关**：上游证据以**冻结读数**入基线（上游 v3.204.0 的跨仓纪律 —— 路径依赖的绿
+      只在一台机器上成立），复核走 `--upstream <dir>` 或 `RP_UPSTREAM_ROOT`，**不传即跳过**
+      （且未复核 ⇏ 通过）。
+      落地：`tests/audit/schedule_conflict_probe.cjs` + `tests/audit/schedule_conflict_baseline.json`
+      + `tests/system-v325.test.mjs`（14 项，含四条负控制）。产品代码零改动；未验实机。
+      详见 `ITERATION_LOG.md` 迭代 51。
 - [ ] **F-1 分支与玩法**（R4 第一批）：持久检查点 / 回滚预览 / 分支只读对照。先取证再立 Gate。
 - [x] **F-3 到访冲突（消费侧）—— v3.4.3 完成**：接入上游 v3.232.0 的 `scene.coPresence` 事实面，
       place App 出「同楼同刻」三态卡（缺格 / 空 / 有内容三句话各不相同）。

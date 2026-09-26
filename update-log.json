@@ -1,6 +1,20 @@
 {
-  "latest": "3.7.0",
+  "latest": "3.8.0",
   "versions": {
+    "3.8.0": {
+      "version": "3.8.0",
+      "date": "2026-09-26",
+      "title": "F-4 剧情日程冲突：取证后按读数否掉（not_now）",
+      "items": [
+        "**F-4 剧情日程冲突：取证后按读数否掉（not_now）** —— TODO 一直挂着「先取证再立 Gate」，本版第一次真跑：**要接的面不存在**。四条读数（探针算出）：① 上游无任何「日程 / 时刻表」外供面（对象键形态零命中；唯一带 schedule 之名的东西是内部周期调度器 `_scheduleFloorHeal`）；② 上游时间轴**只有楼层这一条**（promises 只有 `deadlineFloor` 一数字键，`scheduledAt` / `dueTime` 缺席）；③ 上游把「冲突**判断**」刻意留给下游（`coPresence()` 函数体内零判断字段）；④ 下游已有基础（4 文件 / 22 点已消费承诺期限与状态）。",
+        "★ 为什么不立 Gate 的理由**不是工作量**：要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型**（数据模型 / 存储 / UI / 与承诺面一致性维护），那就从「接外供面」变成了「新做一个业务域」。而且**上游与下游两侧都已明确拒绝判断面**：上游 v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」—— 与 F-3 已在卡片上守住的「不写冲突 / 对峙 / 碰面风险」同一条纪律（并由判据钉在剥注释后的代码上）。",
+        "**替代轴（有读数支持的方向）**：把上游已给的承诺 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面按紧迫度显式分档（上游 `describePromise` 已有三档文案），「同楼层截止的承诺」做**并排呈现**而非冲突判定。本版只立读数与判据，不动手。",
+        "**回归取证**：`node tests/audit/schedule_conflict_probe.cjs`（只读、可复算、枚举面塌陷与入口掏空一律 fail-closed `exit 2`），基线落 `tests/audit/schedule_conflict_baseline.json`。**探针位置无关**：上游证据以冻结读数入基线（上游 v3.204.0 的跨仓纪律 —— 路径依赖的绿只在一台机器上成立），需复核时传 `--upstream <dir>` 或环境变量 `RP_UPSTREAM_ROOT`，**不传即跳过**（且未复核 ⇏ 通过）。",
+        "**同轮抓到两条假阳性并修正判据**：① 初版按裸子串搜 `schedule`，把上游内部周期调度器 `_scheduleFloorHeal` 误报成「有日程面」⇒ 改为只认对象键形态；② 初版只搜整文件，把 `observationNotes()` 里 T16/T17 自述的 `severity` 误报成「coPresence 面含判断字段」⇒ 改为只在**函数体（花括号配平抽取）**内搜。教训同族：判据必须匹配真实书写，**范围粒度错会造成假阳性**。",
+        "落地：`tests/audit/schedule_conflict_probe.cjs`（探针）+ `tests/audit/schedule_conflict_baseline.json`（基线，读数由 `--json` 直接落盘、零手抄）+ `tests/system-v325.test.mjs`（14 项，含四条负控制）。产品代码零改动；未验实机。",
+        "**版本升至 3.8.0（五源同源）**。"
+      ]
+    },
     "3.7.0": {
       "version": "3.7.0",
       "date": "2026-09-26",

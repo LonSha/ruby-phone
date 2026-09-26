@@ -45,7 +45,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.7.0';
+const ST_PHONE_VERSION = '3.8.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -127,14 +127,13 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-26",
     items: [
-        "**P-6 声明式生命周期注册：取证后按读数否掉（not_done）** —— TODO 的准入判据「覆盖率 ≥ 80% 才实施」第一次被真正算出来：59 个手写接线点里 47 个指向 App 实例（**79.7%**）、另 12 个指向非 App 目标（缓存对象 / 桥 / 记忆内核 / 图片管理器 —— 没有「实例」可挂声明）。把 20.3% 留成例外清单，等于「统一框架 + 一张与今天同样长的例外表」。",
-        "★ 比覆盖率更硬的一条：**三条会话路径的差异不是「写得重复」，而是「有意分档」**——11 个槽位里只有 5 个在三条路径上动作集完全相同（**45.5%**），6 个不同；而真跑追因后六条差异**没有一条是遗漏**：`gamesApp` / `worldpulseApp` 只在 P1 有 `onChatChanged`，P2/P3 是**有意**走咽喉点回收（`reloadPhoneSurface()` → `retireSessionScopedSlots()`，三条路径都经它）。P1「换会话」要实例**活下来** vs P2/P3「清数据」要实例**死掉**，是语义互斥的两档。**声明式注册的前提「三条路径干同一件事」实测不成立。**（这条我初版把 gamesApp 读成了「清数据路径漏了重绑」—— 本仓历史上确实反复出现过那个缺陷形态；追调用链后推翻，教训写进基线 `corrections`。）",
-        "**onChatChanged 参数契约不可统一**：26 个无参 + 1 个带默认值（`GamesApp(storage = this.storage)`）+ 1 个**必选参**（`MusicApp(newStorage)` —— 体内直接读参，传 undefined 即抛）；而 `rebindLazyApps()` 逐键做**无参**调用（`phone.<键>?.onChatChanged?.()`），两套调用纪律并存。统一声明的第一步就得改 MusicApp 的参数契约。",
-        "**回归取证**：`node tests/audit/lifecycle_declarative_probe.cjs`（只读、可复算「两次跑逐字节相同」、锚点缺失 / 枚举面不足一律 fail-closed `exit 2`），基线落 `tests/audit/lifecycle_declarative_baseline.json`（读数由脚本 `--json` 直接落盘、**零手抄**）。",
-        "**现有 lifecycle 门禁不受影响**：本版判定是「不实施」，故 `scripts/lifecycle-audit.mjs` 的三层判据（L1 出口接线 / L2 槽位 × 三路径 + 咽喉点 / L3 白名单源码派生 / L4 枚举面自证）**原样保留** —— 否决一个候选不等于放过现状（套件 B2 常驻守它仍在九门链里）。",
-        "**有读数支持的方向（替代轴）**：把三路径差异显式化为「**按路径分档的处置矩阵**」（每条路径 × 每个槽位声明本路径该做什么）—— 同样能消除手写散点，且**不要求**三条路径语义相同。本版只立读数与判据，不动手。",
-        "落地：`tests/audit/lifecycle_declarative_probe.cjs`（探针）+ `tests/audit/lifecycle_declarative_baseline.json`（基线）+ `tests/system-v324.test.mjs`（15 项，含四条真源码破坏负控制）。",
-        "**版本升至 3.7.0（五源同源）**。"
+        "**F-4 剧情日程冲突：取证后按读数否掉（not_now）** —— TODO 一直挂着「先取证再立 Gate」，本版第一次真跑：**要接的面不存在**。四条读数（探针算出）：① 上游无任何「日程 / 时刻表」外供面（对象键形态零命中；唯一带 schedule 之名的东西是内部周期调度器 `_scheduleFloorHeal`）；② 上游时间轴**只有楼层这一条**（promises 只有 `deadlineFloor` 一数字键，`scheduledAt` / `dueTime` 缺席）；③ 上游把「冲突**判断**」刻意留给下游（`coPresence()` 函数体内零判断字段）；④ 下游已有基础（4 文件 / 22 点已消费承诺期限与状态）。",
+        "★ 为什么不立 Gate 的理由**不是工作量**：要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型**（数据模型 / 存储 / UI / 与承诺面一致性维护），那就从「接外供面」变成了「新做一个业务域」。而且**上游与下游两侧都已明确拒绝判断面**：上游 v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」—— 与 F-3 已在卡片上守住的「不写冲突 / 对峙 / 碰面风险」同一条纪律（并由判据钉在剥注释后的代码上）。",
+        "**替代轴（有读数支持的方向）**：把上游已给的承诺 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面按紧迫度显式分档（上游 `describePromise` 已有三档文案），「同楼层截止的承诺」做**并排呈现**而非冲突判定。本版只立读数与判据，不动手。",
+        "**回归取证**：`node tests/audit/schedule_conflict_probe.cjs`（只读、可复算、枚举面塌陷与入口掏空一律 fail-closed `exit 2`），基线落 `tests/audit/schedule_conflict_baseline.json`。**探针位置无关**：上游证据以冻结读数入基线（上游 v3.204.0 的跨仓纪律 —— 路径依赖的绿只在一台机器上成立），需复核时传 `--upstream <dir>` 或环境变量 `RP_UPSTREAM_ROOT`，**不传即跳过**（且未复核 ⇏ 通过）。",
+        "**同轮抓到两条假阳性并修正判据**：① 初版按裸子串搜 `schedule`，把上游内部周期调度器 `_scheduleFloorHeal` 误报成「有日程面」⇒ 改为只认对象键形态；② 初版只搜整文件，把 `observationNotes()` 里 T16/T17 自述的 `severity` 误报成「coPresence 面含判断字段」⇒ 改为只在**函数体（花括号配平抽取）**内搜。教训同族：判据必须匹配真实书写，**范围粒度错会造成假阳性**。",
+        "落地：`tests/audit/schedule_conflict_probe.cjs`（探针）+ `tests/audit/schedule_conflict_baseline.json`（基线，读数由 `--json` 直接落盘、零手抄）+ `tests/system-v325.test.mjs`（14 项，含四条负控制）。产品代码零改动；未验实机。",
+        "**版本升至 3.8.0（五源同源）**。"
     ]
 };
 
