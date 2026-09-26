@@ -221,9 +221,145 @@ export function readLonshaSnapshot(opts = {}) {
         if (!snap && typeof b.refresh === 'function') snap = b.refresh();
     } catch (_e) { snap = null; }
     if (!snap || typeof snap !== 'object') {
-        return { ok: false, reason: 'no-snapshot', source: src, snapshot: null };
+        return { ok: false, reason: 'no-snapshot', source: src, snapshot: null, face: null };
     }
-    return { ok: true, reason: 'ok', source: src, snapshot: snap };
+    // [v3.5.0] 三态补全：原来「快照不在场」这条出口**没有 face 键**，读者拿到的对象键面随路径变，
+    //   只能靠 `('face' in r)` 猜 —— 上一条出口已补 `face: null`，此处补真值（口径：faceFieldState(snapshot)）。
+    return { ok: true, reason: 'ok', source: src, snapshot: snap, face: faceFieldState(snap) };
+}
+
+/* ── [v3.5.0] F-2 下游侧：事件来源构成（上游 lonsha v3.233.0 的 eventPlatforms）
+ *
+ * 上游把「这条事件是谁记的」从 40 字自由文本折成受控分级
+ * （extract / platform / other / none）并外供 `snapshot.eventPlatforms`。
+ *
+ * 下游要答的是**另一个问题**（不是重复上游读数）：
+ *   · 上游答：「每个段来自哪一级、每个平台占了几段」。
+ *   · 下游答：「这台设备上，`extract` 之外的平台标签（`phone:*` / `world:*` / `chat:*`）
+ *     有没有被真用过」——那是**登记方有没有真给标签**的事实面，
+ *     直接决定「跨平台对照」这件事现在能不能做。
+ *
+ * 【五态纪律】（本仓反复治理的形态：缺席与空读数必须可分，且三者处置相反）
+ *   · 桥未装 / 无快照              ⇒ bridge-absent（等装桥 / 等生成跑一轮）
+ *   · 有快照、旧版没有这一面         ⇒ face-absent（等上游升级）
+ *   · 有面、但上游模块未就位/读面抛错 ⇒ unusable（本机读不出，等上游修）
+ *   · 有面、账里没有任何事件段        ⇒ empty（**真读数**：还没有事件线，等剧情推进）
+ *   · 有构成                      ⇒ ok
+ *
+ * ★ 下列形态是**真跑取证**得来的（v3.233.0 的 `platformFace(null)` 与 `_eventPlatformsFace()`）：
+ *   空账返回 **`ok:true` + `reason:'no-events'`**；两条兜底分支返回的是
+ *   **`ok:false` + `reason:'module-unavailable' | 'thrown'`**。
+ *   一律按 `ok !== true` 归一（初稿就是这么写的）会把「上游模块没挂上」谎报成
+ *   「还没有事件线」——两种处境处置相反，压成一态就是错读数。
+ *
+ * 两条硬约束：
+ *   ① **不做判断**（与上游同一纪律）：只说「有几个平台被标过」「共几段」，
+ *      不说「哪个平台更重要」。
+ *   ② **不猜标签**：`platforms` 原样透传（上游已保证受控词表），不合并、不改写、不补全；
+ *      **顺序也照上游**（受控词表顺序），不按段数重排 —— 重排本身就是一种重要性表达。
+ */
+const EVENT_PLATFORM_STATES = Object.freeze({
+    BRIDGE_ABSENT: 'bridge-absent',
+    FACE_ABSENT: 'face-absent',
+    UNUSABLE: 'unusable',
+    EMPTY: 'empty',
+    OK: 'ok'
+});
+
+/** 缺席形态的恒定键面（读者不必再判 undefined；`state`/`reason` 之外的键都有确定零值） */
+function emptyEventPlatformFace(state, reason) {
+    return {
+        state, reason, platforms: [], platformCount: 0, topPlatform: '', topSegments: 0,
+        segments: 0, countedEvents: 0, unlabeled: 0, truncated: false, pluginVersion: ''
+    };
+}
+
+/**
+ * 读上游事件来源构成（单一真源：config/world-bridge.js）。
+ * @param {object} [win] 显式注入 window（无头测试用），不传即取全局
+ * @returns {{ state:string, reason:string, platforms:string[], platformCount:number,
+ *             topPlatform:string, topSegments:number, segments:number, countedEvents:number,
+ *             unlabeled:number, truncated:boolean, pluginVersion:string }}
+ *   state ∈ { bridge-absent, face-absent, unusable, empty, ok }
+ *   topPlatform —— 上游词表顺序里的首个平台（**不是**「最大 / 最重要」；本面不排序不打分）
+ *   任何形态下本函数都**不抛**，且键面恒定（读者不必再判 undefined）。
+ */
+export function readLonshaEventPlatforms(win) {
+    try {
+        const r = readLonshaSnapshot({ win });
+        if (!r || !r.ok || !r.snapshot) {
+            return emptyEventPlatformFace(EVENT_PLATFORM_STATES.BRIDGE_ABSENT, String((r && r.reason) || 'not-mounted'));
+        }
+        const snap = r.snapshot;
+        const pluginVersion = String(snap.pluginVersion || '');
+        const face = snap.eventPlatforms;
+        // 旧版快照没有这一面 ⇒ 如实说「这版没这面」，不是「零个平台」。
+        if (!face || typeof face !== 'object' || Array.isArray(face)) {
+            return Object.assign(emptyEventPlatformFace(EVENT_PLATFORM_STATES.FACE_ABSENT, 'face-absent'), { pluginVersion });
+        }
+        // 上游两条兜底（模块未就位 / 读面抛错）⇒ 本机读不出，与「还没有事件线」相反。
+        if (face.ok !== true) {
+            return Object.assign(
+                emptyEventPlatformFace(EVENT_PLATFORM_STATES.UNUSABLE, String(face.reason || 'module-unavailable')),
+                { pluginVersion }
+            );
+        }
+        const plats = (Array.isArray(face.platforms) ? face.platforms : [])
+            .map((p) => ({
+                platform: String((p && p.platform) || ''),
+                segments: Number(p && p.segments) || 0,
+                events: Number(p && p.events) || 0
+            }))
+            .filter((p) => p.platform && p.segments > 0);   // ★ 顺序照上游（不重排）
+        const segs = Number(face.segments) || 0;
+        const reason = String(face.reason || '');
+        const countedEvents = Number(face.countedEvents) || 0;
+        const unlabeled = Number(face.unlabeled) || 0;
+        // 空账：只认上游自己给的 `reason === 'no-events'`，不拿段数去猜（不替上游下结论）。
+        if (reason === 'no-events' || segs === 0) {
+            return Object.assign(
+                emptyEventPlatformFace(EVENT_PLATFORM_STATES.EMPTY, reason || 'no-events'),
+                { pluginVersion, countedEvents, unlabeled }
+            );
+        }
+        const first = plats[0] || null;
+        return {
+            state: EVENT_PLATFORM_STATES.OK,
+            reason: 'ok',
+            platforms: plats.map((p) => p.platform),
+            platformCount: plats.length,
+            topPlatform: first ? first.platform : '',
+            topSegments: first ? first.segments : 0,
+            segments: segs,
+            countedEvents,
+            unlabeled,
+            truncated: face.truncated === true,
+            pluginVersion
+        };
+    } catch (_e) {
+        return emptyEventPlatformFace(EVENT_PLATFORM_STATES.UNUSABLE, 'thrown');
+    }
+}
+
+/**
+ * 一行可读的读数（**不拼结论文案**，只做单位与分隔：判断归读者）。
+ * 例：`事件来源：2 个平台（phone · chat）/ 共 5 段`；五态各有自己的句子。
+ * ★ 有面但无任何平台标签时说「无平台标签」，**不写「0 个平台」** —— 那句话读者会当成「确实没有」，
+ *   而它与「读不到」在字面上长得太像（本仓三态纪律的直接后果）。
+ */
+export function eventPlatformsLine(win) {
+    try {
+        const r = readLonshaEventPlatforms(win);
+        if (r.state === EVENT_PLATFORM_STATES.BRIDGE_ABSENT) return '事件来源：尚未读到（记忆插件未接上，或还没生成过快照）';
+        if (r.state === EVENT_PLATFORM_STATES.FACE_ABSENT) return '事件来源：本版没有这一面（需记忆插件 v3.233 或更新）';
+        if (r.state === EVENT_PLATFORM_STATES.UNUSABLE) return '事件来源：本版读不出这一面（上游模块未就位，需升级记忆插件）';
+        if (r.state === EVENT_PLATFORM_STATES.EMPTY) return '事件来源：还没有事件线';
+        const who = r.platforms.length ? (r.platforms.join(' · ') + '') : '无平台标签';
+        return '事件来源：' + (r.platforms.length ? r.platformCount + ' 个平台（' + who + '）' : who)
+            + ' / 共 ' + r.segments + ' 段';
+    } catch (_e) {
+        return '事件来源：尚未读取（读取异常，已降级）';
+    }
 }
 
 /**
@@ -571,6 +707,9 @@ export default {
     readWorldAxisSnapshot,
     readWorldClock,
     readLonshaSnapshot,
+    eventPlatformsLine,
+    readLonshaEventPlatforms,
+    EVENT_PLATFORM_STATES,
     readPushProbe,
     readPushField,
     faceFieldState,

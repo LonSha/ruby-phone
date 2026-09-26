@@ -98,6 +98,25 @@ export class WorldpulseView {
         const bad = (wi.reason === 'refused' || wi.reason === 'no-snapshot' || lo.reason === 'thrown' || lo.reason === 'engine-empty'
             || (wi.reason === 'ready' && waRead && waRead.ok === false)
             || (lo.reason === 'ready' && loRead && loRead.ok === false));
+        /* [v3.5.0] F-2 来源侧：桥卡片再答一个问题 —— 「记忆侧的事件是谁记的」。
+         * 与前两块并列的第三个问题：不是「世界现在什么样」，而是「这条线是插件从正文提的、
+         * 还是手机 App 里发生的」——跨平台对照的事实前提。
+         * 四态文案直接取真源给出的 line，**视图不重判形态**（真源已把
+         * bridge-absent / face-absent / empty / ok 分好）；缺席时如实带出，不写「0 个平台」。
+         */
+        let epHtml = '';
+        if (st && st.eventPlatforms) {
+            const ep = st.eventPlatforms;
+            /* 三态各有各的色：ok 绿 / empty 中性（真读数，不是故障）/ 其余（缺席、读不出）按故障色。 */
+            const cls = ep.state === 'ok' ? ' wp-bridge-ok' : (ep.state === 'empty' ? '' : ' wp-bridge-off');
+            const plats = (ep.state === 'ok' && Array.isArray(ep.platforms) && ep.platforms.length)
+                ? `<div class="wp-bridge-hint">被标过的平台：${ep.platforms.map(p => esc(p)).join(' · ')}`
+                  + `（标签由登记方显式给出、不猜归类、不排重要性）</div>`
+                : '';
+            epHtml = `<div class="wp-bridge-line${cls}">${esc(ep.line || '')}</div>` + plats;
+        } else if (st) {
+            epHtml = `<div class="wp-bridge-line wp-bridge-off">事件来源：读取失败</div>`;
+        }
         return `<div class="wp-card wp-bridge">
             <div class="wp-label">跨插件世界桥</div>
             <div class="wp-bridge-line ${wi.mounted ? (wi.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
@@ -107,6 +126,7 @@ export class WorldpulseView {
             ${bad ? `<div class="wp-bridge-line wp-bridge-warn">读不到时本 App 会退回 LLM 生成——两个世界就此对不上</div>` : ''}
             ${rep && rep.consistent === false ? `<div class="wp-bridge-line wp-bridge-warn">来源态与实际读取不一致：桥自述可用、这一次却拉不到——按「实际读取失败」处置</div>` : ''}
             ${rep && rep.summary ? `<div class="wp-bridge-hint">${esc(rep.summary)}</div>` : ''}
+            ${epHtml}
             <div class="wp-bridge-hint">真世界可用时，平行事件陈述真事件、不调 LLM；桥休眠时退回生成（不编数据顶替真世界）。
               「未安装」与「装了没开」是两件事——后者去 WorldAxis 面板开闸即可。</div>
           </div>`;

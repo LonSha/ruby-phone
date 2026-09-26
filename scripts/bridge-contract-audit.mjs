@@ -48,6 +48,9 @@
  *     快照 `injection`（9 键 + 逐块 6 键，落地不早于代际确认），而下游实测**全库零消费**。
  *     这是本仓第七次「建好不消费」，故立为常驻判据。
  *     [v2.98.0] 起只保证 **meta.fieldTypes** 这面被消费（J6），另两面同族同待。
+ *   · [v3.5.0] 起 J11 说「下游有没有消费上游**事件来源构成**面」——上游 lonsha v3.233.0
+ *     （F-2 跨平台事件）把「这条事件是谁记的」折成受控分级四态并外供 `snapshot.eventPlatforms`，
+ *     而下游实测**全库零消费**。这是本仓第八次「建好不消费」，故立为常驻判据。
  *   · 不扫 tests/** 与 scripts/**（测试与门禁引用桥名是必须的），只扫产品面。
  *
  * 用法：
@@ -133,6 +136,21 @@ const PROBE_SELF_MIN = 1;
  *   而那正是本判据要拦的形态；若将来某一面被重构掉，应当**显式**来改这里并写明理由。 */
 const INJECTION_READER = 'readInjection';
 const INJECTION_READER_MIN_CONSUMERS = 2;
+
+/* ── [v3.5.0] J11：上游**事件来源构成**（F-2 跨平台事件的外供面）必须真被业务面消费 ──
+ * 【为什么必须有】上游 lonsha v3.233.0 把段来源从 40 字自由文本折成受控分级四态
+ *   （extract / platform / other / none）并外供 `snapshot.eventPlatforms`；
+ *   分级的全部意义在于**让下游能对照「这条是插件从正文提的、还是手机 App 里发生的」**。
+ *   下游若零消费，那份分级就等于白做（本仓「建好不消费」的第八例）。
+ * 【判据口径】两条同时判：
+ *   ① 真源必须导出 `readLonshaEventPlatforms` / `eventPlatformsLine`；
+ *   ② 产品面 apps/** 的调用点不得少于下限（config/ 是出口自身，不计）。
+ * 【为什么下限是 1】本版刻意只落一个**独立**消费面（织光机来源侧），
+ *   与 J10 的注入面同理：少一个就意味着「那一面又回到零消费」。
+ *   若将来再落一面（如世界脉动的事件对照），应当把这里显式抬高并写明理由。 */
+const EVENT_PLATFORM_READER = 'readLonshaEventPlatforms';
+const EVENT_PLATFORM_LINE_READER = 'eventPlatformsLine';
+const EVENT_PLATFORM_MIN_CONSUMERS = 1;
 
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
@@ -283,6 +301,17 @@ for (const [rel, code] of stripped) {
     if (c > 0) { injConsumerCount += c; injConsumerFiles.push(rel); }
 }
 
+/* ── [v3.5.0] J11：事件来源构成面的出口在场 + 产品侧消费点（只扫 apps/**） ── */
+const eventPlatformExportOk = new RegExp('export\\s+function\\s+' + EVENT_PLATFORM_READER + '\\s*\\(').test(sourceCode);
+const eventPlatformLineExportOk = new RegExp('export\\s+function\\s+' + EVENT_PLATFORM_LINE_READER + '\\s*\\(').test(sourceCode);
+let eventPlatformConsumerCount = 0;
+const eventPlatformConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c = countOf(code, EVENT_PLATFORM_READER + "(");
+    if (c > 0) { eventPlatformConsumerCount += c; eventPlatformConsumerFiles.push(rel); }
+}
+
 /* ------------------------------------------------------------
  * 开关：--list 只报告不判定
  * ------------------------------------------------------------ */
@@ -312,6 +341,7 @@ if (LIST) {
     for (const f of probeSelfFiles) console.log('  ' + f);
     if (!probeSelfSites.length) console.log('  （无结构化面 —— 只读一眼就丢不算消费）');
     console.log('\n── J10 ' + INJECTION_READER + ' 消费点（只计 apps/**）：' + injConsumerCount + '（下限 ' + INJECTION_READER_MIN_CONSUMERS + '）──');
+    console.log('\n── J11 ' + EVENT_PLATFORM_READER + ' 消费点（只计 apps/**）：' + eventPlatformConsumerCount + '（下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）──');
     for (const f of injConsumerFiles) console.log('  ' + f);
     if (!injConsumerFiles.length) console.log('  （无 —— 上游注入读数没人读就是白做）');
     process.exit(0);
@@ -422,6 +452,20 @@ if (injConsumerCount < INJECTION_READER_MIN_CONSUMERS) {
     console.error('  修法：产品面接 config/injection-contract.js 的 readInjection。');
 }
 
+/* ── J11 [v3.5.0] ── */
+if (!eventPlatformExportOk || !eventPlatformLineExportOk) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J11 真源缺出口：' + EVENT_PLATFORM_READER + ' / ' + EVENT_PLATFORM_LINE_READER);
+}
+if (eventPlatformConsumerCount < EVENT_PLATFORM_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J11 ' + EVENT_PLATFORM_READER + ' 只有 ' + eventPlatformConsumerCount + ' 个产品侧消费点（下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）：');
+    for (const f of eventPlatformConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.233.0 把「这条事件是谁记的」折成受控分级四态并外供 snapshot.eventPlatforms，');
+    console.error('        下游不读 ⇒ 用户永远看不到「事件是哪一侧发生的」，跨平台对照在这台设备上无据可查。');
+    console.error('  修法：产品面接 config/world-bridge.js 的 readLonshaEventPlatforms / eventPlatformsLine。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -432,6 +476,7 @@ console.log('[bridge-contract] ' + PUSH_READER + ' 消费点 ' + consumerCount +
 console.log('[bridge-contract] ' + FACE_STATE_READER + ' 消费点 ' + faceConsumerCount + ' 个（' + faceConsumerFiles.length + ' 文件，下限 ' + FACE_READER_MIN_CONSUMERS + '）· 归因文案表手写键 ' + bareKeyHits.length + ' 张');
 console.log('[bridge-contract] ' + PROJECTION_READER + ' 消费点 ' + projConsumerCount + ' 个（' + projConsumerFiles.length + ' 文件，下限 ' + PROJECTION_READER_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] sourceState/lastError 消费点 ' + probeSelfReads + ' 处 · 结构化面 ' + probeSelfSites.length + ' 个（下限 ' + PROBE_SELF_MIN + '）');
+console.log('[bridge-contract] ' + EVENT_PLATFORM_READER + ' 消费点 ' + eventPlatformConsumerCount + ' 个（' + eventPlatformConsumerFiles.length + ' 文件，下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsumerCount + ' 个（' + injConsumerFiles.length + ' 文件，下限 ' + INJECTION_READER_MIN_CONSUMERS + '）');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费');
 process.exit(0);

@@ -11,7 +11,7 @@ import { WorldpulseView } from './worldpulse-view.js';
 // [v2.28.0] 实例级资源域（App 停止监听/换会话时一次性回收其登记的全部常驻资源）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
 // [v2.35.0] 对外世界桥消费面（只读）：把「现编平行事件」换成「消费 WorldAxis 真世界状态」
-import { readWorldAxisSnapshot, readLonshaSnapshot, worldBridgeAvailability, bridgeReport } from '../../config/world-bridge.js';
+import { readWorldAxisSnapshot, readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine, worldBridgeAvailability, bridgeReport } from '../../config/world-bridge.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -283,17 +283,33 @@ export class WorldpulseApp {
      *   在界面上完全不可见。现在视图的桥卡片真的读它，诊断也能拿到一句话总述。
      */
     bridgeStatus() {
+        /* [v3.5.0] F-2：除「桥通不通」外，再给一面「记忆侧的事件是谁记的」
+         *   （上游 lonsha v3.233.0 的 eventPlatforms）。它与 WorldAxis 真世界状态**并列**，
+         *   但答的是另一个问题：不是「世界现在什么样」，而是「这条线是插件从正文提的、
+         *   还是手机 App 里发生的」——跨平台对照的事实前提，此前在这台设备上无据可查。
+         *   三态由真源给出、**不在这里重判**（本仓 v2.97 的教训：7 份 probeBridge 各自为政）；
+         *   缺席时如实带出 state，不写「0 个平台」。 */
+        const epBlock = () => {
+            try {
+                const ep = readLonshaEventPlatforms();
+                return {
+                    state: ep.state, line: eventPlatformsLine(), platforms: ep.platforms,
+                    platformCount: ep.platformCount, segments: ep.segments, truncated: ep.truncated
+                };
+            } catch (_e) { return null; }
+        };
         try {
             const report = bridgeReport();
             return {
                 bridges: worldBridgeAvailability(),
                 report,
                 summary: (report && report.summary) || '',
-                lastRealReason: this._lastRealReason || null
+                lastRealReason: this._lastRealReason || null,
+                eventPlatforms: epBlock()
             };
         } catch (_e) {
-            try { return { bridges: worldBridgeAvailability(), report: null, summary: '', lastRealReason: this._lastRealReason || null }; }
-            catch (_e2) { return { bridges: null, report: null, summary: '', lastRealReason: null }; }
+            try { return { bridges: worldBridgeAvailability(), report: null, summary: '', lastRealReason: this._lastRealReason || null, eventPlatforms: epBlock() }; }
+            catch (_e2) { return { bridges: null, report: null, summary: '', lastRealReason: null, eventPlatforms: null }; }
         }
     }
 

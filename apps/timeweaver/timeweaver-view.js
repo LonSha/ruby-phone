@@ -6,6 +6,8 @@ import { buildNarrative } from './timeweaver-collector.js';
 // [v3.0.2] R2-C：注入读数（送达侧）的文案出口。刻意**不在视图里拼结论** ——
 //   本仓反复踩到「视图自己兜底推出一个结论」，于是不同面给出互相矛盾的说法。
 import { injectionLine, blockLine } from '../../config/injection-contract.js';
+// [v3.5.0] F-2 下游侧：来源构成的一行读数取自桥真源（本文件不拼口径，只渲染）
+import { eventPlatformsLine } from '../../config/world-bridge.js';
 
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"');
@@ -201,7 +203,7 @@ export class TimeweaverView {
         </div>
         ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
         <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>
-        ${this._injectionBlock(m)}`;
+        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}`;
     }
     /* [v3.0.2] R2-C 送达侧：本轮**真的**进了上下文的是哪几块、哪几块被预算裁掉。
        为什么和上面的「回望」分两块：那张卡答「想起了什么」（召回侧），
@@ -226,6 +228,45 @@ export class TimeweaverView {
             <span class="tw-chip" style="color:${inj.outcome === 'aborted' ? '#f87171' : (inj.outcome === 'completed' ? '#cbb89a' : '#6e7681')}">${inj.outcome === 'aborted' ? '\u26a0\ufe0f 被中止（本轮无回复）' : (inj.outcome === 'completed' ? '\u2713 已完成' : '结局未定')}</span>
           </div>
           ${rows}
+        </div>`;
+    }
+
+    /* [v3.5.0] F-2 来源侧：那件事是谁记的（跨平台事件来源构成）。
+       与上面两块并列的**第三个问题**：
+         · 「回望」答 想起了哪段剧情（召回侧）；
+         · 「送达」答 哪几块真的进了上下文（送达侧）；
+         · 本块答 这件事是插件从正文提的、还是手机 App 里发生的（**来源侧**）。
+       前两块都只看得见「模型看到了什么」，本块第一次让「这台设备上有没有跨平台来源」可读。
+       缺席时**不显示**：读不到就是读不到，不写「0 个平台」（那会把「没读到」说成「确实没有」）。 */
+    _eventPlatformsBlock(m) {
+        const ep = m && m.eventPlatforms;
+        if (!ep) return '';
+        /* 三态各有各的话（真源已把五态分好，此处只做转述，**不重判形态**）：
+         *   unusable ⇒ 装了却读不出（本机的问题面，须点名）；
+         *   empty    ⇒ 有面、账里还没有事件段（真读数）；
+         *   ok       ⇒ 有构成。
+         * 缺席两态（桥未装 / 本版没这面）在收集器那层就不建卡了。 */
+        const TAG = { usable: '', ok: '', empty: '（此刻还没有事件段）', unusable: '（本版读不出该面）' };
+        const tag = TAG[ep.state] || '';
+        const rows = (ep.platforms || []).map((p) => `
+          <div class="tw-person">
+            <span class="tw-person-rank">◆</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(p)}</div>
+            </div>
+          </div>`).join('');
+        const zero = ep.segments
+            ? `共 ${ep.segments} 段${ep.truncated ? '（展示已截断，计数为全量）' : ''}`
+            : '本楼还没有事件段';
+        return `
+        <div class="tw-curve" style="margin-top:14px">
+          <div class="tw-curve-label">🔗 来源侧观测 · 事件是谁记的${tag}</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip">${esc(eventPlatformsLine())}</span>
+            <span class="tw-chip">${esc(zero)}</span>
+          </div>
+          ${rows}
+          <div class="tw-hint" style="font-size:11px;line-height:1.8">平台标签由记忆插件侧登记方**显式给出**，不做文本猜测归类；<br>本栏只列被标过的平台，不排哪个平台更重要。</div>
         </div>`;
     }
 

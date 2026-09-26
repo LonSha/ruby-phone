@@ -9,7 +9,7 @@ import TW from './timeweaver-engine.js';
 //   本文件此前**自写**了一份 `window.lonsha_memory_bridge_v1` 读取（只取 snapshot.recallAudit）。
 //   同一份桥读取逻辑有两份实现必然漂移（且第二份不知道对方 v3.174 的 sourceState 可归因），
 //   故收敛到一处——本文件只负责「取 recallAudit 这一块业务数据」，桥怎么读由真源决定。
-import { readLonshaSnapshot } from '../../config/world-bridge.js';
+import { readLonshaSnapshot, readLonshaEventPlatforms, eventPlatformsLine } from '../../config/world-bridge.js';
 // [v3.0.2] R2-C：上游**注入读数**的消费侧单一真源（与上面那条桥读取并列，
 //   但读的是**不同的一面**：readLonshaSnapshot 取 recallAudit「召回了什么」，
 //   本函数取 injection「最终送进上下文的是什么」——中间隔着预算裁剪与去重）。
@@ -116,6 +116,47 @@ export function collectLonshaInjection(win) {
 }
 
 /**
+ * [v3.5.0] F-2 下游侧：读取「这条事件是谁记的」（跨平台事件来源构成）。
+ *
+ * 与上面两个读数的分工（三个问题，各答一个，互不顶替）：
+ *   · `collectLonshaRecall`     —— 召回侧：想起了哪段剧情（recallAudit）；
+ *   · `collectLonshaInjection`  —— 送达侧：哪几块真的进了上下文（injection）；
+ *   · `collectLonshaEventPlatforms` —— **来源侧：事件是谁记的**（eventPlatforms）。
+ *   前两个回答「模型看到了什么」，这一个回答「那件事是哪一侧发生的」——
+ *   跨平台对照（插件从正文提的 vs 手机 App 里发生的）此前在这台设备上**无据可查**。
+ *
+ * 五态归因由真源给出（bridge-absent / face-absent / unusable / empty / ok），此处**不重判**：
+ *   本仓 v2.97 的教训正是每个消费点自写形态判定（7 份 probeBridge 各自为政）。
+ *
+ * 哪两态**不建卡**（返回 null）：桥未装 / 本版没有这一面 —— 那不是本机用户的问题面，
+ *   每张卡都刷一行「尚未读到」只是噪声；而其余三态照旧建卡：
+ *   · `unusable` —— 插件装了但上游模块没挂上（装了却读不出，必须说出来，否则又是一次静默降级）；
+ *   · `empty`    —— 有面、账里还没有事件段（**真读数**，不是错误）；
+ *   · `ok`       —— 有构成。
+ */
+export function collectLonshaEventPlatforms(win) {
+  try {
+    const r = readLonshaEventPlatforms(win);
+    if (!r) return null;
+    if (r.state === 'bridge-absent' || r.state === 'face-absent') return null;
+    return {
+      state: r.state,
+      reason: r.reason,
+      line: eventPlatformsLine(win),
+      platforms: r.platforms,
+      platformCount: r.platformCount,
+      topPlatform: r.topPlatform,
+      topSegments: r.topSegments,
+      segments: r.segments,
+      countedEvents: r.countedEvents,
+      unlabeled: r.unlabeled,
+      truncated: r.truncated,
+      pluginVersion: r.pluginVersion
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -147,12 +188,16 @@ export function buildNarrative(storage, opts = {}) {
   //   注：刻意**不**并入 empty 判定 —— 生活事件为空时注入读数仍可能有效，
   //   把它算进 empty 会让「有剧情侧观测、没生活碎片」被误报成「什么都没有」。
   const injection = (opts.withRecall === false) ? null : collectLonshaInjection(opts.win);
-  if (!events.length) return { events: [], empty: true, recall, injection };
+  // [v3.5.0] F-2：来源侧与上面两个并列（第三个问题：那件事是谁记的）。
+  //   同样**不并入 empty 判定**：本机还没有生活碎片，不代表剧情侧没有来源构成可读。
+  const eventPlatforms = (opts.withRecall === false) ? null : collectLonshaEventPlatforms(opts.win);
+  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms };
   return {
     empty: false,
     events,
     recall,
     injection,
+    eventPlatforms,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

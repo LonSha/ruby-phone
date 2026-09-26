@@ -10,6 +10,47 @@
 
 ---
 
+## 迭代 47 — v3.5.0 跨平台事件来源构成（F-2 消费侧）
+
+- **任务**：接入上游 v3.233.0 外供的 `snapshot.eventPlatforms`（「这条事件是谁记的」）。
+  这是 FOUR_RELEASE_PLAN 里 F-2 的**下游侧**：上游把事件段的 `source`（40 字自由文本）
+  折成受控分级（extract / platform / other / none），下游要真读它且不重复上游。
+- **★ 真跑取证抓出一条错读数（不是推演）**：
+  `event-completeness.js` 的 `platformFace()` 对空账返回 **`ok:true` + `reason:'no-events'`**
+  （「有面、只是还没有事件段」），而 `index.js:_eventPlatformsFace()` 两条兜底分支返回
+  **`ok:false` + `reason:'module-unavailable' | 'thrown'`**。
+  下游初稿一律按 `ok !== true` 归一 ⇒ 把「上游模块根本没挂上」谎报成「还没有事件线」——
+  两种处境处置相反（前者等上游修，后者等剧情推进）。改为五态：
+  `bridge-absent` / `face-absent` / `unusable` / `empty` / `ok`。
+  取证方式：把上游两模块（`ledger-entity.js` + `event-completeness.js`）喂进 `new Function`
+  后真调 `platformFace(null)` 与 `sourceFace()` 十个入参，读数逐条落进判据。
+- **同轮接上一处三态缺口**：`readLonshaSnapshot` 的「快照不在场」出口此前**没有 `face` 键**，
+  读者只能靠 `('face' in r)` 猜（键面随路径变）；两条出口补齐同形键面。
+- **实现**：
+  - `config/world-bridge.js`：`readLonshaEventPlatforms`（五态 + 恒定 11 键面）、
+    `eventPlatformsLine`（五行各不相同，缺席各有证据方向），平台顺序**照上游词表顺序不重排**。
+  - `apps/timeweaver/timeweaver-collector.js`：`collectLonshaEventPlatforms` ——
+    与「召回侧 / 送达侧」并列的**第三个问题（来源侧）**；缺席两态不建卡、其余三态建卡；
+    **不并入 empty 判定**（没有生活碎片 ≠ 没有来源构成可读）。
+  - 织光机「🔗 来源侧观测 · 事件是谁记的」卡：三态各有自己的话，零段时写「本楼还没有事件段」
+    而不是「0 段」；世界脉动桥卡片再答这一面（文案取真源给的 line，**视图不重判形态**）。
+- **两条硬约束**（与上游同纪律）：**不做判断**（不说哪个平台更重要）、**不猜标签**
+  （受控词表原样透传）。★ 有段而零平台标签时说「无平台标签」，**不写「0 个平台」** ——
+  那句话读者会当成「确实没有」，与「读不到」在字面上长得太像。
+- **同轮修掉两处判据自身缺陷**：
+  ① 状态表只在 default 面上（刻意不另开具名导出，免得撞死导出门禁），首版判据写成
+    具名导入 ⇒ `Object.keys(undefined)` 直接 TypeError；
+  ②「视图不得自己判上游状态」那条判据**扫了注释**，而卡片注释正**点名**那些状态串来说明
+    「形态判断归真源」⇒ 把「禁用声明」读成「违规使用」。
+    **与 v3.4.3 同族，本仓第二次犯**；改为剥注释判代码，并补阳性对照
+    （剥过头会让判据恒真）。
+- **验证**：`node --test tests/system-v321.test.mjs` **12/12**（含三条真源码破坏负控制：
+  破「ok!==true ⇒ unusable」/ 破「空账 ⇒ empty」/ 破「顺序照上游」）；
+  `npm run check` 九门全绿（1050 pass · 0 fail）。
+- **遗留**：① 未验实机（真实 SillyTavern 宿主）；② `truncated` 只在有值时才有意义，
+  缺席面恒 `false`（不假报截断）；③ 上游若再扩受控词表，下游**无需改代码**
+  （顺序与标签均透传）——已写进套件 A3。
+
 ## 迭代 46 — v3.4.3 同楼同刻事实面 + 上游口径自述（F-3 / F-6 消费侧）
 
 - **任务**：接入上游 v3.232.0 的两个新面（`scene.coPresence` / `scene.observationNotes`）。
@@ -2303,7 +2344,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ## 元信息
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.4.3`（五源同源）
+- **当前版本**：`3.5.0`（五源同源）
 - **门禁基线**（v3.0.0 实测，`npm run check` exit 0 / 56.4s）：语法 386 文件 /
   导入可解析门 237 文件 325 条静态说明符（动态 import 97 条不计入判据）/ 测试 **835 pass · 0 fail** /
   死导出零新增（255 个文件、786 个 export 声明、零消费 24 条冻结、枚举面 860 条全部识别）/
