@@ -288,6 +288,11 @@ const KEY_REGISTRY = [
   { key: 'chars_settings_v1', scope: 'chat', note: '群像设置' },
   { key: 'bili_entries_v1', scope: 'chat', note: 'B站条目' },
   { key: 'theater_stories_v1', scope: 'chat', note: '小剧场' },
+  /* [v3.15.0 · 计划 #52 + #53] 洞察 App。两键都刻意命中 `/^usage_/`（会话隔离）：
+   *   统计的是「这个角色/这个会话里你怎么用手机」，落全局会让 B 角色读到 A 角色的记录。
+   *   采集只写 stats，设置只写 settings —— 两类数据分开，避免「改设置顺手把读数一起写回去」。 */
+  { key: 'usage_stats_v1', scope: 'chat', note: '使用统计（次数/时长/时段，不含任何内容）' },
+  { key: 'usage_settings_v1', scope: 'chat', note: '洞察设置（注入开关 / 疏远阈值）' },
   { key: 'worldpulse_state_v1', scope: 'chat', note: '世界脉搏状态' },
   { key: 'worldpulse_history_v1', scope: 'chat', note: '世界脉搏历史' },
   { key: 'worldpulse_settings_v1', scope: 'chat', note: '世界脉搏设置' },

@@ -45,12 +45,21 @@ import { numOrNull } from './config/num-gate.js';
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
 import { createBootTiming, bootTimingLine } from './config/boot-timing.js';
 const bootTiming = createBootTiming();
+/* [v3.15.0 · 计划 #52] 使用统计的**采集咽喉点接线**。
+ *   为什么采集放在 `phone:openApp` / `phone:goHome` 这两个咽喉点，而不是放在洞察 App 内部：
+ *     ① 统计必须在用户**不开洞察页**的时候也照记 —— 把采集搬进 App 会得到自带选择偏差的样本
+ *        （「只统计了你看统计页的那些次」）；
+ *     ② 咽喉点是全仓唯一的 App 打开/回桌面必经之路，放这里**不可能漏掉某个 App**；
+ *        而「逐 App 插桩」正是本仓清单式回收反复漏项的形态（清单总会漏，出口不会）。
+ *   ★ 单一读写门：这两个函数是 `usage_stats_v1` 的唯一读写口，本文件绝不自己碰 storage。
+ *     调用一律包在 try/catch 内且**不看返回值** —— 采集失败绝不允许影响开 App。 */
+import { trackerNote as usageTrackOpen, trackerClose as usageTrackClose } from './config/usage-tracker.js';
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.14.0';
+const ST_PHONE_VERSION = '3.15.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -95,6 +104,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'placeApp', 'cheatApp', 'dtApp', 'walletApp', 'profileApp',
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
     'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp',
+    'usageApp',     // [v3.15.0] 洞察：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'diagnoseApp'   // [v2.99.0] 诊断中心：无状态，但仍进表（下帧现取，防将来加缓存时漏重绑）
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -132,16 +142,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-30",
     items: [
-        "**主治：计划 #65「电池优化」**。计划原文是「后台任务使用节能模式（降低同步频率 / 延迟非紧急任务），延长续航」。取证先于动手：本仓真正的后台成本不在「频率太高」，而在**实例被丢弃时其 1Hz 计时器仍在跑** —— 也就是「没人再看得见它，但它每秒还在唤醒一次」。",
-        "**实测确证的泄漏（可复现的因果链）**：微信通话界面 `showVideoCallInterface` / `showVoiceCallInterface` 把秒表句柄存在**方法局部变量** `videoTimer` / `callTimer`，唯一清点是通话界面的**挂断按钮**；而「通话界面在场时微信实例被丢弃」是可达的 —— `index.js` 里六处 `isCallOverlayVisible` 刻意阻止全局渲染即是证据（其中一处还打印「拦截了一次会导致通话界面消失的全局渲染」）。丢弃后计时器以 1Hz 永久重发，而它想更新的 DOM 已不存在。",
-        "**既有判据为什么没拦住（两重假绿，如实记录）**：①判据「句柄存局部变量 + 两处手写清理」的签名把**变量名写死为 `timer`** —— 而微信两处叫 `videoTimer` / `callTimer`，**签名不命中**；②同一条判据的白名单又把这两处**显式登记为「刻意保留的正常态」**（注释理由是「已配对清理」——而配对的只是另一个出口）。于是缺陷被锁进了护栏。教训：**白名单是判据的住处，也是缺陷的藏身处** —— 登记一处「刻意保留」时必须同时写下它**为什么**安全，否则那个理由会随代码漂移而静默失效。",
-        "**修法（接进实例域，不是补一个 clearInterval）**：`apps/wechat/chat-view.js` 构造期建 `this._rt = childRuntime(\"wechat-chat-view\")`，两条秒表改 `addInterval(..., 1000, \"call:video\" / \"call:voice\")`；三类出口统一按 tag 回收 —— 挂断按钮两条 + `releaseInactiveResources()` 新增 `cancelByTag(\"call:\")`（该方法是「离开微信 / 低内存回收 / 清数据」的必经点）。`chat-view.js` 的裸 `setInterval` / `clearInterval` 计数归零。",
-        "**同类丢弃点一次收完（本轮自纠）**：丢弃点共七处 —— `index.js` 六处（三处置 null + 三处会话身份变更）+ `apps/wechat/wechat-app.js` 的 `_resetWechatSingletonCaches()`（微信单例的**唯一丢弃咽喉点**，被清聊天 / 全清 / 设置页清数据三条路径共用）。初稿只改了 `index.js` 六处，**漏了咽喉点**；补上时按本仓口径挂在咽喉点而不是三个调用点各写一次（清单式回收总会漏，v2.31 修 homeScreen 的教训）。",
-        "**新增离开约束判据（防下一条同型路径）**：断言「`wechatApp` 丢弃点每一处都必须先走实例出口」—— 观察面是**丢弃点的上方三行内是否有实例出口调用**，而不是「全文出现过」（后者会被同文件另一页面的正确写法瞬间绕过）。配两条真源码破坏负控制：删掉咽喉点内的 `deactivate()` ⇒ 转红；在某处丢弃点前插一行无关语句把出口推开 ⇒ 转红。",
-        "**交棒改写（保留历史事实，只更新可变形状）**：`tests/system-v228.test.mjs` 的 paired 白名单由 5 处减为 3 处（保留的三处均为「作用域限定在单次操作内」的站点），并新增 4 条 chat-view 正向判据。**v324 取证基线联动**：本版首次使该基线出现判据转 pass（覆盖率准入读数由 79.7% 升至 80.6%）—— 按纪律**如实记入基线并追注「变好的是不是同一条轴」**（这次越线是因为「出口多了一个」，不是因为「可声明性变好了」），判据同步钉住「转 pass 的条数必须与基线一致」，防读数静静变好。",
-        "**顺带修掉一条自己写坏的判据（本版的自我纠正）**：v228 判据「裸 setInterval / clearInterval 已清零」在上一版写入时被转义吃掉了一个字母，实际落盘成「感叹号 + 斜杠 + 一个退格字符 + setInterval」—— 该正则**恒为真**，是一条假绿。已复原为词边界断言并逐字节复查全仓：仅此一处控制字符污染，其余文件干净。教训：**判据的「已清零」型断言必须自证能对破坏有反应** —— 一个恒真的否定式断言与一条真判据在绿字面上完全同形。",
-        "**运行时验证边界（本版的诚实登记）**：本版改动的正确性由无头门禁守住（十道门 + v228 / v324 判据套件 + 2 条真源码破坏负控制）；但「通话界面在场时丢弃实例」这条路径的**真机复现**属**未验证** —— 扩展的自动化门禁跑不了宿主 DOM。文档本版已复校，其「一句话版本」在此重申：它**不能**保证真机上的视觉排版、真实网络往返、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属该文档登记的第二类，需在真机复现后再修。故本版修的是**句柄归属**（可被静态判据钉死），不是「续航实测变好」。",
-        "落地：`apps/wechat/chat-view.js`（7 处：import / 构造期域 / 两条秒表 / 两个挂断出口 / 闲置出口）+ `apps/wechat/wechat-app.js`（1 处：单例丢弃咽喉点）+ `index.js`（6 处丢弃点）+ `tests/system-v228.test.mjs`（交棒 + 5 条新判据含 2 条真源码破坏负控制）+ `tests/system-v324.test.mjs` + `tests/audit/lifecycle_declarative_baseline.json`+ `docs/runtime-verification-boundary.md` / `ITERATION_LOG.md` / `TODO.md`（同步）+ `index.js` / `update-log.json` / `manifest.json` / `package.json`（五源同源）**版本升至 3.14.0（五源同源）**。",
+        "**主治：计划 #52「使用统计面板」+ #53「联系人互动分析」**。这两条是同一族——都要先有**采集/取数面**，展示面才不是编的；而本仓此前两样都没有：全仓对 `phone:openApp` 只有路由消费，**零处**记录「谁被打开过、待了多久、集中在哪个时段」；互动痕迹散在微信 / 短信 / 通话三处且形状各不相同（微信是会话表 + 按会话分桶的懒加载正文，短信是会话套消息，通话是扁平列表），**没有任何地方做过汇总**，故「谁很久没联系了」在本仓此前无从回答。",
+        "**采集点的选址（本版的主要判断）**：统计必须在用户**不开洞察页的时候也照记** —— 把采集搬进 App 会得到自带选择偏差的样本（只统计了你看统计页的那些次）。故采集挂在两个咽喉点（打开 App / 回桌面），而不是逐 App 插桩：咽喉点是全仓必经之路，**不可能漏掉某个 App**；而逐 App 插桩正是本仓清单式回收反复漏项的形态 —— **清单总会漏，出口不会**。",
+        "**三条纪律落成机制（不是写在注释里）**：①**单一读写门** —— 统计键只经 `config/usage-tracker.js` 的两个采集出口读写，咽喉点自己绝不碰 storage，否则「谁在写这个键」就没有答案；②**不抛** —— 采集跑在开 App 的热路径上，任何异常一律吞掉，**绝不允许影响开 App**；③**不猜** —— 未加载的微信会话其条数如实标「条数未知（会话未加载）」而不是算成 0 条（按空桶算会得到「这个联系人从没聊过」这种漂亮假零）；最近联系时间读不到一律 `null`，**绝不补 0**（0 是 1970-01-01，会被算成「55 年没联系」）；近 7 天柱状图对无记录的日子画**虚线占位**并注明，而不是画一根 0 高度的柱。",
+        "**诚实边界（已写进 docs/runtime-verification-boundary.md，不在别处重复声明）**：时长是**两次开 App 之间的间隔，不是真实前台驻留时间** —— 扩展拿不到宿主的前台 / 后台信号，故单次按 4 小时封顶（把手机开着不管，不会把一个 App 算成「用了一整天」）。本面**只记次数 / 时长 / 时段，不记任何内容**（不记消息、不记操作、不记输入）；「访问热点」是 0–23 时的**时段分布**，不是点击坐标，也不是页面路径。",
+        "**为什么加「采集面自检」卡**：展示面读的是**已存下的**统计，采集面坏掉时它只会显示「还没有记录」—— 于是「采集坏了」与「你还没用过」在界面上**完全同形**，这正是本仓最贵的形态（不报错、不崩溃、只错结论）。故把采集键的真实状态（已记天数 / 当前挂着的 App）直接摆出来：用户只要记得「我刚才开过 App」，就能用它判断采集到底在不在工作。",
+        "**顺带修掉本版自己写下的两处形态缺陷（如实记录，不静默放过）**：①`apps/usage/usage-view.js` 的 `_esc()` 把引号转义写成 `.replace(/\\\"/g, '\\\"')` —— 右边那个所谓「实体」是**裸引号本身**，即**恒等替换**（& / < / > 三处真在转义，只有引号那一处空转，所以「看起来一切都对」）。这正是 v3.10.1 收干过 7 处、且 v257 F3 已立过回归锁的同款形态；已改为 `\\x26quot;` 反斜杠转义序列 —— 根因是实体字面量在**写盘 / 补丁层**会被就地解码成裸字符，唯有转义序列能让字面量在源码里不被解码。②`config/contact-insight.js` 初版自带一份同义的 `numOrNull`，改为 import 全仓唯一实现（`config/num-gate.js`，v3.12.0 立的纪律）—— **逐处复制即下一个漏网处**。",
+        "**落地**：`config/usage-tracker.js`（采集 + 投影内核，299 行）+ `config/contact-insight.js`（联系人互动纯函数内核，247 行）+ `apps/usage/` 四件套（data / app / view / css）+ `config/apps.js`（桌面条目）+ `config/storage.js`（`/^usage_/` 会话隔离）+ `index.js`（采集咽喉点 2 处 + 懒加载分支 + REBIND 表项 + 五源同源抬版）+ `scripts/keys-audit.mjs`（两键归属登记）+ `phone.css`（`.uq-*` 样式投递）+ `tests/system-v3150.test.mjs`（判据套件，含真源码破坏负控制）+ `TODO.md` / `ITERATION_LOG.md` / `docs/runtime-verification-boundary.md`（同步）**版本升至 3.15.0（五源同源）**。",
+        "**★ 交棒改写（抬版即红的硬写数字，本轮主动改写而非静默改数）**：本版把三条「写死当版精确读数」的旧判据改为可交棒的形状 —— ① `tests/system-v255.test.mjs` 的 `dirMap` 缺新 App 映射，补登记（结构形）；② `tests/system-v266.test.mjs` 原硬写「APPS id 41 与懒加载分支 41」，改为**反向引用形**（只锁两边相等，不锁具体数）；③ `tests/system-v268.test.mjs` 原硬写「样式投递 31 个」，改为**下限形**（只锁「样式投递面不得塌陷」）。三条与本仓已记录六次的同族脆性同源，修法是仓内既定两式：**结构形与下限形**。四份冻结基线同步复校，并逐条追注「变好的是不是同一条轴」（其中 lifecycle 一条明确记为**轴不同**：这次上浮不是可声明性变好，两条决定性硬否决一格未动）。",
+        "**运行时验证边界（本版新增的诚实登记）**：本版新增的两层（采集咽喉点与三源互动汇总）其正确性由十道门与判据套件守住；但「真机上打开 App 的时长读数与你实际感受是否一致」（扩展拿不到宿主前台信号，单次按 4 小时封顶）与「微信正文在真宿主里确实按加载标记懒加载」属**未验证** —— 自动化门禁跑不了宿主 DOM。二者的共同形态是「看起来没坏但显示不对」：不报错、不崩溃、只错结论，因此**不能保证**与真机一致，需在真机复现后再修。该边界与 `docs/runtime-verification-boundary.md` 共用同一句标志语，由判据强制两侧同源。",
+        "**★ 当版判据套件落地 + 它抓到的两件事（如实记录）**：`tests/system-v3150.test.mjs`（24 条判据，含 8 条真源码破坏负控制；写法是「同一份判据在原件与破坏副本上各跑一次」+「破坏锚点必恰中 1 次」）。建成时它当场报出两个真缺陷：① **采集内核的次数恒为 0** —— `noteOpen()` 里把「本次是否计次数」传成了 false，注释写着「次数在打开时即计」而实现把每次打开都当成「只加时长」，于是统计键里的 count 永远是 0：「最常用功能」退化成按时长排序，用户看到「微信 0 次 · 2 小时」这种自相矛盾的读数；形态正是本版主治的那一族 —— 不报错、不崩溃、只错结论（图表照画、排序照排，只有数字是错的）。已修复并立判据钉住。② **上一轮遗留的致命语法事故**：向本弹窗的条目表追加两条时吃掉了上一条末尾的逗号，导致整个index.js 无法解析（语法门提示：若损坏在 index.js，整个扩展不会被浏览器加载，所有 App 不可用）。已补回分隔符。教训：**向 JSON 字面量块插条目后要回读确认相邻分隔符仍在**；**抬版后必须真跑一次全量门禁**，只跑目标套件会把它完整地漏过去（那三个套件在语法坏掉时依然全绿）。",
     ]
 };
 
@@ -9783,6 +9793,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
             // 监听返回主页
             window.addEventListener('phone:goHome', () => {
+                // [v3.15.0 · 计划 #52] 回桌面 = 本次访问结束：结算时长。
+                //   ★ 放在**清零 currentApp 之前**：此刻 storage 句柄与读数都还是本次会话的，
+                //     而 `currentApp = null` 之后就没有「刚才是哪个 App」这条信息了。
+                //   ★ 幂等：usage-tracker 的 noteClose 只结算「挂着的 open」，没有 open 时是空操作
+                //     —— 连按返回键 / 重复派发 goHome 不会重复计时。
+                try { usageTrackClose(storage); } catch (_e) { /* 采集失败不得阻断界面重建 */ }
                 releasePhoneInactiveResources(null);
                 currentApp = null;
                 window.currentWechatApp = null;
@@ -9806,6 +9822,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
                 releasePhoneInactiveResources(appId);
                 currentApp = appId;
+
+                // [v3.15.0 · 计划 #52] 采集咽喉点：记一次「打开」。
+                //   ★ 放在 guard 之后、路由之前：被 `_homeReturnGuardUntil` 拦下的重入点击
+                //     不算一次真实打开（否则同一秒点两下会得到两条读数）。
+                //   ★ 此处**不做任何分支**、不看返回值：采集是旁路，路由是主路。
+                try { usageTrackOpen(storage, appId); } catch (_e) { /* 采集失败不得阻断开 App */ }
 
                 const app = currentApps.find(a => a.id === appId);
                 if (app) {
@@ -10365,6 +10387,21 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载群像App失败:', err);
                             phoneShell?.showNotification('错误', '群像App加载失败', '❌');
+                        });
+                } else if (appId === 'usage') {
+                    // [v3.15.0 · 计划 #52 + #53] 洞察：使用统计 + 联系人互动（两分页一 App）。
+                    //   本 App **不写任何 storage**（统计的写只在采集咽喉点的 trackerNote/Close），
+                    //   所以它是纯只读面：打开统计页绝不会改动被统计的数据。
+                    bootTiming.instrumentImport(import('./apps/usage/usage-app.js'), './apps/usage/usage-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.usageApp) {
+                                window.VirtualPhone.usageApp = new module.UsageApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.usageApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载洞察App失败:', err);
+                            phoneShell?.showNotification('错误', '洞察App加载失败', '❌');
                         });
                 } else if (appId === 'clock') {
                     // [v2.52.0] 时计：消费记忆插件剧情时钟（只读桥，五态归因，注入走表驱动）。

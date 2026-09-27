@@ -55,6 +55,7 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     charsApp: 'chars', clockApp: 'clock', ledgerApp: 'ledger', assetApp: 'asset',
     graphApp: 'memory', memoryApp: 'memory',
     timeweaverApp: 'timeweaver', wangxiangApp: 'wangxiang',
+    usageApp: 'usage',         // [v3.15.0] 洞察：读数现取（onChatChanged 只丢缓存、不强取）
     diagnoseApp: 'diagnose'   // [v2.99.0] 诊断中心（无状态，但仍实现了空的 onChatChanged）
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），

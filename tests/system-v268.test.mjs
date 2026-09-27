@@ -94,7 +94,12 @@ test('v268-P2 真仓库 R2b/R3b：宽匹配白名单与样式豁免清单全部�
   const r = runOriginal(REG);
   assert.equal(r.code, 0, '注册门禁在真仓库上未通过：' + r.out);
   assert.match(r.out, /两张准入清单存活/);
-  assert.match(r.out, /样式投递 31 个/);
+  /* [v3.15.0 交棒] 原文写死「样式投递 31 个」—— 当版精确读数，新增一个带样式的 App 即红。
+     本条要锁的是「样式投递面**没塌**」（两张准入清单存活那半仍逐字保留），
+     故改为**下限形**：个数不小于 25（塌到 0 才是真失效）。 */
+  const mDeliv = /样式投递 (\d+) 个/.exec(r.out);
+  assert.ok(mDeliv, '样式投递读数必须在场：' + r.out.slice(0, 200));
+  assert.ok(Number(mDeliv[1]) >= 25, '样式投递面不得塌陷，实测 ' + mDeliv[1]);
 });
 
 // ══════════════ 负控制 A：E10 存活性 ══════════════

@@ -134,6 +134,11 @@ export class PhoneStorage {
             /^games_board_state$/,                        // 五子棋/象棋/斗兽棋
             /^games_undercover_state$/,                   // 谁是卧底
             /^games_poker_(user_chips|player_count|chips_mode|selected_contact_ids)$/,
+            // [v3.15.0] 洞察（usage_stats_v1 / usage_settings_v1）。
+            //   为什么要隔离：统计的是「这个角色/这个会话里你怎么用手机」。
+            //   落全局会让 B 角色看到 A 角色的使用记录，而「使用统计」恰恰是最容易被
+            //   当成真实读数消费的一类数据（本仓 v2.8.10 串味事故同族）。
+            /^usage_/,
         ];
 
         // ==================== 防抖：saveChat ====================

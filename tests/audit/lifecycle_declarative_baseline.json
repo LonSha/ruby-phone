@@ -29,6 +29,35 @@
         "semantic_same",
         "semantic_diff"
       ]
+    },
+    "v3.15.0": {
+      "why": "洞察 App（计划 #52 使用统计 + #53 联系人互动分析）：新增 1 个 App 类（UsageApp）⇒ App 类 36 → 37、实例槽位 49 → 50、App 槽位 37 → 38、签名「无参出口」26 → 27（UsageApp.onChatChanged() 无参）；三条路径区间与接线点（62 / 50 / 12）一字未动 —— 本版**不改产品生命周期路径**，只在两个既有咽喉点上挂采集调用。",
+      "readings": {
+        "app_classes": 37,
+        "slots": 50,
+        "app_slots": 38,
+        "app_slot_share_pct": 76.0,
+        "sig_empty": 27
+      },
+      "unchanged": [
+        "wiring_points",
+        "app_exit_points",
+        "non_app_points",
+        "coverage_pct",
+        "non_app_share_pct",
+        "points_p1",
+        "points_p2",
+        "points_p3",
+        "sig_default",
+        "sig_required",
+        "sig_none",
+        "semantic_slots",
+        "semantic_same",
+        "semantic_diff",
+        "semantic_consistency_pct",
+        "criteria_pass_count"
+      ],
+      "axis": "**轴不同（必须写明）**：这次上浮**不是「可声明性变好」** —— R1 覆盖率 80.6%、R4 非 App 占比 19.4% 只是分母变大后被同一批分子摊薄（50/62 → 50/62 未变，App 槽位 +1 只影响槽位分母）；**两条决定性硬否决 R2（参数契约 1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动**，总判定仍为 not_done。拿本版读数当「接近可实施」的证据是误读。"
     }
   },
   "caliber": [
@@ -40,10 +69,10 @@
     "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
   ],
   "readings": {
-    "app_classes": 36,
-    "slots": 49,
-    "app_slots": 37,
-    "app_slot_share_pct": 75.5,
+    "app_classes": 37,
+    "slots": 50,
+    "app_slots": 38,
+    "app_slot_share_pct": 76.0,
     "wiring_points": 62,
     "app_exit_points": 50,
     "non_app_points": 12,
@@ -52,7 +81,7 @@
     "points_p1": 19,
     "points_p2": 20,
     "points_p3": 23,
-    "sig_empty": 26,
+    "sig_empty": 27,
     "sig_default": 1,
     "sig_required": 1,
     "sig_none": 8,
