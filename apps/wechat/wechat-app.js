@@ -7507,6 +7507,11 @@ export class WechatApp {
 
     _resetWechatSingletonCaches() {
         if (window.VirtualPhone) {
+            // [v3.14.0 · 计划 #65] 丢弃实例前先走实例出口：本函数是微信单例的唯一丢弃咽喉点
+            //   （清聊天 / 全清 / 设置页清数据三条路径共用），而通话计时器属实例域（chat-view 的 call: 标签）。
+            //   若在此处裸置 null，通话界面在场时计时器将永久重发。
+            //   挂在哽喉点而不在三个调用点各写一次：清单式回收总会漏（v2.31 修 homeScreen 的教训）。
+            try { this.deactivate?.(); } catch (_e) { /* 忽略 */ }
             window.VirtualPhone.wechatApp = null;
             window.VirtualPhone.cachedWechatData = null;
 

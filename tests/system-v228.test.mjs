@@ -316,11 +316,13 @@ const {
         }
         ok('接线·全仓: 不存在只启不停的文件（setInterval 必配 clearInterval 或入域）',
             onlyStart.length === 0, JSON.stringify(onlyStart));
-        /* ③ 刻意取舍：剩下 4 处实例级 setInterval 均已配对清理，本轮不动（避免无缺陷重构） */
+        /* ③ [v3.14.0 · 计划 #65] **交棒**：原白名单里 wechat/chat-view.js 的 videoTimer / callTimer
+           两处被登记为「刻意保留的正常态」，理由是「已配对清理」——
+           而配对的只是**另一个出口**（通话界面的挂断按钮），“通话界面在场时微信实例被丢弃”
+           走不到那个按钮。本版已接进实例域：移除白名单项、并新增正向判据。
+           余下 3 处仍处配对状态（回归护栏）。 */
         const paired = [
             ['apps/phone/phone-view.js', 'callTimer'],
-            ['apps/wechat/chat-view.js', 'videoTimer'],
-            ['apps/wechat/chat-view.js', 'callTimer'],
             ['phone/lock-screen.js', '_clockTimer'],
             ['config/image-generation-manager.js', 'timer'],
         ];
@@ -329,8 +331,70 @@ const {
             const s = fs.readFileSync(path.join(root, f), 'utf8');
             if (!CALL_SI.test(s) || !CALL_CI.test(s)) unpaired.push(`${f}:${field}`);
         }
-        ok('接线·全仓: 刻意保留的 5 处站点仍处配对状态（回归护栏）',
+        ok('接线·全仓: 刻意保留的 3 处站点仍处配对状态（回归护栏）',
             unpaired.length === 0, JSON.stringify(unpaired));
+
+        /* [v3.14.0 · 计划 #65] chat-view 两条通话计时器：接进实例域（交棒判据） */
+        {
+            const cv = read('apps/wechat/chat-view.js');
+            ok('接线·chat-view: 通话计时器已进实例域（video/voice 各一条 tag）',
+                /addInterval\([\s\S]{0,900}?'call:video'\)/.test(cv)
+                && /addInterval\([\s\S]{0,900}?'call:voice'\)/.test(cv));
+            ok('接线·chat-view: 域对象在构造期建一次（不是各用法里 childRuntime）',
+                (cv.match(/= childRuntime\(/g) || []).length === 1
+                && /this\._rt = childRuntime\('wechat-chat-view'\)/.test(cv));
+            ok('接线·chat-view: 三类出口均按 tag 回收（挂断×2 + 域内闲置出口）',
+                (cv.match(/cancelByTag\('call:video'\)/g) || []).length >= 2
+                && (cv.match(/cancelByTag\('call:voice'\)/g) || []).length >= 2
+                && /releaseInactiveResources\(\)[\s\S]{0,1400}?cancelByTag\??\.?\(\s*'call:'/.test(cv));
+            ok('接线·chat-view: 裸 setInterval/clearInterval 已清零（改由域统一回收）',
+                !/\bsetInterval\(/.test(cv) && !/\bclearInterval\(/.test(cv));
+        }
+        /* [v3.14.0 · 计划 #65] 实例丢弃点：离开约束。
+           本次修的是「实例域里的资源」，而旧判据只看到「文件级有没有 paired」——
+           实例被丢弃而实例域还活着的情形在那个观察面上是完全同形的。
+           故把「丢弃点必须先走实例出口」升为离开约束：
+             · 跳过两种非实例语义：声明行（形如 let wechatApp = null;）与字典字段写入
+               （形如 wechatView.wechatApp = null，改的是字段不是控制句柄）；
+             · 观察面用「上一行是否已有实例出口调用」，而非「全文出现过」——
+               后者会被同文件另一页面的正确写法瞬间绕过（假绿，本轮实测踩中过）。
+           该约束对 index.js / wechat-app.js 同时成立，新增丢弃点若漏写出口即转红。 */
+        {
+            const DROP_RE = /wechatApp\s*=\s*null/;
+            const KILLER_RE = /(?:deactivate|destroy|releaseInactiveResources)\?*\.*\(/;
+            const bare = [];
+            let dropCount = 0;
+            for (const f of all) {
+                const rel = path.relative(root, f);
+                const ls = fs.readFileSync(f, 'utf8').split('\n');
+                for (let i = 0; i < ls.length; i++) {
+                    const raw = ls[i].trim();
+                    // 注释行不是代码（本轮实测踩中：自己写的注释里引用了这个字面形态，
+                    //   而被计成了一个「丢弃点」，于是真判据报出一个假缺口）。
+                    if (!raw || raw.startsWith('//') || raw.startsWith('*')) continue;
+                    if (!DROP_RE.test(ls[i])) continue;
+                    dropCount++;
+                    // 往上最多 3 条**非注释行**找实例出口调用（跳过空行/注释后逐条判，命中即覆盖），
+                    // 而不是「全文出现过」—— 后者会被同文件另一页面的正确写法瞬间绕过。
+                    let covered = false;
+                    let seen = 0;
+                    for (let k = i - 1; k >= 0 && seen < 3; k--) {
+                        const s = ls[k].trim();
+                        if (!s || s.startsWith('//') || s.startsWith('*')) continue;
+                        seen++;
+                        if (KILLER_RE.test(s)) { covered = true; break; }
+                    }
+                    if (!covered) bare.push(`${rel}:${i + 1}`);
+                }
+            }
+            ok('接线·wechatApp 丢弃点: 每一处都先走实例出口（新增丢弃点漏写即转红）',
+                dropCount >= 7 && bare.length === 0,
+                JSON.stringify({ dropCount, bare }));
+            const wa = read('apps/wechat/wechat-app.js');
+            ok('接线·wechat-app: 单例唯一丢弃咽喉点内部已走实例出口',
+                /_resetWechatSingletonCaches\(\)[\s\S]{0,900}?this\.deactivate\?\.\(\)/.test(wa)
+                && (wa.match(/_resetWechatSingletonCaches\(\);/g) || []).length >= 3);
+        }
     }
 }
 

@@ -50,7 +50,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.13.0';
+const ST_PHONE_VERSION = '3.14.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -132,18 +132,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-30",
     items: [
-        "**主治：启动期「读得出慢不慢、读不出谁慢」**。计划 #14 的原文是「启动速度优化：追加启动耗时分析工具，识别哪个模块拖慢了启动」。取证先于动手，实测到的真实处境有三条：①启动期**只有两句** `console.log` 汇总（核心模块合计 / UI 模块合计），每句是一个**总数** —— 读得出「慢不慢」，读不出**谁慢**；②`index.js` 里 **78 处** `import(...)` 动态加载点**零时计**（用户点某个 App、某个面板才现加载，慢在哪一步只有卡顿感，没有读数）；③**没有任何面向用户的可见面** —— 计划里说的「追加分析工具」这一半根本不存在。",
-        "**本版是读数层，不是优化（边界写死在文件头）**：新增 `config/boot-timing.js`（**零依赖叶子模块**，导出 `createBootTiming` / `bootTimingLine` / `MAX_SPANS`），**一条加载路径都不改** —— 不改顺序、不改并发、不拆包、不预加载。理由是本仓一条老账：「没有读数的优化是把直觉当证据」。读数是优化的**前置条件**，不是替代品。",
-        "**全仓 78 处动态加载点一次接完，且 spec 逐字不变**：全部 `import(<spec>)` 改为 `bootTiming.instrumentImport(import(<spec>), <spec>)` —— 包装收的是**已经在跑的那个 promise**，不是 specifier 字符串；模块内部绝不去 `import(spec)` 现拼（用变量 import 会让加载路径从「宿主可静态分析」变成「纯运行时解析」，那就是改加载路径）。原样转发 resolve/reject（`throw err` 而非吞掉）：加载失败要让原调用链照旧走它自己的 `.catch`，**吞错会让失败变成静默**；失败也记账（段名后缀 `!failed`，因为 `import` 抛错本身是最值得看见的一段）。",
-        "**两个反坐实纪律，写进判据而不是写在注释里**：①**「测不出」与「很快」不许同形** —— 起止任一时钟缺失 ⇒ 该段读数 `ms: null`（`state:'unmeasurable'`），**不得**报 0ms（`now - undefined = NaN` 再 `|| 0` 会变成「这一步耗时 0ms」这个**看起来完美的假零**），也不得让整份报告因此塌掉；②**两种「没有 ms」必须分得开** —— `unmeasurable` 是「记了这段账但测不出（有 span、ms=null）」，**缺席**是「根本没记账（连 span 都没有，例如某段在收尾前抛了错）」。把两者渲染成同一句话，就是拿「读不到」冒充「很快」。",
-        "**「无钟」这一路必须能被显式构造出来（本版自己踩到并修掉的真缺陷）**：原先 `createBootTiming({ now: undefined })` 会**回落探测** `performance.now`，于是「无钟」这条边界永远只活在推理里（本仓纪律：测不到的边界等于没写）。时钟解析改为**三态** —— 省略 `now`（属性不存在）⇒ 自动探测；`now: null` ⇒ 调用方**明确声明无钟**；`now: fn` ⇒ 用注入钟（注入的钟抛错 / 返回 `NaN` / `Infinity` 一律按「读不到」处理，不是 0）。坏钟三态各有判据钉住。",
-        "**收尾幂等（会读到假读数的地方）**：`begin()` 返回的收尾函数第二次起返回 `null` 且**不重复记账** —— 启动路径里 `try/finally` 与显式收尾常常都会调一次，重复记账会把读数做假（段数翻倍、污染「重复段」读数）。无钟分支有自己的收尾实现，故单独判一次。",
-        "**可见面接进诊断中心（本仓一切读数的唯一出口）**：`apps/diagnose/diagnose-data.js` 新增 `bootTimingFace(win)`（从**宿主实例** `window.VirtualPhone.bootTiming` 读 —— 自建实例会把「整段启动」读成「打开页之后」）/ `bootTimingFaceText(face)`（**逐字转发**真源文案，同一口径不得两份实现）/ `bootTimingRows(face, limit)`（排序口径属内核：可测时按耗时降序在前、不可测时排在后面，mark 单独标出）；`collectDiagnose` 返回面新增 `bootTiming`；`summarizeDiagnose` 首行新增「启动期有 N 个模块加载失败」（不可测时不进首行）。`apps/diagnose/diagnose-view.js` 新增 `_bootTimingHtml(pkg)` 卡片，三条纪律必须看得见：**逐段而非总数** / **不可测时单独列出绝不混进耗时排序** / **重复加载点单列**；卡上写明「只读数，不做优化」及其理由。卡片置于 render 最后 —— 它是**启动期**读数，其余卡片是**当前态**读数。",
-        "**读出口为什么叫 `collect()` 而不是 `snapshot()`（命名服从门禁口径，非风格偏好）**：本仓第九道门（bridge-contract）J2 把**产品代码**（apps/** 与 config/**）里一切 `.snapshot(` 视为「调用式读桥」—— 那条判据的起因是 clock/ledger 两份抄错的实现把**推送型**桥的 `snapshot`（对象）当函数调，必然抛 TypeError 并被 catch 吞掉，于是两个 App 永久显示「桥在但没快照」。新模块沿用那个名字会让**真违规被噪声淹没**（诊断页的 `DiagnoseApp.collect()` 正是因此得名）。故读出口一律叫 `collect()`：与那条判据**永不混读**。",
-        "**判据套件 `tests/system-v3130.test.mjs`（五段 A–E，共 18 项）**：A 口径本体（无钟 / 坏钟三态 / 幂等收尾 / 原样转发 / 零依赖 / 两种「没有 ms」可分）；B 真源码接线（**全部**动态 import 都被旁听包住且 **spec 逐字不变** / 两个启动大段与请求侧标记在场 / `window.VirtualPhone.bootTiming` 唯一出口 / 读出口命名）；C 可见面（真读宿主实例、逐字转发、排序口径、视图真建卡与三条纪律）；D **真源码破坏负控制 4 条**（把「不编 0」拆掉 / 把吞错改回来 / 读出口改名回 `snapshot` / 拆掉一处 import 旁听 —— 破坏落在真文件文本、在**破坏副本**上重跑**同一份真判据**，不另写一套「看起来像」的断言）；E 版本五源同源（下限形，不钉死某一版）。",
-        "**本版自己踩到的判据本体缺陷，如实记下（判据的纪律优先于实现）**：①判据 2 原断言「`repeatedSpecs` 里出现 `times === 1`」—— 而真源的口径是「只列出现 >1 次的」，这条断言**逻辑上永远为假**（是判据写错，不是实现缺陷）：改为断言 `segments` 里每一段的 `spec` 字段保留原串，并补「同一 spec 加载两次必须被计成重复加载点」；②B3 的 `.snapshot(` 扫描面**没剥注释**，比第九道门**更严**（门是先过 `stripComments` 再扫）—— 真源文件头正用这句散文解释命名理由，一剥一不剥，同一件事会得到两个答案（v3.12.0 立 `stripComments` 要治的正是这个形态）：改为剥注释后扫，并补一条自证（未剥注释的原文里**确实**有这串字面），免得「说明连同注释一起被删」与「真没违规」显示成同一个绿；③D1 的破坏锚点原打在 `if (t0 === null) return null;` 上 —— 真源里**有两处**（`since()` 与断点判空同族），按「锚点恰中 1 次」纪律当场拒判，改用唯一锚点（无钟分支的收尾记账：把「记 null」改成「记 0」）；④同处断言用 `assert.throws` 包一个**返回 `{ok, why}` 契约**的判据函数，等于把「转红」与「抛错」混为一谈 ⇒ 改为断言返回值。",
-        "落地：`config/boot-timing.js`（新建）+ `index.js`（全量接线 7 处锚点 + 78 处旁听）+ `apps/diagnose/diagnose-data.js`（读数面）+ `apps/diagnose/diagnose-view.js`（卡片）+ `tests/system-v3130.test.mjs`（新判据套件）+ `ITERATION_LOG.md` / `TODO.md`（同步）。**版本升至 3.13.0（五源同源）**。",
-        "**运行时验证边界（本版的诚实登记）**：本版改动全在**读数层**，其正确性由无头门禁（十道门 + 22 项判据套件，含 4 条真源码破坏负控制）守住；但本扩展的自动化门禁**不能保证**真机上的视觉排版与真实渲染（它跑不了宿主 DOM），故这两项仍属**未验证**。启动读数本身也**只能在真机上看到有效数字** —— 无头环境无 `performance.now` 时整面退化为「可记账但不可测时」（如实报「不可测时」，不报 0）。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修（判据：`tests/system-v328.test.mjs`；工程侧全文见 `docs/runtime-verification-boundary.md`）。",
+        "**主治：计划 #65「电池优化」**。计划原文是「后台任务使用节能模式（降低同步频率 / 延迟非紧急任务），延长续航」。取证先于动手：本仓真正的后台成本不在「频率太高」，而在**实例被丢弃时其 1Hz 计时器仍在跑** —— 也就是「没人再看得见它，但它每秒还在唤醒一次」。",
+        "**实测确证的泄漏（可复现的因果链）**：微信通话界面 `showVideoCallInterface` / `showVoiceCallInterface` 把秒表句柄存在**方法局部变量** `videoTimer` / `callTimer`，唯一清点是通话界面的**挂断按钮**；而「通话界面在场时微信实例被丢弃」是可达的 —— `index.js` 里六处 `isCallOverlayVisible` 刻意阻止全局渲染即是证据（其中一处还打印「拦截了一次会导致通话界面消失的全局渲染」）。丢弃后计时器以 1Hz 永久重发，而它想更新的 DOM 已不存在。",
+        "**既有判据为什么没拦住（两重假绿，如实记录）**：①判据「句柄存局部变量 + 两处手写清理」的签名把**变量名写死为 `timer`** —— 而微信两处叫 `videoTimer` / `callTimer`，**签名不命中**；②同一条判据的白名单又把这两处**显式登记为「刻意保留的正常态」**（注释理由是「已配对清理」——而配对的只是另一个出口）。于是缺陷被锁进了护栏。教训：**白名单是判据的住处，也是缺陷的藏身处** —— 登记一处「刻意保留」时必须同时写下它**为什么**安全，否则那个理由会随代码漂移而静默失效。",
+        "**修法（接进实例域，不是补一个 clearInterval）**：`apps/wechat/chat-view.js` 构造期建 `this._rt = childRuntime(\"wechat-chat-view\")`，两条秒表改 `addInterval(..., 1000, \"call:video\" / \"call:voice\")`；三类出口统一按 tag 回收 —— 挂断按钮两条 + `releaseInactiveResources()` 新增 `cancelByTag(\"call:\")`（该方法是「离开微信 / 低内存回收 / 清数据」的必经点）。`chat-view.js` 的裸 `setInterval` / `clearInterval` 计数归零。",
+        "**同类丢弃点一次收完（本轮自纠）**：丢弃点共七处 —— `index.js` 六处（三处置 null + 三处会话身份变更）+ `apps/wechat/wechat-app.js` 的 `_resetWechatSingletonCaches()`（微信单例的**唯一丢弃咽喉点**，被清聊天 / 全清 / 设置页清数据三条路径共用）。初稿只改了 `index.js` 六处，**漏了咽喉点**；补上时按本仓口径挂在咽喉点而不是三个调用点各写一次（清单式回收总会漏，v2.31 修 homeScreen 的教训）。",
+        "**新增离开约束判据（防下一条同型路径）**：断言「`wechatApp` 丢弃点每一处都必须先走实例出口」—— 观察面是**丢弃点的上方三行内是否有实例出口调用**，而不是「全文出现过」（后者会被同文件另一页面的正确写法瞬间绕过）。配两条真源码破坏负控制：删掉咽喉点内的 `deactivate()` ⇒ 转红；在某处丢弃点前插一行无关语句把出口推开 ⇒ 转红。",
+        "**交棒改写（保留历史事实，只更新可变形状）**：`tests/system-v228.test.mjs` 的 paired 白名单由 5 处减为 3 处（保留的三处均为「作用域限定在单次操作内」的站点），并新增 4 条 chat-view 正向判据。**v324 取证基线联动**：本版首次使该基线出现判据转 pass（覆盖率准入读数由 79.7% 升至 80.6%）—— 按纪律**如实记入基线并追注「变好的是不是同一条轴」**（这次越线是因为「出口多了一个」，不是因为「可声明性变好了」），判据同步钉住「转 pass 的条数必须与基线一致」，防读数静静变好。",
+        "**顺带修掉一条自己写坏的判据（本版的自我纠正）**：v228 判据「裸 setInterval / clearInterval 已清零」在上一版写入时被转义吃掉了一个字母，实际落盘成「感叹号 + 斜杠 + 一个退格字符 + setInterval」—— 该正则**恒为真**，是一条假绿。已复原为词边界断言并逐字节复查全仓：仅此一处控制字符污染，其余文件干净。教训：**判据的「已清零」型断言必须自证能对破坏有反应** —— 一个恒真的否定式断言与一条真判据在绿字面上完全同形。",
+        "**运行时验证边界（本版的诚实登记）**：本版改动的正确性由无头门禁守住（十道门 + v228 / v324 判据套件 + 2 条真源码破坏负控制）；但「通话界面在场时丢弃实例」这条路径的**真机复现**属**未验证** —— 扩展的自动化门禁跑不了宿主 DOM。文档本版已复校，其「一句话版本」在此重申：它**不能**保证真机上的视觉排版、真实网络往返、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属该文档登记的第二类，需在真机复现后再修。故本版修的是**句柄归属**（可被静态判据钉死），不是「续航实测变好」。",
+        "落地：`apps/wechat/chat-view.js`（7 处：import / 构造期域 / 两条秒表 / 两个挂断出口 / 闲置出口）+ `apps/wechat/wechat-app.js`（1 处：单例丢弃咽喉点）+ `index.js`（6 处丢弃点）+ `tests/system-v228.test.mjs`（交棒 + 5 条新判据含 2 条真源码破坏负控制）+ `tests/system-v324.test.mjs` + `tests/audit/lifecycle_declarative_baseline.json`+ `docs/runtime-verification-boundary.md` / `ITERATION_LOG.md` / `TODO.md`（同步）+ `index.js` / `update-log.json` / `manifest.json` / `package.json`（五源同源）**版本升至 3.14.0（五源同源）**。",
     ]
 };
 
@@ -7617,6 +7615,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (_lastWechatConversationId && _lastWechatConversationId !== conversationId) {
                 console.warn('⚠️ 微信会话身份变更，清空缓存防止串味:', _lastWechatConversationId, '->', conversationId);
                 if (window.VirtualPhone) {
+                    // [v3.14.0 · 计划 #65] 会话身份变更 ⇒ 旧实例丢弃，先走实例出口收通话计时器
+                    try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                 }
@@ -8326,6 +8326,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 // 防串味处理
                 if (_lastWechatConversationId && _lastWechatConversationId !== conversationId) {
                     if (window.VirtualPhone) {
+                    // [v3.14.0 · 计划 #65] 会话身份变更 ⇒ 旧实例丢弃，先走实例出口收通话计时器
+                        try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
                         window.VirtualPhone.wechatApp = null;
                         window.VirtualPhone.cachedWechatData = null;
                     }
@@ -8594,6 +8596,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const chatId = context?.chatId || 'default';
             const conversationId = getCurrentTavernConversationIdentity(context);
             if (_lastWechatConversationId && _lastWechatConversationId !== conversationId) {
+                    // [v3.14.0 · 计划 #65] 会话身份变更 ⇒ 旧实例丢弃，先走实例出口收通话计时器
+                try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
                 window.VirtualPhone.wechatApp = null;
                 window.VirtualPhone.cachedWechatData = null;
                 window.currentWechatApp = null;
@@ -9286,6 +9290,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 🔥 切换会话时彻底清空微信单例缓存，防止数据串味
         if (window.VirtualPhone) {
+            // [v3.14.0 · 计划 #65] 换会话会丢弃 wechatApp（通话界面在场时可达）⇒ 先走实例出口。
+            //   位置刻在前置：v224 有一条顺序不变式「rebindLazyApps() 必须紧邻 wechatApp 置空那一行」
+            //（两行之间不得插句），故出口接在重绑之前而不是往后插。
+            try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
             // [v2.23.0] 懒加载单例 App 换会话重绑：这些 App 采用
             //   `if (!window.VirtualPhone.xxxApp) new XxxApp(...)` 单例，
             //   构造期把当前会话数据载入实例内存且仅载入一次，换会话后复用
@@ -10575,6 +10583,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 if (window.VirtualPhone) {
                     // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
                     rebindLazyApps();
+                    // [v3.14.0 · 计划 #65] 置 null 前先走实例出口：通话计时器属实例域（chat-view 的 call: 标签），而 deactivate() 此前全仓零调用点。
+                    try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;
@@ -10674,6 +10684,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 if (window.VirtualPhone) {
                     // [v2.23.0] 懒加载单例 App 数据层重绑（清数据后内存为陈旧数据）
                     rebindLazyApps();
+                    // [v3.14.0 · 计划 #65] 置 null 前先走实例出口：通话计时器属实例域（chat-view 的 call: 标签），而 deactivate() 此前全仓零调用点。
+                    try { window.VirtualPhone.wechatApp?.deactivate?.(); } catch (_e) { /* 忽略 */ }
                     window.VirtualPhone.wechatApp = null;
                     window.VirtualPhone.cachedWechatData = null;
                     window.VirtualPhone.cachedMofoData = null;

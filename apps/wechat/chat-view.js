@@ -26,6 +26,8 @@ import {
     replacePhoneInlineEmojiTokens
 } from '../../config/phone-emoji.js';
 import { getMemory as getContactMemory, updateMemory as updateContactMemory } from '../../config/phone-chat-memory.js';
+// [v3.14.0 · 计划 #65] 实例级资源域：通话计时器（视频/语音）不再靠「挂断按钮那一处 clearInterval」
+import { childRuntime } from '../../config/runtime-lifecycle.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -81,6 +83,10 @@ export class ChatView {
         this._lobbyPersonaCacheTTL = 10 * 60 * 1000;
         this._lobbyPersonaEmptyCacheTTL = 45 * 1000;
         this._lobbyPersonaCacheMax = 128;
+        // [v3.14.0 · 计划 #65] 通话资源域：域对象**只在构造期建一次**。
+        //   为什么不能在各用法里 childRuntime('wechat-chat-view')：内核每次调用都新建一个域，
+        //   同名的活域会进 childRuntimeDuplicates —— 域表逐年膨胀而「看着像正常」。
+        this._rt = childRuntime('wechat-chat-view');
     }
 
     _readNonNegativeLimit(key, defaultValue = 0, maxValue = 9999) {
@@ -1778,6 +1784,15 @@ export class ChatView {
     }
 
     releaseInactiveResources() {
+        // [v3.14.0 · 计划 #65] 通话计时器在此收口。此前本方法收的是「音频 / TTS / 已载消息」，
+        //   而通话计时器一个都没收 —— 本方法正是「离开微信 / 低内存回收 / 清数据」的必经点，
+        //   于是通话界面在场时被丢弃的实例，其 1Hz 计时器无人回收。
+        //   措辞注意（与 v2.30 修 honey 的教训一致）：**别把全部通话资源都收掉**。
+        //   本视图的域里目前只有这两条计时器，将来若把 TTS 队列等也登记进同域，
+        //   必须在下面另加名字更窄的出口，而不是把 cancelByTag 放宽成全域回收。
+        try {
+            this._rt?.cancelByTag?.('call:');
+        } catch (_e) { /* 域未建（异常构造路径）时静默跳过，不阻断回收 */ }
         if (this.audioPlayer) {
             try {
                 this.audioPlayer.pause();
@@ -14966,8 +14981,13 @@ renderChatRoom(chat) {
         }
 
         // 计时器
+        // [v3.14.0 · 计划 #65] 入实例域：此前句柄存本方法局部作用域、唯一清点是挂断按钮，
+        //   而「通话界面在场时微信实例被丢弃」（换会话 / 清数据 / 离开微信闲置回收）走不到那个按钮
+        //   —— 计时器在无 DOM 可更新的情形下以 1Hz 永久重发。同型形态见 v2.27/v2.28 收敛的
+        //   「轮询句柄存局部变量 + 手写清理清单」。先收同 tag 再登记 ⇒ 重复进入不叠加。
         let videoDuration = 0;
-        const videoTimer = setInterval(() => {
+        this._rt.cancelByTag('call:video');
+        this._rt.addInterval(() => {
             videoDuration++;
             const minutes = Math.floor(videoDuration / 60).toString().padStart(2, '0');
             const seconds = (videoDuration % 60).toString().padStart(2, '0');
@@ -14975,7 +14995,7 @@ renderChatRoom(chat) {
             if (timerDiv) {
                 timerDiv.textContent = `${minutes}:${seconds}`;
             }
-        }, 1000);
+        }, 1000, 'call:video');
 
         const triggerVideoAI = async () => {
             if (isVideoSending || videoPendingUserLines.length === 0) return;
@@ -15149,7 +15169,7 @@ renderChatRoom(chat) {
         // 挂断
         document.getElementById('video-hangup-btn')?.addEventListener('click', () => {
             this.stopWechatCallTTS();
-            clearInterval(videoTimer);
+            this._rt.cancelByTag('call:video');   // [v3.14.0] 回收口径与其它出口统一
             clearVideoBatchTimer();
             videoPendingUserLines = [];
             isVideoSending = false;
@@ -16267,8 +16287,10 @@ ${callTranscript}`;
         };
 
         // 计时器
+        // [v3.14.0 · 计划 #65] 与视频计时器同构：入实例域，四类出口（挂断 / 闲置 / 清数据 / 换会话）统一回收。
         let callDuration = 0;
-        const callTimer = setInterval(() => {
+        this._rt.cancelByTag('call:voice');
+        this._rt.addInterval(() => {
             callDuration++;
             const minutes = Math.floor(callDuration / 60).toString().padStart(2, '0');
             const seconds = (callDuration % 60).toString().padStart(2, '0');
@@ -16276,7 +16298,7 @@ ${callTranscript}`;
             if (timerDiv) {
                 timerDiv.textContent = `${minutes}:${seconds}`;
             }
-        }, 1000);
+        }, 1000, 'call:voice');
 
         // 聊天消息记录
         const chatMessages = [];
@@ -16484,7 +16506,7 @@ ${callTranscript}`;
         // 挂断
         document.getElementById('voice-hangup-btn')?.addEventListener('click', () => {
             this.stopWechatCallTTS();
-            clearInterval(callTimer);
+            this._rt.cancelByTag('call:voice');   // [v3.14.0] 回收口径与其它出口统一
             clearVoiceBatchTimer();
             voicePendingUserLines = [];
             isVoiceSending = false;

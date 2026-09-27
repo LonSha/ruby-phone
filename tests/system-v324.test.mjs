@@ -125,7 +125,16 @@ test('A3 判定挂在读数上（四条判据全部由探针算出，不得手�
     assert.ok(c.desc && c.gotText, '判据必须自带口径与实测值：' + c.id);
   }
   assert.equal(rep.verdict, 'not_done', '本版判定必须是 not_done（准入未达）');
-  assert.equal(rep.criteria.filter((c) => c.pass).length, 0, '四条判据本版必须全不达');
+  /* [v3.14.0 · 交棒] 原断言是「四条全不达」。#65 把通话计时器接进实例域时，在三处置 null 前
+     多调一次实例出口 ⇒ App 出口点 47 → 50，覆盖率 79.7% → 80.6%，R1 与 R4 转 pass。
+     但判定仍为 not_done：真正决定性的 R2/R3 一格未动。本判据改为钉住「两条硬否决在场」
+     与「读数变好不等于方案可行」（否则就是拿准入率当免罪牌）。 */
+  const hard = rep.criteria.filter((c) => c.id === 'R2' || c.id === 'R3');
+  assert.equal(hard.length, 2, '两条硬否决必须在场');
+  assert.equal(hard.filter((c) => c.pass).length, 0,
+    '本版仍不实施：R2/R3 这两条硬否决必须全不达');
+  assert.equal(rep.criteria.filter((c) => c.pass).length, R.criteria_pass_count,
+    '转 pass 的判据数必须与基线记录一致（防读数静静变好）');
   /* 可复算：两次运行逐字节相同 */
   const again = runProbe(null);
   assert.equal(again.status, 0);
