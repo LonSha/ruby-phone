@@ -40,13 +40,17 @@ import { PHONE_EVENTS, makePhoneEvent, phoneEventFireReport, resetPhoneEventFire
 // [v2.72.0] 表格更新锚点：落后正文几楼的三态读数（未知/已追平/落后 N 楼）
 import { UPDATE_GAP_KEY, readUnupdatedFloorCount, recordTableUpdateFloor, updateGapLine } from './config/update-gap.js';
 import { numOrNull } from './config/num-gate.js';
-
+/* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
+ *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
+ *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
+import { createBootTiming, bootTimingLine } from './config/boot-timing.js';
+const bootTiming = createBootTiming();
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.12.0';
+const ST_PHONE_VERSION = '3.13.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -126,18 +130,20 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-29",
+    date: "2026-09-30",
     items: [
-        "**主治：全仓取数口径收干 —— `Number(null) === 0` 这个根因的第五度、也是最后一次发病**。本仓最贵的一类错读数是 `Number.isFinite(Number(x)) ? Number(x) : null` 这个写法：实测 19 个输入里**10 个读错** —— 空白串（含制表符与换行）、空数组、只含一个空串的数组 全读成 **0**；`true` 读成 **1**、`false` 读成 **0**、单元素数组（元素为数字 5）读成 **5**。于是「上游**没给**这一格」与「上游**给了 0**」塌成同一个读数 —— 而 0 在本仓绝大多数格位上都是**合法读数**（第 0 楼、余额 0、注入 0 次、暗流 0 条、剂量 0…），两者处置**相反**。这个根因本仓治过四轮：v3.3.1（三份同名 `numOrNull` 统一）、v3.3.0（楼层门 `floorOrNull`）、v3.11.0（回滚预览的「缺失不得兜底成 0」），**每一轮都是就地修那一处**。本版先做取证而不是直接改：结果查出同一写法仍在 **14 个文件**里活着，形态三种 —— ①本地助手函数（wallet / profile / plotline / memory-insights / ledger 各有一份 `num`）；②内联表达式（place / games / wechat / wangxiang / phone / honey / index.js 共 20 余处）；③**v3.11.0 刚改过的那个文件里的残留**（`config/rollback-preview.js` 仍有 3 处，其中 `floorNum` 只挡住了 `null` / `undefined` 与空串，**纯空白串与空数组**照样伪装成「第 0 楼」）。",
-        "**修法不是「再修一遍」，而是把口径变成单一实现**：新增 `config/num-gate.js`（**零依赖叶子模块**，只导出 `numOrNull`），全仓 16 个文件改走它。为什么必须单一实现：逐处修治的是**症状**，只要口径本身没有唯一落点，下一个写取值函数的人就会再抄一遍弱的那版 —— 本轮的 14 处里，有 4 处就是从同一份弱口径**复制**出来的。调用点命名保留（`import { numOrNull as num }` / `as floorOrNull`），改的是实现归属，不是调用面。",
-        "**逐处裁定的真缺陷（不是形态统一，是会读到错数的地方）**：①`apps/wallet/wallet-data.js` 的 `num(item.floor)` —— 钱包按楼层过滤时把「没给楼层」的流水读成**第 0 楼**命中，且 `whenOf` 会显示「第 0 楼」这个不存在的楼层；②`apps/phone/phone-data.js` 的**两个**短信回滚入口 —— `rollbackSmsToFloor` 与 `removeMainChatSmsAtFloor` 在「没给楼层」时会走成「第 0 楼回滚」，**把所有短信与批次记录全清**；③`apps/health/bio-engine.js` 的 `override` 判定 `Number(x) >= 0` 对空串恒真 ⇒ 一个空白串**静默顶掉**种族妊娠系数、把「没给 override」算成「override = 0」；④`apps/health/bio-propagation.js` 的 剂量兜底 —— `Number(null) === 0` 让「没给剂量」变成「真实 0 次」，注释里写的默认 20 在弱口径下**从不可达**；⑤`apps/honey/honey-data.js` 提现后的余额回落 —— `getWalletBalance()` 返回 null 时被写成 `0`，连下面那条 `amountYuan` 回落都到不了；⑥`apps/wechat/wechat-data.js` 的 `balanceBefore` / `balanceAfter` —— 「这笔转账没记余额」被落盘成 `0`，此后再也分不出「余额是 0」与「没记」；⑦`apps/honey/honey-view.js` 榜单用户行的显隐 —— 读不出名次时被读成「名次 0」而**隐藏**用户自己（方向与安全向相反）；⑧`apps/games/games-app.js`、`apps/wechat/chat-view.js`、`apps/wechat/wechat-data.js`、`apps/wangxiang/wangxiang-app.js` 的时间戳兜底（旧写法读成 0 后**跳过**回落解析，真源明明可用）；⑨`apps/memory/memory-view.js` 的命中分（空数组被渲染成「0.00」，与真的算出 0 分同形）；⑩`apps/ledger/ledger-data.js` —— 它更重一档：**读不出就编 0**（`Number(v)` 取不到就返回 0），于是 `wlr.counts.currents` 没给时面板写「暗流 0」，用户读到的是「这个世界没有暗流」，而真相是「这个读数我们没拿到」；同文件的 `opinion: num(a) + num(b)` 还有第四种形态：**缺失参与算术**（`null + null === 0`），两个格位都没给时整格算成 0。",
-        "**同族的两处「零调用弱口径」直接删**（`apps/profile/profile-data.js`、`apps/plotline/plotline-data.js`）：它们各自持有一份弱口径 `num`，实测**全文件零调用**。留着的代价不是洁癖 —— 它会让下一个读代码的人以为「本文件已经有取数门了」（这正是本轮 14 处复制的温床）。另有两处**名为 `num` 实为展示格式化器**（`cheat-view` / `dt-view`，返回 `'1.2 万字'` 这种字样）改名 `fmtChars`：占着取数门名字的格式化器同样会让人无法判断「这里拿到的是数还是字样」。",
-        "**第十道门：`scripts/weak-coercion-audit.mjs`（取数口径门）**，串进 `npm run check`。判据四条：W1 全仓**真代码**不得再出现 `Number.isFinite(Number(` 这个签名；W2 名为 `num` / `numOrNull` / `floorOrNull` 等的本地助手必须是**合法强口径形态**之一（反式 / 正式 / 规范化，三种都实测等价）；W3 唯一实现 `config/num-gate.js` 必须在场、导出面恰为一个键、且被 ≥ 12 个文件引用；W4 判据自证（真源码里一个强口径形态都命中不到 ⇒ exit 2 拒判）。**本门的存在意义不是「找出今天的错」，而是让这个根因不会再以第五度形态复发。** 实测落点：W1 命中数 53 → 0（真代码），W2 从 9 处误报到 0 处。",
-        "**本版自己踩到的两个坑，如实记下（判据与门槛的纪律优先于实现）**：①**注释污染判据面** —— 本轮给 14 个文件写的说明性注释里逐字带着那个弱口径写法，而 `tests/audit/branch_play_probe.cjs` 是**子串匹配、只跳过 `//` 行**，于是它的「回滚点」读数从 **41 涨到 42**，`branch_play_baseline.json` 当场转红。修法是**把注释里的逐字函数名删掉**（同文件 corrections 里本就写着「判据面不得被散文侵入」），而不是改读数把 42 记成新基线 —— 后者等于让散文合法地冒充回滚实现点。故本门 W1 与 dead-export 的 E6 同款：判定基于**真代码**（剥注释与字符串）。②**破坏锚点绑死在实现文本上** —— `tests/system-v3213.test.mjs` 的 F1 破坏锚点原本打在 `floorNum` 的旧实现那一行，实现一换锚点即失配（锚点必须恰中 1 次）。若不管它，那条判据会因「锚点过期」转红而不是因「缺陷复活」转红 ⇒ 它就从真判据降级成**假判据**。修法是把锚点换成**与实现无关**的那一行（把取数结果收敛成 NaN 空值的 `return`），语义不降级。",
-        "**交棒改写（三处既存判据，一律按本仓先例改写为「下限 + 动态取当版」，而非静默通过）**：①`tests/system-v3213.test.mjs` 的 G1 / G2 / G3 原逐字写死 `'3.11.0'`（当版精确读数，抬版即过期）⇒ 改为**读 `manifest.json` 的版本再逐源比对**（五源同源这条契约一字不减）；②同套件 F1 的破坏锚点（见上）；③三份冻结基线（`long_chat` / `schedule_conflict` / `branch_play`）的**枚举面**读数各 +1并追加复校记录 —— 本版只新增一个 `config/num-gate.js`，其余读数逐项不变（探针量的是「有没有这类站点、有多少」，取数实现的替换不改变站点数）。另同步 `docs/runtime-verification-boundary.md` 的复校版本与两处机器可读数字（语法门 421 → 422 / 导入门 243 文件 348 条 → 244 文件 368 条）。",
-        "**判据套件 `tests/system-v3120.test.mjs`（五段 A–E，真跑 `node --test`）**：A 口径本体逐条对读（19 输入 / 10 条分歧面 + 6 条反坐实面：`0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 必须如实出数，门不得关成「谁都取不到」）；B 真模块行为（走导出面：钱包流水的楼层读数、档案/支线的删除形态、诊断面的回滚预览）；C 结构面（唯一实现在场、调用点命名保留、第五度复发的四种形态各自被守）；D **真源码破坏负控制**（把强口径退回弱口径 ⇒ 同款真判据必须转红；破坏必须落在真文件文本、判据在破坏副本上重跑）；E **第十道门自证**（对每组判据做「破坏→必须转红」与「原版→必须为真」两向证明，含工具两向自证：锚点不存在 / 锚点不唯一必须抛、真源码破坏必须可观测地改变行为）。",
-        "落地：`config/num-gate.js`（新建）+ 16 个消费文件改走唯一实现 + `scripts/weak-coercion-audit.mjs`（第十道门）+ `package.json`（串门禁）+ `tests/system-v3120.test.mjs`（新判据套件）+ `tests/system-v3213.test.mjs`（交棒改写 G 组 + F1 锚点）+ 三份冻结基线复校 + `docs/runtime-verification-boundary.md`（复校）。**版本升至 3.12.0（五源同源）**。",
-        "**运行时验证边界（本版的诚实登记）**：本版改的是**取值口径**，其正确性由无头门禁（十道门 + 21 项判据套件，含 4 条真源码破坏负控制与 4 条门脚本两向自证）守住；但本扩展的自动化门禁**不能保证**真机上的视觉排版与真实渲染（它跑不了宿主 DOM），故这两项仍属**未验证**。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修（判据：`tests/system-v328.test.mjs`；工程侧全文见 `docs/runtime-verification-boundary.md`）。"
+        "**主治：启动期「读得出慢不慢、读不出谁慢」**。计划 #14 的原文是「启动速度优化：追加启动耗时分析工具，识别哪个模块拖慢了启动」。取证先于动手，实测到的真实处境有三条：①启动期**只有两句** `console.log` 汇总（核心模块合计 / UI 模块合计），每句是一个**总数** —— 读得出「慢不慢」，读不出**谁慢**；②`index.js` 里 **78 处** `import(...)` 动态加载点**零时计**（用户点某个 App、某个面板才现加载，慢在哪一步只有卡顿感，没有读数）；③**没有任何面向用户的可见面** —— 计划里说的「追加分析工具」这一半根本不存在。",
+        "**本版是读数层，不是优化（边界写死在文件头）**：新增 `config/boot-timing.js`（**零依赖叶子模块**，导出 `createBootTiming` / `bootTimingLine` / `MAX_SPANS`），**一条加载路径都不改** —— 不改顺序、不改并发、不拆包、不预加载。理由是本仓一条老账：「没有读数的优化是把直觉当证据」。读数是优化的**前置条件**，不是替代品。",
+        "**全仓 78 处动态加载点一次接完，且 spec 逐字不变**：全部 `import(<spec>)` 改为 `bootTiming.instrumentImport(import(<spec>), <spec>)` —— 包装收的是**已经在跑的那个 promise**，不是 specifier 字符串；模块内部绝不去 `import(spec)` 现拼（用变量 import 会让加载路径从「宿主可静态分析」变成「纯运行时解析」，那就是改加载路径）。原样转发 resolve/reject（`throw err` 而非吞掉）：加载失败要让原调用链照旧走它自己的 `.catch`，**吞错会让失败变成静默**；失败也记账（段名后缀 `!failed`，因为 `import` 抛错本身是最值得看见的一段）。",
+        "**两个反坐实纪律，写进判据而不是写在注释里**：①**「测不出」与「很快」不许同形** —— 起止任一时钟缺失 ⇒ 该段读数 `ms: null`（`state:'unmeasurable'`），**不得**报 0ms（`now - undefined = NaN` 再 `|| 0` 会变成「这一步耗时 0ms」这个**看起来完美的假零**），也不得让整份报告因此塌掉；②**两种「没有 ms」必须分得开** —— `unmeasurable` 是「记了这段账但测不出（有 span、ms=null）」，**缺席**是「根本没记账（连 span 都没有，例如某段在收尾前抛了错）」。把两者渲染成同一句话，就是拿「读不到」冒充「很快」。",
+        "**「无钟」这一路必须能被显式构造出来（本版自己踩到并修掉的真缺陷）**：原先 `createBootTiming({ now: undefined })` 会**回落探测** `performance.now`，于是「无钟」这条边界永远只活在推理里（本仓纪律：测不到的边界等于没写）。时钟解析改为**三态** —— 省略 `now`（属性不存在）⇒ 自动探测；`now: null` ⇒ 调用方**明确声明无钟**；`now: fn` ⇒ 用注入钟（注入的钟抛错 / 返回 `NaN` / `Infinity` 一律按「读不到」处理，不是 0）。坏钟三态各有判据钉住。",
+        "**收尾幂等（会读到假读数的地方）**：`begin()` 返回的收尾函数第二次起返回 `null` 且**不重复记账** —— 启动路径里 `try/finally` 与显式收尾常常都会调一次，重复记账会把读数做假（段数翻倍、污染「重复段」读数）。无钟分支有自己的收尾实现，故单独判一次。",
+        "**可见面接进诊断中心（本仓一切读数的唯一出口）**：`apps/diagnose/diagnose-data.js` 新增 `bootTimingFace(win)`（从**宿主实例** `window.VirtualPhone.bootTiming` 读 —— 自建实例会把「整段启动」读成「打开页之后」）/ `bootTimingFaceText(face)`（**逐字转发**真源文案，同一口径不得两份实现）/ `bootTimingRows(face, limit)`（排序口径属内核：可测时按耗时降序在前、不可测时排在后面，mark 单独标出）；`collectDiagnose` 返回面新增 `bootTiming`；`summarizeDiagnose` 首行新增「启动期有 N 个模块加载失败」（不可测时不进首行）。`apps/diagnose/diagnose-view.js` 新增 `_bootTimingHtml(pkg)` 卡片，三条纪律必须看得见：**逐段而非总数** / **不可测时单独列出绝不混进耗时排序** / **重复加载点单列**；卡上写明「只读数，不做优化」及其理由。卡片置于 render 最后 —— 它是**启动期**读数，其余卡片是**当前态**读数。",
+        "**读出口为什么叫 `collect()` 而不是 `snapshot()`（命名服从门禁口径，非风格偏好）**：本仓第九道门（bridge-contract）J2 把**产品代码**（apps/** 与 config/**）里一切 `.snapshot(` 视为「调用式读桥」—— 那条判据的起因是 clock/ledger 两份抄错的实现把**推送型**桥的 `snapshot`（对象）当函数调，必然抛 TypeError 并被 catch 吞掉，于是两个 App 永久显示「桥在但没快照」。新模块沿用那个名字会让**真违规被噪声淹没**（诊断页的 `DiagnoseApp.collect()` 正是因此得名）。故读出口一律叫 `collect()`：与那条判据**永不混读**。",
+        "**判据套件 `tests/system-v3130.test.mjs`（五段 A–E，共 18 项）**：A 口径本体（无钟 / 坏钟三态 / 幂等收尾 / 原样转发 / 零依赖 / 两种「没有 ms」可分）；B 真源码接线（**全部**动态 import 都被旁听包住且 **spec 逐字不变** / 两个启动大段与请求侧标记在场 / `window.VirtualPhone.bootTiming` 唯一出口 / 读出口命名）；C 可见面（真读宿主实例、逐字转发、排序口径、视图真建卡与三条纪律）；D **真源码破坏负控制 4 条**（把「不编 0」拆掉 / 把吞错改回来 / 读出口改名回 `snapshot` / 拆掉一处 import 旁听 —— 破坏落在真文件文本、在**破坏副本**上重跑**同一份真判据**，不另写一套「看起来像」的断言）；E 版本五源同源（下限形，不钉死某一版）。",
+        "**本版自己踩到的判据本体缺陷，如实记下（判据的纪律优先于实现）**：①判据 2 原断言「`repeatedSpecs` 里出现 `times === 1`」—— 而真源的口径是「只列出现 >1 次的」，这条断言**逻辑上永远为假**（是判据写错，不是实现缺陷）：改为断言 `segments` 里每一段的 `spec` 字段保留原串，并补「同一 spec 加载两次必须被计成重复加载点」；②B3 的 `.snapshot(` 扫描面**没剥注释**，比第九道门**更严**（门是先过 `stripComments` 再扫）—— 真源文件头正用这句散文解释命名理由，一剥一不剥，同一件事会得到两个答案（v3.12.0 立 `stripComments` 要治的正是这个形态）：改为剥注释后扫，并补一条自证（未剥注释的原文里**确实**有这串字面），免得「说明连同注释一起被删」与「真没违规」显示成同一个绿；③D1 的破坏锚点原打在 `if (t0 === null) return null;` 上 —— 真源里**有两处**（`since()` 与断点判空同族），按「锚点恰中 1 次」纪律当场拒判，改用唯一锚点（无钟分支的收尾记账：把「记 null」改成「记 0」）；④同处断言用 `assert.throws` 包一个**返回 `{ok, why}` 契约**的判据函数，等于把「转红」与「抛错」混为一谈 ⇒ 改为断言返回值。",
+        "落地：`config/boot-timing.js`（新建）+ `index.js`（全量接线 7 处锚点 + 78 处旁听）+ `apps/diagnose/diagnose-data.js`（读数面）+ `apps/diagnose/diagnose-view.js`（卡片）+ `tests/system-v3130.test.mjs`（新判据套件）+ `ITERATION_LOG.md` / `TODO.md`（同步）。**版本升至 3.13.0（五源同源）**。",
+        "**运行时验证边界（本版的诚实登记）**：本版改动全在**读数层**，其正确性由无头门禁（十道门 + 22 项判据套件，含 4 条真源码破坏负控制）守住；但本扩展的自动化门禁**不能保证**真机上的视觉排版与真实渲染（它跑不了宿主 DOM），故这两项仍属**未验证**。启动读数本身也**只能在真机上看到有效数字** —— 无头环境无 `performance.now` 时整面退化为「可记账但不可测时」（如实报「不可测时」，不报 0）。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修（判据：`tests/system-v328.test.mjs`；工程侧全文见 `docs/runtime-verification-boundary.md`）。",
     ]
 };
 
@@ -320,7 +326,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     function loadHoneyModule() {
         if (!_honeyModulePromise) {
-            _honeyModulePromise = import(ST_PHONE_HONEY_MODULE_URL).catch(error => {
+            _honeyModulePromise = bootTiming.instrumentImport(import(ST_PHONE_HONEY_MODULE_URL), 'honey-app（URL 常量拼接）').catch(error => {
                 _honeyModulePromise = null;
                 throw error;
             });
@@ -437,7 +443,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     function loadGamesModule() {
         if (!_gamesModulePromise) {
-            _gamesModulePromise = import('./apps/games/games-app.js').catch(error => {
+            _gamesModulePromise = bootTiming.instrumentImport(import('./apps/games/games-app.js'), './apps/games/games-app.js').catch(error => {
                 _gamesModulePromise = null;
                 throw error;
             });
@@ -1341,6 +1347,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     async function loadCoreModules() {
         if (modulesLoaded) return;
+        const endBootCore = bootTiming.begin('core-modules');
 
         const startTime = performance.now();
         if (!window.VirtualPhoneRawFetch && typeof window.fetch === 'function') {
@@ -1359,15 +1366,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             imageGenerationManagerModule,
             worldbookManagerModule
         ] = await Promise.all([
-            import('./config/apps.js'),
-            import('./config/storage.js'),
-            import('./config/api-manager.js'),
-            import('./config/time-manager.js'),    // 👈 取消懒加载
-        import('./config/prompt-manager.js?v=20260802-moments-named-images'),  // 👈 取消懒加载
-            import('./config/tts-manager.js?v=20260607-mimo-relay-worker'),
-            import('./config/asr-manager.js?v=20260915-asr-voice-input'),   // [v2.13.0] ASR
-        import('./config/image-generation-manager.js?v=20260828-nai-prompt-preserve'),
-            import('./config/worldbook-manager.js')
+            bootTiming.instrumentImport(import('./config/apps.js'), './config/apps.js'),
+            bootTiming.instrumentImport(import('./config/storage.js'), './config/storage.js'),
+            bootTiming.instrumentImport(import('./config/api-manager.js'), './config/api-manager.js'),
+            bootTiming.instrumentImport(import('./config/time-manager.js'), './config/time-manager.js'),    // 👈 取消懒加载
+        bootTiming.instrumentImport(import('./config/prompt-manager.js?v=20260802-moments-named-images'), './config/prompt-manager.js?v=20260802-moments-named-images'),  // 👈 取消懒加载
+            bootTiming.instrumentImport(import('./config/tts-manager.js?v=20260607-mimo-relay-worker'), './config/tts-manager.js?v=20260607-mimo-relay-worker'),
+            bootTiming.instrumentImport(import('./config/asr-manager.js?v=20260915-asr-voice-input'), './config/asr-manager.js?v=20260915-asr-voice-input'),   // [v2.13.0] ASR
+        bootTiming.instrumentImport(import('./config/image-generation-manager.js?v=20260828-nai-prompt-preserve'), './config/image-generation-manager.js?v=20260828-nai-prompt-preserve'),
+            bootTiming.instrumentImport(import('./config/worldbook-manager.js'), './config/worldbook-manager.js')
         ]);
 
         APPS = appsModule.APPS;
@@ -1503,6 +1510,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         const endTime = performance.now();
         console.log(`✅ 虚拟手机核心模块加载完成 (${Math.round(endTime - startTime)}ms)`);
+        /* [v3.13.0] 收段 + 一行汇总：既有那句只报「核心合计」，这一行报**谁慢**
+         *   （逐段读数与重复加载点在诊断页完整可见；这里给同一实现的一行形）。 */
+        endBootCore();
+        console.log('[启动耗时] ' + bootTimingLine(bootTiming.collect()));
     }
 
     // 🔥 UI 模块加载状态
@@ -1511,6 +1522,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // 🔥 按需加载 UI 模块（打开手机面板时才加载）
     async function loadUIModules() {
         if (uiModulesLoaded) return;
+        const endBootUi = bootTiming.begin('ui-modules');
 
         const startTime = performance.now();
 
@@ -1519,9 +1531,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             homeScreenModule,
             imageUploadModule
         ] = await Promise.all([
-            import(`./phone/phone-shell.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`),
-            import('./phone/home-screen.js'),
-            import(`./apps/settings/image-upload.js?v=${ST_PHONE_VERSION}&r=20260902-image-mime`)
+            bootTiming.instrumentImport(import(`./phone/phone-shell.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`), `./phone/phone-shell.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`),
+            bootTiming.instrumentImport(import('./phone/home-screen.js'), './phone/home-screen.js'),
+            bootTiming.instrumentImport(import(`./apps/settings/image-upload.js?v=${ST_PHONE_VERSION}&r=20260902-image-mime`), `./apps/settings/image-upload.js?v=${ST_PHONE_VERSION}&r=20260902-image-mime`)
         ]);
 
         PhoneShell = phoneShellModule.PhoneShell;
@@ -1532,6 +1544,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         const endTime = performance.now();
         console.log(`✅ 虚拟手机 UI 模块加载完成 (${Math.round(endTime - startTime)}ms)`);
+        endBootUi();
     }
 
     // 🔥 按需加载 TimeManager
@@ -1549,7 +1562,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // 🔥 按需加载设置模块
     async function loadSettingsModule() {
         if (!SettingsApp) {
-            const module = await import('./apps/settings/settings-app.js?v=20260909-comfyui-workflow-isolation');
+            const module = await bootTiming.instrumentImport(import('./apps/settings/settings-app.js?v=20260909-comfyui-workflow-isolation'), './apps/settings/settings-app.js?v=20260909-comfyui-workflow-isolation');
             SettingsApp = module.SettingsApp;
         }
         return SettingsApp;
@@ -2292,7 +2305,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!latestTime?.date || !latestTime?.time) return;
 
             if (!window.VirtualPhone?._calendarReminderApp) {
-                const module = await import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish');
+                const module = await bootTiming.instrumentImport(import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish'), './apps/calendar/calendar-app.js?v=20260527-calendar-polish');
                 window.VirtualPhone._calendarReminderApp = new module.CalendarApp(null, storage);
             }
 
@@ -2349,7 +2362,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             window.VirtualPhone.honeyApp.attachRuntime?.(phoneShell, storage);
             return window.VirtualPhone.honeyApp;
         }
-        const module = await import(`./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`);
+        const module = await bootTiming.instrumentImport(import(`./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`), `./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`);
         if (!window.VirtualPhone) window.VirtualPhone = {};
         if (!window.VirtualPhone.honeyApp) {
             window.VirtualPhone.honeyApp = new module.HoneyApp(phoneShell, storage);
@@ -2743,7 +2756,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             return window.VirtualPhone.cachedMofoData;
         }
 
-        const module = await import('./apps/mofo/mofo-data.js');
+        const module = await bootTiming.instrumentImport(import('./apps/mofo/mofo-data.js'), './apps/mofo/mofo-data.js');
         window.VirtualPhone.cachedMofoData = new module.MofoData(storage);
         if (window.VirtualPhone.mofoApp && window.VirtualPhone.mofoApp.mofoData !== window.VirtualPhone.cachedMofoData) {
             window.VirtualPhone.mofoApp.mofoData = window.VirtualPhone.cachedMofoData;
@@ -6070,7 +6083,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     async function ensureWechatAppForBackground() {
         try {
-            const module = await import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync');
+            const module = await bootTiming.instrumentImport(import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync');
             if (!window.VirtualPhone) window.VirtualPhone = {};
             if (!window.VirtualPhone.wechatApp) {
                 window.VirtualPhone.wechatApp = new module.WechatApp(phoneShell, storage);
@@ -6436,7 +6449,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!idleReady) return false;
             if (task.chatId && task.chatId !== getCurrentChatIdForQueue()) return false;
 
-            const module = await import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish');
+            const module = await bootTiming.instrumentImport(import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish'), './apps/calendar/calendar-app.js?v=20260527-calendar-polish');
             // [v2.63.0] 写回槽位前先看该槽位是否已被占：被占的若是**独立提醒实例**
             //   （phoneShell 为 null，而非活动 calendarApp），顶替后它失去全部引用，
             //   构造期 SWIPE_BACK 监听器无人解绑 → 永久泄漏（换会话后旧实例仍吃回退手势）。
@@ -6482,7 +6495,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const chatLength = Array.isArray(ctx?.chat) ? ctx.chat.length : 0;
             if (chatLength <= 0 && !options.forceCheck) return false;
 
-            import('./apps/calendar/calendar-data.js?v=20260527-calendar-polish').then(dataModule => {
+            bootTiming.instrumentImport(import('./apps/calendar/calendar-data.js?v=20260527-calendar-polish'), './apps/calendar/calendar-data.js?v=20260527-calendar-polish').then(dataModule => {
                 const calendarData = window.VirtualPhone?.calendarApp?.calendarData
                     || window.VirtualPhone?._calendarReminderApp?.calendarData
                     || new dataModule.CalendarData(storage);
@@ -6519,7 +6532,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const chatLength = Array.isArray(ctx?.chat) ? ctx.chat.length : 0;
             if (chatLength <= 0) return;
 
-            import('./apps/weibo/weibo-data.js').then(module => {
+            bootTiming.instrumentImport(import('./apps/weibo/weibo-data.js'), './apps/weibo/weibo-data.js').then(module => {
                 const weiboData = window.VirtualPhone?.weiboApp?.weiboData || new module.WeiboData(storage);
                 const floorSettings = weiboData.getFloorSettings();
                 if (!floorSettings?.autoEnabled) return;
@@ -7589,7 +7602,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         const conversationId = getCurrentTavernConversationIdentity(context);
 
         // 导入 WechatData（使用单例模式，确保消息被存储）
-        import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync').then(module => {
+        bootTiming.instrumentImport(import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync').then(module => {
             let wechatData;
 
             if (getCurrentTavernConversationIdentity() !== conversationId) {
@@ -8297,7 +8310,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const sourceConversationId = getCurrentTavernConversationIdentity();
 
             // 导入 WeChat 数据模块处理
-            import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync').then(async module => {
+            bootTiming.instrumentImport(import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync').then(async module => {
                 let wechatData;
                 if (getCurrentTavernConversationIdentity() !== sourceConversationId) {
                     console.warn('⚠️ 微信回复写入前会话已切换，丢弃旧会话回调');
@@ -8574,7 +8587,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         if (!/"moments"\s*:/.test(sourceText)) return null;
 
         try {
-            const module = await import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
+            const module = await bootTiming.instrumentImport(import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
             if (!window.VirtualPhone) window.VirtualPhone = {};
 
             const context = getContext();
@@ -8665,7 +8678,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     async function ensureWangxiangApp() {
-        const module = await import('./apps/wangxiang/wangxiang-app.js');
+        const module = await bootTiming.instrumentImport(import('./apps/wangxiang/wangxiang-app.js'), './apps/wangxiang/wangxiang-app.js');
         if (!window.VirtualPhone.wangxiangApp) {
             window.VirtualPhone.wangxiangApp = new module.WangxiangApp(phoneShell, storage);
         }
@@ -8944,7 +8957,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 const weiboTagMatch = text.match(/<Weibo>([\s\S]*?)<\/Weibo>/i);
                 if (weiboTagMatch && !isHistoryReplay) {
                     try {
-                        import('./apps/weibo/weibo-data.js').then(module => {
+                        bootTiming.instrumentImport(import('./apps/weibo/weibo-data.js'), './apps/weibo/weibo-data.js').then(module => {
                             const weiboData = window.VirtualPhone.weiboApp?.weiboData || new module.WeiboData(storage);
                             const parsed = weiboData.parseWeiboContent(text);
                                 if (parsed.posts.length > 0) {
@@ -9005,7 +9018,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     const parsed = parseMusicCard(latestMusicContent);
 
                     // 🔥 强制唤醒：不管音乐APP是否打开过，收到标签立刻初始化并塞入歌曲
-                    import('./apps/music/music-app.js').then(module => {
+                    bootTiming.instrumentImport(import('./apps/music/music-app.js'), './apps/music/music-app.js').then(module => {
                         if (!window.VirtualPhone.musicApp) {
                             window.VirtualPhone.musicApp = new module.MusicApp(phoneShell, storage);
                             window.VirtualPhone.musicApp.initFloatingWidget();
@@ -9049,7 +9062,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // 🔥 核心修复：防止 F5 刷新网页时，历史记录里的旧微博把你"重新生成"的新微博覆盖掉！
             if (weiboTagMatch && !isHistoryReplay) {
                 try {
-                    import('./apps/weibo/weibo-data.js').then(module => {
+                    bootTiming.instrumentImport(import('./apps/weibo/weibo-data.js'), './apps/weibo/weibo-data.js').then(module => {
                         const weiboData = window.VirtualPhone.weiboApp?.weiboData
                             || new module.WeiboData(storage);
 
@@ -9100,7 +9113,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 const triggerChatLength = Array.isArray(triggerCtx?.chat) ? triggerCtx.chat.length : 0;
                 if (triggerChatLength > 0) {
                     // 懒加载 DiaryData 检查楼层差
-                    import('./apps/diary/diary-data.js').then(module => {
+                    bootTiming.instrumentImport(import('./apps/diary/diary-data.js'), './apps/diary/diary-data.js').then(module => {
                         const diaryData = window.VirtualPhone.diaryApp?.diaryData
                             || new module.DiaryData(storage);
                         const diaryConfig = diaryData.getAutoSettings();
@@ -9161,7 +9174,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
 
         try {
-            const module = await import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync');
+            const module = await bootTiming.instrumentImport(import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync');
             if (!window.VirtualPhone) window.VirtualPhone = {};
 
             // 单例复用
@@ -9242,7 +9255,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
 
         // 动态加载 phone-app.js 并创建单例
-        import('./apps/phone/phone-app.js').then(module => {
+        bootTiming.instrumentImport(import('./apps/phone/phone-app.js'), './apps/phone/phone-app.js').then(module => {
             if (!window.VirtualPhone.phoneApp) {
                 window.VirtualPhone.phoneApp = new module.PhoneApp(phoneShell, storage);
             }
@@ -9420,7 +9433,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 🎵 如果 musicApp 不存在但新会话开启了悬浮窗，需要创建
         if (!window.VirtualPhone?.musicApp && storage?.get('music_show_floating', false)) {
-            import('./apps/music/music-app.js').then(module => {
+            bootTiming.instrumentImport(import('./apps/music/music-app.js'), './apps/music/music-app.js').then(module => {
                 if (!window.VirtualPhone.musicApp) {
                     window.VirtualPhone.musicApp = new module.MusicApp(null, storage);
                     window.VirtualPhone.musicApp.initFloatingWidget();
@@ -9502,6 +9515,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         try {
             
             // 🔥 第零阶段：只加载最核心的 2 个模块
+            /* [v3.13.0] 请求侧标记：`core-modules` 段只在**真的开始加载**时开出来，
+             *   于是「没请求过」「请求了但没跑完（抛错）」「跑完了」三态可分 ——
+             *   只报后两态会把「压根没跑」静默算成「很快」。 */
+            bootTiming.mark('boot:core-requested');
             await loadCoreModules();
             let phonePromptHandler = async () => {};
             let phonePromptRunTail = Promise.resolve();
@@ -9525,6 +9542,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 : {};
             window.VirtualPhone = {
                 ...previousVirtualPhone,
+                /* [v3.13.0] 启动耗时实例挂**唯一**出口（诊断页从 `window.VirtualPhone.bootTiming`
+                 *   取；实例在模块求值时即建好，故这里读到的是**整段启动**的账）。 */
+                bootTiming: bootTiming,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,
@@ -9613,7 +9633,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     try {
                         const showFloating = storage?.get('music_show_floating', false);
                         if (showFloating) {
-                            import('./apps/music/music-app.js').then(module => {
+                            bootTiming.instrumentImport(import('./apps/music/music-app.js'), './apps/music/music-app.js').then(module => {
                                 // 即使 phoneShell 为 null，也创建 musicApp 实例来管理悬浮窗
                                 if (!window.VirtualPhone.musicApp) {
                                     window.VirtualPhone.musicApp = new module.MusicApp(null, storage);
@@ -9792,7 +9812,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
                 // 打开对应的APP
                 if (appId === 'notifications') {
-                    import('./apps/notifications/notifications-app.js')
+                    bootTiming.instrumentImport(import('./apps/notifications/notifications-app.js'), './apps/notifications/notifications-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.notificationsApp) {
                                 window.VirtualPhone.notificationsApp = new module.NotificationCenterApp(phoneShell, storage);
@@ -9804,7 +9824,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '通知中心加载失败', '❌');
                         });
                 } else if (appId === 'search') {
-                    import('./apps/search/search-app.js')
+                    bootTiming.instrumentImport(import('./apps/search/search-app.js'), './apps/search/search-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.searchApp) {
                                 window.VirtualPhone.searchApp = new module.SearchApp(phoneShell, storage);
@@ -9825,7 +9845,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         window.VirtualPhone.settingsApp.render();
                     });
                 } else if (appId === 'wechat') {
-                    import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync')
+                    bootTiming.instrumentImport(import('./apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-app.js?v=20260906-global-chat-background-sync')
                         .then(module => {
                             try {
                                 // 🔥 单例模式：只在第一次打开时创建微信实例，拒绝重复绑定事件
@@ -9877,7 +9897,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '微信模块加载失败', '❌');
                         });
                 } else if (appId === 'diary') {
-                    import('./apps/diary/diary-app.js')
+                    bootTiming.instrumentImport(import('./apps/diary/diary-app.js'), './apps/diary/diary-app.js')
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.diaryApp) {
@@ -9894,7 +9914,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '日记模块加载失败', '❌');
                         });
                 } else if (appId === 'phone') {
-                    import('./apps/phone/phone-app.js')
+                    bootTiming.instrumentImport(import('./apps/phone/phone-app.js'), './apps/phone/phone-app.js')
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.phoneApp) {
@@ -9911,7 +9931,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '通话模块加载失败', '❌');
                         });
                 } else if (appId === 'music') {
-                    import('./apps/music/music-app.js')
+                    bootTiming.instrumentImport(import('./apps/music/music-app.js'), './apps/music/music-app.js')
                         .then(module => {
                             try {
                                 // 检查是否已存在为悬浮窗创建的实例
@@ -9933,7 +9953,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '音乐模块加载失败', '❌');
                         });
                 } else if (appId === 'weibo') {
-                    import('./apps/weibo/weibo-app.js')
+                    bootTiming.instrumentImport(import('./apps/weibo/weibo-app.js'), './apps/weibo/weibo-app.js')
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.weiboApp) {
@@ -9973,7 +9993,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '蜜语模块加载失败', '❌');
                         });
                 } else if (appId === 'mofo') {
-                    import('./apps/mofo/mofo-app.js')
+                    bootTiming.instrumentImport(import('./apps/mofo/mofo-app.js'), './apps/mofo/mofo-app.js')
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.mofoApp) {
@@ -9995,7 +10015,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '魔坊模块加载失败', '❌');
                         });
                 } else if (appId === 'wangxiang') {
-                    import('./apps/wangxiang/wangxiang-app.js')
+                    bootTiming.instrumentImport(import('./apps/wangxiang/wangxiang-app.js'), './apps/wangxiang/wangxiang-app.js')
                         .then(async module => {
                             try {
                                 if (!window.VirtualPhone.wangxiangApp) {
@@ -10040,7 +10060,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '游戏模块加载失败', '❌');
                         });
                 } else if (appId === 'album') {
-                    import(`./apps/album/album-app.js?v=${ST_PHONE_VERSION}&r=20260802-album-toolbar`)
+                    bootTiming.instrumentImport(import(`./apps/album/album-app.js?v=${ST_PHONE_VERSION}&r=20260802-album-toolbar`), `./apps/album/album-app.js?v=${ST_PHONE_VERSION}&r=20260802-album-toolbar`)
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.albumApp) {
@@ -10057,7 +10077,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '相册模块加载失败', '❌');
                         });
                 } else if (appId === 'calendar') {
-                    import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish')
+                    bootTiming.instrumentImport(import('./apps/calendar/calendar-app.js?v=20260527-calendar-polish'), './apps/calendar/calendar-app.js?v=20260527-calendar-polish')
                         .then(module => {
                             try {
                                 if (!window.VirtualPhone.calendarApp || !window.VirtualPhone.calendarApp.phoneShell?.setContent) {
@@ -10079,7 +10099,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '日历模块加载失败', '❌');
                         });
                                 } else if (appId === 'playbook') {
-                    import('./apps/playbook/playbook-app.js')
+                    bootTiming.instrumentImport(import('./apps/playbook/playbook-app.js'), './apps/playbook/playbook-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.playbookApp) {
                                 window.VirtualPhone.playbookApp = new module.PlaybookApp(phoneShell, storage);
@@ -10091,7 +10111,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '灵感工坊加载失败', '❌');
                         });
                 } else if (appId === 'achievement') {
-                    import('./apps/achievement/achievement-app.js')
+                    bootTiming.instrumentImport(import('./apps/achievement/achievement-app.js'), './apps/achievement/achievement-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.achievementApp) {
                                 window.VirtualPhone.achievementApp = new module.AchievementApp(phoneShell, storage);
@@ -10103,7 +10123,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '成就簿加载失败', '❌');
                         });
                 } else if (appId === 'xhs') {
-                    import('./apps/xhs/xhs-app.js')
+                    bootTiming.instrumentImport(import('./apps/xhs/xhs-app.js'), './apps/xhs/xhs-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.xhsApp) {
                                 window.VirtualPhone.xhsApp = new module.XhsApp(phoneShell, storage);
@@ -10115,7 +10135,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '小红书加载失败', '❌');
                         });
                 } else if (appId === 'tieba') {
-                    import('./apps/tieba/tieba-app.js')
+                    bootTiming.instrumentImport(import('./apps/tieba/tieba-app.js'), './apps/tieba/tieba-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.tiebaApp) {
                                 window.VirtualPhone.tiebaApp = new module.TiebaApp(phoneShell, storage);
@@ -10127,7 +10147,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '贴吧加载失败', '❌');
                         });
                 } else if (appId === 'health') {
-                    import('./apps/health/health-app.js')
+                    bootTiming.instrumentImport(import('./apps/health/health-app.js'), './apps/health/health-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.healthApp) {
                                 window.VirtualPhone.healthApp = new module.HealthApp(phoneShell, storage);
@@ -10139,7 +10159,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '健康App加载失败', '❌');
                         });
                 } else if (appId === 'memory') {
-                    import('./apps/memory/memory-app.js')
+                    bootTiming.instrumentImport(import('./apps/memory/memory-app.js'), './apps/memory/memory-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.memoryApp) {
                                 window.VirtualPhone.memoryApp = new module.MemoryApp(phoneShell, storage);
@@ -10151,7 +10171,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '记忆App加载失败', '❌');
                         });
                 } else if (appId === 'mood') {
-                    import('./apps/mood/mood-app.js')
+                    bootTiming.instrumentImport(import('./apps/mood/mood-app.js'), './apps/mood/mood-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.moodApp) {
                                 window.VirtualPhone.moodApp = new module.MoodApp(phoneShell, storage);
@@ -10163,7 +10183,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '心境App加载失败', '❌');
                         });
                 } else if (appId === 'tarot') {
-                    import('./apps/tarot/tarot-app.js')
+                    bootTiming.instrumentImport(import('./apps/tarot/tarot-app.js'), './apps/tarot/tarot-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.tarotApp) {
                                 window.VirtualPhone.tarotApp = new module.TarotApp(phoneShell, storage);
@@ -10175,7 +10195,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '塔罗App加载失败', '❌');
                         });
                 } else if (appId === 'reading') {
-                    import('./apps/reading/reading-app.js')
+                    bootTiming.instrumentImport(import('./apps/reading/reading-app.js'), './apps/reading/reading-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.readingApp) {
                                 window.VirtualPhone.readingApp = new module.ReadingApp(phoneShell, storage);
@@ -10187,7 +10207,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '阅读App加载失败', '❌');
                         });
                 } else if (appId === 'gacha') {
-                    import('./apps/gacha/gacha-app.js')
+                    bootTiming.instrumentImport(import('./apps/gacha/gacha-app.js'), './apps/gacha/gacha-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.gachaApp) {
                                 window.VirtualPhone.gachaApp = new module.GachaApp(phoneShell, storage);
@@ -10199,7 +10219,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '幸运转盘App加载失败', '❌');
                         });
                 } else if (appId === 'timeweaver') {
-                    import('./apps/timeweaver/timeweaver-app.js')
+                    bootTiming.instrumentImport(import('./apps/timeweaver/timeweaver-app.js'), './apps/timeweaver/timeweaver-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.timeweaverApp) {
                                 window.VirtualPhone.timeweaverApp = new module.TimeweaverApp(phoneShell, storage);
@@ -10211,7 +10231,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '织光机App加载失败', '❌');
                         });
                 } else if (appId === 'worldpulse') {
-                    import('./apps/worldpulse/worldpulse-app.js')
+                    bootTiming.instrumentImport(import('./apps/worldpulse/worldpulse-app.js'), './apps/worldpulse/worldpulse-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.worldpulseApp) {
                                 window.VirtualPhone.worldpulseApp = new module.WorldpulseApp(phoneShell, storage);
@@ -10226,7 +10246,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // [v2.46.0] 地点图景：消费上游记忆插件的场所图景面（只读快照桥）。
                     //   懒加载单例（与 worldpulse/peek 同构）；实例不持有读数副本，
                     //   故换会话只走 onChatChanged（见下方三条清数据路径的调用）。
-                    import('./apps/place/place-app.js')
+                    bootTiming.instrumentImport(import('./apps/place/place-app.js'), './apps/place/place-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.placeApp) {
                                 window.VirtualPhone.placeApp = new module.PlaceApp(phoneShell, storage);
@@ -10243,7 +10263,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     //   不持久化任何状态，故换会话只走 onChatChanged（空实现）。
                     //   与另外 22 个懒加载 App 的差别在于它**不消费 storage**：
                     //   诊断读的是当前**运行时事实**，不是会话数据。
-                    import('./apps/diagnose/diagnose-app.js')
+                    bootTiming.instrumentImport(import('./apps/diagnose/diagnose-app.js'), './apps/diagnose/diagnose-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.diagnoseApp) {
                                 window.VirtualPhone.diagnoseApp = new module.DiagnoseApp(phoneShell, storage);
@@ -10257,7 +10277,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'cheat') {
                     // [v2.47.0] 金手指：万界武库外挂库（装配清单随会话隔离，注入走生成前钩子）。
                     //   懒加载单例（与 place/worldpulse 同构）；外挂正文为内置静态事实源 data/cheats.js。
-                    import('./apps/cheat/cheat-app.js')
+                    bootTiming.instrumentImport(import('./apps/cheat/cheat-app.js'), './apps/cheat/cheat-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.cheatApp) {
                                 window.VirtualPhone.cheatApp = new module.CheatApp(phoneShell, storage);
@@ -10271,7 +10291,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'dirtytalk') {
                     // [v2.48.0] 撩语：聊骚语料词库（装配清单随会话隔离，注入走生成前钩子）。
                     //   懒加载单例（与 cheat/place 同构）；语料正文为内置静态事实源 data/dirtytalk.js。
-                    import('./apps/dirtytalk/dirtytalk-app.js')
+                    bootTiming.instrumentImport(import('./apps/dirtytalk/dirtytalk-app.js'), './apps/dirtytalk/dirtytalk-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.dtApp) {
                                 window.VirtualPhone.dtApp = new module.DtApp(phoneShell, storage);
@@ -10285,7 +10305,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'wallet') {
                     // [v2.49.0] 钱袋：消费记忆插件金钱账面（只读桥，五态归因，注入走生成前钩子）。
                     //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^wallet_/）。
-                    import('./apps/wallet/wallet-app.js')
+                    bootTiming.instrumentImport(import('./apps/wallet/wallet-app.js'), './apps/wallet/wallet-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.walletApp) {
                                 window.VirtualPhone.walletApp = new module.WalletApp(phoneShell, storage);
@@ -10299,7 +10319,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'profile') {
                     // [v2.49.0] 档案：消费记忆插件主角档案+生活小档案（只读桥，五态归因，注入走生成前钩子）。
                     //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^profile_/）。
-                    import('./apps/profile/profile-app.js')
+                    bootTiming.instrumentImport(import('./apps/profile/profile-app.js'), './apps/profile/profile-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.profileApp) {
                                 window.VirtualPhone.profileApp = new module.ProfileApp(phoneShell, storage);
@@ -10313,7 +10333,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'plotline') {
                     // [v2.49.0] 剧情线：消费记忆插件大纲+世界推进（只读桥，五态归因，注入走生成前钩子）。
                     //   懒加载单例（与 place/cheat 同构）；设置随会话隔离（/^plotline_/）。
-                    import('./apps/plotline/plotline-app.js')
+                    bootTiming.instrumentImport(import('./apps/plotline/plotline-app.js'), './apps/plotline/plotline-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.plotlineApp) {
                                 window.VirtualPhone.plotlineApp = new module.PlotlineApp(phoneShell, storage);
@@ -10327,7 +10347,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } else if (appId === 'chars') {
                     // [v2.51.0] 群像：消费记忆插件角色状态表（只读桥，五态归因，注入走表驱动）。
                     //   懒加载单例（与 plotline 同构）；设置随会话隔离（/^chars_/）。
-                    import('./apps/chars/chars-app.js')
+                    bootTiming.instrumentImport(import('./apps/chars/chars-app.js'), './apps/chars/chars-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.charsApp) {
                                 window.VirtualPhone.charsApp = new module.CharsApp(phoneShell, storage);
@@ -10340,7 +10360,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         });
                 } else if (appId === 'clock') {
                     // [v2.52.0] 时计：消费记忆插件剧情时钟（只读桥，五态归因，注入走表驱动）。
-                    import('./apps/clock/clock-app.js')
+                    bootTiming.instrumentImport(import('./apps/clock/clock-app.js'), './apps/clock/clock-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.clockApp) {
                                 window.VirtualPhone.clockApp = new module.ClockApp(phoneShell, storage);
@@ -10353,7 +10373,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         });
                 } else if (appId === 'ledger') {
                     // [v2.53.0] 世界账本：消费记忆插件世界账本读数（只读桥，六态归因，注入走表驱动）。
-                    import('./apps/ledger/ledger-app.js')
+                    bootTiming.instrumentImport(import('./apps/ledger/ledger-app.js'), './apps/ledger/ledger-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.ledgerApp) {
                                 window.VirtualPhone.ledgerApp = new module.LedgerApp(phoneShell, storage);
@@ -10366,7 +10386,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         });
                 } else if (appId === 'asset') {
                     // [v2.61.0] 资产：本地角色账本 / 行情 / 投影 / 结算（引擎零转录，App 层只接线）。
-                    import('./apps/asset/asset-app.js')
+                    bootTiming.instrumentImport(import('./apps/asset/asset-app.js'), './apps/asset/asset-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.assetApp) {
                                 window.VirtualPhone.assetApp = new module.AssetApp(phoneShell, storage);
@@ -10378,7 +10398,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '资产App加载失败', '❌');
                         });
                 } else if (appId === 'peek') {
-                    import('./apps/peek/peek-app.js')
+                    bootTiming.instrumentImport(import('./apps/peek/peek-app.js'), './apps/peek/peek-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.peekApp) {
                                 window.VirtualPhone.peekApp = new module.PeekApp(phoneShell, storage);
@@ -10390,7 +10410,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '查手机App加载失败', '❌');
                         });
                 } else if (appId === 'bilibili') {
-                    import('./apps/bilibili/bili-app.js')
+                    bootTiming.instrumentImport(import('./apps/bilibili/bili-app.js'), './apps/bilibili/bili-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.bilibiliApp) {
                                 window.VirtualPhone.bilibiliApp = new module.BiliApp(phoneShell, storage);
@@ -10402,7 +10422,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', 'B站App加载失败', '❌');
                         });
                 } else if (appId === 'theater') {
-                    import('./apps/theater/theater-app.js')
+                    bootTiming.instrumentImport(import('./apps/theater/theater-app.js'), './apps/theater/theater-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.theaterApp) {
                                 window.VirtualPhone.theaterApp = new module.TheaterApp(phoneShell, storage);
@@ -10414,7 +10434,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             phoneShell?.showNotification('错误', '小剧场App加载失败', '❌');
                         });
                 } else if (appId === 'graph') {
-                    import('./apps/memory/graph-app.js')
+                    bootTiming.instrumentImport(import('./apps/memory/graph-app.js'), './apps/memory/graph-app.js')
                         .then(module => {
                             if (!window.VirtualPhone.graphApp) {
                                 window.VirtualPhone.graphApp = new module.GraphApp(phoneShell, storage);
@@ -10508,7 +10528,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
                     let wechatData = window.VirtualPhone?.wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData;
                     if (!wechatData) {
-                        const module = await import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
+                        const module = await bootTiming.instrumentImport(import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
                         wechatData = new module.WechatData(storage);
                     }
 
@@ -11017,7 +11037,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                     let wechatDataInstance = window.VirtualPhone?.wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData;
                                     if (!wechatDataInstance && storage) {
                                         try {
-                                            const module = await import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
+                                            const module = await bootTiming.instrumentImport(import('./apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync'), './apps/wechat/wechat-data.js?v=20260906-global-chat-background-sync');
                                             if (!window.VirtualPhone) window.VirtualPhone = {};
                                             window.VirtualPhone.cachedWechatData = new module.WechatData(storage);
                                             wechatDataInstance = window.VirtualPhone.cachedWechatData;
@@ -11899,7 +11919,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                         if (diaryInjectEnabled) {
                                             let diaryData = window.VirtualPhone?.diaryApp?.diaryData || null;
                                             if (!diaryData) {
-                                                const diaryModule = await import('./apps/diary/diary-data.js');
+                                                const diaryModule = await bootTiming.instrumentImport(import('./apps/diary/diary-data.js'), './apps/diary/diary-data.js');
                                                 diaryData = new diaryModule.DiaryData(storage);
                                             }
                                             diaryHistoryContent = diaryData?.buildOfflineInjectionContent?.() || '';
@@ -11924,7 +11944,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                                 || window.VirtualPhone?._calendarReminderApp?.calendarData
                                                 || null;
                                             if (!calendarData) {
-                                                const calendarModule = await import('./apps/calendar/calendar-data.js?v=20260527-calendar-polish');
+                                                const calendarModule = await bootTiming.instrumentImport(import('./apps/calendar/calendar-data.js?v=20260527-calendar-polish'), './apps/calendar/calendar-data.js?v=20260527-calendar-polish');
                                                 calendarData = new calendarModule.CalendarData(storage);
                                             }
                                             const reminderMemos = calendarData?.getGlobalReminderItemsByDate?.(dateKey)
@@ -11966,7 +11986,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                                 const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                                                 managedTasks = Array.isArray(parsed) ? parsed : [];
                                             }
-                                            const wangxiangModule = await import('./apps/wangxiang/wangxiang-app.js');
+                                            const wangxiangModule = await bootTiming.instrumentImport(import('./apps/wangxiang/wangxiang-app.js'), './apps/wangxiang/wangxiang-app.js');
                                             wangxiangTaskContent = wangxiangModule.buildWangxiangTaskInjectionContent(managedTasks);
                                         }
                                     } catch (e) {
@@ -11988,7 +12008,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                                 const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                                                 orders = Array.isArray(parsed) ? parsed : [];
                                             }
-                                            const wangxiangModule = await import('./apps/wangxiang/wangxiang-app.js');
+                                            const wangxiangModule = await bootTiming.instrumentImport(import('./apps/wangxiang/wangxiang-app.js'), './apps/wangxiang/wangxiang-app.js');
                                             const currentUserName = String(SillyTavern?.getContext?.()?.name1 || '用户');
                                             wangxiangOrderContent = wangxiangModule.buildWangxiangOrderInjectionContent(orders, currentUserName);
                                         }

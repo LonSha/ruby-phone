@@ -69,6 +69,30 @@ import {
     rollbackPreviewLine,
     rollbackPreviewTable
 } from '../../config/rollback-preview.js';
+/* [v3.13.0 · 计划 #14] 启动耗时的可观测面（消费侧）。
+ *   接在诊断中心的理由与投影面 / 注入面 / 证据面 / 知识面 / 剧情时刻面 / 回滚预览面**同一族**：
+ *   本仓一切「读数」的可见出口就是这里。修前实测：启动期只有两句 `console.log` 总数汇总，
+ *   78 处动态 import 零时计，**没有任何面向用户的可见面** —— 计划 #14 要的
+ *   「追加启动耗时分析工具，识别哪个模块拖慢了启动」里，分析工具这一半根本不存在。
+ *   本文件只**转发**真源读数（一行文案的唯一实现在 config/boot-timing.js），
+ *   不在视图里重新拼一次（自己再拼一次就是同一口径两份实现）。 */
+import { bootTimingLine } from '../../config/boot-timing.js';
+
+/** [v3.13.0] 启动耗时面：从宿主读实例读数。
+ *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
+ *  新建的那个只会看见「诊断页打开之后」发生的事 —— 读启动耗时却从页打开时起算，
+ *  是一个看起来完美、实际毫无意义的读数（本仓「读数必须来自真源」同族纪律）。
+ *  取不到就如实 null：那是「宿主没挂」（旧版插件 / 无宿主），不是「启动很快」。 */
+export function bootTimingFace(win) {
+    const w = hostWindow(win);
+    const host = w && w.VirtualPhone ? w.VirtualPhone : null;
+    const inst = host && host.bootTiming ? host.bootTiming : null;
+    if (!inst || typeof inst.collect !== 'function') return null;
+    try {
+        const face = inst.collect();
+        return (face && typeof face === 'object') ? face : null;
+    } catch (_e) { return null; }
+}
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -347,7 +371,37 @@ export function collectDiagnose(win, storage) {
      *   ★ 刻意**不**把五个域的原始数据放进返回值：卡片只需要读数（条数 / 四态 / 归因），
      *   把几万条消息塞进诊断包会让整份读数在其它消费方那里变重（且那些数据本就有自己的出口）。 */
     const previewSc = (() => { try { return rollbackPreviewFace(w); } catch (_e) { return null; } })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc };
+    /* [v3.13.0 · 计划 #14] 启动耗时面：**从宿主实例读**（本内核不自建实例 —— 见 bootTimingFace 注释）。 */
+    const bootSc = safe(() => bootTimingFace(w), null) || null;
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, bootTiming: bootSc };
+}
+
+/** [v3.13.0] 启动耗时一行读数（**唯一实现**在真源：`config/boot-timing.js` 的 `bootTimingLine`）。
+ *  这里只做转发：诊断内核持有读数面，视图不再自己拼文案（拼第二遍就是同一口径两份实现）。 */
+export function bootTimingFaceText(face) {
+    return bootTimingLine(face);
+}
+
+/** [v3.13.0] 启动耗时逐段明细（**排序与截断在内核**，视图只渲染）。
+ *  排序口径：可测时按耗时降序在前 ⇒ 「谁拖慢了启动」一眼可见；不可测时的段按原顺序排在后面
+ *  （它们没有 ms，混进耗时排序里会把「测不出」伪装成「很快」）。 */
+export function bootTimingRows(face, limit) {
+    const f = (face && typeof face === 'object') ? face : null;
+    if (!f || !Array.isArray(f.segments)) return [];
+    const cap = (typeof limit === 'number' && limit > 0) ? limit : 24;
+    const measured = f.segments.filter((s) => s.state === 'measured')
+        .slice().sort((a, b) => b.ms - a.ms);
+    const unknown = f.segments.filter((s) => s.state !== 'measured');
+    return measured.concat(unknown).slice(0, cap).map((s) => ({
+        name: String(s.name || ''),
+        ms: (typeof s.ms === 'number') ? s.ms : null,
+        state: String(s.state || 'unmeasurable'),
+        spec: String(s.spec || ''),
+        failed: s.failed === true,
+        kind: String(s.kind || 'span'),
+        /* 「这段是不是 mark」在视图要分开渲染（mark 没有耗时语义，不该进耗时表）。 */
+        isMark: String(s.kind || 'span') === 'mark'
+    }));
 }
 
 /** [v3.10.0 · G-4] 当前剧情时刻一行读数（**唯一实现**在真源：`storyClockLine`）。 */
@@ -517,6 +571,14 @@ export function summarizeDiagnose(pkg) {
         bad.push('九账证据面：一本账也读不到（归因 ' + String(ev.reason || 'unknown') + '）');
     }
     if (Number(p.backStack && p.backStack.dropped) > 0) bad.push('返回栈压入被拒 ' + p.backStack.dropped + ' 次');
+    /* [v3.13.0 · 计划 #14] 启动耗时的坏消息：**有段加载失败**进首行（那是用户能处理的：
+     *   某个 App 的资源没加载到 ⇒ 打开它会白屏）；「不可测时」不进首行（那是环境事实，
+     *   用户做不了什么）—— 但它在卡片里必须显式可见（本仓「坏消息先说，但不制造噪声」）。 */
+    const bt = p.bootTiming || null;
+    if (bt && Array.isArray(bt.segments)) {
+        const failed = bt.segments.filter((s) => s.failed === true);
+        if (failed.length) bad.push('启动期有 ' + failed.length + ' 个模块加载失败（' + failed.map((s) => s.name).slice(0, 3).join('、') + '）');
+    }
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
     if (bad.length) return '需注意：' + bad.join(' · ');
     const ok = [];
@@ -547,5 +609,8 @@ export default {
     blockLine,
     rollbackPreviewFaceText,
     rollbackPreviewRows,
+    bootTimingFace,
+    bootTimingFaceText,
+    bootTimingRows,
     summarizeDiagnose
 };

@@ -11,6 +11,8 @@
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
 import { schemaStateText, storageFaceLine, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
+/* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
+import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -91,6 +93,68 @@ export class DiagnoseView {
         html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>只算不执行</b> —— 本卡只回答「这次动作会让哪些域各丢几条」，'
             + '**不会**替你回滚、不会备份、也不报金额（钱包流水作废时会反向冲回余额，报金额等于预演副作用，'
             + '而副作用是否与真回滚逐分一致、本层无法自证 —— 如实少报一层，好过给出一个没人能核对的数）。</div>';
+        return html;
+    }
+    /** [v3.13.0 · 计划 #14] 启动耗时卡：把「谁拖慢了启动」摆在用户面前。
+     *  三条必须看见的东西（缺一条这张卡就失去意义）：
+     *    · **逐段**而不是只有总数：既有那两句 console.log 只报合计，
+     *      读得出「慢不慢」读不出「谁慢」—— 卡片的主体是段表；
+     *    · **不可测时的段单独列出、绝不进耗时排序**：没有 ms 的段混进耗时表里，
+     *      会把「测不出」伪装成「很快」（本仓最贵的错读数形态）；
+     *    · **重复加载点单列**：同一模块被多路 import（带不同 cache-busting query 时
+     *      浏览器不共享实例）是真开销，也是真线索。
+     *  纯渲染：段表排序与截断都在内核（`bootTimingRows`），本方法不自己排。 */
+    _bootTimingHtml(pkg) {
+        const face = (pkg && pkg.bootTiming) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note' + Q + '>读不到启动耗时面 —— 宿主未挂 '
+                + '<code class=' + Q + 'dg-key' + Q + '>VirtualPhone.bootTiming</code>'
+                + '（旧版插件或本页在插件初始化前打开）。这是「没这个读数」，**不是**「启动很快」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(bootTimingFaceText(face)) + '</div>';
+        if (face.clock === 'absent') {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>本环境无 <code class=' + Q + 'dg-key' + Q + '>performance.now</code>：'
+                + '只记了 ' + escapeHtml(String(face.spans || 0)) + ' 段的**顺序**，'
+                + '所有耗时如实留空（不编 0）—— 顺序信息仍然有用：它就是加载先后。</div>';
+        }
+        const rows = bootTimingRows(face, 40);
+        const spanRows = rows.filter((r) => !r.isMark);
+        const marks = rows.filter((r) => r.isMark);
+        if (spanRows.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + spanRows.map((r) => {
+                const tone = r.failed ? 'warn' : (r.state === 'measured' ? 'ok' : 'muted');
+                const msText = (r.ms === null) ? '不可测时' : (Math.round(r.ms) + 'ms');
+                return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.name) + '</code>'
+                    + this._chip(msText, tone)
+                    + (r.failed ? this._chip('加载失败', 'warn') : '')
+                    + (r.spec && r.spec !== r.name ? '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(r.spec) + '</span>' : '')
+                    + '</div>';
+            }).join('') + '</div>';
+        } else {
+            html += '<div class=' + Q + 'dg-note' + Q + '>还没有任何段被记账 —— 本页可能在启动完成之前就被打开了。</div>';
+        }
+        if (marks.length) {
+            html += '<div class=' + Q + 'dg-chips' + Q + '>顺序打点：'
+                + marks.map((r) => this._chip(r.name, 'muted')).join('') + '</div>';
+        }
+        if ((face.unmeasurable || 0) > 0 && face.clock !== 'absent') {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>【注意】有 ' + escapeHtml(String(face.unmeasurable))
+                + ' 段**不可测时**（它们已从上面的耗时排序里摘出、也不计入合计）：'
+                + '这些段没坏，只是钟在那一刻读不到 —— 把它们的耗时当 0 会把「读不到」当成「很快」。</div>';
+        }
+        if ((face.overflow || 0) > 0) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>另有 ' + escapeHtml(String(face.overflow))
+                + ' 段超出明细上限（只计数不留明细，防长会话膨胀）。</div>';
+        }
+        const rep = Array.isArray(face.repeatedSpecs) ? face.repeatedSpecs : [];
+        if (rep.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>重复加载点 ' + rep.length + ' 个：'
+                + rep.slice(0, 6).map((x) => escapeHtml(x.spec + '×' + x.times)).join(' · ')
+                + '（带不同 cache-busting query 时浏览器不共享模块实例，是真开销也是真线索）</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>本卡只读数，不做优化</b> —— 本版一条加载路径都没改'
+            + '（不改顺序、不改并发、不拆包、不预加载）。读数是优化的**前置条件**：先能看见谁慢，再谈改哪'
+            + '（没有读数的优化是把直觉当证据）。耗时缺失一律如实报「不可测时」，绝不报 0ms。</div>';
         return html;
     }
     _chip(text, tone) {
@@ -557,6 +621,9 @@ export class DiagnoseView {
          *   而存档健康说的是**这份存档属于哪个时代** —— 先看范围，再看时代。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>回滚影响预览（只算不执行）</h3>' + this._rollbackPreviewHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
+        /* [v3.13.0 · 计划 #14] 启动耗时卡放在最后：它是**启动期**的读数（其余卡片都是当前态
+         *   的读数）—— 摆在前面的卡会让人以为「启动慢」是当前正在发生的事。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('</div>');

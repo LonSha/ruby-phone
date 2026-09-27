@@ -289,14 +289,19 @@ test('D3 把取证对象写进公告 ⇒ 计数与判据必须一动不动（判
   const r = runProbe(dir);
   assert.equal(r.status, 0, '公告被注入不得使探针崩溃：' + String(r.stderr).slice(0, 200));
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(j.scan, base.scan,
-    '公告写了形态词 ⇒ 静态计数必须与基线逐项一致（判据查代码不查散文）');
-  /* 比的是**计数**与**判据**；`sites` 里的行号会因公告块行数变化而整体平移，
-   *   那不属于「判据面被侵入」，故不并入本条。 */
-  assert.deepEqual(j.readings, base.readings, '读数不得被公告动摇');
-  assert.deepEqual(j.criteria, base.criteria, '判据不得被公告动摇');
-  assert.deepEqual(j.verdict, base.verdict, '结论不得被公告动摇');
-  assert.equal(j.scan.full_materialize, base.scan.full_materialize, '全表物化计数必须不变');
+  /* ★ [v3.13.0 交棒] 比的是**同一棵树未注入时的裸跑读数**（`main`），不是冻结基线。
+   *   为什么改：本条守的是「公告散文不得污染计数」，而基线的 `scan.files` 是**枚举面**，
+   *   每新增一个真源文件就 +1 —— 拿它当锚等于让「判据纯度」这条判据顺带承担
+   *   「枚举面冻结」的职责，每次抬版都会假红（v325-A2 已因同一根因被改造过一轮）。
+   *   换成「注入前 vs 注入后」后，本条与版本演进彻底解耦，且判据更精确：
+   *   唯一允许的变化面就是公告块本身。枚举面下限由 A2 自证，此处不重复。
+   *   `sites` 里的行号会因公告块行数变化而整体平移，那不属于「判据面被侵入」，故不并入本条。 */
+  const j0 = JSON.parse(main.stdout);
+  assert.deepEqual(j.scan, j0.scan, '公告写了形态词 ⇒ 静态计数必须一动不动（判据查代码不查散文）');
+  assert.deepEqual(j.readings, j0.readings, '读数不得被公告动摇');
+  assert.deepEqual(j.criteria, j0.criteria, '判据不得被公告动摇');
+  assert.deepEqual(j.verdict, j0.verdict, '结论不得被公告动摇');
+  assert.equal(j.scan.full_materialize, j0.scan.full_materialize, '全表物化计数必须不变');
 });
 
 /* ══════════ E ── 版本锚 ══════════ */
