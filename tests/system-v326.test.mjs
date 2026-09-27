@@ -1,4 +1,8 @@
 // tests/system-v326.test.mjs — F-1 分支与玩法可行性取证 [v3.9.0]
+//   [v3.11.0 交棒] F-1 的**替代轴**（回滚影响的可见性提升）已在 v3.11.0 落地：真源
+//     `config/rollback-preview.js` + 诊断面接线。故本版把两条判据由「零命中」主动改写为
+//     「下限 / 例外面」形（A2 的预览读数、B1 的 token 面），**而非静默通过** ——
+//     改写处的注释写明代价与理由。同族前例：v326-B1 / v327-E1 / v328-B2 / v268-P1 / v3210-G1。
 //
 //   本版**只取证，不实施**。TODO F 批最后一项 F-1「分支与玩法（R4 第一批）：
 //   持久检查点 / 回滚预览 / 分支只读对照」一直挂着「先取证再立 Gate」。
@@ -121,10 +125,24 @@ test('A2 探针读数与基线逐项一致（读数可复算，防转写漂移�
   assert.ok(rep.filesScanned > 150, '枚举面须 > 150 个文件，实测 ' + rep.filesScanned);
   assert.ok(rep.rollbackPoints > rep.rollbackFiles, '回滚点数须多于文件数（同一文件多点）');
   assert.ok(rep.chatDataPatterns > 50, '会话隔离正则须 > 50 条，实测 ' + rep.chatDataPatterns);
-  /* 下游**没有** F-1 三件（本版只取证）—— 读到非 0 说明要么已实施要么判据被污染 */
+  /* 下游**没有** F-1 三件（本版只取证）—— 读到非 0 说明要么已实施要么判据被污染。
+   * [v3.11.0 交棒] F-1 的**替代轴**（回滚影响的可见性提升）已在本版落地：真源
+   *   `config/rollback-preview.js` + 诊断面接线 ⇒ `previewFaceHits` 必然非 0，
+   *   这是「从只取证切到实施」的**预期代价**（本探针的刻度就是「回滚预览面有没有被做」）。
+   *   故本判据由「必须为 0」改写为「**下限 + 不假零**」：
+   *     · 下限：修订前实测 18 处（真源模块 + 两个诊断文件里的导出名与引用），
+   *       只锁「不准塌成 0」（塌成 0 = 探针刻度失效或实现被摘掉）；
+   *     · 不假零：改版本不得顺手把回滚覆盖面读数做小（真源模块只算不写，
+   *       不该新增或减少回滚点）。精确读数由当版套件（v3213）接管。
+   *   为何不删这条：删了就等于「主动取消观测」；改写为下限后它仍能抓住「实现被摘」与「探针失效」。 */
   assert.equal(rep.checkpointFaceHits, 0, '下游不得出现检查点面');
-  assert.equal(rep.previewFaceHits, 0, '下游不得出现回滚预览面');
+  assert.ok(rep.previewFaceHits >= 15,
+    '回滚预览面已实施（下限 15）—— 读数不得塌成 0，实测 ' + rep.previewFaceHits);
   assert.equal(rep.branchFaceHits, 0, '下游不得出现分支只读对照面');
+  assert.equal(rep.rollbackPoints, R.rollback_points,
+    '回滚覆盖面读数不得因本版落地而变动（真源模块只算不写）：' + rep.rollbackPoints);
+  assert.equal(rep.rollbackFiles, R.rollback_files, '回滚覆盖文件数不得变动');
+  assert.equal(rep.rollbackEntryDefs, R.rollback_entry_defs, '回滚入口定义数不得变动');
 });
 
 test('A3 判定挂在读数上 + 同一棵树跑两次逐字节相同', () => {
@@ -201,6 +219,18 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
   assert.equal(IDX_CODE.split('\n').length, IDX_SRC.split('\n').length,
     '剥离必须保留行数（行号仍指向真实文件）');
   assert.equal(IDX_CODE.indexOf('const ST_PHONE_CURRENT_UPDATE'), -1, '剥离后代码面不得再含公告块');
+  /* [v3.11.0 交棒] token 面按**位置**拆成两族：
+   *   · `index.js`（入口/宿主层）：**仍全禁**。本版落地的是「预览面」而不是「入口接线」，
+   *     入口出现预览面 token 意味着它真的在删楼路径上动了手 —— 那超出本轴范围；
+   *   · `apps/<一层>/*.js`（App 层）：保留 6 个上游分支面 / 检查点面 token
+   *     （`phoneCheckpoint` / `branchCheckpoint` / `saveCheckpoint` / `branchCompare` /
+     `分支对照` / `分支只读`）。
+   *     为什么在此摘掉**三个预览 token**（`previewRollback` / `rollbackPreview` / `dryRunRollback`）：
+   *     下游自建的回滚影响预览面（v3.11.0）是**产品功能面**，它长在 App 层是设计而不是污染
+   *     —— 探针对这三个 token 的**计数**（A2 的 `previewFaceHits`）仍会把它量出来。
+   *     反过来，拦住「上游分支/检查点面被接进来」的纪律**一字未松**（那才是本判据真正要守的）：
+   *     六个 token 全在，且中文裸词 `分支对照` / `分支只读` 与 `branchCompare` 都是上游面专属，
+   *     在本仓任何位置出现都意味着「接了不该接的东西」。 */
   for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint', 'restoreCheckpoint',
     'previewRollback', 'rollbackPreview', 'dryRunRollback', 'RollbackPreview', '回滚预览',
     'branchCompare', '分支对照', '分支只读']) {
@@ -212,8 +242,8 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
     for (const f of fs.readdirSync(abs)) {
       if (f.slice(-3) !== '.js') continue;
       const src = read(path.join(abs, f));
-      for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint', 'previewRollback',
-        'rollbackPreview', 'dryRunRollback', 'branchCompare', '分支对照', '分支只读']) {
+      for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint',
+        'branchCompare', '分支对照', '分支只读']) {
         assert.equal(src.indexOf(tok), -1, dir + '/' + f + ' 不得引入 ' + tok);
       }
     }
@@ -223,11 +253,17 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
   assert.equal(IDX_CODE.indexOf('LonShaLedgerReplay'), -1, '下游不得直读账本回放（本版未接）');
 });
 
-test('B4 判据面不得被公告侵入（把取证对象写进公告 ⇒ 下游读数必须仍为 0）', () => {
-  /* ★ 这一条是**真源码破坏型**负控制：在上游合成的 index.js 里往公告块塞进三个面的名字，
-   *   探针的下游读数必须**一动不动**（证明它查的是产品代码而不是散文）。
-   *   若哪天有人把剥离逻辑删掉，本条会立刻转红。 */
+test('B4 判据面不得被公告侵入（把取证对象写进公告 ⇒ 下游读数必须一动不动）', () => {
+  /* ★ 这一条是**真源码破坏型**负控制：在副本 index.js 的公告块里塞进三个面的名字，
+   *   探针的下游读数必须与「注入前的同一棵树」**逐字相同**（证明它查的是产品代码而不是散文）。
+   *   若哪天有人把剥离逻辑删掉，本条会立刻转红。
+   * [v3.11.0 交棒] 本条的**形式**由「读数必须为 0」改写为「读数必须与注入前逐字相同」——
+   *   理由：本版已把回滚预览面真做进产品（A2 的 `previewFaceHits` = 39 非 0），
+   *   若仍钉 0 则它量的是「有没有做这个功能」，而不是它本来要守的「**公告变更会不会污染读数**」。
+   *   改写后它反而**更严**：三读数逐项相等 + 回滚覆盖面四项相等，任何一项被公告干扰立即红。
+   *   注意它仍守住原本的杀伤面 —— 剥离逻辑若被删，三个读数各会 +1（注入的正是这三个词）。 */
   const c = makeCopy(false);
+  const before = (() => { const r0 = runProbe(c.dir, null); assert.equal(r0.status, 0); return JSON.parse(r0.stdout); })();
   const ip = path.join(c.dir, 'index.js');
   const src = read(ip);
   const anchor = 'const ST_PHONE_CURRENT_UPDATE = {';
@@ -248,9 +284,15 @@ test('B4 判据面不得被公告侵入（把取证对象写进公告 ⇒ 下游
   const r = runProbe(c.dir, null);
   assert.equal(r.status, 0, '公告被注入不得使探针崩溃：' + String(r.stderr).slice(0, 200));
   const j = JSON.parse(r.stdout);
-  assert.equal(j.checkpointFaceHits, 0, '公告写了检查点 ⇒ 下游读数必须仍为 0（判据查代码不查散文）');
-  assert.equal(j.previewFaceHits, 0, '公告写了回滚预览 ⇒ 下游读数必须仍为 0');
-  assert.equal(j.branchFaceHits, 0, '公告写了分支对照 ⇒ 下游读数必须仍为 0');
+  assert.equal(j.checkpointFaceHits, before.checkpointFaceHits,
+    '公告写了检查点 ⇒ 读数必须不动（判据查代码不查散文）');
+  assert.equal(j.previewFaceHits, before.previewFaceHits,
+    '公告写了回滚预览 ⇒ 读数必须不动（实测 ' + j.previewFaceHits + ' vs ' + before.previewFaceHits + '）');
+  assert.equal(j.branchFaceHits, before.branchFaceHits, '公告写了分支对照 ⇒ 读数必须不动');
+  /* 回滚覆盖面四项也一并守：公告里写的服务名与入口名不得被算成实现点 */
+  for (const k of ['rollbackPoints', 'rollbackFiles', 'rollbackEntryDefs', 'filesScanned']) {
+    assert.equal(j[k], before[k], '公告注入不得改变 ' + k);
+  }
 });
 
 test('B2 探针位置无关：不得把兄弟仓绝对路径写死（上游 v3.204.0 的跨仓纪律）', () => {

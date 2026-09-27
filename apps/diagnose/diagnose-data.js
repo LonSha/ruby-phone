@@ -58,6 +58,17 @@ import { knowledgeBoundary } from '../plotline/plotline-data.js';
  *   没有任何出口回答「现在到底是哪一天」，更不会告诉用户「它们互相矛盾」。
  *   本模块只归一与陈述（两源/三源对比 + 确定性 primary 规则），不选边、不猜。 */
 import { storyClock, storyClockLine, storyClockProbe } from '../../config/story-clock.js';
+/* [v3.11.0 · F-1 替代轴] 回滚影响的**只算不执行**预览面（消费侧）。
+ *   接在诊断中心的理由与投影面 / 注入面 / 证据面 / 知识面 / 剧情时刻面**同一族**：
+ *   本仓一切「按楼层作废会连带丢掉什么」的读数，可见出口就是这里。
+ *   修前实测：v3.9.0 的 F-1 取证判定 not_now，但同轮留下了一条有读数支持的替代轴
+ *   （下游 41 个回滚点已有确定的按楼层作废语义，缺的是**读前即知**）。
+ *   本模块只**转发**真源文案，不自己算一遍（自己再算一次就是同一口径两份实现）。 */
+import {
+    rollbackPreviewFace,
+    rollbackPreviewLine,
+    rollbackPreviewTable
+} from '../../config/rollback-preview.js';
 
 /**
  * 上游快照里**已被本仓消费**的字段清单（每个字段对应一个真实 App 面）。
@@ -330,9 +341,25 @@ export function collectDiagnose(win, storage) {
         } catch (_e) { return storyClock({}); }
     })();
 
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc };
+    /* [v3.11.0 · F-1 替代轴] 回滚影响预览面：**本内核调取数口**（不在视图里取）。
+     *   与剧情时刻面同一条纪律 —— 本项目里凡「取数」都在内核、视图只渲染；
+     *   视图自己去读宿主单例的形态，本仓治理过多次（同一读数两个取数口 = 会长歪的读数）。
+     *   ★ 刻意**不**把五个域的原始数据放进返回值：卡片只需要读数（条数 / 四态 / 归因），
+     *   把几万条消息塞进诊断包会让整份读数在其它消费方那里变重（且那些数据本就有自己的出口）。 */
+    const previewSc = (() => { try { return rollbackPreviewFace(w); } catch (_e) { return null; } })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc };
 }
 
+/** [v3.10.0 · G-4] 当前剧情时刻一行读数（**唯一实现**在真源：`storyClockLine`）。 */
+/** [v3.11.0 · F-1 替代轴] 回滚影响预览的一行读数（**唯一实现**在真源 `rollbackPreviewLine`）。
+ *  这里只做转发 —— 本内核持有读数面，视图不再自己拼文案。 */
+export function rollbackPreviewFaceText(pv) {
+    return rollbackPreviewLine(pv);
+}
+/** [v3.11.0 · F-1 替代轴] 回滚影响预览的逐域明细（**唯一实现**在真源 `rollbackPreviewTable`）。 */
+export function rollbackPreviewRows(pv) {
+    return rollbackPreviewTable(pv);
+}
 /** [v3.10.0 · G-4] 当前剧情时刻一行读数（**唯一实现**在真源：`storyClockLine`）。 */
 export function storyClockFaceText(sc) {
     return storyClockLine(sc);
@@ -518,5 +545,7 @@ export default {
     injectionLine,
     injectionVerdictText,
     blockLine,
+    rollbackPreviewFaceText,
+    rollbackPreviewRows,
     summarizeDiagnose
 };

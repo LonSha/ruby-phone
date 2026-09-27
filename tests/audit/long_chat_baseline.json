@@ -79,11 +79,11 @@
   "update_gap_ms_n2000": 0.07
  },
  "scan": {
-  "files": 230,
+  "files": 231,
   "full_materialize": 9,
   "bounded_slice": 5,
   "indexed_loop": 18,
-  "length_read": 48
+  "length_read": 50
  },
  "sites": {
   "full_materialize": [
@@ -142,7 +142,7 @@
    "id": "L5",
    "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
    "pass": true,
-   "got_text": "files=230，全表物化=9，slice(-n)=5，下标直取=18，长度读=48"
+   "got_text": "files=231，全表物化=9，slice(-n)=5，下标直取=18，长度读=50"
   }
  ],
  "timing_criteria": [
@@ -176,7 +176,8 @@
   "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
   "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。",
   "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2，故 files 228 → 230）；并真实改了 `apps/diary/diary-data.js`（+89 行），其中一处 `chat[chat.length - 1]` 取「最后一楼的时间戳」用于**陈旧快照判定**（读长度 + 下标直取，O(1)，不物化）⇒ 长度读 47 → 48。★ 归因经实测核对：同上口径扫 HEAD 树得 28 处、工作树得 29 处，唯一差异就在这个文件（3 → 4）；两个新 config 文件对四类站点**零命中**（它们经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`）。同时 `index.js` 公告块因本版条目变长，两个全表物化站点的行号整体 +5；站点**数量与文件归属未变**。活体读数 `readings` 与结论 `verdict` 本轮真跑与基线逐项一致，故未改写；首测版语义仍保留在 measured_at。"
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2，故 files 228 → 230）；并真实改了 `apps/diary/diary-data.js`（+89 行），其中一处 `chat[chat.length - 1]` 取「最后一楼的时间戳」用于**陈旧快照判定**（读长度 + 下标直取，O(1)，不物化）⇒ 长度读 47 → 48。★ 归因经实测核对：同上口径扫 HEAD 树得 28 处、工作树得 29 处，唯一差异就在这个文件（3 → 4）；两个新 config 文件对四类站点**零命中**（它们经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`）。同时 `index.js` 公告块因本版条目变长，两个全表物化站点的行号整体 +5；站点**数量与文件归属未变**。活体读数 `readings` 与结论 `verdict` 本轮真跑与基线逐项一致，故未改写；首测版语义仍保留在 measured_at。",
+  "v3.11.0 复校：`scan.files` 230 → 231（本版新增 1 个文件 `config/rollback-preview.js`）、`scan.length_read` 48 → 50（同文件内两处 `.length` 读取 —— 短信 `conv.messages` 与微信桶 `buckets[chatId]` 的数组长度判定；这两处正是「会话套消息 vs 扁平列表」形状判定的落点）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 18）与全部活体读数（含 1000 楼卡上限 600）逐项不变。"
  ],
  "not_done": [
   "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",

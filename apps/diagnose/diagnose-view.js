@@ -10,6 +10,7 @@
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
 import { schemaStateText, storageFaceLine, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
+import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -52,6 +53,46 @@ export class DiagnoseView {
 
     _esc(v) { return escapeHtml(v); }
 
+    /**
+     * [v3.11.0 · F-1 替代轴] 回滚影响预览卡：把「删这一楼会连带丢掉什么」摆在删之前。
+     *  纯渲染：四态与逐域文案全部来自真源（`rollbackPreviewFaceText` / `rollbackPreviewRows`），
+     *  本方法**不做任何判断**（不数条数、不猜域）。
+     *  三条必须看见的东西（缺一条这张卡就失去意义）：
+     *    · **两种语义分列**：`及之后`（删楼/回滚）与 `正好该楼`（编辑重放该楼）给出的条数
+     *      方向相反，混成一格用户会照着一个方向的数去做另一个方向的决定；
+     *    · **读不到 ≠ 0 条**：`absent` 域显式写「读不到（不等于 0 条）」，
+     *      与 `zero` 的「0 条（这一楼不影响它）」在界面上长得不一样；
+     *    · **下界说出来**：微信正文按会话懒加载，未加载的会话只算已加载部分，
+     *      读数标注为下界，绝不静默给一个偏低但看起来完整的数。
+     */
+    _rollbackPreviewHtml(pkg) {
+        const pv = (pkg && pkg.rollbackPreview) || null;
+        if (!pv) return '<div class=' + Q + 'dg-note' + Q + '>回滚影响预览读取失败（已降级）</div>';
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(rollbackPreviewFaceText(pv.rollback)) + '</div>';
+        html += '<div class=' + Q + 'dg-sub' + Q + '>另一种语义：' + escapeHtml(rollbackPreviewFaceText(pv.replay)) + '</div>';
+        if (pv.floorOk !== true) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>楼层不可算 —— 当前会话读不到楼层（**不是**「0 条影响」）。'
+                + '没有楼层就没有作废范围，此时任何一个域的「0 条」都不是结论。</div>';
+            return html;
+        }
+        const rows = rollbackPreviewRows(pv.rollback);
+        const toneOf = (st) => (st === 'hit' ? 'warn' : (st === 'partial' ? 'warn' : 'muted'));
+        html += '<div class=' + Q + 'dg-table' + Q + '>'
+            + this._chip('当前楼层 ' + String(pv.floor), 'muted')
+            + rows.map((r) => '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.id) + '</code>' + this._chip(r.label, 'muted')
+                + this._chip(r.text, toneOf(r.state)) + '</div>').join('')
+            + '</div>';
+        const srcs = Array.isArray(pv.sources) ? pv.sources : [];
+        if (srcs.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>取数归因：'
+                + srcs.map((s) => escapeHtml(s.id + '=' + s.state)).join(' · ') + '</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>只算不执行</b> —— 本卡只回答「这次动作会让哪些域各丢几条」，'
+            + '**不会**替你回滚、不会备份、也不报金额（钱包流水作废时会反向冲回余额，报金额等于预演副作用，'
+            + '而副作用是否与真回滚逐分一致、本层无法自证 —— 如实少报一层，好过给出一个没人能核对的数）。</div>';
+        return html;
+    }
     _chip(text, tone) {
         return '<span class=' + Q + 'dg-chip dg-' + escapeHtml(tone || 'muted') + Q + '>' + escapeHtml(text) + '</span>';
     }
@@ -511,6 +552,10 @@ export class DiagnoseView {
          *   「为什么某个角色像是知道了不该知道的事」，属于「解读型」读数而非「在场型」。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>知情网络（谁不知道某件事）</h3>' + this._knowledgeHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
+        /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
+         *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，
+         *   而存档健康说的是**这份存档属于哪个时代** —— 先看范围，再看时代。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>回滚影响预览（只算不执行）</h3>' + this._rollbackPreviewHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>返回栈</h3>' + this._backHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');

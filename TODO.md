@@ -448,7 +448,24 @@
       ⇒ 修法为剥离公告块后再扫（保留行数），并加 B4 负控制钉住剥离逻辑。
       另修掉一条真 fail-open（「指定了上游根却读不到」不再静默降级成「未复核」，改 fail-closed
       `exit 2`），并自审纠正 A3 的口径错（裸跑读数不得用来要求 R3 成立，与 A4 的 fail-closed 语义打架）。
-      落地：`tests/audit/branch_play_probe.cjs` + `tests/audit/branch_play_baseline.json` +
+- [x] **F-1 替代轴（回滚影响的可见性提升）—— v3.11.0 完成**（v3.9.0 取证后判 `not_now`，本版把
+      「有读数支持的替代轴」做出来）：在删楼 / 翻页 / 重生成**之前**，把「这次动作会让哪些域各丢几条」
+      在下游自己的数据上算一遍并呈现。真源 `config/rollback-preview.js`（只算不写）+ 诊断面接线。
+      **五域冻结表**（sms / wechatMessages / wechatMoments / walletTransactions / taskProgress），
+      逐域谓词与真实现同源（短信域走**会话套消息**形状 —— 按扁平列表数会得到「漂亮的假零」；
+      任务进度只有楼层一条、无正文标记，是结构差异，已显式写明）。
+      **四态分治**：`no-floor` / `absent`（读不到）/ `partial`（只算得出下界）/ `zero`（真的是 0 条）/ `hit`。
+      两条纪律写进代码与判据：① **读不到 ≠ 0 条**；② **缺失不得兜底成 0**。
+      **本版自己抓到两条同族真缺陷**（`Number(null) === 0`）：① 楼层入参 `Number(floor)` ⇒ 新增
+      `floorNum()` 把 `null` / `undefined` / `''` 归为 NaN（`0` 仍是合法楼层）；② 逐域取值分支的
+      `Number.isFinite(Number(r))` 对 `r === null` 误判 ⇒ 判空必须先于数值化（残留的第二处）。
+      **代价如实报出**：微信正文按会话懒加载，未加载的会话只算已加载部分并标 `partial` + note（下界），
+      不去调会补 id / 改状态 / 落盘的按会话取消息出口（打开诊断页不会改数据）。
+      **只报条数、不报金额**（报金额等于预演副作用，而副作用是否与真回滚逐分一致本层无法自证）。
+      落地 `config/rollback-preview.js` + 诊断内核四处补丁 + 诊断视图三处补丁 +
+      `tests/system-v3213.test.mjs`（28 项，含四条真源码破坏负控制）+ **两架交棒改写**
+      （v326 的 A2 / B1 / B4，v3212 的 H1）+ 基线复校（枚举面 229 → 230）。
+      详见 `ITERATION_LOG.md` 迭代 59。      落地：`tests/audit/branch_play_probe.cjs` + `tests/audit/branch_play_baseline.json` +
       `tests/system-v326.test.mjs`（17 项，含五条真源码破坏负控制 + B4）。产品代码零改动；未验实机；
       上游本轮零改动（冻结证据 v3.233.0 / c97808c）。详见 `ITERATION_LOG.md` 迭代 52。
       已登记后续候选（不是待办）：把上游补三件回滚面（检查点 / 预检 / 带回滚内容）

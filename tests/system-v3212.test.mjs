@@ -352,16 +352,25 @@ test('G2 让探针不再吞宿主异常 ⇒ 同款「不抛」判据必须转红
 });
 
 /* ══════════ H ── 版本锚 ══════════ */
-test('H1. ★ 版本五源同源为 3.10.2，且当版条目非空', () => {
+test('H1. 版本五源同源（下限形），且当版条目非空', () => {
+    /* [v3.11.0 交棒] 原判据硬写 '3.10.2' —— 那是**当版精确读数**，抬版即过期，
+     *   而本套件要守的是「五源同源 + 当版条目非空」这条**口径**，不是某个版本字面量。
+     *   同族前例（仓内已记录：v326-B1 / v327-E1 / v328-B2 / v268-P1 / v3210-G1 / v3211-E1）。
+     *   命中本类脆性时的自检问句：**这条断言在正常抬版后还会成立吗？** 不会 ⇒ 形状错。
+     *   精确版本判定交给当版套件（v3213-G1）接管。 */
     const man = JSON.parse(readRel('manifest.json'));
     const pkg = JSON.parse(readRel('package.json'));
     const log = JSON.parse(readRel('update-log.json'));
     const idx = readRel('index.js');
-    assert.equal(man.version, '3.10.2', 'manifest 版本');
-    assert.equal(pkg.version, '3.10.2', 'package 版本');
-    assert.equal(log.latest, '3.10.2', 'update-log latest');
-    assert.ok(log.versions['3.10.2'], 'update-log 必须有当版条目');
-    assert.ok(log.versions['3.10.2'].items.length >= 4, '当版条目至少 4 条');
-    assert.ok(/const ST_PHONE_VERSION = '3\.10\.2'/.test(idx), '入口版本常量');
-    assert.ok(/cross-app clock.*|剧情时刻|时间编排/i.test(idx), '内置公告须提到本版主题（供 App 内更新弹窗）');
+    const mv = String(man.version);
+    const parts = mv.split('.').map(Number);
+    assert.ok(parts[0] > 3 || (parts[0] === 3 && parts[1] >= 10),
+        '本套件成立于 RubyPhone 3.10.2 及以后，当前 ' + mv);
+    assert.equal(pkg.version, mv, 'package 与 manifest 同源');
+    assert.equal(log.latest, mv, 'update-log latest 与 manifest 同源');
+    assert.ok(log.versions[mv], 'update-log 必须有当版条目');
+    assert.ok(Array.isArray(log.versions[mv].items) && log.versions[mv].items.length >= 4,
+        '当版条目至少 4 条说明');
+    assert.ok(/const ST_PHONE_VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/.test(idx),
+        '入口版本常量在场（精确值由当版套件判）');
 });

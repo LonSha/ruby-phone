@@ -18,7 +18,7 @@
   ]
  },
  "readings": {
-  "files_scanned": 229,
+  "files_scanned": 230,
   "consume_points": 22,
   "consume_files": 4,
   "local_engine_hits": 0
@@ -77,7 +77,8 @@
   "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
   "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
   "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。"
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+  "v3.11.0 复校：`files_scanned` 229 → 230（本版新增 1 个文件 `config/rollback-preview.js`）。其余三项读数（`consume_points` 22 / `consume_files` 4 / `local_engine_hits` 0）逐项不变 —— 本版没有碰日程面，枚举面涨的是文件数而不是消费点。"
  ],
  "not_done": [
   "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

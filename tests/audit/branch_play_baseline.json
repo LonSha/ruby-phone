@@ -18,7 +18,7 @@
   ]
  },
  "readings": {
-  "files_scanned": 229,
+  "files_scanned": 230,
   "rollback_points": 41,
   "rollback_files": 4,
   "rollback_entry_defs": 12,
@@ -122,7 +122,8 @@
   "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
   "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
   "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。"
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+  "v3.11.0 复校：本轮新增 `config/rollback-preview.js`（回滚影响预览真源，枚举面 +1），并真实改了产品代码（`apps/diagnose/diagnose-data.js`、`apps/diagnose/diagnose-view.js`）。**除枚举面与「回滚预览」读数（0 → 39：探针刻度就是量它）外全部读数逐项不变** ——回滚覆盖面 41 点 / 4 文件 / 12 入口定义一字未动（真源模块**只算不写**，它一条回滚入口都没新增），故本版落地不构成新增回滚实现点。首测版语义保留在 measured_at。★ 同轮同步用**下限形**改写了两条当版精确读数（见 tests/system-v326.test.mjs 的 A2 / B4），并在 B1 处按**位置**拆分 token 面（`index.js` 仍全禁；上游分支面/检查点面 6 个 token 在 App 层全留）。"
  ],
  "not_done": [
   "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
