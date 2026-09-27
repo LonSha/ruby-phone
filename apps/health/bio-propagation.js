@@ -14,6 +14,7 @@ import {
   METOVIVIPAROUS_RACES, AMORPHOUS_RACES, RACE_PHYSIOLOGY,
 } from './bio-races.js';
 import { MENSTRUAL_STAGES, MENSTRUAL_STAGE_DAYS } from './bio-engine.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 export const SPERM_DECAY_PER_DAY = 10;
 export const CROSS_RACE_DIFFICULTY_MULTIPLIER = 1.5;
@@ -198,11 +199,16 @@ export function getClutchSizeMeanByRace(race) {
   return Math.exp(values.reduce((s, v) => s + Math.log(v), 0) / values.length);
 }
 export function getSpermDoseClutchMultiplier(spermValue = 20) {
-  const dose = Number.isFinite(Number(spermValue)) ? Math.max(0, Number(spermValue)) : 20;
+  /* [v3.12.0] 取数走唯一实现：`Number(null) === 0` 会把「没给剂量」当成**真实的 0 次射精**，
+   *  从而给出 0.5 倍（最低档）倍率；旧注释写的默认 20 在弱口径下**从不可达**。 */
+  const sd = numOrNull(spermValue);
+  const dose = sd !== null ? Math.max(0, sd) : 20;
   return Math.max(0.5, Math.min(1.5, 0.5 + (dose / 40)));
 }
 export function getSpermDoseDifficultyBonus(totalSperm) {
-  const dose = Number.isFinite(Number(totalSperm)) ? Math.max(0, Number(totalSperm)) : 0;
+  /* [v3.12.0] 同上：此处兜底本就是 0，形态不变，但取值改走唯一口径（防下次有人抄走这一段）。 */
+  const ts = numOrNull(totalSperm);
+  const dose = ts !== null ? Math.max(0, ts) : 0;
   return Math.max(0.5, Math.min(2, Math.sqrt(dose / 20)));
 }
 

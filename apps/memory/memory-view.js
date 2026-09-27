@@ -14,6 +14,7 @@
  *   ② 全部文本转义：`_esc` 覆盖 `& < > "`（记忆正文来自正文解析，必须当不可信输入）；
  *   ③ 事件不累积：分页切换用容器级委托 + 幂等标志，重复 render 不叠加监听。
  */
+import { numOrNull } from '../../config/num-gate.js';
 export class MemoryView {
   constructor(app) {
     this.app = app;
@@ -393,7 +394,10 @@ export class MemoryView {
     box.innerHTML = hits.length
       ? hits.map((h) => {
         const perm = h.permissionLabel ? '<span class="mem-res-perm">' + this._esc(h.permissionLabel) + '</span>' : '';
-        const sc = Number.isFinite(Number(h._score)) ? Number(h._score).toFixed(2) : '—';
+        /* [v3.12.0] 取数走唯一实现：`Number([])` / `Number('  ')` 都是 0 ⇒ 命中分会显示成
+         *  「0.00」，与「真的算出了 0 分」同形；读不出时本文件的约定是显示 `—`。 */
+        const scoreNum = numOrNull(h._score);
+        const sc = scoreNum !== null ? scoreNum.toFixed(2) : '—';
         return '<div class="mem-res"><div class="mem-res-lbl">' + this._esc(h.layer) +
           ' <span class="mem-res-score">' + sc + '</span>' + perm + '</div>' +
           '<div class="mem-res-text">' + this._esc(h.content) + '</div></div>';

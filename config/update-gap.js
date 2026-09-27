@@ -27,6 +27,7 @@
  *   **不新增 PhoneStorage 键**：这是 chatMetadata 顶层键而非插件自有存储键，
  *   故不触发 keys-audit 的登记要求；写入走 saveMetadataDebounced，失败只 warn 不打断。
  */
+import { numOrNull } from './num-gate.js';
 
 /** chatMetadata 上的锚点键（与源实现同键名，便于跨版本迁移识别）。 */
 export const UPDATE_GAP_KEY = 'rubyTableUpdateReviewAnchor';
@@ -103,7 +104,11 @@ export function readUnupdatedFloorCount(context) {
         if (!isAiFloor(message)) return null;
         // 锚点失效 ⇒ 显示未知，绝不把另一条回复误认为已更新。
         if (stampOf(message) !== String(anchor.sendDate ?? '')) return null;
-        if (swipeOf(message) !== (Number.isFinite(Number(anchor.swipeId)) ? Math.round(Number(anchor.swipeId)) : 0)) return null;
+        /* [v3.12.0] 取数走唯一实现：`Number.isFinite(Number(x))` 在 x 为 `null` / `''` / `[]` 时
+         *  读出 0 且 isFinite 为真，却仍回落 0 —— 读数与 `swipeOf` 一致，但「判据面」是弱口径的。
+         *  本轮把两支统一走唯一实现，逐字等价（既有锚点读数不变）。 */
+        const anchorSwipe = numOrNull(anchor.swipeId);
+        if (swipeOf(message) !== (anchorSwipe === null ? 0 : Math.round(anchorSwipe))) return null;
 
         let count = 0;
         for (let i = anchor.floorId + 1; i < chat.length; i++) {
@@ -200,7 +205,7 @@ export function recordTableUpdateFloor(context, floorId) {
         // 完全相同 ⇒ 不写，省一次宿主保存。
         if (previous && previous.floorId === anchor.floorId
             && String(previous.sendDate ?? '') === anchor.sendDate
-            && (Number.isFinite(Number(previous.swipeId)) ? Math.round(Number(previous.swipeId)) : 0) === anchor.swipeId) {
+            && (numOrNull(previous.swipeId) === null ? 0 : Math.round(numOrNull(previous.swipeId))) === anchor.swipeId) {
             return true;
         }
 

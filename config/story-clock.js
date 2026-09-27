@@ -34,6 +34,7 @@
  * ======================================================== */
 
 import { readWorldClock, readWorldAxisSnapshot, readPushProbe, readPushField, faceFieldState } from './world-bridge.js';
+import { numOrNull } from './num-gate.js';
 
 /** 来源标识（顺序即优先级；`primary` 的选取规则由这份顺序定义） */
 export const CLOCK_SOURCES = Object.freeze(['worldaxis', 'lonsha', 'calendar']);
@@ -85,7 +86,7 @@ export function worldAxisClock(win) {
             date,
             label: str(wc.label || wc.iso),
             precision: str(wc.precision),
-            turn: Number.isFinite(Number(wc.turn)) ? Number(wc.turn) : null,
+            turn: numOrNull(wc.turn),
             extra: str(wc.source)
         });
     } catch (_e) { return sourceFace('unusable', 'unusable'); }
@@ -112,7 +113,7 @@ export function lonshaClock(win) {
             ? str(v.date || v.storyDate || v.label)
             : str(v);
         if (!text) return sourceFace('source-missing', 'source-missing');
-        const turn = (v && typeof v === 'object' && Number.isFinite(Number(v.turn))) ? Number(v.turn) : null;
+        const turn = (v && typeof v === 'object') ? numOrNull(v.turn) : null;
         return sourceFace('ok', 'ok', { date: text, label: text, precision: '', turn, extra: 'lonsha' });
     } catch (_e) { return sourceFace('unusable', 'unusable'); }
 }

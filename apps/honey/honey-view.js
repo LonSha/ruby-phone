@@ -11,6 +11,7 @@
  * ======================================================== */
 // [v2.28.0] 实例级资源域（视图内一次性轮询等常驻资源随实例回收）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
+import { numOrNull } from '../../config/num-gate.js';
 export class HoneyView {
     constructor(app) {
         this.app = app;
@@ -1387,7 +1388,12 @@ export class HoneyView {
         const userRankItem = mergedLeaderboard.userRank;
         const safeHoneyNickname = this._normalizeLeaderboardName(honeyNickname);
         const isUserInTop3 = leaderboardItems.some(item => this._normalizeLeaderboardName(item?.name || '') === safeHoneyNickname);
-        const shouldShowUserRankRow = !!userRankItem && !isUserInTop3 && (Number(userRankItem.rank) > 3 || !Number.isFinite(Number(userRankItem.rank)));
+        /* [v3.12.0] 取数走唯一实现：`Number(null) === 0` ⇒ `0 > 3` 为假、`isFinite(0)` 为真，
+         *  于是「这条排名没给名次」被读成「名次是 0」而**不显示**用户行 —— 方向与安全向相反
+         *  （读不出名次时应当照常显示，而不是静默隐藏用户自己）。
+         *  为避免同一条 `userRankItem.rank` 取值两次（可能带 getter），此处只取一次。 */
+        const userRankNum = numOrNull(userRankItem && userRankItem.rank);
+        const shouldShowUserRankRow = !!userRankItem && !isUserInTop3 && (userRankNum === null || userRankNum > 3);
         const leaderboardRowsHtml = leaderboardItems.length > 0
             ? leaderboardItems.map(item => `
                 <div class="honey-live-rank-row">
@@ -1695,7 +1701,12 @@ export class HoneyView {
         const userRankItem = mergedLeaderboard.userRank;
         const safeHoneyNickname = this._normalizeLeaderboardName(honeyNickname);
         const isUserInTop3 = leaderboardItems.some(item => this._normalizeLeaderboardName(item?.name || '') === safeHoneyNickname);
-        const shouldShowUserRankRow = !!userRankItem && !isUserInTop3 && (Number(userRankItem.rank) > 3 || !Number.isFinite(Number(userRankItem.rank)));
+        /* [v3.12.0] 取数走唯一实现：`Number(null) === 0` ⇒ `0 > 3` 为假、`isFinite(0)` 为真，
+         *  于是「这条排名没给名次」被读成「名次是 0」而**不显示**用户行 —— 方向与安全向相反
+         *  （读不出名次时应当照常显示，而不是静默隐藏用户自己）。
+         *  为避免同一条 `userRankItem.rank` 取值两次（可能带 getter），此处只取一次。 */
+        const userRankNum = numOrNull(userRankItem && userRankItem.rank);
+        const shouldShowUserRankRow = !!userRankItem && !isUserInTop3 && (userRankNum === null || userRankNum > 3);
         const leaderboardRowsHtml = leaderboardItems.length > 0
             ? leaderboardItems.map(item => `
                 <div class="honey-live-rank-row">

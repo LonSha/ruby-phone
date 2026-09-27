@@ -5,11 +5,18 @@ import test from 'node:test';
 // [v2.28.0] honey-view.js 自本版起引入运行时内核依赖（实例级资源域）。
 //   本测试经 data: URL 加载源码以隔离执行，而 data: URL 无 base 无法解析相对 specifier，
 //   故在装入前把相对 import 重写成与源码解析结果一致的绝对 file:// URL（等价加载，不改语义）。
+//   ★ [v3.12.0] 源码新增第二条相对 import（`config/num-gate.js` —— 全仓取数唯一实现）。
+//   漏重写会让本文件在 import 期直接抛 ERR_UNSUPPORTED_RESOLVE_REQUEST（整文件失败），
+//   tests/system-v228.test.mjs 的 data: URL 回归护栏就是钉这个形态的（它如期报红，故此处补齐）。
 const source = fs
     .readFileSync(new URL('../apps/honey/honey-view.js', import.meta.url), 'utf8')
     .replace(
         '../../config/runtime-lifecycle.js',
         new URL('../config/runtime-lifecycle.js', import.meta.url).href
+    )
+    .replace(
+        '../../config/num-gate.js',
+        new URL('../config/num-gate.js', import.meta.url).href
     );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { HoneyView } = await import(moduleUrl);

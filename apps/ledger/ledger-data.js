@@ -1,4 +1,5 @@
 import { faceFieldState } from '../../config/world-bridge.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 /* ========================================================
  * ledger-data.js — [v2.53.0] 世界账本 App 纯函数内核
@@ -42,7 +43,13 @@ export function readLedgerFace(probe, snapshot) {
   }
   return LEDGER_REASONS.ready;
 }
-function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+/* 计数取值：**读不出就如实 null，不编 0**（v3.12.0 收干）。
+ *  旧实现对任何读不出的输入一律返回 0 —— 那是比弱口径更重的一档形态：
+ *  `wlr.counts.currents` 没给 ⇒ 面板显示「暗流 0」，用户读到的是「这个世界没有暗流」，
+ *  而真相是「这个读数我们没拿到」。0 在此处是**一个结论**，不是缺省值。
+ *  同名 `num` 保留（下列十余处调用点不动），但返回值语义改为 `number|null`；
+ *  消费侧（ledger-app / ledger-view）本就在渲染前显式判空，故不变形为 `NaN` / `undefined`。 */
+function num(v) { return numOrNull(v); }
 function strArr(a, cap) {
   if (!Array.isArray(a)) return [];
   return a.slice(0, cap).map((x) => String(x));
@@ -62,7 +69,12 @@ export function projectLedger(wlr) {
     currents: num(c.currents),
     facts: num(c.facts),
     people: num(c.people),
-    opinion: num(c.opinionCanon) + num(c.opinionForum),
+    /* [v3.12.0] 两个格位都读不出时，整格须仍为 null —— 修前是 `num(a) + num(b)`：
+     *  `null + null === 0`，于是「两个格位都没给」被算成**舆情 0 条**
+     *  （同一族里的第四种形态：不是弱口径，而是「缺失参与算术」）。 */
+    opinion: (num(c.opinionCanon) === null && num(c.opinionForum) === null)
+      ? null
+      : ((num(c.opinionCanon) ?? 0) + (num(c.opinionForum) ?? 0)),
   } : null;
   const gap = (wlr.gap && typeof wlr.gap === 'object') ? {
     verdict: wlr.gap.verdict || '',

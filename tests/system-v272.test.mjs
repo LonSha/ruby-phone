@@ -204,6 +204,11 @@ function ctx(chat, md = {}) {
   const src = read(srcPath);
   const tmpDir = path.join(root, 'tests', '.tmp-negctl-v272');
   fs.mkdirSync(tmpDir, { recursive: true });
+  /* ★ [v3.12.0] `config/update-gap.js` 本轮新增一条相对 import（`./num-gate.js`
+   *   —— 全仓取数唯一实现）。被搬进本夹具目录的副本要能解析它，故把实现一并复制过来。
+   *   不这样做的话，`import` 期会抛 ERR_MODULE_NOT_FOUND，**整条反向审计静默失效**
+   *   （本仓最忌的「判据自己坏了却看起来还在跑」）。同族前例：v228 的 data: URL 护栏。 */
+  fs.copyFileSync(path.join(root, 'config', 'num-gate.js'), path.join(tmpDir, 'num-gate.js'));
 
   const runOn = async (code, label) => {
     const file = path.join(tmpDir, `variant-${label}.mjs`);
@@ -232,7 +237,11 @@ function ctx(chat, md = {}) {
 
   // 负控制 2：破坏 swipeId 比对判据
   {
-    const anchor = "        if (swipeOf(message) !== (Number.isFinite(Number(anchor.swipeId)) ? Math.round(Number(anchor.swipeId)) : 0)) return null;";
+    /* ★ [v3.12.0 交棒] 锚点随实现换代：该行原为 `Number.isFinite(Number(anchor.swipeId)) ? …`，
+     *   本版把取值改走全仓唯一实现（`numOrNull`），旧锚点因此失配（判据要求恰中 1 次）。
+     *   换成新实现的那两行，破坏语义逐字不变：摘掉 swipeId 比对 ⇒ 换页后不再报未知。 */
+    const anchor = "        const anchorSwipe = numOrNull(anchor.swipeId);\n"
+        + "        if (swipeOf(message) !== (anchorSwipe === null ? 0 : Math.round(anchorSwipe))) return null;";
     ok('负控制2 锚点恰中 1 次', src.split(anchor).length === 2);
     const broken = src.replace(anchor, '        // [negctl] swipeId 判据已破坏');
     await runOn(broken, 'swipe');
@@ -275,7 +284,16 @@ function ctx(chat, md = {}) {
   ok('不含源实现的 Logger 依赖', !src.includes('error-handler'));
   ok('不含源实现的键名（改用 ruby 前缀）', !src.includes('yuziTableUpdateReviewAnchor'));
   ok('键名使用本仓库前缀', src.includes("'rubyTableUpdateReviewAnchor'"));
-  ok('零外部依赖（无 import 语句）', !/^\s*import\s/m.test(src));
+  /* ★ [v3.12.0 交棒] 原判据是「无 import 语句」—— 本版给本文件加了一条**本仓内部**
+   *   相对 import（`./num-gate.js`，全仓取数唯一实现），故该判据过期。
+   *   改写为语义等价且**更严**的形态：import 一律必须来自本仓相对路径
+   *   （`./` 或 `../`），且不得引用源实现特征。原版只能抓「有没有 import」，
+   *   新版抓「import 的是不是外部 / 源实现的东西」—— 后者才是这节标题的本意。 */
+  const importSpecs = [...src.matchAll(/^\s*import\s[\s\S]*?from\s*'([^']+)'/gm)].map((m) => m[1]);
+  ok('依赖一律来自本仓相对路径（不得引用外部 / 源实现）',
+    importSpecs.every((sp) => /^\.\.?\//.test(sp)), '实测 ' + JSON.stringify(importSpecs));
+  ok('依赖路径不含源实现特征',
+    !importSpecs.some((sp) => /yuzi|error-handler|st-yuzi/i.test(sp)), JSON.stringify(importSpecs));
 }
 
 console.log(`v272 update-gap: ${pass} passed`);

@@ -9,6 +9,7 @@
  * 
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
+import { numOrNull } from '../../config/num-gate.js';
 // ========================================
 // 通话记录数据层
 // ========================================
@@ -317,14 +318,17 @@ export class PhoneCallData {
     }
 
     removeMainChatSmsAtFloor(tavernMessageIndex) {
-        const floor = Number(tavernMessageIndex);
-        if (!Number.isFinite(floor)) return false;
+        /* [v3.12.0] 与本类另一个「本楼及之后」回滚入口同族同险：`Number('')` / `Number([])` 是 0 且通过
+         *  `Number.isFinite` 校验 ⇒「没给楼层」退化成「第 0 楼」，把第 0 楼那批短信全删。
+         *  本入口语义同样是「没给 ⇒ 什么都不删」。 */
+        const floor = numOrNull(tavernMessageIndex);
+        if (floor === null) return false;
         const messagesChanged = this._removeSmsMessages(message =>
             message?.fromMainChatTag === true
-            && Number(message?.tavernMessageIndex) === floor
+            && numOrNull(message?.tavernMessageIndex) === floor
         );
         const batchesChanged = this._removeSmsProcessedBatches(record =>
-            Number(record?.tavernMessageIndex) === floor
+            numOrNull(record?.tavernMessageIndex) === floor
         );
         return messagesChanged || batchesChanged;
     }
@@ -334,12 +338,12 @@ export class PhoneCallData {
         if (!Number.isFinite(floor)) return false;
         const messagesChanged = this._removeSmsMessages(message =>
             message?.fromMainChatTag === true
-            && Number.isFinite(Number(message?.tavernMessageIndex))
-            && Number(message.tavernMessageIndex) >= floor
+            && numOrNull(message?.tavernMessageIndex) !== null
+            && numOrNull(message.tavernMessageIndex) >= floor
         );
         const batchesChanged = this._removeSmsProcessedBatches(record =>
-            Number.isFinite(Number(record?.tavernMessageIndex))
-            && Number(record.tavernMessageIndex) >= floor
+            numOrNull(record?.tavernMessageIndex) !== null
+            && numOrNull(record.tavernMessageIndex) >= floor
         );
         return messagesChanged || batchesChanged;
     }

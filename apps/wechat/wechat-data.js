@@ -12,6 +12,7 @@
 // 微信数据管理
 import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseWechatVoiceContent } from './voice-text.js';
+import { numOrNull } from '../../config/num-gate.js';
 import {
     matchMemberByName,
     parseSpeakers,
@@ -1897,8 +1898,10 @@ export class WechatData {
             weekday: String(meta.weekday || storyTime.weekday || '').trim(),
             timestamp: Number.isFinite(timestamp) && timestamp > 0 ? timestamp : (Number(storyTime.timestamp) || Date.now()),
             realTimestamp: Number(meta.realTimestamp) || Date.now(),
-            balanceBefore: Number.isFinite(Number(balanceState.balanceBefore)) ? Number(balanceState.balanceBefore) : null,
-            balanceAfter: Number.isFinite(Number(balanceState.balanceAfter)) ? Number(balanceState.balanceAfter) : null,
+            /* [v3.12.0] 取数走唯一实现：`null` 经 `Number` 是 0，于是「这笔转账没记余额」
+             *  会被写成 `balanceBefore: 0` —— 流水一旦落盘就再也分不出「余额是 0」还是「没记」。 */
+            balanceBefore: numOrNull(balanceState.balanceBefore),
+            balanceAfter: numOrNull(balanceState.balanceAfter),
             affectsBalance: balanceState.affectsBalance === true,
             fromMainChatTag: meta.fromMainChatTag === true,
             tavernMessageIndex: Number.isFinite(tavernMessageIndex) ? tavernMessageIndex : undefined,
@@ -2712,8 +2715,11 @@ export class WechatData {
             if (timeManager?.getCurrentStoryTime) {
                 const storyTime = timeManager.getCurrentStoryTime();
                 if (storyTime?.time && storyTime?.date) {
-                    const parsedTimestamp = Number.isFinite(Number(storyTime.timestamp))
-                        ? Number(storyTime.timestamp)
+                    /* [v3.12.0] 取数走唯一实现：旧写法把空白串 / 空数组读成 0，于是**跳过**
+                     *  后面那条回落解析。 */
+                    const stTs = numOrNull(storyTime.timestamp);
+                    const parsedTimestamp = stTs !== null
+                        ? stTs
                         : (typeof timeManager.parseTimeToTimestamp === 'function'
                             ? timeManager.parseTimeToTimestamp(storyTime)
                             : Date.now());
@@ -2965,7 +2971,7 @@ export class WechatData {
         const shouldOrderedInsert = message.fromMainChatTag
             && message.tavernMessageIndex !== undefined
             && message.batchId
-            && Number.isFinite(Number(message.mainChatOrder));
+            && numOrNull(message.mainChatOrder) !== null;
         if (shouldOrderedInsert) {
             const nextOrder = Number(message.mainChatOrder);
             let insertIndex = replayInsertAnchorIndex >= 0
@@ -4728,8 +4734,8 @@ parseAIResponse(text) {
 
         const walletDirty = this._rollbackWalletTransactions(record =>
             record?.fromMainChatTag === true
-            && Number.isFinite(Number(record.tavernMessageIndex))
-            && Number(record.tavernMessageIndex) >= Number(targetTavernIndex)
+            && numOrNull(record.tavernMessageIndex) !== null
+            && numOrNull(record.tavernMessageIndex) >= numOrNull(targetTavernIndex)
         );
         isDirty = isDirty || walletDirty;
 

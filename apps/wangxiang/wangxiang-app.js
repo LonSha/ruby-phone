@@ -11,6 +11,7 @@ import { WechatData } from '../wechat/wechat-data.js';
 import { parseWangxiangTaskTags } from './wangxiang-task-parser.js';
 import { PointsLedger } from './points.js';
 import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 const WANGXIANG_TASK_VISUALS = [
     { accent: 'green', icon: 'fa-list-check' },
@@ -451,7 +452,10 @@ export class WangxiangApp {
 
     getWechatWalletBalance() {
         const balance = this._getWechatData()?.getWalletBalance?.();
-        return balance === null || balance === undefined || !Number.isFinite(Number(balance)) ? null : Math.max(0, Number(balance));
+        /* [v3.12.0] 取数走唯一实现：`Number(null) === 0`（isFinite 为真）会让「读不到余额」
+         *  退化成 `0`，而本函数的语义是**读不到就返回 null**（上层据此区分「没钱」与「没读数」）。 */
+        const b = numOrNull(balance);
+        return b === null ? null : Math.max(0, b);
     }
 
     getDeliveryAddresses() {
@@ -599,9 +603,11 @@ export class WangxiangApp {
             const current = timeManager?.getCurrentStoryTime?.() || timeManager?.getCurrentTime?.();
             if (current?.date && current?.time) {
                 const parsedTimestamp = timeManager?.parseTimeToTimestamp?.(current);
-                const timestamp = Number.isFinite(Number(parsedTimestamp))
-                    ? Number(parsedTimestamp)
-                    : Number.isFinite(Number(current.timestamp)) ? Number(current.timestamp) : Date.now();
+                /* [v3.12.0] 取数走唯一实现：两个 `Number.isFinite(Number(...))` 此前会把空白串 /
+                 *  空数组读成 0，于是「解析不出时间戳」被当成「时间戳是 0（1970）」。 */
+                const tsParsed = numOrNull(parsedTimestamp);
+                const tsCurrent = numOrNull(current.timestamp);
+                const timestamp = tsParsed !== null ? tsParsed : (tsCurrent !== null ? tsCurrent : Date.now());
                 return {
                     date: String(current.date),
                     weekday: String(current.weekday || ''),
@@ -646,7 +652,8 @@ export class WangxiangApp {
     _addMinutesToPhoneTime(baseTime, minutes) {
         try {
             const calculated = window.VirtualPhone?.timeManager?.addMinutesToStoryTime?.(baseTime, minutes);
-            if (calculated?.date && calculated?.time && Number.isFinite(Number(calculated.timestamp))) {
+            /* [v3.12.0] 取数走唯一实现（已在本文件顶部 import）。 */
+            if (calculated?.date && calculated?.time && numOrNull(calculated.timestamp) !== null) {
                 return calculated;
             }
         } catch (error) {
@@ -1245,7 +1252,7 @@ export class WangxiangApp {
                 chatId: String(source.chatId || ''),
                 messageId: sourceMessageId,
                 fromMainChatTag: source.fromMainChatTag === true,
-                tavernMessageIndex: Number.isFinite(Number(source.tavernMessageIndex)) ? Number(source.tavernMessageIndex) : null,
+                tavernMessageIndex: numOrNull(source.tavernMessageIndex),
                 batchId: String(source.batchId || '')
             }
         }, this.managedTasks.length);
@@ -1281,7 +1288,7 @@ export class WangxiangApp {
             chatId: String(source.chatId || ''),
             messageId: String(source.messageId || ''),
             fromMainChatTag: source.fromMainChatTag === true,
-            tavernMessageIndex: Number.isFinite(Number(source.tavernMessageIndex)) ? Number(source.tavernMessageIndex) : null,
+            tavernMessageIndex: numOrNull(source.tavernMessageIndex),
             batchId: String(source.batchId || '')
         };
         const managedTask = {

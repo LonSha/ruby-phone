@@ -13,6 +13,7 @@ import { WechatData } from '../wechat/wechat-data.js';
 import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 export class HoneyData {
     constructor(storage) {
@@ -2863,7 +2864,11 @@ export class HoneyData {
             referenceId: `honey:withdraw:${Date.now()}:${coins}`
         });
         const walletAfterRaw = wechatData.getWalletBalance?.();
-        const walletAfter = Number.isFinite(Number(walletAfterRaw)) ? Number(walletAfterRaw) : amountYuan;
+        /* [v3.12.0] 取数走唯一实现：`getWalletBalance()` 返回 null（读不到）时，旧写法因
+         *  `Number(null) === 0` 而**通过** isFinite 校验，于是把「读不到余额」记成 `0`，
+         *  连下面那条回落估算（`amountYuan`）都不可达。 */
+        const walletAfterNum = numOrNull(walletAfterRaw);
+        const walletAfter = walletAfterNum !== null ? walletAfterNum : amountYuan;
 
         return {
             success: true,

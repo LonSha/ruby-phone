@@ -26,6 +26,7 @@ import { faceFieldState } from '../../config/world-bridge.js';
  *   于是「谁不知道某件事」在本仓是零消费。本版接上：三档分形（known / unaware / silent）
  *   与匹配方式如实归因全部走 `config/knowledge-contract.js` 这一份实现，本文件不重写。 */
 import { knowledgeFace, whoKnows, boundaryOf, unawareBlock, knowledgeLine } from '../../config/knowledge-contract.js';
+import { numOrNull as num } from '../../config/num-gate.js';
 /** 归因文案（五态；与 readPlotlineFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PLOTLINE_REASONS = Object.freeze({
     'ready': '剧情线就绪',
@@ -56,8 +57,9 @@ export function defaultPlotlineSettings() {
         maxInject: 10
     };
 }
-/** 取数（不抛；非数值如实 null，不编 0） */
-function num(v) { return Number.isFinite(Number(v)) ? Number(v) : null; }
+/* [v3.12.0] 此处原有本文件自持的一份取值助手 `num`（弱口径），实测**零调用**
+ *  —— 全文件只有定义、没有任何使用点（floor 读数一律走内联写法，本轮已改走唯一实现）。
+ *  删掉的理由不是洁癖：留着一份零调用的弱口径副本，会让下一个人以为「本文件已经有取数门」。 */
 /** 纯文本裁剪（防单条无界） */
 function clip(v, max = 160) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -292,7 +294,9 @@ export function recallEchoList(worldProg) {
                 id: clip(item.id, 80),
                 detail,
                 kind: typeof item.kind === 'string' ? item.kind : 'clue',
-                floor: Number.isFinite(Number(item.floor)) ? Number(item.floor) : null
+                /* [v3.12.0] 取数走唯一实现（`config/num-gate.js`）：旧内联写法把
+                 * `'  '` / `[]` 读成 0、`true` 读成 1 ⇒「这条没有楼层」被伪装成「第 0 楼」。 */
+                floor: num(item.floor)
             });
         }
         return out;
@@ -317,7 +321,9 @@ export function echoLifeList(worldProg) {
             out.push({
                 mode: typeof item.mode === 'string' ? item.mode : 'askbox',
                 char,
-                floor: Number.isFinite(Number(item.floor)) ? Number(item.floor) : null
+                /* [v3.12.0] 取数走唯一实现（`config/num-gate.js`）：旧内联写法把
+                 * `'  '` / `[]` 读成 0、`true` 读成 1 ⇒「这条没有楼层」被伪装成「第 0 楼」。 */
+                floor: num(item.floor)
             });
         }
         return out;

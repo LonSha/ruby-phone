@@ -11,6 +11,7 @@
  * ======================================================== */
 import { ImageCropper } from '../settings/image-cropper.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
+import { numOrNull } from '../../config/num-gate.js';
 import { captureWechatChatSnapshot } from './chat-snapshot.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
@@ -1080,9 +1081,10 @@ export class ChatView {
             input.value = this.inputText;
             input.focus();
             const end = input.value.length;
-            const targetPos = Number.isFinite(Number(caretPos))
-                ? Math.max(0, Math.min(end, Number(caretPos)))
-                : end;
+            /* [v3.12.0] 取数走唯一实现：`[]` / `'  '` 经 `Number` 出 0 且通过 isFinite ⇒ 光标
+             *  会被放到行首（`end` 那条合法兜底反而不可达）。 */
+            const cp = numOrNull(caretPos);
+            const targetPos = cp !== null ? Math.max(0, Math.min(end, cp)) : end;
             if (typeof input.setSelectionRange === 'function') {
                 input.setSelectionRange(targetPos, targetPos);
             }
@@ -1202,9 +1204,10 @@ export class ChatView {
             input.value = this.inputText;
             input.focus();
             const end = input.value.length;
-            const targetPos = Number.isFinite(Number(caretPos))
-                ? Math.max(0, Math.min(end, Number(caretPos)))
-                : end;
+            /* [v3.12.0] 取数走唯一实现：`[]` / `'  '` 经 `Number` 出 0 且通过 isFinite ⇒ 光标
+             *  会被放到行首（`end` 那条合法兜底反而不可达）。 */
+            const cp = numOrNull(caretPos);
+            const targetPos = cp !== null ? Math.max(0, Math.min(end, cp)) : end;
             if (typeof input.setSelectionRange === 'function') {
                 input.setSelectionRange(targetPos, targetPos);
             }
@@ -2497,7 +2500,7 @@ export class ChatView {
             time: parsed.time,
             date: parsed.date,
             weekday: parsed.weekday || window.VirtualPhone?.timeManager?.calculateWeekday?.(parsed.date) || '星期一',
-            timestamp: Number.isFinite(Number(timestamp)) ? Number(timestamp) : Date.now()
+            timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : Date.now()
         };
     }
 

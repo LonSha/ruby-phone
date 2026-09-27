@@ -24,6 +24,7 @@
  * ======================================================== */
 'use strict';
 import { faceFieldState } from '../../config/world-bridge.js';
+import { numOrNull as num } from '../../config/num-gate.js';
 /** 归因文案（五态；与 readWalletFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const WALLET_REASONS = Object.freeze({
     'ready': '钱账就绪',
@@ -42,8 +43,12 @@ export function defaultWalletSettings() {
         maxInject: 6
     };
 }
-/** 取数（不抛；非数值如实 null，不编 0） */
-function num(v) { return Number.isFinite(Number(v)) ? Number(v) : null; }
+/* 取数门：**本仓唯一实现**在 `config/num-gate.js`（v3.12.0 起不再各文件自持一份副本）。
+ *  为什么必须单一实现：弱口径 `Number.isFinite(Number(v)) ? Number(v) : null` 实测把
+ *  `''` / `'  '` / `'\t'` / `[]` / `true` / `false` 分别读成 0 / 0 / 0 / 0 / 1 / 0 ——
+ *  「上游没给这一格」与「上游给了 0」塌成同一个读数，而本文件正是靠这个区分决定
+ *  「这一格报不报」：`whenOf` 里 `null` ⇒ 不显示楼层、`0` ⇒ 显示「第 0 楼」（真实楼层）。
+ *  旧实现就是把「没给楼层」读成「第 0 楼」的那一份（v3.12.0 取证：19 输入 / 10 条分歧）。 */
 /** 纯文本裁剪（防单条无界） */
 function clip(v, max = 60) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();

@@ -5,6 +5,8 @@
  * 不新增 API 管线，不写世界书
  */
 
+import { numOrNull } from './num-gate.js';
+
 const STORAGE_ENABLED_KEY = 'time_env_auto_inject_enabled';
 
 // TPES MODULE 5A：时段-光照绑定
@@ -75,7 +77,9 @@ export class TimeEnvManager {
    */
   buildDirective() {
     const t = this._storyTime();
-    if (!t || !Number.isFinite(Number(t.timestamp))) return '';
+    /* [v3.12.0] 取数走唯一实现：空白串 / 空数组会被 `Number` 读成 0 并**通过** isFinite，
+     *  于是注入块会写上一份「1970-01-01 早上」的时段光照（比不注入更坏）。 */
+    if (!t || numOrNull(t.timestamp) === null) return '';
     const d = new Date(Number(t.timestamp));
     const hour = d.getHours();
     const period = this._periodFor(hour);

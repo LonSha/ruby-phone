@@ -377,12 +377,20 @@ function damage(root, rel, anchor, replacement) {
     fs.writeFileSync(p, txt.split(anchor).join(replacement));
 }
 test('F1 让楼层缺失兜底成 0 ⇒ 同款「不得兜底」判据必须转红', () => {
-    /* 破坏落在**真源码文本**上：摘掉「先把 null / undefined / '' 归一为 NaN」这一步，
-     *   `floorNum` 于是退化成裸 `Number()` ⇒ `Number(null) === 0`、`Number('') === 0`
-     *   把「没给楼层」变成「第 0 楼」，并给出一份「第 0 楼及之后」的漂亮读数。 */
+    /* 破坏落在**真源码文本**上：把 `floorNum` 的取值收敛一步换成**裸数值化**，
+     *   于是 `Number(null) === 0`、`Number('') === 0` —— 「没给楼层」被变成「第 0 楼」，
+     *   并给出一份「第 0 楼及之后」的漂亮读数（与旧实现退化的后果逐字同形）。
+     *   ⚠ 为什么不摘成「未定义的 n」：`floorNum` 是 `previewRollback` 里 try 之外的调用，
+     *   引用未定义变量会让整函数抛 —— 那测的就不是「兜底成 0」了，判据会假红。
+     *
+     *   ★ [v3.12.0 交棒] 锚点由「旧实现文本行」换成**实现无关**的那一行。
+     *   本版把 `floorNum` 的取值实现改走全仓唯一源（`config/num-gate.js`），旧锚点
+     *   随实现消失 ⇒ 本判据会因「锚点失配」转红而非「缺陷复活」转红（锚点须恰中 1 次）。
+     *   不这样改，就等于把一条真判据降级成假判据 —— 这正是本仓
+     *   「破坏锚点不得绑死在实现文本上」的教训，记在此处免得下一个人再踩。 */
     const root = sandbox(['config']);
-    const anchor = "    if (raw === null || raw === undefined || raw === '') return NaN;\n";
-    damage(root, 'config/rollback-preview.js', anchor, '');
+    const anchor = '    return n === null ? NaN : n;\n';
+    damage(root, 'config/rollback-preview.js', anchor, '    return Number(raw);\n');
     const brokenSrc = fs.readFileSync(path.join(root, 'config/rollback-preview.js'), 'utf8');
     assert.equal(brokenSrc.includes(anchor), false, '★ 破坏必须真的发生（摘除后锚点不得残留）');
     return import(pathToFileURL(path.join(root, 'config/rollback-preview.js')).href + '?t=' + Date.now()).then((M) => {
@@ -458,21 +466,26 @@ test('F4 ★ 让 partial 退化成完整读数 ⇒ 同款「下界要说出来�
     });
 });
 /* ══════════ G ── 版本锚 ══════════ */
-test('G1 ★ 版本五源同源为 3.11.0，且当版条目非空', () => {
-    const man = JSON.parse(readRel('manifest.json'));
+/* ★ [v3.12.0 交棒] 本组原逐字写死 '3.11.0'（当版精确读数）—— 抬版即过期。
+ *   按本仓先例改写为**下限 + 动态取当版**：五源同源这条契约一字不减，
+ *   只是不再钉死在某一版上（同族前例：v326 / v3212 / v327 / v328 都这么改过）。 */
+const VNUM = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
+const MAN = JSON.parse(readRel('manifest.json'));
+const LIVE = String(MAN.version);
+test('G1 ★ 版本五源同源（manifest / package / update-log.latest / versions 首键 / 入口常量），且当版条目非空', () => {
     const pkg = JSON.parse(readRel('package.json'));
     const log = JSON.parse(readRel('update-log.json'));
     const idx = readRel('index.js');
-    assert.equal(man.version, '3.11.0', 'manifest 版本');
-    assert.equal(pkg.version, '3.11.0', 'package 版本');
-    assert.equal(log.latest, '3.11.0', 'update-log latest');
-    assert.equal(Object.keys(log.versions)[0], '3.11.0', 'versions 首键（仓内判据约定）');
-    assert.ok(log.versions['3.11.0'], 'update-log 必须有当版条目');
-    assert.ok(log.versions['3.11.0'].items.length >= 4, '当版条目至少 4 条');
-    assert.ok(/const ST_PHONE_VERSION = '3\.11\.0'/.test(idx), '入口版本常量');
-    assert.ok(/回滚影响|只算不执行|可见性/.test(idx), '内置公告须提到本版主题（供 App 内更新弹窗）');
+    assert.equal(pkg.version, LIVE, 'package 版本 == manifest 版本');
+    assert.equal(log.latest, LIVE, 'update-log latest == manifest 版本');
+    assert.equal(Object.keys(log.versions)[0], LIVE, 'versions 首键 == manifest 版本（仓内判据约定）');
+    assert.ok(log.versions[LIVE], 'update-log 必须有当版条目');
+    assert.ok(log.versions[LIVE].items.length >= 4, '当版条目至少 4 条');
+    assert.ok(new RegExp("const ST_PHONE_VERSION = '" + LIVE.replace(/\./g, '\\.') + "'").test(idx),
+        '入口版本常量 == manifest 版本');
+    assert.ok(VNUM(LIVE) >= VNUM('3.11.0'), '本组判据自 3.11.0 起成立；当前 ' + LIVE);
 });
-test('G2 ★ 弹窗 items 与 update-log 逐字同源', () => {
+test('G2 ★ 弹窗 items 与 update-log 逐字同源（动态取当版，不写死版本号）', () => {
     const idx = readRel('index.js');
     const log = JSON.parse(readRel('update-log.json'));
     const entry = log.versions[log.latest];
@@ -482,13 +495,13 @@ test('G2 ★ 弹窗 items 与 update-log 逐字同源', () => {
         assert.ok(m[0].includes(JSON.stringify(item)), '弹窗 items 逐字同源：' + item.slice(0, 20) + '…');
     }
     assert.match(m[0], new RegExp('date: "' + entry.date + '"'));
-    assert.ok(m[0].includes('版本升至 3.11.0（五源同源）'), '落地行必须带版本升级声明');
+    assert.ok(m[0].includes('版本升至 ' + log.latest + '（五源同源）'),
+        '落地行必须带当版升级声明（动态取 update-log.latest）');
 });
-test('G3 当版条目必须如实记录「交棒改写」与「自己抓到的缺陷」', () => {
+test('G3 当版条目必须如实记录「交棒改写」与「自己抓到的缺陷」（形态判据，不钉某版专有词）', () => {
     const log = JSON.parse(readRel('update-log.json'));
-    const txt = log.versions['3.11.0'].items.join(' ');
-    assert.ok(/交棒改写|主动改写/.test(txt), '必须记下对旧判据的交棒改写（而非静默通过）');
-    assert.ok(/Number\(null\) === 0|兜底成 0/.test(txt), '必须记下楼层兜底缺陷');
-    assert.ok(/只算不写/.test(txt) && /懒加载/.test(txt), '必须记下懒加载纪律与代价');
-    assert.ok(/substring|子串匹配|块注释行不跳|散文/.test(txt), '必须记下「注释不得写函数名」的判据面纪律');
+    const txt = log.versions[log.latest].items.join(' ');
+    assert.ok(/交棒改写|主动改写|下限形/.test(txt), '必须记下对旧判据的交棒改写（而非静默通过）');
+    assert.ok(/缺陷|错读数|不得兜底|没给.{0,4}给了 0/.test(txt), '必须如实写下本版自己抓到的缺陷形态');
+    assert.ok(/判据|门禁/.test(txt), '必须记下判据/门禁面的处置（不得只写实现）');
 });

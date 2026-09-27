@@ -49,6 +49,7 @@
  *   逐字函数名与谓词对照见 `ITERATION_LOG.md` 迭代 59。
  * ============================================================ */
 'use strict';
+import { numOrNull } from './num-gate.js';
 
 /* ── 宿主窗口（与 config/story-clock.js 的探针同规格：注入优先、回落全局） ── */
 function hostWindow(win) {
@@ -56,18 +57,36 @@ function hostWindow(win) {
     return (typeof window !== 'undefined') ? window : null;
 }
 
-/* ── 楼层归一（唯一实现）：**缺失与 0 是两件事** ──
+/* ── 楼层归一（**取值实现唯一**）：**缺失与 0 是两件事** ──
  *   `Number(null) === 0`、`Number('') === 0`、`Number([]) === 0` —— 直接 Number 化会把
  *   「没给楼层」静默变成「第 0 楼」，于是预览给出一份「第 0 楼不影响任何域」的漂亮读数
- *   （而真实情况是「我们根本没拿到楼层，作废范围未知」）。故先把这几种写法规一为 NaN。 */
+ *   （而真实情况是「我们根本没拿到楼层，作废范围未知」）。
+ *
+ *   ★ [v3.12.0] 上一版（v3.11.0）在这里只挡住了 `null` / `undefined` / `''` 三种，
+ *   仍属**弱口径**：`'  '`（纯空白）与 `[]` 经 `Number()` 同样读成 **0**、`true` 读成 **1**。
+ *   于是「上游给了个空白串」照样伪装成「第 0 楼」—— 同一个根因在本仓的**第三度发病**
+ *   （前两度：① 楼层入参、② 逐域计数；本文件两处都在本轮之前刚动过）。
+ *   现改走全仓唯一实现；本地只把「没给」映射成本模块原有的 NaN 空值语义，
+ *   函数名与调用点一律不动。
+ *
+ *   ★ 本轮**同步改写了一条既存判据**（如实记录，不留不实陈述）：
+ *   `tests/system-v3213.test.mjs` 的 F1 破坏锚点原本打在上面那段旧实现文本上
+ *   （`if (raw === null || raw === undefined || raw === '') return NaN;`）。
+ *   实现一换，该锚点即失配（破坏锚点必须恰中 1 次 ⇒ 套件当场转红）。
+ *   它报红是对的，但报的是「锚点过期」而不是「缺陷复活」—— 那就成了一条
+ *   **测不中缺陷的假判据**。改法是换成**与实现无关**的那一行（把取数结果收敛成
+ *   NaN 空值的 `return`），语义不降级：破坏后不论本地用什么写法取值，
+ *   「没给」都不再被拦住。 */
 function floorNum(raw) {
-    if (raw === null || raw === undefined || raw === '') return NaN;
-    return Number(raw);
+    const n = numOrNull(raw);
+    return n === null ? NaN : n;
 }
 /* ── 楼层谓词（唯一实现；`exact` 对应「编辑重放该楼」而非「回滚到该楼」） ── */
 function floorMatch(raw, floor, exact) {
-    const n = Number(raw);
-    if (!Number.isFinite(n)) return false;
+    /* [v3.12.0] 取数走唯一实现：`'  '` / `[]` 此前被 `Number()` 读成 0、`true` 读成 1，
+     *   于是「这条记录没有楼层」会被当成「它在第 0 楼」而计入作废条数。 */
+    const n = numOrNull(raw);
+    if (n === null) return false;
     return exact ? n === floor : n >= floor;
 }
 
@@ -285,17 +304,27 @@ export function previewRollback(store, floor, opts) {
              *   「这个域读不到」静默算成「0 条」，状态于是被标成 `zero`（真的是 0 条）而不是
              *   `absent`（读不到）—— 两者处置相反，正是本模块文件头第 ② 条纪律要挡的形态。
              *   （同一族缺陷在楼层入参处已修过一次，这里是残留的第二处：上面那条 `Number` 化
-             *   分支必须排在判空之后。） */
+             *   分支必须排在判空之后。）
+             *
+             *   ★ [v3.12.0] 上面那句「先判空」的纪律当时**只落在最外层**：
+             *   两个 `Number.isFinite(Number(...))` 分支（对象形 `r.count` 与原始形 `r`）
+             *   自身仍是弱口径 —— `r.count` 为 `undefined` 时 `Number` 出 NaN 尚可，
+             *   但 `null` / `''` / `[]` 一律出 **0**，`true` 出 **1**：
+             *   一个「读不到 count」的域照样被标成 `zero`（真的是 0 条），
+             *   而一个布尔形态的返回值会被读成「1 条」。本轮把这两支也改走唯一实现。 */
             if (r === null || r === undefined) {
                 n = null;
-            } else if (r && typeof r === 'object' && Number.isFinite(Number(r.count))) {
-                n = Number(r.count);
-                partial = r.partial === true;
-                note = String(r.note || '');
-            } else if (Number.isFinite(Number(r))) {
-                n = Number(r);
+            } else if (r && typeof r === 'object') {
+                const c = numOrNull(r.count);
+                if (c === null) {
+                    n = null;
+                } else {
+                    n = c;
+                    partial = r.partial === true;
+                    note = String(r.note || '');
+                }
             } else {
-                n = null;
+                n = numOrNull(r);
             }
         } catch (_e) { n = null; }
         /* 四态（与全仓 `faceFieldState` / `sourceState` 同规格）：
@@ -338,7 +367,9 @@ export function rollbackPreviewFace(win) {
     return {
         host: store.host,
         floor: floor,
-        floorOk: floor !== null && Number.isFinite(Number(floor)),
+        /* [v3.12.0] 取数走唯一实现：此前的 `Number.isFinite(Number(floor))` 在 floor 为 `'  '`
+         *   或 `[]` 时会读出 0 ⇒ 把「没拿到楼层」报成「第 0 楼可算」（floor 字段却仍是原值）。 */
+        floorOk: numOrNull(floor) !== null,
         rollback: previewRollback(store, floor, { exact: false }),
         replay: previewRollback(store, floor, { exact: true }),
         sources: store.sources,

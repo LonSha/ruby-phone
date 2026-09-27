@@ -45,8 +45,9 @@ export function defaultProfileSettings() {
         maxInject: 8
     };
 }
-/** 取数（不抛；非数值如实 null，不编 0） */
-function num(v) { return Number.isFinite(Number(v)) ? Number(v) : null; }
+/* [v3.12.0] 此处原有本文件自持的一份取值助手 `num`（弱口径），实测**零调用**（同 plotline）。
+ *  本文件的人设/生活细节取值全走 `clip` / 原样透传，没有任何数值格 —— 故不需要取数门。
+ *  若将来真的要在此读数值，请引用 `config/num-gate.js`，**不要**就地再写一份。 */
 /** 纯文本裁剪（防单条无界） */
 function clip(v, max = 120) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();

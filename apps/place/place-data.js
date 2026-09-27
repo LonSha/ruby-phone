@@ -230,7 +230,9 @@ function treeRows(tree, maxRows) {
     const out = [];
     for (const n of tree) {
         if (!n || typeof n !== 'object') continue;
-        const depth = Number.isFinite(Number(n.depth)) ? Number(n.depth) : 1;
+        /* [v3.12.0] 本文件其余格位早已走本地强口径 `numOrNull`，这三处内联写法是漏网：
+         *  `[]` / `'  '` 经 `Number` 都是 0（`true` 是 1）⇒「没给这一格」被读成真读数。 */
+        const depth = numOrNull(n.depth) ?? 1;
         out.push({
             key: String(n.key || ''),
             name: String(n.name || ''),
@@ -238,7 +240,7 @@ function treeRows(tree, maxRows) {
             depth: Math.max(1, Math.min(depth, 4)),
             floor: numOrNull(n.floor),
             visited: n.visited === true,
-            visits: Number.isFinite(Number(n.visits)) ? Number(n.visits) : 0
+            visits: numOrNull(n.visits) ?? 0
         });
         if (out.length >= maxRows) break;
     }
@@ -258,7 +260,7 @@ function visitRows(visits, maxRows) {
         out.push({
             key: String(v.key || ''),
             path: Array.isArray(v.path) ? v.path.map((x) => String(x)) : [],
-            count: Number.isFinite(Number(v.count)) ? Number(v.count) : null,
+            count: numOrNull(v.count),
             firstFloor: numOrNull(v.firstFloor),
             lastFloor: numOrNull(v.lastFloor),
             revisit: v.revisit === true,
@@ -312,13 +314,13 @@ function coPresenceRows(cp, maxRows) {
             key: String(r.key || ''),
             path: Array.isArray(r.path) ? r.path.map((x) => String(x)) : [],
             names,
-            count: Number.isFinite(Number(r.count)) ? Number(r.count) : names.length
+            count: numOrNull(r.count) ?? names.length
         });
         if (rows.length >= max) break;
     }
     return {
         face: {
-            count: Number.isFinite(Number(cp.count)) ? Number(cp.count) : rows.length,
+            count: numOrNull(cp.count) ?? rows.length,
             totalPresent: numOrNull(cp.totalPresent),
             skippedUnknownFloor: numOrNull(cp.skippedUnknownFloor)
         },

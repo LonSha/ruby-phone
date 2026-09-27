@@ -14,7 +14,9 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&#34;').replace(/'/g, '&#39;');
 }
-function num(n) {
+/* [v3.12.0] 同 apps/cheat/cheat-view.js：这一个是**展示格式化器**而非取数门，
+ *  改名 `fmtChars` 以免与全仓唯一取数门同名混淆。取值口径逐字不变。 */
+function fmtChars(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return '—';
   return v >= 10000 ? `${(v / 10000).toFixed(1)} 万字` : `${v} 字`;
@@ -45,7 +47,7 @@ export class DtView {
     <div class="dt-title">💬 撩语</div>
     <div class="dt-badge">
       <span class="dt-badge-main">${sum.count}/${sum.limit}</span>
-      <span class="dt-badge-sub">${num(sum.chars)}</span>
+      <span class="dt-badge-sub">${fmtChars(sum.chars)}</span>
     </div>
   </div>
   <div class="dt-tabs">
@@ -85,7 +87,7 @@ export class DtView {
           <span class="dt-q" style="background:${tierColorOf(p.tier)}">${esc(p.tier)}</span>
           <span class="dt-cat">${esc(p.label || p.cat)}</span>
           <span class="dt-name">${esc(p.name)}</span>
-          <span class="dt-chars">${num(p.chars)}</span>
+          <span class="dt-chars">${fmtChars(p.chars)}</span>
         </div>
         <div class="dt-desc">${esc(p.desc || '（无简介）')}</div>
         <div class="dt-card-ops">
@@ -159,7 +161,7 @@ export class DtView {
         <div class="dt-card-top">
           <span class="dt-q" style="background:${tierColorOf(p.tier)}">${esc(p.tier)}</span>
           <span class="dt-name">${esc(p.name)}${has ? '' : '<i class="dt-lock-tag">未获得</i>'}</span>
-          <span class="dt-chars">${num(p.chars)}</span>
+          <span class="dt-chars">${fmtChars(p.chars)}</span>
         </div>
         <div class="dt-desc">${esc(p.desc || '（无简介）')}</div>
       </div>
@@ -181,7 +183,7 @@ export class DtView {
       <div class="dt-detail-head">
         <span class="dt-q" style="background:${tierColorOf(p.tier)}">${esc(p.tier)}</span>
         <b>${esc(p.name)}</b>
-        <span class="dt-chars">${num(p.chars)}${p.sub > 1 ? ` · ${p.sub} 合条` : ''}</span>
+        <span class="dt-chars">${fmtChars(p.chars)}${p.sub > 1 ? ` · ${p.sub} 合条` : ''}</span>
       </div>
       <div class="dt-detail-meta">${esc(p.label || p.cat)} · id ${esc(p.id)}</div>
       <pre class="dt-pre">${esc(p.content)}</pre>

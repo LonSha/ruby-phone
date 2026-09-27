@@ -213,8 +213,10 @@ export function normalizeCondition(input) {
     const stages = Array.isArray(c.stages) && c.stages.length
         ? c.stages.map(s => ({ stage: str(s && s.stage), desc: str(s && s.desc), days: numOrNull(s && s.days) }))
         : (lib && Array.isArray(lib.stages) ? lib.stages.map(s => ({ stage: str(s.stage), desc: str(s.desc), days: numOrNull(s.days) })) : []);
-    const storedIndex = (c.stageIndex !== null && c.stageIndex !== undefined && Number.isFinite(Number(c.stageIndex)))
-        ? Math.max(0, Number(c.stageIndex)) : 0;
+    /* [v3.12.0] 此处手动拼的「非空且有限」等价判据在 `true` 上会漏：`Number(true) === 1`
+     *  ⇒ 一个布尔形态的 stageIndex 会被读成「第 1 阶段」。改走本地强口径（同一份实现）。 */
+    const storedIdxNum = numOrNull(c.stageIndex);
+    const storedIndex = storedIdxNum !== null ? Math.max(0, storedIdxNum) : 0;
     const clampedIndex = stages.length ? Math.min(stages.length - 1, storedIndex) : 0;
     const stageName = firstStr(c.stage, (stages[clampedIndex] || {}).stage);
     const stageIndex = c.stage ? stageIndexOf({ stages }, stageName) : clampedIndex;

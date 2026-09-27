@@ -14,7 +14,11 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&#34;').replace(/'/g, '&#39;');
 }
-function num(n) {
+/* [v3.12.0] 原名为 `num`，但它返回的是**展示字符串**（'—' / '1.2 万字'），不是取数门。
+ *  占着 `num` 这个名字正是本轮要治的那种混淆（读代码的人看到 `fmtChars(` 无法判断拿到的是
+ *  一份数还是一个字样，也就无从判断它有没有走全仓那个取数门）—— 故改名为 `fmtChars`。
+ *  取值口径本身不变：非有限数显示 '—'（不是 0 字）。 */
+function fmtChars(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return '—';
   return v >= 10000 ? `${(v / 10000).toFixed(1)} 万字` : `${v} 字`;
@@ -44,7 +48,7 @@ export class CheatView {
     <div class="ch-title">🪄 金手指</div>
     <div class="ch-badge">
       <span class="ch-badge-main">${sum.count}/${sum.limit}</span>
-      <span class="ch-badge-sub">${num(sum.chars)}</span>
+      <span class="ch-badge-sub">${fmtChars(sum.chars)}</span>
     </div>
   </div>
   <div class="ch-tabs">
@@ -83,7 +87,7 @@ export class CheatView {
         <div class="ch-card-top">
           <span class="ch-q" style="background:${qualityColorOf(p.quality)}">${esc(p.quality)}</span>
           <span class="ch-name">${esc(p.name)}</span>
-          <span class="ch-chars">${num(p.chars)}</span>
+          <span class="ch-chars">${fmtChars(p.chars)}</span>
         </div>
         <div class="ch-desc">${esc(p.desc || '（无简介）')}</div>
         <div class="ch-card-ops">
@@ -136,7 +140,7 @@ export class CheatView {
         <div class="ch-card-top">
           <span class="ch-q" style="background:${qualityColorOf(p.quality)}">${esc(p.quality)}</span>
           <span class="ch-name">${esc(p.name)}${has ? '' : '<i class="ch-lock-tag">未获得</i>'}</span>
-          <span class="ch-chars">${num(p.chars)}</span>
+          <span class="ch-chars">${fmtChars(p.chars)}</span>
         </div>
         <div class="ch-desc">${esc(p.desc || '（无简介）')}</div>
       </div>
@@ -158,7 +162,7 @@ export class CheatView {
       <div class="ch-detail-head">
         <span class="ch-q" style="background:${qualityColorOf(p.quality)}">${esc(p.quality)}</span>
         <b>${esc(p.name)}</b>
-        <span class="ch-chars">${num(p.chars)}${p.sub > 1 ? ` · ${p.sub} 合条` : ''}</span>
+        <span class="ch-chars">${fmtChars(p.chars)}${p.sub > 1 ? ` · ${p.sub} 合条` : ''}</span>
       </div>
       <div class="ch-detail-meta">类型 ${esc(p.type || '—')} · id ${esc(p.id)}</div>
       <pre class="ch-pre">${esc(p.content)}</pre>

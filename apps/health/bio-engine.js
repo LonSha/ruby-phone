@@ -10,6 +10,7 @@ import {
   listKnownRaces,
   EMBRYO_LORE,
 } from './bio-races.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 export const MENSTRUAL_STAGES = Object.freeze(['卵泡期', '排卵期', '黄体期', '月经期']);
 export const PREGNANCY_STAGES = Object.freeze(['孕早期', '孕中期', '孕晚期', '临产期', '逾期']);
@@ -76,8 +77,11 @@ export function getGestationSpeciesSpeed(race) {
 }
 
 export function getGestationEffectiveSpeed({ race = '人类', modifier = 1, override } = {}) {
-  if (Number.isFinite(Number(override)) && Number(override) >= 0) {
-    return Math.max(0, Math.min(20, Number(override)));
+  /* [v3.12.0] 取数走唯一实现：`Number('')` / `Number('  ')` / `Number([])` 都是 0，
+   *  而 `>= 0` 恒真 ⇒ 一个空白串会**静默顶掉**种族系数，把「没给 override」算成「override=0」。 */
+  const ov = numOrNull(override);
+  if (ov !== null && ov >= 0) {
+    return Math.max(0, Math.min(20, ov));
   }
   const species = getGestationSpeciesSpeed(race);
   const mul = clampNumber(modifier, 0, 20, 1);

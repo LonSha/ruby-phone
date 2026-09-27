@@ -36,6 +36,7 @@
 'use strict';
 import { lifecycleStage, LIFECYCLE } from '../../config/recall-filter.js';
 import { SUPERSEDE_STATUS } from '../../config/supersede-engine.js';
+import { numOrNull as num } from '../../config/num-gate.js';
 
 /** 五感展示元数据（键必须与 memory-pool.SENSE_HINTS 逐字一致，缺键即该感维不显示） */
 export const SENSE_META = Object.freeze({
@@ -60,8 +61,11 @@ export const AUDIT_GRADE = Object.freeze({
     empty: { label: '尚无沉淀', color: '#9ca3af' }
 });
 
-/** 取数：非有限数如实返回 null（不编 0 —— 0 是一个读数，null 是「没有读数」） */
-function num(v) { return Number.isFinite(Number(v)) ? Number(v) : null; }
+/* 取数门（注释原文：非有限数如实返回 null，不编 0 —— 0 是一个读数，null 是「没有读数」）：
+ *  **实现改走全仓唯一源** `config/num-gate.js`（v3.12.0）。
+ *  旧实现是弱口径，实测把 `''` / `'  '` / `[]` / `true` / `false` 读成 0 / 0 / 0 / 1 / 0 ——
+ *  本文件多处用 `num(x) || 0` / `num(x) ?? null` 区分「有读数」与「没读数」，
+ *  弱口径会让「没给」伪装成「给了一个 0 读数」（与文件头那条纪律正好相反）。 */
 /** 纯文本裁剪（防单条无界撑爆界面） */
 function clip(v, max = 120) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -416,16 +420,20 @@ export function coverageRows(cov, opts = {}) {
             out.reason = String(cov.reason || 'unknown');
             return out;
         }
-        // 楼号清洗：仅收「真·非负整数」（null/字符串/NaN 一律丢弃——null 转数是 0，
-        // 而第 0 楼是合法楼号，两者不可混）
-        const num = (v) => (Number.isInteger(v) && v >= 0) ? v : null;
-        const total = num(cov.total), stamped = num(cov.stamped);
+        /* 楼号清洗：仅收「真·非负整数」（null / 字符串 / NaN 一律丢弃 —— null 转数是 0，
+         *  而第 0 楼是合法楼号，两者不可混）。
+         *  ★ [v3.12.0] 本函数此前把这份更严的口径**命名成 `num`**，在函数作用域里遮蔽了
+         *  模块级的取数门（那是第二份实现的雏形：读代码的人看到 `num(` 无法判断用的是哪一份）。
+         *  它不是 `numOrNull` 的替代品而是**更严的一层**（明确拒绝数字字符串 —— 楼号数组里
+         *  出现字符串说明上游契约变了，此时宁可不认），故改名成 `floorIdx` 并保留原判定。 */
+        const floorIdx = (v) => (Number.isInteger(v) && v >= 0) ? v : null;
+        const total = floorIdx(cov.total), stamped = floorIdx(cov.stamped);
         if (total === null || stamped === null) {
             out.reason = '覆盖度读数形状异常（缺 total/stamped）';
             return out;
         }
         const missing = Array.isArray(cov.missing)
-            ? cov.missing.map(num).filter((n) => n !== null)
+            ? cov.missing.map(floorIdx).filter((n) => n !== null)
             : [];
         const byWhyRaw = (cov.byWhy && typeof cov.byWhy === 'object' && !Array.isArray(cov.byWhy)) ? cov.byWhy : {};
         out.state = 'ok';

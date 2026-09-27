@@ -1,3 +1,5 @@
+import { numOrNull } from '../../../config/num-gate.js';
+
 const STORAGE_KEY = 'games_undercover_state';
 const PLAYER_COUNT = 6;
 const MAX_INVITED_CONTACTS = PLAYER_COUNT - 1;
@@ -627,7 +629,9 @@ export class UndercoverData {
                 return {
                     civilian,
                     undercover,
-                    createdAt: Number.isFinite(Number(item?.createdAt)) ? Number(item.createdAt) : 0
+                    /* [v3.12.0] 取数走唯一实现：`Number(null) === 0` 会把「这条没给时间」
+                     *  记成「创建于 1970」——而这条记录是**最近词对**，排序全靠它。 */
+                    createdAt: numOrNull(item?.createdAt) !== null ? numOrNull(item.createdAt) : 0
                 };
             })
             .filter(Boolean)

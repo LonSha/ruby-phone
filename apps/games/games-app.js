@@ -7,6 +7,7 @@ import { PokerApp } from './poker/poker-app.js';
 // [v2.82.0] 构造期全局监听器收口所需：单次 guard 与宿主级登记层（可回收）。
 import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
+import { numOrNull } from '../../config/num-gate.js';
 import { Game2048Data } from './game2048/game2048-data.js';
 import { Game2048View } from './game2048/game2048-view.js';
 import { SudokuData } from './sudoku/sudoku-data.js';
@@ -1032,14 +1033,17 @@ export class GamesApp extends PokerApp {
             const date = String(storyTime?.date || '').trim();
             const time = String(storyTime?.time || '').trim().replace('：', ':');
             if (date && /^\d{1,2}:\d{2}$/.test(time)) {
-                const timestamp = Number.isFinite(Number(storyTime?.timestamp))
-                    ? Number(storyTime.timestamp)
+                /* [v3.12.0] 取数走唯一实现：旧写法把 `''` / `[]` 读成 0 ⇒「上游没给时间戳」
+                 *  被当成「时间戳是 0」，于是**跳过**了下面那条回落解析（真源明明可用）。 */
+                const tsRaw = numOrNull(storyTime?.timestamp);
+                const timestamp = tsRaw !== null
+                    ? tsRaw
                     : (typeof timeManager?.parseTimeToTimestamp === 'function' ? timeManager.parseTimeToTimestamp(storyTime) : 0);
                 return {
                     date,
                     time,
                     weekday: storyTime?.weekday || '',
-                    timestamp: Number.isFinite(Number(timestamp)) ? Number(timestamp) : 0,
+                    timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : 0,
                     sharedAt: [date, storyTime?.weekday, time].filter(Boolean).join(' ')
                 };
             }
@@ -1167,14 +1171,17 @@ export class GamesApp extends PokerApp {
             const date = String(storyTime?.date || '').trim();
             const time = String(storyTime?.time || '').trim().replace('：', ':');
             if (date && /^\d{1,2}:\d{2}$/.test(time)) {
-                const timestamp = Number.isFinite(Number(storyTime?.timestamp))
-                    ? Number(storyTime.timestamp)
+                /* [v3.12.0] 取数走唯一实现：旧写法把 `''` / `[]` 读成 0 ⇒「上游没给时间戳」
+                 *  被当成「时间戳是 0」，于是**跳过**了下面那条回落解析（真源明明可用）。 */
+                const tsRaw = numOrNull(storyTime?.timestamp);
+                const timestamp = tsRaw !== null
+                    ? tsRaw
                     : (typeof timeManager?.parseTimeToTimestamp === 'function' ? timeManager.parseTimeToTimestamp(storyTime) : 0);
                 return {
                     date,
                     time,
                     weekday: storyTime?.weekday || '',
-                    timestamp: Number.isFinite(Number(timestamp)) ? Number(timestamp) : 0,
+                    timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : 0,
                     sharedAt: [date, storyTime?.weekday, time].filter(Boolean).join(' ')
                 };
             }

@@ -39,13 +39,14 @@ import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, c
 import { PHONE_EVENTS, makePhoneEvent, phoneEventFireReport, resetPhoneEventFireLog } from './config/phone-events.js'; // [v2.41.0] 契约报告 + 落账复位
 // [v2.72.0] 表格更新锚点：落后正文几楼的三态读数（未知/已追平/落后 N 楼）
 import { UPDATE_GAP_KEY, readUnupdatedFloorCount, recordTableUpdateFloor, updateGapLine } from './config/update-gap.js';
+import { numOrNull } from './config/num-gate.js';
 
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.11.0';
+const ST_PHONE_VERSION = '3.12.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -125,19 +126,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-28",
+    date: "2026-09-29",
     items: [
-        "**主治：F-1 取证轮留下的一条「有读数支持的替代轴」落地 —— 回滚影响的可见性提升**。v3.9.0 把 TODO F 批最后一项 F-1（持久检查点 / 回滚预览 / 分支只读对照）判为 `not_now`：三件里两件要接的面不存在、第三件面上没有内容。但同轮取证读出了一条**证据在上游之外**的替代轴 —— 下游 41 个回滚点已有确定的「按楼层作废」语义，缺的从来不是引擎而是**读前即知**。本版把它做出来：在删楼 / 翻页 / 重生成**之前**，把「这次动作会让哪些域各丢几条」在下游自己的数据上算一遍并呈现（**只呈现、不执行**）。修前处境：用户在删楼前无从知道这会连带作废多少手机短信、多少微信正文、多少条朋友圈、多少条钱包流水、多少条任务进度 —— 用户看到的是「我删了一楼」，实际发生的是「我删了一楼 **并且** 五个域各少了一截」。前者是用户的意图，后者是系统的行为，两者之间此前没有任何可见面。",
-        "**新真源 `config/rollback-preview.js`（只算不写）**。逐域复用各域作废时的**同一谓词**（短信 / 微信正文 / 朋友圈 / 钱包流水：正文标记 + 楼层；任务进度：**只有楼层** —— 它本就没有正文标记，这是与其余四域的结构差异，已在文件里显式写明）：谓词若在这里另写一份「大概是这样」，读数就会与真回滚漂移，**而那个漂移是看不见的**（预览说 0、真回滚清 30 条），比不做预览更坏。导出五个面：`currentFloorOf` / `readRollbackStores`（五域取数口唯一实现）/ `previewRollback` / `rollbackPreviewFace` / `rollbackPreviewLine` / `rollbackPreviewTable`。**本模块没有任何执行出口** —— 导出面上不存在任何动词，这不是「还没实现」，是这条轴的设计。",
-        "**四态读数（含新增的 `partial`）**：`absent`（读不到，**不是** 0 条）/ `partial`（读到了但读数不完整，只算得出下界）/ `zero`（真的是 0 条，这一楼不影响它）/ `hit`（会少 n 条），外加楼层非法时的 `no-floor`。为什么要分开：混起来就会出现「预览说没影响、用户放心删、实际那个域压根没被读到」。其中 `partial` 是本版**专为微信正文新增**的态 —— 微信正文按会话懒加载，未加载的会话在内存里没有消息桶，此时只算已加载部分并显式标注下界，绝不静默给出一个偏低但看起来完整的数字（「漂亮的假零」的邻形态）。",
-        "**为何预览面不调按会话取消息的出口**：该出口不仅触发懒加载，还会给没有 id 的旧消息补 id，并把刷新后残留的「生成中」状态改写成失败，随后**落盘**。预览面一调它就违反了本模块自己的「只算不写」纪律（打开诊断页就成了「打开一下就改了数据」，是本仓治理过多次的事故形态）。故只读内存桶 `data.messages` 配 `_messagesLoaded` 标记表，未标记已加载的会话不计入并如实标注。**代价是一层下界，而不是一次静默写入。**",
-        "**不报金额**：钱包流水作废时会反向冲回余额，报金额就要重算余额 —— 那已经是在**预演副作用**，而副作用是否与真回滚逐分一致、本层无法自证。故只报条数：**如实少报一层，好过给出一个没人能核对的数。**",
-        "**诊断面接线（本仓一切读数面的唯一可见出口）**：`apps/diagnose/diagnose-data.js` 新增 `rollbackPreview` 键与两条纯转发出口（`rollbackPreviewFaceText` / `rollbackPreviewRows`，文案唯一实现留在真源）；`apps/diagnose/diagnose-view.js` 新增「回滚影响预览（只算不执行）」卡（放在「存档健康」之前 —— 先看范围，再看时代），把**两种语义**（`及之后` = 删楼/回滚、`正好该楼` = 编辑重放）分列并逐域带出四态文案、取数归因与口径纪律。",
-        "**楼层缺失不得兜底成 0（本版自己抓到的缺陷）**：`Number(null) === 0`、`Number('') === 0` —— 直接 Number 化会把「没给楼层」静默变成「第 0 楼」，于是给出一份「第 0 楼不影响任何域」的漂亮读数（而真实情况是「作废范围未知」）。故新增 `floorNum` 归一：`null` / `undefined` / `''` 一律判 NaN ⇒ 整份读数 `floorOk:false` 且各域 `no-floor`；`0` 仍是**合法楼层**（0 基，与 SillyTavern 一致）。实测：`previewRollback(store, null)` 修前误报 floor 0 / 五域 `zero`，修后 `floorOk:false` / 五域 `no-floor`。",
-        "**判据与门禁自身的缺陷优先于实现缺陷（本版连治三处）**：① 真源模块的注释**刻意不写回滚入口函数名** —— 取证探针统计「回滚覆盖面」时逐行做子串匹配、且只跳过 `//` 开头的行（**块注释行不跳**），注释里写上函数名就会把**散文**算成**回滚实现点**（本仓最忌的「判据面被散文侵入」，v3.9.0 的 B4 负控制就是为这一类立的）；② 交棒改写 `tests/system-v326.test.mjs` 三条当版精确读数，**而非静默通过**：A2 的「预览面必须 0 命中」改为「**下限 + 不假零**」形（本版从只取证切到实施，该读数必然非 0，这是预期代价），B1 的 token 禁面按**位置**拆两族（`index.js` 仍全禁；App 层保留 6 个上游分支面 / 检查点面 token，摘掉三个预览 token —— 下游自建预览面长在 App 层是设计而不是污染），B4 的公告注入负控制由「读数必须为 0」改为「读数必须与注入前**逐字相同**」（改写后反而更严：三读数 + 回滚覆盖面四项逐项相等，任何一项被公告干扰立即红）；③ 基线同步复校（枚举面 229 → **230**，新增复校记录，其余读数逐项不变）。",
-        "**判据套件 `tests/system-v3213.test.mjs`（七段 A–G，真跑 `node --test`）**：A 真源五域谓词**逐条与真实现同源**（含短信域的 conversations 形状陷阱：按扁平列表数会得到「漂亮的假零」）；B 四态 + `no-floor`（含 `null` / `''` / `undefined` 不得兜底成 0）；C 懒加载纪律（`getMessages` 不得被预览面调用、`partial` 必带 note）；D 取数口唯一 + 归因四档；E 诊断面接线（取数口在内核、视图只转发、真建卡）；F 真源码破坏负控制（破坏落真文件文本 → 判据在破坏副本上重跑必须转红）；G 版本锚。",
-        "落地：`config/rollback-preview.js` + `apps/diagnose/diagnose-data.js` + `apps/diagnose/diagnose-view.js` + `tests/system-v3213.test.mjs` + `tests/system-v326.test.mjs`（交棒改写 A2 / B1 / B4）+ `tests/audit/branch_play_baseline.json`（枚举面复校）。**版本升至 3.11.0（五源同源）**。",
-        "**运行时验证边界（本版的诚实登记）**：本版新增的读数面（回滚影响预览）全部**只算不写**，它的正确性由无头门禁与四条真源码破坏负控制守住；但本扩展的自动化门禁**不能保证**真机上的视觉排版与真实渲染 —— 诊断卡在真机上的实际显示、以及各宿主出口在真实运行时是否都可达，仍属**未验证**项。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修（判据：`tests/system-v328.test.mjs`；工程侧全文见 `docs/runtime-verification-boundary.md`）。"
+        "**主治：全仓取数口径收干 —— `Number(null) === 0` 这个根因的第五度、也是最后一次发病**。本仓最贵的一类错读数是 `Number.isFinite(Number(x)) ? Number(x) : null` 这个写法：实测 19 个输入里**10 个读错** —— 空白串（含制表符与换行）、空数组、只含一个空串的数组 全读成 **0**；`true` 读成 **1**、`false` 读成 **0**、单元素数组（元素为数字 5）读成 **5**。于是「上游**没给**这一格」与「上游**给了 0**」塌成同一个读数 —— 而 0 在本仓绝大多数格位上都是**合法读数**（第 0 楼、余额 0、注入 0 次、暗流 0 条、剂量 0…），两者处置**相反**。这个根因本仓治过四轮：v3.3.1（三份同名 `numOrNull` 统一）、v3.3.0（楼层门 `floorOrNull`）、v3.11.0（回滚预览的「缺失不得兜底成 0」），**每一轮都是就地修那一处**。本版先做取证而不是直接改：结果查出同一写法仍在 **14 个文件**里活着，形态三种 —— ①本地助手函数（wallet / profile / plotline / memory-insights / ledger 各有一份 `num`）；②内联表达式（place / games / wechat / wangxiang / phone / honey / index.js 共 20 余处）；③**v3.11.0 刚改过的那个文件里的残留**（`config/rollback-preview.js` 仍有 3 处，其中 `floorNum` 只挡住了 `null` / `undefined` 与空串，**纯空白串与空数组**照样伪装成「第 0 楼」）。",
+        "**修法不是「再修一遍」，而是把口径变成单一实现**：新增 `config/num-gate.js`（**零依赖叶子模块**，只导出 `numOrNull`），全仓 16 个文件改走它。为什么必须单一实现：逐处修治的是**症状**，只要口径本身没有唯一落点，下一个写取值函数的人就会再抄一遍弱的那版 —— 本轮的 14 处里，有 4 处就是从同一份弱口径**复制**出来的。调用点命名保留（`import { numOrNull as num }` / `as floorOrNull`），改的是实现归属，不是调用面。",
+        "**逐处裁定的真缺陷（不是形态统一，是会读到错数的地方）**：①`apps/wallet/wallet-data.js` 的 `num(item.floor)` —— 钱包按楼层过滤时把「没给楼层」的流水读成**第 0 楼**命中，且 `whenOf` 会显示「第 0 楼」这个不存在的楼层；②`apps/phone/phone-data.js` 的**两个**短信回滚入口 —— `rollbackSmsToFloor` 与 `removeMainChatSmsAtFloor` 在「没给楼层」时会走成「第 0 楼回滚」，**把所有短信与批次记录全清**；③`apps/health/bio-engine.js` 的 `override` 判定 `Number(x) >= 0` 对空串恒真 ⇒ 一个空白串**静默顶掉**种族妊娠系数、把「没给 override」算成「override = 0」；④`apps/health/bio-propagation.js` 的 剂量兜底 —— `Number(null) === 0` 让「没给剂量」变成「真实 0 次」，注释里写的默认 20 在弱口径下**从不可达**；⑤`apps/honey/honey-data.js` 提现后的余额回落 —— `getWalletBalance()` 返回 null 时被写成 `0`，连下面那条 `amountYuan` 回落都到不了；⑥`apps/wechat/wechat-data.js` 的 `balanceBefore` / `balanceAfter` —— 「这笔转账没记余额」被落盘成 `0`，此后再也分不出「余额是 0」与「没记」；⑦`apps/honey/honey-view.js` 榜单用户行的显隐 —— 读不出名次时被读成「名次 0」而**隐藏**用户自己（方向与安全向相反）；⑧`apps/games/games-app.js`、`apps/wechat/chat-view.js`、`apps/wechat/wechat-data.js`、`apps/wangxiang/wangxiang-app.js` 的时间戳兜底（旧写法读成 0 后**跳过**回落解析，真源明明可用）；⑨`apps/memory/memory-view.js` 的命中分（空数组被渲染成「0.00」，与真的算出 0 分同形）；⑩`apps/ledger/ledger-data.js` —— 它更重一档：**读不出就编 0**（`Number(v)` 取不到就返回 0），于是 `wlr.counts.currents` 没给时面板写「暗流 0」，用户读到的是「这个世界没有暗流」，而真相是「这个读数我们没拿到」；同文件的 `opinion: num(a) + num(b)` 还有第四种形态：**缺失参与算术**（`null + null === 0`），两个格位都没给时整格算成 0。",
+        "**同族的两处「零调用弱口径」直接删**（`apps/profile/profile-data.js`、`apps/plotline/plotline-data.js`）：它们各自持有一份弱口径 `num`，实测**全文件零调用**。留着的代价不是洁癖 —— 它会让下一个读代码的人以为「本文件已经有取数门了」（这正是本轮 14 处复制的温床）。另有两处**名为 `num` 实为展示格式化器**（`cheat-view` / `dt-view`，返回 `'1.2 万字'` 这种字样）改名 `fmtChars`：占着取数门名字的格式化器同样会让人无法判断「这里拿到的是数还是字样」。",
+        "**第十道门：`scripts/weak-coercion-audit.mjs`（取数口径门）**，串进 `npm run check`。判据四条：W1 全仓**真代码**不得再出现 `Number.isFinite(Number(` 这个签名；W2 名为 `num` / `numOrNull` / `floorOrNull` 等的本地助手必须是**合法强口径形态**之一（反式 / 正式 / 规范化，三种都实测等价）；W3 唯一实现 `config/num-gate.js` 必须在场、导出面恰为一个键、且被 ≥ 12 个文件引用；W4 判据自证（真源码里一个强口径形态都命中不到 ⇒ exit 2 拒判）。**本门的存在意义不是「找出今天的错」，而是让这个根因不会再以第五度形态复发。** 实测落点：W1 命中数 53 → 0（真代码），W2 从 9 处误报到 0 处。",
+        "**本版自己踩到的两个坑，如实记下（判据与门槛的纪律优先于实现）**：①**注释污染判据面** —— 本轮给 14 个文件写的说明性注释里逐字带着那个弱口径写法，而 `tests/audit/branch_play_probe.cjs` 是**子串匹配、只跳过 `//` 行**，于是它的「回滚点」读数从 **41 涨到 42**，`branch_play_baseline.json` 当场转红。修法是**把注释里的逐字函数名删掉**（同文件 corrections 里本就写着「判据面不得被散文侵入」），而不是改读数把 42 记成新基线 —— 后者等于让散文合法地冒充回滚实现点。故本门 W1 与 dead-export 的 E6 同款：判定基于**真代码**（剥注释与字符串）。②**破坏锚点绑死在实现文本上** —— `tests/system-v3213.test.mjs` 的 F1 破坏锚点原本打在 `floorNum` 的旧实现那一行，实现一换锚点即失配（锚点必须恰中 1 次）。若不管它，那条判据会因「锚点过期」转红而不是因「缺陷复活」转红 ⇒ 它就从真判据降级成**假判据**。修法是把锚点换成**与实现无关**的那一行（把取数结果收敛成 NaN 空值的 `return`），语义不降级。",
+        "**交棒改写（三处既存判据，一律按本仓先例改写为「下限 + 动态取当版」，而非静默通过）**：①`tests/system-v3213.test.mjs` 的 G1 / G2 / G3 原逐字写死 `'3.11.0'`（当版精确读数，抬版即过期）⇒ 改为**读 `manifest.json` 的版本再逐源比对**（五源同源这条契约一字不减）；②同套件 F1 的破坏锚点（见上）；③三份冻结基线（`long_chat` / `schedule_conflict` / `branch_play`）的**枚举面**读数各 +1并追加复校记录 —— 本版只新增一个 `config/num-gate.js`，其余读数逐项不变（探针量的是「有没有这类站点、有多少」，取数实现的替换不改变站点数）。另同步 `docs/runtime-verification-boundary.md` 的复校版本与两处机器可读数字（语法门 421 → 422 / 导入门 243 文件 348 条 → 244 文件 368 条）。",
+        "**判据套件 `tests/system-v3120.test.mjs`（五段 A–E，真跑 `node --test`）**：A 口径本体逐条对读（19 输入 / 10 条分歧面 + 6 条反坐实面：`0` / `'0'` / `5` / `'5'` / `' 5 '` / `3.5` 必须如实出数，门不得关成「谁都取不到」）；B 真模块行为（走导出面：钱包流水的楼层读数、档案/支线的删除形态、诊断面的回滚预览）；C 结构面（唯一实现在场、调用点命名保留、第五度复发的四种形态各自被守）；D **真源码破坏负控制**（把强口径退回弱口径 ⇒ 同款真判据必须转红；破坏必须落在真文件文本、判据在破坏副本上重跑）；E **第十道门自证**（对每组判据做「破坏→必须转红」与「原版→必须为真」两向证明，含工具两向自证：锚点不存在 / 锚点不唯一必须抛、真源码破坏必须可观测地改变行为）。",
+        "落地：`config/num-gate.js`（新建）+ 16 个消费文件改走唯一实现 + `scripts/weak-coercion-audit.mjs`（第十道门）+ `package.json`（串门禁）+ `tests/system-v3120.test.mjs`（新判据套件）+ `tests/system-v3213.test.mjs`（交棒改写 G 组 + F1 锚点）+ 三份冻结基线复校 + `docs/runtime-verification-boundary.md`（复校）。**版本升至 3.12.0（五源同源）**。",
+        "**运行时验证边界（本版的诚实登记）**：本版改的是**取值口径**，其正确性由无头门禁（十道门 + 21 项判据套件，含 4 条真源码破坏负控制与 4 条门脚本两向自证）守住；但本扩展的自动化门禁**不能保证**真机上的视觉排版与真实渲染（它跑不了宿主 DOM），故这两项仍属**未验证**。遇到「看起来没坏但显示不对」的问题，属于登记在案的第二类，需在真机复现后再修（判据：`tests/system-v328.test.mjs`；工程侧全文见 `docs/runtime-verification-boundary.md`）。"
     ]
 };
 
@@ -764,8 +764,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     function schedulePhonePanelViewportUpdate(options = {}) {
         const immediate = options.immediate === true;
-        const delay = Number.isFinite(Number(options.delay)) ? Math.max(0, Number(options.delay)) : 60;
-        const settleDelay = Number.isFinite(Number(options.settleDelay)) ? Math.max(0, Number(options.settleDelay)) : 140;
+        /* [v3.12.0] 取数走唯一实现：`[]` / `'  '` 经 `Number` 是 0 并通过 isFinite ⇒ 传了畸形
+         *  延时的调用方会拿到「0 毫秒」而不是各自那档默认值（60 / 140），退化成同步重排。 */
+        const delayRaw = numOrNull(options.delay);
+        const settleRaw = numOrNull(options.settleDelay);
+        const delay = delayRaw === null ? 60 : Math.max(0, delayRaw);
+        const settleDelay = settleRaw === null ? 140 : Math.max(0, settleRaw);
 
         if (immediate) {
             updatePhonePanelViewportHeight(options);
@@ -7892,7 +7896,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
 
                 // 🔥 存储消息到数据层（带上 batchId 和历史标记）
-                const sourceOrder = Number.isFinite(Number(msg.sourceOrder)) ? Number(msg.sourceOrder) : index;
+                const sourceOrder = numOrNull(msg.sourceOrder) ?? index;
                 const added = wechatData.addMessage(chat.id, {
                     from: messageSender,
                     content: cleanContent,
