@@ -373,7 +373,13 @@ test('F1 ★ 版本锚（下限形）+ 当版条目非空 + 弹窗文案不含�
   for (const it of items) {
     assert.equal(it.includes('[') || it.includes(']'), false, '弹窗文案不得含方括号（当版切片判据按首个 ] 截断）');
   }
-  const body = items.join(' ');
+  /* [v3.17.0 交棒] 内容面关键词锚**本套件出生版本**（3.16.0）的条目，不锚 log.latest：
+   *   原判据把「双人身体互动 / DTX_BODY / 位移」打在当版条目上，是对以后每一版下永久约束
+   *   （抬版即红）。按仓内既定口径（同 v298-E2 / v300-D2 / v301-D2 / v302-E2 / v303-D2）：
+   *   落地项关键词锚出生版本（它钉的是历史事实），而弹窗逐字同源那半仍锚当版。 */
+  const own = log.versions['3.16.0'];
+  assert.ok(own && Array.isArray(own.items), 'v3.16.0 条目必须仍在（本判据钉的是历史事实）');
+  const body = own.items.join(' ');
   assert.ok(/双人身体互动|DTX_BODY/.test(body), '当版条目必须点出本版主线（双人身体互动增量）');
   assert.ok(/静默|蒸发|丢弃/.test(body), '当版条目必须记下管线缺陷这件事（不得只写「新增了内容」）');
   assert.ok(/位移/.test(body), '当版条目必须点出新增金手指');

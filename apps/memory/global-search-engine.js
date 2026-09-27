@@ -13,14 +13,31 @@
  * ======================================================== */
 'use strict';
 
-// [v2.62.0] 补源补名纯函数：cheat/dt 装配清单只存 id，经纯函数补回名字/说明（不读 window，
-// 底层 cheatPacks / dirtyTalkModules 顶层纯数据，Node 可测）。
-import { getCheatById } from '../cheat/cheat-data.js';
-import { getModuleById } from '../dirtytalk/dt-data.js';
+// [v3.17.0 R-O2] 补名只读**轻量索引**，不再经业务内核拉完整正文库：
+//   搜索只需要「名称 / 类型 / 品阶 / 档位 / 简介」，而 `getCheatById` 来自 `cheat-data.js`，
+//   那条边会连带 `data/cheats.js`（1.60MB）进搜索的导入闭包；撩语侧同理连带
+//   `data/dirtytalk.js`（0.73MB）+ `data/dirtytalk-corpus.js`（0.15MB）。
+//   实测（v3.17.0）：search-app 导入闭包 2,689,609 B → 198,077 B；未压缩字节 2,473,764 → 81,144。
+//   同源保证：两份索引与正文由同一生成脚本产出，测试锁定 id 集合与字段逐字相等
+//   （本轮实测 166 条武库 + 231 条撩语的搜索字段差异 = 0）。
+import { cheatIndex } from '../../data/cheat-index.js';
+import { dirtyTalkIndex } from '../../data/dirtytalk-index.js';
 import { readPushProbe, evidenceFaceOf } from '../../config/world-bridge.js';
 
 const MAX_SNIPPET = 120;
+/** [v3.17.0 R-O1] 快速档每源预算：**旧名旧值** —— `tests/system-v327` 锁的就是这个 600。
+ *  两档不是「新替旧」：默认路径仍走 600，用户显式点「全历史」才升级。 */
 const MAX_SCAN_PER_SOURCE = 600;
+/** 全历史档每源预算（单源 20000 条：10000 楼会话也铺得下） */
+const MAX_SCAN_PER_SOURCE_FULL = 20000;
+/** 全历史档全索引封顶（多源合起来也不失控） */
+const MAX_INDEX_FULL = 60000;
+/** 分片粒度：每片处理多少条索引条目（只影响节奏，不影响结果集） */
+const SCAN_CHUNK = 2000;
+/** 展示摘要段：与旧行为同值（`body` 仍是前 600 字） */
+const BODY_DISPLAY_CAP = 600;
+/** 可检索文本段：一条消息最多 4000 字进检索面（含 600 字之后的尾部余量） */
+const BODY_SEARCH_CAP = 4000;
 
 /** 归一化：去首尾空白 + 折叠连续空白 + 小写（用于不区分大小写的匹配） */
 function norm(s) {
@@ -31,6 +48,39 @@ function lower(s) {
     return norm(s).toLowerCase();
 }
 
+/**
+ * [v3.17.0 R-O2] 轻索引按 id 取元数据。
+ * 惰性建 Map（首次用到才建），未知 id 返回 null —— 与 `getCheatById` / `getModuleById`
+ * 的对外行为逐条一致（空串、未知 id 一律 null，不猜、不造）。
+ * 索引里**没有 content 键**，故返回对象也不合成一个：搜索只用元数据，
+ * 「搜索能不能搜到正文」与「详情页能不能打开正文」是两件事，后者按需加载。
+ */
+let _cheatMetaMap = null;
+function _cheatMetaById(id) {
+    const k = String(id || '');
+    if (!k) return null;
+    if (!_cheatMetaMap) {
+        _cheatMetaMap = new Map();
+        for (const p of Array.isArray(cheatIndex) ? cheatIndex : []) {
+            if (p && p.id != null) _cheatMetaMap.set(String(p.id), p);
+        }
+    }
+    return _cheatMetaMap.get(k) || null;
+}
+let _dtMetaMap = null;
+function _dtMetaById(id) {
+    const k = String(id || '');
+    if (!k) return null;
+    if (!_dtMetaMap) {
+        _dtMetaMap = new Map();
+        for (const m of Array.isArray(dirtyTalkIndex) ? dirtyTalkIndex : []) {
+            if (m && m.id != null) _dtMetaMap.set(String(m.id), m);
+        }
+    }
+    return _dtMetaMap.get(k) || null;
+}
+// 【不导出】这两个取数口只服务本文件的两条源：导出即多一个「零消费导出」要维护，
+//   行为面由 tests/system-v3170 经 buildDefaultSources 的 cheat / dirtytalk 两条源真跑。
 /**
  * 命中评分。
  * @returns {number} <0 表示未命中
@@ -153,49 +203,127 @@ export class GlobalSearchEngine {
 
     /**
      * 惰性构建索引（每源独立容错）。
+     *
+     * [v3.17.0 R-O1] 两档预算：
+     *   快速（默认 `build()`）每源 `MAX_SCAN_PER_SOURCE = 600` —— 旧行为，一字不改；
+     *   全历史（`build({ full: true })`）每源 20000 条、全索引封顶 60000 条。
+     * 全历史结果**不进**默认缓存（`this._index`）：否则快速档会被上一次全扫污染。
+     * 每源的「原始多少 / 索引多少 / 有没有被截」记在 `this._lastScan`，由 `_scope()` 报给 UI。
+     * @param {{full?:boolean}} [opts]
      * @returns {Array<object>} 归一化后的条目
      */
-    build() {
-        if (this._index) return this._index;
+    build(opts = {}) {
+        const full = opts.full === true;
+        if (!full && this._index) return this._index;
+        const perSource = full ? MAX_SCAN_PER_SOURCE_FULL : MAX_SCAN_PER_SOURCE;
+        const totalCap = full ? MAX_INDEX_FULL : Infinity;
         const out = [];
         const errors = [];
+        const perSourceStat = {};
+        const cappedSources = [];
+        const bodyCappedSources = [];
         for (const src of this._sources) {
             try {
                 const raw = src.items() || [];
                 if (!Array.isArray(raw)) continue;
                 let n = 0;
+                let bodyCapped = false;
                 for (const it of raw) {
-                    if (n >= MAX_SCAN_PER_SOURCE) break;
+                    if (n >= perSource || out.length >= totalCap) break;
                     if (!it || typeof it !== 'object') continue;
                     const title = norm(it.title);
                     const body = norm(it.body);
                     if (!title && !body) continue;
+                    /* [v3.17.0 R-O1] 展示段与可检索段分离：
+                     *   `body`      = 前 600 字（**展示摘要**，与旧行为逐字同值）；
+                     *   `bodyFull`  = 600–4000 字的**尾部余量**，只进命中判定，不进摘要。
+                     * 为什么必须分离：长消息的末尾（玩家口中的「最后那句台词」）此前
+                     *   根本不在检索面里 —— 搜得到开头、搜不到结尾。 */
+                    const bodyFull = body.length > BODY_DISPLAY_CAP ? body.slice(BODY_DISPLAY_CAP, BODY_SEARCH_CAP) : '';
+                    if (body.length > BODY_SEARCH_CAP) bodyCapped = true;
                     out.push({
                         sourceId: src.id,
                         sourceLabel: src.label,
                         icon: String(it.icon || src.icon),
                         appId: String(it.appId || src.appId),
                         title: title.slice(0, 120),
-                        body: body.slice(0, 600),
+                        body: body.slice(0, BODY_DISPLAY_CAP),
+                        bodyFull: bodyFull,
+                        bodyTruncated: body.length > BODY_SEARCH_CAP,
                         ts: Number(it.ts) || 0,
                         meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
                     });
                     n++;
                 }
+                const capped = raw.length > n;
+                if (capped) cappedSources.push(src.id);
+                if (bodyCapped) bodyCappedSources.push(src.id);
+                perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: capped };
+                if (out.length >= totalCap) break;
             } catch (e) {
                 errors.push({ sourceId: src.id, error: String(e?.message || e) });
             }
         }
         this._errors = errors;
-        this._index = out;
+        this._lastScan = {
+            full: full, perSource: perSourceStat, cappedSources: cappedSources,
+            bodyCappedSources: bodyCappedSources, totalCapped: out.length >= totalCap
+        };
+        if (!full) this._index = out;
         return out;
     }
 
     /**
+     * 在**可检索文本**上判分：摘要段 + 尾部余量（两段拼起来就是同一条消息的真身）。
+     * @returns {number} <0 表示未命中
+     */
+    _score(it, q) {
+        return scoreHit(it.title, String(it.body || '') + String(it.bodyFull || ''), q);
+    }
+    /**
+     * [v3.17.0 R-O1] 覆盖度声明的**公共**出口。
+     * 为什么不让 UI 直接调 `_scope()`：跨类调私有方法会把「报什么」
+     *   变成 UI 自己的信规（实测断言也无从下手）；本出口只说「按当前档位扫完是什么样」。
+     * @param {boolean} [full] 是否全历史档
+     * @param {{coverage?:object}} [opts] 分片扫描方可覆盖读数
+     */
+    scanScope(full = false, opts = {}) {
+        const list = this.build({ full: full === true });
+        return this._scope(full === true, opts, list.length);
+    }
+    /**
+     * [v3.17.0 R-O1] 覆盖度声明：让 UI 能说「扫了多少 / 还剩多少 / 谁被截了」，
+     *   而不是把「没扫到」默默显示成「没有命中」（本仓对沉默失败的一贯口径）。
+     * `opts.coverage` 可由**分片扫描方**覆盖（拉入每源已扫条数与未完成态）；
+     *   不传即按本次同步扫描的真实读数报（同步路径没有「还没扫到」这回事）。
+     */
+    _scope(full, opts, indexLen) {
+        const st = this._lastScan || { perSource: {}, cappedSources: [], bodyCappedSources: [], totalCapped: false };
+        const cov = (opts.coverage && typeof opts.coverage === 'object') ? opts.coverage : null;
+        const bySource = (cov && cov.scannedBySource && typeof cov.scannedBySource === 'object') ? cov.scannedBySource : null;
+        const scannedBySource = {};
+        for (const [id, st1] of Object.entries(st.perSource || {})) {
+            scannedBySource[id] = (bySource && bySource[id] != null) ? (Number(bySource[id]) || 0) : (Number(st1.indexed) || 0);
+        }
+        return {
+            mode: full ? 'full' : 'quick',
+            full: !!full,
+            indexLen: Number(indexLen) || 0,
+            scannedBySource: scannedBySource,
+            truncatedSources: Array.isArray(cov && cov.truncatedSources) ? cov.truncatedSources.slice() : (st.cappedSources || []).slice(),
+            bodyTruncatedSources: (st.bodyCappedSources || []).slice(),
+            totalCapped: !!st.totalCapped || !!(cov && cov.totalCapped),
+            pending: Number((cov && cov.pending) || 0),
+            complete: !(cov && cov.complete === false)
+        };
+    }
+    /**
      * 检索。
      * @param {string} query
-     * @param {{limit?:number, sourceIds?:string[]}} [opts]
-     * @returns {{query:string, results:Array, groups:Array, total:number, scanned:number, errors:Array}}
+     * @param {{limit?:number, sourceIds?:string[], full?:boolean,
+     *          coverage?:object}} [opts]
+     * @returns {{query:string,results:Array,groups:Array,total:number,scanned:number,
+     *            errors:Array,scope:object}}
      */
     query(query, opts = {}) {
         const q = norm(query);
@@ -203,18 +331,20 @@ export class GlobalSearchEngine {
         const allow = Array.isArray(opts.sourceIds) && opts.sourceIds.length
             ? new Set(opts.sourceIds.map(String))
             : null;
-        const all = this.build();
+        const full = opts.full === true;
+        const all = this.build({ full: full });
+        const scope = this._scope(full, opts, all.length);
         if (!q) {
-            return { query: '', results: [], groups: [], total: 0, scanned: all.length, errors: this._errors.slice() };
+            return { query: '', results: [], groups: [], total: 0, scanned: all.length, errors: this._errors.slice(), scope: scope };
         }
         const weightOf = {};
         for (const s of this._sources) weightOf[s.id] = s.weight;
         const hits = [];
         for (const it of all) {
             if (allow && !allow.has(it.sourceId)) continue;
-            const score = scoreHit(it.title, it.body, q);
+            const score = this._score(it, q);
             if (score < 0) continue;
-            const snip = makeSnippet(it.body, q);
+            const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), q);
             hits.push({
                 ...it,
                 score: score * (weightOf[it.sourceId] || 1),
@@ -224,7 +354,7 @@ export class GlobalSearchEngine {
         }
         hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));
         const results = hits.slice(0, limit);
-        // 按源分组（保留组内排序），便于面板分区展示
+        /* 按源分组（保留组内排序），便于面板分区展示 */
         const groupMap = new Map();
         for (const r of results) {
             if (!groupMap.has(r.sourceId)) {
@@ -239,11 +369,84 @@ export class GlobalSearchEngine {
             groups,
             total: hits.length,
             scanned: all.length,
-            errors: this._errors.slice()
+            errors: this._errors.slice(),
+            scope: scope
+        };
+    }
+    /**
+     * 全历史分片扫描（[v3.17.0 R-O1]）。
+     * 为什么需要**独立入口**而不是 `query(q, { full: true })` 了事：
+     *   长会话（1000/5000/10000 楼）下全量索引的比中是几十到几百毫秒 —— 同步做完会让输入卡住，
+     *   也没法显示进度与取消。本入口把「全量索引 → 分片比中 → 报每源覆盖」拆成可中断的片。
+     * 两条纪律：
+     *   · 分片只影响**节奏**，不影响**结果集** —— 遍历的就是 `full:true` 的全量索引，
+     *     不因分片少扫任何一条；
+     *   · `isCancelled()` 为真即立刻返回 `cancelled:true` 且 `results:[]` ——
+     *     半份结果比空结果更糟（用户会以为「只有这些」）。
+     * @param {string} query
+     * @param {{limit?:number, sourceIds?:string[], full?:boolean,
+     *          onProgress?:Function, isCancelled?:Function}} [opts]
+     */
+    searchAll(query, opts = {}) {
+        const q = norm(query);
+        const limit = Math.max(1, Number(opts.limit) || 60);
+        const full = opts.full === true;
+        const allow = Array.isArray(opts.sourceIds) && opts.sourceIds.length
+            ? new Set(opts.sourceIds.map(String))
+            : null;
+        const all = this.build({ full: full });
+        const weightOf = {};
+        for (const s of this._sources) weightOf[s.id] = s.weight;
+        const hits = [];
+        const scannedBySource = {};
+        const cancelledNow = () => {
+            try { return typeof opts.isCancelled === 'function' && !!opts.isCancelled(); } catch (_e) { return false; }
+        };
+        let processed = 0;
+        while (processed < all.length) {
+            if (cancelledNow()) {
+                return {
+                    query: '', results: [], groups: [], total: 0, scanned: processed,
+                    errors: this._errors.slice(), cancelled: true,
+                    scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: Math.max(0, all.length - processed), complete: false } }, all.length)
+                };
+            }
+            const end = Math.min(all.length, processed + SCAN_CHUNK);
+            for (; processed < end; processed++) {
+                const it = all[processed];
+                if (allow && !allow.has(it.sourceId)) continue;
+                scannedBySource[it.sourceId] = (scannedBySource[it.sourceId] || 0) + 1;
+                if (!q) continue;
+                const score = this._score(it, q);
+                if (score < 0) continue;
+                const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), q);
+                hits.push({ ...it, score: score * (weightOf[it.sourceId] || 1), snippet: snip.text, snippetHit: !!snip.hit });
+            }
+            if (typeof opts.onProgress === 'function') {
+                try {
+                    opts.onProgress({
+                        processed: processed, total: all.length,
+                        pending: Math.max(0, all.length - processed),
+                        scannedBySource: Object.assign({}, scannedBySource)
+                    });
+                } catch (_e) { /* 进度回调抛错不得影响检索 */ }
+            }
+        }
+        hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));
+        const results = hits.slice(0, limit);
+        const groupMap = new Map();
+        for (const r of results) {
+            if (!groupMap.has(r.sourceId)) groupMap.set(r.sourceId, { sourceId: r.sourceId, label: r.sourceLabel, icon: r.icon, items: [] });
+            groupMap.get(r.sourceId).items.push(r);
+        }
+        const groups = Array.from(groupMap.values()).sort((a, b) => b.items[0].score - a.items[0].score);
+        return {
+            query: q, results: results, groups: groups, total: hits.length, scanned: processed,
+            errors: this._errors.slice(), cancelled: false,
+            scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: 0, complete: true } }, all.length)
         };
     }
 }
-
 /** 时间解析：优先毫秒时间戳，其次 'HH:MM'（按今日折算），最后字符串日期 */
 function tsOf(...vals) {
     for (const v of vals) {
@@ -571,7 +774,7 @@ export function buildDefaultSources(storage, deps = {}) {
             const ids = asArray(state.installed).map(x => String(x)).filter(Boolean);
             const out = [];
             for (const id of ids) {
-                const p = getCheatById(id);
+                const p = _cheatMetaById(id);
                 if (!p) continue; // 未知 id 如实丢弃（与 cheat-app 的 sanitize 口径一致）
                 out.push({ title: String(p.name || id), body: norm([p.type, p.quality, p.desc].filter(Boolean).join(' · ')), icon: '🗡️', appId: 'cheat', meta: { id } });
             }
@@ -587,7 +790,7 @@ export function buildDefaultSources(storage, deps = {}) {
             const ids = asArray(state.installed).map(x => String(x)).filter(Boolean);
             const out = [];
             for (const id of ids) {
-                const m = getModuleById(id);
+                const m = _dtMetaById(id);
                 if (!m) continue;
                 out.push({ title: String(m.name || id), body: norm([m.cat, m.label, m.tier, m.desc].filter(Boolean).join(' · ')), icon: '💋', appId: 'dirtytalk', meta: { id } });
             }

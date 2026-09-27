@@ -23,6 +23,15 @@ export class SearchApp {
             ? deps.chatContextProvider
             : () => this._chatContext();
         this.engine = this._buildEngine();
+        /* [v3.17.0 R-O1] 全历史模式与取消代际：
+         *   `_fullMode` = 用户显式开了全历史（默认仍是快速档，600/源）；
+         *   `_scanGen`   = 扫描代际，每轮新检索 +1。取消 / 换会话 / 换关键词 /
+         *                  数据变更时旧代立即失效 —— 正在跑的扫描靠它自停（`isCancelled`）。
+         *   为什么用代际而不是「清结果」：清结果只能拦住**未开始**的下一轮，
+         *   拦不住**已在跑**的那一轮把旧命中写回面板。 */
+        this._fullMode = false;
+        this._scanGen = 0;
+        this._scanning = false;
         this.view = new SearchView(this);
     }
 
@@ -64,18 +73,88 @@ export class SearchApp {
         }
     }
 
-    /** 供页头展示：已接入几个来源、覆盖多少条记录 */
+    /**
+     * 供页头展示：已接入几个来源、覆盖多少条记录、**覆盖到什么程度**。
+     * [v3.17.0 R-O1] 后一段是新的：快速档只要有一个源被截，页头就应说明
+     *   「N 条已索引 / 某源还有更多」—— 不能把「没扫到」显示成「不存在」。
+     */
     scopeSummary() {
         try {
             const n = this.engine.listSources().length;
-            const scanned = this.engine.build().length;
-            return `${n} 个来源 · ${scanned} 条记录`;
+            const full = this._fullMode === true;
+            const scanned = this.engine.build({ full: full }).length;
+            const scope = this.engine.scanScope(full);
+            const base = `${n} 个来源 · ${scanned} 条记录`;
+            const truncated = (scope && Array.isArray(scope.truncatedSources)) ? scope.truncatedSources : [];
+            if (!truncated.length) return base + (full ? ' · 全历史' : ' · 快速');
+            return base + ' · ' + (full ? '全历史' : '快速') + `（${truncated.length} 个来源有更多未索引）`;
         } catch (_e) { return ''; }
     }
+    /** 切换快速 / 全历史（切换即作废旧索引与旧扫描） */
+    toggleFullMode() {
+        this._fullMode = this._fullMode !== true;
+        this.invalidateAll();
+        return this._fullMode;
+    }
+    /**
+     * [v3.17.0 R-O1] 一次检索的唯一入口：快速档走同步 `query`，全历史档走分片 `searchAll`。
+     * @returns {{result:object, promise:(Promise|null)}}
+     */
+    search(kw, opt = {}) {
+        const sourceIds = this.view && this.view._scope ? [this.view._scope] : [];
+        const scopeOpt = Array.isArray(sourceIds) && sourceIds[0] ? { sourceIds: sourceIds } : {};
+        if (!this._fullMode) {
+            return { result: this.engine.query(kw, scopeOpt), promise: null };
+        }
+        if (typeof this.engine.searchAll !== 'function') {
+            /* [v3.17.0 R-O1] 内核没有分片入口时的**诚实降级**：
+             *   同步跑一次全历史查（如实报覆盖度），而不是退回
+             *   「只搜前 600 条还不说」—— 后者正是本版要消灭的那个形态。
+             *   判据不问源码文本，只问行为（见 tests/system-v3170 C6）。 */
+            return { result: this.engine.query(kw, Object.assign({}, scopeOpt, { full: true })), promise: null };
+        }
+        const gen = ++this._scanGen;
+        this._scanning = true;
+        const self = this;
+        const p = Promise.resolve().then(() => this.engine.searchAll(kw, Object.assign({}, scopeOpt, {
+            full: true,
+            onProgress: typeof opt.onProgress === 'function' ? opt.onProgress : null,
+            isCancelled: self.cancelToken(gen)
+        }))).then((r) => {
+            if (self._scanGen !== gen) return { cancelled: true, results: [], scope: r && r.scope };
+            self._scanning = false;
+            return r;
+        });
+        return { result: null, promise: p, gen: gen };
+    }
 
+    /**
+     * [v3.17.0 R-O1] 「数据变了」的唯一出口：索引失效 + **正在跑的扫描作废**。
+     * 编辑 / 删楼 / 重生成 / 换会话都走这里（前三个是宿主事件，第四个是换源）。
+     * 为什么必须连扫描一起作废：全历史扫一次可能跨几个帧，中途改楼后再把
+     *   旧索引的命中写回面板，就是「旧命中」本仓最忌讳的那类错（不报错、只错结果）。
+     * @returns {number} 新的代际号
+     */
+    invalidateAll() {
+        this.engine.invalidate();
+        this._scanGen++;
+        this._scanning = false;
+        return this._scanGen;
+    }
+    /** 换关键词 = 上一轮全历史扫描作废（但索引本身没脏，不 invalidate） */
+    newQueryToken() {
+        this._scanGen++;
+        this._scanning = false;
+        return this._scanGen;
+    }
+    /** 本轮代际的「取消」谓言（交给引擎的 `isCancelled`） */
+    cancelToken(gen) {
+        const self = this;
+        return function () { return self._scanGen !== gen; };
+    }
     render() {
         // 每次打开都重扫（数据可能刚变化）；检索本身仍在内存索引上完成
-        this.engine.invalidate();
+        this.invalidateAll();
         // [v2.81.0] 顺带对齐宿主侧源：宿主上下文刚就绪 / 刚换会话时，源表不能停在构造那一刻
         this._syncHostSources();
         this.view.render();
@@ -118,6 +197,16 @@ export class SearchApp {
         .gs-hint-chips { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:12px 0; }
         .gs-hint-chip { font-size:11px; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.07); color:#b6bac0; }
         .gs-hint-tip { font-size:11.5px; line-height:1.7; margin-top:10px; }
+        /* [v3.17.0 R-O1] 覆盖度：模式切换 / 扫描进度 / 截断告警 */
+        .gs-modebar { display:flex; gap:8px; align-items:center; margin:8px 16px 0; }
+        .gs-mode { border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#c9ccd1; border-radius:999px; padding:5px 12px; font-size:12px; cursor:pointer; }
+        .gs-mode.gs-mode-on { background:#4c8bf5; border-color:#4c8bf5; color:#fff; }
+        .gs-engine-unsupported { font-size:11px; color:#f2b544; }
+        .gs-scanbar { display:none; align-items:center; gap:8px; margin:8px 16px 0; padding:8px 12px; border-radius:12px; background:rgba(76,139,245,.12); font-size:11.5px; color:#b6bac0; }
+        .gs-scanbar.gs-scan-on { display:flex; }
+        .gs-scan-text { flex:1; min-width:0; }
+        .gs-scan-cancel { flex:0 0 auto; border:none; border-radius:999px; padding:4px 10px; font-size:11px; background:rgba(255,255,255,.12); color:#e8eaed; cursor:pointer; }
+        .gs-group-rest { font-size:10.5px; color:#f2b544; padding:2px 8px 8px; line-height:1.6; }
         </style>`;
     }
 }
