@@ -1,0 +1,1658 @@
+{
+ "note": "v3.16.0 追加 ch166 之前的万界武库冻结台账（内容以 md5 记，避免把 607KB 正文塞进 tests/audit）",
+ "frozen_at": "v3.15.0",
+ "count": 165,
+ "index_count": 165,
+ "packs": [
+  {
+   "id": "ch001",
+   "name": "赋能",
+   "quality": "普通",
+   "chars": 1727,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的结算改写权能，永久自动生效。",
+   "contentMd5": "fbc3c7363e8e7b359505b42133fbb724"
+  },
+  {
+   "id": "ch002",
+   "name": "点石成金",
+   "quality": "史诗",
+   "chars": 3872,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【点石成金】，是{{user}}执掌的绝对拔擢权能。",
+   "contentMd5": "6166397879e31dea8f46f36ee06acc0c"
+  },
+  {
+   "id": "ch003",
+   "name": "天材地宝",
+   "quality": "稀有",
+   "chars": 3217,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}真灵深处开辟的独属福地「万物尽头」。",
+   "contentMd5": "fbed39fd7d4402d5da441d46e5d9ca96"
+  },
+  {
+   "id": "ch004",
+   "name": "力量构筑",
+   "quality": "史诗",
+   "chars": 3821,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【力量构筑】，是{{user}}专属的超凡重编权柄。",
+   "contentMd5": "76219b6bc4190429b7e66c951995b36d"
+  },
+  {
+   "id": "ch005",
+   "name": "诸天投影镜",
+   "quality": "稀有",
+   "chars": 3363,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}真灵永久绑定的镜道至宝，常驻体内，不可剥离、不可遗失。",
+   "contentMd5": "80ed4e0682183291566369da3ebf5605"
+  },
+  {
+   "id": "ch006",
+   "name": "完美融合",
+   "quality": "稀有",
+   "chars": 3476,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「完美融合」，是{{user}}独有的融合权柄。",
+   "contentMd5": "8645a72deb5292e2463a1a77ce7a0e01"
+  },
+  {
+   "id": "ch007",
+   "name": "一以贯之",
+   "quality": "普通",
+   "chars": 1267,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}命格深处的恒定天赋。",
+   "contentMd5": "a957e64ab0306bb6ec292fc56551212b"
+  },
+  {
+   "id": "ch008",
+   "name": "太阳太阴御女天经",
+   "quality": "优秀",
+   "chars": 2420,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}本源永久绑定的无上阴阳法，以{{user}}为自生阴阳源头，以亲密共鸣为纽带，形成「{{user}}滋…",
+   "contentMd5": "58d2479c89bb12b20a7ad55b287bebf4"
+  },
+  {
+   "id": "ch009",
+   "name": "无龙心法",
+   "quality": "稀有",
+   "chars": 2666,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}心灵本源的法则。",
+   "contentMd5": "10e5c1c59937ff7ed9b7c48667ffb814"
+  },
+  {
+   "id": "ch010",
+   "name": "噬恶魔主",
+   "quality": "史诗",
+   "chars": 3615,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「噬恶魔主」，是与{{user}}真灵相系的先天神通，执掌裁恶、诛恶与化恶为资的权柄。",
+   "contentMd5": "8e2bbe164e734deb9593e36b50afce7e"
+  },
+  {
+   "id": "ch011",
+   "name": "收获升级",
+   "quality": "优秀",
+   "chars": 1915,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}命运永久绑定的被动增益天赋，所有真正归属{{user}}的正向收益，到手瞬间自动完成去杂、补全、升级，…",
+   "contentMd5": "a26b8ced99f8728b317ec747b9b1fdc8"
+  },
+  {
+   "id": "ch012",
+   "name": "旅法师",
+   "quality": "史诗",
+   "chars": 4439,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「旅法师」，是{{user}}真灵中觉醒的上古真实火花。",
+   "contentMd5": "cb29b3a7ed26c3ebcd1e40615890f0a5"
+  },
+  {
+   "id": "ch013",
+   "name": "他我融合",
+   "quality": "优秀",
+   "chars": 2280,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}真灵永久绑定的异时空同位体收束权能。",
+   "contentMd5": "b0e4541a22efc3f7bcf1e73f7b20c882"
+  },
+  {
+   "id": "ch014",
+   "name": "试炼空间",
+   "quality": "神话",
+   "chars": 14978,
+   "sub": 7,
+   "type": "平台型",
+   "desc": "试炼空间的运转核心，在于对「可能性」的碰撞、压缩与提炼。",
+   "contentMd5": "90aaf85c4efe9c5e64c7939afd12d3db"
+  },
+  {
+   "id": "ch015",
+   "name": "砺锋",
+   "quality": "优秀",
+   "chars": 2410,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}独有的专属重塑权柄，凡属于{{user}}、或已被{{user}}稳定掌握/支配的技艺、天赋、能力、兵器…",
+   "contentMd5": "fb3870164da21c17224efabd1db029d2"
+  },
+  {
+   "id": "ch016",
+   "name": "心渊",
+   "quality": "稀有",
+   "chars": 2892,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}意识深处绑定的私有肉鸽试炼界域。",
+   "contentMd5": "de85603cf736e526dd24364b71b36932"
+  },
+  {
+   "id": "ch017",
+   "name": "执遗",
+   "quality": "稀有",
+   "chars": 2763,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}灵魂本源刻印的机缘固化权柄。",
+   "contentMd5": "9451e7e2c9e52e3f9b7b2e807a6e9419"
+  },
+  {
+   "id": "ch018",
+   "name": "敕天法统",
+   "quality": "稀有",
+   "chars": 3347,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「敕天法统」是由{{user}}执掌的册命与统序权柄。",
+   "contentMd5": "0f200024950881f69eb757764561006c"
+  },
+  {
+   "id": "ch019",
+   "name": "电表倒转",
+   "quality": "稀有",
+   "chars": 2799,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}命运深度绑定的机制支配型权能，凡存在投入、结算、收益分配链条的系统（游戏副本、修炼体系、交易规则、天道…",
+   "contentMd5": "0ed33019731d530165b6931570fdef16"
+  },
+  {
+   "id": "ch020",
+   "name": "我全都要",
+   "quality": "优秀",
+   "chars": 2585,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「我全都要」，是{{user}}独有的全选权柄。",
+   "contentMd5": "b43926929d9ca64fc9664d46f81dc901"
+  },
+  {
+   "id": "ch021",
+   "name": "汝命乃柴",
+   "quality": "优秀",
+   "chars": 2363,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}执掌的终结权柄。",
+   "contentMd5": "0c37e236e0380f9fd9cb758cdd1a08f7"
+  },
+  {
+   "id": "ch022",
+   "name": "如天至福",
+   "quality": "传说",
+   "chars": 4751,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【如天至福】，是与{{user}}命运根基永久相连的常驻天眷权柄。",
+   "contentMd5": "451a89bc428c3c060cc22680fcf09ab6"
+  },
+  {
+   "id": "ch023",
+   "name": "映我真形",
+   "quality": "优秀",
+   "chars": 2219,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}生命本质绑定的常驻统合权柄。",
+   "contentMd5": "66604867841797ca674f7cd93975d5c1"
+  },
+  {
+   "id": "ch024",
+   "name": "念气体系",
+   "quality": "稀有",
+   "chars": 2771,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}生命本源绑定的专属力量体系。",
+   "contentMd5": "f4da2bf0e6aa01b11cfe42876ea68ccb"
+  },
+  {
+   "id": "ch025",
+   "name": "代价减免",
+   "quality": "稀有",
+   "chars": 3044,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「代价减免」，是{{user}}专属的代价压缩权柄。",
+   "contentMd5": "66961344378e65d8cfbd9dc07e500228"
+  },
+  {
+   "id": "ch026",
+   "name": "熟练度状态栏",
+   "quality": "神话",
+   "chars": 6370,
+   "sub": 3,
+   "type": "个人型",
+   "desc": "「熟练度状态栏」，是与{{user}}意识相连的技艺成长权柄。",
+   "contentMd5": "46e67c3daebee373ff2fa6f9286bc533"
+  },
+  {
+   "id": "ch027",
+   "name": "第一性原理",
+   "quality": "史诗",
+   "chars": 3790,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「第一性原理」，是{{user}}专属的根源解析权柄。",
+   "contentMd5": "6b7687bfcf6703669b0b0cbe745f42d2"
+  },
+  {
+   "id": "ch028",
+   "name": "一言为定",
+   "quality": "普通",
+   "chars": 1772,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}命数之上的应诺权柄。",
+   "contentMd5": "a357346744be2f7e6e0078ee0512f071"
+  },
+  {
+   "id": "ch029",
+   "name": "幻想具现",
+   "quality": "史诗",
+   "chars": 3714,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【幻想具现】，是将幻想原型直接显化为现实造物的权柄。",
+   "contentMd5": "7bfa1b74fb4a790036cac78c1af8daa4"
+  },
+  {
+   "id": "ch030",
+   "name": "传颂之名",
+   "quality": "史诗",
+   "chars": 3509,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「传颂之名」，是让名号与现实相互映照的权能。",
+   "contentMd5": "ce697204a5785f8e170515b5f6608e57"
+  },
+  {
+   "id": "ch031",
+   "name": "人间游戏",
+   "quality": "史诗",
+   "chars": 3850,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「人间游戏」，是铭刻于{{user}}身上的唯一玩家权柄。",
+   "contentMd5": "6e48a04d1331c3b51b502c25507e51e5"
+  },
+  {
+   "id": "ch032",
+   "name": "天人骨血",
+   "quality": "传说",
+   "chars": 4689,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【天人骨血】，是铭刻于{{user}}生命本源的高位神性人形模板。",
+   "contentMd5": "3bb1dacfefee2358ef2187e865c1e656"
+  },
+  {
+   "id": "ch033",
+   "name": "孤月的爱",
+   "quality": "稀有",
+   "chars": 3401,
+   "sub": 2,
+   "type": "个人型",
+   "desc": "寄宿于{{user}}灵魂的专属伴生护道权柄，外显为白发兔娘孤月。",
+   "contentMd5": "8ae2526e34f0cae3d8012b01d1a94ca2"
+  },
+  {
+   "id": "ch034",
+   "name": "现实骇客",
+   "quality": "优秀",
+   "chars": 2588,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}独有的现实改写权柄。",
+   "contentMd5": "04de8646a298c37aa95caaf96b46f7b1"
+  },
+  {
+   "id": "ch035",
+   "name": "吐槽具现",
+   "quality": "优秀",
+   "chars": 1817,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "独属于{{user}}的槽能显化权柄。",
+   "contentMd5": "73fcbb7eeac305da93d1cf06c519b447"
+  },
+  {
+   "id": "ch036",
+   "name": "门扉敞开",
+   "quality": "普通",
+   "chars": 1309,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}执掌的空间通行权柄。",
+   "contentMd5": "df70d6c3153c52f1dd9a4fa2e9ffbce6"
+  },
+  {
+   "id": "ch037",
+   "name": "有限全知",
+   "quality": "优秀",
+   "chars": 2572,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}独有的知见权柄。",
+   "contentMd5": "3131bc01324cd53f0f4eed1ce437659b"
+  },
+  {
+   "id": "ch038",
+   "name": "万世革新",
+   "quality": "稀有",
+   "chars": 2987,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}真灵的革新权柄。",
+   "contentMd5": "0ccb9f55a69db17083c054afa762f5a0"
+  },
+  {
+   "id": "ch039",
+   "name": "我道长青",
+   "quality": "优秀",
+   "chars": 2392,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "扎根于{{user}}灵魂的长青道树。",
+   "contentMd5": "099df984840958ba99480106bcc93b89"
+  },
+  {
+   "id": "ch040",
+   "name": "前路无疆",
+   "quality": "优秀",
+   "chars": 2460,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}真灵的开疆权柄。",
+   "contentMd5": "100f24b02ceac7b77dfec9b9704b1ec3"
+  },
+  {
+   "id": "ch041",
+   "name": "往尽开来",
+   "quality": "优秀",
+   "chars": 2393,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}本源的终章权柄。",
+   "contentMd5": "6a2d27e62fc77bcf4621a89a5cf9d296"
+  },
+  {
+   "id": "ch042",
+   "name": "先行一步",
+   "quality": "优秀",
+   "chars": 2453,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻于{{user}}身上的速度主权。",
+   "contentMd5": "6986a550760ad714162f5e83b1471f95"
+  },
+  {
+   "id": "ch043",
+   "name": "人生模拟",
+   "quality": "传说",
+   "chars": 5070,
+   "sub": 2,
+   "type": "平台型",
+   "desc": "「人生模拟」，是{{user}}独有的命途预演权柄。",
+   "contentMd5": "14fb4564c34f63293830adf122c92699"
+  },
+  {
+   "id": "ch044",
+   "name": "词条系统",
+   "quality": "传说",
+   "chars": 4938,
+   "sub": 3,
+   "type": "平台型",
+   "desc": "附着于{{user}}自身的禀赋编定权柄。",
+   "contentMd5": "82f67dd487073c02fcce9ade6b4b5a93"
+  },
+  {
+   "id": "ch045",
+   "name": "我命由我",
+   "quality": "神话",
+   "chars": 8433,
+   "sub": 5,
+   "type": "外挂",
+   "desc": "我命由我，乃落于{{user}}身上的命数主权。",
+   "contentMd5": "638ab6cda8bd75a83cec49408ba45184"
+  },
+  {
+   "id": "ch046",
+   "name": "脑洞",
+   "quality": "神话",
+   "chars": 14396,
+   "sub": 5,
+   "type": "外挂",
+   "desc": "脑洞的核心，不在空想成真。",
+   "contentMd5": "70c597e6b705f5926e2257b312778ced"
+  },
+  {
+   "id": "ch047",
+   "name": "绝对命中",
+   "quality": "史诗",
+   "chars": 4268,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【绝对命中】，是{{user}}专属的命中必然化权柄。",
+   "contentMd5": "edde5381ad4713ab46e8bbd0e2daf3be"
+  },
+  {
+   "id": "ch048",
+   "name": "性别反转",
+   "quality": "优秀",
+   "chars": 2162,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "性别反转归于{{user}}。",
+   "contentMd5": "6d2597b1b91c2e0114368c57f49d85ca"
+  },
+  {
+   "id": "ch049",
+   "name": "签到",
+   "quality": "稀有",
+   "chars": 3131,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "「签到」，是与{{user}}长期绑定的常驻收益权柄。",
+   "contentMd5": "747968834d73a90193a5d717b02e9793"
+  },
+  {
+   "id": "ch050",
+   "name": "挂机",
+   "quality": "史诗",
+   "chars": 4377,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "「挂机」，是与{{user}}意识和本源相连的征伐型权柄。",
+   "contentMd5": "1507ed20593925b3fea67a6db98492ab"
+  },
+  {
+   "id": "ch051",
+   "name": "指数增长",
+   "quality": "稀有",
+   "chars": 2868,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}本源绑定的指数化成长权柄。",
+   "contentMd5": "e70f8b045dc1339739fc343fe50c8a6c"
+  },
+  {
+   "id": "ch052",
+   "name": "万灵图鉴",
+   "quality": "史诗",
+   "chars": 4421,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "「万灵图鉴」，是与{{user}}本源绑定的万灵统御权柄。",
+   "contentMd5": "2e94b98f3f660856ed9b74caf24c3b1e"
+  },
+  {
+   "id": "ch053",
+   "name": "无限能量",
+   "quality": "普通",
+   "chars": 1620,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}绑定的无限供能权柄。",
+   "contentMd5": "36ff6b1fd9a12803bfc337731250ba73"
+  },
+  {
+   "id": "ch054",
+   "name": "万界垃圾场",
+   "quality": "稀有",
+   "chars": 2693,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "与{{user}}绑定的诸天废弃物流转平台。",
+   "contentMd5": "160e1ae90537ef2bcba076733313952b"
+  },
+  {
+   "id": "ch055",
+   "name": "绝对适应",
+   "quality": "史诗",
+   "chars": 3999,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【绝对适应】，是与{{user}}本源相连的生存、进化与自我完善权柄。",
+   "contentMd5": "b8187af85f03de5becf5334bd994534c"
+  },
+  {
+   "id": "ch056",
+   "name": "深蓝",
+   "quality": "史诗",
+   "chars": 3810,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【深蓝】，是将{{user}}所拥有的一切现实积累持续转化为自身成长的升格权柄。",
+   "contentMd5": "24b3d0ae822db5910dadba2474058e6d"
+  },
+  {
+   "id": "ch057",
+   "name": "生命球",
+   "quality": "史诗",
+   "chars": 4186,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「生命球」，是铭刻于{{user}}生命本源的生命定义权柄。",
+   "contentMd5": "8cebe0e95f9083a4c62f03476317c8c2"
+  },
+  {
+   "id": "ch058",
+   "name": "归我所有",
+   "quality": "普通",
+   "chars": 1545,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的胜者增益权柄。",
+   "contentMd5": "a835c6ccbaae5fd2ca2ea0bf454a2577"
+  },
+  {
+   "id": "ch059",
+   "name": "装备栏",
+   "quality": "史诗",
+   "chars": 4177,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【装备栏】，是与{{user}}本源相连的形而上装备权能。",
+   "contentMd5": "e5910ebeea9c4e14c6b6dcda4ef9797f"
+  },
+  {
+   "id": "ch060",
+   "name": "创生之法",
+   "quality": "稀有",
+   "chars": 2980,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}专属的生命创生权能，从26种固定属性中选取1-3种组合为公式，消耗微量精神力即可创造出真实、稳定、独立的…",
+   "contentMd5": "f7bce9ddddf1fac32d05f90540c01956"
+  },
+  {
+   "id": "ch061",
+   "name": "功德印",
+   "quality": "优秀",
+   "chars": 2206,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "功德印，是一枚法则烙印，将\"善有善报\"从模糊愿景改写为只对{{user}}生效的刚性结算。",
+   "contentMd5": "8f6cf6f415fc68836b5f4f746aa58099"
+  },
+  {
+   "id": "ch062",
+   "name": "诸我身",
+   "quality": "优秀",
+   "chars": 2313,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的全时态自我分化权柄。",
+   "contentMd5": "8190a490e2051c05983ee78ada6a7b6e"
+  },
+  {
+   "id": "ch063",
+   "name": "强买强卖",
+   "quality": "普通",
+   "chars": 880,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的交易规则改写权能。",
+   "contentMd5": "d8278f164b3af9f4a3adb32980fdbfc6"
+  },
+  {
+   "id": "ch064",
+   "name": "心光具现仪",
+   "quality": "优秀",
+   "chars": 1853,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}绝对绑定的辉光变身权柄。",
+   "contentMd5": "5453e4b3b13e346ca383525b15c78a47"
+  },
+  {
+   "id": "ch065",
+   "name": "等价交换",
+   "quality": "稀有",
+   "chars": 2909,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「等价交换」，是{{user}}专属的价值尺度改写权能。",
+   "contentMd5": "bb44b688cace6a339d967db98d00a3e5"
+  },
+  {
+   "id": "ch066",
+   "name": "多倍收获系统",
+   "quality": "稀有",
+   "chars": 2688,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【多倍收获系统】，是与{{user}}本源相连的收获倍增权柄。",
+   "contentMd5": "6da1cd9cb3a86a7b9935af351d57eae8"
+  },
+  {
+   "id": "ch067",
+   "name": "文明之光系统",
+   "quality": "神话",
+   "chars": 10562,
+   "sub": 4,
+   "type": "平台型",
+   "desc": "「文明之光系统」，是与{{user}}绑定的文明跃迁权柄。",
+   "contentMd5": "860ffc0f05963a0dc54f65f74011f078"
+  },
+  {
+   "id": "ch068",
+   "name": "万象神魔图录",
+   "quality": "史诗",
+   "chars": 4050,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "「万象神魔图录」，是{{user}}专属的原型收录与征服权柄。",
+   "contentMd5": "d950fda2f3a51288b44ff9b9aaf78ea8"
+  },
+  {
+   "id": "ch069",
+   "name": "特性赋予",
+   "quality": "普通",
+   "chars": 1427,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}绝对绑定的属性改写权柄。",
+   "contentMd5": "e0d9abd53cb1b9e1d987de7df1509ae4"
+  },
+  {
+   "id": "ch070",
+   "name": "万界网购",
+   "quality": "史诗",
+   "chars": 4346,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "【万界网购】，是与{{user}}本源绑定的跨维度资源交易权柄。",
+   "contentMd5": "19251a7c66169335fc788cb74bff3458"
+  },
+  {
+   "id": "ch071",
+   "name": "开锁",
+   "quality": "普通",
+   "chars": 955,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}打开世间一切\"锁\"的绝对权限。",
+   "contentMd5": "4b773327fe6895ff9866d351b2cfd9fb"
+  },
+  {
+   "id": "ch072",
+   "name": "既要又要",
+   "quality": "普通",
+   "chars": 1586,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的悖论调停权柄。",
+   "contentMd5": "75002d1f52b626c8f2f5b61a392d7c54"
+  },
+  {
+   "id": "ch073",
+   "name": "知见障",
+   "quality": "优秀",
+   "chars": 2440,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}执掌的唯我定义权柄。",
+   "contentMd5": "b6b5391614ec327711f4395ab372eb68"
+  },
+  {
+   "id": "ch074",
+   "name": "时空主宰",
+   "quality": "优秀",
+   "chars": 2459,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}意志所及的时空双重支配权柄。",
+   "contentMd5": "62d91377af366510c728e2376f85c488"
+  },
+  {
+   "id": "ch075",
+   "name": "每日情报",
+   "quality": "史诗",
+   "chars": 3738,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【每日情报】，是绑定于{{user}}的情报权柄。",
+   "contentMd5": "3226b0be766d6d5e20486a786ad3c028"
+  },
+  {
+   "id": "ch076",
+   "name": "无物可与水争",
+   "quality": "普通",
+   "chars": 1525,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的属性绝对优先权。",
+   "contentMd5": "6f881644ad35a37ac343cda5c42fda26"
+  },
+  {
+   "id": "ch077",
+   "name": "非凡成就系统",
+   "quality": "优秀",
+   "chars": 1834,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "铭刻{{user}}一切非凡事迹的认知回响框架。",
+   "contentMd5": "3e5289993fe77c64869aceecd9b673e1"
+  },
+  {
+   "id": "ch078",
+   "name": "自定义式",
+   "quality": "稀有",
+   "chars": 3074,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}拥有数值合并公式的编撰权。",
+   "contentMd5": "3f50b98e42d8f1a54b12a3135505bdf3"
+  },
+  {
+   "id": "ch079",
+   "name": "两极反转",
+   "quality": "普通",
+   "chars": 1394,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "两极反转，是将一切作用于{{user}}自身的效果极性永久颠倒的被动法则。",
+   "contentMd5": "f503472634a7ccdf6bcbe1f531b1dd9a"
+  },
+  {
+   "id": "ch080",
+   "name": "新版功德印",
+   "quality": "史诗",
+   "chars": 3632,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "功德印，是一枚法则烙印，将“善有善报”从模糊愿景改写为只对{{user}}生效的刚性结算。",
+   "contentMd5": "3ae5a31b52dba0f0feeff5f7ae1db57d"
+  },
+  {
+   "id": "ch081",
+   "name": "灼魂之焰",
+   "quality": "优秀",
+   "chars": 2184,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "灼魂之焰是存在于{{user}}灵魂深处的进取之火，亦是其决心自我超越的原初动力。",
+   "contentMd5": "386886eb6fe82f39c1a98e42e4ea8993"
+  },
+  {
+   "id": "ch082",
+   "name": "太始天",
+   "quality": "传说",
+   "chars": 5862,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【太始天】，是寄宿于{{user}}生命本源之中、与{{user}}共生演化的原初洞天。",
+   "contentMd5": "2f18980ff4d126f4bdce46d4fe23d1ab"
+  },
+  {
+   "id": "ch083",
+   "name": "心灵武装化",
+   "quality": "史诗",
+   "chars": 3994,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「心灵武装化」，是将{{user}}的情感、信念、羁绊与意志凝结为现实武装的心灵权能。",
+   "contentMd5": "b6c60158bec10b253cc92a42c2706d7b"
+  },
+  {
+   "id": "ch084",
+   "name": "万界店铺",
+   "quality": "传说",
+   "chars": 5664,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}拥有一间可向诸天万界一切生灵出售商品的店铺。",
+   "contentMd5": "16694be02c15c0bed03f8a4de290fdfd"
+  },
+  {
+   "id": "ch085",
+   "name": "恒耀之血",
+   "quality": "传说",
+   "chars": 5474,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "这是流淌在{{user}}血脉中的永恒炉心。",
+   "contentMd5": "e73d10ba600fc12db9ff4608b9bb1abd"
+  },
+  {
+   "id": "ch086",
+   "name": "VIP特权",
+   "quality": "稀有",
+   "chars": 3228,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}专属的跨维度会员权能。",
+   "contentMd5": "7be7393d4898c3d38a9bae6f06337436"
+  },
+  {
+   "id": "ch087",
+   "name": "模板",
+   "quality": "传说",
+   "chars": 5612,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【模板】，是{{user}}对自身存在规格的定义与成长权柄。",
+   "contentMd5": "2215d107b1d2cf66ae4e44f937a4ded7"
+  },
+  {
+   "id": "ch088",
+   "name": "抽奖系统",
+   "quality": "优秀",
+   "chars": 2418,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "抽奖系统，是{{user}}专属的概念级每日福利发放机制。",
+   "contentMd5": "4d65591dcb1f2d691a478efc0f9aa287"
+  },
+  {
+   "id": "ch089",
+   "name": "全知档案馆",
+   "quality": "优秀",
+   "chars": 2542,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "独属于{{user}}的无限信息中枢。",
+   "contentMd5": "b26fb05cd69c2d5a8c8a452b47a0a2bf"
+  },
+  {
+   "id": "ch090",
+   "name": "终点",
+   "quality": "普通",
+   "chars": 1695,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}独有的终末裁定权柄。",
+   "contentMd5": "34f2ffb580572bcc25c17059f27db1e1"
+  },
+  {
+   "id": "ch091",
+   "name": "分二",
+   "quality": "优秀",
+   "chars": 2519,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【分二】，乃触及“无限”之本源法则的权柄。",
+   "contentMd5": "88bafd76f96de82339dbd9f76348890b"
+  },
+  {
+   "id": "ch092",
+   "name": "咨询法",
+   "quality": "史诗",
+   "chars": 4054,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「咨询法」，是让{{user}}与万物所留下的“被铭记之形”建立联系的权能。",
+   "contentMd5": "65bcdbe746f3924c8e94653e4a7a687c"
+  },
+  {
+   "id": "ch093",
+   "name": "存在侦测",
+   "quality": "优秀",
+   "chars": 2489,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}可对感知范围内的任意个体进行全方位高精度侦测。",
+   "contentMd5": "ce7086ffd833a199677242d3b7b2966d"
+  },
+  {
+   "id": "ch094",
+   "name": "钟灵毓秀",
+   "quality": "稀有",
+   "chars": 3190,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「钟灵毓秀」是常驻于{{user}}身上的万物偏爱法则。",
+   "contentMd5": "5713d4ff027458ba078265671800ca6b"
+  },
+  {
+   "id": "ch095",
+   "name": "十倍返利",
+   "quality": "普通",
+   "chars": 1198,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的消费返利权能。",
+   "contentMd5": "e236da885a4b0fcf82401d8f37c3dad6"
+  },
+  {
+   "id": "ch096",
+   "name": "万界武库",
+   "quality": "优秀",
+   "chars": 2433,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}专属的跨维度武备调配权能。",
+   "contentMd5": "d033c1a80e190aa5314d17cf27321cd9"
+  },
+  {
+   "id": "ch097",
+   "name": "大劫主",
+   "quality": "稀有",
+   "chars": 3371,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「大劫主」，是{{user}}执掌劫难的至高裁决权柄。",
+   "contentMd5": "2d3dc0c26dd42c1cf8947624101758ac"
+  },
+  {
+   "id": "ch098",
+   "name": "攻防一体",
+   "quality": "优秀",
+   "chars": 2205,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【攻防一体】，是{{user}}专属的概念型永驻异能。",
+   "contentMd5": "40472d912d359bcbbe0168702fd4d75b"
+  },
+  {
+   "id": "ch099",
+   "name": "合道补天",
+   "quality": "优秀",
+   "chars": 2092,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}与天地建立的互惠共生权柄。",
+   "contentMd5": "28dd09d4fd4f20db62d85072c7b21533"
+  },
+  {
+   "id": "ch100",
+   "name": "进化之炎",
+   "quality": "普通",
+   "chars": 1698,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}本命神焰，不以温度焚毁，而以\"本质升华\"推动被灼烧的一切不断打破极限，迈向更高概念层次。",
+   "contentMd5": "919ab63a8581eb295bdc44a40a221dbb"
+  },
+  {
+   "id": "ch101",
+   "name": "可能性",
+   "quality": "优秀",
+   "chars": 1984,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}执掌的现实覆写权柄。",
+   "contentMd5": "392eceb75fc60c2a7e8bb38e0175932b"
+  },
+  {
+   "id": "ch102",
+   "name": "轮回章",
+   "quality": "稀有",
+   "chars": 2812,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}灵魂深处刻印的多周目命运系统。",
+   "contentMd5": "dcb71a2757b985dc6c6b0df9451a4e85"
+  },
+  {
+   "id": "ch103",
+   "name": "明阳阙阴天枢合真正法",
+   "quality": "稀有",
+   "chars": 3004,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "与{{user}}灵魂伴生的无上正法，宇宙开辟之初「明阳」与「阙阴」两道根源法则循\"合真道律\"凝结的道之显化。",
+   "contentMd5": "7aaa2a50da5cb2c68e3f39790ba3ec8a"
+  },
+  {
+   "id": "ch104",
+   "name": "升华",
+   "quality": "优秀",
+   "chars": 2508,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}独有的重塑权柄。",
+   "contentMd5": "f288a4b7bd135d26e7511c6d43f3584a"
+  },
+  {
+   "id": "ch105",
+   "name": "万妙佛法",
+   "quality": "史诗",
+   "chars": 4335,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}执掌的佛陀法脉。",
+   "contentMd5": "14a598c408231ccebd82f564610373e2"
+  },
+  {
+   "id": "ch106",
+   "name": "无上位格",
+   "quality": "稀有",
+   "chars": 2818,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}执掌的优先级主权位格。",
+   "contentMd5": "f6846bc71538ca43643b72e39bccf916"
+  },
+  {
+   "id": "ch107",
+   "name": "一念通神",
+   "quality": "稀有",
+   "chars": 2991,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}执掌的无限学习权柄。",
+   "contentMd5": "cca5bb24e937d76d400fd1fdbe160f20"
+  },
+  {
+   "id": "ch108",
+   "name": "脑洞大爆炸",
+   "quality": "史诗",
+   "chars": 4410,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【脑洞大爆炸】，是与{{user}}本源相连的绝对设定权柄。",
+   "contentMd5": "9f697c205d900b98063f79953d9f0b75"
+  },
+  {
+   "id": "ch109",
+   "name": "描述改写",
+   "quality": "优秀",
+   "chars": 2020,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的描述改写权能。",
+   "contentMd5": "f74c8c078156aadc1b1b4c36aa3937e4"
+  },
+  {
+   "id": "ch110",
+   "name": "置物栏",
+   "quality": "优秀",
+   "chars": 2238,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的规则级收纳权能。",
+   "contentMd5": "a37a9bbc543487b4c39df02c26d8a1d2"
+  },
+  {
+   "id": "ch111",
+   "name": "太初魂座",
+   "quality": "稀有",
+   "chars": 2727,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的灵魂基盘。",
+   "contentMd5": "348037fbdc36ba43933514e8229c935b"
+  },
+  {
+   "id": "ch112",
+   "name": "日冕战躯",
+   "quality": "稀有",
+   "chars": 3310,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的超人类进化权能。",
+   "contentMd5": "5c6143e0fcf69b4df3fde71e4841320d"
+  },
+  {
+   "id": "ch113",
+   "name": "职业者",
+   "quality": "稀有",
+   "chars": 2996,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的职业权能。",
+   "contentMd5": "f6f8e8e9ca34d46eac2c19e3ed7bd1b6"
+  },
+  {
+   "id": "ch114",
+   "name": "+3",
+   "quality": "普通",
+   "chars": 1550,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的概念级加法权能。",
+   "contentMd5": "546cfb1dbc2b44df4ba00dda5d93b24c"
+  },
+  {
+   "id": "ch115",
+   "name": "绝对上位",
+   "quality": "普通",
+   "chars": 1058,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的位格压制权能。",
+   "contentMd5": "e61909b5a4b2bdccfe3dd27f18e730d0"
+  },
+  {
+   "id": "ch116",
+   "name": "绝对超然",
+   "quality": "优秀",
+   "chars": 2122,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的位面超越权能。",
+   "contentMd5": "402bbf489ba12f3daf62a1ed776d29b1"
+  },
+  {
+   "id": "ch117",
+   "name": "拓印",
+   "quality": "史诗",
+   "chars": 3962,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「拓印」，是{{user}}将万物规律收为自身模式的复刻权能。",
+   "contentMd5": "aa3d3e54876c740301b9fab872b2b3e3"
+  },
+  {
+   "id": "ch118",
+   "name": "质能转换",
+   "quality": "普通",
+   "chars": 1701,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "{{user}}专属的物理法则改写权能。",
+   "contentMd5": "52626fd0dcefcb361ab5d71c381dd532"
+  },
+  {
+   "id": "ch119",
+   "name": "原力与光剑与吾同在",
+   "quality": "稀有",
+   "chars": 3221,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「原力与光剑与吾同在」，是{{user}}自身的原力源头与光剑权柄。",
+   "contentMd5": "966c4797a56aee3e102c8ab003a6ac54"
+  },
+  {
+   "id": "ch120",
+   "name": "心相武装",
+   "quality": "稀有",
+   "chars": 2757,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的情感具现化权能。",
+   "contentMd5": "121641e4f2d1a24fe24e2c973788bb5f"
+  },
+  {
+   "id": "ch121",
+   "name": "万藏之馆",
+   "quality": "稀有",
+   "chars": 3274,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的征伐与收藏中枢。",
+   "contentMd5": "6d98eb6f6fa9292e160e3e9960b264ab"
+  },
+  {
+   "id": "ch122",
+   "name": "飞升",
+   "quality": "稀有",
+   "chars": 3366,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的跨世界螺旋擢升权能。",
+   "contentMd5": "201412564d7d5b05b737f44b3c234f34"
+  },
+  {
+   "id": "ch123",
+   "name": "自无中生",
+   "quality": "优秀",
+   "chars": 2594,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}专属的生命创生权能。",
+   "contentMd5": "63714c0586de335edaaa5a2037e3c9d4"
+  },
+  {
+   "id": "ch124",
+   "name": "诸天店铺",
+   "quality": "传说",
+   "chars": 5664,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}拥有一间可向诸天万界一切生灵出售商品的店铺。",
+   "contentMd5": "16694be02c15c0bed03f8a4de290fdfd"
+  },
+  {
+   "id": "ch125",
+   "name": "恒曜之血",
+   "quality": "传说",
+   "chars": 4549,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "流淌在{{user}}血脉中的永恒炉心。",
+   "contentMd5": "0df9189e538781b82d75426aede28277"
+  },
+  {
+   "id": "ch126",
+   "name": "升变之印",
+   "quality": "史诗",
+   "chars": 3568,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「升变之印」是{{user}}觉醒的可能性改写权能。",
+   "contentMd5": "28967a64048584a3aa7fe4e0bd2d21b9"
+  },
+  {
+   "id": "ch127",
+   "name": "排列组合",
+   "quality": "稀有",
+   "chars": 3139,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "排列组合，是{{user}}专属的汉字创世权能。",
+   "contentMd5": "e55120219841bcdffcac86456a648e51"
+  },
+  {
+   "id": "ch128",
+   "name": "万界武库思维链",
+   "quality": "稀有",
+   "chars": 3023,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "",
+   "contentMd5": "491626d940fb9f29dc475a80df9435c5"
+  },
+  {
+   "id": "ch129",
+   "name": "挚友列表",
+   "quality": "稀有",
+   "chars": 3260,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "{{user}}专属的关系缔结与万界社交权柄。",
+   "contentMd5": "c2bf5481b9cc2c85c80bcd87354124f7"
+  },
+  {
+   "id": "ch130",
+   "name": "攻略系统",
+   "quality": "史诗",
+   "chars": 3825,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「攻略系统」是{{user}}专属的关系成长权能。",
+   "contentMd5": "4892b547d27073582dd881af237d0f4d"
+  },
+  {
+   "id": "ch131",
+   "name": "自我束缚",
+   "quality": "史诗",
+   "chars": 3755,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「自我束缚」，是将自我限制转化为力量与收益的特殊权柄。",
+   "contentMd5": "227b6c6d6e67f94faf0620a1aacf0a61"
+  },
+  {
+   "id": "ch132",
+   "name": "道途",
+   "quality": "传说",
+   "chars": 4610,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「道途」，是概念凝成的路，也是万物从“是什么”走向“更加成为自己”的超凡体系。",
+   "contentMd5": "a844d842f227301bfb2a20fdc1df0959"
+  },
+  {
+   "id": "ch133",
+   "name": "生物计算机",
+   "quality": "稀有",
+   "chars": 3391,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「生物计算机」，是随生命同生的身载智能。",
+   "contentMd5": "95786ead077fb36c533ca0ddb708225b"
+  },
+  {
+   "id": "ch134",
+   "name": "奇迹智子",
+   "quality": "传说",
+   "chars": 5125,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "「奇迹智子」，是与{{user}}本源相连、由{{user}}亲手拥立的伴生智慧生命集群。",
+   "contentMd5": "8c45ce2b3db1cee8b7833f1bda3c87cb"
+  },
+  {
+   "id": "ch135",
+   "name": "战力倍增",
+   "quality": "稀有",
+   "chars": 3482,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【战力倍增】，是将{{user}}一切战斗实力统一放大的绝对权柄。",
+   "contentMd5": "308832debd626396a40367f214826aa4"
+  },
+  {
+   "id": "ch136",
+   "name": "密码正确",
+   "quality": "史诗",
+   "chars": 4191,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【密码正确】，是{{user}}专属的丧气话觉醒权能。",
+   "contentMd5": "cd79d0cc94d8449fb6e2208db55123a5"
+  },
+  {
+   "id": "ch137",
+   "name": "无限量供应",
+   "quality": "优秀",
+   "chars": 2212,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "无限量供应，是{{user}}专属的吞噬复制权能。",
+   "contentMd5": "86451ef7e8234fe38649de1e68b86f22"
+  },
+  {
+   "id": "ch138",
+   "name": "影",
+   "quality": "史诗",
+   "chars": 3599,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "影，是{{user}}专属的影子权能。",
+   "contentMd5": "b128e2d5cc11104f39f90d1d0ffa1dcc"
+  },
+  {
+   "id": "ch139",
+   "name": "故事点",
+   "quality": "稀有",
+   "chars": 3319,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「故事点」，是{{user}}独有的叙事货币，也是直接批改现实的权柄。",
+   "contentMd5": "5e746a682e34137055ae68f6508d3d43"
+  },
+  {
+   "id": "ch140",
+   "name": "早有先例",
+   "quality": "稀有",
+   "chars": 3492,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「早有先例」，是将真实历史转化为现实依据的特殊权柄。",
+   "contentMd5": "7445e782cfd801c18722b53098839ca9"
+  },
+  {
+   "id": "ch141",
+   "name": "自动填坑",
+   "quality": "史诗",
+   "chars": 4214,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「自动填坑」，是一项专门服务于{{user}}自身创作与灵感的万能补完权能。",
+   "contentMd5": "bdcaa593656dae0588defa1e1e59f6fb"
+  },
+  {
+   "id": "ch142",
+   "name": "伤害储存",
+   "quality": "普通",
+   "chars": 1249,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "「伤害储存」，可以将{{user}}施加于敌人的一切杀伤性效果暂时储存，使其在真正需要结算时再一次性释放。",
+   "contentMd5": "7a8822b7c1d1150f0319bc43281f6c57"
+  },
+  {
+   "id": "ch143",
+   "name": "俺寻思",
+   "quality": "稀有",
+   "chars": 3028,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「俺寻思」，是一种不讲道理的现实合理化权能。",
+   "contentMd5": "8aa163cdba16bf17ca60a0b87dc621af"
+  },
+  {
+   "id": "ch144",
+   "name": "先祖投资人",
+   "quality": "史诗",
+   "chars": 4137,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「先祖投资人」，是将现世成果投入血脉源头，再由祖先与历史重新塑造自身来路的绝对权能。",
+   "contentMd5": "5579778b6f99f2e56d8991f8de88eb69"
+  },
+  {
+   "id": "ch145",
+   "name": "阿撒托斯之梦",
+   "quality": "传说",
+   "chars": 4942,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "{{user}}即阿撒托斯，万物之主，盲目痴愚之神。",
+   "contentMd5": "e1bb238b62b4061adbaefcb3386f2167"
+  },
+  {
+   "id": "ch146",
+   "name": "源堡",
+   "quality": "传说",
+   "chars": 5662,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "【源堡】，是诡秘与时空的至高源质，亦是变化、隐秘、窃取、历史、时间、命运、空间与灵界诸般权柄汇聚而成的神秘宫殿。",
+   "contentMd5": "d184fac3b077b088873163d5336215a2"
+  },
+  {
+   "id": "ch147",
+   "name": "混沌海",
+   "quality": "传说",
+   "chars": 4859,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "【混沌海】，是全知、空想、神圣、风暴、物质、心灵、腐化、牺牲与全能力量交汇而成的至高源质，亦是知识、可能与现实相互转化的…",
+   "contentMd5": "8f394e15d42a43559956e46ad0177a54"
+  },
+  {
+   "id": "ch148",
+   "name": "永暗之河",
+   "quality": "传说",
+   "chars": 5648,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "【永暗之河】，是死亡、永眠、终点、尽头、深暗、黄昏、衰败与亡灵汇聚而成的至高源质，亦是万物抵达终点后的归宿。",
+   "contentMd5": "37da3183a39a2b52c68813e4d9ebddc8"
+  },
+  {
+   "id": "ch149",
+   "name": "母巢",
+   "quality": "传说",
+   "chars": 5628,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "【母巢】，是生命、自然、大地、繁衍、灵性、血液、月亮、美丽与生命循环汇聚而成的至高源质，亦是万物孕育、成长、变化与回归的…",
+   "contentMd5": "8511c720e935892ec33e4efa624346fb"
+  },
+  {
+   "id": "ch150",
+   "name": "知识荒野",
+   "quality": "神话",
+   "chars": 6474,
+   "sub": 1,
+   "type": "平台型",
+   "desc": "【知识荒野】，是知识、信息、记忆、智慧、规律、神秘学、制造与文明汇聚而成的至高源质。",
+   "contentMd5": "36813919888f63ebacd13cebe6e22dd4"
+  },
+  {
+   "id": "ch151",
+   "name": "灾祸之城",
+   "quality": "传说",
+   "chars": 5491,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "【灾祸之城】，是战争、征服、毁灭、灾难、混沌、原初、火焰、疾病、镜界与黑魔法汇聚而成的至高源质。",
+   "contentMd5": "e01d0715ce45ed2cfecf1c82e3934062"
+  },
+  {
+   "id": "ch152",
+   "name": "暗影世界",
+   "quality": "神话",
+   "chars": 6252,
+   "sub": 1,
+   "type": "复合型",
+   "desc": "【暗影世界】，是欲望、堕落、污秽、污染、诅咒、束缚、异类、恶意、腐蚀与身体异化汇聚而成的至高源质。",
+   "contentMd5": "df770fc5272161146a6b806e4d9e3604"
+  },
+  {
+   "id": "ch153",
+   "name": "失序之国",
+   "quality": "传说",
+   "chars": 5329,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "【失序之国】，是法律、秩序、裁决、权威、身份、权限、阶层、定义、扭曲与规则重写汇聚而成的至高源质。",
+   "contentMd5": "b9d7613eaad9b7bab78e3581c04d8728"
+  },
+  {
+   "id": "ch154",
+   "name": "光之钥",
+   "quality": "传说",
+   "chars": 5219,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "【光之钥】，是命运、概率、未来、幸运、厄运、选择、循环、回归与重启汇聚而成的至高源质，也是无数可能分流、汇聚并最终成为现…",
+   "contentMd5": "acf9e0d69ddff29c001c8c3432a709b2"
+  },
+  {
+   "id": "ch155",
+   "name": "本我完满宝诰",
+   "quality": "稀有",
+   "chars": 2878,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "【本我完满宝诰】，是一门以“本我自足、本我自成、内圣于己”为根本的至高内修之法。",
+   "contentMd5": "1c0dd238973c583d68d3698e87bec40f"
+  },
+  {
+   "id": "ch156",
+   "name": "至高亡灵主宰",
+   "quality": "稀有",
+   "chars": 3079,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "【至高亡灵主宰】，是将死亡军势化为自身延伸的绝对权柄。",
+   "contentMd5": "584f72d8e3a32a603978768e1c830e1c"
+  },
+  {
+   "id": "ch157",
+   "name": "与共者",
+   "quality": "史诗",
+   "chars": 4413,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【与共者】，是与{{user}}永恒同行的幻想伴侣权柄。",
+   "contentMd5": "586ef96104a6ae8e2aaef88bd322a381"
+  },
+  {
+   "id": "ch158",
+   "name": "万界武库思维链（V2）",
+   "quality": "普通",
+   "chars": 976,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "",
+   "contentMd5": "35b110ecafbbdb87ff6f4256f7bb3ffd"
+  },
+  {
+   "id": "ch159",
+   "name": "万界武库通用选项栏",
+   "quality": "普通",
+   "chars": 1799,
+   "sub": 1,
+   "type": "外挂",
+   "desc": "",
+   "contentMd5": "c6b0e3f30c2654ec5818c571d7b8db44"
+  },
+  {
+   "id": "ch160",
+   "name": "完满与破限",
+   "quality": "传说",
+   "chars": 4786,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【完满与破限】，是触及“极致”与“超越”的至高权柄。",
+   "contentMd5": "b1edb8900cd5bd4ba1c54d57596cb7c9"
+  },
+  {
+   "id": "ch161",
+   "name": "上位替代",
+   "quality": "史诗",
+   "chars": 3842,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「上位替代」，是{{user}}执掌所属存在之上位未来的选择权柄。",
+   "contentMd5": "434a520b58e86478650f894ec852759c"
+  },
+  {
+   "id": "ch162",
+   "name": "武魂",
+   "quality": "传说",
+   "chars": 5371,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【武魂】，是铭刻于{{user}}生命本源的专属超凡原型。",
+   "contentMd5": "cd21c20980b457a3248a2053d6611e76"
+  },
+  {
+   "id": "ch163",
+   "name": "神象镇狱劲",
+   "quality": "传说",
+   "chars": 5784,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【神象镇狱劲】，是与{{user}}生命本源永久相连的至高修炼权柄。",
+   "contentMd5": "fe18dc77e8627c237984c2a943c6115b"
+  },
+  {
+   "id": "ch164",
+   "name": "神圣几何",
+   "quality": "神话",
+   "chars": 8121,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "【神圣几何】，是铭刻于{{user}}生命本源的专属几何权能，能够将万物的属性、力量与存在特质转化为几何要素，并通过节点…",
+   "contentMd5": "e6c11bfca9c33280b33a22a10f7be4cd"
+  },
+  {
+   "id": "ch165",
+   "name": "图书馆",
+   "quality": "史诗",
+   "chars": 3845,
+   "sub": 1,
+   "type": "个人型",
+   "desc": "「图书馆」是{{user}}专属的征伐收藏权柄。",
+   "contentMd5": "b388e8c5b0872ecdd0b749f707380902"
+  }
+ ]
+}

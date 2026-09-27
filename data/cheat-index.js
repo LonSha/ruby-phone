@@ -1497,6 +1497,15 @@ export const cheatIndex = [
     "sub": 1,
     "type": "个人型",
     "desc": "「图书馆」是{{user}}专属的征伐收藏权柄。",
+  },
+  {
+    "id": "ch166",
+    "name": "位移",
+    "quality": "稀有",
+    "chars": 3323,
+    "sub": 1,
+    "type": "个人型",
+    "desc": "「位移」，是{{user}}执掌位置的权柄。",
   }
 ];
 

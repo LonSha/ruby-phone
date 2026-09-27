@@ -1,5 +1,10 @@
 /* [v2.88.0] 万界武库 V4.1 合并式更新门禁
- * A 数据面：157 → 165 包，id 稳定性（不砍原有、不重排）；
+ *
+ * [v3.16.0 交棒] 本套件原先把「165 包」当作**当版精确读数**硬写进 A1/A2（抬版即过期）。
+ *   按本仓既定两式改写：库规模改**下限形**（只锁「库不得塌缩」），
+ *   同源改**结构形**（id 唯一 + 索引与正文逐条对齐，不锁具体数），
+ *   另补一条**当版增量锚**（ch166 就位）承担「新包真的进来了」这件事。
+ * A 数据面：157 → 165 包（v2.88.0 读数），id 稳定性（不砍原有、不重排）；
  * B 更新面：V4.1 同名包正文确实覆盖（旧字数特征消失、新字数特征就位）；
  * C 新增面：8 新包就位且内容特征正确；
  * D 同源面：index 与 packs 元数据逐字一致（含新包）。
@@ -15,9 +20,11 @@ const byName = new Map(cheatPacks.map((p) => [p.name, p]));
 const byId = new Map(cheatPacks.map((p) => [p.id, p]));
 
 /* A 数据面 */
-ok('A1 库规模 165 包', cheatPacks.length === 165, String(cheatPacks.length));
-ok('A2 id 唯一且 index 同步', byId.size === 165 && cheatIndex.length === 165,
-  `${byId.size}/${cheatIndex.length}`);
+ok('A1 库规模不得塌缩（下限形：v2.88.0 实测 165 包，只锁下限）',
+  cheatPacks.length >= 165, String(cheatPacks.length));
+ok('A2 id 唯一且 index 逐条对齐（结构形，不锁具体条数）',
+  byId.size === cheatPacks.length && cheatIndex.length === cheatPacks.length,
+  `${byId.size}/${cheatIndex.length}/${cheatPacks.length}`);
 ok('A3 旧锚点包保留（ch001 赋能 / ch096 万界武库 / ch128 思维链V1 / ch157 与共者）',
   byId.get('ch001')?.name === '赋能' && byId.get('ch096')?.name === '万界武库' &&
   byId.get('ch128')?.name === '万界武库思维链' && byId.get('ch157')?.name === '与共者');
@@ -44,6 +51,14 @@ ok('C3 通用选项栏内容含四思路', ['光明大道', '技出奇招', '未
   .every((k) => byName.get('万界武库通用选项栏')?.content.includes(k)));
 ok('C4 新包品阶合法（按新字数分档）',
   byName.get('神圣几何')?.quality === '神话' && byName.get('武魂')?.quality === '传说');
+
+/* C5 当版增量锚（[v3.16.0]）—— 库规模改下限形后，由本条承担「新包真的进来了」 */
+ok('C5 ch166 位移就位（个人型 / 含 WJWK-settle 结算段）',
+  byId.get('ch166')?.name === '位移' && byId.get('ch166')?.type === '个人型'
+  && String(byId.get('ch166')?.content || '').includes('<位移>')
+  && String(byId.get('ch166')?.content || '').includes('<WJWK-settle>')
+  && String(byId.get('ch166')?.content || '').includes('<必要边界>'),
+  String(byId.get('ch166')?.name));
 
 /* D 同源面 */
 ok('D1 index 与 packs 元数据逐字一致',
