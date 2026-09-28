@@ -40,6 +40,12 @@
  *   「被中止」是用户真正需要立刻知道的（回复没出稿，该重发），
  *   而「已完成」不是坏消息（不占首行）。
  *
+ * 【[v3.0.4] 可选转述：接上游 v3.251.0 M-O3 回执旁路，不扩面级 10 键】
+ *   上游把 layer / tokenSource / stages / via 做成回执与账本转述，**不进**
+ *   `buildInjectionReadout` 的 10 键面。下游同样：**INJECTION_FACE_KEYS 一字不动**。
+ *   这四格只从 `injection` 对象上**有则抄、无则 null**，不参与 faceDrift、
+ *   不参与 verdict。测不到就 null，绝不编 0。
+ *
  * 【为什么不提供 export default】
  *   本文件与 config/projection-contract.js 并列，但**不**跟着加 `export default`：
  *   本面没有 default 形态的产品侧消费者（同仓 dead-export 门禁的 E11 专门对 default 面
@@ -221,6 +227,11 @@ export function readInjection(win, opts = {}) {
         dropped: null,
         verdict: null,
         blocks: [],
+        /* [v3.0.4] M-O3 可选转述：不在面级 10 键里，缺席即 null */
+        layer: null,
+        tokenSource: null,
+        stages: null,
+        via: null,
         text: INJECTION_REASONS['bridge-absent']
     };
     try {
@@ -335,6 +346,13 @@ export function readInjection(win, opts = {}) {
             dropped: Math.max(0, totalEff - kept),
             verdict,
             blocks,
+            /* [v3.0.4] 可选转述：只抄上游真给的值。layer 须为字符串；
+             *   tokenSource / via 同；stages 须为对象（五阶段表），否则 null。
+             *   不进 faceDrift（那张表只钉 10 键面）。 */
+            layer: (typeof raw.layer === 'string' && raw.layer) ? raw.layer : null,
+            tokenSource: (typeof raw.tokenSource === 'string' && raw.tokenSource) ? raw.tokenSource : null,
+            stages: isPlainObject(raw.stages) ? raw.stages : null,
+            via: (typeof raw.via === 'string' && raw.via) ? raw.via : null,
             text: INJECTION_REASONS['ready']
         };
     } catch (_e) {
@@ -371,6 +389,9 @@ export function injectionLine(inj) {
     if (p.outcome) parts.push('结局：' + outcomeText(p.outcome));
     else parts.push('结局：未提供（上游这版还没外供 outcome）');
     if (p.strayOrigin) parts.push('【注意】该读数不是真生成写的（origin=' + String(p.origin) + '）');
+    if (p.layer) parts.push('层=' + p.layer);
+    if (p.tokenSource) parts.push('token口径=' + p.tokenSource);
+    if (p.via) parts.push('via=' + p.via);
     return parts.join(' · ');
 }
 

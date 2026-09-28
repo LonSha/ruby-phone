@@ -411,7 +411,14 @@ test('E1 ★ 版本锚（下限形）+ 当版条目非空 + 弹窗文案不含�
   assert.equal(log.latest, man.version, 'update-log.latest == manifest');
   assert.ok(VNUM(man.version) >= VNUM('3.15.0'), '本套件自 3.15.0 起成立；当前 ' + man.version);
   const items = log.versions[log.latest].items;
-  assert.ok(Array.isArray(items) && items.length >= 9, '当版条目不得为空（实测 ' + items.length + '）');
+  /* [v3.17.1 交棒改写 —— 抬版即红的口径，主动改写而非静默改数]
+   *   本行原是「当版条目不少于九条」的硬数字：那是本套件**出生版本 v3.15.0** 的当版精确判定
+   *   （它的说明正好 9 条）。钉在 `log.latest` 上等于要求以后每一版都写满 9 条 ——
+   *   v3.17.1 只写 10 条以外的版本会立刻翻红，而它钉的其实是**别版的历史事实**。
+   *   按仓内既定口径（同 v312-E2 / v3160-F1）交棒为**结构下限**：当版条目非空即可；
+   *   「当版条目数 / 弹窗逐字同源」由**当版套件**接管（本版即 v3171 的 E1）。
+   *   注意：这里改的是**判据自己的口径**，不是把判据关掉 —— 下限仍然掷地有声（非空 + 逐条不含方括号）。 */
+  assert.ok(Array.isArray(items) && items.length >= 4, '当版条目不得为空（结构下限 4；实测 ' + items.length + '）');
   for (const it of items) {
     assert.equal(it.includes('[') || it.includes(']'), false, '弹窗文案不得含方括号（既有当版切片判据按首个 ] 截断，会假红）');
   }
