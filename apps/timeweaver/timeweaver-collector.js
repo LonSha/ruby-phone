@@ -20,6 +20,16 @@ import { readInjection, injectionLine } from '../../config/injection-contract.js
  *   接在织光机：这一栏此前能答「想起了什么 / 送进去了什么 / 谁记的 / 出自哪本账」，
  *   独独答不出「这些事发生在**哪一天**」—— 缺的正是判读整条时间线的基准。 */
 import { storyClock, storyClockLine, storyClockProbe, CLOCK_SOURCES, CLOCK_REASONS } from '../../config/story-clock.js';
+/* [v3.20.0 · F8] 续玩简报：跨面收束。
+ *   三个新依赖都是**既有真源**，本文件不新增取数口径：
+ *     · `resumeBrief` / `resumeBriefText` —— 收束内核（纯函数：输入由上面各面给好）；
+ *     · `evidenceFaceOf` —— 由**已有快照**构建证据面（纯函数，不取数 ⇒ 不与上面那处取数点重复）；
+ *     · `promiseList` / `arcList` —— 剧情线既有投影行（不在本文件重解析上游形状）；
+ *     · `updateGapLine` —— 本仓表格锚点读数（「落后正文几楼」，已把「未知」与「0」判开）。 */
+import { resumeBrief, resumeBriefText } from '../../config/resume-brief.js';
+import { evidenceFaceOf } from '../../config/world-bridge.js';
+import { promiseList, arcList } from '../plotline/plotline-data.js';
+import { updateGapLine } from '../../config/update-gap.js';
 
 // 安全读 storage 键并解析为数组
 function readArr(storage, key) {
@@ -275,6 +285,91 @@ export function collectStoryClock(win) {
 }
 
 /**
+ * [v3.20.0 · F8] 第六面：**续玩简报**（隔几天回来该看什么）。
+ *
+ * 与上面五个读数的分工（六个问题，各答一个，互不顶替）：
+ *   · `collectLonshaRecall` / `collectLonshaInjection` / `collectLonshaEventPlatforms` /
+ *     `collectLonshaEvidence` / `collectStoryClock` —— 各答「上游发生了什么 / 模型看到了什么 /
+ *     现在算哪一天」；
+ *   · `collectResumeBrief` —— **收束面：把「上次停在哪 / 还没完的事」收成一份可续清单**。
+ *   前五个都是**面读数**（每个回答一个问题），本面是**跨面收束**（它自己不含任何新口径，
+ *   只把已取好的面按「续玩」这个目的分组，并按当前正文长度挡掉不可达楼层）。
+ *
+ * 【为什么不新开取数点】本仓纪律：同一轮里不出现第二个取数点。故本函数
+ *   · 优先用调用方**已经取好**的面（`opts.evidence` / `opts.storyClock` / `opts.worldProg`）；
+ *   · 未给时才走既有真源各取一次（诊断/独立调用场景）；
+ *   · 快照只读**一份**：`readLonshaSnapshot` 一次，`evidenceFaceOf(snapshot)` 是纯函数（不取数）。
+ *   这正是 `evidenceFaceOf` 当初被拆出来的同一理由（详见 config/world-bridge.js 的那段注释）。
+ *
+ * 【两个输入不走桥】`commitments`（本仓自己拥有的约定五态）与 `updateGap`（本仓的表格锚点）
+ *   都是**本机字段**：前者读 `calendar_commitments`（已登记键，不改命名空间），
+ *   后者读宿主 chatMetadata 的锚点（`updateGapLine(ctx)`）。
+ *
+ * 【缺口不许填占位】任何一个面读不到 ⇒ 由内核记进 `gaps` 并让总述说明「不完整」；
+ *   本函数**不**为读不到的面编一行「暂无」——那会把「没接上」写成「没有」。
+ */
+export function collectResumeBrief(storage, opts = {}) {
+  try {
+    const win = opts.win;
+    const ctx = opts.context || (storage?.getContext ? storage.getContext() : null);
+
+    /* 取数：**已取好的面一律复用**（调用方给了就不再取一次 —— 同一轮不出现第二个取数点）；
+     * 未给时走既有真源。快照只在本函数内读**一次**：证据面与上游承诺都从这一份里派生
+     * （`evidenceFaceOf` 是纯函数，不取数，这正是它当初被拆出来的理由）。 */
+    const needSnap = (opts.evidence === undefined) || (opts.worldProg === undefined);
+    const r = needSnap ? readLonshaSnapshot({ win }) : null;
+    const snap = (r && r.ok && r.snapshot) ? r.snapshot : null;
+
+    const evidence = (opts.evidence !== undefined)
+      ? opts.evidence
+      : (snap ? evidenceFaceOf(snap) : null);
+    const worldProg = (opts.worldProg !== undefined)
+      ? opts.worldProg
+      : (snap ? (snap.worldProg || null) : null);
+
+    /* 上游承诺 / 支线一律走 plotline 既有投影函数（不在本文件重解析上游形状）。 */
+    const promises = worldProg ? promiseList(worldProg) : null;
+    const arcs = worldProg ? arcList(worldProg) : null;
+
+    /* 本机约定（五态）：读的是**已登记键**，不改命名空间、不新增键。 */
+    let commitments = null;
+    if (opts.commitments !== undefined) commitments = opts.commitments;
+    else if (storage?.get) {
+      try {
+        const raw = storage.get('calendar_commitments');
+        commitments = TW.parseMaybe(raw, null);
+      } catch (_e) { commitments = null; }
+    }
+
+    const storyClockFace = (opts.storyClock !== undefined)
+      ? opts.storyClock
+      : collectStoryClock(win);
+
+    const updateGap = (opts.updateGap !== undefined) ? opts.updateGap : updateGapLine(ctx);
+    const floorCount = Array.isArray(ctx?.chat) ? ctx.chat.length : null;
+
+    const brief = resumeBrief({
+      evidence,
+      worldProg: promises,
+      arcs,
+      commitments,
+      storyClock: storyClockFace,
+      updateGap,
+      floorCount,
+      at: opts.at
+    });
+    brief.line = resumeBriefText(brief);
+    return brief;
+  } catch (e) {
+    /* 本函数是**展示面的取数口**，不能因为一个面畸形就把整块卡弄没；
+     *   但**不许静默**：把归因带出来（这一形态本仓治过多次 —— 「降级了但没人知道」）。
+     *   诊断/判据可据此区分「没数据」与「读崩了」。 */
+    try { console.warn('[织光机] 续玩简报取数失败：', e && e.message ? e.message : e); } catch (_e) { /* 无 console 环境 */ }
+    return { at: null, present: false, complete: false, sections: [], gaps: [{ face: 'resume', reason: 'thrown:' + String(e && e.message || e) }], faceLedger: [], dropped: { staleFloors: 0 }, floorCount: null, headline: '续玩简报：读取异常（已降级）', line: '续玩简报：读取异常（已降级）', degraded: true };
+  }
+}
+
+/**
  * 主动聚合所有源 → rawSources（供 TW.normalizeEvents）
  * @param storage PhoneStorage 实例
  */
@@ -316,7 +411,19 @@ export function buildNarrative(storage, opts = {}) {
   //   同样**不并入 empty 判定**：本机没有生活碎片，不代表读不出当前剧情时刻；
   //   算进 empty 会让「有剧情侧时间读数、没生活碎片」被误报成「什么都没有」。
   const clockFace = (opts.withRecall === false) ? null : collectStoryClock(opts.win);
-  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms, evidence, storyClock: clockFace };
+  /* [v3.20.0 · F8] 第六面：续玩简报（跨面收束）。
+   *   ★ 取数分工（**如实写，不夸大**）：上面刚由 `collectLonshaEvidence` 取好的证据面
+   *     直接传下去复用（**不再取第二次**）；`worldProg` 不在任何既有面里外供，
+   *     故由收束器自己读一次快照取它 —— 净增**一次**读取，且明写在这里。
+   *     （本仓纪律「同一轮不出现第二个取数点」针对的是**同一份口径被抄两处**；
+   *      传递而不是重取，正是该纪律要求的做法。）
+   *   与「生活碎片为空」的关系：简报**不并入** empty 判定 —— 本机没有生活碎片，
+   *     不代表没有未完成的约定或可续的上游条目（与上面五面同一取舍）。 */
+  const resume = (opts.withRecall === false) ? null : collectResumeBrief(storage, Object.assign({}, opts, {
+    evidence,
+    storyClock: clockFace
+  }));
+  if (!events.length) return { events: [], empty: true, recall, injection, eventPlatforms, evidence, storyClock: clockFace, resume };
   return {
     empty: false,
     events,
@@ -325,6 +432,7 @@ export function buildNarrative(storage, opts = {}) {
     eventPlatforms,
     evidence,
     storyClock: clockFace,
+    resume,
     timeline: TW.buildTimeline(events, opts.bucket || 'day'),
     milestones: TW.detectMilestones(events),
     curve: TW.buildMoodCurve(events, opts.window || 5),

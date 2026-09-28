@@ -21,7 +21,15 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
-- `npm run check` = **五道子门**串联：`syntax` → `test` → `dead-exports` → `lifecycle` → `registry`。
+- `npm run check` = **十道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
+  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion`。
+  > 【本行订正 · v3.19.0】此前本行写「**五道子门**：syntax → test → dead-exports → lifecycle → registry」——
+  > 那是本行写下时的实况，而 `package.json` 的 `scripts.check` **早已是十道**（v3.19.0 实现工具包时实测）。
+  > 这类「文档写五道、真门禁跑十道」正是本仓治过的形态：**口径与真源脱节，而脱节的那一处是给人读的那一处**。
+  > 订正为真读数（照 `package.json` 抄，不凭印象）：入口本身仍是唯一真源，
+  > 后续若增删门禁，**须同时改本行**（这条纪律比数字本身重要）。
+  > 判据：`tests/system-v3190.test.mjs` 的 D 组钉的是「登记面取数复用了哪一份真源」；
+  > 门禁数量与顺序的真源是 `package.json`，本行只是它的转写。
   - **零消费导出门禁**（v2.41.0 建，v2.42.0 加 E6，`scripts/dead-export-check.mjs`）：判据为「本模块内部零使用 **且** 其它非测试文件零引用」。
     **E6（v2.42.0）消费判定必须基于真代码**：`stripNonCode()` 剔除注释与字符串字面量后再做词匹配。此前裸词正则扫全文 = 「注释/字符串里提一嘴就算已消费」，真死导出会被一句 `// TODO: call X` 掩盖（漏报）。口径要点：模板串 `${...}` 插值**按真代码**处理（本仓大量 `${fn()}` 真调用，整串清空会误抹消费）、正则字面量起始须识别 `return`/`typeof`/`case` 等关键词。回归锁在 `tests/system-v242.test.mjs`。
     **E7（v2.43.0）导出枚举必须覆盖跨行 export 大括号块**：此前单行正则让多行成块转出**整块 0 枚举**，块内死导出既不报红灯也不进账本（fail-open）。实测 `config/drives-engine.js` 真实 7 项只枚举到 1 项。配套两处咬合静默点：跨行块须跳过**整段语句区间**（成员行自身含名字，只跳首行会让块内名字全部被算成已消费）、「声明行」不等于「export 行」（先声明后成块转出的写法里，声明行不算消费）。回归锁在 `tests/system-v243.test.mjs`。

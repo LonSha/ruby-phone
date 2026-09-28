@@ -18,16 +18,18 @@
   ]
  },
  "readings": {
-  "files_scanned": 238,
-  "consume_points": 22,
-  "consume_files": 4,
+  "files_scanned": 240,
+  "consume_points": 26,
+  "consume_files": 6,
   "local_engine_hits": 0
  },
  "consume_files": [
   "apps/memory/global-search-engine.js",
   "apps/plotline/plotline-app.js",
   "apps/plotline/plotline-data.js",
-  "apps/plotline/plotline-view.js"
+  "apps/plotline/plotline-view.js",
+  "apps/timeweaver/timeweaver-collector.js",
+  "config/resume-brief.js"
  ],
  "criteria": [
   {
@@ -82,7 +84,9 @@
   "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
   "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版是纯读数层（一条加载路径都不改），故不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，接一层没时计不影响站点数）。首测版语义仍保留在 measured_at。",
   "v3.15.0 复校：本轮新增 2 个真源模块（config/usage-tracker.js 使用统计采集内核 / config/contact-insight.js 联系人互动纯函数内核）+ 1 个 App 目录（apps/usage/ 下 3 个 .js）⇒ 枚举面 232 → 237（+5）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面（consume_points 22 / consume_files 4 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程/期限面的任何一行，也没有长出本地日程引擎（新模块只做读数的采集与聚合，零 deadline/scheduledAt 语义）。",
-  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。"
+  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。",
+  "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰日程/期限面任何一行。 消费点（consume_points 22）与消费文件（consume_files 4）逐字不变。★ 另有一条**踩坑留档**：登记面初版的 `contract` 描述里逐个列了上游字段名，被本探针按**子串**计了一行 ⇒ 消费点一度虚涨到 23 / 文件 5。处置是改描述措辞（不列英文字段名），**未动探针、未动读数** —— 那一条要守的是「有没有人真的校验承诺期限」，登记表的描述一个字节都不消费它。",
+  "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。"
  ],
  "not_done": [
   "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

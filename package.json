@@ -1,6 +1,6 @@
 {
   "name": "ruby-phone",
-  "version": "3.18.0",
+  "version": "3.20.1",
   "private": true,
   "type": "module",
   "description": "Tooling only: local and CI checks. The SillyTavern extension manifest lives in manifest.json. This file is not loaded at runtime and intentionally declares no dependencies so hosts never try to install anything.",
@@ -15,6 +15,7 @@
     "source-derivation": "node scripts/source-derivation-audit.mjs",
     "bridge-contract": "node scripts/bridge-contract-audit.mjs",
     "import-resolve": "node scripts/import-resolve-check.mjs",
-    "weak-coercion": "node scripts/weak-coercion-audit.mjs"
+    "weak-coercion": "node scripts/weak-coercion-audit.mjs",
+    "check:file": "node scripts/check-file.mjs"
   }
 }

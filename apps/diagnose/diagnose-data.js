@@ -77,6 +77,16 @@ import {
  *   本文件只**转发**真源读数（一行文案的唯一实现在 config/boot-timing.js），
  *   不在视图里重新拼一次（自己再拼一次就是同一口径两份实现）。 */
 import { bootTimingLine } from '../../config/boot-timing.js';
+/* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面。
+ *   计划原文：「跨仓功能登记拥有者、生产者版本、契约形状、消费者、失效条件和单独安装行为。
+ *   缺席、旧版、不产出和空数据分别呈现。」
+ *   修前实测：本仓与两个上游之间有十几条面级契约，**没有任何一处登记过它们** ——
+ *   归属仓 / 起始版本 / 契约形状 / 本仓消费点 / 失效条件 / 只装一个插件会怎样，
+ *   全都要逐个文件读注释（而注释不随对面漂移）。
+ *   ★ 取数**复用本文件已有的两份读数**（统一探针的 `probe`/`snapshot` 与桥可观测面 `report`），
+ *     不新增任何取数点 —— 本仓治理过多轮的「同一读数的两个来源必然漂移」。
+ *     判定组合在 config/crossrepo-registry.js（该模块**零 import**，结构上不可能自持桥名）。 */
+import { registryFace, registryLine, CROSSREPO_FEATURES } from '../../config/crossrepo-registry.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -373,7 +383,60 @@ export function collectDiagnose(win, storage) {
     const previewSc = (() => { try { return rollbackPreviewFace(w); } catch (_e) { return null; } })();
     /* [v3.13.0 · 计划 #14] 启动耗时面：**从宿主实例读**（本内核不自建实例 —— 见 bootTimingFace 注释）。 */
     const bootSc = safe(() => bootTimingFace(w), null) || null;
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, bootTiming: bootSc };
+    /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
+     *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
+     *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
+     *     · worldaxis 侧 ← `report.worldaxis`（桥可观测面：mounted / enabled / stat / read）
+     *   字段三态一律走 `readPushField()`（本仓唯一真源）—— 本内核不自写形状判据。
+     *   `producerVersion` 取 `snapshot.pluginVersion`（上游快照里就有）；取不到即 null，
+     *   由登记面如实报「无从分辨」，**绝不拿本仓版本去代替对面版本**。 */
+    const repoProbe = (() => {
+        try {
+            const wa = (report && report.worldaxis) ? report.worldaxis : null;
+            const lonshaMounted = !!(probe && probe.mounted === true);
+            const producerVersion = (() => {
+                try {
+                    const v = snapshot && snapshot.pluginVersion;
+                    return (typeof v === 'string' && v) ? v : null;
+                } catch (_e) { return null; }
+            })();
+            /* 登记面用到的字段键：从真源推导（不在这里手抄一份键名清单 ——
+             *   手抄的键名清单就是下一个「展示面与真源脱节」的种子）。 */
+            const keys = new Set();
+            for (const f of CROSSREPO_FEATURES) {
+                for (const k of (Array.isArray(f.fieldKeys) ? f.fieldKeys : [])) if (k) keys.add(k);
+            }
+            const fields = {};
+            for (const k of keys) {
+                fields[k] = safe(() => readPushField(snapshot, k), { present: false, kind: null, reason: 'no-snapshot' });
+            }
+            return {
+                lonsha: {
+                    mounted: lonshaMounted,
+                    producerVersion,
+                    fields
+                },
+                worldaxis: {
+                    mounted: !!(wa && wa.mounted === true),
+                    /* 「闸门关着」只认**上游自述的开关位**：`enabled === false` 或明确拒绝读取。
+                     *   绝不把「没有快照」也算成闸门 —— 那是两件处置相反的事。 */
+                    gated: !!(wa && (wa.enabled === false || wa.reason === 'disabled' || wa.reason === 'refused')),
+                    gatedReason: wa ? String(wa.reason || 'gated') : 'bridge-absent',
+                    hasSnapshot: !!(wa && wa.hasSnapshot === true),
+                    readOk: (wa && wa.read) ? (wa.read.ok === true) : null,
+                    readReason: (wa && wa.read) ? String(wa.read.reason || '') : ''
+                }
+            };
+        } catch (_e) { return null; }
+    })();
+    const repoFace = safe(() => registryFace(repoProbe), null);
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, bootTiming: bootSc, crossRepo: repoFace };
+}
+/** [v3.19.0] 跨仓登记面的一行总述（**唯一实现**在真源：`config/crossrepo-registry.js` 的 `registryLine`）。
+ *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
+export function crossRepoFaceText(face) {
+    try { return registryLine(face); }
+    catch (_e) { return '跨仓功能：读取异常（已降级）'; }
 }
 
 /** [v3.13.0] 启动耗时一行读数（**唯一实现**在真源：`config/boot-timing.js` 的 `bootTimingLine`）。

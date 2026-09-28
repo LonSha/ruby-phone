@@ -13,6 +13,8 @@ import { schemaStateText, storageFaceLine, evidenceFaceText, knowledgeFaceText, 
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
+/* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
+import { crossRepoFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -568,6 +570,55 @@ export class DiagnoseView {
             + '是所有「打开一下就改了数据」事故的同一个形状）。</div>';
     }
 
+    /**
+     * [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记卡：把「本仓在消费上游哪些面」一次列全。
+     *  纯渲染：七态文案、分组计数与总述全部来自真源（`crossRepoFaceText` 转发
+     *  `config/crossrepo-registry.js` 的 `registryLine`），本方法**不做任何判定**
+     *  （不数条数、不判版本、不猜谁该动手 —— 判断只在登记面里做一次）。
+     *
+     *  三条必须看见的东西（缺一条这张卡就变成装饰）：
+     *    · **两种处置相反的处境不得同形**：「缺席」（等对面装）／「闸门关着」（用户自己去开）／
+     *      「本版不产出」（等对面升级）／「明确为空」（真读数，什么都不用做）—— 这四件事
+     *      在用户侧的动作完全不同，压成一格就会把人指去做无用功；
+     *    · **逐条带归属与起始版本**：读者要能回答「这条是谁产的、我装的够不够新」；
+     *    · **失效条件写在行上**：同一句「现在没读数」，是「重发一轮就好」还是「只能等升级」，
+     *      取决于失效条件，不写出来读者只能猜。
+     *  排版：逐条按登记顺序列出（**不重排** —— 本仓列表一律按原始顺序），非 ok 的行给对应色调。
+     */
+    _crossRepoHtml(pkg) {
+        const face = (pkg && pkg.crossRepo) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>跨仓功能登记面读取失败（已降级）—— '
+                + '这只说明本页取不到登记读数，**不代表**上游缺席（缺席是登记面里的一格状态）。</div>';
+        }
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        if (!rows.length) {
+            return '<div class=' + Q + 'dg-note' + Q + '>登记表为空：本版没有登记任何跨仓面（无面可判，不等于全部就绪）。</div>';
+        }
+        /* 状态 → 色调：ok 才是绿；empty 是**真读数**（中性）；其余都是「有事要看」。
+         *   empty 刻意不给绿也不给红 —— 它既不是好消息也不是坏消息，是数据本身。 */
+        const toneOf = (st) => (st === 'ok' ? 'ok' : (st === 'empty' ? 'muted' : 'warn'));
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(crossRepoFaceText(face)) + '</div>';
+        html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.map((r) => {
+            const since = (r.since === null || r.since === undefined) ? '无版本判据' : ('since ' + String(r.since));
+            const ver = (r.producerVersion === null || r.producerVersion === undefined)
+                ? '对面版本读不到' : ('对面 ' + String(r.producerVersion));
+            return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.label) + '</code>'
+                + this._chip(r.stateText, toneOf(r.state))
+                + this._chip(r.owner + ' · ' + since, 'muted')
+                + this._chip(ver, 'muted')
+                /* 失效条件只对**非 ok** 的行显示：那是「这格怎么了」的解释；
+                 *   全列出会把卡片变成一张没人读的清单。 */
+                + (r.state === 'ok' ? '' : '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.invalidation) + '</div>')
+                + (r.state === 'ok' ? '' : '<div class=' + Q + 'dg-sub' + Q + '>只装一个插件时：' + escapeHtml(r.standalone) + '</div>')
+                + '</div>';
+        }).join('') + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>本卡只登记，不改行为</b> —— 它不装上游、不开闸门、不替代缺面，'
+            + '只把「本仓在消费谁产出的哪一面、现在处于哪一格」摆出来。判定顺序固定在真源里：'
+            + '<b>桥在场 → 闸门 → 版本 → 字段三态</b>（先比版本会把「桥缺席」报成「版本偏低」，那是编造归因）。</div>';
+        return html;
+    }
+
     resetSilence() {
         try { resetSilenceLedger(typeof window !== 'undefined' ? window : null); } catch (_e) { /* 不抛 */ }
     }
@@ -616,6 +667,11 @@ export class DiagnoseView {
          *   「为什么某个角色像是知道了不该知道的事」，属于「解读型」读数而非「在场型」。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>知情网络（谁不知道某件事）</h3>' + this._knowledgeHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>上游口径自述（T16/T17）</h3>' + this._notesHtml(pkg) + '</section>');
+        /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记卡放在「上游口径自述」之后、
+         *   「回滚影响预览」之前：它属**契约型/解读型**读数（「本仓在消费谁产出的哪一面、
+         *   现在处于哪一格」），而不是「这一次动作的范围」—— 后者与存档健康同族，
+         *   都属「动手前先看清」，登记面答的不是这个问题。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨仓功能登记（消费了上游哪些面）</h3>' + this._crossRepoHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，
          *   而存档健康说的是**这份存档属于哪个时代** —— 先看范围，再看时代。 */

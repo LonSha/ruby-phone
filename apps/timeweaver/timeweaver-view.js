@@ -21,17 +21,22 @@ export class TimeweaverView {
     render() {
         if (!this.app.phoneShell?.setContent) return;
         const model = buildNarrative(this.app.storage, { bucket: 'day' });
-        const html = model.empty ? this._empty() : this._layout(model);
+        const html = model.empty ? this._empty(model) : this._layout(model);
         this.app.phoneShell.setContent(this._css() + html, 'timeweaver-main');
         this._bind();
     }
 
-    _empty() {
+    /* 生活碎片为空时的空态。
+     *   [v3.20.0] 空态也要能看见**续玩简报**：本机没有生活碎片（日记/照片/成就…）
+     *   并不代表没有「未完成的约定 / 上游未了承诺」—— 那正是 F8 要回答的「回来该看什么」。
+     *   此前这个屏幕只有一句「还没有可织的碎片」，把另一类真实可续状态一起说没了。 */
+    _empty(m) {
+        const resumeBlock = m ? this._resumeBlock(m) : '';
         return `<div class="tw-wrap"><div class="tw-empty">
           <div class="tw-empty-icon">🕰️</div>
           <div class="tw-empty-title">织光机还没有可织的碎片</div>
           <div class="tw-empty-sub">去写写日记、拍张照片、聊聊蜜语、解锁成就……<br>当生活散落足够的碎片，这里会为你织出一部可回望的时光。</div>
-        </div></div>`;
+        </div>${resumeBlock}</div>`;
     }
 
     _layout(m) {
@@ -204,7 +209,51 @@ export class TimeweaverView {
         </div>
         ${r.hotFloors.length ? `<div class="tw-curve-label" style="margin:4px 0 8px">你最常回望的时光</div>${floorRows}` : '<div class="tw-hint">还没有形成明显的回望热点。</div>'}
         <div class="tw-hint" style="font-size:11px;line-height:1.8">右侧「被想起」越多，说明那段剧情越常被正文重新唤起。<br>空召回比例偏高时，剧情侧可能缺乏可关联的前情素材。</div>
-        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}${this._evidenceBlock(m)}${this._storyClockBlock(m)}`;
+        ${this._injectionBlock(m)}${this._eventPlatformsBlock(m)}${this._evidenceBlock(m)}${this._storyClockBlock(m)}${this._resumeBlock(m)}`;
+    }
+
+    /* [v3.20.0 · F8] 续玩简报：把上面五面**收束**成「回来该看什么」。
+       与上面各块的关系：那些块是**逐面读数**（一面答一个问题），本块是**跨面收束**
+       （「上次停在哪 / 还没完的事 / 该追赶什么」），它不含任何新口径 —— 不过分节、不加判断。
+       两条纪律在本块落成结构：
+         · **读不到不填占位**：哪一面没读到，由内核的 `faceLedger` 说清（视图不自己列面名），
+           总述（`headline`，唯一实现在内核里）显式写「不完整」；
+         · **丢过行要说出来**：回档/删楼后会挡掉不可达楼层，这是**正确行为**，
+           但静默挡掉会让用户以为「本来就只有这些」——故计数必须显示。 */
+    _resumeBlock(m) {
+        const rb = m && m.resume;
+        if (!rb) return '';
+        const LABEL = { commitments: '约定流程', worldProgress: '上游承诺', evidence: '上游证据面', storyClock: '剧情时刻', updateGap: '表格锚点' };
+        const missing = (rb.faceLedger || []).filter((f) => f.missing).map((f) => LABEL[f.face] || f.face);
+        const secRows = (rb.sections || []).map((sec) => {
+            const rows = sec.rows.map((r) => `
+          <div class="tw-person">
+            <span class="tw-person-rank">\u25b8</span>
+            <div class="tw-person-main">
+              <div class="tw-person-name">${esc(r.text)} <span class="tw-person-meta">${esc(r.source || '')}${r.floor === null || r.floor === undefined ? '' : ' · 第 ' + r.floor + ' 楼'}</span></div>
+            </div>
+          </div>`).join('');
+            const more = sec.more ? `<div class="tw-hint" style="font-size:11px;padding:4px 0">另有 ${sec.more} 项未列出</div>` : '';
+            return `<div class="tw-curve-label" style="margin:10px 0 6px">${esc(sec.label)}</div>${rows}${more}`;
+        }).join('');
+        const stale = Number(rb.dropped && rb.dropped.staleFloors) || 0;
+        const droppedHint = stale
+            ? `<div class="tw-hint" style="font-size:11px;line-height:1.8;color:#e8a33d">已挡下 ${stale} 条不可达楼层的条目（回档/删楼后，那些内容不再属于当前剧情）。<br>这不是丢数据 —— 是不把未来当现在。</div>`
+            : '';
+        const missHint = missing.length
+            ? `<div class="tw-hint" style="font-size:11px;line-height:1.8">尚未读到的输入面：${esc(missing.join('、'))}<br>「读不到」与「确实没有」是两件事，本栏分开说。</div>`
+            : '';
+        return `
+        <div class="tw-curve" style="margin-top:14px">
+          <div class="tw-curve-label">\ud83c\udf31 续玩简报 · 回来先看这一栏${rb.complete ? '' : '（不完整）'}</div>
+          <div class="tw-letter-stats" style="margin-top:8px">
+            <span class="tw-chip">${esc(rb.headline || '')}</span>
+            ${rb.floorCount === null || rb.floorCount === undefined ? '' : `<span class="tw-chip">正文 ${rb.floorCount} 楼</span>`}
+          </div>
+          ${secRows || '<div class="tw-hint" style="font-size:11px;padding:10px 0">本机还没有可续的剧情 —— 先推进一段正文，这里会收出「上次停在哪」。</div>'}
+          ${missHint}
+          ${droppedHint}
+        </div>`;
     }
     /* [v3.0.2] R2-C 送达侧：本轮**真的**进了上下文的是哪几块、哪几块被预算裁掉。
        为什么和上面的「回望」分两块：那张卡答「想起了什么」（召回侧），

@@ -219,9 +219,13 @@ test('C2 ★ 收集器不重判一致性：verdict 逐字取自真源三态', as
 /* ══════════ D ── 织光机接线 ══════════ */
 test('D1 ★ 两条返回路径都带出时间面，且不并入 empty 判定', async () => {
     const src = readRel('apps/timeweaver/timeweaver-collector.js');
-    assert.equal(src.split('storyClock: clockFace').length - 1, 2,
-        '★ 空分支与非空分支都要带（少一条 ⇒ 某条路径上读者拿到 undefined）');
+    /* 【v3.20.0 修订】原判据钉「`storyClock: clockFace` 恰出现 2 次」——那是在数**转写**。
+     *   v3.20.0 新增第六面（续玩简报）后，两个返回分支各多带一个 `resume` 键 ⇒ 计数变 3，
+     *   判据当场红灯。但这**不是**缺陷：时间面在两条路径上仍然都在（这才是它要保的东西）。
+     *   故按本仓纪律「旧形态断言按新行为有证据地接管，不直接删除」改写为**语义判据**：
+     *   两条返回路径都必须带出 `storyClock` 键（用返回值验，而不是数源码里的字符串）。 */
     const TWC = await import('../apps/timeweaver/timeweaver-collector.js');
+    assert.ok(src.split('storyClock: clockFace').length - 1 >= 2, '两条分支都必须出现时间面的传递');
     const empty = TWC.buildNarrative(mockStorage({}), { win: waWin('2026-03-15') });
     assert.equal(empty.empty, true, '无生活碎片 ⇒ empty');
     assert.ok(empty.storyClock, '★ 空分支照样带出时间面');
@@ -324,7 +328,11 @@ function damage(root, rel, anchor, replacement) {
 }
 
 test('G1 让「有面」也被当成没读到 ⇒ 同款建卡判据必须转红', async () => {
-    const root = sandbox(['config', 'apps/timeweaver']);
+    /* 【v3.20.0 修订】沙盒补 `apps/plotline`：collector 新增了「上游承诺/支线投影」这一面，
+     *   依赖 `../plotline/plotline-data.js`（跨 app 导入，本仓有先例：diagnose → plotline）。
+     *   原沙盒只拷 config + apps/timeweaver ⇒ 副本导入即抛 ERR_MODULE_NOT_FOUND，
+     *   **判据取到的是「跑不起来」而不是「破坏了」**（本仓点名的假绿/假红形态）。 */
+    const root = sandbox(['config', 'apps/timeweaver', 'apps/plotline']);
     /* 破坏：把建卡条件改成「必须真拿到日期」（正是本仓要挡的「有面却看不见」形态） */
     damage(root, 'apps/timeweaver/timeweaver-collector.js',
         'if (!line.present && faceless) return null;',
