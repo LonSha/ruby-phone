@@ -8,6 +8,7 @@
 //   必须同时提供「新增 / 改写 / 回收」三条出口，否则同类缺陷会原样重演。
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -89,12 +90,27 @@ test('v279 6. 常驻契约：按 sourceId 去重的派生库必须三条出口�
   // 下次新增第二个按 sourceId 去重的库时同一缺陷会原样重演——
   // 故这里改成结构判据：凡定义了 add() 且提到 sourceId 的模块，
   // 必须同时导出 updateBySource 与 removeBySource（新增/改写/回收）。
+  /* [v3.18.0 交棒] 本判据原把**任何**「提到 sourceId 且有 add(」的文件当成按源身份去重的派生库。
+   *   R-O4 新增的 `config/context-compose.js` 里，`sourceId` 是**转述来源身份**的字段名
+   *   （`retellNode()` 读它、`retellChains()` 按 chainId 归并），它**不写任何存储**、
+   *   不承载派生条目生命周期 ⇒「源头变更后需要改写 / 回收」这个前提在它身上不成立。
+   *   故新增一张**准入清单**（不是放行条：每条都带理由，且做存活自证 —— 指向的文件
+   *   一旦不存在即 fail-closed，与仓内 R2b / R3b / E10 同族纪律）。 */
+  const NOT_DERIVATION = [
+    { rel: 'config/context-compose.js', why: '源身份只作转述链名用（retellNode / retellChains），不写任何存储、无陈旧条目可回收' }
+  ];
+  for (const e of NOT_DERIVATION) {
+    assert.ok(fs.existsSync(path.join(ROOT, e.rel)),
+      '准入清单存活自证：' + e.rel + ' 必须仍存在，否则该条应被删除（理由：' + e.why + '）');
+  }
   const sites = [];
   for (const abs of walk(ROOT)) {
     const src = readFileSync(abs, 'utf8');
     if (!/\bsourceId\b/.test(src)) continue;
     if (!/(^|\n)\s+add\s*\(/.test(src)) continue;
-    sites.push({ rel: path.relative(ROOT, abs).replace(/\\/g, '/'), src });
+    const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+    if (NOT_DERIVATION.some((e) => e.rel === rel)) continue;
+    sites.push({ rel, src });
   }
   assert.ok(sites.length >= 1, '判据必须至少命中一处（否则说明探测器失效，而不是仓库变干净了）');
   const missing = [];

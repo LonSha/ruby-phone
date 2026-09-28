@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.17.1';
+const ST_PHONE_VERSION = '3.18.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -142,16 +142,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-09-28",
     items: [
-        "**主治：上游 v3.251.0 M-O3 把「这一轮注入到底是怎么算出来的」做成了回执旁路（层 / token 口径 / 分阶段 / 经由哪条路径）—— 而下游只读面级 10 键，这四格全库零消费：用户能看见「几块进了」，看不见「怎么算的」。**",
-        "**★ 面级 10 键一字不动**：INJECTION_FACE_KEYS 仍是 origin / outcome / round / ts / tokens / chars / html / total / kept / blocks 十项。四格只作**可选转述**：有则抄、无则 null；扩面就是跨仓契约变更，须另立 Gate。",
-        "**★ 不参与 faceDrift、不参与 verdict**：faceDrift 那张表只钉面级 10 键，四格缺席不得被算成漂移；也不得改变「候选本身就空」与「候选有但全被预算裁掉」的零块两义裁定。",
-        "**★ 不编空对象（本版真防线）**：stages 必须过 isPlainObject（数组 / 字符串一律 null），layer / tokenSource / via 必须是非空字符串（数字 / 空串一律 null）。编一个空对象出来，就与「上游真给了空」同形——那正是本仓反复点名的错读数形态。",
-        "**★ 总述行有才写**：injectionLine 只在真有值时追加「层= / token口径= / via=」，没有就不假装有。",
-        "**新增 tests/system-v3171.test.mjs（12 条）**：A 面级不变与缺席全 null（不是 0 / 空串）/ B 有则抄、畸形降级、零块两义不受扰 / C 负控制三条（镜像自身全绿、拆掉类型判定后同款判据必须转红并还原回绿）/ D 工具两向自证 / E 版本锚。",
-        "**交棒改写（抬版即红的口径，主动改写而非静默改数）**：tests/system-v3150.test.mjs 的 E1 把「当版条目不得少于 9 条」当作当版精确判定（其出生版本 v3.15.0 的说明正好 9 条），本版抬版后它要求未来每一版都写满 9 条——按仓内既定口径交棒为**结构下限（不得少于 4 条）**，当版条目数由当版套件接管；「当版条目非空 / 弹窗不含方括号 / 五源同源」三半逐字保留。",
-        "**缺陷形态登记（本版自己抓到的，如实记录不静默修）**：首稿负控制只断言「破坏后字段不再是 null」，那仍是**在断言新行为**，不是让原判据转红；改为把类型判定写成函数、同一段真判据在原件与破坏副本上各跑一次（两次各写一份就等于没在测同一件事），并在每条负控制后**还原并复验回绿**。",
-        "**运行时验证边界（诚实登记）**：本版改的是读数转述层，由无头门禁与判据守住；但「真宿主里这四格到底长什么样 / 上游换版后是否仍同形」**不在**本版判据范围内。这句话与 docs/runtime-verification-boundary.md 共用同一句标志语——**看起来没坏但显示不对**。本版**不能保证**该形态在真机上一出现就被发现；真宿主验证仍归 R-O3。",
-        "**落地**：config/injection-contract.js（四格可选转述 + 总述行）/ tests/system-v3171.test.mjs（12 条判据）/ ITERATION_LOG.md（迭代 66）/ docs/runtime-verification-boundary.md（复校）/ index.js 与 update-log.json / manifest.json / package.json（五源同源）。 **版本升至 3.17.1（五源同源）**"
+        "**主治：R-O4 取证实测到四条内容生成路径（微信 / 微博 / 日记 / 日程）**各自写了一遍**「从末楼往回取 N 条正文」**，过滤条件、清洗钩子、正文裁剪、条目格式互不相同 —— 于是同一件事在三个 App 里说法可以不同；更贵的是四条路径都答不出「现在到底是哪一天」与「这个角色此刻知不知道这件事」。**",
+        "**★ 新增单一真源 config/context-compose.js**：① `collectRecentChat()` 把那条循环收成一份（循环 / 过滤 / 方向只此一份），**条目格式与清洗由调用方注入** ⇒ 八处既有路径行为零漂移；② `contextFaces()` 把跨 App 时间面与知情面一次取齐；③ `consistencyBlock()` 把两面收成一段生成侧约束；④ `retellNode()` / `retellChains()` 把「同一件事被多个 App 转述」归成**同一条来源链**。",
+        "**★ 一致性块真接进四条路径**：微信（聊天链路独立注入路径）/ 微博 / 日记 / 世界脉搏 —— 四条路径从此交给模型的是同一个「现在」与同一份知情边界。空块不 push、注入失败静默不影响发送（与既有装配类 App 同规）。",
+        "**★ 转述不变成多个独立证据**：世界脉搏推给微博的动态现在带上来路（`origin: worldpulse:<事件 id>`），微博的转述节点表把它算成**同一条来源链**；链上出现两个以上平台时，一致性块明确告知生成侧「这不是互相印证的多个独立证据，不得因多处都在说而当作已确证」。",
+        "**★ 三条老账写进实现**：三源全缺时**不写日期**（绝不拿现实时间顶替剧情时间）；知情面只列账里**明确记着**不知情的人（silent 与 unrecorded 一个字不进块）；**来源链归并只许一份实现** —— 首版把「来源端点入链」写在微博数据层，当场被 `scripts/source-derivation-audit.mjs` 的枚举面抓住（源码里出现源身份字段 + 集合操作 = 疑似派生库），已上收到真源（门禁的提醒是对的：一组按源身份归并的规则写在消费方就是下一处漂移的种子）。",
+        "**新增 tests/system-v3180.test.mjs**：A 单一收集循环（注入式格式 / 区间 / skipSystem / 上限 / 计数如实 / 不抛）/ B 两面取齐与三态分形 / C 一致性块三条边界（无日期不写、冲突必说、零 unaware 不产生空块）/ D 转述链（三平台同链只算一条 / 无来源标记如实进 unknown）/ E 八处路径真消费（建好必须有人用）/ F 负控制三条（真源码破坏 → 副本上重跑同款判据 → 必须转红 → 还原复绿）/ G 版本锚。",
+        "**交棒改写（抬版即红的读数，主动改写而非静默改数）**：本次新增真源与 8 处路径改写让**真读数**发生漂移 —— 语法门 436 → 438 文件、导入门 250 → 251 文件（静态导入 382 → 392 条）、楼层探针枚举面 238 → 239、下标直取 18 → 11、长度读 50 → 47（四个收集循环里的下标直取与长度读被收进真源）、死导出门 270 → 271 文件 / 900 → 906 声明。`tests/system-v325/v326/v327` 的基线账本与 `tests/system-v300` D4 的读数锚点按仓内既定口径**显式改写**（不删判据、不改口径）；`tests/system-v249` E5 原以**一句散文**标识静默 catch，本版 catch 文案为区分两个块而改写，判据改为钉**泛化的静默 catch 惯用式**（同一件事、不绑一句文案）；`tests/system-v3171` E1 原把**上一版专有词**当版本锚，已改为**形态锚**（本代号 + 本版落点 + 如实记录）。",
+        "**运行时验证边界（诚实登记）**：本版改的是**上下文构建与约束注入**，由无头门禁与判据守住；但「真宿主的四条生成路径里模型实际收到什么 / 一致性块是否真影响输出 / 长会话下的检索与滚动是否卡」**不在**本版判据范围内。这句话与 docs/runtime-verification-boundary.md 共用同一句标志语——**看起来没坏但显示不对**。本版**不能保证**该形态在真机上一出现就被发现；真宿主验证仍归 R-O3。",
+        "**落地**：config/context-compose.js（新真源）/ 8 处路径接线（chat-view · weibo-data · diary-data · calendar-app · moments-view · phone-view×2 · games-ai-context · worldpulse-app）/ tests/system-v3180.test.mjs / ITERATION_LOG.md（迭代 67）/ TODO.md（R-O4 登记）/ docs/runtime-verification-boundary.md（复校）/ index.js 与 update-log.json / manifest.json / package.json（五源同源）。 **版本升至 3.18.0（五源同源）**",
+        "**本版自己抓到的缺陷（三处，全部由门禁抓在自己的产物上，未进最终交付）**：① 设计首版把「来源端点入链」写在微博数据层，被 `scripts/source-derivation-audit.mjs` 的枚举面当场抓出（源身份字段配集合归并写在消费方，就是下一处漂移的种子），已上收真源；② 落地补丁把带转义符的正则写成了真换行，`npm run syntax` 当场拒绝（判据形态损坏不得靠重跑掩盖）；③ **发布条目首版自带错读数**：语法门写成 437（实为 438）、导入门漏掉静态导入条数 —— 属**读数说谎**，由 `tests/system-v328` C1 拿真门禁复跑对出（文档口径与真跑差一个文件、一条导入），本条按真读数改正，缺陷形态如实留下（不静默修）。",
     ]
 };
 

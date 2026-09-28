@@ -15,6 +15,8 @@
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+/* [v3.18.0 · R-O4] 两处「最近正文」循环（短信 / 通话）收敛到同一份实现 */
+import { collectRecentChat } from '../../config/context-compose.js';
 import { PHONE_CONFIG } from '../../config/apps.js';
 import { formatWechatChatListTime } from '../wechat/chat-list-time.js';
 
@@ -1377,27 +1379,19 @@ export class PhoneCallView {
 
         const contextLimit = readPhoneContextLimit(storage);
         if (Array.isArray(context.chat)) {
-            const collected = [];
-            for (let index = context.chat.length - 1; index >= 0 && collected.length < contextLimit; index--) {
-                const item = context.chat[index];
-                if (!item || item.isGaigaiPrompt || item.isGaigaiData || item.isPhoneMessage) continue;
-                let content = applyPhoneTagFilter(item.mes || item.content || '', { storage });
-                content = content
+            /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；短信侧特有的标签剥离在 clean 里原样保留 */
+            const collected = collectRecentChat(context, {
+                limit: contextLimit,
+                userName,
+                charName: smsRoleName,
+                clean: (raw) => applyPhoneTagFilter(raw, { storage })
                     .replace(/<img[^>]*src=["']data:image[^"']*["'][^>]*>/gi, '[图片]')
                     .replace(/!\[[^\]]*\]\(data:image[^)]*\)/gi, '[图片]')
                     .replace(/<Phone>[\s\S]*?<\/Phone>/gi, '')
                     .replace(/<Call>[\s\S]*?<\/Call>/gi, '')
                     .replace(/<短信>[\s\S]*?<\/\s*短信\s*>/gi, '')
-                    .trim();
-                if (!content) continue;
-                const isUser = item.is_user || item.role === 'user';
-                collected.unshift({
-                    role: isUser ? 'user' : 'assistant',
-                    content: `${isUser ? userName : smsRoleName}: ${content}`,
-                    isPhoneMessage: true
-                });
-            }
-            messages.push(...collected);
+            });
+            messages.push(...collected.messages);
         }
 
         messages.push({
@@ -2873,38 +2867,18 @@ export class PhoneCallView {
             const contextLimit = readPhoneContextLimit(storage || this.app?.storage);
 
             if (context.chat && Array.isArray(context.chat) && context.chat.length > 0) {
-                const collectedContextMessages = [];
-                for (let idx = context.chat.length - 1; idx >= 0 && collectedContextMessages.length < contextLimit; idx--) {
-                    const msg = context.chat[idx];
-                    // 跳过系统消息和特殊消息
-                    if (!msg || msg.isGaigaiPrompt || msg.isGaigaiData || msg.isPhoneMessage) continue;
-
-                    let content = msg.mes || msg.content || '';
-
-                    // 标签清洗：优先记忆插件，缺失时按手机本地开关回退
-                    content = applyPhoneTagFilter(content, { storage });
-
-                    // 清理 base64 图片
-                    content = content.replace(/<img[^>]*src=["']data:image[^"']*["'][^>]*>/gi, '[图片]');
-                    content = content.replace(/!\[[^\]]*\]\(data:image[^)]*\)/gi, '[图片]');
-
-                    // 移除通话标签
-                    content = content.replace(/<Phone>[\s\S]*?<\/Phone>/gi, '');
-                    content = content.replace(/<Call>[\s\S]*?<\/Call>/gi, '');
-
-                    content = content.trim();
-
-                    if (content) {
-                        const isUser = msg.is_user || msg.role === 'user';
-                        const speaker = isUser ? userName : callRoleName;
-                        collectedContextMessages.unshift({
-                            role: isUser ? 'user' : 'assistant',
-                            content: `${speaker}: ${content}`,
-                            isPhoneMessage: true
-                        });
-                    }
-                }
-                messages.push(...collectedContextMessages);
+                /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；通话侧特有的标签剥离在 clean 里原样保留 */
+                const collected = collectRecentChat(context, {
+                    limit: contextLimit,
+                    userName,
+                    charName: callRoleName,
+                    clean: (raw) => applyPhoneTagFilter(raw, { storage })
+                        .replace(/<img[^>]*src=["']data:image[^"']*["'][^>]*>/gi, '[图片]')
+                        .replace(/!\[[^\]]*\]\(data:image[^)]*\)/gi, '[图片]')
+                        .replace(/<Phone>[\s\S]*?<\/Phone>/gi, '')
+                        .replace(/<Call>[\s\S]*?<\/Call>/gi, '')
+                });
+                messages.push(...collected.messages);
             }
 
             // ========================================

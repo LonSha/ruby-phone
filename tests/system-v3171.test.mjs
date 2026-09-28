@@ -224,5 +224,12 @@ test('E1 版本锚（下限形）：三源同源 + 弹窗与 update-log 逐字�
     const items = log.versions[log.latest].items;
     for (const it of items) assert.ok(m[0].includes(JSON.stringify(it)), '弹窗逐字同源：' + String(it).slice(0, 24));
     assert.match(m[0], new RegExp('date: "' + log.versions[log.latest].date + '"'), 'date 同源');
-    assert.equal(items.some((x) => /M-O3/.test(x)), true, '当版条目须点名本版这件事');
+    /* [v3.18.0 交棒] 原判据把**上一版专有词**（M-O3）当版本锚 —— 抬版即红，且把「本版这件事」
+     *  偷换成「上一版那件事」。改写为**形态锚**：本代号与版本落点 + 如实记录（缺陷 / 交棒改写）。 */
+    const rel = new RegExp('版本升至 ' + log.latest + '（五源同源）');
+    assert.equal(items.some((v) => rel.test(v)), true, '当版条目须点名本版落点（形态锚，不绑上一版专有词）');
+    assert.equal(items.some((v) => /自己抓到的缺陷|本版自己抓到|缺陷形态/.test(v)), true,
+        '当版条目须如实记录本版自己抓到的缺陷（形态锚）');
+    assert.equal(items.some((v) => /交棒改写|主动改写|下限形/.test(v)), true,
+        '当版条目须如实记录对旧判据的交棒改写（形态锚）');
 });

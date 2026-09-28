@@ -3,6 +3,10 @@
  *  游戏 AI 通用酒馆上下文注入
  * ======================================================== */
 import { readPhoneContextLimit } from '../../../config/context-settings.js';
+/* [v3.18.0 · R-O4] 「最近正文」收集循环收敛到单一真源（本文件原本自写一份）。
+ *   抽取口径是「零行为漂移」：清洗钩子（cleanStContextText）与条目格式逐字不变，
+ *   只把循环/过滤/方向（逆序 + unshift）这三件事交给真源。 */
+import { collectRecentChat } from '../../../config/context-compose.js';
 
 function getSillyTavernContext() {
     try {
@@ -61,28 +65,21 @@ function buildPersonaMessage() {
 }
 
 function buildRecentChatMessages(context, storage, limitKey = 'phone-context-limit') {
-    const messages = [];
     const contextLimit = limitKey === 'phone-context-limit'
         ? readPhoneContextLimit(storage)
         : Math.max(0, Math.min(9999, Number.parseInt(storage?.get?.(limitKey), 10) || 0));
-    if (contextLimit <= 0 || !Array.isArray(context?.chat) || context.chat.length <= 0) return messages;
+    if (contextLimit <= 0 || !Array.isArray(context?.chat) || context.chat.length <= 0) return [];
 
-    const userName = context?.name1 || '用户';
-    const charName = context?.name2 || '角色';
-    for (let idx = context.chat.length - 1; idx >= 0 && messages.length < contextLimit; idx--) {
-        const msg = context.chat[idx];
-        if (!msg || msg.isGaigaiPrompt || msg.isGaigaiData || msg.isPhoneMessage) continue;
-        const content = cleanStContextText(msg.mes || msg.content || '');
-        if (!content) continue;
-        const isUser = msg.is_user || msg.role === 'user';
-        const speaker = isUser ? userName : charName;
-        messages.unshift({
+    /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；清洗与格式逐字保留（零行为漂移） */
+    return collectRecentChat(context, {
+        limit: contextLimit,
+        clean: (raw) => cleanStContextText(raw),
+        toEntry: ({ text, isUser, userName, charName }) => ({
             role: isUser ? 'user' : 'assistant',
-            content: `${speaker}: ${content}`,
+            content: `${isUser ? userName : charName}: ${text}`,
             isPhoneMessage: true
-        });
-    }
-    return messages;
+        })
+    }).messages;
 }
 
 export async function buildGameSillyTavernContextMessages(appKey, storage, options = {}) {

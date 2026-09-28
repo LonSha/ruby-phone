@@ -15,6 +15,10 @@ import { numOrNull } from '../../config/num-gate.js';
 import { captureWechatChatSnapshot } from './chat-snapshot.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+/* [v3.18.0 · R-O4] 四条内容生成路径里的「最近正文」循环收敛到同一份实现
+ *   （本文件原本藏着全仓最复杂的那个变体：判页系统噪声 + 微信标签剥离），
+ *   一致性块（当前剧情时刻 + 知情边界 + 转述链）也由同一面提供。 */
+import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/context-compose.js';
 import { CatboxData } from '../games/catbox/catbox-data.js';
 import { parseWangxiangTaskTags, tokenizeWangxiangTaskTags } from '../wangxiang/wangxiang-task-parser.js';
 import { parseWechatVoiceContent } from './voice-text.js';
@@ -11609,8 +11613,18 @@ renderChatRoom(chat) {
                         messages.push({ role: 'system', content: _blk, name: _item.name, isPhoneMessage: true });
                     }
                 }
+                /* [v3.18.0 · R-O4] 跨 App 一致性约束：本机四条内容生成路径（微信/微博/日记/日程）
+                 *   此前**各自拿不到同一个「现在」**，也都不知道该角色此刻是否知情；
+                 *   后果是同一件事在三个 App 里说法不同（不报错、只互相否定）。
+                 *   本块把「当前剧情时刻（含冲突）+ 明确不知情的人 + 转述链」交给生成侧，
+                 *   与四条路径共用同一份读数（`contextFaces` 内部即 storyClock + knowledgeFace）。
+                 *   空块不 push；注入失败静默不影响发送（与上面两个块同规）。 */
+                const _cons = consistencyBlock(_vp, { fact: prompt });
+                if (_cons) {
+                    messages.push({ role: 'system', content: _cons, name: 'SYSTEM (跨App一致性)', isPhoneMessage: true });
+                }
             }
-        } catch (_e) { /* 装配类 App 注入静默失败，不影响发送 */ }
+        } catch (_e) { /* 一致性块注入静默失败，不影响发送 */ }
 
         // 优先使用 characterId 获取真实角色名
         if (context.characterId !== undefined && context.characters && context.characters[context.characterId]) {
@@ -11846,38 +11860,27 @@ renderChatRoom(chat) {
                 return false;
             };
 
-            const collectedContextMessages = [];
-            for (let idx = context.chat.length - 1; idx >= 0 && collectedContextMessages.length < contextLimit; idx--) {
-                const msg = context.chat[idx];
-                // 跳过手机/记忆插件内部消息；隐藏楼层有正文时保留，避免占用楼层后又丢正文。
-                if (!msg || msg.isGaigaiPrompt || msg.isGaigaiData || msg.isPhoneMessage) continue;
-
-                // 🔥 优先使用 msg.mes（酒馆正则处理后的内容），参考记忆插件
-                let content = msg.mes || msg.content || '';
-
-                // 标签清洗：记忆插件可用时走记忆插件；否则按手机本地开关回退
-                content = applyPhoneTagFilter(content, { storage: this.app?.storage || window.VirtualPhone?.storage });
-                content = this._stripWechatTagsFromTavernContext(content);
-
-                // 清理 base64 图片（防止请求体过大）
-                content = content.replace(/<img[^>]*src=["']data:image[^"']*["'][^>]*>/gi, '[图片]');
-                content = content.replace(/!\[[^\]]*\]\(data:image[^)]*\)/gi, '[图片]');
-                if (isLobbySystemNoise(msg, content)) continue;
-
-                content = content.trim();
-
-                if (content) {
-                    const isUser = msg.is_user || msg.role === 'user';
-                    const speaker = isUser ? userName : charName;
-
-                    collectedContextMessages.unshift({
-                        role: isUser ? 'user' : 'assistant',
-                        content: `${speaker}: ${content}`,
-                        isPhoneMessage: true
-                    });
+            /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；但**判页噪声与标签剥离是微信侧特有的**，
+             *   故通过 clean / toEntry 两个注入口原样带过来（零行为漂移）。
+             *   注意 `isLobbySystemNoise` 在清洗**之后**判 —— 保序与重构前逐字一致。 */
+            const collected = collectRecentChat(context, {
+                limit: contextLimit,
+                userName,
+                charName,
+                clean: (raw) => {
+                    let c = applyPhoneTagFilter(raw, { storage: this.app?.storage || window.VirtualPhone?.storage });
+                    c = this._stripWechatTagsFromTavernContext(c);
+                    c = c.replace(/<img[^>]*src=["']data:image[^"']*["'][^>]*>/gi, '[图片]');
+                    c = c.replace(/!\[[^\]]*\]\(data:image[^)]*\)/gi, '[图片]');
+                    return c;
+                },
+                toEntry: ({ msg, text, isUser, userName: un, charName: cn }) => {
+                    if (isLobbySystemNoise(msg, text)) return null;
+                    if (!text) return null;
+                    return { role: isUser ? 'user' : 'assistant', content: `${isUser ? un : cn}: ${text}`, isPhoneMessage: true };
                 }
-            }
-            messages.push(...collectedContextMessages);
+            });
+            messages.push(...collected.messages);
         }
 
         // ========================================

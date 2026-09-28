@@ -15,6 +15,8 @@
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+/* [v3.18.0 · R-O4] 「最近正文」循环与跨 App 一致性块收敛到同一份实现 */
+import { collectRecentChat, contextFaces, consistencyBlock, retellNode } from '../../config/context-compose.js';
 
 export class WeiboData {
     constructor(storage) {
@@ -690,32 +692,20 @@ export class WeiboData {
             const effectiveLimit = Number.isFinite(forceChatLimitRaw) && forceChatLimitRaw > 0
                 ? forceChatLimitRaw
                 : contextLimit;
-            const recentChatMessages = [];
-            for (let idx = boundedEnd - 1; idx >= boundedStart && recentChatMessages.length < effectiveLimit; idx--) {
-                const msg = context.chat[idx];
-                if (!msg || msg.isGaigaiPrompt || msg.isGaigaiData || msg.isPhoneMessage) continue;
-
-                let content = msg?.mes || msg?.content || '';
-                content = applyPhoneTagFilter(content, { storage: this.storage });
-
-                // 清理 base64 图片，避免请求体膨胀；其他标签过滤交给现有黑白名单系统
-                content = String(content || '')
+            /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；微博侧特有的 base64 清理与
+             *   「区间 + forceChatLimit」两个参数原样带过（零行为漂移）。 */
+            const collected = collectRecentChat(context, {
+                limit: Number.isFinite(effectiveLimit) ? effectiveLimit : Infinity,
+                start: boundedStart,
+                end: boundedEnd,
+                userName,
+                charName: context.name2 || '角色',
+                clean: (raw) => applyPhoneTagFilter(raw, { storage: this.storage })
                     .replace(/<img[^>]*src=["']data:(?:image\/[^"']+|application\/octet-stream);base64,[^"']*["'][^>]*>/gi, '[图片]')
                     .replace(/!\[[^\]]*\]\(data:(?:image\/[^)]+|application\/octet-stream);base64,[^)]*\)/gi, '[图片]')
                     .replace(/data:application\/octet-stream;base64,[A-Za-z0-9+/=\s]{120,}/gi, '[图片]')
-                    .trim();
-
-                if (!content) continue;
-
-                const isUser = !!msg.is_user || msg.role === 'user';
-                const speaker = isUser ? userName : (context.name2 || '角色');
-                recentChatMessages.unshift({
-                    role: isUser ? 'user' : 'assistant',
-                    content: `${speaker}: ${content}`,
-                    isPhoneMessage: true
-                });
-            }
-            contextMessages.push(...recentChatMessages);
+            });
+            contextMessages.push(...collected.messages);
         }
 
         // 当前账号状态（用于让 AI 在回复时感知并更新粉丝数）
@@ -726,7 +716,35 @@ export class WeiboData {
             'SYSTEM (微博账号状态)'
         );
 
+        /* [v3.18.0 · R-O4] 跨 App 一致性约束：微博此前完全不知道「现在」是哪一天，
+         *   也不知道「世界脉搏推过来的那条动态」已经是**转述**。于是同一条传闻
+         *   在世界脉搏里一遇、在微博里又一遇，在生成侧就「更像真的了」——
+         *   那是本仓最贵的那类错读数（不报错，只把传闻变确证）。
+         *   本块把当前剧情时刻 + 明确不知情的人 + 转述链一次交给生成侧。 */
+        try {
+            const _win = (typeof window !== 'undefined') ? window : undefined;
+            const _cons = consistencyBlock(_win, { faces: contextFaces(_win), retells: this._retellNodes() });
+            if (_cons) pushSystemMessage(_cons, 'SYSTEM (跨App一致性)');
+        } catch (_e) { /* 一致性块取不到即跳过，不阻断微博生成 */ }
+
         return contextMessages;
+    }
+
+    /**
+     * [v3.18.0 · R-O4] 本地已落地内容的**转述节点**（微博推荐流）。
+     *   只取带来源标记的帖子（`origin` 或 `source === 'worldpulse'`）：
+     *   毫无来源标记的旧帖**不进节点表**（认不出就是认不出，不硬塞进某条链）。
+     *   ★ 链名与「来源端点入链」全在 `config/context-compose.js` 的 retellChains 里算，
+     *   本方法只做**取数 + 映射** —— 归并规则有两份就是下一处漂移的种子。
+     */
+    _retellNodes() {
+        try {
+            const posts = this.getRecommendPosts();
+            if (!Array.isArray(posts) || !posts.length) return [];
+            return posts
+                .filter((post) => post && (post.origin || post.source === 'worldpulse'))
+                .map((post) => retellNode(post, { platform: 'weibo' }));
+        } catch (_e) { return []; }
     }
 
     _getCurrentFollowersCount() {

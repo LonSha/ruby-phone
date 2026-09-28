@@ -18,6 +18,10 @@ import { collectDryRunEntries, recordActivated, dryRunLoreBlock, dryRunFace } fr
  *   WorldAxis 与插件两边）；而「这三处时间到底对不对得上、以哪个为准」在业务面上不可见 ——
  *   平行事件**正需要这一天**才能与主线对得上，否则只能拿现实日期猜。 */
 import { storyClock, storyClockLine, storyClockProbe } from '../../config/story-clock.js';
+/* [v3.18.0 · R-O4] 跨 App 一致性块：世界脉搏是**传闻的源头之一**，它推给微博的动态
+ *   必须带上自己的来源身份，否则同一条事件在世界脉搏里一遇、在微博里又一遇，
+ *   在生成侧就变成「两个独立来源都这么说」。 */
+import { consistencyBlock } from '../../config/context-compose.js';
 
 const SETTINGS_KEY = 'worldpulse_settings_v1';   // 会话级（需注册 CHAT pattern）
 const HISTORY_KEY = 'worldpulse_history_v1';
@@ -246,7 +250,7 @@ export class WorldpulseApp {
                 this._saveHistory(h);
                 // 可选：推送为微博动态（世界在手机里呼吸）。真世界只推第一条，避免刷屏。
                 for (const it of list.slice(0, 1)) {
-                    if (it && it.content) this._pushToWeibo(it.content, it.style || ev.style);
+                    if (it && it.content) this._pushToWeibo(it.content, it.style || ev.style, it.id);
                 }
             }
         } finally {
@@ -282,9 +286,16 @@ export class WorldpulseApp {
         const layerNote = ev.layer === 'far'
             ? '\n\n【远场】这条只是背景呼吸，不得写成正在主线现场发生的事，不得让主角当场遭遇。'
             : '';
+        /* [v3.18.0 · R-O4] 跨 App 一致性约束：平行事件也必须发生在**同一个当前剧情时刻**，
+         *   且不得让账里明确不知情的角色表现出知情。空块不拼（请求与接线前逐字相同）。 */
+        const crossApp = (() => {
+            try { return consistencyBlock(undefined, { fact: ev.customPrefix || ev.style || '' }); }
+            catch (_e) { return ''; }
+        })();
         const prompt = WP.buildEventPrompt(ev.style, ev.customPrefix, digest)
             + (loreBlock ? `\n\n【此刻生效的设定（世界书干跑取数）】\n${loreBlock}` : '')
             + (consistency ? `\n\n${consistency}` : '')
+            + (crossApp ? `\n\n${crossApp}` : '')
             + layerNote;
         try {
             const result = await am.callAI([
@@ -382,7 +393,7 @@ export class WorldpulseApp {
         }
     }
 
-    _pushToWeibo(content, style) {
+    _pushToWeibo(content, style, sourceId = '') {
         try {
             // [v2.20.0] 修复三重调用错误（此功能自 v2.9.0 起为死代码）：
             //   - weiboApp 的数据层属性名是 weiboData（不是 wechatData）
@@ -408,7 +419,12 @@ export class WorldpulseApp {
                 likes: 0,
                 commentList: [],
                 likeList: [],
-                source: 'worldpulse'
+                source: 'worldpulse',
+                /* [v3.18.0 · R-O4] 来源身份：微博这条是**转述**世界脉搏的事件，
+                 *   不是独立发生的一件事。带上来路后，转述链才可归并（`retellNode`
+                 *   以 origin 作链名）—— 否则同一件事在两个 App 各说一次就「更可信」了。 */
+                platform: 'weibo',
+                origin: `worldpulse:${String(sourceId || style || '').trim()}`
             });
             weiboData.saveRecommendPosts(list);
             // 微博 App 在场时通知其刷新（推荐流标记更新）

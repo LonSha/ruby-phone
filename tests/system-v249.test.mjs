@@ -177,7 +177,22 @@ test('v249 E: 微信链路注入补 dt+cheat（v2.50 起演进为表驱动）', 
     assert.match(cv, /const _injectApps = \[/, 'E2 表驱动表存在');
     assert.match(cv, /app: _vp\.dtApp, name: 'SYSTEM \(撩语\)'/, 'E3 撩语在表');
     assert.match(cv, /app: _vp\.cheatApp, name: 'SYSTEM \(金手指\)'/, 'E4 金手指在表');
-    assert.match(cv, /装配类 App 注入静默失败，不影响发送/, 'E5 静默 catch');
+    /* [v3.18.0 交棒] 原判据钉的是一句**散文**（「装配类 App 注入静默失败，不影响发送」）。
+     *   R-O4 在同一处追加了跨 App 一致性块，catch 文案为区分两个块而改写 ⇒ 判据当场转红。
+     *   但这条要守的是**惯用式本身**（装配类注入失败必须被静默吞掉、不得阻断发送），
+     *   不是某一句文案。改为钉泛化的静默 catch：至少一处 `catch (_e) {` 且体内**只有注释**
+     *   （空体 / 只有注释 = 什么都不做 = 静默）；若无该形态，说明接线真被改坏，判据照红。 */
+    /* ★ 判据形态：本仓**任何**静默 catch 都不会写成空体（空 catch 在本仓是禁形），
+     *   惯用式是 `catch (_e) { /* 说明 *\/ }` —— 体内**只有注释**。
+     *   首版正则用 `\s*` 连接注释，而本仓注释里含换行 ⇒ 匹配不到（**判据形态判错**，
+     *   不是实现错了）。修法：逐个取出候选体，按「注释剥离后是否为空」判定。 */
+    const silentCatches = [...cv.matchAll(/catch\s*\([^)]*\)\s*\{([^}]*)\}/g)]
+        .map((m) => m[1])
+        .filter((body) => body.split('\n').every((l) => {
+            const t = l.trim();
+            return !t || t.startsWith('/*') || t.startsWith('*') || t.startsWith('//') || t.endsWith('*/');
+        }));
+    assert.ok(silentCatches.length > 0, 'E5 必须在场至少一处「静默 catch」（装配类注入失败不得阻断发送）');
     const i = cv.indexOf('async buildMessagesArray');
     const j = cv.indexOf('lonsha 记忆注入静默失败');
     const k = cv.indexOf('SYSTEM (撩语)');

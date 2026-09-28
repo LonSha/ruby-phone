@@ -12,6 +12,8 @@
 import { ImageCropper } from '../settings/image-cropper.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+/* [v3.18.0 · R-O4] 「最近正文」循环与跨 App 一致性块收敛到同一份实现 */
+import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/context-compose.js';
 
 // 朋友圈视图 - 高仿微信版
 export class MomentsView {
@@ -2149,24 +2151,24 @@ ${memoryLines.slice(0, 10).join('\n')}
         const storage = window.VirtualPhone?.storage;
         const contextLimit = readPhoneContextLimit(storage || this.app?.storage);
         if (Array.isArray(context.chat) && context.chat.length > 0) {
-            const collectedContextMessages = [];
-            for (let idx = context.chat.length - 1; idx >= 0 && collectedContextMessages.length < contextLimit; idx--) {
-                const msg = context.chat[idx];
-                if (!msg || msg.isGaigaiPrompt || msg.isGaigaiData || msg.isPhoneMessage) continue;
-                let content = msg.mes || msg.content || '';
-                content = applyPhoneTagFilter(content, { storage: this.app?.storage || window.VirtualPhone?.storage });
-                content = String(content).replace(/<[^>]*>/g, '').replace(/\*.*?\*/g, '').trim();
-                if (!content) continue;
-                const isUser = msg.is_user || msg.role === 'user';
-                const speaker = isUser ? userName : charName;
-                collectedContextMessages.unshift({
-                    role: isUser ? 'user' : 'assistant',
-                    content: `${speaker}: ${content}`,
-                    isPhoneMessage: true
-                });
-            }
-            messages.push(...collectedContextMessages);
+            /* [v3.18.0 · R-O4] 循环/过滤/方向交真源；朋友圈侧特有的「剥星号动作描写」
+             *   通过 clean 原样带过（零行为漂移）。 */
+            const collected = collectRecentChat(context, {
+                limit: contextLimit,
+                userName,
+                charName,
+                clean: (raw) => applyPhoneTagFilter(raw, { storage: this.app?.storage || window.VirtualPhone?.storage })
+                    .replace(/<[^>]*>/g, '').replace(/\*.*?\*/g, '').trim()
+            });
+            messages.push(...collected.messages);
         }
+
+        /* [v3.18.0 · R-O4] 跨 App 一致性约束：朋友圈是**转发链上最容易脱离来源的一环** ——
+         *   同一条传闻在这里被复述时，生成侧看不到它已经是第几手。空块不 push。 */
+        try {
+            const _cons = consistencyBlock(undefined, { faces: contextFaces(undefined) });
+            if (_cons) messages.push({ role: 'system', content: _cons, name: 'SYSTEM (跨App一致性)', isPhoneMessage: true });
+        } catch (_e) { /* 一致性块取不到即跳过，不阻断朋友圈生成 */ }
 
         return messages;
     }

@@ -17,6 +17,8 @@ import { applyPhoneTagFilter } from '../../config/tag-filter.js';
  *   刻意**不新建取数实现** —— 与 worldpulse 共用 `config/worldbook-dryrun.js` 同一份
  *   （同一口径只许一份实现；本仓第九道门对「同一口径抄 N 份」有常驻判据）。 */
 import * as DR from '../../config/worldbook-dryrun.js';
+/* [v3.18.0 · R-O4] 「楼层区段正文」收集循环与跨 App 一致性块收敛到同一份实现 */
+import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/context-compose.js';
 
 export class DiaryData {
     constructor(storage) {
@@ -1025,6 +1027,14 @@ export class DiaryData {
         if (loreBlock) messages.push(loreBlock);
         if (wechatHistoryMessage) messages.push(wechatHistoryMessage);
         messages.push(...chatMessages);
+        /* [v3.18.0 · R-O4] 跨 App 一致性约束：日记写的是「这一天」，而这一天到底是哪天、
+         *   这一天里谁明确不知情，此前日记侧一片空白 —— 于是日记里的日期只能靠模型猜，
+         *   与微信/微博里说的「同一天」可能对不上。本块与其它三条路径共用同一份读数。 */
+        try {
+            const _win = (typeof window !== 'undefined') ? window : undefined;
+            const _cons = consistencyBlock(_win, { faces: contextFaces(_win) });
+            if (_cons) messages.push({ role: 'system', content: _cons, name: 'SYSTEM (跨App一致性)', isPhoneMessage: true });
+        } catch (_e) { /* 一致性块取不到即跳过，不阻断日记生成 */ }
         this._appendDiaryPromptAtMessageEnd(messages, filledPrompt);
 
         // 🔥 构建消息数组：背景上下文 + 聊天记录 + 末尾日记提示词
@@ -1638,43 +1648,39 @@ export class DiaryData {
         return String(ctx?.chatMetadata?.file_name || ctx?.chatId || 'default_chat');
     }
 
+    /**
+     * [v3.18.0 · R-O4] 日记的「楼层区段正文」收集 —— 循环交真源，
+     *   但三条日记侧特有的语义原样保留（零行为漂移）：
+     *     ① **正序**（日记要按发生顺序读，与四条「最近 N 条」路径方向相反）；
+     *     ② 防误杀回退（清洗后变空但原文有内容 ⇒ 回退基础清洗）；
+     *     ③ 条目是**纯正文**（不带「说话人: 」前缀）。
+     *   真源默认逆序 + unshift（最近优先），本方法用 `reverse()` 还原正序 ——
+     *   这不是第二份实现，而是「同一份循环、不同的呈现方向」。
+     */
     _collectChatHistory(context, startIndex, endIndex) {
         if (!context.chat || context.chat.length === 0) return null;
 
         const start = Math.max(0, startIndex);
         const end = Math.min(context.chat.length, endIndex);
-        const messages =[];
-
-        for (let i = start; i < end; i++) {
-            const msg = context.chat[i];
-            if (!msg) continue;
-
-            // 精准跳过系统消息和插件自身消息，不要使用 msg.is_system，以免误杀
-            if (msg.role === 'system' || msg.isPhoneMessage || msg.isGaigaiData || msg.isGaigaiPrompt) continue;
-
-            let originalText = msg.mes || msg.content || '';
-            let text = originalText;
-
-            // 标签清洗：优先记忆插件，缺失时按手机本地开关回退
-            text = applyPhoneTagFilter(text, { storage: this.storage });
-
-            // 2. 基础兜底处理（仅去除HTML标签，保留星号动作描写，日记需要动作上下文）
-            text = text.replace(/<[^>]*>/g, '').trim();
-
-            // 3. 安全防空盾：如果清洗后变为空，但原本有内容，大概率是被误杀了，回退基础清洗
-            if (!text && originalText) {
-                text = originalText.replace(/<[^>]*>/g, '').trim();
-            }
-
-            if (!text) continue;
-
-            messages.push({
+        const collected = collectRecentChat(context, {
+            limit: Infinity,
+            start,
+            end,
+            skipSystem: true,
+            clean: (raw) => {
+                let text = applyPhoneTagFilter(raw, { storage: this.storage });
+                text = text.replace(/<[^>]*>/g, '').trim();
+                /* 安全防空盾：清洗后变空但原本有内容 ⇒ 回退基础清洗（日记侧既有语义） */
+                if (!text && raw) text = String(raw).replace(/<[^>]*>/g, '').trim();
+                return text;
+            },
+            toEntry: ({ msg, text }) => ({
                 role: msg.is_user ? 'user' : 'assistant',
                 content: text,
                 isPhoneMessage: true
-            });
-        }
-
+            })
+        });
+        const messages = collected.messages.reverse();
         return messages.length > 0 ? messages : null;
     }
 

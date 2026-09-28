@@ -519,32 +519,34 @@ export class CalendarApp {
         };
     }
 
+    /**
+     * [v3.18.0 · R-O4] 日程侧的「最近正文」收集 —— 循环交真源，
+     *   日程侧特有的语义原样保留（零行为漂移）：
+     *     ① 洗白名单失灵时回退原文（`|| rawText`）；
+     *     ② 剥 think 块与 HTML；
+     *     ③ 正文裁 1800 字、说话人分隔符是**全角冒号**；
+     *     ④ 说话人判据是 `msg.is_user` 原值（不并 role 判定）。
+     */
     _collectRecentChatMessages(context, limit = 30) {
-        const chat = Array.isArray(context?.chat) ? context.chat : [];
         const userName = context?.name1 || '用户';
         const charName = context?.name2 || '角色';
-        const messages = [];
-
-        for (let i = chat.length - 1; i >= 0 && messages.length < limit; i -= 1) {
-            const msg = chat[i];
-            if (!msg || msg.role === 'system' || msg.isPhoneMessage || msg.isGaigaiData || msg.isGaigaiPrompt) continue;
-
-            const rawText = String(msg.mes || msg.content || '').trim();
-            if (!rawText) continue;
-
-            let text = applyPhoneTagFilter(rawText, { storage: this.storage }) || rawText;
-            text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<[^>]*>/g, '').trim();
-            if (!text) continue;
-
-            const speaker = msg.is_user ? userName : charName;
-            messages.unshift({
+        return collectRecentChat(context, {
+            limit,
+            userName,
+            charName,
+            skipSystem: true,
+            maxChars: 1800,
+            clean: (raw) => {
+                const rawText = String(raw || '').trim();
+                let text = applyPhoneTagFilter(rawText, { storage: this.storage }) || rawText;
+                return text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<[^>]*>/g, '').trim();
+            },
+            toEntry: ({ msg, text, userName: un, charName: cn }) => ({
                 role: msg.is_user ? 'user' : 'assistant',
-                content: `${speaker}：${text.slice(0, 1800)}`,
+                content: `${msg.is_user ? un : cn}：${text}`,
                 isPhoneMessage: true
-            });
-        }
-
-        return messages;
+            })
+        }).messages;
     }
 
     parseScheduleResponse(text = '') {
