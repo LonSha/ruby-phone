@@ -1,30 +1,30 @@
-# Mac 系统隐藏文件
+# macOS
 .DS_Store
 
-# Windows 系统隐藏文件
+# Windows
 Thumbs.db
 desktop.ini
 
-# 编辑器配置文件 (VSCode, WebStorm等)
+# Editors (VSCode, WebStorm, ...)
 .vscode/
 .idea/
 
-# npm/Node 相关 
+# npm / Node
 node_modules/
 npm-debug.log*
 yarn-error.log*
 .env
 .wrangler/
 
-# 临时测试文件或日志
+# Scratch files and logs
 *.log
 temp/
 test/
 
-# 压缩包
+# Archives
 *.zip
 *.tar.gz
 *.rar
 
-# 源素材（体积大且版权含混，只保留生成产物）
+# Source material (large, licensing unclear; only generated output is kept)
 .sourcematerial/

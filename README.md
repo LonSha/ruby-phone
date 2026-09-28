@@ -1,12 +1,12 @@
-# 📱 RubyPhone (终极虚拟智能手机) / ruby-phone
+# 📱 RubyPhone — a simulated smartphone UI for SillyTavern
 
-> **三方集大成的酒馆全功能拟真移动终端系统**  
-> 深度融合 **yuzuki-phone**（原生物理手势视图栈 + 双轨大模型通信） + **瑟瑟小手机**（小红书瀑布流 + 百度贴吧盖楼 + 舆论风闻） + **色色灵感状态栏**（458 条精选玩法按需瞬时注入 + 666 条全量成就簿 + 实时 HUD）。  
-> **彻底切断外部数据库依赖，全原生即装即用！**
+> A full-featured, realistic mobile terminal for SillyTavern chat.
+> Built on yuzuki-phone (native gesture view stack + dual-track model transport) plus two community projects it absorbs: a social-feed phone (Xiaohongshu feed + Tieba threads + public-opinion feed) and a playbook / status-bar plugin (458 curated playbooks injected on demand, 666 achievements, live HUD).
+> **Zero external database — fully native, install and go.**
 
 ---
 
-## 🌟 核心革新：彻底告别外部数据库 (Zero-Database Architecture)
+## 🌟 Core: no external database (Zero-Database Architecture)
 
 传统的小手机与灵感状态栏插件强依赖 `AutoCardUpdaterAPI` (ACU SQLite 数据库) 与几万条的外部大数据库模板，没装插件直接弹窗报错瘫痪，换卡/换分支极易数据串味。
 
@@ -23,7 +23,7 @@
 
 ---
 
-## 📲 应用全景矩阵 (App Ecosystem)
+## 📲 App ecosystem
 ### 🔧 v2.8.5 修复 —— 4 个「做了却打不开」的 App 全部接通
 ### 📖 阅读 (Reading) —— [v2.8.7 纯本地 TXT + EPUB 阅读器]
 * **多编码自动探测**：UTF-8 / GB18030 / GBK / Big5 / UTF-16，BOM 优先 + 可读性评分制，乱码自动规避。
@@ -144,7 +144,7 @@
 ### ⌨️ 斜杠命令
 * `/rubyphone` 或 `/rubyphone-toggle`：快捷唤起/收起手机面板（汲取玉子手机 Slash 命令体系）。
 
-## 🕹️ 原生物理手势与体验
+## 🕹️ Native gesture surface
 
 * **微信/iOS 级边缘右滑返回**：全手势接管，任意界面从屏幕左侧向右轻滑即可丝滑退回上一层。
 * **物理双层视图栈**：拒绝简陋的 `display: none`，采用真实 Z-index 堆叠，返回绝不白屏闪烁。
@@ -153,7 +153,7 @@
 
 ---
 
-## 🧩 系统层 (v2.16.0) —— 通知落账 / 全局搜索 / 控制中心
+## 🧩 System layer — notifications / global search / control center
 
 ### 🔔 通知中心 (Notifications)
 * **落账层 `config/system-notifications.js`**：过去通知只有「瞬时横幅 + 队列防刷屏」，一闪即逝、错过即永久丢失。`NotificationLog` 在展示的同时把每条通知写入环形历史（`sys_notifs`，上限 200 条），**同 senderKey 3 分钟内合并为一条并累加 ×N**，且合并不重置已读状态。
@@ -180,178 +180,28 @@
 
 ---
 
-## 💡 安装方法 (Installation)
+## 💡 Installation
 
-### 推荐：通过 SillyTavern 扩展管理器直接安装
+### Recommended: install through the SillyTavern extension manager
 1. 打开 SillyTavern，进入“扩展”面板。
 2. 点击“安装扩展”，在 Git 仓库输入框中粘贴：
    `https://github.com/LonSha/ruby-phone.git`
 3. 点击安装，完成后刷新酒馆页面。
 4. 在顶部导航栏即可看到「📱」手机入口图标！
 
-### 手动安装
+### Manual install
 将本项目文件夹重命名为 `ruby-phone`，完整放入：  
 `SillyTavern/public/scripts/extensions/third-party/ruby-phone/`  
 重启 SillyTavern 即可生效。
 
 ---
 
-## 🎭 群像 App (apps/chars/，v2.51.0)
-消费记忆插件 `snapshot.characters` 面，展示多角色动态状态：
-- **五态归因**：ready / empty / no-chars-face / no-snapshot / bridge-absent
-- **活动度投影排序**：字段 +1/个（封顶5）、待办 +2/个（封顶4），活跃角色优先
-- **注入**：微信 `_injectApps` 表第 7 项 + `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子
-- **设置隔离**：`/^chars_/`，随会话独立
+---
 
-*Created with ❤️ by LonSha & Ruby宇宙*
+## 📚 Docs map
 
-## 🧠 记忆系统 (v2.1.0)
-
-移植自 sxiphone 记忆体系的本地零依赖实现：
-- **自动采集**：对话消息经重要性启发（长度/情感强度/角色权重）筛选进入短期缓冲
-- **睡眠巩固**：短期→长期，关键词模式检测结晶化，重复内容自动强化而非堆积
-- **衰减评分**：Ebbinghaus 模型，pinned/permanent 永不衰减，低分记忆自动归档淘汰
-- **四层记忆池**：前提/感知/空间/时间，感官触发权重最高
-- **AI 注入**：开启后每次生成携带最相关记忆块（纯本地召回，无 LLM 参与）
-- **按聊天隔离**：记忆存于 chatMetadata，切换会话不串味
-- **记忆换代失效（v2.8.2）**：睡眠巩固时新记忆高置信冲突并重要性达标 → 旧条目标记 superseded 退出召回（原文保留可逆，pinned 不可侵犯）；链式换代 + 压制方消失自动复活。零 LLM 纯规则（移植自 Paramecium「原文是唯一真相」）。
-- **去噪清洗（v2.7.3）**：采集前自动剔除 horae 等插件注入的状态块/成对大写块/HTML/裸K=V状态行，代码围栏智能保留中文正文，避免把系统状态当剧情记忆采进去（移植自芋圆机清洗算法）
-- **跨端记忆协同（v2.15.0）**：经 `lonshaBridge.recallBlock` 单一真源，把 LonSha 记忆插件里的剧情记忆注入到微信单聊 / 微信群聊 / 蜜语三条链路；群聊走 `strictActors` 严格模式，只带提及在场成员的记忆，不把某人私密往事灌进群聊。
-
-
-
-## 🕓️ 时计 App (apps/clock/，v2.52.0)
-消费记忆插件 `snapshot.clock` 面，展示剧情时间轴：
-- **五态归因**：ready / empty / no-clock-face / no-snapshot / bridge-absent
-- **时间轴卡片**：日期 / 时段 / 精确度 / 楼层 / 闪回
-- **诊断面板**（可选开关）：时间标签统计 / 世界钟对读 / 锚点
-- **注入**：微信 `_injectApps` 表第 8 项 + `GENERATE_BEFORE_COMBINE_PROMPTS` 主钩子
-
-### 账本（Ledger）
-
-消费 `snapshot.worldLedgerRead`（记忆插件 + WorldAxis 三方对读），展示暗流/事实/人物/舆情计数、未外供缺口与人物位置冲突。
-
-- 六态归因：ready / empty / no-worldaxis / no-ledger-face / no-snapshot / bridge-absent
-- 纯函数内核 `ledger-data.js`（readLedgerFace / projectLedger / ledgerPromptBlock），ready 态可注入 Prompt
-- 主色 `#c084fc`，`.lg-*` 命名空间
-
-- **v2.54 深化**：舆情强度三分（已核实/传闻/未知 + 权威/论坛/沙盒）与事实对读差集（世界侧/本机侧独有明细，`showDiff` 开关）
-
-
-## 🏦 资产 App (apps/asset/，v2.61.0)
-本地角色账本 / 行情 / 投影 / 结算，消费已零转录移植的 LA-0.7.68 资产引擎：
-- **与钱袋分工**：钱袋只读记忆插件 `snapshot.moneyLedger`；资产 App 管本地账本，不建第二份量级词 / 周期增量 / 流水符号。
-- **剧情日**：只认 `TimeManager.getCurrentStoryTime()` 转 ISO `YYYY-MM-DD`；`isReal` / 古历 / 缺字段 → 不结、不推进，绝不读系统时钟。
-- **公开层**：`renderAssetText(..., { layer: 'public' })`，禁止阿拉伯数字，量级词只用汉字。
-- **接线**：桌面图标 `#34d399`、懒加载单例 `assetApp` 进 `ST_PHONE_REBIND_APP_KEYS`、会话键 `/^asset_/` + `/^__la_asset_/`、微信 `_injectApps`、`.as-*` 写入 `phone.css`。
-
-## 🧱 会话作用域单一真源 (v2.55.0)
-
-* **懒加载单例重绑表**：19 个单例 App 的 `onChatChanged` 重绑统一走 `ST_PHONE_REBIND_APP_KEYS` + `rebindLazyApps()`，换会话 / 清当前数据 / 清全部数据三条路径共用同一入口（此前三份手抄清单，漏补一份即静默串味）。
-
-## 🩺 注入钩子活性 (v2.56.0)
-* **guard 置位不得早于宿主就绪检查**：`playbook-app` 的 `_boundGenerationHook = true` 移至两条 `eventSource.on` 之后；构造期宿主未就绪时不再锁死 guard，`render()` 重试可正常挂载。
-* **幂等重试路径**：`health-app` / `peek-app` 在 `render()` 开头重试一次 `_initHooks()`，消除「构造期未就绪即永久不挂载」。
-* **序列化器收敛**：`stringifyState` / `stringifyValue` 三份就地定义合并为模块级 `stStringifyState` 单一真源（null / undefined / object 处理不再三处漂移）。
-## 🧠 记忆洞察 (Memory Insights, v2.57.0)
-* **六面投影首次落到界面**：引擎里早已备好、但界面零消费的能力全部做出读数 —— 五感归档（`getSensoryArchive`）/ 场景聚合（`getSceneTags`）/ 生命周期四段 / 换代压制对读 / 情感轨迹 / 记忆体检，纯函数洞察层 `apps/memory/memory-insights.js`（畸形输入降级不抛、算不出就空不猜）。
-* **记忆 App 视图分页化**：概览 / 五感 / 场景 / 体检 四页 + 时间线常驻；条目行带降温/冻结/墓碑/已换代徽标，检索结果带回忆权限标签（cite/cautious/associate-only）。
-* **单一出口与容错**：控制器 `insights()` 是唯一取数口，六面逐面独立 try/catch（一面失败只空该面、不连坐整页）；`sleepNow()` 是巩固唯一入口，视图不直摸 `core.sleep`。
-* **「看一眼 vs 改一把」纪律**：界面只调纯读 `lifecycleStage()`，绝不触发会墓碑化清正文的 `pruneByLifecycle()`（那是 sleep 巩固管线的副作用）。
-
-## 🧬 育种推演 (Breeding Simulator, v2.58.0)
-* **异种繁殖三组只读推演**：移植上游 `Liuuuu54/st_bs_biotracker v0.9.9` 的繁殖算法链为纯本地推演（`apps/health/bio-propagation.js`，零 LLM / 不写状态）—— 自然受精预测（多精源归属概率 / 受孕率 / 有效精液暴露）/ 后代预测（胎儿种族 / 胚型 / 孕期 / 卵群规模）/ 衍生遗传预测（12 类衍生类型进度 / 到判定线天数）/ 着床窗口（种族着床天数 + 已推进 / 剩余）。
-* **卵群规模字典增量缝合**：远程 `race_config.RACE_CLUTCH_SIZE_MEANS`（25 个多产种族均值）移植为本地 `RACE_CLUTCH_SIZE_MEANS`，过滤为仅本地 `RACE_PHYSIOLOGY` 已存在的种族；`getClutchSizeMeanByRace` 改为字典优先、回落内置字段 —— 此前本地无 `clutchSizeMean` 字段，卵群推演恒退化为 1。
-* **健康 App 第 5 页签「育种」**：5 张推演卡（同种后代 / 跨种推演 / 受精窗口 / 着床窗口 / 衍生遗传），母体取当前种族，纯展示「若操作会如何」，不触碰任何推进 / 受孕 / 写状态路径。
-* **顺带修复既有 bug**：`setHealthTab` 白名单长期漏了 `medical`（点「健康」页签被强制回 cycle），本版补齐 5 页签并立 F4 回归锁。
-* **零死导出**：5 个算法 API（着床 / 核型标签 / 亲和种子 / 流变 / 代谢豁免）全部真接线进育种页，而非登记账本豁免。
-
-## ♟️ 对弈棋种扩列（Chess + Shogi, v2.59.0)
-* **国际象棋 + 日本将棋接入**：把上游瑟瑟小手机游戏扩展 V0.2.0 的 `ChessEngine` / `ShogiEngine` 两个自包含引擎（alpha-beta + 置换表 + 残局搜索，纯 JS 零宿主依赖）移植进 `games/board`，对弈棋种 3 → 5。
-* **国际象棋**：完整走法生成（王车易位 / 吃过路兵 / 升变 Q/R/B/N）+ 将军检测 + 三次重复判和，8×8 棋盘白先。
-* **日本将棋**：完整走法 + 打步詰 / 二歩禁止 + 成桂（成 / 不成双选项）+ 落子（drop）+ 千日手判和，9×9 棋盘 + 手牌计数。
-* **board-data 类型感知**：快照 / 恢复保留 chess 易位权与吃过路兵格、shogi 手牌；走法分发按类型路由（升变 promo / 成桂 promote / 落子 makeDrop）；新增 `shogiHand` / `legalDrops` 手牌出口。
-* **board-view 扩渲染**：chess 用 Unicode 棋子 + 深浅棋盘，shogi 用手牌栏（点选落子）+ 升变 / 成桂选择条；`board.css` 补 `.gb-chs` / `.gb-shg` / `.gb-shogi-hand` / `.gb-promo`。
-* **测试**：`tests/system-v259.test.mjs`（16 用例）—— A 组两引擎真功能 / B 组 BoardData 集成 / F 组源码不变量（引擎零宿主依赖 + view 消费闭环 + CSS 落点）/ G 组版本四源同源。
-
-## 📖 起名台 + 手术库（LA 纯数据模块移植, v2.60.0)
-* **解耦移植 LA 纯数据模块**：把上游 LA-0.7.68 拓展版（单文件 IIFE 大插件，67 虚拟模块靠 `/* src/xxx.js */` 注释分界、模块间靠 `__LA_XXX__` 全局单例耦合）中两块**零宿主依赖纯数据**模块解耦移植进 health App，纯本地只读、不写状态。
-* **起名台（家谱页签）**：`name-data.js`（NAME_DATA 人名库，中文/日文/西方三语言，姓池 499/2925/1557 + 给名池）+ `name-service.js` 封装层统一三语言结构差异，支持随机起名 / 固定姓 / 分性别。
-* **手术库（健康页签）**：`surgery-library.js`（SURGERY_LIBRARY 59 术式，ICD 编码 + 章节/类目/分级/麻醉/恢复期/阶段/并发症）+ `surgery-service.js` 封装层，提供章节分组 / 分级分布 / 阶段分钟合计，点击展开阶段 + 并发症。
-* **解耦手法**：按括号配平切片提取目标模块字节，剥 IIFE 外壳与 `window`/`module.exports` 导出、前置 `export` 落盘，零转录风险；service 层统一 LA 数据结构差异后接进 health-view，导出面收紧到恰好被 view 消费的集合（零死导出）。
-* **测试**：`tests/system-v260.test.mjs`（15 用例）—— A 组起名真数据 / B 组手术库真数据 / F 组源码不变量（数据零宿主依赖 + 血缘注释 + view 消费闭环 + CSS 落点）/ G 组版本锚定。
-
-## 🔍 全局搜索补源 + 记忆覆盖度 (v2.62.0)
-* **全局搜索从 17 源补到 29 源**：此前 29 个 App 里有 12 个各自为政、零搜索接入。本轮按数据形态分两条通道补齐——**本地键 5 个**（武库 / 撩语 / 幸运转盘 / 生理 / 相册，直读各自 `*_state_v1` 等存储键）、**只读桥快照 7 个**（档案 / 剧情线 / 群像 / 时计 / 世界账本 / 钱袋 / 地点，走上游桥面 `getPublicData` 快照）；桥缺失时安全空转返回空集，不抛错、不污染既有源。
-* **图谱 App 换会话重绑**：补 `onChatChanged` 并接入重绑单一真源，丢弃 3 秒陈旧缓存重指当前会话——换会话后图谱不再错读上一段剧情。
-* **记忆 App 新增「覆盖度」分页**：楼层账本现算读数（盖章数 / 覆盖率 / 缺口逐楼列号并按因归因），模块缺席按三态如实报告，**绝不编数顶替**。
-* **测试**：`tests/system-v262.test.mjs`（9 用例，搜索补源 + 覆盖度投影三态）+ v257 分页锚点升到五页。
-
-## 🔌 会话生命周期接线收口 (v2.63.0)
-* **审计驱动而非人肉排查**：本仓连续九版（v2.23~v2.55）都在补「会话切换接线漏一处」这一类缺陷，本轮改为**写脚本一次性枚举全仓缺口**——枚举各 App 的五类生命周期出口（重绑 / 清缓存 / 销毁 / 停用 / 重载）再反查调用路径，从 7 个「定义但零调用」候选里辨伪出 **3 处真缺陷**（其余 5 处为数组泛化调用与更强出口覆盖，非缺陷）。
-* **记忆 App 漏接线**：`onChatChanged` 早已实现却从未接入重绑表，换会话后降级读数与跨会话记忆引用不重绑。已收编。
-* **织光机新增 `onChatChanged`**：丢弃实例级 AI 信缓存与草稿、复位「自动织信只查一次」标志。此前视图**直读**该缓存，换角色后首屏渲染的仍是上一段剧情被 AI 织起的信。
-* **日历提醒实例回收收口为单一真源**：独立提醒实例的回收此前散落三处且没有一处完整（换会话只清缓存不解绑、两条清数据路径完全零处理），且槽位被活动实例顶替后原实例的 `SWIPE_BACK` 监听器**永久泄漏**；另修「打开日历覆盖单例前未解绑」同型缺陷。提醒检查游标也一并纳入回收，跨会话不再拿旧时间点做比较。
-* **测试**：`tests/system-v263.test.mjs`（8 用例：实例域行为 / 视图端到端 / 接线单一真源 / 防漂移）。
-
-## 🧭 会话级槽位审计 + 万象隔离缺口 (v2.64.0)
-* **审计面从「方法出口」下沉到「实例槽位」**：方法级审计查不出「出口被调用了，但只在三条会话路径中的一条上被调」。本轮对每个持实例的 App 槽位逐条核对换会话 / 清当前数据 / 清全部数据三路覆盖，方法级漏得掉的形态在此暴露。
-* **修复万象 App 会话隔离缺口**：它持有整套会话级实例数组（任务 / 委托 / 市场商品 / 订单 / 库存 / 信用余额 / 收货地址），但清理只在换会话路径被显式调用一次，两条清数据路径零处理——清完数据后手机仍持已删任务与订单。
-* **按单一真源纪律修法**：不往两条路径各补一次手抄调用（那正是 v2.23~v2.55 反复漏改的形态），而是给该 App 补 `onChatChanged` 并接入 `ST_PHONE_REBIND_APP_KEYS`，三路自动覆盖；同时把换会话路径里原有的显式调用收敛掉，消除第二条真相与重复执行。
-* **测试**：`tests/system-v264.test.mjs`（5 用例：实例域行为 / 重绑语义 / 单一真源接线 / **槽位 × 三路径覆盖矩阵防回归**）。
-
-## 🛡️ 生命周期接线门禁 (v2.65.0)
-* **把「接线契约」变成发布门**：新增 `scripts/lifecycle-audit.mjs`，与语法门 / 全量测试 / 零消费导出门并列串进 `npm run check`。两条判据——**L1** 查「定义了生命周期出口却无任何接线路径」，**L2** 查「槽位只在换会话路径被回收」。
-* **白名单从真源码派生，而非硬编码**：泛化调用清单来自 `releasePhoneInactiveResources` 的 `appEntries` 数组，咽喉点清单来自 `retireSessionScopedSlots` 函数体。派生前提一旦消失即 **fail-closed 拒判**（exit 2）——写死的白名单会在机制被删除后继续放行，门禁就变吉祥物。
-* **枚举面自证 + 结构守卫**：扫描面低于下限、三路径锚点缺失、白名单无法派生，一律拒判而非静默全绿；这些守卫**连夹具模式也不放宽**（只放宽最低计数闸）。
-* **测试**：`tests/system-v265.test.mjs`（10 用例：正控制 + 5 例**真源码破坏**负控制 + 判据纯度自证）。负控制不是形式主义——它当场逼出判据自身三处缺陷（显式调用正则漏认 `?.()` 与局部句柄前缀、函数体抽取依赖缩进假设），其中两条在真仓库上分别表现为「静默漏判」与「假阳性」。
-## 🧩 注册联动门禁 (v2.66.0)
-* **把「加一个 App 要动几处」变成可判定的对账**：新增 `scripts/registry-audit.mjs`，与语法门 / 全量测试 / 零消费导出门 / 生命周期门并列串进 `npm run check`。判据三面——**R1** APPS 桌面条目 ↔ 懒加载分支双向覆盖（任一侧孤儿即红灯）、**R2** 宽匹配会话键前缀必须登记理由、**R3** 注册结构自证。
-* **R1 零豁免硬判据**：有 App 无懒加载分支 = 点击无反应；有分支无 App = 死代码或改名漏改。真仓库当前 **40 ↔ 40**，完全干净。两侧必须互为子集，不设例外。
-* **R2 明确「不判什么」**：宽匹配前缀（带量词 / 字符类 / 分组 / 或）会吞掉一批键，使「键 ↔ App」逐项对账不适用，故只要求登记理由；而 `^` `$` 是锚定符不计入。**刻意不判「某 App 缺前缀」**——读侧聚合器与共享桶成员属设计内，硬判即假阳性，故只报告不判定。
-* **测试**：`tests/system-v266.test.mjs`（10 条：正控制 + 5 例**真源码破坏**负控制 + 判据纯度自证）。
-## 🎨 注册门禁第四面：样式投递覆盖 (v2.67.0)
-* **第四面纳入对账**：CONTEXT.md 的「四处注册」此前只有三面进门禁，第四面 `phone.css` 样式合并尚未覆盖。样式漏挂的后果是**界面裸奔且不报错**——与既有几类静默失效同族。
-* **判据按实测机制而定，而非想当然**：本仓并存两种投递机制——**A 全局打包**（类前缀族合并进 `phone.css`，25 个文件）与 **B App 内自注入**（diary / honey / music / weibo 四个按文件名建 `<link>`）。只认机制 A 会把四个自注入 App 判成缺口（假阳性）；判据必须覆盖真实存在的**全部**合法机制。
-* **「两机制皆无」确实存在，且要分清「有意」与「漏挂」**：`apps/games/games.css` 是有意的转发壳（正文已拆到 `poker/poker.css`，本文件只留 `@import` 防旧缓存路径 404）。它无需被 JS 引用即已生效，故登记进 `CSS_DELIVERY_EXEMPT` 并写明理由并注明「防后人误改」。
-* **测试**：`tests/system-v266.test.mjs` 扩到 **11 条**（新增 R3 负控制：抹掉某 App 的样式引用 → 门禁点名该文件并 exit 1）。
-## 🧾 准入清单存活自证 (v2.68.0)
-* **纪律从文本落成机制**：v2.65.0 写进 `CONTEXT.md` 的「白名单是准入闸，不是放行条」此前只是文字。三道门里的三张硬编码白名单（`UNHANDLED_ALLOWLIST` / `REGEX_WIDE_ALLOWLIST` / `CSS_DELIVERY_EXEMPT`）**只有准入校验、没有存活自证**——条目所指对象消失后静默退化为**幽灵放行条**，为不存在的情形背书而门禁永不报警。
-* **补齐存活自证，一律 fail-closed 拒判（exit 2）**：**E10** 每条未处理导出写法的白名单条目认领数必须 ≥ 1（**不用固定数字**——数字漂移无害，写死会导致每次新增平台入口都要改门禁）；**R2b** 宽匹配前缀必须仍能在 `CHAT_DATA_PATTERNS` 找到对应条目；**R3b** 样式豁免清单**双向**自证（指向的文件必须存在 + 反向判定「理由已失效」）；**R3c** 样式文件内部本地 `url()` / `@import` 目标必须真实存在，**豁免项同样在射程内**。
-* **为什么是 exit 2 而不是 exit 1**：这不是数据缺陷，是**门禁自己的账目错了**——与 lifecycle 门 L3「派生前提消失即 fail-closed」同族。
-* **证据面纯度修复（本版最有价值的一处）**：样式自注入判定原用「正文里提到过文件名」，实测踩到两处伪证——① `index.js` 的更新说明**散文**把从未被任何 JS 引用的 `games.css` 伪装成「已投递」；② `scripts/` 下门禁**自己的豁免清单字面量**被读成「有 JS 引用它」（自指伪证）。判据已收紧为「**路径字面量**」并把门禁自身排除出引用面——与本仓 E6（v2.42.0）「注释 / 字符串里的提及不算消费」同一纪律的第三次复现。
-* **注释如实性同步**：`UNHANDLED_ALLOWLIST` 注释里「全仓 61 处」实测已漂到 **90 处**；并写明该白名单的**边界外覆盖**（9 处多行对象字面量的成员名其实稳定可对账，暂不纳入枚举因需数据流分析，按名字匹配会产生假阳性）。
-* **测试**：`tests/system-v268.test.mjs`（13 条：三条存活自证的正 / 负控制、证据面收紧的两面复现、R3c 正反例，以及负控制纯度自证——破坏只落在临时副本上，绝不经由真仓库文件树复制）。
-## 🔑 会话键归属门禁 (v2.69.0)
-* **兜底桶收紧为逐键枚举**：会话隔离判定此前用一条 `/^ruby_/` **兜底**匹配 12 个键。兜底能防串味，代价是**归属不可知**——任何 `ruby_` 开头的键都被静默收纳，而「这个键属于谁、该不该隔离」没有任何地方能回答。现改为 11 条精确键 + 1 条前缀型（阅读进度按 bookId 拼接），防串味强度与兜底**等价**，差别只在「可核对」。
-* **新增第六道门 `scripts/keys-audit.mjs`**（`npm run keys`，已串进 `npm run check`）：**K1** 真仓库每个 storage 键必须在登记表声明归属（会话隔离 / 全局），未登记即红灯——把「新增键」从「随手写」变成「必须先回答归属」；**K2** 登记声明必须与 `CHAT_DATA_PATTERNS` 的实际匹配结果一致，把「意图」与「机制」钉在一起；**K3** 每条登记必须仍能在真仓库找到使用点，零命中即拒判（同 E10/R2b/R3b 纪律）。实测 **139 个键全登记**（会话隔离 92 · 全局 45 · 历史键 2），K2 零分歧。
-* **为什么这条门禁值钱**：它守的是本仓最贵的缺陷形态——**不报错、不崩溃、只错数据**。该隔离漏配 → 换角色/换会话数据串味（v2.8.10 事故：成就/抽卡/生理/塔罗互相污染）；不该隔离误配 → 本该全局的设置跟着会话走，切角色后设置"莫名丢了"。两者在运行期都不会报任何错。
-* **`legacy` 历史误存键单独成类**：`games_catbox_state` / `games_werewolf_state` 是「读旧档 → 迁移 → 删旧键」的迁移键，迁移后已无写方。它们仍须活着，但**不参与 K2**——硬判会逼人为了消红灯去改正则，反而丢掉旧档迁移能力。
-* **抽取面纯度 + 结构性收编**：只认 storage 句柄上的读写（宽口径会把 `Map.get('active')` 这类状态标记当成键，实测 86 个里 40 个假阳性）；排除 `scripts/`（那里是描述不是使用）；排除形似键名的 JSON 字段（`WORTH_KEY = 'worth'` 读的是 `stock.worth`）。同时**收编本地包装层**（`const get = (key) => storage?.get?.(key)` 之后的裸 `get('...')`），否则真键会被误报成「登记失效」——收编后新暴露 3 个此前完全未被枚举的真键。
-* **测试**：`tests/system-v269.test.mjs`（16 条：正控制 3 + 负控制 8 + 纯度与接线自证 5）。负控制全程走「真源码破坏（锚点恰中 1 次）→ 临时副本 → `--root` 指向真仓库（只读）」通道。
-* **同轮修复两类判据缺陷**：① 四处 items 同源判据（v253/v254/v255/v256）原用「剥引号 / 全局取引号」实现，隐含假设「条目内不含引号」——内容含 `.get("active")` 这类写法时会劈段错位（假红灯），条目跨行时还会漏比（假绿灯）；已全部改为 JSON.parse 真解析并加守卫测试。② v268-N6 原依赖「当版公告里的散文串」当伪证据，换公告即失效；已改为**夹具自造证据**，并给注册门补「夹具可覆盖豁免清单」通道，使该机制在合成仓库上也能被负控制覆盖。
-## 🩺 生理状态交接适配层 (v2.70.0)
-* **补上「生成后回写」这半条链**：健康 App 此前只有「生成前注入」一条链——本地状态单向喂给模型，正文里已经发生的饮水 / 进食 / 如厕 / 睡眠 / 病症与时间流逝**没有任何回写通道**，状态只能靠手动按钮推进。本版新增 `apps/health/health-state-bridge.js`，回复落地后提取 `<state_handoff>` 交接块，把已发生事实投递给本地确定性状态机。
-* **事实校验铁律**：只认**已发生事实**。未知类型、缺字段、超限数值一律拒绝；说明里出现意图/未完成标记（打算、希望、没能…）的条目按「**愿望不是事实**」拒绝；畸形输入降级不抛，绝不阻断消息渲染（本仓「不抛」纪律）。
-* **确定性投递边界**：交接层只能调用 `HealthData` 既有方法（`applyNeed` / `addCondition` / `removeCondition` / `advanceHours`），**不能**直接覆盖周期日、孕周、胎儿等本地状态机字段。部分缓解类事实（喝了一口水）只入账不投递，避免被误判成全量清零。
-* **交接账本 `ruby_health_handoff`**：去重 + 50 条上限，作为会话隔离键同步登记进 `config/storage.js` 与 keys 门禁登记表（13 个 `ruby_` 键逐一显式枚举），换会话不串味。
-* **测试**：`tests/system-v270.test.mjs`——提取 / 剥离 / 校验 / 确定性应用 / 部分缓解 / 账本去重与上限 / 端到端 / 存储归属 / 接线自证 / 版权纯度。
-## 🧰 工具调用中的最终回复正文提取 (v2.71.0)
-* **静默错数据，而非崩溃**：`ApiManager` 此前只认 `choices[0].delta.content` 一族字段。当上游按 OpenAI function calling / Gemini `functionCall` 协议把最终回复装进**工具调用**里（本仓常见的 `emit_complete_response` 约定）时，标准 `content` 通道是**空的**——配了工具调用预设的用户，微信 / 蜜语 / 微博等所有走 `apiManager.callAI` 的 App 会拿到空文本并报「API 返回内容为空」。
-* **零依赖纯函数模块 `config/tool-call-content.js`**：`extractToolCallFragments` 覆盖 OpenAI `tool_calls`、旧版 `function_call`、Gemini `functionCall` 三种协议形态与 `payload.data` 外层包裹；`mergeToolCallFragments` 按 index 合并跨分片调用（流式 `arguments` 增量累积、完整态覆写）；`extractFinalResponseToolContent` 识别最终回复约定名并取出正文（字符串 / parts 数组两种形态）。
-* **四处接线，全部保持「正文通道优先」**：`_extractStreamContent` 返回值追加 `toolCalls`；`_parseApiResponse` 流式分支与非流式 content 候选各接一处；`_parseChunkedApiText` 与 `_readUniversalStream` 在收尾时用累积的调用表兜底。正文通道非空时**永远不**走工具调用兜底，避免两种通道同时存在时行为漂移。
-* **测试**：`tests/system-v271.test.mjs`——工具名识别 / 三种协议形态 / 流式累积与完整态覆写语义 / 端到端兜底 / 四处接线自证 / 版权纯度（无水印、无网络请求、无 npm 依赖）。
-## 📐 表格更新锚点 (v2.72.0)
-* **把「落后几楼」从不可见变为可读**：新增 `config/update-gap.js`（零依赖纯函数模块），用 `chatMetadata + sendDate + swipeId` 三元组记住表格最后一次更新落在哪一楼；`readUnupdatedFloorCount` 只数锚点楼之后的 **AI 楼**（user 楼与系统楼不计）。
-* **锚点失效三态，绝不给出错数**：删楼 / `sendDate` 变 / `swipeId` 变**任一命中即返回 `null`**——锚点楼被删或那条回复被换成另一条时，读数返回「未知」而不是一个错数。缺口数可以错，**错的方向必须是「不知道」而不是「已追平」**。
-* **scope 隔离 + 幂等 + 上限**：同一顶层键下按 scope 分表，多个表格 App 各记各的锚点不串账，且带 scope 的调用方不会读到旧版裸锚点；同 `{floorId,sendDate,swipeId}` 重复记不触发 `saveMetadataDebounced`；超过 50 份按 `floorId` 淘汰最旧。
-* **三态读数**：`unknown`（锚点失效，需重建）/ `clear`（已追平）/ `behind`（落后 N 楼）——把「没有读数」与「读数为 0」分成两种东西。向后兼容旧版裸锚点，升级不清历史数据。
-* **测试**：`tests/system-v272.test.mjs`——锚点记读闭环 / 三类失效判定 / 计数口径 / scope 隔离 / 幂等 / 上限收敛 / 三态读数 / 畸形输入不抛 / 旧版兼容 / 负控制 / 版权纯度。
-## 🕳️ default 面的消费通道对账 (v2.73.0)
-* **治理「白名单的边界外覆盖」**：`UNHANDLED_ALLOWLIST` 只放行 `export default` 的**写法形态**，不覆盖其上的**具名成员**。v2.68.0 写下的理由是「9 处多行对象字面量的成员须数据流分析才能对账」——于是这批成员**既不报红灯、也不进账本**，与既有六次欠债同形：*有机制、有账目，但账目覆盖不到它*。
-* **先把立论证伪再动手**（本版最有价值的一步）：TODO 称消费形态为 `import M from './m.js'; M.A`。实测指向这 9 处多行 default 对象的 **default 导入点为 0 / 9**，成员消费**全走具名 import**；全仓真正经 `.default` 取成员的只有 **6 个访问点 / 2 模块 / 4 成员**，**且只在测试里**。⇒ 该缺口**可静态对账、不需要数据流分析**，原「不能做」的结论建立在错误前提上（TODO 已据实改写归档）。
-* **新增 dead-export E11（两面判据，全部基于可复算的静态事实）**：① **登记**——模块的产品侧通道为 0（无 default 导入点 · 无 `import * as` · 无本文件 `window|self|globalThis.X =`）而存在经 `.default` 取的成员时，该 `(模块, default.成员)` 必须进 `TEST_ONLY_DEFAULT_LEDGER`，否则报红灯（报错附「成员有无依据」，使成员名拼错的 **phantom 访问点**当场现形）；② **账本校验**——条目须仍命中 ≥1 个访问点（零命中 = **幽灵放行条**）且成员须仍有依据（= **账本腐坏**），两条归因同处一个校验，fail-closed（`exit 2`）。
-* **账本 4 条冻结项**：`apps/cheat/cheat-data.js::QUALITY_META` `::QUALITY_ORDER`、`apps/dirtytalk/dt-data.js::TIER_META` `::TIER_ORDER`——消费形态是**别名导入**只经 default 对象外露，产品侧只用 `qualityColorOf` / `qualityOrderOf`，故产品端零消费；测试守的是与 `cheat-index` 的**数值漂移**。
-* **审计器自身三条缺陷被负控制抓出并修掉**：① `aliasNames` 跑在**剔字符串后**的真代码上而 import 的 `from '…'` 引号已置空 ⇒ 一条别名都匹配不到（**假红**），改为不依赖引号；`hasProdChannel` 同理改用**原文**扫描；② 初版另有一条独立的「访问点无依据」判据，**结论永远轮不到自己决定**（死判据）⇒ 删除并配 `v273-S2` 守卫；③ 账本成员依据**刻意不含**「default 对象成员」（**自我指涉** ⇒ 成员被删后账本腐坏永远抓不到），改用 `strictMemberBacked` 并配 `v273-S1` 守卫。
-* **观测不到 ≠ 判死**：只对「模块在本仓扫描面内」的账本条目生效；夹具里模块不存在属**无从观测**，不判 fail-closed。诊断面 `--e11-dump` 分开报告「本仓访问点 / 非本仓扫描面」，防夹具字面量混进主读数。
-* **测试**：`tests/system-v273.test.mjs`（14 条：正控制 4 + 负控制 8 + 结构锁 2）。负控制沿用本仓三形态假绿纪律：真源码破坏（锚点恰中 1 次）→ 加载破坏副本 → 在副本上重跑同款真判据；夹具只写 `os.tmpdir()`，**绝不**复制真仓库文件树、**绝不**对真仓库写字节。
+- `ITERATION_LOG.md` — engineering record of every iteration (task, why, scope, verification, leftovers).
+- `update-log.json` — the authoritative user-facing changelog that drives the in-app "what’s new" popup.
+- `TODO.md` — confirmed, unfixed items only; an entry is deleted the moment it is fixed.
+- `CONTEXT.md` — architecture and invariants.
+- `FOUR_RELEASE_PLAN.md` — the current four-release plan.

@@ -11,25 +11,25 @@
  * ======================================================== */
 // APP配置文件
 export const DEFAULT_APP_ICONS = Object.freeze({
-    wechat: new URL('../phone/微信.png', import.meta.url).href,
-    weibo: new URL('../phone/微博.png', import.meta.url).href,
-    honey: new URL('../phone/蜜语.png', import.meta.url).href,
-    mofo: new URL('../phone/魔坊.png', import.meta.url).href,
-    wangxiang: new URL('../phone/万象.png', import.meta.url).href,
-    phone: new URL('../phone/电话.png', import.meta.url).href,
-    diary: new URL('../phone/日记.png', import.meta.url).href,
-    music: new URL('../phone/音乐.png', import.meta.url).href,
-    album: new URL('../phone/相册.png', import.meta.url).href,
-    calendar: new URL('../phone/日历.png', import.meta.url).href,
-    games: new URL('../phone/游戏.png', import.meta.url).href,
-    settings: new URL('../phone/设置.png', import.meta.url).href,
-    memory: new URL('../phone/记忆.png', import.meta.url).href,
-    graph: new URL('../phone/图谱.png', import.meta.url).href,
-    mood: new URL('../phone/心境.png', import.meta.url).href,
-    tarot: new URL('../phone/塔罗.png', import.meta.url).href
+    wechat: new URL('../phone/wechat.png', import.meta.url).href,
+    weibo: new URL('../phone/weibo.png', import.meta.url).href,
+    honey: new URL('../phone/honey.png', import.meta.url).href,
+    mofo: new URL('../phone/mofo.png', import.meta.url).href,
+    wangxiang: new URL('../phone/wanxiang.png', import.meta.url).href,
+    phone: new URL('../phone/phone.png', import.meta.url).href,
+    diary: new URL('../phone/diary.png', import.meta.url).href,
+    music: new URL('../phone/music.png', import.meta.url).href,
+    album: new URL('../phone/album.png', import.meta.url).href,
+    calendar: new URL('../phone/calendar.png', import.meta.url).href,
+    games: new URL('../phone/games.png', import.meta.url).href,
+    settings: new URL('../phone/settings.png', import.meta.url).href,
+    memory: new URL('../phone/memory.png', import.meta.url).href,
+    graph: new URL('../phone/graph.png', import.meta.url).href,
+    mood: new URL('../phone/mood.png', import.meta.url).href,
+    tarot: new URL('../phone/tarot.png', import.meta.url).href
 });
 
-export const DEFAULT_PHONE_WALLPAPER = new URL('../phone/手机背景.jpg', import.meta.url).href;
+export const DEFAULT_PHONE_WALLPAPER = new URL('../phone/phone-background.jpg', import.meta.url).href;
 
 export const APPS = [
     // 第一行

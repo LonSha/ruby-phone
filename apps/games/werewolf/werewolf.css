@@ -177,7 +177,7 @@
     height: 27px;
     transform: none;
     border: 0;
-    background: url('./assets/数字边框.png') center / contain no-repeat;
+    background: url('./assets/number-border.png') center / contain no-repeat;
     color: #f3d48f;
     display: flex;
     align-items: center;
