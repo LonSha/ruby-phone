@@ -133,6 +133,44 @@ function tableTextFromCache(cache) {
 }
 
 const REAL_CACHE_BYTES = read(CACHE_REL);
+/** 真仓台账此刻的读数（上游 813ab3a 提交后**已收账为空表**；上游若再次分歧这里会有条目）。 */
+const REAL_LAG = JSON.parse(read(LAG_REL));
+
+/* ── 分歧夹具：本套件**不许**把「真仓此刻有活分歧」当前提 ──
+ * v3.20.4 交付时真仓确有两条分歧（上游提交态尚未跟上），于是多条负控制直接拿真仓当载体；
+ * 上游一提交（813ab3a）它们**全部塌成**「分歧已消失」—— 判据的前提不许是别人的提交进度。
+ * 故 R11 的负控制一律改用**本套件自造的分歧**：把冻读取副本改回上游陈旧账面，
+ * 再按需配一份登记它的台账。载体在夹具里，与上游提不提交无关。 */
+const DIVERGENCE_ENTRIES = () => ([
+    { face: 'checkpointCompare', kind: 'version', upSays: 'v3.237.0', ourSays: '3.252.0',
+        upstreamCommit: 'deadbeef0000', reason: '夹具：陈旧账面与下游 since 口径不一致' },
+    { face: 'checkpointCompare', kind: 'consumer-none', upSays: 'none@0',
+        ourSays: 'readLonshaCheckpointFace@1', upstreamCommit: 'deadbeef0000',
+        reason: '夹具：账面说零消费而本仓已接入' }
+]);
+function divergenceLag(items) {
+    return JSON.stringify({
+        schema: 'upstream-face-lag@1', note: '夹具：自造分歧（载体不依赖真仓那一份）', items
+    }, null, 2) + '\n';
+}
+/** 把冻读取副本改回**上游陈旧账面**（自造分歧），并按 entries 写好台账。
+ *  ★ 三格必须**一起**回到陈旧口径：`consumer: none@0` 与「下游已接入」的 standalone_behavior
+ *    在门上永远不可能同时成立（R7 会在「上游说已接入而本仓无出口」这一向直接报缺陷）——
+ *    只改一格造出来的是**另一种**缺陷，不是「跨仓陈旧账面」。故 standalone 一并回到上游旧措辞。 */
+function stageDivergence(entries) {
+    const dir = stageTree({ [CACHE_REL]: (s) => {
+        const c = JSON.parse(s);
+        c.faces.checkpointCompare.producerVersion = 'v3.237.0';
+        c.faces.checkpointCompare.consumer = 'none@0';
+        c.faces.checkpointCompare.standaloneBehavior =
+            'store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；'
+            + '下游尚未接入（计划二 T4 已排 F7）';
+        return JSON.stringify(c, null, 2) + '\n';
+    } });
+    fs.writeFileSync(path.join(dir, LAG_REL),
+        divergenceLag(entries === undefined ? DIVERGENCE_ENTRIES() : entries));
+    return dir;
+}
 
 /* ══════════ A ── 缺陷在场与形态锚（这一版治的东西必须能被指出来） ══════════ */
 test('A1 ★★★ 真仓冻读取是**提交态**：sourceState=commit + upstreamCommit 非空 + schema=@2', () => {
@@ -158,12 +196,20 @@ test('A3 ★★★ 十一条判据自述与真读数一致（门说几条就几�
     assert.match(g, /R10 冻读取/, 'R10 判据本体必须在场');
     assert.match(g, /R11 /, 'R11 判据本体必须在场');
 });
-test('A4 ★★★ 台账文件在场且形态是「项数组」（R11 的输入不是可选摆设）', () => {
-    const t = JSON.parse(read(LAG_REL));
+test('A4 ★★★ 台账文件在场、形态是「项数组」，且**空表是真读数**（不与「形态坏掉」同形）', () => {
+    const t = REAL_LAG;
     assert.equal(t.schema, 'upstream-face-lag@1', '台账自带 schema');
     assert.ok(Array.isArray(t.items), 'items 必须是数组（形态坏掉与空表不许同形）');
-    assert.ok(t.items.length >= 1, '★ 真仓此刻**确有**上游账面与真码的分歧（提交态 none@0 vs 本仓已接入）');
-    for (const it of t.items) {
+    /* 【v3.20.5 收账改写】v3.20.4 时这里断言 `items.length >= 1`（真仓确有两条分歧）——
+     *   那条前提是**别人的提交进度**：上游 813ab3a 一提交，分歧消失、条目删空，断言就塌。
+     *   台账的实质不是「此刻有几条」，而是「**有分歧必须逐条解释、没分歧不许留条目**」。
+     *   故改为：真仓台账形态合法（0 或 N 条都合法），并由**自造分歧夹具**证明 R11 真读它。 */
+    const div = stageDivergence();
+    const r = runGate(div);
+    assert.equal(r.status, 0, '自造分歧 + 逐条解释 ⇒ 须绿：' + r.err.slice(0, 300));
+    assert.match(r.out, /R11 上游台账待同步：\*\*已解释 2 条\*\*/,
+        '★ 台账必须真被读（解释了几条要出声，否则 A4 只是形态摆设）');
+    for (const it of DIVERGENCE_ENTRIES()) {
         for (const k of ['face', 'kind', 'upSays', 'ourSays', 'upstreamCommit', 'reason']) {
             assert.ok(String(it[k] === undefined ? '' : it[k]).trim(), '台账项缺 ' + k + '：' + JSON.stringify(it).slice(0, 80));
         }
@@ -172,14 +218,31 @@ test('A4 ★★★ 台账文件在场且形态是「项数组」（R11 的输入
 });
 
 /* ══════════ B ── 行为面（真仓真跑 + 夹具真跑） ══════════ */
-test('B1 ★★★ 真仓裸跑：5 面 / 问题 0，且摘要里**说清分歧已被解释**（不许悄悄变绿）', () => {
+test('B1 ★★★ 真仓裸跑：5 面 / 问题 0，且摘要如实报出 R11 的读数（0 条也是真读数）', () => {
     const r = runGate(ROOT);
     assert.equal(r.status, 0, '裸跑必须绿（stderr：' + r.err.slice(0, 200) + '）');
     assert.match(r.out, /跨仓外供面「声明 ↔ 真码」对账：5 面 \/ 问题 0/);
-    assert.match(r.out, /R11 上游台账待同步：\*\*已解释 \d+ 条\*\*/,
-        '★ 分歧被解释必须出声：摘要行仍写着上游那份陈旧账面（none@0），不出声就等于用台账把分歧藏起来');
-    assert.match(r.out, /R10 上游那张表在工作树里有\*\*未提交改动\*\*/,
-        'worktreeDirty 的真读数必须出现在 note 里（如实提示上游账面此刻与提交态不同）');
+    /* 【v3.20.5 收账改写】v3.20.4 在这里断言「摘要必须写**已解释 N 条**」—— 那是拿
+     *   「真仓此刻有活分歧」当前提。上游 813ab3a 提交后分歧消失、台账删空，那句文案
+     *   按设计变成「本次 **0 条**」。**不许**因此断言「已解释」消失（那会让判据逼着人留着陈旧台账），
+     *   也不许只断「绿」——「绿」在「台账被静默忽略」时同样成立。故断言**两者必居其一**：
+     *   摘要必须**明确报出** R11 的读数，且读数与真仓台账条数一致（有则报已解释、无则报 0 条）。 */
+    const items = REAL_LAG.items.length;
+    if (items) {
+        assert.match(r.out, new RegExp('R11 上游台账待同步：\\*\\*已解释 ' + items + ' 条\\*\\*'),
+            '★ 台账里有 ' + items + ' 条 ⇒ 摘要必须逐条报出「已解释」，不许悄悄变绿');
+    } else {
+        assert.match(r.out, /R11 上游台账待同步：本次 \*\*0 条\*\*（上游账面与下游真码逐面一致）—— 空表是真读数/,
+            '★ 台账为空 ⇒ 摘要必须明说「0 条（逐面一致）」，不许什么都不说');
+    }
+});
+test('B1b ★★★ 自造分歧夹具：摘要必须写**已解释 N 条**并点名每条（不许用台账把分歧藏起来）', () => {
+    /* 这是 B1 挪到夹具里的那一半：分歧「被解释」≠ 分歧「不存在」——
+     *   摘要行仍写着上游那份陈旧账面，不出声就等于藏起来。载体换成自造分歧后，这条与上游提不提交无关。 */
+    const r = runGate(stageDivergence());
+    assert.equal(r.status, 0, '已解释的分歧不许转红：' + r.err.slice(0, 300));
+    assert.match(r.out, /R11 上游台账待同步：\*\*已解释 2 条\*\*（checkpointCompare\/version、checkpointCompare\/consumer-none）/,
+        '★ 分歧被解释必须出声，且逐条点名');
 });
 test('B2 ★★★ 给了 --upstream ⇒ 复核的是**提交态**，且如实报「工作树里有未提交改动」', () => {
     const r = runGate(ROOT, ['--upstream', '/home/user/lonsha-memory-plugin']);
@@ -269,18 +332,25 @@ test('C2 ★★★ 拿掉 upstreamCommit ⇒ R10 转红；拿掉 sourceState ⇒
     assert.match(noState.err, /R10 冻读取缺 sourceState/, '必须点名缺的是哪一格');
 });
 test('C3 ★★★ worktreeDirty=true 只是 note 而**不是**缺陷（且该读数真在驱动那句 note）', () => {
-    /* 真仓此刻 worktreeDirty=true（上游那份表在工作树里有未提交改动），门仍须绿；
-     *   反向自证：把这格改成 false，那句 note **必须消失** —— 否则它是写着玩的。 */
-    const green = runGate(stageTree());
-    assert.equal(green.status, 0, 'worktreeDirty=true 不许转红：' + green.err.slice(0, 300));
-    assert.match(green.out, /R10 上游那张表在工作树里有\*\*未提交改动\*\*/, '必须如实出声');
-    const quiet = runGate(stageTree({ [CACHE_REL]: { find: '"worktreeDirty": true', to: '"worktreeDirty": false' } }));
-    assert.equal(quiet.status, 0, '改成 false 仍须绿');
-    assert.equal(/未提交改动/.test(quiet.out), false, '★ 改成 false 后那句 note 必须消失（读数真在驱动它）');
+    /* 【v3.20.5 收账改写】v3.20.4 拿真仓当载体（上游那份表当时确有未提交改动）。
+     *   上游 813ab3a 提交后真仓 `worktreeDirty=false`，那条 note 按设计不再出现 ——
+     *   若沿用旧写法，「绿 + 有 note」这条断言就变成了「断言上游的提交进度」。
+     *   故载体改为**夹具自造**：把 worktreeDirty 置真 ⇒ 必须出声；置假 ⇒ 那句 note 必须消失。 */
+    const dirty = runGate(stageDivergence());
+    const dirtyOn = stageTree({ [CACHE_REL]: { find: '"worktreeDirty": false', to: '"worktreeDirty": true' } });
+    const loud = runGate(dirtyOn);
+    assert.equal(loud.status, 0, 'worktreeDirty=true 不许转红：' + loud.err.slice(0, 300));
+    assert.match(loud.out, /R10 上游那张表在工作树里有\*\*未提交改动\*\*/, '必须如实出声');
+    assert.equal(dirty.status, 0, '对照：worktreeDirty=false 亦须绿');
+    assert.equal(/未提交改动/.test(dirty.out), false, '★ 该格为假时那句 note 必须消失（读数真在驱动它）');
 });
 test('C4 ★★★ 台账项理由被清空 ⇒ R11 转红（沉默不许存在）', () => {
-    const dir = stageTree();
+    /* 【v3.20.5】载体改为自造分歧：`stageTree()` 那份台账此刻是**空表**，
+     *   拿它去清 `items[0].reason` 会撞在「没有第 0 条」上（TypeError），
+     *   那样这条判据就变成了「断言真仓台账非空」—— 前提又是别人的提交进度。 */
+    const dir = stageDivergence();
     const t = JSON.parse(read(LAG_REL));
+    t.items = DIVERGENCE_ENTRIES();
     t.items[0].reason = '   ';
     fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify(t, null, 2) + '\n');
     const r = runGate(dir);
@@ -288,8 +358,9 @@ test('C4 ★★★ 台账项理由被清空 ⇒ R11 转红（沉默不许存在�
     assert.match(r.err, /reason 为空/, '必须点名空理由');
 });
 test('C5 ★★★ 台账项缺 upstreamCommit ⇒ R11 转红（答不出「上游一提交这条还成不成立」）', () => {
-    const dir = stageTree();
+    const dir = stageDivergence();
     const t = JSON.parse(read(LAG_REL));
+    t.items = DIVERGENCE_ENTRIES();
     delete t.items[0].upstreamCommit;
     fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify(t, null, 2) + '\n');
     const r = runGate(dir);
@@ -297,26 +368,27 @@ test('C5 ★★★ 台账项缺 upstreamCommit ⇒ R11 转红（答不出「上�
     assert.match(r.err, /台账里这条缺 upstreamCommit/, '必须点名缺的是哪一格');
 });
 test('C6 ★★★ 台账项删掉一条（分歧仍在而无理由）⇒ R11 逐条点名转红', () => {
-    const dir = stageTree();
-    const t = JSON.parse(read(LAG_REL));
-    const dropped = t.items.pop();
-    fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify(t, null, 2) + '\n');
+    /* 【v3.20.5】自造两条分歧、只登记一条 ⇒ 另一条必须被逐条点名。
+     *   旧写法从真仓台账里 `pop()` 一条 —— 空表之后 `pop()` 得到 undefined，判据自塌。 */
+    const entries = DIVERGENCE_ENTRIES();
+    const dir = stageDivergence([entries[0]]);   /* 只登记 version，consumer-none 无理由 */
     const r = runGate(dir);
     assert.equal(r.status, 1, '有分歧无理由必须转红');
-    assert.match(r.err, new RegExp('R11 .*' + dropped.face), '必须点名被漏掉的那条面：' + dropped.face);
+    assert.match(r.err, /R11 .*checkpointCompare/, '必须点名被漏掉的那条面：checkpointCompare');
     assert.match(r.err, /台账里没有\*\*这一条\*\*/, '必须说清是「没有这一条」而不是「理由为空」');
 });
 test('C7 ★★★ 台账腐化（分歧已消失而条目还在）⇒ R11 反向转红（登记着不存在的分歧就是掩饰）', () => {
-    const dir = stageTree({ [CACHE_REL]: (s) => {
-        const c = JSON.parse(s);
-        c.faces.checkpointCompare.consumer = 'readLonshaCheckpointFace@1';
-        c.faces.checkpointCompare.standaloneBehavior = '下游已接入（夹具）';
-        c.faces.checkpointCompare.producerVersion = 'v3.252.0';
-        return JSON.stringify(c, null, 2) + '\n';
-    } });
+    /* 【v3.20.5 收账改写】旧写法把真仓冻读取改成「与本仓一致」的样子，靠**真仓那两条**登记项
+     *   反向转红 —— 上游 813ab3a 提交后真仓已无分歧、也无登记项，那条路自然走不通。
+     *   自造：登记两条，但把 version 那条的分歧**抹平**（上游账面改成与本仓 since 同值）⇒
+     *   它就成了「登记着不存在的分歧」，必须被点名逼删。 */
+    const dir = stageDivergence();
+    const c = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
+    c.faces.checkpointCompare.producerVersion = 'v3.252.0';   /* 分歧消失，台账项却还在 */
+    fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(c, null, 2) + '\n');
     const r = runGate(dir);
     assert.equal(r.status, 1, '台账腐化必须转红');
-    assert.match(r.err, /R11 台账里登记了 `checkpointCompare\/consumer-none`/, '必须点名腐化的那条');
+    assert.match(r.err, /R11 台账里登记了 `checkpointCompare\/version`/, '必须点名腐化的那条');
     assert.match(r.err, /已经不分歧/, '必须说清是「分歧不存在了」');
 });
 test('C8 ★★★ 台账 shape 坏掉（items 不是数组）⇒ R11 报「形态不可信」，不与「空表」同形', () => {
@@ -331,9 +403,21 @@ test('C9 ★★★ 判据工具自证：锚点不存在 / 不唯一一律抛', (
     assert.equal(replaceOnce('abc', 'abc', 'y'), 'y', '对照：恰中 1 次时正常工作');
     /* 真源码锚点必须在场（否则上面每条负控制都是假绿） */
     assert.match(read(CACHE_REL), /"sourceState": "commit"/, 'C1 的锚点必须在真源码里在场');
-    assert.match(read(CACHE_REL), /"worktreeDirty": true/, 'C3 的锚点必须在真源码里在场');
-    assert.match(read(LAG_REL), /"reason": "/, 'C4 的锚点必须在真源码里在场');
-    assert.match(read(LAG_REL), /"upstreamCommit": "/, 'C5 的锚点必须在真源码里在场');
+    assert.match(read(CACHE_REL), /"worktreeDirty": (true|false)/, 'C3 的锚点必须在真源码里在场');
+    /* 【v3.20.5 收账改写】v3.20.4 在这里核 `"worktreeDirty": true` 与台账里的 `kind` ——
+     *   两者都是「真仓此刻的读数」，上游一提交流就翻面（C3 的锚点由 `true` 变成 `false`，
+     *   台账里的 kind 也随条目一起删光）。锚点自证要核的是**真源码里在场**，
+     *   故 C3 锚点放宽到「两值之一」（两值都由夹具真跑覆盖），台账锚点改核**它自己的 schema 与形态**
+     *   （那是这一版新增的文件契约，不随上游提交进度变化）。 */
+    assert.match(read(LAG_REL), /"schema": "upstream-face-lag@1"/, '台账的 schema 必须在真源码里在场');
+    assert.match(read(LAG_REL), /"items": \[/, 'R11 的输入形态锚必须在真源码里在场（空表也有这个形态）');
+    /* 分歧台账的**条目**形态锚不再依赖真仓（上游一提交即空）——改由自造夹具自证
+     *   （注意读的是**夹具里那一份**：`read()` 读的是真仓，真仓此刻已是空表）。 */
+    const div = stageDivergence();
+    const divLag = fs.readFileSync(path.join(div, LAG_REL), 'utf8');
+    assert.match(divLag, /"reason": "/, 'C4 的锚点（自造分歧里）必须在场');
+    assert.match(divLag, /"upstreamCommit": "/, 'C5 的锚点（自造分歧里）必须在场');
+    assert.match(divLag, /"kind": "consumer-none"/, 'R11 的锚点必须在场（否则 R11 的负控制是假绿）');
 });
 test('C10 ★★★ 逃生口两向都真：能取到工作树态，产物又必须被 R10 判缺陷', () => {
     const dir = stageTree();
@@ -372,27 +456,30 @@ test('C12 ★★★ 「三方定位责任」：登记行与上游表同值而只
 });
 test('C13 ★★ `--lag` 指到别处的台账 ⇒ 生效（路径可换，不许硬编码真仓那一份）', () => {
     /* 夹具里默认指向 RP_ROOT 下那一份；显式给一个**内容不同**的台账，判定必须跟着它走。 */
-    const dir = stageTree();
-    const t = JSON.parse(read(LAG_REL));
+    const dir = stageDivergence();
+    const entries = DIVERGENCE_ENTRIES();
     const alt = path.join(dir, 'alt-lag.json');
-    t.items = t.items.filter((x) => x.kind !== 'version');   /* 少一条 ⇒ 该分歧无理由 */
-    fs.writeFileSync(alt, JSON.stringify(t, null, 2) + '\n');
+    fs.writeFileSync(alt, divergenceLag(entries.filter((x) => x.kind !== 'version')));   /* 少一条 ⇒ 该分歧无理由 */
     const r = runGate(dir, ['--lag', alt]);
     assert.equal(r.status, 1, '换台账后缺的那条分歧必须转红');
     assert.match(r.err, /checkpointCompare\/version|version 与下游不一致/, '必须点名缺的那条');
     /* 对照：把这条补回去（用一个非真仓路径的台账）⇒ 该条不再报 */
-    const t2 = JSON.parse(read(LAG_REL));
     const alt2 = path.join(dir, 'alt-lag2.json');
-    fs.writeFileSync(alt2, JSON.stringify(t2, null, 2) + '\n');
+    fs.writeFileSync(alt2, divergenceLag(entries));
     const ok = runGate(dir, ['--lag', alt2]);
     assert.equal(ok.status, 0, '完整台账（非真仓路径）⇒ 绿：' + ok.err.slice(0, 200));
 });
 test('C14 ★★★ 台账的 upSays 必须与**冻读取提交态**逐字一致（台账不许写别的数来"圆"过去）', () => {
     /* 台账是「解释」，不是「改数」的通道。故逐条核：`version` 那条的 upSays 必须等于
      *   冻读取里该面的 producerVersion；`consumer-none` 那条必须等于该面的 consumer。
-     *   若哪天有人把台账里的数改成「好看的值」，这条立刻响 —— 解释权与事实分离。 */
-    const c = JSON.parse(REAL_CACHE_BYTES);
-    const t = JSON.parse(read(LAG_REL));
+     *   若哪天有人把台账里的数改成「好看的值」，这条立刻响 —— 解释权与事实分离。
+     *   【v3.20.5 收账改写】核的是**自造分歧夹具**里那对（冻读取 + 台账）——
+     *   上游 813ab3a 一提交，真仓那对（陈旧账面 + 台账条目）就一起消失了，
+     *   判据若还盯真仓，它守的就不再是「解释不许改数」，而是「上游还没提交」。 */
+    const entries = DIVERGENCE_ENTRIES();
+    const dir = stageDivergence(entries);
+    const c = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
+    const t = JSON.parse(fs.readFileSync(path.join(dir, LAG_REL), 'utf8'));
     const want = { version: 'producerVersion', 'consumer-none': 'consumer' };
     for (const it of t.items) {
         const field = want[it.kind];
@@ -407,6 +494,11 @@ test('C14 ★★★ 台账的 upSays 必须与**冻读取提交态**逐字一致
     const mismatch = broken.some((it) => want[it.kind]
         && String(it.upSays) !== String(c.faces[it.face][want[it.kind]]));
     assert.equal(mismatch, true, '改动 upSays 后必须能观测到不一致（否则上面的断言是空转）');
+    /* 且这处「圆数」在真门上必须真被抓住（不是只在本地算一遍）。 */
+    const liar = stageDivergence([Object.assign({}, entries[0], { upSays: 'v3.999.0' }), entries[1]]);
+    const r = runGate(liar);
+    assert.equal(r.status, 1, '★ 台账用别的数「圆」分歧必须转红');
+    assert.match(r.err, /台账里没有\*\*这一条\*\*|reason 为空|R11/, '必须点名这条对不上');
 });
 
 /* ══════════ D ── fail-closed 与刷新纪律（本版新增的入口不许破旧纪律） ══════════ */
@@ -422,10 +514,16 @@ test('D2 旧 schema（@1）⇒ rc 2（旧缓存配新判据不许静默错读）
 });
 test('D3 缺上游台账文件 ⇒ **不降级**（缺文件与「没有分歧」不许同形）', () => {
     /* 本版新入口：`--lag` 缺省指向真仓台账。夹具里删掉它，门仍须按「没给台账」处理
-     *   —— 此刻真仓确有分歧 ⇒ 必须转红，而不是被读成「没有分歧」。 */
-    const r = runGate(stageTree({ [LAG_REL]: null }));
+     *   —— 此刻夹具里**确有分歧** ⇒ 必须转红，而不是被读成「没有分歧」。
+     *   【v3.20.5】载体改为自造分歧：真仓此刻已是空表，拿它删文件只会得到「0 条 ⇒ 绿」，
+     *   那条断言就退化成「断言上游提交过了」。 */
+    const dir = stageDivergence();
+    fs.rmSync(path.join(dir, LAG_REL), { force: true });
+    const r = runGate(dir);
     assert.equal(r.status, 1, '缺台账而确有分歧必须转红');
     assert.match(r.err, /没给「上游台账待同步」台账/, '必须说清是「没给」而不是「没有分歧」');
+    /* 反向对照：同样的夹具、**不删**台账 ⇒ 须绿（说明上面那条红确实是「缺文件」引起的）。 */
+    assert.equal(runGate(stageDivergence()).status, 0, '对照：台账在场时须绿');
 });
 test('D4 --refresh 必须带非空理由（空理由的刷新等于没有纪律）', () => {
     const dir = stageTree();
@@ -463,14 +561,31 @@ test('E1 ★★★ 五源同源 + 当版条目自述的判据条数 == 真读数
     assert.equal(log.latest, mv, 'update-log latest 与 manifest 同源');
     assert.ok(Array.isArray(log.versions[mv] && log.versions[mv].items) && log.versions[mv].items.length >= 4,
         '当版条目至少 4 条说明');
-    const mine = (log.versions[mv].items.join('\n').match(/tests\/system-v3204\.test\.mjs（(\d+) 条/) || [])[1];
-    assert.ok(mine, '当版条目里必须自述本套件的条数（否则这条判据无从核对）');
+    /* ★ 取数口（v3.20.5 交棒改写）：本套件的**自身条数**自述写在**它出生那一版**的条目里，
+     *   而升版后「当版」会变成别人的版本 —— 读 `log.versions[mv]` 就是本仓记过的
+     *   「读动态当前版本」漂移族（v3203 F1 / v255 C4 同款）。故改为**扫描所有版本条目、取最近一次自述**：
+     *   本条判据的实质是「自述数 == 真读数」，那份自述落在哪一版条目里不该由它断言
+     *   （「自述必须写在当版」是对**新**套件的口径，由本套件的出生版条目满足）。 */
+    const mine = (() => {
+        for (const k of Object.keys(log.versions)) {
+            const items = ((log.versions[k] || {}).items) || [];
+            const hit = (items.join('\n').match(/tests\/system-v3204\.test\.mjs（(\d+) 条/) || [])[1];
+            if (hit) return hit;
+        }
+        return undefined;
+    })();
+    assert.ok(mine, '历史条目里必须至少有一处自述本套件的条数（否则这条判据无从核对）');
     const realCount = (read('tests/system-v3204.test.mjs').match(/^test\(/gm) || []).length;
     assert.equal(Number(mine), realCount, '★ 自述条数必须等于真读数：自述 ' + mine + ' / 真 ' + realCount);
 });
-test('E2 ★★★ 本版治的缺陷必须进当版条目（自述留档：不可回源 + 洗白两条后果）', () => {
+test('E2 ★★★ 本版治的缺陷必须进**本套件出生那一版**的条目（自述留档：不可回源 + 洗白两条后果）', () => {
+    /* 【v3.20.5 交棒改写】v3.20.4 读的是 `log.versions[log.latest]` —— 而升到 v3.20.5 之后
+     *   「当版」已不是本套件那一版，读 latest 必然取到别人的条目（本仓记过的「读动态当前版本」
+     *   漂移族，同 v3203 F1 / v255 C4）。本套件成立于 v3.20.4，故锚定**它自己那一版**。 */
     const log = JSON.parse(read('update-log.json'));
-    const items = log.versions[log.latest].items.join('\n');
+    const own = log.versions['3.20.4'];
+    assert.ok(own && Array.isArray(own.items), '本套件出生那一版（3.20.4）的条目必须在场');
+    const items = own.items.join('\n');
     assert.match(items, /不可回源/, '当版条目必须写明「不可回源」');
     assert.match(items, /洗白/, '当版条目必须写明「把真分歧洗白」');
     assert.match(items, /R10/, '当版条目必须点名新判据 R10');

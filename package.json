@@ -1,6 +1,6 @@
 {
   "name": "ruby-phone",
-  "version": "3.20.4",
+  "version": "3.20.5",
   "private": true,
   "type": "module",
   "description": "Tooling only: local and CI checks. The SillyTavern extension manifest lives in manifest.json. This file is not loaded at runtime and intentionally declares no dependencies so hosts never try to install anything.",

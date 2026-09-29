@@ -1,22 +1,5 @@
 {
   "schema": "upstream-face-lag@1",
-  "note": "「上游台账待同步」台账 —— R11 的输入。上游 open_face_registry.tsv 的提交态与下游真码对不上的每一条，在这里必须有一段**非空理由**；条目按 face + kind + upSays + ourSays 四元组逐字匹配（笼统一句「上游待同步」不算）。理由是**本仓自己的判断**，刻意与冻读取分开存（冻读取记「上游说了什么」、可被刷新覆写；这份记「我们为什么对不上」）。双向闭合：有分歧无理由 ⇒ 报；有理由无分歧 ⇒ 也报（登记了不存在的分歧就是掩饰）。上游一提交、分歧消失，这里的条目会立刻转红，逼迫删除。",
-  "items": [
-    {
-      "face": "checkpointCompare",
-      "kind": "version",
-      "upSays": "v3.237.0",
-      "ourSays": "3.252.0",
-      "upstreamCommit": "c99a445",
-      "reason": "上游提交态仍写 producer_version=v3.237.0（那一格是 F7 前的初版口径），而本仓的消费口径是 3.252.0 —— 上游 v3.252.0 才在 snapshot-checkpoint.js 交付了内容级 diffPayloadsDeep（本仓 config/crossrepo-registry.js 的 since 已按此口径登记，sinceSource 注明「证据在上游真源」）。上游在其**工作树**里已把这一格改成 v3.252.0，但尚未提交；下游对上游只读，改不了别人的账，故此处登记待上游提交。上游一提交（登记表 sha1 变化并使本条的 upSays 不再成立），R11 会报「登记着不存在的分歧」，逼删本条。"
-    },
-    {
-      "face": "checkpointCompare",
-      "kind": "consumer-none",
-      "upSays": "none@0",
-      "ourSays": "readLonshaCheckpointFace@1",
-      "upstreamCommit": "c99a445",
-      "reason": "上游提交态该面的 consumer 列写 none@0 且 standalone_behavior 写「下游尚未接入（计划二 T4 已排 F7）」，而本仓自 v3.20.2 起**已接入**：消费出口是 config/checkpoint-contract.js 导出的 readLonshaCheckpointFace，门禁 scripts/bridge-contract-audit.mjs 上挂着 [face: checkpointCompare] [reader: readLonshaCheckpointFace] [floor: 1] 标签、登记行 declaredConsumer/declaredFloor 同值。上游工作树里这三格已一起改成「下游已接入」，尚未提交。这条正是 v3.20.3 冻读取（冻的是上游工作树脏态）洗白掉的那处真分歧 —— 改成冻提交态后它按设计现形，故登记解释，而不是把门改成常绿。"
-    }
-  ]
+  "note": "（收账后空表：上游 813ab3a 已把 checkpointCompare 三格改为 v3.252.0 / readLonshaCheckpointFace@1 / 下游已接入，跨仓分歧已消失。）",
+  "items": []
 }

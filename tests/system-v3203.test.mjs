@@ -166,6 +166,40 @@ function tableTextFromCache(cache) {
 }
 
 const REAL_CACHE_BYTES = read(CACHE_REL);
+/** 真仓台账此刻的读数（上游 813ab3a 提交后**已收账为空表**）。 */
+const REAL_LAG = JSON.parse(read(LAG_REL));
+
+/* ── 分歧夹具（v3.20.5 收账）：本套件**不许**把「真仓此刻有活分歧」当前提 ──
+ *   v3.20.3 交付时真仓确有两条分歧，故 C11/C12 直接拿真仓台账当载体；
+ *   上游一提交（813ab3a）分歧消失、台账删空，那两条判据就塌成「断言上游没提交」。
+ *   故一律改为**本套件自造的分歧**：把冻读取副本改回上游陈旧账面 + 配一份登记它的台账。 */
+const DIVERGENCE_ENTRIES = () => ([
+    { face: 'checkpointCompare', kind: 'version', upSays: 'v3.237.0', ourSays: '3.252.0',
+        upstreamCommit: 'deadbeef0000', reason: '夹具：陈旧账面与下游 since 口径不一致' },
+    { face: 'checkpointCompare', kind: 'consumer-none', upSays: 'none@0',
+        ourSays: 'readLonshaCheckpointFace@1', upstreamCommit: 'deadbeef0000',
+        reason: '夹具：账面说零消费而本仓已接入' }
+]);
+function divergenceLag(items) {
+    return JSON.stringify({
+        schema: 'upstream-face-lag@1', note: '夹具：自造分歧（载体不依赖真仓那一份）', items
+    }, null, 2) + '\n';
+}
+/** 把冻读取副本改回上游陈旧账面（三格一起回到旧口径），并按 entries 写好台账。 */
+function stageDivergence(entries) {
+    const dir = stageTree({ [CACHE_REL]: (s) => {
+        const c = JSON.parse(s);
+        c.faces.checkpointCompare.producerVersion = 'v3.237.0';
+        c.faces.checkpointCompare.consumer = 'none@0';
+        c.faces.checkpointCompare.standaloneBehavior =
+            'store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；'
+            + '下游尚未接入（计划二 T4 已排 F7）';
+        return JSON.stringify(c, null, 2) + '\n';
+    } });
+    fs.writeFileSync(path.join(dir, LAG_REL),
+        divergenceLag(entries === undefined ? DIVERGENCE_ENTRIES() : entries));
+    return dir;
+}
 
 /* ══════════ A ── 结构面（门在链上 / 位置无关 / 编号不共号） ══════════ */
 test('A1 ★★★ 第十一道门在 check 链上（否则等于没做），且别名指向本门', () => {
@@ -456,27 +490,25 @@ test('C10b ★★★ 拿掉真冻读取副本的 upstreamCommit ⇒ R10 转红�
     assert.match(r.err, /R10 冻读取缺 upstreamCommit/, '必须点名缺的是哪一格');
 });
 test('C11 ★★★ 台账登记了、而实际已不分歧 ⇒ R11 转红（登记着不存在的分歧就是掩饰）', () => {
-    /* 反向闭合：台账不许腐化。造法：把冻读取改成「上游账面与本仓**一致**」的样子，
-     *   于是两条已登记的分歧都不再成立 ⇒ R11 必须逐条报出来，逼迫删除台账项。 */
-    const dir = stageTree({ [CACHE_REL]: (s) => {
-        const c = JSON.parse(s);
-        c.faces.checkpointCompare.consumer = 'readLonshaCheckpointFace@1';
-        c.faces.checkpointCompare.standaloneBehavior = '下游已接入（夹具）';
-        c.faces.checkpointCompare.producerVersion = 'v3.252.0';
-        return JSON.stringify(c, null, 2) + '\n';
-    } });
+    /* 反向闭合：台账不许腐化。造法（v3.20.5 改为自造）：登记两条分歧，但把 version 那条
+     *   的账面**抹平**（上游改回与本仓 since 同值）⇒ 它变成「登记着不存在的分歧」，必须被点名逼删。
+     *   旧写法把真仓冻读取改成「与本仓一致」的样子、靠**真仓那两条**登记项反向转红 ——
+     *   上游 813ab3a 提交后真仓已无分歧、也无登记项，那条路走不通了。 */
+    const dir = stageDivergence();
+    const c = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
+    c.faces.checkpointCompare.producerVersion = 'v3.252.0';   /* 分歧消失，台账项却还在 */
+    fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(c, null, 2) + '\n');
     const r = runGate(dir);
     assert.equal(r.status, 1, '台账腐化必须转红');
-    assert.match(r.err, /R11 台账里登记了 `checkpointCompare\/consumer-none`/, '必须点名腐化的那条');
+    assert.match(r.err, /R11 台账里登记了 `checkpointCompare\/version`/, '必须点名腐化的那条');
     assert.match(r.err, /已经不分歧/, '必须说清是「分歧不存在了」而不是「没给理由」');
 });
 test('C12 ★★★ 台账项缺理由 / 缺来源提交 ⇒ R11 转红（理由必填，逐条对上）', () => {
+    /* v3.20.5：载体改为自造分歧（真仓台账已收账为空表，`items[0]` 不存在）。 */
     const bare = (tweak) => {
-        const dir = stageTree();
-        const t = JSON.parse(fs.readFileSync(path.join(ROOT, LAG_REL), 'utf8'));
-        tweak(t.items[0]);
-        fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify(t, null, 2) + '\n');
-        return runGate(dir);
+        const entries = DIVERGENCE_ENTRIES();
+        tweak(entries[0]);
+        return runGate(stageDivergence(entries));
     };
     const noReason = bare((it) => { it.reason = '   '; });
     assert.equal(noReason.status, 1, '空理由必须转红');
@@ -521,9 +553,13 @@ test('C9 ★★★ 判据工具自证：锚点不存在 / 不唯一一律抛（�
     /* 真源码锚点必须在场（否则上面每条负控制都是假绿） */
     assert.match(read(REGISTRY_REL), /declaredFloor: 4/, 'C1 的锚点必须在真源码里在场');
     assert.match(read(CACHE_REL), /"producerVersion": "v3\.233\.0"/, 'C4 的锚点必须在真源码里在场');
-    /* v3.20.4 新判据的锚点也必须在真源码里在场（否则 R10/R11 的负控制是假绿） */
+    /* v3.20.4 新判据的锚点也必须在场（否则 R10/R11 的负控制是假绿）。
+     * 【v3.20.5 收账改写】R11 的**条目形态锚**不再取自真仓台账（上游一提交流即空表），
+     *   改由自造分歧夹具自证 —— 锚点自证要核的是「形态在场」，不是「上游还没提交」。 */
     assert.match(read(CACHE_REL), /"sourceState": "commit"/, 'R10 的锚点必须在真源码里在场');
-    assert.match(read(LAG_REL), /"kind": "consumer-none"/, 'R11 的锚点必须在真源码里在场');
+    assert.match(read(LAG_REL), /"schema": "upstream-face-lag@1"/, '台账 schema 锚必须在真源码里在场');
+    const divLag = fs.readFileSync(path.join(stageDivergence(), LAG_REL), 'utf8');
+    assert.match(divLag, /"kind": "consumer-none"/, 'R11 的锚点（自造分歧里）必须在场');
 });
 
 /* ══════════ D ── fail-closed（缺输入一律 rc 2，不许判「通过」） ══════════ */

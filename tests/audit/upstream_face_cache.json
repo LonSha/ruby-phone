@@ -1,14 +1,14 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-09-29T02:39:32.652Z",
-  "refreshReason": "v3.20.4：恢复为提交态冻读取（逃生口自证后回正）",
+  "refreshedAt": "2026-09-29T04:12:06.189Z",
+  "refreshReason": "v3.20.5：上游 813ab3a 已把 checkpointCompare 三格（v3.252.0 / readLonshaCheckpointFace@1 / 下游已接入）提交，冻读取重取提交态",
   "upstreamRepo": "lonsha-memory-plugin",
   "upstreamVersion": "3.255.0",
   "sourceState": "commit",
-  "upstreamCommit": "c99a445",
-  "worktreeDirty": true,
-  "tableSha1": "1ba1c5f1f49b",
+  "upstreamCommit": "813ab3a",
+  "worktreeDirty": false,
+  "tableSha1": "f2977b893c27",
   "tableRows": 5,
   "faces": {
     "projectionEnvelope": {
@@ -41,10 +41,10 @@
     },
     "checkpointCompare": {
       "owner": "lonsha-memory-plugin",
-      "producerVersion": "v3.237.0",
+      "producerVersion": "v3.252.0",
       "upstreamSymbol": "snapshot-checkpoint.js::compareCheckpoints,diffPayloads,diffPayloadsDeep,probeStore",
-      "consumer": "none@0",
-      "standaloneBehavior": "store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；下游尚未接入（计划二 T4 已排 F7）"
+      "consumer": "readLonshaCheckpointFace@1",
+      "standaloneBehavior": "store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；下游已接入（ruby-phone v3.20.2：只读真源 config/checkpoint-content-contract.js + 诊断中心接线；下游第九道门新增 J13 按面设下限 1）"
     }
   }
 }
