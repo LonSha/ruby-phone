@@ -1,141 +1,143 @@
 {
- "file": "tests/audit/branch_play_baseline.json",
- "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**",
- "measured_at": "v3.8.0",
- "probe": "tests/audit/branch_play_probe.cjs",
- "upstream_frozen": {
-  "repo": "lonsha-memory-plugin",
-  "version": "3.233.0",
-  "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
-  "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过（且未复核 ⇏ 通过）。",
-  "findings": [
-   "上游**没有「检查点 / 存档点」这种东西**：全模块枚举 65 个 .js，以 checkpoint / Checkpoint / 存档点 为名的**零个**。",
-   "上游**有持久化**，但持久化的是「每楼一份的附注」而不是「用户主动打的一个检查点」：域内 18 个模块中仅 1 个带持久化机制（floor-ledger.js，走 `msg.extra.lonsha_ledger`）—— 账随楼走（楼删账删、翻页随页走），没有「整份运行时的可回滚快照」。",
-   "上游**分支 / 回滚域内没有预检（先算后改）面**：域内 18 个模块，dryRun / 预检 / 干跑 / 预演 全部零命中。域外确有一处两阶段预检（index.js 的 `restoreFromPayload(..., {dryRun:true})`，注释「[v3.142] CP：预检（dryRun）不得动确认状态——只读校验不该有任何副作用」），但那是**恢复管线**的，不是「回滚前先看会丢掉什么」。",
-   "上游 **branch-guard（v3.184.0）是内存态**：状态在闭包 Map 里（`new Map()` × 3 类队列 + processedSig），全文件零 localStorage / indexedDB / persist；TTL 180000ms、上限 200 条 —— 会话切走即无，跨实例不可见。它的三个待回滚队列记的是**楼层号 + 过期时刻**，不记内容（`stats()` 键 = version / request / apply / swipe / processed / manualEditAt / inManualWindow）。",
-   "上游 **ledger-replay（v3.184.0）只给「执行」不给「预演」**：`replayDrop(host, floor, registry)` / `replayShift(host, deleted, registry)` 形参无 opts / dry，调用即真撤（登记 42 本账）。它的导出面含查表面（`coverage` 出「哪本账在位 / 缺席 / 取数即抛」、`checkReplayInvariants` 校验回放不变量），但那是**回放之后**的校验，不是回放**之前**的预演。",
-   "**两模块都不进 bridge 快照**：`buildBridgeSnapshot()` 函数体内 LonShaBranchGuard / LonShaLedgerReplay / branchGuard / ledgerReplay / branchFace / checkpoint 六类 token **零命中**（快照顶层 14 个键：protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit / worldLedgerRead / scene / projection / injection / evidence / eventPlatforms）。外供通道是**模块全局**（`globalThis.LonShaBranchGuard` / `window.LonShaLedgerReplay`，Object.freeze），运行时可达（本探针真加载真调用验证）。"
-  ]
- },
- "readings": {
-  "files_scanned": 240,
-  "rollback_points": 41,
-  "rollback_files": 4,
-  "rollback_entry_defs": 12,
-  "upstream_global_read_sites": 8,
-  "chat_data_patterns": 94,
-  "namespace_store_sites": 5,
-  "checkpoint_face_hits": 0,
-  "preview_face_hits": 42,
-  "branch_face_hits": 0,
-  "upstream_modules_scanned": 65,
-  "upstream_branch_domain_modules": 18,
-  "upstream_checkpoint_named": 0,
-  "upstream_checkpoint_named_persistent": 0,
-  "upstream_branch_domain_preview_hits": 0,
-  "upstream_branch_guard_loadable": 1,
-  "upstream_ledger_replay_loadable": 1,
-  "upstream_bridge_snapshot_branch_faces": 0
- },
- "rollback_files_list": [
-  "apps/phone/phone-data.js",
-  "apps/wangxiang/wangxiang-app.js",
-  "apps/wechat/wechat-data.js",
-  "index.js"
- ],
- "upstream_reach": {
-  "branch_guard": {
-   "loadable": true,
-   "error": null,
-   "api_keys": 9,
-   "line_reachable": true,
-   "state_crosses_instances": false,
-   "guard_records_no_content": true,
-   "stats_keys": [
-    "version",
-    "request",
-    "apply",
-    "swipe",
-    "processed",
-    "manualEditAt",
-    "inManualWindow"
-   ]
+  "file": "tests/audit/branch_play_baseline.json",
+  "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**",
+  "measured_at": "v3.8.0",
+  "probe": "tests/audit/branch_play_probe.cjs",
+  "upstream_frozen": {
+    "repo": "lonsha-memory-plugin",
+    "version": "3.233.0",
+    "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
+    "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过（且未复核 ⇏ 通过）。",
+    "findings": [
+      "上游**没有「检查点 / 存档点」这种东西**：全模块枚举 65 个 .js，以 checkpoint / Checkpoint / 存档点 为名的**零个**。",
+      "上游**有持久化**，但持久化的是「每楼一份的附注」而不是「用户主动打的一个检查点」：域内 18 个模块中仅 1 个带持久化机制（floor-ledger.js，走 `msg.extra.lonsha_ledger`）—— 账随楼走（楼删账删、翻页随页走），没有「整份运行时的可回滚快照」。",
+      "上游**分支 / 回滚域内没有预检（先算后改）面**：域内 18 个模块，dryRun / 预检 / 干跑 / 预演 全部零命中。域外确有一处两阶段预检（index.js 的 `restoreFromPayload(..., {dryRun:true})`，注释「[v3.142] CP：预检（dryRun）不得动确认状态——只读校验不该有任何副作用」），但那是**恢复管线**的，不是「回滚前先看会丢掉什么」。",
+      "上游 **branch-guard（v3.184.0）是内存态**：状态在闭包 Map 里（`new Map()` × 3 类队列 + processedSig），全文件零 localStorage / indexedDB / persist；TTL 180000ms、上限 200 条 —— 会话切走即无，跨实例不可见。它的三个待回滚队列记的是**楼层号 + 过期时刻**，不记内容（`stats()` 键 = version / request / apply / swipe / processed / manualEditAt / inManualWindow）。",
+      "上游 **ledger-replay（v3.184.0）只给「执行」不给「预演」**：`replayDrop(host, floor, registry)` / `replayShift(host, deleted, registry)` 形参无 opts / dry，调用即真撤（登记 42 本账）。它的导出面含查表面（`coverage` 出「哪本账在位 / 缺席 / 取数即抛」、`checkReplayInvariants` 校验回放不变量），但那是**回放之后**的校验，不是回放**之前**的预演。",
+      "**两模块都不进 bridge 快照**：`buildBridgeSnapshot()` 函数体内 LonShaBranchGuard / LonShaLedgerReplay / branchGuard / ledgerReplay / branchFace / checkpoint 六类 token **零命中**（快照顶层 14 个键：protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit / worldLedgerRead / scene / projection / injection / evidence / eventPlatforms）。外供通道是**模块全局**（`globalThis.LonShaBranchGuard` / `window.LonShaLedgerReplay`，Object.freeze），运行时可达（本探针真加载真调用验证）。"
+    ]
   },
-  "ledger_replay": {
-   "loadable": true,
-   "error": null,
-   "api_keys": 8,
-   "floor_owners": 42,
-   "preview_before_change": true,
-   "coverage_reachable": 42
-  }
- },
- "criteria": [
-  {
-   "id": "R1",
-   "desc": "上游存在**以「检查点 / 存档点」为名且持久化**的面（F-1 第一件的对象）",
-   "pass": false,
-   "got_text": "枚举 65 个模块：以 checkpoint/存档点 为名的有 [无]，**其中带持久化机制的是 0 个**"
+  "readings": {
+    "files_scanned": 241,
+    "rollback_points": 41,
+    "rollback_files": 4,
+    "rollback_entry_defs": 12,
+    "upstream_global_read_sites": 8,
+    "chat_data_patterns": 94,
+    "namespace_store_sites": 5,
+    "checkpoint_face_hits": 1,
+    "preview_face_hits": 42,
+    "branch_face_hits": 0,
+    "upstream_modules_scanned": 65,
+    "upstream_branch_domain_modules": 18,
+    "upstream_checkpoint_named": 0,
+    "upstream_checkpoint_named_persistent": 0,
+    "upstream_branch_domain_preview_hits": 0,
+    "upstream_branch_guard_loadable": 1,
+    "upstream_ledger_replay_loadable": 1,
+    "upstream_bridge_snapshot_branch_faces": 0
   },
-  {
-   "id": "R2",
-   "desc": "**分支 / 回滚域**里存在「预检 / 干跑」面（F-1 第二件的对象）",
-   "pass": false,
-   "got_text": "域内 18 个模块，预检 token **零命中**（域外有：注入链路诊断 dry-run，属另一域）"
-  },
-  {
-   "id": "R3",
-   "desc": "上游分支 / 回放的**模块全局通道运行时可达**（真加载真调用，不靠猜外供形式）",
-   "pass": true,
-   "got_text": "branch-guard 可加载=true（API 9 键，一句话读数可达=true）· ledger-replay 可加载=true（API 8 键，登记 42 本账）"
-  },
-  {
-   "id": "R4",
-   "desc": "上游分支 / 回滚面**携带内容**（能答「回滚会丢掉什么」，而不只是楼层号）",
-   "pass": false,
-   "got_text": "branch-guard stats 键 = [version、request、apply、swipe、processed、manualEditAt、inManualWindow] ⇒ **只记楼层号与过期时刻**，无内容 / 条数字段；ledger-replay 的 replayDrop 形参只有 (host, floor, registry)，无 opts ⇒ 无「先算后改」"
-  },
-  {
-   "id": "R5",
-   "desc": "下游已有回滚覆盖面（增量基础已存在）",
-   "pass": true,
-   "got_text": "41 点 / 4 文件 / 12 入口定义"
-  }
- ],
- "verdict": {
-  "question": "F-1「分支与玩法（R4 第一批）」的持久检查点 / 回滚预览 / 分支只读对照，能不能立 Gate 并实施？",
-  "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 不是「工作量不够」，而是三件里有两件**要接的面不存在**、第三件**面的内容不足以支撑对照**。",
-  "reasons": [
-   "**① 持久检查点：面上没有这东西（R1 ✗）**。枚举 65 个上游模块，以 checkpoint / 存档点 为名的**零个**。上游确有持久化，但持久化的是「每楼一份的附注」（`msg.extra.lonsha_ledger`，走 floor-ledger.js）——那是**账随楼走**的记账，不是「把当前整个运行时冻成一个点、以后能整体退回来」的检查点。分支态唯一的载体 branch-guard 是**内存态 Map**（闭包内 `new Map()`，零持久化 token，TTL 3 分钟、上限 200 条）：会话切走即无。⇒ 真做「持久检查点」只能由下游**自己造一套运行时快照与回退语义**（哪些域进快照、跨域一致性怎么保、退回时旧派生怎么作废），那是**新做一个业务域**，不是接一个已有面。",
-   "**② 回滚预览：分支域内没有预演面（R2 ✗）**。分支 / 回滚域 18 个模块内 dryRun / 预检 / 干跑 / 预演 零命中；`replayDrop` 形参只有 `(host, floor, registry)`、调用即真撤。域外唯一的两阶段预检是恢复管线的 `restoreFromPayload(dryRun:true)`（schema-migration.js 同款 `applied:0` 预检），它回答的是「这份存档能不能恢复」，**不是**「这次回滚会让哪些域丢几条」。⇒ 下游要做「回滚预览」，等价于**自己把每个域的『将要丢什么』算一遍**，而这件事恰恰需要那些域自己声明可预览性 —— 现状是零个域有这种东西。",
-   "**★ ③ 分支只读对照：通道可达但内容不够（R3 ✓ / R4 ✗）**。两模块运行时**确实可达**（本探针真加载真调用：branch-guard 9 个 API 键、一句话读数可达；ledger-replay 8 个键、42 本账登记），所以「读得到」不是问题。问题是**读到的内容不足以做对照**：branch-guard 的 `stats()` 只出七个数（version / request / apply / swipe / processed / manualEditAt / inManualWindow）——**楼层号与计数，没有内容**；ledger-replay 的 `coverage()` 出的是「哪本账在位 / 缺席 / 取数即抛」。拿这些做「分支只读对照」，最多写出一句「本条分支有 3 个待回滚楼层、42 本账在位」——**这不是对照，是仪表读数**；真正的对照要能回答「这一页与那一页差在哪」，而那需要每页的内容或差分，上游根本没保存（它也**刻意不保存**：分支态是易失的、以会话为自然边界）。",
-   "**④ 下游已有强基础，且下游自己已经在做这件事（R5 ✓）**：下游 41 个回滚点 / 4 个文件 / 12 个入口定义（wechat-data / phone-data / wangxiang-app / index.js），已按楼层回滚三类域；存储侧 89 条会话隔离正则 + 5 处命名空间守卫（`chatMetadata` 随聊天档走、`extensionSettings` 全局）。⇒ F-1 若真做，增量是在**下游自己的数据**上做快照与对照，而上游那两本账帮不上忙（它的态是易失的、且不带内容）。",
-   "**⑤ 与已定纪律的关系**：本轮 P-6 与 F-4 两次取证都落在同一条纪律上 —— **先取证再定，读数不支持就记 not_now 并写清代价**。F-1 的读数形态与 F-4 不同（F-4 是「面完全不存在」，F-1 是「通道在、面在、但面上没有内容」），结论相同：不立 Gate。不因「名字听着可做」而动工。"
+  "rollback_files_list": [
+    "apps/phone/phone-data.js",
+    "apps/wangxiang/wangxiang-app.js",
+    "apps/wechat/wechat-data.js",
+    "index.js"
   ],
-  "only_axis_with_evidence": "真正有读数支持、且不需要下游自造一套运行时快照的替代轴是 **「回滚影响的可见性提升」**：下游 41 个回滚点已经有确定的『按楼层作废』语义，缺的从来不是引擎而是**读前即知**——在删楼 / 翻页 / 重生成之前，把「这次动作会让哪些域各丢几条」在**下游自己的数据上**算一遍并呈现（只呈现、不执行）。这条轴的证据在上游之外（下游自己的存储是可数的），不依赖上游那两本账。",
-  "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项状态不受影响。"
- },
- "corrections": [
-  "**探针 v1 把上游面写死成两个文件（假阴性 ⇒ 三判据全错）**：初版只读 `branch-guard.js` / `ledger-replay.js` 搜「持久化 / 预检」，于是漏掉 `restoreFromPayload` 的 dryRun 两阶段预检面与 chatMetadata 嵌入快照面，得出 R1/R2/R3 全 0 的结论。**读数 0 不等于面上没有，只等于探针没扫到。** 修法：模块名单改由**目录枚举**得出（迭代搜索），判据在全模块上搜。教训：**写死枚举面的判据，绿与红都只在一版上成立。**",
-  "**探针 v1 把「外供」等同于「进 bridge 快照」（口径错 ⇒ R3 假阴性）**：下游本来就在**直读上游模块全局**（`window.LonShaFloorLedger` / `window.LonShaMemory` / `window.LonShaEvidenceWorkbench`，实测 8 个站点），所以「不在快照里」根本推不出「拿不到」。修法：改为**可达性实测** —— 把模块源码在隔离沙箱里真加载、真调用，量出「能不能读、读到什么、状态跨不跨实例」。教训：**不要用推断代替测量**；外供形式有三种（快照 / 模块全局 / 都不给），不能先把答案限定成一种再算命中率。",
-  "**探针 v2 的预检判据未限定域（假阳性）**：对全模块裸搜 `dryRun` 会命中上游 3 个模块（index.js×25、settings-ui.js×15、schema-migration.js×8）——那是**注入链路的诊断 dry-run**（「这段内容没有进入 AI 上下文，只回答召回→注入链路通不通」）与**恢复管线预检**，与「回滚预览」不是一个域。修法：域由**文件名模式**派生（branch|ledger|replay|guard|snapshot|checkpoint|restore|changeset|version|closure|shift ⇒ 18 个模块），判据只在域内算。教训同族：**范围粒度错会造成假阳性**。",
-  "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
-  "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
-  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
-  "v3.11.0 复校：本轮新增 `config/rollback-preview.js`（回滚影响预览真源，枚举面 +1），并真实改了产品代码（`apps/diagnose/diagnose-data.js`、`apps/diagnose/diagnose-view.js`）。**除枚举面与「回滚预览」读数（0 → 39：探针刻度就是量它）外全部读数逐项不变** ——回滚覆盖面 41 点 / 4 文件 / 12 入口定义一字未动（真源模块**只算不写**，它一条回滚入口都没新增），故本版落地不构成新增回滚实现点。首测版语义保留在 measured_at。★ 同轮同步用**下限形**改写了两条当版精确读数（见 tests/system-v326.test.mjs 的 A2 / B4），并在 B1 处按**位置**拆分 token 面（`index.js` 仍全禁；上游分支面/检查点面 6 个 token 在 App 层全留）。",
-  "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
-  "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面与 `preview_face_hits`（42，v3.11.0 起就是这个数）外全部读数逐项不变** —— 本版是纯读数层，41 个回滚点 / 4 文件 / 12 入口定义一字未动。首测版语义保留在 measured_at。",
-  "v3.15.0 复校：枚举面 232 → 237（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js）；`chat_data_patterns` 89 → 94（config/storage.js 的 CHAT_DATA_PATTERNS 新增 1 条真模式 `/^usage_/`，其上方 4 行说明性模式行按探针既有口径一并计入 ⇒ +5）；`preview_face_hits` 0 → 42 是**既有点刻度回填**（v3.11.0 起就是 42，基线当初只改了 corrections 散文而漏同步 readings —— 本轮修的是基线自身的转写漂移，不是本版新造了预览面）。**关键：回滚覆盖面读数一字未动**（41 点 / 4 文件 / 12 入口定义）—— 本版是只读展示面，没有偷偷变成执行层，也没有新增/删除回滚点；命名空间守卫 5 处与检查点/分支面 0 命中同样不变。",
-  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。回滚点 41 / 4 文件 / 12 入口定义逐字不变。",
-  "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰回滚/分支面任何一行。 其余读数逐项不变。",
-  "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。"
- ],
- "not_done": [
-  "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
-  "**未给「检查点」建模型**：那是 F-1 若实施时的主体工作（快照域清单 / 跨域一致性 / 退回时派生作废 / 存储分域），本版刻意不做。",
-  "**未验实机**：全部读数来自源码与隔离沙箱内的真加载真调用；无头环境跑不了宿主（DOM / SillyTavern 上下文）。",
-  "**未把该读数立成常驻门禁**：与 P-6 / F-4 同口径 —— 「面存不存在、面上有什么」是决策输入，不是契约（常驻门禁只守「契约不许变坏」）。",
-  "**未替上游补面**：branch-guard / ledger-replay 缺持久化与预览，本版如实记录为上游事实，不据此改上游（上游本轮零改动）。"
- ]
+  "upstream_reach": {
+    "branch_guard": {
+      "loadable": true,
+      "error": null,
+      "api_keys": 9,
+      "line_reachable": true,
+      "state_crosses_instances": false,
+      "guard_records_no_content": true,
+      "stats_keys": [
+        "version",
+        "request",
+        "apply",
+        "swipe",
+        "processed",
+        "manualEditAt",
+        "inManualWindow"
+      ]
+    },
+    "ledger_replay": {
+      "loadable": true,
+      "error": null,
+      "api_keys": 8,
+      "floor_owners": 42,
+      "preview_before_change": true,
+      "coverage_reachable": 42
+    }
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "desc": "上游存在**以「检查点 / 存档点」为名且持久化**的面（F-1 第一件的对象）",
+      "pass": false,
+      "got_text": "枚举 65 个模块：以 checkpoint/存档点 为名的有 [无]，**其中带持久化机制的是 0 个**"
+    },
+    {
+      "id": "R2",
+      "desc": "**分支 / 回滚域**里存在「预检 / 干跑」面（F-1 第二件的对象）",
+      "pass": false,
+      "got_text": "域内 18 个模块，预检 token **零命中**（域外有：注入链路诊断 dry-run，属另一域）"
+    },
+    {
+      "id": "R3",
+      "desc": "上游分支 / 回放的**模块全局通道运行时可达**（真加载真调用，不靠猜外供形式）",
+      "pass": true,
+      "got_text": "branch-guard 可加载=true（API 9 键，一句话读数可达=true）· ledger-replay 可加载=true（API 8 键，登记 42 本账）"
+    },
+    {
+      "id": "R4",
+      "desc": "上游分支 / 回滚面**携带内容**（能答「回滚会丢掉什么」，而不只是楼层号）",
+      "pass": false,
+      "got_text": "branch-guard stats 键 = [version、request、apply、swipe、processed、manualEditAt、inManualWindow] ⇒ **只记楼层号与过期时刻**，无内容 / 条数字段；ledger-replay 的 replayDrop 形参只有 (host, floor, registry)，无 opts ⇒ 无「先算后改」"
+    },
+    {
+      "id": "R5",
+      "desc": "下游已有回滚覆盖面（增量基础已存在）",
+      "pass": true,
+      "got_text": "41 点 / 4 文件 / 12 入口定义"
+    }
+  ],
+  "verdict": {
+    "question": "F-1「分支与玩法（R4 第一批）」的持久检查点 / 回滚预览 / 分支只读对照，能不能立 Gate 并实施？",
+    "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 不是「工作量不够」，而是三件里有两件**要接的面不存在**、第三件**面的内容不足以支撑对照**。",
+    "reasons": [
+      "**① 持久检查点：面上没有这东西（R1 ✗）**。枚举 65 个上游模块，以 checkpoint / 存档点 为名的**零个**。上游确有持久化，但持久化的是「每楼一份的附注」（`msg.extra.lonsha_ledger`，走 floor-ledger.js）——那是**账随楼走**的记账，不是「把当前整个运行时冻成一个点、以后能整体退回来」的检查点。分支态唯一的载体 branch-guard 是**内存态 Map**（闭包内 `new Map()`，零持久化 token，TTL 3 分钟、上限 200 条）：会话切走即无。⇒ 真做「持久检查点」只能由下游**自己造一套运行时快照与回退语义**（哪些域进快照、跨域一致性怎么保、退回时旧派生怎么作废），那是**新做一个业务域**，不是接一个已有面。",
+      "**② 回滚预览：分支域内没有预演面（R2 ✗）**。分支 / 回滚域 18 个模块内 dryRun / 预检 / 干跑 / 预演 零命中；`replayDrop` 形参只有 `(host, floor, registry)`、调用即真撤。域外唯一的两阶段预检是恢复管线的 `restoreFromPayload(dryRun:true)`（schema-migration.js 同款 `applied:0` 预检），它回答的是「这份存档能不能恢复」，**不是**「这次回滚会让哪些域丢几条」。⇒ 下游要做「回滚预览」，等价于**自己把每个域的『将要丢什么』算一遍**，而这件事恰恰需要那些域自己声明可预览性 —— 现状是零个域有这种东西。",
+      "**★ ③ 分支只读对照：通道可达但内容不够（R3 ✓ / R4 ✗）**。两模块运行时**确实可达**（本探针真加载真调用：branch-guard 9 个 API 键、一句话读数可达；ledger-replay 8 个键、42 本账登记），所以「读得到」不是问题。问题是**读到的内容不足以做对照**：branch-guard 的 `stats()` 只出七个数（version / request / apply / swipe / processed / manualEditAt / inManualWindow）——**楼层号与计数，没有内容**；ledger-replay 的 `coverage()` 出的是「哪本账在位 / 缺席 / 取数即抛」。拿这些做「分支只读对照」，最多写出一句「本条分支有 3 个待回滚楼层、42 本账在位」——**这不是对照，是仪表读数**；真正的对照要能回答「这一页与那一页差在哪」，而那需要每页的内容或差分，上游根本没保存（它也**刻意不保存**：分支态是易失的、以会话为自然边界）。",
+      "**④ 下游已有强基础，且下游自己已经在做这件事（R5 ✓）**：下游 41 个回滚点 / 4 个文件 / 12 个入口定义（wechat-data / phone-data / wangxiang-app / index.js），已按楼层回滚三类域；存储侧 89 条会话隔离正则 + 5 处命名空间守卫（`chatMetadata` 随聊天档走、`extensionSettings` 全局）。⇒ F-1 若真做，增量是在**下游自己的数据**上做快照与对照，而上游那两本账帮不上忙（它的态是易失的、且不带内容）。",
+      "**⑤ 与已定纪律的关系**：本轮 P-6 与 F-4 两次取证都落在同一条纪律上 —— **先取证再定，读数不支持就记 not_now 并写清代价**。F-1 的读数形态与 F-4 不同（F-4 是「面完全不存在」，F-1 是「通道在、面在、但面上没有内容」），结论相同：不立 Gate。不因「名字听着可做」而动工。"
+    ],
+    "only_axis_with_evidence": "真正有读数支持、且不需要下游自造一套运行时快照的替代轴是 **「回滚影响的可见性提升」**：下游 41 个回滚点已经有确定的『按楼层作废』语义，缺的从来不是引擎而是**读前即知**——在删楼 / 翻页 / 重生成之前，把「这次动作会让哪些域各丢几条」在**下游自己的数据上**算一遍并呈现（只呈现、不执行）。这条轴的证据在上游之外（下游自己的存储是可数的），不依赖上游那两本账。",
+    "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项状态不受影响。"
+  },
+  "corrections": [
+    "**探针 v1 把上游面写死成两个文件（假阴性 ⇒ 三判据全错）**：初版只读 `branch-guard.js` / `ledger-replay.js` 搜「持久化 / 预检」，于是漏掉 `restoreFromPayload` 的 dryRun 两阶段预检面与 chatMetadata 嵌入快照面，得出 R1/R2/R3 全 0 的结论。**读数 0 不等于面上没有，只等于探针没扫到。** 修法：模块名单改由**目录枚举**得出（迭代搜索），判据在全模块上搜。教训：**写死枚举面的判据，绿与红都只在一版上成立。**",
+    "**探针 v1 把「外供」等同于「进 bridge 快照」（口径错 ⇒ R3 假阴性）**：下游本来就在**直读上游模块全局**（`window.LonShaFloorLedger` / `window.LonShaMemory` / `window.LonShaEvidenceWorkbench`，实测 8 个站点），所以「不在快照里」根本推不出「拿不到」。修法：改为**可达性实测** —— 把模块源码在隔离沙箱里真加载、真调用，量出「能不能读、读到什么、状态跨不跨实例」。教训：**不要用推断代替测量**；外供形式有三种（快照 / 模块全局 / 都不给），不能先把答案限定成一种再算命中率。",
+    "**探针 v2 的预检判据未限定域（假阳性）**：对全模块裸搜 `dryRun` 会命中上游 3 个模块（index.js×25、settings-ui.js×15、schema-migration.js×8）——那是**注入链路的诊断 dry-run**（「这段内容没有进入 AI 上下文，只回答召回→注入链路通不通」）与**恢复管线预检**，与「回滚预览」不是一个域。修法：域由**文件名模式**派生（branch|ledger|replay|guard|snapshot|checkpoint|restore|changeset|version|closure|shift ⇒ 18 个模块），判据只在域内算。教训同族：**范围粒度错会造成假阳性**。",
+    "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
+    "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
+    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+    "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+    "v3.11.0 复校：本轮新增 `config/rollback-preview.js`（回滚影响预览真源，枚举面 +1），并真实改了产品代码（`apps/diagnose/diagnose-data.js`、`apps/diagnose/diagnose-view.js`）。**除枚举面与「回滚预览」读数（0 → 39：探针刻度就是量它）外全部读数逐项不变** ——回滚覆盖面 41 点 / 4 文件 / 12 入口定义一字未动（真源模块**只算不写**，它一条回滚入口都没新增），故本版落地不构成新增回滚实现点。首测版语义保留在 measured_at。★ 同轮同步用**下限形**改写了两条当版精确读数（见 tests/system-v326.test.mjs 的 A2 / B4），并在 B1 处按**位置**拆分 token 面（`index.js` 仍全禁；上游分支面/检查点面 6 个 token 在 App 层全留）。",
+    "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
+    "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面与 `preview_face_hits`（42，v3.11.0 起就是这个数）外全部读数逐项不变** —— 本版是纯读数层，41 个回滚点 / 4 文件 / 12 入口定义一字未动。首测版语义保留在 measured_at。",
+    "v3.15.0 复校：枚举面 232 → 237（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js）；`chat_data_patterns` 89 → 94（config/storage.js 的 CHAT_DATA_PATTERNS 新增 1 条真模式 `/^usage_/`，其上方 4 行说明性模式行按探针既有口径一并计入 ⇒ +5）；`preview_face_hits` 0 → 42 是**既有点刻度回填**（v3.11.0 起就是 42，基线当初只改了 corrections 散文而漏同步 readings —— 本轮修的是基线自身的转写漂移，不是本版新造了预览面）。**关键：回滚覆盖面读数一字未动**（41 点 / 4 文件 / 12 入口定义）—— 本版是只读展示面，没有偷偷变成执行层，也没有新增/删除回滚点；命名空间守卫 5 处与检查点/分支面 0 命中同样不变。",
+    "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。回滚点 41 / 4 文件 / 12 入口定义逐字不变。",
+    "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰回滚/分支面任何一行。 其余读数逐项不变。",
+    "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。",
+    "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
+    "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。"
+  ],
+  "not_done": [
+    "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
+    "**未给「检查点」建模型**：那是 F-1 若实施时的主体工作（快照域清单 / 跨域一致性 / 退回时派生作废 / 存储分域），本版刻意不做。",
+    "**未验实机**：全部读数来自源码与隔离沙箱内的真加载真调用；无头环境跑不了宿主（DOM / SillyTavern 上下文）。",
+    "**未把该读数立成常驻门禁**：与 P-6 / F-4 同口径 —— 「面存不存在、面上有什么」是决策输入，不是契约（常驻门禁只守「契约不许变坏」）。",
+    "**未替上游补面**：branch-guard / ledger-replay 缺持久化与预览，本版如实记录为上游事实，不据此改上游（上游本轮零改动）。"
+  ]
 }

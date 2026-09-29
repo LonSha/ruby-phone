@@ -127,7 +127,19 @@ export const CROSSREPO_FEATURES = Object.freeze([
             { file: 'apps/diagnose/diagnose-data.js', token: 'readProjection(' }
         ],
         invalidation: '切聊 / 回滚 / 编辑后 `_mutationEpoch` 与 envelope 代际不符 ⇒ 上游新鲜度守卫扣下（reason `stale-conversation` / `stale-revision`）；**重发一轮即可**，不是升级问题',
-        standalone: '未装上游 ⇒ 桥缺席；装了但早于 3.212.0 ⇒ 字段三态声明 absent（本面报 not-produced，不报「没有投影」）'
+        standalone: '未装上游 ⇒ 桥缺席；装了但早于 3.212.0 ⇒ 字段三态声明 absent（本面报 not-produced，不报「没有投影」）',
+        /* ── 跨仓面对账三件套（[v3.20.3] 第十一道门 upstream-face-audit.mjs 逐格核对）──
+         * upstreamFace     —— 上游 `tests/audit/open_face_registry.tsv` 里的 face 标识；
+         *                     有它才谈得上「本仓这一条 ↔ 上游那一行」的一一对应。
+         * declaredConsumer —— 上游表 `consumer` 列的出口名（本仓消费侧真源导出的那个口）。
+         * declaredFloor    —— 上游表 `consumer` 列声明的产品侧消费点下限。
+         * 为什么要在本仓**再写一遍**（而不是运行时去读上游表）：上游 `scan_cross_repo_binding`
+         *   的 P2 禁止在役面引用兄弟仓；故上游表以**冻读取**进本仓
+         *   （`tests/audit/upstream_face_cache.json`），本门拿「冻读取 / 本仓这行 / 门禁标签」
+         *   三方对差 —— 任一侧漂移都会响。这三格不是装饰，是那场对差的输入。 */
+        upstreamFace: 'projectionEnvelope',
+        declaredConsumer: 'readProjection',
+        declaredFloor: 4
     },
     {
         id: 'lonsha.injection',
@@ -146,7 +158,10 @@ export const CROSSREPO_FEATURES = Object.freeze([
             { file: 'config/silence-guard.js', token: '.injection' }
         ],
         invalidation: '代际确认前不落地（迟到隔离）；禁用条目注入量为零，不计入实际注入成本',
-        standalone: '旧版无此面 ⇒ not-produced；有面但本轮零块 ⇒ empty（与「没这面」处置相反）'
+        standalone: '旧版无此面 ⇒ not-produced；有面但本轮零块 ⇒ empty（与「没这面」处置相反）',
+        upstreamFace: 'injectionReadout',
+        declaredConsumer: 'readInjection',
+        declaredFloor: 2
     },
     {
         id: 'lonsha.evidence',
@@ -165,7 +180,31 @@ export const CROSSREPO_FEATURES = Object.freeze([
             { file: 'apps/diagnose/diagnose-data.js', token: 'evidenceFaceOf(' }
         ],
         invalidation: '九账模块未就位 ⇒ 面在但 `reason: module-unavailable`（等升级）；账在位但零条目 ⇒ empty（等剧情推进）',
-        standalone: '未装上游 ⇒ 缺席；装了但早于 3.214.0 ⇒ not-produced'
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.214.0 ⇒ not-produced',
+        upstreamFace: 'evidenceWorkbench',
+        declaredConsumer: 'readLonshaEvidence',
+        declaredFloor: 3
+    },
+    {
+        id: 'lonsha.checkpointContent',
+        label: '检查点内容级只读对照（F7 首阶段）',
+        owner: OWNER_LONSHA,
+        since: '3.252.0',
+        sinceSource: '上游 snapshot-checkpoint.js 的 diffPayloadsDeep（v3.252.0 F7 首阶段）；上游版本本仓未留档，证据在上游真源',
+        fieldKeys: [],
+        contract: '引擎方法族：`compareBranchCheckpointsDeep(nameA, nameB, chatId, opts)`（键面读数 + 内容级 changes[]/sets[]/capped[]/cycles[]）与多行文案 `checkpointContentDiffLines`；模块面 `diffPayloadsDeep`',
+        keySites: [
+            { file: 'config/checkpoint-content-contract.js', token: 'compareBranchCheckpointsDeep' }
+        ],
+        consumers: [
+            { file: 'config/checkpoint-content-contract.js', token: 'readLonshaCheckpointFace(' },
+            { file: 'apps/diagnose/diagnose-data.js', token: 'readLonshaCheckpointFace(' }
+        ],
+        invalidation: '引擎方法不全 ⇒ `deep-unavailable`（仍给键面读数，**不是**「内容一样」）；任一侧缺失/载荷损坏 ⇒ `corrupt`；清单读不到（`items === null`）⇒ unusable（**不是**「还没有检查点」）',
+        standalone: '未装上游 ⇒ engine-absent；装了但早于 3.252.0 ⇒ face-absent（检查点族未交付或只有键面读数）',
+        upstreamFace: 'checkpointCompare',
+        declaredConsumer: 'readLonshaCheckpointFace',
+        declaredFloor: 1
     },
     {
         id: 'lonsha.eventPlatforms',
@@ -184,7 +223,10 @@ export const CROSSREPO_FEATURES = Object.freeze([
             { file: 'apps/timeweaver/timeweaver-view.js', token: '.eventPlatforms' }
         ],
         invalidation: '上游模块未就位 ⇒ 面在、`ok !== true`（读不出，与「还没有事件线」相反）',
-        standalone: '未装上游 ⇒ 缺席；装了但早于 3.233.0 ⇒ not-produced'
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.233.0 ⇒ not-produced',
+        upstreamFace: 'eventPlatforms',
+        declaredConsumer: 'readLonshaEventPlatforms',
+        declaredFloor: 1
     },
     {
         id: 'lonsha.knowledge',
@@ -499,7 +541,20 @@ function judgeLonsha(feature, side) {
     }
     const keys = Array.isArray(feature.fieldKeys) ? feature.fieldKeys : [];
     if (!keys.length) {
-        return { state: STATE.UNVERIFIABLE, reason: 'no-field-keys', producerVersion, comparable: order };
+        /* [v3.20.2] 无字段键的面（如检查点内容级对照：它是**引擎方法族**，不是快照顶层字段）。
+         *   此前一律判 `unverifiable / no-field-keys` —— 那让「全绿探针」永远凑不出「全部就绪」，
+         *   而 C2 那条判据（「没有缺席项时不得写缺席」）要的正是**真造出一个没有缺席的世界**。
+         *   如实修法：无字段键的面**只按版本判**（since 是生产者版本，见 cmpVersion 语义）——
+         *     读不到生产者版本 ⇒ 不猜（unverifiable，nothing to compare）；
+         *     版本低于 since      ⇒ outdated（这一面那时还没产出）；
+         *     版本达标（或无版本账）⇒ ok（本面**没有**可判字段的格，故不存在「空读数」这一态）。
+         *   刻意**不**改任何既有面的判定路径（有字段键的一律走下面原逻辑，逐字未动）。 */
+        if (order === null) {
+            return { state: STATE.UNVERIFIABLE, reason: 'no-field-keys-no-version', producerVersion, comparable: order };
+        }
+        return outdated === true
+            ? { state: STATE.OUTDATED, reason: 'producer-behind:' + String(feature.since), producerVersion, comparable: order }
+            : { state: STATE.OK, reason: 'ok', producerVersion, comparable: order };
     }
     const reads = keys.map((k) => {
         const r = (s.fields && s.fields[k]) ? s.fields[k] : null;

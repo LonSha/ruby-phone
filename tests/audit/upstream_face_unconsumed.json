@@ -1,0 +1,4 @@
+{
+  "_schema": "upstream-face-unconsumed@1",
+  "_note": "上游跨仓外供面里 consumer=none@0（本仓尚未消费）的**未消费理由**台账。第十一道门 scripts/upstream-face-audit.mjs 的 R8 会逐面查这里：声明为「零消费」的面必须能回答「为什么」，沉默不许存在。本文件与 tests/audit/upstream_face_cache.json 刻意分开：那份记的是「上游说了什么」（可被 --refresh 覆写），这份记的是「我们为什么还没用它」（本仓自己的判断，刷新不该动它）。当前 5 面全部已接入，故本表为空 —— 空表是**真读数**（有面在某次上游新增后会立刻在这里露出来）。"
+}

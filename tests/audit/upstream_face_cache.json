@@ -1,0 +1,47 @@
+{
+  "schema": "upstream-face-cache@1",
+  "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。",
+  "refreshedAt": "2026-09-29T00:47:12.802Z",
+  "refreshReason": "v3.20.3 首建冻读取：上游 v3.253.0 交付跨仓外供登记表（5 面），此前本仓对它零读取（grep open_face_registry 零命中），声明与计数分居两文件而无钉子。",
+  "upstreamRepo": "lonsha-memory-plugin",
+  "upstreamVersion": "3.255.0",
+  "tableSha1": "f2977b893c27",
+  "tableRows": 5,
+  "faces": {
+    "projectionEnvelope": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.212.0",
+      "upstreamSymbol": "projection-pipeline.js::runPipeline,buildEnvelope,contractOf,PROJECTION_API_VERSION,ENVELOPE_FIELDS",
+      "consumer": "readProjection@4",
+      "standaloneBehavior": "快照无此面 ⇒ 下游报 no-projection-face（文案「需记忆插件 v3.212+」），不当作「都是空」"
+    },
+    "injectionReadout": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.215.0",
+      "upstreamSymbol": "index.js::buildInjectionReadout",
+      "consumer": "readInjection@2",
+      "standaloneBehavior": "未跑过一律 null（**不是空壳对象**）；下游 absent+bridge-absent，不当作「这轮没注入」"
+    },
+    "eventPlatforms": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.233.0",
+      "upstreamSymbol": "index.js::_eventPlatformsFace",
+      "consumer": "readLonshaEventPlatforms@1",
+      "standaloneBehavior": "内核对空账也给全键（面恒定）⇒ 下游按键断言即可、不必猜；下游 bridge-absent|face-absent|unusable|empty|ok 五态"
+    },
+    "evidenceWorkbench": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.214.0",
+      "upstreamSymbol": "index.js::_evidenceWorkbench,searchEvidence",
+      "consumer": "readLonshaEvidence@3",
+      "standaloneBehavior": "取不到内核即给结构完整的空结果、不抛；下游按 ok|empty|absent 分态，不压成一态"
+    },
+    "checkpointCompare": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.252.0",
+      "upstreamSymbol": "snapshot-checkpoint.js::compareCheckpoints,diffPayloads,diffPayloadsDeep,probeStore",
+      "consumer": "readLonshaCheckpointFace@1",
+      "standaloneBehavior": "store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；下游已接入（ruby-phone v3.20.2：只读真源 config/checkpoint-content-contract.js + 诊断中心接线；下游第九道门新增 J13 按面设下限 1）"
+    }
+  }
+}

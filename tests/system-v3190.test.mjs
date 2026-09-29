@@ -385,7 +385,7 @@ test('C4 文档写的门数与顺序必须与 package.json 逐字同构（口径
     assert.deepEqual(docNames, real,
         '文档写的门名/顺序与真源不同：文档 ' + JSON.stringify(docNames) + ' 真源 ' + JSON.stringify(real));
     /* 数量词：中文数字必须与真源门数一致（防「列了十个名字却写五道」） */
-    const CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+    const CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一'];
     const head = doc.slice(Math.max(0, atMarker - 24), atMarker) + '道子门';
     const cnt = /([一二三四五六七八九十]+)道子门/.exec(head);
     assert.ok(cnt, '找不到门数量词（本仓口径要求写「N 道子门」）');

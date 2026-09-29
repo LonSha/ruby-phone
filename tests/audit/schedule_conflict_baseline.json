@@ -1,97 +1,98 @@
 {
- "file": "tests/audit/schedule_conflict_baseline.json",
- "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**",
- "measured_at": "v3.7.0",
- "node_version": "v24.18.0",
- "probe": "tests/audit/schedule_conflict_probe.cjs",
- "upstream_frozen": {
-  "repo": "lonsha-memory-plugin",
-  "version": "3.233.0",
-  "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
-  "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过。",
-  "findings": [
-   "上游**无任何「日程 / 时刻表」外供面**：对象键形态搜 schedule / timetable / agenda / calendarFace / dayPlan 全部 0 命中。",
-   "上游唯一以 schedule 为名的东西是**内部周期调度器**（`_scheduleFloorHeal(f)`，注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）: 位置取模 + 多任务分发」）—— 与「剧情日程」无关，且非外供面。",
-   "上游承诺面**只有楼层维**，无时刻维：`deadlineFloor` 在场，`scheduledAt` / `dueTime` 缺席（promises 条目形状 `{id, character, content, deadlineFloor, status, floor}`，状态机 pending → imminent（deadlineFloor-2 起）→ overdue（过 deadlineFloor））。",
-   "上游把「冲突**判断**」刻意留给下游：`scene-book.js` 的 `coPresence()` 函数体内**零**冲突/紧张度字段（conflictLevel / tension / severity 均不命中）；上游 CHANGELOG v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」。",
-   "上游时间推进只有整体跳日 `time_advance_days`，**无日内时刻轴**；`story_date` 是自由文本。"
-  ]
- },
- "readings": {
-  "files_scanned": 240,
-  "consume_points": 26,
-  "consume_files": 6,
-  "local_engine_hits": 0
- },
- "consume_files": [
-  "apps/memory/global-search-engine.js",
-  "apps/plotline/plotline-app.js",
-  "apps/plotline/plotline-data.js",
-  "apps/plotline/plotline-view.js",
-  "apps/timeweaver/timeweaver-collector.js",
-  "config/resume-brief.js"
- ],
- "criteria": [
-  {
-   "id": "R1",
-   "desc": "上游存在「日程 / 时刻表」外供面",
-   "pass": false,
-   "got_text": "0 个候选键命中（冻结）"
+  "file": "tests/audit/schedule_conflict_baseline.json",
+  "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**",
+  "measured_at": "v3.7.0",
+  "node_version": "v24.18.0",
+  "probe": "tests/audit/schedule_conflict_probe.cjs",
+  "upstream_frozen": {
+    "repo": "lonsha-memory-plugin",
+    "version": "3.233.0",
+    "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
+    "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过。",
+    "findings": [
+      "上游**无任何「日程 / 时刻表」外供面**：对象键形态搜 schedule / timetable / agenda / calendarFace / dayPlan 全部 0 命中。",
+      "上游唯一以 schedule 为名的东西是**内部周期调度器**（`_scheduleFloorHeal(f)`，注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）: 位置取模 + 多任务分发」）—— 与「剧情日程」无关，且非外供面。",
+      "上游承诺面**只有楼层维**，无时刻维：`deadlineFloor` 在场，`scheduledAt` / `dueTime` 缺席（promises 条目形状 `{id, character, content, deadlineFloor, status, floor}`，状态机 pending → imminent（deadlineFloor-2 起）→ overdue（过 deadlineFloor））。",
+      "上游把「冲突**判断**」刻意留给下游：`scene-book.js` 的 `coPresence()` 函数体内**零**冲突/紧张度字段（conflictLevel / tension / severity 均不命中）；上游 CHANGELOG v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」。",
+      "上游时间推进只有整体跳日 `time_advance_days`，**无日内时刻轴**；`story_date` 是自由文本。"
+    ]
   },
-  {
-   "id": "R2",
-   "desc": "上游承诺面存在「按时刻」维度（非仅楼层）",
-   "pass": false,
-   "got_text": "deadlineFloor 在场 / scheduledAt·dueTime 缺席 ⇒ 只有楼层维"
+  "readings": {
+    "files_scanned": 241,
+    "consume_points": 26,
+    "consume_files": 6,
+    "local_engine_hits": 0
   },
-  {
-   "id": "R3",
-   "desc": "上游把「冲突判定」留给下游（它的读数面不含判断字段）",
-   "pass": null,
-   "got_text": "未复核（冻结证据：0）"
-  },
-  {
-   "id": "R4",
-   "desc": "下游已消费承诺的期限 / 状态（增量基础已存在）",
-   "pass": true,
-   "got_text": "4 个文件在消费"
-  }
- ],
- "shape": {
-  "note": "要接的面的**形状不对**：F-4 想要「日程冲突」（跨时间点的资源/地点互斥），而上游能给的只有「一条承诺的截止楼层 + 三态」与「同楼同刻的在场事实」—— 两者都在**楼层**这条轴上，且后者（F-3）下游已接。",
-  "verdict": "未观察到「可做日期/时间冲突判定」的形态：既没有日内时刻轴，也没有跨日期的周期日程；把楼层当作「日程槽位」会先把「日程」这个词用成隐喻。"
- },
- "verdict": {
-  "question": "F-4「剧情日程冲突（与地点层级 / 在场面的冲突判定）」能不能立 Gate 并实施？",
-  "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 要接的面**不存在**，而不是「面存在但工作量不够」。",
-  "reasons": [
-   "**① 上游无「日程」外供面（R1 ✗）**：对象键形态零命中。要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型** —— 那就从「接外供面」变成了「新做一个业务域」（含数据模型、存储、UI、与上游承诺/在场面的一致性维护），量级与 O 批/F 批其余项不在一个档。",
-   "**② 上游时间轴只有「楼层」这一条（R2 ✗）**：无日内时刻（无 `scheduledAt` / `dueTime`）、无跨日期周期日程、无时区长。承诺只有 `deadlineFloor` 一个数字键。**「日程冲突」这个词的能指在这里无处落地**：唯一可算的是「两条承诺的 deadlineFloor 撞在同一个楼层」—— 那只是「两份待办截止点相同」，不是日程冲突，而且得由下游自己算、且要自己定义「几个楼层内算撞车」。",
-   "**★ ③ 上游把「冲突判断」刻意留给了下游，而这与 F-3 已经定下的纪律相互抵触（R3 ✓ 但方向相反）**：`coPresence()` 函数体内零判断字段，上游 CHANGELOG 原话「读数的职责是给事实，把『他们会不会打起来』塞进读数就是拿猜测冒充事实」。下游 F-3（v3.4.3）也已在自己的卡上守住「不写冲突 / 对峙 / 碰面风险」并由判据钉在剥注释后的代码上。故 F-4 若要「判定冲突」，就是在下游重建一个**上游与下游都已明确拒绝的判断面**。",
-   "**④ 下游已有基础但增量小（R4 ✓，4 个文件 / 22 个点）**：`plotline-data.js` 已在读 `p.deadlineFloor`（`deadline` 列）+ `p.status`（未知 status 如实透传），`global-search-engine.js` 把承诺建成可搜索条目。也就是说「承诺到期」这件事**已经能看见了**；F-4 的增量只剩「撞车提醒」，而它的数据源（楼层）已在手。"
+  "consume_files": [
+    "apps/memory/global-search-engine.js",
+    "apps/plotline/plotline-app.js",
+    "apps/plotline/plotline-data.js",
+    "apps/plotline/plotline-view.js",
+    "apps/timeweaver/timeweaver-collector.js",
+    "config/resume-brief.js"
   ],
-  "only_axis_with_evidence": "真正有读数支持、且不需要凭空造模型的替代轴是**「承诺到期读数的可见性提升」**：把上游已给的 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面上按紧迫度显式分档（已逾期 / 即将到期 / 进行中 —— 上游 `describePromise` 已有这三档文案），并把「同楼层截止的承诺互相关联」做成**并排呈现**而非「冲突判定」。本版只立读数与判据，不动手。",
-  "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项（F-1 / F-2 / F-3 / F-5 / F-6 / F-8）状态不受影响。"
- },
- "corrections": [
-  "**探针首版把内部调度器误报成「上游有日程面」**：初版按裸子串搜 `schedule`，命中上游 index.js 的 `_scheduleFloorHeal(f)`（注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）—— 那是**内部楼层修复调度器**，既不是外供面、也与剧情日程无关。修正为只认**对象键形态**（`schedule:` / `timetable:`）后为 0 命中。教训：判据必须匹配**真实书写**（同 lifecycle 门禁的踩坑：漏认/多认都会翻转结论）。",
-  "**探针首版只搜整文件，把 T16/T17 自述里的 `severity` 误报成「coPresence 面含判断字段」**：`scene-book.js` 的 `observationNotes()`（v3.232.0 的 F-6 口径自述）里有 `severity: 'observation'` 两条，与 coPresence 无关。修正为只在 **`coPresence()` 函数体（花括号配平抽取）** 内搜，实测 0 命中。教训：**范围粒度错会造成假阳性**，而假阳性会直接翻转 R3 的结论。",
-  "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
-  "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
-  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
-  "v3.11.0 复校：`files_scanned` 229 → 230（本版新增 1 个文件 `config/rollback-preview.js`）。其余三项读数（`consume_points` 22 / `consume_files` 4 / `local_engine_hits` 0）逐项不变 —— 本版没有碰日程面，枚举面涨的是文件数而不是消费点。",
-  "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
-  "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版是纯读数层（一条加载路径都不改），故不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，接一层没时计不影响站点数）。首测版语义仍保留在 measured_at。",
-  "v3.15.0 复校：本轮新增 2 个真源模块（config/usage-tracker.js 使用统计采集内核 / config/contact-insight.js 联系人互动纯函数内核）+ 1 个 App 目录（apps/usage/ 下 3 个 .js）⇒ 枚举面 232 → 237（+5）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面（consume_points 22 / consume_files 4 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程/期限面的任何一行，也没有长出本地日程引擎（新模块只做读数的采集与聚合，零 deadline/scheduledAt 语义）。",
-  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。",
-  "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰日程/期限面任何一行。 消费点（consume_points 22）与消费文件（consume_files 4）逐字不变。★ 另有一条**踩坑留档**：登记面初版的 `contract` 描述里逐个列了上游字段名，被本探针按**子串**计了一行 ⇒ 消费点一度虚涨到 23 / 文件 5。处置是改描述措辞（不列英文字段名），**未动探针、未动读数** —— 那一条要守的是「有没有人真的校验承诺期限」，登记表的描述一个字节都不消费它。",
-  "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。"
- ],
- "not_done": [
-  "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
-  "**未给「日程」建模型**：那是 F-4 若实施时的主体工作（数据模型 / 存储 / UI / 与承诺面一致性），本版刻意不做 —— 因为读数说「面不存在」。",
-  "**未验实机**：所有读数来自源码与上游冻结证据；无头环境跑不了宿主。",
-  "**未把该读数立成常驻门禁**：与 P-6 / O-5 同口径 —— 「面存不存在」是决策输入，不是契约。"
- ]
+  "criteria": [
+    {
+      "id": "R1",
+      "desc": "上游存在「日程 / 时刻表」外供面",
+      "pass": false,
+      "got_text": "0 个候选键命中（冻结）"
+    },
+    {
+      "id": "R2",
+      "desc": "上游承诺面存在「按时刻」维度（非仅楼层）",
+      "pass": false,
+      "got_text": "deadlineFloor 在场 / scheduledAt·dueTime 缺席 ⇒ 只有楼层维"
+    },
+    {
+      "id": "R3",
+      "desc": "上游把「冲突判定」留给下游（它的读数面不含判断字段）",
+      "pass": null,
+      "got_text": "未复核（冻结证据：0）"
+    },
+    {
+      "id": "R4",
+      "desc": "下游已消费承诺的期限 / 状态（增量基础已存在）",
+      "pass": true,
+      "got_text": "4 个文件在消费"
+    }
+  ],
+  "shape": {
+    "note": "要接的面的**形状不对**：F-4 想要「日程冲突」（跨时间点的资源/地点互斥），而上游能给的只有「一条承诺的截止楼层 + 三态」与「同楼同刻的在场事实」—— 两者都在**楼层**这条轴上，且后者（F-3）下游已接。",
+    "verdict": "未观察到「可做日期/时间冲突判定」的形态：既没有日内时刻轴，也没有跨日期的周期日程；把楼层当作「日程槽位」会先把「日程」这个词用成隐喻。"
+  },
+  "verdict": {
+    "question": "F-4「剧情日程冲突（与地点层级 / 在场面的冲突判定）」能不能立 Gate 并实施？",
+    "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 要接的面**不存在**，而不是「面存在但工作量不够」。",
+    "reasons": [
+      "**① 上游无「日程」外供面（R1 ✗）**：对象键形态零命中。要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型** —— 那就从「接外供面」变成了「新做一个业务域」（含数据模型、存储、UI、与上游承诺/在场面的一致性维护），量级与 O 批/F 批其余项不在一个档。",
+      "**② 上游时间轴只有「楼层」这一条（R2 ✗）**：无日内时刻（无 `scheduledAt` / `dueTime`）、无跨日期周期日程、无时区长。承诺只有 `deadlineFloor` 一个数字键。**「日程冲突」这个词的能指在这里无处落地**：唯一可算的是「两条承诺的 deadlineFloor 撞在同一个楼层」—— 那只是「两份待办截止点相同」，不是日程冲突，而且得由下游自己算、且要自己定义「几个楼层内算撞车」。",
+      "**★ ③ 上游把「冲突判断」刻意留给了下游，而这与 F-3 已经定下的纪律相互抵触（R3 ✓ 但方向相反）**：`coPresence()` 函数体内零判断字段，上游 CHANGELOG 原话「读数的职责是给事实，把『他们会不会打起来』塞进读数就是拿猜测冒充事实」。下游 F-3（v3.4.3）也已在自己的卡上守住「不写冲突 / 对峙 / 碰面风险」并由判据钉在剥注释后的代码上。故 F-4 若要「判定冲突」，就是在下游重建一个**上游与下游都已明确拒绝的判断面**。",
+      "**④ 下游已有基础但增量小（R4 ✓，4 个文件 / 22 个点）**：`plotline-data.js` 已在读 `p.deadlineFloor`（`deadline` 列）+ `p.status`（未知 status 如实透传），`global-search-engine.js` 把承诺建成可搜索条目。也就是说「承诺到期」这件事**已经能看见了**；F-4 的增量只剩「撞车提醒」，而它的数据源（楼层）已在手。"
+    ],
+    "only_axis_with_evidence": "真正有读数支持、且不需要凭空造模型的替代轴是**「承诺到期读数的可见性提升」**：把上游已给的 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面上按紧迫度显式分档（已逾期 / 即将到期 / 进行中 —— 上游 `describePromise` 已有这三档文案），并把「同楼层截止的承诺互相关联」做成**并排呈现**而非「冲突判定」。本版只立读数与判据，不动手。",
+    "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项（F-1 / F-2 / F-3 / F-5 / F-6 / F-8）状态不受影响。"
+  },
+  "corrections": [
+    "**探针首版把内部调度器误报成「上游有日程面」**：初版按裸子串搜 `schedule`，命中上游 index.js 的 `_scheduleFloorHeal(f)`（注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）—— 那是**内部楼层修复调度器**，既不是外供面、也与剧情日程无关。修正为只认**对象键形态**（`schedule:` / `timetable:`）后为 0 命中。教训：判据必须匹配**真实书写**（同 lifecycle 门禁的踩坑：漏认/多认都会翻转结论）。",
+    "**探针首版只搜整文件，把 T16/T17 自述里的 `severity` 误报成「coPresence 面含判断字段」**：`scene-book.js` 的 `observationNotes()`（v3.232.0 的 F-6 口径自述）里有 `severity: 'observation'` 两条，与 coPresence 无关。修正为只在 **`coPresence()` 函数体（花括号配平抽取）** 内搜，实测 0 命中。教训：**范围粒度错会造成假阳性**，而假阳性会直接翻转 R3 的结论。",
+    "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
+    "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
+    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+    "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+    "v3.11.0 复校：`files_scanned` 229 → 230（本版新增 1 个文件 `config/rollback-preview.js`）。其余三项读数（`consume_points` 22 / `consume_files` 4 / `local_engine_hits` 0）逐项不变 —— 本版没有碰日程面，枚举面涨的是文件数而不是消费点。",
+    "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
+    "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版是纯读数层（一条加载路径都不改），故不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，接一层没时计不影响站点数）。首测版语义仍保留在 measured_at。",
+    "v3.15.0 复校：本轮新增 2 个真源模块（config/usage-tracker.js 使用统计采集内核 / config/contact-insight.js 联系人互动纯函数内核）+ 1 个 App 目录（apps/usage/ 下 3 个 .js）⇒ 枚举面 232 → 237（+5）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面（consume_points 22 / consume_files 4 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程/期限面的任何一行，也没有长出本地日程引擎（新模块只做读数的采集与聚合，零 deadline/scheduledAt 语义）。",
+    "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。",
+    "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰日程/期限面任何一行。 消费点（consume_points 22）与消费文件（consume_files 4）逐字不变。★ 另有一条**踩坑留档**：登记面初版的 `contract` 描述里逐个列了上游字段名，被本探针按**子串**计了一行 ⇒ 消费点一度虚涨到 23 / 文件 5。处置是改描述措辞（不列英文字段名），**未动探针、未动读数** —— 那一条要守的是「有没有人真的校验承诺期限」，登记表的描述一个字节都不消费它。",
+    "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。",
+    "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。"
+  ],
+  "not_done": [
+    "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
+    "**未给「日程」建模型**：那是 F-4 若实施时的主体工作（数据模型 / 存储 / UI / 与承诺面一致性），本版刻意不做 —— 因为读数说「面不存在」。",
+    "**未验实机**：所有读数来自源码与上游冻结证据；无头环境跑不了宿主。",
+    "**未把该读数立成常驻门禁**：与 P-6 / O-5 同口径 —— 「面存不存在」是决策输入，不是契约。"
+  ]
 }

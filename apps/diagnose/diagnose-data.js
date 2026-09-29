@@ -77,6 +77,22 @@ import {
  *   本文件只**转发**真源读数（一行文案的唯一实现在 config/boot-timing.js），
  *   不在视图里重新拼一次（自己再拼一次就是同一口径两份实现）。 */
 import { bootTimingLine } from '../../config/boot-timing.js';
+/* [v3.20.2] 上游检查点**内容级只读对照**的消费侧（上游 v3.252.0 F7 首阶段的外供面）。
+ *   接在诊断中心的理由与投影面 / 注入面 / 证据面 / 知识面 / 剧情时刻面 / 删楼影响预览面**同一族**：
+ *   本仓一切「上游读数」的可见出口就是这里。
+ *   修前实测：上游 v3.237.0 交付检查点族、v3.252.0 补上 `diffPayloadsDeep` 与引擎侧
+ *   `compareBranchCheckpointsDeep` / `checkpointContentDiffLines`，而本仓
+ *   `grep -RIn 'compareCheckpoints|diffPayloads|snapshot-checkpoint|LonShaSnapshot' apps config`
+ *   **零命中** —— 于是「同键同长度但值不同」（计划二 F7 点名的「余额 100→900、朋友→仇人」）
+ *   在手机端**零读数**，用户看到的只有「键一样、字节差不多」。
+ *   本文件只**转发**真源读数（五态判定与一句话文案的唯一实现在 checkpoint-content-contract.js），
+ *   不在这里重算对照（下游再算一份就是同一口径的第二份实现）。 */
+import {
+    readLonshaCheckpointFace,
+    readCheckpointContentDiff,
+    checkpointFaceLine,
+    checkpointContentLines
+} from '../../config/checkpoint-content-contract.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面。
  *   计划原文：「跨仓功能登记拥有者、生产者版本、契约形状、消费者、失效条件和单独安装行为。
  *   缺席、旧版、不产出和空数据分别呈现。」
@@ -298,6 +314,38 @@ export function collectDiagnose(win, storage) {
     const evidence = safe(() => evidenceFaceOf(snapshot), null)
         || evidenceFaceOf(null);
 
+    /* ── [v3.20.2] 上游检查点「内容级只读对照」面（上游 v3.252.0 F7 首阶段）──
+     *   为什么接在诊断中心：与投影面 / 注入面 / 证据面 / 知识面 / 剧情时刻面 / 删楼影响预览面
+     *   同一族 —— 本仓一切「上游读数」的可见出口就是这里。
+     *   与「删楼影响预览」的分工（两面常被混为一谈，是两个不同的问题）：
+     *     删楼影响预览说「这次删楼会让**本仓自己的五个域**各丢几条」（下游数据）；
+     *     本面说「上游记忆插件的**两份检查点**之间，内容级差了什么」（上游账本）。
+     *   三态纪律：五态（缺席 / 没这面 / 读不出 / 空 / 有）各有各的话，全在真源里分好；
+     *   本文件只搬运，不在这里再判一次（再判一次就是同一口径两份实现）。
+     *   对照只对**前两份**做（不是把全部两两组合跑一遍）：`count >= 2` 才出对照，
+     *   否则 `null` —— 「只有一份，没什么可比」与「比比看，结果一样」是两件事。 */
+    const checkpoint = (() => {
+        try {
+            const face = readLonshaCheckpointFace(w);
+            const line = checkpointFaceLine(face);
+            let diff = null;
+            let diffLines = null;
+            if (face && face.state === 'ok' && face.names.length >= 2) {
+                const [a, b] = face.names;
+                diff = readCheckpointContentDiff(w, a, b, null);
+                diffLines = checkpointContentLines(w, a, b, null);
+            }
+            return {
+                state: face.state, reason: face.reason,
+                names: face.names, count: face.count,
+                hasContentDiff: face.hasContentDiff === true,
+                engineVersion: face.engineVersion,
+                line, pair: (face && face.names.length >= 2) ? { a: face.names[0], b: face.names[1] } : null,
+                diff, diffLines
+            };
+        } catch (_e) { return null; }
+    })();
+
     /* ── [v3.6.0 · R1-C] 投影的**导出期新鲜度归因**（上游 `meta.projectionFreshness`）──
      *   修前的真实错读数：上游 v3.213.0 的新鲜度守卫把「切聊 / 回滚后的旧缓存」扣下，
      *   `projection` 缺席、`fieldTypes.projection.present` 也为 false ⇒ 下游一律报
@@ -430,7 +478,16 @@ export function collectDiagnose(win, storage) {
         } catch (_e) { return null; }
     })();
     const repoFace = safe(() => registryFace(repoProbe), null);
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, bootTiming: bootSc, crossRepo: repoFace };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace };
+}
+/** [v3.20.2] 上游检查点面的一行读数（**唯一实现**在真源 `config/checkpoint-content-contract.js`）。
+ *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
+export function checkpointFaceText(cp) {
+    try {
+        const c = (cp && typeof cp === 'object') ? cp : null;
+        if (!c) return '检查点面：读取异常（已降级）—— 这不是「还没有检查点」';
+        return String(c.line || checkpointFaceLine(c));
+    } catch (_e) { return '检查点面：读取异常（已降级）'; }
 }
 /** [v3.19.0] 跨仓登记面的一行总述（**唯一实现**在真源：`config/crossrepo-registry.js` 的 `registryLine`）。
  *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
@@ -675,5 +732,6 @@ export default {
     bootTimingFace,
     bootTimingFaceText,
     bootTimingRows,
+    checkpointFaceText,
     summarizeDiagnose
 };

@@ -168,7 +168,7 @@ test('A4 npm 脚本别名在场且指向执行器；既有 check 链一字未动
     assert.equal(pkg.scripts['check:file'], 'node scripts/check-file.mjs',
         'package.json 必须给 check:file 别名（否则「全量落文件」没有人会记得手敲）');
     assert.match(String(pkg.scripts.check),
-        /^npm run syntax && npm run import-resolve && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys && npm run source-derivation && npm run bridge-contract && npm run weak-coercion$/,
+        /^npm run syntax && npm run import-resolve && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys && npm run source-derivation && npm run bridge-contract && npm run weak-coercion && npm run upstream-face$/,
         'check 链不得被本版改动（执行器是**包住**它，不是替换它）');
 });
 

@@ -278,6 +278,11 @@ const STAGE_FILES = [
     // 第二个就在这里。白名单暂存型套件必须同步补上每条判据的读数来源，
     // 否则未破坏的副本树会在 J10 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
     'apps/timeweaver/timeweaver-collector.js',
+    // [v3.20.2] 第九道门新增 J13（上游检查点内容级对照真被业务面消费）：真源是
+    // `config/checkpoint-content-contract.js`（不放入 ⇒ 副本树上四出口全缺 ⇒ 判 corrupt 拒判），
+    // 消费点就在上面的诊断内核里。白名单暂存型套件必须同步补上每条判据的读数来源
+    // —— 否则未破坏的副本树会在 J13 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
+    'config/checkpoint-content-contract.js',
 ];
 
 function stageTree(extra = {}) {

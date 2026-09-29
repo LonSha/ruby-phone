@@ -115,6 +115,11 @@ const BARE_SNAKE_KEY_RE = /^\s+([a-z][A-Za-z0-9]*_[A-Za-z0-9_]+)\s*:/gm;
  *   业务面要的是整面 —— 见上游 README 与 config/projection-contract.js 的 projectionScopeLine
  *   文件头）；本判据要的是「归属面真的接上了」。 */
 const PROJECTION_READER = 'readProjection';
+/* ↑ 跨仓面对账标签（第十一道门 upstream-face-audit.mjs 按此判「声明 ↔ 计数」一致）。
+ * 形态逐字固定：`[face: <上游面 id>] [reader: <本仓消费出口名>] [floor: <产品侧下限>]`。
+ * 为什么要有钉子：声明（上游登记表）与计数（本文件各 J 的下限常量）**分居两个文件**，
+ * 中间原本没有任何东西把它们钉住 —— 下限抄错一位、出口改名，两边都不会响。 */
+/* [face: projectionEnvelope] [reader: readProjection] [floor: 4] */
 /** 产品侧 readProjection( 调用点下限（v3.0.1 实测 5：四个业务 App + 诊断内核）。
  *  写 4 = 实测减一：留一个 App 被重构掉的余量，但拦住「只有诊断面一处」的摆设形态。 */
 const PROJECTION_READER_MIN_CONSUMERS = 4;
@@ -146,6 +151,7 @@ const PROBE_SELF_MIN = 1;
  *   （送达侧观测）。写 2 不留余量是刻意的 —— 少一个就意味着「某一面又回到零消费」，
  *   而那正是本判据要拦的形态；若将来某一面被重构掉，应当**显式**来改这里并写明理由。 */
 const INJECTION_READER = 'readInjection';
+/* [face: injectionReadout] [reader: readInjection] [floor: 2] */
 const INJECTION_READER_MIN_CONSUMERS = 2;
 
 /* ── [v3.5.0] J11：上游**事件来源构成**（F-2 跨平台事件的外供面）必须真被业务面消费 ──
@@ -160,6 +166,7 @@ const INJECTION_READER_MIN_CONSUMERS = 2;
  *   与 J10 的注入面同理：少一个就意味着「那一面又回到零消费」。
  *   若将来再落一面（如世界脉动的事件对照），应当把这里显式抬高并写明理由。 */
 const EVENT_PLATFORM_READER = 'readLonshaEventPlatforms';
+/* [face: eventPlatforms] [reader: readLonshaEventPlatforms] [floor: 1] */
 const EVENT_PLATFORM_LINE_READER = 'eventPlatformsLine';
 const EVENT_PLATFORM_MIN_CONSUMERS = 1;
 
@@ -196,12 +203,35 @@ const EVENT_PLATFORM_MIN_CONSUMERS = 1;
  *   证据面的两个出口（取数式 / 纯函数式）**合并去重**成「哪些产品文件读过这一面」：
  *   一面对外有几个入口是实现选择，判据只问「这一面有没有真被业务面读」。 */
 const EVIDENCE_READER = 'readLonshaEvidence';
+/* [face: evidenceWorkbench] [reader: readLonshaEvidence] [floor: 3] */
 const EVIDENCE_LINE_READER = 'evidenceFaceLine';
 const EVIDENCE_FACE_READER = 'evidenceFaceOf';
 const EVIDENCE_MIN_CONSUMERS = 3;
 const FRESHNESS_READER = 'readProjectionFreshness';
 const FRESHNESS_TEXT_READER = 'projectionFreshnessText';
 const FRESHNESS_MIN_CONSUMERS = 1;
+
+/* ── [v3.20.2] J13：上游**检查点内容级只读对照**（F7 首阶段的外供面）必须真被业务面消费 ──
+ * 【为什么必须有】上游 lonsha v3.237.0（R4-C）交付检查点族、v3.252.0（F7 首阶段）补上
+ *   `diffPayloadsDeep` 与引擎侧 `compareBranchCheckpointsDeep` / `checkpointContentDiffLines`
+ *   —— 那是「**同键同长度但值不同**」（「余额 100→900」「朋友→仇人」）的**唯一**读数面，
+ *   而键面读数在这类改变上完全看不出来（键一样、字节差不多）。
+ *   下游此前对 `compareCheckpoints|diffPayloads|snapshot-checkpoint|LonShaSnapshot` 是
+ *   **零消费** —— 本仓「建好不消费」的第十例，与投影面 / 注入面 / 证据面同一族。
+ * 【判据口径】两条同时判：
+ *   ① 真源 `config/checkpoint-content-contract.js` 必须导出四个出口（缺一即 corrupt）；
+ *   ② 产品面 apps/** 的消费点不得少于下限（config/ 是出口自身，不计）。
+ * 【为什么下限是 1】本版刻意只落一个**独立**消费面（诊断中心内核，它是本仓一切上游读数的
+ *   可见出口）。写 1 不留余量是刻意的 —— 少一个就意味着「那一面又回到零消费」，
+ *   而那正是本判据要拦的形态；若将来再落一面（如某个业务 App 自己读对照），
+ *   应当把这里**显式**抬高并写明理由。 */
+const CHECKPOINT_READER = 'readLonshaCheckpointFace';
+/* [face: checkpointCompare] [reader: readLonshaCheckpointFace] [floor: 1] */
+const CHECKPOINT_DIFF_READER = 'readCheckpointContentDiff';
+const CHECKPOINT_LINES_READER = 'checkpointContentLines';
+const CHECKPOINT_LINE_READER = 'checkpointFaceLine';
+const CHECKPOINT_MIN_CONSUMERS = 1;
+const CHECKPOINT_SOURCE_REL = 'config/checkpoint-content-contract.js';
 
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
@@ -393,6 +423,21 @@ for (const [rel, code] of stripped) {
 }
 const freshnessConsumerCount = freshnessConsumerFiles.length;
 
+/* ── [v3.20.2] J13：检查点内容级对照面的**出口在场**（独立真源文件）+ 产品侧消费点 ──
+ * 出口在场与「有人读」分别判：出口被删（corrupt）与出口没人读（fail）是两种故障，
+ * 压成一条会互相顶替（与 J12 同规）。 */
+const checkpointCode = stripped.get(CHECKPOINT_SOURCE_REL) || '';
+const checkpointExportsOk = [
+    CHECKPOINT_READER, CHECKPOINT_DIFF_READER, CHECKPOINT_LINES_READER, CHECKPOINT_LINE_READER
+].map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(checkpointCode) }));
+let checkpointConsumerCount = 0;
+const checkpointConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c = countOf(code, CHECKPOINT_READER + '(');
+    if (c > 0) { checkpointConsumerCount += c; checkpointConsumerFiles.push(rel); }
+}
+
 /* ------------------------------------------------------------
  * 开关：--list 只报告不判定
  * ------------------------------------------------------------ */
@@ -431,6 +476,10 @@ if (LIST) {
     console.log('── J12 ' + FRESHNESS_READER + ' 消费面（只计 apps/**，按文件去重）：' + freshnessConsumerCount + '（下限 ' + FRESHNESS_MIN_CONSUMERS + '）──');
     for (const f of freshnessConsumerFiles) console.log('  ' + f);
     if (!freshnessConsumerFiles.length) console.log('  （无 —— 「有面但被扣下」与「本版没这面」又会被显示成同一句话）');
+    console.log('\n── J13 ' + CHECKPOINT_READER + ' 消费点（只计 apps/**）：' + checkpointConsumerCount + '（下限 ' + CHECKPOINT_MIN_CONSUMERS + '）──');
+    for (const f of checkpointConsumerFiles) console.log('  ' + f);
+    if (!checkpointConsumerFiles.length) console.log('  （无 —— 上游检查点内容级对照没人读，第十次「建好不消费」）');
+    for (const x of checkpointExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     process.exit(0);
 }
 
@@ -586,6 +635,27 @@ if (freshnessConsumerCount < FRESHNESS_MIN_CONSUMERS) {
     console.error('  修法：产品面接 config/world-bridge.js 的 readProjectionFreshness / projectionFreshnessText。');
 }
 
+/* ── J13 [v3.20.2] ── */
+/* 出口在场与「有人读」**分别判**（与 J12 同规）：出口被删 = corrupt，出口没人读 = fail。
+ * 合成一条会互相顶替 ——「面读不出但有人在读」与「面在但没人读」是两种完全不同的故障。 */
+const missingCheckpointExports = checkpointExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingCheckpointExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J13 真源 ' + CHECKPOINT_SOURCE_REL + ' 缺出口（' + missingCheckpointExports.length + ' 个）：' + missingCheckpointExports.join(' / '));
+    console.error('  说明：这些出口是 v3.20.2 落的下游消费侧入口，被人删掉就等于那一面又回到「读不出」。');
+}
+if (checkpointConsumerCount < CHECKPOINT_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J13 ' + CHECKPOINT_READER + ' 只有 ' + checkpointConsumerCount + ' 个产品侧消费点（下限 ' + CHECKPOINT_MIN_CONSUMERS + '）：');
+    for (const f of checkpointConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.252.0（F7 首阶段）把「两份账之间**内容级**差了什么」外供出来');
+    console.error('        （diffPayloadsDeep + compareBranchCheckpointsDeep / checkpointContentDiffLines）——');
+    console.error('        那是「**同键同长度但值不同**」（「余额 100→900」「朋友→仇人」）的唯一读数面，');
+    console.error('        而键面读数在这类改变上完全看不出来（键一样、字节差不多）。');
+    console.error('        下游零消费 ⇒ 用户看到的只有「两边的键一样」，那份最要紧的差异零读数（第十次「建好不消费」）。');
+    console.error('  修法：产品面接 config/checkpoint-content-contract.js 的 readLonshaCheckpointFace。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -599,5 +669,6 @@ console.log('[bridge-contract] sourceState/lastError 消费点 ' + probeSelfRead
 console.log('[bridge-contract] ' + EVENT_PLATFORM_READER + ' 消费点 ' + eventPlatformConsumerCount + ' 个（' + eventPlatformConsumerFiles.length + ' 文件，下限 ' + EVENT_PLATFORM_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsumerCount + ' 个（' + injConsumerFiles.length + ' 文件，下限 ' + INJECTION_READER_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 消费面 ' + evidenceConsumerCount + ' 个（按文件去重，下限 ' + EVIDENCE_MIN_CONSUMERS + '）· ' + FRESHNESS_READER + ' 消费面 ' + freshnessConsumerCount + ' 个（下限 ' + FRESHNESS_MIN_CONSUMERS + '）');
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费');
+console.log('[bridge-contract] ' + CHECKPOINT_READER + ' 消费点 ' + checkpointConsumerCount + ' 个（' + checkpointConsumerFiles.length + ' 文件，下限 ' + CHECKPOINT_MIN_CONSUMERS + '）· 真源四出口在场 ' + (checkpointExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费');
 process.exit(0);

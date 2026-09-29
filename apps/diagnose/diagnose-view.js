@@ -15,6 +15,9 @@ import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
 import { crossRepoFaceText } from './diagnose-data.js';
+/* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
+ *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
+import { checkpointFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -95,6 +98,51 @@ export class DiagnoseView {
         html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>只算不执行</b> —— 本卡只回答「这次动作会让哪些域各丢几条」，'
             + '**不会**替你回滚、不会备份、也不报金额（钱包流水作废时会反向冲回余额，报金额等于预演副作用，'
             + '而副作用是否与真回滚逐分一致、本层无法自证 —— 如实少报一层，好过给出一个没人能核对的数）。</div>';
+        return html;
+    }
+    /** [v3.20.2] 上游检查点「内容级只读对照」卡：把「两份检查点之间内容级差了什么」摆出来。
+     *
+     *  【这张卡治的欠债】上游 v3.252.0 交付了 `diffPayloadsDeep`（键面之上叠一层逐条内容差异），
+     *    而下游零消费 ⇒ 用户看到的仍只有「键一样、字节差不多」，而计划二 F7 点名的那类改变
+     *    （「余额 100→900」「朋友→仇人」：**同键同长度但值不同**）在手机端**零读数**。
+     *
+     *  【三条必须看见的东西（缺一条这张卡就失去意义）】
+     *    · **五态各有各的话**：记忆插件不在场 / 本版没这面（旧版）/ 清单读不到 /
+     *      还没有检查点（**真读数**）/ 有 —— 全由内核真源分好，卡片只转发。
+     *      把「读不到」渲染成「还没有检查点」是本仓最贵的那类错读数；
+     *    · **半成功不得当失败**：上游在「深比较这版没有」时仍给键面读数，
+     *      卡片必须把这句话原样念出来（与「两边内容完全一样」不是一回事）；
+     *    · **文案走上游**：多行对照文案的唯一实现是上游 `checkpointContentDiffLines`，
+     *      本卡只转发（不自拼 —— 自拼一份就是第二处「这句话该怎么说」的知识）。
+     *  纯渲染：不取数、不判定、不重算差异。 */
+    _checkpointHtml(pkg) {
+        const cp = (pkg && pkg.checkpoint) || null;
+        if (!cp) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>检查点面读取失败（已降级）—— '
+                + '这是「本层读不出」，**不是**「还没有检查点」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(checkpointFaceText(cp)) + '</div>';
+        /* 对照只在「有两份及以上」时才有意义；只有一份时**明说没什么可比**，
+         *   不渲染成一格空白（空白与「比过了，一样」同形）。 */
+        if (!cp.pair || !cp.diff) {
+            if (cp.state === 'ok') {
+                html += '<div class=' + Q + 'dg-note' + Q + '>只有一份检查点，暂无可对照的两份 —— '
+                    + '这里**不是**「比过了、内容一样」。</div>';
+            }
+            return html;
+        }
+        const d = cp.diff;
+        html += '<div class=' + Q + 'dg-sub' + Q + '>对照 <code class=' + Q + 'dg-key' + Q + '>'
+            + escapeHtml(cp.pair.a) + '</code> ↔ <code class=' + Q + 'dg-key' + Q + '>'
+            + escapeHtml(cp.pair.b) + '</code>（只对照，不改任何一份）</div>';
+        if (d.state !== 'readable') {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>对照读不到（'
+                + escapeHtml(String(d.reason || 'unknown')) + '）—— 这是「本层读不出」，**不是**「没有差异」。</div>';
+            return html;
+        }
+        if (String(cp.diffLines || '').trim()) {
+            html += '<pre class=' + Q + 'dg-pre' + Q + '>' + escapeHtml(cp.diffLines) + '</pre>';
+        }
         return html;
     }
     /** [v3.13.0 · 计划 #14] 启动耗时卡：把「谁拖慢了启动」摆在用户面前。
@@ -672,6 +720,7 @@ export class DiagnoseView {
          *   现在处于哪一格」），而不是「这一次动作的范围」—— 后者与存档健康同族，
          *   都属「动手前先看清」，登记面答的不是这个问题。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨仓功能登记（消费了上游哪些面）</h3>' + this._crossRepoHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，
          *   而存档健康说的是**这份存档属于哪个时代** —— 先看范围，再看时代。 */
