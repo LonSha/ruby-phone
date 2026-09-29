@@ -1,13 +1,26 @@
 // tests/system-v3203.test.mjs — 跨仓外供面的「声明 ↔ 真码」对账（第十一道门）[v3.20.3]
 //
-//   本体是 `scripts/upstream-face-audit.mjs`（九条判据 R1–R9）。本套件判的是**门本身**：
+//   本体是 `scripts/upstream-face-audit.mjs`（**十一条**判据 R1–R11）。本套件判的是**门本身**：
 //     ① 它真的在 `npm run check` 链上（否则等于没做）；
 //     ② 它**位置无关**、且**不引用兄弟仓**（上游 P2 明令：在役测试面不得引用兄弟仓库）——
 //        这一条是本版形态选择的根因，不是风格偏好；
-//     ③ 它的九条判据**对真源码破坏有反应**（每条负控制都从**真仓文件**里读出内容、
+//     ③ 它的十一条判据**对真源码破坏有反应**（每条负控制都从**真仓文件**里读出内容、
 //        在副本上恰中 1 次地破坏、再用**同款真判据**观观测转红）；
 //     ④ 它的 fail-closed 是真的（缺输入 / 路径读不到 / schema 不符 ⇒ rc 2，不降级）；
 //     ⑤ 刷新纪律是真的（`--refresh` 必须带上游目录与非空理由，且**不许改动真仓冻读取**）。
+//
+//   【v3.20.4 交棒改写（本套件随门一起改口径，不是静默改数）】
+//     门新增 R10「冻读取**可回源**」与 R11「上游台账待同步」两条判据，并改了四处口径：
+//       · 冻读取 schema `@1` → `@2`（新增 `sourceState` / `upstreamCommit` / `worktreeDirty`）；
+//       · R4/R5/R7 里的**跨仓**分歧（成因在上游那份文件、门对上游只读）不再直接计缺陷，
+//         改走 R11「必须被解释」的通路；**同仓两处不一致**（登记行 vs 门禁标签、
+//         标签抄错）仍直接计缺陷，且新增「三方定位责任」：登记行与上游表同值而只有标签
+//         不同 ⇒ 判本地（`problems`），不许推给上游；
+//       · R9 复核改为比**提交态**（与冻读取同口径），措辞随之变为「**提交态** sha1 与冻读取一致」；
+//       · R8 只在「本仓**确无**消费证据」时才要「为什么还没用它」（账面 `none@0` 而本仓在用，
+//         属语义错位，该走 R11）。
+//     故本套件里 B3/B6/C1/C2/C4/C8/D2 的断言与 `stageUpstream`（上游夹具改**真 git 仓**）
+//     一并跟改；并追加 C10–C14（R10/R11/逃生口/非 git 上游的负控制）。
 //
 //   【为什么负控制全部用「真源码破坏」而不是手写模拟夹具】
 //     本仓记过三种假绿的形：① 对原文件断言（破坏根本没发生也绿）；② 破坏写死成模拟常量
@@ -37,6 +50,7 @@ const GATE_ABS = path.join(ROOT, GATE_REL);
 const BRIDGE_REL = 'scripts/bridge-contract-audit.mjs';
 const CACHE_REL = 'tests/audit/upstream_face_cache.json';
 const UNCONS_REL = 'tests/audit/upstream_face_unconsumed.json';
+const LAG_REL = 'tests/audit/upstream_face_lag.json';
 const REGISTRY_REL = 'config/crossrepo-registry.js';
 
 /** 与门同口径的 sha1（12 位十六进制）—— 冻读取与夹具都按这一份算。 */
@@ -77,9 +91,13 @@ function stageTree(overrides = {}) {
         if (!f.endsWith('.js')) continue;
         fs.copyFileSync(path.join(ROOT, 'config', f), path.join(dir, 'config', f));
     }
-    for (const rel of [BRIDGE_REL, CACHE_REL, UNCONS_REL]) {
+    for (const rel of [BRIDGE_REL, CACHE_REL, UNCONS_REL, LAG_REL]) {
         fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));
     }
+    /* 【夹具的 lag 表用**真仓那一份**】C0 基线自证要求「未破坏即绿」——
+     *   而真仓冻读取（提交态）与真码之间**确有两条已登记的分歧**，故夹具必须带上这份台账
+     *   才可能绿；否则每条用例都会先在 R11 上转红，那红与本条要测的判据无关。
+     *   未登记的分歧（破坏引入的那些）不会被这份台账覆盖，故各条破坏仍各自归因。 */
     for (const [rel, ov] of Object.entries(overrides)) {
         const p = path.join(dir, rel);
         if (ov === null) { fs.rmSync(p, { force: true }); continue; }
@@ -102,13 +120,28 @@ function runGate(dir, extra = []) {
     return { status: r.status, out: String(r.stdout || ''), err: String(r.stderr || '') };
 }
 
-/** 夹具自含的「上游目录」（**绝不指向真兄弟仓** —— 上游 P2 的同一纪律）。 */
+/** 夹具自含的「上游目录」（**绝不指向真兄弟仓** —— 上游 P2 的同一纪律）。
+ *  【v3.20.4：上游夹具必须是**真 git 仓**】门默认只冻上游**提交态**（可回源），
+ *  非 git 仓 ⇒ 明确 rc 2 且**不退回读工作树**。故夹具须 `git init` + 提交一次，
+ *  否则 D5/D5b/E2/E3 这类 `--refresh` 用例会全部撞在「不是 git 仓」上而失去判别力。 */
 function stageUpstream(parent, tableText, version = '3.255.0') {
     const d = path.join(parent, 'upstream');
     fs.mkdirSync(path.join(d, 'tests', 'audit'), { recursive: true });
     fs.writeFileSync(path.join(d, 'tests', 'audit', 'open_face_registry.tsv'), tableText);
     fs.writeFileSync(path.join(d, 'manifest.json'), JSON.stringify({ name: 'upstream', version }, null, 2) + '\n');
+    gitInit(d);
     return d;
+}
+/** 把夹具上游目录造成一个真 git 仓（一次提交），产出一个「提交态」可复算的夹具。 */
+function gitInit(dir) {
+    const run = (args) => spawnSync('git', ['-C', dir, ...args],
+        { encoding: 'utf8', env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' } });
+    const r = run(['init', '-q']);
+    assert.equal(r.status, 0, '夹具上游必须能 git init：' + String(r.stderr || r.error || '').slice(0, 200));
+    run(['add', '-A']);
+    const c = run(['-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid',
+        'commit', '-q', '-m', 'fixture upstream']);
+    assert.equal(c.status, 0, '夹具上游必须能提交：' + String(c.stderr || c.error || '').slice(0, 200));
 }
 
 /** 与真仓冻读取**同形**的夹具冻读取，只把 tableSha1 换成本夹具表的那一份。 */
@@ -212,7 +245,8 @@ test('B3 ★★★ 给了 --upstream 且表与冻读取同源 ⇒ 报「sha1 与
     fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(makeCache(table), null, 2) + '\n');
     const r = runGate(dir, ['--upstream', up]);
     assert.equal(r.status, 0, '同源时须绿：' + r.err.slice(0, 300));
-    assert.match(r.out, /表 sha1 与冻读取一致/, '必须报出复核结论');
+    /* 【v3.20.4 措辞】复核比的是**提交态**（与冻读取同口径），文案里点明了这一点。 */
+    assert.match(r.out, /提交态\*\* sha1 与冻读取一致/, '必须报出复核结论（且点明比的是提交态）');
     assert.equal(/未复核/.test(r.out), false, '★ 复核过了就不许再说「未复核」（两者不许同形）');
 });
 test('B4 ★★★ 给了 --upstream 但表已变 ⇒ 转红并点名 R9（不许沿用旧冻读取）', () => {
@@ -230,26 +264,45 @@ test('B5 ★★★ 给了 --upstream 却读不到 ⇒ rc 2（fail-closed，不�
     assert.equal(r.status, 2, '★ 路径写错与「复核过」不许同形');
     assert.match(r.err, /fail-closed|不降级/, '必须说清是拒判而非缺陷');
 });
-test('B6 ★★ R8：声明 none@0 的面必须能回答「为什么」——缺台账 / 空理由都转红，补上则不再报', () => {
-    const broken = { [CACHE_REL]: { find: '"consumer": "readProjection@4"', to: '"consumer": "none@0"' } };
-    const noTable = runGate(stageTree(broken), ['--unconsumed', '/nonexistent/unconsumed.json']);
+test('B6 ★★ R8：声明 none@0 而本仓**确无消费证据** ⇒ 必须能回答「为什么」（缺台账 / 空理由都转红，补上则不再报）', () => {
+    /* 情形一：上游新增了一个本仓还没登记的零消费面 —— 这才是 R8 的**原生**场景。
+     *   v3.20.3 用「把已接入面的声明改成 none@0」来造它，而那种造法在新口径下
+     *   **本仓有消费证据**（标签 / 登记行的出口真存在）⇒ 属「账面陈旧 vs 真码」，
+     *   该走 R5+R11 而不是 R8（要「为什么还没用」是语义错位）。 */
+    const ghost = (s) => {
+        const c = JSON.parse(s);
+        c.faces.ghostFace = { owner: 'x', producerVersion: 'v3.999.0', upstreamSymbol: 'x',
+            consumer: 'none@0', standaloneBehavior: 'x' };
+        return JSON.stringify(c, null, 2) + '\n';
+    };
+    const noTable = runGate(stageTree({ [CACHE_REL]: ghost }), ['--unconsumed', '/nonexistent/unconsumed.json']);
     assert.equal(noTable.status, 1, '缺理由台账必须转红');
-    assert.match(noTable.err, /R8 面 `projectionEnvelope`/, '必须逐面点名 R8');
+    assert.match(noTable.err, /R8 面 `ghostFace`/, '必须逐面点名 R8');
     assert.match(noTable.err, /没给未消费理由台账/, '必须说清是「没给」而不是「没理由」');
-    const empty = stageTree(broken);
+    const empty = stageTree({ [CACHE_REL]: ghost });
     fs.writeFileSync(path.join(empty, UNCONS_REL), JSON.stringify({ _schema: 'upstream-face-unconsumed@1' }, null, 2) + '\n');
     const emptyRun = runGate(empty);
     assert.equal(emptyRun.status, 1, '空表仍须转红');
+    assert.match(emptyRun.err, /R8 面 `ghostFace`/, '必须点名该面');
     assert.match(emptyRun.err, /没有它的非空理由/, '沉默不许存在');
-    const ok = stageTree(broken);
+    const ok = stageTree({ [CACHE_REL]: ghost });
     fs.writeFileSync(path.join(ok, UNCONS_REL),
-        JSON.stringify({ projectionEnvelope: '夹具：理由非空即可（本面其余判据另测）' }, null, 2) + '\n');
+        JSON.stringify({ ghostFace: '夹具：理由非空即可（本面其余判据另测）' }, null, 2) + '\n');
     const okRun = runGate(ok);
-    assert.equal(/R8 面 `projectionEnvelope`/.test(okRun.err + okRun.out), false,
-        '★ 给了非空理由后 R8 必须不再报（判据不是死的；本面此时仍会因「有标签而声明 none」另报 R5，这是对的）');
-    assert.match(okRun.err, /R5 面 `projectionEnvelope`/,
-        '对照：把声明改成 none@0 而标签还在 ⇒ R5 必须独立报「表陈旧或标签多余」'
-        + '（两条判据各判各的，不许互相顶替）');
+    assert.equal(/R8 面 `ghostFace`/.test(okRun.err + okRun.out), false,
+        '★ 给了非空理由后 R8 必须不再报（判据不是死的）');
+    /* 情形二（v3.20.4 边界收窄）：声明 none@0 而本仓**确有**消费证据（门禁标签还在、
+     *   登记行也声明同一个出口）⇒ 这不是「还没用它」而是**上游账面陈旧**，
+     *   故不走 R8，由 R11 要一段解释。★ 上游那格与本仓之间的差异**只在上游那份文件里**，
+     *   本门对它只读 ⇒ 这里不给 R5（R5 只判同仓两处自己打架）。 */
+    const stale = runGate(stageTree({ [CACHE_REL]: { find: '"consumer": "readProjection@4"', to: '"consumer": "none@0"' } }));
+    /* 说明：下面刻意**不写死那条旧断言的字面量**，而是拼出它 —— 否则本行自己就成了
+     *   那份旧断言（断言串命中自己 = 本仓记过的假红根因）。 */
+    const oldR8 = new RegExp('R8 面 `projection' + 'Envelope`');
+    assert.equal(oldR8.test(stale.err + stale.out), false,
+        '★ 账面 none@0 而本仓在用 ⇒ 必须走 R11（跨仓分歧），不许再报 R8 projectionEnvelope');
+    assert.match(stale.err, /R11 上游面 `projectionEnvelope` 的 consumer-none/,
+        '★ 这类分歧必须走 R11：账面与真码对不上就得能回答「为什么」');
 });
 
 /* ══════════ C ── 负控制：真源码破坏 ⇒ 同款真判据转红 ══════════ */
@@ -267,14 +320,19 @@ test('C1 ★★★ 改真 registry 副本的 declaredFloor ⇒ R5 转红（声�
      *   那是本仓明令禁止的方向（「为了让门变绿而削判据」的反面：让门不敢改好话）。 */
     assert.match(r.err, /R5 面 `projectionEnvelope`/, '必须点名面与 R5');
     assert.match(r.err, /declaredFloor 写 9/, '必须把被改后的那份读数亮出来');
-    assert.match(r.err, /上游表声明 4/, '必须把真源那份读数亮出来（两数并排才能定位分叉）');
+    assert.match(r.err, /而同仓门禁标签写 4/, '必须把真源那份读数亮出来（两数并排才能定位分叉）');
     assert.notEqual(r.status, runGate(ROOT).status, '★ 破坏必须可观测地改变行为（两向对照）');
 });
 test('C2 ★★★ 改真门禁副本的面标签 floor ⇒ R5 转红（钉子被拔掉即响）', () => {
     const dir = stageTree({ [BRIDGE_REL]: { find: '[face: checkpointCompare] [reader: readLonshaCheckpointFace] [floor: 1]', to: '[face: checkpointCompare] [reader: readLonshaCheckpointFace] [floor: 7]' } });
     const r = runGate(dir);
     assert.equal(r.status, 1, '标签下限被改必须转红');
-    assert.match(r.err, /R5 面 `checkpointCompare` 的消费点下限不一致/, '必须点名面与 R5');
+    /* 本面在上游提交态里声明 `none@0`，故它的下限**不与上游表比**（没有下限可对）；
+     *   此刻仍能被抓住，是因为登记行`lonsha.checkpointContent` 的 declaredFloor 还写着 1
+     *   —— 同仓两处不一致。这条正是「钉子被拔掉即响」。 */
+    assert.match(r.err, /R5 面 `checkpointCompare`：登记行 `lonsha\.checkpointContent` 的 declaredFloor 写 1/,
+        '必须点名面、登记行与 R5');
+    assert.match(r.err, /而同仓门禁标签写 7/, '必须把被改后的那份读数亮出来');
 });
 test('C3 ★★★ 删真 registry 副本的一条对账三件套 ⇒ R2/R3 转红（声明缺格）', () => {
     const dir = stageTree({
@@ -285,11 +343,23 @@ test('C3 ★★★ 删真 registry 副本的一条对账三件套 ⇒ R2/R3 转�
     assert.match(r.err, /R2 登记行 `lonsha\.injection` 带 upstreamFace 但缺 declaredConsumer/,
         '必须点名缺的是哪一格');
 });
-test('C4 ★★★ 改真冻读取副本的一条 producerVersion ⇒ R4 转红（版本口径不一致）', () => {
-    const dir = stageTree({ [CACHE_REL]: { find: '"producerVersion": "v3.233.0"', to: '"producerVersion": "v3.999.0"' } });
-    const r = runGate(dir);
-    assert.equal(r.status, 1, '版本被改必须转红');
-    assert.match(r.err, /R4 面 `eventPlatforms` 版本口径不一致/, '必须点名面与 R4');
+test('C4 ★★★ 改真冻读取副本的一条 producerVersion ⇒ R11 收到 version 分歧（版本口径不一致）', () => {
+    /* 【v3.20.4 口径变化】上游账面与下游真码的版本差**不再是本门的 defects**（成因在上游那份文件、
+     *   本门对上游只读）⇒ 它走 R11「必须被解释」的通路。破坏后分两步核：
+     *   ① 无台账 ⇒ R11 转红（不许沉默）；② 台账补齐这一条 ⇒ 该分歧被解释，不再报它。 */
+    const dmg = { [CACHE_REL]: { find: '"producerVersion": "v3.233.0"', to: '"producerVersion": "v3.999.0"' } };
+    const r = runGate(stageTree(dmg));
+    assert.equal(r.status, 1, '版本被改必须转红（经 R11 的通路）');
+    assert.match(r.err, /R11 上游面 `eventPlatforms` 的 version/, '必须点名面与 R11');
+    const dir = stageTree(dmg);
+    fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify({
+        schema: 'upstream-face-lag@1',
+        items: [{ face: 'eventPlatforms', kind: 'version', upSays: 'v3.999.0', ourSays: '3.233.0',
+            upstreamCommit: 'deadbeef0000', reason: '夹具：破坏引入的版本分歧，理由非空即可' }]
+    }, null, 2) + '\n');
+    const fixed = runGate(dir);
+    assert.equal(/R11 上游面 `eventPlatforms` 的 version/.test(fixed.err), false,
+        '★ 台账补齐后该条不再报（判据不是死的）');
 });
 test('C5 ★★★ 删真冻读取副本的一个面 ⇒ R3 转红（双向的「表里有、本仓没登记」反向同样要响）', () => {
     const dir = stageTree({
@@ -342,14 +412,108 @@ test('C7b ★★★ 探测器诚实性：命名出口被拆后，`export {}` 块
     const r = runGate(dir);
     assert.equal(r.status, 0, '只拆命名声明时仍须绿（default 块成员是**真导出**）：' + r.err.slice(0, 200));
 });
-test('C8 ★★★ 把真冻读取副本的 standaloneBehavior 改成「尚未接入」⇒ R7 转红（上游那格陈旧须同步）', () => {
-    const dir = stageTree({ [CACHE_REL]: {
+test('C8 ★★★ 把真冻读取副本的 standaloneBehavior 改成「尚未接入」⇒ R11 收到 not-wired 分歧', () => {
+    /* 【v3.20.4 口径变化】「上游那格写未接入、而本仓已有出口」这一向的成因**在上游那份文件**，
+     *   本门对上游只读 ⇒ 从 defects 改为走 R11「必须被解释」的通路。
+     *   ★ 这一条正是上一版**靠人工手改**的那格（改的是上游工作树、且改完没提交），
+     *   故它必须由机器接住：有分歧 ⇒ 必须有一段解释；上游一提交 ⇒ 台账项转红逼删。 */
+    const dmg = { [CACHE_REL]: {
         find: '"standaloneBehavior": "快照无此面', to: '"standaloneBehavior": "尚未接入：夹具破坏。快照无此面'
+    } };
+    const r = runGate(stageTree(dmg));
+    assert.equal(r.status, 1, '陈旧那格必须转红（经 R11 的通路）');
+    assert.match(r.err, /R11 上游面 `projectionEnvelope` 的 not-wired/, '必须点名面与 R11');
+    const dir = stageTree(dmg);
+    fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify({
+        schema: 'upstream-face-lag@1',
+        items: [{ face: 'projectionEnvelope', kind: 'not-wired', upSays: '上游那格写「尚未接入」',
+            ourSays: '本仓已有出口 `readProjection`', upstreamCommit: 'deadbeef0000',
+            reason: '夹具：破坏引入的接入状态分歧，理由非空即可' }]
+    }, null, 2) + '\n');
+    const fixed = runGate(dir);
+    assert.equal(/R11 上游面 `projectionEnvelope` 的 not-wired/.test(fixed.err), false,
+        '★ 台账补齐后该条不再报');
+});
+/* ══════════ C10–C13 ── v3.20.4 新增判据的负控制（可回源 / 台账双向闭合 / 逃生口 / 三方定位） ══════════ */
+test('C10 ★★★ 把真冻读取副本的 sourceState 改成 worktree ⇒ R10 转红（冻的是不可回源的工作树态）', () => {
+    /* 本版治的缺陷就在这里：v3.20.3 的冻读取冻的是上游**工作树脏态** ——
+     *   sha1 自洽、判据全绿，而那份内容在**任何上游提交里都不存在**。
+     *   故「你冻的是哪一态」必须有机器盯着：不是 commit ⇒ 缺陷。 */
+    const dir = stageTree({ [CACHE_REL]: { find: '"sourceState": "commit"', to: '"sourceState": "worktree"' } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, '冻成工作树态必须转红');
+    assert.match(r.err, /R10 冻读取的 sourceState 是 `worktree`/, '必须点名 R10 与被冻的态');
+    assert.match(r.err, /不可回源|工作树态/, '必须说清为什么这是缺陷（换台干净检出复现不出）');
+});
+test('C10b ★★★ 拿掉真冻读取副本的 upstreamCommit ⇒ R10 转红（答不出「出自哪一次提交」）', () => {
+    const dir = stageTree({ [CACHE_REL]: (s) => {
+        const c = JSON.parse(s);
+        delete c.upstreamCommit;
+        return JSON.stringify(c, null, 2) + '\n';
     } });
     const r = runGate(dir);
-    assert.equal(r.status, 1, '陈旧那格必须转红');
-    assert.match(r.err, /R7 面 `projectionEnvelope`：本仓已有真源出口/, '必须点名面与 R7');
+    assert.equal(r.status, 1, '缺来源提交必须转红');
+    assert.match(r.err, /R10 冻读取缺 upstreamCommit/, '必须点名缺的是哪一格');
 });
+test('C11 ★★★ 台账登记了、而实际已不分歧 ⇒ R11 转红（登记着不存在的分歧就是掩饰）', () => {
+    /* 反向闭合：台账不许腐化。造法：把冻读取改成「上游账面与本仓**一致**」的样子，
+     *   于是两条已登记的分歧都不再成立 ⇒ R11 必须逐条报出来，逼迫删除台账项。 */
+    const dir = stageTree({ [CACHE_REL]: (s) => {
+        const c = JSON.parse(s);
+        c.faces.checkpointCompare.consumer = 'readLonshaCheckpointFace@1';
+        c.faces.checkpointCompare.standaloneBehavior = '下游已接入（夹具）';
+        c.faces.checkpointCompare.producerVersion = 'v3.252.0';
+        return JSON.stringify(c, null, 2) + '\n';
+    } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, '台账腐化必须转红');
+    assert.match(r.err, /R11 台账里登记了 `checkpointCompare\/consumer-none`/, '必须点名腐化的那条');
+    assert.match(r.err, /已经不分歧/, '必须说清是「分歧不存在了」而不是「没给理由」');
+});
+test('C12 ★★★ 台账项缺理由 / 缺来源提交 ⇒ R11 转红（理由必填，逐条对上）', () => {
+    const bare = (tweak) => {
+        const dir = stageTree();
+        const t = JSON.parse(fs.readFileSync(path.join(ROOT, LAG_REL), 'utf8'));
+        tweak(t.items[0]);
+        fs.writeFileSync(path.join(dir, LAG_REL), JSON.stringify(t, null, 2) + '\n');
+        return runGate(dir);
+    };
+    const noReason = bare((it) => { it.reason = '   '; });
+    assert.equal(noReason.status, 1, '空理由必须转红');
+    assert.match(noReason.err, /R11 .*reason 为空/, '必须点名空理由');
+    const noCommit = bare((it) => { delete it.upstreamCommit; });
+    assert.equal(noCommit.status, 1, '缺 upstreamCommit 必须转红');
+    assert.match(noCommit.err, /台账里这条缺 upstreamCommit/, '必须点名缺的是哪一格');
+});
+test('C13 ★★★ --from-worktree 是显式逃生口：能取到脏态读数，但**产物本身被 R10 判缺陷**', () => {
+    /* 逃生口的语义：它必须真能把工作树态取出来（那是它的用途），而不是被静默忽略；
+     *   取出来的东西又必须被自己的判据抓住 —— 两者都要真，缺一就成了摆设。 */
+    const dir = stageTree();
+    const up = stageUpstream(dir, tableTextFromCache(JSON.parse(REAL_CACHE_BYTES)));
+    /* 在夹具上游的工作树里造一处未提交改动（模拟真仓上游那份「改完没提交」）。 */
+    fs.appendFileSync(path.join(up, 'tests', 'audit', 'open_face_registry.tsv'), '# dirty\n');
+    const r = runGate(dir, ['--refresh', '--upstream', up, '--from-worktree', '--reason', '夹具：验证逃生口']);
+    assert.equal(r.status, 0, '逃生口本身须能跑通：' + r.err.slice(0, 200));
+    assert.match(r.err, /冻的是\*\*工作树态\*\*/, '必须打印警告（逃生口不是无声开关）');
+    const written = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
+    assert.equal(written.sourceState, 'worktree', '★ 逃生口必须真取到工作树态（不被静默无视）');
+    assert.equal(written.worktreeDirty, true, '★ 该表在工作树里确有未提交改动，该项必须为真');
+    const judged = runGate(dir);
+    assert.equal(judged.status, 1, '★ 逃生口产物必须被 R10 判缺陷（能取 ≠ 能用）');
+    assert.match(judged.err, /R10 冻读取的 sourceState 是 `worktree`/, '必须由 R10 当场抓住');
+});
+test('C14 ★★★ 非 git 仓的上游 ⇒ --refresh 明确 rc 2，且**不退回读工作树**（不许冻不可回源的内容）', () => {
+    const dir = stageTree();
+    const up = path.join(dir, 'upstream-plain');
+    fs.mkdirSync(path.join(up, 'tests', 'audit'), { recursive: true });
+    fs.writeFileSync(path.join(up, 'tests', 'audit', 'open_face_registry.tsv'),
+        tableTextFromCache(JSON.parse(REAL_CACHE_BYTES)));
+    fs.writeFileSync(path.join(up, 'manifest.json'), JSON.stringify({ version: '3.255.0' }) + '\n');
+    const r = runGate(dir, ['--refresh', '--upstream', up, '--reason', '夹具：非 git 上游']);
+    assert.equal(r.status, 2, '非 git 仓必须拒判（fail-closed）');
+    assert.match(r.err, /不是 git 仓|不退回读工作树/, '必须说清为什么不退回读工作树');
+});
+
 test('C9 ★★★ 判据工具自证：锚点不存在 / 不唯一一律抛（不得静默改成「差不多」的东西）', () => {
     assert.throws(() => replaceOnce('abc', 'zzz', 'y'), /锚点应恰中 1 次，实际 0/);
     assert.throws(() => replaceOnce('abcabc', 'abc', 'y'), /锚点应恰中 1 次，实际 2/);
@@ -357,6 +521,9 @@ test('C9 ★★★ 判据工具自证：锚点不存在 / 不唯一一律抛（�
     /* 真源码锚点必须在场（否则上面每条负控制都是假绿） */
     assert.match(read(REGISTRY_REL), /declaredFloor: 4/, 'C1 的锚点必须在真源码里在场');
     assert.match(read(CACHE_REL), /"producerVersion": "v3\.233\.0"/, 'C4 的锚点必须在真源码里在场');
+    /* v3.20.4 新判据的锚点也必须在真源码里在场（否则 R10/R11 的负控制是假绿） */
+    assert.match(read(CACHE_REL), /"sourceState": "commit"/, 'R10 的锚点必须在真源码里在场');
+    assert.match(read(LAG_REL), /"kind": "consumer-none"/, 'R11 的锚点必须在真源码里在场');
 });
 
 /* ══════════ D ── fail-closed（缺输入一律 rc 2，不许判「通过」） ══════════ */
@@ -367,7 +534,10 @@ test('D1 缺冻读取 ⇒ rc 2（须先显式刷新，不许在没读过上游�
     assert.match(r.err, /冻读取缺失/, '必须说清缺的是哪个输入');
 });
 test('D2 冻读取 schema 不符 ⇒ rc 2（旧缓存配新判据不许静默错读）', () => {
-    const dir = stageTree({ [CACHE_REL]: { find: '"schema": "upstream-face-cache@1"', to: '"schema": "upstream-face-cache@0"' } });
+    /* 【v3.20.4】schema 由 @1 升 @2：冻读取新增 sourceState / upstreamCommit / worktreeDirty
+     *   三格**来源读数**。锚点跟随真源 —— @1 的旧缓存必须被拒判（不然「旧缓存配新判据」会
+     *   静默错读：旧缓存没有「冻的是哪一态」这一格，缺陷原样留存）。 */
+    const dir = stageTree({ [CACHE_REL]: { find: '"schema": "upstream-face-cache@2"', to: '"schema": "upstream-face-cache@1"' } });
     const r = runGate(dir);
     assert.equal(r.status, 2, 'schema 不符必须拒判');
     assert.match(r.err, /schema/, '必须点名 schema');
@@ -446,8 +616,20 @@ test('F1 ★★★ 五源同源（下限形）+ 当版条目自述的判据条�
     assert.equal(log.latest, mv, 'update-log latest 与 manifest 同源');
     assert.ok(Array.isArray(log.versions[mv] && log.versions[mv].items) && log.versions[mv].items.length >= 4,
         '当版条目至少 4 条说明');
-    const mine = (log.versions[mv].items.join('\n').match(/tests\/system-v3203\.test\.mjs（(\d+) 条/) || [])[1];
-    assert.ok(mine, '当版条目里必须自述本套件的条数（否则这条判据无从核对）');
+    /* ★ 取数口（v3.20.4 交棒改写）：本套件的**自身条数**自述在**本版**条目里（v3.20.3 那一条），
+     *   而升级后「当版」会变成别人的版本 —— 读 `log.versions[mv]` 就是本仓记过的「读动态当前版本」
+     *   漂移族（v255 C4 / v256 C4 同款）。故改为**扫描所有版本条目，取最近一次自述**：
+     *   本条判据的实质是「自述数 == 真读数」，至于那份自述落在哪一版条目里不该由它来断言
+     *   （「自述必须写在当版」是本版起才有的口径，由 v3204 E1 对**新**套件强制执行）。 */
+    const mine = (() => {
+        for (const k of Object.keys(log.versions)) {
+            const items = ((log.versions[k] || {}).items) || [];
+            const hit = (items.join('\n').match(/tests\/system-v3203\.test\.mjs（(\d+) 条/) || [])[1];
+            if (hit) return hit;
+        }
+        return undefined;
+    })();
+    assert.ok(mine, '历史条目里必须至少有一处自述本套件的条数（否则这条判据无从核对）');
     const realCount = (read('tests/system-v3203.test.mjs').match(/^test\(/gm) || []).length;
     assert.equal(Number(mine), realCount, '★ 自述条数必须等于真读数：自述 ' + mine + ' / 真 ' + realCount);
 });

@@ -43,7 +43,7 @@
  *   给了却读不到 ⇒ **fail-closed（rc 2）**，与 `schedule_conflict_probe` 同规
  *   （「路径写错」与「复核过」不许同形）。
  *
- * 【本门判什么（九条，全部是「两处必须一致」而不是「某处应当有」）】
+ * 【本门判什么（十一条，全部是「两处必须一致」而不是「某处应当有」）】
  *   R1 前置齐备          —— 冻读取 / 登记表 / registry / 门禁脚本读不到 ⇒ rc 2（拒判）
  *   R2 冻读取形态        —— schema / refreshedAt / refreshReason（非空）/ upstreamVersion
  *   R3 面 ↔ 条目 双向    —— 表里 5 面与 registry 里带 `upstreamFace` 的 5 条**一一对应**：
@@ -66,7 +66,20 @@
  *                            有一条**非空理由**（不许沉默；「还没人用」必须能回答「为什么」）。
  *                            理由**刻意不放冻读取**：那份记的是「上游说了什么」（可被刷新覆写），
  *                            这份是本仓自己的判断 —— 混装会被一次刷新一起刷掉。
- *   R9 上游实时复核（可选）—— 见上。
+ *  R9 上游实时复核（可选）—— 见上。
+ *   R10 冻读取**可回源**（v3.20.4）—— 冻读取必须记明 `sourceState`（`commit`|`worktree`）
+ *                            与 `upstreamCommit`；`sourceState !== 'commit'` ⇒ 缺陷。
+ *                            理由：v3.20.3 首建的冻读取冻的是上游**工作树脏态**，sha1 自洽、
+ *                            判据全绿，而那份内容在**任何上游提交里都不存在** ⇒ 换台干净检出
+ *                            复现不出（报出来的还是一句答非所问的「表已变」），且它**把真分歧
+ *                            一并洗白**（上游提交态与下游真码不一致时，门禁本该响）。
+ *                            工作树脏只作 note（冻的是提交态，判断不受影响）。
+ *   R11 上游台账待同步（v3.20.4）—— R4/R5/R7 里**跨仓**那一类分歧（成因在上游那份文件，
+ *                            本门对上游只读）不直接转红，而是收进一份必须解释的台账
+ *                            （`tests/audit/upstream_face_lag.json`，`--lag`），逐条按
+ *                            `face + kind + upSays + ourSays` 四元组匹配，理由必填；
+ *                            **双向闭合**：有分歧无理由 ⇒ 报；有理由无分歧 ⇒ 也报
+ *                            （台账不许腐化成掩饰）。**同仓两处不一致**仍直接计缺陷。
  *
  * 【为什么九条都做成「一致性」判据而不是「存在性」判据】
  *   本仓反复付代价的形态是「某一侧符合预期、另一侧没人看」。存在性判据（「表里有 5 面」）
@@ -91,6 +104,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -106,8 +120,20 @@ const GATE_REL = path.join('scripts', 'bridge-contract-audit.mjs');
 const UPSTREAM_TABLE_REL = path.join('tests', 'audit', 'open_face_registry.tsv');
 const UPSTREAM_MANIFEST_REL = 'manifest.json';
 
-/** 冻读取 schema（改形态即须改这里；防「旧缓存配新判据」静默错读）。 */
-const CACHE_SCHEMA = 'upstream-face-cache@1';
+/** 冻读取 schema（改形态即须改这里；防「旧缓存配新判据」静默错读）。
+ *
+ * 【@2 · v3.20.4】新增三格**来源**读数：`sourceState`（`commit`|`worktree`）/
+ *   `upstreamCommit`（上游 HEAD 短 sha）/ `worktreeDirty`（该表文件在工作树里是否与提交态不同）。
+ *   【为什么升 schema 而不加可选字段】本版治的缺陷正是「冻读取冻的是上游**工作树脏态**」——
+ *   一份**没人能到达的状态**。@1 里没有「你冻的是哪一态」这一格 ⇒ 判据**无从发现它**；
+ *   若加成可选字段，旧缓存缺格会与「不是脏态」同形（缺格静默通过），缺陷原样留存。
+ *   ⇒ 升 schema 强制重刷，旧缓存一律 rc 2（形态变了，判据不可信）。
+ */
+const CACHE_SCHEMA = 'upstream-face-cache@2';
+
+/** 「上游台账待同步」台账（本仓自己的判断：为什么上游账面与本仓真码对不上）。
+ *  R11 逐条双向核：有分歧无理由 ⇒ 报；有理由无分歧 ⇒ 也报（台账不许腐化成掩饰）。 */
+const UPSTREAM_LAG_REL = path.join('tests', 'audit', 'upstream_face_lag.json');
 
 /* ── 标签形态 ──
  * 门禁各 J 块上的机器可读行，逐字写死形态：`[face: <id>] [reader: <name>] [floor: <n>]`。
@@ -122,6 +148,65 @@ function fail(msg) {
 }
 function readText(p) {
     try { return fs.readFileSync(p, 'utf-8'); } catch (_e) { return null; }
+}
+
+/* ══════════ 上游登记表：**取哪一态**（本版治的缺陷就在这里） ══════════ */
+/**
+ * 上游登记表的两种「态」：
+ *   `commit`   —— `git -C <dir> show HEAD:<rel>`（**可回源、可复算**；干净检出上人人可复现）
+ *   `worktree` —— 直接读文件（**可能含未提交改动**；换台机器就变了）
+ *
+ * 【为什么默认必须是 commit（v3.20.4 治的缺陷）】
+ *   v3.20.3 首建冻读取时冻的是**工作树态**（`tableSha1 = f2977b893c27`），而上游 HEAD 是
+ *   `1ba1c5f1f49b` —— 两者不同，因为上游那份 worktree 里躺着**未提交**的对账修正。
+ *   于是：
+ *     · 冻读取**不可回源**：换一台干净检出跑 `--upstream` 必报「表已变」，
+ *       而红的理由（「上游表变了」）与真处境（「我们冻了一份没人能到达的状态」）无关；
+ *     · 更贵的是它**把真分歧洗白了**：上游**提交态**里 `checkpointCompare` 那格仍写
+ *       `none@0` / `v3.237.0` / 「下游尚未接入」，而本仓早已接入（v3.20.2）——
+ *       这是**两处必须一致**判据本该响的真分歧，被脏态冻读取一并冻掉，门全绿。
+ *   ⇒ 冻读取只许冻**提交态**；脏态只能走 `--from-worktree`（显式），且被 R10 判为缺陷。
+ *
+ * 【为什么用 `git show` 而不是「读文件 + 记 sha1」】
+ *   记 sha1 只能证明「我冻的这份没变过」，不能证明「这份在仓库里存在」。
+ *   本版缺陷正是后者：sha1 是自洽的，而那份内容**在任何提交里都不存在**。
+ *
+ * @returns {{raw:string|null, commit:string, dirty:boolean|null, why:string}}
+ */
+function readUpstreamTableAt(dir, state) {
+    const abs = path.join(dir, UPSTREAM_TABLE_REL);
+    const head = gitOut(dir, ['rev-parse', '--short', 'HEAD']);
+    /* `rev-parse` 自带尾换行 ⇒ 取 sha 必须 trim：否则冻出来的 `upstreamCommit` 会带一个
+     *   "\n"，而 R11 拿它跟台账里的 sha **逐字比**时永远不等（报出来的是一句答非所问的
+     *   「上游已前进」）。sha 是标识符，不是文本内容 —— 只 trim 它，不 trim `git show` 的正文
+     *   （那是文件内容，trailing newline 属内容，trim 会让 sha1 与真源文件对不上）。 */
+    const shaHead = head.ok ? head.out.trim() : '';
+    const worktree = readText(abs);
+    /* `dirty` 判定：该文件在工作树里是否与提交态不同。取不到提交态时为 null（**不猜成 false**）。 */
+    let dirty = null;
+    if (head.ok && worktree != null) {
+        const committed = gitOut(dir, ['show', 'HEAD:' + UPSTREAM_TABLE_REL.split(path.sep).join('/')]);
+        if (committed.ok) dirty = (committed.out !== worktree);
+    }
+    if (state === 'worktree') {
+        return { raw: worktree, commit: shaHead, dirty, why: '工作树态（显式）' };
+    }
+    if (!head.ok) {
+        return { raw: null, commit: '', dirty: null,
+            why: '上游不是 git 仓（或 HEAD 读不到）：' + head.err };
+    }
+    const r = gitOut(dir, ['show', 'HEAD:' + UPSTREAM_TABLE_REL.split(path.sep).join('/')]);
+    if (!r.ok) {
+        return { raw: null, commit: shaHead, dirty, why: '提交态读不到该文件：' + r.err };
+    }
+    return { raw: r.out, commit: shaHead, dirty, why: '提交态' };
+}
+
+/** 跑一条 git 命令（**位置无关**：路径只经 `-C` 传入，不出现在代码字面量里）。 */
+function gitOut(dir, args) {
+    const r = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 20000 });
+    const ok = (r.status === 0) && typeof r.stdout === 'string';
+    return { ok, out: ok ? r.stdout : '', err: ok ? '' : String((r.stderr || r.error || '') + '').trim().slice(0, 200) };
 }
 
 /* ══════════ 上游登记表：解析（与上游 COLS 顺序同源，逐字对齐） ══════════ */
@@ -334,8 +419,15 @@ async function refresh(argv) {
     const dir = path.resolve(upstream);
     if (!fs.existsSync(dir)) fail('上游目录读不到：' + dir);
     const tableAbs = path.join(dir, UPSTREAM_TABLE_REL);
-    const raw = readText(tableAbs);
-    if (raw == null) fail('上游登记表读不到：' + UPSTREAM_TABLE_REL);
+    /* ── 取哪一态：默认**提交态**（可回源）；`--from-worktree` 是显式逃生口，且被 R10 判缺陷 ── */
+    const sourceState = argv.fromWorktree ? 'worktree' : 'commit';
+    const got = readUpstreamTableAt(dir, sourceState);
+    if (got.raw == null) {
+        fail('上游登记表读不到（态：' + sourceState + '）—— ' + got.why
+            + '。若上游不是 git 仓，本门**不退回读工作树**：冻一份不可回源的内容，'
+            + '等于让门禁依赖「这台机器上的那份本地改动」（v3.20.4 治的正是这个形态）');
+    }
+    const raw = got.raw;
     const parsed = parseTable(raw);
     /* 先报「表坏了」再报「表空」：整表列数不符时行数也是 0，若先报 0 行，
      *   报出来的是一句**答非所问**的话（真实原因是列数不符，不是表里没有面）。 */
@@ -364,11 +456,16 @@ async function refresh(argv) {
         note: '上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，'
             + '不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面'
             + '不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，'
-            + '本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。',
+            + '本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。'
+            + '【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：'
+            + '默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。',
         refreshedAt: new Date().toISOString(),
         refreshReason: String(argv.reason || ''),
         upstreamRepo: path.basename(dir),
         upstreamVersion,
+        sourceState,
+        upstreamCommit: got.commit || '',
+        worktreeDirty: (got.dirty === null ? null : !!got.dirty),
         tableSha1: sha1(raw),
         tableRows: parsed.rows.length,
         faces
@@ -379,6 +476,13 @@ async function refresh(argv) {
     console.log('=== 冻读取已刷新：' + CACHE_REL + ' ===');
     console.log('  上游 ' + cache.upstreamRepo + ' ' + upstreamVersion + ' · 表 ' + parsed.rows.length
         + ' 面 · sha1 ' + cache.tableSha1);
+    console.log('  来源态：' + cache.sourceState + '（上游提交 ' + (cache.upstreamCommit || '读不到')
+        + '）· 上游该表工作树' + (cache.worktreeDirty === true ? '**有未提交改动**'
+            : cache.worktreeDirty === false ? '与提交态一致' : '脏态无从判定'));
+    if (cache.sourceState === 'worktree') {
+        console.warn('[upstream-face] 警告：本次冻的是**工作树态** —— 它可能含未提交改动、'
+            + '换台机器即不可复现。这只作临时取证用途，R10 会判它为缺陷。');
+    }
     console.log('  理由：' + cache.refreshReason);
     process.exit(0);
 }
@@ -388,6 +492,8 @@ function judge(ctx) {
     const { cache, features, tags, dupes, gateCode, confFiles } = ctx;
     const problems = [];
     const notes = [];
+    /* 上游台账待同步项（R11 用）：由 R4/R5/R7 的分歧在这里收集，逐条查台账。 */
+    const lagWanted = [];
 
     /* ── R2 冻读取形态 ── */
     if (!String(cache.refreshedAt || '').trim()) problems.push('R2 冻读取缺 refreshedAt');
@@ -396,6 +502,28 @@ function judge(ctx) {
     }
     if (!String(cache.upstreamVersion || '').trim()) problems.push('R2 冻读取缺 upstreamVersion');
     if (!String(cache.tableSha1 || '').trim()) problems.push('R2 冻读取缺 tableSha1');
+    /* ── R10 冻读取**可回源**（v3.20.4 新增；本版治的缺陷就在这里） ──
+     *   一条判据回答一个问题：**这份冻读取能在上游仓库里被找到吗？**
+     *   v3.20.3 的冻读取 sha1 自洽、内容自洽、门全绿 —— 而那份内容在**任何上游提交里都不存在**
+     *   （它冻的是工作树脏态）。缺的不是判据，缺的是「你冻的是哪一态」这一格：
+     *   没有它，判据无从发现、门禁反而替一个不可回源的状态背书。 */
+    const srcState = String(cache.sourceState || '').trim();
+    if (!srcState) {
+        problems.push('R10 冻读取缺 sourceState（来源态）—— 无法回答「冻的是提交态还是工作树态」；'
+            + '而不可回源的冻读取正是本仓 v3.20.4 治掉的形态');
+    } else if (srcState !== 'commit') {
+        problems.push('R10 冻读取的 sourceState 是 `' + srcState + '` 而**不是 `commit`** —— '
+            + '冻的是上游**工作树态**（可能含未提交改动）：换一台干净检出就复现不出这份读数，'
+            + '且它会**把真分歧一并洗白**（上游提交态与下游真码不一致时，门禁本该响）。'
+            + '修法：`--refresh --upstream <dir> --reason "..."`（默认取提交态）');
+    }
+    if (!String(cache.upstreamCommit || '').trim()) {
+        problems.push('R10 冻读取缺 upstreamCommit（来源提交）—— 没有它就无法回答「这份读数出自上游哪一次提交」');
+    }
+    if (cache.worktreeDirty === true) {
+        notes.push('R10 上游那张表在工作树里有**未提交改动** —— 冻读取取的是提交态故不受影响；'
+            + '但下游对账只对**提交态**（对未提交的本地改动对账 = 依赖别人的工作台，换台机器即变）');
+    }
     const frozenFaces = (cache.faces && typeof cache.faces === 'object') ? cache.faces : {};
     if (!Object.keys(frozenFaces).length) problems.push('R2 冻读取里一面都没有（扫描面不可信）');
 
@@ -423,13 +551,26 @@ function judge(ctx) {
         }
     }
 
-    /* ── 逐面：R4 版本同口径 / R5 声明↔标签 / R6 出口在场 / R7 接入状态 ── */
+    /* ── 逐面：R4 版本同口径 / R5 声明↔标签 / R6 出口在场 / R7 接入状态 ──
+     * 【v3.20.4 改：这里出现的分歧分两类，处置相反 —— 这是本版第二个设计要点】
+     *   ① **下游自身两处互相矛盾**（registry 的 declared* 与门禁标签不一致 / 标签抄错）
+     *      ⇒ 直接 `problems`：那是本仓自己能立刻改掉的东西；
+     *   ② **上游账面 vs 下游真码不一致**（上游说 `none@0` 而我们已接入 / 上游写 `v3.237.0`
+     *      而我们的口径是 `3.252.0` / 上游写「尚未接入」而我们已有出口）
+     *      ⇒ 收进 `lagWanted`，由 **R11** 逐条查「上游台账待同步」台账。
+     *   为什么分开：②的成因在**上游那份文件**里，而本门对上游**只读**（改不了别人的账）。
+     *   旧版把②也当 defects 直接报 ⇒ 门禁会因上游没提交而常红；直接放过则退化成「人工记得」。
+     *   故给②一条**必须解释**的通路：每一条都要在台账里有非空理由，且台账**双向闭合**
+     *   （有理由没分歧也报）—— 上游一提交，台账项立刻变成「登记了不存在的分歧」而转红。
+     */
     for (const face of Object.keys(frozenFaces)) {
         const up = frozenFaces[face];
         const row = byFace[face];
         const dec = parseConsumer(up.consumer);
         if (!dec) { problems.push('R5 上游面 `' + face + '` 的 consumer 语法非法：' + up.consumer); continue; }
         const tag = tags[face];
+        /** 记一条「上游账面 vs 下游真码」的分歧（等 R11 查台账）。 */
+        const lagNeed = (kind, upSays, ourSays) => lagWanted.push({ face, kind, upSays, ourSays });
 
         if (row) {
             /* R4：producer_version 与 since 必须指**同一个版本**（写法归一后逐字相同）。
@@ -437,9 +578,7 @@ function judge(ctx) {
              *   而上游表指着另一个版本 —— 正是上一轮靠人工对齐的那格。
              *   归一规则见 normVer（上游带 `v` 前缀是它的判据契约，本仓无前缀是既有约定）。 */
             if (normVer(up.producerVersion) !== normVer(row.since)) {
-                problems.push('R4 面 `' + face + '` 版本口径不一致：上游表写 '
-                    + String(up.producerVersion) + '，本仓 since 写 ' + String(row.since)
-                    + '（归一后仍不同 = 两侧各指一个版本）');
+                lagNeed('version', String(up.producerVersion), String(row.since));
             }
             /* R5：声明（出口名 + 下限）必须与门禁标签逐字一致。
              *   ★ 声明为「零消费」的面**不按消费点比对**（那时没有下限可对）：它只判一件事 ——
@@ -448,30 +587,47 @@ function judge(ctx) {
              *   是一句**答非所问**的缺陷描述（本门第一版就是这么判的，会把人引到错方向）。 */
             if (dec.none) {
                 if (tag) {
-                    problems.push('R5 面 `' + face + '`：上游表声明 `none@0`（尚未消费），'
-                        + '而 ' + GATE_REL + ' 里仍挂着该面的 `[face:]/[reader:]/[floor:]` 标签（表陈旧或标签多余）');
+                    lagNeed('consumer-none', String(up.consumer), tag.reader + '@' + tag.floor);
                 }
             } else if (!tag) {
                 problems.push('R5 面 `' + face + '` 在 ' + GATE_REL + ' 里没有 `[face:]/[reader:]/[floor:]` 标签'
                     + '—— 声明与计数分居两个文件而中间没有钉子（下限抄错一位不会有人响）');
             } else {
+                /* 【v3.20.4 加：三方定位责任】登记行是**第三个见证**。
+                 *   登记行与上游表同值而只有门禁标签不同 ⇒ 分歧只在**本地标签**上
+                 *   （抄错一位 / 标签被改动），这没有「等上游」的余地 ⇒ 直接 problems。
+                 *   若登记行也不站在表那边，才交给 R11（本仓无从判断哪一侧是真源）。 */
+                const sameReader = !!(row && row.declaredConsumer !== null && row.declaredConsumer === dec.name);
+                const sameFloor = !!(row && row.declaredFloor !== null && row.declaredFloor === dec.floor);
                 if (tag.reader !== dec.name) {
-                    problems.push('R5 面 `' + face + '` 的消费出口名不一致：上游表声明 `' + dec.name
-                        + '`，门禁标签写 `' + tag.reader + '`');
+                    if (sameReader) {
+                        problems.push('R5 面 `' + face + '`：门禁标签的消费出口名写 `' + tag.reader
+                            + '`，而上游表与登记行**同写** `' + dec.name + '`（同仓两处不一致 —— 改本地即可）');
+                    } else {
+                        lagNeed('reader', '`' + dec.name + '`', '`' + tag.reader + '`');
+                    }
                 }
                 if (tag.floor !== dec.floor) {
-                    problems.push('R5 面 `' + face + '` 的消费点下限不一致：上游表声明 ' + dec.floor
-                        + '，门禁标签写 ' + tag.floor);
+                    if (sameFloor) {
+                        problems.push('R5 面 `' + face + '`：门禁标签的消费点下限写 ' + tag.floor
+                            + '，而上游表与登记行**同写** ' + dec.floor + '（同仓两处不一致 —— 改本地即可）');
+                    } else {
+                        lagNeed('floor', String(dec.floor), String(tag.floor));
+                    }
                 }
             }
-            /* 本仓登记行自己也声明了同一件事 —— 三方（表 / 登记行 / 门禁标签）必须一致。 */
-            if (row.declaredConsumer !== null && row.declaredConsumer !== dec.name) {
+            /* 本仓登记行自己也声明了同一件事 ⇒ **同仓内两处**必须一致（这一条永远是 defects：
+             *   两处都在本仓、都能改，没有任何「等上游」的余地）。比对面刻意是**门禁标签**
+             *   而不是上游表 —— 上游表那条轴由上面几条负责，两层各判各的、不互相顶替。 */
+            if (row.declaredConsumer !== null && tag && row.declaredConsumer !== tag.reader) {
                 problems.push('R5 面 `' + face + '`：登记行 `' + row.id + '` 的 declaredConsumer 写 `'
-                    + row.declaredConsumer + '`，上游表声明 `' + dec.name + '`');
+                    + row.declaredConsumer + '`，而同仓门禁标签写 `' + tag.reader
+                    + '`（同仓两处不一致 —— 与上游那笔账无关，改本地即可）');
             }
-            if (row.declaredFloor !== null && row.declaredFloor !== dec.floor) {
+            if (row.declaredFloor !== null && tag && row.declaredFloor !== tag.floor) {
                 problems.push('R5 面 `' + face + '`：登记行 `' + row.id + '` 的 declaredFloor 写 '
-                    + row.declaredFloor + '，上游表声明 ' + dec.floor);
+                    + row.declaredFloor + '，而同仓门禁标签写 ' + tag.floor
+                    + '（同仓两处不一致）');
             }
             if (row.declaredConsumer === null || row.declaredFloor === null) {
                 problems.push('R2 登记行 `' + row.id + '` 带 upstreamFace 但缺 declaredConsumer / declaredFloor'
@@ -491,15 +647,34 @@ function judge(ctx) {
              *   而「我们为什么还没用它」是本仓自己的判断 —— 两种来源混在一份文件里，
              *   刷新冻读取就会把本仓的理由一起刷掉（那正是本仓「两份事实混装」的老账）。
              *   故理由走单独输入 `--unconsumed <file>`（face → reason 的 JSON），
-             *   缺文件 / 缺该面 / 理由为空 ⇒ 一律报（沉默等于把这格变成没人看的空格）。 */
+             *   缺文件 / 缺该面 / 理由为空 ⇒ 一律报（沉默等于把这格变成没人看的空格）。
+             *
+             *   【v3.20.4 边界收窄：只在「本仓确无消费证据」时才要这份理由】
+             *   上游账面 `none@0` 不等于「下游真的没用它」—— 账面可能**陈旧**：
+             *   `checkpointCompare` 就是这一例（提交态仍写 `none@0`，而本仓 v3.20.2 已接入）。
+             *   那种情形下要一份「为什么还没用它」是**语义错位**：事实是我们**在用**；
+             *   它属于「跨仓账面 vs 下游真码」的分歧 ⇒ 走 R11 要一段解释即可。
+             *   若两条判据各要一份文件，同一件事就有了**两份口径**（本仓治过的形态）。
+             *   故消费证据（门禁标签 / 登记行声明的出口真存在）在场时，本块不报。 */
+            const declaredName = row && row.declaredConsumer ? String(row.declaredConsumer) : '';
+            const consumedHere = !!tag || (!!declaredName && exportedSomewhere(confFiles, declaredName));
             const table = (ctx.unconsumed && typeof ctx.unconsumed === 'object') ? ctx.unconsumed : null;
-            const why = table ? String(table[face] || '').trim() : '';
-            if (!table) {
-                problems.push('R8 面 `' + face + '` 声明 consumer=none@0，而本次运行没给未消费理由台账'
-                    + '（--unconsumed <file>）——「还没人用」必须能回答「为什么」');
-            } else if (!why) {
-                problems.push('R8 面 `' + face + '` 声明 consumer=none@0，而理由台账里没有它的非空理由'
-                    + '（「还没人用」必须能回答「为什么」；沉默等于把这格变成没人看的空格）');
+            if (consumedHere) {
+                /* 有消费证据却没门禁标签：这仍是一条「账面说零消费 / 本仓在用」的分歧，
+                 *   只是本仓那侧的证据在**登记行**而不是标签上 —— 同样交给 R11，不许静默。 */
+                if (!tag) {
+                    lagNeed('consumer-none', String(up.consumer),
+                        '本仓登记行 `' + row.id + '` 声明出口 `' + declaredName + '`（门禁无标签）');
+                }
+            } else {
+                const why = table ? String(table[face] || '').trim() : '';
+                if (!table) {
+                    problems.push('R8 面 `' + face + '` 声明 consumer=none@0，而本次运行没给未消费理由台账'
+                        + '（--unconsumed <file>）——「还没人用」必须能回答「为什么」');
+                } else if (!why) {
+                    problems.push('R8 面 `' + face + '` 声明 consumer=none@0，而理由台账里没有它的非空理由'
+                        + '（「还没人用」必须能回答「为什么」；沉默等于把这格变成没人看的空格）');
+                }
             }
         }
 
@@ -515,12 +690,13 @@ function judge(ctx) {
         const behaviorText = String(up.standaloneBehavior || '');
         const hasEvidence = !dec.none && exportedSomewhere(confFiles, dec.name);
         if (WIRED_WORD.test(behaviorText) && !hasEvidence) {
+            /* 这一向**不是**「等上游改」：上游说我们已接入，而我们自己这边找不到出口 ——
+             *   方向是本仓缺东西（要么上游超前宣称、要么我们的出口真丢了），必须立刻看。 */
             problems.push('R7 面 `' + face + '`：上游表写「下游已接入」，而本仓找不到对应的真源出口'
                 + '（声明与证据相反）');
         }
         if (NOT_WIRED_WORD.test(behaviorText) && hasEvidence) {
-            problems.push('R7 面 `' + face + '`：本仓已有真源出口 `' + dec.name
-                + '`，而上游表仍写未接入（该格已陈旧，须同步）');
+            lagNeed('not-wired', '上游那格写「尚未接入」', '本仓已有出口 `' + dec.name + '`');
         }
     }
 
@@ -532,42 +708,143 @@ function judge(ctx) {
         }
     }
 
+    /* ── R11 上游台账待同步（v3.20.4 新增；**双向**闭合） ──
+     *   上面 R4/R5/R7 收集到的每一条「上游账面 vs 下游真码」分歧，必须在这份台账里
+     *   有一条**非空理由**；反过来，台账里登记的每一条，也必须**真的还分歧着**。
+     *
+     * 【为什么要有这条通路，而不是让那些分歧直接转红】
+     *   那些分歧的**成因在上游那份文件里**，而本门对上游只读 —— 改不了别人的账。
+     *   直接转红 ⇒ 门禁常态红（红的原因还是「别人没提交」），红久了就没人看；
+     *   直接放过 ⇒ 退化成「人工记得」（本门存在的理由正是这个）。
+     *   故给一条**必须解释 + 双向闭合**的通路：解释写在台账里（可追责、可读），
+     *   且上游一提交（分歧消失）台账项立刻变成「登记了不存在的分歧」而转红。
+     *
+     * 【台账项形态（逐字核，不许泛泛）】
+     *   { face, kind, upSays, ourSays, upstreamCommit, reason }
+     *   `kind` ∈ version | reader | floor | consumer-none | not-wired；
+     *   判据按 `face + kind + upSays + ourSays` 四元组匹配 —— 「说了什么就解释什么」，
+     *   笼统写一句「上游待同步」会被判成「没有这一条」。
+     */
+    const lagTable = (ctx.lag && typeof ctx.lag === 'object') ? ctx.lag : null;
+    const lagItems = Array.isArray(lagTable && lagTable.items) ? lagTable.items : null;
+    /* 「给了文件但形态坏掉」不许与「没给文件」同形：前者是台账本身不可信，后者是没登记。 */
+    const lagBroken = !!(lagTable && !lagItems);
+    if (lagBroken) {
+        problems.push('R11 台账（' + UPSTREAM_LAG_REL + '）的 `items` 不是数组 —— 形态不可信，'
+            + '无法回答「哪些分歧被解释过」（形态坏掉与空表不许同形）');
+    } else if (lagWanted.length && !lagItems) {
+        for (const w of lagoonDescribe(lagWanted)) {
+            problems.push('R11 ' + w + '，而本次运行没给「上游台账待同步」台账（--lag <file>）'
+                + '—— 上游账面与下游真码的分歧必须能回答「为什么」，沉默等于把它交给记忆');
+        }
+    } else if (lagItems) {
+        const keyOf = (o) => [o.face, o.kind, String(o.upSays), String(o.ourSays)].join('\u0000');
+        const have = new Map();
+        for (const it of lagItems) {
+            if (!it || typeof it !== 'object') { problems.push('R11 台账里有非对象项（形态不可信）'); continue; }
+            have.set(keyOf(it), it);
+        }
+        for (const w of lagWanted) {
+            const it = have.get(keyOf(w));
+            if (!it) {
+                problems.push('R11 ' + lagoonDescribe([w])[0] + '，而台账里没有**这一条**'
+                    + '（理由必须逐条对上：说了什么就解释什么，笼统一句「待同步」不算）');
+                continue;
+            }
+            if (!String(it.reason || '').trim()) {
+                problems.push('R11 ' + lagoonDescribe([w])[0] + '：台账里这条的 reason 为空（沉默不许存在）');
+            }
+            if (!String(it.upstreamCommit || '').trim()) {
+                problems.push('R11 ' + lagoonDescribe([w])[0] + '：台账里这条缺 upstreamCommit'
+                    + '（不记上游提交就无法回答「上游一提交这条还成不成立」）');
+            } else if (srcState === 'commit' && String(cache.upstreamCommit || '').trim()
+                && String(it.upstreamCommit).trim() !== String(cache.upstreamCommit).trim()) {
+                notes.push('R11 台账里 `' + w.face + '/' + w.kind + '` 记的是上游提交 '
+                    + it.upstreamCommit + '，而冻读取来自 ' + cache.upstreamCommit
+                    + ' —— 上游已前进，该条须复核是否仍成立');
+            }
+        }
+        /* 反向：台账里登记了、而实际**已经不分歧** ⇒ 台账腐化成了掩饰（本仓治过的形态）。 */
+        const wantKeys = new Set(lagWanted.map(keyOf));
+        for (const [k, it] of have) {
+            if (!wantKeys.has(k)) {
+                problems.push('R11 台账里登记了 `' + it.face + '/' + it.kind + '`（'
+                    + String(it.upSays) + ' ↔ ' + String(it.ourSays) + '），而冻读取与下游真码**已经不分歧**'
+                    + '—— 台账项必须删除（登记着不存在的分歧就是掩饰，与「有分歧不解释」同罪）');
+            }
+        }
+        if (!lagWanted.length && !lagItems.length) {
+            notes.push('R11 上游台账待同步：本次 **0 条**（上游账面与下游真码逐面一致）—— 空表是真读数');
+        }
+        /* 命中也要出声：分歧被解释 ≠ 分歧不存在。若只判「有没有理由」而不打印，
+         *   摘要行仍写着上游那份陈旧账面（如 `checkpointCompare → none@0`），
+         *   读者会以为「下游没接」—— 等于用台账把分歧藏起来（本门存在的理由正是反着来）。 */
+        const explained = [];
+        for (const w of lagWanted) {
+            const it = have.get(keyOf(w));
+            if (it && String(it.reason || '').trim() && String(it.upstreamCommit || '').trim()) {
+                explained.push(w.face + '/' + w.kind);
+            }
+        }
+        if (explained.length) {
+            notes.push('R11 上游台账待同步：**已解释 ' + explained.length + ' 条**（' + explained.join('、')
+                + '）—— 上游提交态与本仓真码仍不一致，理由见 ' + UPSTREAM_LAG_REL
+                + '；上游一提交这些条目会因「分歧已消失」而转红');
+        }
+    }
+
     /* ── R9 上游实时复核（给了 --upstream：读不到 rc2；读到但与冻读取 sha1 不同 ⇒ 表已变） ── */
     const verify = ctx.upstreamDir;
     if (verify) {
-        const raw = readText(path.join(verify, UPSTREAM_TABLE_REL));
-        if (raw == null) {
-            return { fatal: '给了 --upstream 但读不到上游登记表（路径写错与「复核过」不许同形）：'
-                + path.join(path.basename(verify), UPSTREAM_TABLE_REL) };
+        /* ★ 比对的是**提交态**（与冻读取同口径）。v3.20.3 比的是工作树内容 ——
+         *   于是「上游工作树里有未提交改动」会被读成「上游表变了」，报出的是一句答非所问的
+         *   「表已变」（真处境是「有人在这台机器上改了工作树」）。 */
+        const at = readUpstreamTableAt(path.resolve(verify), 'commit');
+        if (at.raw == null) {
+            return { fatal: '给了 --upstream 但读不到上游登记表的**提交态**（路径写错与「复核过」不许同形）：'
+                + path.join(path.basename(path.resolve(verify)), UPSTREAM_TABLE_REL) + ' —— ' + at.why };
         }
-        const got = sha1(raw);
+        const got = sha1(at.raw);
         if (got !== cache.tableSha1) {
             problems.push('R9 上游登记表已变（冻读取 sha1 ' + cache.tableSha1 + '，实时 ' + got
                 + '）—— 须显式 --refresh 并写明理由，不许沿用旧冻读取');
         } else {
-            notes.push('R9 上游实时复核：表 sha1 与冻读取一致（' + got + '）');
+            notes.push('R9 上游实时复核：**提交态** sha1 与冻读取一致（' + got
+                + '，上游提交 ' + (at.commit || '读不到') + '）');
+        }
+        if (at.dirty === true) {
+            notes.push('R9 上游该表在工作树里有未提交改动 —— 复核按**提交态**判（工作树态不可回源，'
+                + '不作为对账对象）');
         }
     } else {
         notes.push('R9 上游实时复核：**未复核**（未给 --upstream）—— 本门只保证「冻读取 ↔ 本仓」一致，'
             + '不保证上游此刻未变；定期刷新请走 --refresh');
     }
-
     return { problems, notes };
 }
+/** 把分歧描述成人读的一句（R11 与 R10 的报错共用一个措辞口径）。 */
+function lagoonDescribe(list) {
+    return list.map((w) => '上游面 `' + w.face + '` 的 ' + w.kind + ' 与下游不一致'
+        + '（上游账面：' + String(w.upSays) + '；下游真码：' + String(w.ourSays) + '）');
+}
+
 
 /* ══════════ 入口 ══════════ */
 function argvParse(argv) {
-    const out = { refresh: false, upstream: null, reason: '', unconsumed: null };
+    const out = { refresh: false, upstream: null, reason: '', unconsumed: null, lag: null, fromWorktree: false };
     for (let i = 0; i < argv.length; i += 1) {
         const a = argv[i];
         if (a === '--refresh') out.refresh = true;
         else if (a === '--upstream') out.upstream = argv[++i] || null;
         else if (a === '--reason') out.reason = argv[++i] || '';
         else if (a === '--unconsumed') out.unconsumed = argv[++i] || null;
+        else if (a === '--lag') out.lag = argv[++i] || null;
+        else if (a === '--from-worktree') out.fromWorktree = true;
     }
     /* 环境变量入口与 F-4 探针同规（`RP_UPSTREAM_ROOT`），便于 CI 传路径。 */
     if (!out.upstream && process.env.RP_UPSTREAM_ROOT) out.upstream = process.env.RP_UPSTREAM_ROOT;
     if (!out.unconsumed) out.unconsumed = path.join(ROOT, 'tests', 'audit', 'upstream_face_unconsumed.json');
+    if (!out.lag) out.lag = path.join(ROOT, UPSTREAM_LAG_REL);
     return out;
 }
 
@@ -601,10 +878,20 @@ if (argv.refresh) {
             catch (_e) { unconsumed = null; }
         }
     }
+    /* 「上游台账待同步」台账：**存在但不可解析** ⇒ 显式空对象（走形态坏掉那条 = 报缺陷），
+     *   不许退化成 `null`（`null` 与「没给」同形，会把一份坏台账读成「没登记」）。 */
+    let lag = null;
+    if (argv.lag) {
+        const lt = readText(argv.lag);
+        if (lt != null) {
+            try { lag = JSON.parse(lt); }
+            catch (_e) { lag = {}; }
+        }
+    }
     const res = judge({
         cache: cacheRes.cache, features,
         tags: parsedTags.tags, dupes: parsedTags.dupes,
-        gateCode, confFiles: conf, upstreamDir, unconsumed
+        gateCode, confFiles: conf, upstreamDir, unconsumed, lag
     });
     if (res.fatal) fail(res.fatal);
     console.log('=== 跨仓外供面「声明 ↔ 真码」对账：' + Object.keys(cacheRes.cache.faces || {}).length
