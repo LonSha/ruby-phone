@@ -481,6 +481,19 @@
  - [ ] **第 2 / 3 层（未开工）**：中件需重写 storage 接线（淘宝仿真 / 恋爱空间 / 游戏厅 / 老福特 / Pixiv / 杂志 / LINE）；
    大件为机制级重写 + 数据迁移（小鼠机整套 / 记忆宫殿 / 白盒音效编辑器）。**这两层不做整文件搬运** —— 每件都是「取机制、套三层、改持久化」。
    **与第 1 层的差别**：第 1 层是「套同一套骨架即完」（单件 18–50KB），这一层**需重写 storage 接线**且单件更大（115–332KB，一个 App 内部会有多个子模块）。
+    **第 2 层起手复算（v3.28.0 收干后当场实测 · 复算结论：路线图与实测一致，无失真）**：
+    按本层纪律「起手前按当场 grep 复算缺口矩阵」，逐件在全仓 `--include=*.js` 精确核了一遍专属概念，命中数如下 ——
+    **真缺口（0 命中，可缝）**：拼团 0 / 订单状态机（待发货·待收货·待评价）0 / 游戏厅 0 / 杂志 0 /
+    提示词中心 0 / 头像识别 0 / 约会日记 0 / 情侣空间 0；LINE 仿真 3 命中但全在 wechat/plotline 的**正文串**里（非 App）；
+    淘宝·taobao·Pixiv·老福特 各 1 命中且**全落在 `config/l0-assets.js`**（L0 静态素材登记，不是 App）→ 也属真缺口；
+    思维链 2 命中落在 `data/cheats.js` / `data/cheat-index.js`（提示词作弊表，噪声）。
+    **源侧实测体积（`du -sb`）**：taobao 154272 / lovers-space 174001 / game-hall 339805 / forum 133414 / date 120530 /
+    kk-checkin 104548 / tukey-accounting 86319 / prompt-center 67271 / studio 59714 / thought-chain 50172（以上均在
+    `nuo3/src_xintuk/runtime/scripts/<name>/`，是**分片载荷目录**，顶层同名 .js 只是 445 字节的注入壳）；
+    perigee 侧 lofter.js 267370 / pixiv-novel.js 213700 + pixiv-illust.js 80350 + pixiv-comments.js 30713 /
+    magazine.js 118212 / line.js 167474。
+    **起手序**：淘宝仿真 → 恋爱空间 → 日期 → 游戏厅 → 老福特 → Pixiv → 杂志 → LINE（先立「PhoneStorage 重写接线」的范式，再批量套）。
+
 ## P2 · 功能 / 架构
 
 - [x] **`计划.txt` 第 386~394 行「四项优先」的落地状态（v2.82.0 结算）**：
