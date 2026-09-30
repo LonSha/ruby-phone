@@ -93,6 +93,18 @@ export class PhoneStorage {
             //   与 ^focus_ 同族的单条前缀覆盖三键（无元字符、无需宽匹配登记）。
             //   账本随会话隔离：换角色不该看到上一个角色的账。
             /^accounting_/,
+            // [v3.25.0] 存钱罐（piggy_settings / piggy_state）：
+            //   与 ^focus_ / ^accounting_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   罐随会话隔离：换角色后那是另一个角色的另一个罐。
+            /^piggy_/,
+            // [v3.26.0] 正则过滤器（regexfilter_settings / regexfilter_presets）：
+            //   与 ^piggy_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   方案随会话隔离：换角色后那套改写规则不该跟着走。
+            /^regexfilter_/,
+            // [v3.26.0] 打卡（punchcard_settings / punchcard_cards）：
+            //   与 ^focus_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   卡册随会话隔离：换角色后那是另一个角色的作息。
+            /^punchcard_/,
             // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
             /^ledger_/,
             // [v2.61.0] 资产 App：设置走 asset_settings_v1；引擎唯一读写门的聊天变量

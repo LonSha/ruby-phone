@@ -432,6 +432,41 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.25.0] 存钱罐：余额 / 收支流水 / 亲属卡额度周期（缝合自 EPhone·xINOVO piggy_bank）。
+        //   只缝本地储值那一半；源里那套商品下单结算与角色家人卡事件流不缝
+        //   （消息归微信/日记/剧场，用户钱包的仲裁源是微信零钱）。会话键走 ^piggy_ 前缀。
+        id: 'piggy',
+        name: '存钱罐',
+        icon: '🐷',
+        color: '#ea580c',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.26.0] 正则过滤器：自定规则 → 预览改写结果 / 导出为 ST 正则脚本（缝合自 EPhone·xINOVO regex_filter）。
+        //   只缝「规则引擎 + 外壳保护 + 导出语义」；本 App 不改写任何消息正文
+        //   （正文改写的仲裁者是 config/tag-filter.js，同一块文本放两个改写者＝本仓最贵的形态）。
+        //   会话键走 ^regexfilter_ 前缀，随会话隔离。
+        id: 'regexfilter',
+        name: '正则过滤',
+        icon: '🪄',
+        color: '#6366f1',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.26.0] 打卡：作息清单 → 勾选 / 逐项备注 / 连续天数（缝合自 MyPhone punchcard）。
+        //   只缝「主叫侧的账」；源自建 IndexedDB 与「调模型生成角色作息表」两块不缝
+        //   （前者违零数据库铁律，后者是生成侧的活——本 App 只把聚合事实交给生成侧）。
+        //   会话键走 ^punchcard_ 前缀，随会话隔离。
+        id: 'punchcard',
+        name: '打卡',
+        icon: '🗓️',
+        color: '#0891b2',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

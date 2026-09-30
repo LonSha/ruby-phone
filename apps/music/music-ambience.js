@@ -5,10 +5,22 @@
  *   2. MediaSession 媒体会话: 锁屏/系统媒体中心显示歌曲与进度
  *   3. 时间轴歌词推进: timeupdate 驱动, 显示当前句
  *  零侵入: 挂到 MusicData.audioPlayer 事件 + 读公开状态
+ *
+ *  [v3.24.0 · L0-2] 场景环境音（L0 素材第 4 类）：
+ *   5 条 30 秒环境音（`assets/sounds/ambience/`）作为**可叠加的背景层**，
+ *   与歌曲同时播放（各自一个 Audio 实例，互不抢声道）。
+ *   · 素材路径只在取数口 `config/l0-assets.js` 一处拼 —— 本文件不写 assets 路径；
+ *   · key 落进已有的 `ruby_phone_lyrics_settings`（不新增 storage 键）；
+ *   · **惰性创建**：只有真的选了环境音才 new Audio()，否则这 1.2MB 一条都不加载。
  * ======================================================== */
+import { L0_ASSETS } from '../../config/l0-assets.js';
 
 const LYRICS_ROOT_ID = 'ruby-phone-desktop-lyrics';
 const KEY = 'ruby_phone_lyrics_settings';
+
+/* 环境音清单（key → {label, url}），唯一真源在取数口 */
+const AMBIENCE_LIST = L0_ASSETS.ambience;
+const AMBIENCE_BY_KEY = Object.freeze(Object.fromEntries(AMBIENCE_LIST.map((a) => [a.key, a])));
 
 export class MusicAmbience {
   constructor(musicData) {
@@ -25,6 +37,9 @@ export class MusicAmbience {
     this._boundMeta = null;
     this.el = null;
     this.textEl = null;
+    /* [v3.24.0 · L0-2] 环境音层：一个 Audio 实例 + 当前 key（惰性创建，见 _ensureAmbienceAudio） */
+    this._ambienceAudio = null;
+    this._ambienceKey = '';
   }
 
   _load() {
@@ -40,7 +55,9 @@ export class MusicAmbience {
       mobileLyrics: true,     // 手机内歌词默认开
       lyricColor: '#f2cf70',
       fontSize: 14,
-      position: { left: 50, top: 92 } // 百分比
+      position: { left: 50, top: 92 }, // 百分比
+      ambienceKey: '',        // [v3.24.0 · L0-2] 场景环境音 key（''=关）
+      ambienceVolume: 0.35    // [v3.24.0 · L0-2] 环境音音量（相对歌曲，默认压低）
     };
   }
 
@@ -144,9 +161,9 @@ export class MusicAmbience {
       this._paint();
       this._updateMediaPosition();
     };
-    this._boundPlay = () => { this._setMediaSessionPlayback(true); };
-    this._boundPause = () => { this._setMediaSessionPlayback(false); };
-    this._boundEnded = () => { this._setMediaSessionPlayback(false); };
+    this._boundPlay = () => { this._setMediaSessionPlayback(true); this._resumeAmbience(); };
+    this._boundPause = () => { this._setMediaSessionPlayback(false); this._pauseAmbience(); };
+    this._boundEnded = () => { this._setMediaSessionPlayback(false); this._pauseAmbience(); };
     this._boundMeta = () => { this._updateMediaMetadata(); };
     this.audio.addEventListener('timeupdate', this._boundTimeupdate);
     this.audio.addEventListener('play', this._boundPlay);
@@ -197,6 +214,123 @@ export class MusicAmbience {
     this.save();
     this._paint();
   }
+
+  /* ==================== [v3.24.0 · L0-2] 场景环境音 ====================
+   *  与歌曲**同时播放**的背景层：独立 Audio 实例 ⇒ 音量各自可控、互不暂停。
+   *  素材只取 key 定位；白名单外（含 ''）一律当作「关」——
+   *  素材哪天从 assets/ 里删掉，读回时会静默回到无环境音态，而不是对着 404 空播放。
+   */
+
+  /** 环境音选项（给设置面板渲染用；唯一真源在取数口） */
+  static ambienceOptions() {
+    return AMBIENCE_LIST.map((a) => ({ key: a.key, label: a.label }));
+  }
+
+  /** 当前环境音 key（''=关）。读回时对白名单校验，失效 key 当关。 */
+  getAmbienceKey() {
+    const key = String(this.settings.ambienceKey || '');
+    return AMBIENCE_BY_KEY[key] ? key : '';
+  }
+
+  /** 惰性创建 Audio（只在该 key 真被选中时才加载那条 240KB 素材） */
+  _ensureAmbienceAudio() {
+    if (this._ambienceAudio) return this._ambienceAudio;
+    try {
+      const audio = new Audio();
+      audio.loop = true;              // 30 秒素材无缝循环
+      audio.preload = 'auto';
+      this._ambienceAudio = audio;
+      return audio;
+    } catch (e) {
+      this._ambienceAudio = null;
+      return null;
+    }
+  }
+
+  /**
+   * 切换环境音。
+   * @param {string} key 取数口清单里的 key；''/'off' 表示关闭
+   * @param {{resume?: boolean}} [opts] resume=true 时切换后立即续播（面板上换音时要保持连通）
+   * @returns {string} 实际生效的 key（''=已关）
+   */
+  setAmbience(key, opts = {}) {
+    const next = AMBIENCE_BY_KEY[String(key || '')] ? String(key) : '';
+    const audio = this._ambienceAudio;
+    if (audio) {
+      try { audio.pause(); } catch (e) { /* 忽略 */ }
+    }
+    this._ambienceKey = next;
+    this.settings.ambienceKey = next;
+    this.save();
+    if (!next) return '';
+    const created = this._ensureAmbienceAudio();
+    if (!created) return '';
+    try {
+      created.src = AMBIENCE_BY_KEY[next].url;
+      created.loop = true;
+      created.volume = this._clampVolume(this.settings.ambienceVolume);
+      if (opts.resume !== false) {
+        const p = created.play();
+        if (p && typeof p.catch === 'function') p.catch(() => { /* 自动播放被浏览器挡住：等下一次用户手势 */ });
+      }
+    } catch (e) { /* 忽略 */ }
+    return next;
+  }
+
+  /** 环境音音量（0~1），与歌曲音量正交 */
+  setAmbienceVolume(volume) {
+    this.settings.ambienceVolume = this._clampVolume(volume);
+    this.save();
+    if (this._ambienceAudio) {
+      try { this._ambienceAudio.volume = this.settings.ambienceVolume; } catch (e) { /* 忽略 */ }
+    }
+    return this.settings.ambienceVolume;
+  }
+
+  getAmbienceVolume() {
+    return this._clampVolume(this.settings.ambienceVolume);
+  }
+
+  _clampVolume(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0.35;
+    return Math.max(0, Math.min(1, n));
+  }
+
+  /** 歌曲起播/续播时把环境音一起带上（被浏览器挡过的那次在这里补上） */
+  _resumeAmbience() {
+    if (!this._ambienceKey && !this.getAmbienceKey()) return;
+    const key = this.getAmbienceKey();
+    if (!key) return;
+    const audio = this._ensureAmbienceAudio();
+    if (!audio) return;
+    try {
+      if (!audio.src) audio.src = AMBIENCE_BY_KEY[key].url;
+      audio.volume = this._clampVolume(this.settings.ambienceVolume);
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { /* 忽略 */ });
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /** 暂停环境音（歌曲暂停/结束时；不销毁，key 保留） */
+  _pauseAmbience() {
+    if (!this._ambienceAudio) return;
+    try { this._ambienceAudio.pause(); } catch (e) { /* 忽略 */ }
+  }
+
+  /** 彻底回收（清缓存 / 换会话时） */
+  destroyAmbience() {
+    const audio = this._ambienceAudio;
+    this._ambienceAudio = null;
+    this._ambienceKey = '';
+    if (!audio) return;
+    try {
+      audio.pause();
+      audio.removeAttribute?.('src');
+      audio.load?.();
+    } catch (e) { /* 忽略 */ }
+  }
+
 
   _ensureLyricEl() {
     let el = document.getElementById(LYRICS_ROOT_ID);

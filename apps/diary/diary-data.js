@@ -13,6 +13,9 @@
 // 📔 日记数据引擎 - 存储与AI调用
 // ========================================
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
+/* [v3.24.0 · L0-1] 封面画框：内置素材按 **key** 存取，键→URL 的解析只在取数口一处。
+ *   本文件只做**白名单校验**（用 galleryFrameUrl 判 key 是否在册），不自己拼路径。 */
+import { galleryFrameUrl } from '../../config/l0-assets.js';
 /* [v3.10.0 · G-3] 日记侧接干跑取数：让「这一天真正生效的设定」也进日记请求。
  *   刻意**不新建取数实现** —— 与 worldpulse 共用 `config/worldbook-dryrun.js` 同一份
  *   （同一口径只许一份实现；本仓第九道门对「同一口径抄 N 份」有常驻判据）。 */
@@ -161,6 +164,21 @@ export class DiaryData {
             this.storage.remove('global_diary_bg_cover');
         }
         this._cleanupReplacedDiaryImage(oldUrl, nextUrl);
+    }
+
+    /* [v3.24.0 · L0-1] 封面画框（内置 26 套 L0 素材）。
+     *   存的是 **key** 不是 URL：素材哪天从 assets/ 里删掉，
+     *   读回时白名单校验会把它判成 ''（界面回落为无画框），而不会指向一条 404。
+     *   storage 走 `global_diary_cover_frame`（全局：与封面背景图同族，跨会话共享）。 */
+    getCoverFrame() {
+        const key = String(this.storage.get('global_diary_cover_frame') || '').trim();
+        return galleryFrameUrl(key) ? key : '';
+    }
+
+    async setCoverFrame(key) {
+        const next = galleryFrameUrl(String(key || '').trim()) ? String(key).trim() : '';
+        if (next) this.storage.set('global_diary_cover_frame', next);
+        else this.storage.remove('global_diary_cover_frame');
     }
 
     getTocBg() {

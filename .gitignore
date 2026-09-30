@@ -28,3 +28,11 @@ test/
 
 # Source material (large, licensing unclear; only generated output is kept)
 .sourcematerial/
+
+# 审计探针夹具临时目录（os.tmpdir 之外的历史残留；v3.26.0 补登记）
+/rp_p6_*/
+/rp_f4_*/
+/rp_longchat_*/
+/rp_sched_*/
+/rp_branch_*/
+/rp_v328_*/

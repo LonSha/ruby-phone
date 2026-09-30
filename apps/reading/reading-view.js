@@ -4,6 +4,25 @@
  * ======================================================== */
 'use strict';
 
+/* L0 静态素材（纸纹）取数口：路径怎么拼只此一份，不在视图里手写 assets 路径。
+ *   为什么用纸纹而不是纯色：本 App 的定位就是「正文排版仿纸质书」，
+ *   而 paper 主题是唯一带纹理的纸面主题（parchment/night/ink 保持纯色不变）。 */
+import { L0_ASSETS } from '../../config/l0-assets.js';
+
+/* 纸纹 key → URL 表（从 L0 取数口读，避免本文件自持第二条路径） */
+const PAPER_TEXTURE_URLS = Object.freeze(Object.fromEntries(
+    L0_ASSETS.textures.map((t) => [t.key, t.url])
+));
+const PAPER_THEME_TEXTURE = PAPER_TEXTURE_URLS['cream-paper'];
+
+/* 主题清单（单一真源）：切换顺序、读回校验、标签表都以它为准。
+ *   此前这三处各写一份字面量（切换用 order 数组、读回用三个 `===` OR、标签用对象键），
+ *   加深色主题时漏改任一处的症状都是「存了不生效」——不报错。 */
+const READING_THEMES = Object.freeze(['parchment', 'paper', 'night', 'ink']);
+
+/* 主题按钮字符（与 READING_THEMES 同源：少一个键就回落到第一项的字符，不会渲染成 undefined） */
+const READING_THEME_LABELS = Object.freeze({ parchment: '☀', paper: '📜', night: '🌙', ink: '⚫' });
+
 function esc(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -27,7 +46,7 @@ export class ReadingView {
         const tc = this._themeCss();
         const html = `
         <style>
-        .rd-root { display:flex; flex-direction:column; height:100%; font-family: 'Songti SC','SimSun','Noto Serif SC',Georgia,serif; color:${tc.text}; background:${tc.bg}; box-sizing:border-box; }
+        .rd-root { display:flex; flex-direction:column; height:100%; font-family: 'Songti SC','SimSun','Noto Serif SC',Georgia,serif; color:${tc.text}; box-sizing:border-box; background-color:${tc.bg}; background-image:${tc.bgImage ? `url('${tc.bgImage}')` : 'none'}; background-repeat:repeat; background-size:auto; }
         .rd-root * { box-sizing:border-box; }
         .rd-shelf { flex:1; overflow-y:auto; padding:14px; }
         .rd-shelf-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -75,12 +94,19 @@ export class ReadingView {
         const t = this.theme || 'parchment';
         const themes = {
             parchment: { bg: '#f5f1e6', card: '#fffdf7', bar: '#efe7d7', border: '#e4dccb', text: '#3d3a35', sub: '#9a8b76', soft: '#6b5c48' },
+            /* [v3.24.0] paper：parchment 的**带纸纹版**（同一套配色，多铺一层 cream-paper 纸纹）。
+             *   单列一个主题而不是把 parchment 直接换成带纹样，是为了让
+             *   「旧读数（用户此前存的 theme='parchment'）行为一个字不变」。 */
+            paper: { bg: '#f5f1e6', card: '#fffdf7', bar: '#efe7d7', border: '#e4dccb', text: '#3d3a35', sub: '#9a8b76', soft: '#6b5c48', bgImage: PAPER_THEME_TEXTURE },
             night: { bg: '#1c1f24', card: '#24282e', bar: '#20242a', border: '#33383f', text: '#cfd3d8', sub: '#7c828a', soft: '#a7adb5' },
             ink: { bg: '#121212', card: '#171717', bar: '#141414', border: '#2a2a2a', text: '#d4d4d4', sub: '#6f6f6f', soft: '#a3a3a3' }
         }[t] || {};
         return {
             bg: themes.bg, card: themes.card, bar: themes.bar, border: themes.border,
-            text: themes.text, sub: themes.sub, soft: themes.soft
+            text: themes.text, sub: themes.sub, soft: themes.soft,
+            /* bgImage 缺席 ⇒ 空串（不是 'none'）：让调用方统一用「有则铺、无则保持纯色」的写法，
+             *   不必在模板里再判一次假值。 */
+            bgImage: themes.bgImage || ''
         };
     }
 
@@ -129,7 +155,6 @@ export class ReadingView {
         const content = paras.length ? paras.map(p => `<p>${esc(p)}</p>`).join('') : '<p style="text-indent:0;color:#9a8b76">（本章暂无内容）</p>';
         const chapterOptions = book.chapters.map((c, i) =>
             `<option value="${i}" ${i === this.curChapter ? 'selected' : ''}>${esc(c.title || ('第' + (i + 1) + '章'))}</option>`).join('');
-        const themeLabels = { parchment: '☀', night: '🌙', ink: '⚫' };
         const authorLine = book.author ? ` · ${esc(book.author)}` : '';
         const pct = book.chapters.length ? Math.round(((this.curChapter + 1) / book.chapters.length) * 100) : 0;
         return `
@@ -138,7 +163,7 @@ export class ReadingView {
                 <button class="rd-back" id="rd-back" title="返回书架">‹</button>
                 <select id="rd-chapters" class="rd-chapters">${chapterOptions}</select>
                 <div class="rd-fonts">
-                    <button class="rd-f" id="rd-theme" title="切换主题">${themeLabels[this.theme || 'parchment'] || '☀'}</button>
+                    <button class="rd-f" id="rd-theme" title="切换主题">${READING_THEME_LABELS[this.theme] || READING_THEME_LABELS[READING_THEMES[0]]}</button>
                     <button class="rd-f" id="rd-fminus">A−</button>
                     <span style="font-size:11px;color:${tc.sub}">${this.fontPx}px</span>
                     <button class="rd-f" id="rd-fplus">A＋</button>
@@ -170,8 +195,9 @@ export class ReadingView {
             q('#rd-fplus')?.addEventListener('click', () => { this.fontPx = Math.min(24, this.fontPx + 2); this.render(); });
             q('#rd-fminus')?.addEventListener('click', () => { this.fontPx = Math.max(12, this.fontPx - 2); this.render(); });
             q('#rd-theme')?.addEventListener('click', () => {
-                const order = ['parchment', 'night', 'ink'];
-                this.theme = order[(order.indexOf(this.theme) + 1) % order.length];
+                const order = READING_THEMES;
+                const at = order.indexOf(this.theme);
+                this.theme = order[(at < 0 ? 0 : at + 1) % order.length];
                 this._saveProgress();
                 this.render();
             });
@@ -205,7 +231,7 @@ export class ReadingView {
                 const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
                 this.curChapter = Number(p.chapter) || 0;
                 this.fontPx = Number(p.fontPx) || 16;
-                if (p.theme === 'parchment' || p.theme === 'night' || p.theme === 'ink') this.theme = p.theme;
+                if (READING_THEMES.includes(p.theme)) this.theme = p.theme;
             }
         } catch (e) { this.curChapter = 0; }
     }

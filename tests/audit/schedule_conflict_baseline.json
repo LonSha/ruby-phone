@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 247,
+    "files_scanned": 257,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -130,6 +130,42 @@
         "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
       ],
       "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+    },
+    "v3.24.0": {
+      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+      "readings": {
+        "readings.files_scanned": 248
+      }
+    },
+    "v3.25.0": {
+      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；**其余读数逐项不变** —— 消费面仍是 6 个文件 / 23 个消费点 / 本机引擎命中 0。理由：存钱罐读时间只走既有的取数口，不新增「按时刻消费」的站点，也不引入任何本机日程引擎。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+      "readings": {
+        "files_scanned": 251
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "not_done": [
+        "存钱罐的「家庭卡片刷新周期」（PIGGY_REFRESH_PERIODS）是**展示口径**，不是日程冲突面：它不读楼层时间轴，也不参与任何日程合并，故本探针消费面 0 变化。",
+        "本层只量静态站点与既有消费面；真机里「换会话时余额与卡片从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+      ]
+    },
+    "v3.26.0": {
+      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "枚举面随两个新 App 扩张（251 → 257 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 正则过滤器与打卡都不消费上游的「承诺期限 / 状态」（前者是文本工作台，后者是主叫侧账本）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+      "readings": {
+        "files_scanned": 257
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "criteria_refreshed": {}
     }
   }
 }

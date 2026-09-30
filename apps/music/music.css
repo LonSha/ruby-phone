@@ -1330,6 +1330,41 @@
     margin-top: 2px;
 }
 
+/* ==================== [v3.24.0 · L0-2] 场景环境音 ==================== */
+.music-settings-item.is-column {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.music-ambience-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.music-ambience-chip {
+    border: 1px solid rgba(120, 130, 140, 0.3);
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    color: #55606a;
+    cursor: pointer;
+}
+
+.music-ambience-chip.is-active {
+    border-color: #6db3d8;
+    background: rgba(168, 216, 234, 0.35);
+    color: #2f6b8c;
+    font-weight: 600;
+}
+
+.music-vol-slider {
+    width: 120px;
+    accent-color: #6db3d8;
+}
+
 /* 开关 */
 .music-toggle {
     width: 44px;

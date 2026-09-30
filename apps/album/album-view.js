@@ -6,6 +6,9 @@
  * ======================================================== */
 
 import { PHONE_CONFIG } from '../../config/apps.js';
+/* [v3.24.0 · L0-3] 分享面板：25 个平台图标（L0 素材第 2 类）。
+ *   URL 解析只在取数口一处（`shareIconUrl`），本文件只把 key 列表画成按钮。 */
+import { L0_ASSETS, shareIconUrl } from '../../config/l0-assets.js';
 
 export const ALBUM_CSS_URL = new URL('./album.css?v=1.2.1&r=20260802-album-toolbar', import.meta.url).href;
 
@@ -359,6 +362,9 @@ export class AlbumView {
                     <button type="button" class="album-preview-close" aria-label="关闭">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
+                    <button type="button" class="album-preview-share" aria-label="分享" title="分享到平台">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
                     <button type="button" class="album-preview-delete" aria-label="删除">
                         <i class="fa-regular fa-trash-can"></i>
                     </button>
@@ -384,6 +390,7 @@ export class AlbumView {
         });
         overlay.querySelector('.album-preview-close')?.addEventListener('click', () => this.closePreview());
         overlay.querySelector('.album-preview-delete')?.addEventListener('click', () => this.deleteImage(image));
+        overlay.querySelector('.album-preview-share')?.addEventListener('click', () => this.openShareSheet(image, overlay));
 
         if (isVideo) {
             const video = overlay.querySelector('.album-preview-video');
@@ -414,6 +421,58 @@ export class AlbumView {
             });
             playOnce();
         }
+    }
+
+    /* ==================== [v3.24.0 · L0-3] 分享面板 ====================
+     *  用 L0 素材第 2 类（25 个平台图标）把「分享」做成看得见的选择列表。
+     *  本仓此前**没有任何分享卡实现**（`grep share/card` 零命中），
+     *  这里只落最小闭环：选平台 → 把这条媒体的引用拼成一句可粘贴的文本。
+     *  · 图标全走 `shareIconUrl(key)`（白名单外返回空串，不产生破图）；
+     *  · **不新增 storage 键**：分享这个动作本身不留状态（免得为动作加一条键必登记）。
+     */
+    openShareSheet(image, overlay) {
+        if (!image || !overlay) return;
+        const root = overlay.querySelector('.album-preview-panel') || overlay;
+        root.querySelector('.album-share-sheet')?.remove();
+
+        const sheet = document.createElement('div');
+        sheet.className = 'album-share-sheet';
+        sheet.innerHTML = `
+            <div class="album-share-title">分享到</div>
+            <div class="album-share-grid">
+                ${L0_ASSETS.icons.map(icon => `
+                    <button type="button" class="album-share-item" data-album-share="${this.escapeAttr(icon.key)}" title="${this.escapeHtml(icon.label)}">
+                        <span class="album-share-icon" style="background-image: url('${this.escapeAttr(shareIconUrl(icon.key))}');"></span>
+                        <span class="album-share-label">${this.escapeHtml(icon.label)}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <button type="button" class="album-share-cancel">取消</button>
+        `;
+        root.appendChild(sheet);
+
+        sheet.querySelector('.album-share-cancel')?.addEventListener('click', () => sheet.remove());
+        sheet.querySelectorAll('[data-album-share]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const key = String(btn.dataset.albumShare || '');
+                const label = L0_ASSETS.icons.find(i => i.key === key)?.label || key;
+                if (!shareIconUrl(key)) return;
+                const text = `【${label}】${image.filename || '图片'} — ${image.src || ''}`;
+                let copied = false;
+                try {
+                    if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(text);
+                        copied = true;
+                    }
+                } catch (e) { copied = false; }
+                this.app.phoneShell?.showNotification?.(
+                    '相册',
+                    copied ? `已复制分享文案（${label}）` : `分享文案（${label}）：${text.slice(0, 40)}`,
+                    '📤'
+                );
+                sheet.remove();
+            });
+        });
     }
 
     closePreview() {

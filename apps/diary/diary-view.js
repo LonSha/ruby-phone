@@ -13,6 +13,10 @@
 // 📔 日记视图 - UI渲染与交互
 // ========================================
 
+/* [v3.24.0 · L0-1] 封面画框：26 套内置素材从取数口读（路径不在本文件手写）。
+ *   选择列表由 `L0_ASSETS.frames` 生成 ⇒ 加一套画框只改取数口一处。 */
+import { L0_ASSETS, galleryFrameUrl } from '../../config/l0-assets.js';
+
 export class DiaryView {
     constructor(app) {
         this.app = app;
@@ -70,10 +74,18 @@ export class DiaryView {
         const coverBg = data.getCoverBg();
         const bgStyle = coverBg ? `background-image: url('${coverBg}'); background-size: cover; background-position: center;` : '';
         const showText = !coverBg;
+        /* [v3.24.0 · L0-1] 封面画框：`coverFrame` 是**在册 key**（数据层已白名单校验），
+         *   这里只把它转成一条背景图 —— 不在视图里拼 assets 路径。
+         *   画框与背景图**可叠加**：画框在下层（cover）铺满，背景图在上层（.diary-cover::after）。
+         *   此前画框只能靠用户自带图，故只存 URL；现在两者正交，各自独立开关。 */
+        const coverFrameKey = data.getCoverFrame();
+        const coverFrameUrl = galleryFrameUrl(coverFrameKey);
+        const frameStyle = coverFrameUrl ? `background-image: url('${coverFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain;` : '';
 
         const html = `
             <div class="diary-app">
-                <div class="diary-cover" id="diary-cover" style="${bgStyle}">
+                <div class="diary-cover${coverFrameUrl ? ' has-frame' : ''}" id="diary-cover" style="${bgStyle}">
+                    ${coverFrameUrl ? `<div class="diary-cover-frame" style="${frameStyle}"></div>` : ''}
                     ${showText ? `
                         <div class="diary-cover-decoration"></div>
                         <div class="diary-cover-title">我 的 日 记</div>
@@ -799,6 +811,7 @@ export class DiaryView {
         const globalFontSize = this.app.diaryData.getGlobalFontSize();
         const autoLastFloor = this.app.diaryData.getAutoLastFloor() || 0;
         const useDiaryWorldbook = window.VirtualPhone?.worldbookManager?.getEnabled?.('diary') ?? true;
+        const currentCoverFrame = this.app.diaryData.getCoverFrame();
 
         const html = `
             <div class="diary-app">
@@ -850,6 +863,24 @@ export class DiaryView {
                             <button class="diary-s-btn diary-s-btn-warn" id="diary-bg-reset-default" style="width: 100%; margin-top: 8px;">
                                 恢复默认背景并清理上传文件
                             </button>
+                        </div>
+
+                        <!-- [v3.24.0 · L0-1] 封面画框（内置素材，与上面的自定义背景图正交） -->
+                        <div class="diary-s-section">
+                            <div class="diary-s-section-title">封面画框</div>
+                            <div class="diary-s-desc">内置 ${L0_ASSETS.frames.length} 套画框，与自定义封面图可叠加</div>
+                            <div class="diary-frame-grid" id="diary-frame-grid">
+                                <button type="button" class="diary-frame-chip${!currentCoverFrame ? ' is-active' : ''}" data-diary-frame="">
+                                    <span class="diary-frame-chip-thumb is-none">无</span>
+                                    <span class="diary-frame-chip-label">不使用</span>
+                                </button>
+                                ${L0_ASSETS.frames.map(frame => `
+                                    <button type="button" class="diary-frame-chip${currentCoverFrame === frame.key ? ' is-active' : ''}" data-diary-frame="${frame.key}" title="${frame.label}">
+                                        <span class="diary-frame-chip-thumb" style="background-image: url('${frame.url}');"></span>
+                                        <span class="diary-frame-chip-label">${frame.label}</span>
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
 
                         <!-- 手动生成日记 -->
@@ -1066,6 +1097,24 @@ export class DiaryView {
                 alert('❌ 恢复默认背景失败：' + (err?.message || err));
             }
         };
+
+        /* [v3.24.0 · L0-1] 封面画框选择（内置素材）。
+         *   事件绑在**容器**上（一个监听器覆盖 27 个 chip），不用 27 个 onclick；
+         *   点击后只重渲染封面与设置页（`this.render()` 会走 settings 视图，
+         *   故这里只更新受影响的 chip 态 + 存 key，不整页重绘以免滑块焦点丢失）。 */
+        const frameGrid = document.getElementById('diary-frame-grid');
+        if (frameGrid) {
+            frameGrid.onclick = async (e) => {
+                const chip = e.target.closest('[data-diary-frame]');
+                if (!chip || !frameGrid.contains(chip)) return;
+                const key = String(chip.dataset.diaryFrame || '');
+                await this.app.diaryData.setCoverFrame(key);
+                frameGrid.querySelectorAll('[data-diary-frame]').forEach((el) => {
+                    el.classList.toggle('is-active', String(el.dataset.diaryFrame || '') === key);
+                });
+                this.app.phoneShell?.showNotification?.('日记', key ? '封面画框已更换' : '已取消封面画框', '🖼️');
+            };
+        }
 
         const manualRun = document.getElementById('diary-manual-run');
         if (manualRun) manualRun.onclick = async () => {

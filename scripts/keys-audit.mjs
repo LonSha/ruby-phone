@@ -236,6 +236,12 @@ const KEY_REGISTRY = [
   { key: 'accounting_settings', scope: 'chat', note: '[v3.22.0] 记账设置（月度预算 / 注入开关 / 流水上限）' },
   { key: 'accounting_accounts', scope: 'chat', note: '[v3.22.0] 账户列表（账户随会话隔离：换角色不该看到上一个角色的账）' },
   { key: 'accounting_records', scope: 'chat', note: '[v3.22.0] 收支流水（金额一律以分为整数存，方向由 kind 定）' },
+  { key: 'piggy_settings', scope: 'chat', note: '[v3.25.0] 存钱罐设置（注入开关 / 注入笔数 / 流水上限）' },
+  { key: 'piggy_state', scope: 'chat', note: '[v3.25.0] 存钱罐状态（余额以分为整数存 + 流水 + 亲属卡额度）' },
+  { key: 'regexfilter_settings', scope: 'chat', note: '[v3.26.0] 正则过滤器设置（转出 ST 脚本开关 / 预览截断）' },
+  { key: 'regexfilter_presets', scope: 'chat', note: '[v3.26.0] 正则方案（方案随会话隔离：换角色不该带着上一个角色的改写规则）' },
+  { key: 'punchcard_settings', scope: 'chat', note: '[v3.26.0] 打卡设置（注入开关 / 注入项数 / 保留天数）' },
+  { key: 'punchcard_cards', scope: 'chat', note: '[v3.26.0] 打卡卡册（按天归档；项按 id 定位，防删项后下标平移串项）' },
   { key: 'ledger_settings', scope: 'chat', note: '世界账本设置' },
   { key: 'jiwen_state', scope: 'chat', note: '积温引擎五轴状态' },
   { key: 'memory_awakening', scope: 'chat', note: '记忆觉醒状态' },
@@ -333,6 +339,9 @@ const KEY_REGISTRY = [
   { key: 'global_diary_bg_cover', scope: 'global', note: '日记封面背景' },
   { key: 'global_diary_bg_global', scope: 'global', note: '日记全局背景' },
   { key: 'global_diary_bg_toc', scope: 'global', note: '日记目录背景' },
+  /* [v3.24.0 · L0-1] 封面画框：存的是 **key**（L0 素材清单里的），不是 URL。
+   *   与封面背景图同族（全局）——封面是「本机这台手机」的外观，不随角色换。 */
+  { key: 'global_diary_cover_frame', scope: 'global', note: '日记封面画框（L0 素材 key）' },
   { key: 'global_honey_bg_video', scope: 'global', note: '蜜语背景视频' },
   { key: 'global_weibo_beautify', scope: 'global', note: '微博美化开关' },
   { key: 'global_music_volume', scope: 'global', note: '音乐音量' },

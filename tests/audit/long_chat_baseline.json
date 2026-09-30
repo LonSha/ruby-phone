@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 248,
+    "files": 258,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -94,8 +94,8 @@
       "apps/weibo/weibo-data.js:2403",
       "config/api-manager.js:397",
       "config/worldbook-dryrun.js:155",
-      "index.js:2866",
-      "index.js:10550"
+      "index.js:2872",
+      "index.js:10604"
     ],
     "bounded_slice": [
       "apps/games/werewolf/werewolf-view.js:643",
@@ -105,10 +105,10 @@
       "config/phone-chat-memory.js:78"
     ],
     "length_read_sample": [
-      "apps/diary/diary-data.js:1137",
-      "apps/diary/diary-data.js:1584",
-      "apps/diary/diary-data.js:1661",
-      "apps/diary/diary-data.js:1664",
+      "apps/diary/diary-data.js:1155",
+      "apps/diary/diary-data.js:1602",
+      "apps/diary/diary-data.js:1679",
+      "apps/diary/diary-data.js:1682",
       "apps/games/common/games-ai-context.js:71",
       "apps/games/werewolf/werewolf-view.js:643",
       "apps/memory/memory-app.js:163",
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=248，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -231,6 +231,53 @@
         "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
       ],
       "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+    },
+    "v3.24.0": {
+      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 248 → 249；四类站点计数（全表物化 / slice(-n) / 下标直取 / 长度读）不受影响。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 249
+      }
+    },
+    "v3.25.0": {
+      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在本探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 249 → 252；四类站点计数（全表物化 / 有界切片 / 下标直取 / 长度读）**一格未动**，40 项活体读数亦逐项不变。L5 判据散文里的 `files=` 必须与 `scan.files` 同源（v3.23.0 起由机械复算守着），故一并同步。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 252,
+        "criteria.L5.got_text": "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "unchanged": [
+        "readings",
+        "scan.full_materialize",
+        "scan.bounded_slice",
+        "scan.indexed_loop",
+        "scan.length_read",
+        "verdict"
+      ],
+      "not_done": [
+        "扫描面 +3 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片 / 下标直取 / 长度读」形态（存钱罐是单会话内的账本视图，不消费楼层序列）。",
+        "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
+      ]
+    },
+    "v3.26.0": {
+      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "静态扫描面 252 → 258 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 正则过滤器与打卡都不消费楼层序列（前者只吃用户手填的预览文本，后者只读自己的账）。既有站点行号随前置插入整体后移（`index.js` +6 行、`apps/diary/diary-data.js` +18 行），按现场重取；判据散文 L5 的 `files=` 同步刷新为 258。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 258,
+        "criteria.L5.got_text": "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
     }
   }
 }

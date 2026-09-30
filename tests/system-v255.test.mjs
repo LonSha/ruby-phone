@@ -58,7 +58,10 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     usageApp: 'usage',         // [v3.15.0] 洞察：读数现取（onChatChanged 只丢缓存、不强取）
     diagnoseApp: 'diagnose',  // [v2.99.0] 诊断中心（无状态，但仍实现了空的 onChatChanged）
     focusApp: 'focus',        // [v3.21.0] 番茄钟：换会话重取任务与记录（不持跨轮副本）
-    accountingApp: 'accounting' // [v3.22.0] 记账：账户 / 流水 / 月度投影换会话重取
+    accountingApp: 'accounting', // [v3.22.0] 记账：账户 / 流水 / 月度投影换会话重取
+    piggyApp: 'piggy',        // [v3.25.0] 存钱罐：换会话丢缓存、余额与卡片从 storage 现取
+    regexFilterApp: 'regexfilter', // [v3.26.0] 正则过滤器：换会话丢缓存，规则与预设从 storage 现取
+    punchcardApp: 'punchcard'  // [v3.26.0] 打卡：换会话重取卡片，不持跨轮副本（源按下标改项，本仓按项 id）
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

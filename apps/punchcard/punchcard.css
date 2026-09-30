@@ -1,0 +1,54 @@
+/* [v3.26.0] 打卡 App（.pch-*） */
+.pch-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.pch-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.pch-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.pch-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.pch-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.pch-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.pch-face-icon { font-size: 18px; }
+.pch-face-label { flex: 1; }
+
+.pch-streak { text-align: center; background: rgba(168,85,247,.10); border: 1px solid rgba(168,85,247,.24); border-radius: 12px; padding: 14px; }
+.pch-streak-num { font-size: 38px; font-weight: 600; color: #d8b4fe; font-family: 'Times New Roman', serif; }
+.pch-streak-unit { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+.pch-stats { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.pch-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,.04); }
+.pch-stat-row span:last-child { color: #e2e8f0; }
+
+.pch-today, .pch-create, .pch-settings { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.pch-list-title { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
+.pch-target { font-size: 12px; color: #a78bfa; margin-bottom: 6px; }
+.pch-empty { font-size: 12px; color: #64748b; padding: 8px 0; }
+
+.pch-item { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+.pch-item.is-done .pch-item-label { color: #64748b; text-decoration: line-through; }
+.pch-item-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 13px; color: #e2e8f0; }
+.pch-item-at { font-family: 'Times New Roman', serif; color: #93c5fd; flex-shrink: 0; }
+.pch-item-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pch-item-kind { font-size: 10px; color: #94a3b8; background: rgba(255,255,255,.06); border-radius: 5px; padding: 1px 5px; flex-shrink: 0; }
+.pch-item-remark { flex-basis: 100%; margin-bottom: 0; }
+
+.pch-draft { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.pch-draft .pch-input { margin-bottom: 0; }
+.pch-draft-kind { flex: 0 0 84px; }
+.pch-draft-at { flex: 0 0 96px; }
+.pch-draft-label { flex: 1; }
+.pch-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+.pch-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; }
+.pch-btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.1); color: #e2e8f0; }
+.pch-btn-primary { background: #7c3aed; color: #fff; }
+.pch-mini { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; flex-shrink: 0; }
+.pch-mini-armed { background: rgba(239,68,68,.22); color: #fca5a5; }
+.pch-toggle, .pch-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
+.pch-field input[type="number"] { width: 68px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }
+.pch-hint { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.5; }
+
+.pch-list { display: flex; flex-direction: column; gap: 6px; }
+.pch-hist { background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 10px; }
+.pch-hist-head { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.pch-hist-date { font-size: 13px; color: #e2e8f0; font-family: 'Times New Roman', serif; }
+.pch-hist-meta { flex: 1; font-size: 11px; color: #94a3b8; }
+.pch-hist-item { font-size: 12px; color: #cbd5e1; padding: 3px 0 3px 6px; border-left: 2px solid rgba(255,255,255,.08); margin-top: 4px; }
+.pch-hist-item em { color: #94a3b8; font-style: normal; }

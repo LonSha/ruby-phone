@@ -14,6 +14,9 @@
 // ========================================
 // [v2.28.0] 实例级资源域（视图销毁即回收本视图登记的全部常驻资源）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
+/* [v3.24.0 · L0-2] 环境音选项/文案从氛围模块取（key→中文名的唯一真源在取数口，
+ *   而「怎么播」在 MusicAmbience）——视图不自己记一份环境音名表。 */
+import { MusicAmbience } from './music-ambience.js';
 
 const SVG_NOTE = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" opacity="0.4"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
 const SVG_PLAY = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -146,6 +149,9 @@ export class MusicView {
         const storage = this.app.storage;
 
         const showFloating = storage.get('music_show_floating', false);
+        /* [v3.24.0 · L0-2] 环境音当前态：key 与音量都从氛围模块现取（一处真源） */
+        const currentAmbienceKey = this.app.ambience?.getAmbienceKey?.() || '';
+        const currentAmbienceVolume = this.app.ambience?.getAmbienceVolume?.() ?? 0.35;
 
         // 获取提示词
         let promptContent = '';
@@ -184,6 +190,30 @@ export class MusicView {
                                     <div class="music-settings-item-desc">播放时在屏幕上显示当前歌词（可拖动）</div>
                                 </div>
                                 <div class="music-toggle ${this.app.ambience?.settings?.desktopLyrics ? 'active' : ''}" id="music-toggle-desktop-lyrics"></div>
+                            </div>
+                        </div>
+
+                        <!-- [v3.24.0 · L0-2] 场景环境音（内置素材，与歌曲叠加播放） -->
+                        <div class="music-settings-group">
+                            <div class="music-settings-group-title">场景环境音</div>
+                            <div class="music-settings-item is-column">
+                                <div>
+                                    <div class="music-settings-item-label">叠加环境音</div>
+                                    <div class="music-settings-item-desc">与歌曲同时播放的一段循环背景音（可选关闭）</div>
+                                </div>
+                                <div class="music-ambience-chips" id="music-ambience-chips">
+                                    <button type="button" class="music-ambience-chip${!currentAmbienceKey ? ' is-active' : ''}" data-music-ambience="">关闭</button>
+                                    ${MusicAmbience.ambienceOptions().map(opt => `
+                                        <button type="button" class="music-ambience-chip${currentAmbienceKey === opt.key ? ' is-active' : ''}" data-music-ambience="${opt.key}">${opt.label}</button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="music-settings-item">
+                                <div>
+                                    <div class="music-settings-item-label">环境音音量</div>
+                                    <div class="music-settings-item-desc">当前 <span id="music-ambience-vol-value">${Math.round(currentAmbienceVolume * 100)}</span>%</div>
+                                </div>
+                                <input type="range" id="music-ambience-volume" class="music-vol-slider" min="0" max="100" step="5" value="${Math.round(currentAmbienceVolume * 100)}">
                             </div>
                         </div>
 
@@ -263,6 +293,32 @@ export class MusicView {
                 const on = !(this.app.ambience?.settings?.desktopLyrics);
                 this.app.ambience?.setDesktopLyrics?.(on);
                 lyricsToggle.classList.toggle('active', on);
+            };
+        }
+
+        /* [v3.24.0 · L0-2] 场景环境音：切 key（容器上绑一个监听器覆盖全部 chip）＋音量滑块。
+         *   切换时 `resume` 保持为真：若此刻歌曲正在播，环境音立刻跟上；
+         *   被浏览器自动播放策略挡住的那次会在下一次 play 事件里由 _resumeAmbience 补上。 */
+        const ambienceChips = screen.querySelector('#music-ambience-chips');
+        if (ambienceChips) {
+            ambienceChips.onclick = (e) => {
+                const chip = e.target.closest('[data-music-ambience]');
+                if (!chip || !ambienceChips.contains(chip)) return;
+                const key = String(chip.dataset.musicAmbience || '');
+                const applied = this.app.ambience?.setAmbience?.(key) ?? '';
+                ambienceChips.querySelectorAll('[data-music-ambience]').forEach((el) => {
+                    el.classList.toggle('is-active', String(el.dataset.musicAmbience || '') === applied);
+                });
+                this.app.phoneShell?.showNotification?.('音乐', applied ? '已开环境音' : '已关环境音', '🌿');
+            };
+        }
+
+        const ambienceVol = screen.querySelector('#music-ambience-volume');
+        if (ambienceVol) {
+            ambienceVol.oninput = (e) => {
+                const val = this.app.ambience?.setAmbienceVolume?.(Number(e.target.value) / 100) ?? 0.35;
+                const label = screen.querySelector('#music-ambience-vol-value');
+                if (label) label.textContent = String(Math.round(val * 100));
             };
         }
         

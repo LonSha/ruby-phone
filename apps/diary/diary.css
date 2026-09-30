@@ -1652,4 +1652,83 @@
     color: var(--diary-text-primary) !important;
 }
 
+/* ==================== [v3.24.0 · L0-1] 封面画框 ====================
+ *  画框层（.diary-cover-frame）铺在封面里、文字与搭扣之下：
+ *  只负责把内置画框素材「按 contain 居中」画出来，不参与布局（absolute + pointer-events:none）。
+ *  与用户自带封面背景图（.diary-cover 的 background-image）正交 —— 两者可同时生效。 */
+.phone-body-panel .diary-app .diary-cover-frame,
+.diary-app .diary-cover-frame {
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 有画框时文字抬到画框之上（画框是全屏 contain，下半部会压到文字区） */
+.diary-app .diary-cover.has-frame .diary-cover-title,
+.diary-app .diary-cover.has-frame .diary-cover-subtitle,
+.diary-app .diary-cover.has-frame .diary-cover-decoration {
+    position: relative;
+    z-index: 2;
+}
+
+/* 选择器：每套画框一个小格（缩略图 + 中文名），当前选中项描边高亮 */
+.diary-app .diary-frame-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+    max-height: 232px;
+    overflow-y: auto;
+}
+
+.diary-app .diary-frame-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 2px;
+    border: 1px solid rgba(140, 118, 92, 0.28);
+    border-radius: 8px;
+    background: rgba(255, 252, 245, 0.6);
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1.2;
+    color: var(--diary-text-secondary);
+}
+
+.diary-app .diary-frame-chip.is-active {
+    border-color: #b08a54;
+    box-shadow: 0 0 0 1px #b08a54 inset;
+    background: rgba(255, 246, 228, 0.9);
+}
+
+.diary-app .diary-frame-chip-thumb {
+    width: 100%;
+    height: 42px;
+    border-radius: 4px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-color: rgba(228, 220, 203, 0.45);
+}
+
+.diary-app .diary-frame-chip-thumb.is-none {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--diary-text-muted);
+}
+
+.diary-app .diary-frame-chip-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* 复用手机设置的 toggle-switch（如果已有则跳过） */

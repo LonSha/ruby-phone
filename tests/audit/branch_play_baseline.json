@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 247,
+    "files_scanned": 257,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 8,
-    "chat_data_patterns": 102,
+    "chat_data_patterns": 114,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 1,
     "preview_face_hits": 42,
@@ -181,6 +181,54 @@
         "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
       ],
       "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+    },
+    "v3.24.0": {
+      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/branch_play_probe.cjs --json",
+      "readings": {
+        "readings.files_scanned": 248
+      }
+    },
+    "v3.25.0": {
+      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/piggy-data.js` / `piggy-view.js` / `piggy-app.js` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；`config/storage.js` 的会话隔离表新增一条前缀 `/^piggy_/`（一条覆盖 piggy_settings / piggy_state 两键）。第二项读数比预期多涨了 3：探针的 `chatDataPatterns` 刻度是「行首可选空白 + `/` + 可选 `^`」，而本版在那段里同时写了三行 `//` 注释说明 ⇒ **注释行也被计入**（102 + 1 条真前缀 + 3 行注释 = 106）。这是本仓「探针的刻度是文本的」的又一次现场实证，如实刷新，不改口径（其余读数：回滚点 / 命名空间守卫 / 上游冻结面一字未动）。新值取自探针现场输出，不手抄。",
+      "how": "node tests/audit/branch_play_probe.cjs --json",
+      "readings": {
+        "files_scanned": 251,
+        "chat_data_patterns": 106
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits"
+      ],
+      "not_done": [
+        "新 App 的两条 storage 键（piggy_settings / piggy_state）**没有**新增任何回滚 / 预览入口：回滚覆盖面仍是 41 点 / 4 文件 / 12 入口定义，一格未动 —— 存钱罐的数据是「用户自己攒的钱」，本版没有把它接进任何回滚域。",
+        "`chat_data_patterns` 的 +4 里有 3 是**注释行**：本探针的这条读数口径按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+      ]
+    },
+    "v3.26.0": {
+      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "枚举面 251 → 257 个文件；**新增 4 条会话隔离前缀**（`regexfilter_settings` / `regexfilter_presets` / `punchcard_settings` / `punchcard_cards`）⇒ 静态模式面 `chat_data_patterns` 106 → 114。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两个新 App 都不写回滚点、不碰分支对照。",
+      "readings": {
+        "files_scanned": 257,
+        "chat_data_patterns": 114
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits"
+      ],
+      "criteria_refreshed": {}
     }
   }
 }
