@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 258,
+    "files": 273,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -271,6 +271,46 @@
         "L5": [
           "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
           "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.27.0": {
+      "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "静态扫描面 258 → 270 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 头像框 / 商城 / 拉黑 / 天气都不消费楼层序列（前者只画自己的框、商城只读自己的目录与订单、拉黑只写名单、天气只存自己的缓存）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加四件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 270。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 270,
+        "criteria.L5.got_text": "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.28.0": {
+      "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "静态扫描面 270 → 273 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 自定义组件不消费楼层序列（只画自己的组件库与桌面实例，变量值也只从自己的实例表读）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 273。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 273,
+        "criteria.L5.got_text": "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
         ]
       },
       "unchanged": [

@@ -166,6 +166,72 @@
         "semantic_consistency_pct",
         "criteria_pass_count"
       ]
+    },
+    "v3.27.0": {
+      "what": "四件新 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+      "why": "素材缝合第 1 层再落四件（头像框 `apps/avatarframe` + 商城 `apps/shop` + 拉黑 `apps/block` + 天气 `apps/weather`）：各新增 1 个 App 类 ⇒ App 类 42 → 46、实例槽位 55 → 59、App 槽位 43 → 47、签名「无参出口」32 → 36（四件的 `onChatChanged()` 都无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 四个新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 78.2% → 79.7%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+      "readings": {
+        "app_classes": 46,
+        "slots": 59,
+        "app_slots": 47,
+        "app_slot_share_pct": 79.7,
+        "sig_empty": 36
+      },
+      "unchanged": [
+        "wiring_points",
+        "app_exit_points",
+        "non_app_points",
+        "coverage_pct",
+        "non_app_share_pct",
+        "points_p1",
+        "points_p2",
+        "points_p3",
+        "sig_default",
+        "sig_required",
+        "sig_none",
+        "semantic_slots",
+        "semantic_same",
+        "semantic_diff",
+        "semantic_consistency_pct",
+        "criteria_pass_count"
+      ],
+      "not_done": [
+        "四件新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 头像框 / 商城 / 拉黑 / 天气 **没有**在这三条路径上补出口调用（它们不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取）。这是**如实记录**，不是漏复校。",
+        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+      ]
+    },
+    "v3.28.0": {
+      "what": "自定义组件 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+      "why": "素材缝合第 1 层最后一件落地（自定义组件 `apps/widget`）：新增 1 个 App 类 ⇒ App 类 46 → 47、实例槽位 59 → 60、App 槽位 47 → 48、签名「无参出口」36 → 37（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 79.7% → 80.0%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+      "readings": {
+        "app_classes": 47,
+        "slots": 60,
+        "app_slots": 48,
+        "app_slot_share_pct": 80.0,
+        "sig_empty": 37
+      },
+      "unchanged": [
+        "wiring_points",
+        "app_exit_points",
+        "non_app_points",
+        "coverage_pct",
+        "non_app_share_pct",
+        "points_p1",
+        "points_p2",
+        "points_p3",
+        "sig_default",
+        "sig_required",
+        "sig_none",
+        "semantic_slots",
+        "semantic_same",
+        "semantic_diff",
+        "semantic_consistency_pct",
+        "criteria_pass_count"
+      ],
+      "not_done": [
+        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 自定义组件 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存与未保存草稿并重取）。这是**如实记录**，不是漏复校。",
+        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+      ]
     }
   },
   "caliber": [
@@ -177,10 +243,10 @@
     "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
   ],
   "readings": {
-    "app_classes": 42,
-    "slots": 55,
-    "app_slots": 43,
-    "app_slot_share_pct": 78.2,
+    "app_classes": 47,
+    "slots": 60,
+    "app_slots": 48,
+    "app_slot_share_pct": 80.0,
     "wiring_points": 62,
     "app_exit_points": 50,
     "non_app_points": 12,
@@ -189,7 +255,7 @@
     "points_p1": 19,
     "points_p2": 20,
     "points_p3": 23,
-    "sig_empty": 32,
+    "sig_empty": 37,
     "sig_default": 1,
     "sig_required": 1,
     "sig_none": 8,

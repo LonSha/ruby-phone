@@ -467,6 +467,73 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.27.0] 头像框：框清单 → 两个挂载点（我 / 本会话角色）挂什么（缝合自 EPhone·xintuk）。
+        //   源那 364 条框全是 postimg 外链、自定义框进 Dexie、六个挂载点一锅端 —— 三块都不缝
+        //   （外链违零外部请求审计，Dexie 违零数据库铁律，六挂载点在本仓没有对应对象）。
+        //   挂载点走**草稿 + 显式保存**，把源「角色设置暂存、主屏/微博即时写」的两套语义收成一套。
+        //   会话键走 ^avatarframe_ 前缀，随会话隔离。
+        id: 'avatarframe',
+        name: '头像框',
+        icon: '🖼️',
+        color: '#0ea5e9',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.27.0] 商城：商品目录 → 购物车 → 下单签发口令 → 自提核销（缝合自 EPhone·xINOVO shop）。
+        //   源「商品靠模型现生成、口令从聊天正文正则抓、设置直写 Dexie」三块都不缝
+        //   （前者是生成侧的活，后者正文归属在聊天层，Dexie 违零数据库铁律）。
+        //   金额一律**整数分**：源用浮点算总价，0.1+0.2 会让车与订单差一分。
+        //   会话键走 ^shop_ 前缀，随会话隔离。
+        id: 'shop',
+        name: '商城',
+        icon: '🛒',
+        color: '#f97316',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.27.0] 拉黑：双向两本账（你拉黑它 / 它拉黑你）+ 各自的申请流（缝合自 EPhone·xINOVO block_system）。
+        //   源「拉黑标记写在宿主角色对象上、自己拼 prompt 调模型、60 秒轮询」三块都不缝
+        //   （角色对象归宿主，模型调用归生成侧，本仓不转常驻定时器 —— 冷却改走**读数**）。
+        //   会话键走 ^block_ 前缀，随会话隔离。
+        id: 'block',
+        name: '拉黑',
+        icon: '🚫',
+        color: '#e11d48',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.27.0] 天气：两份观测（角色所在地 / 你所在地）→ 码翻人话 → 带时效注入
+        //   （缝合自 EPhone·xINOVO WeatherService 的结构 + MyPhone 的 WMO 码表）。
+        //   源两路都自己发 fetch、自己拿定位、还读别的 App 的 indexedDB —— 三块都不缝
+        //   （新增模块零外部请求审计，定位归权限面，一个 App 不读另一个 App 的表）。
+        //   本件不请求天气：事实由用户（或宿主读到之后）填进来，只负责翻译与时效读数。
+        //   会话键走 ^weather_ 前缀，随会话隔离。
+        id: 'weather',
+        name: '天气',
+        icon: '🌤️',
+        color: '#0d9488',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
+        //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
+        //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；
+        //   ③ 源用 sessionStorage 存编辑草稿 —— 本仓走 PhoneStorage 的 widget_draft 键；
+        //   ④ 源导出走 Blob 下载 —— 本仓收敛成纯字符串 toExportText / fromImportText。
+        //   源 js 段在本件改名 notes：避免造成「写进去就会跑」的误解。
+        //   会话键走 ^widget_ 前缀，随会话隔离。
+        id: 'widget',
+        name: '自定义组件',
+        icon: '🧱',
+        color: '#8b5cf6',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

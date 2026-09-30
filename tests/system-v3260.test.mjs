@@ -565,16 +565,21 @@ test('C3 样式源与 phone.css 逐字同源，且视图产出的每个类名都
     const phone = read('phone.css');
     const segs = [
         ['apps/regexfilter/regexfilter.css', 'rgx-',
-            '/* ---------- [v3.26.0] 正则过滤器 App（.rgx-*） ---------- */',
-            '/* ---------- [v3.26.0] 打卡 App（.pch-*） ---------- */'],
+            '/* ---------- [v3.26.0] 正则过滤器 App（.rgx-*） ---------- */'],
         ['apps/punchcard/punchcard.css', 'pch-',
-            '/* ---------- [v3.26.0] 打卡 App（.pch-*） ---------- */', null],
+            '/* ---------- [v3.26.0] 打卡 App（.pch-*） ---------- */'],
     ];
     const norm = (x) => (x.startsWith('/*') ? x.slice(x.indexOf('\n') + 1).trim() : x.trim());
-    for (const [cssRel, prefix, hdr, nextHdr] of segs) {
+    for (const [cssRel, prefix, hdr] of segs) {
         const at = phone.indexOf(hdr);
         assert.ok(at >= 0, 'phone.css 必须带本版段注释：' + hdr);
-        const seg = nextHdr ? phone.slice(at, phone.indexOf(nextHdr)) : phone.slice(at);
+        /* ★ [v3.27.0 交棒] 段尾按**下一个段头**截断，不取文件尾：phone.css 是追加式产物，
+         *   后版本往后接段时，取到文件尾会把别人的段并进来 ⇒ 本条会以「逐字同源失败」假红
+         *   （红的原因不是样式漂移，是取段口径没跟上传送带）。找不到下一个段头才取到文件尾。
+         *   同一纪律见 tests/system-v3250.test.mjs B3。 */
+        const rest = phone.slice(at);
+        const nxt = rest.indexOf('/* ---------- [', 1);
+        const seg = nxt >= 0 ? rest.slice(0, nxt) : rest;
         /* ★ 源 vs 产物**逐字同源**：本仓样式投递走「打包进 phone.css」，两份手抄必然漂移。 */
         assert.equal(norm(seg), norm(read(cssRel)), 'phone.css 的本版段必须与 ' + cssRel + ' 逐字同源');
         const n = (seg.match(new RegExp('[.]' + prefix, 'g')) || []).length;

@@ -61,7 +61,12 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     accountingApp: 'accounting', // [v3.22.0] 记账：账户 / 流水 / 月度投影换会话重取
     piggyApp: 'piggy',        // [v3.25.0] 存钱罐：换会话丢缓存、余额与卡片从 storage 现取
     regexFilterApp: 'regexfilter', // [v3.26.0] 正则过滤器：换会话丢缓存，规则与预设从 storage 现取
-    punchcardApp: 'punchcard'  // [v3.26.0] 打卡：换会话重取卡片，不持跨轮副本（源按下标改项，本仓按项 id）
+    punchcardApp: 'punchcard', // [v3.26.0] 打卡：换会话重取卡片，不持跨轮副本（源按下标改项，本仓按项 id）
+    avatarFrameApp: 'avatarframe', // [v3.27.0] 头像框：换会话必须丢未保存草稿（_mountsDirty）并重取挂载点
+    shopApp: 'shop',           // [v3.27.0] 商城：换会话重取目录 / 车 / 订单，不持跨轮副本
+    blockApp: 'block',         // [v3.27.0] 拉黑：换会话重取两本账（我拉黑谁 / 谁拉黑我）
+    weatherApp: 'weather',     // [v3.27.0] 天气：换会话重取两份观测（角色所在地 / 你所在地）
+    widgetApp: 'widget'        // [v3.28.0] 自定义组件：换会话必须丢未保存草稿（widget_draft）并重取组件库/桌面实例
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

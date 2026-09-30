@@ -1,0 +1,47 @@
+/* [v3.27.0] 天气 App（.wth-*） */
+.wth-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.wth-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.wth-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.wth-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.wth-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.wth-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.wth-face-icon { font-size: 18px; }
+.wth-face-label { flex: 1; }
+.wth-flash { background: rgba(13,148,136,.16); color: #2dd4bf; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.wth-banner { font-size: 11px; color: #64748b; line-height: 1.55; background: rgba(255,255,255,.03); border-radius: 8px; padding: 8px 12px; }
+.wth-banner strong { color: #94a3b8; }
+
+.wth-slot { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; border-left: 3px solid rgba(13,148,136,.35); }
+.wth-slot.is-empty { border-left-color: rgba(255,255,255,.08); }
+.wth-slot-title { font-size: 14px; margin: 0 0 8px; color: #e2e8f0; }
+.wth-read { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.wth-read-desc { font-size: 16px; color: #e2e8f0; }
+.wth-read-temp { font-size: 22px; font-family: 'Times New Roman', serif; color: #2dd4bf; }
+.wth-read-city { font-size: 12px; color: #94a3b8; }
+.wth-read-rain { font-size: 10px; color: #38bdf8; background: rgba(56,189,248,.14); border-radius: 5px; padding: 1px 6px; }
+.wth-read-age { font-size: 11px; color: #64748b; margin-top: 4px; }
+.wth-read-age.is-stale { color: #fbbf24; }
+.wth-read-age strong { color: #fbbf24; }
+.wth-empty { font-size: 12px; color: #64748b; padding: 4px 0; }
+
+.wth-form { margin-top: 10px; }
+.wth-form-row { display: flex; gap: 6px; align-items: center; }
+.wth-form-row .wth-input { margin-bottom: 0; }
+.wth-temp { flex: 0 0 108px; }
+.wth-code { flex: 1; min-width: 110px; }
+.wth-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; }
+.wth-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.wth-btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.1); color: #e2e8f0; }
+.wth-btn-primary { background: #0d9488; color: #fff; }
+.wth-mini { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; flex-shrink: 0; }
+.wth-mini:disabled { opacity: .38; cursor: default; }
+.wth-mini-armed { background: rgba(239,68,68,.22); color: #fca5a5; }
+
+.wth-stats, .wth-clean, .wth-settings { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.wth-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,.04); }
+.wth-stat-row span:last-child { color: #e2e8f0; }
+.wth-list-title { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
+.wth-hint { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.55; }
+.wth-hint strong { color: #94a3b8; }
+.wth-toggle, .wth-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
+.wth-field input[type="number"] { width: 68px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }

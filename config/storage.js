@@ -105,6 +105,26 @@ export class PhoneStorage {
             //   与 ^focus_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
             //   卡册随会话隔离：换角色后那是另一个角色的作息。
             /^punchcard_/,
+            // [v3.27.0] 头像框（avatarframe_frames / avatarframe_mounts / avatarframe_settings）：
+            //   与 ^focus_ 同族的单条前缀覆盖三键（无元字符、无需宽匹配登记）。
+            //   框与挂载点随会话隔离：换角色后那是另一个角色的相框与谁挂了谁的框。
+            /^avatarframe_/,
+            // [v3.27.0] 商城（shop_settings / shop_products / shop_categories / shop_cart / shop_orders）：
+            //   与 ^focus_ 同族的单条前缀覆盖五键（无元字符、无需宽匹配登记）。
+            //   目录、车与订单随会话隔离：换角色后那批货与那笔账不该跟着走。
+            /^shop_/,
+            // [v3.27.0] 拉黑（block_settings / block_state）：
+            //   与 ^piggy_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   两本账（我拉黑谁 / 谁拉黑我）随会话隔离：换角色后这是另一段关系。
+            /^block_/,
+            // [v3.27.0] 天气（weather_settings / weather_state）：
+            //   与 ^piggy_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   观测随会话隔离：换角色后那是另一个城市的另一天气。
+            /^weather_/,
+            // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
+            //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
+            //   组件是「这个会话里摆了什么」——落全局会跨角色串味。
+            /^widget_/,
             // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
             /^ledger_/,
             // [v2.61.0] 资产 App：设置走 asset_settings_v1；引擎唯一读写门的聊天变量
