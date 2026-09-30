@@ -121,6 +121,15 @@ export class PhoneStorage {
             //   与 ^piggy_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
             //   观测随会话隔离：换角色后那是另一个城市的另一天气。
             /^weather_/,
+            // [v3.29.0] 桃宝（taobao_settings / taobao_products / taobao_cart / taobao_orders / taobao_grabs）：
+            //   与 ^shop_ 同族的单条前缀覆盖五键（无元字符、无需宽匹配登记）。
+            //   目录、车、订单与抓取记录随会话隔离：换角色后那是另一个角色的另一个店。
+            /^taobao_/,
+            // [v3.30.0] 恋爱空间（lover_settings / lover_days / lover_footprints / lover_diary /
+            //   lover_letters / lover_questions）：与 ^shop_ 同族的单条前缀覆盖六键（无元字符、无需宽匹配登记）。
+            //   起算日、足迹、心情日记、情书与问答都是「这段关系的账」，随会话隔离：
+            //   换角色后那是另一段关系的另一本账。
+            /^lover_/,
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。

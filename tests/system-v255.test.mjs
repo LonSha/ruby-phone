@@ -66,7 +66,9 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     shopApp: 'shop',           // [v3.27.0] 商城：换会话重取目录 / 车 / 订单，不持跨轮副本
     blockApp: 'block',         // [v3.27.0] 拉黑：换会话重取两本账（我拉黑谁 / 谁拉黑我）
     weatherApp: 'weather',     // [v3.27.0] 天气：换会话重取两份观测（角色所在地 / 你所在地）
-    widgetApp: 'widget'        // [v3.28.0] 自定义组件：换会话必须丢未保存草稿（widget_draft）并重取组件库/桌面实例
+    widgetApp: 'widget',       // [v3.28.0] 自定义组件：换会话必须丢未保存草稿（widget_draft）并重取组件库/桌面实例
+    taobaoApp: 'taobao',       // [v3.29.0] 桃宝：换会话重取目录 / 车 / 订单 / 抓取记录，不持跨轮副本
+    loverApp: 'loverspace'     // [v3.30.0] 恋爱空间：换会话丢草稿（足迹 / 情书 / 回答）与视图态（_replyTo / _focusDiary）并全量重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

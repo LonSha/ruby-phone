@@ -411,8 +411,12 @@ test('E3 样式与 phone.css 逐字同源，且视图产出的每个类名都有
     assert.equal(phone.split(WSEG).length - 1, 1, 'phone.css 必须恰好带一次本段段头');
     /* ★ 取段纪律：本段是**当前末段**，故取到文件尾；但必须先自证「本段之后没有别的段头」。
      *   下版往后接段时这条会报红（提醒改成按下一个段头截断）—— 见文件头「取段纪律」。 */
-    const rest = phone.slice(at);
-    assert.equal(rest.indexOf('/* ---------- [', 1), -1, '本段必须是 phone.css 的末段（下版接段后请改成按下一个段头截断）');
+    const rest0 = phone.slice(at);
+    /* ★ 本段早已不是末段（后续版本不断往后接段）：按**下一个段头**截断（与 v3290 同款口径）。
+     *   自证仍保留：若本段之后一个段头都没有，说明段头提取口径坏了（本段没取到）。 */
+    const nxt328 = rest0.indexOf('/* ---------- [', 1);
+    const rest = nxt328 >= 0 ? rest0.slice(0, nxt328) : rest0;
+    assert.ok(rest0.indexOf('/* ---------- [', 1) >= 0, '本段之后必须有后续段头（否则说明取段口径失效）');
     const norm = (x) => x.replace(/^\/\*[\s\S]*?\*\/\s*/, '').trim();
     const cssRel = 'apps/' + WID + '/' + WID + '.css';
     assert.equal(norm(rest), norm(read(cssRel)), 'phone.css 的本版段必须与 ' + cssRel + ' 逐字同源');
@@ -755,10 +759,13 @@ test('V1 版本锚（下限形）+ 四源同源 + update-log 条目', () => {
     assert.equal(log.head, man.version, 'update-log.head 必须与 manifest 同版');
     assert.ok(src.includes("const ST_PHONE_VERSION = '" + man.version + "';"), '入口版本常量必须与 manifest 同版');
     /* ★ update-log 的键序约定：新版本插**首位**（v3.23.0 踩过「追加末尾」的坑 —— 版本列表倒着读）。 */
+    /* 版本键序约定：新版本插首位（版本列表倒着读）。 */
     const firstKey = Object.keys(log.versions)[0];
-    assert.equal(firstKey, man.version, '当前版本必须插在 versions **首位**（版本列表倒着读）');
-    const cur = (log.versions || {})[man.version];
-    assert.ok(cur, 'update-log 必须含当前版本 ' + man.version + ' 的条目');
+    assert.equal(firstKey, man.version, '当前版本必须插在 versions **首位**');
+    /* ★ 本套件守的是**自己那一版**（v3.28.0 自定义组件），不是「当版」：抬版后 latest 已换成新件。 */
+    const SELF = '3.28.0';
+    const cur = (log.versions || {})[SELF];
+    assert.ok(cur, 'update-log 必须含本套件所属版本 ' + SELF + ' 的条目');
     assert.ok(Array.isArray(cur.items) && cur.items.length >= 3, '本版条目必须写足（items ' + (cur.items ? cur.items.length : 0) + ' 段）');
     const joined = cur.items.join('\n');
     for (const marker of ['自定义组件', '不执行', '工作台']) {
@@ -769,8 +776,12 @@ test('V1 版本锚（下限形）+ 四源同源 + update-log 条目', () => {
     assert.ok(bm, '公告块的形状必须是对象（与抬版脚本同源）');
     const block = bm[0];
     assert.ok(block.length > 0, 'index.js 必须有 ST_PHONE_CURRENT_UPDATE 公告块');
-    for (const it of cur.items) {
-        assert.ok(block.includes(JSON.stringify(it)), '公告块里找不到这一条（必须与条目逐字同源）：' + it.slice(0, 40));
+    /* ★ 公告块与该版条目逐字同源：本件成立时公告块就是本版；抬版后公告块换成新件，
+     *   故这条只在「当前版本 == 本件版本」时检查（否则恒假红）。 */
+    if (man.version === SELF) {
+        for (const it of cur.items) {
+            assert.ok(block.includes(JSON.stringify(it)), '公告块里找不到这一条（必须与条目逐字同源）：' + it.slice(0, 40));
+        }
     }
     /* 迭代日志必须带上本版那一段。 */
     assert.ok(read('ITERATION_LOG.md').includes(man.version), 'ITERATION_LOG.md 必须含当前版本段');

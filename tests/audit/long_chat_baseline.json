@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 273,
+    "files": 279,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -311,6 +311,46 @@
         "L5": [
           "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
           "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.29.0": {
+      "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "静态扫描面 273 → 276 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的目录 / 车 / 订单时间线 / 抓取记录）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 276。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 276,
+        "criteria.L5.got_text": "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.30.0": {
+      "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+      "why": "静态扫描面 276 → 279 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的天数 / 足迹 / 日记 / 情书 / 问答）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 279。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 279,
+        "criteria.L5.got_text": "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
         ]
       },
       "unchanged": [

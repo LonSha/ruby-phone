@@ -108,7 +108,12 @@ return { exportsOf, stripNonCode, unhandledKind, HANDLED_LINE_PATHS, UNHANDLED_A
     // 钉死具体数字会让「加了一个 App」变成门禁红灯（v2.46 加 apps/place/ 时真实踩到）。
     const declN = Number((out.match(/扫描 \d+ 个文件 \/ (\d+) 个 export 声明/) || [])[1] || 0);
     ok('D2 扫描面不少于 E8 时代的 521 声明（E9 不缩面、不退回旧口径）', declN >= 521, String(declN));
-    ok('D3 零消费仍为 24（不新增债务；v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS，账本 25→24）', /零消费 24/.test(out));
+    /* ★ 判据形态：不新增债务（**上限形**）。降下去是还债（v3.30.0 两处真接线：桃宝 TAOBAO_FACES
+ *   / ORDER_STATUS_ORDER；再往前 v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS），
+ *   升上去才是欠债。原先钉死「== 24」会把每一次还债也判成红。 */
+const deadCount = Number((/零消费 (\d+)/.exec(out) || [])[1]);
+ok('D3 零消费不高于 24（不新增债务；降下去是还债，实测 ' + deadCount + '）',
+    Number.isFinite(deadCount) && deadCount <= 24, '实测 ' + deadCount);
     ok('D4 基线账本仍为 24 条冻结项', /基线账本：24 条冻结项/.test(out));
     ok('D5 判定口径未被放宽（仍打印 ✓ 无新增零消费导出）', /✓ 无新增零消费导出/.test(out));
 }

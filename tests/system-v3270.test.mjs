@@ -90,6 +90,7 @@ const SHP_REL = 'apps/shop/shop-data.js';
 const BLK_REL = 'apps/block/block-data.js';
 const WTH_REL = 'apps/weather/weather-data.js';
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const VNUM32 = (v) => String(v).split('.').reduce((a, x) => a * 1000 + Number(x), 0);
 
 /** 固定「现在」：倒计时与时效是时间逻辑，判据必须与真实时钟解耦。 */
 const NOW = new Date('2026-09-30T12:00:00').getTime();
@@ -1236,9 +1237,16 @@ test('V1 版本锚（下限形）+ 四源同源 + update-log 条目', () => {
     assert.equal(log.latest, man.version, 'update-log.latest 必须与 manifest 同版');
     assert.equal(log.head, man.version, 'update-log.head 必须与 manifest 同版');
     assert.ok(src.includes("const ST_PHONE_VERSION = '" + man.version + "';"), '入口版本常量必须与 manifest 同版');
-    /* 本版条目必须在场且非空（审计门会查这一条，这里先钉住）。 */
-    const cur = (log.versions || {})[man.version];
-    assert.ok(cur, 'update-log 必须含当前版本 ' + man.version + ' 的条目');
+    /* 本版条目必须在场且非空（审计门会查这一条，这里先钉住）。
+     * ★ [v3.30.0 交棒] 这里守的是**本套件自己那一版**，不是「当版」：
+     *   此前写 `log.versions[man.version]`，读的是抬版后的 latest —— 于是 v3.30.0 抬版当场把
+     *   本条判红（「本版条目必须写到 头像框」），而 3.27.0 的条目其实好好的。
+     *   口径：判据钉自己那一版的历史事实，抬版不该动它。
+     *   （同款口径错 v3.28.0 / v3.29.0 已同法改为读自己那一版。） */
+    const SELF = '3.27.0';
+    assert.ok(VNUM32(man.version) >= VNUM32(SELF), '本套件成立于 ' + SELF + ' 及以后');
+    const cur = (log.versions || {})[SELF];
+    assert.ok(cur, 'update-log 必须含 ' + SELF + ' 的条目');
     assert.ok(Array.isArray(cur.items) && cur.items.length >= 3, '本版条目必须写足（items ' + (cur.items ? cur.items.length : 0) + ' 段）');
     const joined = cur.items.join('\n');
     for (const marker of ['头像框', '商城', '拉黑', '天气']) {

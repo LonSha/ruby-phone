@@ -520,6 +520,40 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.29.0] 桃宝：商品目录 → 购物车 → 下单 → **物流时间线推演**（缝合自 EPhone·xintuk taobao 四片）。
+        //   源是四合一超级模块（抓娃娃机 + 购物 + 外卖 + 物流），本件取三块。五处不缝：
+        //   商品与评价靠模型生成 / 实时物流定时器 / Dexie / 直改用户钱包与角色银行卡 / 外链素材。
+        //   物流改**惰性补推**：状态由时间推演决定（源挂 setTimeout 且要回查页面是否 active）。
+        //   娃娃机战利品只登记面值不入账（本仓用户钱包的仲裁源是微信零钱）。
+        //   会话键走 ^taobao_ 前缀，随会话隔离。
+        id: 'taobao',
+        name: '桃宝',
+        icon: '🛍️',
+        color: '#f97316',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.30.0] 恋爱空间：天数 / 今日足迹 / 心情日记 + 心情罐子 / 情书 / 提问与回答 五块
+        //   （缝合自 EPhone·xintuk lovers-space 四片，174001 字节 / 77 函数）。
+        //   四处不缝：① 说说·相册·照片·分享 —— 让位本仓 apps/weibo/（同一件事两个权威）；
+        //   ② 番茄钟 + 白噪音 —— 让位本仓 apps/focus/，且一个模块里两处计时器是本仓忌的形态；
+        //   ③ 直连模型的 fetch（源 handleGenerateDailyActivity 自己拼 systemPrompt 发请求）——
+        //     本仓模型调用走宿主生成侧；④ Dexie / db.chats / chat.history 写入
+        //     （源把整份 chat 落库、还往 history 塞 isHidden 系统消息驱动模型）——
+        //     零数据库铁律，且 App 不替宿主写楼层。另加：12 条外链素材一条不收。
+        //   四条偏离：不做实时定时器（源每分钟 setInterval 重画 / 改惰性显形）；
+        //   时间一律本地时区（源用 UTC 日期串，东八区凌晨会算到昨天）；足迹封顶 24 条并如实计数；
+        //   心情日记空串归一成「没记」（「没记」不等于「记了空」）。
+        //   会话键走 ^lover_ 前缀，随会话隔离。
+        id: 'loverspace',
+        name: '恋爱空间',
+        icon: '💞',
+        color: '#ec4899',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；
