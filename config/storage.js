@@ -85,6 +85,14 @@ export class PhoneStorage {
             /^chars_/,
             // [v2.52.0] 时计（clock_settings_v1：注入开关 + 诊断显示）。只读桥消费，设置随会话隔离。
             /^clock_/,
+            // [v3.21.0] 番茄钟（focus_settings / focus_tasks / focus_sessions）：
+            //   任务清单、专注记录与设置都随会话隔离——换角色后统计不该带着上一个角色的成绩。
+            //   刻意用单条 ^focus_ 前缀覆盖三键（与 ^clock_ 同族，无元字符、无需宽匹配登记）。
+            /^focus_/,
+            // [v3.22.0] 记账（accounting_settings / accounting_accounts / accounting_records）：
+            //   与 ^focus_ 同族的单条前缀覆盖三键（无元字符、无需宽匹配登记）。
+            //   账本随会话隔离：换角色不该看到上一个角色的账。
+            /^accounting_/,
             // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
             /^ledger_/,
             // [v2.61.0] 资产 App：设置走 asset_settings_v1；引擎唯一读写门的聊天变量

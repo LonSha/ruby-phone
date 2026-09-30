@@ -1,14 +1,14 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-09-29T04:12:06.189Z",
-  "refreshReason": "v3.20.5：上游 813ab3a 已把 checkpointCompare 三格（v3.252.0 / readLonshaCheckpointFace@1 / 下游已接入）提交，冻读取重取提交态",
+  "refreshedAt": "2026-09-30T04:53:59.448Z",
+  "refreshReason": "v3.23.5：上游 v3.258.0/7ec2e37 已把正向表表头那句「下游→上游方向 0 面」订正为退役短语（本仓侧 v3.23.4 已把反向面变成机器会响的一面），冻读取重取提交态",
   "upstreamRepo": "lonsha-memory-plugin",
-  "upstreamVersion": "3.255.0",
+  "upstreamVersion": "3.259.0",
   "sourceState": "commit",
-  "upstreamCommit": "813ab3a",
+  "upstreamCommit": "7ec2e37",
   "worktreeDirty": false,
-  "tableSha1": "f2977b893c27",
+  "tableSha1": "c3764ee18e75",
   "tableRows": 5,
   "faces": {
     "projectionEnvelope": {

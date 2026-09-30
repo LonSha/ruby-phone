@@ -1,76 +1,374 @@
 {
- "file": "tests/audit/memory_growth_probe.cjs",
- "note": "内存快照增长 / 渲染耗时取证。**无浏览器 / 无 DOM**：计时读数一律不是实机渲染耗时。",
- "measured_at": "v3.10.0",
- "node_version": "v24.18.0",
- "gc_forced": true,
- "noise_note": "已用 --expose-gc 强制回收后取样；单点仍不可判泄漏，只判**跨轮趋势**。",
- "rounds": 8,
- "ops_per_round": 400,
- "readings": {
-  "heap_samples_kb": [
-   4169,
-   4180,
-   4183,
-   4183,
-   4180,
-   4183,
-   4185,
-   4185
+  "file": "tests/audit/memory_growth_probe.cjs",
+  "note": "内存快照增长 / 渲染耗时取证。**无浏览器 / 无 DOM**：计时读数一律不是实机渲染耗时。",
+  "measured_at": "v3.23.3",
+  "node_version": "v24.18.0",
+  "gc_forced": true,
+  "noise_note": "已用 --expose-gc 强制回收后取样；单点仍不可判泄漏，只判**跨轮趋势**。",
+  "rounds": 8,
+  "ops_per_round": 400,
+  "readings": {
+    "heap_samples_kb": [
+      4362,
+      4367,
+      4376,
+      4376,
+      4376,
+      4376,
+      4378,
+      4378
+    ],
+    "heap_first_kb": 4362,
+    "heap_last_kb": 4378,
+    "heap_total_growth_kb": 16,
+    "heap_tail_growth_kb": 2,
+    "heap_tail_kb_per_round": 0.5,
+    "host_roundtrip_samples_kb": [
+      5188,
+      5183,
+      5194,
+      5223,
+      5204,
+      5204,
+      5204,
+      5206,
+      5218,
+      5221,
+      5213,
+      5213,
+      5213,
+      5213,
+      5213,
+      5213,
+      5214,
+      5214,
+      5214,
+      5214,
+      5214,
+      5214,
+      5214,
+      5214
+    ],
+    "host_roundtrip_per_round_kb": 0.5,
+    "host_roundtrip_restored": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "host_roundtrip_per_round_kb_samples": [
+      0.5,
+      0,
+      0
+    ],
+    "host_roundtrip_per_round_median_kb": 0,
+    "heap_tail_kb_per_round_samples": [
+      0.5,
+      1.25,
+      2
+    ]
+  },
+  "timings": {
+    "string_build": {
+      "not_render": true,
+      "warn": "★ 这是「视图串生成」耗时，**不是 DOM 渲染耗时** —— 本环境无布局引擎。",
+      "reps": 400,
+      "total_ms": 20.501,
+      "per_op_ms": 0.051,
+      "html_chars": 1739,
+      "threw": 0
+    }
+  },
+  "listeners": {
+    "base": 0,
+    "peak": 0,
+    "after": 0,
+    "leaked": 0,
+    "event_base": 0,
+    "event_peak": 2,
+    "event_after": 0,
+    "event_leaked": 0,
+    "rounds": 8
+  },
+  "verdict": {
+    "module_heap": "linear-acceptable",
+    "module_heap_note": "后半段每轮增长 1.25KB（3 跑中位数，< 32KB/轮）—— 属「线性且微小」",
+    "listeners": "ok",
+    "listeners_note": "构造-启动-停止 8 轮后全局监听器回到基线（0）",
+    "event_source": "ok",
+    "event_source_note": "构造-启动-停止 8 轮后事件源 handler 回到基线（0）；峰值 2 ⇒ 订阅确实发生了，且被收净（不是「没订上」的假绿）",
+    "new_app_hooks": "ok",
+    "new_app_hooks_note": "两个新 App 重复 render 后宿主订阅数不变（各恰 1 条）—— 幂等哨兵在场",
+    "host_injection": "linear-acceptable",
+    "host_injection_note": "装/卸 8 轮后四个宿主全局逐轮还原，堆后端每轮 0.5KB（3 跑中位数，< 32KB/轮）⇒ 桩宿主下无沉淀；真宿主占用仍不可测（见 unmeasurable）",
+    "render": "string-build-ok"
+  },
+  "facts": {
+    "note": "新 App（focus/accounting）的**结构性事实**：钩子幂等 + tick 清退。不测单 App 堆趋势（样本太小不可判，留 not_done）。",
+    "focus_hook": {
+      "on_first_open": 1,
+      "on_second_open": 1,
+      "hydrated": true,
+      "bound_flag": true
+    },
+    "accounting_hook": {
+      "on_first_open": 1,
+      "on_second_open": 1,
+      "hydrated": true,
+      "bound_flag": true
+    },
+    "focus_tick": {
+      "started": true,
+      "tick_while_running": true,
+      "tick_after_deactivate": true
+    },
+    "host_roundtrip": {
+      "note": "**桩宿主近似**：反复 install → 使用 → uninstall 后 (a) 四个宿主全局按**同一性**还原；(b) 堆跨轮趋势。**真宿主**（SillyTavern 本体）里那一份注入对象的占用仍不可测。",
+      "rounds": 8,
+      "globals_same_obj": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "globals_restored_all": true,
+      "trials": 3
+    }
+  },
+  "unmeasurable": [
+    {
+      "item": "真实 DOM 渲染 / 排版 / 合成耗时",
+      "why": "无布局引擎；夹具不渲染 DOM"
+    },
+    {
+      "item": "跨会话长时间运行的堆增长（小时级）",
+      "why": "本探针只跑分钟级；长时应由真机观测"
+    },
+    {
+      "item": "V8 之外的运行时内存",
+      "why": "process.memoryUsage 只覆盖当前进程"
+    }
   ],
-  "heap_first_kb": 4169,
-  "heap_last_kb": 4185,
-  "heap_total_growth_kb": 16,
-  "heap_tail_growth_kb": 5,
-  "heap_tail_kb_per_round": 1.25
- },
- "timings": {
-  "string_build": {
-   "not_render": true,
-   "warn": "★ 这是「视图串生成」耗时，**不是 DOM 渲染耗时** —— 本环境无布局引擎。",
-   "reps": 400,
-   "total_ms": 29.644,
-   "per_op_ms": 0.074,
-   "html_chars": 1739,
-   "threw": 0
-  }
- },
- "listeners": {
-  "base": 0,
-  "peak": 0,
-  "after": 0,
-  "leaked": 0,
-  "event_base": 0,
-  "event_peak": 2,
-  "event_after": 0,
-  "event_leaked": 0,
-  "rounds": 8
- },
- "verdict": {
-  "module_heap": "linear-acceptable",
-  "module_heap_note": "后半段每轮增长 1.25KB（< 32KB/轮）—— 属「线性且微小」，不立优化候选",
-  "listeners": "ok",
-  "listeners_note": "构造-启动-停止 8 轮后全局监听器回到基线（0）",
-  "event_source": "ok",
-  "event_source_note": "构造-启动-停止 8 轮后事件源 handler 回到基线（0）；峰值 2 ⇒ 订阅确实发生了，且被收净（不是「没订上」的假绿）",
-  "render": "string-build-ok"
- },
- "unmeasurable": [
-  {
-   "item": "真实 DOM 渲染 / 排版 / 合成耗时",
-   "why": "无布局引擎；夹具不渲染 DOM"
+  "approx_measurable": [
+    {
+      "item": "宿主（SillyTavern）注入对象的内存占用（**桩宿主近似**）",
+      "how": "反复 install → 使用（造视图元素 / 挂全局监听 / 挂事件源 handler / 写 storage） → uninstall → resetHostFlags；判 (a) 四个宿主全局按**同一性**还原， (b) 堆的跨轮趋势（带 gc 才判，不带 gc 拒判）",
+      "readings": {
+        "host_roundtrip_per_round_kb": 0.5,
+        "host_roundtrip_per_round_kb_samples": [
+          0.5,
+          0,
+          0
+        ],
+        "host_roundtrip_per_round_median_kb": 0,
+        "host_roundtrip_samples_kb": [
+          5188,
+          5183,
+          5194,
+          5223,
+          5204,
+          5204,
+          5204,
+          5206,
+          5218,
+          5221,
+          5213,
+          5213,
+          5213,
+          5213,
+          5213,
+          5213,
+          5214,
+          5214,
+          5214,
+          5214,
+          5214,
+          5214,
+          5214,
+          5214
+        ],
+        "globals_restored_all": true,
+        "verdict": "linear-acceptable"
+      },
+      "still_unmeasurable": "**真宿主**（SillyTavern 本体）里那一份注入对象的**实际占用** —— 夹具是零依赖替身，不是宿主本体；真机读数归 R-O3（真宿主实机验证）"
+    }
+  ],
+  "corrections": [
+    "【v3.22.0 跑法差异（必读）】同一个探针不带 `--expose-gc` 时读数 166.75KB/轮 ⇒ `leak-candidate`；带 gc 时 1.25/0.75KB/轮 ⇒ `linear-acceptable`，**差 300 倍**。前者量的是未回收垃圾。故：**不带 gc 的读数不可判**，探针已改为此时输出 `inconclusive` 并给复跑命令；本基线只认带 gc 的读数。本轮带 gc 复测 0.75KB/轮（基线 1.25KB/轮）——同一量级，不立案。",
+    "本轮读数与 v3.10.0 逐项差异：`heap_samples_kb` 的**绝对值**整体上移（首轮 4169→4307KB，与 Node 版本/分配布局有关），但**尾段斜率** 1.25→0.75KB/轮、`timings.string_build.per_op_ms` 0.074→0.059ms。两者都不判「退化」：判据只认**跨轮斜率**与**数量级**（v3210 E2 的阈值是 32KB/轮，两版都低两个数量级）。",
+    "【v3.23.3 · B2 迁移（unmeasurable 4 → 3）】宿主注入对象一条从 `unmeasurable` 迁到 `approx_measurable`（**桩宿主近似**）：带 gc 时 8 轮 install→使用→uninstall 往返为 0.5KB/轮（linear-acceptable），且四个宿主全局（window / document / SillyTavern / localStorage）按**对象同一性**逐轮还原（`readings.host_roundtrip_restored` 全 true）—— 判据用 `===` 而非 `typeof`：夹具不还原时 `typeof globalThis.window` 仍是 'object'，弱判定会给出恒真的假绿。不带 gc 的同码复跑得 54.25KB/轮 ⇒ inconclusive（真宿主占用仍不可测） ⇒ 拒判（inconclusive），与模块面那条同因（未回收垃圾）—— 两组读数差约 400 倍，**再次印证「不带 gc 的读数不可判」**。**真宿主（SillyTavern 本体）里那一份注入对象的实际占用仍不可测**：夹具是零依赖替身，不是宿主本体；真机读数归 R-O3。",
+    "【v3.23.4 · 裁决面下移到「跨次中位数」（本版自己抓到的缺陷）】同一份代码 12 连跑，宿主往返斜率得 0.5 / 0.75 / 1 / 1.25 / 1.5 / 2.25 / 4 / **55.25** KB/轮 —— 同一份代码里出现两个档次：8 轮里只要 GC 迟到一轮，末轮就多背 50~270KB。按单次读数发判决 = 「拿拖动当机制」，且使 H2/I2 的「基线与现场逐字同源」间歇翻面。修法两条：① 判决下移到 TRIALS（默认 3）连跑的**中位数**，单次读数只落 readings；② `facts` 只放**确定性**字段 `verdict` 移出 facts 到 verdict/readings（探针 ③ 段注释早已写明这条纪律，本版贯彽到底。"
+  ],
+  "rebuilds": {
+    "v3.22.0": {
+      "why": "v3.22.0：新增 App（focus 番茄钟 + accounting 记账）后复校；纯取证类复校，**产品代码未改**（本版对 memory_growth 的唯一代码改动是探针的拒判口径）。",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc，否则读数不可判",
+      "readings": {
+        "readings.heap_tail_kb_per_round": 0.75,
+        "readings.heap_first_kb": 4307,
+        "readings.heap_last_kb": 4323,
+        "readings.heap_total_growth_kb": 16,
+        "timings.string_build.per_op_ms": 0.059
+      },
+      "unchanged": [
+        "readings.heap_samples_kb 长度（8 轮）",
+        "listeners（全局 base/peak/after/leaked 全 0）",
+        "listeners.event_peak=2（★ 订阅确实发生且被收净 —— 不是「没订上」的假绿）",
+        "verdict.listeners / verdict.event_source / verdict.render",
+        "unmeasurable（4 项）"
+      ],
+      "not_done": [
+        "真实 DOM 渲染耗时（无布局引擎）—— 仍归 R-O3 真宿主实机",
+        "小时级长时堆增长（本探针只跑分钟级）",
+        "新 App（focus/accounting）的**堆趋势**：本版已补其**结构性事实**（宿主钩子幂等 + tick 清退，见 facts 段与 verdict.new_app_hooks），但**单 App 的堆斜率**仍不判 —— 样本太小（一个 App 的视图构造不足以跑出可信斜率），硬判只会造出「拿噪声当证据」的读数。真机长时观测归 R-O3。"
+      ]
+    },
+    "v3.23.1": {
+      "why": "v3.23.1：把基线 v3.22.0 not_done 里那条「新 App 单独的堆/监听器面未覆盖」中**能测且该测**的两条补上（宿主钩子幂等 + tick 清退），并把读数按「零手抄」落回本文件。",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← facts 段与 verdict.new_app_hooks 直接取自该输出（不经人手）",
+      "readings": {
+        "facts.focus_hook": {
+          "on_first_open": 1,
+          "on_second_open": 1,
+          "hydrated": true,
+          "bound_flag": true
+        },
+        "facts.accounting_hook": {
+          "on_first_open": 1,
+          "on_second_open": 1,
+          "hydrated": true,
+          "bound_flag": true
+        },
+        "facts.focus_tick": {
+          "started": true,
+          "tick_while_running": true,
+          "tick_after_deactivate": true
+        },
+        "verdict.new_app_hooks": "ok"
+      },
+      "unchanged": [
+        "readings（本版未动模块面驱动：仍是 knowledge/story-clock/dryrun/plotline 四面）",
+        "timings.string_build（同量级）",
+        "listeners（全局/事件源 8 轮后回基线）",
+        "unmeasurable（仍 4 项）"
+      ],
+      "not_done": [
+        "真实 DOM 渲染耗时（无布局引擎）—— 仍归 R-O3 真宿主实机",
+        "小时级长时堆增长（本探针只跑分钟级）",
+        "新 App（focus/accounting）的**堆趋势**：本版已补其**结构性事实**（宿主钩子幂等 + tick 清退，见 facts 段与 verdict.new_app_hooks），但**单 App 的堆斜率**仍不判 —— 样本太小（一个 App 的视图构造不足以跑出可信斜率），硬判只会造出「拿噪声当证据」的读数。真机长时观测归 R-O3。"
+      ]
+    },
+    "v3.23.3": {
+      "why": "B2 剩余面迁移（PLAN.md）：把 `unmeasurable` 里**能在桩宿主下近似**的那条（宿主注入对象的内存占用）迁进可测面 —— 探针新增第 ③b 段取证面 + `approx_measurable` 登记段；unmeasurable 4 → 3。产品代码未改（只动探针与基线）。",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc；本次 baseline 的 readings/timings/listeners/verdict/facts/unmeasurable/approx_measurable **逐字取自该输出**（零手抄）",
+      "readings": {
+        "readings.host_roundtrip_per_round_kb": 0.5,
+        "readings.host_roundtrip_samples_kb": [
+          5149,
+          5152,
+          5154,
+          5165,
+          5165,
+          5165,
+          5165,
+          5167
+        ],
+        "readings.host_roundtrip_restored": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "facts.host_roundtrip.globals_same_obj": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "facts.host_roundtrip.globals_restored_all": true,
+        "verdict.host_injection": "linear-acceptable",
+        "readings.heap_tail_kb_per_round": -0.25,
+        "timings.string_build.per_op_ms": 0.048
+      },
+      "unchanged": [
+        "readings.heap_samples_kb 长度（8 轮）与判据（仍是后 4 轮斜率、阈值 32KB/轮）",
+        "listeners（全局 base/peak/after/leaked）与 event_peak=2（★ 订阅发生且被收净）",
+        "verdict.module_heap / verdict.listeners / verdict.event_source / verdict.render",
+        "facts.focus_hook / facts.accounting_hook / facts.focus_tick（新 App 结构性事实）"
+      ],
+      "not_done": [
+        "真实 DOM 渲染 / 排版 / 合成耗时（无布局引擎）—— 仍归 R-O3 真宿主实机",
+        "**真宿主**注入对象那一份的**实际占用**（本次迁的是「反复装/卸是否有沉淀」这一半）",
+        "跨会话小时级堆增长（本探针只跑分钟级）",
+        "V8 之外的运行时内存（process.memoryUsage 只覆盖当前进程）"
+      ]
+    },
+    "v3.23.4": {
+      "why": "v3.23.4：修本版自己抓到的缺陷 —— 裁决面落在单次采样的浮点斜率上（与本探针自己的「单点不可判，只判趋势」同族）。产品代码未改（只动探针与基线）。",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc；本次 baseline 的 facts / readings / timings / unmeasurable / approx_measurable 逐字取自该输出（零手拄）",
+      "readings": {
+        "readings.host_roundtrip_per_round_median_kb": 0,
+        "readings.host_roundtrip_per_round_kb_samples": [
+          0.5,
+          0,
+          0
+        ],
+        "readings.heap_tail_kb_per_round_samples": [
+          0.5,
+          1.25,
+          2
+        ],
+        "verdict.host_injection": "linear-acceptable",
+        "verdict.module_heap": "linear-acceptable",
+        "facts.host_roundtrip": {
+          "note": "**桩宿主近似**：反复 install → 使用 → uninstall 后 (a) 四个宿主全局按**同一性**还原；(b) 堆跨轮趋势。**真宿主**（SillyTavern 本体）里那一份注入对象的占用仍不可测。",
+          "rounds": 8,
+          "globals_same_obj": [
+            false,
+            false,
+            false,
+            false
+          ],
+          "globals_restored_all": true,
+          "trials": 3
+        }
+      },
+      "unchanged": [
+        "readings.heap_samples_kb 长度（8 轮）与判据（仍是同一个 32KB/轮 阈值，只是取中位数）",
+        "listeners / verdict.listeners / verdict.event_source / verdict.render",
+        "facts.focus_hook / facts.accounting_hook / facts.focus_tick"
+      ],
+      "not_done": [
+        "真实 DOM 渲染 / 排版 / 合成耗时（无布局引擎）—— 仍归 R-O3 真宿主实机",
+        "**真宿主**注入对象那一份的**实际占用**",
+        "跨会话小时级堆增长",
+        "V8 之外的运行时内存"
+      ]
+    }
   },
-  {
-   "item": "宿主（SillyTavern）注入对象的内存占用",
-   "why": "无真实宿主"
-  },
-  {
-   "item": "跨会话长时间运行的堆增长（小时级）",
-   "why": "本探针只跑分钟级；长时应由真机观测"
-  },
-  {
-   "item": "V8 之外的运行时内存",
-   "why": "process.memoryUsage 只覆盖当前进程"
-  }
- ]
+  "trials": 3
 }

@@ -25,6 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -55,8 +56,8 @@ function makeCopy() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_f4_'));
   temps.push(dir);
   fs.copyFileSync(path.join(ROOT, 'index.js'), path.join(dir, 'index.js'));
-  fs.cpSync(path.join(ROOT, 'apps'), path.join(dir, 'apps'), { recursive: true });
-  fs.cpSync(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
+  copyTreeSafe(path.join(ROOT, 'apps'), path.join(dir, 'apps'));
+  copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'));
   return dir;
 }
 process.on('exit', () => {
@@ -123,6 +124,44 @@ test('A4 未指定上游根时不得假绿（跨仓证据不硬依赖兄弟仓�
   assert.ok(/未指定上游根/.test(String(j.upstream.note)), '必须写明为什么没复核');
   /* 且判定不得因此变成 go（未复核 ⇏ 通过） */
   assert.equal(j.verdict, 'not_now', '未复核时判定不得翻成 go');
+});
+
+/* ★ v3.23.0 补门：判据散文（criteria[*].got_text）必须与探针现场**复算一致**。
+ *   此前本套件只校验「criteria 在场 / 条数 / desc 非空」，**从不复算内容** ——
+ *   于是散文随 readings 漂移而无人发现。活标本：schedule 的 R4 散文写着「4 个文件在消费」，
+ *   而同文件 readings.consume_files 与探针现场都是 6（**同文件内自相矛盾**）。
+ *   纪律：冻结面（现场写「未复核（冻结证据：…）」）按设计跳过 —— 跨仓探针不硬依赖兄弟仓在场。
+ *   自包含：冻结判据与取字段函数都在函数体内（不受模块顶层 const 的 TDZ 影响）。 */
+function assertMainCriteria(baseCrit, liveCrit) {
+  const FROZEN_RE = /未复核|冻结证据|（冻结）/;
+  const gotOf = (c) => (c.gotText !== undefined ? String(c.gotText) : String(c.got_text));
+  assert.equal(liveCrit.length, baseCrit.length, '判据条数必须一致');
+  const live = new Map(liveCrit.map((c) => [String(c.id), c]));
+  for (const b of baseCrit) {
+    const id = String(b.id);
+    const l = live.get(id);
+    assert.ok(l, '现场缺判据：' + id);
+    const lg = gotOf(l);
+    if (FROZEN_RE.test(lg)) continue; /* 冻结面：这次未复核，按设计跳过 */
+    assert.equal(lg, String(b.got_text),
+      '判据散文必须与现场复算一致（' + id + '）—— 源变了就该主动刷新基线的 got_text，'
+      + '而不是让散文与 readings 长期分叉');
+  }
+}
+test('FM1 判据散文可复算（零手抄）＋ 负控制：手抄漂移必须转红', () => {
+  /* ① 真基线上的同款真判据必须为真 */
+  assertMainCriteria(base.criteria, rep.criteria);
+  /* ② 真值破坏：把 R4 散文改回**本轮抓到的真实手抄旧值** ⇒ 必须转红 */
+  const bad = JSON.parse(JSON.stringify(base));
+  const t = bad.criteria.find((c) => c.id === 'R4');
+  assert.ok(t, '负控制需要 R4 在场');
+  t.got_text = '4 个文件在消费';
+  const liveR4 = rep.criteria.find((c) => c.id === 'R4');
+  assert.notEqual(t.got_text,
+    (liveR4.gotText !== undefined ? String(liveR4.gotText) : String(liveR4.got_text)),
+    '破坏必须真的改掉值（否则负控制无效）');
+  assert.throws(() => assertMainCriteria(bad.criteria, rep.criteria),
+    /判据散文必须与现场复算一致/, '负控制：手抄旧值必须让同款判据转红');
 });
 
 /* ══════════ B ── 回写防护 ══════════ */

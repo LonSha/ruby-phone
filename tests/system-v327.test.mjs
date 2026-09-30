@@ -24,6 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -57,14 +58,14 @@ function makeCopy() {
   temps.push(dir);
   fs.copyFileSync(path.join(ROOT, 'index.js'), path.join(dir, 'index.js'));
   fs.copyFileSync(path.join(ROOT, 'manifest.json'), path.join(dir, 'manifest.json'));
-  fs.cpSync(path.join(ROOT, 'apps'), path.join(dir, 'apps'), { recursive: true });
-  fs.cpSync(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
+  copyTreeSafe(path.join(ROOT, 'apps'), path.join(dir, 'apps'));
+  copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'));
   /* ★ 真模块的**真实依赖**：`data/` 等顶层目录必须一起拷。
    *   漏了它 `global-search-engine` 会经 cheat-data → data/cheats.js 加载失败 ——
    *   探针会如实报 load-failed 并（修正后）fail-closed 拒判。 */
   for (const d of ['data', 'phone', 'workers', 'assets']) {
     if (fs.existsSync(path.join(ROOT, d))) {
-      fs.cpSync(path.join(ROOT, d), path.join(dir, d), { recursive: true });
+      copyTreeSafe(path.join(ROOT, d), path.join(dir, d));
     }
   }
   fs.mkdirSync(path.join(dir, 'tests'), { recursive: true });
@@ -110,6 +111,7 @@ test('A1 基线齐备（读数 / 静态面 / 站点 / 判据 / 结论 / 修正 /
 
 test('A2 探针读数与基线逐项一致（读数零手抄；枚举面与上限自证）', () => {
   assert.deepEqual(rep.readings, base.readings, '读数必须与基线逐项一致');
+  assertLongChatCriteria(base.criteria, rep.criteria, rep.scan);
   assert.deepEqual(rep.scan, base.scan, '静态面计数必须与基线一致');
   assert.equal(rep.verdict.answer, base.verdict.answer, '结论文本必须与基线一致');
   /* 枚举面自证：扫描器失效时会塌成 0 */
@@ -168,6 +170,49 @@ test('A4 fail-closed：读不到就拒判，绝不以 0 发合格证', () => {
   assert.equal(r4.status, 2, '路径写错必须 exit 2，实测 ' + r4.status);
   /* ⑤ 正常树不得被判成 fail-closed */
   assert.equal(main.status, 0);
+});
+
+/* ★ v3.23.0 补门：判据散文（criteria[*].got_text）必须与探针现场**复算一致**。
+ *   本基线是**分叉最久**的一份：L5 的手抄值停在 files=238 / 下标直取=18 / 长度读=50，
+ *   而机器读数 `scan` 早已是 248 / 9 / 5 / 11 / 48（自 v3.19.0 起分叉，无人发现）——
+ *   因为 A2/A3 只比 readings / scan / verdict 与「同树两次跑」，**判据散文一次都没被比过**。
+ *   自包含：冻结判据与取字段函数都在函数体内。 */
+function assertLongChatCriteria(baseCrit, liveCrit, scan) {
+  const FROZEN_RE = /未复核|冻结证据|（冻结）/;
+  const gotOf = (c) => (c.gotText !== undefined ? String(c.gotText) : String(c.got_text));
+  assert.equal(liveCrit.length, baseCrit.length, '判据条数必须一致');
+  const live = new Map(liveCrit.map((c) => [String(c.id), c]));
+  for (const b of baseCrit) {
+    const id = String(b.id);
+    const l = live.get(id);
+    assert.ok(l, '现场缺判据：' + id);
+    const lg = gotOf(l);
+    if (FROZEN_RE.test(lg)) continue;
+    assert.equal(lg, String(b.got_text),
+      '判据散文必须与现场复算一致（' + id + '）—— 源变了就该主动刷新基线的 got_text');
+  }
+  /* 散文不得「自说自话」：L5 里的静态计数必须与 scan 同源 */
+  const l5 = baseCrit.find((c) => c.id === 'L5');
+  if (l5 && scan) {
+    assert.ok(new RegExp('files=' + scan.files + '(?!\\d)').test(l5.got_text),
+      'L5 散文的 files 必须等于 scan.files（' + scan.files + '），实测散文：' + l5.got_text);
+    assert.ok(new RegExp('长度读=' + scan.length_read + '(?!\\d)').test(l5.got_text),
+      'L5 散文的「长度读」必须等于 scan.length_read（' + scan.length_read + '）');
+    assert.ok(new RegExp('全表物化=' + scan.full_materialize + '(?!\\d)').test(l5.got_text),
+      'L5 散文的「全表物化」必须等于 scan.full_materialize（' + scan.full_materialize + '）');
+  }
+}
+test('FM1 判据散文可复算（零手抄）＋ 负控制：手抄漂移必须转红', () => {
+  assertLongChatCriteria(base.criteria, rep.criteria, rep.scan);
+  /* 真值破坏：把 L5 散文改回**本轮抓到的真实手抄旧值** ⇒ 必须转红 */
+  const bad = JSON.parse(JSON.stringify(base));
+  const t = bad.criteria.find((c) => c.id === 'L5');
+  assert.ok(t, '负控制需要 L5 在场');
+  t.got_text = 'files=238，全表物化=9，slice(-n)=5，下标直取=18，长度读=50';
+  assert.notEqual(t.got_text, String(rep.criteria.find((c) => c.id === 'L5').got_text),
+    '破坏必须真的改掉值（否则负控制无效）');
+  assert.throws(() => assertLongChatCriteria(bad.criteria, rep.criteria, rep.scan),
+    /判据散文必须与现场复算一致/, '负控制：手抄旧值必须让同款判据转红');
 });
 
 /* ══════════ B ── 回写防护 ══════════ */

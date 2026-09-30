@@ -30,6 +30,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import { execFileSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -431,8 +432,7 @@ function mutateOnce(src, from, to) {
 /** 造一个全量镜像树（排除 .git）；mut 里的文件以「读完原版→变形」的方式覆盖 */
 function mirror(mut) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v299-mir-'));
-    fs.cpSync(ROOT, dir, {
-        recursive: true,
+    copyTreeSafe(ROOT, dir, {
         filter: (src) => !src.split(path.sep).includes('.git'),
     });
     for (const [rel, fn] of Object.entries(mut)) {
@@ -500,7 +500,10 @@ test('v299 F2. 负控制：状态槽名被当 storage 键登记 ⇒ keys K1 红�
 
 test('v299 F3. 负控制：重绑表删掉 diagnoseApp ⇒ lifecycle L1 红灯（槽位漏接线）', () => {
     withMirror({
-        'index.js': (s) => mutateOnce(s, "    'diagnoseApp'   // [v2.99.0] ", "    '__x'   // [v2.99.0] "),
+        /* [v3.22.0 交棒] 锈点跟随表项格式：表尾项为了能继续追加，
+         *   给 'diagnoseApp' 补了尾逗号，旧锈点（后直接跟注释）从此 0 命中。
+         *   判据本身不变：真源码破坏 ⇒ 副本上重跑真判据 ⇒ 必须红灯。 */
+        'index.js': (s) => mutateOnce(s, "    'diagnoseApp',   // [v2.99.0] ", "    '__x',   // [v2.99.0] "),
     }, (dir) => {
         const r = runGate(dir, 'scripts/lifecycle-audit.mjs');
         assert.equal(r.ok, false, '槽位漏接线必须红灯');
@@ -542,7 +545,7 @@ test('v299 F6. 负控制：三态判定被写成常量 ⇒ A4 的同款真判据
     assert.equal(origState, 'declared-empty', '原版必须能把「声明了、值为空」认出来');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v299-d4-'));
     try {
-        fs.cpSync(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
+        copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'));
         const rel = 'config/world-bridge.js';
         const broken = mutateOnce(read(rel), F6_ANCHOR, F6_BROKEN);
         fs.writeFileSync(path.join(dir, rel), broken);

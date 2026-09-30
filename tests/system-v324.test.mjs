@@ -27,6 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -57,7 +58,7 @@ function makeCopy() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_p6_'));
   temps.push(dir);
   fs.copyFileSync(path.join(ROOT, 'index.js'), path.join(dir, 'index.js'));
-  fs.cpSync(path.join(ROOT, 'apps'), path.join(dir, 'apps'), { recursive: true });
+  copyTreeSafe(path.join(ROOT, 'apps'), path.join(dir, 'apps'));
   return dir;
 }
 process.on('exit', () => {
@@ -153,6 +154,44 @@ test('A4 弹窗 items 不得含方括号（既有当版切片判据按首个 ] �
     assert.equal(it.includes('[') || it.includes(']'), false, '弹窗文案不得含方括号：' + it.slice(0, 40));
   }
   assert.ok(head.includes(JSON.stringify(log.versions[log.latest].items.slice(-1)[0])), '末条必须能在头部里读到（切片未被提前截断）');
+});
+
+/* ★ v3.23.0 补门：判据散文（criteria[*].got_text）必须与探针现场**复算一致**。
+ *   此前本套件只校验「criteria 在场 / 条数 / desc 非空」—— **从不复算内容**，
+ *   于是散文会随 readings 漂移而无人发现（活标本：schedule R4 散文 4 / 读数 6；
+ *   long_chat L5 散文 238/18/50 / scan 248/11/48，自 v3.19.0 起分叉）。
+ *   纪律：冻结面（现场写「未复核（冻结证据：…）」= 这次没传 --upstream）按设计跳过。
+ *   自包含：冻结判据与取字段函数都在函数体内（不受模块顶层 const 的 TDZ 影响）。 */
+function assertAuditCriteria(baseCrit, liveCrit) {
+  const FROZEN_RE = /未复核|冻结证据|（冻结）/;
+  const gotOf = (c) => (c.gotText !== undefined ? String(c.gotText) : String(c.got_text));
+  assert.equal(liveCrit.length, baseCrit.length, '判据条数必须一致');
+  const live = new Map(liveCrit.map((c) => [String(c.id), c]));
+  for (const b of baseCrit) {
+    const id = String(b.id);
+    const l = live.get(id);
+    assert.ok(l, '现场缺判据：' + id);
+    const lg = gotOf(l);
+    if (FROZEN_RE.test(lg)) continue;
+    assert.equal(lg, String(b.got_text),
+      '判据散文必须与现场复算一致（' + id + '）—— 源变了就该主动刷新基线的 got_text');
+  }
+}
+test('FM1 判据散文可复算（零手抄）＋ 负控制：手抄漂移必须转红', () => {
+  assertAuditCriteria(base.criteria, rep.criteria);
+  /* 真值破坏：挑一条**现场非冻结**的判据，把散文换成一个不可能等于现场的值 ⇒ 必须转红 */
+  const gotOf = (c) => (c.gotText !== undefined ? String(c.gotText) : String(c.got_text));
+  const liveMap = new Map(rep.criteria.map((c) => [String(c.id), c]));
+  const bad = JSON.parse(JSON.stringify(base));
+  const FROZEN_RE = /未复核|冻结证据|（冻结）/;
+  const target = bad.criteria.find((c) => {
+    const l = liveMap.get(String(c.id));
+    return l && !FROZEN_RE.test(gotOf(l));
+  });
+  assert.ok(target, '负控制需要一个「现场非冻结」的判据');
+  target.got_text = '【负控制占位】与现场必然不符';
+  assert.throws(() => assertAuditCriteria(bad.criteria, rep.criteria),
+    /判据散文必须与现场复算一致/, '负控制：手抄漂移必须让同款判据转红');
 });
 
 /* ══════════ B ── 回写防护 ══════════ */

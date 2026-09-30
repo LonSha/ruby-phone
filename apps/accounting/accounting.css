@@ -1,0 +1,56 @@
+/* [v3.22.0] 记账 App（.ac-*） */
+.ac-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.ac-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.ac-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.ac-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.ac-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.ac-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.ac-face-icon { font-size: 18px; }
+
+.ac-net { background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.2); border-radius: 12px; padding: 14px; text-align: center; }
+.ac-net-label { font-size: 12px; color: #94a3b8; }
+.ac-net-value { font-size: 32px; font-weight: 600; color: #60a5fa; font-family: 'Times New Roman', serif; margin: 4px 0; }
+.ac-net-meta { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.ac-chip { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,.08); color: #cbd5e1; }
+.ac-chip-debt { background: rgba(248,113,113,.12); color: #fca5a5; }
+
+.ac-month { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.ac-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,.04); }
+.ac-stat-row span:last-child { color: #e2e8f0; }
+
+.ac-accounts { display: flex; flex-direction: column; gap: 8px; }
+.ac-account { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.04); border-radius: 10px; padding: 10px 12px; }
+.ac-account-info { min-width: 0; }
+.ac-account-name { font-size: 14px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-account-type { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.ac-account-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ac-account-balance { font-size: 14px; color: #e2e8f0; font-family: 'Times New Roman', serif; }
+.ac-account-balance.is-neg { color: #f87171; }
+
+.ac-card { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.ac-card h3 { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
+.ac-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; margin-bottom: 8px; }
+.ac-input.is-error { border-color: rgba(239,68,68,.6); }
+.ac-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.ac-select { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; }
+
+.ac-kinds { display: flex; gap: 6px; margin-bottom: 8px; }
+.ac-kind { flex: 1; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 6px 0; font-size: 12px; cursor: pointer; background: transparent; color: #cbd5e1; }
+.ac-kind.is-active { background: rgba(96,165,250,.2); border-color: rgba(96,165,250,.5); color: #93c5fd; }
+
+.ac-btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.1); color: #e2e8f0; }
+.ac-btn-primary { background: #3b82f6; color: #fff; width: 100%; }
+.ac-mini { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; }
+
+.ac-records { display: flex; flex-direction: column; gap: 6px; }
+.ac-records h3 { font-size: 13px; margin: 0 0 4px; color: #94a3b8; }
+.ac-record { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; }
+.ac-rec-cat { font-size: 12px; color: #e2e8f0; flex-shrink: 0; }
+.ac-rec-note { font-size: 11px; color: #94a3b8; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-rec-amt { font-size: 13px; font-family: 'Times New Roman', serif; flex-shrink: 0; }
+.ac-rec-amt.is-in { color: #4ade80; }
+.ac-rec-amt.is-out { color: #fca5a5; }
+
+.ac-toggle, .ac-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
+.ac-field input[type="number"] { width: 68px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }
+.ac-hint { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.5; }

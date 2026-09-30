@@ -27,6 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -42,18 +43,16 @@ const SKIP = new Set(['.git', 'node_modules']);
  *   而报错点指向一个用户从没听说过的临时文件名（实测：`.tmp_v315_probe_<ts>.js`）。
  *   它此前被归为「环境抖动」，真因是 v315 N1 的负控制往**仓根**写探针文件
  *   （与 O-4 修掉的「临时产物落仓根」同一形态；v315 那侧已改到 tests/audit/ 下）。
- *   这里仍加一道防线：cpSync 失败时**重试一次** —— 镜像类测试要观察的是「门禁在退化输入上的行为」，
+ *   这里加一道防线：cpSync 失败时**重试** —— 镜像类测试要观察的是「门禁在退化输入上的行为」，
  *   不是「仓库在那一瞬间的文件集合」，为一条瞬态竞态让整个套件转红是**测量误差被当成了测量结果**。
- *   重试仍失败则抛出（不吞错：真·持续失败必须看得见）。 */
-function cpWithRetry(src, dest) {
-    try {
-        return fs.cpSync(src, dest, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)) });
-    } catch (e) {
-        if (!/ENOENT/.test(String(e && e.code))) throw e;
-        try { fs.rmSync(dest, { recursive: true, force: true }); } catch (_e2) { /* 首次可能只建了一半 */ }
-        return fs.cpSync(src, dest, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)) });
-    }
-}
+ *   重试仍失败则抛出（不吞错：真·持续失败必须看得见）。
+ *   [v3.23.0] 本函数上收为共享实现 `tests/_mirror_tree.mjs` 的 `copyTreeSafe`。
+ *     起因：同族缺陷在本仓共有 16 处镜像点，**只有这一处**带防护（v323 的手写 copyTree
+ *     也不管用 —— 它 catch 的是 readFileSync，而竞态抛在更早的 lstat 上；v3171 干脆裸调）。
+ *     于是「同一件事被写了四次，其中三次忘了」—— 收成唯一实现，全部镜像点引用它。 */
+const cpWithRetry = (src, dest) => copyTreeSafe(src, dest, {
+    filter: (s) => !s.split(path.sep).some((x) => SKIP.has(x)),
+});
 function mirror(gut = [], gone = []) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v314-mir-'));
     cpWithRetry(ROOT, dir);

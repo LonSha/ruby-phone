@@ -36,6 +36,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import { installRuntimeHost, resetHostFlags } from './_runtime_host.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -57,7 +58,7 @@ function makeFullCopy() {
   for (const e of fs.readdirSync(ROOT, { withFileTypes: true })) {
     if (['.git', 'node_modules', '.wrangler'].includes(e.name)) continue;
     if (e.name.startsWith('.')) continue;
-    fs.cpSync(path.join(ROOT, e.name), path.join(dst, e.name), { recursive: true });
+    copyTreeSafe(path.join(ROOT, e.name), path.join(dst, e.name));
   }
   return dst;
 }

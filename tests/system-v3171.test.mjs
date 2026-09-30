@@ -10,6 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -131,8 +132,7 @@ const dest = fs.mkdtempSync(path.join(os.tmpdir(), 'v3171-c-'));
 let MIRROR = null;
 const mirrorRoot = () => {
     if (MIRROR) return MIRROR;
-    fs.cpSync(ROOT, dest + '/root', {
-        recursive: true,
+    copyTreeSafe(ROOT, dest + '/root', {
         filter: (p) => !/(\.git|[\/]node_modules|\.sourcematerial)[\/]?/.test(p)
     });
     MIRROR = dest + '/root';

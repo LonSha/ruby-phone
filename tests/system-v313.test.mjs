@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -109,7 +110,7 @@ function mutateOnce(src, from, to) {
 }
 function mirror(mut) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v313-mir-'));
-    fs.cpSync(ROOT, dir, { recursive: true, filter: (s) => !s.split(path.sep).includes('.git') });
+    copyTreeSafe(ROOT, dir, { filter: (s) => !s.split(path.sep).includes('.git') });
     for (const [rel, fn] of Object.entries(mut)) {
         const body = fn(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
         assert.notEqual(body, fs.readFileSync(path.join(ROOT, rel), 'utf8'), '破坏未发生：' + rel);

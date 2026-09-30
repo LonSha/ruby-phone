@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -146,7 +147,7 @@ const temps = [];
 function makeCopy() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3150_'));
   temps.push(dir);
-  fs.cpSync(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
+  copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'));
   fs.mkdirSync(path.join(dir, 'apps', 'usage'), { recursive: true });
   for (const rel of [APP_REL, DATA_REL, VIEW_REL, IDX_REL]) {
     fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));

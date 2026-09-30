@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.20.5';
+const ST_PHONE_VERSION = '3.23.4';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -105,7 +105,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'plotlineApp', 'charsApp', 'clockApp', 'ledgerApp', 'assetApp',
     'graphApp', 'memoryApp', 'timeweaverApp', 'wangxiangApp',
     'usageApp',     // [v3.15.0] 洞察：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
-    'diagnoseApp'   // [v2.99.0] 诊断中心：无状态，但仍进表（下帧现取，防将来加缓存时漏重绑）
+    'diagnoseApp',   // [v2.99.0] 诊断中心：无状态，但仍进表（下帧现取，防将来加缓存时漏重绑）
+    'focusApp',      // [v3.21.0] 番茄钟：有 deactivate 出口（切走掐 tick），必须进表
+    'accountingApp'  // [v3.22.0] 记账：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
 //   存在理由：`Number(null) === Number('') === Number([]) === 0`、`Number(true) === 1`，
@@ -140,15 +142,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-09-29",
+    date: "2026-09-30",
     items: [
-        "**主治：v3.20.4 交付时把跨仓分歧收进台账逐条解释（那两条都指向上游 `checkpointCompare` 行），而当时留的两条路里的第二条 —— 「真去上游把账面改对」—— 本轮走完了。** 台账机制的全部价值在于「上游一提交就自己转红」，本轮把这条闭环**真跑了一遍**。上游 `813ab3a` 把那三格改为 `v3.252.0` / `readLonshaCheckpointFace@1` / 「下游已接入」，并注明「producer_version 取完整契约形状齐备的那一版，与下游 registry 的 `since` 同口径；族首见 v3.237.0 仍在 `contract_shape` 内注明」。**为什么必须走第二条路**：一份**长期挂着**的台账项，读起来与「这事没人管」很难分辨；机制的价值只剩「一提交就转红」这一条 —— 而它成立的前提是**真会有人去提交**。",
-        "**★ 闭环实证（是这一次真跑出来的读数，不是设计说明）**：上游提交 → 下游按**提交态**重冻（`--refresh --reason` 写明「上游 813ab3a 已把三格提交」，冻读取转为 `sourceState=commit` / `upstreamCommit=813ab3a` / `worktreeDirty=false`）→ 跑门禁，**R11 反向转红两处**，逐条报「台账里登记了 `checkpointCompare/version`（v3.237.0 ↔ 3.252.0），而冻读取与下游真码**已经不分歧** —— 台账项必须删除（登记着不存在的分歧就是掩饰，与「有分歧不解释」同罪）」→ 删台账两条（备份留档，`items` 置为空数组，`note` 写明收账理由）→ 再跑门禁：**本次 0 条**（空表是真读数）、门禁收尾输出「一致」 rc 0。**双向闭合两个方向都真响过**：v3.20.4 是「有分歧缺理由 ⇒ 报」，本轮是「有理由无分歧 ⇒ 也报」。另注意 `tableSha1` 与上一版冻的工作树态**相同** —— 上游工作树内容此刻与提交态一致，**同一个 sha1 这次是「可回源」的那一份**；判据看的是**来源态**，不是 sha1 本身（这正是 v3.20.3 那处缺陷的形态：sha1 一样、可回源性完全不同）。",
-        "**★ 交棒改写（把「别人的提交进度」从判据的前提里摘出去）**：删台账后实测，两套件共 **14 处**判据当场塌陷（v3204 的 A4/B1/C3/C4/C5/C6/C7/C9/C13/C14/D3 与 v3203 的 C9/C11/C12）—— 全属同一类：它们把「**真仓此刻有活分歧**」当作负控制的**前提**。问题不是写错了，而是**把判据的成立押在别人的提交进度上**：上游一提交，它们不是「测出缺陷」，而是**失去判别力**（有几处直接抛异常）。修法一律改为**夹具自造分歧**：`DIVERGENCE_ENTRIES()`（两条：`checkpointCompare/version` v3.237.0↔3.252.0、`checkpointCompare/consumer-none` none@0↔readLonshaCheckpointFace@1，`upstreamCommit: 'deadbeef0000'`）、`divergenceLag()`（生成台账 JSON）、`stageDivergence(entries)`（把冻读取副本改回上游陈旧口径）。**踩到的关键陷阱**：`stageDivergence` 必须把冻读取副本的**三格一起**改回（producerVersion + consumer + standaloneBehavior）—— 若只改 consumer 而不改 standaloneBehavior，`none@0` 与「下游已接入」**同屏**会触发 **R7**（「上游表写『下游已接入』而本仓找不到对应真源出口」），那是**另一种缺陷**、不是跨仓陈旧账面，负控制会指向错的判据。另两处取数口同族：E1 原本读「当版」条目（升版后「当版」变成别人的版本 ⇒ 本仓记过的「读动态当前版本」漂移族），改为**扫描所有版本条目、取最近一次自述**；E2 锚定**本套件出生那一版**。",
-        "**★ 交棒纪律（本轮改造的真正目的）**：本仓反复记过「只在开发机上绿」这一族（判据绑死兄弟仓绝对路径、绑死某台机器的目录布局）。判据依赖「真仓此刻有活分歧」是**同族的第二次现身**：它让套件的结果取决于**上游此刻提交到哪一步**。改造后，任何一台干净检出、从上游提交态重冻，都能复现同一结果（绿）—— **前提不是别人的进度，而是本仓自己的夹具**。",
-        "**运行时验证边界（诚实登记）**：本版能验的是 —— **台账双向闭合两向都真**（有分歧缺理由 ⇒ 报；有理由无分歧 ⇒ 报）、**空表是真读数**（本次 0 条不是「跳过」）、**冻读取来源态**（`sourceState=commit` + `upstreamCommit` + `worktreeDirty=false`）、以及**改造后的 14 处负控制全部自造分歧、不再随上游提交而塌**。**不能保证**的是：① **上游那份账是否还会变** —— 本门对上游**只读**；② **真宿主里两个插件各是什么版本** —— 仍归 **R-O3**；③ 本版**未**新增门禁判据（改的是判据套件与文档），故不声称覆盖了新形态。这类形态的共性与本层其余各条同规：**不报错、不崩溃、只把「两边看起来一样」当成「两边真的一样」** —— 看起来没坏但显示不对，本层只能挡住机制面。",
-        "**★ 本版自己抓到的缺陷（两条 · 留档防复发）**：① **终端里内嵌 `python3 -c` 单行脚本、含引号转义时会被 bash 解析失败**（本轮改登记表与台账各踩一次）—— 这类补丁必须**先落盘成 `.py` 文件再执行**，且落盘后要做 AST 校验（本仓记过「大文件落盘会静默截断」的账）。② **判据的负控制不能靠「改别人的仓」来制造**：改造前的写法里，有若干条把「真仓那条台账项在场」当成输入，台账一空，取第一条 就是 `undefined` ⇒ 直接抛异常（**不是断言失败**），套件读数从「11 fail」这种可读形态变成一串崩溃栈 —— **缺陷自己把判据的可读性打掉了**。修法同 E1：**输入自造，判据只对自己造的东西断言**。",
-        "**落地**：上游 lonsha-memory-plugin 提交 `813ab3a`（`checkpointCompare` 三格 + `open_items_reconcile.md` 追加 §(o) + `FOUR_RELEASE_PLAN.md` 标 R1-A/R1-C；上游门禁 `npm test` 236/236 文件 · 2397 断言 · 0 失败 · rc 0；推送 `c99a445..813ab3a main -> main`）/ tests/audit/upstream_face_cache.json（按**提交态**重冻）/ tests/audit/upstream_face_lag.json（**收账空表**，note 写明理由）/ tests/system-v3203.test.mjs（38 条 · C9/C11/C12 交棒改写）/ tests/system-v3204.test.mjs（35 条 · 11 处交棒改写 + 新增 B1b）/ tools/sync_update_log.py（自述条数单向回写）/ docs/runtime-verification-boundary.md（v3.20.5 复校段 + 当版实测数字）/ ITERATION_LOG.md / TODO.md / index.js 与 update-log.json / manifest.json / package.json（五源同源）。 **版本升至 3.20.5（五源同源）**"
+        "【T1 反向面 · 两仓 PLAN 都写着的「下游→上游 0 面」早就不真了】修前实测（不是推测）：本仓 `PLAN.md` 与上游 `PLAN.md` 在 v3.20.x~v3.25x 期间**都**登记着同一句「下游→上游 **0 面**」——而 `window.VirtualPhone.lonshaBridge` 在本仓 `index.js`（第 1420 行 import 的 `mountLonShaBridge`）挂载，上游 `index.js` **真在消费它**（`backfill` / `recall` / `onFloorCommitted` / `onFloorRollback` 四族调用点）。**功能早就在跑，登记面 0 面** —— 这是本仓最贵形态（「声明没有判据 ⇒ 声明会漂移」）落在**跨仓方向**上的翻版，只是这次漂的是两仓的**规划文档**。故本版不是新功能，是**把既成事实登记成可核读数**。",
+        "【形态选择 · 不新建门】本仓**严禁两门共号**（第十道门已属 `weak-coercion-audit.mjs`，第十一道门是本门）。反向面对账作为 **R12** 加进既有的第十一道门 `scripts/upstream-face-audit.mjs`（十一条 → **十二条**）——新增一个门会同时抬高语法门、导入门与边界文档的机器可读读数（纯记账成本、不带价值）。",
+        "【R12 判什么（逐格「声明 ↔ 真码」，全部在本仓内闭链）】a 登记行形态（`owner` 必须是本仓、`since` 版本形态、`upstreamConsumerFloor >= 1` —— 「声明了上游消费」而下限为 0 等于声明没人用）；b 本仓产出口名 / 方法名在场；c 挂载点 `<file>#<symbol>` 真定义在该文件里（挂载点退役而登记未删 = 表在绿、面已没）；d 上游消费面**在上游分发面**（`--upstream` 模式下用上游 manifest 的 `js` / `extra_js` 判，与上游 T3 同口径：不在分发面 = 上游压根不加载它 ⇒ 「有消费点」在用户侧不成立）。",
+        "【本版自己抓到的缺陷 · R12 的 b 格初版**两处错**，都留档防复发 —— 本仓假绿三形各中一形】错 1 · **自我指涉假绿（第三形）**：初版在 `ctx.confFiles`（= 本仓 `config/*.js`）里找出口名 —— 而登记行**自己**就写在 `config/crossrepo-registry.js` 里、`methods` 后面那一串 那串字面量本来就在那份文本里 ⇒ 判据**读到自己**、必然命中、永不报错。⇒ 判定面改到 `mountSite` 指的那个文件（与登记行分开）。错 2 · **问错问题（形态混装）**：初版把实例方法与模块导出混在一个 `methods` 列表 里、统一用「导出」判定 ⇒ 10 个方法全报「找不到真导出」。上游消费的是 `bridge.backfill(…)`，判定面是「**类里有这个方法**」而不是「模块导出了它」。⇒ 两族分列、各自判：`exports` 列表（真导出三态）与 `methods` 列表（类体方法）。**这两处都不是靠新判据发现的，是靠新判据第一次真跑就报红** —— 判据的第一个用户是它自己。",
+        "【本条判据的存在理由 · 反向面不许塞进消费侧数组】反向面**另起一个导出** （`config/crossrepo-registry.js` 的 `CROSSREPO_PRODUCED_FACES`），**不塞进 `CROSSREPO_FEATURES`**：那个数组的条目形态（`since` / `upstreamFace` / `fieldKeys`）全是为「消费侧」设计的，塞进去会让 R3「面 ↔ 条目双向」把反向面误判成缺登记。且**「没导出」与「本仓没有反向面」不许同形**（`CROSSREPO_PRODUCED_FACES` 不是数组 ⇒ fail-closed rc 2，不是读成 0 面）。",
+        "【R12-d 为什么用「分发面」而不是「上游消费点下限」】本仓**数不到**上游的调用点（那是上游仓的事，本门对上游**只读** —— 上游 P2 明令在役测试面不得引用兄弟仓库）。硬编一个下限数字就是手抄，必然漂移。可核的那一半是「文件在上游分发面上」，故 `--upstream` 模式下用**上游 manifest** 判、未给时**如实报「未复核」而不是静默跳过**（与 R9 同纪律；给了却读不到上游 manifest ⇒ 报缺陷，不许降级成「未复核」）。",
+        "【交棒改写 · 两个老套件的夹具与老断言】`tests/system-v3203.test.mjs` 与 `tests/system-v3204.test.mjs` 的夹具树原先 **不带挂载点文件**（`apps/memory/lonsha-bridge.js`）、夹具上游 manifest 也**不带 `js`（分发面）** ⇒ R12 上线后 14 条用例集体转红，而红因是**夹具缺格**、与被测判据无关。修法：两套件的 `stageTree` 按**登记行自己声明的** `mountSite` 复制挂载点文件（不在测试里硬编第二份路径），`stageUpstream` 补 `js: 'index.js'` 与真仓同形；两处锚着旧汇总行文本的断言随之放宽到新形态（但不许放宽成「只要出现『对账』二字」）。",
+        "【判据面 · 新增 G 段 11 条（挂既有 v3203，不新建套件）】G1 真仓读数（产出侧面数 + 未给 `--upstream` 时如实说「未复核」，且不许同时出现「上游复核」字样）；G2 owner 非本仓 ⇒ 红；G3 方法在挂载点文件里改名 ⇒ 红；**G3b 专治自我指涉**（改 registry 里的名字也必须红 —— 若判定面还在登记行自己那份文本里就会假绿）；G4 模块导出被拆 ⇒ 红；G4b 三态反向自证；G5 挂载符号退役 ⇒ 红；G6 消费面不在上游分发面 ⇒ 红；G7 复核路径不可读 ⇒ 报缺陷；G8 fail-closed（没导出反向面数组 ⇒ rc 2）；G9 判据工具两向自证（锚点不存在 / 不唯一一律抛）。**为什么不新建套件**：v3203 就是本门（第十一道门）的专属套件，R12 是本门新增的一条判据 —— 新建会同时抬高语法门与导入门读数、还要改边界文档的数字行（与 v3.23.3 的「判据挂 v3210」同规）。",
+        "【落地 · 版本升至 3.23.4（五源同源）】`scripts/upstream-face-audit.mjs`（+R12 判据块 + `producedClaimOf` + `classBodies` / `methodDefinedIn` + `loadRegistry` 返回两数组 + 汇总行加产出侧读数）；`config/crossrepo-registry.js`（+`CROSSREPO_PRODUCED_FACES`，登记 `ruby.lonshaBridge` 一面）；`scripts/check-file.mjs`（读数登记表加 `produced` 一格、`problems` 正则跟新汇总行 —— **旧正则已不再命中**，属静默失配，一并修）；`tests/system-v3203.test.mjs`（+G 段 11 条、夹具带挂载点文件、头部自述改十二条）；`tests/system-v3204.test.mjs`（夹具同上、A3 自述改十二条、B1 汇总行正则跟新）。全量门禁 1572 测试全绿（本版 +11 条判据挂在既有套件内）。",
+        "【运行时验证边界（诚实登记）】本版能验的是 —— 反向面登记行与本仓真码**逐格**一致、负控制**两向都真**（改名 / 拆导出 / 退役挂载符号 ⇒ 必红；真仓上还原后必绿）、以及不给 `--upstream` 时**如实说「未复核」**（且不许同时出现「上游复核」字样）。**不能保证**的是：① **上游此刻的调用点** —— 本门对上游**只读**，判的是「消费面在上游分发面」而不是「上游真调了几次」（本仓数不到上游调用点，硬编一个下限数字就是手抄必然漂移）；② **真宿主里两个插件各是什么版本** —— 仍归 **R-O3**；③ **真机上一出现就发现** —— 反向面坏了只有「上游那份调用静默失效」这种**看起来没坏但显示不对**的形态，本层只挡得住机制面。三条均仍归 R-O3（真宿主实机验证）。",
+        "【本版自己抓到的缺陷 · 裁决面建立在「单次采样」上（本仓假绿的另一族）】v3.23.3 的 B2 迁移把宿主往返读数落进基线后，`tests/system-v3210.test.mjs` 的 H2/I2（基线 ↔ 探针现场**逐字**同源）开始**间歇性转红**：同一份代码 12 连跑，宿主往返斜率得 0.5 / 0.75 / 1 / 1.25 / 1.5 / 2.25 / 4 / **55.25** KB/轮 —— 同一个仓里出现**两个档次**，而阈值 32KB/轮 正好卡在中间。现场：8 轮里只要 GC 迟到一轮，末轮就多背 50~270KB。",
+        "【错在哪 · 不是「阈值不准」，是「拿单点当机制」】把阈值调宽（或调窄）都只是把翻面概率挪走：它让**同一份代码**在不同时刻给自己发相反的合格证，并把这种抖动传给下游判据（逐字比 facts 的 H2/I2）。这与探针自己写着的噪声声明（「单点 heapUsed 不可判泄漏，只看跨轮趋势」）属同一族纪律 —— 旧实现把「趋势」当成了「两个端点的差不均」，而趋势的**单次估计**仍然是噪声。",
+        "【修法两条 · 都改交付物，不放宽判据】① 裁决面下移到**跨次中位数**：`TRIALS`（默认 3）段各自独立采样窗口各算斜率，取**中位数**进判决；单次读数一律只落 readings（判决拿不到它）。中位数必须能从落盘 samples **复算**（E2/H2/N1 三条各自算一遍再比判决）。② `facts.host_roundtrip.verdict` **移出 facts**：它由浮点斜率派生 ⇒ 逐字比必然翻面，归 readings/verdict —— 这条纪律本探针 ③ 段注释**早已写明**（「样本数组/浮点斜率放进去会让 H2 永远红」），本版把它贯彻到底。",
+        "【为什么不把 H2/I2 放宽或删掉】那是**放宽判据**（本仓最忌），且丢掉这两条判据的全部价值 —— 它们的存在理由是「**基线不是手抄的**」。下移后这两条反而**更强**（多一条「判决必须由中位数与同一性还原两个可复算量唯一决定」），且三种破坏下均实测转红（负控制两向自证：退回单次采样 ⇒ N1 红；facts 里再嵌 verdict ⇒ H2 红）。"
     ]
 };
 
@@ -10300,6 +10309,34 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载诊断中心App失败:', err);
                             phoneShell?.showNotification('错误', '诊断中心App加载失败', '❌');
+                        });
+                } else if (appId === 'focus') {
+                    // [v3.21.0] 番茄钟：专注计时 / 时长统计 / 事实注入（缝合自 EPhone·xINOVO pomodoro）。
+                    //   懒加载单例；会话键走 ^focus_ 前缀随会话隔离；切走时 deactivate 掐掉 tick。
+                    bootTiming.instrumentImport(import('./apps/focus/focus-app.js'), './apps/focus/focus-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.focusApp) {
+                                window.VirtualPhone.focusApp = new module.FocusApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.focusApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载番茄钟App失败:', err);
+                            phoneShell?.showNotification('错误', '番茄钟App加载失败', '❌');
+                        });
+                } else if (appId === 'accounting') {
+                    // [v3.22.0] 记账：账户 / 流水 / 月度投影 / 事实注入（缝合自 EPhone·xintuk tukey-accounting）。
+                    //   懒加载单例；会话键走 ^accounting_ 前缀随会话隔离。
+                    bootTiming.instrumentImport(import('./apps/accounting/accounting-app.js'), './apps/accounting/accounting-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.accountingApp) {
+                                window.VirtualPhone.accountingApp = new module.AccountingApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.accountingApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载记账App失败:', err);
+                            phoneShell?.showNotification('错误', '记账App加载失败', '❌');
                         });
                 } else if (appId === 'cheat') {
                     // [v2.47.0] 金手指：万界武库外挂库（装配清单随会话隔离，注入走生成前钩子）。

@@ -31,6 +31,7 @@ import { readFileSync, writeFileSync, mkdtempSync, readdirSync, mkdirSync } from
 import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (f) => readFileSync(path.join(ROOT, f), 'utf8');
@@ -44,14 +45,13 @@ const AUDIT_SRC = read('scripts/bridge-contract-audit.mjs');
 
 /** 镜像仓：世界桥有相对 import（config/*），搬单文件会断路径 ⇒ 按真仓结构建镜像。 */
 const MIRROR = mkdtempSync(path.join(os.tmpdir(), 'v323-mir-'));
-(function copyTree(src, dst) {
-    for (const e of readdirSync(src, { withFileTypes: true })) {
-        if (['.git', 'node_modules', 'tests', 'assets'].includes(e.name)) continue;
-        const sp = path.join(src, e.name), dp = path.join(dst, e.name);
-        if (e.isDirectory()) { mkdirSync(dp, { recursive: true }); copyTree(sp, dp); }
-        else if (e.name.endsWith('.js')) { try { writeFileSync(dp, readFileSync(sp, 'utf8')); } catch (_e) { /* 跳过读不到的 */ } }
-    }
-})(ROOT, MIRROR);
+/* [v3.23.0] 手写 copyTree → 共享的 copyTreeSafe。
+ *   旧写法只 catch 了 readFileSync 的 ENOENT，而瞬态竞态抛在更早的 **lstat** 上
+ *   （readFileSync 根本没走到）⇒ 它看着像「已经防过」，其实防的是另一件事。
+ *   排除面与旧写法逐项相同（.git / node_modules / tests / assets）。 */
+copyTreeSafe(ROOT, MIRROR, {
+    filter: (s) => !s.split(path.sep).some((x) => ['.git', 'node_modules', 'tests', 'assets'].includes(x)),
+});
 const WB = await import(pathToFileURL(path.join(MIRROR, 'config', 'world-bridge.js')).href);
 const DD = await import(pathToFileURL(path.join(MIRROR, 'apps', 'diagnose', 'diagnose-data.js')).href);
 

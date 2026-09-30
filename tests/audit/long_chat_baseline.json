@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 242,
+    "files": 248,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -87,36 +87,36 @@
   },
   "sites": {
     "full_materialize": [
-      "apps/honey/honey-data.js:3907",
-      "apps/memory/global-search-engine.js:280",
-      "apps/wechat/chat-view.js:10357",
-      "apps/wechat/wechat-data.js:4014",
-      "apps/weibo/weibo-data.js:2385",
+      "apps/honey/honey-data.js:3912",
+      "apps/memory/global-search-engine.js:483",
+      "apps/wechat/chat-view.js:10379",
+      "apps/wechat/wechat-data.js:4020",
+      "apps/weibo/weibo-data.js:2403",
       "config/api-manager.js:397",
       "config/worldbook-dryrun.js:155",
-      "index.js:2842",
-      "index.js:10454"
+      "index.js:2866",
+      "index.js:10550"
     ],
     "bounded_slice": [
       "apps/games/werewolf/werewolf-view.js:643",
       "apps/memory/memory-data.js:338",
-      "apps/phone/phone-view.js:2718",
+      "apps/phone/phone-view.js:2712",
       "apps/worldpulse/worldpulse-engine.js:185",
       "config/phone-chat-memory.js:78"
     ],
     "length_read_sample": [
-      "apps/calendar/calendar-app.js:528",
-      "apps/diary/diary-data.js:1127",
-      "apps/diary/diary-data.js:1574",
-      "apps/diary/diary-data.js:1642",
-      "apps/diary/diary-data.js:1645",
-      "apps/games/common/games-ai-context.js:68",
-      "apps/games/common/games-ai-context.js:72",
+      "apps/diary/diary-data.js:1137",
+      "apps/diary/diary-data.js:1584",
+      "apps/diary/diary-data.js:1661",
+      "apps/diary/diary-data.js:1664",
+      "apps/games/common/games-ai-context.js:71",
       "apps/games/werewolf/werewolf-view.js:643",
       "apps/memory/memory-app.js:163",
       "apps/music/music-app.js:176",
-      "apps/phone/phone-view.js:1381",
-      "apps/phone/phone-view.js:2875"
+      "apps/phone/phone-view.js:2869",
+      "apps/settings/settings-app.js:5097",
+      "apps/settings/settings-app.js:11530",
+      "apps/settings/settings-app.js:11537"
     ]
   },
   "criteria": [
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=238，全表物化=9，slice(-n)=5，下标直取=18，长度读=50"
+      "got_text": "files=248，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -184,7 +184,8 @@
     "v3.18.0（R-O4）复算：枚举面 238 → 239（新增 config/context-compose.js）；四类站点计数变化来自**收集循环的单一实现** —— 原先四处循环各自写下标直取与长度读，现收进 config/context-compose.js 一份（indexed_loop 18 → 11、length_read 50 → 47）。其余读数（物化/有界消费者/引擎上限）逐字不变，由 A2 的另四条断言独立守住。",
     "v3.19.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰长会话取数面任何一行。 其余四类站点计数（full_materialize 9 / bounded_slice 5 / indexed_loop 11 / length_read 47）逐项不变。",
     "v3.20.0 复校：枚举面 240 → 241（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 站点面：length_read 47 → 48（`apps/timeweaver/timeweaver-collector.js` 在把当前正文长度交给「挡未来事实」判定时读了一次 `ctx.chat.length` —— 这是**新增的一处正文长度读取**，如实计入）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 11）逐项不变。",
-    "v3.20.2 复校：枚举面 241 → 242（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。"
+    "v3.20.2 复校：枚举面 241 → 242（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
+    "**v3.22.0 复校（枚举面 +6 文件，四类站点计数不动）**：`scan.files` 242→248。新增的 apps/focus 与 apps/accounting 未引入任何新的全表物化 / 有界切片 / 下标直取 / 长度读站点 —— 四类计数 9/5/11/48 一格未变，`readings`（40 项活体读数）与 `verdict` 也未动。这正是本项要防的形态：**枚举面变了不等于形态变了**。"
   ],
   "not_done": [
     "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",
@@ -192,5 +193,44 @@
     "**内存快照增长 / 单次渲染耗时这一维仍未测**（TODO P2 同一格）：夹具不渲染 DOM、无布局与命中测试，`process.memoryUsage()` 在本环境噪声远大于信号（实测 heapUsed 抖动 GB 级，且探针自身即为大对象宿主）。这一维按既有口径继续登记在 docs/runtime-verification-boundary.md。",
     "**未覆盖视图层站点的运行代价**：`phone-view / chat-view / moments-view / settings-app` 的消费点需要真 DOM 与 App 实例方能驱动，本探针只做静态归类，不驱动它们。",
     "**未做 AST 级归属**：静态计数是文本形态（与 O-6 / P-1 同口径），同名接收者会混算；要精确须单独立一版换工具。"
-  ]
+  ],
+  "rebuilds": {
+    "v3.22.0": {
+      "why": "枚举面 +6 文件；四类静态站点计数与全部活体读数不动。",
+      "readings": {
+        "scan.files": 248
+      },
+      "unchanged": [
+        "readings",
+        "scan.full_materialize",
+        "scan.bounded_slice",
+        "scan.indexed_loop",
+        "scan.length_read",
+        "verdict"
+      ],
+      "not_done": [
+        "扫描面 +6 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片」形态。",
+        "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
+      ],
+      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+    },
+    "v3.23.0": {
+      "why": "判据散文刷新：`criteria[L5].got_text` 是**建基线时的手抄值**（files=238，…，下标直取=18，长度读=50），而机器读数 `scan` 早已是 248 / 9 / 5 / 11 / 48 —— 两者自 v3.19.0 起就分叉。根因同上：readings 与 scan 有刷新流程，判据散文段没有。",
+      "readings": {},
+      "unchanged": [
+        "readings",
+        "scan（若该基线有）",
+        "sites（若该基线有）",
+        "verdict",
+        "corrections",
+        "not_done",
+        "timing_criteria"
+      ],
+      "not_done": [
+        "计时类判据（`timing_criteria.L4`）**不可复算**（源码明写「只比同量级」）⇒ 基线保留原读数、不做刷新；只在 `compare_criteria.py` 里做量级比对（0.2× ~ 5×）。",
+        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+      ],
+      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+    }
+  }
 }

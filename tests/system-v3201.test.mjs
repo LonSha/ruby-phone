@@ -430,3 +430,85 @@ test('E2 边界文档与当版同源（复校标记在场 + 两道真门读数�
     assert.equal(Number(docImp[1]), Number(mi[1]), '文档导入文件数必须等于真跑');
     assert.equal(Number(docImp[2]), Number(mi[2]), '文档导入条数必须等于真跑');
 });
+
+/* ══════════ F ── B3 下段：预算对账 / 超阈值告警 [v3.23.1] ══════════
+ *   设计纪律（判据守的就是这四条，不是「有告警字样」）：
+ *     ① 阈值真源是**仓外文件**，执行器**不自带**阈值（阈值是随机器变的量）；
+ *     ② **fail-open**：预算缺 / 门不在表 ⇒ 只报耗时、不告警（与「读不到读数即拒判」方向相反）；
+ *     ③ 告警**不改退出码**（超预算是该去看一眼，不是该拦下来）；
+ *     ④ 坏输入不许静默走 fail-open —— 原因必须说出来（否则「没设」与「读坏了」塌成一句）。 */
+function budgetPath(dir) { return path.join(dir, 'config', 'gate-budget.json'); }
+function putBudget(dir, obj) {
+    fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
+    fs.writeFileSync(budgetPath(dir), typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2) + '\n');
+    return dir;
+}
+test('F1 阈值真源在场且与 scripts.check 链逐门对齐（不许多、不许少、顺序同源）', () => {
+    const rel = 'config/gate-budget.json';
+    assert.ok(fs.existsSync(path.join(ROOT, rel)), '预算真源必须落仓：' + rel);
+    const b = JSON.parse(read(rel));
+    assert.equal(b.schema, 'gate-budget@1', '预算文件必须自带 schema（口径可查）');
+    assert.equal(typeof b.margin_pct, 'number', 'margin_pct 必须是数（余量口径不许省）');
+    assert.ok(b.margin_pct > 0 && b.margin_pct < 100, 'margin_pct 必须在 (0,100)：太小噪声就告警，太大等于没设');
+    const chain = (String(pkg.scripts.check).match(/npm run ([a-z0-9-]+)/g) || []).map((s) => s.replace('npm run ', ''));
+    assert.deepEqual(Object.keys(b.gates), chain, '预算表必须与 scripts.check 链逐门对齐（顺序同源）');
+    let sum = 0;
+    for (const [name, g] of Object.entries(b.gates)) {
+        assert.ok(Number.isInteger(g.ms) && g.ms > 0, name + '.ms 必须是正整数（实测基线）');
+        assert.equal(g.limit_ms, Math.round(g.ms * (1 + b.margin_pct / 100)),
+            name + '.limit_ms 必须 == round(ms*(1+margin/100))（数值自洽，防手改一个不重算）');
+        assert.ok(typeof g.why === 'string' && g.why.length > 8, name + ' 必须写 why（这个门为什么会慢）');
+        sum += g.ms;
+    }
+    assert.equal(b.total_ms, sum, 'total_ms 必须等于各门 ms 之和（自洽）');
+});
+test('F2 ★ 执行器不自带阈值：真源路径唯一 + 预算大值不得出现在源码里', () => {
+    const code = stripComments(SRC);
+    assert.equal((code.match(/gate-budget\.json/g) || []).length, 1,
+        '★ 阈值真源路径在**代码**里必须恰 1 处（出现在注释里不算）—— 同「门清单真源只此一份」的纪律');
+    const b = JSON.parse(read('config/gate-budget.json'));
+    /* 大值才查：小值（<1000）与源码里既有计数/常量撞车概率高，查了只会变成假红源头 */
+    const bigs = [];
+    for (const g of Object.values(b.gates)) for (const v of [g.ms, g.limit_ms]) if (v >= 1000) bigs.push(v);
+    assert.ok(bigs.length >= 4, '前提：预算里应有多门大值（否则这条判据测不到东西）');
+    for (const v of bigs) {
+        assert.equal(new RegExp('\\b' + v + '\\b').test(code), false,
+            '★ 执行器不得自带阈值 ' + v + '（自带阈值 = 换台机器就要改代码，且改完没人知道基线是多少）');
+    }
+});
+test('F3 ★ fail-open 正例：mini 仓没放预算 ⇒ 只报耗时、不告警、退出码不变', () => {
+    const repo = miniRepo();
+    const r = runExec(repo);
+    assert.equal(r.status, 0, '前提：mini 链全绿（stderr：' + r.err.slice(0, 200) + '）');
+    assert.match(r.out, /预算对账：未设阈值/, '★ 没设阈值必须**如实说出来**，不许静默略过（否则「没设」与「没跑」同形）');
+    assert.match(r.out, /只报耗时，不告警/, '必须说清后果（fail-open 的方向要说给读的人听）');
+    assert.equal(/超预算告警/.test(r.out), false, '★ 没设阈值时**不得**出现告警（不许猜一个数去叫）');
+});
+test('F4 ★ 告警真有反应且不改判绿：极紧预算 ⇒ 四门全超，退出码仍 0', () => {
+    const repo = miniRepo();
+    const tight = { schema: 'gate-budget@1', margin_pct: 10, measured_at: 'fixture', gates: {} };
+    for (const g of ['syntax', 'import-resolve', 'test', 'weak-coercion']) tight.gates[g] = { ms: 1, limit_ms: 1, why: '夹具：1ms 必然超' };
+    putBudget(repo, tight);
+    const r = runExec(repo);
+    assert.match(r.out, /预算对账/, '放上预算后必须走对账分支（不是 fail-open 那句）');
+    assert.match(r.out, /超预算告警/, '★ 1ms 的预算下必须**真的**报超预算（证明这条不是「永远不叫」）');
+    assert.match(r.out, /4 道门超预算/, '四门全超必须点名道数');
+    assert.match(r.out, /不改判绿/, '告警文案必须自带「不改判绿」的说明（否则读的人会以为门坏了）');
+    assert.equal(r.status, 0, '★ 超预算是「该去看一眼」不是「该拦下来」—— 退出码必须不变');
+});
+test('F5 ★ 工具两向自证：坏输入必须说出原因，不许静默当「没设阈值」', () => {
+    /* ① gates 表形态坏 */
+    const repo1 = miniRepo();
+    putBudget(repo1, { schema: 'gate-budget@1', margin_pct: 5, gates: 5 });
+    const r1 = runExec(repo1);
+    assert.match(r1.out, /未设阈值/, 'gates 形态坏时必须回落到 fail-open 分支');
+    assert.match(r1.out, /缺 gates 表/, '★ 必须说出**具体原因**（「读坏了」与「没设」处置不同）');
+    assert.equal(r1.status, 0, 'fail-open 不改退出码');
+    /* ② 坏 JSON */
+    const repo2 = miniRepo();
+    putBudget(repo2, '{ 这不是 json');
+    const r2 = runExec(repo2);
+    assert.match(r2.out, /未设阈值/, '坏 JSON 也必须回落到 fail-open 分支');
+    assert.match(r2.out, /解析失败/, '★ 必须说出「解析失败」而非默认「文件不在场」');
+    assert.equal(r2.status, 0, 'fail-open 不改退出码');
+});

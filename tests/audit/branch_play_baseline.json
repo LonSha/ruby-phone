@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 241,
+    "files_scanned": 247,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 8,
-    "chat_data_patterns": 94,
+    "chat_data_patterns": 102,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 1,
     "preview_face_hits": 42,
@@ -131,7 +131,8 @@
     "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰回滚/分支面任何一行。 其余读数逐项不变。",
     "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。",
     "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
-    "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。"
+    "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。",
+    "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
@@ -139,5 +140,47 @@
     "**未验实机**：全部读数来自源码与隔离沙箱内的真加载真调用；无头环境跑不了宿主（DOM / SillyTavern 上下文）。",
     "**未把该读数立成常驻门禁**：与 P-6 / F-4 同口径 —— 「面存不存在、面上有什么」是决策输入，不是契约（常驻门禁只守「契约不许变坏」）。",
     "**未替上游补面**：branch-guard / ledger-replay 缺持久化与预览，本版如实记录为上游事实，不据此改上游（上游本轮零改动）。"
-  ]
+  ],
+  "rebuilds": {
+    "v3.22.0": {
+      "why": "新增两条会话隔离前缀（focus_ / accounting_）+ 枚举面 +6 文件；回滚面与上游面不动。",
+      "readings": {
+        "files_scanned": 247,
+        "chat_data_patterns": 102
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits"
+      ],
+      "not_done": [
+        "两处新增 storage 前缀（`focus_` / `accounting_`）只进**静态模式**面（chatDataPatterns 94→102），回滚面（rollbackPoints 41）与上游面（upstream_global_read_sites 8）**一格未动**。",
+        "真宿主上的回滚/预览实况仍归 R-O3。"
+      ],
+      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+    },
+    "v3.23.0": {
+      "why": "判据散文复算：R5 与探针现场逐字一致；R1–R4 现场为「未复核（冻结证据：…）」—— 跨仓探针不硬依赖兄弟仓在场（上游 v3.204.0 的路径纪律），**故不刷新**，基线保留上次复核值。",
+      "readings": {},
+      "unchanged": [
+        "readings",
+        "scan（若该基线有）",
+        "sites（若该基线有）",
+        "verdict",
+        "corrections",
+        "not_done",
+        "timing_criteria"
+      ],
+      "not_done": [
+        "判据散文只做**文本复算**；判据的语义是否仍然成立（`pass`）不由本层复核。",
+        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+      ],
+      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+    }
+  }
 }

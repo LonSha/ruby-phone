@@ -1,0 +1,66 @@
+{
+  "_comment": "门禁逐门耗时预算（B3 下段「超阈值告警」的真源）。check-file.mjs 只读它、不自带阈值 —— 与「门清单真源是 package.json scripts.check」同款纪律。ms = 实测基线；limit_ms = 告警口径（ms × (1 + margin_pct/100)）。门不在本表 / 本文件不在场 ⇒ 只报耗时、不告警（fail-open：门慢不等于判据坏）。",
+  "schema": "gate-budget@1",
+  "margin_pct": 10,
+  "measured_at": "v3.23.1",
+  "measured_by": "npm run check:file（全链一次）",
+  "measured_log": "/sdcard/rpwork/cf_baseline.txt",
+  "total_ms": 96897,
+  "gates": {
+    "syntax": {
+      "ms": 1052,
+      "limit_ms": 1157,
+      "why": "语法门只做 node --check，随文件数线性涨（当前 460 文件）—— 超预算通常意味着文件数暴涨"
+    },
+    "import-resolve": {
+      "ms": 1376,
+      "limit_ms": 1514,
+      "why": "导入门扫描面与语法门几乎同集，额外做说明符解析 —— 两门预算应同步涨"
+    },
+    "test": {
+      "ms": 82054,
+      "limit_ms": 90259,
+      "why": "判据门（node --test 全量）是链上最贵的一门，占全链约 85% —— 它慢通常来自用例数增长或某条用例真跑外部进程"
+    },
+    "dead-exports": {
+      "ms": 2762,
+      "limit_ms": 3038,
+      "why": "死导出门要建 import 图，随模块数涨"
+    },
+    "lifecycle": {
+      "ms": 726,
+      "limit_ms": 799,
+      "why": "生命周期门只读 App 类出口，轻量"
+    },
+    "registry": {
+      "ms": 3210,
+      "limit_ms": 3531,
+      "why": "注册门要对照 apps.js 与 lazy 分支，中等"
+    },
+    "keys": {
+      "ms": 803,
+      "limit_ms": 883,
+      "why": "键归属门扫全仓 storage 使用点，轻量"
+    },
+    "source-derivation": {
+      "ms": 834,
+      "limit_ms": 917,
+      "why": "源头派生门扫枚举面，轻量"
+    },
+    "bridge-contract": {
+      "ms": 1792,
+      "limit_ms": 1971,
+      "why": "桥契约门扫消费点，中等"
+    },
+    "weak-coercion": {
+      "ms": 1638,
+      "limit_ms": 1802,
+      "why": "弱口径门扫枚举面 + 唯一实现引用，中等"
+    },
+    "upstream-face": {
+      "ms": 650,
+      "limit_ms": 715,
+      "why": "跨仓门读冻读取 + 上游表，最轻（上游不在场时更快）"
+    }
+  }
+}

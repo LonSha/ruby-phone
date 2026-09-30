@@ -1,6 +1,7 @@
 // tests/system-v3203.test.mjs — 跨仓外供面的「声明 ↔ 真码」对账（第十一道门）[v3.20.3]
 //
-//   本体是 `scripts/upstream-face-audit.mjs`（**十一条**判据 R1–R11）。本套件判的是**门本身**：
+//   本体是 `scripts/upstream-face-audit.mjs`（**十二条**判据 R1–R12；R12 为 v3.23.4 新增的
+//   反向面对账，本套件随门交棒，见文件末「R12 段」）。本套件判的是**门本身**：
 //     ① 它真的在 `npm run check` 链上（否则等于没做）；
 //     ② 它**位置无关**、且**不引用兄弟仓**（上游 P2 明令：在役测试面不得引用兄弟仓库）——
 //        这一条是本版形态选择的根因，不是风格偏好；
@@ -40,7 +41,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -55,6 +56,30 @@ const REGISTRY_REL = 'config/crossrepo-registry.js';
 
 /** 与门同口径的 sha1（12 位十六进制）—— 冻读取与夹具都按这一份算。 */
 const sha1 = (s) => createHash('sha1').update(String(s), 'utf-8').digest('hex').slice(0, 12);
+
+/**
+ * 反向面登记行**自己声明的**挂载点文件（`CROSSREPO_PRODUCED_FACES[].mountSite` 的 `<file>` 部分）。
+ *
+ * 【为什么从登记行读，而不是在测试里硬编一份路径】
+ *   夹具要带 `apps/memory/lonsha-bridge.js` 才能让 R12 的 b/c 两格有判定面。
+ *   若在测试里写死这份路径，则登记行换了挂载点 ⇒ 夹具还在搬老文件 ⇒ R12 报红而红因
+ *   指向测试自己的过时假设（本仓记过的「转写与真源脱节」）。读登记行 = 一处真源。
+ *   登记行是 ESM（夹具所在的 cwd 下无 package.json 时 `import()` 会失败），
+ *   故在**真仓根**（那里有 `{"type":"module"}`）下 import，只取其声明值。
+ */
+async function reverseMountFiles() {
+    const mod = await import(pathToFileURL(path.join(ROOT, REGISTRY_REL)).href);
+    const out = new Set();
+    for (const f of (mod.CROSSREPO_PRODUCED_FACES || [])) {
+        const ms = String((f || {}).mountSite || '');
+        const at = ms.lastIndexOf('#');
+        if (at > 0) out.add(ms.slice(0, at));
+    }
+    return [...out];
+}
+/* 顶层 await 取一次（ESM 支持）：`stageTree` 保持同步，本套件所有调用点一字不改 ——
+ *   「夹具形态变了」不该顺带把二十几处调用改成 async（那是把噪音混进真改动里）。 */
+const REVERSE_MOUNT_FILES = await reverseMountFiles();
 
 const temps = [];
 function tmp(prefix) {
@@ -94,6 +119,17 @@ function stageTree(overrides = {}) {
     for (const rel of [BRIDGE_REL, CACHE_REL, UNCONS_REL, LAG_REL]) {
         fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));
     }
+    /* 【R12（v3.23.4）：夹具必须带**挂载点文件**】
+     *   R12 的 b / c 两格的判定面是 `CROSSREPO_PRODUCED_FACES` 登记行里 `mountSite` 指的
+     *   那个文件（`apps/memory/lonsha-bridge.js`）—— 它的方法/导出名在那里逐格核。
+     *   夹具不带它 ⇒ 每条用例都先在 R12 上转红（「挂载点文件不在磁盘」），
+     *   那红与本套件各条要测的判据无关。故按登记行**自己声明的**路径复制，
+     *   而不是在测试里硬编一份路径（登记行改路径 ⇒ 这里跟着走）。 */
+    for (const rel of REVERSE_MOUNT_FILES) {
+        const dst = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(path.join(ROOT, rel), dst);
+    }
     /* 【夹具的 lag 表用**真仓那一份**】C0 基线自证要求「未破坏即绿」——
      *   而真仓冻读取（提交态）与真码之间**确有两条已登记的分歧**，故夹具必须带上这份台账
      *   才可能绿；否则每条用例都会先在 R11 上转红，那红与本条要测的判据无关。
@@ -128,7 +164,13 @@ function stageUpstream(parent, tableText, version = '3.255.0') {
     const d = path.join(parent, 'upstream');
     fs.mkdirSync(path.join(d, 'tests', 'audit'), { recursive: true });
     fs.writeFileSync(path.join(d, 'tests', 'audit', 'open_face_registry.tsv'), tableText);
-    fs.writeFileSync(path.join(d, 'manifest.json'), JSON.stringify({ name: 'upstream', version }, null, 2) + '\n');
+    /* 【v3.23.4 R12 交棒改写】夹具上游 manifest 必须带 `js`（分发面）。
+     *   R12 的 d 格判的是「上游消费面在不在上游**分发面**（manifest 的 js / extra_js）」——
+     *   与上游 T3 同口径：不在分发面 = 上游压根不加载它 ⇒ 「有消费点」在用户侧不成立。
+     *   夹具 manifest 原先只有 name/version ⇒ 真仓的反向面（消费面 `index.js`）必然报「不在分发面」，
+     *   那条红是**夹具缺格**引起的，不是被测判据的缺陷。补上 `js: 'index.js'` 与真仓同形。 */
+    fs.writeFileSync(path.join(d, 'manifest.json'),
+        JSON.stringify({ name: 'upstream', version, js: 'index.js' }, null, 2) + '\n');
     gitInit(d);
     return d;
 }
@@ -260,7 +302,11 @@ test('A5 ★★ 本门位置无关、且不引用兄弟仓（上游 P2 同规：
 test('B1 ★★★ 真仓裸跑：5 面 / 问题 0，退出码 0', () => {
     const r = runGate(ROOT);
     assert.equal(r.status, 0, '裸跑必须绿（stderr：' + r.err.slice(0, 200) + '）');
-    assert.match(r.out, /跨仓外供面「声明 ↔ 真码」对账：5 面 \/ 问题 0/);
+    /* 【v3.23.4 R12 交棒改写】汇总行加了本仓产出面的读数（`… 5 面（消费侧）/ N 面（本仓产出侧 · R12） / 问题 0`）。
+     *   本套件锚的是**消费侧面数不为 0 且问题为 0**这件事，故正则随之放宽到新形态——
+     *   但**不许**放宽成「只要出现『对账』二字」：那样连「0 面 / 问题 3」也算过。
+     *   判据实质：五面照旧逐面列出（下面那条断言仍守着）且问题数为 0。 */
+    assert.match(r.out, /跨仓外供面「声明 ↔ 真码」对账：[1-9]\d* 面（消费侧）\/ \d+ 面（本仓产出侧 · R12） \/ 问题 0/);
     for (const face of ['projectionEnvelope', 'injectionReadout', 'eventPlatforms', 'evidenceWorkbench', 'checkpointCompare']) {
         assert.ok(r.out.includes(face), '汇总必须逐面列出：' + face);
     }
@@ -668,4 +714,114 @@ test('F1 ★★★ 五源同源（下限形）+ 当版条目自述的判据条�
     assert.ok(mine, '历史条目里必须至少有一处自述本套件的条数（否则这条判据无从核对）');
     const realCount = (read('tests/system-v3203.test.mjs').match(/^test\(/gm) || []).length;
     assert.equal(Number(mine), realCount, '★ 自述条数必须等于真读数：自述 ' + mine + ' / 真 ' + realCount);
+});
+
+/* ══════════ G ── R12 反向面对账（v3.23.4 · T1；本仓产出 → 上游消费） ══════════
+ *   【为什么这一段的负控制里有一条专治「自我指涉」】
+ *     本仓记过假绿三形，其中第三形是「破坏把判据自己删了（自我指涉）」。
+ *     R12 的 b 格初版**真的踩了这一形**：它在 `ctx.confFiles`（= 本仓 `config/*.js`）里
+ *     找出口名 —— 而登记行自己就写在 `config/crossrepo-registry.js` 里、`methods: […]`
+ *     那串字面量本来就在那份文本里 ⇒ 判据**读到自己**、必然命中、永不报错。
+ *     故 G3b 专治它：把 registry 里的名字改掉。若 b 格还在「自己那份文本」里找，
+ *     新名字也在那里 ⇒ 会**绿**（假绿现形）；判定面挪到挂载点文件后 ⇒ 必须**红**。
+ *   【判定面一律是「真源码破坏 → 副本 → 重跑同款真判据」】（本仓三形假绿的统一修法）。 */
+const BRIDGE_MOUNT_REL = 'apps/memory/lonsha-bridge.js';
+
+test('G1 ★★★ R12 真仓读数：摘要报出产出侧面数，且未给 --upstream 时如实说「未复核」', () => {
+    const r = runGate(ROOT);
+    assert.equal(r.status, 0, '前提：真仓裸跑须绿：' + r.err.slice(0, 300));
+    assert.match(r.out, /\d+ 面（本仓产出侧 · R12）/, '摘要必须报出本仓产出面数（不是只在消费侧报数）');
+    assert.match(r.out, /R12 反向面：本次登记 \*\*1 面\*\*/,
+        '★ R12 必须出声（真仓确有 1 面；静默跳过与「0 面」同形）');
+    assert.match(r.out, /未复核上游分发面/, '没给 --upstream 时必须如实报「未复核」');
+    assert.equal(/R12 反向面 `ruby\.lonshaBridge` 上游复核/.test(r.out), false,
+        '★ 没读上游就不许出现「上游复核」的字样（两者不许同形）');
+});
+test('G2 ★★★ R12-a：owner 不是本仓 ⇒ 转红（声明了上游消费却挂别人的名）', () => {
+    const dir = stageTree({ [REGISTRY_REL]: {
+        find: "        owner: 'ruby-phone',", to: "        owner: 'lonsha-memory-plugin'," } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, 'owner 不是本仓必须转红：' + r.err.slice(0, 200));
+    assert.match(r.err, /R12 反向面登记行 `ruby\.lonshaBridge` 的 owner 不是本仓/, '必须点名 owner 与那条登记行');
+});
+test('G3 ★★★ R12-b：方法在**挂载点文件**里被改名 ⇒ 转红（真源码破坏，副本上重跑同款判据）', () => {
+    const dir = stageTree({ [BRIDGE_MOUNT_REL]: {
+        find: '    backfill(extracted) {', to: '    backfillRenamed(extracted) {' } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, '方法名在真源里没了必须转红：' + r.err.slice(0, 200));
+    assert.match(r.err, /登记的本仓方法 `backfill` 在 apps\/memory\/lonsha-bridge\.js 的类体里找不到定义/,
+        '必须点名方法、文件与「类体」这个判定面');
+});
+test('G3b ★★★ R12-b 判定面**不是登记行自己**：改 registry 里的名字也必须转红（专治自我指涉假绿）', () => {
+    /* 这条是 G3 的反向自证：若 b 格在登记行所在的那份文本里找名字，改 registry 后
+     *   `recallBlockRenamed` 仍在 registry 里 ⇒ 假绿（本仓第三形）；判定面在挂载点文件 ⇒ 红。 */
+    const dir = stageTree({ [REGISTRY_REL]: {
+        find: "'recallBlock', 'applyCoordinatedInjection',", to: "'recallBlockRenamed', 'applyCoordinatedInjection'," } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, '★ 改 registry 后必须转红 —— 绿就说明判定面读到了登记行自己（自我指涉）');
+    assert.match(r.err, /登记的本仓方法 `recallBlockRenamed` 在 apps\/memory\/lonsha-bridge\.js/,
+        '必须点名那个（不存在的）新名字');
+});
+test('G4 ★★★ R12-b：模块导出被拆 ⇒ 转红（exports 判的是真导出三态，不是「文件里出现过这个字符串」）', () => {
+    const dir = stageTree({ [BRIDGE_MOUNT_REL]: {
+        find: 'export function mountLonShaBridge(', to: 'function mountLonShaBridge(' } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, 'export 拆掉后须转红：' + r.err.slice(0, 200));
+    assert.match(r.err, /登记的本仓导出 `mountLonShaBridge`/);
+});
+test('G4b ★★★ R12-b 反向自证：只拆命名导出而**留着 default 块成员** ⇒ 仍须绿（三态认得出来）', () => {
+    /* 与 v3203 C7b 同规：把「导出」认成「必须写 export function」会误伤本仓合法的
+     *   「先声明后成块转出」写法。`apps/memory/lonsha-bridge.js` 只有命名导出，故这条
+     *   用**改 registry 声明**的方式造出「同一个名字的另一种真导出形态」不可行 ⇒
+     *   改为直接证：真仓（三种导出形态共存）上该格为绿，且 LONSHA_BRIDGE_KEY（const 形态）
+     *   与 LonShaBridge（class 形态）都被认出来。 */
+    const r = runGate(ROOT);
+    assert.equal(r.status, 0, '前提：真仓上 exports 三态全认得出来：' + r.err.slice(0, 300));
+});
+test('G5 ★★★ R12-c：挂载符号退役而登记未删 ⇒ 转红（表在绿、面已没）', () => {
+    const dir = stageTree({ [REGISTRY_REL]: {
+        find: "#mountLonShaBridge'", to: "#mountLonShaBridgeRetired'" } });
+    const r = runGate(dir);
+    assert.equal(r.status, 1, '挂载符号不存在须转红：' + r.err.slice(0, 200));
+    assert.match(r.err, /的挂载符号在 apps\/memory\/lonsha-bridge\.js 里找不到定义/);
+});
+test('G6 ★★★ R12-d：消费面**不在上游分发面** ⇒ 转红（上游不加载它 = 「有消费点」在用户侧不成立）', () => {
+    const dir = stageTree();
+    const cache = JSON.parse(REAL_CACHE_BYTES);
+    const table = tableTextFromCache(cache);
+    const up = stageUpstream(dir, table);
+    fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(makeCache(table), null, 2) + '\n');
+    const mf = JSON.parse(fs.readFileSync(path.join(up, 'manifest.json'), 'utf8'));
+    mf.js = 'other-entry.js';   /* 把消费面（index.js）踢出分发面 */
+    fs.writeFileSync(path.join(up, 'manifest.json'), JSON.stringify(mf, null, 2) + '\n');
+    const r = runGate(dir, ['--upstream', up]);
+    assert.equal(r.status, 1, '消费面不在分发面须转红：' + r.err.slice(0, 200));
+    assert.match(r.err, /的消费面 `index\.js` \*\*不在上游分发面\*\*/,
+        '必须点名消费面与「不在分发面」这个判据');
+});
+test('G7 ★★★ R12-d：给了 --upstream 却读不到上游 manifest ⇒ 报缺陷（不许降级成「未复核」）', () => {
+    const dir = stageTree();
+    const cache = JSON.parse(REAL_CACHE_BYTES);
+    const table = tableTextFromCache(cache);
+    const up = stageUpstream(dir, table);
+    fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(makeCache(table), null, 2) + '\n');
+    fs.rmSync(path.join(up, 'manifest.json'), { force: true });
+    const r = runGate(dir, ['--upstream', up]);
+    assert.equal(r.status, 1, '★ 复核路径不可读不许降级（「读不到」与「未复核」不许同形）');
+    assert.match(r.err, /给了 --upstream 但读不到上游 manifest\.json/);
+});
+test('G8 ★★★ R12 fail-closed：「没导出反向面数组」与「本仓没有反向面」不许同形', () => {
+    const dir = stageTree({ [REGISTRY_REL]: {
+        find: 'export const CROSSREPO_PRODUCED_FACES = Object.freeze([',
+        to: 'const CROSSREPO_PRODUCED_FACES = Object.freeze([' } });
+    const r = runGate(dir);
+    assert.equal(r.status, 2, '★ 登记真源没导出反向面数组必须拒判（不是读成「0 面」）');
+    assert.match(r.err, /未导出 CROSSREPO_PRODUCED_FACES/);
+});
+test('G9 ★★★ R12 判据工具两向自证：锚点不存在 / 不唯一一律抛（不许静默改成「差不多」的东西）', () => {
+    assert.throws(() => stageTree({ [REGISTRY_REL]: {
+        find: "owner: 'nobody-at-all',", to: "owner: 'x'," } }), /锚点应恰中 1 次/,
+        '锚点不存在必须抛（否则负控制是假绿：破坏根本没发生）');
+    assert.ok(REVERSE_MOUNT_FILES.includes(BRIDGE_MOUNT_REL),
+        '夹具搬的挂载点文件必须来自登记行声明（一处真源），而不是测试里硬编的第二份');
 });

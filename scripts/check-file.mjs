@@ -118,7 +118,9 @@ const READS = {
      *   冻读取刷了而上游那面撤了，面数会掉 —— 两种漂移都在这条读数上可见。 */
     'upstream-face': [
         { id: 'faces', label: '对账面数', re: /跨仓外供面「声明 ↔ 真码」对账：(\d+) 面/, g: 1 },
-        { id: 'problems', label: '问题数', re: /对账：\d+ 面 \/ 问题 (\d+)/, g: 1 }
+        { id: 'produced', label: '本仓产出面数（R12）', re: /面（消费侧）\/ (\d+) 面（本仓产出侧 · R12）/, g: 1 },
+        { id: 'problems', label: '问题数',
+            re: /对账：\d+ 面（消费侧）\/ \d+ 面（本仓产出侧 · R12） \/ 问题 (\d+)/, g: 1 }
     ]
 };
 
@@ -217,6 +219,59 @@ for (const res of results) {
     summary.push('  ' + tag + ' ' + res.gate.padEnd(18) + ' exit=' + res.code + ' ' + String(res.ms + 'ms').padStart(8) + '  ' + body);
 }
 summary.push('');
+{
+    const totalMs = results.reduce((s, r) => s + (Number(r.ms) || 0), 0);
+    const slow = results.slice().sort((a, b) => b.ms - a.ms)[0];
+    summary.push('  耗时合计 ' + totalMs + 'ms' + (slow ? ' · 最慢门 ' + slow.gate + ' ' + slow.ms + 'ms' : ''));
+}
+/* ★ [v3.23.1 · B3 下段] 预算对账：**超阈值告警**。
+ *   阈值来自仓外文件 `config/gate-budget.json`，执行器**不自带**阈值 ——
+ *   阈值是随机器变的量（CI 慢机 / 快机），不该烘进代码里逼人改码。
+ *   ★ 方向与既有 fail-closed **相反**：预算缺 / 门不在表 ⇒ **只报耗时、不告警**（fail-open）。
+ *     理由：门慢不等于判据坏 —— 读不到读数必须拒判（exit 2），但「今天机器慢」不该被读成「门坏了」。
+ *   ★ 告警**不改退出码**（仍按 0/1/2 三档）：超预算是「该去看一眼」，不是「该拦下来」。
+ *   ★ 取值写法：这里只做**结构校验**（这格有没有一个可用的数），用**显式类型判定**
+ *     （与上方 `const code = typeof r.status === 'number' ? …` 同款），
+ *     **不用**「`Number.isFinite(` 包一层 `Number(`」那种写法 —— 那是本仓第十道门点名的**弱口径签名**
+ *     （`Number(null)`/`Number('')`/`Number([])` 全 0 ⇒ 「没给」与「给了 0」塌成同一读数；
+ *      本块第一版正是被那道门当场抓住的）。 */
+{
+    const bp = path.join(ROOT, 'config', 'gate-budget.json');
+    let budget = null;
+    let budgetWhy = '';
+    if (fs.existsSync(bp)) {
+        try { budget = JSON.parse(fs.readFileSync(bp, 'utf8')); } catch (e) { budgetWhy = '预算文件解析失败：' + String(e && e.message); }
+        if (budget && (!budget.gates || typeof budget.gates !== 'object')) { budget = null; budgetWhy = '预算文件缺 gates 表'; }
+    } else { budgetWhy = '预算文件不在场（' + bp + '）'; }
+    summary.push('');
+    if (!budget) {
+        /* fail-open：如实说「未设阈值」，不猜一个数去告警 */
+        summary.push('  预算对账：未设阈值（' + budgetWhy + '）—— 只报耗时，不告警');
+    } else {
+        const margin = typeof budget.margin_pct === 'number' ? budget.margin_pct : '?';
+        summary.push('  预算对账（真源 ' + bp + ' · 余量 +' + margin + '%'
+            + (budget.measured_at ? ' · 基线 ' + budget.measured_at : '') + '）：');
+        const over = [];
+        const unlisted = [];
+        for (const res of results) {
+            const b = budget.gates[res.gate];
+            const limit = b && typeof b.limit_ms === 'number' ? b.limit_ms : null;
+            if (limit === null) { unlisted.push(res.gate); continue; }
+            const ms = typeof res.ms === 'number' ? res.ms : 0;
+            if (ms > limit) {
+                over.push(res.gate);
+                summary.push('    \u203c ' + res.gate.padEnd(18) + String(ms + 'ms').padStart(9) + '  > ' + String(limit + 'ms').padStart(9) + '  \u2190 **\u8d85预算告警**');
+            } else {
+                summary.push('    \u2713 ' + res.gate.padEnd(18) + String(ms + 'ms').padStart(9) + '  \u2264 ' + String(limit + 'ms').padStart(9));
+            }
+        }
+        /* 未登记的门：**不判**（未登记 ≠ 超预算），但要说出来，否则新门悄悄进链没人知道它有没有预算 */
+        if (unlisted.length) summary.push('    · 不在预算表里（不判：未登记不等于超预算）：' + unlisted.join(' / '));
+        summary.push('    预算状态：' + (over.length
+            ? over.length + ' 道门超预算（**告警**，不改判绿 —— 门慢不等于判据坏）'
+            : '全部在预算内'));
+    }
+}
 summary.push('  读数（主读数，逐门）：');
 for (const res of results) for (const x of res.reads) summary.push('    ' + res.gate + '.' + x.id + ' = ' + x.value + '   # ' + x.label);
 if (parseFails.length) {

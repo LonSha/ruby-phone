@@ -43,7 +43,7 @@
  *   给了却读不到 ⇒ **fail-closed（rc 2）**，与 `schedule_conflict_probe` 同规
  *   （「路径写错」与「复核过」不许同形）。
  *
- * 【本门判什么（十一条，全部是「两处必须一致」而不是「某处应当有」）】
+ * 【本门判什么（十二条，全部是「两处必须一致」而不是「某处应当有」）】
  *   R1 前置齐备          —— 冻读取 / 登记表 / registry / 门禁脚本读不到 ⇒ rc 2（拒判）
  *   R2 冻读取形态        —— schema / refreshedAt / refreshReason（非空）/ upstreamVersion
  *   R3 面 ↔ 条目 双向    —— 表里 5 面与 registry 里带 `upstreamFace` 的 5 条**一一对应**：
@@ -80,6 +80,13 @@
  *                            `face + kind + upSays + ourSays` 四元组匹配，理由必填；
  *                            **双向闭合**：有分歧无理由 ⇒ 报；有理由无分歧 ⇒ 也报
  *                            （台账不许腐化成掩饰）。**同仓两处不一致**仍直接计缺陷。
+ *   R12 反向面对账（v3.23.4）—— **方向反转**：本仓产出、上游消费。修前两仓 PLAN 都写着
+ *                            「下游→上游 **0 面**」，而 `window.VirtualPhone?.lonshaBridge`
+ *                            在本仓挂载且上游 `index.js` 真在消费它（回填 / 召回 /
+ *                            楼层生命周期三族）—— **功能早在跑，登记面 0 面**。
+ *                            逐格判：登记行形态 / 本仓出口名在场 / 挂载点符号在场 /
+ *                            上游消费面**在上游分发面**（需 `--upstream`；未给则如实报
+ *                            「未复核」而不是静默跳过）。
  *
  * 【为什么九条都做成「一致性」判据而不是「存在性」判据】
  *   本仓反复付代价的形态是「某一侧符合预期、另一侧没人看」。存在性判据（「表里有 5 面」）
@@ -277,13 +284,47 @@ function parseTags(code) {
 }
 
 /* ══════════ 本仓登记行：import 真源 ══════════ */
+/**
+ * import 登记真源。
+ *
+ * 【为什么改为返回**两个**数组（v3.23.4 · T1 反向面）】
+ *   `CROSSREPO_FEATURES` 记的是「上游产出、本仓消费」（下游→上游 0 面那句话的**前半**）。
+ *   而本仓实测已有**既成事实的反向面**：`window.VirtualPhone.lonshaBridge` 被上游
+ *   `index.js` 真消费（回填 / 召回 / 楼层生命周期 三族）。那一半此前**两仓都没有登记**
+ *   —— 于是「反向 0 面」这句话在两个仓里都长期为真，而它**早就不真了**。
+ *   ⇒ 反向面另起一个导出（`CROSSREPO_PRODUCED_FACES`），由 R12 逐格对账；
+ *     **不塞进 CROSSREPO_FEATURES**：那个数组的条目形态（since / upstreamFace / fieldKeys）
+ *     全是为「消费侧」设计的，塞进去会让 R3「面 ↔ 条目双向」把反向面误判成缺登记。
+ */
 async function loadRegistry() {
     const abs = path.join(ROOT, REGISTRY_REL);
     if (!fs.existsSync(abs)) fail('登记行真源缺失：' + REGISTRY_REL);
     const mod = await import(pathToFileURL(abs).href);
     const features = mod.CROSSREPO_FEATURES;
     if (!Array.isArray(features)) fail('登记行真源未导出 CROSSREPO_FEATURES（形态变了，判据不可信）');
-    return features;
+    const produced = mod.CROSSREPO_PRODUCED_FACES;
+    /* 反向面**必须**是真数组：`undefined`（忘了导出）与「本仓确实没有反向面」不许同形
+     *   —— 前者是登记面缺一半，后者是一句可核的读数。 */
+    if (!Array.isArray(produced)) {
+        fail('登记行真源未导出 CROSSREPO_PRODUCED_FACES（反向面登记面缺一半；'
+            + '「没导出」与「本仓没有反向面」不许同形）');
+    }
+    return { features, produced };
+}
+
+/** 反向面登记行的四格（缺了就是没声明过 —— 不猜成空串）。 */
+function producedClaimOf(f) {
+    return {
+        id: String(f.id || ''),
+        owner: String(f.owner || ''),
+        since: f.since == null ? null : String(f.since),
+        upstreamConsumers: Array.isArray(f.upstreamConsumers) ? f.upstreamConsumers : null,
+        upstreamConsumerFile: f.upstreamConsumerFile == null ? null : String(f.upstreamConsumerFile),
+        upstreamConsumerFloor: (typeof f.upstreamConsumerFloor === 'number') ? f.upstreamConsumerFloor : null,
+        mountSite: f.mountSite == null ? null : String(f.mountSite),
+        exports: Array.isArray(f.exports) ? f.exports : null,
+        methods: Array.isArray(f.methods) ? f.methods : null
+    };
 }
 
 /** 抽登记行里与跨仓声明有关的四项（缺了就是没声明过 —— 不猜成空串）。 */
@@ -392,7 +433,34 @@ function braceInner(code, at) {
     return null;
 }
 
-/* ══════════ 冻读取：写出与读入 ══════════ */
+/* ══════════ 类体成员：方法名是否被**定义为方法**（与「模块导出」分开判） ══════════ */
+/**
+ * 取源码里所有 `class … { … }` 的类体（括号配对，支持嵌套与跨行）。
+ *
+ * 【为什么要与 `exportedSomewhere` 分开】
+ *   反向面登记行里有两族名字，形态**不同**：
+ *     · 模块导出（`LonShaBridge` / `mountLonShaBridge` / `LONSHA_BRIDGE_KEY`）—— `export` 形态；
+ *     · 实例方法（`backfill` / `recall` / `onFloorCommitted` …）—— **类体成员**，不是模块导出。
+ *   初版把两族都塞进 `methods[]` 用「导出」判定 ⇒ 10 个方法全报「找不到真导出」。
+ *   这不是误报松动（那才是本仓最贵的形态），而是**判据本身问错了问题**：
+ *   上游 `index.js` 消费的是 `bridge.backfill(…)` —— 判定面是「类里有这个方法」。
+ */
+function classBodies(code) {
+    const out = [];
+    const re = /class\s+[A-Za-z_$][\w$]*[^{]*\{/g;
+    for (const m of String(code).matchAll(re)) {
+        const inner = braceInner(code, m.index + m[0].length - 1);
+        if (inner != null) out.push(inner);
+    }
+    return out;
+}
+/** 方法名是否在某个类体里被**定义为方法**（`name(` / `async name(` / `static name(` / get|set）。 */
+function methodDefinedIn(code, name) {
+    const esc = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(?:^|[;{}\\n])\\s*(?:async\\s+)?(?:static\\s+)?(?:get\\s+|set\\s+)?'
+        + esc + '\\s*\\(');
+    return classBodies(code).some((b) => re.test(b));
+}
 function sha1(s) {
     return createHash('sha1').update(String(s), 'utf-8').digest('hex').slice(0, 12);
 }
@@ -793,6 +861,177 @@ function judge(ctx) {
         }
     }
 
+    /* ── R12 反向面对账（v3.23.4 · T1；方向反转：**本仓产出 → 上游消费**） ──
+     *   修前实测（不是推测）：两仓 PLAN 都写着「下游→上游 **0 面**」，
+     *   而 `window.VirtualPhone?.lonshaBridge` 在本仓 `index.js` 挂载（第 1420 行）
+     *   且**上游 `index.js` 真消费它**（`backfill` / `recall` / `onFloorCommitted` /
+     *   `onFloorRollback` 四族）。也就是说：**功能早就在跑，登记面 0 面**。
+     *   这是本仓最贵形态（「声明没有判据 ⇒ 声明会漂移」）在反向尺度上的翻版 ——
+     *   只是这次漂的是**上游那份表**（它写「0 面」而事实不是）。
+     *
+     *   【判什么（逐格「声明 ↔ 真码」，全部在本仓内闭链）】
+     *     a 登记行形态      —— id / owner / since / upstreamConsumerFile(名) / Floor(整数) /
+     *                          mountSite / upstreamConsumers[] / exports[] / methods[] 齐备且非空
+     *     b 本仓产出口名在场  —— 两族**分列、各自判**：
+     *                          `exports[]`（模块导出，三态认得出）与 `methods[]`（类体方法），
+     *                          两族都必须在**挂载点那个文件**里真存在。
+     *                          **不许**在登记行自己所在的那份文本里找 —— 那串字面量本来就写在登记行里，
+     *                          判据会读到自己 ⇒ 必然命中、永不报错（第三种假绿形：自我指涉）。
+     *                          **也不许**两族混用同一种判定 —— 方法不是模块导出（形态混装 ⇒ 全报假红）。
+     *     c 挂载点在场      —— `mountSite`（`<file>#<symbol>`）在该文件里真定义
+     *     d 上游消费面在场  —— `upstreamConsumerFile` 必须在上游**分发面**（js / extra_js）
+     *                          （与上游 T3 同口径：不在分发面 = 上游压根不加载它 ⇒ 没人在消费）
+     *
+     *   【为什么 d 用「分发面」而不是「上游消费点下限」】
+     *     本仓**数不到**上游的消费点（那是上游仓的事，本门对上游只读）。硬编一个下限数字
+     *     就是手抄，必然漂移。可核的那一半是：文件在上游分发面上、且上游真在用它 —— 前者
+     *     由本仓 `manifest` 判不了（那是**上游的** manifest），故 `--upstream` 模式下用
+     *     上游 manifest 判、未给时**如实报「未复核」而不是静默跳过**。
+     */
+    const produced = Array.isArray(ctx.produced) ? ctx.produced : null;
+    /* 注意：`verify`（= ctx.upstreamDir）在**本块之后**才声明 —— 此处直接用 ctx.upstreamDir，
+     *   否则会踩 TDZ（`Cannot access 'verify' before initialization`）。 */
+    const upDir12 = ctx.upstreamDir;
+    if (produced == null) {
+        problems.push('R12 本仓登记真源没给出反向面数组（形态不可信）');
+    } else if (!produced.length) {
+        notes.push('R12 反向面：本次 **0 面**（本仓尚未产出任何外供面给上游）—— 空表是真读数');
+    } else {
+        const seenIds = new Set();
+        for (const raw of produced) {
+            const f = producedClaimOf(raw);
+            if (seenIds.has(f.id)) problems.push('R12 反向面登记行 id 重复：' + f.id);
+            seenIds.add(f.id);
+            for (const k of ['id', 'owner', 'since', 'upstreamConsumerFile', 'mountSite']) {
+                if (!String(f[k] || '').trim()) {
+                    problems.push('R12 反向面登记行 `' + (f.id || '(空 id)') + '` 的 ' + k + ' 为空（不许留白）');
+                }
+            }
+            if (f.owner !== 'ruby-phone') {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 owner 不是本仓：' + f.owner);
+            }
+            if (!/^v?[0-9]+\.[0-9]+\.[0-9]+$/.test(String(f.since || ''))) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 since 形态非法：' + f.since);
+            }
+            if (f.upstreamConsumerFloor == null || f.upstreamConsumerFloor < 1) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 upstreamConsumerFloor 须为 >=1 的整数（'
+                    + '「声明了上游消费」而下限为 0，等于声明没人用）');
+            }
+            if (!f.upstreamConsumers || !f.upstreamConsumers.length) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 upstreamConsumers 为空数组'
+                    + '（必须点名上游读了哪些出口 —— 空数组与「没登记」同形）');
+            }
+            if (!f.methods || !f.methods.length) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 methods 为空数组（本仓产出的出口名一个都没登记）');
+            }
+            /* c 挂载点 `<file>#<symbol>`：**先**解析 —— b 要用它指的那个文件当判定面 */
+            const hashAt = String(f.mountSite).lastIndexOf('#');
+            let mfile = null;
+            let msym = null;
+            let mountCode = null;    /* 该文件的真源码（剥注释）；b / c 共用**同一份**判定面 */
+            if (hashAt <= 0) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 mountSite 缺 `#` 分隔：' + f.mountSite);
+            } else {
+                mfile = String(f.mountSite).slice(0, hashAt);
+                msym = String(f.mountSite).slice(hashAt + 1);
+                const mcode = readText(path.join(ROOT, mfile));
+                if (mcode == null) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 的挂载点文件不在磁盘：' + mfile);
+                } else {
+                    mountCode = { rel: mfile, code: stripComments(mcode) };
+                }
+            }
+            /* b 本仓产出口名 / 方法名必须在该文件里**真存在**。
+             *   【★ 初版两处错都在这里，都留档防复发 —— 本仓假绿三形各中一形】
+             *     错 1 · **自我指涉假绿（第三种形）**：初版在 `ctx.confFiles`（= 本仓 `config/*.js`）里找
+             *           名字 —— 而登记行**自己**就写在 `config/crossrepo-registry.js` 里，`methods: […]`
+             *           那串字面量本来就在那份文本里 ⇒ 判据**读到自己**、必然命中、永不报错。
+             *           ⇒ 判定面改到 `mountSite` 指的那个文件（与登记行分开）。
+             *     错 2 · **问错问题（形态混装）**：初版把方法与模块导出混在一个 `methods[]` 里、统一用
+             *           「导出」判定 ⇒ 10 个实例方法全报「找不到真导出」。上游消费的是 `bridge.backfill(…)`，
+             *           判定面是「类里有这个方法」而不是「模块导出了它」。
+             *   ⇒ 两族分列、各自判：`exports[]`（模块导出，三态认得出来）/ `methods[]`（类体方法）。
+             *     两格都空 ⇒ 登记行没有可核的产出面（缺陷）。
+             */
+            const hasExports = Array.isArray(f.exports) && f.exports.length;
+            const hasMethods = Array.isArray(f.methods) && f.methods.length;
+            if (!hasExports && !hasMethods) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 既没登记 exports[] 也没登记 methods[]'
+                    + '（没有一个可核的产出面 —— 空与「没登记」同形）');
+            }
+            if (f.exports != null && !Array.isArray(f.exports)) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 exports 不是数组（形态不可信）');
+            }
+            if (f.methods != null && !Array.isArray(f.methods)) {
+                problems.push('R12 反向面登记行 `' + f.id + '` 的 methods 不是数组（形态不可信）');
+            }
+            for (const m of (f.exports || [])) {
+                if (mountCode == null) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 登记的本仓导出 `' + m
+                        + '` 无从核对：挂载点文件不可读（' + (mfile || '(mountSite 非法)') + '）');
+                    continue;
+                }
+                if (!exportedSomewhere([mountCode], m)) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 登记的本仓导出 `' + m
+                        + '` 在 ' + mfile + ' 里找不到真导出（登记了不存在的出口 = 本仓最贵形态）');
+                }
+            }
+            for (const m of (f.methods || [])) {
+                if (mountCode == null) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 登记的本仓方法 `' + m
+                        + '` 无从核对：挂载点文件不可读（' + (mfile || '(mountSite 非法)') + '）');
+                    continue;
+                }
+                if (!methodDefinedIn(mountCode.code, m)) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 登记的本仓方法 `' + m
+                        + '` 在 ' + mfile + ' 的类体里找不到定义（登记了不存在的方法 = 本仓最贵形态）');
+                }
+            }
+            /* c 挂载符号必须真定义在该文件里 */
+            if (mountCode != null) {
+                const defRe = new RegExp('(?:function\\s+(?:' + msym + ')|const\\s+(?:' + msym
+                    + ')\\s*=|export\\s+(?:function|class)\\s+(?:' + msym + '))\\b');
+                if (!defRe.test(mountCode.code)) {
+                    problems.push('R12 反向面登记行 `' + f.id + '` 的挂载符号在 ' + mfile
+                        + ' 里找不到定义：' + msym + '（挂载点退役而登记未删 = 表在绿、面已没）');
+                }
+            }
+            /* d 上游消费面是否在上游分发面（需 --upstream；未给则如实报未复核） */
+            if (upDir12) {
+                const upManifest = readText(path.join(path.resolve(upDir12), UPSTREAM_MANIFEST_REL));
+                if (upManifest == null) {
+                    problems.push('R12 反向面 `' + f.id + '`：给了 --upstream 但读不到上游 manifest.json'
+                        + '（复核路径不可读不许降级成「未复核」）');
+                } else {
+                    let mf = null;
+                    try { mf = JSON.parse(upManifest); } catch (_e) { mf = null; }
+                    if (!mf) {
+                        problems.push('R12 反向面 `' + f.id + '`：上游 manifest.json 不是合法 JSON，无法判分发面');
+                    } else {
+                        const faceSet = new Set();
+                        if (typeof mf.js === 'string') faceSet.add(mf.js);
+                        for (const x of (Array.isArray(mf.extra_js) ? mf.extra_js : [])) faceSet.add(String(x));
+                        if (!faceSet.has(f.upstreamConsumerFile)) {
+                            problems.push('R12 反向面 `' + f.id + '` 的消费面 `' + f.upstreamConsumerFile
+                                + '` **不在上游分发面**（manifest 的 js / extra_js）—— 上游不加载它 ⇒ '
+                                + '「有消费点」这句话在用户侧不成立');
+                        } else {
+                            notes.push('R12 反向面 `' + f.id + '` 上游复核：消费面 `' + f.upstreamConsumerFile
+                                + '` 在上游分发面（' + faceSet.size + ' 个文件名）');
+                        }
+                    }
+                }
+            }
+        }
+        if (!upDir12) {
+            notes.push('R12 反向面：本次登记 **' + produced.length + ' 面**，但**未复核上游分发面**'
+                + '（未给 --upstream）—— 本门只保证「登记 ↔ 本仓真码」一致，不保证上游此刻仍消费；'
+                + '定期复核请带 --upstream');
+        } else {
+            notes.push('R12 反向面：登记 **' + produced.length + ' 面** 且上游分发面已复核');
+        }
+    }
+
     /* ── R9 上游实时复核（给了 --upstream：读不到 rc2；读到但与冻读取 sha1 不同 ⇒ 表已变） ── */
     const verify = ctx.upstreamDir;
     if (verify) {
@@ -855,7 +1094,7 @@ if (argv.refresh) {
 } else {
     const cacheRes = loadCache();
     if (cacheRes.fatal) fail(cacheRes.fatal);
-    const features = await loadRegistry();
+    const reg = await loadRegistry();
     const gateCode = readText(path.join(ROOT, GATE_REL));
     if (gateCode == null) fail('门禁脚本读不到：' + GATE_REL);
     const parsedTags = parseTags(gateCode);
@@ -889,13 +1128,14 @@ if (argv.refresh) {
         }
     }
     const res = judge({
-        cache: cacheRes.cache, features,
+        cache: cacheRes.cache, features: reg.features, produced: reg.produced,
         tags: parsedTags.tags, dupes: parsedTags.dupes,
         gateCode, confFiles: conf, upstreamDir, unconsumed, lag
     });
     if (res.fatal) fail(res.fatal);
     console.log('=== 跨仓外供面「声明 ↔ 真码」对账：' + Object.keys(cacheRes.cache.faces || {}).length
-        + ' 面 / 问题 ' + res.problems.length + ' ===');
+        + ' 面（消费侧）/ ' + (reg.produced ? reg.produced.length : 0) + ' 面（本仓产出侧 · R12） / 问题 '
+        + res.problems.length + ' ===');
     for (const [face, up] of Object.entries(cacheRes.cache.faces || {})) {
         console.log('  · ' + face + '（上游 ' + up.producerVersion + '）→ ' + up.consumer);
     }

@@ -64,16 +64,33 @@ if (files.length < 40) {
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 /* ── ① 下游：承诺期限/状态的消费点 ── */
-const CONSUME_TOKENS = ['deadlineFloor', 'deadline', 'promises'];
+/* ★ 口径修正（v3.22.0 复校）：`deadline` 必须带**词边界**。
+ *   裸词子串匹配会把与上游承诺无关的同族私名一起吃进来 —— 本仓实例：
+ *   `apps/focus/focus-app.js` 的私有运行态字段 `_deadline`（番茄钟倒计时时刻，10 处）
+ *   被算成「消费上游承诺期限」，读数 26 → 36 点 / 6 → 7 文件（**漂亮的假涨**）。
+ *   本探针要量的是「下游有没有在消费上游 promises 的 deadlineFloor」，
+ *   倒计时字段与之毫无关系。故 `deadline` 只认**独立标识符**（前一位不得为标识符字符）；
+ *   `deadlineFloor` 由它自己的 token 命中（本就单列）。 */
+const CONSUME_TOKENS = [
+  { tok: 'deadlineFloor', re: /deadlineFloor/ },
+  { tok: 'deadline', re: /(?:^|[^A-Za-z0-9_$])deadline(?!Floor)/ },
+  { tok: 'promises', re: /promises/ }
+];
+/* ★ 块注释也算注释（v3.22.0 复校）：探针口径写的是「注释行不计」，但原实现只跳过 `//`，
+ *   于是 `/* … 倒计时显示走 deadline。 *`` 这类**块注释散文**被算成消费点（残余 1 点）。
+ *   匹配前先把块注释整段抹白（保留换行 ⇒ 行号不变），任何文件的注释散文都不再计入。 */
+function stripBlockComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+}
 const consumePoints = [];
 for (const f of files) {
-  const src = fs.readFileSync(f, 'utf8');
+  const src = stripBlockComments(fs.readFileSync(f, 'utf8'));
   const lines = src.split(NL);
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
     if (!t || t.slice(0, 2) === '//') continue;
-    for (const tok of CONSUME_TOKENS) {
-      if (lines[i].indexOf(tok) >= 0) { consumePoints.push({ file: rel(f), line: i + 1, token: tok }); break; }
+    for (const spec of CONSUME_TOKENS) {
+      if (spec.re.test(lines[i])) { consumePoints.push({ file: rel(f), line: i + 1, token: spec.tok }); break; }
     }
   }
 }

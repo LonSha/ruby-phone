@@ -38,7 +38,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -52,6 +52,28 @@ const LAG_REL = 'tests/audit/upstream_face_lag.json';
 const REGISTRY_REL = 'config/crossrepo-registry.js';
 
 const sha1 = (s) => createHash('sha1').update(String(s), 'utf-8').digest('hex').slice(0, 12);
+
+/**
+ * 反向面登记行**自己声明的**挂载点文件（`CROSSREPO_PRODUCED_FACES[].mountSite` 的 `<file>` 部分）。
+ *
+ * 【为什么从登记行读，而不是在测试里硬编一份路径】
+ *   夹具要带 `apps/memory/lonsha-bridge.js` 才能让 R12 的 b/c 两格有判定面。
+ *   若在测试里写死这份路径，则登记行换了挂载点 ⇒ 夹具还在搬老文件 ⇒ R12 报红而红因
+ *   指向测试自己的过时假设（本仓记过的「转写与真源脱节」）。读登记行 = 一处真源。
+ *   与 v3203 那份同源同由（两套件都要带这份文件，故各持一份相同的取数函数）。
+ */
+async function reverseMountFiles() {
+    const mod = await import(pathToFileURL(path.join(ROOT, REGISTRY_REL)).href);
+    const out = new Set();
+    for (const f of (mod.CROSSREPO_PRODUCED_FACES || [])) {
+        const ms = String((f || {}).mountSite || '');
+        const at = ms.lastIndexOf('#');
+        if (at > 0) out.add(ms.slice(0, at));
+    }
+    return [...out];
+}
+/* 顶层 await 取一次（ESM 支持）：`stageTree` 保持同步，本套件所有调用点一字不改。 */
+const REVERSE_MOUNT_FILES = await reverseMountFiles();
 
 const temps = [];
 function tmp(prefix) {
@@ -85,6 +107,12 @@ function stageTree(overrides = {}) {
     for (const rel of [BRIDGE_REL, CACHE_REL, UNCONS_REL, LAG_REL]) {
         fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));
     }
+    /* 【R12（v3.23.4）：夹具必须带**挂载点文件**】见 v3203 同处注释；路径从登记行读（一处真源）。 */
+    for (const rel of REVERSE_MOUNT_FILES) {
+        const dst = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(path.join(ROOT, rel), dst);
+    }
     for (const [rel, ov] of Object.entries(overrides)) {
         const p = path.join(dir, rel);
         if (ov === null) { fs.rmSync(p, { force: true }); continue; }
@@ -111,7 +139,10 @@ function stageUpstream(parent, tableText, version = '3.255.0') {
     const d = path.join(parent, 'upstream');
     fs.mkdirSync(path.join(d, 'tests', 'audit'), { recursive: true });
     fs.writeFileSync(path.join(d, 'tests', 'audit', 'open_face_registry.tsv'), tableText);
-    fs.writeFileSync(path.join(d, 'manifest.json'), JSON.stringify({ name: 'upstream', version }, null, 2) + '\n');
+    /* 【v3.23.4 R12 交棒改写】夹具上游 manifest 必须带 `js`（分发面）——
+     *   见 v3203 同处注释（R12 的 d 格判「消费面在上游分发面」，夹具缺格会造出与被测判据无关的红）。 */
+    fs.writeFileSync(path.join(d, 'manifest.json'),
+        JSON.stringify({ name: 'upstream', version, js: 'index.js' }, null, 2) + '\n');
     const run = (args) => spawnSync('git', ['-C', d, ...args],
         { encoding: 'utf8', env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' } });
     assert.equal(run(['init', '-q']).status, 0, '夹具上游必须能 git init');
@@ -188,13 +219,20 @@ test('A2 ★★★ 门脚本自带缺陷留档：写明「上一版冻的是工�
     assert.match(g, /洗白/, '必须点名「把真分歧洗白」这条后果（更贵的那条）');
     assert.match(g, /--from-worktree/, '必须给出显式逃生口');
 });
-test('A3 ★★★ 十一条判据自述与真读数一致（门说几条就几条，R10/R11 在场）', () => {
+test('A3 ★★★ 判据自述与真读数一致（门说几条就几条，R10/R11/R12 全在场）', () => {
     const g = read(GATE_REL);
-    assert.match(g, /本门判什么（十一条/, '头部自述必须是十一条');
+    /* 【v3.23.4 交棒改写】R12（反向面对账）上线 ⇒ 自述从「十一条」改为「十二条」。
+     *   **不许**改成「至少十一」这类软口径：那对「新增判据忘了登记」毫无反应。
+     *   本套件成立于「十一条」时期，故此处同时守着旧号不再出现（自述是给人读的那一处，
+     *   留一个旧数字就是第二份口径）。 */
+    assert.match(g, /本门判什么（十二条/, '头部自述必须是十二条（R12 上线后）');
+    assert.equal(/本门判什么（十一条/.test(g), false, '旧条数自述不许残留（口径不留两版）');
     assert.match(g, /\n \* {3}R10 /, 'R10 必须逐条登记');
     assert.match(g, /\n \* {3}R11 /, 'R11 必须逐条登记');
+    assert.match(g, /\n \* {3}R12 /, 'R12 必须逐条登记');
     assert.match(g, /R10 冻读取/, 'R10 判据本体必须在场');
     assert.match(g, /R11 /, 'R11 判据本体必须在场');
+    assert.match(g, /R12 反向面对账/, 'R12 判据本体必须在场');
 });
 test('A4 ★★★ 台账文件在场、形态是「项数组」，且**空表是真读数**（不与「形态坏掉」同形）', () => {
     const t = REAL_LAG;
@@ -221,7 +259,7 @@ test('A4 ★★★ 台账文件在场、形态是「项数组」，且**空表�
 test('B1 ★★★ 真仓裸跑：5 面 / 问题 0，且摘要如实报出 R11 的读数（0 条也是真读数）', () => {
     const r = runGate(ROOT);
     assert.equal(r.status, 0, '裸跑必须绿（stderr：' + r.err.slice(0, 200) + '）');
-    assert.match(r.out, /跨仓外供面「声明 ↔ 真码」对账：5 面 \/ 问题 0/);
+    assert.match(r.out, /跨仓外供面「声明 ↔ 真码」对账：[1-9]\d* 面（消费侧）\/ \d+ 面（本仓产出侧 · R12） \/ 问题 0/);
     /* 【v3.20.5 收账改写】v3.20.4 在这里断言「摘要必须写**已解释 N 条**」—— 那是拿
      *   「真仓此刻有活分歧」当前提。上游 813ab3a 提交后分歧消失、台账删空，那句文案
      *   按设计变成「本次 **0 条**」。**不许**因此断言「已解释」消失（那会让判据逼着人留着陈旧台账），

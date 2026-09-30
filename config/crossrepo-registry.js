@@ -683,9 +683,74 @@ export function registryLine(face) {
     return '跨仓功能：登记 ' + rows.length + ' 项 / ' + (parts.length ? parts.join(' · ') : '无可判项');
 }
 
+/* ============================================================
+ * 反向面登记（**本仓产出 → 上游消费**）[v3.23.4 · T1]
+ * ------------------------------------------------------------
+ * 【治的欠债（修前实测，不是推测）】
+ *   本仓 `PLAN.md` 与上游 `PLAN.md` 在 v3.20.x~v3.25x 期间**都写着**同一句：
+ *   「下游→上游 **0 面**」。而本仓实测：
+ *     · `apps/memory/lonsha-bridge.js` 导出 `mountLonShaBridge`，在 `index.js:1420` 挂载；
+ *     · **上游 `index.js` 真在消费它** —— `window.VirtualPhone?.lonshaBridge` 出现 4 处
+ *       （`backfill` / `onFloorCommitted` / `onFloorRollback` / `recall`），
+ *       另有 `memoryCore.record` 与 `timeManager.getCurrentStoryTime` 各呈一族。
+ *   也就是说：**功能早就在跑，而登记面写着 0 面**。
+ *   这正是本仓最贵形态（「声明没有判据 ⇒ 声明会漂移」）在反向尺度上的翻版 ——
+ *   只不过这次漂的是**两仓的规划文档**，两边都没人说错话，两边也都没人核过。
+ *
+ * 【为什么不塞进 CROSSREPO_FEATURES】
+ *   那个数组的每一条都是**消费侧**语义（`since` = 上游开始产出这一面的版本 /
+ *   `upstreamFace` / `fieldKeys` / `keySites`）。把产出侧塞进去，`R3 面 ↔ 条目双向`
+ *   会立刻把它判成「声称对应上游面、而表里没这一面」—— 一条**假红**。
+ *   ⇒ 另起一个导出，形态按产出侧设计，由 `scripts/upstream-face-audit.mjs` 的 **R12** 逐格对账。
+ *
+ * 【每格都要能被真码核（与 CROSSREPO_FEATURES 同纪律）】
+ *   id                    —— 登记标识（R12 查重）
+ *   owner                 —— 归属仓 = 产出方 = **本仓**
+ *   since                 —— 本仓**开始产出这一面**的版本（挂载点落地的版本）
+ *   mountSite             —— `<本仓文件>#<符号>`：R12 去那个文件里找该符号的定义
+ *                            （挂载点退役而登记未删 = 表在绿、面已没 —— 必须响）
+ *   upstreamConsumerFile  —— 上游**消费方文件**（须在上游分发面；`--upstream` 时复核）
+ *   upstreamConsumerFloor —— 上游消费点下限（**声明值**，本仓数不到上游的调用点；
+ *                            故 R12 只判它在场与 >=1，不假装是本仓实测的）
+ *   upstreamConsumers     —— 上游读了哪些出口名（人读 + 供上游复核）
+ *   exports               —— 本仓**模块导出**的名字（R12 在挂载点文件里按导出三态核对）
+ *   methods               —— 本仓**类体方法**的名字（R12 在挂载点文件的类体里核方法定义）
+ * ============================================================ */
+export const CROSSREPO_PRODUCED_FACES = Object.freeze([
+    {
+        id: 'ruby.lonshaBridge',
+        owner: 'ruby-phone',
+        since: '2.2.0',
+        sinceSource: '本仓 apps/memory/lonsha-bridge.js 的 [v2.2] 楼层提交盖章注释'
+            + '（上游 index.js 同处注释也写 [v2.2] RB: 楼层提交盖章 → 桥同步手机侧楼层状态）',
+        label: '手机记忆桥（LonShaBridge）：回填 / 召回 / 注入协调 / 楼层生命周期',
+        mountSite: 'apps/memory/lonsha-bridge.js#mountLonShaBridge',
+        upstreamConsumerFile: 'index.js',
+        upstreamConsumerFloor: 4,
+        upstreamConsumers: ['backfill', 'recall', 'onFloorCommitted', 'onFloorRollback'],
+        exports: ['LonShaBridge', 'LONSHA_BRIDGE_KEY', 'mountLonShaBridge'],
+        methods: ['backfill', 'recall', 'recallBlock', 'applyCoordinatedInjection',
+            'onChatChanged', 'onFloorCommitted', 'onFloorRollback', 'getStats',
+            'setEnabled', 'setCoordinated'],
+        /* 上游消费的三族（人读；R12 不逐条核上游代码 —— 那需要读兄弟仓，本门只读上游 manifest） */
+        usedBy: '上游 index.js 三族：① LLM 提取结果回填手机库（backfill，含 clock / diaries 双端互通）；'
+            + '② 手机记忆作为一路召回源（recall，rubyPhoneRecall 闸门）；'
+            + '③ 楼层生命周期（onFloorCommitted 盖章 / onFloorRollback 删楼回滚）',
+        absentVsEmpty: '桥未挂载（上游取不到 window.VirtualPhone）时上游**静默跳过**（try 包住、'
+            + '不抛不报）；而「桥在但这次没有可回填的提取结果」与前者**不同形** —— '
+            + '前者 `bridge` 为 undefined、后者 `bridge.backfill(payload)` 真被调用了一次。'
+            + '上游侧对「桥不在场」有兜底分支（写 `memoryCore.record`），对「空结果」没有分支。',
+        standalone: '只装本仓（上游缺席）⇒ 桥照常挂载但**无人消费**：'
+            + '`window.VirtualPhone.lonshaBridge` 在位、`getStats()` 可读，'
+            + '而回填 / 召回 / 楼层联动三族的驱动方（上游）不在场 ⇒ 这三族不跑。'
+            + '本仓侧不报错、不降级成假读数（桥的能力面与「谁在调它」分开）。'
+    }
+]);
+
 export default {
     CROSSREPO_FEATURES,
+    CROSSREPO_PRODUCED_FACES,
     featureState,
     registryFace,
-    registryLine
+registryLine
 };

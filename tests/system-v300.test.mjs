@@ -34,6 +34,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import { execFileSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -517,7 +518,7 @@ const MIRROR_DIRS = ['config', 'apps'];
 function mirror(mut) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v300-mir-'));
     for (const d of MIRROR_DIRS) {
-        fs.cpSync(path.join(ROOT, d), path.join(dir, d), { recursive: true });
+        copyTreeSafe(path.join(ROOT, d), path.join(dir, d));
     }
     for (const [rel, fn] of Object.entries(mut)) {
         const body = fn(read(rel));

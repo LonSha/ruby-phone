@@ -412,6 +412,26 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.21.0] 番茄钟：专注计时 + 时长统计 + 事实注入（缝合自 EPhone·xINOVO pomodoro）。
+        //   只记时长，不替用户发消息；会话键走 ^focus_ 前缀，随会话隔离。
+        id: 'focus',
+        name: '番茄钟',
+        icon: '⏱️',
+        color: '#3b82f6',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.22.0] 记账：账户树 + 余额 + 收支流水 + 月度投影（缝合自 EPhone·xintuk tukey-accounting）。
+        //   只缝本地账本那一半；源里那个「AI 群聊记账」本仓无对应结构。会话键走 ^accounting_ 前缀。
+        id: 'accounting',
+        name: '记账',
+        icon: '📒',
+        color: '#10b981',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

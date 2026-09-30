@@ -56,7 +56,9 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     graphApp: 'memory', memoryApp: 'memory',
     timeweaverApp: 'timeweaver', wangxiangApp: 'wangxiang',
     usageApp: 'usage',         // [v3.15.0] 洞察：读数现取（onChatChanged 只丢缓存、不强取）
-    diagnoseApp: 'diagnose'   // [v2.99.0] 诊断中心（无状态，但仍实现了空的 onChatChanged）
+    diagnoseApp: 'diagnose',  // [v2.99.0] 诊断中心（无状态，但仍实现了空的 onChatChanged）
+    focusApp: 'focus',        // [v3.21.0] 番茄钟：换会话重取任务与记录（不持跨轮副本）
+    accountingApp: 'accounting' // [v3.22.0] 记账：账户 / 流水 / 月度投影换会话重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。
