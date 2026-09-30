@@ -1,0 +1,351 @@
+/* ========================================================
+ *  柚月小手机 (Yuzuki's Little Phone)
+ *  你说我猜样式（.gw- 前缀，本件独占）
+ *  说明：与海龟汤同批落地，但样式各自独立、互不复用，
+ *        避免两件之一被替换时把另一件的观感带走。
+ * ======================================================== */
+
+.gw-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #10161f;
+    color: #e6edf6;
+}
+/* 两面屏名（同时作为 phoneShell.setContent 的 token）：本前缀下的根修饰。 */
+.gw-app.gw-setup,
+.gw-app.gw-game {
+    position: relative;
+}
+
+/* ---------------------------------------------------------------- 设置页 */
+
+.gw-setup-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px 96px;
+}
+
+.gw-section {
+    margin-bottom: 18px;
+}
+
+.gw-section-title {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #7d8ea6;
+    margin-bottom: 8px;
+}
+
+.gw-partners {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gw-partner {
+    width: 84px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    border: 1px solid #22314a;
+    background: #16202e;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.gw-partner.is-picked {
+    border-color: #6a8bd9;
+    background: #16233c;
+}
+
+.gw-partner-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #223146;
+    font-size: 16px;
+}
+
+.gw-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gw-avatar-text {
+    color: #b8c8dd;
+}
+
+.gw-partner-name {
+    font-size: 12px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gw-modes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gw-mode {
+    flex: 1 1 0;
+    min-width: 120px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #22314a;
+    background: #16202e;
+    color: #c6d4e6;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.gw-mode.is-active {
+    border-color: #6a8bd9;
+    background: #16233c;
+    color: #eaf1ff;
+}
+
+.gw-mode-label {
+    font-size: 14px;
+}
+
+.gw-mode-desc {
+    font-size: 11px;
+    color: #8395ab;
+}
+
+.gw-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #22314a;
+    background: #16202e;
+    color: #e6edf6;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.gw-input::placeholder {
+    color: #63748c;
+}
+
+.gw-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(16, 22, 31, 0) 0%, #10161f 40%);
+}
+
+.gw-primary-btn {
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #3f6ad9;
+    color: #f2f7ff;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.gw-ghost-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #2b3d58;
+    background: transparent;
+    color: #c6d4e6;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.gw-empty {
+    font-size: 12px;
+    color: #63748c;
+}
+
+/* ---------------------------------------------------------------- 对局页 */
+
+.gw-hint-bar {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #9fb0c6;
+    background: #131b26;
+    border-bottom: 1px solid #1c2735;
+}
+
+.gw-hint-bar strong {
+    color: #ffd77a;
+}
+
+.gw-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px 110px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gw-log-entry {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+/* 气泡里的正文块：与 .gw-log-who 同一层，长句要能断行。 */
+.gw-log-text {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.gw-log-entry.is-user {
+    flex-direction: row-reverse;
+}
+
+.gw-log-system {
+    justify-content: center;
+    font-size: 12px;
+    color: #7d8ea6;
+}
+
+.gw-log-avatar {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #223146;
+    font-size: 13px;
+}
+
+.gw-log-bubble {
+    max-width: 74%;
+    padding: 8px 11px;
+    border-radius: 12px;
+    background: #182434;
+    font-size: 13px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.gw-log-entry.is-user .gw-log-bubble {
+    background: #1d3350;
+}
+
+.gw-log-who {
+    font-size: 11px;
+    color: #7d8ea6;
+    margin-bottom: 2px;
+}
+
+.gw-reroll {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #2b3d58;
+    background: transparent;
+    color: #7d8ea6;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gw-action-area {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #10161f;
+    border-top: 1px solid #1c2735;
+}
+
+.gw-input-inline {
+    margin-bottom: 0;
+    flex: 1 1 auto;
+}
+
+.gw-send {
+    width: auto;
+    padding: 10px 16px;
+    flex: 0 0 auto;
+}
+
+.gw-typing {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: #7d8ea6;
+}
+
+/* ---------------------------------------------------------------- 弹层 */
+
+.gw-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 10, 16, 0.72);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 20;
+}
+
+.gw-sheet {
+    width: 100%;
+    max-height: 82%;
+    overflow-y: auto;
+    background: #14202c;
+    border-radius: 16px 16px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+}
+
+.gw-sheet-title {
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #eaf1ff;
+}
+
+.gw-rules {
+    margin: 0 0 14px;
+    padding-left: 18px;
+    color: #c6d4e6;
+    font-size: 13px;
+    line-height: 1.75;
+}
+
+.gw-summary-body {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #c6d4e6;
+    margin-bottom: 14px;
+    word-break: break-word;
+}
+
+.gw-sheet-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}

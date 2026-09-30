@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 278,
+    "files_scanned": 285,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -233,6 +233,23 @@
       "not_done": [
         "新 App 带 6 条会话隔离键（settings / days / footprints / diary / letters / questions），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
         "真机里「换会话时起算日 / 足迹 / 日记 / 情书 / 问答从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+      ]
+    },
+    "v3.32.0": {
+      "what": "v3.31.0 约会大作战 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）；v3.32.0 两个子游戏同样只扩枚举面",
+      "why": "枚举面随两版新件扩张（278 → 285 个文件：v3.31.0 的 `apps/date/` 三件 ＋ v3.32.0 的 `apps/games/seaturtle/` 与 `apps/games/guesswhat/` 各两件 .js）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 约会大作战是一册**本会话自有的约会台账**（场景册 / 场次 / 欠账），海龟汤与你说我猜是**一局对话型对局**（谜题 / 日志 / 回合），三者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+      "readings": {
+        "files_scanned": 285
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "两版新件共带 9 条会话隔离键（date：settings / scenes / store 三键；seaturtle / guesswhat 各一态键），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+        "真机里「换会话时场景册 / 场次 / 欠账 / 一局对局态从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
       ]
     }
   }

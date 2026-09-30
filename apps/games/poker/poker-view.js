@@ -71,6 +71,32 @@ export class PokerView {
                         <i class="fa-solid fa-chevron-right games-game-chevron"></i>
                     </button>
 
+                    <button class="games-game-card games-seaturtle-card" id="games-open-seaturtle" type="button">
+                        <div class="games-game-art">
+                            <div class="games-seaturtle-lobby-art" aria-hidden="true">
+                                <i class="fa-solid fa-mug-hot"></i>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">海龟汤</div>
+                            <div class="games-game-desc">是/否问答 · 一起推谜底</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
+
+                    <button class="games-game-card games-guesswhat-card" id="games-open-guesswhat" type="button">
+                        <div class="games-game-art">
+                            <div class="games-guesswhat-lobby-art" aria-hidden="true">
+                                <i class="fa-solid fa-comments"></i>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">你说我猜</div>
+                            <div class="games-game-desc">一人出题 · 一人猜词</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
+
                     <button class="games-game-card games-poker-card" id="games-open-poker" type="button">
                         <div class="games-game-art">
                             <span class="games-lobby-card games-lobby-card-black">A♠</span>
@@ -529,6 +555,12 @@ export class PokerView {
         });
         document.getElementById('games-open-undercover')?.addEventListener('click', () => {
             this.app.openUndercover();
+        });
+        document.getElementById('games-open-seaturtle')?.addEventListener('click', () => {
+            this.app.openSeaTurtle();
+        });
+        document.getElementById('games-open-guesswhat')?.addEventListener('click', () => {
+            this.app.openGuessWhat();
         });
         document.getElementById('games-open-2048')?.addEventListener('click', () => {
             this.app.open2048();

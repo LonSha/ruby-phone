@@ -273,6 +273,46 @@
     box-shadow: inset 0 0 0 1px rgba(141, 79, 40, 0.18);
 }
 
+.games-seaturtle-card {
+    border-color: rgba(94, 152, 168, 0.26);
+    background:
+        linear-gradient(135deg, rgba(94, 152, 168, 0.2), rgba(255, 255, 255, 0.06)),
+        rgba(255, 255, 255, 0.07);
+}
+.games-seaturtle-lobby-art {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background:
+        radial-gradient(circle at 50% 26%, rgba(214, 236, 240, 0.94), transparent 34%),
+        linear-gradient(145deg, #2f5f6b, #12181c 66%);
+    color: #eef7f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+    font-size: 14px;
+}
+.games-guesswhat-card {
+    border-color: rgba(146, 122, 196, 0.26);
+    background:
+        linear-gradient(135deg, rgba(146, 122, 196, 0.2), rgba(255, 255, 255, 0.06)),
+        rgba(255, 255, 255, 0.07);
+}
+.games-guesswhat-lobby-art {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background:
+        radial-gradient(circle at 50% 26%, rgba(228, 219, 247, 0.94), transparent 34%),
+        linear-gradient(145deg, #4a3b78, #14131b 66%);
+    color: #f3effc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+    font-size: 13px;
+}
 .games-lobby-card {
     position: absolute;
     width: 22px;

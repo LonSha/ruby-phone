@@ -306,6 +306,8 @@ const KEY_REGISTRY = [
   { key: 'games_undercover_state', scope: 'chat', note: '谁是卧底' },
   { key: 'chat_games_catbox_state', scope: 'chat', note: '猫箱（现役键）' },
   { key: 'chat_games_werewolf_state', scope: 'chat', note: '狼人杀（现役键）' },
+  { key: 'chat_games_seaturtle_state', scope: 'chat', note: '海龟汤（v3.32.0）' },
+  { key: 'chat_games_guesswhat_state', scope: 'chat', note: '你说我猜（v3.32.0）' },
   { key: 'chat_mofo_runtime_states', scope: 'chat', note: '神灯运行时状态' },
   { key: 'ruby_gacha_state', scope: 'chat', note: '幸运转盘（cheat/dirtytalk/memory 只读共享）' },
   { key: 'ruby_health_cycle', scope: 'chat', note: '生理周期' },

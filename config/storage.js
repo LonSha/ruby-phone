@@ -49,6 +49,11 @@ export class PhoneStorage {
             /^weibo_/,            // 微博数据
             /^honey_/,            // 蜜语数据
             /^chat_games_/,        // 按聊天独立的游戏存档
+            // [v3.32.0] 两个「AI 对局」小游戏：海龟汤 / 你说我猜。
+            //   精确枚举只作评审面（模式 /^chat_games_/ 已能自动接住），列出来是为了
+            //   让「游戏厅里现在有哪几款按聊天独立存档」一眼可数，不必去翻 App 目录。
+            /^chat_games_seaturtle_state$/,
+            /^chat_games_guesswhat_state$/,
             /^pending[_-]contacts$/, // 待处理联系人
             /^chat_/,             // 聊天相关
             /^message_/,          // 消息相关
