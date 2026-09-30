@@ -612,14 +612,14 @@ test('H3 样式源与 phone.css 逐字同源，且视图产出的每个类名都
     const at = phone.indexOf(HDR);
     assert.ok(at >= 0, 'phone.css 必须带本版段头：' + HDR);
     const rest = phone.slice(at);
-    /* ★ 取段纪律：本版接的是**当前末段** ⇒ 取到文件尾；但先自证后面**没有**别的段头。
-     *   v3.31.0 往后接段时这条会**主动报红**，提醒按 v3.28.0 立的交棒口径改成
-     *   「按下一个段头截断」（v3.29.0 那套件就是这么改的，不是回归）。 */
-    assert.equal(rest.indexOf('/* ---------- [', 1), -1,
-        '本段原本应是末段：它后面出现了新段头 ⇒ 请把取段口径改成「按下一个段头截断」（交棒）');
+    /* ★ [v3.31.0 接段已执行] 本段不再是末段 —— v3.31.0 往后接了「约会大作战」段，
+     *   故按 v3.28.0 当时立的交棒口径：**按下一个段头截断**，不取文件尾。
+     *   下版若再往后接段，本取法依然正确（不会以「同源失败」假红）。 */
+    const nxt = rest.indexOf('/* ---------- [', 1);
+    const seg = nxt >= 0 ? rest.slice(0, nxt) : rest;
     const norm = (x) => x.replace(/^\/\*[\s\S]*?\*\/\s*/, '').trim();
-    assert.equal(norm(rest), norm(read(CSS_REL)), 'phone.css 的本版段必须与 ' + CSS_REL + ' 逐字同源');
-    assert.ok(rest.split(CSS_PFX).length - 1 >= 5, '本段必须真的带样式');
+    assert.equal(norm(seg), norm(read(CSS_REL)), 'phone.css 的本版段必须与 ' + CSS_REL + ' 逐字同源');
+    assert.ok(seg.split(CSS_PFX).length - 1 >= 5, '本段必须真的带样式');
     /* 每个产出的类名都要有**样式落点**：自己有条规则 / 是 JS 选择器锚点。 */
     const view = read(VIEW_REL);
     const js = view + read(APP_REL);
@@ -1124,8 +1124,13 @@ test('V1 版本锚（下限形）+ 四源同版 + update-log 条目在册', () =
     assert.equal(log.head, man.version, 'update-log.head 必须与 manifest 同版');
     assert.ok(src.includes("const ST_PHONE_VERSION = '" + man.version + "';"), '入口版本常量必须与 manifest 同版');
     /* 本版条目必须在场且非空（审计门会查这一条，这里先钉住）。 */
-    const cur = (log.versions || {})[man.version];
-    assert.ok(cur, 'update-log 必须含当前版本 ' + man.version + ' 的条目');
+    /* ★ 本套件守的是**自己那一版**（v3.30.0 恋爱空间），不是「当版」——
+     *   抬版后 latest 换成新件。此前这里读 `log.versions[man.version]`，
+     *   一抬到 3.31.0 就报「本版条目必须写到 恋爱空间」红，而 3.30.0 的条目其实好好的。
+     *   这是本仓记过的「守别人的版」同款口径错的第四例（v3270 / v3280 / v3290 已改）。 */
+    const SELF = '3.30.0';
+    const cur = (log.versions || {})[SELF];
+    assert.ok(cur, 'update-log 必须含本套件所属版本 ' + SELF + ' 的条目');
     assert.ok(Array.isArray(cur.items) && cur.items.length >= 6, '本版条目必须写足（items ' + (cur.items ? cur.items.length : 0) + ' 段）');
     const joined = cur.items.join('\n');
     for (const marker of ['恋爱空间', '首日即第 1 天', '到点显形', '心情罐子', '回信收发对调', '三态']) {

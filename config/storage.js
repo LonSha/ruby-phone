@@ -130,6 +130,11 @@ export class PhoneStorage {
             //   起算日、足迹、心情日记、情书与问答都是「这段关系的账」，随会话隔离：
             //   换角色后那是另一段关系的另一本账。
             /^lover_/,
+            // [v3.31.0] 约会大作战（date_settings / date_scenes / date_store）：
+            //   与 ^shop_ 同族的单条前缀覆盖三键（无元字符、无需宽匹配登记）。
+            //   场景册、场次与欠账都是「这段关系的账」，随会话隔离：
+            //   换角色后那是另一个角色的另一本约会账。
+            /^date_/,
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。

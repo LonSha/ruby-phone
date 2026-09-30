@@ -554,6 +554,32 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.31.0] 约会大作战：场景册 / 出资四路 / 计划到收场 / 结算卡 / 欠账台账 五块
+        //   （缝合自 EPhone·xintuk date 三片，120530 字节 / 3195 行 / 51 个函数）。
+        //   两块不取：① 立绘库（源靠 x/y/size 滑块把图叠在背景上 —— 那是一套完整的编辑器，
+        //   与「约会」不是一件事，本仓也没有立绘权威）；② BGM 面板（源读 window.state.musicState.playlist，
+        //   那是「一起听」的曲库 —— 本仓有第二个权威；音量写 projectStorage 是全局键，会跨会话串味）。
+        //   四处不缝：① **不碰钱包**（源四处 updateUserBalanceAndLogTransaction /
+        //   updateCharacterPhoneBankBalance 直改用户余额与角色银行卡；本仓用户钱包的仲裁源是
+        //   **微信零钱**）—— 本件只算「谁出多少」与「够不够」，出账入账交给那个权威；
+        //   ② **不直连模型**（源三处自己拼 systemPrompt 直发，连 Gemini 分支都自己走）—— 走宿主生成侧；
+        //   ③ **不写 Dexie、不碰 db.chats / chat.history**（源整份 chat 落库、往 history 塞 isHidden
+        //   系统消息驱动模型、结束时塞 pat_message）—— 零数据库铁律 + 不替宿主写楼层；
+        //   ④ **一张图都不存、一条外链都不收**（源把生图 URL 含 data: 写进场景与立绘、背景靠外链）——
+        //   只登记宿主给的路径与用户自填提示词。
+        //   四条偏离：金额一律**整数金币**且 `我出的 + Ta 出的 === 花费` 是不变量（源用 cost / 2 浮点
+        //   算 AA、toFixed(2) 显示、四路各写一份扣款）；不做实时定时器与逐句动画（源 4 处 setTimeout）；
+        //   历史只留最近 40 场并如实计数（源无上界增长）；「没走到结束」不许当成一场完整的约会
+        //   （源只在 isDateOver && completion >= 100 时结算，否则状态静静挂内存里、重开全丢）。
+        //   会话键走 ^date_ 前缀，随会话隔离。
+        id: 'date',
+        name: '约会大作战',
+        icon: '💖',
+        color: '#f43f5e',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；
