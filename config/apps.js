@@ -635,6 +635,33 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.36.0] 杂志：动画杂志（缝合自 Perigee js/magazine.js 1971 行 / 118212 字节 + magazine.css 20050 字节）。
+        //   源是一个挂在全局 AppState.data.magazineData 上（切角色串味）、以 Utils.saveData 整块回写
+        //   （13 处命中）、与放送局 / 论坛 / TTS 三处联动的日文动画杂志仿真：十种稿件类型
+        //   （声优访谈 / 制作组访谈 / 圆桌座谈 / 人气投票 / 角色企划 / 制作专栏 / 读者来函 /
+        //   角色对谈 / 关系图 / 月度总结）、十套正文解析器、四套导出、译文折叠块。
+        //   四处不缝（都写清后果）：
+        //     ① 源有 8 处 Utils.callChatAPI 直连模型、自己拼 systemPrompt 自己解析 TITLE: 行
+        //        —— 本件一条请求都不发，只产「可复制的要求文本」，结果由用户贴回来登记；
+        //     ② 源把整块状态经 Utils.saveData 回写、往宿主事件总线抛 emitEvent、读
+        //        broadcast.officialNpcs —— 本件零宿主写入零宿主读，三条会话键各走 PhoneStorage；
+        //     ③ 源要别的 App 的池（放送局的官方 NPC 当受访者 / 论坛的世界观当题材 /
+        //        ttsConfig 当音频出口）—— 本件自带 10 位原创受访者池，零跨 App 读；
+        //     ④ 源 exportImage() 从 jsdelivr CDN 动态插 <script> 拉 html2canvas、把离屏 DOM
+        //        画成 PNG data URL —— 本件一条外链都不收、一张图都不产，导出只有 TXT 与可打印结构。
+        //   三条偏离：期号收成登记时写下的序号（源用 findIndex+1 反查，删中间一篇后
+        //   后面所有篇期号集体前移，旧导出与新读数对不上）；正文解析收成唯一实现
+        //   （源十套解析器各写一遍、同一行在不同类型下归类不同且没人能回答「这行算被认出来了吗」）；
+        //   译文按段落数组存（源把整段转义后塞 innerHTML，译文里的标签全变可见字符）。
+        //   写盘三条键走 ^magazine_ 前缀随会话隔离。
+        id: 'magazine',
+        name: '杂志',
+        icon: '📖',
+        color: '#8b6914',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；

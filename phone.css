@@ -14816,3 +14816,606 @@ input:checked + .toggle-slider:before {
 
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
+
+/* ══════════════ [v3.36.0] 杂志（magazine） ══════════════ */
+/* ========================================================
+ * magazine.css — [v3.36.0] 杂志 样式层
+ *
+ * 照抄 pixiv / lofter / date 规格：全部选择器挂在 `.mgz-root` 下（宿主样式不外泄、
+ * 也不吃宿主样式）；类名与 magazine-view.js 的产出**逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源 `magazine.css`（20050 字节）的三条骨干：
+ *   ① 纸感底 + 金棕主色（源用 #8b6914 做刊头与徽标，本件沿用）；
+ *   ② 类型徽标用**每型一色**（源 `_TYPE_COLORS` 十色，本件按行内 style 注入，
+ *      故这里只给徽标的形，不给色）；
+ *   ③ 正文是**阅读面**：行距放宽、字号 15px、段间留白 —— 源在长图导出里
+ *      也是这套比例（`font-size:14px;line-height:1.7`）。
+ *
+ * ★ 本件**不用 emoji 做布局锚点**：源的图标全是 emoji，不同平台宽度不一，
+ *   窄屏上会把标题挤下去。本件的图形字符（◆ ◇ ▲ ● ■ ▣ ♪ ★）在
+ *   等宽与比例字体下宽度一致。
+ * ======================================================== */
+.mgz-root {
+    --mgz-gold: #8b6914;
+    --mgz-gold-soft: #b08d3a;
+    --mgz-paper: #faf6f0;
+    --mgz-ink: #3a2a0a;
+    --mgz-ink-2: #6b5a3a;
+    --mgz-line: #e3d9c6;
+    --mgz-warn: #b4690e;
+    --mgz-err: #c0392b;
+    --mgz-ok: #2e7d32;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 12px 24px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--mgz-ink);
+    background: var(--mgz-paper);
+    min-height: 100%;
+}
+.mgz-root * {
+    box-sizing: border-box;
+}
+.mgz-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.mgz-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--mgz-gold);
+}
+.mgz-header-sub {
+    font-size: 11px;
+    color: var(--mgz-ink-2);
+    opacity: 0.8;
+}
+.mgz-face {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.6);
+}
+.mgz-face-ok {
+    border-left-color: var(--mgz-ok);
+}
+.mgz-face-warn {
+    border-left-color: var(--mgz-warn);
+}
+.mgz-face-err {
+    border-left-color: var(--mgz-err);
+}
+.mgz-face-icon {
+    font-size: 15px;
+}
+.mgz-face-label {
+    font-weight: 600;
+}
+.mgz-face-sub {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--mgz-ink-2);
+    text-align: right;
+}
+.mgz-flash {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(139, 105, 20, 0.1);
+    border: 1px solid rgba(139, 105, 20, 0.25);
+    font-size: 12px;
+    color: var(--mgz-gold);
+}
+.mgz-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+}
+.mgz-tab {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mgz-ink-2);
+    font-size: 13px;
+    cursor: pointer;
+}
+.mgz-tab.is-on {
+    background: var(--mgz-gold);
+    border-color: var(--mgz-gold);
+    color: #fff;
+}
+.mgz-tab-label {
+    pointer-events: none;
+}
+.mgz-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.mgz-chip {
+    padding: 2px 8px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--mgz-ink-2);
+}
+.mgz-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mgz-card {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+.mgz-card-cover {
+    flex: 0 0 46px;
+    height: 62px;
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.mgz-card-vol {
+    pointer-events: none;
+}
+.mgz-card-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.mgz-card-title {
+    font-weight: 600;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+.mgz-card-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--mgz-ink-2);
+}
+.mgz-card-npc {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--mgz-gold-soft);
+    overflow-wrap: anywhere;
+}
+.mgz-card-warn {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--mgz-warn);
+}
+.mgz-card-side {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.mgz-mini {
+    padding: 3px 8px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--mgz-ink-2);
+    font-size: 11px;
+    cursor: pointer;
+}
+.mgz-mini-err {
+    color: var(--mgz-err);
+    border-color: rgba(192, 57, 43, 0.4);
+}
+.mgz-btn {
+    padding: 7px 12px;
+    border: 1px solid var(--mgz-gold);
+    border-radius: 6px;
+    background: var(--mgz-gold);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+}
+.mgz-btn-warn {
+    background: #fff;
+    color: var(--mgz-err);
+    border-color: rgba(192, 57, 43, 0.5);
+}
+.mgz-empty {
+    padding: 24px 12px;
+    text-align: center;
+}
+.mgz-empty-text {
+    font-size: 13px;
+    color: var(--mgz-ink-2);
+}
+.mgz-reader {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 8px;
+    background: #fff;
+}
+.mgz-reader-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.mgz-reader-vol {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mgz-gold);
+}
+.mgz-reader-type {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+}
+.mgz-reader-title {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--mgz-ink);
+}
+.mgz-reader-npc {
+    font-size: 12px;
+    color: var(--mgz-gold-soft);
+}
+.mgz-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 15px;
+    line-height: 1.75;
+}
+.mgz-gap {
+    height: 8px;
+}
+.mgz-q {
+    margin-top: 10px;
+    color: var(--mgz-ink-2);
+    font-style: italic;
+}
+.mgz-a {
+    color: var(--mgz-ink);
+}
+.mgz-a-name {
+    font-weight: 600;
+    color: var(--mgz-gold);
+}
+.mgz-p {
+    color: var(--mgz-ink);
+    overflow-wrap: anywhere;
+}
+.mgz-p-warn {
+    padding-left: 8px;
+    border-left: 2px solid var(--mgz-warn);
+    color: var(--mgz-warn);
+}
+.mgz-rank {
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: var(--mgz-paper);
+}
+.mgz-rank-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+.mgz-rank-medal {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mgz-gold);
+    border: 1px solid var(--mgz-gold);
+    border-radius: 3px;
+    padding: 0 4px;
+}
+.mgz-rank-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--mgz-ink-2);
+}
+.mgz-rank-name {
+    font-weight: 600;
+}
+.mgz-rank-pct {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--mgz-gold);
+}
+.mgz-rank-bar-wrap {
+    margin-top: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(139, 105, 20, 0.12);
+    overflow: hidden;
+}
+.mgz-rank-bar {
+    height: 100%;
+    background: var(--mgz-gold);
+}
+.mgz-cmt {
+    padding-left: 8px;
+    font-size: 13px;
+    color: var(--mgz-ink-2);
+}
+.mgz-feat {
+    margin: 8px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: #fff;
+}
+.mgz-feat-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.mgz-feat-icon {
+    color: var(--mgz-gold);
+}
+.mgz-feat-name {
+    font-weight: 600;
+}
+.mgz-feat-line {
+    font-size: 14px;
+    color: var(--mgz-ink);
+}
+.mgz-letter {
+    padding: 6px 10px;
+    border-left: 3px solid var(--mgz-gold-soft);
+    background: rgba(176, 141, 58, 0.06);
+}
+.mgz-letter-head {
+    font-weight: 600;
+    color: var(--mgz-gold);
+}
+.mgz-reply {
+    padding: 6px 10px;
+    border-left: 3px solid var(--mgz-ink-2);
+    background: rgba(107, 90, 58, 0.06);
+}
+.mgz-reply-head {
+    font-weight: 600;
+    color: var(--mgz-ink-2);
+}
+.mgz-talk {
+    color: var(--mgz-ink);
+}
+.mgz-talk-name {
+    font-weight: 600;
+    color: var(--mgz-gold);
+}
+.mgz-narr {
+    font-size: 13px;
+    color: var(--mgz-ink-2);
+}
+.mgz-rel {
+    padding: 4px 8px;
+    border-left: 2px solid var(--mgz-gold-soft);
+    font-size: 13px;
+}
+.mgz-note {
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+}
+.mgz-chart {
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: #fff;
+    overflow-x: auto;
+}
+.mgz-chart-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    color: var(--mgz-ink-2);
+}
+.mgz-edge {
+    stroke: var(--mgz-line);
+    stroke-width: 1.5;
+}
+.mgz-edge-label {
+    fill: var(--mgz-ink-2);
+}
+.mgz-node {
+    opacity: 0.9;
+}
+.mgz-node-label {
+    fill: #fff;
+    font-weight: 600;
+}
+.mgz-chart-fallback {
+    padding: 8px;
+    border: 1px dashed var(--mgz-warn);
+    border-radius: 6px;
+}
+.mgz-tl {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: var(--mgz-paper);
+}
+.mgz-tl-head {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mgz-gold);
+}
+.mgz-tl-p {
+    font-size: 14px;
+    color: var(--mgz-ink);
+    overflow-wrap: anywhere;
+}
+.mgz-reader-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.mgz-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--mgz-ink);
+    font-size: 13px;
+    font-family: inherit;
+}
+.mgz-ta {
+    min-height: 72px;
+    resize: vertical;
+    line-height: 1.6;
+}
+.mgz-ta-lg {
+    min-height: 160px;
+    font-size: 12px;
+}
+.mgz-new {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mgz-new-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.mgz-new-row > label {
+    flex: 0 0 68px;
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+}
+.mgz-new-people {
+    align-items: flex-start;
+}
+.mgz-people {
+    flex: 1 1 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.mgz-person {
+    padding: 4px 8px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--mgz-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.mgz-person.is-on {
+    background: var(--mgz-gold);
+    border-color: var(--mgz-gold);
+    color: #fff;
+}
+.mgz-hint {
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(139, 105, 20, 0.08);
+    font-size: 11px;
+    color: var(--mgz-ink-2);
+}
+.mgz-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--mgz-gold-soft);
+    border-radius: 8px;
+    background: #fff;
+}
+.mgz-prompt-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mgz-gold);
+}
+.mgz-prompt-head > button {
+    margin-left: auto;
+}
+.mgz-prompt-acts {
+    display: flex;
+    gap: 6px;
+}
+.mgz-search {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mgz-search-meta {
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+}
+.mgz-hit {
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+.mgz-hit-title {
+    font-weight: 600;
+    font-size: 13px;
+}
+.mgz-hit-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--mgz-gold-soft);
+}
+.mgz-hit-sn {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+    overflow-wrap: anywhere;
+}
+.mgz-set {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mgz-set-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.mgz-set-row > label {
+    flex: 0 0 68px;
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+}
+.mgz-set-readings {
+    padding: 8px 10px;
+    border: 1px solid var(--mgz-line);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    color: var(--mgz-ink-2);
+}
