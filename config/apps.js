@@ -808,6 +808,35 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.42.0] 曲库案头：把对话端拿回来的那份曲目收拾好（缝合自两个源）
+        //   ① 小鼠机 nuo_sources/nuo3/xiaoshuji.html 的 netease 一族
+        //      （实测 71 个函数，块文件 nuo_sources/nuo3/live/blk_netease.txt）；
+        //   ② EPhone·xintuk src_xintuk/runtime/scripts/main-app/ 的
+        //      「第三方音乐聚合 + 扫码账号桥」一族（65 片 / 908 个函数）。
+        //   取四块治理面：曲目归一与去重（逐条报）/ 封面四态（零外链）/
+        //   歌词归一（坏行不静默丢）/ 播放模式与队列游标（坏值拒而不夹）
+        //   + 来源读数（冷却与偏好不同形）+ 回执归一（六因）。
+        //   ★ 立场差：两个源都是「取数的那个人」（自己持多家聚合 API 与 NCM 节点、
+        //   自己发请求、自己 new Audio() 真放一遍验链接、自己从本地存储
+        //   直读账号 uid 与 cookie），本件是「案头」：只收拾用户从对话端
+        //   拿回来的那份曲目数据。
+        //   四块不缝：① **不发请求**（源 neteaseApiFetch / fetchJson 直连多家 API）；
+        //   ② **不读账号与 cookie**（源 currentAccountStorageKey 直读 uid 与 cookie）；
+        //   ③ **不碰 audio 元件**（源 validateAudio 真放 9 秒且失败无读数）；
+        //   ④ **不收外链、不落数据库**（源封面走外链托底图）。
+        //   四条偏离：① 去重不许静默（源塞进 alternatives 不报）；
+        //   ② 封面不许换托底图（源 PLACEHOLDER_COVER 是外链）；
+        //   ③ 歌词坏行不许静默丢（源 exec 不中即 continue）；
+        //   ④ 队列超限不许静默截（源到 limit 就 break）。
+        //   写盘四条键走 ^musicdesk_ 前缀随会话隔离。
+        id: 'musicdesk',
+        name: '曲库案头',
+        icon: '🎵',
+        color: '#8a6f3f',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

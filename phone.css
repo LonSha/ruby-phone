@@ -14817,6 +14817,521 @@ input:checked + .toggle-slider:before {
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
 
+/* ══════════════ [v3.42.0] 曲库案头（musicdesk） ══════════════ */
+/* ========================================================
+ * musicdesk.css — [v3.42.0] 曲库案头 · 样式层
+ *
+ * 照抄 needsim / kettle / sourcebook 规格：全部选择器挂在 .msd-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 musicdesk-view.js 的产出
+ * **逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自两个源的**案头感**（纸上清单 + 印章）：
+ *   ① 底是「旧纸案头」的暖灰，不是纯白（纯白会把「读不出来」的淡红吹没）；
+ *   ② 曲目**逐条三态**：时长读得出来（等宽数字）/ 读不出来（横线 + 红）；
+ *      封面一律零外链 —— 出的是**八档色相块 + 首字**（源用外链托底图）；
+ *   ③ 四态**四色**、且「没了」与「读不出来」不同色（源把两者画成同一屏）；
+ *   ④ 队列读数用**六格表**：给进来 / 留下来 / 合并掉 / 截掉 / 丢掉的，
+ *      一眼看得出「少掉的那几首去哪了」（源一个字不说）；
+ *   ⑤ 来源卡片带「你偏好这条」的旗子与冷静剩余秒数；
+ *   ⑥ 数值一律等宽字体：条数 / 秒数 / 占比要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.msd-root {
+    --msd-bg: #f3f1ec;
+    --msd-panel: #fbfaf7;
+    --msd-panel-2: #e9e5dd;
+    --msd-line: #d3ccbf;
+    --msd-ink: #2a2723;
+    --msd-ink-2: #5f594f;
+    --msd-ink-3: #9a948a;
+
+    /* 四态四色 */
+    --msd-ok: #1f7a4d;
+    --msd-warn: #a35c12;
+    --msd-off: #8a857c;
+    --msd-err: #b02a1f;
+
+    /* 八档色相（封面令牌）—— 互不相同，且同一首歌恒定 */
+    --msd-tone-a: #7d9bb5;
+    --msd-tone-b: #b58a7d;
+    --msd-tone-c: #8ab58c;
+    --msd-tone-d: #a58ab5;
+    --msd-tone-e: #b5b08a;
+    --msd-tone-f: #8ab0b5;
+    --msd-tone-g: #b58a9f;
+    --msd-tone-h: #9aa2b5;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--msd-bg);
+    color: var(--msd-ink);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.msd-root * { box-sizing: border-box; }
+
+/* ---------- 页头 ---------- */
+.msd-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.msd-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+.msd-header-sub {
+    font-size: 11px;
+    color: var(--msd-ink-3);
+    text-align: right;
+}
+
+/* ---------- 状态面（四态四色，不许同形） ---------- */
+.msd-face {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border-left: 4px solid var(--msd-off);
+    background: var(--msd-panel);
+}
+.msd-face-ok { border-left-color: var(--msd-ok); }
+.msd-face-warn { border-left-color: var(--msd-warn); }
+.msd-face-err { border-left-color: var(--msd-err); }
+.msd-face-label { font-weight: 600; }
+.msd-face-sub { font-size: 12px; color: var(--msd-ink-2); }
+
+.msd-flash {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #efe7d6;
+    color: #6a4b18;
+    font-size: 12px;
+}
+
+/* ---------- 页签 ---------- */
+.msd-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.msd-tab {
+    padding: 4px 10px;
+    border: 1px solid var(--msd-line);
+    border-radius: 999px;
+    background: var(--msd-panel);
+    color: var(--msd-ink-2);
+    font: inherit;
+    cursor: pointer;
+}
+.msd-tab.is-on {
+    background: var(--msd-ink);
+    border-color: var(--msd-ink);
+    color: #fbfaf7;
+}
+
+/* ---------- 面板通用 ---------- */
+.msd-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--msd-line);
+    border-radius: 8px;
+    background: var(--msd-panel);
+}
+.msd-hint {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+}
+.msd-empty {
+    padding: 14px 10px;
+    border: 1px dashed var(--msd-line);
+    border-radius: 8px;
+    color: var(--msd-ink-3);
+    text-align: center;
+}
+.msd-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+/* ---------- 四态色相 ---------- */
+.msd-state-ok { color: var(--msd-ok); }
+.msd-state-warn { color: var(--msd-warn); }
+.msd-state-off { color: var(--msd-off); }
+.msd-state-err { color: var(--msd-err); }
+
+/* ---------- 封面四态读数 ---------- */
+.msd-covers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.msd-cover-count,
+.msd-cover-none {
+    padding: 2px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 999px;
+    background: var(--msd-panel-2);
+    font-size: 11.5px;
+}
+
+/* ---------- 曲目列表 ---------- */
+.msd-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.msd-song {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 8px;
+    background: var(--msd-panel);
+    cursor: pointer;
+}
+.msd-song.is-on {
+    border-color: var(--msd-ink);
+    box-shadow: inset 0 0 0 1px var(--msd-ink);
+}
+.msd-cover {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--msd-panel-2);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+.msd-tone-a { background: var(--msd-tone-a); }
+.msd-tone-b { background: var(--msd-tone-b); }
+.msd-tone-c { background: var(--msd-tone-c); }
+.msd-tone-d { background: var(--msd-tone-d); }
+.msd-tone-e { background: var(--msd-tone-e); }
+.msd-tone-f { background: var(--msd-tone-f); }
+.msd-tone-g { background: var(--msd-tone-g); }
+.msd-tone-h { background: var(--msd-tone-h); }
+.msd-tone-none {
+    background: transparent;
+    border: 1px dashed var(--msd-line);
+    color: var(--msd-ink-3);
+}
+.msd-song-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.msd-song-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.msd-song-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.msd-song-dur {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--msd-ink-2);
+}
+.msd-song-dur.is-unk {
+    color: var(--msd-err);
+    font-weight: 600;
+}
+.msd-song-sub {
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.msd-gone {
+    color: var(--msd-warn);
+}
+.msd-song-why {
+    font-size: 11px;
+    color: var(--msd-err);
+}
+.msd-song-cov {
+    flex: 0 0 auto;
+    font-size: 11px;
+}
+
+/* ---------- 单条详情 ---------- */
+.msd-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--msd-line);
+    border-radius: 8px;
+    background: var(--msd-panel-2);
+}
+.msd-detail-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11.5px;
+}
+.msd-detail-top span:first-child { color: var(--msd-ink-2); }
+
+/* ---------- 播放模式条 ---------- */
+.msd-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.msd-mode {
+    padding: 4px 10px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: var(--msd-panel);
+    color: var(--msd-ink-2);
+    font: inherit;
+    cursor: pointer;
+}
+.msd-mode.is-on {
+    background: #dfeaddad;
+    border-color: var(--msd-ok);
+    color: var(--msd-ok);
+    font-weight: 600;
+}
+
+/* ---------- 按钮与表单 ---------- */
+.msd-panel button[type="button"] {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: var(--msd-panel-2);
+    color: var(--msd-ink);
+    font: inherit;
+    cursor: pointer;
+}
+.msd-rows,
+.msd-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.msd-rows label,
+.msd-form label {
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+}
+.msd-rows input,
+.msd-form textarea,
+.msd-src-in {
+    padding: 6px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--msd-ink);
+    font: inherit;
+}
+.msd-draft {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: var(--msd-panel-2);
+    color: var(--msd-ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+}
+/* ---------- 歌词面 ---------- */
+.msd-lyr-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 6px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: var(--msd-panel-2);
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+}
+.msd-lyr-bar b {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--msd-ink);
+}
+.msd-lyric-list {
+    margin: 0;
+    padding: 0 0 0 4px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 46vh;
+    overflow: auto;
+}
+.msd-lyric {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+.msd-lyric:nth-child(odd) { background: var(--msd-panel-2); }
+.msd-lyric-at {
+    flex: 0 0 auto;
+    color: var(--msd-ink-3);
+}
+.msd-lyric-tx {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ---------- 队列六格表 ---------- */
+.msd-qgrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+@media (max-width: 420px) {
+    .msd-qgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.msd-qcell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 6px;
+    background: var(--msd-panel-2);
+}
+.msd-qk {
+    font-size: 11px;
+    color: var(--msd-ink-2);
+}
+.msd-qv {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 17px;
+    font-weight: 600;
+}
+.msd-qline {
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+}
+.msd-qline b {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---------- 来源面 ---------- */
+.msd-src {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--msd-line);
+    border-radius: 8px;
+    background: var(--msd-panel);
+}
+.msd-src-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.msd-src-top {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.msd-src-k {
+    font-weight: 600;
+}
+.msd-src-flag {
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #efe7d6;
+    color: #6a4b18;
+    font-size: 11px;
+}
+.msd-src-sub {
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.msd-src-btns {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.msd-src-in {
+    width: 100%;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+}
+
+/* ---------- 台账面 ---------- */
+.msd-receipts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 46vh;
+    overflow: auto;
+}
+.msd-receipt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-left: 3px solid var(--msd-line);
+    border-radius: 0 6px 6px 0;
+    background: var(--msd-panel-2);
+}
+.msd-rc-top {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.msd-rc-k {
+    font-weight: 600;
+    font-size: 11.5px;
+}
+.msd-rc-line {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    color: var(--msd-ink-2);
+}
+.msd-rc-why {
+    flex: 0 0 auto;
+    color: var(--msd-ink-3);
+}
+.msd-rc-sub {
+    font-size: 11px;
+    color: var(--msd-ink-3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 /* ══════════════ [v3.41.0] 需求沙盘（needsim） ══════════════ */
 /* ========================================================
  * needsim.css — [v3.41.0] 需求沙盘 · 样式层
