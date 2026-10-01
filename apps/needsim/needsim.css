@@ -1,0 +1,515 @@
+/* ========================================================
+ * needsim.css — [v3.41.0] 需求沙盘 · 样式层
+ *
+ * 照抄 kettle / sourcebook / recall 规格：全部选择器挂在 .nsm-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 needsim-view.js 的产出
+ * **逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源「小鼠机・模拟人生面板」的**六格仪表 + 微光卡**观感：
+ *   ① 底是「夜里开着的仪表盘」的冷灰蓝，不是纯白（纯白会把「读不出来」
+ *      的淡红吹没）；
+ *   ② 六项需求**逐项三态**：读得出来（按档位四色）/ 读不出来（横线 + 红）；
+ *      源把读不出来的回落成 5 并照画进度条 —— 看着就像真的快见底了；
+ *   ③ 心情**缺项不同形**：源落「非常不开心」，本件画「心情读不出来」；
+ *   ④ 池子**四态四色**：源只有「能拆开」与「当成空」；
+ *   ⑤ 取数**四态三色**（后两个共一个红 —— 都是「你看到的不对、原因不在你」）；
+ *   ⑥ 数值一律等宽字体：档位计数 / 条数 / 占比要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.nsm-root {
+    --nsm-bg: #eef1f6;
+    --nsm-panel: #fbfcfe;
+    --nsm-panel-2: #e4e9f1;
+    --nsm-line: #cfd6e2;
+    --nsm-ink: #262b33;
+    --nsm-ink-2: #5d6675;
+    --nsm-ink-3: #98a1b0;
+
+    /* 六项档位四色（充足 → 告急） */
+    --nsm-lv-plenty: #047857;
+    --nsm-lv-ok: #0369a1;
+    --nsm-lv-low: #b45309;
+    --nsm-lv-alert: #b91c1c;
+
+    /* 池子四态色相 */
+    --nsm-pool-ok: #047857;
+    --nsm-pool-partial: #b45309;
+    --nsm-pool-absent: #78716c;
+    --nsm-pool-malformed: #b91c1c;
+
+    /* 三态（好 / 缺口 / 坏了） */
+    --nsm-ok: #047857;
+    --nsm-warn: #b45309;
+    --nsm-err: #b91c1c;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--nsm-bg);
+    color: var(--nsm-ink);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.nsm-root * { box-sizing: border-box; }
+
+/* ---------- 页头 ---------- */
+.nsm-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.nsm-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+.nsm-header-sub {
+    font-size: 11px;
+    color: var(--nsm-ink-3);
+}
+
+/* ---------- 状态面（四态三色，不许同形） ---------- */
+.nsm-face {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-face-label { font-weight: 600; }
+.nsm-face-sub { font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-face-ok { border-left-color: var(--nsm-ok); }
+.nsm-face-ok .nsm-face-label { color: var(--nsm-ok); }
+.nsm-face-warn { border-left-color: var(--nsm-warn); }
+.nsm-face-warn .nsm-face-label { color: var(--nsm-warn); }
+.nsm-face-err { border-left-color: var(--nsm-err); background: #fef6f6; }
+.nsm-face-err .nsm-face-label { color: var(--nsm-err); }
+
+.nsm-flash {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--nsm-panel-2);
+    color: var(--nsm-ink-2);
+    font-size: 12px;
+}
+
+/* ---------- 页签 ---------- */
+.nsm-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid var(--nsm-line);
+    padding-bottom: 6px;
+}
+.nsm-tab {
+    padding: 4px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 999px;
+    background: var(--nsm-panel);
+    color: var(--nsm-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.nsm-tab.is-on {
+    border-color: var(--nsm-ink);
+    background: var(--nsm-ink);
+    color: var(--nsm-panel);
+}
+
+/* ---------- 面板 ---------- */
+.nsm-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.nsm-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--nsm-ink-2);
+}
+.nsm-none {
+    padding: 10px;
+    border: 1px dashed var(--nsm-line);
+    border-radius: 6px;
+    color: var(--nsm-ink-3);
+    font-size: 12px;
+    text-align: center;
+}
+
+/* ---------- 表单 ---------- */
+.nsm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-form label { font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-form input, .nsm-form textarea {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 4px;
+    background: var(--nsm-panel-2);
+    color: var(--nsm-ink);
+    font-family: inherit;
+    font-size: 12px;
+}
+.nsm-form button, .nsm-act button, .nsm-sec-head button, .nsm-led-btns button {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 4px;
+    background: var(--nsm-panel-2);
+    color: var(--nsm-ink);
+    font-size: 12px;
+    cursor: pointer;
+}
+.nsm-draft {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 4px;
+    background: var(--nsm-panel-2);
+    color: var(--nsm-ink);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+/* ---------- 六项需求 ---------- */
+.nsm-needs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.nsm-need {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-need.is-unk { border-left-color: var(--nsm-err); background: #fef6f6; }
+.nsm-need-top { display: flex; align-items: baseline; gap: 6px; }
+.nsm-need-ic { font-size: 13px; }
+.nsm-need-lab { font-weight: 600; }
+.nsm-need-val {
+    margin-left: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+.nsm-need.is-unk .nsm-need-val { color: var(--nsm-err); font-family: inherit; font-size: 11px; }
+.nsm-need-sub { font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-pct { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; }
+
+.nsm-bar {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--nsm-panel-2);
+    overflow: hidden;
+}
+.nsm-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--nsm-lv-ok);
+}
+.nsm-lv-plenty { background: var(--nsm-lv-plenty); }
+.nsm-lv-ok { background: var(--nsm-lv-ok); }
+.nsm-lv-low { background: var(--nsm-lv-low); }
+.nsm-lv-alert { background: var(--nsm-lv-alert); }
+/* 读不出来：画一条横线，不画进度 —— 与「真的快见底」不同形 */
+.nsm-bar-unk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-linear-gradient(45deg, #f6d7d7, #f6d7d7 4px, #fbeaea 4px, #fbeaea 8px);
+}
+.nsm-bar-dash { color: var(--nsm-err); font-size: 11px; line-height: 1; }
+
+.nsm-mood {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-mood-k { font-size: 11px; color: var(--nsm-ink-3); }
+.nsm-mood-v { font-weight: 600; }
+.nsm-mood-sub { margin-left: auto; font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-mood.is-unk { border-left-color: var(--nsm-err); background: #fef6f6; }
+.nsm-mood.is-unk .nsm-mood-v { color: var(--nsm-err); }
+
+/* ---------- 台词池 ---------- */
+.nsm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px;
+}
+.nsm-act {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-act-top { display: flex; align-items: baseline; gap: 6px; }
+.nsm-act-ic { font-size: 13px; }
+.nsm-act-lab { font-weight: 600; }
+.nsm-act-n {
+    margin-left: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--nsm-ink-2);
+}
+.nsm-act-eff { font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-act-state { font-size: 11px; color: var(--nsm-ink-2); }
+.nsm-act-warn { font-size: 11px; color: var(--nsm-warn); }
+
+/* 池子四态四色 */
+.nsm-pool-ok { border-left-color: var(--nsm-pool-ok); }
+.nsm-pool-ok .nsm-act-lab { color: var(--nsm-pool-ok); }
+.nsm-pool-partial { border-left-color: var(--nsm-pool-partial); }
+.nsm-pool-partial .nsm-act-lab { color: var(--nsm-pool-partial); }
+.nsm-pool-absent { border-left-color: var(--nsm-pool-absent); }
+.nsm-pool-absent .nsm-act-lab { color: var(--nsm-pool-absent); }
+.nsm-pool-malformed { border-left-color: var(--nsm-pool-malformed); background: #fef6f6; }
+.nsm-pool-malformed .nsm-act-lab { color: var(--nsm-pool-malformed); }
+
+.nsm-sec-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--nsm-line);
+    font-weight: 600;
+}
+.nsm-sec-sub { font-size: 11px; color: var(--nsm-ink-2); font-weight: 400; }
+.nsm-events {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.nsm-ev {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-ev-top { display: flex; align-items: baseline; gap: 6px; }
+.nsm-ev-i {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--nsm-ink-3);
+}
+.nsm-ev-t { font-weight: 600; font-size: 12px; }
+.nsm-ev-x { font-size: 12px; color: var(--nsm-ink-2); }
+
+.nsm-extra {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px dashed var(--nsm-line);
+    border-radius: 6px;
+}
+.nsm-extra-k { font-size: 12px; font-weight: 600; }
+.nsm-extra-v { font-size: 11px; color: var(--nsm-ink-2); font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+
+/* ---------- 今日愿望（四态四色，过期不许与「今天没有」同形） ---------- */
+.nsm-wish {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-wish-state {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+}
+.nsm-wish-title { font-size: 14px; font-weight: 600; }
+.nsm-wish-desc { font-size: 12px; color: var(--nsm-ink-2); }
+.nsm-wish-meta { font-size: 11px; color: var(--nsm-ink-3); }
+.nsm-wish-warn {
+    margin-top: 2px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: #fdf3e7;
+    color: var(--nsm-warn);
+    font-size: 11px;
+}
+.nsm-wish-ok { border-left-color: var(--nsm-ok); }
+.nsm-wish-ok .nsm-wish-state { color: var(--nsm-ok); }
+/* 过期：**暖橙 + 虚线边**（与「今天没有」的冷灰、与「读不出来」的红都不同形） */
+.nsm-wish-stale { border-left-color: var(--nsm-warn); border-style: dashed; background: #fdfaf3; }
+.nsm-wish-stale .nsm-wish-state { color: var(--nsm-warn); }
+.nsm-wish-stale .nsm-wish-title { color: var(--nsm-ink-2); text-decoration: line-through; }
+/* 今天没有：冷灰、无虚线、无划掉 */
+.nsm-wish-absent { border-left-color: var(--nsm-ink-3); border-style: solid; background: var(--nsm-panel-2); }
+.nsm-wish-absent .nsm-wish-state { color: var(--nsm-ink-3); }
+.nsm-wish-malformed { border-left-color: var(--nsm-err); background: #fef6f6; }
+.nsm-wish-malformed .nsm-wish-state { color: var(--nsm-err); }
+
+/* ---------- 记忆流（逐条卡，顶替痕迹另色） ---------- */
+.nsm-mems {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.nsm-mem {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-mem.is-auto { border-left: 3px solid var(--nsm-ink-3); padding-left: 8px; }
+.nsm-mem.is-on { border-color: var(--nsm-ink-2); box-shadow: 0 0 0 1px var(--nsm-ink-3) inset; }
+.nsm-mem-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.nsm-mem-t { font-size: 12px; font-weight: 600; }
+.nsm-mem-age {
+    flex: 0 0 auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px;
+    color: var(--nsm-ink-3);
+}
+/* 时间戳在未来 / 读不出来：横线加红，不许夹成「刚刚」 */
+.nsm-mem-age.is-unk { color: var(--nsm-err); font-weight: 600; }
+.nsm-mem-x { font-size: 12px; color: var(--nsm-ink); }
+.nsm-mem-kind { font-size: 10px; color: var(--nsm-ink-3); }
+
+
+/* ---------- 台账（回执逐张，跳项 / 顶替一律留痕） ---------- */
+.nsm-led {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.nsm-rec {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--nsm-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-rec-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.nsm-rec-lab { font-size: 12px; font-weight: 600; }
+.nsm-rec-kind {
+    padding: 0 6px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 999px;
+    font-size: 10px;
+    color: var(--nsm-ink-2);
+}
+.nsm-rec-mood {
+    margin-left: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px;
+    color: var(--nsm-ink-3);
+}
+.nsm-rec-line { font-size: 12px; color: var(--nsm-ink); }
+.nsm-rec-body {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px;
+    color: var(--nsm-ink-3);
+}
+.nsm-rc-ok { border-left-color: var(--nsm-ok); }
+/* 有跳项 / 有顶替：暖橙，且在正文上留色 */
+.nsm-rc-warn { border-left-color: var(--nsm-warn); background: #fdfaf3; }
+.nsm-rc-warn .nsm-rec-body { color: var(--nsm-warn); }
+
+/* ---------- 策略（口径表，只读） ---------- */
+.nsm-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 6px;
+    background: var(--nsm-panel);
+}
+.nsm-row-k { font-size: 12px; font-weight: 600; }
+.nsm-row input[type="number"] {
+    width: 76px;
+    padding: 3px 6px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 5px;
+    background: #fff;
+    color: var(--nsm-ink);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+.nsm-row-sub { font-size: 11px; color: var(--nsm-ink-3); }
+.nsm-cats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.nsm-cat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--nsm-line);
+    border-radius: 6px;
+    background: var(--nsm-panel-2);
+}
+.nsm-cat-k { flex: 0 0 96px; font-size: 12px; font-weight: 600; }
+.nsm-cat-v { font-size: 11px; color: var(--nsm-ink-2); }
+
+/* ---------- 窄屏（本件是六页签 + 六格仪表 + 逐态卡片条的竖排界面） ---------- */
+@media (max-width: 420px) {
+    .nsm-root { padding: 10px 8px; gap: 8px; }
+    .nsm-need-top { flex-wrap: wrap; }
+    .nsm-cat { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .nsm-cat-k { flex: 0 0 auto; }
+    .nsm-rec-mood { margin-left: 0; }
+}
+
+
+/* ---------- 记忆 / 台账 两处的「已存 N / M 条」 ---------- */
+.nsm-led-cap {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px;
+    color: var(--nsm-ink-3);
+}
