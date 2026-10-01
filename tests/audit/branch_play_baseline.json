@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 307,
+    "files_scanned": 310,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 8,
-    "chat_data_patterns": 188,
+    "chat_data_patterns": 193,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 1,
     "preview_face_hits": 42,
@@ -577,6 +577,37 @@
       "readings": {
         "files_scanned": 307,
         "chat_data_patterns": 188
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits",
+        "upstream_modules_scanned",
+        "upstream_branch_domain_modules",
+        "upstream_checkpoint_named",
+        "upstream_checkpoint_named_persistent",
+        "upstream_branch_domain_preview_hits",
+        "upstream_branch_guard_loadable",
+        "upstream_ledger_replay_loadable",
+        "upstream_bridge_snapshot_branch_faces"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+        "chat_data_patterns 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+      ]
+    },
+    "v3.40.0": {
+      "what": "v3.40.0 对话水壶的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+      "why": "枚举面 307 -> 310 个文件（本版三个新 .js）；**会话隔离前缀面** 188 -> 193（+5）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^kettle_/,（一条前缀覆盖三条键：记录 / 策略 / 台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 4 行配套注释（版标行、一条前缀覆盖三键行、三键各自独立行、随会话隔离行）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 对话水壶不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+      "readings": {
+        "files_scanned": 310,
+        "chat_data_patterns": 193
       },
       "unchanged": [
         "rollback_points",

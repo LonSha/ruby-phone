@@ -178,6 +178,11 @@ export class PhoneStorage {
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。
+            // [v3.40.0] 对话水壶（kettle_notes / kettle_policy / kettle_ledger）：
+            //   一条前缀覆盖三键，三条键都无元字符，按仓内口径「无需宽匹配登记」。
+            //   已封的记录、策略（台账保留数）、台账回执各自独立。
+            //   随会话隔离：源把探店记录写进宿主会话键下，切角色时**原样留着**（串味）。源没有这一步。
+            /^kettle_/,
             /^widget_/,
             // [v2.53.0] 世界账本（ledger_settings_v1：注入开关）。只读桥消费。
             /^ledger_/,

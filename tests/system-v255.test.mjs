@@ -75,7 +75,8 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     magazineApp: 'magazine',   // [v3.36.0] 杂志：换会话丢稿件与译文与台账（视图态一并重置）并全量重取
     soundkitApp: 'soundkit',   // [v3.37.0] 音效盒：换会话丢配方草稿（音符表 / 名字 / 音量）、分享码与 CSS 探针并全量重取
     recallApp: 'recall',       // [v3.38.0] 召回治理台：换会话丢候选快照草稿与标签页详情态，四路配置 / 策略 / 台账全量重取
-    sourcebookApp: 'sourcebook' // [v3.39.0] 时光胶囊：换会话丢存信表单草稿与贴回的回信草稿，信 / 策略 / 台账全量重取
+    sourcebookApp: 'sourcebook', // [v3.39.0] 时光胶囊：换会话丢存信表单草稿与贴回的回信草稿，信 / 策略 / 台账全量重取
+    kettleApp: 'kettle'        // [v3.40.0] 对话水壶：换会话丢表单字段与要求文本草稿与详情态，记录 / 策略 / 台账全量重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

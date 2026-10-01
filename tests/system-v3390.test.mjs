@@ -1425,11 +1425,15 @@ test('L1 版本锚（下限形）+ 四源同版 + update-log 条目在册', () =
 });
 
 test('L2 交棒必须指向第 3 层余件的真实现状（路线图字面不成立时以实测为准）', () => {
-    const src = read(INDEX);
-    /* 本件是第 3 层第三件，交棒必须改写为余下的两件。 */
-    assert.ok(src.includes('第 3 层第三件'), 'index.js 公告的交接段必须指向本件');
-    assert.ok(src.includes('xiaoshuji'), '交棒必须落到源文件名（便于下一步定位）');
-    assert.ok(src.includes('EPhone'), '交棒必须指向下一件');
-    /* 运行时验证边界那句必须与文档同源（本仓边界判据靠它）。 */
-    assert.ok(src.includes('运行时验证边界'), '公告条目必须带运行时验证边界段');
+    /* [v3.40.0 交棒改写] 本断言**原钉 index.js 当前公告**，而公告随每次抬版整体重写 ——
+     *   那是「可变的当前状态」（下一版必红），不是判据该钉的东西。
+     *   按本仓纪律（v2.35.0 记过：判据要钉不变的历史事实）改钉**本件自己那一版的 update-log 条目**：
+     *   公告可以换，但 v3.39.0 当年说了什么是有据可查的历史。 */
+    const log = JSON.parse(read('update-log.json'));
+    const own = (log.versions['3.39.0'] || {}).items || [];
+    const text = own.join(String.fromCharCode(10));
+    assert.ok(text.includes('第 3 层第三件'), 'v3.39.0 条目必须自述它是第 3 层第三件');
+    assert.ok(text.includes('xiaoshuji'), '交棒必须落到源文件名（便于下一步定位）');
+    assert.ok(text.includes('EPhone'), '交棒必须指向下一件');
+    assert.ok(text.includes('运行时验证边界'), '条目必须带运行时验证边界段');
 });

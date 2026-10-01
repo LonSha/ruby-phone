@@ -14817,6 +14817,373 @@ input:checked + .toggle-slider:before {
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
 
+/* ══════════════ [v3.40.0] 对话水壶（kettle） ══════════════ */
+/* ========================================================
+ * kettle.css — [v3.40.0] 对话水壶 · 样式层
+ *
+ * 照抄 sourcebook / recall / soundkit / pixiv / magazine 规格：全部选择器挂在
+ * .ktl-root 下（宿主样式不外泄、也不吃宿主样式）；类名与 kettle-view.js 的
+ * 产出**逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源「小鼠机・探店」的**搪瓷壶 + 餐桌纸**观感（源是暖底 + 圆角）：
+ *   ① 底是「桌布」的暖灰色，不是纯白（纯白会把「数不出来」的淡黄徽章吹没）；
+ *   ② 轮次**三档三色**，且「数不出来」用另一个色相 —— 塔进任一档就是源的那个毛病：
+ *      数不出来被说成「聊了很久」、一条都没有被说成「三言两语」；
+ *   ③ 选项**四态四色**：源只有「能拆开」与「拆不开」两种色相；
+ *   ④ 取数**四态三色**（读得到 / 还没记过 / 写了但认不出来 / 取不出来）：
+ *      后两者共用一个红 —— 它们都是「你看到的东西不对，且原因不在你」；
+ *   ⑤ 数值一律等宽字体：档位计数 / 台账条数 / 占比要对得齐。
+ *
+ * ★ 本件**不用 emoji 做布局锚点**：图形字符（· ▸ ● ○）在等宽与比例字体下宽度一致。
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.ktl-root {
+    --ktl-bg: #f7f4ef;
+    --ktl-panel: #fffefb;
+    --ktl-panel-2: #f1ece3;
+    --ktl-line: #e0d8ca;
+    --ktl-ink: #33302b;
+    --ktl-ink-2: #6f6759;
+    --ktl-ink-3: #a09785;
+
+    /* 轮次三档色相（三言两语 → 坐下聊了很久） */
+    --ktl-rd-short: #0e9488;
+    --ktl-rd-eventful: #2563eb;
+    --ktl-rd-long: #7c3aed;
+
+    /* 选项四态色相 */
+    --ktl-op-ok: #15803d;
+    --ktl-op-too-few: #b45309;
+    --ktl-op-too-many: #db2777;
+    --ktl-op-absent: #78716c;
+
+    /* 三态（好 / 缺口 / 坏了） */
+    --ktl-ok: #15803d;
+    --ktl-warn: #b45309;
+    --ktl-err: #b91c1c;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--ktl-bg);
+    color: var(--ktl-ink);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.ktl-root * { box-sizing: border-box; }
+
+/* ---------- 页头 ---------- */
+.ktl-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.ktl-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+.ktl-header-sub {
+    font-size: 11px;
+    color: var(--ktl-ink-3);
+}
+
+/* ---------- 状态面（四态三色，不许同形） ---------- */
+.ktl-face {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--ktl-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-face-label { font-weight: 600; }
+.ktl-face-sub { font-size: 11px; color: var(--ktl-ink-2); }
+.ktl-face-ok { border-left-color: var(--ktl-ok); }
+.ktl-face-ok .ktl-face-label { color: var(--ktl-ok); }
+.ktl-face-warn { border-left-color: var(--ktl-warn); }
+.ktl-face-warn .ktl-face-label { color: var(--ktl-warn); }
+.ktl-face-err { border-left-color: var(--ktl-err); background: #fff5f5; }
+.ktl-face-err .ktl-face-label { color: var(--ktl-err); }
+
+.ktl-flash {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--ktl-panel-2);
+    color: var(--ktl-ink-2);
+    font-size: 12px;
+}
+
+/* ---------- 页签 ---------- */
+.ktl-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid var(--ktl-line);
+    padding-bottom: 6px;
+}
+.ktl-tab {
+    padding: 4px 10px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 999px;
+    background: var(--ktl-panel);
+    color: var(--ktl-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.ktl-tab.is-on {
+    border-color: var(--ktl-ink);
+    background: var(--ktl-ink);
+    color: var(--ktl-panel);
+}
+
+/* ---------- 面板 ---------- */
+.ktl-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ktl-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--ktl-ink-2);
+}
+
+/* ---------- 表单 ---------- */
+.ktl-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-form label { font-size: 11px; color: var(--ktl-ink-2); }
+.ktl-form input, .ktl-form textarea {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 4px;
+    background: var(--ktl-panel-2);
+    color: var(--ktl-ink);
+    font-family: inherit;
+    font-size: 12px;
+}
+.ktl-form button, .ktl-detail-btns button, .ktl-cap-btns button, .ktl-led-btns button {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 4px;
+    background: var(--ktl-panel-2);
+    color: var(--ktl-ink);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* ---------- 记录列表 ---------- */
+.ktl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ktl-list-none, .ktl-led-none {
+    padding: 10px;
+    border: 1px dashed var(--ktl-line);
+    border-radius: 6px;
+    color: var(--ktl-ink-3);
+    font-size: 12px;
+    text-align: center;
+}
+.ktl-cap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 6px;
+    background: var(--ktl-panel);
+    cursor: pointer;
+}
+.ktl-cap.is-on { border-color: var(--ktl-ink); box-shadow: 0 0 0 2px rgba(0,0,0,.05); }
+.ktl-cap-top { display: flex; align-items: baseline; gap: 6px; }
+.ktl-cap-idx {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--ktl-ink-3);
+}
+.ktl-cap-who { font-weight: 600; }
+.ktl-cap-shop { font-size: 11px; color: var(--ktl-ink-2); }
+.ktl-cap-line { font-size: 12px; color: var(--ktl-ink-2); }
+.ktl-cap-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+.ktl-cap-btns { display: flex; gap: 6px; }
+
+/* 徽章：三档三色 + 「数不出来」单列一色 */
+.ktl-b {
+    padding: 1px 7px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 999px;
+    background: var(--ktl-panel-2);
+    color: var(--ktl-ink-2);
+    font-size: 11px;
+}
+.ktl-b-round.is-known { color: var(--ktl-rd-eventful); border-color: var(--ktl-rd-eventful); background: transparent; }
+.ktl-b-round.is-unk { color: var(--ktl-err); border-color: var(--ktl-err); background: transparent; }
+.ktl-b-scene { color: var(--ktl-ink-2); }
+.ktl-b-solo.is-hit { color: var(--ktl-warn); border-color: var(--ktl-warn); background: transparent; }
+.ktl-b-dash.is-hit { color: var(--ktl-err); border-color: var(--ktl-err); background: transparent; }
+
+/* ---------- 单条详情 ---------- */
+.ktl-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--ktl-ink-3);
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-detail-head { font-weight: 600; font-size: 13px; }
+.ktl-detail-line { font-size: 12px; color: var(--ktl-ink-2); }
+.ktl-detail-btns { display: flex; gap: 6px; }
+.ktl-detail-lab { font-size: 11px; color: var(--ktl-ink-2); }
+.ktl-draft {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 4px;
+    background: var(--ktl-panel-2);
+    color: var(--ktl-ink);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    resize: vertical;
+}
+.ktl-detail textarea[data-k] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 4px;
+    background: #fffefb;
+    color: var(--ktl-ink);
+    font-family: inherit;
+    font-size: 12px;
+}
+
+/* ---------- 逐档逐态列表 ---------- */
+.ktl-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ktl-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--ktl-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-row-k { font-weight: 600; }
+.ktl-row-floor { font-size: 11px; color: var(--ktl-ink-3); }
+.ktl-row-sub { font-size: 11px; color: var(--ktl-ink-3); }
+.ktl-row-count {
+    margin-left: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+.ktl-row-why { font-size: 11px; color: var(--ktl-ink-2); flex-basis: 100%; }
+.ktl-pct { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* 三档三色 */
+.ktl-rd-short { border-left-color: var(--ktl-rd-short); }
+.ktl-rd-short .ktl-row-k { color: var(--ktl-rd-short); }
+.ktl-rd-eventful { border-left-color: var(--ktl-rd-eventful); }
+.ktl-rd-eventful .ktl-row-k { color: var(--ktl-rd-eventful); }
+.ktl-rd-long { border-left-color: var(--ktl-rd-long); }
+.ktl-rd-long .ktl-row-k { color: var(--ktl-rd-long); }
+
+/* 四态四色 */
+.ktl-op-ok { border-left-color: var(--ktl-op-ok); }
+.ktl-op-ok .ktl-row-k { color: var(--ktl-op-ok); }
+.ktl-op-too-few { border-left-color: var(--ktl-op-too-few); }
+.ktl-op-too-few .ktl-row-k { color: var(--ktl-op-too-few); }
+.ktl-op-too-many { border-left-color: var(--ktl-op-too-many); }
+.ktl-op-too-many .ktl-row-k { color: var(--ktl-op-too-many); }
+.ktl-op-absent { border-left-color: var(--ktl-op-absent); }
+.ktl-op-absent .ktl-row-k { color: var(--ktl-op-absent); }
+
+.ktl-extra {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px dashed var(--ktl-line);
+    border-radius: 6px;
+}
+.ktl-extra-k { font-size: 12px; font-weight: 600; }
+.ktl-extra-v { font-size: 11px; color: var(--ktl-ink-2); }
+
+/* ---------- 台账 ---------- */
+.ktl-led-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ktl-led-cap { font-size: 11px; color: var(--ktl-ink-3); }
+.ktl-led {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ktl-rec {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 10px;
+    border: 1px solid var(--ktl-line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-rc-ok { border-left-color: var(--ktl-ok); }
+.ktl-rc-warn { border-left-color: var(--ktl-warn); }
+.ktl-rec-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.ktl-rec-who { font-weight: 600; }
+.ktl-rec-round { font-size: 11px; color: var(--ktl-ink-2); }
+.ktl-rec-round.is-unk { color: var(--ktl-err); }
+.ktl-rec-opt { font-size: 11px; margin-left: auto; }
+.ktl-rec-body { font-size: 11px; color: var(--ktl-ink-2); }
+
+/* ---------- 策略 ---------- */
+.ktl-cats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ktl-cat {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--ktl-line);
+    border-radius: 6px;
+    background: var(--ktl-panel);
+}
+.ktl-cat-k { font-weight: 600; }
+.ktl-cat-v { font-size: 11px; color: var(--ktl-ink-2); }
+
 /* ══════════════ [v3.39.0] 时光胶囊（sourcebook） ══════════════ */
 /* ========================================================
  * sourcebook.css — [v3.39.0] 时光胶囊 · 封存取回台 样式层

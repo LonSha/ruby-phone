@@ -760,6 +760,29 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.40.0] 对话水壶：把模型已经说过的话收拾好（缝合自 SullyOS·小鼠机
+        //   xiaoshuji.html 的 Tandan 探店一族，实测 32 个函数 / 754 处命中）。
+        //   取六块的**治理面**：轮次分档与时长话术 / 选项协议裁切与去重 / 场景标签 /
+        //   单字语气词登记 / 破折号体检 / 记录封包与读数。
+        //   ★ 立场差：源是「替模型说话的那个」，本件是「把模型已经说的话收拾好」。
+        //   四块不缝：① **不自己调模型**（源 fetchTandanDetailReply 从本地存储直读
+        //   apiUrl / apiKey / selectedModel 并自己走 SSE 流）；② **不往对话里写楼层**
+        //   （源 addTandanRecordToChat 直接调宿主 addMessage）；③ **不碰宿主角色表**
+        //   （源直读 roles / getUserPersona / currentChatRole）；④ **不收外链、不落数据库**
+        //   （源壁纸走 IndexedDB、头像走 URL）。
+        //   四条偏离：① **轮次算不出来不许与「说了很久」同形**（源 NaN 落「很久」、
+        //   0 落「短暂」，两处都反）；② **单字语气词一律不保留**，只做登记读数；
+        //   ③ **选项要裁**（不足三个与超过三个都不许当合，源 split 后照单全收）；
+        //   ④ **破折号是一种读数，不是风格禁令**。
+        //   写盘三条键走 ^kettle_ 前缀随会话隔离。
+        id: 'kettle',
+        name: '对话水壶',
+        icon: '☕',
+        color: '#9a6b3f',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {
