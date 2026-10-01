@@ -602,6 +602,39 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.35.0] Pixiv：日文同人平台（缝合自 Perigee js/pixiv-illust.js 1411 行 +
+        //   js/pixiv-novel.js 3888 行 + js/pixiv-comments.js 563 行，共 5862 行 / 324763 字节）。
+        //   源是一个挂在全局 AppState.data.pixivData 上（65 处命中）、以 Utils.saveData 整块回写
+        //   （38 处命中）的仿真：插画生成 / 小说连载 / 文风库 / 评论楼中楼四块齐备，
+        //   且**自带三条生图链路 + 两条正文链路**（NovelAI / OpenAI 兼容 / OpenRouter；
+        //   19 处网络调用）、插画 Blob 落 IndexedDB（IllustGallery）、还要 twitterData.fanFriends
+        //   当作者池、要 broadcast.plotProgress 当题材源、要 forumData.threads 当分享出口。
+        //   取五块：① 作品面（列表 / 分月 / tag / 本地检索）② 阅读器（目录 + 逐章点赞 + 正文渲染）
+        //   ③ 续章滑窗（最近 5 章全文、更早给梗概）④ 评论楼中楼 ⑤ 我的四格 + 插画登记面。
+        //   设置面取「文风库 + 语言模式（日文正文 / 中文折叠译文）」。
+        //   四块不缝：① **不直连任何模型**（源自己读 imageApiConfig.provider 决定走哪条链路）——
+        //   本件一个网络调用都没有：生成走两条合法通道，视图摆出可复制的要求文本、结果由用户贴回来；
+        //   ② **不落 IndexedDB、不碰宿主对象**（源把插画 Blob 落 IllustGallery、把卡片往宿主消息数组
+        //   push）—— 本件零数据库、零宿主写入；③ **不共用别的 App 的池**（源要推特粉丝池 / 广播题材
+        //   源 / 论坛分享出口）—— 本件自带 9 位原创写手，零跨 App 读；④ **一张图都不存、一条外链
+        //   都不收**（源存生图 URL 与外链封面、把 Blob 转 base64 data URL 塞帖）—— 插画面是
+        //   **登记面**，只存「提示词 / 尺寸 / 张数 / 收藏 / 谁画的」，没有任何地址字段，视图不渲染 img。
+        //   三条偏离：① 心数模型收成唯一确定性实现 deriveHeatBase / deriveChapterHearts
+        //   （源 _rollHeatBase 掷随机、_rollChapterHearts 再乘一次随机，同一作品每次读数不同且
+        //   缓存与逐章永久不一致）—— 本件同一 (fc, cold) 必得同一读数、hearts 恒等于逐章最高；
+        //   ② 评论树深度有显式上限、上溯带访问集（源 _topAncestorId 只靠 guard < 50 步数上限，
+        //   数据自指时停但**不报告**）—— 本件把 truncated / orphans 分开报；
+        //   ③ 译文折叠块走**白名单**不走转义器耦合（源 _sanitizeDetailsBlock 靠 [^&] 匹配，
+        //   自己注释里写明「勿收编 Utils.escapeHtml」）—— 本件扫字符流逐标签判白名单。
+        //   写盘三条键走 ^pixiv_ 前缀随会话隔离。
+        id: 'pixiv',
+        name: 'Pixiv',
+        icon: '🎨',
+        color: '#818cf8',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；

@@ -1,0 +1,135 @@
+/* [v3.35.0] Pixiv App（.pxv-*） */
+/* 缝合自 Perigee js/pixiv-illust.js + pixiv-novel.js + pixiv-comments.js。
+   四块不缝：不直连模型 / 不落 IndexedDB 也不碰宿主对象 / 不共用别的 App 的池 /
+   一张图都不存也不收外链（故本文件里**没有** img 规则）。
+   样式投递走机制 A（打包进 phone.css 同款段）。 */
+.pxv-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.pxv-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pxv-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.pxv-header-sub { font-size: 11px; color: #64748b; }
+.pxv-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; flex-wrap: wrap; }
+.pxv-face-ok { background: rgba(56,189,248,.12); color: #7dd3fc; }
+.pxv-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.pxv-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.pxv-face-icon { font-size: 18px; }
+.pxv-face-label { flex: 1; }
+.pxv-face-sub { font-size: 10px; color: #94a3b8; }
+.pxv-flash { background: rgba(56,189,248,.14); color: #7dd3fc; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+
+.pxv-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pxv-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 4px; border-radius: 9px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color: #cbd5e1; cursor: pointer; }
+.pxv-tab.is-on { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.12); color: #7dd3fc; }
+.pxv-tab-label { font-size: 12px; }
+.pxv-tab-sub { font-size: 10px; color: #94a3b8; }
+.pxv-subtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.pxv-subtab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color: #cbd5e1; font-size: 11px; cursor: pointer; }
+.pxv-subtab.is-on { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.12); color: #7dd3fc; }
+.pxv-subtab-n { font-size: 10px; color: #94a3b8; }
+
+.pxv-panel { display: flex; flex-direction: column; gap: 8px; }
+.pxv-title { font-size: 13px; margin: 4px 0 0; color: #e5e7eb; }
+.pxv-cmt-title { font-size: 12px; margin: 8px 0 2px; color: #cbd5e1; }
+.pxv-empty { font-size: 12px; color: #94a3b8; padding: 8px 0; line-height: 1.7; }
+.pxv-empty-inline { font-size: 11px; color: #94a3b8; }
+.pxv-hint { font-size: 11px; color: #94a3b8; line-height: 1.7; }
+.pxv-warn { font-size: 11px; color: #fbbf24; background: rgba(251,191,36,.09); border-radius: 7px; padding: 6px 9px; line-height: 1.7; }
+.pxv-warn-inline { font-size: 10px; color: #fb923c; margin: 2px 0 6px; }
+.pxv-month { font-size: 11px; color: #64748b; margin: 4px 0; }
+
+.pxv-tagrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pxv-tagrow-lab { font-size: 11px; color: #64748b; }
+.pxv-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #7dd3fc; background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.25); border-radius: 999px; padding: 2px 8px; cursor: pointer; }
+.pxv-tag-sm { font-size: 11px; }
+.pxv-tag-xs { font-size: 10px; padding: 1px 6px; }
+.pxv-tag-out { color: #cbd5e1; background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); }
+.pxv-tag-n { font-size: 9px; color: #94a3b8; }
+.pxv-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.pxv-card { border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: rgba(255,255,255,.02); }
+.pxv-card-head { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.pxv-card-avatar { width: 26px; height: 26px; border-radius: 50%; background: rgba(56,189,248,.18); color: #7dd3fc; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.pxv-card-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pxv-card-title { font-size: 13px; color: #e5e7eb; }
+.pxv-card-by { font-size: 10px; color: #94a3b8; }
+.pxv-card-kind { font-size: 10px; color: #a5b4fc; border: 1px solid rgba(165,180,252,.3); border-radius: 5px; padding: 1px 6px; }
+.pxv-card-sum { font-size: 11px; color: #94a3b8; margin: 6px 0 0; line-height: 1.7; }
+.pxv-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pxv-n { font-size: 11px; color: #94a3b8; }
+.pxv-n-heart { color: #fb7185; font-family: 'Times New Roman', serif; }
+.pxv-n-warn { color: #fb923c; }
+.pxv-card-acts { display: flex; gap: 6px; margin-left: auto; }
+.pxv-mini { font-size: 11px; color: #cbd5e1; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); border-radius: 7px; padding: 2px 8px; cursor: pointer; }
+.pxv-mini.is-on { border-color: rgba(251,113,133,.5); color: #fb7185; }
+.pxv-btn { font-size: 12px; color: #0b1220; background: #7dd3fc; border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.pxv-btn-ghost { background: rgba(255,255,255,.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,.14); }
+.pxv-input { width: 100%; box-sizing: border-box; font-size: 12px; color: #e5e7eb; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 6px 9px; }
+.pxv-input-sm { width: auto; flex: 0 1 130px; }
+.pxv-ta { width: 100%; box-sizing: border-box; min-height: 64px; font-size: 12px; color: #e5e7eb; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 6px 9px; resize: vertical; }
+.pxv-ta-tall { min-height: 130px; }
+.pxv-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pxv-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #cbd5e1; }
+
+.pxv-reader { border: 1px solid rgba(56,189,248,.22); border-radius: 10px; padding: 10px; background: rgba(56,189,248,.04); display: flex; flex-direction: column; gap: 8px; }
+.pxv-reader-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pxv-reader-title { font-size: 14px; margin: 0; color: #e5e7eb; }
+.pxv-reader-by { font-size: 11px; color: #94a3b8; flex: 1; }
+.pxv-toc { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pxv-toc-lab { font-size: 11px; color: #64748b; }
+.pxv-toc-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #cbd5e1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 2px 8px; cursor: pointer; }
+.pxv-toc-item.is-on { border-color: rgba(56,189,248,.55); color: #7dd3fc; }
+.pxv-toc-n { font-size: 11px; }
+.pxv-toc-pos { font-size: 9px; color: #a5b4fc; }
+.pxv-toc-heart { font-size: 10px; color: #fb7185; font-family: 'Times New Roman', serif; }
+.pxv-chapter-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pxv-chap-num { font-size: 13px; color: #e5e7eb; }
+.pxv-chap-title { font-size: 13px; color: #f0f0f0; flex: 1; }
+.pxv-chap-pos { font-size: 10px; border-radius: 5px; padding: 1px 6px; color: #a5b4fc; border: 1px solid rgba(165,180,252,.3); }
+.pxv-pos-ending { color: #fb7185; border-color: rgba(251,113,133,.35); }
+.pxv-pos-extra { color: #fbbf24; border-color: rgba(251,191,36,.35); }
+.pxv-body { display: flex; flex-direction: column; gap: 8px; }
+.pxv-para { font-size: 13px; color: #d4d4d8; line-height: 1.9; margin: 0; }
+.pxv-para details { border-left: 2px solid rgba(56,189,248,.35); padding-left: 8px; margin: 4px 0; }
+.pxv-para summary { font-size: 11px; color: #7dd3fc; cursor: pointer; }
+.pxv-chap-acts { display: flex; align-items: center; gap: 8px; }
+.pxv-chap-read { font-size: 11px; color: #64748b; }
+
+.pxv-cmts { display: flex; flex-direction: column; gap: 5px; }
+.pxv-cmt { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.pxv-cmt-indent { white-space: pre; }
+.pxv-cmt-by { color: #7dd3fc; }
+.pxv-cmt-by[data-op] { color: #fbbf24; }
+.pxv-cmt-by[data-me] { color: #86efac; }
+.pxv-cmt-text { flex: 1; color: #cbd5e1; line-height: 1.7; }
+.pxv-replying { font-size: 11px; color: #fbbf24; display: flex; align-items: center; gap: 6px; }
+.pxv-cont { display: flex; flex-direction: column; gap: 6px; }
+
+.pxv-ill { border: 1px solid rgba(255,255,255,.1); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.pxv-ill-prompt { font-size: 12px; color: #e5e7eb; line-height: 1.7; }
+.pxv-ill-neg { font-size: 11px; color: #fb923c; }
+.pxv-ill-meta { font-size: 10px; color: #94a3b8; }
+
+.pxv-author { border: 1px solid rgba(255,255,255,.08); border-radius: 9px; padding: 6px 10px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pxv-author.is-idle { opacity: .72; }
+.pxv-author-name { font-size: 13px; color: #e5e7eb; }
+.pxv-author-type { font-size: 11px; color: #94a3b8; }
+.pxv-author-bio { font-size: 11px; color: #94a3b8; flex: 1 1 100%; line-height: 1.7; }
+.pxv-author-n { font-size: 11px; color: #a5b4fc; }
+.pxv-author-idle { font-size: 10px; color: #fb923c; border: 1px solid rgba(251,146,60,.4); border-radius: 5px; padding: 1px 6px; }
+.pxv-author-built { font-size: 10px; color: #7dd3fc; border: 1px solid rgba(56,189,248,.3); border-radius: 5px; padding: 1px 6px; }
+.pxv-rec { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: #64748b; }
+
+.pxv-style { border: 1px solid rgba(255,255,255,.08); border-radius: 9px; padding: 6px 10px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pxv-style.is-off { opacity: .6; }
+.pxv-style-name { font-size: 13px; color: #e5e7eb; }
+.pxv-style-built { font-size: 10px; color: #7dd3fc; border: 1px solid rgba(56,189,248,.3); border-radius: 5px; padding: 1px 6px; }
+.pxv-style-rules { flex: 1 1 100%; font-size: 11px; color: #94a3b8; line-height: 1.7; }
+
+.pxv-set { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; color: #cbd5e1; }
+.pxv-set-lab { font-size: 12px; color: #cbd5e1; }
+.pxv-readings { font-size: 11px; color: #64748b; line-height: 1.7; }
+
+.pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
+.pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
+/* [v3.35.0] 坏号章：不假装成具体章号，也不给点击目标（低调但看得出）。 */
+.pxv-toc-item.is-bad { opacity: .55; cursor: default; }
+.pxv-toc-item.is-bad .pxv-toc-n { font-style: italic; }

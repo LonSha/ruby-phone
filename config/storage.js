@@ -149,6 +149,11 @@ export class PhoneStorage {
             //   作者池、稿子、合集、关注与订阅、我的四个列表都是「这段关系的账」，
             //   随会话隔离：换角色后那是另一个人的另一批稿子。
             /^lofter_/,
+            // [v3.35.0] Pixiv（pixiv_settings / pixiv_content / pixiv_store）：
+            //   一条前缀覆盖三键（无元字符、无需宽匹配登记）。
+            //   作者池、作品、章与评论、插画登记、四本账都是「这段关系的账」，
+            //   随会话隔离：换角色后那是另一个人的另一批作品。
+            /^pixiv_/,
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。
