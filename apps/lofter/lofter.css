@@ -1,0 +1,97 @@
+/* [v3.34.0] 老福特 App（.lof-*） */
+.lof-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.lof-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.lof-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.lof-header-sub { font-size: 11px; color: #64748b; }
+
+.lof-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; flex-wrap: wrap; }
+.lof-face-ok { background: rgba(56,189,248,.12); color: #7dd3fc; }
+.lof-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.lof-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.lof-face-icon { font-size: 18px; }
+.lof-face-label { flex: 1; }
+.lof-face-sub { font-size: 10px; color: #94a3b8; }
+.lof-flash { background: rgba(56,189,248,.14); color: #7dd3fc; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+
+.lof-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.lof-tab { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); border-radius: 10px; padding: 7px 8px; cursor: pointer; }
+.lof-tab.is-on { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.1); }
+.lof-tab-label { font-size: 12px; color: #e2e8f0; }
+.lof-tab-sub { font-size: 10px; color: #94a3b8; }
+
+.lof-panel { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.lof-title { font-size: 13px; margin: 12px 0 8px; color: #94a3b8; }
+.lof-panel > .lof-title:first-child { margin-top: 0; }
+.lof-empty { font-size: 12px; color: #64748b; padding: 6px 0; line-height: 1.6; }
+.lof-hint { font-size: 11px; color: #64748b; line-height: 1.6; margin-top: 6px; }
+.lof-warn { font-size: 11px; color: #fb923c; margin-top: 6px; line-height: 1.6; }
+.lof-note { font-size: 11px; color: #94a3b8; line-height: 1.7; }
+.lof-month { font-size: 11px; color: #64748b; margin: 10px 0 6px; border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 4px; }
+
+.lof-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; }
+.lof-ta { resize: vertical; line-height: 1.55; margin-top: 6px; font-family: inherit; }
+.lof-sel { width: auto; min-width: 96px; }
+.lof-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.lof-row .lof-input { flex: 1 1 120px; }
+.lof-row .lof-sel { flex: 0 0 auto; }
+.lof-acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.lof-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #e5e7eb; font-size: 12px; cursor: pointer; }
+.lof-btn-primary { border-color: rgba(56,189,248,.5); background: rgba(56,189,248,.16); color: #7dd3fc; }
+.lof-mini { padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #94a3b8; font-size: 11px; cursor: pointer; }
+.lof-mini.is-on { border-color: rgba(244,114,182,.6); color: #f9a8d4; }
+.lof-pre { font-size: 11px; color: #cbd5e1; background: rgba(0,0,0,.3); border-radius: 8px; padding: 8px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }
+
+.lof-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.lof-tag { border: 1px solid rgba(56,189,248,.3); background: rgba(56,189,248,.08); color: #7dd3fc; border-radius: 12px; padding: 3px 10px; font-size: 11px; cursor: pointer; }
+.lof-tag-sm { padding: 1px 7px; font-size: 10px; }
+.lof-tag-out { cursor: default; display: inline-flex; align-items: center; gap: 4px; }
+.lof-tag-n { color: #94a3b8; margin-left: 4px; }
+
+.lof-card { border: 1px solid rgba(255,255,255,.08); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+.lof-card.is-open { border-color: rgba(56,189,248,.45); }
+.lof-card-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 9px 10px; background: transparent; border: 0; cursor: pointer; }
+.lof-card-avatar { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #0f172a; background: #7dd3fc; }
+.lof-card-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lof-card-title { font-size: 13px; color: #e5e7eb; }
+.lof-card-by { font-size: 10px; color: #94a3b8; }
+.lof-card-kind { font-size: 10px; color: #94a3b8; border: 1px solid rgba(255,255,255,.12); border-radius: 5px; padding: 1px 6px; }
+.lof-card-sum { font-size: 11px; color: #a1a1aa; padding: 0 10px 6px; line-height: 1.6; }
+.lof-card-snip { font-size: 11px; color: #7dd3fc; padding: 0 10px 6px; line-height: 1.6; }
+.lof-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 10px 9px; }
+.lof-n { font-size: 11px; color: #94a3b8; }
+.lof-n-heart { color: #f9a8d4; }
+.lof-n-img { color: #a5b4fc; }
+.lof-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.lof-card-acts { display: flex; gap: 4px; margin-left: auto; }
+
+.lof-detail { border-top: 1px solid rgba(255,255,255,.06); padding: 10px; }
+.lof-body { font-size: 13px; color: #d4d4d8; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+.lof-imgs { font-size: 11px; color: #a5b4fc; margin-top: 8px; }
+.lof-imgs-note { color: #64748b; margin-left: 6px; }
+.lof-cmts { margin-top: 10px; border-top: 1px dashed rgba(255,255,255,.08); padding-top: 8px; }
+.lof-cmt { display: flex; align-items: baseline; gap: 6px; font-size: 12px; padding: 3px 0; }
+.lof-cmt-by { color: #7dd3fc; }
+.lof-cmt-by[data-op="1"] { color: #f9a8d4; }
+.lof-cmt-tx { flex: 1; color: #cbd5e1; line-height: 1.6; }
+.lof-cmt-indent { color: transparent; }
+.lof-col-link { font-size: 11px; color: #94a3b8; margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.lof-col, .lof-author, .lof-style { border: 1px solid rgba(255,255,255,.08); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lof-col.is-cur { border-color: rgba(56,189,248,.45); }
+.lof-author.is-idle { opacity: .72; }
+.lof-style.is-off { opacity: .6; }
+.lof-col-name, .lof-author-name, .lof-style-name { font-size: 13px; color: #e5e7eb; }
+.lof-col-by, .lof-author-type, .lof-author-bio, .lof-col-st { font-size: 11px; color: #94a3b8; }
+.lof-col-n, .lof-author-n { font-size: 11px; color: #a5b4fc; }
+.lof-author-idle { font-size: 10px; color: #fb923c; border: 1px solid rgba(251,146,60,.4); border-radius: 5px; padding: 1px 6px; }
+.lof-style-bi { font-size: 10px; color: #7dd3fc; border: 1px solid rgba(56,189,248,.3); border-radius: 5px; padding: 1px 6px; }
+.lof-style-rules { flex: 1 1 100%; font-size: 11px; color: #94a3b8; line-height: 1.6; }
+
+.lof-subtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.lof-subtab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color: #cbd5e1; font-size: 11px; cursor: pointer; }
+.lof-subtab.is-on { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.12); color: #7dd3fc; }
+.lof-subtab-n { font-size: 10px; color: #94a3b8; }
+
+.lof-field, .lof-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
+.lof-field input[type="number"] { width: 76px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }
+.lof-field .lof-sel { min-width: 150px; width: auto; }

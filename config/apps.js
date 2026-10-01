@@ -580,6 +580,28 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.34.0] 老福特：中文同人圈创作平台（缝合自 Perigee js/lofter.js，4445 行 / 267370 字节）。
+        //   源是一个挂在全局 AppState.data.lofterData 上、**共用微博粉丝池与 CP 设定**的仿真。
+        //   取五块：① 短文批量 ② 长篇合集（含前文滑窗）③ 评论楼中楼 ④ 关注 / 订阅 / 我的四格
+        //   ⑤ 阅读面（首页 / 分月 / tag / 搜索）。设置面取「文风库」这一块机制（11 款内置 + 自建）。
+        //   四处不缝：① **不直连模型**（源自己读 apiOverride.apiKey、自己拼 systemPrompt、自己发
+        //   POST）—— 生成走两条合法通道：视图摆出可复制的要求文本，用户从对话框拿回结果贴回来；
+        //   ② **不落 Dexie、不碰 db.chats / chat.history**（源整块 lofterData 经 Utils.saveData 回写、
+        //   把卡片往 history 里 push）；③ **不共用别的 App 的池**（源要 weiboData.fanFriends 与 CP
+        //   设定）—— 本件自带原创作者池，零跨 App 读；④ **一张图都不存、一条外链都不收**（源存生图
+        //   URL 与外链封面）—— 只登记「有没有图 / 几张」。
+        //   三条偏离：统计数收成唯一实现 deriveStats(heat, cold)（源三处各掷一次随机、序关系不保证），
+        //   本件同一 (heat, cold) 必得同一读数且「心 >= 收藏 >= 评论」恒成立；前文滑窗提成纯函数
+        //   prevChapterContext（最近 5 章全文、更早给摘要）；评论树深度有上限且上溯带访问集防自指
+        //   （源 _topAncestorId 无保护，数据自指时无限上溯）。写盘三条键走 ^lofter_ 前缀随会话隔离。
+        id: 'lofter',
+        name: '老福特',
+        icon: '🖋',
+        color: '#38bdf8',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；
