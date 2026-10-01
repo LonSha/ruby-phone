@@ -496,6 +496,39 @@
         "本面增量**只有注册面**：音效盒的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 配方 / 台账）都不进本面的槽位账。",
         "真机里「换角色时音效盒是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
       ]
+    },
+    "v3.38.0": {
+      "what": "v3.38.0 召回治理台（`apps/recall/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+      "why": "本版与前三版**同形**：召回治理台**是一个新 App**（四件 2080 行：数据层 457 / App 层 686 / 视图 433 / 样式 504），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 54 → 55、实例槽位 67 → 68、App 槽位 55 → 56、App 槽位占比 82.1% → 82.4%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 44 → 45（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+      "readings": {
+        "app_classes": 55,
+        "slots": 68,
+        "app_slots": 56,
+        "app_slot_share_pct": 82.4,
+        "sig_empty": 45
+      },
+      "unchanged": [
+        "wiring_points",
+        "app_exit_points",
+        "non_app_points",
+        "coverage_pct",
+        "non_app_share_pct",
+        "points_p1",
+        "points_p2",
+        "points_p3",
+        "sig_default",
+        "sig_required",
+        "sig_none",
+        "semantic_slots",
+        "semantic_same",
+        "semantic_diff",
+        "semantic_consistency_pct",
+        "criteria_pass_count"
+      ],
+      "not_done": [
+        "本面增量**只有注册面**：召回治理台的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（四路配置 / 策略 / 台账）都不进本面的槽位账。",
+        "真机里「换角色时召回治理台是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+      ]
     }
   },
   "caliber": [
@@ -507,10 +540,10 @@
     "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
   ],
   "readings": {
-    "app_classes": 54,
-    "slots": 67,
-    "app_slots": 55,
-    "app_slot_share_pct": 82.1,
+    "app_classes": 55,
+    "slots": 68,
+    "app_slots": 56,
+    "app_slot_share_pct": 82.4,
     "wiring_points": 62,
     "app_exit_points": 50,
     "non_app_points": 12,
@@ -519,7 +552,7 @@
     "points_p1": 19,
     "points_p2": 20,
     "points_p3": 23,
-    "sig_empty": 44,
+    "sig_empty": 45,
     "sig_default": 1,
     "sig_required": 1,
     "sig_none": 8,
