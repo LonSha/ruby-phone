@@ -170,6 +170,11 @@ export class PhoneStorage {
             //   四路配置、策略（房间 / 注入开关 / 门槛 / topN / 水位线）、台账各自独立。
             //   随会话隔离：源把配置挂在角色卡与全局对象上，切角色时**原样留着**（串味）。源没有这一步。
             /^recall_/,
+            // [v3.39.0] 时光胶囊（sourcebook_capsules / sourcebook_policy / sourcebook_ledger）：
+            //   一条前缀覆盖三键，三条键都无元字符，按仓内口径「无需宽匹配登记」。
+            //   封存的信、策略（台账保留数）、台账回执各自独立。
+            //   随会话隔离：源把胶囊写在宿主微信键下（全局），切角色时**原样留着**（串味）。源没有这一步。
+            /^sourcebook_/,
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。

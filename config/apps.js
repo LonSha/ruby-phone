@@ -717,6 +717,35 @@ export const APPS = [
         data: {}
     },
     {
+        // [v3.39.0] 时光胶囊：把信存起来、到日子再拆（缝合自 SullyOS·小鼠机
+        //   xiaoshuji.html 的 timeCapsule 一族，实测 66 个函数 / 419 处命中）。
+        //   源的「时光胶囊」不是展示面（只是个列表），实为一整套**封存与取回**机制：
+        //   封存三必填（正文 / 拆开日期 / 封存时间）+ 跨度分档 + 口吻分族 + 折叠归一
+        //   + 回信归一（四段与兜底）+ 两条硬约束 + 台账回执。
+        //   取六块：① 跨度六档（同天 / 几天 / 几周 / 几月 / 数月 / 几年）与各档天数下限
+        //   ② 口吻六族（混合 / 开心 / 难 / 期待 / 柔软 / 日常）与说话指引
+        //   ③ 折叠归一（string / data / items / capsules / timeCapsules 五种形态，最多折四层）
+        //   ④ 回信四段的供给与兜底（title / roleMessage / receipt / keywords）
+        //   ⑤ 两条硬约束（线下互动或送礼 / 给人压力）与**命中位置**
+        //   ⑥ 台账回执与封存取回读数。
+        //   四块不缝：① **不自己调模型**（源 getTimeCapsuleApiConfig 直读 localStorage 的
+        //   apiUrl / apiKey / selectedModel 并拼 chat 请求；本件**零网络零密钥**，只产
+        //   可复制的要求文本与回信校验）；② **不碰宿主对象**（源写宿主微信键
+        //   wechatTimeCapsules）；③ **不读别的 App 的表**（源直读 roles 全局与
+        //   messages[roleId] 末 10 条）；④ **不收外链、不落数据库**（源走 DataStorage /
+        //   IndexedDB 与 URL 头像；本件落 PhoneStorage 三条会话键）。
+        //   三条偏离：① **封存时间取不出来不许当成今天**（源 createdAt || Date.now()，
+        //   于是三年前写的信与今天写的信在跨度上同形）；② **未填心情不许与填了默认值同形**
+        //   （源 mood || 'quiet'）；③ **跨度首档与算不出天数不许同形**（源默认档喰掉两种）。
+        //   写盘三条键走 ^sourcebook_ 前缀随会话隔离。
+        id: 'sourcebook',
+        name: '时光胶囊',
+        icon: '⏳',
+        color: '#a8763e',
+        badge: 0,
+        data: {}
+    },
+    {
         // [v3.28.0] 自定义组件：登记 / 对账 / 产描述 / 导出设计稿（缝合自 EPhone·xINOVO custom-widgets + uwu widget_market）。
         //   源四块都不缝：① 源把用户写的 js 用 new Function 直接跑 —— 本件一行用户代码都不执行，
         //   宿主想渲染就取 toHostPayload；② 源自建 iframe + postMessage 桥（整块不搬）；

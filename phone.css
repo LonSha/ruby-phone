@@ -14817,6 +14817,494 @@ input:checked + .toggle-slider:before {
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
 
+/* ══════════════ [v3.39.0] 时光胶囊（sourcebook） ══════════════ */
+/* ========================================================
+ * sourcebook.css — [v3.39.0] 时光胶囊 · 封存取回台 样式层
+ *
+ * 照拄 recall / soundkit / pixiv / magazine 规格：全部选择器挂在 .sbr-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 sourcebook-view.js 的产出**逐类对应**
+ * （registry 门会核）。
+ *
+ * 设计语言取自源「小鼠机・时光胶囊」的**铁盒子 + 纸信**观感（源是暖底 + 手写感）：
+ *   ① 底是「旧纸」的暖米色，不是纯白（纯白会把「未填」的淡黄徽章吹没）；
+ *   ② 六档跨度各带一个色相 —— **六档不许同色**，否则「同天封的」与「许多年前封的」
+ *      在用户眼里塔成一堆，也就不知道自己的书架上都是什么距离的信；
+ *   ③ 六族口吻各带一个色相 —— 同理，「开心」与「难过」不能同形；
+ *   ④ 封存时间**三态三色**（已填 / 没填 / 认不出来）：没填该去补、认不出来该去改，
+ *      源把两种都当成「今天封的」，本件把它们分开画；
+ *   ⑤ 数值一律等宽字体：档位计数 / 台账条数 / 天数三个数字要对得齐。
+ *
+ * ★ 本件**不用 emoji 做布局锚点**：图形字符（· ▸ ● ○）在等宽与比例字体下宽度一致。
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.sbr-root {
+    --sbr-bg: #faf7f0;
+    --sbr-panel: #fffdf8;
+    --sbr-panel-2: #f4efe3;
+    --sbr-line: #e3d9c6;
+    --sbr-ink: #3b3229;
+    --sbr-ink-2: #7a6a55;
+    --sbr-ink-3: #a89880;
+
+    /* 六档跨度色相（同天 → 许多年） */
+    --sbr-sp-same-day: #0e9488;
+    --sbr-sp-few-days: #2563eb;
+    --sbr-sp-few-weeks: #7c3aed;
+    --sbr-sp-few-months: #ea580c;
+    --sbr-sp-months: #b91c1c;
+    --sbr-sp-years: #475569;
+
+    /* 六族口吻色相 */
+    --sbr-tn-mixed: #9333ea;
+    --sbr-tn-happy: #ca8a04;
+    --sbr-tn-difficult: #475569;
+    --sbr-tn-anticipation: #0891b2;
+    --sbr-tn-tender: #db2777;
+    --sbr-tn-daily: #78716c;
+
+    /* 三态（好 / 缺口 / 坏了） */
+    --sbr-ok: #15803d;
+    --sbr-warn: #b45309;
+    --sbr-err: #b91c1c;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--sbr-bg);
+    color: var(--sbr-ink);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.sbr-root * { box-sizing: border-box; }
+
+/* ---------- 页头 ---------- */
+.sbr-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.sbr-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+.sbr-header-sub {
+    font-size: 11px;
+    color: var(--sbr-ink-3);
+}
+
+/* ---------- 状态面（三态三色，不许同形） ---------- */
+.sbr-face {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border: 1px solid var(--sbr-line);
+    border-left-width: 3px;
+    border-radius: 8px;
+    background: var(--sbr-panel);
+}
+.sbr-face-ok { border-left-color: var(--sbr-ok); }
+.sbr-face-warn { border-left-color: var(--sbr-warn); }
+.sbr-face-err { border-left-color: var(--sbr-err); background: #fdf3f2; }
+.sbr-face-icon { font-size: 15px; }
+.sbr-face-label { font-weight: 600; }
+.sbr-face-sub {
+    flex: 1 1 100%;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-flash {
+    padding: 7px 10px;
+    border: 1px solid #d8c9a8;
+    border-radius: 7px;
+    background: #fdf7e6;
+    font-size: 12px;
+}
+
+/* ---------- 页签 ---------- */
+.sbr-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.sbr-tab {
+    padding: 5px 11px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 999px;
+    background: var(--sbr-panel);
+    color: var(--sbr-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.sbr-tab.is-on {
+    border-color: #8a7550;
+    background: #8a7550;
+    color: #fffdf8;
+}
+
+/* ---------- 面板与提示 ---------- */
+.sbr-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 10px;
+    background: var(--sbr-panel);
+}
+.sbr-hint {
+    margin: 0;
+    padding: 7px 9px;
+    border-left: 3px solid var(--sbr-line);
+    background: var(--sbr-panel-2);
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+
+/* ---------- 存信表单 ---------- */
+.sbr-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.sbr-form label {
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-form textarea,
+.sbr-form input {
+    padding: 6px 8px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--sbr-ink);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+}
+.sbr-form button {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 6px 14px;
+    border: 1px solid #8a7550;
+    border-radius: 7px;
+    background: #8a7550;
+    color: #fffdf8;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* ---------- 书架 ---------- */
+.sbr-shelf {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.sbr-shelf-none,
+.sbr-led-none {
+    padding: 10px;
+    border: 1px dashed var(--sbr-line);
+    border-radius: 8px;
+    background: var(--sbr-panel-2);
+    font-size: 12px;
+    color: var(--sbr-ink-2);
+}
+.sbr-cap {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 9px 10px;
+    border: 1px solid var(--sbr-line);
+    border-left-width: 3px;
+    border-radius: 9px;
+    background: var(--sbr-panel);
+    cursor: pointer;
+}
+.sbr-cap.is-on {
+    border-color: #8a7550;
+    background: #fffaf0;
+}
+/* 卡片左侧三色 = 封存时间三态（已填 / 没填 / 认不出来）*/
+.sbr-cap.sbr-ct-ok { border-left-color: var(--sbr-ok); }
+.sbr-cap.sbr-ct-absent { border-left-color: var(--sbr-warn); }
+.sbr-cap.sbr-ct-err { border-left-color: var(--sbr-err); }
+.sbr-cap-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--sbr-ink-3);
+}
+.sbr-cap-idx {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 600;
+    color: var(--sbr-ink-2);
+}
+.sbr-cap-open { color: var(--sbr-ink-2); }
+.sbr-cap-kind {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--sbr-panel-2);
+}
+.sbr-cap-msg {
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+.sbr-cap-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.sbr-cap-btns {
+    display: flex;
+    gap: 7px;
+}
+.sbr-cap-btns button,
+.sbr-detail-btns button,
+.sbr-led-btns button {
+    padding: 4px 10px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 6px;
+    background: var(--sbr-panel-2);
+    color: var(--sbr-ink);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* ---------- 徒章（跨度 / 口吻 / 心情 / 封存时间） ---------- */
+.sbr-b {
+    padding: 1px 7px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 999px;
+    background: var(--sbr-panel-2);
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-b-span { border-color: #bfd8d5; background: #eef7f6; color: #0f766e; }
+.sbr-b-span.is-unk { border-color: #e5cfb0; background: #fdf3e3; color: #b45309; }
+.sbr-b-tone { border-color: #d9cfea; background: #f5f1fb; color: #6d28d9; }
+.sbr-b-mood { border-color: #d4d4d8; background: #f4f4f5; }
+.sbr-b-mood.is-empty { border-style: dashed; color: var(--sbr-ink-3); }
+.sbr-bc-ok { border-color: #bfe0c8; background: #f0faf2; color: var(--sbr-ok); }
+.sbr-bc-absent { border-color: #e8d4ac; background: #fdf7e6; color: var(--sbr-warn); }
+.sbr-bc-err { border-color: #eebdba; background: #fdf3f2; color: var(--sbr-err); }
+
+/* ---------- 单封信详情 ---------- */
+.sbr-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid #d8c9a8;
+    border-radius: 10px;
+    background: #fffbf3;
+}
+.sbr-detail-head {
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-detail-msg {
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+.sbr-detail-btns {
+    display: flex;
+    gap: 7px;
+}
+.sbr-detail-lab {
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-detail textarea {
+    padding: 7px 8px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--sbr-ink);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.6;
+    resize: vertical;
+}
+.sbr-draft { background: #f4efe3; }
+
+/* ---------- 六档 / 六族列表 ---------- */
+.sbr-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sbr-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 9px;
+    border: 1px solid var(--sbr-line);
+    border-left-width: 3px;
+    border-radius: 7px;
+    background: var(--sbr-panel);
+}
+.sbr-row-k { font-weight: 600; font-size: 12px; }
+.sbr-row-floor {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--sbr-ink-3);
+}
+.sbr-row-count {
+    margin-left: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: var(--sbr-ink-2);
+}
+.sbr-row-feel {
+    flex: 1 1 100%;
+    font-size: 11px;
+    color: var(--sbr-ink-3);
+}
+.sbr-row-sub {
+    flex: 1 1 100%;
+    font-size: 11px;
+    color: var(--sbr-ink-3);
+}
+
+/* 六档：每档一个色相（塔成一档 = 收信口吻永远偏档）*/
+.sbr-sp-same_day { border-left-color: var(--sbr-sp-same-day); }
+.sbr-sp-few_days { border-left-color: var(--sbr-sp-few-days); }
+.sbr-sp-few_weeks { border-left-color: var(--sbr-sp-few-weeks); }
+.sbr-sp-few_months { border-left-color: var(--sbr-sp-few-months); }
+.sbr-sp-months { border-left-color: var(--sbr-sp-months); }
+.sbr-sp-years { border-left-color: var(--sbr-sp-years); }
+.sbr-sp-same_day .sbr-row-k { color: var(--sbr-sp-same-day); }
+.sbr-sp-few_days .sbr-row-k { color: var(--sbr-sp-few-days); }
+.sbr-sp-few_weeks .sbr-row-k { color: var(--sbr-sp-few-weeks); }
+.sbr-sp-few_months .sbr-row-k { color: var(--sbr-sp-few-months); }
+.sbr-sp-months .sbr-row-k { color: var(--sbr-sp-months); }
+.sbr-sp-years .sbr-row-k { color: var(--sbr-sp-years); }
+
+/* 六族：每族一个色相（塔成一族 = 所有回信全长一个腔）*/
+.sbr-tn-mixed { border-left-color: var(--sbr-tn-mixed); }
+.sbr-tn-happy { border-left-color: var(--sbr-tn-happy); }
+.sbr-tn-difficult { border-left-color: var(--sbr-tn-difficult); }
+.sbr-tn-anticipation { border-left-color: var(--sbr-tn-anticipation); }
+.sbr-tn-tender { border-left-color: var(--sbr-tn-tender); }
+.sbr-tn-daily { border-left-color: var(--sbr-tn-daily); }
+.sbr-tn-mixed .sbr-row-k { color: var(--sbr-tn-mixed); }
+.sbr-tn-happy .sbr-row-k { color: var(--sbr-tn-happy); }
+.sbr-tn-difficult .sbr-row-k { color: var(--sbr-tn-difficult); }
+.sbr-tn-anticipation .sbr-row-k { color: var(--sbr-tn-anticipation); }
+.sbr-tn-tender .sbr-row-k { color: var(--sbr-tn-tender); }
+.sbr-tn-daily .sbr-row-k { color: var(--sbr-tn-daily); }
+
+.sbr-extra {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 9px;
+    border: 1px dashed #e5cfb0;
+    border-radius: 7px;
+    background: #fdf9f0;
+    font-size: 11px;
+}
+.sbr-extra-k { font-weight: 600; color: var(--sbr-warn); }
+.sbr-extra-v { color: var(--sbr-ink-2); }
+
+/* ---------- 台账 ---------- */
+.sbr-led-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.sbr-led-cap {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-led {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.sbr-rec {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--sbr-line);
+    border-left-width: 3px;
+    border-radius: 8px;
+    background: var(--sbr-panel);
+}
+.sbr-rec.sbr-rc-ok { border-left-color: var(--sbr-ok); }
+.sbr-rec.sbr-rc-err { border-left-color: var(--sbr-err); background: #fdf6f5; }
+.sbr-rec-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-rec-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--sbr-ink-3);
+}
+.sbr-rec-span { color: #0f766e; }
+.sbr-rec-span.is-unk { color: var(--sbr-warn); }
+.sbr-rec-tone { margin-left: auto; }
+.sbr-rec-body {
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
+.sbr-rec-fb {
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: #fdf3e3;
+    font-size: 11px;
+    color: var(--sbr-warn);
+}
+
+/* ---------- 策略 ---------- */
+.sbr-panel .sbr-row input[type="number"] {
+    width: 84px;
+    padding: 4px 7px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 6px;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+}
+.sbr-cats {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sbr-cat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 9px;
+    border: 1px solid var(--sbr-line);
+    border-radius: 7px;
+    background: var(--sbr-panel-2);
+}
+.sbr-cat-k { font-size: 12px; font-weight: 600; }
+.sbr-cat-v {
+    margin-left: auto;
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--sbr-ink-2);
+}
 /* ══════════════ [v3.38.0] 召回治理台（recall） ══════════════ */
 /* ========================================================
  * recall.css — [v3.38.0] 记忆宫殿 · 召回治理台 样式层
