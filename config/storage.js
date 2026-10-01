@@ -54,6 +54,10 @@ export class PhoneStorage {
             //   让「游戏厅里现在有哪几款按聊天独立存档」一眼可数，不必去翻 App 目录。
             /^chat_games_seaturtle_state$/,
             /^chat_games_guesswhat_state$/,
+            // [v3.33.0] 另两个游戏厅小游戏：剧本杀 / 心动飞行棋。
+            //   同样只作评审面（模式 /^chat_games_/ 已能自动接住）。
+            /^chat_games_scriptkill_state$/,
+            /^chat_games_ludo_state$/,
             /^pending[_-]contacts$/, // 待处理联系人
             /^chat_/,             // 聊天相关
             /^message_/,          // 消息相关

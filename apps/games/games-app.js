@@ -24,6 +24,10 @@ import { SeaTurtleData } from './seaturtle/seaturtle-data.js';
 import { SeaTurtleView } from './seaturtle/seaturtle-view.js';
 import { GuessWhatData, isGuessHit, GUESS_MAX_ROUNDS } from './guesswhat/guesswhat-data.js';
 import { GuessWhatView } from './guesswhat/guesswhat-view.js';
+import { ScriptKillData, ownerDisplayOf } from './scriptkill/scriptkill-data.js';
+import { ScriptKillView } from './scriptkill/scriptkill-view.js';
+import { LudoData, rollLudoDice, isLudoEventCell, LUDO_AI_EVENTS, LUDO_QUESTION_TYPES, ludoModeLabel } from './ludo/ludo-data.js';
+import { LudoView } from './ludo/ludo-view.js';
 
 const CATBOX_CSS_URL = new URL('./catbox/catbox.css?v=1.0.0', import.meta.url).href;
 const WEREWOLF_CSS_URL = new URL('./werewolf/werewolf.css?v=1.0.49', import.meta.url).href;
@@ -37,6 +41,28 @@ const UNDERCOVER_API_COOLDOWN_MS = 5000;
 const SEATURTLE_AI_STEP_DELAY_MS = 2200;
 const GUESSWHAT_AI_STEP_DELAY_MS = 1200;
 const DIALOG_GAME_API_COOLDOWN_MS = 5000;
+// [v3.33.0] 两个「剧情型对局」的节流与概率（与上一批同量级）。
+//   剧本杀的搜证空手率是大厅原口径（30%），不是本仓新定的口味。
+const SCRIPTKILL_AI_STEP_DELAY_MS = 1800;
+const SCRIPTKILL_SEARCH_EMPTY_RATE = 0.3;
+const LUDO_AI_STEP_DELAY_MS = 800;
+/* [v3.33.0] 飞行棋事件词 → 中性短句。事件词表以数据层 `LUDO_AI_EVENTS` 为准，这里只补说法，
+ *   两边是**同一张表的两半**（判据钉住「每个事件词都有落点、且没有多余词」）——
+ *   避免出现「编排层认识、数据层不认识」的幽灵事件。
+ *   ★ 起手那版根本没有这张表：`LUDO_AI_EVENTS` 导出后全仓零消费（dead-export 门当场报红）。
+ *   措辞一律**不带主语**（主语由调用处拼），因为同一个词在两种语境下共用：
+ *   「小雅 掷出 6 点。」（谁做的）与「小雅 被对方踩回起点。」（谁受的）。 */
+const LUDO_EVENT_LABELS = {
+    roll_6: '掷出 6 点',
+    kick_char: '踩回对方棋子',
+    kick_user: '被对方踩回起点',
+    char_win: '到达终点',
+    user_win: '到达终点',
+    answer_question: '正在回答问题',
+    evaluate_answer: '正在评价回答'
+};
+/* 白名单：只有在这一张表里的事件词才能被落成文案（未知词一律不落） */
+const LUDO_EVENT_SET = new Set(LUDO_AI_EVENTS);
 const CATBOX_PRELOAD_ASSETS = [
     new URL('./catbox/assets/wxxw1.png', import.meta.url).href,
     new URL('./catbox/assets/wxxw2.png', import.meta.url).href,
@@ -76,6 +102,10 @@ export class GamesApp extends PokerApp {
         this.seaTurtleView = new SeaTurtleView(this);
         this.guessWhatData = new GuessWhatData(storage);
         this.guessWhatView = new GuessWhatView(this);
+        this.scriptKillData = new ScriptKillData(storage);
+        this.scriptKillView = new ScriptKillView(this);
+        this.ludoData = new LudoData(storage);
+        this.ludoView = new LudoView(this);
         this._werewolfDriving = false;
         this._werewolfNightDriving = false;
         this._lastWerewolfApiRequestAt = 0;
@@ -83,6 +113,9 @@ export class GamesApp extends PokerApp {
         this._undercoverRunId = 0;
         this._seaTurtleDriving = false;
         this._guessWhatSending = false;
+        this._scriptKillDriving = false;
+        this._scriptKillVoting = false;
+        this._ludoDriving = false;
         this._dialogGameLastApiAt = 0;
         this._undercoverAbortController = null;
         this._undercoverPendingUserContext = false;
@@ -131,6 +164,16 @@ export class GamesApp extends PokerApp {
         this.applyPhoneChromeTheme();
         this.currentView = 'guesswhat';
         this.guessWhatView.render();
+    }
+    openScriptKill() {
+        this.applyPhoneChromeTheme();
+        this.currentView = 'scriptkill';
+        this.scriptKillView.render();
+    }
+    openLudo() {
+        this.applyPhoneChromeTheme();
+        this.currentView = 'ludo';
+        this.ludoView.render();
     }
 
     // [v3.32.0] 两个对话型对局共用的一次性 API 冷却：避免连续请求打满代理。
@@ -2666,6 +2709,8 @@ export class GamesApp extends PokerApp {
 
     backToLobby() {
         this.stopUndercoverFlow?.();
+        this.stopScriptKillFlow?.();
+        this.stopLudoFlow?.();
         this.game2048View?.destroy?.();
         this.sudokuView?.destroy?.();
         this.catboxView?.destroy?.();
@@ -2673,6 +2718,8 @@ export class GamesApp extends PokerApp {
         this.undercoverView?.destroy?.();
         this.seaTurtleView?.destroy?.();
         this.guessWhatView?.destroy?.();
+        this.scriptKillView?.destroy?.();
+        this.ludoView?.destroy?.();
         super.backToLobby();
     }
 
@@ -2687,6 +2734,8 @@ export class GamesApp extends PokerApp {
         this.undercoverView?.destroy?.();
         this.seaTurtleView?.destroy?.();
         this.guessWhatView?.destroy?.();
+        this.scriptKillView?.destroy?.();
+        this.ludoView?.destroy?.();
     }
 
 
@@ -3218,6 +3267,531 @@ export class GamesApp extends PokerApp {
         this.phoneShell?.showNotification?.('你说我猜', '复盘已发出', '💬');
     }
 
+    // ====================================================================
+    // [v3.33.0] 两个「剧情型对局」的编排层（剧本杀 / 心动飞行棋）
+    //   源侧形态是宿主页里自己拼 systemPrompt 直打 /v1/chat/completions，
+    //   本仓统一走 apiManager.callAI，与其他游戏同一条通道。
+    // ====================================================================
+    /** 一次性睡眠（编排层内部节流用） */
+    _dialogSleep(ms = 0) {
+        return new Promise(resolve => setTimeout(resolve, numOrNull(ms) ?? 0));
+    }
+    // ---------------------------------------------------------------- 剧本杀
+    getDefaultScriptKillPrompt() {
+        return [
+            '你现在在一场「剧本杀」里，扮演分配给你的那个角色。',
+            '铁律：',
+            '1. 只从你的角色人设与剧本出发说话，不出戏、不解释规则、不用 Emoji。',
+            '2. 不承认自己是 AI，不提及「剧本」「模型」「提示词」这些词。',
+            '3. 只输出一个严格的 JSON 对象，不要任何额外文字或代码块标记。'
+        ].join('\n');
+    }
+    /**
+     * 剧本杀的一次 AI 动作。
+     * action = introduce / discuss_timeline / discuss / vote / decide_clue
+     * 返回形状随 action 变：vote → { targetId, speech }；
+     * decide_clue → { reveal, speech }；其余 → { speech }。
+     */
+    async _scriptKillAct(player = null, action = 'discuss', extra = '') {
+        const data = this.scriptKillData;
+        const state = data.getState();
+        const script = data.getScript();
+        const roster = (state.players || []).map(item => `${item.id}｜${item.name}（${item.roleName}）`).join('\n');
+        const logText = (state.log || [])
+            .filter(entry => entry.type !== 'system')
+            .slice(-14)
+            .map(entry => `${entry.speakerName || '某人'}: ${entry.text}`)
+            .join('\n');
+        const evidence = Array.isArray(player?.evidence) && player.evidence.length
+            ? player.evidence.join('\n')
+            : '（还没有搜到线索）';
+        const taskMap = {
+            introduce: '现在轮到你做自我介绍。用你角色的口吻说清你的姓名、身份，以及你和死者 / 这起事件的关系。',
+            discuss_timeline: '现在轮到你公开时间线。说清事情发生前后你在哪里、做了什么——对自己不利的部分可以含糊，但不要编造得太离谱。',
+            discuss: '现在是讨论环节。结合已经听到的发言和线索，说出你的怀疑与推理。',
+            decide_clue: '你翻到了一件属于自己的东西。你可以选择当众拿出来（reveal=true），也可以装作没看见（reveal=false）。',
+            vote: '现在是投票环节，你要指认凶手。'
+        };
+        const isVote = action === 'vote';
+        const isClue = action === 'decide_clue';
+        const lines = [
+            `你扮演「${player?.name || '玩家'}」，人设：${player?.persona || '（未填写）'}`,
+            `你抽到的角色是【${player?.roleName || '—'}】`,
+            `角色介绍：${player?.description || '—'}`,
+            `你的故事（只有你自己知道）：${player?.storyline || '—'}`,
+            `你的任务：${player?.tasks || '—'}`,
+            script ? `案件背景：${script.storyBackground}` : '',
+            '',
+            '在场玩家（格式：id｜名字（角色））：',
+            roster,
+            '',
+            '已经听到的发言与线索：',
+            logText || '（还没有人开口）',
+            '',
+            '你手上的线索：',
+            evidence,
+            '',
+            taskMap[action] || taskMap.discuss,
+            extra ? `补充情况：${extra}` : '',
+            isVote
+                ? '只能从在场玩家里挑一个人（不能选自己）。输出 JSON：{"targetId":"那个人的 id","speech":"一句话说清你为何指认他"}'
+                : (isClue
+                    ? '输出 JSON：{"reveal":true,"speech":"如果拿出来，就说一句符合人设的话；不拿出来时这里写一句含糊的托词"}'
+                    : '输出 JSON：{"speech":"你的发言（1~3 句，符合你的口吻）"}')
+        ];
+        const messages = [
+            { role: 'system', content: this.getDefaultScriptKillPrompt() },
+            { role: 'user', content: lines.filter(line => line !== '').join('\n') }
+        ];
+        const text = await this._callDialogGameAi(messages);
+        const parsed = this._extractDialogGameJson(text);
+        if (!parsed) {
+            if (isVote) return { targetId: '', speech: '我再想想。' };
+            if (isClue) return { reveal: false, speech: '（他摸到了什么，随手收进了口袋。）' };
+            return { speech: '……' };
+        }
+        if (isVote) {
+            const target = String(parsed.targetId || '');
+            const valid = (state.players || []).some(item => item.id === target && item.id !== player?.id);
+            return { targetId: valid ? target : '', speech: String(parsed.speech || '').trim() || '我觉得是他。' };
+        }
+        if (isClue) {
+            return { reveal: parsed.reveal === true, speech: String(parsed.speech || '').trim() };
+        }
+        return { speech: String(parsed.speech || '').trim() || '……' };
+    }
+    /** 阶段 → AI 动作名 */
+    _scriptKillActionOfPhase(phase = '') {
+        const value = String(phase || '');
+        if (value === 'introduction') return 'introduce';
+        if (value === 'timeline_discussion') return 'discuss_timeline';
+        return 'discuss';
+    }
+    /** 本阶段让所有 AI 依次发言 */
+    async _scriptKillRunSpeeches(phase = '') {
+        const data = this.scriptKillData;
+        const action = this._scriptKillActionOfPhase(phase);
+        for (const player of data.getAiPlayers()) {
+            if (data.getState().phase !== phase) break;
+            await this._dialogSleep(SCRIPTKILL_AI_STEP_DELAY_MS);
+            const act = await this._scriptKillAct(player, action);
+            data.addSpeech(player, act.speech);
+            this.scriptKillView.renderGame();
+        }
+    }
+    /** 一名玩家的一次搜证（30% 空手是大厅原口径） */
+    async _scriptKillSearch(player = null) {
+        const data = this.scriptKillData;
+        if (!player) return;
+        data.recordSearch(player.id);
+        const pool = data.availableCluesFor(player.id).filter(clue => !data.isClueCollected(clue));
+        if (!pool.length) {
+            data.addSearchResult(player, '这里已经被翻过了，没有新的东西。');
+            this.scriptKillView.renderGame();
+            return;
+        }
+        if (Math.random() < SCRIPTKILL_SEARCH_EMPTY_RATE) {
+            data.addSearchResult(player, '翻了一圈，什么都没找到。');
+            this.scriptKillView.renderGame();
+            return;
+        }
+        const clue = pool[Math.floor(Math.random() * pool.length)];
+        data.collectClue(clue, player.id);
+        const source = ownerDisplayOf(clue.owner);
+        if (!data.isAboutSelf(clue, player.id)) {
+            data.addSearchResult(player, `在【${source}】找到：${clue.description}`);
+        } else if (player.isUser) {
+            data.addSearchResult(player, `在【${source}】翻到了自己的东西：${clue.description}`);
+        } else {
+            const act = await this._scriptKillAct(player, 'decide_clue', clue.description);
+            data.addSearchResult(player, act.reveal
+                ? `把东西拿了出来：${clue.description}`
+                : (act.speech || '（他摸到了什么，随手收进了口袋。）'));
+        }
+        this.scriptKillView.renderGame();
+    }
+    /** 本阶段让所有 AI 把各自的搜证次数用完 */
+    async _scriptKillRunSearches(phase = '') {
+        const data = this.scriptKillData;
+        const times = data.searchAllowance(phase);
+        for (let round = 0; round < times; round += 1) {
+            for (const player of data.getAiPlayers()) {
+                if (data.getState().phase !== phase) break;
+                await this._dialogSleep(SCRIPTKILL_AI_STEP_DELAY_MS);
+                await this._scriptKillSearch(player);
+            }
+        }
+    }
+    /**
+     * 开局后的第一步驱动（视图在 `data.startGame()` 成功后调用）。
+     * ★ 起手那版**漏了这个方法**：视图写的是 `this.app.startScriptKillFlow?.()`，
+     *   可选链把「方法不存在」吞成静默无操作 —— 点「开始」之后界面停在本环节，
+     *   没有任何按钮能推它（属本仓记过的「视图调了 App 上不存在的方法＝静默断裂」）。
+     *   由本套件 G 组钉住。
+     */
+    async startScriptKillFlow() {
+        this._scriptKillDriving = false;
+        this._scriptKillVoting = false;
+        this.scriptKillView.renderGame();
+        await this.advanceScriptKill();
+    }
+    /** 推进一个阶段：先让 AI 走完本阶段该做的，再切到下一阶段 */
+    async advanceScriptKill() {
+        if (this._scriptKillDriving) return;
+        const data = this.scriptKillData;
+        const state = data.getState();
+        if (!state.players?.length || state.phase === 'end') return;
+        this._scriptKillDriving = true;
+        try {
+            const phase = state.phase;
+            if (phase === 'start') {
+                data.addSystem(`【故事背景】\n${data.getScript()?.storyBackground || ''}`);
+                data.addSystem('请各位玩家查看自己的角色信息，准备进行自我介绍。');
+                data.setPhase('introduction');
+                this.scriptKillView.renderGame();
+                return;
+            }
+            if (phase === 'introduction' || phase === 'timeline_discussion' || phase.startsWith('discussion_')) {
+                await this._scriptKillRunSpeeches(phase);
+            } else if (data.searchAllowance(phase) > 0) {
+                await this._scriptKillRunSearches(phase);
+            }
+            const next = data.nextPhaseOf(phase);
+            data.setPhase(next);
+            if (next === 'discussion_round_1') data.addSystem('第一轮搜证结束，现在进入【第一轮讨论环节】。');
+            if (next === 'evidence_round_2') data.addSystem('第一轮讨论结束，现在进入【第二轮搜证环节】，每人还剩 【1 次】搜证机会。');
+            if (next === 'discussion_round_2') data.addSystem('第二轮搜证结束，现在进入【第二轮讨论环节】。');
+            if (next === 'discussion_round_3') data.addSystem('第二轮讨论结束，现在进入【最终讨论环节】。');
+            if (next === 'voting') data.addSystem('最终讨论结束，现在进入投票环节。请投票指认凶手！');
+        } catch (error) {
+            console.warn('[ScriptKill] 阶段推进中断:', error);
+        } finally {
+            this._scriptKillDriving = false;
+            this.scriptKillView.renderGame();
+        }
+    }
+    /** 用户发言（自我介绍 / 时间线 / 讨论），只记录，不推进阶段 */
+    async speakScriptKill({ text = '' } = {}) {
+        const data = this.scriptKillData;
+        const state = data.getState();
+        if (!data.isUserTurnPhase(state.phase)) return;
+        const user = data.getUserPlayer();
+        data.addSpeech(user, String(text || '').trim());
+        this.scriptKillView.renderGame();
+    }
+    /** 用户搜证 */
+    async searchScriptKill() {
+        const data = this.scriptKillData;
+        const user = data.getUserPlayer();
+        if (!user || data.searchAllowance(data.getState().phase) <= 0) return;
+        if (!data.canSearch(user.id)) {
+            this.phoneShell?.showNotification?.('剧本杀', '本环节的搜证机会用完了', '🎭');
+            return;
+        }
+        await this._scriptKillSearch(user);
+    }
+    /** 用户投票 → AI 跟着投 → 立刻结算并揭真相 */
+    async voteScriptKill({ targetId = '' } = {}) {
+        if (this._scriptKillVoting) return;
+        const data = this.scriptKillData;
+        const state = data.getState();
+        if (state.phase !== 'voting') return;
+        this._scriptKillVoting = true;
+        try {
+            const user = data.getUserPlayer();
+            data.setVote(user?.id || 'user', targetId);
+            const target = data.getPlayerById(targetId);
+            data.addVoteLine(`${user?.name || '我'} 投票给了 ${target?.name || '—'}。`);
+            for (const player of data.getAiPlayers()) {
+                await this._dialogSleep(SCRIPTKILL_AI_STEP_DELAY_MS);
+                const act = await this._scriptKillAct(player, 'vote');
+                data.setVote(player.id, act.targetId);
+                const voted = act.targetId ? data.getPlayerById(act.targetId) : null;
+                data.addVoteLine(voted ? `${player.name} 投票给了 ${voted.name}。` : `${player.name} 弃票了。`);
+                this.scriptKillView.renderGame();
+            }
+            const outcome = data.resolveVotes();
+            data.addSystem(outcome.resultText);
+            data.addSystem(`【真相】\n${data.getScript()?.truth || ''}`);
+            data.revealTruth();
+        } catch (error) {
+            console.warn('[ScriptKill] 投票结算中断:', error);
+        } finally {
+            this._scriptKillVoting = false;
+            this.scriptKillView.renderGame();
+        }
+    }
+    async shareScriptKillSummary(targetIds = []) {
+        const data = this.scriptKillData;
+        const summary = data.getSummary();
+        const wechatData = this.getWechatData?.();
+        const ids = Array.isArray(targetIds) ? targetIds.filter(Boolean) : [];
+        if (!wechatData?.addMessage || !ids.length) {
+            this.phoneShell?.showNotification?.('剧本杀', '微信数据未就绪，暂时无法分享', '🎭');
+            return;
+        }
+        let sent = 0;
+        ids.forEach(targetId => {
+            const player = data.getPlayerById(targetId);
+            if (!player?.name) return;
+            let chat = (wechatData.getChatList?.() || []).find(item => String(item?.name || '').trim() === player.name);
+            if (!chat) chat = wechatData.createChat?.({ name: player.name, type: 'single', avatar: player.avatar || '' });
+            if (!chat) return;
+            wechatData.addMessage(chat.id, {
+                from: 'me',
+                type: 'text',
+                content: `【剧本杀复盘】\n${summary}`
+            });
+            sent += 1;
+        });
+        wechatData.saveData?.();
+        this.phoneShell?.showNotification?.('剧本杀', sent ? `复盘已发给 ${sent} 位` : '没有可发送的对象', '🎭');
+    }
+    stopScriptKillFlow() {
+        this._scriptKillDriving = false;
+        this._scriptKillVoting = false;
+    }
+    // ---------------------------------------------------------------- 心动飞行棋
+    getDefaultLudoPrompt() {
+        return [
+            '你正在和对方玩一局「飞行棋」，棋路上会抽到一些需要聊一聊的问题。',
+            '铁律：',
+            '1. 用你自己的口吻说话，像日常聊天一样自然，不用 Emoji，不解释规则。',
+            '2. 只输出一个严格的 JSON 对象，不要任何额外文字或代码块标记。'
+        ].join('\n');
+    }
+    /** AI 对一道题的回答 / 评价 */
+    async _ludoAiAnswer(player = null, question = null, kind = 'answer', entries = [], event = '') {
+        const data = this.ludoData;
+        const rival = data.getOpponentOf(player?.id || '');
+        const said = entries.length
+            ? `对方已经说了：${entries.map(item => `${item.speaker}：${item.text}`).join(' / ')}`
+            : '';
+        const lines = [
+            `你扮演「${player?.name || '玩家'}」，人设：${player?.persona || '（未填写）'}`,
+            `正在和你玩棋的人是「${rival?.name || '对方'}」`,
+            /* 局面事件（掷出 6 / 踩到人 / 先到终点 / 正在答题…）：事件词以数据层
+             * `LUDO_AI_EVENTS` 为白名单，查不到文案就不提 —— 模型不接未知词。 */
+            (LUDO_EVENT_SET.has(String(event || '')) ? `当前局面：${LUDO_EVENT_LABELS[event]}。` : ''),
+            '',
+            `抽到的问题：“${question?.text || ''}”`,
+            said,
+            '',
+            kind === 'evaluate'
+                ? '请对对方的回答发表一句你的看法（贴合人设，可以打趣）。'
+                : '请回答这个问题（1~2 句，贴合你的人设）。',
+            '输出 JSON：{"text":"你的话"}'
+        ];
+        const messages = [
+            { role: 'system', content: this.getDefaultLudoPrompt() },
+            { role: 'user', content: lines.filter(line => line !== '').join('\n') }
+        ];
+        const text = await this._callDialogGameAi(messages);
+        const parsed = this._extractDialogGameJson(text);
+        return String(parsed?.text || '').trim()
+            || (kind === 'evaluate' ? '嗯……说得还挺像那么回事。' : '让我想想。');
+    }
+    /** 问答推进：谁该答谁答；轮到用户就停在 awaiting 上等输入 */
+    async _ludoResumeQuestion() {
+        const data = this.ludoData;
+        const state = data.getState();
+        const question = state.pendingQuestion;
+        if (!question) return;
+        const entries = question.answers || [];
+        const current = data.getCurrentPlayer();
+        const other = data.getOpponentOf(current?.id || '');
+        /* 模式脚本以数据层的 `LUDO_QUESTION_TYPES` 为准：`both_answer` 双方各答一次，
+         *   `single_answer` 一人答、另一人评。起手那版把这两个字面量散写在三处
+         *   （本函数 + 抽题提示 + 视图标签），模式表反而零消费；现在这里是唯一分派点。 */
+        const mode = String(question.type || 'both_answer');
+        const isBothAnswer = LUDO_QUESTION_TYPES.some(item => item.value === mode && item.value === 'both_answer');
+        const script = isBothAnswer
+            ? [{ who: current, kind: 'answer' }, { who: other, kind: 'answer' }]
+            : [{ who: current, kind: 'answer' }, { who: other, kind: 'evaluate' }];
+        const step = script[entries.length];
+        if (!step?.who) {
+            data.addSystem('本轮问答结束，游戏继续！');
+            data.clearQuestion();
+            data.advanceTurn();
+            this.ludoView.renderGame();
+            return;
+        }
+        if (step.who.isUser) {
+            data.updateQuestion({ awaiting: 'user', kind: step.kind });
+            this.ludoView.renderGame();
+            return;
+        }
+        await this._dialogSleep(LUDO_AI_STEP_DELAY_MS);
+        const text = await this._ludoAiAnswer(step.who, question, step.kind, entries);
+        data.pushQuestionAnswer({ speakerId: step.who.id, speaker: step.who.name, text, kind: step.kind });
+        data.addSpeech(step.who, text, step.kind);
+        this.ludoView.renderGame();
+        await this._ludoResumeQuestion();
+    }
+    /** 踩到事件格：抽一道题并开始问答 */
+    async _ludoAskQuestion(player = null) {
+        const data = this.ludoData;
+        const question = data.drawQuestion();
+        if (!question) {
+            data.advanceTurn();
+            return;
+        }
+        data.updateQuestion({ awaiting: '', answers: [], kind: 'answer' });
+        data.addSystem(`【${ludoModeLabel(question.type)}】抽到的问题是：“${question.text}”`);
+        this.ludoView.renderGame();
+        await this._ludoResumeQuestion();
+    }
+    /** 一名玩家的一次行动（掷骰 + 全部后果） */
+    async _ludoTakeTurn(player = null) {
+        const data = this.ludoData;
+        if (!player) return;
+        const dice = rollLudoDice(!data.isOnBoard(player.id));
+        data.addRoll(player, dice);
+        const result = data.applyRoll(player.id, dice);
+        this.ludoView.renderGame();
+        if (!result) return;
+        if (result.type === 'win') {
+            data.addSystem(`${player.name} 到达了终点！`);
+            this.ludoView.renderGame();
+            return;
+        }
+        if (result.type === 'blocked') {
+            data.addSystem('点数不是 6，无法起飞。');
+            data.advanceTurn();
+            this.ludoView.renderGame();
+            return;
+        }
+        if (result.type === 'takeoff') data.addSystem(`${player.name} 的棋子起飞了！`);
+        const rival = result.kicked ? data.getPlayerById(result.kicked) : null;
+        if (rival) data.addSystem(`${player.name} 踩中了 ${rival.name}，对方回到起点。`);
+        if (isLudoEventCell(result.to)) {
+            await this._ludoAskQuestion(player);
+            return;
+        }
+        if (data.shouldRollAgain(dice)) {
+            data.addSystem('掷出 6 点，再走一次。');
+        } else {
+            data.advanceTurn();
+        }
+        this.ludoView.renderGame();
+    }
+    /** 让 AI 一直走到「轮到用户」或「等用户答题」或「分出胜负」为止 */
+    async runLudoAi() {
+        if (this._ludoDriving) return;
+        const data = this.ludoData;
+        this._ludoDriving = true;
+        try {
+            let guard = 0;
+            while (guard < 200) {
+                guard += 1;
+                const state = data.getState();
+                if (state.phase !== 'playing' || state.pendingQuestion) break;
+                const player = data.getCurrentPlayer();
+                if (!player || player.isUser) break;
+                await this._dialogSleep(LUDO_AI_STEP_DELAY_MS);
+                await this._ludoTakeTurn(player);
+            }
+        } catch (error) {
+            console.warn('[Ludo] AI 回合中断:', error);
+        } finally {
+            this._ludoDriving = false;
+            this.ludoView.renderGame();
+        }
+    }
+    /** 开局后由视图调用：若先手是 AI，让它先走 */
+    async startLudoFlow() {
+        this.ludoView.renderGame();
+        await this.runLudoAi();
+    }
+    /** 用户掷骰子；返回点数（视图拿去显示骰面） */
+    async rollLudo() {
+        const data = this.ludoData;
+        const state = data.getState();
+        if (state.phase !== 'playing' || state.pendingQuestion) return 0;
+        const player = data.getCurrentPlayer();
+        if (!player?.isUser) return 0;
+        const dice = rollLudoDice(!data.isOnBoard(player.id));
+        data.addRoll(player, dice);
+        const result = data.applyRoll(player.id, dice);
+        this.ludoView.renderGame();
+        if (!result) return dice;
+        if (result.type === 'win') {
+            data.addSystem(`${player.name} 到达了终点！`);
+            this.ludoView.renderGame();
+            return dice;
+        }
+        if (result.type === 'blocked') {
+            data.addSystem('点数不是 6，无法起飞。');
+            data.advanceTurn();
+            this.ludoView.renderGame();
+            await this.runLudoAi();
+            return dice;
+        }
+        if (result.type === 'takeoff') data.addSystem(`${player.name} 的棋子起飞了！`);
+        const rival = result.kicked ? data.getPlayerById(result.kicked) : null;
+        if (rival) data.addSystem(`${player.name} 踩中了 ${rival.name}，对方回到起点。`);
+        if (isLudoEventCell(result.to)) {
+            await this._ludoAskQuestion(player);
+            return dice;
+        }
+        if (data.shouldRollAgain(dice)) {
+            data.addSystem('掷出 6 点，再走一次。');
+            this.ludoView.renderGame();
+            return dice;
+        }
+        data.advanceTurn();
+        this.ludoView.renderGame();
+        await this.runLudoAi();
+        return dice;
+    }
+    /** 用户回答抽到的问题 */
+    async answerLudo({ text = '' } = {}) {
+        const data = this.ludoData;
+        const state = data.getState();
+        const question = state.pendingQuestion;
+        if (!question || question.awaiting !== 'user') return;
+        const user = data.getUserPlayer();
+        const content = String(text || '').trim();
+        data.pushQuestionAnswer({
+            speakerId: user?.id || 'user',
+            speaker: user?.name || '我',
+            text: content,
+            kind: question.kind || 'answer'
+        });
+        data.addSpeech(user, content, question.kind || 'answer');
+        data.updateQuestion({ awaiting: '' });
+        this.ludoView.renderGame();
+        await this._ludoResumeQuestion();
+        /* ★ 用户答完**最后一步**时，`_ludoResumeQuestion` 只做收尾（清题 + 换手），
+         *   不会替 AI 走棋。若此时恰好轮到 AI，界面就停在「等对方掷骰」不动 ——
+         *   用户没有任何按钮能推它，属静默卡死。这里补一次驱动（轮到用户时它立刻返回）。 */
+        await this.runLudoAi();
+    }
+    async shareLudoSummary() {
+        const data = this.ludoData;
+        const rival = data.getAiPlayer();
+        const wechatData = this.getWechatData?.();
+        if (!wechatData?.addMessage || !rival?.name) {
+            this.phoneShell?.showNotification?.('心动飞行棋', '微信数据未就绪，暂时无法分享', '🎲');
+            return;
+        }
+        let chat = (wechatData.getChatList?.() || []).find(item => String(item?.name || '').trim() === rival.name);
+        if (!chat) chat = wechatData.createChat?.({ name: rival.name, type: 'single', avatar: rival.avatar || '' });
+        if (!chat) {
+            this.phoneShell?.showNotification?.('心动飞行棋', '没找到对应的聊天', '🎲');
+            return;
+        }
+        wechatData.addMessage(chat.id, {
+            from: 'me',
+            type: 'text',
+            content: `【心动飞行棋记录】\n${data.getSummary()}`
+        });
+        wechatData.saveData?.();
+        this.phoneShell?.showNotification?.('心动飞行棋', '记录已发出', '🎲');
+    }
+    stopLudoFlow() {
+        this._ludoDriving = false;
+    }
     handleSwipeBack() {
         if (this.currentView === 'undercover' && this.undercoverView?.handleBack?.()) {
             return;
@@ -3228,7 +3802,13 @@ export class GamesApp extends PokerApp {
         if (this.currentView === 'guesswhat' && this.guessWhatView?.handleBack?.()) {
             return;
         }
-        if (this.currentView === 'game2048' || this.currentView === 'sudoku' || this.currentView === 'catbox' || this.currentView === 'werewolf' || this.currentView === 'undercover' || this.currentView === 'seaturtle' || this.currentView === 'guesswhat') {
+        if (this.currentView === 'scriptkill' && this.scriptKillView?.handleBack?.()) {
+            return;
+        }
+        if (this.currentView === 'ludo' && this.ludoView?.handleBack?.()) {
+            return;
+        }
+        if (this.currentView === 'game2048' || this.currentView === 'sudoku' || this.currentView === 'catbox' || this.currentView === 'werewolf' || this.currentView === 'undercover' || this.currentView === 'seaturtle' || this.currentView === 'guesswhat' || this.currentView === 'scriptkill' || this.currentView === 'ludo') {
             this.backToLobby();
             return;
         }

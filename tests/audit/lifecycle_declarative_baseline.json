@@ -332,6 +332,38 @@
         "本版两个子游戏（海龟汤 / 你说我猜）**刻意不进本面**：它们是 `apps/games/` 的内部视图，生命周期由父类 `GamesApp` 一条管到底（`games-app.js` 里两处级联清退）。它们的「换会话不许串味」由会话键隔离保证，不由本面保证 —— 本面量的是**会话路径出口调用**，两个子游戏不新增槽位，故本面对它们无话可说（这本身就是如实读数）。",
         "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
       ]
+    },
+    "v3.33.0": {
+      "what": "v3.33.0 游戏厅下半两件（剧本杀 / 心动飞行棋）的接线位置；本版**不进本面**",
+      "why": "本版两个子游戏与上一版的两个同款：都挂在既有 `apps/games/` 之下，是 `games-app.js` 里的**内部视图切换**（`currentView` 分支 + 大厅卡片 + 生命周期级联），**不新增 App 类、不进 `config/apps.js`、不新增实例槽位**。因此本面**一格未动**是「如实的一格未动」，不是漏复校（本脚本对零变化下了硬断言）：App 类 50 / 实例槽位 63 / App 槽位 51 / 接线点 62（App 出口 50 + 非 App 12）/ 三路径 19·20·23 / 四类签名 40·1·1·8 / 语义面 11 槽（同 5 · 异 6），与上一版逐格相同。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 本版没有触碰这条「声明式生命周期准入」的任一面。",
+      "readings": {},
+      "unchanged": [
+        "app_classes",
+        "slots",
+        "app_slots",
+        "app_slot_share_pct",
+        "wiring_points",
+        "app_exit_points",
+        "non_app_points",
+        "coverage_pct",
+        "non_app_share_pct",
+        "points_p1",
+        "points_p2",
+        "points_p3",
+        "sig_empty",
+        "sig_default",
+        "sig_required",
+        "sig_none",
+        "semantic_slots",
+        "semantic_same",
+        "semantic_diff",
+        "semantic_consistency_pct",
+        "criteria_pass_count"
+      ],
+      "not_done": [
+        "本面**没有**本版增量可记：两个子游戏不进 App 注册面 —— 它们的「会话隔离」由 `config/storage.js` 的两条精确枚举承担（见 keys 门账本），与生命周期出口无关。",
+        "真机里「返回大厅 / 销毁时两个子视图的驱动是否真被停掉」仍归 R-O3（真宿主实机验证）。"
+      ]
     }
   },
   "caliber": [

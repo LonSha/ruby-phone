@@ -21,9 +21,34 @@
 import json
 import os
 import re
+import subprocess
 import sys
-
 ROOT = '/home/user/ruby-phone'
+
+# ★ 计数口径修正（v3.33.0）：静态 `^test(` 只数**顶层字面量** test 声明。
+#   v3.32.0 起套件引入**动态展开**（负控制表 `for (const [title, ...] of DAMAGE) test(title, ...)`），
+#   `^test(` 数不到它们 —— 实测 v3320 静态 18 / 实跑 30、v3330 静态 16 / 实跑 30。
+#   若沿用静态口径，本脚本会把条目里那句正确的「（30 条）」**回写成 18**（把派生数写坏）。
+#   故：静态可判「无动态展开」时沿用静态（零开销）；否则实跑该套件取真读数（带缓存）。
+_COUNT_CACHE = {}
+
+
+def real_test_count(rel):
+    if rel in _COUNT_CACHE:
+        return _COUNT_CACHE[rel]
+    src_txt = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+    static = len(re.findall(r'^test\(', src_txt, re.M))
+    dynamic = re.search(r'^[ \t]*test\((?![\'"])', src_txt, re.M)
+    if not dynamic:
+        _COUNT_CACHE[rel] = static
+        return static
+    r = subprocess.run(['node', '--test', rel], cwd=ROOT, capture_output=True, text=True, timeout=900)
+    m = re.search(r'tests (\d+)', r.stdout + r.stderr)
+    assert m, '实跑计数取不到：' + rel
+    n = int(m.group(1))
+    print('  实跑计数 %s：静态 %d → 实跑 %d（含动态展开）' % (rel, static, n))
+    _COUNT_CACHE[rel] = n
+    return n
 IDX_REL = 'index.js'
 LOG_REL = 'update-log.json'
 
@@ -67,7 +92,7 @@ for suite_rel in sorted(suite_names):
     suite_abs = os.path.join(ROOT, suite_rel)
     if not os.path.exists(suite_abs):
         continue
-    real = len(re.findall(r'^test\(', open(suite_abs, encoding='utf-8').read(), re.M))
+    real = real_test_count(suite_rel)
     # 形态：<path>（N 条 —— 路径与左括号之间只允许一个反引号与空白（跟人的合法书写，不是宽松匹配）
     pat = re.compile(re.escape(suite_rel) + r'`?\s*（(\d+) 条')
 

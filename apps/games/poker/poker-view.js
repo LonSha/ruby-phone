@@ -97,6 +97,30 @@ export class PokerView {
                         <i class="fa-solid fa-chevron-right games-game-chevron"></i>
                     </button>
 
+                    <button class="games-game-card games-scriptkill-card" id="games-open-scriptkill" type="button">
+                        <div class="games-game-art">
+                            <div class="games-scriptkill-lobby-art" aria-hidden="true">
+                                <i class="fa-solid fa-masks-theater"></i>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">剧本杀</div>
+                            <div class="games-game-desc">抽角色 · 搜证 · 指认凶手</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
+                    <button class="games-game-card games-ludo-card" id="games-open-ludo" type="button">
+                        <div class="games-game-art">
+                            <div class="games-ludo-lobby-art" aria-hidden="true">
+                                <i class="fa-solid fa-dice"></i>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">心动飞行棋</div>
+                            <div class="games-game-desc">掷骰前进 · 踩到就聊聊</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
                     <button class="games-game-card games-poker-card" id="games-open-poker" type="button">
                         <div class="games-game-art">
                             <span class="games-lobby-card games-lobby-card-black">A♠</span>
@@ -561,6 +585,12 @@ export class PokerView {
         });
         document.getElementById('games-open-guesswhat')?.addEventListener('click', () => {
             this.app.openGuessWhat();
+        });
+        document.getElementById('games-open-scriptkill')?.addEventListener('click', () => {
+            this.app.openScriptKill();
+        });
+        document.getElementById('games-open-ludo')?.addEventListener('click', () => {
+            this.app.openLudo();
         });
         document.getElementById('games-open-2048')?.addEventListener('click', () => {
             this.app.open2048();

@@ -652,7 +652,16 @@ test('G1 四个入口 / 两条常量 / 生命周期级联 / 返回手势链齐�
     const swipe = app.slice(app.indexOf('    handleSwipeBack()'));
     assert.ok(swipe.includes("this.currentView === 'seaturtle' && this.seaTurtleView?.handleBack?.()"), '返回手势必须先问海龟汤视图');
     assert.ok(swipe.includes("this.currentView === 'guesswhat' && this.guessWhatView?.handleBack?.()"), '返回手势必须先问你说我猜视图');
-    assert.ok(swipe.includes("this.currentView === 'guesswhat')"), '落大厅分支必须含 guesswhat');
+    /* ★ [v3.33.0 交棒 · 判据自身缺陷] 原断言写成「必须**确切**包含
+     *   `this.currentView === 'guesswhat')`」—— 那是把「当版最后一款」写进了判据：
+     *   **下一个**子游戏落进这个析取链时它当场报红，而产品侧完全正确（枚举本来就该跟着长）。
+     *   与 v3270/v3280/v3290/v3300 四处「守别人的版」同族，只是这次守的是「当版最后一款」。
+     *   改为泛化：形态锚（仍须是一条析取链）+ 守自己那一件（本套件那两款必须在链上）。 */
+    assert.ok(/this\.currentView === '[a-z0-9]+'(?: \|\| this\.currentView === '[a-z0-9]+')+\)/.test(swipe),
+        '落大厅分支必须是一条 currentView 析取链（形态锚，不许退化成单件判定）');
+    for (const v of ['seaturtle', 'guesswhat']) {
+        assert.ok(swipe.includes("'" + v + "'"), '落大厅分支必须含本套件那一件：' + v);
+    }
 });
 
 test('G2 视图调用面闭合在 App 上：视图调了 App 上不存在的方法＝静默断裂', () => {
