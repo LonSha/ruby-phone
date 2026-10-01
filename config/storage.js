@@ -160,6 +160,11 @@ export class PhoneStorage {
             //   台账（分享过哪些 / 导出过哪些）各自独立。
             //   随会话隔离：源把这些全挂在内存的 AppState.data.magazineData 上，切角色即串味。
             /^magazine_/,
+            // [v3.37.0] 白盒音效盒（soundkit_settings / soundkit_recipes / soundkit_ledger）：
+            //   一条前缀覆盖三键，三条键都无元字符，按仓内口径「无需宽匹配登记」。
+            //   绑定表（四个去处各绑了什么 + 试听音量）、自定义配方、台账各自独立。
+            //   随会话隔离：源把提示音写回宿主对象，切角色时**原样留着**（串味）。源没有这一步。
+            /^soundkit_/,
             // [v3.28.0] 自定义组件（widget_settings / widget_templates / widget_instances / widget_draft）：
             //   一条前缀覆盖四键（无元字符、无需宽匹配登记）。
             //   组件是「这个会话里摆了什么」——落全局会跨角色串味。

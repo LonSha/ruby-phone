@@ -71,8 +71,9 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     loverApp: 'loverspace',    // [v3.30.0] 恋爱空间：换会话丢草稿（足迹 / 情书 / 回答）与视图态（_replyTo / _focusDiary）并全量重取
     dateApp: 'date',           // [v3.31.0] 约会大作战：换会话丢草稿（场景三格 / 剧情与日志）与视图态（_current / _editScene）并全量重取
     lofterApp: 'lofter',       // [v3.34.0] 老福特：换会话丢草稿（短文批量 / 续章 / 评论 / 作者与文风格）与视图态并全量重取
-    pixivApp: 'pixiv',
-    magazineApp: 'magazine'    // [v3.36.0] 杂志：换会话丢稿件与译文与台账（视图态一并重置）并全量重取          // [v3.35.0] Pixiv：换会话丢草稿（作品三格 / 续章正文 / 评论 / 插画登记 / 文风与作者）与视图态并全量重取
+    pixivApp: 'pixiv',         // [v3.35.0] Pixiv：换会话丢草稿（作品三格 / 续章正文 / 评论 / 插画登记 / 文风与作者）与视图态并全量重取
+    magazineApp: 'magazine',   // [v3.36.0] 杂志：换会话丢稿件与译文与台账（视图态一并重置）并全量重取
+    soundkitApp: 'soundkit'    // [v3.37.0] 音效盒：换会话丢配方草稿（音符表 / 名字 / 音量）、分享码与 CSS 探针并全量重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

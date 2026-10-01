@@ -1,0 +1,413 @@
+/* ========================================================
+ * soundkit.css — [v3.37.0] 白盒音效盒 样式层
+ *
+ * 照抄 pixiv / lofter / magazine 规格：全部选择器挂在 `.snd-root` 下（宿主样式不外泄、
+ * 也不吃宿主样式）；类名与 soundkit-view.js 的产出**逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源 `WhiteboxSoundEditor` 的**深色控制台**观感（源是黑底 + 青绿示波器）：
+ *   ① 底是「调音台」的深灰蓝，不是纯黑（纯黑在手机上会把边缘糊掉）；
+ *   ② 主色青绿（示波器荧光），四态各有各的色相 —— **四态不许同色**，
+ *      否则「已静音」与「没绑」在用户眼里又塌成一态（本件最要紧的一条）；
+ *   ③ 数值一律等宽字体：频率 / 起点 / 时长三个数字要对得齐，否则用户没法肉眼比对两条配方。
+ *
+ * ★ 波形预览是 SVG（view 层产出），这里只给框与底纹，不给任何位图。
+ * ★ 本件**不用 emoji 做布局锚点**：图形字符（▍ ▸ ● ○）在等宽与比例字体下宽度一致。
+ * ======================================================== */
+.snd-root {
+    --snd-bg: #10161d;
+    --snd-panel: #161e27;
+    --snd-panel-2: #1d2731;
+    --snd-line: #2a3744;
+    --snd-ink: #dfe8f0;
+    --snd-ink-2: #8b9aa8;
+    --snd-accent: #35d6b0;
+    --snd-accent-2: #1d9c81;
+    --snd-ok: #35d6b0;
+    --snd-info: #5aa9f0;
+    --snd-mute: #7d8894;
+    --snd-warn: #e0a33c;
+    --snd-err: #e0625a;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 12px 24px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--snd-ink);
+    background: var(--snd-bg);
+    min-height: 100%;
+}
+.snd-root * {
+    box-sizing: border-box;
+}
+.snd-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.snd-header > h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--snd-ink);
+}
+.snd-header-sub {
+    font-size: 12px;
+    color: var(--snd-ink-2);
+}
+/* ---------- 取数面（三态各一色：开着 / 还没有 / 读不出来） ---------- */
+.snd-face {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--snd-line);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--snd-panel);
+}
+.snd-face-ok {
+    border-left-color: var(--snd-ok);
+}
+.snd-face-warn {
+    border-left-color: var(--snd-warn);
+}
+.snd-face-err {
+    border-left-color: var(--snd-err);
+}
+.snd-face-icon {
+    flex: 0 0 auto;
+    font-size: 14px;
+}
+.snd-face-label {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 600;
+}
+.snd-face-sub {
+    flex: 1 1 auto;
+    font-size: 12px;
+    color: var(--snd-ink-2);
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+.snd-flash {
+    padding: 6px 10px;
+    border: 1px dashed var(--snd-accent-2);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--snd-accent);
+    background: rgba(53, 214, 176, 0.07);
+    overflow-wrap: anywhere;
+}
+/* ---------- 页签 ---------- */
+.snd-tabs {
+    display: flex;
+    gap: 6px;
+}
+.snd-tab {
+    flex: 1 1 0;
+    padding: 7px 4px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel);
+    color: var(--snd-ink-2);
+    font-size: 13px;
+    cursor: pointer;
+}
+.snd-tab.is-on {
+    border-color: var(--snd-accent);
+    color: var(--snd-bg);
+    background: var(--snd-accent);
+    font-weight: 600;
+}
+.snd-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+/* 四个页签面板各有一层薄框（面板级落点：类名与视图产出逐类对应）。 */
+.snd-slots,
+.snd-editor,
+.snd-share,
+.snd-settings {
+    padding: 8px 10px;
+    border: 1px solid var(--snd-line);
+    border-radius: 8px;
+    background: var(--snd-panel);
+}
+.snd-sec-title {
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--snd-accent);
+    letter-spacing: 0.04em;
+}
+/* ---------- 槽位（四态四色 —— 本件最要紧的一条） ---------- */
+.snd-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--snd-line);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--snd-panel);
+}
+.snd-tone-ok {
+    border-left-color: var(--snd-ok);
+}
+.snd-tone-info {
+    border-left-color: var(--snd-info);
+}
+.snd-tone-mute {
+    border-left-color: var(--snd-mute);
+}
+.snd-tone-warn {
+    border-left-color: var(--snd-warn);
+}
+.snd-slot-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.snd-slot-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+.snd-slot-state {
+    padding: 1px 6px;
+    border: 1px solid var(--snd-line);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--snd-ink-2);
+}
+.snd-slot-detail {
+    flex: 1 1 100%;
+    font-size: 12px;
+    color: var(--snd-ink-2);
+    overflow-wrap: anywhere;
+}
+.snd-slot-warn {
+    flex: 1 1 100%;
+    font-size: 12px;
+    color: var(--snd-warn);
+}
+.snd-slot-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.snd-slot-vol {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.snd-slot-vol-label {
+    flex: 0 0 78px;
+    font-size: 12px;
+    color: var(--snd-ink-2);
+}
+.snd-slot-range {
+    flex: 1 1 auto;
+}
+/* ---------- 波形预览（纯 SVG，无位图） ---------- */
+.snd-wave {
+    padding: 4px 6px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel-2);
+}
+.snd-wave-lg {
+    padding: 6px 8px;
+}
+.snd-wave-svg {
+    display: block;
+    width: 100%;
+    height: 64px;
+}
+.snd-wave-svg rect {
+    fill: var(--snd-accent);
+}
+.snd-wave-meta {
+    font-size: 11px;
+    color: var(--snd-ink-2);
+}
+.snd-wave-empty {
+    font-size: 12px;
+    color: var(--snd-ink-2);
+}
+/* ---------- 按钮族 ---------- */
+.snd-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel-2);
+    color: var(--snd-ink);
+    font-size: 12px;
+    cursor: pointer;
+}
+.snd-primary {
+    border-color: var(--snd-accent-2);
+    color: var(--snd-accent);
+    font-weight: 600;
+}
+.snd-del {
+    border-color: rgba(224, 98, 90, 0.5);
+    color: var(--snd-err);
+}
+.snd-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+/* ---------- 编辑器 ---------- */
+.snd-edit-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.snd-edit-cur {
+    font-size: 12px;
+    color: var(--snd-ink-2);
+    overflow-wrap: anywhere;
+}
+.snd-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.snd-field > label {
+    flex: 0 0 68px;
+    font-size: 12px;
+    color: var(--snd-ink-2);
+}
+.snd-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel);
+    color: var(--snd-ink);
+    font-size: 13px;
+}
+.snd-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.snd-note-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+    gap: 4px;
+    align-items: center;
+}
+.snd-cell {
+    min-width: 0;
+    padding: 4px 5px;
+    border: 1px solid var(--snd-line);
+    border-radius: 5px;
+    background: var(--snd-panel);
+    color: var(--snd-ink);
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.snd-warn {
+    padding: 6px 10px;
+    border: 1px solid rgba(224, 163, 60, 0.5);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--snd-warn);
+    background: rgba(224, 163, 60, 0.08);
+    overflow-wrap: anywhere;
+}
+.snd-note {
+    font-size: 12px;
+    color: var(--snd-ink-2);
+    overflow-wrap: anywhere;
+}
+/* ---------- 内置配方芯片 ---------- */
+.snd-builtins {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.snd-chip {
+    padding: 4px 10px;
+    border: 1px solid var(--snd-accent-2);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--snd-accent);
+    font-size: 12px;
+    cursor: pointer;
+}
+/* ---------- 配方列表 ---------- */
+.snd-recipes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.snd-recipe-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel);
+}
+.snd-recipe-name {
+    flex: 1 1 auto;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.snd-recipe-meta {
+    flex: 1 1 100%;
+    font-size: 11px;
+    color: var(--snd-ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* ---------- 分享 / 设置 ---------- */
+.snd-code {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel);
+    color: var(--snd-ink);
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    resize: vertical;
+    overflow-wrap: anywhere;
+}
+.snd-range {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.snd-range-val {
+    flex: 0 0 40px;
+    font-size: 12px;
+    color: var(--snd-ink-2);
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.snd-read {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 8px;
+    border: 1px solid var(--snd-line);
+    border-radius: 6px;
+    background: var(--snd-panel);
+    font-size: 12px;
+}
+.snd-read > span:last-child {
+    color: var(--snd-ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
