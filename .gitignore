@@ -36,3 +36,7 @@ test/
 /rp_sched_*/
 /rp_branch_*/
 /rp_v328_*/
+
+# Python 脚本缓存（v3.44.0 补登记）
+__pycache__/
+tools/__pycache__/

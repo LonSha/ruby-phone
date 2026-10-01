@@ -1,0 +1,370 @@
+/* ========================================================
+ * doujin.css — [v3.44.0] 同人商店 · 样式层
+ *
+ * 照抄 pvdesk / musicdesk 规格：全部选择器挂在 .djn-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 doujin-view.js 的产出
+ * **逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源的**店头感**（同人商店的暖橙主色 #e8530e + 价签纸感）：
+ *   ① 底是「店内木架」的暖深灰，不是纯黑（纯黑会把「超限」的红吹没）；
+ *   ② 两个面（商店 / 市场）用**同一张卡**：商品卡左图位右价签，
+ *      市场卡多一行卖家与品相 —— 一眼看得出「同一件东西的两次身价」；
+ *   ③ 价格一律等宽右对齐，**三态**：取到数、没数字（画「--」）、超限（标红）；
+ *   ④ 四项上限画**余量条**（读数 / 上限），取不出来画横线且不着色
+ *      —— 「真的用到 0」与「读不出来」不同形；
+ *   ⑤ 逐行拒收用**红边行**并写出是第几行、因为什么，不并成一句「有 N 行失败」；
+ *   ⑥ 数值一律等宽字体：价格 / 件数 / 热度 / 上限要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.djn-root {
+    --djn-bg: #16120e;
+    --djn-panel: #211b15;
+    --djn-panel-2: #2b231b;
+    --djn-line: #3d3126;
+    --djn-ink: #f2e9de;
+    --djn-ink-2: #c0ae9b;
+    --djn-ink-3: #8a7767;
+    /* 源的主色：#e8530e（メロンブックス橙） */
+    --djn-accent: #e8530e;
+    --djn-accent-soft: #7a3413;
+    --djn-gold: #d8a13a;
+    /* 四态四色（与 view 的 FACE_TONE 一一对应） */
+    --djn-ok: #46b97a;
+    --djn-warn: #d8a13a;
+    --djn-err: #d9564a;
+    --djn-off: #7b8794;
+    --djn-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--djn-bg);
+    color: var(--djn-ink);
+    font-size: 13px;
+    line-height: 1.6;
+    border-radius: 10px;
+}
+.djn-root * { box-sizing: border-box; }
+
+/* ---------- 头与四态面 ---------- */
+.djn-head { display: flex; flex-direction: column; gap: 2px; }
+.djn-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.djn-head-sub { font-size: 11px; color: var(--djn-ink-3); line-height: 1.5; }
+.djn-face {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--djn-line);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--djn-panel);
+}
+.djn-face-line { font-size: 12px; font-weight: 600; }
+.djn-face-why { font-size: 11px; color: var(--djn-ink-3); }
+.djn-tone-ok { border-left-color: var(--djn-ok); }
+.djn-tone-ok .djn-face-line { color: var(--djn-ok); }
+.djn-tone-warn { border-left-color: var(--djn-warn); }
+.djn-tone-warn .djn-face-line { color: var(--djn-warn); }
+.djn-tone-err { border-left-color: var(--djn-err); }
+.djn-tone-err .djn-face-line { color: var(--djn-err); }
+.djn-tone-off { border-left-color: var(--djn-off); }
+.djn-tone-off .djn-face-line { color: var(--djn-off); }
+
+/* ---------- 页签 ---------- */
+.djn-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.djn-tab {
+    padding: 4px 10px;
+    border: 1px solid var(--djn-line);
+    border-radius: 999px;
+    background: var(--djn-panel);
+    color: var(--djn-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.djn-tab.on {
+    background: var(--djn-accent-soft);
+    border-color: var(--djn-accent);
+    color: #fff;
+}
+.djn-tab-n {
+    margin-left: 4px;
+    font-family: var(--djn-mono);
+    font-size: 11px;
+    opacity: .8;
+}
+
+/* ---------- 段与表 ---------- */
+.djn-sec { display: flex; flex-direction: column; gap: 6px; }
+.djn-sec-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--djn-ink-2);
+    letter-spacing: .04em;
+    border-bottom: 1px solid var(--djn-line);
+    padding-bottom: 3px;
+}
+.djn-sec-note { font-size: 11px; color: var(--djn-ink-3); line-height: 1.5; }
+.djn-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--djn-line);
+}
+.djn-row:last-child { border-bottom: none; }
+.djn-row-idx {
+    font-family: var(--djn-mono);
+    font-size: 11px;
+    color: var(--djn-ink-3);
+    min-width: 22px;
+}
+.djn-row-title { flex: 1 1 auto; word-break: break-word; }
+.djn-row-num {
+    font-family: var(--djn-mono);
+    font-size: 12px;
+    color: var(--djn-ink-2);
+    white-space: nowrap;
+}
+.djn-dim { color: var(--djn-ink-3); }
+.djn-err-text { color: var(--djn-err); }
+.djn-warn-text { color: var(--djn-warn); }
+.djn-ok-text { color: var(--djn-ok); }
+.djn-bad-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 6px;
+    border-left: 3px solid var(--djn-err);
+    background: rgba(217, 86, 74, .08);
+    border-radius: 4px;
+}
+.djn-empty { font-size: 12px; color: var(--djn-ink-3); padding: 6px 2px; }
+
+/* ---------- 商品卡（商店面） ---------- */
+.djn-grid { display: flex; flex-direction: column; gap: 6px; }
+.djn-card {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--djn-line);
+    border-radius: 6px;
+    background: var(--djn-panel);
+}
+.djn-card-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.djn-card-title { font-size: 13px; font-weight: 600; word-break: break-word; }
+.djn-card-sub { font-size: 11px; color: var(--djn-ink-3); }
+.djn-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.djn-tag {
+    padding: 1px 6px;
+    border: 1px solid var(--djn-line);
+    border-radius: 999px;
+    font-size: 10px;
+    color: var(--djn-ink-2);
+}
+.djn-tag-r18 { border-color: var(--djn-err); color: var(--djn-err); }
+.djn-tag-new { border-color: var(--djn-accent); color: var(--djn-accent); }
+.djn-price {
+    font-family: var(--djn-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--djn-gold);
+    white-space: nowrap;
+    align-self: flex-start;
+}
+.djn-price-bad { color: var(--djn-err); }
+.djn-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+}
+.djn-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+}
+
+/* ---------- 市场面（二手在售） ---------- */
+.djn-listing {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--djn-line);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--djn-panel);
+}
+.djn-listing-sold { opacity: .62; }
+.djn-listing-fake { border-left-color: var(--djn-err); }
+.djn-listing-scalper { border-left-color: var(--djn-accent); }
+.djn-listing-normal { border-left-color: var(--djn-line); }
+.djn-listing-top { display: flex; align-items: baseline; gap: 6px; }
+.djn-listing-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--djn-ink-3); }
+.djn-listing-seller { font-size: 11px; color: var(--djn-ink-2); }
+.djn-ratio-hot { color: var(--djn-accent); font-weight: 600; }
+.djn-ratio-cold { color: var(--djn-ink-3); }
+
+/* ---------- 价格引擎块（市场面：相场三行） ---------- */
+.djn-engine {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--djn-line);
+    border-radius: 6px;
+    background: var(--djn-panel-2);
+}
+.djn-engine-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.djn-engine-label { color: var(--djn-ink-3); min-width: 76px; }
+.djn-engine-val { font-family: var(--djn-mono); color: var(--djn-ink); }
+.djn-engine-note { font-size: 11px; color: var(--djn-ink-3); line-height: 1.5; }
+
+/* ---------- 余量条（四项上限） ---------- */
+.djn-gauge { display: flex; flex-direction: column; gap: 3px; }
+.djn-gauge-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.djn-gauge-label { color: var(--djn-ink-3); min-width: 68px; }
+.djn-gauge-track {
+    flex: 1 1 auto;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--djn-panel-2);
+    overflow: hidden;
+}
+.djn-gauge-fill { height: 100%; background: var(--djn-ok); }
+.djn-gauge-fill.warn { background: var(--djn-warn); }
+.djn-gauge-fill.err { background: var(--djn-err); }
+.djn-gauge-num {
+    font-family: var(--djn-mono);
+    font-size: 11px;
+    color: var(--djn-ink-2);
+    min-width: 62px;
+    text-align: right;
+}
+.djn-gauge-num.blank { color: var(--djn-ink-3); }
+
+/* ---------- 表单 ---------- */
+.djn-field { display: flex; flex-direction: column; gap: 3px; }
+.djn-field-label { font-size: 11px; color: var(--djn-ink-3); }
+.djn-input, .djn-area {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--djn-line);
+    border-radius: 6px;
+    background: var(--djn-panel-2);
+    color: var(--djn-ink);
+    font-size: 12px;
+    font-family: inherit;
+}
+.djn-area { min-height: 96px; resize: vertical; line-height: 1.6; }
+.djn-input:focus, .djn-area:focus { outline: none; border-color: var(--djn-accent); }
+.djn-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.djn-chip {
+    padding: 3px 9px;
+    border: 1px solid var(--djn-line);
+    border-radius: 999px;
+    background: var(--djn-panel);
+    color: var(--djn-ink-2);
+    font-size: 11px;
+    cursor: pointer;
+}
+.djn-chip.on { background: var(--djn-accent-soft); border-color: var(--djn-accent); color: #fff; }
+
+/* ---------- 按钮 ---------- */
+.djn-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.djn-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--djn-line);
+    border-radius: 6px;
+    background: var(--djn-panel-2);
+    color: var(--djn-ink);
+    font-size: 12px;
+    cursor: pointer;
+}
+.djn-btn-main { background: var(--djn-accent); border-color: var(--djn-accent); color: #fff; font-weight: 600; }
+.djn-btn-quiet { background: transparent; color: var(--djn-ink-2); }
+.djn-btn-danger { border-color: var(--djn-err); color: var(--djn-err); }
+
+/* ---------- 要求文本（可复制块） ---------- */
+.djn-pre {
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--djn-line);
+    border-radius: 6px;
+    background: #0f0c09;
+    color: var(--djn-ink-2);
+    font-family: var(--djn-mono);
+    font-size: 11px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 320px;
+    overflow: auto;
+}
+.djn-copy-note { font-size: 11px; color: var(--djn-ink-3); }
+
+/* ---------- 收银台 ---------- */
+.djn-cart-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 6px;
+    border-bottom: 1px dashed var(--djn-line);
+}
+.djn-cart-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px 6px;
+    border-top: 1px solid var(--djn-line);
+    font-size: 13px;
+    font-weight: 600;
+}
+.djn-cart-total .djn-price { font-size: 16px; }
+
+/* ---------- 台账 ---------- */
+.djn-ledger-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--djn-line);
+    font-size: 11px;
+}
+.djn-ledger-kind {
+    font-family: var(--djn-mono);
+    color: var(--djn-ink-3);
+    min-width: 74px;
+}
+.djn-ledger-note { flex: 1 1 auto; color: var(--djn-ink-2); word-break: break-word; }
+
+/* ---------- 读数表（明细） ---------- */
+.djn-metrics { display: flex; flex-direction: column; gap: 2px; }
+.djn-metric { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.djn-metric-k { color: var(--djn-ink-3); min-width: 92px; }
+.djn-metric-v { font-family: var(--djn-mono); color: var(--djn-ink); }
+/* ---------- 顶部一句回执 ---------- */
+.djn-flash {
+    font-size: 12px;
+    color: var(--djn-accent);
+    border: 1px solid var(--djn-accent-soft);
+    border-radius: 6px;
+    padding: 5px 9px;
+    background: rgba(232, 83, 14, .08);
+}
+/* ---------- 超限块（**单列**，不并进面四态） ---------- */
+.djn-over {
+    border: 1px solid var(--djn-err);
+    border-radius: 6px;
+    padding: 7px 9px;
+    background: rgba(217, 86, 74, .08);
+}
+.djn-over-title { font-size: 12px; color: var(--djn-err); font-weight: 600; }
+.djn-over-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; margin-top: 3px; }
+.djn-over-label { color: var(--djn-ink-2); min-width: 92px; }

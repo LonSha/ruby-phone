@@ -1,0 +1,260 @@
+/* ========================================================
+ * pvdesk.css — [v3.43.0] PV 案头 · 样式层
+ *
+ * 照抄 musicdesk / sourcebook / kettle 规格：全部选择器挂在 .pvd-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 pvdesk-view.js 的产出
+ * **逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源的**工房感**（暗房工作台 + 分镜条）：
+ *   ① 底是「暗房工作台」的冷灰蓝，不是纯黑（纯黑会把「超限」的红吹没）；
+ *   ② 逐镜一张**分镜卡**：左侧镜号与时间码等宽；卡片里是可直接复制的要求文本；
+ *   ③ 四项上限一律画**余量条**（读数 / 上限），取不出来画横线且不着色
+ *      —— 「真的用到 0」与「读不出来」不同形；
+ *   ④ 逐格填写态用**小旗**：哪一格没给、哪一格认不出，一眼看得出差别；
+ *   ⑤ 坏行表与台账表用横线分隔的**清单感**，表头小字、内容等宽；
+ *   ⑥ 数值一律等宽字体：镜号 / 秒数 / 字数 / 上限要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.pvd-root {
+    --pvd-bg: #111820;
+    --pvd-panel: #18202a;
+    --pvd-panel-2: #1f2a36;
+    --pvd-line: #2c3948;
+    --pvd-ink: #e6edf5;
+    --pvd-ink-2: #a9b8c8;
+    --pvd-ink-3: #6d7d8e;
+
+    /* 四态四色（与 view 的 FACE_TONE 一一对应） */
+    --pvd-ok: #46b97a;
+    --pvd-warn: #d8a13a;
+    --pvd-err: #d9564a;
+    --pvd-off: #7b8794;
+
+    --pvd-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: var(--pvd-bg);
+    color: var(--pvd-ink);
+    font-size: 13px;
+    line-height: 1.6;
+    border-radius: 10px;
+}
+.pvd-root * { box-sizing: border-box; }
+
+/* ---------- 头与四态面 ---------- */
+.pvd-head { display: flex; flex-direction: column; gap: 2px; }
+.pvd-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.pvd-head-sub { font-size: 11px; color: var(--pvd-ink-3); line-height: 1.5; }
+
+.pvd-face {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--pvd-line);
+    border-left-width: 3px;
+    border-radius: 8px;
+    background: var(--pvd-panel);
+}
+.pvd-face-label { font-size: 12px; font-weight: 600; }
+.pvd-face-sub { font-size: 11px; color: var(--pvd-ink-2); font-family: var(--pvd-mono); }
+.pvd-face-ok { border-left-color: var(--pvd-ok); }
+.pvd-face-ok .pvd-face-label { color: var(--pvd-ok); }
+.pvd-face-warn { border-left-color: var(--pvd-warn); }
+.pvd-face-warn .pvd-face-label { color: var(--pvd-warn); }
+.pvd-face-err { border-left-color: var(--pvd-err); }
+.pvd-face-err .pvd-face-label { color: var(--pvd-err); }
+/* 根色调：四态挂在根上，整页强调色跟着「这一份可不可信」走（键面取数据层真源）。 */
+.pvd-root.pvd-tone-ok { --pvd-accent: var(--pvd-ok); }
+.pvd-root.pvd-tone-warn { --pvd-accent: var(--pvd-warn); }
+.pvd-root.pvd-tone-err { --pvd-accent: var(--pvd-err); }
+.pvd-root.pvd-tone-none { --pvd-accent: var(--pvd-off); }
+
+/* ---------- 余量面（读数 / 上限，取不出来画横线） ---------- */
+.pvd-gauges,
+.pvd-reads { display: flex; flex-wrap: wrap; gap: 6px; }
+.pvd-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    padding: 2px 7px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 999px;
+    background: var(--pvd-panel-2);
+    font-size: 11px;
+    color: var(--pvd-ink-2);
+    white-space: nowrap;
+}
+.pvd-chip b { font-family: var(--pvd-mono); color: var(--pvd-ink); font-weight: 600; }
+/* 读数取不出来：画横线（横线字符）且**不复用「真的 0」那副样式** */
+.pvd-chip.is-unk { border-style: dashed; color: var(--pvd-off); }
+.pvd-chip.is-unk b { color: var(--pvd-off); }
+.pvd-chip.is-over { border-color: var(--pvd-err); }
+.pvd-chip.is-over b { color: var(--pvd-err); }
+.pvd-chip.is-warn { border-color: var(--pvd-warn); color: var(--pvd-warn); }
+
+/* ---------- 页签 ---------- */
+.pvd-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.pvd-tab {
+    padding: 4px 10px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--pvd-ink-2);
+    font-size: 12px;
+    cursor: pointer;
+}
+.pvd-tab.is-on { background: var(--pvd-panel-2); border-color: var(--pvd-ink-3); color: var(--pvd-ink); font-weight: 600; }
+
+/* ---------- 提示条 ---------- */
+.pvd-flash {
+    padding: 6px 9px;
+    border: 1px solid var(--pvd-warn);
+    border-radius: 6px;
+    background: rgba(216, 161, 58, .1);
+    color: var(--pvd-warn);
+    font-size: 11px;
+}
+
+/* ---------- 面板 ---------- */
+.pvd-panel { display: flex; flex-direction: column; gap: 8px; }
+.pvd-hint { margin: 0; font-size: 11px; color: var(--pvd-ink-3); line-height: 1.6; }
+.pvd-sub { font-size: 11px; color: var(--pvd-ink-2); }
+.pvd-note { font-size: 11px; color: var(--pvd-ink-2); }
+.pvd-empty {
+    padding: 10px;
+    border: 1px dashed var(--pvd-line);
+    border-radius: 8px;
+    color: var(--pvd-ink-3);
+    font-size: 12px;
+    text-align: center;
+}
+.pvd-warn {
+    padding: 6px 9px;
+    border-left: 3px solid var(--pvd-err);
+    background: rgba(217, 86, 74, .08);
+    color: var(--pvd-ink);
+    font-size: 11px;
+}
+.pvd-warn b { color: var(--pvd-err); }
+.pvd-list { margin: 0; padding-left: 18px; font-size: 11px; color: var(--pvd-ink-2); font-family: var(--pvd-mono); }
+
+/* ---------- 行与控件 ---------- */
+.pvd-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.pvd-row > span:first-child { min-width: 84px; color: var(--pvd-ink-2); }
+.pvd-sel,
+.pvd-num {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 6px;
+    background: var(--pvd-panel);
+    color: var(--pvd-ink);
+    font-size: 12px;
+    font-family: inherit;
+}
+.pvd-ta {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 8px;
+    background: var(--pvd-panel);
+    color: var(--pvd-ink);
+    font-size: 12px;
+    font-family: var(--pvd-mono);
+    line-height: 1.6;
+    resize: vertical;
+}
+.pvd-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.pvd-btns button {
+    padding: 5px 11px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 6px;
+    background: var(--pvd-panel-2);
+    color: var(--pvd-ink);
+    font-size: 12px;
+    cursor: pointer;
+}
+.pvd-btns button:hover { border-color: var(--pvd-ink-3); }
+.pvd-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--pvd-ink-2); }
+
+/* ---------- 分镜卡 ---------- */
+.pvd-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--pvd-line);
+    border-left-width: 3px;
+    border-left-color: var(--pvd-ink-3);
+    border-radius: 8px;
+    background: var(--pvd-panel);
+    cursor: pointer;
+}
+.pvd-card.is-on { border-left-color: var(--pvd-warn); background: var(--pvd-panel-2); }
+.pvd-card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pvd-card-n { font-family: var(--pvd-mono); font-size: 12px; font-weight: 600; }
+.pvd-card-clock { font-family: var(--pvd-mono); font-size: 11px; color: var(--pvd-ink-2); }
+.pvd-detail { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--pvd-line); }
+
+/* 要求文本（等宽、可长按复制） */
+.pvd-pre {
+    margin: 0;
+    padding: 9px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .28);
+    color: var(--pvd-ink);
+    font-family: var(--pvd-mono);
+    font-size: 11px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 320px;
+    overflow: auto;
+}
+.pvd-pre-out { border-color: var(--pvd-warn); background: rgba(216, 161, 58, .06); max-height: 420px; }
+
+/* ---------- 表（坏行 / 素材 / 台账） ---------- */
+.pvd-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.pvd-table thead th {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--pvd-line);
+    color: var(--pvd-ink-3);
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+}
+.pvd-table tbody td {
+    padding: 4px 6px;
+    border-bottom: 1px solid rgba(44, 57, 72, .6);
+    color: var(--pvd-ink-2);
+    vertical-align: top;
+}
+.pvd-table tbody tr.pvd-over td { color: var(--pvd-err); }
+.pvd-cell-text { font-family: var(--pvd-mono); color: var(--pvd-ink); word-break: break-word; }
+.pvd-table button {
+    padding: 2px 7px;
+    border: 1px solid var(--pvd-line);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--pvd-ink-2);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* ---------- 窄屏 ---------- */
+@media (max-width: 420px) {
+    .pvd-root { padding: 10px; font-size: 12px; }
+    .pvd-row { flex-wrap: wrap; }
+    .pvd-row > span:first-child { min-width: 0; }
+    .pvd-pre { max-height: 240px; }
+    .pvd-pre-out { max-height: 320px; }
+    .pvd-table { font-size: 10px; }
+}

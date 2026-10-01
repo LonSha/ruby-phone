@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 317,
+    "files": 323,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -571,6 +571,46 @@
         "L5": [
           "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
           "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.43.0": {
+      "what": "v3.43.0 PV 案头的真实接线；楼层长会话面一格未动",
+      "why": "静态扫描面 317 -> 320 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— PV 案头的分镜脚本、歌词原文与作品台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与七行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 320。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 320,
+        "criteria.L5.got_text": "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部 40 项活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
+    },
+    "v3.44.0": {
+      "what": "v3.44.0 同人商店 · 柜台的三个月真实接线；楼层长会话面一格未动",
+      "why": "静态扫描面 320 -> 323 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 同人商店的商品原文、二手在售原文与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与八行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 323。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 323,
+        "criteria.L5.got_text": "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
         ]
       },
       "unchanged": [

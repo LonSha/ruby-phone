@@ -760,15 +760,12 @@ test('C3 样式段头独立成行（本仓踩过粘连坑：语法合法但样�
     const lineStart = phone.lastIndexOf(NL, at) + 1;
     assert.ok(phone.slice(lineStart, at).indexOf('/*') >= 0 || phone.slice(at - 2, at).indexOf('/*') >= 0,
         '段头必须独占一行（不许与上一段尾粘连）');
-    /* 段序：最新版在最前。 */
-    const heads = [];
-    let i = phone.indexOf('/* ' + String.fromCharCode(9552) + String.fromCharCode(9552));
-    while (i >= 0) {
-        heads.push(phone.slice(i, i + 40));
-        i = phone.indexOf('/* ' + String.fromCharCode(9552) + String.fromCharCode(9552), i + 1);
-    }
-    assert.ok(heads.length >= 2);
-    assert.ok(heads[0].indexOf('[v3.42.0]') > 0, '本版段必须排在最前');
+    /* 段序：本版段必须排在**上一版**段之前（最新版在最前）。
+     * ★ 原写的是绝对形「heads[0] 必须是本版」—— 那等于给下一版埋一条必红的断言：
+     *   下一版一插新段它就红，而它想守的其实只是「本版在上一版之前」。
+     *   仓内 v3390 / v3400 两版用的都是这个相对形，这里统一过来。 */
+    assert.ok(phone.indexOf(mark) < phone.indexOf('[v3.41.0]'),
+        '本版段必须在 v3.41.0 段之前（最新版在最前）');
 });
 
 test('C4 源文件与 phone.css 段必须逐字同源（手工改两处必会再犯）', () => {

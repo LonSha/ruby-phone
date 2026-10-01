@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.42.0';
+const ST_PHONE_VERSION = '3.44.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -146,10 +146,21 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             且六项需求 / 台词池 / 记忆流 / 台账全是「这个角色的账」——
                       //             换会话必须四格全量重取（源把两本账放在无角色维度的键下，
                       //             切角色后旧需求值与旧台词池原样留着，串味且不报）
-    'musicdeskApp'    // [v3.42.0] 曲库案头：有表单字段（贴回的回信与要求文本草稿）与队列上限 / 台账保留数，
+    'musicdeskApp',   // [v3.42.0] 曲库案头：有表单字段（贴回的回信与要求文本草稿）与队列上限 / 台账保留数，
                       //             且曲库 / 歌词 / 来源读数 / 台账全是「这段关系的账」——
                       //             换会话必须四格全量重取（源把曲库、歌词与来源健康全放在无角色维度的键下，
                       //             切角色后旧曲库与旧游标原样留着，串味且不报）
+    'pvdeskApp',      // [v3.43.0] PV 案头：有表单字段（贴回的分镜脚本 / 歌词原文 / 要求文本草稿）
+                      //             与时长 / 主行上限 / 宽素材开关，且题面 / 台账 / 歌词 / 策略
+                      //             全是「这段关系的账」—— 换会话必须四格全量重取
+                      //             （源把题面、歌词、任务列表与设置全放在**没有角色维度**的键下，
+                      //             换角色后旧题面与旧台账原样留着，串味且不报）
+    'doujinApp'       // [v3.44.0] 同人商店：有表单字段（贴回的商品原文 / 二手在售原文 / 要求文本草稿）
+                      //             与四项上限，且店头 / 市场 / 收银台 / 动作台账
+                      //             全是「这段关系的账」—— 换会话必须四格全量重取
+                      //             （源把在售商品、二手出品、购物车与动作流水四类全塞进
+                      //             **一个 AppState.data 大对象**里，换角色后四类一起串味，
+                      //             而清购物车顺手把在售台账也清了，源没有这一步）
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
 //   存在理由：`Number(null) === Number('') === Number([]) === 0`、`Number(true) === 1`，
@@ -184,33 +195,33 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-06",
+    date: "2026-10-08",
     items: [
-        "【定位 · 素材缝合路线图第 3 层第六件：曲库案头（小鼠机余件 + EPhone·xintuk 第三方音乐聚合，**合并交付**）】本版是**一次合并交付**：按指令「把小鼠机剩下的做了，在一个版本做完，然后把第三层剩余项做了」，把两块并进同一个 v3.42.0 —— ① 小鼠机（nuo_sources/nuo3/xiaoshuji.html，6405117 字节 / 112434 行单文件自包含）的 netease 一族 71 个函数（块文件 nuo_sources/nuo3/live/blk_netease.txt，64764 字节）；② EPhone·xintuk（src_xintuk/runtime/scripts/main-app/ 下 65 片，2269720 字符 / 908 个函数）里的「第三方音乐聚合 + 扫码账号桥」一族。新件定名 apps/musicdesk/（曲库案头），按第 3 层范式办理：取机制 → 套三层（取数 → 纯函数 → 视图 → 落盘）→ 改持久化（零数据库 / PhoneStorage / 会话键前缀）。",
-        "【小鼠机余件的重判 · netease 一族取治理面，desktop 8 个函数一律不缝】netease 一族 71 个函数里，可取的**只有治理面**：曲目归一（neteaseNormalizeSong）、去重（dedupeSongs 的兄弟形态）、播放模式状态机（neteaseGetSequentialQueueIndex / neteaseGetRandomQueueIndex / neteaseGetManualQueueIndex）、歌词解析（neteaseProcessLrcString）、时间格式（neteaseFormatTime）、封面占位（neteaseGenerateMonoCover / neteaseInitialFromName）、队列游标与滚动定位（neteaseForceScrollToCurrentIndex / neteaseGetPlaylistStartIndex）。整块**围绕远程 API 与 audio 元素**（neteaseApiFetch / neteaseLoadAndPlayNeteaseSong / neteasePlayCurrentAudio / neteaseValidateAudio 之类），缝进来的只有「数据怎么归一」这一层。desktop 8 个函数（compressDesktopSettingsAvatars / debugDesktopData / desktopIcon 缓存一族）**一律不缝**：8 个里 7 个是 IndexedDB 事务 + 宿主对象（window.indexedDB / openDesktopSettingsDBForCompression / getLocalImageCompressionKindForKey），剩下 1 个是 debug 用的 alert 诊断；既没有可归一的纯函数面，也没有本仓能承载的持久化层（本仓零数据库）。这条重判是**如实记录为什么不做**，不是漏做。",
-        "【立场差 · 两个源都是「取数的那个人」，本件是「案头」】两个源都在做同一件事：自己拿远端来源列表、自己发请求、自己 new Audio() 真放一遍验链接、自己从本地存储直读账号 uid 与 cookie 拼进播放链。本件**零网络、零密钥、零音频元件、零外链**：它是**案头** —— 把用户从任何对话端拿回来的那份曲目数据收拾好（归一 / 去重 / 封面 / 歌词 / 播放模式 / 队列 / 来源读数 / 校验序 / 回执归一），并产一段**可复制的要求文本**由用户自己拿去问。",
-        "【缝什么 · 曲目归一逐项报「替用户编了什么」】源那条净名函数在三处静默兜底：id 缺失照收（后续拿 undefined 去请求）、名字缺失写死一个缺省名、艺人缺失写死另一个缺省名。本件 normalizeSong 逐项报 filled 明细，且 **id 缺失判 ok=false** —— 一条没有 id 的曲目在案头上是「认不出来」的那一态，不是一首正常的歌；专辑与封面缺失也各自计进 filled。",
-        "【缝什么 · 去重与超限逐条报】源 dedupeSongs 留下第一条、把重复项塞进 alternatives 且**不报**；到 limit 就 break，后面的**一条不报**（用户只看到歌单短了一截）。本件逐条报 merged（合并进哪一条、键是什么、累计几条）、dropped.no_id / dropped.no_name、capped（到上限截掉几条）与 over，且**键里带专辑段**：源只按「名字 + 艺人」判重，原版与现场版会被判成同一首而合并掉。",
-        "【缝什么 · 封面零外链（色相 + 首字四态）】源在没有封面时换成一条**外链托底图**（PLACEHOLDER_COVER）。本件零 URL、零二进制：出的是**八档色相令牌 + 首字**，四态互不同形 —— 有引用且首字取得出 ok / 有引用但首字取不出 partial / 压根没给 absent / 给了但不是字串 malformed；色相由**歌曲键**决定，同一首歌每次同一档。",
-        "【缝什么 · 歌词归一（坏行分两类报）】源对每一行拿正则试一次，不中就 continue —— 丢了几行**一个字都不报**，用户只会觉得「这首歌歌词怎么这么短」。本件把丢掉的按类报：dropped.noTime（这一行没有任何成形的时间标签，含纯元信息行）、dropped.noText（标签成形成了但后面一个字都没有，按标签个数计）；一行带多个标签时按标签个数展开成多行（源只认第一个、其余静默丢）。时间标签改手写扫描（本件不许写正则字面量），两处**刻意往「更认得出来」放宽**：分钟与秒允许 1~n 位、小数位长度不设限。",
-        "【缝什么 · 时长四态与毫秒互转都报出来】源把「大于 1000 的数」当毫秒除以 1000，且**不报**；另有一类源会照收：一首九十万秒的曲目会被画成一个看不出错的时长。本件 durationOf 报 normalized（这次的数被当成毫秒折算过）与 why（not_number / too_small / too_large / from_millis / ok）；时间格式化四态与源不同形 —— 源是「非数返回 00:00」，本件**读不出来与真的 0 秒不是一回事**：absent（没给，画横线）/ malformed（给了但不是数）/ ok（真的是 0 秒才画 00:00）/ 负数单列 why=negative。",
-        "【缝什么 · 播放模式坏值拒而不夹】源一句 includes 判不过就 return —— **静默不动**：用户点了「随机」，界面按钮没变、播放也没变，而且一个字都不说。本件 modeOf 分三形（没给 absent / 给了但不是字串 not_text / 给了字串但不认识 unknown_mode）并带上 saw；App 层认不出来时**保持原样**并把 saw 与 why 落进台账。",
-        "【缝什么 · 队列游标五因与绕回留痕】源拿游标直接当数组下标用（坏游标与越界由 JS 自己兜，结果 undefined、画面一片空白），有的分支还会静默夹到第一首。本件 seekTo 一律拒并给因：no_list / not_number / empty_queue / not_integer / out_of_range（带 given 与 size）；跳曲报 wrapped（绕回开头了）/ only_one / picked，且**随机不做 Math.random** —— 宿主把 0~1 的一个数传进来，本件只做纯函数归一（这样「随机」在判据里可复现，且不许挑到当前这首）。",
-        "【缝什么 · 来源读数四形，偏好与冷却一起画】源只记「连续失败到 3 次就开始冷静」，冷静期过了不做任何标注、**读不出来时当作没问题**。本件 healthOf 四形分列：absent（成败都没给过，不是「都好」）/ cooling（在冷却窗口内，带剩余毫秒）/ cold（窗口已过，可以再试）/ ok；sortSources 保留「偏好在先」这条设计（那是用户的意思，不该被程序推翻），但**把偏好项当前的状态一起画出来**；pickSource 三形（absent / cooling_only / ok）—— 源在待试列表为空时返回 undefined，调用处一律当空处理。",
-        "【缝什么 · 把握分带「为什么」】源 matchScore 是曲名全等给 70、包含给 45、其余 0，艺人全等 +30、包含 +18，调用处 filter 掉 45 分以下的。本件逐条对齐这套分值（阈值提成真源表 MUS_MATCH_MIN）并把 why 一并返回（same_name / name_in / none）—— 源只返回一个数，用户看到一条被判「不像」却说不出是名字对不上还是艺人没写。",
-        "【缝什么 · 回执归一的六个失败因】源把「响应没法解析」塔成一句。本件六因分列且**返回键不返回话**：no_text / unbalanced（括号没配平，带深度）/ no_object / bad_json / not_object / empty。★ 取回执改用**逐字符配平**并且**花括号与方括号都认** —— 源一句 JSON.parse 包在 try 里，一份裸数组的回执（对话端很可能就这么回）会被判成「没找到对象」，用户手里的整张曲目表一条都收不进来。",
-        "【缝什么 · 要求文本（本件唯一一处写出去的字）】源自己拼 prompt 自己发请求。本件只产**一段可复制的要求文本**（composeRequestText）：说清要什么形状，并列三条要求（曲目表原样给、别替我删重复；时长给秒数；歌词整段贴、坏行不用修）。立场差就落在这句话上：本件不发请求，数据得由用户从任何对话端拿回来。",
-        "【缝什么 · 读数面与台账】源把计数散在各处，没有一处能回答「我现在到底有多少东西」。本件 readingsOf 收成一处读数面（曲目几首 / 封面四态各几首 / 歌词留几行与坏几行 / 来源几条与冷静中几条 / 队列给进来与留下来几条），另加台账：每次收拾回信 / 换模式 / 跳曲 / 定位 / 裁队列各留一张回执（给进来几条、合并几条、截几条、认不出的那串字是什么）。★ 读数**一律不编 0**：读数取不出来时曲目数与封面计数整格是 null（视图画横线），不是「0 首」。",
-        "【四条偏离 · 去重不许静默】源把重复项塞进 alternatives 且不报，前台条目数少了几首用户看不出来。本件逐条报 merged（合并进哪一条）与 dropped 两因。",
-        "【四条偏离 · 封面不许换托底图】源没有封面就换成一条外链图 —— 于是「这一首没有封面」与「这一首有封面」在画面上都有一张图，用户分不出来。本件零外链，四态各自带话。",
-        "【四条偏离 · 歌词坏行不许静默丢】源正则不中即 continue。本件把坏行按两类逐项列出来，用户看得出「是这首歌本来就没有时间标签」还是「刚才那段被截断了」。",
-        "【四条偏离 · 队列不许静默截断】源到 limit 就 break。本件报 capped 与截掉几条，并标 over（这次给进来的超了上限）。",
-        "【四块不缝 · 不发请求】源 neteaseApiFetch / neteaseFetchMusicFromAPI / neteaseBuildApiUrl 直连多家聚合 API 与多个 NCM 节点，另一源另有 搜索 / 试节点 / 取歌单 / 取资料 一整族（searchNeteaseMusic / tryNcmNodes / getNeteasePlaylistTracks / getNeteaseProfile）。本件**零网络调用**：曲目数据由用户从对话端拿回来。缝进来就是把网络出口塞进本仓，与宿主争权威。",
-        "【四块不缝 · 不读宿主账号与 cookie】源 currentAccountStorageKey 从本地存储直读账号 uid 与 cookie、再拼进播放链接（另一源另有扫码登录桥 startNeteaseQr / startQqQr / withNcmCookie）。本件**零密钥读、零账号读**：来源清单是用户自己填的，只用于「该先试哪条」这一件事，且**本件不发请求**，所以填了也不会被拿去出网。",
-        "【四块不缝 · 不碰 audio 元件】源 validateAudio 用 new Audio() 真放一遍再判 —— 那条路要求用户**同步等 9 秒**，且失败后没有任何读数。本件零音频元件、零播放：只记来源的成败次数与冷却，由用户自己动手记。",
-        "【四块不缝 · 不收外链、不落数据库】源封面走外链托底图、来源健康落 localStorage ephone-music-source-health、另有 IndexedDB 一族。本件零数据库、零 URL、零二进制，落 PhoneStorage 四条会话键（musicdesk_lib / musicdesk_lyrics / musicdesk_ledger / musicdesk_policy），storage 出口只准 get / set 两个口。",
-        "【六条视图纪律 + 一条实现纪律 + 一条单一真源纪律】① 时长读不出来画横线（不是 00:00）；② 封面零外链，出的是色相块加首字；③ 歌词坏行逐项列（不留一行空白）；④ 去重与截断逐条报进队列面六格表；⑤ 来源面把「你偏好这条」的旗子与冷却剩余秒数一起画；⑥ 空与坏不同形（计数在读数取不出来时画横线而不是零）。实现纪律：**视图与数据层不许写正则字面量**（本仓剥注释器是字符状态机、不解析正则），反斜杠与引号一律走 String.fromCharCode 拼装形。单一真源纪律：**「现在几点」只许有一个出处**（App 的 nowOf）—— 视图与数据层都不许各自取时钟，两处各自取会让冷却读数当场分岔（这一帧「还剩 30 秒」、下一帧「已经过了」）。",
-        "【本版自己抓到的真缺陷（七处）+ 判据面自身错（九处）+ 运行时验证边界 + 版本升至 3.42.0（五源同源）+ 交棒改写】① **时长判定恒假**：App 的逐曲行拿「归一的原始字段」重判时长，而归一后的曲目形状里**根本没有这个字段** ⇒ 每一首读得出时长的曲目在画面上都变成一条横线，而且不报任何错（本件真踩到）。② **回读丢字段**：曲目归一原本只认源那套键（ar / al / dt），而落盘后**回读**给的是本件自己的形状（artist 字串 / album 字串 / seconds）⇒ 收拾完一次重开 App，艺人全变回「未知艺人」、专辑与时长整批丢掉，同样不报。③ **裸数组回信一律收不进来**：取回执只认花括号，而回执归一里明写着「拿到数组也能用」—— 两个口径互相打架，对话端直给一张数组表会被判成「没找到对象」，整张曲目表一条都收不进来。④ **失败因返回话不返回键**：六个因返回的是中文话而不是键，程序没法比对（六个因在判据里会塌成一串散文）。⑤ **封面读数空与坏同形**：读数面在曲库读不到时给四个 0，视图把「读数拿不到」画成「四种封面各 0 首」。⑥ **样式层不完整**：样式文件落盘时尾部还是占位（歌词 / 队列 / 来源 / 台账四段缺失）—— 视图产出的二十余个类没有落点，后四个页签整块没样式（registry 门的样式投递对账与源文件逐字同源判据都会红）。⑦ **接线锚点自带数组尾**：接线脚本第一处锚点把数组收尾符一起括进来，新条目被插到 APPS 数组**外面**（语法门当场红）。**判据面自身错九处**（破坏锚点写成非法 JS / 视图类名对照表漏掉动态前缀 / 空与坏判据断了不在场的串 / 面四态夹具自带 partial 格 / 队列六格计数期望与实际差一格 / 读数面夹具缺项 / 反引号禁令误判注释 / 时长三形期望与实际差一格 / 剥注释器哨兵被自己的注释吃掉等）。**运行时验证边界**：本版能验的是曲目归一逐项两态互不同形、去重与截断逐条报、封面四态互不同形且零外链、歌词坏行分两类报、时长四态与毫秒折算都报、播放模式三形与拒而不夹、游标五因与绕回留痕、来源四形与偏好冷却一起画、回执六因、读数不编 0、换会话四格全量重取、六处接线落点齐备、视图调用面闭合在 App 上、视图类名与样式逐类对应、四件零网络零宿主零外链、负控制都真响过。**不能保证**的是：① 真宿主实机里的落盘 / 会话隔离 / 换会话重绑实况（本仓至今没有可运行浏览器的验证环境）；② 真机上贴一份回信进来后的观感与长歌词排版；③ 窄屏上的排版与观感（本件是六页签 + 六格表 + 逐条卡片条型界面）。三条均仍归 R-O3（真宿主实机验证）：这类形态的共性是**不报错、不崩溃、只错结果 —— 看起来没坏但显示不对**，本版只能挡住机制面。五源同源抬版：manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的 ST_PHONE_VERSION 常量与公告块 / ITERATION_LOG.md 头部迭代段。**交棒改写 · 第 3 层余件与小鼠机收干**：本件收干后「小鼠机」这块源**已全部处置完毕**（tandan 一族 → v3.40.0 对话水壶；sims 一族 → v3.41.0 需求沙盘；netease 一族 → 本版取治理面；desktop 一族 → 本版重判不缝并写明理由）。mateiral 缝合路线图第 3 层下一步转**同批其它源卡**：nuo_sources/nuo3/ 下已解包但未开块的 ephone 全量（src_ephone_full / ex_ephone 两套）与 perigee / xinovo / fluffie 四款，以及 src_sully / src_youyou / src_meixinji / src_myphone 四套源。下一步按「先侦察函数块、再取治理面」的老规矩办。",
+        "【定位 · 素材缝合路线图第 3 层第八件：同人商店 · 柜台（Perigee OS「メロンブックス + メルカリ」两件合一件，合计 2743 行 / 113 方法）】本版把 Perigee OS 的**同人商店与二手市场**缝进本仓：melonbooks.js（1837 行 / 83133 字符 / 56 方法）+ mercari.js（906 行 / 38414 字符 / 49 方法），块文件 nuo_sources/nuo3/live/blk_melon.txt（60805 字节 / 526 行）。新件定名 apps/doujin/（同人商店 · 柜台），四层齐备：doujin-data.js（纯函数内核）/ doujin.css（样式）/ doujin-app.js（取数与落盘）/ doujin-view.js（视图），按第 3 层范式办理：取机制 → 套三层 → 改持久化（零数据库 / PhoneStorage / 会话键前缀 /^doujin_/）。",
+        "【为什么两件合一件：源自己写着「周边は将来の Mercari モジュールへ」】源 melonbooks.js 的定数注释逐字写着「goods（グッズ）は旧データ表示用に残す。新規生成では使わない」——**周边是旧数据，新规不再产**，而它的去处正是 Mercari 那一面。商店与二手市场在源里本就是**一条流水线**：商店出货 → 周边 → 市场转手。拆成两件会把「同一件周边的两次身价」劈开（一次是店头标价，一次是转手价与稀有度倍率），故本版判成一件：商品五型里的 goods 标成 DJ_LEGACY_TYPES（旧数据照显、新生成不产），新生成四型（DJ_GENERATABLE_TYPES）另列。",
+        "【立场差 · 源是「店员而且是收银的那个人」，本件是「柜台」】源自己起 AI 会话生成新刊与市场行情、自己把出售按钮接进钱包余额与交易流水 LinePay、自己按剧情节点推进售罄与价格波动、自己直读宿主界面元素（getElementById 二十余处）。本件是**柜台** —— 只把商品 / 社团 / 即卖会 / 二手在售收拾成一份**账**，产**可复制的要求文本**（requestText），把价算准、把不合法行逐条报出来。本件不起会话、不接钱包、不出图、不读宿主界面。",
+        "【缝什么 · 价格解析三态：一个数字都没有不许读成 0】源把「¥500」与「面议」同得 0（剥非数字 → parseInt → 再 || 0），于是「没数字」与「真的 0 元」同形。本件 priceOf 分三态报：ok / no_digits / over_limit，逐行报是第几行、原文是什么。★ 源的四条定价规则里「万以上按千、千以上按百、其余按十」本件照抄到 roundPrice 三档，不自己发明数字。",
+        "【缝什么 · 商品行逐行拒收（源是一条静默跳过、整件商品被丢）】源 _generateProducts 里「找不到社团就把整条商品丢掉」，用户看不出为什么少了一件。本件 classifyProducts 逐行裁定：ok / no_title / no_price / over_limit，rejected 逐条带行号与原文与 why。★ 行 id 按**行号**稳定派生（有外部 id 时优先，无则 row + 序号）：行号与 id 两套标号各说各话时视图点不中那一行。",
+        "【缝什么 · 合计逐行回报（源把读不出来的行当 0 加进去）】源把每行 parseInt 的结果再 || 0 加进合计，一行读不出来就少算一笔且不报。本件 cartTotal 逐行回报：合法行的钱照算、读不出来的行进 bad 列，并且 **ok=false 时合计标「不可信」** —— 不可信的车**不许照样结**（源扣完才说）。",
+        "【缝什么 · 角色热度三分量不塌成一个数（源只返回一个数）】源只返回一个数，「为什么被炒到 4 倍」用户对不出来。本件 characterHeat 分三分量报：在售周边归属数 / 剧情节点文本命中数（按位置加权）/ 名字出现数，三格各自带值。★ 盲盒与普通周边**不同形**：盲盒按**单款角色热度**、普通周边取 charNames **最高**热度 —— 源两路都只返回一个数，塔平了就分不出「这一盒里是谁」。",
+        "【缝什么 · 出品个体价：同一 roll 必得同一个价（源用 Math.random，判定不可判）】源 listingPrice 里直接取 Math.random，同一个出品每次问都是新价。本件把**随机数提到参数位**（roll），同一 roll 必得同一个价 —— 判据才判得动。定价系数表 DJ_PRICE_RULES 逐条照抄源（黄牛 2.0+rand*3.0 / 赝品 0.7+rand*0.4 / 普通 0.8+rand*0.5 / 急售 15% 概率 0.5+rand*0.2，本件列成表让「为什么黄牛这么贵」可对）。",
+        "【缝什么 · 售罄比例四步与出品规划（源不留痕）】soldRatioOf 四步：没绑剧情节点与绑了不同形（源界面没有这一格，全靠翻列表数）；variantPlan 的基数 / 加成 / 概率逐条对齐，且概率另给「约每几件出一件」（概率是「几个人里出一个」的语义，源只报个小数）。",
+        "【缝什么 · 重定价逐条报旧价 / 新价 / 幅度（源静默改价）】源 refreshMarket 里重新定价，幅度超过阈值才算「明显变动」，改了什么一个字都不说。本件 repriceOf 逐条报：旧价 / 新价 / 幅度 / 是否超阈值；且读数必须**每轮重算**（本件第一版只在构造里清一次，于是越列越长 —— 动作口改完内存字段必须紧跟一次重算）。",
+        "【缝什么 · 上限余量四项与存档分档（源顶到上限只丢一句「已裁剪」）】源把上限写死在若干处、顶到上限就截、只说一句已裁剪。本件 readingsOf / gaugesOf 收成一处余量面（四项读数 / 上限），★ 读数**一律不编 0**：取不出来是 null（视图画横线），不是「真的 0」。存档份数上限与商品件数上限**分成两个常量**（DJ_SHELF_STORE_MAX / DJ_SHELF_MAX）：源把两件事挤在一个数上，改一处会静默改另一处。",
+        "【缝什么 · 台账挤掉旧记录要计数（源静默 shift）】源动作流水满了一挤了之，挤掉几条不报。本件 ledgerTrim 逐笔留痕、挤掉要报数（ledgerInfo 的 dropped）。★ 清店头与车时**不顺手清台账**：源把四类挤在一个大对象里，一个「清空」按钮会连在售台账一起清。",
+        "【四条偏离 · ① 价格解析不许把「没数字」读成 0】源「¥500」与「面议」同得 0，本件三态分报。",
+        "【四条偏离 · ② 商品行不许静默跳过】源找不到社团就丢整条，本件逐行报 why 与原文。",
+        "【四条偏离 · ③ 价格档不许只丢一句「波动了」】源改价不说，本件报旧价 / 新价 / 幅度。",
+        "【四条偏离 · ④ 盲盒与普通周边不许同形】源两路都返回一个数，本件按热度口径分形（盲盒单款 / 普通取最高）。",
+        "【四块不缝 · ① 不连钱包】源 purchase() 直接扣钱包余额并写交易流水（LinePay）。本件结账**只动本件的车与历史**，四件里一个钱包 / 流水调用都没有（判据 D1 逐词扫）。",
+        "【四块不缝 · ② 不落库不落外部备份 ③ 不出图 ④ 不读宿主界面元素】② 源 Utils.saveData / IndexedDB / GitHub 备份 —— 本件只走 PhoneStorage 四条会话键（doujin_shop / doujin_market / doujin_cart / doujin_ledger，storage 出口收敛成 get / set 两个口）；③ 源 _buildCoverPrompt + dispatchGenerate 逐件出封面 —— 本件零出图、零 URL、零 data URL、零图片扩展名、零索引库；④ 源满篇 document.getElementById 直读宿主元素 —— 本件不直读宿主元素（视图只经 App 取数，App 只经 storage 取数）。",
+        "【四条会话键：四类分开存，全走 /^doujin_/ 前缀随会话隔离】doujin_shop（店头 + 存档）/ doujin_market（二手在售 + 收藏 + 赝品标记）/ doujin_cart（待结行 + 已结历史）/ doujin_ledger（动作台账）。四条键已在 scripts/keys-audit.mjs 登记 scope: chat。★ 为什么四条分开：源把四类全塞进一个 AppState.data 大对象 —— 换角色后四类一起串味，而清购物车顺手把在售台账也清了。",
+        "【六处接线落点（少一处就静默错数据 / 点了没反应）】config/apps.js 的 APPS 一项、config/storage.js 的 CHAT_DATA_PATTERNS 一条宽前缀、scripts/keys-audit.mjs 四条键登记、index.js 的懒加载分支与 window.VirtualPhone.doujinApp 挂载、index.js 的表单字段登记表一项（贴回的商品原文 / 二手在售原文 / 要求文本草稿）、phone.css 的样式段投递（与 doujin.css 逐字同源）。",
+        "【本件实现纪律（四条，都由判据 J6 守住）】① apps/doujin/ 四件**不许出现正则字面量**（本仓剥注释器是字符状态机、不解析正则）；② **不许出现反斜杠**；③ 也不许出现反引号（模板字符串禁用）；④ 一切字符切分走 indexOf / slice / split。⑤ 视图层与号、双引号与单引号一律走**拼装形**（String.fromCharCode）—— 落盘链会把实体解码；⑥ 行 id 按行号稳定派生；⑦ **售出状态只有一个真源词 sold_out**；⑧ **动作口只落行、裁定归 classifyProducts 一处**。",
+        "【本版自己抓到的产品侧真缺陷（五处，全部由本版判据首跑抓出）】① **priceOf 只认字符串**，而 ingestShopText 落库存的是数字（800）⇒ classifyProducts 按字符串核 ⇒ 写成数字的行全被判 no_price ⇒ **收下的商品在投影面全消失**（「收下了却一件都没进店头」，不报错不崩溃只错结果）；② **priceText 存 cleanText(p.price)**，数字形态时为空 ⇒ cartTotal 核价失败 ⇒ **车里合计永远是 0 且不可信**；③ **ingestShopText 把坏行丢掉**（不落 _productsRaw）⇒ 投影面 rejected 永远为空 ⇒ 视图画不出拒收行（用户连「为什么没收」都查不到）；④ **_extractList 把「有开括号但没闭合」误判成 no_bracket**（应为 bad_json）—— 两件事挤成一个键时用户会去重贴文本，而真因是括号写残了；⑤ **sold 与 sold_out 两套状态词各说各话**：统计侧认 sold、而词表里根本没有这个键（是 sold_out）⇒ 「标已售出」点下去界面变了、统计里却仍算作「在售」。修法：加 DJ_SOLD_KEYS + isSold() 当**唯一口径**。",
+        "【判据面自身缺陷（本版首跑暴露九处，逐条修）】① 套件 shopJson / listingJson 用**单引号**拼 JSON ⇒ JSON.parse 必败 ⇒ 整族 B 组红且**看起来像产品缺陷**（改用双引号 DQ）；② A16 用例词写 sold（与产品同错，判据跟着错）；③ I4 热度判据太松（只断言三字段在场，抓不住「算的时候只用了一个分量」）⇒ 加逐分量对照；④ appGateProblems 用了 APP 未导出的常量（undefined ⇒ 循环不跑 ⇒ 假红）；⑤ I13 观测点（跨实例验会漏，改回同实例内存投影）；⑥ I17/I18 真口径是「换出去再换回来，账要还在」；⑦ I20 需逐项自成字面；⑧ I21/I22 需咬住「三元回横线」「带 blank 标记」「!blank 才着色」；⑨ I24 需按位置逐项对上。★ 判据纪律：**不许只查「关键词在场」**——必须咬住可观测的行为（数值 / 路径 / 跨实例结果），否则破坏落在同类词上时判据会假绿。",
+        "【破坏表锚点（DAMAGE 二十五条）本轮重挂四处】q13 落 `if (!box.ok)` 失败分支并**顺手加 _recompute()**（否则清了内存不重算投影，观测不到，是装饰性破坏）；q17 把 _clearToDefaults() 与 probe() 一起拿掉；q19 清车改写等价形（`splice` 清车那句替代赋值清车 + 另插一句清店头）；q20 改 `malformed: ok`；q22 咬 djn-gauge-num 的 blank 标记；q23 咬 `if (!r.blank) {`。★ J2 会查「替换后原串残留为零」：替换串**不许原样包含锚点**。",
+        "【运行时验证边界 + 版本升至 3.44.0（五源同源）+ 交棒改写】本版能验的是：价格三态不编 0 / 商品行逐行拒收 / 热度三分量与盲盒分形 / 重定价逐条报 / 合计不可信不许照样结 / 上限余量 null 与 0 不同形 / 四条会话键随会话隔离 / 六处接线落点齐备 / 四件零钱包零网络零出图零宿主读 / 负控制二十五条都真响过（含本轮重挂的四处）。**不能保证**的是：① 真宿主实机里的落盘 / 会话隔离 / 换会话重绑实况（本仓至今没有可运行浏览器的验证环境）；② 真机上贴一份商品原文与一份二手在售原文进来后的观感与长列表排版；③ 窄屏上的排版与观感（本件是六页签 + 逐条卡片条型界面）。三条均仍归 R-O3（真宿主实机验证）：这类形态的共性是**不报错、不崩溃、只错结果 —— 看起来没坏但显示不对**，本版只能挡住机制面。五源同源抬版：manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的 ST_PHONE_VERSION 常量与公告块 / ITERATION_LOG.md 头部迭代段。★ 交棒：本件收干后，Perigee OS 的「商店 + 二手市场」两件（melonbooks 1837 行 + mercari 906 行，合计 2743 行 / 113 方法）**已全部处置完毕**；可取的是价格解析 / 行核 / 热度与盲盒分形 / 出品定价 / 售罄与重定价 / 上限余量 / 台账裁边这一层治理面，不缝的是钱包 / 出图 / 网络 / 宿主界面读。第 3 层下一步转同批其它源（ephone 全量两套 / perigee / xinovo / fluffie 四款 / src_sully / src_youyou / src_meixinji / src_myphone 四套），按「先侦察函数块、再取治理面」的老规矩办。",
     ]
 };
 
@@ -10682,6 +10693,55 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载时光胶囊App失败:', err);
                             phoneShell?.showNotification('错误', '时光胶囊App加载失败', '❌');
+                        });
+                } else if (appId === 'pvdesk') {
+                    // [v3.43.0] PV 案头：缝合自 Perigee OS「ニコニコ 音乐PV工房」一族
+                    //   （七件 / 4450 行 / 126 方法）。
+                    //   取四块治理面：分镜脚本解析（区间反了逐条报 / 空体逐条报 /
+                    //   超硬限报截断）/ 逐镜要求文本组装（逐格报填写态）/
+                    //   歌词时间轴与字幕版式（三态不压平 / 坏行逐项列）/ 三项上限余量。
+                    //   四块不缝：零音频元件（源自起 WebAudio 合成与试听）；零网络
+                    //   （源直连生图与视频生成入口）；零出图零成片（源逐镜出图、
+                    //   任务队列出片、落 IndexedDB 与 GitHub 备份）；零宿主界面读
+                    //   （源满篇 document.getElementById 直读宿主元素）。
+                    //   四条偏离：镜头区间反了不许静默跳过；镜头体为空不许静默收下；
+                    //   歌词坏行不许静默丢；上限不许只丢一句「已裁剪」。
+                    //   写盘四条键走 ^pvdesk_ 前缀随会话隔离。
+                    bootTiming.instrumentImport(import('./apps/pvdesk/pvdesk-app.js'), './apps/pvdesk/pvdesk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.pvdeskApp) {
+                                window.VirtualPhone.pvdeskApp = new module.PvdeskApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.pvdeskApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载PV案头App失败:', err);
+                            phoneShell?.showNotification('错误', 'PV案头App加载失败', '❌');
+                        });
+                } else if (appId === 'doujin') {
+                    // [v3.44.0] 同人商店 · 柜台：缝合自 Perigee OS 的メロンブックス
+                    //   （melonbooks.js，1837 行 / 56 方法）与メルカリ（mercari.js，
+                    //   906 行 / 49 方法）两件，合计 2743 行 / 113 方法。
+                    //   取四块治理面：商品行分类与逐行拒收（社团 / 类型 / 状态逐条核）/
+                    //   价格引擎（三态解析 + 稀有度倍率 + 角色热度三分量 + 二手个体价）/
+                    //   市场流动（上新 / 售出 / 重定价逐条报旧价新价幅度）/ 四项上限余量。
+                    //   四块不缝：不连钱包（源 purchase() 直接扣 LinePay 余额并写交易流水）；
+                    //   不落库不落外部备份（源 Utils.saveData / IndexedDB / GitHub 备份）；
+                    //   不出图（源 _buildCoverPrompt + dispatchGenerate 逐件出封面）；
+                    //   不读宿主界面元素（源满篇 document.getElementById 直读宿主 td/div）。
+                    //   四条偏离：价格解析不许把「没数字」读成 0；商品行不许静默跳过；
+                    //   价格档不许只丢一句「波动了」；盲盒与普通周边不许同形。
+                    //   写盘四条键走 ^doujin_ 前缀随会话隔离。
+                    bootTiming.instrumentImport(import('./apps/doujin/doujin-app.js'), './apps/doujin/doujin-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.doujinApp) {
+                                window.VirtualPhone.doujinApp = new module.DoujinApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.doujinApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载同人商店App失败:', err);
+                            phoneShell?.showNotification('错误', '同人商店App加载失败', '❌');
                         });
                 } else if (appId === 'musicdesk') {
                     // [v3.42.0] 曲库案头：缝合自小鼠机 netease 一族（71 个函数）
