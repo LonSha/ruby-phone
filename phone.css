@@ -14817,6 +14817,249 @@ input:checked + .toggle-slider:before {
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
 
+/* ══════════════ [v3.45.0] 存档台（archive） ══════════════ */
+/* ========================================================
+ * archive.css — [v3.45.0] 存档台 · 样式层
+ *
+ * 照拄 pvdesk / musicdesk / doujin 规格：全部选择器挂在 .arc-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 archive-view.js 的产出
+ * **逐类对应**（registry 门会核）。
+ *
+ * 设计语言取自源的**存档台感**（冷灰蓝的介质感 + 绿色对账「成」）：
+ *   ① 底是「旧磁带机」的冷灰蓝，不是纯黑（纯黑会把「超限」的红吹没）；
+ *   ② 包型 / 版本 / 覆盖性**三个面分开画**：包型块用中性色，
+ *      会清空的那一块一律标红 —— 源同一屏两个按钮一个补一个清，外观一样；
+ *   ③ 逐表读数用**等宽表**：表名 / 形态 / 条数三列对齐，
+ *      「包里没这一张」与「包里带了但读不出来」不同形；
+ *   ④ 四项上限画**余量条**（读数 / 上限），取不出来画横线且不着色
+ *      —— 「真的用到 0」与「读不出来」不同形；
+ *   ⑤ 形态可疑的表整行**加红边**并写出因为什么；
+ *   ⑥ 数值一律等宽字体：条数 / 体积 / 上限要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.arc-root {
+    --arc-bg: #10161c;
+    --arc-panel: #18212a;
+    --arc-panel-2: #202c37;
+    --arc-line: #2c3a46;
+    --arc-ink: #e8eef4;
+    --arc-ink-2: #b3c2d0;
+    --arc-ink-3: #7d8f9e;
+    /* 源的主色：冷介质的青蓝 */
+    --arc-accent: #3f9bd0;
+    --arc-accent-soft: #1d4e6b;
+    --arc-gold: #d8a13a;
+    /* 四态四色（与 view 的 FACE_TONE 一一对应） */
+    --arc-ok: #46b97a;
+    --arc-warn: #d8a13a;
+    --arc-err: #d9564a;
+    --arc-off: #7b8794;
+    --arc-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--arc-bg);
+    color: var(--arc-ink);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.arc-root * { box-sizing: border-box; }
+/* ---------- 四态边框色 ---------- */
+.arc-tone-ok { border-top: 2px solid var(--arc-ok); }
+.arc-tone-warn { border-top: 2px solid var(--arc-warn); }
+.arc-tone-err { border-top: 2px solid var(--arc-err); }
+.arc-tone-off { border-top: 2px solid var(--arc-off); }
+.arc-tone-none { border-top: 2px solid var(--arc-off); }
+/* ---------- 页头 ---------- */
+.arc-head { display: flex; flex-direction: column; gap: 3px; }
+.arc-title { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+.arc-sub { font-size: 12px; color: var(--arc-ink-2); }
+.arc-why { font-size: 12px; color: var(--arc-err); }
+/* ---------- 页签 ---------- */
+.arc-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.arc-tab {
+    flex: 1 1 auto;
+    min-width: 60px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--arc-ink-2);
+    background: var(--arc-panel);
+    border: 1px solid var(--arc-line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.arc-tab.on {
+    color: var(--arc-ink);
+    background: var(--arc-panel-2);
+    border-color: var(--arc-accent);
+}
+/* ---------- 通用块 ---------- */
+.arc-sec {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px;
+    background: var(--arc-panel);
+    border: 1px solid var(--arc-line);
+    border-radius: 8px;
+}
+.arc-sec-title { font-size: 13px; font-weight: 600; color: var(--arc-ink); }
+.arc-sec-note { font-size: 11px; color: var(--arc-ink-3); line-height: 1.45; }
+.arc-sub-title { font-size: 12px; color: var(--arc-ink-2); margin-top: 2px; }
+.arc-empty {
+    font-size: 12px;
+    color: var(--arc-ink-3);
+    padding: 8px 9px;
+    border: 1px dashed var(--arc-line);
+    border-radius: 8px;
+}
+.arc-note {
+    font-size: 12px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--arc-line);
+    color: var(--arc-ink-2);
+}
+.arc-note-ok { border-color: var(--arc-ok); color: var(--arc-ok); background: rgba(70, 185, 122, .08); }
+.arc-note-err { border-color: var(--arc-err); color: var(--arc-err); background: rgba(217, 86, 74, .08); }
+/* ---------- 表单 ---------- */
+.arc-field { display: flex; flex-direction: column; gap: 4px; }
+.arc-field-label { font-size: 12px; color: var(--arc-ink-2); }
+.arc-area, .arc-input {
+    width: 100%;
+    padding: 7px 9px;
+    font-size: 12px;
+    font-family: var(--arc-mono);
+    color: var(--arc-ink);
+    background: var(--arc-panel-2);
+    border: 1px solid var(--arc-line);
+    border-radius: 6px;
+    resize: vertical;
+}
+.arc-area { min-height: 76px; }
+.arc-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.arc-btn {
+    padding: 7px 12px;
+    font-size: 12px;
+    color: var(--arc-ink);
+    background: var(--arc-panel-2);
+    border: 1px solid var(--arc-line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.arc-btn-main { border-color: var(--arc-accent); color: var(--arc-accent); }
+.arc-btn-quiet { color: var(--arc-ink-2); }
+.arc-btn-danger { border-color: var(--arc-err); color: var(--arc-err); }
+/* ---------- 读数表 ---------- */
+.arc-metrics { display: flex; flex-direction: column; gap: 2px; }
+.arc-metric { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.arc-metric-k { color: var(--arc-ink-3); min-width: 92px; }
+.arc-metric-v { font-family: var(--arc-mono); color: var(--arc-ink); word-break: break-all; }
+/* ---------- 表清单（等宽三列） ---------- */
+.arc-table {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--arc-line);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.arc-tr {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--arc-line);
+}
+.arc-tr:last-child { border-bottom: none; }
+.arc-th { color: var(--arc-ink-3); background: var(--arc-panel-2); }
+.arc-suspect { background: rgba(217, 86, 74, .10); border-left: 3px solid var(--arc-err); }
+.arc-td-name { flex: 1 1 46%; font-family: var(--arc-mono); word-break: break-all; }
+.arc-td-shape { flex: 1 1 40%; color: var(--arc-ink-2); }
+.arc-td-rows { flex: 0 0 auto; min-width: 46px; text-align: right; font-family: var(--arc-mono); }
+.arc-td-rows.blank { color: var(--arc-ink-3); }
+.arc-tag {
+    margin-left: 5px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: var(--arc-gold);
+    border: 1px solid var(--arc-gold);
+    border-radius: 4px;
+}
+.arc-why-mini { display: block; font-size: 10px; color: var(--arc-err); margin-top: 1px; }
+.arc-dim { color: var(--arc-ink-3); font-size: 11px; }
+/* ---------- 芯片列 ---------- */
+.arc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.arc-chip {
+    padding: 2px 7px;
+    font-size: 11px;
+    font-family: var(--arc-mono);
+    border-radius: 4px;
+    border: 1px solid var(--arc-line);
+    color: var(--arc-ink-2);
+}
+.arc-chip-clear { border-color: var(--arc-err); color: var(--arc-err); background: rgba(217, 86, 74, .08); }
+.arc-chip-unknown { border-color: var(--arc-gold); color: var(--arc-gold); }
+.arc-chip-only { border-color: var(--arc-accent); color: var(--arc-accent); }
+/* ---------- 清单行 ---------- */
+.arc-list { display: flex; flex-direction: column; gap: 3px; }
+.arc-list-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.arc-list-k { flex: 0 0 auto; min-width: 150px; font-family: var(--arc-mono); color: var(--arc-ink); }
+.arc-list-v { flex: 1 1 auto; color: var(--arc-ink-2); word-break: break-all; }
+/* ---------- 体检块 ---------- */
+.arc-audit {
+    padding: 6px 8px;
+    border: 1px solid var(--arc-line);
+    border-left: 3px solid var(--arc-warn);
+    border-radius: 6px;
+}
+.arc-audit-name { font-size: 12px; color: var(--arc-ink); }
+.arc-audit-miss { font-size: 11px; color: var(--arc-warn); }
+/* ---------- 余量条 ---------- */
+.arc-gauge { display: flex; flex-direction: column; gap: 5px; }
+.arc-gauge-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.arc-gauge-label { flex: 0 0 auto; min-width: 66px; color: var(--arc-ink-3); }
+.arc-gauge-track {
+    flex: 1 1 auto;
+    height: 7px;
+    background: var(--arc-panel-2);
+    border: 1px solid var(--arc-line);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.arc-gauge-fill { display: block; height: 100%; background: var(--arc-accent); }
+.arc-gauge-fill.warn { background: var(--arc-warn); }
+.arc-gauge-fill.err { background: var(--arc-err); }
+.arc-gauge-num { flex: 0 0 auto; min-width: 78px; text-align: right; font-family: var(--arc-mono); }
+.arc-gauge-num.blank { color: var(--arc-ink-3); }
+/* ---------- 顶部一句回执 ---------- */
+.arc-flash {
+    font-size: 12px;
+    color: var(--arc-accent);
+    border: 1px solid var(--arc-accent-soft);
+    border-radius: 6px;
+    padding: 5px 9px;
+    background: rgba(63, 155, 208, .08);
+}
+/* ---------- 要求文本预览 ---------- */
+.arc-pre {
+    font-family: var(--arc-mono);
+    font-size: 11px;
+    color: var(--arc-ink);
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 8px 9px;
+    background: var(--arc-panel-2);
+    border: 1px solid var(--arc-line);
+    border-radius: 6px;
+    max-height: 210px;
+    overflow-y: auto;
+}
 /* ══════════════ [v3.44.0] 同人商店（doujin） ══════════════ */
 /* ========================================================
  * doujin.css — [v3.44.0] 同人商店 · 样式层

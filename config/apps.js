@@ -900,6 +900,35 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    // [v3.45.0] 存档台（素材缝合第 3 层第九件）：缝 EPhone·xintuk
+    //   main-app 的存档 / 备份生命周期一族（源 045 / 046 / 049 / 011 / 007
+    //   五片，块文件 blk_xintuk_backup.txt）。
+    //   只把一份包收拾成可对账的账（包型 / 版本 / 覆盖性 /
+    //   表名 / 条数 / 体积 / 结构可疑 / 重置影响），产可复制的要求文本（requestText）。
+    //   四块不缝：① **不落库不落外部备份**（源 Utils.saveData /
+    //   IndexedDB 全表 / GitHub 上传）；② **不下载不上传**（源 Blob +
+    //   URL.createObjectURL + a.click() 造下载，以及 uploadBackupToGitHub /
+    //   restoreBackupFromGitHub）；③ **不出图不压图**（源 compressImage /
+    //   canvas 重编码 / compressAllImagesInDB）；④ **不读宿主界面元素**（源满篇
+    //   document.getElementById 直读宿主）。
+    //   四条偏离：① 包型不许猜（源靠「有没有 type 字段」三分支，
+    //   认不出就按全量处理并**直接覆盖**）；② 覆盖性不许含糊（源的
+    //   「补充式导入」用 bulkPut，而「330 格式导入」**先 clear
+    //   全部表再 bulkAdd**，同一个界面上两个按钮）；③ 版本号不许只数值比
+    //   （源里 version 有两套语义：1 = 流式包 / 3 = 分块包与 330 包）；
+    //   ④ 表不许静默丢（源只对交集开事务，交集外一字不说）。
+    //   写盘四条键走 ^archive_ 前缀随会话隔离（已收包 / 对账面 /
+    //   要求文本草稿 / 动作台账四类分开存，源把四类全塞进
+    //   一个 AppState 大对象，换角色后一起串味）。
+    //   ★ 本件不写任何宿主数据：一个字段都不写、一张表都不碰。
+    {
+        id: 'archive',
+        name: '存档台',
+        icon: '💾',
+        color: '#3f9bd0',
+        badge: 0,
+        data: {}
+        },
 ];
 // 手机配置
 export const PHONE_CONFIG = {
