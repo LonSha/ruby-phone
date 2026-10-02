@@ -85,3 +85,34 @@
   `src/presentation-v2/assets/desk-pet/*`（走路帧与表情位图）。变更面**远大于**另两仓。
 - **st-tavern-architect**：全仓 6 文件，无「变更面」可言（首次取证）。
 
+## 五、逐件源码头部实读（**已读出**，不依赖留存工作树）
+
+这一节是本次侦察**真读过**的东西（不是从提交标题推的）。取数位置：`/tmp/refup/` 的浅克隆（= 上游 HEAD），
+所以与本地留存的陈旧副本无关；下表文件路径在**留存里多数还不存在**（新增件），已如实标注。
+
+### ST-MyriadKnots（truth 在 `/tmp/refup/ST-MyriadKnots`）
+
+| 文件 | 体量 | 实读到了什么 |
+| --- | --- | --- |
+| `src/v3/qianshi-domain.js` | 92920 字节 / 1318 行 | 潜识（Qianshi）域的**图模型**：import `graphology` 的 `MultiDirectedGraph` / `DirectedGraph` 与 `graphology-dag` 的 `topologicalSort` / `willCreateCycle`，依赖 `foundation-domain.js` 的 `deterministicUuid` 与 `time-engine.js` 的 `formatStoryTime` / `projectTime` / `timeDistance` —— **有环检测 + 拓扑排序 + 剧情时间投影**，不是自由文本 |
+| `src/v3/qianshi-schema.js` | 11455 字节 / 149 行 | `QIANSHI_SCHEMA_VERSION = 1`；状态集 `planned / inProgress / completed / cancelled / occurred / unknown`，增量状态集 `ready / empty / partial / pending` |
+| `src/v3/chat-branch-inheritance.js` | 16130 字节 / 237 行 | **分支继承**：`sha256` 指纹 + `createFoundationStore` + `projectFoundationPrefix` / `validatePreparedFoundation` / `createCheckpointInputFingerprints` —— 与 `foundation-*` 一族同源 |
+| `src/v3/preparation-diagnostic.js` | 4033 字节 / 100 行 | **11 步流水线诊断**（冻结数组）：`synchronizing` → `snapshotClone` → `sourceSelection` → `sourceSanitization` → `timeSources` → `identityDirectory` → `qianshiCandidates` → `extractorEnvelope` → `dependencySnapshot` → `rootCheck` → `extractorHandoff` —— 每步是可点名的阶段，**不是一句「准备中」** |
+| `src/storage-management.js` | 27121 字节 / 529 行 | 存储管理：import `foundation-schema` / `memory-schema` 的六个 `validate*`，逐结构体检 —— 与本仓「parse vs validate」「缺席与空不同形」同族 |
+| `src/tauri-backend.js` | 15448 字节 / 269 行 | TauriTavern 传输层：`STORAGE_NAMESPACE = qqj-bainiao-v1`、锁 `Symbol.for(qqj.bainiao.tt.locks.v1)`、注释写「never replaces window.fetch」—— **自带命名空间与锁，且不接管宿主 fetch** |
+
+### st_bs_biotracker（truth 在 `/tmp/refup/st_bs_biotracker`）
+
+| 文件 | 体量 | 实读到了什么 |
+| --- | --- | --- |
+| `scripts/fetus_sprite.js` | 19687 字节 / 421 行 | 子宫图的胎儿 / 卵 / 不定型：**几何部件描述 → 按目标大小 / 方向 / 镜像 / 挤压直接栅格化成像素格**，不缩放不旋转点阵图（自述「8 个方向与任何尺寸都是干净的原生像素」） |
+| `scripts/state_migration.js` | 6554 字节 / 127 行 | 存档结构版本迁移：注释写明「1.0.0～1.0.5 的存档没有这个栏位，视为 1」—— **缺栏位当 1、不报错** |
+| `docs/mechanics/`（10 篇） | 共约 83 KB | `pregnancy-and-labor.md` 13728、`tool-reference.md` 13043、`registration.md` 10618、`tracking-and-state.md` 7711、`special-cases.md` 7729、`wardrobe-and-skills.md` 6787 等 —— 上游把自己的机制写成了文档 |
+| `index.js` | 468893 字节 / 9688 行 | 主件；变更面是既有多文件混合，本次**未逐行读** —— 如实标注，不冒充已读 |
+
+### 未读部分（诚实登记）
+
+- **shujuku 485 文件未读**：只取到了路径聚合（`src/service/` 150、`src/presentation-v2/` 103）与新增件名。
+- **两个附件脚本（瑟瑟小手机 / 色色灵感状态栏）未读源码**：只读了头部注释与结构骨架（两个都是酒馆助手脚本，`content` 是**注入用脚本**、内含 webpack 打包的嵌入 HTML，与「扩展酒馆 UI」同族，非普通插件）。
+- **`st-tavern-architect` 未读 `index.js`**：只知道它是 Three.js + Dual-Agent 的 3D 工作台（`workbench.html`）。
+
