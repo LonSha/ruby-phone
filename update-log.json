@@ -1,6 +1,18 @@
 {
-  "latest": "3.52.0",
+  "latest": "3.53.0",
   "versions": {
+    "3.53.0": {
+      "version": "3.53.0",
+      "date": "2026-10-02",
+      "items": [
+        "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
+        "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
+        "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",
+        "【缝什么 · 指纹面】FNV-1a 双路不同种子哈希 36 进制拼接（同文必同指纹、异文几乎必异指纹）；引用幂等键三形（chat:角色:消息 / gallery:角色:图 / favorite_asset:id）；引用去重逐条计 dropped。",
+        "【四块不缝】① 不渲染 React 组件（源 chips 是 JSX）；② 不弹 window.confirm（源导出确认弹层）；③ 不碰宿主存储（源 getAsset/saveAsset）；④ 不碰音频（源 ttsRouter / voicePlayback / SARSpeechSwitch）。连同 ChatHistoryCleanupModal / shareCardCanvas / avatarModelStore / bubbleAppearance / useChatAutoReply 等 DOM 演出面一律不缝。",
+        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^sd2_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次D收干；剩余批次 E~G（youyou / meixinji / perigee 剩件）按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。"
+      ]
+    },
     "3.52.0": {
       "version": "3.52.0",
       "date": "2026-10-02",

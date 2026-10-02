@@ -14982,6 +14982,19 @@ input:checked + .toggle-slider:before {
 .sm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
 .sm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
 .sm-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* ══════════════ [v3.53.0] SullyOS 治理案头（sullydesk） ══════════════ */
+/* sullydesk.css — [v3.53.0] SullyOS 治理案头 · 样式层 */
+.sd2-root { all: initial; }
+.sd2-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.sd2-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.sd2-sec h3 { font-size: 12px; margin: 0 0 6px; color: #4a5a78; }
+.sd2-input { width: 100%; min-height: 72px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.sd2-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.sd2-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+.sd2-ok { color: #3a6a4a; }
+.sd2-bad { color: #a04a4a; font-weight: 600; }
+.sd2-chip { display: inline-block; padding: 2px 10px; border-radius: 10px; background: #f0ede8; font-size: 11px; margin: 2px 4px 2px 0; }
+.sd2-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
 /* ══════════════ [v3.48.0] 子宫画板（uterus） ══════════════ */
 /* ========================================================
  * uterus.css — [v3.48.0] 子宫画板 · 样式层

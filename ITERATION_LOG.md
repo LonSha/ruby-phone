@@ -10,6 +10,12 @@
 
 ---
 
+## 迭代 111 — v3.53.0 素材缝合路线图第 3 层第十七件：SullyOS 治理案头（exportGuard 导出凭据扫描 + CharacterGroupFilter 分组过滤 + contentFavorites 指纹面，三小件合并）（字段名十三词干与值面 sk-·Bearer·JWT·长密钥兜底 / 白名单十九字段与 dataURL 剥离与打码首4尾3 / 三态判定 safe·contains-secret·unexpected-secret / 分组三档与未分组兜底与计数联动 / FNV 双哈希 36 进制指纹与引用幂等键三形去重）+ 接线侧自纠（index 公告块跨版本衔接缺逗号又犯，定位到引号计数法）+ 两条会话键会话隔离 + 六处接线 + 抬版收干)
+- **【定位】源们是 React 组件与宿主存储的胶水面（vendor 依赖 / window.confirm / getAsset-saveAsset），本件零依赖零 confirm 零音频：只做「这份导出安不安全、这批条目怎么分组、这个收藏的指纹是什么」的判定与读数。不缝：ChatHistoryCleanupModal / shareCardCanvas / voicePlayback / ttsRouter / avatarModelStore / SARSpeechSwitch / bubbleAppearance / useChatAutoReply 等 DOM 演出面。**
+- **【接线侧自纠】index 公告块跨版本衔接缺逗号又犯（v3490 / v3510 / v3520 / v3530 四连），本次定位到可靠修法：注入后逐行数引号（每行恰 2 个），行尾形态必须是「闭引号+成员逗号」或「闭引号」（末项）；引号数不为 2 的行即为坏行。**
+- **【门禁】五道单门全绿：syntax / registry / keys / dead-export 零新增（EG_VALUE_SIGNS 与 CF_KINDS 两个未消费常量删除）/ import-resolve。v3490 判据 11/11 未受牵连；sullydesk 冒烟全过（凭据字段名与 Bearer 检出 / 安全件判 safe / 打码首4尾3 / 指纹稳定与区分 / 分组三档与未分组计数）。按用户指令全缝完前不跑全量回归。**
+- **【交棒】批次D收干完毕（sullydesk 一件；SullyOS 其余大块 minified 指数文件与宿主演出面裁定不缝）。剩余批次 E~G（youyou memory-engine / meixinji db·auth / perigee 剩件）按总控计划推进，全部缝完前不跑全量回归（用户指令已存记忆库）。**
+
 ## 迭代 110 — v3.52.0 素材缝合路线图第 3 层第十六件：总结案头（Kawaii 主题包总结引擎格式归一与游标一族，05 base.js 2869 行非网络面）（标题六形与正文四形标记匹配 / 无标记首行截 15 字加省略号 / 终回退记忆碎片 / 标题组装=标题-条数-日期 / 双通道游标 chunk×间隔初始位与成批推进与失败回滚）+ 接线侧三处自纠（v255 dirMap 尾逗号三连坑；index 公告块跨版本块衔接逗号两处；SM_LEDGER_MAX 零消费删除）+ 两条会话键会话隔离 + 六处接线 + 抬版收干)
 - **【定位】源 generateVectorSummary 是发请求的那个人（fetch 双 provider + 安全审查结界抛错面），本件是案头：总结文本由用户从任何对话端贴回来，解析归一入册；游标只算不拉。不缝：出图压缩（compressImage canvas 与 GIF 保形）/ 备份导入导出 / validateDataIntegrity / DnD 设置面。**
 - **【接线侧自纠三处】① v255 dirMap 的「值尾逗号写进行注释后」同坑第三连（v3490 / v3510 / v3520），修正法固化：每次插 dirMap 后立刻 node --check 单文件；② index.js 公告块跨版本衔接缺逗号两处（新 items 首项插到旧数组后，旧块末项的逗号被新解析吞掉），修正法：注入后按引号计数逐行扫；③ SM_LEDGER_MAX 本件无台账消费面，删除。**

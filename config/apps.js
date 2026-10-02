@@ -1185,6 +1185,20 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+
+    {
+        // [v3.53.0] SullyOS 治理案头（sullydesk）：合并缝合自 SullyOS 三个治理小件（非网络非存储面）。
+        //   取三块机制：① exportGuard 导出凭据扫描（字段名十三词干 / 值面 sk-·Bearer·JWT·长密钥兜底 / 白名单字段 / dataURL 剥离 / 打码首4尾3 / 三态判定 safe·contains-secret·unexpected-secret）；
+        //   ② CharacterGroupFilter 分组过滤三档（全部·具体组·未分组，未分组=无组或组已不在册，计数随档联动，order→createdAt 回退排序）；
+        //   ③ contentFavorites 指纹面（FNV 双哈希 36 进制 / 引用幂等键三形 / 引用去重）。
+        //   不缝：React 组件渲染 / window.confirm / 宿主存储（getAsset/saveAsset）/ 音频（ttsRouter·voicePlayback）· DOM 演出面。
+        id: 'sullydesk',
+        name: 'SullyOS 治理案头',
+        icon: '🛡️',
+        color: '#4a5a78',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

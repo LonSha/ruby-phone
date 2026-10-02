@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.52.0';
+const ST_PHONE_VERSION = '3.53.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -194,6 +194,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'annidateApp',    // [v3.51.0] 纪念日数学案头：条目册与预警幂等随会话隔离，换会话两格全量重取
     'cardtableApp',   // [v3.51.0] 牌桌案头：牌组与已选与台账随会话隔离，换会话三格全量重取
     'summdeskApp',     // [v3.52.0] 总结案头：记忆册与双游标随会话隔离，换会话两格全量重取
+    'sullydeskApp',    // [v3.53.0] SullyOS 治理案头：审计读数与台账随会话隔离，换会话两格全量重取
 
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -231,6 +232,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-12",
     items: [
+        "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
+        "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
+        "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",
+        "【缝什么 · 指纹面】FNV-1a 双路不同种子哈希 36 进制拼接（同文必同指纹、异文几乎必异指纹）；引用幂等键三形（chat:角色:消息 / gallery:角色:图 / favorite_asset:id）；引用去重逐条计 dropped。",
+        "【四块不缝】① 不渲染 React 组件（源 chips 是 JSX）；② 不弹 window.confirm（源导出确认弹层）；③ 不碰宿主存储（源 getAsset/saveAsset）；④ 不碰音频（源 ttsRouter / voicePlayback / SARSpeechSwitch）。连同 ChatHistoryCleanupModal / shareCardCanvas / avatarModelStore / bubbleAppearance / useChatAutoReply 等 DOM 演出面一律不缝。",
+        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^sd2_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次D收干；剩余批次 E~G（youyou / meixinji / perigee 剩件）按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
         "【定位 · 素材缝合路线图第 3 层第十六件】本版把 Kawaii 主题包总结引擎的格式归一与游标一族（05 base.js 2869 行，非网络面）缝进本仓：apps/summdesk/（总结案头）四层齐备。源是「发请求的那个人」（fetch 双 provider 生成总结），本件是案头：总结文本由用户从任何对话端贴回来，本件只做解析归一与游标读数。",
         "【缝什么 · 解析面】总结文本解析逐支对齐：标题六形标记（【标题】/标题:/标题：/加粗标题/# 标题/裸标题，最长优先防截断）与正文四形；有标题无正文标记时剥离标题行取剩余；无标题时首非空行截 15 字加省略号；全空回退「记忆碎片」；引号剥离；标题组装=标题-条数范围-日期（2026/10/2 形）。各形态落到哪一格逐条报 notes（源静默回退）。",
         "【缝什么 · 游标面】双通道自动总结游标（普通/vector 与真向量两套独立）：初始位=chunk×间隔（源 vectorLastIndex 推算）、超长收口到历史长度、攒够一批推进一批（起点/终点/范围条三格）、失败回滚到批次起点并停本轮（源 catch 分支同款）。游标只算不拉：源攒够批后 fetch 生成，本件零网络。",
@@ -11093,6 +11100,21 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载总结案头App失败:', err);
                             phoneShell?.showNotification('错误', '总结案头App加载失败', '❌');
+                        });
+                } else if (appId === 'sullydesk') {
+                    // [v3.53.0] SullyOS 治理案头：合并缝合自 SullyOS 三个治理小件（exportGuard / CharacterGroupFilter / contentFavorites 指纹面）。
+                    //   取三块机制：① 导出凭据扫描三态判定；② 分组过滤三档与计数联动；③ FNV 双哈希指纹与引用去重。
+                    //   React 渲染与宿主存储与音频不缝。写盘两条键走 ^sd2_ 前缀随会话隔离。★ 零依赖、零 confirm、零音频。
+                    bootTiming.instrumentImport(import('./apps/sullydesk/sullydesk-app.js'), './apps/sullydesk/sullydesk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.sullydeskApp) {
+                                window.VirtualPhone.sullydeskApp = new module.SullydeskApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.sullydeskApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载SullyOS治理案头App失败:', err);
+                            phoneShell?.showNotification('错误', 'SullyOS治理案头App加载失败', '❌');
                         });
                 } else if (appId === 'needsim') {
                     // [v3.41.0] 需求沙盘：把模型给的那份数据收拾好（缝合自 SullyOS·小鼠机
