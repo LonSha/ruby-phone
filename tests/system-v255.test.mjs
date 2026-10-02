@@ -84,7 +84,12 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     archiveApp: 'archive',      // [v3.45.0] 存档台：换会话丢贴回的包原文与要求文本草稿，已收包 / 对账面 / 要求草稿 / 动作台账四格全量重取
     cotdeskApp: 'cotdesk',      // [v3.46.0] 思维链案头：换会话丢贴回的条目册与配置与要求文本草稿，条目册 / 配置 / 要求草稿 / 动作台账四格全量重取
     diagdeskApp: 'diagdesk',   // [v3.47.0] 诊断案头：换会话丢贴回的存档与摘要草稿，存档原文 / 摘要草稿 / 动作台账三格全量重取
-    uterusApp: 'uterus'        // [v3.48.0] 子宫画板：换会话丢贴回的角色状态与读数文本，状态原文 / 动作台账两格全量重取
+    uterusApp: 'uterus',       // [v3.48.0] 子宫画板：换会话丢贴回的角色状态与读数文本，状态原文 / 动作台账两格全量重取
+    memtableApp: 'memtable',   // [v3.49.0] 结构化记忆案头：换会话丢贴回的模板与更新包，模板库 / 数据 / 更新包 / 台账四格全量重取
+    socialguardApp: 'socialguard',  // [v3.50.0] 熟人可见性案头：换会话丢帖子库与人脉册，四格全量重取
+    freehomeApp: 'freehome',        // [v3.50.0] 自由桌面布局案头：换会话丢布局与台账，两格全量重取
+    stickerdeskApp: 'stickerdesk',  // [v3.50.0] 表情包册案头：换会话丢册与分类，三格全量重取
+    lexiscoreApp: 'lexiscore'       // [v3.50.0] 词法评分案头：换会话丢词条库与台账，两格全量重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

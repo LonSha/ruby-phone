@@ -1005,6 +1005,140 @@ export const APPS = [
         data: {}
     },
 
+    {
+        // [v3.49.0] 结构化记忆案头（memtable）：缝合自 EPhone·xINOVO 记忆表格一族
+        //   （memory_table.js 3245 行 / 119 函数，IIFE）。
+        //   取两块机制：① 三级册子与逐型归一（模板＞表（keyValue / rows 两型）＞
+        //   字段八型，坏值逐因报，上限只报不截）；② 更新包 → 逐条计划 → 按确认落库
+        //   （自写 XML 状态机，坏结构逐条报因；锁定与禁编字段落库前拦下）。
+        //   四处不缝：不发请求不拼提示词（源 buildTemplateDefinitionForPrompt 直打 AI）；
+        //   不用 DOMParser（源用宿主 DOMParser）；不写宿主数据库（源挂 Dexie 整块回写）；
+        //   不画图表（源 drawSparkline）。
+        //   三条偏离：认不出逐条报 unknown_* 不硬塞；锁定字段落库前拦下（源 best-effort 静默）；
+        //   超上限只报不截（源静默丢超额）。
+        //   写盘四条键走 ^memtable_ 前缀随会话隔离。
+        //   ★ 本件零网络、零 AI、零 DOMParser、零定时器、零 canvas。
+        id: 'memtable',
+        name: '结构化记忆案头',
+        icon: '📒',
+        color: '#7a5ea8',
+        badge: 0,
+        data: {}
+    },
+
+    {
+        // [v3.50.0] 熟人可见性案头（socialguard）：缝合自 EPhone·xINOVO 熟人动态知情治理一族（moments.js 237647 字节）。
+        // 取两块：① 可见性判定（受众名单 audienceIds / 互动可见五分支 canSeeInteraction / persona 分身隔离）；
+        // ② 知情账与人脉闭包（seenBy 首看记账 / 未看不许互动 / linked 人脉反向镜像与三权）；
+        // 四处不缝：不拼 AI 提示词（源 promptDefaults 全家桶）/ 不录音频（源 MediaRecorder）/ 不出图不收图 / 不挂宿主 db.moments；
+        // 三条偏离：受众认不出逐条报不硬留 / 通知收件人失权剔除并报数 / story 过期另立一格不进 feed；
+        // ★ 零网络、零 AI、零录音、零出图。
+        id: 'socialguard',
+        name: '熟人可见性案头',
+        icon: '🛡',
+        color: '#5a4a78',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 自由桌面布局案头（freehome）：缝合自 EPhone·xINOVO 自由主屏幕布局治理一族（free-home.js 1558 行 / 70 函数）。
+        // 取两块：① 两套合法性门（显式坐标逐件验位 / 无坐标按序试装配）与占位三算（面积 / 标记 / 首个空位）；
+        // ② 形状治理（app / folder≥2 / widget 三型与 wide 4x2·square 2x2 查表）与页数 30 / 页内 16 上限；
+        // 不缝：拖拽手势与指针画布与底部抽屉（DOM 演出面）一律不进；
+        // 偏离：问题逐因报出（源布尔一票否决看不出哪里坏）；
+        // ★ 零手势、零画布、零定时器。
+        id: 'freehome',
+        name: '自由桌面布局案头',
+        icon: '🧩',
+        color: '#4a6848',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 表情包册案头（stickerdesk）：缝合自 EPhone·xINOVO 表情包管理解析与治理一族（sticker.js 1499 行）。
+        // 取两块：① 宽泛格式解析（名称:URL 全半角分隔 / 尾部标点剥离 / 注释行跳过 / URL 幂等去重逐行报）；
+        // ② 分类册治理（重命名查重 / 解散须空 / 移动须在册，逐因拒）；
+        // 不缝：AI 识别 / 下载上传 / 图片预览（源 img 出图面）一律不进；
+        // 偏离：重命名先验在册（源可给幽灵分类改名）；
+        // ★ 零网络、零 AI、零图片处理。
+        id: 'stickerdesk',
+        name: '表情包册案头',
+        icon: '🗂',
+        color: '#4a6a78',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 词法评分案头（lexiscore）：缝合自 EPhone·xINOVO 向量记忆的词法兜底通道（vector_memory.js 1849 行，仅取非网络面）。
+        // 取两块：① 切词与命中评分（空白中西标点分隔 / 长度≥2 / 命中比 + 置顶 0.35 + 权重步进 0.08，上限 1）；
+        // ② 兜底选取（宽容线 max(0.05, 阈值×0.45) / 排序三键：置顶→分数→更新时刻 / topK 截取）；
+        // 不缝：嵌入 API / 向量余弦 / 上下文注入（源网络面与提示词面）一律不进；
+        // 与召回台的裁定差：recall 是 BM25 三档文档级检索，本件是逐条目轻量 token 命中兜底，机制族不同并存不撞；
+        // ★ 零网络、零嵌入、零注入。
+        id: 'lexiscore',
+        name: '词法评分案头',
+        icon: '🔎',
+        color: '#6a5a48',
+        badge: 0,
+        data: {}
+    },
+
+    {
+        // [v3.50.0] 熟人可见性案头（socialguard）：缝合自 EPhone·xINOVO 熟人动态知情治理一族（moments.js 237647 字节）。
+        // 取两块：① 可见性判定（受众名单 audienceIds / 互动可见五分支 canSeeInteraction / persona 分身隔离）；
+        // ② 知情账与人脉闭包（seenBy 首看记账 / 未看不许互动 / linked 人脉反向镜像与三权）；
+        // 四处不缝：不拼 AI 提示词（源 promptDefaults 全家桶）/ 不录音频（源 MediaRecorder）/ 不出图不收图 / 不挂宿主 db.moments；
+        // 三条偏离：受众认不出逐条报不硬留 / 通知收件人失权剔除并报数 / story 过期另立一格不进 feed；
+        // ★ 零网络、零 AI、零录音、零出图。
+        id: 'socialguard',
+        name: '熟人可见性案头',
+        icon: '🛡',
+        color: '#5a4a78',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 自由桌面布局案头（freehome）：缝合自 EPhone·xINOVO 自由主屏幕布局治理一族（free-home.js 1558 行 / 70 函数）。
+        // 取两块：① 两套合法性门（显式坐标逐件验位 / 无坐标按序试装配）与占位三算（面积 / 标记 / 首个空位）；
+        // ② 形状治理（app / folder≥2 / widget 三型与 wide 4x2·square 2x2 查表）与页数 30 / 页内 16 上限；
+        // 不缝：拖拽手势与指针画布与底部抽屉（DOM 演出面）一律不进；
+        // 偏离：问题逐因报出（源布尔一票否决看不出哪里坏）；
+        // ★ 零手势、零画布、零定时器。
+        id: 'freehome',
+        name: '自由桌面布局案头',
+        icon: '🧩',
+        color: '#4a6848',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 表情包册案头（stickerdesk）：缝合自 EPhone·xINOVO 表情包管理解析与治理一族（sticker.js 1499 行）。
+        // 取两块：① 宽泛格式解析（名称:URL 全半角分隔 / 尾部标点剥离 / 注释行跳过 / URL 幂等去重逐行报）；
+        // ② 分类册治理（重命名查重 / 解散须空 / 移动须在册，逐因拒）；
+        // 不缝：AI 识别 / 下载上传 / 图片预览（源 img 出图面）一律不进；
+        // 偏离：重命名先验在册（源可给幽灵分类改名）；
+        // ★ 零网络、零 AI、零图片处理。
+        id: 'stickerdesk',
+        name: '表情包册案头',
+        icon: '🗂',
+        color: '#4a6a78',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.50.0] 词法评分案头（lexiscore）：缝合自 EPhone·xINOVO 向量记忆的词法兜底通道（vector_memory.js 1849 行，仅取非网络面）。
+        // 取两块：① 切词与命中评分（空白中西标点分隔 / 长度≥2 / 命中比 + 置顶 0.35 + 权重步进 0.08，上限 1）；
+        // ② 兜底选取（宽容线 max(0.05, 阈值×0.45) / 排序三键：置顶→分数→更新时刻 / topK 截取）；
+        // 不缝：嵌入 API / 向量余弦 / 上下文注入（源网络面与提示词面）一律不进；
+        // 与召回台的裁定差：recall 是 BM25 三档文档级检索，本件是逐条目轻量 token 命中兜底，机制族不同并存不撞；
+        // ★ 零网络、零嵌入、零注入。
+        id: 'lexiscore',
+        name: '词法评分案头',
+        icon: '🔎',
+        color: '#6a5a48',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

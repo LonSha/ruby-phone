@@ -1,0 +1,24 @@
+/* socialguard.css — [v3.50.0] 熟人可见性案头 · 样式层 */
+.sg-root { all: initial; }
+.sg-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.sg-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; }
+.sg-face { display: inline-block; padding: 2px 10px; border-radius: 10px; background: #efe9f7; color: #5a4a78; font-size: 12px; }
+.sg-readings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sg-kv { display: flex; gap: 6px; font-size: 12px; }
+.sg-kv span:first-child { color: #8a8378; }
+.sg-tabs { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+.sg-tab { padding: 4px 12px; border-radius: 12px; border: 1px solid #d8d2c8; background: #faf8f4; font-size: 12px; }
+.sg-tab-on { background: #5a4a78; color: #fff; border-color: #5a4a78; }
+.sg-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.sg-sec h3 { font-size: 12px; margin: 0 0 6px; color: #5a4a78; }
+.sg-input { width: 100%; min-height: 72px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.sg-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.sg-row { display: flex; gap: 6px; align-items: center; padding: 5px 6px; border-bottom: 1px dashed #eee8de; font-size: 12px; flex-wrap: wrap; }
+.sg-row-ok { background: #f6fbf6; }
+.sg-row-off { background: #fbf6f6; color: #9a8f8f; }
+.sg-row-kind { font-size: 11px; color: #8a8378; min-width: 30px; }
+.sg-row-author { font-weight: 600; }
+.sg-row-text { color: #6a645c; flex: 1; min-width: 120px; }
+.sg-row-badges { font-size: 11px; color: #7a6ea0; }
+.sg-empty { color: #9a948a; font-size: 12px; padding: 8px 0; }
+.sg-dropped { font-size: 11px; color: #a08a6a; padding: 4px 0; }

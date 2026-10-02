@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.48.0';
+const ST_PHONE_VERSION = '3.50.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -180,12 +180,16 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             （源把存档本体、诊断上下文与迁移进度
                       //             全挂在宿主的大对象上，换角色后三类一起串味，
                       //             而放下一份存档顺手把已出的摘要也清了，源没有这一步）
-    'uterusApp',      // [v3.48.0] 子宫画板：有表单字段（贴回的角色状态与读数文本的追加要求）
-                      //             与四项上限，且状态原文 / 动作台账
-                      //             全是「这段关系的账」—— 换会话必须两格全量重取
-                      //             （源把胎数、降阶、宫压、精液与羊膜耐久全挂在
-                      //             宿主角色档案上，换角色后旧胎与旧读数原样留着，
-                      //             而放下一份状态顺手把已出的读数也清了，源没有这一步）
+    'memtableApp',   // [v3.49.0] 结构化记忆案头：有表单字段（贴回的模板 JSON / 更新包 XML / 要求草稿）
+                      //             与四项上限，且模板库 / 数据 / 更新包 / 台账
+                      //             全是「这段关系的账」—— 换会话必须四格全量重取
+                      //             （源把模板与数据挂宿主数据库大对象上，换角色后一起串味，
+                      //             而换模板顺手把已解析的更新包留在原处，源没有这一步）
+
+    'socialguardApp', // [v3.50.0] 熟人可见性案头：帖子库 / 人脉册 / 设置 / 台账全是「这段关系的账」——换会话四格全量重取
+    'freehomeApp',    // [v3.50.0] 自由桌面布局案头：布局与台账随会话隔离，换会话两格全量重取
+    'stickerdeskApp', // [v3.50.0] 表情包册案头：册 / 分类 / 台账随会话隔离，换会话三格全量重取
+    'lexiscoreApp',   // [v3.50.0] 词法评分案头：词条库与台账随会话隔离，换会话两格全量重取
 
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -223,6 +227,24 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-12",
     items: [
+        "【定位 · 素材缝合路线图第 3 层第十四件（合并交付 · 批次A四件一次抬版）】本版把 EPhone·xINOVO 余件的四个机制族合并缝进本仓：① 熟人可见性案头 apps/socialguard/（moments.js 237647 字节的知情治理一族）；② 自由桌面布局案头 apps/freehome/（free-home.js 1558 行 / 70 函数的布局治理一族）；③ 表情包册案头 apps/stickerdesk/（sticker.js 1499 行的解析与治理一族）；④ 词法评分案头 apps/lexiscore/（vector_memory.js 1849 行的非网络面）。四件全部四层齐备（data 纯函数内核 / app 取数落盘 / view 视图 / css 样式）。",
+        "【缝什么 · 可见性面】受众名单（audienceIds，空名单=公开）与互动可见五分支逐支对齐：观者先得看见帖子；user 的赞与评论带 persona 分身，只被「认识的那个分身」看见；互动者本人看不见帖子时除作者与 user 外不许见；user / 作者本人 / all 档全可见；其余按人脉闭包。seenBy 首看记账只在第一次看落时刻；未看过不许互动（作者免看）；story 过期另立一格不进 feed。",
+        "【缝什么 · 人脉面】linked 人脉双向镜像：me 侧与 peer 侧各持一份，owner 反转、权限取反向字段（mayInteract / mayPost / mayStory 三权），镜像不许只算单向；人脉闭包含 actor 自己 + user 互通 + 本人人脉 + 来向人脉。",
+        "【缝什么 · 布局面】4×4 网格占位三算（面积 / 占位标记 / 首个空位）与两套合法性门：显式 row/col 逐件验位、无坐标按原序试装配（旧预设兼容，源同款口径）；形状三型（app / folder≥2 / widget）与 wide 4x2·square 2x2 查表；页数 30 / 页内 16 上限；dock 只认在册件；问题逐因报出（源布尔一票否决看不出哪里坏）。",
+        "【缝什么 · 表情包面】宽泛格式解析：名称:URL / 名称：URL / 名称 URL / 名称URL 都能收，尾部标点剥离，注释行跳过；URL 幂等去重逐行报（bad_line / dup_url 逐条带行号）；分类册治理逐因拒：重命名先验在册与查重（源可给幽灵分类改名，本件拦下）、解散须空、移动须在册。",
+        "【缝什么 · 词法面】切词（空白与中西标点分隔、token 长度≥2）、命中比基础分、置顶加成 0.35、权重步进 0.08、上限 1；兜底选取宽容线 max(0.05, 阈值×0.45)、排序三键（置顶→分数→更新时刻）、topK 截取。与召回台的裁定差：recall 是 BM25 三档文档级检索，本件是逐条目轻量 token 命中兜底，机制族不同并存不撞。",
+        "【四块不缝 × 四件】socialguard：不拼 AI 提示词（源 promptDefaults 全家桶）/ 不录音频（源 MediaRecorder）/ 不出图不收图 / 不挂宿主 db.moments；freehome：拖拽手势 / 指针画布 / 底部抽屉全不进；stickerdesk：AI 识别 / 下载上传 / 图片预览全不进；lexiscore：嵌入 API / 向量余弦 / 上下文注入全不进。四件全部零网络、零 AI 调用。",
+        "【接线 · 四件六处落点齐备】① config/apps.js 四条注册（id 与名与图标与主色，各带不缝清单与偏离清单注释）；② config/storage.js 四条前缀（^sg_ / ^fh_ / ^sd_ / ^ls_）；③ scripts/keys-audit.mjs 登记 11 键（sg×4 / fh×2 / sd×3 / ls×2，scope 为 chat）；④ index.js 懒加载分支四个 + 挂载 + REBIND 表四条；⑤ phone.css 四段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补四项。",
+        "【会话隔离 · 交棒 · 收干】11 条会话键随会话隔离：源把帖子库人脉册挂 db.moments、布局挂 db.freeHomeLayout、词条挂 chat.vectorMemory（换角色全部串味），换会话全量重取，清各面只清自己那条键。批次A四件已收干；第 3 层剩余按总控计划推进批次B~G；automatic-journal 与 diary 撞权威裁定不缝（差异面仅宿主态迁移脚本）。全部缝完前不跑全量回归（用户指令已存记忆库）；判据套件 system-v3490 与四件冒烟全绿，五道单门当场复跑。",
+        "【定位 · 素材缝合路线图第 3 层第十三件：结构化记忆案头（EPhone·xINOVO 记忆表格一族）】本版把 src_xinovo/js/modules/memory_table.js（3245 行 / 119 函数，IIFE）缝进本仓。新件定名 apps/memtable/（结构化记忆案头），四层齐备：memtable-data.js（1053 行 / 58 导出，纯函数内核）/ memtable-app.js（253 行，取数与落盘）/ memtable-view.js（294 行，视图）/ memtable.css（51 行，样式）。源是「发请求的那个人」，本件是案头：更新包由用户从任何对话端贴回来，本件零网络、零 AI、零 DOMParser、零定时器。",
+        "【缝什么 · 册子面：三级册子与逐型归一】模板＞表（keyValue / rows 两型）＞字段（八型 text / longtext / number / enum / tags / progress / date / boolean）。逐型归一：数值超范围夹取要报 clamped 不许无声改数；enum 值不在册要报 fallback 不许静默回缺省；认不出的型归一成 text 并记 why。模板与字段坏行逐条拒收（unknown 桶与 rejected 清单），上限超了只报不截。",
+        "【缝什么 · 更新包面：贴回 XML → 逐条计划 → 按确认落库】XML 解析是自写的逐字符状态机（不用 DOMParser），坏结构逐条报因（xml_broken 带 pos）、能收的几条照收不整段丢。解析产物是逐条更新计划：哪一模板 / 哪一表 / 哪一字段或哪一行 / 旧值 / 新值 / 收或不收的因。落库只落确认过的 set 条，纯函数不改入参。",
+        "【缝什么 · 门面：锁定与禁编字段不许被更新包改写】字段锁（locked）与 aiEditable=false 落库前拦下报 blocked；fill_empty 策略下旧值非空拒改报 kept；模板 / 表 / 字段 / 行认不出逐条报 unknown_* 不硬塞。源是 best-effort 静默跳过，本件逐格报出为什么。",
+        "【缝什么 · 上限面：六项上限成字，超限只报不截】模板库 200 / 每表 500 行 / 原文 400000 字 / 历史快照 20 / 序列读数 12 点 / 台账 120 条。历史超上限报 dropped 不许静默挤掉；台账裁边计数 dropped 现示。",
+        "【缝什么 · 读数面：看板与游标与余量】看板读数（模板 / 表 / 字段 / 行表 / 行 / 锁定 / 历史计数）、自动更新游标读数（间隔 / 游标位 / 未同步 / 成批数）、上限余量读数；模板定义文本一键复制（不拼提示词）；历史序列至多 12 点原样交视图，画不画是视图的事。",
+        "【四块不缝 · 源里本就有的外部耦合一律不接】① 不发请求不拼提示词（源 buildTemplateDefinitionForPrompt 拼一大段 systemPrompt 直打 AI）；② 不用 DOMParser（源用宿主 DOMParser，本件自写状态机）；③ 不写宿主数据库（源挂 db.memoryTableTemplates 与 chat.memoryTables，Dexie 整块回写，本件零数据库走 PhoneStorage）；④ 不画图表（源 drawSparkline 画历史曲线，本件只产序列读数）。",
+        "【接线 · 六处落点全齐备】① config/apps.js 注册（id memtable 与名「结构化记忆案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 一条前缀 ^memtable_ 覆盖四条会话键；③ scripts/keys-audit.mjs 登记 memtable_templates / memtable_data / memtable_xml / memtable_ledger（scope 为 chat）；④ index.js 懒加载分支与挂载与表单字段表（REBIND 表）；⑤ phone.css 本版段与 apps/memtable/memtable.css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补一项。少一处就静默错数据或点了没反应，判据套件逐点钉住。",
+        "【会话隔离 · 交棒 · 边界 · 收干】写盘四条键（模板库 / 数据 / 更新包原文+收下时刻 / 台账）走 ^memtable_ 前缀随会话隔离：源把模板与数据挂宿主数据库大对象上（换角色后一起串味），换会话四格全量重取，清各面只清自己那条键。交棒：xINOVO 记忆表格一族已处置完毕，第 3 层剩余源（xinovo 余件 moments / vector_memory / automatic-journal / sticker / free-home 等）按总控计划逐件推进，全部缝完前不跑全量回归（用户指令）。运行时验证边界：真宿主实机落盘与会话隔离实况、真模板量级下的排版、窄屏观感三条不能保证，归 R-O3。五源同源抬版：manifest.json 与 package.json 与 update-log.json 首位新键 + latest 与 index.js 的版本常量与公告块与 ITERATION_LOG.md 头部迭代段。",
         "【定位 · 素材缝合路线图第 3 层第十二件：子宫像素画板（四片同族，合计 155940 字节 / 2456 行）】本版把 st_bs_biotracker 的四片同族缝进本仓：fetus_sprite.js（19687 字节 / 422 行，几何部件与八方向栅格化，零依赖纯函数）+ uterus_layout.js（16728 字节 / 375 行，版面与推挤与液面与羊膜囊）+ stage_config.js（阶段表与产程基础时长）+ uterus_render.js（50738 字节 / 1237 行，绘制层与像素笔与图块缓存与调色盘）。新件定名 apps/uterus/（子宫画板），四层齐备：uterus-data.js（1205 行 / 73 导出，纯函数内核）/ uterus-app.js（371 行 / 3 导出，取数与落盘）/ uterus-view.js（1011 行 / 1 导出，视图）/ uterus.css（242 行，样式）。",
         "【缝什么 · 几何面：八方向任意尺寸都不许溢出】源只按固定几档角度画，斜角会顶出画布。本件把任意角度与任意高度的图块栅格到自己的矩形里（角落反算包围盒 + 外扩 margin），实格数下限与锚点内界逐角度断言。认不出的胚型另立一格（notes.unknownType 与 drawnAs 分开报），缺高度报出来（sizeMissing，不许无声按 20 算），五型册里没有的不许当在册。",
         "【缝什么 · 镜像面：左右翻不许改了尺寸也不许不翻】源在着色一步上做镜像，边界像素因取整会偏一格。本件在投影一步上做镜像：宽高与锚点必须与原图一致，结构级左右翻必须成立，像素级不一致的格数不得超过 5%（只允许取整偏一格）。",
@@ -10902,7 +10924,96 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             console.error('❌ 加载曲库案头App失败:', err);
                             phoneShell?.showNotification('错误', '曲库案头App加载失败', '❌');
                         });
-                } else if (appId === 'needsim') {
+                } else if (appId === 'memtable') {
+                    // [v3.49.0] 结构化记忆案头：缝合自 EPhone·xINOVO 记忆表格一族
+                    //   （memory_table.js 3245 行 / 119 函数，IIFE）。
+                    //   取两块机制：① 三级册子与逐型归一（模板＞表（keyValue / rows 两型）＞
+                    //   字段八型，坏值逐因报，上限只报不截）；② 更新包 → 逐条计划 → 按确认落库
+                    //   （自写 XML 状态机，坏结构逐条报因；锁定与禁编字段落库前拦下）。
+                    //   四处不缝：不发请求不拼提示词（源 buildTemplateDefinitionForPrompt）；
+                    //   不用 DOMParser（源用宿主 DOMParser）；不写宿主数据库（源挂 Dexie 回写）；
+                    //   不画图表（源 drawSparkline）。
+                    //   三条偏离：认不出逐条报 unknown_* 不硬塞；锁定字段落库前拦下；
+                    //   超上限只报不截。
+                    //   写盘四条键走 ^memtable_ 前缀随会话隔离。
+                    //   ★ 本件零网络、零 AI、零 DOMParser、零定时器、零 canvas。
+                    bootTiming.instrumentImport(import('./apps/memtable/memtable-app.js'), './apps/memtable/memtable-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.memtableApp) {
+                                window.VirtualPhone.memtableApp = new module.MemtableApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.memtableApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载结构化记忆案头App失败:', err);
+                            phoneShell?.showNotification('错误', '结构化记忆案头App加载失败', '❌');
+                        });
+                                } else if (appId === 'socialguard') {
+                    // [v3.50.0] 熟人可见性案头：缝合自 EPhone·xINOVO 熟人动态知情治理一族（moments.js）。
+                    //   取两块机制：① 可见性判定（受众名单 / 互动可见五分支 / persona 分身隔离）；
+                    //   ② 知情账与人脉闭包（seenBy 首看 / 未看不许互动 / linked 反向镜像与三权）。
+                    //   四处不缝：不拼提示词 / 不录音频 / 不出图 / 不挂宿主 db.moments。
+                    //   写盘四条键走 ^sg_ 前缀随会话隔离。★ 零网络、零 AI、零录音、零出图。
+                    bootTiming.instrumentImport(import('./apps/socialguard/socialguard-app.js'), './apps/socialguard/socialguard-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.socialguardApp) {
+                                window.VirtualPhone.socialguardApp = new module.SocialguardApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.socialguardApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载熟人可见性案头App失败:', err);
+                            phoneShell?.showNotification('错误', '熟人可见性案头App加载失败', '❌');
+                        });
+                } else if (appId === 'freehome') {
+                    // [v3.50.0] 自由桌面布局案头：缝合自 EPhone·xINOVO 自由主屏幕布局治理一族（free-home.js）。
+                    //   取两块机制：① 两套合法性门（显式坐标验位 / 无坐标试装配）与占位三算；
+                    //   ② 形状治理（app / folder≥2 / widget 查表）与页数页内上限。拖拽手势与画布不缝。
+                    //   写盘两条键走 ^fh_ 前缀随会话隔离。★ 零手势、零画布、零定时器。
+                    bootTiming.instrumentImport(import('./apps/freehome/freehome-app.js'), './apps/freehome/freehome-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.freehomeApp) {
+                                window.VirtualPhone.freehomeApp = new module.FreehomeApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.freehomeApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载自由桌面布局案头App失败:', err);
+                            phoneShell?.showNotification('错误', '自由桌面布局案头App加载失败', '❌');
+                        });
+                } else if (appId === 'stickerdesk') {
+                    // [v3.50.0] 表情包册案头：缝合自 EPhone·xINOVO 表情包管理解析与治理一族（sticker.js）。
+                    //   取两块机制：① 宽泛格式解析（名称:URL / 标点剥离 / URL 幂等去重逐行报）；
+                    //   ② 分类册治理（重命名查重 / 解散须空 / 移动须在册，逐因拒）。AI 识别与出图不缝。
+                    //   写盘三条键走 ^sd_ 前缀随会话隔离。★ 零网络、零 AI、零图片处理。
+                    bootTiming.instrumentImport(import('./apps/stickerdesk/stickerdesk-app.js'), './apps/stickerdesk/stickerdesk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.stickerdeskApp) {
+                                window.VirtualPhone.stickerdeskApp = new module.StickerdeskApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.stickerdeskApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载表情包册案头App失败:', err);
+                            phoneShell?.showNotification('错误', '表情包册案头App加载失败', '❌');
+                        });
+                } else if (appId === 'lexiscore') {
+                    // [v3.50.0] 词法评分案头：缝合自 EPhone·xINOVO 向量记忆的词法兜底通道（vector_memory.js 非网络面）。
+                    //   取两块机制：① 切词与命中评分（token≥2 / 置顶与权重加成）；
+                    //   ② 兜底选取（宽容线 / 排序三键 / topK）。嵌入 API 与上下文注入不缝。
+                    //   写盘两条键走 ^ls_ 前缀随会话隔离。★ 零网络、零嵌入、零注入。
+                    bootTiming.instrumentImport(import('./apps/lexiscore/lexiscore-app.js'), './apps/lexiscore/lexiscore-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.lexiscoreApp) {
+                                window.VirtualPhone.lexiscoreApp = new module.LexiscoreApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.lexiscoreApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载词法评分案头App失败:', err);
+                            phoneShell?.showNotification('错误', '词法评分案头App加载失败', '❌');
+                        });
+} else if (appId === 'needsim') {
                     // [v3.41.0] 需求沙盘：把模型给的那份数据收拾好（缝合自 SullyOS·小鼠机
                     //   xiaoshuji.html 的「模拟人生需求面板」一族，44 个函数 / 981 处命中）。
                     //   取六块治理面：六项需求逐项可读性 / 心情四档与缺项 / 六个行动的
