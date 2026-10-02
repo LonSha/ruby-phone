@@ -1,0 +1,10 @@
+/* periodmath.css — [v3.51.0] 周期数学案头 · 样式层 */
+.pm-root { all: initial; }
+.pm-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.pm-status { padding: 8px 12px; border-radius: 10px; background: #fdeef2; color: #a04a62; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.pm-readings { font-size: 12px; color: #6a645c; margin-bottom: 8px; }
+.pm-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.pm-sec h3 { font-size: 12px; margin: 0 0 6px; color: #a04a62; }
+.pm-input { width: 100%; min-height: 64px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.pm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.pm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }

@@ -14935,6 +14935,41 @@ input:checked + .toggle-slider:before {
 .ls-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
 .ls-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
 .ls-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* ══════════════ [v3.51.0] 周期数学案头（periodmath） ══════════════ */
+/* periodmath.css — [v3.51.0] 周期数学案头 · 样式层 */
+.pm-root { all: initial; }
+.pm-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.pm-status { padding: 8px 12px; border-radius: 10px; background: #fdeef2; color: #a04a62; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.pm-readings { font-size: 12px; color: #6a645c; margin-bottom: 8px; }
+.pm-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.pm-sec h3 { font-size: 12px; margin: 0 0 6px; color: #a04a62; }
+.pm-input { width: 100%; min-height: 64px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.pm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.pm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+/* ══════════════ [v3.51.0] 纪念日数学案头（annidate） ══════════════ */
+/* annidate.css — [v3.51.0] 纪念日数学案头 · 样式层 */
+.ad-root { all: initial; }
+.ad-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.ad-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; font-size: 12px; color: #6a645c; }
+.ad-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.ad-sec h3 { font-size: 12px; margin: 0 0 6px; color: #635368; }
+.ad-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.ad-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+.ad-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* ══════════════ [v3.51.0] 牌桌案头（cardtable） ══════════════ */
+/* cardtable.css — [v3.51.0] 牌桌案头 · 样式层 */
+.ct-root { all: initial; }
+.ct-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.ct-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; font-size: 12px; color: #6a645c; }
+.ct-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.ct-sec h3 { font-size: 12px; margin: 0 0 6px; color: #6a4a78; }
+.ct-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.ct-why { font-size: 11px; color: #a05a4a; margin-left: 6px; }
+.ct-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.ct-card { width: 64px; height: 36px; border-radius: 6px; border: 1px solid #d8d2c8; background: #faf8f4; font-size: 10px; }
+.ct-sel { background: #6a4a78; color: #fff; border-color: #6a4a78; }
+.ct-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+.ct-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
 /* ══════════════ [v3.48.0] 子宫画板（uterus） ══════════════ */
 /* ========================================================
  * uterus.css — [v3.48.0] 子宫画板 · 样式层

@@ -1139,6 +1139,37 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+
+    {
+        // [v3.51.0] 周期数学案头（periodmath）：缝合自 MyPhone 生理期模块周期计算一族（period.js 819 行）。
+        // 有效窗均值（周期 15~60 天 / 经期 2~14 天，异常样本不进均值，样本不足如实报）/ 四相判定（月经·卵泡·排卵·黄体，排卵窗=中点±2）/ 三形倒计时（距下次·预计今天·已延期）/ 临近预警（≤3 天当日幂等）。不缝：AI 建议生成（callLLM）与 IndexedDB 与图表绘制（renderChart）。★ 零网络、零 AI、零图表。
+        id: 'periodmath',
+        name: '周期数学案头',
+        icon: '🌸',
+        color: '#a04a62',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.51.0] 纪念日数学案头（annidate）：缝合自 MyPhone 纪念日模块日期数学一族（anniversary.js 682 行）。
+        // 三形天数（已过去·距离·就是今天）/ 四类提醒（当天·前一天·每年当天·每年前一天，周年数>0 才算）/ 星座表（逐月分界）/ 当日幂等预警。不缝：IndexedDB / DOM 轮播（setInterval 换星标项）/ 图片上传（出图面）。★ 零网络、零定时器、零出图。
+        id: 'annidate',
+        name: '纪念日数学案头',
+        icon: '📅',
+        color: '#635368',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v3.51.0] 牌桌案头（cardtable）：缝合自 MyPhone 牌桌组件牌组与状态机一族（card-table.js 807 行）。
+        // 取差异面：雷诺曼 36 牌名表（仓内 tarot 权威没有）/ Fisher-Yates 洗牌 / 正逆位 50%（雷诺曼恒无）/ 抽牌状态机（back→selected→back，取消后序号重排）/ 选牌上限 12 满员报 full。不缝：IndexedDB 出图 / DOM 网格渲染 / overlay 弹层。★ 零图片、零数据库。
+        id: 'cardtable',
+        name: '牌桌案头',
+        icon: '🃏',
+        color: '#6a4a78',
+        badge: 0,
+        data: {}
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

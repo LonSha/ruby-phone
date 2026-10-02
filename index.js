@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.50.0';
+const ST_PHONE_VERSION = '3.51.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -190,6 +190,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'freehomeApp',    // [v3.50.0] 自由桌面布局案头：布局与台账随会话隔离，换会话两格全量重取
     'stickerdeskApp', // [v3.50.0] 表情包册案头：册 / 分类 / 台账随会话隔离，换会话三格全量重取
     'lexiscoreApp',   // [v3.50.0] 词法评分案头：词条库与台账随会话隔离，换会话两格全量重取
+    'periodmathApp',  // [v3.51.0] 周期数学案头：周期记录与设置随会话隔离，换会话两格全量重取
+    'annidateApp',    // [v3.51.0] 纪念日数学案头：条目册与预警幂等随会话隔离，换会话两格全量重取
+    'cardtableApp',   // [v3.51.0] 牌桌案头：牌组与已选与台账随会话隔离，换会话三格全量重取
 
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -227,6 +230,13 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-12",
     items: [
+        "【定位 · 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）】本版把 MyPhone 余件的三个纯机制族合并缝进本仓：① 周期数学案头 apps/periodmath/（period.js 819 行的周期计算一族）；② 纪念日数学案头 apps/annidate/（anniversary.js 682 行的日期数学一族）；③ 牌桌案头 apps/cardtable/（card-table.js 807 行的牌组与状态机一族）。三件四层齐备，全部零网络零 AI 零图表零图片。",
+        "【缝什么 · 周期面】有效窗均值逐条对齐：周期长取相邻两次起始日的日差（15~60 天内才进均值）、经期长取起始到结束+1（2~14 天内才进，含最旧一条）；样本不足如实报 not_enough 不拿缺省值冒充。四相判定（月经期/卵泡期/排卵期/黄体期，排卵窗=周期中点±2）；三形倒计时（距下次约 N 天/预计今天/已延期 N 天）；临近预警 ≤3 天且当日幂等（日期键去重）。",
+        "【缝什么 · 纪念日面】三形天数（已过去 N 天/距离目标还有 N 天/就是今天）；四类提醒逐支对齐（当天/前一天/每年当天/每年前一天，周年数>0 才算周年）；星座表逐月分界；当日幂等预警（同一日历日只警一次）。",
+        "【缝什么 · 牌桌面】取与仓内 tarot 权威的差异面：雷诺曼 36 牌名表（仓内 tarot-data 没有）；Fisher-Yates 洗牌；正逆位 50%（雷诺曼恒 none）；抽牌状态机（牌背→选中→翻回，取消后序号按原顺序连续重排 1 基）；选牌上限 12 满员报 full 不静默挤掉。78 张塔罗拼名（大阿尔卡那 22 + 四花色×14 自动生成）。",
+        "【四块不缝 × 三件】periodmath：AI 建议生成（callLLM）/ IndexedDB / 图表绘制（renderChart）不进；annidate：IndexedDB / DOM 轮播（setInterval 换星标项）/ 图片上传（出图面）不进；cardtable：IndexedDB 出图 / DOM 网格渲染 / overlay 弹层不进。三件全部零网络、零 AI、零定时器、零图片。",
+        "【接线 · 三件六处落点齐备】① config/apps.js 三条注册（各带不缝与偏离清单注释）；② config/storage.js 三条前缀（^pm_ / ^ad_ / ^ct_）；③ scripts/keys-audit.mjs 登记 7 键（pm×2 / ad×2 / ct×3，scope 为 chat）；④ index.js 懒加载分支三个 + 挂载 + REBIND 表三条；⑤ phone.css 三段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补三项。",
+        "【会话隔离 · 裁定 · 交棒】7 条会话键随会话隔离：源把周期与纪念日与牌组挂 IndexedDB（PhoneSimPeriod 等），换角色后原样留着串味，换会话全量重取。裁定：MyPhone 余件中 chat/settings/contacts/lofter/diary/worldbook/accounting/music/theater/tarot/punchcard/weather/memo 等撞仓内权威不缝；pet/food/fridge/datejournal/octopus/doomsday/isekai/xiuxian/campus/lovenews/infinite/story/wedding/teaparty/visa/qa/workreport/plan/outfit 为 IndexedDB+DOM+AI 会话宿主演出面不缝。批次B收干；剩余批次 C~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
         "【定位 · 素材缝合路线图第 3 层第十四件（合并交付 · 批次A四件一次抬版）】本版把 EPhone·xINOVO 余件的四个机制族合并缝进本仓：① 熟人可见性案头 apps/socialguard/（moments.js 237647 字节的知情治理一族）；② 自由桌面布局案头 apps/freehome/（free-home.js 1558 行 / 70 函数的布局治理一族）；③ 表情包册案头 apps/stickerdesk/（sticker.js 1499 行的解析与治理一族）；④ 词法评分案头 apps/lexiscore/（vector_memory.js 1849 行的非网络面）。四件全部四层齐备（data 纯函数内核 / app 取数落盘 / view 视图 / css 样式）。",
         "【缝什么 · 可见性面】受众名单（audienceIds，空名单=公开）与互动可见五分支逐支对齐：观者先得看见帖子；user 的赞与评论带 persona 分身，只被「认识的那个分身」看见；互动者本人看不见帖子时除作者与 user 外不许见；user / 作者本人 / all 档全可见；其余按人脉闭包。seenBy 首看记账只在第一次看落时刻；未看过不许互动（作者免看）；story 过期另立一格不进 feed。",
         "【缝什么 · 人脉面】linked 人脉双向镜像：me 侧与 peer 侧各持一份，owner 反转、权限取反向字段（mayInteract / mayPost / mayStory 三权），镜像不许只算单向；人脉闭包含 actor 自己 + user 互通 + 本人人脉 + 来向人脉。",
@@ -11012,8 +11022,55 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载词法评分案头App失败:', err);
                             phoneShell?.showNotification('错误', '词法评分案头App加载失败', '❌');
+                            phoneShell?.showNotification('错误', '词法评分案头App加载失败', '❌');
                         });
-} else if (appId === 'needsim') {
+                } else if (appId === 'periodmath') {
+                    // [v3.51.0] 周期数学案头：缝合自 MyPhone 生理期模块周期计算一族（period.js）。
+                    //   取两块机制：① 有效窗均值（双窗校验异常样本不进均值）与四相判定；
+                    //   ② 三形倒计时与临近预警（当日幂等）。AI 建议与图表绘制不缝。
+                    //   写盘两条键走 ^pm_ 前缀随会话隔离。★ 零网络、零 AI、零图表。
+                    bootTiming.instrumentImport(import('./apps/periodmath/periodmath-app.js'), './apps/periodmath/periodmath-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.periodmathApp) {
+                                window.VirtualPhone.periodmathApp = new module.PeriodmathApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.periodmathApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载周期数学案头App失败:', err);
+                            phoneShell?.showNotification('错误', '周期数学案头App加载失败', '❌');
+                        });
+                } else if (appId === 'annidate') {
+                    // [v3.51.0] 纪念日数学案头：缝合自 MyPhone 纪念日模块日期数学一族（anniversary.js）。
+                    //   取两块机制：① 三形天数与星座表；② 四类提醒判定（周年数>0）与当日幂等。
+                    //   DOM 轮播与图片上传不缝。写盘两条键走 ^ad_ 前缀随会话隔离。★ 零定时器、零出图。
+                    bootTiming.instrumentImport(import('./apps/annidate/annidate-app.js'), './apps/annidate/annidate-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.annidateApp) {
+                                window.VirtualPhone.annidateApp = new module.AnnidateApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.annidateApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载纪念日数学案头App失败:', err);
+                            phoneShell?.showNotification('错误', '纪念日数学案头App加载失败', '❌');
+                        });
+                } else if (appId === 'cardtable') {
+                    // [v3.51.0] 牌桌案头：缝合自 MyPhone 牌桌组件牌组与状态机一族（card-table.js）。
+                    //   取差异面：雷诺曼 36 牌名表（仓内 tarot 权威没有）/ 洗牌 / 正逆位 50% / 抽牌状态机。
+                    //   出图与 DOM 网格不缝。写盘三条键走 ^ct_ 前缀随会话隔离。★ 零图片、零数据库。
+                    bootTiming.instrumentImport(import('./apps/cardtable/cardtable-app.js'), './apps/cardtable/cardtable-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.cardtableApp) {
+                                window.VirtualPhone.cardtableApp = new module.CardtableApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.cardtableApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载牌桌案头App失败:', err);
+                            phoneShell?.showNotification('错误', '牌桌案头App加载失败', '❌');
+                        });
+                } else if (appId === 'needsim') {
                     // [v3.41.0] 需求沙盘：把模型给的那份数据收拾好（缝合自 SullyOS·小鼠机
                     //   xiaoshuji.html 的「模拟人生需求面板」一族，44 个函数 / 981 处命中）。
                     //   取六块治理面：六项需求逐项可读性 / 心情四档与缺项 / 六个行动的

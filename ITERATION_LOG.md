@@ -10,6 +10,13 @@
 
 ---
 
+## 迭代 109 — v3.51.0 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）：周期数学案头 + 纪念日数学案头 + 牌桌案头（有效窗双窗均值与四相判定 / 三形倒计时与当日幂等预警 / 三形天数与四类提醒与星座表 / 雷诺曼 36 牌名表与 Fisher-Yates 与抽牌状态机）+ 抓两处接线错（v255 dirMap 尾逗号进注释；apps.js json.dumps 双引号导致 registry R1 对不上）+ 7 条会话键会话隔离 + 六处接线 ×3 + 抬版收干)
+- **【定位】本版把 MyPhone 余件三个纯机制族合并缝入：① apps/periodmath/（period.js 819 行：有效窗均值（周期 15~60 / 经期 2~14 双窗，异常样本不进均值）/ 四相判定（排卵窗=中点±2）/ 三形倒计时 / 临近预警 ≤3 天当日幂等）；② apps/annidate/（anniversary.js 682 行：三形天数 / 四类提醒（周年数>0 才算周年）/ 星座表逐月分界 / 当日幂等）；③ apps/cardtable/（card-table.js 807 行：雷诺曼 36 牌名表（仓内 tarot 权威没有）/ Fisher-Yates / 正逆位 50%（雷诺曼恒 none）/ 抽牌状态机 back→selected→back 取消后序号重排 / 上限 12 满员报 full）。三件全部零网络零 AI 零图表零图片。**
+- **【裁定 · MyPhone 余件不缝清单】chat / settings / contacts / lofter / diary / worldbook / accounting / music / theater / tarot / punchcard / weather / memo 撞仓内权威不缝；pet / food / fridge / datejournal / octopus / doomsday / isekai / xiuxian / campus / lovenews / infinite / story / wedding / teaparty / visa / qa / workreport / plan / outfit 为 IndexedDB + DOM + AI 会话宿主演出面不缝。**
+- **【判据侧自身错两处】① v255 dirMap 的尾逗号写进了行注释后（词法上吞掉），连续两版栽在同一坑——修正法：逐行 node --check 立刻验；② apps.js 条目用 json.dumps 生成双引号 + unicode 转义，registry R1 按'单引号字面量'对账全落空——修正法：id/name/icon/color 一律手写单引号原文。**
+- **【门禁】五道单门全绿：syntax 607 文件 / registry id 78 分支 78 前缀 95 样式投递 68 / keys 使用点与登记对账一致 / dead-export 零新增（4 个未消费常量：1 个改为真消费 PM_ALERT_WINDOW 接入 alertGate，3 个删除）/ import-resolve ✓。v3490 判据 11/11 未受牵连；三件机制冒烟全过（短周期被窗拒 / 周年匹配与当日幂等 / 牌名表与状态机）。按用户指令全缝完前不跑全量回归。**
+- **【交棒】批次B收干完毕。第 3 层剩余源按 tools/layer3_remaining_plan.md 推进批次 C~G（kawaii 五片 / SullyOS 小件 / youyou / meixinji / perigee 剩件），全部缝完前不跑全量回归（用户指令已存记忆库）。**
+
 ## 迭代 108 — v3.50.0 素材缝合路线图第 3 层第十四件（合并交付 · 批次A四件一次抬版）：熟人可见性案头 + 自由桌面布局案头 + 表情包册案头 + 词法评分案头（可见性五分支与 seenBy 知情账 / 4×4 占位治理两套门 / 宽泛格式解析与 URL 幂等去重 / 词法评分与宽容线兜底）+ 抓两处真缺陷（renameCategory 可给幽灵分类改名；零消费清洗误删 canSeeInteraction 本体后重建并接线 checkPost）+ 四件会话键 11 条会话隔离 + 六处接线 ×4 + 抬版收干)
 - **【定位】本版把 EPhone·xINOVO 余件四个机制族合并缝入（先例 v3.42.0 合并交付）：① socialguard（moments.js 237647 字节知情治理一族：受众名单 / 互动可见五分支 / persona 分身隔离 / seenBy 首看记账 / 未看不许互动 / linked 人脉反向镜像三权）；② freehome（free-home.js 1558 行 / 70 函数布局治理一族：4×4 占位三算 / 两套合法性门 / 形状三型查表 / 页数页内上限）；③ stickerdesk（sticker.js 1499 行解析治理一族：宽泛格式解析 / URL 幂等去重逐行报 / 分类册治理逐因拒）；④ lexiscore（vector_memory.js 1849 行非网络面：切词 / 命中比 + 置顶 0.35 + 权重步进 0.08 / 宽容线 max(0.05, 阈值×0.45) / 排序三键 / topK）。与 recall 的裁定差：BM25 是文档级检索，本件是逐条目 token 兜底，机制族不同并存不撞。automatic-journal 与 diary 撞权威裁定不缝（差异面仅宿主态迁移脚本）。**
 - **【缺陷 · renameCategory 幽灵分类】自纠抓到：renameCategory 不验证 categoryId 在册，幽灵分类也能改名成功。已补 unknown_category 门（先验在册再查重）。**
