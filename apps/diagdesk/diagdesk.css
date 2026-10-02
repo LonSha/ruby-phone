@@ -1,0 +1,199 @@
+/* ========================================================
+ * diagdesk.css — [v3.47.0] 诊断案头 · 样式层
+ *
+ * 照拄 archive / pvdesk / musicdesk / doujin / cotdesk 规格：全部选择器挂在 .dd-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 diagdesk-view.js 的产出
+ * **逐类对应**（registry 门会核 —— 前缀族 dd 需能在 phone.css 里找到）。
+ *
+ * 设计语言取自源的**体检单感**（深夜石板底 + 盖印朱的主色）：
+ *   ① 底是「体检机」的石板灰，不是纯黑（纯黑会把「缺栏位」的朱红吹没）；
+ *   ② 栏位表**三列**：栏位 / 状态 / 从哪版起 —— 「缺栏位（不许读成 0）」
+ *      与「这一版还没有这一栏（对）」各写各的，**不许合成一句「有点问题」**；
+ *   ③ 四态边框色与 view 的 FACE_TONE 一一对应（ok / warn / err / off）；
+ *   ④ 迁移逐版画**步骤卡**：要做（琥珀）/ 不用做（灰）/ 动不了（朱红）三种各成一色；
+ *   ⑤ 流水线逐格画**扁表**，失败格整行染朱，认不出的步骤另立一格；
+ *   ⑥ 六态计数里「说不清」有数就染琥珀（**不当还没发生**）；
+ *   ⑦ 数值一律等宽字体：条数 / 格数 / 版本号 / 上限要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.dd-root {
+    --dd-bg: #11151a;
+    --dd-panel: #181d24;
+    --dd-panel-2: #202731;
+    --dd-line: #2d3541;
+    --dd-ink: #e8edf2;
+    --dd-ink-2: #b0bac6;
+    --dd-ink-3: #7a848f;
+    /* 源的主色：体检机朱 */
+    --dd-accent: #c9603f;
+    --dd-accent-soft: #3a2019;
+    --dd-gold: #d8a13a;
+    /* 四态四色（与 view 的 FACE_TONE 一一对应） */
+    --dd-ok: #46b97a;
+    --dd-warn: #d8a13a;
+    --dd-err: #d9564a;
+    --dd-off: #7b8794;
+    --dd-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--dd-bg);
+    color: var(--dd-ink);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.dd-root * { box-sizing: border-box; }
+/* ---------- 四态边框色 ---------- */
+.dd-tone-ok { border-top: 2px solid var(--dd-ok); }
+.dd-tone-warn { border-top: 2px solid var(--dd-warn); }
+.dd-tone-err { border-top: 2px solid var(--dd-err); }
+.dd-tone-off { border-top: 2px solid var(--dd-off); }
+.dd-tone-none { border-top: 2px solid var(--dd-off); }
+/* ---------- 页头 ---------- */
+.dd-head { display: flex; flex-direction: column; gap: 3px; }
+.dd-title { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+.dd-sub { font-size: 12px; color: var(--dd-ink-2); }
+.dd-why { font-size: 12px; color: var(--dd-err); }
+/* ---------- 页签 ---------- */
+.dd-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.dd-tab {
+    flex: 1 1 auto;
+    min-width: 60px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--dd-ink-2);
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.dd-tab.on {
+    color: var(--dd-ink);
+    background: var(--dd-panel-2);
+    border-color: var(--dd-accent);
+}
+/* ---------- 通用块 ---------- */
+.dd-sec {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px;
+    background: var(--dd-panel);
+    border: 1px solid var(--dd-line);
+    border-radius: 8px;
+}
+.dd-sec-title { font-size: 13px; font-weight: 600; color: var(--dd-ink); }
+.dd-sec-note { font-size: 11px; color: var(--dd-ink-3); line-height: 1.45; }
+.dd-sub-title { font-size: 12px; font-weight: 600; color: var(--dd-ink-2); margin-top: 2px; }
+/* ---------- 读数格 ---------- */
+.dd-metrics { display: flex; flex-wrap: wrap; gap: 6px; }
+.dd-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 78px;
+    padding: 5px 8px;
+    background: var(--dd-panel-2);
+    border: 1px solid var(--dd-line);
+    border-radius: 6px;
+}
+.dd-metric-k { font-size: 10px; color: var(--dd-ink-3); }
+.dd-metric-v { font-size: 13px; font-family: var(--dd-mono); color: var(--dd-ink); }
+/* ---------- 表 ---------- */
+.dd-table { display: flex; flex-direction: column; gap: 2px; }
+.dd-tr {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+.dd-th { color: var(--dd-ink-3); font-size: 11px; border-bottom: 1px solid var(--dd-line); }
+.dd-td-name { flex: 1 1 42%; min-width: 0; overflow-wrap: anywhere; }
+.dd-td-place { flex: 1 1 42%; min-width: 0; font-size: 11px; color: var(--dd-ink-2); overflow-wrap: anywhere; }
+.dd-td-num { flex: 0 0 48px; text-align: right; font-family: var(--dd-mono); font-size: 11px; }
+.dd-td-num.warn { color: var(--dd-warn); }
+.dd-tr.dd-bad { background: var(--dd-accent-soft); }
+/* ---------- 列表 ---------- */
+.dd-list { display: flex; flex-direction: column; gap: 3px; }
+.dd-list-row { display: flex; align-items: baseline; gap: 6px; padding: 3px 5px; border-radius: 4px; }
+.dd-list-k { flex: 0 0 24px; font-family: var(--dd-mono); font-size: 11px; color: var(--dd-ink-3); }
+.dd-list-v { flex: 1 1 auto; min-width: 0; font-size: 11px; color: var(--dd-ink-2); overflow-wrap: anywhere; }
+.dd-list-row.dd-list-bad .dd-list-v { color: var(--dd-err); }
+/* ---------- 迁移步骤卡 ---------- */
+.dd-step {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 7px 8px;
+    background: var(--dd-panel-2);
+    border-left: 3px solid var(--dd-line);
+    border-radius: 6px;
+}
+.dd-step-head { display: flex; align-items: center; gap: 6px; font-family: var(--dd-mono); font-size: 12px; }
+.dd-step-note { font-size: 11px; color: var(--dd-ink-3); line-height: 1.45; }
+/* ---------- 标签 ---------- */
+.dd-tag {
+    padding: 1px 6px;
+    font-size: 10px;
+    border-radius: 999px;
+    border: 1px solid var(--dd-line);
+    color: var(--dd-ink-2);
+}
+.dd-tag-ok { color: var(--dd-ok); border-color: var(--dd-ok); }
+.dd-tag-warn { color: var(--dd-warn); border-color: var(--dd-warn); }
+.dd-tag-err { color: var(--dd-err); border-color: var(--dd-err); }
+.dd-tag-off { color: var(--dd-off); border-color: var(--dd-off); }
+/* ---------- 输入 ---------- */
+.dd-field { display: flex; flex-direction: column; gap: 4px; }
+.dd-field-label { font-size: 11px; color: var(--dd-ink-3); }
+.dd-area {
+    width: 100%;
+    min-height: 92px;
+    padding: 7px 8px;
+    font-family: var(--dd-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--dd-ink);
+    background: var(--dd-bg);
+    border: 1px solid var(--dd-line);
+    border-radius: 6px;
+    resize: vertical;
+}
+.dd-area-sm { min-height: 54px; }
+/* ---------- 按钮 ---------- */
+.dd-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.dd-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--dd-line);
+    background: var(--dd-panel-2);
+    color: var(--dd-ink);
+    cursor: pointer;
+}
+.dd-btn-main { border-color: var(--dd-accent); color: var(--dd-ink); background: var(--dd-accent-soft); }
+.dd-btn-quiet { color: var(--dd-ink-2); }
+/* ---------- 提示 ---------- */
+.dd-note { padding: 4px 6px; font-size: 11px; border-radius: 4px; color: var(--dd-ink-3); }
+.dd-note-ok { color: var(--dd-ok); }
+.dd-note-warn { color: var(--dd-warn); }
+.dd-note-err { color: var(--dd-err); }
+.dd-empty { padding: 8px; font-size: 11px; color: var(--dd-ink-3); text-align: center; }
+.dd-flash {
+    padding: 7px 9px;
+    font-family: var(--dd-mono);
+    font-size: 11px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--dd-ink);
+    background: var(--dd-panel-2);
+    border: 1px solid var(--dd-line);
+    border-radius: 6px;
+}

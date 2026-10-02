@@ -42,6 +42,12 @@ const BS = String.fromCharCode(92);
 /** 双引号（造 HTML 断言用）：拼装形。 */
 const DQ = String.fromCharCode(34);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/** 副本树登记表（跑完必删）。★ 本套件对真仓只读：破坏类负控制只准落在副本上。 */
+const temps = [];
+process.on('exit', () => {
+    for (const d of temps) { try { fs.rmSync(d, { recursive: true, force: true }); } catch (_e) { /* 忽略 */ } }
+});
 /** 剥注释（字符状态机，与 v3300…v3450 同款）。
  *  ★ 为什么必须有：本仓纪律「**注释里的提及不算消费**」。本件的文件头逐条写明了
  *    「源里有什么、本件为什么不能有」—— 那些词是**说明**不是**消费**。
@@ -642,11 +648,27 @@ function wireProblems(files) {
     if (css.indexOf('.cd-root') < 0) bad.push('wire-css-lost');
     return bad;
 }
-function wireJudge() {
+/** 接线面取数口。★ root 可指向副本树 —— 破坏类负控制只准写副本，绝不写真仓：
+ *  node --test 是文件级并行，写真仓会在破坏窗口内被别的套件读到，
+ *  且跑批被中断时（finally 来不及执行）会把破坏永久留在仓里。 */
+function wireJudgeAt(root) {
+    const rd = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
     return wireProblems({
-        apps: read(APPS), storage: read(STORAGE), index: read(INDEX),
-        keys: read(KEYS), phoneCss: read(PHONE_CSS)
+        apps: rd(APPS), storage: rd(STORAGE), index: rd(INDEX),
+        keys: rd(KEYS), phoneCss: rd(PHONE_CSS)
     });
+}
+function wireJudge() { return wireJudgeAt(ROOT); }
+/** 接线面副本树：六处落点所在文件按真相对路径各一份。 */
+function stageWire() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_wire_'));
+    temps.push(dir);
+    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS]) {
+        const dst = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(path.join(ROOT, rel), dst);
+    }
+    return dir;
 }
 
 /* ══════════ A — 落点面（位置 × 角色 → 六侧） ══════════ */
@@ -1223,16 +1245,16 @@ for (const [title, key, kind, expect] of NEG) {
             return;
         }
         if (kind === 'wire') {
-            /* 接线类：判据读的是真路径，故先改真文件、跑判据、再改回来 —— try/finally 保证回得来。 */
-            const real = read(rel);
-            try {
-                fs.writeFileSync(path.join(ROOT, rel), damaged);
-                assert.ok(wireJudge().some((x) => expect.some((e) => x.startsWith(e))),
-                    '破坏后必须报出 ' + expect.join('/') + '，实测：' + (wireJudge().join(' , ') || '（没报）'));
-            } finally {
-                fs.writeFileSync(path.join(ROOT, rel), real);
-            }
-            assert.equal(read(rel), real, '接线文件必须逐字节回得来');
+            /* ★ 只写副本：写真仓会在并行窗口里被别的套件读到，中断还会留下永久破坏。 */
+            const dirW = stageWire();
+            const realW = fs.readFileSync(path.join(dirW, rel), 'utf8');
+            assert.deepEqual(wireJudgeAt(dirW), [], '对照：副本未破坏时必须干净');
+            fs.writeFileSync(path.join(dirW, rel), damaged);
+            const badW = wireJudgeAt(dirW);
+            assert.ok(badW.some((x) => expect.some((e) => x.startsWith(e))),
+                '破坏后必须报出 ' + expect.join('/') + '，实测：' + (badW.join(' , ') || '（没报）'));
+            fs.writeFileSync(path.join(dirW, rel), realW);
+            assert.deepEqual(wireJudgeAt(dirW), [], '对照：还原后副本必须干净');
             assert.deepEqual(wireJudge(), [], '对照：真接线必须干净');
             return;
         }
