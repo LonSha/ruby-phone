@@ -312,6 +312,8 @@ const KEY_REGISTRY = [
   { key: 'diagdesk_archive', scope: 'chat', note: '[v3.47.0] 诊断案头存档原文（贴回的存档 + 收下时刻；读不出来与就是空不同形）' },
   { key: 'diagdesk_draft', scope: 'chat', note: '[v3.47.0] 诊断案头摘要草稿（目标 + 追加要求）' },
   { key: 'diagdesk_ledger', scope: 'chat', note: '[v3.47.0] 诊断案头动作台账（每一次收档 / 放下 / 存草稿 / 出文本的回执）' },
+  { key: 'uterus_subject', scope: 'chat', note: '[v3.48.0] 子宫画板收下的角色状态原文（+ 收下时刻；读不出来与就是空不同形）' },
+  { key: 'uterus_ledger', scope: 'chat', note: '[v3.48.0] 子宫画板动作台账（每一次收下 / 放下 / 推帧 / 出文本 / 清台账的回执）' },
   { key: 'block_settings', scope: 'chat', note: '[v3.27.0] 拉黑设置（注入开关 / 风控间隔 / 自动回绝开关）' },
   { key: 'block_state', scope: 'chat', note: '[v3.27.0] 拉黑两本账（我拉黑谁 / 谁拉黑我 + 双向申请与历史）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },
