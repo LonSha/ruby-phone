@@ -1,0 +1,219 @@
+/* ========================================================
+ * cotdesk.css — [v3.46.0] 思维链案头 · 样式层
+ *
+ * 照拄 archive / pvdesk / musicdesk / doujin 规格：全部选择器挂在 .cd-root 下
+ * （宿主样式不外泄、也不吃宿主样式）；类名与 cotdesk-view.js 的产出
+ * **逐类对应**（registry 门会核 —— 前缀族 cd 需能在 phone.css 里找到）。
+ *
+ * 设计语言取自源的**推演白板感**（深夜深蓝的冷底 + 思考紫的主色）：
+ *   ① 底是「推演白板」的深灰蓝，不是纯黑（纯黑会把「落点被塌平」的琥珀吹没）；
+ *   ② 条目对账表**等宽五列**：条目 / 落点 / 深度 / 开关 / 字数 ——
+ *      落点列里「认不出来」与「被塌平」各写各的，**不许合成一句「有点问题」**；
+ *   ③ 四态边框色与 view 的 FACE_TONE 一一对应（ok / warn / err / off）；
+ *   ④ 锁定两个语义分开画：数据字段 cd-tag（金）＋ 界面禁令 cd-locked（左金边）；
+ *   ⑤ 三项上限画**余量条**，取不出来画横线且条子留空
+ *      —— 「真的用到 0」与「读不出来」不同形；
+ *   ⑥ 标记对读数按成对 / 落单分别着色（落单为琥珀，成对为绿）；
+ *   ⑦ 数值一律等宽字体：条数 / 字数 / 深度 / 上限要对得齐。
+ *
+ * ★ 段头必须独立成行（本仓踩过「段头与上一段尾粘连，下一版找不到段尾」的坑）。
+ * ======================================================== */
+.cd-root {
+    --cd-bg: #0f1220;
+    --cd-panel: #171b2c;
+    --cd-panel-2: #1f2438;
+    --cd-line: #2b3247;
+    --cd-ink: #e9ecf6;
+    --cd-ink-2: #b4bad0;
+    --cd-ink-3: #7c85a0;
+    /* 源的主色：推演紫蓝 */
+    --cd-accent: #7b8ce0;
+    --cd-accent-soft: #2c3358;
+    --cd-gold: #d8a13a;
+    /* 四态四色（与 view 的 FACE_TONE 一一对应） */
+    --cd-ok: #46b97a;
+    --cd-warn: #d8a13a;
+    --cd-err: #d9564a;
+    --cd-off: #7b8794;
+    --cd-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--cd-bg);
+    color: var(--cd-ink);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.cd-root * { box-sizing: border-box; }
+/* ---------- 四态边框色 ---------- */
+.cd-tone-ok { border-top: 2px solid var(--cd-ok); }
+.cd-tone-warn { border-top: 2px solid var(--cd-warn); }
+.cd-tone-err { border-top: 2px solid var(--cd-err); }
+.cd-tone-off { border-top: 2px solid var(--cd-off); }
+.cd-tone-none { border-top: 2px solid var(--cd-off); }
+/* ---------- 页头 ---------- */
+.cd-head { display: flex; flex-direction: column; gap: 3px; }
+.cd-title { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+.cd-sub { font-size: 12px; color: var(--cd-ink-2); }
+.cd-why { font-size: 12px; color: var(--cd-err); }
+/* ---------- 页签 ---------- */
+.cd-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.cd-tab {
+    flex: 1 1 auto;
+    min-width: 60px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--cd-ink-2);
+    background: var(--cd-panel);
+    border: 1px solid var(--cd-line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.cd-tab.on {
+    color: var(--cd-ink);
+    background: var(--cd-panel-2);
+    border-color: var(--cd-accent);
+}
+/* ---------- 通用块 ---------- */
+.cd-sec {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px;
+    background: var(--cd-panel);
+    border: 1px solid var(--cd-line);
+    border-radius: 8px;
+}
+.cd-sec-title { font-size: 13px; font-weight: 600; color: var(--cd-ink); }
+.cd-sec-note { font-size: 11px; color: var(--cd-ink-3); line-height: 1.45; }
+.cd-sub-title { font-size: 12px; color: var(--cd-ink-2); margin-top: 2px; }
+.cd-empty {
+    font-size: 12px;
+    color: var(--cd-ink-3);
+    padding: 8px 9px;
+    border: 1px dashed var(--cd-line);
+    border-radius: 8px;
+}
+.cd-note {
+    font-size: 12px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--cd-line);
+    color: var(--cd-ink-2);
+}
+.cd-note-ok { border-color: var(--cd-ok); color: var(--cd-ok); background: rgba(70, 185, 122, .08); }
+.cd-note-warn { border-color: var(--cd-warn); color: var(--cd-warn); background: rgba(216, 161, 58, .08); }
+.cd-note-err { border-color: var(--cd-err); color: var(--cd-err); background: rgba(217, 86, 74, .08); }
+/* ---------- 表单 ---------- */
+.cd-field { display: flex; flex-direction: column; gap: 4px; }
+.cd-field-label { font-size: 12px; color: var(--cd-ink-2); }
+.cd-area {
+    width: 100%;
+    padding: 7px 9px;
+    font-size: 12px;
+    font-family: var(--cd-mono);
+    color: var(--cd-ink);
+    background: var(--cd-panel-2);
+    border: 1px solid var(--cd-line);
+    border-radius: 6px;
+    resize: vertical;
+    min-height: 76px;
+}
+.cd-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.cd-btn {
+    padding: 7px 12px;
+    font-size: 12px;
+    color: var(--cd-ink);
+    background: var(--cd-panel-2);
+    border: 1px solid var(--cd-line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.cd-btn-main { border-color: var(--cd-accent); color: var(--cd-accent); }
+.cd-btn-quiet { color: var(--cd-ink-2); }
+/* ---------- 读数表 ---------- */
+.cd-metrics { display: flex; flex-direction: column; gap: 2px; }
+.cd-metric { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.cd-metric-k { color: var(--cd-ink-3); min-width: 92px; }
+.cd-metric-v { font-family: var(--cd-mono); color: var(--cd-ink); word-break: break-all; }
+/* ---------- 对账表（等宽五列） ---------- */
+.cd-table {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--cd-line);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.cd-tr {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--cd-line);
+}
+.cd-tr:last-child { border-bottom: none; }
+.cd-th { color: var(--cd-ink-3); background: var(--cd-panel-2); }
+/* 有问题的条目整行加红底；声明锁定的整行加金左边（两个语义不同形） */
+.cd-bad { background: rgba(217, 86, 74, .10); }
+.cd-locked { border-left: 3px solid var(--cd-gold); }
+.cd-td-name { flex: 1 1 32%; font-family: var(--cd-mono); word-break: break-all; }
+.cd-td-place { flex: 1 1 34%; color: var(--cd-ink-2); }
+.cd-td-depth { flex: 0 0 auto; min-width: 44px; text-align: right; font-family: var(--cd-mono); }
+.cd-td-depth.blank { color: var(--cd-ink-3); }
+.cd-td-sw { flex: 0 0 auto; min-width: 28px; text-align: right; color: var(--cd-ink-2); }
+.cd-td-chars { flex: 0 0 auto; min-width: 54px; text-align: right; font-family: var(--cd-mono); }
+.cd-td-chars.err { color: var(--cd-err); }
+.cd-tag {
+    margin-left: 5px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: var(--cd-gold);
+    border: 1px solid var(--cd-gold);
+    border-radius: 4px;
+}
+.cd-mini { display: block; font-size: 10px; color: var(--cd-ink-3); margin-top: 1px; }
+.cd-why-mini { display: block; font-size: 10px; color: var(--cd-warn); margin-top: 1px; }
+.cd-problem {
+    display: block;
+    flex: 1 1 100%;
+    font-size: 10px;
+    color: var(--cd-err);
+    margin-top: 1px;
+}
+/* ---------- 清单行 ---------- */
+.cd-list { display: flex; flex-direction: column; gap: 3px; }
+.cd-list-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.cd-list-locked { border-left: 3px solid var(--cd-gold); padding-left: 5px; }
+.cd-list-k { flex: 0 0 auto; min-width: 132px; font-family: var(--cd-mono); color: var(--cd-ink); }
+.cd-list-v { flex: 1 1 auto; color: var(--cd-ink-2); word-break: break-all; }
+/* ---------- 余量条 ---------- */
+.cd-gauge { display: flex; flex-direction: column; gap: 5px; }
+.cd-gauge-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.cd-gauge-label { flex: 0 0 auto; min-width: 70px; color: var(--cd-ink-3); }
+.cd-gauge-track {
+    flex: 1 1 auto;
+    height: 7px;
+    background: var(--cd-panel-2);
+    border: 1px solid var(--cd-line);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.cd-gauge-fill { display: block; height: 100%; background: var(--cd-accent); }
+.cd-gauge-fill.warn { background: var(--cd-warn); }
+.cd-gauge-fill.err { background: var(--cd-err); }
+.cd-gauge-num { flex: 0 0 auto; min-width: 84px; text-align: right; font-family: var(--cd-mono); }
+.cd-gauge-num.blank { color: var(--cd-ink-3); }
+/* ---------- 顶部一句回执 ---------- */
+.cd-flash {
+    font-size: 12px;
+    color: var(--cd-accent);
+    border: 1px solid var(--cd-accent-soft);
+    border-radius: 6px;
+    padding: 5px 9px;
+    background: rgba(123, 140, 224, .08);
+}
