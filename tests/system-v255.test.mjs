@@ -92,7 +92,8 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     lexiscoreApp: 'lexiscore',      // [v3.50.0] 词法评分案头：换会话丢词条库与台账，两格全量重取
     periodmathApp: 'periodmath',    // [v3.51.0] 周期数学案头：换会话丢周期记录与设置，两格全量重取
     annidateApp: 'annidate',        // [v3.51.0] 纪念日数学案头：换会话丢条目册与预警幂等，两格全量重取
-    cardtableApp: 'cardtable'       // [v3.51.0] 牌桌案头：换会话丢牌组与台账，三格全量重取
+    cardtableApp: 'cardtable',      // [v3.51.0] 牌桌案头：换会话丢牌组与台账，三格全量重取
+    summdeskApp: 'summdesk'         // [v3.52.0] 总结案头：换会话丢记忆册与双游标，两格全量重取
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。

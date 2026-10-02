@@ -257,6 +257,9 @@ export class PhoneStorage {
             /^pm_/,
             /^ad_/,
             /^ct_/,
+            // [v3.52.0] 总结案头（sm_memories 记忆册 / sm_cursors 双游标）：随会话隔离，
+            //   源把记忆挂宿主 chat 大对象，换角色后一起串味。
+            /^sm_/,
             /^musicdesk_/,
             /^needsim_/,
             /^kettle_/,

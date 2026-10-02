@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.51.0';
+const ST_PHONE_VERSION = '3.52.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -193,6 +193,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'periodmathApp',  // [v3.51.0] 周期数学案头：周期记录与设置随会话隔离，换会话两格全量重取
     'annidateApp',    // [v3.51.0] 纪念日数学案头：条目册与预警幂等随会话隔离，换会话两格全量重取
     'cardtableApp',   // [v3.51.0] 牌桌案头：牌组与已选与台账随会话隔离，换会话三格全量重取
+    'summdeskApp',     // [v3.52.0] 总结案头：记忆册与双游标随会话隔离，换会话两格全量重取
 
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -230,6 +231,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-12",
     items: [
+        "【定位 · 素材缝合路线图第 3 层第十六件】本版把 Kawaii 主题包总结引擎的格式归一与游标一族（05 base.js 2869 行，非网络面）缝进本仓：apps/summdesk/（总结案头）四层齐备。源是「发请求的那个人」（fetch 双 provider 生成总结），本件是案头：总结文本由用户从任何对话端贴回来，本件只做解析归一与游标读数。",
+        "【缝什么 · 解析面】总结文本解析逐支对齐：标题六形标记（【标题】/标题:/标题：/加粗标题/# 标题/裸标题，最长优先防截断）与正文四形；有标题无正文标记时剥离标题行取剩余；无标题时首非空行截 15 字加省略号；全空回退「记忆碎片」；引号剥离；标题组装=标题-条数范围-日期（2026/10/2 形）。各形态落到哪一格逐条报 notes（源静默回退）。",
+        "【缝什么 · 游标面】双通道自动总结游标（普通/vector 与真向量两套独立）：初始位=chunk×间隔（源 vectorLastIndex 推算）、超长收口到历史长度、攒够一批推进一批（起点/终点/范围条三格）、失败回滚到批次起点并停本轮（源 catch 分支同款）。游标只算不拉：源攒够批后 fetch 生成，本件零网络。",
+        "【四块不缝】① 不发请求不拼提示词（源 generateVectorSummary 拼 systemPrompt 走 fetch 双 provider，含安全审查结界抛错面）；② 不出图（源 compressImage canvas 压缩与 GIF 保形）；③ 不做备份导入导出（源 createFullBackupData / importBackupData / validateDataIntegrity）；④ 不读宿主界面元素（源满篇 getElementById）。",
+        "【接线 · 六处落点齐备】① config/apps.js 注册（id summdesk 与名「总结案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 前缀 ^sm_；③ scripts/keys-audit.mjs 登记 sm_memories 与 sm_cursors（scope 为 chat）；④ index.js 懒加载分支 + 挂载 + REBIND 表；⑤ phone.css 本版段与 summdesk.css 逐字同源；⑥ tests/system-v255.test.mjs dirMap 补一项。",
+        "【会话隔离 · 裁定 · 交棒】两条会话键随会话隔离：源把记忆册挂宿主 chat 大对象（换角色一起串味），换会话两格全量重取。裁定：kawaii 其余片（06 ui 渲染 / 07 settings 宿主设置 / 08 sandbox 四路 AI 生成 / 01~04 纯样式壳 / sw.js）不缝；批次C收干；剩余批次 D~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
         "【定位 · 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）】本版把 MyPhone 余件的三个纯机制族合并缝进本仓：① 周期数学案头 apps/periodmath/（period.js 819 行的周期计算一族）；② 纪念日数学案头 apps/annidate/（anniversary.js 682 行的日期数学一族）；③ 牌桌案头 apps/cardtable/（card-table.js 807 行的牌组与状态机一族）。三件四层齐备，全部零网络零 AI 零图表零图片。",
         "【缝什么 · 周期面】有效窗均值逐条对齐：周期长取相邻两次起始日的日差（15~60 天内才进均值）、经期长取起始到结束+1（2~14 天内才进，含最旧一条）；样本不足如实报 not_enough 不拿缺省值冒充。四相判定（月经期/卵泡期/排卵期/黄体期，排卵窗=周期中点±2）；三形倒计时（距下次约 N 天/预计今天/已延期 N 天）；临近预警 ≤3 天且当日幂等（日期键去重）。",
         "【缝什么 · 纪念日面】三形天数（已过去 N 天/距离目标还有 N 天/就是今天）；四类提醒逐支对齐（当天/前一天/每年当天/每年前一天，周年数>0 才算周年）；星座表逐月分界；当日幂等预警（同一日历日只警一次）。",
@@ -11069,6 +11076,23 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载牌桌案头App失败:', err);
                             phoneShell?.showNotification('错误', '牌桌案头App加载失败', '❌');
+                        });
+                } else if (appId === 'summdesk') {
+                    // [v3.52.0] 总结案头：缝合自 Kawaii 主题包总结引擎格式归一与游标一族（05 base.js 非网络面）。
+                    //   取两块机制：① 总结文本解析（标题正文标记匹配与回退链）；
+                    //   ② 双通道自动总结游标（chunk×间隔初始位 / 成批推进 / 失败回滚批次起点）。
+                    //   fetch 生成与出图压缩与备份面不缝。写盘两条键走 ^sm_ 前缀随会话隔离。
+                    //   ★ 零网络、零 AI、零出图。
+                    bootTiming.instrumentImport(import('./apps/summdesk/summdesk-app.js'), './apps/summdesk/summdesk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.summdeskApp) {
+                                window.VirtualPhone.summdeskApp = new module.SummdeskApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.summdeskApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载总结案头App失败:', err);
+                            phoneShell?.showNotification('错误', '总结案头App加载失败', '❌');
                         });
                 } else if (appId === 'needsim') {
                     // [v3.41.0] 需求沙盘：把模型给的那份数据收拾好（缝合自 SullyOS·小鼠机

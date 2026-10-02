@@ -14970,6 +14970,18 @@ input:checked + .toggle-slider:before {
 .ct-sel { background: #6a4a78; color: #fff; border-color: #6a4a78; }
 .ct-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
 .ct-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* ══════════════ [v3.52.0] 总结案头（summdesk） ══════════════ */
+/* summdesk.css — [v3.52.0] 总结案头 · 样式层 */
+.sm-root { all: initial; }
+.sm-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.sm-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; font-size: 12px; color: #6a645c; }
+.sm-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.sm-sec h3 { font-size: 12px; margin: 0 0 6px; color: #7a5a2a; }
+.sm-input { width: 100%; min-height: 72px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.sm-range { width: 100%; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; margin-top: 4px; }
+.sm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.sm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+.sm-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
 /* ══════════════ [v3.48.0] 子宫画板（uterus） ══════════════ */
 /* ========================================================
  * uterus.css — [v3.48.0] 子宫画板 · 样式层

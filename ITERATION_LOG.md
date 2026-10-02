@@ -10,6 +10,12 @@
 
 ---
 
+## 迭代 110 — v3.52.0 素材缝合路线图第 3 层第十六件：总结案头（Kawaii 主题包总结引擎格式归一与游标一族，05 base.js 2869 行非网络面）（标题六形与正文四形标记匹配 / 无标记首行截 15 字加省略号 / 终回退记忆碎片 / 标题组装=标题-条数-日期 / 双通道游标 chunk×间隔初始位与成批推进与失败回滚）+ 接线侧三处自纠（v255 dirMap 尾逗号三连坑；index 公告块跨版本块衔接逗号两处；SM_LEDGER_MAX 零消费删除）+ 两条会话键会话隔离 + 六处接线 + 抬版收干)
+- **【定位】源 generateVectorSummary 是发请求的那个人（fetch 双 provider + 安全审查结界抛错面），本件是案头：总结文本由用户从任何对话端贴回来，解析归一入册；游标只算不拉。不缝：出图压缩（compressImage canvas 与 GIF 保形）/ 备份导入导出 / validateDataIntegrity / DnD 设置面。**
+- **【接线侧自纠三处】① v255 dirMap 的「值尾逗号写进行注释后」同坑第三连（v3490 / v3510 / v3520），修正法固化：每次插 dirMap 后立刻 node --check 单文件；② index.js 公告块跨版本衔接缺逗号两处（新 items 首项插到旧数组后，旧块末项的逗号被新解析吞掉），修正法：注入后按引号计数逐行扫；③ SM_LEDGER_MAX 本件无台账消费面，删除。**
+- **【门禁】五道单门全绿：syntax / registry / keys / dead-export 零新增 / import-resolve。v3490 判据 11/11 未受牵连；summdesk 冒烟全过（全形解析 / 变体标题 / 无标记回退链 / 空文本记忆碎片 / 成批推进 3 批 / 标题组装带日期）。按用户指令全缝完前不跑全量回归。**
+- **【交棒】批次C收干完毕（summdesk 一件；其余五片裁定不缝）。剩余批次 D~G 按总控计划推进（SullyOS 小件 / youyou / meixinji / perigee 剩件），全部缝完前不跑全量回归（用户指令已存记忆库）。**
+
 ## 迭代 109 — v3.51.0 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）：周期数学案头 + 纪念日数学案头 + 牌桌案头（有效窗双窗均值与四相判定 / 三形倒计时与当日幂等预警 / 三形天数与四类提醒与星座表 / 雷诺曼 36 牌名表与 Fisher-Yates 与抽牌状态机）+ 抓两处接线错（v255 dirMap 尾逗号进注释；apps.js json.dumps 双引号导致 registry R1 对不上）+ 7 条会话键会话隔离 + 六处接线 ×3 + 抬版收干)
 - **【定位】本版把 MyPhone 余件三个纯机制族合并缝入：① apps/periodmath/（period.js 819 行：有效窗均值（周期 15~60 / 经期 2~14 双窗，异常样本不进均值）/ 四相判定（排卵窗=中点±2）/ 三形倒计时 / 临近预警 ≤3 天当日幂等）；② apps/annidate/（anniversary.js 682 行：三形天数 / 四类提醒（周年数>0 才算周年）/ 星座表逐月分界 / 当日幂等）；③ apps/cardtable/（card-table.js 807 行：雷诺曼 36 牌名表（仓内 tarot 权威没有）/ Fisher-Yates / 正逆位 50%（雷诺曼恒 none）/ 抽牌状态机 back→selected→back 取消后序号重排 / 上限 12 满员报 full）。三件全部零网络零 AI 零图表零图片。**
 - **【裁定 · MyPhone 余件不缝清单】chat / settings / contacts / lofter / diary / worldbook / accounting / music / theater / tarot / punchcard / weather / memo 撞仓内权威不缝；pet / food / fridge / datejournal / octopus / doomsday / isekai / xiuxian / campus / lovenews / infinite / story / wedding / teaparty / visa / qa / workreport / plan / outfit 为 IndexedDB + DOM + AI 会话宿主演出面不缝。**

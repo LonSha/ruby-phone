@@ -1,6 +1,18 @@
 {
-  "latest": "3.51.0",
+  "latest": "3.52.0",
   "versions": {
+    "3.52.0": {
+      "version": "3.52.0",
+      "date": "2026-10-02",
+      "items": [
+        "【定位 · 素材缝合路线图第 3 层第十六件】本版把 Kawaii 主题包总结引擎的格式归一与游标一族（05 base.js 2869 行，非网络面）缝进本仓：apps/summdesk/（总结案头）四层齐备。源是「发请求的那个人」（fetch 双 provider 生成总结），本件是案头：总结文本由用户从任何对话端贴回来，本件只做解析归一与游标读数。",
+        "【缝什么 · 解析面】总结文本解析逐支对齐：标题六形标记（【标题】/标题:/标题：/加粗标题/# 标题/裸标题，最长优先防截断）与正文四形；有标题无正文标记时剥离标题行取剩余；无标题时首非空行截 15 字加省略号；全空回退「记忆碎片」；引号剥离；标题组装=标题-条数范围-日期（2026/10/2 形）。各形态落到哪一格逐条报 notes（源静默回退）。",
+        "【缝什么 · 游标面】双通道自动总结游标（普通/vector 与真向量两套独立）：初始位=chunk×间隔（源 vectorLastIndex 推算）、超长收口到历史长度、攒够一批推进一批（起点/终点/范围条三格）、失败回滚到批次起点并停本轮（源 catch 分支同款）。游标只算不拉：源攒够批后 fetch 生成，本件零网络。",
+        "【四块不缝】① 不发请求不拼提示词（源 generateVectorSummary 拼 systemPrompt 走 fetch 双 provider，含安全审查结界抛错面）；② 不出图（源 compressImage canvas 压缩与 GIF 保形）；③ 不做备份导入导出（源 createFullBackupData / importBackupData / validateDataIntegrity）；④ 不读宿主界面元素（源满篇 getElementById）。",
+        "【接线 · 六处落点齐备】① config/apps.js 注册（id summdesk 与名「总结案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 前缀 ^sm_；③ scripts/keys-audit.mjs 登记 sm_memories 与 sm_cursors（scope 为 chat）；④ index.js 懒加载分支 + 挂载 + REBIND 表；⑤ phone.css 本版段与 summdesk.css 逐字同源；⑥ tests/system-v255.test.mjs dirMap 补一项。",
+        "【会话隔离 · 裁定 · 交棒】两条会话键随会话隔离：源把记忆册挂宿主 chat 大对象（换角色一起串味），换会话两格全量重取。裁定：kawaii 其余片（06 ui 渲染 / 07 settings 宿主设置 / 08 sandbox 四路 AI 生成 / 01~04 纯样式壳 / sw.js）不缝；批次C收干；剩余批次 D~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。"
+      ]
+    },
     "3.51.0": {
       "version": "3.51.0",
       "date": "2026-10-02",
