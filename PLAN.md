@@ -130,3 +130,40 @@
 5. **W1 / W2 / X1** 拓宽项按兴趣选切，moyunphone 储备是现成抓手。
 
 > 维护规则：条目落地后，在条目末标注「已交付 v3.20.x」并附证据；不删历史条目，保持追加式。
+
+---
+
+# 2026-10-03 推进计划（v3.54.0 基线 · 双仓协同）
+
+> 本节为当前执行计划。用户指令：「把计划存入远端和记忆库，然后开始推进，在做完全部内容前，别跑全量」。
+> 执行铁律：本节全部落地前**不跑全量**（`npm test` 全量 / `npm run check` 全链），只跑单门 / 单套件。
+> 基线真读数：387 js / 289470 行 / **80 个 App** / `index.js` **873710 字节**；门禁 2867/2867 · 0 fail，十一道门全绿（v3.54.0 刚清零 58 项历史遗留）。
+> 素材路线图第 3 层十八件已全部缝完（v3.25~v3.54）。本仓下一阶段杠杆不在「再缝源」，在**已有 80 件的互联、瘦身、消费点深化**。
+
+## 优化提升
+
+- **A1 · index.js 巨兽瘦身【最大杠杆】**：移植 lonsha 四刀范式（取库口单例 + 常量空实现退路按方法名对账 + 统一构造点）。
+  先剥 **REBIND/lifecycle 注册表与公告块**（纯数据、爆炸半径最小），再剥 App 挂载分支。
+  每刀必带「同名函数抄哪一份」真行为断言（lonsha v3.259 第四刀 `parseStoryDateLoose` 双份静默回归教训）；
+  剥出模块进 `syntax-check` / `import-resolve` 扫描面，index.js 字节数落 `tests/audit` 基线对账。
+- **A2 · 80 App 消费点闭环审计**：建「App × 消费面」矩阵（prompt 注入 / 全局搜索 17 源 / 通知落账 / 微信链路 `_injectApps` / 诊断中心 / 织光机），
+  逐格标「已消费 / 不适用 / 缺口」；缺口登记台账双向闭合（有理由写明 / 无理由报红）。矩阵落 `config/` 只读真源 + 判据守「新缝 App 必须登记矩阵行」。
+- **A3 · R-O3 真宿主实机验证**：`docs/runtime-verification-boundary.md` 里「归 R-O3」条目做成清单，按「可在真宿主单次会话内验证」分组排批次，逐批勾台账记「已实机验证 + 版本 + 现象」。
+- **A4 · 门禁成本与判据卫生**：①公告同源判据「全量相等 → 当版前缀包含」修法固化为判据设计规范落 `CONTEXT.md`；②四份活基线（lifecycle / schedule_conflict / branch_play / long_chat）加漂移超阈值自检。
+
+## 拓宽·拓展·拓深
+
+- **B1 · 80 App 互联层【结构价值最高】**：①跨 App 资金只读聚合面（traveldesk / shop / piggy / wallet，对标 lonsha `evidence-workbench` 九账对账面）；②health × annidate × calendar × periodmath 周期联动（排卵日 → 日历事件 → 纪念日提醒自动串联）；③记忆族聚合（memtable / summdesk / cotdesk / recall / timeweaver × lonsha 桥对账卡）。每抓手 = 只读聚合面 + 五态归因 + 真消费点，不新造写路径。
+- **B2 · 素材路线图第 3 层 / 机制级收尾裁定**：批次 G 剩余件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）逐件三问裁定（真缺口还是噪声 / 源逻辑能否剥出 / 接线成本 ≤ 收益）。缝的按「四层齐备 + 六处接线 + 负控制」范式；**不缝的留档 `ITERATION_LOG` 防下轮重复侦察**。
+- **B3 · NovelAI v4 多角色生图 + 角色一致性**：`image-generation-manager` 增多角色模式 + 一致性锚点（复用 `honey-avatar-selection` 角色选定），走 `nai-queue-worker` 排队。排有真机 / 生图需求窗口。
+- **B4 · 宿主性能守护 + 上下文总结**：`perf_baseline.json` / `perf_probe.mjs` 加常驻性能守护（帧率 / 长任务）；`context-compose` / `resume-brief` 对齐 moyunphone 总结策略。与 A3 互补（A3 验正确性，本项护性能）。
+
+## 协同主线（与 lonsha-memory-plugin 双仓拧一股）
+
+1. **双仓瘦身对齐**：本仓 A1 与 lonsha A1 同用四刀范式（lonsha 已验证成熟，本仓直接复用）。
+2. **判据卫生互鉴**：本仓 v3.54.0「判据交棒改写 + 活基线零手抄刷新」经验回喂 lonsha A2；lonsha 三形态假绿自检 H5/H6 回喂本仓。
+3. **跨仓桥消费深化**：本仓 B1 互联层聚合事实，经 lonsha B3 反向面上桥进引擎账本——「手机从孤岛陈列升级为引擎数据前端」。
+
+## 起手两件（成本最低、读数回报最快）
+
+① **A2**（80 App 消费点矩阵，纯只读零风险，立刻产出对账读数）；② lonsha A1 续刀（按磁盘重算候选后剥下一刀）。
