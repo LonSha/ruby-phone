@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.54.0';
+const ST_PHONE_VERSION = '3.55.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -234,6 +234,18 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-03",
     items: [
+        "【定位】本版做计划 A2：建「App × 平台级消费面」矩阵（只读零风险）。第 1~3 层共缝入三十余件 App，每件都做到了四层齐备 + 六处接线 + 判据带负控制，但「这些 App 有没有被平台级六面覆盖」全仓没有一处能回答（要么逐文件读注释、注释不随对面漂移，要么人肉 review）。新增 config/app-consumption-matrix.js（六面口径 + 81 行矩阵 + 五条不适用台账）。",
+        "【六面口径】F1 生成侧注入（真源：App 自有文件里出现 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子）/ F2 全局搜索（global-search-engine 源表 appId）/ F3 系统通知（config/system-notifications.js 映射表）/ F4 微信链路（chat-view.js 的 _injectApps 表）/ F5 上游读数（14 个上游契约面之一）/ F6 生命周期（index.js 的 REBIND 表）。真读数：28 / 27 / 14 / 10 / 12 / 65（共 81 件 App）。",
+        "【口径纪律】本模块只陈列事实、不做取数：六个布尔值全部由判据套件从磁盘真源独立复算并与本表双向对账（同源自述必然恒绿；声明与事实分开存放，两者不一致时才有判别力）。false 格不逐格写理由（逐格写 4xx 条必然退化成放行条），取收口式：只有「六面全无」的 5 件（mofo / games / settings / mood / search）进不适用台账并逐条写明理由，该台账与磁盘双向对账。",
+        "【拓展】诊断中心新增「App 消费面矩阵」卡片（位置：跨仓功能登记之后、检查点内容级对照之前）：逐面命中数 + 逐 App 命中面清单 + 不适用台账理由全上墙；一句话总述由内核给出，视图只排版（不自算第二份）。appFaces 面在**所有**路径的返回包上地在（十几套历史判据断言 collectDiagnose 结构恒定，新增面必须全路径在场）。",
+        "【本版自己抓到的缺陷之一 · 目录 ≠ App】首跑复算即抓到：apps/memory/ 一个目录承载两件 App（memory-app.js / graph-app.js），按目录取数会让 graph 继承 memory 的读数 —— 首版将 graph 误报为命中注入 / 搜索 / 上游三面。修法：复算一律按「该 App 自有文件集」取数（入口文件 + 同名前缀文件），并在判据里把「目录取」作为可分辨性反例钉住（若两种读法结果一样，说明这条口径根本没被验证）。",
+        "【本版自己抓到的缺陷之二 · 判据自身的假绿】破坏表首跑即报红 D8（「视图卡片被拿掉」未被观测到）：原判据只看「_appFacesHtml(pkg) 字符串在场」，而方法签名也包含同一串 —— 卡片被删后签名仍在，判据照样绿。修法：改认「调用点」形态（this._appFacesHtml(pkg)）—— 「定义过」与「被调起」是两件事，这正是判据该抳的形态。",
+        "【判据套件】本版对旧判据无交棒改写（新剢判据全部新增；旧套件只改了一条形态锚：「引用一个标识符」改为「引用调用点」，属下限形改写）。新增 tests/system-v3550.test.mjs（14 例）：A 面逐列复算（逐行、逐面两重对账）/ B 面 NA 双向对账 / F 面诊断接线与键面恒定 / G 面判据工具自证（下限锚 + 口径可分辨）/ V 面版本下限锚 / D 面真源码定点破坏 8 条（破坏只落副本树，锚点必须恰中 1 次）。",
+        "【门禁】死导出门当场复跑得：扫描 413 文件 / 2387 个导出声明，新模块五个导出全部被诊断中心真消费（死导出门明确「测试不算消费」，故矩阵导出面必须有产品端消费点）；诊断相关十余套件单跑 391 例全绿。",
+        "【边界（诚实记账）】六面复算是「文本形态」口径（不解析 AST、不追动态拼名）；本表证明的是「消费点在场」，不证明「真机上那处消费真跑对了」（归 R-O3 真宿主实机验证）。",
+        "【文档记账】PLAN.md 现状基线由 v3.28.0 对齐真读数（v3.55.0：80 个 App / index.js 体量 / 门禁读数），A2 条目标注「已交付 v3.55.0」。",
+        "【运行时验证边界】本版能保证的是「消费点在场」（六面真源复算与磁盘逐格一致）；不能保证真机上那处消费真跑对了（需真宿主实机验证）—— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，需在真机复现后再修。",
+        "【版本升至 3.55.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
         "【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
         "【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
         "【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
@@ -242,7 +254,6 @@ const ST_PHONE_CURRENT_UPDATE = {
         "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
         "【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）：三类根因 —— ① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。这类形态的共性是**看起来没坏但显示不对**：判据与门禁不真跑全量就永远不会响（**运行时验证边界**——本层判据只守形状与接线，**不能保证**真机排版/网络/宿主存储迁移这类 R-O3 项，遇到显示不对需真机复现后再修），本版能保证的只有「响了之后交付物与判据都如实归位」。",
         "【版本升至 3.54.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐（含 head 补抬：3.48.0 历史漏改）。",
-
         "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
         "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
         "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",

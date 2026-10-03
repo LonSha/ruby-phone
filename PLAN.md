@@ -8,11 +8,12 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | v3.28.0（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十一道门全过**，**1699 个 tests / 0 fail** | `package.json` scripts.check |
-| 体量 | **292 个 .js / 241810 行**：apps 220 文件（51 个 App 目录）、config 52 文件 | `find . -name '*.js' -not -path './node_modules/*'` / `wc -l` |
+| 版本 | v3.55.0（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十一道门全过**，**2867 个 tests / 0 fail**（v3.54.0 实测；v3.55.0 本轮新增 v3550 套件 14 例） | `package.json` scripts.check |
+| 体量 | **388 个 .js / 289739 行**：apps 315 文件（**80 个 App 目录**）、config 53 文件、tests 199 套件；`index.js` **877871 字节 / 14127 行** | `find . -name '*.js'` / `wc -l` / `wc -c` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
-| 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0；此前只是「落盘未消费」） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
+| 平台消费面 | **80 件 App × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 65；六面全无 5 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
+| 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
 
 ---
 
@@ -148,6 +149,8 @@
   剥出模块进 `syntax-check` / `import-resolve` 扫描面，index.js 字节数落 `tests/audit` 基线对账。
 - **A2 · 80 App 消费点闭环审计**：建「App × 消费面」矩阵（prompt 注入 / 全局搜索 17 源 / 通知落账 / 微信链路 `_injectApps` / 诊断中心 / 织光机），
   逐格标「已消费 / 不适用 / 缺口」；缺口登记台账双向闭合（有理由写明 / 无理由报红）。矩阵落 `config/` 只读真源 + 判据守「新缝 App 必须登记矩阵行」。
+
+  **已交付 v3.55.0**：`config/app-consumption-matrix.js`（六面口径 + 81 行矩阵 + 五条不适用台账）+ 诊断中心「App 消费面矩阵」卡片 + `tests/system-v3550.test.mjs`（逐列复算 / NA 双向对账 / 判据工具自证 / 8 条破坏表）；真读数 28/27/14/10/12/65，六面全无 5 件入台账。
 - **A3 · R-O3 真宿主实机验证**：`docs/runtime-verification-boundary.md` 里「归 R-O3」条目做成清单，按「可在真宿主单次会话内验证」分组排批次，逐批勾台账记「已实机验证 + 版本 + 现象」。
 - **A4 · 门禁成本与判据卫生**：①公告同源判据「全量相等 → 当版前缀包含」修法固化为判据设计规范落 `CONTEXT.md`；②四份活基线（lifecycle / schedule_conflict / branch_play / long_chat）加漂移超阈值自检。
 

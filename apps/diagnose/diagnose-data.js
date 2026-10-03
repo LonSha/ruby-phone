@@ -103,6 +103,11 @@ import {
  *     不新增任何取数点 —— 本仓治理过多轮的「同一读数的两个来源必然漂移」。
  *     判定组合在 config/crossrepo-registry.js（该模块**零 import**，结构上不可能自持桥名）。 */
 import { registryFace, registryLine, CROSSREPO_FEATURES } from '../../config/crossrepo-registry.js';
+/* [v3.55.0 · 计划 A2] App 消费面矩阵面（80 件 App × 六条平台级消费面）。
+ *   接在诊断中心的理由与投影面 / 注入面 / 知识面 / 跨仓登记面同一族：本仓一切「平台级覆盖读数」的可见出口就是这里。
+ *   ★ 本内核只**陈列**矩阵模块的读数，不在这里复算第二份：六个布尔值的真源复算在判据套件里
+ *     （声明与事实分开存放，两者不一致时才有判别力）；内核再算一份就变成同源自述、必然恒绿。 */
+import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-consumption-matrix.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -478,7 +483,43 @@ export function collectDiagnose(win, storage) {
         } catch (_e) { return null; }
     })();
     const repoFace = safe(() => registryFace(repoProbe), null);
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace };
+    /* ── [v3.55.0 · 计划 A2] App 消费面矩阵面 ──
+     *   修前实测：第 1~3 层共缝入三十余件 App，每件都做到了「四层齐备 + 六处接线 + 判据带负控制」，
+     *   但缝完之后「这些 App 有没有被平台级六面覆盖」全仓没有一处能回答 ——
+     *   要么逐文件读注释（注释不随对面漂移），要么人肉 review。而本仓最贵的缺陷形态正是这一类：
+     *   不报错、不崩溃、只是**默默不生效**（App 打不开全局搜索、发不出通知、换会话后数据落旧会话）。
+     *   取不到即 null（模块缺失 / 抛错 ⇒ 如实报降级，不伪造一张全空的表）。 */
+    const appFaces = (() => {
+        try {
+            const total = MATRIX.length;
+            const cons = faceCounts(MATRIX);
+            const faces = FACE_KEYS.map((k) => ({
+                key: k,
+                label: String((FACE_META[k] && FACE_META[k].label) || k),
+                count: Number(cons[k] || 0)
+            }));
+            const rows = MATRIX.map((r) => {
+                const on = FACE_KEYS.filter((k) => !!(r.faces && r.faces[k] === true));
+                return { appId: String(r.appId), name: String(r.name), count: on.length, faces: on };
+            });
+            const na = Object.keys(NA).map((id) => {
+                const row = MATRIX.find((r) => r.appId === id);
+                return { appId: String(id), name: row ? String(row.name) : String(id), reason: String(NA[id] || '') };
+            });
+            const zero = rows.filter((r) => r.count === 0).length;
+            return {
+                total: total,
+                faces: faces,
+                rows: rows,
+                na: na,
+                zeroCount: zero,
+                line: '消费面矩阵：' + String(total) + ' 件 App × ' + String(FACE_KEYS.length)
+                    + ' 条平台级消费面（逐面命中数见下）；六面全无 ' + String(zero)
+                    + ' 件已入「不适用」台账（逐条附理由）。'
+            };
+        } catch (_e) { return null; }
+    })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces };
 }
 /** [v3.20.2] 上游检查点面的一行读数（**唯一实现**在真源 `config/checkpoint-content-contract.js`）。
  *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */

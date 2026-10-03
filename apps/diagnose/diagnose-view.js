@@ -667,6 +667,45 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v3.55.0 · 计划 A2] App 消费面矩阵卡：把「哪些 App 接上了哪些平台面」摆出来。
+     *   本方法**只排版**：逐面命中数、逐行命中面、台账理由全部来自内核读数（一句话总述也是内核给的）。
+     *   视图自己数一遍条数就是同一口径的第二份实现 —— 本仓治理过多轮的形态。 */
+    _appFacesHtml(pkg) {
+        const face = (pkg && pkg.appFaces) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>消费面矩阵读数读取失败（已降级）—— '
+                + '这只说明本页取不到矩阵读数，**不代表**这些 App 就全面没接上。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(face.line) + '</div>';
+        const faces = Array.isArray(face.faces) ? face.faces : [];
+        if (faces.length) {
+            html += '<div class=' + Q + 'dg-chips' + Q + '>' + faces.map((f) =>
+                this._chip(f.label + ' ' + String(f.count), f.count > 0 ? 'ok' : 'muted')).join('') + '</div>';
+        }
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        if (!rows.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>矩阵为空：本版没有可列的 App（无表可判，不等于全部适配）。</div>';
+            return html;
+        }
+        html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.map((r) => {
+            const on = Array.isArray(r.faces) ? r.faces : [];
+            return '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.name) + '</code>'
+                + this._chip(r.count + '/' + String(faces.length), r.count > 0 ? 'ok' : 'muted')
+                + (on.length ? this._chip(on.join(' · '), 'muted')
+                    : this._chip('六面全无（见下台账）', 'warn'))
+                + '</div>';
+        }).join('') + '</div>';
+        const na = Array.isArray(face.na) ? face.na : [];
+        if (na.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '><b>「不适用」台账</b>（只有六面全无的 App 才需理由，且与磁盘双向对账）：</div>';
+            html += na.map((x) => '<div class=' + Q + 'dg-sub' + Q + '><b>' + escapeHtml(x.name) + '</b>：' + escapeHtml(x.reason) + '</div>').join('');
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>本卡只陈列事实，不做取数</b> —— 六个布尔值的真源复算在判据套件里，'
+            + '与本表双向对账（同源自述必然恒绿）。「false」格不逐格写理由：只有「六面全无」才是真需要说明的那一类，'
+            + '其余一面命中即说明它确实在被消费。</div>';
+        return html;
+    }
+
     resetSilence() {
         try { resetSilenceLedger(typeof window !== 'undefined' ? window : null); } catch (_e) { /* 不抛 */ }
     }
@@ -720,6 +759,10 @@ export class DiagnoseView {
          *   现在处于哪一格」），而不是「这一次动作的范围」—— 后者与存档健康同族，
          *   都属「动手前先看清」，登记面答的不是这个问题。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨仓功能登记（消费了上游哪些面）</h3>' + this._crossRepoHtml(pkg) + '</section>');
+        /* [v3.55.0 · 计划 A2] App 消费面矩阵卡放在「跨仓功能登记」之后、
+         *   「检查点内容级对照」之前：两者同族（都答「本仓在消费谁产出的哪一面」），
+         *   但登记面答的是**向外看**的上游契约，本卡答的是**向内看**的平台级覆盖 —— 先看外部哪些面在，再看自己家的 App 有没有接上。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>App 消费面矩阵（哪些 App 接上了哪些平台面）</h3>' + this._appFacesHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，

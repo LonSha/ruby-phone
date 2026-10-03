@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 367,
+    "files_scanned": 368,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
@@ -884,6 +884,30 @@
     "v3.54.0": {
       "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
       "why": "files_scanned 334→367、chat_data_patterns 252→279：v3.49~v3.54 新增 App 与判据套件使扫描文件数与会话隔离正则增长。首次全量 npm run test 暴露基线陈旧。"
+    },
+    "v3.55.0": {
+      "what": "枚举面 367 -> 368（同上）",
+      "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 回滚覆盖面一格未动（rollback_points 41 / rollback_files 4 / rollback_entry_defs 12 逐项不变）。",
+      "readings": {
+        "files_scanned": 368,
+        "rollback_points": 41,
+        "rollback_files": 4,
+        "rollback_entry_defs": 12,
+        "upstream_global_read_sites": 8,
+        "chat_data_patterns": 279,
+        "namespace_store_sites": 5,
+        "checkpoint_face_hits": 1,
+        "preview_face_hits": 42,
+        "branch_face_hits": 0,
+        "upstream_modules_scanned": 65,
+        "upstream_branch_domain_modules": 18,
+        "upstream_checkpoint_named": 0,
+        "upstream_checkpoint_named_persistent": 0,
+        "upstream_branch_domain_preview_hits": 0,
+        "upstream_branch_guard_loadable": 1,
+        "upstream_ledger_replay_loadable": 1,
+        "upstream_bridge_snapshot_branch_faces": 0
+      }
     }
   }
 }
