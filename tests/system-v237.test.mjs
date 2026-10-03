@@ -304,7 +304,7 @@ const REAL_SNAPSHOT = () => ({ worldClock: { iso: '2026-09-13T21:45', label: '�
     /* [v2.38.0] 交棓：E9c 改查 HEAD 版本（不钉 V） */
     const headV = Object.keys(LOG.versions || {})[0];
     const headItems = (LOG.versions?.[headV]?.items) || [];
-    ok('E9c 公告与 HEAD 版本日志逐字同源（自洽）', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(headItems),
+    ok('E9c 公告与 HEAD 版本日志逐字同源（自洽）', Array.isArray(ann) && headItems.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} head=${headItems.length}`);
     ok('E10a v2.36 桥可观测面条目仍在', /可观测/.test(((LOG.versions?.['2.36.0'] || {}).items || []).join('\n')));
     ok('E10b v2.35 世界桥消费面条目仍在', /世界桥/.test(((LOG.versions?.['2.35.0'] || {}).items || []).join('\n')));

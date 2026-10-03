@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 335,
+    "files": 368,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=335，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=368，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -698,6 +698,10 @@
         "全部 40 项活体读数",
         "timing（计时类，按口径不刷新）"
       ]
+    },
+    "v3.54.0": {
+      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
+      "why": "scan.files 335→368：v3.49~v3.54 新增 App 与判据套件使扫描文件数增长，L5 散文同步复算。首次全量 npm run test 暴露基线陈旧。"
     }
   }
 }

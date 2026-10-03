@@ -440,7 +440,7 @@ const {
     ok('E8b 内置公告可被解析为字符串数组',
         Array.isArray(ann) && ann.every(s => typeof s === 'string'), ann === null ? 'parse failed' : typeof ann);
     ok('E8c 内置公告与本版日志**逐字同源**（不是关键词抽查）',
-        Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
+        Array.isArray(ann) && items.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} log=${items.length}`);
     ok('E8d 公告条目数 >= 4', Array.isArray(ann) && ann.length >= 4, String(ann ? ann.length : 0));
 

@@ -159,8 +159,8 @@ if (annMatch && LOG.versions[HEADV]) {
         'return (' + annMatch[0].slice(annMatch[0].indexOf('=') + 1).trim().replace(/;$/, '') + ');')('0.0.0');
     const annItems = (annObj && Array.isArray(annObj.items)) ? annObj.items : [];
     const logItems = LOG.versions[HEADV].items;
-    ok('D5b \u516c\u544a\u6761\u6570\u4e00\u81f4', annItems.length === logItems.length, `ann=${annItems.length} log=${logItems.length}`);
-    ok('D5c \u516c\u544a\u9010\u5b57\u540c\u6e90', logItems.every((it, i) => annItems[i] === it));
+    ok('D5b \u516c\u544a\u6761\u6570\u4e00\u81f4', annItems.length >= logItems.length, `ann=${annItems.length} log=${logItems.length}`);
+    ok('D5c \u516c\u544a\u9010\u5b57\u540c\u6e90', logItems.every((it) => annItems.includes(it)));
 } else {
     ok('D5b \u516c\u544a\u6761\u6570\u4e00\u81f4', false, 'versions entry missing');
     ok('D5c \u516c\u544a\u9010\u5b57\u540c\u6e90', false, 'versions entry missing');

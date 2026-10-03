@@ -172,7 +172,11 @@ test('C3 items 逐字同源（index.js 与 update-log）', () => {
     .map((l) => JSON.parse(l.replace(/,\s*$/, '')));
   const logItems = log.versions[v].items;
   assert.ok(items.length > 0, 'index.js items 未解析到');
-  assert.deepEqual(logItems.slice(0, items.length), items, 'items 未逐字同源');
+  // [v3.54.0 修复] 公告块为累积式（历版本 items 新在前），update-log 每版仅当版 items：
+  //   原判据 logItems.slice(0, items.length) 方向写反 —— 拿整块 67 条去跟当版 6 条比，
+  //   公告块一旦累积即必然红（历史三版 3.52/3.53/3.54 头部 6 条均与当版逐字一致，纯方向缺陷）。
+  //   真实契约是「update-log 当版 = 公告块头部前缀」，改前缀方向比对（与 D8 公共前缀口径一致）。
+  assert.deepEqual(items.slice(0, logItems.length), logItems, 'items 未逐字同源（update-log 当版应为公告块头部前缀）');
 });
 
 test('C4 v255 条目记录本轮变更（锚定自身版本，不随升版漂移）', () => {

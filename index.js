@@ -180,6 +180,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             （源把存档本体、诊断上下文与迁移进度
                       //             全挂在宿主的大对象上，换角色后三类一起串味，
                       //             而放下一份存档顺手把已出的摘要也清了，源没有这一步）
+    'uterusApp',     // [v3.48.0] 子宫画板：状态原文与动作台账随会话隔离，换会话两格全量重取（补登记：v3.48.0 漏入 REBIND 表，全量回归 lifecycle 首跑暴露）
     'memtableApp',   // [v3.49.0] 结构化记忆案头：有表单字段（贴回的模板 JSON / 更新包 XML / 要求草稿）
                       //             与四项上限，且模板库 / 数据 / 更新包 / 台账
                       //             全是「这段关系的账」—— 换会话必须四格全量重取
@@ -231,7 +232,7 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-12",
+    date: "2026-10-03",
     items: [
         "【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
         "【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
@@ -239,6 +240,9 @@ const ST_PHONE_CURRENT_UPDATE = {
         "【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
         "【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
         "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
+        "【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）：三类根因 —— ① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。这类形态的共性是**看起来没坏但显示不对**：判据与门禁不真跑全量就永远不会响（**运行时验证边界**——本层判据只守形状与接线，**不能保证**真机排版/网络/宿主存储迁移这类 R-O3 项，遇到显示不对需真机复现后再修），本版能保证的只有「响了之后交付物与判据都如实归位」。",
+        "【版本升至 3.54.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐（含 head 补抬：3.48.0 历史漏改）。",
+
         "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
         "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
         "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",

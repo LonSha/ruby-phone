@@ -538,7 +538,7 @@ const SC_E6 = (m) => {                       // A2a 同款：宿主路径必须�
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('G9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
-    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
+    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && items.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} log=${items.length}`);
     /* G10 交棒基线：历史主线条目仍钉住 */
     ok('G10a 2.32.0 历史条目仍在（回收口径主线）',

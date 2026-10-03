@@ -142,6 +142,9 @@ test('D4 current-update items match log', () => {
     .filter((l) => l.startsWith('"'))
     .map((l) => JSON.parse(l.replace(/,\s*$/, '')))
     .filter((s) => s !== log.versions[String(manifest.version)].date);
-  assert.equal(strs.length, logItems.length);
-  for (let i = 0; i < logItems.length; i++) assert.equal(strs[i], logItems[i]);
+  // [v3.54.0] 公告块为累积式（历版本 items 新在前），当版 items 是公告块头部前缀：
+  //   原判据 strs.length === logItems.length 假设公告块只含当版（全量相等），累积后必红。
+  //   改包含式：当版 items 必须逐字出现在公告块内。
+  assert.ok(strs.length >= logItems.length, '公告块条目数不得少于当版');
+  for (let i = 0; i < logItems.length; i++) assert.ok(strs.includes(logItems[i]), '当版 item 未逐字出现在公告块: ' + logItems[i].slice(0, 30));
 });

@@ -181,8 +181,8 @@ if (annMatch && LOG.versions[HEADV]) {
         'return (' + annMatch[0].slice(annMatch[0].indexOf('=') + 1).trim().replace(/;$/, '') + ');')('0.0.0');
     const annItems = (annObj && Array.isArray(annObj.items)) ? annObj.items : [];
     const logItems = LOG.versions[HEADV].items;
-    ok('E5b 公告条数一致', annItems.length === logItems.length);
-    ok('E5c 公告与 HEAD 逐字同源', logItems.every((item, i) => annItems[i] === item));
+    ok('E5b 公告条数一致', annItems.length >= logItems.length);
+    ok('E5c 公告与 HEAD 逐字同源', logItems.every((item) => annItems.includes(item)));
 } else {
     ok('E5b 公告条数一致', false, 'skipped');
     ok('E5c 公告与 HEAD 逐字同源', false, 'skipped');

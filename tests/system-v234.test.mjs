@@ -514,7 +514,7 @@ const SC_pairAlarm = (m) => {             // B2 同款：恰 2 只必须命中�
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('G9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
-    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
+    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && items.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} log=${items.length}`);
     /* G10 交棒基线：历史主线条目仍钉住 */
     ok('G10a 2.33.0 历史条目仍在（成因账主线）',

@@ -10,7 +10,9 @@
         "【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
         "【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
         "【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
-        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。"
+        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
+        "【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）：三类根因 —— ① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。这类形态的共性是**看起来没坏但显示不对**：判据与门禁不真跑全量就永远不会响（**运行时验证边界**——本层判据只守形状与接线，**不能保证**真机排版/网络/宿主存储迁移这类 R-O3 项，遇到显示不对需真机复现后再修），本版能保证的只有「响了之后交付物与判据都如实归位」。",
+        "【版本升至 3.54.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐（含 head 补抬：3.48.0 历史漏改）。"
       ]
     },
     "3.53.0": {
@@ -2798,5 +2800,5 @@
       ]
     }
   },
-  "head": "3.48.0"
+  "head": "3.54.0"
 }

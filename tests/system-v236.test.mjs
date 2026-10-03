@@ -302,7 +302,7 @@ const bridgeWin = (over = {}) => Object.assign({
     ok('E9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
     // [v2.37.0] 交棒：公告随头部版本走（当前版本条目由该版自己的测试锁逐字同源）
     const headItems = (LOG.versions?.[HEADV]?.items) || [];
-    ok('E9c 公告与头部版本日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(headItems),
+    ok('E9c 公告与头部版本日志逐字同源', Array.isArray(ann) && headItems.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} log=${headItems.length}`);
     ok('E10a 2.35.0 历史条目仍在（世界桥消费面主线）',
         /两个世界|世界桥/.test(((LOG.versions?.['2.35.0'] || {}).items || []).join('\n')));

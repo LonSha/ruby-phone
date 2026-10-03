@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 334,
+    "files_scanned": 367,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 8,
-    "chat_data_patterns": 252,
+    "chat_data_patterns": 279,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 1,
     "preview_face_hits": 42,
@@ -880,6 +880,10 @@
         "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
         "chat_data_patterns 的 +6 里有 5 是**注释行**（本版 storage.js 的配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
       ]
+    },
+    "v3.54.0": {
+      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
+      "why": "files_scanned 334→367、chat_data_patterns 252→279：v3.49~v3.54 新增 App 与判据套件使扫描文件数与会话隔离正则增长。首次全量 npm run test 暴露基线陈旧。"
     }
   }
 }

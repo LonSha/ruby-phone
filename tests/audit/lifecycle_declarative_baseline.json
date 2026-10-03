@@ -1,6 +1,6 @@
 {
   "file": "tests/audit/lifecycle_declarative_baseline.json",
-  "note": "P-6「声明式生命周期注册」可行性基线。读数由 tests/audit/lifecycle_declarative_probe.cjs 生成（**读数零手抄**：本文件可由 --json 输出直接落盘，避免转写漂移）。**只量，不改造。**",
+  "note": "P-6「声明式生命周期注册」可行性基线。读数由 tests/audit/lifecycle_declarative_probe.cjs 生成（**读数零手抄**：本文件可由 --json 输出直接落盘，避免转写漂移）。**只量，不改造。**（v3.54.0 复校：按探针 --json 现场零手抄刷新读数，详见 rebuilds.v3.54.0）",
   "measured_at": "v3.6.0",
   "node_version": "v24.18.0",
   "probe": "tests/audit/lifecycle_declarative_probe.cjs",
@@ -859,6 +859,10 @@
         "本面增量**只有注册面**：子宫画板的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的两条会话键（收下的角色状态原文 / 动作台账）都不进本面的槽位账。",
         "真机里「换会话时状态与台账是否两格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
       ]
+    },
+    "v3.54.0": {
+      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针 --json 现场落盘）",
+      "why": "App 类 65→76 / 槽位 78→89 / App 槽位 66→77 / 无参出口 55→66：增量来自 v3.49~v3.54 六个新 App（sullydesk/summdesk/periodmath/annidate/cardtable/traveldesk）+ uterusApp 补登 REBIND 表（v3.48.0 历史遗漏，lifecycle 判据当场报红后补上）。判据与门禁不真跑全量就不会响 —— 本版首次全量 npm run test 暴露此陈旧基线。"
     }
   },
   "caliber": [
@@ -870,10 +874,10 @@
     "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
   ],
   "readings": {
-    "app_classes": 65,
-    "slots": 78,
-    "app_slots": 66,
-    "app_slot_share_pct": 84.6,
+    "app_classes": 76,
+    "slots": 89,
+    "app_slots": 77,
+    "app_slot_share_pct": 86.5,
     "wiring_points": 62,
     "app_exit_points": 50,
     "non_app_points": 12,
@@ -882,7 +886,7 @@
     "points_p1": 19,
     "points_p2": 20,
     "points_p3": 23,
-    "sig_empty": 55,
+    "sig_empty": 66,
     "sig_default": 1,
     "sig_required": 1,
     "sig_none": 8,
@@ -903,6 +907,7 @@
   "semantic_diff_slots": [
     {
       "slot": "calendarApp",
+      "same": false,
       "P1": [
         "exit"
       ],
@@ -919,6 +924,7 @@
     },
     {
       "slot": "gamesApp",
+      "same": false,
       "P1": [
         "exit"
       ],
@@ -927,6 +933,7 @@
     },
     {
       "slot": "mofoApp",
+      "same": false,
       "P1": [
         "exit"
       ],
@@ -941,6 +948,7 @@
     },
     {
       "slot": "musicApp",
+      "same": false,
       "P1": [
         "exit"
       ],
@@ -954,6 +962,7 @@
     },
     {
       "slot": "weiboApp",
+      "same": false,
       "P1": [
         "exit"
       ],
@@ -968,6 +977,7 @@
     },
     {
       "slot": "worldpulseApp",
+      "same": false,
       "P1": [
         "exit"
       ],

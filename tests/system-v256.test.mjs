@@ -125,7 +125,11 @@ test('C3 items 逐字同源（index.js 与 update-log）', () => {
   //   条目跨行时后几条漏比 ⇒ 假绿灯。改为**真解析字符串字面量**，escape 语义由语言保证。
     .map((l) => JSON.parse(l.replace(/,\s*$/, '')));
   assert.ok(items.length > 0, 'index.js items 未解析到');
-  assert.deepEqual(log.versions[v].items.slice(0, items.length), items, 'items 未逐字同源');
+  // [v3.54.0] 公告块为累积式（历版本 items 新在前），当版 items 是公告块头部前缀：
+  //   原判据 log.versions[v].items.slice(0, items.length) 方向写反（拿当版去比块头部）。
+  //   改前缀方向：公告块头部 len(logItems) 条 == 当版 items。
+  const logItems = log.versions[v].items;
+  assert.deepEqual(items.slice(0, logItems.length), logItems, 'items 未逐字同源');
 });
 
 test('C4 本版(2.56.0)条目含本轮变更（锚定自身版本，不随升版漂移）', () => {

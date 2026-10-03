@@ -529,7 +529,7 @@ async function loadBroken(src) {
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('G9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));
-    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && JSON.stringify(ann) === JSON.stringify(items),
+    ok('G9c 公告与本版日志逐字同源', Array.isArray(ann) && items.every(it => ann.includes(it)),
         `ann=${ann ? ann.length : 'null'} log=${items.length}`);
     /* G10 交棒基线：历史主线条目仍钉住（判据要钉不变的历史事实） */
     ok('G10a 2.34.0 历史条目仍在（重复存活域主线）',

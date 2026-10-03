@@ -15,7 +15,8 @@
 - **【缝什么 · 分账面】shared 均摊按人头减份；split 按 splitDetails 明细比例减份（成员不在册则减到 payer 头上并把债务记入外部债务表）；private payer 自负全额。consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。normalizeExpense 拒收 unknown_payer；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。**
 - **【门禁】五道单门全绿：syntax / registry / keys / dead-export / import-resolve。v3490 判据 11/11 未受牵连；traveldesk 冒烟全过（JPY/USD/CNY 折算 / 三型余额 / 家庭归并 / 贪心清算 / 外部债务 / 拒收 unknown_payer / 入账台账清空）。按用户指令全缝完前不跑全量回归。**
 - **【交棒】批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定，全部缝完前不跑全量回归（用户指令已存记忆库）。**
-## 迭代 111 — v3.53.0 素材缝合路线图第 3 层第十七件：SullyOS 治理案头（exportGuard 导出凭据扫描 + CharacterGroupFilter 分组过滤 + contentFavorites 指纹面，三小件合并）（字段名十三词干与值面 sk-·Bearer·JWT·长密钥兜底 / 白名单十九字段与 dataURL 剥离与打码首4尾3 / 三态判定 safe·contains-secret·unexpected-secret / 分组三档与未分组兜底与计数联动 / FNV 双哈希 36 进制指纹与引用幂等键三形去重）+ 接线侧自纠（index 公告块跨版本衔接缺逗号又犯，定位到引号计数法）+ 两条会话键会话隔离 + 六处接线 + 抬版收干)
+- **【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）。三类根因：① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据——真实契约一直是「当版 items = 公告块头部前缀」）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版常年漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）、uterusApp 自 v3.48.0 漏入 REBIND 表（lifecycle 判据当场报红后补登）。四份活基线（lifecycle_declarative / schedule_conflict / branch_play / long_chat）按探针现场**零手抄**刷新（新增 11 个 App 类使读数增长）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。最终全量 `npm run test` **2867 通过 · 0 失败**，`npm run check` 十一道门全绿。**
+## 迭代 111 — v3.53.0 素材缝合路线图第 3 层第十七件：SullyOS 治理案头（exportGuard 导出凭据扫描 + CharacterGroupFilter 分组过滤 + contentFavorites 指纹面，三小件合并）（字段名十三词干与值面 sk-·Bearer·JWT·长密钥兜底 / 白名单十九字段与 dataURL 剥离与打码首4尾3 / 三态判定 safe·contains-secret·unexpected-secret / 分组三档与未分组兜底与计数联动 / FNV 双哈希 36 进制指纹与引用幂等键三形去重）+ 接线侧自纠（index 公告块跨版本衔接缺逗号又犯，定位到引号计数法）+ 两条会话键会话隔离 + 六处接线 + 抬版收干）
 - **【定位】源们是 React 组件与宿主存储的胶水面（vendor 依赖 / window.confirm / getAsset-saveAsset），本件零依赖零 confirm 零音频：只做「这份导出安不安全、这批条目怎么分组、这个收藏的指纹是什么」的判定与读数。不缝：ChatHistoryCleanupModal / shareCardCanvas / voicePlayback / ttsRouter / avatarModelStore / SARSpeechSwitch / bubbleAppearance / useChatAutoReply 等 DOM 演出面。**
 - **【接线侧自纠】index 公告块跨版本衔接缺逗号又犯（v3490 / v3510 / v3520 / v3530 四连），本次定位到可靠修法：注入后逐行数引号（每行恰 2 个），行尾形态必须是「闭引号+成员逗号」或「闭引号」（末项）；引号数不为 2 的行即为坏行。**
 - **【门禁】五道单门全绿：syntax / registry / keys / dead-export 零新增（EG_VALUE_SIGNS 与 CF_KINDS 两个未消费常量删除）/ import-resolve。v3490 判据 11/11 未受牵连；sullydesk 冒烟全过（凭据字段名与 Bearer 检出 / 安全件判 safe / 打码首4尾3 / 指纹稳定与区分 / 分组三档与未分组计数）。按用户指令全缝完前不跑全量回归。**
@@ -5217,7 +5218,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.48.0`（五源同源）
+- **当前版本**：`3.54.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/
