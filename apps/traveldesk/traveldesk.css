@@ -1,0 +1,12 @@
+/* traveldesk.css — [v3.54.0] 旅行记账案头 · 样式层 */
+.tv-root { all: initial; }
+.tv-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.tv-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.tv-sec h3 { font-size: 12px; margin: 0 0 6px; color: #2a5a6a; }
+.tv-input { width: 100%; min-height: 72px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
+.tv-inline { width: 22%; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; margin: 0 4px 4px 0; }
+.tv-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
+.tv-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+.tv-ok { color: #3a6a4a; }
+.tv-bad { color: #a04a4a; font-weight: 600; }
+.tv-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }

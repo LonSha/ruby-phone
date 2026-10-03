@@ -1199,6 +1199,18 @@ export const APPS = [
         badge: 0,
         data: {}
     },
+    {
+        // [v3.54.0] 旅行记账案头（traveldesk）：缝合自 Perigee OS travel.js 的分账清算一族
+        //   （toCNY 汇率折算 / 三型费用 shared·split·private / 余额计算 / 家庭归并 / 贪心内部清算双指针 / 外部债务表）。
+        //   不缝：DOM 渲染 / confirm 弹层 / 宿主存储（AppState.data.travelData）/ 汇率源拉取（fetch）。
+        //   偏离：账本经 JSON 贴回入账，不入表单逐笔录；上限 500 条 / 20 人；|差额|≤0.01 清零。
+        id: 'traveldesk',
+        name: '旅行记账案头',
+        icon: '🧳',
+        color: '#2a5a6a',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

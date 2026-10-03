@@ -263,6 +263,9 @@ export class PhoneStorage {
             // [v3.53.0] SullyOS 治理案头（sd2_audit 最近审计 / sd2_ledger 台账）：随会话隔离，
             //   源们的审计与收藏索引挂宿主存储（getAsset/saveAsset），换角色后原样留着。
             /^sd2_/,
+            // [v3.54.0] 旅行记账案头（tv_book 账本 / tv_ledger 台账）：随会话隔离，
+            //   源挂在 AppState.data.travelData（换角色后一起串味），本件经 JSON 贴回入账。
+            /^tv_/,
             /^musicdesk_/,
             /^needsim_/,
             /^kettle_/,

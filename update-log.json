@@ -1,6 +1,18 @@
 {
-  "latest": "3.53.0",
+  "latest": "3.54.0",
   "versions": {
+    "3.54.0": {
+      "version": "3.54.0",
+      "date": "2026-10-03",
+      "items": [
+        "【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
+        "【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
+        "【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
+        "【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
+        "【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
+        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。"
+      ]
+    },
     "3.53.0": {
       "version": "3.53.0",
       "date": "2026-10-02",

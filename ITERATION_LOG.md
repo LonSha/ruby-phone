@@ -10,6 +10,11 @@
 
 ---
 
+## 迭代 112 — v3.54.0 素材缝合路线图第 3 层第十八件：旅行记账案头（Perigee OS travel.js 564 行分账清算一族）（toCNY 汇率折算 / 三型费用 shared·split·private / 余额计算 balancesOf / 家庭归并 consolidateFamilies / 贪心内部清算 internalSettlement 双指针配对 / 外部债务表 externalSettlement）+ 入账拒收 unknown_payer 与 500 条 / 20 人 / 120 台账上限 + 两条会话键 ^tv_ 会话隔离 + 六处接线 + 抬版收干)
+- **【定位】源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络：只做「这份账怎么摊、谁该给谁多少」的判定与读数。不缝：DOM 演出面 / confirm 弹层 / 宿主存储（AppState.data.travelData 直挂角色档案，换角色串味）/ 汇率源拉取（fetch）。**
+- **【缝什么 · 分账面】shared 均摊按人头减份；split 按 splitDetails 明细比例减份（成员不在册则减到 payer 头上并把债务记入外部债务表）；private payer 自负全额。consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。normalizeExpense 拒收 unknown_payer；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。**
+- **【门禁】五道单门全绿：syntax / registry / keys / dead-export / import-resolve。v3490 判据 11/11 未受牵连；traveldesk 冒烟全过（JPY/USD/CNY 折算 / 三型余额 / 家庭归并 / 贪心清算 / 外部债务 / 拒收 unknown_payer / 入账台账清空）。按用户指令全缝完前不跑全量回归。**
+- **【交棒】批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定，全部缝完前不跑全量回归（用户指令已存记忆库）。**
 ## 迭代 111 — v3.53.0 素材缝合路线图第 3 层第十七件：SullyOS 治理案头（exportGuard 导出凭据扫描 + CharacterGroupFilter 分组过滤 + contentFavorites 指纹面，三小件合并）（字段名十三词干与值面 sk-·Bearer·JWT·长密钥兜底 / 白名单十九字段与 dataURL 剥离与打码首4尾3 / 三态判定 safe·contains-secret·unexpected-secret / 分组三档与未分组兜底与计数联动 / FNV 双哈希 36 进制指纹与引用幂等键三形去重）+ 接线侧自纠（index 公告块跨版本衔接缺逗号又犯，定位到引号计数法）+ 两条会话键会话隔离 + 六处接线 + 抬版收干)
 - **【定位】源们是 React 组件与宿主存储的胶水面（vendor 依赖 / window.confirm / getAsset-saveAsset），本件零依赖零 confirm 零音频：只做「这份导出安不安全、这批条目怎么分组、这个收藏的指纹是什么」的判定与读数。不缝：ChatHistoryCleanupModal / shareCardCanvas / voicePlayback / ttsRouter / avatarModelStore / SARSpeechSwitch / bubbleAppearance / useChatAutoReply 等 DOM 演出面。**
 - **【接线侧自纠】index 公告块跨版本衔接缺逗号又犯（v3490 / v3510 / v3520 / v3530 四连），本次定位到可靠修法：注入后逐行数引号（每行恰 2 个），行尾形态必须是「闭引号+成员逗号」或「闭引号」（末项）；引号数不为 2 的行即为坏行。**

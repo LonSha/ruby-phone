@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.53.0';
+const ST_PHONE_VERSION = '3.54.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -195,6 +195,7 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'cardtableApp',   // [v3.51.0] 牌桌案头：牌组与已选与台账随会话隔离，换会话三格全量重取
     'summdeskApp',     // [v3.52.0] 总结案头：记忆册与双游标随会话隔离，换会话两格全量重取
     'sullydeskApp',    // [v3.53.0] SullyOS 治理案头：审计读数与台账随会话隔离，换会话两格全量重取
+    'traveldeskApp',   // [v3.54.0] 旅行记账案头：账本与台账随会话隔离，换会话两格全量重取
 
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
@@ -232,6 +233,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-12",
     items: [
+        "【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
+        "【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
+        "【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
+        "【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
+        "【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
+        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
         "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
         "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
         "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",
@@ -11115,6 +11122,25 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .catch(err => {
                             console.error('❌ 加载SullyOS治理案头App失败:', err);
                             phoneShell?.showNotification('错误', 'SullyOS治理案头App加载失败', '❌');
+                        });
+                } else if (appId === 'traveldesk') {
+                    // [v3.54.0] 旅行记账案头：缝合自 Perigee OS travel.js 的分账清算一族。
+                    //   取六块机制：① 汇率折算 toCNY；② 三型费用 shared·split·private；
+                    //   ③ 余额计算 balancesOf；④ 家庭归并 consolidateFamilies；
+                    //   ⑤ 贪心内部清算 internalSettlement 双指针配对（差额≤0.01 清零）；
+                    //   ⑥ 外部债务表 externalSettlement。
+                    //   DOM 渲染与 confirm 弹层与宿主存储（AppState.data.travelData）与汇率源拉取不缝。
+                    //   写盘两条键走 ^tv_ 前缀随会话隔离。★ 零网络、零 AI、零出图。
+                    bootTiming.instrumentImport(import('./apps/traveldesk/traveldesk-app.js'), './apps/traveldesk/traveldesk-app.js')
+                        .then(module => {
+                            if (!window.VirtualPhone.traveldeskApp) {
+                                window.VirtualPhone.traveldeskApp = new module.TraveldeskApp(phoneShell, storage);
+                            }
+                            window.VirtualPhone.traveldeskApp.render();
+                        })
+                        .catch(err => {
+                            console.error('❌ 加载旅行记账案头App失败:', err);
+                            phoneShell?.showNotification('错误', '旅行记账案头App加载失败', '❌');
                         });
                 } else if (appId === 'needsim') {
                     // [v3.41.0] 需求沙盘：把模型给的那份数据收拾好（缝合自 SullyOS·小鼠机

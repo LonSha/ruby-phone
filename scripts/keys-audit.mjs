@@ -340,6 +340,8 @@ const KEY_REGISTRY = [
   { key: 'sm_cursors', scope: 'chat', note: '[v3.52.0] 总结案头双通道游标（普通与真向量）' },
   { key: 'sd2_audit', scope: 'chat', note: '[v3.53.0] SullyOS 治理案头最近审计读数（level/hits）' },
   { key: 'sd2_ledger', scope: 'chat', note: '[v3.53.0] SullyOS 治理案头动作台账' },
+  { key: 'tv_book', scope: 'chat', note: '[v3.54.0] 旅行记账案头账本（people/families/expenses）' },
+  { key: 'tv_ledger', scope: 'chat', note: '[v3.54.0] 旅行记账案头动作台账' },
   { key: 'block_settings', scope: 'chat', note: '[v3.27.0] 拉黑设置（注入开关 / 风控间隔 / 自动回绝开关）' },
   { key: 'block_state', scope: 'chat', note: '[v3.27.0] 拉黑两本账（我拉黑谁 / 谁拉黑我 + 双向申请与历史）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },
