@@ -16,7 +16,7 @@
     transition: transform 0.15s ease;
 }
 
-.phone-pet-root:active { transform: scale(0.95); cursor: grabbing; }
+.phone-pet-root:active { filter: brightness(1.12); cursor: grabbing; }
 
 .phone-pet-root .pet-video {
     position: absolute;
@@ -51,3 +51,26 @@
 
 /* 手机开出时宠物稍微缩小避让 */
 .phone-pet-root[data-pet-state="PhoneLoop"] { transform: scale(0.86); }
+
+/* ============================================================
+ * [v3.56.0] 桌面宠物拖拽态
+ * ------------------------------------------------------------
+ * 刻意**不**在这里覆盖 transform：
+ *   `[data-pet-state="PhoneLoop"] { transform: scale(0.86) }`（手机开着时）必须继续生效
+ *   —— bindPetDrag 的位移是相对「未变换原点」算的，只要缩放比例在拖拽全程恒定，
+ *   视觉位移就与手指严格同步。若在拖拽期清掉缩放，宠物会「按住就放大跳一下」。
+ *   同理，`.phone-pet-root:active` 的按下反馈已从 `transform: scale(0.95)` 换成
+ *   `filter: brightness()`：缩放反馈会在按下瞬间改变几何，与拖拽抢同一个 transform 属性
+ *   （也正因如此，此前「按住不动」时宠物会缩着抖）。
+ * 光标：`.phone-pet-root` 写着 cursor: grab，拖拽期换 grabbing ——
+ *   此前全库从无拖拽实现，故这两行光标承诺一直是空头支票，现在兑现。
+ * ============================================================ */
+.phone-pet-root.is-pet-dragging {
+    cursor: grabbing !important;
+    transition: none !important;   /* 拖拽跟手，不要 video 那 0.22s 的缓动拖影 */
+    will-change: left, top;
+}
+/* 按下但尚未越过拖拽阈值（纯点击的中间态）：只给一点视觉反馈，不动几何。 */
+.phone-pet-root.is-pet-pressing {
+    filter: brightness(1.12);
+}

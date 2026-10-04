@@ -59,7 +59,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.55.0';
+const ST_PHONE_VERSION = '3.56.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -232,89 +232,103 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-03",
+    date: "2026-10-04",
     items: [
-        "【定位】本版做计划 A2：建「App × 平台级消费面」矩阵（只读零风险）。第 1~3 层共缝入三十余件 App，每件都做到了四层齐备 + 六处接线 + 判据带负控制，但「这些 App 有没有被平台级六面覆盖」全仓没有一处能回答（要么逐文件读注释、注释不随对面漂移，要么人肉 review）。新增 config/app-consumption-matrix.js（六面口径 + 81 行矩阵 + 五条不适用台账）。",
-        "【六面口径】F1 生成侧注入（真源：App 自有文件里出现 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子）/ F2 全局搜索（global-search-engine 源表 appId）/ F3 系统通知（config/system-notifications.js 映射表）/ F4 微信链路（chat-view.js 的 _injectApps 表）/ F5 上游读数（14 个上游契约面之一）/ F6 生命周期（index.js 的 REBIND 表）。真读数：28 / 27 / 14 / 10 / 12 / 65（共 81 件 App）。",
-        "【口径纪律】本模块只陈列事实、不做取数：六个布尔值全部由判据套件从磁盘真源独立复算并与本表双向对账（同源自述必然恒绿；声明与事实分开存放，两者不一致时才有判别力）。false 格不逐格写理由（逐格写 4xx 条必然退化成放行条），取收口式：只有「六面全无」的 5 件（mofo / games / settings / mood / search）进不适用台账并逐条写明理由，该台账与磁盘双向对账。",
-        "【拓展】诊断中心新增「App 消费面矩阵」卡片（位置：跨仓功能登记之后、检查点内容级对照之前）：逐面命中数 + 逐 App 命中面清单 + 不适用台账理由全上墙；一句话总述由内核给出，视图只排版（不自算第二份）。appFaces 面在**所有**路径的返回包上地在（十几套历史判据断言 collectDiagnose 结构恒定，新增面必须全路径在场）。",
-        "【本版自己抓到的缺陷之一 · 目录 ≠ App】首跑复算即抓到：apps/memory/ 一个目录承载两件 App（memory-app.js / graph-app.js），按目录取数会让 graph 继承 memory 的读数 —— 首版将 graph 误报为命中注入 / 搜索 / 上游三面。修法：复算一律按「该 App 自有文件集」取数（入口文件 + 同名前缀文件），并在判据里把「目录取」作为可分辨性反例钉住（若两种读法结果一样，说明这条口径根本没被验证）。",
-        "【本版自己抓到的缺陷之二 · 判据自身的假绿】破坏表首跑即报红 D8（「视图卡片被拿掉」未被观测到）：原判据只看「_appFacesHtml(pkg) 字符串在场」，而方法签名也包含同一串 —— 卡片被删后签名仍在，判据照样绿。修法：改认「调用点」形态（this._appFacesHtml(pkg)）—— 「定义过」与「被调起」是两件事，这正是判据该抳的形态。",
-        "【判据套件】本版对旧判据无交棒改写（新剢判据全部新增；旧套件只改了一条形态锚：「引用一个标识符」改为「引用调用点」，属下限形改写）。新增 tests/system-v3550.test.mjs（14 例）：A 面逐列复算（逐行、逐面两重对账）/ B 面 NA 双向对账 / F 面诊断接线与键面恒定 / G 面判据工具自证（下限锚 + 口径可分辨）/ V 面版本下限锚 / D 面真源码定点破坏 8 条（破坏只落副本树，锚点必须恰中 1 次）。",
-        "【门禁】死导出门当场复跑得：扫描 413 文件 / 2387 个导出声明，新模块五个导出全部被诊断中心真消费（死导出门明确「测试不算消费」，故矩阵导出面必须有产品端消费点）；诊断相关十余套件单跑 391 例全绿。",
-        "【边界（诚实记账）】六面复算是「文本形态」口径（不解析 AST、不追动态拼名）；本表证明的是「消费点在场」，不证明「真机上那处消费真跑对了」（归 R-O3 真宿主实机验证）。",
-        "【文档记账】PLAN.md 现状基线由 v3.28.0 对齐真读数（v3.55.0：80 个 App / index.js 体量 / 门禁读数），A2 条目标注「已交付 v3.55.0」。",
-        "【运行时验证边界】本版能保证的是「消费点在场」（六面真源复算与磁盘逐格一致）；不能保证真机上那处消费真跑对了（需真宿主实机验证）—— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，需在真机复现后再修。",
-        "【版本升至 3.55.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
-        "【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
-        "【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
-        "【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
-        "【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
-        "【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
-        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
-        "【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）：三类根因 —— ① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。这类形态的共性是**看起来没坏但显示不对**：判据与门禁不真跑全量就永远不会响（**运行时验证边界**——本层判据只守形状与接线，**不能保证**真机排版/网络/宿主存储迁移这类 R-O3 项，遇到显示不对需真机复现后再修），本版能保证的只有「响了之后交付物与判据都如实归位」。",
-        "【版本升至 3.54.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐（含 head 补抬：3.48.0 历史漏改）。",
-        "【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
-        "【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
-        "【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",
-        "【缝什么 · 指纹面】FNV-1a 双路不同种子哈希 36 进制拼接（同文必同指纹、异文几乎必异指纹）；引用幂等键三形（chat:角色:消息 / gallery:角色:图 / favorite_asset:id）；引用去重逐条计 dropped。",
-        "【四块不缝】① 不渲染 React 组件（源 chips 是 JSX）；② 不弹 window.confirm（源导出确认弹层）；③ 不碰宿主存储（源 getAsset/saveAsset）；④ 不碰音频（源 ttsRouter / voicePlayback / SARSpeechSwitch）。连同 ChatHistoryCleanupModal / shareCardCanvas / avatarModelStore / bubbleAppearance / useChatAutoReply 等 DOM 演出面一律不缝。",
-        "【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^sd2_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次D收干；剩余批次 E~G（youyou / meixinji / perigee 剩件）按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
-        "【定位 · 素材缝合路线图第 3 层第十六件】本版把 Kawaii 主题包总结引擎的格式归一与游标一族（05 base.js 2869 行，非网络面）缝进本仓：apps/summdesk/（总结案头）四层齐备。源是「发请求的那个人」（fetch 双 provider 生成总结），本件是案头：总结文本由用户从任何对话端贴回来，本件只做解析归一与游标读数。",
-        "【缝什么 · 解析面】总结文本解析逐支对齐：标题六形标记（【标题】/标题:/标题：/加粗标题/# 标题/裸标题，最长优先防截断）与正文四形；有标题无正文标记时剥离标题行取剩余；无标题时首非空行截 15 字加省略号；全空回退「记忆碎片」；引号剥离；标题组装=标题-条数范围-日期（2026/10/2 形）。各形态落到哪一格逐条报 notes（源静默回退）。",
-        "【缝什么 · 游标面】双通道自动总结游标（普通/vector 与真向量两套独立）：初始位=chunk×间隔（源 vectorLastIndex 推算）、超长收口到历史长度、攒够一批推进一批（起点/终点/范围条三格）、失败回滚到批次起点并停本轮（源 catch 分支同款）。游标只算不拉：源攒够批后 fetch 生成，本件零网络。",
-        "【四块不缝】① 不发请求不拼提示词（源 generateVectorSummary 拼 systemPrompt 走 fetch 双 provider，含安全审查结界抛错面）；② 不出图（源 compressImage canvas 压缩与 GIF 保形）；③ 不做备份导入导出（源 createFullBackupData / importBackupData / validateDataIntegrity）；④ 不读宿主界面元素（源满篇 getElementById）。",
-        "【接线 · 六处落点齐备】① config/apps.js 注册（id summdesk 与名「总结案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 前缀 ^sm_；③ scripts/keys-audit.mjs 登记 sm_memories 与 sm_cursors（scope 为 chat）；④ index.js 懒加载分支 + 挂载 + REBIND 表；⑤ phone.css 本版段与 summdesk.css 逐字同源；⑥ tests/system-v255.test.mjs dirMap 补一项。",
-        "【会话隔离 · 裁定 · 交棒】两条会话键随会话隔离：源把记忆册挂宿主 chat 大对象（换角色一起串味），换会话两格全量重取。裁定：kawaii 其余片（06 ui 渲染 / 07 settings 宿主设置 / 08 sandbox 四路 AI 生成 / 01~04 纯样式壳 / sw.js）不缝；批次C收干；剩余批次 D~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
-        "【定位 · 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）】本版把 MyPhone 余件的三个纯机制族合并缝进本仓：① 周期数学案头 apps/periodmath/（period.js 819 行的周期计算一族）；② 纪念日数学案头 apps/annidate/（anniversary.js 682 行的日期数学一族）；③ 牌桌案头 apps/cardtable/（card-table.js 807 行的牌组与状态机一族）。三件四层齐备，全部零网络零 AI 零图表零图片。",
-        "【缝什么 · 周期面】有效窗均值逐条对齐：周期长取相邻两次起始日的日差（15~60 天内才进均值）、经期长取起始到结束+1（2~14 天内才进，含最旧一条）；样本不足如实报 not_enough 不拿缺省值冒充。四相判定（月经期/卵泡期/排卵期/黄体期，排卵窗=周期中点±2）；三形倒计时（距下次约 N 天/预计今天/已延期 N 天）；临近预警 ≤3 天且当日幂等（日期键去重）。",
-        "【缝什么 · 纪念日面】三形天数（已过去 N 天/距离目标还有 N 天/就是今天）；四类提醒逐支对齐（当天/前一天/每年当天/每年前一天，周年数>0 才算周年）；星座表逐月分界；当日幂等预警（同一日历日只警一次）。",
-        "【缝什么 · 牌桌面】取与仓内 tarot 权威的差异面：雷诺曼 36 牌名表（仓内 tarot-data 没有）；Fisher-Yates 洗牌；正逆位 50%（雷诺曼恒 none）；抽牌状态机（牌背→选中→翻回，取消后序号按原顺序连续重排 1 基）；选牌上限 12 满员报 full 不静默挤掉。78 张塔罗拼名（大阿尔卡那 22 + 四花色×14 自动生成）。",
-        "【四块不缝 × 三件】periodmath：AI 建议生成（callLLM）/ IndexedDB / 图表绘制（renderChart）不进；annidate：IndexedDB / DOM 轮播（setInterval 换星标项）/ 图片上传（出图面）不进；cardtable：IndexedDB 出图 / DOM 网格渲染 / overlay 弹层不进。三件全部零网络、零 AI、零定时器、零图片。",
-        "【接线 · 三件六处落点齐备】① config/apps.js 三条注册（各带不缝与偏离清单注释）；② config/storage.js 三条前缀（^pm_ / ^ad_ / ^ct_）；③ scripts/keys-audit.mjs 登记 7 键（pm×2 / ad×2 / ct×3，scope 为 chat）；④ index.js 懒加载分支三个 + 挂载 + REBIND 表三条；⑤ phone.css 三段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补三项。",
-        "【会话隔离 · 裁定 · 交棒】7 条会话键随会话隔离：源把周期与纪念日与牌组挂 IndexedDB（PhoneSimPeriod 等），换角色后原样留着串味，换会话全量重取。裁定：MyPhone 余件中 chat/settings/contacts/lofter/diary/worldbook/accounting/music/theater/tarot/punchcard/weather/memo 等撞仓内权威不缝；pet/food/fridge/datejournal/octopus/doomsday/isekai/xiuxian/campus/lovenews/infinite/story/wedding/teaparty/visa/qa/workreport/plan/outfit 为 IndexedDB+DOM+AI 会话宿主演出面不缝。批次B收干；剩余批次 C~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
-        "【定位 · 素材缝合路线图第 3 层第十四件（合并交付 · 批次A四件一次抬版）】本版把 EPhone·xINOVO 余件的四个机制族合并缝进本仓：① 熟人可见性案头 apps/socialguard/（moments.js 237647 字节的知情治理一族）；② 自由桌面布局案头 apps/freehome/（free-home.js 1558 行 / 70 函数的布局治理一族）；③ 表情包册案头 apps/stickerdesk/（sticker.js 1499 行的解析与治理一族）；④ 词法评分案头 apps/lexiscore/（vector_memory.js 1849 行的非网络面）。四件全部四层齐备（data 纯函数内核 / app 取数落盘 / view 视图 / css 样式）。",
-        "【缝什么 · 可见性面】受众名单（audienceIds，空名单=公开）与互动可见五分支逐支对齐：观者先得看见帖子；user 的赞与评论带 persona 分身，只被「认识的那个分身」看见；互动者本人看不见帖子时除作者与 user 外不许见；user / 作者本人 / all 档全可见；其余按人脉闭包。seenBy 首看记账只在第一次看落时刻；未看过不许互动（作者免看）；story 过期另立一格不进 feed。",
-        "【缝什么 · 人脉面】linked 人脉双向镜像：me 侧与 peer 侧各持一份，owner 反转、权限取反向字段（mayInteract / mayPost / mayStory 三权），镜像不许只算单向；人脉闭包含 actor 自己 + user 互通 + 本人人脉 + 来向人脉。",
-        "【缝什么 · 布局面】4×4 网格占位三算（面积 / 占位标记 / 首个空位）与两套合法性门：显式 row/col 逐件验位、无坐标按原序试装配（旧预设兼容，源同款口径）；形状三型（app / folder≥2 / widget）与 wide 4x2·square 2x2 查表；页数 30 / 页内 16 上限；dock 只认在册件；问题逐因报出（源布尔一票否决看不出哪里坏）。",
-        "【缝什么 · 表情包面】宽泛格式解析：名称:URL / 名称：URL / 名称 URL / 名称URL 都能收，尾部标点剥离，注释行跳过；URL 幂等去重逐行报（bad_line / dup_url 逐条带行号）；分类册治理逐因拒：重命名先验在册与查重（源可给幽灵分类改名，本件拦下）、解散须空、移动须在册。",
-        "【缝什么 · 词法面】切词（空白与中西标点分隔、token 长度≥2）、命中比基础分、置顶加成 0.35、权重步进 0.08、上限 1；兜底选取宽容线 max(0.05, 阈值×0.45)、排序三键（置顶→分数→更新时刻）、topK 截取。与召回台的裁定差：recall 是 BM25 三档文档级检索，本件是逐条目轻量 token 命中兜底，机制族不同并存不撞。",
-        "【四块不缝 × 四件】socialguard：不拼 AI 提示词（源 promptDefaults 全家桶）/ 不录音频（源 MediaRecorder）/ 不出图不收图 / 不挂宿主 db.moments；freehome：拖拽手势 / 指针画布 / 底部抽屉全不进；stickerdesk：AI 识别 / 下载上传 / 图片预览全不进；lexiscore：嵌入 API / 向量余弦 / 上下文注入全不进。四件全部零网络、零 AI 调用。",
-        "【接线 · 四件六处落点齐备】① config/apps.js 四条注册（id 与名与图标与主色，各带不缝清单与偏离清单注释）；② config/storage.js 四条前缀（^sg_ / ^fh_ / ^sd_ / ^ls_）；③ scripts/keys-audit.mjs 登记 11 键（sg×4 / fh×2 / sd×3 / ls×2，scope 为 chat）；④ index.js 懒加载分支四个 + 挂载 + REBIND 表四条；⑤ phone.css 四段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补四项。",
-        "【会话隔离 · 交棒 · 收干】11 条会话键随会话隔离：源把帖子库人脉册挂 db.moments、布局挂 db.freeHomeLayout、词条挂 chat.vectorMemory（换角色全部串味），换会话全量重取，清各面只清自己那条键。批次A四件已收干；第 3 层剩余按总控计划推进批次B~G；automatic-journal 与 diary 撞权威裁定不缝（差异面仅宿主态迁移脚本）。全部缝完前不跑全量回归（用户指令已存记忆库）；判据套件 system-v3490 与四件冒烟全绿，五道单门当场复跑。",
-        "【定位 · 素材缝合路线图第 3 层第十三件：结构化记忆案头（EPhone·xINOVO 记忆表格一族）】本版把 src_xinovo/js/modules/memory_table.js（3245 行 / 119 函数，IIFE）缝进本仓。新件定名 apps/memtable/（结构化记忆案头），四层齐备：memtable-data.js（1053 行 / 58 导出，纯函数内核）/ memtable-app.js（253 行，取数与落盘）/ memtable-view.js（294 行，视图）/ memtable.css（51 行，样式）。源是「发请求的那个人」，本件是案头：更新包由用户从任何对话端贴回来，本件零网络、零 AI、零 DOMParser、零定时器。",
-        "【缝什么 · 册子面：三级册子与逐型归一】模板＞表（keyValue / rows 两型）＞字段（八型 text / longtext / number / enum / tags / progress / date / boolean）。逐型归一：数值超范围夹取要报 clamped 不许无声改数；enum 值不在册要报 fallback 不许静默回缺省；认不出的型归一成 text 并记 why。模板与字段坏行逐条拒收（unknown 桶与 rejected 清单），上限超了只报不截。",
-        "【缝什么 · 更新包面：贴回 XML → 逐条计划 → 按确认落库】XML 解析是自写的逐字符状态机（不用 DOMParser），坏结构逐条报因（xml_broken 带 pos）、能收的几条照收不整段丢。解析产物是逐条更新计划：哪一模板 / 哪一表 / 哪一字段或哪一行 / 旧值 / 新值 / 收或不收的因。落库只落确认过的 set 条，纯函数不改入参。",
-        "【缝什么 · 门面：锁定与禁编字段不许被更新包改写】字段锁（locked）与 aiEditable=false 落库前拦下报 blocked；fill_empty 策略下旧值非空拒改报 kept；模板 / 表 / 字段 / 行认不出逐条报 unknown_* 不硬塞。源是 best-effort 静默跳过，本件逐格报出为什么。",
-        "【缝什么 · 上限面：六项上限成字，超限只报不截】模板库 200 / 每表 500 行 / 原文 400000 字 / 历史快照 20 / 序列读数 12 点 / 台账 120 条。历史超上限报 dropped 不许静默挤掉；台账裁边计数 dropped 现示。",
-        "【缝什么 · 读数面：看板与游标与余量】看板读数（模板 / 表 / 字段 / 行表 / 行 / 锁定 / 历史计数）、自动更新游标读数（间隔 / 游标位 / 未同步 / 成批数）、上限余量读数；模板定义文本一键复制（不拼提示词）；历史序列至多 12 点原样交视图，画不画是视图的事。",
-        "【四块不缝 · 源里本就有的外部耦合一律不接】① 不发请求不拼提示词（源 buildTemplateDefinitionForPrompt 拼一大段 systemPrompt 直打 AI）；② 不用 DOMParser（源用宿主 DOMParser，本件自写状态机）；③ 不写宿主数据库（源挂 db.memoryTableTemplates 与 chat.memoryTables，Dexie 整块回写，本件零数据库走 PhoneStorage）；④ 不画图表（源 drawSparkline 画历史曲线，本件只产序列读数）。",
-        "【接线 · 六处落点全齐备】① config/apps.js 注册（id memtable 与名「结构化记忆案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 一条前缀 ^memtable_ 覆盖四条会话键；③ scripts/keys-audit.mjs 登记 memtable_templates / memtable_data / memtable_xml / memtable_ledger（scope 为 chat）；④ index.js 懒加载分支与挂载与表单字段表（REBIND 表）；⑤ phone.css 本版段与 apps/memtable/memtable.css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补一项。少一处就静默错数据或点了没反应，判据套件逐点钉住。",
-        "【会话隔离 · 交棒 · 边界 · 收干】写盘四条键（模板库 / 数据 / 更新包原文+收下时刻 / 台账）走 ^memtable_ 前缀随会话隔离：源把模板与数据挂宿主数据库大对象上（换角色后一起串味），换会话四格全量重取，清各面只清自己那条键。交棒：xINOVO 记忆表格一族已处置完毕，第 3 层剩余源（xinovo 余件 moments / vector_memory / automatic-journal / sticker / free-home 等）按总控计划逐件推进，全部缝完前不跑全量回归（用户指令）。运行时验证边界：真宿主实机落盘与会话隔离实况、真模板量级下的排版、窄屏观感三条不能保证，归 R-O3。五源同源抬版：manifest.json 与 package.json 与 update-log.json 首位新键 + latest 与 index.js 的版本常量与公告块与 ITERATION_LOG.md 头部迭代段。",
-        "【定位 · 素材缝合路线图第 3 层第十二件：子宫像素画板（四片同族，合计 155940 字节 / 2456 行）】本版把 st_bs_biotracker 的四片同族缝进本仓：fetus_sprite.js（19687 字节 / 422 行，几何部件与八方向栅格化，零依赖纯函数）+ uterus_layout.js（16728 字节 / 375 行，版面与推挤与液面与羊膜囊）+ stage_config.js（阶段表与产程基础时长）+ uterus_render.js（50738 字节 / 1237 行，绘制层与像素笔与图块缓存与调色盘）。新件定名 apps/uterus/（子宫画板），四层齐备：uterus-data.js（1205 行 / 73 导出，纯函数内核）/ uterus-app.js（371 行 / 3 导出，取数与落盘）/ uterus-view.js（1011 行 / 1 导出，视图）/ uterus.css（242 行，样式）。",
-        "【缝什么 · 几何面：八方向任意尺寸都不许溢出】源只按固定几档角度画，斜角会顶出画布。本件把任意角度与任意高度的图块栅格到自己的矩形里（角落反算包围盒 + 外扩 margin），实格数下限与锚点内界逐角度断言。认不出的胚型另立一格（notes.unknownType 与 drawnAs 分开报），缺高度报出来（sizeMissing，不许无声按 20 算），五型册里没有的不许当在册。",
-        "【缝什么 · 镜像面：左右翻不许改了尺寸也不许不翻】源在着色一步上做镜像，边界像素因取整会偏一格。本件在投影一步上做镜像：宽高与锚点必须与原图一致，结构级左右翻必须成立，像素级不一致的格数不得超过 5%（只允许取整偏一格）。",
-        "【缝什么 · 版面面：推挤不动即停，不许读成到顶】源死跑满 12 轮且一个字不说，单胎也报「推挤轮 12/12」，视图据此误报触顶。本件加 moved 早停标志与 reachCap 读数（不动即停；跑满才标到顶），读数行改成「推挤轮 N（到顶）」。",
-        "【缝什么 · 上限面：超上限不许静默丢，没画出来的也要报名】源只报 hiddenCount 一个数，用户不知道哪几胎没画。本件 hiddenList 逐胎报名（embryoId 与 why 与 declaredType 与 unknownType），超上限那胎若声明型认不出也必须单独报出来。",
-        "【缝什么 · 栏位面：缺栏位不等于默认值】源把缺栏位按默认值算，「没这一栏」与「就是 20」在界面上同形。本件 missing 逐格记（base.uterinePressure 与 base.libido 与 fetuses 那一层的 weight 与 affinity 与 tendencyAngle），算不出来不读成 0。",
-        "【缝什么 · 空台面：空窗期是可画的台子，没贴过才是画不出来】源把空窗期与没状态混成一句。本件 stageKindOf 分四格：blank（压根没贴过，verdict 回 cant）/ empty（空窗期，是可画的空台，verdict 回 ok 且 emptyStage 成字）/ gestating（六孕期与产兆前驱与三产程）/ unknown（认不出的阶段，verdict 回 bad，不许当成六个孕期之一）。",
-        "【缝什么 · 液面面：精液越多液面越高，满后溢出且浸满】源只按一个比值画线，溢出与浸满两件事看不出来。本件给 getSemenCapacity 容量（基础 100）与 semenFull 与 semenOverflow 与 fluidHeight 四项读数，满与溢各成字。",
-        "【缝什么 · 囊面：同卵共囊，孕早不成囊】源按胎逐只画囊，同卵双胎画成两只。本件按 identicalGroup 归囊（同组共一只），囊成员逐个列，按成员最大孕龄定囊大小。",
-        "【缝什么 · 主题面：认不出的键不许吞掉内置色】源把主题盘整盘替换，认不出的键会连内置色一起吞掉。本件 resolvePalette 只认键名：认得的用主题色，认不出的保留内置色，themed 与 total 两个读数分开报（主题为入参，不读宿主界面元素）。",
-        "【缝什么 · 读侧面：视图不重算，读侧把真源表原样交出去】源在视图层又算一遍版面与读数，两处口径会漂。本件读侧（readingCells / problemCells / fetusCells / sacCells）把真源表原样交视图，视图只画不算。声明型与画出型分开报（认不出的声明原样报出，不许洗成胎生）。",
-        "【缝什么 · 上限读数面：六项上限都要成字】源的上限散在各处。本件 limits 把六项上限（胎数与推挤轮与格数与行数与台账）收成一处成字，App 层与视图都从这一处取。",
-        "【四块不缝 · 源里的外部耦合一律不接】① 不写回角色状态（源把呼吸相位与表情进度写回 profile）；② 不读宿主界面元素取主题色（源 pickThemeHue 读 theme.screen 与 text 与 border 三者里最饱和的一个），本件主题是入参；③ 不发请求不注入条目；④ 不起未受控计时器（源 setInterval 每 180 毫秒推一帧，还带 visibilitychange 与 matchMedia 两套），本件帧推进由调用方显式推（app.frameTick），视图只画当下这一帧。",
-        "【五条偏离 · 逐条对着源的静默失效】① 认不出的胚型不当胎生静默画（另立一格 + 报声明型）；② 缺栏位不等于默认值（逐格记）；③ 算不出来不读成 0；④ 超上限不许静默丢（逐胎报名）；⑤ 推挤轮数要有上限读数（不动即停 + 到顶标）。",
-        "【静态门 · 零反引号零反斜杠】本层三件与样式层守全仓口径：零反引号、零反斜杠（剥注释器是字符状态机，裸引号会让它卡住），文本里的与号与尖括号一律走拼装形。全件与四块不缝一起由静态门与判据套件双向守住。",
-        "【接线 · 六处落点全齐备】① config/apps.js 注册（id uterus 与名「子宫画板」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 一条宽前缀 ^uterus_ 覆盖两条会话键；③ scripts/keys-audit.mjs 登记 uterus_subject 与 uterus_ledger（scope 为 chat）；④ index.js 懒加载分支与挂载与表单字段表；⑤ phone.css 本版段与 apps/uterus/uterus.css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补一项。少一处就静默错数据或点了没反应，判据套件逐点钉住。",
-        "【会话隔离 · 两条键随会话分开存】写盘两条键（uterus_subject 状态原文 + 收下时刻 / uterus_ledger 动作台账）走 ^uterus_ 前缀随会话隔离：源把状态与画布进度全挂在宿主大对象上，换角色后一起串味。换会话两格全量重取（旧状态与旧台账都不许留着）。放下一份状态只清自己那条键（台账不许跟着没），清台账只清自己那条键（状态不许跟着没）。",
-        "【缺陷 · 落盘结果被丢掉：写不进去也报「成」】本件自纠抓到一处真缺陷：ingestSubject 与 clearSubject 与 clearLedger 把 _persistSubject 与 _persistLedger 的返回值丢掉了，于是 storage 抛异常或只读时仍回 saved 为真 —— 界面上是「收下了」，实际一个字节都没写进去（看起来没坏但存不下）。已改为把落盘结果传进回执（saved 按真结果报，storage 另有一格信号）。判据套件把只读盘与抛异常盘两种情形都钉住。",
-        "【缺陷 · 挂起：整仓复制 26 棵把单测拖过两分钟】本件破坏表原本每条开一棵整仓副本树，26 条累计把单测拖到 120 秒触墙（跑到第 13 条用例时被文件级超时打断，报 Promise resolution is still pending）。根因不是真死锁而是**光机量的拷贝**。已改为按需只复制判据会读到的那十件（清单与判据读的路径一一对应，少一件即判据报错、不会静默），破坏表 887 毫秒跑完，全套件 1.35 秒收干。★ 教训：跑不动的门禁守不住纪律。",
-        "【判据面 · 破坏表 26 条与负控制 6 条】破坏表 D1~D26 逐条真源码定点破坏（一律落副本树，真仓只读），每条独立开一棵按需副本树、加载副本模块、重跑同款真判据（判据若抛异常同样计入失败）；负控制 N1 锚点不存在必须抛与 N2 人为构双锚点真调工具两向自证与 N3 判据不得引用锚点且锚点在真源码恰中 1 次与 N4 剥注释器自证与 N5 破坏必须可观测改行为与 N6 三向自证（真源码判据得空 / 破坏后转红 / 副本模块不等于真仓模块）。",
-        "【交棒：子宫画板族已全部处置完毕，转到同批下一件】本件收干后，st_bs_biotracker 的子宫像素画板四片（合计 155940 字节 / 2456 行）已全部处置完毕；可取的是「一份状态画出当下这一帧」这一层版面面（几何 / 版面 / 液面 / 囊 / 读数 / 判定 / 收录），不缝的是写回状态 / 读宿主界面元素取主题色 / 起定时器 / 做一场演出（drawCue 与 drawRupture 与 drawObstruction 要时间轴）。",
-        "【运行时验证边界 · v3.48.0 复校】本版能证明的是：几何内核与版面层与 App 层与视图层四层的**机制面**（宫体外形边界 / 八方向不溢出 / 不动即停 / 缺栏位逐格 / 超上限逐胎报名 / 认不出的另立一格 / 同卵共囊 / 液面与浸满与溢出 / 主题只认键名 / 落盘真结果 / 换会话两格重取 / 六处接线齐备 / 四块不缝真的没缝 / 二十六条破坏都真响过）。不能保证的是：① 真宿主实机里的落盘与会话隔离与换会话重绑实况（本仓至今没有可运行浏览器的验证环境）；② 真机上贴一份上千胎量级的真状态进来后的版面观感与长列表排版；③ 窄屏上的排版与观感（本件是四页签 + 96x120 像素画布放大两倍）。三条均仍归 R-O3（真宿主实机验证）：这类形态的共性是**不报错、不崩溃、只错结果 —— 看起来没坏但显示不对**，本版只能挡住机制面。五源同源抬版：manifest.json 与 package.json 与 update-log.json 首位新键 + latest 与 index.js 的版本常量与公告块与 ITERATION_LOG.md 头部迭代段。",
-        "【收干 · 本版自己的门禁与基线】① 单件门禁（判据套件 13 用例全绿，含破坏表 26 条与负控制 6 条）；② 两道门当场复跑（registry APPS id 70 与懒加载分支 70 与会话键前缀 87 与样式投递 60；keys 使用点 257 与 CHAT_DATA_PATTERNS 85 与登记 257）；③ 四处审计基线零手抄刷新（lifecycle 与 branch_play 与 schedule_conflict 与 long_chat，读数来由逐条写进 rebuilds）；④ 运行时验证边界文档 v3.48.0 复校；⑤ 全量门禁留到全部七件完成后统一跑（本轮节奏约束：全部完成之前不跑全量）。⑥ 本版自己抓到的缺陷（死导出十二个，判据面级联翻红）：读数面真实接上孕程分界/延产上限/孕育速度区间/入盆标记/羊膜档；胎位端点(DESCENT_TOP/CROWNED_OUT)、入盆阈值(DESCENT_INLET)、羊膜囊判定(hasFluidSac)、亲和文字(affinityWordOf)改为走真源不再手抄；J7 归因文案表 UD_ACTION_TEXT 键改取真源 UD_ACTIONS 常量值。⑦ 对旧判据的交棒改写（下限形）：v3230 两处裸 cpSync 改引用共享实现 copyTreeSafe。",
-        "【版本升至 3.48.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
+        "【定位】本轮不缝新素材，只收口用户报障的六项真实缺陷。六项同属本仓最贵的那一类形态：不报错、不崩溃、也不进日志，只是安静地不生效 —— 门禁全绿、测试全绿、真机上却「图标重叠」「进了 App 出不来」「拖着没反应」。",
+        "【缺陷①·桌面图标重叠】renderIconLayout 把全部 81 件一次性铺进单个 .app-grid（repeat(4,1fr) 且无行数约束），唯一溢出承接是 .home-screen 的 overflow-y:auto —— 桌面成了一条 21 行超长滚动列表，绝对定位的 .dock（bottom:8%）悬浮其上、与末行图标视觉重叠。APPS 键集不含任何分类字段，故分页是唯一不依赖新增数据模型的落法。",
+        "【缺陷②·分页缺失】新增六个方法：getIconPageCapacity（4 列 × 5 行 = 20，行数按实测几何取 5：单行约 74px、可用高度约 464px，5 行约 370px 仍有余量）/ buildIconPages / renderIconPageDots / _clampIconPage / goIconPage（走 translate3d(-n*100%)）/ bindIconPager（touchstart-end 与 pointerdown-up 双面，判定取「起止两点坐标之差」与既有 bindSwipeGesture 同口径，刻意不用 PointerEvent.movementX —— 该字段只在 mousemove 上可靠、触摸端基本不填）。页底 padding-bottom:146px 显式留出 dock 净空：分页后内容不再靠滚动承接，不留出末行仍会被 dock 压住（正是报障本体）。81 件 ⇒ 5 页（20/20/20/20/1）。",
+        "【缺陷③·品牌串】对外显示名统一 RubyPhone（index.js 抽屉两处显示名 + 两处 title）；文件头版权署名「柚月小手机 (Yuzuki 的 Little Phone)」有意保留 —— 属来源归属、不是产品名，判据据此把署名行写成唯一放行形态。",
+        "【缺陷④·返回键此前从未渲染过】全库零返回按钮，唯一返回路径是「左边缘 1/2 区域右滑」—— 对用户不可见、不可发现。修法：在 .phone-screen 直系渲染 button#phone-back-button（不能放 view-stack 内的图层节点（data-view-id），它会被 setContent 反复重建与回收，按钮跟着图层走就会「切一次 App 就没了」）；返回语义真源仍是 goHome()（压栈弹栈 + 返回桌面后 500ms 屏蔽误 reopen），按钮只调它、不重写第二份；bindBackButton 的 pointerdown/touchstart stopPropagation 是必须的（否则同一次触摸会被 bindSwipeGesture 读成边缘右滑，触发一次额外返回 = 双退）；可见性同步走 syncBackButtonVisibility 三个调用点并写 inline display 直写，不依赖 CSS 优先级。",
+        "【缺陷⑤·宠物拖拽空实现】pet.css 写着 cursor:grab 却全库零拖拽实现（光标承诺一直是空头支票）。补 bindPetDrag：阈值 DRAG_MIN=6 把点击与拖拽分流；位移一律相对「未变换原点」算 —— 反解式 styleLeft = rect.left + (rect.width - offsetWidth)/2（offsetWidth 不随 transform 变，是精确反解；宠物根带 scale(0.86)，拿 rect.left 当起点会全程偏半个缩放量）；夹取与恢复一律用未变换尺寸；:active 的按下反馈从 transform:scale(0.95) 换成 filter:brightness（缩放反馈会在按下瞬间改几何，与拖拽抢同一个 transform 属性）；拖后那一次 click 必须用捕获期 + stopImmediatePropagation 吞掉（开/关手机的 click 挂在同一个 petRoot 上，同节点监听器按注册顺序触发，stopPropagation 拦不住同节点的后一个）。",
+        "【缺陷⑥·宠物位置键未定义（本轮最深一处）】PHONE_PET_POSITION_KEY 在原状被写点与读点两处引用，而文件头部零声明 —— 拖拽一旦移动就在写点抛 ReferenceError 并被 try/catch 吞掉，用户表现是「拖了但下次打开位置没变」的静默失效。已补定义：键名取连字符形态，默认落全局 extensionSettings（语义归属是「界面偏好」而非会话数据，跨会话漂移会让用户每换角色都要重摆）；刻意不复用悬浮按钮的位置键 —— 两者是不同元素且可见性互斥，共键会让「拖了宠物」下次把按钮摆到宠物位上。",
+        "【捕真缺陷 · 判据自指伪证三形态（缺陷形态三条）】本套件首跑报红的两条是**假缺陷**，根因同一条：判据把「解释这次修正的注释」当成了缺陷本体。形态一：A1 的负判据锚点（修前的整列渲染表达式）在我写的「为什么加」注释里被引用；形态二：A7 的负判据锚点 movementX 同样只在注释里出现（说明为什么不用它）；形态三：pet.css 的说明里引用了旧写法 transform:scale(0.95)。修法：新增 codeOf() 去注释层，全部负判据一律改在代码面上判 —— 这类误报最容易被当成「判据误报」直接放宽，放宽即失守。",
+        "【捕真缺陷 · 判据恒红与计数锚点歧义】首跑另抓到两处判据自身的缺陷：① D5 判据写「该串恰 1 次」，而它在真仓恰有 2 处（拖拽夹取 + 恢复夹取，两处都必须用未变换尺寸），写死「恰 1」使判据恒红 —— 假红与恒绿同样是坏判据，只是方向相反；② E3 用 home-page-dot 计页码点，5 点读数得 12（该串是 yzp- 前缀与外层容器的子串，每点被计两次、容器再计两次），属不可归因的计数面，改取 data-page-index 作锚点。",
+        "【判据套件】新增 tests/system-v3560.test.mjs（15 例）：A 分页 / B 返回键 / C 品牌 / D 宠物拖拽 / G 判据工具自证五面判据 + E 面 5 条真调用行为面（直接 import 真模块调真方法并断言算出来的结果 —— 文本在场只证明写过，调用结果才证明算对：分页切分不丢件与边界、页码夹取、页码点唯一、手势真调注册监听器、位置键与真方法同在）+ 18 条真源码定点破坏表 + 1 条真仓只读回读。破坏一律落副本树，锚点必须恰中 1 次（不唯一即抛），锚点一律取纯 ASCII 片段。本条另含对旧判据的三处**交棒改写**（不是放宽）：C2 品牌串由全行扫描收紧到载体行、D5 由「恰 1 次」改写为下限 2、A1 / A7 / D7 三条负判据移入代码面。",
+        "【门禁】十一道路门全绿（syntax / import-resolve / test / dead-exports / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / upstream-face）；全量回归 2881 例 0 失败；keys 285 键 96 patterns 285 登记、registry 81 App id 81 懒加载分支 98 前缀、样式投递未覆盖 0。",
+        "【边界（诚实记账）】本套件证明的是「消费点在场 + 纯函数算对」，不证明「真机上那段手势/拖拽真跑对了」：手势与拖拽是纯函数级验证（真调监听器、真方法、假事件），指针事件的真实派发、CSS translate3d 的真实合成、宿主 !important 的真实压制都归 R-O3 真宿主实机验证。",
+        "【版本升至 3.56.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
+        "【运行时验证边界复校（v3.56.0）】本版六项修复的可验面全部落在**纯函数与接线**上（分页切分、页码夹取、手势判定、拖拽反解与夹取）；它**不能保证**真机上的视觉排版、指针事件真实派发、CSS 合成与宿主 !important 压制。遇到「看起来没坏但显示不对」的问题，属本文登记的第二类，需在真机复现后再修。",
+"【定位】本版做计划 A2：建「App × 平台级消费面」矩阵（只读零风险）。第 1~3 层共缝入三十余件 App，每件都做到了四层齐备 + 六处接线 + 判据带负控制，但「这些 App 有没有被平台级六面覆盖」全仓没有一处能回答（要么逐文件读注释、注释不随对面漂移，要么人肉 review）。新增 config/app-consumption-matrix.js（六面口径 + 81 行矩阵 + 五条不适用台账）。",
+"【六面口径】F1 生成侧注入（真源：App 自有文件里出现 GENERATE_BEFORE_COMBINE_PROMPTS 主钩子）/ F2 全局搜索（global-search-engine 源表 appId）/ F3 系统通知（config/system-notifications.js 映射表）/ F4 微信链路（chat-view.js 的 _injectApps 表）/ F5 上游读数（14 个上游契约面之一）/ F6 生命周期（index.js 的 REBIND 表）。真读数：28 / 27 / 14 / 10 / 12 / 65（共 81 件 App）。",
+"【口径纪律】本模块只陈列事实、不做取数：六个布尔值全部由判据套件从磁盘真源独立复算并与本表双向对账（同源自述必然恒绿；声明与事实分开存放，两者不一致时才有判别力）。false 格不逐格写理由（逐格写 4xx 条必然退化成放行条），取收口式：只有「六面全无」的 5 件（mofo / games / settings / mood / search）进不适用台账并逐条写明理由，该台账与磁盘双向对账。",
+"【拓展】诊断中心新增「App 消费面矩阵」卡片（位置：跨仓功能登记之后、检查点内容级对照之前）：逐面命中数 + 逐 App 命中面清单 + 不适用台账理由全上墙；一句话总述由内核给出，视图只排版（不自算第二份）。appFaces 面在**所有**路径的返回包上地在（十几套历史判据断言 collectDiagnose 结构恒定，新增面必须全路径在场）。",
+"【本版自己抓到的缺陷之一 · 目录 ≠ App】首跑复算即抓到：apps/memory/ 一个目录承载两件 App（memory-app.js / graph-app.js），按目录取数会让 graph 继承 memory 的读数 —— 首版将 graph 误报为命中注入 / 搜索 / 上游三面。修法：复算一律按「该 App 自有文件集」取数（入口文件 + 同名前缀文件），并在判据里把「目录取」作为可分辨性反例钉住（若两种读法结果一样，说明这条口径根本没被验证）。",
+"【本版自己抓到的缺陷之二 · 判据自身的假绿】破坏表首跑即报红 D8（「视图卡片被拿掉」未被观测到）：原判据只看「_appFacesHtml(pkg) 字符串在场」，而方法签名也包含同一串 —— 卡片被删后签名仍在，判据照样绿。修法：改认「调用点」形态（this._appFacesHtml(pkg)）—— 「定义过」与「被调起」是两件事，这正是判据该抳的形态。",
+"【判据套件】本版对旧判据无交棒改写（新剢判据全部新增；旧套件只改了一条形态锚：「引用一个标识符」改为「引用调用点」，属下限形改写）。新增 tests/system-v3550.test.mjs（14 例）：A 面逐列复算（逐行、逐面两重对账）/ B 面 NA 双向对账 / F 面诊断接线与键面恒定 / G 面判据工具自证（下限锚 + 口径可分辨）/ V 面版本下限锚 / D 面真源码定点破坏 8 条（破坏只落副本树，锚点必须恰中 1 次）。",
+"【门禁】死导出门当场复跑得：扫描 413 文件 / 2387 个导出声明，新模块五个导出全部被诊断中心真消费（死导出门明确「测试不算消费」，故矩阵导出面必须有产品端消费点）；诊断相关十余套件单跑 391 例全绿。",
+"【边界（诚实记账）】六面复算是「文本形态」口径（不解析 AST、不追动态拼名）；本表证明的是「消费点在场」，不证明「真机上那处消费真跑对了」（归 R-O3 真宿主实机验证）。",
+"【文档记账】PLAN.md 现状基线由 v3.28.0 对齐真读数（v3.55.0：80 个 App / index.js 体量 / 门禁读数），A2 条目标注「已交付 v3.55.0」。",
+"【运行时验证边界】本版能保证的是「消费点在场」（六面真源复算与磁盘逐格一致）；不能保证真机上那处消费真跑对了（需真宿主实机验证）—— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，需在真机复现后再修。",
+"【版本升至 3.55.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
+"【定位 · 素材缝合路线图第 3 层第十八件】本版把 Perigee OS 旅行记账（travel.js 564 行）的分账清算一族缝进本仓：apps/traveldesk/（旅行记账案头）四层齐备。源挂在 AppState.data.travelData 上满篇 DOM 渲染与 confirm，本件零 DOM 零 confirm 零网络，只做判定与读数。",
+"【缝什么 · 汇率折算】toCNY 逐支对齐：人民币原样 1.0；外币 ÷ rateUnit × rate 两位截断（例 100 JPY ÷ 100 × 0.048 = 0.05 CNY）；recordedRate 随行记下，试算不落账。",
+"【缝什么 · 分账面】三型费用逐支对齐：shared 均摊（按人头减份）/ split 指定分摊（按 splitDetails 明细比例减份，成员不在册则减到 payer 头上并把债务记入外部债务表）/ private 私人（payer 自负全额）。balancesOf 返回 payer 总支出与每人余额；consolidateFamilies 家庭归并（成员余额并入 rep 代理人）；internalSettlement 贪心清算（债务人升序 × 债权人降序双指针配对，|差额|≤0.01 清零）；externalSettlement 外部债务表（>0.01 才列）。",
+"【缝什么 · 入账与读数】normalizeExpense 拒收 unknown_payer（payer 不在册的费用整条退回并报 why）；上限 500 条费用 / 20 人 / 台账 120 条；readingsOf 公共总支出（private 不入）与人均（仅 shared 摊）。",
+"【四块不缝】① 不渲染 DOM（源满篇 querySelector / innerHTML 演出面）；② 不弹 confirm（源结算确认弹层）；③ 不碰宿主存储（源 AppState.data.travelData 直挂角色档案，换角色串味）；④ 不拉汇率源（源 fetch 外部汇率接口）。",
+"【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^tv_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次G traveldesk 一件收干；批次G 剩余候选件（minus-one 负一屏 / broadcast / melonbooks / mercari / niconico 系列 / twitter 系列 / line / widgets / desktop-edit / decorations）按总控计划继续裁定；全缝完前不跑全量回归（用户指令已存记忆库）。",
+"【全量回归首跑 · 判据交棒改写与抓真缺陷】第 3 层十三件全部缝合完成，首次全量 `npm run test` 暴露 58 项历史遗留失败（此前按用户约束全缝完前不跑全量，坏判据从未暴露）：三类根因 —— ① 公告同源「全量相等」旧判据 vs 公告块累积式设计（v231~v239/v253/v254/v256 十二套件改「当版 items 逐字含于公告块」的包含式口径，属**交棒改写**，未放宽判据）；② update-log.head 停在 3.48.0 与公告块 date 不同源（五源抬版漏 head 与 date，已补抬）；③ 本版自己抓到的**缺陷**：config/apps.js 四件（socialguard/freehome/stickerdesk/lexiscore）整段重复误粘（audit 与 entry-integrity 判据当场报红后删除重复块）、ITERATION_LOG.md「当前版本」元信息行停在 3.48.0（v280 判据当场报红后补抬）。边界文档同步 v3.54.0 复校并把语法/导入两门**实测数字**刷新为 616 文件 / 380 文件 558 条。这类形态的共性是**看起来没坏但显示不对**：判据与门禁不真跑全量就永远不会响（**运行时验证边界**——本层判据只守形状与接线，**不能保证**真机排版/网络/宿主存储迁移这类 R-O3 项，遇到显示不对需真机复现后再修），本版能保证的只有「响了之后交付物与判据都如实归位」。",
+"【版本升至 3.54.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐（含 head 补抬：3.48.0 历史漏改）。",
+"【定位 · 素材缝合路线图第 3 层第十七件】本版把 SullyOS 三个治理小件合并缝进本仓：apps/sullydesk/（SullyOS 治理案头）四层齐备。源们是 React 组件与宿主存储的胶水面，本件零依赖零 DOM 零 confirm，只做判定与读数。",
+"【缝什么 · 审计面】导出凭据扫描逐支对齐：字段名十三词干（api_key / apikey / secret / token / authorization / auth / bearer / password / passwd / pwd / access_key / private_key / anon_key / credential，下划线连字符等价）；值面特征（sk- 开头 ≥12 位 / Bearer 令牌 / JWT 三段式 eyj 开头 / 32+ 位长密钥兜底可关）；URL 只在带 key/token/secret 参数时才扫；dataURL 剥离；白名单十九字段跳过值扫描；打码显示首 4 尾 3 带长度；三态判定 safe / contains-secret（预期含密钥的配置备份）/ unexpected-secret（不应出现，逐路径列出）。",
+"【缝什么 · 分组面】分组过滤三档（全部 / 具体组 groupId 匹配 / 未分组兜底档——groupId 空或组已不在册都算）；计数随档联动；档位表构建（全部+各组+未分组>0 才出现）；order 缺栏位回退 createdAt 再回退 0 的排序链（缺栏位与就是 0 分开）。",
+"【缝什么 · 指纹面】FNV-1a 双路不同种子哈希 36 进制拼接（同文必同指纹、异文几乎必异指纹）；引用幂等键三形（chat:角色:消息 / gallery:角色:图 / favorite_asset:id）；引用去重逐条计 dropped。",
+"【四块不缝】① 不渲染 React 组件（源 chips 是 JSX）；② 不弹 window.confirm（源导出确认弹层）；③ 不碰宿主存储（源 getAsset/saveAsset）；④ 不碰音频（源 ttsRouter / voicePlayback / SARSpeechSwitch）。连同 ChatHistoryCleanupModal / shareCardCanvas / avatarModelStore / bubbleAppearance / useChatAutoReply 等 DOM 演出面一律不缝。",
+"【接线 · 会话隔离 · 交棒】六处落点齐备（apps 注册 / storage 前缀 ^sd2_ / keys 2 键 / index 分支挂载 REBIND / phone.css 同源 / v255 dirMap）；两条会话键随会话隔离，换会话两格全量重取。批次D收干；剩余批次 E~G（youyou / meixinji / perigee 剩件）按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
+"【定位 · 素材缝合路线图第 3 层第十六件】本版把 Kawaii 主题包总结引擎的格式归一与游标一族（05 base.js 2869 行，非网络面）缝进本仓：apps/summdesk/（总结案头）四层齐备。源是「发请求的那个人」（fetch 双 provider 生成总结），本件是案头：总结文本由用户从任何对话端贴回来，本件只做解析归一与游标读数。",
+"【缝什么 · 解析面】总结文本解析逐支对齐：标题六形标记（【标题】/标题:/标题：/加粗标题/# 标题/裸标题，最长优先防截断）与正文四形；有标题无正文标记时剥离标题行取剩余；无标题时首非空行截 15 字加省略号；全空回退「记忆碎片」；引号剥离；标题组装=标题-条数范围-日期（2026/10/2 形）。各形态落到哪一格逐条报 notes（源静默回退）。",
+"【缝什么 · 游标面】双通道自动总结游标（普通/vector 与真向量两套独立）：初始位=chunk×间隔（源 vectorLastIndex 推算）、超长收口到历史长度、攒够一批推进一批（起点/终点/范围条三格）、失败回滚到批次起点并停本轮（源 catch 分支同款）。游标只算不拉：源攒够批后 fetch 生成，本件零网络。",
+"【四块不缝】① 不发请求不拼提示词（源 generateVectorSummary 拼 systemPrompt 走 fetch 双 provider，含安全审查结界抛错面）；② 不出图（源 compressImage canvas 压缩与 GIF 保形）；③ 不做备份导入导出（源 createFullBackupData / importBackupData / validateDataIntegrity）；④ 不读宿主界面元素（源满篇 getElementById）。",
+"【接线 · 六处落点齐备】① config/apps.js 注册（id summdesk 与名「总结案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 前缀 ^sm_；③ scripts/keys-audit.mjs 登记 sm_memories 与 sm_cursors（scope 为 chat）；④ index.js 懒加载分支 + 挂载 + REBIND 表；⑤ phone.css 本版段与 summdesk.css 逐字同源；⑥ tests/system-v255.test.mjs dirMap 补一项。",
+"【会话隔离 · 裁定 · 交棒】两条会话键随会话隔离：源把记忆册挂宿主 chat 大对象（换角色一起串味），换会话两格全量重取。裁定：kawaii 其余片（06 ui 渲染 / 07 settings 宿主设置 / 08 sandbox 四路 AI 生成 / 01~04 纯样式壳 / sw.js）不缝；批次C收干；剩余批次 D~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
+"【定位 · 素材缝合路线图第 3 层第十五件（合并交付 · 批次B三件）】本版把 MyPhone 余件的三个纯机制族合并缝进本仓：① 周期数学案头 apps/periodmath/（period.js 819 行的周期计算一族）；② 纪念日数学案头 apps/annidate/（anniversary.js 682 行的日期数学一族）；③ 牌桌案头 apps/cardtable/（card-table.js 807 行的牌组与状态机一族）。三件四层齐备，全部零网络零 AI 零图表零图片。",
+"【缝什么 · 周期面】有效窗均值逐条对齐：周期长取相邻两次起始日的日差（15~60 天内才进均值）、经期长取起始到结束+1（2~14 天内才进，含最旧一条）；样本不足如实报 not_enough 不拿缺省值冒充。四相判定（月经期/卵泡期/排卵期/黄体期，排卵窗=周期中点±2）；三形倒计时（距下次约 N 天/预计今天/已延期 N 天）；临近预警 ≤3 天且当日幂等（日期键去重）。",
+"【缝什么 · 纪念日面】三形天数（已过去 N 天/距离目标还有 N 天/就是今天）；四类提醒逐支对齐（当天/前一天/每年当天/每年前一天，周年数>0 才算周年）；星座表逐月分界；当日幂等预警（同一日历日只警一次）。",
+"【缝什么 · 牌桌面】取与仓内 tarot 权威的差异面：雷诺曼 36 牌名表（仓内 tarot-data 没有）；Fisher-Yates 洗牌；正逆位 50%（雷诺曼恒 none）；抽牌状态机（牌背→选中→翻回，取消后序号按原顺序连续重排 1 基）；选牌上限 12 满员报 full 不静默挤掉。78 张塔罗拼名（大阿尔卡那 22 + 四花色×14 自动生成）。",
+"【四块不缝 × 三件】periodmath：AI 建议生成（callLLM）/ IndexedDB / 图表绘制（renderChart）不进；annidate：IndexedDB / DOM 轮播（setInterval 换星标项）/ 图片上传（出图面）不进；cardtable：IndexedDB 出图 / DOM 网格渲染 / overlay 弹层不进。三件全部零网络、零 AI、零定时器、零图片。",
+"【接线 · 三件六处落点齐备】① config/apps.js 三条注册（各带不缝与偏离清单注释）；② config/storage.js 三条前缀（^pm_ / ^ad_ / ^ct_）；③ scripts/keys-audit.mjs 登记 7 键（pm×2 / ad×2 / ct×3，scope 为 chat）；④ index.js 懒加载分支三个 + 挂载 + REBIND 表三条；⑤ phone.css 三段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补三项。",
+"【会话隔离 · 裁定 · 交棒】7 条会话键随会话隔离：源把周期与纪念日与牌组挂 IndexedDB（PhoneSimPeriod 等），换角色后原样留着串味，换会话全量重取。裁定：MyPhone 余件中 chat/settings/contacts/lofter/diary/worldbook/accounting/music/theater/tarot/punchcard/weather/memo 等撞仓内权威不缝；pet/food/fridge/datejournal/octopus/doomsday/isekai/xiuxian/campus/lovenews/infinite/story/wedding/teaparty/visa/qa/workreport/plan/outfit 为 IndexedDB+DOM+AI 会话宿主演出面不缝。批次B收干；剩余批次 C~G 按总控计划推进；全缝完前不跑全量回归（用户指令已存记忆库）。",
+"【定位 · 素材缝合路线图第 3 层第十四件（合并交付 · 批次A四件一次抬版）】本版把 EPhone·xINOVO 余件的四个机制族合并缝进本仓：① 熟人可见性案头 apps/socialguard/（moments.js 237647 字节的知情治理一族）；② 自由桌面布局案头 apps/freehome/（free-home.js 1558 行 / 70 函数的布局治理一族）；③ 表情包册案头 apps/stickerdesk/（sticker.js 1499 行的解析与治理一族）；④ 词法评分案头 apps/lexiscore/（vector_memory.js 1849 行的非网络面）。四件全部四层齐备（data 纯函数内核 / app 取数落盘 / view 视图 / css 样式）。",
+"【缝什么 · 可见性面】受众名单（audienceIds，空名单=公开）与互动可见五分支逐支对齐：观者先得看见帖子；user 的赞与评论带 persona 分身，只被「认识的那个分身」看见；互动者本人看不见帖子时除作者与 user 外不许见；user / 作者本人 / all 档全可见；其余按人脉闭包。seenBy 首看记账只在第一次看落时刻；未看过不许互动（作者免看）；story 过期另立一格不进 feed。",
+"【缝什么 · 人脉面】linked 人脉双向镜像：me 侧与 peer 侧各持一份，owner 反转、权限取反向字段（mayInteract / mayPost / mayStory 三权），镜像不许只算单向；人脉闭包含 actor 自己 + user 互通 + 本人人脉 + 来向人脉。",
+"【缝什么 · 布局面】4×4 网格占位三算（面积 / 占位标记 / 首个空位）与两套合法性门：显式 row/col 逐件验位、无坐标按原序试装配（旧预设兼容，源同款口径）；形状三型（app / folder≥2 / widget）与 wide 4x2·square 2x2 查表；页数 30 / 页内 16 上限；dock 只认在册件；问题逐因报出（源布尔一票否决看不出哪里坏）。",
+"【缝什么 · 表情包面】宽泛格式解析：名称:URL / 名称：URL / 名称 URL / 名称URL 都能收，尾部标点剥离，注释行跳过；URL 幂等去重逐行报（bad_line / dup_url 逐条带行号）；分类册治理逐因拒：重命名先验在册与查重（源可给幽灵分类改名，本件拦下）、解散须空、移动须在册。",
+"【缝什么 · 词法面】切词（空白与中西标点分隔、token 长度≥2）、命中比基础分、置顶加成 0.35、权重步进 0.08、上限 1；兜底选取宽容线 max(0.05, 阈值×0.45)、排序三键（置顶→分数→更新时刻）、topK 截取。与召回台的裁定差：recall 是 BM25 三档文档级检索，本件是逐条目轻量 token 命中兜底，机制族不同并存不撞。",
+"【四块不缝 × 四件】socialguard：不拼 AI 提示词（源 promptDefaults 全家桶）/ 不录音频（源 MediaRecorder）/ 不出图不收图 / 不挂宿主 db.moments；freehome：拖拽手势 / 指针画布 / 底部抽屉全不进；stickerdesk：AI 识别 / 下载上传 / 图片预览全不进；lexiscore：嵌入 API / 向量余弦 / 上下文注入全不进。四件全部零网络、零 AI 调用。",
+"【接线 · 四件六处落点齐备】① config/apps.js 四条注册（id 与名与图标与主色，各带不缝清单与偏离清单注释）；② config/storage.js 四条前缀（^sg_ / ^fh_ / ^sd_ / ^ls_）；③ scripts/keys-audit.mjs 登记 11 键（sg×4 / fh×2 / sd×3 / ls×2，scope 为 chat）；④ index.js 懒加载分支四个 + 挂载 + REBIND 表四条；⑤ phone.css 四段与各自 css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补四项。",
+"【会话隔离 · 交棒 · 收干】11 条会话键随会话隔离：源把帖子库人脉册挂 db.moments、布局挂 db.freeHomeLayout、词条挂 chat.vectorMemory（换角色全部串味），换会话全量重取，清各面只清自己那条键。批次A四件已收干；第 3 层剩余按总控计划推进批次B~G；automatic-journal 与 diary 撞权威裁定不缝（差异面仅宿主态迁移脚本）。全部缝完前不跑全量回归（用户指令已存记忆库）；判据套件 system-v3490 与四件冒烟全绿，五道单门当场复跑。",
+"【定位 · 素材缝合路线图第 3 层第十三件：结构化记忆案头（EPhone·xINOVO 记忆表格一族）】本版把 src_xinovo/js/modules/memory_table.js（3245 行 / 119 函数，IIFE）缝进本仓。新件定名 apps/memtable/（结构化记忆案头），四层齐备：memtable-data.js（1053 行 / 58 导出，纯函数内核）/ memtable-app.js（253 行，取数与落盘）/ memtable-view.js（294 行，视图）/ memtable.css（51 行，样式）。源是「发请求的那个人」，本件是案头：更新包由用户从任何对话端贴回来，本件零网络、零 AI、零 DOMParser、零定时器。",
+"【缝什么 · 册子面：三级册子与逐型归一】模板＞表（keyValue / rows 两型）＞字段（八型 text / longtext / number / enum / tags / progress / date / boolean）。逐型归一：数值超范围夹取要报 clamped 不许无声改数；enum 值不在册要报 fallback 不许静默回缺省；认不出的型归一成 text 并记 why。模板与字段坏行逐条拒收（unknown 桶与 rejected 清单），上限超了只报不截。",
+"【缝什么 · 更新包面：贴回 XML → 逐条计划 → 按确认落库】XML 解析是自写的逐字符状态机（不用 DOMParser），坏结构逐条报因（xml_broken 带 pos）、能收的几条照收不整段丢。解析产物是逐条更新计划：哪一模板 / 哪一表 / 哪一字段或哪一行 / 旧值 / 新值 / 收或不收的因。落库只落确认过的 set 条，纯函数不改入参。",
+"【缝什么 · 门面：锁定与禁编字段不许被更新包改写】字段锁（locked）与 aiEditable=false 落库前拦下报 blocked；fill_empty 策略下旧值非空拒改报 kept；模板 / 表 / 字段 / 行认不出逐条报 unknown_* 不硬塞。源是 best-effort 静默跳过，本件逐格报出为什么。",
+"【缝什么 · 上限面：六项上限成字，超限只报不截】模板库 200 / 每表 500 行 / 原文 400000 字 / 历史快照 20 / 序列读数 12 点 / 台账 120 条。历史超上限报 dropped 不许静默挤掉；台账裁边计数 dropped 现示。",
+"【缝什么 · 读数面：看板与游标与余量】看板读数（模板 / 表 / 字段 / 行表 / 行 / 锁定 / 历史计数）、自动更新游标读数（间隔 / 游标位 / 未同步 / 成批数）、上限余量读数；模板定义文本一键复制（不拼提示词）；历史序列至多 12 点原样交视图，画不画是视图的事。",
+"【四块不缝 · 源里本就有的外部耦合一律不接】① 不发请求不拼提示词（源 buildTemplateDefinitionForPrompt 拼一大段 systemPrompt 直打 AI）；② 不用 DOMParser（源用宿主 DOMParser，本件自写状态机）；③ 不写宿主数据库（源挂 db.memoryTableTemplates 与 chat.memoryTables，Dexie 整块回写，本件零数据库走 PhoneStorage）；④ 不画图表（源 drawSparkline 画历史曲线，本件只产序列读数）。",
+"【接线 · 六处落点全齐备】① config/apps.js 注册（id memtable 与名「结构化记忆案头」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 一条前缀 ^memtable_ 覆盖四条会话键；③ scripts/keys-audit.mjs 登记 memtable_templates / memtable_data / memtable_xml / memtable_ledger（scope 为 chat）；④ index.js 懒加载分支与挂载与表单字段表（REBIND 表）；⑤ phone.css 本版段与 apps/memtable/memtable.css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补一项。少一处就静默错数据或点了没反应，判据套件逐点钉住。",
+"【会话隔离 · 交棒 · 边界 · 收干】写盘四条键（模板库 / 数据 / 更新包原文+收下时刻 / 台账）走 ^memtable_ 前缀随会话隔离：源把模板与数据挂宿主数据库大对象上（换角色后一起串味），换会话四格全量重取，清各面只清自己那条键。交棒：xINOVO 记忆表格一族已处置完毕，第 3 层剩余源（xinovo 余件 moments / vector_memory / automatic-journal / sticker / free-home 等）按总控计划逐件推进，全部缝完前不跑全量回归（用户指令）。运行时验证边界：真宿主实机落盘与会话隔离实况、真模板量级下的排版、窄屏观感三条不能保证，归 R-O3。五源同源抬版：manifest.json 与 package.json 与 update-log.json 首位新键 + latest 与 index.js 的版本常量与公告块与 ITERATION_LOG.md 头部迭代段。",
+"【定位 · 素材缝合路线图第 3 层第十二件：子宫像素画板（四片同族，合计 155940 字节 / 2456 行）】本版把 st_bs_biotracker 的四片同族缝进本仓：fetus_sprite.js（19687 字节 / 422 行，几何部件与八方向栅格化，零依赖纯函数）+ uterus_layout.js（16728 字节 / 375 行，版面与推挤与液面与羊膜囊）+ stage_config.js（阶段表与产程基础时长）+ uterus_render.js（50738 字节 / 1237 行，绘制层与像素笔与图块缓存与调色盘）。新件定名 apps/uterus/（子宫画板），四层齐备：uterus-data.js（1205 行 / 73 导出，纯函数内核）/ uterus-app.js（371 行 / 3 导出，取数与落盘）/ uterus-view.js（1011 行 / 1 导出，视图）/ uterus.css（242 行，样式）。",
+"【缝什么 · 几何面：八方向任意尺寸都不许溢出】源只按固定几档角度画，斜角会顶出画布。本件把任意角度与任意高度的图块栅格到自己的矩形里（角落反算包围盒 + 外扩 margin），实格数下限与锚点内界逐角度断言。认不出的胚型另立一格（notes.unknownType 与 drawnAs 分开报），缺高度报出来（sizeMissing，不许无声按 20 算），五型册里没有的不许当在册。",
+"【缝什么 · 镜像面：左右翻不许改了尺寸也不许不翻】源在着色一步上做镜像，边界像素因取整会偏一格。本件在投影一步上做镜像：宽高与锚点必须与原图一致，结构级左右翻必须成立，像素级不一致的格数不得超过 5%（只允许取整偏一格）。",
+"【缝什么 · 版面面：推挤不动即停，不许读成到顶】源死跑满 12 轮且一个字不说，单胎也报「推挤轮 12/12」，视图据此误报触顶。本件加 moved 早停标志与 reachCap 读数（不动即停；跑满才标到顶），读数行改成「推挤轮 N（到顶）」。",
+"【缝什么 · 上限面：超上限不许静默丢，没画出来的也要报名】源只报 hiddenCount 一个数，用户不知道哪几胎没画。本件 hiddenList 逐胎报名（embryoId 与 why 与 declaredType 与 unknownType），超上限那胎若声明型认不出也必须单独报出来。",
+"【缝什么 · 栏位面：缺栏位不等于默认值】源把缺栏位按默认值算，「没这一栏」与「就是 20」在界面上同形。本件 missing 逐格记（base.uterinePressure 与 base.libido 与 fetuses 那一层的 weight 与 affinity 与 tendencyAngle），算不出来不读成 0。",
+"【缝什么 · 空台面：空窗期是可画的台子，没贴过才是画不出来】源把空窗期与没状态混成一句。本件 stageKindOf 分四格：blank（压根没贴过，verdict 回 cant）/ empty（空窗期，是可画的空台，verdict 回 ok 且 emptyStage 成字）/ gestating（六孕期与产兆前驱与三产程）/ unknown（认不出的阶段，verdict 回 bad，不许当成六个孕期之一）。",
+"【缝什么 · 液面面：精液越多液面越高，满后溢出且浸满】源只按一个比值画线，溢出与浸满两件事看不出来。本件给 getSemenCapacity 容量（基础 100）与 semenFull 与 semenOverflow 与 fluidHeight 四项读数，满与溢各成字。",
+"【缝什么 · 囊面：同卵共囊，孕早不成囊】源按胎逐只画囊，同卵双胎画成两只。本件按 identicalGroup 归囊（同组共一只），囊成员逐个列，按成员最大孕龄定囊大小。",
+"【缝什么 · 主题面：认不出的键不许吞掉内置色】源把主题盘整盘替换，认不出的键会连内置色一起吞掉。本件 resolvePalette 只认键名：认得的用主题色，认不出的保留内置色，themed 与 total 两个读数分开报（主题为入参，不读宿主界面元素）。",
+"【缝什么 · 读侧面：视图不重算，读侧把真源表原样交出去】源在视图层又算一遍版面与读数，两处口径会漂。本件读侧（readingCells / problemCells / fetusCells / sacCells）把真源表原样交视图，视图只画不算。声明型与画出型分开报（认不出的声明原样报出，不许洗成胎生）。",
+"【缝什么 · 上限读数面：六项上限都要成字】源的上限散在各处。本件 limits 把六项上限（胎数与推挤轮与格数与行数与台账）收成一处成字，App 层与视图都从这一处取。",
+"【四块不缝 · 源里的外部耦合一律不接】① 不写回角色状态（源把呼吸相位与表情进度写回 profile）；② 不读宿主界面元素取主题色（源 pickThemeHue 读 theme.screen 与 text 与 border 三者里最饱和的一个），本件主题是入参；③ 不发请求不注入条目；④ 不起未受控计时器（源 setInterval 每 180 毫秒推一帧，还带 visibilitychange 与 matchMedia 两套），本件帧推进由调用方显式推（app.frameTick），视图只画当下这一帧。",
+"【五条偏离 · 逐条对着源的静默失效】① 认不出的胚型不当胎生静默画（另立一格 + 报声明型）；② 缺栏位不等于默认值（逐格记）；③ 算不出来不读成 0；④ 超上限不许静默丢（逐胎报名）；⑤ 推挤轮数要有上限读数（不动即停 + 到顶标）。",
+"【静态门 · 零反引号零反斜杠】本层三件与样式层守全仓口径：零反引号、零反斜杠（剥注释器是字符状态机，裸引号会让它卡住），文本里的与号与尖括号一律走拼装形。全件与四块不缝一起由静态门与判据套件双向守住。",
+"【接线 · 六处落点全齐备】① config/apps.js 注册（id uterus 与名「子宫画板」与图标与主色，带不缝清单与偏离清单注释）；② config/storage.js 一条宽前缀 ^uterus_ 覆盖两条会话键；③ scripts/keys-audit.mjs 登记 uterus_subject 与 uterus_ledger（scope 为 chat）；④ index.js 懒加载分支与挂载与表单字段表；⑤ phone.css 本版段与 apps/uterus/uterus.css 逐字同源；⑥ tests/system-v255.test.mjs 的 dirMap 补一项。少一处就静默错数据或点了没反应，判据套件逐点钉住。",
+"【会话隔离 · 两条键随会话分开存】写盘两条键（uterus_subject 状态原文 + 收下时刻 / uterus_ledger 动作台账）走 ^uterus_ 前缀随会话隔离：源把状态与画布进度全挂在宿主大对象上，换角色后一起串味。换会话两格全量重取（旧状态与旧台账都不许留着）。放下一份状态只清自己那条键（台账不许跟着没），清台账只清自己那条键（状态不许跟着没）。",
+"【缺陷 · 落盘结果被丢掉：写不进去也报「成」】本件自纠抓到一处真缺陷：ingestSubject 与 clearSubject 与 clearLedger 把 _persistSubject 与 _persistLedger 的返回值丢掉了，于是 storage 抛异常或只读时仍回 saved 为真 —— 界面上是「收下了」，实际一个字节都没写进去（看起来没坏但存不下）。已改为把落盘结果传进回执（saved 按真结果报，storage 另有一格信号）。判据套件把只读盘与抛异常盘两种情形都钉住。",
+"【缺陷 · 挂起：整仓复制 26 棵把单测拖过两分钟】本件破坏表原本每条开一棵整仓副本树，26 条累计把单测拖到 120 秒触墙（跑到第 13 条用例时被文件级超时打断，报 Promise resolution is still pending）。根因不是真死锁而是**光机量的拷贝**。已改为按需只复制判据会读到的那十件（清单与判据读的路径一一对应，少一件即判据报错、不会静默），破坏表 887 毫秒跑完，全套件 1.35 秒收干。★ 教训：跑不动的门禁守不住纪律。",
+"【判据面 · 破坏表 26 条与负控制 6 条】破坏表 D1~D26 逐条真源码定点破坏（一律落副本树，真仓只读），每条独立开一棵按需副本树、加载副本模块、重跑同款真判据（判据若抛异常同样计入失败）；负控制 N1 锚点不存在必须抛与 N2 人为构双锚点真调工具两向自证与 N3 判据不得引用锚点且锚点在真源码恰中 1 次与 N4 剥注释器自证与 N5 破坏必须可观测改行为与 N6 三向自证（真源码判据得空 / 破坏后转红 / 副本模块不等于真仓模块）。",
+"【交棒：子宫画板族已全部处置完毕，转到同批下一件】本件收干后，st_bs_biotracker 的子宫像素画板四片（合计 155940 字节 / 2456 行）已全部处置完毕；可取的是「一份状态画出当下这一帧」这一层版面面（几何 / 版面 / 液面 / 囊 / 读数 / 判定 / 收录），不缝的是写回状态 / 读宿主界面元素取主题色 / 起定时器 / 做一场演出（drawCue 与 drawRupture 与 drawObstruction 要时间轴）。",
+"【运行时验证边界 · v3.48.0 复校】本版能证明的是：几何内核与版面层与 App 层与视图层四层的**机制面**（宫体外形边界 / 八方向不溢出 / 不动即停 / 缺栏位逐格 / 超上限逐胎报名 / 认不出的另立一格 / 同卵共囊 / 液面与浸满与溢出 / 主题只认键名 / 落盘真结果 / 换会话两格重取 / 六处接线齐备 / 四块不缝真的没缝 / 二十六条破坏都真响过）。不能保证的是：① 真宿主实机里的落盘与会话隔离与换会话重绑实况（本仓至今没有可运行浏览器的验证环境）；② 真机上贴一份上千胎量级的真状态进来后的版面观感与长列表排版；③ 窄屏上的排版与观感（本件是四页签 + 96x120 像素画布放大两倍）。三条均仍归 R-O3（真宿主实机验证）：这类形态的共性是**不报错、不崩溃、只错结果 —— 看起来没坏但显示不对**，本版只能挡住机制面。五源同源抬版：manifest.json 与 package.json 与 update-log.json 首位新键 + latest 与 index.js 的版本常量与公告块与 ITERATION_LOG.md 头部迭代段。",
+"【收干 · 本版自己的门禁与基线】① 单件门禁（判据套件 13 用例全绿，含破坏表 26 条与负控制 6 条）；② 两道门当场复跑（registry APPS id 70 与懒加载分支 70 与会话键前缀 87 与样式投递 60；keys 使用点 257 与 CHAT_DATA_PATTERNS 85 与登记 257）；③ 四处审计基线零手抄刷新（lifecycle 与 branch_play 与 schedule_conflict 与 long_chat，读数来由逐条写进 rebuilds）；④ 运行时验证边界文档 v3.48.0 复校；⑤ 全量门禁留到全部七件完成后统一跑（本轮节奏约束：全部完成之前不跑全量）。⑥ 本版自己抓到的缺陷（死导出十二个，判据面级联翻红）：读数面真实接上孕程分界/延产上限/孕育速度区间/入盆标记/羊膜档；胎位端点(DESCENT_TOP/CROWNED_OUT)、入盆阈值(DESCENT_INLET)、羊膜囊判定(hasFluidSac)、亲和文字(affinityWordOf)改为走真源不再手抄；J7 归因文案表 UD_ACTION_TEXT 键改取真源 UD_ACTIONS 常量值。⑦ 对旧判据的交棒改写（下限形）：v3230 两处裸 cpSync 改引用共享实现 copyTreeSafe。",
+"【版本升至 3.48.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
     ]
 };
 
@@ -5500,19 +5514,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 <div id="phoneDrawerToolRow" class="list-group-item flex-container flexGap5 interactable"
                      tabindex="0"
                      role="listitem"
-                     title="柚月の手机 (${statusText})">
+                     title="RubyPhone (${statusText})">
                     <div id="phoneDrawerIcon" class="fa-fw fa-solid fa-mobile-screen-button extensionsMenuExtensionButton"
                          style="position:relative; ${iconStyle}"
                          tabindex="0"
                          role="button">
                         <span id="phone-badge" class="badge-notification" style="display:none; position:absolute; top:-4px; right:-6px;"></span>
                     </div>
-                    <span>柚月の手机</span>
+                    <span>RubyPhone</span>
                 </div>
             </div>
         ` : `
             <div id="phoneDrawerToolEntry" class="extension_container interactable" tabindex="0" role="button"
-                 title="柚月の手机 (${statusText})"
+                 title="RubyPhone (${statusText})"
                  style="position:relative; display:flex; align-items:center; justify-content:center; min-width:38px; min-height:38px;">
                 <div id="phoneDrawerIcon" class="fa-fw fa-solid fa-mobile-screen-button"
                      style="position:relative; display:flex; align-items:center; justify-content:center; width:100%; height:100%; ${iconStyle}"
@@ -5573,7 +5587,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
                     // 视觉反馈：图标变灰/点亮
                     drawerIcon.style.cssText = settings.enabled ? '' : 'opacity: 0.4; filter: grayscale(1);';
-                    drawerIcon.title = settings.enabled ? '柚月の手机 (已启用)' : '柚月の手机 (已休眠)';
+                    drawerIcon.title = settings.enabled ? 'RubyPhone (已启用)' : 'RubyPhone (已休眠)';
 
                     // 手机震动反馈
                     if (navigator.vibrate) navigator.vibrate(50);

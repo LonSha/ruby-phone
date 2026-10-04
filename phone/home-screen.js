@@ -164,15 +164,167 @@ export class HomeScreen {
 
     renderIconLayout() {
         const dateInfo = this.getCurrentDateParts();
+        const pages = this.buildIconPages();
+        const dots = this.renderIconPageDots(pages.length);
         return `
             <div class="home-time yzp-home-time${dateInfo.isAncient ? ' is-ancient' : ''}">
                 <div class="time-large yzp-home-time-large">${this.getCurrentTime()}</div>
                 <div class="date yzp-home-date">${this._escapeHtml(dateInfo.date)}${dateInfo.weekday ? ` ${this._escapeHtml(dateInfo.weekday)}` : ''}</div>
             </div>
-            <div class="app-grid yzp-home-app-grid">
-                ${this.apps.map(app => this.renderAppIcon(app)).join('')}
+            <div class="app-grid-pager yzp-home-app-grid-pager" data-page-count="${pages.length}">
+                ${pages.map((apps, index) => `
+                    <div class="app-grid yzp-home-app-grid app-grid-page yzp-home-app-grid-page" data-page-index="${index}">
+                        ${apps.map(app => this.renderAppIcon(app)).join('')}
+                    </div>
+                `).join('')}
             </div>
+            ${dots}
         `;
+    }
+
+    /* ============================================================
+     * [v3.56.0] 桌面图标分页
+     * ------------------------------------------------------------
+     * 为什么加（用户报障「还有图标重叠问题」「这怎么用」）：
+     *   修前 `renderIconLayout()` 把**全部 81 个 App** 一次性铺进单个 `.app-grid`
+     *   （`${this.apps.map(app => this.renderAppIcon(app)).join('')}`），
+     *   而 `.app-grid` 是 `grid-template-columns: repeat(4, 1fr)` 且无行数约束 ——
+     *   唯一的溢出承接是 `.home-screen` 的 `overflow-y: auto`。于是：
+     *     ① 桌面变成一条 21 行的超长滚动列表（无分页、无页码感）；
+     *     ② 绝对定位的 `.dock` 悬浮在滚动内容之上，与末行图标**视觉重叠**。
+     *   `APPS` 对象键集为 `id name icon defaultIcon color badge data`，不含任何分类字段，
+     *   故分页是唯一不依赖新增数据模型的落法。
+     *
+     * 每页容量为什么是 4×5=20：
+     *   列数沿用既有的 4 列（`phone.css` 的 `repeat(4, ...)`）。行数按实测几何取 5 ——
+     *   单行高约 74px（图标 42px + 名称 ~14px + 行距 ~13.6px），可用高度约 464px
+     *   （屏高 ~780px − 时间头 ~170px − 底部为 dock 预留的 ~146px），故 5 行约 370px
+     *   仍有余量；第 6 行（444px）太贴边，不用。
+     *   81 件 ⇒ 5 页（20/20/20/20/1）。
+     * ============================================================ */
+    getIconPageCapacity() {
+        const columns = 4;
+        const rows = 5;
+        return columns * rows;
+    }
+
+    buildIconPages() {
+        const apps = Array.isArray(this.apps) ? this.apps : [];
+        const capacity = this.getIconPageCapacity();
+        if (apps.length <= capacity) return [apps];
+        const pages = [];
+        for (let i = 0; i < apps.length; i += capacity) {
+            pages.push(apps.slice(i, i + capacity));
+        }
+        return pages;
+    }
+
+    renderIconPageDots(pageCount) {
+        if (!Number.isFinite(pageCount) || pageCount <= 1) return '';
+        const current = this._clampIconPage(this._iconPage ?? 0, pageCount);
+        const dots = Array.from({ length: pageCount }, (_, i) =>
+            `<button type="button" class="home-page-dot yzp-home-page-dot${i === current ? ' is-active' : ''}" data-page-index="${i}" aria-label="第 ${i + 1} 页"></button>`
+        ).join('');
+        return `<div class="home-page-dots yzp-home-page-dots" role="tablist">${dots}</div>`;
+    }
+
+    _clampIconPage(page, pageCount = null) {
+        const count = pageCount ?? this.buildIconPages().length;
+        const n = Number(page);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.min(Math.max(0, count - 1), Math.trunc(n)));
+    }
+
+    /** 切到第 page 页（越界自动夹取）。返回是否真的发生了切换。 */
+    goIconPage(page) {
+        const pager = this.phoneShell?.screen?.querySelector?.('.app-grid-pager');
+        if (!pager) return false;
+        const pageCount = Number(pager.dataset.pageCount) || 1;
+        const next = this._clampIconPage(page, pageCount);
+        const prev = this._iconPage ?? 0;
+        this._iconPage = next;
+        pager.style.transform = `translate3d(${-next * 100}%, 0, 0)`;
+        pager.querySelectorAll('.app-grid-page').forEach((el) => {
+            el.setAttribute('aria-hidden', String(Number(el.dataset.pageIndex) !== next));
+        });
+        pager.parentElement?.querySelectorAll?.('.home-page-dot').forEach((dot) => {
+            const isActive = Number(dot.dataset.pageIndex) === next;
+            dot.classList.toggle('is-active', isActive);
+            dot.setAttribute('aria-selected', String(isActive));
+        });
+        return next !== prev;
+    }
+
+    /** 分页手势与页码点击。水平滑动翻页；垂直滑动**不**拦截（留给宿主页面滚动）。 */
+    bindIconPager() {
+        const pager = this.phoneShell?.screen?.querySelector?.('.app-grid-pager');
+        if (!pager || pager.dataset.pagerBound === '1') return;
+        pager.dataset.pagerBound = '1';
+        const pageCount = Number(pager.dataset.pageCount) || 1;
+        /* 页码点击在容器外层（.home-page-dots 是 pager 的**兄弟**、position:absolute），
+         *   故单独绑一次；`dotsBound` 标志防重复绑。
+         *   关于手势区与 dock 的关系（实测，非推断）：
+         *     - pager 的包围盒**覆盖** dock —— 每页 `padding-bottom:146px` 是为 dock 让的净空，
+         *       但它仍算在页（进而算在轨道）的盒子里，而 dock 是 `bottom:8%` 的居中小条；
+         *     - 但纯**点击** dock 不会翻页：翻页要求 |dx| ≥ SWIPE_MIN(40)，点击位移远小于它，
+         *       而这两个监听器是 passive 的、不 preventDefault，故 dock 的 onclick 照常触发；
+         *     - 在 dock 上横向拖 ≥40px 确实会翻页 —— 与在图标区横拖同一条判定，属预期。
+         *   结论：不需要把手势区从轨道缩到页；此处只留判定，不做额外裁剪。 */
+        const dotsHost = pager.parentElement?.querySelector?.('.home-page-dots');
+        if (dotsHost && dotsHost.dataset.dotsBound !== '1') {
+            dotsHost.dataset.dotsBound = '1';
+            dotsHost.addEventListener('click', (e) => {
+                const dot = e.target?.closest?.('.home-page-dot');
+                if (!dot) return;
+                e.stopPropagation();
+                this.goIconPage(Number(dot.dataset.pageIndex));
+            });
+        }
+        this.goIconPage(this._iconPage ?? 0);
+        if (pageCount <= 1) return;
+
+        const SWIPE_MIN = 40;   // 低于此位移不认作翻页（防止误触把点击吃掉）
+        let startX = 0;
+        let startY = 0;
+        let tracking = false;
+        const begin = (x, y) => { startX = x; startY = y; tracking = true; };
+        const finish = (x, y) => {
+            if (!tracking) return;
+            tracking = false;
+            const dx = x - startX;
+            const dy = y - startY;
+            /* 位移取「起止两点坐标之差」（touchstart→touchend / pointerdown→pointerup），
+             *   与 bindSwipeGesture（phone-shell）同一条口径：那里也是
+             *   `Math.abs(e.touches[0].clientX - this.touchStartX)`。
+             *   刻意**不**用 PointerEvent.movementX/Y：该字段本就只在 mousemove 上可靠，
+             *   触摸端基本不填，而本仓 pointer 面是主路径（触摸端另走 touch* 对）。
+             *   若哪天有人改成读 movement，判据仍会绿（断言只看「调用点在场」），
+             *   真机上却是「怎么划都不翻页」——这正是本仓最贵的缺陷形态。 */
+            if (Math.abs(dx) < SWIPE_MIN) return;
+            if (Math.abs(dx) <= Math.abs(dy)) return;   // 斜向/纵向手势不翻页
+            this.goIconPage((this._iconPage ?? 0) + (dx < 0 ? 1 : -1));
+        };
+
+        this._rt.addListener(pager, 'touchstart', (e) => {
+            const t = e.touches?.[0];
+            if (!t || e.touches.length !== 1) return;
+            begin(t.clientX, t.clientY);
+        }, { passive: true }, 'home:iconPageTouchStart');
+        this._rt.addListener(pager, 'touchend', (e) => {
+            const t = e.changedTouches?.[0];
+            if (!t) return;
+            finish(t.clientX, t.clientY);
+        }, { passive: true }, 'home:iconPageTouchEnd');
+        // 指针事件面（桌面端鼠标拖拽 / 触控板）：与触摸同一条判定
+        this._rt.addListener(pager, 'pointerdown', (e) => {
+            if (e.pointerType === 'touch') return;   // 触摸走上面那对，避免双计
+            if (e.button !== undefined && e.button !== 0) return;
+            begin(e.clientX, e.clientY);
+        }, { passive: true }, 'home:iconPagePointerDown');
+        this._rt.addListener(pager, 'pointerup', (e) => {
+            if (e.pointerType === 'touch') return;
+            finish(e.clientX, e.clientY);
+        }, { passive: true }, 'home:iconPagePointerUp');
     }
 
     renderCardLayout() {
@@ -548,6 +700,9 @@ export class HomeScreen {
                 this.openApp(appId);
             };
         });
+
+        // [v3.56.0] 桌面图标分页（水平滑动 / 点页码）。卡片布局没有 pager，函数内部自行短路。
+        this.bindIconPager();
 
         // 监听壁纸更新
         // [v2.31.0] 四处 `window.addEventListener` 改为经实例域登记：`_xxxEventBound`

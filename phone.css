@@ -910,6 +910,58 @@
 }
 
 /* ========================================
+   ⬅️ [v3.56.0] App 内返回键
+   ========================================
+   为什么在左上角：用户报障原话是「进入应用后，**左上角**没有返回按钮」——
+   位置按用户预期给，不另造一套。层级压在视图层之上（z-index 40 > 当前视图 10）
+   但低于通知横幅，因此不会被 App 内容盖住。 */
+.phone-screen .phone-back-button {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 40;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 30px;
+    padding: 0 10px 0 8px;
+    margin: 0;
+    border: 0;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    color: var(--phone-global-text, #1f2937);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.phone-screen .phone-back-button:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.phone-screen .phone-back-button:active {
+    transform: scale(0.94);
+}
+
+/* 主屏幕隐藏（同步另有 inline display 直写兜底，防样式表被宿主 !important 压过） */
+.phone-screen .phone-back-button.is-hidden {
+    display: none !important;
+}
+
+/* 深色底（蜜语/游戏/万象三套换肤面板）下的对比度补偿 */
+.phone-body-panel-honey .phone-screen .phone-back-button,
+.phone-body-panel-games .phone-screen .phone-back-button,
+.phone-body-panel-wangxiang .phone-screen .phone-back-button {
+    background: rgba(20, 22, 28, 0.62);
+    color: #f3f4f6;
+}
+
+/* ========================================
    🔘 Home指示器 - 已隐藏
    ======================================== */
 
@@ -998,6 +1050,83 @@
     width: 100% !important;
     margin: 0 !important;
     list-style: none !important;
+}
+
+/* ========================================
+   📄 [v3.56.0] 桌面图标分页
+   ========================================
+   修前：全部 81 个 App 铺进**单个** .app-grid（21 行），靠 .home-screen 的
+   overflow-y 滚动承接 —— 桌面没有分页感，且绝对定位的 .dock 会压住末行图标。
+   现在：.app-grid-pager 是横向三轨轨道（每页 100% 宽），transform 位移翻页；
+   .app-grid 退化为**页**（重叠在同一格），垂直方向不再需要滚动。 */
+.phone-screen .home-screen .app-grid-pager {
+    position: relative !important;
+    z-index: 1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    /* 给 dock 让出的净空：dock 是 position:absolute; bottom:8% 且高约 44+12px，
+       故轨道底部留 146px（含最后一行图标与 dock 之间的视觉呼吸）。 */
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    touch-action: pan-y;   /* 纵向留给宿主滚动，横向由本组件接管（配合 bindIconPager 的手势判定） */
+}
+
+.phone-screen .home-screen .app-grid-page {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    align-content: start !important;
+    /* 单页最多 4×5=20 格 ⇒ 显式声明 5 行轨，不足时被 align-content 顶到上方 */
+    grid-auto-rows: auto !important;
+    max-height: none !important;
+    /* dock 净空：dock 是 .home-screen 内的 position:absolute; bottom:8%（高约 56px），
+       页码点在其上方（bottom:19%）。分页后内容不再靠滚动承接，故须在**页**底部
+       显式留出这段净空，否则末行图标仍会被 dock 压住（这正是用户报的「图标重叠」）。 */
+    padding-bottom: 146px !important;
+}
+
+/* 页码点：贴着 dock 上方居中 */
+.phone-screen .home-screen .home-page-dots {
+    position: absolute !important;
+    z-index: 3 !important;
+    left: 50% !important;
+    bottom: 19% !important;
+    transform: translateX(-50%) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    margin: 0 !important;
+    padding: 3px 8px !important;
+    border-radius: 10px !important;
+    background: rgba(0, 0, 0, 0.16) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.phone-screen .home-screen .home-page-dot {
+    display: block !important;
+    width: 7px !important;
+    height: 7px !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.phone-screen .home-screen .home-page-dot.is-active {
+    background: var(--phone-global-text, #ffffff) !important;
+    transform: scale(1.28) !important;
 }
 
 .phone-screen .home-screen .app-icon {

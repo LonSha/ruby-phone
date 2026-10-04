@@ -88,13 +88,27 @@ export class PhoneShell {
             </div>
         </div>
 
-        <div class="phone-screen" id="phone-screen"></div>
+        <div class="phone-screen" id="phone-screen">
+            <!-- [v3.56.0] App 内返回键：此前**从未渲染过**任何返回按钮（全库零 back-btn），
+                 唯一返回路径是「左边缘 1/2 区域右滑」—— 对用户不可见、不可发现。
+                 故用户报障「进入应用后左上角没有返回按钮」。
+                 它由 .phone-screen 直系持有（不在 view-stack 内），因此切视图不会重建它；
+                 常驻但按 isAtHomeScreen() 切换可见性，主屏幕时隐藏。
+                 触发链路与右滑返回同一条：goHome() → PHONE_EVENTS.GO_HOME。 -->
+            <button type="button" class="phone-back-button" id="phone-back-button"
+                    aria-label="返回上一页" title="返回">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                <span class="phone-back-button-text">返回</span>
+            </button>
+        </div>
     </div>
 `;
 
         panelContainer.appendChild(this.container);
         this.screen = this.container.querySelector('.phone-screen');
         this.syncHomeLayoutChromeClass();
+        this.bindBackButton();
+        this.syncBackButtonVisibility();
 
         this.bindPanelEvents();
         this.bindSwipeGesture();
@@ -838,6 +852,54 @@ export class PhoneShell {
         return this.viewHistory.length <= 1 && (this.viewHistory.length === 0 || this.viewHistory[0].id === 'home');
     }
 
+    /* ============================================================
+     * [v3.56.0] App 内返回键
+     * ------------------------------------------------------------
+     * 为什么加（真实报障，不是整洁性偏好）：
+     *   用户反馈「进入应用后，左上角没有返回按钮」。实查：`createInPanel` 的 innerHTML
+     *   只渲染 punch-hole / statusbar / phone-screen 三块，`grep back-btn|返回` 全库只命中
+     *   注释与手势逻辑 —— **从未渲染过任何返回按钮**。唯一返回路径是
+     *   `bindSwipeGesture` 的「左边缘 1/2 区域右滑」，对用户不可见、不可发现。
+     *
+     * 为什么挂在 .phone-screen 而不是 view-stack 内的图层：
+     *   图层（[data-view-id]）会被 setContent 反复重建与回收，按钮挂在里面会随视图
+     *   一起被销毁（切一次 App 就没了）。.phone-screen 是常驻容器，按钮跟着它活。
+     *
+     * 为什么走 goHome() 而不是自己维护一份返回逻辑：
+     *   右滑返回（bindSwipeGesture 的 SWIPE_BACK 分支）已经是本仓的返回语义真源，
+     *   它负责压栈/弹栈与「返回桌面后 500ms 屏蔽误 reopen」。第二个真源必然漂移，
+     *   故这里只调它、不重写。
+     * ============================================================ */
+    bindBackButton() {
+        const btn = this.container?.querySelector?.('#phone-back-button');
+        if (!btn || btn.dataset.backBound === '1') return;
+        btn.dataset.backBound = '1';
+        // pointerdown 的 stopPropagation 是必须的：否则同一次触摸会被 bindSwipeGesture
+        //   的 touchmove 判定读成「从边缘起手的右滑」，触发一次额外返回（双退）。
+        btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+        btn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.isAtHomeScreen()) return;
+            this.goHome();
+        });
+    }
+
+    /* 可见性：主屏幕隐藏，其余视图显示。
+     *   只切 class 不做 DOM 增删 —— 按钮常驻，避免每次切视图都重建（并因此丢监听）。 */
+    syncBackButtonVisibility() {
+        const btn = this.container?.querySelector?.('#phone-back-button');
+        if (!btn) return false;
+        const atHome = this.isAtHomeScreen();
+        btn.classList.toggle('is-hidden', atHome);
+        btn.setAttribute('aria-hidden', String(atHome));
+        // 内联 display 兜底：宿主可能在别处用 !important 压过样式表（本仓已知形态），
+        //   故走 inline style 直写，不依赖 CSS 优先级。
+        btn.style.display = atHome ? 'none' : '';
+        return !atHome;
+    }
+
     goHome() {
         this.currentApp = null;
         this.viewHistory = [];  // 🔥 清空视觉历史栈
@@ -845,6 +907,10 @@ export class PhoneShell {
             // 返回桌面后短时间屏蔽一次图标点击导致的误 reopen
             window.VirtualPhone._homeReturnGuardUntil = Date.now() + 500;
         }
+        // [v3.56.0] 栈已清空 ⇒ 已在主屏幕，返回键必须立刻隐藏。
+        //   不依赖随后的 setContent（home 视图重建可能走缓存 diff 而**不**触发重渲染），
+        //   故在此显式同步一次。
+        this.syncBackButtonVisibility();
         window.dispatchEvent(new CustomEvent(PHONE_EVENTS.GO_HOME));
     }
     
@@ -1252,6 +1318,8 @@ export class PhoneShell {
         });
         window.VirtualPhone?.refreshGlobalTextColorStyle?.();
         window.VirtualPhone?.refreshGlobalFontScale?.();
+        // [v3.56.0] 视图切换后同步返回键可见性（栈刚被改过，这里是唯一收口点）。
+        this.syncBackButtonVisibility();
     }
 
     syncHomeLayoutChromeClass() {

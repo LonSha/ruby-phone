@@ -8,9 +8,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | v3.55.0（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十一道门全过**，**2867 个 tests / 0 fail**（v3.54.0 实测；v3.55.0 本轮新增 v3550 套件 14 例） | `package.json` scripts.check |
-| 体量 | **388 个 .js / 289739 行**：apps 315 文件（**80 个 App 目录**）、config 53 文件、tests 199 套件；`index.js` **877871 字节 / 14127 行** | `find . -name '*.js'` / `wc -l` / `wc -c` |
+| 版本 | v3.56.0（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十一道门全过**，**2881 个 tests / 0 fail**（v3.55.0 实测；v3.56.0 本轮新增 v3560 套件 15 例） | `package.json` scripts.check |
+| 体量 | **388 个 .js / 290201 行**：apps 315 文件（**80 个 App 目录**）、config 53 文件、tests 200 套件；`index.js` **885409 字节 / 14142 行** | `find . -name '*.js'` / `wc -l` / `wc -c` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **80 件 App × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 65；六面全无 5 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |

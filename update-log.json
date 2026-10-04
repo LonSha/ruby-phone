@@ -1,6 +1,26 @@
 {
-  "latest": "3.55.0",
+  "latest": "3.56.0",
   "versions": {
+    "3.56.0": {
+      "version": "3.56.0",
+      "date": "2026-10-04",
+      "items": [
+        "【定位】本轮不缝新素材，只收口用户报障的六项真实缺陷。六项同属本仓最贵的那一类形态：不报错、不崩溃、也不进日志，只是安静地不生效 —— 门禁全绿、测试全绿、真机上却「图标重叠」「进了 App 出不来」「拖着没反应」。",
+        "【缺陷①·桌面图标重叠】renderIconLayout 把全部 81 件一次性铺进单个 .app-grid（repeat(4,1fr) 且无行数约束），唯一溢出承接是 .home-screen 的 overflow-y:auto —— 桌面成了一条 21 行超长滚动列表，绝对定位的 .dock（bottom:8%）悬浮其上、与末行图标视觉重叠。APPS 键集不含任何分类字段，故分页是唯一不依赖新增数据模型的落法。",
+        "【缺陷②·分页缺失】新增六个方法：getIconPageCapacity（4 列 × 5 行 = 20，行数按实测几何取 5：单行约 74px、可用高度约 464px，5 行约 370px 仍有余量）/ buildIconPages / renderIconPageDots / _clampIconPage / goIconPage（走 translate3d(-n*100%)）/ bindIconPager（touchstart-end 与 pointerdown-up 双面，判定取「起止两点坐标之差」与既有 bindSwipeGesture 同口径，刻意不用 PointerEvent.movementX —— 该字段只在 mousemove 上可靠、触摸端基本不填）。页底 padding-bottom:146px 显式留出 dock 净空：分页后内容不再靠滚动承接，不留出末行仍会被 dock 压住（正是报障本体）。81 件 ⇒ 5 页（20/20/20/20/1）。",
+        "【缺陷③·品牌串】对外显示名统一 RubyPhone（index.js 抽屉两处显示名 + 两处 title）；文件头版权署名「柚月小手机 (Yuzuki 的 Little Phone)」有意保留 —— 属来源归属、不是产品名，判据据此把署名行写成唯一放行形态。",
+        "【缺陷④·返回键此前从未渲染过】全库零返回按钮，唯一返回路径是「左边缘 1/2 区域右滑」—— 对用户不可见、不可发现。修法：在 .phone-screen 直系渲染 button#phone-back-button（不能放 view-stack 内的图层节点（data-view-id），它会被 setContent 反复重建与回收，按钮跟着图层走就会「切一次 App 就没了」）；返回语义真源仍是 goHome()（压栈弹栈 + 返回桌面后 500ms 屏蔽误 reopen），按钮只调它、不重写第二份；bindBackButton 的 pointerdown/touchstart stopPropagation 是必须的（否则同一次触摸会被 bindSwipeGesture 读成边缘右滑，触发一次额外返回 = 双退）；可见性同步走 syncBackButtonVisibility 三个调用点并写 inline display 直写，不依赖 CSS 优先级。",
+        "【缺陷⑤·宠物拖拽空实现】pet.css 写着 cursor:grab 却全库零拖拽实现（光标承诺一直是空头支票）。补 bindPetDrag：阈值 DRAG_MIN=6 把点击与拖拽分流；位移一律相对「未变换原点」算 —— 反解式 styleLeft = rect.left + (rect.width - offsetWidth)/2（offsetWidth 不随 transform 变，是精确反解；宠物根带 scale(0.86)，拿 rect.left 当起点会全程偏半个缩放量）；夹取与恢复一律用未变换尺寸；:active 的按下反馈从 transform:scale(0.95) 换成 filter:brightness（缩放反馈会在按下瞬间改几何，与拖拽抢同一个 transform 属性）；拖后那一次 click 必须用捕获期 + stopImmediatePropagation 吞掉（开/关手机的 click 挂在同一个 petRoot 上，同节点监听器按注册顺序触发，stopPropagation 拦不住同节点的后一个）。",
+        "【缺陷⑥·宠物位置键未定义（本轮最深一处）】PHONE_PET_POSITION_KEY 在原状被写点与读点两处引用，而文件头部零声明 —— 拖拽一旦移动就在写点抛 ReferenceError 并被 try/catch 吞掉，用户表现是「拖了但下次打开位置没变」的静默失效。已补定义：键名取连字符形态，默认落全局 extensionSettings（语义归属是「界面偏好」而非会话数据，跨会话漂移会让用户每换角色都要重摆）；刻意不复用悬浮按钮的位置键 —— 两者是不同元素且可见性互斥，共键会让「拖了宠物」下次把按钮摆到宠物位上。",
+        "【捕真缺陷 · 判据自指伪证三形态（缺陷形态三条）】本套件首跑报红的两条是**假缺陷**，根因同一条：判据把「解释这次修正的注释」当成了缺陷本体。形态一：A1 的负判据锚点（修前的整列渲染表达式）在我写的「为什么加」注释里被引用；形态二：A7 的负判据锚点 movementX 同样只在注释里出现（说明为什么不用它）；形态三：pet.css 的说明里引用了旧写法 transform:scale(0.95)。修法：新增 codeOf() 去注释层，全部负判据一律改在代码面上判 —— 这类误报最容易被当成「判据误报」直接放宽，放宽即失守。",
+        "【捕真缺陷 · 判据恒红与计数锚点歧义】首跑另抓到两处判据自身的缺陷：① D5 判据写「该串恰 1 次」，而它在真仓恰有 2 处（拖拽夹取 + 恢复夹取，两处都必须用未变换尺寸），写死「恰 1」使判据恒红 —— 假红与恒绿同样是坏判据，只是方向相反；② E3 用 home-page-dot 计页码点，5 点读数得 12（该串是 yzp- 前缀与外层容器的子串，每点被计两次、容器再计两次），属不可归因的计数面，改取 data-page-index 作锚点。",
+        "【判据套件】新增 tests/system-v3560.test.mjs（15 例）：A 分页 / B 返回键 / C 品牌 / D 宠物拖拽 / G 判据工具自证五面判据 + E 面 5 条真调用行为面（直接 import 真模块调真方法并断言算出来的结果 —— 文本在场只证明写过，调用结果才证明算对：分页切分不丢件与边界、页码夹取、页码点唯一、手势真调注册监听器、位置键与真方法同在）+ 18 条真源码定点破坏表 + 1 条真仓只读回读。破坏一律落副本树，锚点必须恰中 1 次（不唯一即抛），锚点一律取纯 ASCII 片段。本条另含对旧判据的三处**交棒改写**（不是放宽）：C2 品牌串由全行扫描收紧到载体行、D5 由「恰 1 次」改写为下限 2、A1 / A7 / D7 三条负判据移入代码面。",
+        "【门禁】十一道路门全绿（syntax / import-resolve / test / dead-exports / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / upstream-face）；全量回归 2881 例 0 失败；keys 285 键 96 patterns 285 登记、registry 81 App id 81 懒加载分支 98 前缀、样式投递未覆盖 0。",
+        "【边界（诚实记账）】本套件证明的是「消费点在场 + 纯函数算对」，不证明「真机上那段手势/拖拽真跑对了」：手势与拖拽是纯函数级验证（真调监听器、真方法、假事件），指针事件的真实派发、CSS translate3d 的真实合成、宿主 !important 的真实压制都归 R-O3 真宿主实机验证。",
+        "【版本升至 3.56.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest + head / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
+        "【运行时验证边界复校（v3.56.0）】本版六项修复的可验面全部落在**纯函数与接线**上（分页切分、页码夹取、手势判定、拖拽反解与夹取）；它**不能保证**真机上的视觉排版、指针事件真实派发、CSS 合成与宿主 !important 压制。遇到「看起来没坏但显示不对」的问题，属本文登记的第二类，需在真机复现后再修。"
+      ]
+    },
     "3.55.0": {
       "version": "3.55.0",
       "date": "2026-10-03",
@@ -2818,5 +2838,5 @@
       ]
     }
   },
-  "head": "3.55.0"
+  "head": "3.56.0"
 }
