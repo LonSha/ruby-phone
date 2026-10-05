@@ -70,8 +70,15 @@ export const NA = Object.freeze({
     mofo: "魔坊空壳占位（mofo-app.js 头注自述「空壳占位」）：只有模板导入导出与运行态迁移，无生成侧接入面；通知走 phoneShell.showNotification 即时提示、不经落点映射表。",
     games: "游戏厅：内建八款游戏各自的 AI 提示词构造器（getDefault*Prompt）只喂给本 App 自己的牌局生成，不属平台级注入面；战绩落盘是本会话私有库、不被全局搜索索引，也不进通知落点表。",
     settings: "设置 App：纯配置读写与界面装配，本身不产出可搜索内容、不产通知、不向生成侧注入约束（它是被其它 App 读取的设置真源）。",
-    mood: "心境 App：源文件头注自述「只读聚合，不直接写引擎状态」——它读 drives/jiwen/记忆三处引擎读数做可视化，不落盘自有数据、因此无搜索/通知/注入/生命周期四面。",
-    search: "全局搜索 App 本身：它是 F2 这条消费面的**宿主**（把 28 个 App 的数据接成索引源），不是被索引方 —— 自己搜自己无意义，故 F2 对它不适用；其余五面亦无消费点。"
+    mood: "心境 App：源文件头注自述「只读聚合，不直接写引擎状态」——它读 drives/jiwen/记忆三处引擎读数做可视化，不落盘自有数据、因此无搜索/通知/注入/生命周期四面。"
+    /* ★ [v3.58.0 · 计划 O4] 本版把 search 从这台账里**移出**：它原本是「六面全无」，
+     *   本版给它接上了 F6_lifecycle（进 ST_PHONE_REBIND_APP_KEYS）——
+     *   此前它不在表里（入口只在「点开搜索」时懒加载），换会话后 `_scanGen` 不推进、
+     *   上一段会话那轮**还在跑**的全历史扫描仍算当前代际，跑完把旧会话的命中写进面板
+     *   （不报错、只错结果）。它仍无其余五面，其中 F2 属**不适用**而非漏配
+     *   （它是那一条消费面的宿主、把 28 个 App 的数据接成索引源，不是被索引方），
+     *   该口径写在矩阵那一行的行内注释里 —— 本台账的准入条件是「六面全无」，
+     *   收口式口径不许留放行条（留一条就会双向对账报红，这是判据在守它）。 */
 });
 
 /** 矩阵本体：每个 App 一行（faces 为磁盘真读数，由判据复算对账）。 */
@@ -114,7 +121,7 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "clock", name: "时计", dir: "clock", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: true, F6_lifecycle: true }) }),
     Object.freeze({ appId: "ledger", name: "账本", dir: "ledger", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: true, F6_lifecycle: true }) }),
     Object.freeze({ appId: "asset", name: "资产", dir: "asset", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: false, F6_lifecycle: true }) }),
-    Object.freeze({ appId: "search", name: "全局搜索", dir: "search", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
+    Object.freeze({ appId: "search", name: "全局搜索", dir: "search", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "notifications", name: "通知中心", dir: "notifications", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "usage", name: "洞察", dir: "usage", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "diagnose", name: "诊断", dir: "diagnose", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: true, F6_lifecycle: true }) }),

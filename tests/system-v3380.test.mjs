@@ -68,7 +68,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -534,7 +534,9 @@ test('D4 storage 出口必须收敛：只许 get / set 两个口（不许第三�
         assert.equal(appCode.includes(bad), false, 'App 不许用 storage 的第三个口：' + bad);
     }
     assert.ok(appCode.includes('this.storage.get('), 'App 必须经 storage.get 取数');
-    assert.ok(appCode.includes('this.storage.set('), 'App 必须经 storage.set 落盘');
+    /* [v3.58.0 · 计划 O5] 经 set 落盘即可：直调 set 或走唯一实现（writeReceipt 内部调 set）。 */
+    assert.ok(appCode.includes('this.storage.set(') || appCode.includes('writeReceipt(this.storage'),
+        'App 必须经 storage.set 落盘');
 });
 
 /* ══════════════════════ E — 真源消费面 ══════════════════════ */
@@ -890,6 +892,7 @@ function writeDamagedCopy(rel, from, to) {
     fs.writeFileSync(target, damaged);
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     return { target, src: damaged };
 }
 
@@ -925,6 +928,7 @@ for (const [title, key, kind, judge, expect] of NEG) {
             fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
             fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
             fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
+            fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
             const target = path.join(dir, path.dirname(rel), 'h' + (hash >>> 0) + '_' + path.basename(rel));
             fs.writeFileSync(target, damagedSrc);
             const mod = await import(pathToFileURL(target).href);

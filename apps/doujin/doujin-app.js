@@ -49,6 +49,7 @@ import {
     listingStats, gaugesOf, gaugeText
 } from './doujin-data.js';
 import { DoujinView } from './doujin-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 export const DJ_SHOP_KEY = 'doujin_shop';
 export const DJ_MARKET_KEY = 'doujin_market';
@@ -170,8 +171,9 @@ export class DoujinApp {
         if (!gate.ok) return false;
         if (typeof this.storage.set !== 'function') return false;
         try {
-            this.storage.set(key, JSON.stringify(value));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败也照报成功（与 A 族方向相反的同一类错）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
         } catch (e) {
             return false;
         }

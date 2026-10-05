@@ -44,6 +44,7 @@ import {
     readingRows, problemsOf, verdictOf, readingText, resolvePalette, limits, typeInBook
 } from './uterus-data.js';
 import { UterusView } from './uterus-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 export const UD_SUBJECT_KEY = 'uterus_subject';
 export const UD_LEDGER_KEY = 'uterus_ledger';
 
@@ -132,8 +133,10 @@ export class UterusApp {
     _writeJSON(key, value) {
         const gate = this._storageUsable();
         if (!gate.ok) return false;
-        try { this.storage.set(key, JSON.stringify(value)); return true; }
-        catch (e) { return false; }
+        try {
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现（此前无条件 return true）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
+        } catch (e) { return false; }
     }
     _parse(key) {
         const r = this._readRaw(key);

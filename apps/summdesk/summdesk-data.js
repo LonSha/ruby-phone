@@ -14,6 +14,13 @@
  * ======================================================== */
 'use strict';
 
+/* [v3.57.0·O3] 数值取值走**全仓唯一实现**（`config/num-gate.js`）。
+ *   本件此前自带的那份 `numOrNull` 只给 `number` 放行、其余一律 `Number(v)` ——
+ *   游标与时间戳面上的 0 是**合法读数**，与「没给」必须分得开。 */
+import { numOrNull } from '../../config/num-gate.js';
+/* 本件对外仍导出同名入口（下游 -app.js 照旧 `import { numOrNull }`），不做第二份实现。 */
+export { numOrNull };
+
 export const SM_TITLE_MAX = 15;
 export const SM_ELLIPSIS = '...';
 export const SM_FALLBACK_TITLE = '记忆碎片';
@@ -22,7 +29,6 @@ export const SM_MEMORIES_MAX = 500;
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
 export function toStr(v) { return (typeof v === 'string') ? v : ''; }
-export function numOrNull(v) { const n = (typeof v === 'number') ? v : Number(v); return Number.isFinite(n) ? n : null; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

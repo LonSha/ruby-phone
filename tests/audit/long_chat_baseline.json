@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 369,
+    "files": 371,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=369，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -713,6 +713,26 @@
         "indexed_loop": 11,
         "length_read": 48
       }
+    },
+    "v3.58.0": {
+      "what": "v3.58.0 O4/O5 的两件新真源进扫描面；楼层长会话面一格未动",
+      "why": "静态扫描面 369 -> 371 个文件（config/session-gate.js 与 config/write-receipt.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「在飞的写回口」与「写入回执」，两者都不摸楼层数组。既有站点行号随前置插入整体后移（config 目录新增两件、index.js 追加三处 bumpSessionEpoch 与七族写回口的令牌判定），按现场重取；判据散文 L5 的 files= 同步刷新为 371。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 371,
+        "criteria.L5.got_text": "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": [
+          "files=369，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+          "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+        ]
+      },
+      "unchanged": [
+        "四类静态站点计数",
+        "全部活体读数",
+        "timing（计时类，按口径不刷新）"
+      ]
     }
   }
 }

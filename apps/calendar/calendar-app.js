@@ -19,6 +19,10 @@ import {
     commitmentCalendarProjection,
     summarizeCommitments
 } from '../../config/commitment-flow.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：日程生成是**在飞请求**（构建提示词要等世界书、
+ *   AI 一轮再等一次），回信时可能已经换了会话。它写 `calendar_memos`（按会话隔离），
+ *   旧回信落回来会把上一段会话的日程排进新会话的日历，并在新会话桌面弹「已添加 N 条日程」。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
 export class CalendarApp {
     constructor(phoneShell, storage) {
@@ -301,7 +305,8 @@ export class CalendarApp {
 
         this.isGeneratingSchedule = true;
         if (!silent) this.calendarView.render();
-
+        /* [v3.58.0 · 计划 O4] 令牌在**发起请求之前**记（构建提示词本身还要等世界书异步注入）。 */
+        const sessionToken = captureSessionToken(this.storage);
         try {
             const messages = await this._buildScheduleAiMessages();
             if (!messages.length) throw new Error('没有可用的剧情上下文');
@@ -323,7 +328,15 @@ export class CalendarApp {
             if (!schedules.length) {
                 throw new Error('没有解析到有效日程');
             }
-
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏。这是本函数**唯一**的落盘入口
+             *   （下面 `addMemo` 会连带 `saveMemos`），所以栅栏放在写之前、解析之后：
+             *   解析失败那条路（上面 throw）与它无关，不该为一次跨会话多记一笔拒绝。
+             *   不当前即静默收摊：不写日程、不弹「已添加 N 条日程」、不改视图选中日。
+             *   注意 `silent` 是调用方口径（自动补全走 true），与是否跨会话无关 ——
+             *   两条路径都要挡，故栅栏放在 `silent` 分支之外。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'calendar-schedule')) {
+                return { createdCount: 0, droppedBySessionChange: true };
+            }
             const created = [];
             schedules.forEach(item => {
                 const memo = this.calendarData.addMemo({

@@ -14,6 +14,11 @@
 // ========================================
 import { ImageCropper } from '../settings/image-cropper.js';
 import { replacePhoneInlineEmojiTokens } from '../../config/phone-emoji.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：本视图里那两处「逐条延迟落盘」的循环
+ *   （每条评论之间等 0.8~2.3 秒）是**在飞写回**的典型形态 ——
+ *   数据层那一轮 AI 已经过了栅栏，但循环本身还在往会话里写。
+ *   只在数据层设栅栏、不管这里的延迟写，等于栅栏只建了一半。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
 export class WeiboView {
     constructor(weiboApp) {
@@ -1537,6 +1542,10 @@ export class WeiboView {
     // AI互动：陌生网友/营销号/官方号 对用户发的微博进行评论和点赞
     async triggerWeiboAIReaction(post) {
         try {
+            /* [v3.58.0 · 计划 O4] 令牌在本函数**第一个 await 之前**记：下面既有数据层那一轮
+             *   AI，又有逐条评论之间的 0.8~2.3 秒等待 —— 后者是纯 UI 侧的延迟写回，
+             *   数据层的栅栏管不到它。 */
+            const sessionToken = captureSessionToken(this.app?.storage || null);
             this.app.phoneShell.showNotification('微博', '网友正在围观...', '👀');
 
             const result = await this.app.weiboData.generateReactionForPost(post);
@@ -1549,11 +1558,20 @@ export class WeiboView {
                     const c = result.comments[i];
                     await new Promise(r => setTimeout(r, 800 + Math.random() * 1500));
 
+                    /* [v3.58.0 · 计划 O4] 每条评论前重新裁决：这一等可能已经跨过会话切换。
+                     *   不当前即**整段收摊**（`return`）—— 剩下的评论与被点赞的名字都属于
+                     *   上一段会话，继续写完等于把上一段会话的互动灌进当前会话。 */
+                    if (!guardSessionWrite(this.app?.storage || null, sessionToken, 'weibo-reaction-comments')) return;
+
                     const aiReplyTo = c.replyTo ? String(c.replyTo).trim() : null;
                     this.app.weiboData.addComment(post.id, c.text, aiReplyTo || null, 'user', c.name, c.location || '');
                 }
 
                 const posts = this.app.weiboData.getUserPosts();
+                /* [v3.58.0 · 计划 O4] 点赞账目落盘前的最后一道：上面那一串延迟同样是等待。
+                 *   到这里不当前即整段收摊（不写 likes / forward、不弹「收到新互动」、
+                 *   也不局部刷新面板）。 */
+                if (!guardSessionWrite(this.app?.storage || null, sessionToken, 'weibo-reaction-likes')) return;
                 const updatedPost = posts.find(p => p.id === post.id);
                 if (updatedPost) {
                     if (!updatedPost.likeList) updatedPost.likeList = [];
@@ -2102,6 +2120,11 @@ export class WeiboView {
 
             this.app.phoneShell.showNotification('微博', '网友正在围观...', '👀');
 
+            /* [v3.58.0 · 计划 O4] 令牌在发起这一轮之前记：下面除了数据层那一轮 AI，
+             *   还有逐条回复之间的 1.0~2.5 秒延迟，以及最后那次「同一详情上下文才刷新」。
+             *   后者已经按详情上下文自守了一道，但它守的是「界面还在不在那一页」，
+             *   不认「会话还是不是那一段」—— 换会话后同名 postId 可能又出现，故仍需栅栏。 */
+            const sessionToken = captureSessionToken(this.app?.storage || null);
             const result = await this.app.weiboData.generateReplyForUserComment(post, userText, replyTo, {
                 replyRootIndex: Number.isInteger(meta?.replyRootIndex) ? meta.replyRootIndex : null,
                 replyCommentIndex: Number.isInteger(meta?.replyCommentIndex) ? meta.replyCommentIndex : null
@@ -2114,6 +2137,9 @@ export class WeiboView {
                 for (const c of result.comments) {
                     // 模拟打字延迟，制造真实感
                     await new Promise(r => setTimeout(r, 1000 + Math.random() * 1500));
+                    /* [v3.58.0 · 计划 O4] 每条回复前重新裁决（同 triggerWeiboAIReaction）：
+                     *   这一等可能已经跨过会话切换，不当前即整段收摊。 */
+                    if (!guardSessionWrite(this.app?.storage || null, sessionToken, 'weibo-comment-replies')) return;
                     const finalReplyTo = replyTarget;
                     const replyRootIndex = Number.isInteger(meta?.replyRootIndex) ? meta.replyRootIndex : null;
 

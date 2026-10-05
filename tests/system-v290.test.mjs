@@ -232,6 +232,9 @@ test('v290 D2. 负控制：恢复 app 自持第二个 store → lost update 复�
     'apps/calendar/calendar-view.js': read('apps/calendar/calendar-view.js'),
     'config/life-events.js': LIFE_SRC,
     'config/storage.js': read('config/storage.js'),
+    /* [v3.58.0 · 计划 O4] calendar-app 的会话栅栏依赖这两件（少一件即 ERR_MODULE_NOT_FOUND）。 */
+    'config/session-gate.js': read('config/session-gate.js'),
+    'config/num-gate.js': read('config/num-gate.js'),
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),

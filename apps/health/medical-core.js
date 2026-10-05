@@ -6,6 +6,12 @@
  * ======================================================== */
 'use strict';
 import { categories as ILLNESS_CATEGORIES, illnesses as ILLNESS_LIBRARY } from '../../data/illness-library.js';
+/* [v3.57.0·O3] 数值取值走**全仓唯一实现**（`config/num-gate.js`）。
+ *   本件此前自带的那份 `numOrNull` 是「`String(v).trim()` 规范化」式：`null` / `''` / `[]` /
+ *   `false` 已判对，但 `[5]` 仍会经 `String([5]) === '5'` 穿越成 5（数组不是数值）。
+ *   对外仍导出同名入口（本件内部与下游按名字取），不做第二份实现。 */
+import { numOrNull } from '../../config/num-gate.js';
+export { numOrNull };
 
 // ---- 病程五型 ----
 export const COURSES = ['acute', 'chronic', 'congenital', 'obstetric', 'injury'];
@@ -98,12 +104,6 @@ export const DEFAULT_ACUTE_DAYS = 7;
 
 // ---- 基础工具 ----
 export function str(v) { return v == null ? '' : String(v); }
-export function numOrNull(v) {
-    const s = (v === null || v === undefined) ? '' : String(v).trim();
-    if (!s) return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-}
 export function clampInt(v, dflt, lo, hi) {
     const n = numOrNull(v);
     return n == null ? dflt : Math.min(hi, Math.max(lo, Math.round(n)));

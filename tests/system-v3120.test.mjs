@@ -172,7 +172,8 @@ test('C3 ★★ 注释与字符串里的写法不算命中（判据面不得被�
             '/* 同上：Number.isFinite(Number(x)) 是弱口径 */',
             "const s = 'Number.isFinite(Number(y))';",
             "import { numOrNull } from '../../config/num-gate.js';",
-            'export const z = numOrNull(s);'
+            'function numOrNullOf(v) { return numOrNull(v); }',
+            'export const z = numOrNullOf(s);'
         ].join('\n')
     });
     assert.equal(out.status, 0, '★ 只有散文提到该写法时不得判红（实得 exit ' + out.status + '）：' + out.stderr.slice(0, 200));
@@ -186,11 +187,21 @@ test('C4 ★★ 真仓库读数：唯一实现被 ≥ 12 个文件引用，枚�
         [path.join(ROOT, 'scripts', 'weak-coercion-audit.mjs'), '--list'],
         { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
     assert.equal(out.status, 0, '真仓库 --list 应可跑通：' + out.stderr.slice(0, 200));
-    const m = /枚举面 (\d+) 文件 · 强口径本体 (\d+) 处 · 唯一实现被引用 (\d+) 文件/.exec(out.stdout);
-    assert.ok(m, '读数行在场（口径不得静默变更）：' + out.stdout.slice(0, 200));
-    assert.ok(Number(m[1]) > 180, '枚举面须 > 180 文件，实测 ' + m[1]);
-    assert.ok(Number(m[2]) >= 3, '强口径本体须 ≥ 3 处（合法形态）');
-    assert.ok(Number(m[3]) >= 12, '唯一实现被引用文件数须 ≥ 12，实测 ' + m[3]);
+    /* [v3.57.0·O3 交棒改写，不是放宽] 读数行在 v3.57.0 起加入两个**自证计数**字段
+     *   （族名定义 / 探针实跑），原判据把整行当一个不可变字符串匹配 ⇒ 插一个字段即恒红。
+     *   改为按**字段各自提取**：三个读数分别取、各自的断言强度一字未降
+     *   （枚举面 > 180 / 强口径本体 ≥ 3 / 引用面 ≥ 12），另加两条自证下限 ——
+     *   这正是本版给门加的判据（「零命中」不得被读成「全绿」）。 */
+    const shape = /枚举面 (\d+) 文件 · 强口径本体 (\d+) 处/.exec(out.stdout);
+    const refs = /唯一实现被引用 (\d+) 文件/.exec(out.stdout);
+    assert.ok(shape && refs, '读数行在场（口径不得静默变更）：' + out.stdout.slice(0, 200));
+    assert.ok(Number(shape[1]) > 180, '枚举面须 > 180 文件，实测 ' + shape[1]);
+    assert.ok(Number(shape[2]) >= 3, '强口径本体须 ≥ 3 处（合法形态）');
+    assert.ok(Number(refs[1]) >= 12, '唯一实现被引用文件数须 ≥ 12，实测 ' + refs[1]);
+    const fam = /族名定义 (\d+) 处/.exec(out.stdout);
+    const prb = /探针实跑 (\d+) 次/.exec(out.stdout);
+    assert.ok(fam && Number(fam[1]) > 0, '族名定义自证计数须 > 0（否则判据面可能已被改坏）：' + out.stdout.slice(0, 200));
+    assert.ok(prb && Number(prb[1]) > 0, '探针实跑自证计数须 > 0（否则探针根本没跑）：' + out.stdout.slice(0, 200));
 });
 
 /* ══════════ D ── 真源码破坏负控制 ══════════ */
@@ -299,7 +310,15 @@ test('E1 ★★ 原版上必须为真（阳性对照：门不是恒红）', () =
 });
 
 test('E2 ★★★ 真源码破坏必须可观测地改变行为（W1 命中 ⇒ 必须判红）', () => {
-    const out = runGate({ 'apps/demo/weak.js': 'const a = Number.isFinite(Number(b)) ? Number(b) : null;\n' });
+    /* [v3.57.0·O3] 夹具必须自带族名函数（如 floorOrNull），否则 v3.57.0 的**自证**
+     *   （familyDefsSeen === 0 ⇒ exit 2 拒判）先触发，exit 2 而不是 exit 1。
+     *   这不是放宽带宽：W1 的判据一字未改，只是让夹具满足「判据面非空」这条前置。 */
+    const out = runGate({
+        'apps/demo/weak.js': 'const a = Number.isFinite(Number(b)) ? Number(b) : null;\n',
+        'apps/demo/helper.js': "import { numOrNull } from '../../config/num-gate.js';\n"
+            + 'function floorOrNull(v) { return numOrNull(v); }\n'
+            + 'export const h = floorOrNull(1);\n'
+    });
     assert.equal(out.status, 1, '弱口径写法在场必须判红，实测 exit ' + out.status);
     assert.ok(/W1/.test(out.stderr), '必须点名 W1：' + out.stderr.slice(0, 200));
 });

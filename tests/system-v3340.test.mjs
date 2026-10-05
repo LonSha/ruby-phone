@@ -113,7 +113,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -650,10 +650,22 @@ test('D2 App 层不许直连模型 / 不许落数据库 / 不许替宿主写楼�
     /* ★ 导入面是**块**（`import {` 起首、`} from '...'` 收尾）：按块裁出来数。
      *   按「单行含 import」数会**少算** —— 多行导入块的正文行不含 `import` 字样。 */
     const importBlocks = code.match(/^import[\s\S]*?from '[^']+';/gm) || [];
-    assert.equal(importBlocks.length, 3, 'App 层只许三条 import（数据层 / 数值门 / 视图）');
-    assert.ok(importBlocks[0].includes("from './lofter-data.js'"), '第一条必须是本件数据层');
-    assert.ok(importBlocks[1].includes("from '../../config/num-gate.js'"), '第二条必须是两层级的数值门');
-    assert.ok(importBlocks[2].includes("from './lofter-view.js'"), '第三条必须是本件视图');
+    /* [v3.58.0 · 计划 O5] 白名单是**分层允许集**：数据层 / 数值门 / 视图 / 写回执唯一实现。
+     *   这四条就是「App 层只许这么几件」的全部 —— 原先数「恰三条」是把当时那一格当成了
+     *   不变量，于是接入写回执（O5 的正当接线）会被读成「多导入了别的东西」。 */
+    const ALLOWED_IMPORT_SOURCES = [
+        "from './lofter-data.js'",
+        "from '../../config/num-gate.js'",
+        "from './lofter-view.js'",
+        "from '../../config/write-receipt.js'",
+    ];
+    for (const blk of importBlocks) {
+        assert.ok(ALLOWED_IMPORT_SOURCES.some((s) => blk.includes(s)),
+            'App 层不许 import 别的东西：' + blk.replace(/\s+/g, ' ').slice(0, 90));
+    }
+    assert.ok(importBlocks.some((b) => b.includes("from './lofter-data.js'")), '必须导入本件数据层');
+    assert.ok(importBlocks.some((b) => b.includes("from '../../config/num-gate.js'")), '必须导入两层级的数值门');
+    assert.ok(importBlocks.some((b) => b.includes("from './lofter-view.js'")), '必须导入本件视图');
 });
 test('D3 视图层不许碰存储 / 不许收外链与图源 / 不许自己拼请求', () => {
     const code = stripComments(read(LF_VIEW));

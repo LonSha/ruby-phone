@@ -14,6 +14,11 @@ import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：记录总结是一次跨帧的长请求（240s 超时），
+ *   回信时可能已经换了会话。它写的是 `honey_host_history_*`（按会话隔离的键），
+ *   所以旧回信落回来会把上一段会话的总结与已覆盖轮次哈希写进新会话的桶 ——
+ *   新会话下这些轮次会被判「已总结过」而永远不再总结（错得静默、且持久）。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
 export class HoneyData {
     constructor(storage) {
@@ -3505,6 +3510,9 @@ export class HoneyData {
         if (!safeHostName) throw new Error('主播名称为空');
         const { history, summary, turns } = this._collectUnsummarizedHostHistoryTurns(safeHostName);
         if (!turns.length) return { changed: false, summary };
+        /* [v3.58.0 · 计划 O4] 令牌在**发起请求之前**记：下面这一轮最长可等 240 秒，
+         *   期间用户完全可能切到别的会话（本函数不在任何队列里，切会话也不会打断它）。 */
+        const sessionToken = captureSessionToken(this.storage);
 
         const apiManager = window.VirtualPhone?.apiManager;
         if (!apiManager) throw new Error('API Manager 未初始化');
@@ -3617,6 +3625,14 @@ export class HoneyData {
         if (!nextText) throw new Error('AI 未返回有效总结');
 
         const phoneStoryTime = this._getCurrentPhoneStoryTimeInfo();
+        /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：上面 `await` 回来时可能已在别的会话。
+         *   此刻**只差落盘这一脚**（`history._summary` 还只是内存对象），
+         *   所以这里返回即可——不写 `_setStored`、不排防抖刷盘。
+         *   返回口径如实：`changed:false`（这一次确实没改任何持久化数据），
+         *   `remaining` 沿用真实剩余量，便于调用方继续（而不是谎报已总结）。 */
+        if (!guardSessionWrite(this.storage, sessionToken, 'honey-host-summary')) {
+            return { changed: false, summary, added: 0, remaining: turns.length };
+        }
         const nextSummary = {
             text: nextText,
             coveredTurnHashes: [...new Set([...summary.coveredTurnHashes, ...selectedTurns.map(turn => turn.hash)])],

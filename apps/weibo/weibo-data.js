@@ -17,6 +17,11 @@ import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
 /* [v3.18.0 · R-O4] 「最近正文」循环与跨 App 一致性块收敛到同一份实现 */
 import { collectRecentChat, contextFaces, consistencyBlock, retellNode } from '../../config/context-compose.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：推荐流是**在飞请求**（走 _apiQueue 串行、跨帧返回）。
+ *   换会话后旧请求若照旧写回，会把上一段会话的推荐微博与热搜挤进新会话的桶里
+ *   —— 而它自己只做 `_mergeRecommendPostsWithAllPreservedLikes` 这类**内容级**合并，
+ *   完全不知道会话已经换了。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
 export class WeiboData {
     constructor(storage) {
@@ -982,7 +987,9 @@ export class WeiboData {
     async generateRecommend(onProgress, options = {}) {
         return this.queueApiCall(async () => {
             if (onProgress) onProgress('正在生成推荐内容...');
-
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记：这一段等待可能横跨会话切换
+             *   （`_apiQueue` 串行，前一轮没回来时这一轮还在等）。 */
+            const sessionToken = captureSessionToken(this.storage);
             const contextMessages = await this._collectContextMessages(options);
             const promptManager = window.VirtualPhone?.promptManager;
             promptManager?.ensureLoaded();
@@ -992,20 +999,21 @@ export class WeiboData {
             if (searchQuery) {
                 recommendPromptWithFollowers += `\n\n【微博搜索约束】用户正在微博上搜索「${searchQuery}」相关内容。请保持原有微博推荐生成格式不变，但本次生成的微博热搜和推荐微博必须重点围绕该搜索关键词展开，优先生成与「${searchQuery}」直接相关的讨论、观点、评论和配图描述。`;
             }
-
             const rawResponse = await this._callAI(recommendPromptWithFollowers, contextMessages);
             const parsed = this.parseWeiboContent(rawResponse);
             if (!Array.isArray(parsed.posts) || parsed.posts.length === 0) {
                 throw new Error('微博推荐解析失败，AI返回内容不完整，请重试');
             }
-
             // 为每条微博添加ID
             parsed.posts.forEach((post, idx) => {
                 post.id = Date.now().toString(36) + idx.toString(36) + Math.random().toString(36).substr(2, 4);
                 if (!post.likeList) post.likeList = [];
                 if (!post.commentList) post.commentList = [];
             });
-
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：本函数一路 `await`，回来时可能已在别的会话。
+             *   不当前即**原样返回解析结果**（内容本身没毛病，只是不属于当前会话）：
+             *   不写推荐、不写热搜、不动粉丝数 —— 一条都不落盘。拒绝已记账，诊断面可见。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-recommend')) return parsed;
             const oldRecommendPosts = this.getRecommendPosts();
             // 刷新只替换未被用户点赞的旧推荐微博；用户点过赞的微博保留在新内容后面。
             this.saveRecommendPosts(this._mergeRecommendPostsWithAllPreservedLikes(parsed.posts, oldRecommendPosts));
@@ -1018,7 +1026,6 @@ export class WeiboData {
                 // 解析失败保护：不要把已有热搜清空
                 console.warn('⚠️ [Weibo] 推荐刷新未解析到热搜，保留现有热搜列表');
             }
-
             if (onProgress) onProgress('生成完成');
             return parsed;
         });
@@ -1028,6 +1035,8 @@ export class WeiboData {
     async generateHotSearchDetail(title, onProgress) {
         return this.queueApiCall(async () => {
             if (onProgress) onProgress('正在生成热搜内容...');
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记（理由同 generateRecommend）。 */
+            const sessionToken = captureSessionToken(this.storage);
 
             const contextMessages = await this._collectContextMessages();
             const promptManager = window.VirtualPhone?.promptManager;
@@ -1050,6 +1059,11 @@ export class WeiboData {
 
             const existing = this.getHotSearchDetail(title);
             const mergedPosts = this._mergeGeneratedPostsWithPreservedLikes(parsed.posts, existing?.posts);
+
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：上面一轮 `_collectContextMessages` + 一轮
+             *   `_callAI` 都可能跨会话。不当前即原样返回解析结果（本函数不写粉丝数，
+             *   故没有 `_updateFollowersFromText` 那一处）。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-hot-detail')) return { title, posts: mergedPosts, generatedAt: Date.now() };
 
             // 缓存到对应热搜
             const detailData = {
@@ -1074,7 +1088,8 @@ export class WeiboData {
     async appendHotSearchContent(title, onProgress) {
         return this.queueApiCall(async () => {
             if (onProgress) onProgress('正在追加生成...');
-
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记。 */
+            const sessionToken = captureSessionToken(this.storage);
             const existing = this.getHotSearchDetail(title);
             const contextMessages = await this._collectContextMessages();
             const promptManager = window.VirtualPhone?.promptManager;
@@ -1107,6 +1122,10 @@ export class WeiboData {
             });
 
             // 追加到已有数据
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏（理由同上）。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-hot-append')) {
+                return existing || { title, posts: parsed.posts, generatedAt: Date.now() };
+            }
             if (existing) {
                 existing.posts.push(...parsed.posts);
                 existing.generatedAt = Date.now();
@@ -1782,6 +1801,8 @@ export class WeiboData {
 
     async generateReactionForPost(post) {
         return this.queueApiCall(async () => {
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记。 */
+            const sessionToken = captureSessionToken(this.storage);
             const userName = this._getCurrentWeiboNickname();
             const contextMessages = await this._collectContextMessages();
             const currentFollowers = this._getCurrentFollowersCount();
@@ -1824,6 +1845,10 @@ export class WeiboData {
             prompt = this._injectCurrentFollowersToPrompt(prompt);
 
             const response = await this._callAI(prompt, contextMessages);
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：`_updateFollowersFromText` 会写 `weibo_profile`
+             *   （按会话隔离的键）。不当前即空手返回 —— 与调用方口径一致
+             *   （`weibo-view.triggerWeiboAIReaction` 对空 comments/likes 自然不落任何东西）。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-reaction')) return { comments: [], likes: [] };
             this._updateFollowersFromText(response);
 
             // 解析JSON
@@ -1861,6 +1886,8 @@ export class WeiboData {
     // ========================================
     async generateReplyForUserComment(post, userComment, replyTo, meta = {}) {
         return this.queueApiCall(async () => {
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记。 */
+            const sessionToken = captureSessionToken(this.storage);
             const userName = this._getCurrentWeiboNickname();
             const contextMessages = await this._collectContextMessages();
             const currentFollowers = this._getCurrentFollowersCount();
@@ -1911,6 +1938,8 @@ export class WeiboData {
             prompt = this._injectCurrentFollowersToPrompt(prompt);
 
             const response = await this._callAI(prompt, contextMessages);
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏（同 generateReactionForPost）。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-comment-reply')) return { comments: [] };
             this._updateFollowersFromText(response);
 
             // 解析JSON
@@ -1990,6 +2019,8 @@ export class WeiboData {
 
     async generateMoreComments(postId, source = 'recommend', hotSearchTitle = null) {
         return this.queueApiCall(async () => {
+            /* [v3.58.0 · 计划 O4] 令牌在排队**发起之前**记。 */
+            const sessionToken = captureSessionToken(this.storage);
             // 找到帖子
             let posts, post;
             if (source === 'recommend') {
@@ -2012,6 +2043,9 @@ export class WeiboData {
             commentPrompt = commentPrompt.replace(/\{\{weiboContent\}\}/g, post.content || '');
 
             const rawResponse = await this._callAI(commentPrompt, contextMessages);
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：下面 `_updateFollowersFromText` 与
+             *   三处 save* 都写按会话隔离的键。不当前即空手返回。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-more-comments')) return [];
             this._updateFollowersFromText(rawResponse);
 
             // 解析评论
@@ -2456,6 +2490,13 @@ export class WeiboData {
         const totalFloors = endIndex - startIndex;
         const batchCount = Math.ceil(totalFloors / batchSize);
         this.stopBatch = false;
+        /* [v3.58.0 · 计划 O4] 会话世代令牌（本函数自己也要落盘：`weibo_auto_last_floor`）。
+         *   为什么 `generateRecommend` 已经上了栅栏、这里还要再上一道：
+         *   它挡住的是**微博正文与热搜**，而 `setAutoLastFloor` 写的是**自动游标** ——
+         *   旧会话那一批跑完后把游标推到新会话的楼层上，新会话就被判「这一段已经生成过」，
+         *   于是**永远不再自动生成**。这条错得比正文更隐蔽：它不报错、不显示任何东西，
+         *   只是新会话从此静默地少掉一整段微博。 */
+        const sessionToken = captureSessionToken(this.storage);
 
         // 全局状态
         if (window.VirtualPhone) {
@@ -2468,7 +2509,10 @@ export class WeiboData {
                 // 单批次
                 if (onProgress) onProgress(0, 1, '生成中...');
                 await this.generateRecommend();
-                if (isAuto) this.setAutoLastFloor(endIndex);
+                /* [v3.58.0 · 计划 O4] 游标也要过栅栏（单批次分支）。`generateRecommend` 自己
+                 *   已挡下正文，但游标是**另一格**：正文被挡下时这里若照推，
+                 *   新会话就被判「已生成过」而永不再生成。 */
+                if (isAuto && guardSessionWrite(this.storage, sessionToken, 'weibo-auto-cursor')) this.setAutoLastFloor(endIndex);
                 if (window.VirtualPhone?.weiboBatchProgress) window.VirtualPhone.weiboBatchProgress.current = 1;
                 if (onProgress) onProgress(1, 1, '完成');
             } else {
@@ -2495,7 +2539,8 @@ export class WeiboData {
 
                     try {
                         await this.generateRecommend();
-                        if (isAuto) this.setAutoLastFloor(bEnd);
+                        /* [v3.58.0 · 计划 O4] 游标逐批过栅栏（多批次分支）。 */
+                        if (isAuto && guardSessionWrite(this.storage, sessionToken, 'weibo-auto-cursor')) this.setAutoLastFloor(bEnd);
                     } catch (err) {
                         console.error(`[WeiboData] 批次 ${i + 1} 失败:`, err);
                         if (onProgress) onProgress(i, batchCount, `批次 ${i + 1} 失败: ${err.message}`);
@@ -2550,6 +2595,11 @@ export class WeiboData {
         const endIndex = chatLength;
         // 自动模式只取最近一段窗口，避免把历史 0-N 全量塞给 AI
         const startIndex = Math.max(safeLastIndex + 1, endIndex - minTriggerDelta);
+        /* [v3.58.0 · 计划 O4] 会话世代令牌：本函数的 `generateRecommend` 自己会挡下正文，
+         *   但**游标推高**（`setAutoLastFloor`）与**红点/通知**发生在本函数这一侧。
+         *   旧会话那一轮回来时若照推游标，新会话会被判「已生成过」而再也不自动生成 ——
+         *   与 `batchGenerateWeibo` 同一形态，故两处都要令牌。 */
+        const sessionToken = captureSessionToken(this.storage);
 
         try {
             const parsed = await this.generateRecommend(null, {
@@ -2557,6 +2607,11 @@ export class WeiboData {
                 chatEndIndex: endIndex,
                 forceChatLimit: minTriggerDelta
             });
+            /* [v3.58.0 · 计划 O4] 写回前的会话栅栏：不当前即原样返回（如实报「被挡下」，
+             *   不谎报成功，也不推游标、不点红点、不发通知）。 */
+            if (!guardSessionWrite(this.storage, sessionToken, 'weibo-auto-cursor')) {
+                return { skipped: true, reason: 'session-changed', dropped: true };
+            }
             this.setAutoLastFloor(endIndex);
 
             const newPostCount = Array.isArray(parsed?.posts) ? parsed.posts.length : 0;

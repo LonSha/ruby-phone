@@ -25,6 +25,7 @@
  * ======================================================== */
 'use strict';
 import { AR_TEXT_MAX, AR_LOG_MAX, AR_TABLE_MAX, AR_BUNDLE_MAX, AR_TABLE_SHAPES } from './archive-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -503,7 +504,7 @@ export class ArchiveView {
         const a = (typeof act === 'string') ? act : '';
         if (a === 'ingest') {
             const r = app.ingestPack(this._packInput);
-            this._flash = r.ok ? '' : ('没收下（' + r.why + '）');
+            this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? r.why : '没落下去') + '）');
             if (r.ok) { app.setTab('face'); this._packInput = ''; }
         } else if (a === 'clear_input') {
             this._packInput = '';
@@ -518,7 +519,7 @@ export class ArchiveView {
             this._flash = '草稿已存。';
         } else if (a === 'make_text') {
             const r = app.makeText();
-            this._flash = r.ok ? r.text : ('出不了（' + r.why + '）');
+            this._flash = writeLanded(r) ? r.text : ('出不了（' + (r.why ? r.why : '没落下去') + '）');
         } else if (a === 'clear_ledger') {
             const r = app.clearLedger();
             this._flash = '清掉 ' + String(r.cleared) + ' 条（本件自己的台账）。';

@@ -215,64 +215,117 @@ export class GlobalSearchEngine {
     build(opts = {}) {
         const full = opts.full === true;
         if (!full && this._index) return this._index;
-        const perSource = full ? MAX_SCAN_PER_SOURCE_FULL : MAX_SCAN_PER_SOURCE;
-        const totalCap = full ? MAX_INDEX_FULL : Infinity;
+        /* [v3.60.0 · 计划 O2] 建索引与全历史分片扫描共用同一份 _indexChunks：
+         *   这里**同步抽干**它（不让出）—— 快速档与所有同步调用方
+         *   （query / scanScope / 页头读数 / 既有判据）行为一字不改。 */
         const out = [];
-        const errors = [];
-        const perSourceStat = {};
-        const cappedSources = [];
-        const bodyCappedSources = [];
-        for (const src of this._sources) {
-            try {
-                const raw = src.items() || [];
-                if (!Array.isArray(raw)) continue;
-                let n = 0;
-                let bodyCapped = false;
-                for (const it of raw) {
-                    if (n >= perSource || out.length >= totalCap) break;
-                    if (!it || typeof it !== 'object') continue;
-                    const title = norm(it.title);
-                    const body = norm(it.body);
-                    if (!title && !body) continue;
-                    /* [v3.17.0 R-O1] 展示段与可检索段分离：
-                     *   `body`      = 前 600 字（**展示摘要**，与旧行为逐字同值）；
-                     *   `bodyFull`  = 600–4000 字的**尾部余量**，只进命中判定，不进摘要。
-                     * 为什么必须分离：长消息的末尾（玩家口中的「最后那句台词」）此前
-                     *   根本不在检索面里 —— 搜得到开头、搜不到结尾。 */
-                    const bodyFull = body.length > BODY_DISPLAY_CAP ? body.slice(BODY_DISPLAY_CAP, BODY_SEARCH_CAP) : '';
-                    if (body.length > BODY_SEARCH_CAP) bodyCapped = true;
-                    out.push({
-                        sourceId: src.id,
-                        sourceLabel: src.label,
-                        icon: String(it.icon || src.icon),
-                        appId: String(it.appId || src.appId),
-                        title: title.slice(0, 120),
-                        body: body.slice(0, BODY_DISPLAY_CAP),
-                        bodyFull: bodyFull,
-                        bodyTruncated: body.length > BODY_SEARCH_CAP,
-                        ts: Number(it.ts) || 0,
-                        meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
-                    });
-                    n++;
-                }
-                const capped = raw.length > n;
-                if (capped) cappedSources.push(src.id);
-                if (bodyCapped) bodyCappedSources.push(src.id);
-                perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: capped };
-                if (out.length >= totalCap) break;
-            } catch (e) {
-                errors.push({ sourceId: src.id, error: String(e?.message || e) });
-            }
-        }
-        this._errors = errors;
-        this._lastScan = {
-            full: full, perSource: perSourceStat, cappedSources: cappedSources,
-            bodyCappedSources: bodyCappedSources, totalCapped: out.length >= totalCap
-        };
+        const gen = this._indexChunks({ full: full, sink: out });
+        for (let step = gen.next(); !step.done; step = gen.next()) { /* 抽干，不让出 */ }
         if (!full) this._index = out;
         return out;
     }
 
+    /**
+     * [v3.60.0 · 计划 O2] 片间让出**宏任务**（不是微任务）。
+     * 为什么必须是宏任务：微任务队列在同一轮事件循环里会被抽干 —— 只 await 一枚已决
+     *   Promise 等于没让。计时器（含「点了取消」后那枚零延迟计时器）与点击事件排在
+     *   **宏任务**队列里；同步扫描不返回，它们永远轮不到 —— 这正是本版要治的形态：
+     *   「函数没有异步让出，控制器 Promise.resolve().then() 仅推迟开始」。
+     * 没有 setTimeout 的宿主退回 setImmediate / 微任务：内核可单测，也不因宿主差异抛错。
+     * @returns {Promise<void>}
+     */
+    _yieldTurn() {
+        return new Promise((resolve) => {
+            const g = (typeof globalThis !== 'undefined' && globalThis) ? globalThis : {};
+            if (typeof g.setTimeout === 'function') { g.setTimeout(resolve, 0); return; }
+            if (typeof g.setImmediate === 'function') { g.setImmediate(resolve); return; }
+            resolve();
+        });
+    }
+
+    /**
+     * [v3.60.0 · 计划 O2] 取数 / 归一化 / 两档预算的**唯一实现**，做成可中断生成器：
+     *   · build() 同步抽干（快速档与全部同步调用方一字不改）；
+     *   · searchAll() 异步驱动 —— 片前查取消、片后让出一轮宏任务。
+     * 为什么合并成生成器而不是并排写两份：本仓「同一口径不许两份实现」——
+     *   两档预算、展示段/可检索段分离、每源容错、截断登记只该有一处真源。
+     * 让出点：每 SCAN_CHUNK 条之后（生成器 yield，驱动器决定是否等待）。
+     * 边界（如实登记，不冒称「全程零阻塞」）：src.items() 本身仍是一次**同步物化** ——
+     *   取数口形态被 tests/system-v3170 A2 与 tests/system-v327 B1 锁死（不得前移截断），
+     *   它的单次台阶有上界（一源最多 20000 条），耗时进读数但不可中断。
+     * @param {{full?:boolean, sink?:Array<object>}} [opts]
+     * @returns {Generator<void, Array<object>, void>}
+     */
+    * _indexChunks(opts = {}) {
+        const full = opts.full === true;
+        const out = Array.isArray(opts.sink) ? opts.sink : [];
+        const perSource = full ? MAX_SCAN_PER_SOURCE_FULL : MAX_SCAN_PER_SOURCE;
+        const totalCap = full ? MAX_INDEX_FULL : Infinity;
+        const errors = [];
+        const perSourceStat = {};
+        const cappedSources = [];
+        const bodyCappedSources = [];
+        try {
+            for (const src of this._sources) {
+                try {
+                    const raw = src.items() || [];
+                    if (!Array.isArray(raw)) continue;
+                    let n = 0;
+                    let bodyCapped = false;
+                    perSourceStat[src.id] = { raw: raw.length, indexed: 0, capped: false };
+                    for (const it of raw) {
+                        if (n >= perSource || out.length >= totalCap) break;
+                        if (!it || typeof it !== 'object') continue;
+                        const title = norm(it.title);
+                        const body = norm(it.body);
+                        if (!title && !body) continue;
+                        /* [v3.17.0 R-O1] 展示段与可检索段分离：
+                         *   body     = 前 600 字（**展示摘要**，与旧行为逐字同值）；
+                         *   bodyFull = 600–4000 字的**尾部余量**，只进命中判定，不进摘要。
+                         * 为什么必须分离：长消息的末尾（玩家口中的「最后那句台词」）此前
+                         *   根本不在检索面里 —— 搜得到开头、搜不到结尾。 */
+                        const bodyFull = body.length > BODY_DISPLAY_CAP ? body.slice(BODY_DISPLAY_CAP, BODY_SEARCH_CAP) : '';
+                        if (body.length > BODY_SEARCH_CAP) bodyCapped = true;
+                        out.push({
+                            sourceId: src.id,
+                            sourceLabel: src.label,
+                            icon: String(it.icon || src.icon),
+                            appId: String(it.appId || src.appId),
+                            title: title.slice(0, 120),
+                            body: body.slice(0, BODY_DISPLAY_CAP),
+                            bodyFull: bodyFull,
+                            bodyTruncated: body.length > BODY_SEARCH_CAP,
+                            ts: Number(it.ts) || 0,
+                            meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
+                        });
+                        n++;
+                        /* [v3.60.0 · 计划 O2] 每片登记一次已建部分并交还控制权：
+                         *   中途被取消时，_lastScan 反映的是**已建部分**，不是上一轮的陈旧读数。 */
+                        if (n % SCAN_CHUNK === 0) {
+                            perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: false };
+                            yield;
+                        }
+                    }
+                    const capped = raw.length > n;
+                    perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: capped };
+                    if (capped) cappedSources.push(src.id);
+                    if (bodyCapped) bodyCappedSources.push(src.id);
+                    if (out.length >= totalCap) break;
+                } catch (e) {
+                    errors.push({ sourceId: src.id, error: String(e?.message || e) });
+                }
+            }
+        } finally {
+            /* 无论抽干、还是被 gen.return() 提前收束，都落一次真实记账
+             *   （防「取消之后读数还停在上一轮」这类不报错、只错数的形态）。 */
+            this._errors = errors;
+            this._lastScan = {
+                full: full, perSource: perSourceStat, cappedSources: cappedSources,
+                bodyCappedSources: bodyCappedSources, totalCapped: out.length >= totalCap
+            };
+        }
+        return out;
+    }
     /**
      * 在**可检索文本**上判分：摘要段 + 尾部余量（两段拼起来就是同一条消息的真身）。
      * @returns {number} <0 表示未命中
@@ -387,14 +440,33 @@ export class GlobalSearchEngine {
      * @param {{limit?:number, sourceIds?:string[], full?:boolean,
      *          onProgress?:Function, isCancelled?:Function}} [opts]
      */
-    searchAll(query, opts = {}) {
+    /**
+     * 全历史分片扫描（[v3.17.0 R-O1]，[v3.60.0 · 计划 O2] 让出事件循环）。
+     * 为什么需要**独立入口**而不是 `query(q, { full: true })` 了事：
+     *   长会话（1000/5000/10000 楼）下全量索引的比中是几十到几百毫秒 —— 同步做完会让输入卡住，
+     *   也没法显示进度与取消。本入口把「全量索引 → 分片比中 → 报每源覆盖」拆成可中断的片。
+     * 三条纪律：
+     *   · 分片只影响**节奏**，不影响**结果集** —— 遍历的就是 `full:true` 的全量索引，
+     *     不因分片少扫任何一条；
+     *   · `isCancelled()` 为真即立刻返回 `cancelled:true` 且 `results:[]` ——
+     *     半份结果比空结果更糟（用户会以为「只有这些」）；
+     *   · [v3.60.0 · 计划 O2] 每片之后**让出一轮宏任务**（`_yieldTurn()`）——
+     *     建索引阶段也一样。为什么这曾经是个真缺陷：「按 2000 条分片」只换了循环写法，
+     *     整个函数从头到尾同步跑完，片间从不让出 —— 计时器（含用户点取消后那枚零延迟
+     *     计时器）与点击事件排在宏任务队列里，要等函数返回才轮得到；控制器那层
+     *     `Promise.resolve().then()` 只是把开始推到微任务，不是让出。
+     * @param {string} query
+     * @param {{limit?:number, sourceIds?:string[], full?:boolean,
+     *          onProgress?:Function, isCancelled?:Function}} [opts]
+     * @returns {Promise<object>} 与同步路径同形的结果体
+     */
+    async searchAll(query, opts = {}) {
         const q = norm(query);
         const limit = Math.max(1, Number(opts.limit) || 60);
         const full = opts.full === true;
         const allow = Array.isArray(opts.sourceIds) && opts.sourceIds.length
             ? new Set(opts.sourceIds.map(String))
             : null;
-        const all = this.build({ full: full });
         const weightOf = {};
         for (const s of this._sources) weightOf[s.id] = s.weight;
         const hits = [];
@@ -402,6 +474,20 @@ export class GlobalSearchEngine {
         const cancelledNow = () => {
             try { return typeof opts.isCancelled === 'function' && !!opts.isCancelled(); } catch (_e) { return false; }
         };
+        /* ══ 阶段一：建索引（可让出，不与同步路径分家） ══ */
+        const all = [];
+        const gen = this._indexChunks({ full: full, sink: all });
+        while (true) {
+            const step = gen.next();
+            if (step.done) break;
+            /* [v3.60.0 · 计划 O2] 建索引的每一片后让出一轮宏任务。
+             *   取消检查**不设在这里**：`isCancelled` 的调用计数是既有判据的契约
+             *   （tests/system-v3170 B5 锁的是「第 4 次检查 = 已扫 6000 条」），
+             *   在索引阶段插检查点会挪动它 —— 取消语义不该因实现节奏变化而变。
+             *   索引阶段仍受档位预算与每源上限约束，单片台阶有界。 */
+            await this._yieldTurn();
+        }
+        /* ══ 阶段二：分片比中（检查点原位，片后让出） ══ */
         let processed = 0;
         while (processed < all.length) {
             if (cancelledNow()) {
@@ -431,7 +517,12 @@ export class GlobalSearchEngine {
                     });
                 } catch (_e) { /* 进度回调抛错不得影响检索 */ }
             }
+            await this._yieldTurn();
         }
+        /* [v3.60.0 · 计划 O2] 收束（排序 / 截取 / 分组）也纳入可中断任务：
+         *   命中集可能到 60000 条，排序与分组不是零成本 —— 放在最后一次让出之后，
+         *   等于把一段同步台阶留在结尾（本版要治的正是这种「尾巴上的卡顿」）。 */
+        await this._yieldTurn();
         hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));
         const results = hits.slice(0, limit);
         const groupMap = new Map();
@@ -445,6 +536,21 @@ export class GlobalSearchEngine {
             errors: this._errors.slice(), cancelled: false,
             scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: 0, complete: true } }, all.length)
         };
+    }
+
+    /**
+     * [v3.60.0 · 计划 O2] 一次 build + 覆盖度读数（页头读数专用）。
+     * 为什么必须新增出口：`scanScope()` 每次自己 build 一遍；页头要的是「扫了多少条
+     *   + 覆盖到什么程度」两件事，原先得调 `build()` 与 `scanScope()` 各一次 ——
+     *   全历史档每次重开面板就重复全量建两次索引（O2 计划点名的「scopeSummary 不得每次重复
+     *   全历史 build」）。本出口把两件事收成**一次** build。
+     * @param {boolean} [full]
+     * @param {{coverage?:object}} [opts]
+     * @returns {{scanned:number, scope:object}}
+     */
+    scanSummary(full = false, opts = {}) {
+        const list = this.build({ full: full === true });
+        return { scanned: list.length, scope: this._scope(full === true, opts, list.length) };
     }
 }
 /** 时间解析：优先毫秒时间戳，其次 'HH:MM'（按今日折算），最后字符串日期 */

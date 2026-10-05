@@ -34,6 +34,11 @@ import {
     projectionFreshnessText
 } from '../../config/world-bridge.js';
 import { backGuardReport } from '../../config/back-guard.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏的**被挡回信账本**（唯一真源 `config/session-gate.js`）。
+ *   计划验收要求「旧响应有可读拒绝原因」—— 那条要求正落在这里：
+ *   栅栏在写回口挡下旧会话回信时只 `console.warn`（不抛、不弹窗，见该模块文件头），
+ *   若没有这一面，用户与工程师都**看不到**它挡过谁 —— 「安静地知道」需要有人读账本。 */
+import { sessionDropLog } from '../../config/session-gate.js';
 import { validateSourceKey, auditSourceKeys, sourceKeyRulebook } from '../../config/source-key-rules.js';
 /* [v3.0.0] 上游投影契约（L-F5 的消费侧）：把记忆插件 v3.212.0 新外供的投影 envelope
  *   读成手机端可看的面。接在这里的理由：本仓一切「上游读数」的可见出口就是诊断中心，
@@ -519,7 +524,47 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces };
+    /* ── [v3.58.0 · 计划 O4] 会话世代栅栏面（**被挡下的旧会话回信**）──
+     *   摆的是什么：当前世代号、被挡下的回信条数、以及每一条的（域 / 拒绝原因 / 中文文案 / 时刻）。
+     *   与「App 消费面矩阵」的分工（两面常被混为一谈，是两个不同的问题）：
+     *     矩阵说「哪些 App **接上了**平台面」（接线在场）；
+     *     本面说「这些接线**真的挡下过谁**」（行为发生过）。
+     *   三条纪律与全页一致：
+     *     ① 只读：只调真源读出口 `sessionDropLog()`（它返回快照副本），本内核不自摸栅栏内部状态、
+     *        也不自己再数一遍条数（数第二遍就是同一口径两份实现）；
+     *     ② 不抛：读不到 / 抛错 ⇒ `ok:false` + 归因，不伪造一张空表；
+     *     ③ 不猜：**账本在位但一条都没挡过 ⇒ 那是正常读数**（本轮没有跨会话回信），
+     *        绝不能渲染成「栅栏没生效」—— 把「没有异常」谎报成「机制坏了」是本仓最忌的反向错读数。 */
+    const sessionGate = (() => {
+        try {
+            const log = sessionDropLog();
+            if (!log || typeof log !== 'object') return { ok: false, reason: 'gate-absent', epoch: null, count: 0, rows: [] };
+            const rows = Array.isArray(log.rows) ? log.rows.map((r) => ({
+                domain: String((r && r.domain) || 'unknown'),
+                reason: String((r && r.reason) || 'unknown'),
+                text: String((r && r.text) || ''),
+                at: Number((r && r.at) || 0) || 0
+            })) : [];
+            return { ok: true, reason: 'ok', epoch: Number(log.epoch) || 0, count: rows.length, rows };
+        } catch (_e) { return { ok: false, reason: 'gate-threw', epoch: null, count: 0, rows: [] }; }
+    })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, sessionGate };
+}
+/** [v3.58.0 · 计划 O4] 会话世代栅栏面的一行读数（**唯一实现**在本文件 `collectDiagnose` 内取的那一面）。
+ *  这里只做转发与文案：视图不自己拼（拼第二遍就是同一口径两份实现）。
+ *  三态文案必须互不相同（本仓老规矩）：
+ *    · 读不到账本 → 说「读不到」并给归因，**不说**「没挡过」；
+ *    · 读到但零条 → 说「本轮没有被挡下的回信」——这是**好读数**，不是坏消息。 */
+export function sessionGateFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f || f.ok !== true) {
+            return '会话世代栅栏：读不到账本（归因 ' + String((f && f.reason) || 'unknown')
+                + '）—— 这不是「没有被挡下的回信」';
+        }
+        if (!f.count) return '会话世代栅栏：当前世代 ' + String(f.epoch) + '，本轮未被挡下任何回信（正常）。';
+        return '会话世代栅栏：当前世代 ' + String(f.epoch) + '，已挡下 ' + String(f.count) + ' 条旧会话回信。';
+    } catch (_e) { return '会话世代栅栏：读取异常（已降级）—— 这不是「没有被挡下的回信」'; }
 }
 /** [v3.20.2] 上游检查点面的一行读数（**唯一实现**在真源 `config/checkpoint-content-contract.js`）。
  *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
@@ -774,5 +819,6 @@ export default {
     bootTimingFaceText,
     bootTimingRows,
     checkpointFaceText,
+    sessionGateFaceText,
     summarizeDiagnose
 };

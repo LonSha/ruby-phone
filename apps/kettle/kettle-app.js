@@ -39,6 +39,7 @@ import {
     kettleReadings, ledgerFace
 } from './kettle-data.js';
 import { KettleView } from './kettle-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
@@ -156,8 +157,9 @@ export class KettleApp {
     _writeJSON(key, v) {
         try {
             if (!this.storage || typeof this.storage.set !== 'function') return false;
-            this.storage.set(key, JSON.stringify(v));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败（真 PhoneStorage 内部吞错）也照报成功。 */
+            return writeReceipt(this.storage, key, JSON.stringify(v)).saved === true;
         } catch (_e) { return false; }
     }
     /* ---------- 装载 ---------- */

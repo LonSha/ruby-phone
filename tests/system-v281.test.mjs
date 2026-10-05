@@ -214,7 +214,12 @@ test('v281 C3. 源头改了 → 重开面板给新读数（不吃旧结果快照
 // ============================================================================
 test('v281 D1. 破坏「每次打开对齐宿主源」→ C1/C2 同款判据在副本上转红', async () => {
     const dir = mutate('no-sync', [
-        [APP_REL, '        this._syncHostSources();\n', '']
+        /* [v3.58.0 · 计划 O4] 锚点收回到 render() 那一处：O4 之后 onChatChanged() 也有
+         *   同一行「对齐宿主源」，裸行字面量会命中 2 次（mutate 直接抛，负控制跑不起来）。
+         *   两条路径都该对齐，判据钉的是**打开面板**这条（C1/C2 探针走 render），
+         *   故取 render() 独有的注释 + 调用一起锚定，破坏面与判据面一致。 */
+        [APP_REL, '        // [v2.81.0] 顺带对齐宿主侧源：宿主上下文刚就绪 / 刚换会话时，源表不能停在构造那一刻\n'
+            + '        this._syncHostSources();\n', '']
     ]);
     const p1 = await probeHostLateBind(dir);
     assert.equal(p1.constructed, false, '破坏副本的前置仍应成立');

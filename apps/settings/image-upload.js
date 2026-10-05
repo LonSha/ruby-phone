@@ -10,6 +10,7 @@
  * Copyright (c) yuzuki. All rights reserved.
  * ======================================================== */
 import { detectImageMime } from '../../config/image-mime.js';
+import { writeReceiptAsync } from '../../config/write-receipt.js';
 
 // ==========================================
 // 图片上传管理 - 全部存酒馆服务端，彻底告别 localStorage 和 Base64
@@ -295,13 +296,22 @@ export class ImageUploadManager {
     // ========================================
     async _saveCache() {
         try {
-            await this.storage.set(this.storageKey, JSON.stringify(this.cache));
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前 `await this.storage.set(...)` 的结果
+             *   被当场丢掉 —— 写失败只在控制台留一行，十个调用点（上传 / 删除 / 迁移）照旧
+             *   当成功。异步出口正是为这条路径存在的：等落队，并把 `saved` 还给调用方。 */
+            const receipt = await writeReceiptAsync(this.storage, this.storageKey, JSON.stringify(this.cache));
+            if (!receipt.saved) {
+                console.error('[ImageUpload] 保存图片路径失败:', receipt.why);
+                return receipt;
+            }
             // 同步到全局 imageManager，避免设置页实例与主屏实例缓存分叉
             if (window.VirtualPhone?.imageManager && window.VirtualPhone.imageManager !== this) {
                 window.VirtualPhone.imageManager.cache = JSON.parse(JSON.stringify(this.cache));
             }
+            return receipt;
         } catch (e) {
             console.error('[ImageUpload] 保存图片路径失败:', e);
+            return { saved: false, why: 'save_threw' };
         }
     }
 

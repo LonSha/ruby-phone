@@ -20,6 +20,7 @@ import {
     findTemplate, findTable, findField, caps
 } from './memtable-data.js';
 import { MemtableView } from './memtable-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 export const MT_TEMPLATES_KEY = 'memtable_templates';
 export const MT_DATA_KEY = 'memtable_data';
@@ -112,8 +113,9 @@ export class MemtableApp {
         const gate = this._storageUsable();
         if (!gate.ok) return { saved: false, why: gate.why };
         try {
-            const wrote = this.storage.set(key, value);
-            return { saved: wrote === true, why: wrote === true ? '' : 'set_false' };
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：真 PhoneStorage.set 是 async，
+             *   把它的返回值当同步布尔读会让 saved 恒假（见 config/write-receipt.js 头注）。 */
+            return writeReceipt(this.storage, key, value);
         } catch (e) {
             return { saved: false, why: 'write_threw' };
         }

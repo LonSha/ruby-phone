@@ -267,12 +267,19 @@ function versionProblems(root) {
     const pkg = JSON.parse(readFrom(root, PKG_REL));
     const log = JSON.parse(readFrom(root, UPDLOG_REL));
     const idx = readFrom(root, INDEX_REL);
-    for (const [name, v] of [['manifest', man.version], ['package', pkg.version],
-        ['update-log.latest', log.latest], ['update-log.head', log.head]]) {
-        if (v !== MIN_VERSION) bad.push('V1 ' + name + ' = ' + String(v) + '（应 ' + MIN_VERSION + '）');
+    /* [v3.57.0·O3 交棒改写，不是放宽] 原判据把五源**钉死在出生那一版**
+     *   （`v !== '3.56.0'` 即红）—— 抬版当日必红，属「判据恒红」形态（与恒绿同样是坏判据，
+     *   只是方向相反）。改写为**下限 + 五源自洽**：① 本套件自出生版起成立（>= MIN_VERSION）；
+     *   ② 四源彼此一致（这才是真契约 —— 「五源不同源」照样会被抓到，但不因抬版误红）；
+     *   ③ 入口常量与当版条目在场。 */
+    const vnum = (v) => String(v).split('.').map((x) => Number(x)).reduce((a, b) => a * 1000 + b, 0);
+    if (vnum(man.version) < vnum(MIN_VERSION)) bad.push('V1 manifest 版本低于本套件出生版：' + man.version);
+    for (const [name, v] of [['package', pkg.version], ['update-log.latest', log.latest],
+        ['update-log.head', log.head]]) {
+        if (v !== man.version) bad.push('V1 ' + name + ' = ' + String(v) + '（应与 manifest ' + man.version + ' 同源）');
     }
-    if (hits(idx, 'const ST_PHONE_VERSION = ' + Q + MIN_VERSION + Q + ';') !== 1) bad.push('V1 index.js 版本常量不同源');
-    if (!log.versions || !log.versions[MIN_VERSION]) bad.push('V1 update-log 缺当版条目');
+    if (hits(idx, 'const ST_PHONE_VERSION = ' + Q + man.version + Q + ';') !== 1) bad.push('V1 index.js 版本常量不同源');
+    if (!log.versions || !log.versions[man.version]) bad.push('V1 update-log 缺当版条目');
     return bad;
 }
 
@@ -410,6 +417,8 @@ test('V2 台账：本套件必须与「六项缺陷」一一对得上，不留�
 /* ============================================================
  * D 面：破坏表 —— 真源码定点破坏 ⇒ 在副本树上重跑**同款真判据**必须转红
  * ============================================================ */
+/* 动态版本锚：破坏表的版本面不许钉死某一版的字面量（抬版即失配 ⇒ 破坏静默不生效）。 */
+const CUR_LATEST_ANCHOR = '"latest": "' + String(JSON.parse(readRel(UPDLOG_REL)).latest) + '"';
 const D = [
     /* D1：把分页拆掉，退回「全部一次铺进单格」 */
     ['A1 退回单格全铺（分页被删）', HOME_REL,
@@ -475,10 +484,10 @@ const D = [
     ['D7 :active 又缩放', PET_CSS_REL,
         '.phone-pet-root:active { filter: brightness(1.12); cursor: grabbing; }',
         '.phone-pet-root:active { transform: scale(0.95); cursor: grabbing; }', 'petProblems'],
-    /* D17：版本五源脱节 */
+    /* D17：版本五源脱节（动态锚：把 latest 指到一个与四源都不相符的版本） */
     ['V1 五源脱节', UPDLOG_REL,
-        '"latest": "3.56.0"',
-        '"latest": "3.55.0"', 'versionProblems'],
+        CUR_LATEST_ANCHOR,
+        '"latest": "0.0.0"', 'versionProblems'],
     /* D18：分页容量被放大到无意义 */
     ['A8 每页容量无意义', HOME_REL,
         'const rows = 5;',
@@ -519,8 +528,11 @@ test('D20 负控制：在解说/注释行提到旧名，不得被 C2 判成泄�
     /* 这条是「判据不许自指伪证」的**反例锚**：把旧名写进一行注释，C2 必须仍返回空。
      *   抬版当天真被这件事绊过 —— 判据扫到了 announce 块里那句说明文案。
      *   若哪天有人把 C2 改回全行扫描，这条会立刻报红。 */
-    const ws = breakIn(INDEX_REL, 'const ST_PHONE_VERSION = ' + Q + MIN_VERSION + Q + ';',
-        'const ST_PHONE_VERSION = ' + Q + MIN_VERSION + Q + ';   // 旧名柚月の手机与柚月小手机已统一为 RubyPhone');
+    /* [v3.57.0·O3 交棒改写] 锚点版本号改为**动态取当版**（原写死出生版 3.56.0，抬版即锚点失配 ⇒
+     *   breakIn 直接抛，负控制变成「跑不起来」而不是「响过了」）。判据本身一字未改。 */
+    const CUR_V = String(JSON.parse(readRel(MANIFEST_REL)).version);
+    const ws = breakIn(INDEX_REL, 'const ST_PHONE_VERSION = ' + Q + CUR_V + Q + ';',
+        'const ST_PHONE_VERSION = ' + Q + CUR_V + Q + ';   // 旧名柚月の手机与柚月小手机已统一为 RubyPhone');
     const bad = brandProblems(ws);
     assert.deepEqual(bad, [], '注释里提旧名被误判成泄漏：' + bad.join(' | '));
 });

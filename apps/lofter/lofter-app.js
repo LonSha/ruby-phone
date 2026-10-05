@@ -54,6 +54,7 @@ import {
 } from './lofter-data.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { LofterView } from './lofter-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^lofter_/`，否则跨会话串味。
    源把全部状态塞在内存的 `AppState.data.lofterData` 里（切角色就串味）。
    本件分三条：设置 / 内容（作者+文章+合集） / 互动（关注与订阅与我的四个列表）。 */
@@ -104,8 +105,9 @@ export class LofterApp {
     _writeJSON(key, v) {
         try {
             if (!this.storage) return false;
-            this.storage.set(key, JSON.stringify(v));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败（真 PhoneStorage 内部吞错）也照报成功。 */
+            return writeReceipt(this.storage, key, JSON.stringify(v)).saved === true;
         } catch (_e) { return false; }
     }
     /** 宿主的称呼（`name1` 是用户、`name2` 是角色）；无宿主 ⇒ 用中性词，**绝不编人名**。 */

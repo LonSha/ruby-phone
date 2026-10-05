@@ -54,6 +54,7 @@ import {
 } from './pvdesk-data.js';
 import { PvdeskView } from './pvdesk-view.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 /* 四条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^pvdesk_/，否则跨会话串味。源把题面、歌词、任务列表与设置全放在
@@ -167,8 +168,9 @@ export class PvdeskApp {
         if (!gate.ok) return false;
         if (typeof this.storage.set !== 'function') return false;
         try {
-            this.storage.set(key, JSON.stringify(value));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败也照报成功（与 A 族方向相反的同一类错）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
         } catch (e) {
             return false;
         }

@@ -54,7 +54,12 @@
  *   本件不许出现反引号模板串（本仓静态门按串形守），一律字符串拼接。
  * ======================================================== */
 'use strict';
-
+/* [v3.57.0·O3] 数值取值走全仓唯一实现（config/num-gate.js）。
+ *   本件此前自带的那份 numOrNull 只挡 null / undefined / 空串三形，
+ *   纯空格串 / 空数组 / 布尔假 仍被读成 0、布尔真 读成 1、单元素数组 读成 5。 */
+import { numOrNull } from '../../config/num-gate.js';
+/* 本件对外仍导出同名入口（下游 -app.js 照旧按原名引入），不做第二份实现。 */
+export { numOrNull };
 /* ---------- 画布与上限（源：uterus_layout.js 的 UTERUS_CANVAS / MAX_DRAWN_FETUSES） ---------- */
 export const UTERUS_CANVAS = Object.freeze({ width: 96, height: 120 });
 export const MAX_DRAWN_FETUSES = 5;
@@ -124,11 +129,6 @@ export const UD_SOURCE_NOTE = '源是 st_bs_biotracker 的绘制一族（胎儿�
 
 /* ---------- 小工具 ---------- */
 function toStr(v) { return (typeof v === 'string') ? v : ''; }
-export function numOrNull(v) {
-    if (v === null || v === undefined || v === '') return null;
-    const n = Number(v);
-    return (typeof n === 'number' && isFinite(n)) ? n : null;
-}
 function numOr(v, fallback) { const n = numOrNull(v); return (n === null) ? fallback : n; }
 export function clampNum(v, lo, hi) { const n = numOr(v, lo); return (n < lo) ? lo : (n > hi) ? hi : n; }
 export function isPlain(v) { return Boolean(v) && typeof v === 'object' && !Array.isArray(v); }

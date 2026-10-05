@@ -5,7 +5,7 @@
  * 键面话术本文件不重列，读数取不出来画横线。
  * ======================================================== */
 'use strict';
-import { visibleTo, isStoryAlive } from './socialguard-data.js';
+import { visibleTo, isStoryAlive, seenAtOf } from './socialguard-data.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -91,7 +91,7 @@ export class SocialguardView {
         for (const p of rows) {
             const alive = p.kind === 'story' ? isStoryAlive(p, Date.now()) : true;
             const vis = visibleTo(p, 'user');
-            const seen = !!(p.seenBy && p.seenBy['user']);
+            const seen = seenAtOf(p.seenBy && p.seenBy['user']) !== null;
             const tone = (!alive || !vis) ? 'sg-row-off' : 'sg-row-ok';
             h += '<div class="sg-row ' + tone + '"><span class="sg-row-kind">' + esc(p.kind) + '</span>' +
                 '<span class="sg-row-author">' + esc(p.authorId) + '</span>' +

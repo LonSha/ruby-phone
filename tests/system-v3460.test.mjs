@@ -82,7 +82,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -1185,6 +1185,10 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3460_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'storage.js'), path.join(dir, 'config', 'storage.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v3.58.0 · 计划 O5] 本件 17 件中的 cotdesk 已把写回执接进唯一实现，
+     *   副本树少了它，模块解析当场 ERR_MODULE_NOT_FOUND（真踩过）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const ad = path.join(dir, 'apps', 'cotdesk');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['cotdesk-data.js', 'cotdesk-app.js', 'cotdesk-view.js']) {

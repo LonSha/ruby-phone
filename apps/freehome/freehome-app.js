@@ -9,6 +9,7 @@ import {
     FH_LEDGER_MAX, trimRows, layoutProblems, normalizeLayout, readingsOf, listOf, toStr, isPlain
 } from './freehome-data.js';
 import { FreehomeView } from './freehome-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 export const FH_LAYOUT_KEY = 'fh_layout';
 export const FH_LEDGER_KEY = 'fh_ledger';
@@ -42,9 +43,12 @@ export class FreehomeApp {
         const gate = this._storageUsable();
         if (!gate.ok) return { saved: false, why: gate.why };
         try {
-            const wrote = this.storage.set(key, value);
-            return { saved: wrote === true, why: wrote === true ? '' : 'set_false' };
-        } catch (e) { return { saved: false, why: 'write_threw' }; }
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：真 PhoneStorage.set 是 async，
+             *   把它的返回值当同步布尔读会让 saved 恒假（见 config/write-receipt.js 头注）。 */
+            return writeReceipt(this.storage, key, value);
+        } catch (e) {
+            return { saved: false, why: 'write_threw' };
+        }
     }
     _nowMs() {
         if (this.shell && typeof this.shell.now === 'function') {

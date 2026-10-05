@@ -26,6 +26,7 @@ import {
     PV_CAST_MAX, PV_CAPTION_MIN, PV_LRC_LINE_MAX, PV_META_TAGS, PV_FIG_MARKS,
     PV_DURATION_MIN, PV_DURATION_MAX
 } from './pvdesk-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
@@ -536,7 +537,7 @@ export class PvdeskView {
             const box = this._q('[data-k="reply"]');
             const r = app.ingestReply(box ? box.value : '');
             if (r.ok !== true) {
-                this._flash = '没收下（' + app.whyTextOf(r.why) + '）';
+                this._flash = '没收下（' + (r.why ? app.whyTextOf(r.why) : '没落下去') + '）';
                 this.refresh();
                 return;
             }
@@ -552,7 +553,7 @@ export class PvdeskView {
         if (name === 'ingest-lyrics') {
             const box = this._q('[data-k="lyrics"]');
             const r = app.ingestLyrics(box ? box.value : '');
-            this._flash = r.ok ? ('收下歌词：' + app.lyricsModeText() + ' · 成句 ' + r.cues) : '歌词是空的，没记';
+            this._flash = writeLanded(r) ? ('收下歌词：' + app.lyricsModeText() + ' · 成句 ' + r.cues) : '歌词是空的，没记';
             this.refresh();
             return;
         }
@@ -573,7 +574,7 @@ export class PvdeskView {
         }
         if (name === 'save') {
             const r = app.saveToShelf({});
-            this._flash = r.ok ? ('存进台账（' + r.shots + ' 镜 · ' + r.chars + ' 字）') : '存不进：还没有题面';
+            this._flash = writeLanded(r) ? ('存进台账（' + r.shots + ' 镜 · ' + r.chars + ' 字）') : '存不进：还没有题面';
             this.refresh();
             return;
         }
@@ -596,8 +597,8 @@ export class PvdeskView {
         }
     }
     _flashOf(r, okText, badText) {
-        if (r && r.ok === true) return okText;
-        return badText + (r && r.why ? ('（' + r.why + '）') : '');
+        if (writeLanded(r)) return okText;
+        return badText + (r && r.why ? ('（' + r.why + '）') : '（没落下去）');
     }
 
     /* ---------- 事件 ---------- */
@@ -631,14 +632,14 @@ export class PvdeskView {
             const rmEl = climb(t, (n) => n.getAttribute('data-rm') !== null);
             if (rmEl) {
                 const r = this.app.removeFromShelf(Number(rmEl.getAttribute('data-rm')));
-                this._flash = r.ok ? ('台账还剩 ' + r.left + ' 份') : ('没有这一份（' + r.saw + '）');
+                this._flash = writeLanded(r) ? ('台账还剩 ' + r.left + ' 份') : ('没有这一份（' + r.saw + '）');
                 this.refresh();
                 return;
             }
             const cardEl = climb(t, (n) => n.getAttribute('data-open') !== null);
             if (cardEl) {
                 const r = this.app.openItem(cardEl.getAttribute('data-open'));
-                this._flash = r.ok ? '' : ('找不到镜头 ' + r.key);
+                this._flash = writeLanded(r) ? '' : ('找不到镜头 ' + r.key);
                 this.refresh();
             }
         });
@@ -649,32 +650,32 @@ export class PvdeskView {
             const k0 = t.getAttribute('data-k');
             if (pick === 'lens') {
                 const r = this.app.setLens(t.value);
-                this._flash = r.ok ? ('机型换成 ' + t.value) : '没这个机型，当没给';
+                this._flash = writeLanded(r) ? ('机型换成 ' + t.value) : '没这个机型，当没给';
                 this.refresh();
                 return;
             }
             if (pick === 'style') {
                 const r = this.app.setStyle(t.value);
-                this._flash = r.ok ? ('画风换成 ' + t.value) : (r.saw ? ('认不出这个画风（' + r.saw + '），当没给') : '画风当没给');
+                this._flash = writeLanded(r) ? ('画风换成 ' + t.value) : (r.saw ? ('认不出这个画风（' + r.saw + '），当没给') : '画风当没给');
                 this.refresh();
                 return;
             }
             if (pick === 'mood') {
                 const r = this.app.setMood(t.value);
-                this._flash = r.ok ? ('情绪换成 ' + t.value) : '情绪当没给';
+                this._flash = writeLanded(r) ? ('情绪换成 ' + t.value) : '情绪当没给';
                 this.refresh();
                 return;
             }
             if (pick === 'duration') {
                 const r = this.app.setDuration(t.value);
-                this._flash = r.ok ? ('时长定成 ' + r.duration + ' 秒') : ('「' + r.saw + '」不收（'
+                this._flash = writeLanded(r) ? ('时长定成 ' + r.duration + ' 秒') : ('「' + r.saw + '」不收（'
                     + r.min + ' 到 ' + r.max + ' 秒）');
                 this.refresh();
                 return;
             }
             if (k0 === 'cuesec') {
                 const r = this.app.cueAt(t.value);
-                this._flash = r.ok ? ('第 ' + String(t.value) + ' 秒是「' + r.text + '」（' + r.clock + '）')
+                this._flash = writeLanded(r) ? ('第 ' + String(t.value) + ' 秒是「' + r.text + '」（' + r.clock + '）')
                     : ('第 ' + String(t.value) + ' 秒没词（' + r.why + '）');
                 this.refresh();
                 return;
@@ -688,20 +689,20 @@ export class PvdeskView {
             }
             if (pick === 'lang') {
                 const r = this.app.setLang(t.value);
-                this._flash = r.ok ? ('语速口径换成 ' + r.lang) : ('不认这个语言（' + r.saw + '）');
+                this._flash = writeLanded(r) ? ('语速口径换成 ' + r.lang) : ('不认这个语言（' + r.saw + '）');
                 this.refresh();
                 return;
             }
             const k = t.getAttribute('data-k');
             if (k === 'maxchars') {
                 const r = this.app.setMaxChars(t.value);
-                this._flash = r.ok ? ('主行上限 ' + r.maxChars + ' 字') : ('「' + r.saw + '」不收（4 到 40 字）');
+                this._flash = writeLanded(r) ? ('主行上限 ' + r.maxChars + ' 字') : ('「' + r.saw + '」不收（4 到 40 字）');
                 this.refresh();
                 return;
             }
             if (k === 'wide') {
                 const r = this.app.setWide(t.checked === true);
-                this._flash = r.ok ? ('宽素材上限' + (r.wide ? '已打开' : '已关闭') + '（参考图 ' + r.refs + ' 张）')
+                this._flash = writeLanded(r) ? ('宽素材上限' + (r.wide ? '已打开' : '已关闭') + '（参考图 ' + r.refs + ' 张）')
                     : '没改成就';
                 this.refresh();
             }

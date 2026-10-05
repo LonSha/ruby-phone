@@ -11,9 +11,16 @@
  *
  * 【依赖】无（纯函数层）
  * 【上游定位】extract-core.js
+ *
+ * 【[v3.57.0·O3] 唯一一处对上游正文的改动（其余逐字未改）】
+ *   上游正文里有一个 `numOr0`：「取正整数量、否则 0」。它是 `Number(v)` 直通 ——
+ *   `''` / `[]` / `null` / `false` 全被读成 0（这一档恰好与它的契约值同形，看不出来），
+ *   而 `true` 会被读成 1、`[5]` 会被读成 5，**越过了「判不出」这一档**。
+ *   本版把它的取值改走全仓唯一实现（`config/num-gate.js` 的 `numOrNull`），
+ *   函数名、契约（无值 / 非正 ⇒ 0）与调用点一字未动。此改动已回报上游血缘注释。
  * ======================================================== */
 'use strict';
-
+import { numOrNull } from '../../../config/num-gate.js';
 const __REQ = {};
 
 export default (function () {
@@ -225,8 +232,8 @@ export default (function () {
     return fields.map(f => Object.assign({}, f, { kind: FIELD_KINDS.indexOf(f.kind) >= 0 ? f.kind : 'text' }));
   }
   function numOr0(v) {
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    const n = numOrNull(v);
+    return (n !== null && n > 0) ? Math.floor(n) : 0;
   }
   // 逐字段**来源标记**（§3.4 的三档，纯函数）：
   //   · 用户没动 → `原文抄录`（模型从原文抄的）

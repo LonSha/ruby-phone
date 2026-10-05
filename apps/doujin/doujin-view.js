@@ -25,6 +25,7 @@ import {
     DJ_GAUGE_KEYS, DJ_TITLE_MAX, DJ_LISTING_MAX, DJ_CART_MAX, DJ_LEDGER_MAX, DJ_QTY_MAX,
     DJ_SHELF_MAX, DJ_SHELF_STORE_MAX
 } from './doujin-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
@@ -538,8 +539,8 @@ export class DoujinView {
         const app = this.app;
         if (act === 'ingest_shop') {
             const r = app.ingestShopText(this._shopInput || '');
-            this._flash = r.ok ? ('收下 ' + String(r.added) + ' 件' + (r.rejected.length ? ('，拒收 ' + String(r.rejected.length) + ' 行') : ''))
-                : ('没收下：' + app.rowWhyTextOf(r.why) + (r.saw ? ('（开头是「' + r.saw + '」）') : ''));
+            this._flash = writeLanded(r) ? ('收下 ' + String(r.added) + ' 件' + (r.rejected.length ? ('，拒收 ' + String(r.rejected.length) + ' 行') : ''))
+                : ('没收下：' + (r.why ? app.rowWhyTextOf(r.why) : '没落下去') + (r.saw ? ('（开头是「' + r.saw + '」）') : ''));
             if (r.ok) this._shopInput = '';
             this.refresh();
             return;
@@ -547,14 +548,14 @@ export class DoujinView {
         if (act === 'clear_shop_input') { this._shopInput = ''; this._flash = '输入已清空'; this.refresh(); return; }
         if (act === 'add_cart') {
             const r = app.addToCart(id || '');
-            this._flash = r.ok ? ('已入车（' + String(r.rows) + ' 行）') : ('没入车：' + this._whyText(r.why));
+            this._flash = writeLanded(r) ? ('已入车（' + String(r.rows) + ' 行）') : ('没入车：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }
         if (act === 'ingest_listing') {
             const r = app.ingestListingText(this._listingInput || '');
-            this._flash = r.ok ? ('收下 ' + String(r.added) + ' 条在售' + (r.rejected.length ? ('，拒收 ' + String(r.rejected.length) + ' 行') : ''))
-                : ('没收下：' + this._whyText(r.why));
+            this._flash = writeLanded(r) ? ('收下 ' + String(r.added) + ' 条在售' + (r.rejected.length ? ('，拒收 ' + String(r.rejected.length) + ' 行') : ''))
+                : ('没收下：' + (r.why ? this._whyText(r.why) : '没落下去'));
             if (r.ok) this._listingInput = '';
             this.refresh();
             return;
@@ -562,19 +563,19 @@ export class DoujinView {
         if (act === 'clear_listing_input') { this._listingInput = ''; this._flash = '输入已清空'; this.refresh(); return; }
         if (act === 'set_focus') {
             const r = app.setFocus(this._focusInput || '');
-            this._flash = r.ok ? ('选中「' + r.focus + '」') : '没选中';
+            this._flash = writeLanded(r) ? ('选中「' + r.focus + '」') : '没选中';
             this.refresh();
             return;
         }
         if (act === 'fav') {
             const r = app.toggleFav(id);
-            this._flash = r.ok ? (r.fav ? '已收藏' : '已取消收藏') : '没成就';
+            this._flash = writeLanded(r) ? (r.fav ? '已收藏' : '已取消收藏') : '没成就';
             this.refresh();
             return;
         }
         if (act === 'mark_sold') {
             const r = app.setField(id, 'status', 'sold_out');
-            this._flash = r.ok ? '已标完售' : ('没标成：' + this._whyText(r.why));
+            this._flash = writeLanded(r) ? '已标完售' : ('没标成：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }
@@ -586,9 +587,9 @@ export class DoujinView {
         }
         if (act === 'set_price') {
             const r = app.setPrice(this._priceId || '', this._priceNew || '');
-            this._flash = r.ok ? ('改价 ' + String(r.from === null ? DASH : r.from) + ' → ' + String(r.to)
+            this._flash = writeLanded(r) ? ('改价 ' + String(r.from === null ? DASH : r.from) + ' → ' + String(r.to)
                 + (r.changed ? ('（明显变动 ' + (r.ratio * 100).toFixed(1) + '%）') : '（幅度不到阈值）'))
-                : ('没改：' + this._whyText(r.why));
+                : ('没改：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }
@@ -600,8 +601,8 @@ export class DoujinView {
         }
         if (act === 'settle') {
             const r = app.settle();
-            this._flash = r.ok ? ('结账完成：' + String(r.n) + ' 件 · ¥' + String(r.total))
-                : ('没结：' + this._whyText(r.why) + (r.bad ? ('（' + String(r.bad) + ' 行读不出价）') : ''));
+            this._flash = writeLanded(r) ? ('结账完成：' + String(r.n) + ' 件 · ¥' + String(r.total))
+                : ('没结：' + (r.why ? this._whyText(r.why) : '没落下去') + (r.bad ? ('（' + String(r.bad) + ' 行读不出价）') : ''));
             this.refresh();
             return;
         }
@@ -613,14 +614,14 @@ export class DoujinView {
         }
         if (act === 'save_shelf') {
             const r = app.saveToShelf();
-            this._flash = r.ok ? ('已存 ' + String(r.kept) + ' 份') : ('没存：' + this._whyText(r.why));
+            this._flash = writeLanded(r) ? ('已存 ' + String(r.kept) + ' 份') : ('没存：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }
-        if (act === 'clear_draft') { const r = app.clearDraft(); this._flash = r.ok ? '草稿已清' : '没成'; this.refresh(); return; }
+        if (act === 'clear_draft') { const r = app.clearDraft(); this._flash = writeLanded(r) ? '草稿已清' : '没成'; this.refresh(); return; }
         if (act === 'shelf_remove') {
             const r = app.removeFromShelf(Number(id));
-            this._flash = r.ok ? ('剩下 ' + String(r.kept) + ' 份') : ('没删：' + this._whyText(r.why));
+            this._flash = writeLanded(r) ? ('剩下 ' + String(r.kept) + ' 份') : ('没删：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }

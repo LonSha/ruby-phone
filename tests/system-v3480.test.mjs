@@ -30,6 +30,8 @@ const UD_DATA = 'apps/uterus/uterus-data.js';
 const UD_APP = 'apps/uterus/uterus-app.js';
 const UD_VIEW = 'apps/uterus/uterus-view.js';
 const UD_CSS = 'apps/uterus/uterus.css';
+const NUM_GATE = 'config/num-gate.js';
+const RECEIPT = 'config/write-receipt.js';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -77,7 +79,7 @@ function memStorage(seed) {
     const box = new Map(Object.entries(seed || {}));
     return {
         get: (k, d) => (box.has(k) ? box.get(k) : ((d === undefined) ? null : d)),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box
     };
 }
@@ -123,7 +125,9 @@ const WS_FILES = [
     INDEX,
     KEYS,
     PHONE_CSS,
-    V255
+    V255,
+    NUM_GATE,
+    RECEIPT
 ];
 function makeWorkspace() {
     const d = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-ud-ws-'));

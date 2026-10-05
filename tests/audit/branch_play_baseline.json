@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 368,
+    "files_scanned": 370,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
@@ -908,6 +908,37 @@
         "upstream_ledger_replay_loadable": 1,
         "upstream_bridge_snapshot_branch_faces": 0
       }
+    },
+    "v3.58.0": {
+      "what": "v3.58.0 O4/O5：两条新真源（config/session-gate.js · config/write-receipt.js）；本件不写回滚点",
+      "why": "枚举面 368 -> 370 个文件（本版三个新 .js 里，两个产品侧真源进本探针扫描面：config/session-gate.js 与 config/write-receipt.js；第三个是 tests/system-v3590.test.mjs，`tests/` 不在本探针的扫描面）。**会话隔离前缀面（chat_data_patterns）279 一格未动** —— 本版七族写回口接的是「出发时记令牌 + 写回前裁决」，裁决结果落在内存账本（sessionDropLog 有界快照），**不新增任何会话键、也不新增 storage 前缀**：回执面只回答「这次调用落了没有」，不引入新的持久化面。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 会话栅栏不写回滚点、不碰分支对照。",
+      "readings": {
+        "files_scanned": 370
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "chat_data_patterns",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits",
+        "upstream_modules_scanned",
+        "upstream_branch_domain_modules",
+        "upstream_checkpoint_named",
+        "upstream_checkpoint_named_persistent",
+        "upstream_branch_domain_preview_hits",
+        "upstream_branch_guard_loadable",
+        "upstream_ledger_replay_loadable",
+        "upstream_bridge_snapshot_branch_faces"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+        "本版新增的两件真源都是**进程内**真源（世代号与回执判定），没有持久化态：故本面既不新增会话隔离前缀、也不新增回滚点。这是如实记录，不是漏复校。"
+      ]
     }
   }
 }

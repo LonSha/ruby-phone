@@ -16,7 +16,15 @@
  * 人脉双向镜像不许只算单向；story 过期不许再进 feed。
  * ======================================================== */
 'use strict';
-
+/* [v3.57.0·O3] 数值取值走**全仓唯一实现**（`config/num-gate.js`）。
+ *   本件此前自带的那份 `numOrNull` 只给 `number` 放行、其余一律 `Number(v)` ——
+ *   `null` / `''` / `[]` / `false` → 0、`true` → 1、`[5]` → 5。
+ *   ⚠ 知情账（seenBy）与时刻面正是被这一步读坏的：`seenBy[k]` 的 `null` / `[]` / `false`
+ *   被收成 0，**键留下了**，于是 `readingsOf` 按键数据实计到了这些脏值；而互动门读的
+ *   是同一个 0（falsy）⇒ 界面统计与互动门对同一条记录给出相反结论。 */
+import { numOrNull } from '../../config/num-gate.js';
+/* 本件对外仍导出同名入口（下游 -app.js 照旧 `import { numOrNull }`），不做第二份实现。 */
+export { numOrNull };
 /* ---------- 真源常量 ---------- */
 export const SG_KINDS = Object.freeze(['post', 'story']);
 export const SG_CONTACT_KINDS = Object.freeze(['direct', 'linked']);
@@ -30,7 +38,18 @@ export const SG_HISTORY_SUMMARY_MAX = 6;
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
 export function toStr(v) { return (typeof v === 'string') ? v : ''; }
-export function numOrNull(v) { const n = (typeof v === 'number') ? v : Number(v); return Number.isFinite(n) ? n : null; }
+/* ---------- 知情账单格判定（[v3.57.0·O3]） ----------
+ * 「看过没」在源里只有一种可表示形态：`markSeen` 写进去的**正数**（首看时刻；
+ * 拿不到时刻时写 1，见该函数）。故本判定只认「有限数且 > 0」，其余一律判「表示不了已看」：
+ *   · `0`（含脏值被收成的 0、历史遗留的 0）——0 是 falsy，互动门与历史摘要本来就不认它，
+ *     若 `readingsOf` 按键计数就把它算成一个人 ⇒ **同一条记录两种结论**（O3 的病灶）；
+ *   · `null` / `undefined` / `''` / `[]` / `false`（归一阶段的怪值）——它们从不是「看过」。
+ * 归一（normalizePost）与读数（readingsOf）、门（mayInteractWith）、首看（markSeen）四处
+ * 必须同用这一条判据，否则四个读数会各自为政。 */
+export function seenAtOf(v) {
+    const t = numOrNull(v);
+    return (t !== null && t > 0) ? t : null;
+}
 export function deepClone(v) { try { return JSON.parse(JSON.stringify(v)); } catch (e) { return null; } }
 export function trimRows(list, cap) {
     const arr = listOf(list);
@@ -72,7 +91,10 @@ export function normalizePost(raw, index) {
     const seenBy = {};
     if (isPlain(raw.seenBy)) {
         for (const k of Object.keys(raw.seenBy)) {
-            const t = numOrNull(raw.seenBy[k]);
+            /* [v3.57.0·O3] 只认能**表示已看**的格（正数时刻，`seenAtOf`）；脏值与历史 0 一律丢弃。
+             *   此处此前是「取到数就留」，而旧取数把 null/''/[]/false 收成 0 —— 键留下了，
+             *   读数面按它计数、门面却不认它 ⇒ 界面统计与互动门对同一条记录相反。 */
+            const t = seenAtOf(raw.seenBy[k]);
             if (k && t !== null) seenBy[k] = t;
         }
     }
@@ -220,22 +242,24 @@ export function contactsFor(contacts, charId) {
 }
 
 /* ---------- 知情账与互动门（源 markSeen / seenBy 一族）---------- */
-/* 首看记账：seenBy[actorId] 只在第一次看时落时刻（源 firstView 语义）。 */
+/* 首看记账：seenBy[actorId] 只在第一次看时落时刻（源 firstView 语义）。
+ *   [v3.57.0·O3] 「已看」的可表示形态只有一种：**正数**（时刻；拿不到时刻时写 1）。
+ *   落格与查格同用 `seenAtOf`，故 `firstView`、`mayInteractWith`、`historySummary`、
+ *   `readingsOf` 对同一条记录必然给出同一结论。 */
 export function markSeen(post, actorId, atMs) {
     if (!isPlain(post) || !actorId) return { ok: false, why: 'bad_input', firstView: false, seenBy: null };
     if (!visibleTo(post, actorId)) return { ok: false, why: 'not_visible', firstView: false, seenBy: null };
     const seenBy = isPlain(post.seenBy) ? deepClone(post.seenBy) : {};
-    const firstView = !seenBy[actorId];
-    if (firstView) seenBy[actorId] = (typeof atMs === 'number' && atMs > 0) ? atMs : 1; /* 无时刻也保「已看」真值：0 是 falsy 会毁掉互动门 */
+    const firstView = seenAtOf(seenBy[actorId]) === null;
+    if (firstView) seenBy[actorId] = (numOrNull(atMs) !== null && Number(atMs) > 0) ? Number(atMs) : 1;
     return { ok: true, why: '', firstView: firstView, seenBy: seenBy };
 }
-
 /* 互动门：未看过不许互动（源「尚未观看这条动态」语义）；作者免看。 */
 export function mayInteractWith(post, actorId) {
     if (!isPlain(post)) return { ok: false, why: 'bad_input' };
     if (post.authorId === actorId) return { ok: true, why: '' };
     if (!visibleTo(post, actorId)) return { ok: false, why: 'not_visible' };
-    if (!isPlain(post.seenBy) || !post.seenBy[actorId]) return { ok: false, why: 'not_seen' };
+    if (!isPlain(post.seenBy) || seenAtOf(post.seenBy[actorId]) === null) return { ok: false, why: 'not_seen' };
     return { ok: true, why: '' };
 }
 
@@ -272,7 +296,7 @@ export function feedOf(posts, nowMs) {
 /* 历史摘要（源 1254 行）：作者自己发的或我看过的，至多 6 条，用于自述不撒谎。 */
 export function historySummary(posts, actorId, summarize) {
     const rows = listOf(posts)
-        .filter(function (p) { return p && visibleTo(p, actorId) && (p.authorId === actorId || (isPlain(p.seenBy) && p.seenBy[actorId])); })
+        .filter(function (p) { return p && visibleTo(p, actorId) && (p.authorId === actorId || (isPlain(p.seenBy) && seenAtOf(p.seenBy[actorId]) !== null)); })
         .sort(function (a, b) { return b.createdAt - a.createdAt; })
         .slice(0, SG_HISTORY_SUMMARY_MAX);
     return rows.map(function (p) { return { id: p.id, authorId: p.authorId, text: (typeof summarize === 'function') ? summarize(p) : toStr(p.text) }; });
@@ -308,7 +332,11 @@ export function readingsOf(posts, contacts, nowMs) {
     const alive = ps.filter(function (p) { return (p.kind === 'story') ? isStoryAlive(p, now) : true; });
     let seen = 0; let likes = 0; let comments = 0;
     for (const p of alive) {
-        seen += Object.keys(isPlain(p.seenBy) ? p.seenBy : {}).length;
+        /* [v3.57.0·O3] 计的是**能表示已看**的格（`seenAtOf`），不是「seenBy 里有几个键」。
+         *   此前按 `Object.keys().length` 计：归一阶段留下的 0 值键（脏值被收成 0）被算成
+         *   一个人，而互动门与历史摘要判它是「未看」⇒ 界面读数 4、允许互动仅 1。
+         *   归一已把这类格丢弃，此处再按同一判据计数，四个读数才真正同源。 */
+        seen += Object.keys(isPlain(p.seenBy) ? p.seenBy : {}).filter(function (k) { return seenAtOf(p.seenBy[k]) !== null; }).length;
         likes += listOf(p.likes).length;
         comments += listOf(p.comments).filter(function (c) { return c && !c.deletedAt; }).length;
     }

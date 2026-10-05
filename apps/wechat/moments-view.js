@@ -14,6 +14,10 @@ import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
 /* [v3.18.0 · R-O4] 「最近正文」循环与跨 App 一致性块收敛到同一份实现 */
 import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/context-compose.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：朋友圈配图生成同样是长在飞请求
+ *   （可选中译英 + 参考图构建 + provider + 上传），且这条路上有**三次** saveData()，
+ *   每一次都会把状态写进按会话隔离的朋友圈数据里。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
 // 朋友圈视图 - 高仿微信版
 export class MomentsView {
@@ -952,7 +956,10 @@ export class MomentsView {
                 : `[${mediaType}]（${promptText}）`;
         }
         const generationId = `moment_img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
+        /* [v3.58.0 · 计划 O4] 令牌在第一次 await 之前记（下面 `saveData` 之后就是两轮 await）。
+         *   注意上面那两次「管理器未初始化 / 初次置 loading」的写回都发生在**同一帧内**，
+         *   没有 await 隔开，故不需要栅栏。 */
+        const sessionToken = captureSessionToken(imageStorage);
         this._setMomentImageState(moment, index, {
             status: 'loading',
             error: '',
@@ -981,6 +988,10 @@ export class MomentsView {
             const novelAIReferences = generationContext.references;
             const referenceNames = generationContext.referenceNames;
             const useUserReference = generationContext.useUserReference;
+            /* [v3.58.0 · 计划 O4] 两道 await（中译英 + 参考图上下文）之后的栅栏：
+             *   下面这一笔 saveData 之前，内存里的状态已经属于**上一段会话**了。
+             *   不当前即整轮收摊（收摊后不再继续 provider，也不会再落盘）。 */
+            if (!guardSessionWrite(imageStorage, sessionToken, 'wechat-moment-image')) return;
             this._setMomentImageState(moment, index, {
                 prompt: promptText,
                 description: displayDescription,
@@ -1028,6 +1039,9 @@ export class MomentsView {
         } catch (error) {
             const friendlyMessage = this._normalizeImageGenerationError(error);
             const latestMoment = this._getMomentById(momentId) || moment;
+            /* [v3.58.0 · 计划 O4] 失败状态同样过栅栏：换会话后 provider 抛错，
+             *   把这条失败写进当前会话的朋友圈、并弹「生图失败」通知，属于串味。 */
+            if (!guardSessionWrite(imageStorage, sessionToken, 'wechat-moment-image-failed')) return;
             this._setMomentImageState(latestMoment, index, {
                 status: 'failed',
                 error: friendlyMessage,

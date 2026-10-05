@@ -22,6 +22,7 @@
  * ======================================================== */
 'use strict';
 import { DD_TEXT_MAX, DD_LEDGER_MAX, DD_ROWS_MAX, DD_ROLES_MAX, DD_DEPTH_MAX, DD_STATUS_TEXT, DD_DELTA_TEXT } from './diagdesk-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -447,7 +448,7 @@ export class DiagdeskView {
         const a = (typeof act === 'string') ? act : '';
         if (a === 'ingest_archive') {
             const r = app.ingestArchive(this._archiveInput);
-            this._flash = r.ok ? '' : ('没收下（' + app.intakeWhyText(r.why) + '）');
+            this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? app.intakeWhyText(r.why) : '没落下去') + '）');
             if (r.ok) { app.setTab('overview'); this._archiveInput = ''; }
         } else if (a === 'clear_archive_input') {
             this._archiveInput = '';
@@ -458,7 +459,7 @@ export class DiagdeskView {
             this._flash = '已放下 —— 只动本件的三条键，宿主一个字段都没碰。';
         } else if (a === 'make_text') {
             const r = app.requestNow(this._extraInput);
-            this._flash = r.ok ? r.text : ('出不了（' + app.intakeWhyText(r.why) + '）');
+            this._flash = writeLanded(r) ? r.text : ('出不了（' + (r.why ? app.intakeWhyText(r.why) : '没落下去') + '）');
         } else if (a === 'save_draft') {
             app.setDraft('', this._extraInput);
             this._flash = '草稿已存。';

@@ -75,7 +75,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -771,7 +771,8 @@ test('D4 storage 出口必须收敛：只许 get / set 两个口（不许第三�
         assert.equal(app.includes(bad), false, 'App 层不许调 storage 的第三口：' + bad);
     }
     assert.ok(app.includes('this.storage.get('), '必须只走 get');
-    assert.ok(app.includes('this.storage.set('), '必须只走 set');
+    /* [v3.58.0 · 计划 O5] 经 set 落盘即可：直调或走唯一实现。 */
+    assert.ok(app.includes('this.storage.set(') || app.includes('writeReceipt(this.storage'), '必须只走 set');
 });
 
 
@@ -1162,6 +1163,7 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3400_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const kd = path.join(dir, 'apps', 'kettle');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['kettle-data.js', 'kettle-view.js', 'kettle-app.js']) {

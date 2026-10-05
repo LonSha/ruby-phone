@@ -23,6 +23,9 @@
  * ======================================================== */
 'use strict';
 import { faceFieldState } from '../../config/world-bridge.js';
+/* [v3.57.0·O3] 楼层取值走**全仓唯一实现**（`config/num-gate.js`）——
+ *   本件此前的 `floorOf` 是 `Number(v)` 直通，`''` / `[]` / `false` 全被读成第 0 楼。 */
+import { numOrNull as floorOrNull } from '../../config/num-gate.js';
 /** 归因文案（五态；与 readCharsFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const CHARS_REASONS = Object.freeze({
     'ready': '群像就绪',
@@ -48,8 +51,7 @@ function clip(v, max = 40) {
 }
 /** 楼层取值（floor 缺失/非法如实 null，不编 0） */
 function floorOf(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
+    return floorOrNull(v);
 }
 /**
  * 来源归因：把「桥在不在 / 有没有快照 / 有没有角色面 / 空不空」与「就绪」分开报。

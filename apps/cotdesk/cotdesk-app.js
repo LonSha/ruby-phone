@@ -56,6 +56,7 @@ import {
     configFace, cdTrim, gaugesOf, gaugeText, requestText
 } from './cotdesk-data.js';
 import { CotdeskView } from './cotdesk-view.js';
+import { writeReceipt, collectReceipt } from '../../config/write-receipt.js';
 export const CD_ITEMS_KEY = 'cotdesk_items';
 export const CD_CONFIG_KEY = 'cotdesk_config';
 export const CD_DRAFT_KEY = 'cotdesk_draft';
@@ -169,7 +170,16 @@ export class CotdeskApp {
         return { ok: true, why: '' };
     }
     _savedOk(wrote) {
-        return { saved: wrote === true, storage: this._storageUsable().ok };
+        /* [v3.58.0 · 计划 O5] 既收单键布尔（writeReceipt 的 saved），也收多键**完成范围**
+         *   （collectReceipt 的返回）：多键时 saved 表示「本动作落的那几条键全落了」。 */
+        const ok = (wrote && typeof wrote === 'object') ? wrote.saved === true : wrote === true;
+        return { saved: ok, storage: this._storageUsable().ok };
+    }
+    /** 把「本动作落的那几条键」收成一份**完成范围**回执（唯一实现见 config/write-receipt.js）。
+     *  ★ 只报最后一条键是本版治的形态：前一条没落下去时界面照样显示成功，
+     *    下次打开就出现「正文没了、投影还在」这种两边对不上的状态。 */
+    _writeScope(rows) {
+        return collectReceipt(rows);
     }
     /** 读一格。三种回报：ok / absent（这一格压根没写过）/ malformed（写了但读不懂）。
      *  ★ 抛异常**不是**「没记过」：本仓最贵的形态是「读不出来 ⇒ 画成空」。 */
@@ -187,8 +197,9 @@ export class CotdeskApp {
         if (!gate.ok) return false;
         if (typeof this.storage.set !== 'function') return false;
         try {
-            this.storage.set(key, JSON.stringify(value));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败也照报成功（与 A 族方向相反的同一类错）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
         } catch (e) {
             return false;
         }
@@ -324,7 +335,10 @@ export class CotdeskApp {
         const t = cdTrim(this._ledger, CD_LOG_MAX);
         this._ledger = t.rows;
         this._dropped += t.dropped;
-        this._persistLedger();
+        const wl = this._persistLedger();
+        /* [v3.58.0 · 计划 O5] 台账那条键的落盘结果**必须回出去**：动作口的 saved 要算上它，
+         *   此前台账落没落只有本函数知道，而调用方报的是字面 true。 */
+        row.saved = wl === true;
         return row;
     }
     /* ---------- 动作口（只写自己的四条键） ---------- */
@@ -352,20 +366,30 @@ export class CotdeskApp {
         }
         this._raw = raw;
         this._rawAt = this._now;
-        this._persistItems();
+        const wItems = this._persistItems();
         this.probe();
-        this._receipt('items_ingest', true, '', { n: ex.total });
-        return Object.assign(this._savedOk(true), { ok: true, items: ex.total });
+        const rcI = this._receipt('items_ingest', true, '', { n: ex.total });
+        /* 这一刀落两条键：册子原文 + 台账。**两条都算** —— 只报后者就是「原文丢了也报成功」。 */
+        const wrI = this._writeScope([
+            { key: 'items', ok: wItems === true, why: wItems === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcI.saved === true, why: rcI.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrI), { ok: true, items: ex.total });
     }
     /** 放下一份册子（只清自己的键；**不是**清宿主）。 */
     clearItems() {
         const had = this._raw.length;
         this._raw = '';
         this._rawAt = 0;
-        this._persistItems();
+        const wItemsC = this._persistItems();
         this.probe();
-        this._receipt('items_clear', true, '', { n: had });
-        return Object.assign(this._savedOk(true), { ok: true, cleared: had });
+        const rcIC = this._receipt('items_clear', true, '', { n: had });
+        /* 清空同样落两条键（清原文 + 补一笔台账）。 */
+        const wrIC = this._writeScope([
+            { key: 'items', ok: wItemsC === true, why: wItemsC === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcIC.saved === true, why: rcIC.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrIC), { ok: true, cleared: had });
     }
     /** 收下配置：四格（模式 / 接口 / 强度 / 预填）原样存，**不替它补默认值**。 */
     ingestConfig(text) {
@@ -385,19 +409,27 @@ export class CotdeskApp {
         }
         this._cfgRaw = raw;
         this._cfgAt = this._now;
-        this._persistConfig();
+        const wCfg = this._persistConfig();
         this.probe();
-        this._receipt('config_ingest', true, '', { n: 0 });
-        return Object.assign(this._savedOk(true), { ok: true, mode: this._mode });
+        const rcC = this._receipt('config_ingest', true, '', { n: 0 });
+        const wrC = this._writeScope([
+            { key: 'config', ok: wCfg === true, why: wCfg === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcC.saved === true, why: rcC.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrC), { ok: true, mode: this._mode });
     }
     clearConfig() {
         const had = this._cfgRaw.length;
         this._cfgRaw = '';
         this._cfgAt = 0;
-        this._persistConfig();
+        const wCfgC = this._persistConfig();
         this.probe();
-        this._receipt('config_clear', true, '', { n: had });
-        return Object.assign(this._savedOk(true), { ok: true, cleared: had });
+        const rcCC = this._receipt('config_clear', true, '', { n: had });
+        const wrCC = this._writeScope([
+            { key: 'config', ok: wCfgC === true, why: wCfgC === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcCC.saved === true, why: rcCC.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrCC), { ok: true, cleared: had });
     }
     setTarget(text) {
         this._target = cleanText(text);

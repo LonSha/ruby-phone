@@ -56,6 +56,7 @@ import {
     gaugesOf, gaugeText, requestText, extractObject
 } from './archive-data.js';
 import { ArchiveView } from './archive-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 export const AR_PACK_KEY = 'archive_pack';
 export const AR_FACE_KEY = 'archive_face';
 export const AR_DRAFT_KEY = 'archive_draft';
@@ -171,8 +172,9 @@ export class ArchiveApp {
         if (!gate.ok) return false;
         if (typeof this.storage.set !== 'function') return false;
         try {
-            this.storage.set(key, JSON.stringify(value));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败也照报成功（与 A 族方向相反的同一类错）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
         } catch (e) {
             return false;
         }

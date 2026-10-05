@@ -37,6 +37,7 @@ import {
     playbackErrorFace, speechFace
 } from './soundkit-data.js';
 import { SoundkitView } from './soundkit-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^soundkit_/`，
    否则跨会话串味。源把提示音写回宿主对象（切角色时**原样留着**）。 */
@@ -110,8 +111,9 @@ export class SoundkitApp {
     _writeJSON(key, v) {
         try {
             if (!this.storage) return false;
-            this.storage.set(key, JSON.stringify(v));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败（真 PhoneStorage 内部吞错）也照报成功。 */
+            return writeReceipt(this.storage, key, JSON.stringify(v)).saved === true;
         } catch (_e) { return false; }
     }
     _loadSettings() {

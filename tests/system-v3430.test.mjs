@@ -78,7 +78,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -845,7 +845,10 @@ test('G2 四条键真被产品消费（写面必须落到这四条上）', () =>
     assert.ok(code.includes('pvdesk_brief') && code.includes('pvdesk_shelf')
         && code.includes('pvdesk_lyrics') && code.includes('pvdesk_policy'), '四条键名必须在产品侧出现');
     /* 写面：_writeJSON 只走 storage.set。 */
-    assert.ok(code.includes('this.storage.set(key, JSON.stringify(value))'), '写面必须走 storage.set');
+    /* [v3.58.0 · 计划 O5] 写面既可以直接走 set，也可以走唯一实现（writeReceipt 内部正是调 set）——
+     *   门要钉的是「有没有经 set 落盘」，不是「字面量必须长这一行」。 */
+    assert.ok(code.includes('this.storage.set(key, JSON.stringify(value))')
+        || code.includes('writeReceipt(this.storage, key, JSON.stringify(value))'), '写面必须走 storage.set');
     assert.equal(code.includes('setChatData'), false, '不许走别的取数口（keys 门认不出）');
 });
 
@@ -1188,6 +1191,7 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3430_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const kd = path.join(dir, 'apps', 'pvdesk');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['pvdesk-data.js', 'pvdesk-view.js', 'pvdesk-app.js']) {

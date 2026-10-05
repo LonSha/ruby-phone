@@ -9,6 +9,7 @@ import {
     internalSettlement, externalSettlement, normalizeExpenses, normalizeExpense, readingsOf, trimRows, listOf, toStr, isPlain
 } from './traveldesk-data.js';
 import { TraveldeskView } from './traveldesk-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 export const TV_BOOK_KEY = 'tv_book';
 export const TV_LEDGER_KEY = 'tv_ledger';
@@ -37,9 +38,12 @@ export class TraveldeskApp {
     _writeRaw(key, value) {
         if (!this.storage || typeof this.storage.set !== 'function') return { saved: false, why: 'no_api' };
         try {
-            const wrote = this.storage.set(key, value);
-            return { saved: wrote === true, why: wrote === true ? '' : 'set_false' };
-        } catch (e) { return { saved: false, why: 'write_threw' }; }
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：真 PhoneStorage.set 是 async，
+             *   把它的返回值当同步布尔读会让 saved 恒假（见 config/write-receipt.js 头注）。 */
+            return writeReceipt(this.storage, key, value);
+        } catch (e) {
+            return { saved: false, why: 'write_threw' };
+        }
     }
     _log(action, detail) {
         const entry = { at: Date.now(), action: toStr(action), detail: toStr(detail) };

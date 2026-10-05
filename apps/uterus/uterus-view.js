@@ -35,6 +35,7 @@ import {
     MEMBRANE_TEXT, PRESSURE_TEXT, buildFetusGrid, toneColor, resolvePalette, wombRadius, quantizeAngle,
     affinityWordOf, DESCENT_INLET
 } from './uterus-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -981,7 +982,7 @@ export class UterusView {
         const a = (typeof act === 'string') ? act : '';
         if (a === 'ingest_subject') {
             const r = app.ingestSubject(app.inputOf());
-            this._flash = r.ok ? '' : ('没收下（' + app.intakeWhyText(r.why) + '）');
+            this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? app.intakeWhyText(r.why) : '没落下去') + '）');
             if (r.ok) { app.setTab('board'); app.setInput(''); }
         } else if (a === 'clear_input') {
             app.setInput('');

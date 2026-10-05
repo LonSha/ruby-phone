@@ -362,8 +362,13 @@ export class LonShaBridge {
     }
     onFloorCommitted(floor) {
         try {
-            const f = Number(floor);
-            if (!Number.isFinite(f)) return;
+            /* [v3.57.0·O3] 取值门与 `onFloorRollback` **同口径**（本文件 `floorOrNull`）。
+             *   此前这里是 `const f = Number(floor)`：`Number(null)` / `Number('')` /
+             *   `Number('  ')` / `Number([])` / `Number(false)` **全是 0** —— 于是「**没给**楼层」
+             *   被读成「第 0 楼」并 `invalidateFloorAt(1)`，把第 1 楼之后的记忆误失效；
+             *   而 0 是**合法楼层**（第 0 楼之后才该清）。两处口径不一致正是本轮要修的病灶。 */
+            const f = floorOrNull(floor);
+            if (f === null) return;
             try { this.memoryCore?.invalidateFloorAt?.(f + 1); } catch (e) {}
             this.stats.floorsIngested++;
             if ((this.stats.floorsIngested & 7) === 0) this._save();   // 每 8 楼落一次盘

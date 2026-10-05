@@ -331,6 +331,21 @@ test('v3170 B7. App 侧代际守卫：最后一帧换代际时，旧完整结果
     assert.equal(r.dropped, true, '旧代际的完整结果必须被 App 丢掉');
     assert.equal(r.leaked, false, '不得把旧命中泄露给调用方');
 });
+test('v3170 B8. [v3.60.0 · 计划 O2] 全历史扫描片间真的让出事件循环', async () => {
+    /* 守的是 O2 本体：片间让出必须是**宏任务**。旧实现（按 2000/片循环但全程同步）
+     *   零延迟计时器要等函数返回才轮得到，本判据必为 0 次；让出退化成微任务
+     *   （await Promise.resolve()）同样为 0 —— 负控制 E9 就是把让出指令改回去。 */
+    const g = await loadGse(ROOT);
+    const eng = new g.GlobalSearchEngine({ sources: [g.makeTavernSource({ chat: mkChat(10000) })] });
+    let ticks = 0;
+    const timer = setInterval(() => { ticks += 1; }, 1);
+    let r = null;
+    try { r = await eng.searchAll(MARK_MID, { full: true }); } finally { clearInterval(timer); }
+    assert.equal(r.results.length, 1, '让出不得改变结果集（中楼词仍须命中）');
+    assert.equal(r.scanned, 10000, '让出不得少扫（仍须扫到底）');
+    assert.ok(ticks >= 1, '扫描期间零延迟计时器必须至少跑到一次（同步跑完必为 0，实得 ' + ticks + '）');
+});
+
 /* ══════════════ C ── 控制器与视图面 ══════════════ */
 /** 小仓库：把搜索链路整条复制过去（负控制副本与行为判据共用一份）。 */
 const CLOSURE = [
@@ -475,8 +490,15 @@ async function judgeSurfaceLive(root) {
         const v = app.view;
         v._keyword = '末楼独有词';
         v._resultsHtml();
-        await new Promise((r) => setImmediate(r));
-        await new Promise((r) => setImmediate(r));
+        /* [v3.60.0 · 计划 O2] 等待口径随施工改：原先固定「等 2 个 setImmediate」，
+         *   那等于把「全历史扫描同步跑完」当前提。本版 O2 正是要打破它 ——
+         *   片间让出宏任务后，完成时刻从「约 2 个 tick」变成「约 2 + 片数」个 tick。
+         *   本判据的本意是「结果真的落到结果区」，故改为**有界真等**（上限 4s）：
+         *   不是放宽，是把「等多久」换成「等它到」。 */
+        const t0 = Date.now();
+        while (Date.now() - t0 < 4000 && !(/gs-item/.test(box.innerHTML) && /末楼独有词/.test(box.innerHTML))) {
+            await new Promise((r) => setTimeout(r, 10));
+        }
         const landed = box.innerHTML;
         const hasHit = /末楼独有词/.test(landed) && /gs-item/.test(landed);
         // 取消后：旧结果不得残留
@@ -644,6 +666,23 @@ test('v3170 E7. 破坏「轻索引同源」⇒ D1 同款判据必须转红', asy
     assert.equal(ok.cheatDiff, 0, '阳性对照：原件上同款判据必须为绿');
     assert.equal(ok.dtDiff, 0, '阳性对照：撩语侧也一样');
 });
+test('v3170 E9. [v3.60.0 · 计划 O2] 破坏「片间让出宏任务」⇒ B8 同款判据必须转红', async () => {
+    /* 让出退化成微任务 = 没让出：await 一枚已决 Promise 在同一轮事件循环里被抽干。 */
+    const dir = mutate('e9', [[GSE, "            if (typeof g.setTimeout === 'function') { g.setTimeout(resolve, 0); return; }", "            if (typeof g.setTimeout === 'function') { resolve(); return; }"]]);
+    const g = await loadGse(dir);
+    const eng = new g.GlobalSearchEngine({ sources: [g.makeTavernSource({ chat: mkChat(10000) })] });
+    let ticks = 0;
+    const timer = setInterval(() => { ticks += 1; }, 1);
+    try { await eng.searchAll(MARK_MID, { full: true }); } finally { clearInterval(timer); }
+    assert.equal(ticks, 0, '★ 让出退化成微任务后，计时器必须一次都跑不到（实得 ' + ticks + '）');
+    const ok = await loadGse(ROOT);
+    const eng2 = new ok.GlobalSearchEngine({ sources: [ok.makeTavernSource({ chat: mkChat(10000) })] });
+    let t2 = 0;
+    const tm2 = setInterval(() => { t2 += 1; }, 1);
+    try { await eng2.searchAll(MARK_MID, { full: true }); } finally { clearInterval(tm2); }
+    assert.ok(t2 >= 1, '阳性对照：原件上同款判据必须为绿');
+});
+
 test('v3170 E8. 变异工具两向自证（锚点不存在 / 不唯一都必须抛）', () => {
     assert.throws(() => mutate('e8a', [[GSE, '不存在的锚点字符串_zzz', 'x']]), /须恰中 1 次/);
     assert.throws(() => mutate('e8b', [[GSE, 'const MAX_SCAN_PER_SOURCE', 'x']]), /须恰中 1 次/);

@@ -84,7 +84,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -905,8 +905,12 @@ const DAMAGE = {
         '    _persistDraft() {' + NL + '        return false;'],
     /* ㉔ App：写了没成不当回事（源从不看落盘结果）。 */
     q24: [AR_APP,
-        '        } catch (e) {' + NL + '            return false;' + NL + '        }',
-        '        } catch (e) {' + NL + '            return true;' + NL + '        }'],
+        /* [v3.58.0 · 计划 O5] 原锚点取的是 _writeJSON 里那对 catch{return false} ——
+         *   O5 之后抛错在 writeReceipt 内部就收成 write_threw 了，那对成了**死码**，
+         *   破坏它什么也不改（判据当然不响）。锚点改到同一格的活机制：把回执判定
+         *   抹成无条件成功。 */
+        "            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;",
+        '            return true;'],
     /* ㉕ App：换会话不重取（源就是切角色原样留着）。 */
     q25: [AR_APP,
         '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL + "        this._focus = '';" + NL
@@ -955,6 +959,7 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3450_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'storage.js'), path.join(dir, 'config', 'storage.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const ad = path.join(dir, 'apps', 'archive');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js']) {

@@ -82,8 +82,15 @@ export class SearchApp {
         try {
             const n = this.engine.listSources().length;
             const full = this._fullMode === true;
-            const scanned = this.engine.build({ full: full }).length;
-            const scope = this.engine.scanScope(full);
+            /* [v3.60.0 · 计划 O2] 读数收成**一次** build：原先 `build()` 与 `scanScope()`
+             *   各建一遍全量索引 —— 全历史档每次重开面板就重复全量建两次
+             *   （O2 计划点名的「scopeSummary 不得每次重复全历史 build」）。
+             *   `scanSummary` 是内核侧的唯一读数出口；内核没有它时退回旧两件（诚实降级）。 */
+            const sum = (typeof this.engine.scanSummary === 'function')
+                ? this.engine.scanSummary(full)
+                : { scanned: this.engine.build({ full: full }).length, scope: this.engine.scanScope(full) };
+            const scanned = sum.scanned;
+            const scope = sum.scope;
             const base = `${n} 个来源 · ${scanned} 条记录`;
             const truncated = (scope && Array.isArray(scope.truncatedSources)) ? scope.truncatedSources : [];
             if (!truncated.length) return base + (full ? ' · 全历史' : ' · 快速');
@@ -146,6 +153,27 @@ export class SearchApp {
         this._scanGen++;
         this._scanning = false;
         return this._scanGen;
+    }
+    /**
+     * [v3.58.0 · 计划 O4] 换会话重绑：本 App 的**扫描代际与源表**都带会话气息。
+     *   本 App 此前不在 REBIND 表里（index.js 只在「点开搜索」时懒加载它），
+     *   于是换会话后发生了一件不报错、只错结果的事：
+     *     ① `_scanGen` 只被「再搜一次 / 再打开面板」推进 —— 换会话不推进它，
+     *        上一段会话那轮**还在跑**的全历史扫描因此仍算「当前代际」，
+     *        跑完照着自己的 `isCancelled` 判言（`_scanGen !== gen` 为假）把
+     *        上一段会话的命中写进面板；
+     *     ② `engine` 里的 29 个本地键源与酒馆源，是构造那一刻按**当时**的
+     *        会话身份装的 —— 换会话后源表还指着上一段对话的 history 数组。
+     *   两件都在这里一次做掉：作废旧扫描（`invalidateAll` 同时 `engine.invalidate()`），
+     *   再把宿主侧源重对齐到当前会话（`_syncHostSources`）。
+     *   注意与 `render()` 的分工：`render()` 是「打开面板」这条路径，
+     *   本方法只管「会话换了」这条路径 —— 两者都必须做，不可互相顶替
+     *   （打开面板不会推进代际吗？会。但换会话时用户未必打开面板，
+     *   而正在跑的扫描不等面板）。
+     */
+    onChatChanged() {
+        this.invalidateAll();
+        this._syncHostSources();
     }
     /** 本轮代际的「取消」谓言（交给引擎的 `isCancelled`） */
     cancelToken(gen) {

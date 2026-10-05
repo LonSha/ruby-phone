@@ -232,6 +232,9 @@ test('v293 D. 负控制：源键退回「含状态与 revision」→ 全程多�
     'apps/calendar/calendar-view.js': read('apps/calendar/calendar-view.js'),
     'config/life-events.js': LIFE_SRC,
     'config/storage.js': read('config/storage.js'),
+    /* [v3.58.0 · 计划 O4] calendar-app 的会话栅栏依赖这两件（少一件即 ERR_MODULE_NOT_FOUND）。 */
+    'config/session-gate.js': read('config/session-gate.js'),
+    'config/num-gate.js': read('config/num-gate.js'),
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
@@ -261,6 +264,9 @@ test('v293 D2. 负控制：抽掉整族回收 → 终态幽灵复现（B 判据�
     'apps/calendar/calendar-view.js': read('apps/calendar/calendar-view.js'),
     'config/life-events.js': broken,
     'config/storage.js': read('config/storage.js'),
+    /* [v3.58.0 · 计划 O4] calendar-app 的会话栅栏依赖这两件（少一件即 ERR_MODULE_NOT_FOUND）。 */
+    'config/session-gate.js': read('config/session-gate.js'),
+    'config/num-gate.js': read('config/num-gate.js'),
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),

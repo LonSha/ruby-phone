@@ -33,6 +33,22 @@
  *      且全仓引用它的文件数不得低于下限（防「门立了、实现被摘」）。
  *   W4（结构自证）枚举面文件数低于下限 ⇒ exit 2（拒判，不是合格）。判据正则在真源码上
  *      必须至少命中一次**合法形态 (a)**，否则说明判据本身被改坏 ⇒ exit 2。
+ *   W2b（**广义族名**，[v3.57.0·O3] 扩面）W1/W2 两个面都只看「写法签名」与「名字闭集」，
+ *      于是第五度形态从缝里漏了过去：**九个案头各自复制了一份同名 `numOrNull`**
+ *      （`const n = (typeof v === 'number') ? v : Number(v) …`）。它既不含 W1 的签名
+ *      （`Number.isFinite(Number(` 连写），名字又不在 W2 的闭集里（形态上却**是**同一族），
+ *      门读数 w1=0 / w2=0 —— 「门全绿、真缺陷在位」。故 W2b 把判定从**名字闭集**换成
+ *      **名字族**（`num` / `floor` / `finite` 前缀，可带 `st`）：族内且体内含 `Number(` 的函数，
+ *      必须是强形态或纯转发，否则红灯。
+ *   W5（**语义探针**，[v3.57.0·O3] 扩面）文本扫描只能判「长什么样」；W5 直接**跑**族内单参函数，
+ *      喂一组怪值（`null` / `undefined` / `''` / `'  '` / `[]` / `false` / `true` / `[5]`）。
+ *      判据：**「没给」不得被读成有效值** —— 除 `[5]`（数组里只有一个数，是「给了 5」的
+ *      真读数）外，其余结果集必须单值。`null:0 … false:0` 这种「半数怪值读成 0」的形态
+ *      单靠文本看不出来，跑一遍就现形（实测 13 处，与 W2b 同源但**互不掩护**）。
+ *   W5b（**唯一实现本体探针**）对 `config/num-gate.js` 跑同一组怪值 + 一组真值：
+ *      怪值必须全 `null`、真值必须如实出数。它守的是「门自己退化成弱口径」这一面 ——
+ *      唯一实现退化了，全仓引用它反而会把弱口径**扩散**到每一处。
+ *      两向都要守：只守「怪值都 null」会把门关成「谁都取不到」，故真值面同时断言。
  *
  * 【为什么必须剔除注释与字符串（W1 的第一条纪律，本仓踩过）】
  *   本版落地的同时给 14 个文件写了「这里原来写的是弱口径…」的注释，注释里逐字带着该形态。
@@ -155,6 +171,24 @@ const HELPER_DEF_RE = new RegExp(
  *   这不是「放宽到谁都过」—— 弱口径那两式（`Number.isFinite(Number(v)) ? …` 与
  *   `const n = Number(v); return Number.isFinite(n) ? n : 0`）体内一个类型判定都没有，
  *   照旧命中 W1 或落进 W2 红线。 */
+/* ── W2b/W5：族名（不是闭集）与定义收集 ── */
+const FAMILY_RE = /^(?:st)?(?:num|floor|finite)(?:[A-Z0-9_]|$)/;
+const DEF_DECL_RE = /function\s+([A-Za-z_$][\w$]*)\s*\(\s*([A-Za-z_$][\w$]*)([^)]*)\)\s*\{/g;
+const DEF_ASSIGN_RE = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:function\s*)?\(\s*([A-Za-z_$][\w$]*)([^)]*)\)\s*=>\s*\{/g;
+/* 怪值集：**「没给」的四种真实形态**（null / undefined / 空串 / 空数组 / false）
+ *   + `true`（布尔不是数）+ `[5]`（数组里有一个数 —— 这一条**允许**出 5）。 */
+const ODD_INPUTS = [['null', null], ['undefined', undefined], ['empty', ''], ['spaces', '  '],
+    ['emptyArr', []], ['false', false], ['true', true]];
+/* 真值集：门不得关成「谁都取不到」（反坐实判据）。 */
+/* 探针输入集：怪值七条 + `[5]`（数组里包着一个数 —— 「给了 5」的形态）。
+ *   ⚠ 强口径对 `[5]` 也必须判「没给」（`typeof [] !== 'number'`）⇒ 八条读数必须**全同**。
+ *   弱口径（`Number(v)` 族）会把 `[5]` 穿成 5，唯此探针可捕（文本扫描看不出来）。 */
+const W5_INPUTS = [...ODD_INPUTS, ['arr5', [5]]];
+const REAL_INPUTS = [['0', 0, 0], ["'0'", '0', 0], ['5', 5, 5], ["'5'", '5', 5], ["' 5 '", ' 5 ', 5], ['3.5', 3.5, 3.5]];
+/** 体内是不是**真的在做数值化**（`Number(...)` 调用）。
+ *   显示格式化一族（`(typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH`）
+ *   也以 `num` 命名、也提 `Number.isFinite`，但它**不把输入转成数**，不属取数门。 */
+const COERCE_MARK = /Number\s*\(/;
 const STRONG_TYPEOF = /typeof\s+\w+\s*[!=]==?\s*'number'/;
 const STRONG_NORM = /String\s*\(\s*\w+\s*\)\s*\.\s*trim\s*\(\s*\)/;
 const STRONG_NULLISH = /[=!]==?\s*(?:null|undefined)/;
@@ -191,6 +225,10 @@ if (filesScanned < MIN_FILES) {
 
 const w1 = [];   // 弱口径写法
 const w2 = [];   // 本地取数助手自成一版
+const w2b = [];  // 广义族名弱形态（[v3.57.0·O3]）
+const w5 = [];   // 语义探针非单值（[v3.57.0·O3]）
+let familyDefsSeen = 0;   // W4 自证：广义族判定面至少命中一次
+let probedSeen = 0;      // W4 自证：语义探针至少真跑过一次
 let strongFormSeen = 0;   // W4 自证：合法形态 (a) 至少命中一次
 const refFiles = new Set();  // W3：引用唯一实现的文件
 
@@ -218,9 +256,61 @@ for (const rel of files) {
         const strong = isStrongForm(body);
         const forward = FORWARD_MARK.test(body);
         if (strong) strongFormSeen += 1;
-        if (!strong && !forward) {
+        /* 只审**真在做数值化**的助手：显示格式化一族（`… ? String(v) : DASH`）不受判。 */
+        if (COERCE_MARK.test(body) && !strong && !forward) {
             const line = code.slice(0, h.index).split('\n').length;
             w2.push({ file: rel, line, name: h[1], text: body.replace(/\s+/g, ' ').slice(0, 140) });
+        }
+    }
+    /* ── W2b + W5：广义族名（声明式 + 赋值式） ── */
+    const defs = [];
+    let d;
+    DEF_DECL_RE.lastIndex = 0;
+    while ((d = DEF_DECL_RE.exec(code)) !== null) {
+        defs.push({ name: d[1], param: d[2], more: d[3], body: bodyOf(code, code.indexOf('{', d.index)), idx: d.index });
+    }
+    DEF_ASSIGN_RE.lastIndex = 0;
+    while ((d = DEF_ASSIGN_RE.exec(code)) !== null) {
+        defs.push({ name: d[1], param: d[2], more: d[3], body: bodyOf(code, code.indexOf('{', d.index)), idx: d.index });
+    }
+    for (const def of defs) {
+        if (!FAMILY_RE.test(def.name)) continue;
+        /* W4 自证计数只看「族名形态在不在场」，与「这条重不重要」无关 —— 故**唯一实现本体
+         *   自己体内的族名定义也要计入**。把它排除在外会让自证退化成「除本体外还得有别的
+         *   族名函数」：镜像夹具（只带本体）上恒 exit 2，「判据坏了」被读成「结构漂移」。 */
+        familyDefsSeen += 1;
+        if (rel === GATE_MODULE) continue;   /* 唯一实现本体走 W5b，不由本面判 */
+        const hasCoerce = COERCE_MARK.test(def.body);
+        const line = code.slice(0, def.idx).split('\n').length;
+        if (hasCoerce && !isStrongForm(def.body) && !FORWARD_MARK.test(def.body)) {
+            w2b.push({ file: rel, line, name: def.name, sig: def.param + def.more,
+                text: def.body.replace(/\s+/g, ' ').slice(0, 140) });
+        }
+        /* W5 探针：只跑**单参、可构造**者。多参的不跑（夹具造不出来，静默跳过不是放行：
+         *   多参助手进不了 W5 面，但它们仍要过 W2（闭集）或 W2b（族名）。 */
+        if (hasCoerce && def.more.trim() === '') {
+            let fn = null;
+            try { fn = new Function('return (function ' + def.name + '(' + def.param + ') ' + def.body + ')')(); }
+            catch (e) { fn = null; }
+            if (!fn) continue;   /* 构造失败：体里有自由变量（如引用 `window`）—— 不属本面 */
+            probedSeen += 1;
+            const vals = [];
+            let opaque = false;
+            for (const [, v] of W5_INPUTS) {
+                try { vals.push(JSON.stringify(fn(v))); }
+                catch (e) {
+                    if (/is not defined/.test(String(e))) { opaque = true; break; }
+                    vals.push('THREW');
+                }
+            }
+            if (opaque) continue;
+                        /* 判据：**「没给」不得被读成有效值**。八条输入（含 `[5]`）全属「不给数」，
+             *   读数必须彼此相同（都判「没给」⇒ 都是 null）。弱口径会把 `[5]` 穿成 5，
+             *   文本扫描看不出来 —— 唯此探针可捕。 */
+            if (new Set(vals).size > 1) {
+                w5.push({ file: rel, line, name: def.name,
+                    reading: W5_INPUTS.map(([l], i) => l + ':' + vals[i]).join(' ') });
+            }
         }
     }
 
@@ -242,6 +332,23 @@ if (!fs.existsSync(gateAbs)) {
     if (!isStrongForm(gsrc)) {
         problems.push(`${GATE_MODULE} 本体不再是强口径（先看类型）—— 唯一实现自己退化了`);
     }
+    /* ── W5b：唯一实现本体探针（判据落点的自证，不是形态自证） ── */
+    const gbody = (/export\s+function\s+numOrNull\s*\(\s*v\s*\)\s*\{[\s\S]*?\n\}/.exec(gsrc) || [''])[0];
+    let gfn = null;
+    try { gfn = new Function(gbody.replace(/export\s+function/, 'return (function') + ')')(); } catch (e) { gfn = null; }
+    if (!gfn) {
+        problems.push(`${GATE_MODULE} 本体构造失败 —— 探针无法证明唯一实现真在判「没给」`);
+    } else {
+        probedSeen += 1;
+        const gbad = [];
+        for (const [lab, v] of W5_INPUTS) {
+            if (gfn(v) !== null) gbad.push(lab + '=' + JSON.stringify(gfn(v)));
+        }
+        for (const [lab, v, want] of REAL_INPUTS) {
+            if (gfn(v) !== want) gbad.push(lab + '=' + JSON.stringify(gfn(v)));
+        }
+        if (gbad.length) problems.push(`${GATE_MODULE} 本体读数异常：` + gbad.join(' '));
+    }
 }
 if (refFiles.size < MIN_REF) {
     problems.push(`引用唯一实现的文件只有 ${refFiles.size} 个（下限 ${MIN_REF}）`
@@ -252,6 +359,16 @@ if (strongFormSeen === 0) {
     console.error('✗ 判据自证失败：真源码里一个「强口径本体」都没命中 —— W2 的判据正则可能已被改坏，本门拒判');
     process.exit(2);
 }
+if (familyDefsSeen === 0) {
+    console.error('✗ 判据自证失败：广义族名（num/floor/finite 前缀）一处定义都没枚举到 —— W2b/W5 的判据'
+        + '正则可能已被改坏，本门拒判（否则「族名一条没扫到」会被读成「族名全合规」）');
+    process.exit(2);
+}
+if (probedSeen === 0) {
+    console.error('✗ 判据自证失败：语义探针一次都没真跑过 —— W5 夹具/构造可能已被改坏，本门拒判'
+        + '（否则「探针跑不起来」会被读成「探针全过」）');
+    process.exit(2);
+}
 
 /* ── 报告 ── */
 if (LIST_ONLY) {
@@ -260,8 +377,14 @@ if (LIST_ONLY) {
     for (const x of w1) console.log(`    ${x.file}:${x.line}  ${x.text}`);
     console.log(`[weak-coercion] W2 弱口径助手 ${w2.length} 处：`);
     for (const x of w2) console.log(`    ${x.file}:${x.line}  ${x.name}()  ${x.text}`);
+    console.log(`[weak-coercion] W2b 族名弱形态 ${w2b.length} 处（广义族名 num/floor/finite 前缀）：`);
+    for (const x of w2b) console.log(`    ${x.file}:${x.line}  ${x.name}(${x.sig})  ${x.text}`);
+    console.log(`[weak-coercion] W5 探针非单值 ${w5.length} 处（「没给」被读成了有效值）：`);
+    for (const x of w5) console.log(`    ${x.file}:${x.line}  ${x.name}()  ${x.reading}`);
+    console.log(`[weak-coercion] 自证计数：族名定义 ${familyDefsSeen} 处 · 探针实跑 ${probedSeen} 次`);
 }
 console.log(`[weak-coercion] 枚举面 ${filesScanned} 文件 · 强口径本体 ${strongFormSeen} 处 · `
+    + `族名定义 ${familyDefsSeen} 处 · 探针实跑 ${probedSeen} 次 · `
     + `唯一实现被引用 ${refFiles.size} 文件（${GATE_MODULE}）`);
 for (const x of w1) {
     console.error(`[weak-coercion] ✗ W1 弱口径写法 ${x.file}:${x.line}：${x.text}`);
@@ -269,9 +392,16 @@ for (const x of w1) {
 for (const x of w2) {
     console.error(`[weak-coercion] ✗ W2 本地取数助手自成一版 ${x.file}:${x.line}：${x.name}() ${x.text}`);
 }
+for (const x of w2b) {
+    console.error(`[weak-coercion] ✗ W2b 族名弱形态 ${x.file}:${x.line}：${x.name}(${x.sig}) ${x.text}`);
+}
+for (const x of w5) {
+    console.error(`[weak-coercion] ✗ W5 探针非单值 ${x.file}:${x.line}：${x.name}() ${x.reading}`
+        + '（「没给」被读成了有效值：`null`/`[]`/`[5]`/`false` 之流溜进了读数）');
+}
 for (const p of problems) console.error('[weak-coercion] ✗ ' + p);
-if (w1.length + w2.length + problems.length > 0) {
-    console.error(`[weak-coercion] ✗ 共 ${w1.length + w2.length + problems.length} 处`
+if (w1.length + w2.length + w2b.length + w5.length + problems.length > 0) {
+    console.error(`[weak-coercion] ✗ 共 ${w1.length + w2.length + w2b.length + w5.length + problems.length} 处`
         + '（改法：`import { numOrNull } from \'…/config/num-gate.js\'`，不要就地再写一份）');
     process.exit(1);
 }

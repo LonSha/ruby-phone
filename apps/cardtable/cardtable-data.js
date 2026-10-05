@@ -11,7 +11,10 @@
  * 源挂 IndexedDB 出图（getTarotImage），本件零图片零数据库；会话键走 ^ct_ 前缀。
  * ======================================================== */
 'use strict';
-
+/* [v3.57.0·O3] 数值取值走**全仓唯一实现**（`config/num-gate.js`）。
+ *   本件此前的 `numOrNullOf` 只给 `number` 放行、其余一律 `Number(v)` —— 牌序 0 是
+ *   **合法读数**（第一张牌），而 `''` / `[]` / `false` 会被读成同一个 0。 */
+import { numOrNull } from '../../config/num-gate.js';
 export const CT_MAJOR = Object.freeze(['愚者','魔术师','女祭司','女皇','皇帝','教皇','恋人','战车','力量','隐士','命运之轮','正义','倒吊人','死神','节制','恶魔','塔','星星','月亮','太阳','审判','世界']);
 export const CT_SUITS = Object.freeze(['权杖','圣杯','宝剑','星币']);
 export const CT_RANKS = Object.freeze(['Ace','二','三','四','五','六','七','八','九','十','侍从','骑士','王后','国王']);
@@ -41,7 +44,7 @@ export function tarotNameOf(index) {
     return suit + rank;
 }
 
-function numOrNullOf(v) { const n = (typeof v === 'number') ? v : Number(v); return Number.isFinite(n) ? n : null; }
+function numOrNullOf(v) { return numOrNull(v); }
 
 export function lenormandNameOf(index) {
     const i = numOrNullOf(index);

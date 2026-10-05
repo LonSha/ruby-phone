@@ -78,7 +78,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -723,7 +723,9 @@ test('D2 不碰宿主对象、不落数据库、不跨 App 读（源直读 roles
     const app = read(NS_APP);
     const imports = [...app.matchAll(/from '[^']+'/g)].map((m) => m[0]);
     for (const im of imports) {
-        assert.ok(im.includes('./needsim-data.js') || im.includes('./needsim-view.js') || im.includes('num-gate.js'),
+        /* [v3.58.0 · 计划 O5] 写回执的唯一实现同为**允许面**（三件基本 + 取数门 + 写回执）。 */
+        assert.ok(im.includes('./needsim-data.js') || im.includes('./needsim-view.js')
+            || im.includes('num-gate.js') || im.includes('write-receipt.js'),
             'App 不许 import 别的东西：' + im);
     }
 });
@@ -1201,6 +1203,7 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3410_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const kd = path.join(dir, 'apps', 'needsim');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['needsim-data.js', 'needsim-view.js', 'needsim-app.js']) {

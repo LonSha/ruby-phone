@@ -23,6 +23,7 @@
  * ======================================================== */
 'use strict';
 import { CD_ITEM_MAX, CD_LOG_MAX, CD_TEXT_MAX, CD_CHARS_MAX, CD_EFFORT_TEXT } from './cotdesk-data.js';
+import { writeLanded } from '../../config/write-receipt.js';
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -528,7 +529,7 @@ export class CotdeskView {
         const a = (typeof act === 'string') ? act : '';
         if (a === 'ingest_items') {
             const r = app.ingestItems(this._itemsInput);
-            this._flash = r.ok ? '' : ('没收下（' + app.ingestWhyText(r.why) + '）');
+            this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? app.ingestWhyText(r.why) : '没落下去') + '）');
             if (r.ok) { app.setTab('items'); this._itemsInput = ''; }
         } else if (a === 'clear_items_input') {
             this._itemsInput = '';
@@ -539,7 +540,7 @@ export class CotdeskView {
             this._flash = '已放下 —— 只动本件的四条键，宿主一个字段都没碰。';
         } else if (a === 'ingest_cfg') {
             const r = app.ingestConfig(this._cfgInput);
-            this._flash = r.ok ? '配置已收下。' : ('没收下（' + r.why + '）');
+            this._flash = writeLanded(r) ? '配置已收下。' : ('没收下（' + (r.why ? r.why : '没落下去') + '）');
             if (r.ok) this._cfgInput = '';
         } else if (a === 'clear_cfg_input') {
             this._cfgInput = '';
@@ -554,7 +555,7 @@ export class CotdeskView {
             this._flash = '草稿已存。';
         } else if (a === 'make_text') {
             const r = app.makeText();
-            this._flash = r.ok ? r.text : ('出不了（' + app.ingestWhyText(r.why) + '）');
+            this._flash = writeLanded(r) ? r.text : ('出不了（' + (r.why ? app.ingestWhyText(r.why) : '没落下去') + '）');
         } else if (a === 'clear_ledger') {
             const r = app.clearLedger();
             this._flash = '清掉 ' + String(r.cleared) + ' 条（本件自己的台账）。';

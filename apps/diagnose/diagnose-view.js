@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText } from './diagnose-data.js';
+import { checkpointFaceText, sessionGateFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -143,6 +143,49 @@ export class DiagnoseView {
         if (String(cp.diffLines || '').trim()) {
             html += '<pre class=' + Q + 'dg-pre' + Q + '>' + escapeHtml(cp.diffLines) + '</pre>';
         }
+        return html;
+    }
+    /** [v3.58.0 · 计划 O4] 会话世代栅栏卡：把「被挡下的旧会话回信」摆到可见面上。
+     *
+     *  【这张卡治的欠债】v3.58.0 给七族回信写回点（生图 / 微博 / 蜜语 / 日程 / 日记 /
+     *    微信图片 / 朋友圈图片）装了会话世代栅栏，挡下时**不抛异常、不弹窗**
+     *    （抛异常会打断调用方的 finally 清理，弹窗会吵）—— 于是它「安静地正确」，
+     *    也「安静到没人知道它是否真的挡过谁」。计划 O4 的验收原文点名：
+     *    「旧响应有**可读的拒绝原因**」。本卡就是那份可读。
+     *
+     *  【三条必须看见的东西（缺一条这张卡就失去意义）】
+     *    · **三态各有各的话**（全在内核真源 `sessionGateFaceText` 里分好）：
+     *      读不到账本 / 读到但零条 / 读到有挡下 —— 三句文案互不相同；
+     *      把「读不到账本」渲染成「本轮没挡过」是本仓最贵的那类反向错读数；
+     *    · **零条是正常读数，不是坏消息**：本轮没有跨会话回信时不该出现任何告警色 ——
+     *      把「没有异常」谎报成「机制坏了」会让人去修一个没坏的东西；
+     *    · **每条给得出域名与中文原因**：域名叫得出「是哪一族回信」（如 wechat-image），
+     *      原因为四种裁决之一（令牌畸形 / 身份取不到 / 会话已切换 / 世代已变）——
+     *      只说「挡了一条」而不能说「挡了谁、为什么」等于没说。
+     *  纯渲染：取数与三态判定全在内核（`collectDiagnose` 的 `sessionGate` 面 + `sessionGateFaceText`），
+     *  本方法不自己数条数、不自己判原因（那都是同一口径的第二份实现）。 */
+    _sessionGateHtml(pkg) {
+        const face = (pkg && pkg.sessionGate) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到会话世代栅栏面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有被挡下的回信」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(sessionGateFaceText(face)) + '</div>';
+        if (face.ok !== true) return html;
+        if (!face.count) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>零条是**正常**读数：本轮没有跨会话回信落地，'
+                + '不代表栅栏没生效（栅栏只在该挡的时候出现读数）。</div>';
+            return html;
+        }
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.map((r) => (
+            '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+            + escapeHtml(String(r.domain || 'unknown')) + '</code>'
+            + this._chip(String(r.reason || 'unknown'), 'warn')
+            + '<span class=' + Q + 'dg-face' + Q + '>' + escapeHtml(String(r.text || '')) + '</span></div>'
+        )).join('') + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>口径：被挡下的回信**一条都没落盘**（不写正文、不推游标、不点红点），'
+            + '账本有界（只留最近若干条）—— 遥测本身不得成为新的泄漏源。</div>';
         return html;
     }
     /** [v3.13.0 · 计划 #14] 启动耗时卡：把「谁拖慢了启动」摆在用户面前。
@@ -763,6 +806,10 @@ export class DiagnoseView {
          *   「检查点内容级对照」之前：两者同族（都答「本仓在消费谁产出的哪一面」），
          *   但登记面答的是**向外看**的上游契约，本卡答的是**向内看**的平台级覆盖 —— 先看外部哪些面在，再看自己家的 App 有没有接上。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>App 消费面矩阵（哪些 App 接上了哪些平台面）</h3>' + this._appFacesHtml(pkg) + '</section>');
+        /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
+         *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），
+         *   本卡答「这些接线**真的挡下过谁**」（行为发生过）。接线在场不等于行为发生过。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>会话世代栅栏（哪些旧会话回信被挡下）</h3>' + this._sessionGateHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，

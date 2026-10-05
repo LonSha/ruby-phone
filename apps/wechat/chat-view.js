@@ -12,6 +12,12 @@
 import { ImageCropper } from '../settings/image-cropper.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v3.58.0 · 计划 O4] 会话世代栅栏：微信生图是本仓最长的在飞请求之一
+ *   （先等英文 TAG 一轮 AI、再等图片 provider、再等上传落盘）。
+ *   它写的是 `wechat_messages_*`（按会话隔离的键），旧回信落回来会把图片挂到
+ *   新会话的同名消息上 —— 而它自带的 `imageGenerationRuntimeId` 只在**页级**上成立
+ *   （同一次页面生命周期内才算同批），换会话后仍然相等，拦不住这一族。 */
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { captureWechatChatSnapshot } from './chat-snapshot.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
@@ -4655,7 +4661,9 @@ renderChatRoom(chat) {
         }
         const generationId = `wechat_img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const previousImageUrl = String(message.generatedImageUrl || '').trim();
-
+        /* [v3.58.0 · 计划 O4] 令牌在**第一次 await 之前**记：下面每一段等待之后都要先过栅栏。
+         *   `loading` 那一笔写回就在本行之后、且不在任何 await 之后，故不需要栅栏。 */
+        const sessionToken = captureSessionToken(storage);
         this.app.wechatData.updateMessageById(chatId, safeMessageId, {
             imageGenStatus: 'loading',
             imageGenerationId: generationId,
@@ -4676,6 +4684,12 @@ renderChatRoom(chat) {
             promptText = await this._resolveWechatImageGenerationPrompt(sourcePromptText);
         } catch (error) {
             const promptError = String(error?.message || '英文 TAG 生成失败').trim();
+            /* [v3.58.0 · 计划 O4] 失败状态也要过栅栏：把上一段会话的 TAG 失败写进
+             *   当前会话的消息、并在当前会话弹通知，同样是串味。跨会话时只收锁走人。 */
+            if (!guardSessionWrite(storage, sessionToken, 'wechat-image-prompt-failed')) {
+                this._imagePromptGenerationLocks.delete(generationLockKey);
+                return;
+            }
             this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                 imagePrompt: sourcePromptText,
                 imageDescription: descriptionText,
@@ -4691,6 +4705,13 @@ renderChatRoom(chat) {
         const latestBeforeGeneration = this.app.wechatData.getMessages(chatId)
             .find((item) => String(item?.id || '').trim() === safeMessageId);
         if (String(latestBeforeGeneration?.imageGenerationId || '') !== generationId) {
+            this._imagePromptGenerationLocks.delete(generationLockKey);
+            return;
+        }
+        /* [v3.58.0 · 计划 O4] 过了 TAG 那一轮 await 之后的第一道栅栏：下面要写 imagePrompt/content
+         *   并开始真正生图。不当前即收锁走人（**不释放 loading**：那条消息属于上一段会话，
+         *   它的 loading 状态会随那段会话一起被丢弃，不该由这里去动新会话的同名消息）。 */
+        if (!guardSessionWrite(storage, sessionToken, 'wechat-image-prompt')) {
             this._imagePromptGenerationLocks.delete(generationLockKey);
             return;
         }
@@ -4727,6 +4748,10 @@ renderChatRoom(chat) {
                 const latestVideoMessage = this.app.wechatData.getMessages(chatId)
                     .find((item) => String(item?.id || '').trim() === safeMessageId);
                 if (String(latestVideoMessage?.imageGenerationId || '') !== generationId) return;
+                /* [v3.58.0 · 计划 O4] 视频落盘前的会话栅栏（视频 provider 最慢，此窗口最大）。
+                 *   不当前即走人：上传好的文件成为孤儿（无引用），但会话一致性优先 ——
+                 *   把上一段会话的视频挂进当前会话是用户看得见的错，孤儿文件不是。 */
+                if (!guardSessionWrite(storage, sessionToken, 'wechat-image-video')) return;
                 this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                     mediaType: '视频',
                     imagePrompt: promptText,
@@ -4756,6 +4781,8 @@ renderChatRoom(chat) {
             const latestMessage = this.app.wechatData.getMessages(chatId)
                 .find((item) => String(item?.id || '').trim() === safeMessageId);
             if (String(latestMessage?.imageGenerationId || '') !== generationId) return;
+            /* [v3.58.0 · 计划 O4] 图片落盘前的会话栅栏：与上面视频那条同源同理。 */
+            if (!guardSessionWrite(storage, sessionToken, 'wechat-image')) return;
             this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                 mediaType: '图片',
                 imagePrompt: promptText,
@@ -4780,11 +4807,13 @@ renderChatRoom(chat) {
                 : (rawMessage || '未知错误');
 
             console.error('微信图片生成失败:', error);
-
             const latestMessage = this.app.wechatData.getMessages(chatId)
                 .find((item) => String(item?.id || '').trim() === safeMessageId);
             if (String(latestMessage?.imageGenerationId || '') !== generationId) return;
-
+            /* [v3.58.0 · 计划 O4] 失败状态同样过栅栏：跨会话时不把失败写进当前会话，
+             *   也不在当前会话弹「生图失败」（那条失败属于上一段会话的那一轮）。
+             *   finally 里的收锁照旧执行，锁键按 chatId 命名，不会串到别的会话。 */
+            if (!guardSessionWrite(storage, sessionToken, 'wechat-image-failed')) return;
             this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                 imagePrompt: promptText,
                 imageDescription: descriptionText,

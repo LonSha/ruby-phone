@@ -54,6 +54,7 @@ import {
     problemsOf, verdictOf, summarize, requestText, intake
 } from './diagdesk-data.js';
 import { DiagdeskView } from './diagdesk-view.js';
+import { writeReceipt, collectReceipt } from '../../config/write-receipt.js';
 export const DD_ARCHIVE_KEY = 'diagdesk_archive';
 export const DD_DRAFT_KEY = 'diagdesk_draft';
 export const DD_LEDGER_KEY = 'diagdesk_ledger';
@@ -128,7 +129,16 @@ export class DiagdeskApp {
         return { ok: true, why: '' };
     }
     _savedOk(wrote) {
-        return { saved: wrote === true, storage: this._storageUsable().ok };
+        /* [v3.58.0 · 计划 O5] 既收单键布尔（writeReceipt 的 saved），也收多键**完成范围**
+         *   （collectReceipt 的返回）：多键时 saved 表示「本动作落的那几条键全落了」。 */
+        const ok = (wrote && typeof wrote === 'object') ? wrote.saved === true : wrote === true;
+        return { saved: ok, storage: this._storageUsable().ok };
+    }
+    /** 把「本动作落的那几条键」收成一份**完成范围**回执（唯一实现见 config/write-receipt.js）。
+     *  ★ 只报最后一条键是本版治的形态：前一条没落下去时界面照样显示成功，
+     *    下次打开就出现「正文没了、投影还在」这种两边对不上的状态。 */
+    _writeScope(rows) {
+        return collectReceipt(rows);
     }
     /** 读一格。三种回报：ok / absent / malformed。抛异常**不是**「没记过」。 */
     _readRaw(key) {
@@ -144,8 +154,9 @@ export class DiagdeskApp {
         const gate = this._storageUsable();
         if (!gate.ok) return false;
         try {
-            this.storage.set(key, JSON.stringify(value));
-            return true;
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：此前这里无条件 return true，
+             *   写调用失败也照报成功（与 A 族方向相反的同一类错）。 */
+            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;
         } catch (e) {
             return false;
         }
@@ -269,7 +280,10 @@ export class DiagdeskApp {
         const t = trimRows(this._ledger, DD_LEDGER_MAX);
         this._ledger = t.rows;
         this._dropped += t.dropped;
-        this._persistLedger();
+        const wl = this._persistLedger();
+        /* [v3.58.0 · 计划 O5] 台账那条键的落盘结果**必须回出去**：动作口的 saved 要算上它，
+         *   此前台账落没落只有本函数知道，而调用方报的是字面 true。 */
+        row.saved = wl === true;
         return row;
     }
     /* ---------- 动作口（只写自己的三条键） ---------- */
@@ -292,20 +306,29 @@ export class DiagdeskApp {
         }
         this._raw = raw;
         this._rawAt = this._now;
-        this._persistArchive();
+        const wArc = this._persistArchive();
         this.probe();
-        this._receipt('archive_ingest', true, '', { n: raw.length });
-        return Object.assign(this._savedOk(true), { ok: true, chars: raw.length });
+        const rcA = this._receipt('archive_ingest', true, '', { n: raw.length });
+        /* 这一刀落两条键：存档原文 + 台账。**两条都算**。 */
+        const wrA = this._writeScope([
+            { key: 'archive', ok: wArc === true, why: wArc === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcA.saved === true, why: rcA.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrA), { ok: true, chars: raw.length });
     }
     /** 放下一份存档（只清自己的键；**不是**清宿主）。 */
     clearArchive() {
         const had = this._raw.length;
         this._raw = '';
         this._rawAt = 0;
-        this._persistArchive();
+        const wArcC = this._persistArchive();
         this.probe();
-        this._receipt('archive_clear', true, '', { n: had });
-        return Object.assign(this._savedOk(true), { ok: true, cleared: had });
+        const rcAC = this._receipt('archive_clear', true, '', { n: had });
+        const wrAC = this._writeScope([
+            { key: 'archive', ok: wArcC === true, why: wArcC === true ? '' : 'set_false' },
+            { key: 'ledger', ok: rcAC.saved === true, why: rcAC.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrAC), { ok: true, cleared: had });
     }
     /** 改摘要草稿（两格原样存，不替它补默认值）。 */
     setDraft(target, extra) {
@@ -335,9 +358,14 @@ export class DiagdeskApp {
         const had = this._ledger.length + this._dropped;
         this._ledger = [];
         this._dropped = 0;
-        this._persistLedger();
-        this._receipt('ledger_clear', true, '', { n: had });
-        return Object.assign(this._savedOk(true), { ok: true, cleared: had, archiveKept: this._raw.length });
+        const wLed = this._persistLedger();
+        const rcL = this._receipt('ledger_clear', true, '', { n: had });
+        /* 清台账这一刀也落两条：清掉后的台账 + 之后补记的那一笔。 */
+        const wrL = this._writeScope([
+            { key: 'ledger', ok: wLed === true, why: wLed === true ? '' : 'set_false' },
+            { key: 'ledger_tail', ok: rcL.saved === true, why: rcL.saved === true ? '' : 'set_false' }
+        ]);
+        return Object.assign(this._savedOk(wrL), { ok: true, cleared: had, archiveKept: this._raw.length });
     }
     /* ---------- 渲染与换会话 ---------- */
     render() {

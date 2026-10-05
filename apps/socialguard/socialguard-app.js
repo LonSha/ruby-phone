@@ -11,10 +11,11 @@
 import {
     SG_LEDGER_MAX, trimRows, normalizePostStore, normalizeContact, mirrorContacts,
     visibleTo, canSeeInteraction, contactsFor, markSeen, mayInteractWith, filterNotifications, feedOf, historySummary,
-    deleteGuard, commentGuard, readingsOf, isStoryAlive,
+    deleteGuard, commentGuard, readingsOf, isStoryAlive, seenAtOf,
     isPlain, listOf, toStr, numOrNull, deepClone, charActor, charIdOfActor
 } from './socialguard-data.js';
 import { SocialguardView } from './socialguard-view.js';
+import { writeReceipt } from '../../config/write-receipt.js';
 
 export const SG_POSTS_KEY = 'sg_posts';
 export const SG_CONTACTS_KEY = 'sg_contacts';
@@ -58,9 +59,12 @@ export class SocialguardApp {
         const gate = this._storageUsable();
         if (!gate.ok) return { saved: false, why: gate.why };
         try {
-            const wrote = this.storage.set(key, value);
-            return { saved: wrote === true, why: wrote === true ? '' : 'set_false' };
-        } catch (e) { return { saved: false, why: 'write_threw' }; }
+            /* [v3.58.0 · 计划 O5] 写回执走唯一实现：真 PhoneStorage.set 是 async，
+             *   把它的返回值当同步布尔读会让 saved 恒假（见 config/write-receipt.js 头注）。 */
+            return writeReceipt(this.storage, key, value);
+        } catch (e) {
+            return { saved: false, why: 'write_threw' };
+        }
     }
     _probe() {
         const p = this._readRaw(SG_POSTS_KEY);
@@ -112,7 +116,7 @@ export class SocialguardApp {
         const post = this._posts.find(function (p) { return p && p.id === postId; });
         if (!post) return { ok: false, why: 'not_found', visibleTo: false, seen: false, mayInteract: false };
         const vis = visibleTo(post, viewerId);
-        const seen = isPlain(post.seenBy) && !!post.seenBy[viewerId];
+        const seen = isPlain(post.seenBy) && seenAtOf(post.seenBy[viewerId]) !== null;
         const inter = mayInteractWith(post, actorId || viewerId);
         const interVis = canSeeInteraction(post, viewerId, actorId || viewerId, interactionPersonaId || '', viewerPersonaId || '', this._settings);
         const mirror = contactsFor(this._contacts, charIdOfActor(viewerId));

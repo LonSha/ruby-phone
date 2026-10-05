@@ -71,7 +71,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -759,7 +759,9 @@ test('D3 不收外链、不产二进制：没有任何 URL / data URL / 图片�
 test('D4 storage 出口必须收敛：只许 get / set 两个口（不许第三口）', () => {
     const app = stripComments(read(SB_APP));
     assert.ok(app.includes('this.storage.get('), '必须经 get 口取数');
-    assert.ok(app.includes('this.storage.set('), '必须经 set 口落盘');
+    /* [v3.58.0 · 计划 O5] 经 set 口落盘即可：直调或走唯一实现。 */
+    assert.ok(app.includes('this.storage.set(') || app.includes('writeReceipt(this.storage'),
+        '必须经 set 口落盘');
     for (const bad of ['this.storage.remove', 'this.storage.delete', 'this.storage.clear', 'this.storage.keys', 'this.storage.all']) {
         assert.equal(app.includes(bad), false, 'storage 出口不许有第三口：' + bad);
     }
@@ -1276,6 +1278,7 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3390_'));
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     const sbDir = path.join(dir, 'apps', 'sourcebook');
     fs.mkdirSync(sbDir, { recursive: true });
     for (const f of ['sourcebook-data.js', 'sourcebook-view.js', 'sourcebook-app.js']) {

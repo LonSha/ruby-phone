@@ -11,7 +11,12 @@
  * 会话键走 ^ad_ 前缀随会话隔离。
  * ======================================================== */
 'use strict';
-
+/* [v3.57.0·O3] 数值取值走**全仓唯一实现**（`config/num-gate.js`）。
+ *   本件此前自带一份 `numOrNull`，形态是「先给 number 放行、其余一律 `Number(v)`」——
+ *   它把上游**没给**这一格读成了有效值：`null → 0`、`'' → 0`、`'  ' → 0`、`[] → 0`、
+ *   `false → 0`、`true → 1`、`[5] → 5`。0 在这里是**合法读数**（第 0 分钟、第 0 天），
+ *   于是「没给」与「给了 0」在同一个读数上塌在一起 —— 而两者处置相反。 */
+import { numOrNull } from '../../config/num-gate.js';
 export const AD_DAY_MS = 24 * 60 * 60 * 1000;
 export const AD_ZODIAC_CUTS = Object.freeze([20, 19, 21, 20, 21, 22, 23, 23, 23, 24, 23, 22]);
 export const AD_ZODIAC_SIGNS = Object.freeze(['摩羯座', '水瓶座', '双鱼座', '白羊座', '金牛座', '双子座', '巨蟹座', '狮子座', '处女座', '天秤座', '天蝎座', '射手座', '摩羯座']);
@@ -19,7 +24,6 @@ export const AD_ZODIAC_SIGNS = Object.freeze(['摩羯座', '水瓶座', '双鱼�
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
 export function toStr(v) { return (typeof v === 'string') ? v : ''; }
-export function numOrNull(v) { const n = (typeof v === 'number') ? v : Number(v); return Number.isFinite(n) ? n : null; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

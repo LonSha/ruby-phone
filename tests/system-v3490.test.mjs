@@ -22,6 +22,8 @@ const MD_DATA = 'apps/memtable/memtable-data.js';
 const MD_APP = 'apps/memtable/memtable-app.js';
 const MD_VIEW = 'apps/memtable/memtable-view.js';
 const MD_CSS = 'apps/memtable/memtable.css';
+const NUM_GATE = 'config/num-gate.js';
+const RECEIPT = 'config/write-receipt.js';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -120,7 +122,9 @@ function fakeDom() {
 /* ---------- 副本树加载器：真源码定点破坏 → 写副本 → 加载副本 ---------- */
 const WS_FILES = [
     MD_DATA, MD_APP, MD_VIEW, MD_CSS,
-    APPS, STORAGE, INDEX, KEYS, PHONE_CSS, V255
+    APPS, STORAGE, INDEX, KEYS, PHONE_CSS, V255,
+    NUM_GATE,
+    RECEIPT
 ];
 function makeWorkspace() {
     const d = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-mt-ws-'));

@@ -113,7 +113,7 @@ function memStorage(seed = {}) {
     const box = new Map(Object.entries(seed));
     return {
         get: (k) => (box.has(k) ? box.get(k) : null),
-        set: (k, v) => { box.set(k, v); },
+        set: (k, v) => { box.set(k, v); return true; },
         _box: box,
     };
 }
@@ -734,6 +734,7 @@ function writeDamagedCopy(rel, from, to) {
     fs.writeFileSync(target, damaged);
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
+    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     return { target, src: damaged };
 }
 async function loadDamagedCopy(rel, from, to) {
