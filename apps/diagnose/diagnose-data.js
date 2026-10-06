@@ -108,6 +108,14 @@ import {
  *     不新增任何取数点 —— 本仓治理过多轮的「同一读数的两个来源必然漂移」。
  *     判定组合在 config/crossrepo-registry.js（该模块**零 import**，结构上不可能自持桥名）。 */
 import { registryFace, registryLine, CROSSREPO_FEATURES } from '../../config/crossrepo-registry.js';
+/* [v3.63.0 · X8 第二切片] 受控恢复交接面（预检 → 执行 → 回读 三段闸门）。
+ *   接在诊断中心的理由与「会话世代栅栏」同族：本仓一切「被挡下的回信」的可见出口就是这里。
+ *   与 session-gate 面**分列**（两者常被混为一谈，是两个不同的问题）：
+ *     会话栅栏说「换会话/清数据之后，旧回信有没有被挡」；
+ *     交接栅栏说「**恢复过数据**之后，恢复前飞出的回信有没有被挡」—— 恢复不改会话身份，
+ *     故前者对这类回信**完全无感**，必须单列。
+ *   ★ 只调真源读出口（本内核不复算判定、不另数一遍条数）。 */
+import { precheckLine, handoffLine, handoffGateLine, handoffDropLog } from '../../config/resume-handoff.js';
 /* [v3.55.0 · 计划 A2] App 消费面矩阵面（80 件 App × 六条平台级消费面）。
  *   接在诊断中心的理由与投影面 / 注入面 / 知识面 / 跨仓登记面同一族：本仓一切「平台级覆盖读数」的可见出口就是这里。
  *   ★ 本内核只**陈列**矩阵模块的读数，不在这里复算第二份：六个布尔值的真源复算在判据套件里
@@ -488,6 +496,27 @@ export function collectDiagnose(win, storage) {
         } catch (_e) { return null; }
     })();
     const repoFace = safe(() => registryFace(repoProbe), null);
+    /* ── [v3.63.0 · X8 第二切片] 受控恢复交接面 ──
+     *   摆的是什么：当前交接世代号、**被挡下的恢复前回信**（与 session-gate 面分列 ——
+     *   恢复不改会话身份，会话栅栏对这类回信完全无感）。
+     *   三条纪律与全页一致：
+     *     ① 只读：只调真源读出口 `handoffDropLog()`（它返回快照副本），本内核不自摸栅栏内部状态；
+     *     ② 不抛：读不到 / 抛错 ⇒ `ok:false` + 归因，不伪造一张空表；
+     *     ③ 不猜：**账本在位但一条都没挡过 ⇒ 那是正常读数**（本轮没做过恢复），
+     *        绝不能渲染成「栅栏没生效」—— 把「没有异常」谎报成「机制坏了」是本仓最忌的反向错读数。 */
+    const handoff = (() => {
+        try {
+            const log = handoffDropLog();
+            if (!log || typeof log !== 'object') return { ok: false, reason: 'gate-absent', epoch: null, count: 0, rows: [] };
+            const rows = Array.isArray(log.rows) ? log.rows.map((r) => ({
+                domain: String((r && r.domain) || 'unknown'),
+                reason: String((r && r.reason) || 'unknown'),
+                text: String((r && r.text) || ''),
+                at: Number((r && r.at) || 0) || 0
+            })) : [];
+            return { ok: true, reason: 'ok', epoch: Number(log.epoch) || 0, count: rows.length, rows };
+        } catch (_e) { return { ok: false, reason: 'gate-threw', epoch: null, count: 0, rows: [] }; }
+    })();
     /* ── [v3.55.0 · 计划 A2] App 消费面矩阵面 ──
      *   修前实测：第 1~3 层共缝入三十余件 App，每件都做到了「四层齐备 + 六处接线 + 判据带负控制」，
      *   但缝完之后「这些 App 有没有被平台级六面覆盖」全仓没有一处能回答 ——
@@ -548,7 +577,7 @@ export function collectDiagnose(win, storage) {
             return { ok: true, reason: 'ok', epoch: Number(log.epoch) || 0, count: rows.length, rows };
         } catch (_e) { return { ok: false, reason: 'gate-threw', epoch: null, count: 0, rows: [] }; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, handoff, sessionGate };
 }
 /** [v3.58.0 · 计划 O4] 会话世代栅栏面的一行读数（**唯一实现**在本文件 `collectDiagnose` 内取的那一面）。
  *  这里只做转发与文案：视图不自己拼（拼第二遍就是同一口径两份实现）。
@@ -577,6 +606,20 @@ export function checkpointFaceText(cp) {
 }
 /** [v3.19.0] 跨仓登记面的一行总述（**唯一实现**在真源：`config/crossrepo-registry.js` 的 `registryLine`）。
  *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
+/** [v3.63.0 · X8 第二切片] 受控恢复交接面的一行读数（**唯一实现**在真源 `config/resume-handoff.js`）。
+ *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。
+ *  三态文案必须互不相同（本仓老规矩）：
+ *    · 读不到账本 → 说「读不到」并给归因，**不说**「没挡过」；
+ *    · 读到但零条 → 说「本轮无恢复，未被挡下任何回信」——这是**好读数**，不是坏消息。 */
+export function handoffFaceText(face, pre, hand) {
+    try {
+        const lines = [];
+        if (pre) lines.push(precheckLine(pre));
+        if (hand) lines.push(handoffLine(hand));
+        lines.push(handoffGateLine(face));
+        return lines.join('　');
+    } catch (_e) { return '受控恢复交接：读取异常（已降级）—— 这不是「没有被挡下的回信」'; }
+}
 export function crossRepoFaceText(face) {
     try { return registryLine(face); }
     catch (_e) { return '跨仓功能：读取异常（已降级）'; }
@@ -820,5 +863,6 @@ export default {
     bootTimingRows,
     checkpointFaceText,
     sessionGateFaceText,
+    handoffFaceText,
     summarizeDiagnose
 };

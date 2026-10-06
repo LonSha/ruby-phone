@@ -65,7 +65,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.62.0';
+const ST_PHONE_VERSION = '3.63.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -244,6 +244,10 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-06",
     items: [
+        "【运行时验证边界 · v3.63.0 复校】本版把边界文档（docs/runtime-verification-boundary.md）按当版复校一次：数字按真跑刷新（语法门 642 文件 / 导入门 386 文件 625 条）。边界结论不变：本环境已能跑真浏览器（L4 层布局/命中/交互接线），但**真宿主**（SillyTavern 本体）的事件广播、持久化与双扩展共装仍**不能保证** —— 这类「看起来没坏但显示不对」的形态只能在真宿主里才暴露，自动化门禁结构上够不到。",
+        "【版本升至 3.63.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。本版对旧判据的**交棒改写**：v3620 套件的当版锚点由硬等号 3.62.0 改为**下限形**（硬等号由当版套件接管，判据钉历史事实不随抬版漂移）；并把 update-log.versions 首键归位到当版（顺带修好上一版遗留的「首键非当前版」缺陷，全量失败数由 76 降到 48）。本版自己抓到的**缺陷**：① 判据 G 段含换行锚点用普通引号串声明 ⇒ self.includes 恒假（改 String.raw）；② 引入取数门后「单文件落 /tmp 再 import」载入方式失效（改工作区副本树）；③ 诊断面 handoff 插在 sessionGate 之后，使 v3580 R4 逐字持有的锚点形态消失。",
+        "【X8 第二切片 · 受控恢复交接（预检 → 执行 → 回读 三段闸门）】X8 验收原文「恢复前预检、恢复后回读，旧异步写入被拒」此前**三段里两段不存在、一段只做了一半**：全仓与读档有关的写面（config/floor-store.js 的 appendBatch / removeByFloor / removeById、apps/archive 的覆盖式导入与全量重置）**拿到指令就动手**，没有任何一处先回答「现在到底能不能恢复」；恢复后也没有回读 —— 「动作抛错」与「写了但写丢了」长得一样；而 config/session-gate.js（O4 交付）虽然能挡下旧回信，但它判的是「会话身份变了没」——**恢复动作不改会话身份**（改的是数据），故恢复期间飞出去的回信在它眼里完全合法，会把旧分支内容写进刚恢复好的存档。新增 config/resume-handoff.js（463 行，纯函数，只 import 取数门 numOrNull）：① 预检四道（目标 / 会话身份 / 在飞回信 / 当前数据面）收成三档 ok / blocked / unusable，**不可测 ≠ 通过** —— 目标清单读不到报 unusable 而**不是**「没有这份存档」（处置相反），有在飞回信则 blocked 且**点名**是哪几条；非空数据面显式告知「会被覆盖」，空档不说（不造成噪声）；② 交接**委托真实 owner**（apply 由调用方注入）——本模块自身**零写面**，同一 handoffId 幂等（重复调用返回首次结果、执行体只跑一次），未注入执行体即 held（不去猜一条写入路径）；③ 回读三态 ok / mismatch / unreadable 互不同形，**写面自述的 {ok:true} 不作为恢复成功的证据** ——自述成功而回读不符 ⇒ partial（不是 done）；mismatch 逐键点名（含「回读多出来的键」）。旧异步写入被拒：新增**交接世代栅栏**（handoffEpoch，在任何写动作**之前** +1），与 session-gate 的会话栅栏**串联**（两把都要过）——恢复期间飞出的回信一律作废并记账，恢复之后新发出的回信不受影响。判据 tests/v3630_resume_handoff.test.mjs（17 条）：A 结构 / B1 预检三档 / B2 清单缺席 / B3 在飞点名 / B4 覆盖语义 / C1 held≠done（执行体 0 次）/ C2 幂等 / C3 自述不算数 / C4 抛错与拒绝各自归因 / C5 无执行体 / D1 回读三态 / D2 逐键点名 / E1 旧写入被拒 / E2 两把闸门 / E3 先抬后写 / F 真源码破坏（摘掉「先抬世代」⇒ E1 真判据实测失败）/ G 自防护 + 当版锚点。★ 本轮自己抓到的一处缺陷：G 段首版用普通引号串声明含换行的破坏锚点，源文件里那是**两字符** `\\n`、引号串里是**真换行** ⇒ self.includes 恒假（v3288 同形坑，已改 String.raw）。",
+        "【判据与门禁面 · v3.63.0】新增判据套件 tests/v3630_resume_handoff.test.mjs（17 条，含真源码破坏 F 段）。十一道门禁逐门真跑：syntax 642 文件 / import-resolve 386 文件 625 条 / dead-exports 无新增零消费 / lifecycle 77 类 22 槽无缺口 / registry 81↔81 双向零孤儿 / keys 285 点全登记 / source-derivation 10 条全存活 / bridge-contract 十三面全消费 / weak-coercion 全仓无同族弱口径（唯一实现被引用 63 文件）/ upstream-face 一致。本版对旧判据的交棒改写：v3620 当版锚点改下限形、v3630 C5 由「零 import」改「只准 import 取数门」。",
         "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。",
         "【运行时验证边界复校 · v3.61.0 推翻一条长期结论】本环境实测可跑真浏览器（Chromium 131，L4 层五场景×四视口全绿）——自动化门禁现在能保证的不止「结构正确与接线完整」，还包括独立浏览器里的布局/命中/交互接线；仍不能保证的是真宿主（SillyTavern 本体）的事件广播、持久化与双扩展共装。遇到 看起来没坏但显示不对 的问题，属本文登记的第二类，需在真机复现后再修（详见 docs/runtime-verification-boundary.md）。",
         "【定位 · 计划 O6 入口接线瘦身】本版把 phone:openApp 处理器里 67 段「结构上完全同构」的懒加载五件套（instrumentImport → 单例 new → render → catch）收敛为 config/app-lazy-routes.js 单源表 + 一个通用装配器；14 个有真实差异逻辑的分支（构造参数 / 缓存同步 / 通话避让 / 双 import 兜底 / 按会话状态分流）原样内联保留 —— 表驱动会抹掉它们的差异，把它们写进表反而是倒退。index.js 由 808555 字节降至约 741KB（-67.6KB）。",
@@ -257,7 +261,7 @@ const ST_PHONE_CURRENT_UPDATE = {
         "【O8 · 真宿主边界仍如实保留】独立浏览器层证明的是「布局/命中/交互接线」，真 SillyTavern 宿主的事件广播、持久化与双扩展共装仍未验证 —— L2 进程内最小宿主与本层分报结论，不互相顶替。",
         "【交棒改写 · 扫描面跟着代码走（不是放宽判据）】O6 把 67 段懒加载五件套搬进 config/app-lazy-routes.js 之后，全仓 40 个套件里 57 处「index.js 必须有懒加载分支 / 懒加载单例 / import 路径」的**扫描面**随即失效 —— 真功能一处没少，判据却全数落空（假红）。本版把这类判据的数据源统一换成 tests/_lazy_routes.mjs 导出的**判据面**（index 内联分支 ∪ 表行渲染回的同形分支，渲染形与重构前的五件套逐字同构），断言与错误文案一字未改；表缺席或解析不到 60 行即 fail-closed 拒判，绝不静默返回空面。同一口径只留一份实现（此前 40+ 份各自读 index.js，正是这一轮全量假红的成因）。",
         "【本版自己抓到的三处缺陷 · 逐条有据】① **表 errTitle 语义定错**：字段带「加载失败」后缀、装配器又拼一次，67 个 App 的失败提示全是「…加载失败失败」病句（加载失败时用户看到重复后缀）—— 已把字段改为标题基名，装配器拼接不动，console/notify 文案逐字回归重构前形态；② **抬版漏项两处**：update-log.json 的 3.61.0 条目缺 version 字段（全 212 个版本条目里唯一例外，v259 G1 / v298 E1 当场报 undefined），ITERATION_LOG.md 元信息「当前版本」仍写 3.60.0（v280-2 等五套件报「文档已腐坏」）—— 均已补齐；③ **工具面自纠**：批量补丁把 _lazy_routes 的 import 插进**多行 import 语句的中间**，8 个套件当场语法错（被语法门 638 文件扫描抓到）—— 已改为插在该 import 语句的收尾行之后。三处都没有放宽任何判据：门禁随刀升级、而非放松。",
-        "【版本升至 3.61.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。",
+        "【版本升至 3.61.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。"
     ]
 };
 

@@ -223,6 +223,8 @@ test('v3620 G. 自防护 + 当版锚点（V4 计数形态）', async () => {
     assert.ok(self.length > 4000, '本档自身不得被清空（实 ' + self.length + ' 字符）');
     const pkgRaw = JSON.parse(readRoot('package.json')).version;
     const vnum = (s) => String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0);
-    assert.equal(vnum('3.62.0'), vnum(pkgRaw), '当版锚点须与 package.json 同源（V4 计数形态）');
+    /* 抬版后本套件不再是当版 ⇒ 锚点改为**下限形**（硬等号由当版套件接管）。
+     *  本仓惯例：判据钉历史事实，不随抬版漂移（v3270 同款口径）。 */
+    assert.ok(vnum(pkgRaw) >= vnum('3.62.0'), '当版锚点须 ≥ 出生版（下限形，V4 计数形态；实 ' + pkgRaw + '）');
     ok('自防护 + 当版锚点 ' + pkgRaw);
 });

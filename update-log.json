@@ -1,6 +1,23 @@
 {
-  "latest": "3.62.0",
+  "latest": "3.63.0",
   "versions": {
+    "3.63.0": {
+      "version": "3.63.0",
+      "date": "2026-10-06",
+      "items": [
+        "【运行时验证边界 · v3.63.0 复校】本版把边界文档（docs/runtime-verification-boundary.md）按当版复校一次：数字按真跑刷新（语法门 642 文件 / 导入门 386 文件 625 条）。边界结论不变：本环境已能跑真浏览器（L4 层布局/命中/交互接线），但**真宿主**（SillyTavern 本体）的事件广播、持久化与双扩展共装仍**不能保证** —— 这类「看起来没坏但显示不对」的形态只能在真宿主里才暴露，自动化门禁结构上够不到。",
+        "【版本升至 3.63.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。本版对旧判据的**交棒改写**：v3620 套件的当版锚点由硬等号 3.62.0 改为**下限形**（硬等号由当版套件接管，判据钉历史事实不随抬版漂移）；并把 update-log.versions 首键归位到当版（顺带修好上一版遗留的「首键非当前版」缺陷，全量失败数由 76 降到 48）。本版自己抓到的**缺陷**：① 判据 G 段含换行锚点用普通引号串声明 ⇒ self.includes 恒假（改 String.raw）；② 引入取数门后「单文件落 /tmp 再 import」载入方式失效（改工作区副本树）；③ 诊断面 handoff 插在 sessionGate 之后，使 v3580 R4 逐字持有的锚点形态消失。",
+        "【X8 第二切片 · 受控恢复交接（预检 → 执行 → 回读 三段闸门）】X8 验收原文「恢复前预检、恢复后回读，旧异步写入被拒」此前**三段里两段不存在、一段只做了一半**：全仓与读档有关的写面（config/floor-store.js 的 appendBatch / removeByFloor / removeById、apps/archive 的覆盖式导入与全量重置）**拿到指令就动手**，没有任何一处先回答「现在到底能不能恢复」；恢复后也没有回读 —— 「动作抛错」与「写了但写丢了」长得一样；而 config/session-gate.js（O4 交付）虽然能挡下旧回信，但它判的是「会话身份变了没」——**恢复动作不改会话身份**（改的是数据），故恢复期间飞出去的回信在它眼里完全合法，会把旧分支内容写进刚恢复好的存档。新增 config/resume-handoff.js（463 行，纯函数，只 import 取数门 numOrNull）：① 预检四道（目标 / 会话身份 / 在飞回信 / 当前数据面）收成三档 ok / blocked / unusable，**不可测 ≠ 通过** —— 目标清单读不到报 unusable 而**不是**「没有这份存档」（处置相反），有在飞回信则 blocked 且**点名**是哪几条；非空数据面显式告知「会被覆盖」，空档不说（不造成噪声）；② 交接**委托真实 owner**（apply 由调用方注入）——本模块自身**零写面**，同一 handoffId 幂等（重复调用返回首次结果、执行体只跑一次），未注入执行体即 held（不去猜一条写入路径）；③ 回读三态 ok / mismatch / unreadable 互不同形，**写面自述的 {ok:true} 不作为恢复成功的证据** ——自述成功而回读不符 ⇒ partial（不是 done）；mismatch 逐键点名（含「回读多出来的键」）。旧异步写入被拒：新增**交接世代栅栏**（handoffEpoch，在任何写动作**之前** +1），与 session-gate 的会话栅栏**串联**（两把都要过）——恢复期间飞出的回信一律作废并记账，恢复之后新发出的回信不受影响。判据 tests/v3630_resume_handoff.test.mjs（17 条）：A 结构 / B1 预检三档 / B2 清单缺席 / B3 在飞点名 / B4 覆盖语义 / C1 held≠done（执行体 0 次）/ C2 幂等 / C3 自述不算数 / C4 抛错与拒绝各自归因 / C5 无执行体 / D1 回读三态 / D2 逐键点名 / E1 旧写入被拒 / E2 两把闸门 / E3 先抬后写 / F 真源码破坏（摘掉「先抬世代」⇒ E1 真判据实测失败）/ G 自防护 + 当版锚点。★ 本轮自己抓到的一处缺陷：G 段首版用普通引号串声明含换行的破坏锚点，源文件里那是**两字符** `\\n`、引号串里是**真换行** ⇒ self.includes 恒假（v3288 同形坑，已改 String.raw）。",
+        "【判据与门禁面 · v3.63.0】新增判据套件 tests/v3630_resume_handoff.test.mjs（17 条，含真源码破坏 F 段）。十一道门禁逐门真跑：syntax 642 文件 / import-resolve 386 文件 625 条 / dead-exports 无新增零消费 / lifecycle 77 类 22 槽无缺口 / registry 81↔81 双向零孤儿 / keys 285 点全登记 / source-derivation 10 条全存活 / bridge-contract 十三面全消费 / weak-coercion 全仓无同族弱口径（唯一实现被引用 63 文件）/ upstream-face 一致。本版对旧判据的交棒改写：v3620 当版锚点改下限形、v3630 C5 由「零 import」改「只准 import 取数门」。"
+      ]
+    },
+    "3.62.0": {
+      "version": "3.62.0",
+      "date": "2026-10-06",
+      "items": [
+        "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。"
+      ]
+    },
     "3.61.0": {
       "version": "3.61.0",
       "date": "2026-10-05",
@@ -2950,14 +2967,7 @@
         "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
         "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
       ]
-    },
-    "3.62.0": {
-      "version": "3.62.0",
-      "date": "2026-10-06",
-      "items": [
-        "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。"
-      ]
     }
   },
-  "head": "3.62.0"
+  "head": "3.63.0"
 }
