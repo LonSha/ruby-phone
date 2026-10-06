@@ -40,3 +40,4 @@ test/
 # Python 脚本缓存（v3.44.0 补登记）
 __pycache__/
 tools/__pycache__/
+.git-msgs/
