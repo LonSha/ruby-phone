@@ -21,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/diagdesk/diagdesk-data.js';
 import * as APP from '../apps/diagdesk/diagdesk-app.js';
+import { LAZY_ROUTE_TABLE_REL, readRepoTable, routeSurface, withRouteSurface } from './_lazy_routes.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DD_DATA = 'apps/diagdesk/diagdesk-data.js';
@@ -38,7 +39,8 @@ const BS = String.fromCharCode(92);
 const DQ = String.fromCharCode(34);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 副本树登记表（跑完必删）。★ 本套件对真仓**只读**：任何破坏类负控制只准落在副本上。 */
 const temps = [];
 process.on('exit', () => {
@@ -490,10 +492,14 @@ function wireProblems(files) {
 /** 接线面的取数口。★ root 可指向副本树 —— 破坏类负控制只准写副本，
  *  绝不写真仓：`node --test` 是文件级并行，写真仓会在破坏窗口内被别的套件读到，
  *  且一旦跑批被中断（finally 来不及执行）会把破坏**永久留在仓里**（本版真踩过）。 */
+const TABLE_IN = (dir) => {
+    const p = path.join(dir, LAZY_ROUTE_TABLE_REL);
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : readRepoTable();
+};
 function wireJudgeAt(root) {
     const rd = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
     return wireProblems({
-        apps: rd(APPS), storage: rd(STORAGE), index: rd(INDEX),
+        apps: rd(APPS), storage: rd(STORAGE), index: routeSurface(rd(INDEX), TABLE_IN(root)),
         keys: rd(KEYS), phoneCss: rd(PHONE_CSS)
     });
 }
@@ -502,7 +508,7 @@ function wireJudge() { return wireJudgeAt(ROOT); }
 function stageWire() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3470w_'));
     temps.push(dir);
-    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS]) {
+    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS, LAZY_ROUTE_TABLE_REL]) {
         const dst = path.join(dir, rel);
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), dst);
@@ -871,11 +877,13 @@ const DAMAGE = {
     /* ⑳ 接线：会话键前缀丢掉（换会话读到别人的账）。 */
     q20: [STORAGE, '    /^diagdesk_/,', '    /^diagdeskX_/,'],
     /* ㉑ 接线：懒加载分支丢掉（打开页面一片空白）。 */
-    q21: [INDEX, "                } else if (appId === 'diagdesk') {",
-        "                } else if (appId === 'diagdeskX') {"],
+    q21: [LAZY_ROUTE_TABLE_REL,
+        '    { id: "diagdesk", module: "./apps/diagdesk/diagdesk-app.js", key: "diagdeskApp", cls: "DiagdeskApp", errTitle: "诊断案头App" },',
+        '    { id: "diagdeskX", module: "./apps/diagdeskX/diagdesk-app.js", key: "diagdeskApp", cls: "DiagdeskApp", errTitle: "诊断案头App" },'],
     /* ㉒ 接线：挂载丢掉（实例建不起来）。 */
-    q22: [INDEX, '                            if (!window.VirtualPhone.diagdeskApp) {' + NL + '                                window.VirtualPhone.diagdeskApp = new module.DiagdeskApp(phoneShell, storage);',
-        '                            if (!window.VirtualPhone.diagdeskAppX) {' + NL + '                                window.VirtualPhone.diagdeskAppX = new module.DiagdeskApp(phoneShell, storage);'],
+    q22: [LAZY_ROUTE_TABLE_REL,
+        '    { id: "diagdesk", module: "./apps/diagdesk/diagdesk-app.js", key: "diagdeskApp", cls: "DiagdeskApp", errTitle: "诊断案头App" },',
+        '    { id: "diagdesk", module: "./apps/diagdesk/diagdesk-app.js", key: "diagdeskAppX", cls: "DiagdeskApp", errTitle: "诊断案头App" },'],
 };
 /** 造一棵**真目录结构**的暂存树（破坏副本按真相对路径落盘，相对 import 才解得了）。 */
 function stageTree() {

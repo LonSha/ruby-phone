@@ -10,9 +10,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const _readRaw = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const read = withRouteSurface(_readRaw, root);
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = '') => {
     if (cond) { pass++; console.log(`✓ ${name}`); }

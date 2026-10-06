@@ -14,7 +14,13 @@ class MockStorage {
   remove(k) { delete this.d[k]; }
 }
 const mock = {
-  phoneShell: { screen: new MockScreen(), showNotification() {} },
+  phoneShell: {
+    screen: new MockScreen(),
+    showNotification() {},
+    /* [v3.61.0 · O1] 视图改走 setContent（唯一内容入口），夹具必须跟上新接口：
+     *   缺它则 render 当场抛「setContent is not a function」，后续断言全不跑。 */
+    setContent(html) { this.screen.innerHTML = html; },
+  },
   storage: new MockStorage(),
 };
 const events = [];

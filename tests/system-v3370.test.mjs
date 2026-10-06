@@ -78,6 +78,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -95,7 +96,8 @@ const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
 const KEYS = 'scripts/keys-audit.mjs';
 const V255 = 'tests/system-v255.test.mjs';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 剥注释（字符状态机，与 v3300 / v3310 / v3320 / v3330 / v3340 / v3350 / v3360 同款）。
  *  ★ 为什么必须有：本仓纪律「**注释里的提及不算消费**」。本件的文件头与源码注释逐条写明了
  *    「源里有什么、本仓为什么不能有」——那些词（`callChatAPI`、`ttsRouter`、`data:image`…）是

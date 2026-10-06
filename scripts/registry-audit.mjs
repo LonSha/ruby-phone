@@ -124,9 +124,19 @@ const appIds = [...new Set(
 )];
 
 // ② 懒加载分支（`appId === 'xxx'`，大小写不敏感）
-const branchIds = [...new Set(
-  [...idxSrc.matchAll(/appId\s*===\s*'([\w-]+)'/g)].map((m) => m[1].toLowerCase())
+//    [v3.61.0 · 计划 O6] 路由覆盖面 = index.js 内联分支 ∪ config/app-lazy-routes.js 表 id 字段
+//    （67 个五件套分支收敛为表驱动后，index.js 只剩 14 个内联分支 ——
+//      不并入表 id 的话 R1 双向覆盖与 R3 计数闸都会把真覆盖误判成孤儿）。
+const lazyRouteSrc = (() => {
+  try { return fs.readFileSync(path.join(root, 'config/app-lazy-routes.js'), 'utf8'); } catch { return ''; }
+})();
+const tableIds = [...new Set(
+  [...lazyRouteSrc.matchAll(/\bid:\s*['"]([\w-]+)['"]/g)].map((m) => m[1].toLowerCase())
 )];
+const branchIds = [...new Set([
+  ...[...idxSrc.matchAll(/appId\s*===\s*'([\w-]+)'/g)].map((m) => m[1].toLowerCase()),
+  ...tableIds,
+])];
 
 // ③ 会话键前缀（CHAT_DATA_PATTERNS 数组体）
 const patStart = storSrc.indexOf('CHAT_DATA_PATTERNS');

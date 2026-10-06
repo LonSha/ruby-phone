@@ -81,6 +81,7 @@ import {
     pickCities, placeOrder, logisticsSteps, statusKeyOfDoneCount, statusTextOf, statusRankOf,
     applyLogistics, rollTier, recordGrab, readTaobaoFace, projectTaobao, taobaoPromptBlock,
 } from '../apps/taobao/taobao-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -88,8 +89,8 @@ const DATA_REL = 'apps/taobao/taobao-data.js';
 const APP_REL = 'apps/taobao/taobao-app.js';
 const VIEW_REL = 'apps/taobao/taobao-view.js';
 const CSS_REL = 'apps/taobao/taobao.css';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 const YEN = '\u00a5';
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;

@@ -50,11 +50,13 @@ import {
     addInstance, removeInstance, setInstanceVar, toHostPayload, shareTemplate, toExportText,
     fromImportText, aiPrompt, projectWidget, readWidgetFace, widgetPromptBlock,
 } from '../apps/widget/widget-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const WGT_REL = 'apps/widget/widget-data.js';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 固定「现在」：实例创建时间是时间逻辑，判据必须与真实时钟解耦。 */
 const NOW = 1759000000000;
 

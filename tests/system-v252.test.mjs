@@ -4,10 +4,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const read = (p) => readFileSync(resolve(root, p), 'utf-8');
+const _readRaw = (p) => readFileSync(resolve(root, p), 'utf-8');
+const read = withRouteSurface(_readRaw, root);
 const manifest = JSON.parse(read('manifest.json'));
 
 test('A1 clock-data exports', async () => {

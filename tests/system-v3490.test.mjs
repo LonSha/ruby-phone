@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as DAT from '../apps/memtable/memtable-data.js';
 import * as APP from '../apps/memtable/memtable-app.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const MD_DATA = 'apps/memtable/memtable-data.js';
@@ -32,7 +33,8 @@ const V255 = 'tests/system-v255.test.mjs';
 const PHONE_CSS = 'phone.css';
 const NL = String.fromCharCode(10);
 const Q = String.fromCharCode(39);
-const read = (rel, root) => fs.readFileSync(path.join(root || ROOT, rel), 'utf8');
+const _readRaw = (rel, root) => fs.readFileSync(path.join(root || ROOT, rel), 'utf8');
+const read = (rel, root) => withRouteSurface(_readRaw, root || ROOT)(rel, root);
 const temps = [];
 let seq = 0;
 process.on('exit', () => {

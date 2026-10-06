@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { routeSurface, readRepoTable } from './_lazy_routes.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const readRel = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -255,7 +256,11 @@ test('A6 ★★ 两个「没有 ms」必须可分：records 在场 vs 缺席', (
 
 /* ══════════ B ── 真源码接线 ══════════ */
 test('B1 ★★★ index.js 全部动态 import 都被旁听包住，且 spec 逐字不变（读数层不得改加载路径）', () => {
-    const src = readRel('index.js');
+    /* [v3.61.0 · O6] 输入取**判据面**（index.js 内联 ∪ 懒加载路由表行渲染回的同形分支）：
+     *   67 段 `instrumentImport(import(x), x)` 已搬进 config/app-lazy-routes.js，
+     *   index.js 只剩内联的十几处。旧扫描面（只读 index.js）会把它们读成「掉了 26 处」——
+     *   真实现一处没少，是扫描面没跟着代码走。判据口径一字未改。 */
+    const src = routeSurface(readRel('index.js'), readRepoTable());
     const scan = scanImportWiring(src);
     assert.equal(scan.suspects.length, 0,
         '★ 模板串正文里出现 import( ⇒ 剥面可能吞掉真代码，按 fail-closed 拒判：' + JSON.stringify(scan.suspects));
@@ -423,7 +428,8 @@ test('D3 ★★★ 负控制：读出口改名回 snapshot ⇒ 判据 4 在破�
 });
 
 test('D4 ★★★ 负控制：真源码里拆掉一处 import 旁听 ⇒ 判据 3（B1 同款）转红', () => {
-    const src = readRel('index.js');
+    /* 同 B1：取判据面（mood 一行就在表里，module 字段即原 spec，故锚点照旧恰中 1 次）。 */
+    const src = routeSurface(readRel('index.js'), readRepoTable());
     const anchor = "bootTiming.instrumentImport(import('./apps/mood/mood-app.js'), './apps/mood/mood-app.js')";
     assert.equal(src.split(anchor).length - 1, 1, '锚点应恰好命中 1 次');
     assert.equal(scanImportWiring(src).bare.length, 0, '阳性对照：原版上必须是 0 处裸 import');

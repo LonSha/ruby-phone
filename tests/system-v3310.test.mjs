@@ -100,6 +100,7 @@ import {
     startRun, closeRun, addRunLine, attachStory, runPhase, humanSpan, rateDate, settleRun,
     sharePayload, shareText, pruneRunStore, projectDate, datePromptBlock, faceSummary,
 } from '../apps/date/date-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -107,8 +108,8 @@ const DATA_REL = 'apps/date/date-data.js';
 const APP_REL = 'apps/date/date-app.js';
 const VIEW_REL = 'apps/date/date-view.js';
 const CSS_REL = 'apps/date/date.css';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 剥注释（字符状态机，与 v3300 / v3290 同款）。
  *  ★ 为什么必须有：本仓纪律「**注释里的提及不算消费**」。本件的文件头逐条写明了
  *    「源里有什么、本仓为什么不能有」——那些词（`setTimeout`、`Dexie`、`chat.history`、

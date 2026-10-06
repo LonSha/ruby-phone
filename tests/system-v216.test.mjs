@@ -17,6 +17,7 @@ import {
     normalizeScale, readFlag, writeFlag, isDndOn, isWifiOn, isFlashlightOn,
     readShellScale, applyShellScale, lockNow, musicControl, currentTrack
 } from '../config/system-controls.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -276,7 +277,7 @@ function mkStorage(seed = {}) {
 
 // ========== 5. 接线门：模块必须真的被装配（防假交付） ==========
 {
-    const idx = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
+    const idx = routeSurface(fs.readFileSync(path.join(root, 'index.js'), 'utf8'), readRepoTable());
     const storageSrc = fs.readFileSync(path.join(root, 'config/storage.js'), 'utf8');
     const appsSrc = fs.readFileSync(path.join(root, 'config/apps.js'), 'utf8');
     const cssSrc = fs.readFileSync(path.join(root, 'phone.css'), 'utf8');

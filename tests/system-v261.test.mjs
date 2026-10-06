@@ -15,8 +15,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-
+const _readRaw = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = withRouteSurface(_readRaw, root);
 import {
     ASSET_REASONS,
     defaultAssetSettings,
@@ -32,6 +32,7 @@ import {
 import core from '../apps/asset/engine/asset-core.js';
 import settlement from '../apps/asset/engine/asset-settlement.js';
 import storeApi from '../apps/asset/engine/asset-store.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 function memHost(bag) {
     const b = bag || {};

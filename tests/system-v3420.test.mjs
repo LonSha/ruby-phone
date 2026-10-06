@@ -21,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/musicdesk/musicdesk-data.js';
 import * as APP from '../apps/musicdesk/musicdesk-app.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -43,8 +44,8 @@ const BS = String.fromCharCode(92);
 const DQ = String.fromCharCode(34);
 /** 竖线（来源清单文本用）：拼装形。 */
 const PIPE = String.fromCharCode(124);
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 剥注释（字符状态机，与 v3300…v3410 同款）。
  *  ★ 为什么必须有：本仓纪律「**注释里的提及不算消费**」。本件的文件头逐条写明了
  *    「源里有什么、本件为什么不能有」——那些词是**说明**不是**消费**。

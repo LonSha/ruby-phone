@@ -26,13 +26,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = '') => {
     if (cond) { pass++; console.log(`\u2713 ${name}`); }
     else { fail++; console.log(`\u2717 ${name} ${detail}`); }
 };
-const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const _readRaw = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const read = withRouteSurface(_readRaw, root);
 const AMP = String.fromCharCode(38); // 与号：避免内联实体字面量被工具链改写
 
 const D = await import('../apps/place/place-data.js');

@@ -36,13 +36,14 @@ import {
     normalizePiggyState, applyTransaction, removeTransactions, createFamilyCard,
     refreshFamilyCards, projectPiggy, readPiggyFace, piggyPromptBlock,
 } from '../apps/piggy/piggy-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DATA_REL = 'apps/piggy/piggy-data.js';
 const DATA_SRC = fs.readFileSync(path.join(ROOT, DATA_REL), 'utf8');
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /**
  * 剥注释（字符状态机，与 v3200 / v3201 同款）。
  * ★ 为什么必须有：本仓纪律「**注释里的提及不算消费**」（E6 / v299 A4 / v3190 A4 /

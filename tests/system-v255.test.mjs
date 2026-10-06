@@ -15,6 +15,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -34,8 +36,20 @@ test('A2 重绑表 key 无重复', () => {
 });
 
 test('A3 每个 key 都能映射到真实单例构造点（防拼写错误静默 no-op）', () => {
-  const miss = KEYS.filter((k) => !new RegExp('VirtualPhone\\.' + k + '\\s*=\\s*new\\s+module\\.').test(idx));
-  assert.deepEqual(miss, [], '表内有 key 全仓无对应 `window.VirtualPhone.X = new module.Y(...)`：' + miss.join(','));
+  /* [v3.61.0 · O6] 构造点面扩为「index.js 内联 ∪ 表字段对」：
+   *   67 个懒加载 App 的 `window.VirtualPhone.X = new module.Y(` 已随表驱动搬进
+   *   config/app-lazy-routes.js，那里 `key: "X"` 与 `cls: "Y"` 成对 —— 它就是该构造点
+   *   在表中的形态（装配器 `new module[lazyRoute.cls](…)` 挂的正是 `[lazyRoute.key]`）。
+   *   判断仍是「每个 key 必须真有构造点」，只是把「构造点在哪」扩到表；
+   *   表缺席或行数不足即 fail-closed 抛（不静默放过）。 */
+  const { parseLazyRoutes, LAZY_ROUTE_TABLE_REL } = require('./_lazy_routes.mjs');
+  const rows = parseLazyRoutes(read(LAZY_ROUTE_TABLE_REL));
+  assert.ok(rows.length >= 60, '表解析异常：只有 ' + rows.length + ' 行 —— 拒判');
+  const miss = KEYS.filter((k) => {
+    if (new RegExp('VirtualPhone\\.' + k + '\\s*=\\s*new\\s+module\\.').test(idx)) return false;
+    return !rows.some((r) => r.key === k);
+  });
+  assert.deepEqual(miss, [], '表内有 key 全仓无对应构造点（`window.VirtualPhone.X = new module.Y(...)` 或表内 key/cls 成对）：' + miss.join(','));
 });
 
 test('A4 rebindLazyApps 定义为函数且逐个安全调用', () => {

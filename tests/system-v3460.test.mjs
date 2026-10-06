@@ -23,6 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/cotdesk/cotdesk-data.js';
 import * as APP from '../apps/cotdesk/cotdesk-app.js';
+import { LAZY_ROUTE_TABLE_REL, readRepoTable, routeSurface, withRouteSurface } from './_lazy_routes.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const CD_DATA = 'apps/cotdesk/cotdesk-data.js';
@@ -41,8 +42,8 @@ const Q = String.fromCharCode(39);
 const BS = String.fromCharCode(92);
 /** 双引号（造 HTML 断言用）：拼装形。 */
 const DQ = String.fromCharCode(34);
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 副本树登记表（跑完必删）。★ 本套件对真仓只读：破坏类负控制只准落在副本上。 */
 const temps = [];
 process.on('exit', () => {
@@ -651,10 +652,14 @@ function wireProblems(files) {
 /** 接线面取数口。★ root 可指向副本树 —— 破坏类负控制只准写副本，绝不写真仓：
  *  node --test 是文件级并行，写真仓会在破坏窗口内被别的套件读到，
  *  且跑批被中断时（finally 来不及执行）会把破坏永久留在仓里。 */
+const TABLE_IN = (dir) => {
+    const p = path.join(dir, LAZY_ROUTE_TABLE_REL);
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : readRepoTable();
+};
 function wireJudgeAt(root) {
     const rd = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
     return wireProblems({
-        apps: rd(APPS), storage: rd(STORAGE), index: rd(INDEX),
+        apps: rd(APPS), storage: rd(STORAGE), index: routeSurface(rd(INDEX), TABLE_IN(root)),
         keys: rd(KEYS), phoneCss: rd(PHONE_CSS)
     });
 }
@@ -663,7 +668,7 @@ function wireJudge() { return wireJudgeAt(ROOT); }
 function stageWire() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_wire_'));
     temps.push(dir);
-    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS]) {
+    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS, LAZY_ROUTE_TABLE_REL]) {
         const dst = path.join(dir, rel);
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), dst);
@@ -1177,8 +1182,9 @@ const DAMAGE = {
     /* ㉛ 接线：会话键前缀丢掉（换会话读到别人的账）。 */
     q32: [STORAGE, '    /^cotdesk_/,', '    /^cotdeskX_/,'],
     /* ㉜ 接线：懒加载分支丢掉（打开页面一片空白）。 */
-    q33: [INDEX, '                } else if (appId === ' + Q + 'cotdesk' + Q + ') {',
-        '                } else if (appId === ' + Q + 'cotdeskX' + Q + ') {'],
+    q33: [LAZY_ROUTE_TABLE_REL,
+        '    { id: "cotdesk", module: "./apps/cotdesk/cotdesk-app.js", key: "cotdeskApp", cls: "CotdeskApp", errTitle: "思维链案头App" },',
+        '    { id: "cotdeskX", module: "./apps/cotdeskX/cotdesk-app.js", key: "cotdeskApp", cls: "CotdeskApp", errTitle: "思维链案头App" },'],
 };
 /** 造一棵**真目录结构**的暂存树（破坏副本按真相对路径落盘，相对 import 才解得了）。 */
 function stageTree() {

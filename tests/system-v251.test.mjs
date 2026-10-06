@@ -8,9 +8,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => readFileSync(join(root, p), 'utf8');
-
+const _readRaw = (p) => readFileSync(join(root, p), 'utf8');
+const read = withRouteSurface(_readRaw, root);
 test('v251 A: 群像（chars）四件套与注册', () => {
     for (const f of ['chars-data.js', 'chars-app.js', 'chars-view.js', 'chars.css']) {
         assert.ok(read(`apps/chars/${f}`).length > 200, `A1 四件套 ${f} 存在`);

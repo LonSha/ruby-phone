@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -15,7 +16,7 @@ const ok = (name, cond, detail = '') => {
 // ========== 1. APPS 注册 vs 路由一致性 ==========
 {
   const appsJs = fs.readFileSync(path.join(root, 'config/apps.js'), 'utf8');
-  const idx = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
+  const idx = routeSurface(fs.readFileSync(path.join(root, 'index.js'), 'utf8'), readRepoTable());
   const apps = [...appsJs.matchAll(/id: '([a-zA-Z]+)'/g)].map(m => m[1]);
   const routes = [...idx.matchAll(/appId === '([a-zA-Z]+)'/g)].map(m => m[1]);
   const dupApps = apps.filter((a, i) => apps.indexOf(a) !== i);

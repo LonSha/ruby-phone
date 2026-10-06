@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (p) => readFileSync(join(root, p), 'utf8');
-
+const _readRaw = (p) => readFileSync(join(root, p), 'utf8');
+const read = withRouteSurface(_readRaw, root);
 test('v249 A: 钱袋（wallet）四件套与注册', () => {
     const apps = read('config/apps.js');
     const idx = read('index.js');

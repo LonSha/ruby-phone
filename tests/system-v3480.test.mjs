@@ -24,6 +24,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as DAT from '../apps/uterus/uterus-data.js';
 import * as APP from '../apps/uterus/uterus-app.js';
 import { copyTreeSafe } from './_mirror_tree.mjs';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const UD_DATA = 'apps/uterus/uterus-data.js';
@@ -44,7 +45,8 @@ const BS = String.fromCharCode(92);
 const DQ = String.fromCharCode(34);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
-const read = (rel, root) => fs.readFileSync(path.join(root || ROOT, rel), 'utf8');
+const _readRaw = (rel, root) => fs.readFileSync(path.join(root || ROOT, rel), 'utf8');
+const read = (rel, root) => withRouteSurface(_readRaw, root || ROOT)(rel, root);
 /** 判据只需模块的上限常量：接口面收窄成一份只带上限的小对象。 */
 const apiOf = (M) => ({ UD_CELLS_MAX: M.UD_CELLS_MAX, UD_ROWS_MAX: M.UD_ROWS_MAX });
 /** 副本树登记表（跑完必删）。★ 本套件对真仓**只读**：任何破坏类负控制只准落在副本上。 */

@@ -1251,8 +1251,29 @@ export class PhoneShell {
         }
 
         // 3. 初始化多图层容器
+        /* [v3.61.0 · O1] 由「覆盖 screen.innerHTML」改为「逐件补齐」。
+         *   为什么必须改（真浏览器实测抓到的真缺陷，不是整洁性偏好）：
+         *     本块此前写 `this.screen.innerHTML = '<div class="view-stack-container">…'`，
+         *     而 createInPanel 把 `<button id="phone-back-button">` 渲染为 `.phone-screen`
+         *     的**直系子节点**（那里的注释明写「不在 view-stack 内，因此切视图不会重建它」）。
+         *     但 setContent 是唯一的内容入口、homeScreen.render() 也走它 ——
+         *     于是**第一次渲染就把整个 screen 的 innerHTML 换掉，按钮当场被销毁**；
+         *     且本块只在首帧进（之后走 data-raw-html diff 分支），再无任何路径把它加回来。
+         *     用户表现：进了 App 左上角**没有返回键**，只能靠不可见的边缘右滑退出 ——
+         *     正是 v3.56.0 想治、却只治了「渲染出来」没治「活下来」的那一格。
+         *     原注释里「常驻、切视图不会重建」是静态读源码得出的断言，与运行时相反。
+         *   改法要点：只 append 缺失的那两件，绝不触碰 screen 里已有的兄弟节点。
+         *   子节点顺序不影响视觉（两者都是 absolute 定位，back-button 走 z-index:40）。 */
         if (!this.screen.querySelector('.view-stack-container')) {
-            this.screen.innerHTML = '<div class="view-stack-container" style="position:relative;width:100%;height:100%;"></div><div class="phone-home-indicator"></div>';
+            const stackEl = document.createElement('div');
+            stackEl.className = 'view-stack-container';
+            stackEl.style.cssText = 'position:relative;width:100%;height:100%;';
+            this.screen.appendChild(stackEl);
+            if (!this.screen.querySelector('.phone-home-indicator')) {
+                const indicatorEl = document.createElement('div');
+                indicatorEl.className = 'phone-home-indicator';
+                this.screen.appendChild(indicatorEl);
+            }
             this.bindHomeIndicator();
         }
         const stack = this.screen.querySelector('.view-stack-container');

@@ -40,7 +40,18 @@ if (!fs.existsSync(idxPath)) {
   console.error('[declarative] 读不到 index.js —— fail-closed 拒判');
   process.exit(2);
 }
-const IDX = fs.readFileSync(idxPath, 'utf8');
+/* [v3.61.0 · O6] 判据面：index.js 内联构造点 ∪ 懒加载路由表渲染回的同形构造点。
+ *   67 处 `window.VirtualPhone.X = new module.Y(` 已搬进 config/app-lazy-routes.js，
+ *   只读 index.js 会让槽位反查与散点扫描一起塌（实测「类 77 / 槽位 22 / App 槽位 14」
+ *   低于下限 ⇒ 探针 exit 2 ⇒ v324 顶层断言失败）。扫描面跟着代码走，口径一字未改。
+ *   探针是 .cjs：Node 24 支持 require ESM，故直接 require 共享单源。
+ *   副本 root 里没有表文件属常态 ⇒ 回落真仓的表（表那一半始终取真源）。 */
+const _lazyRoutes = require(path.join(__dirname, '..', '_lazy_routes.mjs'));
+const _lazyTableFor = (dir) => {
+  try { return fs.readFileSync(path.join(dir, 'config', 'app-lazy-routes.js'), 'utf8'); }
+  catch (_e) { return _lazyRoutes.readRepoTable(); }
+};
+const IDX = _lazyRoutes.routeSurface(fs.readFileSync(idxPath, 'utf8'), _lazyTableFor(ROOT));
 if (!IDX.length) {
   console.error('[declarative] index.js 为空 —— fail-closed 拒判');
   process.exit(2);

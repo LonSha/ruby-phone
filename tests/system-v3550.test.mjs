@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { routeSurface, readRepoTable } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -106,7 +107,10 @@ function ownedFiles(root, id, dir) {
 /** 实例变量 → appId：同一条加载分支里的 appId === '<id>' 紧邻 window.VirtualPhone.<var> = new。
  *  为什么不在判据里手抄一份映射：手抄的映射就是下一个「展示面与真源脱节」的种子。 */
 function varToAppId(root) {
-    const idx = readFrom(root, INDEX_REL);
+    /* [v3.61.0 · O6] 取判据面：67 个 `window.VirtualPhone.X = new …` 已搬进
+     *   懒加载路由表，只读 index.js 会让「实例变量 → appId」映射塌掉（实测 22 → 16），
+     *   F4/F6 两列的磁盘复算随之全错。扫描面跟着代码走，判据口径不动。 */
+    const idx = routeSurface(readFrom(root, INDEX_REL), readRepoTable());
     const out = {};
     const re = new RegExp('window' + BS + '.VirtualPhone' + BS + '.' + '(' + BS + 'w+' + ')' + ' = new ', 'g');
     let m = re.exec(idx);
@@ -146,7 +150,10 @@ function recompute(root) {
     notes.varToId = Object.keys(vmap).length;
     const F4 = new Set([...blk.matchAll(new RegExp('app: _vp' + BS + '.' + '(' + BS + 'w+' + ')', 'g'))].map((m) => vmap[m[1]] || m[1]));
     /* F6：换会话重绑表 */
-    const idx = readFrom(root, INDEX_REL);
+    /* [v3.61.0 · O6] 取判据面：67 个 `window.VirtualPhone.X = new …` 已搬进
+     *   懒加载路由表，只读 index.js 会让「实例变量 → appId」映射塌掉（实测 22 → 16），
+     *   F4/F6 两列的磁盘复算随之全错。扫描面跟着代码走，判据口径不动。 */
+    const idx = routeSurface(readFrom(root, INDEX_REL), readRepoTable());
     const ri = idx.indexOf('const ST_PHONE_REBIND_APP_KEYS = [');
     notes.f6Host = ri >= 0;
     const rbBlk = ri >= 0 ? idx.slice(ri, idx.indexOf(NL + '];', ri)) : '';

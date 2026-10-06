@@ -32,10 +32,12 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { copyTreeSafe } from './_mirror_tree.mjs';
 import { execFileSync } from 'node:child_process';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const _readRaw = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 const at = (rel) => pathToFileURL(path.join(ROOT, rel)).href;
 
 const BG = 'config/back-guard.js';

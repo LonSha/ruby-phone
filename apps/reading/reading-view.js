@@ -85,7 +85,11 @@ export class ReadingView {
         </style>
         ${this.currentBook ? this._renderReader(tc) : this._renderShelf(tc)}
         `;
-        this.app.phoneShell.screen.innerHTML = html;
+        /* [v3.61.0 · O1] 同 gacha-view：唯一内容入口纪律 —— 不再直接覆盖 `.phone-screen`，
+         *   改走 setContent（内容落进 [data-view-id] 图层），否则返回键与图层栈会被这次渲染抹掉。
+         *   viewId 用「阅读-书架 / 阅读-正文」两态区分，切态时历史栈能各留一层（返回键行为与其余 App 一致）。
+         *   `_bind()` 读的是 screen（图层祖先），选择器一字不用改。 */
+        this.app.phoneShell.setContent(html, this.currentBook ? 'reading-reader' : 'reading-shelf');
         this._bind();
     }
 

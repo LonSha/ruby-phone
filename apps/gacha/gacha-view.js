@@ -62,7 +62,14 @@ export class GachaView {
       </div>
       <div class="ga-body">${this._renderBody()}</div>
     </div>`;
-    this.app.phoneShell.screen.innerHTML = html;
+    /* [v3.61.0 · O1] 唯一内容入口纪律：此前这里写 `this.app.phoneShell.screen.innerHTML = html`，
+     *   直接覆盖 `.phone-screen` 的全部子节点 —— 后果与 phone-shell 的第 3 步同源：
+     *   把 `.view-stack-container`（以及返回键等 screen 直系成员）一并抹掉，
+     *   且因为没有 view-stack 了，下一次 setContent 会以为自己是首帧、重建一份栈，
+     *   历史栈与图层随之错位。改成走 setContent 后，内容落进 [data-view-id] 图层，
+     *   与全仓另外 40 余处 App 同一条路径。
+     *   `_bind()` 里读的是 `screen`（图层的祖先），选择器一字不用改。 */
+    this.app.phoneShell.setContent(html, 'gacha-main');
     this._bind();
   }
 

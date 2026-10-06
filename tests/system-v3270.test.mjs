@@ -82,6 +82,7 @@ import {
     normalizeWeatherState, emptyWeatherState, setObservation, clearObservation,
     clearAllObservations, readWeatherFace, slotReading, projectWeather, weatherPromptBlock,
 } from '../apps/weather/weather-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -89,7 +90,8 @@ const AVF_REL = 'apps/avatarframe/avatarframe-data.js';
 const SHP_REL = 'apps/shop/shop-data.js';
 const BLK_REL = 'apps/block/block-data.js';
 const WTH_REL = 'apps/weather/weather-data.js';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 const VNUM32 = (v) => String(v).split('.').reduce((a, x) => a * 1000 + Number(x), 0);
 
 /** 固定「现在」：倒计时与时效是时间逻辑，判据必须与真实时钟解耦。 */

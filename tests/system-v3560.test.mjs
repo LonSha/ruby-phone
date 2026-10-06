@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { routeSurface, readRepoTable } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -129,9 +130,14 @@ function backProblems(root) {
 
     /* B1 必须真渲染出按钮，且挂在 .phone-screen 直系（不在 view-stack 内 —— 图层会被
      *    setContent 反复重建与回收，按钮跟着图层走就会「切一次 App 就没了」）。 */
-    if (hits(shell, 'id=' + DQ + 'phone-back-button' + DQ) !== 1) bad.push('B1 未渲染返回按钮');
-    const screenStart = shell.indexOf('<div class="phone-screen"');
-    const btnAt = shell.indexOf('id=' + DQ + 'phone-back-button' + DQ);
+    /* ★ 判据面取**代码面**（剥注释）：v3.61.0 为本块补了一段解释「此前为什么会被
+     *   第一次 setContent 杀掉」的注释，注释里逐字引着 `<button id="phone-back-button">` ——
+     *   裸文本扫描会把**说明**读成第二个按钮（判据自指伪证，本仓最贵的形态之一）。
+     *   与同文件 A1/A7 的负判据同一纪律。 */
+    const shellCode = codeOf(shell);
+    if (hits(shellCode, 'id=' + DQ + 'phone-back-button' + DQ) !== 1) bad.push('B1 未渲染返回按钮');
+    const screenStart = shellCode.indexOf('<div class="phone-screen"');
+    const btnAt = shellCode.indexOf('id=' + DQ + 'phone-back-button' + DQ);
     if (screenStart < 0 || btnAt < 0 || btnAt < screenStart) bad.push('B1 返回按钮不在 .phone-screen 之后（可能被放进图层）');
     /* B2 绑定与可见性同步必须真被调用，不能只留方法定义 */
     if (hits(shell, 'this.bindBackButton();') !== 1) bad.push('B2 bindBackButton 未被调用');
@@ -437,9 +443,12 @@ const D = [
         'this.bindIconPager();',
         'void 0;', 'pagerProblems'],
     /* D5：返回按钮渲染被拿掉 */
+    /* ★ 锚点收紧为含 class= 的唯一串：只写 `id="phone-back-button"` 时，
+     *   v3.61.0 的解说注释里也有一处同形引用 ⇒ 命中 2 次，破坏就不再单一
+     *   （breakIn 会抛「锚点不唯一」，负控制变成「跑不起来」而不是「响过了」）。 */
     ['B1 返回按钮被拿掉', SHELL_REL,
-        'id=' + DQ + 'phone-back-button' + DQ,
-        'id=' + DQ + 'phone-back-x' + DQ, 'backProblems'],
+        'class=' + DQ + 'phone-back-button' + DQ + ' id=' + DQ + 'phone-back-button' + DQ,
+        'class=' + DQ + 'phone-back-x' + DQ + ' id=' + DQ + 'phone-back-x' + DQ, 'backProblems'],
     /* D6：返回按钮搬进图层（切一次 App 就没了） */
     ['B1 返回按钮搬出 .phone-screen', SHELL_REL,
         '<div class="phone-screen" id="phone-screen">',

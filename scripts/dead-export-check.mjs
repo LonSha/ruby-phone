@@ -72,6 +72,8 @@ const rootIdx = args.indexOf('--root');
 const root = rootIdx >= 0
   ? path.resolve(args[rootIdx + 1] || '.')
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// 真仓判定：未传 --root 即真仓（产线文件与产线基线只对真仓成立）
+const REAL_REPO = rootIdx < 0;
 const listMode = args.includes('--list');
 const updateMode = args.includes('--update');
 
@@ -374,6 +376,27 @@ if (codeTexts.size !== texts.size) {
   process.exit(2);
 }
 
+/* [v3.61.0 · 计划 O6/O8] 数据驱动消费面：config/app-lazy-routes.js 的 cls 字段集合。
+ *   从表文件原文提取 `cls: '<名字>'` 字面量（原文提取，不剥字符串 —— 字段本体就是字符串）。
+ *   表文件缺席/解析不到任何行 = 结构漂移，fail-closed 拒判（exit 2）：
+ *   否则装配器的消费面成了「门看不见的黑洞」，比误报更伤。 */
+const LAZY_ROUTE_REL = 'config/app-lazy-routes.js';
+const lazyRouteRaw = texts.get(LAZY_ROUTE_REL);
+const LAZY_CLS_SET = new Set();
+if (typeof lazyRouteRaw === 'string') {
+  for (const m of lazyRouteRaw.matchAll(/cls:\s*['"]([^'"]+)['"]/g)) LAZY_CLS_SET.add(m[1]);
+}
+/* ★ 作用域：只对**真仓**成立（未传 --root 时 REAL_REPO=true）。
+ *   为什么必须有这一层：负控制走的是「合成小仓 + 不开夹具 + --root 指向合成仓」
+ *   通道（v268-N1 注释明写「不开夹具 ⇒ E10 启用」），那些 root 里没有产线的
+ *   config/app-lazy-routes.js —— 那是**合成仓的常态**，不是本仓的结构漂移。
+ *   少了这层，闸会在合成仓上抢先 exit 2、霸占整个错误面，让 E10 的存活自证读不到
+ *   （实测：临时目录放一个 `export const onlyNamed = 1;` ⇒ rc=2 且只报 lazy-route）。 */
+if (REAL_REPO && !FIXTURE_MODE && LAZY_CLS_SET.size < 60) {
+  console.error('[dead-export] lazy-route 表解析异常：cls 字段 ' + LAZY_CLS_SET.size + ' 个（<60），消费面判定失效，fail-closed 拒判');
+  process.exit(2);
+}
+
 const isExternalConsumer = (rel) => EXTERNAL_CONSUMER_DIRS.some(d => rel.startsWith(d));
 
 let totalExports = 0;
@@ -415,6 +438,16 @@ for (const f of files) {
       const t = codeTexts.get(g.rel);   // v2.42.0: 只认真代码里的消费
       if (typeof t !== 'string') continue;
       if (re.test(t)) { cross++; break; }
+      /* [v3.61.0 · 计划 O6/O8] 数据驱动消费面（lazy-route 表的 cls 字段）：
+       *   phone:openApp 的 67 个 App 装配收敛为表驱动后，index.js 侧的
+       *   `new module.XxxApp(...)` 词面消失，换成 `new module[lazyRoute.cls]`
+       *   （值来自 config/app-lazy-routes.js 的 `cls: 'XxxApp'` 字符串字段）。
+       *   E6 剥字符串后词匹配扫不到它 ⇒ 67 个真实消费的类被误报零消费。
+       *   这里按**数据驱动**口径补判：表文件里 `cls: '<名字>'` 字面量
+       *   就是运行时真实发生的消费（装配器真的用它 new 实例）——
+       *   只认 config/app-lazy-routes.js 这一个登记过的表文件，
+       *   不放开「任何字符串提及都算消费」（那会把 E6 的洞重新打开）。 */
+      if (g.rel === LAZY_ROUTE_REL && LAZY_CLS_SET.has(e.name)) { cross++; break; }
     }
     if (cross > 0) { stat.crossFile += 1; continue; }
     dead.push({ name: e.name, file: f.rel, line: e.line });

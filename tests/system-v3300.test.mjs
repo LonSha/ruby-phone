@@ -87,6 +87,7 @@ import {
     isValidDateStr, pruneFootprintStore, footprintsOf, putFootprints, pruneDiaryStore,
     parseFootprintLines, parseLetterInput, parseDiaryInput,
 } from '../apps/loverspace/loverspace-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -94,8 +95,8 @@ const DATA_REL = 'apps/loverspace/loverspace-data.js';
 const APP_REL = 'apps/loverspace/loverspace-app.js';
 const VIEW_REL = 'apps/loverspace/loverspace-view.js';
 const CSS_REL = 'apps/loverspace/loverspace.css';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 const DAY = 24 * 60 * 60 * 1000;
 
 /** 剥注释（字符状态机，与 v3200 / v3250 / v3260 / v3270 / v3290 同款）。

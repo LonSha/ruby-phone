@@ -65,13 +65,14 @@ import {
     removeCard, removeItem, streakOf, projectPunch, readPunchFace, pendingItems,
     punchPromptBlock,
 } from '../apps/punchcard/punchcard-data.js';
+import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const RGX_REL = 'apps/regexfilter/regexfilter-data.js';
 const PCH_REL = 'apps/punchcard/punchcard-data.js';
-const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
+const _readRaw = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const read = withRouteSurface(_readRaw, ROOT);
 /** 固定「现在」：日键与连续天数是日历逻辑，判据必须与真实时钟解耦。
  *  `new Date('YYYY-MM-DDTHH:mm:ss')`（无 Z）按 ES2016+ 是**本地时间**，故日键在任何时区都稳定。 */
 const NOW = new Date('2026-09-30T12:00:00').getTime();
