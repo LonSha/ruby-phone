@@ -770,6 +770,19 @@
 - **遗留项**：第 1 层余下五件（头像框 / 商城 / 自定义组件 / 拉黑 / 天气）与整个第 2 层；真宿主实机验证仍不可做（见 `docs/runtime-verification-boundary.md`）。
 
 ---
+## 迭代 120 — v3.62.0 · X8 第一切片：分支对照工作区（只读）—— 「换成另一个分支，我的约定/钱/时间会变成什么」
+- 【定位 · X8】X8 原文「用户选两分支时呈现**角色状态、约定、财务和剧情时间的语义变化**；恢复前展示影响、缺面和会话身份，恢复只委托真实宿主/引擎 owner。**先完成只读导航，再推进受控恢复交接**」。本仓实测：四样语义面各有真源（上游检查点内容级对照 `config/checkpoint-content-contract.js`、`config/story-clock.js`、`config/rollback-preview.js`、`config/resume-brief.js`），但**没有任何一处**把「选两分支 → 这四样各变成什么样」收成一条读数；上游那条对照只给「键面 + 原始 deep」，**没有把 payload 映射成语义组**。用户只能各自打开一遍页面靠眼睛对 —— 而这四样恰好都是语义化的（约定五态、财务正负、时间锚点），肉眼对账最容易把「未知」读成「没有」。
+- 【本版新增】`config/branch-contrast.js`（347 行，纯函数只读）三件事：① **归组**：把键面差异按四组语义面（`character` / `commitment` / `finance` / `storyTime`）归类，每行带原始键路径可回源；归不进四组的键**如实单列** `unknownKeys`（不硬塞）。② **跨支隔离**（X8 核心验收点「分支 A 的秘密不进入 B」）：按支给秘密名单（`secretKeysA` / `secretKeysB`），真检出 `a-secret-in-b` / `b-secret-in-a`；**未给名单时 `checked:false`**（未核对≠已通过）。③ **三态不同形**：`ok` / `empty`（比过了确实无差异）/ `face-absent`（读不到来源）/ `engine-absent`（上游归因透传）/ 上游半成功 `deep-unavailable`（键面给了、内容级没有）**单独成形**，不得与「一样」同形。本模块**只读**（`applied` 恒 `false`），不含任何写面 —— 恢复委托真实宿主/引擎 owner（X8 原文）。
+- 【不重算上游口径】内容级差异的唯一实现在上游 `diffPayloadsDeep`（经 `checkpoint-content-contract.js` 转发）；本模块**只归组**，不另写一份比对。读差异只有两条路：调用方给的两支 `payloadA/B`，或调用方注入的 `readDiff`（本模块**不自带** import —— 那会把「上游在不在」变成模块级副作用）。
+- 【本版自己抓到的两处缺陷 · 逐条有据】① 死变量 `let diffReason`（声明未用）与 `let leaks = 0`（恒 0 的**假计数**，`countLeak` 首版根本没在判定泄漏）—— 后者是本仓定性过的「看起来在守、实际数不出」形态，已改为按支口径的**真判定**（B 侧独有且属 A 秘密面 ⇒ 泄漏 / 反向同理）；② 文案读旧字段 `sealed` 而实际按支给名单，已改读 `crossLeak.checked`（未核对与已核对无泄漏**不同形**）。
+- 【首跑抓到的真缺陷（D2）】`deep-unavailable` 半成功时 `deep=null`，代码落到 payload 分支拿 `undefined` 做 `Object.keys` ⇒ 抛错（11 条里 1 条红）。修法：显式跟踪「差异是否来自 payload」（`fromPayload`），payload 分支加存在性防护；半成功路径由 `state=empty + reason=deep-unavailable` 如实归因。
+- 【判据】`tests/v3620_branch_contrast.test.mjs`（**10 条**）：A 只读结构（`applied:false` + 四组齐全）/ B1 归组正确（含 `groupOfKey` 复算 + 未归组键单列）/ B2 不重算上游口径（`readDiff` 注入路径 + 参数透传）/ C1 跨支泄漏**真检出**（双向）/ C2 未核对≠通过 / D1 三态不同形 / D2 半成功单列 / E 四态缺席各自归因 / F **真源码破坏**（摘掉一侧泄漏判定 ⇒ C1 真判据实测失败，另一侧不受影响）/ G 自防护 + 当版锚点。
+- 【门禁】十一道门全绿（syntax / import-resolve / test（本套件 10/10）/ dead-exports / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / upstream-face）；按用户纪律不跑全量。
+- 【版本升至 3.62.0（四源同源）】`manifest.json` / `package.json` / `index.js`（`ST_PHONE_VERSION` + 公告块）/ `update-log.json`（`latest` + `head` + 新条目）一次抬齐；本文件新增本迭代段。
+- 【双项目联动（用户指令「双项目记得都推进」）】本项与 `lonsha-memory-plugin` 的 **X3 注入策略对照**（同批交付 v3.289.0）配套：上游答「换成别套配置会怎样」，本仓答「换成另一个分支会怎样」——两者同一纪律（**只读对照、不应用、来源三档、未取到实际激活时只报有限范围**）。
+- 【遗留 · X8 后续切片】只读导航已落地；待推进「受控恢复交接」：恢复前预检、恢复后回读、旧异步写入被拒（`APPLY_STATES` 四态常量已就位，`applied` 仍恒 false）。
+
+---
 ## 迭代 83 — v3.25.0 素材缝合路线图第 1 层第一件：存钱罐 App（`piggy_bank.js` 缝成纯函数内核 + 会话语义落盘）+ 自抓三件缺陷（缩进错级 / 注释也进读数 / 判据自己错）
 - **任务来源**：无人值守模式下的自主迭代，接 `INVENTORY_V2.md`（素材缝合路线图）的**第 1 层**第一件。
   第 0 层（L0 静态素材接真消费点）已在 v3.24.0 交付；第 1 层是「小 App 批量」（单件 18–50KB），本版起手存钱罐。

@@ -1,5 +1,5 @@
 {
-  "latest": "3.61.0",
+  "latest": "3.62.0",
   "versions": {
     "3.61.0": {
       "version": "3.61.0",
@@ -2950,7 +2950,14 @@
         "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
         "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
       ]
+    },
+    "3.62.0": {
+      "version": "3.62.0",
+      "date": "2026-10-06",
+      "items": [
+        "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。"
+      ]
     }
   },
-  "head": "3.61.0"
+  "head": "3.62.0"
 }

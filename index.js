@@ -65,7 +65,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.61.0';
+const ST_PHONE_VERSION = '3.62.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -242,10 +242,10 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-05",
+    date: "2026-10-06",
     items: [
+        "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。",
         "【运行时验证边界复校 · v3.61.0 推翻一条长期结论】本环境实测可跑真浏览器（Chromium 131，L4 层五场景×四视口全绿）——自动化门禁现在能保证的不止「结构正确与接线完整」，还包括独立浏览器里的布局/命中/交互接线；仍不能保证的是真宿主（SillyTavern 本体）的事件广播、持久化与双扩展共装。遇到 看起来没坏但显示不对 的问题，属本文登记的第二类，需在真机复现后再修（详见 docs/runtime-verification-boundary.md）。",
-
         "【定位 · 计划 O6 入口接线瘦身】本版把 phone:openApp 处理器里 67 段「结构上完全同构」的懒加载五件套（instrumentImport → 单例 new → render → catch）收敛为 config/app-lazy-routes.js 单源表 + 一个通用装配器；14 个有真实差异逻辑的分支（构造参数 / 缓存同步 / 通话避让 / 双 import 兜底 / 按会话状态分流）原样内联保留 —— 表驱动会抹掉它们的差异，把它们写进表反而是倒退。index.js 由 808555 字节降至约 741KB（-67.6KB）。",
         "【本版自己抓到的缺陷 · 复制粘贴的直接产物】lexiscore 分支的 catch 块里 showNotification 重复两次（加载失败时用户会看到两条重复错误通知）—— 67 段近逐字重复的形态里这是必然结果，本刀当场修掉。",
         "【门禁随刀升级而非放松 · 两道】① dead-export 门新增「数据驱动消费面」：表文件里 cls 字段的字符串字面量是运行时真实发生的消费（装配器真的用它 new 实例），只认 config/app-lazy-routes.js 这一个登记过的表文件、表缺席或解析异常即 fail-closed 拒判，不放开「任何字符串提及都算消费」；② registry 门的懒加载分支覆盖面升级为「index.js 内联分支 ∪ 表文件 id 字段」，R1 双向覆盖在新形态下仍 81↔81 零孤儿。",
