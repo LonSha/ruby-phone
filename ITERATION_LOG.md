@@ -3,7 +3,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （211 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （215 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -11,6 +11,17 @@
 ---
 
 ---
+## 迭代 122 — v3.64.0 · 探针纯度复校（块注释也算注释）+ 检查点下限判据交棒 + 两份活基线零手抄重绑
+- 【定位 · 本轮首跑真读数】v3.63.0 全量回归 `node --test tests/*.test.mjs` 实测 `1..2978` / pass 2976 / **fail 2** / duration 153163ms / EXIT=1。两处红是**同一条断言、同一形态**：`tests/system-v325.test.mjs` 与 `tests/system-v326.test.mjs` 的「A2 探针读数与基线逐项一致」均报 `Expected values to be strictly equal: 373 !== 371`（strictEqual，expected 371 / actual 373）。八道门单独真跑全部 EXIT=0（registry / keys / lifecycle / dead-exports / bridge-contract / weak-coercion / source-derivation / upstream-face）⇒ 红在**探针与基线之间**，不在门禁。
+- 【根因三条 · 逐条实测】① **枚举面陈旧**：两份基线的 `rebuilds` 段最后一条都停在 **v3.58.0**（记 370），此后 v3.61.0 / v3.62.0 / v3.63.0 新增的 config 侧新件（`branch-contrast.js` v3.62.0、`resume-handoff.js` v3.63.0、`app-lazy-routes.js` 等）**从未重绑**；实测枚举面 = apps 315 + config 58 = **373**。② **preview 42 -> 34 与 globalRead 8 -> 4 是同一缺陷形态（探针口径缺陷）**：`branch_play_probe.cjs` 的 `countTokens` 与三处读文件**只跳 `//` 行、不剥块注释**，而块注释恰是写规格的地方 ⇒「本模块绝不碰 X」被算成「X 已实施」。③ **branchFace 2 -> 0 同族**，且原那 2 点**全部**落在 `config/branch-contrast.js` 的文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 `checkpointCompare` 面），与「下游有没有接上游的**分支只读对照**面」**同名不同物**，如实归零正是该探针该给的读数。
+- 【本版修复 ① 探针纯度】`tests/audit/branch_play_probe.cjs` 补上「**块注释也算注释**」纪律（与 `schedule_conflict_probe.cjs` 的 **v3.22.0** 同款 `stripBlockComments`：匹配前整段抹白、**保留换行** ⇒ 行号不变），`IDX_CODE` 与三处读文件统一走新增的 `readCode`，头部留档补第 ④ 条形态纪律。实测读数：`checkpointFaceHits` **1 -> 0**（原那 1 点在 `config/checkpoint-content-contract.js` 文件头，逐字写着「绝不碰 `saveCheckpoint` / `dropCheckpoint` 这类写面」—— 它声明的是**没做**写面）、`previewFaceHits` **43 -> 34**（9 处块注释行：diagnose-data 3 / diagnose-view 1 / rollback-preview 2 / boot-timing 1 / num-gate 1 / branch-contrast 1）、`upstreamGlobalReadSites` **8 -> 4**（graph-bridge 1 / memory-app 2 / world-bridge 1，后者逐字写「不摸 `window.LonShaEvidenceWorkbench`」）。**回滚覆盖面 41 点 / 4 文件 / 12 入口定义一格未动**（rollback 族本就没有块注释命中，已实测）⇒ v326 D3 真源码破坏负控制不受影响。
+- 【本版修复 ② 连带判据的交棒改写（同批，不是事后补）】探针诚实化**必然**牵动一条下限判据：`checkpointFaceHits` 归零会打破 `system-v326.test.mjs` 的 `assert.ok(rep.checkpointFaceHits >= 1, ...)`。按本仓纪律**改写为版本无关的真判据**：真源四出口（`readLonshaCheckpointFace` / `readCheckpointContentDiff` / `checkpointContentLines` / `checkpointFaceLine`）**在场** + 产品面 `apps/diagnose/diagnose-data.js` **真调用**（import 进来的名字不算消费）。两条下策都不取：**不删断言**（删断言 = 洗断言）、**不换 token 把散文重新算绿**（那等于把散文固化成读数）。同一件事第十道门 `scripts/bridge-contract-audit.mjs` 的 **J13** 早已以更强形式守着（面 `checkpointCompare` / 读出口 `readLonshaCheckpointFace` / 产品侧下限 1；实测消费点 1、真源四出口在场）—— **文本计数版退场，真调用版接棒**；本条不再够拦住「删实现留注释」的形态已在留档里写明代价。
+- 【本版修复 ③ 基线零手抄重绑】`tools/rebind_v3640_baseline.py`（沿用 house pattern：现场跑探针取真读数、默认 dry-run、`--write` 才落盘、写进 `rebuilds` 段的 what / why / readings / unchanged / not_done）：`branch_play_baseline.json` 五格改（`files_scanned` 371 -> **373**、`checkpoint_face_hits` 1 -> **0**、`preview_face_hits` 42 -> **34**、`upstream_global_read_sites` 8 -> **4**、`branch_face_hits` 保持 **0**），`schedule_conflict_baseline.json` 一格改（`files_scanned` 371 -> **373**；消费点 23 / 消费文件 6 / 本地引擎 0 与名单逐字不变）。脚本内自带**未动项对账**（`unchanged` 列的每个键必须与现场逐项相同，防「顺手改了还写没动」）与**判据散文复算对账**（现场非冻结判据的 got_text 必须与基线逐字相同）。
+- 【验证】`tests/system-v325.test.mjs` **15/15** · `tests/system-v326.test.mjs` **18/18**，两处红转绿（原地复跑实测）。四份活基线中另两份（`lifecycle_declarative`、`long_chat`）**零漂移**，本版未动它们。
+- 【边界】本版治的是**探针口径与判据形态**，零产品面改动（`config/` 与 `apps/` 一个字节未改）⇒ 语法门 642 文件 / 导入门 386 文件 625 条两读数一字未动。块注释纪律目前只在 `branch_play_probe` 补齐（`schedule_conflict_probe` 早在 v3.22.0 已立）；日后新增走子串匹配的探针仍须逐件核对是否同步 —— 这条作为 not_done 写进了两份基线。
+- 【运行时验证边界 · v3.64.0 复校】本版把边界文档（docs/runtime-verification-boundary.md）按当版复校一次：数字按真跑刷新（语法门 642 文件 / 导入门 386 文件 625 条），边界结论不变 —— 本环境已能跑真浏览器（L4 层布局 / 命中 / 交互接线），但真宿主（SillyTavern 本体）的事件广播、持久化与双扩展共装仍不能保证：这类「看起来没坏但显示不对」的形态只能在真宿主里才暴露，自动化门禁结构上够不到。本版零产品面改动（config 与 apps 一个字节未改），故两道门的读数一字未动（已自证）。
+- 【版本升至 3.64.0（五源同源）】`manifest.json` / `package.json` / `index.js`（`ST_PHONE_VERSION` + 公告块）/ `update-log.json`（`latest` + `head` + 新条目）一次抬齐；本文件新增本迭代段；边界文档按当版复校。
+
 ## 迭代 121 — v3.63.0 · X8 第二切片：受控恢复交接（预检 → 执行 → 回读 三段闸门）
 - 【定位 · X8】X8 原文「恢复只委托真实宿主/引擎 owner。**先完成只读导航，再推进受控恢复交接**」；验收原文「**恢复前预检、恢复后回读，旧异步写入被拒**」。本仓实测：三段里**两段不存在、一段只做了一半**。① 恢复前预检此前**不存在** —— 全仓唯一与读档有关的写面在 `config/floor-store.js`（`appendBatch` / `removeByFloor` / `removeById`）与 `apps/archive/archive-data.js`（覆盖式导入 / 全量重置），它们**拿到指令就动手**，没有任何一处先回答「现在到底能不能恢复」。② 恢复后回读此前**不存在** —— 「动作抛错」与「写了但写丢了」长得一样。③ 旧异步写入被拒**只做了一半**：`config/session-gate.js`（O4 交付）能挡旧回信，但它判的是「**会话身份**变了没」，而**恢复动作不改会话身份**（改的是数据）—— 恢复期间飞出去的回信在它眼里完全合法，会把旧分支内容写进刚恢复好的存档。
 - 【本版新增】`config/resume-handoff.js`（463 行，纯函数，只 import 取数门 `numOrNull`）三件事：① **预检四道**（目标 / 会话身份 / 在飞回信 / 当前数据面）收成三档 `ok` / `blocked` / `unusable` —— **不可测 ≠ 通过**：目标清单读不到报 `unusable` 而**不是**「没有这份存档」（两者处置相反）；有在飞回信则 `blocked` 且**点名**是哪几条；非空数据面显式告知「会被覆盖」，空档不说（不造成噪声）。② **交接委托真实 owner**（`apply` 由调用方注入）——本模块自身**零写面**；同一 `handoffId` 幂等（重复调用返回首次结果、执行体只跑一次）；未注入执行体即 `held`（不去猜一条写入路径）。③ **回读三态** `ok` / `mismatch` / `unreadable` 互不同形 —— **写面自述的 `{ok:true}` 不作为恢复成功的证据**：自述成功而回读不符 ⇒ `partial`（不是 `done`）；`mismatch` 逐键点名（含「回读多出来的键」）。
@@ -5364,7 +5375,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.63.0`（五源同源）
+- **当前版本**：`3.64.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

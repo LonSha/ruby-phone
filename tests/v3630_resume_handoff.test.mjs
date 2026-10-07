@@ -356,6 +356,11 @@ test('v3630 G. 自防护 + 当版锚点（V4 计数形态）', async () => {
     assert.ok(self.includes(A_LIST_UNREADABLE), '本档须持有锚点③原串');
     const pkgRaw = JSON.parse(readRoot('package.json')).version;
     const vnum = (s) => String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0);
-    assert.equal(vnum('3.63.0'), vnum(pkgRaw), '当版锚点须与 package.json 同源（V4 计数形态）');
+    /* [v3.64.0 交棒] 原来的当版硬等号（vnum 等于 3.63.0）是**抬版即红**的写法：
+     *  本套件描述的是 v3.63.0 交付的那个模块，而 package.json 的版本会随每一版上抬。
+     *  按本仓惯例（v3620 G 已先例、v3270 同款口径）改为**下限形**：判据钉历史事实
+     *  （该模块自 3.63.0 出生），不随抬版漂移。这不是放宽 —— 当版硬等号由当版套件接管。 */
+    assert.ok(vnum(pkgRaw) >= vnum('3.63.0'),
+        '当版锚点须 ≥ 出生版（下限形，V4 计数形态；实 ' + pkgRaw + '）');
     ok('自防护 + 当版锚点 ' + pkgRaw);
 });

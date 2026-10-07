@@ -18,15 +18,15 @@
     ]
   },
   "readings": {
-    "files_scanned": 371,
+    "files_scanned": 373,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
-    "upstream_global_read_sites": 8,
+    "upstream_global_read_sites": 4,
     "chat_data_patterns": 279,
     "namespace_store_sites": 5,
-    "checkpoint_face_hits": 1,
-    "preview_face_hits": 42,
+    "checkpoint_face_hits": 0,
+    "preview_face_hits": 34,
     "branch_face_hits": 0,
     "upstream_modules_scanned": 65,
     "upstream_branch_domain_modules": 18,
@@ -938,6 +938,38 @@
       "not_done": [
         "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
         "本版新增的两件真源都是**进程内**真源（世代号与回执判定），没有持久化态：故本面既不新增会话隔离前缀、也不新增回滚点。这是如实记录，不是漏复校。"
+      ]
+    },
+    "v3.64.0": {
+      "what": "v3.64.0 探针纯度复校：branch_play_probe 补上「块注释也算注释」纪律（与 schedule_conflict_probe 的 v3.22.0 同款）+ 陈旧枚举面重绑",
+      "why": "两件事各自独立、必须分开记：（A）**陈旧漂移**：files_scanned 371 -> 373。枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config/branch-contrast.js（v3.62.0）与 config/resume-handoff.js（v3.63.0）从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。（B）**口径诚实化**：checkpoint_face_hits 1 -> 0、preview_face_hits 42 -> 34、upstream_global_read_sites 8 -> 4。探针此前的 countTokens 与三处读文件只跳 `//` 行，**块注释散文照进读数**，而块注释恰是写规格的地方 ⇒ 「本模块绝不碰 X」被算成「X 已实施」。逐条归因（现场实测，非推测）：checkpoint 唯一 1 点在 config/checkpoint-content-contract.js 文件头，逐字写「绝不碰 saveCheckpoint / dropCheckpoint 这类写面」；preview 9 处块注释行（diagnose-data 3 · diagnose-view 1 · rollback-preview 2 · boot-timing 1 · num-gate 1 · branch-contrast 1）；globalRead 4 处（graph-bridge 1 · memory-app 2 · world-bridge 1，后者逐字写「不摸 window.LonShaEvidenceWorkbench」）。branch_face_hits 仍 0：原 2 点全在 config/branch-contrast.js 文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 checkpointCompare 面），与「下游有没有接上游的分支只读对照面」**同名不同物**，如实归零正是本探针该给的读数。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）· 会话隔离前缀面（279）· 命名空间存储点（5）**一格未动**（rollback 族本就没有块注释命中，已实测）。★ 连带面（同批落地，不是事后补）：本读数归零会打破 v326 A2 的「下限 1」判据 ⇒ 该判据已改写为「真源四出口在场 + 产品面真调用」（见 tools/patch_v3640_handoff.py 留档），文本计数版退场、真调用版接棒（bridge-contract J13 早已以更强形式守着同一件事）。",
+      "readings": {
+        "files_scanned": 373,
+        "checkpoint_face_hits": 0,
+        "preview_face_hits": 34,
+        "branch_face_hits": 0,
+        "upstream_global_read_sites": 4
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "chat_data_patterns",
+        "namespace_store_sites",
+        "upstream_modules_scanned",
+        "upstream_branch_domain_modules",
+        "upstream_checkpoint_named",
+        "upstream_checkpoint_named_persistent",
+        "upstream_branch_domain_preview_hits",
+        "upstream_branch_guard_loadable",
+        "upstream_ledger_replay_loadable",
+        "upstream_bridge_snapshot_branch_faces"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+        "块注释纪律只补在**探针侧**；其它 token 族走子串匹配的探针若日后新增，仍须逐件核对是否同步。本版只修 branch_play_probe（schedule_conflict_probe 早在 v3.22.0 已立）。",
+        "「下游已实施检查点内容级对照」此刻的证据是**真源四出口在场 + 产品面真调用**（v326 A2 改写 + bridge-contract J13），**不是**本探针的文本计数 —— 文本计数从此不再为该结论作证。"
       ]
     }
   }

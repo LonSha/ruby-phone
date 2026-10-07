@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 371,
+    "files_scanned": 373,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -553,6 +553,23 @@
       "not_done": [
         "本版新增的两件真源都不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
         "真机里「换会话时在飞的日程请求是否被栅栏挡下」的时序仍归 R-O3（真宿主实机验证）。"
+      ]
+    },
+    "v3.64.0": {
+      "what": "v3.64.0：只重绑陈旧枚举面（本探针口径早在 v3.22.0 已含块注释纪律，本版未改它）",
+      "why": "files_scanned 371 -> 373：枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config 侧新件（branch-contrast.js / resume-handoff.js / app-lazy-routes.js 等）未重绑。本版治的是兄弟探针（branch_play_probe）的块注释口径，**不动本探针任何读数**：consume_points 23 / consume_files 6 / local_engine_hits 0 与消费文件名单逐字不变（同一份现场输出比对，非照抄）。",
+      "readings": {
+        "files_scanned": 373
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "消费面读数为零漂移（承诺期限 / 状态消费点 23、文件 6、本地日程引擎 0），这是如实记录而非漏复校。",
+        "上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。"
       ]
     }
   }

@@ -27,6 +27,15 @@
  *      探针不猜「只有快照才算外供」，而是把模块源码在隔离沙箱里**真加载、真调用**，
  *      量出「能不能读到、读到什么、状态跨不跨实例」。v2 把「外供」等同于「进快照」，
  *      得出 R3=0 的结论 —— 那是**口径错**，不是事实（下游本来就在直读模块全局）。
+ *   ④ **块注释也算注释**（v3.64.0 复校，与 `schedule_conflict_probe.cjs` 的 v3.22.0 同款）：
+ *     本探针此前只跳过 `//` 行，**块注释散文照进读数** —— 而块注释恰恰是「写规格」的地方，
+ *     于是「本模块绝不碰 X」这类声明会被算成「X 已实施」。实测四族都吃过这一口：
+ *       checkpoint 1->0（唯一命中在 config/checkpoint-content-contract.js 文件头，
+ *         那几行写的是「绝不碰 saveCheckpoint / dropCheckpoint 这类写面」）；
+ *       preview 43->34；branchFace 2->0（两处全在 config/branch-contrast.js 文件头）；
+ *       globalRead 8->4（config/world-bridge.js 那处注释写着「不摸 window.LonShaEvidenceWorkbench」）。
+ *     回滚覆盖面 41 点 / 4 文件 / 12 入口定义**一格未动**（同一口径下实测） ⇒ D3 负控制不受影响。
+ *     剥离实现保留换行（行号仍指向真实文件），与姊妹探针逐字同款。
  *   另守两条 token 纪律：不认裸词（下游 `preview` 是图片预览、`checkpoint` 是 SD 模型名、
  *   中文「检查点」撞 step-pipeline 的「取消检查点」）；查快照只查 buildBridgeSnapshot()
  *   函数体（配平抽取），不查整文件（整文件必然命中内部取库口 `_branchGuardLib()`）。
@@ -82,7 +91,15 @@ function stripAnnouncements(src) {
   const mid = src.slice(at, end + 2).split(NL).map((l) => (l.trim() ? '' : l)).join(NL);
   return src.slice(0, at) + mid + src.slice(end + 2);
 }
-const IDX_CODE = stripAnnouncements(IDX);
+/* ★ 块注释也算注释（v3.64.0 复校）。与 `schedule_conflict_probe.cjs` 的 `stripBlockComments`
+ *   逐字同款（v3.22.0 立）：匹配前先把块注释整段抹白、**保留换行** ⇒ 行号不变。
+ *   为什么必须做：本探针全部 token 族都是**子串匹配**，而块注释是写规格的地方 ——
+ *   「本模块绝不碰 X」会被算成「X 已实施」（实测四族都吃过这一口，见头部 ④）。 */
+function stripBlockComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+}
+const readCode = (abs) => stripBlockComments(fs.readFileSync(abs, 'utf8'));
+const IDX_CODE = stripBlockComments(stripAnnouncements(IDX));
 const idxLines = IDX_CODE.split(NL);
 
 /* ══════════ 一、下游读数 ══════════ */
@@ -107,9 +124,9 @@ function scanRollback(src, file) {
   }
 }
 scanRollback(IDX_CODE, 'index.js');
-for (const f of files) scanRollback(fs.readFileSync(f, 'utf8'), rel(f));
+for (const f of files) scanRollback(readCode(f), rel(f));
 for (const f of files) {
-  const lines = fs.readFileSync(f, 'utf8').split(NL);
+  const lines = readCode(f).split(NL);
   for (let i = 0; i < lines.length; i++) {
     if (!defRe.test(lines[i])) continue;
     for (const tok of ROLLBACK_TOKENS) {
@@ -127,7 +144,7 @@ const rollbackFiles = [...new Set(rollbackPoints.map((p) => p.file))].sort();
 
 /* ② F-1 三件在**下游**的现状（规格化复合 token，不认裸词） */
 const downLines = [['index.js', idxLines]];
-for (const f of files) downLines.push([rel(f), fs.readFileSync(f, 'utf8').split(NL)]);
+for (const f of files) downLines.push([rel(f), readCode(f).split(NL)]);
 function countTokens(tokens) {
   const hits = [];
   for (const [file, lines] of downLines) {

@@ -21,6 +21,9 @@
 //     B 回写防护：产品代码零改动 / 无 F-1 三件 / 无兄弟仓硬编码 / 探针位置无关
 //     C 结论面（not_now 必须给出三类证据 + 替代轴 + not_blocked_by）
 //     D 负控制五条（真源码破坏 → 同款真判据转红；含 fail-closed 两条）
+//   ★ [v3.64.0 交棒] A2 的第三条判据（`checkpointFaceHits` 下限 1）在本版改写为
+//     「真源四出口在场 + 产品面真调用」—— 理由与代价见该判据处留档（探针补上块注释
+//     纪律后该文本读数如实归零，原先那 1 点来自文件头规格注释）。
 //     E 版本锚
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -146,8 +149,38 @@ test('A2 探针读数与基线逐项一致（读数可复算，防转写漂移�
    *   —— 同一轮它先虚涨到 45 过一次，归因**是注释**（探针只跳 `//` 行、**不跳块注释续行**），
    *   把注释措辞改掉后回落。这条把它写进留档：**探针的刻度是文本的**，注释也会进读数。
    *   精确读数由当版套件 `tests/system-v3202.test.mjs` 接管（18 条，含 4 条真源码破坏负控制）。 */
-  assert.ok(rep.checkpointFaceHits >= 1,
-    '检查点面在下游已实施（下限 1）—— 读数不得塌成 0（塌成 0 = 实现被摘或探针刻度失效），实测 ' + rep.checkpointFaceHits);
+  /* ★ [v3.64.0 交棒] 本条由「探针文本计数的下限」改写为「真源出口 + 产品面真调用」。
+   *   **为什么必须改**：`checkpointFaceHits` 是**文本子串计数**，而本探针（v3.64.0 前）
+   *   只跳 `//` 行、**不剥块注释** ⇒ 它量的从来不是「有没有实施」，而是「有没有人在这份树的
+   *   任意位置（含块注释散文）写过这个 token」。实测：唯一的 1 点命中来自
+   *   `config/checkpoint-content-contract.js` 的文件头**规格注释** —— 那几行逐字写着
+   *   「绝不碰 `saveCheckpoint` / `dropCheckpoint` 这类写面」，即它声明的是**没做**写面。
+   *   v3.64.0 给探针补上块注释纪律（与 `schedule_conflict_probe.cjs` 的 v3.22.0 同款）后
+   *   该读数如实归零 ⇒ 旧下限 1 翻红。**这不是「塌成 0」，是「原先那个 1 本来就是散文」**
+   *   （本仓 v3.20.2 已为同一形态留过档：探针的刻度是文本的，注释也会进读数）。
+   *   **为什么这样改**：按本仓纪律「优先交棒为版本无关的真判据」，且不取两条下策 ——
+   *     删断言（= 洗断言）与「换个 token 把散文重新算绿」（= 把散文固化成读数）。
+   *     新判据锚在**实现**上：① 真源四出口在场；② 产品面**真调用**（import 名不算消费）。
+   *   同一件事 `scripts/bridge-contract-audit.mjs` 的 J13 已以更强形式守着
+   *   （`[face: checkpointCompare] [reader: readLonshaCheckpointFace] [floor: 1]`，
+   *   实测消费点 1、真源四出口在场）。旧判据「写 1 不留余量」的原意（少一个 = 那一面又回到
+   *   零消费）由 J13 承接，本处另留**调用点级**贴身复核。
+   *   ⚠ 代价如实记：本条不再能拦住「把实现删掉、把注释留下」这一形态 —— 但那种形态现在由
+   *   真调用判据拦（删掉调用点即翻红），而**注释形态本来就不该被判据当成实现**。 */
+  const cpSrc = read(path.join(ROOT, 'config', 'checkpoint-content-contract.js'));
+  for (const fn of ['readLonshaCheckpointFace', 'readCheckpointContentDiff',
+    'checkpointContentLines', 'checkpointFaceLine']) {
+    assert.ok(new RegExp('export function ' + fn + '\\b').test(cpSrc),
+      '检查点真源必须导出 ' + fn + '（缺一即该面被摘）');
+  }
+  assert.ok(/checkpointContentDiff|CHECKPOINT_DIFF_STATES/.test(cpSrc),
+    '真源必须带深对照态（上游半成功与失败不同形）');
+  const cpConsumer = read(path.join(ROOT, 'apps', 'diagnose', 'diagnose-data.js'));
+  assert.ok(/readLonshaCheckpointFace\(/.test(cpConsumer),
+    '产品面必须**真调用**检查点读面（import 进来的名字不算消费）—— '
+    + '这是「下游已实施检查点内容级对照」此刻的**实现级**证据');
+  assert.ok(/readCheckpointContentDiff\(/.test(cpConsumer),
+    '产品面必须真调用深对照读数（只读一行文案不算接了内容级对照）');
   assert.ok(rep.previewFaceHits >= 15,
     '回滚预览面已实施（下限 15）—— 读数不得塌成 0，实测 ' + rep.previewFaceHits);
   /* `branchFaceHits` 仍保持**零点判据**：本版接的是**检查点内容级对照**，不是「分支只读对照」
