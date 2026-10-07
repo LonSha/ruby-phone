@@ -9,3 +9,9 @@
 .sm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
 .sm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
 .sm-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* [v3.66.0 · X2] 跨 App 定位条 */
+.sm-focus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 10px; border-left: 3px solid #4a90d9; background: rgba(74, 144, 217, 0.08); font-size: 12px; }
+.sm-focus.is-gone { border-left-color: #c07070; background: rgba(192, 112, 112, 0.10); }
+.sm-focus-lab { font-weight: 600; }
+.sm-focus-id { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.sm-focus-why { color: #7a7468; }

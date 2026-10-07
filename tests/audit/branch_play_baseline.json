@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 378,
+    "files_scanned": 379,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
@@ -991,6 +991,37 @@
         "namespace_store_sites"
       ],
       "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
+    },
+    "v3.66.0": {
+      "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
+      "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
+      "readings": {
+        "files_scanned": 379
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "chat_data_patterns",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits",
+        "upstream_modules_scanned",
+        "upstream_branch_domain_modules",
+        "upstream_checkpoint_named",
+        "upstream_checkpoint_named_persistent",
+        "upstream_branch_domain_preview_hits",
+        "upstream_branch_guard_loadable",
+        "upstream_ledger_replay_loadable",
+        "upstream_bridge_snapshot_branch_faces"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
+        "本版新增的协议件不写回滚点、不碰分支对照：回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面一格未动。这不代表没接好，代表本门确实与它无关（X2 治的是结果靶心）。"
+      ]
     }
   }
 }

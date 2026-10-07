@@ -41,6 +41,17 @@ export class SummdeskView {
     _html(vm) {
         const r = vm.readings || {};
         let h = '<div class="sm-wrap">';
+        /* [v3.66.0 · X2] 跨 App 定位条（找不到即明说，不假装还在） */
+        const f = vm.focus;
+        if (f) {
+            h += '<div class="sm-focus' + (f.gone ? ' is-gone' : '') + '">' +
+                '<span class="sm-focus-lab">定位</span>' +
+                '<span class="sm-focus-id">' + esc(f.id) + '</span>' +
+                (f.gone
+                    ? '<span class="sm-focus-why">这条记忆已不在册里（被清过，或换过会话）</span>'
+                    : '<span class="sm-focus-why">第 ' + esc(String(f.index + 1)) + ' 条 · ' + esc(f.title) + (f.excerpt ? ' · ' + esc(f.excerpt) : '') + '</span>') +
+                '<button class="sm-btn" data-act="unfocus">收起定位</button></div>';
+        }
         h += '<div class="sm-head">记忆册 ' + num(r.memories) + ' · 普通游标 ' + num(r.cursorNormal) + ' · 向量游标 ' + num(r.cursorTrue) + '</div>';
         h += '<div class="sm-sec"><h3>收总结文本</h3>' +
             '<textarea class="sm-input" data-in="text"></textarea>' +
@@ -66,6 +77,7 @@ export class SummdeskView {
                     self.app.intakeSummary(ta ? ta.value : '', ra ? ra.value : '');
                     self.app.render();
                 } else if (act === 'clear') { self.app.clearMemories(); self.app.render(); }
+                else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
             });
         });
     }

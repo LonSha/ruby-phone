@@ -10,3 +10,9 @@
 .tv-ok { color: #3a6a4a; }
 .tv-bad { color: #a04a4a; font-weight: 600; }
 .tv-empty { color: #9a948a; font-size: 12px; padding: 6px 0; }
+/* [v3.66.0 · X2] 跨 App 定位条：与普通区块视觉上分得开（否则用户不知道「这是从搜索跳来的」） */
+.tv-focus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 10px; border-left: 3px solid #4a90d9; background: rgba(74, 144, 217, 0.08); font-size: 12px; }
+.tv-focus.is-gone { border-left-color: #c07070; background: rgba(192, 112, 112, 0.10); }
+.tv-focus-lab { font-weight: 600; }
+.tv-focus-id { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.tv-focus-why { color: #7a7468; }

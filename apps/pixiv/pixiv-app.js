@@ -84,6 +84,12 @@ export class PixivApp {
         this._current = '';
         this._chapter = 1;
         this._tab = 'novel';
+        /* [v3.66.0 · X2] 跨 App 定位态：`_refOpen` 是「阅读器要画哪一篇」的**唯一真源**
+         *   （视图读 `openedNovelId()`，不再直接读 `_current`）。`_refIllust` 同义，
+         *   管插画登记面。二者都由 `clearRef()` / `onChatChanged()` 清掉 ——
+         *   否则「从搜索点进来过」会跨会话残留，让下一次打开停在上个会话的作品上。 */
+        this._refOpen = '';
+        this._refIllust = '';
         this._view = null;
         this._loadSettings();
     }
@@ -831,6 +837,54 @@ export class PixivApp {
         this._loadSettings();
         this.probe();
         if (this._view) this._view.refresh();
+    }
+    /* ---------- [v3.66.0 · X2] 跨 App 定位口 ---------- */
+    /**
+     * 定位到某篇作品（全局搜索点进来时用）。
+     *   ★ 按 **作品 id** 找（本件 `novelById` 已是唯一查找口），不按下标。
+     *   ★ 打开态同时写 `_refOpen`：视图阅读器读的是 `openedNovelId()` ——
+     *     只写 `_current` 的话，**视图侧看的是另一个字段**，详情面板画不出来
+     *     （不报错、只是空白，正是本仓最贵的形态）。
+     *   ★ `openNovel` 返回 `{ok:false,error}` 时**原样带原因**，不假装打开过。
+     */
+    openRef(ref) {
+        const kind = (ref && typeof ref === 'object') ? String(ref.kind || '') : '';
+        const id = (ref && typeof ref === 'object') ? String(ref.id === undefined || ref.id === null ? '' : ref.id) : '';
+        if (!id) return { ok: false, reason: 'no_id' };
+        /* ★ 先取数再找：本件**两条**通路（作品 / 插画）都要先 probe。
+         *   首版只在插画分支 probe，作品分支直接 openNovel ⇒ 池子是空的，
+         *   每次都报 not_found —— 「搜索点进来永远找不到这篇」。这条由判据当场抓到。 */
+        this.probe();
+        if (kind === 'illust') {
+            const it = this.illustById(id);
+            if (!it) return { ok: false, reason: 'not_found', id: id, saw: this.illusts.length };
+            this._tab = 'illust';
+            this._refIllust = id;
+            if (this._view) this._view.refresh();
+            return { ok: true, id: id, kind: 'illust', tab: 'illust' };
+        }
+        if (kind !== 'novel') return { ok: false, reason: 'kind_unsupported', kind: kind };
+        const r = this.openNovel(id, null);
+        if (r && r.ok !== true) return { ok: false, reason: 'not_found', id: id, saw: this.novels.length };
+        this._refOpen = id;
+        this._tab = 'novel';
+        if (this._view) this._view.refresh();
+        return { ok: true, id: id, kind: 'novel', chapter: this._chapter, saw: this.novels.length };
+    }
+    /** 阅读器真正要画的那一篇（跨 App 定位优先，其次才是点选态）。 */
+    openedNovelId() { return this._refOpen || this._current; }
+    /** 定位态里的插画 id（'' = 没有）。 */
+    openedIllustId() { return this._refIllust || ''; }
+/** 清除跨 App 定位态（视图合上阅读器、换会话都调，防「合上了但定位还在」）。
+ *  ★ `_current` 也要一并清：`openedNovelId()` 的回退链是「定位态优先、其次点选态」，
+ *    只清前者的话阅读器**照样还画着那篇**（「合上了但还开着」），故两态一起清。
+ *    这条由判据当场抓到（首版只清 `_refOpen`，清完 `openedNovelId()` 仍返回那一篇）。 */
+    clearRef() {
+        this._refOpen = '';
+        this._refIllust = '';
+        this._current = '';
+        this._chapter = 1;
+        return { ok: true };
     }
     render() {
         this.probe();

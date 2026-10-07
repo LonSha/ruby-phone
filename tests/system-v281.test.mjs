@@ -119,6 +119,13 @@ const CLOSURE = [
     // [v2.97.0] 搜索内核改走单一真源读桥（readPushProbe），破坏副本必须带上该依赖，
     //   否则副本 import 直接 ERR_MODULE_NOT_FOUND，负控制变成「因缺文件而红」而不是「因破坏而红」。
     'config/world-bridge.js',
+    // [v3.66.0 · X2] 搜索内核新增跨 App 靶心协议件与数值门依赖：
+    //   闭包不带它们，副本 import 就是 ERR_MODULE_NOT_FOUND，
+    //   负控制会变成「因缺文件而红」而不是「因破坏而红」（同一支笔的教训复现）。
+    'config/open-ref.js', 'config/num-gate.js',
+    // [v3.66.0 · X2] search-view 现在还 import 详情荷载装配件（buildOpenDetail），
+    //   kind 表挂在它上面；副本缺了照样是「因缺文件而红」。
+    'config/app-open-detail.js',
     'apps/cheat/cheat-data.js',
     'apps/dirtytalk/dt-data.js',
     'data/cheats.js', 'data/cheat-index.js',

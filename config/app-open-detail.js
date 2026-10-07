@@ -24,6 +24,11 @@
  * ======================================================== */
 'use strict';
 
+/* [v3.66.0 · X2] 靶心归一与页签归一**同一处判**：`ref` 是否成立由 open-ref.js
+ *   的登记表说话（kind 必须登记、appId 必须与归属一致），本件不自己判一遍 ——
+ *   两处各判一次形态，必然分歧。 */
+import { normalizeOpenRef } from './open-ref.js';
+
 /** 载荷归一的归因词表（判据按此表逐词核，防随口新词）。 */
 export const OPEN_DETAIL_REASONS = Object.freeze({
     OK: '',
@@ -58,11 +63,17 @@ export function normalizeOpenDetail(detail) {
  * 拼一条派发载荷（供派发点用**同一支笔**写字，而不是各处手写对象字面量）。
  * `tab` 为 null 时**不写这个字段**（保持与修前 detail 逐字节一致 —— 既有 9 处
  *   派发点改成走本函数后，事件载荷不该发生任何变化，那是白改）。
+ * [v3.66.0 · X2] 第三参 `ref`：跨 App 靶心（`{appId,kind,id}`）。
+ *   同样**能省就省**：没有 / 不成立时不写字段，既有调用方载荷一字不变。
  */
-export function buildOpenDetail(appId, tab) {
+export function buildOpenDetail(appId, tab, ref) {
     const id = toStrOf(appId);
     const t = (typeof tab === 'string' && tab) ? tab : null;
-    return t ? { appId: id, tab: t } : { appId: id };
+    const r = normalizeOpenRef(ref);
+    const out = { appId: id };
+    if (t) out.tab = t;
+    if (r.ok) out.ref = { appId: r.appId, kind: r.kind, id: r.id };
+    return out;
 }
 
 /**

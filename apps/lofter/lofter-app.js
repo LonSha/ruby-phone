@@ -81,6 +81,8 @@ export class LofterApp {
         this._proj = null;
         this._readings = { dropped: 0, trimmed: 0, totalArticles: 0, totalCollections: 0, inactiveAuthors: 0 };
         this._current = '';
+        /* [v3.66.0 · X2] 跨 App 定位态（详情态的唯一真源，视图读 refArticleId()）。 */
+        this._refArt = '';
         this._tab = 'home';
         this._view = null;
         this._loadSettings();
@@ -291,6 +293,30 @@ export class LofterApp {
         return { ok: true, dropped: r.dropped };
     }
     currentId() { return this._current; }
+    /* ---------- [v3.66.0 · X2] 跨 App 定位口 ---------- */
+    /**
+     * 定位到某一篇文章（全局搜索点进来时用）。
+     *   ★ 按 **文章 id** 找（`articleById` 是唯一查找口），不按下标。
+     *   ★ 详情态写进 `_refArt`（视图读 `refArticleId()`）—— 本件的详情态原本由**视图
+     *     自持** `_article`，app 侧无法告知「要画哪一篇」；补上这条通道，
+     *     否则「点进来了但详情没展开」不报错、只是没反应。
+     *   ★ 没找到如实报 `not_found`，不假装打开过。
+     */
+    openRef(ref) {
+        const id = (ref && typeof ref === 'object') ? String(ref.id === undefined || ref.id === null ? '' : ref.id) : '';
+        if (!id) return { ok: false, reason: 'no_id' };
+        this.probe();
+        const a = this.articleById(id);
+        if (!a) return { ok: false, reason: 'not_found', id: id, saw: this.articles.length };
+        this._refArt = id;
+        this._current = id;
+        this._tab = 'home';
+        if (this._view) this._view.refresh();
+        return { ok: true, id: id, kind: 'article', saw: this.articles.length };
+    }
+    /** 详情态要画的那一篇（跨 App 定位优先，其次才是点选留下的痕迹）。 */
+    refArticleId() { return this._refArt || ''; }
+    clearRef() { this._refArt = ''; return { ok: true }; }
     setCurrent(id) { this._current = String(id || ''); return this._current; }
     toggleFollowAuthor(id) {
         const a = this.authorById(id);
@@ -655,6 +681,7 @@ export class LofterApp {
     /** 换会话：作者池、稿子、合集、关注与订阅、我的四个列表全是「这段关系的账」，故全部重取。 */
     onChatChanged() {
         this._current = '';
+        this._refArt = '';
         this._tab = 'home';
         this._loadSettings();
         this.probe();

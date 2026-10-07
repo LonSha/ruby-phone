@@ -873,6 +873,31 @@ export class MusicdeskApp {
         if (this._view) this._view.refresh();
         return { ok: true };
     }
+    /* ---------- [v3.66.0 · X2] 跨 App 定位口 ---------- */
+    /**
+     * 定位到某一首曲目（全局搜索点进来时用）。
+     *   ★ 按 **稳定 id**（`s.id`）当场现找，不按下标 —— 曲目行那条 `data-open` 是下标语义，
+     *     源侧删中间一条后下标会指到别的一首头上（不报错、只串项）。
+     *     openRef 每次都按 id 重找，所以「删过、换过会话」之后也不会指错。
+     *   ★ 回报 reason：「点进来停在首屏」与「这一首没了」必须分得开。
+     */
+    openRef(ref) {
+        const id = (ref && typeof ref === 'object') ? String(ref.id === undefined || ref.id === null ? '' : ref.id) : '';
+        if (!id) return { ok: false, reason: 'no_id' };
+        this.probe();
+        let idx = -1;
+        for (let i = 0; i < this.songs.length; i += 1) {
+            if (String(this.songs[i] && this.songs[i].id) === id) { idx = i; break; }
+        }
+        if (idx < 0) return { ok: false, reason: 'not_found', id: id, saw: this.songs.length };
+        /* 同步既有点选态（视图详情面板读的是它），使「定位到的那一首」= 「正打开的那一首」。 */
+        this._current = String(idx);
+        this._tab = 'shelf';
+        const row = this.songRows()[idx];
+        if (this._view) this._view.refresh();
+        return { ok: true, id: id, index: idx, key: row ? row.key : '', saw: this.songs.length };
+    }
+    clearRef() { this.closeSong(); return { ok: true }; }
 
     /* ---------- 生命周期 ---------- */
     /**

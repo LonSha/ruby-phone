@@ -101,6 +101,11 @@ export class LofterView {
     _qa(sel) { return this._root ? this._root.querySelectorAll(sel) : []; }
     _buildHTML() {
         const app = this.app;
+        /* [v3.66.0 · X2] 跨 App 定位态同步（与 pixiv 同款，理由同）：
+         *   app 侧被全局搜索投了「要看哪一篇」时，视图自有的 `_article` 必须跟着走 ——
+         *   否则它还是空，详情区画不出来（不报错、只是没反应）。 */
+        const refArt = app.refArticleId();
+        if (refArt && refArt !== this._article) this._article = refArt;
         const face = app.faceReason();
         const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
         const tabs = TABS;
@@ -533,7 +538,7 @@ export class LofterView {
             else self._flash = (r && r.error) ? r.error : '没成';
         };
         for (const b of this._qa('.lof-tab')) {
-            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._article = ''; this.refresh(); });
+            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._article = ''; app.clearRef(); this.refresh(); });
         }
         for (const b of this._qa('.lof-subtab')) {
             b.addEventListener('click', () => { this._myFace = b.dataset.myface; this.refresh(); });

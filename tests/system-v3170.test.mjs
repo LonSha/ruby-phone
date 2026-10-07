@@ -350,6 +350,12 @@ test('v3170 B8. [v3.60.0 · 计划 O2] 全历史扫描片间真的让出事件�
 /** 小仓库：把搜索链路整条复制过去（负控制副本与行为判据共用一份）。 */
 const CLOSURE = [
     GSE, APP, VIEW, 'config/world-bridge.js',
+    // [v3.66.0 · X2] 搜索内核新增两个 config 依赖（跨 App 靶心协议件 / 数值门）：
+    //   闭包不带它们，副本 import 直接 ERR_MODULE_NOT_FOUND，
+    //   负控制就变成「因缺文件而红」而不是「因破坏而红」。
+    'config/open-ref.js', 'config/num-gate.js',
+    // [v3.66.0 · X2] 视图侧新增详情荷载装配件依赖（target_kind 表挂在它上面）
+    'config/app-open-detail.js',
     'data/cheat-index.js', 'data/dirtytalk-index.js',
     // 正文库只为 D1 同源判据与轻索引对照：它们**不在**搜索导入闭包里（见 A5）
     'data/cheats.js', 'data/dirtytalk.js', 'data/dirtytalk-corpus.js'

@@ -42,6 +42,17 @@ export class AnnidateView {
     _html(vm) {
         const r = vm.readings || {};
         let h = '<div class="ad-wrap">';
+        /* [v3.66.0 · X2] 跨 App 定位条（找不到即明说，不假装还在） */
+        const f = vm.focus;
+        if (f) {
+            h += '<div class="ad-focus' + (f.gone ? ' is-gone' : '') + '">' +
+                '<span class="ad-focus-lab">定位</span>' +
+                '<span class="ad-focus-id">' + esc(f.id) + '</span>' +
+                (f.gone
+                    ? '<span class="ad-focus-why">这条纪念日已不在条目册里（被清过，或换过会话）</span>'
+                    : '<span class="ad-focus-why">第 ' + esc(String(f.index + 1)) + ' 条 · ' + esc(f.title) + ' · ' + esc(f.word) + '</span>') +
+                '<button class="ad-btn" data-act="unfocus">收起定位</button></div>';
+        }
         h += '<div class="ad-head">条目 ' + num(r.items) + ' · 星标 ' + num(r.starred) + '</div>';
         h += '<div class="ad-sec"><h3>操作</h3>' +
             '<button class="ad-btn" data-act="check">查今日提醒</button>' +
@@ -69,6 +80,7 @@ export class AnnidateView {
                 const act = b.getAttribute('data-act');
                 if (act === 'check') { self.app.checkAlerts(); self.app.render(); }
                 else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
+                else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
             });
         });
     }

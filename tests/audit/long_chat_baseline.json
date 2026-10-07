@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 379,
+    "files": 380,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=379，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -751,6 +751,27 @@
         "recent_story_context_lines"
       ],
       "not_done": "本轮仍为合成宿主取证，非实机。"
+    },
+    "v3.66.0": {
+      "what": "v3.66.0 X2 第一切片：静态扫描面随新件扩张；楼层长会话面一格未动",
+      "why": "静态扫描面 379 -> 380 个文件（config/open-ref.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「结果没有靶心」，不摸楼层数组。既有站点行号随前置插入整体后移（global-search-engine 新增两条 import 与七个源登记块），按现场重取；判据散文 L5 的 files= 同步刷新为 380。",
+      "how": "node tests/audit/long_chat_probe.cjs --json",
+      "readings": {
+        "scan.files": 380,
+        "criteria.L5.got_text": "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      },
+      "criteria_refreshed": {
+        "L5": {
+          "got_text": [
+            "files=379，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+            "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+          ]
+        }
+      },
+      "not_done": [
+        "本版新增的协议件与楼层数组无关：四类站点计数与全部活体读数逐项相同。这是如实记录，不是漏复校。",
+        "真机里 1000 楼长会话下的渲染与时序仍归 R-O3；本门只跑合成宿主。"
+      ]
     }
   }
 }

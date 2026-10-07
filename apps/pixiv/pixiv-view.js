@@ -105,6 +105,12 @@ export class PixivView {
     _qa(sel) { return this._root ? this._root.querySelectorAll(sel) : []; }
     _buildHTML() {
         const app = this.app;
+        /* [v3.66.0 · X2] 跨 App 定位态同步：app 侧定了「阅读器要画哪一篇」（全局搜索点进来）
+         *   时，视图自有的 `_open` 必须跟着走 —— 否则它还是空，
+         *   开场读到 `this._open` 的每一处（含合上、点赞、评论）都会对着空 id 干活，
+         *   表现是「点进来了但什么都不画」，不报错。 */
+        const refOpen = app.openedNovelId();
+        if (refOpen && refOpen !== this._open) this._open = refOpen;
         const face = app.faceReason();
         const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
         const cur = app.tab();
@@ -636,7 +642,7 @@ export class PixivView {
             else self._flash = (r && r.error) ? r.error : '没成';
         };
         for (const b of this._qa('.pxv-tab')) {
-            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._open = ''; this.refresh(); });
+            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._open = ''; app.clearRef(); this.refresh(); });
         }
         for (const b of this._qa('.pxv-subtab')) {
             b.addEventListener('click', () => { this._myFace = b.dataset.myface; this.refresh(); });
@@ -644,7 +650,7 @@ export class PixivView {
         for (const b of this._qa('[data-read]')) {
             b.addEventListener('click', () => {
                 const id = b.dataset.read;
-                if (this._open === id) { this._open = ''; this.refresh(); return; }
+                if (this._open === id) { this._open = ''; app.clearRef(); this.refresh(); return; }
                 const r = app.openNovel(id);
                 if (!r.ok) { this._flash = r.error || '打不开'; this.refresh(); return; }
                 this._open = id;
@@ -653,7 +659,7 @@ export class PixivView {
             });
         }
         const rc = this._q('#pxv-reader-close');
-        if (rc) rc.addEventListener('click', () => { this._open = ''; this._replyTo = ''; this.refresh(); });
+        if (rc) rc.addEventListener('click', () => { this._open = ''; this._replyTo = ''; app.clearRef(); this.refresh(); });
         for (const b of this._qa('[data-chap]')) {
             b.addEventListener('click', () => { app.setCurrentChapter(b.dataset.chap); this._replyTo = ''; this.refresh(); });
         }

@@ -6,7 +6,10 @@
  * 结果按来源分区，命中片段高亮，点击跳转到来源 App。
  * ======================================================== */
 'use strict';
-
+/* [v3.66.0 · X2] 派发载荷走唯一一支笔（config/app-open-detail.js）。
+ *   本件是**第一处**把靶心（ref）带进 `phone:openApp` 的派发点 ——
+ *   不手写对象字面量，免得字段名与核心那支笔漂开。 */
+import { buildOpenDetail } from '../../config/app-open-detail.js';
 function esc(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -271,12 +274,19 @@ export class SearchView {
     _row(it, kw) {
         const jumpable = !!it.appId;
         const time = this._timeText(it.ts);
-        return `<div class="gs-item${jumpable ? ' gs-jumpable' : ''}" data-app="${esc(it.appId || '')}">
+        /* [v3.66.0 · X2] 靶心：引擎早在条目上写了 `meta`（含 `ref`），但此前视图
+         *   **一个字都不读**，打开只发 `{ appId }` —— 用户点进去落在 App 首屏，
+         *   还得自己再翻一遍。这里把 ref 挂到行上（`data-ref`，JSON 串），
+         *   点子时随载荷一起派发；同时把「能定位到哪一条」在行上明写出来，
+         *   免得用户以为「打开 ›」只是开 App。 */
+        const ref = (it && it.meta && it.meta.ref && it.meta.ref.id) ? it.meta.ref : null;
+        const refAttr = ref ? ` data-ref="${esc(JSON.stringify({ appId: ref.appId, kind: ref.kind, id: ref.id }))}"` : '';
+        return `<div class="gs-item${jumpable ? ' gs-jumpable' : ''}" data-app="${esc(it.appId || '')}"${refAttr}>
             <div class="gs-item-icon">${esc(it.icon || '📄')}</div>
             <div class="gs-item-body">
                 <div class="gs-item-title">${highlight(it.title, kw)}</div>
                 ${it.snippet ? `<div class="gs-item-snippet">${highlight(it.snippet, kw)}</div>` : ''}
-                <div class="gs-item-meta">${esc(it.sourceLabel)}${time ? ' · ' + esc(time) : ''}${jumpable ? ' · <span class="gs-jump">打开 ›</span>' : ''}</div>
+                <div class="gs-item-meta">${esc(it.sourceLabel)}${time ? ' · ' + esc(time) : ''}${jumpable ? ' · <span class="gs-jump">' + (ref ? '打开到这一条 ›' : '打开 ›') + '</span>' : ''}</div>
             </div>
         </div>`;
     }
@@ -401,8 +411,17 @@ export class SearchView {
             item.addEventListener('click', () => {
                 const appId = String(item.dataset.app || '');
                 if (!appId) return;
+                /* [v3.66.0 · X2] 派发带靶心：`data-ref` 有就把归一后的 ref 一并投出去。
+                 *   解析失败**不静默吞** —— 退化成只开 App，并把原因写到 console
+                 *   （坏了要有人知道；此处不弹 UI，免得搜一下就一串红）。 */
+                let ref = null;
+                const rawRef = item.dataset.ref;
+                if (rawRef) {
+                    try { ref = JSON.parse(rawRef); }
+                    catch (_e) { console.warn('⚠️ 搜索结果的靶心解析失败，退化为只打开 App：', rawRef); }
+                }
                 try {
-                    window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+                    window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, null, ref) }));
                 } catch (_e) { /* 忽略 */ }
             });
         });

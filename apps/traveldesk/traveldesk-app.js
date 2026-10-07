@@ -26,6 +26,12 @@ export class TraveldeskApp {
         this._lastQuote = null;
         this._ledger = [];
         this._dropped = 0;
+        /* [v3.66.0 · X2] 跨 App 定位到的费用 id（'' = 没有定位态）。
+         *   ★ 存 **id** 不存下标：本仓曲库那件正是按数组下标定位详情态，
+         *     删中间项后详情会串到别的一条头上（不报错、只串项）。
+         *     费用 id 由 `normalizeExpense` 派生的 `tv_e_<下标>` 兜底，
+         *     但**用户/上游给了 id 就以它为准** —— 故这里一律按 id 找。 */
+        this._focus = '';
     }
     _readRaw(key) {
         if (!this.storage || typeof this.storage.get !== 'function') return { ok: false, why: 'no_api', value: undefined };
@@ -91,14 +97,40 @@ export class TraveldeskApp {
         return summary;
     }
     readings() { return readingsOf(this._expenses, this._people); }
+    /* ---------- [v3.66.0 · X2] 跨 App 定位口 ---------- */
+    /**
+     * 定位到某一条费用（全局搜索点进来时用）。
+     *   ★ 按 **id** 找，不按下标：删中间一条后下标会让定位串到别的一条头上。
+     *   ★ 回报 `{ok:false, reason}` 而**不是**静默返回 —— 「点进来还停在首屏」
+     *     与「这条费用没了」在界面上长得一样，必须由调用方把理由报出来。
+     */
+    openRef(ref) {
+        const id = (ref && typeof ref === 'object') ? toStr(ref.id) : '';
+        if (!id) return { ok: false, reason: 'no_id' };
+        this._probe();
+        const hit = this._expenses.filter((e) => toStr(e && e.id) === id);
+        if (!hit.length) return { ok: false, reason: 'not_found', id: id, saw: this._expenses.length };
+        this._focus = id;
+        return { ok: true, id: id, index: this._expenses.indexOf(hit[0]), saw: this._expenses.length };
+    }
+    /** 清掉定位态（视图「收起」与换会话都走这里，防定位态跨会话残留）。 */
+    clearRef() { this._focus = ''; return { ok: true }; }
+    /** 定位态：id + 它在**当下**曲库里的下标（找不到时 index = -1，不假装还在）。 */
+    focusRow() {
+        if (!this._focus) return null;
+        const idx = this._expenses.findIndex((e) => toStr(e && e.id) === this._focus);
+        if (idx < 0) return { id: this._focus, index: -1, gone: true };
+        const e = this._expenses[idx];
+        return { id: this._focus, index: idx, gone: false, payer: toStr(e.payer), note: toStr(e.note), finalCNY: e.finalCNY };
+    }
     symbols() { return TV_CURRENCY_SYMBOLS; }
     clearAll() { this._people = []; this._families = []; this._expenses = []; this._writeRaw(TV_BOOK_KEY, {}); this._log('clear', ''); }
     clearLedger() { this._ledger = []; this._writeRaw(TV_LEDGER_KEY, []); this._log('clear_ledger', ''); }
-    onChatChanged() { this._probe(); this._dropped = 0; this.render(); }
+    onChatChanged() { this._probe(); this._dropped = 0; this._focus = ''; this.render(); }
     render() {
         this._probe();
         if (!this._view) this._view = new TraveldeskView(this);
         this._view.render(this._vm());
     }
-    _vm() { return { people: this._people, families: this._families, expenses: this._expenses, lastSummary: this._lastSummary, lastQuote: this._lastQuote, readings: this.readings(), ledger: this._ledger, dropped: this._dropped }; }
+    _vm() { return { people: this._people, families: this._families, expenses: this._expenses, lastSummary: this._lastSummary, lastQuote: this._lastQuote, readings: this.readings(), ledger: this._ledger, dropped: this._dropped, focus: this.focusRow() }; }
 }

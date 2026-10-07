@@ -23,6 +23,11 @@
 import { cheatIndex } from '../../data/cheat-index.js';
 import { dirtyTalkIndex } from '../../data/dirtytalk-index.js';
 import { readPushProbe, evidenceFaceOf } from '../../config/world-bridge.js';
+/* [v3.66.0 · X2] 源侧写 ref 与消费侧读 ref 必须**同一支笔**：字段名一漂
+ *   （id / itemId / ref 三种写法迟早同时在）就没有任何一处能对账。 */
+import { buildOpenRef } from '../../config/open-ref.js';
+/* [v3.66.0 · X2] 数值取值走全仓唯一实现（config/num-gate.js），不自带第二份形态判。 */
+import { numOrNull } from '../../config/num-gate.js';
 
 const MAX_SNIPPET = 120;
 /** [v3.17.0 R-O1] 快速档每源预算：**旧名旧值** —— `tests/system-v327` 锁的就是这个 600。
@@ -1131,10 +1136,155 @@ export function buildDefaultSources(storage, deps = {}) {
         }
     });
 
+    /* ============================================================
+     * [v3.66.0 · 拓展计划 X2 第一切片] 内容桶接入 + 精确打开
+     * ------------------------------------------------------------
+     * 【修前处境】以上 29 个源只登记了「能搜到」，条目上**一个可定位的身份都没有**：
+     *   `meta` 管线早就在（本文件 6 处写 meta），但 `apps/search/*` 对 `.meta`
+     *   零消费，视图 `_row()` 也不渲染它，打开只发 `{ appId }`。
+     *   ⇒ 「搜到一条旅行费用」与「打开那条费用」之间没有任何桥 —— 用户点进去落在首屏，
+     *     还得自己再翻一遍。这不是索引不够，是**结果没有靶心**。
+     * 【本切片接 6 个桶】按 agent note 给的内容价值序：旅行费用 → 总结册 → 纪念日 →
+     *   曲库 → 创作收藏（pixiv 两型 + 老福特）。规则工作台 / 布局参数等**不接**
+     *   —— 它们是定向检索面，接进来只会把矩阵涂满而没有真实用例（X2 验收原话）。
+     * 【每条的身份】**一律取真源里既有的稳定 id**：
+     *   · traveldesk 费用 `id`（归一函数派生 `tv_e_<下标>` 或上游给的 id）；
+     *   · summdesk 记忆 `id`（`sm_m_<时间戳>`）；
+     *   · annidate 条目 `id`（`ad_i_<下标>` 或上游给的 id）；
+     *   · musicdesk 曲目 `id`（**不是下标** —— 视图的 `data-open` 是下标语义，
+     *     删中间项后会串项，正是本仓登记过多次的形态，故这里刻意用 id）；
+     *   · pixiv 作品 / 插画 `id`（本就有 `novelById` / `illustById`）；
+     *   · lofter 文章 `id`（本就有 `articleById`）。
+     * 【为什么 meta.ref 的字段名走 buildOpenRef】源侧写字必须与消费侧读字**同一支笔**，
+     *   否则字段名一漂（id / itemId / ref）就没有任何一处能对账。
+     * ============================================================ */
+    // ---- 旅行记账：费用条目（tv_book.expenses[]）----
+    sources.push({
+        id: 'traveldesk-expense', label: '旅行费用', icon: '🧾', appId: 'traveldesk', weight: 1.2,
+        items: () => {
+            const b = asObj(get('tv_book', {}));
+            return asArray(b.expenses).map((e) => {
+                const id = String((e && e.id) || '');
+                if (!id) return null;
+                return {
+                    title: String((e && e.note) || '') || ('费用 ' + id),
+                    body: norm([
+                        e && e.payer, e && e.type,
+                        (e && e.currency && e.currency !== 'CNY') ? (String(e.currency) + ' ' + String(e.amount === undefined ? '' : e.amount)) : '',
+                        (e && e.finalCNY !== undefined) ? ('折合 ' + String(e.finalCNY) + ' CNY') : '',
+                        (e && e.isPrivate) ? '私人' : ''
+                    ].filter(Boolean).join(' · ')),
+                    ts: 0, icon: '🧾', appId: 'traveldesk',
+                    meta: { ref: buildOpenRef('expense', id, 'traveldesk') }
+                };
+            }).filter(Boolean);
+        }
+    });
+    // ---- 总结案头：记忆册（sm_memories[]）----
+    sources.push({
+        id: 'summdesk-memory', label: '总结记忆', icon: '📝', appId: 'summdesk', weight: 1.3,
+        items: () => asArray(get('sm_memories', [])).map((m) => {
+            const id = String((m && m.id) || '');
+            if (!id) return null;
+            return {
+                title: String((m && m.title) || '一段总结'),
+                body: norm(m && m.content),
+                ts: tsOf(m && m.timestamp),
+                icon: '📝', appId: 'summdesk',
+                meta: { ref: buildOpenRef('memory', id, 'summdesk') }
+            };
+        }).filter(Boolean)
+    });
+    // ---- 纪念日数学案头：条目（ad_items[]）----
+    sources.push({
+        id: 'annidate-item', label: '纪念日', icon: '🎂', appId: 'annidate', weight: 1.1,
+        items: () => asArray(get('ad_items', [])).map((it) => {
+            const id = String((it && it.id) || '');
+            if (!id) return null;
+            const d = numOrNull(it && it.date);
+            return {
+                title: String((it && it.title) || '未命名纪念日'),
+                body: norm([
+                    it && it.note,
+                    (it && it.isStarred) ? '星标' : '',
+                    (d === null) ? '' : new Date(d).toISOString().slice(0, 10)
+                ].filter(Boolean).join(' · ')),
+                ts: d === null ? 0 : d,
+                icon: '🎂', appId: 'annidate',
+                meta: { ref: buildOpenRef('item', id, 'annidate') }
+            };
+        }).filter(Boolean)
+    });
+    // ---- 曲库案头：曲目（musicdesk_lib.songs[]）----
+    sources.push({
+        id: 'musicdesk-song', label: '曲库曲目', icon: '🎼', appId: 'musicdesk', weight: 1.2,
+        items: () => {
+            const lib = asObj(get('musicdesk_lib', {}));
+            return asArray(lib.songs).map((s) => {
+                const id = String((s && s.id) || '');
+                if (!id) return null;
+                return {
+                    title: String((s && s.name) || '曲目'),
+                    body: norm([s && s.artist, s && s.album].filter(Boolean).join(' · ')),
+                    ts: 0, icon: '🎼', appId: 'musicdesk',
+                    meta: { ref: buildOpenRef('song', id, 'musicdesk') }
+                };
+            }).filter(Boolean);
+        }
+    });
+    // ---- Pixiv：小说与插画（pixiv_content.novels[] / .illustrations[]）----
+    sources.push({
+        id: 'pixiv-novel', label: 'Pixiv 小说', icon: '📕', appId: 'pixiv', weight: 1.2,
+        items: () => {
+            const c = asObj(get('pixiv_content', {}));
+            return asArray(c.novels).map((n) => {
+                const id = String((n && n.id) || '');
+                if (!id) return null;
+                return {
+                    title: String((n && n.title) || '（无题）'),
+                    body: norm([n && n.authorName, n && n.synopsis].filter(Boolean).join(' · ')),
+                    ts: 0, icon: '📕', appId: 'pixiv',
+                    meta: { ref: buildOpenRef('novel', id, 'pixiv') }
+                };
+            }).filter(Boolean);
+        }
+    });
+    sources.push({
+        id: 'pixiv-illust', label: 'Pixiv 插画', icon: '🖼️', appId: 'pixiv', weight: 1.0,
+        items: () => {
+            const c = asObj(get('pixiv_content', {}));
+            return asArray(c.illustrations).map((x) => {
+                const id = String((x && x.id) || '');
+                if (!id) return null;
+                return {
+                    title: String((x && x.title) || '（无题）'),
+                    body: norm([x && x.authorName, x && x.note].filter(Boolean).join(' · ')),
+                    ts: 0, icon: '🖼️', appId: 'pixiv',
+                    meta: { ref: buildOpenRef('illust', id, 'pixiv') }
+                };
+            }).filter(Boolean);
+        }
+    });
+    // ---- 老福特：文章（lofter_content.articles[]）----
+    sources.push({
+        id: 'lofter-article', label: '老福特文章', icon: '🖋️', appId: 'lofter', weight: 1.2,
+        items: () => {
+            const c = asObj(get('lofter_content', {}));
+            return asArray(c.articles).map((a) => {
+                const id = String((a && a.id) || '');
+                if (!id) return null;
+                return {
+                    title: String((a && a.title) || '（无题）'),
+                    body: norm([a && a.summary, asArray(a && a.tags).join(' ')].filter(Boolean).join(' · ')),
+                    ts: 0, icon: '🖋️', appId: 'lofter',
+                    meta: { ref: buildOpenRef('article', id, 'lofter') }
+                };
+            }).filter(Boolean);
+        }
+    });
+
     return sources;
 }
-
-/** 成就目录（id → 名称/分类/说明）；运行时由成就 App 提供，缺失则只索引 id */
 function _achievementCatalog() {
     try {
         const app = (typeof window !== 'undefined') ? window.VirtualPhone?.achievementApp : null;

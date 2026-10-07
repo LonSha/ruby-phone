@@ -316,7 +316,11 @@ test('v3600 C2. 分流不变：快速档同步、全历史档带承诺，切回�
 });
 
 /* ══════════════ D ── 负控制（真源码破坏 → 副本上重跑同款判据） ══════════════ */
-const CLOSURE = [GSE, APP, 'config/world-bridge.js', 'data/cheat-index.js', 'data/dirtytalk-index.js'];
+const CLOSURE = [GSE, APP, 'config/world-bridge.js', 'data/cheat-index.js', 'data/dirtytalk-index.js',
+    // [v3.66.0 · X2] 搜索内核新增两个 config 依赖（跨 App 靶心协议件 / 数值门）：
+    //   闭包不带它们，副本 import 直接 ERR_MODULE_NOT_FOUND ⇒ 负控制会退化成
+    //   「因缺文件而红」而不是「因破坏而红」。
+    'config/open-ref.js', 'config/num-gate.js'];
 function mkTree(tag) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3600-' + tag + '-'));
     for (const f of CLOSURE) {

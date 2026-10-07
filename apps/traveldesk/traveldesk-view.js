@@ -45,6 +45,20 @@ export class TraveldeskView {
     }
     _html(vm) {
         let h = '<div class="tv-wrap">';
+        /* [v3.66.0 · X2] 跨 App 定位条：从全局搜索点进来时，把「你要看的那一条」摆到最上面。
+         *   ★ 找不到时**不假装还在** —— 明确说「这条费用已不在账本里（可能被删或换了会话）」，
+         *     因为「点进来停在首屏」与「这一条没了」在界面上长得一样。 */
+        const f = vm.focus;
+        if (f) {
+            h += '<div class="tv-focus' + (f.gone ? ' is-gone' : '') + '">' +
+                '<span class="tv-focus-lab">定位</span>' +
+                '<span class="tv-focus-id">' + esc(f.id) + '</span>' +
+                (f.gone
+                    ? '<span class="tv-focus-why">这条费用已不在账本里（被删了，或换过会话）</span>'
+                    : '<span class="tv-focus-why">第 ' + esc(String(f.index + 1)) + ' 条 · ' + esc(f.payer || DASH)
+                        + ' · ' + money(f.finalCNY) + (f.note ? ' · ' + esc(f.note) : '') + '</span>') +
+                '<button class="tv-btn" data-act="unfocus">收起定位</button></div>';
+        }
         h += '<div class="tv-sec"><h3>账本（贴回 JSON）</h3>' +
             '<textarea class="tv-input" data-in="book"></textarea>' +
             '<button class="tv-btn" data-act="intake">入账</button>' +
@@ -92,6 +106,7 @@ export class TraveldeskView {
                     return n ? n.value : '';
                 };
                 if (act === 'intake') { self.app.intakeBook(val('book')); self.app.render(); }
+                else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
                 else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
                 else if (act === 'clear-ledger') { self.app.clearLedger(); self.app.render(); }
                 else if (act === 'settle') { self.app.settle(); self.app.render(); }

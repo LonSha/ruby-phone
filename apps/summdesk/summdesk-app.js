@@ -21,6 +21,8 @@ export class SummdeskApp {
         this._memories = [];
         this._cursors = { normal: 0, normalChunk: 0, normalInterval: 0, trueV: 0, trueChunk: 0, trueInterval: 0 };
         this._lastParse = null;
+        /* [v3.66.0 · X2] 跨 App 定位到的记忆 id（'' = 无定位态）。按 id 不按下标。 */
+        this._focus = '';
     }
     _readRaw(key) {
         if (!this.storage || typeof this.storage.get !== 'function') return { ok: false, why: 'no_api', value: undefined };
@@ -85,12 +87,36 @@ export class SummdeskApp {
         return { ok: true };
     }
     readings() { return readingsOf(this._memories, this._cursors.normal, this._cursors.trueV, this._cursors.historyLen || 0); }
+    /* ---------- [v3.66.0 · X2] 跨 App 定位口 ---------- */
+    /**
+     * 定位到某一条记忆（全局搜索点进来时用）。
+     *   ★ 按 id 找，不按下标 —— 册里删中间一条后，下标会让定位串到别的一条头上。
+     *   ★ 回报 reason：「点进来停在首屏」与「这条记忆没了」必须分得开。
+     */
+    openRef(ref) {
+        const id = (ref && typeof ref === 'object') ? toStr(ref.id) : '';
+        if (!id) return { ok: false, reason: 'no_id' };
+        this._probe();
+        const idx = this._memories.findIndex((m) => toStr(m && m.id) === id);
+        if (idx < 0) return { ok: false, reason: 'not_found', id: id, saw: this._memories.length };
+        this._focus = id;
+        return { ok: true, id: id, index: idx, saw: this._memories.length };
+    }
+    clearRef() { this._focus = ''; return { ok: true }; }
+    /** 定位态：id + 当下下标（找不到时 index = -1 且 gone，绝不假装还在）。 */
+    focusRow() {
+        if (!this._focus) return null;
+        const idx = this._memories.findIndex((m) => toStr(m && m.id) === this._focus);
+        if (idx < 0) return { id: this._focus, index: -1, gone: true };
+        const m = this._memories[idx];
+        return { id: this._focus, index: idx, gone: false, title: toStr(m.title), excerpt: toStr(m.content).slice(0, 60) };
+    }
     clearMemories() { this._memories = []; this._writeRaw(SM_MEMORIES_KEY, []); }
-    onChatChanged() { this._probe(); this.render(); }
+    onChatChanged() { this._probe(); this._focus = ''; this.render(); }
     render() {
         this._probe();
         if (!this._view) this._view = new SummdeskView(this);
         this._view.render(this._vm());
     }
-    _vm() { return { memories: this._memories, cursors: this._cursors, lastParse: this._lastParse, readings: this.readings() }; }
+    _vm() { return { memories: this._memories, cursors: this._cursors, lastParse: this._lastParse, readings: this.readings(), focus: this.focusRow() }; }
 }

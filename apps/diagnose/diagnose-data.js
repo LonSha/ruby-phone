@@ -121,6 +121,15 @@ import { precheckLine, handoffLine, handoffGateLine, handoffDropLog } from '../.
  *   ★ 本内核只**陈列**矩阵模块的读数，不在这里复算第二份：六个布尔值的真源复算在判据套件里
  *     （声明与事实分开存放，两者不一致时才有判别力）；内核再算一份就变成同源自述、必然恒绿。 */
 import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-consumption-matrix.js';
+/* [v3.66.0 · 拓展计划 X2 第一切片] 跨 App「定位引用」协议面的**运行时可见出口**。
+ *   为什么要接在这里：本切片新造了七条靶心（旅行费用 / 总结记忆 / 纪念日条目 / 曲库曲目 /
+ *   Pixiv 作品 / Pixiv 插画 / 老福特文章），消费侧散在六个 App 里。协议件自己的登记表
+ *   与「同一支笔写出的两条 ref 必须自等」这两件事，此前**只有测试在跑** ——
+ *   而本仓的纪律是「一切读数的可见出口就是诊断中心」：表坏了（kind 漂、归属写错、
+ *   同一 kind 挂两个 App）应当**在手机上看得见**，而不是只在 CI 里红。
+ *   与矩阵卡的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
+ *   本面答「投靶心这套协议**自身**现在还自洽吗」（表自检 + 自等自证）。 */
+import { OPEN_REF_KINDS, OPEN_REF_REASONS, openRefSelfCheck, buildOpenRef, normalizeOpenRef, sameRef } from '../../config/open-ref.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -553,6 +562,51 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* ── [v3.66.0 · X2 第一切片] 跨 App 靶心协议面（表自检 + 自等自证）──
+     *   摆的是什么：七个 kind 各自挂在哪个 App（逐条 label 可读）、表的自检结论、
+     *   以及一条**真跑出来的自等自证** —— 用同一支笔 `buildOpenRef` 造两条 ref，
+     *   经 `normalizeOpenRef` 归一后用 `sameRef` 比对必须为真；再造一条改一个字段的，
+     *   比对必须为假（这一对「真 + 假」才是证明；只报一边等于没报）。
+     *   为什么必须带上「必须为假」那一边：本仓最贵的形态是**恒真判据**
+     *   （写完发现它对任何输入都点头），只报「自等为真」时，一个永远返回 true 的
+     *   `sameRef` 也会让这面全绿。
+     *   三条纪律与全页一致：只读（不投任何 ref、不碰任何 App 实例）、不抛（单面 try/catch）、
+     *   不猜（取不到即 null，如实说取不到，不伪造一张空表）。 */
+    const openRefFace = (() => {
+        try {
+            const kinds = Object.keys(OPEN_REF_KINDS || {});
+            if (!kinds.length) return { ok: false, reason: 'table-empty', problems: [], kinds: [], apps: [], line: '' };
+            const self = openRefSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const rows = kinds.map((k) => {
+                const rec = OPEN_REF_KINDS[k] || {};
+                return { kind: String(k), appId: String(rec.appId || ''), label: String(rec.label || '') };
+            });
+            const apps = Array.from(new Set(rows.map((r) => r.appId))).sort();
+            /* 自等自证（真 + 假两侧都跑）：任一侧不成立即 problems 里记一条，
+             *   绝不把「只跑通真的一侧」当成协议自洽的证据。 */
+            const probe = rows[0];
+            const a = buildOpenRef(probe.kind, 'diag-probe-id', probe.appId);
+            const same = buildOpenRef(probe.kind, 'diag-probe-id', probe.appId);
+            const other = buildOpenRef(probe.kind, 'diag-probe-other', probe.appId);
+            const na = normalizeOpenRef(a);
+            if (!na.ok) problems.push('自等自证：同一支笔写出的 ref 归一必须成立（' + String(na.why) + '）');
+            if (!sameRef(a, same)) problems.push('自等自证：同一支笔写出的两条 ref 必须判等');
+            if (sameRef(a, other)) problems.push('自等自证：id 不同却判等 ⇒ 判等口径坏了（恒真）');
+            const reasons = Object.keys(OPEN_REF_REASONS || {}).filter((k) => k !== 'OK').length;
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                kinds: rows,
+                apps: apps,
+                reasonStates: reasons,
+                line: '跨 App 靶心协议：' + String(rows.length) + ' 个 kind 挂在 ' + String(apps.length)
+                    + ' 个 App 上；归因 ' + String(reasons) + ' 态；表自检与自等自证'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**（见下）' : '全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* ── [v3.58.0 · 计划 O4] 会话世代栅栏面（**被挡下的旧会话回信**）──
      *   摆的是什么：当前世代号、被挡下的回信条数、以及每一条的（域 / 拒绝原因 / 中文文案 / 时刻）。
      *   与「App 消费面矩阵」的分工（两面常被混为一谈，是两个不同的问题）：
@@ -577,7 +631,7 @@ export function collectDiagnose(win, storage) {
             return { ok: true, reason: 'ok', epoch: Number(log.epoch) || 0, count: rows.length, rows };
         } catch (_e) { return { ok: false, reason: 'gate-threw', epoch: null, count: 0, rows: [] }; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, handoff, sessionGate };
 }
 /** [v3.58.0 · 计划 O4] 会话世代栅栏面的一行读数（**唯一实现**在本文件 `collectDiagnose` 内取的那一面）。
  *  这里只做转发与文案：视图不自己拼（拼第二遍就是同一口径两份实现）。

@@ -164,6 +164,34 @@ export class DiagnoseView {
      *      只说「挡了一条」而不能说「挡了谁、为什么」等于没说。
      *  纯渲染：取数与三态判定全在内核（`collectDiagnose` 的 `sessionGate` 面 + `sessionGateFaceText`），
      *  本方法不自己数条数、不自己判原因（那都是同一口径的第二份实现）。 */
+    /* [v3.66.0 · X2 第一切片] 跨 App 靶心协议卡（表自检 + 自等自证）。
+     *   与「App 消费面矩阵」的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
+     *   本卡答「投靶心这套协议自身现在还自洽吗」—— 表坏了（kind 漂 / 归属写错）时
+     *   用户点搜索结果会落在**别人的首屏**上，而那种病不报错、只是显示不对。
+     *   内核只陈列，本视图只排版（与全页同规格：视图不自算读数）。 */
+    _openRefHtml(pkg) {
+        const face = (pkg && pkg.openRefFace) || null;
+        if (!face || face.ok === undefined) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>跨 App 靶心协议读数读取失败（已降级）—— '
+                + '这只说明本页取不到该面，**不代表**靶心投递就坏了。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(face.line) + '</div>';
+        const kinds = Array.isArray(face.kinds) ? face.kinds : [];
+        if (kinds.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + kinds.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.kind) + '</code>'
+                + this._chip(escapeHtml(r.label), 'muted')
+                + this._chip('→ ' + escapeHtml(r.appId), 'ok') + '</div>').join('') + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检/自等自证报了问题</b>（这些会让点进来的用户落到别人的首屏）：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>自等自证为什么两侧都跑：只报「同一支笔写的两条判等」时，'
+            + '一个**恒真**的判等函数也会让这面全绿 —— 故必须同时报「改一个字段就必须判不等」那一边。</div>';
+        return html;
+    }
     _sessionGateHtml(pkg) {
         const face = (pkg && pkg.sessionGate) || null;
         if (!face) {
@@ -809,6 +837,9 @@ export class DiagnoseView {
         /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
          *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），
          *   本卡答「这些接线**真的挡下过谁**」（行为发生过）。接线在场不等于行为发生过。 */
+        /* [v3.66.0 · X2 第一切片] 跨 App 靶心协议卡紧跟矩阵卡之后：两张卡是同一族的两个问题 ——
+         *   矩阵答「哪些 App 接上了平台面」，本卡答「这套投靶心的协议自身自洽吗」。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨 App 靶心协议（结果能不能落到那一条上）</h3>' + this._openRefHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>会话世代栅栏（哪些旧会话回信被挡下）</h3>' + this._sessionGateHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：

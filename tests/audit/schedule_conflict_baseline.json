@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 378,
+    "files_scanned": 379,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -586,6 +586,23 @@
         "local_engine_hits"
       ],
       "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
+    },
+    "v3.66.0": {
+      "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
+      "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
+      "readings": {
+        "files_scanned": 379
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "本版新增的协议件不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
+        "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。"
+      ]
     }
   }
 }
