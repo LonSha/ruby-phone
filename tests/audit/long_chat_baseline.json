@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 374,
+    "files": 379,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=374，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+      "got_text": "files=379，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     }
   ],
   "timing_criteria": [
@@ -733,6 +733,24 @@
         "全部活体读数",
         "timing（计时类，按口径不刷新）"
       ]
+    },
+    "v3.65.0": {
+      "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）",
+      "why": "L5 的 files= 是扫描面真读数（374 -> 379，为本版新增源件后的仓内 .js 计数）。**长会话行为读数一格未动**（N=10/100/400/1000/2000 五档的楼层数、物化条数、引擎索引长度、最近楼层上下文行数全部逐字不变）—— 本版不碰楼层消费路径。四类站点计数（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）同样一格未动。",
+      "readings": {
+        "files": 379,
+        "full_materialize": 9,
+        "bounded_slice": 5,
+        "indexed_loop": 11,
+        "length_read": 48
+      },
+      "unchanged": [
+        "floor_count",
+        "materialize_items",
+        "engine_index_len",
+        "recent_story_context_lines"
+      ],
+      "not_done": "本轮仍为合成宿主取证，非实机。"
     }
   }
 }

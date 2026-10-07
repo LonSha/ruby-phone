@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 373,
+    "files_scanned": 378,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -571,6 +571,21 @@
         "消费面读数为零漂移（承诺期限 / 状态消费点 23、文件 6、本地日程引擎 0），这是如实记录而非漏复校。",
         "上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。"
       ]
+    },
+    "v3.65.0": {
+      "what": "v3.65.0 枚举面 +5（config 新件 3 个 .js；apps/taskentry 2 个 .js）",
+      "why": "files_scanned 是 apps/** + config/** 的 .js 计数：373 -> 378。**消费面一格未动**（消费点 23 / 消费文件 6 件 / 本地引擎命中 0）—— 本版新增的是任务入口导航件，不碰排期冲突的任何消费路径（R2 的「只有楼层维」与 R3 的「未复核（冻结证据：0）」两段散文一字不改）。",
+      "readings": {
+        "files_scanned": 378,
+        "consume_points": 23,
+        "local_engine_hits": 0
+      },
+      "unchanged": [
+        "consume_points",
+        "consume_files",
+        "local_engine_hits"
+      ],
+      "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
     }
   }
 }

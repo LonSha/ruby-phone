@@ -16,6 +16,8 @@
 
 import { tokenizeWangxiangTaskTags } from './apps/wangxiang/wangxiang-task-parser.js';
 import { PhoneCallData, parseSmsMessagesFromText } from './apps/phone/phone-data.js';
+// [v3.65.0 · X1] 开 App 载荷归一与页签投递的唯一实现（装配器在 render 之前投页签，见其调用处注释）
+import { normalizeOpenDetail, applyOpenDetail } from './config/app-open-detail.js';
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
@@ -65,7 +67,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.64.0';
+const ST_PHONE_VERSION = '3.65.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -203,6 +205,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'summdeskApp',     // [v3.52.0] 总结案头：记忆册与双游标随会话隔离，换会话两格全量重取
     'sullydeskApp',    // [v3.53.0] SullyOS 治理案头：审计读数与台账随会话隔离，换会话两格全量重取
     'traveldeskApp',   // [v3.54.0] 旅行记账案头：账本与台账随会话隔离，换会话两格全量重取
+    'taskentryApp',    // [v3.65.0 · X1] 任务入口：收藏（te_pins）与台账（te_ledger）随会话隔离，
+                       //             且**筛选态 _cap 与 dropped 计数是实例态** —— 换会话必须丢，
+                       //             否则新会话会带着上一段的筛选与「挤掉 N 条」的旧读数。
     'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
@@ -242,8 +247,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-07",
+    date: "2026-10-08",
     items: [
+        "【定位 · X1 的真实缺口（修前实测处境）】桌面是 81 个 App 的平铺网格，用户要做一件事得先自己知道那件事归哪个 App；更要紧的是**即使点对了 App 也到不了要看的页签**。修前全仓 openApp 的 detail 恒为只有 appId 一个字段（实测 9 处派发点，settings 那处多带 icon 仍无页签），消费端只按 appId 查表或落内联分支、从不读页签 ⇒ 「打开曲库」只能落在兜底书架页，歌词页到不了。本版新增任务入口这一件：按用户任务聚合 App 与页签，把入口的靶心补上。",
+        "【本版自己抓到的缺陷 ① 缺省吃空表把好卡判成废卡】内核 availableCards 的缺省写成空对象，于是 15 条带页签靶心全被判成未核对（unknown）⇒ 靶心不可达 ⇒ 5 张带页签的卡整体不可用。修前实测读数：带页签 0 条 / 只到 App 14 条、可用卡 2 张；改为缺省吃真表后实测 29 条靶心（带页签 15 / 只到 App 14）、可用卡 7 张、0 张不可用。教训一句话：忘了传参数最多该拿真表判，绝不能得到一屏假红。判据侧同款缺陷另有 4 处，一并修在源头而不改断言。",
+        "【本版自己抓到的缺陷 ② 读不出与没记录被塌成一态】最近使用委托 usage-tracker 的两个出口，但把裸读数直接喂给聚合出口，而聚合出口假定 days 字段在场 ⇒ 抛 Object.keys 的 TypeError。形态是「本来要区分读不出与没有记录，结果两者都变成异常」。修法是先过一遍归一出口再聚合（聚合出口的口径一字未改，只在调用侧补归一）。修后实测三态分列：空读数与字符串归读不出、空对象与空 days 归没记录、真读数按次数降序并与跨天计数合并。",
+        "【本版自己抓到的缺陷 ③ 判据基建的四处坏法（比被测对象的缺陷更该先修）】① 抽取器把右方括号写进字符类时多转义一次，正则直接抛未终止字符类 —— 那是**判据自身崩了**，混在一起会把基建缺陷读成对象缺陷；② 负控制的副本树只放被破坏那一件，而被破坏模块静态 import 同目录依赖 ⇒ 模块找不到，同样不是「破坏没反应」；③ 破坏锚点撞车（裸片段在本文件出现两次），锚点不唯一时该抛就抛，不能把撞车当成功；④ 断言把**字面文本**拿去当正则匹配，文本里的插入符被当成锚点 ⇒ 永远为假。四条统一修法：抽取器字符类只转义一次、副本树带完整 config 目录、锚点取整行、字面匹配改子串查找。另修内核一处：收藏开关对纯空白 id 当变更，会落成永远消不掉的孤儿收藏。",
+        "【交棒改写 · 版本锚取下限形】本套件自带版本锚，写法是**下限形**（大于等于当版）而不是硬等号。理由与 v3.63.0 那条同款：钉子套件描述的是**它出生那一版**交付的模块，硬等号抬版即红、且把「本件这件事」偷换成「当版那件事」。这不是放宽 —— 当版硬等号由当版套件接管（本版即本件）。同一批还改写了两条旧式判据：页签前缀族的检查改为**只在关键字数组区间内**查找（整文件搜索会把说明文字也算成登记，等于把说明当实现）。",
+        "【页签真源 · 可被证伪的声明】新增登记表把 21 个 App 的页签按 4 种载体形态分派：显式数组 13 / 条件链 2 / 视图层白名单 2 / 单页 4（合计 82 个页签）。关键口径：**收下的串不等于事实上可达的页签** —— 不夹取的那一族真源在视图层的数组里，而单页 App 视图层一个页签分支都没有。故本表不是第二真源，是**可被证伪的声明**：判据 B 组真读源码逐条比集合相等，漂移即红；三种载体各配一个抽取器，混用会让判据核到不存在的数组。表侧的抽取器原型首跑抓到两处真问题并当场修：两个视图层 App 的兜底名各不相同（其中一处我抄错成 board，真源码是 guard）。",
+        "【接线面 · 一处补投而不是九处改写】装配器在渲染**之前**投页签，顺序不可反 —— 本仓有两族 setTab，一族只改状态不渲染，先渲染再设页签会让它们停在兜底页反而非目标页，那正是本版要治的形态。既有 9 处派发点的载荷**逐字节未动**（判据 D 组钉住这条：页签为空时**不写这个字段**），新入口走唯一一支笔构造载荷。四处登记一次到位：应用表、懒加载路由表、会话重绑表、消费矩阵；两个会话键进 keys 台账与存储前缀族。",
+        "【验证 · 门禁与判据真读数】本套件 24 个用例（结构 6 / 页签真源 3 / 三面交叉 2 / 接线 4 / 负控制 6 / 版本登记 3），含 6 条真源码破坏负控制（改表、改源码白名单、改卡表靶心、挪接线顺序、删键登记、锚点不唯一必须抛）。九道门单独真跑全部退出码 0：语法门 648 个文件、导入门 391 个文件 634 条、注册三方对账 82 个应用 id、键归属 287 条（会话隔离 234 / 全局 50 / 历史键 3）、零消费导出无新增、生命周期与桥接契约与取数口径卫生全绿。本版新增源件 6 个（config 3 / apps 2 / tests 1），登记面四处对账通过。",
+        "【运行时验证边界 · v3.65.0 复校】本版按当版复校边界文档，数字按真跑刷新（语法门 648 文件 / 导入门 391 文件 634 条），边界结论不变。本切片把「入口出现在真实桌面」做到有据（进应用表即会被图标布局渲染），但**本版没有在任何真实浏览器里跑过本 App**：模块行为是实测的、判据面是接线过的，真宿主里点一下是否真落在歌词页**不能保证**。这类「看起来没坏但显示不对」的形态只能在真宿主里暴露，自动化门禁结构上够不到。",
+        "【版本升至 3.65.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。",
         "【定位 · 本轮首跑真读数】v3.63.0 全量回归 `node --test tests/*.test.mjs` 实测 `1..2978` / pass 2976 / **fail 2** / duration 153163ms / EXIT=1。两处红是**同一条断言、同一形态**：`tests/system-v325.test.mjs` 与 `tests/system-v326.test.mjs` 的「A2 探针读数与基线逐项一致」均报 `Expected values to be strictly equal: 373 !== 371`（strictEqual，expected 371 / actual 373）。八道门单独真跑全部 EXIT=0（registry / keys / lifecycle / dead-exports / bridge-contract / weak-coercion / source-derivation / upstream-face）⇒ 红在**探针与基线之间**，不在门禁。",
         "【根因三条 · 逐条实测】① **枚举面陈旧**：两份基线的 `rebuilds` 段最后一条都停在 **v3.58.0**（记 370），此后 v3.61.0 / v3.62.0 / v3.63.0 新增的 config 侧新件（`branch-contrast.js` v3.62.0、`resume-handoff.js` v3.63.0、`app-lazy-routes.js` 等）**从未重绑**；实测枚举面 = apps 315 + config 58 = **373**。② **preview 42 -> 34 与 globalRead 8 -> 4 是同一缺陷形态（探针口径缺陷）**：`branch_play_probe.cjs` 的 `countTokens` 与三处读文件**只跳 `//` 行、不剥块注释**，而块注释恰是写规格的地方 ⇒「本模块绝不碰 X」被算成「X 已实施」。③ **branchFace 2 -> 0 同族**，且原那 2 点**全部**落在 `config/branch-contrast.js` 的文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 `checkpointCompare` 面），与「下游有没有接上游的**分支只读对照**面」**同名不同物**，如实归零正是该探针该给的读数。",
         "【本版修复 ① 探针纯度】`tests/audit/branch_play_probe.cjs` 补上「**块注释也算注释**」纪律（与 `schedule_conflict_probe.cjs` 的 **v3.22.0** 同款 `stripBlockComments`：匹配前整段抹白、**保留换行** ⇒ 行号不变），`IDX_CODE` 与三处读文件统一走新增的 `readCode`，头部留档补第 ④ 条形态纪律。实测读数：`checkpointFaceHits` **1 -> 0**（原那 1 点在 `config/checkpoint-content-contract.js` 文件头，逐字写着「绝不碰 `saveCheckpoint` / `dropCheckpoint` 这类写面」—— 它声明的是**没做**写面）、`previewFaceHits` **43 -> 34**（9 处块注释行：diagnose-data 3 / diagnose-view 1 / rollback-preview 2 / boot-timing 1 / num-gate 1 / branch-contrast 1）、`upstreamGlobalReadSites` **8 -> 4**（graph-bridge 1 / memory-app 2 / world-bridge 1，后者逐字写「不摸 `window.LonShaEvidenceWorkbench`」）。**回滚覆盖面 41 点 / 4 文件 / 12 入口定义一格未动**（rollback 族本就没有块注释命中，已实测）⇒ v326 D3 真源码破坏负控制不受影响。",
@@ -9974,6 +9989,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         .then(module => {
                             if (!window.VirtualPhone[lazyRoute.key]) {
                                 window.VirtualPhone[lazyRoute.key] = new module[lazyRoute.cls](phoneShell, storage);
+                            }
+                            /* [v3.65.0 · X1] 投页签必须**在 render 之前**：本仓有两族 setTab ——
+                             *   一族只改 `_tab` 不渲染（曲库/老福特/素材书/…），先渲染再设页签
+                             *   会让它们停在**兜底页**（正是本版要治的形态）；另一族自带 render()。
+                             *   故先归一载荷、再投递、最后才 render；归一与投递都走唯一实现
+                             *   （config/app-open-detail.js），本处不手写 detail 字面量。 */
+                            const openRes = applyOpenDetail(window.VirtualPhone[lazyRoute.key], normalizeOpenDetail(e.detail));
+                            if (openRes && openRes.applied === false && openRes.why === 'no-set-tab') {
+                                // 声明了靶心却没有投递口 ⇒ 声明与靶心脱钩（必须报，不能静默）
+                                console.warn('⚠️ ' + lazyRoute.errTitle + ' 不接受页签投递（no-set-tab）：声明与靶心脱钩');
                             }
                             window.VirtualPhone[lazyRoute.key].render();
                         })

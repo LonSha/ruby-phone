@@ -78,6 +78,7 @@ export const APP_LAZY_ROUTES = [
     { id: "summdesk", module: "./apps/summdesk/summdesk-app.js", key: "summdeskApp", cls: "SummdeskApp", errTitle: "总结案头App" },
     { id: "sullydesk", module: "./apps/sullydesk/sullydesk-app.js", key: "sullydeskApp", cls: "SullydeskApp", errTitle: "SullyOS治理案头App" },
     { id: "traveldesk", module: "./apps/traveldesk/traveldesk-app.js", key: "traveldeskApp", cls: "TraveldeskApp", errTitle: "旅行记账案头App" },
+    { id: "taskentry", module: "./apps/taskentry/taskentry-app.js", key: "taskentryApp", cls: "TaskentryApp", errTitle: "任务入口App" },
     { id: "needsim", module: "./apps/needsim/needsim-app.js", key: "needsimApp", cls: "NeedsimApp", errTitle: "需求沙盘App" },
     { id: "kettle", module: "./apps/kettle/kettle-app.js", key: "kettleApp", cls: "KettleApp", errTitle: "对话水壶App" },
     { id: "widget", module: "./apps/widget/widget-app.js", key: "widgetApp", cls: "WidgetApp", errTitle: "自定义组件App" },

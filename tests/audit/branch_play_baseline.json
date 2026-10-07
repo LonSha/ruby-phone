@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 373,
+    "files_scanned": 378,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 4,
-    "chat_data_patterns": 279,
+    "chat_data_patterns": 285,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 0,
     "preview_face_hits": 34,
@@ -971,6 +971,26 @@
         "块注释纪律只补在**探针侧**；其它 token 族走子串匹配的探针若日后新增，仍须逐件核对是否同步。本版只修 branch_play_probe（schedule_conflict_probe 早在 v3.22.0 已立）。",
         "「下游已实施检查点内容级对照」此刻的证据是**真源四出口在场 + 产品面真调用**（v326 A2 改写 + bridge-contract J13），**不是**本探针的文本计数 —— 文本计数从此不再为该结论作证。"
       ]
+    },
+    "v3.65.0": {
+      "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）+ 会话前缀族 +1（/^te_/）",
+      "why": "files_scanned 373 -> 378（apps/** + config/** 的 .js 计数）；chat_data_patterns 279 -> 285 是**存储层会话前缀族**的真读数 —— 本版给 config/storage.js 的会话前缀族加了 /^te_/（任务入口两条会话键），族条数随之增加。**回滚覆盖面与上游读取面一格未动**：41 点 / 4 文件 / 12 入口定义 · checkpoint 0 · preview 34 · branch 0 · 上游全局读取点 4 —— 本版不碰回滚/检查点/预览/分支对照任何路径。",
+      "readings": {
+        "files_scanned": 378,
+        "chat_data_patterns": 285,
+        "namespace_store_sites": 5
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits",
+        "upstream_global_read_sites",
+        "namespace_store_sites"
+      ],
+      "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
     }
   }
 }

@@ -342,6 +342,8 @@ const KEY_REGISTRY = [
   { key: 'sd2_ledger', scope: 'chat', note: '[v3.53.0] SullyOS 治理案头动作台账' },
   { key: 'tv_book', scope: 'chat', note: '[v3.54.0] 旅行记账案头账本（people/families/expenses）' },
   { key: 'tv_ledger', scope: 'chat', note: '[v3.54.0] 旅行记账案头动作台账' },
+  { key: 'te_pins', scope: 'chat', note: '[v3.65.0] 任务入口收藏（按用户摆放顺序的卡片 id 列表；上限 12）' },
+  { key: 'te_ledger', scope: 'chat', note: '[v3.65.0] 任务入口动作台账（打开/拒开/收藏/取消；上限 80）' },
   { key: 'block_settings', scope: 'chat', note: '[v3.27.0] 拉黑设置（注入开关 / 风控间隔 / 自动回绝开关）' },
   { key: 'block_state', scope: 'chat', note: '[v3.27.0] 拉黑两本账（我拉黑谁 / 谁拉黑我 + 双向申请与历史）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },

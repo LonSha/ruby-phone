@@ -1153,6 +1153,19 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v3.65.0 · 拓展计划 X1] 任务入口（taskentry）：按「用户要做的事」聚合既有 App 与页签。
+        //   修前桌面是 81 件平铺网格，且 `phone:openApp` 的 detail 恒为 { appId }（9 处派发点实测），
+        //   「打开曲库的歌词页」做不到 —— 只能落在兜底页。本 App 只做**导航聚合**：
+        //   卡片是受限声明式的（读既有 App 的路由与页签白名单），不执行用户 JS、不改桌面布局。
+        //   零网络、零 AI、零外链；两条会话键 te_pins / te_ledger 随会话隔离。
+        id: 'taskentry',
+        name: '任务入口',
+        icon: '🧭',
+        color: '#4a5a6a',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

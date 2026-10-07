@@ -110,6 +110,7 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     summdeskApp: 'summdesk',        // [v3.52.0] 总结案头：换会话丢记忆册与双游标，两格全量重取
     sullydeskApp: 'sullydesk',      // [v3.53.0] SullyOS 治理案头：换会话丢审计读数与台账，两格全量重取
     traveldeskApp: 'traveldesk',    // [v3.54.0] 旅行记账案头：换会话丢账本与台账，两格全量重取
+    taskentryApp: 'taskentry',      // [v3.65.0] 任务入口：换会话必须丢筛选态（_cap）与台账挤掉计数（_dropped，都是实例态），收藏与台账随会话重取
     searchApp: 'search'             // [v3.58.0] 全局搜索：换会话作废在跑的全历史扫描（_scanGen）并重对齐宿主源表
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
