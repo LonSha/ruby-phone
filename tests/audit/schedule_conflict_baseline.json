@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 379,
+    "files_scanned": 384,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -603,6 +603,25 @@
         "本版新增的协议件不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
         "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。"
       ]
-    }
+    },
+    "v3.72.0": {
+        "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑（消费面一格未动）",
+        "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。",
+        "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+        "readings": {
+              "files_scanned": 384
+        },
+        "unchanged": [
+              "consume_points",
+              "consume_files",
+              "local_engine_hits"
+        ],
+        "criteria_refreshed": {},
+        "not_done": [
+              "消费面（承诺期限 / 状态）与上一版逐字相同：消费点 23 / 消费文件 6 —— 本版新增的五个 config 件不落在该消费面上。这是如实记录，不是漏复校。",
+              "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。",
+              "本版只重绑枚举面读数，**不动**判定（verdict 与 criteria 散文除 files_scanned 引用外逐字不变）。"
+        ]
+  }
   }
 }

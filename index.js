@@ -312,7 +312,9 @@ const ST_PHONE_CURRENT_UPDATE = {
         "【第二件 · 受控恢复交接（预检→执行→回读三段闸门）】** `config/resume-handoff.js`（纯函数，463 行，只 import 取数门 numOrNull）：`precheckHandoff` 四道检查 → ok/blocked/unusable 三档；`handoffResume` 预检不过零调用（held）、同 handoffId 幂等、先抬交接世代再执行；`readbackOf` ok/mismatch/unreadable 三态；`guardHandoffWrite` 交接世代栅栏与 session-gate 串联（两把都要过）。",
         "【接线 · 诊断中心 handoffFace 卡片】** `apps/diagnose/diagnose-data.js` 的 handoff IIFE 与 handoffFaceText 转发函数已在 main 上（继承自 v3.63.0）；`apps/diagnose/diagnose-view.js` 加 `_handoffHtml` 渲染方法与卡片 section（与 sessionGate 面分列）；`index.js` import 两个协议件。",
         "【验证 · 门禁与判据真读数】** 两个测试套件共 27 个用例（v3720 分支对照 10 条 + v3730 受控恢复 17 条），含跨支泄漏/三态不同形/幂等/回读/旧写入被拒/两把闸门/真源码破坏负控制。自检函数全绿。",
-        "【版本升至 3.72.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。"
+        "【版本升至 3.72.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。",
+        "【本版自己抓到的缺陷 · 三处判据基建失配（比被测对象更该先修）】** ① `update-log.head` 停在 3.70.0 而 manifest 已是 3.72.0（v3.68.0~v3.72.0 五版合并交付时漏改），15 个套件因「三源同源」判据当场转红；② 零消费账本 26 条与门禁硬钉 24 条失配 —— `clampInt` 在本仓三处同名导出（签名各异），裸名匹配互相掩盖，形成**假消费**；③ 三份活基线的 `files_scanned` 停在 v3.66.0 的 379/380，而枚举面已随 X3~X8 新件长到 384/385。三者同族：**不报错、不崩溃、只错结果** —— **看起来没坏但显示不对**。这正是**运行时验证边界**第二类形态；本层只挡得住判据与门禁面，**不能保证**真宿主里那一轮真实对话与真机渲染 —— 那三条仍归 R-O3。",
+        "【交棒改写 · 三条判据按本仓纪律主动改写而非静默通过】** ① `system-v326` B1 自称查的是**产品代码**（「公告是散文，不是实现」），却**只剥公告块、不剥块注释** —— v3.72.0 X8 的接线说明注释里写了「续玩与分支对照工作区」，该 token 当场被算成「产品代码引进了分支对照面」。修法按 v3.64.0 同款纪律补上**块注释也算注释**（整段抹白、保留换行），并加**两向自证**：真代码里写 ⇒ 必须仍被读到，只写在注释里 ⇒ 必须读不到 —— token 禁令一字未松，只是不再量散文。② `system-v327` L5 与 `system-v325` / `system-v326` 的枚举面读数按 house pattern 零手抄重绑（现场跑探针取真读数、写进 `rebuilds` 段），不取「降低断言」那条下策。③ `system-v3171` / `system-v3213` 的形态锚（本版缺陷 / 交棒改写）由本条目承接，不钉上一版专有词。"
     ]
 };
 

@@ -291,7 +291,24 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
     if (end < 0) return s;
     return s.slice(0, at) + s.slice(at, end + 2).replace(/[^\n]/g, '') + s.slice(end + 2);
   };
-  const IDX_CODE = strip(IDX_SRC);
+  /* ★ [v3.72.0 交棒] 剥离面补上「**块注释也算注释**」（与 `branch_play_probe.cjs` 的 v3.64.0 /
+   *   `schedule_conflict_probe.cjs` 的 v3.22.0 同款：整段抹白、**保留换行** ⇒ 行号不变）。
+   *   为什么必须补：本判据自称查的是**产品代码**（「公告是散文，不是实现」），但它此前**只剥公告块**，
+   *   于是 `index.js` 里的**块注释散文**照样进读数 —— v3.72.0 X8 的接线说明注释里写了
+   *   「续玩与分支对照工作区」，该 token 当场被算成「产品代码引进了分支对照面」。
+   *   这不是「降低断言」：token 禁令对**真代码**一字未松，且下面加了**两向自证**
+   *   （真代码里写 ⇒ 必须仍被读到；只写在注释里 ⇒ 必须读不到）。
+   *   同族前例：v3.64.0（探针补块注释纪律后 `checkpointFaceHits` 如实归零，旧下限判据交棒改写）。 */
+  const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .split('\n').map((l) => (l.trim().slice(0, 2) === '//' ? ' '.repeat(l.length) : l)).join('\n');
+  /* 两向自证（工具自证，不依赖被测对象）：注释面必须被抹掉，真代码面必须留下。 */
+  assert.equal(stripComments('var a = 1; /* 分支对照 */\nvar b = 2;').indexOf('分支对照'), -1,
+    '自证：块注释里的 token 必须被抹掉（否则判据仍在量散文）');
+  assert.equal(stripComments('// 分支对照\nvar c = 3;').indexOf('分支对照'), -1,
+    '自证：整行 // 注释里的 token 必须被抹掉');
+  assert.ok(stripComments('var d = fn(分支对照);\n').indexOf('分支对照') >= 0,
+    '自证：真代码里的 token 必须**仍被读到**（禁令不得被抹掉）');
+  const IDX_CODE = stripComments(strip(IDX_SRC));
   /* ★ 自证「剥离面确实非空」不得硬钉当版公告的**具体词**：公告每版都会改写，
    *   钉词等于把判据挂在会被正常迭代修改的散文上（v3.9.1 抬版即翻红的真实事故）。
    *   改为**结构性**自证：公告块的 item 数组必须非空、且剥离后行数不变（行号仍指向真文件）。 */
@@ -316,7 +333,7 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
    *     —— 探针对这三个 token 的**计数**（A2 的 `previewFaceHits`）仍会把它量出来。
    *     反过来，拦住「上游分支/检查点面被接进来」的纪律**一字未松**（那才是本判据真正要守的）：
    *     六个 token 全在，且中文裸词 `分支对照` / `分支只读` 与 `branchCompare` 都是上游面专属，
-   *     在本仓任何位置出现都意味着「接了不该接的东西」。 */
+   *     在本仓**产品代码**里出现都意味着「接了不该接的东西」（v3.72.0 起剥块注释：散文不算实现，见下方交棒留档）。 */
   for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint', 'restoreCheckpoint',
     'previewRollback', 'rollbackPreview', 'dryRunRollback', 'RollbackPreview', '回滚预览',
     'branchCompare', '分支对照', '分支只读']) {
@@ -327,7 +344,7 @@ test('B1 产品代码零改动（本版只取证；若实施，本判据会被�
     if (!fs.statSync(abs).isDirectory()) continue;
     for (const f of fs.readdirSync(abs)) {
       if (f.slice(-3) !== '.js') continue;
-      const src = read(path.join(abs, f));
+      const src = stripComments(read(path.join(abs, f)));
       for (const tok of ['phoneCheckpoint', 'branchCheckpoint', 'saveCheckpoint',
         'branchCompare', '分支对照', '分支只读']) {
         assert.equal(src.indexOf(tok), -1, dir + '/' + f + ' 不得引入 ' + tok);
