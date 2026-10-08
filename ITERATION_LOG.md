@@ -1,4 +1,59 @@
+## 迭代 130 — v3.72.0 · 拓展计划 X8：续玩与分支对照工作区
+- **【定位 · X8 的真实缺口（修前实测处境）】** 已有 resume-brief 五面、织光机呈现、回滚预览、检查点内容对照、存档案头；但「选两分支 → 看语义变化」和「恢复前预检 → 执行 → 回读」两段操作流程此前在 feat/x8-resume-handoff 分支上交付过（v3.62.0/v3.63.0），未合入 main。X8 的任务是把这两件纯函数协议层合入当前主线（v3.71.0），完成只读分支对照 + 受控恢复交接的完整接线。
+- **【协议层 · 分支对照（只读）】** `config/branch-contrast.js`（纯函数，397 行）：`branchContrast` 把两支 payload 的差异按四组语义面（character/commitment/finance/storyTime）归类，每组给出 onlyA/onlyB/changed 三类行；跨支秘密隔离判定（`countLeak`）；三态不同形（缺席/空/正常）；`applied` 恒 false（只读）。
+- **【第二件 · 受控恢复交接（预检→执行→回读三段闸门）】** `config/resume-handoff.js`（纯函数，463 行，只 import 取数门 numOrNull）：`precheckHandoff` 四道检查 → ok/blocked/unusable 三档；`handoffResume` 预检不过零调用（held）、同 handoffId 幂等、先抬交接世代再执行；`readbackOf` ok/mismatch/unreadable 三态；`guardHandoffWrite` 交接世代栅栏与 session-gate 串联（两把都要过）。
+- **【接线 · 诊断中心 handoffFace 卡片】** `apps/diagnose/diagnose-data.js` 的 handoff IIFE 与 handoffFaceText 转发函数已在 main 上（继承自 v3.63.0）；`apps/diagnose/diagnose-view.js` 加 `_handoffHtml` 渲染方法与卡片 section（与 sessionGate 面分列）；`index.js` import 两个协议件。
+- **【验证 · 门禁与判据真读数】** 两个测试套件共 27 个用例（v3720 分支对照 10 条 + v3730 受控恢复 17 条），含跨支泄漏/三态不同形/幂等/回读/旧写入被拒/两把闸门/真源码破坏负控制。自检函数全绿。
+- **【版本升至 3.72.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。
+
+## 迭代 129 — v3.71.0 · 拓展计划 X7 第四切片：多角色生图操作深化
+- **【定位 · X7 的真实缺口（修前实测处境）】** image-generation-manager.js（5245 行）已解析最多六个 {人物 ... 人物} 块、产出 v4_prompt / v4_negative_prompt 的 char_captions / centers，支持位置（A1-E5 网格 / 中文方位 / 英文别名）和深度标签（前/后）。但槽位编辑全内联在类方法里：增删重排只能手改字符串，重复别名不报，坐标越界不拦，payload 无法离线预检，图片回执无绑定。
+- **【协议层 · 槽位模型 + payload 预检】** 新增 `config/character-slot-manager.js`（纯函数，740 行，18 个 export）：`parseSlotModel` 把 `{人物 ... 人物}` 字符串解析成结构化槽位列表（含位置/深度标签/ntags 分离）；`serializeSlotModel` 序列化回字符串；`addSlot` / `removeSlot` / `swapSlots` / `reorderSlots` 结构化编辑（六槽上限）；`buildPayloadPreview` 构建最终角色分配预览（char_captions / centers / use_coords），重复别名报 conflict、坐标越界报 out-of-bounds。
+- **【第二件 · 幂等图片回执账本】** `imageReceiptIdemKey` + `normalizeImageReceiptEntry` + `normalizeImageReceiptLedger` + `diffImageReceiptLedger` + `applyImageReceiptLedger`：幂等键 `<sessionKey>:<characterId>:<sceneTag>`，同角色同场景只记一次；diff 判断角色被删则标记 stale；上限 200 条，随会话隔离（image_receipt_ledger）。
+- **【位置工具 · grid ↔ coords 互转 + 越界校验】** `gridToCoords` / `coordsToGrid` 实现 A1-E5 网格与 {x,y} 坐标互转（与 image-generation-manager._resolveNovelAICharacterPosition 同口径）；`validatePosition` 校验坐标在 [0.1, 0.9] 范围内。
+- **【接线 · 诊断中心 characterSlotFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 回执账本状态 pending/completed 计数），`diagnose-view.js` 加 `_characterSlotHtml` 渲染方法与卡片；`index.js` 在 `checkCalendarScheduleReminders` 内加 `_imageReceiptLedgerCache` 缓存写入块。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^image_receipt_` 前缀；`scripts/keys-audit.mjs` 加 `image_receipt_ledger` 键（scope: chat）。
+- **【验证 · 门禁与判据真读数】** 新增套件 42 个用例（协议 3 / 槽位解析 7 / 槽位编辑 9 / payload 预检 5 / 幂等账本 9 / 位置工具 10 / 版本与导出面 2），含六槽上限/重复别名/坐标越界/空输入防御性降级的负控制。自检函数全绿。
+- **【版本升至 3.71.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。
+
+## 迭代 128 — v3.70.0 · 拓展计划 X6 第三切片：创作素材到发布草稿
+- **【定位 · X6 的真实缺口（修前实测处境）】** 本仓有八个创作类 App（musicdesk / stickerdesk / soundkit / pixiv / lofter / magazine / pvdesk / doujin），各自管理素材但彼此之间没有协议层回答「从哪个素材出处选了什么、放进哪个草稿、草稿最终发给谁」。代价是素材 id 不可追溯、草稿切聊串味、同曲多份播放状态不一致。X6 的任务是在协议层把素材来源、草稿构建与幂等账本接起来。
+- **【协议层 · 来源登记表 + 草稿构建】** 新增 `config/creation-pipeline.js`（纯函数，341 行，11 个 export）：`CREATION_SOURCES` 钉死 8 个来源的素材类型与 idKey；`CREATION_TARGETS` 登记 6 个发布目标及接受的素材类型；`buildCreationDraft` 校验来源/目标/类型匹配后产出 `status: 'draft'` 草稿（不落账不发布）；`verifyMaterialExists` 校验素材在来源中是否存在。
+- **【第二件 · 幂等草稿账本】** `creationIdemKey` + `normalizeCreationEntry` + `normalizeCreationLedger` + `diffCreationLedger` + `applyCreationLedger`：幂等键 `<source>:<materialId>:<targetApp>`，同素材同目标只记一次；diff 判断素材被删则标记 stale；上限 150 条，随会话隔离（creation_ledger）。
+- **【接线 · 诊断中心 creationFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本状态 draft/published 计数），`diagnose-view.js` 加 `_creationHtml` 渲染方法与卡片（与 knowledgeBridgeFace 同范式）；`index.js` 在 `checkCalendarScheduleReminders` 内加 `_creationLedgerCache` 缓存写入块。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^creation_` 前缀；`scripts/keys-audit.mjs` 加 `creation_ledger` 键（scope: chat）。
+- **【验证 · 门禁与判据真读数】** 新增套件 28 个用例（协议 7 / 草稿构建 8 / 素材校验 6 / 幂等账本 13 / 版本与导出面 2），含幂等/截断/去重/素材被删标记陈旧/跨来源不干扰/空输入防御性降级的负控制。自检函数全绿。
+- **【版本升至 3.70.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。
+
+## 迭代 127 — v3.69.0 · 拓展计划 X5 第二切片：社媒知情边界实际接入
+- **【协议层 · 知情判定单独一件】** 新增 `config/social-knowledge-bridge.js`（纯函数，371 行，9 个 export）：`knowledgeCheck` 收 posts+contacts+actorId 判定可见/已看/未看/可互动/被挡五列表（内联 `_isVisibleTo`/`_seenAtOf` 与 socialguard-data 同口径，保持零依赖——不 import socialguard-data.js）；`filterNotificationsByVisibility` 按可见性过滤通知列表（看不见帖子的人不收到相关通知，非社媒通知放行）。
+- **【第二件 · 幂等知情账本】** `knowledgeIdemKey` + `normalizeKnowledgeLedger` + `diffKnowledgeLedger` + `applyKnowledgeLedger`：幂等键 `<actorId>:<postId>:<eventType>`，同事件多次记录只留一条；diff 判断帖子被删则标记 stale；上限 200 条，随会话隔离（knowledge_ledger）。
+- **【接线 · 诊断中心 knowledgeBridgeFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本状态 active/stale），`diagnose-view.js` 加 `_knowledgeBridgeHtml` 渲染方法与卡片（与 financeFace 同范式）。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^knowledge_` 前缀；`scripts/keys-audit.mjs` 加 `knowledge_ledger` 键（scope: chat）。同时修复了编辑过程中误删的 `/^needsim_/` 模式行。
+- **【验证 · 门禁与判据真读数】** 新增套件 20 个用例（协议 3 / 知情判定 5 / 账本 7 / 通知过滤 4 / 版本与导出面 2），含幂等/截断/去重/帖子被删标记陈旧/非社媒通知放行的负控制。自检函数全绿。
+- **【版本升至 3.69.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。## 迭代 126 — v3.68.0 · 拓展计划 X4 第一切片：财务总览与旅行结算交接
+- **【定位 · X4 的真实缺口（修前实测处境）】** 本仓有七个各持不同语义的财务面：wallet（上游快照金钱账）、accounting（本地账本净值）、piggy（存钱罐余额）、asset（资产净值）、traveldesk（旅行分摊）、shop（商城订单）、taobao（桃宝订单）。每个面各自只在自己的 App 里显示自己的数字，而没有任何一处回答同一个问题：「这个角色现在一共有多少钱，各自算准了吗」。代价是三类错读数：盲目求和（不同账户/币种直接相加产生无意义总数）、预测冒充事实（旅行分摊结算建议被当真实交易）、来源不可追溯（同笔交易在两处各算各的，总额虚高）。
+- **【协议层 · 七源归一单独一件】** 新增 `config/finance-overview.js`（纯函数，581 行，13 个 export）：来源登记表 `FINANCE_SOURCES` 钉死七源的币种、确定性（fact/prediction/suggestion）、提供面与写权限；`buildFinanceOverview` 收各来源已投影好的数据归一为分源行（不重算——重算一份就是第二份真源），**不产生跨来源总余额**（不同币种/账户的数字相加没有语义），没打开的来源记 `not-opened`（不把没人去读当成余额 0）。
+- **【第二件 · 结算草稿】** `travelSettlementDraft` + `fillSettlementDraft`：包装 traveldesk 的 balancesOf + internalSettlement + externalSettlement，产出一份标明 `certainty: 'suggestion'` 的草稿（不落账、不改余额）。只有用户选定一个真实账本接受后才落账，落账动作只由唯一 owner 写。
+- **【第三件 · 幂等提交账本】** `settlementIdemKey` + `normalizeFinanceLedger` + `diffFinanceLedger` + `applyFinanceLedger`：幂等键 `<source>:<draftId>:<dayKey>`，同草稿多次提交只记一次（防重试重复扣款）；diff 三态分离（new/replay/revoked）；上限 120 条，随会话隔离（finance_ledger）。
+- **【接线 · 诊断中心 financeFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本自检 + 来源登记表 + 宿主缓存读数 + 缺口），`diagnose-view.js` 加 `_financeHtml` 渲染方法与卡片（与 scheduleFace 同范式）。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^finance_/` 前缀；`scripts/keys-audit.mjs` 加 `finance_ledger` 键（scope: chat）。账本记的是「这个角色/这段对话里提交了哪些结算草稿、撤了什么」——随会话隔离。
+- **【验证 · 门禁与判据真读数】** 新增套件 22 个用例（协议 4 / 归一 5 / 账本 7 / 草稿 4 / 版本与导出面 2），含幂等/撤回/截断/去重/建议≠事实的负控制。自检函数 source + ledger 全绿。导出面恒定 13 个。
+- **【版本升至 3.68.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。
 # 迭代日志 (Iteration Log)
+
+## 迭代 125 — v3.67.0 · 拓展计划 X3 第一切片：剧情日程与提醒联动
+
+- **【定位 · X3 的真实缺口（修前实测处境）】** 本仓有四套「到点了该提醒什么」的判定，各自只在自己那一格里跑：日历备忘比前后两个剧情时刻、纪念日拿现实时间判四类、周期预警拿现实时间判 0-3 天窗口、约定有状态机但判到期这件事根本没人做。三套幂等键三种形态、两种时间基，而没有任何一处回答同一个问题：「今天该提醒我什么，各自算准了吗」。代价是两类错读数：时间基混用（把周期预测按剧情日推进或反之）与形态不可比（三个源的键不同形，谁提醒过谁没提醒过无法对账，取消来源后撤回提醒无处可查）。
+- **【协议层 · 四源归一单独一件】** 新增 `config/schedule-bridge.js`（纯函数，678 行，23 个 export）：四源登记表钉死每源的时间基（story/real）、确定性（fact/prediction）、投递责任（self/bridge）与可点回性；`buildScheduleAdvice` 收四源已判好的结果归一为建议行（不重算——重算一份就是第二份真源），`dayKeyOf`/`storyDayKeyOf`/`idemKeyOf` 把三种历史键形收成一支笔（`<source>:<sourceId>:<dayKey>`），缺剧情钟不产行（不拿今天顶替——X3 原文硬要求）。
+- **【第二件 · 提醒账本】** `normalizeScheduleLedger` + `diffScheduleLedger` + `applyScheduleLedger`：幂等键对账（同键复算算 replay 不重投）、撤回门（只对 read【source】===true 的源判撤回——把不知道当没有是本仓最贵的反向错读数）、改期归因（从本轮行的 liveBySourceId 索引判断，不从账本建索引——账本只能回答过去投过什么）、回档归因（只对 story 基且 atStoryDay > storyDay 判，real 基不判，story.dayKey 为空不判）。上限 240 条，随会话隔离（schedule_ledger）。
+- **【第三件 · 投递载荷】** `scheduleSenderKey` + `scheduleDeliveryPlan` + `scheduleNoticeOf`：投递责任拆分（calendar-memo=self 已有自己的弹窗通道本层只记账；anniversary/commitment/cycle=bridge 由本层投）；无靶心时 appId 必须为空（否则横幅点击把用户丢到别人首屏）；有靶心时经 open-ref 归一后才取 appId。
+- **【接线 · index.js 的 checkCalendarScheduleReminders 咽喉点】** 在日历提醒检测的同一条 try 里追加四源取数与归一：storyClock 走三源归一（不直接拿 latestTime.date——后者是单源 calendar）；纪念日/周期案头若未打开则取数为 undefined（协议层据此记 gap not-read，不把没人去读当成没有到期项）；约定走 commitmentCalendarProjection；投递只走 bridge 源且只投 notify（replay 不重投）；落账后写诊断缓存。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^schedule_/` 前缀；`scripts/keys-audit.mjs` 的 KEY_REGISTRY 加 `schedule_ledger` 键（scope: chat）。账本记的是「这个角色/这段对话里提醒过什么、撤了什么」——随会话隔离：换角色后不该看到上一个角色的提醒账。
+- **【诊断中心 · scheduleFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本自检 + 四源登记表 + 宿主缓存读数 + 缺口），`diagnose-view.js` 加 `_scheduleHtml` 渲染方法与 `<section>` 卡片（与 openRefFace 同范式：内核只陈列，视图只排版）。
+- **【验证 · 门禁与判据真读数】** 新增套件 12 个用例（协议 3 / 归一 4 / 账本 4 / 投递 2 / 版本与导出面 2），含幂等/撤回门/改期分辨/回档分辨（含 real 基反向自证与 story.dayKey 为空不判回档）的负控制。自检函数 15 条用例（表侧 7 + 账本侧 8）全绿。死导出门禁：16 个产品侧 export 被 index.js 消费，2 个 selfCheck 被 diagnose-data.js 消费（从基线可清理）。
+- **【版本升至 3.67.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。
+
 
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
@@ -5403,7 +5458,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`3.66.0`（五源同源）
+- **当前版本**：`3.72.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

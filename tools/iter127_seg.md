@@ -1,0 +1,8 @@
+## 迭代 127 — v3.69.0 · 拓展计划 X5 第二切片：社媒知情边界实际接入
+- **【定位 · X5 的真实缺口（修前实测处境）】** 本仓 socialguard 有完整的可见性判定（visibleTo / canSeeInteraction / mayInteractWith），但判定的结果全在 App 内部消化：看不见帖子的人仍可能从通知、搜索、AI 回复中获得内容；未看帖子的角色不知道自己「未看」；撤回/换分身/修改受众后缓存不失效。X5 的任务是把这些已有判定接到协议层，形成跨 App 的知情边界。
+- **【协议层 · 知情判定单独一件】** 新增 `config/social-knowledge-bridge.js`（纯函数，371 行，9 个 export）：`knowledgeCheck` 收 posts+contacts+actorId 判定可见/已看/未看/可互动/被挡五列表（内联 `_isVisibleTo`/`_seenAtOf` 与 socialguard-data 同口径，保持零依赖——不 import socialguard-data.js）；`filterNotificationsByVisibility` 按可见性过滤通知列表（看不见帖子的人不收到相关通知，非社媒通知放行）。
+- **【第二件 · 幂等知情账本】** `knowledgeIdemKey` + `normalizeKnowledgeLedger` + `diffKnowledgeLedger` + `applyKnowledgeLedger`：幂等键 `<actorId>:<postId>:<eventType>`，同事件多次记录只留一条；diff 判断帖子被删则标记 stale；上限 200 条，随会话隔离（knowledge_ledger）。
+- **【接线 · 诊断中心 knowledgeBridgeFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本状态 active/stale），`diagnose-view.js` 加 `_knowledgeBridgeHtml` 渲染方法与卡片（与 financeFace 同范式）。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^knowledge_` 前缀；`scripts/keys-audit.mjs` 加 `knowledge_ledger` 键（scope: chat）。同时修复了编辑过程中误删的 `/^needsim_/` 模式行。
+- **【验证 · 门禁与判据真读数】** 新增套件 20 个用例（协议 3 / 知情判定 5 / 账本 7 / 通知过滤 4 / 版本与导出面 2），含幂等/截断/去重/帖子被删标记陈旧/非社媒通知放行的负控制。自检函数全绿。
+- **【版本升至 3.69.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。

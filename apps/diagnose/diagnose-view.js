@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, sessionGateFaceText } from './diagnose-data.js';
+import { checkpointFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -214,6 +214,166 @@ export class DiagnoseView {
         )).join('') + '</div>';
         html += '<div class=' + Q + 'dg-note' + Q + '>口径：被挡下的回信**一条都没落盘**（不写正文、不推游标、不点红点），'
             + '账本有界（只留最近若干条）—— 遥测本身不得成为新的泄漏源。</div>';
+        return html;
+    }
+    /** [v3.67.0 · 拓展计划 X3] 日程提醒协议卡：四源归一结果 + 账本状态 + 缺口。
+     *  与 _openRefHtml 同规格：内核只陈列，本视图只排版（视图不自算读数是本仓纪律）。 */
+    _scheduleHtml(pkg) {
+        const face = (pkg && pkg.scheduleFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到日程提醒协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有到期项」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(scheduleFaceText(face)) + '</div>';
+        const sources = Array.isArray(face.sources) ? face.sources : [];
+        if (sources.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + sources.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.source) + '</code>'
+                + this._chip(escapeHtml(r.label), 'muted')
+                + this._chip(r.timeBasis === 'story' ? '剧情基' : '现实基', r.timeBasis === 'story' ? 'ok' : 'warn')
+                + this._chip(r.deliver === 'self' ? '自带投递' : '协议层投', r.deliver === 'self' ? 'muted' : 'ok')
+                + '</div>').join('') + '</div>';
+        }
+        const gaps = Array.isArray(face.gaps) ? face.gaps : [];
+        if (gaps.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>缺口（这些源本轮没取数或剧情钟读不出）：</div>';
+            html += gaps.map((g) => '<div class=' + Q + 'dg-sub' + Q + '>'
+                + escapeHtml(String(g.source || '')) + '：' + escapeHtml(String(g.reason || '')) + '</div>').join('');
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检/账本自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+     }
+     /** [v3.68.0 · 拓展计划 X4] 财务总览协议卡：七源归一结果 + 结算账本状态 + 缺口。
+      *  与 _scheduleHtml 同规格：内核只陈列，本视图只排版。 */
+     _financeHtml(pkg) {
+         const face = (pkg && pkg.financeFace) || null;
+         if (!face) {
+             return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到财务总览协议面（已降级）—— '
+                 + '这是「本层读不出」，**不是**「没钱」。</div>';
+         }
+         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(financeFaceText(face)) + '</div>';
+         const sources = Array.isArray(face.sources) ? face.sources : [];
+         if (sources.length) {
+             html += '<div class=' + Q + 'dg-table' + Q + '>' + sources.map((r) =>
+                 '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.source) + '</code>'
+                 + this._chip(escapeHtml(r.label), 'muted')
+                 + this._chip(escapeHtml(r.currency), r.currency === 'CNY' ? 'ok' : 'warn')
+                 + this._chip(r.certainty === 'fact' ? '事实' : (r.certainty === 'suggestion' ? '建议' : '预测'), r.certainty === 'fact' ? 'ok' : 'warn')
+                 + '</div>').join('') + '</div>';
+         }
+         const gaps = Array.isArray(face.gaps) ? face.gaps : [];
+         if (gaps.length) {
+             html += '<div class=' + Q + 'dg-note' + Q + '>缺口（这些来源本轮没打开或读不出）：</div>';
+             html += gaps.map((g) => '<div class=' + Q + 'dg-sub' + Q + '>'
+                 + escapeHtml(String(g.source || '')) + '：' + escapeHtml(String(g.reason || '')) + '</div>').join('');
+         }
+         const problems = Array.isArray(face.problems) ? face.problems : [];
+         if (problems.length) {
+             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检/账本自检报了问题</b>：</div>';
+             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+         }
+         return html;
+     }
+     /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议卡：知情账本状态 + 表自检。
+      *  与 _financeHtml 同规格：内核只陈列，本视图只排版。 */
+     _knowledgeBridgeHtml(pkg) {
+         const face = (pkg && pkg.knowledgeBridgeFace) || null;
+         if (!face) {
+             return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到社媒知情边界面（已降级）—— '
+                 + '这是「本层读不出」，**不是**「没有帖子」。</div>';
+         }
+         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(knowledgeBridgeFaceText(face)) + '</div>';
+         const ledger = face.ledger || {};
+         if (ledger.total !== undefined) {
+             html += '<div class=' + Q + 'dg-table' + Q + '>'
+                 + this._chip('总 ' + String(ledger.total || 0), 'muted')
+                 + this._chip('活跃 ' + String(ledger.active || 0), 'ok')
+                 + this._chip('陈旧 ' + String(ledger.stale || 0), 'warn')
+                 + this._chip('上限 ' + String(ledger.limit || 0), 'muted')
+                 + '</div>';
+         }
+         const problems = Array.isArray(face.problems) ? face.problems : [];
+         if (problems.length) {
+             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检报了问题</b>：</div>';
+             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+         }
+         return html;
+     }
+     /** [v3.70.0 · 拓展计划 X6] 创作草稿协议卡：来源登记表 + 草稿账本 + 表自检。 */
+     _creationHtml(pkg) {
+         const face = (pkg && pkg.creationFace) || null;
+         if (!face) {
+             return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到创作草稿协议面（已降级）—— '
+                 + '这是「本层读不出」，**不是**「没有素材」。</div>';
+         }
+         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(creationFaceText(face)) + '</div>';
+         const ledger = face.ledger || {};
+         if (ledger.total !== undefined) {
+             html += '<div class=' + Q + 'dg-table' + Q + '>'
+                 + this._chip('总 ' + String(ledger.total || 0), 'muted')
+                 + this._chip('草稿 ' + String(ledger.draft || 0), 'warn')
+                 + this._chip('已发布 ' + String(ledger.published || 0), 'ok')
+                 + this._chip('上限 ' + String(ledger.limit || 0), 'muted')
+                 + '</div>';
+         }
+         const problems = Array.isArray(face.problems) ? face.problems : [];
+         if (problems.length) {
+             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检报了问题</b>：</div>';
+             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+         }
+         return html;
+    }
+    /** [v3.71.0 · X7] 多角色生图协议卡：角色槽位 + payload 预检 + 幂等回执账本。 */
+    _characterSlotHtml(pkg) {
+        const face = (pkg && pkg.characterSlotFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到多角色生图协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有角色槽位」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(characterSlotFaceText(face)) + '</div>';
+        const ledger = face.ledger || {};
+        if (ledger.total !== undefined) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>'
+                + this._chip('总 ' + String(ledger.total || 0), 'muted')
+                + this._chip('待出 ' + String(ledger.pending || 0), 'warn')
+                + this._chip('已完成 ' + String(ledger.completed || 0), 'ok')
+                + this._chip('上限 ' + String(ledger.limit || 0), 'muted')
+                + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
+    /** [v3.72.0 · X8] 受控恢复交接卡：交接世代栅栏 + 被挡下的旧回信。
+     *  与会话栅栏面**分列**（两种拒绝原因不同形）：会话栅栏说「换会话了」；
+     *  交接栅栏说「恢复过数据了」—— 恢复不改会话身份，前者对这类回信完全无感。 */
+    _handoffHtml(pkg) {
+        const face = (pkg && pkg.handoff) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到受控恢复交接面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有被挡下的回信」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(handoffFaceText(face)) + '</div>';
+        if (face.epoch !== null && face.epoch !== undefined) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>'
+                + this._chip('交接世代 ' + String(face.epoch), 'muted')
+                + this._chip('已挡下 ' + String(face.count || 0), face.count ? 'warn' : 'ok')
+                + '</div>';
+        }
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        if (rows.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>恢复前被挡下的旧回信</b>：</div>';
+            html += rows.map((r) => '<div class=' + Q + 'dg-sub' + Q + '>'
+                + escapeHtml(r.domain) + ' — ' + escapeHtml(r.text)
+                + '</div>').join('');
+        }
         return html;
     }
     /** [v3.13.0 · 计划 #14] 启动耗时卡：把「谁拖慢了启动」摆在用户面前。
@@ -841,6 +1001,12 @@ export class DiagnoseView {
          *   矩阵答「哪些 App 接上了平台面」，本卡答「这套投靶心的协议自身自洽吗」。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨 App 靶心协议（结果能不能落到那一条上）</h3>' + this._openRefHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>会话世代栅栏（哪些旧会话回信被挡下）</h3>' + this._sessionGateHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>日程提醒协议（四源归一 + 幂等账本）</h3>' + this._scheduleHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务总览协议（七源归一 + 结算草稿 + 幂等账本）</h3>' + this._financeHtml(pkg) + '</section>');
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>多角色生图协议（槽位编辑 + payload 预检 + 幂等回执）</h3>' + this._characterSlotHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，

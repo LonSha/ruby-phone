@@ -1,0 +1,11 @@
+## 迭代 125 — v3.67.0 · 拓展计划 X3 第一切片：剧情日程与提醒联动
+
+- **【定位 · X3 的真实缺口（修前实测处境）】** 本仓有四套「到点了该提醒什么」的判定，各自只在自己那一格里跑：日历备忘比前后两个剧情时刻、纪念日拿现实时间判四类、周期预警拿现实时间判 0-3 天窗口、约定有状态机但判到期这件事根本没人做。三套幂等键三种形态、两种时间基，而没有任何一处回答同一个问题：「今天该提醒我什么，各自算准了吗」。代价是两类错读数：时间基混用（把周期预测按剧情日推进或反之）与形态不可比（三个源的键不同形，谁提醒过谁没提醒过无法对账，取消来源后撤回提醒无处可查）。
+- **【协议层 · 四源归一单独一件】** 新增 `config/schedule-bridge.js`（纯函数，678 行，23 个 export）：四源登记表钉死每源的时间基（story/real）、确定性（fact/prediction）、投递责任（self/bridge）与可点回性；`buildScheduleAdvice` 收四源已判好的结果归一为建议行（不重算——重算一份就是第二份真源），`dayKeyOf`/`storyDayKeyOf`/`idemKeyOf` 把三种历史键形收成一支笔（`<source>:<sourceId>:<dayKey>`），缺剧情钟不产行（不拿今天顶替——X3 原文硬要求）。
+- **【第二件 · 提醒账本】** `normalizeScheduleLedger` + `diffScheduleLedger` + `applyScheduleLedger`：幂等键对账（同键复算算 replay 不重投）、撤回门（只对 read【source】===true 的源判撤回——把不知道当没有是本仓最贵的反向错读数）、改期归因（从本轮行的 liveBySourceId 索引判断，不从账本建索引——账本只能回答过去投过什么）、回档归因（只对 story 基且 atStoryDay > storyDay 判，real 基不判，story.dayKey 为空不判）。上限 240 条，随会话隔离（schedule_ledger）。
+- **【第三件 · 投递载荷】** `scheduleSenderKey` + `scheduleDeliveryPlan` + `scheduleNoticeOf`：投递责任拆分（calendar-memo=self 已有自己的弹窗通道本层只记账；anniversary/commitment/cycle=bridge 由本层投）；无靶心时 appId 必须为空（否则横幅点击把用户丢到别人首屏）；有靶心时经 open-ref 归一后才取 appId。
+- **【接线 · index.js 的 checkCalendarScheduleReminders 咽喉点】** 在日历提醒检测的同一条 try 里追加四源取数与归一：storyClock 走三源归一（不直接拿 latestTime.date——后者是单源 calendar）；纪念日/周期案头若未打开则取数为 undefined（协议层据此记 gap not-read，不把没人去读当成没有到期项）；约定走 commitmentCalendarProjection；投递只走 bridge 源且只投 notify（replay 不重投）；落账后写诊断缓存。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^schedule_/` 前缀；`scripts/keys-audit.mjs` 的 KEY_REGISTRY 加 `schedule_ledger` 键（scope: chat）。账本记的是「这个角色/这段对话里提醒过什么、撤了什么」——随会话隔离：换角色后不该看到上一个角色的提醒账。
+- **【诊断中心 · scheduleFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本自检 + 四源登记表 + 宿主缓存读数 + 缺口），`diagnose-view.js` 加 `_scheduleHtml` 渲染方法与 `<section>` 卡片（与 openRefFace 同范式：内核只陈列，视图只排版）。
+- **【验证 · 门禁与判据真读数】** 新增套件 12 个用例（协议 3 / 归一 4 / 账本 4 / 投递 2 / 版本与导出面 2），含幂等/撤回门/改期分辨/回档分辨（含 real 基反向自证与 story.dayKey 为空不判回档）的负控制。自检函数 15 条用例（表侧 7 + 账本侧 8）全绿。死导出门禁：16 个产品侧 export 被 index.js 消费，2 个 selfCheck 被 diagnose-data.js 消费（从基线可清理）。
+- **【版本升至 3.67.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。

@@ -1,0 +1,9 @@
+## 迭代 126 — v3.68.0 · 拓展计划 X4 第一切片：财务总览与旅行结算交接
+- **【定位 · X4 的真实缺口（修前实测处境）】** 本仓有七个各持不同语义的财务面：wallet（上游快照金钱账）、accounting（本地账本净值）、piggy（存钱罐余额）、asset（资产净值）、traveldesk（旅行分摊）、shop（商城订单）、taobao（桃宝订单）。每个面各自只在自己的 App 里显示自己的数字，而没有任何一处回答同一个问题：「这个角色现在一共有多少钱，各自算准了吗」。代价是三类错读数：盲目求和（不同账户/币种直接相加产生无意义总数）、预测冒充事实（旅行分摊结算建议被当真实交易）、来源不可追溯（同笔交易在两处各算各的，总额虚高）。
+- **【协议层 · 七源归一单独一件】** 新增 `config/finance-overview.js`（纯函数，581 行，13 个 export）：来源登记表 `FINANCE_SOURCES` 钉死七源的币种、确定性（fact/prediction/suggestion）、提供面与写权限；`buildFinanceOverview` 收各来源已投影好的数据归一为分源行（不重算——重算一份就是第二份真源），**不产生跨来源总余额**（不同币种/账户的数字相加没有语义），没打开的来源记 `not-opened`（不把没人去读当成余额 0）。
+- **【第二件 · 结算草稿】** `travelSettlementDraft` + `fillSettlementDraft`：包装 traveldesk 的 balancesOf + internalSettlement + externalSettlement，产出一份标明 `certainty: 'suggestion'` 的草稿（不落账、不改余额）。只有用户选定一个真实账本接受后才落账，落账动作只由唯一 owner 写。
+- **【第三件 · 幂等提交账本】** `settlementIdemKey` + `normalizeFinanceLedger` + `diffFinanceLedger` + `applyFinanceLedger`：幂等键 `<source>:<draftId>:<dayKey>`，同草稿多次提交只记一次（防重试重复扣款）；diff 三态分离（new/replay/revoked）；上限 120 条，随会话隔离（finance_ledger）。
+- **【接线 · 诊断中心 financeFace 卡片】** `apps/diagnose/diagnose-data.js` 加 IIFE 取数面（表自检 + 账本自检 + 来源登记表 + 宿主缓存读数 + 缺口），`diagnose-view.js` 加 `_financeHtml` 渲染方法与卡片（与 scheduleFace 同范式）。
+- **【存储键 · 会话隔离登记】** `config/storage.js` 的 CHAT_DATA_PATTERNS 加 `^finance_/` 前缀；`scripts/keys-audit.mjs` 加 `finance_ledger` 键（scope: chat）。账本记的是「这个角色/这段对话里提交了哪些结算草稿、撤了什么」——随会话隔离。
+- **【验证 · 门禁与判据真读数】** 新增套件 22 个用例（协议 4 / 归一 5 / 账本 7 / 草稿 4 / 版本与导出面 2），含幂等/撤回/截断/去重/建议≠事实的负控制。自检函数 source + ledger 全绿。导出面恒定 13 个。
+- **【版本升至 3.68.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。

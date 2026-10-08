@@ -144,6 +144,18 @@
       "name": "hasGaigaiTagFilter",
       "line": 65,
       "reason": "探测 window.Gaigai / window.YuzukiMemory 的能力判定，属宿主环境相关的可选能力面，接入点未定。"
+    },
+    {
+      "file": "config/schedule-bridge.js",
+      "name": "scheduleBridgeSelfCheck",
+      "line": 340,
+      "reason": "[v3.67.0 · X3] 协议件表侧自检（四源登记表完整性 + 幂等键稳定性 + 日键归一正确性）。与 tests/system-v3670_schedule.test.mjs 的磁盘侧独立复算互为对照——门禁/诊断调用它，产品端不直接消费。接入点为诊断中心 scheduleFace（同 openRefFace 的 selfCheck 范式）。"
+    },
+    {
+      "file": "config/schedule-bridge.js",
+      "name": "scheduleLedgerSelfCheck",
+      "line": 596,
+      "reason": "[v3.67.0 · X3] 账本侧自检（幂等/撤回门/改期分辨/回档分辨/投递拆分/载荷靶心共 8 条用例）。与 tests/system-v3670_schedule.test.mjs 的磁盘侧独立复算互为对照。接入点为诊断中心 scheduleFace。"
     }
   ]
 }

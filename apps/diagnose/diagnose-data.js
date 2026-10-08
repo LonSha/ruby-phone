@@ -130,6 +130,19 @@ import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-c
  *   与矩阵卡的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
  *   本面答「投靶心这套协议**自身**现在还自洽吗」（表自检 + 自等自证）。 */
 import { OPEN_REF_KINDS, OPEN_REF_REASONS, openRefSelfCheck, buildOpenRef, normalizeOpenRef, sameRef } from '../../config/open-ref.js';
+/* [v3.67.0 · 拓展计划 X3] 日程提醒协议面：与 openRefFace 同一族——协议件自身现在还自洽吗。
+ *   四源归一结果、账本状态、缺口、投递计划，在此面陈列（不重算，只读缓存）。 */
+import { scheduleBridgeSelfCheck, scheduleLedgerSelfCheck, scheduleAdviceLine, SCHEDULE_SOURCES } from '../../config/schedule-bridge.js';
+/* [v3.68.0 · 拓展计划 X4] 财务总览协议面：与 scheduleFace 同一族——协议件自身现在还自洽吗。
+ *   七源归一结果、结算草稿状态、提交账本状态、缺口，在此面陈列（不重算，只读缓存）。 */
+import { financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_SOURCES, FINANCE_LEDGER_LIMIT } from '../../config/finance-overview.js';
+/* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 scheduleFace / financeFace 同一族——协议件自身现在还自洽吗。
+ *   可见性判定结果、知情账本状态、通知过滤、缺口，在此面陈列（不重算，只读缓存与自检）。 */
+import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-knowledge-bridge.js';
+/* [v3.70.0 · 拓展计划 X6] 创作素材到发布草稿协议面：与 knowledgeBridgeFace 同一族。
+ *   来源登记表 + 草稿账本状态 + 表自检。 */
+import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-pipeline.js';
+import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -631,7 +644,142 @@ export function collectDiagnose(win, storage) {
             return { ok: true, reason: 'ok', epoch: Number(log.epoch) || 0, count: rows.length, rows };
         } catch (_e) { return { ok: false, reason: 'gate-threw', epoch: null, count: 0, rows: [] }; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, handoff, sessionGate };
+    const scheduleFace = (() => {
+        try {
+            const bridgeSelf = scheduleBridgeSelfCheck();
+            const ledgerSelf = scheduleLedgerSelfCheck();
+            const problems = []
+                .concat(Array.isArray(bridgeSelf && bridgeSelf.problems) ? bridgeSelf.problems.map(String) : [])
+                .concat(Array.isArray(ledgerSelf && ledgerSelf.problems) ? ledgerSelf.problems.map(String) : []);
+            const sources = Object.keys(SCHEDULE_SOURCES || {}).map((k) => {
+                const reg = SCHEDULE_SOURCES[k] || {};
+                return { source: String(k), label: String(reg.label || ''), timeBasis: String(reg.timeBasis || ''), deliver: String(reg.deliver || '') };
+            });
+            /* 从宿主读缓存（index.js 的 checkCalendarScheduleReminders 投递后写入；未跑即 null） */
+            const w = hostWindow();
+            const advice = (w && w.VirtualPhone) ? w.VirtualPhone._scheduleAdviceCache : null;
+            const ledgerCache = (w && w.VirtualPhone) ? w.VirtualPhone._scheduleLedgerCache : null;
+            const line = advice ? scheduleAdviceLine(advice) : null;
+            const ledgerEntries = (ledgerCache && Array.isArray(ledgerCache.entries)) ? ledgerCache.entries : [];
+            const delivered = ledgerEntries.filter((e) => e.state === 'delivered').length;
+            const withdrawn = ledgerEntries.filter((e) => e.state === 'withdrawn').length;
+            const gaps = (advice && Array.isArray(advice.gaps)) ? advice.gaps.map((g) => ({ source: String(g.source || ''), reason: String(g.reason || '') })) : [];
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                sources: sources,
+                adviceLine: line,
+                gaps: gaps,
+                ledger: { total: ledgerEntries.length, delivered: delivered, withdrawn: withdrawn },
+                text: '日程提醒协议：' + String(sources.length) + ' 个源（'
+                    + sources.map((s) => s.label).join(' / ') + '）；'
+                    + (line ? line.detail : '尚未取数')
+                    + '；账本 ' + String(ledgerEntries.length) + ' 条（投递 ' + String(delivered) + ' · 撤回 ' + String(withdrawn) + '）'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；表自检与账本自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    /* [v3.68.0 · 拓展计划 X4] 财务总览协议面：与 scheduleFace 同范式——
+     * 只读自检 + 来源登记表 + 宿主缓存读数 + 缺口。 */
+    const financeFace = (() => {
+        try {
+            const sourceSelf = financeSourceSelfCheck();
+            const ledgerSelf = financeLedgerSelfCheck();
+            const problems = []
+                .concat(Array.isArray(sourceSelf && sourceSelf.problems) ? sourceSelf.problems.map(String) : [])
+                .concat(Array.isArray(ledgerSelf && ledgerSelf.problems) ? ledgerSelf.problems.map(String) : []);
+            const sources = FINANCE_SOURCES.map((s) => ({
+                source: String(s.source), label: String(s.label), currency: String(s.currency),
+                certainty: String(s.certainty), openable: s.openable, ownerWrite: s.ownerWrite
+            }));
+            const w = hostWindow();
+            const overview = (w && w.VirtualPhone) ? w.VirtualPhone._financeOverviewCache : null;
+            const ledgerCache = (w && w.VirtualPhone) ? w.VirtualPhone._financeLedgerCache : null;
+            const ledgerEntries = (ledgerCache && Array.isArray(ledgerCache.entries)) ? ledgerCache.entries : [];
+            const committed = ledgerEntries.filter((e) => e.action === 'commit').length;
+            const gaps = (overview && Array.isArray(overview.gaps)) ? overview.gaps.map((g) => ({ source: String(g.source || ''), reason: String(g.reason || '') })) : [];
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                sources: sources,
+                readyCount: overview ? overview.readyCount : null,
+                notOpenedCount: overview ? overview.notOpenedCount : null,
+                gaps: gaps,
+                ledger: { total: ledgerEntries.length, committed: committed, limit: FINANCE_LEDGER_LIMIT },
+                text: '财务总览：' + String(sources.length) + ' 个来源（'
+                    + sources.map((s) => s.label).join(' / ') + '）；'
+                    + (overview ? String(overview.readyCount) + ' 就绪 · ' + String(overview.notOpenedCount) + ' 未打开' : '尚未取数')
+                    + '；账本 ' + String(ledgerEntries.length) + ' 条（提交 ' + String(committed) + ' / 上限 ' + String(FINANCE_LEDGER_LIMIT) + '）'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；表自检与账本自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    /* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 financeFace 同范式——
+     * 只读自检 + 知情账本状态 + 宿主缓存读数 + 缺口。 */
+    const knowledgeBridgeFace = (() => {
+        try {
+            const self = knowledgeSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const w = hostWindow();
+            const ledgerCache = (w && w.VirtualPhone) ? w.VirtualPhone._knowledgeLedgerCache : null;
+            const ledgerEntries = (ledgerCache && Array.isArray(ledgerCache.entries)) ? ledgerCache.entries : [];
+            const active = ledgerEntries.filter((e) => e.state === 'active').length;
+            const stale = ledgerEntries.filter((e) => e.state === 'stale').length;
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                ledger: { total: ledgerEntries.length, active: active, stale: stale, limit: KNOWLEDGE_LEDGER_LIMIT },
+                text: '社媒知情边界：知情账本 ' + String(ledgerEntries.length) + ' 条（活跃 '
+                    + String(active) + ' · 陈旧 ' + String(stale) + ' / 上限 ' + String(KNOWLEDGE_LEDGER_LIMIT) + '）'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；表自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    /* [v3.70.0 · 拓展计划 X6] 创作素材到发布草稿协议面：与 knowledgeBridgeFace 同范式。 */
+    const creationFace = (() => {
+        try {
+            const self = creationSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const w = hostWindow();
+            const ledgerCache = (w && w.VirtualPhone) ? w.VirtualPhone._creationLedgerCache : null;
+            const ledgerEntries = (ledgerCache && Array.isArray(ledgerCache.entries)) ? ledgerCache.entries : [];
+            const draft = ledgerEntries.filter((e) => e.status === 'draft').length;
+            const published = ledgerEntries.filter((e) => e.status === 'published').length;
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                ledger: { total: ledgerEntries.length, draft: draft, published: published, limit: CREATION_LEDGER_LIMIT },
+                text: '创作草稿：来源 8 · 目标 6；账本 ' + String(ledgerEntries.length) + ' 条（草稿 '
+                    + String(draft) + ' · 已发布 ' + String(published) + ' / 上限 ' + String(CREATION_LEDGER_LIMIT) + '）'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；表自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    const characterSlotFace = (() => {
+        try {
+            const self = characterSlotSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const w = hostWindow();
+            const ledgerCache = (w && w.VirtualPhone) ? w.VirtualPhone._imageReceiptLedgerCache : null;
+            const ledgerEntries = (ledgerCache && Array.isArray(ledgerCache.entries)) ? ledgerCache.entries : [];
+            const pending = ledgerEntries.filter((e) => e.status === 'pending').length;
+            const completed = ledgerEntries.filter((e) => e.status === 'completed').length;
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                ledger: { total: ledgerEntries.length, pending: pending, completed: completed, limit: IMAGE_RECEIPT_LEDGER_LIMIT },
+                text: '多角色生图：槽位上限 6；回执账本 ' + String(ledgerEntries.length) + ' 条（待出 '
+                    + String(pending) + ' · 已完成 ' + String(completed) + ' / 上限 ' + String(IMAGE_RECEIPT_LEDGER_LIMIT) + '）'
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；表自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, handoff, sessionGate };
 }
 /** [v3.58.0 · 计划 O4] 会话世代栅栏面的一行读数（**唯一实现**在本文件 `collectDiagnose` 内取的那一面）。
  *  这里只做转发与文案：视图不自己拼（拼第二遍就是同一口径两份实现）。
@@ -648,6 +796,48 @@ export function sessionGateFaceText(face) {
         if (!f.count) return '会话世代栅栏：当前世代 ' + String(f.epoch) + '，本轮未被挡下任何回信（正常）。';
         return '会话世代栅栏：当前世代 ' + String(f.epoch) + '，已挡下 ' + String(f.count) + ' 条旧会话回信。';
     } catch (_e) { return '会话世代栅栏：读取异常（已降级）—— 这不是「没有被挡下的回信」'; }
+}
+/** [v3.67.0 · 拓展计划 X3] 日程提醒协议面的一行读数（唯一实现在本文件 `collectDiagnose` 内取的那一面）。
+ *  与 sessionGateFaceText 同范式：只做转发与文案，视图不自己拼。 */
+export function scheduleFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '日程提醒协议：读取异常（已降级）—— 这不是「没有到期项」';
+        return String(f.text || '日程提醒协议：无读数');
+    } catch (_e) { return '日程提醒协议：读取异常（已降级）'; }
+}
+/** [v3.68.0 · 拓展计划 X4] 财务总览协议面的一行读数（唯一实现在本文件 `collectDiagnose` 内取的那一面）。
+ *  与 scheduleFaceText 同范式：只做转发与文案，视图不自己拼。 */
+export function financeFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '财务总览协议：读取异常（已降级）—— 这不是「没钱」';
+        return String(f.text || '财务总览协议：无读数');
+    } catch (_e) { return '财务总览协议：读取异常（已降级）'; }
+}
+/** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面的一行读数（与 financeFaceText 同范式）。 */
+export function knowledgeBridgeFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '社媒知情边界：读取异常（已降级）—— 这不是「没有帖子」';
+        return String(f.text || '社媒知情边界：无读数');
+    } catch (_e) { return '社媒知情边界：读取异常（已降级）'; }
+}
+/** [v3.70.0 · 拓展计划 X6] 创作草稿协议面的一行读数（与 knowledgeBridgeFaceText 同范式）。 */
+export function creationFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '创作草稿协议：读取异常（已降级）—— 这不是「没有素材」';
+        return String(f.text || '创作草稿协议：无读数');
+    } catch (_e) { return '创作草稿协议：读取异常（已降级）'; }
+}
+/** [v3.71.0 · 拓展计划 X7] 多角色生图协议面的一行读数（与 creationFaceText 同范式）。 */
+export function characterSlotFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '多角色生图协议：读取异常（已降级）—— 这不是「没有角色槽位」';
+        return String(f.text || '多角色生图协议：无读数');
+    } catch (_e) { return '多角色生图协议：读取异常（已降级）'; }
 }
 /** [v3.20.2] 上游检查点面的一行读数（**唯一实现**在真源 `config/checkpoint-content-contract.js`）。
  *  这里只做转发 —— 视图不再自己拼（拼第二遍就是同一口径两份实现）。 */
@@ -918,5 +1108,10 @@ export default {
     checkpointFaceText,
     sessionGateFaceText,
     handoffFaceText,
-    summarizeDiagnose
+    summarizeDiagnose,
+    scheduleFaceText,
+    financeFaceText,
+    knowledgeBridgeFaceText,
+    creationFaceText,
+    characterSlotFaceText
 };

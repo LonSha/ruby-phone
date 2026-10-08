@@ -107,7 +107,10 @@ export const LEDGER = [
     { file: 'apps/calendar/calendar-view.js', kind: 'not-a-derivation', note: '时间线视图据 memo.commitmentSourceId 反查约定（纯展示）。' },
     { file: 'apps/memory/global-search-engine.js', kind: 'not-a-derivation', exports: ['registerSource(src)', 'query(query, opts = {})'], note: '跨 App 搜索：sourceId 是来源标签，索引每次打开面板失效重建，不承载派生条目生命周期。' },
     { file: 'apps/search/search-view.js', kind: 'not-a-derivation', note: '搜索面板：按来源作用域过滤视图。' },
-    { file: 'config/prompt-manager.js', kind: 'not-a-derivation', inFace: false, note: '提示词导入预设：字段名叫 sourceId，语义是「导入来源的预设 id」，无删除语义、不参与去重回收（预设删除走独立入口）。' },
+    { file: 'config/schedule-bridge.js', kind: 'not-a-derivation', note: '日程提醒协议桥：sourceKey 是来源 App 的标签（schedule/wechat/task/health），不承载派生条目生命周期。' },
+    { file: 'config/branch-contrast.js', kind: 'not-a-derivation', inFace: false, note: '分支对照工作区：纯函数只读对照，不承载派生条目生命周期。' },
+    { file: 'config/resume-handoff.js', kind: 'not-a-derivation', inFace: false, note: '受控恢复交接：纯函数预检/执行/回读，不承载派生条目生命周期。' },
+{ file: 'config/prompt-manager.js', kind: 'not-a-derivation', inFace: false, note: '提示词导入预设：字段名叫 sourceId，语义是「导入来源的预设 id」，无删除语义、不参与去重回收（预设删除走独立入口）。' },
 ];
 
 /* ------------------------------------------------------------

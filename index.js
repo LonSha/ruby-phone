@@ -44,6 +44,62 @@ import { PHONE_EVENTS, makePhoneEvent, phoneEventFireReport, resetPhoneEventFire
 // [v2.72.0] 表格更新锚点：落后正文几楼的三态读数（未知/已追平/落后 N 楼）
 import { UPDATE_GAP_KEY, readUnupdatedFloorCount, recordTableUpdateFloor, updateGapLine } from './config/update-gap.js';
 import { numOrNull } from './config/num-gate.js';
+/* [v3.68.0 · 拓展计划 X4] 财务总览与旅行结算交接协议层（纯函数）：
+ *   七源归一（不盲目求和）+ 结算草稿（suggestion ≠ fact）+ 幂等提交账本。
+ *   接线点在诊断中心取数面（与 scheduleFace 同一族）。 */
+import {
+    buildFinanceOverview, financeSourceRow, FINANCE_SOURCES,
+    travelSettlementDraft, fillSettlementDraft,
+    settlementIdemKey, normalizeFinanceLedger, diffFinanceLedger, applyFinanceLedger,
+    financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_LEDGER_LIMIT
+} from './config/finance-overview.js';
+/* [v3.69.0 · 拓展计划 X5] 社媒知情边界实际接入协议层（纯函数）：
+ *   知情判定（可见/已看/可互动）+ 通知过滤（看不见不收）+ 知情账本（撤回失效缓存）。 */
+import {
+    knowledgeCheck, filterNotificationsByVisibility,
+    knowledgeIdemKey, normalizeKnowledgeLedger, diffKnowledgeLedger, applyKnowledgeLedger,
+    knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT
+} from './config/social-knowledge-bridge.js';
+/* [v3.70.0 · 拓展计划 X6] 创作素材到发布草稿协议层（纯函数）：
+ *   素材来源登记表 + 草稿构建 + 幂等草稿账本。 */
+import {
+    creationSelfCheck,
+    normalizeCreationLedger,
+    CREATION_LEDGER_LIMIT
+} from './config/creation-pipeline.js';
+/* [v3.71.0 · 拓展计划 X7] 多角色生图操作深化协议层（纯函数）：
+ *   角色槽位模型 + payload 预检 + 幂等图片回执账本。 */
+import {
+    characterSlotSelfCheck,
+    normalizeImageReceiptLedger,
+    IMAGE_RECEIPT_LEDGER_LIMIT
+} from './config/character-slot-manager.js';
+/* [v3.72.0 · 拓展计划 X8] 续玩与分支对照工作区（两件纯函数协议层）：
+ *   ① branch-contrast：选两分支 → 四组语义面（角色/约定/财务/剧情时间）只读对照，
+ *      跨支秘密隔离判定，三态不同形（缺席/空/正常）。
+ *   ② resume-handoff：受控恢复交接（预检 → 执行 → 回读三段闸门），
+ *      交接世代栅栏与 session-gate 串联（两把都要过），同 handoffId 幂等。
+ *   接线点在诊断中心 handoffFace 卡片（与 sessionGate 面分列）。 */
+import {
+    branchContrast, branchContrastLine,
+    CONTRAST_GROUPS as BC_GROUPS
+} from './config/branch-contrast.js';
+import {
+    precheckHandoff, handoffResume, readbackOf,
+    bumpHandoffEpoch, handoffEpoch, captureHandoffToken,
+    handoffWriteReason, guardHandoffWrite, handoffDropLog,
+    precheckLine, handoffLine, handoffGateLine,
+    PRECHECK_STATES as HO_PRECHECK_STATES
+} from './config/resume-handoff.js';
+/* [v3.67.0 · 拓展计划 X3] 日程提醒协议层（纯函数）：
+ *   四源归一 + 幂等账本 + 投递载荷。接线点在 `checkCalendarScheduleReminders`，
+ *   那是剧情时间更新后日历提醒的唯一咽喉。纪念日 / 周期 / 约定的取数也在此收敛：
+ *   不重算（各源的判定仍只有一份），只把**已判好的结果**收进来归一、对账、投递。 */
+import {
+    buildScheduleAdvice, diffScheduleLedger, applyScheduleLedger,
+    scheduleDeliveryPlan, scheduleNoticeOf, normalizeScheduleLedger,
+    scheduleAdviceLine, SCHEDULE_LEDGER_LIMIT
+} from './config/schedule-bridge.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：在飞回信（生图 / 搜索 / 微信生成 / 总结 / 日程 / 微博推荐）
  *   的唯一裁决口。下面三条会话身份变更路径各抬一次世代，此前所有在飞回信一律失去当前身份。
  *   为什么不在各 App 里各写一份「出发时记个号、回来对一下」：那正是本仓 v3.12.0 立唯一取值门
@@ -69,7 +125,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.66.0';
+const ST_PHONE_VERSION = '3.72.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -251,57 +307,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-08",
     items: [
-        "【定位 · X2 的真实缺口（修前实测处境）】全局搜索的引擎侧**早就有** `meta` 管线：`global-search-engine.js` 有 6 处在条目上写 `meta`（楼层 / 成就 id / 条目 id / ref 等），条目归一化处也保证把它保留到命中项上；而 `apps/search/*.js` 对 `.meta` 的消费是**零命中** —— 视图不读它、行上不渲染它，打开只派发 `{ appId }`。于是「搜到了一条旅行费用」与「打开旅行记账」之间没有任何桥：用户点结果只会落在该 App 的**首屏**，还得自己再翻一遍。这不是索引不够，是**结果没有靶心**。",
-        "【本版自己抓到的缺陷 ① 两条通路只 probe 了一条】pixiv 的 `openRef` 分「作品 / 插画」两支，首版只在插画分支先取数、作品分支直接调 `openNovel` ⇒ 池子是空的，报 `not_found`。形态是「搜索点进来**永远找不到**这篇」，且不崩溃、不报错。判据 C1 当场抓到（`saw:0`），修法是把取数提到两支共用处。教训一句话：同一件里分了两条通路，取数这种前置动作**必须提到分叉之前**。",
-        "【本版自己抓到的缺陷 ② 清定位只清了一半】pixiv 的阅读器画哪一篇走的是**回退链**（定位态优先、其次点选留下的痕迹）。首版 `clearRef()` 只清定位态 ⇒ 清完 `openedNovelId()` 仍返回那一篇，界面表现是「合上了但还开着」。判据 C1 的「清掉之后必须真空」抓到（实测仍返回第二篇）。修法：两态一起清，章节号也归位。",
-        "【本版自己抓到的缺陷 ③ 三处判据基建坏法（比被测对象缺陷更该先修）】① 矩阵用**双引号**、引擎源表用**单引号**，判据两处都按单引号查 ⇒ 矩阵「一行都找不到」，六件全报「矩阵缺行」，那是**判据自身崩了**，与「矩阵真缺行」长得一样；② 查「有没有接上 import」写成 `A 缺 && B 缺`，而 B 是「函数调用处出现花括号」**恒成立** ⇒ 该判据恒为假，去掉 import 也全绿；③ 「绑定时有没有真读靶心」按裸的 `data-ref` 字样查，而绑定的**注释里**也写着 `data-ref` ⇒ 恒绿。三条统一修法：按各自真源的字面量查、判据不得被恒真项短路、必须钉**真读取点**（`item.dataset.ref`）而非字样。",
-        "【协议层 · 跨 App 靶心单独一件】新增 `config/open-ref.js`（纯函数）：登记表把七个 kind 钉到六个 App（旅行费用 / 总结记忆 / 纪念日条目 / 曲库曲目 / Pixiv 小说 / Pixiv 插画 / 老福特文章），归一分六态（结构 / 未登记 kind / 缺 App / 归属不符 / 缺 id 各一态）、投递分五态（含 `target-silent`）。为什么要单独一件而不让各 App 自己认：字段名会漂（id / itemId / ref）、kind 会漂、**错配会静默** —— 把 Pixiv 的小说 id 投到老福特，那边只会报「文章找不到了」，用户以为作品被删了，其实是投错了 App。三条口径写进头注：kind 必须登记且归属一致、id 一律收成字符串再比（纯空白不算 id）、投递要如实回报。",
-        "【六桶接定位口 · 四处同款两处特殊】旅行记账 / 总结案头 / 纪念日三件同款（定位态 + `focusRow` 现算 + 视图定位条 + 收起按钮 + 换会话清除）；曲库特殊：**按稳定 id 现找不按下标**（曲目行那条 `data-open` 是下标语义，删中间一条后下标会指到别一首头上，正是本仓登记过多年的形态）；Pixiv 特殊：作品 / 插画两支 + 补 `openedNovelId()` / `openedIllustId()` 通道（本件详情态原本由**视图自持**，app 侧无法告知「要画哪一篇」，光改状态画不出来）；老福特特殊：补 `refArticleId()` 通道，同款理由。六处视图的「收起 / 换页签 / 合上阅读器」都补了清除，防「合上了但定位还在」。",
-        "【源侧 7 条新源 · 身份取自真源里的既有稳定 id】引擎源表从 29 条扩到 36 条、覆盖 App 从 27 件升到 33 件。七条新源逐条从真源读（旅行账本 / 记忆册 / 条目册 / 曲库 / 作品池 / 插画池 / 文章池），**每条都写 `meta.ref` 且走同一支笔**构造；id 一律取真源里既有的稳定 id，不是下标 —— 「索引到了」与「点得回去」是两件事。没 id 的裸条目**一条都不索引**（否则点进去必然找不到，用户以为那条被删了）。规则工作台 / 布局参数等仍是定向检索面，不进源表（不为把矩阵涂满而索引所有设置）。",
-        "【派发面 · 一条靶心从源到界面的全链】搜索行渲染 `data-ref`（JSON 串）并把文案改成「打开到这一条 ›」；绑定时解析失败**不静默吞**（退化为只开 App 并把原因写到 console）；载荷走 `buildOpenDetail(appId, tab, ref)` 唯一一支笔（tab / ref 不成立时**不写该字段**，既有 9 处派发点的载荷逐字节不变）；装配器在 `render()` **之前**依次投页签与靶心（目标只点亮详情态、自己不渲染，挪到 render 之后就画不出来），未定位到靶心时出声告警。矩阵声明侧六件的 F2_search 同批转真（与引擎源表双向对账）。",
-        "【验证 · 门禁与判据真读数】新增套件 23 个用例（协议 4 / 源侧 4 / 消费侧 3 / 接线 3 / 负控制 6 / 版本与导出面 3），含 5 条真源码破坏负控制（去掉源侧靶心、把「找不到」改成「随便指一条」、把 silent 判成成功、把投靶心挪到 render 之后、绑定时不再读靶心）与 1 条锚点自证（不唯一 / 不存在都必须抛）。判据逐条对着磁盘真源算：协议件真 import 真调、引擎真跑 `buildDefaultSources`（真实存储形状 seed，逐条核 `meta.ref` 自身归一成立）、六个 App 真 new 真调 `openRef`（同一 id 命中同一条 + 删中间项后仍命中同一条 + 清完必须真空）。",
-        "【交棒改写 · 判据只认「同款判据在副本上必须转红」】负控制里一条断言首版钉死了「红必须长成哪一句」（要求报「render 之后」），而顺序被破坏时判据报的是「投靶心之后找不到 render」—— 两者是**同一种病**，钉死措辞会让负控制在被测对象没错时报假红。改为只认「顺序面必须转红」，措辞不参与判分。",
-        "【抬版后连带面 · 11 套既有判据同时转红（本版自己被震到的面）】新协议件一落地，11 条既有断言当场红，逐条查明**没有一条是产品缺陷**，全是「判据基建的闭包/读数没跟上新件」：① 四套**镜像树**闭包（v281 / v3170 / v3600 × 两处）只拷了旧依赖，副本里那条引用本协议件的静态导入直接 `ERR_MODULE_NOT_FOUND` —— 负控制变成「因缺文件而红」而不是「因破坏而红」（这一族在本仓有前例，v2.97.0 就为 world-bridge 踩过一次，故修法照旧：把新件补进闭包并写明理由）。② 三套**债务账本**（v243/v244/v245）钉的是「零消费不高于 24 且账本 = 24 条」，而本版给协议件接了两个新导出；处置不是往账本里塞两条（那是把债记账），而是**真接产品线**：诊断中心是本仓一切读数的**唯一可见出口**，于是新增「跨 App 靶心协议」卡（内核陈列表自检 + **同一支笔写出的两条判据自等、改一个字段必须判不等**两侧都跑；视图只排版），零消费 25 → 23、账本仍 24 条，一条债没欠。③ 三套**活基线**（v325/v326/v327）的枚举面随新件扩张（378 → 379 / 379 → 380），值一律由 `tools/doc3660.py` 真跑探针取数落盘，判据散文 L5 的 `files=` 同步刷新（这一族在 v3.58.0 已有同款先例，修法照旧）。教训一句话：**新增一件真源，会把「闭包 / 债务 / 活读数」三类既有判据同时拉红 —— 红的第一嫌疑是判据基建没跟上，不是被测对象坏了。",
-        "【本版自己抓到的缺陷 ④ 迭代段里的字面导入说明符被真门禁当成真导入】写迭代段时为了讲清「副本树缺依赖」这件事，顺手把那条静态导入连引号一起写进了条目正文；导入门会剥离注释与模板串、但**保留普通字符串内容**（说明符就在引号里，必须留），于是它把条目文本当成入口真要加载的路径，扫描面 639 → 641、`index.js` 被判成「引用了不存在的相对路径」，全量回归里 v282 / v314 / v315 三套当场红。形态要害是：**「讲代码的文本」与「真代码」共用同一个扫描面时，任何一个带引号的真说明符样本都会被当真**。修法不是放宽门禁（那会让真断链漏网），而是改措辞 —— 用描述性说法指代那条导入、不写出可直接解析的字面量；改完回到「静态相对导入 640 条」这条真读数，边界文档无需再改（与抬版脚本真跑取数当时同值）。",
-        "【运行时验证边界 · v3.66.0 复校】本版按当版复校边界文档，数字按真跑刷新（语法门 651 文件 / 导入门 392 文件 640 条，均由抬版脚本真跑取数），边界结论不变。本切片把「结果带靶心并**投到目标 App 的定位口**」做到有据（协议 / 源侧 / 消费侧 / 接线四面都有真判据），但**本版仍没有在任何真实浏览器里跑过这条链路**：模块行为是实测的、装配顺序是接线过的，真宿主里点一下搜索结果是否真落在那一条上**不能保证**。这类「看起来没坏但显示不对」的形态只能在真宿主里暴露，自动化门禁结构上够不到。",
-        "【版本升至 3.66.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。",
-        "【定位 · X1 的真实缺口（修前实测处境）】桌面是 81 个 App 的平铺网格，用户要做一件事得先自己知道那件事归哪个 App；更要紧的是**即使点对了 App 也到不了要看的页签**。修前全仓 openApp 的 detail 恒为只有 appId 一个字段（实测 9 处派发点，settings 那处多带 icon 仍无页签），消费端只按 appId 查表或落内联分支、从不读页签 ⇒ 「打开曲库」只能落在兜底书架页，歌词页到不了。本版新增任务入口这一件：按用户任务聚合 App 与页签，把入口的靶心补上。",
-        "【本版自己抓到的缺陷 ① 缺省吃空表把好卡判成废卡】内核 availableCards 的缺省写成空对象，于是 15 条带页签靶心全被判成未核对（unknown）⇒ 靶心不可达 ⇒ 5 张带页签的卡整体不可用。修前实测读数：带页签 0 条 / 只到 App 14 条、可用卡 2 张；改为缺省吃真表后实测 29 条靶心（带页签 15 / 只到 App 14）、可用卡 7 张、0 张不可用。教训一句话：忘了传参数最多该拿真表判，绝不能得到一屏假红。判据侧同款缺陷另有 4 处，一并修在源头而不改断言。",
-        "【本版自己抓到的缺陷 ② 读不出与没记录被塌成一态】最近使用委托 usage-tracker 的两个出口，但把裸读数直接喂给聚合出口，而聚合出口假定 days 字段在场 ⇒ 抛 Object.keys 的 TypeError。形态是「本来要区分读不出与没有记录，结果两者都变成异常」。修法是先过一遍归一出口再聚合（聚合出口的口径一字未改，只在调用侧补归一）。修后实测三态分列：空读数与字符串归读不出、空对象与空 days 归没记录、真读数按次数降序并与跨天计数合并。",
-        "【本版自己抓到的缺陷 ③ 判据基建的四处坏法（比被测对象的缺陷更该先修）】① 抽取器把右方括号写进字符类时多转义一次，正则直接抛未终止字符类 —— 那是**判据自身崩了**，混在一起会把基建缺陷读成对象缺陷；② 负控制的副本树只放被破坏那一件，而被破坏模块静态 import 同目录依赖 ⇒ 模块找不到，同样不是「破坏没反应」；③ 破坏锚点撞车（裸片段在本文件出现两次），锚点不唯一时该抛就抛，不能把撞车当成功；④ 断言把**字面文本**拿去当正则匹配，文本里的插入符被当成锚点 ⇒ 永远为假。四条统一修法：抽取器字符类只转义一次、副本树带完整 config 目录、锚点取整行、字面匹配改子串查找。另修内核一处：收藏开关对纯空白 id 当变更，会落成永远消不掉的孤儿收藏。",
-        "【交棒改写 · 版本锚取下限形】本套件自带版本锚，写法是**下限形**（大于等于当版）而不是硬等号。理由与 v3.63.0 那条同款：钉子套件描述的是**它出生那一版**交付的模块，硬等号抬版即红、且把「本件这件事」偷换成「当版那件事」。这不是放宽 —— 当版硬等号由当版套件接管（本版即本件）。同一批还改写了两条旧式判据：页签前缀族的检查改为**只在关键字数组区间内**查找（整文件搜索会把说明文字也算成登记，等于把说明当实现）。",
-        "【页签真源 · 可被证伪的声明】新增登记表把 21 个 App 的页签按 4 种载体形态分派：显式数组 13 / 条件链 2 / 视图层白名单 2 / 单页 4（合计 82 个页签）。关键口径：**收下的串不等于事实上可达的页签** —— 不夹取的那一族真源在视图层的数组里，而单页 App 视图层一个页签分支都没有。故本表不是第二真源，是**可被证伪的声明**：判据 B 组真读源码逐条比集合相等，漂移即红；三种载体各配一个抽取器，混用会让判据核到不存在的数组。表侧的抽取器原型首跑抓到两处真问题并当场修：两个视图层 App 的兜底名各不相同（其中一处我抄错成 board，真源码是 guard）。",
-        "【接线面 · 一处补投而不是九处改写】装配器在渲染**之前**投页签，顺序不可反 —— 本仓有两族 setTab，一族只改状态不渲染，先渲染再设页签会让它们停在兜底页反而非目标页，那正是本版要治的形态。既有 9 处派发点的载荷**逐字节未动**（判据 D 组钉住这条：页签为空时**不写这个字段**），新入口走唯一一支笔构造载荷。四处登记一次到位：应用表、懒加载路由表、会话重绑表、消费矩阵；两个会话键进 keys 台账与存储前缀族。",
-        "【验证 · 门禁与判据真读数】本套件 24 个用例（结构 6 / 页签真源 3 / 三面交叉 2 / 接线 4 / 负控制 6 / 版本登记 3），含 6 条真源码破坏负控制（改表、改源码白名单、改卡表靶心、挪接线顺序、删键登记、锚点不唯一必须抛）。九道门单独真跑全部退出码 0：语法门 648 个文件、导入门 391 个文件 634 条、注册三方对账 82 个应用 id、键归属 287 条（会话隔离 234 / 全局 50 / 历史键 3）、零消费导出无新增、生命周期与桥接契约与取数口径卫生全绿。本版新增源件 6 个（config 3 / apps 2 / tests 1），登记面四处对账通过。",
-        "【运行时验证边界 · v3.65.0 复校】本版按当版复校边界文档，数字按真跑刷新（语法门 648 文件 / 导入门 391 文件 634 条），边界结论不变。本切片把「入口出现在真实桌面」做到有据（进应用表即会被图标布局渲染），但**本版没有在任何真实浏览器里跑过本 App**：模块行为是实测的、判据面是接线过的，真宿主里点一下是否真落在歌词页**不能保证**。这类「看起来没坏但显示不对」的形态只能在真宿主里暴露，自动化门禁结构上够不到。",
-        "【版本升至 3.65.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。",
-        "【定位 · 本轮首跑真读数】v3.63.0 全量回归 `node --test tests/*.test.mjs` 实测 `1..2978` / pass 2976 / **fail 2** / duration 153163ms / EXIT=1。两处红是**同一条断言、同一形态**：`tests/system-v325.test.mjs` 与 `tests/system-v326.test.mjs` 的「A2 探针读数与基线逐项一致」均报 `Expected values to be strictly equal: 373 !== 371`（strictEqual，expected 371 / actual 373）。八道门单独真跑全部 EXIT=0（registry / keys / lifecycle / dead-exports / bridge-contract / weak-coercion / source-derivation / upstream-face）⇒ 红在**探针与基线之间**，不在门禁。",
-        "【根因三条 · 逐条实测】① **枚举面陈旧**：两份基线的 `rebuilds` 段最后一条都停在 **v3.58.0**（记 370），此后 v3.61.0 / v3.62.0 / v3.63.0 新增的 config 侧新件（`branch-contrast.js` v3.62.0、`resume-handoff.js` v3.63.0、`app-lazy-routes.js` 等）**从未重绑**；实测枚举面 = apps 315 + config 58 = **373**。② **preview 42 -> 34 与 globalRead 8 -> 4 是同一缺陷形态（探针口径缺陷）**：`branch_play_probe.cjs` 的 `countTokens` 与三处读文件**只跳 `//` 行、不剥块注释**，而块注释恰是写规格的地方 ⇒「本模块绝不碰 X」被算成「X 已实施」。③ **branchFace 2 -> 0 同族**，且原那 2 点**全部**落在 `config/branch-contrast.js` 的文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 `checkpointCompare` 面），与「下游有没有接上游的**分支只读对照**面」**同名不同物**，如实归零正是该探针该给的读数。",
-        "【本版修复 ① 探针纯度】`tests/audit/branch_play_probe.cjs` 补上「**块注释也算注释**」纪律（与 `schedule_conflict_probe.cjs` 的 **v3.22.0** 同款 `stripBlockComments`：匹配前整段抹白、**保留换行** ⇒ 行号不变），`IDX_CODE` 与三处读文件统一走新增的 `readCode`，头部留档补第 ④ 条形态纪律。实测读数：`checkpointFaceHits` **1 -> 0**（原那 1 点在 `config/checkpoint-content-contract.js` 文件头，逐字写着「绝不碰 `saveCheckpoint` / `dropCheckpoint` 这类写面」—— 它声明的是**没做**写面）、`previewFaceHits` **43 -> 34**（9 处块注释行：diagnose-data 3 / diagnose-view 1 / rollback-preview 2 / boot-timing 1 / num-gate 1 / branch-contrast 1）、`upstreamGlobalReadSites` **8 -> 4**（graph-bridge 1 / memory-app 2 / world-bridge 1，后者逐字写「不摸 `window.LonShaEvidenceWorkbench`」）。**回滚覆盖面 41 点 / 4 文件 / 12 入口定义一格未动**（rollback 族本就没有块注释命中，已实测）⇒ v326 D3 真源码破坏负控制不受影响。",
-        "【本版修复 ② 连带判据的交棒改写（同批，不是事后补）】探针诚实化**必然**牵动一条下限判据：`checkpointFaceHits` 归零会打破 `system-v326.test.mjs` 的 `assert.ok(rep.checkpointFaceHits >= 1, ...)`。按本仓纪律**改写为版本无关的真判据**：真源四出口（`readLonshaCheckpointFace` / `readCheckpointContentDiff` / `checkpointContentLines` / `checkpointFaceLine`）**在场** + 产品面 `apps/diagnose/diagnose-data.js` **真调用**（import 进来的名字不算消费）。两条下策都不取：**不删断言**（删断言 = 洗断言）、**不换 token 把散文重新算绿**（那等于把散文固化成读数）。同一件事第十道门 `scripts/bridge-contract-audit.mjs` 的 **J13** 早已以更强形式守着（面 `checkpointCompare` / 读出口 `readLonshaCheckpointFace` / 产品侧下限 1；实测消费点 1、真源四出口在场）—— **文本计数版退场，真调用版接棒**；本条不再够拦住「删实现留注释」的形态已在留档里写明代价。",
-        "【本版修复 ③ 基线零手抄重绑】`tools/rebind_v3640_baseline.py`（沿用 house pattern：现场跑探针取真读数、默认 dry-run、`--write` 才落盘、写进 `rebuilds` 段的 what / why / readings / unchanged / not_done）：`branch_play_baseline.json` 五格改（`files_scanned` 371 -> **373**、`checkpoint_face_hits` 1 -> **0**、`preview_face_hits` 42 -> **34**、`upstream_global_read_sites` 8 -> **4**、`branch_face_hits` 保持 **0**），`schedule_conflict_baseline.json` 一格改（`files_scanned` 371 -> **373**；消费点 23 / 消费文件 6 / 本地引擎 0 与名单逐字不变）。脚本内自带**未动项对账**（`unchanged` 列的每个键必须与现场逐项相同，防「顺手改了还写没动」）与**判据散文复算对账**（现场非冻结判据的 got_text 必须与基线逐字相同）。",
-        "【验证】`tests/system-v325.test.mjs` **15/15** · `tests/system-v326.test.mjs` **18/18**，两处红转绿（原地复跑实测）。四份活基线中另两份（`lifecycle_declarative`、`long_chat`）**零漂移**，本版未动它们。",
-        "【边界】本版治的是**探针口径与判据形态**，零产品面改动（`config/` 与 `apps/` 一个字节未改）⇒ 语法门 642 文件 / 导入门 386 文件 625 条两读数一字未动。块注释纪律目前只在 `branch_play_probe` 补齐（`schedule_conflict_probe` 早在 v3.22.0 已立）；日后新增走子串匹配的探针仍须逐件核对是否同步 —— 这条作为 not_done 写进了两份基线。",
-        "【运行时验证边界 · v3.64.0 复校】本版把边界文档（docs/runtime-verification-boundary.md）按当版复校一次：数字按真跑刷新（语法门 642 文件 / 导入门 386 文件 625 条），边界结论不变 —— 本环境已能跑真浏览器（L4 层布局 / 命中 / 交互接线），但真宿主（SillyTavern 本体）的事件广播、持久化与双扩展共装仍不能保证：这类「看起来没坏但显示不对」的形态只能在真宿主里才暴露，自动化门禁结构上够不到。本版零产品面改动（config 与 apps 一个字节未改），故两道门的读数一字未动（已自证）。",
-        "【版本升至 3.64.0（五源同源）】`manifest.json` / `package.json` / `index.js`（`ST_PHONE_VERSION` + 公告块）/ `update-log.json`（`latest` + `head` + 新条目）一次抬齐；本文件新增本迭代段；边界文档按当版复校。",
-        "【运行时验证边界 · v3.63.0 复校】本版把边界文档（docs/runtime-verification-boundary.md）按当版复校一次：数字按真跑刷新（语法门 642 文件 / 导入门 386 文件 625 条）。边界结论不变：本环境已能跑真浏览器（L4 层布局/命中/交互接线），但**真宿主**（SillyTavern 本体）的事件广播、持久化与双扩展共装仍**不能保证** —— 这类「看起来没坏但显示不对」的形态只能在真宿主里才暴露，自动化门禁结构上够不到。",
-        "【版本升至 3.63.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。本版对旧判据的**交棒改写**：v3620 套件的当版锚点由硬等号 3.62.0 改为**下限形**（硬等号由当版套件接管，判据钉历史事实不随抬版漂移）；并把 update-log.versions 首键归位到当版（顺带修好上一版遗留的「首键非当前版」缺陷，全量失败数由 76 降到 48）。本版自己抓到的**缺陷**：① 判据 G 段含换行锚点用普通引号串声明 ⇒ self.includes 恒假（改 String.raw）；② 引入取数门后「单文件落 /tmp 再 import」载入方式失效（改工作区副本树）；③ 诊断面 handoff 插在 sessionGate 之后，使 v3580 R4 逐字持有的锚点形态消失。",
-        "【X8 第二切片 · 受控恢复交接（预检 → 执行 → 回读 三段闸门）】X8 验收原文「恢复前预检、恢复后回读，旧异步写入被拒」此前**三段里两段不存在、一段只做了一半**：全仓与读档有关的写面（config/floor-store.js 的 appendBatch / removeByFloor / removeById、apps/archive 的覆盖式导入与全量重置）**拿到指令就动手**，没有任何一处先回答「现在到底能不能恢复」；恢复后也没有回读 —— 「动作抛错」与「写了但写丢了」长得一样；而 config/session-gate.js（O4 交付）虽然能挡下旧回信，但它判的是「会话身份变了没」——**恢复动作不改会话身份**（改的是数据），故恢复期间飞出去的回信在它眼里完全合法，会把旧分支内容写进刚恢复好的存档。新增 config/resume-handoff.js（463 行，纯函数，只 import 取数门 numOrNull）：① 预检四道（目标 / 会话身份 / 在飞回信 / 当前数据面）收成三档 ok / blocked / unusable，**不可测 ≠ 通过** —— 目标清单读不到报 unusable 而**不是**「没有这份存档」（处置相反），有在飞回信则 blocked 且**点名**是哪几条；非空数据面显式告知「会被覆盖」，空档不说（不造成噪声）；② 交接**委托真实 owner**（apply 由调用方注入）——本模块自身**零写面**，同一 handoffId 幂等（重复调用返回首次结果、执行体只跑一次），未注入执行体即 held（不去猜一条写入路径）；③ 回读三态 ok / mismatch / unreadable 互不同形，**写面自述的 {ok:true} 不作为恢复成功的证据** ——自述成功而回读不符 ⇒ partial（不是 done）；mismatch 逐键点名（含「回读多出来的键」）。旧异步写入被拒：新增**交接世代栅栏**（handoffEpoch，在任何写动作**之前** +1），与 session-gate 的会话栅栏**串联**（两把都要过）——恢复期间飞出的回信一律作废并记账，恢复之后新发出的回信不受影响。判据 tests/v3630_resume_handoff.test.mjs（17 条）：A 结构 / B1 预检三档 / B2 清单缺席 / B3 在飞点名 / B4 覆盖语义 / C1 held≠done（执行体 0 次）/ C2 幂等 / C3 自述不算数 / C4 抛错与拒绝各自归因 / C5 无执行体 / D1 回读三态 / D2 逐键点名 / E1 旧写入被拒 / E2 两把闸门 / E3 先抬后写 / F 真源码破坏（摘掉「先抬世代」⇒ E1 真判据实测失败）/ G 自防护 + 当版锚点。★ 本轮自己抓到的一处缺陷：G 段首版用普通引号串声明含换行的破坏锚点，源文件里那是**两字符** `\\n`、引号串里是**真换行** ⇒ self.includes 恒假（v3288 同形坑，已改 String.raw）。",
-        "【判据与门禁面 · v3.63.0】新增判据套件 tests/v3630_resume_handoff.test.mjs（17 条，含真源码破坏 F 段）。十一道门禁逐门真跑：syntax 642 文件 / import-resolve 386 文件 625 条 / dead-exports 无新增零消费 / lifecycle 77 类 22 槽无缺口 / registry 81↔81 双向零孤儿 / keys 285 点全登记 / source-derivation 10 条全存活 / bridge-contract 十三面全消费 / weak-coercion 全仓无同族弱口径（唯一实现被引用 63 文件）/ upstream-face 一致。本版对旧判据的交棒改写：v3620 当版锚点改下限形、v3630 C5 由「零 import」改「只准 import 取数门」。",
-        "【X8 第一切片 · 分支对照工作区（只读）】X8 原文「用户选两分支时呈现角色状态、约定、财务和剧情时间的语义变化」此前**零实现** —— 上游检查点内容级对照（checkpoint-content-contract.js）只给「键面 + 原始 deep」，没有把 payload 映射成语义组。新增 config/branch-contrast.js：① 把键面差异按四组语义面（character / commitment / finance / storyTime）归组，每行带原始键路径可回源；② 跨支隔离判定（X8 核心验收点「分支 A 的秘密不进入 B」）——按支给秘密名单，真检出 a-secret-in-b / b-secret-in-a；未给名单时 checked:false，不与「已核对无泄漏」同形；③ 三态不同形（缺席 face-absent / 空 empty / 正常 ok，以及上游半成功 deep-unavailable 单列）。本模块**只读**（applied 恒 false），不含任何写面，恢复委托真实宿主/引擎 owner。判据 tests/v3620_branch_contrast.test.mjs（10 条）：A 只读结构 / B1 归组 / B2 不重算上游口径 / C1 跨支泄漏真检出 / C2 未核对≠通过 / D1 三态 / D2 半成功 / E 四态缺席归因 / F 真源码破坏（摘一侧判定 ⇒ C1 真判据实测失败、另一侧不受影响）/ G 自防护 + 当版锚点。★ 本轮自查两处首版缺陷：① 死变量 let diffReason / let leaks（后者恒 0 的假计数，已改为按支口径的真判定）；② 文案读旧字段 sealed 而实际按支给名单，已改读 crossLeak.checked。",
-        "【运行时验证边界复校 · v3.61.0 推翻一条长期结论】本环境实测可跑真浏览器（Chromium 131，L4 层五场景×四视口全绿）——自动化门禁现在能保证的不止「结构正确与接线完整」，还包括独立浏览器里的布局/命中/交互接线；仍不能保证的是真宿主（SillyTavern 本体）的事件广播、持久化与双扩展共装。遇到 看起来没坏但显示不对 的问题，属本文登记的第二类，需在真机复现后再修（详见 docs/runtime-verification-boundary.md）。",
-        "【定位 · 计划 O6 入口接线瘦身】本版把 phone:openApp 处理器里 67 段「结构上完全同构」的懒加载五件套（instrumentImport → 单例 new → render → catch）收敛为 config/app-lazy-routes.js 单源表 + 一个通用装配器；14 个有真实差异逻辑的分支（构造参数 / 缓存同步 / 通话避让 / 双 import 兜底 / 按会话状态分流）原样内联保留 —— 表驱动会抹掉它们的差异，把它们写进表反而是倒退。index.js 由 808555 字节降至约 741KB（-67.6KB）。",
-        "【本版自己抓到的缺陷 · 复制粘贴的直接产物】lexiscore 分支的 catch 块里 showNotification 重复两次（加载失败时用户会看到两条重复错误通知）—— 67 段近逐字重复的形态里这是必然结果，本刀当场修掉。",
-        "【门禁随刀升级而非放松 · 两道】① dead-export 门新增「数据驱动消费面」：表文件里 cls 字段的字符串字面量是运行时真实发生的消费（装配器真的用它 new 实例），只认 config/app-lazy-routes.js 这一个登记过的表文件、表缺席或解析异常即 fail-closed 拒判，不放开「任何字符串提及都算消费」；② registry 门的懒加载分支覆盖面升级为「index.js 内联分支 ∪ 表文件 id 字段」，R1 双向覆盖在新形态下仍 81↔81 零孤儿。",
-        "【O6 回归证据 · 真浏览器五场景】表驱动装配器改动后 o1-shell-smoke 16/16、o1-core-flow 16/16、o1-search-cancel 18/18、o1-settings-save 10/10、o1-chat-switch 8/8 全绿（Chromium 131 真跑，含表内 App gacha/search 的真实打开与返回链）。",
-        "【定位 · 计划 O7 渲染性能按证据收口】真浏览器热路径 before 读数：起壳 110ms（含 81 图标首屏）、面板关→开 50ms、16000 楼全历史搜索扫描 100ms（含 O2 的宏任务让出）、结果长列表同步渲染 0ms 量级；面板复开 20 次的 DOM 节点零增长（399→399，外壳恒 1 套）。全部热路径健康，无需要分页/窗口化治理的性能缺陷 —— 按证据实施原则，O7 以证据收口，不做无据优化。",
-        "【O7 边界如实登记】--dump-dom 单帧模式下 CSS transition 冻结在 t=0（行内 transform 已写对、computed 恒为恒等）—— 这是取证环境的形态不是产品缺陷；场景层以禁 transition 取证（等效系统「减少动画」用户形态）。真机帧率与滚动流畅度仍归 R-O3。",
-        "【O1 收口 · 浏览器与宿主操作回归全部完成】五场景（shell-smoke / core-flow / search-cancel / settings-save / chat-switch）× 四视口（320/390/768/1280px）共 20 跑全绿；本轮抓到并修复的返回按钮三处同源缺陷（setContent 覆盖销毁 #phone-back-button；gacha/reading 两 App 绕过 setContent 直写 screen.innerHTML）均有端到端回归读数。版本公告弹窗（异步出现、盖住全屏）被三场景当真实世界条件处理：等它出现 → 真点关闭键 → 等它真消失，并作为独立读数（update-modal-dismissible）。",
-        "【O8 · 旧边界结论复校推翻】docs/runtime-verification-boundary.md 头部长期写「本仓库当前的运行环境跑不了浏览器 / Playwright 零命中 / 网络不可用」—— 本轮实测：真 Chromium 131.0.6778.33 在位且已跑通全部场景（served 121~157 个真实文件请求），网络可用（公告弹窗经同源 fetch 取回 update-log.json）。该过时结论本版改写；判据 system-v328 的 C1 数字随门禁真跑刷新（语法 637 文件 / 导入 384 文件 623 条）。",
-        "【O8 · 真宿主边界仍如实保留】独立浏览器层证明的是「布局/命中/交互接线」，真 SillyTavern 宿主的事件广播、持久化与双扩展共装仍未验证 —— L2 进程内最小宿主与本层分报结论，不互相顶替。",
-        "【交棒改写 · 扫描面跟着代码走（不是放宽判据）】O6 把 67 段懒加载五件套搬进 config/app-lazy-routes.js 之后，全仓 40 个套件里 57 处「index.js 必须有懒加载分支 / 懒加载单例 / import 路径」的**扫描面**随即失效 —— 真功能一处没少，判据却全数落空（假红）。本版把这类判据的数据源统一换成 tests/_lazy_routes.mjs 导出的**判据面**（index 内联分支 ∪ 表行渲染回的同形分支，渲染形与重构前的五件套逐字同构），断言与错误文案一字未改；表缺席或解析不到 60 行即 fail-closed 拒判，绝不静默返回空面。同一口径只留一份实现（此前 40+ 份各自读 index.js，正是这一轮全量假红的成因）。",
-        "【本版自己抓到的三处缺陷 · 逐条有据】① **表 errTitle 语义定错**：字段带「加载失败」后缀、装配器又拼一次，67 个 App 的失败提示全是「…加载失败失败」病句（加载失败时用户看到重复后缀）—— 已把字段改为标题基名，装配器拼接不动，console/notify 文案逐字回归重构前形态；② **抬版漏项两处**：update-log.json 的 3.61.0 条目缺 version 字段（全 212 个版本条目里唯一例外，v259 G1 / v298 E1 当场报 undefined），ITERATION_LOG.md 元信息「当前版本」仍写 3.60.0（v280-2 等五套件报「文档已腐坏」）—— 均已补齐；③ **工具面自纠**：批量补丁把 _lazy_routes 的 import 插进**多行 import 语句的中间**，8 个套件当场语法错（被语法门 638 文件扫描抓到）—— 已改为插在该 import 语句的收尾行之后。三处都没有放宽任何判据：门禁随刀升级、而非放松。",
-        "【版本升至 3.61.0（五源同源）】manifest.json / package.json / update-log.json 首位新键 + latest / index.js 的版本常量与公告块 / ITERATION_LOG.md 头部迭代段，五处同源一次抬齐。"
+        "【定位 · X8 的真实缺口（修前实测处境）】** 已有 resume-brief 五面、织光机呈现、回滚预览、检查点内容对照、存档案头；但「选两分支 → 看语义变化」和「恢复前预检 → 执行 → 回读」两段操作流程此前在 feat/x8-resume-handoff 分支上交付过（v3.62.0/v3.63.0），未合入 main。X8 的任务是把这两件纯函数协议层合入当前主线（v3.71.0），完成只读分支对照 + 受控恢复交接的完整接线。",
+        "【协议层 · 分支对照（只读）】** `config/branch-contrast.js`（纯函数，397 行）：`branchContrast` 把两支 payload 的差异按四组语义面（character/commitment/finance/storyTime）归类，每组给出 onlyA/onlyB/changed 三类行；跨支秘密隔离判定（`countLeak`）；三态不同形（缺席/空/正常）；`applied` 恒 false（只读）。",
+        "【第二件 · 受控恢复交接（预检→执行→回读三段闸门）】** `config/resume-handoff.js`（纯函数，463 行，只 import 取数门 numOrNull）：`precheckHandoff` 四道检查 → ok/blocked/unusable 三档；`handoffResume` 预检不过零调用（held）、同 handoffId 幂等、先抬交接世代再执行；`readbackOf` ok/mismatch/unreadable 三态；`guardHandoffWrite` 交接世代栅栏与 session-gate 串联（两把都要过）。",
+        "【接线 · 诊断中心 handoffFace 卡片】** `apps/diagnose/diagnose-data.js` 的 handoff IIFE 与 handoffFaceText 转发函数已在 main 上（继承自 v3.63.0）；`apps/diagnose/diagnose-view.js` 加 `_handoffHtml` 渲染方法与卡片 section（与 sessionGate 面分列）；`index.js` import 两个协议件。",
+        "【验证 · 门禁与判据真读数】** 两个测试套件共 27 个用例（v3720 分支对照 10 条 + v3730 受控恢复 17 条），含跨支泄漏/三态不同形/幂等/回读/旧写入被拒/两把闸门/真源码破坏负控制。自检函数全绿。",
+        "【版本升至 3.72.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段；边界文档按当版复校。"
     ]
 };
 
@@ -2467,10 +2478,189 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 window.VirtualPhone._calendarReminderApp = new module.CalendarApp(null, storage);
             }
 
-            window.VirtualPhone._calendarReminderApp.checkScheduleReminders?.(latestTime, {
+            const _calDue = window.VirtualPhone._calendarReminderApp.checkScheduleReminders?.(latestTime, {
                 previousTime: _lastCalendarReminderCheckTime
             });
+            if (_calDue) window.VirtualPhone._calendarReminderApp._lastDue = _calDue;
             _lastCalendarReminderCheckTime = { ...latestTime };
+
+            /* ── [v3.67.0 · X3] 四源归一 + 幂等账本 + 投递 ──
+             *   日历那条已经由 checkScheduleReminders 自己投了（deliver=self），
+             *   下面收的是纪念日 / 周期 / 约定三源的取数与归一。
+             *   ★ 不重算：各源的判定仍只有一份，这里只把**已判好的结果**传进协议层。
+             *   ★ 不实例化没开过的 App：纪念日 / 周期案头若未打开，取数为 undefined
+             *      （协议层据此记 gap「not-read」，不会把「没人去读」当成「没有到期项」）。 */
+            try {
+                const SCHEDULE_LEDGER_KEY = 'schedule_ledger';
+
+                /* 剧情时刻：走 storyClock（三源归一），不直接拿 latestTime.date ——
+                 *   后者是单源（calendar），而 storyClock 合并 worldaxis / lonsha / calendar。 */
+                let sc = null;
+                try {
+                    const clockMod = await bootTiming.instrumentImport(import('./config/story-clock.js'), './config/story-clock.js');
+                    const probe = clockMod.storyClockProbe(window);
+                    sc = clockMod.storyClock({ win: probe.win, calendarSource: probe.calendarSource });
+                } catch (_ce) { /* storyClock 不可用时 sc 为 null，协议层记 story-missing */ }
+
+                /* 日历到期项：日历 App 已判好，从 calendarData 取最近一次判定结果 */
+                let calendarDue = undefined;
+                try {
+                    const calApp = window.VirtualPhone?._calendarReminderApp;
+                    if (calApp?.calendarData?.getReminderDueMemo) {
+                        const lastDue = calApp._lastDue || null;
+                        if (lastDue) calendarDue = lastDue;
+                    }
+                } catch (_ce) { /* 不可读即未读 */ }
+
+                /* 纪念日：App 已打开过才有实例 */
+                let anniversaryMatches = undefined;
+                try {
+                    const adApp = window.VirtualPhone?.annidateApp;
+                    if (adApp?.checkAlerts) {
+                        const r = adApp.checkAlerts();
+                        anniversaryMatches = r?.matches;
+                    }
+                } catch (_ce) { /* 不可读即未读 */ }
+
+                /* 周期预警：App 已打开过才有实例 */
+                let cycleAlert = undefined;
+                try {
+                    const pmApp = window.VirtualPhone?.periodmathApp;
+                    if (pmApp?.checkAlert) {
+                        cycleAlert = pmApp.checkAlert();
+                    }
+                } catch (_ce) { /* 不可读即未读 */ }
+
+                /* 约定：从 calendar_commitments 读取，走 commitmentCalendarProjection */
+                let commitments = undefined;
+                try {
+                    const calApp = window.VirtualPhone?._calendarReminderApp;
+                    if (calApp?.calendarData) {
+                        const raw = storage?.get?.('calendar_commitments');
+                        if (raw) {
+                            const cfMod = await bootTiming.instrumentImport(import('./config/commitment-flow.js'), './config/commitment-flow.js');
+                            commitments = cfMod.commitmentCalendarProjection(raw);
+                        }
+                    }
+                } catch (_ce) { /* 不可读即未读 */ }
+
+                /* 归一 */
+                const advice = buildScheduleAdvice({
+                    nowMs: Date.now(),
+                    storyClock: sc,
+                    calendarDue: calendarDue,
+                    anniversaryMatches: anniversaryMatches,
+                    cycleAlert: cycleAlert,
+                    commitments: commitments
+                });
+
+                /* 对账：与账本比一遍 */
+                const rawLedger = storage?.get?.(SCHEDULE_LEDGER_KEY);
+                const decision = diffScheduleLedger(advice, rawLedger);
+
+                /* 投递：只投 bridge 源（self 源已由日历自己投过） */
+                const plan = scheduleDeliveryPlan(advice.rows);
+                for (const row of plan.deliver) {
+                    /* 只投本轮新出的（notify），replay 不重投 */
+                    if (!decision.notify.some((r) => r.idemKey === row.idemKey)) continue;
+                    const notice = scheduleNoticeOf(row);
+                    showUnifiedPhoneNotification(notice.title, notice.message, notice.icon, {
+                        senderKey: notice.senderKey,
+                        appId: notice.appId,
+                        meta: notice.meta
+                    });
+                }
+
+                /* 落账 */
+                if (decision.notify.length || decision.withdraw.length) {
+                    const storyDay = (advice.story && advice.story.dayKey) || '';
+                    const newLedger = applyScheduleLedger(rawLedger, decision, Date.now(), storyDay);
+                    storage?.set?.(SCHEDULE_LEDGER_KEY, JSON.stringify(newLedger));
+                }
+
+                /* 诊断缓存（供 diagnose-data.js 的 scheduleFace 读取） */
+                if (window.VirtualPhone) {
+                    window.VirtualPhone._scheduleAdviceCache = advice;
+                    window.VirtualPhone._scheduleLedgerCache = normalizeScheduleLedger(rawLedger);
+                }
+
+                /* [v3.68.0 · X4] 财务总览缓存（供 diagnose-data.js 的 financeFace 读取）。
+                 *   与 scheduleFace 同范式：只读缓存，不落账、不改余额。
+                 *   各来源的投影由已实例化的 App 取（懒加载未触发 = not-opened）。
+                 *   finance_ledger 键实际使用点：读取已有结算提交账本。 */
+                try {
+                    const vp = window.VirtualPhone;
+                    if (vp) {
+                        const FINANCE_LEDGER_KEY = 'finance_ledger';
+                        const rawFinLedger = vp._storage?.get?.(FINANCE_LEDGER_KEY);
+                        const finLedger = normalizeFinanceLedger(rawFinLedger ? (typeof rawFinLedger === 'string' ? (() => { try { return JSON.parse(rawFinLedger); } catch (_) { return []; } })() : rawFinLedger) : []);
+                        vp._financeLedgerCache = finLedger;
+
+                        /* 只读总览：收集各来源的投影（App 未打开 = null = not-opened） */
+                        const projections = {};
+                        const wApp = vp.walletApp;
+                        const aApp = vp.accountingApp;
+                        const pApp = vp.piggyApp;
+                        const asApp = vp.assetApp;
+                        const tvApp = vp.traveldeskApp;
+                        const shApp = vp.shopApp;
+                        const tbApp = vp.taobaoApp;
+                        if (wApp && typeof wApp._probe === 'function') { try { wApp._probe(); projections.wallet = wApp._lastProjection || null; } catch (_) { projections.wallet = null; } }
+                        if (aApp) projections.accounting = aApp._lastProjection || null;
+                        if (pApp) projections.piggy = pApp._lastProjection || null;
+                        if (asApp) projections.asset = asApp._lastProjection || null;
+                        if (tvApp) projections.traveldesk = tvApp._lastReadings || null;
+                        if (shApp) projections.shop = shApp._lastProjection || null;
+                        if (tbApp) projections.taobao = tbApp._lastProjection || null;
+                        vp._financeOverviewCache = buildFinanceOverview(projections);
+                    }
+                } catch (e3) {
+                    console.warn('[Finance] 总览缓存失败:', e3);
+                }
+
+                /* [v3.69.0 · X5] 社媒知情边界缓存（供 diagnose-data.js 的 knowledgeBridgeFace 读取）。
+                 *   与 financeFace 同范式：只读缓存，不落账、不改可见性。
+                 *   knowledge_ledger 键实际使用点：读取已有知情账本。 */
+                try {
+                    const vp = window.VirtualPhone;
+                    if (vp) {
+                        const KNOWLEDGE_LEDGER_KEY = 'knowledge_ledger';
+                        const rawKnoLedger = vp._storage?.get?.(KNOWLEDGE_LEDGER_KEY);
+                        const knoLedger = normalizeKnowledgeLedger(rawKnoLedger ? (typeof rawKnoLedger === 'string' ? (() => { try { return JSON.parse(rawKnoLedger); } catch (_) { return []; } })() : rawKnoLedger) : []);
+                        vp._knowledgeLedgerCache = knoLedger;
+                    }
+                } catch (e4) {
+                    console.warn('[Knowledge] 知情账本缓存失败:', e4);
+                }
+
+                /* [v3.70.0 · X6] 创作草稿缓存（供 diagnose-data.js 的 creationFace 读取）。 */
+                try {
+                    const vp = window.VirtualPhone;
+                    if (vp) {
+                        const CREATION_LEDGER_KEY = 'creation_ledger';
+                        const rawCreLedger = vp._storage?.get?.(CREATION_LEDGER_KEY);
+                        const creLedger = normalizeCreationLedger(rawCreLedger ? (typeof rawCreLedger === 'string' ? (() => { try { return JSON.parse(rawCreLedger); } catch (_) { return []; } })() : rawCreLedger) : []);
+                        vp._creationLedgerCache = creLedger;
+                    }
+                } catch (e5) {
+                    console.warn('[Creation] 草稿账本缓存失败:', e5);
+                }
+
+                /* [v3.71.0 · X7] 图片回执缓存（供 diagnose-data.js 的 characterSlotFace 读取）。 */
+                try {
+                    const vp = window.VirtualPhone;
+                    if (vp) {
+                        const IMAGE_RECEIPT_KEY = 'image_receipt_ledger';
+                        const rawImgLedger = vp._storage?.get?.(IMAGE_RECEIPT_KEY);
+                        const imgLedger = normalizeImageReceiptLedger(rawImgLedger ? (typeof rawImgLedger === 'string' ? (() => { try { return JSON.parse(rawImgLedger); } catch (_) { return []; } })() : rawImgLedger) : []);
+                        vp._imageReceiptLedgerCache = imgLedger;
+                    }
+                } catch (e6) {
+                    console.warn('[ImageReceipt] 回执账本缓存失败:', e6);
+                }
+            } catch (e2) {
+                console.warn('[Schedule] 四源归一失败:', e2);
+            }
         } catch (e) {
             console.warn('[Calendar] 日程提醒检测失败:', e);
         }
