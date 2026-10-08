@@ -104,7 +104,7 @@ export const DEFAULT_ACUTE_DAYS = 7;
 
 // ---- 基础工具 ----
 export function str(v) { return v == null ? '' : String(v); }
-export function clampInt(v, dflt, lo, hi) {
+export function clampIntDefault(v, dflt, lo, hi) {
     const n = numOrNull(v);
     return n == null ? dflt : Math.min(hi, Math.max(lo, Math.round(n)));
 }

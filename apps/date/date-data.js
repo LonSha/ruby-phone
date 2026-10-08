@@ -142,7 +142,7 @@ const intOr = (v, d) => {
     const n = numOrNull(v);
     return n === null ? d : Math.round(n);
 };
-const clampInt = (v, d, lo, hi) => Math.min(hi, Math.max(lo, intOr(v, d)));
+const boundedInt = (v, d, lo, hi) => Math.min(hi, Math.max(lo, intOr(v, d)));
 const str = (v) => (v === null || v === undefined) ? '' : String(v);
 const trimTo = (v, n) => str(v).trim().slice(0, n);
 /** 出账累加用：这里 0 是**真语义**（没人出过钱），不是「没给」。 */
@@ -154,7 +154,7 @@ export function normalizeDateSettings(raw) {
     const known = Object.keys(FUND_MODES).indexOf(mode) >= 0;
     return {
         injectToPrompt: o.injectToPrompt === undefined ? DEFAULT_DATE_SETTINGS.injectToPrompt : !!o.injectToPrompt,
-        maxInjectLines: clampInt(o.maxInjectLines, DEFAULT_DATE_SETTINGS.maxInjectLines, 1, 20),
+        maxInjectLines: boundedInt(o.maxInjectLines, DEFAULT_DATE_SETTINGS.maxInjectLines, 1, 20),
         defaultFundMode: known ? mode : '',
         allowBorrowFromDate: !!o.allowBorrowFromDate,
     };

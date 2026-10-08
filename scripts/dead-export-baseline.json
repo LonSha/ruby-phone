@@ -45,9 +45,9 @@
     },
     {
       "file": "apps/health/medical-core.js",
-      "name": "clampInt",
+      "name": "clampIntDefault",
       "line": 107,
-      "reason": "整数夹取通用小工具，仅测试引用；可在真有消费方时再提升为对外接口。"
+      "reason": "整数夹取通用小工具（带默认值版：v 非数时返回 dflt），仅测试面预留、产品端零消费。★ 原名 clampInt 与 apps/pixiv/pixiv-data.js 和 apps/magazine/magazine-data.js 的同名导出撞车（那两处签名是 (v, lo, hi, fallback)，参数顺序不同），被门禁的裸名全仓匹配**假消费**成「已消费」，属漏报方向的读数污染。按 apps/accounting/accounting-data.js 的既有先例改名消除撞车，同时消除真实的调用混淆隐患。接入点未定，暂冻结。"
     },
     {
       "file": "apps/health/medical-core.js",
@@ -144,18 +144,6 @@
       "name": "hasGaigaiTagFilter",
       "line": 65,
       "reason": "探测 window.Gaigai / window.YuzukiMemory 的能力判定，属宿主环境相关的可选能力面，接入点未定。"
-    },
-    {
-      "file": "config/schedule-bridge.js",
-      "name": "scheduleBridgeSelfCheck",
-      "line": 340,
-      "reason": "[v3.67.0 · X3] 协议件表侧自检（四源登记表完整性 + 幂等键稳定性 + 日键归一正确性）。与 tests/system-v3670_schedule.test.mjs 的磁盘侧独立复算互为对照——门禁/诊断调用它，产品端不直接消费。接入点为诊断中心 scheduleFace（同 openRefFace 的 selfCheck 范式）。"
-    },
-    {
-      "file": "config/schedule-bridge.js",
-      "name": "scheduleLedgerSelfCheck",
-      "line": 596,
-      "reason": "[v3.67.0 · X3] 账本侧自检（幂等/撤回门/改期分辨/回档分辨/投递拆分/载荷靶心共 8 条用例）。与 tests/system-v3670_schedule.test.mjs 的磁盘侧独立复算互为对照。接入点为诊断中心 scheduleFace。"
     }
   ]
 }

@@ -114,14 +114,14 @@ const intOr = (v, d) => {
     const n = numOrNull(v);
     return n === null ? d : Math.round(n);
 };
-const clampInt = (v, d, lo, hi) => Math.min(hi, Math.max(lo, intOr(v, d)));
+const boundedInt = (v, d, lo, hi) => Math.min(hi, Math.max(lo, intOr(v, d)));
 
 export function normalizeLoverSettings(raw) {
     const o = (raw && typeof raw === 'object') ? raw : {};
     const d = DEFAULT_LOVER_SETTINGS;
     return Object.freeze({
         injectToPrompt: (o.injectToPrompt === undefined) ? d.injectToPrompt : !!o.injectToPrompt,
-        maxInjectLines: clampInt(o.maxInjectLines, d.maxInjectLines, 0, 20),
+        maxInjectLines: boundedInt(o.maxInjectLines, d.maxInjectLines, 0, 20),
         revealByTime: (o.revealByTime === undefined) ? d.revealByTime : !!o.revealByTime,
         oncePerDay: (o.oncePerDay === undefined) ? d.oncePerDay : !!o.oncePerDay,
     });
@@ -326,7 +326,7 @@ export function splitDateStr(s) {
 
 /** 该月天数（用「下月 0 号」取，不手写月份表）。 */
 export function daysInMonth(year, month) {
-    const y = intOr(year, 1970); const m = clampInt(month, 1, 1, 12);
+    const y = intOr(year, 1970); const m = boundedInt(month, 1, 1, 12);
     return new Date(y, m, 0).getDate();
 }
 
@@ -336,7 +336,7 @@ export function daysInMonth(year, month) {
  * **不返回 HTML**（源返回 HTML 串；本件数据层只给数据结构，画是视图的事）。
  */
 export function calendarGrid(year, month, diaryMap) {
-    const y = intOr(year, 1970); const mo = clampInt(month, 1, 1, 12);
+    const y = intOr(year, 1970); const mo = boundedInt(month, 1, 1, 12);
     const map = (diaryMap && typeof diaryMap === 'object') ? diaryMap : {};
     const lead = new Date(y, mo - 1, 1).getDay();
     const dim = daysInMonth(y, mo);
@@ -361,7 +361,7 @@ export function calendarGrid(year, month, diaryMap) {
  * 那是「看着一样、其实换台机器就变」的一处；本件显式排序。
  */
 export function moodJar(year, month, diaryMap) {
-    const y = intOr(year, 1970); const mo = clampInt(month, 1, 1, 12);
+    const y = intOr(year, 1970); const mo = boundedInt(month, 1, 1, 12);
     const map = (diaryMap && typeof diaryMap === 'object') ? diaryMap : {};
     const p = (n) => String(n).padStart(2, '0');
     const prefix = y + '-' + p(mo) + '-';
@@ -687,7 +687,7 @@ export function isValidDateStr(s) {
  */
 export function pruneFootprintStore(store, maxDays) {
     const src = (store && typeof store === 'object') ? store : {};
-    const top = clampInt(maxDays, LOVER_LIMITS.maxFootprintDays, 1, 400);
+    const top = boundedInt(maxDays, LOVER_LIMITS.maxFootprintDays, 1, 400);
     const keys = Object.keys(src).filter(isValidDateStr).sort().reverse();
     const keep = keys.slice(0, top);
     const out = {};
@@ -721,7 +721,7 @@ export function putFootprints(store, dateStr, list) {
  */
 export function pruneDiaryStore(store, maxDays) {
     const src = (store && typeof store === 'object') ? store : {};
-    const top = clampInt(maxDays, LOVER_LIMITS.maxDiaryDays, 1, 3000);
+    const top = boundedInt(maxDays, LOVER_LIMITS.maxDiaryDays, 1, 3000);
     const keys = Object.keys(src).filter(isValidDateStr).sort().reverse();
     const keep = keys.slice(0, top);
     const out = {};
