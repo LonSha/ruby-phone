@@ -1,6 +1,10 @@
 # ruby-phone 发展规划
 
-> **当前规划入口（2026-10-08 复算，v3.64.0 / 5a20685）**：
+> **第二期计划入口（2026-10-08 复算，v3.72.0 / 9a27979）**：【本期为现行提案】
+> [优化提升计划（第二期）](.agents/notes/proposed/architecture/2026-10-08-optimization-plan-v2.md) ·
+> [拓展计划（第二期）](.agents/notes/proposed/feature/2026-10-08-expansion-plan-v2.md)。
+> 第一期（下方入口）的 O1–O8 与 X1–X8 均已交付（X1 v3.65.0 / X2 v3.66.0 / X3 v3.67.0 / X4 v3.68.0 / X5 v3.69.0 / X6 v3.70.0 / X7 v3.71.0 / X8 v3.72.0），第二期只保留仍成立的真实缺口；两份新计划各自开篇的「过时内容裁定」表逐条列出裁定。
+> **上一份规划入口（2026-10-08 复算，v3.64.0 / 5a20685）**：【历史快照】
 > [优化提升计划](.agents/notes/proposed/architecture/2026-10-04-optimization-plan.md) ·
 > [拓展计划](.agents/notes/proposed/feature/2026-10-04-expansion-plan.md) ·
 > [本轮证据](docs/planning/2026-10-04-evidence.md)。
@@ -14,14 +18,14 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | v3.65.0（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十一道门全过**，**3002 个 tests / 0 fail**（v3.65.0 全量实测，duration 147s） | `package.json` scripts.check |
-| 体量 | **405 个 .js / 293249 行**：apps 317 文件（**81 个 App 目录**）、config 61 文件、tests 207 套件；`index.js` **786960 字节 / 13042 行** | `find . -name '*.js'` / `wc -l` / `wc -c` |
+| 版本 | **v3.72.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十一道静态门全过**；全量 `node --test tests/*.test.mjs` **3191 例 / 3159 通过 / 32 失败**（v3.72.0 实测，约 145s）—— 32 例**全部**来自 `system-v243/v244/v245` 历史套件（版本锚与基线读数失配，非本次改动引入） | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v3.72.0 复算**：apps **81 个 App 目录**（`config/apps.js` **82 条 id**）、config **67** 件、tests **215** 套件、scripts **14** 件；`index.js` **778915 字节 / 13259 行**；`phone.css` **619586 字节** | `find` / `wc -l` / `wc -c` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
 
-> 本表**没有判据看守**（它不在任何门禁的扫描面里），所以每次抬版都要人肉复算一次 —— 这是已知欠债，已登记在 O8「计划、基线与测试成本收口」名下。读数出处逐条写在最右列，复算时按列跑命令即可。
+> 本表已于 **2026-10-08（v3.72.0）复算一次**（版本 / 门禁 / 体量三行按磁盘实读改写）。本表**仍没有判据看守** —— 这是已知欠债，已登记在 O8「计划、基线与测试成本收口」名下。读数出处逐条写在最右列，复算时按列跑命令即可。
 
 ---
 
