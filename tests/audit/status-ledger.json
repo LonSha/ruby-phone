@@ -1,0 +1,129 @@
+{
+  "schema": "status-ledger@1",
+  "generated_by": "tools/gen_status_ledger.mjs",
+  "version": "3.72.0",
+  "version_sources": {
+    "package": "3.72.0",
+    "manifest": "3.72.0",
+    "update_log_latest": "3.72.0",
+    "index_const": "3.72.0"
+  },
+  "version_same": true,
+  "gates": {
+    "static_gate_files": 13,
+    "static_gate_list": [
+      "bridge-contract-audit.mjs",
+      "dead-export-check.mjs",
+      "import-resolve-check.mjs",
+      "keys-audit.mjs",
+      "lifecycle-audit.mjs",
+      "named-import-check.mjs",
+      "registry-audit.mjs",
+      "screen-host-check.mjs",
+      "session-writeback-audit.mjs",
+      "source-derivation-audit.mjs",
+      "syntax-check.mjs",
+      "upstream-face-audit.mjs",
+      "weak-coercion-audit.mjs"
+    ],
+    "check_chain": [
+      "syntax",
+      "import-resolve",
+      "test",
+      "dead-exports",
+      "lifecycle",
+      "registry",
+      "keys",
+      "source-derivation",
+      "bridge-contract",
+      "weak-coercion",
+      "named-import",
+      "screen-host",
+      "session-writeback",
+      "upstream-face"
+    ],
+    "check_chain_len": 14
+  },
+  "tests": {
+    "test_files": 217,
+    "audit_dir_exists": true,
+    "audit_files": 16
+  },
+  "browser": {
+    "scenarios": [
+      "o1-app-data-states.scen.js",
+      "o1-app-enumeration.scen.js",
+      "o1-chat-switch.scen.js",
+      "o1-core-flow.scen.js",
+      "o1-search-cancel.scen.js",
+      "o1-settings-save.scen.js",
+      "o1-shell-smoke.scen.js",
+      "o7-perf-probe.scen.js",
+      "o7-reopen-leak.scen.js"
+    ],
+    "scenario_count": 9,
+    "probe_scenarios": 14,
+    "infra": {
+      "runner": true,
+      "driver": true,
+      "gate": true,
+      "host_stub": true
+    },
+    "chromium_env": null,
+    "chromium_env_note": "未显式指定 RUBY_PHONE_CHROMIUM —— 走 Playwright 缓存探测通道；本格为 null 表示「未指定」，不表示「没有浏览器」"
+  },
+  "scale": {
+    "app_dirs": 81,
+    "apps_ids": 82,
+    "index_lines": 13266,
+    "css_bytes": 619586,
+    "crossrepo": {
+      "produced_faces": 20
+    }
+  },
+  "material_split": {
+    "material_dir": ".sourcematerial",
+    "material_present": true,
+    "material_files": 2,
+    "material_files_note": "私有素材目录在场，文件数为实读",
+    "suite_files": 2,
+    "suite_list": [
+      "system-v3160.test.mjs",
+      "system-v3171.test.mjs"
+    ],
+    "scanner": "tests/ 下正文含 \".sourcematerial\" 的 *.test.mjs（读文件内容，不按文件名猜）",
+    "groups": [
+      {
+        "id": "mechanism",
+        "label": "公开夹具验机制",
+        "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
+        "suite_files": 215,
+        "runnable": true,
+        "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
+      },
+      {
+        "id": "fidelity",
+        "label": "私有真素材验保真",
+        "suite_scope": "tests/ 下正文含 \".sourcematerial\" 的套件",
+        "suite_files": 2,
+        "suite_list": [
+          "system-v3160.test.mjs",
+          "system-v3171.test.mjs"
+        ],
+        "runnable": true,
+        "why": "私有素材在场 ⇒ 本组可跑（真跑结果归各档门禁，本格只说可跑性）"
+      }
+    ],
+    "note": "本格只报**可跑性**（静态可判定），不报跑绿与否 —— 那要真执行，归门禁输出。「套件数 ≠ 通过数」；素材缺席组不得计入任何「通过」分子。"
+  },
+  "digest": {
+    "scope": [
+      "package.json",
+      "manifest.json",
+      "update-log.json"
+    ],
+    "sha256_16": "ec78d861acc92503"
+  },
+  "unknown": [],
+  "unknown_count": 0
+}

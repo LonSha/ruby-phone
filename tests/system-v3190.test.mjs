@@ -385,11 +385,26 @@ test('C4 文档写的门数与顺序必须与 package.json 逐字同构（口径
     assert.deepEqual(docNames, real,
         '文档写的门名/顺序与真源不同：文档 ' + JSON.stringify(docNames) + ' 真源 ' + JSON.stringify(real));
     /* 数量词：中文数字必须与真源门数一致（防「列了十个名字却写五道」） */
-    const CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一'];
+    /* ★ [本轮修正] 中文数字表改**生成式**（支持 0..99）。
+     *   原表写死到「十一」；门数本轮从 11 涨到 13 后，`CN[13]` 是 undefined，
+     *   判据报 `actual '十三' expected undefined` —— 断言方向是对的（真源 13 道），
+     *   错的是**表容量这个隐含假设**。这类「判据自身表达力不足伪装成被测对象不一致」
+     *   正是本仓登记过的形态，故不只补格：换成生成式 + 加容量自证。 */
+    const CN_DIGIT = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    const cnNum = (n) => {
+        if (n < 10) return CN_DIGIT[n];
+        if (n < 20) return '十' + (n % 10 ? CN_DIGIT[n % 10] : '');
+        if (n < 100) return CN_DIGIT[Math.floor(n / 10)] + '十' + (n % 10 ? CN_DIGIT[n % 10] : '');
+        return null; // 超出可表示范围：如实返回 null，由下方容量自证报出来
+    };
     const head = doc.slice(Math.max(0, atMarker - 24), atMarker) + '道子门';
     const cnt = /([一二三四五六七八九十]+)道子门/.exec(head);
     assert.ok(cnt, '找不到门数量词（本仓口径要求写「N 道子门」）');
-    assert.equal(cnt[1], CN[real.length],
+    const expectCn = cnNum(real.length);
+    assert.ok(expectCn,
+        '★ 判据自身容量不足：真源门数 ' + real.length + ' 超出中文数字可表示范围 ——'
+        + ' 这是判据的输入面问题，不是被测对象不一致（不得拿 undefined 当期望值去比）');
+    assert.equal(cnt[1], expectCn,
         '★ 数量词与真源不一致：文档写「' + cnt[1] + '道」，真源是 ' + real.length + ' 道');
 });
 

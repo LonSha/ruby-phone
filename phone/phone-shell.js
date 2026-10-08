@@ -1226,6 +1226,166 @@ export class PhoneShell {
         });
     }
 
+    /* ============================================================
+     * 建栈 / 取图层宿主（唯一实现）
+     * ------------------------------------------------------------
+     * 为什么抽出来（真浏览器实测抓到的真缺陷，不是整洁性偏好）：
+     *   v3.61.0 把 setContent 自己的「覆盖 screen.innerHTML」改成了「逐件补齐」，
+     *   但它只修了**自己**这一条路径—— 全仓另有 18 个 App 的 render() 直接
+     *   把内容写进 `phoneShell.screen`（实例： `this.view.render(this.phoneShell.screen)`），
+     *   而那些 view 的 `_draw()` 写的是 `this.container.innerHTML = html` ⇒
+     *   **一次点击就把 `.phone-screen` 的子节点整体换掉**：
+     *     栈、返回键、小白条全没，且栈没了之后**再也回不来**
+     *     （setContent 会以为自己是首帧而重建一份空栈，但旧图层已随 screen 一起被消灭）。
+     *   真浏览器逐开 82 入口实测：18 个入口毁掉外壳（playbook / achievement / xhs / tieba /
+     *   health / memory / graph / peek / bilibili / theater / place / cheat / dirtytalk / wallet /
+     *   profile / plotline / chars / asset），且后续回键全部失灵。
+     *
+     * 为什么不把它们全改成 setContent：
+     *   那 18 个 view 的内部重绘写的是 `this.container.innerHTML`（容器就是图层），
+     *   而 setContent 会把传入的 html 字符串**整体重写进图层**（并以
+     *   `data-raw-html` 做指纹去重）—— 与那些 view 的自重绘形成**两个真源**，
+     *   且需要把它们的内部重绘全部改成调 setContent（面大、易漏）。
+     *   而「把宿主从 screen 换成图层」是同一件事的最小动作：
+     *   图层本就是那些 view 应该写的地方（它们只是拿错了祖先节点），
+     *   且 view 内部的 `container.querySelector` / `_draw` 一字不用改。
+     *
+     * 为什么要幂等降级：
+     *   单元测试用模拟 shell（`{ screen }`，无栈、无 setContent）直接 new 这些 App
+     *   并断言它们渲染出主体。若取不到栈就丢弃渲染，那些套件会从「验证行为」
+     *   退化成「验证我不会渲染」。故实现层允许回退到 screen，
+     *   但**回退路径必须可观测**：只要真壳在场（有 screen）就一律走图层，
+     *   不会出现「真壳在场但走了回退」这种模棱两可。
+     *   真壳路径的守卫在浏览器层：「逐开 82 入口后外壳仍完整」。
+     * ============================================================ */
+    /** 建栈（缺哪件补哪件，绝不触碰 screen 里已有的兄弟节点）。
+     *   子节点顺序不影响视觉（两者都是 absolute 定位，back-button 走 z-index:40）。
+     *   建栈后需要它的路径有两条：setContent（正常渲染）与 layerHost（给直接写宿主的 view 取图层）。 */
+    _ensureViewStack() {
+        if (!this.screen) return null;
+        if (!this.screen.querySelector('.view-stack-container')) {
+            const stackEl = document.createElement('div');
+            stackEl.className = 'view-stack-container';
+            stackEl.style.cssText = 'position:relative;width:100%;height:100%;';
+            this.screen.appendChild(stackEl);
+            if (!this.screen.querySelector('.phone-home-indicator')) {
+                const indicatorEl = document.createElement('div');
+                indicatorEl.className = 'phone-home-indicator';
+                this.screen.appendChild(indicatorEl);
+            }
+            this.bindHomeIndicator();
+        }
+        return this.screen.querySelector('.view-stack-container');
+    }
+    /** 取某个图层的宿主节点（供 App 把内容写进图层而非 .phone-screen）。
+     *   @param viewId  图层名（同 setContent 的 viewId）
+     *   @param create  缺失时是否创建（默认 true）
+     *   返回：图层元素；无栈且无 screen 时返回 null（调用方回退）。 */
+    layerHost(viewId, { create = true } = {}) {
+        const stack = this._ensureViewStack();
+        if (!stack) return null;
+        const id = String(viewId || '').trim();
+        if (!id) return null;
+        let layer = stack.querySelector(`[data-view-id="${id}"]`);
+        if (!layer) {
+            if (!create) return null;
+            layer = document.createElement('div');
+            layer.setAttribute('data-view-id', id);
+            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:transparent;overflow:hidden;border-radius:inherit;';
+            stack.appendChild(layer);
+        }
+        /* 登记为当前层：否则这个图层不会被置顶（返回键不出现），且下一次 setContent
+         *   的 GC 会因它不在 viewHistory 里而把它删掉。这里走的是与 setContent
+         *   完全同一条实现（_applyViewLayerState）。 */
+        this._applyViewLayerState(id);
+        return layer;
+    }
+    /** 将某个图层登记为「当前层」：维护历史栈、Z-index/堆叠、孤儿图层回收、返回键可见性。
+     *   这四件事原本只在 setContent 里做（第 2/6/7 步）；抽出来是因为
+     *   「直接写图层宿主」的 App 也必须走同一套—— 否则它们写进去的图层不会被置顶（返回键不出现），
+     *   且会在下一次 setContent 的 GC 里被当成孤儿删掉。 */
+    _applyViewLayerState(viewId) {
+        if (viewId === 'home') this.viewHistory = [];
+        const existingIndex = this.viewHistory.findIndex(v => v.id === viewId);
+        if (existingIndex !== -1) {
+            this.viewHistory.splice(existingIndex + 1); // 后退：弹出顶部多余页面
+        } else {
+            this.viewHistory.push({ id: viewId }); // 前进：压入新页面
+        }
+        const stack = this.screen?.querySelector?.('.view-stack-container');
+        if (stack) {
+            const allViews = stack.querySelectorAll('[data-view-id]');
+            allViews.forEach(v => {
+                const id = v.getAttribute('data-view-id');
+                const historyIndex = this.viewHistory.findIndex(item => item.id === id);
+                if (id === viewId) {
+                    v.className = 'phone-view-layer phone-view-current';
+                    v.style.display = 'block';
+                    v.style.zIndex = '10';
+                    v.style.boxShadow = '-5px 0 20px rgba(0,0,0,0.15)';
+                    v.style.transform = 'translate3d(0,0,0)';
+                    v.style.transition = 'none';
+                    v.style.opacity = '1';
+                } else if (historyIndex === this.viewHistory.length - 2) {
+                    v.className = 'phone-view-layer phone-view-prev';
+                    v.style.display = 'block';
+                    v.style.zIndex = '5';
+                    v.style.boxShadow = 'none';
+                    v.style.transform = 'translate3d(0,0,0)';
+                    v.style.transition = 'none';
+                    v.style.opacity = '1';
+                } else {
+                    v.className = 'phone-view-layer';
+                    v.style.display = 'none';
+                }
+            });
+            allViews.forEach(v => {
+                const id = v.getAttribute('data-view-id');
+                if (!this.viewHistory.find(item => item.id === id)) {
+                    v.remove(); // 连同背景图缓存一起彻底销毁
+                }
+            });
+        }
+        window.VirtualPhone?.refreshGlobalTextColorStyle?.();
+        window.VirtualPhone?.refreshGlobalFontScale?.();
+        // [v3.56.0] 视图切换后同步返回键可见性（栈刚被改过，这里是唯一收口点）。
+        this.syncBackButtonVisibility();
+    }
+    /* ============================================================
+     * 当前 App / 内容宿主（唯一实现）
+     * ------------------------------------------------------------
+     * 为什么存在（真浏览器逐开 82 入口实测抓到的真缺陷）：
+     *   全仓 **43 个 App 的 view** 写的是
+     *     `const container = this.shell?.getContentContainer?.();`
+     *     `if (!container) return;`
+     *   而 `getContentContainer` 在本仓**根本没有定义**（全仓 grep 只命中 43 处调用点、零处定义）。
+     *   于是那 43 个 App 点开后**什么都不渲染**：不报错、不崩溃、图层不出现，
+     *   用户看到的是一个**点了没反应的图标**—— 正是本仓最贵的缺陷形态（静默失效）。
+     *   为什么不把 43 处调用改成别的写法：那会产生 43 份各自取宿主的逻辑（必然漂移）；
+     *   而「缺一个已被 43 处引用的方法」正好是一个单点：它本就是大家已经约定好的接口。
+     *
+     * 返回什么：**当前 App 的真图层**（而不是 `.phone-screen`）。
+     *   回退顺序：① 当前 App 图层（创建）→ ② 已有的 `.phone-view-current`
+     *   → ③ `screen`（无壳的单元测试场景）。
+     *   ② 是为了让「已有当前层」的路径（例如已经走 setContent 渲染过的 App）
+     *   不被新建一个空层抢走渲染位。
+     * ============================================================ */
+    /** 告诉壳「现在在哪个 App 里」（index.js 的 phone:openApp 咽喉点调）。
+     *   不做其他任何事：历史栈 / Z-index / 回键都归 setContent（唯一收口点）。 */
+    setCurrentApp(appId) {
+        this.currentApp = (appId === undefined || appId === null) ? null : String(appId);
+    }
+    /** 当前 App 的内容宿主（供 view 写入）。无壳 / 无栈时返回 null（调用方自行退化）。 */
+    getContentContainer() {
+        if (!this.screen) return null;
+        if (this.currentApp) {
+            const host = this.layerHost('view-' + this.currentApp);
+            if (host) return host;
+        }
+        const cur = this.screen.querySelector?.('.view-stack-container .phone-view-current');
+        if (cur) return cur;
+        return this.screen;
+    }
     setContent(html, viewId = null) {
         if (!this.screen) return;
         this.syncHomeLayoutChromeClass();
@@ -1241,51 +1401,12 @@ export class PhoneShell {
         }
         this._syncChromeThemeForView(viewId, html);
 
-        // 2. 维护历史栈
-        if (viewId === 'home') this.viewHistory =[];
-        const existingIndex = this.viewHistory.findIndex(v => v.id === viewId);
-        if (existingIndex !== -1) {
-            this.viewHistory.splice(existingIndex + 1); // 后退：弹出顶部多余页面
-        } else {
-            this.viewHistory.push({ id: viewId }); // 前进：压入新页面
-        }
-
-        // 3. 初始化多图层容器
-        /* [v3.61.0 · O1] 由「覆盖 screen.innerHTML」改为「逐件补齐」。
-         *   为什么必须改（真浏览器实测抓到的真缺陷，不是整洁性偏好）：
-         *     本块此前写 `this.screen.innerHTML = '<div class="view-stack-container">…'`，
-         *     而 createInPanel 把 `<button id="phone-back-button">` 渲染为 `.phone-screen`
-         *     的**直系子节点**（那里的注释明写「不在 view-stack 内，因此切视图不会重建它」）。
-         *     但 setContent 是唯一的内容入口、homeScreen.render() 也走它 ——
-         *     于是**第一次渲染就把整个 screen 的 innerHTML 换掉，按钮当场被销毁**；
-         *     且本块只在首帧进（之后走 data-raw-html diff 分支），再无任何路径把它加回来。
-         *     用户表现：进了 App 左上角**没有返回键**，只能靠不可见的边缘右滑退出 ——
-         *     正是 v3.56.0 想治、却只治了「渲染出来」没治「活下来」的那一格。
-         *     原注释里「常驻、切视图不会重建」是静态读源码得出的断言，与运行时相反。
-         *   改法要点：只 append 缺失的那两件，绝不触碰 screen 里已有的兄弟节点。
-         *   子节点顺序不影响视觉（两者都是 absolute 定位，back-button 走 z-index:40）。 */
-        if (!this.screen.querySelector('.view-stack-container')) {
-            const stackEl = document.createElement('div');
-            stackEl.className = 'view-stack-container';
-            stackEl.style.cssText = 'position:relative;width:100%;height:100%;';
-            this.screen.appendChild(stackEl);
-            if (!this.screen.querySelector('.phone-home-indicator')) {
-                const indicatorEl = document.createElement('div');
-                indicatorEl.className = 'phone-home-indicator';
-                this.screen.appendChild(indicatorEl);
-            }
-            this.bindHomeIndicator();
-        }
+        // 2. 维护历史栈（唯一实现，见 _applyViewLayerState）
+        this._applyViewLayerState(viewId);
         const stack = this.screen.querySelector('.view-stack-container');
-
-        // 4. 获取或创建目标图层
-        let targetView = stack.querySelector(`[data-view-id="${viewId}"]`);
-        if (!targetView) {
-            targetView = document.createElement('div');
-            targetView.setAttribute('data-view-id', viewId);
-            targetView.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:transparent;overflow:hidden;border-radius:inherit;';
-            stack.appendChild(targetView);
-        }
+        // 3. 获取或创建目标图层（与 layerHost 同一条建层实现）
+        const targetView = this.layerHost(viewId, { create: true });
+        if (!targetView) return;
 
         // 5. 终极 DOM Diffing：比对原始字符串，避免浏览器序列化导致的误判！
         const normalize = (str) => str.replace(/diary-view-enter/g, '').replace(/diary-view-exit/g, '').trim();
@@ -1299,44 +1420,7 @@ export class PhoneShell {
         }
         this._scopePhoneFormControls(targetView);
 
-        // 6. 图层 Z-Index 管理（完美的 iOS/微信 原生堆叠效果）
-        const allViews = stack.querySelectorAll('[data-view-id]');
-        allViews.forEach(v => {
-            const id = v.getAttribute('data-view-id');
-            const historyIndex = this.viewHistory.findIndex(item => item.id === id);
-
-            if (id === viewId) {
-                // 当前置顶页面
-                v.className = 'phone-view-layer phone-view-current';
-                v.style.display = 'block';
-                v.style.zIndex = '10';
-                v.style.boxShadow = '-5px 0 20px rgba(0,0,0,0.15)';
-                v.style.transform = 'translate3d(0,0,0)';
-                v.style.transition = 'none';
-                v.style.opacity = '1';
-            } else if (historyIndex === this.viewHistory.length - 2) {
-                // 上一页（垫在下面，滑动返回时可见）
-                v.className = 'phone-view-layer phone-view-prev';
-                v.style.display = 'block';
-                v.style.zIndex = '5';
-                v.style.boxShadow = 'none';
-                v.style.transform = 'translate3d(0,0,0)';
-                v.style.transition = 'none';
-                v.style.opacity = '1';
-            } else {
-                // 历史深处页面，隐藏节省性能
-                v.className = 'phone-view-layer';
-                v.style.display = 'none';
-            }
-        });
-
-        // 7. 垃圾回收：清理被滑走并弹出的孤儿页面
-        allViews.forEach(v => {
-            const id = v.getAttribute('data-view-id');
-            if (!this.viewHistory.find(item => item.id === id)) {
-                v.remove(); // 连同背景图缓存一起彻底销毁
-            }
-        });
+        // 6. 图层 Z-index / GC / 回键同步（唯一实现，见 _applyViewLayerState）
         window.VirtualPhone?.refreshGlobalTextColorStyle?.();
         window.VirtualPhone?.refreshGlobalFontScale?.();
         // [v3.56.0] 视图切换后同步返回键可见性（栈刚被改过，这里是唯一收口点）。

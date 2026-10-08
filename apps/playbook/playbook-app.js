@@ -66,7 +66,7 @@ export class PlaybookApp {
   }
 
   render() {
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('playbook-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 

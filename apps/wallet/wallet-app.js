@@ -119,7 +119,7 @@ export class WalletApp {
         this._lastProbe = null;
     }
     render() {
-        this.view.render(this.phoneShell?.screen);
+        this.view.render(this.phoneShell?.layerHost?.('wallet-main') || this.phoneShell?.screen);
     }
 }
 export default WalletApp;

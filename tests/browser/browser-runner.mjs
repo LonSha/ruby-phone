@@ -107,6 +107,34 @@ function decodeEntities(s) {
     .split(A).join(String.fromCharCode(38));
 }
 
+/* ---------- 无头模式选择：`=new` 会把窗口宽夹到 500px 下限 ----------
+ * 实测（chromium-1148 / 131.0.6778.33，逐个跑 320/390/500/768/1280 得到）：
+ *   `--headless=new --window-size=320,800` ⇒ window.innerWidth = 500（被夹住）；
+ *   `--headless=old --window-size=320,800` ⇒ 320（真生效）。
+ * R-O1 点名的四档视口里 320 / 390 都在 500 以下 ⇒ 用 new 模式跑，「窄屏档」
+ * 实际全在 500px 上跑，而命中测试照报绿 —— 这正是本仓最贵的那类假绿：
+ *   **判据以为自己测了窄屏，其实没测**（宽度夹住后布局根本没走到窄屏分支）。
+ * 故本层两向都守：
+ *   ① 优先 `--headless=old`（用一次 about:blank 探测，进程内缓存，失败才退 `=new`）；
+ *   ② 页面侧另加一条 `viewport-applied` 自证读数（见下方 page 模板）——
+ *      视口没真生效就直接转红，**不依赖本函数的探测结论正确**。
+ * 老模式在更高版本 Chromium 上会被移除 ⇒ 探测 + 自证二者缺一不可。
+ */
+let __headlessModeCache = null;
+function pickHeadlessMode(exe) {
+  if (__headlessModeCache) return __headlessModeCache;
+  try {
+    const r = spawnSync(exe, ['--headless=old', '--no-sandbox', '--disable-gpu', '--dump-dom', 'about:blank'],
+      { encoding: 'utf8', timeout: 20000 });
+    if (r && r.status === 0 && /<html/i.test(String(r.stdout || ''))) {
+      __headlessModeCache = 'old';
+      return 'old';
+    }
+  } catch (_e) { /* 落到 new */ }
+  __headlessModeCache = 'new';
+  return 'new';
+}
+
 /**
  * 跑一个浏览器场景。
  * @param {{root:string, scenarios?:string[]|string, body?:string, styles?:string[],
@@ -192,6 +220,25 @@ window.addEventListener('error', (e) => window.report({ name: 'window-error', ok
 window.addEventListener('unhandledrejection', (e) => window.report({ name: 'unhandled-rejection', ok: false, detail: String((e && e.reason && e.reason.message) || (e && e.reason) || '') }));
 /* 静态 import 只能待在模块顶层（放进块里 = 语法错误 = 整个模块不执行）。 */
 ${scenarioImports}
+/* ★ 视口自证（runner 层「无头模式选择」的第二道守）：判据自己先报「我到底在多宽里跑的」。
+   为什么要这一条：无头新模式（--headless=new）会把窗口宽夹到 500px 下限（实测 131.0.6778.33），
+   于是「320px 窄屏档」其实在 500px 上跑、命中测试还照报绿 —— 判据以为测了窄屏，其实没测。
+   runner 侧已优先选老模式（--headless=old），但那是**结论**；本读数把**现场**也说一遍：
+   视口没真生效 ⇒ 直接一条 FAIL 带出去，后续读数全部不再有意义。
+   容差 ±2px（滚动条 / 取整）。
+   ★ 注意：本段在**模板字面量内部**，注释与字符串里都不得出现反引号 —— 一个反引号就会
+     提前终止整个页面模板（本轮实测踩到：SyntaxError: Invalid left-hand side ...）。 */
+(function () {
+  const want = ${vp.width};
+  const got = window.innerWidth;
+  window.report({
+    name: 'viewport-applied',
+    ok: Math.abs(got - want) <= 2,
+    detail: 'want=' + want + ' innerWidth=' + got + ' outerWidth=' + window.outerWidth +
+      ' docEl=' + document.documentElement.clientWidth +
+      (Math.abs(got - want) <= 2 ? '' : ' —— 视口没真生效（无头模式把宽度夹住了）：窄屏档会在假宽上跑'),
+  });
+})();
 try {
 ${scenarioBody}
 } catch (err) {
@@ -203,8 +250,9 @@ flush();
 
   const srv = await startStaticServer({ root, fixture: page });
   try {
+    const headlessMode = pickHeadlessMode(browser.exe);
     const args = [
-      '--headless=new',
+      `--headless=${headlessMode}`,
       '--no-sandbox',
       '--disable-gpu',
       '--disable-dev-shm-usage',

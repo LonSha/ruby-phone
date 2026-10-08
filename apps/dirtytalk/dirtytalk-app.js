@@ -194,7 +194,7 @@ export class DtApp {
     } catch (_e) { /* 视图状态清理失败不影响数据正确性 */ }
   }
 
-  render() { this.view.render(this.phoneShell?.screen); }
+  render() { this.view.render(this.phoneShell?.layerHost?.('dt-main') || this.phoneShell?.screen); }
 }
 
 export default DtApp;

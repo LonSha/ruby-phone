@@ -164,12 +164,31 @@ test('A3 全程零管道：子进程的 fd 只许接日志文件（不许任何�
     assert.equal(/\bspawn\w*\(\s*'sh'|\|\s*(grep|head|sort)\b/.test(code), false,
         '\u2605 产品路径不得出现 shell 管道（本版两条事故都出在这里）');
 });
-test('A4 npm 脚本别名在场且指向执行器；既有 check 链一字未动', () => {
+test('A4 npm 脚本别名在场且指向执行器；既有 check 链按不变量守住（不再逐字钉死）', () => {
     assert.equal(pkg.scripts['check:file'], 'node scripts/check-file.mjs',
         'package.json 必须给 check:file 别名（否则「全量落文件」没有人会记得手敲）');
-    assert.match(String(pkg.scripts.check),
-        /^npm run syntax && npm run import-resolve && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys && npm run source-derivation && npm run bridge-contract && npm run weak-coercion && npm run upstream-face$/,
-        'check 链不得被本版改动（执行器是**包住**它，不是替换它）');
+    /* ★ [R-O2 修正] 原断言把链**逐字钉死**成 v3.20.1 那一刻的 11 道门：
+     *     assert.match(chain, /^npm run syntax && ... && npm run upstream-face$/)
+     *   它的**意图**是对的（执行器包住链、不替换链），但表达方式把
+     *   「本版没动链」写成了「此后每一版都必须逐字等于这条链」——
+     *   于是任何一版合法增门都会判红。这正是 R-O2 点名的形态：
+     *   **把时点快照当成永久约束**（同族：拿 `log.latest` 当版本锚）。
+     *   改为不变量：这 11 道门必须在链上、且相互顺序不变；尾锚仍是 upstream-face。 */
+    const chain = String(pkg.scripts.check);
+    const seq = (chain.match(/npm run ([a-z][a-z-]*)/g) || []).map((s) => s.replace('npm run ', ''));
+    const MUST = ['syntax', 'import-resolve', 'test', 'dead-exports', 'lifecycle',
+        'registry', 'keys', 'source-derivation', 'bridge-contract', 'weak-coercion', 'upstream-face'];
+    /* ① 子序列同序：这 11 道门一个都不能少、相互次序不能换 */
+    let i = 0;
+    for (const g of seq) if (i < MUST.length && g === MUST[i]) i += 1;
+    assert.equal(i, MUST.length,
+        '★ 这 11 道门的**子序列**必须在链上按原序出现（缺门或换序即红）：实得 ' + JSON.stringify(seq));
+    /* ② 一个都不少（子序列判据对「多出来」是宽容的，对「少一个」才严格 —— 两者都要） */
+    for (const g of MUST) assert.ok(seq.includes(g), '链上缺门：' + g);
+    /* ③ 尾锚：新增门只能插在 upstream-face 之前（第三道门的尾锚，另由 system-v3203 A1 把守） */
+    assert.equal(seq[seq.length - 1], 'upstream-face', 'check 链必须以 upstream-face 收尾');
+    /* ④ 意图保留：执行器**包住**链而不是替换它 —— 链本身仍由 package.json 持有 */
+    assert.ok(seq.length >= MUST.length, '链不得短于原 11 道门');
 });
 
 test('A5 剥注释工具两向自证（否则 A2/A3 可能把注释读成代码）', () => {

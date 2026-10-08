@@ -75,7 +75,7 @@ export class AchievementApp {
   }
 
   render() {
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('achievement-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 }

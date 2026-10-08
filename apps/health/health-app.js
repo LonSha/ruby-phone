@@ -68,7 +68,7 @@ export class HealthApp {
     //   _initHooks（内部幂等），覆盖构造期 SillyTavern context 尚未就绪、
     //   导致注入钩子静默未挂载的窗口。
     this._initHooks();
-    this.view.render(this.phoneShell.screen);
+    this.view.render(this.phoneShell.layerHost?.('health-main') || this.phoneShell.screen);
   }
 }
 

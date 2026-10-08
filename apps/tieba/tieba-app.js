@@ -39,7 +39,7 @@ export class TiebaApp {
   }
 
   render() {
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('tieba-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 }

@@ -34,7 +34,7 @@ export class GraphApp {
   }
 
   render() {
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('graph-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 }

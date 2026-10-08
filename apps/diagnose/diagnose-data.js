@@ -48,6 +48,13 @@ import { readProjection, projectionValue, projectionLine } from '../../config/pr
  *   接在这里的理由与本仓一切「上游读数」的可见出口相同：投影接诊断、探针自述接诊断，
  *   注入面同族 —— 而它此前**全库零消费**（上游 v3.215.0 做出来，下游没人读）。 */
 import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockLine } from '../../config/injection-contract.js';
+/* ★ 真浏览器逐开 82 入口实测抓到的真缺陷：本文件对外**只有 default 导出对象**里带着
+ *   injectionLine / injectionVerdictText / blockLine，没有具名导出；而 diagnose-view.js 写的是
+ *   `import { ... blockLine } from './diagnose-data.js'` ⇒ **模块整体加载失败**（SyntaxError:
+ *   does not provide an export named 'blockLine'），连带 diagnose 入口点开后永远是空白（外壳不崩、日志一行错）。
+ *   修法：把它们原样转出（不新造第二份实现）—— 与 default 对象共用同一个来源。 */
+export { injectionLine, injectionVerdictText, blockLine };
+
 /* [v3.10.0 · G-3] 知情网络的消费侧真源（上游 worldProg.knowledge 的「谁不知道」面）。
  *   接在诊断中心的理由与投影面/注入面/证据面**同一族**：本仓一切「上游读数」的
  *   可见出口就是这里。修前实测：`worldProg.knowledge` 只有 plotline 的列表出口在读，

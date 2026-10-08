@@ -370,7 +370,7 @@ export class AssetApp {
         this._initHook();
         const today = this.todayIso();
         if (today) this._advanceMarket(today);
-        this.view.render(this.phoneShell && this.phoneShell.screen);
+        this.view.render((this.phoneShell && this.phoneShell.layerHost && this.phoneShell.layerHost('asset-main')) || (this.phoneShell && this.phoneShell.screen));
     }
 }
 export default AssetApp;

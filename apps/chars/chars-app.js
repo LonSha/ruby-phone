@@ -137,7 +137,7 @@ export class CharsApp {
         this._lastProbe = null;
     }
     render() {
-        this.view.render(this.phoneShell?.screen);
+        this.view.render(this.phoneShell?.layerHost?.('chars-main') || this.phoneShell?.screen);
     }
 }
 export default CharsApp;

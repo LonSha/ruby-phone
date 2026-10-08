@@ -121,6 +121,27 @@ const READS = {
         { id: 'produced', label: '本仓产出面数（R12）', re: /面（消费侧）\/ (\d+) 面（本仓产出侧 · R12）/, g: 1 },
         { id: 'problems', label: '问题数',
             re: /对账：\d+ 面（消费侧）\/ \d+ 面（本仓产出侧 · R12） \/ 问题 (\d+)/, g: 1 }
+    ],
+    /* ── 下列三门是 v3.72.0 之后新增（R-O3 静态门 + 其负控制套件同批进链）──
+     *  登记纪律与其余门一字不差：**主读数必须在日志里真读得到**，
+     *  否则 check:file 走 exit 2 拒判（那时不是「门坏了」，是「新门没登记」）。 */
+    'named-import': [
+        { id: 'files', label: '扫描文件数', re: /named-import\] 扫描 (\d+) 个文件/, g: 1 },
+        { id: 'imports', label: '具名导入条数', re: /具名导入 (\d+) 条/, g: 1 },
+        { id: 'checkable', label: '可判定条数', re: /可判定 (\d+) 条/, g: 1 }
+    ],
+    'screen-host': [
+        { id: 'files', label: '扫描文件数', re: /screen-host\] 扫描 (\d+) 个文件/, g: 1 },
+        { id: 'uses', label: 'layerHost 使用点', re: /layerHost 使用点 (\d+)/, g: 1 },
+        /* ★ 这条读数是**这门存在的全部理由**：0 = 没有任何 App 绕过 layerHost 直写外壳。
+         *   它一旦非 0，门自己会 exit 1；此处登记它是为了让 check:file 的汇总行
+         *   也能在**全绿那次**读到「0」——「没红」与「没读数」不是一回事。 */
+        { id: 'bypass', label: '直写外壳的调用点', re: /直接写外壳的调用点 (\d+)/, g: 1 }
+    ],
+    'session-writeback': [
+        { id: 'files', label: '扫描生产文件数', re: /扫描 (\d+) 个生产 \.js/, g: 1 },
+        { id: 'captures', label: '令牌捕获点', re: /捕获点 (\d+) · 栅栏点 (\d+)/, g: 1 },
+        { id: 'guards', label: '栅栏裁决点', re: /捕获点 (\d+) · 栅栏点 (\d+)/, g: 2 }
     ]
 };
 

@@ -39,7 +39,7 @@ export class XhsApp {
   }
 
   render() {
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('xhs-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 }

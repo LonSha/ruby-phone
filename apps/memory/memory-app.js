@@ -37,7 +37,7 @@ export class MemoryApp {
   render() {
     // 首次打开: 引导用户开启自动注入 (功能可见性)
     this._maybeShowOnboarding();
-    const screen = this.phoneShell.screen;
+    const screen = this.phoneShell.layerHost?.('memory-main') || this.phoneShell.screen;
     this.view.render(screen);
   }
 

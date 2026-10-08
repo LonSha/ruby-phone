@@ -1,0 +1,68 @@
+{
+  "schema": "gate-tiers@1",
+  "note": "四档门禁的唯一真源（R-O9 第 3 条工作：门禁分档展示）。判据逐档核回磁盘：静态档的门名、定向档的套件名都必须真实存在。",
+  "tiers": {
+    "static": {
+      "label": "静态门（秒级，零浏览器）",
+      "commands": [
+        "npm run syntax",
+        "npm run import-resolve",
+        "npm run dead-exports",
+        "npm run lifecycle",
+        "npm run registry",
+        "npm run keys",
+        "npm run source-derivation",
+        "npm run bridge-contract",
+        "npm run weak-coercion",
+        "npm run upstream-face",
+        "npm run session-writeback",
+        "node scripts/named-import-check.mjs",
+        "node scripts/screen-host-check.mjs"
+      ],
+      "why": "这十三道门回答「结构有没有坏」。它们不回答「用户点得到吗」—— 那条归浏览器档。session-writeback 额外回答「写回口的时序对不对」（令牌必须在第一个 await 之前记下）—— 接线在场不等于语义活着。"
+    },
+    "targeted": {
+      "label": "定向套件（进程内，毫秒~秒级）",
+      "commands": [
+        "node --test tests/system-v3730.test.mjs",
+        "node --test tests/system-v3740.test.mjs",
+        "node --test tests/audit.test.mjs",
+        "node --test tests/entry-integrity.test.mjs",
+        "node --test tests/system-v328.test.mjs",
+        "node --test tests/system-v3201.test.mjs"
+      ],
+      "why": "改动某一面时只跑相关套件。它是快反馈，不替代全量。",
+      "note": "本节条目是常用定向集，不是全部套件；全量归 full 档。"
+    },
+    "browser": {
+      "label": "浏览器门（L4，真 Chromium + 真 phone.css）",
+      "commands": [
+        "node tests/browser/gate.mjs",
+        "node tests/browser/run-scenario.mjs tests/browser/scenarios/o1-shell-smoke.scen.js"
+      ],
+      "viewports": [
+        "320x568",
+        "390x844",
+        "768x1024",
+        "1280x800"
+      ],
+      "min_scenarios": 7,
+      "why": "回答「真排版引擎下入口有没有真盒、能不能点到、内容看没看见」。无浏览器时该档必须报未执行并以 exit 2 收场。",
+      "note": "gate.mjs 是总门禁（覆盖面本身是判据）；run-scenario.mjs 是单次驱动（调试用，不承诺覆盖面）。"
+    },
+    "host": {
+      "label": "真宿主门（SillyTavern 本体 + 双扩展共装）",
+      "status": "not-executed",
+      "commands": [],
+      "note": "本环境无任何可访问的测试 SillyTavern 实例。R-O1 第 5 条与 R-O3 全部条目归此档：如实登记未执行，不得计通过。",
+      "blocked_by": "环境能力缺口：交付环境未提供真宿主；不得以桩结果冒充。"
+    },
+    "full": {
+      "label": "全量回归（计划收口后才跑）",
+      "commands": [
+        "npm test"
+      ],
+      "why": "批次纪律：计划内容做完前只跑单门/单套件，全量集中到收口跑一次。"
+    }
+  }
+}

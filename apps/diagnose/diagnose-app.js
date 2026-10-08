@@ -84,7 +84,7 @@ export class DiagnoseApp {
     }
 
     render() {
-        this.view.render(this.phoneShell?.screen);
+        this.view.render(this.phoneShell?.layerHost?.('diagnose-main') || this.phoneShell?.screen);
     }
 }
 

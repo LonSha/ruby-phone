@@ -9,8 +9,12 @@ import {
     availableCards, pinnedCards, recentFromUsage, entryReadings, filterCards, capabilityOf,
     tabState, isRouted, toStr, listOf, dispatchOpen,
     readPins, writePins, togglePin, readLedger, writeLedger,
-    hasTabSource, tabSourceReadings, TAB_SOURCE_NOTE, taskEntrySelfCheck, TE_TABMAP
+    taskEntrySelfCheck, TE_TABMAP
 } from '../../config/task-entry.js';
+/* ★ 真浏览器逐开 82 入口实测抓到的真缺陷：这三个名字原本从 `config/task-entry.js` 导入，
+ *   而它们从来就不在那里（定义在 `config/tab-source.js`）⇒ 模块整体加载失败，
+ *   任务入口入口点开后永远是空白。修法：改指真源（不在 task-entry 里转手一份——那会造出第二份声明）。 */
+import { hasTabSource, tabSourceReadings, TAB_SOURCE_NOTE } from '../../config/tab-source.js';
 import { readUsage } from '../../config/usage-tracker.js';
 import { TaskentryView } from './taskentry-view.js';
 export { TE_PINS_KEY, TE_LEDGER_KEY };

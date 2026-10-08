@@ -21,8 +21,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
-- `npm run check` = **十一道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
-  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `upstream-face`。
+- `npm run check` = **十四道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
+  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `upstream-face`。
   > 【本行订正 · v3.19.0】此前本行写「**五道子门**：syntax → test → dead-exports → lifecycle → registry」——
   > 那是本行写下时的实况，而 `package.json` 的 `scripts.check` **早已是十道**（v3.19.0 实现工具包时实测）。
   > 这类「文档写五道、真门禁跑十道」正是本仓治过的形态：**口径与真源脱节，而脱节的那一处是给人读的那一处**。

@@ -152,7 +152,7 @@ export class PlotlineApp {
         this._lastProbe = null;
     }
     render() {
-        this.view.render(this.phoneShell?.screen);
+        this.view.render(this.phoneShell?.layerHost?.('plotline-main') || this.phoneShell?.screen);
     }
 }
 export default PlotlineApp;

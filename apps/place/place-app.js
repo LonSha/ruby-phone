@@ -156,7 +156,7 @@ export class PlaceApp {
     }
 
     render() {
-        this.view.render(this.phoneShell?.screen);
+        this.view.render(this.phoneShell?.layerHost?.('place-main') || this.phoneShell?.screen);
     }
 }
 

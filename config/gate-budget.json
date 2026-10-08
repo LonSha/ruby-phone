@@ -5,7 +5,7 @@
   "measured_at": "v3.23.1",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 96897,
+  "total_ms": 99350,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -56,6 +56,21 @@
       "ms": 1638,
       "limit_ms": 1802,
       "why": "弱口径门扫枚举面 + 唯一实现引用，中等"
+    },
+    "named-import": {
+      "ms": 956,
+      "limit_ms": 1052,
+      "why": "具名导入门要建每个模块的具名导出面，随模块数线性涨"
+    },
+    "screen-host": {
+      "ms": 797,
+      "limit_ms": 877,
+      "why": "外壳宿主门只扫 apps/** 的 render 目标，轻量"
+    },
+    "session-writeback": {
+      "ms": 700,
+      "limit_ms": 770,
+      "why": "R-O3 静态门：只读七个写回口文件的文本（不走 apps/ 全量扫描），与 screen-host 同量级；慢下来通常意味着扫描面被扩到全仓"
     },
     "upstream-face": {
       "ms": 650,

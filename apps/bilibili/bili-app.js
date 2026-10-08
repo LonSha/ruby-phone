@@ -18,7 +18,7 @@ export class BiliApp {
   }
 
   render() {
-    this.view.render(this.phoneShell.screen);
+    this.view.render(this.phoneShell.layerHost?.('bilibili-main') || this.phoneShell.screen);
   }
 }
 

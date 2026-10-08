@@ -17,7 +17,7 @@ export class TheaterApp {
   }
 
   render() {
-    this.view.render(this.phoneShell.screen);
+    this.view.render(this.phoneShell.layerHost?.('theater-main') || this.phoneShell.screen);
   }
 }
 

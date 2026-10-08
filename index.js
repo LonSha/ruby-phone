@@ -10168,6 +10168,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
                 releasePhoneInactiveResources(appId);
                 currentApp = appId;
+                /* 告诉壳「现在在哪个 App 里」：全仓 43 个 view 走
+                 *   `this.shell?.getContentContainer?.()` 取内容宿主（它们不自己持有图层），
+                 *   而那个方法需要知道当前 appId 才能给出对应图层。 */
+                phoneShell?.setCurrentApp?.(appId);
 
                 // [v3.15.0 · 计划 #52] 采集咽喉点：记一次「打开」。
                 //   ★ 放在 guard 之后、路由之前：被 `_homeReturnGuardUntil` 拦下的重入点击
