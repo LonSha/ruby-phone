@@ -369,6 +369,61 @@ const D = [
     ['R5a 缺口短语被删', 'apps/archive/archive-view.js',
         "this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? r.why : '没落下去')",
         "this._flash = writeLanded(r) ? '' : ('没收下（' + (r.why ? r.why : '')", 'landedStruct'],
+    /* ── [v3.74.0 · 计划 R-O4] 相位与回读确认面：病灶是「读数把三阶段压成一格」，
+     *   故破坏全部落在**相位推演与回读比对**上 —— 每一条都能让界面照报已保存。 ── */
+    /* D12：相位推演把「没回读」推成「已确认」⇒ 写了就算成（真宿主上写调用落了多半如此） */
+    ['R6 未回读被推成已确认', RECEIPT_REL,
+        '    if (stated.length < list.length) return PHASE_WRITTEN;',
+        '    if (false) return PHASE_WRITTEN;', 'phase'],
+    /* D13：回读值不比对 ⇒ 说谎存储（set 报成功、盘上没变）也报 confirmed。
+     *   锚点取**原值比对那一格**（结构比较的最后一道：同形不同值的出口）。 */
+    ['R6 回读不比对', RECEIPT_REL,
+        '    if (!aObj) return false;',
+        '    if (!aObj) return true;', 'phase'],
+    /* D14：读不回来被当成已确认（「读不到东西」与「读到了同一份」合成一格）。
+     *   注意：只把「读空了」那一格分支改掉**不足以**完整观测 —— 比对口径本身（readbackSame）
+     *   还必须有它的负控（见 D13）。本条的靶子是**读回空那一格**的相位回话。 */
+    ['R6 读不回被当成已确认', RECEIPT_REL,
+        '    if (readThrew) {' + NL + '        /* 读不出来',
+        '    if (readThrew && false) {' + NL + '        /* 读不出来', 'phase-empty'],
+    /* D15：「没做回读」被标成「做了但读不回」（两种失真合成一格 —— 全仓每次普通写都会假报） */
+    ['R6 没做回读被标成读不回', RECEIPT_REL,
+        '        if (!hasReader || row.ok !== true || !hasWanted) {',
+        '        if (row.ok !== true || !hasWanted) {', 'phase'],
+    /* D16：判据的相位门被摘 ⇒ partial / not_confirmed 照报成了（R-O4 验收四情形当场失效）。
+     *   注意锚点必须是**主门那一行**（只拿 written/confirmed）：上一行的 `isReceiptPhase`
+     *   是「自造相位」的闸，摘它不会让 partial 过关 —— 首版锚错在这上面，判据不响（假绿）。 */
+    ['R6 判据相位门被摘', RECEIPT_REL,
+        '        if (r.phase !== PHASE_WRITTEN && r.phase !== PHASE_CONFIRMED) return false;',
+        '        if (false) return false;', 'acceptFour'],
+    /* D23：相位话术的「读不出」那一格被摘 ⇒ 一个没定义的字符串会被说成「落下去了且读回一致」
+     *   （phaseText 的兜底是**判定**，不是 default 兜底 —— 摘它就没人在读不出的格上说话了）。 */
+    ['R6 相位话术兜底被摘', RECEIPT_REL,
+        '    if (!isReceiptPhase(p)) return PHASE_UNKNOWN_TEXT;',
+        '    if (false) return PHASE_UNKNOWN_TEXT;', 'phase'],
+    /* D17/D18：渲染层退回裸写（那一格从此有两个 owner，回执读数一概不经过它） */
+    ['R6 渲染层退回裸写', 'apps/music/music-view.js',
+        "                const w = writeConfirmed(this.app.storage, 'music_show_floating', newVal);",
+        '                this.app.storage.set(' + Q + 'music_show_floating' + Q + ', newVal);', 'viewWrite'],
+    ['R6 电话页退回裸写', 'apps/phone/phone-view.js',
+        "            const w = writeConfirmed(this.app.storage, 'phone-call-auto-tts', e.target.checked);",
+        '            this.app.storage.set(' + Q + 'phone-call-auto-tts' + Q + ', e.target.checked);', 'viewWrite'],
+    /* D20：删除语义被抹 ⇒ **写空·读回非空**（没删掉）也算一致：删除失败照报删掉了。
+     *   （D19 就是上面 D14 那条：读抛错那一格被抹后，删除语义下会「读都读不出来却报已确认」。） */
+    ['R6 删没删掉不分面', RECEIPT_REL,
+        '    if (aEmpty) return bEmpty;',
+        '    if (aEmpty) return true;', 'phase'],
+    /* D22：结构比较的「逐键比」被抹 ⇒ 同长不同值的对象被判同一份（回读形同虚设）。
+     *   锚点取**对象逐键那一处**：数组那条（i 索引）与它不同行，唯一天然成立。 */
+    ['R6 结构比较被抹', RECEIPT_REL,
+        '        if (!sameValue(a[k], b[k], depth + 1)) return false;',
+        '        if (!sameValue(a[k], b[k], depth + 1)) return true;', 'phase'],
+    /* D21：形态史台账的键名写错（台账与真源码脱钩 ⇒ 空挂）必须转红（R-O4 第 5 条）。
+     *   为什么不动「条数」：改条数要动数组结构，破坏点会跨行、锚点不唯一；
+     *   键名这一格才是台账的价值所在 —— 它一旦对不上，台账就只是文档。 */
+    ['R6 形态史台账空挂', RECEIPT_REL,
+        Q + 'diary_entries' + Q + ', shape: ' + Q + 'raw' + Q,
+        Q + 'diary_entries_typo' + Q + ', shape: ' + Q + 'raw' + Q, 'mixedShape'],
 ];
 const JUDGES = {
     wiring: (root) => Promise.resolve(wiringProblems(root)),
@@ -379,6 +434,125 @@ const JUDGES = {
         return bad;
     },
     landedStruct: (root) => Promise.resolve(writeLandedStructure(root)),
+    /* [v3.74.0 · 计划 R-O4] 相位 + 回读确认面：四条真行为破坏各自的最短可观测面。
+     *   每条都只问「这一处坏了，读数还能不能分得开」—— 不是重跑整套。 */
+    phase: async (root) => {
+        const box = await import(pathToFileURL(path.join(root, RECEIPT_REL)).href + '?p=' + String(seq));
+        const bad = [];
+        /* ① 说谎存储：set 说成了、盘上没变 ⇒ 必须 not_confirmed（不许 confirmed） */
+        const liar = { get: () => 'old', set: () => Promise.resolve(true) };
+        const r1 = box.writeConfirmed(liar, 'k', 'new');
+        if (r1.phase !== box.PHASE_NOT_CONFIRMED) bad.push('说谎存储未报 not_confirmed：' + r1.phase);
+        /* ② 真写存储 ⇒ confirmed */
+        const truth = { _v: 'old', get(k) { return this._v; }, set(k, v) { this._v = v; return Promise.resolve(true); } };
+        const r2 = box.writeConfirmed(truth, 'k', 'new');
+        if (r2.phase !== box.PHASE_CONFIRMED || r2.confirmed !== true) bad.push('真写存储未报 confirmed：' + r2.phase);
+        /* ③ 未回读（rows 只给 ok）⇒ 止于 written，不得冒充 confirmed */
+        if (box.phaseOf([{ key: 'a', ok: true }]) !== box.PHASE_WRITTEN) bad.push('未回读的行未止于 written');
+        /* ③b 读回空位 / 读抛错两条路径都不得 confirmed（「读不到东西」不许当读到了） */
+        const empty = box.writeConfirmed({ get: () => undefined, set: () => Promise.resolve(true) }, 'k', 'new');
+        if (empty.phase !== box.PHASE_NOT_CONFIRMED || empty.confirmed !== false) bad.push('读回空位竟报 confirmed');
+        const getBad = box.writeConfirmed({ get: () => { throw new Error('x'); }, set: () => Promise.resolve(true) }, 'k', 'new');
+        if (getBad.phase !== box.PHASE_NOT_CONFIRMED || getBad.confirmed !== false) bad.push('读抛错竟报 confirmed');
+        /* ③c **删这一格**的两向：真删掉了 ⇒ confirmed；没删掉（读回旧值）⇒ not_confirmed。
+         *   这一对是「写空」这一形的正负控 —— 少了它，「删除失败照报删掉了」与
+         *   「删除成功照报失败」两种失真都测不出来。 */
+        const del = { _v: '有东西', get() { return this._v; }, set(k, v) { if (v === null || v === undefined) this._v = undefined; else this._v = v; return Promise.resolve(true); } };
+        const rDel = box.writeConfirmed(del, 'k', null);
+        if (rDel.phase !== box.PHASE_CONFIRMED || rDel.confirmed !== true) bad.push('删除成功竟未报 confirmed：' + JSON.stringify(rDel));
+        const delFail = { get: () => '旧的还在', set: () => Promise.resolve(true) };
+        const rDelFail = box.writeConfirmed(delFail, 'k', null);
+        if (rDelFail.phase !== box.PHASE_NOT_CONFIRMED) bad.push('删没删掉不分面：' + JSON.stringify(rDelFail));
+        /* ③d 行集面同一条口径：写空读空 = confirmed，写空读非空 = not_confirmed */
+        const rowsDel = box.confirmRows([{ key: 'k', ok: true, value: null }], () => null);
+        if (rowsDel[0].confirmed !== true) bad.push('行集面：删除成功未标 confirmed');
+        const rowsDelFail = box.confirmRows([{ key: 'k', ok: true, value: null }], () => '旧的还在');
+        if (rowsDelFail[0].confirmed !== false) bad.push('行集面：删没删掉不分面');
+        /* ③e **结构相等 ≠ 引用相等**：真宿主写对象时读回来必然是新对象
+         *    （本仓有一族键写 JSON 文本；写对象树时宿主也可能深拷贝）。
+         *    比引用会把「每一次正常落对象」显示成失败 —— 本版自己抓到的第二处缺陷。 */
+        const objRt = { raw: '正文', at: 1 };
+        const rt = { _v: null, get() { return this._v === null ? null : JSON.parse(this._v); }, set(k, v) { this._v = JSON.stringify(v); return Promise.resolve(true); } };
+        const rRt = box.writeConfirmed(rt, 'k', objRt);
+        if (rRt.phase !== box.PHASE_CONFIRMED || rRt.confirmed !== true) bad.push('对象 JSON 往返未报 confirmed：' + String(rRt.phase));
+        /* 反向：结构**真的不同**必须仍报 not_confirmed（不许为了过上一关把比对放宽成恒真） */
+        const diff = { get: () => ({ raw: '旧的', at: 0 }), set: () => Promise.resolve(true) };
+        if (box.writeConfirmed(diff, 'k', objRt).phase !== box.PHASE_NOT_CONFIRMED) bad.push('结构不同被放过');
+        /* 原值不许因「长得像」被判相等：1 与 '1' 是两回事 */
+        if (box.writeConfirmed({ get: () => '1', set: () => Promise.resolve(true) }, 'k', 1).phase !== box.PHASE_NOT_CONFIRMED) bad.push('数字 1 与字符串 1 被判相等');
+        /* 深度有界：超深判不等而不是死循环（证明比较有上限） */
+        let deep = { v: 1 };
+        for (let i = 0; i < box.SHAPE_DEPTH_MAX + 3; i += 1) deep = { n: deep };
+        const deepCopy = JSON.parse(JSON.stringify(deep));
+        if (box.readbackSame(deep, deepCopy) !== false) bad.push('超深结构未被判不等（深度上限失效）');
+        if (box.readbackSame({ a: 1 }, { a: 1 }) !== true) bad.push('浅结构相同未判相等');
+        /* ④ 没传读者 ⇒ 一个都不许标「读不回」（两种失真必须可分） */
+        const rowsNoReader = box.confirmRows([{ key: 'a', ok: true, value: 1 }], undefined);
+        if (Object.prototype.hasOwnProperty.call(rowsNoReader[0], 'confirmed')) bad.push('没做回读竟被标了 confirmed');
+        /* ⑤ 传了读者但读不回 ⇒ false + notReadBack */
+        const rowsLost = box.confirmRows([{ key: 'a', ok: true, value: 1 }], () => undefined);
+        if (rowsLost[0].confirmed !== false || rowsLost[0].notReadBack !== true) bad.push('读不回未被标成 notReadBack');
+        /* ⑥ 话术面：八态各有各的话，且「读不出的相位」不许与任何一格已知相位同话
+         *    （自造字符串被说成「落下去了且读回一致」= 把读不出伪装成已确认）。 */
+        const texts = box.RECEIPT_PHASES.map((p) => box.phaseText(p));
+        for (let i = 0; i < box.RECEIPT_PHASES.length; i += 1) {
+            if (!texts[i] || typeof texts[i] !== 'string') bad.push('相位缺话术：' + box.RECEIPT_PHASES[i]);
+        }
+        if (new Set(texts).size !== box.RECEIPT_PHASES.length) bad.push('相位话术有重（八态被压成同一句话）');
+        const unk = box.phaseText('confirmed!');
+        if (texts.indexOf(unk) >= 0) bad.push('读不出的相位与某一格已知相位同话');
+        /* ⑦ 判据面：only written/confirmed 能过门，自造相位一律不成 */
+        if (box.phaseSettled(box.PHASE_CONFIRMED) !== true) bad.push('phaseSettled 把已确认判成没落');
+        for (const p of [box.PHASE_WRITTEN, box.PHASE_PARTIAL, box.PHASE_NOT_CONFIRMED, box.PHASE_FAILED, box.PHASE_THREW, box.PHASE_GATE_FAILED, box.PHASE_PREPARED, 'confirmed!']) {
+            if (box.phaseSettled(p) !== false) bad.push('phaseSettled 放过了未确认相位：' + p);
+        }
+        return bad;
+    },
+    /* R-O4 **验收原文**那四种情形：都不得判成「可以显示已保存」。 */
+    acceptFour: async (root) => {
+        const box = await import(pathToFileURL(path.join(root, RECEIPT_REL)).href + '?f=' + String(seq));
+        const bad = [];
+        if (box.writeLanded({ ok: true, saved: true, phase: box.PHASE_NOT_CONFIRMED }) !== false) bad.push('not_confirmed 照报成了');
+        if (box.writeLanded({ ok: true, saved: true, phase: box.PHASE_PARTIAL }) !== false) bad.push('partial 照报成了');
+        /* 另外两种靠 saved 口径，同样必须挡住 */
+        if (box.writeLanded({ ok: true, saved: false }) !== false) bad.push('set 返回假照报成了');
+        if (box.writeLanded({ ok: true, saved: false, phase: box.PHASE_THREW }) !== false) bad.push('抛错照报成了');
+        if (box.writeLanded({ ok: true, saved: true, phase: box.PHASE_CONFIRMED }) !== true) bad.push('已确认竟被判不成');
+        /* 自造相位不许冒充已确认（`isReceiptPhase` 那一格被摘时这条会响） */
+        if (box.writeLanded({ ok: true, saved: true, phase: 'confirmed!' }) !== false) bad.push('自造相位照报成了');
+        return bad;
+    },
+    /* 读抛错 + 写空（删这一格）⇒ 必须 not_confirmed。
+     *   为什么专挑这一格：它是「读抛了」与「读回空」两条路径**唯一能分开**的地方 ——
+     *   若把读抛错那一格分支摘掉，删除语义会让 readbackSame(null, undefined) 判成一致
+     *   ⇒ 读都读不出来却报「已确认」。这正是「看起来没坏但显示不对」。 */
+    'phase-empty': async (root) => {
+        const box = await import(pathToFileURL(path.join(root, RECEIPT_REL)).href + '?e=' + String(seq));
+        const bad = [];
+        const getThrows = { get: () => { throw new Error('x'); }, set: () => Promise.resolve(true) };
+        const r = box.writeConfirmed(getThrows, 'k', null);
+        if (r.phase !== box.PHASE_NOT_CONFIRMED || r.confirmed !== false) {
+            bad.push('读抛错未报 not_confirmed：' + JSON.stringify(r));
+        }
+        return bad;
+    },
+    /* 渲染层唯一写入 owner：裸写（两个 owner）必须转红。 */
+    viewWrite: (root) => Promise.resolve(viewWriteProblems(root)),
+    /* 混用史台账：掏空 ⇒ 台账自洽判据必须转红（R-O4 第 5 条）。 */
+    mixedShape: async (root) => {
+        const box = await import(pathToFileURL(path.join(root, RECEIPT_REL)).href + '?m=' + String(seq));
+        const bad = [];
+        const led = box.STORAGE_SHAPE_LEDGER;
+        if (!Array.isArray(led) || led.length < 5) bad.push('形态史台账条数不足：' + String(led && led.length));
+        /* 台账每条必须真在源码里找得到那条容错分支（防「空挂」） */
+        for (const row of (led || [])) {
+            let src = '';
+            try { src = readFrom(root, row.rel); } catch (_e) { bad.push('台账载体不在场：' + row.rel); continue; }
+            if (src.indexOf('JSON.parse') < 0) bad.push('台账载体没有历史兼容读：' + row.rel);
+            if (src.indexOf(row.key) < 0) bad.push('台账键名在载体里找不到：' + row.rel + ' :: ' + row.key);
+        }
+        return bad;
+    },
     behavior: async (root) => {
         const box = await import(pathToFileURL(path.join(root, RECEIPT_REL)).href + '?b=' + String(seq));
         const bad = [];
@@ -501,6 +675,165 @@ async function writeLandedBehaviour() {
     }
     return bad;
 }
+
+/* ── [v3.74.0 · 计划 R-O4 第 4 条] 渲染层不得顺手修数据：一格数据只许一个写主 ──
+ * 治的是「同一格有两个 owner」：渲染层顺手 `storage.set(...)` 时，那一格的回执读数
+ *   **一概不经过它**（写了没写、读不读得回，全都读不出来），而数据侧还以为自己独占该键。
+ * 三处**都是真扫出来的**（不是推演）：音乐悬浮窗开关 / 电话自动朗读开关 / 微信贴纸缓存。
+ * 判据用剥注释剥字符串后的代码面 —— 否则改注释里的旧写法示例会被误判成复发。
+ * ★ 台账第三格记的是「参数形态」而不是「哪个出口」：两个开关从 writeReceipt 升级成
+ *   writeConfirmed（写 + 回读一次）是**同一件事做深了一步**，不是换实现；
+ *   若把台账钉死成某个出口名，这次升级就会被判成「owner 声明与代码不符」——
+ *   那是**判据钉错了格**（该钉「经过唯一实现」而钉成了「经过哪一支」）。 */
+const VIEW_WRITE_LEDGER = [
+    ['apps/music/music-view.js', 'music_show_floating', "this.app.storage, 'music_show_floating'"],
+    ['apps/phone/phone-view.js', 'phone-call-auto-tts', "this.app.storage, 'phone-call-auto-tts'"],
+    ['apps/wechat/chat-view.js', 'phone_wechat_alapi_sticker_cache_v1', 'writeReceipt(storage, WECHAT_STICKER_ALAPI_CACHE_KEY'],
+];
+const BARE_SET_RE = /\bstorage\s*\??\.\s*set\s*\(/;
+function viewWriteProblems(root) {
+    const bad = [];
+    /* ① 渲染层全扫：`*-view.js` 里一处裸写都不许剩（新写的也不许） */
+    const stack = [path.join(root, 'apps')];
+    while (stack.length) {
+        const d = stack.pop();
+        let ents = [];
+        try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+        for (const e of ents) {
+            const p = path.join(d, e.name);
+            if (e.isDirectory()) { stack.push(p); continue; }
+            if (!e.name.endsWith('-view.js')) continue;
+            const code = codeOnly(readFrom(root, path.relative(root, p).split(path.sep).join('/')));
+            const m = BARE_SET_RE.exec(code);
+            if (m) {
+                const rel = path.relative(root, p).split(path.sep).join('/');
+                bad.push('R6 ' + rel + ' 渲染层仍有裸写（那一格有两个 owner）：'
+                    + code.slice(Math.max(0, m.index - 30), m.index + 50).split(NL).join(' '));
+            }
+        }
+    }
+    /* ② 三个已知口必须走唯一实现（唯一 owner 是**读数**，不是声明） */
+    for (const [rel, key, mark] of VIEW_WRITE_LEDGER) {
+        const code = codeKeepStr(readFrom(root, rel));
+        if (hits(code, mark) < 1) bad.push('R6 ' + rel + ' 的 ' + key + ' 未走唯一实现（owner 声明与代码不符）');
+    }
+    return bad;
+}
+/* ── [v3.74.0 · 计划 R-O4 第 2/3 条] 回读确认面的**真行为**（带真 storage 往返） ── */
+async function readbackSurface() {
+    const bad = [];
+    const box = await import(pathToFileURL(path.join(ROOT, RECEIPT_REL)).href + '?R=' + String(seq));
+    /* ① 说谎存储（写调用成了、盘上没变）⇒ not_confirmed；真写存储 ⇒ confirmed。
+     *   这一对是本版最贵的形态：旧读数两格同形，界面照报「已保存」。 */
+    const liar = { get: () => 'old', set: () => Promise.resolve(true), remove: () => Promise.resolve(true) };
+    const rl = box.writeConfirmed(liar, 'k', 'new');
+    if (rl.phase !== box.PHASE_NOT_CONFIRMED) bad.push('R7 说谎存储未报 not_confirmed：' + rl.phase);
+    if (rl.confirmed !== false) bad.push('R7 说谎存储竟标 confirmed');
+    const truth = { _v: 'old', get() { return this._v; }, set(k, v) { this._v = v; return Promise.resolve(true); }, remove() { this._v = undefined; return Promise.resolve(true); } };
+    const rt = box.writeConfirmed(truth, 'k', 'new');
+    if (rt.phase !== box.PHASE_CONFIRMED || rt.confirmed !== true) bad.push('R7 真写存储未报 confirmed：' + JSON.stringify(rt));
+    /* ② 读抛错 ⇒ 不许 confirmed，且不许与「明确没落」同形 */
+    const getThrows = { get: () => { throw new Error('get boom'); }, set: () => Promise.resolve(true), remove: () => Promise.resolve(true) };
+    const rg = box.writeConfirmed(getThrows, 'k', 'new');
+    if (rg.phase !== box.PHASE_NOT_CONFIRMED || rg.saved !== true) bad.push('R7 get 抛错未如实报：' + JSON.stringify(rg));
+    /* 读得回来但读不到东西（get 回 undefined）⇒ 同样是 not_confirmed ——
+     *   与「读抛了」合成一格可以，与 confirmed 合成一格不行：界面上都「不能报成」。 */
+    const emptyRead = { get: () => undefined, set: () => Promise.resolve(true) };
+    const re = box.writeConfirmed(emptyRead, 'k', 'new');
+    if (re.phase !== box.PHASE_NOT_CONFIRMED || re.confirmed !== false) bad.push('R7 读不到东西未报 not_confirmed：' + JSON.stringify(re));
+    if (box.writeConfirmed(null, 'k', 1).phase !== box.PHASE_GATE_FAILED) bad.push('R7 无存储接口未报 gate_failed');
+    if (box.writeConfirmed({ set: () => { throw new Error('x'); } }, 'k', 1).phase !== box.PHASE_THREW) bad.push('R7 写抛错未报 threw');
+    /* ③ 多键：三键里第二键没落 ⇒ partial，且完成范围如实（kept/lost） */
+    const st = accStorage({ failKeys: ['b'] });
+    const scope = box.writeScopeReceipt([
+        { key: 'a', ok: true, value: 1 }, { key: 'b', ok: false, value: 2 }, { key: 'c', ok: true, value: 3 },
+    ], (k) => st.get(k, undefined));
+    if (scope.phase !== box.PHASE_PARTIAL) bad.push('R7 多键中途失败未报 partial：' + scope.phase);
+    if (scope.saved !== false) bad.push('R7 多键中途失败竟报 saved');
+    if (String(scope.kept) !== 'a,c' || String(scope.lost) !== 'b') bad.push('R7 完成范围不符：' + JSON.stringify(scope.kept) + '/' + JSON.stringify(scope.lost));
+    /* ④ 重开往返：写 → 等落队 → 新实例装回来，逐字一致（真 async 契约 + 真模块） */
+    {
+        const M = await import(pathToFileURL(path.join(ROOT, 'apps/cotdesk/cotdesk-app.js')).href + '?R=' + String(seq));
+        const st2 = accStorage();
+        const text = JSON.stringify([{ id: 'z1', kind: 'pair', prompt: 'p', reply: 'r' }]);
+        const app = new M.CotdeskApp({ getContentContainer: () => null }, st2);
+        app.ingestItems(text);
+        await CY();
+        const app2 = new M.CotdeskApp({ getContentContainer: () => null }, st2);
+        app2.probe();
+        if (app2.rawLen() !== text.length) bad.push('R7 重开往返长度不符：' + String(app2.rawLen()));
+    }
+    return bad;
+}
+
+test('R6 渲染层唯一写入 owner：三处直写全部走上唯一实现，全仓渲染层零裸写', () => {
+    const bad = viewWriteProblems(ROOT);
+    assert.deepEqual(bad, [], bad.join(' | '));
+    assert.equal(VIEW_WRITE_LEDGER.length, 3, '台账三条（三处真扫出来的直写点）');
+});
+test('R7 回读确认面真行为：说谎存储必须读得出、真假两态不同形、多键部分落 = partial', async () => {
+    const bad = await readbackSurface();
+    assert.deepEqual(bad, [], bad.join(' | '));
+});
+/* ── [v3.74.0 · 计划 R-O4 第 5 条] 对象值与 JSON 文本混用的历史兼容路径 ── */
+/** 解码口径的真行为：**三分面**不许塌（原值 / 没写过 / 读不懂）。 */
+async function decodeSurface() {
+    const bad = [];
+    const box = await import(pathToFileURL(path.join(ROOT, RECEIPT_REL)).href + '?D=' + String(seq));
+    const d = box.decodeStored;
+    if (typeof d !== 'function') { bad.push('R8 缺解码唯一口径 decodeStored'); return bad; }
+    /* ① 旧形态：裸对象（宿主直接存引用）—— 原样交回，**不许**再 JSON.parse 一次 */
+    const obj = { a: 1 };
+    const r1 = d(obj);
+    if (r1.ok !== true || r1.value !== obj) bad.push('R8 旧形态（裸对象）未原样交回');
+    /* ② 新形态：JSON 文本 —— 解回对象 */
+    const r2 = d(JSON.stringify(obj));
+    if (r2.ok !== true || JSON.stringify(r2.value) !== JSON.stringify(obj)) bad.push('R8 JSON 文本未解回');
+    /* ③ 没写过（空串 / 全空白）与 ④ 读不懂（坏 JSON）**必须不同形**：
+     *   前者是「这一格是空的」，后者是「这一格坏了」。合成一格就是把坏数据静默当空。 */
+    const e1 = d('');
+    const e2 = d('   ');
+    const m1 = d('{坏');
+    if (e1.ok !== true || e1.why !== 'empty' || e1.value !== null) bad.push('R8 空串未报 empty：' + JSON.stringify(e1));
+    if (e2.ok !== true || e2.why !== 'empty') bad.push('R8 全空白未报 empty：' + JSON.stringify(e2));
+    if (m1.ok !== false || m1.why !== 'json') bad.push('R8 坏 JSON 未报 json：' + JSON.stringify(m1));
+    if (m1.why === e1.why) bad.push('R8 「读不懂」与「没写过」同形');
+    /* ⑤ 数字 / 布尔等原值也要走原值形态（不是字符串就不解） */
+    if (d(0).value !== 0 || d(false).value !== false) bad.push('R8 原值被误当文本解');
+    return bad;
+}
+/** 形态史台账：与真源码对得上（防空挂）。 */
+function mixedShapeProblems(root) {
+    const bad = [];
+    const code = codeKeepStr(readFrom(root, RECEIPT_REL));
+    if (code.indexOf('export const STORAGE_SHAPE_LEDGER = Object.freeze([') < 0) {
+        bad.push('R8 形态史台账不在场');
+        return bad;
+    }
+    const starts = code.split('{ rel: ').slice(1);
+    if (starts.length < 5) bad.push('R8 台账条数不足：' + String(starts.length));
+    for (const chunk of starts) {
+        const body = chunk.split('}')[0];
+        /* 注意：split 已经把 `{ rel: ` 吃掉，故载体名是**这一段的第一个引号串**。 */
+        const mRel = body.match(/^'([^']+)'/);
+        const mKey = body.match(/key: '([^']+)'/);
+        const mShape = body.match(/shape: '([^']+)'/);
+        if (!mRel || !mKey || !mShape) { bad.push('R8 台账条目字段不齐：' + body.slice(0, 60)); continue; }
+        if (['raw', 'json'].indexOf(mShape[1]) < 0) bad.push('R8 台账形态取值不认识：' + mShape[1]);
+        let src = '';
+        try { src = readFrom(root, mRel[1]); }
+        catch (_e) { bad.push('R8 台账载体不在场：' + mRel[1]); continue; }
+        if (src.indexOf(mKey[1]) < 0) bad.push('R8 台账键名在载体里找不到（台账已脱钩）：' + mRel[1] + ' :: ' + mKey[1]);
+        if (src.indexOf('JSON.parse') < 0) bad.push('R8 台账载体没有历史兼容读：' + mRel[1]);
+    }
+    return bad;
+}
+test('R8 混用史的兼容读：解码三分面不许塌 + 台账与真源码对得上（R-O4 第 5 条）', async () => {
+    const bad = await decodeSurface();
+    assert.deepEqual(bad, [], bad.join(' | '));
+    const bad2 = mixedShapeProblems(ROOT);
+    assert.deepEqual(bad2, [], bad2.join(' | '));
+});
 
 /* ============================================================
  * R4 面：计划 O5 验收里**此前没有断言覆盖**的三条（真模块 + 真 async 契约）

@@ -19,6 +19,10 @@ import { readPhoneContextLimit } from '../../config/context-settings.js';
 import { collectRecentChat } from '../../config/context-compose.js';
 import { PHONE_CONFIG } from '../../config/apps.js';
 import { formatWechatChatListTime } from '../wechat/chat-list-time.js';
+/* [v3.74.0 · 计划 R-O4 第 4 条] 视图层不得顺手写数据：通话设置里那一格此前是
+ *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
+ *   开关照样翻过去，重开设置页才发现没存住。现在走 writeConfirmed（写 + 回读一次）。 */
+import { writeConfirmed, phaseSettled, phaseText } from '../../config/write-receipt.js';
 
 export class PhoneCallView {
     constructor(app) {
@@ -2052,7 +2056,14 @@ export class PhoneCallView {
 
         const autoTtsToggle = query('#phone-call-tts-toggle-settings');
         if (autoTtsToggle) autoTtsToggle.onchange = (e) => {
-            this.app.storage.set('phone-call-auto-tts', e.target.checked);
+            /* [v3.74.0 · 计划 R-O4] 写失败不许翻开关：拿**回读确认过**的相位决定界面，失败即回弹。
+             *   只报 saved 不够 —— 真机上 set 是 async，「调用落了」与「读得回同一份」是两件事，
+             *   开关正是用户以为「已存住」的那一格，故这里多走一步回读（唯一实现 writeConfirmed）。 */
+            const w = writeConfirmed(this.app.storage, 'phone-call-auto-tts', e.target.checked);
+            if (!phaseSettled(w.phase)) {
+                e.target.checked = !e.target.checked;
+                this.app.phoneShell?.showNotification?.('没存住', phaseText(w.phase) || '自动朗读开关没能写下去', '⚠️');
+            }
         };
 
         // 保存通话提示词

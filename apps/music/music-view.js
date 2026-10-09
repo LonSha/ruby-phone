@@ -14,6 +14,13 @@
 // ========================================
 // [v2.28.0] 实例级资源域（视图销毁即回收本视图登记的全部常驻资源）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
+/* [v3.74.0 · 计划 R-O4 第 4 条] 渲染层不得顺手写数据：这一格此前直接 `storage.set(...)`
+ *   且**不看返回值** —— 写失败时开关照样翻过去，用户以为开了；重开面板才发现没存住。
+ *   现在一律走唯一实现，并**按真实回执**决定要不要把开关翻回去。
+ *  ★ 用 `writeConfirmed`（写 + **回读一次**）而不只是 `writeReceipt`：开关这一格是
+ *    「用户以为存住了」的典型 —— 只有回读到同一份才算真存住。相位判定走 `phaseSettled`
+ *    （唯一实现），视图不自己比字符串，失败话术取 `phaseText`（八态各有各的话）。 */
+import { writeConfirmed, phaseSettled, phaseText } from '../../config/write-receipt.js';
 /* [v3.24.0 · L0-2] 环境音选项/文案从氛围模块取（key→中文名的唯一真源在取数口，
  *   而「怎么播」在 MusicAmbience）——视图不自己记一份环境音名表。 */
 import { MusicAmbience } from './music-ambience.js';
@@ -275,7 +282,16 @@ export class MusicView {
             floatingToggle.onclick = () => {
                 const current = this.app.storage.get('music_show_floating', false);
                 const newVal = !current;
-                this.app.storage.set('music_show_floating', newVal);
+                /* [v3.74.0 · 计划 R-O4] 写失败不许翻开关：拿**回读确认过**的相位决定界面。
+                 *   此前这里 `storage.set(...)` 不看返回值 —— 真机上 set 是 async，
+                 *   读数永远「成功」，于是开关翻了、盘上没变，重开面板弹回旧值。
+                 *   现在多走一步回读：只有「写下去且读回同一份」才允许翻开关；
+                 *   失败时不但不翻，还把那句「为什么」说出来（八态各有各的话）。 */
+                const w = writeConfirmed(this.app.storage, 'music_show_floating', newVal);
+                if (!phaseSettled(w.phase)) {
+                    this.app.phoneShell?.showNotification?.('没存住', phaseText(w.phase) || '悬浮窗开关没能写下去', '⚠️');
+                    return;
+                }
                 floatingToggle.classList.toggle('active', newVal);
                 if (newVal) {
                     this.renderFloatingWidget();

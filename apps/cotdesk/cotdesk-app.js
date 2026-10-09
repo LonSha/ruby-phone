@@ -56,7 +56,10 @@ import {
     configFace, cdTrim, gaugesOf, gaugeText, requestText
 } from './cotdesk-data.js';
 import { CotdeskView } from './cotdesk-view.js';
-import { writeReceipt, collectReceipt } from '../../config/write-receipt.js';
+/* [v3.74.0 · 计划 R-O4] 写回执三阶段统一：collectReceipt 报「调用落没落」（完成范围），
+ *   writeScopeReceipt 在上面再加**逐条回读**（相位）—— 两者都是唯一实现。
+ *   decodeStored 是对象值 / JSON 文本混用的历史兼容读口径（第 5 条）。 */
+import { writeReceipt, collectReceipt, writeScopeReceipt, decodeStored } from '../../config/write-receipt.js';
 export const CD_ITEMS_KEY = 'cotdesk_items';
 export const CD_CONFIG_KEY = 'cotdesk_config';
 export const CD_DRAFT_KEY = 'cotdesk_draft';
@@ -177,9 +180,19 @@ export class CotdeskApp {
     }
     /** 把「本动作落的那几条键」收成一份**完成范围**回执（唯一实现见 config/write-receipt.js）。
      *  ★ 只报最后一条键是本版治的形态：前一条没落下去时界面照样显示成功，
-     *    下次打开就出现「正文没了、投影还在」这种两边对不上的状态。 */
-    _writeScope(rows) {
+     *    下次打开就出现「正文没了、投影还在」这种两边对不上的状态。
+     *  ★ [v3.74.0 · 计划 R-O4 第 3 条] 带 readOne 时**逐条回读确认**并把相位一并给出：
+     *    完成范围说的是「调用落没落」，相位说的是「落下去的读不读得回同一份」——
+     *    两者都记，界面才不至于把「写了但读不回」显示成「已保存」。 */
+    _writeScope(rows, readOne) {
+        if (typeof readOne === 'function') return writeScopeReceipt(rows, readOne);
         return collectReceipt(rows);
+    }
+    /** 收下这一刀之后**逐条回读**一次（唯一实现 confirmRows 的入口）。
+     *  为什么是显式方法而不是默认行为：多读一次就多一次宿主调用，
+     *  热路径上不该有 —— 由调用方（收下/放下这类真落盘的动作用它）决定值不值。 */
+    _readbackOne(key) {
+        try { return this.storage.get(key, null); } catch (_e) { return undefined; }
     }
     /** 读一格。三种回报：ok / absent（这一格压根没写过）/ malformed（写了但读不懂）。
      *  ★ 抛异常**不是**「没记过」：本仓最贵的形态是「读不出来 ⇒ 画成空」。 */
@@ -204,17 +217,19 @@ export class CotdeskApp {
             return false;
         }
     }
-    /** 解析一格 JSON。三种回报，**不把读不懂读成空**。 */
+    /**
+     * 解析一格 JSON。三种回报，**不把读不懂读成空**。
+     * [v3.74.0 · 计划 R-O4 第 5 条] 解码走唯一口径 decodeStored：本仓有一族键
+     *   存过两种形态（裸对象 → JSON 文本），读侧此前各写一遍同一句三元式，
+     *   坏值处置互不相同。现在四态归一处判，「读不懂」与「没写过」不再可能被写成同一句。
+     */
     _parse(key) {
         const r = this._readRaw(key);
         if (!r.ok) return { face: FACE_ABSENT, why: r.why, obj: null };
         if (r.why === 'absent') return { face: FACE_EMPTY, why: '', obj: null };
-        let obj = null;
-        try {
-            obj = (typeof r.value === 'string') ? JSON.parse(r.value) : r.value;
-        } catch (e) {
-            return { face: FACE_MALFORMED, why: 'json', obj: null };
-        }
+        const d = decodeStored(r.value, key);
+        if (d.ok !== true) return { face: FACE_MALFORMED, why: d.why, obj: null };
+        const obj = d.value;
         if (!obj || typeof obj !== 'object') return { face: FACE_MALFORMED, why: 'shape', obj: null };
         return { face: FACE_OK, why: '', obj };
     }
@@ -369,12 +384,20 @@ export class CotdeskApp {
         const wItems = this._persistItems();
         this.probe();
         const rcI = this._receipt('items_ingest', true, '', { n: ex.total });
-        /* 这一刀落两条键：册子原文 + 台账。**两条都算** —— 只报后者就是「原文丢了也报成功」。 */
+        /* 这一刀落两条键：册子原文 + 台账。**两条都算** —— 只报后者就是「原文丢了也报成功」。
+         * [v3.74.0 · 计划 R-O4 第 2/3 条] 再走一步**逐条回读**：写下去的那一份与读回来的
+         *   那一份是不是同一份。写在同一次动作里、读也读同一把键 —— 只有这两句都成立，
+         *   界面才敢说「收下了」。readOne 只读一格（真读不动就抛，由 confirmRows 收成「读不回」）。 */
         const wrI = this._writeScope([
-            { key: 'items', ok: wItems === true, why: wItems === true ? '' : 'set_false' },
-            { key: 'ledger', ok: rcI.saved === true, why: rcI.saved === true ? '' : 'set_false' }
-        ]);
-        return Object.assign(this._savedOk(wrI), { ok: true, items: ex.total });
+            /* ★ value 必须是**写下去的那一份**：本件落的是 JSON 文本（_persistItems 里
+             *   stringify 一次），故回读要比的也是那份文本 —— 传对象会因「文本 ≠ 对象」判不等。 */
+            { key: 'items', ok: wItems === true, why: wItems === true ? '' : 'set_false', value: JSON.stringify({ raw: this._raw, at: this._rawAt }) },
+            /* 台账那条键同理：落的是 JSON 文本，且**必须带 value** —— 不带就只剩「调用落了」，
+             *   相位会止于 partial（「有一条没回读过」），界面于是不敢说「收下了」。
+             *   这不是保守，是**如实**：没比过的那一条确实不能说「读回同一份」。 */
+            { key: 'ledger', ok: rcI.saved === true, why: rcI.saved === true ? '' : 'set_false', value: JSON.stringify({ ledger: this._ledger, dropped: this._dropped }) }
+        ], (k) => this._readbackOne(k));
+        return Object.assign(this._savedOk(wrI), { ok: true, items: ex.total, phase: wrI.phase });
     }
     /** 放下一份册子（只清自己的键；**不是**清宿主）。 */
     clearItems() {

@@ -38,6 +38,10 @@ import {
 import { getMemory as getContactMemory, updateMemory as updateContactMemory } from '../../config/phone-chat-memory.js';
 // [v3.14.0 · 计划 #65] 实例级资源域：通话计时器（视频/语音）不再靠「挂断按钮那一处 clearInterval」
 import { childRuntime } from '../../config/runtime-lifecycle.js';
+/* [v3.74.0 · 计划 R-O4 第 4 条] 渲染层不得顺手写数据：这一格此前直接
+ *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
+ *   于是通道缓存写失败也被当成写下去了（下次用同一张图再挂一次远端请求）。 */
+import { writeReceipt } from '../../config/write-receipt.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -6614,21 +6618,27 @@ renderChatRoom(chat) {
         return entry;
     }
 
+    /* [v3.74.0 · 计划 R-O4 第 4 条] 写口收成一处、并**回话**：此前这一格写没写下去
+     *   外面无从得知（裸 set 不看返回值，真机上 async 恒「成功」）。
+     *   现在返回回执：`saved !== true` 说明调用没落 —— 调用方据此决定要不要重试，
+     *   而不是「写完就当缓存有了」（那会让贴纸每轮重开都重新盲搜，且没人知道原因）。 */
     _writePersistentStickerCache(cache) {
         const storage = this._getStickerPersistentStorage();
-        if (!storage?.set || !cache || typeof cache !== 'object') return;
+        if (!storage?.set || !cache || typeof cache !== 'object') {
+            return { saved: false, why: 'no_api' };
+        }
         const entries = Object.entries(cache)
             .map(([key, value]) => [key, this._normalizePersistentStickerCacheEntry(value)])
             .filter(([key, value]) => key && value && (value.url || value.failed))
             .sort((a, b) => (Number(b[1].savedAt) || 0) - (Number(a[1].savedAt) || 0))
             .slice(0, WECHAT_STICKER_ALAPI_CACHE_MAX);
         const nextCache = Object.fromEntries(entries);
-        storage.set(WECHAT_STICKER_ALAPI_CACHE_KEY, nextCache);
+        return writeReceipt(storage, WECHAT_STICKER_ALAPI_CACHE_KEY, nextCache);
     }
 
     _setPersistentStickerCacheEntry(cacheKey, entry) {
         const key = String(cacheKey || '').trim();
-        if (!key) return;
+        if (!key) return { saved: false, why: 'no_key' };
         const cache = this._readPersistentStickerCache();
         cache[key] = {
             keyword: String(entry?.keyword || '').trim(),
@@ -6636,7 +6646,7 @@ renderChatRoom(chat) {
             failed: entry?.failed === true,
             savedAt: Number(entry?.savedAt) || Date.now()
         };
-        this._writePersistentStickerCache(cache);
+        return this._writePersistentStickerCache(cache);
     }
 
     getStickerAlapiToken() {
@@ -6946,11 +6956,16 @@ renderChatRoom(chat) {
 
         cache[cacheKey] = finalUrl || null;
         if (finalUrl && /^\/backgrounds\/phone_[^?#]+/i.test(finalUrl)) {
-            this._setPersistentStickerCacheEntry(cacheKey, {
+            /* [v3.74.0 · 计划 R-O4 第 4 条] 写回执现在会回话：没落下去要说出来，
+             *   否则用户下一次重开聊天页发现贴纸又没了，而日志里一片安静。 */
+            const w = this._setPersistentStickerCacheEntry(cacheKey, {
                 keyword,
                 url: finalUrl,
                 failed: false
             });
+            if (w && w.saved !== true) {
+                console.warn('[Wechat] ALAPI 表情缓存未能写下去:', w.why || 'set_false');
+            }
         }
         this.applyInlineStickerByCacheKey(cacheKey, cache[cacheKey], keyword);
     }
