@@ -4,7 +4,13 @@
  *   ① setup 不计时 —— 把夹具成本算进被测调用，读数可差 290 倍；
  *   ② **先预热** —— 首测含 JIT 编译成本：首版「projectScene 200 在场」报 3.335ms，
  *      反而比「1000 在场」的 1.328ms 慢，那不是算法特征，是冷启动。 */
-const P='/home/user/ruby-phone/';
+/* 位置无关（本仓纪律）：根由本文件位置推得，不得写字面量绝对路径 ——
+ *   写死根会把探针钉在某一台机器的目录布局上，换个根（镜像根 / 干净检出）就探到别处，
+ *   而它报出来的读数仍然「像真的」。 */
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import nodePath from 'node:path';
+const HERE = nodePath.dirname(fileURLToPath(import.meta.url));
+const P = pathToFileURL(nodePath.resolve(HERE, '..') + nodePath.sep).href;
 const { projectScene } = await import(P+'apps/place/place-data.js');
 const { injectionBlocksOf } = await import(P+'config/injection-contract.js');
 const { scoreHit, makeSnippet } = await import(P+'apps/memory/global-search-engine.js');

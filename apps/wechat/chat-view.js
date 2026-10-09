@@ -3492,7 +3492,7 @@ renderChatRoom(chat) {
                         ? 'message-image-box-custom-emoji'
                         : 'wechat-chat-photo-box';
                     const photoClass = isCustomEmojiImage ? '' : 'wechat-chat-photo';
-                    messageBody = `<div class="message-image-box ${photoBoxClass}" style="position: relative; display: inline-block; line-height: 0; ${customEmojiBoxStyle}"><img src="${safeImageContent}" class="message-image ${photoClass}" style="${customEmojiImgStyle}"></div>`;
+                    messageBody = `<div class="message-image-box ${photoBoxClass}" style="position: relative; display: inline-block; line-height: 0; ${customEmojiBoxStyle}"><img src="${safeImageContent}" loading="lazy" decoding="async" class="message-image ${photoClass}" style="${customEmojiImgStyle}"></div>`;
                 }
                 break;
             case 'image_prompt':
@@ -5078,7 +5078,7 @@ renderChatRoom(chat) {
                     cursor: ${generationStatus === 'loading' ? 'progress' : 'pointer'};
                 ">
                     ${generatedImageUrl ? `
-                        <img src="${safeImageUrl}" alt="${promptText}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                        <img src="${safeImageUrl}" alt="${promptText}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover; display:block;">
                         ${isVideo ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;"><div style="width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; padding-left:4px;"><i class="fa-solid fa-play"></i></div></div>` : ''}
                         <div class="message-image-prompt-regenerate" data-message-id="${cardId}" title="重新生成${msg.mediaType || '图片'}" style="
                             position:absolute;
