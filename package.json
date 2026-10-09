@@ -1,11 +1,11 @@
 {
   "name": "ruby-phone",
-  "version": "3.76.0",
+  "version": "3.78.0",
   "private": true,
   "type": "module",
   "description": "Tooling only: local and CI checks. The SillyTavern extension manifest lives in manifest.json. This file is not loaded at runtime and intentionally declares no dependencies so hosts never try to install anything.",
   "scripts": {
-    "check": "npm run syntax && npm run import-resolve && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys && npm run source-derivation && npm run bridge-contract && npm run weak-coercion && npm run named-import && npm run screen-host && npm run session-writeback && npm run upstream-face",
+    "check": "npm run syntax && npm run import-resolve && npm run test && npm run dead-exports && npm run lifecycle && npm run registry && npm run keys && npm run source-derivation && npm run bridge-contract && npm run weak-coercion && npm run named-import && npm run screen-host && npm run session-writeback && npm run hardlink-safety && npm run upstream-face",
     "syntax": "node scripts/syntax-check.mjs",
     "test": "node --test tests/*.test.mjs",
     "dead-exports": "node scripts/dead-export-check.mjs",
@@ -20,6 +20,7 @@
     "check:file": "node scripts/check-file.mjs",
     "named-import": "node scripts/named-import-check.mjs",
     "screen-host": "node scripts/screen-host-check.mjs",
-    "session-writeback": "node scripts/session-writeback-audit.mjs"
+    "session-writeback": "node scripts/session-writeback-audit.mjs",
+    "hardlink-safety": "node scripts/hardlink-safety-check.mjs"
   }
 }

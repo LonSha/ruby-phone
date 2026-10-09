@@ -1,19 +1,20 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "3.76.0",
+  "version": "3.78.0",
   "version_sources": {
-    "package": "3.76.0",
-    "manifest": "3.76.0",
-    "update_log_latest": "3.76.0",
-    "index_const": "3.76.0"
+    "package": "3.78.0",
+    "manifest": "3.78.0",
+    "update_log_latest": "3.78.0",
+    "index_const": "3.78.0"
   },
   "version_same": true,
   "gates": {
-    "static_gate_files": 13,
+    "static_gate_files": 14,
     "static_gate_list": [
       "bridge-contract-audit.mjs",
       "dead-export-check.mjs",
+      "hardlink-safety-check.mjs",
       "import-resolve-check.mjs",
       "keys-audit.mjs",
       "lifecycle-audit.mjs",
@@ -40,12 +41,13 @@
       "named-import",
       "screen-host",
       "session-writeback",
+      "hardlink-safety",
       "upstream-face"
     ],
-    "check_chain_len": 14
+    "check_chain_len": 15
   },
   "tests": {
-    "test_files": 220,
+    "test_files": 221,
     "audit_dir_exists": true,
     "audit_files": 21
   },
@@ -76,7 +78,7 @@
   "scale": {
     "app_dirs": 81,
     "apps_ids": 82,
-    "index_lines": 13269,
+    "index_lines": 13276,
     "css_bytes": 619586,
     "crossrepo": {
       "produced_faces": 20
@@ -98,7 +100,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 218,
+        "suite_files": 219,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -123,7 +125,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "976e8305e2e7a5bd"
+    "sha256_16": "531555bac36593db"
   },
   "unknown": [],
   "unknown_count": 0

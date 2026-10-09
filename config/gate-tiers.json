@@ -14,6 +14,7 @@
         "npm run source-derivation",
         "npm run bridge-contract",
         "npm run weak-coercion",
+        "npm run hardlink-safety",
         "npm run upstream-face",
         "npm run session-writeback",
         "node scripts/named-import-check.mjs",

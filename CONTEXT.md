@@ -21,8 +21,16 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
-- `npm run check` = **十四道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
-  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `upstream-face`。
+- `npm run check` = **十五道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
+  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `hardlink-safety` → `upstream-face`。
+  > 【本行订正 · v3.78.0】新增第十五段 `hardlink-safety`（`scripts/hardlink-safety-check.mjs`：
+  > 硬链接安全的四判据 —— 真调用面 / 工作树被改写 / 版本库可用 / HEAD 可达），故本行由「十四道」改「**十五道**」。
+  > 同规：只照 `package.json` 的 `scripts.check` 抄，不凭印象 —— C4 判据当场就会替我们核对。
+  > ⚠️ 位置也有不变量：本仓链**以 `upstream-face` 收尾**（`tests/system-v3201` A4 与 `system-v3203` A1 两处判据看守），
+  > 故新门插在它**之前**而不是追加到末尾 —— 这条是踩过的：一版曾把新门追加到链尾，当场被两条判据抓红。
+  > 注意两个数**不是一回事**，别互相顶替：**链段数 15**（本行转写的那个数，含 `test` 与 `import-resolve`）
+  > vs **静态门脚本数** `static_gate_files` = **14**（`tests/audit/status-ledger.json` 里那个数；
+  > `scripts/` 下按命名规约收进来的 `*-check.mjs` / `*-audit.mjs`）。本行受 C4 看守的是前者。
   > 【本行订正 · v3.19.0】此前本行写「**五道子门**：syntax → test → dead-exports → lifecycle → registry」——
   > 那是本行写下时的实况，而 `package.json` 的 `scripts.check` **早已是十道**（v3.19.0 实现工具包时实测）。
   > 这类「文档写五道、真门禁跑十道」正是本仓治过的形态：**口径与真源脱节，而脱节的那一处是给人读的那一处**。
@@ -99,7 +107,22 @@ RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone �
     （`export default` 多行对象字面量 17 → **9** 处；白名单注释 61 → **90** 处），
     两者恰是所要治的病（注释与实测脱节）的现场演示。**边界外覆盖也要写清**，不许用「不适用」含糊过去。
 - **负控制纪律（两道门共用，测试节强制）**：真源码破坏（锚点恰中 1 次）→ 在**夹具副本**上重跑**真门禁进程**。夹具走环境变量通道（`RP_LIFECYCLE_FIXTURE` / `RP_REGISTRY_FIXTURE`），只放宽最低计数闸、不放宽结构锚点。三种假绿必须全部排掉：对原文件断言 / 破坏写成模拟常量 / 判据自指。
-- ⚠️ **禁止对真仓库执行 `cp -al`（血泪教训）**：本环境该操作会把已跟踪文件替换为指向临时 l2s 收容所名字的符号链接（实测 425 个文件损坏，靠 `git checkout -- .` 恢复）。需要副本请用合成夹具；恢复判据是 `git status` **只显示 `T`（类型变化）而无 `M`（内容修改）**，此时内容可信。
+- ⚠️ **禁止本容器内一切「硬链接创建」，以及「`git clone` 后再 `mv` / 重建目录」（血泪教训；v3.77.0 补记根因）**：
+  - **模拟规则**：本容器以 proot `--link2symlink` 运行，**任何硬链接创建**（`ln` / `cp -al` / `git clone` 内部建 pack 索引）
+    都被模拟成「把**源文件**改名成 `.l2s.*` 别名，再在原名处放一个**指向它的符号链接**」。
+    故受害者不只是「复制目标」——**凡创建硬链接者的源树都会被反向改写**（此前只登记了 `cp -al` 这一形态，不够）。
+  - **历史读数**：v2.65.0 期实测 425 个已跟踪文件损坏（`cp -al` 复制真仓），靠 `git checkout -- .` 恢复。
+  - **加深的根因（v3.77.0 主仓实测，此前未登记）**：`git clone` **自身**即触发该模拟 ——
+    它在 `.git/objects/pack` 建硬链时把 `pack-*.pack/.idx/.rev` 改名成 `.l2s.tmp_*`，
+    规范名退化为**绝对路径符号链接**（指回克隆当时的路径）。于是该仓库**一旦被 `mv` / 原地重建**，
+    链接全部悬空 ⇒ `git log` 报 `bad object HEAD`。此形态**落在 `.git/` 内、不在工作树**，
+    会越过「只查工作树有没有 `.l2s`」的旧判据 —— 真判据要数 `.git/objects` 底下。
+  - **纪律**：需要副本用**合成夹具**或**跨来源重取**（从远端重新 clone 到目标位置，别 clone 完再 `mv`）；
+    恢复判据是 `git status` **只显示 `T`（类型变化）而无 `M`（内容修改）**，此时内容可信。
+  - **恢复面（v3.77.0 实测可用）**：带 `.0001` 后缀的 `.l2s.*` 文件即**真数据实体**，
+    悬空的规范名符号链接里写着正确哈希 ⇒ 删掉悬空链接、把 `.0001` 实体改回那个规范名即可复原（`git fsck` 归零）。
+  - ⚠️ **红线：不得用 `git prune` / `git gc` 清这些别名孤儿** —— 它们与真对象同在 `.git/objects/*/`，
+    v3.77.0 实测 prune 会**连带删掉从未提交的松散对象**（HEAD 树随即不可读）。删只用按键名 `*.l2s.*` 精确删。
 
 ## 会话键归属门禁（v2.69.0，第六道门）
 - **动机**：`config/storage.js` 的 `CHAT_DATA_PATTERNS` 决定每个 storage 键**落在哪里**——命中 → 当前会话的

@@ -5,7 +5,7 @@
   "measured_at": "v3.23.1",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 99350,
+  "total_ms": 100150,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -71,6 +71,11 @@
       "ms": 700,
       "limit_ms": 770,
       "why": "R-O3 静态门：只读七个写回口文件的文本（不走 apps/ 全量扫描），与 screen-host 同量级；慢下来通常意味着扫描面被扩到全仓"
+    },
+    "hardlink-safety": {
+      "ms": 800,
+      "limit_ms": 880,
+      "why": "硬链接安全门只做两件轻活：扫 685 个文件的真调用面 + 有界数几处目录里的 .l2s 别名；与 screen-host 同量级。慢下来通常意味着扫描面被扩到全仓，或某个目录突然多出上万条别名（本仓实测：一次损坏就会注入数万条）"
     },
     "upstream-face": {
       "ms": 650,
