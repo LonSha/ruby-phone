@@ -1,6 +1,6 @@
 {
   "schema": "bump-drill@2",
-  "at": "2026-10-09T01:20:28.365Z",
+  "at": "2026-10-09T02:07:26.956Z",
   "baseline": {
     "clean": true,
     "dirty_count": 0,
@@ -22,8 +22,8 @@
         "fail_count": 2,
         "exit": 1,
         "signal": null,
-        "ms": 212,
-        "bytes": 2211,
+        "ms": 263,
+        "bytes": 2208,
         "token_red": true,
         "anchor_red": true,
         "caught": true,
@@ -37,8 +37,8 @@
         "fail_count": 2,
         "exit": 1,
         "signal": null,
-        "ms": 186,
-        "bytes": 2140,
+        "ms": 226,
+        "bytes": 2142,
         "token_red": true,
         "anchor_red": true,
         "caught": true,
@@ -52,8 +52,8 @@
         "fail_count": 1,
         "exit": 1,
         "signal": null,
-        "ms": 215,
-        "bytes": 1367,
+        "ms": 217,
+        "bytes": 1370,
         "token_red": true,
         "anchor_red": false,
         "caught": false,
@@ -83,7 +83,7 @@
         "failed": [],
         "red": false,
         "exit": 0,
-        "ms": 30835
+        "ms": 42071
       },
       "anchor_group": {
         "suite_files": 80,
@@ -174,7 +174,7 @@
         "red": false,
         "exit": 0,
         "added_by_bump": [],
-        "ms": 32655
+        "ms": 41995
       },
       "carry_group": {
         "suite_files": 10,
@@ -199,8 +199,43 @@
         ],
         "red": true,
         "exit": 1,
-        "ms": 26466,
+        "ms": 23904,
         "note": "这一组读了抬版连带面载体（ITERATION_LOG 元信息与当版段 / 边界文档复校标记 / tests/audit 台账）。它们的红是「抬版动作还没做」，与版本锚缺陷是**两类**：前者照清单补齐即绿，后者要改判据。混看会把该改的当成该修的。"
+      },
+      "carry_plan": {
+        "actions": [
+          {
+            "id": "iter-meta-version",
+            "rel": "ITERATION_LOG.md",
+            "why": "元信息「当前版本」行必须与 manifest 同源（v280 2 / v303 D2 点名；判据在文档侧，属抬版动作）"
+          },
+          {
+            "id": "boundary-recheck",
+            "rel": "docs/runtime-verification-boundary.md",
+            "why": "边界文档必须带**当版**复校标记（v3202 E2 点名；只改头部当版那一处，历史复校行是留档不是待办）"
+          },
+          {
+            "id": "iter-segment",
+            "rel": "ITERATION_LOG.md",
+            "why": "迭代日志必须含**当版段**（v3280 点名）。真抬版这一段是人工写的正文，演练里插一段**合成段**（标题即显式标注）—— 本条验的是「有没有当版段」这道门槛，不是正文质量"
+          }
+        ],
+        "applied": [
+          "iter-meta-version",
+          "boundary-recheck",
+          "iter-segment"
+        ],
+        "noop": [],
+        "problems": [],
+        "recheck": {
+          "executed": true,
+          "tests": 165,
+          "failed": [],
+          "red": false,
+          "ms": 28402,
+          "note": "复跑 0 红 ⇒ 动作清单在当版**充分**（照着做即绿）。这一步是证据，不是声明。"
+        },
+        "sufficient": true
       }
     }
   ],
