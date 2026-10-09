@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import {
     classifySources, pickProbeHost, parseFailedFromOutput, isUnattributedRed,
     cmpVersion, analyzeDrill, analyzeProbes, CARRY_RE, TOP_LEVEL_EXIT_RE,
+    planCarry, CARRY_PLAN, iterMetaAnchor, boundaryAnchor,
 } from '../tools/bump-drill-core.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -203,6 +204,28 @@ test('v3750 E6. 真仓读数回放：本次演练的四件连带面红与零锚�
     const recomputed = analyzeDrill(j.runs);
     assert.equal(j.analysis.coverage_ok, recomputed.coverage_ok, 'report 与内核现算不一致（口径漂移）');
     assert.deepEqual(j.analysis.anchor_regressions, recomputed.anchor_regressions);
+    /* ⑥d 清单读数回放：报告里必须能读出「照清单之后还剩几件红」。
+     *   旧 schema（只有 carry_group.failed 一个数）在本判据下必然红 —— 那正是本条要防的：
+     *   读者只剩「这些红都是动作没做」这一句声明可依，无从复核。 */
+    for (const r of j.runs) {
+        const cp = r.carry_plan;
+        assert.ok(cp, '报告缺 carry_plan 面（R-O2 第 4 条的读数没落盘）:' + (r.label || ''));
+        assert.ok(Array.isArray(cp.actions) && cp.actions.length >= 1, '清单动作表不得为空');
+        assert.ok(Array.isArray(cp.applied) || Array.isArray(cp.problems), '清单执行读数缺失');
+        assert.ok(cp.recheck && typeof cp.recheck === 'object', '复跑读数缺失');
+        if (cp.recheck.executed) {
+            assert.equal(cp.sufficient, (cp.recheck.failed || []).length === 0,
+                'sufficient 必须由复跑余红现算（不许手写结论）');
+            const before = (r.carry_group && r.carry_group.failed) || [];
+            const after = cp.recheck.failed || [];
+            assert.ok(after.length <= before.length,
+                '照清单之后红反而变多（前 ' + before.length + ' → 后 ' + after.length + '）—— '
+                + '说明清单动作本身引入了新红，比不做更坏');
+        } else {
+            assert.equal(cp.sufficient, null, '没跑复跑面时不得给「充分」结论（未执行不报通过）');
+            assert.ok(cp.recheck.note, '未执行必须写明缘由');
+        }
+    }
 });
 
 /* ── F. 探针结论 ── */
@@ -290,4 +313,123 @@ test('v3750 G3. 自扫：本套件自己**不得**含「当版等值锚」（R-O
     /* 反向自证之二：注释剔除器得真能剔掉注释。 */
     const stripped = '/* X */'.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
     assert.ok(!/X/.test(stripped), '注释剔除器失效 —— 自扫会把自己的注释当坏判据');
+});
+
+/* ── H. 连带面**动作清单自证**（R-O2 第 4 条：抬版流程不再把这些红当噪声）──
+ *   这一族要证的不是「有清单」，而是**清单是不是充分的**：
+ *   把清单在镜像里真跑一遍、再复跑该组 —— 0 红才算清单在当版说得过去。
+ *   故本段对 planCarry 同样做两向：正控（真仓上真能推演出三条动作）+ 负控（锚点对不上必须拒改）。
+ *   本段不写任何版本常量：`next` 由真仓当版**现推**，与 G3 的自扫纪律同源。 */
+const CUR = manifest.version;
+const NEXT = CUR.replace(/(\d+)$/, (d) => String(Number(d) + 1));
+const carryFiles = () => {
+    const files = {};
+    for (const a of CARRY_PLAN) if (!(a.rel in files)) files[a.rel] = read(a.rel);
+    return files;
+};
+
+test('v3750 H1. planCarry 正控（读真仓）：三条动作全应用、零问题，且产物真变了', () => {
+    const files = carryFiles();
+    const r = planCarry(files, CUR, NEXT);
+    assert.deepEqual(r.problems, [], '真仓上不该有清单腐坏：' + r.problems.join('；'));
+    assert.deepEqual(r.applied.slice().sort(), CARRY_PLAN.map((a) => a.id).sort(),
+        '三条动作都该被应用（实得 ' + r.applied.join(',') + '）—— 少一条说明锚点随抬版漂了');
+    const log = r.files['ITERATION_LOG.md'];
+    assert.ok(log.includes(iterMetaAnchor(NEXT)), '产物里元信息必须已换成抬版后的版本');
+    assert.ok(!log.includes(iterMetaAnchor(CUR)), '产物里旧元信息必须已消失（否则 v280 判据照旧红）');
+    const bnd = r.files['docs/runtime-verification-boundary.md'];
+    assert.ok(bnd.includes(boundaryAnchor(NEXT)), '边界文档须换成当版复校标记');
+    assert.ok(!bnd.includes(boundaryAnchor(CUR)), '旧复校标记须已消失');
+    /* 历史复校行是**留档**不是待办：替换型动作只能动头部那一处（锚点恰中 1 次这条纪律的来由）。 */
+    assert.ok(bnd.includes('v3.63.0 复校'), '历史复校行不得被顺手改掉（那是留档）');
+});
+
+test('v3750 H2. 幂等：清单已做过时一律报 noop，不猜、不重复插段', () => {
+    const once = planCarry(carryFiles(), CUR, NEXT).files;
+    const twice = planCarry(once, CUR, NEXT);
+    assert.deepEqual(twice.applied, [], '已做过的不许再应用一遍（第二次跑会插出两个合成段）');
+    assert.deepEqual(twice.problems, [], '「已做过」是正常态，不得记成腐坏');
+    assert.equal(twice.noop.length, CARRY_PLAN.length, '每条都该报 noop：' + twice.noop.join(','));
+    const segs = twice.files['ITERATION_LOG.md'].split('【抬版演练合成段】').length - 1;
+    assert.equal(segs, 1, '合成段只许有一段（实得 ' + segs + ' —— 幂等失效）');
+});
+
+test('v3750 H3. 负控：锚点对不上必须拒改（fail-closed，不猜）', () => {
+    const r = planCarry(carryFiles(), '2.0.0', '2.0.1');
+    const appliedReplace = r.applied.filter((id) =>
+        CARRY_PLAN.some((a) => a.id === id && a.kind === 'replace'));
+    assert.deepEqual(appliedReplace, [],
+        '锚点 0 命中时不许改写型动作（猜了就会误改历史留档）');
+    assert.ok(r.problems.length >= 2, '两条替换型都该记 problems（实得 ' + r.problems.length + '）');
+    assert.ok(r.problems.every((p) => p.includes('恰 1')), '问题文案要能指认「应恰 1 次」这条纪律');
+    /* 插入型与替换型在这一点上**不同形**（它没有可对不上的旧串）：
+     *   插入型只看「有没有当版段」这个客观事实 —— 用一个不存在的版本号问它，
+     *   它当然该插。若哪天插入型也开始因「锚点对不上」拒做，那说明有人把两类混成一类了。 */
+    assert.ok(r.applied.includes('iter-segment'), '插入型不随替换型的锚点腐坏而失效（两者不同形）');
+    /* 载体不在场也要记问题 —— 否则「清单腐坏」与「这条不用做」会被混为一谈。 */
+    const r2 = planCarry({}, CUR, NEXT);
+    assert.equal(r2.applied.length, 0);
+    assert.ok(r2.problems.length >= 2, '载体全缺时必须逐条记 problems');
+});
+
+test('v3750 H4. planCarry 是纯函数：入参一字不改（落盘只能在驱动器里）', () => {
+    const files = carryFiles();
+    const before = files['ITERATION_LOG.md'];
+    planCarry(files, CUR, NEXT);
+    assert.equal(files['ITERATION_LOG.md'], before, '入参被改动了 —— 那真仓就有被误写的路');
+    assert.ok(!files['ITERATION_LOG.md'].includes(iterMetaAnchor(NEXT)));
+});
+
+test('v3750 H5. 清单纪律：载体必须落在 CARRY_RE 认得的范围里，两类动作字段各自齐备', () => {
+    for (const a of CARRY_PLAN) {
+        assert.ok(a.id && a.rel && a.why, '每条动作都得有 id/rel/why（清单是给人读的）：' + a.id);
+        assert.ok(CARRY_RE.test(a.rel),
+            '清单载体不在分组认得的三处之内：' + a.rel + ' —— 两套载体名单会各自漂移，'
+            + '于是清单「充分」也只对另一拨套件成立');
+        if (a.kind === 'replace') {
+            assert.equal(typeof a.oldAnchor, 'function', '替换型必须能现推旧锚（写死会随抬版漂）');
+            assert.equal(typeof a.newText, 'function', '替换型必须能现推新串');
+        } else {
+            assert.equal(a.oldAnchor, undefined, '插入型没有「旧串」，别给它留一个用得上的口子');
+        }
+    }
+    /* 替换型**不许**把自己写成等值锚：斜体/反引号形态由构造器决定，清单里只放函数。 */
+    const raw = read('tools/bump-drill-core.mjs');
+    assert.ok(!/oldAnchor:\s*['"]/.test(raw), '替换型锚点不得写成字面量（会随抬版漂成 0 命中）');
+});
+
+test('v3750 H6. 防冒充：合成段自带显式标注，且真仓永不被它写过', () => {
+    const seg = planCarry(carryFiles(), CUR, NEXT).files['ITERATION_LOG.md'];
+    assert.ok(seg.includes('【抬版演练合成段】'), '合成段标题必须自曝身份（演练产物冒充发布正文最忌）');
+    assert.ok(/## 迭代 \d+ — v[\d.]+ · 【抬版演练合成段】/.test(seg),
+        '合成段要接在真段的形态与编号上（否则判据只认得到「有段」，认不出是哪版）');
+    assert.ok(!read('ITERATION_LOG.md').includes('【抬版演练合成段】'),
+        '真仓的迭代日志里出现了演练合成段 —— 说明有某条路径把演练产物写进了真仓');
+});
+
+test('v3750 H7. 驱动器接线：清单读数进报告，且只向镜像写', () => {
+    const drv = read('tools/bump-drill.mjs');
+    assert.match(drv, /carry_plan:\s*carry/, '清单读数必须随演练一起落盘（否则「充分」只是口头声明）');
+    assert.match(drv, /function runCarryPlan\(dir,/, '驱动器必须有清单执行面');
+    assert.match(drv, /runCarryPlan\(dir,/, '执行面必须吃镜像路径');
+    /* 真仓唯一被写的文件是**报告**（读数，不是产物；且它是「跑一次 --write」之后再跑
+     *   不被自己挡住的那个例外）。这份名单必须**恰好**如此 —— 多出任何一项，
+     *   都意味着抬版产物有可能落到真仓里，那是本工具最不该有的写法。
+     *   注意全量面日志走的是镜像（`path.join(dir, CORPUS_LOG_REL)`），它不该在这张单上。 */
+    const rootWrites = (drv.match(/writeFileSync\(path\.join\(ROOT,\s*([A-Z_][A-Z_0-9]*)/g) || [])
+        .map((s) => s.slice(s.lastIndexOf(',') + 1).trim());
+    assert.deepEqual(rootWrites, ['REPORT_REL'],
+        '真仓写入面漂了（实得 ' + rootWrites.join(' | ') + '）—— 产物的落点只能是镜像');
+    assert.ok(!/writeFileSync\(path\.join\(dir,\s*CORPUS_LOG_REL/.test(drv)
+        || /path\.join\(dir,\s*CORPUS_LOG_REL\)/.test(drv),
+        '全量面日志应落镜像（它会长成几十 MB，落真仓就是把演练痕迹留在发布树上）');
+    /* 推演只许有一处调用点：散成几处之后，「清单有没有被真执行过」就又要靠人读代码判断。 */
+    const calls = (drv.match(/planCarry\(/g) || []).length;
+    assert.equal(calls, 1, '驱动器的 planCarry 调用点必须是 1 处（实得 ' + calls + ' 处）——'
+        + '多处调用会让「清单已执行」与「清单被跳过了」再次不可分');
+    const body = drv.slice(drv.indexOf('function runCarryPlan'), drv.indexOf('/* ── 主流程 ──'));
+    assert.match(body, /planCarry\(/, '那一处调用必须在 runCarryPlan 里（它才拿得到镜像路径）');
+    assert.match(body, /sufficient/, '执行面必须给出「清单是否充分」这个读数（它是本条的验收原文）');
+    assert.match(body, /problems\.length[\s\S]{0,200}executed: false/,
+        '清单自身有问题时必须 fail-closed（不跑复跑面）—— 不可信的清单跑出来的绿解释不了任何事');
 });

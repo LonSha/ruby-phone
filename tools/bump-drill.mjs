@@ -63,7 +63,7 @@ import { spawnSync } from 'node:child_process';
 /* 纯判定内核：分组 / 取数 / 宿主资格 / 版本比较 / 读数归因（唯一实现，可单测）。 */
 import {
     classifySources, parseFailedFromOutput, isUnattributedRed, cmpVersion,
-    analyzeDrill, analyzeProbes, pickProbeHost as corePickHost,
+    analyzeDrill, analyzeProbes, pickProbeHost as corePickHost, planCarry, CARRY_PLAN,
 } from './bump-drill-core.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -317,6 +317,55 @@ function injectProbe(dir, kind, cur) {
         expect: kind === 'floor' ? 'not-flipped' : 'detected', cur };
 }
 
+/* ── ⑥d 连带面**动作清单自证** ──
+ *   治的是什么：演练跑出「连带面组 N 件红」时，归因只到「这些是抬版动作还没做」——
+ *   可这句话**没有证明清单是完整的**。某天某套件因另一条未登记的连带面转红时，
+ *   它会混进同一堆红里，读者照旧分不清「照清单补齐即绿」还是「清单本身漏了」。
+ *   处置：把清单在**镜像里真做一遍**（`planCarry` 是纯函数，落盘只在这里），再复跑该组：
+ *     · 复跑 0 红 ⇒ 清单在当版**充分**（这一步是证据，不是声明）；
+ *     · 复跑仍有红 ⇒ 剩下那些**不在清单里**，必须逐条重新归因（不许当噪声放过）。
+ *   清单自身有问题（锚点 0 次 / 载体不在场）时**不跑复跑面**：那时清单不可信，
+ *   复跑出来的绿也解释不了（fail-closed，与全仓判据同一口径）。
+ *   真仓一字不动：只读 `dir`、只写 `dir`。 */
+function runCarryPlan(dir, carryList, from, to) {
+    const rels = [...new Set(CARRY_PLAN.map((a) => a.rel))];
+    const files = {};
+    for (const rel of rels) {
+        try { files[rel] = fs.readFileSync(path.join(dir, rel), 'utf8'); }
+        catch (_e) { /* 不在场：交给 planCarry 记成 problems */ }
+    }
+    const planned = planCarry(files, from, to);
+    if (planned.problems.length) {
+        log('[bump-drill] ⚠ 连带面清单自身有问题（本次不据此下结论）：' + planned.problems.join('；'));
+    }
+    let recheck;
+    if (planned.problems.length || !planned.applied.length) {
+        recheck = {
+            executed: false, failed: null,
+            note: planned.problems.length
+                ? '清单自身有问题（见 problems）⇒ 拒判：此刻复跑出来的绿也解释不了。'
+                : '没有需要应用的动作（清单已全部做过）⇒ 本面无事可证。',
+        };
+    } else {
+        for (const [rel, text] of Object.entries(planned.files)) {
+            try { fs.writeFileSync(path.join(dir, rel), text); } catch (_e) { /* 忽略 */ }
+        }
+        const r = runSuite(dir, carryList, { bumpTo: to });
+        recheck = {
+            executed: true, tests: r.tests, failed: r.failed, red: r.red, ms: r.ms,
+            note: r.failed.length
+                ? '复跑仍有红 ⇒ 这些红**不在动作清单里**，须逐条重新归因（不许当噪声放过）。'
+                : '复跑 0 红 ⇒ 动作清单在当版**充分**（照着做即绿）。这一步是证据，不是声明。',
+        };
+    }
+    return {
+        actions: CARRY_PLAN.map((a) => ({ id: a.id, rel: a.rel, why: a.why })),
+        applied: planned.applied, noop: planned.noop, problems: planned.problems,
+        recheck,
+        sufficient: recheck.executed ? recheck.failed.length === 0 : null,
+    };
+}
+
 /* ── 主流程 ── */
 const dirty = isCleanWorktree();
 if (dirty === null) die('git status 跑不动（本工具的基线纪律依赖 git）');
@@ -441,6 +490,18 @@ for (const t of TARGETS) {
         log(`[bump-drill] 连带面组 ${c.ms} ms · 断言 ${c.tests} · 红 ${c.failed.length}` +
             (c.failed.length ? '：' + c.failed.join(', ') : ''));
 
+        /* ⑥d 连带面**动作清单自证**（详见下文 carry 块） */
+        const carry = runCarryPlan(dir, groups.carry, bumped.from, bumped.to);
+        if (carry.recheck.executed) {
+            log(`[bump-drill] 连带面动作清单：应用 ${carry.applied.length} 条`
+                + (carry.noop.length ? `（已做过 ${carry.noop.length} 条：${carry.noop.join(', ')}）` : '')
+                + ` · 复跑红 ${carry.recheck.failed.length}`
+                + (carry.recheck.failed.length ? '：' + carry.recheck.failed.join(', ') : '')
+                + ` ⇒ 清单${carry.sufficient ? '充分（照做即绿）' : '**不充分**（余红不在清单里）'}`);
+        } else {
+            log('[bump-drill] 连带面动作清单：' + carry.recheck.note);
+        }
+
         runs.push({
             label: t.label,
             from: bumped.from,
@@ -472,6 +533,9 @@ for (const t of TARGETS) {
                     + 'tests/audit 台账）。它们的红是「抬版动作还没做」，与版本锚缺陷是**两类**：'
                     + '前者照清单补齐即绿，后者要改判据。混看会把该改的当成该修的。',
             },
+            /* ⑥d 的读数进报告：`failed` 是**照清单之前**的红，`carry.recheck.failed` 是**照清单之后**
+               的余红。两条并排放，读者不必再信任何人说「这些红都是动作没做」。 */
+            carry_plan: carry,
         });
     } finally {
         if (!KEEP) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_e) { /* 忽略 */ } }

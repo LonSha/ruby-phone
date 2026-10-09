@@ -89,6 +89,119 @@ export function isUnattributedRed({ red, failed }) {
     return !!red && (!failed || failed.length === 0);
 }
 
+/* ── ②b 抬版**连带面动作清单**（R-O2 第 4 条：与 R-O9 联动，让抬版流程不再把它们当噪声）──
+ *
+ *   为什么这份清单必须**可执行**而不只是「可读」：
+ *     演练跑出「连带面组 4 件红」时，归因只到「这些是抬版动作还没做」为止 ——
+ *     可这句话**没有证明清单是完整的**。若某天某套件因另一条未登记的连带面转红，
+ *     它会混进同一堆红里，读者照旧分不清「照清单补齐即绿」还是「清单本身漏了」。
+ *   把动作写成机器可跑的三件套（锚点 / 变换 / 自证），演练就能在镜像里**真做一遍**
+ *   并复跑该组：0 红 ⇒ 清单在当版是**充分**的（这一步是证据，不是声明）；
+ *   仍有红 ⇒ 剩下那些不是清单里的负债，必须逐条重新归因。
+ *
+ *   每条动作的纪律（与门禁判据同一族）：
+ *     · 锚点必须**恰中 1 次**（0 次 = 已腐坏 / 已被别人做掉；多次 = 会误改历史段落）；
+ *     · 锚点用**当版**版本号构造，不写死（写死就会随抬版漂移成 0 命中）；
+ *     · 已经做过的（旧锚 0 次 + 新锚恰 1 次）⇒ 报 `noop-already-applied`，不猜、不重复插段。
+ */
+
+/** ITERATION_LOG 的元信息行锚点（真仓写法：`- **当前版本**：\`x.y.z\``）。 */
+export const iterMetaAnchor = (v) => '- **当前版本**：`' + String(v) + '`';
+/** 边界文档头部的当版复校标记锚点（真仓写法：`（v2.82.0 起；**vX.Y.Z 复校**）`）。 */
+export const boundaryAnchor = (v) => '（v2.82.0 起；**v' + String(v) + ' 复校**）';
+
+/* 两条**替换**型动作：有「旧串 → 新串」这一对，可做锚点恰中 1 次的自证。 */
+export const CARRY_ACTIONS = [
+    {
+        kind: 'replace',
+        id: 'iter-meta-version',
+        rel: 'ITERATION_LOG.md',
+        why: '元信息「当前版本」行必须与 manifest 同源（v280 2 / v303 D2 点名；判据在文档侧，属抬版动作）',
+        oldAnchor: (cur) => iterMetaAnchor(cur),
+        newText: (cur, next) => iterMetaAnchor(next),
+    },
+    {
+        kind: 'replace',
+        id: 'boundary-recheck',
+        rel: 'docs/runtime-verification-boundary.md',
+        why: '边界文档必须带**当版**复校标记（v3202 E2 点名；只改头部当版那一处，历史复校行是留档不是待办）',
+        oldAnchor: (cur) => boundaryAnchor(cur),
+        newText: (cur, next) => boundaryAnchor(next),
+    },
+];
+/* 一条**插入**型动作：没有可换的旧串（详见 planCarry 里那一段为什么合成段就够）。
+ *   两类不同形，故分表 —— 把它们塞进同一个循环会让锚点判定长出特例分支，
+ *   而本仓最忌「一条判据里两套逻辑」（分支里的那一支永远只有作者自己走过）。 */
+export const CARRY_INSERTS = [
+    {
+        kind: 'insert',
+        id: 'iter-segment',
+        rel: 'ITERATION_LOG.md',
+        why: '迭代日志必须含**当版段**（v3280 点名）。真抬版这一段是人工写的正文，'
+            + '演练里插一段**合成段**（标题即显式标注）—— 本条验的是「有没有当版段」这道门槛，不是正文质量',
+    },
+];
+/** 两类动作的**只读视图**（诊断与判据读这份，不必自己拼两张表）。 */
+export const CARRY_PLAN = CARRY_ACTIONS.concat(CARRY_INSERTS);
+
+/**
+ * 在给定文件集合上**推演**一遍连带面动作（纯函数：不改盘、不抛给调用方之外的地方）。
+ * @param {Record<string,string>} files 路径 → 文本（只含清单涉及的文件）
+ * @param {string} cur 抬版前版本
+ * @param {string} next 抬版后版本
+ * @returns {{files:Record<string,string>, applied:string[], noop:string[], problems:string[]}}
+ */
+export function planCarry(files, cur, next) {
+    const out = Object.assign({}, files);
+    const applied = [];
+    const noop = [];
+    const problems = [];
+    const countOf = (s, sub) => (sub ? s.split(sub).length - 1 : 0);
+    const need = (a) => {
+        const src = out[a.rel];
+        if (typeof src === 'string') return src;
+        problems.push(a.id + '：载体 ' + a.rel + ' 不在场（清单腐坏）');
+        return null;
+    };
+
+    for (const a of CARRY_ACTIONS) {
+        const src = need(a);
+        if (src === null) continue;
+        const oldA = a.oldAnchor(cur);
+        const newA = a.newText(cur, next);
+        const nOld = countOf(src, oldA);
+        const nNew = countOf(src, newA);
+        if (nOld === 1) {
+            out[a.rel] = src.split(oldA).join(newA);
+            applied.push(a.id);
+            continue;
+        }
+        if (nOld === 0 && nNew >= 1) { noop.push(a.id); continue; }
+        problems.push(a.id + '：锚点命中 ' + nOld + ' 次（应恰 1）—— 清单腐坏或已被别人改过，'
+            + '本次**不猜**（猜了就会误改历史留档）');
+    }
+
+    for (const a of CARRY_INSERTS) {
+        const src = need(a);
+        if (src === null) continue;
+        /* 合成段只做**门槛级**替代：真抬版这一段是人工正文（写什么、写多少都有讲究），
+         *   而判据只问「迭代日志里有没有当版段」。故这里插的段标题自带
+         *   「【抬版演练合成段】」，让任何读到镜像的人都一眼看出它不是正文 ——
+         *   演练产物冒充发布正文，正是本仓最忌的「看起来成功」。 */
+        const heading = /^## 迭代 (\d+) — /m.exec(src);
+        if (!heading) { problems.push(a.id + '：找不到迭代段标题形态（探测器失效）'); continue; }
+        if (src.includes('v' + next + ' · ')) { noop.push(a.id); continue; }
+        const seg = '## 迭代 ' + (Number(heading[1]) + 1) + ' — v' + next + ' · 【抬版演练合成段】\n'
+            + '- **【本段来由】** 由 `tools/bump-drill.mjs` 在**镜像**里合成：判据只要求'
+            + '「迭代日志含当版段」这道门槛（v3280 点名），而真发布时这一段是人工写的正文。'
+            + '本段**不是**发布正文，真仓一字未动。\n\n';
+        out[a.rel] = seg + src;
+        applied.push(a.id);
+    }
+
+    return { files: out, applied, noop, problems };
+}
+
 /* ── ③ 版本比较（按数字段，不按字符串）── */
 export function cmpVersion(a, b) {
     const x = String(a).split('.').map(Number);
