@@ -49,7 +49,10 @@ export const PHONE_EVENTS = Object.freeze({
     CLEAR_CURRENT_DATA: 'phone:clearCurrentData',
     CLEAR_ALL_DATA: 'phone:clearAllData',
     // [v2.26.0] 由双向对账扫出：全仓唯一一个「有派发、无契约」的漏网事件。
-    PET_STATECHANGE: 'phone:pet-statechange'
+    PET_STATECHANGE: 'phone:pet-statechange',
+    // [v3.79.0] 动效闸门的恢复信号：后台降频的消费方用它触发「现取」，
+    //   避免恢复瞬间每个消费方各跑一次全量重算（合成器管攒下的，本信号管现取）。
+    MOTION_RESUME: 'phone:motionResume'
 });
 
 /**
@@ -124,7 +127,11 @@ export const PHONE_EVENT_CONTRACT = Object.freeze({
         note: '桌面宠物状态机广播（Idle/TapReaction/PhoneEnter/PhoneLoop/PhoneExit）。'
             + ' 注意：派发目标是宠物按钮元素而非 window/document，故不属长期存活对象、'
             + '不需登记回收；且当前全仓零订阅者——保留为对外可观测接口。'
-    }
+    },
+    [PHONE_EVENTS.MOTION_RESUME]: {
+        kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
+        note: '动效闸门恢复：detail 带 {active,reason,panelOpen,docVisible,flushed}。'
+    },
 });
 
 /** 契约内全部事件名（已排序，供审计对账） */

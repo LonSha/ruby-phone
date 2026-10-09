@@ -16,6 +16,9 @@
 // ========================================
 
 import { getMemoryTagFilterInfo } from './tag-filter.js';
+/* [v3.81.0 · A7] 副模型的隔离面收口到单一真源：静默 / 上下文 / 空载三面由此模块唯一持有，
+ *   调用点不再手写字面量（手写的那份正确、但删掉一行不会有任何东西响）。 */
+import { buildSubmodelParams, judgeSubmodelIsolation, isolationLine } from './submodel-isolation.js';
 // @@ 工具调用中的最终回复正文提取（OpenAI tool_calls / function_call / Gemini functionCall）
 import { extractToolCallFragments, mergeToolCallFragments, extractFinalResponseToolContent } from './tool-call-content.js';
 
@@ -785,22 +788,19 @@ export class ApiManager {
                 }))
                 : [];
 
-            const generateParams = {
+            /* [v3.81.0 · A7] 隔离面不再就地手写：三项纪律（静默 / 不注入上下文 / 空载）
+             *   由 config/submodel-isolation.js 唯一持有，且**造完即自检** ——
+             *   自检err 只留一行读数、不阻断请求（隔离面坏了也不该让日记生成整个失败），
+             *   但这一行足以让「谁把哪一项改了方向」在控制台可见。 */
+            const generateParams = buildSubmodelParams({
                 prompt: safeMessages,
-                images: [],
-                quiet: true,
-                dryRun: false,
-                skip_save: true,
-                stream: useStream !== false,
-                include_world_info: false,
-                include_jailbreak: false,
-                include_character_card: false,
-                include_names: false,
-                max_tokens: resolvedMaxTokens,
-                length: resolvedMaxTokens,
-                stop: [],
-                stop_sequence: []
-            };
+                maxTokens: resolvedMaxTokens,
+                useStream: useStream !== false
+            });
+            const isolation = judgeSubmodelIsolation(generateParams);
+            if (isolation.state !== 'isolated') {
+                console.warn('[ApiManager] ' + isolationLine(isolation));
+            }
             this._attachPhoneSignalToPayload(generateParams, phoneSignal);
 
             const result = await context.generateRaw(generateParams);

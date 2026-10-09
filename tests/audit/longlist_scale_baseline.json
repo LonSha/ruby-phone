@@ -1,115 +1,180 @@
 {
- "file": "tests/audit/longlist_scale_probe.cjs",
- "probe": "tests/audit/longlist_scale_probe.cjs",
- "note": "长列表渲染规模取证：真 ChatView + Node 宿主桩（无浏览器 / 无 SillyTavern 宿主）。夹具只用图片类消息（文本气泡在 Node 桩下会走进宿主面分支，见文件头边界）。读数不代表实机渲染耗时；真排版与真解码归 tests/browser/scenarios/o6-longlist-perf.scen.js。",
- "measured_at": "v3.76.0",
- "host": {
-  "file": "apps/wechat/chat-view.js",
-  "lines": [
-   500,
-   1500
+  "file": "tests/audit/longlist_scale_probe.cjs",
+  "probe": "tests/audit/longlist_scale_probe.cjs",
+  "note": "长列表渲染规模取证：真 ChatView + Node 宿主桩（无浏览器 / 无 SillyTavern 宿主）。夹具只用图片类消息（文本气泡在 Node 桩下会走进宿主面分支，见文件头边界）。读数不代表实机渲染耗时；真排版与真解码归 tests/browser/scenarios/o6-longlist-perf.scen.js。",
+  "measured_at": "v3.76.0",
+  "host": {
+    "file": "apps/wechat/chat-view.js",
+    "lines": [
+      500,
+      1500,
+      4000
+    ],
+    "img_step": 5,
+    "fixture": "image-messages-only"
+  },
+  "readings": {
+    "meta_n500": {
+      "n": 500,
+      "bytes": 170732,
+      "divs": 667,
+      "imgs": 100,
+      "lazy": 100,
+      "asyncAttr": 100,
+      "ids": 100,
+      "dividers": 167
+    },
+    "bytes_per_msg_n500": 341.46,
+    "divs_per_msg_n500": 1.334,
+    "stub_skipped_lines_n500": 400,
+    "rendered_lines_n500": 100,
+    "meta_n1500": {
+      "n": 1500,
+      "bytes": 511968,
+      "divs": 2000,
+      "imgs": 300,
+      "lazy": 300,
+      "asyncAttr": 300,
+      "ids": 300,
+      "dividers": 500
+    },
+    "bytes_per_msg_n1500": 341.31,
+    "divs_per_msg_n1500": 1.333,
+    "stub_skipped_lines_n1500": 1200,
+    "rendered_lines_n1500": 300,
+    "meta_n1500_rerun": {
+      "n": 1500,
+      "bytes": 511968,
+      "divs": 2000,
+      "imgs": 300,
+      "lazy": 300,
+      "asyncAttr": 300,
+      "ids": 300,
+      "dividers": 500
+    },
+    "bytes_per_msg_n1500_rerun": 341.31,
+    "divs_per_msg_n1500_rerun": 1.333,
+    "stub_skipped_lines_n1500_rerun": 1200,
+    "rendered_lines_n1500_rerun": 300,
+    "repeat_bytes_equal_n1500_rerun": true,
+    "meta_n4000": {
+      "n": 4000,
+      "bytes": 1366196,
+      "divs": 5334,
+      "imgs": 800,
+      "lazy": 800,
+      "asyncAttr": 800,
+      "ids": 800,
+      "dividers": 1334
+    },
+    "bytes_per_msg_n4000": 341.55,
+    "divs_per_msg_n4000": 1.334,
+    "stub_skipped_lines_n4000": 3200,
+    "rendered_lines_n4000": 800,
+    "after_motion_css": {
+      "stage": "v3.79.0 收口：扫描面由 phone.css 扩为递归全仓，判定由计数改为按动画名 + 分类闭合",
+      "css_files_scanned": 85,
+      "infinite_sites": 21,
+      "infinite_names": 19,
+      "decorative_names": 12,
+      "state_names": 7,
+      "unclassified_names": 0,
+      "unclassified_list": [],
+      "doubly_classified": [],
+      "decor_uncovered": [],
+      "decor_phantom": [],
+      "state_in_still": [],
+      "body_floats": 1,
+      "float_uncovered": [],
+      "data_still_refs": 13,
+      "data_bg_refs": 8,
+      "reduce_media_blocks": 2,
+      "play_state_paused_rules": 2
+    }
+  },
+  "timing": {
+    "render_ms_n500": 47.49,
+    "render_ms_n1500": 134.91,
+    "render_ms_n1500_rerun": 104.39,
+    "render_ms_n4000": 200.64
+  },
+  "criteria": [
+    {
+      "id": "L1",
+      "desc": "消息图片全部带 loading=lazy 与 decoding=async（改前实测两值均为 0）",
+      "pass": true,
+      "got": "imgs=300 lazy=300 async=300"
+    },
+    {
+      "id": "L2",
+      "desc": "渲染产物里不存在『带 src 却不带 loading』的图片标签（漏改一处即转红）",
+      "pass": true,
+      "got": "imgTags=300 naked=0"
+    },
+    {
+      "id": "L3",
+      "desc": "单条消息的 DOM 代价（divs/条）不随会话长度漂移（三点 500/1500/4000，任两点漂移 >10% 即渲染路径变了）",
+      "pass": true,
+      "got": "divs/条 n500=1.334 n1500=1.333 n4000=1.334 最大漂移=0.05%"
+    },
+    {
+      "id": "L4",
+      "desc": "每条**真渲染出来**的消息都带 data-message-id（选择态 / 定位 / 跳转的身份面）",
+      "pass": true,
+      "got": "ids=300 期望=300"
+    },
+    {
+      "id": "L5",
+      "desc": "同一夹具复算两遍，渲染产物字节数相等（计数段可复算）",
+      "pass": true,
+      "got": "511968 vs 511968"
+    },
+    {
+      "id": "L6",
+      "desc": "时间分隔条数量远少于消息数（每楼一条即渲染路径回归）",
+      "pass": true,
+      "got": "dividers=500 n=1500"
+    },
+    {
+      "id": "L7",
+      "desc": "极端档（4000 楼）的媒体指令契约与身份面同样完整（只有典型档被查 = 覆盖面缩水）",
+      "pass": true,
+      "got": "n4000 imgs=800 lazy=800 async=800 ids=800 期望=800"
+    },
+    {
+      "id": "L8",
+      "desc": "phone.css 每处带 infinite 的动画都有降频覆盖：data-still 引用数不小于 infinite 处数，且 reduced-motion 政策块、animation-play-state:paused、data-bg 三路都在（改前实测三值均为 0）",
+      "pass": true,
+      "got": "infinite=7 data-still=10 data-bg=4 reduceMedia=2 playStatePaused=1"
+    }
   ],
-  "img_step": 5,
-  "fixture": "image-messages-only"
- },
- "readings": {
-  "meta_n1500": {
-   "n": 1500,
-   "bytes": 511968,
-   "divs": 2000,
-   "imgs": 300,
-   "lazy": 300,
-   "asyncAttr": 300,
-   "ids": 300,
-   "dividers": 500
+  "verdict": "准入判据全绿：媒体指令契约 / 单条 DOM 代价（三点 500/1500/4000 不漂移）/ 身份面 / 可复算 / 动效降频覆盖五类在真渲染函数与真 phone.css 上成立（读数见 readings 与 timing）",
+  "corrections": [
+    "候选一（已实测否掉）：给 `.chat-message` 加 `content-visibility: auto` + `contain-intrinsic-size` 来跳过视口外排版。实测：加上之后 `offsetHeight>0` 的元素数与元素盒高**都没变**（1500/1500、scrollHeight 反而由 89550 涨到 134550）—— 因为量尺寸这个动作本身强迫全量布局，读数失真 50%。既然本层量不出收益、又引入容器几何风险，不作为交付。",
+    "候选二（已实测否掉）：把消息列表窗口化（只渲染视口附近若干楼）。实测这条路径牵动 30 余处 `#chat-messages` / `.chat-message[data-index]` 消费者（多选态、全选、截图渲染、定位、搜索跳转、语音/视频通话视图），而本环境**不能**对真机长会话做端到端验收 ⇒「改完发版再让用户发现问题」不符合本仓纪律（未验证不声称）。",
+    "候选三（本版交付）：消息图片加 `loading=lazy` + `decoding=async`。浏览器层实测该层**支持**懒加载（简单滚动容器 600 张里真解码 211 张），但经 App 真实路径（`.chat-messages` 内 300 张）未观察到解码减少（300/300）—— 收益归目标设备复核，故本项只断言**属性契约**、收益只登记。",
+    "候选四（本版交付，第二层）：动效档位 + 后台降频 + 有界被动采样。三项的取舍分别是——档位听用户（用户显式选择优先于系统政策）、降频听处境（面板/页面都不可见才降）、采样听浏览器（只收它自己判定的 longtask，不自定阈值）。",
+    "候选五（已实测否掉）：按 App 逐个给无限动画打补丁（每处单独停）。理由：修前 14 处 infinite 分散在 phone.css 与四张 App 局部样式表里，逐处补会漏（本仓的清单式漏项形态）；改为两族（装饰类 / 状态类）+ 两个 dataset 属性统一表达，判据 L8 用计数覆盖而非逐处列举。"
+  ],
+  "before_after": {
+    "media_directives": {
+      "stage": "第一层（v3.76.0）交付，本版未改动，此处只作对照基准",
+      "before": "修前实测：loading=lazy 与 decoding=async 两值均为 0（每个图片站点都没带）",
+      "after": "lazy=300/300 async=300/300"
+    },
+    "motion_throttle": {
+      "stage": "第二层（本版）交付：非必要动画 + 后台降频",
+      "before": "修前实测：prefers-reduced-motion 0 处、animation-play-state 0 处；面板隐藏后 yzp-home-vinyl-spin 仍 running；宠物 video 在面板关闭与页面隐藏两种状态下都还在播",
+      "after": "全仓 CSS（85 张）data-still 引用 13 处 / data-bg 引用 8 处 / prefers-reduced-motion 块 2 处 / animation-play-state:paused 2 处；带 infinite 的动画 21 处全部归类且覆盖（未分类 0 / 装饰未覆盖 0 / 浮层未覆盖 0）；行为面读数见 tests/browser/scenarios/o6-motion-throttle.scen.js"
+    }
   },
-  "bytes_per_msg_n1500": 341.31,
-  "divs_per_msg_n1500": 1.333,
-  "stub_skipped_lines_n1500": 1200,
-  "rendered_lines_n1500": 300,
-  "meta_n1500_rerun": {
-   "n": 1500,
-   "bytes": 511968,
-   "divs": 2000,
-   "imgs": 300,
-   "lazy": 300,
-   "asyncAttr": 300,
-   "ids": 300,
-   "dividers": 500
-  },
-  "bytes_per_msg_n1500_rerun": 341.31,
-  "divs_per_msg_n1500_rerun": 1.333,
-  "stub_skipped_lines_n1500_rerun": 1200,
-  "rendered_lines_n1500_rerun": 300,
-  "repeat_bytes_equal_n1500_rerun": true,
-  "meta_n500": {
-   "n": 500,
-   "bytes": 170732,
-   "divs": 667,
-   "imgs": 100,
-   "lazy": 100,
-   "asyncAttr": 100,
-   "ids": 100,
-   "dividers": 167
-  },
-  "bytes_per_msg_n500": 341.46,
-  "divs_per_msg_n500": 1.334,
-  "stub_skipped_lines_n500": 400,
-  "rendered_lines_n500": 100
- },
- "timing": {
-  "render_ms_n1500": 183.62,
-  "render_ms_n1500_rerun": 156.65,
-  "render_ms_n500": 31.57
- },
- "criteria": [
-  {
-   "id": "L1",
-   "desc": "消息图片全部带 loading=lazy 与 decoding=async（改前实测两值均为 0）",
-   "pass": true,
-   "got": "imgs=300 lazy=300 async=300"
-  },
-  {
-   "id": "L2",
-   "desc": "渲染产物里不存在『带 src 却不带 loading』的图片标签（漏改一处即转红）",
-   "pass": true,
-   "got": "imgTags=300 naked=0"
-  },
-  {
-   "id": "L3",
-   "desc": "单条消息的 DOM 代价（divs/条）不随会话长度漂移（>10% 即渲染路径变了）",
-   "pass": true,
-   "got": "divs/条 n1500=1.333 n500=1.334 漂移=0.05%"
-  },
-  {
-   "id": "L4",
-   "desc": "每条**真渲染出来**的消息都带 data-message-id（选择态 / 定位 / 跳转的身份面）",
-   "pass": true,
-   "got": "ids=300 期望=300"
-  },
-  {
-   "id": "L5",
-   "desc": "同一夹具复算两遍，渲染产物字节数相等（计数段可复算）",
-   "pass": true,
-   "got": "511968 vs 511968"
-  },
-  {
-   "id": "L6",
-   "desc": "时间分隔条数量远少于消息数（每楼一条即渲染路径回归）",
-   "pass": true,
-   "got": "dividers=500 n=1500"
-  }
- ],
- "verdict": "准入判据全绿：媒体指令契约 / 单条 DOM 代价 / 身份面 / 可复算四类在真渲染函数上成立（读数见 readings 与 timing）",
- "corrections": [
-  "候选一（已实测否掉）：给 `.chat-message` 加 `content-visibility: auto` + `contain-intrinsic-size` 来跳过视口外排版。实测：加上之后 `offsetHeight>0` 的元素数与元素盒高**都没变**（1500/1500、scrollHeight 反而由 89550 涨到 134550）—— 因为量尺寸这个动作本身强迫全量布局，读数失真 50%。既然本层量不出收益、又引入容器几何风险，不作为交付。",
-  "候选二（已实测否掉）：把消息列表窗口化（只渲染视口附近若干楼）。实测这条路径牵动 30 余处 `#chat-messages` / `.chat-message[data-index]` 消费者（多选态、全选、截图渲染、定位、搜索跳转、语音/视频通话视图），而本环境**不能**对真机长会话做端到端验收 ⇒「改完发版再让用户发现问题」不符合本仓纪律（未验证不声称）。",
-  "候选三（本版交付）：消息图片加 `loading=lazy` + `decoding=async`。浏览器层实测该层**支持**懒加载（简单滚动容器 600 张里真解码 211 张），但经 App 真实路径（`.chat-messages` 内 300 张）未观察到解码减少（300/300）—— 收益归目标设备复核，故本项只断言**属性契约**、收益只登记。"
- ],
- "not_done": [
-  "未测真机流畅度：无目标设备，本探针与浏览器层读的都是「渲染完成时刻」，不是帧率、也不是手机上的滚动流畅度。",
-  "未测移动端后台节流窗口：`document.hidden` 属属性替换模拟，不触发浏览器真实节流。",
-  "未测文本类消息的渲染代价：夹具只用图片消息（见文件头边界），文本气泡在 Node 桩下会走进宿主面分支。",
-  "未测真实存储读取：夹具是内存数组，不造 IndexedDB / localStorage 压力。"
- ]
+  "not_done": [
+    "未测真机流畅度：无目标设备，本探针与浏览器层读的都是「渲染完成时刻」，不是帧率、也不是手机上的滚动流畅度。",
+    "未测移动端后台节流窗口：`document.hidden` 属属性替换模拟，不触发浏览器真实节流。",
+    "未测文本类消息的渲染代价：夹具只用图片消息（见文件头边界），文本气泡在 Node 桩下会走进宿主面分支。",
+    "未测真实存储读取：夹具是内存数组，不造 IndexedDB / localStorage 压力。",
+    "未测真机省电读数：后台降频用 `document.hidden` 属性替换模拟，不触发浏览器真实节流窗口 —— 本层证明的是「代码收到隐藏信号后真停了」，不是「手机上省了多少电」。"
+  ],
+  "refreshed_at": "v3.79.0",
+  "refresh_note": "本基线在 v3.79.0 被**显式刷新过一次**（不是抬版侧写）：新增三项读数与两条判据 —— n4000（极端档 4000 楼）与 L3 的三点漂移判据、L7（极端档媒体契约与身份面）、L8（phone.css 动效降频覆盖统计，含 after_motion_css 读数组）。measured_at 仍是 v3.76.0（建基线时的当版，冻结历史值）；刷新是「输入面变了、读数跟着变」的显式动作，不是被抬版脚本连带改写。"
 }

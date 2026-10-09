@@ -599,6 +599,10 @@ function loadDamagedCopy(rel, from, to) {
     const gateDir = path.join(dir, 'config');
     fs.mkdirSync(gateDir, { recursive: true });
     fs.writeFileSync(path.join(gateDir, 'num-gate.js'), NUM_GATE_STUB);
+    /* [v3.84.0 · R-O8] 副本里也要有 num-clamp 的**真件字节副本**：
+     *   被加载的模块现在从它取有界取数（口径唯一），缺了会 ERR_MODULE_NOT_FOUND ——
+     *   那与破坏本身无关（假红）。刻意用 copyFileSync 而不是手写桩：副本就是真件的副本。 */
+    fs.copyFileSync(new URL('../config/num-clamp.js', import.meta.url), path.join(gateDir, 'num-clamp.js'));
     return import(pathToFileURL(target).href);
 }
 

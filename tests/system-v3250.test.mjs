@@ -398,6 +398,8 @@ function loadDamagedCopy(splitFrom, splitTo) {
         '    const n = Number(v);\n' +
         '    return Number.isFinite(n) ? n : null;\n' +
         '}\n');
+    /* [v3.84.0 · R-O8] 副本里也要有 num-clamp 的**真件字节副本**（被加载模块现在从它取有界取数）。 */
+    fs.copyFileSync(new URL('../config/num-clamp.js', import.meta.url), path.join(gateDir, 'num-clamp.js'));
     return import(pathToFileURL(target).href);
 }
 

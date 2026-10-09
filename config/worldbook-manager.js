@@ -3,7 +3,14 @@
  *  世界书选择与注入辅助
  * ======================================================== */
 
+/* [v3.80.0 · 缝入 A1] 世界书写链路。修前本模块**只有读通道**（loadWorldInfo 一族）：
+ *   模型写下的长期事实没有任何去处，只能挤在会话桶里，换卡即丢。
+ *   纯函数那一半（去重 / 归一 / 合并 / 读数行）在 config/worldbook-write.js（零 IO，
+ *   便于负控制直接破坏）；本文件只留**宿主交互**那一半（读→合并→写→刷缓存）。 */
+import { mergeEntries, toEntriesMap, worldbookWriteLine } from './worldbook-write.js';
+
 const WORLD_INFO_GET_ENDPOINT = '/api/worldinfo/get';
+const WORLD_INFO_SAVE_ENDPOINT = '/api/worldinfo/edit';
 let cachedCsrfToken = '';
 let cachedCsrfTokenAt = 0;
 
@@ -500,12 +507,105 @@ export class WorldbookManager {
                 entries,
                 allEntries,
                 totalEntries,
-                disabledEntries
+                disabledEntries,
+                /* [v3.80.0 · 缝入 A1] 读出来就必须说得出「这份能被写」：没读到内容时
+                 *   这一格如实是空串（写回会走 read-failed），而不是悄悄省略 ——
+                 *   省略会让消费方分不清「不能写」和「这一格不存在」。 */
+                writeLine: entries.length ? '可写（追加模式·按内容去重）' : '未读到条目：写回前会重新现读一次'
             };
         } catch (error) {
             console.warn(`[WorldbookManager] 读取世界书失败: ${name}`, error);
-            return { ...book, entries: [], allEntries: [], totalEntries: 0, disabledEntries: 0 };
+            return { ...book, entries: [], allEntries: [], totalEntries: 0, disabledEntries: 0, writeLine: '读取失败：写回会再试一次现读' };
         }
+    }
+
+    /**
+     * [v3.80.0 · 缝入 A1] 把条目**追加**进指定世界书（默认 append 模式，绝不覆盖）。
+     *
+     * 两条铁律（在纯函数层已实现，这里负责不被宿主绕开）：
+     *   ① 绝不覆盖用户手写条目 —— `update-by-uid` 模式也只改 `source` 相同的那条；
+     *   ② 按**归一化内容**去重（全角/大小写/空白差异不算新条目）。
+     *
+     * @returns {{ok:boolean, reason:string, name:string, added:Array, skipped:Array,
+     *            replaced:Array, line:string, entries:number}}
+     *   `reason`：`'ok'` / `'no-name'` / `'empty'` / `'read-failed'` / `'write-failed'`
+     *   —— 五态互不同形（写失败与没东西可写处置相反：前者要重试，后者不用）。
+     */
+    async writeMemoryEntries(name, incoming, options = {}) {
+        const cleanName = safeString(name);
+        const empty = { ok: false, reason: 'no-name', name: '', added: [], skipped: [], replaced: [], line: '', entries: 0 };
+        /* [v3.83.0 · 计划 R-O7] **真回执**：写入的结论留一份在实例上，供诊断页读。
+         *   为什么必须留在真源侧：诊断不许自行推测「上一次写成功了没有」——
+         *   没有回执时它只能说「没跑过」（unknown），而那就分不出「没写过」与「写坏了」。 */
+        const receipt = (result) => {
+            this._lastWriteReceipt = Object.assign({ at: Date.now() }, result);
+            return result;
+        };
+        if (!cleanName) return receipt(empty);
+        if (!Array.isArray(incoming) || incoming.length === 0) {
+            return receipt(Object.assign({}, empty, { name: cleanName, reason: 'empty' }));
+        }
+
+        /* 读：走**和展示同一条**读通道（读到的必须就是他看到的那一份）。 */
+        let data = null;
+        try {
+            data = normalizeWorldInfoData(await this._loadWorldInfoViaFrontendModule(cleanName));
+            if (!data) data = await fetchWorldInfoByName(cleanName);
+        } catch (error) {
+            console.warn('[WorldbookManager] 记忆写回前读取失败:', cleanName, error);
+        }
+        if (!data || typeof data !== 'object') {
+            return receipt(Object.assign({}, empty, { name: cleanName, reason: 'read-failed' }));
+        }
+
+        const merged = mergeEntries(data.entries, incoming, {
+            mode: options.mode === 'update-by-uid' ? 'update-by-uid' : 'append',
+            forceRewriteSource: options.forceRewriteSource === true,
+            maxEntries: options.maxEntries
+        });
+        const line = worldbookWriteLine(merged);
+        if (merged.added.length === 0 && merged.replaced.length === 0) {
+            /* 「没有新增」不是失败：全部命中重复/空内容/超限，三态在 skipped 里可查。
+             *   刻意仍返回 ok:true —— 报失败会诱导调用方重试，而重试一百次结果一样。 */
+            return receipt({ ok: true, reason: 'ok', name: cleanName, added: [], skipped: merged.skipped, replaced: [], line: line, entries: merged.entries.length });
+        }
+
+        const payload = Object.assign({}, data, { entries: toEntriesMap(merged.entries) });
+        const written = await this._saveWorldInfo(cleanName, payload);
+        if (!written) {
+            return receipt({ ok: false, reason: 'write-failed', name: cleanName, added: [], skipped: merged.skipped, replaced: [], line: line, entries: merged.entries.length });
+        }
+        /* 写完刷缓存：下一次列表读必须是新值（不刷就会拿 5 秒内的旧缓存，
+         *   用户看到「写了但没变」）。 */
+        await this._refreshWorldInfoCache(cleanName).catch(function () { return false; });
+        this._cache = null;
+        this._cacheAt = 0;
+        return receipt({ ok: true, reason: 'ok', name: cleanName, added: merged.added, skipped: merged.skipped, replaced: merged.replaced, line: line, entries: merged.entries.length });
+    }
+
+    /** 写：先试前端模块出口，再试后端接口。两条都失败才如实报失败（不静默成功）。 */
+    async _saveWorldInfo(name, data) {
+        try {
+            const worldModule = await this._loadWorldInfoModule();
+            const worldInfo = worldModule?.world_info || window.world_info;
+            if (typeof worldModule?.saveWorldInfo === 'function') {
+                await worldModule.saveWorldInfo(name, data.entries, true);
+                return true;
+            }
+            if (typeof worldInfo?.saveWorldInfo === 'function') {
+                await worldInfo.saveWorldInfo(name, data.entries, true);
+                return true;
+            }
+        } catch (error) {
+            console.warn('[WorldbookManager] 世界书写回（前端模块）失败:', name, error);
+        }
+        try {
+            await fetchJson(WORLD_INFO_SAVE_ENDPOINT, Object.assign({}, data, { name: name }));
+            return true;
+        } catch (error) {
+            console.warn('[WorldbookManager] 世界书写回（后端接口）失败:', name, error);
+        }
+        return false;
     }
 
     async listAvailableWorldbooks(options = {}) {

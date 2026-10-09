@@ -40,6 +40,7 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+import { boundedInt } from '../../config/num-clamp.js';
 
 /** 归因三态。**值**是连字符形，视图文案表的键必须取这里的值（与 focus-data 同纪律）。 */
 export const PIGGY_REASONS = Object.freeze({
@@ -72,13 +73,6 @@ export const DEFAULT_PIGGY_SETTINGS = Object.freeze({
 /** 全新一份默认设置（冻结，防被就地改）。 */
 export function defaultPiggySettings() {
     return Object.freeze({ ...DEFAULT_PIGGY_SETTINGS });
-}
-
-function boundedInt(v, fallback, min, max) {
-    const n = numOrNull(v);
-    if (n === null) return fallback;
-    const r = Math.round(n);
-    return Math.min(max, Math.max(min, r));
 }
 
 /** 设置规范化：外部数据一律先过这里（读不出就如实回落默认，不把 NaN 混进运行时）。 */

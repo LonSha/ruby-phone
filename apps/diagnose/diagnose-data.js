@@ -47,7 +47,7 @@ import { readProjection, projectionValue, projectionLine } from '../../config/pr
 /* [v3.0.2] R2-C 上游注入读数的消费侧单一真源（Gate R2-A/R2-B 的外供面）。
  *   接在这里的理由与本仓一切「上游读数」的可见出口相同：投影接诊断、探针自述接诊断，
  *   注入面同族 —— 而它此前**全库零消费**（上游 v3.215.0 做出来，下游没人读）。 */
-import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockLine } from '../../config/injection-contract.js';
+import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockLine, injectionPriorityLine } from '../../config/injection-contract.js';
 /* ★ 真浏览器逐开 82 入口实测抓到的真缺陷：本文件对外**只有 default 导出对象**里带着
  *   injectionLine / injectionVerdictText / blockLine，没有具名导出；而 diagnose-view.js 写的是
  *   `import { ... blockLine } from './diagnose-data.js'` ⇒ **模块整体加载失败**（SyntaxError:
@@ -150,6 +150,17 @@ import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-
  *   来源登记表 + 草稿账本状态 + 表自检。 */
 import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-pipeline.js';
 import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
+/* [v3.82.0 · B 清单] 写作面八张卡的**唯一消费口**：氛围池（B1）/ 关系七级（B2）/
+ *   判定与平行线（B3+B4）/ 状态字段（B5）/ 二级摘要（B6）/ 事实表（B7）/ 人工纠错（B8）。
+ *   接在诊断中心的理由与投影面 / 注入面 / 证据面**同一族**：本仓一切「上游读数」
+ *   的可见出口就是这里 —— 八份纯函数若没有这一个消费点，就是本仓被点过六次的
+ *   「内核建好了、导出挂出来了、产品端零消费」。 */
+import { craftFaces, craftLine } from '../../config/craft-cards.js';
+import { numOrNull } from '../../config/num-gate.js';
+/* [v3.83.0 · 计划 R-O7] 诊断处置面：把「有读数」翻成「能处置」。
+ *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
+ *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
+import { DIAG_STATES, DIAG_DOMAINS, CODE_TABLE, buildDisposal, disposalLine, canJump, codeTableSelfCheck } from '../../config/diagnose-action.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -786,7 +797,172 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, handoff, sessionGate };
+    /* [v3.82.0 · B 清单] 写作面：八张卡的结构面读数（每张自带一行活读数）。
+     *  取不到一律 null（与其余面同纪律：**不伪造**）。 */
+    const craftFace = (() => {
+        try {
+            const faces = craftFaces();
+            const problems = [];
+            for (const f of faces) {
+                /* 取数一律走全仓唯一口径 `numOrNull`（不得写 `Number.isFinite(Number(x))` ——
+                 *  那不是「更宽松」，而是把 null/''/[] 全读成 0，属本仓点名的弱口径形态）。 */
+                if (!f || !f.line || numOrNull(f.rows) === null) {
+                    problems.push('写作面读数缺失：' + String(f && f.id));
+                }
+            }
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                cards: faces.map((f) => ({ id: f.id, label: f.label, rows: f.rows, kinds: f.kinds, line: f.line })),
+                text: craftLine(faces) + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；八张卡全部给出活读数')
+            };
+        } catch (_e) { return null; }
+    })();
+    /* [v3.83.0 · 计划 R-O7] 诊断处置面：把各面**已经取到的读数**翻成五态处置。
+     *  为什么在这里做而不在视图里：本仓纪律 —— 视图纯渲染，一切结论由内核给出；
+     *  且「处置」必须与读数**同一次取数**（分两次取会读到不同的现场）。
+     *  这里不做任何新的 IO，只把上面已取到的 face 读数当输入。 */
+    const disposalFace = (() => {
+        try {
+            const self = codeTableSelfCheck(CODE_TABLE);
+            const items = [];
+            /* ① 续玩交接：预检三态 → 处置（有真实回执才报失败，没跑过一律 unknown）。 */
+            (() => {
+                const face = handoff && typeof handoff === 'object' ? handoff : null;
+                if (!face) {
+                    items.push(buildDisposal({
+                        domain: 'resume-handoff', symptom: 'precheck-blocked', present: false,
+                        action: { appId: 'diagnose' }
+                    }));
+                    return;
+                }
+                const pre = face.precheck || face.pre || null;
+                const state = String((pre && pre.state) || '');
+                if (!state) {
+                    items.push(buildDisposal({ domain: 'resume-handoff', symptom: 'epoch-stale', unknown: true, reason: '未跑过预检' }));
+                    return;
+                }
+                if (state === 'unusable' || state === 'blocked') {
+                    items.push(buildDisposal({
+                        domain: 'resume-handoff', symptom: 'precheck-blocked', failed: true,
+                        stage: '预检', scope: '受控恢复交接（回档前的可测性）',
+                        retry: true, hostSwitch: false, needConfirm: true,
+                        action: { appId: 'diagnose' }, reason: String(pre.why || '')
+                    }));
+                    return;
+                }
+                items.push(buildDisposal({ domain: 'resume-handoff', symptom: 'readback-mismatch' }));
+            })();
+            /* ② 注入面：两种「0 块」不同处置（候选空 ⇒ 查召回；全被裁 ⇒ 调预算）。 */
+            (() => {
+                const inj = (typeof injection === 'object' && injection) ? injection : null;
+                if (!inj || inj.reason !== 'ready') {
+                    items.push(buildDisposal({ domain: 'injection', symptom: 'candidates-empty', present: inj ? true : false, unknown: !!inj }));
+                    return;
+                }
+                if (inj.verdict === 'all-dropped') {
+                    items.push(buildDisposal({
+                        domain: 'injection', symptom: 'all-dropped', failed: true,
+                        stage: '预算裁剪', scope: '注入上下文（本轮 0 块进入）',
+                        retry: true, hostSwitch: false, needConfirm: false,
+                        action: { appId: 'settings' }, reason: '候选 ' + String(inj.total || 0) + ' 块全被裁'
+                    }));
+                    return;
+                }
+                if (inj.verdict === 'candidates-empty') {
+                    items.push(buildDisposal({
+                        domain: 'injection', symptom: 'candidates-empty', failed: true,
+                        stage: '召回取数', scope: '注入候选（召回没给出素材）',
+                        retry: true, hostSwitch: true, needConfirm: false,
+                        action: { appId: 'memory' }
+                    }));
+                    return;
+                }
+                items.push(buildDisposal({ domain: 'injection', symptom: 'stray-origin', absent: true, present: true }));
+            })();
+            /* ③ 世界书写回：本仓一次真失败才报失败，其余如实空。 */
+            (() => {
+                /* 真回执来源：宿主的 WorldbookManager 实例（v3.83.0 起把每次写入的结论留一份
+                 *   在实例的 _lastWriteReceipt 上）。**没有回执就说没跑过**，不编失败。 */
+                const host = hostWindow();
+                const inst = (host && host.VirtualPhone && host.VirtualPhone.worldbookManager) || null;
+                const wb = (inst && inst._lastWriteReceipt) ? inst._lastWriteReceipt : null;
+                if (!wb || typeof wb !== 'object') {
+                    items.push(buildDisposal({ domain: 'worldbook', symptom: 'write-failed', present: false }));
+                    return;
+                }
+                if (wb.ok === false) {
+                    items.push(buildDisposal({
+                        domain: 'worldbook', symptom: 'write-failed', failed: true,
+                        stage: '写回', scope: '世界书条目（本机记忆写不进去）',
+                        retry: true, hostSwitch: true, needConfirm: true,
+                        action: { appId: 'settings' }, reason: String(wb.reason || '')
+                    }));
+                    return;
+                }
+                items.push(buildDisposal({ domain: 'worldbook', symptom: 'duplicate-content' }));
+            })();
+            /* ④ 存储与搜索、生命周期：本版只登记码面与「面在不在」（无回执的**不编失败**）。 */
+            for (const [domain, symptom, present] of [
+                ['storage', 'key-unregistered', !!(storageFace && storageFace.ok !== undefined)],
+                ['search', 'source-threw', false],
+                ['lifecycle', 'no-exit-wired', true]
+            ]) {
+                items.push(buildDisposal({ domain: domain, symptom: symptom, present: present }));
+            }
+            const counts = {};
+            for (const s of Object.values(DIAG_STATES)) counts[s] = 0;
+            for (const it of items) counts[it.state] += 1;
+            const needAction = items.filter((it) => it.state === DIAG_STATES.FAILED);
+            const jumpable = needAction.filter((it) => canJump(it).ok);
+            return {
+                ok: self.ok && items.every((it) => it.ok),
+                reason: 'ok',
+                problems: (self.ok ? [] : self.problems).concat(items.filter((it) => !it.ok).map((it) => it.why)),
+                domains: DIAG_DOMAINS.length,
+                codes: self.count,
+                counts: counts,
+                items: items.map((it) => ({
+                    state: it.state, code: it.code, ok: it.ok, why: it.why,
+                    appId: it.action.appId, kind: it.action.kind, id: it.action.id,
+                    line: disposalLine(it)
+                })),
+                text: '诊断处置：' + DIAG_DOMAINS.length + ' 域 · ' + self.count + ' 个码面 · 五态 '
+                    + Object.values(DIAG_STATES).map((s) => s + ' ' + counts[s]).join(' / ')
+                    + '；需要动的 ' + needAction.length + ' 项（可一步跳转 ' + jumpable.length + '）'
+                    + (needAction.length === jumpable.length ? '' : '**有 ' + (needAction.length - jumpable.length) + ' 项跳不过去**')
+            };
+        } catch (_e) { return null; }
+    })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+}
+
+/** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
+ *  三态：面缺席说「读不到」；有问题逐条点名；就绪则把五态分布与「需要动的项」说出来。 */
+export function disposalFaceText(face) {
+    const f = (face && typeof face === 'object') ? face : null;
+    if (!f) return '诊断处置：读不到（诊断内核未取到这一面）';
+    if (f.ok !== true) {
+        return '诊断处置：**有 ' + String((f.problems || []).length) + ' 条问题** —— '
+            + (f.problems || []).map(String).join(' · ');
+    }
+    return String(f.text || '诊断处置：无读数');
+}
+
+/** [v3.82.0 · B 清单] 写作面的一行读数（**唯一实现**在 `collectDiagnose` 内取的那一面）。
+ *  这里只做转发与文案：视图不自己拼。三态互不相同：
+ *   · 面缺席 → 说「读不到」并给归因，**不说**「八张卡都在」；
+ *   · 面在场但有问题 → 逐条点名（读的人才知道是哪一张）。 */
+export function craftFaceText(face) {
+    const f = (face && typeof face === 'object') ? face : null;
+    if (!f) return '写作面：读不到（诊断内核未取到这一面）';
+    if (f.ok !== true) {
+        return '写作面：**有 ' + String((f.problems || []).length) + ' 条问题** —— '
+            + (f.problems || []).map(String).join(' · ');
+    }
+    const cards = Array.isArray(f.cards) ? f.cards : [];
+    return String(f.text || '写作面：无读数') + ' —— ' + cards.map((c) => c.line).join(' | ');
 }
 /** [v3.58.0 · 计划 O4] 会话世代栅栏面的一行读数（**唯一实现**在本文件 `collectDiagnose` 内取的那一面）。
  *  这里只做转发与文案：视图不自己拼（拼第二遍就是同一口径两份实现）。
@@ -1105,6 +1281,7 @@ export default {
     projAbsentText,
     sourceStateText,
     injectionLine,
+    injectionPriorityLine,
     injectionVerdictText,
     blockLine,
     rollbackPreviewFaceText,

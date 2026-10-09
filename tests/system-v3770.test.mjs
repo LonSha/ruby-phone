@@ -37,6 +37,7 @@ const CV = 'apps/wechat/chat-view.js';
 const PROBE = 'tests/audit/longlist_scale_probe.cjs';
 const BASEF = 'tests/audit/longlist_scale_baseline.json';
 const SCENE = 'tests/browser/scenarios/o6-longlist-perf.scen.js';
+const SELF_REL = 'tests/system-v3770.test.mjs';
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const CV_SRC = read(CV);
 const PROBE_SRC = read(PROBE);
@@ -85,6 +86,12 @@ let MIRROR = null;
  */
 const MIRROR_FILES = [
     PROBE, 'manifest.json', 'package.json', CV,
+    /* [v3.79.0 · 交棒] 动效面（L8）的输入面**由一份 phone.css 扩成全仓 CSS**：
+     *   本版收口复核实测到探针原先只扫 phone.css，而全仓带 infinite 的动画共
+     *   **21 处 / 19 个名字 / 7 张 CSS**，漏掉的 14 处恰好是「门全绿而动画照转」那一族。
+     *   判据面扩了，镜像面就得跟着扩 —— 不扩 ⇒ 副本读数 css=1 而真仓 css=85，
+     *   B2（位置无关）当场转红：那证明的是「两个根看到的不是同一件事」。 */
+    ...allCssUnder(ROOT),
     'apps/wechat/chat-snapshot.js', 'apps/wechat/gift-catalog.js', 'apps/wechat/group-scheduler.js',
     'apps/wechat/voice-text.js', 'apps/wechat/wechat-data.js',
     'apps/honey/honey-app.js', 'apps/honey/honey-data.js',
@@ -101,7 +108,29 @@ const MIRROR_FILES = [
     'config/session-gate.js', 'config/story-clock.js', 'config/tag-filter.js',
     'config/world-bridge.js', 'config/write-receipt.js',
 ];
-function mirror() {
+/* [v3.79.0] 递归枚举全仓 .css —— 与 tests/audit/longlist_scale_probe.cjs 里那份**逐字同口径**
+ *   （口径片段由本文件末的 D5 判据看守）。为什么两处各写一份而不上收：探针是 .cjs，
+ *   套件是 .mjs，共享一个 .mjs 模块会让 .cjs 侧走不了 require；而镜像面比模块复用更
+ *   要紧的是「两边枚举到的清单必须一样」，那就交给判据守，不靠人记得同步。 */
+function allCssUnder(root) {
+    const out = [];
+    (function walk(dir, depth) {
+        if (depth > 6) return;
+        let names = [];
+        try { names = fs.readdirSync(dir); } catch (_e) { return; }
+        for (const nm of names) {
+            if (nm === 'node_modules' || nm === '.git') continue;
+            const abs = path.join(dir, nm);
+            let st = null;
+            try { st = fs.statSync(abs); } catch (_e) { continue; }
+            if (st.isDirectory()) walk(abs, depth + 1);
+            else if (nm.slice(-4) === '.css') out.push(path.relative(root, abs));
+        }
+    })(root, 0);
+    return out.sort();
+}
+function mirror(dirOverride) {
+    if (dirOverride) return buildMirrorInto(dirOverride);
     if (MIRROR) return MIRROR;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o6mirror-'));
     try {
@@ -119,6 +148,20 @@ function mirror() {
     return MIRROR;
 }
 /** 定点破坏：写副本前先断开硬链，真仓文件不受影响。 */
+
+/** [v3.79.0] 往指定目录铺一份镜像（与 mirror() 同一份清单；供需要的负控制拿**干净副本**）。
+ *   为什么要有它：镜像根本身是**缓存**，先跑的负控制会把它破坏掉，后面的判据看到的是
+ *   别人弄坏的那份（实测：D1~D3 破坏过 chat-view 之后，D5 读到 L1/L2/L6/L7 一并转红）。
+ *   本仓纪律：负控制必须在它自己那份输入上取数。 */
+function buildMirrorInto(dir) {
+    for (const rel of MIRROR_FILES) {
+        const dst = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(path.join(ROOT, rel), dst);
+    }
+    process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_e) { /* 忽略 */ } });
+    return dir;
+}
 function breakFile(mirrorRoot, rel, mutator) {
     const abs = path.join(mirrorRoot, rel);
     const src = fs.readFileSync(abs, 'utf8');
@@ -203,17 +246,17 @@ test('v3770 B3. 计数段在两次独立 spawn 之间逐字节一致（可复算
 });
 
 /* ══════════════════ C 行为面 ══════════════════ */
-test('v3770 C1. 探针六条判据全绿（verdict 是字符串而不是 inconclusive 对象）', () => {
+test('v3770 C1. 探针八条判据全绿（L1~L8，v3.79.0 起为八条）（verdict 是字符串而不是 inconclusive 对象）', () => {
     const r = runProbe(ROOT);
     assert.ok(r.parsed);
-    assert.ok(Array.isArray(r.parsed.criteria) && r.parsed.criteria.length >= 6, '判据数不足（实得 ' + (r.parsed.criteria || []).length + '）');
+    assert.ok(Array.isArray(r.parsed.criteria) && r.parsed.criteria.length >= 8, '判据数不足（v3.79.0 起为 L1~L8 八条，实得 ' + (r.parsed.criteria || []).length + '）');
     const failed = r.parsed.criteria.filter((c) => !c.pass).map((c) => c.id);
     assert.deepEqual(failed, [], '未通过：' + failed.join(','));
     assert.equal(typeof r.parsed.verdict, 'string', '判据全绿时 verdict 必须是结论文本：' + JSON.stringify(r.parsed.verdict));
 });
 
-test('v3770 C2. 「被跳过的楼」不静默：rendered + skipped === n（读不出来就不算测过）', () => {
-    for (const n of [1500, 500]) {
+test('v3770 C2. 「被跳过的楼」不静默：rendered + skipped === n（三档 500/1500/4000 都要成立）', () => {
+    for (const n of [1500, 500, 4000]) {
         const tag = 'n' + n;
         const rendered = base.readings['rendered_lines_' + tag];
         const skipped = base.readings['stub_skipped_lines_' + tag];
@@ -228,8 +271,10 @@ test('v3770 C2. 「被跳过的楼」不静默：rendered + skipped === n（读�
 test('v3770 C3. 单条消息的 DOM 代价不随会话长度漂移（这是「路径多重」的读数）', () => {
     const a = base.readings.divs_per_msg_n1500;
     const b = base.readings.divs_per_msg_n500;
-    assert.ok(a > 0 && b > 0, '两档都必须有读数');
+    const c4 = base.readings.divs_per_msg_n4000;
+    assert.ok(a > 0 && b > 0 && c4 > 0, '三档都必须有读数（典型 500/1500 + 极端 4000）');
     assert.ok(Math.abs(a - b) / b <= 0.10, '漂移超过 10% ⇒ 渲染路径变了：' + a + ' vs ' + b);
+    assert.ok(Math.abs(c4 - b) / b <= 0.10, '极端档漂移超过 10% ⇒ 渲染路径随规模变了：' + c4 + ' vs ' + b);
 });
 
 test('v3770 C4. 身份面完整：每条真渲染出来的消息都带 data-message-id', () => {
@@ -242,7 +287,7 @@ test('v3770 C4. 身份面完整：每条真渲染出来的消息都带 data-mess
 let cachedMirror = null;
 const mirrorFor = () => { cachedMirror = cachedMirror || mirror(); return cachedMirror; };
 
-test('v3770 D1. 摘掉消息图片的懒加载 ⇒ L1/L2 必须转红（且只红这两条）', () => {
+test('v3770 D1. 摘掉消息图片的懒加载 ⇒ L1/L2/L7 必须转红，且不得带红 L3~L6（定点性）', () => {
     const m = mirrorFor();
     breakFile(m, CV, (s) => {
         const anchor = '<img src="${safeImageContent}" loading="lazy" decoding="async"';
@@ -252,7 +297,16 @@ test('v3770 D1. 摘掉消息图片的懒加载 ⇒ L1/L2 必须转红（且只�
     const r = runProbeAt(path.join(m, PROBE), m);
     assert.equal(r.status, 0);
     const failed = r.parsed.criteria.filter((c) => !c.pass).map((c) => c.id).sort();
-    assert.deepEqual(failed, ['L1', 'L2'], '摘掉懒加载应只让 L1/L2 转红，实得：' + failed.join(','));
+    /* [v3.79.0 · 交棒改写（判据面，不是放宽）] 断言的**对象**从「只红 L1/L2」改成
+     *   「L1/L2 必红，且**同族的** L7（极端档的同一契约）也必红」。理由：同一处懒加载缺陷
+     *   会被两个夹具各读到一次，而 L7 存在的意义正是「不许只有典型档被查」——
+     *   把它排除在射程外，就等于给覆盖面开了个只在负控制里看的洞。
+     *   定点性判据改为「L3–L6 一律不得被这处破坏带红」（它们与媒体指令无关）。 */
+    assert.ok(failed.includes('L1') && failed.includes('L2'), '摘掉懒加载必须让 L1/L2 转红，实得：' + failed.join(','));
+    assert.ok(failed.includes('L7'), '同一契约在极端档上必须同样转红（覆盖面不许只在典型档成立），实得：' + failed.join(','));
+    for (const id of ['L3', 'L4', 'L5', 'L6']) {
+        assert.ok(!failed.includes(id), id + ' 与媒体指令无关，不得被这处破坏带红（定点性）：' + failed.join(','));
+    }
 });
 
 test('v3770 D2. 摘掉全部懒加载（两处） ⇒ 媒体指令契约回归失败', () => {
@@ -280,12 +334,60 @@ test('v3770 D3. 把时间分隔条改成每楼一条 ⇒ L6 必须转红', () =>
     assert.ok(failed.includes('L6'), '每楼一条分隔条必须让 L6 转红，实得：' + failed.join(',') || '(none)');
 });
 
+test('v3770 D5. 真源码破坏 phone.css 的装饰类覆盖 ⇒ L8（按动画名）必须点名转红', () => {
+    /* 破坏三件事之一：删掉一行覆盖选择器。判据面是 L8 的「按动画名判定装饰类被覆盖」，
+     *   故要求它转红**并点名那个动画**（按名判定才可能点名；计数判定只能说不等）。 */
+    /* 要一份**干净**的镜像根：共享那份已被前面的负控制破坏过（见 buildMirrorInto 注释）。 */
+    const m = fs.mkdtempSync(path.join(os.tmpdir(), 'o6l8-'));
+    buildMirrorInto(m);
+    breakFile(m, 'phone.css', (src) => {
+        const anchor = 'html[data-still="1"] .honey-goto-live-btn,' + String.fromCharCode(10);
+        assert.equal(src.split(anchor).length - 1, 1, '锚点必须恰中 1 次');
+        return src.replace(anchor, '');
+    });
+    const r = runProbeAt(path.join(m, PROBE), m);
+    /* 本探针的出口契约：0 = 跑到底（判据结果在 criteria 里）、2 = fail-closed 拒判。' +
+     *   它**不会**为「某条判据没过」而 exit 1（初版这里写 1 是把采样器的契约搬错了）。 */
+    assert.equal(r.status, 0, '破坏后探针仍须跑到底（实得 ' + r.status + '，2 意味着镜像里读不到输入面）');
+    assert.ok(r.parsed, '破坏后仍须吐 JSON（否则是崩溃而不是判据响）');
+    const l8 = (r.parsed.criteria || []).filter((c) => c.id === 'L8')[0];
+    assert.ok(l8 && l8.pass === false, 'L8（全仓按名覆盖）必须转红');
+    assert.ok(String(l8.got).indexOf('honeyFollowPulse') >= 0, '必须**点名**那个没被覆盖的动画：' + String(l8.got).slice(0, 260));
+    const others = (r.parsed.criteria || []).filter((c) => !c.pass).map((c) => c.id);
+    assert.deepEqual(others, ['L8'], '定点性：其余判据不得被这处破坏带红，实得：' + others.join(','));
+});
 test('v3770 D4. 删掉 manifest.version ⇒ 探针 fail-closed（exit 2，不得发 0 合格证）', () => {
     const m = mirrorFor();
     breakFile(m, 'manifest.json', () => JSON.stringify({ name: 'ruby-phone' }, null, 2) + String.fromCharCode(10));
     const r = runProbeAt(path.join(m, PROBE), m);
     assert.equal(r.status, 2, '读不到版本必须 exit 2（实得 ' + r.status + '）');
     assert.equal(r.parsed, null, 'fail-closed 时不得吐出任何「合格」读数');
+});
+
+/* ══════════════════ D8 动效面（L8）的负控制与面一致性 [v3.79.0] ══════════════════ */
+/* ★ 次序有讲究：D5 用共享镜像根（mirrorFor 是**缓存**），而 D4 会把 manifest.version' +
+ *   删掉让后续探针 fail-closed —— 故 D5 必须排在 D4 **之前**（这是实测出来的，不是摆好看的）。 */
+/* 为什么这两条归本套件而不归 v3790：L8 是**本探针**的判据，它的镜像根要求 chat-view 的
+ *   完整输入闭包 —— 本套件的镜像清单正是那份闭包（v3790 的没有）。负控制必须在它真正
+ *   运行的那个环境里做，否则「破坏后转红」证明不了任何事。 */
+
+
+test('v3770 D6. 两处「全仓 CSS 枚举」口径一致（探针内联那份 vs 本套件镜像面那份）', () => {
+    /* 同一件事写两遍，就必须有一处判据看守它们不分叉 —— 否则任一边改了深度上限
+     *   或后缀判定，另一边的取数面会静默缩水（本仓治过的形态）。 */
+    const marks = ['if (depth > 6) return;', "nm.slice(-4) === '.css'",
+        "if (nm === 'node_modules' || nm === '.git') continue;"];
+    for (const mk of marks) {
+        assert.ok(PROBE_SRC.includes(mk), '探针内联枚举缺口径片段：' + mk);
+        assert.ok(read(SELF_REL).includes(mk), '镜像面枚举缺口径片段：' + mk);
+    }
+    assert.ok(read(SELF_REL).includes('...allCssUnder(ROOT),'), '镜像清单必须真的铺上全仓 CSS（不是定义了没人用）');
+    assert.ok(PROBE_SRC.includes('const cssFiles = [];'), '探针必须真的枚举全仓 CSS');
+    /* 面下限 + 两边同清单：空面 = 「0 命中」与「干净」同形。 */
+    const r = runProbe(ROOT);
+    const got = r.parsed.readings.after_motion_css;
+    assert.ok(got.css_files_scanned > 0, '扫描面不得为空');
+    assert.equal(got.css_files_scanned, allCssUnder(ROOT).length, '两处枚举必须得到同一份清单');
 });
 
 /* ══════════════════ F 版本锚（下限形） ══════════════════ */

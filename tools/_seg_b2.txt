@@ -1,0 +1,13 @@
+    /* ★ [v3.79.0 改判：距离窗 → 作用域窗]
+     *   旧判据是 `/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/`：一条
+     *   「多远之内」的代理判据。它量错了对象 —— 本版把动效运行时挂到同一个出口时，
+     *   在那个 128 行的对象字面量里插了 8 行（motion 那格连注释），bootTiming 一句被
+     *   推到 442 字符外，于是判据转红，而**唯一出口这件事根本没变**。
+     *   「距离」只是「它是这个字面量的一格」的代理；代理一旦和它代理的东西脱钩，
+     *   治代理就是在治一个已经不存在的病（负控制也只能自证：只要真源里那句话离得够远，
+     *   它就永远是红的）。改判为量作用域：从 `window.VirtualPhone = {` 起做花括号配对，
+     *   `bootTiming: bootTiming` 必须落在这个对象字面量**之内** —— 不管中间插了多少行、多远，
+     *   只要还是它的一格就算过（否则它就是另一个作用域里的同名变量，诊断页读不到）。 */
+    const scope = scopeObjectLiteral(src, 'window.VirtualPhone = {', 'bootTiming: bootTiming');
+    assert.ok(scope.indexOf('bootTiming: bootTiming') >= 0,
+        '★ 必须挂出 window.VirtualPhone.bootTiming（诊断页读数的唯一出口）—— 它得是这个对象的一格');

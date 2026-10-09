@@ -1,0 +1,110 @@
+{
+ "file": "tests/audit/perf_sampler_probe.cjs",
+ "probe": "tests/audit/perf_sampler_probe.cjs",
+ "note": "被动采样器有界性与三态口径取证：合成 observer + Node（无浏览器）。读数不代表真机上的长任务分布；浏览器侧归 tests/browser/scenarios/o6-motion-throttle.scen.js。",
+ "measured_at": "v3.78.0",
+ "module": "config/perf-sampler.js",
+ "readings": {
+  "bounded": {
+   "armed": {
+    "ok": true,
+    "reason": ""
+   },
+   "limit": 8,
+   "count": 8,
+   "dropped": 5,
+   "maxMs": 13,
+   "lastMs": 13
+  },
+  "order": {
+   "maxMs": 13,
+   "lastMs": 13,
+   "count": 8,
+   "expectMin": 6,
+   "expectMax": 13
+  },
+  "unsupported": {
+   "armOk": false,
+   "support": false,
+   "probed": true,
+   "supported": false,
+   "count": 0
+  },
+  "passive": {
+   "timerCalls": 0
+  },
+  "idempotent": {
+   "a1": true,
+   "a2": "already-armed",
+   "d1was": true,
+   "d2was": false,
+   "a3": true,
+   "disconnects": 1
+  },
+  "repeatable": {
+   "equal": true,
+   "sample": {
+    "supported": true,
+    "probed": true,
+    "armed": true,
+    "limit": 6,
+    "count": 6,
+    "dropped": 3,
+    "maxMs": 13.5,
+    "totalMs": 58.5,
+    "lastMs": 13.5,
+    "lastAt": 9,
+    "reason": "p"
+   }
+  }
+ },
+ "criteria": [
+  {
+   "id": "P1",
+   "desc": "环形缓冲有界：灌 limit+extra 条后 count 停在 limit，dropped == extra",
+   "pass": true,
+   "got": "limit=8 count=8 dropped=5"
+  },
+  {
+   "id": "P2",
+   "desc": "环形缓冲读序为最旧→最新（maxMs / lastMs 都落在溢出后的尾样本上）",
+   "pass": true,
+   "got": "maxMs=13 lastMs=13（期望 max=13 last=13，存活样本自 6 起）"
+  },
+  {
+   "id": "P3",
+   "desc": "宿主不支持时 arm 返回 ok=false 且 readings().supported===false、probed===true（“没测到”不得与“0 条”同形）",
+   "pass": true,
+   "got": "armOk=false supported=false probed=true count=0"
+  },
+  {
+   "id": "P4",
+   "desc": "守护器自身零定时器（被动订阅，不轮询）：整段生命周期内 setInterval/setTimeout 调用数为 0",
+   "pass": true,
+   "got": "timerCalls=0"
+  },
+  {
+   "id": "P5",
+   "desc": "arm/disarm 幂等：重复 arm 走 already-armed 短路、重复 disarm 报 was=false、disarm 后可再 arm",
+   "pass": true,
+   "got": "a2=already-armed d1was=true d2was=false a3=true disconnects=1"
+  },
+  {
+   "id": "P6",
+   "desc": "同一输入复算两遍读数逐字段相等（读数可复算）",
+   "pass": true,
+   "got": "两遍逐字段相等"
+  }
+ ],
+ "corrections": [
+  "候选一（已实测否掉）：用定时器（requestIdleCallback / setInterval）主动轮询主线程读数。理由：本仓 v2.27.0 已把三处永久轮询改成登记制（runtime-lifecycle.js 文件头写明理由：句柄不存 + 无清理路径即永久累积）；守护器自己变成被守护对象是本末倒置。故本层只订阅浏览器自产的 longtask 条目，P4 判据把「零定时器」写成可测事实（把 globalThis 的 setInterval/setTimeout 换成计数器，恒为 0）。",
+  "候选二（已实测否掉）：自定卡顿阈值（例如 >100ms 记一次）。理由：longtask 条目自带 50ms 阈值且由浏览器判定 —— 自定阈值等于自己造口径，而本仓反复的教训是「口径必须单源」。故只收 longtask，不自算。",
+  "候选三（本版交付）：环形缓冲 + 三态（supported / probed / count）。有界是本条工作的字面要求（「有界保存」），三态挡的是「没测到」被读成「0 条」那一种假绿。"
+ ],
+ "not_done": [
+  "未测真机节流窗口：浏览器层用 document.hidden 属性替换模拟，不触发真实后台节流，故「手机上省了多少电」本层答不了。",
+  "未采样除 longtask 外的类别（resource / paint / layout-shift）：数据量大且有别的通道（boot-timing / perf_probe），本层不收。",
+  "未做长时（>1 分钟）累积行为观察：单帧 dump 模式下页面生命周期很短，环形缓冲的 dropped 增长只在探针里被证明（P1），不在浏览器里跑满。",
+  "未做目标设备读数：本环境无目标设备，读数只覆盖机制面。"
+ ]
+}

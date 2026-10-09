@@ -42,6 +42,7 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+import { boundedInt } from '../../config/num-clamp.js';
 
 /** 归因三态。**值**是连字符形，视图文案表的键必须取这里的值（同 focus / piggy / punchcard 纪律）。 */
 export const AVATAR_FRAME_REASONS = Object.freeze({
@@ -68,15 +69,6 @@ export const DEFAULT_AVATAR_FRAME_SETTINGS = Object.freeze({
 
 export function defaultAvatarFrameSettings() {
     return Object.freeze({ ...DEFAULT_AVATAR_FRAME_SETTINGS });
-}
-
-function boundedInt(v, fallback, min, max) {
-    // [v3.27.0] 取数改走全仓唯一实现（config/num-gate.js）：
-    //   原写法 Number.isFinite(Number(v)) 是弱口径签名 —— Number('') / Number([]) / Number(null)
-    //   全是 0，于是「上游没给这一格」与「上游给了 0」塌成同一个读数。
-    const n = numOrNull(v);
-    if (n === null) return fallback;
-    return Math.min(max, Math.max(min, n));
 }
 
 export function normalizeAvatarFrameSettings(raw) {

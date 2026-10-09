@@ -12,6 +12,16 @@
 // 设置APP
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
+/* [v3.81.0 · A6] 便携负载的纯函数对：魔标校验 + 按内容去重追加（三处导入共用同一份口径）。
+ *   此前三处（NAI 预设 / GPT 预设 / ComfyUI 工作流）各自解析、各自按名去重 ——
+ *   同一份文件导两次就多一份（id 每次新生成、名字又被改名规则绕开）。 */
+import {
+    PORTABLE_MARKS,
+    readPortable,
+    appendByContent,
+    portableLine,
+    parseStateLine
+} from '../../config/portable-payload.js';
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
@@ -1298,6 +1308,13 @@ export class SettingsApp {
         const phoneExtensionBaseUrl = window.VirtualPhone?.extensionBaseUrl || new URL('../../', import.meta.url).href;
         const homeLayoutRaw = String(this.storage.get('phone-home-layout') || 'icons');
         const homeLayout = homeLayoutRaw === 'cards' ? 'cards' : 'icons';
+        /* [v3.79.0 · 计划 R-O6 第二层] 动效档位（sys_motion_level，随会话隔离）。
+         *   设置页是这条键的**唯一写入口**（读侧在 config/motion.js 与 index.js 的运行时）。
+         *   未知值一律回落 auto ——「没设过」与「设了个不认识的值」在这里同形是安全的：
+         *   两者都应当跟随系统政策，而不是猜用户想要什么。 */
+        const MOTION_LEVEL_IDS = ['auto', 'full', 'reduced', 'still'];
+        const motionRaw = String(this.storage.get('sys_motion_level') || '').trim().toLowerCase();
+        const motionLevel = MOTION_LEVEL_IDS.indexOf(motionRaw) >= 0 ? motionRaw : 'auto';
         const cardLayoutCustomCss = String(this.storage.get(CARD_LAYOUT_CUSTOM_CSS_KEY) || '');
         // 加载壁纸和颜色设置
         const customWallpaper = this.imageManager.getWallpaper();
@@ -2456,6 +2473,21 @@ export class SettingsApp {
                                     <select id="phone-home-layout" style="width: 112px; height: 34px; padding: 0 8px; border: 1px solid rgba(18, 24, 38, 0.12); border-radius: 10px; background: #f8fafc; color: #111827; font-size: 12px;">
                                         <option value="icons" ${homeLayout === 'icons' ? 'selected' : ''}>图标布局</option>
                                         <option value="cards" ${homeLayout === 'cards' ? 'selected' : ''}>卡片布局</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-toggle">
+                                    <div>
+                                        <div class="setting-label">动效档位</div>
+                                        <div class="setting-desc">跟随系统 = 尊重系统的「减少动态效果」设置；减动会停掉装饰性动画（黑胶唱片旋转、跑马灯、加载旋转等），静态还会停掉正在播放的指示动画</div>
+                                    </div>
+                                    <select id="phone-motion-level" style="width: 112px; height: 34px; padding: 0 8px; border: 1px solid rgba(18, 24, 38, 0.12); border-radius: 10px; background: #f8fafc; color: #111827; font-size: 12px;">
+                                        <option value="auto" ${motionLevel === 'auto' ? 'selected' : ''}>跟随系统</option>
+                                        <option value="full" ${motionLevel === 'full' ? 'selected' : ''}>全开</option>
+                                        <option value="reduced" ${motionLevel === 'reduced' ? 'selected' : ''}>减动</option>
+                                        <option value="still" ${motionLevel === 'still' ? 'selected' : ''}>静态</option>
                                     </select>
                                 </div>
                             </div>
@@ -5866,6 +5898,15 @@ export class SettingsApp {
             window.VirtualPhone?.home?.render?.({ forceDomRefresh: true });
         });
 
+        /* [v3.79.0 · 计划 R-O6 第二层] 动效档位变更：写键 + 让运行时**立刻**重解析并重写 dataset。
+         *   为什么必须显式调一次而不是等下次启动：档位写的是 documentElement 的属性，
+         *   不重跑就只在下次启动生效 —— 用户当场改完看不到任何变化，会以为设置坏了。 */
+        document.getElementById('phone-motion-level')?.addEventListener('change', async (e) => {
+            const value = String(e.target.value || 'auto');
+            await this.storage.set('sys_motion_level', value);
+            try { window.VirtualPhone?.motion?.refresh?.(value); } catch (_e) { /* 运行时不在场时不影响设置落盘 */ }
+        });
+
         document.getElementById('save-card-layout-css')?.addEventListener('click', async () => {
             const textarea = document.getElementById('phone-card-layout-custom-css');
             const cssText = String(textarea?.value || '').trim();
@@ -7263,7 +7304,7 @@ export class SettingsApp {
             return this._getImagePromptAppDefs().find(def => def.id === normalizedApp)?.name || normalizedApp;
         };
         const buildImagePromptPresetSharePayload = (appKey, presets = []) => ({
-            type: 'yuzuki-phone-nai-presets',
+            type: PORTABLE_MARKS.NAI_PRESETS,
             version: 1,
             app: this._normalizeImagePromptApp(appKey),
             exportedAt: new Date().toISOString(),
@@ -7292,7 +7333,7 @@ export class SettingsApp {
             })).filter(preset => preset.name)
         });
         const buildOpenAIImagePresetSharePayload = (appKey, presets = []) => ({
-            type: 'yuzuki-phone-gpt-presets',
+            type: PORTABLE_MARKS.GPT_PRESETS,
             version: 1,
             app: this._normalizeImagePromptApp(appKey),
             exportedAt: new Date().toISOString(),
@@ -7401,21 +7442,27 @@ export class SettingsApp {
                 updatedAt: Date.now()
             };
         };
+        /* [v3.81.0 · A6] 三处导入共用同一份「认魔标 + 去重追加」口径（config/portable-payload.js）。
+         *   此前三处各自 `JSON.parse` + 按**名字**去重：同一份文件导两次就多一份
+         *   （id 每次新生成、名字又被 `导入2` 规则绕开），且错文件（把 GPT 预设喂给 NAI 导入）
+         *   会被静默吃进来写脏。 */
+        const readPortablePresetFile = (rawText, expectMark, label) => {
+            const read = readPortable(rawText, {
+                expect: expectMark,
+                allowUnmarked: true,
+                parse: (text) => {
+                    const tolerant = parseJsonTolerant(text);
+                    if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
+                    return tolerant.value;
+                }
+            });
+            if (!read.accepted) throw new Error(parseStateLine(read.state, read.mark) + '（' + label + '）');
+            return read.candidates;
+        };
         const parseImagePromptPresetImportText = (rawText = '') => {
             const text = String(rawText || '').trim();
             if (!text) return [];
-            // [v2.94.0] 导入串常是从聊天/文档里复制来的，容易带尾逗号或
-            //   缺分隔逗号。旧实现一次 JSON.parse 失败就整批拒绝，改走容错解析。
-            const tolerant = parseJsonTolerant(text);
-            if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
-            const payload = tolerant.value;
-
-            const candidates = Array.isArray(payload)
-                ? payload
-                : (Array.isArray(payload?.presets)
-                    ? payload.presets
-                    : (Array.isArray(payload?.items) ? payload.items : []));
-            return candidates
+            return readPortablePresetFile(text, PORTABLE_MARKS.NAI_PRESETS, 'NAI 预设')
                 .map((preset, index) => normalizeImportedImagePreset(preset, `导入预设 ${index + 1}`))
                 .filter(Boolean);
         };
@@ -7447,17 +7494,8 @@ export class SettingsApp {
         const parseOpenAIImagePresetImportText = (rawText = '') => {
             const text = String(rawText || '').trim();
             if (!text) return [];
-            // [v2.94.0] 同上：容错解析取代一次性 JSON.parse。
-            const tolerant = parseJsonTolerant(text);
-            if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
-            const payload = tolerant.value;
-
-            const candidates = Array.isArray(payload)
-                ? payload
-                : (Array.isArray(payload?.presets)
-                    ? payload.presets
-                    : (Array.isArray(payload?.items) ? payload.items : []));
-            return candidates
+            // [v2.94.0] 容错解析取代一次性 JSON.parse（可注入，见 readPortablePresetFile）。
+            return readPortablePresetFile(text, PORTABLE_MARKS.GPT_PRESETS, 'GPT 预设')
                 .map((preset, index) => normalizeImportedOpenAIImagePreset(preset, `导入 GPT 预设 ${index + 1}`))
                 .filter(Boolean);
         };
@@ -7779,19 +7817,22 @@ export class SettingsApp {
         const parseComfyUIWorkflowImportText = (rawText = '', fallbackBaseName = '') => {
             const text = String(rawText || '').trim();
             if (!text) return [];
-            let payload = null;
-            try {
-                payload = JSON.parse(text);
-            } catch (err) {
-                throw new Error('导入内容不是有效 JSON');
-            }
-            const candidates = Array.isArray(payload)
-                ? payload
-                : (Array.isArray(payload?.workflows)
-                    ? payload.workflows
-                    : (Array.isArray(payload?.items) ? payload.items : [payload]));
+            /* [v3.81.0 · A6] 走同一份便携口径：认魔标（不属本类的明确拒绝）、
+             *  容错解析（借鉴 NAI/GPT 两处的 v2.94.0 结论：导入串常带尾逗号）、
+             *  且允许**裸对象**（用户直接粘 API Format，没有 workflows 外衣）。 */
+            const read = readPortable(text, {
+                expect: PORTABLE_MARKS.COMFYUI_WORKFLOWS,
+                allowUnmarked: true,
+                singleObject: true,
+                parse: (raw) => {
+                    const tolerant = parseJsonTolerant(raw);
+                    if (!tolerant.ok) throw new Error('导入内容不是有效 JSON');
+                    return tolerant.value;
+                }
+            });
+            if (!read.accepted) throw new Error(parseStateLine(read.state, read.mark) + '（ComfyUI 工作流）');
             const baseName = String(fallbackBaseName || '').trim();
-            const workflows = candidates
+            const workflows = read.candidates
                 .map((item, index) => normalizeImportedComfyUIWorkflow(
                     item,
                     baseName ? (index === 0 ? baseName : `${baseName} ${index + 1}`) : `导入工作流 ${index + 1}`
@@ -7837,7 +7878,7 @@ export class SettingsApp {
             return nextName;
         };
         const buildComfyUIWorkflowSharePayload = (workflows = []) => ({
-            type: 'yuzuki-phone-comfyui-workflows',
+            type: PORTABLE_MARKS.COMFYUI_WORKFLOWS,
             version: 4,
             exportedAt: new Date().toISOString(),
             workflows: (Array.isArray(workflows) ? workflows : []).map(workflow => ({
@@ -8657,16 +8698,21 @@ export class SettingsApp {
                 const imported = parseOpenAIImagePresetImportText(rawText);
                 if (!imported.length) throw new Error('没有识别到可导入的 GPT 预设');
                 const existing = this._getOpenAIImagePresets(appKey);
+                /* [v3.81.0 · A6] 同 NAI 一处：按内容去重追加，绝不覆盖既有。 */
+                const merged = appendByContent(existing, imported);
+                if (!merged.added.length) {
+                    this.phoneShell?.showNotification?.('没有新增', portableLine(merged, 'GPT 预设'), '✅');
+                    return;
+                }
                 const usedNames = new Set(existing.map(preset => String(preset.name || '').trim()).filter(Boolean));
-                const nextPresets = [...existing];
                 let firstImportedId = '';
-                imported.forEach((preset) => {
+                merged.added.forEach((preset) => {
                     preset.id = createImagePromptPresetId();
                     if (!firstImportedId) firstImportedId = preset.id;
                     preset.name = makeUniqueImagePresetName(preset.name, usedNames);
                     preset.updatedAt = Date.now();
-                    nextPresets.push(preset);
                 });
+                const nextPresets = merged.list;
                 await this._saveOpenAIImagePresets(appKey, nextPresets);
                 await setOpenAIActivePresetId(appKey, firstImportedId);
                 fillOpenAIImagePresetSelect(nextPresets, firstImportedId);
@@ -8874,16 +8920,22 @@ export class SettingsApp {
                 const imported = parseImagePromptPresetImportText(rawText);
                 if (!imported.length) throw new Error('没有识别到可导入的预设');
                 const existing = this._getImagePromptPresets(appKey);
+                /* [v3.81.0 · A6] 按**内容**去重追加（此前按名字去重：同一份文件导两次就多一份）。
+                 *  绝不覆盖：既有条目只被保留（`kept` 与原数组逐项同引用）。 */
+                const merged = appendByContent(existing, imported);
+                if (!merged.added.length) {
+                    this.phoneShell?.showNotification?.('没有新增', portableLine(merged, 'NAI 预设'), '✅');
+                    return;
+                }
                 const usedNames = new Set(existing.map(preset => String(preset.name || '').trim()).filter(Boolean));
-                const nextPresets = [...existing];
                 let firstImportedId = '';
-                imported.forEach((preset) => {
+                merged.added.forEach((preset) => {
                     preset.id = createImagePromptPresetId();
                     if (!firstImportedId) firstImportedId = preset.id;
                     preset.name = makeUniqueImagePresetName(preset.name, usedNames);
                     preset.updatedAt = Date.now();
-                    nextPresets.push(preset);
                 });
+                const nextPresets = merged.list;
                 await this._saveImagePromptPresets(appKey, nextPresets);
                 const activeId = firstImportedId;
                 if (activeId) {
@@ -9222,16 +9274,21 @@ export class SettingsApp {
                 const imported = parseComfyUIWorkflowImportText(rawText, fileBaseName);
                 if (!imported.length) throw new Error('没有识别到可导入的 ComfyUI 工作流');
                 const existing = this._getComfyUIWorkflows();
+                /* [v3.81.0 · A6] 同两处预设：按内容去重追加，绝不覆盖既有工作流。 */
+                const merged = appendByContent(existing, imported);
+                if (!merged.added.length) {
+                    this.phoneShell?.showNotification?.('没有新增', portableLine(merged, 'ComfyUI 工作流'), '✅');
+                    return;
+                }
                 const usedNames = new Set(existing.map(workflow => String(workflow.name || '').trim()).filter(Boolean));
-                const nextWorkflows = [...existing];
                 let firstImportedId = '';
-                imported.forEach((workflow) => {
+                merged.added.forEach((workflow) => {
                     workflow.id = createImagePromptPresetId();
                     if (!firstImportedId) firstImportedId = workflow.id;
                     workflow.name = makeUniqueComfyUIWorkflowName(workflow.name, usedNames);
                     workflow.updatedAt = Date.now();
-                    nextWorkflows.push(workflow);
                 });
+                const nextWorkflows = merged.list;
                 await this._saveComfyUIWorkflows(nextWorkflows);
                 await setComfyUIActiveWorkflowId(firstImportedId);
                 fillComfyUIWorkflowSelect(nextWorkflows, firstImportedId);

@@ -197,6 +197,35 @@ function judgeReadOutletNaming(mod) {
     return { ok: bad.length === 0, why: bad.join(' / ') };
 }
 
+/** 对象字面量的作用域取文：遍历每一处 `head`，从开花括号起做配对（跳过字符串 / 注释 / 模板串），
+ *  返回第一个正文含 `needle` 的字面量（含首尾花括号）。
+ *  为何要遍历：同一份文件里 `window.VirtualPhone = {}` 有十几处（整个仓库约定的「存在即初始化」习惯），
+ *  只取第一处会拿到一个 `{}` 空对象（正是假红的另一种长相）。花括号不闭合即返回空串（fail-closed）。 */
+function scopeObjectLiteral(src, head, needle) {
+    for (let at = src.indexOf(head); at >= 0; at = src.indexOf(head, at + 1)) {
+        const open = src.indexOf('{', at + head.length - 1);
+        if (open < 0) continue;
+        let depth = 0;
+        for (let i = open; i < src.length; i += 1) {
+            const c = src[i];
+            if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i += 1; continue; }
+            if (c === '/' && src[i + 1] === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i += 1; i += 1; continue; }
+            if (c === '"' || c === "'" || c === '`') {
+                const q = c;
+                i += 1;
+                while (i < src.length) { if (src[i] === '\\') { i += 2; continue; } if (src[i] === q) break; i += 1; }
+                continue;
+            }
+            if (c === '{') depth += 1;
+            else if (c === '}') {
+                depth -= 1;
+                if (depth === 0) { const body = src.slice(open, i + 1); if (body.indexOf(needle) >= 0) return body; break; }
+            }
+        }
+    }
+    return '';
+}
+
 /* ══════════ A ── 口径本体 ══════════ */
 test('A1 ★★★ 无钟/坏钟下耗时如实 null（绝不编 0），且整份读数不塌', () => {
     const r = judgeNoFabricatedZero(BT);
@@ -287,8 +316,19 @@ test('B2 ★★ 两个启动大段 + 请求侧标记在场（三态可分：没�
     }
     /* 一行汇总必须走真源（不得就地拼一遍文案） */
     assert.ok(/bootTimingLine\(bootTiming\.collect\(\)\)/.test(src), '汇总日志必须消费真源文案');
-    assert.equal(/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/.test(src), true,
-        '★ 必须挂出 window.VirtualPhone.bootTiming（诊断页读数的唯一出口）');
+    /* ★ [v3.79.0 改判：距离窗 → 作用域窗]
+     *   旧判据是 `/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/`：一条
+     *   「多远之内」的代理判据。它量错了对象 —— 本版把动效运行时挂到同一个出口时，
+     *   在那个 128 行的对象字面量里插了 8 行（motion 那格连注释），bootTiming 一句被
+     *   推到 442 字符外，于是判据转红，而**唯一出口这件事根本没变**。
+     *   「距离」只是「它是这个字面量的一格」的代理；代理一旦和它代理的东西脱钩，
+     *   治代理就是在治一个已经不存在的病（负控制也只能自证：只要真源里那句话离得够远，
+     *   它就永远是红的）。改判为量作用域：从 `window.VirtualPhone = {` 起做花括号配对，
+     *   `bootTiming: bootTiming` 必须落在这个对象字面量**之内** —— 不管中间插了多少行、多远，
+     *   只要还是它的一格就算过（否则它就是另一个作用域里的同名变量，诊断页读不到）。 */
+    const scope = scopeObjectLiteral(src, 'window.VirtualPhone = {', 'bootTiming: bootTiming');
+    assert.ok(scope.indexOf('bootTiming: bootTiming') >= 0,
+        '★ 必须挂出 window.VirtualPhone.bootTiming（诊断页读数的唯一出口）—— 它得是这个对象的一格');
 });
 
 test('B3 ★★ 真源是零依赖叶子模块，且读出口命名服从 J2 口径（不叫 snapshot）', () => {
@@ -439,6 +479,29 @@ test('D4 ★★★ 负控制：真源码里拆掉一处 import 旁听 ⇒ 判据
     assert.ok(scan.bare[0] > 0, '转红须指得出行号');
 });
 
+test('D5 ★★★ 负控制：把 bootTiming 那一格搬出对象字面量 ⇒ 作用域窗同款判据转红', () => {
+    /* 真源码破坏（锚点恰中 1 次）：把它从对象里拿出去，改成对象**后**的一句赋值。
+     * 这正是旧距离窗本应抓住、却因为只看「400 字符内有没有这串字」而无从判断的形态，
+     * 而新判据问的是「它还是不是这个对象的一格」。
+     * 注意：破坏必须落在**取到的那个**对象字面量上，而不是同名的空对象上（存在即初始化的那十几处）。 */
+    const src = readRel('index.js');
+    const head = 'window.VirtualPhone = {';
+    const scope0 = scopeObjectLiteral(src, head, 'bootTiming: bootTiming');
+    assert.ok(scope0.length > 200, '阳性对照：应取到知道那一个对象字面量，实测长度 ' + scope0.length);
+    const assertScope = (s) => assert.ok(scopeObjectLiteral(s, head, 'bootTiming: bootTiming').indexOf('bootTiming: bootTiming') >= 0,
+        '★ 必须挂出 window.VirtualPhone.bootTiming（诊断页读数的唯一出口）—— 它得是这个对象的一格');
+    assertScope(src);   /* 阳性对照：真源上同款判据必须为真 */
+    const anchor = '                bootTiming: bootTiming,';
+    assert.equal(src.split(anchor).length - 1, 1, '锚点应恰好命中 1 次');
+    const broken = src.replace(anchor, '            };' + String.fromCharCode(10) + '            window.VirtualPhone.bootTiming = bootTiming;');
+    assert.notEqual(broken, src, '破坏必须真的改到东西');
+    assert.throws(() => assertScope(broken), /唯一出口/, '★ 搬出对象后，作用域窗判据竟然没转红（则本判据在说谎）');
+    /* （记录）旧距离窗在这个破坏上同样是红的 —— 说明改判不是「挡住了破坏」，而是「换了量的对象」。
+     *   旧判据的死法在别处：真源里那句话本来就在窗外（442 字符），于是它**恒红**，
+     *   逼着人把距离从 400 调到 500、600…… 那是在拿常数追事实。 */
+    assert.equal(/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/.test(broken), false,
+        '（记录）旧距离窗在此破坏上也是红：改判换的是判据量的东西，不是判据的松紧');
+});
 /* ══════════ E ── 版本锚 ══════════ */
 const VNUM = (s) => Number(String(s).split('.').reduce((a, x) => a * 1000 + Number(x), 0));
 test('E1 ★ 版本五源同源（下限形：自 3.13.0 起成立，不钉死某一版）', () => {

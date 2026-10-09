@@ -56,6 +56,12 @@ export class PhoneFloatingEntry {
             this.updateVisibility(typeof open === 'boolean' ? open : null);
         };
         this._onSettingsChanged = () => this.sync();
+        /* [v3.79.0 · 计划 R-O6 第二层] 页面隐藏时把宠物暂停（**降频不是杀死**）。
+         *   修前实测：面板关闭与页面隐藏两种状态下宠物 video 都还在播（`paused=false`）——
+         *   一个 webm 被钉在内存里、解码器按帧跑，而用户看不到。
+         *   注意闸门只认**页面可见性**，不认面板开关：宠物是面板**之外**的常驻元素，
+         *   面板开着时它本来就在演 PhoneLoop（那是产品行为，不是漏停）。 */
+        this._onDocVisibility = () => this.applyMotionGate();
     }
 
     isEnabled() {
@@ -324,6 +330,19 @@ export class PhoneFloatingEntry {
             }
         }
         try { this.pet?.syncPanel?.(hidden); } catch (e) {}
+        this.applyMotionGate();
+    }
+
+    /**
+     * [v3.79.0] 后台降频闸：页面隐藏时暂停宠物播放。
+     * 返回值 = 「现在允许播放吗」（真读数，供测试与诊断直接断言）。
+     * 无 document（Node 单测）时按允许处理 —— 缺席不得当成「隐藏」。
+     */
+    applyMotionGate() {
+        const hidden = (typeof document !== 'undefined') && document.hidden === true;
+        const active = !hidden;
+        try { this.pet?.setActive?.(active); } catch (_e) { /* 降频失败不得阻断悬浮球 */ }
+        return active;
     }
 
     mount() {
@@ -348,6 +367,9 @@ export class PhoneFloatingEntry {
             window.visualViewport?.addEventListener?.('resize', reposition, { passive: true, signal });
             window.visualViewport?.addEventListener?.('scroll', reposition, { passive: true, signal });
             window.addEventListener('phone:panelVisibility', this._onPanelVisibility, { signal });
+            /* [v3.79.0] 页面可见性也走同一个 AbortController：unmount 时统一摘掉，
+             *   不新增一条「手写清单」（本仓反复治过的形态）。 */
+            document.addEventListener('visibilitychange', this._onDocVisibility, { signal });
             window.addEventListener('phone:floatingEntrySettingsChanged', this._onSettingsChanged, { signal });
         }
 
@@ -393,6 +415,18 @@ export class PhoneFloatingEntry {
                 root.appendChild(petRoot);
             }
             this.pet = new PetController(petRoot, () => this.onActivate());
+            /* [v3.79.0 · 计划 R-O6 第二层] 可见性闸在**创建宠物的那个入口**绑定。
+             *   为什么不只在 mount() 里绑（实测踩到的坑）：`sync()` 会先试 mount()，
+             *   但悬浮球关掉时 mount() 直接返回，而 `ensurePet()` **仍然会造宠物** ——
+             *   于是出现「宠物在跑、却没人监听可见性」的形态（浏览器层实测：
+             *   页面隐藏后 video 仍 `paused=false`）。绑定点必须与创建点同处。
+             *   幂等用实例字段：`ensurePet()` 自身有 `if (this.pet) return` 前置，
+             *   但这层守卫只防同实例重复，故仍显式判断一次（防将来前置被改动）。 */
+            if (!this._docVisBound) {
+                this._docVisBound = true;
+                document.addEventListener('visibilitychange', this._onDocVisibility);
+            }
+            this.applyMotionGate();
             // [v3.56.0] 桌面宠物拖拽：`pet.css` 一直写着 cursor: grab，但全库从无实现
             //   （用户报障「悬浮球不能拖动」的根因）。挂在这里而不是 PetController 内：
             //   pet-root 由本方法创建，绑定点与创建点同处，无跨模块时序依赖。

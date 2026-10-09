@@ -40,6 +40,7 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+import { boundedInt } from '../../config/num-clamp.js';
 
 /** 归因三态。**值**是连字符形，视图文案表的键必须取这里的值（同 focus / piggy / punchcard 纪律）。 */
 export const WEATHER_REASONS = Object.freeze({
@@ -69,12 +70,6 @@ export const DEFAULT_WEATHER_SETTINGS = Object.freeze({
 
 export function defaultWeatherSettings() {
     return Object.freeze({ ...DEFAULT_WEATHER_SETTINGS });
-}
-
-function boundedInt(v, fallback, min, max) {
-    const n = numOrNull(v);
-    if (n === null) return fallback;
-    return Math.min(max, Math.max(min, Math.round(n)));
 }
 
 export function normalizeWeatherSettings(raw) {

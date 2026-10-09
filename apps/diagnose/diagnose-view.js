@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -347,6 +347,57 @@ export class DiagnoseView {
         const problems = Array.isArray(face.problems) ? face.problems : [];
         if (problems.length) {
             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
+    /** [v3.82.0 · B 清单] 写作面八张卡：氛围池 / 关系七级 / 判定与平行线 / 状态字段 /
+     *  事实表 / 二级摘要 / 人工纠错 / 叙述语言扫描。与其余协议卡同规格：内核只陈列、本视图只排版。 */
+    _craftHtml(pkg) {
+        const face = (pkg && pkg.craftFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到写作面（已降级）—— '
+                + '这是「本层读不出」，**不是**「八张卡都不在」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(craftFaceText(face)) + '</div>';
+        const cards = Array.isArray(face.cards) ? face.cards : [];
+        for (const c of cards) {
+            html += '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(c.line || '')) + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>写作面自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
+    /** [v3.83.0 · 计划 R-O7] 诊断处置卡：五态分布 + 需要动的项 + 一步到处置入口。
+     *  与其余协议卡同规格：内核只陈列、本视图只排版。**视图不自行推测**（本仓纪律）。 */
+    _disposalHtml(pkg) {
+        const face = (pkg && pkg.disposalFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到诊断处置面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有待处置项」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(disposalFaceText(face)) + '</div>';
+        const counts = face.counts || {};
+        html += '<div class=' + Q + 'dg-table' + Q + '>'
+            + this._chip('空 ' + String(counts.empty || 0), 'muted')
+            + this._chip('未知 ' + String(counts.unknown || 0), 'warn')
+            + this._chip('缺席 ' + String(counts.absent || 0), 'muted')
+            + this._chip('失败 ' + String(counts.failed || 0), (counts.failed ? 'bad' : 'ok'))
+            + this._chip('部分成功 ' + String(counts.partial || 0), 'warn')
+            + '</div>';
+        const items = Array.isArray(face.items) ? face.items : [];
+        for (const it of items) {
+            const bad = it.state === 'failed';
+            html += '<div class=' + Q + 'dg-sub' + (bad ? ' dg-bad' : '') + Q + '>'
+                + escapeHtml(String(it.line || ''))
+                + (it.appId ? ' --- 处置入口：' + escapeHtml(String(it.appId)) : ' --- 无处置入口') + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>处置面自检报了问题</b>：</div>';
             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
         }
         return html;
@@ -1007,6 +1058,10 @@ export class DiagnoseView {
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>多角色生图协议（槽位编辑 + payload 预检 + 幂等回执）</h3>' + this._characterSlotHtml(pkg) + '</section>');
+        /* [v3.82.0 · B 清单] 写作面卡与其余协议卡同列（它回答的是「写正文要用到的那几件事
+         *  各自的真源在不在」，与多角色生图/创作草稿同属「生成链上的一环」）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>写作面（氛围池 / 关系七级 / 判定与平行线 / 状态字段 / 二级摘要 / 纠错）</h3>' + this._craftHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>诊断处置（五态：空 / 未知 / 缺席 / 失败 / 部分成功 · 一步到入口）</h3>' + this._disposalHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>检查点内容级对照（上游只读）</h3>' + this._checkpointHtml(pkg) + '</section>');
         /* [v3.11.0 · F-1 替代轴] 回滚影响预览卡放在「存档健康」之前：
          *   它与存档健康同属「动手前先看清」，但本卡说的是**这一次动作的范围**，

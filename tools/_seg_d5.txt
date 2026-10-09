@@ -1,0 +1,22 @@
+test('D5 ★★★ 负控制：把 bootTiming 那一格搬出对象字面量 ⇒ 作用域窗同款判据转红', () => {
+    /* 真源码破坏（锚点恰中 1 次）：把它从对象里拿出去，改成对象**后**的一句赋值。
+     * 这正是旧距离窗本应抓住、却因为只看「400 字符内有没有这串字」而无从判断的形态，
+     * 而新判据问的是「它还是不是这个对象的一格」。
+     * 注意：破坏必须落在**取到的那个**对象字面量上，而不是同名的空对象上（存在即初始化的那十几处）。 */
+    const head = 'window.VirtualPhone = {';
+    const scope0 = scopeObjectLiteral(src, head, 'bootTiming: bootTiming');
+    assert.ok(scope0.length > 200, '阳性对照：应取到知道那一个对象字面量，实测长度 ' + scope0.length);
+    const assertScope = (s) => assert.ok(scopeObjectLiteral(s, head, 'bootTiming: bootTiming').indexOf('bootTiming: bootTiming') >= 0,
+        '★ 必须挂出 window.VirtualPhone.bootTiming（诊断页读数的唯一出口）—— 它得是这个对象的一格');
+    assertScope(src);   /* 阳性对照：真源上同款判据必须为真 */
+    const anchor = '                bootTiming: bootTiming,';
+    assert.equal(src.split(anchor).length - 1, 1, '锚点应恰好命中 1 次');
+    const broken = src.replace(anchor, '            };' + String.fromCharCode(10) + '            window.VirtualPhone.bootTiming = bootTiming;');
+    assert.notEqual(broken, src, '破坏必须真的改到东西');
+    assert.throws(() => assertScope(broken), /唯一出口/, '★ 搬出对象后，作用域窗判据竟然没转红（则本判据在说谎）');
+    /* （记录）旧距离窗在这个破坏上同样是红的 —— 说明改判不是「挡住了破坏」，而是「换了量的对象」。
+     *   旧判据的死法在别处：真源里那句话本来就在窗外（442 字符），于是它**恒红**，
+     *   逼着人把距离从 400 调到 500、600…… 那是在拿常数追事实。 */
+    assert.equal(/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/.test(broken), false,
+        '（记录）旧距离窗在此破坏上也是红：改判换的是判据量的东西，不是判据的松紧');
+});

@@ -109,6 +109,19 @@ import { bumpSessionEpoch } from './config/session-gate.js';
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
 import { createBootTiming, bootTimingLine } from './config/boot-timing.js';
+/* [v3.79.0 · 计划 R-O6 第二层] 动效档位与「后台降频 / 恢复重取」统一出口。
+ *   修前实测：`prefers-reduced-motion` 与 `animation-play-state` 全仓零命中；
+ *   面板隐藏后 `yzp-home-vinyl-spin` 仍是 running，宠物 video 在面板关闭与页面隐藏
+ *   两种状态下都还在播。本模块把三件事收进一个真源：档位解析（用户显式选择优先于
+ *   系统政策）/ 把档写成浏览器真懂的 dataset / 把同一轮恢复里的多个重取请求合成一次。
+ *   口径：后台降频不是后台杀死 —— 默认只停**非必要**动效与轮询，用户显式选
+ *   reduced/still 才连「用户正在看的进行中状态」一起降。 */
+import { MOTION_STORAGE_KEY, applyMotionLevel, applyMotionGate, bindVisibilityGate, createResumeScheduler, RESUME_EVENT } from './config/motion.js';
+/* [v3.79.0 · 计划 R-O6 第二层] 被动性能采样器。修前全仓 `PerformanceObserver` 零命中：
+ *   已有读数全是**主动调用式**，于是「用户实际体验到了什么」在两次主动调用之间是空白。
+ *   本模块只订阅浏览器自己产生的 longtask 条目（>50ms，阈值由浏览器定，不自造），
+ *   环形缓冲有界保存、可 arm/disarm。 */
+import { createPerfSampler } from './config/perf-sampler.js';
 import { APP_LAZY_ROUTES, APP_LAZY_ROUTE_INDEX } from './config/app-lazy-routes.js';   // [v3.61.0 · 计划 O6] 表驱动懒加载路由
 const bootTiming = createBootTiming();
 /* [v3.15.0 · 计划 #52] 使用统计的**采集咽喉点接线**。
@@ -125,7 +138,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.78.0';
+const ST_PHONE_VERSION = '3.84.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -305,26 +318,23 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-09",
+    date: "2026-10-11",
     items: [
-        "【定位 · 为什么把文档纪律变成门】** 本仓有一条写在 `CONTEXT.md` 里的血泪教训：「禁止对真仓库执行 `cp -al`」。它被记了 100 多个版本，**却没有任何一道门拦着它再来一次** —— 本仓对这类形态有过专门命名（「机制建好却零消费」的镜像：**规矩立好却零看守**）。本版把它做成第十五段静态门 `scripts/hardlink-safety-check.mjs`，判据全部落在**真源码 / 真进程 / 真磁盘**上。",
-        "【实测事故一 · v2.65.0 的 cp -al】** 某负控制用 `cp -al 真仓库` 建硬链接副本，实测 **425 个已跟踪文件**退化成指向临时别名名字的悬空符号链接，靠 `git checkout -- .` 恢复。事故之后只留下了一句注释与 `CONTEXT.md` 一行字，判据面为零。",
-        "【实测事故二 · v3.77.0 的 git clone 与本仓原地重建】** 本版开发期实测到**此前从未登记**的更深根因：`git clone` **自身**即触发同一模拟 —— 它在 `.git/objects/pack` 建硬链时把 `pack-*.pack / .idx / .rev` 改名成 `.l2s.tmp_*`，**规范名退化为绝对路径符号链接**（指回克隆当时的路径）。于是仓库一旦 `mv` 或原地重建，链接全部悬空 ⇒ `git log` 报 `bad object HEAD`、`git fsck` 报一批 `unable to mmap`。此形态**落在 `.git` 之内、不在工作树**，会整个越过「只查工作树有没有别名」的旧判据。",
-        "【为什么旧判据拦不住】** 仓内原有的 `tests/system-v265.test.mjs` 守卫只做了一件有价值的事：禁止**自己**去调 `cp` 复制文件树。它是**自我约束**，不是**对仓库状态的判据** —— 别人在别处弄坏这棵树，它一无所知。本门补的正是这一半：**对树本身取数**。",
-        "【判据一 · 真调用面】** H1：`scripts/` `tools/` `tests/` `apps/` `config/` 下**产品与工具代码**不得真去建硬链接（`fs.linkSync` / `fs.link` 调用 / 以 ln 或 cp 为程序名的子进程调用）。只拦**调用形态**，不拦字面提到 —— 本仓大量注释在**记录**这起事故（`CONTEXT.md` / `system-v265` / `system-v3770`），把「提到」也算违规就是把记录本身当成了病（本仓治过的形态：判据输入面 ≠ 结论面）。实测读数：扫描 **685 个文件**，真调用命中 **0 处**。",
-        "【判据二 · 工作树被改写】** H2：工作树侧（**排除 `.git`**）零 `.l2s.*` 别名、零符号链接。这正是 v2.65.0 那 425 个文件坏掉时的形态。实测对照：事故中的主仓 **7538 个符号链接**，健康仓 **0**。",
-        "【判据三 · 版本库可用】** H3：`git status --porcelain` 能跑（rc 0）。仓库被损坏时它直接 fatal（实测：`fatal: not a git repository` / `fatal: bad object HEAD`）。本门**不**把「有未提交改动」判红 —— 那是开发常态，判它等于「改一行就跑不了门」。",
-        "【判据四 · HEAD 可达】** H4：`git rev-parse HEAD` 成功**且** `git cat-file -t HEAD` 返回 `commit`。这条把「pack 索引被改名、规范名退化为悬空链接」那一形态钉住 —— 那种仓库 `git status` 可能仍不乱报，但 HEAD 一定取不出来。",
-        "【为什么 H2 与 H4 必须都在】** 两次事故分居两侧：v2.65.0 是**工作树**被改写（H2 抓），v3.77.0 是**对象库**被改写（H4 抓）。任一条单用都会对另一半完全沉默 —— 这也是本版把两条**都**写进门的原因，而不是选一条更省事的。",
-        "【实测纠正 · 最初判据每次提交自红（本版被自己抓到的一处错）】** 最初版本把「`.git` 里有 `.l2s.*`」当红灯。实测：本容器的 proot 在**任何一次正常提交**里都会留下 `tmp_obj_NNNN + tmp_obj_NNNN.0001` 这一对（全新 `git init` 加一次 commit 即产生 **3 对**，而 git 一切正常）。按最初判据，这道门会在**每次提交后自红** —— 而「永远红的门 = 没有门」。故判红域收窄为**工作树侧**，并把这条口径固化成 `tests/system-v3780.test.mjs` 的 E1 组（夹具里**已含**这些别名，而正控制要求 exit 0）。",
-        "【判据边界 · 旁证域与扫描面下限（都是防「永远红」与「永远绿」）】** ① `os.tmpdir()` 与仓库父目录只作**旁证报数、不判红**（实测该两处有 **27 万余条**别名，属别的项目，判红会让本门永远红）；② 扫描面低于 **50 个源文件**即 **exit 2 拒判**（扫描目录写错时「0 命中」与「干净」同形，本仓 v3.3.2 O-3 同款纪律）；③ 旁证递归有**目录数上限**并如实标注「已截断」（门不许自己拖垮迭代节奏）。",
-        "【接线四处（缺一处等于没接上）】** ① `package.json` 的 `hardlink-safety` 脚本与 `scripts.check` 链（链长 **14 → 15**）；② `config/gate-budget.json` 逐门预算（与链顺序同源，v3201 的 F1 判据看守）；③ `config/gate-tiers.json` 静态档清单；④ `scripts/check-file.mjs` 的主读数登记（未登记即 exit 2 拒判）。另：台账 `tests/audit/status-ledger.json` 的 `check_chain_len` 随链自动归位。",
-        "【实测读数（真跑，不是推演）】** 本门对真仓：扫描 685 文件 / 真调用 0 / 工作树别名 0 / 工作树符号链接 0 / 版本库可用 / HEAD 可达 ⇒ **exit 0**，耗时约 **3.6 秒**。负控制五条全数转红：扫描面塌陷 ⇒ exit 2；真调用 `fs.linkSync` ⇒ exit 1；工作树别名 ⇒ exit 1；工作树符号链接 ⇒ exit 1；HEAD 不可解 ⇒ exit 1。反向自证一条：注释与字符串里提到 `fs.linkSync` **不得**转红。",
-        "【边界（诚实，四条）】** ① 本门**不**自动清理任何残留：发现只报位置与形态（v3.77.0 实测 `git prune` 会连带删掉从未提交的松散对象 ⇒ 自动清理是危险动作，清理必须是人或脚本的显式动作）；② 本门**不**覆盖仓库之外的任意路径，它守的是「这个仓库还能用吗」，不是「整台机器干不干净」；③ 本门判的是**树的状态**，不是「谁弄坏的」，归因仍需人做；④ 符号链接判据按**存在即红**处理，若将来确有需要提交的符号链接（本仓当前 0 处），须显式开白名单并在此登记。",
-        "【本版自己抓到的缺陷（一处，由实测红出来）】** 第一版判据把「`.git` 里有 `.l2s.*`」当红灯 —— 实测：全新 `git init` 加一次 commit 就产生 3 对 `tmp_obj` 别名，而 git 一切正常。按那版判据，这道门会在**每次提交后自红**，即「永远红的门 = 没有门」（本仓治过的最贵形态之一）。修法：判红域收窄为**工作树侧**，并把口径固化成负控制 E1 组（夹具里**已含**那些别名，而正控制仍须 exit 0）。同批修掉的第二处：最初把「有未提交改动」当红灯，那等于「改一行就跑不了门」，一并去掉。第三处：旁证递归最初无上限，实测在 22 万条别名的 `/tmp` 上慢到不可用，改为有界并如实标注「已截断」。",
-        "【交棒改写（判据面，不是放宽）】** 仓内原有的 `tests/system-v265.test.mjs` 守卫只约束「**自己**不许调 cp 复制文件树」，属自我约束而非对仓库状态的判据（别人在别处弄坏这棵树，它一无所知）；本版新增的门改成**对树本身取数**（真调用面 / 工作树 / 版本库 / HEAD 四条），两者并存、分工不重叠，旧守卫一行未改。另两处同源改写：`config/gate-budget.json` 的 `total_ms` 随新增一段**同步重算**（自洽判据当场看守）；`CONTEXT.md` 的门数总述行由「十四道」改「十五道」（C4 判据逐字对账，并额外写清「链段数 15」与「静态门脚本数 14」不是一回事）。",
-        "【边界 · 用户可见的那句仍须与工程文档同源】** 本门判的是**这棵树的状态**，不是「整台机器干不干净」，也不是「谁弄坏的」—— 归因仍需人做。**看起来没坏但显示不对** 这一族的镜像（树的形态已经坏了，而命令照样能跑出一堆看似正常的输出）本门挡得住；但本层 **不能保证** 仓库之外任意路径是否干净、也不能保证每次损坏都能定位到肇事者，那两项归 **运行时验证边界**。那句话与 docs/runtime-verification-boundary.md 逐字同源，用户侧读到的就是它。",
-        "【版本升至 3.78.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两道真门读数由取数臂现场跑后写入，不手抄）；门禁链尾新增一段（`scripts.check` 由 14 段变 15 段）；状态台账按新落盘重生成。"
+        "【定位 · 计划 R-O8 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 依据真调用图优先治理四簇（懒加载映射 / 生命周期接线 / 更新公告数据 / 跨 App 注入装配）；② 先迁纯数据与无状态装配，再迁带副作用模块；③ 每次迁移保持 App 加载顺序、单例、旧键名与异常退路；④ 清理同名不同实现的函数，核对动态路径与缺席退路。本版先做**取数**：扫 apps/ config/ phone/ 全部 .js 的函数定义面（名字 + 函数体指纹）。",
+        "【取数结果（本版全部结论的起点）】** 同名函数 **163 组**：其中函数体**逐字相同**的 30 组、**同名不同实现**的 **133 组**。最典型的一簇是「有界取整」：`boundedInt` 一份代码在 **11 个文件**里各写了一遍，参数名与语义完全一致（v, fallback, min, max），而其中 **2 份仍是弱口径**（Number(v) + Number.isFinite）。",
+        "【为什么这是 R-O8 点名的形态，而不是洁癖】** 同一条口径在 11 处复制，改好了 9 处、剩下 2 处**没有任何东西能回答**。第 9 处改对不等于第 10 处改对 —— 这正是「维护半径」四个字的实测含义。而弱口径的后果是**读数塌格**：对空串、空数组、null 调用 Number 全是 0，「上游没给这一格」与「上游给了 0」在同一个写法下同形。",
+        "【新模块 · config/num-clamp.js】** 有界取数的**唯一实现**：boundedBy（返回对象形态，带处置原因）/ boundedInt / boundedNum / clampLine。取数一律走 numOrNull（全仓唯一取数门）。",
+        "【本模块的两条裁定（各自对应一个错法）】** ① 边界 min/max **必须都是有限数**才夹取 —— 边界本身取不到时如实返回原数并报 unbounded，**不夹取、也不编一个边界**（这一条与「没给 ≠ 给了 0」同源）；② 三态互不同形：value（取到并夹好）/ fallback（取不到，用兜底）/ unbounded（取到了但边界取不到）—— 把 unbounded 并进 value，调用方会以为边界生效了；并进 fallback，会以为没取到数。",
+        "【迁移 11 处（计划第 ②③ 条：先迁无状态装配，保持加载顺序与异常退路）】** accounting / avatarframe / block / focus / piggy / punchcard / regexfilter / shop / taobao / weather / widget 共 11 个 App 的本地 boundedInt 全部删除，改引唯一实现；各文件只加一条静态导入，**调用点与参数一字未改**（零行为变更面），App 加载顺序、单例与错误退路不动。",
+        "【两处真缺陷当场被消掉】** accounting 与 focus 两份正是残留的**弱口径**副本（Number(v) + Number.isFinite）—— 迁移后它们与其余 9 处**必然同口径**，因为只有一份实现了。这不是「顺手改」，而是 R-O8「清理同名不同实现」的直接兑现。",
+        "【配套：副本夹具也要有唯一实现】** 七个老套件的负控制用 `mkdtempSync` 搭真目录结构的副本再加载被破坏模块；被加载模块现在会引 num-clamp ⇒ 副本里缺它即 ERR_MODULE_NOT_FOUND（**与破坏本身无关的假红**）。处置是给夹具补一份**真件字节副本**（copyFileSync，不是手写桩 —— 桩会与真件分叉），共 7 个套件。",
+        "【本版顺带修掉的真缺陷（三处，都由老判据当场报出）】** ① `docs/runtime-verification-boundary.md` 的机器可读复校契约两行**陈旧**（语法 710 / 导入 399 文件 660 条 vs 真跑 730 / 415 文件 695 条）—— 这正是那道契约要防的形态：文档写了实测、其实是抄的旧数；② 日程冲突基线 `files_scanned` 386 → **402**（枚举面随真源文件数走，本版新增件入面）；③ 长会话基线 `scan.files` 387 → **403** 与判据散文 L5 的 got_text 同步（该套件的纪律是「源变了就该主动刷新基线的 got_text」，不是放宽判据）。",
+        "【新增套件 · tests/system-v3840.test.mjs】** 结构面（唯一实现在场且只导出这一族 / 11 处本地副本已清零 / 各文件真引唯一实现）+ 行为面（三态互不同形 / 边界取不到即不夹取 / 弱口径与强口径的输入对读差）+ 接线面（真跑被迁移 App 的 normalize 入口，读数与迁移前逐项相同）+ 负控制（真源码定点破坏 → 破坏副本 → 同款判据）+ 版本锚。",
+        "【本版自己抓到的缺陷（四处，都由老判据当场报出，不是事后回看）】** ① 机器可读复校契约陈旧（见上）；② 日程冲突基线 files_scanned 与长会话基线 scan.files 与 L5 got_text 随枚举面漂移未刷；③ 本套件判据**自身偏差两处**：A1 的弱口径签名判据在未剔注释的源码上跑（唯一实现的文件头里逐字写着那个签名，属「判据面被散文侵入」）；B1 夹具把 boolean 当合法读数（numOrNull 只认 number 与非空数字字符串）—— 两处都是判据自己算错口径，已按真源改回；④ C1 夹具的期望值写错（0-20 界内取 3 却写成 5），属「夹具错会把好代码逼着改坏」。",
+        "【用户可见的边界（与 docs/runtime-verification-boundary.md 同源）】** 本版挡得住「**看起来没坏但显示不对**」这一族里的一个具体形态：同一口径被复制成多份、其中几份悄悄退回弱口径（读数上只表现为「空值被读成 0」，没有任何一处会报错）。本版 **不能保证**：其余 132 组同名不同实现都已收口（本版只治了「参数与语义完全一致」的那一族，其余需要逐簇判断，不是复制粘贴能解决的），也不能保证真机上的行为与这里的输入对读差完全一致。边界原文见运行时验证边界文档。",
+        "【交棒改写（判据面，不是放宽）】** 本版把「弱口径不再允许就地新写」从 weak-coercion 门的**事后扫描**升级为 num-clamp 的**结构性不允许**：有界取数本身只剩一处实现，第 12 处副本连出现的机会都没有。门与真源分工不重叠（门仍在守其余族名的漏网），旧判据一行未改。",
+        "【边界 · 诚实三条】** ① 本版**只治完全同构的那一族**（11 处 boundedInt 与它们的参数语义逐字一致）—— 其余同名不同实现的 132 组多数是**合理分化**（同一个名字在不同 App 里语义本就不同，例如 clip 有五种不同截断口径），强行合并会抹掉差异；② 本版**没有动**计划点名的另三簇（懒加载映射已由 v3.61.0 表驱动收口、生命周期接线与更新公告数据两簇本版只取数不动手）—— 它们需要各自的判据面，不是同一把刀；③ 迁移的收益是**维护半径**（同口径只剩一份实现），**不是行数**：11 个文件合计只减约 1.9KB，按计划原文「入口行数只作附属读数」的口径，本版**不以行数作为理由**。",
+        "【版本升至 3.84.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；状态台账按新落盘重生成。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3840.py 对齐 tools/bump_v3830.py）。"
     ]
 };
 
@@ -386,6 +396,108 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     // 🔥 三击唤醒手势状态
     let phoneTapCount = 0;
     let phoneLastTapTime = 0;
+
+    // [v3.79.0 · 计划 R-O6 第二层] 动效运行时：档位解析 / 后台降频闸 / 恢复重取合成器。
+    //   为什么三件东西放一处而不是散到各消费方：修前实测的处境是「没人负责」——
+    //   面板关了、页面切走了，该停的照跑；而一旦改成「人人负责」，恢复瞬间就会变成
+    //   每个消费方各跑一次全量重算（计划原文点名要避免的形态）。故闸门一个、合成器一个。
+    let motionRuntime = null;
+    // [v3.79.0] 有界被动采样器：随动效运行时一起起，但**独立可停**（见下方闸门回调）。
+    let perfSampler = null;
+
+    /** 面板当前是否开着（可见性判定的单一真源，与产品自己的类名同源）。 */
+    function isPhonePanelOpen() {
+        try { return document.getElementById('phone-panel')?.classList?.contains('phone-panel-open') === true; }
+        catch (_e) { return false; }
+    }
+
+    /** 读出用户档位（storage 唯一写入者仍是设置页；此处只读，读不到就回落 auto）。 */
+    function readMotionUserLevel() {
+        try { return storage?.get?.(MOTION_STORAGE_KEY); } catch (_e) { return null; }
+    }
+
+    /**
+     * 把档位写到 documentElement（浏览器真懂的载体）并刷新运行时读数。
+     * 幂等：多次调用结果一致；无 documentElement 时返回 ok=false 但不抛。
+     */
+    function refreshMotionLevel(reason = 'init') {
+        const r = applyMotionLevel(document, readMotionUserLevel());
+        try {
+            if (motionRuntime) {
+                motionRuntime.level = r.level;
+                motionRuntime.source = r.source;
+                motionRuntime.still = r.still;
+                motionRuntime.lastReason = String(reason);
+            }
+        } catch (_e) { /* 读数失败不得阻断档位写入 */ }
+        return r;
+    }
+
+    /**
+     * 启动动效运行时。**在任何 App 之前**跑：档位必须在首帧前写出，
+     *   否则用户会先看到一段动效再被停掉（首屏一闪）。
+     */
+    function initMotionRuntime() {
+        if (motionRuntime) return motionRuntime;
+        const scheduler = createResumeScheduler({ maxTasks: 12 });
+        perfSampler = createPerfSampler({});
+        /* 前台才采样：后台断开订阅（断开的成本是 0；留一个隐藏期的 observer 不是）。
+         *   这条与「守护器自身不得常驻拖累」是同一条纪律的两面。 */
+        try { perfSampler.arm('boot'); } catch (_e) { /* 采样失败不得阻断启动 */ }
+        motionRuntime = {
+            key: MOTION_STORAGE_KEY,
+            level: 'full', source: 'default', still: false,
+            scheduler,
+            gate: null,
+            /** 恢复次数（只增）：浏览器层与诊断用它证明「恢复真的发生过」。 */
+            resumes: 0,
+            lastReason: '',
+            /** 最近一次闸门读数（现取，不留缓存）。 */
+            state: () => (motionRuntime.gate ? motionRuntime.gate.state() : { active: true, reason: 'unbound', panelOpen: false, docVisible: true }),
+            /** 恢复重取：同 key 覆盖，flush 时统一执行。 */
+            onResume: (key, fn) => scheduler.request(key, fn),
+            /**
+             * [v3.79.0] 重解析并重写档位（设置页改完当场生效；不传参则现读 storage）。
+             * 刻意**只认 storage 这一份真源**：传进来的 hint 只用于「刚落盘之前」那一瞬，
+             *   若存储写失败，读回来的是旧值 —— 那时界面显示新档而实际是旧档，这种不一致
+             *   必须在读数上可查，故这里**先写后读**、以读到的为准。
+             */
+            refresh: () => refreshMotionLevel('manual'),
+            stats: () => ({ level: motionRuntime.level, source: motionRuntime.source, still: motionRuntime.still, resumes: motionRuntime.resumes, lastReason: motionRuntime.lastReason, ...scheduler.stats(), sampler: perfSampler ? perfSampler.readings() : null }),
+            /** 采样器读数（有界快照；未支持时 supported=false，**不得读成 0 条**）。 */
+            perf: () => (perfSampler ? perfSampler.readings() : null),
+        };
+        refreshMotionLevel('init');
+        const gate = bindVisibilityGate(
+            { win: window, doc: document, getPanelOpen: isPhonePanelOpen },
+            (st) => {
+                try {
+                    try { applyMotionGate(document, !!(st && st.active === true), st && st.reason); }
+                    catch (_e) { /* 闸门写入失败不得阻断降频与重取 */ }
+                    if (st && st.active === false) {
+                        /* 后台：断开订阅（有界被动采样器只在前台收集）。 */
+                        try { perfSampler?.disarm('hidden:' + String(st.reason || '')); } catch (_e) { /* 忽略 */ }
+                    }
+                    if (st && st.active === true) {
+                        // 恢复：先合成一次「重取」，再放恢复信号（两者分工：
+                        //   合成器管「没人在场时攒下的重取」，信号管「需要现取状态的消费方」）。
+                        motionRuntime.resumes += 1;
+                        motionRuntime.lastResumeAt = Date.now();
+                        const r = scheduler.flush('resume:' + String(st.reason || ''));
+                        motionRuntime.lastFlush = r;
+                        // 恢复：重新订阅（若宿主不支持，arm 会如实返回 ok=false，
+                        //   而 readings().supported 仍是 false —— 两种「没测到」不同形）。
+                        try { perfSampler?.arm('resume'); } catch (_e) { /* 忽略 */ }
+                        try { window.dispatchEvent(new CustomEvent(RESUME_EVENT, { detail: { ...st, flushed: r } })); } catch (_e) { /* 派发失败不得阻断 */ }
+                    }
+                } catch (_e) { /* 恢复处理失败不得抛 */ }
+            },
+            globalRuntime
+        );
+        motionRuntime.gate = gate;
+        try { if (!window.VirtualPhone) window.VirtualPhone = {}; window.VirtualPhone.motion = motionRuntime; } catch (_e) { /* 全局不可写时不阻断 */ }
+        return motionRuntime;
+    }
 
     // 🔥 延迟初始化的变量
     let phoneShell = null;
@@ -9910,12 +10022,22 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // 🔥 第一阶段：核心数据初始化
             loadData();
 
+            /* [v3.79.0 · 计划 R-O6 第二层] 动效运行时在**这里**起，理由有二：
+             *   ① 档位必须在首帧之前写到 documentElement 上，否则用户会先看到一段动效再被停掉；
+             *   ② storage 此刻已就绪（loadData 已跑），读得到用户档位。
+             *   它起在 VirtualPhone 重建**之前**，故下面那一步用 ...previousVirtualPhone 保留它。 */
+            try { initMotionRuntime(); } catch (e) { console.warn('[v3.79.0] 动效运行时启动失败（不阻断）:', e); }
+
             // 🔥 VirtualPhone 全局对象（保留已挂载的方法，避免被覆盖）
             const previousVirtualPhone = (window.VirtualPhone && typeof window.VirtualPhone === 'object')
                 ? window.VirtualPhone
                 : {};
             window.VirtualPhone = {
                 ...previousVirtualPhone,
+                /* [v3.79.0 · 计划 R-O6 第二层] 动效运行时与恢复重取合成器。
+                 *   与 bootTiming 同规：挂在唯一出口上，诊断页与控制台从这里读，
+                 *   而**不是**让每个消费方各持一份状态（那样「现在是哪一档」会有 N 个答案）。 */
+                motion: motionRuntime,
                 /* [v3.13.0] 启动耗时实例挂**唯一**出口（诊断页从 `window.VirtualPhone.bootTiming`
                  *   取；实例在模块求值时即建好，故这里读到的是**整段启动**的账）。 */
                 bootTiming: bootTiming,

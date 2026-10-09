@@ -12,6 +12,18 @@ import { MemoryPool } from './memory-pool.js';
 import { cleanFloorForSummary } from '../../config/message-clean.js';
 import { decorateRecall, pruneByLifecycle, RECALL_PERMISSION } from '../../config/recall-filter.js';
 import { scanSupersede, reviveSuperseded, SUPERSEDE_STATUS } from '../../config/supersede-engine.js';
+/* [v3.80.0 · 缝入 A3] 结构化记忆块：模型在正文里**显式声明**要记的事。
+ *   修前记忆全靠被动采集（正文丢桶、后续检索捞回来），于是「共同经历」这类
+ *   需要主动声明的东西，从来没被声明过 —— 它只是恰好躺在某句话里，检索到了算运气。 */
+import { parseMemoryBlock, memoryBlockLine } from '../../config/memory-block.js';
+/* [v3.80.0 · 缝入 A2] 三级记忆：world（跨卡共同）/ shared:<角色>（跨卡角色）/ save（本档）。
+ *   存储只加**一个**全局键（键面成本：每加一键就要在 keys-audit 回答归属、在
+ *   CHAT_DATA_PATTERNS 与机制对齐）；`/^memory_/` 全判会话隔离的口径不变，
+ *   故该键刻意走 `phone_` 前缀并登记 scope:'global'（见 scripts/keys-audit.mjs）。 */
+import {
+    SHARED_MEMORY_KEY, LEVELS as SHARED_LEVELS, emptyStore, normalizeStore,
+    remember as sharedRemember, recall as sharedRecall, sharedMemoryLine as sharedMemoryLineOf
+} from '../../config/shared-memory.js';
 
 /** [v3.3.0] 楼层取值门（删楼回滚族）：只认数字与非空数字字符串，其余如实 null。
  *  与 `config/projection-contract.js` / `config/injection-contract.js` 的 `numOrNull`、
@@ -36,6 +48,12 @@ export class MemoryCore {
         this.pool = new MemoryPool();
         // [RB] 数据版本戳: 任何落盘的记忆变更递增, 供 LonShaBridge 懒检测 BM25 索引失效
         this._dataVersion = 0;
+        /* [v3.80.0 · 缝入 A3] 最近一次解析到的记忆块（诊断页读它，不重解析）。
+         *   刻意**不落盘**：块是「这一轮回复说了什么」，不是账本。 */
+        this.pendingMemoryBlock = null;
+        this._sharedLoaded = false;
+        this._sharedStore = emptyStore();
+        this._sharedWriteCount = 0;
         // [v2.82.0] prompt 钩子单次挂载标记（见 attachPromptHook 注释）
         this._hooked = false;
 
@@ -112,10 +130,26 @@ export class MemoryCore {
      * @param context 可选 { place, senses, emotion }
      */
     record(role, text, context = {}, meta = {}) {
+        /* [v3.80.0 · 缝入 A3] 结构化记忆块解析 —— **必须在清洗之前**。
+         *   修后实测（本套件 C3/C4 当场抓到）：`cleanFloorForSummary` 会把成对块
+         *   整段剔除，先清洗再解析等于把模型写的块当噪声删掉 —— 解析永远读不到块。
+         *   它剔除的是**系统注入**的状态块，而我们这里要读的正是模型自己写的块，
+         *   两者形状相近但归属相反，故顺序不可调换。 */
+        let block = null;
+        try { block = parseMemoryBlock(String(text || '')); } catch (_e) { block = null; }
+        this.pendingMemoryBlock = (block && block.present) ? block : null;
+
         let content = String(text || '');
         // [芋圆] 采集前清洗: 剔除 horae 等插件注入的状态块/HTML/成对块/裸K=V行, 避免把系统状态当记忆采进去
         try { content = cleanFloorForSummary(content); } catch (e) { /* 清洗失败保留原文 */ }
         content = content.replace(/\s+/g, ' ').trim();
+
+        /* 吸块必须在「正文为空」那道门**之前**：整楼只有记忆块的回复，清洗后正文确实为空 ——
+         *   若先过门再吸块，这种回复会早退，块永远进不了桶
+         *   （实测量到：只写块的那一楼 record 返回 null，pendingMemoryBlock 有读数而桶是空的）。 */
+        if (block && block.present && !block.empty && block.items.length) {
+            try { this._absorbMemoryBlock(block, role, meta); } catch (_e) { /* 解析出的块坏了不阻断采集 */ }
+        }
         if (!content) return null;
 
         const emotion = this.emotion.analyze(content);
@@ -159,6 +193,83 @@ export class MemoryCore {
         // 每 N 条自动触发一次睡眠巩固
         if (this.shortTerm.length >= this.config.sleepEveryMessages) this.sleep();
         return entry;
+    }
+
+    /* ---------------- [v3.80.0 · 缝入 A2/A3] 跨卡记忆与结构化块 ---------------- */
+
+    /** 全局桶读入（懒加载 + 每次写回都回写内存副本）。
+     *  刻意**不**进 `_load()`：`reload()` 是换会话路径，把跨卡桶挂在那儿
+     *  等于换会话就把跨卡层丢掉 —— 那正是本功能要治的病。 */
+    _sharedStoreNow() {
+        if (this._sharedLoaded) return this._sharedStore;
+        let raw = null;
+        try { raw = this.storage?.get?.(SHARED_MEMORY_KEY); } catch (_e) { raw = null; }
+        this._sharedStore = normalizeStore(raw);
+        this._sharedLoaded = true;
+        return this._sharedStore;
+    }
+
+    _persistShared(store) {
+        this._sharedStore = store;
+        this._sharedLoaded = true;
+        this._sharedWriteCount += 1;
+        try { this.storage?.set?.(SHARED_MEMORY_KEY, JSON.stringify(store)); } catch (_e) { /* 全局桶写失败不阻断本会话记忆 */ }
+    }
+
+    /** 结构化块 → 跨卡桶。层级由调用方经 `meta.sharedLevel` 指定，默认 world：
+     *  「共同经历」需要知道**是谁**的经历，而块里只有文本 —— 名字得由调用方给。 */
+    _absorbMemoryBlock(block, role, meta) {
+        const level = (meta && meta.sharedLevel === SHARED_LEVELS.SHARED) ? SHARED_LEVELS.SHARED : SHARED_LEVELS.WORLD;
+        const cardId = String((meta && meta.cardId) || '');
+        const chatId = String((meta && meta.chatId) || '');
+        const name = String((meta && meta.character) || '');
+        let store = this._sharedStoreNow();
+        let added = 0;
+        for (const item of block.items) {
+            const res = sharedRemember(store, level, item.text, {
+                kind: item.kind, cardId: cardId, chatId: chatId, name: name, source: 'memory-block'
+            });
+            store = res.store;
+            if (res.added) added += 1;
+        }
+        this._lastSharedWrite = { added: added, skipped: block.items.length - added, level: level, bucket: level === SHARED_LEVELS.SHARED ? ('shared:' + name) : 'world' };
+        if (added > 0) this._persistShared(store);
+        return this._lastSharedWrite;
+    }
+
+    /** 三级检索：跨卡两档 + 本档。**逐档标注来源**（诊断页必须能回答
+     *  「这条是跨卡层来的还是本会话来的」，揉成一列后两张卡的同名角色就分不开了）。 */
+    recallShared(query = {}, limit = 8) {
+        const q = (typeof query === 'string') ? { text: query } : (query || {});
+        const saveRecords = this.longTerm.map(function (m) { return { text: m.content, at: m.createdAt || '' }; });
+        const score = function (a, b) {
+            const needle = String(a || '').trim();
+            const hay = String(b || '');
+            if (!needle || !hay) return 0;
+            let hit = 0;
+            for (let i = 0; i + 2 <= needle.length; i += 1) {
+                if (hay.indexOf(needle.slice(i, i + 2)) >= 0) hit += 1;
+            }
+            return hit;
+        };
+        return sharedRecall(this._sharedStoreNow(), saveRecords, Object.assign({}, q, { limit: limit, score: score }));
+    }
+
+    /** 一行读数（诊断页用）：三档分列 + 结构化块的当轮读数。 */
+    sharedMemoryLine() {
+        const res = this.recallShared({}, 0);
+        return sharedMemoryLineOf(res);
+    }
+
+    /** 记忆块一行读数（当轮）。无块时如实说「本回复无」，不报失败。 */
+    memoryBlockLineNow() {
+        return memoryBlockLine(this.pendingMemoryBlock || { present: false });
+    }
+
+    /** 跨卡桶清空（用户必须能清掉全局桶，否则它是一块看不见也删不掉的污渍）。 */
+    clearShared() {
+        this._persistShared(emptyStore());
+        return true;
     }
 
     _extractTags(text) {
@@ -445,6 +556,12 @@ export class MemoryCore {
         this.shortTerm = [];
         this.pool.clear();
         this.stats = { consolidated: 0, archived: 0, lastSleep: null };
+        this.pendingMemoryBlock = null;
+        /* [v3.80.0 · 缝入 A2] 「清全部数据」连跨卡桶一起清：它与 storage.clearAllData()
+         *   同一语义（连全局设置都清），留着跨卡桶会让用户以为清干净了。
+         *   「清当前数据」走 clearCurrentChat()，那里**不动**跨卡桶 —— 跨卡层正是
+         *   为了不被会话边界切碎才存在的。两者处置相反，故不共用一条实现。 */
+        this.clearShared();
         this._save();
     }
 

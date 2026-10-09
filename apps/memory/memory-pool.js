@@ -3,7 +3,16 @@
  *  移植自 sxiphone MemoryPool: 四层结构 (premise/perception/spatial/temporal)
  *  三级触发: 感官(sensory) → 关键词(keyword) → 文本相关(semantic)
  *  零外部依赖; 持久化由 MemoryData 负责
+ * --------------------------------------------------------
+ *  [v3.80.0 · 缝入 A4] 关键词层此前是**精确集合匹配**（`itemKw.some(ik => ik === k)`）：
+ *  查询切出的 2~4 字片段要在条目关键词里**一字不差**地存在才算命中。中文里
+ *  「城西的老槐树」与「老槐树下避雨」共享 4 个字，却在旧口径下**零命中** ——
+ *  而语义层要求 `hit >= 2` 才收，于是这类条目直接被丢掉。
+ *  本版把打分交给 apps/memory/keyword-overlap.js 的字窗滑窗（2 字权 1 / 3 字权 3 /
+ *  4 字权 9），并**保留触发类型判定**：命中为 0 时仍如实回落语义层。
+ *  归一化在这里做（overlapScore 只给原始分，见该模块文件头）。
  * ======================================================== */
+import { overlapScore } from './keyword-overlap.js';
 
 const SENSE_WEIGHTS = { smell: 1.0, touch: 0.95, sight: 0.7, sound: 0.6, taste: 0.85 };
 
@@ -133,8 +142,11 @@ export class MemoryPool {
             results.matched = this._matchByKeywords(queryKeywords);
         }
         if (results.matched.length === 0) {
-            results.triggerType = 'semantic';
-            results.matched = this._matchBySemantic(query);
+            /* [v3.80.0 · 缝入 A4] 第三级由「语义（2 字片段计数）」换成「相关度（字窗滑窗）」：
+             *   形态只有一处收口，故旧语义层不再参与触发，只留作诊断对比面。
+             *   触发类型名字如实报 relevance —— 报成 semantic 会让诊断页把两套口径混为一谈。 */
+            results.triggerType = 'relevance';
+            results.matched = this._matchByRelevance(query);
         }
         if (results.matched.length > 0) {
             results.confidence = this._calculateMatchConfidence(results.matched, query);
@@ -160,21 +172,84 @@ export class MemoryPool {
         return matches.sort((a, b) => b._score - a._score).slice(0, 8);
     }
 
-    _matchByKeywords(keywords) {
-        const matches = [];
-        const kset = new Set(keywords.map(k => k.toLowerCase()));
-        for (const item of this.pool.spatial.concat(this.pool.temporal)) {
-            const itemKw = (item.keywords || []).map(k => String(k).toLowerCase());
-            const text = String(item.content || '').toLowerCase();
-            let hit = 0;
-            for (const k of kset) {
-                if (itemKw.some(ik => ik === k) || text.includes(k)) hit++;
-            }
-            if (hit > 0) matches.push({ ...item, _score: hit / Math.sqrt(kset.size || 1), _layer: item._layer || (item.place ? 'spatial' : 'temporal') });
-        }
-        return matches.sort((a, b) => b._score - a._score).slice(0, 8);
+    /** 条目检索文本：关键词与正文**一起**看（旧口径也是两者 or，不缩面）。 */
+    _entrySearchText(item) {
+        const kw = (item && Array.isArray(item.keywords)) ? item.keywords.join(' ') : '';
+        return kw + ' ' + String((item && item.content) || '');
     }
 
+    _matchByKeywords(keywords) {
+        const query = Array.isArray(keywords) ? keywords.join(' ') : String(keywords || '');
+        return this._rankByOverlap(query, this.pool.spatial.concat(this.pool.temporal), 8);
+    }
+
+    /** [v3.80.0 · 缝入 A4] 懒建的字窗索引。持久结构与 `sensoryIndex` 同款（Map），
+     *  不落盘、不改变 `dumpState` 的形状（落盘形状一改，读旧档那条路就要迁移）。 */
+    _overlapIndex() {
+        if (!this._overlapCache) this._overlapCache = new Map();
+        return this._overlapCache;
+    }
+
+    /** 归一化：把原始加权分压进 0–1。
+     *  分母与 keyword-overlap.overlapRatio 同源（3 字窗权重），**不另立一套** ——
+     *  同一件事两份归一化正是本仓反复点名的分叉种子。 */
+    _normalizeOverlap(raw) {
+        return Math.min(1, Math.max(0, Number(raw) || 0) / 9);
+    }
+
+    _rankByOverlap(query, items, topN) {
+        const q = String(query || '');
+        if (!q.trim()) return [];
+        const idx = this._overlapIndex();
+        const out = [];
+        for (const item of items) {
+            /* 缓存键**必须含 query**：同一条目对不同查询的得分不同，
+             *  只按条目 id 建键会让下一次查询读到上一次的分
+             *  （实测形态：无关查询命中同一条目 —— 本套件 C2 当场抓到）。 */
+            const key = q + '\u0000' + String(item && item.id || '') + '@' + String((item && item.createdAt) || '');
+            let scored = idx.get(key);
+            if (!scored) {
+                scored = overlapScore(q, this._entrySearchText(item));
+                idx.set(key, scored);
+                if (idx.size > 4000) {
+                    /* 有界：索引是缓存不是账本，超限即整体丢（丢缓存只损失一次重算，
+                     *   而无限长大的 Map 会跟着会话活到用户卸载那天）。 */
+                    idx.clear();
+                    idx.set(key, scored);
+                }
+            }
+            if (scored.score <= 0) continue;
+            out.push({
+                ...item,
+                _score: this._normalizeOverlap(scored.score),
+                _rawScore: scored.score,
+                _overlap: { hits: scored.hits, phrases: scored.phrases, truncated: scored.truncated },
+                _layer: item._layer || (item.place ? 'spatial' : 'temporal')
+            });
+        }
+        return out.sort((a, b) => b._score - a._score).slice(0, topN || 8);
+    }
+
+    /** [v3.80.0 · 缝入 A4] 相关度触发面：旧语义层要求「至少 2 个 2 字片段命中」——
+     *  那是一个与文本长度无关的**绝对**门槛，长句天然占优、短条目天然吃亏。
+     *  这里改用同一份字窗打分按 layer 收敛（三层都过、各有自己的 topN）。 */
+    _matchByRelevance(query) {
+        const bags = [
+            ['spatial', this.pool.spatial, 8],
+            ['temporal', this.pool.temporal, 8],
+            ['perception', this.pool.perception, 6]
+        ];
+        const out = [];
+        for (const bag of bags) {
+            for (const m of this._rankByOverlap(query, bag[1], bag[2])) {
+                out.push({ ...m, _layer: m._layer || bag[0] });
+            }
+        }
+        return out.sort((a, b) => b._score - a._score).slice(0, 8);
+    }
+
+    /** 旧语义层（**保留可回退**）：修前它是唯一兜底，v3800 之后由 `_matchByRelevance`
+     *  接管触发路径，但函数本身留着 —— 诊断页要能对比两套口径的召回差异。 */
     _matchBySemantic(query) {
         const q = String(query || '').toLowerCase();
         const cjk = q.match(/[一-鿿]{2}/g) || [];

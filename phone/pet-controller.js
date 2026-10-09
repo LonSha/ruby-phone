@@ -34,6 +34,14 @@ export class PetController {
     this.renderGeneration = 0;
     this.destroyed = false;
     this.alphaChecked = new WeakSet();
+    /* [v3.79.0 · 计划 R-O6 第二层] 后台降频：面板关闭或页面切走时把播放**暂停**。
+     *   修前实测：面板隐藏（display:none）与页面隐藏两种状态下宠物 video 都还在播
+     *   （`paused=false`）—— 它是本仓最贵的一类资源：一个 webm 被钉在内存里、
+     *   解码器按帧跑，而用户根本看不到。
+     *   口径边界（**降频不是杀死**）：只暂停播放，不清 src、不销毁元素、不改状态机；
+     *   恢复时从**当前状态**继续（不是从头播），且状态机本身不因暂停而前进。 */
+    this.active = true;
+    this.pausedByGate = false;
 
     // 双 video 交叉淡化
     this.videos = [];
@@ -96,6 +104,38 @@ export class PetController {
     }
   }
 
+  /**
+   * [v3.79.0] 后台降频闸：`active=false` 时暂停播放（保留 src 与状态机）。
+   * 幂等：重复调用同一值不产生额外副作用；与 destroy 可共存（destroy 后本方法空转）。
+   * @returns {{active:boolean, playing:number, paused:number, changed:boolean}}
+   */
+  setActive(active) {
+    const next = active === true;
+    const result = { active: next, playing: 0, paused: 0, changed: false };
+    if (this.destroyed) return result;
+    if (next === this.active) {
+      // 值没变：仍然如实报当前播放面（调用方读的是真读数，不是「我刚请求过什么」）。
+      for (const v of this.videos) { if (v && !v.paused && !v.ended) result.playing += 1; else if (v && v.paused) result.paused += 1; }
+      return result;
+    }
+    this.active = next;
+    result.changed = true;
+    if (next) {
+      if (this.pausedByGate) {
+        this.pausedByGate = false;
+        // 恢复：**只恢复那一个前台视频**，不让两条同时跑（双 video 交叉淡化的前提）。
+        const front = this.videos[this.frontIndex];
+        if (front && front.getAttribute('src')) { try { front.play().catch(() => this.root.classList.add('is-pet-fallback')); } catch (_e) { /* 忽略 */ } }
+      }
+    } else {
+      let any = false;
+      for (const v of this.videos) { if (!v || v.paused) continue; any = true; v.pause(); }
+      this.pausedByGate = any;
+    }
+    for (const v of this.videos) { if (v && !v.paused && !v.ended) result.playing += 1; else if (v && v.paused) result.paused += 1; }
+    return result;
+  }
+
   destroy() {
     this.destroyed = true;
     this.renderGeneration += 1;
@@ -136,7 +176,10 @@ export class PetController {
       current.classList.remove('is-front');
       current.pause();
       this.frontIndex = nextIndex;
-      next.play().catch(() => this.root.classList.add('is-pet-fallback'));
+      // [v3.79.0] 闸门关闭时不启动：否则「换状态」这一步会把刚暂停的视频又拉起来
+      //   （实测形态：面板隐藏期间状态机推进一次，宠物又开播）。
+      if (this.active) next.play().catch(() => this.root.classList.add('is-pet-fallback'));
+      else this.pausedByGate = true;
     };
 
     next.onloadeddata = promote;

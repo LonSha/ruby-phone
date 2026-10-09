@@ -183,7 +183,12 @@ export class LockScreen {
     this._root = root;
     this._bind(root);
     this._clearClock();
-    this._clockTimer = setInterval(() => {
+    /* [v3.79.0 · 计划 R-O6 第二层] 后台降频：页面隐藏时这个 10s 时钟轮询只做一次
+     *   「醒来即对齐」，不再按周期跑（**降频不是杀死** —— 时钟是用户正在看的信息，
+     *   不能整个停掉，但没必要在页面看不见时每 10 秒重算一次。
+     *   实测口径：`document.hidden` 为真时该轮询改由恢复事件驱动（见 _bind 的可见性监听）。 */
+    this._clockTick = () => {
+      if (typeof document !== 'undefined' && document.hidden === true) return;   // 隐藏期不重算
       const next = this._nowParts();
       const timeEl = root.querySelector('#pls-time');
       const dateEl = root.querySelector('#pls-date');
@@ -191,7 +196,8 @@ export class LockScreen {
       if (timeEl) timeEl.textContent = next.time;
       if (dateEl) dateEl.textContent = next.date;
       if (helloEl) helloEl.textContent = next.greeting;
-    }, 10000);
+    };
+    this._clockTimer = setInterval(this._clockTick, 10000);
   }
 
   _bind(root) {
@@ -254,6 +260,17 @@ export class LockScreen {
       e.stopPropagation();
       _jump('music');
     });
+    /* [v3.79.0 · 计划 R-O6 第二层] 恢复后**立即重取一次**：时钟在隐藏期没有重算
+     *   （见 render() 的 _clockTick），故恢复时必须补一次，否则用户会先看到一段
+     *   陈旧时间（最长 10 秒）再被下一次轮询纠正 —— 那是「看起来没坏但显示不对」。
+     *   监听器同样走实例字段持有 + 重绑前先解绑旧引用（与上面 window 两处同规，
+     *   否则每次锁屏→解锁净增一个 document 监听器）。 */
+    if (this._onDocVisibility) document.removeEventListener('visibilitychange', this._onDocVisibility);
+    this._onDocVisibility = () => {
+      if (typeof document !== 'undefined' && document.hidden === true) return;
+      try { this._clockTick?.(); } catch (_e) { /* 重取失败不得阻断解锁 */ }
+    };
+    document.addEventListener('visibilitychange', this._onDocVisibility);
   }
 }
 

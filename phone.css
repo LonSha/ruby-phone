@@ -20116,3 +20116,105 @@ input:checked + .toggle-slider:before {
 .te-source-read { font-size: 11px; opacity: .7; }
 .te-selfcheck { padding: 4px 10px; font-size: 11px; opacity: .7; }
 .te-selfcheck-bad { border-left: 2px solid #a0553f; opacity: 1; font-weight: 600; }
+/* ---------- [v3.79.0] 动效档位（全局，非 App 段） ---------- */
+/* motion 段 — [v3.79.0 · 计划 R-O6 第二层] 非必要动画的机器可验收口
+ * ------------------------------------------------------------
+ * 修前实测（浏览器层 / Chromium 131 / headless old / 单帧 dump）：
+ *   `prefers-reduced-motion` 全仓零命中、`animation-play-state` 全仓零命中；
+ *   面板隐藏（display:none）之后 `document.getAnimations()` 里那条
+ *   `yzp-home-vinyl-spin` 仍是 running；宠物 video 在面板关闭与页面隐藏
+ *   两种状态下都还在播（`paused=false`）。
+ *
+ * 两个属性（同名不同义，不得合并成一个）：
+ *   · `data-motion`：本机实际生效的档（full / reduced / still）。由
+ *     config/motion.js 写入**解析后**的值（不写原始 auto），故 CSS 侧不必再问政策。
+ *   · `data-still`：仅 reduced / still 两档存在 —— 「装饰类整族别动」的开关。
+ *     full 档必须**移除**它（不是写 0）：存在即生效。
+ *
+ * 两类动画的边界（写在这里，免得后人把「减动」做成「把用户在看的东西停掉」）：
+ *   ① 装饰类（只提供氛围，不承载状态信息）：黑胶唱片旋转 / 来电状态文字脉冲 /
+ *      通话头像呼吸 / 音乐唱盘与按钮旋转 / 蜜语跑马灯 / 蜜语刷新 / 日历加载 /
+ *      日记生成。reduced 与 still 两档都停。
+ *   ② 状态类（承载「正在进行」这件事）：语音气泡弧线闪烁 / 通话输入指示器 /
+ *      短信输入脉冲。**只有显式选 still 才停**；面板关闭时它们随 display:none 自然停。
+ *
+ * 政策兜底（@media 段）：脚本尚未跑到时也已生效（避免首屏先动一下再停）。
+ *   选择器带 `html:not([data-motion])` —— 只要 JS 写过属性就交给它说了算，
+ *   用户显式选 full 时此段必须**不能再**停任何东西。
+ * ------------------------------------------------------------ */
+
+/* ① 装饰类：reduced / still 两档停 */
+html[data-still="1"] #phone-panel-content .phone-screen .home-vinyl-record,
+html[data-still="1"] .phone-call-incoming-status,
+html[data-still="1"] .phone-call-active-avatar,
+html[data-still="1"] .music-floating-panel.is-playing .album-cover-wrapper,
+html[data-still="1"] .music-floating-btn .music-fb-icon.spinning,
+html[data-still="1"] .honey-meta-title.is-marquee .honey-meta-title-track,
+html[data-still="1"] .honey-refresh-btn.is-loading i,
+html[data-still="1"] #phone-panel-content .phone-screen .yzp-calendar-generate-btn.is-loading i,
+html[data-still="1"] #phone-panel-content .phone-screen .yzp-calendar-add-title-icon.is-loading i,
+html[data-still="1"] .diary-generating-spinner,
+/* [v3.79.0 收口补全] 以下三处是收口复核时实测到的漏项（全仓带 infinite 的动画
+ *   共 21 处，散在 7 张 CSS；本条最初只列了 phone.css 自己那 8 个名字）：
+ *   蜜语「关注」脉冲与游戏厅猫呼吸同属装饰类（只提供氛围、不承载状态信息），
+ *   修前在 reduced 档照转。判据面由探针 L8 按**动画名**看守（新增动画未归类即红）。 */
+html[data-still="1"] .honey-goto-live-btn,
+html[data-still="1"] .games-catbox-cat.is-preview,
+html[data-still="1"] .games-catbox-cat.is-home {
+    animation: none !important;
+}
+
+/* ② 后台（面板隐藏 / 页面切走）：装饰类动画与状态类动画一律停。
+ *    为什么要这一道而不靠 display:none：实测 `display:none` 子树里的动画
+ *    仍是 `running` 状态（`document.getAnimations()` 里看得见），Chromium 131 复现。
+ *    两个属性分工：`data-still` 管用户偏好（跨前后台成立），`data-bg` 管当下处境
+ *    （恢复后必须立刻消失）—— 塌成一个会让「用户自己选的减动」与「系统帮它省电」同形。 */
+html[data-bg] .phone-screen *,
+html[data-bg] .phone-screen *::before,
+html[data-bg] .phone-screen *::after {
+    animation-play-state: paused !important;
+}
+
+/* ③ 政策兜底：脚本未跑到时生效；JS 写过 data-motion 后一律让位 */
+@media (prefers-reduced-motion: reduce) {
+    html:not([data-motion]) #phone-panel-content .phone-screen .home-vinyl-record,
+    html:not([data-motion]) .phone-call-incoming-status,
+    html:not([data-motion]) .phone-call-active-avatar,
+    html:not([data-motion]) .music-floating-panel.is-playing .album-cover-wrapper,
+    html:not([data-motion]) .music-floating-btn .music-fb-icon.spinning,
+    html:not([data-motion]) .honey-meta-title.is-marquee .honey-meta-title-track,
+    html:not([data-motion]) .honey-refresh-btn.is-loading i,
+    html:not([data-motion]) .diary-generating-spinner {
+        animation: none !important;
+    }
+}
+
+/* ④ 静止档：连状态类动画与过渡一起停（用户显式选的，最彻底的一档） */
+html[data-motion="still"] .phone-screen *,
+html[data-motion="still"] .phone-screen *::before,
+html[data-motion="still"] .phone-screen *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* ⑤ [v3.79.0 收口补全] body 级浮层 —— 修前 `html[data-bg] .phone-screen *` 盖不到它。
+ *   实测根因：`#music-floating-root` 由 `(document.body).appendChild` 创建
+ *   （apps/music/music-view.js 的 _getFloatingContainer / position:fixed /
+ *   z-index 2147483640），**不在 .phone-screen 子树内** —— 于是面板关闭或页面切走时，
+ *   其内 `vinyl-spin infinite` 唱盘照转。App 图层由 phone-shell 的 layerHost 建在
+ *   .view-stack-container 里（在 .phone-screen 内），故只有 body 级浮层需要单列；
+ *   名单与判据面（探针 L8 的 MOTION_BODY_FLOATS）同源。
+ *   注意选择器是浮层的**后代**（`.music-floating-panel *`）而不是浮层本身：
+ *   面板自己的 `.closing`（0.2s forwards）不能停，那是关闭动画，停了就关不掉。 */
+html[data-bg] .music-floating-panel *,
+html[data-bg] .music-floating-panel *::before,
+html[data-bg] .music-floating-panel *::after {
+    animation-play-state: paused !important;
+}
+
+html[data-motion="still"] .music-floating-panel *,
+html[data-motion="still"] .music-floating-panel *::before,
+html[data-motion="still"] .music-floating-panel *::after {
+    animation: none !important;
+    transition: none !important;
+}

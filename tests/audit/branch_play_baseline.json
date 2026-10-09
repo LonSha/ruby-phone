@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 384,
+    "files_scanned": 402,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
@@ -132,7 +132,8 @@
     "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。",
     "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
     "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。",
-    "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。"
+    "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。",
+    "v3.84.0 复校：枚举面 386 → 402（本版新增真源 config/num-clamp.js（有界取数唯一实现）与 config/diagnose-action.js（诊断处置面）+ v3.80.0~v3.84.0 累计的 A/B 清单八件真源与三个判据套件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；回滚点（rollback_points）/ 回滚文件（rollback_files）/ 回滚入口定义（rollback_entry_defs）/ 上游全局读取点 / CHAT_DATA_PATTERNS / 命名空间存储点**逐项不变** —— 本版没有碰回滚与存储面任何一行。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
@@ -1024,29 +1025,29 @@
       ]
     },
     "v3.72.0": {
-        "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑 + chat_data_patterns 随 config/storage.js 真增长",
-        "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 另有一项**与枚举面无关**的真增长必须分开记：`chat_data_patterns` 285 -> **303** —— 该读数由 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 表逐行数出（探针口径：以 / 或 ^ 起首的行），五版合并交付期间该表被真扩充 ⇒ 属**源变了读数跟着变**，不是口径漂移（同一段源码两个 ref 实测 285 vs 303，与探针输出逐字一致）。",
-        "how": "node tests/audit/branch_play_probe.cjs --json",
-        "readings": {
-              "files_scanned": 384,
-              "chat_data_patterns": 303
-        },
-        "unchanged": [
-              "rollback_points",
-              "rollback_files",
-              "rollback_entry_defs",
-              "upstream_global_read_sites",
-              "namespace_store_sites",
-              "checkpoint_face_hits",
-              "preview_face_hits",
-              "branch_face_hits"
-        ],
-        "criteria_refreshed": {},
-        "not_done": [
-              "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
-              "回滚覆盖面（41 点 / 4 文件 / 12 入口定义）一格未动 —— 本版新增的五个 config 件不写回滚点。这不代表没接好，代表本门确实与它无关。",
-              "`chat_data_patterns` 的增长只记读数、不改口径：探针「以 / 或 ^ 起首的行」判法本版一字未动。"
-        ]
-  }
+      "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑 + chat_data_patterns 随 config/storage.js 真增长",
+      "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 另有一项**与枚举面无关**的真增长必须分开记：`chat_data_patterns` 285 -> **303** —— 该读数由 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 表逐行数出（探针口径：以 / 或 ^ 起首的行），五版合并交付期间该表被真扩充 ⇒ 属**源变了读数跟着变**，不是口径漂移（同一段源码两个 ref 实测 285 vs 303，与探针输出逐字一致）。",
+      "how": "node tests/audit/branch_play_probe.cjs --json",
+      "readings": {
+        "files_scanned": 384,
+        "chat_data_patterns": 303
+      },
+      "unchanged": [
+        "rollback_points",
+        "rollback_files",
+        "rollback_entry_defs",
+        "upstream_global_read_sites",
+        "namespace_store_sites",
+        "checkpoint_face_hits",
+        "preview_face_hits",
+        "branch_face_hits"
+      ],
+      "criteria_refreshed": {},
+      "not_done": [
+        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
+        "回滚覆盖面（41 点 / 4 文件 / 12 入口定义）一格未动 —— 本版新增的五个 config 件不写回滚点。这不代表没接好，代表本门确实与它无关。",
+        "`chat_data_patterns` 的增长只记读数、不改口径：探针「以 / 或 ^ 起首的行」判法本版一字未动。"
+      ]
+    }
   }
 }

@@ -54,6 +54,15 @@
 'use strict';
 
 import { readPushProbe } from './world-bridge.js';
+/* [v3.80.0 · 缝入 A5] 注入优先级 / 预算保护。本模块此前**只读**上游的 `dropped-budget`，
+ *   从不参与裁剪：上游裁完报一个数，下游把那个数转述出去 —— 而「底线与规则不压」这条
+ *   口径在整条链路上没有任何地方成立。接线后：块级读数进入 planInjection，
+ *   `priorityPlan` 与 `dropped-budget` 两个来源同时暴露，**可对账**（相等=口径一致；
+ *   不等=上游换了裁剪口径，本仓不必再猜）。 */
+import { planInjection, injectionPriorityLine } from './injection-priority.js';
+/* 再导出：本模块是注入读数对外的**唯一入口**，消费方（诊断页 / 视图）只认这一处，
+ *   不应被迫知道「计划面其实住在另一个文件里」。 */
+export { injectionPriorityLine };
 
 /* 【跨仓契约快照】上游 `injection` 面的**顶层键**（v3.218.0 起 10 键）。
  *   为什么在下游有意重复一份：跨仓不能 import（上游是酒馆插件、本仓是扩展），
@@ -227,6 +236,9 @@ export function readInjection(win, opts = {}) {
         dropped: null,
         verdict: null,
         blocks: [],
+        /* [v3.80.0 · 缝入 A5] 预算计划面。空形也带这一格（读出面结构必须恒定，
+         *   消费方不必判 undefined）。 */
+        priorityPlan: null,
         /* [v3.0.4] M-O3 可选转述：不在面级 10 键里，缺席即 null */
         layer: null,
         tokenSource: null,
@@ -310,6 +322,20 @@ export function readInjection(win, opts = {}) {
         if (kept > 0) verdict = 'injected';
         else if (totalEff > 0) verdict = 'all-dropped';
         else verdict = 'candidates-empty';
+        /* [v3.80.0 · 缝入 A5] 预算计划：把逐块读数喂给 planInjection。
+         *   预算取上游真给的 `chars`（它才是「这次注入了多少字」）；给不出就取——
+         *   **不**编一个默认预算：编了会让「上游没报预算」被读成「预算够」。
+         *   块形状：上游 ref/label/chars/kept → 本模块的 ref/label/chars/tier 提示。 */
+        let priorityPlan = null;
+        try {
+            const budget = numOrNull(raw.chars);
+            priorityPlan = planInjection(
+                blocks.map(function (b) {
+                    return { ref: b.ref, label: b.label, chars: b.chars, kept: b.kept, kind: b.label };
+                }),
+                { budgetChars: (budget === null ? Number.MAX_SAFE_INTEGER : budget) }
+            );
+        } catch (_e) { priorityPlan = null; }
         const ts = numOrNull(raw.ts);
         const injected = numOrNull(opts.now);
         const now = (injected === null) ? Date.now() : injected;
@@ -346,6 +372,7 @@ export function readInjection(win, opts = {}) {
             dropped: Math.max(0, totalEff - kept),
             verdict,
             blocks,
+            priorityPlan,
             /* [v3.0.4] 可选转述：只抄上游真给的值。layer 须为字符串；
              *   tokenSource / via 同；stages 须为对象（五阶段表），否则 null。
              *   不进 faceDrift（那张表只钉 10 键面）。 */
@@ -389,6 +416,8 @@ export function injectionLine(inj) {
     if (p.outcome) parts.push('结局：' + outcomeText(p.outcome));
     else parts.push('结局：未提供（上游这版还没外供 outcome）');
     if (p.strayOrigin) parts.push('【注意】该读数不是真生成写的（origin=' + String(p.origin) + '）');
+    /* [v3.80.0 · 缝入 A5] 计划面有读数才说，没有不假装有（同 layer / via 的口径）。 */
+    if (p.priorityPlan) parts.push(injectionPriorityLine(p.priorityPlan));
     if (p.layer) parts.push('层=' + p.layer);
     if (p.tokenSource) parts.push('token口径=' + p.tokenSource);
     if (p.via) parts.push('via=' + p.via);

@@ -9,6 +9,7 @@
  * ======================================================== */
 
 /** 两种计时语义。倒计时到点自动完成；正计时一直往上走，手动停止才算一次。 */
+import { boundedInt } from '../../config/num-clamp.js';
 export const FOCUS_MODES = Object.freeze({
     countdown: 'countdown',
     stopwatch: 'stopwatch',
@@ -39,13 +40,6 @@ export const DEFAULT_FOCUS_SETTINGS = Object.freeze({
 /** 全新一份默认设置（冻结，防被就地改）。 */
 export function defaultFocusSettings() {
     return Object.freeze({ ...DEFAULT_FOCUS_SETTINGS });
-}
-
-function boundedInt(v, fallback, min, max) {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return fallback;
-    const r = Math.round(n);
-    return Math.min(max, Math.max(min, r));
 }
 
 /**

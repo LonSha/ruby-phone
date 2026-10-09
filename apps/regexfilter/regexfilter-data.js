@@ -44,6 +44,7 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+import { boundedInt } from '../../config/num-clamp.js';
 
 /** 归因三态。**值**是连字符形，视图文案表的键必须取这里的值（与 focus / piggy 同纪律）。 */
 export const RGX_REASONS = Object.freeze({
@@ -70,12 +71,6 @@ export const DEFAULT_RGX_SETTINGS = Object.freeze({
 
 export function defaultRgxSettings() {
     return Object.freeze({ ...DEFAULT_RGX_SETTINGS });
-}
-
-function boundedInt(v, fallback, min, max) {
-    const n = numOrNull(v);
-    if (n === null) return fallback;
-    return Math.min(max, Math.max(min, Math.round(n)));
 }
 
 /** 设置规范化：外部数据一律先过这里（读不出就如实回落默认，不把 NaN 混进运行时）。 */

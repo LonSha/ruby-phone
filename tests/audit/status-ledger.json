@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "3.78.0",
+  "version": "3.84.0",
   "version_sources": {
-    "package": "3.78.0",
-    "manifest": "3.78.0",
-    "update_log_latest": "3.78.0",
-    "index_const": "3.78.0"
+    "package": "3.84.0",
+    "manifest": "3.84.0",
+    "update_log_latest": "3.84.0",
+    "index_const": "3.84.0"
   },
   "version_same": true,
   "gates": {
@@ -47,9 +47,9 @@
     "check_chain_len": 15
   },
   "tests": {
-    "test_files": 221,
+    "test_files": 227,
     "audit_dir_exists": true,
-    "audit_files": 21
+    "audit_files": 23
   },
   "browser": {
     "scenarios": [
@@ -60,12 +60,14 @@
       "o1-search-cancel.scen.js",
       "o1-settings-save.scen.js",
       "o1-shell-smoke.scen.js",
+      "o6-longlist-extreme.scen.js",
       "o6-longlist-perf.scen.js",
+      "o6-motion-throttle.scen.js",
       "o7-perf-probe.scen.js",
       "o7-reopen-leak.scen.js"
     ],
-    "scenario_count": 10,
-    "probe_scenarios": 19,
+    "scenario_count": 12,
+    "probe_scenarios": 25,
     "infra": {
       "runner": true,
       "driver": true,
@@ -78,8 +80,8 @@
   "scale": {
     "app_dirs": 81,
     "apps_ids": 82,
-    "index_lines": 13276,
-    "css_bytes": 619586,
+    "index_lines": 13398,
+    "css_bytes": 625971,
     "crossrepo": {
       "produced_faces": 20
     }
@@ -100,7 +102,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 219,
+        "suite_files": 225,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -125,7 +127,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "531555bac36593db"
+    "sha256_16": "ebd4f6a46ca96096"
   },
   "unknown": [],
   "unknown_count": 0

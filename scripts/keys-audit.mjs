@@ -369,6 +369,10 @@ const KEY_REGISTRY = [
   { key: 'tw_letters', scope: 'chat', note: '织光机收藏册' },
   { key: 'tw_last_auto', scope: 'chat', note: '织光机织信游标' },
   { key: 'sys_shell_scale', scope: 'chat', note: '显示缩放（表驱动 config/system-controls.js）' },
+  /* [v3.79.0 · 计划 R-O6 第二层] 动效档位。由设置页写入、config/motion.js 与 index.js 的
+   *   动效运行时读取（写入口唯一）。**逐键显式登记而不是靠 /^sys_/ 兜底**：本仓
+   *   v2.69.0 的裁定是「兜底能防串味，但归属不可知」，故 /^sys_/ 之外仍逐键列名。 */
+  { key: 'sys_motion_level', scope: 'chat', note: '动效档位（auto / full / reduced / still，随会话隔离）' },
   { key: 'wangxiang_managed_tasks', scope: 'chat', note: '万象任务' },
   { key: 'wangxiang_generated_tasks', scope: 'chat', note: '万象生成任务' },
   { key: 'wangxiang_task_progress_history', scope: 'chat', note: '任务进度' },
@@ -472,6 +476,13 @@ const KEY_REGISTRY = [
   { key: 'games_poker_ai_chat_enabled', scope: 'global', note: '扑克 AI 开关' },
   { key: 'games_undercover_ai_prompt', scope: 'global', note: '卧底 AI 提示词' },
   { key: 'games_undercover_prompt_presets_migrated', scope: 'global', note: '卧底预设迁移标记' },
+  /* [v3.80.0 · 缝入 A2] 三级记忆的**跨会话聚合层**（apps/memory/memory-data.js 读写）。
+   *   为什么必须是 global：跨卡共同层的全部价值就在于不被会话边界切碎；
+   *   登记成 chat 会让它退化成第三个会话桶，名字叫 shared 而已。
+   *   键面刻意只加**这一个**（内部按 world / shared:<角色名> 分槽）：
+   *   每加一个 storage 键，就要在这里回答一次归属 —— 三次答案是同一个，没有理由拆。
+   *   另：它带 `phone_` 前缀是**刻意的**，因为 /^memory_/ 全判会话隔离（防串味的口径不动）。 */
+  { key: 'phone_shared_memory_v1', scope: 'global', note: '记忆三档·跨卡共同层（world / shared:<角色>；本档层仍走 memory_core_v1）' },
   { key: 'games_werewolf_ai_prompt', scope: 'global', note: '狼人 AI 提示词' },
   { key: 'mofo_generators', scope: 'global', note: '神灯生成器配置' },
   { key: 'mofo_deleted_item_ids', scope: 'global', note: '神灯删除记录' },

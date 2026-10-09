@@ -11,6 +11,7 @@
  * ======================================================== */
 
 /** 账户大类。源的 isAsset 三态（true/false/null）是它的语义：资产 / 负债 / 不计入净值。 */
+import { boundedInt } from '../../config/num-clamp.js';
 export const ACCOUNT_GROUPS = Object.freeze([
     Object.freeze({ name: '普通账户', isAsset: true, icon: '\ud83d\udcb5' }),
     Object.freeze({ name: '信用账户', isAsset: false, icon: '\ud83d\udcb3' }),
@@ -56,11 +57,6 @@ export function defaultAccountingSettings() {
  * tests/system-v245 的 D3（钉住 24）当场翻红。
  * 我不把这条当成「门禁太脆」就绕过去：**假消费是真读数污染**（账本会显示欠债已还清，
  * 而那个导出其实一个消费方都没有），故改名为不可能撞车的 boundedInt。 */
-function boundedInt(v, fallback, min, max) {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return fallback;
-    return Math.min(max, Math.max(min, Math.round(n)));
-}
 
 /** 分转元 / 元转分：金额一律以**分**为整数存，避免浮点累加误差。 */
 export function yuanToCents(y) {
