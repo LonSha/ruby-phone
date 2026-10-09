@@ -1,4 +1,4 @@
-# ruby-phone 运行时验证边界（v2.82.0 起；**v3.74.0 复校**）
+# ruby-phone 运行时验证边界（v2.82.0 起；**v3.75.0 复校**）
 
 > 本文件回答一个容易被含糊过去的问题：**哪些结论有证据，哪些没有。**
 > 写它的直接动机是 `计划.txt` 建议「新增一个浏览器运行时冒烟层」——
@@ -297,7 +297,7 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 下面两行是**机器可读**的复校契约：门禁会真跑 `syntax` / `import-resolve` 两道门，
 把它们的读数与这两行逐项比对，不一致即转红（防「文档写了实测、其实是抄的旧数」）。
 
-- 语法 689 文件
+- 语法 690 文件
 （**v3.72.0 复校**：X3~X8 七件新协议模块（`config/schedule-bridge.js` / `finance-overview.js` / `social-knowledge-bridge.js` / `creation-pipeline.js` / `character-slot-manager.js` / `branch-contrast.js` / `resume-handoff.js`）与对应判据套件落进语法门扫描面，语法面 651 → **663**。★ 本行只记真跑读数（`node scripts/syntax-check.mjs` 现场取），不手抄。旧值 651 是 v3.66.0 的读数，v3.67.0~v3.72.0 六版未复校该行 —— 本轮补上。）
 （**v3.61.0 复校**：本版新增 .js/.mjs——`config/app-lazy-routes.js`（O6 表驱动路由单源表）+ `tests/browser/` 基建四件与场景七件（L4 层 O1/O7 场景与探针），语法面 625 -> **638**（`tests/` 层面又新增一件：`tests/_lazy_routes.mjs`——O6 判据面共享单源，把表行渲染回同形分支供 40 个套件复用）。★ 本版主刀是**减法**：index.js 的 phone:openApp 处理器 67 段同构五件套收敛为表驱动（808555 -> 702758 字节），门禁面随之升级而非放松——dead-export 新增「数据驱动消费面」判定（表 cls 字段即真消费，表缺席即 exit 2），registry 的懒加载分支覆盖面升级为「内联分支 ∪ 表 id 字段」（81↔81 零孤儿）。）
 （**v3.60.0 复校**：本版新增 1 个 .mjs —— `tests/system-v3600.test.mjs`（O2 判据套件）；产品侧**新增 0 个 .js**（治的是既有的 `apps/memory/global-search-engine.js` 与 `apps/search/search-app.js` 两件），故语法面 624 -> **625** 的增量全部来自那一个判据套件。★ 与上一版**同族形态**：都不新增产品文件，只在既有实现上换口径。）

@@ -1,0 +1,155 @@
+{
+ "file": "tests/audit/search_scale_probe.cjs",
+ "probe": "tests/audit/search_scale_probe.cjs",
+ "note": "搜索与大数据量交互性能取证：合成源 + 真模块（无浏览器 / 无 SillyTavern 宿主）。读数不代表实机；取消的**用户可感知延迟**须真 DOM 层另测。 首版基线（建基线时实测）：计数段逐字节可复算，计时段只比同量级。",
+ "measured_at": "v3.75.0",
+ "host": {
+  "sizes": [
+   1000,
+   5000,
+   10000
+  ],
+  "cap_n": 80000,
+  "announcement_stripped": false
+ },
+ "readings": {
+  "ticks_during_scan_n10000": 11,
+  "scanned_full_n10000": 10000,
+  "hits_n10000": 1,
+  "index_cancel_indexed_n10000": 2000,
+  "index_cancel_scanned_n10000": 0,
+  "index_cancel_results_n10000": 0,
+  "index_cancel_at_is_index": 1,
+  "index_cancel_pending_is_null": 1,
+  "index_cancel_calls": 1,
+  "index_cancel_lastscan_indexed_n10000": 2000,
+  "match_cancel_scanned_n10000": 6000,
+  "match_cancel_pending_n10000": 4000,
+  "match_cancel_at_is_match": 1,
+  "match_cancel_calls": 4,
+  "equiv_same_total": 1,
+  "equiv_same_ids": 1,
+  "equiv_total": 5000,
+  "done_pending_n5000": 0,
+  "done_at_is_null": 1,
+  "take_ms_present": 1,
+  "take_ms_ge_0": 1,
+  "last_scan_indexed_n10000": 10000,
+  "scanned_again_n10000": 10000,
+  "cap_scanned_n80000": 60000,
+  "cap_index_len_n80000": 60000,
+  "cap_ticks_n80000": 61,
+  "quick_index_len_n1000": 600,
+  "full_index_len_n1000": 1000,
+  "full_scanned_n1000": 1000,
+  "quick_index_len_n5000": 600,
+  "full_index_len_n5000": 5000,
+  "full_scanned_n5000": 5000,
+  "quick_index_len_n10000": 600,
+  "full_index_len_n10000": 10000,
+  "full_scanned_n10000": 10000
+ },
+ "timing": {
+  "full_scan_ms_n10000": 50.59,
+  "cancel_index_ms_n10000": 8.17,
+  "cancel_match_ms_n10000": 40.08,
+  "take_ms_n10000": 0.78,
+  "cap_scan_ms_n80000": 353.98,
+  "scan_ms_n1000": 5.83,
+  "scan_ms_n5000": 34.14,
+  "scan_ms_n10000": 48.79,
+  "heap_used_mb_after": 102.3
+ },
+ "criteria": [
+  {
+   "id": "S1",
+   "desc": "索引与比中期间宏任务计时器真跑到（同步跑完必为 0）",
+   "pass": true,
+   "got": 11
+  },
+  {
+   "id": "S2",
+   "desc": "索引阶段作废：一条都不比中（scanned=0 / results=0）",
+   "pass": true,
+   "got": "0/0"
+  },
+  {
+   "id": "S3",
+   "desc": "索引阶段作废**真少建**（indexed 远小于全量 10000）",
+   "pass": true,
+   "got": 2000
+  },
+  {
+   "id": "S3b",
+   "desc": "作废后 _lastScan 落的是已建部分（真记账，不是上一轮陈旧值）",
+   "pass": true,
+   "got": 2000
+  },
+  {
+   "id": "S4",
+   "desc": "作废段位如实报 index（与比中作废不同形）",
+   "pass": true,
+   "got": "index"
+  },
+  {
+   "id": "S5",
+   "desc": "索引作废的 pending 是 null（未知不报 0）",
+   "pass": true,
+   "got": "null"
+  },
+  {
+   "id": "S6",
+   "desc": "比中作废：停在 6000（第 4 次检查 = 已扫 6000 条的契约仍在）",
+   "pass": true,
+   "got": 6000
+  },
+  {
+   "id": "S7",
+   "desc": "比中作废的 pending 是数字（已知），与索引作废不同形",
+   "pass": true,
+   "got": 4000
+  },
+  {
+   "id": "S8",
+   "desc": "无取消路径与同步基线逐字一致（同 total / 同序列）",
+   "pass": true,
+   "got": 5000
+  },
+  {
+   "id": "S9",
+   "desc": "完成态：pending=0 且段位为 null（三态互不同形）",
+   "pass": true,
+   "got": 0
+  },
+  {
+   "id": "S10",
+   "desc": "逐源取数耗时进读数（perSource.ms 是有限非负数）",
+   "pass": true,
+   "got": "1/1"
+  },
+  {
+   "id": "S11",
+   "desc": "_lastScan.indexed 反映真建量（10000 档应铺满 10000）",
+   "pass": true,
+   "got": 10000
+  },
+  {
+   "id": "S12",
+   "desc": "60000 全索引封顶：不越界且期间仍让出",
+   "pass": true,
+   "got": "60000/61"
+  }
+ ],
+ "verdict": "准入判据全绿：让出 / 取消 / 等价 / 三态四类在真模块上成立（读数见 readings 与 timing）",
+ "corrections": [
+  "第一版把「索引阶段作废」的断言写成「indexed === 0」，实测是 2000 —— 检查点在**每片之后**（SCAN_CHUNK=2000），故第一片建完才受理。断言改为「0 < indexed < 全量」，那才是「真少建」的正确形态。",
+  "不含索引阶段的取消时，比中阶段的第 4 次检查必须仍在 6000 条处生效 —— 该计数是 tests/system-v3170 B5 的既有契约，本版不得挪动（实现上表现为 cancelIndex 默认关）。",
+  "计时读数不可逐字节复算（进程调度与 GC 会动它）⇒ 与计数段分块，套件只比同量级。"
+ ],
+ "not_done": [
+  "未做实机取证：无浏览器、无真 SillyTavern 宿主、无真实长会话；合成源单条正文远短于真实楼层（真实单楼可达数千字），故**绝对耗时不可外推**。",
+  "未测真 DOM 层渲染代价：结果区高亮与列表重绘需要真浏览器（归 R-O6 / R-O1 的浏览器层）。",
+  "未测手机端后台节流窗口：移动端定时器与 rAF 节流行为不同，本探针的「让出」证据只在 Node 事件循环上成立。",
+  "未测 IndexedDB / localStorage 读取耗时：源侧取数在本探针里是内存数组，真实源走存储读取（本版只把它的耗时接进读数，未造真存储压力）。"
+ ]
+}

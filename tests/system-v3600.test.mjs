@@ -345,8 +345,14 @@ function mutate(tag, edits) {
     }
     return dir;
 }
-const A_STAGE1 = ['            await this._yieldTurn();', '        }', '        /* ══ 阶段二：分片比中（检查点原位，片后让出） ══ */'].join(NL);
-const A_STAGE1_X = ['        }', '        /* ══ 阶段二：分片比中（检查点原位，片后让出） ══ */'].join(NL);
+/* [v3.75.0 + R-O5 交棒] 索引让出点仍是同一句；它在索引循环体内、且其后紧跟「索引片间受理作废」分支（默认关）。
+ *   为什么不再把 `}` 与阶段二注释一起当锚点：形状变了（合法地多了一个分支），判据要钉的是**让出本身**，不是它周围有几行。
+ *   判别力不变：删掉这句后「第一次进度回调前不得再有计时器跑过」照样转红（D1）。 */
+/* ★ 唯一性靠**上下文**，不靠缩进：阶段二循环里也有一句同缩进的让出，
+ *   单行锚点实得 2 次（D1 因此在唯一性断言上 fail-closed 拒改 —— 这是对的）。
+ *   故锚点取「让出 + 紧随的索引阶段开关」两行；阶段二那句后面跟的是 `}`。 */
+const A_STAGE1 = ['            await this._yieldTurn();', '            if (cancelIndex && cancelledNow()) {'].join(NL);
+const A_STAGE1_X = ['            if (cancelIndex && cancelledNow()) {'].join(NL);
 const A_TAIL = ['        await this._yieldTurn();', '        hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));'].join(NL);
 const A_TAIL_X = ['        hits.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));'].join(NL);
 const A_MACRO = "if (typeof g.setTimeout === 'function') { g.setTimeout(resolve, 0); return; }";
@@ -397,6 +403,9 @@ test('v3600 D6. 真仓只读：全部破坏跑完后，真仓判据必须仍然�
     assert.equal(q.quickIndexLen, 600);
     const raw = readAt(ROOT, GSE);
     assert.ok(raw.includes(A_STAGE1), '真仓建索引让出仍在');
+    /* [v3.75.0 + R-O5] 新增分支必须也在（防有人把整块摘掉而套件不自知）：
+     *   只钉「开关在场」这一条字符串 —— 分支的行为面由新套件 v3760 守。 */
+    assert.ok(raw.includes('const cancelIndex = opts.cancelIndex === true;'), '真仓索引阶段受理作废的开关仍在');
     assert.ok(raw.includes(A_TAIL), '真仓收束让出仍在');
 });
 

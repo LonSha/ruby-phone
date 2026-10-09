@@ -126,6 +126,11 @@ export class SearchApp {
         const p = Promise.resolve().then(() => this.engine.searchAll(kw, Object.assign({}, scopeOpt, {
             full: true,
             onProgress: typeof opt.onProgress === 'function' ? opt.onProgress : null,
+            /* [v3.75.0 + R-O5] 索引阶段也受理作废：全历史档最贵的一段就是建索引
+             *   （10000 楼要建 10000 条对象）。不传这一格，用户在等待期点
+             *   「取消」要等整段建完才被受理 —— 那正是 R-O5 要治的形态。
+             *   引擎侧 `isCancelled` 调用计数契约（v3170 B5）走默认关的直调路径。 */
+            cancelIndex: true,
             isCancelled: self.cancelToken(gen)
         }))).then((r) => {
             if (self._scanGen !== gen) return { cancelled: true, results: [], scope: r && r.scope };

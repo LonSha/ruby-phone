@@ -49,6 +49,19 @@ function norm(s) {
     return String(s ?? '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * [v3.75.0 + R-O5] 单调取时：优先 `performance.now()`（亚毫秒），退回 `Date.now()`。
+ * 为什么不用 Date.now() 单独扛：它的 1ms 分辨率会把「单源 20000 条物化」这类真成本读成 0，
+ *   于是「源侧代价」永远量不出来 —— 本版要立的正是这条读数（先量后定阈值）。
+ * 与 `_yieldTurn` 同族：宿主能力走 globalThis 探测，缺了不抛、只降级。
+ * @returns {number}
+ */
+function nowMs() {
+    const g = (typeof globalThis !== 'undefined' && globalThis) ? globalThis : {};
+    if (g.performance && typeof g.performance.now === 'function') return g.performance.now();
+    return Date.now();
+}
+
 function lower(s) {
     return norm(s).toLowerCase();
 }
@@ -273,11 +286,18 @@ export class GlobalSearchEngine {
         try {
             for (const src of this._sources) {
                 try {
+                    /* [v3.75.0 + R-O5] 取数耗时**计入读数**：源侧 `items()` 仍是一次同步物化
+                     *   （形态被 tests/system-v3170 A2 与 tests/system-v327 B1 锁死，不得前移截断），
+                     *   但它的代价不再是「看不见的成本」—— 逐源记进 perSource[id].ms。
+                     *   为什么必须记：R-O5 第 3 条原文要求「必须计入耗时」。没有这条读数，
+                     *   「要不要把截断前移到取数口」就只能靠感觉定。 */
+                    const takeT0 = nowMs();
                     const raw = src.items() || [];
+                    const takeMs = Math.round((nowMs() - takeT0) * 100) / 100;
                     if (!Array.isArray(raw)) continue;
                     let n = 0;
                     let bodyCapped = false;
-                    perSourceStat[src.id] = { raw: raw.length, indexed: 0, capped: false };
+                    perSourceStat[src.id] = { raw: raw.length, indexed: 0, capped: false, ms: takeMs };
                     for (const it of raw) {
                         if (n >= perSource || out.length >= totalCap) break;
                         if (!it || typeof it !== 'object') continue;
@@ -307,12 +327,12 @@ export class GlobalSearchEngine {
                         /* [v3.60.0 · 计划 O2] 每片登记一次已建部分并交还控制权：
                          *   中途被取消时，_lastScan 反映的是**已建部分**，不是上一轮的陈旧读数。 */
                         if (n % SCAN_CHUNK === 0) {
-                            perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: false };
+                            perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: false, ms: takeMs };
                             yield;
                         }
                     }
                     const capped = raw.length > n;
-                    perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: capped };
+                    perSourceStat[src.id] = { raw: raw.length, indexed: n, capped: capped, ms: takeMs };
                     if (capped) cappedSources.push(src.id);
                     if (bodyCapped) bodyCappedSources.push(src.id);
                     if (out.length >= totalCap) break;
@@ -326,7 +346,10 @@ export class GlobalSearchEngine {
             this._errors = errors;
             this._lastScan = {
                 full: full, perSource: perSourceStat, cappedSources: cappedSources,
-                bodyCappedSources: bodyCappedSources, totalCapped: out.length >= totalCap
+                bodyCappedSources: bodyCappedSources, totalCapped: out.length >= totalCap,
+                /* [v3.75.0 + R-O5] 已建条数：中途被 gen.return() 收束时，
+                 *   这是**已建部分**的真读数（不是上一轮的陈旧值，也不是全量上限）。 */
+                indexed: out.length
             };
         }
         return out;
@@ -358,6 +381,13 @@ export class GlobalSearchEngine {
     _scope(full, opts, indexLen) {
         const st = this._lastScan || { perSource: {}, cappedSources: [], bodyCappedSources: [], totalCapped: false };
         const cov = (opts.coverage && typeof opts.coverage === 'object') ? opts.coverage : null;
+        /* [v3.75.0 + R-O5] pending 是**三态**：数字（已知）/ 0（真的没有剩余）
+         *   / null（未知 —— 索引阶段被作废时「还剩多少没建」根本不可得）。
+         *   为什么不能塌成 0：UI 读 `Number(pending) > 0`，0 会被显示成
+         *   「没有剩余」，而事实是「不知道」—— 把未知读成已知正是本仓最贵的假绿。 */
+        const pendingKnown = (cov && cov.pending != null) ? Number(cov.pending) : null;
+        const pendingVal = Number.isFinite(pendingKnown) ? pendingKnown
+            : ((cov && cov.complete === false) ? null : 0);
         const bySource = (cov && cov.scannedBySource && typeof cov.scannedBySource === 'object') ? cov.scannedBySource : null;
         const scannedBySource = {};
         for (const [id, st1] of Object.entries(st.perSource || {})) {
@@ -371,7 +401,11 @@ export class GlobalSearchEngine {
             truncatedSources: Array.isArray(cov && cov.truncatedSources) ? cov.truncatedSources.slice() : (st.cappedSources || []).slice(),
             bodyTruncatedSources: (st.bodyCappedSources || []).slice(),
             totalCapped: !!st.totalCapped || !!(cov && cov.totalCapped),
-            pending: Number((cov && cov.pending) || 0),
+            pending: pendingVal,
+            /* [v3.75.0 + R-O5] 作废发生在哪一段：`index` / `match` / null（三态互不同形）。
+             *   为什么要有这一格：此前只报 `complete:false`，索引阶段与比中阶段
+             *   被作废在读数上同形 —— 用户看不出「取消到底受理在哪一段」。 */
+            cancelledAt: (cov && cov.cancelledAt) || null,
             complete: !(cov && cov.complete === false)
         };
     }
@@ -462,7 +496,10 @@ export class GlobalSearchEngine {
      *     `Promise.resolve().then()` 只是把开始推到微任务，不是让出。
      * @param {string} query
      * @param {{limit?:number, sourceIds?:string[], full?:boolean,
-     *          onProgress?:Function, isCancelled?:Function}} [opts]
+     *          onProgress?:Function, isCancelled?:Function,
+     *          cancelIndex?:boolean}} [opts]
+     *   `cancelIndex`（[v3.75.0 + R-O5]，默认 false）为真时，索引片间也受理作废；
+     *   默认关是**契约**（见阶段一注释：调用计数被 tests/system-v3170 B5 锁死）。
      * @returns {Promise<object>} 与同步路径同形的结果体
      */
     async searchAll(query, opts = {}) {
@@ -476,10 +513,23 @@ export class GlobalSearchEngine {
         for (const s of this._sources) weightOf[s.id] = s.weight;
         const hits = [];
         const scannedBySource = {};
+        /* [v3.75.0 + R-O5] 取消谓言提到开头：索引阶段（阶段一）也要能看到它。
+         *   原来它定义在阶段一下方 —— 索引阶段在它之前执行，那时函数还没定义
+         *   （不改位置就只能另写一份，而本仓最忌「同一口径两份实现」）。
+         *   位置改了，**行为一字未改**（谓言体逐字照搬）。 */
         const cancelledNow = () => {
             try { return typeof opts.isCancelled === 'function' && !!opts.isCancelled(); } catch (_e) { return false; }
         };
-        /* ══ 阶段一：建索引（可让出，不与同步路径分家） ══ */
+        /* ══ 阶段一：建索引（可让出；可选地在片间受理作废） ══
+         * [v3.75.0 + R-O5] `opts.cancelIndex === true` 时才在索引片间查取消谓言。
+         *   为什么**默认关**：`isCancelled` 的调用计数是既有判据的契约
+         *   （tests/system-v3170 B5 锁「第 4 次检查 = 已扫 6000 条」），默认插检查点
+         *   会挪动它 —— 「既有调用方与判据一字不改」由「默认关」保证，
+         *   而不是靠改判据来迁就实现。
+         *   为什么必须**有**这条路径：索引阶段是长会话最贵的一段（10000 楼要建
+         *   10000 条对象），此前用户在等待期点「取消」要等整段建完才被受理。
+         *   作废时如实报 `indexed`（已建部分）与 `scanned: 0`（一条都没比中过）。 */
+        const cancelIndex = opts.cancelIndex === true;
         const all = [];
         const gen = this._indexChunks({ full: full, sink: all });
         while (true) {
@@ -491,6 +541,17 @@ export class GlobalSearchEngine {
              *   在索引阶段插检查点会挪动它 —— 取消语义不该因实现节奏变化而变。
              *   索引阶段仍受档位预算与每源上限约束，单片台阶有界。 */
             await this._yieldTurn();
+            if (cancelIndex && cancelledNow()) {
+                /* 索引阶段被作废：**不建完**。`gen.return()` 触发生成器的 finally，
+                 *   于是 `_lastScan.indexed` 与 `_errors` 落的是**已建部分**的真记账
+                 *   （防「取消之后读数还停在上一轮」那类不报错、只错数的形态）。 */
+                gen.return();
+                return {
+                    query: '', results: [], groups: [], total: 0, scanned: 0,
+                    indexed: all.length, errors: this._errors.slice(), cancelled: true,
+                    scope: this._scope(full, { coverage: { scannedBySource: {}, pending: null, complete: false, cancelledAt: 'index' } }, all.length)
+                };
+            }
         }
         /* ══ 阶段二：分片比中（检查点原位，片后让出） ══ */
         let processed = 0;
@@ -498,8 +559,8 @@ export class GlobalSearchEngine {
             if (cancelledNow()) {
                 return {
                     query: '', results: [], groups: [], total: 0, scanned: processed,
-                    errors: this._errors.slice(), cancelled: true,
-                    scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: Math.max(0, all.length - processed), complete: false } }, all.length)
+                    indexed: all.length, errors: this._errors.slice(), cancelled: true,
+                    scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: Math.max(0, all.length - processed), complete: false, cancelledAt: 'match' } }, all.length)
                 };
             }
             const end = Math.min(all.length, processed + SCAN_CHUNK);
@@ -538,8 +599,8 @@ export class GlobalSearchEngine {
         const groups = Array.from(groupMap.values()).sort((a, b) => b.items[0].score - a.items[0].score);
         return {
             query: q, results: results, groups: groups, total: hits.length, scanned: processed,
-            errors: this._errors.slice(), cancelled: false,
-            scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: 0, complete: true } }, all.length)
+            indexed: all.length, errors: this._errors.slice(), cancelled: false,
+            scope: this._scope(full, { coverage: { scannedBySource: scannedBySource, pending: 0, complete: true, cancelledAt: null } }, all.length)
         };
     }
 
