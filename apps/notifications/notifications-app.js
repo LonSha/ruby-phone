@@ -74,6 +74,25 @@ export class NotificationCenterApp {
         .nc-empty-icon { font-size:38px; margin-bottom:12px; }
         .nc-empty-title { font-size:14px; color:#c9ccd1; margin-bottom:6px; }
         .nc-empty-sub { font-size:12px; line-height:1.6; }
+        /* [v3.85.0 · 拓展计划 R-X1] 行动中心两列（只读 / 需确认）。 */
+        .nc-ac { margin:0 16px 10px; padding:10px 12px; border-radius:14px; background:rgba(76,139,245,.08); border:1px solid rgba(76,139,245,.18); }
+        .nc-ac-mute { background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.08); }
+        .nc-ac-head { font-size:12.5px; font-weight:700; color:#9dc0ff; letter-spacing:.3px; }
+        .nc-ac-note { font-size:11.5px; color:#8b8f96; margin-top:5px; line-height:1.5; }
+        .nc-ac-lane { margin-top:8px; }
+        .nc-ac-lanetitle { font-size:11px; color:#9aa0a6; display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+        .nc-ac-lanen { font-size:10px; padding:0 6px; border-radius:999px; background:rgba(255,255,255,.12); }
+        .nc-ac-item { display:flex; gap:9px; align-items:flex-start; padding:8px 9px; border-radius:11px; background:rgba(255,255,255,.05); margin-bottom:5px; }
+        .nc-ac-icon { flex:0 0 20px; text-align:center; font-size:13px; }
+        .nc-ac-body { flex:1; min-width:0; }
+        .nc-ac-t1 { font-size:12.5px; font-weight:600; color:#f1f3f4; word-break:break-word; }
+        .nc-ac-t2 { font-size:11.5px; color:#b6bac0; margin-top:2px; line-height:1.45; word-break:break-word; }
+        .nc-ac-t3 { font-size:10.5px; color:#8b8f96; margin-top:4px; }
+        .nc-ac-btns { flex:0 0 auto; display:flex; gap:5px; }
+        .nc-ac-btn { border:none; border-radius:8px; padding:4px 9px; font-size:11px; background:rgba(255,255,255,.12); color:#dfe1e5; cursor:pointer; }
+        .nc-ac-btn:hover { background:rgba(255,255,255,.22); }
+        .nc-ac-open { background:rgba(76,139,245,.35); color:#fff; }
+        .nc-ac-btn-off { opacity:.4; cursor:not-allowed; }
         </style>`;
     }
 

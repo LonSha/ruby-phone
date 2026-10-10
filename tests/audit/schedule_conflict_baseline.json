@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 402,
+    "files_scanned": 403,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
@@ -89,7 +89,7 @@
     "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。",
     "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
     "**★ v3.22.0 复校（口径收紧：一是词边界，二是块注释）**：`consume_points` 26→**23**、`consume_files` 6（成员有增有减）、`files_scanned` 241→247。两处都是**探针自己原先的口径没做全**，不是源文案的问题：① `deadline` 是**子串**匹配 ⇒ 新版 `apps/focus/focus-app.js` 的私有运行态字段 `_deadline`（番茄钟倒计时时刻，10 处）被算成「消费上游承诺期限」（假阳性，「漂亮的假涨」）；② 探针口径写明「注释行不计」，但实现只跳过 `//` ⇒ `/* … 倒计时显示走 deadline。 */`这类**块注释散文**照算（残余 1 点）。修法：`deadline` 改词边界匹配（`deadlineFloor` 仍由它自己的 token 命中），并在匹配前把 `/* … */` 整段抹白（保留换行 ⇒ 行号不变）。★ 同时如实记下**成员变动**：`apps/focus/focus-app.js` 出列（它读的是自己的倒计时，不是上游承诺），其余 6 个文件不变。",
-    "v3.84.0 复校：枚举面 386 → 402（本版新增 4 个真源文件 config/num-clamp.js（有界取数唯一实现）/ config/diagnose-action.js（诊断处置面）+ 两件判据套件 tests/system-v3820.test.mjs / system-v3830.test.mjs，另含 v3.80.0 起的 A/B 清单八件真源 config/portable-payload.js / submodel-isolation.js / ambience-pool.js / relation-tier.js / scene-rules.js / state-fields.js / archive-digest.js / memory-correction.js / craft-cards.js；累计 16 件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；消费面（consume_points 23 / consume_files 6 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程与期限面任何一行。"
+    "v3.85.0 复校：枚举面 402 → 403（本版新增 4 个真源文件 config/num-clamp.js（有界取数唯一实现）/ config/diagnose-action.js（诊断处置面）+ 两件判据套件 tests/system-v3820.test.mjs / system-v3830.test.mjs，另含 v3.80.0 起的 A/B 清单八件真源 config/portable-payload.js / submodel-isolation.js / ambience-pool.js / relation-tier.js / scene-rules.js / state-fields.js / archive-digest.js / memory-correction.js / craft-cards.js；累计 16 件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；消费面（consume_points 23 / consume_files 6 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程与期限面任何一行。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

@@ -66,10 +66,77 @@ export class NotificationCenterView {
             </div>
             <div class="nc-filters">${this._filterChips(all)}</div>
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
+            ${this._actionSection()}
             <div class="nc-list">${rows.length ? rows.map(n => this._row(n)).join('') : this._empty()}</div>
         </div>`;
         shell.setContent(this.app.css() + html, 'notifications-main');
         this._bind();
+    }
+
+    /* ---------------- [v3.85.0 · R-X1] 行动中心两列 ----------------
+     *   数据**只**从宿主缓存读（`VirtualPhone._actionCenterCache`，由 config/action-center.js
+     *   在咽喉处算好后挂上）：本视图不重算、不过滤、不判断哪条属哪列 ——
+     *   分列在真源层就做完了，视图再分一遍就是第二份实现（本仓治过多次的那种漂移）。
+     *   跳不过去的条目**照样显示**，并把理由写在按钮上（点了没反应才是真坑）。 */
+    _actionSection() {
+        let center = null;
+        try { center = window.VirtualPhone?._actionCenterCache || null; } catch (_e) { center = null; }
+        if (!center) {
+            return `<div class="nc-ac nc-ac-mute"><div class="nc-ac-head">行动中心</div>` +
+                `<div class="nc-ac-note">还没取到数（下一次剧情时间推进后刷新）</div></div>`;
+        }
+        const lanes = center.lanes || { readonly: [], needConfirm: [] };
+        const nRead = (lanes.readonly || []).length;
+        const nNeed = (lanes.needConfirm || []).length;
+        const gaps = Array.isArray(center.gaps) ? center.gaps : [];
+        /* 三态不许压平：读不到（gap）/ 读了确实没有 / 有 N 条。 */
+        const head = `行动中心 · ${nNeed} 项需确认 · ${nRead} 项只读`;
+        const gapLine = gaps.length
+            ? `<div class="nc-ac-note">${gaps.length} 个源这轮没读到：${esc(gaps.map(g => g.source).join(' · '))}</div>`
+            : '';
+        if (!nRead && !nNeed) {
+            return `<div class="nc-ac"><div class="nc-ac-head">${esc(head)}</div>${gapLine}` +
+                `<div class="nc-ac-note">本机现在没有待处理的项</div></div>`;
+        }
+        return `<div class="nc-ac">
+            <div class="nc-ac-head">${esc(head)}</div>
+            ${gapLine}
+            ${this._actionLane('需确认', lanes.needConfirm)}
+            ${this._actionLane('只读', lanes.readonly)}
+        </div>`;
+    }
+
+    _actionLane(title, rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const body = list.length
+            ? list.map(it => this._actionRow(it)).join('')
+            : `<div class="nc-ac-note">（无）</div>`;
+        return `<div class="nc-ac-lane"><div class="nc-ac-lanetitle">${esc(title)}<span class="nc-ac-lanen">${list.length}</span></div>${body}</div>`;
+    }
+
+    _actionRow(it) {
+        const acts = Array.isArray(it.actions) ? it.actions : [];
+        const label = { done: '完成', snooze: '稍后', ignore: '忽略' };
+        const btns = acts.map(a => {
+            const key = String(a || '');
+            if (key === 'open') {
+                const ok = it.jump && it.jump.ok === true;
+                const why = ok ? '打开来源' : ('跳不过去：' + String((it.jump && it.jump.why) || ''));
+                return `<button class="nc-ac-btn nc-ac-open${ok ? '' : ' nc-ac-btn-off'}" data-ac-anchor="${esc(it.realIdemKey)}" data-ac-act="open" title="${esc(why)}"${ok ? '' : ' disabled'}>打开</button>`;
+            }
+            return `<button class="nc-ac-btn" data-ac-anchor="${esc(it.realIdemKey)}" data-ac-act="${esc(key)}">${esc(label[key] || key)}</button>`;
+        }).join('');
+        const meta = [it.label, it.certainty === 'suggestion' ? '建议' : '', it.floor !== null && it.floor !== undefined ? ('第 ' + it.floor + ' 楼') : '', it.storyDay || '']
+            .filter(Boolean).join(' · ');
+        return `<div class="nc-ac-item${it.jump && it.jump.ok ? ' nc-ac-jumpable' : ''}">
+            <div class="nc-ac-icon">${esc(it.icon || '•')}</div>
+            <div class="nc-ac-body">
+                <div class="nc-ac-t1">${esc(it.title || '')}</div>
+                ${it.detail ? `<div class="nc-ac-t2">${esc(it.detail)}</div>` : ''}
+                <div class="nc-ac-t3">${esc(meta)}</div>
+            </div>
+            <div class="nc-ac-btns">${btns}</div>
+        </div>`;
     }
 
     _filterChips(all) {
@@ -228,6 +295,23 @@ export class NotificationCenterView {
                         window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
                     } catch (_e) { /* 忽略 */ }
                     return;
+                }
+                this.render();
+            });
+        });
+        /* [v3.85.0 · R-X1] 行动项四动作：视图只把「锚 + 动作」交给宿主去落账与新起一轮，
+         *   自己**不写账本、不改 center**（写入口只有咽喉一处，否则又是两份账）。 */
+        root.querySelectorAll('.nc-ac-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const anchor = String(btn.dataset.acAnchor || '');
+                const act = String(btn.dataset.acAct || '');
+                let res = null;
+                try { res = window.VirtualPhone?.applyActionCenterAction?.(anchor, act) || null; } catch (_e) { res = null; }
+                if (res && res.ok === true) {
+                    this._flash = res.note || '已处理';
+                } else {
+                    this._flash = (res && res.note) ? res.note : '这一项处理不了（宿主未接线或已失效）';
                 }
                 this.render();
             });

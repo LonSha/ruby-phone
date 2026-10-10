@@ -18,12 +18,12 @@
     ]
   },
   "readings": {
-    "files_scanned": 402,
+    "files_scanned": 403,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
     "upstream_global_read_sites": 4,
-    "chat_data_patterns": 303,
+    "chat_data_patterns": 308,
     "namespace_store_sites": 5,
     "checkpoint_face_hits": 0,
     "preview_face_hits": 34,
@@ -133,7 +133,7 @@
     "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
     "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。",
     "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。",
-    "v3.84.0 复校：枚举面 386 → 402（本版新增真源 config/num-clamp.js（有界取数唯一实现）与 config/diagnose-action.js（诊断处置面）+ v3.80.0~v3.84.0 累计的 A/B 清单八件真源与三个判据套件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；回滚点（rollback_points）/ 回滚文件（rollback_files）/ 回滚入口定义（rollback_entry_defs）/ 上游全局读取点 / CHAT_DATA_PATTERNS / 命名空间存储点**逐项不变** —— 本版没有碰回滚与存储面任何一行。"
+    "v3.85.0 复校：枚举面 402 → 403（本版新增真源 config/num-clamp.js（有界取数唯一实现）与 config/diagnose-action.js（诊断处置面）+ v3.80.0~v3.84.0 累计的 A/B 清单八件真源与三个判据套件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；回滚点（rollback_points）/ 回滚文件（rollback_files）/ 回滚入口定义（rollback_entry_defs）/ 上游全局读取点 / CHAT_DATA_PATTERNS / 命名空间存储点**逐项不变** —— 本版没有碰回滚与存储面任何一行。"
   ],
   "not_done": [
     "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",

@@ -53,6 +53,16 @@ import {
     settlementIdemKey, normalizeFinanceLedger, diffFinanceLedger, applyFinanceLedger,
     financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_LEDGER_LIMIT
 } from './config/finance-overview.js';
+/* [v3.85.0 · 拓展计划 R-X1] 统一行动中心（纯函数）：
+ *   五源归一（账单/约定/未读/续玩/失败）→ 两列（只读 / 需确认）→ 幂等账本 → 通知投递。
+ *   接线点与 scheduleFace 同族：**取数在咽喉，判定全在内核**，本文件只做五源的「怎么拿到」。 */
+import {
+    AC_LEDGER_KEY, buildActionCenter, diffActionLedger, applyActionLedger, applyAction,
+    normalizeActionLedger, acSummaryLine, actionNoticeOf
+} from './config/action-center.js';
+/* [v3.85.0 · R-X1] 行动项跳转沿用 X2 的靶心载荷（`buildOpenDetail(appId, tab, ref)`），
+ *   不另造一套派发 —— 派发链只有 `phone:openApp` 一条。 */
+import { buildOpenDetail } from './config/app-open-detail.js';
 /* [v3.69.0 · 拓展计划 X5] 社媒知情边界实际接入协议层（纯函数）：
  *   知情判定（可见/已看/可互动）+ 通知过滤（看不见不收）+ 知情账本（撤回失效缓存）。 */
 import {
@@ -138,7 +148,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.84.0';
+const ST_PHONE_VERSION = '3.85.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -320,21 +330,24 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-11",
     items: [
-        "【定位 · 计划 R-O8 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 依据真调用图优先治理四簇（懒加载映射 / 生命周期接线 / 更新公告数据 / 跨 App 注入装配）；② 先迁纯数据与无状态装配，再迁带副作用模块；③ 每次迁移保持 App 加载顺序、单例、旧键名与异常退路；④ 清理同名不同实现的函数，核对动态路径与缺席退路。本版先做**取数**：扫 apps/ config/ phone/ 全部 .js 的函数定义面（名字 + 函数体指纹）。",
-        "【取数结果（本版全部结论的起点）】** 同名函数 **163 组**：其中函数体**逐字相同**的 30 组、**同名不同实现**的 **133 组**。最典型的一簇是「有界取整」：`boundedInt` 一份代码在 **11 个文件**里各写了一遍，参数名与语义完全一致（v, fallback, min, max），而其中 **2 份仍是弱口径**（Number(v) + Number.isFinite）。",
-        "【为什么这是 R-O8 点名的形态，而不是洁癖】** 同一条口径在 11 处复制，改好了 9 处、剩下 2 处**没有任何东西能回答**。第 9 处改对不等于第 10 处改对 —— 这正是「维护半径」四个字的实测含义。而弱口径的后果是**读数塌格**：对空串、空数组、null 调用 Number 全是 0，「上游没给这一格」与「上游给了 0」在同一个写法下同形。",
-        "【新模块 · config/num-clamp.js】** 有界取数的**唯一实现**：boundedBy（返回对象形态，带处置原因）/ boundedInt / boundedNum / clampLine。取数一律走 numOrNull（全仓唯一取数门）。",
-        "【本模块的两条裁定（各自对应一个错法）】** ① 边界 min/max **必须都是有限数**才夹取 —— 边界本身取不到时如实返回原数并报 unbounded，**不夹取、也不编一个边界**（这一条与「没给 ≠ 给了 0」同源）；② 三态互不同形：value（取到并夹好）/ fallback（取不到，用兜底）/ unbounded（取到了但边界取不到）—— 把 unbounded 并进 value，调用方会以为边界生效了；并进 fallback，会以为没取到数。",
-        "【迁移 11 处（计划第 ②③ 条：先迁无状态装配，保持加载顺序与异常退路）】** accounting / avatarframe / block / focus / piggy / punchcard / regexfilter / shop / taobao / weather / widget 共 11 个 App 的本地 boundedInt 全部删除，改引唯一实现；各文件只加一条静态导入，**调用点与参数一字未改**（零行为变更面），App 加载顺序、单例与错误退路不动。",
-        "【两处真缺陷当场被消掉】** accounting 与 focus 两份正是残留的**弱口径**副本（Number(v) + Number.isFinite）—— 迁移后它们与其余 9 处**必然同口径**，因为只有一份实现了。这不是「顺手改」，而是 R-O8「清理同名不同实现」的直接兑现。",
-        "【配套：副本夹具也要有唯一实现】** 七个老套件的负控制用 `mkdtempSync` 搭真目录结构的副本再加载被破坏模块；被加载模块现在会引 num-clamp ⇒ 副本里缺它即 ERR_MODULE_NOT_FOUND（**与破坏本身无关的假红**）。处置是给夹具补一份**真件字节副本**（copyFileSync，不是手写桩 —— 桩会与真件分叉），共 7 个套件。",
-        "【本版顺带修掉的真缺陷（三处，都由老判据当场报出）】** ① `docs/runtime-verification-boundary.md` 的机器可读复校契约两行**陈旧**（语法 710 / 导入 399 文件 660 条 vs 真跑 730 / 415 文件 695 条）—— 这正是那道契约要防的形态：文档写了实测、其实是抄的旧数；② 日程冲突基线 `files_scanned` 386 → **402**（枚举面随真源文件数走，本版新增件入面）；③ 长会话基线 `scan.files` 387 → **403** 与判据散文 L5 的 got_text 同步（该套件的纪律是「源变了就该主动刷新基线的 got_text」，不是放宽判据）。",
-        "【新增套件 · tests/system-v3840.test.mjs】** 结构面（唯一实现在场且只导出这一族 / 11 处本地副本已清零 / 各文件真引唯一实现）+ 行为面（三态互不同形 / 边界取不到即不夹取 / 弱口径与强口径的输入对读差）+ 接线面（真跑被迁移 App 的 normalize 入口，读数与迁移前逐项相同）+ 负控制（真源码定点破坏 → 破坏副本 → 同款判据）+ 版本锚。",
-        "【本版自己抓到的缺陷（四处，都由老判据当场报出，不是事后回看）】** ① 机器可读复校契约陈旧（见上）；② 日程冲突基线 files_scanned 与长会话基线 scan.files 与 L5 got_text 随枚举面漂移未刷；③ 本套件判据**自身偏差两处**：A1 的弱口径签名判据在未剔注释的源码上跑（唯一实现的文件头里逐字写着那个签名，属「判据面被散文侵入」）；B1 夹具把 boolean 当合法读数（numOrNull 只认 number 与非空数字字符串）—— 两处都是判据自己算错口径，已按真源改回；④ C1 夹具的期望值写错（0-20 界内取 3 却写成 5），属「夹具错会把好代码逼着改坏」。",
-        "【用户可见的边界（与 docs/runtime-verification-boundary.md 同源）】** 本版挡得住「**看起来没坏但显示不对**」这一族里的一个具体形态：同一口径被复制成多份、其中几份悄悄退回弱口径（读数上只表现为「空值被读成 0」，没有任何一处会报错）。本版 **不能保证**：其余 132 组同名不同实现都已收口（本版只治了「参数与语义完全一致」的那一族，其余需要逐簇判断，不是复制粘贴能解决的），也不能保证真机上的行为与这里的输入对读差完全一致。边界原文见运行时验证边界文档。",
-        "【交棒改写（判据面，不是放宽）】** 本版把「弱口径不再允许就地新写」从 weak-coercion 门的**事后扫描**升级为 num-clamp 的**结构性不允许**：有界取数本身只剩一处实现，第 12 处副本连出现的机会都没有。门与真源分工不重叠（门仍在守其余族名的漏网），旧判据一行未改。",
-        "【边界 · 诚实三条】** ① 本版**只治完全同构的那一族**（11 处 boundedInt 与它们的参数语义逐字一致）—— 其余同名不同实现的 132 组多数是**合理分化**（同一个名字在不同 App 里语义本就不同，例如 clip 有五种不同截断口径），强行合并会抹掉差异；② 本版**没有动**计划点名的另三簇（懒加载映射已由 v3.61.0 表驱动收口、生命周期接线与更新公告数据两簇本版只取数不动手）—— 它们需要各自的判据面，不是同一把刀；③ 迁移的收益是**维护半径**（同口径只剩一份实现），**不是行数**：11 个文件合计只减约 1.9KB，按计划原文「入口行数只作附属读数」的口径，本版**不以行数作为理由**。",
-        "【版本升至 3.84.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；状态台账按新落盘重生成。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3840.py 对齐 tools/bump_v3830.py）。"
+        "【定位 · 计划 R-X1 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 汇总五类待处理项；② 每条带来源 App、来源事件、会话、楼层或剧情时间；③ 支持完成 / 延期 / 忽略 / 跳转四种动作；④ 只读通知与需要确认的通知分开呈现。修前实测的处境是：五类待处理项**分散在五个源里各说各的** —— 待确认账单在财务总览、到期约定在日历、未读事件在通知日志、续玩建议在织光机、失败任务在诊断中心 —— 没有任何一处能回答「现在总共该处理什么」。",
+        "【修前处境的四条实测形态】** ① 五处各说各的，没有总量，用户要挨个 App 翻；② 「没读到」与「读了确实没有」同形，都渲染成空行；③ 同一件事改了一行日期（改期）被判成换了一条新事项，于是同一条会在提醒里出现两次；④ 只读通知与需要确认混在一列，真正需要用户动手的那些被淹没。本模块逐条消掉这四条。",
+        "【新模块 · config/action-center.js（纯函数，811 行）】** 五源归一的**唯一实现**：只消费不取数（不引五源的取数件、不碰宿主的 window 与 document 与 localStorage），把上游各给一份读数收成一份可处置的行动中心。导出十八个出口，自检报出五类与五源登记齐备且问题为空表。",
+        "【三张表：五类 × 两条泳道 × 四动作】** 类别五类（账单 / 约定 / 未读 / 续玩 / 失败）、泳道两条（只读 / 需确认）、动作四个（完成 / 延期 / 忽略 / 跳转）、状态六态（open / done / snoozed / ignored / expired / withdrawn）。四条缺一条，「分开呈现」与「四动作」就没有共同的语言。",
+        "【五源登记表：每类钉死六件事】** 每类钉死 label 与 from 与 timeBasis 与 lane 与 appId 与 icon，外加动作白名单：账单钉旅行结算面与真实时间、约定钉日历与剧情时间、未读钉空来源与只读、续玩钉织光机与只读、失败钉诊断处置面与需确认。**来源与时间基写在登记表里，不写在视图里** —— 视图纯渲染、一切结论由内核给出。",
+        "【锚的两条键（本模块最贵的一条设计）】** 一条是带日期的顺序键，只用于投递上屏与通知合并；另一条是**不带日期的对账锚**。为什么要两条：改期只该换前者，不该换后者 —— 只有一条键时，日历里挪一行就等于换了身份，于是同一条承诺会在提醒里出现两次（修前形态第三条的根因）。撤回判定与改期判定都挂在后者上。",
+        "【撤回门与回档判据（计划验收第四项的直接兑现）】** 撤回面上**唯一**的已决判据是「只有仍处于 open 的条目才可能被撤」—— 用户已经决定过的（完成 / 延期 / 忽略 / 过期）一律跳过，回档撤的是「系统还没让你看过的未来提醒」，不是「你已经决定过的事」；紧随的撤回门是「源本轮没读就不撤」—— 把「不知道」当成「没有」是本仓最贵的反向错读数；回档只对**剧情基**的行判（真实时间基的行不随剧情回档走）；改期判据是「激活锚里还有这一条」。",
+        "【账本 · 幂等与上限】** 账本随会话隔离（换角色后不该看到上一个角色的行动项与处理痕迹），上限 240 条，只记幂等键与撤回原因与处理痕迹三类；落账仅在有新增或撤回时写盘，其余轮次只读不算不写。撤回原因三态（源被回档 / 源被改期 / 源已消失）互不同形 —— 并成一格，用户就分不清「它没了」与「它挪走了」。",
+        "【咽喉接线（唯一取数口）】** 五源的取数全部落在 index.js 的 refreshActionCenter 里：账单从旅行结算面的对外债务与内部转付摊平、约定复用日历投影的缓存透传（**不自己再算一份**）、未读从通知日志过滤未读、续玩从织光机的上一份简报、失败从诊断处置面过滤真 failed。刷新点放在日历提醒检查的早退之前 —— 否则两类与剧情时间无关的源永远看不到。缓存挂宿主，视图只读缓存。",
+        "【跳转是导航，不是状态】** 四种动作里「跳转」是导航（走唯一那条派发链，不另造一套），另外三种才是状态。把打开也在账本里记成一种状态，会让「打开看一眼」变成「这件事被我处理了」—— 故 applyAction 收到打开就**如实拒绝**并给出可读原因。三种写动作里找不到锚也如实回报（还没落账 / 打开不是状态），不静默吞掉。",
+        "【视图 · 两条泳道 + 四个动作】** 通知中心视图加两条泳道（只读 / 需确认）与四个动作按钮，样式走新增的 .nc-ac 系列。**视图纯渲染**：只读宿主缓存、不重算、不自己写账、不引内核实现 —— 会重算的视图会在内核改口径时静默显示错数，而没有任何东西会响。",
+        "【三处登记齐备（本仓的既有纪律，缺一处即门禁转红）】** ① 会话级存储前缀（随会话隔离，与既有财务账本同款）；② keys 台账登记该键并声明作用域为会话级；③ 派生面台账登记本模块为「非派生库」（来源事件 id 只用于幂等键与撤回归因，本层不持有也不回收来源条目 —— 回收由各源自己做）。",
+        "【新增套件 · tests/system-v3850.test.mjs（637 行 / 19 用例）】** 五面：结构面（真源在场 / 只消费不取数 / 三处登记 / 咽喉接线三处都在）、行为面（十条判据同源一次通过 / 名实一致四项一项不少 / 失败项只在真 failed 时进列）、接线面（刷新点在早退之前 / 视图纯渲染 / 真跑内核链验首轮落账与复算不重投）、负控制八条（真源码定点破坏到副本 → 同款判据必须转红）、版本锚。负控制全部走「破坏副本 + 同款判据」，而不是另写一份模拟判据。",
+        "【本版自己抓到的两处真缺陷（都由负控制当场报出，不是事后回看）】** ① 「已决定过的不撤」曾写成一张独立的已决态表，而紧随的另一条判据已经涵盖了同一条规矩 —— 两份一旦分叉，负控制对破坏就一个字不变（这是判据不敏感，不是判据合格），故删表并把规矩收成一处；② 跳转判据里曾有一条三元守卫，而取跳转的函数在不可跳时本就返回空靶心，改掉它行为不变 ⇒ **不可观测**，故把破坏点移到「跳不过去时理由被抹掉」与「仍带出靶心」两处。两条的共性是：负控制必须选「破坏形态与判据粒度匹配」的那一处。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「**看起来没坏但显示不对**」这一族里的一个具体形态：同一件待处理事项在多处显示成不同状态，或改期后被当成新事项重复提醒。本版**不能保证**：① 真宿主里五源同时可读时的观感与滚动表现；② 免打扰只抑制展示而不丢失事件这一条在真机上的表现（本版只保证账本与撤回门的机制面）；③ 真机上的通知点击真的打开了对应来源。边界原文见运行时验证边界文档。",
+        "【边界 · 诚实三条】** ① 本版**只做汇总与处置**，不改五源各自的判定口径（五源仍各管各的取数，本层只消费）；② 账本**不是**五源条目的副本，只记幂等键与处理痕迹，来源条目被删时本层不回收、只按撤回归因如实标记；③ 本版**没有**做免打扰的持久化设置项（本版只保证「抑制展示不丢事件」的机制面），那一格仍需单独一轮。",
+        "【交棒改写（判据面，不是放宽）】** 本版把「五源各说各的」从清单式汇总换成了**登记表驱动的归一**：第 6 个源要接进来时，只需在登记表里加一行，泳道与动作白名单与时间基与来源 App 都随行给出 —— 是否漏接由登记表与探针回答，不靠人记得。",
+        "【版本升至 3.85.0（五源同源）】** manifest.json 与 package.json 与 index.js 的版本常量与公告块与 update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息当前版本行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；三条探针基线随枚举面漂移同步刷新（日程与分支的枚举面、长会话的扫描面与判据散文）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3850.py 对齐 tools/bump_v3840.py）。"
     ]
 };
 
@@ -2591,6 +2604,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
     async function checkCalendarScheduleReminders(currentTime = null) {
+        /* [v3.85.0 · 拓展计划 R-X1] 行动中心刷新：**放在本函数的早退之前**。
+         *   它的五源里有两类（未读通知 / 失败任务）跟剧情时间毫无关系，
+         *   跟着日历早退会让这两类永远看不到（不报错、就是看不到）。
+         *   不 await：后台刷新，不挡日历这条链。 */
+        try { refreshActionCenter(); } catch (_acr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -2664,6 +2682,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         if (raw) {
                             const cfMod = await bootTiming.instrumentImport(import('./config/commitment-flow.js'), './config/commitment-flow.js');
                             commitments = cfMod.commitmentCalendarProjection(raw);
+                            /* 同一次取数，顺手留给行动中心（R-X1 的约定面读它）——
+                             *   两处各取一次会各判一次，哪天口径差了就是两份读数。 */
+                            if (window.VirtualPhone) window.VirtualPhone._actionCommitmentsProjection = commitments;
                         }
                     }
                 } catch (_ce) { /* 不可读即未读 */ }
@@ -2787,6 +2808,186 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
         } catch (e) {
             console.warn('[Calendar] 日程提醒检测失败:', e);
+        }
+    }
+
+    /* [v3.85.0 · 拓展计划 R-X1] 统一行动中心：五源归一 → 两列 → 幂等账本 → 通知投递。
+     *   与上面那段日程提醒**同一族**（取数在咽喉，判定全在内核）。
+     *   调用点在 `checkCalendarScheduleReminders` 的**入口处（早退之前）**：
+     *   本模块有两类源（未读通知 / 失败任务）与剧情时间无关，跟着早退会被一起吞掉。
+     *   五源各按「读不到 ≠ 没有」表达：取不到就**别传这个键**（内核记 not-read gap）。 */
+    async function refreshActionCenter() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+            const nowMs = Date.now();
+
+            /* 源 1 待确认账单：旅行记账的结算建议（suggestion）。App 没开过 = 没读。 */
+            let bills;
+            try {
+                const tvApp = vp.traveldeskApp;
+                if (tvApp && typeof tvApp.settle === 'function') {
+                    const summary = tvApp.settle() || {};
+                    const ext = Array.isArray(summary.external) ? summary.external : [];
+                    const transfers = Array.isArray(summary.transfers) ? summary.transfers : [];
+                    bills = [];
+                    for (let i = 0; i < ext.length; i++) {
+                        const d = ext[i] || {};
+                        bills.push({
+                            sourceId: 'ext:' + String(d.from || '') + '>' + String(d.to || ''),
+                            title: '对外结算：' + String(d.from || '') + ' → ' + String(d.to || ''),
+                            note: '旅行外部债务（未落账的建议）',
+                            amountCents: Math.round((Number(d.amount) || 0) * 100),
+                            certainty: 'suggestion',
+                            ref: { kind: 'expense', id: String(d.expenseId || d.id || '') }
+                        });
+                    }
+                    for (let i = 0; i < transfers.length; i++) {
+                        const d = transfers[i] || {};
+                        bills.push({
+                            sourceId: 'in:' + String(d.from || '') + '>' + String(d.to || ''),
+                            title: '内部转付：' + String(d.from || '') + ' → ' + String(d.to || ''),
+                            note: '旅行分摊结算建议（确认后才落账）',
+                            amountCents: Math.round((Number(d.amount) || 0) * 100),
+                            certainty: 'suggestion',
+                            ref: { kind: 'expense', id: String(d.expenseId || d.id || '') }
+                        });
+                    }
+                    if (!bills.length) bills = [];   /* 读到了、确实没有 —— 与「没读」分开 */
+                }
+            } catch (_ab) { /* 读不到 ⇒ 不传这个键（内核记 not-read） */ }
+
+            /* 源 2 到期约定：复用日程那段已经取好的承诺投影（同一份读数，不重取）。 */
+            let commitments;
+            try {
+                if (vp._actionCommitmentsProjection !== undefined) commitments = vp._actionCommitmentsProjection;
+            } catch (_ac) { /* 读不到即不传 */ }
+
+            /* 源 3 未读事件：通知落账层里 read=false 的那些。 */
+            let unread;
+            try {
+                const log = vp.notificationLog;
+                if (log && typeof log.list === 'function') {
+                    unread = log.list().filter((n) => n && n.read !== true).map((n) => ({
+                        id: String(n.id || ''),
+                        appId: (n.appId && n.appId !== '__sys__') ? String(n.appId) : '',
+                        title: String(n.title || ''),
+                        message: String(n.message || ''),
+                        ts: n.ts || null,
+                        floor: (typeof n.floor === 'number') ? n.floor : undefined,
+                        ref: n.ref || null,
+                        read: false
+                    }));
+                }
+            } catch (_ad) { /* 读不到即不传 */ }
+
+            /* 源 4 续玩建议：织光机续玩简报。App 没开过 = 没读（**不自己算一份**）。 */
+            let resume;
+            try {
+                const twApp = vp.timeweaverApp;
+                if (twApp && twApp._lastBrief && typeof twApp._lastBrief === 'object') {
+                    resume = twApp._lastBrief;
+                }
+            } catch (_ae) { /* 读不到即不传 */ }
+
+            /* 源 5 失败任务：诊断中心的处置读数（只在真跑过诊断之后才有）。 */
+            let failures;
+            try {
+                const diag = vp._diagnoseCache;
+                if (diag && diag.disposalFace && Array.isArray(diag.disposalFace.items)) {
+                    failures = diag.disposalFace.items.filter((it) => String((it && it.state) || '') === 'failed');
+                }
+            } catch (_af) { /* 读不到即不传 */ }
+
+            const center = buildActionCenter({
+                nowMs: nowMs,
+                storyDay: (vp._scheduleAdviceCache && vp._scheduleAdviceCache.story && vp._scheduleAdviceCache.story.dayKey) || '',
+                bills: bills,
+                commitments: commitments,
+                unread: unread,
+                resume: resume,
+                failures: failures
+            });
+
+            /* 对账：本轮该处理什么 vs 账本里出现过什么。 */
+            const rawLedger = storage?.get?.(AC_LEDGER_KEY);
+            let ledger = rawLedger;
+            if (typeof rawLedger === 'string') { try { ledger = JSON.parse(rawLedger); } catch (_) { ledger = null; } }
+            const decision = diffActionLedger(center, ledger);
+
+            /* 只对本轮**新出**的投一条（replay 不重投 —— 同一件事不重复上屏）。 */
+            for (const row of decision.fresh) {
+                try {
+                    const notice = actionNoticeOf(row);
+                    showUnifiedPhoneNotification(notice.title, notice.message, notice.icon, {
+                        senderKey: notice.senderKey,
+                        appId: notice.appId,
+                        meta: notice.meta
+                    });
+                } catch (_an) { /* 单条投递失败不影响整体 */ }
+            }
+
+            /* 落账（有新增或撤回才写 —— 不然每轮都在写盘）。 */
+            if (decision.fresh.length || decision.withdraw.length) {
+                const next = applyActionLedger(ledger, decision, nowMs, center.storyDay);
+                try { storage?.set?.(AC_LEDGER_KEY, JSON.stringify(next)); } catch (_aw) { /* 写失败不崩调用链 */ }
+                vp._actionLedgerCache = next;
+            } else {
+                vp._actionLedgerCache = normalizeActionLedger(ledger);
+            }
+
+            /* 缓存：视图与诊断都读这一份（**唯一读数出口**，不在视图里重算一次）。 */
+            vp._actionCenterCache = center;
+            vp._actionCenterLine = acSummaryLine(center);
+        } catch (e) {
+            console.warn('[ActionCenter] 行动中心归一失败:', e);
+        }
+    }
+
+    /**
+     * [v3.85.0 · R-X1] 处理一条行动项（视图把「锚 + 动作」交上来）。
+     *   · `open` 是**导航不是状态**：开完就回，账本一个字不改（跳转是旁路）；
+     *   · done / snooze / ignore 落账后**立刻重跑一轮刷新**，让两列与通知同源更新；
+     *   · 找不到锚就如实回报（不静默成功 —— 「点了没反应」是用户最恨的那种）。
+     * @returns {{ok:boolean, note:string, state:string}}
+     */
+    function applyActionCenterAction(anchor, action) {
+        try {
+            const vp = window.VirtualPhone;
+            const key = String(anchor || '');
+            const act = String(action || '');
+            const center = vp?._actionCenterCache || null;
+            if (!key) return { ok: false, note: '这一项没有标识，处理不了', state: '' };
+            const item = ((center && center.items) || []).filter((x) => String(x.realIdemKey || '') === key)[0] || null;
+
+            if (act === 'open') {
+                if (!item) return { ok: false, note: '这一项已经不在了（下一轮会刷新掉）', state: '' };
+                const jump = item.jump || { ok: false, why: '无跳转信息' };
+                if (jump.ok !== true) return { ok: false, note: '跳不过去：' + String(jump.why || ''), state: '' };
+                try {
+                    window.dispatchEvent(new CustomEvent('phone:openApp', {
+                        detail: buildOpenDetail(jump.appId, item.tab || null, item.ref || null)
+                    }));
+                } catch (_e) { return { ok: false, note: '派发跳转失败', state: '' }; }
+                return { ok: true, note: '已打开 ' + String(jump.appId || ''), state: '' };
+            }
+
+            let rawLedger = storage?.get?.(AC_LEDGER_KEY);
+            if (typeof rawLedger === 'string') { try { rawLedger = JSON.parse(rawLedger); } catch (_) { rawLedger = null; } }
+            const res = applyAction(rawLedger, key, act, { at: Date.now() });
+            if (res.changed !== true) {
+                const whyNote = res.why === 'open-is-navigation' ? '打开是跳转，不是待办状态'
+                    : (res.why === 'no-such-entry' ? '这一项还没落账（先等一轮刷新）' : '这个动作不成立');
+                return { ok: false, note: whyNote, state: res.state || '' };
+            }
+            try { storage?.set?.(AC_LEDGER_KEY, JSON.stringify(res.entries)); } catch (_e) { /* 写失败不崩 */ }
+            if (vp) vp._actionLedgerCache = res.entries;
+            /* 重跑一轮：两列与通知都同源更新（不在视图里各改一半）。 */
+            try { refreshActionCenter(); } catch (_e) { /* 下一轮 tick 还会再刷 */ }
+            const stateText = res.state === 'done' ? '已完成' : (res.state === 'snoozed' ? '已稍后' : '已忽略');
+            return { ok: true, note: stateText + '（同一件事不会再重复提醒）', state: res.state };
+        } catch (e) {
+            return { ok: false, note: '处理失败：' + String((e && e.message) || e), state: '' };
         }
     }
 
@@ -10041,6 +10242,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.13.0] 启动耗时实例挂**唯一**出口（诊断页从 `window.VirtualPhone.bootTiming`
                  *   取；实例在模块求值时即建好，故这里读到的是**整段启动**的账）。 */
                 bootTiming: bootTiming,
+                /* [v3.85.0 · 拓展计划 R-X1] 行动中心的**唯一写入口**：
+                 *   通知中心视图只把「锚 + 动作」交上来，落账与重跑都在咽喉这一处做。 */
+                applyActionCenterAction: applyActionCenterAction,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,
