@@ -151,6 +151,35 @@ if (!CHOKE) {
 }
 
 /* ---------- 扫描 apps 下的 App 类与生命周期出口 ---------- */
+/* ---------- 表驱动装配面：cls → 槽位 key（必要，不是可选）----------
+ * 为什么必须派生这一面（v3.91.0 实测到的**射程退化**，本门禁此前根本没报警）：
+ *   v3.61.0 起 67 个 App 的装配由 index.js 内联五件套收敛到 config/app-lazy-routes.js
+ *   的单源表，装配语句变成 `window.VirtualPhone[lazyRoute.key] = new module[lazyRoute.cls](…)`。
+ *   L1 原先只反查 index.js 里的字面写法 `VirtualPhone.X = new module.Class`，
+ *   于是**表驱动挂载的 App 一个都反查不到**（keys=[] ⇒ `continue` 静默跳过）。
+ *   实测射程：81 个含出口的 App 类里只有 13 个仍被扫到，68 个（含 apps/backupdesk）
+ *   从判据里消失 —— 判据没坏、没报错，只是再也不看它们了。
+ *   后果（本版实证）：新 App 实现 onChatChanged、v255 的 dirMap 也登记了，
+ *   偏偏漏进 ST_PHONE_REBIND_APP_KEYS，门禁全绿放行。
+ * 纪律：反查面必须与装配面的**真实形态**同构；形态变了而判据没变 = 静默放行。 */
+const LAZY_TABLE_REL = 'config/app-lazy-routes.js';
+const lazyRaw = readFile(LAZY_TABLE_REL);
+let LAZY_BY_CLS = null;
+if (typeof lazyRaw === 'string' && lazyRaw.length) {
+  LAZY_BY_CLS = new Map();
+  for (const m of lazyRaw.matchAll(/key:\s*['"]([A-Za-z0-9_$]+)['"]\s*,\s*cls:\s*['"]([A-Za-z0-9_$]+)['"]/g)) {
+    if (!LAZY_BY_CLS.has(m[2])) LAZY_BY_CLS.set(m[2], new Set());
+    LAZY_BY_CLS.get(m[2]).add(m[1]);
+  }
+  if (LAZY_BY_CLS.size === 0) LAZY_BY_CLS = null;
+}
+// 表读不到 ⇒ 反查面缺一半 ⇒ 拒判（不得退回「只认字面写法」的旧射程）。
+if (!LAZY_BY_CLS) {
+  console.error('[lifecycle] 无法从 ' + LAZY_TABLE_REL + ' 派生 cls→槽位映射 ——' +
+    '表驱动装配面是 L1 射程的一半，缺了它 68 个 App 会静默逃出判据，fail-closed 拒判');
+  process.exit(2);
+}
+
 const EXITS = ['onChatChanged', 'clearCache', 'destroy', 'deactivate', 'reload'];
 const appsDir = path.join(root, 'apps');
 if (!fs.existsSync(appsDir)) {
@@ -171,11 +200,16 @@ for (const dir of fs.readdirSync(appsDir)) {
       const body = src.slice(cm.index);
       const defined = EXITS.filter((e) => new RegExp('\\n\\s*' + e + '\\s*\\(').test(body));
       if (!defined.length) continue;
-      // 反查单例槽位：VirtualPhone.X = new (module.)?Class(
-      const keys = [...idx.matchAll(
+      /* 反查单例槽位，**两面同构**（缺一面就是射程退化，见上方 LAZY_BY_CLS 的说明）：
+       *   ① 字面写法：`VirtualPhone.X = new (module.)?Class(`
+       *   ② 表驱动写法：`window.VirtualPhone[lazyRoute.key] = new module[lazyRoute.cls](`
+       *      —— 槽位名在 index.js 里是**变量**，字面反查必然落空，只能由表反查补上。 */
+      const literalKeys = [...idx.matchAll(
         new RegExp('VirtualPhone\\.(\\w+)\\s*=\\s*new\\s+(?:module\\.)?' + cm[1] + '\\b', 'g')
       )].map((m) => m[1]);
-      classes.push({ dir, file: f, cls: cm[1], exits: defined, keys: [...new Set(keys)] });
+      const tableKeys = [...(LAZY_BY_CLS.get(cm[1]) || [])];
+      const keys = [...new Set(literalKeys.concat(tableKeys))];
+      classes.push({ dir, file: f, cls: cm[1], exits: defined, keys, literalKeys, tableKeys });
     }
   }
 }
@@ -204,6 +238,11 @@ for (const c of classes) {
 
 /* ---------- L2：槽位 × 三路径覆盖 ---------- */
 const EXIT_CALL = /\.(clearCache|destroy|deactivate|onChatChanged|reload|clearCurrentChat|clear)\??\.?\(/;
+/* L2 的槽位面**刻意不含表驱动槽位**（与 L1 不同，这是有理由的分工）：
+ *   L2 判的是「某槽位在换会话路径被回收，两条清数据路径却漏了」。表驱动槽位在 index.js 里
+ *   根本不以字面槽位名出现，它们的回收统一走 rebindLazyApps()（三路共用同一入口，
+ *   天然三路一致）—— 把它们收进 L2 只会得到一批**永远为真**的判定（装样子），
+ *   不会多拦住一个真缺陷。L1 则必须收，因为「进没进 REBIND 表」正是 L1 判的东西。 */
 const slots = new Set([...idx.matchAll(/VirtualPhone\.(\w+)\s*=\s*new\b/g)].map((m) => m[1]));
 const regionHasExit = (range, name) => {
   if (!range) return false;
@@ -234,6 +273,16 @@ if (!FIXTURE_MODE) {
   if (classes.length < 20) {
     console.error(`[lifecycle] 只枚举到 ${classes.length} 个含生命周期出口的 App 类（低于下限 20）——` +
       '类枚举器或 apps/ 结构已失效，fail-closed 拒判');
+    process.exit(2);
+  }
+  /* ★ 射程自证（v3.91.0 补）：**反查得到槽位的类**占比过低即视为反查面失效。
+   *   为什么单看 classes.length 不够：v3.61.0 之后 classes.length 一直是 81（枚举面好好的），
+   *   但其中 68 个反查不到槽位被 `continue` 掉 —— 枚举面与判定面脱钩，总数完全看不出来。
+   *   本下限按实测留足余量（修复后 81/81 可反查到，字面写法只覆盖 13 个）。 */
+  const resolved = classes.filter((c) => c.keys.length > 0).length;
+  if (resolved < Math.ceil(classes.length * 0.8)) {
+    console.error(`[lifecycle] 只有 ${resolved}/${classes.length} 个含出口的类能反查到槽位（低于 80%）——` +
+      '槽位反查面与装配面已脱钩（表驱动装配未被识别？），判据射程退化，fail-closed 拒判');
     process.exit(2);
   }
   if (REBIND_KEYS.size < 15) {

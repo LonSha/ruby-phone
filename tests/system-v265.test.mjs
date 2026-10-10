@@ -32,7 +32,8 @@ const IDX_REL = 'index.js';
 
 /* ---------- 夹具仓库：一个最小但结构完整的 index.js ---------- */
 const FIXTURE_INDEX = `const ST_PHONE_REBIND_APP_KEYS = [
-    'alphaApp'
+    'alphaApp',
+    'deltaApp'
 ];
 function rebindLazyApps() {
     const phone = window.VirtualPhone || {};
@@ -73,17 +74,32 @@ window.addEventListener('phone:clearAllData', () => {
 window.VirtualPhone.alphaApp = new module.AlphaApp(a, b);
 window.VirtualPhone.betaApp = new module.BetaApp(a, b);
 window.VirtualPhone.gammaApp = new module.GammaApp(a, b);
+const lazyRoute = APP_LAZY_ROUTE_INDEX.get(appId);
+window.VirtualPhone[lazyRoute.key] = new module[lazyRoute.cls](a, b);
+`;
+
+/* 表驱动装配面（v3.91.0 补）：真仓库 v3.61.0 起 67 个 App 是这么挂的 ——
+ *   槽位名在 index.js 里是**变量**（`VirtualPhone[lazyRoute.key]`），字面反查必然落空。
+ *   夹具必须携带这一面，否则它比被测契约**弱**（判据要认两面，夹具只给一面），
+ *   新负控制也就无从复现「表驱动 App 漏进 REBIND 表」这个真实形态。 */
+const FIXTURE_LAZY = `export const APP_LAZY_ROUTES = [
+  { id: "delta", module: "./apps/delta/delta-app.js", key: "deltaApp", cls: "DeltaApp", errTitle: "DeltaApp" },
+];
 `;
 
 const FIXTURE_APPS = {
   alpha: 'export class AlphaApp {\n    constructor(a, b) {}\n    onChatChanged() {}\n}\n',
   beta: 'export class BetaApp {\n    constructor(a, b) {}\n    onChatChanged() {}\n    clearCache() {}\n}\n',
-  gamma: 'export class GammaApp {\n    constructor(a, b) {}\n    deactivate() {}\n}\n'
+  gamma: 'export class GammaApp {\n    constructor(a, b) {}\n    deactivate() {}\n}\n',
+  delta: 'export class DeltaApp {\n    constructor(a, b) {}\n    onChatChanged() {}\n}\n'
 };
 
 function makeFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-lc-fx-'));
   fs.writeFileSync(path.join(dir, IDX_REL), FIXTURE_INDEX);
+  const cfg = path.join(dir, 'config');
+  fs.mkdirSync(cfg);
+  fs.writeFileSync(path.join(cfg, 'app-lazy-routes.js'), FIXTURE_LAZY);
   const apps = path.join(dir, 'apps');
   fs.mkdirSync(apps);
   for (const [name, src] of Object.entries(FIXTURE_APPS)) {
@@ -134,14 +150,14 @@ test('v265-P2 夹具仓库本身通过（负控制的基线必须是绿的）', 
   withFixture((dir) => {
     const r = runAudit(dir);
     assert.equal(r.code, 0, '夹具未通过，后续负控制无意义：' + r.out);
-    assert.match(r.out, /扫描 3 个含生命周期出口的 App 类 \/ 3 个实例槽位/);
+    assert.match(r.out, /扫描 4 个含生命周期出口的 App 类 \/ 3 个实例槽位/);
   });
 });
 
 // ══════════════ 负控制 ══════════════
 test('v265-N1 L1 有效：REBIND 表移除唯一 key → 该 App 被判「无接线路径」并 exit 1', () => {
   withFixture((dir, idxFile) => {
-    breakOnce(idxFile, "'alphaApp'\n", '');
+    breakOnce(idxFile, "    'alphaApp',\n", '');
     const r = runAudit(dir);
     assert.equal(r.code, 1, 'L1 未报警：' + r.out);
     assert.match(r.out, /AlphaApp/, '未点名 AlphaApp');
@@ -191,6 +207,34 @@ test('v265-N5 三路径锚点守卫：换会话函数被改名 → fail-closed e
   });
 });
 
+test('v265-N6 表驱动面参与 L1：表驱动挂载的 App 未进 REBIND 表 → exit 1 并点名', () => {
+  /* 本次（v3.91.0）修复的根因形态：v3.61.0 表驱动装配后，槽位名在 index.js 里是变量
+   *   （`VirtualPhone[lazyRoute.key]`），L1 的字面反查必然落空 ⇒ 该 App 静默逃出判据。
+   *   实测射程：81 个含出口的类里只有 13 个仍被扫到，68 个（含本次新建的 backupdesk）消失。
+   *   本负控制复现的正是「漏登记 + 逃出射程」叠加后的静默放行：破坏前它绿，
+   *   而修复后同款破坏必须红 —— 这条判据就是来把那种「全绿放行」钉死的。 */
+  withFixture((dir, idxFile) => {
+    breakOnce(idxFile, "    'deltaApp'\n", '');
+    const r = runAudit(dir);
+    assert.equal(r.code, 1, '表驱动 App 漏进 REBIND 表竟未报警（射程退化复发）：' + r.out);
+    assert.match(r.out, /DeltaApp/, '未点名 DeltaApp');
+    assert.match(r.out, /L1/);
+  });
+});
+
+test('v265-N7 射程自证：表驱动面读不到 → fail-closed exit 2（而非退回旧射程）', () => {
+  /* 为什么这条与 N3/N4 并列：表驱动面是 L1 射程的**一半**。读不到它时，
+   *   正确的行为是拒判（exit 2），**不得**退回「只认字面写法」的旧射程 ——
+   *   退回去正是「判据看起来在跑、其实不看 68 个 App」的成因。 */
+  withFixture((dir) => {
+    fs.writeFileSync(path.join(dir, 'config', 'app-lazy-routes.js'), 'export const APP_LAZY_ROUTES = [];\n');
+    const r = runAudit(dir);
+    assert.equal(r.code, 2, '表驱动面读不到却仍出判定（应 fail-closed）：' + r.out);
+    assert.match(r.out, /fail-closed/);
+    assert.match(r.out, /app-lazy-routes\.js/, '拒判消息必须点名读不到的那份表');
+  });
+});
+
 // ══════════════ 判据纯度 / 接线自证 ══════════════
 test('v265-S1 负控制纯度：破坏只落在夹具上，且完全不经由文件树复制', () => {
   const src = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
@@ -200,10 +244,10 @@ test('v265-S1 负控制纯度：破坏只落在夹具上，且完全不经由文
   const defLines = src.split('\n').filter((l) => /^function breakOnce\(/.test(l)).length;
   assert.equal(defLines, 1, 'breakOnce 定义应恰 1 处');
   const callLines = src.split('\n').filter((l) => /^\s*breakOnce\(/.test(l)).length;
-  assert.equal(callLines, 6, 'breakOnce 调用行应为 6（N1..N5 五例 + S1b 先绿后红对照）');
+  assert.equal(callLines, 7, 'breakOnce 调用行应为 7（N1..N5 五例 + N6 表驱动面 + S1b 先绿后红对照）');
   // ② 每例负控制必须显式断言退出码（防「破坏发生与否都不看结论」的空断言）；
   //    N1..N5 五例各自断言一次；S1b 断的是 `broken.code`（先绿后红两步，故不在此列）。
-  assert.equal((src.match(/assert\.equal\(r\.code, [12],/g) || []).length, 5, '退出码断言应为 5 处');
+  assert.equal((src.match(/assert\.equal\(r\.code, [12],/g) || []).length, 7, '退出码断言应为 7 处（N1..N7）');
   // ③ 绝不**调用** cp 复制真仓库文件树（本轮事故根因），也绝不写仓库原件。
   //    注意只拦「真调用」：注释里提到 `cp -al` 是在记录事故原因，不该被自己的守卫误伤
   //    （判据的输入面必须与结论面一致——这里比的是实际调用，不是字面出现）。
@@ -217,7 +261,7 @@ test('v265-S1 负控制纯度：破坏只落在夹具上，且完全不经由文
 test('v265-S1b 破坏确实可观测：同一夹具上先绿，破坏后真判据改变结论', () => {
   withFixture((dir, idxFile) => {
     assert.equal(runAudit(dir).code, 0, '破坏前夹具应为绿');
-    breakOnce(idxFile, "'alphaApp'\n", '');
+    breakOnce(idxFile, "    'alphaApp',\n", '');
     const broken = runAudit(dir);
     assert.equal(broken.code, 1, '破坏后结论未改变（判据未被真正调用）：' + broken.out);
     assert.match(broken.out, /AlphaApp/);

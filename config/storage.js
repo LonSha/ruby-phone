@@ -70,6 +70,8 @@ export class PhoneStorage {
                                  //   随会话隔离——命中行另带归属段，跨段同键一律拒，故不会串味）
             /^cw_/,              // [v3.90.0] 创作工作台发布台账（只记「哪条幂等键已发布过」；幂等键本身含来源与
                                  //   素材 id，随会话隔离，跨段不串味。草稿状态仍在 creation_ledger）
+            /^backup_/,          // [v3.91.0] 本地备份台账（记「哪次导了哪些键、撤成没撤成」；随会话隔离——
+                                 //   备份范围含会话面，落全局会让另一个角色看到别人的备份记录）
             /^wangxiang_/,        // 万象任务与订单数据
             /^phone_call_/,       // 通话记录数据
             /^music_/,            // 音乐播放列表数据
@@ -1194,6 +1196,38 @@ export class PhoneStorage {
             absent: ledger.absent === true,
             corrupt: ledger.corrupt === true,
         };
+    }
+
+    /**
+     * [v3.91.0 · 拓展计划 R-X7] 两层的**只读键枚举面**（备份与迁移的取数口）。
+     *
+     * 为什么需要它：备份要回答的第一个问题是「本机到底有哪些键」，而本存储层此前
+     *   只有逐键的 `get` / `set` / `remove`（取不到一个「全部键名」的口）。没有这一口，备份就只能
+     *   按「已知键名清单」去探，而清单总会漏（本仓清单式回收反复漏项的同一形态）。
+     *
+     * 只读：不写入、不删除、不触发迁移（不走 get 的 localStorage 兜底分支）。
+     * 三态分开：容器读不到（`readable:false`）/ 读到了但零键 / 读到了有几键。
+     * @returns {{readable:boolean, chat:string[], global:string[], why:string}}
+     */
+    enumerateKeys() {
+        const out = { readable: false, chat: [], global: [], why: '' };
+        try {
+            const chatStore = this._getChatMetadataStore();
+            const extStore = this._getExtensionSettingsStore();
+            if (!chatStore || !extStore) {
+                out.why = '两层容器至少有一层读不到（宿主未就绪）—— 这是「读不出」，不是「没有数据」';
+                return out;
+            }
+            /* 宿主容器里除了本命名空间之外，还有其他扩展的键；本面只枚举**本命名空间**里的键。 */
+            out.chat = Object.keys(chatStore).sort();
+            out.global = Object.keys(extStore).sort();
+            out.readable = true;
+            out.why = 'chatMetadata 与 extensionSettings 两层均可读';
+            return out;
+        } catch (e) {
+            out.why = '枚举报错：' + String((e && e.message) || e);
+            return out;
+        }
     }
 
     /**

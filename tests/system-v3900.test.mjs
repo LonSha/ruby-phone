@@ -6,11 +6,11 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as CW from '../config/creation-workbench.js';
 import * as CP from '../config/creation-pipeline.js';
-import { CreationWorkbenchView } from '../apps/creationdesk/creation-workbench-view.js';
+import { CreationdeskView } from '../apps/creationdesk/creationdesk-view.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const IDX = read('index.js');
-const APP = read('apps/creationdesk/creation-workbench-app.js');
+const APP = read('apps/creationdesk/creationdesk-app.js');
 const MAN = JSON.parse(read('manifest.json'));
 
 const bag = () => CW.cwCollectMaterials({
@@ -173,11 +173,29 @@ test('v3900 A1 structure: five kinds, four checks, five real owners, keys and re
     assert.ok(read('scripts/keys-audit.mjs').indexOf("key: 'cw_published'") >= 0, 'cw_published 必须登记进键审计');
     /* 注册面：APPS / 懒加载路由 / 消费矩阵 三处 */
     assert.ok(read('config/apps.js').indexOf("id: 'creationdesk'") >= 0, 'APPS 必须登记 creationdesk');
-    assert.ok(read('config/app-lazy-routes.js').indexOf('creationWorkbenchApp') >= 0, '懒加载路由必须登记');
+    assert.ok(read('config/app-lazy-routes.js').indexOf('creationdeskApp') >= 0, '懒加载路由必须登记');
     assert.ok(read('config/app-consumption-matrix.js').indexOf('"creationdesk"') >= 0, '消费矩阵必须登记');
     /* 上一版的零消费缺口：本版必须真把 creation-pipeline 的导出消费起来 */
     assert.ok(IDX.indexOf('CREATION_TARGETS') >= 0, 'index.js 必须真引用 CREATION_TARGETS');
     assert.ok(read('apps/diagnose/diagnose-data.js').indexOf('creationWorkbenchFace') >= 0, '诊断面必须有消费口');
+    /* ★ 目录 / 文件名 / 类名 / 槽位名四一致（全仓约定：apps/<dir>/<dir>-{app,view}.js + <Dir>App + <dir>App）。
+     *   修前形态（本版全量 npm test 首跑暴露）：App 用了别名文件名（creation-workbench-app.js）、
+     *   类名 CreationWorkbenchApp 与目录名 creationdesk 也不挂钩，audit.test.mjs 的通用约定当场判红。
+     *   这不是「命名洁癖」：约定被打破时，凡按 <dir>-app.js 派生路径的判据（v3270 / v3550 / v3590 /
+     *   v3650 与 audit 通用面）都会**静默漏过**这个 App —— 它从判据的枚举面里消失，且没有任何一处报错。 */
+    for (const rel of ['apps/creationdesk/creationdesk-app.js', 'apps/creationdesk/creationdesk-view.js']) {
+        assert.ok(fs.existsSync(path.join(ROOT, rel)), '四一致：' + rel + ' 必须存在');
+    }
+    assert.ok(!fs.existsSync(path.join(ROOT, 'apps/creationdesk/creation-workbench-app.js')), '别名文件不得留下');
+    assert.ok(APP.indexOf('export class CreationdeskApp') >= 0, '类名必须由目录名派生（<Dir>App）');
+    assert.ok(read('config/app-lazy-routes.js').indexOf('key: "creationdeskApp"') >= 0, '槽位名必须由目录名派生');
+    /* ★ 进 REBIND 表。同族缺陷有先例（v3.48.0 补登记）：App 实现了 onChatChanged、v255 的 dirMap
+     *   也登记了，**唯独没进 ST_PHONE_REBIND_APP_KEYS** ⇒ 换会话只换 storage，实例态（选中素材 /
+     *   目标 / 敏感标记）原样留着 —— 不报错、只错结果。修前 lifecycle 门也拦不住它：
+     *   表驱动装配的槽位在 index.js 里是变量，L1 的字面反查落空后静默跳过了 68 个 App（见 v265-N6）。 */
+    const tbl = (IDX.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
+    assert.ok(tbl.indexOf("'creationdeskApp'") >= 0, '创作台必须进 REBIND 表（换会话丢实例态）');
+    assert.ok(/\n\s*onChatChanged\s*\(/.test(APP), 'App 必须实现 onChatChanged');
 });
 
 test('v3900 A2 pure kernel and data-only view', () => {
@@ -185,7 +203,7 @@ test('v3900 A2 pure kernel and data-only view', () => {
     for (const bad of ['localStorage', 'sessionStorage', 'document.', 'setTimeout', 'setInterval', 'new Date(', '.setItem', 'window.', 'VirtualPhone']) {
         assert.equal(src.indexOf(bad) >= 0, false, '纯内核不得出现 ' + bad);
     }
-    const view = read('apps/creationdesk/creation-workbench-view.js');
+    const view = read('apps/creationdesk/creationdesk-view.js');
     for (const bad of ['storage.', 'localStorage', 'eval(', 'new Function', 'srcdoc', 'iframe']) {
         assert.equal(view.indexOf(bad) >= 0, false, '视图不得出现 ' + bad);
     }
@@ -263,7 +281,7 @@ test('v3900 B5 no second state source: draft ledger and published ledger are dis
     /* 【剥注释后】判「有没有真摸那个键」—— 注释里提一嘴不算（本仓旧病：注释里的名字被当成消费）。 */
     const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
     assert.equal(strip(read('config/creation-workbench.js')).indexOf("'creation_ledger'"), -1, '内核不得直摸草稿键（只引用 creation-pipeline）');
-    assert.equal(strip(read('apps/creationdesk/creation-workbench-app.js')).indexOf('cw_published'), -1, 'App 不得自己摸发布键（由咽喉收口）');
+    assert.equal(strip(read('apps/creationdesk/creationdesk-app.js')).indexOf('cw_published'), -1, 'App 不得自己摸发布键（由咽喉收口）');
     const merged = CW.cwAppendPublished([{ idemKey: 'a', status: 'draft', at: 1 }], { ok: true, idemKey: 'b', at: 2 });
     assert.equal(merged.count, 2, '草稿与发布条目必须共存于同一账本（同一份归一）');
 });
@@ -305,10 +323,10 @@ test('v3900 B8 owner table is data and covers only real write faces', () => {
 test('v3900 C1 real host face returns cached materials and never writes from the view', () => {
     const has = (id) => IDX.indexOf('vf.' + id) >= 0 || IDX.indexOf(id) >= 0;
     assert.ok(has('creationWorkbenchFace'), '必须挂只读读数口');
-    assert.ok(has('applyCreationWorkbenchAction'), '必须挂唯一动作口');
-    assert.ok(IDX.indexOf('refreshCreationWorkbench') >= 0, '必须在咽喉刷新时机接线');
+    assert.ok(has('applyCreationdeskAction'), '必须挂唯一动作口');
+    assert.ok(IDX.indexOf('refreshCreationdesk') >= 0, '必须在咽喉刷新时机接线');
     /* 咽喉必须先判会话与世代，再判白名单（顺序不许错） */
-    const i = IDX.indexOf('function applyCreationWorkbenchAction');
+    const i = IDX.indexOf('function applyCreationdeskAction');
     const seg = IDX.slice(i, i + 1500);
     assert.ok(seg.indexOf('wfSameScope') >= 0 && seg.indexOf('stale-scope') >= 0, '必须先判会话');
     assert.ok(seg.indexOf('handoffEpoch') >= 0 && seg.indexOf('stale-epoch') >= 0, '必须判世代');
@@ -317,7 +335,7 @@ test('v3900 C1 real host face returns cached materials and never writes from the
 
 test('v3900 C2 view markup escapes and renders three distinct states', () => {
     const Q = String.fromCharCode(34);
-    const v = new CreationWorkbenchView({ shell: null });
+    const v = new CreationdeskView({ shell: null });
     const vm = {
         scope: {}, scopeOk: true,
         materials: { items: [], states: [], unreadable: ['track'], dropped: 0, readable: false },

@@ -185,6 +185,14 @@ import {
     cwSelfCheck, CW_KINDS, CW_CHECK_CODES, CW_STEPS, CW_TARGET_OWNERS,
     cwPlanLine, cwStepLine, cwCheckLine,
 } from '../../config/creation-workbench.js';
+/* [v3.91.0 · 拓展计划 R-X7] 本地备份与恢复协议面：与 workflowFace / creationWorkbenchFace 同范式——
+ *   只读自检 + 范围四维 + 两个分面 + 迁移表 + 键枚举三态 + 台账三态 + 计划计数。
+ *   ★ 本卡量的是「把这一整部手机搬走这条路通不通」。 */
+import {
+    backupSelfCheck, BACKUP_DIMENSIONS, BACKUP_SCOPES, BACKUP_SCOPE_KEYS,
+    BACKUP_MIGRATIONS, BACKUP_SCHEMA_VERSION, BACKUP_ENTRY_STATES,
+    backupPackLine, backupPlanLine,
+} from '../../config/data-backup.js';
 /* [v3.83.0 · 计划 R-O7] 诊断处置面：把「有读数」翻成「能处置」。
  *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
  *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
@@ -1026,6 +1034,71 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.91.0 · 拓展计划 R-X7] 本地备份与恢复协议面：与 creationWorkbenchFace 同范式 ——
+     *   范围四维 / 两个分面 / 迁移表 / 键枚举三态 / 台账三态 / 包体与计划读数。
+     *   ★ 与 R-X5 / R-X6 两张卡的分工：那两张分别答「几步串成一条路」与「一个素材发到一个 App」，
+     *     本卡答「把这一整部手机搬走这条路通不通（范围 / 身份 / 迁移 / 幂等 / 撤销）」。 */
+    const backupFace = (() => {
+        try {
+            const self = backupSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const dims = BACKUP_DIMENSIONS.map((d) => ({ key: d.key, label: d.label, note: d.note }));
+            const scopes = BACKUP_SCOPE_KEYS.map((k) => ({ key: k, label: BACKUP_SCOPES[k].label, note: BACKUP_SCOPES[k].note }));
+            const migrations = BACKUP_MIGRATIONS.map((m) => ({ from: m.from, to: m.to, why: m.why }));
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const cache = vp ? (vp._backup || null) : null;
+            const keys = (cache && cache.keys) ? cache.keys : null;
+            const enu = keys ? (keys.readable === true) : null;
+            const led = (cache && cache.ledger) ? cache.ledger : null;
+            const ledReadable = led ? (led.readable === true) : null;
+            const plan = (cache && cache.plan) ? cache.plan : null;
+            let head = '尚未取数';
+            if (cache && keys) {
+                head = enu
+                    ? ('键面：会话面 ' + String((keys.chat || []).length) + ' · 全局面 ' + String((keys.global || []).length))
+                    : ('键枚举**读不到**（' + String(keys.why || '') + '）—— **不是「没有数据」**');
+                head += ledReadable
+                    ? (' · 台账 ' + String((led.entries || []).length) + ' 条')
+                    : ' · 台账**读不到**（**不是「没备份过」**）';
+            }
+            const entryStates = Object.keys(BACKUP_ENTRY_STATES).map((k) => BACKUP_ENTRY_STATES[k]);
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                dims: dims,
+                dimLine: dims.map((d) => d.label).join(' / '),
+                scopes: scopes,
+                migrations: migrations,
+                migrationLine: migrations.map((m) => ('v' + String(m.from) + '→v' + String(m.to))).join(' / '),
+                schema: BACKUP_SCHEMA_VERSION,
+                entryStates: entryStates,
+                keys: {
+                    readable: cache ? enu : null,
+                    chat: keys ? (keys.chat || []).length : null,
+                    global: keys ? (keys.global || []).length : null,
+                    why: keys ? String(keys.why || '') : '',
+                },
+                ledger: {
+                    readable: cache ? ledReadable : null,
+                    count: cache && ledReadable ? (led.entries || []).length : null,
+                    unreadable: cache ? !ledReadable : null,
+                },
+                packLine: (cache && cache.pack) ? backupPackLine(cache.pack) : '',
+                planLine: plan ? backupPlanLine(plan, (cache && cache.commit) ? cache.commit : null) : '',
+                planTotals: plan ? plan.totals : null,
+                undoCount: (cache && cache.undo && cache.undo.count) ? cache.undo.count : 0,
+                line: head,
+                text: '本地备份：范围四维（' + dims.map((d) => d.label).join(' / ') + '）；'
+                    + '两个分面（' + scopes.map((sc) => sc.label).join(' / ') + '）；'
+                    + '迁移 ' + String(migrations.length) + ' 步（当前 v' + String(BACKUP_SCHEMA_VERSION) + '）；'
+                    + (cache ? head : '尚未取数')
+                    + (plan ? ('；导入计划 ' + backupPlanLine(plan, null)) : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；四维取交集 / 分面不互换 / 老包明确迁移或拒 / 重复导入幂等 / 导入前不改现有数据自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
      *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围）+ 缺口。
      *   ★ 与既有受控恢复交接面分工：那张答「这一次恢复的预检过了没有」，本面答「跳项目续玩这条路通不通」。 */
@@ -1287,7 +1360,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, backupFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1363,6 +1436,15 @@ export function workflowFaceText(face) {
 /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
  *  与 workflowFaceText 同范式：只做转发与文案，视图不自己拼。
  *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+/** [v3.91.0 · 拓展计划 R-X7] 本地备份与恢复协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。 */
+export function backupFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '本地备份：读取异常（已降级）—— 这不是「没有数据」';
+        return String(f.text || '本地备份：无读数');
+    } catch (_e) { return '本地备份：读取异常（已降级）'; }
+}
+/* 原函数名保留：上面那个是新增，下面这个是既有实现。 */
 export function creationWorkbenchFaceText(face) {
     try {
         const f = (face && typeof face === 'object') ? face : null;
@@ -1703,6 +1785,7 @@ export default {
     workflowFaceText,
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,
+    backupFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

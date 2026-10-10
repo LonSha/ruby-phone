@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -397,6 +397,55 @@ export class DiagnoseView {
      *  三态不同形（面缺席 / 尚未取数 / 有读数）。 */
     /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议卡：五类素材状态 + 四类检查 + 目标 owner + 发布台账三态。
      *  与 _workflowHtml 同规格：内核只陈列，本视图只排版；三态不同形（面缺席 / 尚未取数 / 有读数）。 */
+    /** [v3.91.0 · 拓展计划 R-X7] 本地备份与恢复协议卡：范围四维 + 两分面 + 迁移表 + 键枚举/台账三态 + 计划计数。
+     *  与 _workflowHtml / _creationWorkbenchHtml 同规格：内核只陈列，本视图只排版。 */
+    _backupHtml(pkg) {
+        const face = (pkg && pkg.backupFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到备份协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有数据」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(backupFaceText(face)) + '</div>';
+        const dims = Array.isArray(face.dims) ? face.dims : [];
+        if (dims.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + dims.map((d) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(d.key) + '</code>'
+                + this._chip(escapeHtml(d.label), 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(d.note || '')) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const scopes = Array.isArray(face.scopes) ? face.scopes : [];
+        if (scopes.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + scopes.map((sc) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(sc.key) + '</code>'
+                + this._chip(escapeHtml(sc.label), 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(sc.note || '')) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>迁移表：' + escapeHtml(face.migrationLine || '（无）')
+            + '（当前 schema v' + escapeHtml(String(face.schema)) + '；旧包要么明确迁移要么明确拒绝，不静默丢字段）</div>';
+        const keys = face.keys || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>键枚举：'
+            + (keys.readable === null ? '尚未取数' : keys.readable
+                ? ('会话面 ' + escapeHtml(String(keys.chat)) + ' · 全局面 ' + escapeHtml(String(keys.global)))
+                : '<b>读不到</b>（**不是「没有数据」**）：' + escapeHtml(String(keys.why || '')))
+            + '</div>';
+        const led = face.ledger || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>备份台账：'
+            + (led.readable === null ? '尚未取数' : led.readable
+                ? escapeHtml(String(led.count)) + ' 条'
+                : '<b>读不到</b>（**不是「没备份过」**）')
+            + '</div>';
+        if (face.packLine) html += '<div class=' + Q + 'dg-note' + Q + '>包体：' + escapeHtml(String(face.packLine)) + '</div>';
+        if (face.planLine) html += '<div class=' + Q + 'dg-note' + Q + '>导入计划：' + escapeHtml(String(face.planLine)) + '</div>';
+        if (face.undoCount) html += '<div class=' + Q + 'dg-note' + Q + '>可撤销项 ' + escapeHtml(String(face.undoCount)) + ' 个（按写入逆序）</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>范围/分面/迁移地基自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
     _creationWorkbenchHtml(pkg) {
         const face = (pkg && pkg.creationWorkbenchFace) || null;
         if (!face) {
@@ -1326,6 +1375,8 @@ export class DiagnoseView {
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>声明式工作流（九态：空闲 / 阻塞 / 预览 / 待确认 / 运行中 / 已暂停 / 完成 / 部分完成 / 已回滚）</h3>' + this._workflowHtml(pkg) + '</section>');
          /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作工作台（五类素材 / 四类发布前检查；发布只委托目标 App 的真源写口）</h3>' + this._creationWorkbenchHtml(pkg) + '</section>');
+         /* [v3.91.0 · R-X7] 备份恢复卡与上面两张**并列**（分工：那两张管「一次操作」，本卡管「把整部手机搬走」）。 */
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>本地备份与恢复（范围四维 / 分面不互换 / 老包明确迁移或拒 / 重复导入幂等）</h3>' + this._backupHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

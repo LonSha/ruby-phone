@@ -1,5 +1,5 @@
 /* ========================================================
- * creation-workbench-view.js — [v3.90.0 · 拓展计划 R-X6]
+ * creationdesk-view.js — [v3.90.0 · 拓展计划 R-X6]
  *   素材到发布的完整创作工作台 · 视图（纯渲染）
  * 挂载走 shell.getContentContainer；与号/尖括号走拼装形（不在模板串里出现裸尖括号）。
  *
@@ -22,7 +22,7 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-export class CreationWorkbenchView {
+export class CreationdeskView {
     constructor(app) { this.app = app; this.root = null; }
     _mount() {
         if (this.root && this.root.isConnected) return this.root;

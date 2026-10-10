@@ -1,5 +1,5 @@
 /* ========================================================
- * creation-workbench-app.js — [v3.90.0 · 拓展计划 R-X6]
+ * creationdesk-app.js — [v3.90.0 · 拓展计划 R-X6]
  *   素材到发布的完整创作工作台 · 落盘与接线
  *
  * 【本件刻意不做的事（验收③④的落点）】
@@ -13,9 +13,9 @@
  * ========================================================= */
 'use strict';
 import { cwPlanLine, cwSelfCheck, CW_STEPS } from '../../config/creation-workbench.js';
-import { CreationWorkbenchView } from './creation-workbench-view.js';
+import { CreationdeskView } from './creationdesk-view.js';
 
-export class CreationWorkbenchApp {
+export class CreationdeskApp {
     constructor(shell, storage) {
         this.shell = shell || null;
         this.storage = storage || null;
@@ -41,7 +41,7 @@ export class CreationWorkbenchApp {
     setNote(note) { this._note = String(note || ''); return this._note; }
     async act(action) {
         const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
-        if (!vp || typeof vp.applyCreationWorkbenchAction !== 'function') {
+        if (!vp || typeof vp.applyCreationdeskAction !== 'function') {
             this._flash = '创作工作台入口不在位（咽喉未就绪）';
             this._flashBad = true;
             this.render();
@@ -60,7 +60,7 @@ export class CreationWorkbenchApp {
             token: token,
         };
         let r;
-        try { r = await vp.applyCreationWorkbenchAction(payload); }
+        try { r = await vp.applyCreationdeskAction(payload); }
         catch (e) { r = { ok: false, note: '执行失败：' + String(e.message || e) }; }
         const now = this.host();
         if (now && (now.token !== token || JSON.stringify(now.scope) !== JSON.stringify(scope))) return r;
@@ -71,7 +71,7 @@ export class CreationWorkbenchApp {
     }
     /* ---------- 渲染 ---------- */
     render() {
-        if (!this._view) this._view = new CreationWorkbenchView(this);
+        if (!this._view) this._view = new CreationdeskView(this);
         this._view.render(this._vm());
     }
     _vm() {

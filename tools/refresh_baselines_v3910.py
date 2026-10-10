@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""refresh_baselines_v3900.py — v3.90.0 抬版后的探针基线对账（现场读数写回，零手抄）。
+"""refresh_baselines_v3910.py — v3.91.0 抬版后的探针基线对账（现场读数写回，零手抄）。
 
 抬版带来的枚举面漂移（R-X6 真实缺口落地）：
   · 新增真源：config/workflow.js、config/workflow-runtime.js

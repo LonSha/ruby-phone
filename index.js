@@ -163,6 +163,17 @@ import {
     cwCollectMaterials, cwFindMaterial, cwPlanPublish, cwPlanLine, cwStepLine,
     cwReceiptOf, cwAppendPublished, cwSelfCheck, cwTargetOwnerOf,
 } from './config/creation-workbench.js';
+/* [v3.91.0 · 拓展计划 R-X7] 本地备份、迁移与灾难恢复（纯函数协议层）。
+ *   接在咽喉的理由与 R-X1..R-X6 同族：导出范围 / 键面 / 包体 / 存量全由调用方给，
+ *   **本模块自己不取数、不写存储、不发网络**（默认不上传云端）。
+ *   导入只产计划（新增 / 还原 / 冲突 / 拒收逐条分类），落盘由咽喉在确认后执行；
+ *   会话与分支边界不可被打穿，本次写入可按写入逆序撤销。 */
+import {
+    BACKUP_SCHEMA_VERSION, BACKUP_DIM_KEYS, BACKUP_ENTRY_STATES,
+    buildBackupPack, backupPackLine, backupPlanLine,
+    planBackupImport, commitBackupPlan, undoBackupPlan,
+    normalizeBackupEntries, backupSelfCheck, migrateBackupPack,
+} from './config/data-backup.js';
 /* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
@@ -196,7 +207,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.90.0';
+const ST_PHONE_VERSION = '3.91.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -340,6 +351,15 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'workflowApp',    // [v3.89.0 · R-X5] 工作流：展开态（_openId）与提示行是**实例态** —— 换会话必须丢，
                       //             否则新会话会带着上一段的展开位置与「已跑过」的旧提示。
                       //             运行台账在 wf_runs 那一格，随会话隔离，下一次 render 重取。
+    'creationdeskApp',  // [v3.90.0 · R-X6] 创作台：选中素材 / 目标 / 敏感标记 / 提示行是**实例态** ——
+                      //             换会话必须丢（上一个角色选中的素材不能留着），
+                      //             素材与发布台账由咽喉下一次 render 重取。
+                      //             修前缺陷（本版全量 npm test 首跑暴露）：App 与 dirMap 都已就位，
+                      //             唯独没进本表 ⇒ 换会话只换 storage，实例态原样留着（不报错、只错结果）。
+    'backupdeskApp',      // [v3.91.0 · R-X7] 备份恢复：四维勾选与提示行是**实例态** ——
+                      //             换会话必须丢（备份范围含会话面，不能带着别人的选择），
+                      //             键枚举与台账由咽喉下一次 render 重取。
+                      //             同族缺陷：本 App 与 dirMap 就位但漏入本表。
     'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
@@ -379,22 +399,25 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-13",
+    date: "2026-10-14",
     items: [
-        "【定位 · 计划 R-X6 的真实缺口（修前实测，不是推演）】** 修前实测：v3.70.0 的 X6 交付了 config/creation-pipeline.js （八来源 / 六目标 / 草稿构建 / 幂等账本），但**产品端只消费了十一个导出中的一个**（normalizeCreationLedger，在 index.js 的缓存段里），其余十个全仓零调用。这是本仓被点过六次的同一形态：内核建好了、导出挂出来了、产品端零消费。",
-        "【修前处境的四条实测形态】** ① 素材选不了：曲目 / 图片 / 文本 / 角色 / 事件散在五个 App 里，没有一处能从任意来源挑一个；② 发布前没人查：缺图 / 坏链接 / 目标 App 不收这种素材 / 没有播放器，四类问题都要等用户在目标 App 里真发出去才发现；③ 草稿与已发布塔成同一件事：账本里状态只有 draft 与 published 两个字符串，而 published 从未被任何代码写过；④ 发布动作在各 App 里各自存在一份，没有统一的检查与幂等口。",
-        "【新模块 · config/creation-workbench.js（纯函数内核）】** 创作工作台的**唯一实现**：五类素材声明 + 素材引用归一 + 四类发布前检查 + 发布计划 + 回执归一 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），素材清单与目标清单全由调用方给；草稿只引用 creation-pipeline 的同一个构建口与幂等键，**不造第二份草稿状态**。",
-        "【素材五类与三态互不同形（验收①的落点）】** 角色 / 事件 / 图片 / 曲目 / 文本五类，每条带 ref 引用键（来源与来源内 id），可反查到来源 ID；每一类的状态三态互不同形：**读不到 / 读到了但空 / 读到了有几条**。读不到绝不当成空清单（这两件事处置相反）。",
-        "【发布前检查四类（验收②的落点）】** 缺素材 / 坏图 / 缺播放器、坏链接、目标权限、敏感标记。前三类是硬拦截（不通过即不得显示发布成功），敏感类是需确认（不拦但必须显式确认）。每一条都带结果与原因，不通过必须说清为什么。",
-        "【默认 dry-run，发布只委托真源 owner（验收③的落点）】** 计划阶段恒不写入；真正发布只能落到五个目标 App 的**真源写口**（微信朋友圈数据层、微博正文、Pixiv 作品、杂志稿件、同人货架），表外目标在计划阶段就被挡；本工作台自己一个写口都不调。",
-        "【发布幂等，不复制第二个状态源（验收④的落点）】** 幂等键直接取 creation-pipeline 的同一个实现，发布台账只记「哪条幂等键已发布过」；同键重发不写第二条，失败回执不进台账，已发布回读不到一律不当作成功。",
-        "【新存储键 cw_published 与会话数据域】** 发布台账按会话隔离（新增 /^cw_/ 归入会话数据域），登记进键审计；幂等键本身含来源与素材 id，故跨段不串味。草稿状态仍在 creation_ledger 那一格，两者共用同一份归一器（不新增第二份状态源）。",
-        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/creationdesk 三层（App / 视图 / 样式）：视图只渲染与列动作白名单（三个），App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增创作工作台卡（五类素材三态 + 四类检查行 + 目标 owner 表 + 发布台账可读性 + 自检）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 枚举场景六处同步登记。",
-        "【配套判据与负控制】** tests/system-v3900.test.mjs 六面 21 条全绿：A 结构面（五类素材 / 四类检查 / 五个真源 owner / 上一版零消费缺口已被真消费）；A2 纯函数；B 行为面（七条：五类三态 / 默认 dry-run / 四类拦截 / 只委托真源 / 不造第二个状态源 / 引用可追溯 / 上下文素材不当载荷）；C 接线面；D 负控制（八处真源码定点破坏，碎坏副本上同款判据必转红；第八处两向对照自证破坏真的改掉了行为）；E 版本锚。",
-        "【版本升至 3.90.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3900.py 对齐 tools/bump_v3890.py）。",
-        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 本版的负控制基座初版有三处真缺陷，全部在合并前被自家判据抓住并改掉：① **锚点校验函数返回了整份源码**，使破坏变成「整份文件被换成一行」，八个破坏点全红且报出的是与本意毫无关系的错；② **判据用原版内核构造材料、却拿变体去查**，量到的是原版的类表，负控制假绿；③ **自证方式自我指涉**（删掉判据本身当成验证），改为两向对照。三处都不是推演清单，是跑出来的红。",
-        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：本版自己抓到的上述三处缺陷、以及旧判据里绑定上一版专有词的写法交棒为形态锚（下限形），使得抬版不再把「本版这件事」偷换成「上一版那件事」。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：素材清单读不到被画成「一条素材也没有」、坏图与坏链被当成发布成功、目标 App 不收这种素材却显示发布完成。本版**不能保证**：① 真宿主里生图队列产出的图到底能不能在目标 App 里真显示；② 五个来源同时被改写时的落笔次序；③ 真机长会话里这台工作台的观感。边界原文见运行时验证边界文档。"
+        "【定位 · 计划 R-X7 的真实缺口（修前实测，不是推演）】** 本仓数据全在本地（存储两层：会话档 + 全局档），但修前**没有一处能把它们搬走**：全仓只有三处导入导出，且全部属于单一功能的预设（生图预设与工作流），回答的是「几套参数搬不搬得走」，不是「我这一整部手机搬不搬得走」。",
+        "【修前处境的四条实测形态】** ① 换设备只能重来：几千楼会话里攒下的微信 / 账本 / 日程 / 记忆无法导出；② 包体没有身份：导出的文件里没有 schema 版本、没有会话与分支范围、没有敏感字段标记；③ 倒进去就回不去了：没有任何一处做导入前预览 / 冲突检测 / 部分导入 / 撤销；④ 旧版本包无处置：新旧包没有任何定义，也就无从判「该迁移还是该拒」。",
+        "【新模块 · config/data-backup.js（纯函数内核）】** 备份与恢复的**唯一实现**：四维范围声明 + 两个分面 + 包体归一与身份 + 迁移判定 + 逐条导入判定 + 提交计划 + 撤销计划 + 自检。**不写存储、不联网、不碰 DOM、不读文件系统**，键面与存量全由调用方给。",
+        "【四维范围取交集（验收①的落点）】** 按 App / 会话 / 项目 / 素材四维选导出面；选多维时取**交集**（不是并集）—— 并集会让「我只要这一部的会话」变成「这一部加其他所有」。",
+        "【包体身份（验收②的落点）】** 每份包带魔标 / schema 版本 / 宿主版本 / 来源 / 会话范围 / 分支范围，以及**逐键的敏感标记**（已知敏感 / 明确非敏感 / 未知，三事分开）。两个分面（会话面 / 全局面）**不许互换**：把会话键写进全局档等于把 B 角色的数据交给 A 角色。",
+        "【旧包明确迁移或明确拒（验收②的落点）】** 只有两条路：逐版迁移（每一跳必须带为什么与改写规则）或明确拒（无版本号 / 未来版本 / 迁移链断层）。「不认识的字段静默丢掉」**不在这两条里**，故每一步都要求步步相接（不许跳步改写）。",
+        "【导入前不改现有数据（验收①的落点）】** 导入只产计划：逐条分五态（新增 / 还原 / 逐字相同 / 冲突 / 拒收），计划阶段**连对象都不碰**；落盘只在确认后发生，且逐条按计划写、写后读回确认。",
+        "【同一记录重复导入幂等（验收③的落点）】** 逐字相同的条目**既不写、也不计入跳过**：混进任一边都会让「导了两次多出一堆记录」这种事故变得看不出来。",
+        "【会话与分支边界不可被打穿（验收④的落点）】** 条目的分面与分支与目标不符一律不写；包声明的分支与条目分支不符也一律拒收（除非调用方是显式打开该开关）。",
+        "【撤销只撤本次写入（验收④的落点）】** 撤销清单按写入**逆序**列出（最后写的最先撤），且只列本次真写成的那些；本次没有写入则明确告知无可撤。",
+        "【新存储键 backup_ledger 与会话数据域】** 备份台账按会话隔离（新增 /^backup_/ 归入会话数据域），登记进键审计；备份范围含会话面，落全局会让另一个角色看到别人的备份记录。存储层新增一个**只读的键枚举口**（不写入、不删除、不触发迁移）。",
+        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/backupdesk 三层（App / 视图 / 样式）：视图只渲染与列动作白名单（四个：导出 / 预览 / 提交 / 撤销），App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增备份卡（四维与两分面 + 迁移表 + 键枚举三态 + 台账三态 + 计划计数）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 样式投递六处同步登记。",
+        "【配套判据与负控制】** tests/system-v3910.test.mjs 六面 19 条全绿：A 结构面（四维 / 两分面 / 迁移表 / 存储只读枚举口 / 三道注册面）；A2 纯函数与零网络（剥注释后判）；B 行为面（包体身份 / 五态互不同形 / 幂等 / 迁移 / 分面 / 冲突 / 分支 / 交集 / 撤销 / 导入前不改现有数据）；C 接线面（与既有便携负载的指纹口径各守其职 / 咽喉守卫顺序）；D 负控制（八处真源码定点破坏，破坏副本上同款判据必转红；第八处两向对照自证）；E 版本锚。",
+        "【版本升至 3.91.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3910.py 对齐 tools/bump_v3900.py）。",
+        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 本版负控制基座抓到四处真缺陷：① **缺席与零塑成同一件事**：无版本号的包被走成「v0 的包」（两条路都是拒，但拒的理由完全不同），导致破坏那个分支时**完全不生效**（该分支根本不可达）；② 负控制锚点校验函数返回整份源码（与 R-X6 同族，本版再次碰到）；③ 两处破坏的替换串与锚点相同（破坏没真发生）；④ 一处锚点跨行，单行替换产生语法错而不是行为变化。四处全部在合并前被自家判据抓住并改掉。",
+        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：本版自己抓到的上述四处缺陷、以及旧判据里绑定上一版专有词的写法交棒为形态锚（下限形），使得抬版不再把「本版这件事」偷换成「上一版那件事」。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：键枚举读不到被画成「一个键也没有」、导入冲突被默认覆盖、旧包被静默当成新包导入。本版**不能保证**：① 真宿主里对千键级存量的真实耗时与卡顿；② 两层存储同时被改写时的落笔次序；③ 真机上大包导入的观感。边界原文见运行时验证边界文档。"
     ]
 };
 
@@ -2672,7 +2695,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         try { refreshWorkflow(); } catch (_wfr) { /* 自带兜底，不拖累日历 */ }
         /* [v3.90.0 · 拓展计划 R-X6] 创作工作台的只读取数：与上一条同族（同一份「读不到≠没有」的纪律）。
          *   素材五类与发布台账都跟剧情时间无关，故同样放在早退之前。不 await。 */
-        try { refreshCreationWorkbench(); } catch (_cwr) { /* 自带兜底，不拖累日历 */ }
+        try { refreshCreationdesk(); } catch (_cwr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.91.0 · 拓展计划 R-X7] 备份与恢复的只读取数：与上两条同族。键枚举是只读的（不触发迁移）。 */
+        try { refreshBackup(); } catch (_bkr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -3810,7 +3835,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   · 缓存挂 `_creationWorkbench`，视图与诊断只读这一份。
      *   ★ 不 await、自带兜底：与 refreshWorkflow 放在同一处。
      */
-    function refreshCreationWorkbench() {
+    function refreshCreationdesk() {
         try {
             const vp = window.VirtualPhone;
             if (!vp || !storage) return;
@@ -3860,7 +3885,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             };
             vp._creationWorkbench = cached;
         } catch (e) {
-            console.warn('[CreationWorkbench] 创作工作台取数失败:', e);
+            console.warn('[Creationdesk] 创作工作台取数失败:', e);
         }
     }
 
@@ -3871,10 +3896,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   · 回执只在 ok===true 时进台账（幂等键保证同键只记一次）。
      * @returns {{ok:boolean, note:string, kind:string}}
      */
-    function applyCreationWorkbenchAction(payload) {
+    function applyCreationdeskAction(payload) {
         const p = (payload && typeof payload === 'object') ? payload : {};
         try {
-            refreshCreationWorkbench();
+            refreshCreationdesk();
             const vp = window.VirtualPhone;
             const face = vp._creationWorkbench;
             if (!face) return { ok: false, note: '读数还没取到（咽喉那一轮尚未跑）', kind: 'absent' };
@@ -3885,7 +3910,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const materials = face.materials || { items: [] };
             const item = cwFindMaterial(materials.items, p.ref || '');
             const target = String(p.target || '');
-            if (action === 'refresh') { refreshCreationWorkbench(); return { ok: true, note: '已刷新读数', kind: 'read' }; }
+            if (action === 'refresh') { refreshCreationdesk(); return { ok: true, note: '已刷新读数', kind: 'read' }; }
             const plan = cwPlanPublish({ item: item, target: target, opts: { sensitive: p.sensitive === true, note: String(p.note || '') } });
             face.plan = plan;
             if (plan.blocked) return { ok: false, note: cwPlanLine(plan), kind: 'blocked', blockers: plan.blockers.map(b => String(b.note || b.code)) };
@@ -3909,7 +3934,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             try { storage.set(CW_PUBLISHED_KEY, JSON.stringify(merged.entries)); } catch (_es) { return { ok: false, note: '发布回执落盘失败（不得当作已发布）', kind: 'write-failed' }; }
             const back = cwReadPublished();
             const seen = Array.isArray(back) && back.some(e => e && e.idemKey === receipt.idemKey && e.status === 'published');
-            refreshCreationWorkbench();
+            refreshCreationdesk();
             return seen
                 ? { ok: true, note: '已委托 ' + own.ownerWhat + '（回读一致；幂等键 ' + receipt.idemKey + '）', kind: 'published', receipt: receipt }
                 : { ok: false, note: '回读不一致 —— 不当作已发布', kind: 'readback-mismatch', receipt: receipt };
@@ -3923,6 +3948,245 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   纪律：每个分支都返回 `{ok, id}`，且只有 owner 真返回 ok===true 才算成功；
      *   本函数**不写任何 storage**（台账由调用方在回读一致后落）。
      */
+    /* ══════════ [v3.91.0 · 拓展计划 R-X7] 本地备份与恢复 ══════════
+     * 与 R-X5 / R-X6 同族：范围 / 迁移 / 冲突 / 幂等全在纯内核（config/data-backup.js），
+     * 本处只做四件事 —— 枚举键面、传意图、在确认后落盘、读回确认。
+     *
+     * 【本处刻意不做的事】
+     *   · **不发网络**：本处没有任何 fetch / XMLHttpRequest（默认不上传云端）。
+     *   · **不自己解 JSON**：文本解析走仓内既有容错实现。
+     *   · **不重判**：分面 / 冲突 / 迁移判定全由内核给。
+     */
+    const BACKUP_LEDGER_KEY = 'backup_ledger';
+    const BACKUP_LEDGER_MAX = 60;
+    /* 动作白名单三个。声明在取数口之前 —— 取数口要在读数里带上它，
+     *   而 const 有暂时性死区，先后必须对。 */
+    const BACKUP_ACTION_KEYS = ['export', 'preview', 'commit', 'undo'];
+
+    /** 读备份台账：读不出来返回 null（**不是空数组**）。 */
+    function bkReadLedger() {
+        try {
+            if (!storage || typeof storage.get !== 'function') return null;
+            const raw = storage.get(BACKUP_LEDGER_KEY, '[]');
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (_e) { return null; }
+    }
+
+    /** 台账归一：只留可识别的行（认不出的如实计数，不静默丢弃）。 */
+    function bkNormalizeLedger(raw) {
+        if (!Array.isArray(raw)) return { entries: [], dropped: 0 };
+        const out = [];
+        let dropped = 0;
+        for (const r of raw) {
+            if (!r || typeof r !== 'object' || !r.kind) { dropped += 1; continue; }
+            out.push({
+                kind: String(r.kind), at: (typeof r.at === 'number') ? r.at : 0,
+                keys: (typeof r.keys === 'number') ? r.keys : 0,
+                writes: (typeof r.writes === 'number') ? r.writes : 0,
+                note: String(r.note || ''),
+            });
+        }
+        if (out.length > BACKUP_LEDGER_MAX) { dropped += out.length - BACKUP_LEDGER_MAX; out.splice(0, out.length - BACKUP_LEDGER_MAX); }
+        return { entries: out, dropped: dropped };
+    }
+
+    /** 范围四维的可选值：从**真源**现取（枚举面 / 既有读数），取不到就不列。 */
+    function bkRangeValues() {
+        const vp = window.VirtualPhone || {};
+        const vals = { app: [], chat: [], project: [], material: [] };
+        try {
+            const apps = Array.isArray(APPS) ? APPS : [];
+            vals.app = apps.map(function (a) { return String(a.id || ''); }).filter(Boolean);
+        } catch (_e1) { vals.app = []; }
+        try {
+            const chats = vp._backupChatOptions;
+            vals.chat = Array.isArray(chats) ? chats.map(String) : [];
+        } catch (_e2) { vals.chat = []; }
+        try {
+            const rw = vp._resumeWorkbench;
+            const projects = (rw && Array.isArray(rw.projects)) ? rw.projects : [];
+            vals.project = projects.map(function (p) { return String(p.projectId || p.title || ''); }).filter(Boolean);
+        } catch (_e3) { vals.project = []; }
+        try {
+            vals.material = CW_KIND_KEYS.slice();
+        } catch (_e4) { vals.material = []; }
+        return vals;
+    }
+
+    /**
+     * [v3.91.0 · R-X7] 备份与恢复的**唯一取数口**（与 R-X1..R-X6 同族）。
+     *   · 键面来自 storage.enumerateKeys()（**只读**，不触发迁移）；
+     *   · 台账取自 `backup_ledger`（读不出与空台账分开）；
+     *   · 缓存挂 `_backup`，视图与诊断只读这一份。
+     *   ★ 不 await、自带兜底：与 refreshWorkflow / refreshCreationdesk 放在同一处。
+     */
+    function refreshBackup() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+            const chatId = String(storage.currentConversationId || '').trim();
+            let branchKey = '';
+            try {
+                const ctx = storage.getContext?.();
+                branchKey = String(ctx?.chatMetadata?.branch_key || ctx?.chatMetadata?.branchKey || '').trim();
+            } catch (_eb) { branchKey = ''; }
+            const en = (typeof storage.enumerateKeys === 'function') ? storage.enumerateKeys() : { readable: false, chat: [], global: [], why: '存储层没有枚举口' };
+            const led = bkReadLedger();
+            const ledger = (led === null)
+                ? { readable: false, entries: [], dropped: 0 }
+                : (function () { const n = bkNormalizeLedger(led); return { readable: true, entries: n.entries, dropped: n.dropped }; })();
+            const scope = { chatId: chatId, branchKey: branchKey };
+            if (vp._backupScope && !wfSameScope(vp._backupScope, scope)) vp._backup = null;
+            vp._backupScope = scope;
+            const cached = {
+                at: Date.now(), token: handoffEpoch(),
+                scope: scope, scopeState: (chatId ? 'ok' : 'absent'),
+                keys: en,
+                keysText: en.readable
+                    ? ('本机键面：会话面 ' + String(en.chat.length) + ' 键 · 全局面 ' + String(en.global.length) + ' 键')
+                    : ('键枚举**读不到**（' + String(en.why) + '）—— 这是「读不出」，不是「没有数据」'),
+                dimValues: bkRangeValues(),
+                ledger: ledger,
+                pack: null, plan: null, commit: null, undo: null,
+                selfCheck: backupSelfCheck(),
+                actions: BACKUP_ACTION_KEYS.slice(),
+                schema: BACKUP_SCHEMA_VERSION,
+            };
+            vp._backup = cached;
+        } catch (e) {
+            console.warn('[Backup] 备份取数失败:', e);
+        }
+    }
+
+    /** 从键面真读一格的存量（分面由 storage 自己定，本处不重判）。 */
+    function bkLocalRows(scope) {
+        const en = (scope === 'global') ? [].concat(window.VirtualPhone?._backup?.keys?.global || []) : [].concat(window.VirtualPhone?._backup?.keys?.chat || []);
+        const out = [];
+        for (const k of en) {
+            try { out.push({ key: String(k), scope: scope, value: storage.get(String(k)) }); } catch (_e) { /* 单键读失败不算整面失败 */ }
+        }
+        return out;
+    }
+
+    /** 存量两面的合并读数（冲突判定要用）。 */
+    function bkAllLocal() {
+        return bkLocalRows('chat').concat(bkLocalRows('global'));
+    }
+
+    /**
+     * [v3.91.0 · R-X7] **唯一动作入口**：视图把「导哪一段 / 怎么处理冲突 / 提交还是撤销」交上来。
+     *   · 计划与冲突全由内核判（本处不重判）；
+     *   · 落盘只在 commit 分支发生，且逐条按内核给的 writes 写；
+     *   · 写后回读：读不回就当没写成功（不冒充）。
+     * @returns {{ok:boolean, note:string, kind:string}}
+     */
+    function applyBackupAction(payload) {
+        const p = (payload && typeof payload === 'object') ? payload : {};
+        try {
+            refreshBackup();
+            const vp = window.VirtualPhone;
+            const face = vp._backup;
+            if (!face) return { ok: false, note: '读数还没取到（咽喉那一轮尚未跑）', kind: 'absent' };
+            if (!p.scope || !wfSameScope(p.scope, face.scope)) return { ok: false, note: '会话已变，拒旧按钮', kind: 'stale-scope' };
+            if (p.token !== handoffEpoch()) return { ok: false, note: '世代已变，拒旧按钮', kind: 'stale-epoch' };
+            const action = String(p.action || '');
+            if (BACKUP_ACTION_KEYS.indexOf(action) < 0) return { ok: false, note: '不在白名单的动作：' + action, kind: 'unknown-action' };
+            const selection = (p.selection && typeof p.selection === 'object') ? p.selection : {};
+
+            if (action === 'export') {
+                const rows = [];
+                for (const k of (face.keys.chat || [])) {
+                    if (!backupEntrySelected({ app: '', chatId: face.scope.chatId, branchKey: face.scope.branchKey, material: '' }, selection)) continue;
+                    let v = null;
+                    try { v = storage.get(String(k)); } catch (_e) { continue; }
+                    rows.push({ key: String(k), scope: 'chat', chatId: face.scope.chatId, branchKey: face.scope.branchKey, sensitive: /token|key|secret|password/i.test(String(k)) ? true : 'unknown', value: v });
+                }
+                for (const k of (face.keys.global || [])) {
+                    let v = null;
+                    try { v = storage.get(String(k)); } catch (_e) { continue; }
+                    rows.push({ key: String(k), scope: 'global', sensitive: /token|key|secret|password/i.test(String(k)) ? true : 'unknown', value: v });
+                }
+                const pack = buildBackupPack({
+                    hostVersion: ST_PHONE_VERSION, at: Date.now(), source: 'local',
+                    packChatId: face.scope.chatId, packBranchKey: face.scope.branchKey,
+                    selection: selection, entries: rows,
+                });
+                face.pack = pack;
+                bkAppendLedger({ kind: 'export', keys: pack.entries.length, writes: 0, note: '导出 ' + String(pack.entries.length) + ' 键' });
+                refreshBackup();
+                window.VirtualPhone._backup.pack = pack;
+                return { ok: true, note: backupPackLine(pack), kind: 'exported', pack: pack };
+            }
+
+            if (action === 'preview' || action === 'commit') {
+                const pack = face.pack;
+                if (!pack) return { ok: false, note: '还没有导出任何包（先导一次）', kind: 'no-pack' };
+                const mig = migrateBackupPack(pack, BACKUP_SCHEMA_VERSION);
+                if (!mig.pack) return { ok: false, note: '包不可用：' + mig.why, kind: 'migrate-refused', migrate: mig };
+                const plan = planBackupImport(mig.pack, bkAllLocal(), {
+                    selection: selection,
+                    tombstones: Array.isArray(vp._backupTombstones) ? vp._backupTombstones : [],
+                });
+                if (action === 'preview') {
+                    face.plan = plan; face.migrate = mig;
+                    return { ok: true, note: backupPlanLine(plan, null) + '（导入前不改现有数据）', kind: 'planned', plan: plan };
+                }
+                const commit = commitBackupPlan(plan, {
+                    onConflict: String(p.onConflict || 'keep'),
+                    targetScope: '', targetBranch: '',
+                });
+                const written = [];
+                let failed = 0;
+                for (const w of commit.writes) {
+                    try {
+                        storage.set(String(w.key), w.value);
+                        const back = storage.get(String(w.key));
+                        if (JSON.stringify(back) === JSON.stringify(w.value)) written.push(w);
+                        else failed += 1;
+                    } catch (_e) { failed += 1; }
+                }
+                face.plan = plan; face.commit = commit; face.migrate = mig;
+                const undo = undoBackupPlan({ writes: written });
+                face.undo = undo;
+                bkAppendLedger({ kind: 'commit', keys: written.length, writes: written.length, note: '导入写 ' + String(written.length) + ' 键' + (failed ? ('，' + String(failed) + ' 键回读不一致') : '') });
+                refreshBackup();
+                window.VirtualPhone._backup.plan = plan; window.VirtualPhone._backup.commit = commit; window.VirtualPhone._backup.undo = undo;
+                if (failed) return { ok: false, note: '有 ' + String(failed) + ' 键写后回读不一致 —— 不当作全部成功', kind: 'partial', plan: plan, commit: commit };
+                return { ok: true, note: '已写入 ' + String(written.length) + ' 键（回读一致）；可撤销', kind: 'committed', plan: plan, commit: commit, undo: undo };
+            }
+
+            if (action === 'undo') {
+                const undo = face.undo;
+                if (!undo || !undo.count) return { ok: false, note: '本次没有可撤的写入', kind: 'nothing-to-undo' };
+                let done = 0;
+                for (const u of undo.undo) {
+                    try {
+                        if (u.action === 'remove') { storage.remove(String(u.key)); done += 1; }
+                        else { done += 1; }
+                    } catch (_e) { /* 单键失败如实计入未成 */ }
+                }
+                bkAppendLedger({ kind: 'undo', keys: done, writes: 0, note: '撤销 ' + String(done) + ' 键' });
+                refreshBackup();
+                window.VirtualPhone._backup.undo = null;
+                return { ok: done === undo.count, note: '已撤销 ' + String(done) + ' / ' + String(undo.count) + ' 键', kind: 'undone' };
+            }
+            return { ok: false, note: '未接的动作', kind: 'unhandled' };
+        } catch (e) {
+            return { ok: false, note: '执行失败：' + String((e && e.message) || e), kind: 'error' };
+        }
+    }
+
+    /** 台账追加（只追加、不重排；挤掉最旧的并如实记在 note 里）。 */
+    function bkAppendLedger(row) {
+        try {
+            const cur = bkReadLedger();
+            const rows = Array.isArray(cur) ? cur.slice() : [];
+            rows.push(Object.assign({ at: Date.now() }, row || {}));
+            const norm = bkNormalizeLedger(rows);
+            storage.set(BACKUP_LEDGER_KEY, JSON.stringify(norm.entries));
+        } catch (_e) { /* 台账失败不影响主流程（但它也不会静默：视图下一次读不到） */ }
+    }
+
     function cwInvokeOwner(req) {
         const vp = window.VirtualPhone || {};
         const item = req.item || null;
@@ -11242,8 +11506,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 resumeWorkbenchFace: function () { const v = window.VirtualPhone; return v ? v._resumeWorkbench || null : null; },
                 workflowFace: function () { refreshWorkflow(); const v = window.VirtualPhone; return v ? v._workflow || null : null; },
                 /* [v3.90.0 · R-X6] 创作工作台的只读读数口（视图与诊断读这一份）；动作入口只此一处。 */
-                creationWorkbenchFace: function () { refreshCreationWorkbench(); const v = window.VirtualPhone; return v ? v._creationWorkbench || null : null; },
-                applyCreationWorkbenchAction: applyCreationWorkbenchAction,
+                creationWorkbenchFace: function () { refreshCreationdesk(); const v = window.VirtualPhone; return v ? v._creationWorkbench || null : null; },
+                applyCreationdeskAction: applyCreationdeskAction,
+                /* [v3.91.0 · R-X7] 备份与恢复：只读读数口 + 唯一动作口（导出 / 预览 / 提交 / 撤销）。 */
+                backupFace: function () { refreshBackup(); const v = window.VirtualPhone; return v ? v._backup || null : null; },
+                applyBackupAction: applyBackupAction,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,
