@@ -137,6 +137,13 @@ import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-c
  *   与矩阵卡的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
  *   本面答「投靶心这套协议**自身**现在还自洽吗」（表自检 + 自等自证）。 */
 import { OPEN_REF_KINDS, OPEN_REF_REASONS, openRefSelfCheck, buildOpenRef, normalizeOpenRef, sameRef } from '../../config/open-ref.js';
+/* [v3.86.0 · 拓展计划 R-X2] 来源链协议面：与 openRefFace 同一族——协议件自身现在还自洽吗。
+ *   与靶心协议面的分工（两面常被混为一谈，是两个不同的问题）：
+ *     靶心面答「这条结论**能不能落到**那一条上」（单点定位能力）；
+ *     本面答「这条结论**是从哪来的、中途经过了谁、上游没了会怎样**」（多点关系与失效传播）。
+ *   为什么必须有这一面：全局搜索能找到内容，但用户此前**看不到**一条信息如何从原始记录
+ *   流转到通知 / 草稿 / 记忆 / 生成请求 —— 关系只活在代码里，不在界面上。 */
+import { provenanceSelfCheck, pgSummaryLine, PG_NODE_KINDS, PG_EDGE_KINDS, PG_STATES, PG_BLOCK_REASONS } from '../../config/provenance-graph.js';
 /* [v3.67.0 · 拓展计划 X3] 日程提醒协议面：与 openRefFace 同一族——协议件自身现在还自洽吗。
  *   四源归一结果、账本状态、缺口、投递计划，在此面陈列（不重算，只读缓存）。 */
 import { scheduleBridgeSelfCheck, scheduleLedgerSelfCheck, scheduleAdviceLine, SCHEDULE_SOURCES } from '../../config/schedule-bridge.js';
@@ -638,6 +645,86 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* ── [v3.86.0 · 拓展计划 R-X2] 来源链协议面（一条信息从哪来、经过谁、上游没了会怎样）──
+     *   摆的是什么：五类节点表 / 四类边表 / 三态表的自检，加上**宿主这一轮的来源图读数**
+     *   （节点数、边数、已失效、悬空、被隔离、不可长期定位、派生、未取到的源、转述链）。
+     *   与靶心协议面的分工：靶心面答「能不能落到那一条上」，本面答「这条是从哪来的」。
+     *   三条纪律与全页一致：
+     *     ① 只读：只读自检出口与宿主缓存 `_provenanceCache`／`_provenanceLine`（唯一读数出口），
+     *        不自己查图、不自己数第二遍；
+     *     ② 不抛：单面 try/catch，读不到即 null；
+     *     ③ 不猜：**「宿主这一轮还没取数」与「取到了、确实空」是两件事** ——
+     *        图不在位就说「尚未取数」，绝不说「没有来源关系」（本仓最忌的反向错读数）；
+     *        被隔离的节点只报**壳与原因**（跨段 / 不可见），内容一个字不带（验收④）。 */
+    const provenanceFace = (() => {
+        try {
+            const self = provenanceSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const nodeKinds = Object.keys(PG_NODE_KINDS || {}).map((k) => {
+                const rec = PG_NODE_KINDS[k] || {};
+                return { kind: String(k), label: String(rec.label || ''), icon: String(rec.icon || ''), durable: rec.durable === true };
+            });
+            const edgeKinds = Object.keys(PG_EDGE_KINDS || {}).map((k) => ({
+                kind: String(k), label: String((PG_EDGE_KINDS[k] || {}).label || '')
+            }));
+            const states = Object.keys(PG_STATES || {}).map((k) => String(PG_STATES[k]));
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const graph = vp ? vp._provenanceCache : null;
+            const line = vp ? vp._provenanceLine : null;
+            const hasGraph = !!(graph && typeof graph === 'object' && Array.isArray(graph.nodes));
+            const rawCounts = (hasGraph && graph.counts && typeof graph.counts === 'object') ? graph.counts : {};
+            const counts = {};
+            for (const k of ['nodes', 'edges', 'live', 'withdrawn', 'dangling', 'blocked', 'notDurable', 'derived', 'gaps', 'chains', 'retoldChains']) {
+                counts[k] = Number(rawCounts[k]) || 0;
+            }
+            const rawBlocked = (hasGraph && Array.isArray(graph.blocked)) ? graph.blocked : [];
+            const blocked = rawBlocked.map((b) => ({
+                key: String((b && b.key) || ''), kind: String((b && b.kind) || ''),
+                reason: String((b && b.reason) || ''), hasRef: !!(b && b.hasRef === true)
+            }));
+            /* 按原因归类（跨段 / 跨段边 / 不可见）—— 读的人才知道**被拦下的是哪一类**，
+             *   而不是笼统一句「有一些被挡了」。 */
+            const blockedByReason = {};
+            for (const b of blocked) blockedByReason[b.reason] = (blockedByReason[b.reason] || 0) + 1;
+            /* 归因文案从**内核词表**拿（本视图不自己造第二份原因表）：
+             *   跨段 / 跨段边 / 不可见 —— 三者处置不同（前两者去切会话或分支，后者去查可见性）。 */
+            const BLOCK_TEXT = {};
+            BLOCK_TEXT[PG_BLOCK_REASONS.CROSS_SCOPE] = '跨会话/跨分支';
+            BLOCK_TEXT[PG_BLOCK_REASONS.CROSS_SCOPE_EDGE] = '跨段的边';
+            BLOCK_TEXT[PG_BLOCK_REASONS.NOT_VISIBLE] = '这条对当前角色不可见';
+            const rawGaps = (hasGraph && Array.isArray(graph.gaps)) ? graph.gaps : [];
+            const gaps = rawGaps.map((g) => ({ source: String((g && g.source) || ''), reason: String((g && g.reason) || '') }));
+            const tablesText = '五类节点 ' + String(nodeKinds.length) + ' · 四类边 ' + String(edgeKinds.length)
+                + ' · 三态 ' + String(states.length) + ' 态';
+            const readText = hasGraph
+                ? String(line || pgSummaryLine(graph))
+                : '尚未取数（宿主这一轮还没跳跑来源图刷新）';
+            const blockedText = blocked.length
+                ? ('；被隔离/不可见 ' + String(blocked.length) + ' 条（'
+                    + Object.keys(blockedByReason).map((k) => String(BLOCK_TEXT[k] || k) + ' ' + String(blockedByReason[k])).join(' / ') + '）')
+                : '';
+            const gapText = gaps.length ? ('；未取到的源 ' + gaps.map((g) => g.source).join(' / ')) : '';
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                nodeKinds: nodeKinds,
+                edgeKinds: edgeKinds,
+                states: states,
+                hasGraph: hasGraph,
+                counts: counts,
+                blocked: blocked,
+                blockedByReason: blockedByReason,
+                blockText: BLOCK_TEXT,
+                gaps: gaps,
+                chainText: hasGraph ? String(graph.chainText || '') : '',
+                readLine: hasGraph ? String(line || '') : null,
+                text: '来源链协议：' + tablesText + '；' + readText + blockedText + gapText
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**（见下）' : '；表自检与自等自证全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* ── [v3.58.0 · 计划 O4] 会话世代栅栏面（**被挡下的旧会话回信**）──
      *   摆的是什么：当前世代号、被挡下的回信条数、以及每一条的（域 / 拒绝原因 / 中文文案 / 时刻）。
      *   与「App 消费面矩阵」的分工（两面常被混为一谈，是两个不同的问题）：
@@ -935,7 +1022,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -997,6 +1084,19 @@ export function financeFaceText(face) {
         if (!f) return '财务总览协议：读取异常（已降级）—— 这不是「没钱」';
         return String(f.text || '财务总览协议：无读数');
     } catch (_e) { return '财务总览协议：读取异常（已降级）'; }
+}
+/** [v3.86.0 · 拓展计划 R-X2] 来源链协议面的一行读数（唯一实现在本文件 `collectDiagnose` 内取的那一面）。
+ *  与 financeFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  三态必须互不同形（这是验收①与③在读数上的落点）：
+ *   · 面缺席 → 说「读不到」并给归因，**不说**「没有来源关系」；
+ *   · 图未跑 → 说「尚未取数」（这一轮还没跳）—— 它**不是**「查无此物」；
+ *   · 有读数 → 报五类/四类/三态表规模 + 分列计数 + 被隔离归类。 */
+export function provenanceFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '来源链协议：读取异常（已降级）—— 这不是「本机没有来源关系」';
+        return String(f.text || '来源链协议：无读数');
+    } catch (_e) { return '来源链协议：读取异常（已降级）—— 这不是「本机没有来源关系」'; }
 }
 /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面的一行读数（与 financeFaceText 同范式）。 */
 export function knowledgeBridgeFaceText(face) {
@@ -1295,6 +1395,7 @@ export default {
     summarizeDiagnose,
     scheduleFaceText,
     financeFaceText,
+    provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,
     characterSlotFaceText

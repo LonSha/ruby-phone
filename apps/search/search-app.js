@@ -221,6 +221,10 @@ export class SearchApp {
         .gs-item-snippet { font-size:12px; color:#b6bac0; margin-top:3px; line-height:1.5; word-break:break-word; }
         .gs-item-meta { font-size:10.5px; color:#7f858b; margin-top:5px; }
         .gs-jump { color:#6ea8fe; }
+        /* [v3.86.0 · R-X2] 行面来源链读数：正行说「这条从哪来、上游还在不在」；
+           隔离/未纳入那一档用 warn 色单列，与「查不到」区分开。 */
+        .gs-prov { font-size:10.5px; color:#8b93a1; margin-top:3px; line-height:1.5; }
+        .gs-prov-warn { color:#e0b050; }
         .gs-mark { background:rgba(242,181,68,.28); color:#ffe0a3; border-radius:3px; padding:0 1px; }
         .gs-err { font-size:11px; color:#f87171; padding:6px 4px; }
         .gs-empty, .gs-hint { text-align:center; padding:48px 24px; color:#8b8f96; }

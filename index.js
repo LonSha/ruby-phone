@@ -63,6 +63,13 @@ import {
 /* [v3.85.0 · R-X1] 行动项跳转沿用 X2 的靶心载荷（`buildOpenDetail(appId, tab, ref)`），
  *   不另造一套派发 —— 派发链只有 `phone:openApp` 一条。 */
 import { buildOpenDetail } from './config/app-open-detail.js';
+/* [v3.86.0 · 拓展计划 R-X2] 跨 App 来源链与实体关系浏览器（纯函数）：
+ *   五类节点归一 → 四类边（来源/派生/转述/引用）→ 撤回传播 → 跨段隔离。
+ *   与 R-X1 同范式：**取数在咽喉，判定全在内核**；可见性判定**复用** X5 的
+ *   knowledgeCheck（不写第二份口径）—— 这一行 brought in 的正是 X5 那组出口。 */
+import {
+    buildProvenanceGraph, pgSummaryLine, pgRowFace, provenanceSelfCheck
+} from './config/provenance-graph.js';
 /* [v3.69.0 · 拓展计划 X5] 社媒知情边界实际接入协议层（纯函数）：
  *   知情判定（可见/已看/可互动）+ 通知过滤（看不见不收）+ 知情账本（撤回失效缓存）。 */
 import {
@@ -148,7 +155,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.85.0';
+const ST_PHONE_VERSION = '3.86.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -330,24 +337,27 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-11",
     items: [
-        "【定位 · 计划 R-X1 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 汇总五类待处理项；② 每条带来源 App、来源事件、会话、楼层或剧情时间；③ 支持完成 / 延期 / 忽略 / 跳转四种动作；④ 只读通知与需要确认的通知分开呈现。修前实测的处境是：五类待处理项**分散在五个源里各说各的** —— 待确认账单在财务总览、到期约定在日历、未读事件在通知日志、续玩建议在织光机、失败任务在诊断中心 —— 没有任何一处能回答「现在总共该处理什么」。",
-        "【修前处境的四条实测形态】** ① 五处各说各的，没有总量，用户要挨个 App 翻；② 「没读到」与「读了确实没有」同形，都渲染成空行；③ 同一件事改了一行日期（改期）被判成换了一条新事项，于是同一条会在提醒里出现两次；④ 只读通知与需要确认混在一列，真正需要用户动手的那些被淹没。本模块逐条消掉这四条。",
-        "【新模块 · config/action-center.js（纯函数，811 行）】** 五源归一的**唯一实现**：只消费不取数（不引五源的取数件、不碰宿主的 window 与 document 与 localStorage），把上游各给一份读数收成一份可处置的行动中心。导出十八个出口，自检报出五类与五源登记齐备且问题为空表。",
-        "【三张表：五类 × 两条泳道 × 四动作】** 类别五类（账单 / 约定 / 未读 / 续玩 / 失败）、泳道两条（只读 / 需确认）、动作四个（完成 / 延期 / 忽略 / 跳转）、状态六态（open / done / snoozed / ignored / expired / withdrawn）。四条缺一条，「分开呈现」与「四动作」就没有共同的语言。",
-        "【五源登记表：每类钉死六件事】** 每类钉死 label 与 from 与 timeBasis 与 lane 与 appId 与 icon，外加动作白名单：账单钉旅行结算面与真实时间、约定钉日历与剧情时间、未读钉空来源与只读、续玩钉织光机与只读、失败钉诊断处置面与需确认。**来源与时间基写在登记表里，不写在视图里** —— 视图纯渲染、一切结论由内核给出。",
-        "【锚的两条键（本模块最贵的一条设计）】** 一条是带日期的顺序键，只用于投递上屏与通知合并；另一条是**不带日期的对账锚**。为什么要两条：改期只该换前者，不该换后者 —— 只有一条键时，日历里挪一行就等于换了身份，于是同一条承诺会在提醒里出现两次（修前形态第三条的根因）。撤回判定与改期判定都挂在后者上。",
-        "【撤回门与回档判据（计划验收第四项的直接兑现）】** 撤回面上**唯一**的已决判据是「只有仍处于 open 的条目才可能被撤」—— 用户已经决定过的（完成 / 延期 / 忽略 / 过期）一律跳过，回档撤的是「系统还没让你看过的未来提醒」，不是「你已经决定过的事」；紧随的撤回门是「源本轮没读就不撤」—— 把「不知道」当成「没有」是本仓最贵的反向错读数；回档只对**剧情基**的行判（真实时间基的行不随剧情回档走）；改期判据是「激活锚里还有这一条」。",
-        "【账本 · 幂等与上限】** 账本随会话隔离（换角色后不该看到上一个角色的行动项与处理痕迹），上限 240 条，只记幂等键与撤回原因与处理痕迹三类；落账仅在有新增或撤回时写盘，其余轮次只读不算不写。撤回原因三态（源被回档 / 源被改期 / 源已消失）互不同形 —— 并成一格，用户就分不清「它没了」与「它挪走了」。",
-        "【咽喉接线（唯一取数口）】** 五源的取数全部落在 index.js 的 refreshActionCenter 里：账单从旅行结算面的对外债务与内部转付摊平、约定复用日历投影的缓存透传（**不自己再算一份**）、未读从通知日志过滤未读、续玩从织光机的上一份简报、失败从诊断处置面过滤真 failed。刷新点放在日历提醒检查的早退之前 —— 否则两类与剧情时间无关的源永远看不到。缓存挂宿主，视图只读缓存。",
-        "【跳转是导航，不是状态】** 四种动作里「跳转」是导航（走唯一那条派发链，不另造一套），另外三种才是状态。把打开也在账本里记成一种状态，会让「打开看一眼」变成「这件事被我处理了」—— 故 applyAction 收到打开就**如实拒绝**并给出可读原因。三种写动作里找不到锚也如实回报（还没落账 / 打开不是状态），不静默吞掉。",
-        "【视图 · 两条泳道 + 四个动作】** 通知中心视图加两条泳道（只读 / 需确认）与四个动作按钮，样式走新增的 .nc-ac 系列。**视图纯渲染**：只读宿主缓存、不重算、不自己写账、不引内核实现 —— 会重算的视图会在内核改口径时静默显示错数，而没有任何东西会响。",
-        "【三处登记齐备（本仓的既有纪律，缺一处即门禁转红）】** ① 会话级存储前缀（随会话隔离，与既有财务账本同款）；② keys 台账登记该键并声明作用域为会话级；③ 派生面台账登记本模块为「非派生库」（来源事件 id 只用于幂等键与撤回归因，本层不持有也不回收来源条目 —— 回收由各源自己做）。",
-        "【新增套件 · tests/system-v3850.test.mjs（637 行 / 19 用例）】** 五面：结构面（真源在场 / 只消费不取数 / 三处登记 / 咽喉接线三处都在）、行为面（十条判据同源一次通过 / 名实一致四项一项不少 / 失败项只在真 failed 时进列）、接线面（刷新点在早退之前 / 视图纯渲染 / 真跑内核链验首轮落账与复算不重投）、负控制八条（真源码定点破坏到副本 → 同款判据必须转红）、版本锚。负控制全部走「破坏副本 + 同款判据」，而不是另写一份模拟判据。",
-        "【本版自己抓到的两处真缺陷（都由负控制当场报出，不是事后回看）】** ① 「已决定过的不撤」曾写成一张独立的已决态表，而紧随的另一条判据已经涵盖了同一条规矩 —— 两份一旦分叉，负控制对破坏就一个字不变（这是判据不敏感，不是判据合格），故删表并把规矩收成一处；② 跳转判据里曾有一条三元守卫，而取跳转的函数在不可跳时本就返回空靶心，改掉它行为不变 ⇒ **不可观测**，故把破坏点移到「跳不过去时理由被抹掉」与「仍带出靶心」两处。两条的共性是：负控制必须选「破坏形态与判据粒度匹配」的那一处。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「**看起来没坏但显示不对**」这一族里的一个具体形态：同一件待处理事项在多处显示成不同状态，或改期后被当成新事项重复提醒。本版**不能保证**：① 真宿主里五源同时可读时的观感与滚动表现；② 免打扰只抑制展示而不丢失事件这一条在真机上的表现（本版只保证账本与撤回门的机制面）；③ 真机上的通知点击真的打开了对应来源。边界原文见运行时验证边界文档。",
-        "【边界 · 诚实三条】** ① 本版**只做汇总与处置**，不改五源各自的判定口径（五源仍各管各的取数，本层只消费）；② 账本**不是**五源条目的副本，只记幂等键与处理痕迹，来源条目被删时本层不回收、只按撤回归因如实标记；③ 本版**没有**做免打扰的持久化设置项（本版只保证「抑制展示不丢事件」的机制面），那一格仍需单独一轮。",
-        "【交棒改写（判据面，不是放宽）】** 本版把「五源各说各的」从清单式汇总换成了**登记表驱动的归一**：第 6 个源要接进来时，只需在登记表里加一行，泳道与动作白名单与时间基与来源 App 都随行给出 —— 是否漏接由登记表与探针回答，不靠人记得。",
-        "【版本升至 3.85.0（五源同源）】** manifest.json 与 package.json 与 index.js 的版本常量与公告块与 update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息当前版本行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；三条探针基线随枚举面漂移同步刷新（日程与分支的枚举面、长会话的扫描面与判据散文）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3850.py 对齐 tools/bump_v3840.py）。"
+        "【定位 · 计划 R-X2 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 以事件 / 角色 / 交易 / 素材 / 楼层为节点，展示来源与派生与转述与引用与当前状态；② 从手机记录跳到原始出处（无跳转能力时给可执行的替代定位）；③ 同名异人与不同会话与不同分支明确隔离；④ 与第一期已交付的社媒知情边界共用同一份可见性判定。修前实测的处境是：全局搜索能找到内容，但**没有任何一处**回答「这条是从哪来的、中途经过了谁、上游没了会怎样」—— 一条通知、一份草稿、一条记忆各自成立，彼此之间的来源关系只活在代码里。",
+        "【修前处境的五条实测形态】** ① 来源关系只在代码里，界面上看不见；② 上游被删或被撤回时下游**静默消失**，用户以为本来就没有这个东西；③ 「本轮没读到这一类源」与「读了、这一类确实没有」在界面上同形，而两者处置正好相反（前者等下次刷新，后者才叫真没有）；④ 角色名被当成全局唯一 id，同名异人在关系图上被拼成一个人且**不报错**；⑤ 跨会话或跨分支的记录混进同一张图，别段内容从这个口子漏出来。本模块逐条消掉这五条。",
+        "【新模块 · config/provenance-graph.js（纯函数，592 行）】** 来源关系归一的**唯一实现**：五类节点收成一张可看的图。**不写存储**（不持键、不带计时器、不碰 DOM），引的四样全是既有唯一口径（取数门 / 靶心协议 / 转述链 / 可见性判定），故**不涉 keys 台账**。导出十七个出口，自检报出表齐备且问题为空表。",
+        "【五类节点与四类边：来源要经得起追问】** 节点五类（事件 / 角色 / 交易 / 素材 / 楼层），边四类（来源 / 派生 / 转述 / 引用）。**「转述」与「独立来源」必须不同形** —— 并成一格，同一传闻被三个平台各说一遍就会被数成三条独立来源，这是本仓最贵的一类错读数。转述链归并走既有唯一口径，来源端点也入链。",
+        "【名实一致 · 角色名不是全局唯一（验收③的落点之一）】** 五类节点里**只有角色**标为不可长期定位，其余四类可长期定位。为什么：同名异人是本仓的既知形态（同名的两个人在两个会话里各有一条记录），把名字当全局唯一 id ⇒ 关系图会把两个人拼成一个人，且**不报错**。故角色一律走「不可长期定位 + 给原因」这条，并在图上如实写明原由。",
+        "【三态不许挤成两态（验收③的落点之二）】** 三态是 在场 / 已失效 / 悬空。已失效与悬空**必须分两格**，因为处置相反：前者等上游恢复（源被撤回），后者要去看看哪条不见了（上游认不出）。撤回**不删除节点** —— 只标失效并留位。",
+        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 撤回判定**只认调用方显式声明读过**的那一类源。只凭「图里有这个 kind 的一条」证明不了「这一类全在」—— 那是把部分当全部，正是本仓最贵的反向错读数。未读到的源逐条记缺口并附归因，绝不与「读了确实没有」同形。",
+        "【同轮内可判定的撤回 + 墓碑留位（验收③的直接兑现）】** 派生与引用与转述节点的上游不在图里、而**上游那类源本轮确实读过** ⇒ 那不是没读到，是上游被删或被撤回了。此时给上游立一块**留位**（key 与类别在、内容已不在、并写明它曾经是哪一类的哪一条），下游标失效并把「是谁连累了它」带下去。反过来：上游那类源本轮没读过 ⇒ 不判撤，只留悬空 —— 两者永远不当同一件事处理。",
+        "【撤回经悬空边也要传播】** 上游被撤回后才从图里消失时，悬空边照样把失效传下去。否则「上游撤回」会退化成「莫名其妙悬空」—— 两者在用户眼里处置不同，前者等上游恢复，后者要去查哪条没了。",
+        "【隔离两维（验收④的落点）】** 跨段判定走会话身份与剧情分叉键两维，与既有会话世代栅栏同口径（**拿不到会话身份即判不是同一段**，宁可多拦一条不可漏一条）。跨段的记录只报壳 —— 类别与原因可以带，**内容一个字都不带**；跨段的边同样记一条壳。可见性判定**不在本处写第二份**，由内核转交第一期已交付的社媒知情边界；不可见的节点移到隔离区（只报壳）而不是静默删掉，否则「被拦下」与「本来没有」又同形了。",
+        "【行面四态（视图层的最小接口）】** 给「一行产品记录」配一个行面：没取到图 / 这条没有身份 / 被隔离 / 不在图里，四态互不同形；命中时给来源链读数与跳转与跳不过去时的替代定位三样，视图照着排版即可。**没图就不说话** —— 图没跑不等于这条没有来源，缀一句「暂无来源关系」就是造谣。",
+        "【咽喉接线（唯一取数口）】** 五类节点的取数全落在 index.js 的 refreshProvenanceGraph 里：生活事件从日历派生读数、角色从约定投影、交易从旅行记账、素材从微博推荐流、楼层从织光机续玩简报。**每类各在一个独立 try/catch 里，读不到就不声明读过**（不塞进已读名单）；刷新点放在日历提醒检查的早退之前 —— 否则与剧情时间无关的两类源永远看不到。缓存挂宿主，视图与诊断只读这一份。",
+        "【跳转是导航，不是状态】** 跳转沿用既有唯一那条派发链与靶心载荷，不另造一套。**跳不过去如实回报并带回可执行的替代定位** —— 只说「跳不过去」等于把问题丢回给用户；按节点类别给具体动作（角色去角色 App 按名字筛并提醒同名会有多条、事件去日历时间线按来源键定位等）。",
+        "【三态必须不同形 · 两处视图】** 总述三态（未取数 / 零条 / N 条）与诊断面三态（面缺席 / 图未跑 / 有读数）各自不同形。诊断新增来源链协议卡，与既有跨 App 靶心协议卡分工明确：靶心面答「这条能不能落到那一条上」，本卡答「这条从哪来、中途经过谁、上游没了会怎样」。搜索行面在既有靶心旁挂来源链读数行，样式走新增的 .gs-prov 系列。两处视图都**只读宿主缓存与内核出口**，不自己查图、不自己拼归因。",
+        "【新增套件 · tests/system-v3860.test.mjs（19 用例）】** 五面：结构面（真源在场 / 纯函数不摸宿主不写存储 / 派生面枚举面未命中）、行为面（十一条判据同源一次通过 / 读不到不等于没有 / 未登记的类别不硬塞 / 按内容去重绝不覆盖 / 链回溯带环保护）、接线面（咽喉四处都在 / 刷新点在早退之前 / 诊断与搜索两处视图纯渲染 / 真跑内核链验五源归一）、负控制六条（真源码定点破坏到副本 → 同款判据必须转红）、版本锚。负控制全部走「破坏副本 + 同款判据」，而不是另写一份模拟判据。",
+        "【负控制选点（本仓的既知教训，本版照办）】** 五条破坏点全选「破坏形态与判据粒度严丝合缝」的那一处：把撤回判定从显式声明读到改用图里出现过的类别（把部分当全部的那一手）、去掉拿不到会话身份即判不是同一段的门、把角色标成可长期定位、把行面的被隔离与不在图压成一格、上游读过却不在场时不立留位。第6条是负控制自身可证伪的两向（破坏副本必须真被加载且与原版不同源；未触及的那条判据在副本上仍须成立）。",
+        "【本版自己抓到的两处真缺陷（都由负控制与判据当场报出，不是事后回看）】** ① 删掉一条在给定输入下**不可能命中**的破坏锚点（该分支的输入在该判据里根本走不到），换成真正走得通的那一处 —— 否则负控制是假绿；② 修掉一处判据的锚点粒度（破坏点选在被隔离壳与不在图两条返回**并排**的那一行），否则把两态压成一格时判据不变红，等于没守住。两条的共性是：负控制必须选「破坏形态与判据粒度匹配」的那一处，选偏了就是假绿。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的两个具体形态：上游被删或被撤回时下游静默消失（用户以为本来就没有）、同名异人在关系图上被拼成一个人。本版**不能保证**：① 真宿主里五类节点同时可读时的观感与图规模过大时的滚动表现；② 可见性判定在真机社媒数据上的表现（本版只复用既有口径，不新增判定）；③ 真机上从行面跳转真的落在对应那一条上。边界原文见运行时验证边界文档。",
+        "【边界 · 诚实三条】** ① 本版**只做关系归一与展示**，不改任何上游的取数口径（五类源各管各的取数，本层只消费）；② 图**不是**上游条目的副本，只在同轮内立留位标记失效，跨轮的撤回仍需上游自己持久化；③ 本版**没有**做图的持久化与跨轮增量（每次刷新重建一份读数），也没有做关系图的可视化画布（本轮只做读数与列表面）。",
+        "【交棒改写（判据面，不是放宽）】** 本版把「来源关系只活在代码里」换成了**表驱动的归一**：第 6 类节点要接进来时，只需在节点表里加一行并给它的定位口径，隔离与定位与归因都随行给出 —— 是否漏接由表与探针回答，不靠人记得。",
+        "【版本升至 3.86.0（五源同源）】** manifest.json 与 package.json 与 index.js 的版本常量与公告块与 update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息当前版本行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；三条探针基线随枚举面漂移同步刷新（日程与分支的枚举面、长会话的扫描面与判据散文）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3860.py 对齐 tools/bump_v3850.py）。"
     ]
 };
 
@@ -2609,6 +2619,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   跟着日历早退会让这两类永远看不到（不报错、就是看不到）。
          *   不 await：后台刷新，不挡日历这条链。 */
         try { refreshActionCenter(); } catch (_acr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.86.0 · 拓展计划 R-X2] 来源关系图刷新：与行动中心**同族**（同一份「读不到≠没有」的纪律），
+         *   同样放在早退之前 —— 它的五类节点里也有跟剧情时间无关的（素材 / 楼层）。不 await。 */
+        try { refreshProvenanceGraph(); } catch (_pgr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -2988,6 +3001,165 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             return { ok: true, note: stateText + '（同一件事不会再重复提醒）', state: res.state };
         } catch (e) {
             return { ok: false, note: '处理失败：' + String((e && e.message) || e), state: '' };
+        }
+    }
+
+    /* [v3.86.0 · 拓展计划 R-X2] 来源关系图的取数（咽喉唯一取数口，与 R-X1 同族）。
+     *   五类节点各按「读不到 ⇒ 别把它算作读过」表达：
+     *     · `readSources` 只声明**本轮确实读全了**的类别 —— 撤回判定只认它
+     *       （只凭「图里有这个 kind 的一条」证明不了「这一类全在」，那是把部分当全部）；
+     *     · 跨会话 / 跨分支的隔离走**本机既有两维**（storage.currentConversationId
+     *       + 剧情分叉键），与 session-gate 同口径；拿不到身份即判「不是同一段」；
+     *     · 可见性判定**不在本处写一份** —— 它由内核转交 X5 的 knowledgeCheck。
+     *   缓存挂 `_provenanceCache` / `_provenanceLine`，视图与诊断都读这一份。 */
+    function refreshProvenanceGraph() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+            const rawNodes = [];
+            const readSources = [];
+            const chatId = String(storage.currentConversationId || '').trim();
+            /* 剧情分叉键：宿主每次改动 swipe 都会给 chatMetadata 换一个键，
+             *   这里只取**一个字面量**（不解析语义）—— 它变了就说明「不是同一条线」。 */
+            let branchKey = '';
+            try {
+                const ctx = storage.getContext?.();
+                branchKey = String(ctx?.chatMetadata?.branch_key || ctx?.chatMetadata?.branchKey || '').trim();
+            } catch (_eb) { branchKey = ''; }
+            const scope = { chatId: chatId, branchKey: branchKey };
+
+            /* ① 生活事件（时间线派生读数）：带来源键的那些 —— 上游即它的 `sourceId`。 */
+            try {
+                const calApp = vp.calendarApp || vp._calendarReminderApp || null;
+                const store = calApp && calApp.calendarData && calApp.calendarData._lifeEvents;
+                if (store && Array.isArray(store.events)) {
+                    readSources.push('event');
+                    for (const ev of store.events) {
+                        const sid = String(ev && ev.sourceId || '').trim();
+                        if (!sid) continue;
+                        rawNodes.push({
+                            kind: 'event', sourceId: sid, label: String(ev.title || ev.summary || '').slice(0, 60),
+                            scope: scope,
+                            /* 源键形如 `calendar:<memoId>:<type>` / `commitment:<id>`：
+                             *   上游就是**源键自己**（那一头是日历备忘 / 约定，不是图中的另一节点）。
+                             *   故只把 `derived` 标上，`via` 指向源键 —— 上游不在图里时
+                             *   由内核按「读没读全」判撤回（留位），而不是静默当孤儿。 */
+                            via: sid.split(':').slice(0, 2).join(':'),
+                            derived: true
+                        });
+                    }
+                }
+            } catch (_e1) { /* 读不到 ⇒ 不声明读过 */ }
+
+            /* ② 角色：从约定投影里取 actor（**名字不是全局唯一**，内核会如实标「不可长期定位」）。 */
+            try {
+                const proj = vp._actionCommitmentsProjection;
+                if (proj !== undefined && proj !== null) {
+                    readSources.push('character');
+                    const seenNames = new Set();
+                    const items = Array.isArray(proj) ? proj : (Array.isArray(proj.items) ? proj.items : []);
+                    for (const it of items) {
+                        const name = String(it && it.actor || '').trim();
+                        if (!name || seenNames.has(name)) continue;
+                        seenNames.add(name);
+                        rawNodes.push({ kind: 'character', name: name, label: name, scope: scope });
+                    }
+                }
+            } catch (_e2) { /* 读不到即不声明 */ }
+
+            /* ③ 交易：旅行记账的费用条目（靶心走 open-ref 的登记表）。 */
+            try {
+                const b = storage.get?.('tv_book');
+                const book = (typeof b === 'string') ? JSON.parse(b) : (b || {});
+                if (book && typeof book === 'object') {
+                    readSources.push('trade');
+                    const list = Array.isArray(book.expenses) ? book.expenses : [];
+                    for (const e of list) {
+                        const id = String(e && e.id || '').trim();
+                        if (!id) continue;
+                        rawNodes.push({
+                            kind: 'trade', label: String(e.note || ('费用 ' + id)).slice(0, 60), scope: scope,
+                            ref: { appId: 'traveldesk', kind: 'expense', id: id }
+                        });
+                    }
+                }
+            } catch (_e3) { /* 读不到即不声明 */ }
+
+            /* ④ 素材：微博推荐流里带来源标记的那些（`origin` = 世界脉搏推来的转述）。 */
+            let posts = null;
+            try {
+                const wd = vp.weiboApp && vp.weiboApp.weiboData;
+                if (wd && typeof wd.getRecommendPosts === 'function') {
+                    readSources.push('material');
+                    const list = wd.getRecommendPosts();
+                    posts = [];
+                    for (const p of (Array.isArray(list) ? list : [])) {
+                        const pid = String(p && p.id || '').trim();
+                        if (!pid) continue;
+                        const origin = String(p.origin || p.retellOf || '').trim();
+                        rawNodes.push({
+                            kind: 'material', label: String(p.text || p.content || '').slice(0, 60), scope: scope,
+                            ref: { appId: 'pixiv', kind: 'novel', id: pid },
+                            platform: 'weibo', retellOf: origin, postId: pid
+                        });
+                        posts.push({ id: pid, authorId: String(p.authorId || 'user'), audienceIds: Array.isArray(p.audienceIds) ? p.audienceIds : [], seenBy: p.seenBy || {}, kind: 'post' });
+                    }
+                }
+            } catch (_e4) { /* 读不到即不声明 */ }
+
+            /* ⑤ 楼层：织光机续玩简报里的停靠楼层（它本来就带楼层号）。 */
+            try {
+                const brief = vp.timeweaverApp && vp.timeweaverApp._lastBrief;
+                if (brief && typeof brief === 'object') {
+                    readSources.push('floor');
+                    const rows = [];
+                    for (const sec of (Array.isArray(brief.sections) ? brief.sections : [])) {
+                        for (const r of (Array.isArray(sec && sec.rows) ? sec.rows : [])) {
+                            if (r && typeof r.floor === 'number') rows.push(r.floor);
+                        }
+                    }
+                    for (const f of Array.from(new Set(rows)).slice(0, 20)) {
+                        rawNodes.push({ kind: 'floor', floor: f, label: ('第 ' + f + ' 楼'), scope: scope });
+                    }
+                }
+            } catch (_e5) { /* 读不到即不声明 */ }
+
+            /* 可见性输入：有 postId 的节点交给内核转交 X5 的 knowledgeCheck。 */
+            const graph = buildProvenanceGraph({
+                nodes: rawNodes, readSources: readSources, scope: scope,
+                posts: posts, contacts: [], actorId: 'user', nowMs: Date.now()
+            });
+            vp._provenanceCache = graph;
+            vp._provenanceLine = pgSummaryLine(graph);
+        } catch (e) {
+            console.warn('[ProvenanceGraph] 来源图归一失败:', e);
+        }
+    }
+
+    /**
+     * [v3.86.0 · R-X2] 从图上一条记录跳到原始出处（视图把靶心交上来）。
+     *   与 R-X1 的 open 同一族：**跳转是导航不是状态**，账本一个字不改；
+     *   跳不过去**如实回报，并带回可执行的替代定位**（验收②）。
+     */
+    function applyProvenanceJump(ref) {
+        try {
+            const face = pgRowFace(window.VirtualPhone ? window.VirtualPhone._provenanceCache : null, ref);
+            if (!face.found) {
+                const whyText = face.why === 'no-graph' ? '这一轮还没取到来源图（等下一次刷新）'
+                    : (face.why === 'blocked' ? '这一条被隔离了（' + String(face.blockReason || '') + '），不给跳转'
+                        : '来源图上没有这一条：' + String(face.note || ''));
+                return { ok: false, note: whyText, alt: '' };
+            }
+            const jump = face.jump;
+            if (!jump.ok) {
+                return { ok: false, note: '跳不过去：' + String(jump.why || ''), alt: String(jump.alt || '') };
+            }
+            window.dispatchEvent(new CustomEvent('phone:openApp', {
+                detail: buildOpenDetail(jump.appId, null, jump.ref)
+            }));
+            return { ok: true, note: '已打开 ' + String(jump.appId || ''), alt: '' };
+        } catch (e) {
+            return { ok: false, note: '跳转失败：' + String((e && e.message) || e), alt: '' };
         }
     }
 
@@ -10245,6 +10417,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.85.0 · 拓展计划 R-X1] 行动中心的**唯一写入口**：
                  *   通知中心视图只把「锚 + 动作」交上来，落账与重跑都在咽喉这一处做。 */
                 applyActionCenterAction: applyActionCenterAction,
+                /* [v3.86.0 · 拓展计划 R-X2] 来源图跳转的**唯一写入口**：
+                 *   视图只把靶心交上来，图上查不到就如实回报（并给替代定位）。 */
+                applyProvenanceJump: applyProvenanceJump,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

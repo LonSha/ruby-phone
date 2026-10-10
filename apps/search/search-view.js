@@ -10,6 +10,11 @@
  *   本件是**第一处**把靶心（ref）带进 `phone:openApp` 的派发点 ——
  *   不手写对象字面量，免得字段名与核心那支笔漂开。 */
 import { buildOpenDetail } from '../../config/app-open-detail.js';
+/* [v3.86.0 · 拓展计划 R-X2] 行面来源链读数：一行结果**从哪来、上游还在不在**。
+ *   为什么接在这里：全局搜索能找到内容，但用户此前看不到这条命中的**来源关系**；
+ *   查询与结论仍在内核（`pgRowFace` 四态互不同形），本件只拿回来排版 ——
+ *   视图不自查图、不自己拼归因（本仓「视图纯渲染」纪律）。 */
+import { pgRowFace } from '../../config/provenance-graph.js';
 function esc(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -281,14 +286,50 @@ export class SearchView {
          *   免得用户以为「打开 ›」只是开 App。 */
         const ref = (it && it.meta && it.meta.ref && it.meta.ref.id) ? it.meta.ref : null;
         const refAttr = ref ? ` data-ref="${esc(JSON.stringify({ appId: ref.appId, kind: ref.kind, id: ref.id }))}"` : '';
+        /* [v3.86.0 · X2] 来源链读数行：只在**图上有这一条**时才加一行，没图就不说话
+         *   （图没跑 ≠ 没有来源 —— 那种情况下缀一句「暂无来源关系」就是造谣）。 */
+        const prov = this._provRowHtml(ref);
         return `<div class="gs-item${jumpable ? ' gs-jumpable' : ''}" data-app="${esc(it.appId || '')}"${refAttr}>
             <div class="gs-item-icon">${esc(it.icon || '📄')}</div>
             <div class="gs-item-body">
                 <div class="gs-item-title">${highlight(it.title, kw)}</div>
                 ${it.snippet ? `<div class="gs-item-snippet">${highlight(it.snippet, kw)}</div>` : ''}
                 <div class="gs-item-meta">${esc(it.sourceLabel)}${time ? ' · ' + esc(time) : ''}${jumpable ? ' · <span class="gs-jump">' + (ref ? '打开到这一条 ›' : '打开 ›') + '</span>' : ''}</div>
+                ${prov}
             </div>
         </div>`;
+    }
+
+    /**
+     * [v3.86.0 · 拓展计划 R-X2] 一行的**来源链读数**（内核判定，本件只排版）。
+     *   四态各有各的形，绝不塌成一格：
+     *     · `no-graph` —— 这一轮还没取到图：**不说话**（既不夸「有来源」，也不冤「没来源」）；
+     *     · `no-key` / `not-in-graph` —— 这条没被图覆盖：套一句「未纳入本次来源图」；
+     *     · `blocked` —— 被隔离（跨段 / 不可见）：只报原因，**内容一个字不带**；
+     *     · 命中 —— 报状态 / 能否长期定位 / 上游链；上游断了还要把**替代定位**摆出来。
+     */
+    _provRowHtml(ref) {
+        let face = null;
+        try {
+            /* 宿主挂载点与全仓其余读数点同源（`window.VirtualPhone`）—— 视图不自建实例，
+             *   新建的那个会看见另一份图（本仓「读数必须来自真源」同族纪律）。 */
+            const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+            face = pgRowFace(vp ? vp._provenanceCache : null, ref);
+        } catch (_e) { return ''; }
+        if (!face || face.why === 'no-graph') return '';
+        if (face.found !== true) {
+            const note = face.why === 'blocked' ? ('被隔离（' + String(face.blockReason || '') + '），不给来源读数')
+                : '未纳入本次来源图';
+            return '<div class="gs-prov gs-prov-warn">来源链：' + esc(note) + '</div>';
+        }
+        let text = '来源链：' + String(face.line || '');
+        const chain = face.chain;
+        if (chain && chain.ok === true && Array.isArray(chain.rows) && chain.rows.length) {
+            text += ' · 上游 ' + String(chain.rows.length) + ' 跳';
+        }
+        const jump = face.jump || {};
+        const alt = (jump.ok !== true && jump.alt) ? ('｜替代定位：' + String(jump.alt)) : '';
+        return '<div class="gs-prov">' + esc(text + alt) + '</div>';
     }
 
     _hint() {

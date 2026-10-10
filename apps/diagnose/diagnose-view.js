@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -190,6 +190,81 @@ export class DiagnoseView {
         }
         html += '<div class=' + Q + 'dg-note' + Q + '>自等自证为什么两侧都跑：只报「同一支笔写的两条判等」时，'
             + '一个**恒真**的判等函数也会让这面全绿 —— 故必须同时报「改一个字段就必须判不等」那一边。</div>';
+        return html;
+    }
+    /* [v3.86.0 · 拓展计划 R-X2] 来源链协议卡（表自检 + 宿主这一轮的来源图读数）。
+     *   与「跨 App 靶心协议」卡的分工：靶心卡答「这条结论**能不能落到**那一条上」
+     *   （单点定位能力），本卡答「这条结论**从哪来、中途经过谁、上游没了会怎样**」
+     *   （多点关系与失效传播）—— 两张卡常被混为一谈，摆在一起才看得出分工。
+     *   三态互不同形（本页老规矩）：
+     *     · 面缺席 → 说「读不到」并给归因，**不说**「本机没有来源关系」；
+     *     · 图未跑 → 说「尚未取数」（这一轮还没跳），**不是**「查无此物」；
+     *     · 有读数 → 分列陈列，并把被隔离的节点**按原因归类**（跨段 / 跨段边 / 不可见）。
+     *   内核只陈列，本视图只排版（视图不自算读数是本仓纪律）。 */
+    _provenanceHtml(pkg) {
+        const face = (pkg && pkg.provenanceFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到来源链协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「本机没有来源关系」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(provenanceFaceText(face)) + '</div>';
+        const nodeKinds = Array.isArray(face.nodeKinds) ? face.nodeKinds : [];
+        if (nodeKinds.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + nodeKinds.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.icon + ' ' + r.kind) + '</code>'
+                + this._chip(escapeHtml(r.label), 'muted')
+                + this._chip(r.durable ? '可长期定位' : '不可长期定位（同名会有多条）', r.durable ? 'ok' : 'warn')
+                + '</div>').join('') + '</div>';
+        }
+        const edgeKinds = Array.isArray(face.edgeKinds) ? face.edgeKinds : [];
+        if (edgeKinds.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + edgeKinds.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.kind) + '</code>' + this._chip(escapeHtml(r.label), 'muted') + '</div>').join('') + '</div>';
+        }
+        /* 读数面：**图未跑**与**图跑了但空**必须分开说，绝不塌成一格。 */
+        if (!face.hasGraph) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>宿主这一轮还没取数 —— 这张图是**跳跑刷新**的（与剧情时间无关），'
+                + '看得到它才有读数。它**不代表**「本机没有来源关系」。</div>';
+        } else {
+            const c = face.counts || {};
+            html += '<div class=' + Q + 'dg-table' + Q + '>'
+                + this._chip('节点 ' + String(c.nodes || 0), 'muted')
+                + this._chip('边 ' + String(c.edges || 0), 'muted')
+                + this._chip('已失效 ' + String(c.withdrawn || 0), (c.withdrawn ? 'warn' : 'ok'))
+                + this._chip('悬空 ' + String(c.dangling || 0), (c.dangling ? 'warn' : 'ok'))
+                + this._chip('隔离/不可见 ' + String(c.blocked || 0), (c.blocked ? 'warn' : 'ok'))
+                + this._chip('不可长期定位 ' + String(c.notDurable || 0), 'muted')
+                + this._chip('派生 ' + String(c.derived || 0), 'muted')
+                + this._chip('未取到的源 ' + String(c.gaps || 0), 'muted')
+                + '</div>';
+            /* 为什么「已失效」与「悬空」要分开两个格子：两者的**处置不同** ——
+             *   前者等上游恢复（源被撤回），后者要去看看哪条不见了（上游认不出）。 */
+            html += '<div class=' + Q + 'dg-note' + Q + '>「已失效」与「悬空」分列两格：前者是源被撤回 / 删除'
+                + '（下游**留位显示失效**，不静默消失）；后者是上游认不出 / 不在场 —— 是同一条链上的两件事，处置相反。'
+                + '「未取到的源」说的是**读不到**，不是「没有」。</div>';
+            const blocked = Array.isArray(face.blocked) ? face.blocked : [];
+            if (blocked.length) {
+                html += '<div class=' + Q + 'dg-sub' + Q + '>被隔离/不可见的节点（**只报壳与原因，内容一个字不带**）：</div>';
+                html += '<div class=' + Q + 'dg-table' + Q + '>' + blocked.map((b) =>
+                    '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                    + escapeHtml(b.kind || '?') + '</code>'
+                    + this._chip(escapeHtml((face.blockText && face.blockText[b.reason]) || b.reason || 'unknown'), 'warn')
+                    + this._chip(b.hasRef ? '本来有靶心' : '无靶心', 'muted') + '</div>').join('') + '</div>';
+            }
+            if (face.chainText) {
+                html += '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(face.chainText) + '</div>';
+            }
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>表自检/自等自证报了问题</b>（这些会让用户在关系图上看到错的来源）：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>撤回判定只认调用方**显式声明读过**的那一类源：'
+            + '只凭「图里有这个 kind 的一条」证明不了「这一类全在」—— 拿部分当全部就是把「读不到」当「没有」；'
+            + '上游撤回时悬空边也会把失效传下去，否则「上游撤回」会退化成「莫名其妙悬空」。</div>';
         return html;
     }
     _sessionGateHtml(pkg) {
@@ -1051,6 +1126,10 @@ export class DiagnoseView {
         /* [v3.66.0 · X2 第一切片] 跨 App 靶心协议卡紧跟矩阵卡之后：两张卡是同一族的两个问题 ——
          *   矩阵答「哪些 App 接上了平台面」，本卡答「这套投靶心的协议自身自洽吗」。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨 App 靶心协议（结果能不能落到那一条上）</h3>' + this._openRefHtml(pkg) + '</section>');
+        /* [v3.86.0 · 拓展计划 R-X2] 来源链协议卡紧跟在靶心协议卡之后：两张卡问的是同一条链
+         *   的两件不同事 —— 靶心卡答「这条结论能不能落到那一条上」（单点），本卡答
+         *   「这条从哪来、中途经过谁、上游没了会怎样」（多点与失效传播）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>来源链协议（一条信息从哪来 · 经过谁 · 上游没了会怎样）</h3>' + this._provenanceHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>会话世代栅栏（哪些旧会话回信被挡下）</h3>' + this._sessionGateHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>日程提醒协议（四源归一 + 幂等账本）</h3>' + this._scheduleHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务总览协议（七源归一 + 结算草稿 + 幂等账本）</h3>' + this._financeHtml(pkg) + '</section>');
