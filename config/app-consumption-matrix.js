@@ -165,6 +165,7 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "sullydesk", name: "SullyOS 治理案头", dir: "sullydesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "traveldesk", name: "旅行记账案头", dir: "traveldesk", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "taskentry", name: "任务入口", dir: "taskentry", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "workflow", name: "工作流", dir: "workflow", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
 ]);
 
 /** 便捷取用口：逐面统计命中数（诊断面与判据共用；不自持第二份数据）。

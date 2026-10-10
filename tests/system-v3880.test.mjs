@@ -350,15 +350,21 @@ test('v3880 A2. 本层是纯函数：不摸宿主、不写存储、只有一份�
         const j = t.indexOf('};', i);
         return j < 0 ? t.slice(0, i) : t.slice(0, i) + t.slice(j);
     };
-    const negScan = stripComments(read(IDX));
+    /* [v3.89.0 交棒] 原句以「公告散文里恰有该字面量」为前提：抬版换条目即红，而它要证的
+     *   只是「剔除器真的会剔」。改为自证式负控制（不绑任何一版的公告内容）。 */
     for (const f of [A_APP, IDX]) {
         const c = stripAnnounce(stripComments(read(f)));
         for (const lit of ['projectTitle', 'floorEnd']) {
             assert.ok(!c.includes(lit), f + ' 不得自己再写一套字段礼规（命中 ' + lit + '）');
         }
     }
-    assert.ok(negScan.includes('projectTitle'),
-        '负控制前提：未剔除公告块时 index.js 确实含该字面量（否则本条负控制无从成立）');
+    /* [v3.89.0 交棒] 原句把「公告散文里恰有该字面量」当前提 —— 抬版换了条目就红，
+     *   而它想证的其实只是「剔除器真的会剔」。改写为**自证**：拿一段自带该字面量的
+     *   合成文本验证剔除器确实剔除（不绑任何一版的公告内容）。 */
+    const synth = ANNOUNCE + '"projectTitle"};';
+    assert.ok(synth.includes('projectTitle'), '负控制前提：合成文本未剔除时确实含该字面量');
+    assert.ok(!stripAnnounce(synth).includes('projectTitle'),
+        '负控制：剔除器必须把公告块里那一段剔掉');
     /* 派生面枚举面：同一行不得同时出现「源身份字段 + 集合操作」。 */
     const ops = ['.filter(', '.find(', '.map(', '.flatMap(', '.reduce(', '.push(', '.unshift('];
     const hit = code.split(String.fromCharCode(10)).filter((l) => (l.includes('sourceId') || l.includes('sourceKey'))
@@ -724,6 +730,13 @@ test('v3880 E1. 版本锚（下限形）：五源同源且不低于 3.88.0', () 
     for (const it of entry.items) {
         assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
     }
-    assert.ok(read('docs/runtime-verification-boundary.md').includes('**v3.88.0 复校**'), '边界文档复校标记未跟版');
+    /* [v3.89.0 交棒] 原句把上一版专有词（**v3.88.0 复校**）当复校锚 —— 抬版即红，
+     *   且把本层这件事偷换成上一版那件事。改写为**下限形**：复校标记必须是当版，
+     *   且不得低于本套件成立的那一版（同仓 v3171 E1 的同款形态锚）。 */
+    const bnd = read('docs/runtime-verification-boundary.md');
+    assert.ok(bnd.includes('v' + man.version + ' 复校'), '边界文档复校标记未跟当版');
+    const mV = /v([0-9]+\.[0-9]+\.[0-9]+) 复校/.exec(bnd);
+    assert.ok(mV, '边界文档必须仍有复校标记');
+    assert.ok(cmp(mV[1], '3.88.0') >= 0, '复校标记不得低于 3.88.0：' + mV[1]);
 });
 

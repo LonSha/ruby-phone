@@ -1,942 +1,13 @@
 {
-  "file": "tests/audit/lifecycle_declarative_baseline.json",
-  "note": "P-6「声明式生命周期注册」可行性基线。读数由 tests/audit/lifecycle_declarative_probe.cjs 生成（**读数零手抄**：本文件可由 --json 输出直接落盘，避免转写漂移）。**只量，不改造。**（v3.54.0 复校：按探针 --json 现场零手抄刷新读数，详见 rebuilds.v3.54.0）",
-  "measured_at": "v3.6.0",
-  "node_version": "v24.18.0",
-  "probe": "tests/audit/lifecycle_declarative_probe.cjs",
-  "rebuilds": {
-    "v3.14.0": {
-      "why": "#65 后端定时器节能收口：chat-view 通话计时器接进实例域 ⇒ 清数据/换会话点新增 3 处 App 出口调用（P1/P2/P3 各 +1）",
-      "readings": {
-        "wiring_points": 62,
-        "app_exit_points": 50,
-        "non_app_points": 12,
-        "coverage_pct": 80.6,
-        "non_app_share_pct": 19.4,
-        "points_p1": 19,
-        "points_p2": 20,
-        "points_p3": 23
-      },
-      "unchanged": [
-        "app_classes",
-        "slots",
-        "app_slots",
-        "sig_empty",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff"
-      ]
-    },
-    "v3.15.0": {
-      "why": "洞察 App（计划 #52 使用统计 + #53 联系人互动分析）：新增 1 个 App 类（UsageApp）⇒ App 类 36 → 37、实例槽位 49 → 50、App 槽位 37 → 38、签名「无参出口」26 → 27（UsageApp.onChatChanged() 无参）；三条路径区间与接线点（62 / 50 / 12）一字未动 —— 本版**不改产品生命周期路径**，只在两个既有咽喉点上挂采集调用。",
-      "readings": {
-        "app_classes": 37,
-        "slots": 50,
-        "app_slots": 38,
-        "app_slot_share_pct": 76.0,
-        "sig_empty": 27
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "axis": "**轴不同（必须写明）**：这次上浮**不是「可声明性变好」** —— R1 覆盖率 80.6%、R4 非 App 占比 19.4% 只是分母变大后被同一批分子摊薄（50/62 → 50/62 未变，App 槽位 +1 只影响槽位分母）；**两条决定性硬否决 R2（参数契约 1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动**，总判定仍为 not_done。拿本版读数当「接近可实施」的证据是误读。"
-    },
-    "v3.22.0": {
-      "why": "本版新增两个 App（focus / accounting）改变了类与槽位枚举面；三条会话路径的接线点一格未变。",
-      "readings": {
-        "app_classes": 39,
-        "slots": 52,
-        "app_slots": 40,
-        "sig_empty": 29,
-        "app_slot_share_pct": 76.9
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff"
-      ],
-      "not_done": [
-        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ focus 与 accounting **没有**在这三条路径上补出口调用（appExitPoints 仍 50）。这是**如实记录**，不是漏复校。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ],
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
-    },
-    "v3.23.0": {
-      "why": "判据散文复算：四条判据（R1–R4）与探针现场**逐字一致，零漂移**。本轮只是把「判据散文可复算」这件事纳入机械检查，故在此如实登记「已复算、无变化」。",
-      "readings": {},
-      "unchanged": [
-        "readings",
-        "scan（若该基线有）",
-        "sites（若该基线有）",
-        "verdict",
-        "corrections",
-        "not_done",
-        "timing_criteria"
-      ],
-      "not_done": [
-        "判据散文只做**文本复算**；判据的语义是否仍然成立（`pass`）不由本层复核。",
-        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
-      ],
-      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
-    },
-    "v3.25.0": {
-      "why": "v3.25.0：存钱罐 App（`apps/piggy/piggy-app.js`）新增 1 个 App 类 ⇒ App 类 39 → 40、实例槽位 52 → 53、App 槽位 40 → 41、签名「无参出口」29 → 30（PiggyApp.onChatChanged() 无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 本版没有在三条会话路径上补任何出口调用（换会话时由 `ST_PHONE_REBIND_APP_KEYS` 的泛化循环统一重绑，P1 的 19 点里不含 piggyApp）。App 槽位占比随分母变大按现场重算：76.9% → 77.4%（分子 41 / 分母 53）。",
-      "readings": {
-        "app_classes": 40,
-        "slots": 53,
-        "app_slots": 41,
-        "sig_empty": 30,
-        "app_slot_share_pct": 77.4
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 存钱罐**没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取读数）。",
-        "**未因本版新增一个 App 而重开声明式注册的评估**：R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）两条硬否决一格未动，准入仍是「未达」；本版只按新读数复校，不改判定。"
-      ]
-    },
-    "v3.26.0": {
-      "what": "新增两个 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
-      "why": "存钱罐之后第 1 层再落两件（正则过滤器 `apps/regexfilter` + 打卡 `apps/punchcard`）：各新增 1 个 App 类 ⇒ App 类 40 → 42、实例槽位 53 → 55、App 槽位 41 → 43、签名「无参出口」30 → 32（两件的 `onChatChanged()` 都无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 两个新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 77.4% → 78.2%。",
-      "readings": {
-        "app_classes": 42,
-        "slots": 55,
-        "app_slots": 43,
-        "app_slot_share_pct": 78.2,
-        "sig_empty": 32
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ]
-    },
-    "v3.27.0": {
-      "what": "四件新 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
-      "why": "素材缝合第 1 层再落四件（头像框 `apps/avatarframe` + 商城 `apps/shop` + 拉黑 `apps/block` + 天气 `apps/weather`）：各新增 1 个 App 类 ⇒ App 类 42 → 46、实例槽位 55 → 59、App 槽位 43 → 47、签名「无参出口」32 → 36（四件的 `onChatChanged()` 都无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 四个新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 78.2% → 79.7%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
-      "readings": {
-        "app_classes": 46,
-        "slots": 59,
-        "app_slots": 47,
-        "app_slot_share_pct": 79.7,
-        "sig_empty": 36
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "四件新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 头像框 / 商城 / 拉黑 / 天气 **没有**在这三条路径上补出口调用（它们不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取）。这是**如实记录**，不是漏复校。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ]
-    },
-    "v3.28.0": {
-      "what": "自定义组件 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
-      "why": "素材缝合第 1 层最后一件落地（自定义组件 `apps/widget`）：新增 1 个 App 类 ⇒ App 类 46 → 47、实例槽位 59 → 60、App 槽位 47 → 48、签名「无参出口」36 → 37（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 79.7% → 80.0%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
-      "readings": {
-        "app_classes": 47,
-        "slots": 60,
-        "app_slots": 48,
-        "app_slot_share_pct": 80.0,
-        "sig_empty": 37
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 自定义组件 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存与未保存草稿并重取）。这是**如实记录**，不是漏复校。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ]
-    },
-    "v3.29.0": {
-      "what": "桃宝 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
-      "why": "素材缝合第 2 层第一批第一件落地（桃宝 `apps/taobao`）：新增 1 个 App 类 ⇒ App 类 47 → 48、实例槽位 60 → 61、App 槽位 48 → 49、签名「无参出口」37 → 38（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 80.0% → 80.3%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
-      "readings": {
-        "app_classes": 48,
-        "slots": 61,
-        "app_slots": 49,
-        "app_slot_share_pct": 80.3,
-        "sig_empty": 38
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 桃宝 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取目录 / 车 / 订单 / 抓取记录）。这是**如实记录**，不是漏复校。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ]
-    },
-    "v3.30.0": {
-      "what": "恋爱空间 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
-      "why": "素材缝合第 2 层第二件落地（恋爱空间 `apps/loverspace`）：新增 1 个 App 类 ⇒ App 类 48 → 49、实例槽位 61 → 62、App 槽位 49 → 50、签名「无参出口」38 → 39（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 80.3% → 80.6%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
-      "readings": {
-        "app_classes": 49,
-        "slots": 62,
-        "app_slots": 50,
-        "app_slot_share_pct": 80.6,
-        "sig_empty": 39
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 恋爱空间 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢草稿与视图态并全量重取起算日 / 足迹 / 日记 / 情书 / 问答）。这是**如实记录**，不是漏复校。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ]
-    },
-    "v3.32.0": {
-      "what": "v3.31.0 约会大作战 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）；本版（v3.32.0）两个子游戏**不进本面**",
-      "why": "本面基线停在 v3.30.0，这次补的是**两版**的连带面 —— 但增量**全部来自 v3.31.0**：约会大作战新增 1 个 App 类（`apps/date`）⇒ App 类 49 → 50、实例槽位 62 → 63、App 槽位 50 → 51、签名「无参出口」39 → 40（它的 `onChatChanged()` 无参，进签名「空列表」那一格）。**本版（v3.32.0）在这一面一格未动**：海龟汤 / 你说我猜是挂在既有 `apps/games/` 下的两个子游戏（`games-app.js` 里的内部视图切换 + 两张大厅卡片），**不新增 App 类、不进 `config/apps.js`、不新增实例槽位** —— 故本版对这一面是「如实的一格未动」，不是漏复校。占比随分母按现场重算：App 槽位占比 80.6% → 81.0%。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用；两个子游戏连槽位都没有。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
-      "readings": {
-        "app_classes": 50,
-        "slots": 63,
-        "app_slots": 51,
-        "app_slot_share_pct": 81.0,
-        "sig_empty": 40
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "新 App（date）的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 约会大作战 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢草稿与视图态并全量重取场景册 / 场次 / 欠账）。这是**如实记录**，不是漏复校。",
-        "本版两个子游戏（海龟汤 / 你说我猜）**刻意不进本面**：它们是 `apps/games/` 的内部视图，生命周期由父类 `GamesApp` 一条管到底（`games-app.js` 里两处级联清退）。它们的「换会话不许串味」由会话键隔离保证，不由本面保证 —— 本面量的是**会话路径出口调用**，两个子游戏不新增槽位，故本面对它们无话可说（这本身就是如实读数）。",
-        "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
-      ]
-    },
-    "v3.33.0": {
-      "what": "v3.33.0 游戏厅下半两件（剧本杀 / 心动飞行棋）的接线位置；本版**不进本面**",
-      "why": "本版两个子游戏与上一版的两个同款：都挂在既有 `apps/games/` 之下，是 `games-app.js` 里的**内部视图切换**（`currentView` 分支 + 大厅卡片 + 生命周期级联），**不新增 App 类、不进 `config/apps.js`、不新增实例槽位**。因此本面**一格未动**是「如实的一格未动」，不是漏复校（本脚本对零变化下了硬断言）：App 类 50 / 实例槽位 63 / App 槽位 51 / 接线点 62（App 出口 50 + 非 App 12）/ 三路径 19·20·23 / 四类签名 40·1·1·8 / 语义面 11 槽（同 5 · 异 6），与上一版逐格相同。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {},
-      "unchanged": [
-        "app_classes",
-        "slots",
-        "app_slots",
-        "app_slot_share_pct",
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_empty",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面**没有**本版增量可记：两个子游戏不进 App 注册面 —— 它们的「会话隔离」由 `config/storage.js` 的两条精确枚举承担（见 keys 门账本），与生命周期出口无关。",
-        "真机里「返回大厅 / 销毁时两个子视图的驱动是否真被停掉」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.34.0": {
-      "what": "v3.34.0 老福特（`apps/lofter/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
-      "why": "本版与前几版的分水岭：老福特**是一个新 App**（四件 2320 行：数据层 / App 层 / 视图 / 样式），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 50 → 51、实例槽位 63 → 64、App 槽位 51 → 52、App 槽位占比 81.0% → 81.2%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 40 → 41（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {
-        "app_classes": 51,
-        "slots": 64,
-        "app_slots": 52,
-        "app_slot_share_pct": 81.2,
-        "sig_empty": 41
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：老福特的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 存储）都不进本面的槽位账。",
-        "真机里「换角色时老福特是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.35.0": {
-      "what": "v3.35.0 Pixiv（`apps/pixiv/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
-      "why": "本版与上一版**同形**：Pixiv **是一个新 App**（四件 2988 行：数据层 1085 / App 层 836 / 视图 933 / 样式 134），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 51 → 52、实例槽位 64 → 65、App 槽位 52 → 53、App 槽位占比 81.2% → 81.5%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 41 → 42（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {
-        "app_classes": 52,
-        "slots": 65,
-        "app_slots": 53,
-        "app_slot_share_pct": 81.5,
-        "sig_empty": 42
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：Pixiv 的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 存储）都不进本面的槽位账。",
-        "真机里「换角色时 Pixiv 是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.36.0": {
-      "what": "v3.36.0 杂志（`apps/magazine/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
-      "why": "本版与前两版**同形**：杂志**是一个新 App**（四件 2617 行：数据层 911 / App 层 466 / 视图 639 / 样式 601），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 52 → 53、实例槽位 65 → 66、App 槽位 53 → 54、App 槽位占比 81.5% → 81.8%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 42 → 43（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {
-        "app_classes": 53,
-        "slots": 66,
-        "app_slots": 54,
-        "app_slot_share_pct": 81.8,
-        "sig_empty": 43
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：杂志的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时杂志是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.37.0": {
-      "what": "v3.37.0 白盒音效盒（`apps/soundkit/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
-      "why": "本版与前三版**同形**：音效盒**是一个新 App**（四件 2048 行：数据层 631 / App 层 498 / 视图 506 / 样式 413），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 53 → 54、实例槽位 66 → 67、App 槽位 54 → 55、App 槽位占比 81.8% → 82.1%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 43 → 44（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {
-        "app_classes": 54,
-        "slots": 67,
-        "app_slots": 55,
-        "app_slot_share_pct": 82.1,
-        "sig_empty": 44
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：音效盒的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 配方 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时音效盒是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.38.0": {
-      "what": "v3.38.0 召回治理台（`apps/recall/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
-      "why": "本版与前三版**同形**：召回治理台**是一个新 App**（四件 2080 行：数据层 457 / App 层 686 / 视图 433 / 样式 504），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 54 → 55、实例槽位 67 → 68、App 槽位 55 → 56、App 槽位占比 82.1% → 82.4%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 44 → 45（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
-      "readings": {
-        "app_classes": 55,
-        "slots": 68,
-        "app_slots": 56,
-        "app_slot_share_pct": 82.4,
-        "sig_empty": 45
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：召回治理台的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（四路配置 / 策略 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时召回治理台是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.39.0": {
-      "what": "v3.39.0 时光胶囊（apps/sourcebook/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与前几版**同形**：时光胶囊**是一个新 App**（四件 2175 行：数据层 636 / App 层 610 / 视图 442 / 样式 487），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 55 -> 56、实例槽位 68 -> 69、App 槽位 56 -> 57、App 槽位占比 82.4% -> 82.6%、覆盖率 80.6% -> 80.6%、非 App 占比 19.4% -> 19.4%、空参签名 45 -> 46（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 56,
-        "slots": 69,
-        "app_slots": 57,
-        "app_slot_share_pct": 82.6,
-        "sig_empty": 46
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：时光胶囊的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（封存 / 策略 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时时光胶囊是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.40.0": {
-      "what": "v3.40.0 对话水壶（apps/kettle/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与前几版**同形**：对话水壶**是一个新 App**（四件 1934 行：数据层 508 / App 层 658 / 视图 403 / 样式 365），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 56 -> 57、实例槽位 69 -> 70、App 槽位 57 -> 58、App 槽位占比 82.6% -> 82.9%、覆盖率 80.6% -> 80.6%、非 App 占比 19.4% -> 19.4%、空参签名 46 -> 47（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 57,
-        "slots": 70,
-        "app_slots": 58,
-        "app_slot_share_pct": 82.9,
-        "sig_empty": 47
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：时光胶囊的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（封存 / 策略 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时时光胶囊是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.41.0": {
-      "what": "v3.41.0 需求沙盘（apps/needsim/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：需求沙盘**是一个新 App**（四件 2639 行：数据层 825 / App 层 829 / 视图 470 / 样式 515），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 57 -> 58、实例槽位 70 -> 71、App 槽位 58 -> 59、App 槽位占比 82.9% -> 83.1%、空参签名 47 -> 48（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 58,
-        "slots": 71,
-        "app_slots": 59,
-        "app_slot_share_pct": 83.1,
-        "sig_empty": 48
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：需求沙盘的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（需求 / 池子 / 记忆与愿望 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时需求沙盘是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.42.0": {
-      "what": "v3.42.0 曲库案头（apps/musicdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：曲库案头**是一个新 App**（四件 2991 行：数据层 1043 / App 层 897 / 视图 537 / 样式 514），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 58 -> 59、实例槽位 71 -> 72、App 槽位 59 -> 60、App 槽位占比 83.1% -> 83.3%、空参签名 48 -> 49（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 59,
-        "slots": 72,
-        "app_slots": 60,
-        "app_slot_share_pct": 83.3,
-        "sig_empty": 49
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：曲库案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（曲库 / 歌词 / 台账 / 策略）都不进本面的槽位账。",
-        "真机里「换角色时曲库案头是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.43.0": {
-      "what": "v3.43.0 PV 案头（apps/pvdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：PV 案头**是一个新 App**（四件 2726 行：数据层 844 / App 层 919 / 视图 708 / 样式 255），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 59 -> 60、实例槽位 72 -> 73、App 槽位 60 -> 61、App 槽位占比 83.3% -> 83.6%、空参签名 49 -> 50（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 60,
-        "slots": 73,
-        "app_slots": 61,
-        "app_slot_share_pct": 83.6,
-        "sig_empty": 50
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：PV 案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（题面 / 作品台账 / 歌词 / 策略）都不进本面的槽位账。",
-        "真机里「换角色时 PV 案头是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.44.0": {
-      "what": "v3.44.0 同人商店 · 柜台（apps/doujin/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：同人商店 · 柜台**是一个新 App**（四件 2675 行：数据层 540 / App 层 1118 / 视图 647 / 样式 370），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 60 -> 61、实例槽位 73 -> 74、App 槽位 61 -> 62、App 槽位占比 83.6% -> 83.8%、空参签名 50 -> 51（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 61,
-        "slots": 74,
-        "app_slots": 62,
-        "app_slot_share_pct": 83.8,
-        "sig_empty": 51
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：同人商店的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（店头（含存档）/ 市场 / 收银台 / 台账）都不进本面的槽位账。",
-        "真机里「换角色时同人商店是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.45.0": {
-      "what": "v3.45.0 存档台（apps/archive/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：存档台**是一个新 App**（四件 1944 行：数据层 615 / App 层 559 / 视图 528 / 样式 242），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 61 -> 62、实例槽位 74 -> 75、App 槽位 62 -> 63、App 槽位占比 83.8% -> 84.0%、空参签名 51 -> 52（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 62,
-        "slots": 75,
-        "app_slots": 63,
-        "app_slot_share_pct": 84.0,
-        "sig_empty": 52
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：存档台的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（已收包 / 对账面 / 要求草稿 / 动作台账）都不进本面的槽位账。",
-        "真机里「换角色时存档台是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.46.0": {
-      "what": "v3.46.0 思维链案头（apps/cotdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：思维链案头**是一个新 App**（四件 1903 行：数据层 562 / App 层 557 / 视图 564 / 样式 220），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 62 -> 63、实例槽位 75 -> 76、App 槽位 63 -> 64、App 槽位占比 84.0% -> 84.2%、空参签名 52 -> 53（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 63,
-        "slots": 76,
-        "app_slots": 64,
-        "app_slot_share_pct": 84.2,
-        "sig_empty": 53
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：思维链案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（条目册 / 配置 / 草稿 / 台账）都不进本面的槽位账。",
-        "真机里「换会话时条目册与台账是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.47.0": {
-      "what": "v3.47.0 诊断案头（apps/diagdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：诊断案头**是一个新 App**（四件 1886 行：数据层 745 / App 层 470 / 视图 471 / 样式 200），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 63 -> 64、实例槽位 76 -> 77、App 槽位 64 -> 65、App 槽位占比 84.2% -> 84.4%、空参签名 53 -> 54（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 64,
-        "slots": 77,
-        "app_slots": 65,
-        "app_slot_share_pct": 84.4,
-        "sig_empty": 54
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：诊断案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（存档原文 / 摘要草稿 / 动作台账）都不进本面的槽位账。",
-        "真机里「换会话时存档与台账是否三格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.48.0": {
-      "what": "v3.48.0 子宫画板（apps/uterus/ 四件）注册进 config/apps.js，成为本仓新的 App",
-      "why": "本版与上一版**同形**：子宫画板**是一个新 App**（四件 2829 行：数据层 1205 / App 层 371 / 视图 1011 / 样式 242），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 64 -> 65、实例槽位 77 -> 78、App 槽位 65 -> 66、App 槽位占比 84.4% -> 84.6%、空参签名 54 -> 55（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 65,
-        "slots": 78,
-        "app_slots": 66,
-        "app_slot_share_pct": 84.6,
-        "sig_empty": 55
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量**只有注册面**：子宫画板的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的两条会话键（收下的角色状态原文 / 动作台账）都不进本面的槽位账。",
-        "真机里「换会话时状态与台账是否两格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.54.0": {
-      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针 --json 现场落盘）",
-      "why": "App 类 65→76 / 槽位 78→89 / App 槽位 66→77 / 无参出口 55→66：增量来自 v3.49~v3.54 六个新 App（sullydesk/summdesk/periodmath/annidate/cardtable/traveldesk）+ uterusApp 补登 REBIND 表（v3.48.0 历史遗漏，lifecycle 判据当场报红后补上）。判据与门禁不真跑全量就不会响 —— 本版首次全量 npm run test 暴露此陈旧基线。"
-    },
-    "v3.58.0": {
-      "what": "v3.58.0 O4 会话世代栅栏 + O5 写入回执：搜索 App 进换会话重绑表（补 onChatChanged 出口）",
-      "why": "本面**真增长一格**：App 类 76 -> 77、App 槽位 77 -> 78、App 槽位占比 86.5% -> 87.6%、空参签名 66 -> 67 —— 增量**精确归因到 SearchApp**：O4 为「换会话后上一段会话的全历史扫描仍算当前代际」补了 `onChatChanged()`（invalidateAll + _syncHostSources）并登记进 ST_PHONE_REBIND_APP_KEYS。本面只计「定义了出口的类」，故它此刻才进类账；出口是空参形态，故空参签名同步 +1。★ 与 v3.47.0 那版同形（新增 App 注册）不同源：本版**没有新增 App**，增长的只是「既有 App 补了一条实例出口」这一格。接线点总数 62、App 出口 50、非 App 12、覆盖率 80.6%、三路径分布 19/20/23、语义槽位 11（同 5 · 异 6）一格未动 —— 本版不新增生命周期咽喉点，只在既有重绑表上挂一格。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
-      "readings": {
-        "app_classes": 77,
-        "app_slots": 78,
-        "app_slot_share_pct": 87.6,
-        "sig_empty": 67
-      },
-      "unchanged": [
-        "slots",
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "coverage_pct",
-        "non_app_share_pct",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff",
-        "semantic_consistency_pct",
-        "criteria_pass_count"
-      ],
-      "not_done": [
-        "本面增量只有**出口注册**这一格：搜索 App 的会话隔离由它自己那份 _scanGen 承担，不进本面的槽位账。",
-        "真机里「换会话时上一段会话那轮全历史扫描是否真的被作废」仍归 R-O3（真宿主实机验证）；本面只证明`出口在场`，不证明它被真调过。"
-      ]
-    },
-    "v3.65.0": {
-      "what": "v3.65.0 新增一个 App 类（任务入口 TaskentryApp，实现了无参 onChatChanged）⇒ 枚举面 +1",
-      "why": "本探针按 apps/** 与 index.js **真数**枚举 App 类与生命周期槽位。新增一件产品面 App 必然让 app_classes 77 -> 78、slots 89 -> 90（新 App 在会话重绑表里 ⇒ 有会话槽位）、app_slots 78 -> 79、app_slot_share 87.6% -> 87.8%、sig_empty 67 -> 68（新出口是无参的）。**其余读数一格未动**（接线点 62 / App 出口 50 / 非 App 点 12 / 三条路径 19-20-23 / 默认参 1 / 必选参 1 / 无签名 8 / 语义 11-5-6）—— 新 App 的接线点落在既有咽喉点上（P1 的懒加载重绑），不新增手写散点。R2 的判据散文仍写「1 个必选参出口」且一字不改（必选参出口仍是 MusicApp 一个）。",
-      "readings": {
-        "app_classes": 78,
-        "slots": 90,
-        "app_slots": 79,
-        "app_slot_share_pct": 87.8,
-        "sig_empty": 68
-      },
-      "unchanged": [
-        "wiring_points",
-        "app_exit_points",
-        "non_app_points",
-        "points_p1",
-        "points_p2",
-        "points_p3",
-        "sig_default",
-        "sig_required",
-        "sig_none",
-        "semantic_slots",
-        "semantic_same",
-        "semantic_diff"
-      ],
-      "not_done": "本版仍未实施「声明式生命周期出口」（四条判据的结论一字未动）。"
-    }
-  },
-  "caliber": [
-    "三路径区间按**函数/监听器边界**精确划定（P1 = onChatChanged() 函数体；P2 = phone:clearCurrentData 监听器；P3 = phone:clearAllData 监听器；P3 结束锚缺失时回退到文件末）—— 近似区间会让 P1 尾部与 P2 头部重叠，把真缺口判成已覆盖（沿用 scripts/lifecycle-audit.mjs 的踩坑结论）。",
-    "接线点按**物理行**计数：同一行同时出现「实例槽位名」与「出口调用或作废赋值」才算一个点；注释行不计。跨行书写（如 albumApp?.destroy?.() 与 albumApp = null 分两行）按两行各计一点 —— 因为声明式改造要删的正是这两行。",
-    "App 实例槽位 = 「VirtualPhone.X = new …」且 X 能反查到某个含生命周期出口的 App 类；非 App 槽位指没法用 static lifecycleExits 表达的接线目标（缓存对象 / 桥 / 外部管理器）。",
-    "onChatChanged 签名只认类体内的定义形态；必选参的判据是「参数列表里有内容且不含默认值」。",
-    "语义一致性以**槽位**为单位比对三条路径上的动作集（exit / nullify 序列），三条路径动作集逐元素相同才算一致。",
-    "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
-  ],
-  "readings": {
-    "app_classes": 78,
-    "slots": 90,
-    "app_slots": 79,
-    "app_slot_share_pct": 87.8,
+ "file": "tests/audit/lifecycle_declarative_baseline.json",
+ "note": "P-6「声明式生命周期注册」可行性基线。读数由 tests/audit/lifecycle_declarative_probe.cjs 生成（**读数零手抄**：本文件可由 --json 输出直接落盘，避免转写漂移）。**只量，不改造。**（v3.54.0 复校：按探针 --json 现场零手抄刷新读数，详见 rebuilds.v3.54.0）",
+ "measured_at": "v3.6.0",
+ "node_version": "v24.18.0",
+ "probe": "tests/audit/lifecycle_declarative_probe.cjs",
+ "rebuilds": {
+  "v3.14.0": {
+   "why": "#65 后端定时器节能收口：chat-view 通话计时器接进实例域 ⇒ 清数据/换会话点新增 3 处 App 出口调用（P1/P2/P3 各 +1）",
+   "readings": {
     "wiring_points": 62,
     "app_exit_points": 50,
     "non_app_points": 12,
@@ -944,162 +15,1091 @@
     "non_app_share_pct": 19.4,
     "points_p1": 19,
     "points_p2": 20,
-    "points_p3": 23,
-    "sig_empty": 68,
-    "sig_default": 1,
-    "sig_required": 1,
-    "sig_none": 8,
-    "semantic_slots": 11,
-    "semantic_same": 5,
-    "semantic_diff": 6,
-    "semantic_consistency_pct": 45.5,
-    "criteria_pass_count": 2
+    "points_p3": 23
+   },
+   "unchanged": [
+    "app_classes",
+    "slots",
+    "app_slots",
+    "sig_empty",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff"
+   ]
   },
-  "signatures": {
-    "required": [
-      "MusicApp(newStorage)"
-    ],
-    "default": [
-      "GamesApp(storage = this.storage)"
-    ]
+  "v3.15.0": {
+   "why": "洞察 App（计划 #52 使用统计 + #53 联系人互动分析）：新增 1 个 App 类（UsageApp）⇒ App 类 36 → 37、实例槽位 49 → 50、App 槽位 37 → 38、签名「无参出口」26 → 27（UsageApp.onChatChanged() 无参）；三条路径区间与接线点（62 / 50 / 12）一字未动 —— 本版**不改产品生命周期路径**，只在两个既有咽喉点上挂采集调用。",
+   "readings": {
+    "app_classes": 37,
+    "slots": 50,
+    "app_slots": 38,
+    "app_slot_share_pct": 76.0,
+    "sig_empty": 27
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "axis": "**轴不同（必须写明）**：这次上浮**不是「可声明性变好」** —— R1 覆盖率 80.6%、R4 非 App 占比 19.4% 只是分母变大后被同一批分子摊薄（50/62 → 50/62 未变，App 槽位 +1 只影响槽位分母）；**两条决定性硬否决 R2（参数契约 1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动**，总判定仍为 not_done。拿本版读数当「接近可实施」的证据是误读。"
   },
-  "semantic_diff_slots": [
-    {
-      "slot": "calendarApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [
-        "exit",
-        "exit",
-        "nullify"
-      ],
-      "P3": [
-        "exit",
-        "exit",
-        "nullify"
-      ]
-    },
-    {
-      "slot": "gamesApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [],
-      "P3": []
-    },
-    {
-      "slot": "mofoApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [
-        "exit",
-        "nullify"
-      ],
-      "P3": [
-        "exit",
-        "nullify"
-      ]
-    },
-    {
-      "slot": "musicApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [
-        "exit"
-      ],
-      "P3": [
-        "exit",
-        "nullify"
-      ]
-    },
-    {
-      "slot": "weiboApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [
-        "exit"
-      ],
-      "P3": [
-        "exit",
-        "exit",
-        "nullify"
-      ]
-    },
-    {
-      "slot": "worldpulseApp",
-      "same": false,
-      "P1": [
-        "exit"
-      ],
-      "P2": [],
-      "P3": []
-    }
+  "v3.22.0": {
+   "why": "本版新增两个 App（focus / accounting）改变了类与槽位枚举面；三条会话路径的接线点一格未变。",
+   "readings": {
+    "app_classes": 39,
+    "slots": 52,
+    "app_slots": 40,
+    "sig_empty": 29,
+    "app_slot_share_pct": 76.9
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff"
+   ],
+   "not_done": [
+    "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ focus 与 accounting **没有**在这三条路径上补出口调用（appExitPoints 仍 50）。这是**如实记录**，不是漏复校。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ],
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+  },
+  "v3.23.0": {
+   "why": "判据散文复算：四条判据（R1–R4）与探针现场**逐字一致，零漂移**。本轮只是把「判据散文可复算」这件事纳入机械检查，故在此如实登记「已复算、无变化」。",
+   "readings": {},
+   "unchanged": [
+    "readings",
+    "scan（若该基线有）",
+    "sites（若该基线有）",
+    "verdict",
+    "corrections",
+    "not_done",
+    "timing_criteria"
+   ],
+   "not_done": [
+    "判据散文只做**文本复算**；判据的语义是否仍然成立（`pass`）不由本层复核。",
+    "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+   ],
+   "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+  },
+  "v3.25.0": {
+   "why": "v3.25.0：存钱罐 App（`apps/piggy/piggy-app.js`）新增 1 个 App 类 ⇒ App 类 39 → 40、实例槽位 52 → 53、App 槽位 40 → 41、签名「无参出口」29 → 30（PiggyApp.onChatChanged() 无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 本版没有在三条会话路径上补任何出口调用（换会话时由 `ST_PHONE_REBIND_APP_KEYS` 的泛化循环统一重绑，P1 的 19 点里不含 piggyApp）。App 槽位占比随分母变大按现场重算：76.9% → 77.4%（分子 41 / 分母 53）。",
+   "readings": {
+    "app_classes": 40,
+    "slots": 53,
+    "app_slots": 41,
+    "sig_empty": 30,
+    "app_slot_share_pct": 77.4
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 存钱罐**没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取读数）。",
+    "**未因本版新增一个 App 而重开声明式注册的评估**：R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）两条硬否决一格未动，准入仍是「未达」；本版只按新读数复校，不改判定。"
+   ]
+  },
+  "v3.26.0": {
+   "what": "新增两个 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+   "why": "存钱罐之后第 1 层再落两件（正则过滤器 `apps/regexfilter` + 打卡 `apps/punchcard`）：各新增 1 个 App 类 ⇒ App 类 40 → 42、实例槽位 53 → 55、App 槽位 41 → 43、签名「无参出口」30 → 32（两件的 `onChatChanged()` 都无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 两个新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 77.4% → 78.2%。",
+   "readings": {
+    "app_classes": 42,
+    "slots": 55,
+    "app_slots": 43,
+    "app_slot_share_pct": 78.2,
+    "sig_empty": 32
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ]
+  },
+  "v3.27.0": {
+   "what": "四件新 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+   "why": "素材缝合第 1 层再落四件（头像框 `apps/avatarframe` + 商城 `apps/shop` + 拉黑 `apps/block` + 天气 `apps/weather`）：各新增 1 个 App 类 ⇒ App 类 42 → 46、实例槽位 55 → 59、App 槽位 43 → 47、签名「无参出口」32 → 36（四件的 `onChatChanged()` 都无参）；**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 四个新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 78.2% → 79.7%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+   "readings": {
+    "app_classes": 46,
+    "slots": 59,
+    "app_slots": 47,
+    "app_slot_share_pct": 79.7,
+    "sig_empty": 36
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "四件新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 头像框 / 商城 / 拉黑 / 天气 **没有**在这三条路径上补出口调用（它们不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取）。这是**如实记录**，不是漏复校。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ]
+  },
+  "v3.28.0": {
+   "what": "自定义组件 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+   "why": "素材缝合第 1 层最后一件落地（自定义组件 `apps/widget`）：新增 1 个 App 类 ⇒ App 类 46 → 47、实例槽位 59 → 60、App 槽位 47 → 48、签名「无参出口」36 → 37（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 79.7% → 80.0%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+   "readings": {
+    "app_classes": 47,
+    "slots": 60,
+    "app_slots": 48,
+    "app_slot_share_pct": 80.0,
+    "sig_empty": 37
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 自定义组件 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存与未保存草稿并重取）。这是**如实记录**，不是漏复校。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ]
+  },
+  "v3.29.0": {
+   "what": "桃宝 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+   "why": "素材缝合第 2 层第一批第一件落地（桃宝 `apps/taobao`）：新增 1 个 App 类 ⇒ App 类 47 → 48、实例槽位 60 → 61、App 槽位 48 → 49、签名「无参出口」37 → 38（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 80.0% → 80.3%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+   "readings": {
+    "app_classes": 48,
+    "slots": 61,
+    "app_slots": 49,
+    "app_slot_share_pct": 80.3,
+    "sig_empty": 38
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 桃宝 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢缓存并重取目录 / 车 / 订单 / 抓取记录）。这是**如实记录**，不是漏复校。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ]
+  },
+  "v3.30.0": {
+   "what": "恋爱空间 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）",
+   "why": "素材缝合第 2 层第二件落地（恋爱空间 `apps/loverspace`）：新增 1 个 App 类 ⇒ App 类 48 → 49、实例槽位 61 → 62、App 槽位 49 → 50、签名「无参出口」38 → 39（`onChatChanged()` 无参）。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用。占比随分母按现场重算：App 槽位占比 80.3% → 80.6%。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+   "readings": {
+    "app_classes": 49,
+    "slots": 62,
+    "app_slots": 50,
+    "app_slot_share_pct": 80.6,
+    "sig_empty": 39
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "新 App 的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 恋爱空间 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢草稿与视图态并全量重取起算日 / 足迹 / 日记 / 情书 / 问答）。这是**如实记录**，不是漏复校。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ]
+  },
+  "v3.32.0": {
+   "what": "v3.31.0 约会大作战 App 的**真实接线**（懒加载分支、重绑键、storage 前缀、样式投递、会话路径入口）；本版（v3.32.0）两个子游戏**不进本面**",
+   "why": "本面基线停在 v3.30.0，这次补的是**两版**的连带面 —— 但增量**全部来自 v3.31.0**：约会大作战新增 1 个 App 类（`apps/date`）⇒ App 类 49 → 50、实例槽位 62 → 63、App 槽位 50 → 51、签名「无参出口」39 → 40（它的 `onChatChanged()` 无参，进签名「空列表」那一格）。**本版（v3.32.0）在这一面一格未动**：海龟汤 / 你说我猜是挂在既有 `apps/games/` 下的两个子游戏（`games-app.js` 里的内部视图切换 + 两张大厅卡片），**不新增 App 类、不进 `config/apps.js`、不新增实例槽位** —— 故本版对这一面是「如实的一格未动」，不是漏复校。占比随分母按现场重算：App 槽位占比 80.6% → 81.0%。**三条路径区间与接线点（62 / 50 / 12、19/20/23）一字未动** —— 新 App 只进 `ST_PHONE_REBIND_APP_KEYS` 的泛化重绑循环，不在三处咽喉点上补出口调用；两个子游戏连槽位都没有。判定仍为 not_done：决定性硬否决 R2（1 个必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 拿本版读数当「接近可实施」的证据是误读。",
+   "readings": {
+    "app_classes": 50,
+    "slots": 63,
+    "app_slots": 51,
+    "app_slot_share_pct": 81.0,
+    "sig_empty": 40
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "新 App（date）的三条会话路径（p1/p2/p3）出口调用：计数 19/20/23 **一格未动** ⇒ 约会大作战 **没有**在这三条路径上补出口调用（它不持有需要显式回收的资源：无定时器、无全局监听器、无 Audio 实例；换会话只丢草稿与视图态并全量重取场景册 / 场次 / 欠账）。这是**如实记录**，不是漏复校。",
+    "本版两个子游戏（海龟汤 / 你说我猜）**刻意不进本面**：它们是 `apps/games/` 的内部视图，生命周期由父类 `GamesApp` 一条管到底（`games-app.js` 里两处级联清退）。它们的「换会话不许串味」由会话键隔离保证，不由本面保证 —— 本面量的是**会话路径出口调用**，两个子游戏不新增槽位，故本面对它们无话可说（这本身就是如实读数）。",
+    "真宿主上「点了入口真的进得去」不可测 —— 仍归 R-O3。"
+   ]
+  },
+  "v3.33.0": {
+   "what": "v3.33.0 游戏厅下半两件（剧本杀 / 心动飞行棋）的接线位置；本版**不进本面**",
+   "why": "本版两个子游戏与上一版的两个同款：都挂在既有 `apps/games/` 之下，是 `games-app.js` 里的**内部视图切换**（`currentView` 分支 + 大厅卡片 + 生命周期级联），**不新增 App 类、不进 `config/apps.js`、不新增实例槽位**。因此本面**一格未动**是「如实的一格未动」，不是漏复校（本脚本对零变化下了硬断言）：App 类 50 / 实例槽位 63 / App 槽位 51 / 接线点 62（App 出口 50 + 非 App 12）/ 三路径 19·20·23 / 四类签名 40·1·1·8 / 语义面 11 槽（同 5 · 异 6），与上一版逐格相同。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 —— 本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {},
+   "unchanged": [
+    "app_classes",
+    "slots",
+    "app_slots",
+    "app_slot_share_pct",
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_empty",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面**没有**本版增量可记：两个子游戏不进 App 注册面 —— 它们的「会话隔离」由 `config/storage.js` 的两条精确枚举承担（见 keys 门账本），与生命周期出口无关。",
+    "真机里「返回大厅 / 销毁时两个子视图的驱动是否真被停掉」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.34.0": {
+   "what": "v3.34.0 老福特（`apps/lofter/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+   "why": "本版与前几版的分水岭：老福特**是一个新 App**（四件 2320 行：数据层 / App 层 / 视图 / 样式），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 50 → 51、实例槽位 63 → 64、App 槽位 51 → 52、App 槽位占比 81.0% → 81.2%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 40 → 41（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {
+    "app_classes": 51,
+    "slots": 64,
+    "app_slots": 52,
+    "app_slot_share_pct": 81.2,
+    "sig_empty": 41
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：老福特的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 存储）都不进本面的槽位账。",
+    "真机里「换角色时老福特是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.35.0": {
+   "what": "v3.35.0 Pixiv（`apps/pixiv/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+   "why": "本版与上一版**同形**：Pixiv **是一个新 App**（四件 2988 行：数据层 1085 / App 层 836 / 视图 933 / 样式 134），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 51 → 52、实例槽位 64 → 65、App 槽位 52 → 53、App 槽位占比 81.2% → 81.5%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 41 → 42（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {
+    "app_classes": 52,
+    "slots": 65,
+    "app_slots": 53,
+    "app_slot_share_pct": 81.5,
+    "sig_empty": 42
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：Pixiv 的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 存储）都不进本面的槽位账。",
+    "真机里「换角色时 Pixiv 是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.36.0": {
+   "what": "v3.36.0 杂志（`apps/magazine/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+   "why": "本版与前两版**同形**：杂志**是一个新 App**（四件 2617 行：数据层 911 / App 层 466 / 视图 639 / 样式 601），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 52 → 53、实例槽位 65 → 66、App 槽位 53 → 54、App 槽位占比 81.5% → 81.8%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 42 → 43（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {
+    "app_classes": 53,
+    "slots": 66,
+    "app_slots": 54,
+    "app_slot_share_pct": 81.8,
+    "sig_empty": 43
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：杂志的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 内容 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时杂志是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.37.0": {
+   "what": "v3.37.0 白盒音效盒（`apps/soundkit/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+   "why": "本版与前三版**同形**：音效盒**是一个新 App**（四件 2048 行：数据层 631 / App 层 498 / 视图 506 / 样式 413），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 53 → 54、实例槽位 66 → 67、App 槽位 54 → 55、App 槽位占比 81.8% → 82.1%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 43 → 44（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {
+    "app_classes": 54,
+    "slots": 67,
+    "app_slots": 55,
+    "app_slot_share_pct": 82.1,
+    "sig_empty": 44
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：音效盒的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（设置 / 配方 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时音效盒是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.38.0": {
+   "what": "v3.38.0 召回治理台（`apps/recall/` 四件）注册进 `config/apps.js`，成为本仓新的 App",
+   "why": "本版与前三版**同形**：召回治理台**是一个新 App**（四件 2080 行：数据层 457 / App 层 686 / 视图 433 / 样式 504），按仓内规范注册进 `config/apps.js`（id/name/icon/color）并接 `index.js` 的重绑表与懒加载分支，因此本面**真增长**：App 类 54 → 55、实例槽位 67 → 68、App 槽位 55 → 56、App 槽位占比 82.1% → 82.4%、覆盖率 80.6% → 80.6%、非 App 占比 19.4% → 19.4%、空参签名 44 → 45（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动 ——本版没有触碰这条「声明式生命周期准入」的任一面。",
+   "readings": {
+    "app_classes": 55,
+    "slots": 68,
+    "app_slots": 56,
+    "app_slot_share_pct": 82.4,
+    "sig_empty": 45
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：召回治理台的「会话隔离」由 `config/storage.js` 的一条宽前缀承担（见 keys 门账本），与生命周期出口无关；本 App 的三条会话键（四路配置 / 策略 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时召回治理台是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.39.0": {
+   "what": "v3.39.0 时光胶囊（apps/sourcebook/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与前几版**同形**：时光胶囊**是一个新 App**（四件 2175 行：数据层 636 / App 层 610 / 视图 442 / 样式 487），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 55 -> 56、实例槽位 68 -> 69、App 槽位 56 -> 57、App 槽位占比 82.4% -> 82.6%、覆盖率 80.6% -> 80.6%、非 App 占比 19.4% -> 19.4%、空参签名 45 -> 46（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 56,
+    "slots": 69,
+    "app_slots": 57,
+    "app_slot_share_pct": 82.6,
+    "sig_empty": 46
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：时光胶囊的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（封存 / 策略 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时时光胶囊是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.40.0": {
+   "what": "v3.40.0 对话水壶（apps/kettle/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与前几版**同形**：对话水壶**是一个新 App**（四件 1934 行：数据层 508 / App 层 658 / 视图 403 / 样式 365），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 56 -> 57、实例槽位 69 -> 70、App 槽位 57 -> 58、App 槽位占比 82.6% -> 82.9%、覆盖率 80.6% -> 80.6%、非 App 占比 19.4% -> 19.4%、空参签名 46 -> 47（新 App 的构造与出口都走空参形态）；接线点 / 三路径分布 / 其余三类签名 / 语义面 11 槽（同 5 · 异 6）一格未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 57,
+    "slots": 70,
+    "app_slots": 58,
+    "app_slot_share_pct": 82.9,
+    "sig_empty": 47
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：时光胶囊的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（封存 / 策略 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时时光胶囊是否全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.41.0": {
+   "what": "v3.41.0 需求沙盘（apps/needsim/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：需求沙盘**是一个新 App**（四件 2639 行：数据层 825 / App 层 829 / 视图 470 / 样式 515），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 57 -> 58、实例槽位 70 -> 71、App 槽位 58 -> 59、App 槽位占比 82.9% -> 83.1%、空参签名 47 -> 48（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 58,
+    "slots": 71,
+    "app_slots": 59,
+    "app_slot_share_pct": 83.1,
+    "sig_empty": 48
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：需求沙盘的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（需求 / 池子 / 记忆与愿望 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时需求沙盘是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.42.0": {
+   "what": "v3.42.0 曲库案头（apps/musicdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：曲库案头**是一个新 App**（四件 2991 行：数据层 1043 / App 层 897 / 视图 537 / 样式 514），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 58 -> 59、实例槽位 71 -> 72、App 槽位 59 -> 60、App 槽位占比 83.1% -> 83.3%、空参签名 48 -> 49（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 59,
+    "slots": 72,
+    "app_slots": 60,
+    "app_slot_share_pct": 83.3,
+    "sig_empty": 49
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：曲库案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（曲库 / 歌词 / 台账 / 策略）都不进本面的槽位账。",
+    "真机里「换角色时曲库案头是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.43.0": {
+   "what": "v3.43.0 PV 案头（apps/pvdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：PV 案头**是一个新 App**（四件 2726 行：数据层 844 / App 层 919 / 视图 708 / 样式 255），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 59 -> 60、实例槽位 72 -> 73、App 槽位 60 -> 61、App 槽位占比 83.3% -> 83.6%、空参签名 49 -> 50（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 60,
+    "slots": 73,
+    "app_slots": 61,
+    "app_slot_share_pct": 83.6,
+    "sig_empty": 50
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：PV 案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（题面 / 作品台账 / 歌词 / 策略）都不进本面的槽位账。",
+    "真机里「换角色时 PV 案头是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.44.0": {
+   "what": "v3.44.0 同人商店 · 柜台（apps/doujin/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：同人商店 · 柜台**是一个新 App**（四件 2675 行：数据层 540 / App 层 1118 / 视图 647 / 样式 370），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 60 -> 61、实例槽位 73 -> 74、App 槽位 61 -> 62、App 槽位占比 83.6% -> 83.8%、空参签名 50 -> 51（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 61,
+    "slots": 74,
+    "app_slots": 62,
+    "app_slot_share_pct": 83.8,
+    "sig_empty": 51
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：同人商店的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（店头（含存档）/ 市场 / 收银台 / 台账）都不进本面的槽位账。",
+    "真机里「换角色时同人商店是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.45.0": {
+   "what": "v3.45.0 存档台（apps/archive/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：存档台**是一个新 App**（四件 1944 行：数据层 615 / App 层 559 / 视图 528 / 样式 242），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的重绑表与懒加载分支，因此本面**真增长**：App 类 61 -> 62、实例槽位 74 -> 75、App 槽位 62 -> 63、App 槽位占比 83.8% -> 84.0%、空参签名 51 -> 52（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 62,
+    "slots": 75,
+    "app_slots": 63,
+    "app_slot_share_pct": 84.0,
+    "sig_empty": 52
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：存档台的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（已收包 / 对账面 / 要求草稿 / 动作台账）都不进本面的槽位账。",
+    "真机里「换角色时存档台是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.46.0": {
+   "what": "v3.46.0 思维链案头（apps/cotdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：思维链案头**是一个新 App**（四件 1903 行：数据层 562 / App 层 557 / 视图 564 / 样式 220），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 62 -> 63、实例槽位 75 -> 76、App 槽位 63 -> 64、App 槽位占比 84.0% -> 84.2%、空参签名 52 -> 53（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 63,
+    "slots": 76,
+    "app_slots": 64,
+    "app_slot_share_pct": 84.2,
+    "sig_empty": 53
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：思维链案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的四条会话键（条目册 / 配置 / 草稿 / 台账）都不进本面的槽位账。",
+    "真机里「换会话时条目册与台账是否四格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.47.0": {
+   "what": "v3.47.0 诊断案头（apps/diagdesk/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：诊断案头**是一个新 App**（四件 1886 行：数据层 745 / App 层 470 / 视图 471 / 样式 200），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 63 -> 64、实例槽位 76 -> 77、App 槽位 64 -> 65、App 槽位占比 84.2% -> 84.4%、空参签名 53 -> 54（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 64,
+    "slots": 77,
+    "app_slots": 65,
+    "app_slot_share_pct": 84.4,
+    "sig_empty": 54
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：诊断案头的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的三条会话键（存档原文 / 摘要草稿 / 动作台账）都不进本面的槽位账。",
+    "真机里「换会话时存档与台账是否三格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.48.0": {
+   "what": "v3.48.0 子宫画板（apps/uterus/ 四件）注册进 config/apps.js，成为本仓新的 App",
+   "why": "本版与上一版**同形**：子宫画板**是一个新 App**（四件 2829 行：数据层 1205 / App 层 371 / 视图 1011 / 样式 242），按仓内规范注册进 config/apps.js（id/name/icon/color）并接 index.js 的表单字段表与懒加载分支，因此本面**真增长**：App 类 64 -> 65、实例槽位 77 -> 78、App 槽位 65 -> 66、App 槽位占比 84.4% -> 84.6%、空参签名 54 -> 55（新 App 的构造与出口都走空参形态）；覆盖率 80.6% 与三路径分布（19 / 20 / 23）一格未动 —— 本版只在既有两个咽喉点上挂采集调用，未改产品生命周期路径；其余三类签名 / 语义面 11 槽（同 5 · 异 6）也未动。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 65,
+    "slots": 78,
+    "app_slots": 66,
+    "app_slot_share_pct": 84.6,
+    "sig_empty": 55
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量**只有注册面**：子宫画板的会话隔离由 config/storage.js 的一条宽前缀承担（见 keys 门账本）；本 App 的两条会话键（收下的角色状态原文 / 动作台账）都不进本面的槽位账。",
+    "真机里「换会话时状态与台账是否两格全量重取、视图是否级联刷新」仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.54.0": {
+   "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针 --json 现场落盘）",
+   "why": "App 类 65→76 / 槽位 78→89 / App 槽位 66→77 / 无参出口 55→66：增量来自 v3.49~v3.54 六个新 App（sullydesk/summdesk/periodmath/annidate/cardtable/traveldesk）+ uterusApp 补登 REBIND 表（v3.48.0 历史遗漏，lifecycle 判据当场报红后补上）。判据与门禁不真跑全量就不会响 —— 本版首次全量 npm run test 暴露此陈旧基线。"
+  },
+  "v3.58.0": {
+   "what": "v3.58.0 O4 会话世代栅栏 + O5 写入回执：搜索 App 进换会话重绑表（补 onChatChanged 出口）",
+   "why": "本面**真增长一格**：App 类 76 -> 77、App 槽位 77 -> 78、App 槽位占比 86.5% -> 87.6%、空参签名 66 -> 67 —— 增量**精确归因到 SearchApp**：O4 为「换会话后上一段会话的全历史扫描仍算当前代际」补了 `onChatChanged()`（invalidateAll + _syncHostSources）并登记进 ST_PHONE_REBIND_APP_KEYS。本面只计「定义了出口的类」，故它此刻才进类账；出口是空参形态，故空参签名同步 +1。★ 与 v3.47.0 那版同形（新增 App 注册）不同源：本版**没有新增 App**，增长的只是「既有 App 补了一条实例出口」这一格。接线点总数 62、App 出口 50、非 App 12、覆盖率 80.6%、三路径分布 19/20/23、语义槽位 11（同 5 · 异 6）一格未动 —— 本版不新增生命周期咽喉点，只在既有重绑表上挂一格。判定仍为 not_done：两条硬否决 R2（必选参出口）与 R3（三路径语义一致率 45.5%）一格未动。",
+   "readings": {
+    "app_classes": 77,
+    "app_slots": 78,
+    "app_slot_share_pct": 87.6,
+    "sig_empty": 67
+   },
+   "unchanged": [
+    "slots",
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "coverage_pct",
+    "non_app_share_pct",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff",
+    "semantic_consistency_pct",
+    "criteria_pass_count"
+   ],
+   "not_done": [
+    "本面增量只有**出口注册**这一格：搜索 App 的会话隔离由它自己那份 _scanGen 承担，不进本面的槽位账。",
+    "真机里「换会话时上一段会话那轮全历史扫描是否真的被作废」仍归 R-O3（真宿主实机验证）；本面只证明`出口在场`，不证明它被真调过。"
+   ]
+  },
+  "v3.65.0": {
+   "what": "v3.65.0 新增一个 App 类（任务入口 TaskentryApp，实现了无参 onChatChanged）⇒ 枚举面 +1",
+   "why": "本探针按 apps/** 与 index.js **真数**枚举 App 类与生命周期槽位。新增一件产品面 App 必然让 app_classes 77 -> 78、slots 89 -> 90（新 App 在会话重绑表里 ⇒ 有会话槽位）、app_slots 78 -> 79、app_slot_share 87.6% -> 87.8%、sig_empty 67 -> 68（新出口是无参的）。**其余读数一格未动**（接线点 62 / App 出口 50 / 非 App 点 12 / 三条路径 19-20-23 / 默认参 1 / 必选参 1 / 无签名 8 / 语义 11-5-6）—— 新 App 的接线点落在既有咽喉点上（P1 的懒加载重绑），不新增手写散点。R2 的判据散文仍写「1 个必选参出口」且一字不改（必选参出口仍是 MusicApp 一个）。",
+   "readings": {
+    "app_classes": 78,
+    "slots": 90,
+    "app_slots": 79,
+    "app_slot_share_pct": 87.8,
+    "sig_empty": 68
+   },
+   "unchanged": [
+    "wiring_points",
+    "app_exit_points",
+    "non_app_points",
+    "points_p1",
+    "points_p2",
+    "points_p3",
+    "sig_default",
+    "sig_required",
+    "sig_none",
+    "semantic_slots",
+    "semantic_same",
+    "semantic_diff"
+   ],
+   "not_done": "本版仍未实施「声明式生命周期出口」（四条判据的结论一字未动）。"
+  }
+ },
+ "caliber": [
+  "三路径区间按**函数/监听器边界**精确划定（P1 = onChatChanged() 函数体；P2 = phone:clearCurrentData 监听器；P3 = phone:clearAllData 监听器；P3 结束锚缺失时回退到文件末）—— 近似区间会让 P1 尾部与 P2 头部重叠，把真缺口判成已覆盖（沿用 scripts/lifecycle-audit.mjs 的踩坑结论）。",
+  "接线点按**物理行**计数：同一行同时出现「实例槽位名」与「出口调用或作废赋值」才算一个点；注释行不计。跨行书写（如 albumApp?.destroy?.() 与 albumApp = null 分两行）按两行各计一点 —— 因为声明式改造要删的正是这两行。",
+  "App 实例槽位 = 「VirtualPhone.X = new …」且 X 能反查到某个含生命周期出口的 App 类；非 App 槽位指没法用 static lifecycleExits 表达的接线目标（缓存对象 / 桥 / 外部管理器）。",
+  "onChatChanged 签名只认类体内的定义形态；必选参的判据是「参数列表里有内容且不含默认值」。",
+  "语义一致性以**槽位**为单位比对三条路径上的动作集（exit / nullify 序列），三条路径动作集逐元素相同才算一致。",
+  "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
+ ],
+ "readings": {
+  "app_classes": 79,
+  "slots": 91,
+  "app_slots": 80,
+  "app_slot_share_pct": 87.9,
+  "wiring_points": 62,
+  "app_exit_points": 50,
+  "non_app_points": 12,
+  "coverage_pct": 80.6,
+  "non_app_share_pct": 19.4,
+  "points_p1": 19,
+  "points_p2": 20,
+  "points_p3": 23,
+  "sig_empty": 69,
+  "sig_default": 1,
+  "sig_required": 1,
+  "sig_none": 8,
+  "semantic_slots": 11,
+  "semantic_same": 5,
+  "semantic_diff": 6,
+  "semantic_consistency_pct": 45.5,
+  "criteria_pass_count": 2
+ },
+ "signatures": {
+  "required": [
+   "MusicApp(newStorage)"
   ],
-  "criteria": [
-    {
-      "id": "R1",
-      "desc": "声明式覆盖面 >= 80%",
-      "pass": true,
-      "got_text": "80.6%"
-    },
-    {
-      "id": "R2",
-      "desc": "onChatChanged 参数契约可统一（无必选参出口）",
-      "pass": false,
-      "got_text": "1 个必选参出口"
-    },
-    {
-      "id": "R3",
-      "desc": "三路径语义一致率 >= 80%",
-      "pass": false,
-      "got_text": "45.5%"
-    },
-    {
-      "id": "R4",
-      "desc": "非 App 接线点占比 <= 20%",
-      "pass": true,
-      "got_text": "19.4%"
-    }
-  ],
-  "shape": {
-    "note": "接线的形态是「**同一件事在三条路径上各写一遍，且三遍写得不一样**」：59 个接线点里 47 个目标是 App 实例（理论上可由 static lifecycleExits 表达），但其中只有 5/11 个槽位在三条路径上动作集**完全相同**。",
-    "verdict": "未观察到「单一声明即可覆盖三路径」的形态：路径差异不是重复书写（可归并），而是**语义差异**（不该归并）。"
-  },
-  "verdict": {
-    "question": "App 生命周期出口能不能改成「每个 App 自声明 static lifecycleExits、由框架统一调用」？",
-    "answer": "**本版判定：不实施（not_done，按读数否掉，不是按感觉）**。注意：原先那条「覆盖率未达准入门槛」的否决读数**在本版失效** —— #65 接进实例域后新增 3 处 App 出口调用，覆盖率首次跨过 80% 准入线（79.7% → 80.6%）。但**两条更硬的否决读数原封不动**：参数契约不可统一（R2）与三路径语义一致率仅 45.5%（R3） —— 后者才是决定性的一条（详见 reasons）。",
-    "reasons": [
-      "**★ 准入线读数在本版被改动（必须如实记下，不得假装不变）**：清数据/换会话接线点从 59 增至 62、App 出口点从 47 增至 50，覆盖率 79.7% → **80.6%**（**首次越过 80% 线**）。起因是 #65（电池优化）把 chat-view 的通话计时器接进了实例域 —— 旧写法 `window.VirtualPhone.wechatApp = null` 只算「作废式接线」，新写法在置 null 前多了一行 `wechatApp?.deactivate?.()` ⇒ 同一物理行上「槽位名 + 出口调用」同时出现，从「只 nullify」变成「exit + nullify」而多计一点（三条路径各一处）。非 App 点仍 12，占比 20.3% → 19.4%。\n\n**注意这个变化是因为「出口多了一个」，不是因为「可声明性变好了」** —— 拿它当「接近可实施」的证据是误读：其余两条否决读数（参数契约 / 语义差异）一点没动，而它们才是决定性的。\n\n**① 覆盖率原本不达准入线（本版已越过，但只有这一条动了）**：59 → 62 个手写接线点里 47 → 50 个目标指向 App 实例，另 **12 个仍指向非 App 目标**（cachedWechatData / cachedMofoData / cachedPhoneCallData / imageManager / `_autoWeibo*Keys` / memoryCore / lonshaBridge / storage / version / _pendingImages） —— 这些没有「实例」可挂声明（缓存对象不是 App；桥与记忆内核的 onChatChanged 各有自己的会话契约）。把 19.4% 的接线点留成例外清单，等于「统一框架 + 一张与今天同样长的例外表」。",
-      "**★ 决定性否决读数：三路径的差异不是「写得重复」，而是「有意分档」** —— 11 个 App 槽位里只有 5 个动作集三路径一致，6 个不一致，一致率 45.5%。而真跑追因后，**六条差异全部是设计意图，没有一条是遗漏**（这正是声明式注册最不能碰的东西）：\n    ① `gamesApp` / `worldpulseApp` —— 只在 P1 有 `onChatChanged`，P2/P3 零处理。起初我把它读成「清数据路径漏了重绑」（本仓的历史缺陷形态），**追因后推翻**：两者的区别是语义互斥 —— P1 是「换会话」，实例**必须活下来**（各自 onChatChanged 重绑）；P2/P3 是「清数据」，实例**必须死掉**（`retireSessionScopedSlots()` 里 `deactivate?.()` / `destroy?.()` + 置 null）。而后者并非手写散点：它挂在**唯一咽喉点**上 —— `reloadPhoneSurface()` 内部调 `retireSessionScopedSlots()`（index.js:2600），三条路径都调 `reloadPhoneSurface()`（9372 / 10603 / 10710），所以 P2/P3 **不需要**写任何重绑。vilifecycle-audit 的 L2 早就把这种形态认作已覆盖（`viaChoke`）—— 把它归并成「一个声明」就是抹掉「活/死」这条语义轴。\n    ② `weiboApp` P3 多一个 `destroy()`（类内早有 destroy，此前从未接线 —— 注释明写「[v2.25.0] 解绑 _swipeHandler」）；③ `calendarApp` P2/P3 有 `destroy() + 置 null`、P1 只有 `clearCache()`（P1 换会话必须让实例随会话活下来）；④ `musicApp` / `mofoApp` P2/P3 多一个置 null（清数据要丢实例，换会话不能丢）。结论：**这些差异是「按路径分档的处置」，不是「同一件事写了三遍」**。声明式注册的前提是「三条路径干同一件事」，而实测前提不成立 —— 强行归并就是制造缺陷，而 lifecycle-audit 门禁守的正是这件事。",
-      "**onChatChanged 参数契约无法统一**：框架统一调用只能是零参或统一传参，而实测 26 个无参 + 1 个带默认值（`GamesApp.onChatChanged(storage = this.storage)`）+ 1 个**必选参**（`MusicApp.onChatChanged(newStorage)` —— 体内直接读 `newStorage.get(…)`，传 undefined 即抛）。现状 `rebindLazyApps()` 是**无参**调用（`phone[key]?.onChatChanged?.()`），而 MusicApp 不在 REBIND 表里、由 P1 处显式 `onChatChanged(storage)` 承接 —— 两套调用纪律并存。统一声明的第一步就得改 MusicApp 的参数契约（产品行为改动，不属本轮取证范围）。",
-      "**另有 11 个含出口的 App 类根本不在 REBIND 表里**（AlbumApp / CalendarApp / DiaryApp / GamesApp / HoneyApp / MofoApp / MusicApp / PhoneApp / WechatApp / WeiboApp / WorldpulseApp）：它们靠 P1 区间内的**手写显式调用**兜着，声明式注册要接管它们，等于把今天的隐式约定（「谁在哪条路径上调我」）一次性全部显式化 —— 而 6/11 个槽位的三路径语义并不一致（上一条），显式化的结果就是把今天的正确行为写成错误声明。"
-    ],
-    "only_axis_with_evidence": "真正有读数支持的方向不是「声明式注册出口」，而是「**把三路径差异显式化为按路径分档的处置矩阵**」（每条路径 × 每个槽位声明「本路径该做什么」）—— 它同样能消除手写散点，且不要求三条路径语义相同。本版只立读数与判据，不动手。"
-  },
-  "corrections": [
-    "**探针首版只认「无参调用」形态，漏掉可选调用 `?.()`**：初版正则按 `\\.(出口)[?]?\\(` 匹配，把 `albumApp?.destroy?.()` 这类「实例可选 + 方法可选」的写法漏在外面，接线点从 59 掉到 41、覆盖率却反而升到 80.5% —— **漏认让读数看起来更好**，正是「假绿」。修正为同时收 `?.` 与 `.` 后，实测 59 点 / 79.7%（跨过 80% 线跑到线下方，判定随之翻转）。教训与 lifecycle-audit 的踩坑记录同族：判据必须匹配**真实书写**。",
-    "**首版漏掉「作废式接线」（`X = null`）**：只扫出口调用会把 `window.VirtualPhone.albumApp = null` 这类点算漏 —— 而它才是声明式注册要消灭的大头（21 处）。修正后 41 → 59。",
-    "**pctOf 初版拼进了字面反斜杠**（`+ BS + `），输出 `79.7%\\` —— 读数带零宽瑕疵，已修。这类「输出里多一个字符」的缺陷在只读百分比结果时看不见，是套件 A1 逐字比对的意义所在。",
-    "**我把一条有意为之的设计读成了缺陷（本轮最重的一次自我纠正）**：基线初稿写「gamesApp 只在 P1 有 onChatChanged、P2/P3 零处理 —— 正是本仓反复出现的那类缺陷」。**追因后推翻**：追 `releasePhoneInactiveResources` / `retireSessionScopedSlots` / `reloadPhoneSurface` 的调用链后确认，gamesApp 与 worldpulseApp 在 P2/P3 是**有意走咽喉点回收**（reloadPhoneSurface → retireSessionScopedSlots，三条路径都经它），而不是遗漏；`lifecycle-audit` 的 L2 判据也早已把 `viaChoke` 算作覆盖。教训：**「某槽位在某路径零处理」有且只有两种成因（遗漏/ 有意分档），取证时不能只读「缺没缺」、必须追「为什么缺」** —— 否则会把「设计」写进「缺陷」栏，而这种误读会直接反转结论（初稿的理由指向「补上就好」，真相是「两者语义互斥、不能归并」）。",
-    "**准入线读数被一次无关改动推过线（v3.14.0 复校时发现）**：#65 把通话计时器接进实例域时，顺手在三处置 null 前多调一次实例出口，使 App 出口点 47 → 50、覆盖率 79.7% → 80.6%，**首次越过 80% 准入线**。必须把这件事写进基线而不是让读数静静变好：①准入门槛是**决策输入**，它的变化会改「该不该做」的结论；②但这一条变化**不是「可声明性变好」** —— 只是「出口调用多了一处」，而真正否决声明式注册的两条（参数契约不可统一、三路径语义一致率 45.5%）一格未动。教训：**读数变好之后更要追问「变好的是不是同一条轴」**，否则会把「掺进去的一点新绿」当成「准入门槛实已满足」。",
-    "**v3.22.0 复校（+2 个 App 类）**：本版缝入 apps/focus/（番茄钟）与 apps/accounting/（记账）两个 App，使 `app_classes` 37→39、`slots` 50→52、`app_slots` 38→40、`sig_empty` 27→29（两个新 App 的 `onChatChanged` 都是无参形态）、`app_slot_share_pct` 76.0→76.9。★ 值得注意的是**没动的那几项**：`wiring_points` 62、`app_exit_points` 50、`points_p1/p2/p3` 19/20/23 一格未变 —— 因为两个新 App 都没有在换会话（P1）/ 清当前会话数据（P2）/ 清全部数据（P3）三条路径上补出口调用。这不是本探针该改的事（它只量形态），但**如实记下**：新 App 的接入只更新了 REBIND 表的枚举面，三条清理路径上目前没有它们的出口点。"
-  ],
-  "not_done": [
-    "**未改任何产品代码**：本版只做取证与判据，index.js 的产品行为零变化（本次取证不改 index.js，仅新增 tests/audit 下探针与基线、tests/system-v324.test.mjs 套件、文档三处）。",
-    "**未实施声明式注册**：准入判据未达（79.7% < 80%），另有参数契约与语义差异两条硬否决（见 verdict.reasons）。",
-    "**未把 R1-R4 立成常驻门禁**：取证类读数不进 npm run check（与 O-5 性能基线、P-2 宿主分诊同口径）—— 常驻门禁只该守「契约不许变坏」，而「覆盖率是多少」是决策输入，不是契约。",
-    "**未覆盖实机**：三路径语义差异是从源码读出的；各 App 出口在真实宿主下的行为未验（无头环境跑不了 index.js 的 DOM 依赖段）。",
-    "**未验三路径差异在真实宿主下的行为**：基线里六条差异的「设计意图」结论是从源码 + 注释 + 咽喉点调用链读出的（含 index.js:2543-2571 的作者自述），未在真主机上复现过；无头环境跑不了 index.js 的 DOM 依赖段。",
-    "**未因覆盖率越线而重启声明式注册的评估**：R1 本版首次 pass，但 R2/R3 仍不达 —— 只要有一条硬否决在场，准入就是「未达」，不得因单轴变绿而重开方案。",
-    "**未因本版新增两个 App 而重开声明式注册的评估**：R2/R3 两条硬否决一格未动，准入仍是「未达」；本版只按新读数复校，不改判定。"
+  "default": [
+   "GamesApp(storage = this.storage)"
   ]
+ },
+ "semantic_diff_slots": [
+  {
+   "slot": "calendarApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [
+    "exit",
+    "exit",
+    "nullify"
+   ],
+   "P3": [
+    "exit",
+    "exit",
+    "nullify"
+   ]
+  },
+  {
+   "slot": "gamesApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [],
+   "P3": []
+  },
+  {
+   "slot": "mofoApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [
+    "exit",
+    "nullify"
+   ],
+   "P3": [
+    "exit",
+    "nullify"
+   ]
+  },
+  {
+   "slot": "musicApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [
+    "exit"
+   ],
+   "P3": [
+    "exit",
+    "nullify"
+   ]
+  },
+  {
+   "slot": "weiboApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [
+    "exit"
+   ],
+   "P3": [
+    "exit",
+    "exit",
+    "nullify"
+   ]
+  },
+  {
+   "slot": "worldpulseApp",
+   "same": false,
+   "P1": [
+    "exit"
+   ],
+   "P2": [],
+   "P3": []
+  }
+ ],
+ "criteria": [
+  {
+   "id": "R1",
+   "desc": "声明式覆盖面 >= 80%",
+   "pass": true,
+   "got_text": "80.6%"
+  },
+  {
+   "id": "R2",
+   "desc": "onChatChanged 参数契约可统一（无必选参出口）",
+   "pass": false,
+   "got_text": "1 个必选参出口"
+  },
+  {
+   "id": "R3",
+   "desc": "三路径语义一致率 >= 80%",
+   "pass": false,
+   "got_text": "45.5%"
+  },
+  {
+   "id": "R4",
+   "desc": "非 App 接线点占比 <= 20%",
+   "pass": true,
+   "got_text": "19.4%"
+  }
+ ],
+ "shape": {
+  "note": "接线的形态是「**同一件事在三条路径上各写一遍，且三遍写得不一样**」：59 个接线点里 47 个目标是 App 实例（理论上可由 static lifecycleExits 表达），但其中只有 5/11 个槽位在三条路径上动作集**完全相同**。",
+  "verdict": "未观察到「单一声明即可覆盖三路径」的形态：路径差异不是重复书写（可归并），而是**语义差异**（不该归并）。"
+ },
+ "verdict": {
+  "question": "App 生命周期出口能不能改成「每个 App 自声明 static lifecycleExits、由框架统一调用」？",
+  "answer": "**本版判定：不实施（not_done，按读数否掉，不是按感觉）**。注意：原先那条「覆盖率未达准入门槛」的否决读数**在本版失效** —— #65 接进实例域后新增 3 处 App 出口调用，覆盖率首次跨过 80% 准入线（79.7% → 80.6%）。但**两条更硬的否决读数原封不动**：参数契约不可统一（R2）与三路径语义一致率仅 45.5%（R3） —— 后者才是决定性的一条（详见 reasons）。",
+  "reasons": [
+   "**★ 准入线读数在本版被改动（必须如实记下，不得假装不变）**：清数据/换会话接线点从 59 增至 62、App 出口点从 47 增至 50，覆盖率 79.7% → **80.6%**（**首次越过 80% 线**）。起因是 #65（电池优化）把 chat-view 的通话计时器接进了实例域 —— 旧写法 `window.VirtualPhone.wechatApp = null` 只算「作废式接线」，新写法在置 null 前多了一行 `wechatApp?.deactivate?.()` ⇒ 同一物理行上「槽位名 + 出口调用」同时出现，从「只 nullify」变成「exit + nullify」而多计一点（三条路径各一处）。非 App 点仍 12，占比 20.3% → 19.4%。\n\n**注意这个变化是因为「出口多了一个」，不是因为「可声明性变好了」** —— 拿它当「接近可实施」的证据是误读：其余两条否决读数（参数契约 / 语义差异）一点没动，而它们才是决定性的。\n\n**① 覆盖率原本不达准入线（本版已越过，但只有这一条动了）**：59 → 62 个手写接线点里 47 → 50 个目标指向 App 实例，另 **12 个仍指向非 App 目标**（cachedWechatData / cachedMofoData / cachedPhoneCallData / imageManager / `_autoWeibo*Keys` / memoryCore / lonshaBridge / storage / version / _pendingImages） —— 这些没有「实例」可挂声明（缓存对象不是 App；桥与记忆内核的 onChatChanged 各有自己的会话契约）。把 19.4% 的接线点留成例外清单，等于「统一框架 + 一张与今天同样长的例外表」。",
+   "**★ 决定性否决读数：三路径的差异不是「写得重复」，而是「有意分档」** —— 11 个 App 槽位里只有 5 个动作集三路径一致，6 个不一致，一致率 45.5%。而真跑追因后，**六条差异全部是设计意图，没有一条是遗漏**（这正是声明式注册最不能碰的东西）：\n    ① `gamesApp` / `worldpulseApp` —— 只在 P1 有 `onChatChanged`，P2/P3 零处理。起初我把它读成「清数据路径漏了重绑」（本仓的历史缺陷形态），**追因后推翻**：两者的区别是语义互斥 —— P1 是「换会话」，实例**必须活下来**（各自 onChatChanged 重绑）；P2/P3 是「清数据」，实例**必须死掉**（`retireSessionScopedSlots()` 里 `deactivate?.()` / `destroy?.()` + 置 null）。而后者并非手写散点：它挂在**唯一咽喉点**上 —— `reloadPhoneSurface()` 内部调 `retireSessionScopedSlots()`（index.js:2600），三条路径都调 `reloadPhoneSurface()`（9372 / 10603 / 10710），所以 P2/P3 **不需要**写任何重绑。vilifecycle-audit 的 L2 早就把这种形态认作已覆盖（`viaChoke`）—— 把它归并成「一个声明」就是抹掉「活/死」这条语义轴。\n    ② `weiboApp` P3 多一个 `destroy()`（类内早有 destroy，此前从未接线 —— 注释明写「[v2.25.0] 解绑 _swipeHandler」）；③ `calendarApp` P2/P3 有 `destroy() + 置 null`、P1 只有 `clearCache()`（P1 换会话必须让实例随会话活下来）；④ `musicApp` / `mofoApp` P2/P3 多一个置 null（清数据要丢实例，换会话不能丢）。结论：**这些差异是「按路径分档的处置」，不是「同一件事写了三遍」**。声明式注册的前提是「三条路径干同一件事」，而实测前提不成立 —— 强行归并就是制造缺陷，而 lifecycle-audit 门禁守的正是这件事。",
+   "**onChatChanged 参数契约无法统一**：框架统一调用只能是零参或统一传参，而实测 26 个无参 + 1 个带默认值（`GamesApp.onChatChanged(storage = this.storage)`）+ 1 个**必选参**（`MusicApp.onChatChanged(newStorage)` —— 体内直接读 `newStorage.get(…)`，传 undefined 即抛）。现状 `rebindLazyApps()` 是**无参**调用（`phone[key]?.onChatChanged?.()`），而 MusicApp 不在 REBIND 表里、由 P1 处显式 `onChatChanged(storage)` 承接 —— 两套调用纪律并存。统一声明的第一步就得改 MusicApp 的参数契约（产品行为改动，不属本轮取证范围）。",
+   "**另有 11 个含出口的 App 类根本不在 REBIND 表里**（AlbumApp / CalendarApp / DiaryApp / GamesApp / HoneyApp / MofoApp / MusicApp / PhoneApp / WechatApp / WeiboApp / WorldpulseApp）：它们靠 P1 区间内的**手写显式调用**兜着，声明式注册要接管它们，等于把今天的隐式约定（「谁在哪条路径上调我」）一次性全部显式化 —— 而 6/11 个槽位的三路径语义并不一致（上一条），显式化的结果就是把今天的正确行为写成错误声明。"
+  ],
+  "only_axis_with_evidence": "真正有读数支持的方向不是「声明式注册出口」，而是「**把三路径差异显式化为按路径分档的处置矩阵**」（每条路径 × 每个槽位声明「本路径该做什么」）—— 它同样能消除手写散点，且不要求三条路径语义相同。本版只立读数与判据，不动手。"
+ },
+ "corrections": [
+  "**探针首版只认「无参调用」形态，漏掉可选调用 `?.()`**：初版正则按 `\\.(出口)[?]?\\(` 匹配，把 `albumApp?.destroy?.()` 这类「实例可选 + 方法可选」的写法漏在外面，接线点从 59 掉到 41、覆盖率却反而升到 80.5% —— **漏认让读数看起来更好**，正是「假绿」。修正为同时收 `?.` 与 `.` 后，实测 59 点 / 79.7%（跨过 80% 线跑到线下方，判定随之翻转）。教训与 lifecycle-audit 的踩坑记录同族：判据必须匹配**真实书写**。",
+  "**首版漏掉「作废式接线」（`X = null`）**：只扫出口调用会把 `window.VirtualPhone.albumApp = null` 这类点算漏 —— 而它才是声明式注册要消灭的大头（21 处）。修正后 41 → 59。",
+  "**pctOf 初版拼进了字面反斜杠**（`+ BS + `），输出 `79.7%\\` —— 读数带零宽瑕疵，已修。这类「输出里多一个字符」的缺陷在只读百分比结果时看不见，是套件 A1 逐字比对的意义所在。",
+  "**我把一条有意为之的设计读成了缺陷（本轮最重的一次自我纠正）**：基线初稿写「gamesApp 只在 P1 有 onChatChanged、P2/P3 零处理 —— 正是本仓反复出现的那类缺陷」。**追因后推翻**：追 `releasePhoneInactiveResources` / `retireSessionScopedSlots` / `reloadPhoneSurface` 的调用链后确认，gamesApp 与 worldpulseApp 在 P2/P3 是**有意走咽喉点回收**（reloadPhoneSurface → retireSessionScopedSlots，三条路径都经它），而不是遗漏；`lifecycle-audit` 的 L2 判据也早已把 `viaChoke` 算作覆盖。教训：**「某槽位在某路径零处理」有且只有两种成因（遗漏/ 有意分档），取证时不能只读「缺没缺」、必须追「为什么缺」** —— 否则会把「设计」写进「缺陷」栏，而这种误读会直接反转结论（初稿的理由指向「补上就好」，真相是「两者语义互斥、不能归并」）。",
+  "**准入线读数被一次无关改动推过线（v3.14.0 复校时发现）**：#65 把通话计时器接进实例域时，顺手在三处置 null 前多调一次实例出口，使 App 出口点 47 → 50、覆盖率 79.7% → 80.6%，**首次越过 80% 准入线**。必须把这件事写进基线而不是让读数静静变好：①准入门槛是**决策输入**，它的变化会改「该不该做」的结论；②但这一条变化**不是「可声明性变好」** —— 只是「出口调用多了一处」，而真正否决声明式注册的两条（参数契约不可统一、三路径语义一致率 45.5%）一格未动。教训：**读数变好之后更要追问「变好的是不是同一条轴」**，否则会把「掺进去的一点新绿」当成「准入门槛实已满足」。",
+  "**v3.22.0 复校（+2 个 App 类）**：本版缝入 apps/focus/（番茄钟）与 apps/accounting/（记账）两个 App，使 `app_classes` 37→39、`slots` 50→52、`app_slots` 38→40、`sig_empty` 27→29（两个新 App 的 `onChatChanged` 都是无参形态）、`app_slot_share_pct` 76.0→76.9。★ 值得注意的是**没动的那几项**：`wiring_points` 62、`app_exit_points` 50、`points_p1/p2/p3` 19/20/23 一格未变 —— 因为两个新 App 都没有在换会话（P1）/ 清当前会话数据（P2）/ 清全部数据（P3）三条路径上补出口调用。这不是本探针该改的事（它只量形态），但**如实记下**：新 App 的接入只更新了 REBIND 表的枚举面，三条清理路径上目前没有它们的出口点。"
+ ],
+ "not_done": [
+  "**未改任何产品代码**：本版只做取证与判据，index.js 的产品行为零变化（本次取证不改 index.js，仅新增 tests/audit 下探针与基线、tests/system-v324.test.mjs 套件、文档三处）。",
+  "**未实施声明式注册**：准入判据未达（79.7% < 80%），另有参数契约与语义差异两条硬否决（见 verdict.reasons）。",
+  "**未把 R1-R4 立成常驻门禁**：取证类读数不进 npm run check（与 O-5 性能基线、P-2 宿主分诊同口径）—— 常驻门禁只该守「契约不许变坏」，而「覆盖率是多少」是决策输入，不是契约。",
+  "**未覆盖实机**：三路径语义差异是从源码读出的；各 App 出口在真实宿主下的行为未验（无头环境跑不了 index.js 的 DOM 依赖段）。",
+  "**未验三路径差异在真实宿主下的行为**：基线里六条差异的「设计意图」结论是从源码 + 注释 + 咽喉点调用链读出的（含 index.js:2543-2571 的作者自述），未在真主机上复现过；无头环境跑不了 index.js 的 DOM 依赖段。",
+  "**未因覆盖率越线而重启声明式注册的评估**：R1 本版首次 pass，但 R2/R3 仍不达 —— 只要有一条硬否决在场，准入就是「未达」，不得因单轴变绿而重开方案。",
+  "**未因本版新增两个 App 而重开声明式注册的评估**：R2/R3 两条硬否决一格未动，准入仍是「未达」；本版只按新读数复校，不改判定。"
+ ]
 }

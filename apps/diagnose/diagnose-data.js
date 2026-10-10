@@ -154,6 +154,10 @@ import { financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_SOURCES, FINANC
  *   财务总览面答「这台机器上各个来源各有多少钱，各自算准了吗」；
  *   本面答「有哪些『建议』还没变成『已确认』、确认了会不会重复扣款」。 */
 import { FC_STATE_KEYS, FC_STATES, fcSummaryLine, financeCommitSelfCheck, FINANCE_COMMIT_LEDGER_KEY } from '../../config/finance-commit.js';
+import {
+    WF_STATES, WF_STATE_KEYS, WF_LEVEL_KEYS, WF_LEVELS, WF_STEPS_MAX,
+    wfLevelLine, wfStateText, workflowSelfCheck
+} from '../../config/workflow.js';
 /* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 scheduleFace / financeFace 同一族——协议件自身现在还自洽吗。
  *   可见性判定结果、知情账本状态、通知过滤、缺口，在此面陈列（不重算，只读缓存与自检）。 */
 import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-knowledge-bridge.js';
@@ -873,6 +877,67 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流协议面：与 financeCommitFace / resumeWorkbenchFace 同范式——
+     *   只读自检 + 九态表 + 三档权限 + 宿主缓存读数（流程 / 运行台账 / 上次运行）+ 每步 owner。
+     *   ★ 与 R-X1..R-X4 四张卡分工：那四张各答「某一面的读数对不对」，本卡答
+     *     「把几步串成一条流水这条路通不通（默认 dry-run / 幂等 / 不执行任意脚本）」。 */
+    const workflowFace = (() => {
+        try {
+            const self = workflowSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const states = WF_STATE_KEYS.map((k) => ({
+                key: String(k), label: String(WF_STATES[k].label), text: wfStateText(k),
+            }));
+            const levels = WF_LEVEL_KEYS.map((k) => ({
+                key: String(k), label: String(WF_LEVELS[k].label), writes: WF_LEVELS[k].writes === true,
+            }));
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const cache = vp ? (vp._workflow || null) : null;
+            const runs = (cache && cache.runs) ? cache.runs : null;
+            const runReadable = !!(runs && runs.readable === true);
+            const runCount = runReadable ? (runs.entries || []).length : null;
+            const flows = (cache && Array.isArray(cache.flows)) ? cache.flows : [];
+            const lastRun = (cache && cache.run) ? cache.run : null;
+            const blocked = flows.filter((f) => f.blocked === true).length;
+            const line = vp ? String(vp._workflowLine || '') : '';
+            let head = '尚未取数';
+            if (cache) {
+                head = runReadable
+                    ? ('流程 ' + String(flows.length) + ' 条 · 运行台账 ' + String(runCount) + ' 条'
+                        + (blocked ? (' · 有 ' + String(blocked) + ' 条开不了工') : ''))
+                    : ('流程 ' + String(flows.length) + ' 条 · 运行台账**读不到**（**不是「没跑过」**）');
+            }
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                states: states,
+                levels: levels,
+                levelLine: wfLevelLine(),
+                flows: flows.map((f) => ({
+                    id: String(f.id || ''), label: String(f.label || ''),
+                    blocked: f.blocked === true, needsConfirm: f.needsConfirm === true,
+                    problems: Array.isArray(f.problems) ? f.problems.map(String) : [],
+                    steps: Array.isArray(f.steps) ? f.steps.map((st) => ({
+                        id: String(st.id || ''), label: String(st.label || ''),
+                        level: String(st.level || ''), writes: st.writes === true,
+                        owner: String(st.owner || ''), out: String(st.out || ''),
+                    })) : [],
+                })),
+                runReadable: cache ? runReadable : null,
+                stepsMax: WF_STEPS_MAX,
+                runs: { total: runCount, unreadable: cache ? !runReadable : null },
+                lastRun: lastRun ? { flowId: String(lastRun.flowId || ''), state: String(lastRun.state || '') } : null,
+                line: line,
+                text: '声明式工作流：九态（' + states.map((x) => x.label).join(' / ') + '）；'
+                    + '权限三档（' + wfLevelLine() + '）；'
+                    + (cache ? (head + (lastRun ? ('；上次运行 ' + String(lastRun.flowId) + ' · ' + String(lastRun.state)) : '；还没跑过任何一条')) : '尚未取数')
+                    + (blocked ? '；有 ' + String(blocked) + ' 条开不了工' : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；九态互不同值 / 默认 dry-run / 幂等 / 不执行任意脚本自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
      *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围）+ 缺口。
      *   ★ 与既有受控恢复交接面分工：那张答「这一次恢复的预检过了没有」，本面答「跳项目续玩这条路通不通」。 */
@@ -1134,7 +1199,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1196,6 +1261,16 @@ export function financeFaceText(face) {
         if (!f) return '财务总览协议：读取异常（已降级）—— 这不是「没钱」';
         return String(f.text || '财务总览协议：无读数');
     } catch (_e) { return '财务总览协议：读取异常（已降级）'; }
+}
+/** [v3.89.0 · 拓展计划 R-X5] 声明式工作流协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
+ *  与 financeCommitFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+export function workflowFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '声明式工作流：读取异常（已降级）—— 这不是「没有流程」';
+        return String(f.text || '声明式工作流：无读数');
+    } catch (_e) { return '声明式工作流：读取异常（已降级）'; }
 }
 /** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
  *  与 financeCommitFaceText 同范式：只做转发与文案，视图不自己拼。
@@ -1527,6 +1602,7 @@ export default {
     scheduleFaceText,
     financeFaceText,
     financeCommitFaceText,
+    workflowFaceText,
     resumeWorkbenchFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,

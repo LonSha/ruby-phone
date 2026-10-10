@@ -1,0 +1,36 @@
+/* workflow.css — [v3.89.0 · 拓展计划 R-X5] 声明式工作流 · 样式层 */
+.wfl-root { all: initial; }
+.wfl-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.wfl-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; }
+.wfl-title { font-size: 15px; font-weight: 600; color: #3c4a58; }
+.wfl-sub { font-size: 11px; color: #9a948a; margin: 2px 0 6px; }
+.wfl-reads { font-size: 11px; color: #6a645c; margin-top: 2px; }
+.wfl-self { padding: 4px 8px; font-size: 11px; opacity: .7; margin-top: 6px; }
+.wfl-self-bad { border-left: 2px solid #a0553f; opacity: 1; font-weight: 600; }
+.wfl-flash { margin-top: 6px; padding: 4px 8px; font-size: 12px; border-left: 2px solid #4a5a6a; background: #f4f6f8; }
+.wfl-flash-bad { border-left-color: #a0553f; background: #faf2ef; }
+.wfl-run { margin-top: 6px; font-size: 11px; color: #6a645c; }
+.wfl-flows { display: flex; flex-direction: column; gap: 8px; }
+.wfl-flow { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; }
+.wfl-flow-head { display: flex; align-items: center; gap: 8px; }
+.wfl-flow-label { flex: 1 1 auto; font-size: 13px; font-weight: 600; }
+.wfl-open { padding: 2px 8px; border-radius: 9px; border: 1px solid #d8d2c8; background: #fff; font-size: 11px; }
+.wfl-flow-hint { font-size: 11px; color: #9a948a; margin: 3px 0; }
+.wfl-flow-read { font-size: 11px; color: #6a645c; }
+.wfl-steps { margin: 6px 0; }
+.wfl-step { border: 1px solid #eee8de; border-radius: 6px; padding: 5px 7px; margin-bottom: 4px; }
+.wfl-step-write { border-left: 3px solid #a08a6a; }
+.wfl-step-head { display: flex; align-items: center; gap: 8px; }
+.wfl-step-label { flex: 1 1 auto; font-size: 12px; font-weight: 600; }
+.wfl-step-lv { font-size: 10px; color: #6a645c; }
+.wfl-step-meta { font-size: 10px; color: #9a948a; }
+.wfl-step-faces { font-size: 10px; color: #6a645c; }
+.wfl-step-bad { font-size: 10px; color: #a0553f; }
+.wfl-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.wfl-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 11px; }
+.wfl-btn-run { border-color: #a08a6a; color: #6a5330; }
+.wfl-box { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-top: 8px; }
+.wfl-box h3 { font-size: 12px; margin: 0 0 6px; color: #4a5a6a; }
+.wfl-row { display: flex; gap: 8px; font-size: 11px; padding: 3px 0; border-bottom: 1px dashed #eee8de; }
+.wfl-row-k { flex: 0 0 84px; color: #33586a; }
+.wfl-row-v { flex: 1 1 auto; color: #6a645c; }

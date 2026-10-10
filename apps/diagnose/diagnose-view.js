@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, resumeWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -391,6 +391,52 @@ export class DiagnoseView {
      }
     /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议卡：知情账本状态 + 表自检。
       *  与 _financeHtml 同规格：内核只陈列，本视图只排版。 */
+    /** [v3.89.0 · 拓展计划 R-X5] 声明式工作流协议卡：九态表 + 三档权限 + 流程步骤 + 运行台账读数。
+     *  与 R-X1..R-X4 四张卡分工：那四张各答「某一面的读数对不对」；本卡答
+     *  「把几步串成一条流水这条路通不通（默认 dry-run / 幂等 / 不执行任意脚本）」。
+     *  三态不同形（面缺席 / 尚未取数 / 有读数）。 */
+    _workflowHtml(pkg) {
+        const face = (pkg && pkg.workflowFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到工作流协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有流程」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(workflowFaceText(face)) + '</div>';
+        const states = Array.isArray(face.states) ? face.states : [];
+        if (states.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + states.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.key) + '</code>'
+                + this._chip(escapeHtml(r.label), 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>权限三档：' + escapeHtml(face.levelLine || '—')
+            + '（书面写步必须指向可写 owner；表外名字一律不认）</div>';
+        const runs = face.runs || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>运行台账：'
+            + (face.runReadable === null ? '尚未取数' : face.runReadable
+                ? escapeHtml(String(runs.total ?? '—')) + ' 条'
+                : '<b>读不到</b>（**不是「没跑过」**）')
+            + (face.lastRun ? ' · 上次运行 ' + escapeHtml(String(face.lastRun.flowId)) + ' · ' + escapeHtml(String(face.lastRun.state)) : ' · 还没跑过任何一条')
+            + '</div>';
+        const flows = Array.isArray(face.flows) ? face.flows : [];
+        if (flows.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + flows.map((f) =>
+                '<div class=' + Q + 'dg-trow' + Q + '>' + this._chip(escapeHtml(f.label || f.id), f.blocked ? 'muted' : '')
+                + (f.blocked ? '<span class=' + Q + 'dg-sub' + Q + '>开不了工</span>' : '')
+                + (f.needsConfirm ? '<span class=' + Q + 'dg-sub' + Q + '>写步需显式确认</span>' : '')
+                + '</div>').join('') + '</div>';
+            const stepBits = flows.map((f) => (Array.isArray(f.steps) ? f.steps.length : 0)).reduce((a, b) => a + b, 0);
+            html += '<div class=' + Q + 'dg-note' + Q + '>步骤合计 ' + escapeHtml(String(stepBits))
+                + ' 步（每步都声明输入 / 输出 / 权限 / owner；单条上限 ' + escapeHtml(String(face.stepsMax)) + ' 步）</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>九态/权限/dry-run 地基自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
     /** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议卡：三态表 + 项目清单 + 影响范围 + 缺口。
      *  与既有受控恢复交接卡分工：那张答「这一次恢复的预检过了没有」；本卡答「跳项目续玩这条路通不通」。 */
     _resumeWorkbenchHtml(pkg) {
@@ -1213,6 +1259,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务提交向导（四态：已发生 / 待确认 / 模拟报价 / 结算建议）</h3>' + this._financeCommitHtml(pkg) + '</section>');
         /* [v3.88.0 · R-X4] 续玩工作台卡与受控恢复交接卡**并列**（分工：交接卡量这一次的预检，本卡量跳项目这条路）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跳项目续玩工作台（三态：未选项目 / 清单读不到 / 已选中）</h3>' + this._resumeWorkbenchHtml(pkg) + '</section>');
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>声明式工作流（九态：空闲 / 阻塞 / 预览 / 待确认 / 运行中 / 已暂停 / 完成 / 部分完成 / 已回滚）</h3>' + this._workflowHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

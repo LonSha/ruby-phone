@@ -1166,6 +1166,18 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v3.89.0 · 拓展计划 R-X5] 声明式工作流：把需要手动串联的几步先声明成一条流程，
+        //   默认 dry-run（先预览再确认），写步只能委托真实 owner（通知 / 日历 / 存档台草稿 /
+        //   财务账本）。不执行任意用户 JS：能跑的流程由内置声明表固定，没有步骤编辑器。
+        //   零网络、零 AI、零外链；一条会话键 wf_runs 随会话隔离。
+        id: 'workflow',
+        name: '工作流',
+        icon: '🧩',
+        color: '#5a6a4a',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

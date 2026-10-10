@@ -19,7 +19,7 @@ import { installBrowserHost, waitFor } from '/tests/browser/host-stub.mjs';
 const mod = await import('/config/apps.js');
 const APPS = mod.APPS;
 const ids = APPS.map((a) => a.id);
-report({ name: 'enumeration-source', ok: ids.length === 82, detail: 'config/apps.js 条目 = ' + ids.length + '（判据要求 82）' });
+report({ name: 'enumeration-source', ok: ids.length === 83, detail: 'config/apps.js 条目 = ' + ids.length + '（判据要求 83）' });
 installBrowserHost({
   chat: Array.from({ length: 3 }, (_, i) => ({ mes: '楼层' + i, is_user: i % 2 === 0, swipes: ['x'], swipe_id: 0 })),
 });

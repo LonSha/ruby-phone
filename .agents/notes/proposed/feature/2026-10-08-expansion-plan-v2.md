@@ -193,3 +193,5 @@ Status: proposed
 - 本计划与[优化提升计划（第二期）](../architecture/2026-10-08-optimization-plan-v2.md)互链。
 - 第一期计划（[优化](../architecture/2026-10-04-optimization-plan.md) / [拓展](2026-10-04-expansion-plan.md)）为 v3.56.0 快照，X1–X8 与 O1–O8 已交付，仅作交付史保留。
 - 施工前必须重读当前 HEAD 重算基线；已被其他版本完成的条目直接转完成，禁止按快照重复做。
+
+R-X5 的执行证据契约见[实现笔记](../../implemented/feature/2026-10-10-declarative-workflow.md)，验收以当次代码与测试结果为准。

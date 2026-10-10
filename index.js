@@ -139,6 +139,16 @@ import {
     buildResumeWorkbench, rwSummaryLine, rwDraftOf, rwLevelLine, rwProjectsFromPack,
     resumeWorkbenchSelfCheck, RW_LEVELS, RW_PROJECT_STATES as RW_STATES
 } from './config/resume-workbench.js';
+/* [v3.89.0 · 拓展计划 R-X5] 安全的声明式个人工作流（纯函数协议层）。
+ *   接在咽喉的理由与 R-X1..R-X4 同族：流程声明 / 步骤输入 / 运行台账全由调用方给 ——
+ *   **本模块自己不取数、不写存储、也不执行任何用户脚本**（步骤是数据，能做的事由内置 owner 表限定）。
+ *   「先预览、要确认、再委托 owner、写后回读」四步全在咽喉这一处收口。 */
+import {
+    WF_FLOWS, WF_OWNERS, WF_RUNS_KEY, WF_LEVELS,
+    previewFlow, wfRunsOf, wfSummaryLine, wfStepLine, wfLevelLine,
+    workflowSelfCheck, wfSameScope,
+} from './config/workflow.js';
+import { createWorkflowRunner } from './config/workflow-runtime.js';
 /* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
@@ -172,7 +182,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.88.0';
+const ST_PHONE_VERSION = '3.89.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -313,6 +323,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'taskentryApp',    // [v3.65.0 · X1] 任务入口：收藏（te_pins）与台账（te_ledger）随会话隔离，
                        //             且**筛选态 _cap 与 dropped 计数是实例态** —— 换会话必须丢，
                        //             否则新会话会带着上一段的筛选与「挤掉 N 条」的旧读数。
+    'workflowApp',    // [v3.89.0 · R-X5] 工作流：展开态（_openId）与提示行是**实例态** —— 换会话必须丢，
+                      //             否则新会话会带着上一段的展开位置与「已跑过」的旧提示。
+                      //             运行台账在 wf_runs 那一格，随会话隔离，下一次 render 重取。
     'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
@@ -352,31 +365,25 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-11",
+    date: "2026-10-12",
     items: [
-        "【定位 · 计划 R-X4 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 能选一部作品当作「接着玩」的对象；② 选之前先看清这一次接续带什么、停在哪里；③ 接续动作只由唯一 owner 写；④ 未选 / 读不到 / 已选三态必须分得开。修前实测的处境是：上游已有分卷与选择性接续，而本仓**不知道「项目」是什么**（projectId 按字面量搜命中数 0）。",
-        "【修前处境的四条实测形态】** ① 续玩简报 / 分支对照 / 受控恢复交接 三件都在场，但三件各自只答一段，没有一处把「我要接着玩哪一部、带到哪儿、缺什么」一次说清；② 「项目」这一维全仓从来没有过，它只活在上游接续包里；③ 最贵的三种错读数在本面各自本可能发生：「没选项目」被画成「没有作品」、「清单读不到」被画成「零个项目」、「同名角色」按名字被合并成一个人；④ 选中项在存档台自己那一格，但读这一格抛了异常时，清单读不到的分支从来走不到（清单永远被画成空）。",
-        "【新模块 · config/resume-workbench.js（纯函数，963 行）】** 跨项目续玩工作台的**唯一实现**：三态表 + 三级操作 + 五类冲突 + 六面清单 + 接续草稿 + 世代回读 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），项目清单与选中项与各面读数全由调用方给；故**不新增存储键**（复用 X4 已登记的 archive_face 一格）。唯一外部依赖是唯一数值门 num-gate；导出十七个出口，自检十四组两侧都跑。",
-        "【三态互不同形（验收④的落点）】** 三态是尚未选择项目 / 项目清单读不到 / 已选中项目，每态给三样（状态词 + 标签 + 总括行）都不许两两相同。没选那一态的一句话就是「维持会话隔离，本项目读数一栏不产出」；读不到那一态就是「不是「没有作品」，是取数失败」。为什么单列：把「没选」写成「空」、把「读不到」写成「0 个项目」，两者都是本仓最贵的错读数。",
-        "【没选项目 ⇒ 什么都不产（fail-closed验收①的落点）】** 没选就直接返回：不产项目行、不产角色读数、不产分节读数、不给草稿、不给恢复（restore 恒 held）。它**不是**「读出来是空的」，是「这一栏压根没开工」。",
-        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 项目清单读不出来（null）与「确实一个项目都没有」（［］）分开：前者归 unreadable 并记 gap，后者仍是 ready（只是选不中）。四行面与在飞回信也同一口径：null = 读不到、［］ = 真没有、缺这一键 = 本模块点名缺面。三态处置各不相同。",
-        "【同名异宇宙不合并（身份键刻意不是名字）】** 角色身份键是 **作品标识|宇宙|名字** 三元组。拿名字当键会把两个人拼成一个人且**不报错**；两人同名但分属两个宇宙 ⇒ 两个人、两个不同的键，并必须报一条同名异宇宙冲突。键**也刻意不带卷 / 章节**：同一部作品换一卷出现，还是**同一个人**；拼进去会把同一个人拆成两个。",
-        "【拿不到会话身份即判不是同一段（fail-closed）】** 取数与同步靠两维（会话 + 分支键）与既有格门同口径。任一侧身份缺项，一律判「**不是同一段**」并报身份缺项冲突与 gap：宁可多拦一条，不可让一个项目的内容漏进另一段会话的续玩读数。",
-        "【跟项目 / 跟段 / 跟分支的行不混算】** 四类冲突各自可辨：同名异宇宙 / 跨段（另会话或另分支）/ 跨项目 / 旧回信在飞，加上身份缺项共五类。不进本段的行一律不计进影响范围，但**必须如实报出归因与条数**。为什么单列：默默丢掉与不计入是两件事；前者让人以为「就这么多」。",
-        "【在飞旧回信 ⇒ 恢复 held（不能只看预检 ok 就放行）】** 有在飞旧回信时，即使预检是 ok，也一律不给恢复并点名旧回信在飞；没有真实 owner 时同理（restore 恒 held 且归因无 owner）。",
-        "【恢复只委托 owner + 旧世代必拒（验收③的落点）】** 本模块**没有任何写面**：只把「要接续什么」说清楚，动手的是注入的真实 owner。恢复结果四态互不同形（held / done / partial / stale-rejected）；回读不看写面自述（回读状态不是 ok 即 partial）；旧异步写入必被拒（世代不符或任一侧读不出 ⇒ stale-rejected，且把 applied **置回 false**）—— 不能因为「写下去了」就说「成了」。",
-        "【接续草稿必含缺口行 + 草稿不平替已恢复】** 草稿是纯数据（不写存储、不发请求），但缺面**不许静默省略**：「你没带这一面」与「这一面是空的」必须能分辨；不可恢复时草稿里必须明写「本草稿仅为文本，未发起恢复」—— 否则「生成了草稿」会被读成「已经接上了」。",
-        "【影响范围：0 楼是合法停点（不得补 0也不得丢 0）】** 停点取本段最大楼层，没记录一律记 null。「0 楼」与「没记录」不同形—— 把 0 当成没记录（或把没记录补成 0）都会让「刚开头」与「从未开始」同形。",
-        "【存档包归一只有一份（跳项目的取数口）】** 上游接续包给的是 projectTitle / volumeId / floorEnd，本仓清单给的是 title / volume / chapter / lastFloor，两套礼规的归一只写一次（rwProjectsFromPack），存档台与咽喉都只 import。认得出（带项目身份）⇒ 一个项目行；认不出（不带项目身份）⇒ 空清单（不硬塞一行）—— 后者**不是**「读不到」，两者处置相反。",
-        "【双侧自检：每一条都跑真、假两例（验收自检的落点）】** 自检共十四组：三态不同形 / 没选不泄漏 / 清单读不到 ≠ 空 / 跳项目跳段不混算 / 同名异宇宙不合并 / 无身份 fail-closed / 在飞旧回信拦恢复 / 无 owner 即 held / 缺面进 gap 而可选面不记 / 草稿必含缺口行 / 旧世代归因 / 0 楼合法 / 恢复四态不同形 / 存档包归一。为什么两侧：只跑真例只能证明「能跑」，证明不了「拦得住」。",
-        "【咽喉接线（唯一取数口 + 唯一恢复入口）】** 取数落在 index.js 的 refreshResumeWorkbench：项目清单从存档台收下的那份包原文读并走唯一归一，选中项取存档台自己那一格，四行面各取本机既有读数，缓存挂宿主；刷新点放在日历提醒检查的早退之前，不 await。**唯一的恢复入口**是 applyResumeRestore：读不到读数与三个不可恢复状态各自给 held 与不同文案，真正动手的只能是注入的 owner（本机不自己改主档）；视图与诊断都不写存储。",
-        "【两处视图纯渲染 + 一处诊断协议面】** 存档台项目块给**五个不同形**的读数（还没收过包 / 收下的东西读不懂 / 认得出但不带项目身份 / 清单里有 N 个项目 / 清单读不到），且两个动作口（选这个 / 取消选择）各自分话；诊断新增跳项目续玩工作台卡，与既有受控恢复交接卡分工明确：后者量「这一次恢复的预检过了没有」，本卡量「跳项目这条路通不通」。",
-        "【读不到归因端：视图不自己猜】** 存档台新增 projectsWhy，只给三种值（read_threw / payload-unreadable / 空）；视图直接读它说人话。为什么单列：读不到的各种原因（存储抛异常 / 原文读不懂）若在视图里各自猜，新增一种原因时就会被默默归成「还没收过包」。",
-        "【本版自己抓到的一处真缺陷（由测试集与探针当场报出）】** 存档台的 _loadProjects 原先无论读得读不得都会赋值，于是「项目清单读不到」这一分支从来走不到，存储抛异常时用户会把取数失败当成「这份包没有项目」。已改成：读这一格抛了异常、或收下的原文读不懂，一律判「读不到」（null）并在视图里给归因；「读不到」分支也排在「还没收过包」之前。盲点的共性跟 R-X3 一样：「读不到」与「没有」这条口径，在只用一个字段时就会被静默压平。",
-        "【交棒改写（判据面，不是放宽）】** 本版把「接着玩」这条路从「三件各答一段、没有项目这一维」改成**单一项目取数口 + 唯一恢复入口**：以后多一种「可接续的东西」，只需在四行面里加一类，三态判定与同名归并与世代回读都随行给出。",
-        "【配套判据与负控制】** tests/system-v3880.test.mjs 五面 22 条全绿：A 结构面（三态三级五类十一归因六面 + 复用 X4 那一格 + 派生面枚举面未命中）；B 行为面（十三条判据同源一次通过 + 真跑全链 + 去重 + 角色身份键）；C 接线面（咽喉四处 + 四个非 owner 层零写存储 + 两条视图纯渲染 + 真跑取数三读数不同形）；D 负控制（七处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第八处自证破坏副本真被加载且未触及的判据仍成立）；E 版本锚（五源同源不低于 3.88.0）。",
-        "【版本升至 3.88.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3880.py 对齐 tools/bump_v3870.py）。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的两个具体形态：项目清单读不到被画成「没有项目」、同名异人被当成同一个人而不报。本版**不能保证**：① 真宿主里存档台那一格被并发改写时选中项的落笔次序；② 上游接续包字段在真机数据上的实际取值分布（本版只把两套礼规归成一份，不新增判定）；③ 真机上从项目行点选后咽喉产出的读数在长会话里的观感。边界原文见运行时验证边界文档。"
+        "【定位 · 计划 R-X5 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 用户能把几步串成一条自己的流程；② 每一步都自己声明读写面与归属 owner；③ 能预览 / 暂停 / 重试 / 回滚；④ 绝不允许用户提供任意 JavaScript。修前实测的处境是：上游已有单点动作与确认提交向导，而本仓**没有「流程」这一层**（flow 这一维全仓从来没有过，串联只活在用户的脑子里）。",
+        "【修前处境的四条实测形态】** ① 一件事要跨三个 App 时，用户只能手点三次且中间没有任何一步能被复查；② 手点三次意味着第二步失败后第一步没人知道该不该撤；③ 最贵的三种错读数本该在本面发生却无处可拦：「没确认」被当成「确认了」、「某步失败」被整条画成「完成了」、「重复点一次」把通知与草稿又写一份；④ 回滚此前不存在，撤一步只能靠用户自己回忆原来是什么。",
+        "【新模块 · config/workflow.js（纯函数内核）】** 声明式个人工作流的**唯一实现**：三档权限 + 九种流程状态 + 五种单步状态 + 十七条归因词 + 七个 owner 登记 + 两条内置流程 + 预览 / 计划 / 收成 / 回读 / 回滚 / 暂停 / 续跑。**不写存储**（不持键、不带计时器、不碰 DOM、不 eval、不 new Function），输入与台账全由调用方给。",
+        "【新模块 · config/workflow-runtime.js（执行协调器）】** 把实际执行、逐步检查点、暂停、续跑、逆序回滚集中到一处：端口注入（scope / token / inputs / readRuns / writeRuns / invoke / publish / newKey / now / yieldStep）让 I/O 全部由宿主提供。执行器**不解释任何用户代码**：它只会按声明表逐位调 owner。",
+        "【默认 dry-run（验收①的落点）】** 写流程未带显式确认一律判 not-confirmed：预览只产计划与「要写什么」，一步不跑、一字不写。要真跑必须由调用方显式把确认带上来；这是本面最便宜也最容易被绕过的一道门，故由内核与运行器**两侧各拦一次**。",
+        "【某步失败不得冒充完成（验收②的落点）】** 任一步 failed / skipped / 结果未知 ⇒ 整条**只叫 partial**，绝不叫 done。写前先落 running 检查点、owner 返回后再落结果：owner 抛错或返回未知时该步保持 running（结果未知），**不许自动重跑**。失败即断链：后继步骤一步不跑。",
+        "【重试幂等与同条流程内部的续跑】** 两条口径并立：台账里已有同一 idemKey ⇒ replay，一步也不跑（把已成的写成 replayed，executed 归零）；同一条流程断在半路再续 ⇒ 已成步骤转 replayed，只有未成的几步交回去跑。两处都由 resumeFlow 与计划器的 run 标记共同保证，测试里的重试恰好只调回那一两步。",
+        "【跨会话 / 跨分支 / 跨世代一律 fail-closed（验收③的落点）】** 台账命中行必须与本次**属同一段**才叫重放；同键不同段一律 scope-changed 拒（既不当重放，也不重跑）。台账读不到（null 或非数组）**绝不当作空账本**：判 run-unreadable 拒。执行中会话或世代变了，旧回执一律不写入新会话。",
+        "【回滚只撤本机记录，真实数据交回各 owner】** 回滚按**写步逆序**列清单，交给各自的 owner 去撤（本模块只产「撤什么」的收据清单，绝不自己改真实余额 / 通知 / 日历）。已撤过的写步不再出现在可撤清单里；只撤掉一部分就只叫 partial，全部撤完才叫 rolledback。没有可撤的一律 nothing-to-rollback，不假装撤过。",
+        "【owner 口不解释脚本（验收④的落点），全部走真实接口】** index.js 的 owner 口只按登记表分派：草稿走存档台 setTarget 并校验 saved 与回读；通知走通知账本 push / flushNow / remove 并校验 senderKey 与回读；日历走真实剧情日与 addMemo / deleteMemo 并校验 source 与回读；账单复用既有确认提交动作与账本，**不复制第二套存储实现**。撤销是**互斥分支**，绝不落入写入分支。",
+        "【新存储键 wf_runs 与会话数据域】** 运行台账按会话隔离（/^wf_/ 归入会话数据域），登记进键审计；每行至少留 flowId / runKey / state / scope / 步骤证据与必要收据，上限四十条并如实报被挤条数。台账三态分开：坏 JSON 与 undefined 是**读不到**、空数组是**读到了但空**、含非法行是**读到了但有丢弃计数**。",
+        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/workflow 三层（App / 视图 / 样式）：视图只渲染与列动作白名单，App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增工作流卡（九态表 + 三档权限 + 流程 / 步骤 / owner 读数 + 台账可读性 + 上次运行 + 自检）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 枚举场景六处同步登记。",
+        "【配套判据与负控制】** tests/system-v3890.test.mjs 五面 22 条全绿：A 结构面（三档权限 / 九态互不同形 / 每条流程每步都有 owner / 只读步与写步宣告一致）；B 行为面（十条：dry-run、真桩全链与单调重放、失败断链、暂停竞态、跨世代拒、逆序回滚）；C 接线面（直接切出真源码的 owner 口在受控上下文里跑：真存档台真通知账本往返与撤销、null / 抛错一律不算成）；D 负控制（七处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第八处自证破坏副本真被加载且模块自检当场报出该处破坏）。",
+        "【版本升至 3.89.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3890.py 对齐 tools/bump_v3880.py），本版不新增存储键以外的扫描面无漂移。",
+        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 执行器初版有三处真缺陷，全部在合并前被自家判据抓住并改掉：① **台账读不到被当成空账本放行**（模块自检当场报出「台账读不到竟放行」）；② **续跑只改内存状态而不真跑剩余 owner**（把没跑写成跑过了）；③ **回读发生在台账写入之前**，等于没确认刚写下去的那一份。三处都不是推演清单，是跑出来的红。",
+        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：本版自己抓到的上述三处缺陷、以及旧判据里绑定上一版专有词的写法交棒为形态锚（下限形），使得抬版不再把「本版这件事」偷换成「上一版那件事」。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：台账读不到被画成「没有运行记录」、某步失败被整条画成「完成」、回读发生在写入之前被当成已确认。本版**不能保证**：① 真宿主里存档台 / 通知账本 / 日历那三格被并发改写时的落笔次序；② 两步之间的真实停顿与真机上暂停点击的到达时机；③ 真机长会话里这条流程的观感。边界原文见运行时验证边界文档。",
     ]
 };
 
@@ -2649,6 +2656,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   「读不到≠没有」的纪律），同样放在早退之前 —— 它读的项目清单 / 选中项 / 行动中心
          *   缓存都跟剧情时间无关。不 await。 */
         try { refreshResumeWorkbench(); } catch (_rwr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流的只读取数：与前者同族（同一份「读不到≠没有」
+         *   的纪律），同样放在早退之前 —— 流程声明与运行台账都跟剧情时间无关。不 await。 */
+        try { refreshWorkflow(); } catch (_wfr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -3465,6 +3475,227 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         } catch (e) {
             return { ok: false, note: '恢复失败：' + String((e && e.message) || e), state: '' };
         }
+    }
+
+    /* 本模块对外只认这五个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
+     *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。 */
+    const WF_ACTION_KEYS = ['preview', 'run', 'pause', 'resume', 'rollback'];
+
+    /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流的**唯一取数口**（与 R-X1..R-X4 四条同族）。
+     *   · 「流程声明」是内置的（config/workflow.js 的步骤表）—— 用户改不了，也无需改；
+     *   · 「运行台账」取自 `wf_runs` 那一格（读不出与空台账**分开**）；
+     *   · 「输入面」由本口现取（续玩工作台读数 / 财务草稿都是本机既有读数）；
+     *   · 缓存挂 `_workflow` / `_workflowLine`，视图与诊断只读这一份。
+     *   ★ 不 await、自带兜底：放在日历早退之前。 */
+    function refreshWorkflow() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+
+            /* 会话身份两维：与 session-gate / provenance-graph / resume-workbench 同口径。
+             *   拿不到即判「什么都进不了读数」（内核 fail-closed）。 */
+            const chatId = String(storage.currentConversationId || '').trim();
+            let branchKey = '';
+            try {
+                const ctx = storage.getContext?.();
+                branchKey = String(ctx?.chatMetadata?.branch_key || ctx?.chatMetadata?.branchKey || '').trim();
+            } catch (_eb) { branchKey = ''; }
+
+            /* 运行台账：**读不出来（null）与零条（［］）分开** —— 这一格是本模块最贵的一条口径，
+             *   把「读不到」当成「没跑过」会让重试直接重复发一条通知。 */
+            const runs = wfReadRuns();
+            const runsNorm = wfRunsOf(runs);
+
+            /* 输入面：每一项都**现取**，每一项都可能「本机暂时给不出」。 */
+            const inputs = {};
+            try { inputs['archive-pack'] = storage.get?.('archive_pack') ?? null; } catch (_e1) { inputs['archive-pack'] = null; }
+            inputs['resume-face'] = vp._resumeWorkbench || null;
+            inputs['settlement-draft'] = vp._financeDraftCache || null;
+
+            /* 逐条流程的**只读**读数（步骤 / 权限 / owner / 可跑性）—— 不执行任何东西。 */
+            const flows = [];
+            for (const f of WF_FLOWS) {
+                const pv = previewFlow({ flowId: f.id, scope: { chatId: chatId, branchKey: branchKey }, inputs: inputs, runs: runsNorm.entries, at: null });
+                flows.push({
+                    id: f.id, label: f.label, hint: f.hint,
+                    steps: pv.steps.map((st) => ({
+                        id: st.id, label: st.label, level: st.level, levelLabel: (WF_LEVELS[st.level] || {}).label || '',
+                        writes: st.writes, owner: st.owner, ownerWhat: st.ownerWhat, out: st.out,
+                        faces: st.faces, problems: st.problems, line: wfStepLine(st),
+                    })),
+                    scopeState: pv.scopeState, willWrite: false,
+                    needsConfirm: pv.needsConfirm, blocked: pv.blocked, problems: pv.problems,
+                });
+            }
+
+            const scope = { chatId, branchKey };
+            if (vp._workflowRun && (!wfSameScope(vp._workflowRun.scope, scope)
+                || vp._workflowToken !== handoffEpoch())) vp._workflowRun = null;
+            vp._workflowToken = handoffEpoch();
+            if (!vp._workflowRun && runsNorm.readable) {
+                vp._workflowRun = runsNorm.entries.find(r => wfSameScope(r.scope, scope)) || null;
+            }
+            const cached = {
+                at: Date.now(), token: handoffEpoch(),
+                scope: { chatId: chatId, branchKey: branchKey },
+                scopeState: flows.length ? flows[0].scopeState : 'absent',
+                runs: runsNorm, flows: flows,
+                inputs: inputs,
+                selfCheck: workflowSelfCheck(),
+                levels: wfLevelLine(),
+                actions: WF_ACTION_KEYS.slice(),
+                run: vp._workflowRun || null,
+            };
+            vp._workflow = cached;
+            vp._workflowLine = wfSummaryLine(vp._workflowRun);
+        } catch (e) {
+            console.warn('[Workflow] 声明式工作流取数失败:', e);
+        }
+    }
+
+    /**
+     * [v3.89.0 · R-X5] **唯一执行入口**：视图把「要跑哪条流程 / 确认与否」交上来。
+     *   · 预览 / 计划 / 执行 / 回读 / 台账追加 / 回滚全部收在这一处；
+     *   · 委托面**只有本函数里这张 owner 表**（表外的 owner 在计划阶段就被拒了）；
+     *   · “能不能跑”全由内核判（本处不重判）；本处只做一件事：把意图交给真源。
+     * @returns {{ok:boolean, note:string, state:string, kind:string}}
+     */
+    let workflowRunner = null;
+    function wfReadRuns() {
+        try {
+            if (!storage || typeof storage.get !== 'function') return null;
+            const raw = storage.get(WF_RUNS_KEY, '[]');
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (_e) { return null; }
+    }
+    function applyWorkflowAction(action) {
+        if (!workflowRunner) workflowRunner = createWorkflowRunner({
+            scope: () => { refreshWorkflow(); return window.VirtualPhone?._workflow?.scope || {}; },
+            token: () => handoffEpoch(),
+            inputs: () => window.VirtualPhone?._workflow?.inputs || {},
+            readRuns: wfReadRuns,
+            writeRuns: rows => storage.set(WF_RUNS_KEY, JSON.stringify(rows)),
+            invoke: wfInvokeOwner,
+            publish: rec => { window.VirtualPhone._workflowRun = rec; refreshWorkflow(); },
+            newKey: () => 'run-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+            now: () => Date.now(),
+            yieldStep: () => new Promise(resolve => setTimeout(resolve, 0)),
+        });
+        return workflowRunner.act(action);
+    }
+
+    function wfInvokeOwner(ownerKey, req) {
+        const vp = window.VirtualPhone;
+        const reg = Object.prototype.hasOwnProperty.call(WF_OWNERS, ownerKey) ? WF_OWNERS[ownerKey] : null;
+        if (!reg) return { ok: false, note: 'owner 未登记' };
+        refreshWorkflow();
+        if (!wfSameScope(req.scope, vp._workflow?.scope) || req.token !== handoffEpoch()) {
+            return { ok: false, note: '会话已变' };
+        }
+        const reads = req.payload?.reads || {};
+        const receipt = req.receipt || {};
+        const readJSON = key => {
+            const raw = storage.get(key);
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        };
+        const refusal = note => ({ ok: false, note });
+        // Undo is a disjoint dispatch branch: it must never fall through to apply.
+        if (req.rollback === true) {
+            if (ownerKey === 'notify') {
+                const log = vp.notificationLog;
+                if (!log || !receipt.id || receipt.created !== true) return refusal('缺通知撤销收据');
+                const item = log.get(receipt.id);
+                if (item && item.senderKey !== receipt.senderKey) return refusal('通知已改变，不撤他人数据');
+                if (item) log.remove(receipt.id);
+                log.flushNow();
+                const rows = readJSON('sys_notifs');
+                return { ok: Array.isArray(rows) && !rows.some(r => r.id === receipt.id), note: '通知撤销回读' };
+            }
+            if (ownerKey === 'archive-draft') {
+                const ar = vp.archiveApp;
+                if (!ar || typeof receipt.before !== 'string' || typeof receipt.after !== 'string') return refusal('缺草稿撤销收据');
+                const current = readJSON('archive_draft');
+                if (current?.target !== receipt.after) return refusal('草稿已被编辑，不覆盖');
+                const r = ar.setTarget(receipt.before);
+                return { ok: r?.saved === true && readJSON('archive_draft')?.target === receipt.before, note: '草稿已还原' };
+            }
+            if (ownerKey === 'calendar') {
+                const data = (vp.calendarApp || vp._calendarReminderApp)?.calendarData;
+                if (!data || !receipt.id) return refusal('缺日历撤销收据');
+                const rows = readJSON('calendar_memos');
+                if (!Array.isArray(rows)) return refusal('日历读不到');
+                const row = rows.find(r => r.id === receipt.id);
+                if (row && (row.source !== 'workflow' || row.title !== receipt.title)) return refusal('日历项已改变');
+                if (row) data.deleteMemo(receipt.id);
+                const back = readJSON('calendar_memos');
+                return { ok: Array.isArray(back) && !back.some(r => r.id === receipt.id), note: '日历撤销回读' };
+            }
+            if (ownerKey === 'finance-ledger') {
+                if (receipt.created !== true) return { ok: true, note: '原有确认记录不撤销' };
+                if (!receipt.idemKey || vp._financeCommitPreview?.idemKey !== receipt.idemKey) return refusal('当前账单已变，不撤别的账');
+                const r = applyFinanceCommitAction('revoke');
+                const back = readJSON(FINANCE_COMMIT_LEDGER_KEY);
+                return { ok: r?.ok === true && Array.isArray(back) && !back.some(e => e.idemKey === receipt.idemKey), note: '仅撤本机确认记录，不改真实余额' };
+            }
+            return refusal('owner 不支持撤销');
+        }
+        if (ownerKey === 'resume-workbench') {
+            const face = reads['resume-face'];
+            if (!face?.canDraft) return refusal('没有可生成的项目摘要');
+            const draft = rwDraftOf(face);
+            const line = [draft.title].concat(draft.lines, draft.gaps, draft.notice || '').join(String.fromCharCode(10));
+            return { ok: !draft.empty, value: { line }, note: '已生成续玩摘要' };
+        }
+        if (ownerKey === 'archive-draft') {
+            const ar = vp.archiveApp;
+            const txt = String(reads.brief?.line || '').trim();
+            if (!ar || !txt) return refusal('存档台或摘要缺席');
+            const before = ar.drafts().target;
+            const r = ar.setTarget(txt);
+            const back = readJSON('archive_draft');
+            const ok = r?.saved === true && back?.target === ar.drafts().target;
+            return { ok, uncertain: !ok, value: { target: back?.target },
+                receipt: { before, after: back?.target }, note: ok ? '草稿保存回读一致' : '草稿保存未确认' };
+        }
+        if (ownerKey === 'notify') {
+            const log = vp.notificationLog;
+            if (!log || !reads.brief?.line) return refusal('通知口或摘要缺席');
+            const senderKey = 'workflow:' + req.idemKey;
+            const old = log.list().find(r => r.senderKey === senderKey);
+            if (old) return { ok: true, value: { id: old.id }, receipt: { id: old.id, senderKey, created: true }, note: '通知已存在' };
+            const r = log.push({ title: '续玩摘要已备好', message: reads.brief.line, appId: 'workflow', senderKey });
+            if (!r || r.error || !r.id) return refusal('通知 owner 拒绝写入');
+            log.flushNow();
+            const rows = readJSON('sys_notifs');
+            const ok = Array.isArray(rows) && rows.some(n => n.id === r.id && n.senderKey === senderKey);
+            return { ok, uncertain: !ok, value: { id: r.id }, receipt: { id: r.id, senderKey, created: !r.merged }, note: '通知落账回读' };
+        }
+        if (ownerKey === 'finance-ledger') {
+            if (JSON.stringify(reads['settlement-draft']) !== JSON.stringify(vp._financeDraftCache)) return refusal('账单草稿已变');
+            const raw = readJSON(FINANCE_COMMIT_LEDGER_KEY) ?? [];
+            const plan = planCommit(reads['settlement-draft'], raw, { at: Date.now() });
+            if (![FC_PLANS.fresh, FC_PLANS.replay].includes(plan.plan)) return refusal('账单不可确认');
+            const r = applyFinanceCommitAction('commit');
+            const back = readbackCommit(plan, readJSON(FINANCE_COMMIT_LEDGER_KEY));
+            const ok = r?.ok === true && back.confirmed === true;
+            return { ok, uncertain: !ok, value: { idemKey: plan.idemKey },
+                receipt: { idemKey: plan.idemKey, created: plan.plan === FC_PLANS.fresh }, note: r?.note || '账单未确认' };
+        }
+        if (ownerKey === 'calendar') {
+            const app = vp.calendarApp || vp._calendarReminderApp;
+            const data = app?.calendarData;
+            const date = app?.calendarView?.getStoryDateParts?.();
+            const dateKey = date && app.calendarView.toDateKey(date);
+            if (!data || !dateKey || !reads.ledger?.idemKey) return refusal('日历、剧情日或确认账单缺席');
+            const title = '结算已确认 · ' + reads.ledger.idemKey;
+            const old = data.getMemos().find(r => r.source === 'workflow' && r.title === title && r.dateKey === dateKey);
+            const r = old || data.addMemo({ dateKey, title, type: 'daily', color: 'blue', source: 'workflow', globalReminder: false });
+            if (!r?.id) return refusal('日历 owner 拒绝创建');
+            const rows = readJSON('calendar_memos');
+            const ok = Array.isArray(rows) && rows.some(m => m.id === r.id);
+            return { ok, uncertain: !ok, value: { id: r.id }, receipt: { id: r.id, title: r.title, created: !old }, note: '日历备忘回读' };
+        }
+        return refusal('本版未接这条 owner');
     }
 
     function playWechatMessageSound(options = {}) {
@@ -10731,9 +10962,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                  *   视图只交「要接续什么」，委托真实 owner 与回读都在咽喉这一处做。
                  *   只读读数口另挂 `resumeWorkbenchFace`（视图与诊断读这一份）。 */
                 applyResumeRestore: applyResumeRestore,
+                /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流的**唯一执行入口**：
+                 *   视图只交「跑哪条流程 / 确认与否」，预览 / 计划 / 委托 owner / 回读 / 追台账
+                 *   / 回滚都在咽喉这一处做。只读读数口另挂 `workflowFace`（视图与诊断读这一份）。 */
+                applyWorkflowAction: applyWorkflowAction,
                 /* 只读读数口：视图与诊断读这一份，不各算一次。 */
                 financeCommitFace: function () { const v = window.VirtualPhone; return v ? v._financeCommitCache || null : null; },
                 resumeWorkbenchFace: function () { const v = window.VirtualPhone; return v ? v._resumeWorkbench || null : null; },
+                workflowFace: function () { refreshWorkflow(); const v = window.VirtualPhone; return v ? v._workflow || null : null; },
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,
