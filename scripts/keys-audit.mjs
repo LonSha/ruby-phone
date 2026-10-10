@@ -344,6 +344,7 @@ const KEY_REGISTRY = [
   { key: 'tv_ledger', scope: 'chat', note: '[v3.54.0] 旅行记账案头动作台账' },
   { key: 'te_pins', scope: 'chat', note: '[v3.65.0] 任务入口收藏（按用户摆放顺序的卡片 id 列表；上限 12）' },
   { key: 'wf_runs', scope: 'chat', note: '[v3.89.0] 声明式工作流运行台账（本机记「这条流程跑过哪些运行键」：流程 id / 运行键 / 状态 / 时刻 / 归属段；上限 40）' },
+  { key: 'cw_published', scope: 'chat', note: '[v3.90.0] 创作工作台发布台账（幂等键 <source>:<materialId>:<targetApp> → 已发布；同键只记一次，上限 150）' },
   { key: 'te_ledger', scope: 'chat', note: '[v3.65.0] 任务入口动作台账（打开/拒开/收藏/取消；上限 80）' },
   { key: 'schedule_ledger', scope: 'chat', note: '[v3.67.0] 日程提醒协议账本（四源归一后的幂等键/撤回/改期/回档留痕；上限 240）' },
   { key: 'finance_ledger', scope: 'chat', note: '[v3.68.0] 财务结算提交追踪账本（旅行分摊结算草稿的幂等提交/撤回留痕；上限 120）' },

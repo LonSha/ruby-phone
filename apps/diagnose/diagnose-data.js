@@ -177,6 +177,14 @@ import { numOrNull } from '../../config/num-gate.js';
  *   ★ 本面与既有的受控恢复交接面**不是重复**：那张量的是「这一次恢复的预检」，
  *     本面量的是「跳项目续玩这条路通不通」—— 项目 / 卷 / 停点 / 同名异宇宙 / 三级操作。 */
 import { resumeWorkbenchSelfCheck, RW_PROJECT_STATES, RW_STATE_LABELS } from '../../config/resume-workbench.js';
+/* [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面：与 workflowFace / resumeWorkbenchFace 同范式——
+ *   只读自检 + 五类素材状态表 + 四类检查行 + 宿主缓存读数（素材 / 目标 / 发布台账 / 计划）+ 每步 owner。
+ *   ★ 本卡修的是**上一版的真实缺口**：v3.70.0 的 creation-pipeline 导出面 11 项里，
+ *     产品端只消费了 1 项（normalizeCreationLedger），其余 10 项全仓零调用。 */
+import {
+    cwSelfCheck, CW_KINDS, CW_CHECK_CODES, CW_STEPS, CW_TARGET_OWNERS,
+    cwPlanLine, cwStepLine, cwCheckLine,
+} from '../../config/creation-workbench.js';
 /* [v3.83.0 · 计划 R-O7] 诊断处置面：把「有读数」翻成「能处置」。
  *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
  *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
@@ -938,6 +946,86 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面：与 workflowFace 同范式 ——
+     *   五类素材状态 / 四类检查行 / 目标 owner 表 / 发布台账三态。
+     *   ★ 与 R-X5 那张卡的分工：那张答「把几步串成流水这条路通不通」，
+     *     本卡答「把一个素材发到一个 App 这条路通不通（谁检查、谁落账、谁真写）」。 */
+    const creationWorkbenchFace = (() => {
+        try {
+            const self = cwSelfCheck('');
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const kinds = CW_KINDS.map((k) => ({
+                key: k.key, label: k.label, publishable: k.publishable === true, acceptsKey: String(k.acceptsKey || ''),
+            }));
+            const checks = CW_CHECK_CODES.map((c) => ({ code: c.code, level: c.level, label: c.label }));
+            const steps = CW_STEPS.map((st) => ({ id: st.id, label: st.label, level: st.level, writes: st.writes === true, line: cwStepLine(st) }));
+            const owners = Object.keys(CW_TARGET_OWNERS).map((t) => ({
+                target: t, owner: CW_TARGET_OWNERS[t].owner, what: CW_TARGET_OWNERS[t].ownerWhat,
+            }));
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const cache = vp ? (vp._creationWorkbench || null) : null;
+            const mats = (cache && cache.materials) ? cache.materials : null;
+            const items = (mats && Array.isArray(mats.items)) ? mats.items : [];
+            const states = (mats && Array.isArray(mats.states)) ? mats.states : [];
+            const unreadable = (mats && Array.isArray(mats.unreadable)) ? mats.unreadable : [];
+            const pub = (cache && cache.published) ? cache.published : null;
+            const pubReadable = !!(pub && pub.readable === true);
+            const plan = (cache && cache.plan) ? cache.plan : null;
+            let head = '尚未取数';
+            if (cache && mats) {
+                head = mats.readable
+                    ? ('素材 ' + String(items.length) + ' 条（认不出 ' + String(mats.dropped || 0) + ' 条）')
+                    : ('有 ' + String(unreadable.length) + ' 类清单**读不到**（**不是「没有素材」**）');
+                head += pubReadable
+                    ? (' · 已发布台账 ' + String((pub.entries || []).length) + ' 条')
+                    : ' · 已发布台账**读不到**（**不是「没发过」**）';
+            }
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                kinds: kinds,
+                checks: checks,
+                checksLine: checks.map((c) => c.label).join(' / '),
+                steps: steps,
+                owners: owners,
+                states: states,
+                materials: {
+                    readable: mats ? mats.readable === true : null,
+                    count: mats ? items.length : null,
+                    dropped: mats ? (mats.dropped || 0) : null,
+                    unreadable: unreadable,
+                    items: items.map((it) => ({
+                        ref: String(it.ref || ''), kind: String(it.kind || ''), label: String(it.label || ''),
+                        source: String(it.source || ''), sourceId: String(it.sourceId || ''),
+                        version: it.version || 0, present: it.present === true,
+                        linkOk: it.linkOk !== false,
+                        publishable: it.publishable === true,
+                    })),
+                },
+                targets: (cache && Array.isArray(cache.targets)) ? cache.targets.map((t) => ({
+                    target: String(t.target || ''), label: String(t.label || ''),
+                    owner: String(t.owner || ''), selectable: !!t.owner,
+                })) : [],
+                published: {
+                    readable: cache ? pubReadable : null,
+                    count: cache && pubReadable ? (pub.entries || []).length : null,
+                    unreadable: cache ? !pubReadable : null,
+                },
+                planBlocked: plan ? plan.blocked === true : null,
+                planLine: plan ? cwPlanLine(plan) : '',
+                planBlockers: plan ? (plan.blockers || []).map((b) => String(b.note || b.code)) : [],
+                line: head,
+                text: '创作工作台：五类素材（' + kinds.map((k) => k.label).join(' / ') + '）；'
+                    + '四类检查（' + checks.map((c) => c.label).join(' / ') + '）；'
+                    + '目标 owner ' + String(owners.length) + ' 个；'
+                    + (cache ? head : '尚未取数')
+                    + (plan ? ('；计划 ' + cwPlanLine(plan)) : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；五类互不同形 / 默认 dry-run / 发布只委托真源 owner / 幂等不复制第二个状态源自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
      *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围）+ 缺口。
      *   ★ 与既有受控恢复交接面分工：那张答「这一次恢复的预检过了没有」，本面答「跳项目续玩这条路通不通」。 */
@@ -1199,7 +1287,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1271,6 +1359,16 @@ export function workflowFaceText(face) {
         if (!f) return '声明式工作流：读取异常（已降级）—— 这不是「没有流程」';
         return String(f.text || '声明式工作流：无读数');
     } catch (_e) { return '声明式工作流：读取异常（已降级）'; }
+}
+/** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
+ *  与 workflowFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+export function creationWorkbenchFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '创作工作台：读取异常（已降级）—— 这不是「没有素材」';
+        return String(f.text || '创作工作台：无读数');
+    } catch (_e) { return '创作工作台：读取异常（已降级）'; }
 }
 /** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
  *  与 financeCommitFaceText 同范式：只做转发与文案，视图不自己拼。
@@ -1604,6 +1702,7 @@ export default {
     financeCommitFaceText,
     workflowFaceText,
     resumeWorkbenchFaceText,
+    creationWorkbenchFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

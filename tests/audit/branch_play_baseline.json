@@ -18,12 +18,12 @@
   ]
  },
  "readings": {
-  "files_scanned": 410,
+  "files_scanned": 413,
   "rollback_points": 41,
   "rollback_files": 4,
   "rollback_entry_defs": 12,
   "upstream_global_read_sites": 4,
-  "chat_data_patterns": 310,
+  "chat_data_patterns": 312,
   "namespace_store_sites": 5,
   "checkpoint_face_hits": 0,
   "preview_face_hits": 34,

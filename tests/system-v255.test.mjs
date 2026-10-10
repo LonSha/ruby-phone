@@ -113,6 +113,8 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
     taskentryApp: 'taskentry',      // [v3.65.0] 任务入口：换会话必须丢筛选态（_cap）与台账挤掉计数（_dropped，都是实例态），收藏与台账随会话重取
     workflowApp: 'workflow',        // [v3.89.0] 工作流：换会话必须丢展开态（_openId）与提示行，
                                     //            运行台账由咽喉下一次 render 重取
+    creationWorkbenchApp: 'creationdesk', // [v3.90.0] 创作台：换会话必须丢选中素材 / 目标 / 敏感标记 / 提示行（上一个
+                                          //            角色的选中项不能留着），素材与台账由咽喉重取
     searchApp: 'search'             // [v3.58.0] 全局搜索：换会话作废在跑的全历史扫描（_scanGen）并重对齐宿主源表
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），

@@ -933,10 +933,10 @@
   "[v3.14.0 交棒] criteria_pass_count 记录「本版有几条准入判据转 pass」（当前 2 / 4）。它不是「可行度」指标：钉住它是为了防「读数静静变好」（某一条无关改动推过准入线时，不得让它沉默变绿）。"
  ],
  "readings": {
-  "app_classes": 79,
-  "slots": 91,
-  "app_slots": 80,
-  "app_slot_share_pct": 87.9,
+  "app_classes": 80,
+  "slots": 92,
+  "app_slots": 81,
+  "app_slot_share_pct": 88.0,
   "wiring_points": 62,
   "app_exit_points": 50,
   "non_app_points": 12,
@@ -945,7 +945,7 @@
   "points_p1": 19,
   "points_p2": 20,
   "points_p3": 23,
-  "sig_empty": 69,
+  "sig_empty": 70,
   "sig_default": 1,
   "sig_required": 1,
   "sig_none": 8,

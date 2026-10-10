@@ -91,7 +91,8 @@ import {
 import {
     creationSelfCheck,
     normalizeCreationLedger,
-    CREATION_LEDGER_LIMIT
+    CREATION_LEDGER_LIMIT,
+    CREATION_TARGETS,
 } from './config/creation-pipeline.js';
 /* [v3.71.0 · 拓展计划 X7] 多角色生图操作深化协议层（纯函数）：
  *   角色槽位模型 + payload 预检 + 幂等图片回执账本。 */
@@ -149,6 +150,19 @@ import {
     workflowSelfCheck, wfSameScope,
 } from './config/workflow.js';
 import { createWorkflowRunner } from './config/workflow-runtime.js';
+/* [v3.90.0 · 拓展计划 R-X6] 素材到发布的完整创作工作台（纯函数协议层）。
+ *   本模块修的是**上一版的真实缺口的续集**：v3.70.0 的 creation-pipeline 把「八来源 / 六目标 /
+ *   草稿 / 幂等账本」都建好了，但产品端只消费了其中一个导出（normalizeCreationLedger），
+ *   其余七个全仓零调用 —— 本仓被点过六次的同一形态。
+ *   接在咽喉的理由与 R-X1..R-X5 同族：素材清单 / 目标清单 / 发布台账全由调用方给，
+ *   **本模块自己不取数、不写存储、不执行任何用户脚本**；发布动作一律委托目标 App 的真源写口
+ *   （wechatData.addMoment / weiboData.publishUserPost / PixivApp.createNovel /
+ *   MagazineApp.addArticle / DoujinApp.saveToShelf），本处只做「检查 → 委托 → 回读 → 记台账」。 */
+import {
+    CW_STEPS, CW_TARGET_OWNERS, CW_LEVELS, CW_KIND_KEYS,
+    cwCollectMaterials, cwFindMaterial, cwPlanPublish, cwPlanLine, cwStepLine,
+    cwReceiptOf, cwAppendPublished, cwSelfCheck, cwTargetOwnerOf,
+} from './config/creation-workbench.js';
 /* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
@@ -182,7 +196,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.89.0';
+const ST_PHONE_VERSION = '3.90.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -365,25 +379,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-12",
+    date: "2026-10-13",
     items: [
-        "【定位 · 计划 R-X5 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 用户能把几步串成一条自己的流程；② 每一步都自己声明读写面与归属 owner；③ 能预览 / 暂停 / 重试 / 回滚；④ 绝不允许用户提供任意 JavaScript。修前实测的处境是：上游已有单点动作与确认提交向导，而本仓**没有「流程」这一层**（flow 这一维全仓从来没有过，串联只活在用户的脑子里）。",
-        "【修前处境的四条实测形态】** ① 一件事要跨三个 App 时，用户只能手点三次且中间没有任何一步能被复查；② 手点三次意味着第二步失败后第一步没人知道该不该撤；③ 最贵的三种错读数本该在本面发生却无处可拦：「没确认」被当成「确认了」、「某步失败」被整条画成「完成了」、「重复点一次」把通知与草稿又写一份；④ 回滚此前不存在，撤一步只能靠用户自己回忆原来是什么。",
-        "【新模块 · config/workflow.js（纯函数内核）】** 声明式个人工作流的**唯一实现**：三档权限 + 九种流程状态 + 五种单步状态 + 十七条归因词 + 七个 owner 登记 + 两条内置流程 + 预览 / 计划 / 收成 / 回读 / 回滚 / 暂停 / 续跑。**不写存储**（不持键、不带计时器、不碰 DOM、不 eval、不 new Function），输入与台账全由调用方给。",
-        "【新模块 · config/workflow-runtime.js（执行协调器）】** 把实际执行、逐步检查点、暂停、续跑、逆序回滚集中到一处：端口注入（scope / token / inputs / readRuns / writeRuns / invoke / publish / newKey / now / yieldStep）让 I/O 全部由宿主提供。执行器**不解释任何用户代码**：它只会按声明表逐位调 owner。",
-        "【默认 dry-run（验收①的落点）】** 写流程未带显式确认一律判 not-confirmed：预览只产计划与「要写什么」，一步不跑、一字不写。要真跑必须由调用方显式把确认带上来；这是本面最便宜也最容易被绕过的一道门，故由内核与运行器**两侧各拦一次**。",
-        "【某步失败不得冒充完成（验收②的落点）】** 任一步 failed / skipped / 结果未知 ⇒ 整条**只叫 partial**，绝不叫 done。写前先落 running 检查点、owner 返回后再落结果：owner 抛错或返回未知时该步保持 running（结果未知），**不许自动重跑**。失败即断链：后继步骤一步不跑。",
-        "【重试幂等与同条流程内部的续跑】** 两条口径并立：台账里已有同一 idemKey ⇒ replay，一步也不跑（把已成的写成 replayed，executed 归零）；同一条流程断在半路再续 ⇒ 已成步骤转 replayed，只有未成的几步交回去跑。两处都由 resumeFlow 与计划器的 run 标记共同保证，测试里的重试恰好只调回那一两步。",
-        "【跨会话 / 跨分支 / 跨世代一律 fail-closed（验收③的落点）】** 台账命中行必须与本次**属同一段**才叫重放；同键不同段一律 scope-changed 拒（既不当重放，也不重跑）。台账读不到（null 或非数组）**绝不当作空账本**：判 run-unreadable 拒。执行中会话或世代变了，旧回执一律不写入新会话。",
-        "【回滚只撤本机记录，真实数据交回各 owner】** 回滚按**写步逆序**列清单，交给各自的 owner 去撤（本模块只产「撤什么」的收据清单，绝不自己改真实余额 / 通知 / 日历）。已撤过的写步不再出现在可撤清单里；只撤掉一部分就只叫 partial，全部撤完才叫 rolledback。没有可撤的一律 nothing-to-rollback，不假装撤过。",
-        "【owner 口不解释脚本（验收④的落点），全部走真实接口】** index.js 的 owner 口只按登记表分派：草稿走存档台 setTarget 并校验 saved 与回读；通知走通知账本 push / flushNow / remove 并校验 senderKey 与回读；日历走真实剧情日与 addMemo / deleteMemo 并校验 source 与回读；账单复用既有确认提交动作与账本，**不复制第二套存储实现**。撤销是**互斥分支**，绝不落入写入分支。",
-        "【新存储键 wf_runs 与会话数据域】** 运行台账按会话隔离（/^wf_/ 归入会话数据域），登记进键审计；每行至少留 flowId / runKey / state / scope / 步骤证据与必要收据，上限四十条并如实报被挤条数。台账三态分开：坏 JSON 与 undefined 是**读不到**、空数组是**读到了但空**、含非法行是**读到了但有丢弃计数**。",
-        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/workflow 三层（App / 视图 / 样式）：视图只渲染与列动作白名单，App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增工作流卡（九态表 + 三档权限 + 流程 / 步骤 / owner 读数 + 台账可读性 + 上次运行 + 自检）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 枚举场景六处同步登记。",
-        "【配套判据与负控制】** tests/system-v3890.test.mjs 五面 22 条全绿：A 结构面（三档权限 / 九态互不同形 / 每条流程每步都有 owner / 只读步与写步宣告一致）；B 行为面（十条：dry-run、真桩全链与单调重放、失败断链、暂停竞态、跨世代拒、逆序回滚）；C 接线面（直接切出真源码的 owner 口在受控上下文里跑：真存档台真通知账本往返与撤销、null / 抛错一律不算成）；D 负控制（七处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第八处自证破坏副本真被加载且模块自检当场报出该处破坏）。",
-        "【版本升至 3.89.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3890.py 对齐 tools/bump_v3880.py），本版不新增存储键以外的扫描面无漂移。",
-        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 执行器初版有三处真缺陷，全部在合并前被自家判据抓住并改掉：① **台账读不到被当成空账本放行**（模块自检当场报出「台账读不到竟放行」）；② **续跑只改内存状态而不真跑剩余 owner**（把没跑写成跑过了）；③ **回读发生在台账写入之前**，等于没确认刚写下去的那一份。三处都不是推演清单，是跑出来的红。",
+        "【定位 · 计划 R-X6 的真实缺口（修前实测，不是推演）】** 修前实测：v3.70.0 的 X6 交付了 config/creation-pipeline.js （八来源 / 六目标 / 草稿构建 / 幂等账本），但**产品端只消费了十一个导出中的一个**（normalizeCreationLedger，在 index.js 的缓存段里），其余十个全仓零调用。这是本仓被点过六次的同一形态：内核建好了、导出挂出来了、产品端零消费。",
+        "【修前处境的四条实测形态】** ① 素材选不了：曲目 / 图片 / 文本 / 角色 / 事件散在五个 App 里，没有一处能从任意来源挑一个；② 发布前没人查：缺图 / 坏链接 / 目标 App 不收这种素材 / 没有播放器，四类问题都要等用户在目标 App 里真发出去才发现；③ 草稿与已发布塔成同一件事：账本里状态只有 draft 与 published 两个字符串，而 published 从未被任何代码写过；④ 发布动作在各 App 里各自存在一份，没有统一的检查与幂等口。",
+        "【新模块 · config/creation-workbench.js（纯函数内核）】** 创作工作台的**唯一实现**：五类素材声明 + 素材引用归一 + 四类发布前检查 + 发布计划 + 回执归一 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），素材清单与目标清单全由调用方给；草稿只引用 creation-pipeline 的同一个构建口与幂等键，**不造第二份草稿状态**。",
+        "【素材五类与三态互不同形（验收①的落点）】** 角色 / 事件 / 图片 / 曲目 / 文本五类，每条带 ref 引用键（来源与来源内 id），可反查到来源 ID；每一类的状态三态互不同形：**读不到 / 读到了但空 / 读到了有几条**。读不到绝不当成空清单（这两件事处置相反）。",
+        "【发布前检查四类（验收②的落点）】** 缺素材 / 坏图 / 缺播放器、坏链接、目标权限、敏感标记。前三类是硬拦截（不通过即不得显示发布成功），敏感类是需确认（不拦但必须显式确认）。每一条都带结果与原因，不通过必须说清为什么。",
+        "【默认 dry-run，发布只委托真源 owner（验收③的落点）】** 计划阶段恒不写入；真正发布只能落到五个目标 App 的**真源写口**（微信朋友圈数据层、微博正文、Pixiv 作品、杂志稿件、同人货架），表外目标在计划阶段就被挡；本工作台自己一个写口都不调。",
+        "【发布幂等，不复制第二个状态源（验收④的落点）】** 幂等键直接取 creation-pipeline 的同一个实现，发布台账只记「哪条幂等键已发布过」；同键重发不写第二条，失败回执不进台账，已发布回读不到一律不当作成功。",
+        "【新存储键 cw_published 与会话数据域】** 发布台账按会话隔离（新增 /^cw_/ 归入会话数据域），登记进键审计；幂等键本身含来源与素材 id，故跨段不串味。草稿状态仍在 creation_ledger 那一格，两者共用同一份归一器（不新增第二份状态源）。",
+        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/creationdesk 三层（App / 视图 / 样式）：视图只渲染与列动作白名单（三个），App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增创作工作台卡（五类素材三态 + 四类检查行 + 目标 owner 表 + 发布台账可读性 + 自检）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 枚举场景六处同步登记。",
+        "【配套判据与负控制】** tests/system-v3900.test.mjs 六面 21 条全绿：A 结构面（五类素材 / 四类检查 / 五个真源 owner / 上一版零消费缺口已被真消费）；A2 纯函数；B 行为面（七条：五类三态 / 默认 dry-run / 四类拦截 / 只委托真源 / 不造第二个状态源 / 引用可追溯 / 上下文素材不当载荷）；C 接线面；D 负控制（八处真源码定点破坏，碎坏副本上同款判据必转红；第八处两向对照自证破坏真的改掉了行为）；E 版本锚。",
+        "【版本升至 3.90.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3900.py 对齐 tools/bump_v3890.py）。",
+        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 本版的负控制基座初版有三处真缺陷，全部在合并前被自家判据抓住并改掉：① **锚点校验函数返回了整份源码**，使破坏变成「整份文件被换成一行」，八个破坏点全红且报出的是与本意毫无关系的错；② **判据用原版内核构造材料、却拿变体去查**，量到的是原版的类表，负控制假绿；③ **自证方式自我指涉**（删掉判据本身当成验证），改为两向对照。三处都不是推演清单，是跑出来的红。",
         "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：本版自己抓到的上述三处缺陷、以及旧判据里绑定上一版专有词的写法交棒为形态锚（下限形），使得抬版不再把「本版这件事」偷换成「上一版那件事」。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：台账读不到被画成「没有运行记录」、某步失败被整条画成「完成」、回读发生在写入之前被当成已确认。本版**不能保证**：① 真宿主里存档台 / 通知账本 / 日历那三格被并发改写时的落笔次序；② 两步之间的真实停顿与真机上暂停点击的到达时机；③ 真机长会话里这条流程的观感。边界原文见运行时验证边界文档。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：素材清单读不到被画成「一条素材也没有」、坏图与坏链被当成发布成功、目标 App 不收这种素材却显示发布完成。本版**不能保证**：① 真宿主里生图队列产出的图到底能不能在目标 App 里真显示；② 五个来源同时被改写时的落笔次序；③ 真机长会话里这台工作台的观感。边界原文见运行时验证边界文档。"
     ]
 };
 
@@ -2659,6 +2670,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流的只读取数：与前者同族（同一份「读不到≠没有」
          *   的纪律），同样放在早退之前 —— 流程声明与运行台账都跟剧情时间无关。不 await。 */
         try { refreshWorkflow(); } catch (_wfr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.90.0 · 拓展计划 R-X6] 创作工作台的只读取数：与上一条同族（同一份「读不到≠没有」的纪律）。
+         *   素材五类与发布台账都跟剧情时间无关，故同样放在早退之前。不 await。 */
+        try { refreshCreationWorkbench(); } catch (_cwr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -3697,6 +3711,263 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         }
         return refusal('本版未接这条 owner');
     }
+
+    /* ══════════ [v3.90.0 · 拓展计划 R-X6] 创作工作台 ══════════
+     * 与 R-X5 同族：声明 / 计划 / 检查全在纯内核（config/creation-workbench.js），
+     * 本处只做四件事 —— 取数、传意图、委托真实 owner、读回确认。
+     *
+     * 【本处刻意不做的事】
+     *   · **不重判能不能发**：blocker 名单由内核 cwPlanPublish 给；本处若再判一遍，
+     *     就是同一口径两份实现（本仓六次欠债的共同形态）。
+     *   · **不自己造素材副本**：五个来源的清单每次现取，取不到记 unreadable，
+     *     绝不擅自当空数组（「读不到」与「没有」处置相反）。
+     *   · **不执行任意用户脚本**：动作白名单只有三个（plan / publish / refresh）。
+     */
+    const CW_PUBLISHED_KEY = 'cw_published';
+    /* 本模块对外只认这三个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
+     *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。 */
+    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh'];
+
+    /** 读已发布台账：读不出来返回 null（**不是空数组**）。 */
+    function cwReadPublished() {
+        try {
+            if (!storage || typeof storage.get !== 'function') return null;
+            const raw = storage.get(CW_PUBLISHED_KEY, '[]');
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (_e) { return null; }
+    }
+
+    /** 素材：五类各取一次；**取不到就是取不到**，不塌成空清单。 */
+    function cwReadMaterials() {
+        const vp = window.VirtualPhone || {};
+        const faces = {};
+        const tryFace = (kind, fn) => {
+            try {
+                const rows = fn();
+                if (!Array.isArray(rows)) { faces[kind] = { ok: false, rows: [] }; return; }
+                faces[kind] = { ok: true, rows: rows };
+            } catch (_e) { faces[kind] = { ok: false, rows: [] }; }
+        };
+        /* 角色：群像 App 的角色表（上下文素材）。 */
+        tryFace('character', () => {
+            const chars = vp.charsApp || vp.chars;
+            const rows = chars && typeof chars.charsAll === 'function' ? chars.charsAll() : null;
+            if (!Array.isArray(rows)) return null;
+            return rows.map(r => ({ source: 'chars', sourceId: String(r.id || r.name || ''), label: String(r.name || r.id || ''), version: 1 }));
+        });
+        /* 事件：日历项（上下文素材）。 */
+        tryFace('event', () => {
+            const cal = (vp.calendarApp || vp._calendarReminderApp);
+            const data = cal && cal.calendarData;
+            const rows = data && typeof data.getMemos === 'function' ? data.getMemos() : null;
+            if (!Array.isArray(rows)) return null;
+            return rows.slice(0, 200).map(r => ({ source: 'calendar', sourceId: String(r.id || ''), label: String(r.title || r.id || ''), version: 1 }));
+        });
+        /* 图片：生图队列产出（多角色生图，X7 那一版的能力）。 */
+        tryFace('image', () => {
+            const mgr = vp.imageManager || vp.imageGenerationManager;
+            const rows = mgr && typeof mgr.receipts === 'function' ? mgr.receipts() : null;
+            if (!Array.isArray(rows)) return null;
+            return rows.slice(0, 200).map(r => ({ source: 'image-generation', sourceId: String(r.id || ''), label: String(r.label || r.prompt || r.id || ''), link: String(r.url || r.link || ''), present: r.present !== false, why: String(r.why || ''), version: 1 }));
+        });
+        /* 曲目：曲库案头（载荷素材；播放委托 MusicApp）。 */
+        tryFace('track', () => {
+            const md = vp.musicdeskApp;
+            const rows = md && typeof md.songRows === 'function' ? md.songRows() : null;
+            if (!Array.isArray(rows)) return null;
+            return rows.slice(0, 200).map(r => ({ source: 'musicdesk', sourceId: String(r.id || r.key || ''), label: String(r.title || r.name || r.id || ''), version: 1 }));
+        });
+        /* 文本：四个文稿类 App 合流（稿子 / 作品 / 稿件 / 分镜脚本）。 */
+        tryFace('text', () => {
+            const out = [];
+            const lofter = vp.lofterApp;
+            if (lofter && typeof lofter.articlesAll === 'function') {
+                for (const a of lofter.articlesAll().slice(0, 100)) out.push({ source: 'lofter', sourceId: String(a.id || ''), label: String(a.title || a.id || ''), version: 1 });
+            }
+            const pixiv = vp.pixivApp;
+            if (pixiv && typeof pixiv.novelsAll === 'function') {
+                for (const n of pixiv.novelsAll().slice(0, 100)) out.push({ source: 'pixiv', sourceId: String(n.id || ''), label: String(n.title || n.id || ''), version: 1 });
+            }
+            const mag = vp.magazineApp;
+            if (mag && typeof mag.articlesAll === 'function') {
+                for (const a of mag.articlesAll().slice(0, 100)) out.push({ source: 'magazine', sourceId: String(a.id || ''), label: String(a.title || a.id || ''), version: 1 });
+            }
+            const pv = vp.pvdeskApp;
+            if (pv && typeof pv.ledgerRows === 'function') {
+                for (const e of pv.ledgerRows().slice(0, 100)) out.push({ source: 'pvdesk', sourceId: String(e.id || e.at || ''), label: String(e.title || e.id || ''), version: 1 });
+            }
+            if (!out.length && !lofter && !pixiv && !mag && !pv) return null;
+            return out;
+        });
+        return cwCollectMaterials({ faces });
+    }
+
+    /**
+     * [v3.90.0 · R-X6] 创作工作台的**唯一取数口**（与 R-X1..R-X5 同族）。
+     *   · 素材五类现取（`_creationWorkbench.materials`）；
+     *   · 目标清单取自内核 owner 表（**目标没有真源写口就不列成可选**）；
+     *   · 发布台账取自 `cw_published`（读不出与空台账分开）；
+     *   · 缓存挂 `_creationWorkbench`，视图与诊断只读这一份。
+     *   ★ 不 await、自带兜底：与 refreshWorkflow 放在同一处。
+     */
+    function refreshCreationWorkbench() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+            const chatId = String(storage.currentConversationId || '').trim();
+            let branchKey = '';
+            try {
+                const ctx = storage.getContext?.();
+                branchKey = String(ctx?.chatMetadata?.branch_key || ctx?.chatMetadata?.branchKey || '').trim();
+            } catch (_eb) { branchKey = ''; }
+            const materials = cwReadMaterials();
+            const pubRaw = cwReadPublished();
+            const published = (pubRaw === null)
+                ? { readable: false, entries: [], dropped: 0 }
+                : (() => {
+                    const norm = cwAppendPublished(pubRaw, null);
+                    return { readable: true, entries: norm.entries, dropped: norm.dropped };
+                })();
+            /* 目标清单：只列**有真源写口**的五个 + 内核登记但本版未接的口如实标无发布口。 */
+            const targets = [];
+            for (const t of CREATION_TARGETS) {
+                const own = cwTargetOwnerOf(t.target);
+                targets.push({
+                    target: t.target, label: t.label, accepts: t.accepts,
+                    owner: own ? own.owner : '', ownerWhat: own ? own.ownerWhat : '',
+                    instKey: own ? own.instKey : '',
+                    note: own ? '' : '本版未接这个目标的真源写口（列出来只为如实说明，不可选）',
+                });
+            }
+            const scope = { chatId: chatId, branchKey: branchKey };
+            if (vp._creationWorkbenchScope && !wfSameScope(vp._creationWorkbenchScope, scope)) {
+                vp._creationWorkbench = null;
+            }
+            vp._creationWorkbenchScope = scope;
+            const cached = {
+                at: Date.now(), token: handoffEpoch(),
+                scope: scope,
+                scopeState: (chatId ? 'ok' : 'absent'),
+                materials: materials,
+                targets: targets,
+                published: published,
+                selfCheck: cwSelfCheck(''),
+                actions: CW_ACTION_KEYS.slice(),
+                steps: CW_STEPS.map(s => Object.assign({}, s, { line: cwStepLine(s) })),
+                levels: CW_LEVELS,
+                kinds: CW_KIND_KEYS.slice(),
+                plan: null,
+            };
+            vp._creationWorkbench = cached;
+        } catch (e) {
+            console.warn('[CreationWorkbench] 创作工作台取数失败:', e);
+        }
+    }
+
+    /**
+     * [v3.90.0 · R-X6] **唯一执行入口**：视图把「选了什么素材、发到哪、是否带敏感标记」交上来。
+     *   · 计划与 blocker 全由内核判（本处不重判）；
+     *   · 发布动作只委托 `cwInvokeOwner` 里那张 switch 表（表外的目标在计划阶段就被挡了）；
+     *   · 回执只在 ok===true 时进台账（幂等键保证同键只记一次）。
+     * @returns {{ok:boolean, note:string, kind:string}}
+     */
+    function applyCreationWorkbenchAction(payload) {
+        const p = (payload && typeof payload === 'object') ? payload : {};
+        try {
+            refreshCreationWorkbench();
+            const vp = window.VirtualPhone;
+            const face = vp._creationWorkbench;
+            if (!face) return { ok: false, note: '读数还没取到（咽喉那一轮尚未跑）', kind: 'absent' };
+            if (!p.scope || !wfSameScope(p.scope, face.scope)) return { ok: false, note: '会话已变，拒旧按钮', kind: 'stale-scope' };
+            if (p.token !== handoffEpoch()) return { ok: false, note: '世代已变，拒旧按钮', kind: 'stale-epoch' };
+            const action = String(p.action || '');
+            if (CW_ACTION_KEYS.indexOf(action) < 0) return { ok: false, note: '不在白名单的动作：' + action, kind: 'unknown-action' };
+            const materials = face.materials || { items: [] };
+            const item = cwFindMaterial(materials.items, p.ref || '');
+            const target = String(p.target || '');
+            if (action === 'refresh') { refreshCreationWorkbench(); return { ok: true, note: '已刷新读数', kind: 'read' }; }
+            const plan = cwPlanPublish({ item: item, target: target, opts: { sensitive: p.sensitive === true, note: String(p.note || '') } });
+            face.plan = plan;
+            if (plan.blocked) return { ok: false, note: cwPlanLine(plan), kind: 'blocked', blockers: plan.blockers.map(b => String(b.note || b.code)) };
+            if (action === 'plan') return { ok: true, note: cwPlanLine(plan), kind: 'dry-run', plan: plan };
+            /* publish：写步**只能**委托真实 owner（这张表之外的目标在计划阶段已被挡）。 */
+            const own = cwTargetOwnerOf(target);
+            if (!own) return { ok: false, note: '目标 App 没有真源写口：' + target, kind: 'no-owner' };
+            const req = {
+                target: target, owner: own.owner, instKey: own.instKey,
+                item: item, draft: plan.draft, idemKey: plan.idemKey,
+                scope: face.scope, token: handoffEpoch(),
+            };
+            let raw = null;
+            try { raw = cwInvokeOwner(req); }
+            catch (e) { raw = { ok: false, reason: 'owner 抛错：' + String((e && e.message) || e) }; }
+            const receipt = cwReceiptOf(raw, plan.idemKey);
+            if (!receipt.ok) return { ok: false, note: '发布未成功：' + receipt.reason, kind: 'owner-refused', receipt: receipt };
+            /* 写后回读：台账里必须真能读到这一键，读不回不算发布成功。 */
+            const before = cwReadPublished();
+            const merged = cwAppendPublished(Array.isArray(before) ? before : [], receipt);
+            try { storage.set(CW_PUBLISHED_KEY, JSON.stringify(merged.entries)); } catch (_es) { return { ok: false, note: '发布回执落盘失败（不得当作已发布）', kind: 'write-failed' }; }
+            const back = cwReadPublished();
+            const seen = Array.isArray(back) && back.some(e => e && e.idemKey === receipt.idemKey && e.status === 'published');
+            refreshCreationWorkbench();
+            return seen
+                ? { ok: true, note: '已委托 ' + own.ownerWhat + '（回读一致；幂等键 ' + receipt.idemKey + '）', kind: 'published', receipt: receipt }
+                : { ok: false, note: '回读不一致 —— 不当作已发布', kind: 'readback-mismatch', receipt: receipt };
+        } catch (e) {
+            return { ok: false, note: '执行失败：' + String((e && e.message) || e), kind: 'error' };
+        }
+    }
+
+    /**
+     * 五个目标的**真源写口**（本表之外的目标没有发布能力）。
+     *   纪律：每个分支都返回 `{ok, id}`，且只有 owner 真返回 ok===true 才算成功；
+     *   本函数**不写任何 storage**（台账由调用方在回读一致后落）。
+     */
+    function cwInvokeOwner(req) {
+        const vp = window.VirtualPhone || {};
+        const item = req.item || null;
+        if (!item) return { ok: false, reason: '缺素材' };
+        const label = String(item.label || item.sourceId || '');
+        if (req.owner === 'wechat-moment') {
+            const wd = vp.wechatApp && vp.wechatApp.wechatData;
+            if (!wd || typeof wd.addMoment !== 'function') return { ok: false, reason: '微信数据层不在位' };
+            const id = 'cwm_' + Date.now().toString(36);
+            wd.addMoment({ id: id, author: '', content: label, images: item.link ? [item.link] : [], time: Date.now(), source: 'creationdesk' });
+            const rows = wd.data && Array.isArray(wd.data.moments) ? wd.data.moments : null;
+            return (rows && rows.some(m => m && String(m.id) === id))
+                ? { ok: true, id: id, reason: 'ok' }
+                : { ok: false, reason: '朋友圈回读不到这一条' };
+        }
+        if (req.owner === 'weibo-post') {
+            const wd = vp.weiboApp && vp.weiboApp.weiboData;
+            if (!wd || typeof wd.publishUserPost !== 'function') return { ok: false, reason: '微博数据层不在位' };
+            const r = wd.publishUserPost(label, item.link ? [item.link] : []);
+            const id = r && (r.id || (r.post && r.post.id));
+            return id ? { ok: true, id: String(id), reason: 'ok' } : { ok: false, reason: '微博发布未返回 id' };
+        }
+        if (req.owner === 'pixiv-novel') {
+            const app = vp.pixivApp;
+            if (!app || typeof app.createNovel !== 'function') return { ok: false, reason: 'Pixiv 不在位' };
+            const r = app.createNovel({ title: label, synopsis: String(item.licNote || '') });
+            return (r && r.ok === true && r.id) ? { ok: true, id: String(r.id), reason: 'ok' } : { ok: false, reason: String((r && r.error) || 'Pixiv 拒绝创建') };
+        }
+        if (req.owner === 'magazine-article') {
+            const app = vp.magazineApp;
+            if (!app || typeof app.addArticle !== 'function') return { ok: false, reason: '杂志 不在位' };
+            const r = app.addArticle({ title: label, body: String(item.licNote || ''), type: 'news' });
+            const id = r && (r.id || (r.article && r.article.id));
+            return id ? { ok: true, id: String(id), reason: 'ok' } : { ok: false, reason: '杂志稿件未返回 id' };
+        }
+        if (req.owner === 'doujin-shelf') {
+            const app = vp.doujinApp;
+            if (!app || typeof app.saveToShelf !== 'function') return { ok: false, reason: '同人商店不在位' };
+            const r = app.saveToShelf({ id: item.sourceId, title: label, source: 'creationdesk' });
+            const ok = (r === true) || (r && r.ok === true);
+            return ok ? { ok: true, id: String(item.sourceId), reason: 'ok' } : { ok: false, reason: '同人货架拒绝保存' };
+        }
+        return { ok: false, reason: '本版未接这条 owner：' + String(req.owner || '') };
+    }
+
 
     function playWechatMessageSound(options = {}) {
         try {
@@ -10970,6 +11241,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 financeCommitFace: function () { const v = window.VirtualPhone; return v ? v._financeCommitCache || null : null; },
                 resumeWorkbenchFace: function () { const v = window.VirtualPhone; return v ? v._resumeWorkbench || null : null; },
                 workflowFace: function () { refreshWorkflow(); const v = window.VirtualPhone; return v ? v._workflow || null : null; },
+                /* [v3.90.0 · R-X6] 创作工作台的只读读数口（视图与诊断读这一份）；动作入口只此一处。 */
+                creationWorkbenchFace: function () { refreshCreationWorkbench(); const v = window.VirtualPhone; return v ? v._creationWorkbench || null : null; },
+                applyCreationWorkbenchAction: applyCreationWorkbenchAction,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -395,6 +395,70 @@ export class DiagnoseView {
      *  与 R-X1..R-X4 四张卡分工：那四张各答「某一面的读数对不对」；本卡答
      *  「把几步串成一条流水这条路通不通（默认 dry-run / 幂等 / 不执行任意脚本）」。
      *  三态不同形（面缺席 / 尚未取数 / 有读数）。 */
+    /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议卡：五类素材状态 + 四类检查 + 目标 owner + 发布台账三态。
+     *  与 _workflowHtml 同规格：内核只陈列，本视图只排版；三态不同形（面缺席 / 尚未取数 / 有读数）。 */
+    _creationWorkbenchHtml(pkg) {
+        const face = (pkg && pkg.creationWorkbenchFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到创作工作台协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有素材」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(creationWorkbenchFaceText(face)) + '</div>';
+        const kinds = Array.isArray(face.kinds) ? face.kinds : [];
+        if (kinds.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + kinds.map((k) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(k.key) + '</code>'
+                + this._chip(escapeHtml(k.label), 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + (k.publishable ? '可作发布载荷' : '上下文素材（不作发布载荷）') + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const states = Array.isArray(face.states) ? face.states : [];
+        if (states.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + states.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '>' + this._chip(escapeHtml(r.label), r.state === 'unreadable' ? 'muted' : '')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(r.note || '')) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const checks = Array.isArray(face.checks) ? face.checks : [];
+        html += '<div class=' + Q + 'dg-note' + Q + '>发布前检查四类：' + escapeHtml(face.checksLine || '—')
+            + '（前三类是 blocker：缺素材 / 坏链接 / 目标权限；敏感类是需确认）</div>';
+        if (checks.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + checks.map((c) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(c.code) + '</code>'
+                + this._chip(escapeHtml(c.label), c.level === 'blocker' ? '' : 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + (c.level === 'blocker' ? '不通过即不得显示发布成功' : '需显式确认') + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const pubs = face.published || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>发布台账：'
+            + (pubs.readable === null ? '尚未取数' : pubs.readable
+                ? escapeHtml(String(pubs.count ?? '—')) + ' 条'
+                : '<b>读不到</b>（**不是「没发过」**）')
+            + '</div>';
+        const owners = Array.isArray(face.owners) ? face.owners : [];
+        if (owners.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + owners.map((o) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(o.target) + '</code>'
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(o.what || o.owner) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const steps = Array.isArray(face.steps) ? face.steps : [];
+        if (steps.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + steps.map((st) =>
+                '<div class=' + Q + 'dg-trow' + Q + '>' + this._chip(escapeHtml(st.label), st.writes ? '' : 'muted')
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(st.line || '') + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        if (face.planLine) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>当前计划：' + escapeHtml(String(face.planLine)) + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>五类/检查/owner 地基自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
     _workflowHtml(pkg) {
         const face = (pkg && pkg.workflowFace) || null;
         if (!face) {
@@ -1260,6 +1324,8 @@ export class DiagnoseView {
         /* [v3.88.0 · R-X4] 续玩工作台卡与受控恢复交接卡**并列**（分工：交接卡量这一次的预检，本卡量跳项目这条路）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跳项目续玩工作台（三态：未选项目 / 清单读不到 / 已选中）</h3>' + this._resumeWorkbenchHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>声明式工作流（九态：空闲 / 阻塞 / 预览 / 待确认 / 运行中 / 已暂停 / 完成 / 部分完成 / 已回滚）</h3>' + this._workflowHtml(pkg) + '</section>');
+         /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作工作台（五类素材 / 四类发布前检查；发布只委托目标 App 的真源写口）</h3>' + this._creationWorkbenchHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

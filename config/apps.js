@@ -1178,6 +1178,20 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v3.90.0 · 拓展计划 R-X6] 创作工作台：把素材、角色、事件、目标 App 与发布前检查
+        //   真正连起来（X6 只到「素材→草稿」，X7 只到「多角色生图」，两版合并交付但没人把它们接上）。
+        //   素材五类（角色 / 事件 / 图片 / 曲目 / 文本）统一选择，可回溯到来源 ID；
+        //   发布前检查四类（缺素材 / 坏链接 / 目标权限 / 敏感标记）；发布动作仍由目标 App
+        //   的 owner 执行（本 App 没有 addMoment / publishUserPost / createNovel 的任何直接调用）。
+        //   零网络、零 AI、零外链。
+        id: 'creationdesk',
+        name: '创作台',
+        icon: '🎬',
+        color: '#6a4a5a',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {
