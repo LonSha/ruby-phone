@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -504,6 +504,68 @@ export class DiagnoseView {
         const problems = Array.isArray(face.problems) ? face.problems : [];
         if (problems.length) {
             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>五类/检查/owner 地基自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
+    /** [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康协议卡：六项能力四态行（含替代操作）+ 设备身份 + 零写入证据。
+     *  与 _backupHtml / _workflowHtml 同规格：内核只陈列，本视图只排版；三态不同形。
+     *  ★ 状态符号是**本卡局部**的（不是模块级第二份实现）：它只服务「不只依赖颜色」这一条验收，
+     *    文案唯一实现仍在内核（CAP_STATE_TEXT，经 face.rows[].stateText 送达）。 */
+    _capHealthHtml(pkg) {
+        const symOfState = (st) => (st === 'ok' ? '[可用]'
+            : (st === 'partial' ? '[部分]' : (st === 'unavailable' ? '[不可用]' : '[未验证]')));
+        const toneOfState = (st) => (st === 'ok' ? 'ok' : (st === 'unverified' ? 'muted' : 'bad'));
+        const face = (pkg && pkg.capHealthFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到能力体检协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「六项能力都不可用」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(capHealthFaceText(face)) + '</div>';
+        /* 设备身份：本机 / 宿主 / 上游（功能点 ①）。与「能力四态」分开摆 —— 前者是身份，后者是处境。 */
+        if (face.hostLine) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>' + escapeHtml(String(face.hostLine))
+                + '（宿主版本读不出与「宿主不支持」是两件事：前者去确认装没装，后者去换环境）</div>';
+        }
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        if (!rows.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>'
+                + (face.linked ? '能力读数尚未取数（**不是**「六项都不可用」）' : '语义：读数口不在位（咽喉未挂）')
+                + '</div>';
+        } else {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + rows.map((r) => {
+                const bits = '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.label || r.id) + '</code>'
+                    + this._chip(symOfState(r.state) + ' ' + String(r.state || ''), toneOfState(r.state))
+                    + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(r.stateText || '')) + '</span>'
+                    + '</div>';
+                const why = r.why ? ('<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.why) + '</div>') : '';
+                /* 验收②：缺能力时给替代操作（不可用 / 部分可用才给；未验证不需要动手）。 */
+                const fb = (r.state === 'unavailable' || r.state === 'partial')
+                    ? ('<div class=' + Q + 'dg-note' + Q + '>替代操作（顺序即优先级）：'
+                        + escapeHtml((r.fallbacks || []).join(' -> ')) + '</div>')
+                    : (r.state === 'unverified'
+                        ? ('<div class=' + Q + 'dg-note' + Q + '>现在不必动手：跑一次才知道（未验证不是坏）</div>')
+                        : '');
+                return bits + why + fb;
+            }).join('') + '</div>';
+            html += '<div class=' + Q + 'dg-note' + Q + '>四态计数：可用 '
+                + escapeHtml(String((face.counts && face.counts.ok) || 0)) + ' · 部分可用 '
+                + escapeHtml(String((face.counts && face.counts.partial) || 0)) + ' · 不可用 '
+                + escapeHtml(String((face.counts && face.counts.unavailable) || 0)) + ' · 未验证 '
+                + escapeHtml(String((face.counts && face.counts.unverified) || 0))
+                + '（未验证 = **没测过**，不等于坏）</div>';
+        }
+        if (face.crossLine) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>跨仓联动：' + escapeHtml(String(face.crossLine))
+                + (face.crossStale ? '（版本读不出与版本偏低处置相反：前者去确认装没装，后者去升级）' : '') + '</div>';
+        }
+        /* 验收③的可见证据：检测本身零写入。取不到就如实说「取不到」，不写 0。 */
+        html += '<div class=' + Q + 'dg-note' + Q + '>检测副作用：'
+            + (face.writes === null ? '写入计数<b>取不到</b>（不是 0）' : ('写入计数 ' + escapeHtml(String(face.writes))))
+            + '（能力判定内核零 import 零 IO ⇒ 结构上不可能写存储 / 发网络 / 调模型）</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>四态/替代操作/跨仓段地基自检报了问题</b>：</div>';
             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
         }
         return html;
@@ -1377,6 +1439,9 @@ export class DiagnoseView {
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作工作台（五类素材 / 四类发布前检查；发布只委托目标 App 的真源写口）</h3>' + this._creationWorkbenchHtml(pkg) + '</section>');
          /* [v3.91.0 · R-X7] 备份恢复卡与上面两张**并列**（分工：那两张管「一次操作」，本卡管「把整部手机搬走」）。 */
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>本地备份与恢复（范围四维 / 分面不互换 / 老包明确迁移或拒 / 重复导入幂等）</h3>' + this._backupHtml(pkg) + '</section>');
+         /* [v3.92.0 · R-X8] 能力体检卡与功能卡**并列**（分工：那几张答「某条功能路通不通」，
+          *   本卡答「这台机器有没有能力跑那条路」—— 设备级前提）。 */
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>宿主与能力健康（四态：可用 / 部分可用 / 不可用 / 未验证 · 接口存在不报成服务可用）</h3>' + this._capHealthHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

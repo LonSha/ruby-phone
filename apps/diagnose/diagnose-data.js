@@ -193,6 +193,16 @@ import {
     BACKUP_MIGRATIONS, BACKUP_SCHEMA_VERSION, BACKUP_ENTRY_STATES,
     backupPackLine, backupPlanLine,
 } from '../../config/data-backup.js';
+/* [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康协议面：与 backupFace / workflowFace 同范式 ——
+ *   只读自检 + 六项能力四态行（含替代操作）+ 设备身份读数 + 零写入证据。
+ *   ★ 本卡答的问题与上面几张**都不重叠**：那几张各答「某一功能这条路通不通」，
+ *     本卡答「这台机器**有没有能力**跑那条路」—— 设备级前提，不是功能级读数。
+ *   四态刻意不同形（可用 / 部分可用 / 不可用 / **未验证**）：压平任何两态都会造出
+ *   「两种处置相反的处境长得一模一样」，而「没测过」被报成「坏了」正是本卡要防的那一类。 */
+import {
+    capHealthSelfCheck,
+    CAPABILITY_IDS, CAPABILITY_LABELS, CAP_STATE_TEXT as CH_STATE_TEXT,
+} from '../../config/capability-health.js';
 /* [v3.83.0 · 计划 R-O7] 诊断处置面：把「有读数」翻成「能处置」。
  *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
  *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
@@ -1099,6 +1109,64 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康协议面：与 backupFace 同范式 ——
+     *   只读自检 + 六项能力四态行 + 设备身份读数（本机 / 宿主 / 上游）+ 零写入证据。
+     *   ★ 读数**只从咽喉那一份缓存读**（`vp._caphealth`），本内核不自己采观测 ——
+     *     再采一份就是「同一读数的两个来源必然漂移」。缓存不在就如实报「尚未取数」。 */
+    const capHealthFace = (() => {
+        try {
+            const self = capHealthSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const cache = vp ? (vp._caphealth || null) : null;
+            const summary = (cache && cache.summary) ? cache.summary : null;
+            const notice = (cache && cache.notice) ? cache.notice : null;
+            const rows = (summary && Array.isArray(summary.rows)) ? summary.rows.map((r) => ({
+                id: String(r.id || ''),
+                label: String(r.label || CAPABILITY_LABELS[r.id] || r.id || ''),
+                state: String(r.state || ''),
+                stateText: String(r.stateText || CH_STATE_TEXT[r.state] || ''),
+                probe: String(r.probe || ''),
+                why: String(r.why || ''),
+                fallbacks: Array.isArray(r.fallbacks) ? r.fallbacks.slice() : [],
+            })) : [];
+            const counts = (summary && summary.counts) ? summary.counts : null;
+            /* 「面缺席」与「尚未取数」必须分开：前者是咽喉没挂（本层读不出），
+             *   后者是挂了但那一轮还没跑。压成一态就是本仓最贵的那类错读数。 */
+            const linked = !!(vp && typeof vp.capHealthFace === 'function');
+            const head = !linked
+                ? '能力体检读数口不在位（咽喉未挂）—— **不是「六项都不可用」**'
+                : (cache
+                    ? (summary ? String(summary.line || '') : '读数在但汇总面读不出')
+                    : '尚未取数（能力体检那一路还没跑过）');
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                linked: linked,
+                cacheReadable: !!cache,
+                counts: counts,
+                total: summary ? summary.total : CAPABILITY_IDS.length,
+                rows: rows,
+                hostVersion: cache ? String(cache.hostVersion || '') : '',
+                hostLine: cache ? String(cache.hostVersionText || '') : '',
+                crossLine: notice ? String(notice.line || '') : '',
+                crossStale: !!(notice && notice.stale),
+                crossMissing: (notice && Array.isArray(notice.missing)) ? notice.missing.slice() : [],
+                crossOutdated: (notice && Array.isArray(notice.outdated)) ? notice.outdated.slice() : [],
+                writes: cache ? numOrNull(cache.writes) : null,
+                states: 4,
+                capabilities: CAPABILITY_IDS.length,
+                line: head,
+                text: '能力体检：四态（' + ['ok', 'partial', 'unavailable', 'unverified'].map((k) => CH_STATE_TEXT[k]).join(' / ') + '）；'
+                    + '六项能力（' + CAPABILITY_IDS.map((k) => CAPABILITY_LABELS[k]).join(' / ') + '）；'
+                    + head
+                    + (notice ? ('；' + String(notice.line || '')) : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；四态不同形 / 接口存在不报成服务可用 / 检测零写入零模型调用自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
      *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围）+ 缺口。
      *   ★ 与既有受控恢复交接面分工：那张答「这一次恢复的预检过了没有」，本面答「跳项目续玩这条路通不通」。 */
@@ -1360,7 +1428,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, backupFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1443,6 +1511,16 @@ export function backupFaceText(face) {
         if (!f) return '本地备份：读取异常（已降级）—— 这不是「没有数据」';
         return String(f.text || '本地备份：无读数');
     } catch (_e) { return '本地备份：读取异常（已降级）'; }
+}
+/** [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
+ *  与 backupFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+export function capHealthFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '能力体检：读取异常（已降级）—— 这不是「六项都不可用」';
+        return String(f.text || '能力体检：无读数');
+    } catch (_e) { return '能力体检：读取异常（已降级）'; }
 }
 /* 原函数名保留：上面那个是新增，下面这个是既有实现。 */
 export function creationWorkbenchFaceText(face) {
@@ -1786,6 +1864,7 @@ export default {
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,
     backupFaceText,
+    capHealthFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

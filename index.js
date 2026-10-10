@@ -174,6 +174,19 @@ import {
     planBackupImport, commitBackupPlan, undoBackupPlan,
     normalizeBackupEntries, backupSelfCheck, migrateBackupPack,
 } from './config/data-backup.js';
+import {
+    CAPABILITY_IDS, capHealthSummary, capHealthReport, crossRepoNotice,
+    capHealthSelfCheck, minUpstreamOf,
+} from './config/capability-health.js';
+/* [v3.92.0 · 拓展计划 R-X8] 上游只读出口（本仓已有的唯一真源，不新建第二份）：
+ *   · `lonshaSource`  —— 记忆插件的**来源自述态**（mounted / sourceState / lastError）；
+ *   · `readPushProbe` —— 推/拉统一探针（快照 + 来源 id，用于上游版本归因）；
+ *   · `CROSSREPO_FEATURES` —— 登记面真源（插件级最低版本由 `minUpstreamOf` 从它派生，
+ *     不在咽喉写常数 —— 写常数就是「同一口径的第二份实现」）。 */
+import {
+    LONSHA_BRIDGE_ID, lonshaSource, readPushProbe,
+} from './config/world-bridge.js';
+import { CROSSREPO_FEATURES } from './config/crossrepo-registry.js';
 /* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
@@ -207,7 +220,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.91.0';
+const ST_PHONE_VERSION = '3.92.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -360,6 +373,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             换会话必须丢（备份范围含会话面，不能带着别人的选择），
                       //             键枚举与台账由咽喉下一次 render 重取。
                       //             同族缺陷：本 App 与 dirMap 就位但漏入本表。
+    'caphealthApp',   // [v3.92.0 · R-X8] 能力体检：提示行与已生成的报告是**实例态** ——
+                      //             换会话必须丢（上一段会话复制出来的报告不能留着），
+                      //             六项能力的观测由咽喉下一次 render 现采（设备级读数，不随会话变）。
     'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
@@ -399,25 +415,26 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-14",
+    date: "2026-10-15",
     items: [
-        "【定位 · 计划 R-X7 的真实缺口（修前实测，不是推演）】** 本仓数据全在本地（存储两层：会话档 + 全局档），但修前**没有一处能把它们搬走**：全仓只有三处导入导出，且全部属于单一功能的预设（生图预设与工作流），回答的是「几套参数搬不搬得走」，不是「我这一整部手机搬不搬得走」。",
-        "【修前处境的四条实测形态】** ① 换设备只能重来：几千楼会话里攒下的微信 / 账本 / 日程 / 记忆无法导出；② 包体没有身份：导出的文件里没有 schema 版本、没有会话与分支范围、没有敏感字段标记；③ 倒进去就回不去了：没有任何一处做导入前预览 / 冲突检测 / 部分导入 / 撤销；④ 旧版本包无处置：新旧包没有任何定义，也就无从判「该迁移还是该拒」。",
-        "【新模块 · config/data-backup.js（纯函数内核）】** 备份与恢复的**唯一实现**：四维范围声明 + 两个分面 + 包体归一与身份 + 迁移判定 + 逐条导入判定 + 提交计划 + 撤销计划 + 自检。**不写存储、不联网、不碰 DOM、不读文件系统**，键面与存量全由调用方给。",
-        "【四维范围取交集（验收①的落点）】** 按 App / 会话 / 项目 / 素材四维选导出面；选多维时取**交集**（不是并集）—— 并集会让「我只要这一部的会话」变成「这一部加其他所有」。",
-        "【包体身份（验收②的落点）】** 每份包带魔标 / schema 版本 / 宿主版本 / 来源 / 会话范围 / 分支范围，以及**逐键的敏感标记**（已知敏感 / 明确非敏感 / 未知，三事分开）。两个分面（会话面 / 全局面）**不许互换**：把会话键写进全局档等于把 B 角色的数据交给 A 角色。",
-        "【旧包明确迁移或明确拒（验收②的落点）】** 只有两条路：逐版迁移（每一跳必须带为什么与改写规则）或明确拒（无版本号 / 未来版本 / 迁移链断层）。「不认识的字段静默丢掉」**不在这两条里**，故每一步都要求步步相接（不许跳步改写）。",
-        "【导入前不改现有数据（验收①的落点）】** 导入只产计划：逐条分五态（新增 / 还原 / 逐字相同 / 冲突 / 拒收），计划阶段**连对象都不碰**；落盘只在确认后发生，且逐条按计划写、写后读回确认。",
-        "【同一记录重复导入幂等（验收③的落点）】** 逐字相同的条目**既不写、也不计入跳过**：混进任一边都会让「导了两次多出一堆记录」这种事故变得看不出来。",
-        "【会话与分支边界不可被打穿（验收④的落点）】** 条目的分面与分支与目标不符一律不写；包声明的分支与条目分支不符也一律拒收（除非调用方是显式打开该开关）。",
-        "【撤销只撤本次写入（验收④的落点）】** 撤销清单按写入**逆序**列出（最后写的最先撤），且只列本次真写成的那些；本次没有写入则明确告知无可撤。",
-        "【新存储键 backup_ledger 与会话数据域】** 备份台账按会话隔离（新增 /^backup_/ 归入会话数据域），登记进键审计；备份范围含会话面，落全局会让另一个角色看到别人的备份记录。存储层新增一个**只读的键枚举口**（不写入、不删除、不触发迁移）。",
-        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 apps/backupdesk 三层（App / 视图 / 样式）：视图只渲染与列动作白名单（四个：导出 / 预览 / 提交 / 撤销），App 只转发到咽喉入口，两者都不自己写 storage、不重判内核。诊断协议面新增备份卡（四维与两分面 + 迁移表 + 键枚举三态 + 台账三态 + 计划计数）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 键审计 / 样式投递六处同步登记。",
-        "【配套判据与负控制】** tests/system-v3910.test.mjs 六面 19 条全绿：A 结构面（四维 / 两分面 / 迁移表 / 存储只读枚举口 / 三道注册面）；A2 纯函数与零网络（剥注释后判）；B 行为面（包体身份 / 五态互不同形 / 幂等 / 迁移 / 分面 / 冲突 / 分支 / 交集 / 撤销 / 导入前不改现有数据）；C 接线面（与既有便携负载的指纹口径各守其职 / 咽喉守卫顺序）；D 负控制（八处真源码定点破坏，破坏副本上同款判据必转红；第八处两向对照自证）；E 版本锚。",
-        "【版本升至 3.91.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3910.py 对齐 tools/bump_v3900.py）。",
-        "【本版自己抓到的缺陷形态（合并前实测，不是推演）】** 本版负控制基座抓到四处真缺陷：① **缺席与零塑成同一件事**：无版本号的包被走成「v0 的包」（两条路都是拒，但拒的理由完全不同），导致破坏那个分支时**完全不生效**（该分支根本不可达）；② 负控制锚点校验函数返回整份源码（与 R-X6 同族，本版再次碰到）；③ 两处破坏的替换串与锚点相同（破坏没真发生）；④ 一处锚点跨行，单行替换产生语法错而不是行为变化。四处全部在合并前被自家判据抓住并改掉。",
-        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：本版自己抓到的上述四处缺陷、以及旧判据里绑定上一版专有词的写法交棒为形态锚（下限形），使得抬版不再把「本版这件事」偷换成「上一版那件事」。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的三个具体形态：键枚举读不到被画成「一个键也没有」、导入冲突被默认覆盖、旧包被静默当成新包导入。本版**不能保证**：① 真宿主里对千键级存量的真实耗时与卡顿；② 两层存储同时被改写时的落笔次序；③ 真机上大包导入的观感。边界原文见运行时验证边界文档。"
+        "【定位 · 计划 R-X8 的真实缺口（修前实测，不是推演）】** 本仓有八十六个 App、十几个上游契约、两条桥、三种生图通道、两端语音，但修前**没有一处**能回答「这台机器此刻到底有什么能力」：宿主版本全仓零处读取（`grep -rn 'version_display'` 与 `SillyTavern.version` 双双零命中），两条桥在不在场只有世界脉冲一张卡里顺带提一句，录音接口在不在浏览器里没有任何出口，用户遇到「语音按了没反应」只能猜是没装、没开还是浏览器不支持。",
+        "【修前处境的四条实测形态】** ① 能力缺失与读数缺席长得一样：搜索 App 没加载过、记忆桥没挂、生图没选通道，界面给的都是一片空白；② 接口在场被当成服务可用：桥挂上了就画成「记忆可用」，而桥挂上到真产出快照之间隔着好几轮；③ 缺能力不给替代路径：一项不可用时，用户拿到的只有「不可用」两个字，没有「那还能怎么办」；④ 双项目版本不一致零提示：记忆插件 v3.1.0 配手机端的最新生图协议时会静默少功能，没人在界面上说过一句话。",
+        "【新模块 · config/capability-health.js（纯函数内核）】** 四态判定 / 六项能力登记 / 替代操作表 / 汇总面 / 跨仓提示 / 诊断报告 / 自检的**唯一实现**。**零 import 之外的依赖、零 IO**：不读时钟、不读存储、不联网、不碰 DOM，观测与版本全由调用方注入。",
+        "【四态刻意不同形（验收①的落点）】** 可用 / 部分可用 / 不可用 / **未验证**，四态文案互不相同（自检直接断言 `new Set(texts).size === 4`）。压平任何两态都会造出「两种处置相反的处境长得一模一样」：**面缺席 ≠ 面坏了**——宿主没装那个扩展、本版没接那一面，都属于「没测过」，报成坏会造成一批假故障（自检专门断言「面缺席即使自述不可用也必须判未验证」）。",
+        "【接口存在不得报成服务可用（验收②的落点）】** 观测分四级（服务 / 接口 / 版本 / 无）：只知道接口在场 ⇒ 最高只能到部分可用；只知道版本号 ⇒ 未验证（版本号不是可用性）。这一条单独成 `apiOnlyDegrade()` 而不是内联 —— 它是最容易被后人改坏的一格（去掉就退化），自检与判据双向钉住。",
+        "【缺能力必须给替代操作（验收②的落点）】** 六项能力各有一组替代操作，**顺序即优先级**，由内核声明、原样转述到界面（视图不得自己排）。未验证**不给**替代操作（现在不必动手）—— 给未验证项也塞一份替代路径，会把「跑一次就好」误导成「已经坏了要绕路」。",
+        "【能力检测零写入零模型调用（验收③的落点）】** 判定内核零 import 之外的副作用；咽喉那一层**只调只读出口**：搜索只探到引擎的 `listSources()`、记忆读上游自述态、图片只读管理器配置（**绝不出图**）、语音只检查 `getUserMedia` **在不在**（**不调用** —— 调用会弹授权弹窗，那本身就是副作用）、通知真读一次读路径、恢复交接读世代号与被挡日志。读数里带 `writes: 0`（字面事实，不是声明），判据套件把咽喉那一段剥注释后逐条核。",
+        "【宿主版本多来源试读 + 读不出就是读不出】** 宿主（SillyTavern）版本按「先问 API → 再问 `getContext()` → 最后问页面元素 `#version_display`」试读；全拿不到就**如实空串** ⇒ 界面写「**读不出** —— 这是「读不出」，不是「宿主不支持」」。这两句处置相反：读不出要人去确认装没装，不支持要人换环境；写成同一句就是本仓最贵的那一类错读数。",
+        "【跨仓版本联动（功能点 ④的落点）】** 上游最低版本**从登记面真源派生**（`minUpstreamOf` 取该 owner 名下最大的 `since`，`null since` 不参与比对），不在这里写常数（写常数就是同一口径的第二份实现）；版本偏低与版本读不出分列两账（`outdated` / `missing`），没有门限就**不判版本偏低**（如实少一条判据，好过拿假门限比）。上游版本归因只在**恰好一个上游立了版本判据且来源 id 能对上名字族**时进行 —— 认不出就报「读不出」，不猜。",
+        "【复制诊断报告（功能点 ③的落点）】** 报告文本唯一实现在内核 `capHealthReport`，由咽喉调；**「复制」这个动作本身不得触发检测**（只用已判定的读数拼，`report` 分支里不出现观测采集函数），判据按此钉住。",
+        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 `apps/caphealth` 三层（App / 视图 / 样式）：动作白名单**只有一个**（`report` —— 本 App 是纯读数面，没有任何写动作），视图只渲染与转发；诊断协议面新增能力体检卡（六项四态行 + 设备身份 + 零写入证据）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 样式投递同步登记。",
+        "【咽喉范式（与 R-X1..R-X7 同族）】** 白名单 `CAPHEALTH_ACTION_KEYS` 声明在取数口**之前**（取数口要在读数里带上它，`const` 有暂时性死区）；`refreshCapHealth()` 是唯一取数口（缓存挂 `vp._caphealth`，含 `readable` / `why` 与其余协议面同形）；`applyCaphealthAction()` 是唯一动作口（先判白名单 → 取数 → 世代检查，**视图给了 token 才比** —— 本动作不写任何东西，误拒只会让按钮看起来坏了）；`capHealthFace` 是只读读数口，**每次读都重采**（宿主重载 / 桥上下线 / 通道改选都会改变读数）。**不按会话作废**：这是**设备级**读数，按会话作废会造出「换个角色能力就变了」的假读数；而实例态（提示行与已生成的报告）**必须**随会话丢，故 `caphealthApp` 进 `ST_PHONE_REBIND_APP_KEYS`。",
+        "【类前缀族撞车（本版自己侦察到并改掉的真缺陷）】** 本模块原用 `.ch-*` 族，而金手指 App（`apps/cheat`，v2.47.0）**已占用**该族，两者有**八个类名逐字重名**（ch-root / ch-head / ch-title / ch-badge / ch-btn / ch-note / ch-pre / ch-row），且取值方向相反（金手指是深色鎏金全屏、能力体检是浅色卡片）。按样式投递机制 A 把内容并进 `phone.css` ⇒ 同名选择器互相覆盖，**金手指界面当场走形**，而 registry 门只看「前缀族在不在 phone.css 里」，**看不出撞车**。已将本模块整族改名 `.cph-*` 并投递进 phone.css，判据新增三条钉住（族名对、无裸 `.ch-` 残留、能被 phone.css 找到）。",
+        "【三层与咽喉缓存键名错位（本版自己实测抓到的真缺陷）】** 咽喉写 `hostVersionText` 且**没有** `readable` / `why` 两格，而 App `_vm()` 读的是 `hostVersionLine` / `host.readable` / `host.why`。三处对不上 ⇒ 宿主版本明明取到了、界面永远显示「还没取到」；`faceReadable` 恒为 false ⇒ 界面永远挂着一条「能力面取数口不在位」的红字（**假故障**）。修法两侧同时改：咽喉缓存补 `readable: true` 与 `why: ''`（缓存在场即读数可读，不可读的唯一形态是咽喉未挂、由 `capHealthFace()==null` 表达），App 改读 `hostVersionText`。判据 C1 把这组键名逐格钉住。",
+        "【配套判据与负控制】** `tests/system-v3920.test.mjs` 六面 22 条：A 结构面（四态 / 六能力 / 替代操作六组 / 三处注册面 / 四一致命名 / REBIND 表 / 类前缀族与样式投递）；A2 纯函数与只读咽喉（剥注释后逐条核：无存储写入、无网络、无模型调用、无 `getUserMedia()` 调用）；B 行为面（四态不同形 / 接口不报服务可用 / 替代操作 / 跨仓两事分列 / 宿主版本诚实 / 计数守恒 / 最低版本派生 / 报告不重检测 / 多来源试读）；C 接线面（键名逐格对齐 / 白名单先于取数口 / 世代检查条件 / 只读读数口现采 / 诊断面只读那一份缓存）；D 负控制（八处真源码定点破坏，破坏副本上同款判据必转红；第八处两向对照自证）；E 版本锚。",
+        "【版本升至 3.92.0（五源同源）】** `manifest.json` / `package.json` / `index.js` 的版本常量与公告块 / `update-log.json` 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 `tools/bump_v3920.py` 对齐 `tools/bump_v3910.py`）。",
+        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：清单里「新增一处能力面」这类**绑定本版专有词**的写法，在本版交棒为形态锚（下限形：新版本判据只要求「能力面 ≥ 6 项且四态各不同形」，不要求「那一版那六项」），使抬版不再把「本版这件事」偷换成「上一版那件事」。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的四个具体形态：面缺席被画成「坏了」、接口在场被画成「服务可用」、宿主版本读不出被写成「不支持」、上游版本读不出与版本偏低被合成一句。本版**不能保证**：① 真宿主里 `#version_display` 的实际存在性与版本号格式（本版是多来源试读 + 读不出即如实说，不假定它一定在）；② 六项能力在两台桥都缺席的真机上的观感；③「复制诊断报告」在无剪贴板权限环境下的降级体验（代码里已降级为「显示在下方手动选中」，但观感未实测）。"
     ]
 };
 
@@ -2698,6 +2715,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         try { refreshCreationdesk(); } catch (_cwr) { /* 自带兜底，不拖累日历 */ }
         /* [v3.91.0 · 拓展计划 R-X7] 备份与恢复的只读取数：与上两条同族。键枚举是只读的（不触发迁移）。 */
         try { refreshBackup(); } catch (_bkr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康取数：与上三条同族（同一份「读不到≠没有」的纪律）。
+         *   它读的是**设备级**读数（本机版本 / 宿主版本 / 桥在场 / 浏览器能力），跟剧情时间无关，
+         *   故同样放在早退之前。检测本身零写入、零模型调用（验收③）。不 await。 */
+        try { refreshCapHealth(); } catch (_chr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -4185,6 +4206,297 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const norm = bkNormalizeLedger(rows);
             storage.set(BACKUP_LEDGER_KEY, JSON.stringify(norm.entries));
         } catch (_e) { /* 台账失败不影响主流程（但它也不会静默：视图下一次读不到） */ }
+    }
+
+
+    /* ══════════ [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康中心 ══════════ */
+    /* 与 R-X1..R-X7 同族：六项能力的四态判定全在纯内核（config/capability-health.js），
+     * 本处只做三件事 —— 采集观测、传意图、缓存读数。
+     *
+     * 【本处刻意不做的事】（计划验收③「能力检测本身不得触发真实写入或模型调用」的落点）
+     *   · **不写存储**：本段没有任何 storage.set / remove（读数里带 `writes: 0`）；
+     *   · **不调模型**：本段没有任何 generateRaw / API 请求；
+     *   · **不发网络**：本段没有任何 fetch / XMLHttpRequest / new Image()；
+     *   · **不重判**：四态怎么分、替代操作给什么全由内核判（本处只把观测喂进去）。
+     *   这四条不靠人记得：判据套件把本段函数体单独取出来（剥注释）逐条核。 */
+    /* 动作白名单**只有一个**（`report`）：本 App 是纯读数面，没有任何写动作。
+     *   声明在取数口之前 —— 取数口要在读数里带上它（const 有暂时性死区，先后必须对）。 */
+    const CAPHEALTH_ACTION_KEYS = ['report'];
+
+    /** 宿主（SillyTavern）版本：**多来源试读，读不到即空串**。
+     *   为什么不写死一个来源：本仓实测没有别处读宿主版本，也没有稳定契约
+     *   （ST 未把版本写进 `getContext()` 的保证文本里）。故按「先问 API、再问页面元素」
+     *   的顺序试读，全拿不到就**如实空串** —— 上层写「读不出」，
+     *   绝不写「不支持」（两事处置相反：前者是读数缺席，后者是能力缺失）。 */
+    function chHostVersion(win) {
+        try {
+            const st = win ? win.SillyTavern : null;
+            if (st && typeof st.version === 'string' && st.version) return String(st.version).trim();
+            if (st && typeof st.getContext === 'function') {
+                const ctx = st.getContext();
+                if (ctx && typeof ctx.version === 'string' && ctx.version) return String(ctx.version).trim();
+            }
+            const doc = (win && win.document) ? win.document : null;
+            const el = (doc && typeof doc.querySelector === 'function') ? doc.querySelector('#version_display') : null;
+            return (el && el.textContent) ? String(el.textContent).trim() : '';
+        } catch (_e) { return ''; }
+    }
+
+    /** 六项能力的**观测采集**（只调只读出口）。
+     *   条件：本函数不写存储、不发网络、不调模型。
+     *   “用了哪一级观测”是本函数最容易被后人改坏的一格（把 api 改成 service
+     *   就会把「接口在」报成「服务可用」—— 计划验收②明令禁止），故每一格
+     *   都把“为什么是这一级”写在当场，并由判据套件反向钉住。 */
+    function chCollectObservations(win) {
+        const vp = window.VirtualPhone || {};
+        const out = {};
+        /* ① 搜索：本机内建全局搜索（引擎 + 源表）。
+         *   只探到「接口在场」⇒ 观测级 **api** ⇒ 内核最高只能判 partial。 */
+        try {
+            const app = vp.searchApp || null;
+            const engine = (app && app.engine) ? app.engine : null;
+            if (app && engine && typeof engine.listSources === 'function') {
+                const list = engine.listSources();
+                const n = Array.isArray(list) ? list.length : null;
+                out.search = {
+                    present: true, probe: 'api', healthy: 'ok',
+                    note: '全局搜索在位（索引源 ' + (n === null ? '读不出' : String(n) + ' 个') + '）；本处只探到接口、没跑过一次检索'
+                };
+            } else {
+                out.search = { present: false, probe: 'none', healthy: '', note: '全局搜索 App 不在位（本版未加载 / 未打开过）' };
+            }
+        } catch (e) {
+            out.search = { present: false, probe: 'none', healthy: '', note: '搜索探针抛错：' + String((e && e.message) || e) };
+        }
+        /* ② 记忆：上游记忆插件的桥。观测级 **service** —— 因为读的是**对方的自述态**
+         *   （`lonshaSource`：mounted / sourceState / lastError 全是上游自己报的，本仓不猜）。
+         *   「桥挂载了但还没产出快照」与「上游说引擎不在位」**不同形**：
+         *   前者降到 api 级（→ partial，等一轮就好），后者如实报不可用。 */
+        try {
+            const src = lonshaSource(LONSHA_BRIDGE_ID, win) || {};
+            if (!src.mounted) {
+                out.memory = { present: false, probe: 'none', healthy: '', note: '记忆插件桥不在场（未安装或未加载）' };
+            } else if (src.reason === 'ready') {
+                out.memory = { present: true, probe: 'service', healthy: 'ok', note: '上游自述：桥已就绪（来源态 ' + String(src.sourceState || 'ready') + '）' };
+            } else if (src.reason === 'engine-absent') {
+                out.memory = { present: true, probe: 'service', healthy: 'unavailable', note: '上游自述：记忆引擎不在位（这是对方说的，不是我们猜的）' };
+            } else if (src.reason === 'engine-empty') {
+                out.memory = { present: true, probe: 'service', healthy: 'partial', note: '上游自述：记忆引擎为空（还没有数据）' };
+            } else if (src.reason === 'thrown') {
+                out.memory = { present: true, probe: 'service', healthy: 'unavailable', note: '上游自述抛错：' + String(src.lastError || '（未给原因）') };
+            } else {
+                out.memory = { present: true, probe: 'api', healthy: 'ok', note: '桥已挂载但还没产出快照（对方尚未就绪）—— 只探到接口' };
+            }
+        } catch (e) {
+            out.memory = { present: false, probe: 'none', healthy: '', note: '记忆桥探针抛错：' + String((e && e.message) || e) };
+        }
+        /* ③ 图片：生图管理器。只读到“通道选了没”⇒ api 级（“选了通道”不等于
+         *   “出得出图”）。本处绝不试跑一张图 —— 那是真实模型调用（验收③）。 */
+        try {
+            const mgr = vp.imageGenerationManager || null;
+            if (mgr && typeof mgr.getConfig === 'function') {
+                const cfg = mgr.getConfig() || {};
+                const provider = String(cfg.provider || cfg.activeProvider || '').trim();
+                out.image = {
+                    present: true, probe: 'api', healthy: 'ok',
+                    note: '生图管理器在位（' + (provider ? ('通道 ' + provider) : '未选通道') + '）；本处只探到接口、没出过一张图'
+                };
+            } else {
+                out.image = { present: false, probe: 'none', healthy: '', note: '生图管理器不在位（本版未接 / 未初始化）' };
+            }
+        } catch (e) {
+            out.image = { present: false, probe: 'none', healthy: '', note: '生图探针抛错：' + String((e && e.message) || e) };
+        }
+        /* ④ 语音：两端（朗读 / 语音输入）。注意一格特例：浏览器**没有录音接口**时
+         *   不是「没测过」而是**测得到的缺件** —— 那就如实报不可用。
+         *   探针只看函数在不在，**不调 getUserMedia**（那会弹授权弹窗，也是副作用）。 */
+        try {
+            const tts = vp.ttsManager || null;
+            const asr = vp.asrManager || null;
+            const nav = win ? win.navigator : null;
+            const canRecord = !!(nav && nav.mediaDevices && typeof nav.mediaDevices.getUserMedia === 'function');
+            if (!tts && !asr) {
+                out.voice = { present: false, probe: 'none', healthy: '', note: '语音两端（朗读 / 语音输入）都不在位' };
+            } else if (!canRecord && asr) {
+                out.voice = { present: true, probe: 'api', healthy: 'unavailable', note: '本浏览器没有录音接口（navigator.mediaDevices.getUserMedia 不在）—— 语音输入不能用' };
+            } else {
+                out.voice = {
+                    present: true, probe: 'api', healthy: 'ok',
+                    note: '语音端在位（' + (tts ? '朗读' : '无朗读') + ' / ' + (asr ? '语音输入' : '无语音输入')
+                        + (canRecord ? ' · 浏览器录音接口在场' : '') + '）；本处只探到接口、没真朗读过一次'
+                };
+            }
+        } catch (e) {
+            out.voice = { present: false, probe: 'none', healthy: '', note: '语音探针抛错：' + String((e && e.message) || e) };
+        }
+        /* ⑤ 通知：通知账本。**真读一次**读路径（list()）才算 service 级；
+         *   「账本读得到」与「能落账」不是一回事，故文案里明说落账**未测**
+         *   （落账是写入，本页不做 —— 验收③）。 */
+        try {
+            const log = vp.notificationLog || null;
+            const rows = (log && typeof log.list === 'function') ? log.list() : null;
+            if (Array.isArray(rows)) {
+                out.notify = {
+                    present: true, probe: 'service', healthy: 'ok',
+                    note: '通知账本**已真读一次**（本条 ' + String(rows.length) + ' 条）；落账未测（落账是写入，本页不做）'
+                };
+            } else if (log) {
+                out.notify = { present: true, probe: 'api', healthy: 'ok', note: '通知账本在位但读出口没给数组 —— 只探到接口' };
+            } else {
+                out.notify = { present: false, probe: 'none', healthy: '', note: '通知账本不在位（未初始化）' };
+            }
+        } catch (e) {
+            out.notify = { present: false, probe: 'none', healthy: '', note: '通知账本探针抛错：' + String((e && e.message) || e) };
+        }
+        /* ⑥ 恢复交接：交接栅栏（本机内纯函数，无外部依赖）。
+         *   能真读出世代号与被挡日志 ⇒ service。 */
+        try {
+            const ep = handoffEpoch();
+            if (typeof ep === 'number' && isFinite(ep)) {
+                const log = handoffDropLog();
+                const dropped = (log && typeof log.count === 'number') ? log.count : null;
+                out.handoff = {
+                    present: true, probe: 'service', healthy: 'ok',
+                    note: '交接栅栏**已真读一次**（当前世代 ' + String(ep) + ' · 被挡旧回信 ' + (dropped === null ? '读不出' : String(dropped)) + ' 条）'
+                };
+            } else {
+                out.handoff = { present: true, probe: 'api', healthy: 'ok', note: '交接栅栏在位但世代号读不出 —— 只探到接口' };
+            }
+        } catch (e) {
+            out.handoff = { present: true, probe: 'service', healthy: 'unavailable', note: '交接栅栏抛错：' + String((e && e.message) || e) };
+        }
+        return out;
+    }
+
+    /* 上游版本比对**只在可归因时进行**：登记面里立了版本判据的上游恰好一个、
+     *   且「推/拉统一探针」本轮读到的来源 id 能对上它的名字族 ⇒
+     *   才把快照自述的 `pluginVersion` 当作那个上游的版本。
+     * 为什么不去读桥对象自己的 `version`：WorldAxis 桥上的 `version` 是**契约版本**
+     *   （恒为 1，不是扩展版本）—— 登记面注释里已点名，拿它比会造出假读数。
+     * 对不上 / 认不出 / 不止一个 ⇒ 空串 ⇒ 内核如实报「版本读不出」，**不猜**。 */
+    function chUpstreamVersions(win) {
+        try {
+            const owners = [];
+            const mins = {};
+            for (const f of CROSSREPO_FEATURES) {
+                const o = String((f && f.owner) || '');
+                if (!o || mins[o] !== undefined) continue;
+                const min = minUpstreamOf(CROSSREPO_FEATURES, o);
+                mins[o] = min;
+                if (!min) continue;                 /* 该上游不立版本判据 ⇒ 不列 */
+                owners.push(o);                      /* 不删：认不出来源时要如实报，不静默 */
+            }
+            const probe = readPushProbe(win) || {};
+            const snap = probe.snapshot || null;
+            const self = (snap && typeof snap.pluginVersion === 'string') ? String(snap.pluginVersion).trim() : '';
+            const pid = String(probe.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const out = [];
+            for (const o of owners) {
+                /* 名字族匹配：取上游标识的第一段（按 - _ 切）作为族名。 */
+                const seg = String(o).toLowerCase().split(/[-_]/)[0] || '';
+                const unique = (owners.length === 1);
+                const match = unique && seg && pid.indexOf(seg) >= 0;
+                out.push({ id: o, version: match ? self : '', min: mins[o] });
+            }
+            return out;
+        } catch (_e) { return []; }
+    }
+
+    /** 跨仓版本联动的输入（只供内核 `crossRepoNotice` 判）。 */
+    function chCrossRepoInput(win) {
+        return {
+            phone: ST_PHONE_VERSION,
+            hostVersion: chHostVersion(win),
+            upstreams: chUpstreamVersions(win),
+            /* 面级契约本轮**不取数**：那一面需要完整的双桥探针（lonsha 侧字段三态 +
+             *   worldaxis 侧读成败），而诊断中心的 `repoProbe` 已是那份探针的唯一取数点。
+             *   在咽喉再建第二份 ⇒ 同一读数的两个来源必然漂移（本仓治过多次）。
+             *   传 null 而不是 0：内核对此写「面级契约：本轮未取数（不是零面就绪）」。 */
+            totalFaces: null,
+            readyFaces: null,
+            minUpstream: '',
+        };
+    }
+
+    /**
+     * [v3.92.0 · R-X8] 能力健康的**唯一取数口**（与 R-X1..R-X7 同族）。
+     *   · 六项能力的观测**现采**（`chCollectObservations`，只调只读出口）；
+     *   · 四态判定全交内核（本处不重判）；
+     *   · 缓存挂 `_caphealth`，视图与诊断只读这一份；
+     *   · **不按会话作废**：这是**设备级**读数（本机 / 宿主 / 插件共用），
+     *     按会话作废会造出「换个角色能力就变了」的假读数；
+     *     但取数口本身**每次读都重采**（宿主重载 / 桥上下线都会变）。
+     *   ★ 不 await、自带兜底：与 refreshBackup / refreshWorkflow 放在同一处。
+     */
+    function refreshCapHealth() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp) return;
+            const win = (typeof window !== 'undefined') ? window : null;
+            const observations = chCollectObservations(win);
+            const summary = capHealthSummary(observations);
+            const notice = crossRepoNotice(chCrossRepoInput(win));
+            let chatId = '';
+            try { chatId = String((storage && storage.currentConversationId) || '').trim(); } catch (_ec) { chatId = ''; }
+            vp._caphealth = {
+                at: Date.now(), token: handoffEpoch(),
+                chatId: chatId,
+                hostVersion: chHostVersion(win),
+                /* 宿主版本那一行**按内核唯一文案来**（notice.idLine 只说身份：本机 / 宿主）——
+                 *   不在咽喉另拼一句，否则同一读数会有两种说法。 */
+                hostVersionText: String(notice.idLine || ''),
+                /* readable / why 两格与其余协议面同形：**缓存在场即读数可读**
+                 *   （本取数口跑完一轮才写这份缓存）。不可读只有一种形态 —— 咽喉没挂，
+                 *   那一支由 `capHealthFace()` 返回 null 表达，App 据 null 说「入口不在位」。 */
+                readable: true,
+                why: '',
+                observations: observations,
+                summary: summary,
+                notice: notice,
+                ids: CAPABILITY_IDS.slice(),
+                actions: CAPHEALTH_ACTION_KEYS.slice(),
+                selfCheck: capHealthSelfCheck(),
+                writes: 0,                       /* 本取数口不写存储（字面事实，不是声明） */
+                report: '',
+            };
+        } catch (e) {
+            console.warn('[Caphealth] 能力体检取数失败:', e);
+        }
+    }
+
+    /**
+     * [v3.92.0 · R-X8] **唯一动作口**：视图只能交 `report`（白名单就一个）。
+     *   · 报告文本由内核 `capHealthReport` 拼（本处不重拼）；
+     *   · **不重新检测**：只用**已判定的读数**拼报告 —— 「复制」这个动作本身不得触发检测；
+     *   · 世代检查：视图**给了 token 才比**（与 R-X7 的落盘动作不同 —— 本动作不写任何东西，
+     *     旧按钮最坏结果是复制到一份过期读数，不会写错地方；而误拒会让按钮看起来坏了）。
+     * @returns {{ok:boolean, note:string, kind:string, report?:string}}
+     */
+    function applyCaphealthAction(payload) {
+        const p = (payload && typeof payload === 'object') ? payload : {};
+        try {
+            const action = String(p.action || '');
+            if (CAPHEALTH_ACTION_KEYS.indexOf(action) < 0) return { ok: false, note: '不在白名单的动作：' + action, kind: 'unknown-action' };
+            refreshCapHealth();
+            const face = window.VirtualPhone ? window.VirtualPhone._caphealth : null;
+            if (!face) return { ok: false, note: '读数还没取到（咽喉那一轮尚未跑）', kind: 'absent' };
+            if (p.token !== undefined && p.token !== null && p.token !== handoffEpoch()) {
+                return { ok: false, note: '世代已变，拒旧按钮', kind: 'stale-epoch' };
+            }
+            if (action === 'report') {
+                const report = capHealthReport(face.summary, face.notice);
+                face.report = report;
+                return {
+                    ok: true,
+                    note: '报告 ' + String(report.split(String.fromCharCode(10)).length) + ' 行（只用已判定的读数拼，未重新检测）',
+                    kind: 'report',
+                    report: report,
+                };
+            }
+            return { ok: false, note: '未接的动作', kind: 'unhandled' };
+        } catch (e) {
+            return { ok: false, note: '执行失败：' + String((e && e.message) || e), kind: 'error' };
+        }
     }
 
     function cwInvokeOwner(req) {
@@ -11511,6 +11823,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.91.0 · R-X7] 备份与恢复：只读读数口 + 唯一动作口（导出 / 预览 / 提交 / 撤销）。 */
                 backupFace: function () { refreshBackup(); const v = window.VirtualPhone; return v ? v._backup || null : null; },
                 applyBackupAction: applyBackupAction,
+                /* [v3.92.0 · 拓展计划 R-X8] 能力体检：只读读数口（视图与诊断读这一份）+ 唯一动作口
+                 *   （白名单只有一个：report —— 本 App 是纯读数面，没有任何写动作）。
+                 *   读数口**每次读都重采**：宿主重载 / 桥上下线 / 通道改选都会改变读数，
+                 *   缓存一份陈读数正是本仓最贵的那类错读数（「上次测是好的」）。 */
+                capHealthFace: function () { refreshCapHealth(); const v = window.VirtualPhone; return v ? v._caphealth || null : null; },
+                applyCaphealthAction: applyCaphealthAction,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

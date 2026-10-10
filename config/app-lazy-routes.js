@@ -82,6 +82,7 @@ export const APP_LAZY_ROUTES = [
     { id: "workflow", module: "./apps/workflow/workflow-app.js", key: "workflowApp", cls: "WorkflowApp", errTitle: "工作流App" },
     { id: "creationdesk", module: "./apps/creationdesk/creationdesk-app.js", key: "creationdeskApp", cls: "CreationdeskApp", errTitle: "创作台App" },
     { id: "backupdesk", module: "./apps/backupdesk/backupdesk-app.js", key: "backupdeskApp", cls: "BackupdeskApp", errTitle: "备份恢复App" },
+    { id: "caphealth", module: "./apps/caphealth/caphealth-app.js", key: "caphealthApp", cls: "CaphealthApp", errTitle: "能力体检App" },
     { id: "needsim", module: "./apps/needsim/needsim-app.js", key: "needsimApp", cls: "NeedsimApp", errTitle: "需求沙盘App" },
     { id: "kettle", module: "./apps/kettle/kettle-app.js", key: "kettleApp", cls: "KettleApp", errTitle: "对话水壶App" },
     { id: "widget", module: "./apps/widget/widget-app.js", key: "widgetApp", cls: "WidgetApp", errTitle: "自定义组件App" },

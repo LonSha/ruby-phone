@@ -1,0 +1,28 @@
+/* caphealth.css — [v3.92.0 · 拓展计划 R-X8] 宿主与能力健康中心 · 样式层 */
+.cph-root { all: initial; }
+.cph-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
+.cph-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 8px; }
+.cph-title { font-size: 15px; font-weight: 600; color: #3c4a58; }
+.cph-sub { font-size: 11px; color: #9a948a; margin: 2px 0 6px; }
+.cph-reads { font-size: 11px; color: #6a645c; margin-top: 2px; }
+.cph-face-bad { color: #a0553f; font-weight: 600; }
+.cph-self { padding: 4px 8px; font-size: 11px; opacity: .7; margin-top: 6px; }
+.cph-self-bad { border-left: 2px solid #a0553f; opacity: 1; font-weight: 600; }
+.cph-flash { margin-top: 6px; font-size: 12px; color: #4a6a4a; }
+.cph-flash-bad { color: #a0553f; }
+.cph-box { border: 1px solid #e8e3da; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.cph-box h3 { margin: 0 0 6px; font-size: 13px; color: #3c4a58; font-weight: 600; }
+.cph-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.cph-badge { display: inline-block; min-width: 56px; text-align: center; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.cph-ok { background: #e8f0e6; color: #45603f; }
+.cph-part { background: #fbf3dd; color: #7a6320; }
+.cph-bad { background: #f6e5e0; color: #8a4433; }
+.cph-un { background: #ececec; color: #6d6d6d; }
+.cph-state { font-size: 12px; color: #4a4640; }
+.cph-why { font-size: 11px; color: #8a8478; margin: 2px 0 0 64px; }
+.cph-fb { font-size: 11px; color: #45603f; margin: 2px 0 4px 64px; }
+.cph-note { font-size: 11px; color: #8a8478; }
+.cph-acts { margin-top: 6px; }
+.cph-btn { border: 1px solid #d8d2c8; background: #faf8f4; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.cph-btn:hover { background: #f2eee6; }
+.cph-pre { white-space: pre-wrap; font-size: 11px; background: #faf8f4; border: 1px solid #eee9e0; border-radius: 4px; padding: 6px 8px; margin-top: 6px; color: #4a4640; }

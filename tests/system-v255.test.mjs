@@ -117,6 +117,9 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
                                           //            角色的选中项不能留着），素材与台账由咽喉重取
     backupdeskApp: 'backupdesk',        // [v3.91.0] 备份恢复：换会话必须丢选中范围（四维勾选）与提示行，
                                     //            键枚举与台账由咽喉重取（备份范围含会话面，不能带着别人的选择）
+    caphealthApp: 'caphealth',      // [v3.92.0] 能力体检：换会话必须丢提示行与已生成的报告（都是实例态）；
+                                    //            六项能力观测是**设备级**读数（本机 / 宿主 / 插件共用），
+                                    //            不随会话变 —— 由咽喉下一次 render 现采
     searchApp: 'search'             // [v3.58.0] 全局搜索：换会话作废在跑的全历史扫描（_scanGen）并重对齐宿主源表
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
