@@ -196,3 +196,4 @@ Status: proposed
 
 R-X5 的执行证据契约见[实现笔记](../../implemented/feature/2026-10-10-declarative-workflow.md)，验收以当次代码与测试结果为准。
 R-X8 的执行证据契约见[实现笔记](../../implemented/feature/2026-10-15-host-capability-health.md)，验收以当次代码与测试结果为准。
+R-X9 的执行证据契约见[实现笔记](../../implemented/feature/2026-10-16-accessibility-and-narrow-screen.md)，验收以当次代码与测试结果为准。

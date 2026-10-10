@@ -58,7 +58,16 @@ const read = (rel) => {
  *   踩坑：`const WORTH_KEY = 'worth'` 里的 `'worth'` 是 **JSON 字段名**（读 stock.worth），
  *   不是 storage 键。故 --list 会单列「仅由常量层引用的键」供人工复核，防同类混入。 */
 const HANDLE = String.raw`(?:(?:window\.)?VirtualPhone(?:\?)?\.storage|phoneStorage|phone(?:\?)?\.storage|\bthis\.storage|\bthis\.app(?:\.phone)?(?:\?)?\.storage|\bapp(?:\.phone)?(?:\?)?\.storage|\bstorage)`;
-const CALL_RE = new RegExp(HANDLE + String.raw`\??\.(?:set|get|remove)\??\.?\s*\(\s*['"\`]([A-Za-z_][A-Za-z0-9_]*)['"\`]`, 'g');
+/* [v3.93.0 · R-X9] 键名字符集**必须含连字符**：本仓实测 142 个键带连字符
+ *   （phone-font-scale / phone-image-* / offline-* / story-* …），旧口径
+ *   `[A-Za-z_][A-Za-z0-9_]*` 把它们整体挡在 K1/K2/K3 之外 —— 其中 3 个真的
+ *   命中 CHAT_DATA_PATTERNS（pending-contacts / story-current-time /
+ *   story-initial-time），即「该隔离的键从未被问过归属」。这不是放宽判据，
+ *   是把**射程**补回它本来该有的宽度（键是 storage 的实参，字符串里有什么字符
+ *   就该认什么字符）。
+ *   仍刻意不收模板插值键（`phone-tts-${provider}-voice`）：它不是一个键，
+ *   是一个键族，登记它等于登记一个通配 —— 归属不可知正是 v2.69.0 要治的形态。 */
+const CALL_RE = new RegExp(HANDLE + String.raw`\??\.(?:set|get|remove)\??\.?\s*\(\s*['"\`]([A-Za-z_][A-Za-z0-9_.-]*)['"\`]`, 'g');
 const CONST_RE = /(?:storageKey|\bconst KEY\b|\b[A-Z][A-Z0-9_]*_KEY|this\.KEY)\s*[:=]\s*['"`]([A-Za-z_][A-Za-z0-9_]*)['"`]/g;
 /* 本地包装层（实测踩到，v2.69.0）：本仓为**可测性**普遍写作
  *     const get = (key, dflt = null) => { try { return storage?.get?.(key, dflt) ?? dflt; } catch { return dflt; } };
@@ -501,7 +510,164 @@ const KEY_REGISTRY = [
   // [v2.89.0] 存储层迁移账本：记录「哪些旧键已迁进新架构」，防重复搬运。
   //   键名不匹配任何 CHAT_DATA_PATTERNS → 默认落全局命名空间（isChatData=false）；
   //   写端会按 isChatData 选 store，但**键名归属**以 pattern 匹配为准，故登记 global。
-  { key: '__migration_ledger', scope: 'global', note: '存储层迁移留痕账本（version+keys）' }
+  /* [v3.93.0 · R-X9] 无障碍操作层三键。**全部命中 /^sys_/ ⇒ 会话隔离**：
+   *   口径与 sys_motion_level / sys_shell_scale 一致 —— 「这台手机怎么显示」随会话走，
+   *   这也是计划验收「设置重开后保留，且按会话正确隔离」的落点。
+   *   刻意不新开「低动画」与「字体缩放」键：前者就是 sys_motion_level、后者就是
+   *   phone-font-scale（同一件事两个存储位必然漂移）。 */
+  { key: 'sys_access_level', scope: 'chat', note: '操作层档位（standard / enhanced / large，随会话隔离）' },
+  { key: 'sys_access_compact', scope: 'chat', note: '紧凑列表开关（随会话隔离）' },
+  { key: 'sys_access_theme', scope: 'chat', note: '主题档（auto / light / dark，随会话隔离）' },
+  { key: '__migration_ledger', scope: 'global', note: '存储层迁移留痕账本（version+keys）' },
+
+  // ══ [v3.93.0 · R-X9] 键名字符集放开后**补齐的登记**（142 条）══
+  // 为什么现在才有：旧抽取口径的字符集是 `[A-Za-z_][A-Za-z0-9_]*`，把 142 个带连字符的
+  //   键整体挡在 K1/K2/K3 之外（实测），其中 3 个真的命中 CHAT_DATA_PATTERNS。
+  // 逐键显式枚举、不用通配（如 `phone-*`）：通配会把「新键归属」重新变成不需要回答的问题
+  //   —— 那正是 v2.69.0 把 `/^ruby_/` 兜底改成逐键枚举的理由。
+  // 归属判据是**实测**：对每个键跑一遍 CHAT_DATA_PATTERNS，命中即 chat、不命中即 global。
+  { key: 'pending-contacts', scope: 'chat', note: '显示与交互设置（本机外观，跨会话共享）' },
+  { key: 'story-current-time', scope: 'chat', note: '显示与交互设置（本机外观，跨会话共享）' },
+  { key: 'story-initial-time', scope: 'chat', note: '显示与交互设置（本机外观，跨会话共享）' },
+  { key: 'dock-apps', scope: 'global', note: '底部快捷栏 App 列表（设置页写 / 桌面读）' },
+  { key: 'offline-diary-history-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-diary-history-limit', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-group-chat-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-group-chat-limit', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-honey-chat-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-moments-history-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-phone-call-history-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-single-chat-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-single-chat-limit', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-wechat-prompt-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-weibo-history-enabled', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'offline-weibo-history-limit', scope: 'global', note: '离线回复相关设置（设置页写 / 数据层读）' },
+  { key: 'phone-app-custom-names', scope: 'global', note: 'App 显示名自定义（设置页写 / 桌面读）' },
+  { key: 'phone-asr-auto-local', scope: 'global', note: '语音输入配置（设置页 / asr-manager）' },
+  { key: 'phone-asr-language', scope: 'global', note: '语音输入配置（设置页 / asr-manager）' },
+  { key: 'phone-asr-provider', scope: 'global', note: '语音输入配置（设置页 / asr-manager）' },
+  { key: 'phone-asr-section-open', scope: 'global', note: '语音输入配置（设置页 / asr-manager）' },
+  { key: 'phone-call-auto-tts', scope: 'global', note: '通话相关设置' },
+  { key: 'phone-call-limit', scope: 'global', note: '通话相关设置' },
+  { key: 'phone-card-time-image', scope: 'global', note: '时间卡片背景图路径（相册 / 设置页 / 上传器读写）' },
+  { key: 'phone-font-scale', scope: 'global', note: '全局字体缩放百分比（设置页 / font-scale 读写）' },
+  { key: 'phone-frame-color', scope: 'global', note: '手机壳颜色（设置页 / font-scale 读写）' },
+  { key: 'phone-global-text', scope: 'global', note: '全局文字颜色（设置页 / font-scale 读写）' },
+  { key: 'phone-home-layout', scope: 'global', note: '桌面布局（图标 / 卡片；设置页写 / 桌面与外壳读）' },
+  { key: 'phone-honey-tts-cache-enabled', scope: 'global', note: '蜜语相关设置' },
+  { key: 'phone-honey-tts-enabled', scope: 'global', note: '蜜语相关设置' },
+  { key: 'phone-honey-tts-mode', scope: 'global', note: '蜜语相关设置' },
+  { key: 'phone-image-active-comfyui-app', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-active-prompt-app', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-active-workflow', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-clip', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-loras', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-mode', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-model', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-node-mapping', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-remote-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-sampler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-scheduler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-transport', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-vae', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-workflow', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-comfyui-workflows', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-debug-payload', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-enabled', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-honey-auto-generate', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-active-vibe-group', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-custom-key', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-model', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-public-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-queue-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-sampler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-schedule', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-site', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-skip-cfg-compat', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-vibe-enabled', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-vibe-groups', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-novelai-vibe-normalize-strength', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-active-preset', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-custom-key', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-model', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-presets', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-presets-by-app', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-public-relay-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-public-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-quality', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-site', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-openai-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-prompt-presets', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-prompt-presets-by-app', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-provider', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-provider-app-bindings', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-duration', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-instance-type', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-key', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-seed', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-steps', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-runninghub-workflow-id', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-adetailer', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-auth', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-hires-fix', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-lora', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-model', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-restore-faces', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-sampler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-scheduler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-upscaler', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-url', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-sd-vae', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-seed', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-siliconflow-key', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-siliconflow-model', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-wechat-height', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-image-wechat-width', scope: 'global', note: '生图通道配置（设置页 / image-generation-manager / 各 App 读写）' },
+  { key: 'phone-injection-require-variable-enabled', scope: 'global', note: '注入要求变量开关（设置页写 / index.js 读）' },
+  { key: 'phone-prompt-active-presets', scope: 'global', note: '提示词预设（config/prompt-manager.js）' },
+  { key: 'phone-prompt-user-presets', scope: 'global', note: '提示词预设（config/prompt-manager.js）' },
+  { key: 'phone-prompts', scope: 'global', note: '提示词总表（设置页 / prompt-manager 读写）' },
+  { key: 'phone-settings-general-data-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-general-interaction-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-general-personalization-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-general-text-color-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-general-time-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-memory-permission-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-settings-memory-tag-filter-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  { key: 'phone-shell-scale', scope: 'global', note: '外壳缩放百分比（旧键；与 sys_shell_scale 双写，控制中心与设置页读）' },
+  { key: 'phone-sms-limit', scope: 'global', note: '短信条数上限（设置页 / phone-view 读写）' },
+  { key: 'phone-tts-fallback-female-provider', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-fallback-female-voice', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-fallback-male-provider', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-fallback-male-voice', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-fallback-section-open', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-honey-section-open', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-key', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-main-provider', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-minimax-section-open', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-model', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-provider', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-url', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-voice', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-voice-history', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-volc-app-id', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-volc-resource-id', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-volc-voice-history', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-tts-wechat-section-open', scope: 'global', note: '语音合成配置（设置页 / tts-manager / honey 等读写）' },
+  { key: 'phone-update-announcement-seen-version', scope: 'global', note: '更新检查游标（phone/update-checker.js）' },
+  { key: 'phone-update-last-check-at', scope: 'global', note: '更新检查游标（phone/update-checker.js）' },
+  { key: 'phone-update-remote-ack-version', scope: 'global', note: '更新检查游标（phone/update-checker.js）' },
+  { key: 'phone-user-message-listener-enabled', scope: 'global', note: '监听用户消息开关（设置页写 / index.js 读）' },
+  { key: 'phone-wallpaper', scope: 'global', note: '桌面壁纸（相册 / 设置页 / 桌面 / 外壳读写）' },
+  { key: 'phone-wechat-offline-clean-user-reply-enabled', scope: 'global', note: '微信离线清理用户回复开关（设置页 / chat-view / index.js 读写）' },
+  { key: 'wechat-call-auto-tts', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-group-call-history-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-group-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-moments-context-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-single-call-history-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-single-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' }
 ];
 
 const matches = (entry, key) => entry.key.endsWith('*')

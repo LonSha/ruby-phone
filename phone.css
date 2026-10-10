@@ -20364,3 +20364,184 @@ html[data-motion="still"] .music-floating-panel *::after {
 .cph-btn { border: 1px solid #d8d2c8; background: #faf8f4; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
 .cph-btn:hover { background: #f2eee6; }
 .cph-pre { white-space: pre-wrap; font-size: 11px; background: #faf8f4; border: 1px solid #eee9e0; border-radius: 4px; padding: 6px 8px; margin-top: 6px; color: #4a4640; }
+
+/* ══════════════ [v3.93.0] 无障碍操作台（accessdesk） ══════════════ */
+/* accessdesk.css — [v3.93.0 · 拓展计划 R-X9] 无障碍操作台 · 样式层
+ * 类前缀族 .axd-*（实测在 phone.css 侧与 apps/ 侧均未被占用；registry 门按族判定）。
+ * 本文件是**源**，内容同步投递进 phone.css（机制 A）—— 与 caphealth / te / cph 同规。 */
+
+.axd-root { all: initial; }
+.axd-wrap {
+    padding: 12px;
+    font-size: 13px;
+    color: #2b2b2b;
+    line-height: 1.5;
+}
+.axd-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 10px; }
+.axd-title { font-size: 15px; font-weight: 600; color: #3c4a58; }
+.axd-sub { font-size: 11px; color: #9a948a; margin: 2px 0 4px; }
+.axd-note { font-size: 11px; color: #6a645c; margin-top: 4px; }
+.axd-warn { font-size: 11px; color: #8a6a20; background: #fbf6e4; border-left: 2px solid #c8a840; padding: 4px 8px; margin-top: 6px; }
+.axd-box { border: 1px solid #e8e3da; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.axd-box h3 { margin: 0 0 6px; font-size: 13px; color: #3c4a58; font-weight: 600; }
+.axd-row { display: flex; align-items: baseline; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.axd-k { flex: 0 0 84px; font-size: 11px; color: #9a948a; }
+.axd-v { font-size: 12px; }
+.axd-dim { font-size: 11px; color: #7a746c; }
+.axd-caps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.axd-cap {
+    flex: 1 1 auto;
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid #d8d2c8;
+    border-radius: 8px;
+    background: #faf8f4;
+    color: #4a4540;
+    font-size: 12px;
+    cursor: pointer;
+}
+.axd-cap-on { background: #e8f0e6; border-color: #a8c0a0; color: #3d5a38; font-weight: 600; }
+.axd-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.axd-btn {
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid #d8d2c8;
+    border-radius: 8px;
+    background: #fff;
+    color: #3c4a58;
+    font-size: 12px;
+    cursor: pointer;
+}
+.axd-btn-dim { color: #7a746c; }
+.axd-mark { font-weight: 600; }
+.axd-tone-good { color: #45603f; }
+.axd-tone-bad { color: #8a4433; }
+.axd-tone-muted { color: #7a746c; }
+.axd-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
+.axd-legend-i { padding: 1px 6px; border-radius: 3px; background: #f6f4f0; }
+.axd-self { padding: 4px 8px; font-size: 11px; color: #6a645c; margin-top: 6px; }
+.axd-self-bad { border-left: 2px solid #a0553f; color: #8a4433; font-weight: 600; }
+.axd-flash { margin-top: 6px; font-size: 12px; color: #4a6a4a; }
+.axd-flash-bad { color: #a0553f; }
+
+/* ── 放大与窄屏的落点（判据由内核 overlapGuardOf 给，此处只落实） ──
+ * ① 大字号档：按钮行换行、定高行改自适应。 */
+.axd-root[data-ax-band="large"] .axd-cap,
+.axd-root[data-ax-band="large"] .axd-btn {
+    flex: 1 1 46%;
+    min-height: 40px;
+    font-size: 13px;
+}
+.axd-root[data-ax-band="large"] .axd-k { flex: 0 0 100%; }
+.axd-root[data-ax-band="large"] .axd-row { row-gap: 2px; }
+/* ② 窄屏（320px）：单列、点击目标不缩水。 */
+.axd-root[data-ax-narrow="1"] .axd-caps { flex-direction: column; }
+.axd-root[data-ax-narrow="1"] .axd-cap { width: 100%; }
+.axd-root[data-ax-narrow="1"] .axd-acts { flex-direction: column; }
+.axd-root[data-ax-narrow="1"] .axd-btn { width: 100%; }
+/* ③ 焦点可见：任何档位都保留焦点环（本页自己也要遵守它讲的事）。 */
+.axd-root :is(.axd-cap, .axd-btn):focus-visible {
+    outline: 2px solid #0a84ff;
+    outline-offset: 2px;
+}
+/* ④ 增强档：点击目标放大到 44px（内核 AX_TOUCH_MIN 的落点）。 */
+.axd-root[data-ax-guard="wrap"] .axd-cap,
+.axd-root[data-ax-guard="wrap"] .axd-btn { min-height: 44px; }
+/* ══════════════ [v3.93.0 · R-X9] 无障碍操作层（焦点环 / 状态标记 / 窄屏） ══════════════ */
+/* ── ① 焦点环：键盘可达性的**可见那一半**（另一半是 tabindex + keydown，在 home-screen.js） ──
+ * 为什么用 :focus-visible 而不是 :focus：:focus 对鼠标点击也生效，会让鼠标用户
+ *   看到一圈本不该出现的轮廓（本仓既有 10 处就是这么写的，只覆盖了具体控件）。
+ * 覆盖面：桌面图标 / dock 图标 / 任务入口 / 无障碍操作台 / 通用按钮型句柄。
+ *   `outline` 单列而不是用 box-shadow：那就不会被任何 `overflow:hidden` 父层裁掉
+ *   （桌面图标外层有 overflow 约束，用 box-shadow 会被吃掉一半）。 */
+#phone-panel-content .phone-screen :is(
+    .app-icon, .dock-app, .home-page-dot, .yzp-home-app-action, .yzp-home-dock-app,
+    .home-card, [role="button"], [tabindex]:not([tabindex="-1"])
+):focus-visible {
+    outline: 2px solid var(--iphone-accent, #0a84ff);
+    outline-offset: 2px;
+    border-radius: 10px;
+}
+
+/* ── ② 状态标记：文字或符号是**主**载体，颜色是附加 ──
+ * 口径：`.ax-mark` 是内核 markOf() 产出的标记（含文字 + 符号），
+ *   本段只负责「去掉颜色之后仍看得出差别」——即符号不许只靠 color 区分。
+ * 为什么要 `[data-ax-mark]` 属性选择器而不是只靠类名：类名可能被复用，
+ *   而属性是内核显式打上的（写错就查得到）。 */
+.ax-mark { font-weight: 600; }
+.ax-mark::before { content: attr(data-ax-mark); margin-right: 4px; }
+.ax-mark[data-ax-state="ok"] { color: #2f6b3a; }
+.ax-mark[data-ax-state="fail"] { color: #a03a2a; }
+.ax-mark[data-ax-state="unknown"] { color: #7a6a3a; }
+.ax-mark[data-ax-state="empty"] { color: #6a6a6a; }
+
+/* ── ③ 320px 窄屏专门布局（断点真源：config/access-layers.js 的 AX_NARROW_WIDTH = 320） ──
+ * 修前实测：本文件**没有**任何 320px 媒体查询 —— 320px 设备上桌面四列挤成一团、
+ *   dock 图标叠字、按钮行溢出。本段给一条**专门布局**（不是「顺带挤一挤」）：
+ *   图标三列、字号降一档、按钮行允许换行、状态行高度自适应。 */
+@media (max-width: 320px) {
+    /* 桌面：四列 → 三列（列数是分页容量的来源之一，home-screen.js 用内核的 narrowPlan 取同一份口径）。 */
+    #phone-panel-content .phone-screen .home-screen .app-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 3% !important;
+        padding: 3% 4% !important;
+    }
+    #phone-panel-content .phone-screen .home-screen .app-icon-bg {
+        width: 46px !important;
+        height: 46px !important;
+    }
+    #phone-panel-content .phone-screen .home-screen .app-name {
+        font-size: 10px !important;
+        max-width: 46px !important;
+    }
+    /* dock：保留文字（去掉就成了一排无标签色块 —— 验收③的反面），但缩字号。 */
+    #phone-panel-content .phone-screen .home-screen .dock-app .app-name {
+        font-size: 9px !important;
+    }
+    /* 设置页与通用卡片：按钮行换行、状态行高度自适应（对应内核 overlapGuardOf 的两格）。 */
+    #phone-panel-content .phone-body-panel :is(.setting-item, .settings-row, .axd-row) {
+        flex-wrap: wrap !important;
+    }
+    #phone-panel-content .phone-body-panel :is(.setting-btn, .axd-btn, .axd-cap) {
+        min-height: 40px;
+    }
+}
+
+/* ── ④ 大字体档（>115%）：按钮行换行 + 定高行改自适应 ──
+ * 与窄屏段**分列**而不是合并：两件事的成因不同（一个是视口窄、一个是字号大），
+ *   合并会造出「大字号设备被当成窄屏」或反之的假处置。
+ * 选择器带 `html[data-ax-band="large"]` —— 该属性由咽喉 refreshAccess() 写。 */
+html[data-ax-band="large"] #phone-panel-content .phone-body-panel :is(.setting-item, .settings-row, .axd-row) {
+    flex-wrap: wrap !important;
+    row-gap: 4px !important;
+}
+html[data-ax-band="large"] #phone-panel-content .phone-body-panel :is(.setting-btn, .axd-btn, .axd-cap) {
+    min-height: 44px;
+}
+html[data-ax-band="large"] #phone-panel-content .phone-body-panel :is(.setting-desc, .axd-dim) {
+    line-height: 1.6 !important;
+}
+
+/* ── ⑤ 深色模式：只覆盖**不透明底 + 文字色**两族，不做「全仓换肤」 ──
+ * 为什么克制：本仓 1218 处用 var(--phone-*) 取色，但绝大多数 App 的局部样式是
+ *   写死的浅色。全仓换肤等于重做一遍所有 App 的配色（那是另一版的工作量），
+ *   而「只把外壳与通用面板压暗」已经能让深色档**真的看得出是深色**，
+ *   且不会把某个 App 的文字压成看不见（那是「做了深色反而更糟」）。
+ * 属性 `html[data-ax-theme="dark"]` 由咽喉写；未写时本段不生效（默认亮色）。 */
+html[data-ax-theme="dark"] {
+    --phone-global-text: #e8e6e2;
+    --settings-text-color: #e8e6e2;
+    --settings-muted-text-color: #a8a49c;
+}
+html[data-ax-theme="dark"] #phone-panel-content .phone-body-panel,
+html[data-ax-theme="dark"] #phone-panel-content .phone-screen .home-screen,
+html[data-ax-theme="dark"] #phone-panel-content .axd-wrap,
+html[data-ax-theme="dark"] #phone-panel-content .te-wrap,
+html[data-ax-theme="dark"] #phone-panel-content .cph-wrap {
+    background: #1c1c1e;
+    color: #e8e6e2;
+}
+html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box) {
+    background: #2a2a2c;
+    border-color: #3a3a3c;
+}

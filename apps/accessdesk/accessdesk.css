@@ -1,0 +1,81 @@
+/* accessdesk.css — [v3.93.0 · 拓展计划 R-X9] 无障碍操作台 · 样式层
+ * 类前缀族 .axd-*（实测在 phone.css 侧与 apps/ 侧均未被占用；registry 门按族判定）。
+ * 本文件是**源**，内容同步投递进 phone.css（机制 A）—— 与 caphealth / te / cph 同规。 */
+
+.axd-root { all: initial; }
+.axd-wrap {
+    padding: 12px;
+    font-size: 13px;
+    color: #2b2b2b;
+    line-height: 1.5;
+}
+.axd-head { border-bottom: 1px solid #e5e0d8; padding-bottom: 8px; margin-bottom: 10px; }
+.axd-title { font-size: 15px; font-weight: 600; color: #3c4a58; }
+.axd-sub { font-size: 11px; color: #9a948a; margin: 2px 0 4px; }
+.axd-note { font-size: 11px; color: #6a645c; margin-top: 4px; }
+.axd-warn { font-size: 11px; color: #8a6a20; background: #fbf6e4; border-left: 2px solid #c8a840; padding: 4px 8px; margin-top: 6px; }
+.axd-box { border: 1px solid #e8e3da; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.axd-box h3 { margin: 0 0 6px; font-size: 13px; color: #3c4a58; font-weight: 600; }
+.axd-row { display: flex; align-items: baseline; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.axd-k { flex: 0 0 84px; font-size: 11px; color: #9a948a; }
+.axd-v { font-size: 12px; }
+.axd-dim { font-size: 11px; color: #7a746c; }
+.axd-caps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.axd-cap {
+    flex: 1 1 auto;
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid #d8d2c8;
+    border-radius: 8px;
+    background: #faf8f4;
+    color: #4a4540;
+    font-size: 12px;
+    cursor: pointer;
+}
+.axd-cap-on { background: #e8f0e6; border-color: #a8c0a0; color: #3d5a38; font-weight: 600; }
+.axd-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.axd-btn {
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid #d8d2c8;
+    border-radius: 8px;
+    background: #fff;
+    color: #3c4a58;
+    font-size: 12px;
+    cursor: pointer;
+}
+.axd-btn-dim { color: #7a746c; }
+.axd-mark { font-weight: 600; }
+.axd-tone-good { color: #45603f; }
+.axd-tone-bad { color: #8a4433; }
+.axd-tone-muted { color: #7a746c; }
+.axd-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
+.axd-legend-i { padding: 1px 6px; border-radius: 3px; background: #f6f4f0; }
+.axd-self { padding: 4px 8px; font-size: 11px; color: #6a645c; margin-top: 6px; }
+.axd-self-bad { border-left: 2px solid #a0553f; color: #8a4433; font-weight: 600; }
+.axd-flash { margin-top: 6px; font-size: 12px; color: #4a6a4a; }
+.axd-flash-bad { color: #a0553f; }
+
+/* ── 放大与窄屏的落点（判据由内核 overlapGuardOf 给，此处只落实） ──
+ * ① 大字号档：按钮行换行、定高行改自适应。 */
+.axd-root[data-ax-band="large"] .axd-cap,
+.axd-root[data-ax-band="large"] .axd-btn {
+    flex: 1 1 46%;
+    min-height: 40px;
+    font-size: 13px;
+}
+.axd-root[data-ax-band="large"] .axd-k { flex: 0 0 100%; }
+.axd-root[data-ax-band="large"] .axd-row { row-gap: 2px; }
+/* ② 窄屏（320px）：单列、点击目标不缩水。 */
+.axd-root[data-ax-narrow="1"] .axd-caps { flex-direction: column; }
+.axd-root[data-ax-narrow="1"] .axd-cap { width: 100%; }
+.axd-root[data-ax-narrow="1"] .axd-acts { flex-direction: column; }
+.axd-root[data-ax-narrow="1"] .axd-btn { width: 100%; }
+/* ③ 焦点可见：任何档位都保留焦点环（本页自己也要遵守它讲的事）。 */
+.axd-root :is(.axd-cap, .axd-btn):focus-visible {
+    outline: 2px solid #0a84ff;
+    outline-offset: 2px;
+}
+/* ④ 增强档：点击目标放大到 44px（内核 AX_TOUCH_MIN 的落点）。 */
+.axd-root[data-ax-guard="wrap"] .axd-cap,
+.axd-root[data-ax-guard="wrap"] .axd-btn { min-height: 44px; }

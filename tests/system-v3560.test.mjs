@@ -106,15 +106,27 @@ function pagerProblems(root) {
      *    而 PointerEvent.movementX/Y 在触摸端基本不填 —— 用错即「怎么划都不翻页」。 */
     if (hits(home, 'const dx = x - startX;') !== 1) bad.push('A7 手势位移未取起止坐标之差');
     if (hits(code, 'movementX') > 0) bad.push('A7 手势位移读了 movementX（触摸端不可靠）');
-    /* A8 每页容量下限：81 件要真被切成多页，容量必须小到能落进一屏 */
-    const m = home.match(/return columns \* rows;/);
-    if (!m) bad.push('A8 缺每页容量计算');
+    /* A8 每页容量下限：81 件要真被切成多页，容量必须小到能落进一屏（≤ 24）。
+     * ★ [v3.93.0 交棒改写，不是放宽] 原判据把**实现形态**钉死为「恰写 `return columns * rows;`
+     *   且列数是一个数字字面量」。v3.93.0（R-X9 窄屏专门布局）把桌面列数改成**从内核派生**
+     *   （`config/access-layers.js` 的 narrowPlan —— 修掉「CSS 写一个 4、JS 再写一个 4」的两处漂移：
+     *   窄屏下 CSS 改 3 列而 JS 仍按 4 列摆，末行必被 dock 压住），于是那条形态锚在真仓上
+     *   必然落空 ⇒ 判据恒红（与恒绿同样是坏判据，只是方向相反）。
+     *   改写为**版本无关的两半**（原判据真正的意图一句没丢）：
+     *     ① 容量必须由**行数**参与算出（返回表达式里必须有 `* rows`）—— 这才是不漂移的那一半；
+     *     ② 行数必须显式声明为数字，且「列数 × 行数 ≤ 24」（列数取自源码里的字面量；
+     *        没有字面量 ⇒ 列数来自内核，按标准档 4 列算）。
+     *   列数那一格的真源现在是内核，由 v3930 的 C4（静态接线）与 E1（真调用行为面）守着，
+     *   本处不重复钉实现形态。 */
+    const capM = home.match(/return\s+[^\n;]*\*\s*rows\s*;/);
+    const rm = home.match(/const rows = (\d+);/);
+    const cm = home.match(/const columns = (\d+);/);
+    if (!capM) bad.push('A8 缺每页容量计算（容量必须由行数参与算出）');
+    else if (!rm) bad.push('A8 容量行数未显式声明');
     else {
-        const cm = home.match(/const columns = (\d+);/);
-        const rm = home.match(/const rows = (\d+);/);
-        if (!cm || !rm) bad.push('A8 容量行列未显式声明');
-        else if (Number(cm[1]) * Number(rm[1]) > 24) {
-            bad.push('A8 每页容量 ' + String(Number(cm[1]) * Number(rm[1])) + ' 超过 24，分页无意义');
+        const cols = cm ? Number(cm[1]) : 4;
+        if (cols * Number(rm[1]) > 24) {
+            bad.push('A8 每页容量 ' + String(cols * Number(rm[1])) + ' 超过 24，分页无意义');
         }
     }
     return bad;

@@ -223,7 +223,7 @@ export function capSummaryLine(counts, attentionCount) {
 /**
  * 跨仓版本联动提示（计划 R-X8 ④：双项目版本不匹配时给出明确联动提示）。
  * 只比对**调用方给的**两个版本号 + 登记面的就绪条数，不自己读文件、不自己判上游版本。
- * @param {{phone:string, upstreams:Array<{id:string,version:string|null}>|null,
+ * @param {{phoneVersion:string, upstreams:Array<{id:string,version:string|null}>|null,
  *          readyFaces:number, totalFaces:number, minUpstream:string}} input
  */
 export function crossRepoNotice(input) {

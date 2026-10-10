@@ -18,7 +18,7 @@
   ]
  },
  "readings": {
-  "files_scanned": 419,
+  "files_scanned": 422,
   "rollback_points": 41,
   "rollback_files": 4,
   "rollback_entry_defs": 12,
@@ -1049,5 +1049,7 @@
     "`chat_data_patterns` 的增长只记读数、不改口径：探针「以 / 或 ^ 起首的行」判法本版一字未动。"
    ]
   }
- }
+ },
+ "refreshed_at": "v3.93.0",
+ "refresh_note": "本基线在 v3.93.0 被**显式刷新过一次**（不是抬版侧写），原因只有一类：R-X9 落地的文件使**全仓枚举面**从 419 涨到 422，于是「扫到的文件数」这条读数必然跟着涨。这是「**输入面变了、读数跟着变**」的显式动作，不是转写漂移。刷新由 tools/refresh_baselines_v3930.py 完成（零手抄、幂等、冻结 measured_at、冻结面跳过、名单不一致即报错）。measured_at 仍是建基线时的当版，未被改写。"
 }

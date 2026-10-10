@@ -178,6 +178,20 @@ import {
     CAPABILITY_IDS, capHealthSummary, capHealthReport, crossRepoNotice,
     capHealthSelfCheck, minUpstreamOf,
 } from './config/capability-health.js';
+/* [v3.93.0 · 拓展计划 R-X9] 无障碍 / 窄屏 / 个性化操作层（纯函数内核）。
+ *   接在咽喉的理由与 R-X1..R-X8 同族：三档怎么定、四态怎么分、窄屏怎么排、名字取哪个
+ *   真源全由调用方（内核）判 —— 本模块自己不读存储、不碰 DOM、不联网。
+ *   三件个性化开关刻意**复用既有真源**：低动画落 `sys_motion_level`（config/motion.js 的键）、
+ *   字体缩放落 `phone-font-scale`（phone/font-scale.js 的键），本版只新开三个键
+ *   （sys_access_level / sys_access_compact / sys_access_theme）。
+ *   为什么 320px 断点必须从内核取而不是写在 CSS 里：列数变化会改分页容量（home-screen.js），
+ *   而分页容量是 JS 算的 —— 两边各写一个 320 就必然漂移（本仓同一口径两份实现的老账）。 */
+import {
+    AX_LEVEL_KEY, AX_PREF_KEYS, AX_NARROW_WIDTH, AX_TOUCH_MIN,
+    resolveAccessLevel, readAccessEnv, narrowPlan, overlapGuardOf,
+    resolveTheme, readDarkEnv, normalizeCompact, markOf, accessSelfCheck,
+    iconA11yName, a11yNameUsable,
+} from './config/access-layers.js';
 /* [v3.92.0 · 拓展计划 R-X8] 上游只读出口（本仓已有的唯一真源，不新建第二份）：
  *   · `lonshaSource`  —— 记忆插件的**来源自述态**（mounted / sourceState / lastError）；
  *   · `readPushProbe` —— 推/拉统一探针（快照 + 来源 id，用于上游版本归因）；
@@ -220,7 +234,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.92.0';
+const ST_PHONE_VERSION = '3.93.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -373,6 +387,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             换会话必须丢（备份范围含会话面，不能带着别人的选择），
                       //             键枚举与台账由咽喉下一次 render 重取。
                       //             同族缺陷：本 App 与 dirMap 就位但漏入本表。
+    'accessdeskApp',  // [v3.93.0 · R-X9] 无障碍操作台：提示行与预览档是**实例态** ——
+                      //             换会话必须丢（上一段会话的预览不能留着）；
+                      //             三个设置键随会话隔离（^sys_），档位属性由咽喉下一次 render 重写。
     'caphealthApp',   // [v3.92.0 · R-X8] 能力体检：提示行与已生成的报告是**实例态** ——
                       //             换会话必须丢（上一段会话复制出来的报告不能留着），
                       //             六项能力的观测由咽喉下一次 render 现采（设备级读数，不随会话变）。
@@ -415,26 +432,26 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-15",
+    date: "2026-10-16",
     items: [
-        "【定位 · 计划 R-X8 的真实缺口（修前实测，不是推演）】** 本仓有八十六个 App、十几个上游契约、两条桥、三种生图通道、两端语音，但修前**没有一处**能回答「这台机器此刻到底有什么能力」：宿主版本全仓零处读取（`grep -rn 'version_display'` 与 `SillyTavern.version` 双双零命中），两条桥在不在场只有世界脉冲一张卡里顺带提一句，录音接口在不在浏览器里没有任何出口，用户遇到「语音按了没反应」只能猜是没装、没开还是浏览器不支持。",
-        "【修前处境的四条实测形态】** ① 能力缺失与读数缺席长得一样：搜索 App 没加载过、记忆桥没挂、生图没选通道，界面给的都是一片空白；② 接口在场被当成服务可用：桥挂上了就画成「记忆可用」，而桥挂上到真产出快照之间隔着好几轮；③ 缺能力不给替代路径：一项不可用时，用户拿到的只有「不可用」两个字，没有「那还能怎么办」；④ 双项目版本不一致零提示：记忆插件 v3.1.0 配手机端的最新生图协议时会静默少功能，没人在界面上说过一句话。",
-        "【新模块 · config/capability-health.js（纯函数内核）】** 四态判定 / 六项能力登记 / 替代操作表 / 汇总面 / 跨仓提示 / 诊断报告 / 自检的**唯一实现**。**零 import 之外的依赖、零 IO**：不读时钟、不读存储、不联网、不碰 DOM，观测与版本全由调用方注入。",
-        "【四态刻意不同形（验收①的落点）】** 可用 / 部分可用 / 不可用 / **未验证**，四态文案互不相同（自检直接断言 `new Set(texts).size === 4`）。压平任何两态都会造出「两种处置相反的处境长得一模一样」：**面缺席 ≠ 面坏了**——宿主没装那个扩展、本版没接那一面，都属于「没测过」，报成坏会造成一批假故障（自检专门断言「面缺席即使自述不可用也必须判未验证」）。",
-        "【接口存在不得报成服务可用（验收②的落点）】** 观测分四级（服务 / 接口 / 版本 / 无）：只知道接口在场 ⇒ 最高只能到部分可用；只知道版本号 ⇒ 未验证（版本号不是可用性）。这一条单独成 `apiOnlyDegrade()` 而不是内联 —— 它是最容易被后人改坏的一格（去掉就退化），自检与判据双向钉住。",
-        "【缺能力必须给替代操作（验收②的落点）】** 六项能力各有一组替代操作，**顺序即优先级**，由内核声明、原样转述到界面（视图不得自己排）。未验证**不给**替代操作（现在不必动手）—— 给未验证项也塞一份替代路径，会把「跑一次就好」误导成「已经坏了要绕路」。",
-        "【能力检测零写入零模型调用（验收③的落点）】** 判定内核零 import 之外的副作用；咽喉那一层**只调只读出口**：搜索只探到引擎的 `listSources()`、记忆读上游自述态、图片只读管理器配置（**绝不出图**）、语音只检查 `getUserMedia` **在不在**（**不调用** —— 调用会弹授权弹窗，那本身就是副作用）、通知真读一次读路径、恢复交接读世代号与被挡日志。读数里带 `writes: 0`（字面事实，不是声明），判据套件把咽喉那一段剥注释后逐条核。",
-        "【宿主版本多来源试读 + 读不出就是读不出】** 宿主（SillyTavern）版本按「先问 API → 再问 `getContext()` → 最后问页面元素 `#version_display`」试读；全拿不到就**如实空串** ⇒ 界面写「**读不出** —— 这是「读不出」，不是「宿主不支持」」。这两句处置相反：读不出要人去确认装没装，不支持要人换环境；写成同一句就是本仓最贵的那一类错读数。",
-        "【跨仓版本联动（功能点 ④的落点）】** 上游最低版本**从登记面真源派生**（`minUpstreamOf` 取该 owner 名下最大的 `since`，`null since` 不参与比对），不在这里写常数（写常数就是同一口径的第二份实现）；版本偏低与版本读不出分列两账（`outdated` / `missing`），没有门限就**不判版本偏低**（如实少一条判据，好过拿假门限比）。上游版本归因只在**恰好一个上游立了版本判据且来源 id 能对上名字族**时进行 —— 认不出就报「读不出」，不猜。",
-        "【复制诊断报告（功能点 ③的落点）】** 报告文本唯一实现在内核 `capHealthReport`，由咽喉调；**「复制」这个动作本身不得触发检测**（只用已判定的读数拼，`report` 分支里不出现观测采集函数），判据按此钉住。",
-        "【App 与诊断两面接线（新增模块必进三道扫描面）】** 新增 `apps/caphealth` 三层（App / 视图 / 样式）：动作白名单**只有一个**（`report` —— 本 App 是纯读数面，没有任何写动作），视图只渲染与转发；诊断协议面新增能力体检卡（六项四态行 + 设备身份 + 零写入证据）。注册面 / 懒加载 / 消费矩阵 / 生命周期 / 样式投递同步登记。",
-        "【咽喉范式（与 R-X1..R-X7 同族）】** 白名单 `CAPHEALTH_ACTION_KEYS` 声明在取数口**之前**（取数口要在读数里带上它，`const` 有暂时性死区）；`refreshCapHealth()` 是唯一取数口（缓存挂 `vp._caphealth`，含 `readable` / `why` 与其余协议面同形）；`applyCaphealthAction()` 是唯一动作口（先判白名单 → 取数 → 世代检查，**视图给了 token 才比** —— 本动作不写任何东西，误拒只会让按钮看起来坏了）；`capHealthFace` 是只读读数口，**每次读都重采**（宿主重载 / 桥上下线 / 通道改选都会改变读数）。**不按会话作废**：这是**设备级**读数，按会话作废会造出「换个角色能力就变了」的假读数；而实例态（提示行与已生成的报告）**必须**随会话丢，故 `caphealthApp` 进 `ST_PHONE_REBIND_APP_KEYS`。",
-        "【类前缀族撞车（本版自己侦察到并改掉的真缺陷）】** 本模块原用 `.ch-*` 族，而金手指 App（`apps/cheat`，v2.47.0）**已占用**该族，两者有**八个类名逐字重名**（ch-root / ch-head / ch-title / ch-badge / ch-btn / ch-note / ch-pre / ch-row），且取值方向相反（金手指是深色鎏金全屏、能力体检是浅色卡片）。按样式投递机制 A 把内容并进 `phone.css` ⇒ 同名选择器互相覆盖，**金手指界面当场走形**，而 registry 门只看「前缀族在不在 phone.css 里」，**看不出撞车**。已将本模块整族改名 `.cph-*` 并投递进 phone.css，判据新增三条钉住（族名对、无裸 `.ch-` 残留、能被 phone.css 找到）。",
-        "【三层与咽喉缓存键名错位（本版自己实测抓到的真缺陷）】** 咽喉写 `hostVersionText` 且**没有** `readable` / `why` 两格，而 App `_vm()` 读的是 `hostVersionLine` / `host.readable` / `host.why`。三处对不上 ⇒ 宿主版本明明取到了、界面永远显示「还没取到」；`faceReadable` 恒为 false ⇒ 界面永远挂着一条「能力面取数口不在位」的红字（**假故障**）。修法两侧同时改：咽喉缓存补 `readable: true` 与 `why: ''`（缓存在场即读数可读，不可读的唯一形态是咽喉未挂、由 `capHealthFace()==null` 表达），App 改读 `hostVersionText`。判据 C1 把这组键名逐格钉住。",
-        "【配套判据与负控制】** `tests/system-v3920.test.mjs` 六面 22 条：A 结构面（四态 / 六能力 / 替代操作六组 / 三处注册面 / 四一致命名 / REBIND 表 / 类前缀族与样式投递）；A2 纯函数与只读咽喉（剥注释后逐条核：无存储写入、无网络、无模型调用、无 `getUserMedia()` 调用）；B 行为面（四态不同形 / 接口不报服务可用 / 替代操作 / 跨仓两事分列 / 宿主版本诚实 / 计数守恒 / 最低版本派生 / 报告不重检测 / 多来源试读）；C 接线面（键名逐格对齐 / 白名单先于取数口 / 世代检查条件 / 只读读数口现采 / 诊断面只读那一份缓存）；D 负控制（八处真源码定点破坏，破坏副本上同款判据必转红；第八处两向对照自证）；E 版本锚。",
-        "【版本升至 3.92.0（五源同源）】** `manifest.json` / `package.json` / `index.js` 的版本常量与公告块 / `update-log.json` 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 `tools/bump_v3920.py` 对齐 `tools/bump_v3910.py`）。",
-        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：清单里「新增一处能力面」这类**绑定本版专有词**的写法，在本版交棒为形态锚（下限形：新版本判据只要求「能力面 ≥ 6 项且四态各不同形」，不要求「那一版那六项」），使抬版不再把「本版这件事」偷换成「上一版那件事」。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的四个具体形态：面缺席被画成「坏了」、接口在场被画成「服务可用」、宿主版本读不出被写成「不支持」、上游版本读不出与版本偏低被合成一句。本版**不能保证**：① 真宿主里 `#version_display` 的实际存在性与版本号格式（本版是多来源试读 + 读不出即如实说，不假定它一定在）；② 六项能力在两台桥都缺席的真机上的观感；③「复制诊断报告」在无剪贴板权限环境下的降级体验（代码里已降级为「显示在下方手动选中」，但观感未实测）。"
+        "【定位 · 计划 R-X9 的真实缺口（修前实测，不是推演）】** 键盘与触屏可达、字体缩放、状态不只靠颜色、窄屏布局四件事此前全仓没有一处出口；侦察时另撞到一条更重的：键审计的抽键正则不认连字符，一批带连字符的键从未进入任何一道门禁的射程。",
+        "【修前处境的四条实测形态】** ① 桌面图标与 dock 只挂了 onclick，没有 role / tabindex / aria-label，键盘用户整个主屏进不去；② focus-visible 全仓只写在五个文件的具体控件 id 上，图标与 dock 一处都没有（鼠标用户反而全程亮框，键盘用户全程没框）；③ 状态标记（app-badge 一族十余处）只有色块，色觉障碍用户读不出成功与失败；④ 全仓没有 320px 断点（两条 max-width 320px 是宽度取值不是断点），且翻页容量写死四列，与 CSS 的列数分属两处。",
+        "【键审计射程盲区（本版最重修正）】** scripts/keys-audit.mjs 的抽键字符集原为字母数字下划线，实测全仓 142 个带连字符的键（phone-font-scale / phone-image 一族 / offline 一族 / story 一族等）从未被 K1 / K2 / K3 问过归属，其中 3 个**真的**命中 CHAT_DATA_PATTERNS（pending-contacts、story-current-time、story-initial-time）—— 即「该按会话隔离的键，从来没有任何门禁问过它归谁」。修法是放宽字符集到含点与连字符，并**逐键显式登记** 142 条（3 会话隔离 · 139 全局），**不用通配**（通配会让归属于是「看着像对」）。修后读数：443 个使用点 / 106 条 pattern / 443 条登记（会话隔离 250 · 全局 190 · 历史键 3）。",
+        "【新内核 · config/access-layers.js（纯函数内核）】** 三档操作层 / 四态状态 / 窄屏计划 / 字号档 / 遮挡守卫 / 可读名四级真源 / 主题解析 / 自检的**唯一实现**。零 IO：不读时钟、不读存储、不联网、不碰 DOM，环境与真源全由调用方注入。",
+        "【四态不得压平（验收③的落点）】** 空 / 未知 / 失败 / 成功四态各带**文字与符号**（○ / ？ / × / ✓），归一化一律「认不出归未知、空串归空」—— 两者处置相反：空是「这里本来就没有」，未知是「没测到」，压平会造出「本来没有」被写成「故障」的假故障。",
+        "【读不出不得猜（验收②的落点）】** 宽度读不出**不得**判窄屏、字号读不出**不得**判大字号：判窄会让标准屏用户看到缩排布局，判大字号会让没设过的人看到换行；两个方向都难看，故读数缺席一律走标准档并在界面上**如实写明依据**（读不出就是读不出）。",
+        "【遮挡守卫三格各自独立（验收②的落点）】** 按钮换行 / 状态行高度自适应 / 文字标签保留三格互不塌陷：并成总开关会在放大字体时把状态行压成定高，文字顶到下一行；判据直接断言三格不得同时为真或同时为假。",
+        "【可读名四级真源 + 不编名字（验收③的落点）】** aria-label 大于 label 大于 text 大于 icon，四级都取不到就**如实空串**，绝不编「按钮」二字 —— 给读屏一个空名字，比给一个看着正常的假名字更难排查（假名字会让用户以为点对了）。",
+        "【App 三层 · apps/accessdesk（类前缀族 axd-）】** 动作白名单四个值（level / compact / theme / preview），其中 **preview 是纯视图态**：不进白名单、也不经过咽喉（它根本不写任何东西）。低动画**复用** sys_motion_level、字体缩放**复用** phone-font-scale，本 App 只写 sys_access_level / sys_access_compact / sys_access_theme 三键 —— 同一件事不留第二个存储位。",
+        "【咽喉范式（与 R-X1..R-X8 同族）】** 白名单 ACCESS_ACTION_KEYS 声明在取数口**之前**；refreshAccess 是唯一取数口（缓存挂 vp._access，含 readable / why）；applyAccessAction 是唯一动作口（白名单 → 取数 → 世代检查 → 写 → 重取）；writeAccessKey 写后**回读三态**（confirmed / pending / mismatch）—— 写失败最贵的形态是「按钮看起来点了、值没落盘」，写后回读是唯一能当场发现它的时机。三个动作写键收敛在**唯一一处**，不得各写一遍。",
+        "【消费面 · 主屏与全局样式】** 图标与 dock 加 role / tabindex / aria-label（名字取自内核 iconA11yName）；bindEvents 在**同一处**挂点击 / Enter / Space 三种激活（Space 要 preventDefault，否则浏览器会拿它滚页面）；翻页容量改从内核 narrowPlan **派生列数**（不得自己再写一个四）。全局样式补五段：焦点环（用 focus-visible，鼠标点击不亮框）、状态标记四态符号注入、320px 专门布局、大字号档布局、深色模式（**只覆盖不透明底与文字色两族**，半透明层叠后对比度反而更差）。",
+        "【门禁自指伪证（本版自己踩到并改掉的坑）】** 在 access-layers.js 注释里写了一个键常量赋值的**样例字面量**，被 keys 门的常量正则当成真证据，报出一个假键 —— 注释也会进射程，故改掉措辞并在旁边写明「本条注释刻意不写键常量赋值的样例字面量」。同族另两次：键名只藏在对象字面量里、抽取口径两处都不认，造成**幽灵登记**（改成三键各自单列常量）；以及动作键补登记前 K1 报未登记。",
+        "【本版自己抓到的三条真缺陷（都由门禁当场报红，不是靠人回看）】** ① **键审计射程本身的盲区**（见上：142 个连字符键从未被问过归属，其中 3 个真命中会话隔离正则）—— 这是**判据自身的射程错**，比任何一条业务缺陷都贵：它让「键归属全登记」这句结论在此前每一版都是**假的绿**；② **longlist 基线跨五版未刷**（`readings.after_motion_css.css_files_scanned` 停在 85，而真仓自 v3.89.0 起已 86→90）——v3770 的 B1/B2 两条读数判据**连红五版**，每版都看着像「本版引入的新红」；本版把刷新做成可复算的脚本动作（`tools/refresh_baselines_v3930.py`，幂等、冻结 `measured_at`、嵌套格名单不一致即拒判），刷新后两条转绿；③ **R-X8 遗留的事件字面量误判**（`config/capability-health.js` 的 JSDoc 参数标注里写了「参数名 phone 紧跟冒号类型」的样例，被「phone 加冒号加标识符」的全仓扫描面当成事件名 ⇒ v226「对账①」转红；**该红自 v3.92.0 就存在**，本版改注解措辞为 `phoneVersion` 修掉）。三条都不是本版新写的代码造成的，但**都只有把门禁真跑一遍才会现形**。",
+        "【本版自己抓到的两处实现缺陷】** ① 三层透出的排版依据此前分成 `narrow` 与 `narrowReason` 两格，视图又各自还原一次口径 —— 判据 C1 报「App 必须透出 plan」后改为**只此一格** `plan`（`narrow`/`narrowReason` 由视图从它派生），同一件事不再有两个来源；② 本版新写的基线刷新工具**自己也踩了一坑**：探针读数段在 `readings` 里，而对账代码直接在上面一层找 ⇒「格格都在、却一处也对不上」，对账静默空转（写盘 0 处、看着像「已同源」）。修法是先取 `readings` 段再对，并保留「找不到就不动、不猜」的降级。",
+        "【配套判据与负控制】** tests/system-v3930.test.mjs 六面 39 条：A 结构面 / A2 纯函数只读 / B 行为面（四态守恒 · 320 闭区间 · 读不出不猜 · 三格独立 · 名字不编 · 主题三段） / C 接线面（缓存逐格对齐 · 白名单先于取数口 · 只读口现采 · 列数派生 · 焦点环与断点共处一份样式 · 写键收敛一处 · 抽键口径认连字符） / D 负控制八处真源码定点破坏（破坏副本上同款判据必转红，第八处两向对照自证） / E 版本锚。",
+        "【版本升至 3.93.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3930.py 对齐 tools/bump_v3920.py）。",
+        "【交棒改写 · 对旧判据的形态锚】** 本段按版本锚的形态要求如实记录：清单里「新增一处窄屏布局」这类**绑定本版专有词**的写法，在本版交棒为形态锚（下限形：新版本判据只要求「断点存在且读不出不猜」，不要求「那一版那个 320」），使抬版不再把「本版这件事」偷换成「上一版那件事」。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的四个具体形态：键盘进不去主屏、状态只有色块、放大字体压住旁边的按钮、窄屏溢出。本版**不能保证**：① 真机触屏与读屏的实际观感（本版是按属性与样式核的，没有实机跑过）；② 深色模式下第三方素材与缩略图的实际对比度；③ 字体缩放取自既有设置项的百分比，若那一项日后改成分档文本，字号档会退回「读不出」而不是猜错（这是刻意的：宁可少一条判据，不可多一条假判据）。"
     ]
 };
 
@@ -2719,6 +2736,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   它读的是**设备级**读数（本机版本 / 宿主版本 / 桥在场 / 浏览器能力），跟剧情时间无关，
          *   故同样放在早退之前。检测本身零写入、零模型调用（验收③）。不 await。 */
         try { refreshCapHealth(); } catch (_chr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.93.0 · 拓展计划 R-X9] 无障碍操作层取数：与上一条同族（同一份「读不到≠没有」的纪律）。
+         *   它读的是**设备级**读数（视口宽 / 系统政策 / 三个键），跟剧情时间无关，故同样放在
+         *   早退之前。取数只写 documentElement 属性、不写存储（验收「设置重开后保留」由键负责）。 */
+        try { refreshAccess(); } catch (_axr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -4032,6 +4053,237 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             vals.material = CW_KIND_KEYS.slice();
         } catch (_e4) { vals.material = []; }
         return vals;
+    }
+
+    /* ══════════════ [v3.93.0 · 拓展计划 R-X9] 无障碍 / 窄屏 / 个性化操作层 ══════════════
+     * 【范式（与 R-X1..R-X8 同族）】
+     *   · 动作白名单 ACCESS_ACTION_KEYS 声明在取数口**之前**（取数口要在读数里带上它，
+     *     `const` 有暂时性死区，先后必须对）；
+     *   · refreshAccess() 是唯一取数口（缓存挂 vp._access，含 readable / why 与其余面同形）；
+     *   · applyAccessAction() 是唯一动作口（先判白名单 → 取数 → 世代检查 → 写 → 重取）；
+     *   · accessFace 是只读读数口。
+     * 【不按会话作废】dataset 与档位写的是 **documentElement**（整台机器一份），
+     *   按会话作废会造出「换个角色无障碍档位就回默认」的假行为；但实例态（提示行 / 预览）
+     *   必须随会话丢，故 accessdeskApp 进 REBIND 表。
+     * 【为什么 dataset 只在这里写】写两处必然漂移（一处改了另一处没改，界面就是
+     *   「看起来生效了、其实没生效」）—— 与 motion.js 的 data-motion 同规。
+     * ------------------------------------------------------------------ */
+    /* 动作白名单**只有三个落盘动作**（preview 是纯视图态，不进白名单也不经这里）。 */
+    const ACCESS_ACTION_KEYS = ['level', 'compact', 'theme'];
+
+    /**
+     * 写一次设置并**回读三态**（写入的对错要能读出来，不能只信 set 没抛）。
+     * 为什么这一格单独成函数：三个动作都要「写 → 回读 → 如实报三态」，
+     *   各写一遍就是同一口径三份实现（本仓常驻判据之一）。
+     * @returns {{ok:boolean, kind:string, why:string}}
+     *   ok=true 且 why='' ⇒ 回读得到；ok=true 且 why='pending' ⇒ 写入已排队但本刻回读不到
+     *   （真宿主上 set 返回 Promise、落盘在防抖之后 —— **这两事必须分开**）；
+     *   ok=false ⇒ 写入调用抛了（明确的失败）。
+     */
+    function writeAccessKey(key, value) {
+        try {
+            const ret = storage.set(key, value);
+            if (ret && typeof ret.then === 'function') {
+                try { Promise.resolve(ret).catch(function () { /* storage 侧自行报告 */ }); } catch (_e) { /* 忽略 */ }
+            }
+        } catch (e) {
+            return { ok: false, kind: 'write-threw', why: '写入抛错：' + String((e && e.message) || e) };
+        }
+        /* 回读一次：读得到且**与写入值同形**才算落定；读不到不算失败（可能在防抖窗口里）。 */
+        let back = null;
+        try { back = storage.get(key); } catch (_e2) { back = null; }
+        if (back === undefined || back === null || back === '') return { ok: true, kind: 'pending', why: '' };
+        const same = (typeof value === 'boolean') ? (back === value || String(back) === String(value)) : (String(back) === String(value));
+        if (!same) return { ok: false, kind: 'mismatch', why: '回读值不一致（写入 ' + String(value) + '，回读到 ' + String(back) + '）' };
+        return { ok: true, kind: 'confirmed', why: '' };
+    }
+
+    /** 写 documentElement 上的三个数据属性（浏览器真懂的载体）。
+     *   · `data-ax-level`  本机生效的操作层档（standard / enhanced / large）；
+     *   · `data-ax-theme`  生效主题（light / dark）；
+     *   · `data-ax-compact` 紧凑列表（1 存在即生效，0 时**移除**属性 —— 与 motion 的
+     *     data-still 同规：属性存在即生效，写 0 仍会被 [data-ax-compact] 命中）。 */
+    function applyAccessAttrs(win, state) {
+        try {
+            const doc = (win && win.document) ? win.document : null;
+            const root = doc ? doc.documentElement : null;
+            if (!root || !root.dataset) return { ok: false, why: 'no-documentElement' };
+            root.dataset.axLevel = String(state.level);
+            root.dataset.axTheme = String(state.theme);
+            if (state.compact) root.dataset.axCompact = '1';
+            else { try { delete root.dataset.axCompact; } catch (_e) { root.removeAttribute('data-ax-compact'); } }
+            return { ok: true, why: '' };
+        } catch (e) { return { ok: false, why: 'threw: ' + String((e && e.message) || e) }; }
+    }
+
+    /** 读三个键（**读不出与空分开**：读不出 ⇒ null，分别由上层说「读不出」）。 */
+    function readAccessKeys() {
+        const read = (k) => { try { return storage && typeof storage.get === 'function' ? storage.get(k) : null; } catch (_e) { return null; } };
+        return {
+            level: read(AX_LEVEL_KEY),
+            compact: read(AX_PREF_KEYS.compact),
+            theme: read(AX_PREF_KEYS.theme),
+            fontPercent: read('phone-font-scale'),
+            /* 动效档位**读既有真源**（config/motion.js 的 MOTION_STORAGE_KEY）：
+             *   本版不新开「低动画」键 —— 同一件事两个存储位必然漂移。 */
+            motionLevel: read(MOTION_STORAGE_KEY)
+        };
+    }
+
+    /** 桌面图标的可读名盘点（**只读**当前 App 表，不渲染、不碰 DOM）。
+     *   口径：名字取不到即如实计入 namesMissing，不编「按钮」。
+     *   表的优先级：currentApps（用户改过显示名的现值）> APPS（出厂值）。
+     *   两者都读不到（尚未 init）⇒ 如实返回 null ⇒ 上层说「未盘点」，**不报 0**。 */
+    function auditIconNames() {
+        let total = 0, missing = 0;
+        let rows = null;
+        try { if (typeof currentApps !== 'undefined' && Array.isArray(currentApps)) rows = currentApps; } catch (_e1) { rows = null; }
+        if (!rows) { try { if (typeof APPS !== 'undefined' && Array.isArray(APPS)) rows = APPS; } catch (_e2) { rows = null; } }
+        if (!rows) return { total: null, missing: null };
+        for (const a of rows) {
+            total += 1;
+            if (!a11yNameUsable(iconA11yName(a))) missing += 1;
+        }
+        return { total: total, missing: missing };
+    }
+
+    /** 四态读数守恒：本页三个开关 + 档位来源 + 自检，逐格归到 markOf 的四态之一。 */
+    function accessMarks(state) {
+        const rows = [];
+        const push = (k, raw, detail) => rows.push({ key: k, mark: markOf(raw, detail) });
+        push('level', state.levelState, state.levelText);
+        push('theme', state.themeState, state.themeText);
+        push('compact', state.compact ? 'ok' : 'empty', state.compact ? '紧凑列表已开' : '紧凑列表未开');
+        push('motion', state.motionState, '动效档位 ' + String(state.motionLevel === null ? '读不出' : state.motionLevel));
+        push('font', state.fontKnown ? 'ok' : 'unknown', state.fontKnown ? ('字体缩放 ' + String(state.fontPercent) + '%') : '字体缩放读不出');
+        push('names', state.namesMissing === null ? 'unknown' : (state.namesMissing === 0 ? 'ok' : 'fail'),
+            state.namesMissing === null ? '桌面图标名未盘点' : ('缺 ' + String(state.namesMissing) + ' 个可读名'));
+        return rows;
+    }
+
+    /**
+     * 唯一取数口：读三个键 + 问两条系统政策 + 现算窄屏与遮挡守卫 → 缓存挂 vp._access。
+     * 不 await、自带兜底：与 refreshCapHealth / refreshBackup 放在同一处。
+     */
+    function refreshAccess() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp) return;
+            const win = (typeof window !== 'undefined') ? window : null;
+            const keys = readAccessKeys();
+            const env = readAccessEnv(win);
+            const dark = readDarkEnv(win);
+            /* 档位：用户显式 > 系统政策 > 默认。 */
+            const lv = resolveAccessLevel(keys.level, env);
+            /* 主题：用户显式 > 系统政策 > 亮色。 */
+            const th = resolveTheme(keys.theme, { dark: dark });
+            const compact = normalizeCompact(keys.compact);
+            /* 窄屏判定需要真实视口宽：读不出（无宿主）⇒ 不判窄屏（内核如实退回标准布局）。 */
+            const width = (win && typeof win.innerWidth === 'number') ? win.innerWidth : NaN;
+            const plan = narrowPlan({ width: width, level: lv.level });
+            const guard = overlapGuardOf(plan, keys.fontPercent);
+            const attrs = applyAccessAttrs(win, { level: lv.level, theme: th.theme, compact: compact });
+            const names = auditIconNames();
+            const self = accessSelfCheck();
+            /* 档位这一格的来源（谁定的）必须可读 —— 否则「我选了增强却看起来没生效」无法定位。 */
+            const levelState = self.problems.length ? 'fail' : (attrs.ok ? 'ok' : 'fail');
+            const levelText = '生效 ' + String(lv.level) + '（来源 ' + String(lv.source) + '）';
+            const themeState = attrs.ok ? 'ok' : 'fail';
+            const themeText = '主题 ' + String(th.theme) + '（来源 ' + String(th.source) + '）';
+            const motionState = keys.motionLevel === null || keys.motionLevel === undefined ? 'unknown' : 'ok';
+            const state = {
+                level: lv.level, levelSource: lv.source, levelState: levelState, levelText: levelText,
+                theme: th.theme, themeSource: th.source, themeState: themeState, themeText: themeText,
+                compact: compact,
+                motionLevel: (keys.motionLevel === null || keys.motionLevel === undefined) ? null : String(keys.motionLevel),
+                motionState: motionState,
+                fontPercent: (guard.band === undefined) ? null : (keys.fontPercent === null || keys.fontPercent === undefined ? null : Number(keys.fontPercent)),
+                fontKnown: !!(keys.fontPercent !== null && keys.fontPercent !== undefined),
+                plan: plan, guard: guard,
+                namesMissing: names.missing, iconTotal: names.total,
+                focusRing: lv.level === 'standard' ? 'auto' : 'always'
+            };
+            const marks = accessMarks(state);
+            const counts = { ok: 0, fail: 0, unknown: 0, empty: 0 };
+            for (const r of marks) counts[r.mark.state] += 1;
+            let chatId = '';
+            try { chatId = String((storage && storage.currentConversationId) || '').trim(); } catch (_ec) { chatId = ''; }
+            let narrowNow = false;
+            try { narrowNow = (win && typeof win.innerWidth === 'number') ? win.innerWidth <= AX_NARROW_WIDTH : false; } catch (_en) { narrowNow = false; }
+            vp._access = {
+                at: Date.now(), token: handoffEpoch(),
+                chatId: chatId,
+                /* 三格与其余协议面同形：缓存在场即可读；不可读的唯一形态是咽喉未挂（accessFace 返 null）。 */
+                readable: true, why: '',
+                level: lv.level, levelSource: lv.source, levelState: levelState, levelText: levelText,
+                theme: th.theme, themeSource: th.source, themeState: themeState, themeText: themeText,
+                compact: compact,
+                motionLevel: state.motionLevel, motionState: motionState,
+                fontPercent: state.fontPercent, fontKnown: state.fontKnown,
+                plan: plan, guard: guard,
+                narrowNow: narrowNow,
+                focusRing: state.focusRing,
+                namesMissing: state.namesMissing, iconTotal: state.iconTotal,
+                marks: marks, counts: counts,
+                selfCheck: self,
+                attrs: attrs,
+                touchMin: AX_TOUCH_MIN,   /* 点击目标下限（CSS 43/44px 那一格的真源） */
+                ids: ACCESS_ACTION_KEYS.slice(),
+                actions: ACCESS_ACTION_KEYS.slice(),
+                writes: 0,          /* 取数口本身不写存储（只写 documentElement 属性） */
+                note: (attrs.ok
+                    ? ('已按 ' + String(lv.level) + ' 档落地（来源 ' + String(lv.source) + '）· 视口 ' + (plan.narrow ? '窄屏' : '标准') + '布局' + (state.fontKnown ? ' · 字号 ' + String(state.fontPercent) + '%' : ' · 字号读不出'))
+                    : ('落地失败：' + String(attrs.why) + '（读数仍然可读，界面照常显示这一格）'))
+            };
+        } catch (e) {
+            console.warn('[Access] 无障碍操作层取数失败:', e);
+        }
+    }
+
+    /**
+     * 唯一动作口：白名单先判 → 取数 → 世代检查（视图给了 token 才比）→ 写 → 重取。
+     * 三个动作一一对应三个键；**没有第四个动作**（preview 根本不写东西，故不经这里）。
+     * @returns {{ok:boolean, note:string, kind:string}}
+     */
+    function applyAccessAction(payload) {
+        const p = (payload && typeof payload === 'object') ? payload : {};
+        try {
+            const action = String(p.action || '');
+            if (ACCESS_ACTION_KEYS.indexOf(action) < 0) return { ok: false, note: '不在白名单的动作：' + action, kind: 'unknown-action' };
+            refreshAccess();
+            const face = window.VirtualPhone ? window.VirtualPhone._access : null;
+            if (!face) return { ok: false, note: '读数还没取到（咽喉那一轮尚未跑）', kind: 'absent' };
+            if (p.token !== undefined && p.token !== null && p.token !== handoffEpoch()) {
+                return { ok: false, note: '世代已变，拒旧按钮', kind: 'stale-epoch' };
+            }
+            const value = p.value;
+            if (action === 'level') {
+                const v = String(value === null || value === undefined ? '' : value).trim().toLowerCase();
+                if (['standard', 'enhanced', 'large'].indexOf(v) < 0) return { ok: false, note: '不认的档位：' + v, kind: 'bad-value' };
+                const w = writeAccessKey(AX_LEVEL_KEY, v);
+                refreshAccess();
+                if (!w.ok) return { ok: false, note: '操作层档位没写下去：' + w.why, kind: w.kind };
+                return { ok: true, note: '操作层档位 → ' + v + '（' + (w.kind === 'confirmed' ? '已回读到' : '已排队，稍后落盘') + '）', kind: 'level' };
+            }
+            if (action === 'compact') {
+                const on = (value === true || value === 'on' || value === 'true');
+                const w = writeAccessKey(AX_PREF_KEYS.compact, on);
+                refreshAccess();
+                if (!w.ok) return { ok: false, note: '紧凑列表没写下去：' + w.why, kind: w.kind };
+                return { ok: true, note: '紧凑列表 → ' + (on ? '开' : '关') + '（' + (w.kind === 'confirmed' ? '已回读到' : '已排队，稍后落盘') + '）', kind: 'compact' };
+            }
+            if (action === 'theme') {
+                const v = String(value === null || value === undefined ? '' : value).trim().toLowerCase();
+                if (['auto', 'light', 'dark'].indexOf(v) < 0) return { ok: false, note: '不认的主题：' + v, kind: 'bad-value' };
+                const w = writeAccessKey(AX_PREF_KEYS.theme, v);
+                refreshAccess();
+                if (!w.ok) return { ok: false, note: '主题没写下去：' + w.why, kind: w.kind };
+                return { ok: true, note: '主题 → ' + v + '（' + (w.kind === 'confirmed' ? '已回读到' : '已排队，稍后落盘') + '）', kind: 'theme' };
+            }
+            return { ok: false, note: '未接的动作', kind: 'unhandled' };
+        } catch (e) {
+            return { ok: false, note: '执行失败：' + String((e && e.message) || e), kind: 'error' };
+        }
     }
 
     /**
@@ -11829,6 +12081,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                  *   缓存一份陈读数正是本仓最贵的那类错读数（「上次测是好的」）。 */
                 capHealthFace: function () { refreshCapHealth(); const v = window.VirtualPhone; return v ? v._caphealth || null : null; },
                 applyCaphealthAction: applyCaphealthAction,
+                /* [v3.93.0 · 拓展计划 R-X9] 无障碍操作层：只读读数口 + 唯一动作口。
+                 *   读数口**每次读都重采**（视口宽会变、系统政策会变、档位会变）。 */
+                accessFace: function () { refreshAccess(); const v = window.VirtualPhone; return v ? v._access || null : null; },
+                applyAccessAction: applyAccessAction,
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

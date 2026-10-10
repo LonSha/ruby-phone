@@ -73,7 +73,7 @@
     "rendered_lines_n4000": 800,
     "after_motion_css": {
       "stage": "v3.79.0 收口：扫描面由 phone.css 扩为递归全仓，判定由计数改为按动画名 + 分类闭合",
-      "css_files_scanned": 85,
+      "css_files_scanned": 90,
       "infinite_sites": 21,
       "infinite_names": 19,
       "decorative_names": 12,
@@ -145,7 +145,7 @@
       "id": "L8",
       "desc": "phone.css 每处带 infinite 的动画都有降频覆盖：data-still 引用数不小于 infinite 处数，且 reduced-motion 政策块、animation-play-state:paused、data-bg 三路都在（改前实测三值均为 0）",
       "pass": true,
-      "got": "infinite=7 data-still=10 data-bg=4 reduceMedia=2 playStatePaused=1"
+      "got": "css=90 infinite=21 names=19 unclassified=0 decorUncovered=0 phantom=0 stateInStill=0 floatUncovered=0 reduceMedia=2 playStatePaused=2 data-bg=8"
     }
   ],
   "verdict": "准入判据全绿：媒体指令契约 / 单条 DOM 代价（三点 500/1500/4000 不漂移）/ 身份面 / 可复算 / 动效降频覆盖五类在真渲染函数与真 phone.css 上成立（读数见 readings 与 timing）",
@@ -175,6 +175,6 @@
     "未测真实存储读取：夹具是内存数组，不造 IndexedDB / localStorage 压力。",
     "未测真机省电读数：后台降频用 `document.hidden` 属性替换模拟，不触发浏览器真实节流窗口 —— 本层证明的是「代码收到隐藏信号后真停了」，不是「手机上省了多少电」。"
   ],
-  "refreshed_at": "v3.79.0",
-  "refresh_note": "本基线在 v3.79.0 被**显式刷新过一次**（不是抬版侧写）：新增三项读数与两条判据 —— n4000（极端档 4000 楼）与 L3 的三点漂移判据、L7（极端档媒体契约与身份面）、L8（phone.css 动效降频覆盖统计，含 after_motion_css 读数组）。measured_at 仍是 v3.76.0（建基线时的当版，冻结历史值）；刷新是「输入面变了、读数跟着变」的显式动作，不是被抬版脚本连带改写。"
+  "refreshed_at": "v3.93.0",
+  "refresh_note": "本基线在 v3.93.0 被**显式刷新过一次**（不是抬版侧写）：两处 ——① readings.after_motion_css.css_files_scanned 与 ② criteria[L8].got 的散文。这是一条**跨五版未刷**的遗留：真仓全仓 .css 枚举面自 v3.89.0 起就已超过 85（v3.88.0=85 → v3.89.0=86 → v3.90.0=87 → v3.91.0=88 → v3.92.0=89 → v3.93.0=90），而那份基线停在 85 ⇒ v3770 的 B1/B2 两条读数判据自 v3.89.0 起**连红五版**，且每版都看着像「本版引入的新红」。本版把刷新做成可复算的脚本动作（tools/refresh_baselines_v3930.py，零手抄、幂等、冻结 measured_at），并把这条遗留如实登记进 v3.93.0 的当版条目。measured_at 仍是 v3.76.0（建基线时的当版，冻结历史值）；刷新是「输入面变了、读数跟着变」的显式动作，不是被抬版脚本连带改写。"
 }

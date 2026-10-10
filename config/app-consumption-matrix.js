@@ -169,6 +169,7 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "creationdesk", name: "创作台", dir: "creationdesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "backupdesk", name: "备份恢复", dir: "backupdesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "caphealth", name: "能力体检", dir: "caphealth", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "accessdesk", name: "无障碍操作台", dir: "accessdesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
 ]);
 
 /** 便捷取用口：逐面统计命中数（诊断面与判据共用；不自持第二份数据）。

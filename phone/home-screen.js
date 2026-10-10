@@ -12,6 +12,11 @@
 // 主屏幕
 import { APPS, PHONE_CONFIG } from '../config/apps.js'; // 🔥🔥🔥 这一行必须改！
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
+/* [v3.93.0 · 拓展计划 R-X9] 桌面图标的可读名（唯一实现在内核，本文件只消费）。
+ *   修前实测：本文件给图标只挂了 onclick —— 没有 tabindex / role / aria-label，
+ *   键盘 Tab 不过去、读屏也不知道每个图标叫什么。名字的真源就在 app 数据里
+ *   （自定义显示名 > App 名），只是此前没接出来。 */
+import { iconA11yName, a11yNameUsable, narrowPlan } from '../config/access-layers.js';
 
 const CARD_LAYOUT_CUSTOM_CSS_KEY = 'phone-card-layout-custom-css';
 const CARD_LAYOUT_CUSTOM_STYLE_ID = 'phone-card-layout-custom-css-style';
@@ -203,9 +208,28 @@ export class HomeScreen {
      *   81 件 ⇒ 5 页（20/20/20/20/1）。
      * ============================================================ */
     getIconPageCapacity() {
-        const columns = 4;
+        /* [v3.93.0 · R-X9] 列数**从内核派生**（config/access-layers.js 的 narrowPlan）：
+         *   320px 窄屏把列数改成 3（phone.css 的 @media 段落实），而容量是 JS 算的 ——
+         *   两处各写一个 4 就必然漂移：窄屏上仍按 4 列摆，第 7 行被 dock 压住。
+         *   行数仍按实测几何取 5（窄屏下图标更小、可用高度不变，故行数不变）。
+         *   视口读不出 ⇒ 内核如实退回标准列数（不猜成窄屏）。 */
+        let width = NaN;
+        try {
+            const w = (typeof window !== 'undefined') ? window : null;
+            if (w && typeof w.innerWidth === 'number') width = w.innerWidth;
+        } catch (_e) { width = NaN; }
+        const plan = narrowPlan({ width: width, level: this._accessLevel() });
         const rows = 5;
-        return columns * rows;
+        return plan.cols * rows;
+    }
+
+    /** 现读操作层档位（**只读** storage，不写、不缓存）：窄屏列数随档位微调。 */
+    _accessLevel() {
+        try {
+            const st = (typeof window !== 'undefined') && window.VirtualPhone ? window.VirtualPhone.storage : null;
+            const v = st && typeof st.get === 'function' ? st.get('sys_access_level') : null;
+            return v || 'standard';
+        } catch (_e) { return 'standard'; }
     }
 
     buildIconPages() {
@@ -660,8 +684,11 @@ export class HomeScreen {
             const customClass = iconImage ? 'custom-icon' : '';
             const iconContent = iconImage ? '' : app.icon;
 
+            const a11y = iconA11yName({ displayName: this._getAppDisplayName(app), name: app.name, ariaLabel: app.ariaLabel });
+            const ariaAttr = a11yNameUsable(a11y) ? ` aria-label="${this._escapeHtml(a11y.name)}"` : '';
+
             return `
-                <div class="dock-app yzp-home-dock-app ${customClass}" data-app="${app.id}" style="${iconStyle}">
+                <div class="dock-app yzp-home-dock-app ${customClass}" data-app="${app.id}" style="${iconStyle}" role="button" tabindex="0"${ariaAttr}>
                     ${iconContent}
                 </div>
             `;
@@ -680,24 +707,46 @@ export class HomeScreen {
 
         const customClass = iconImage ? 'custom-icon' : '';
 
+        /* [v3.93.0 · R-X9] 可读名与键盘可达**在同一处**给：名字取不到就如实空串
+         *   （内核 a11yNameOf 的口径：不编「按钮」）—— 此时只加 tabindex/role，
+         *   不加空的 aria-label（加了等于告诉读屏「这个控件的名字是空字符串」）。 */
+        const a11y = iconA11yName({ displayName: this._getAppDisplayName(app), name: app.name, ariaLabel: app.ariaLabel });
+        const ariaAttr = a11yNameUsable(a11y) ? ` aria-label="${this._escapeHtml(a11y.name)}"` : '';
+
         return `
-            <div class="app-icon yzp-home-app-icon yzp-home-app-action" data-app="${app.id}" style="--app-color: ${app.color}">
+            <div class="app-icon yzp-home-app-icon yzp-home-app-action" data-app="${app.id}" style="--app-color: ${app.color}" role="button" tabindex="0"${ariaAttr}>
                 <div class="app-icon-bg yzp-home-app-icon-bg ${customClass}" style="${iconStyle}">
                     ${iconContent}
                 </div>
                 ${badge}
-                <div class="app-name yzp-home-app-name">${this._escapeHtml(this._getAppDisplayName(app))}</div>
+                <div class="app-name yzp-home-app-name" aria-hidden="true">${this._escapeHtml(this._getAppDisplayName(app))}</div>
             </div>
         `;
     }
     
     bindEvents() {
+        /* 图标句柄在**同一处**挂三种激活方式：点击 / 键盘 Enter / 键盘 Space。
+         *   为什么 Space 要 preventDefault：浏览器默认会用 Space 滚动页面，
+         *   不拦住就会「按下空格时图标被激活 + 桌面同时滚了一段」（两个后果，其中一个没人要）。 */
         const icons = this.phoneShell.screen.querySelectorAll('.yzp-home-app-action, .yzp-home-dock-app, .app-icon, .dock-app');
         icons.forEach(icon => {
+            const activate = () => {
+                const appId = icon.dataset.app;
+                if (!appId) return;
+                this.openApp(appId);
+            };
             icon.onclick = (e) => {
                 e.stopPropagation();
                 const appId = icon.dataset.app;
                 this.openApp(appId);
+            };
+            /* 键盘：只在图标自身聚焦时响应（不装到 document 上 —— 那会与 App 内的
+             *   输入框抢按键）。Enter 与 Space 都走同一个 activate()。 */
+            icon.onkeydown = (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+                e.preventDefault();
+                e.stopPropagation();
+                activate();
             };
         });
 
