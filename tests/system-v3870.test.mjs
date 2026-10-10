@@ -579,6 +579,10 @@ test('v3870 E1. 版本锚（下限形）：五源同源且不低于 3.87.0', () 
     for (const it of entry.items) {
         assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
     }
-    /* 复校标记必须与当版同源（边界文档那条机器可读契约）。 */
-    assert.ok(read('docs/runtime-verification-boundary.md').includes('**v3.87.0 复校**'), '边界文档复校标记未跟版');
+    /* 复校标记必须与**当版**同源（边界文档那条机器可读契约）。
+     *   ★ [v3.88.0 交棒改写] 原先钉的是本版自己的字面量 v3.87.0 —— 那是**读数**不是判据：
+     *     文档下一次复校（v3.88.0）就把它钉成了必红（实测：抬版后 E1 因它转红）。
+     *     改成「与当前版本同源」，本套件在后续每一版都仍然成立。 */
+    assert.ok(read('docs/runtime-verification-boundary.md').includes('v' + man.version + ' 复校'),
+        '边界文档复校标记未跟版（当版 ' + man.version + '）');
 });

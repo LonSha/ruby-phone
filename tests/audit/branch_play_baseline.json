@@ -1,32 +1,904 @@
 {
-  "file": "tests/audit/branch_play_baseline.json",
-  "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**",
-  "measured_at": "v3.8.0",
-  "probe": "tests/audit/branch_play_probe.cjs",
-  "upstream_frozen": {
-    "repo": "lonsha-memory-plugin",
-    "version": "3.233.0",
-    "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
-    "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过（且未复核 ⇏ 通过）。",
-    "findings": [
-      "上游**没有「检查点 / 存档点」这种东西**：全模块枚举 65 个 .js，以 checkpoint / Checkpoint / 存档点 为名的**零个**。",
-      "上游**有持久化**，但持久化的是「每楼一份的附注」而不是「用户主动打的一个检查点」：域内 18 个模块中仅 1 个带持久化机制（floor-ledger.js，走 `msg.extra.lonsha_ledger`）—— 账随楼走（楼删账删、翻页随页走），没有「整份运行时的可回滚快照」。",
-      "上游**分支 / 回滚域内没有预检（先算后改）面**：域内 18 个模块，dryRun / 预检 / 干跑 / 预演 全部零命中。域外确有一处两阶段预检（index.js 的 `restoreFromPayload(..., {dryRun:true})`，注释「[v3.142] CP：预检（dryRun）不得动确认状态——只读校验不该有任何副作用」），但那是**恢复管线**的，不是「回滚前先看会丢掉什么」。",
-      "上游 **branch-guard（v3.184.0）是内存态**：状态在闭包 Map 里（`new Map()` × 3 类队列 + processedSig），全文件零 localStorage / indexedDB / persist；TTL 180000ms、上限 200 条 —— 会话切走即无，跨实例不可见。它的三个待回滚队列记的是**楼层号 + 过期时刻**，不记内容（`stats()` 键 = version / request / apply / swipe / processed / manualEditAt / inManualWindow）。",
-      "上游 **ledger-replay（v3.184.0）只给「执行」不给「预演」**：`replayDrop(host, floor, registry)` / `replayShift(host, deleted, registry)` 形参无 opts / dry，调用即真撤（登记 42 本账）。它的导出面含查表面（`coverage` 出「哪本账在位 / 缺席 / 取数即抛」、`checkReplayInvariants` 校验回放不变量），但那是**回放之后**的校验，不是回放**之前**的预演。",
-      "**两模块都不进 bridge 快照**：`buildBridgeSnapshot()` 函数体内 LonShaBranchGuard / LonShaLedgerReplay / branchGuard / ledgerReplay / branchFace / checkpoint 六类 token **零命中**（快照顶层 14 个键：protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit / worldLedgerRead / scene / projection / injection / evidence / eventPlatforms）。外供通道是**模块全局**（`globalThis.LonShaBranchGuard` / `window.LonShaLedgerReplay`，Object.freeze），运行时可达（本探针真加载真调用验证）。"
-    ]
+ "file": "tests/audit/branch_play_baseline.json",
+ "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**",
+ "measured_at": "v3.8.0",
+ "probe": "tests/audit/branch_play_probe.cjs",
+ "upstream_frozen": {
+  "repo": "lonsha-memory-plugin",
+  "version": "3.233.0",
+  "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
+  "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过（且未复核 ⇏ 通过）。",
+  "findings": [
+   "上游**没有「检查点 / 存档点」这种东西**：全模块枚举 65 个 .js，以 checkpoint / Checkpoint / 存档点 为名的**零个**。",
+   "上游**有持久化**，但持久化的是「每楼一份的附注」而不是「用户主动打的一个检查点」：域内 18 个模块中仅 1 个带持久化机制（floor-ledger.js，走 `msg.extra.lonsha_ledger`）—— 账随楼走（楼删账删、翻页随页走），没有「整份运行时的可回滚快照」。",
+   "上游**分支 / 回滚域内没有预检（先算后改）面**：域内 18 个模块，dryRun / 预检 / 干跑 / 预演 全部零命中。域外确有一处两阶段预检（index.js 的 `restoreFromPayload(..., {dryRun:true})`，注释「[v3.142] CP：预检（dryRun）不得动确认状态——只读校验不该有任何副作用」），但那是**恢复管线**的，不是「回滚前先看会丢掉什么」。",
+   "上游 **branch-guard（v3.184.0）是内存态**：状态在闭包 Map 里（`new Map()` × 3 类队列 + processedSig），全文件零 localStorage / indexedDB / persist；TTL 180000ms、上限 200 条 —— 会话切走即无，跨实例不可见。它的三个待回滚队列记的是**楼层号 + 过期时刻**，不记内容（`stats()` 键 = version / request / apply / swipe / processed / manualEditAt / inManualWindow）。",
+   "上游 **ledger-replay（v3.184.0）只给「执行」不给「预演」**：`replayDrop(host, floor, registry)` / `replayShift(host, deleted, registry)` 形参无 opts / dry，调用即真撤（登记 42 本账）。它的导出面含查表面（`coverage` 出「哪本账在位 / 缺席 / 取数即抛」、`checkReplayInvariants` 校验回放不变量），但那是**回放之后**的校验，不是回放**之前**的预演。",
+   "**两模块都不进 bridge 快照**：`buildBridgeSnapshot()` 函数体内 LonShaBranchGuard / LonShaLedgerReplay / branchGuard / ledgerReplay / branchFace / checkpoint 六类 token **零命中**（快照顶层 14 个键：protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit / worldLedgerRead / scene / projection / injection / evidence / eventPlatforms）。外供通道是**模块全局**（`globalThis.LonShaBranchGuard` / `window.LonShaLedgerReplay`，Object.freeze），运行时可达（本探针真加载真调用验证）。"
+  ]
+ },
+ "readings": {
+  "files_scanned": 406,
+  "rollback_points": 41,
+  "rollback_files": 4,
+  "rollback_entry_defs": 12,
+  "upstream_global_read_sites": 4,
+  "chat_data_patterns": 308,
+  "namespace_store_sites": 5,
+  "checkpoint_face_hits": 0,
+  "preview_face_hits": 34,
+  "branch_face_hits": 0,
+  "upstream_modules_scanned": 65,
+  "upstream_branch_domain_modules": 18,
+  "upstream_checkpoint_named": 0,
+  "upstream_checkpoint_named_persistent": 0,
+  "upstream_branch_domain_preview_hits": 0,
+  "upstream_branch_guard_loadable": 1,
+  "upstream_ledger_replay_loadable": 1,
+  "upstream_bridge_snapshot_branch_faces": 0
+ },
+ "rollback_files_list": [
+  "apps/phone/phone-data.js",
+  "apps/wangxiang/wangxiang-app.js",
+  "apps/wechat/wechat-data.js",
+  "index.js"
+ ],
+ "upstream_reach": {
+  "branch_guard": {
+   "loadable": true,
+   "error": null,
+   "api_keys": 9,
+   "line_reachable": true,
+   "state_crosses_instances": false,
+   "guard_records_no_content": true,
+   "stats_keys": [
+    "version",
+    "request",
+    "apply",
+    "swipe",
+    "processed",
+    "manualEditAt",
+    "inManualWindow"
+   ]
   },
-  "readings": {
-    "files_scanned": 405,
+  "ledger_replay": {
+   "loadable": true,
+   "error": null,
+   "api_keys": 8,
+   "floor_owners": 42,
+   "preview_before_change": true,
+   "coverage_reachable": 42
+  }
+ },
+ "criteria": [
+  {
+   "id": "R1",
+   "desc": "上游存在**以「检查点 / 存档点」为名且持久化**的面（F-1 第一件的对象）",
+   "pass": false,
+   "got_text": "枚举 65 个模块：以 checkpoint/存档点 为名的有 [无]，**其中带持久化机制的是 0 个**"
+  },
+  {
+   "id": "R2",
+   "desc": "**分支 / 回滚域**里存在「预检 / 干跑」面（F-1 第二件的对象）",
+   "pass": false,
+   "got_text": "域内 18 个模块，预检 token **零命中**（域外有：注入链路诊断 dry-run，属另一域）"
+  },
+  {
+   "id": "R3",
+   "desc": "上游分支 / 回放的**模块全局通道运行时可达**（真加载真调用，不靠猜外供形式）",
+   "pass": true,
+   "got_text": "branch-guard 可加载=true（API 9 键，一句话读数可达=true）· ledger-replay 可加载=true（API 8 键，登记 42 本账）"
+  },
+  {
+   "id": "R4",
+   "desc": "上游分支 / 回滚面**携带内容**（能答「回滚会丢掉什么」，而不只是楼层号）",
+   "pass": false,
+   "got_text": "branch-guard stats 键 = [version、request、apply、swipe、processed、manualEditAt、inManualWindow] ⇒ **只记楼层号与过期时刻**，无内容 / 条数字段；ledger-replay 的 replayDrop 形参只有 (host, floor, registry)，无 opts ⇒ 无「先算后改」"
+  },
+  {
+   "id": "R5",
+   "desc": "下游已有回滚覆盖面（增量基础已存在）",
+   "pass": true,
+   "got_text": "41 点 / 4 文件 / 12 入口定义"
+  }
+ ],
+ "verdict": {
+  "question": "F-1「分支与玩法（R4 第一批）」的持久检查点 / 回滚预览 / 分支只读对照，能不能立 Gate 并实施？",
+  "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 不是「工作量不够」，而是三件里有两件**要接的面不存在**、第三件**面的内容不足以支撑对照**。",
+  "reasons": [
+   "**① 持久检查点：面上没有这东西（R1 ✗）**。枚举 65 个上游模块，以 checkpoint / 存档点 为名的**零个**。上游确有持久化，但持久化的是「每楼一份的附注」（`msg.extra.lonsha_ledger`，走 floor-ledger.js）——那是**账随楼走**的记账，不是「把当前整个运行时冻成一个点、以后能整体退回来」的检查点。分支态唯一的载体 branch-guard 是**内存态 Map**（闭包内 `new Map()`，零持久化 token，TTL 3 分钟、上限 200 条）：会话切走即无。⇒ 真做「持久检查点」只能由下游**自己造一套运行时快照与回退语义**（哪些域进快照、跨域一致性怎么保、退回时旧派生怎么作废），那是**新做一个业务域**，不是接一个已有面。",
+   "**② 回滚预览：分支域内没有预演面（R2 ✗）**。分支 / 回滚域 18 个模块内 dryRun / 预检 / 干跑 / 预演 零命中；`replayDrop` 形参只有 `(host, floor, registry)`、调用即真撤。域外唯一的两阶段预检是恢复管线的 `restoreFromPayload(dryRun:true)`（schema-migration.js 同款 `applied:0` 预检），它回答的是「这份存档能不能恢复」，**不是**「这次回滚会让哪些域丢几条」。⇒ 下游要做「回滚预览」，等价于**自己把每个域的『将要丢什么』算一遍**，而这件事恰恰需要那些域自己声明可预览性 —— 现状是零个域有这种东西。",
+   "**★ ③ 分支只读对照：通道可达但内容不够（R3 ✓ / R4 ✗）**。两模块运行时**确实可达**（本探针真加载真调用：branch-guard 9 个 API 键、一句话读数可达；ledger-replay 8 个键、42 本账登记），所以「读得到」不是问题。问题是**读到的内容不足以做对照**：branch-guard 的 `stats()` 只出七个数（version / request / apply / swipe / processed / manualEditAt / inManualWindow）——**楼层号与计数，没有内容**；ledger-replay 的 `coverage()` 出的是「哪本账在位 / 缺席 / 取数即抛」。拿这些做「分支只读对照」，最多写出一句「本条分支有 3 个待回滚楼层、42 本账在位」——**这不是对照，是仪表读数**；真正的对照要能回答「这一页与那一页差在哪」，而那需要每页的内容或差分，上游根本没保存（它也**刻意不保存**：分支态是易失的、以会话为自然边界）。",
+   "**④ 下游已有强基础，且下游自己已经在做这件事（R5 ✓）**：下游 41 个回滚点 / 4 个文件 / 12 个入口定义（wechat-data / phone-data / wangxiang-app / index.js），已按楼层回滚三类域；存储侧 89 条会话隔离正则 + 5 处命名空间守卫（`chatMetadata` 随聊天档走、`extensionSettings` 全局）。⇒ F-1 若真做，增量是在**下游自己的数据**上做快照与对照，而上游那两本账帮不上忙（它的态是易失的、且不带内容）。",
+   "**⑤ 与已定纪律的关系**：本轮 P-6 与 F-4 两次取证都落在同一条纪律上 —— **先取证再定，读数不支持就记 not_now 并写清代价**。F-1 的读数形态与 F-4 不同（F-4 是「面完全不存在」，F-1 是「通道在、面在、但面上没有内容」），结论相同：不立 Gate。不因「名字听着可做」而动工。"
+  ],
+  "only_axis_with_evidence": "真正有读数支持、且不需要下游自造一套运行时快照的替代轴是 **「回滚影响的可见性提升」**：下游 41 个回滚点已经有确定的『按楼层作废』语义，缺的从来不是引擎而是**读前即知**——在删楼 / 翻页 / 重生成之前，把「这次动作会让哪些域各丢几条」在**下游自己的数据上**算一遍并呈现（只呈现、不执行）。这条轴的证据在上游之外（下游自己的存储是可数的），不依赖上游那两本账。",
+  "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项状态不受影响。"
+ },
+ "corrections": [
+  "**探针 v1 把上游面写死成两个文件（假阴性 ⇒ 三判据全错）**：初版只读 `branch-guard.js` / `ledger-replay.js` 搜「持久化 / 预检」，于是漏掉 `restoreFromPayload` 的 dryRun 两阶段预检面与 chatMetadata 嵌入快照面，得出 R1/R2/R3 全 0 的结论。**读数 0 不等于面上没有，只等于探针没扫到。** 修法：模块名单改由**目录枚举**得出（迭代搜索），判据在全模块上搜。教训：**写死枚举面的判据，绿与红都只在一版上成立。**",
+  "**探针 v1 把「外供」等同于「进 bridge 快照」（口径错 ⇒ R3 假阴性）**：下游本来就在**直读上游模块全局**（`window.LonShaFloorLedger` / `window.LonShaMemory` / `window.LonShaEvidenceWorkbench`，实测 8 个站点），所以「不在快照里」根本推不出「拿不到」。修法：改为**可达性实测** —— 把模块源码在隔离沙箱里真加载、真调用，量出「能不能读、读到什么、状态跨不跨实例」。教训：**不要用推断代替测量**；外供形式有三种（快照 / 模块全局 / 都不给），不能先把答案限定成一种再算命中率。",
+  "**探针 v2 的预检判据未限定域（假阳性）**：对全模块裸搜 `dryRun` 会命中上游 3 个模块（index.js×25、settings-ui.js×15、schema-migration.js×8）——那是**注入链路的诊断 dry-run**（「这段内容没有进入 AI 上下文，只回答召回→注入链路通不通」）与**恢复管线预检**，与「回滚预览」不是一个域。修法：域由**文件名模式**派生（branch|ledger|replay|guard|snapshot|checkpoint|restore|changeset|version|closure|shift ⇒ 18 个模块），判据只在域内算。教训同族：**范围粒度错会造成假阳性**。",
+  "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
+  "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
+  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+  "v3.11.0 复校：本轮新增 `config/rollback-preview.js`（回滚影响预览真源，枚举面 +1），并真实改了产品代码（`apps/diagnose/diagnose-data.js`、`apps/diagnose/diagnose-view.js`）。**除枚举面与「回滚预览」读数（0 → 39：探针刻度就是量它）外全部读数逐项不变** ——回滚覆盖面 41 点 / 4 文件 / 12 入口定义一字未动（真源模块**只算不写**，它一条回滚入口都没新增），故本版落地不构成新增回滚实现点。首测版语义保留在 measured_at。★ 同轮同步用**下限形**改写了两条当版精确读数（见 tests/system-v326.test.mjs 的 A2 / B4），并在 B1 处按**位置**拆分 token 面（`index.js` 仍全禁；上游分支面/检查点面 6 个 token 在 App 层全留）。",
+  "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
+  "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面与 `preview_face_hits`（42，v3.11.0 起就是这个数）外全部读数逐项不变** —— 本版是纯读数层，41 个回滚点 / 4 文件 / 12 入口定义一字未动。首测版语义保留在 measured_at。",
+  "v3.15.0 复校：枚举面 232 → 237（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js）；`chat_data_patterns` 89 → 94（config/storage.js 的 CHAT_DATA_PATTERNS 新增 1 条真模式 `/^usage_/`，其上方 4 行说明性模式行按探针既有口径一并计入 ⇒ +5）；`preview_face_hits` 0 → 42 是**既有点刻度回填**（v3.11.0 起就是 42，基线当初只改了 corrections 散文而漏同步 readings —— 本轮修的是基线自身的转写漂移，不是本版新造了预览面）。**关键：回滚覆盖面读数一字未动**（41 点 / 4 文件 / 12 入口定义）—— 本版是只读展示面，没有偷偷变成执行层，也没有新增/删除回滚点；命名空间守卫 5 处与检查点/分支面 0 命中同样不变。",
+  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。回滚点 41 / 4 文件 / 12 入口定义逐字不变。",
+  "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰回滚/分支面任何一行。 其余读数逐项不变。",
+  "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。",
+  "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
+  "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。",
+  "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。",
+  "v3.85.0 复校：枚举面 402 → 403（本版新增真源 config/num-clamp.js（有界取数唯一实现）与 config/diagnose-action.js（诊断处置面）+ v3.80.0~v3.84.0 累计的 A/B 清单八件真源与三个判据套件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；回滚点（rollback_points）/ 回滚文件（rollback_files）/ 回滚入口定义（rollback_entry_defs）/ 上游全局读取点 / CHAT_DATA_PATTERNS / 命名空间存储点**逐项不变** —— 本版没有碰回滚与存储面任何一行。"
+ ],
+ "not_done": [
+  "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
+  "**未给「检查点」建模型**：那是 F-1 若实施时的主体工作（快照域清单 / 跨域一致性 / 退回时派生作废 / 存储分域），本版刻意不做。",
+  "**未验实机**：全部读数来自源码与隔离沙箱内的真加载真调用；无头环境跑不了宿主（DOM / SillyTavern 上下文）。",
+  "**未把该读数立成常驻门禁**：与 P-6 / F-4 同口径 —— 「面存不存在、面上有什么」是决策输入，不是契约（常驻门禁只守「契约不许变坏」）。",
+  "**未替上游补面**：branch-guard / ledger-replay 缺持久化与预览，本版如实记录为上游事实，不据此改上游（上游本轮零改动）。"
+ ],
+ "rebuilds": {
+  "v3.22.0": {
+   "why": "新增两条会话隔离前缀（focus_ / accounting_）+ 枚举面 +6 文件；回滚面与上游面不动。",
+   "readings": {
+    "files_scanned": 247,
+    "chat_data_patterns": 102
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits"
+   ],
+   "not_done": [
+    "两处新增 storage 前缀（`focus_` / `accounting_`）只进**静态模式**面（chatDataPatterns 94→102），回滚面（rollbackPoints 41）与上游面（upstream_global_read_sites 8）**一格未动**。",
+    "真宿主上的回滚/预览实况仍归 R-O3。"
+   ],
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+  },
+  "v3.23.0": {
+   "why": "判据散文复算：R5 与探针现场逐字一致；R1–R4 现场为「未复核（冻结证据：…）」—— 跨仓探针不硬依赖兄弟仓在场（上游 v3.204.0 的路径纪律），**故不刷新**，基线保留上次复核值。",
+   "readings": {},
+   "unchanged": [
+    "readings",
+    "scan（若该基线有）",
+    "sites（若该基线有）",
+    "verdict",
+    "corrections",
+    "not_done",
+    "timing_criteria"
+   ],
+   "not_done": [
+    "判据散文只做**文本复算**；判据的语义是否仍然成立（`pass`）不由本层复核。",
+    "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+   ],
+   "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+  },
+  "v3.24.0": {
+   "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/branch_play_probe.cjs --json",
+   "readings": {
+    "readings.files_scanned": 248
+   }
+  },
+  "v3.25.0": {
+   "why": "v3.25.0：新增存钱罐 App（`apps/piggy/piggy-data.js` / `piggy-view.js` / `piggy-app.js` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；`config/storage.js` 的会话隔离表新增一条前缀 `/^piggy_/`（一条覆盖 piggy_settings / piggy_state 两键）。第二项读数比预期多涨了 3：探针的 `chatDataPatterns` 刻度是「行首可选空白 + `/` + 可选 `^`」，而本版在那段里同时写了三行 `//` 注释说明 ⇒ **注释行也被计入**（102 + 1 条真前缀 + 3 行注释 = 106）。这是本仓「探针的刻度是文本的」的又一次现场实证，如实刷新，不改口径（其余读数：回滚点 / 命名空间守卫 / 上游冻结面一字未动）。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/branch_play_probe.cjs --json",
+   "readings": {
+    "files_scanned": 251,
+    "chat_data_patterns": 106
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits"
+   ],
+   "not_done": [
+    "新 App 的两条 storage 键（piggy_settings / piggy_state）**没有**新增任何回滚 / 预览入口：回滚覆盖面仍是 41 点 / 4 文件 / 12 入口定义，一格未动 —— 存钱罐的数据是「用户自己攒的钱」，本版没有把它接进任何回滚域。",
+    "`chat_data_patterns` 的 +4 里有 3 是**注释行**：本探针的这条读数口径按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.26.0": {
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面 251 → 257 个文件；**新增 4 条会话隔离前缀**（`regexfilter_settings` / `regexfilter_presets` / `punchcard_settings` / `punchcard_cards`）⇒ 静态模式面 `chat_data_patterns` 106 → 114。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两个新 App 都不写回滚点、不碰分支对照。",
+   "readings": {
+    "files_scanned": 257,
+    "chat_data_patterns": 114
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits"
+   ],
+   "criteria_refreshed": {}
+  },
+  "v3.27.0": {
+   "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面 257 → 269 个文件；**新增 4 条会话隔离前缀**（一条前缀覆盖一组键，共 12 条键：`^avatarframe_` 3 条 / `^shop_` 5 条 / `^block_` 2 条 / `^weather_` 2 条）⇒ 静态模式面 `chat_data_patterns` 114 → 130（+16：4 条真前缀 + 12 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 四件新 App 都不写回滚点、不碰分支对照（都只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 269,
+    "chat_data_patterns": 130
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +16 里有 12 是**注释行**（每条前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.28.0": {
+   "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面 269 → 272 个文件；**新增 1 条会话隔离前缀**（`^widget_` 一条覆盖四键：`widget_settings` / `widget_templates` / `widget_instances` / `widget_draft`）⇒ 静态模式面 `chat_data_patterns` 130 → 134（+4：1 条真前缀 + 3 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 272,
+    "chat_data_patterns": 134
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +4 里有 3 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.29.0": {
+   "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面 272 → 275 个文件；**新增 1 条会话隔离前缀**（`^taobao_` 一条覆盖五键：`taobao_settings` / `taobao_products` / `taobao_cart` / `taobao_orders` / `taobao_grabs`）⇒ 静态模式面 `chat_data_patterns` 134 → 138（+4：1 条真前缀 + 3 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 275,
+    "chat_data_patterns": 138
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +4 里有 3 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.30.0": {
+   "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面 275 → 278 个文件；**新增 1 条会话隔离前缀**（`^lover_` 一条覆盖六键：`lover_settings` / `lover_days` / `lover_footprints` / `lover_diary` / `lover_letters` / `lover_questions`）⇒ 静态模式面 `chat_data_patterns` 138 → 143（+5：1 条真前缀 + 4 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 278,
+    "chat_data_patterns": 143
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +5 里有 4 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.32.0": {
+   "what": "v3.31.0 约会大作战与 v3.32.0 两个子游戏的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）；两版都不写回滚点、不碰分支对照",
+   "why": "枚举面 278 → 285 个文件（两版新件 .js 之和）；**会话隔离前缀面** 143 → 153（+10），两版**各 +5**，逐版拆开写：v3.31.0 新增 1 条真前缀 `/^date_/` ＋ 4 条配套注释行 = +5；v3.32.0 新增 2 条**精确枚举**（`/^chat_games_seaturtle_state$/` 与 `/^chat_games_guesswhat_state$/`，父前缀 `/^chat_games_/` 已能自动接住，列出来只为「游戏厅里现在有哪几款按聊天独立存档」可一眼可数）＋ 3 条配套注释行 = +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两版新件都不写回滚点、不碰分支对照（只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 285,
+    "chat_data_patterns": 153
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +10 里有 8 是**注释行**（两版各带数条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。★ 另需注意：本次 +10 是**两版之和**（基线停在 v3.30.0），不是单版增量。"
+   ]
+  },
+  "v3.33.0": {
+   "what": "v3.33.0 游戏厅下半两件的真实接线（storage 精确枚举面）；两件都不写回滚点、不碰分支对照",
+   "why": "枚举面 285 → 289 个文件（本版四个新 .js）；**会话隔离前缀面** 153 → 157（+4）—— 逐行拆开写：本版在 `config/storage.js` 新增 2 条**精确枚举**（`/^chat_games_scriptkill_state$/` 与 `/^chat_games_ludo_state$/`，父前缀 `/^chat_games_/` 已能自动接住，列出来只为「游戏厅里现在有哪几款按聊天独立存档」可一眼可数）＋ 2 条配套注释行（`// [v3.33.0] …` 与 `//   同样只作评审面…`）= +4。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两个子游戏都不写回滚点、不碰分支对照（只写自己的会话键）。",
+   "readings": {
+    "files_scanned": 289,
+    "chat_data_patterns": 157
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +4 里有 2 是**注释行**（本版 storage.js 的两条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.34.0": {
+   "what": "v3.34.0 老福特的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 289 → 292 个文件（本版三个新 .js）；**会话隔离前缀面** 157 → 162（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^lofter_/,`（一条前缀覆盖三条键：设置 / 内容 / 存储；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.34.0] 老福特…`、`//   一条前缀覆盖三键…`、`//   作者池、稿子、合集…`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 老福特不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 292,
+    "chat_data_patterns": 162
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.35.0": {
+   "what": "v3.35.0 Pixiv 的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 292 → 295 个文件（本版三个新 .js）；**会话隔离前缀面** 162 → 167（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^pixiv_/,`（一条前缀覆盖三条键：设置 / 内容 / 存储；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.35.0] Pixiv…`、`//   一条前缀覆盖三键…`、`//   插画登记面、小说与稿子…`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— Pixiv 不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 295,
+    "chat_data_patterns": 167
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.36.0": {
+   "what": "v3.36.0 杂志的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 295 → 298 个文件（本版三个新 .js）；**会话隔离前缀面** 167 → 173（+6）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^magazine_/,`（一条前缀覆盖三条键：设置 / 内容 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 5 行配套注释（`// [v3.36.0] 杂志…`、`//   一条前缀覆盖三键…`、`//   设置…、内容…、`、`//   台账…各自独立。`、`//   随会话隔离…`）= +6。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 杂志不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 298,
+    "chat_data_patterns": 173
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +6 里有 5 是**注释行**（本版 storage.js 的五条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.37.0": {
+   "what": "v3.37.0 白盒音效盒的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 298 → 301 个文件（本版三个新 .js）；**会话隔离前缀面** 173 → 178（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^soundkit_/,`（一条前缀覆盖三条键：设置 / 配方 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.37.0] 白盒音效盒…`、`//   一条前缀覆盖三键…`、`//   绑定表…、自定义配方、台账各自独立。`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 音效盒不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 301,
+    "chat_data_patterns": 178
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.38.0": {
+   "what": "v3.38.0 召回治理台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 301 → 304 个文件（本版三个新 .js）；**会话隔离前缀面** 178 → 183（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^recall_/,`（一条前缀覆盖三条键：四路配置 / 策略 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.38.0] 召回治理台…`、`//   一条前缀覆盖三键…`、`//   四路配置、策略（房间 / 注入开关 / 门槛 / topN / 水位线）、台账各自独立。`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 召回治理台不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 304,
+    "chat_data_patterns": 183
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.39.0": {
+   "what": "v3.39.0 时光胶囊的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 304 -> 307 个文件（本版三个新 .js）；**会话隔离前缀面** 183 -> 188（+5）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^sourcebook_/,（一条前缀覆盖三条键：封存 / 策略 / 台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 4 行配套注释（版标行、一条前缀覆盖三键行、三键各自独立行、随会话隔离行）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 时光胶囊不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 307,
+    "chat_data_patterns": 188
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.40.0": {
+   "what": "v3.40.0 对话水壶的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 307 -> 310 个文件（本版三个新 .js）；**会话隔离前缀面** 188 -> 193（+5）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^kettle_/,（一条前缀覆盖三条键：记录 / 策略 / 台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 4 行配套注释（版标行、一条前缀覆盖三键行、三键各自独立行、随会话隔离行）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 对话水壶不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 310,
+    "chat_data_patterns": 193
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.41.0": {
+   "what": "v3.41.0 需求沙盘的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 310 -> 313 个文件（本版三个新 .js）；**会话隔离前缀面** 193 -> 200（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^needsim_/,（一条前缀覆盖四条键：需求 / 池子 / 记忆与愿望 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、源的缺口行、源没有这一步行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 需求沙盘不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 313,
+    "chat_data_patterns": 200
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.42.0": {
+   "what": "v3.42.0 曲库案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 313 -> 316 个文件（本版三个新 .js）；**会话隔离前缀面** 200 -> 207（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^musicdesk_/,（一条前缀覆盖四条键：曲库 / 歌词 / 台账 / 策略；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、源的缺口行、源没有这一步行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 曲库案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 316,
+    "chat_data_patterns": 207
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.43.0": {
+   "what": "v3.43.0 PV 案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 316 -> 319 个文件（本版三个新 .js）；**会话隔离前缀面** 207 -> 215（+8）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^pvdesk_/,（一条前缀覆盖四条键：题面 / 作品台账 / 歌词 / 策略；四条键都无元字符，按仓内口径无需宽匹配登记）+ 7 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +8。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— PV 案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 319,
+    "chat_data_patterns": 215
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +8 里有 7 是**注释行**（本版 storage.js 的七条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.44.0": {
+   "what": "v3.44.0 同人商店 · 柜台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 319 -> 322 个文件（本版三个新 .js：apps/doujin/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 215 -> 224（+9）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^doujin_/（一条前缀覆盖四条键：店头（含存档）/ 市场 / 收银台 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 8 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四类各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +9。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 同人商店不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 322,
+    "chat_data_patterns": 224
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +9 里有 8 是**注释行**（本版 storage.js 的八条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.45.0": {
+   "what": "v3.45.0 存档台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 319 -> 322 个文件（本版三个新 .js：apps/archive/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 224 -> 232（+8）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^archive_/（一条前缀覆盖四条键：已收包 / 对账面 / 要求草稿 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 7 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四类各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +8。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 存档台不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 325,
+    "chat_data_patterns": 232
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +8 里有 7 是**注释行**（本版 storage.js 的七条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.46.0": {
+   "what": "v3.46.0 思维链案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 325 -> 328 个文件（本版三个新 .js：apps/cotdesk/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 232 -> 239（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^cotdesk_/（一条前缀覆盖四条键：条目册 / 配置 / 草稿 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、四类各自是什么行、随会话隔离行、源把四类挤在一个 AppState 行、本件按动作边界分开行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 思维链案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
+   "readings": {
+    "files_scanned": 328,
+    "chat_data_patterns": 239
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.47.0": {
+   "what": "v3.47.0 诊断案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 328 -> 331 个文件（本版三个新 .js：apps/diagdesk/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 239 -> 246（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^diagdesk_/（一条前缀覆盖三条键：存档原文 / 摘要草稿 / 动作台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖三键行、三类各自是什么行、随会话隔离行、源把三类挤在一个宿主对象行、本件按动作边界分开行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 诊断案头不写回滚点、不碰分支对照（只写自己的三条会话键）。",
+   "readings": {
+    "files_scanned": 331,
+    "chat_data_patterns": 246
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.48.0": {
+   "what": "v3.48.0 子宫画板的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
+   "why": "枚举面 331 -> 334 个文件（本版 3 件新 .js）；**会话隔离前缀面** 246 -> 252（+6）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^uterus_/（一条前缀覆盖两条键：收下的角色状态原文 / 动作台账；两条键都无元字符，按仓内口径无需宽匹配登记）+ 5 行配套注释（版标行、一条前缀覆盖两键行、仓内口径行、两类各自是什么行、随会话隔离与源的缺口行）= +6。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 子宫画板不写回滚点、不碰分支对照（只写自己的两条会话键）。",
+   "readings": {
+    "files_scanned": 334,
+    "chat_data_patterns": 252
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "chat_data_patterns 的 +6 里有 5 是**注释行**（本版 storage.js 的配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
+   ]
+  },
+  "v3.54.0": {
+   "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
+   "why": "files_scanned 334→367、chat_data_patterns 252→279：v3.49~v3.54 新增 App 与判据套件使扫描文件数与会话隔离正则增长。首次全量 npm run test 暴露基线陈旧。"
+  },
+  "v3.55.0": {
+   "what": "枚举面 367 -> 368（同上）",
+   "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 回滚覆盖面一格未动（rollback_points 41 / rollback_files 4 / rollback_entry_defs 12 逐项不变）。",
+   "readings": {
+    "files_scanned": 368,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,
-    "upstream_global_read_sites": 4,
-    "chat_data_patterns": 308,
+    "upstream_global_read_sites": 8,
+    "chat_data_patterns": 279,
     "namespace_store_sites": 5,
-    "checkpoint_face_hits": 0,
-    "preview_face_hits": 34,
+    "checkpoint_face_hits": 1,
+    "preview_face_hits": 42,
     "branch_face_hits": 0,
     "upstream_modules_scanned": 65,
     "upstream_branch_domain_modules": 18,
@@ -36,1018 +908,146 @@
     "upstream_branch_guard_loadable": 1,
     "upstream_ledger_replay_loadable": 1,
     "upstream_bridge_snapshot_branch_faces": 0
+   }
   },
-  "rollback_files_list": [
-    "apps/phone/phone-data.js",
-    "apps/wangxiang/wangxiang-app.js",
-    "apps/wechat/wechat-data.js",
-    "index.js"
-  ],
-  "upstream_reach": {
-    "branch_guard": {
-      "loadable": true,
-      "error": null,
-      "api_keys": 9,
-      "line_reachable": true,
-      "state_crosses_instances": false,
-      "guard_records_no_content": true,
-      "stats_keys": [
-        "version",
-        "request",
-        "apply",
-        "swipe",
-        "processed",
-        "manualEditAt",
-        "inManualWindow"
-      ]
-    },
-    "ledger_replay": {
-      "loadable": true,
-      "error": null,
-      "api_keys": 8,
-      "floor_owners": 42,
-      "preview_before_change": true,
-      "coverage_reachable": 42
-    }
+  "v3.58.0": {
+   "what": "v3.58.0 O4/O5：两条新真源（config/session-gate.js · config/write-receipt.js）；本件不写回滚点",
+   "why": "枚举面 368 -> 370 个文件（本版三个新 .js 里，两个产品侧真源进本探针扫描面：config/session-gate.js 与 config/write-receipt.js；第三个是 tests/system-v3590.test.mjs，`tests/` 不在本探针的扫描面）。**会话隔离前缀面（chat_data_patterns）279 一格未动** —— 本版七族写回口接的是「出发时记令牌 + 写回前裁决」，裁决结果落在内存账本（sessionDropLog 有界快照），**不新增任何会话键、也不新增 storage 前缀**：回执面只回答「这次调用落了没有」，不引入新的持久化面。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 会话栅栏不写回滚点、不碰分支对照。",
+   "readings": {
+    "files_scanned": 370
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "chat_data_patterns",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "本版新增的两件真源都是**进程内**真源（世代号与回执判定），没有持久化态：故本面既不新增会话隔离前缀、也不新增回滚点。这是如实记录，不是漏复校。"
+   ]
   },
-  "criteria": [
-    {
-      "id": "R1",
-      "desc": "上游存在**以「检查点 / 存档点」为名且持久化**的面（F-1 第一件的对象）",
-      "pass": false,
-      "got_text": "枚举 65 个模块：以 checkpoint/存档点 为名的有 [无]，**其中带持久化机制的是 0 个**"
-    },
-    {
-      "id": "R2",
-      "desc": "**分支 / 回滚域**里存在「预检 / 干跑」面（F-1 第二件的对象）",
-      "pass": false,
-      "got_text": "域内 18 个模块，预检 token **零命中**（域外有：注入链路诊断 dry-run，属另一域）"
-    },
-    {
-      "id": "R3",
-      "desc": "上游分支 / 回放的**模块全局通道运行时可达**（真加载真调用，不靠猜外供形式）",
-      "pass": true,
-      "got_text": "branch-guard 可加载=true（API 9 键，一句话读数可达=true）· ledger-replay 可加载=true（API 8 键，登记 42 本账）"
-    },
-    {
-      "id": "R4",
-      "desc": "上游分支 / 回滚面**携带内容**（能答「回滚会丢掉什么」，而不只是楼层号）",
-      "pass": false,
-      "got_text": "branch-guard stats 键 = [version、request、apply、swipe、processed、manualEditAt、inManualWindow] ⇒ **只记楼层号与过期时刻**，无内容 / 条数字段；ledger-replay 的 replayDrop 形参只有 (host, floor, registry)，无 opts ⇒ 无「先算后改」"
-    },
-    {
-      "id": "R5",
-      "desc": "下游已有回滚覆盖面（增量基础已存在）",
-      "pass": true,
-      "got_text": "41 点 / 4 文件 / 12 入口定义"
-    }
-  ],
-  "verdict": {
-    "question": "F-1「分支与玩法（R4 第一批）」的持久检查点 / 回滚预览 / 分支只读对照，能不能立 Gate 并实施？",
-    "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 不是「工作量不够」，而是三件里有两件**要接的面不存在**、第三件**面的内容不足以支撑对照**。",
-    "reasons": [
-      "**① 持久检查点：面上没有这东西（R1 ✗）**。枚举 65 个上游模块，以 checkpoint / 存档点 为名的**零个**。上游确有持久化，但持久化的是「每楼一份的附注」（`msg.extra.lonsha_ledger`，走 floor-ledger.js）——那是**账随楼走**的记账，不是「把当前整个运行时冻成一个点、以后能整体退回来」的检查点。分支态唯一的载体 branch-guard 是**内存态 Map**（闭包内 `new Map()`，零持久化 token，TTL 3 分钟、上限 200 条）：会话切走即无。⇒ 真做「持久检查点」只能由下游**自己造一套运行时快照与回退语义**（哪些域进快照、跨域一致性怎么保、退回时旧派生怎么作废），那是**新做一个业务域**，不是接一个已有面。",
-      "**② 回滚预览：分支域内没有预演面（R2 ✗）**。分支 / 回滚域 18 个模块内 dryRun / 预检 / 干跑 / 预演 零命中；`replayDrop` 形参只有 `(host, floor, registry)`、调用即真撤。域外唯一的两阶段预检是恢复管线的 `restoreFromPayload(dryRun:true)`（schema-migration.js 同款 `applied:0` 预检），它回答的是「这份存档能不能恢复」，**不是**「这次回滚会让哪些域丢几条」。⇒ 下游要做「回滚预览」，等价于**自己把每个域的『将要丢什么』算一遍**，而这件事恰恰需要那些域自己声明可预览性 —— 现状是零个域有这种东西。",
-      "**★ ③ 分支只读对照：通道可达但内容不够（R3 ✓ / R4 ✗）**。两模块运行时**确实可达**（本探针真加载真调用：branch-guard 9 个 API 键、一句话读数可达；ledger-replay 8 个键、42 本账登记），所以「读得到」不是问题。问题是**读到的内容不足以做对照**：branch-guard 的 `stats()` 只出七个数（version / request / apply / swipe / processed / manualEditAt / inManualWindow）——**楼层号与计数，没有内容**；ledger-replay 的 `coverage()` 出的是「哪本账在位 / 缺席 / 取数即抛」。拿这些做「分支只读对照」，最多写出一句「本条分支有 3 个待回滚楼层、42 本账在位」——**这不是对照，是仪表读数**；真正的对照要能回答「这一页与那一页差在哪」，而那需要每页的内容或差分，上游根本没保存（它也**刻意不保存**：分支态是易失的、以会话为自然边界）。",
-      "**④ 下游已有强基础，且下游自己已经在做这件事（R5 ✓）**：下游 41 个回滚点 / 4 个文件 / 12 个入口定义（wechat-data / phone-data / wangxiang-app / index.js），已按楼层回滚三类域；存储侧 89 条会话隔离正则 + 5 处命名空间守卫（`chatMetadata` 随聊天档走、`extensionSettings` 全局）。⇒ F-1 若真做，增量是在**下游自己的数据**上做快照与对照，而上游那两本账帮不上忙（它的态是易失的、且不带内容）。",
-      "**⑤ 与已定纪律的关系**：本轮 P-6 与 F-4 两次取证都落在同一条纪律上 —— **先取证再定，读数不支持就记 not_now 并写清代价**。F-1 的读数形态与 F-4 不同（F-4 是「面完全不存在」，F-1 是「通道在、面在、但面上没有内容」），结论相同：不立 Gate。不因「名字听着可做」而动工。"
-    ],
-    "only_axis_with_evidence": "真正有读数支持、且不需要下游自造一套运行时快照的替代轴是 **「回滚影响的可见性提升」**：下游 41 个回滚点已经有确定的『按楼层作废』语义，缺的从来不是引擎而是**读前即知**——在删楼 / 翻页 / 重生成之前，把「这次动作会让哪些域各丢几条」在**下游自己的数据上**算一遍并呈现（只呈现、不执行）。这条轴的证据在上游之外（下游自己的存储是可数的），不依赖上游那两本账。",
-    "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项状态不受影响。"
+  "v3.64.0": {
+   "what": "v3.64.0 探针纯度复校：branch_play_probe 补上「块注释也算注释」纪律（与 schedule_conflict_probe 的 v3.22.0 同款）+ 陈旧枚举面重绑",
+   "why": "两件事各自独立、必须分开记：（A）**陈旧漂移**：files_scanned 371 -> 373。枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config/branch-contrast.js（v3.62.0）与 config/resume-handoff.js（v3.63.0）从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。（B）**口径诚实化**：checkpoint_face_hits 1 -> 0、preview_face_hits 42 -> 34、upstream_global_read_sites 8 -> 4。探针此前的 countTokens 与三处读文件只跳 `//` 行，**块注释散文照进读数**，而块注释恰是写规格的地方 ⇒ 「本模块绝不碰 X」被算成「X 已实施」。逐条归因（现场实测，非推测）：checkpoint 唯一 1 点在 config/checkpoint-content-contract.js 文件头，逐字写「绝不碰 saveCheckpoint / dropCheckpoint 这类写面」；preview 9 处块注释行（diagnose-data 3 · diagnose-view 1 · rollback-preview 2 · boot-timing 1 · num-gate 1 · branch-contrast 1）；globalRead 4 处（graph-bridge 1 · memory-app 2 · world-bridge 1，后者逐字写「不摸 window.LonShaEvidenceWorkbench」）。branch_face_hits 仍 0：原 2 点全在 config/branch-contrast.js 文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 checkpointCompare 面），与「下游有没有接上游的分支只读对照面」**同名不同物**，如实归零正是本探针该给的读数。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）· 会话隔离前缀面（279）· 命名空间存储点（5）**一格未动**（rollback 族本就没有块注释命中，已实测）。★ 连带面（同批落地，不是事后补）：本读数归零会打破 v326 A2 的「下限 1」判据 ⇒ 该判据已改写为「真源四出口在场 + 产品面真调用」（见 tools/patch_v3640_handoff.py 留档），文本计数版退场、真调用版接棒（bridge-contract J13 早已以更强形式守着同一件事）。",
+   "readings": {
+    "files_scanned": 373,
+    "checkpoint_face_hits": 0,
+    "preview_face_hits": 34,
+    "branch_face_hits": 0,
+    "upstream_global_read_sites": 4
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "chat_data_patterns",
+    "namespace_store_sites",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
+    "块注释纪律只补在**探针侧**；其它 token 族走子串匹配的探针若日后新增，仍须逐件核对是否同步。本版只修 branch_play_probe（schedule_conflict_probe 早在 v3.22.0 已立）。",
+    "「下游已实施检查点内容级对照」此刻的证据是**真源四出口在场 + 产品面真调用**（v326 A2 改写 + bridge-contract J13），**不是**本探针的文本计数 —— 文本计数从此不再为该结论作证。"
+   ]
   },
-  "corrections": [
-    "**探针 v1 把上游面写死成两个文件（假阴性 ⇒ 三判据全错）**：初版只读 `branch-guard.js` / `ledger-replay.js` 搜「持久化 / 预检」，于是漏掉 `restoreFromPayload` 的 dryRun 两阶段预检面与 chatMetadata 嵌入快照面，得出 R1/R2/R3 全 0 的结论。**读数 0 不等于面上没有，只等于探针没扫到。** 修法：模块名单改由**目录枚举**得出（迭代搜索），判据在全模块上搜。教训：**写死枚举面的判据，绿与红都只在一版上成立。**",
-    "**探针 v1 把「外供」等同于「进 bridge 快照」（口径错 ⇒ R3 假阴性）**：下游本来就在**直读上游模块全局**（`window.LonShaFloorLedger` / `window.LonShaMemory` / `window.LonShaEvidenceWorkbench`，实测 8 个站点），所以「不在快照里」根本推不出「拿不到」。修法：改为**可达性实测** —— 把模块源码在隔离沙箱里真加载、真调用，量出「能不能读、读到什么、状态跨不跨实例」。教训：**不要用推断代替测量**；外供形式有三种（快照 / 模块全局 / 都不给），不能先把答案限定成一种再算命中率。",
-    "**探针 v2 的预检判据未限定域（假阳性）**：对全模块裸搜 `dryRun` 会命中上游 3 个模块（index.js×25、settings-ui.js×15、schema-migration.js×8）——那是**注入链路的诊断 dry-run**（「这段内容没有进入 AI 上下文，只回答召回→注入链路通不通」）与**恢复管线预检**，与「回滚预览」不是一个域。修法：域由**文件名模式**派生（branch|ledger|replay|guard|snapshot|checkpoint|restore|changeset|version|closure|shift ⇒ 18 个模块），判据只在域内算。教训同族：**范围粒度错会造成假阳性**。",
-    "**「检查点」中文 token 撞步进流水线（假阳性）**：`step-pipeline.js` 有 2 处中文「检查点」，注释写的是「**取消检查点**：每步执行前 + 重试等待后各查一次 signal」——那是取消信号的轮询点，与「存档点」毫无关系。修法：改用英文 checkpoint / 存档点（且要求**同文件带持久化机制**才算面）。教训：**同一个词在中文注释里常是另一件事**，token 必须与语义绑定。",
-    "**下游 `preview` / `dryRun` 裸词大面积假阳性（初版读数错误）**：下游裸搜 `preview` 会命中 album / diary / 游戏 / honey 的**图片预览**（几十处），裸搜 `dryRun` 命中 `api-manager.js` 的宿主生成参数 `dryRun:false` 与 `injection-contract.js` 的注释。修法：下游判据一律用**回滚域的复合 token**（previewRollback / rollbackPreview / dryRunRollback / RollbackPreview / 回滚预览）。修正后三条下游读数均为 0（与「三件都没做过」一致）。",
-    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-    "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
-    "v3.11.0 复校：本轮新增 `config/rollback-preview.js`（回滚影响预览真源，枚举面 +1），并真实改了产品代码（`apps/diagnose/diagnose-data.js`、`apps/diagnose/diagnose-view.js`）。**除枚举面与「回滚预览」读数（0 → 39：探针刻度就是量它）外全部读数逐项不变** ——回滚覆盖面 41 点 / 4 文件 / 12 入口定义一字未动（真源模块**只算不写**，它一条回滚入口都没新增），故本版落地不构成新增回滚实现点。首测版语义保留在 measured_at。★ 同轮同步用**下限形**改写了两条当版精确读数（见 tests/system-v326.test.mjs 的 A2 / B4），并在 B1 处按**位置**拆分 token 面（`index.js` 仍全禁；上游分支面/检查点面 6 个 token 在 App 层全留）。",
-    "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
-    "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面与 `preview_face_hits`（42，v3.11.0 起就是这个数）外全部读数逐项不变** —— 本版是纯读数层，41 个回滚点 / 4 文件 / 12 入口定义一字未动。首测版语义保留在 measured_at。",
-    "v3.15.0 复校：枚举面 232 → 237（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js）；`chat_data_patterns` 89 → 94（config/storage.js 的 CHAT_DATA_PATTERNS 新增 1 条真模式 `/^usage_/`，其上方 4 行说明性模式行按探针既有口径一并计入 ⇒ +5）；`preview_face_hits` 0 → 42 是**既有点刻度回填**（v3.11.0 起就是 42，基线当初只改了 corrections 散文而漏同步 readings —— 本轮修的是基线自身的转写漂移，不是本版新造了预览面）。**关键：回滚覆盖面读数一字未动**（41 点 / 4 文件 / 12 入口定义）—— 本版是只读展示面，没有偷偷变成执行层，也没有新增/删除回滚点；命名空间守卫 5 处与检查点/分支面 0 命中同样不变。",
-    "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。回滚点 41 / 4 文件 / 12 入口定义逐字不变。",
-    "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰回滚/分支面任何一行。 其余读数逐项不变。",
-    "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面逐项不变（回滚点 41 / 回滚文件 4 / 入口定义 12 / 上游全局读取点 8 / 会话键模式 94 / 命名空间存储点 5）。",
-    "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
-    "v3.20.2 精确归因（**对上面那条的总账核对**，勘误式补记）：`checkpoint_face_hits` 0 → **1** —— 唯一增量来自下游新接的只读真源 `config/checkpoint-content-contract.js`（它的读取面里出现一次检查点 token；该文件**不碰** localStorage / 本仓 storage / `ctx.chat`，对回滚点与站点零贡献）。`preview_face_hits` **42 → 42（逐项不变）**：本轮新写的注释**刻意不含那几个预览 token** —— 这是本仓既有的写法纪律（`config/rollback-preview.js` 文件头写明了「注释里写函数名会被探针算成实现点」），本轮实测踩到过一次并当场改回（初稿在 `diagnose-data.js` 的注释里写了「回滚预览」四个字，探针只跳 `//` 行、**不跳块注释续行** ⇒ 读数 42 → 45（虚涨 3），改掉措辞后回落到 42）。`branch_face_hits` 仍为 **0**：本轮接的是**检查点内容级对照**，不是分支只读对照。⇒ 本版对回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与命名空间守卫（5）**零改动**。",
-    "**v3.22.0 复校（存储分域 +2 条）**：`chat_data_patterns` 94→102、`files_scanned` 241→247。前者是 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 新增 `focus_` 与 `accounting_` 两条会话级隔离前缀（随注释行一起计入，与探针既有的「行首注释也算一条」口径一致）；后者是 apps/ 新增 6 个 .js。**回滚覆盖面（rollback_points 41 / files 4 / entry_defs 12）与上游三件读数一格未变** —— 本版不动回滚面。",
-    "v3.85.0 复校：枚举面 402 → 403（本版新增真源 config/num-clamp.js（有界取数唯一实现）与 config/diagnose-action.js（诊断处置面）+ v3.80.0~v3.84.0 累计的 A/B 清单八件真源与三个判据套件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；回滚点（rollback_points）/ 回滚文件（rollback_files）/ 回滚入口定义（rollback_entry_defs）/ 上游全局读取点 / CHAT_DATA_PATTERNS / 命名空间存储点**逐项不变** —— 本版没有碰回滚与存储面任何一行。"
-  ],
-  "not_done": [
-    "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
-    "**未给「检查点」建模型**：那是 F-1 若实施时的主体工作（快照域清单 / 跨域一致性 / 退回时派生作废 / 存储分域），本版刻意不做。",
-    "**未验实机**：全部读数来自源码与隔离沙箱内的真加载真调用；无头环境跑不了宿主（DOM / SillyTavern 上下文）。",
-    "**未把该读数立成常驻门禁**：与 P-6 / F-4 同口径 —— 「面存不存在、面上有什么」是决策输入，不是契约（常驻门禁只守「契约不许变坏」）。",
-    "**未替上游补面**：branch-guard / ledger-replay 缺持久化与预览，本版如实记录为上游事实，不据此改上游（上游本轮零改动）。"
-  ],
-  "rebuilds": {
-    "v3.22.0": {
-      "why": "新增两条会话隔离前缀（focus_ / accounting_）+ 枚举面 +6 文件；回滚面与上游面不动。",
-      "readings": {
-        "files_scanned": 247,
-        "chat_data_patterns": 102
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits"
-      ],
-      "not_done": [
-        "两处新增 storage 前缀（`focus_` / `accounting_`）只进**静态模式**面（chatDataPatterns 94→102），回滚面（rollbackPoints 41）与上游面（upstream_global_read_sites 8）**一格未动**。",
-        "真宿主上的回滚/预览实况仍归 R-O3。"
-      ],
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
-    },
-    "v3.23.0": {
-      "why": "判据散文复算：R5 与探针现场逐字一致；R1–R4 现场为「未复核（冻结证据：…）」—— 跨仓探针不硬依赖兄弟仓在场（上游 v3.204.0 的路径纪律），**故不刷新**，基线保留上次复核值。",
-      "readings": {},
-      "unchanged": [
-        "readings",
-        "scan（若该基线有）",
-        "sites（若该基线有）",
-        "verdict",
-        "corrections",
-        "not_done",
-        "timing_criteria"
-      ],
-      "not_done": [
-        "判据散文只做**文本复算**；判据的语义是否仍然成立（`pass`）不由本层复核。",
-        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
-      ],
-      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
-    },
-    "v3.24.0": {
-      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/branch_play_probe.cjs --json",
-      "readings": {
-        "readings.files_scanned": 248
-      }
-    },
-    "v3.25.0": {
-      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/piggy-data.js` / `piggy-view.js` / `piggy-app.js` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；`config/storage.js` 的会话隔离表新增一条前缀 `/^piggy_/`（一条覆盖 piggy_settings / piggy_state 两键）。第二项读数比预期多涨了 3：探针的 `chatDataPatterns` 刻度是「行首可选空白 + `/` + 可选 `^`」，而本版在那段里同时写了三行 `//` 注释说明 ⇒ **注释行也被计入**（102 + 1 条真前缀 + 3 行注释 = 106）。这是本仓「探针的刻度是文本的」的又一次现场实证，如实刷新，不改口径（其余读数：回滚点 / 命名空间守卫 / 上游冻结面一字未动）。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/branch_play_probe.cjs --json",
-      "readings": {
-        "files_scanned": 251,
-        "chat_data_patterns": 106
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits"
-      ],
-      "not_done": [
-        "新 App 的两条 storage 键（piggy_settings / piggy_state）**没有**新增任何回滚 / 预览入口：回滚覆盖面仍是 41 点 / 4 文件 / 12 入口定义，一格未动 —— 存钱罐的数据是「用户自己攒的钱」，本版没有把它接进任何回滚域。",
-        "`chat_data_patterns` 的 +4 里有 3 是**注释行**：本探针的这条读数口径按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.26.0": {
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面 251 → 257 个文件；**新增 4 条会话隔离前缀**（`regexfilter_settings` / `regexfilter_presets` / `punchcard_settings` / `punchcard_cards`）⇒ 静态模式面 `chat_data_patterns` 106 → 114。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两个新 App 都不写回滚点、不碰分支对照。",
-      "readings": {
-        "files_scanned": 257,
-        "chat_data_patterns": 114
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits"
-      ],
-      "criteria_refreshed": {}
-    },
-    "v3.27.0": {
-      "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面 257 → 269 个文件；**新增 4 条会话隔离前缀**（一条前缀覆盖一组键，共 12 条键：`^avatarframe_` 3 条 / `^shop_` 5 条 / `^block_` 2 条 / `^weather_` 2 条）⇒ 静态模式面 `chat_data_patterns` 114 → 130（+16：4 条真前缀 + 12 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 四件新 App 都不写回滚点、不碰分支对照（都只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 269,
-        "chat_data_patterns": 130
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +16 里有 12 是**注释行**（每条前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.28.0": {
-      "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面 269 → 272 个文件；**新增 1 条会话隔离前缀**（`^widget_` 一条覆盖四键：`widget_settings` / `widget_templates` / `widget_instances` / `widget_draft`）⇒ 静态模式面 `chat_data_patterns` 130 → 134（+4：1 条真前缀 + 3 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 272,
-        "chat_data_patterns": 134
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +4 里有 3 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.29.0": {
-      "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面 272 → 275 个文件；**新增 1 条会话隔离前缀**（`^taobao_` 一条覆盖五键：`taobao_settings` / `taobao_products` / `taobao_cart` / `taobao_orders` / `taobao_grabs`）⇒ 静态模式面 `chat_data_patterns` 134 → 138（+4：1 条真前缀 + 3 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 275,
-        "chat_data_patterns": 138
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +4 里有 3 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.30.0": {
-      "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面 275 → 278 个文件；**新增 1 条会话隔离前缀**（`^lover_` 一条覆盖六键：`lover_settings` / `lover_days` / `lover_footprints` / `lover_diary` / `lover_letters` / `lover_questions`）⇒ 静态模式面 `chat_data_patterns` 138 → 143（+5：1 条真前缀 + 4 条配套注释行，本探针这条读数按文本行计，注释与真前缀同形）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 新 App 不写回滚点、不碰分支对照（只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 278,
-        "chat_data_patterns": 143
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +5 里有 4 是**注释行**（新前缀各带一条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.32.0": {
-      "what": "v3.31.0 约会大作战与 v3.32.0 两个子游戏的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）；两版都不写回滚点、不碰分支对照",
-      "why": "枚举面 278 → 285 个文件（两版新件 .js 之和）；**会话隔离前缀面** 143 → 153（+10），两版**各 +5**，逐版拆开写：v3.31.0 新增 1 条真前缀 `/^date_/` ＋ 4 条配套注释行 = +5；v3.32.0 新增 2 条**精确枚举**（`/^chat_games_seaturtle_state$/` 与 `/^chat_games_guesswhat_state$/`，父前缀 `/^chat_games_/` 已能自动接住，列出来只为「游戏厅里现在有哪几款按聊天独立存档」可一眼可数）＋ 3 条配套注释行 = +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两版新件都不写回滚点、不碰分支对照（只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 285,
-        "chat_data_patterns": 153
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +10 里有 8 是**注释行**（两版各带数条配套注释，与真前缀同形）：本探针这条读数按文本行计，注释与真前缀同形。本版只如实刷新，未改口径（改口径会让历史读数不可比）。★ 另需注意：本次 +10 是**两版之和**（基线停在 v3.30.0），不是单版增量。"
-      ]
-    },
-    "v3.33.0": {
-      "what": "v3.33.0 游戏厅下半两件的真实接线（storage 精确枚举面）；两件都不写回滚点、不碰分支对照",
-      "why": "枚举面 285 → 289 个文件（本版四个新 .js）；**会话隔离前缀面** 153 → 157（+4）—— 逐行拆开写：本版在 `config/storage.js` 新增 2 条**精确枚举**（`/^chat_games_scriptkill_state$/` 与 `/^chat_games_ludo_state$/`，父前缀 `/^chat_games_/` 已能自动接住，列出来只为「游戏厅里现在有哪几款按聊天独立存档」可一眼可数）＋ 2 条配套注释行（`// [v3.33.0] …` 与 `//   同样只作评审面…`）= +4。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 两个子游戏都不写回滚点、不碰分支对照（只写自己的会话键）。",
-      "readings": {
-        "files_scanned": 289,
-        "chat_data_patterns": 157
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +4 里有 2 是**注释行**（本版 storage.js 的两条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.34.0": {
-      "what": "v3.34.0 老福特的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 289 → 292 个文件（本版三个新 .js）；**会话隔离前缀面** 157 → 162（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^lofter_/,`（一条前缀覆盖三条键：设置 / 内容 / 存储；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.34.0] 老福特…`、`//   一条前缀覆盖三键…`、`//   作者池、稿子、合集…`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 老福特不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 292,
-        "chat_data_patterns": 162
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.35.0": {
-      "what": "v3.35.0 Pixiv 的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 292 → 295 个文件（本版三个新 .js）；**会话隔离前缀面** 162 → 167（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^pixiv_/,`（一条前缀覆盖三条键：设置 / 内容 / 存储；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.35.0] Pixiv…`、`//   一条前缀覆盖三键…`、`//   插画登记面、小说与稿子…`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— Pixiv 不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 295,
-        "chat_data_patterns": 167
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.36.0": {
-      "what": "v3.36.0 杂志的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 295 → 298 个文件（本版三个新 .js）；**会话隔离前缀面** 167 → 173（+6）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^magazine_/,`（一条前缀覆盖三条键：设置 / 内容 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 5 行配套注释（`// [v3.36.0] 杂志…`、`//   一条前缀覆盖三键…`、`//   设置…、内容…、`、`//   台账…各自独立。`、`//   随会话隔离…`）= +6。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 杂志不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 298,
-        "chat_data_patterns": 173
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +6 里有 5 是**注释行**（本版 storage.js 的五条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.37.0": {
-      "what": "v3.37.0 白盒音效盒的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 298 → 301 个文件（本版三个新 .js）；**会话隔离前缀面** 173 → 178（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^soundkit_/,`（一条前缀覆盖三条键：设置 / 配方 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.37.0] 白盒音效盒…`、`//   一条前缀覆盖三键…`、`//   绑定表…、自定义配方、台账各自独立。`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 音效盒不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 301,
-        "chat_data_patterns": 178
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.38.0": {
-      "what": "v3.38.0 召回治理台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 301 → 304 个文件（本版三个新 .js）；**会话隔离前缀面** 178 → 183（+5）—— 逐行拆开写：本版在 `config/storage.js` 新增 1 条**宽前缀** `/^recall_/,`（一条前缀覆盖三条键：四路配置 / 策略 / 台账；三条键都无元字符，按仓内口径「无需宽匹配登记」）+ 4 行配套注释（`// [v3.38.0] 召回治理台…`、`//   一条前缀覆盖三键…`、`//   四路配置、策略（房间 / 注入开关 / 门槛 / topN / 水位线）、台账各自独立。`、`//   随会话隔离…`）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 召回治理台不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 304,
-        "chat_data_patterns": 183
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1–R4）仍是「未复核（冻结证据）」—— 未传 `--upstream`，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "`chat_data_patterns` 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.39.0": {
-      "what": "v3.39.0 时光胶囊的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 304 -> 307 个文件（本版三个新 .js）；**会话隔离前缀面** 183 -> 188（+5）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^sourcebook_/,（一条前缀覆盖三条键：封存 / 策略 / 台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 4 行配套注释（版标行、一条前缀覆盖三键行、三键各自独立行、随会话隔离行）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 时光胶囊不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 307,
-        "chat_data_patterns": 188
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.40.0": {
-      "what": "v3.40.0 对话水壶的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 307 -> 310 个文件（本版三个新 .js）；**会话隔离前缀面** 188 -> 193（+5）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^kettle_/,（一条前缀覆盖三条键：记录 / 策略 / 台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 4 行配套注释（版标行、一条前缀覆盖三键行、三键各自独立行、随会话隔离行）= +5。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 对话水壶不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 310,
-        "chat_data_patterns": 193
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +5 里有 4 是**注释行**（本版 storage.js 的四条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.41.0": {
-      "what": "v3.41.0 需求沙盘的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 310 -> 313 个文件（本版三个新 .js）；**会话隔离前缀面** 193 -> 200（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^needsim_/,（一条前缀覆盖四条键：需求 / 池子 / 记忆与愿望 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、源的缺口行、源没有这一步行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 需求沙盘不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 313,
-        "chat_data_patterns": 200
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.42.0": {
-      "what": "v3.42.0 曲库案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 313 -> 316 个文件（本版三个新 .js）；**会话隔离前缀面** 200 -> 207（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^musicdesk_/,（一条前缀覆盖四条键：曲库 / 歌词 / 台账 / 策略；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、源的缺口行、源没有这一步行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 曲库案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 316,
-        "chat_data_patterns": 207
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.43.0": {
-      "what": "v3.43.0 PV 案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 316 -> 319 个文件（本版三个新 .js）；**会话隔离前缀面** 207 -> 215（+8）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^pvdesk_/,（一条前缀覆盖四条键：题面 / 作品台账 / 歌词 / 策略；四条键都无元字符，按仓内口径无需宽匹配登记）+ 7 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四键各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +8。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— PV 案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 319,
-        "chat_data_patterns": 215
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +8 里有 7 是**注释行**（本版 storage.js 的七条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.44.0": {
-      "what": "v3.44.0 同人商店 · 柜台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 319 -> 322 个文件（本版三个新 .js：apps/doujin/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 215 -> 224（+9）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^doujin_/（一条前缀覆盖四条键：店头（含存档）/ 市场 / 收银台 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 8 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四类各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +9。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 同人商店不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 322,
-        "chat_data_patterns": 224
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +9 里有 8 是**注释行**（本版 storage.js 的八条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.45.0": {
-      "what": "v3.45.0 存档台的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 319 -> 322 个文件（本版三个新 .js：apps/archive/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 224 -> 232（+8）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^archive_/（一条前缀覆盖四条键：已收包 / 对账面 / 要求草稿 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 7 行配套注释（版标行、一条前缀覆盖四键行、仓内口径行、四类各自是什么行、随会话隔离行、源的缺口行、源没有这一步行）= +8。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 存档台不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 325,
-        "chat_data_patterns": 232
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +8 里有 7 是**注释行**（本版 storage.js 的七条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.46.0": {
-      "what": "v3.46.0 思维链案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 325 -> 328 个文件（本版三个新 .js：apps/cotdesk/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 232 -> 239（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^cotdesk_/（一条前缀覆盖四条键：条目册 / 配置 / 草稿 / 台账；四条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖四键行、四类各自是什么行、随会话隔离行、源把四类挤在一个 AppState 行、本件按动作边界分开行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 思维链案头不写回滚点、不碰分支对照（只写自己的四条会话键）。",
-      "readings": {
-        "files_scanned": 328,
-        "chat_data_patterns": 239
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.47.0": {
-      "what": "v3.47.0 诊断案头的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 328 -> 331 个文件（本版三个新 .js：apps/diagdesk/ 的 data / app / view，样式那件不进扫描面）；**会话隔离前缀面** 239 -> 246（+7）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^diagdesk_/（一条前缀覆盖三条键：存档原文 / 摘要草稿 / 动作台账；三条键都无元字符，按仓内口径无需宽匹配登记）+ 6 行配套注释（版标行、一条前缀覆盖三键行、三类各自是什么行、随会话隔离行、源把三类挤在一个宿主对象行、本件按动作边界分开行）= +7。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 诊断案头不写回滚点、不碰分支对照（只写自己的三条会话键）。",
-      "readings": {
-        "files_scanned": 331,
-        "chat_data_patterns": 246
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +7 里有 6 是**注释行**（本版 storage.js 的六条配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.48.0": {
-      "what": "v3.48.0 子宫画板的真实接线（storage 宽前缀面）；本件不写回滚点、不碰分支对照",
-      "why": "枚举面 331 -> 334 个文件（本版 3 件新 .js）；**会话隔离前缀面** 246 -> 252（+6）—— 逐行拆开写：本版在 config/storage.js 新增 1 条**宽前缀** /^uterus_/（一条前缀覆盖两条键：收下的角色状态原文 / 动作台账；两条键都无元字符，按仓内口径无需宽匹配登记）+ 5 行配套注释（版标行、一条前缀覆盖两键行、仓内口径行、两类各自是什么行、随会话隔离与源的缺口行）= +6。★ 本探针这条读数**按文本行计**，注释与真前缀同形（历史各版同口径，未改）。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 子宫画板不写回滚点、不碰分支对照（只写自己的两条会话键）。",
-      "readings": {
-        "files_scanned": 334,
-        "chat_data_patterns": 252
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "chat_data_patterns 的 +6 里有 5 是**注释行**（本版 storage.js 的配套注释，与真前缀同形）：本探针这条读数按文本行计。本版只如实刷新，未改口径（改口径会让历史读数不可比）。"
-      ]
-    },
-    "v3.54.0": {
-      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
-      "why": "files_scanned 334→367、chat_data_patterns 252→279：v3.49~v3.54 新增 App 与判据套件使扫描文件数与会话隔离正则增长。首次全量 npm run test 暴露基线陈旧。"
-    },
-    "v3.55.0": {
-      "what": "枚举面 367 -> 368（同上）",
-      "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 回滚覆盖面一格未动（rollback_points 41 / rollback_files 4 / rollback_entry_defs 12 逐项不变）。",
-      "readings": {
-        "files_scanned": 368,
-        "rollback_points": 41,
-        "rollback_files": 4,
-        "rollback_entry_defs": 12,
-        "upstream_global_read_sites": 8,
-        "chat_data_patterns": 279,
-        "namespace_store_sites": 5,
-        "checkpoint_face_hits": 1,
-        "preview_face_hits": 42,
-        "branch_face_hits": 0,
-        "upstream_modules_scanned": 65,
-        "upstream_branch_domain_modules": 18,
-        "upstream_checkpoint_named": 0,
-        "upstream_checkpoint_named_persistent": 0,
-        "upstream_branch_domain_preview_hits": 0,
-        "upstream_branch_guard_loadable": 1,
-        "upstream_ledger_replay_loadable": 1,
-        "upstream_bridge_snapshot_branch_faces": 0
-      }
-    },
-    "v3.58.0": {
-      "what": "v3.58.0 O4/O5：两条新真源（config/session-gate.js · config/write-receipt.js）；本件不写回滚点",
-      "why": "枚举面 368 -> 370 个文件（本版三个新 .js 里，两个产品侧真源进本探针扫描面：config/session-gate.js 与 config/write-receipt.js；第三个是 tests/system-v3590.test.mjs，`tests/` 不在本探针的扫描面）。**会话隔离前缀面（chat_data_patterns）279 一格未动** —— 本版七族写回口接的是「出发时记令牌 + 写回前裁决」，裁决结果落在内存账本（sessionDropLog 有界快照），**不新增任何会话键、也不新增 storage 前缀**：回执面只回答「这次调用落了没有」，不引入新的持久化面。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面（全局读点 8、命名空间存储点 5、检查点面 1、预览面 42、分支面 0）**一格未动** —— 会话栅栏不写回滚点、不碰分支对照。",
-      "readings": {
-        "files_scanned": 370
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "chat_data_patterns",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "本版新增的两件真源都是**进程内**真源（世代号与回执判定），没有持久化态：故本面既不新增会话隔离前缀、也不新增回滚点。这是如实记录，不是漏复校。"
-      ]
-    },
-    "v3.64.0": {
-      "what": "v3.64.0 探针纯度复校：branch_play_probe 补上「块注释也算注释」纪律（与 schedule_conflict_probe 的 v3.22.0 同款）+ 陈旧枚举面重绑",
-      "why": "两件事各自独立、必须分开记：（A）**陈旧漂移**：files_scanned 371 -> 373。枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config/branch-contrast.js（v3.62.0）与 config/resume-handoff.js（v3.63.0）从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。（B）**口径诚实化**：checkpoint_face_hits 1 -> 0、preview_face_hits 42 -> 34、upstream_global_read_sites 8 -> 4。探针此前的 countTokens 与三处读文件只跳 `//` 行，**块注释散文照进读数**，而块注释恰是写规格的地方 ⇒ 「本模块绝不碰 X」被算成「X 已实施」。逐条归因（现场实测，非推测）：checkpoint 唯一 1 点在 config/checkpoint-content-contract.js 文件头，逐字写「绝不碰 saveCheckpoint / dropCheckpoint 这类写面」；preview 9 处块注释行（diagnose-data 3 · diagnose-view 1 · rollback-preview 2 · boot-timing 1 · num-gate 1 · branch-contrast 1）；globalRead 4 处（graph-bridge 1 · memory-app 2 · world-bridge 1，后者逐字写「不摸 window.LonShaEvidenceWorkbench」）。branch_face_hits 仍 0：原 2 点全在 config/branch-contrast.js 文件头块注释 —— 那是**下游自建的 X8 第一切片**（消费上游既有 checkpointCompare 面），与「下游有没有接上游的分支只读对照面」**同名不同物**，如实归零正是本探针该给的读数。回滚覆盖面（41 点 / 4 文件 / 12 入口定义）· 会话隔离前缀面（279）· 命名空间存储点（5）**一格未动**（rollback 族本就没有块注释命中，已实测）。★ 连带面（同批落地，不是事后补）：本读数归零会打破 v326 A2 的「下限 1」判据 ⇒ 该判据已改写为「真源四出口在场 + 产品面真调用」（见 tools/patch_v3640_handoff.py 留档），文本计数版退场、真调用版接棒（bridge-contract J13 早已以更强形式守着同一件事）。",
-      "readings": {
-        "files_scanned": 373,
-        "checkpoint_face_hits": 0,
-        "preview_face_hits": 34,
-        "branch_face_hits": 0,
-        "upstream_global_read_sites": 4
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "chat_data_patterns",
-        "namespace_store_sites",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数（65 个模块 / 域内 18 个 / 以 checkpoint 为名且带持久化的 0 个），不当作绿。",
-        "块注释纪律只补在**探针侧**；其它 token 族走子串匹配的探针若日后新增，仍须逐件核对是否同步。本版只修 branch_play_probe（schedule_conflict_probe 早在 v3.22.0 已立）。",
-        "「下游已实施检查点内容级对照」此刻的证据是**真源四出口在场 + 产品面真调用**（v326 A2 改写 + bridge-contract J13），**不是**本探针的文本计数 —— 文本计数从此不再为该结论作证。"
-      ]
-    },
-    "v3.65.0": {
-      "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）+ 会话前缀族 +1（/^te_/）",
-      "why": "files_scanned 373 -> 378（apps/** + config/** 的 .js 计数）；chat_data_patterns 279 -> 285 是**存储层会话前缀族**的真读数 —— 本版给 config/storage.js 的会话前缀族加了 /^te_/（任务入口两条会话键），族条数随之增加。**回滚覆盖面与上游读取面一格未动**：41 点 / 4 文件 / 12 入口定义 · checkpoint 0 · preview 34 · branch 0 · 上游全局读取点 4 —— 本版不碰回滚/检查点/预览/分支对照任何路径。",
-      "readings": {
-        "files_scanned": 378,
-        "chat_data_patterns": 285,
-        "namespace_store_sites": 5
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_global_read_sites",
-        "namespace_store_sites"
-      ],
-      "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
-    },
-    "v3.66.0": {
-      "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
-      "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
-      "readings": {
-        "files_scanned": 379
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "chat_data_patterns",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits",
-        "upstream_modules_scanned",
-        "upstream_branch_domain_modules",
-        "upstream_checkpoint_named",
-        "upstream_checkpoint_named_persistent",
-        "upstream_branch_domain_preview_hits",
-        "upstream_branch_guard_loadable",
-        "upstream_ledger_replay_loadable",
-        "upstream_bridge_snapshot_branch_faces"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
-        "本版新增的协议件不写回滚点、不碰分支对照：回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面一格未动。这不代表没接好，代表本门确实与它无关（X2 治的是结果靶心）。"
-      ]
-    },
-    "v3.72.0": {
-      "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑 + chat_data_patterns 随 config/storage.js 真增长",
-      "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 另有一项**与枚举面无关**的真增长必须分开记：`chat_data_patterns` 285 -> **303** —— 该读数由 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 表逐行数出（探针口径：以 / 或 ^ 起首的行），五版合并交付期间该表被真扩充 ⇒ 属**源变了读数跟着变**，不是口径漂移（同一段源码两个 ref 实测 285 vs 303，与探针输出逐字一致）。",
-      "how": "node tests/audit/branch_play_probe.cjs --json",
-      "readings": {
-        "files_scanned": 384,
-        "chat_data_patterns": 303
-      },
-      "unchanged": [
-        "rollback_points",
-        "rollback_files",
-        "rollback_entry_defs",
-        "upstream_global_read_sites",
-        "namespace_store_sites",
-        "checkpoint_face_hits",
-        "preview_face_hits",
-        "branch_face_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
-        "回滚覆盖面（41 点 / 4 文件 / 12 入口定义）一格未动 —— 本版新增的五个 config 件不写回滚点。这不代表没接好，代表本门确实与它无关。",
-        "`chat_data_patterns` 的增长只记读数、不改口径：探针「以 / 或 ^ 起首的行」判法本版一字未动。"
-      ]
-    }
+  "v3.65.0": {
+   "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）+ 会话前缀族 +1（/^te_/）",
+   "why": "files_scanned 373 -> 378（apps/** + config/** 的 .js 计数）；chat_data_patterns 279 -> 285 是**存储层会话前缀族**的真读数 —— 本版给 config/storage.js 的会话前缀族加了 /^te_/（任务入口两条会话键），族条数随之增加。**回滚覆盖面与上游读取面一格未动**：41 点 / 4 文件 / 12 入口定义 · checkpoint 0 · preview 34 · branch 0 · 上游全局读取点 4 —— 本版不碰回滚/检查点/预览/分支对照任何路径。",
+   "readings": {
+    "files_scanned": 378,
+    "chat_data_patterns": 285,
+    "namespace_store_sites": 5
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_global_read_sites",
+    "namespace_store_sites"
+   ],
+   "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
+  },
+  "v3.66.0": {
+   "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
+   "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
+   "readings": {
+    "files_scanned": 379
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "chat_data_patterns",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits",
+    "upstream_modules_scanned",
+    "upstream_branch_domain_modules",
+    "upstream_checkpoint_named",
+    "upstream_checkpoint_named_persistent",
+    "upstream_branch_domain_preview_hits",
+    "upstream_branch_guard_loadable",
+    "upstream_ledger_replay_loadable",
+    "upstream_bridge_snapshot_branch_faces"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
+    "本版新增的协议件不写回滚点、不碰分支对照：回滚覆盖面（41 点 / 4 文件 / 12 入口定义）与上游面一格未动。这不代表没接好，代表本门确实与它无关（X2 治的是结果靶心）。"
+   ]
+  },
+  "v3.72.0": {
+   "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑 + chat_data_patterns 随 config/storage.js 真增长",
+   "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 另有一项**与枚举面无关**的真增长必须分开记：`chat_data_patterns` 285 -> **303** —— 该读数由 `config/storage.js` 的 `CHAT_DATA_PATTERNS` 表逐行数出（探针口径：以 / 或 ^ 起首的行），五版合并交付期间该表被真扩充 ⇒ 属**源变了读数跟着变**，不是口径漂移（同一段源码两个 ref 实测 285 vs 303，与探针输出逐字一致）。",
+   "how": "node tests/audit/branch_play_probe.cjs --json",
+   "readings": {
+    "files_scanned": 384,
+    "chat_data_patterns": 303
+   },
+   "unchanged": [
+    "rollback_points",
+    "rollback_files",
+    "rollback_entry_defs",
+    "upstream_global_read_sites",
+    "namespace_store_sites",
+    "checkpoint_face_hits",
+    "preview_face_hits",
+    "branch_face_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "上游面（R1-R4）仍是「未复核（冻结证据）」—— 未传 --upstream，跨仓探针不硬依赖兄弟仓在场。本版如实保留各冻结读数，不当作绿。",
+    "回滚覆盖面（41 点 / 4 文件 / 12 入口定义）一格未动 —— 本版新增的五个 config 件不写回滚点。这不代表没接好，代表本门确实与它无关。",
+    "`chat_data_patterns` 的增长只记读数、不改口径：探针「以 / 或 ^ 起首的行」判法本版一字未动。"
+   ]
   }
+ }
 }

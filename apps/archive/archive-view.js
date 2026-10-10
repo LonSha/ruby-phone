@@ -155,6 +155,68 @@ export class ArchiveView {
         parts.push('</div>');
         return parts.join('');
     }
+    /* ---------- [v3.88.0 · R-X4] 项目清单与选中项 ----------
+     *  五个不同形的读数（这是本块唯一的价值）：
+     *   ① 还没收过包、② 收下的东西读不懂、③ 认得出但没有项目身份、
+     *   ④ 清单里有 N 个项目、⑤ 清单**读不到**（本件不持清单，读不到即「不知道」）。
+     *  源把⑤画成③，用户会以「这份包没有项目」去修一份根本读不出来的包。 */
+    _projectBlock() {
+        const app = this.app;
+        const parts = [];
+        const face = app.faceOf();
+        const readable = app.projectsReadable();
+        const rows = app.projectRows();
+        const sel = app.selected();
+        parts.push(this._sec('这个段落的项目',
+            '选中项由**本件**记在自己那一格里 —— 咽喉按它决定要不要产出项目读数'));
+        /* ★ 「读不到」排在「还没收过包」**之前**：读这一格抛了异常时，连「有没有包」
+         *   都不可知 —— 先报取数失败，不许拿「还没收过包」把异常盖掉。 */
+        if (!readable) {
+            const why = app.projectsWhy();
+            const tail = (why === 'read_threw')
+                ? '读这一格时抛了异常 —— 与「还没收过包」不同形'
+                : '收下的原文读不懂，项目身份无从取出';
+            parts.push('<div class="arc-note arc-note-err">项目清单**读不到** —— 不是「没有项目」，是取数失败（'
+                + this._esc(tail) + '）</div>');
+            parts.push('</div>');
+            return parts.join('');
+        }
+        if (face !== 'ok') {
+            parts.push('<div class="arc-note">还没有可以认的包：' + this._esc(app.faceText())
+                + '（**不是**「这份包没有项目」）</div>');
+            parts.push('</div>');
+            return parts.join('');
+        }
+        if (!rows.length) {
+            parts.push('<div class="arc-note">这份包认得出，但**不带项目身份**（没有项目标识）—— 选不了，也不会硬塞一行</div>');
+            parts.push('</div>');
+            return parts.join('');
+        }
+        parts.push('<div class="arc-sub-title">可接的项目 ' + String(rows.length) + ' 个</div>');
+        parts.push('<div class="arc-list">');
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            const on = !!(sel && sel.projectId === r.projectId);
+            parts.push('<div class="arc-list-row arc-pick' + (on ? ' on' : '') + '">');
+            parts.push('<span class="arc-list-k">' + this._esc(r.title || r.projectId) + '</span>');
+            parts.push('<span class="arc-list-v">' + this._esc(r.projectId)
+                + (r.volume ? '　卷：' + this._esc(r.volume) : '')
+                + '　停点：' + this._esc(r.lastFloor === null ? DASH : ('第 ' + r.lastFloor + ' 楼')) + '</span>');
+            parts.push('<button class="arc-btn arc-btn-quiet" data-act="pick_project" data-key="'
+                + this._esc(r.projectId) + '">' + (on ? '已选中' : '选这个') + '</button>');
+            parts.push('</div>');
+        }
+        parts.push('</div>');
+        if (sel) {
+            parts.push('<div class="arc-note arc-note-ok">已选中：' + this._esc(sel.title || sel.projectId)
+                + ' —— 咽喉下一轮取数就会产出这个项目的续玩读数。</div>');
+            parts.push('<div class="arc-btns"><button class="arc-btn arc-btn-quiet" data-act="clear_project">取消选择</button></div>');
+        } else {
+            parts.push('<div class="arc-note">**尚未选择项目**：咽喉维持会话隔离（不产出任何项目读数、不给恢复）</div>');
+        }
+        parts.push('</div>');
+        return parts.join('');
+    }
     /* ---------- 包页签 ---------- */
     _packPanel() {
         const app = this.app;
@@ -169,6 +231,7 @@ export class ArchiveView {
         parts.push('<button class="arc-btn arc-btn-quiet" data-act="clear_pack">放下一份包</button>');
         parts.push('</div>');
         parts.push('</div>');
+        parts.push(this._projectBlock());
         /* 包型读数 */
         const b = app.bundle();
         const v = app.versionRow();
@@ -520,6 +583,16 @@ export class ArchiveView {
         } else if (a === 'make_text') {
             const r = app.makeText();
             this._flash = writeLanded(r) ? r.text : ('出不了（' + (r.why ? r.why : '没落下去') + '）');
+        } else if (a === 'pick_project') {
+            const r = app.selectProject(el.getAttribute('data-key'));
+            /* ★ [v3.88.0 · R-X4] 选中项与对账面**同一次落笔**（都写在 archive_face 那一格）——
+             *   没落下去就不许画成「选好了」：R5 口径（界面播报不许与落盘相左）。
+             *   下面这一行原先写的是 r.ok：动作成立但这一笔没落盘时，界面会说选上了。 */
+            this._flash = writeLanded(r) ? '' : ('选不了（' + (r.why === 'not-in-list' ? '这个项目不在清单里' : (r.why === 'list-unreadable' ? '清单读不到' : r.why)) + '）');
+        } else if (a === 'clear_project') {
+            const r = app.clearSelection();
+            this._flash = writeLanded(r) ? '已取消选择 —— 咽喉回到维持隔离。'
+                : ('这一笔没存住 —— 重开会回到选中的那一个（' + (r.why ? r.why : '读不清成因') + '）');
         } else if (a === 'clear_ledger') {
             const r = app.clearLedger();
             this._flash = '清掉 ' + String(r.cleared) + ' 条（本件自己的台账）。';

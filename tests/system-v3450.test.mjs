@@ -913,11 +913,13 @@ const DAMAGE = {
         "            return writeReceipt(this.storage, key, JSON.stringify(value)).saved === true;",
         '            return true;'],
     /* ㉕ App：换会话不重取（源就是切角色原样留着）。 */
+    /* ✈ [v3.88.0 · R-X4] 本条的锂点随当版前移：换会话时选中项与项目清单也要归零（否则会把上一个对话的选中项带过来）。 */
     q25: [AR_APP,
-        '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL + "        this._focus = '';" + NL
-        + "        this._input = '';" + NL + '        this._now = 0;' + NL + '        this.probe();',
-        '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL + "        this._focus = '';" + NL
-        + "        this._input = '';" + NL + '        this._now = 0;'],
+        '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL
+        + '        this._sel = null;' + NL + '        this._proj = null;' + NL
+        + "        this._focus = '';" + NL + "        this._input = '';" + NL + '        this._now = 0;' + NL + '        this.probe();',
+        '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL
+        + "        this._focus = '';" + NL + "        this._input = '';" + NL + '        this._now = 0;'],
     /* ㉖ 视图：面色相塔平（四态只有一种色）。 */
     q26: [AR_VIEW,
         "    malformed: 'err',",
@@ -961,6 +963,9 @@ function stageTree() {
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'storage.js'), path.join(dir, 'config', 'storage.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v3.88.0 · R-X4] 存档台新引了跳项目续玩的唯一归一（真源 + 它的数值门），副本树要同步。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'resume-workbench.js'), path.join(dir, 'config', 'resume-workbench.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
     const ad = path.join(dir, 'apps', 'archive');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js']) {

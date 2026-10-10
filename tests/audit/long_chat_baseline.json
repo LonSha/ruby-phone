@@ -1,799 +1,799 @@
 {
-  "file": "tests/audit/long_chat_probe.cjs",
-  "probe": "tests/audit/long_chat_probe.cjs",
-  "note": "长会话（1000 楼）楼层消费路径取证：静态四类站点 + 活体缩放。合成宿主 + 真模块，非实机。",
-  "measured_at": "v3.9.1",
-  "host": {
-    "fixture": "tests/_runtime_host.mjs",
-    "chat_lengths": [
-      10,
-      100,
-      400,
-      1000,
-      2000
-    ],
-    "announcement_stripped": true
+ "file": "tests/audit/long_chat_probe.cjs",
+ "probe": "tests/audit/long_chat_probe.cjs",
+ "note": "长会话（1000 楼）楼层消费路径取证：静态四类站点 + 活体缩放。合成宿主 + 真模块，非实机。",
+ "measured_at": "v3.9.1",
+ "host": {
+  "fixture": "tests/_runtime_host.mjs",
+  "chat_lengths": [
+   10,
+   100,
+   400,
+   1000,
+   2000
+  ],
+  "announcement_stripped": true
+ },
+ "readings": {
+  "floor_count_n10": 10,
+  "materialize_items_n10": 10,
+  "materialize_chars_n10": 141,
+  "engine_index_len_n10": 10,
+  "recent_story_context_lines_n10": 8,
+  "recent_story_context_chars_n10": 63,
+  "recent_story_digest_lines_n10": 6,
+  "update_gap_floors_n10": 9,
+  "floor_count_n100": 100,
+  "materialize_items_n100": 100,
+  "materialize_chars_n100": 1582,
+  "engine_index_len_n100": 100,
+  "recent_story_context_lines_n100": 8,
+  "recent_story_context_chars_n100": 71,
+  "recent_story_digest_lines_n100": 6,
+  "update_gap_floors_n100": 99,
+  "floor_count_n400": 400,
+  "materialize_items_n400": 400,
+  "materialize_chars_n400": 6982,
+  "engine_index_len_n400": 400,
+  "recent_story_context_lines_n400": 8,
+  "recent_story_context_chars_n400": 79,
+  "recent_story_digest_lines_n400": 6,
+  "update_gap_floors_n400": 399,
+  "floor_count_n1000": 1000,
+  "materialize_items_n1000": 1000,
+  "materialize_chars_n1000": 17783,
+  "engine_index_len_n1000": 600,
+  "recent_story_context_lines_n1000": 8,
+  "recent_story_context_chars_n1000": 79,
+  "recent_story_digest_lines_n1000": 6,
+  "update_gap_floors_n1000": 999,
+  "floor_count_n2000": 2000,
+  "materialize_items_n2000": 2000,
+  "materialize_chars_n2000": 37783,
+  "engine_index_len_n2000": 600,
+  "recent_story_context_lines_n2000": 8,
+  "recent_story_context_chars_n2000": 87,
+  "recent_story_digest_lines_n2000": 6,
+  "update_gap_floors_n2000": 1999
+ },
+ "timing": {
+  "materialize_ms_n10": 0.56,
+  "engine_build_ms_n10": 0.38,
+  "recent_story_context_ms_n10": 0.27,
+  "update_gap_ms_n10": 0.13,
+  "materialize_ms_n100": 0.12,
+  "engine_build_ms_n100": 0.36,
+  "recent_story_context_ms_n100": 0.03,
+  "update_gap_ms_n100": 0.03,
+  "materialize_ms_n400": 0.59,
+  "engine_build_ms_n400": 0.99,
+  "recent_story_context_ms_n400": 0.01,
+  "update_gap_ms_n400": 0.06,
+  "materialize_ms_n1000": 0.67,
+  "engine_build_ms_n1000": 1.35,
+  "recent_story_context_ms_n1000": 0.01,
+  "update_gap_ms_n1000": 0.04,
+  "materialize_ms_n2000": 2.97,
+  "engine_build_ms_n2000": 2.49,
+  "recent_story_context_ms_n2000": 0.02,
+  "update_gap_ms_n2000": 0.07
+ },
+ "scan": {
+  "files": 407,
+  "full_materialize": 9,
+  "bounded_slice": 5,
+  "indexed_loop": 11,
+  "length_read": 48
+ },
+ "sites": {
+  "full_materialize": [
+   "apps/honey/honey-data.js:3912",
+   "apps/memory/global-search-engine.js:483",
+   "apps/wechat/chat-view.js:10379",
+   "apps/wechat/wechat-data.js:4020",
+   "apps/weibo/weibo-data.js:2403",
+   "config/api-manager.js:397",
+   "config/worldbook-dryrun.js:155",
+   "index.js:2872",
+   "index.js:10604"
+  ],
+  "bounded_slice": [
+   "apps/games/werewolf/werewolf-view.js:643",
+   "apps/memory/memory-data.js:338",
+   "apps/phone/phone-view.js:2712",
+   "apps/worldpulse/worldpulse-engine.js:185",
+   "config/phone-chat-memory.js:78"
+  ],
+  "length_read_sample": [
+   "apps/diary/diary-data.js:1155",
+   "apps/diary/diary-data.js:1602",
+   "apps/diary/diary-data.js:1679",
+   "apps/diary/diary-data.js:1682",
+   "apps/games/common/games-ai-context.js:71",
+   "apps/games/werewolf/werewolf-view.js:643",
+   "apps/memory/memory-app.js:163",
+   "apps/music/music-app.js:176",
+   "apps/phone/phone-view.js:2869",
+   "apps/settings/settings-app.js:5097",
+   "apps/settings/settings-app.js:11530",
+   "apps/settings/settings-app.js:11537"
+  ]
+ },
+ "criteria": [
+  {
+   "id": "L1",
+   "desc": "有界消费者（最近 n 楼摘要）的输出形态不随楼层数增长",
+   "pass": true,
+   "got_text": "recentStoryContext 行数=8/8/8/8/8，recentStoryDigest 行数=6/6/6/6/6（N=10/100/400/1000/2000）"
   },
-  "readings": {
-    "floor_count_n10": 10,
-    "materialize_items_n10": 10,
-    "materialize_chars_n10": 141,
-    "engine_index_len_n10": 10,
-    "recent_story_context_lines_n10": 8,
-    "recent_story_context_chars_n10": 63,
-    "recent_story_digest_lines_n10": 6,
-    "update_gap_floors_n10": 9,
-    "floor_count_n100": 100,
-    "materialize_items_n100": 100,
-    "materialize_chars_n100": 1582,
-    "engine_index_len_n100": 100,
-    "recent_story_context_lines_n100": 8,
-    "recent_story_context_chars_n100": 71,
-    "recent_story_digest_lines_n100": 6,
-    "update_gap_floors_n100": 99,
-    "floor_count_n400": 400,
-    "materialize_items_n400": 400,
-    "materialize_chars_n400": 6982,
-    "engine_index_len_n400": 400,
-    "recent_story_context_lines_n400": 8,
-    "recent_story_context_chars_n400": 79,
-    "recent_story_digest_lines_n400": 6,
-    "update_gap_floors_n400": 399,
-    "floor_count_n1000": 1000,
-    "materialize_items_n1000": 1000,
-    "materialize_chars_n1000": 17783,
-    "engine_index_len_n1000": 600,
-    "recent_story_context_lines_n1000": 8,
-    "recent_story_context_chars_n1000": 79,
-    "recent_story_digest_lines_n1000": 6,
-    "update_gap_floors_n1000": 999,
-    "floor_count_n2000": 2000,
-    "materialize_items_n2000": 2000,
-    "materialize_chars_n2000": 37783,
-    "engine_index_len_n2000": 600,
-    "recent_story_context_lines_n2000": 8,
-    "recent_story_context_chars_n2000": 87,
-    "recent_story_digest_lines_n2000": 6,
-    "update_gap_floors_n2000": 1999
+  {
+   "id": "L2",
+   "desc": "存在「全表物化」站点：物化对象数 == 楼层数（截断发生在物化之后）",
+   "pass": true,
+   "got_text": "Tavern 源 items() 长度=10/100/400/1000/2000（N=10/100/400/1000/2000）"
   },
-  "timing": {
-    "materialize_ms_n10": 0.56,
-    "engine_build_ms_n10": 0.38,
-    "recent_story_context_ms_n10": 0.27,
-    "update_gap_ms_n10": 0.13,
-    "materialize_ms_n100": 0.12,
-    "engine_build_ms_n100": 0.36,
-    "recent_story_context_ms_n100": 0.03,
-    "update_gap_ms_n100": 0.03,
-    "materialize_ms_n400": 0.59,
-    "engine_build_ms_n400": 0.99,
-    "recent_story_context_ms_n400": 0.01,
-    "update_gap_ms_n400": 0.06,
-    "materialize_ms_n1000": 0.67,
-    "engine_build_ms_n1000": 1.35,
-    "recent_story_context_ms_n1000": 0.01,
-    "update_gap_ms_n1000": 0.04,
-    "materialize_ms_n2000": 2.97,
-    "engine_build_ms_n2000": 2.49,
-    "recent_story_context_ms_n2000": 0.02,
-    "update_gap_ms_n2000": 0.07
+  {
+   "id": "L3",
+   "desc": "下游索引上限（MAX_SCAN_PER_SOURCE=600）存在，且作用在物化之后",
+   "pass": true,
+   "got_text": "引擎索引长度=10/100/400/600/600，期望=10/100/400/600/600"
   },
-  "scan": {
-    "files": 406,
+  {
+   "id": "L5",
+   "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
+   "pass": true,
+   "got_text": "files=407，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+  }
+ ],
+ "timing_criteria": [
+  {
+   "id": "L4",
+   "desc": "物化耗时随楼层数增长未观察到超线性（5 倍楼层 ≤ 8 倍耗时 + 常数）",
+   "pass": true,
+   "got_text": "n400=0.59ms，n2000=2.97ms（计时读数不可复算，只比同量级）"
+  }
+ ],
+ "verdict": {
+  "question": "1000 楼长会话下，楼层消费路径有没有真实的、可立的优化面？",
+  "answer": "**本版判定：有一个面，而且只有一个 —— 「截断发生在物化之后」。它按读数成立，不靠感觉；本版只登记与立判据，形态决策留给后续版本。**",
+  "reasons": [
+   "**有界消费者确实有界**：`recentStoryContext` 行数 8/8/8/8/8、`recentStoryDigest` 行数 6/6/6/6/6（N=10/100/400/1000/2000）—— 最近 n 楼抽取类路径全程输出形态恒定。这条**否掉了「长会话下本地摘要会退化」的猜测**。",
+   "**全表物化站点确实存在且对象数 == 楼层数**：Tavern 源 `items()` 长度 10/100/400/1000/2000（静态面实测 9 个站点）。代表性证据：`makeTavernSource()` 是 `ctx.chat.map(...)`；wechat/honey 是 `chat.forEach` 建**全量**行数组后再 `slice(-10)`。",
+   "**上限存在，但设在物化之后**：引擎索引长度 10/100/400/600/600（`MAX_SCAN_PER_SOURCE = 600`）—— 引擎侧是安全的；代价在**源侧**：即便最终只用 600 条，源侧也已把 N 条全部映成了对象（每条含最多 600 字正文）。",
+   "**未观察到超线性**（实测值见 `timing_criteria` 块：计时读数不可复算，故不写进结论文本）。所以这不是性能危机，而是「代价随会话长度无界增长」的**形态**问题：今天 1000 楼 1~2ms，但真实单楼可达数千字、真机比这里慢，再叠加多个消费点，才是要防的。",
+   "**视图层站点未实测**：4 处视图层的全表物化（`wechat/chat-view.js` / `wechat/wechat-data.js` / `honey/honey-data.js` / `weibo/weibo-data.js`）需真 DOM 与 App 实例，本探针只做静态归类 —— 如实登记，不假装覆盖。"
+  ],
+  "only_axis": "**把截断前移到取数口（只改取数口，惰性取数）** —— 改的是 `items()` 与 `forEach` 建全量数组这两类站点，目标形态是「先取 N 条，再产出」；不改 UI 结构、不改任何跨仓契约、不改 App 清单。判据：改前改后「有界消费者输出」「引擎可见条目集」「用户可见搜索结果」三面逐项等价。",
+  "not_blocked_by": "不阻任何其他项；与 OPT-D2（气泡渲染性能）正交（那是视图层测时，本项是取数层形态）。本项为决策输入，不是契约。"
+ },
+ "modules": {
+  "quote_full_materialize": true,
+  "wpe_loaded": true
+ },
+ "corrections": [
+  "本探针第一版把「全表物化」正则写成 `(?:context|ctx)\\.chat`，实测 0 命中 —— 因为真实写法里接收者叫 `chat`（`const chat = ctx?.chat`）、且有的站点是 `probe.chat.forEach`。口径修正：接收者改为「任意以 context/ctx 结尾的成员链，或裸 chat」，实测 8 个站点。",
+  "「物化」不能只看 forEach/map/filter：`chat.slice(-8).map(...)` 也是 O(8) 物化，但它**有界**。故四类分开计（full / bounded / indexed / length），不混成一个「消费点数」。",
+  "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
+  "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。",
+  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2，故 files 228 → 230）；并真实改了 `apps/diary/diary-data.js`（+89 行），其中一处 `chat[chat.length - 1]` 取「最后一楼的时间戳」用于**陈旧快照判定**（读长度 + 下标直取，O(1)，不物化）⇒ 长度读 47 → 48。★ 归因经实测核对：同上口径扫 HEAD 树得 28 处、工作树得 29 处，唯一差异就在这个文件（3 → 4）；两个新 config 文件对四类站点**零命中**（它们经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`）。同时 `index.js` 公告块因本版条目变长，两个全表物化站点的行号整体 +5；站点**数量与文件归属未变**。活体读数 `readings` 与结论 `verdict` 本轮真跑与基线逐项一致，故未改写；首测版语义仍保留在 measured_at。",
+  "v3.11.0 复校：`scan.files` 230 → 231（本版新增 1 个文件 `config/rollback-preview.js`）、`scan.length_read` 48 → 50（同文件内两处 `.length` 读取 —— 短信 `conv.messages` 与微信桶 `buckets[chatId]` 的数组长度判定；这两处正是「会话套消息 vs 扁平列表」形状判定的落点）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 18）与全部活体读数（含 1000 楼卡上限 600）逐项不变。",
+  "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
+  "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变**（四类站点计数 9 / 5 / 18 / 50 与全部活体读数一字未动）。★ 归因经实测核对：新模块对四类站点零命中（它只做时间记账，不摸 `ctx.chat`），而本版改的 78 处 import 旁听全在 `index.js`（已被剥离公告块后的判据面之外的那部分），其中 `Promise.all` 数组形态的接线点不构成本探针计数的四类站点。首测版语义保留在 measured_at。",
+  "v3.15.0 复校：枚举面 233 → 238（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js），L5 的 got_text 同步（files=232 → 238，属**基线自带的转写漂移**：它写死了上一轮的数）；**同一条轴**：只有枚举面 +5，四类站点计数（全表物化 9 / slice(-n) 5 / 下标直取 18 / 长度读 50）与全部 40 项活体读数（含 1000 楼卡在 MAX_SCAN_PER_SOURCE=600 上）逐项不变 —— 新模块只做「次数/时长/时段」的聚合，不消费历史楼层正文，零新增物化站点。",
+  "v3.18.0（R-O4）复算：枚举面 238 → 239（新增 config/context-compose.js）；四类站点计数变化来自**收集循环的单一实现** —— 原先四处循环各自写下标直取与长度读，现收进 config/context-compose.js 一份（indexed_loop 18 → 11、length_read 50 → 47）。其余读数（物化/有界消费者/引擎上限）逐字不变，由 A2 的另四条断言独立守住。",
+  "v3.19.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰长会话取数面任何一行。 其余四类站点计数（full_materialize 9 / bounded_slice 5 / indexed_loop 11 / length_read 47）逐项不变。",
+  "v3.20.0 复校：枚举面 240 → 241（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 站点面：length_read 47 → 48（`apps/timeweaver/timeweaver-collector.js` 在把当前正文长度交给「挡未来事实」判定时读了一次 `ctx.chat.length` —— 这是**新增的一处正文长度读取**，如实计入）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 11）逐项不变。",
+  "v3.20.2 复校：枚举面 241 → 242（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
+  "**v3.22.0 复校（枚举面 +6 文件，四类站点计数不动）**：`scan.files` 242→248。新增的 apps/focus 与 apps/accounting 未引入任何新的全表物化 / 有界切片 / 下标直取 / 长度读站点 —— 四类计数 9/5/11/48 一格未变，`readings`（40 项活体读数）与 `verdict` 也未动。这正是本项要防的形态：**枚举面变了不等于形态变了**。"
+ ],
+ "not_done": [
+  "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",
+  "**未验证实机**：无浏览器、无 SillyTavern 宿主、无真实聊天记录。合成楼层每条约 6 字（`楼层 N`），而真实长会话单楼可达数千字 —— 本基线量的是**形态**（对象数/索引长度是否随 N 走），不是真实体量的字节数。",
+  "**内存快照增长 / 单次渲染耗时这一维仍未测**（TODO P2 同一格）：夹具不渲染 DOM、无布局与命中测试，`process.memoryUsage()` 在本环境噪声远大于信号（实测 heapUsed 抖动 GB 级，且探针自身即为大对象宿主）。这一维按既有口径继续登记在 docs/runtime-verification-boundary.md。",
+  "**未覆盖视图层站点的运行代价**：`phone-view / chat-view / moments-view / settings-app` 的消费点需要真 DOM 与 App 实例方能驱动，本探针只做静态归类，不驱动它们。",
+  "**未做 AST 级归属**：静态计数是文本形态（与 O-6 / P-1 同口径），同名接收者会混算；要精确须单独立一版换工具。"
+ ],
+ "rebuilds": {
+  "v3.22.0": {
+   "why": "枚举面 +6 文件；四类静态站点计数与全部活体读数不动。",
+   "readings": {
+    "scan.files": 248
+   },
+   "unchanged": [
+    "readings",
+    "scan.full_materialize",
+    "scan.bounded_slice",
+    "scan.indexed_loop",
+    "scan.length_read",
+    "verdict"
+   ],
+   "not_done": [
+    "扫描面 +6 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片」形态。",
+    "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
+   ],
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+  },
+  "v3.23.0": {
+   "why": "判据散文刷新：`criteria[L5].got_text` 是**建基线时的手抄值**（files=238，…，下标直取=18，长度读=50），而机器读数 `scan` 早已是 248 / 9 / 5 / 11 / 48 —— 两者自 v3.19.0 起就分叉。根因同上：readings 与 scan 有刷新流程，判据散文段没有。",
+   "readings": {},
+   "unchanged": [
+    "readings",
+    "scan（若该基线有）",
+    "sites（若该基线有）",
+    "verdict",
+    "corrections",
+    "not_done",
+    "timing_criteria"
+   ],
+   "not_done": [
+    "计时类判据（`timing_criteria.L4`）**不可复算**（源码明写「只比同量级」）⇒ 基线保留原读数、不做刷新；只在 `compare_criteria.py` 里做量级比对（0.2× ~ 5×）。",
+    "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+   ],
+   "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+  },
+  "v3.24.0": {
+   "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 248 → 249；四类站点计数（全表物化 / slice(-n) / 下标直取 / 长度读）不受影响。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 249
+   }
+  },
+  "v3.25.0": {
+   "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在本探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 249 → 252；四类站点计数（全表物化 / 有界切片 / 下标直取 / 长度读）**一格未动**，40 项活体读数亦逐项不变。L5 判据散文里的 `files=` 必须与 `scan.files` 同源（v3.23.0 起由机械复算守着），故一并同步。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 252,
+    "criteria.L5.got_text": "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "unchanged": [
+    "readings",
+    "scan.full_materialize",
+    "scan.bounded_slice",
+    "scan.indexed_loop",
+    "scan.length_read",
+    "verdict"
+   ],
+   "not_done": [
+    "扫描面 +3 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片 / 下标直取 / 长度读」形态（存钱罐是单会话内的账本视图，不消费楼层序列）。",
+    "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
+   ]
+  },
+  "v3.26.0": {
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 252 → 258 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 正则过滤器与打卡都不消费楼层序列（前者只吃用户手填的预览文本，后者只读自己的账）。既有站点行号随前置插入整体后移（`index.js` +6 行、`apps/diary/diary-data.js` +18 行），按现场重取；判据散文 L5 的 `files=` 同步刷新为 258。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 258,
+    "criteria.L5.got_text": "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.27.0": {
+   "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 258 → 270 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 头像框 / 商城 / 拉黑 / 天气都不消费楼层序列（前者只画自己的框、商城只读自己的目录与订单、拉黑只写名单、天气只存自己的缓存）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加四件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 270。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 270,
+    "criteria.L5.got_text": "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.28.0": {
+   "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 270 → 273 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 自定义组件不消费楼层序列（只画自己的组件库与桌面实例，变量值也只从自己的实例表读）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 273。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 273,
+    "criteria.L5.got_text": "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.29.0": {
+   "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 273 → 276 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的目录 / 车 / 订单时间线 / 抓取记录）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 276。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 276,
+    "criteria.L5.got_text": "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.30.0": {
+   "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 276 → 279 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的天数 / 足迹 / 日记 / 情书 / 问答）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 279。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 279,
+    "criteria.L5.got_text": "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.32.0": {
+   "what": "v3.31.0 与 v3.32.0 两版新件的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "静态扫描面 279 → 286 个文件（两版新件 .js 之和：`apps/date/` 三件 ＋ 两个子游戏各两件）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 约会大作战不消费楼层序列（只画自己的场景册 / 场次 / 欠账），两个子游戏的日志是**自己那一局的内存与存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加各件样式、`config/apps.js` / `config/storage.js` / `apps/games/games-app.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 286。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 286,
+    "criteria.L5.got_text": "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.33.0": {
+   "what": "v3.33.0 游戏厅下半两件的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 286 → 290 个文件（本版四个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 剧本杀的日志与飞行棋的日志都是**自己那一局的内存与存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加两条精确枚举与注释），按现场重取；判据散文 L5 的 `files=` 同步刷新为 290。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 290,
+    "criteria.L5.got_text": "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.34.0": {
+   "what": "v3.34.0 老福特的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 290 → 293 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 老福特的稿子与评论都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 293。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 293,
+    "criteria.L5.got_text": "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.35.0": {
+   "what": "v3.35.0 Pixiv 的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 293 → 296 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— Pixiv 的稿子与评论都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 296。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 296,
+    "criteria.L5.got_text": "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.36.0": {
+   "what": "v3.36.0 杂志的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 296 → 299 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 杂志的稿件与译文都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与五行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 299。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 299,
+    "criteria.L5.got_text": "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.37.0": {
+   "what": "v3.37.0 白盒音效盒的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 299 → 302 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 音效盒的配方与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 302。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 302,
+    "criteria.L5.got_text": "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.38.0": {
+   "what": "v3.38.0 召回治理台的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 302 → 305 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 召回治理台的四路候选、融合读数与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 305。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 305,
+    "criteria.L5.got_text": "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.39.0": {
+   "what": "v3.39.0 时光胶囊的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 305 -> 308 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 时光胶囊的封存书架、读数面与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与四行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 308。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 308,
+    "criteria.L5.got_text": "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.40.0": {
+   "what": "v3.40.0 对话水壶的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 308 -> 311 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 对话水壶的记录书架、读数面与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与四行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 311。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 311,
+    "criteria.L5.got_text": "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.41.0": {
+   "what": "v3.41.0 需求沙盘的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 311 -> 314 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 需求沙盘的六项需求、台词池与记忆流都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 314。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 314,
+    "criteria.L5.got_text": "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.42.0": {
+   "what": "v3.42.0 曲库案头的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 314 -> 317 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 曲库案头的曲目表、歌词原文与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 317。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 317,
+    "criteria.L5.got_text": "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.43.0": {
+   "what": "v3.43.0 PV 案头的真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 317 -> 320 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— PV 案头的分镜脚本、歌词原文与作品台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与七行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 320。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 320,
+    "criteria.L5.got_text": "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.44.0": {
+   "what": "v3.44.0 同人商店 · 柜台的三个月真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 320 -> 323 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 同人商店的商品原文、二手在售原文与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与八行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 323。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 323,
+    "criteria.L5.got_text": "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.45.0": {
+   "what": "v3.45.0 存档台的三个月真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 320 -> 323 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 存档台的包原文、对账面与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与八行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 323。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 326,
+    "criteria.L5.got_text": "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.46.0": {
+   "what": "v3.46.0 思维链案头的四件真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 326 -> 329 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 思维链案头的条目册、配置与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 329。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 329,
+    "criteria.L5.got_text": "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.47.0": {
+   "what": "v3.47.0 诊断案头的四件真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 329 -> 332 个文件（本版三个新 .js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 诊断案头的存档、草稿与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加三条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 332。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 332,
+    "criteria.L5.got_text": "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.48.0": {
+   "what": "v3.48.0 子宫画板的四件真实接线；楼层长会话面一格未动",
+   "why": "静态扫描面 332 -> 335 个文件（本版 3 件新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 子宫画板的角色状态原文、动作台账与逐格读数都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与 5 行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加两条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 335。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 335,
+    "criteria.L5.got_text": "files=335，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=335，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+    ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部 40 项活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
+  },
+  "v3.54.0": {
+   "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
+   "why": "scan.files 335→368：v3.49~v3.54 新增 App 与判据套件使扫描文件数增长，L5 散文同步复算。首次全量 npm run test 暴露基线陈旧。"
+  },
+  "v3.55.0": {
+   "what": "静态扫描面 +1（新件 config/app-consumption-matrix.js）并同步判据散文 L5 的 files 字段",
+   "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 楼层消费形态一格未动（全表物化站点 / 引擎侧上限 600 / 有界消费者读数逐项不变）。",
+   "scan": {
+    "files": 369,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 11,
     "length_read": 48
+   }
   },
-  "sites": {
-    "full_materialize": [
-      "apps/honey/honey-data.js:3912",
-      "apps/memory/global-search-engine.js:483",
-      "apps/wechat/chat-view.js:10379",
-      "apps/wechat/wechat-data.js:4020",
-      "apps/weibo/weibo-data.js:2403",
-      "config/api-manager.js:397",
-      "config/worldbook-dryrun.js:155",
-      "index.js:2872",
-      "index.js:10604"
-    ],
-    "bounded_slice": [
-      "apps/games/werewolf/werewolf-view.js:643",
-      "apps/memory/memory-data.js:338",
-      "apps/phone/phone-view.js:2712",
-      "apps/worldpulse/worldpulse-engine.js:185",
-      "config/phone-chat-memory.js:78"
-    ],
-    "length_read_sample": [
-      "apps/diary/diary-data.js:1155",
-      "apps/diary/diary-data.js:1602",
-      "apps/diary/diary-data.js:1679",
-      "apps/diary/diary-data.js:1682",
-      "apps/games/common/games-ai-context.js:71",
-      "apps/games/werewolf/werewolf-view.js:643",
-      "apps/memory/memory-app.js:163",
-      "apps/music/music-app.js:176",
-      "apps/phone/phone-view.js:2869",
-      "apps/settings/settings-app.js:5097",
-      "apps/settings/settings-app.js:11530",
-      "apps/settings/settings-app.js:11537"
+  "v3.58.0": {
+   "what": "v3.58.0 O4/O5 的两件新真源进扫描面；楼层长会话面一格未动",
+   "why": "静态扫描面 369 -> 371 个文件（config/session-gate.js 与 config/write-receipt.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「在飞的写回口」与「写入回执」，两者都不摸楼层数组。既有站点行号随前置插入整体后移（config 目录新增两件、index.js 追加三处 bumpSessionEpoch 与七族写回口的令牌判定），按现场重取；判据散文 L5 的 files= 同步刷新为 371。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 371,
+    "criteria.L5.got_text": "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": [
+     "files=369，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+     "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
     ]
+   },
+   "unchanged": [
+    "四类静态站点计数",
+    "全部活体读数",
+    "timing（计时类，按口径不刷新）"
+   ]
   },
-  "criteria": [
-    {
-      "id": "L1",
-      "desc": "有界消费者（最近 n 楼摘要）的输出形态不随楼层数增长",
-      "pass": true,
-      "got_text": "recentStoryContext 行数=8/8/8/8/8，recentStoryDigest 行数=6/6/6/6/6（N=10/100/400/1000/2000）"
-    },
-    {
-      "id": "L2",
-      "desc": "存在「全表物化」站点：物化对象数 == 楼层数（截断发生在物化之后）",
-      "pass": true,
-      "got_text": "Tavern 源 items() 长度=10/100/400/1000/2000（N=10/100/400/1000/2000）"
-    },
-    {
-      "id": "L3",
-      "desc": "下游索引上限（MAX_SCAN_PER_SOURCE=600）存在，且作用在物化之后",
-      "pass": true,
-      "got_text": "引擎索引长度=10/100/400/600/600，期望=10/100/400/600/600"
-    },
-    {
-      "id": "L5",
-      "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
-      "pass": true,
-      "got_text": "files=406，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-    }
-  ],
-  "timing_criteria": [
-    {
-      "id": "L4",
-      "desc": "物化耗时随楼层数增长未观察到超线性（5 倍楼层 ≤ 8 倍耗时 + 常数）",
-      "pass": true,
-      "got_text": "n400=0.59ms，n2000=2.97ms（计时读数不可复算，只比同量级）"
-    }
-  ],
-  "verdict": {
-    "question": "1000 楼长会话下，楼层消费路径有没有真实的、可立的优化面？",
-    "answer": "**本版判定：有一个面，而且只有一个 —— 「截断发生在物化之后」。它按读数成立，不靠感觉；本版只登记与立判据，形态决策留给后续版本。**",
-    "reasons": [
-      "**有界消费者确实有界**：`recentStoryContext` 行数 8/8/8/8/8、`recentStoryDigest` 行数 6/6/6/6/6（N=10/100/400/1000/2000）—— 最近 n 楼抽取类路径全程输出形态恒定。这条**否掉了「长会话下本地摘要会退化」的猜测**。",
-      "**全表物化站点确实存在且对象数 == 楼层数**：Tavern 源 `items()` 长度 10/100/400/1000/2000（静态面实测 9 个站点）。代表性证据：`makeTavernSource()` 是 `ctx.chat.map(...)`；wechat/honey 是 `chat.forEach` 建**全量**行数组后再 `slice(-10)`。",
-      "**上限存在，但设在物化之后**：引擎索引长度 10/100/400/600/600（`MAX_SCAN_PER_SOURCE = 600`）—— 引擎侧是安全的；代价在**源侧**：即便最终只用 600 条，源侧也已把 N 条全部映成了对象（每条含最多 600 字正文）。",
-      "**未观察到超线性**（实测值见 `timing_criteria` 块：计时读数不可复算，故不写进结论文本）。所以这不是性能危机，而是「代价随会话长度无界增长」的**形态**问题：今天 1000 楼 1~2ms，但真实单楼可达数千字、真机比这里慢，再叠加多个消费点，才是要防的。",
-      "**视图层站点未实测**：4 处视图层的全表物化（`wechat/chat-view.js` / `wechat/wechat-data.js` / `honey/honey-data.js` / `weibo/weibo-data.js`）需真 DOM 与 App 实例，本探针只做静态归类 —— 如实登记，不假装覆盖。"
-    ],
-    "only_axis": "**把截断前移到取数口（只改取数口，惰性取数）** —— 改的是 `items()` 与 `forEach` 建全量数组这两类站点，目标形态是「先取 N 条，再产出」；不改 UI 结构、不改任何跨仓契约、不改 App 清单。判据：改前改后「有界消费者输出」「引擎可见条目集」「用户可见搜索结果」三面逐项等价。",
-    "not_blocked_by": "不阻任何其他项；与 OPT-D2（气泡渲染性能）正交（那是视图层测时，本项是取数层形态）。本项为决策输入，不是契约。"
+  "v3.65.0": {
+   "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）",
+   "why": "L5 的 files= 是扫描面真读数（374 -> 379，为本版新增源件后的仓内 .js 计数）。**长会话行为读数一格未动**（N=10/100/400/1000/2000 五档的楼层数、物化条数、引擎索引长度、最近楼层上下文行数全部逐字不变）—— 本版不碰楼层消费路径。四类站点计数（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）同样一格未动。",
+   "readings": {
+    "files": 379,
+    "full_materialize": 9,
+    "bounded_slice": 5,
+    "indexed_loop": 11,
+    "length_read": 48
+   },
+   "unchanged": [
+    "floor_count",
+    "materialize_items",
+    "engine_index_len",
+    "recent_story_context_lines"
+   ],
+   "not_done": "本轮仍为合成宿主取证，非实机。"
   },
-  "modules": {
-    "quote_full_materialize": true,
-    "wpe_loaded": true
-  },
-  "corrections": [
-    "本探针第一版把「全表物化」正则写成 `(?:context|ctx)\\.chat`，实测 0 命中 —— 因为真实写法里接收者叫 `chat`（`const chat = ctx?.chat`）、且有的站点是 `probe.chat.forEach`。口径修正：接收者改为「任意以 context/ctx 结尾的成员链，或裸 chat」，实测 8 个站点。",
-    "「物化」不能只看 forEach/map/filter：`chat.slice(-8).map(...)` 也是 O(8) 物化，但它**有界**。故四类分开计（full / bounded / indexed / length），不混成一个「消费点数」。",
-    "计时读数**不可**逐字节复算（进程调度与 GC 会动它）—— 若与计数段同块，套件的「跑两次逐字节相同」判据会假红。故分块，且套件只比同量级。",
-    "判据面必须先剥离内置公告（v3.9.0 第六类「读数说谎」）：公告里提一句 `chat.forEach` 就会污染静态计数。本探针在扫描前剥离 ST_PHONE_CURRENT_UPDATE 整块并保留行号。",
-    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-    "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2，故 files 228 → 230）；并真实改了 `apps/diary/diary-data.js`（+89 行），其中一处 `chat[chat.length - 1]` 取「最后一楼的时间戳」用于**陈旧快照判定**（读长度 + 下标直取，O(1)，不物化）⇒ 长度读 47 → 48。★ 归因经实测核对：同上口径扫 HEAD 树得 28 处、工作树得 29 处，唯一差异就在这个文件（3 → 4）；两个新 config 文件对四类站点**零命中**（它们经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`）。同时 `index.js` 公告块因本版条目变长，两个全表物化站点的行号整体 +5；站点**数量与文件归属未变**。活体读数 `readings` 与结论 `verdict` 本轮真跑与基线逐项一致，故未改写；首测版语义仍保留在 measured_at。",
-    "v3.11.0 复校：`scan.files` 230 → 231（本版新增 1 个文件 `config/rollback-preview.js`）、`scan.length_read` 48 → 50（同文件内两处 `.length` 读取 —— 短信 `conv.messages` 与微信桶 `buckets[chatId]` 的数组长度判定；这两处正是「会话套消息 vs 扁平列表」形状判定的落点）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 18）与全部活体读数（含 1000 楼卡上限 600）逐项不变。",
-    "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
-    "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变**（四类站点计数 9 / 5 / 18 / 50 与全部活体读数一字未动）。★ 归因经实测核对：新模块对四类站点零命中（它只做时间记账，不摸 `ctx.chat`），而本版改的 78 处 import 旁听全在 `index.js`（已被剥离公告块后的判据面之外的那部分），其中 `Promise.all` 数组形态的接线点不构成本探针计数的四类站点。首测版语义保留在 measured_at。",
-    "v3.15.0 复校：枚举面 233 → 238（新增 2 个真源模块 + 1 个 App 目录的 3 个 .js），L5 的 got_text 同步（files=232 → 238，属**基线自带的转写漂移**：它写死了上一轮的数）；**同一条轴**：只有枚举面 +5，四类站点计数（全表物化 9 / slice(-n) 5 / 下标直取 18 / 长度读 50）与全部 40 项活体读数（含 1000 楼卡在 MAX_SCAN_PER_SOURCE=600 上）逐项不变 —— 新模块只做「次数/时长/时段」的聚合，不消费历史楼层正文，零新增物化站点。",
-    "v3.18.0（R-O4）复算：枚举面 238 → 239（新增 config/context-compose.js）；四类站点计数变化来自**收集循环的单一实现** —— 原先四处循环各自写下标直取与长度读，现收进 config/context-compose.js 一份（indexed_loop 18 → 11、length_read 50 → 47）。其余读数（物化/有界消费者/引擎上限）逐字不变，由 A2 的另四条断言独立守住。",
-    "v3.19.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰长会话取数面任何一行。 其余四类站点计数（full_materialize 9 / bounded_slice 5 / indexed_loop 11 / length_read 47）逐项不变。",
-    "v3.20.0 复校：枚举面 240 → 241（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 站点面：length_read 47 → 48（`apps/timeweaver/timeweaver-collector.js` 在把当前正文长度交给「挡未来事实」判定时读了一次 `ctx.chat.length` —— 这是**新增的一处正文长度读取**，如实计入）。其余三类站点（full_materialize 9 / bounded_slice 5 / indexed_loop 11）逐项不变。",
-    "v3.20.2 复校：枚举面 241 → 242（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
-    "**v3.22.0 复校（枚举面 +6 文件，四类站点计数不动）**：`scan.files` 242→248。新增的 apps/focus 与 apps/accounting 未引入任何新的全表物化 / 有界切片 / 下标直取 / 长度读站点 —— 四类计数 9/5/11/48 一格未变，`readings`（40 项活体读数）与 `verdict` 也未动。这正是本项要防的形态：**枚举面变了不等于形态变了**。"
-  ],
-  "not_done": [
-    "**未改任何产品代码**：本版只取证与立基线。「把截断前移到取数口」的形态决策刻意留给取证之后的版本。",
-    "**未验证实机**：无浏览器、无 SillyTavern 宿主、无真实聊天记录。合成楼层每条约 6 字（`楼层 N`），而真实长会话单楼可达数千字 —— 本基线量的是**形态**（对象数/索引长度是否随 N 走），不是真实体量的字节数。",
-    "**内存快照增长 / 单次渲染耗时这一维仍未测**（TODO P2 同一格）：夹具不渲染 DOM、无布局与命中测试，`process.memoryUsage()` 在本环境噪声远大于信号（实测 heapUsed 抖动 GB 级，且探针自身即为大对象宿主）。这一维按既有口径继续登记在 docs/runtime-verification-boundary.md。",
-    "**未覆盖视图层站点的运行代价**：`phone-view / chat-view / moments-view / settings-app` 的消费点需要真 DOM 与 App 实例方能驱动，本探针只做静态归类，不驱动它们。",
-    "**未做 AST 级归属**：静态计数是文本形态（与 O-6 / P-1 同口径），同名接收者会混算；要精确须单独立一版换工具。"
-  ],
-  "rebuilds": {
-    "v3.22.0": {
-      "why": "枚举面 +6 文件；四类静态站点计数与全部活体读数不动。",
-      "readings": {
-        "scan.files": 248
-      },
-      "unchanged": [
-        "readings",
-        "scan.full_materialize",
-        "scan.bounded_slice",
-        "scan.indexed_loop",
-        "scan.length_read",
-        "verdict"
-      ],
-      "not_done": [
-        "扫描面 +6 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片」形态。",
-        "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
-      ],
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
-    },
-    "v3.23.0": {
-      "why": "判据散文刷新：`criteria[L5].got_text` 是**建基线时的手抄值**（files=238，…，下标直取=18，长度读=50），而机器读数 `scan` 早已是 248 / 9 / 5 / 11 / 48 —— 两者自 v3.19.0 起就分叉。根因同上：readings 与 scan 有刷新流程，判据散文段没有。",
-      "readings": {},
-      "unchanged": [
-        "readings",
-        "scan（若该基线有）",
-        "sites（若该基线有）",
-        "verdict",
-        "corrections",
-        "not_done",
-        "timing_criteria"
-      ],
-      "not_done": [
-        "计时类判据（`timing_criteria.L4`）**不可复算**（源码明写「只比同量级」）⇒ 基线保留原读数、不做刷新；只在 `compare_criteria.py` 里做量级比对（0.2× ~ 5×）。",
-        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
-      ],
-      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
-    },
-    "v3.24.0": {
-      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 248 → 249；四类站点计数（全表物化 / slice(-n) / 下标直取 / 长度读）不受影响。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 249
-      }
-    },
-    "v3.25.0": {
-      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在本探针枚举面（apps/ + config/ 的 .js）⇒ `scan.files` 249 → 252；四类站点计数（全表物化 / 有界切片 / 下标直取 / 长度读）**一格未动**，40 项活体读数亦逐项不变。L5 判据散文里的 `files=` 必须与 `scan.files` 同源（v3.23.0 起由机械复算守着），故一并同步。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 252,
-        "criteria.L5.got_text": "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "unchanged": [
-        "readings",
-        "scan.full_materialize",
-        "scan.bounded_slice",
-        "scan.indexed_loop",
-        "scan.length_read",
-        "verdict"
-      ],
-      "not_done": [
-        "扫描面 +3 文件，但**四类静态站点计数与全部 40 项活体读数一格未动** ⇒ 新 App 没有引入任何「全表物化 / 无界切片 / 下标直取 / 长度读」形态（存钱罐是单会话内的账本视图，不消费楼层序列）。",
-        "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
-      ]
-    },
-    "v3.26.0": {
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 252 → 258 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 正则过滤器与打卡都不消费楼层序列（前者只吃用户手填的预览文本，后者只读自己的账）。既有站点行号随前置插入整体后移（`index.js` +6 行、`apps/diary/diary-data.js` +18 行），按现场重取；判据散文 L5 的 `files=` 同步刷新为 258。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 258,
-        "criteria.L5.got_text": "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=252，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.27.0": {
-      "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 258 → 270 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 头像框 / 商城 / 拉黑 / 天气都不消费楼层序列（前者只画自己的框、商城只读自己的目录与订单、拉黑只写名单、天气只存自己的缓存）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加四件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 270。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 270,
-        "criteria.L5.got_text": "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=258，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.28.0": {
-      "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 270 → 273 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 自定义组件不消费楼层序列（只画自己的组件库与桌面实例，变量值也只从自己的实例表读）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 273。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 273,
-        "criteria.L5.got_text": "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=270，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.29.0": {
-      "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 273 → 276 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的目录 / 车 / 订单时间线 / 抓取记录）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 276。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 276,
-        "criteria.L5.got_text": "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=273，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.30.0": {
-      "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 276 → 279 个文件；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 桃宝不消费楼层序列（只画自己的天数 / 足迹 / 日记 / 情书 / 问答）。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加本件样式、`config/apps.js` 与 `config/storage.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 279。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 279,
-        "criteria.L5.got_text": "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=276，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.32.0": {
-      "what": "v3.31.0 与 v3.32.0 两版新件的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "静态扫描面 279 → 286 个文件（两版新件 .js 之和：`apps/date/` 三件 ＋ 两个子游戏各两件）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 约会大作战不消费楼层序列（只画自己的场景册 / 场次 / 欠账），两个子游戏的日志是**自己那一局的内存与存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`index.js` 追加懒加载分支与重绑键、`phone.css` 追加各件样式、`config/apps.js` / `config/storage.js` / `apps/games/games-app.js` 各追加登记），按现场重取；判据散文 L5 的 `files=` 同步刷新为 286。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 286,
-        "criteria.L5.got_text": "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=279，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.33.0": {
-      "what": "v3.33.0 游戏厅下半两件的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 286 → 290 个文件（本版四个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 剧本杀的日志与飞行棋的日志都是**自己那一局的内存与存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加两条精确枚举与注释），按现场重取；判据散文 L5 的 `files=` 同步刷新为 290。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 290,
-        "criteria.L5.got_text": "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=286，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.34.0": {
-      "what": "v3.34.0 老福特的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 290 → 293 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 老福特的稿子与评论都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 293。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 293,
-        "criteria.L5.got_text": "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=290，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.35.0": {
-      "what": "v3.35.0 Pixiv 的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 293 → 296 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— Pixiv 的稿子与评论都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 296。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 296,
-        "criteria.L5.got_text": "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=293，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.36.0": {
-      "what": "v3.36.0 杂志的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 296 → 299 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 杂志的稿件与译文都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与五行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 299。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 299,
-        "criteria.L5.got_text": "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=296，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.37.0": {
-      "what": "v3.37.0 白盒音效盒的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 299 → 302 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 音效盒的配方与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 302。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 302,
-        "criteria.L5.got_text": "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=299，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.38.0": {
-      "what": "v3.38.0 召回治理台的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 302 → 305 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 召回治理台的四路候选、融合读数与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（`config/storage.js` 追加一条宽前缀与四行注释、`config/apps.js` 追加注册条目），按现场重取；判据散文 L5 的 `files=` 同步刷新为 305。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 305,
-        "criteria.L5.got_text": "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=302，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.39.0": {
-      "what": "v3.39.0 时光胶囊的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 305 -> 308 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 时光胶囊的封存书架、读数面与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与四行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 308。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 308,
-        "criteria.L5.got_text": "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=305，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.40.0": {
-      "what": "v3.40.0 对话水壶的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 308 -> 311 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 对话水壶的记录书架、读数面与回执台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与四行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 311。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 311,
-        "criteria.L5.got_text": "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=308，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.41.0": {
-      "what": "v3.41.0 需求沙盘的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 311 -> 314 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 需求沙盘的六项需求、台词池与记忆流都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 314。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 314,
-        "criteria.L5.got_text": "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=311，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.42.0": {
-      "what": "v3.42.0 曲库案头的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 314 -> 317 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 曲库案头的曲目表、歌词原文与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 317。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 317,
-        "criteria.L5.got_text": "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=314，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.43.0": {
-      "what": "v3.43.0 PV 案头的真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 317 -> 320 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— PV 案头的分镜脚本、歌词原文与作品台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与七行注释、config/apps.js 追加注册条目），按现场重取；判据散文 L5 的 files= 同步刷新为 320。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 320,
-        "criteria.L5.got_text": "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=317，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.44.0": {
-      "what": "v3.44.0 同人商店 · 柜台的三个月真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 320 -> 323 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 同人商店的商品原文、二手在售原文与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与八行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 323。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 323,
-        "criteria.L5.got_text": "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=320，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.45.0": {
-      "what": "v3.45.0 存档台的三个月真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 320 -> 323 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 存档台的包原文、对账面与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与八行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 323。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 326,
-        "criteria.L5.got_text": "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=323，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.46.0": {
-      "what": "v3.46.0 思维链案头的四件真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 326 -> 329 个文件（本版三个新 .js）；**四类站点计数与全部 40 项活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 思维链案头的条目册、配置与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加四条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 329。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 329,
-        "criteria.L5.got_text": "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=326，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.47.0": {
-      "what": "v3.47.0 诊断案头的四件真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 329 -> 332 个文件（本版三个新 .js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 诊断案头的存档、草稿与台账都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与六行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加三条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 332。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 332,
-        "criteria.L5.got_text": "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=329，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.48.0": {
-      "what": "v3.48.0 子宫画板的四件真实接线；楼层长会话面一格未动",
-      "why": "静态扫描面 332 -> 335 个文件（本版 3 件新 .js）；**四类站点计数与全部 40 项活体读数一格未动** （全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 子宫画板的角色状态原文、动作台账与逐格读数都是**自己那一份会话存档**，连楼层数组都不摸。既有站点行号随前置插入整体后移（config/storage.js 追加一条宽前缀与 5 行注释、config/apps.js 追加注册条目、scripts/keys-audit.mjs 追加两条键登记），按现场重取；判据散文 L5 的 files= 同步刷新为 335。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 335,
-        "criteria.L5.got_text": "files=335，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=332，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=335，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部 40 项活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.54.0": {
-      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
-      "why": "scan.files 335→368：v3.49~v3.54 新增 App 与判据套件使扫描文件数增长，L5 散文同步复算。首次全量 npm run test 暴露基线陈旧。"
-    },
-    "v3.55.0": {
-      "what": "静态扫描面 +1（新件 config/app-consumption-matrix.js）并同步判据散文 L5 的 files 字段",
-      "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 楼层消费形态一格未动（全表物化站点 / 引擎侧上限 600 / 有界消费者读数逐项不变）。",
-      "scan": {
-        "files": 369,
-        "full_materialize": 9,
-        "bounded_slice": 5,
-        "indexed_loop": 11,
-        "length_read": 48
-      }
-    },
-    "v3.58.0": {
-      "what": "v3.58.0 O4/O5 的两件新真源进扫描面；楼层长会话面一格未动",
-      "why": "静态扫描面 369 -> 371 个文件（config/session-gate.js 与 config/write-receipt.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「在飞的写回口」与「写入回执」，两者都不摸楼层数组。既有站点行号随前置插入整体后移（config 目录新增两件、index.js 追加三处 bumpSessionEpoch 与七族写回口的令牌判定），按现场重取；判据散文 L5 的 files= 同步刷新为 371。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 371,
-        "criteria.L5.got_text": "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": [
-          "files=369，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-          "files=371，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-        ]
-      },
-      "unchanged": [
-        "四类静态站点计数",
-        "全部活体读数",
-        "timing（计时类，按口径不刷新）"
-      ]
-    },
-    "v3.65.0": {
-      "what": "v3.65.0 枚举面 +5（config 新件 3 / apps/taskentry 2）",
-      "why": "L5 的 files= 是扫描面真读数（374 -> 379，为本版新增源件后的仓内 .js 计数）。**长会话行为读数一格未动**（N=10/100/400/1000/2000 五档的楼层数、物化条数、引擎索引长度、最近楼层上下文行数全部逐字不变）—— 本版不碰楼层消费路径。四类站点计数（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）同样一格未动。",
-      "readings": {
-        "files": 379,
-        "full_materialize": 9,
-        "bounded_slice": 5,
-        "indexed_loop": 11,
-        "length_read": 48
-      },
-      "unchanged": [
-        "floor_count",
-        "materialize_items",
-        "engine_index_len",
-        "recent_story_context_lines"
-      ],
-      "not_done": "本轮仍为合成宿主取证，非实机。"
-    },
-    "v3.66.0": {
-      "what": "v3.66.0 X2 第一切片：静态扫描面随新件扩张；楼层长会话面一格未动",
-      "why": "静态扫描面 379 -> 380 个文件（config/open-ref.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「结果没有靶心」，不摸楼层数组。既有站点行号随前置插入整体后移（global-search-engine 新增两条 import 与七个源登记块），按现场重取；判据散文 L5 的 files= 同步刷新为 380。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 380,
-        "criteria.L5.got_text": "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": {
-          "got_text": [
-            "files=379，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-            "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-          ]
-        }
-      },
-      "not_done": [
-        "本版新增的协议件与楼层数组无关：四类站点计数与全部活体读数逐项相同。这是如实记录，不是漏复校。",
-        "真机里 1000 楼长会话下的渲染与时序仍归 R-O3；本门只跑合成宿主。"
-      ]
-    },
-    "v3.72.0": {
-      "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑（楼层消费面一格未动）",
-      "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 本探针的静态扫描面 = apps/** + config/** + index.js ⇒ 380 -> **385**（比另两份多 1 个 index.js）。判据散文 L5 的 `files=` 同步刷新为 385（零手抄：直接取现场探针输出的 gotText）。",
-      "how": "node tests/audit/long_chat_probe.cjs --json",
-      "readings": {
-        "scan.files": 385,
-        "criteria.L5.got_text": "files=385，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-      },
-      "criteria_refreshed": {
-        "L5": {
-          "got_text": [
-            "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
-            "files=385，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
-          ]
-        }
-      },
-      "not_done": [
-        "四类站点计数与全部活体读数逐项相同：本版新增的五个 config 件与楼层数组无关。这是如实记录，不是漏复校。",
-        "真机里 1000 楼长会话下的渲染与时序仍归 R-O3；本门只跑合成宿主。",
-        "本版只重绑 `scan.files` 与 L5 散文的 `files=`，**不动**任何判据阈值（四类站点 > 0 与枚举面 > 150 一字未改）。"
-      ]
+  "v3.66.0": {
+   "what": "v3.66.0 X2 第一切片：静态扫描面随新件扩张；楼层长会话面一格未动",
+   "why": "静态扫描面 379 -> 380 个文件（config/open-ref.js）；**四类站点计数与全部活体读数一格未动**（全表物化 9 / 有界切片 5 / 下标直取 11 / 长度读 48）—— 本版治的是「结果没有靶心」，不摸楼层数组。既有站点行号随前置插入整体后移（global-search-engine 新增两条 import 与七个源登记块），按现场重取；判据散文 L5 的 files= 同步刷新为 380。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 380,
+    "criteria.L5.got_text": "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": {
+     "got_text": [
+      "files=379，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+      "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+     ]
     }
+   },
+   "not_done": [
+    "本版新增的协议件与楼层数组无关：四类站点计数与全部活体读数逐项相同。这是如实记录，不是漏复校。",
+    "真机里 1000 楼长会话下的渲染与时序仍归 R-O3；本门只跑合成宿主。"
+   ]
+  },
+  "v3.72.0": {
+   "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑（楼层消费面一格未动）",
+   "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。 本探针的静态扫描面 = apps/** + config/** + index.js ⇒ 380 -> **385**（比另两份多 1 个 index.js）。判据散文 L5 的 `files=` 同步刷新为 385（零手抄：直接取现场探针输出的 gotText）。",
+   "how": "node tests/audit/long_chat_probe.cjs --json",
+   "readings": {
+    "scan.files": 385,
+    "criteria.L5.got_text": "files=385，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+   },
+   "criteria_refreshed": {
+    "L5": {
+     "got_text": [
+      "files=380，全表物化=9，slice(-n)=5，下标直取=11，长度读=48",
+      "files=385，全表物化=9，slice(-n)=5，下标直取=11，长度读=48"
+     ]
+    }
+   },
+   "not_done": [
+    "四类站点计数与全部活体读数逐项相同：本版新增的五个 config 件与楼层数组无关。这是如实记录，不是漏复校。",
+    "真机里 1000 楼长会话下的渲染与时序仍归 R-O3；本门只跑合成宿主。",
+    "本版只重绑 `scan.files` 与 L5 散文的 `files=`，**不动**任何判据阈值（四类站点 > 0 与枚举面 > 150 一字未改）。"
+   ]
   }
+ }
 }

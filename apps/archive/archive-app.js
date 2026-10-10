@@ -57,6 +57,10 @@ import {
 } from './archive-data.js';
 import { ArchiveView } from './archive-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [v3.88.0 · 拓展计划 R-X4] 包 → 项目行的归一**唯一口径**（真源 config/resume-workbench.js）。
+ *   本件是「项目清单」的取数源，咽喉是消费者；两处各写一套字段礼规会在改字段名时
+ *   静默归一成一行空项目（不报错）—— 故归一只能有一份，这里只 import。 */
+import { rwProjectsFromPack } from '../../config/resume-workbench.js';
 export const AR_PACK_KEY = 'archive_pack';
 export const AR_FACE_KEY = 'archive_face';
 export const AR_DRAFT_KEY = 'archive_draft';
@@ -144,6 +148,12 @@ export class ArchiveApp {
         this._img = null;
         this._gauges = [];
         this._text = '';
+        /* [v3.88.0 · R-X4] 选中的项目（内存镜像；持久化在**自己的** AR_FACE_KEY 的 lastSelected 一格，
+         *   与咽喉共用同一次落笔 —— 不给它另起第五条键）。 */
+        this._sel = null;
+        /* 项目清单读数（null = 读不到；[] = 认得出但没有项目身份）。
+         *   ★ 两者**不同形**：读不到要如实说读不到，空清单是真的没有。 */
+        this._proj = null;
     }
     /* ---------- storage 三态（本仓纪律：抛异常不等于「没记过」） ---------- */
     _storageUsable() {
@@ -229,6 +239,28 @@ export class ArchiveApp {
         const dp = numOrNull(st.obj.dropped);
         this._dropped = (dp !== null && dp >= 0) ? dp : 0;
     }
+    /** _loadFace 与 _readRaw('archive_face') 同源（避免两处各取一次）。 */
+    _faceSlot() {
+        const st = this._parse(AR_FACE_KEY);
+        if (st.face !== FACE_OK) return null;
+        return st.obj;
+    }
+    /** [v3.88.0 · R-X4] 装载「选中项」：从**本件自己的**对账面读回来。
+     *  ★ 认不出形状（老版本写的对账面没有这一格）⇒ 判「没选」而不是编一个默认项目。 */
+    _loadFaceSel() {
+        this._sel = null;
+        const face = this._faceSlot();
+        const raw = (face && typeof face === 'object') ? face.lastSelected : null;
+        const o = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : null;
+        if (!o) return;
+        const pid = toStr(o.projectId).trim();
+        if (!pid) return;
+        this._sel = {
+            projectId: pid, title: toStr(o.title), volume: toStr(o.volume), chapter: toStr(o.chapter),
+            volumeId: toStr(o.volumeId), navKey: toStr(o.navKey),
+            lastFloor: (typeof o.lastFloor === 'number' && Number.isFinite(o.lastFloor) && o.lastFloor >= 0) ? o.lastFloor : null
+        };
+    }
     _persistPack() {
         return this._writeJSON(AR_PACK_KEY, { raw: this._packRaw, at: this._packAt });
     }
@@ -243,6 +275,9 @@ export class ArchiveApp {
         return this._writeJSON(AR_FACE_KEY, {
             face: this._face, pack: this._bundle ? this._bundle.pack : 'unknown',
             tables: this._rows.length, rows: this._sum ? this._sum.rows : null,
+            /* [v3.88.0 · R-X4] 选中项与对账面**同一次落笔**（多写一格，不新增存储键）。
+             *   ★ null 是合法值：没选就明写 null（咽喉据此维持会话隔离）。 */
+            lastSelected: this._sel ? Object.assign({}, this._sel) : null,
             at: this._now
         });
     }
@@ -254,6 +289,8 @@ export class ArchiveApp {
         this._malformed = (pk.face === FACE_MALFORMED);
         this._loadDraft();
         this._loadLedger();
+        this._loadFaceSel();
+        this._loadProjects();
         this._recompute();
         return { face: this._face, why: this._why };
     }
@@ -384,6 +421,9 @@ export class ArchiveApp {
     clearPack() {
         this._packRaw = '';
         this._packAt = 0;
+        /* 放下包 ⇒ 选中项一并清掉：清单都没了，还留着一个「选中的项目」就是把
+         *   已经不存在的项目报成选好的（与「读不到 ≠ 没有」同一条纪律）。 */
+        this._sel = null;
         this._persistPack();
         this.probe();
         const wrote = this._persistFace();
@@ -419,6 +459,77 @@ export class ArchiveApp {
         this._dropped = 0;
         const wrote = this._persistLedger();
         return Object.assign(this._savedOk(wrote), { ok: true, cleared: had, wasDropped: wasDropped });
+    }
+    /** [v3.88.0 · R-X4] 项目清单读数：走**唯一归一实现**。
+     *   读不到 ⇒ null；读得到但认不出项目身份 ⇒ []；认得出 ⇒ [项目行]。 */
+    _loadProjects() {
+        this._proj = null;
+        /* 读这一格**抛了异常** ⇒ 清单是「读不到」（null），与「认得出但不带项目身份」（[]）不同形。
+         *   ★ 本仓最贵的形态是「读不出来 ⇒ 画成空」：storage 异常必须一路如实传到项目块，
+         *     否则 _projectBlock 的「读不到」分支永远走不到，用户会把取数失败当成「这份包没有项目」。 */
+        if (this._why === 'read_threw') return;
+        const raw = this._packRaw;
+        /* 还没收过包 ⇒ 空清单（对账面另有「还没收过包」一态，看得到）。 */
+        if (!raw.length) { this._proj = []; return; }
+        /* 收下的东西**读不懂** ⇒ 清单同样不可判：它**不是**「这份包没有项目」。 */
+        const box = extractObject(raw);
+        if (!box.ok) return;
+        this._proj = rwProjectsFromPack(box.value);
+    }
+    /* ---------- [v3.88.0 · R-X4] 项目清单与选中项（只动本件自己的格） ---------- */
+    /** 清单是否读得到（null 与 [] 处置相反）。 */
+    projectsReadable() { return this._proj !== null; }
+    /** 清单**读不到**时的归因（取值只有三种；视图据此说人话，不自己猜）。
+     *   · 'read_threw'         —— storage 读这一格时抛了异常（与「没记过」不同形）；
+     *   · 'payload-unreadable' —— 收下的原文读不懂，项目身份无从取出；
+     *   · ''                   —— 读得到（清单可能是空表，那是「真没有」）。 */
+    projectsWhy() {
+        if (this._why === 'read_threw') return 'read_threw';
+        if (this._proj === null) return 'payload-unreadable';
+        return '';
+    }
+    /** 项目行（读不到给空表 —— 调用方必须先看 projectsReadable）。 */
+    projectRows() { return Array.isArray(this._proj) ? this._proj.slice() : []; }
+    projectCount() { return Array.isArray(this._proj) ? this._proj.length : null; }
+    /** 当前选中项（没选给 null，**不拿列表第一项顶上**）。 */
+    selected() { return this._sel ? Object.assign({}, this._sel) : null; }
+    selectedId() { return this._sel ? this._sel.projectId : ''; }
+    /** 选一个项目（**只收清单里真有的那一个**；不在清单里一律不选，归因为 not-in-list）。
+     *  为什么必须校验：咽喉按「选中项在场」决定要不要产出项目读数 —— 让它拿着一个
+     *  清单里根本没有的 id，等于把「选错了」伪装成「选好了」。 */
+    selectProject(pid) {
+        const want = toStr(pid).trim();
+        if (!want) return this.clearSelection();
+        if (!this.projectsReadable()) {
+            return Object.assign(this._savedOk(false), { ok: false, why: 'list-unreadable', selected: null });
+        }
+        const rows = this.projectRows();
+        for (let i = 0; i < rows.length; i++) {
+            if (rows[i].projectId === want) return this.setSelected(rows[i]);
+        }
+        return Object.assign(this._savedOk(false), { ok: false, why: 'not-in-list', selected: null });
+    }
+    /** 直接落一个选中项（视图层已经拿到的项目行）。 */
+    setSelected(row) {
+        const o = (row && typeof row === 'object' && !Array.isArray(row)) ? row : null;
+        const pid = toStr(o && o.projectId).trim();
+        if (!pid) return this.clearSelection();
+        const fl = numOrNull(o.lastFloor != null ? o.lastFloor : o.floor);
+        this._sel = {
+            projectId: pid, title: toStr(o.title), volume: toStr(o.volume), chapter: toStr(o.chapter),
+            volumeId: toStr(o.volumeId), navKey: toStr(o.navKey),
+            lastFloor: (fl !== null && fl >= 0) ? fl : null
+        };
+        const wrote = this._persistFace();
+        this._receipt('project_select', true, '', { n: 1 });
+        return Object.assign(this._savedOk(wrote), { ok: true, selected: this.selected() });
+    }
+    /** 取消选择（选择是可撤销的；取消后咽喉回到「维持隔离」）。 */
+    clearSelection() {
+        this._sel = null;
+        const wrote = this._persistFace();
+        this._receipt('project_clear', true, '', { n: 0 });
+        return Object.assign(this._savedOk(wrote), { ok: true, selected: null });
     }
     /* ---------- 页面投影（视图层只读这里，不持第二份清单） ---------- */
     faceOf() { return this._face; }
@@ -546,6 +657,8 @@ export class ArchiveApp {
      *  ★ 四格的装载由 probe **一处**承担（单一装载路径）。 */
     onChatChanged() {
         this._tab = 'pack';
+        this._sel = null;
+        this._proj = null;
         this._focus = '';
         this._input = '';
         this._now = 0;

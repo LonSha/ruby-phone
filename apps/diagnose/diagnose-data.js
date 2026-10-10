@@ -168,6 +168,11 @@ import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageRecei
  *   「内核建好了、导出挂出来了、产品端零消费」。 */
 import { craftFaces, craftLine } from '../../config/craft-cards.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
+ *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围 / 在飞旧回信）+ 缺口。
+ *   ★ 本面与既有的受控恢复交接面**不是重复**：那张量的是「这一次恢复的预检」，
+ *     本面量的是「跳项目续玩这条路通不通」—— 项目 / 卷 / 停点 / 同名异宇宙 / 三级操作。 */
+import { resumeWorkbenchSelfCheck, RW_PROJECT_STATES, RW_STATE_LABELS } from '../../config/resume-workbench.js';
 /* [v3.83.0 · 计划 R-O7] 诊断处置面：把「有读数」翻成「能处置」。
  *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
  *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
@@ -868,6 +873,66 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
+     *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围）+ 缺口。
+     *   ★ 与既有受控恢复交接面分工：那张答「这一次恢复的预检过了没有」，本面答「跳项目续玩这条路通不通」。 */
+    const resumeWorkbenchFace = (() => {
+        try {
+            const self = resumeWorkbenchSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const stateKeys = Object.keys(RW_PROJECT_STATES);
+            const states = stateKeys.map((k) => ({
+                key: String(RW_PROJECT_STATES[k]),
+                label: String(RW_STATE_LABELS[RW_PROJECT_STATES[k]] || ''),
+            }));
+            const w = hostWindow();
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const cache = vp ? (vp._resumeWorkbench || null) : null;
+            const stateKey = cache ? String(cache.state || '') : '';
+            const proj = (cache && cache.project) ? cache.project : null;
+            const impact = (cache && cache.impact) ? cache.impact : null;
+            const chars = (cache && Array.isArray(cache.characters)) ? cache.characters : [];
+            const gaps = (cache && Array.isArray(cache.gaps)) ? cache.gaps : [];
+            const conflicts = (cache && Array.isArray(cache.conflicts)) ? cache.conflicts : [];
+            const line = vp ? String(vp._resumeWorkbenchLine || '') : '';
+            const openItems = impact ? numOrNull(impact.openItems) : null;
+            const lastFloor = impact ? numOrNull(impact.lastFloor) : null;
+            let head = '尚未取数';
+            if (cache) {
+                if (stateKey === String(RW_PROJECT_STATES.NO_SELECTION)) head = '尚未选择项目 —— 维持会话隔离（**不是**「没有作品」）';
+                else if (stateKey === String(RW_PROJECT_STATES.UNREADABLE)) head = '项目清单读不到（**不是**「没有作品」）';
+                else head = '《' + String((proj && (proj.title || proj.projectId)) || '—') + '》 · 未了 ' + String(openItems === null ? '—' : openItems)
+                    + ' · 角色 ' + String(chars.length)
+                    + ' · 停点 ' + (lastFloor === null ? '未记录' : ('第 ' + String(lastFloor) + ' 楼'))
+                    + ' · ' + (cache.canRestore === true ? '可请求恢复' : '不可恢复');
+            }
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                states: states,
+                stateKey: stateKey,
+                stateLabel: stateKey ? String(RW_STATE_LABELS[stateKey] || '') : '',
+                listReadable: cache ? (cache.listReadable === true) : null,
+                projectPresent: !!proj,
+                projectCount: cache ? numOrNull(cache.projectCount) : null,
+                characterCount: chars.length,
+                openItems: openItems,
+                lastFloor: lastFloor,
+                gapCount: gaps.length,
+                conflictCount: conflicts.length,
+                canDraft: cache ? (cache.canDraft === true) : false,
+                canRestore: cache ? (cache.canRestore === true) : false,
+                levelCount: (cache && Array.isArray(cache.levels)) ? cache.levels.length : 0,
+                line: line,
+                text: '续玩工作台：三态（' + states.map((x) => x.label).join(' / ') + '）；'
+                    + head
+                    + (cache && gaps.length ? '；缺面 ' + String(gaps.length) : '')
+                    + (cache && conflicts.length ? '；冲突 ' + String(conflicts.length) : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；三态互不同形 / 同名不合并 / 旧回信拦截自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 financeFace 同范式——
      * 只读自检 + 知情账本状态 + 宿主缓存读数 + 缺口。 */
     const knowledgeBridgeFace = (() => {
@@ -1069,7 +1134,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1131,6 +1196,16 @@ export function financeFaceText(face) {
         if (!f) return '财务总览协议：读取异常（已降级）—— 这不是「没钱」';
         return String(f.text || '财务总览协议：无读数');
     } catch (_e) { return '财务总览协议：读取异常（已降级）'; }
+}
+/** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
+ *  与 financeCommitFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+export function resumeWorkbenchFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '续玩工作台：读取异常（已降级）—— 这不是「没有选中项目」';
+        return String(f.text || '续玩工作台：无读数');
+    } catch (_e) { return '续玩工作台：读取异常（已降级）'; }
 }
 /** [v3.87.0 · 拓展计划 R-X3] 财务提交向导协议面的一行读数（与 financeFaceText 同范式）。
  *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
@@ -1452,6 +1527,7 @@ export default {
     scheduleFaceText,
     financeFaceText,
     financeCommitFaceText,
+    resumeWorkbenchFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

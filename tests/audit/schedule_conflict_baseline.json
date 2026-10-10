@@ -1,628 +1,628 @@
 {
-  "file": "tests/audit/schedule_conflict_baseline.json",
-  "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**",
-  "measured_at": "v3.7.0",
-  "node_version": "v24.18.0",
-  "probe": "tests/audit/schedule_conflict_probe.cjs",
-  "upstream_frozen": {
-    "repo": "lonsha-memory-plugin",
-    "version": "3.233.0",
-    "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
-    "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过。",
-    "findings": [
-      "上游**无任何「日程 / 时刻表」外供面**：对象键形态搜 schedule / timetable / agenda / calendarFace / dayPlan 全部 0 命中。",
-      "上游唯一以 schedule 为名的东西是**内部周期调度器**（`_scheduleFloorHeal(f)`，注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）: 位置取模 + 多任务分发」）—— 与「剧情日程」无关，且非外供面。",
-      "上游承诺面**只有楼层维**，无时刻维：`deadlineFloor` 在场，`scheduledAt` / `dueTime` 缺席（promises 条目形状 `{id, character, content, deadlineFloor, status, floor}`，状态机 pending → imminent（deadlineFloor-2 起）→ overdue（过 deadlineFloor））。",
-      "上游把「冲突**判断**」刻意留给下游：`scene-book.js` 的 `coPresence()` 函数体内**零**冲突/紧张度字段（conflictLevel / tension / severity 均不命中）；上游 CHANGELOG v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」。",
-      "上游时间推进只有整体跳日 `time_advance_days`，**无日内时刻轴**；`story_date` 是自由文本。"
-    ]
+ "file": "tests/audit/schedule_conflict_baseline.json",
+ "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**",
+ "measured_at": "v3.7.0",
+ "node_version": "v24.18.0",
+ "probe": "tests/audit/schedule_conflict_probe.cjs",
+ "upstream_frozen": {
+  "repo": "lonsha-memory-plugin",
+  "version": "3.233.0",
+  "commit": "c97808cf5f3f3f7688c55a819b205d9f824657d8",
+  "why_frozen": "跨仓探针不得把兄弟仓绝对路径写成硬依赖（上游 v3.204.0 scan_cross_repo_binding.mjs 的纪律：路径依赖的绿只在一台机器上成立）。故上游证据以冻结读数入基线；需复核时传 --upstream <dir> 或 RP_UPSTREAM_ROOT，不传就跳过。",
+  "findings": [
+   "上游**无任何「日程 / 时刻表」外供面**：对象键形态搜 schedule / timetable / agenda / calendarFace / dayPlan 全部 0 命中。",
+   "上游唯一以 schedule 为名的东西是**内部周期调度器**（`_scheduleFloorHeal(f)`，注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）: 位置取模 + 多任务分发」）—— 与「剧情日程」无关，且非外供面。",
+   "上游承诺面**只有楼层维**，无时刻维：`deadlineFloor` 在场，`scheduledAt` / `dueTime` 缺席（promises 条目形状 `{id, character, content, deadlineFloor, status, floor}`，状态机 pending → imminent（deadlineFloor-2 起）→ overdue（过 deadlineFloor））。",
+   "上游把「冲突**判断**」刻意留给下游：`scene-book.js` 的 `coPresence()` 函数体内**零**冲突/紧张度字段（conflictLevel / tension / severity 均不命中）；上游 CHANGELOG v3.232.0 原话「账本能回答『两人此刻都在钟楼』，不能回答『他们会不会打起来』；把后者塞进读数就是拿猜测冒充事实」。",
+   "上游时间推进只有整体跳日 `time_advance_days`，**无日内时刻轴**；`story_date` 是自由文本。"
+  ]
+ },
+ "readings": {
+  "files_scanned": 406,
+  "consume_points": 23,
+  "consume_files": 6,
+  "local_engine_hits": 0
+ },
+ "consume_files": [
+  "apps/memory/global-search-engine.js",
+  "apps/plotline/plotline-app.js",
+  "apps/plotline/plotline-data.js",
+  "apps/plotline/plotline-view.js",
+  "apps/timeweaver/timeweaver-collector.js",
+  "config/resume-brief.js"
+ ],
+ "criteria": [
+  {
+   "id": "R1",
+   "desc": "上游存在「日程 / 时刻表」外供面",
+   "pass": false,
+   "got_text": "0 个候选键命中（冻结）"
   },
-  "readings": {
-    "files_scanned": 405,
+  {
+   "id": "R2",
+   "desc": "上游承诺面存在「按时刻」维度（非仅楼层）",
+   "pass": false,
+   "got_text": "deadlineFloor 在场 / scheduledAt·dueTime 缺席 ⇒ 只有楼层维"
+  },
+  {
+   "id": "R3",
+   "desc": "上游把「冲突判定」留给下游（它的读数面不含判断字段）",
+   "pass": null,
+   "got_text": "未复核（冻结证据：0）"
+  },
+  {
+   "id": "R4",
+   "desc": "下游已消费承诺的期限 / 状态（增量基础已存在）",
+   "pass": true,
+   "got_text": "6 个文件在消费"
+  }
+ ],
+ "shape": {
+  "note": "要接的面的**形状不对**：F-4 想要「日程冲突」（跨时间点的资源/地点互斥），而上游能给的只有「一条承诺的截止楼层 + 三态」与「同楼同刻的在场事实」—— 两者都在**楼层**这条轴上，且后者（F-3）下游已接。",
+  "verdict": "未观察到「可做日期/时间冲突判定」的形态：既没有日内时刻轴，也没有跨日期的周期日程；把楼层当作「日程槽位」会先把「日程」这个词用成隐喻。"
+ },
+ "verdict": {
+  "question": "F-4「剧情日程冲突（与地点层级 / 在场面的冲突判定）」能不能立 Gate 并实施？",
+  "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 要接的面**不存在**，而不是「面存在但工作量不够」。",
+  "reasons": [
+   "**① 上游无「日程」外供面（R1 ✗）**：对象键形态零命中。要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型** —— 那就从「接外供面」变成了「新做一个业务域」（含数据模型、存储、UI、与上游承诺/在场面的一致性维护），量级与 O 批/F 批其余项不在一个档。",
+   "**② 上游时间轴只有「楼层」这一条（R2 ✗）**：无日内时刻（无 `scheduledAt` / `dueTime`）、无跨日期周期日程、无时区长。承诺只有 `deadlineFloor` 一个数字键。**「日程冲突」这个词的能指在这里无处落地**：唯一可算的是「两条承诺的 deadlineFloor 撞在同一个楼层」—— 那只是「两份待办截止点相同」，不是日程冲突，而且得由下游自己算、且要自己定义「几个楼层内算撞车」。",
+   "**★ ③ 上游把「冲突判断」刻意留给了下游，而这与 F-3 已经定下的纪律相互抵触（R3 ✓ 但方向相反）**：`coPresence()` 函数体内零判断字段，上游 CHANGELOG 原话「读数的职责是给事实，把『他们会不会打起来』塞进读数就是拿猜测冒充事实」。下游 F-3（v3.4.3）也已在自己的卡上守住「不写冲突 / 对峙 / 碰面风险」并由判据钉在剥注释后的代码上。故 F-4 若要「判定冲突」，就是在下游重建一个**上游与下游都已明确拒绝的判断面**。",
+   "**④ 下游已有基础但增量小（R4 ✓，4 个文件 / 22 个点）**：`plotline-data.js` 已在读 `p.deadlineFloor`（`deadline` 列）+ `p.status`（未知 status 如实透传），`global-search-engine.js` 把承诺建成可搜索条目。也就是说「承诺到期」这件事**已经能看见了**；F-4 的增量只剩「撞车提醒」，而它的数据源（楼层）已在手。"
+  ],
+  "only_axis_with_evidence": "真正有读数支持、且不需要凭空造模型的替代轴是**「承诺到期读数的可见性提升」**：把上游已给的 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面上按紧迫度显式分档（已逾期 / 即将到期 / 进行中 —— 上游 `describePromise` 已有这三档文案），并把「同楼层截止的承诺互相关联」做成**并排呈现**而非「冲突判定」。本版只立读数与判据，不动手。",
+  "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项（F-1 / F-2 / F-3 / F-5 / F-6 / F-8）状态不受影响。"
+ },
+ "corrections": [
+  "**探针首版把内部调度器误报成「上游有日程面」**：初版按裸子串搜 `schedule`，命中上游 index.js 的 `_scheduleFloorHeal(f)`（注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）—— 那是**内部楼层修复调度器**，既不是外供面、也与剧情日程无关。修正为只认**对象键形态**（`schedule:` / `timetable:`）后为 0 命中。教训：判据必须匹配**真实书写**（同 lifecycle 门禁的踩坑：漏认/多认都会翻转结论）。",
+  "**探针首版只搜整文件，把 T16/T17 自述里的 `severity` 误报成「coPresence 面含判断字段」**：`scene-book.js` 的 `observationNotes()`（v3.232.0 的 F-6 口径自述）里有 `severity: 'observation'` 两条，与 coPresence 无关。修正为只在 **`coPresence()` 函数体（花括号配平抽取）** 内搜，实测 0 命中。教训：**范围粒度错会造成假阳性**，而假阳性会直接翻转 R3 的结论。",
+  "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
+  "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
+  "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
+  "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
+  "v3.11.0 复校：`files_scanned` 229 → 230（本版新增 1 个文件 `config/rollback-preview.js`）。其余三项读数（`consume_points` 22 / `consume_files` 4 / `local_engine_hits` 0）逐项不变 —— 本版没有碰日程面，枚举面涨的是文件数而不是消费点。",
+  "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
+  "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版是纯读数层（一条加载路径都不改），故不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，接一层没时计不影响站点数）。首测版语义仍保留在 measured_at。",
+  "v3.15.0 复校：本轮新增 2 个真源模块（config/usage-tracker.js 使用统计采集内核 / config/contact-insight.js 联系人互动纯函数内核）+ 1 个 App 目录（apps/usage/ 下 3 个 .js）⇒ 枚举面 232 → 237（+5）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面（consume_points 22 / consume_files 4 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程/期限面的任何一行，也没有长出本地日程引擎（新模块只做读数的采集与聚合，零 deadline/scheduledAt 语义）。",
+  "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。",
+  "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰日程/期限面任何一行。 消费点（consume_points 22）与消费文件（consume_files 4）逐字不变。★ 另有一条**踩坑留档**：登记面初版的 `contract` 描述里逐个列了上游字段名，被本探针按**子串**计了一行 ⇒ 消费点一度虚涨到 23 / 文件 5。处置是改描述措辞（不列英文字段名），**未动探针、未动读数** —— 那一条要守的是「有没有人真的校验承诺期限」，登记表的描述一个字节都不消费它。",
+  "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。",
+  "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
+  "**★ v3.22.0 复校（口径收紧：一是词边界，二是块注释）**：`consume_points` 26→**23**、`consume_files` 6（成员有增有减）、`files_scanned` 241→247。两处都是**探针自己原先的口径没做全**，不是源文案的问题：① `deadline` 是**子串**匹配 ⇒ 新版 `apps/focus/focus-app.js` 的私有运行态字段 `_deadline`（番茄钟倒计时时刻，10 处）被算成「消费上游承诺期限」（假阳性，「漂亮的假涨」）；② 探针口径写明「注释行不计」，但实现只跳过 `//` ⇒ `/* … 倒计时显示走 deadline。 */`这类**块注释散文**照算（残余 1 点）。修法：`deadline` 改词边界匹配（`deadlineFloor` 仍由它自己的 token 命中），并在匹配前把 `/* … */` 整段抹白（保留换行 ⇒ 行号不变）。★ 同时如实记下**成员变动**：`apps/focus/focus-app.js` 出列（它读的是自己的倒计时，不是上游承诺），其余 6 个文件不变。",
+  "v3.85.0 复校：枚举面 402 → 403（本版新增 4 个真源文件 config/num-clamp.js（有界取数唯一实现）/ config/diagnose-action.js（诊断处置面）+ 两件判据套件 tests/system-v3820.test.mjs / system-v3830.test.mjs，另含 v3.80.0 起的 A/B 清单八件真源 config/portable-payload.js / submodel-isolation.js / ambience-pool.js / relation-tier.js / scene-rules.js / state-fields.js / archive-digest.js / memory-correction.js / craft-cards.js；累计 16 件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；消费面（consume_points 23 / consume_files 6 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程与期限面任何一行。"
+ ],
+ "not_done": [
+  "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
+  "**未给「日程」建模型**：那是 F-4 若实施时的主体工作（数据模型 / 存储 / UI / 与承诺面一致性），本版刻意不做 —— 因为读数说「面不存在」。",
+  "**未验实机**：所有读数来自源码与上游冻结证据；无头环境跑不了宿主。",
+  "**未把该读数立成常驻门禁**：与 P-6 / O-5 同口径 —— 「面存不存在」是决策输入，不是契约。"
+ ],
+ "rebuilds": {
+  "v3.22.0": {
+   "why": "探针 token 口径收紧（词边界 + 块注释剥离）⇒ 读数变小；同时枚举面随新版 +6 个文件。",
+   "readings": {
+    "files_scanned": 247,
+    "consume_points": 23,
+    "consume_files": 6
+   },
+   "unchanged": [
+    "local_engine_hits"
+   ],
+   "not_done": [
+    "探针只扫 6 个已知消费点文件的**静态命中**；新 App 的倒计时（focus 的 `_deadline`）是**私有运行态**，不是「消费上游承诺期限」，故**不应**计入 —— 这也是本轮把 token 由子串匹配收成词边界的原因。",
+    "运行时是否真出现「两个 App 争同一日程槽」需要真宿主时间推进，本层不可测。"
+   ],
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
+  },
+  "v3.23.0": {
+   "why": "判据散文刷新：`criteria[R4].got_text` 是**手抄旧值**（\"4 个文件在消费\"），与同文件 `readings.consume_files=6` 以及探针现场输出（\"6 个文件在消费\"）**同文件内互相矛盾**。根因不是探针：本轮新增 focus 的私有倒计时字段后，探针把 `deadline` 收成词边界匹配 ⇒ 消费文件数变过；readings 跟着更新了，散文段没有。",
+   "readings": {},
+   "unchanged": [
+    "readings",
+    "scan（若该基线有）",
+    "sites（若该基线有）",
+    "verdict",
+    "corrections",
+    "not_done",
+    "timing_criteria"
+   ],
+   "not_done": [
+    "**上游面仍未复核**（R1–R3 现场为「未复核（冻结证据：…）」）：要复核时传 `--upstream <dir>` 或 `RP_UPSTREAM_ROOT`；本层不硬依赖兄弟仓在场。",
+    "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
+   ],
+   "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
+  },
+  "v3.24.0": {
+   "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+   "readings": {
+    "readings.files_scanned": 248
+   }
+  },
+  "v3.25.0": {
+   "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；**其余读数逐项不变** —— 消费面仍是 6 个文件 / 23 个消费点 / 本机引擎命中 0。理由：存钱罐读时间只走既有的取数口，不新增「按时刻消费」的站点，也不引入任何本机日程引擎。新值取自探针现场输出，不手抄。",
+   "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+   "readings": {
+    "files_scanned": 251
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "not_done": [
+    "存钱罐的「家庭卡片刷新周期」（PIGGY_REFRESH_PERIODS）是**展示口径**，不是日程冲突面：它不读楼层时间轴，也不参与任何日程合并，故本探针消费面 0 变化。",
+    "本层只量静态站点与既有消费面；真机里「换会话时余额与卡片从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.26.0": {
+   "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面随两个新 App 扩张（251 → 257 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 正则过滤器与打卡都不消费上游的「承诺期限 / 状态」（前者是文本工作台，后者是主叫侧账本）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 257
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {}
+  },
+  "v3.27.0": {
+   "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面随四件新 App 扩张（257 → 269 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 头像框 / 商城 / 拉黑 / 天气都不消费上游的「承诺期限 / 状态」（四件都是单会话内的**自有账**：框配置、商品目录与订单、黑名单、天气缓存，都不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 269
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "四件新 App 各带 12 条会话隔离前缀（3 + 5 + 2 + 2），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时四件的账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.28.0": {
+   "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面随新 App 扩张（269 → 272 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 自定义组件不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的组件登记与桌面实例表**，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 272
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "新 App 带 4 条会话隔离键（settings / templates / instances / draft），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时组件表与桌面实例从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.29.0": {
+   "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面随新 App 扩张（272 → 275 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 桃宝不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的商品 / 车 / 订单 / 抓取记录台账**，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 275
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "新 App 带 5 条会话隔离键（settings / products / cart / orders / grabs），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时目录 / 车 / 订单 / 抓取记录从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.30.0": {
+   "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
+   "why": "枚举面随新 App 扩张（275 → 278 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 恋爱空间不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的关系台账**：起算日 / 足迹 / 日记 / 情书 / 问答，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 278
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "新 App 带 6 条会话隔离键（settings / days / footprints / diary / letters / questions），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时起算日 / 足迹 / 日记 / 情书 / 问答从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.32.0": {
+   "what": "v3.31.0 约会大作战 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）；v3.32.0 两个子游戏同样只扩枚举面",
+   "why": "枚举面随两版新件扩张（278 → 285 个文件：v3.31.0 的 `apps/date/` 三件 ＋ v3.32.0 的 `apps/games/seaturtle/` 与 `apps/games/guesswhat/` 各两件 .js）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 约会大作战是一册**本会话自有的约会台账**（场景册 / 场次 / 欠账），海龟汤与你说我猜是**一局对话型对局**（谜题 / 日志 / 回合），三者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 285
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "两版新件共带 9 条会话隔离键（date：settings / scenes / store 三键；seaturtle / guesswhat 各一态键），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时场景册 / 场次 / 欠账 / 一局对局态从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.33.0": {
+   "what": "v3.33.0 游戏厅下半两件：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（285 → 289 个文件：`apps/games/scriptkill/` 的 data / view 两件 与 `apps/games/ludo/` 的 data / view 两件，共 +4 个 .js）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。剧本杀是一局**多阶段推理对局**（角色 / 线索 / 投票 / 日志），心动飞行棋是一局**棋盘格对局**（骰子 / 格子 / 题库 / 事件），两者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 289
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 2 条会话隔离键（`chat_games_scriptkill_state` / `chat_games_ludo_state`），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时一局对局态从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.34.0": {
+   "what": "v3.34.0 老福特：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（289 → 292 个文件：`apps/lofter/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。老福特是一块**内容流平台**（短文流 / 长篇合集 / 评论楼中楼 / 关注订阅四格 / 阅读面），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 292
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（设置 / 内容 / 存储），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时稿子从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.35.0": {
+   "what": "v3.35.0 Pixiv：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（292 → 295 个文件：`apps/pixiv/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。Pixiv 是一块**内容平台**（插画登记面 / 小说与滑窗 / 评论楼中楼与三态 / 检索与四格 / 出图要求文本），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 295
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（设置 / 内容 / 存储），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时稿子从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.36.0": {
+   "what": "v3.36.0 杂志：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（295 → 298 个文件：`apps/magazine/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。杂志是一块**内容编辑部**（十型稿件 / 十套解析 / 四套导出 / 译文块），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 298
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（设置 / 内容 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时稿件从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.37.0": {
+   "what": "v3.37.0 白盒音效盒：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（298 → 301 个文件：`apps/soundkit/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。音效盒是一块**本机音频合成面**（四条去处的绑定表 / 自定义配方 / 试听与导出台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 301
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（设置 / 配方 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时配方从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.38.0": {
+   "what": "v3.38.0 召回治理台：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（301 → 304 个文件：`apps/recall/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。召回治理台是一块**候选治理面**（四路状态 / 融合逐路贡献 / 注入裁决 / 回执台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 304
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（四路配置 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时策略与水位线从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.39.0": {
+   "what": "v3.39.0 时光胶囊：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（304 -> 307 个文件：apps/sourcebook/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。时光胶囊是一块**封存取回治理面**（跨度分档 / 口吻分族 / 硬约束校验 / 回信归一 / 读数台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 307
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（封存 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.40.0": {
+   "what": "v3.40.0 对话水壶：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（307 -> 310 个文件：apps/kettle/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。对话水壶是一块**收话治理面**（轮次分档 / 选项裁切 / 场景标注 / 单字登记 / 破折号体检 / 记录封包），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 310
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（记录 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.41.0": {
+   "what": "v3.41.0 需求沙盘：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（310 -> 313 个文件：apps/needsim/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。需求沙盘是一块**收拾模型给的数值**的治理面（需求钳位 / 效果台账 / 池子四态 / 游标轮次 / 愿望四态 / 记忆淘汰 / 回信归一），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 313
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（需求 / 池子 / 记忆与愿望 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.42.0": {
+   "what": "v3.42.0 曲库案头：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（313 -> 316 个文件：apps/musicdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。曲库案头是一块**收拾用户拿回来的曲目数据**的治理面（曲目归一与去重 / 封面四态 / 歌词归一 / 播放模式与队列游标 / 来源读数 / 回执归一），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 316
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（曲库 / 歌词 / 台账 / 策略），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时曲库与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.43.0": {
+   "what": "v3.43.0 PV 案头：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（316 -> 319 个文件：apps/pvdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。PV 案头是一块**收拾分镜脚本与歌词**的治理面（分镜解析 / 逐镜要求文本 / 歌词时间轴与字幕版式 / 三项上限余量），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 319
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（题面 / 作品台账 / 歌词 / 策略），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时题面与作品台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.44.0": {
+   "what": "v3.44.0 同人商店 · 柜台：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（319 -> 322 个文件：apps/doujin/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。同人商店是一块**收拾商品原文与二手在售原文**的治理面（价格三态 / 商品行逐行拒收 / 热度与盲盒分形 / 出品定价 / 售罄与重定价 / 上限余量 / 台账裁边），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 322
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（店头（含存档）/ 市场 / 收银台 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时店头与车从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.45.0": {
+   "what": "v3.45.0 存档台：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（319 -> 322 个文件：apps/archive/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。存档台是一块**收拾一份备份包**的治理面（包型裁定 / 版本互认 / 覆盖性 / 逐表读数 / 结构体检 / 体积估重 / 重置影响），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 325
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（已收包 / 对账面 / 要求草稿 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时已收包与对账面从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.46.0": {
+   "what": "v3.46.0 思维链案头：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（325 -> 328 个文件：apps/cotdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。思维链案头是一块**看一份条目册怎么落下去**的案头面（位置 × 角色 / 深度 / 接口 / 预填 / 原生思考参数 / 锁定 / 标记体检 / 收录失败因 / 上限余量），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 328
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **4 条会话键**（条目册 / 配置 / 草稿 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时条目册与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.47.0": {
+   "what": "v3.47.0 诊断案头：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（328 -> 331 个文件：apps/diagdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。诊断案头是一块**看一份存档怎么读、该补什么**的案头面（版本 / 六态 / 增量 / 流水线 / 栏位 / 迁移 / 判定 / 收录），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 331
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **3 条会话键**（存档原文 / 摘要草稿 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时存档与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.48.0": {
+   "what": "v3.48.0 子宫画板：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（331 -> 334 个文件：apps/uterus/ 的 3 件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。子宫画板是一块**把一份角色状态画成一张像素画板**的治理面（几何 / 版面 / 液面 / 囊 / 读数 / 判定 / 收录），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 334
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新件共带 **2 条会话键**（收下的角色状态原文 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
+    "真机里「换会话时状态与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
+  },
+  "v3.54.0": {
+   "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
+   "why": "files_scanned 334→367：v3.49~v3.54 新增 App 与判据套件使扫描文件数增长。首次全量 npm run test 暴露基线陈旧。"
+  },
+  "v3.55.0": {
+   "what": "枚举面 367 -> 368（新件 config/app-consumption-matrix.js 进静态扫描面）",
+   "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 消费面一格未动（consume_points 23 / consume_files 6 / local_engine_hits 0 逐项不变）；四条判据与 verdict（not_now）一字未动。",
+   "readings": {
+    "files_scanned": 368,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
+   }
   },
-  "consume_files": [
-    "apps/memory/global-search-engine.js",
-    "apps/plotline/plotline-app.js",
-    "apps/plotline/plotline-data.js",
-    "apps/plotline/plotline-view.js",
-    "apps/timeweaver/timeweaver-collector.js",
-    "config/resume-brief.js"
-  ],
-  "criteria": [
-    {
-      "id": "R1",
-      "desc": "上游存在「日程 / 时刻表」外供面",
-      "pass": false,
-      "got_text": "0 个候选键命中（冻结）"
-    },
-    {
-      "id": "R2",
-      "desc": "上游承诺面存在「按时刻」维度（非仅楼层）",
-      "pass": false,
-      "got_text": "deadlineFloor 在场 / scheduledAt·dueTime 缺席 ⇒ 只有楼层维"
-    },
-    {
-      "id": "R3",
-      "desc": "上游把「冲突判定」留给下游（它的读数面不含判断字段）",
-      "pass": null,
-      "got_text": "未复核（冻结证据：0）"
-    },
-    {
-      "id": "R4",
-      "desc": "下游已消费承诺的期限 / 状态（增量基础已存在）",
-      "pass": true,
-      "got_text": "6 个文件在消费"
-    }
-  ],
-  "shape": {
-    "note": "要接的面的**形状不对**：F-4 想要「日程冲突」（跨时间点的资源/地点互斥），而上游能给的只有「一条承诺的截止楼层 + 三态」与「同楼同刻的在场事实」—— 两者都在**楼层**这条轴上，且后者（F-3）下游已接。",
-    "verdict": "未观察到「可做日期/时间冲突判定」的形态：既没有日内时刻轴，也没有跨日期的周期日程；把楼层当作「日程槽位」会先把「日程」这个词用成隐喻。"
+  "v3.58.0": {
+   "what": "v3.58.0 O4/O5：只扩枚举面，不消费「承诺期限 / 状态」",
+   "why": "枚举面随本版新件扩张（368 -> 370 个文件：config/session-gate.js 与 config/write-receipt.js；判据套件不进本探针扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。本版治的是「回信跨会话落错桶」与「写入报成功但其实没落」，两者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
+   "readings": {
+    "files_scanned": 370
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新增的两件真源都不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
+    "真机里「换会话时在飞的日程请求是否被栅栏挡下」的时序仍归 R-O3（真宿主实机验证）。"
+   ]
   },
-  "verdict": {
-    "question": "F-4「剧情日程冲突（与地点层级 / 在场面的冲突判定）」能不能立 Gate 并实施？",
-    "answer": "**本版判定：not_now（不立 Gate、不实施）** —— 要接的面**不存在**，而不是「面存在但工作量不够」。",
-    "reasons": [
-      "**① 上游无「日程」外供面（R1 ✗）**：对象键形态零命中。要接的面不存在 ⇒ 真做 F-4 只能由下游**自己造一个日程模型** —— 那就从「接外供面」变成了「新做一个业务域」（含数据模型、存储、UI、与上游承诺/在场面的一致性维护），量级与 O 批/F 批其余项不在一个档。",
-      "**② 上游时间轴只有「楼层」这一条（R2 ✗）**：无日内时刻（无 `scheduledAt` / `dueTime`）、无跨日期周期日程、无时区长。承诺只有 `deadlineFloor` 一个数字键。**「日程冲突」这个词的能指在这里无处落地**：唯一可算的是「两条承诺的 deadlineFloor 撞在同一个楼层」—— 那只是「两份待办截止点相同」，不是日程冲突，而且得由下游自己算、且要自己定义「几个楼层内算撞车」。",
-      "**★ ③ 上游把「冲突判断」刻意留给了下游，而这与 F-3 已经定下的纪律相互抵触（R3 ✓ 但方向相反）**：`coPresence()` 函数体内零判断字段，上游 CHANGELOG 原话「读数的职责是给事实，把『他们会不会打起来』塞进读数就是拿猜测冒充事实」。下游 F-3（v3.4.3）也已在自己的卡上守住「不写冲突 / 对峙 / 碰面风险」并由判据钉在剥注释后的代码上。故 F-4 若要「判定冲突」，就是在下游重建一个**上游与下游都已明确拒绝的判断面**。",
-      "**④ 下游已有基础但增量小（R4 ✓，4 个文件 / 22 个点）**：`plotline-data.js` 已在读 `p.deadlineFloor`（`deadline` 列）+ `p.status`（未知 status 如实透传），`global-search-engine.js` 把承诺建成可搜索条目。也就是说「承诺到期」这件事**已经能看见了**；F-4 的增量只剩「撞车提醒」，而它的数据源（楼层）已在手。"
-    ],
-    "only_axis_with_evidence": "真正有读数支持、且不需要凭空造模型的替代轴是**「承诺到期读数的可见性提升」**：把上游已给的 `status` 三态（pending / imminent / overdue）与 `deadlineFloor` 在 plotline 面上按紧迫度显式分档（已逾期 / 即将到期 / 进行中 —— 上游 `describePromise` 已有这三档文案），并把「同楼层截止的承诺互相关联」做成**并排呈现**而非「冲突判定」。本版只立读数与判据，不动手。",
-    "not_blocked_by": "不阻任何其他项：本项未开工，故无依赖它的工作；F 批其余项（F-1 / F-2 / F-3 / F-5 / F-6 / F-8）状态不受影响。"
+  "v3.64.0": {
+   "what": "v3.64.0：只重绑陈旧枚举面（本探针口径早在 v3.22.0 已含块注释纪律，本版未改它）",
+   "why": "files_scanned 371 -> 373：枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config 侧新件（branch-contrast.js / resume-handoff.js / app-lazy-routes.js 等）未重绑。本版治的是兄弟探针（branch_play_probe）的块注释口径，**不动本探针任何读数**：consume_points 23 / consume_files 6 / local_engine_hits 0 与消费文件名单逐字不变（同一份现场输出比对，非照抄）。",
+   "readings": {
+    "files_scanned": 373
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "消费面读数为零漂移（承诺期限 / 状态消费点 23、文件 6、本地日程引擎 0），这是如实记录而非漏复校。",
+    "上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。"
+   ]
   },
-  "corrections": [
-    "**探针首版把内部调度器误报成「上游有日程面」**：初版按裸子串搜 `schedule`，命中上游 index.js 的 `_scheduleFloorHeal(f)`（注释「[v3.19] 周期调度纯函数（收编 RUBY scheduler.js）」）—— 那是**内部楼层修复调度器**，既不是外供面、也与剧情日程无关。修正为只认**对象键形态**（`schedule:` / `timetable:`）后为 0 命中。教训：判据必须匹配**真实书写**（同 lifecycle 门禁的踩坑：漏认/多认都会翻转结论）。",
-    "**探针首版只搜整文件，把 T16/T17 自述里的 `severity` 误报成「coPresence 面含判断字段」**：`scene-book.js` 的 `observationNotes()`（v3.232.0 的 F-6 口径自述）里有 `severity: 'observation'` 两条，与 coPresence 无关。修正为只在 **`coPresence()` 函数体（花括号配平抽取）** 内搜，实测 0 命中。教训：**范围粒度错会造成假阳性**，而假阳性会直接翻转 R3 的结论。",
-    "**探针初版有 O(n²) 性能缺陷（读数不变，但门禁时长不可接受）**：`index.js` 的行切分被写在了 for 的**条件与体内**（`for (let i = 0; i < IDX.split(NL).length; i++) { const l = IDX.split(NL)[i]; ... }`），于是 13k 行每次迭代重切一次。实测：单次探针 ~24 秒；套件里探针被拉起四次 ⇒ 96 秒，把全量九门拖到超时。修正为**切分只算一次**后 0.64 秒，**读数逐项不变**（同一份文本、同一套判据）—— 这正是「性能回归与读数回归必须分开判」的案例：它不影响结论，只影响可跑性。",
-    "**负控制 D3 初版选了「改名」而非「摘行」，破坏不产生可观测差异**：探针的判据 token 是**子串**匹配（`deadlineFloor` 含 `deadline`），故把 `deadlineFloor` 改名成 `deadlineFloorX` 后同一行仍被 `deadline` 命中，消费点数不变 ⇒ 该负控制**假绿**（判据对破坏无反应，看起来却通过）。改为摘**整行**（`for (const p of asArray(wp.promises)) {` → `...wp.promiseRows...`）后点数恰好少 1。教训：负控制必须选「破坏形态与判据粒度匹配」的那一种 —— 否则测的是「判据不敏感」，却读成「判据合格」。",
-    "v3.9.3 复校：本轮新增 `config/worldbook-dryrun.js`（世界书干跑取数层），使枚举面 +1 个文件；其 `chat.map` 归一化处被计入「全表物化」（配置层对历史楼层**只读且随后即弃**，不构成新的消费代价）。读数如实更新，首测版语义保留在 measured_at。",
-    "v3.10.0 复校：本轮新增 `config/knowledge-contract.js` 与 `config/story-clock.js`（枚举面 +2），并真实改了产品代码（`apps/plotline/*`、`apps/diary/diary-data.js`、`apps/diagnose/*`、`apps/calendar/calendar-app.js`）。**除枚举面外全部读数逐项不变** —— 本探针量的是「有没有这类站点、有多少」，两个新模块经 `config/world-bridge.js` 读桥，不直接摸 `ctx.chat`，故站点数零变化。首测版语义保留在 measured_at。",
-    "v3.11.0 复校：`files_scanned` 229 → 230（本版新增 1 个文件 `config/rollback-preview.js`）。其余三项读数（`consume_points` 22 / `consume_files` 4 / `local_engine_hits` 0）逐项不变 —— 本版没有碰日程面，枚举面涨的是文件数而不是消费点。",
-    "v3.12.0 复校：本轮新增 `config/num-gate.js`（全仓取数唯一实现，零依赖叶子模块，被 20 个产品文件引用）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版只改「取值口径走哪一份实现」，不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，取数实现替换不改变站点数）。首测版语义仍保留在 measured_at。",
-    "v3.13.0 复校：本轮新增 `config/boot-timing.js`（启动耗时可观测面真源，零依赖叶子模块）⇒ 枚举面 +1。**除枚举面外全部读数逐项不变** —— 本版是纯读数层（一条加载路径都不改），故不新增/不删除任何被本探针计数的站点（探针量的是「有没有这类站点、有多少」，接一层没时计不影响站点数）。首测版语义仍保留在 measured_at。",
-    "v3.15.0 复校：本轮新增 2 个真源模块（config/usage-tracker.js 使用统计采集内核 / config/contact-insight.js 联系人互动纯函数内核）+ 1 个 App 目录（apps/usage/ 下 3 个 .js）⇒ 枚举面 232 → 237（+5）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面（consume_points 22 / consume_files 4 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程/期限面的任何一行，也没有长出本地日程引擎（新模块只做读数的采集与聚合，零 deadline/scheduledAt 语义）。",
-    "v3.18.0（R-O4）复算：枚举面 237 → 238（新增 config/context-compose.js）。消费点与消费文件逐字不变（承诺期限/状态面未被本版触碰）。",
-    "v3.19.0 复校：枚举面 238 → 239（本版新增 1 个真源文件 `config/crossrepo-registry.js` —— 跨仓功能登记面，零 import 叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走；消费面逐项不变 —— 本版没有碰日程/期限面任何一行。 消费点（consume_points 22）与消费文件（consume_files 4）逐字不变。★ 另有一条**踩坑留档**：登记面初版的 `contract` 描述里逐个列了上游字段名，被本探针按**子串**计了一行 ⇒ 消费点一度虚涨到 23 / 文件 5。处置是改描述措辞（不列英文字段名），**未动探针、未动读数** —— 那一条要守的是「有没有人真的校验承诺期限」，登记表的描述一个字节都不消费它。",
-    "v3.20.0 复校：枚举面 239 → 240（本版新增 1 个真源文件 `config/resume-brief.js` —— 续玩简报内核，计划二 F8 的手机侧内核；零取数叶子模块）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实增量**（与上面那种「只涨枚举面」不同）：续玩简报真的读了「上游承诺的行」（经 `apps/plotline/plotline-data.js` 的投影 = 承诺期限消费面），且收集器遍历承诺数组时读长度 ⇒ 消费点与相关站点计数**如实上涨**，不是扫描器误报。逐项增量已写在下面的读数里；破坏性判据（消费点恰好少 1）不受影响。 消费面：consume_points 22 → 26、consume_files 4 → 6（新增 `config/resume-brief.js` 与 `apps/timeweaver/timeweaver-collector.js` —— 前者按承诺投影行渲染「上游未了承诺」一节并读 `deadline`，后者接收该投影并读其行数）。",
-    "v3.20.2 复校：枚举面 240 → 241（本版新增 2 个文件：只读真源 `config/checkpoint-content-contract.js`（上游检查点内容级只读对照的消费侧单一真源）与判据 `tests/system-v3202.test.mjs`）。**同一条轴**：本探针量的是「枚举面上有多少文件」，所以它只随真源文件数走。★ 本版这一条轴**另有真实归因**：新增的那个 config 文件是**零取数叶子** —— 它只调上游 `LonShaMemory.engine` 的两个只读方法，**不碰** localStorage / 不碰本仓 storage / 不摸 `ctx.chat`，故对本探针量回滚点与站点的读数**零贡献**（实测：回滚点 / 消费点 / 站点数逐项不变）。",
-    "**★ v3.22.0 复校（口径收紧：一是词边界，二是块注释）**：`consume_points` 26→**23**、`consume_files` 6（成员有增有减）、`files_scanned` 241→247。两处都是**探针自己原先的口径没做全**，不是源文案的问题：① `deadline` 是**子串**匹配 ⇒ 新版 `apps/focus/focus-app.js` 的私有运行态字段 `_deadline`（番茄钟倒计时时刻，10 处）被算成「消费上游承诺期限」（假阳性，「漂亮的假涨」）；② 探针口径写明「注释行不计」，但实现只跳过 `//` ⇒ `/* … 倒计时显示走 deadline。 */`这类**块注释散文**照算（残余 1 点）。修法：`deadline` 改词边界匹配（`deadlineFloor` 仍由它自己的 token 命中），并在匹配前把 `/* … */` 整段抹白（保留换行 ⇒ 行号不变）。★ 同时如实记下**成员变动**：`apps/focus/focus-app.js` 出列（它读的是自己的倒计时，不是上游承诺），其余 6 个文件不变。",
-    "v3.85.0 复校：枚举面 402 → 403（本版新增 4 个真源文件 config/num-clamp.js（有界取数唯一实现）/ config/diagnose-action.js（诊断处置面）+ 两件判据套件 tests/system-v3820.test.mjs / system-v3830.test.mjs，另含 v3.80.0 起的 A/B 清单八件真源 config/portable-payload.js / submodel-isolation.js / ambience-pool.js / relation-tier.js / scene-rules.js / state-fields.js / archive-digest.js / memory-correction.js / craft-cards.js；累计 16 件）。**同一条轴**：本探针量的是「枚举面上有多少文件」，故它只随真源文件数走；消费面（consume_points 23 / consume_files 6 / 本地引擎命中 0）逐项不变 —— 本版没有碰日程与期限面任何一行。"
-  ],
-  "not_done": [
-    "**未立 Gate、未写任何产品代码**：本版只取证与判据（探针 + 基线 + 套件），下游产品行为零变化。",
-    "**未给「日程」建模型**：那是 F-4 若实施时的主体工作（数据模型 / 存储 / UI / 与承诺面一致性），本版刻意不做 —— 因为读数说「面不存在」。",
-    "**未验实机**：所有读数来自源码与上游冻结证据；无头环境跑不了宿主。",
-    "**未把该读数立成常驻门禁**：与 P-6 / O-5 同口径 —— 「面存不存在」是决策输入，不是契约。"
-  ],
-  "rebuilds": {
-    "v3.22.0": {
-      "why": "探针 token 口径收紧（词边界 + 块注释剥离）⇒ 读数变小；同时枚举面随新版 +6 个文件。",
-      "readings": {
-        "files_scanned": 247,
-        "consume_points": 23,
-        "consume_files": 6
-      },
-      "unchanged": [
-        "local_engine_hits"
-      ],
-      "not_done": [
-        "探针只扫 6 个已知消费点文件的**静态命中**；新 App 的倒计时（focus 的 `_deadline`）是**私有运行态**，不是「消费上游承诺期限」，故**不应**计入 —— 这也是本轮把 token 由子串匹配收成词边界的原因。",
-        "运行时是否真出现「两个 App 争同一日程槽」需要真宿主时间推进，本层不可测。"
-      ],
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）"
-    },
-    "v3.23.0": {
-      "why": "判据散文刷新：`criteria[R4].got_text` 是**手抄旧值**（\"4 个文件在消费\"），与同文件 `readings.consume_files=6` 以及探针现场输出（\"6 个文件在消费\"）**同文件内互相矛盾**。根因不是探针：本轮新增 focus 的私有倒计时字段后，探针把 `deadline` 收成词边界匹配 ⇒ 消费文件数变过；readings 跟着更新了，散文段没有。",
-      "readings": {},
-      "unchanged": [
-        "readings",
-        "scan（若该基线有）",
-        "sites（若该基线有）",
-        "verdict",
-        "corrections",
-        "not_done",
-        "timing_criteria"
-      ],
-      "not_done": [
-        "**上游面仍未复核**（R1–R3 现场为「未复核（冻结证据：…）」）：要复核时传 `--upstream <dir>` 或 `RP_UPSTREAM_ROOT`；本层不硬依赖兄弟仓在场。",
-        "真宿主实机不可测（无头环境跑不了宿主）—— 仍归 R-O3。"
-      ],
-      "what": "判据散文（`criteria[*].got_text`）纳入机械复算并刷新手抄漂移"
-    },
-    "v3.24.0": {
-      "why": "v3.24.0：新增 `config/l0-assets.js`（L0 素材唯一取数口）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 247 → 248；其余读数（回滚点 / 会话隔离正则 / 命名空间守卫 / 上游冻结面）不受影响。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/schedule_conflict_probe.cjs --json",
-      "readings": {
-        "readings.files_scanned": 248
-      }
-    },
-    "v3.25.0": {
-      "why": "v3.25.0：新增存钱罐 App（`apps/piggy/` 三个 .js）落在探针枚举面（apps/ + config/ 的 .js）⇒ 枚举文件数 248 → 251；**其余读数逐项不变** —— 消费面仍是 6 个文件 / 23 个消费点 / 本机引擎命中 0。理由：存钱罐读时间只走既有的取数口，不新增「按时刻消费」的站点，也不引入任何本机日程引擎。新值取自探针现场输出，不手抄。",
-      "how": "node tests/audit/schedule_conflict_probe.cjs --json",
-      "readings": {
-        "files_scanned": 251
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "not_done": [
-        "存钱罐的「家庭卡片刷新周期」（PIGGY_REFRESH_PERIODS）是**展示口径**，不是日程冲突面：它不读楼层时间轴，也不参与任何日程合并，故本探针消费面 0 变化。",
-        "本层只量静态站点与既有消费面；真机里「换会话时余额与卡片从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.26.0": {
-      "what": "新增两个 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面随两个新 App 扩张（251 → 257 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 正则过滤器与打卡都不消费上游的「承诺期限 / 状态」（前者是文本工作台，后者是主叫侧账本）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 257
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {}
-    },
-    "v3.27.0": {
-      "what": "四件新 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面随四件新 App 扩张（257 → 269 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 头像框 / 商城 / 拉黑 / 天气都不消费上游的「承诺期限 / 状态」（四件都是单会话内的**自有账**：框配置、商品目录与订单、黑名单、天气缓存，都不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 269
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "四件新 App 各带 12 条会话隔离前缀（3 + 5 + 2 + 2），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时四件的账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.28.0": {
-      "what": "自定义组件 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面随新 App 扩张（269 → 272 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 自定义组件不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的组件登记与桌面实例表**，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 272
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "新 App 带 4 条会话隔离键（settings / templates / instances / draft），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时组件表与桌面实例从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.29.0": {
-      "what": "桃宝 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面随新 App 扩张（272 → 275 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 桃宝不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的商品 / 车 / 订单 / 抓取记录台账**，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 275
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "新 App 带 5 条会话隔离键（settings / products / cart / orders / grabs），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时目录 / 车 / 订单 / 抓取记录从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.30.0": {
-      "what": "恋爱空间 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）",
-      "why": "枚举面随新 App 扩张（275 → 278 个文件）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 恋爱空间不消费上游的「承诺期限 / 状态」（它是一册**本会话自有的关系台账**：起算日 / 足迹 / 日记 / 情书 / 问答，不读楼层时间轴、不参与日程合并）。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 278
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "新 App 带 6 条会话隔离键（settings / days / footprints / diary / letters / questions），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时起算日 / 足迹 / 日记 / 情书 / 问答从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.32.0": {
-      "what": "v3.31.0 约会大作战 App 的**真实接线**（出口调用、样式投递、storage 前缀、会话路径入口）；v3.32.0 两个子游戏同样只扩枚举面",
-      "why": "枚举面随两版新件扩张（278 → 285 个文件：v3.31.0 的 `apps/date/` 三件 ＋ v3.32.0 的 `apps/games/seaturtle/` 与 `apps/games/guesswhat/` 各两件 .js）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0 —— 约会大作战是一册**本会话自有的约会台账**（场景册 / 场次 / 欠账），海龟汤与你说我猜是**一局对话型对局**（谜题 / 日志 / 回合），三者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 285
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "两版新件共带 9 条会话隔离键（date：settings / scenes / store 三键；seaturtle / guesswhat 各一态键），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时场景册 / 场次 / 欠账 / 一局对局态从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.33.0": {
-      "what": "v3.33.0 游戏厅下半两件：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（285 → 289 个文件：`apps/games/scriptkill/` 的 data / view 两件 与 `apps/games/ludo/` 的 data / view 两件，共 +4 个 .js）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。剧本杀是一局**多阶段推理对局**（角色 / 线索 / 投票 / 日志），心动飞行棋是一局**棋盘格对局**（骰子 / 格子 / 题库 / 事件），两者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 289
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 2 条会话隔离键（`chat_games_scriptkill_state` / `chat_games_ludo_state`），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时一局对局态从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.34.0": {
-      "what": "v3.34.0 老福特：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（289 → 292 个文件：`apps/lofter/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。老福特是一块**内容流平台**（短文流 / 长篇合集 / 评论楼中楼 / 关注订阅四格 / 阅读面），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 292
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（设置 / 内容 / 存储），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时稿子从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.35.0": {
-      "what": "v3.35.0 Pixiv：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（292 → 295 个文件：`apps/pixiv/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。Pixiv 是一块**内容平台**（插画登记面 / 小说与滑窗 / 评论楼中楼与三态 / 检索与四格 / 出图要求文本），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 295
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（设置 / 内容 / 存储），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时稿子从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.36.0": {
-      "what": "v3.36.0 杂志：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（295 → 298 个文件：`apps/magazine/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。杂志是一块**内容编辑部**（十型稿件 / 十套解析 / 四套导出 / 译文块），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 298
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（设置 / 内容 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时稿件从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.37.0": {
-      "what": "v3.37.0 白盒音效盒：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（298 → 301 个文件：`apps/soundkit/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。音效盒是一块**本机音频合成面**（四条去处的绑定表 / 自定义配方 / 试听与导出台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 301
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（设置 / 配方 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时配方从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.38.0": {
-      "what": "v3.38.0 召回治理台：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（301 → 304 个文件：`apps/recall/` 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。召回治理台是一块**候选治理面**（四路状态 / 融合逐路贡献 / 注入裁决 / 回执台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1–R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 304
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（四路配置 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时策略与水位线从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.39.0": {
-      "what": "v3.39.0 时光胶囊：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（304 -> 307 个文件：apps/sourcebook/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。时光胶囊是一块**封存取回治理面**（跨度分档 / 口吻分族 / 硬约束校验 / 回信归一 / 读数台账），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 307
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（封存 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.40.0": {
-      "what": "v3.40.0 对话水壶：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（307 -> 310 个文件：apps/kettle/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。对话水壶是一块**收话治理面**（轮次分档 / 选项裁切 / 场景标注 / 单字登记 / 破折号体检 / 记录封包），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 310
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（记录 / 策略 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.41.0": {
-      "what": "v3.41.0 需求沙盘：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（310 -> 313 个文件：apps/needsim/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。需求沙盘是一块**收拾模型给的数值**的治理面（需求钳位 / 效果台账 / 池子四态 / 游标轮次 / 愿望四态 / 记忆淘汰 / 回信归一），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 313
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（需求 / 池子 / 记忆与愿望 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时策略与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.42.0": {
-      "what": "v3.42.0 曲库案头：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（313 -> 316 个文件：apps/musicdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。曲库案头是一块**收拾用户拿回来的曲目数据**的治理面（曲目归一与去重 / 封面四态 / 歌词归一 / 播放模式与队列游标 / 来源读数 / 回执归一），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 316
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（曲库 / 歌词 / 台账 / 策略），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时曲库与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.43.0": {
-      "what": "v3.43.0 PV 案头：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（316 -> 319 个文件：apps/pvdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。PV 案头是一块**收拾分镜脚本与歌词**的治理面（分镜解析 / 逐镜要求文本 / 歌词时间轴与字幕版式 / 三项上限余量），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 319
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（题面 / 作品台账 / 歌词 / 策略），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时题面与作品台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.44.0": {
-      "what": "v3.44.0 同人商店 · 柜台：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（319 -> 322 个文件：apps/doujin/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。同人商店是一块**收拾商品原文与二手在售原文**的治理面（价格三态 / 商品行逐行拒收 / 热度与盲盒分形 / 出品定价 / 售罄与重定价 / 上限余量 / 台账裁边），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 322
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（店头（含存档）/ 市场 / 收银台 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时店头与车从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.45.0": {
-      "what": "v3.45.0 存档台：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（319 -> 322 个文件：apps/archive/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。存档台是一块**收拾一份备份包**的治理面（包型裁定 / 版本互认 / 覆盖性 / 逐表读数 / 结构体检 / 体积估重 / 重置影响），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 325
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（已收包 / 对账面 / 要求草稿 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时已收包与对账面从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.46.0": {
-      "what": "v3.46.0 思维链案头：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（325 -> 328 个文件：apps/cotdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。思维链案头是一块**看一份条目册怎么落下去**的案头面（位置 × 角色 / 深度 / 接口 / 预填 / 原生思考参数 / 锁定 / 标记体检 / 收录失败因 / 上限余量），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 328
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **4 条会话键**（条目册 / 配置 / 草稿 / 台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时条目册与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.47.0": {
-      "what": "v3.47.0 诊断案头：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（328 -> 331 个文件：apps/diagdesk/ 的 data / app / view 三件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。诊断案头是一块**看一份存档怎么读、该补什么**的案头面（版本 / 六态 / 增量 / 流水线 / 栏位 / 迁移 / 判定 / 收录），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 331
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **3 条会话键**（存档原文 / 摘要草稿 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时存档与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.48.0": {
-      "what": "v3.48.0 子宫画板：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（331 -> 334 个文件：apps/uterus/ 的 3 件 .js，样式那件不进本探针的扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。子宫画板是一块**把一份角色状态画成一张像素画板**的治理面（几何 / 版面 / 液面 / 囊 / 读数 / 判定 / 收录），它不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 334
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新件共带 **2 条会话键**（收下的角色状态原文 / 动作台账），但**没有一条**落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是**如实记录**，不是漏复校。",
-        "真机里「换会话时状态与台账从 storage 现取」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.54.0": {
-      "what": "v3.54.0 全量回归首跑 · 基线刷新（零手抄，按探针现场落盘）",
-      "why": "files_scanned 334→367：v3.49~v3.54 新增 App 与判据套件使扫描文件数增长。首次全量 npm run test 暴露基线陈旧。"
-    },
-    "v3.55.0": {
-      "what": "枚举面 367 -> 368（新件 config/app-consumption-matrix.js 进静态扫描面）",
-      "why": "v3.55.0 A2 App 消费面矩阵：新增 config/app-consumption-matrix.js（只读真源）与 tests/system-v3550.test.mjs（判据套件），并把矩阵面接进诊断中心（apps/diagnose/diagnose-data.js 真陈列、diagnose-view.js 建卡）。本版**未新增 App**：生命周期面的 App 类 / 实例槽位 / 三路径分布 一格未动；本面变动的只是**静态扫描面**（该探针按 .js 文件计），故 +1。 消费面一格未动（consume_points 23 / consume_files 6 / local_engine_hits 0 逐项不变）；四条判据与 verdict（not_now）一字未动。",
-      "readings": {
-        "files_scanned": 368,
-        "consume_points": 23,
-        "consume_files": 6,
-        "local_engine_hits": 0
-      }
-    },
-    "v3.58.0": {
-      "what": "v3.58.0 O4/O5：只扩枚举面，不消费「承诺期限 / 状态」",
-      "why": "枚举面随本版新件扩张（368 -> 370 个文件：config/session-gate.js 与 config/write-receipt.js；判据套件不进本探针扫描面）；**承诺期限 / 状态的消费面一格未动**：消费点仍 23 处、消费文件仍 6 个、本地引擎命中仍 0。本版治的是「回信跨会话落错桶」与「写入报成功但其实没落」，两者都不读楼层时间轴、不参与日程合并、不消费上游的「承诺期限 / 状态」。上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。",
-      "readings": {
-        "files_scanned": 370
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新增的两件真源都不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
-        "真机里「换会话时在飞的日程请求是否被栅栏挡下」的时序仍归 R-O3（真宿主实机验证）。"
-      ]
-    },
-    "v3.64.0": {
-      "what": "v3.64.0：只重绑陈旧枚举面（本探针口径早在 v3.22.0 已含块注释纪律，本版未改它）",
-      "why": "files_scanned 371 -> 373：枚举面 = apps/** 315 + config/** 58 = 373；基线 rebuilds 段最后一条停在 v3.58.0（记 370），此后 v3.61.0/v3.62.0/v3.63.0 新增的 config 侧新件（branch-contrast.js / resume-handoff.js / app-lazy-routes.js 等）未重绑。本版治的是兄弟探针（branch_play_probe）的块注释口径，**不动本探针任何读数**：consume_points 23 / consume_files 6 / local_engine_hits 0 与消费文件名单逐字不变（同一份现场输出比对，非照抄）。",
-      "readings": {
-        "files_scanned": 373
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "消费面读数为零漂移（承诺期限 / 状态消费点 23、文件 6、本地日程引擎 0），这是如实记录而非漏复校。",
-        "上游面（R1-R3）仍为「未复核（冻结证据）」：本层不硬依赖兄弟仓在场，按既有口径不刷新。"
-      ]
-    },
-    "v3.65.0": {
-      "what": "v3.65.0 枚举面 +5（config 新件 3 个 .js；apps/taskentry 2 个 .js）",
-      "why": "files_scanned 是 apps/** + config/** 的 .js 计数：373 -> 378。**消费面一格未动**（消费点 23 / 消费文件 6 件 / 本地引擎命中 0）—— 本版新增的是任务入口导航件，不碰排期冲突的任何消费路径（R2 的「只有楼层维」与 R3 的「未复核（冻结证据：0）」两段散文一字不改）。",
-      "readings": {
-        "files_scanned": 378,
-        "consume_points": 23,
-        "local_engine_hits": 0
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
-    },
-    "v3.66.0": {
-      "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
-      "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
-      "readings": {
-        "files_scanned": 379
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "本版新增的协议件不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
-        "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。"
-      ]
-    },
-    "v3.72.0": {
-      "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑（消费面一格未动）",
-      "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。",
-      "how": "node tests/audit/schedule_conflict_probe.cjs --json",
-      "readings": {
-        "files_scanned": 384
-      },
-      "unchanged": [
-        "consume_points",
-        "consume_files",
-        "local_engine_hits"
-      ],
-      "criteria_refreshed": {},
-      "not_done": [
-        "消费面（承诺期限 / 状态）与上一版逐字相同：消费点 23 / 消费文件 6 —— 本版新增的五个 config 件不落在该消费面上。这是如实记录，不是漏复校。",
-        "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。",
-        "本版只重绑枚举面读数，**不动**判定（verdict 与 criteria 散文除 files_scanned 引用外逐字不变）。"
-      ]
-    }
+  "v3.65.0": {
+   "what": "v3.65.0 枚举面 +5（config 新件 3 个 .js；apps/taskentry 2 个 .js）",
+   "why": "files_scanned 是 apps/** + config/** 的 .js 计数：373 -> 378。**消费面一格未动**（消费点 23 / 消费文件 6 件 / 本地引擎命中 0）—— 本版新增的是任务入口导航件，不碰排期冲突的任何消费路径（R2 的「只有楼层维」与 R3 的「未复核（冻结证据：0）」两段散文一字不改）。",
+   "readings": {
+    "files_scanned": 378,
+    "consume_points": 23,
+    "local_engine_hits": 0
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "not_done": "上游实时复核仍未做（本版未给 --upstream）。"
+  },
+  "v3.66.0": {
+   "what": "v3.66.0 X2 第一切片：config/open-ref.js 进枚举面（跨 App 靶心协议件）",
+   "why": "枚举面 378 -> 379 个文件（本版新增四个 .js：config/open-ref.js 进本探针扫描面；apps/search/search-view.js / apps/memory/global-search-engine.js 是既有件；tests/system-v3660_open_ref.test.mjs 在 tests/ 下，不进本探针扫描面）。**消费面一格未动** —— 本版治的是「搜到一条内容却打不开那一条」，它既不读楼层时间轴、也不参与日程合并、不消费上游的「承诺期限 / 状态」。",
+   "readings": {
+    "files_scanned": 379
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "本版新增的协议件不落在「承诺期限 / 状态」的消费面上：消费点 23 / 消费文件 6 与上一版逐字相同。这是如实记录，不是漏复校。",
+    "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。"
+   ]
+  },
+  "v3.72.0": {
+   "what": "v3.72.0 R-O2 组 D：陈旧枚举面零手抄重绑（消费面一格未动）",
+   "why": "枚举面 379 -> **384** 个文件（apps/** 317 + config/** 67）：v3.68.0~v3.72.0 五版合并交付新增五个 config 侧协议件 —— character-slot-manager.js / creation-pipeline.js / finance-overview.js / schedule-bridge.js / social-knowledge-bridge.js。基线 rebuilds 段最后一条停在 v3.66.0（记 379），此后五版从未重绑 —— 本版不是「新件进面」，是**把欠账补上**。★ 归因链（实测，非推测）：五版合并交付（9a27979）把新增件一次带进树，而三份基线各自的重绑义务只在**当版交付时**触发 ⇒ 五版合并时无人执行，读数停在 379。形态与本版抓到的主缺陷同族：**不报错、不崩溃、只错结果** —— 门禁不响，基线静默陈旧。★ 为何单列一版重建而不是改判据：本仓明令禁止「刷新 baseline 洗绿」；此处刷新是**如实记录现场**，判据一字未动（v325 A2 要求读数与基线逐项一致 —— 基线是账本，不是阈值）。★ 未做（如实）：本版不追查五版合并时为何漏绑（工具链缺口），只在留档里把缺口形状写清。",
+   "how": "node tests/audit/schedule_conflict_probe.cjs --json",
+   "readings": {
+    "files_scanned": 384
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "criteria_refreshed": {},
+   "not_done": [
+    "消费面（承诺期限 / 状态）与上一版逐字相同：消费点 23 / 消费文件 6 —— 本版新增的五个 config 件不落在该消费面上。这是如实记录，不是漏复校。",
+    "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。",
+    "本版只重绑枚举面读数，**不动**判定（verdict 与 criteria 散文除 files_scanned 引用外逐字不变）。"
+   ]
   }
+ }
 }

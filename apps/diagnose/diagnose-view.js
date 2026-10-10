@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, resumeWorkbenchFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -391,6 +391,46 @@ export class DiagnoseView {
      }
     /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议卡：知情账本状态 + 表自检。
       *  与 _financeHtml 同规格：内核只陈列，本视图只排版。 */
+    /** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议卡：三态表 + 项目清单 + 影响范围 + 缺口。
+     *  与既有受控恢复交接卡分工：那张答「这一次恢复的预检过了没有」；本卡答「跳项目续玩这条路通不通」。 */
+    _resumeWorkbenchHtml(pkg) {
+        const face = (pkg && pkg.resumeWorkbenchFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到续玩工作台协议面（已降级）—— '
+                + '这是「本层读不出」，**不是**「没有选中项目」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(resumeWorkbenchFaceText(face)) + '</div>';
+        const states = Array.isArray(face.states) ? face.states : [];
+        if (states.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + states.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.key) + '</code>'
+                + this._chip(escapeHtml(r.label), 'muted') + '</div>').join('') + '</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>项目清单：'
+            + (face.listReadable === null
+                ? '<b>尚未取数</b>'
+                : (face.listReadable
+                    ? ('读到（' + escapeHtml(String(face.projectCount === null ? '—' : face.projectCount)) + ' 个项目）')
+                    : '<b>读不到</b>（**不是「没有作品」**）'))
+            + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>影响范围：未了 '
+            + escapeHtml(String(face.openItems === null ? '—' : face.openItems))
+            + ' · 角色 ' + escapeHtml(String(face.characterCount || 0))
+            + ' · 停点 ' + ((face.lastFloor === null || face.lastFloor === undefined)
+                ? '未记录' : ('第 ' + escapeHtml(String(face.lastFloor)) + ' 楼'))
+            + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>恢复：'
+            + (face.canRestore ? '可请求恢复（委托真实 owner）' : '不可恢复（读写分离，本机不自己改主档）')
+            + ' · 缺面 ' + escapeHtml(String(face.gapCount || 0))
+            + ' · 冲突 ' + escapeHtml(String(face.conflictCount || 0))
+            + '</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>三态/隔离地基自检报了问题</b>：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+        }
+        return html;
+    }
      _knowledgeBridgeHtml(pkg) {
          const face = (pkg && pkg.knowledgeBridgeFace) || null;
          if (!face) {
@@ -1171,6 +1211,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务总览协议（七源归一 + 结算草稿 + 幂等账本）</h3>' + this._financeHtml(pkg) + '</section>');
         /* [v3.87.0 · R-X3] 提交向导卡与总览卡**并列**（分工：总览量余额，本卡量「建议→已确认」通不通）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务提交向导（四态：已发生 / 待确认 / 模拟报价 / 结算建议）</h3>' + this._financeCommitHtml(pkg) + '</section>');
+        /* [v3.88.0 · R-X4] 续玩工作台卡与受控恢复交接卡**并列**（分工：交接卡量这一次的预检，本卡量跳项目这条路）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跳项目续玩工作台（三态：未选项目 / 清单读不到 / 已选中）</h3>' + this._resumeWorkbenchHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

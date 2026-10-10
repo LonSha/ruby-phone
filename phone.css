@@ -16050,6 +16050,11 @@ input:checked + .toggle-slider:before {
     max-height: 210px;
     overflow-y: auto;
 }
+/* ---------- 项目选择行（v3.88.0 · R-X4） ---------- */
+.arc-pick { align-items: center; }
+.arc-pick .arc-list-k { min-width: 120px; color: var(--arc-ink); }
+.arc-pick.on { border-left: 3px solid var(--arc-ok); padding-left: 5px; }
+.arc-pick .arc-btn { flex: 0 0 auto; }
 /* ══════════════ [v3.44.0] 同人商店（doujin） ══════════════ */
 /* ========================================================
  * doujin.css — [v3.44.0] 同人商店 · 样式层

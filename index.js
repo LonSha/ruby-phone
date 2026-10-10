@@ -131,6 +131,14 @@ import {
  *   为什么不在各 App 里各写一份「出发时记个号、回来对一下」：那正是本仓 v3.12.0 立唯一取值门
  *   之前的老路（同一口径抄 N 份，第 N+1 份必然是漏的那份）。 */
 import { bumpSessionEpoch } from './config/session-gate.js';
+/* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台（纯函数协议层）。
+ *   接在咽喉的理由与 R-X1/R-X2/R-X3 同族：项目清单 / 选中项 / 各面读数 / 在飞回信
+ *   全由调用方给 —— **本模块自己不取数、不写存储、不持会话键**。
+ *   恢复也只产请求，由 `applyResumeRestore` 委托真实 owner（上游分卷接续）。 */
+import {
+    buildResumeWorkbench, rwSummaryLine, rwDraftOf, rwLevelLine, rwProjectsFromPack,
+    resumeWorkbenchSelfCheck, RW_LEVELS, RW_PROJECT_STATES as RW_STATES
+} from './config/resume-workbench.js';
 /* [v3.13.0 · 计划 #14] 启动耗时的**可观测面**（读数是优化的前置条件，本版一条加载路径都不改）。
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
@@ -164,7 +172,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.87.0';
+const ST_PHONE_VERSION = '3.88.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -346,25 +354,29 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-11",
     items: [
-        "【定位 · 计划 R-X3 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 确认前先预览这笔交易影响哪些人的余额；② 确认动作只能由唯一 owner 写；③ 写后回读、可重试、可撤销；④ 预演与已发生与待确认与不可确认四态必须分得开。修前实测的处境是：预算与结算草稿建好了，**但没有任何一处能把它变成一条已确认账**。",
-        "【修前处境的四条实测形态】** ① X4 已经把七源归一与结算草稿与幂等账本建齐，但 finance_ledger 这一格**全仓零写入点**（只在咽喉里被读出来挂缓存）；② travelSettlementDraft 产出的是空壳（balances/internal/external 逐字写死 null），fillSettlementDraft 全仓零调用；③ 诊断页永远报「账本 0 条（提交 0）」是**假读数**——不是「没人提交过」，是「根本没有提交这个动作」；④ 建议与已发生在界面上同形，看一瞥就以为是已经转过的钱。",
-        "【新模块 · config/finance-commit.js（纯函数，614 行）】** 提交向导的**唯一实现**：四态表 + 预览 + 计划 + 落账回读撤销 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），账本与草稿由调用方传进来；故**不新增存储键**（复用 X4 登记的那一格 finance_ledger），也不涉 keys 台账。导出十七个出口，自检两侧都跑。",
-        "【四态互不同形：建议与已发生必须分得开（验收④的落点）】** 四态是已发生 / 待确认 / 模拟报价 / 结算建议，每态给三样（键 + 标签 + 处置文案）都不许两两相同。报价态一句话就是「不落账，也永不落账——报价不是交易」；建议态一句话就是「确认后也只是本机记一笔，**不代表对方收到钱**」；已发生态一句话就是「已落账（本机确认过的提交）」。为什么单列：把建议当成已付钱是本仓最贵的一类财务错读数。",
-        "【报价永不落账（计划外的头号守卫）】** 报价（试算结果）即使已经进了账本也判 quoted 且计提交一律被拒（归因 quote-never-commits）。报价与建议在数据上只差一个 kind，但语义是两件事：前者是算给人看的，后者是等人点头的。两者都不许直接变成「钱动了」。",
-        "【预览零写：不是承诺，是这一层不碰账本（验收①的落点）】** 预览只算不写：返回值里 willWrite 恒 false，且**不改入参账本**（就地复算入参串不变）。「预览不修改余额」不需要靠承诺：它没有别的可能。",
-        "【幂等落账：重复确认不重复扣款（验收②的落点）】** 幂等键 = 来源:草稿号:日键（X4 已有那一份口径，本层不重写）。已在账本即 replay，**不重复扣款**且如实回报（这不是错误，是幂等生效）。反向也钉住：换一天（日键变）是**另一笔**结算，次日可以再确认一次——这是有意的，否则「幂等」会把正常的二次确认也吞掉。",
-        "【只允许唯一 owner 写（验收②的另一半）】** owner 查 X4 的来源登记表：本仓写权的来源（记账 / 存钱罐 / 资产 / 旅行记账 / 商城 / 桃宝）返回自己；上游写的来源（钱袋：上游记忆插件写）返回 owner-is-upstream，本机**不能代它写**。落账只动「本机确认过哪些提交」这一本账，**绝不代任何来源改真实余额**。",
-        "【多币种不盲目相加（验收③的落点）】** 混合币种一律不给总额（total 恒 null）并附归因；单一币种才给总额。预览层也守同一条：一笔结算里有多币种时，预览给分币种明细而不拼总额。旅行本就有多币种，硬加出来的那个数没有语义。",
-        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 账本读不出来（null）与「确实零条提交」分开：前者在行面上说「读不到」并明说**这不是「本机没有提交记录」**，在预览里记 ledger-not-read；只有读到了空账本才叫真零条。为什么单列：把「没取数」当成「没有提交」是本仓最贵的一类反向错读数（你就是能让人以为系统没坏）。",
-        "【写后回读两向（验收③的第一半）】** 落账后回读比对：写下去的那一份与读回来的那一份是同一份才算 confirmed；读不回来（或根本没读到）一律 not_confirmed 并带归因。相位止于 confirmed，**不叫 durable**——回读一致不证明字节进了宿主存储（写落盘可能在防抖之后），与既有的写凭据同口径。",
-        "【撤销如实 + 撤的是本机那一笔确认（验收③的第二半）】** 账本里没有这一条就如实拒绝（不假装撤掉了）；撤成功了也清的是本机的确认记录，**不是任何真实余额**——真实余额只能由 owner 自己回滚。",
-        "【结算草稿：从空壳到可提交】** 把旅行记账的 settle 输出拆成带稳定 id 的结算行（内部 / 对外两族各自可辨认），组成一份 kind 固定为 suggestion 的草稿：内部 / 对外计数齐备、参与者去重保序、备注明写「确认后本机记一笔，不代表对方收到钱」。这填掉了 fillSettlementDraft 零调用留下的那个洞。",
-        "【咽喉接线（唯一取数口 + 唯一写入口）】** 取数落在 index.js 的 refreshFinanceCommit：账本从 finance_ledger 读（读不出与空账本分得开）、草稿从旅行记账的 settle 输出构建，缓存挂宿主；刷新点放在日历提醒检查的早退之前（它的草稿源跟剧情时间无关），不 await。**唯一的账本写入口**是 applyFinanceCommitAction：提交走计划→落账→storage.set→回读比对，撤销走回读校验真没了；视图与诊断都不写账本。",
-        "【三态必须不同形 · 两处视图】** 交易台面的结算提交区块只读宿主缓存（缓存不在位说「还没取到提交读数」、草稿不在位说「还没取到结算草稿」，**不**缀「暂无待确认」——那是造谣）；诊断新增财务提交向导卡，与既有财务总览卡分工明确：总览面量余额，本卡量「建议→已确认」通不通。四处读数（未取数 / 没草稿 / 读不到账本 / 有读数）互不同形。",
-        "【本版自己抓到的三处真缺陷（都由负控制与判据当场报出，不是事后回看）】** ① 取数里存缓存时把「账本读不到」与「读到空账本」两个只写成了同一个 ledger 字段，回读面板据此把「还没取数」说成「零条提交」—— 已改成账本本体与 ledgerRead 两名分开存；② 写入口的写后回读原先直接把 storage 读回值当作账本用，坏 JSON 会被抬成「已读到且零条」，改成非数组一律归为「读不到」（null）；③ 账本上限裁剪用例原先把截尾方向写反（以为是保留最早），实跑报出后才改成保留最新（截掉最旧）。三条的共性是：读不到与没有这条口径，在「只用一个字段」时就会被静默压平。",
-        "【交棒改写（判据面，不是放宽）】** 本版把「建议 → 落账」这条路从「只有表与草稿、没有写入口」改成**单一写入口 + 幂等账本**：以后新增一个可提交的来源，只需在 X4 的来源登记表里加一行（并标上 ownerWrite），四态判定与落账与回读都随行给出 —— 是否漏接由登记表与写入口计数回答，不靠人记得。",
-        "【配套判据与负控制】** tests/system-v3870.test.mjs 五面 19 条全绿：A 结构面（四态三动作三计划十七出口 + 复用 X4 那一格 + 派生面枚举面未命中）；B 行为面（十一条判据同源一次通过 + 真跑全链 + 上限裁剪 + 结算行族别）；C 接线面（咽喉四处 + 写入口只有一处 + 两条视图纯渲染 + 账本三读数不同形）；D 负控制（六处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第七处自证破坏副本真被加载且未触及的判据仍成立）；E 版本锚（五源同源不低于 3.87.0）。",
-        "【版本升至 3.87.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3870.py 对齐 tools/bump_v3860.py）。"
+        "【定位 · 计划 R-X4 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 能选一部作品当作「接着玩」的对象；② 选之前先看清这一次接续带什么、停在哪里；③ 接续动作只由唯一 owner 写；④ 未选 / 读不到 / 已选三态必须分得开。修前实测的处境是：上游已有分卷与选择性接续，而本仓**不知道「项目」是什么**（projectId 按字面量搜命中数 0）。",
+        "【修前处境的四条实测形态】** ① 续玩简报 / 分支对照 / 受控恢复交接 三件都在场，但三件各自只答一段，没有一处把「我要接着玩哪一部、带到哪儿、缺什么」一次说清；② 「项目」这一维全仓从来没有过，它只活在上游接续包里；③ 最贵的三种错读数在本面各自本可能发生：「没选项目」被画成「没有作品」、「清单读不到」被画成「零个项目」、「同名角色」按名字被合并成一个人；④ 选中项在存档台自己那一格，但读这一格抛了异常时，清单读不到的分支从来走不到（清单永远被画成空）。",
+        "【新模块 · config/resume-workbench.js（纯函数，963 行）】** 跨项目续玩工作台的**唯一实现**：三态表 + 三级操作 + 五类冲突 + 六面清单 + 接续草稿 + 世代回读 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），项目清单与选中项与各面读数全由调用方给；故**不新增存储键**（复用 X4 已登记的 archive_face 一格）。唯一外部依赖是唯一数值门 num-gate；导出十七个出口，自检十四组两侧都跑。",
+        "【三态互不同形（验收④的落点）】** 三态是尚未选择项目 / 项目清单读不到 / 已选中项目，每态给三样（状态词 + 标签 + 总括行）都不许两两相同。没选那一态的一句话就是「维持会话隔离，本项目读数一栏不产出」；读不到那一态就是「不是「没有作品」，是取数失败」。为什么单列：把「没选」写成「空」、把「读不到」写成「0 个项目」，两者都是本仓最贵的错读数。",
+        "【没选项目 ⇒ 什么都不产（fail-closed验收①的落点）】** 没选就直接返回：不产项目行、不产角色读数、不产分节读数、不给草稿、不给恢复（restore 恒 held）。它**不是**「读出来是空的」，是「这一栏压根没开工」。",
+        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 项目清单读不出来（null）与「确实一个项目都没有」（［］）分开：前者归 unreadable 并记 gap，后者仍是 ready（只是选不中）。四行面与在飞回信也同一口径：null = 读不到、［］ = 真没有、缺这一键 = 本模块点名缺面。三态处置各不相同。",
+        "【同名异宇宙不合并（身份键刻意不是名字）】** 角色身份键是 **作品标识|宇宙|名字** 三元组。拿名字当键会把两个人拼成一个人且**不报错**；两人同名但分属两个宇宙 ⇒ 两个人、两个不同的键，并必须报一条同名异宇宙冲突。键**也刻意不带卷 / 章节**：同一部作品换一卷出现，还是**同一个人**；拼进去会把同一个人拆成两个。",
+        "【拿不到会话身份即判不是同一段（fail-closed）】** 取数与同步靠两维（会话 + 分支键）与既有格门同口径。任一侧身份缺项，一律判「**不是同一段**」并报身份缺项冲突与 gap：宁可多拦一条，不可让一个项目的内容漏进另一段会话的续玩读数。",
+        "【跟项目 / 跟段 / 跟分支的行不混算】** 四类冲突各自可辨：同名异宇宙 / 跨段（另会话或另分支）/ 跨项目 / 旧回信在飞，加上身份缺项共五类。不进本段的行一律不计进影响范围，但**必须如实报出归因与条数**。为什么单列：默默丢掉与不计入是两件事；前者让人以为「就这么多」。",
+        "【在飞旧回信 ⇒ 恢复 held（不能只看预检 ok 就放行）】** 有在飞旧回信时，即使预检是 ok，也一律不给恢复并点名旧回信在飞；没有真实 owner 时同理（restore 恒 held 且归因无 owner）。",
+        "【恢复只委托 owner + 旧世代必拒（验收③的落点）】** 本模块**没有任何写面**：只把「要接续什么」说清楚，动手的是注入的真实 owner。恢复结果四态互不同形（held / done / partial / stale-rejected）；回读不看写面自述（回读状态不是 ok 即 partial）；旧异步写入必被拒（世代不符或任一侧读不出 ⇒ stale-rejected，且把 applied **置回 false**）—— 不能因为「写下去了」就说「成了」。",
+        "【接续草稿必含缺口行 + 草稿不平替已恢复】** 草稿是纯数据（不写存储、不发请求），但缺面**不许静默省略**：「你没带这一面」与「这一面是空的」必须能分辨；不可恢复时草稿里必须明写「本草稿仅为文本，未发起恢复」—— 否则「生成了草稿」会被读成「已经接上了」。",
+        "【影响范围：0 楼是合法停点（不得补 0也不得丢 0）】** 停点取本段最大楼层，没记录一律记 null。「0 楼」与「没记录」不同形—— 把 0 当成没记录（或把没记录补成 0）都会让「刚开头」与「从未开始」同形。",
+        "【存档包归一只有一份（跳项目的取数口）】** 上游接续包给的是 projectTitle / volumeId / floorEnd，本仓清单给的是 title / volume / chapter / lastFloor，两套礼规的归一只写一次（rwProjectsFromPack），存档台与咽喉都只 import。认得出（带项目身份）⇒ 一个项目行；认不出（不带项目身份）⇒ 空清单（不硬塞一行）—— 后者**不是**「读不到」，两者处置相反。",
+        "【双侧自检：每一条都跑真、假两例（验收自检的落点）】** 自检共十四组：三态不同形 / 没选不泄漏 / 清单读不到 ≠ 空 / 跳项目跳段不混算 / 同名异宇宙不合并 / 无身份 fail-closed / 在飞旧回信拦恢复 / 无 owner 即 held / 缺面进 gap 而可选面不记 / 草稿必含缺口行 / 旧世代归因 / 0 楼合法 / 恢复四态不同形 / 存档包归一。为什么两侧：只跑真例只能证明「能跑」，证明不了「拦得住」。",
+        "【咽喉接线（唯一取数口 + 唯一恢复入口）】** 取数落在 index.js 的 refreshResumeWorkbench：项目清单从存档台收下的那份包原文读并走唯一归一，选中项取存档台自己那一格，四行面各取本机既有读数，缓存挂宿主；刷新点放在日历提醒检查的早退之前，不 await。**唯一的恢复入口**是 applyResumeRestore：读不到读数与三个不可恢复状态各自给 held 与不同文案，真正动手的只能是注入的 owner（本机不自己改主档）；视图与诊断都不写存储。",
+        "【两处视图纯渲染 + 一处诊断协议面】** 存档台项目块给**五个不同形**的读数（还没收过包 / 收下的东西读不懂 / 认得出但不带项目身份 / 清单里有 N 个项目 / 清单读不到），且两个动作口（选这个 / 取消选择）各自分话；诊断新增跳项目续玩工作台卡，与既有受控恢复交接卡分工明确：后者量「这一次恢复的预检过了没有」，本卡量「跳项目这条路通不通」。",
+        "【读不到归因端：视图不自己猜】** 存档台新增 projectsWhy，只给三种值（read_threw / payload-unreadable / 空）；视图直接读它说人话。为什么单列：读不到的各种原因（存储抛异常 / 原文读不懂）若在视图里各自猜，新增一种原因时就会被默默归成「还没收过包」。",
+        "【本版自己抓到的一处真缺陷（由测试集与探针当场报出）】** 存档台的 _loadProjects 原先无论读得读不得都会赋值，于是「项目清单读不到」这一分支从来走不到，存储抛异常时用户会把取数失败当成「这份包没有项目」。已改成：读这一格抛了异常、或收下的原文读不懂，一律判「读不到」（null）并在视图里给归因；「读不到」分支也排在「还没收过包」之前。盲点的共性跟 R-X3 一样：「读不到」与「没有」这条口径，在只用一个字段时就会被静默压平。",
+        "【交棒改写（判据面，不是放宽）】** 本版把「接着玩」这条路从「三件各答一段、没有项目这一维」改成**单一项目取数口 + 唯一恢复入口**：以后多一种「可接续的东西」，只需在四行面里加一类，三态判定与同名归并与世代回读都随行给出。",
+        "【配套判据与负控制】** tests/system-v3880.test.mjs 五面 22 条全绿：A 结构面（三态三级五类十一归因六面 + 复用 X4 那一格 + 派生面枚举面未命中）；B 行为面（十三条判据同源一次通过 + 真跑全链 + 去重 + 角色身份键）；C 接线面（咽喉四处 + 四个非 owner 层零写存储 + 两条视图纯渲染 + 真跑取数三读数不同形）；D 负控制（七处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第八处自证破坏副本真被加载且未触及的判据仍成立）；E 版本锚（五源同源不低于 3.88.0）。",
+        "【版本升至 3.88.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3880.py 对齐 tools/bump_v3870.py）。",
+        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的两个具体形态：项目清单读不到被画成「没有项目」、同名异人被当成同一个人而不报。本版**不能保证**：① 真宿主里存档台那一格被并发改写时选中项的落笔次序；② 上游接续包字段在真机数据上的实际取值分布（本版只把两套礼规归成一份，不新增判定）；③ 真机上从项目行点选后咽喉产出的读数在长会话里的观感。边界原文见运行时验证边界文档。"
     ]
 };
 
@@ -2633,6 +2645,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   「读不到≠没有」的纪律），同样放在早退之前 —— 它的草稿来自旅行记账，
          *   跟剧情时间无关。不 await。 */
         try { refreshFinanceCommit(); } catch (_fcr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台取数：与前三者**同族**（同一份
+         *   「读不到≠没有」的纪律），同样放在早退之前 —— 它读的项目清单 / 选中项 / 行动中心
+         *   缓存都跟剧情时间无关。不 await。 */
+        try { refreshResumeWorkbench(); } catch (_rwr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -2666,6 +2682,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     const clockMod = await bootTiming.instrumentImport(import('./config/story-clock.js'), './config/story-clock.js');
                     const probe = clockMod.storyClockProbe(window);
                     sc = clockMod.storyClock({ win: probe.win, calendarSource: probe.calendarSource });
+                    /* [v3.88.0 · R-X4] 同一次取数顺手留给续玩工作台（它读**已判好**的时钟，不重算）。
+                     *   两处各取一次会各判一次，哪天口径差了就是两份读数 —— 与约定投影同纪律。 */
+                    if (window.VirtualPhone) window.VirtualPhone._resumeClockCache = sc;
                 } catch (_ce) { /* storyClock 不可用时 sc 为 null，协议层记 story-missing */ }
 
                 /* 日历到期项：日历 App 已判好，从 calendarData 取最近一次判定结果 */
@@ -3286,6 +3305,165 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             return { ok: true, note: '已确认提交（本机记一笔；真实余额由各来源自己写）', state: FC_STATES.settled.key, plan: plan.plan };
         } catch (e) {
             return { ok: false, note: '提交失败：' + String((e && e.message) || e), state: '', plan: '' };
+        }
+    }
+
+    /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台的取数（咽喉唯一取数口，与前四者同族）。
+     *   · 「项目」这一维全仓**从来没有过**（`projectId` 按字面量搜命中数 0）——
+     *     它此前只活在上游分卷接续包里，本仓这一侧完全没有对应读数；
+     *   · 我在：项目清单取自 `archive_pack`（存档台收下的一份包 = 「我拥有的一部作品」），
+     *     选中项取自**归档台自己记的那一格**（`archive_face` 的 lastSelected），
+     *     没有选就**什么都不产**（fail-closed，不是「看成全部」）；
+     *   · 在飞回信取自本机既有两维（会话 + 分支键），与 session-gate / provenance-graph 同口径；
+     *   · 缓存挂 `_resumeWorkbench` / `_resumeWorkbenchLine`，视图与诊断只读这一份。
+     *   ★ 不 await、自带兜底：放在日历早退之前。 */
+    function refreshResumeWorkbench() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+
+            /* 会话身份（拿不到即判「什么都进不了读数」—— 见内核 rwSameScope 的 fail-closed）。 */
+            const chatId = String(storage.currentConversationId || '').trim();
+            let branchKey = '';
+            try {
+                const ctx = storage.getContext?.();
+                branchKey = String(ctx?.chatMetadata?.branch_key || ctx?.chatMetadata?.branchKey || '').trim();
+            } catch (_eb) { branchKey = ''; }
+
+            /* 项目清单：读档案台收下的那份包原文，再走**唯一一份**归一（真源 rwProjectsFromPack）。
+             *   ★ 本处**刻意不解析字段**：字段礼规（projectTitle / volumeId / floorEnd 与
+             *     title / volume / chapter / lastFloor 两套）只在 config/resume-workbench.js 里写一次。
+             *     这里再写一遍的话，哪天对侧改字段名，本处会静默归一成一行「没有标题、没有卷」的空项目。
+             *   三态：读不到 ⇒ null（**不是**空清单）；读到了但认不出项目身份 ⇒ []（真没有）。 */
+            let projects = null;
+            try {
+                const raw = storage.get?.('archive_pack');
+                if (raw !== undefined) {
+                    const bag = (typeof raw === 'string')
+                        ? (() => { try { return JSON.parse(raw); } catch (_) { return undefined; } })()
+                        : raw;
+                    if (bag === undefined) projects = null;                    /* 坏 JSON ＝ 读不到 */
+                    else if (Array.isArray(bag)) {
+                        projects = [];
+                        for (let i = 0; i < bag.length; i++) {
+                            const rows = rwProjectsFromPack(bag[i]);
+                            for (let j = 0; j < rows.length; j++) projects.push(rows[j]);
+                        }
+                    } else if (bag && typeof bag === 'object') {
+                        /* 存档台把包原文存在自己的格里：`{ raw, at }`。认得出这一层就先拆出来，
+                         *   拆不出来再当包本体试（两种写法历史上都出现过，都认，不猜字段）。 */
+                        let inner = bag;
+                        if (typeof bag.raw === 'string' && bag.raw.length) {
+                            try { inner = JSON.parse(bag.raw); } catch (_) { inner = null; }
+                        }
+                        projects = inner ? rwProjectsFromPack(inner) : [];
+                    } else projects = [];
+                }
+            } catch (_ep) { projects = null; }
+
+            /* 选中项：归档台自己记的那一格（没有就**不选** —— 内核据此维持隔离）。 */
+            let selected = null;
+            try {
+                const f = storage.get?.('archive_face');
+                const face = (typeof f === 'string') ? (() => { try { return JSON.parse(f); } catch (_) { return null; } })() : f;
+                if (face && typeof face === 'object' && face.lastSelected && typeof face.lastSelected === 'object') {
+                    selected = Object.assign({}, face.lastSelected, { chatId: chatId, branchKey: branchKey });
+                }
+            } catch (_es) { selected = null; }
+
+            /* 四行面：**给 null = 读不到、给 [] = 真没有、不给 = 本模块点名缺面**。
+             *   未了事项走行动中心缓存（同一份读数，不重取）；否则这一面就是「本次没给」。 */
+            const inputs = {
+                chatId: chatId, branchKey: branchKey,
+                selected: selected,
+                projects: projects
+            };
+            const pid = selected ? String(selected.projectId || '') : '';
+            const ac = vp._actionCenterCache;
+            if (ac && Array.isArray(ac.items)) {
+                inputs.notifications = ac.items.map((it) => ({
+                    floor: it && it.floor, state: it && it.state,
+                    title: String((it && (it.title || it.label)) || ''),
+                    chatId: chatId, branchKey: branchKey, projectId: pid
+                }));
+            }
+            /* 角色：从本机既有的约定投影取（与来源图同源，不另起一份）。
+             *   ★ 这一面**刻意不给** universe —— 本机没有「宇宙」这一维，
+             *    兑一个空串比编一个名字诚实（内核按三元组 作品|宇宙|名字 去重）。 */
+            if (vp._actionCommitmentsProjection !== undefined) {
+                const proj = vp._actionCommitmentsProjection;
+                const items = Array.isArray(proj) ? proj : (Array.isArray(proj && proj.items) ? proj.items : []);
+                inputs.characters = items.map((it) => ({
+                    name: String((it && (it.actor || it.name)) || ''), universe: '',
+                    chatId: chatId, branchKey: branchKey, projectId: pid
+                })).filter((c) => c.name);
+            }
+            /* 分支 / 证据：各从本机既有读数取（读不到就**不给这一键**）。 */
+            const pg = vp._provenanceCache;
+            if (pg && Array.isArray(pg.nodes)) {
+                inputs.materials = pg.nodes.filter((n) => n && n.kind === 'material')
+                    .map((n) => ({ floor: n.floor, chatId: chatId, branchKey: branchKey, projectId: selected ? String(selected.projectId || '') : '', title: String(n.label || '') }));
+            }
+
+            /* 剧情时刻：走 storyClock 已判好的结果（本模块不重算时钟）。 */
+            try {
+                const sc = vp._resumeClockCache;
+                if (sc && typeof sc === 'object') inputs.storyClock = { label: String(sc.text || '') };
+            } catch (_ec) { /* 不给这一面 */ }
+
+            /* 财务：可选面（不给不记 gap），取 R-X3 已判好的那一份。 */
+            try {
+                const fcz = vp._financeCommitCache;
+                if (fcz && typeof fcz === 'object') inputs.finance = { rows: Array.isArray(fcz.ledger) ? fcz.ledger.length : null, label: String(fcz.line || '') };
+            } catch (_ef) { /* 可选面，不给就是不给 */ }
+
+            const work = buildResumeWorkbench(inputs);
+            vp._resumeWorkbench = work;
+            vp._resumeWorkbenchLine = rwSummaryLine(work);
+        } catch (e) {
+            console.warn('[ResumeWorkbench] 跳项目续玩取数失败:', e);
+        }
+    }
+
+    /**
+     * [v3.88.0 · R-X4] **恢复唯一入口**（视图把「选中的项目 + 要接续什么」交上来）。
+     *   · 本函数**只做一件事**：把内核判好的请求交给注入的真实 owner —— 手机侧不自己改主档；
+     *   · 前置条件链（没选 / 清单读不到 / 无 owner / 预检不过 / 有在飞回信）全部由内核判，
+     *     本处**不重判**（重判就是同一口径两份实现）；
+     *   · 落笔后**回读**：世代不符（旧异步写入）一律拒 —— 写下去了不等于成了。
+     * @returns {{ok:boolean, note:string, state:string}}
+     */
+    function applyResumeRestore(req) {
+        try {
+            const vp = window.VirtualPhone;
+            const work = vp && vp._resumeWorkbench;
+            if (!work) return { ok: false, note: '这一轮还没取到工作台读数（等下一次刷新）', state: '' };
+            if (work.state === RW_STATES.NO_SELECTION) return { ok: false, note: '尚未选择项目（维持会话隔离）', state: 'held' };
+            if (work.state === RW_STATES.UNREADABLE) return { ok: false, note: '项目清单读不到（**不是**「没有作品」）', state: 'held' };
+            if (work.canRestore !== true) {
+                return { ok: false, note: (work.restore && work.restore.why) || '当前不可恢复', state: 'held' };
+            }
+            const owner = vp.importerApp && typeof vp.importerApp.applyContinuation === 'function'
+                ? vp.importerApp
+                : (typeof vp.applyVolumeContinuation === 'function' ? vp : null);
+            if (!owner) return { ok: false, note: '没有真实 owner 可委托（本机不自己改主档）', state: 'held' };
+            let applied = null;
+            try {
+                applied = owner.applyContinuation(req || {}) || null;
+            } catch (e) { return { ok: false, note: 'owner 执行抛错：' + String((e && e.message) || e), state: 'held' }; }
+            if (!applied || applied.ok !== true) {
+                return { ok: false, note: 'owner 拒绝执行（' + String((applied && applied.reason) || 'no-result') + '）', state: 'held' };
+            }
+            /* 回读：世代对不上 ⇒ 拒（旧异步写入）。 */
+            const back = work.epoch;
+            const at = applied.epoch;
+            if (back === null || back === undefined || at === null || at === undefined || back !== at) {
+                return { ok: false, note: '回读世代不符（旧异步写入被拒，不当作已恢复）', state: 'stale-rejected' };
+            }
+            refreshResumeWorkbench();
+            return { ok: true, note: '已委托真实 owner 接续（本机只记这一次请求）', state: 'done' };
+        } catch (e) {
+            return { ok: false, note: '恢复失败：' + String((e && e.message) || e), state: '' };
         }
     }
 
@@ -10549,8 +10727,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.87.0 · 拓展计划 R-X3] 财务提交的**唯一写入口**：
                  *   视图只把动作交上来，落账 / 回读 / 撤销都在咽喉这一处做。 */
                 applyFinanceCommitAction: applyFinanceCommitAction,
+                /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台的**唯一恢复入口**：
+                 *   视图只交「要接续什么」，委托真实 owner 与回读都在咽喉这一处做。
+                 *   只读读数口另挂 `resumeWorkbenchFace`（视图与诊断读这一份）。 */
+                applyResumeRestore: applyResumeRestore,
                 /* 只读读数口：视图与诊断读这一份，不各算一次。 */
                 financeCommitFace: function () { const v = window.VirtualPhone; return v ? v._financeCommitCache || null : null; },
+                resumeWorkbenchFace: function () { const v = window.VirtualPhone; return v ? v._resumeWorkbench || null : null; },
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

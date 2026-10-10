@@ -1,4 +1,4 @@
-# ruby-phone 运行时验证边界（v2.82.0 起；**v3.87.0 复校**）
+# ruby-phone 运行时验证边界（v2.82.0 起；**v3.88.0 复校**）
 
 > 本文件回答一个容易被含糊过去的问题：**哪些结论有证据，哪些没有。**
 > 写它的直接动机是 `计划.txt` 建议「新增一个浏览器运行时冒烟层」——
@@ -297,7 +297,7 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 下面两行是**机器可读**的复校契约：门禁会真跑 `syntax` / `import-resolve` 两道门，
 把它们的读数与这两行逐项比对，不一致即转红（防「文档写了实测、其实是抄的旧数」）。
 
-- 语法 737 文件
+- 语法 739 文件
 （**v3.83.0 复校**：本版新增 4 个 `.js` —— 产品侧一件真源 `config/num-clamp.js`（有界取数的唯一实现）+ `config/diagnose-action.js`（诊断处置面，v3.83.0）与两个判据套件 `tests/system-v3820.test.mjs` / `tests/system-v3830.test.mjs`（另有 v3.81.0 起累计的 `config/portable-payload.js` / `config/submodel-isolation.js` / `config/ambience-pool.js` / `config/relation-tier.js` / `config/scene-rules.js` / `config/state-fields.js` / `config/archive-digest.js` / `config/memory-correction.js` / `config/craft-cards.js` 与对应套件）。语法面 710 → **731**；导入面 399 → **415** 文件、660 → **695** 条（11 处 `boundedInt` 副本改引唯一实现，各 +1 条静态说明符）。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
 （**v3.79.0 复校**：本版新增 11 个 `.js`/`.mjs` —— 产品侧两件真源 `config/motion.js`（动效档位 + 后台降频闸 + 恢复重取合成器）与 `config/perf-sampler.js`（有界被动采样器）+ `tests/system-v3790.test.mjs` 判据套件 + 探针与基线两件（`tests/audit/perf_sampler_probe.cjs` / `perf_sampler_baseline.json`）+ `tests/browser/scenarios/` 两份交付场景与六份取证场景（`_diag21`~`_diag26`，取证前缀不进扫描面但进语法门）。语法面 699 → **710**。★ 导入门方面：`config/motion.js` 与 `config/perf-sampler.js` 各被 `index.js` 静态导入一条（+2 文件 / +2 条），其余新件都在 `tests/`（不进导入门扫描面），故导入面 397 → **399** 文件、658 → **660** 条。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
 （**v3.72.0 复校**：X3~X8 七件新协议模块（`config/schedule-bridge.js` / `finance-overview.js` / `social-knowledge-bridge.js` / `creation-pipeline.js` / `character-slot-manager.js` / `branch-contrast.js` / `resume-handoff.js`）与对应判据套件落进语法门扫描面，语法面 651 → **663**。★ 本行只记真跑读数（`node scripts/syntax-check.mjs` 现场取），不手抄。旧值 651 是 v3.66.0 的读数，v3.67.0~v3.72.0 六版未复校该行 —— 本轮补上。）
@@ -314,7 +314,7 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 （**v3.44.0 复校**：本版新增 4 个 .js —— `apps/doujin/` 三件（数据层 / App 层 / 视图层）+ `tests/system-v3440.test.mjs` 一个判据套件（该件的 `doujin.css` 是样式不是 .js，不计入语法面）；导入面 332 → **335** 文件、519 → **522** 条静态说明符 —— 增量全部来自新件的模块间引用（App→数据层 / App→视图层 / 视图层→数据层，共 3 条）与新套件自身的 import。**无一处是既有读数倒退**。）
 （**v3.43.0 复校**：本版新增 4 个 .js —— `apps/pvdesk/` 三件（数据层 / App 层 / 视图层）+ `tests/system-v3430.test.mjs` 一个判据套件（该件的 `pvdesk.css` 是样式不是 .js，不计入语法面）；导入面 326 → **332** 文件、511 → **519** 条静态说明符 —— 增量全部来自新件的模块间引用（数据层→数值门 / App→数据层 / App→视图层 / App→数值门 / 视图层→数据层，共 5 条）与新套件自身的 import。**无一处是既有读数倒退**。）
 （**v3.27.0 复校**：本版新增 13 个 .js —— `apps/avatarframe/` / `apps/shop/` / `apps/block/` / `apps/weather/` 各三个（四件新 App 的三层），共 12 个，＋ `tests/system-v3270.test.mjs` 一个判据套件（四件的 `*.css` 是样式不是 .js，不计入语法面）；导入面 270 → **282** 文件、423 → **439** 条静态说明符 —— 增量全部来自四件新 App 的模块间引用与新套件的 import，**无一处是既有读数倒退**。其余各门读数见 `ITERATION_LOG.md` 迭代 85 段。）
-- 导入 418 文件 711 条
+- 导入 419 文件 715 条
 （**v3.72.0 复校**：导入门扫描面（`tests/` 不在其中）增 **5** 文件—— X3~X8 的五件 `config/*.js` 协议件（各被 `index.js` 或 App 侧静态导入）；静态说明符 640 → **654**（+14）。**零条既有导入被删**。★ 本行只记真跑读数（`node scripts/import-resolve-check.mjs` 现场取）。）
 （**v3.61.0 复校**：文件 383 -> **384**（+1：`config/app-lazy-routes.js`，被 `index.js` 静态导入一条）；静态说明符 622 -> **623**（+1：同那条）；动态 import 138 -> **72**（**-66**：67 段五件套的动态 import 收敛为表驱动的 `import(lazyRoute.module)` 一条 —— 动态计数的口径是「import( 出现次数」，本版是**首次出现负数增量**，如实登记：这不是删功能，是同一件事从 67 份写法收敛成 1 份写法）。）
 （**v3.60.0 复校**：导入面读数**一字未动** —— 文件 383 -> **383**、静态说明符 622 -> **622**。为什么新增了一个判据套件却不进这两格：本行量的**不是语法门面**（判据套件进语法门、不进导入解析判据面，这是既有口径，见 v3.56.0 那条的自证）；且本版产品侧只改既有两件的函数体，未新增也未删除任何 import 语句。**零条**既有导入被删、**零条**被改。）（**v3.59.0 复校**：导入面增量逐条对账 —— 文件 383 -> **383**（**一格未动**：本版未新增文件）、静态说明符 616 -> **622**（+6 条：六件视图各新增一条 import 走唯一判据 writeLanded；**零条既有导入被删**）、动态 import 138 -> **138**。★ 边界：本判据保证的是「界面播报不再与回执相左」—— 写没落下去时界面不许报已收下；**不证明**字节真进了宿主存储：调用落了不等于落盘了，要写后真读一次才能证明往返，那一步仍需真机复现。这正是本文第二类「看起来没坏但显示不对」的典型。）（**v3.58.0 复校**：导入面增量逐条对账 —— 文件 381 → **383**（新件 2 个：`config/session-gate.js` 与 `config/write-receipt.js`；两个判据套件不进本门扫描面）、静态说明符 572 → **616**（增 44 条：`config/write-receipt.js` 被 34 件写回口各引一条、`config/session-gate.js` 被 9 件引（含入口 `index.js` 那一条）、另有 14 条新写的 `config/num-gate.js` 引用落在 O4/O5 逐处侦察时一起归门的取数点上；**零条既有导入被删**（比对 HEAD 基线 `--list` 明细：新增 57 条、消失 0 条））、动态 import 137 → **138**。★ 边界：本版能证明的是「在飞的写回口全部接了栅栏」与「写回执的裁决口径唯一且 Promise 不当布尔读」，**不证明**真宿主里那一轮真实 AI 回信、真机切会话与真机渲染，也不证明字节真进了宿主存储（调用落了不等于落盘，要写后真读一次才能证明往返）。这正是本文第二类「看起来没坏但显示不对」的典型。）
