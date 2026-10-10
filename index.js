@@ -70,6 +70,15 @@ import { buildOpenDetail } from './config/app-open-detail.js';
 import {
     buildProvenanceGraph, pgSummaryLine, pgRowFace, provenanceSelfCheck
 } from './config/provenance-graph.js';
+/* [v3.87.0 · 拓展计划 R-X3] 财务与事件的确认提交向导（纯函数）：
+ *   四态表（已发生/待确认/模拟报价/结算建议）+ 预览（纯读）+ 提交计划（幂等）+ 落账回读撤销。
+ *   与 X4 的财务总览同族：**取数在咽喉，判定全在内核**；账本写入口只有下面那一个。
+ *   ★ 本层**只维护「本机确认过哪些提交」这一本账**，绝不代任何来源改真实余额。 */
+import {
+    FC_STATES, FC_PLANS, fcSummaryLine, fcSettlementDraft,
+    previewCommit, planCommit, applyCommitPlan, readbackCommit, revokeCommit,
+    FINANCE_COMMIT_LEDGER_KEY
+} from './config/finance-commit.js';
 /* [v3.69.0 · 拓展计划 X5] 社媒知情边界实际接入协议层（纯函数）：
  *   知情判定（可见/已看/可互动）+ 通知过滤（看不见不收）+ 知情账本（撤回失效缓存）。 */
 import {
@@ -155,7 +164,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.86.0';
+const ST_PHONE_VERSION = '3.87.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -337,27 +346,25 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-11",
     items: [
-        "【定位 · 计划 R-X2 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 以事件 / 角色 / 交易 / 素材 / 楼层为节点，展示来源与派生与转述与引用与当前状态；② 从手机记录跳到原始出处（无跳转能力时给可执行的替代定位）；③ 同名异人与不同会话与不同分支明确隔离；④ 与第一期已交付的社媒知情边界共用同一份可见性判定。修前实测的处境是：全局搜索能找到内容，但**没有任何一处**回答「这条是从哪来的、中途经过了谁、上游没了会怎样」—— 一条通知、一份草稿、一条记忆各自成立，彼此之间的来源关系只活在代码里。",
-        "【修前处境的五条实测形态】** ① 来源关系只在代码里，界面上看不见；② 上游被删或被撤回时下游**静默消失**，用户以为本来就没有这个东西；③ 「本轮没读到这一类源」与「读了、这一类确实没有」在界面上同形，而两者处置正好相反（前者等下次刷新，后者才叫真没有）；④ 角色名被当成全局唯一 id，同名异人在关系图上被拼成一个人且**不报错**；⑤ 跨会话或跨分支的记录混进同一张图，别段内容从这个口子漏出来。本模块逐条消掉这五条。",
-        "【新模块 · config/provenance-graph.js（纯函数，592 行）】** 来源关系归一的**唯一实现**：五类节点收成一张可看的图。**不写存储**（不持键、不带计时器、不碰 DOM），引的四样全是既有唯一口径（取数门 / 靶心协议 / 转述链 / 可见性判定），故**不涉 keys 台账**。导出十七个出口，自检报出表齐备且问题为空表。",
-        "【五类节点与四类边：来源要经得起追问】** 节点五类（事件 / 角色 / 交易 / 素材 / 楼层），边四类（来源 / 派生 / 转述 / 引用）。**「转述」与「独立来源」必须不同形** —— 并成一格，同一传闻被三个平台各说一遍就会被数成三条独立来源，这是本仓最贵的一类错读数。转述链归并走既有唯一口径，来源端点也入链。",
-        "【名实一致 · 角色名不是全局唯一（验收③的落点之一）】** 五类节点里**只有角色**标为不可长期定位，其余四类可长期定位。为什么：同名异人是本仓的既知形态（同名的两个人在两个会话里各有一条记录），把名字当全局唯一 id ⇒ 关系图会把两个人拼成一个人，且**不报错**。故角色一律走「不可长期定位 + 给原因」这条，并在图上如实写明原由。",
-        "【三态不许挤成两态（验收③的落点之二）】** 三态是 在场 / 已失效 / 悬空。已失效与悬空**必须分两格**，因为处置相反：前者等上游恢复（源被撤回），后者要去看看哪条不见了（上游认不出）。撤回**不删除节点** —— 只标失效并留位。",
-        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 撤回判定**只认调用方显式声明读过**的那一类源。只凭「图里有这个 kind 的一条」证明不了「这一类全在」—— 那是把部分当全部，正是本仓最贵的反向错读数。未读到的源逐条记缺口并附归因，绝不与「读了确实没有」同形。",
-        "【同轮内可判定的撤回 + 墓碑留位（验收③的直接兑现）】** 派生与引用与转述节点的上游不在图里、而**上游那类源本轮确实读过** ⇒ 那不是没读到，是上游被删或被撤回了。此时给上游立一块**留位**（key 与类别在、内容已不在、并写明它曾经是哪一类的哪一条），下游标失效并把「是谁连累了它」带下去。反过来：上游那类源本轮没读过 ⇒ 不判撤，只留悬空 —— 两者永远不当同一件事处理。",
-        "【撤回经悬空边也要传播】** 上游被撤回后才从图里消失时，悬空边照样把失效传下去。否则「上游撤回」会退化成「莫名其妙悬空」—— 两者在用户眼里处置不同，前者等上游恢复，后者要去查哪条没了。",
-        "【隔离两维（验收④的落点）】** 跨段判定走会话身份与剧情分叉键两维，与既有会话世代栅栏同口径（**拿不到会话身份即判不是同一段**，宁可多拦一条不可漏一条）。跨段的记录只报壳 —— 类别与原因可以带，**内容一个字都不带**；跨段的边同样记一条壳。可见性判定**不在本处写第二份**，由内核转交第一期已交付的社媒知情边界；不可见的节点移到隔离区（只报壳）而不是静默删掉，否则「被拦下」与「本来没有」又同形了。",
-        "【行面四态（视图层的最小接口）】** 给「一行产品记录」配一个行面：没取到图 / 这条没有身份 / 被隔离 / 不在图里，四态互不同形；命中时给来源链读数与跳转与跳不过去时的替代定位三样，视图照着排版即可。**没图就不说话** —— 图没跑不等于这条没有来源，缀一句「暂无来源关系」就是造谣。",
-        "【咽喉接线（唯一取数口）】** 五类节点的取数全落在 index.js 的 refreshProvenanceGraph 里：生活事件从日历派生读数、角色从约定投影、交易从旅行记账、素材从微博推荐流、楼层从织光机续玩简报。**每类各在一个独立 try/catch 里，读不到就不声明读过**（不塞进已读名单）；刷新点放在日历提醒检查的早退之前 —— 否则与剧情时间无关的两类源永远看不到。缓存挂宿主，视图与诊断只读这一份。",
-        "【跳转是导航，不是状态】** 跳转沿用既有唯一那条派发链与靶心载荷，不另造一套。**跳不过去如实回报并带回可执行的替代定位** —— 只说「跳不过去」等于把问题丢回给用户；按节点类别给具体动作（角色去角色 App 按名字筛并提醒同名会有多条、事件去日历时间线按来源键定位等）。",
-        "【三态必须不同形 · 两处视图】** 总述三态（未取数 / 零条 / N 条）与诊断面三态（面缺席 / 图未跑 / 有读数）各自不同形。诊断新增来源链协议卡，与既有跨 App 靶心协议卡分工明确：靶心面答「这条能不能落到那一条上」，本卡答「这条从哪来、中途经过谁、上游没了会怎样」。搜索行面在既有靶心旁挂来源链读数行，样式走新增的 .gs-prov 系列。两处视图都**只读宿主缓存与内核出口**，不自己查图、不自己拼归因。",
-        "【新增套件 · tests/system-v3860.test.mjs（19 用例）】** 五面：结构面（真源在场 / 纯函数不摸宿主不写存储 / 派生面枚举面未命中）、行为面（十一条判据同源一次通过 / 读不到不等于没有 / 未登记的类别不硬塞 / 按内容去重绝不覆盖 / 链回溯带环保护）、接线面（咽喉四处都在 / 刷新点在早退之前 / 诊断与搜索两处视图纯渲染 / 真跑内核链验五源归一）、负控制六条（真源码定点破坏到副本 → 同款判据必须转红）、版本锚。负控制全部走「破坏副本 + 同款判据」，而不是另写一份模拟判据。",
-        "【负控制选点（本仓的既知教训，本版照办）】** 五条破坏点全选「破坏形态与判据粒度严丝合缝」的那一处：把撤回判定从显式声明读到改用图里出现过的类别（把部分当全部的那一手）、去掉拿不到会话身份即判不是同一段的门、把角色标成可长期定位、把行面的被隔离与不在图压成一格、上游读过却不在场时不立留位。第6条是负控制自身可证伪的两向（破坏副本必须真被加载且与原版不同源；未触及的那条判据在副本上仍须成立）。",
-        "【本版自己抓到的两处真缺陷（都由负控制与判据当场报出，不是事后回看）】** ① 删掉一条在给定输入下**不可能命中**的破坏锚点（该分支的输入在该判据里根本走不到），换成真正走得通的那一处 —— 否则负控制是假绿；② 修掉一处判据的锚点粒度（破坏点选在被隔离壳与不在图两条返回**并排**的那一行），否则把两态压成一格时判据不变红，等于没守住。两条的共性是：负控制必须选「破坏形态与判据粒度匹配」的那一处，选偏了就是假绿。",
-        "【用户可见的边界（与运行时验证边界文档同源）】** 本版挡得住「看起来没坏但显示不对」这一族里的两个具体形态：上游被删或被撤回时下游静默消失（用户以为本来就没有）、同名异人在关系图上被拼成一个人。本版**不能保证**：① 真宿主里五类节点同时可读时的观感与图规模过大时的滚动表现；② 可见性判定在真机社媒数据上的表现（本版只复用既有口径，不新增判定）；③ 真机上从行面跳转真的落在对应那一条上。边界原文见运行时验证边界文档。",
-        "【边界 · 诚实三条】** ① 本版**只做关系归一与展示**，不改任何上游的取数口径（五类源各管各的取数，本层只消费）；② 图**不是**上游条目的副本，只在同轮内立留位标记失效，跨轮的撤回仍需上游自己持久化；③ 本版**没有**做图的持久化与跨轮增量（每次刷新重建一份读数），也没有做关系图的可视化画布（本轮只做读数与列表面）。",
-        "【交棒改写（判据面，不是放宽）】** 本版把「来源关系只活在代码里」换成了**表驱动的归一**：第 6 类节点要接进来时，只需在节点表里加一行并给它的定位口径，隔离与定位与归因都随行给出 —— 是否漏接由表与探针回答，不靠人记得。",
-        "【版本升至 3.86.0（五源同源）】** manifest.json 与 package.json 与 index.js 的版本常量与公告块与 update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息当前版本行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）；三条探针基线随枚举面漂移同步刷新（日程与分支的枚举面、长会话的扫描面与判据散文）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3860.py 对齐 tools/bump_v3850.py）。"
+        "【定位 · 计划 R-X3 的真实缺口（修前实测，不是推演）】** 计划原文四条：① 确认前先预览这笔交易影响哪些人的余额；② 确认动作只能由唯一 owner 写；③ 写后回读、可重试、可撤销；④ 预演与已发生与待确认与不可确认四态必须分得开。修前实测的处境是：预算与结算草稿建好了，**但没有任何一处能把它变成一条已确认账**。",
+        "【修前处境的四条实测形态】** ① X4 已经把七源归一与结算草稿与幂等账本建齐，但 finance_ledger 这一格**全仓零写入点**（只在咽喉里被读出来挂缓存）；② travelSettlementDraft 产出的是空壳（balances/internal/external 逐字写死 null），fillSettlementDraft 全仓零调用；③ 诊断页永远报「账本 0 条（提交 0）」是**假读数**——不是「没人提交过」，是「根本没有提交这个动作」；④ 建议与已发生在界面上同形，看一瞥就以为是已经转过的钱。",
+        "【新模块 · config/finance-commit.js（纯函数，614 行）】** 提交向导的**唯一实现**：四态表 + 预览 + 计划 + 落账回读撤销 + 自检。**不写存储**（不持键、不带计时器、不碰 DOM），账本与草稿由调用方传进来；故**不新增存储键**（复用 X4 登记的那一格 finance_ledger），也不涉 keys 台账。导出十七个出口，自检两侧都跑。",
+        "【四态互不同形：建议与已发生必须分得开（验收④的落点）】** 四态是已发生 / 待确认 / 模拟报价 / 结算建议，每态给三样（键 + 标签 + 处置文案）都不许两两相同。报价态一句话就是「不落账，也永不落账——报价不是交易」；建议态一句话就是「确认后也只是本机记一笔，**不代表对方收到钱**」；已发生态一句话就是「已落账（本机确认过的提交）」。为什么单列：把建议当成已付钱是本仓最贵的一类财务错读数。",
+        "【报价永不落账（计划外的头号守卫）】** 报价（试算结果）即使已经进了账本也判 quoted 且计提交一律被拒（归因 quote-never-commits）。报价与建议在数据上只差一个 kind，但语义是两件事：前者是算给人看的，后者是等人点头的。两者都不许直接变成「钱动了」。",
+        "【预览零写：不是承诺，是这一层不碰账本（验收①的落点）】** 预览只算不写：返回值里 willWrite 恒 false，且**不改入参账本**（就地复算入参串不变）。「预览不修改余额」不需要靠承诺：它没有别的可能。",
+        "【幂等落账：重复确认不重复扣款（验收②的落点）】** 幂等键 = 来源:草稿号:日键（X4 已有那一份口径，本层不重写）。已在账本即 replay，**不重复扣款**且如实回报（这不是错误，是幂等生效）。反向也钉住：换一天（日键变）是**另一笔**结算，次日可以再确认一次——这是有意的，否则「幂等」会把正常的二次确认也吞掉。",
+        "【只允许唯一 owner 写（验收②的另一半）】** owner 查 X4 的来源登记表：本仓写权的来源（记账 / 存钱罐 / 资产 / 旅行记账 / 商城 / 桃宝）返回自己；上游写的来源（钱袋：上游记忆插件写）返回 owner-is-upstream，本机**不能代它写**。落账只动「本机确认过哪些提交」这一本账，**绝不代任何来源改真实余额**。",
+        "【多币种不盲目相加（验收③的落点）】** 混合币种一律不给总额（total 恒 null）并附归因；单一币种才给总额。预览层也守同一条：一笔结算里有多币种时，预览给分币种明细而不拼总额。旅行本就有多币种，硬加出来的那个数没有语义。",
+        "【读不到 ≠ 没有（本模块最贵的一条设计）】** 账本读不出来（null）与「确实零条提交」分开：前者在行面上说「读不到」并明说**这不是「本机没有提交记录」**，在预览里记 ledger-not-read；只有读到了空账本才叫真零条。为什么单列：把「没取数」当成「没有提交」是本仓最贵的一类反向错读数（你就是能让人以为系统没坏）。",
+        "【写后回读两向（验收③的第一半）】** 落账后回读比对：写下去的那一份与读回来的那一份是同一份才算 confirmed；读不回来（或根本没读到）一律 not_confirmed 并带归因。相位止于 confirmed，**不叫 durable**——回读一致不证明字节进了宿主存储（写落盘可能在防抖之后），与既有的写凭据同口径。",
+        "【撤销如实 + 撤的是本机那一笔确认（验收③的第二半）】** 账本里没有这一条就如实拒绝（不假装撤掉了）；撤成功了也清的是本机的确认记录，**不是任何真实余额**——真实余额只能由 owner 自己回滚。",
+        "【结算草稿：从空壳到可提交】** 把旅行记账的 settle 输出拆成带稳定 id 的结算行（内部 / 对外两族各自可辨认），组成一份 kind 固定为 suggestion 的草稿：内部 / 对外计数齐备、参与者去重保序、备注明写「确认后本机记一笔，不代表对方收到钱」。这填掉了 fillSettlementDraft 零调用留下的那个洞。",
+        "【咽喉接线（唯一取数口 + 唯一写入口）】** 取数落在 index.js 的 refreshFinanceCommit：账本从 finance_ledger 读（读不出与空账本分得开）、草稿从旅行记账的 settle 输出构建，缓存挂宿主；刷新点放在日历提醒检查的早退之前（它的草稿源跟剧情时间无关），不 await。**唯一的账本写入口**是 applyFinanceCommitAction：提交走计划→落账→storage.set→回读比对，撤销走回读校验真没了；视图与诊断都不写账本。",
+        "【三态必须不同形 · 两处视图】** 交易台面的结算提交区块只读宿主缓存（缓存不在位说「还没取到提交读数」、草稿不在位说「还没取到结算草稿」，**不**缀「暂无待确认」——那是造谣）；诊断新增财务提交向导卡，与既有财务总览卡分工明确：总览面量余额，本卡量「建议→已确认」通不通。四处读数（未取数 / 没草稿 / 读不到账本 / 有读数）互不同形。",
+        "【本版自己抓到的三处真缺陷（都由负控制与判据当场报出，不是事后回看）】** ① 取数里存缓存时把「账本读不到」与「读到空账本」两个只写成了同一个 ledger 字段，回读面板据此把「还没取数」说成「零条提交」—— 已改成账本本体与 ledgerRead 两名分开存；② 写入口的写后回读原先直接把 storage 读回值当作账本用，坏 JSON 会被抬成「已读到且零条」，改成非数组一律归为「读不到」（null）；③ 账本上限裁剪用例原先把截尾方向写反（以为是保留最早），实跑报出后才改成保留最新（截掉最旧）。三条的共性是：读不到与没有这条口径，在「只用一个字段」时就会被静默压平。",
+        "【交棒改写（判据面，不是放宽）】** 本版把「建议 → 落账」这条路从「只有表与草稿、没有写入口」改成**单一写入口 + 幂等账本**：以后新增一个可提交的来源，只需在 X4 的来源登记表里加一行（并标上 ownerWrite），四态判定与落账与回读都随行给出 —— 是否漏接由登记表与写入口计数回答，不靠人记得。",
+        "【配套判据与负控制】** tests/system-v3870.test.mjs 五面 19 条全绿：A 结构面（四态三动作三计划十七出口 + 复用 X4 那一格 + 派生面枚举面未命中）；B 行为面（十一条判据同源一次通过 + 真跑全链 + 上限裁剪 + 结算行族别）；C 接线面（咽喉四处 + 写入口只有一处 + 两条视图纯渲染 + 账本三读数不同形）；D 负控制（六处真源码定点破坏，每处只改语义上与之严丝合缝的那一点，破坏副本上同款判据必转红；第七处自证破坏副本真被加载且未触及的判据仍成立）；E 版本锚（五源同源不低于 3.87.0）。",
+        "【版本升至 3.87.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校（两行机器可读契约由现场真跑取数改写）。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3870.py 对齐 tools/bump_v3860.py）。"
     ]
 };
 
@@ -2622,6 +2629,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         /* [v3.86.0 · 拓展计划 R-X2] 来源关系图刷新：与行动中心**同族**（同一份「读不到≠没有」的纪律），
          *   同样放在早退之前 —— 它的五类节点里也有跟剧情时间无关的（素材 / 楼层）。不 await。 */
         try { refreshProvenanceGraph(); } catch (_pgr) { /* 自带兜底，不拖累日历 */ }
+        /* [v3.87.0 · 拓展计划 R-X3] 财务提交向导取数：与行动中心 / 来源图**同族**（同一份
+         *   「读不到≠没有」的纪律），同样放在早退之前 —— 它的草稿来自旅行记账，
+         *   跟剧情时间无关。不 await。 */
+        try { refreshFinanceCommit(); } catch (_fcr) { /* 自带兜底，不拖累日历 */ }
         try {
             if (!storage) return;
             const tm = timeManager || window.VirtualPhone?.timeManager || await loadTimeManager();
@@ -2978,9 +2989,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 const jump = item.jump || { ok: false, why: '无跳转信息' };
                 if (jump.ok !== true) return { ok: false, note: '跳不过去：' + String(jump.why || ''), state: '' };
                 try {
-                    window.dispatchEvent(new CustomEvent('phone:openApp', {
-                        detail: buildOpenDetail(jump.appId, item.tab || null, item.ref || null)
-                    }));
+                    window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP,
+                        buildOpenDetail(jump.appId, item.tab || null, item.ref || null)));
                 } catch (_e) { return { ok: false, note: '派发跳转失败', state: '' }; }
                 return { ok: true, note: '已打开 ' + String(jump.appId || ''), state: '' };
             }
@@ -3154,12 +3164,128 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!jump.ok) {
                 return { ok: false, note: '跳不过去：' + String(jump.why || ''), alt: String(jump.alt || '') };
             }
-            window.dispatchEvent(new CustomEvent('phone:openApp', {
-                detail: buildOpenDetail(jump.appId, null, jump.ref)
-            }));
+            window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP,
+                buildOpenDetail(jump.appId, null, jump.ref)));
             return { ok: true, note: '已打开 ' + String(jump.appId || ''), alt: '' };
         } catch (e) {
             return { ok: false, note: '跳转失败：' + String((e && e.message) || e), alt: '' };
+        }
+    }
+
+    /* [v3.87.0 · 拓展计划 R-X3] 财务提交向导的取数（咽喉唯一取数口，与 X4 财务总览同族）。
+     *   · 结算草稿从旅行记账的 settle 输出构建 —— 读不到就**不声明读过**（`_financeDraftCache` 留 null）；
+     *   · 账本从 finance_ledger 读（**这一格此前全仓只读不写**，本版把写入口补在这里）；
+     *   · 缓存挂 `_financeCommitCache` / `_financeDraftCache` / `_financeCommitLine`，视图与诊断只读这一份。
+     *   ★ 不 await、自带兜底：与行动中心 / 来源图同一族，放在日历早退之前。 */
+    function refreshFinanceCommit() {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return;
+
+            /* 账本：读这一格（读不出与空账本必须分得开 —— null 才是「读不到」）。 */
+            let ledger = null;
+            try {
+                const raw = vp._storage?.get?.(FINANCE_COMMIT_LEDGER_KEY);
+                if (raw !== undefined && raw !== null) {
+                    const parsed = (typeof raw === 'string')
+                        ? (() => { try { return JSON.parse(raw); } catch (_) { return null; } })()
+                        : raw;
+                    if (Array.isArray(parsed)) ledger = parsed;
+                }
+            } catch (_ef) { ledger = null; }
+
+            /* 结算草稿：旅行记账已判好的 settle 输出（App 没开过 = 没读 ⇒ 草稿为 null）。 */
+            let draft = null;
+            try {
+                const tvApp = vp.traveldeskApp;
+                if (tvApp && typeof tvApp.settle === 'function') {
+                    const summary = tvApp.settle() || {};
+                    const dayKey = String((vp._scheduleAdviceCache && vp._scheduleAdviceCache.story && vp._scheduleAdviceCache.story.dayKey) || '');
+                    draft = fcSettlementDraft(summary, { dayKey: dayKey });
+                }
+            } catch (_ed) { draft = null; }
+
+            const preview = draft ? previewCommit(draft, ledger) : null;
+
+            /* 三态互不同形：账本读不到 / 读到确实零条 / 读到 N 条。 */
+            const commitLine = fcSummaryLine(ledger);
+
+            vp._financeLedgerCache = normalizeFinanceLedger(Array.isArray(ledger) ? ledger : []);
+            vp._financeDraftCache = draft;
+            vp._financeCommitPreview = preview;
+            vp._financeCommitCache = { ledger: ledger, ledgerRead: (ledger !== null), draft: draft, preview: preview, line: commitLine };
+            vp._financeCommitLine = commitLine;
+        } catch (e) {
+            console.warn('[FinanceCommit] 提交向导取数失败:', e);
+        }
+    }
+
+    /**
+     * [v3.87.0 · R-X3] 提交 / 撤销一笔结算（视图把「草稿 + 动作」交上来）。
+     *   · **唯一的账本写入口**：只有这里写 `finance_ledger`，视图与诊断都不写；
+     *   · 落账后**回读比对**（写下去的与读回来的是同一份才算 confirmed）；
+     *   · 幂等命中（replay）**不重复扣款**，如实回报而不是报错；
+     *   · 撤销撤的是**本机的那一笔确认**，不是任何真实余额。
+     * @returns {{ok:boolean, note:string, state:string, plan:string}}
+     */
+    function applyFinanceCommitAction(action) {
+        try {
+            const vp = window.VirtualPhone;
+            if (!vp || !storage) return { ok: false, note: '宿主未就绪', state: '', plan: '' };
+            const act = String(action || 'commit');
+
+            const raw = storage.get?.(FINANCE_COMMIT_LEDGER_KEY);
+            let ledger = [];
+            if (raw !== undefined && raw !== null) {
+                const parsed = (typeof raw === 'string')
+                    ? (() => { try { return JSON.parse(raw); } catch (_) { return null; } })()
+                    : raw;
+                if (Array.isArray(parsed)) ledger = parsed;
+                else return { ok: false, note: '提交账本读不出来（不是「没有提交」）', state: '', plan: '' };
+            }
+
+            const draft = vp._financeDraftCache || null;
+            if (!draft) return { ok: false, note: '这一轮还没取到结算草稿（先打开旅行记账）', state: '', plan: '' };
+
+            if (act === 'revoke') {
+                const key = String(vp._financeCommitPreview && vp._financeCommitPreview.idemKey || '');
+                const res = revokeCommit(ledger, key);
+                if (res.ok !== true) {
+                    const whyText = res.why === 'no-such-commit' ? '这一笔还没提交过（没东西可撤）' : '撤销不成立：' + String(res.why || '');
+                    return { ok: false, note: whyText, state: '', plan: '' };
+                }
+                try { storage.set?.(FINANCE_COMMIT_LEDGER_KEY, JSON.stringify(res.entries)); } catch (_ew) { return { ok: false, note: '写回失败（撤销未落盘）', state: '', plan: '' }; }
+                let got = null;
+                try { const back = storage.get?.(FINANCE_COMMIT_LEDGER_KEY); got = (typeof back === 'string') ? JSON.parse(back) : back; } catch (_er) { got = null; }
+                const stillThere = normalizeFinanceLedger(Array.isArray(got) ? got : []).entries.some((e) => e.idemKey === key);
+                refreshFinanceCommit();
+                if (stillThere) return { ok: true, note: '已撤销，但读回来还在（可能没落盘）', state: '', plan: '' };
+                return { ok: true, note: '已撤销（本机不再记这一笔）', state: '', plan: '' };
+            }
+
+            /* 提交：算计划 → 落账 → 回读。 */
+            const plan = planCommit(draft, ledger, { at: Date.now() });
+            if (plan.plan === FC_PLANS.replay) {
+                refreshFinanceCommit();
+                return { ok: true, note: '这一笔已经提交过（幂等命中，不重复记账）', state: '', plan: plan.plan };
+            }
+            if (plan.plan !== FC_PLANS.fresh) {
+                const whyText = plan.why === 'quote-never-commits' ? '报价永不落账（报价不是交易）'
+                    : (plan.why === 'owner-is-upstream' ? '这一来源由上游写（本机不能代它记账）'
+                        : (plan.why === 'no-idem-key' ? '这一笔没有可用身份（缺来源或草稿号）' : '这一笔不可提交：' + String(plan.why || '')));
+                return { ok: false, note: whyText, state: '', plan: plan.plan };
+            }
+
+            const applied = applyCommitPlan(ledger, plan);
+            try { storage.set?.(FINANCE_COMMIT_LEDGER_KEY, JSON.stringify(applied.entries)); } catch (_ew) { return { ok: false, note: '写回失败（未落盘）', state: '', plan: plan.plan }; }
+            let got = null;
+            try { const back = storage.get?.(FINANCE_COMMIT_LEDGER_KEY); got = (typeof back === 'string') ? JSON.parse(back) : back; } catch (_er) { got = null; }
+            const rb = readbackCommit(plan, Array.isArray(got) ? got : null);
+            refreshFinanceCommit();
+            if (rb.confirmed !== true) return { ok: true, note: '已提交，但读回来没对上（相位：' + String(rb.phase || '') + '）', state: FC_STATES.settled.key, plan: plan.plan };
+            return { ok: true, note: '已确认提交（本机记一笔；真实余额由各来源自己写）', state: FC_STATES.settled.key, plan: plan.plan };
+        } catch (e) {
+            return { ok: false, note: '提交失败：' + String((e && e.message) || e), state: '', plan: '' };
         }
     }
 
@@ -10420,6 +10546,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.86.0 · 拓展计划 R-X2] 来源图跳转的**唯一写入口**：
                  *   视图只把靶心交上来，图上查不到就如实回报（并给替代定位）。 */
                 applyProvenanceJump: applyProvenanceJump,
+                /* [v3.87.0 · 拓展计划 R-X3] 财务提交的**唯一写入口**：
+                 *   视图只把动作交上来，落账 / 回读 / 撤销都在咽喉这一处做。 */
+                applyFinanceCommitAction: applyFinanceCommitAction,
+                /* 只读读数口：视图与诊断读这一份，不各算一次。 */
+                financeCommitFace: function () { const v = window.VirtualPhone; return v ? v._financeCommitCache || null : null; },
                 storage: storage,
                 settings: settings,
                 extensionBaseUrl: ST_PHONE_BASE_URL,

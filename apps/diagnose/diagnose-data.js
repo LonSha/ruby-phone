@@ -150,6 +150,10 @@ import { scheduleBridgeSelfCheck, scheduleLedgerSelfCheck, scheduleAdviceLine, S
 /* [v3.68.0 · 拓展计划 X4] 财务总览协议面：与 scheduleFace 同一族——协议件自身现在还自洽吗。
  *   七源归一结果、结算草稿状态、提交账本状态、缺口，在此面陈列（不重算，只读缓存）。 */
 import { financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_SOURCES, FINANCE_LEDGER_LIMIT } from '../../config/finance-overview.js';
+/* [v3.87.0 · 拓展计划 R-X3] 财务提交向导协议面：与 financeFace **分工明确**——
+ *   财务总览面答「这台机器上各个来源各有多少钱，各自算准了吗」；
+ *   本面答「有哪些『建议』还没变成『已确认』、确认了会不会重复扣款」。 */
+import { FC_STATE_KEYS, FC_STATES, fcSummaryLine, financeCommitSelfCheck, FINANCE_COMMIT_LEDGER_KEY } from '../../config/finance-commit.js';
 /* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 scheduleFace / financeFace 同一族——协议件自身现在还自洽吗。
  *   可见性判定结果、知情账本状态、通知过滤、缺口，在此面陈列（不重算，只读缓存与自检）。 */
 import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-knowledge-bridge.js';
@@ -821,6 +825,49 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+    /* [v3.87.0 · 拓展计划 R-X3] 财务提交向导协议面：与 financeFace 同范式——
+     *   只读自检 + 四态表 + 宿主缓存读数（草稿/账本/预览）+ 缺口。
+     *   ★ 本面与 financeFace 的读数**不是重复**：总览面量余额，本面量「建议 → 确认」这条路通不通。 */
+    const financeCommitFace = (() => {
+        try {
+            const self = financeCommitSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const states = FC_STATE_KEYS.map((k) => ({
+                key: String(k), label: String(FC_STATES[k].label), text: String(FC_STATES[k].text),
+            }));
+            const w = hostWindow();
+            const cache = (w && w.VirtualPhone && w.VirtualPhone._financeCommitCache) ? w.VirtualPhone._financeCommitCache : null;
+            const draft = cache ? cache.draft : null;
+            const ledgerRead = cache ? (cache.ledgerRead === true) : false;
+            const preview = cache ? cache.preview : null;
+            const ledgerEntries = (cache && Array.isArray(cache.ledger)) ? cache.ledger : [];
+            const committed = ledgerEntries.filter((e) => e.action === 'commit').length;
+            const hasDraft = !!(draft && draft.lines && draft.lines.length);
+            const duplicate = !!(preview && preview.duplicate && preview.duplicate.isDuplicate);
+            const stateKey = preview ? String(preview.state || '') : '';
+            const line = cache ? String(cache.line || '') : fcSummaryLine(null);
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                states: states,
+                draftPresent: hasDraft,
+                draftLineCount: (draft && Array.isArray(draft.lines)) ? draft.lines.length : 0,
+                draftOwnerWritable: draft ? (draft.ownerWritable === true) : null,
+                ledgerRead: ledgerRead,
+                ledger: { total: ledgerEntries.length, committed: committed },
+                previewState: stateKey,
+                previewStateLabel: stateKey ? String(FC_STATES[stateKey].label) : '',
+                duplicate: duplicate,
+                line: line,
+                text: '财务提交：四态（' + states.map((x) => x.label).join(' / ') + '）；'
+                    + (cache ? (hasDraft ? '草稿 ' + String((draft.lines || []).length) + ' 行 · 态 ' + String(stateKey || '—') : '这一轮没取到结算草稿') : '尚未取数')
+                    + '；' + (ledgerRead ? '账本 ' + String(ledgerEntries.length) + ' 条（提交 ' + String(committed) + '）' : '账本读不到（**不是「没有提交」**）')
+                    + (duplicate ? '；已提交过（幂等命中，不重复记账）' : '')
+                    + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**' : '；四态互不同值 / 幂等 / 多币种守卫自检全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
     /* [v3.69.0 · 拓展计划 X5] 社媒知情边界协议面：与 financeFace 同范式——
      * 只读自检 + 知情账本状态 + 宿主缓存读数 + 缺口。 */
     const knowledgeBridgeFace = (() => {
@@ -1022,7 +1069,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1084,6 +1131,15 @@ export function financeFaceText(face) {
         if (!f) return '财务总览协议：读取异常（已降级）—— 这不是「没钱」';
         return String(f.text || '财务总览协议：无读数');
     } catch (_e) { return '财务总览协议：读取异常（已降级）'; }
+}
+/** [v3.87.0 · 拓展计划 R-X3] 财务提交向导协议面的一行读数（与 financeFaceText 同范式）。
+ *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
+export function financeCommitFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '财务提交向导：读取异常（已降级）—— 这不是「没有待确认的提交」';
+        return String(f.text || '财务提交向导：无读数');
+    } catch (_e) { return '财务提交向导：读取异常（已降级）'; }
 }
 /** [v3.86.0 · 拓展计划 R-X2] 来源链协议面的一行读数（唯一实现在本文件 `collectDiagnose` 内取的那一面）。
  *  与 financeFaceText 同范式：只做转发与文案，视图不自己拼。
@@ -1395,6 +1451,7 @@ export default {
     summarizeDiagnose,
     scheduleFaceText,
     financeFaceText,
+    financeCommitFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

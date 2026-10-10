@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -353,7 +353,43 @@ export class DiagnoseView {
          }
          return html;
      }
-     /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议卡：知情账本状态 + 表自检。
+     /** [v3.87.0 · 拓展计划 R-X3] 财务提交向导协议卡：四态表 + 结算草稿 + 提交账本 + 预览。
+      *  与 _financeHtml 分工：那张卡答「各来源各有多少钱」；本卡答「建议 → 已确认」这条路通不通。
+      *  三态不同形（面缺席 / 尚未取数 / 有读数）。 */
+     _financeCommitHtml(pkg) {
+         const face = (pkg && pkg.financeCommitFace) || null;
+         if (!face) {
+             return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到财务提交协议面（已降级）—— '
+                 + '这是「本层读不出」，**不是**「没有待确认的提交」。</div>';
+         }
+         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(financeCommitFaceText(face)) + '</div>';
+         const states = Array.isArray(face.states) ? face.states : [];
+         if (states.length) {
+             html += '<div class=' + Q + 'dg-table' + Q + '>' + states.map((r) =>
+                 '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>' + escapeHtml(r.key) + '</code>'
+                 + this._chip(escapeHtml(r.label), 'muted')
+                 + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                 + '</div>').join('') + '</div>';
+         }
+         html += '<div class=' + Q + 'dg-note' + Q + '>结算草稿：'
+             + (face.draftPresent
+                 ? escapeHtml(String(face.draftLineCount)) + ' 行 · 落账 owner ' + (face.draftOwnerWritable ? '本机可写' : '上游写（本机不代记）')
+                 : (face.draftLineCount === 0 ? '这一轮没取到（旅行记账没打开不算「没有待结算」）' : '—'))
+             + '</div>';
+         html += '<div class=' + Q + 'dg-note' + Q + '>提交账本：'
+             + (face.ledgerRead
+                 ? escapeHtml(String((face.ledger && face.ledger.total) || 0)) + ' 条（提交 ' + escapeHtml(String((face.ledger && face.ledger.committed) || 0)) + '）'
+                 : '<b>读不到</b>（**不是「没有提交」**）')
+             + (face.duplicate ? ' · 已提交过（幂等命中，不重复记账）' : '')
+             + '</div>';
+         const problems = Array.isArray(face.problems) ? face.problems : [];
+         if (problems.length) {
+             html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>四态/幂等地基自检报了问题</b>：</div>';
+             html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(p) + '</div>').join('');
+         }
+         return html;
+     }
+    /** [v3.69.0 · 拓展计划 X5] 社媒知情边界协议卡：知情账本状态 + 表自检。
       *  与 _financeHtml 同规格：内核只陈列，本视图只排版。 */
      _knowledgeBridgeHtml(pkg) {
          const face = (pkg && pkg.knowledgeBridgeFace) || null;
@@ -1133,6 +1169,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>会话世代栅栏（哪些旧会话回信被挡下）</h3>' + this._sessionGateHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>日程提醒协议（四源归一 + 幂等账本）</h3>' + this._scheduleHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务总览协议（七源归一 + 结算草稿 + 幂等账本）</h3>' + this._financeHtml(pkg) + '</section>');
+        /* [v3.87.0 · R-X3] 提交向导卡与总览卡**并列**（分工：总览量余额，本卡量「建议→已确认」通不通）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>财务提交向导（四态：已发生 / 待确认 / 模拟报价 / 结算建议）</h3>' + this._financeCommitHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>社媒知情边界（可见性判定 + 幂等账本）</h3>' + this._knowledgeBridgeHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作草稿协议（八源素材 + 草稿构建 + 幂等账本）</h3>' + this._creationHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>受控恢复交接（预检 → 执行 → 回读 · 交接栅栏）</h3>' + this._handoffHtml(pkg) + '</section>');

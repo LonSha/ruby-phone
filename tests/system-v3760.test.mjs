@@ -182,8 +182,12 @@ function judgeProbeBase(root) {
  *   闭包不带全 ⇒ 副本 import 直接 ERR_MODULE_NOT_FOUND ⇒ 负控制会退化成「因缺文件而红」。 */
 const CLOSURE_ENGINE = [GSE, 'data/cheat-index.js', 'data/dirtytalk-index.js',
     'config/world-bridge.js', 'config/open-ref.js', 'config/num-gate.js'];
+/* [v3.87.0 交棒改写] 视图侧新增来源链行面依赖（provenance-graph 及其闭包）：闭包不带它们，
+   副本 import 就是 ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」。 */
+const CLOSURE_VIEW_EXTRA = ['config/provenance-graph.js', 'config/context-compose.js',
+    'config/knowledge-contract.js', 'config/social-knowledge-bridge.js', 'config/story-clock.js'];
 /* app 闭包：search-app 的 import 闭包（9 个文件，比引擎多视图层两件）。 */
-const CLOSURE_APP = CLOSURE_ENGINE.concat([APP, 'apps/search/search-view.js', 'config/app-open-detail.js']);
+const CLOSURE_APP = CLOSURE_ENGINE.concat(CLOSURE_VIEW_EXTRA).concat([APP, 'apps/search/search-view.js', 'config/app-open-detail.js']);
 function mkTree(tag, files) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3760-' + tag + '-'));
     for (const f of files) {

@@ -123,6 +123,10 @@ const CLOSURE = [
     //   闭包不带它们，副本 import 就是 ERR_MODULE_NOT_FOUND，
     //   负控制会变成「因缺文件而红」而不是「因破坏而红」（同一支笔的教训复现）。
     'config/open-ref.js', 'config/num-gate.js',
+    // [v3.87.0 交棒改写] search-view 新增来源链行面读数依赖（config/provenance-graph.js 及其闭包）：
+    //   闭包不带它们，副本 import 就是 ERR_MODULE_NOT_FOUND，
+    //   负控制会变成「因缺文件而红」而不是「因破坏而红」（同一支笔的教训反复出现）。
+    'config/provenance-graph.js', 'config/context-compose.js', 'config/knowledge-contract.js', 'config/social-knowledge-bridge.js', 'config/story-clock.js',
     // [v3.66.0 · X2] search-view 现在还 import 详情荷载装配件（buildOpenDetail），
     //   kind 表挂在它上面；副本缺了照样是「因缺文件而红」。
     'config/app-open-detail.js',

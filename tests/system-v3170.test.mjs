@@ -354,6 +354,7 @@ const CLOSURE = [
     //   闭包不带它们，副本 import 直接 ERR_MODULE_NOT_FOUND，
     //   负控制就变成「因缺文件而红」而不是「因破坏而红」。
     'config/open-ref.js', 'config/num-gate.js',
+    'config/provenance-graph.js', 'config/context-compose.js', 'config/knowledge-contract.js', 'config/social-knowledge-bridge.js', 'config/story-clock.js',
     // [v3.66.0 · X2] 视图侧新增详情荷载装配件依赖（target_kind 表挂在它上面）
     'config/app-open-detail.js',
     'data/cheat-index.js', 'data/dirtytalk-index.js',

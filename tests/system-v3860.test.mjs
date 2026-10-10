@@ -377,7 +377,10 @@ test('v3860 C1. 咽喉接线：导入 / 刷新 / 跳转 / 挂载四处都在', (
     assert.ok(idx.includes('_provenanceCache = graph;'), '读数必须挂到唯一缓存口');
     assert.ok(idx.includes('_provenanceLine = pgSummaryLine(graph);'), '总述必须同轮算好（视图不自算）');
     /* 跳转沿用 X2 的靶心载荷，不另造派发链。 */
-    assert.ok(idx.includes("detail: buildOpenDetail(jump.appId, null, jump.ref)"), '跳转必须走唯一一支笔');
+    /* [v3.87.0 交棒改写] 派发侧收归到契约单源 makePhoneEvent（v2.41 纪律）：旧断言钉的是手写
+     *   new CustomEvent('phone:openApp', ...) 形，那一形会让 v226 契约对账与 v241 手写字面量判据转红；
+     *   本步修正后，断言改钉「契约单源 + 靶心载荷」这一实质。 */
+    assert.ok(idx.includes("makePhoneEvent(PHONE_EVENTS.OPEN_APP,") && idx.includes("buildOpenDetail(jump.appId, null, jump.ref)"), '跳转必须走唯一一支笔（契约单源 + 靶心）');
 });
 
 test('v3860 C2. 刷新点排在日历早退之前 —— 否则与剧情时间无关的两类源永远看不到', () => {

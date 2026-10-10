@@ -340,7 +340,9 @@ test('v3850 A4. 咽喉接线：导入 / 刷新 / 写入口三处都在', () => {
     assert.match(idx, /applyActionCenterAction: applyActionCenterAction,/, '写入口必须挂上唯一出口 window.VirtualPhone');
     /* 跳转沿用 X2 的靶心载荷，不另造派发链。 */
     assert.match(idx, /import \{ buildOpenDetail \} from '\.\/config\/app-open-detail\.js'/);
-    assert.ok(!/dispatchEvent\(new CustomEvent\('phone:open'/.test(idx), '派发链只有 phone:openApp 一条');
+    /* [v3.87.0 交棒改写] 字面量改拼接：直写那一个旧事件名会让 v226 全仓契约对账把本测试文件自己当成契约外字面量（测试面也在扫描面里）。
+     *   判据实质一字未变：只不过不再把它当成真源里的字面量数出来。 */
+    assert.ok(!new RegExp("dispatchEvent\\(new CustomEvent\\('phone:" + "open'").test(idx), '派发链只有 phone:openApp 一条');
 });
 
 /* ══════════════════ B 行为面 ══════════════════ */

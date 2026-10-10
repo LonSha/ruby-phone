@@ -68,6 +68,9 @@ const TOUCHED = [
   'config/worldbook-manager.js',
   'config/prompt-manager.js',
   'config/schedule-bridge.js',
+  // [v3.87.0 交棒改写] R-X1 新增的行动中心已进台账（kind: not-a-derivation, 需命中枚举面）：
+  //   副本树不带它，“未破坏副本自身全绿”就会把它报成行尸条目（B0 假红）。
+  'config/action-center.js',
   'config/branch-contrast.js',
   'config/resume-handoff.js',
   'apps/calendar/calendar-app.js',
