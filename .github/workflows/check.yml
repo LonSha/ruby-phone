@@ -1,0 +1,30 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check (npm run check)
+        run: npm run check
+      # upstream-face 的 B2 以「本机存在兄弟仓 /home/user/lonsha-memory-plugin」为前提；
+      # CI 里那条路径不存在 ⇒ 该用例按自己的设计走 fail-closed（rc 2），会报红。
+      # 这是判据的已知边界（裸跑只保证「冻读取 ↔ 本仓」），此处如实登记，不用 skip 掩盖。
+      - name: Note on known CI boundary
+        if: failure()
+        run: |
+          echo "::notice::若失败仅集中在 tests/system-v3204.test.mjs 的 B2，那是它依赖本机兄弟仓路径所致（见仓内 runtime-verification-boundary 文档的已知环境依赖节）。"
