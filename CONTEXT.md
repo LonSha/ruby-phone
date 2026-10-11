@@ -68,7 +68,8 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
   - 性能层（v2.40.0）：门改为**本进程内 vm 批量解析**（251 文件单次 ~0.6s，旧逐文件 spawn 为 ~16.7s），仅对快筛失败的文件回退 per-file `--check` 取精确 stderr。`vm.SourceTextModule` 需 `--experimental-vm-modules`，缺标志时门自 re-exec 一次（`RP_SYNTAX_GATE_REEXEC` 防递归）。判定等价性由 `tests/syntax-gate-perf.test.mjs`（含负控制）锁定，改动门时须重跑。
   - 注：显式写 `"type": "commonjs"` 并不等价于"没有 package.json"——含 `export` 的文件会因模块语法直接报错（另一种失败机制）。
 - 新增/改动 App 时同步三处版本号：`manifest.json`、`index.js` 的 `ST_PHONE_VERSION`、`package.json`；`update-log.json` 需含当前版本条目且 `latest` 指向它。版本跨源自洽由测试断言锁定，不要把具体版本号硬编码进测试。
-- release 附带离线 zip。
+- 发布附带离线 zip：`python3 tools/release_zip.py` 现场构建 `dist/<repo>-v<版本>.zip`（成员集自 `git ls-files` 派生、排除开发面），作为 GitHub Release 附件分发。
+  [v3.94.0 · 出处修正] 原句写「release 附带离线 zip」而当时**既无 tag 也无 Release**、更没有产出 zip 的工具 —— 是「给人读的那一句与真源脱节」。本版把它兑现：补打包工具 + 首个 tag/Release 与附件。
 - README.md 安装指引指向 GitHub 仓库 LonSha/ruby-phone。
 
 ## 生命周期与注册门禁（v2.65.0 ~ v2.68.0）

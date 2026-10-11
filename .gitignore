@@ -41,3 +41,5 @@ test/
 __pycache__/
 tools/__pycache__/
 .git-msgs/
+# Release package output (built by tools/release_zip.py; attached to GitHub releases, not committed)
+dist/
