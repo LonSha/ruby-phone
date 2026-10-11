@@ -219,10 +219,20 @@ test('E1 ★ `.git/objects` 里的 `tmp_obj_*` **不算**红灯（最初判据�
      *   而 C1 要求 exit 0 —— 两条一起就证明了这条口径。 */
     const dir = cleanFixture('e1');
     try {
+        /* [CI 忠实性修复] 原判据把「夹具里有别名」当成**环境前提**：
+         *   本容器的 proot 在任何一次正常提交里都会留下 `.l2s.` 别名，而真 git（CI 的
+         *   runner）一个都不留 ⇒ 这一行在 CI 上必红（判据的绿来自本机环境，
+         *   与 v3.23.0 「镜像不得依赖瞬态文件」同族）。修法：**自造该现象**
+         *   —— 在夹具的 `.git` 里显式写一对 `.l2s.tmp_*` / `.l2s.tmp_*.0001`（与实测形态一致），
+         *   不再依赖环境。 */
+        const seed = path.join(dir, '.git', 'objects', 'pack');
+        fs.mkdirSync(seed, { recursive: true });
+        fs.writeFileSync(path.join(seed, '.l2s.tmp_probe_0001'), 'x');
+        fs.writeFileSync(path.join(seed, '.l2s.tmp_probe_0001.0001'), 'x');
         let n = 0;
         const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (e.name.startsWith('.l2s.')) n += 1; if (e.isDirectory()) walk(path.join(d, e.name)); } };
         walk(path.join(dir, '.git'));
-        assert.ok(n > 0, '前提：夹具的 .git 里**应当**有 tmp_obj 别名（否则这条判据测不到东西）—— 实得 ' + n);
+        assert.ok(n > 0, '前提：夹具的 .git 里已自造别名（否则这条判据测不到东西）—— 实得 ' + n);
         const r = runGate(dir);
         assert.equal(r.status, 0, '.git 里的 tmp_obj 不得让门转红（实得 ' + r.status + '）：' + (r.stderr || '').slice(0, 300));
         assert.doesNotMatch(r.stderr, /H2/, 'H2 的判红域必须不含 .git');
