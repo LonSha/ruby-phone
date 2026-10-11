@@ -1,7 +1,7 @@
 # RubyPhone 工程宪法 (Project Context)
 
 ## 项目定位
-RubyPhone 是 SillyTavern 原生第三方扩展，三方整合：yuzuki-phone 物理手势底座 + 瑟瑟小手机社媒生态 + 色色灵感状态栏玩法/成就体系，并新增健康生理推演、音乐微信联动。
+RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Database Architecture）：原生物理手势视图栈与双轨模型传输为本仓自有代码；机制设计上吸收了瑟瑟小手机（社媒生态）与色色灵感状态栏（玩法/成就体系）的公开设计，并新增健康生理推演、音乐微信联动。（[v3.94.0 出处修正] 旧文曾写作「三方整合：yuzuki-phone 物理手势底座」——实测本仓不含 yuzuki-phone 代码，属早期模板误植，已正。）
 
 ## 零数据库铁律 (Zero-Database Iron Rule)
 1. 禁止调用 AutoCardUpdaterAPI / querySql / executeSql 等任何外部数据库接口。

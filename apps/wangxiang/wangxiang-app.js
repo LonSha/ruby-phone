@@ -1,8 +1,11 @@
 /* ========================================================
- *  柚月小手机 (Yuzuki's Little Phone)
- *  作者 (Author): yuzuki
+ *  RubyPhone — SillyTavern 虚拟智能手机 UI
+ *  作者 (Author): LonSha
  *
- * Copyright (c) yuzuki. All rights reserved.
+ * 本仓为独立实现（Zero-Database Architecture），不含任何第三方未授权代码。
+ * 对外显示名统一为 RubyPhone。
+ *
+ * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 
 import { WangxiangView } from './wangxiang-view.js';

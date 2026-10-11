@@ -1,7 +1,7 @@
 # 📱 RubyPhone — a simulated smartphone UI for SillyTavern
 
 > A full-featured, realistic mobile terminal for SillyTavern chat.
-> Built on yuzuki-phone (native gesture view stack + dual-track model transport) plus two community projects it absorbs: a social-feed phone (Xiaohongshu feed + Tieba threads + public-opinion feed) and a playbook / status-bar plugin (458 curated playbooks injected on demand, 666 achievements, live HUD).
+> 独立实现（RubyPhone 自有代码）：原生物理手势视图栈 + 双轨模型传输，并无缝吸收两个社区项目的机制设计： a social-feed phone (Xiaohongshu feed + Tieba threads + public-opinion feed) and a playbook / status-bar plugin (458 curated playbooks injected on demand, 666 achievements, live HUD).
 > **Zero external database — fully native, install and go.**
 
 ---
@@ -92,18 +92,18 @@
 * **用户自主发帖**：选择贴吧，发布新帖，参与社区讨论。
 * **AI 动态捕获**：大模型可在回复中输出 `<Tieba>` 标签，自动发帖盖楼。
 
-### 💬 微信 (WeChat) —— [源自 yuzuki-phone]
+### 💬 微信 (WeChat)
 * **拟真社交**：支持单聊、群聊、转账、发红包、联系人动态生成。
 * **音视频通话**：拟真来电弹窗，支持接入 MiniMax / OpenAI 等 TTS 语音连播。
 * **朋友圈**：角色自动发动态，支持点赞与楼中楼评论互动。
 
-### 👁️‍🗨️ 微博 (Weibo) —— [源自 yuzuki-phone]
+### 👁️‍🗨️ 微博 (Weibo)
 * 实时剧情热搜榜单，带有高仿微博信息流与 IP 属地，支持一键转发微信。
 
-### 🎵 网易云音乐 (Music) —— [源自 yuzuki-phone]
+### 🎵 网易云音乐 (Music)
 * 全局毛玻璃悬浮微型播放器，支持剧情推荐真实歌曲即时播放。
 
-### 📔 日记本 (Diary) —— [源自 yuzuki-phone]
+### 📔 日记本 (Diary)
 * 根据聊天记录，AI 自动以角色第一人称视角撰写精美排版的实体书日记。
 
 ---

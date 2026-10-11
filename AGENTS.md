@@ -27,6 +27,8 @@ npm run check    # 一次跑完全部门（语法 / 导入 / 测试 / 死导出 
 ## 历史说明
 
 本文件旧版标题为 "Yuzuki Phone Project Instructions"，并要求读
-`C:\Users\Tienchi\Code\手机文件代码结构.txt`（原作者开发机上的路径，
-在本仓与本机均不存在，属死指针）。已按本仓实际形态改写：
-项目名是 RubyPhone，权威文档是仓内 `CONTEXT.md`。
+`C:\Users\Tienchi\Code\手机文件代码结构.txt`。
+【[v3.94.0 · 出处修正]】该标题与路径**不是本项目的上游**：实测全盘检索无任何
+yuzuki-phone 本地留存，本仓亦不含其代码。二者是早期模板误植（连同 50 个文件头里
+那份含「禁止二改发布」的 yuzuki 版权声明），已于 v3.94.0 一并清除。
+本仓为**独立实现**：项目名是 RubyPhone，权威文档是仓内 `CONTEXT.md`。

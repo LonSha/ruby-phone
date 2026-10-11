@@ -204,9 +204,30 @@ function brandProblems(root) {
             if (line.indexOf('柚月の') >= 0) bad.push('C2 ' + rel + ' 仍含旧产品名「柚月の」');
         }
     }
-    /* C3 版权署名本身必须还在（改名不等于抹掉来源归属） */
-    const appSrc = readFrom(root, 'config/apps.js');
-    if (hits(appSrc, 'Yuzuki') < 1) bad.push('C3 版权署名被误删');
+    /* C3 品牌面不得再含上游署名。
+     *   [v3.94.0 · 出处修正] 原判据是 `if (hits(appSrc, 'Yuzuki') < 1) bad.push('C3 版权署名被误删')` ——
+     *   它要求 config/apps.js **必须**保留 yuzuki 署名。而实测（用户 2026-10-11 确认，且全盘
+     *   检索无 yuzuki-phone 本地留存）本仓并不含该上游代码，那行署名是早期误植。原判据因此把
+     *   「给人读的那一处与真源脱节」**制度化**了：产品改正署名，门禁反而报红。反转为守**真的**
+     *   那个不变量：品牌面（用户可见/被打包分发）不得出现上游署名 —— 与 C1/C2 同向，不是放宽。 */
+    /* ★ [v3.94.0 自指伪证修正，不是放宽] 本判据**不能全文件裸扫**：index.js 的
+     *   ST_PHONE_CURRENT_UPDATE 公告块是**字符串**，本版修正说明本身就写着「清除 50 个文件头的
+     *   上游版权署名」—— 裸扫把「解释这次修正的文字」判成缺陷本体（本仓第四种自指伪证形态，
+     *   与 C2 当年同一坑，D20 是它的反例锚）。故先把公告块整体剔除再扫。
+     *   剔除是**按块**而非按行：破坏表 D10 往品牌面注入的是**注释行**，那一族必须仍被 C3 抓到。 */
+    const stripAnnounce = (s) => s.replace(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/, 'const ST_PHONE_CURRENT_UPDATE = {};');
+    for (const rel of BRAND_FILES) {
+        const src = stripAnnounce(readFrom(root, rel));
+        if (hits(src, 'Copyright (c) yuzuki') > 0) bad.push('C3 ' + rel + ' 仍含上游版权头');
+        if (hits(src, 'All rights reserved') > 0) bad.push('C3 ' + rel + ' 仍含上游保留权利声明');
+    }
+    /* C4 留存文档也不得再自称含上游代码（声明面与产品面同源）。 */
+    for (const rel of ['README.md', 'manifest.json', 'AGENTS.md']) {
+        let src;
+        try { src = readFrom(root, rel); } catch (_e) { continue; }
+        if (/Built on yuzuki-phone/.test(src)) bad.push('C4 ' + rel + ' 仍声称 Built on yuzuki-phone');
+        if (/yuzuki × /.test(src)) bad.push('C4 ' + rel + ' 仍把 yuzuki 列为共同作者');
+    }
     return bad;
 }
 
@@ -477,10 +498,14 @@ const D = [
     ['C1 显示名退回旧产品名', INDEX_REL,
         '<span>RubyPhone</span>',
         '<span>柚月の手机</span>', 'brandProblems'],
-    /* D10：版权署名被误删（改名不该抹来源） */
-    ['C3 版权署名被误删', 'config/apps.js',
-        'Yuzuki',
-        'Unknown', 'brandProblems'],
+    /* D10：品牌面被注入上游版权头（本仓为独立实现，不得含上游声明）。
+     *   [v3.94.0 出处修正] 原行是「C3 版权署名被误删」→ 破坏 config/apps.js 里的 'Yuzuki'。
+     *   那是**假前提的破坏**：本仓本就不该有 Yuzuki 署名，该锚点在真源上命中 0 次 ⇒ breakIn
+     *   直接抛「锚点不唯一」⇒ 负控制变成「跑不起来」而不是「响过了」（本仓定性过的坏形态）。
+     *   改写为破坏**真判据**：把上游版权头写进品牌面 ⇒ C3 必须转红。 */
+    ['C3 品牌面混入上游版权头', 'config/apps.js',
+        '/* ========================================================',
+        '/* Copyright (c) yuzuki. All rights reserved.', 'brandProblems'],
     /* D11：宠物键常量定义被删（引用即抛 ReferenceError） */
     ['D1 宠物位置键未定义', FLOAT_REL,
         'export const PHONE_PET_POSITION_KEY = ' + Q + 'phone-pet-position' + Q + ';',

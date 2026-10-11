@@ -1,13 +1,11 @@
 /* ========================================================
- *  柚月小手机 (Yuzuki's Little Phone)
- *  作者 (Author): yuzuki
- * 
- * ⚠️ 版权声明 (Copyright Notice):
- * 1. 禁止商业化：本项目仅供交流学习，严禁任何形式的倒卖、盈利等商业行为。
- * 2. 禁止二改发布：严禁未经授权修改代码后作为独立项目二次发布或分发。
- * 3. 禁止抄袭：严禁盗用本项目的核心逻辑、UI设计与相关原代码。
- * 
- * Copyright (c) yuzuki. All rights reserved.
+ *  RubyPhone — SillyTavern 虚拟智能手机 UI
+ *  作者 (Author): LonSha
+ *
+ * 本仓为独立实现（Zero-Database Architecture），不含任何第三方未授权代码。
+ * 对外显示名统一为 RubyPhone。
+ *
+ * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 // 剧情时间管理器
 import { readWorldClock, readWorldAxisSnapshot } from './world-bridge.js';

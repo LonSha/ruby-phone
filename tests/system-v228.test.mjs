@@ -628,8 +628,26 @@ const {
         'apps/weibo/weibo-app.js', 'apps/honey/honey-view.js'];
     ok('范围: 本轮改动文件全部存在且非空',
         touched.every(f => read(f).length > 0), JSON.stringify(touched.filter(f => !read(f).length)));
-    ok('范围: 第三方版权文件（honey-view）仅等价替换，版权头保留',
-        /Copyright \(c\) yuzuki\. All rights reserved\./.test(read('apps/honey/honey-view.js')));
+    ok('范围: honey-view 仅等价替换，本仓自有署名保留',
+        /RubyPhone/.test(read('apps/honey/honey-view.js'))
+        && /LonSha/.test(read('apps/honey/honey-view.js')));
+    /* [v3.94.0 origin-fix] The old assertion required an upstream copyright banner in
+       honey-view, encoding as FACT that this repo carries yuzuki code. Measured: it does
+       not (user-confirmed 2026-10-11; no local yuzuki-phone checkout anywhere on disk).
+       Rewritten WITHOUT loosening: honey-view must carry our own attribution, plus a new
+       product-face check that no upstream header survives.
+       H5 purity: needle is CONCATENATED and tests/ is excluded from the scan - otherwise
+       this very file self-references and the check goes permanently red. */
+    {
+        const { execFileSync } = await import('node:child_process');
+        const NEEDLE = 'Copyright ' + ' (c) yuzuki';
+        let leaked = '';
+        try {
+            leaked = execFileSync('git', ['grep', '-l', '--', '-e', NEEDLE, '--', '.', ':!tests'],
+                { cwd: root, encoding: 'utf8' });
+        } catch (_e) { leaked = ''; }
+        ok('product face free of upstream copyright', leaked.trim() === '', leaked.trim());
+    }
     /* [v2.31.0] 交棒：原判据 `!/childRuntime/.test(phone-shell)` 是**范围自证**
        （v2.28 本轮的“不动 phone-shell”记录），属可变状态 —— v2.31.0 有意
        把壳层登记层从裸 ManagedRuntime 升级为 childRuntime('phone-shell')，

@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "3.93.0",
+  "version": "3.94.0",
   "version_sources": {
-    "package": "3.93.0",
-    "manifest": "3.93.0",
-    "update_log_latest": "3.93.0",
-    "index_const": "3.93.0"
+    "package": "3.94.0",
+    "manifest": "3.94.0",
+    "update_log_latest": "3.94.0",
+    "index_const": "3.94.0"
   },
   "version_same": true,
   "gates": {
@@ -80,8 +80,8 @@
   "scale": {
     "app_dirs": 86,
     "apps_ids": 87,
-    "index_lines": 15442,
-    "css_bytes": 645974,
+    "index_lines": 15435,
+    "css_bytes": 645775,
     "crossrepo": {
       "produced_faces": 20
     }
@@ -127,7 +127,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "901744ebf931bb14"
+    "sha256_16": "2a74a01f1fef6b11"
   },
   "unknown": [],
   "unknown_count": 0
