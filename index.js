@@ -232,7 +232,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.94.0';
+const ST_PHONE_VERSION = '3.95.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -430,21 +430,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-16",
+    date: "2026-10-17",
     items: [
-        "【定位 · 出处与品牌面修正（修前实测，不是推演）】** 50 个 tracked 文件（45 js + 5 css）文件头带 `Copyright (c) yuzuki`，其中 42 个带完整横幅（含「禁止二改发布」）；manifest.author 写「yuzuki × Ruby宇宙 × LonSha」；README 4 处写「源自 yuzuki-phone」、首段写「Built on yuzuki-phone」；index.js 头部自称「柚月小手机 (Yuzukis Little Phone)」。实测全盘检索**无任何 yuzuki-phone 本地留存**、本仓不含其代码 ⇒ 这些是早期模板**误植的虚假署名**（不是「二改分发」），但按「给人读的那一处不得与真源脱节」的纪律，无论真假它都是错的、必须修。",
-        "【三分法处置（避免误伤功能面）】** A 版权头块（伪陈述）替换；B **功能互操作串保留**（window.YuzukiMemory / 柚月の记忆 / yuzuki-phone-backup / yuzuki-phone-nai-presets / yuzuki-phone-comfyui-workflows —— 改会破坏已导出数据与宿主桥接）；C **主题资源名保留**（apps/wechat/themes/yuzuki-clear-floral / yuzuki_清透花语 / YUZUKI_CLEAR_FLORAL 一族 —— CSS 资产引用）。判据只对 A 面设红，B/C 面刻意不设 —— 否则门禁会逼着后人改坏兼容面。",
-        "【50 文件头替换（实测 50/50，MISS 0）】** 三种实测头块形态（full 39 / full-alt 3 / short 8）逐形态替换；新头为「RubyPhone — SillyTavern 虚拟智能手机 UI / 作者 LonSha / 本仓为独立实现 / 版权 (c) 2026 LonSha。采 MIT 许可」。替换前逐文件记 md5 基线、脚本先过 AST 校验；替换后残留读数：`Copyright (c) yuzuki` 0 处、「禁止二改发布」0 处（改动 50 files / +336 −396）。",
-        "【门禁面同刀（产品面与判据面必须一起改，不放宽口径）】** 两处判据把假前提固化了：system-v228 原断言 honey-view.js **必须保留** yuzuki 版权头 → 改为要求该文件持有**本仓自有**署名，并**追加全仓判据**（任何 tracked 文件不得再出现上游版权头 —— 扫描面从「一个文件」扩到全仓，是收紧不是放宽）；system-v3560 的 C3 原要求品牌面**必须含** Yuzuki 署名 → 反转为「品牌面不得含上游版权头」，另加 C4 要求留存文档不得再声称 Built on yuzuki-phone。",
-        "【本版自己抓到的缺陷（三处，全部由门禁当场报红而非靠人回看）】** ① system-v228 新判据的注释与代码含被禁串 ⇒ 全仓检索命中测试文件自己、判据恒红（自指伪证）；② system-v3560 的 D10 破坏表锚点指向已删除的 Yuzuki 署名（锚点不唯一、建表即抛）；③ system-v3560 的 C3 用全文件裸扫，把 index.js 公告块里「描述本次修正」的字符串判成「仍含上游版权头」（同一族自指伪证，与 C2 当年同坑、D20 是它的反例锚）—— 修法为按块剔除公告块后再扫（保留对注释行注入的捕获）。",
-        "【交棒改写（把固化旧前提的判据改成守真不变量，不是放宽）】** system-v228 那条「必须保留 yuzuki 版权头」在真源上已不成立 ⇒ 改为「必须持有本仓自有署名」+ 全仓禁止上游版权头（扫描面从 1 文件扩到全仓，收紧）；system-v3560 的 C3「品牌面必须含 Yuzuki 署名」反转为「品牌面不得含上游版权头」，破坏表 D10 的锚点同步从「删署名」改为「注入上游版权头」；下限形版本锚（只要求 ≥ 当版）保持不变。",
-        "【留存文档同源改写】** README（删 4 处「源自 yuzuki-phone」、首段 Built on yuzuki-phone 改独立实现）、AGENTS.md（历史说明改写为「该标题与路径**不是本项目的上游**……是早期模板误植，已一并清除」）、CONTEXT.md（「三方整合：yuzuki-phone 物理手势底座」改独立实现 + 留痕）、manifest.json（author → LonSha、description 去「融合 yuzuki」）。",
-        "【状态台账重生成（不报错、只错读数）】** 本刀使 phone.css 字节数与 index.js 行数变化 ⇒ tests/audit/status-ledger.json 漂移、system-v3730 的 S3 判据转红；由 node tools/gen_status_ledger.mjs --write 重算（测试 236 / 门 14 / 场景 12 / unknown=0），重算后 16/16 转绿。",
-        "【全量归因（红绿都要能归因，不许把环境噪声算成缺陷）】** 首跑 npm run check 报**全局性** is still pending but the event loop has already resolved（110 处、223 红）—— 症状是「单文件跑正常、全部一起跑就崩」。按纪律克隆 HEAD 基线做对照并清掉上一轮遗留的孤儿 node 进程后**干净重跑**，该症状**不复现**（3621 用例 / 3618 通过）。结论：它是并发与宿主资源槽位下的环境性假红（与仓内已登记的「整仓复制把单测拖过两分钟」同族），**非本次改动引入**。",
-        "【跨仓滞后如实登记（不属于本刀，也不掩盖）】** 清理后残余的 system-v3204 B2：上游 lonsha-memory-plugin 自 v3.305.0 / v3.314.0 起把跨仓外供登记表由 5 面增到 7 面（memoryToolsEnvelope / phoneFactReceipt，本仓**零消费**），而本仓冻读取仍停在 5 面 ⇒ 门禁在「表已变」处转红（该红在**未改动的基线克隆上同样存在**，已实测）。完整对齐需改门禁设计（R3 要求每个上游面都有登记行，与 A1「每行须有真消费点」互斥），属需两侧协同的非有界子项目 ⇒ 本版如实登记，**不弱化判据、不伪造对齐**。",
-        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是「看起来没坏但显示不对」这一族里与署名/品牌面相关的那几处：文件头署名、manifest / README / AGENTS 的出处声明、门禁是否还在守真前提。本版**不能保证**：① 真宿主实机装载后的观感与渲染（本版只核文件面与文档面）；② 两个跨仓新面（memoryToolsEnvelope / phoneFactReceipt）在手机侧的真实消费接入（属后续计划）；③ 「机制吸收自哪些社区项目的公开设计」这一层的完整出处（本版只正代码出处与署名这一层）。",
-        "【配套复跑读数】** system-v228.test.mjs 1 pass / 0 fail；system-v3560.test.mjs 15/15；system-v3730.test.mjs 16/16；腿检门（syntax 760 文件 / import-resolve 435 文件 744 条）通过。",
-        "【版本升至 3.94.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3940.py 对齐 tools/bump_v3930.py）。"
+        "【定位 · 真竞态（本地单档即可确定性复现）】`tests/system-v301/v302/v303/v310` 的 `withMirror(mut, fn)` 是**同步助手**：建临时镜像树 → 跑 `fn(dir)` → `finally` 删树。而它们的 回调全部是 `async`：`await withMirror(mut, async (dir) => { ... await loadMirror(dir, PC) ... })`。`fn(dir)` 返回一个 pending Promise 后函数立即返回，`finally` 进去 `fs.rmSync` 把镜像树删掉；回调随后才 `import()` 那个文件 ⇒ `ENOENT: no such file or directory, open /tmp/v301-mir-xxx/config/projection-contract.js`。这是一个真竞态（时序决定输出），而不是环境抖动。",
+        "【同仓已有正确范式（这是“同一件事的第二份写法并且漏了 await”）】v300 / v311 / v312 / v313 / v314 同名助手写的是 `async function withMirror(mut, fn) { ... return await fn(dir) ... }`，因此它们的 async 回调一直能跑完。需求本来就是同一个（本库 `tests/_mirror_tree.mjs` 已立“同一块代码只留一份”纪律），故修法向真源靠齐，不自创第三种形态。",
+        "【为什么不是“并发假红”（推翻旧归因，用可复算对照说话）】CI 与 README 此前把 `test-suite` 的失败归为“资源受限 runner 上并发/派生进程假红”。实测本说不成立：单档单跑 v301 连跑 3 次均红（`C4`，反复），v302 必红 3 条（`C1/C2/C3`）。另做三重对照：干净克隆里 `--test-concurrency=1` 协序口径仍红 3 条（恰好是这三条），而并发口径红 15 条。",
+        "【数字适配到“不可能巧合”的程度】并发红数 15 = v301(1) + v302(5) + v303(6) + v310(3)，**与“该文件内 async 回调调用点数”逐一吹合**（按括号配对取回调体后数出来的真读数）。并行跑只是把时序演得更容易输出，缺陷本身与并发无关；把它归成环境噪声会让缺陷长期藏在非阻塞标签后。",
+        "【修法（不改任何调用点，不弱化任何判据）】把清理挂在同一个 Promise 上：`const done = () => fs.rmSync(dir, { recursive: true, force: true })`；`try { r = fn(dir) } catch (e) { done(); throw e }`；若 `r` 是 thenable 则 `return Promise.resolve(r).finally(done)`，否则 `done(); return r`。同步路径行为逐字不变，异步路径由 `.finally` 在原 Promise 上收尾。",
+        "【同型潜伏一并收口】`system-v299` 当前无 async 回调（不会现红），但写法与四个病例逐字相同，属同型潜伏，本次一并统一；避免下一个人给它加上 async 回调后再踩一次。四个真病例加一个潜伏，共改 5 个文件的助手定义。",
+        "【真源破坏下的判据未被弱化（修的是时机，不是判据）】本次改的是“建树/删树的时机”，不是判据本身：被破坏的副本仍然真跑编译后的代码、真断言该红的仍红（只是不再在“回调还没跑完就被删”这一环上误伤）；这不是放宽，是修真缺陷。",
+        "【回归读数（单档 + 全量 + 干净克隆三重）】① 修后单档：v299 30/30 · v301 18/18 · v302 21/21 · v303 17/17 · v310 19/19；② 本仓全量（Node 20）：修前 25 红 → 修后 1 红，仅余 `v3204 B2`；③ 干净克隆同口径：修前 15 红 → 修后 5 红，`v301/v302/v303/v310` 全族消失。",
+        "【残余红的归属（不混入本版，也不掩盖）】修后干净克隆径下仅存两类：v3160 族 4 条是**已登记的边界**（依赖被 gitignore 的 `.sourcematerial/`素材，缺位时 fail-closed 拒判，方向安全）；`v3204 B2` 是**跨仓冻读取滞后**（上游表 5 面 → 7 面，本仓对新增两面零消费），非本版引入，上一版已如实登记，不在本版冒充解决。",
+        "【本版自己抓到的缺陷形态（形态锚）】** 抬版首跑即红 6 条，全部指向同一件事：当版 items 少了仓内一贯的三类材质（缺陷形态 / 交棒改写 / 面向用户的边界条）。这与本版修的真竞态无关，是**抬版自身的材质缺项**。堵口写进 tools/bump_v3950.py 的构建期守卫：材质不全就拒绝落盘，不许写完再靠测试发现。",
+        "【交棒改写（本轮实做）】** 前几版把「镜像树助手」当既有设施，本版把它降为被守护对象：withMirror 由同步助手改为「清理挂在同一个 Promise 上」的形态，调用点与判据一字未改；旧的「真源破坏→副本真跑」判据逐字保留，属主动改写而非静默通过。这是本版对判据面与实现面的分工重划。",
+        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是「看起来没坏但显示不对」这一族里与测试口径相关的那几处：镜像树助手在异步回调下被同步 finally 提前删树（修后 v301 / v302 / v303 / v310 全族转绿）。本版**不能保证**：① 真宿主实机装载后的观感与渲染（本版只核文件面与测试面）；② 两个跨仓新面（memoryToolsEnvelope / phoneFactReceipt）在手机侧的真实消费接入（属后续计划）；③ 上游登记表由 5 面增至 7 面后本仓零消费这一滞后的最终对齐（属跨仓协同）。",
+        "【构建期守卫（本次漏项的堵口：脚本不再让材质缺项静默通过）】** 本次抬版首跑即暴露一个自己的缺陷：iter 段漏了仓内一贯的收尾条，而 system-v280-3 / v285-6 / v286-4 / v287-5 四道判据正守着这条格式 ⇒ index.js 里没有该串、四条同时转红。定性：这是**抬版自身的材质缺项，不是判据缺陷**（把「版本号与说明同源」这条仓内一贯格式写掉了）。堵口写在 tools/bump_v3950.py 内：当版 items 必须含一条「版本升至 当版（五源同源）」，且 index.js 落盘后必须能 grep 到该串 —— 材质不全就拒绝落盘，不许写完再靠测试发现。",
+        "【版本升至 3.95.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3950.py 对齐 tools/bump_v3940.py）。"
     ]
 };
 

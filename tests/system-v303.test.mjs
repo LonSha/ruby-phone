@@ -239,9 +239,21 @@ function mirror(mut) {
     }
     return dir;
 }
+/* [v3.95.0] 回调可以是 async（本族 15 个调用点皆如此）——**清理必须挂在同一个 Promise 上**。
+ *   原写法 finally 会在回调的第一个 await 完成前就 rmSync 掉镜像树，回调随后 import() 那个文件
+ *   ⇒ ENOENT: no such file or directory, open '.../config/projection-contract.js'
+ *   （实测：v301 C4 / v302 C1-C3 / v303 C1-C6 / v310 N1-N3；本地单档即可确定性复现，与并发无关）。
+ *   同步回调路径行为不变；异步回调路径由 .finally 在原 Promise 上收尾。 */
 function withMirror(mut, fn) {
     const dir = mirror(mut);
-    try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    const done = () => fs.rmSync(dir, { recursive: true, force: true });
+    let r;
+    try { r = fn(dir); } catch (e) { done(); throw e; }
+    if (r !== null && (typeof r === 'object' || typeof r === 'function') && typeof r.then === 'function') {
+        return Promise.resolve(r).finally(done);
+    }
+    done();
+    return r;
 }
 const loadMirror = (dir, rel) => import(pathToFileURL(path.join(dir, rel)).href + '?m=' + Date.now());
 const readerOf = (dir) => (rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
