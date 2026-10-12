@@ -82,6 +82,9 @@ const TOUCHED = [
   'apps/album/album-view.js',
   'apps/memory/global-search-engine.js',
   'apps/search/search-view.js',
+  // [v3.97.0 · R3-O4 交棒] 搜索 App 本轮首次进枚举面（筛后按来源标签分组渲染）：
+  //   与 action-center 同款交棒 —— 副本树不带它，B0「未破坏副本自身全绿」会把它报成行尸条目。
+  'apps/search/search-app.js',
 ];
 
 function stageTree(extra = {}) {

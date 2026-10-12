@@ -124,7 +124,41 @@ export class SearchView {
         const errs = (r.errors && r.errors.length)
             ? `<div class="gs-err">${r.errors.length} 个来源读取失败：${esc(r.errors.map(e => e.sourceId).join('、'))}</div>`
             : '';
-        return head + this._scopeWarn(scope) + groups + errs;
+        return head + this._facetNote(r.facets) + this._scopeWarn(scope) + groups + errs;
+    }
+
+    /**
+     * [v3.97.0 · R3-O4] 受控筛选读数行：让用户看见**引擎从问句里抽出了什么条件**、
+     *   以及**筛掉了多少、为什么**（内核判定，本件只排版 —— 视图不自算条件是本仓纪律）。
+     *
+     * 【为什么必须显示】R3-O4 验收原文要求「与既有搜索比较找到目标所需操作数」——
+     *   若条件抽取结果不可见，用户只能猜「为什么这几条被筛掉了」，等于换了个黑箱。
+     * 【为什么 `gaps` 要分开说】「认不出人名 ⇒ 不按人名筛」与「按人名筛了」是两件事：
+     *   前者必须明说，否则用户会以为「这人确实没谈过」。
+     */
+    _facetNote(facets) {
+        const f = (facets && typeof facets === 'object') ? facets : null;
+        if (!f) return '';
+        const gaps = Array.isArray(f.gaps) ? f.gaps : [];
+        const c = f.conditions;
+        const gapHtml = gaps.length
+            ? `<div class="gs-prov gs-prov-warn">${gaps.map(g => esc(String((g && g.why) || (g && g.kind) || ''))).join('；')}</div>`
+            : '';
+        if (!c) {
+            /* 没抽出条件 = 没听懂 ⇒ 原样返回未筛结果，并如实说「这次没按条件筛」。 */
+            return `<div class="gs-prov">条件：<b>没抽出可用条件</b>（按原关键词检索，**未做筛选**）</div>` + gapHtml;
+        }
+        const bits = [];
+        if (c.keyword) bits.push('关键词「' + esc(c.keyword) + '」（词序容错）');
+        if (c.person) bits.push('人物「' + esc(c.person) + '」');
+        if (c.from || c.to) bits.push('时间 ' + esc(String(c.from || '')) + ' ~ ' + esc(String(c.to || '')));
+        if (Array.isArray(c.kinds) && c.kinds.length) bits.push('类型 ' + esc(c.kinds.join('/')));
+        const n = Number(f.kept) || 0;
+        const d = Number(f.dropped) || 0;
+        const why = (f.byReason && Object.keys(f.byReason).length)
+            ? '（其中 ' + Object.entries(f.byReason).map(([k, v]) => esc(k + ' 不符 ' + v + ' 条')).join('；') + '）'
+            : '';
+        return `<div class="gs-prov">条件：${bits.join(' · ')} · 保留 ${n} 条${d ? '，筛掉 ' + d + ' 条' + why : ''}</div>` + gapHtml;
     }
     /** 模式按钮：快速档报出真实上限（从内核读，不把 600 抄成第二份真相） */
     _modeBtnHtml() {

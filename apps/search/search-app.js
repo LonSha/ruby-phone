@@ -11,6 +11,11 @@
 
 import { GlobalSearchEngine, buildDefaultSources, makeTavernSource } from '../memory/global-search-engine.js';
 import { SearchView } from './search-view.js';
+/* [v3.97.0 · R3-O4] 问句 → 受控条件（人名 / 时间 / 类型 + 词序容错）的唯一实现。
+ *   本 App 只做两件事：把问句交它抽条件（`facetsOf`），再拿条件**过滤**既有命中
+ *   （`applyFacets`）——**不重排相关性**（排序仍归引擎的 `scoreHit`），
+ *   也**不新建索引、不新建性能守卫**（计划原文逐字点名）。 */
+import { facetsOf, applyFacets } from '../../config/search-facets.js';
 
 export class SearchApp {
     constructor(phoneShell, storage, deps = {}) {
@@ -74,6 +79,41 @@ export class SearchApp {
     }
 
     /**
+     * [v3.97.0 · R3-O4] 问句 → 受控条件（人名 / 时间 / 类型 + 词序容错）。
+     *
+     * 【人名从哪来】本 App 只从**两个既有真源**装配原名清单：
+     *   群像 App 的角色表（`charsApp.charsAll()`）与微信通讯录（`cachedWechatData.getContacts()`）。
+     *   两处都取不到 ⇒ 传**空清单**：`facetsOf` 会如实记一条 `no-actors` 缺口并
+     *   **整条不参与人名筛选**（绝不按不存在的人名筛）。
+     *
+     * 【`now` 显式取值】相对时间（今天/上周）以「本机现在」为基准 —— 取值唯一，
+     *   免得视图另算一遍（同一读数两处实现必然漂移）。
+     */
+    facets(query) {
+        return facetsOf(query, { knownActors: this._knownActors(), now: Date.now() });
+    }
+
+    /** 引擎已知人名清单（**装配点唯一**：群像角色表 ∪ 微信通讯录）。取不到即空数组。 */
+    _knownActors() {
+        const out = [];
+        const seen = new Set();
+        const push = (n) => { const s = String(n || '').trim(); if (s && !seen.has(s)) { seen.add(s); out.push(s); } };
+        try {
+            const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+            const chars = vp && (vp.charsApp || vp.chars);
+            const rows = (chars && typeof chars.charsAll === 'function') ? chars.charsAll() : null;
+            if (Array.isArray(rows)) for (const r of rows) push(r && (r.name || r.id));
+        } catch (_e) { /* 单来源失败不阻断另一来源 */ }
+        try {
+            const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+            const wd = vp && vp.cachedWechatData;
+            const rows = (wd && typeof wd.getContacts === 'function') ? wd.getContacts() : null;
+            if (Array.isArray(rows)) for (const c of rows) push(c && (c.name || c.remark || c.nickname || c.id));
+        } catch (_e) { /* 同上 */ }
+        return out;
+    }
+
+    /**
      * 供页头展示：已接入几个来源、覆盖多少条记录、**覆盖到什么程度**。
      * [v3.17.0 R-O1] 后一段是新的：快速档只要有一个源被截，页头就应说明
      *   「N 条已索引 / 某源还有更多」—— 不能把「没扫到」显示成「不存在」。
@@ -111,7 +151,7 @@ export class SearchApp {
         const sourceIds = this.view && this.view._scope ? [this.view._scope] : [];
         const scopeOpt = Array.isArray(sourceIds) && sourceIds[0] ? { sourceIds: sourceIds } : {};
         if (!this._fullMode) {
-            return { result: this.engine.query(kw, scopeOpt), promise: null };
+            return { result: this._filterByFacets(this.engine.query(kw, scopeOpt), kw), promise: null };
         }
         if (typeof this.engine.searchAll !== 'function') {
             /* [v3.17.0 R-O1] 内核没有分片入口时的**诚实降级**：
@@ -135,9 +175,50 @@ export class SearchApp {
         }))).then((r) => {
             if (self._scanGen !== gen) return { cancelled: true, results: [], scope: r && r.scope };
             self._scanning = false;
-            return r;
+            /* [v3.97.0 · R3-O4] 分片档与同步档**同一份筛选口径**（唯一实现 `_filterByFacets`）：
+             *   否则「快速档能按人名筛、全历史档不能」—— 同一功能两档行为不同，用户无从预期。 */
+            return self._filterByFacets(r, kw);
         });
         return { result: null, promise: p, gen: gen };
+    }
+
+    /* [v3.97.0 · R3-O4] 受控筛选的**唯一出口**（同步档与分片档共用同一份口径）。
+     *   · 条件由 `facets(query)` 抽（唯一实现）；
+     *   · 只**过滤**已检出的行，**不重排相关性**（排序仍归引擎的 `scoreHit`）；
+     *   · 结果体原样保留（scope / scanned / errors 一字不动），只换 `results` 与 `groups`；
+     *   · 筛选后的读数落进 `facets` 格（条件 + 筛掉多少 + 为什么），供视图如实显示。 */
+    _filterByFacets(result, kw) {
+        try {
+            const r = (result && typeof result === 'object') ? result : null;
+            if (!r) return result;
+            const f = this.facets(kw);
+            /* ★ 「没抽出任何条件」= 没听懂 ⇒ **不筛**（原样返回）。
+             *   若把空条件当「全通过」去筛，会把「没听懂」静默显示成「都匹配」。 */
+            if (!f.ok) {
+                return Object.assign({}, r, { facets: { conditions: null, kept: (r.results || []).length, dropped: 0, byReason: {}, gaps: f.gaps } });
+            }
+            const applied = applyFacets(r.results || [], f);
+            const groupMap = new Map();
+            for (const row of applied.rows) {
+                if (!groupMap.has(row.sourceId)) groupMap.set(row.sourceId, { sourceId: row.sourceId, label: row.sourceLabel, icon: row.icon, items: [] });
+                groupMap.get(row.sourceId).items.push(row);
+            }
+            const groups = Array.from(groupMap.values()).sort((a, b) => b.items[0].score - a.items[0].score);
+            return Object.assign({}, r, {
+                results: applied.rows,
+                groups,
+                total: applied.rows.length,
+                facets: {
+                    conditions: applied.conditions,
+                    kept: applied.kept, dropped: applied.dropped, byReason: applied.byReason,
+                    gaps: f.gaps
+                }
+            });
+        } catch (_e) {
+            /* 筛选是**增强**，绝不因它抛错让整次检索失败（原样返回未筛结果，并如实留痕）。 */
+            try { console.warn('⚠️ 检索条件筛选失败，退回未筛结果：', _e); } catch (_e2) { /* 忽略 */ }
+            return result;
+        }
     }
 
     /**

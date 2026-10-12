@@ -18,6 +18,8 @@ import { PhoneCallData, parseSmsMessagesFromText } from './apps/phone/phone-data
 import { normalizeOpenDetail, applyOpenDetail } from './config/app-open-detail.js';
 // [v3.66.0 · X2] 跨 App 靶心投递（与页签同一处装配：先 setTab、再投 ref、最后 render）
 import { applyOpenRef } from './config/open-ref.js';
+/* [v3.97.0 · R3-X1] 手机事实回执的唯一装配点（三类来源共用；与记忆 App 同源转发） */
+import { sendPhoneEvent } from './config/phone-fact-contract.js';
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
@@ -234,7 +236,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.96.0';
+const ST_PHONE_VERSION = '3.97.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -434,16 +436,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-18",
     items: [
-        "【定位 · 真缺口（本地可确定性复现）】装配类 App 此前只有两条注入路径，而两条都有同一个前提：这个 App 被打开过。主链路靠各 App 在自己构造期往 GENERATE_BEFORE_COMBINE_PROMPTS 挂钩子；微信链路靠 chat-view.js 的 _injectApps 表取已实例化对象。而实例只在 phone:openApp 懒加载时才 new。后果：用户保存过设置后重载，只要没有先点开那个 App，那份设置就完全不生效 —— 不报错、不提示、请求里就是没有那一块。这是本仓最贵的一族形态（不报错、只错行为）：用户会以为「我设了」。",
-        "【本版做什么（把有效装配从「是否打开过」解耦）】新建 apps/app-injection.js：设置按各 App 同一个 storage 键读，默认值一律复用各 App 的 default 设置工厂（不在这里抄第二份，抄了必然漂移）；数据面只读快照走 config/world-bridge.js 的 readPushProbe，各 App 的 read 归因纯函数仍是唯一真源；注入块复用各 App 的提示块纯函数，一个字不改；预算裁定沿用 config/injection-priority.js 的 planInjection。本模块不重写提示词系统，它只把既有纯函数读面在没有实例时接上。",
-        "【与既有两条路径的关系（同事实不重复）】collectMissingAppInjections 只对没有实例的 App 出块。实例在场的 App 仍由它自己的钩子或微信表注入 —— 本模块不抢、也不重复注入同一事实。微信链路的免实例段插在实例表循环之后，两段并列而非互相取代。",
-        "【重型三者为何是 deferred 而不是当场加载】撩语、金手指、资产的正文是 MB 级静态数据与 LA 引擎簇，它们当初就是按需加载的。若本模块静态 import 它们，等于把一个外挂都没装的用户也拖上全部语料 —— 那是把懒加载反向做掉。故先看存储里有没有非空装配清单或已启用配置，有才动态 import 并缓存；加载完成前该 App 本次不出块，并如实记进 deferred。",
-        "【只读纪律与键归属】本模块只读 storage 与只读快照，绝不写任何键、不碰上游状态。它新增读的资产引导键 __la_asset_config_v1 此前只在引擎内部经局部常量使用，不落在键门的常量层抽取面，故从未被 K1 问到归属；本版把该键登记进 scripts/keys-audit.mjs 的登记表并声明会话隔离（机制侧命中既有前缀，声明与机制一致）。",
-        "【本版自己抓到的缺陷形态（形态锚）】** 行为探针首跑即暴露一处自己的缺陷：重型装配的未出块分支一律记 deferred，把「模块已就绪但真没内容」与「模块还没加载完」压成同一形态，违反本仓反复点名的「四态不同形」（二者处置方向相反：前者等用户去装东西，后者等这一次加载完成）。这不是推演出来的，是探针跑出来的；修法是把空块按「模块是否已就绪」分流到 empty 与 deferred 两格，并在负控制里给它配一条定点破坏。另有一处同族缺陷由门禁抓住：本模块初版自写了快照形态判据（三处），撞上「形态判定只许有一份」的既有关禁（J4）；修法是把三处改成只读 readPushProbe 的返回值、形态判定仍只留在真源里。两次都是本版自己引入又自己收口，不是既有缺陷。",
-        "【交棒改写（本轮实做）】** 前几版把「跨 App 注入」完全绑定在 App 实例身上（微信表与各 App 钩子），本版把它降为「实例是快路径、存储读面是底线」：实例在场时行为逐字不变，实例缺位时改由存储读面与快照读面接管。旧的实例表字面一字未动（矩阵复算依赖它），新增的只是一条并列的免实例路径。这是本版对注入时机与注入职责的分工重划，不是放宽判据。",
-        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是「保存了设置但没生效」这一族里与注入路径相关的那几处（修后无实例也能出块，见当版套件行为面与负控制）。本版**不能保证**：① 真宿主实机装载后的观感与渲染（本版只核文件面、纯函数行为面与门禁面）；② 各 App 自己的面归因阶梯在实机上的显示（属各 App 既有套件）；③ 重型三者首次生成时的实际加载耗时（本版只保证未就绪时如实记 deferred、不静默）。",
-        "【回归读数（定向 + 门禁）】当版定向套件 27 例全绿（结构 8 · 行为 10 · 接线 4 · 负控制 5）；门禁面：语法 763 文件 · 导入可解析 · 零消费新增 0 · 生命周期 · 注册 · 键归属 444 键全登记 · 命名导入 · 弱口径 · 屏幕宿主 · 桥契约全部 rc=0。首次把桥契约门纳入本项的自检清单，正因它抓到了上面那三处自写形态判据。",
-        "【版本升至 3.96.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3960.py 对齐 tools/bump_v3950.py）。"
+        "【定位 · 真缺口（本轮实测，不是推演）】上游记忆插件已交付三件外供面，而手机侧**零消费**：上游登记表里这三行的消费列逐字写着 none@0。断点在下游而不是上游 —— 用户在上游能做到「带证据问答」，在手机上却既问不了、也看不到自己刚付的那笔钱有没有进记忆。本版把这三面接上。",
+        "【本版做什么（只搬不重算，三个纯消费契约模块）】新建 config/phone-fact-contract.js（手机事实回执，R3-X1）、config/memory-qa-contract.js（带出处往事问答，R3-X2）、config/search-facets.js（问句到受控条件，R3-O4）。三者一律**只转发、不重算**：四态与五态词表逐字对齐上游，恒定键面逐字对齐上游登记表，绝不在下游再造第二份判定真源。",
+        "【六个消费点】记忆 App 取数层新增 askPast 与事实桥取数口；记忆视图新增第六页「问往事」（跳过态各自成形，缺口逐条具名）；搜索两档（同步档与全历史档）共用同一份筛选口径；旅行记账提交后取回执；日历履约后取回执；宿主新增唯一取数口 phoneFactReceiptFor（补会话号，**不要求记忆 App 已被打开**）。",
+        "【三处真实场景闭环】付款提交、日历履约、宿主任意时刻取回执各一条闭环。宿主那一口刻意不经记忆 App 实例：实例只在懒加载时 new，等实例就是在重犯 v3.96.0 刚治过的「有效装配依赖是否打开过」同族形态。",
+        "【本版自己抓到的缺陷形态（形态锚）】** 定向套件首跑抖出**三处自己的真缺陷**，全是「该分开的两态被压成一态」这一族的变体：① 问答模块的缺席路径把「插件不在场」写死成 empty —— 与「跑了、扫了、确实没命中」同形，而两者处置相反（前者去装插件，后者去改问法）；② facetsOf 里一句空问句早返回，让「没听懂」既不说抽不出条件、也不给一条为什么；③ 同一个分支把「插件在、但本版没有这一口」也报成「插件不在场」，而那是等升级、不是等装插件。三处都是套件跑出来的，不是读代码看出来的。",
+        "【交棒改写（本轮实做）】** 上游登记表里这三面的消费列从 none@0 改成真读数（readMemoryQaAnswer@1 / readMemoryToolsEnvelope@1 / readPhoneFactReceipt@1），下游冻读取随上游提交态刷新为八面。搜索侧则把「字面命中」抬成「找对那件事」：人物、日期、类型三条件组合筛选加中文词序容错，并把筛掉多少与为什么如实显示。这是判据射程与消费面的重划，不是放宽。",
+        "【不新建第二套（计划原文点名）】不新建记忆库、不新建搜索索引、不新建性能守卫；相关性排序仍归既有 scoreHit，本层只**过滤**已检出的行。筛选口径只许一份实现，同步档与全历史档共用，免得同一功能两档行为不同。",
+        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是：三面在插件缺席、版本旧、本机读不出、真读数空四种情形下**各说各话**（见当版套件行为面与负控制），以及六处消费点确实在场且共用同一份口径。本版**不能保证**：① 真宿主实机里插件确实装在位时的端到端观感（本版只核文件面、纯函数行为面与门禁面）；② 上游未来版本对这三面键面的再次变更（本版按当版契约对齐，漂移靠两地登记面与对账门报警）；③ 搜索筛选在万条级库上的实机响应（计划原文已点名不许拿 Node 读数冒充手机帧率）。",
+        "【回归读数（定向 + 门禁）】当版定向套件 21 例（结构 3 · 行为 10 · 接线 4 · 负控制 3 · 版本锚 1）；门禁面：语法 767 文件 · 导入可解析 · 命名导入 · 弱口径 · 零消费新增 0 · 注册 · 键归属 · 生命周期 · 派生读数源身份台账（新增 search-app 一条已登记的**非派生库**）· 桥契约（三面消费点 2/2/4 加写入侧 2）全部 rc=0。计划期内一律只跑定向验证，不跑全量回归。",
+        "【版本升至 3.97.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3970.py 对齐 tools/bump_v3960.py）。"
     ]
 };
 
@@ -3394,6 +3396,35 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             return { ok: true, note: '已确认提交（本机记一笔；真实余额由各来源自己写）', state: FC_STATES.settled.key, plan: plan.plan };
         } catch (e) {
             return { ok: false, note: '提交失败：' + String((e && e.message) || e), state: '', plan: '' };
+        }
+    }
+    /**
+     * [v3.97.0 · R3-X1] 手机事实回执的**唯一取数口**（财务 / 日历 / 剧情三类共用）。
+     *
+     * 【为什么装配在真源模块里而不是本口】三类来源的 `source` 名要与上游
+     *   `DEFAULT_CLASS_HINT` 逐字对上，三处各拼一份必然漂移；故装配点唯一在
+     *   `config/phone-fact-contract.js::assemblePhoneFact`（记忆 App 的 `sendPhoneEvent`
+     *   与**本口**都调它，同源不重写）。本口只负责补会话身份并转发，**不改写返回值**。
+     *
+     * 【四态不许压平】上游回执带 `state`（accepted / rejected / pending / revoked）与
+     *   `reason`；本口**原样搬运**，绝不折算成「成功/失败」——那会把「还悬着」读成「被拒了」。
+     *   模块不在场时上游给 ok:false + state:'absent'，本口照搬（**不是**「这条没入账」）。
+     */
+    function phoneFactReceiptFor(cls, payload, ctx) {
+        try {
+            /* ★ 走真源模块（`config/phone-fact-contract.js` 的 `sendPhoneEvent`），
+             *   **不要求记忆 App 已被打开**：实例只在懒加载时才 new，等实例就是在重犯
+             *   「有效装配依赖是否打开过」（v3.96.0 · R3-O6 刚治过的那族形态）。
+             *   装配点唯一在这一处；记忆 App 的 `sendPhoneEvent` 是它的**同源转发**
+             *   （两边都调同一个 `assemblePhoneFact`，不各拼一份）。 */
+            const c = Object.assign({}, ctx || {});
+            if (!c.chatId) { try { c.chatId = String(storage?.currentConversationId || ''); } catch (_ec) { c.chatId = ''; } }
+            return sendPhoneEvent(typeof window !== 'undefined' ? window : null, cls, payload, c);
+        } catch (e) {
+            return { ok: false, state: 'unavailable', reason: 'thrown',
+                eventClass: 'unknown', classKnown: false, guarded: false, guard: '',
+                lifecycle: null, receipt: null, plan: null,
+                notes: ['回执取数抛错：' + String((e && e.message) || e)] };
         }
     }
 
@@ -12055,6 +12086,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.87.0 · 拓展计划 R-X3] 财务提交的**唯一写入口**：
                  *   视图只把动作交上来，落账 / 回读 / 撤销都在咽喉这一处做。 */
                 applyFinanceCommitAction: applyFinanceCommitAction,
+                /* [v3.97.0 · R3-X1] 手机事实回执的**唯一取数口**（三类来源共用）：
+                 *   视图只交「哪一类 + 载荷」，装配与转发都在咽喉这一处做
+                 *   （记忆 App 的 `sendPhoneEvent` 是唯一装配点，本口只转发它）。
+                 *   只读：上游 `handleFact` 是纯函数，落账由 owner 侧走既有门。 */
+                phoneFactReceiptFor: phoneFactReceiptFor,
                 /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台的**唯一恢复入口**：
                  *   视图只交「要接续什么」，委托真实 owner 与回读都在咽喉这一处做。
                  *   只读读数口另挂 `resumeWorkbenchFace`（视图与诊断读这一份）。 */

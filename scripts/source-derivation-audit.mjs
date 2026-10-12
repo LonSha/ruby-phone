@@ -107,6 +107,11 @@ export const LEDGER = [
     { file: 'apps/calendar/calendar-view.js', kind: 'not-a-derivation', note: '时间线视图据 memo.commitmentSourceId 反查约定（纯展示）。' },
     { file: 'apps/memory/global-search-engine.js', kind: 'not-a-derivation', exports: ['registerSource(src)', 'query(query, opts = {})'], note: '跨 App 搜索：sourceId 是来源标签，索引每次打开面板失效重建，不承载派生条目生命周期。' },
     { file: 'apps/search/search-view.js', kind: 'not-a-derivation', note: '搜索面板：按来源作用域过滤视图。' },
+    /* [v3.97.0 · R3-O4 交棒] `search-app.js` 本轮首次进枚举面：受控筛选出口 `_filterByFacets`
+     *   在筛后按 `row.sourceId` 重新分组渲染（`.push(row)` 那行构成「源身份字段 + 集合操作」形态）。
+     *   它是**渲染分组**，不是派生库：不持有条目、不做按源去重与回收（去重与回收归各源自己做），
+     *   与同目录已在册的 `search-view.js` / `global-search-engine.js` 同属「sourceId 是来源标签」一类。 */
+    { file: 'apps/search/search-app.js', kind: 'not-a-derivation', note: '搜索 App：筛后按来源标签重新分组渲染（源身份是展示标签，不承载派生条目生命周期）。' },
     { file: 'config/schedule-bridge.js', kind: 'not-a-derivation', note: '日程提醒协议桥：sourceKey 是来源 App 的标签（schedule/wechat/task/health），不承载派生条目生命周期。' },
     { file: 'config/action-center.js', kind: 'not-a-derivation', note: '统一行动中心：sourceId 是**五源待处理项的来源事件 id**（约定的 apt_x / 账单的 from>to / 通知 id），只用于幂等键与撤回归因，本层不持有、也不回收来源条目（回收由各源自己做）。枚举面命中 4 处均为键构造与留痕行。' },
     { file: 'config/branch-contrast.js', kind: 'not-a-derivation', inFace: false, note: '分支对照工作区：纯函数只读对照，不承载派生条目生命周期。' },

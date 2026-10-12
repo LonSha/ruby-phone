@@ -233,6 +233,32 @@ const CHECKPOINT_LINE_READER = 'checkpointFaceLine';
 const CHECKPOINT_MIN_CONSUMERS = 1;
 const CHECKPOINT_SOURCE_REL = 'config/checkpoint-content-contract.js';
 
+/* ── [v3.97.0 · R3-X2/X1] J14/J15/J16：上游三件新外供面必须真被业务面消费 ──
+ * 【为什么必须有】上游 B 包（v3.320.0/v3.321.0/v3.322.0）与 M-X6 交付了三件面：
+ *   `memoryQaAnswer`（带证据的自然语言问答 · v3.322.0）、`memoryToolsEnvelope`
+ *   （五能力统一只读信封 · v3.319.0）、`phoneFactReceipt`（确认/撤回/双向回执 · v3.314.0）。
+ *   而下游实测 **全库零消费** —— 本仓「建好不消费」的第十一至十三例，
+ *   与投影面 / 注入面 / 证据面 / 检查点面同一族。R3-X1/X2 已接入，本门把它们钉住。
+ * 【判据口径】每条：① 真源必须导出对应出口；② 产品面 apps/** 的消费点不得少于下限。
+ * 【为什么下限各是 1】三面各落一个**独立业务面**（记忆 App 内核；事实回执另加
+ *   旅行记账与日历两处写入侧）。写 1 不留余量是刻意的 —— 少一个就意味着那一面又回到零消费。 */
+const QA_READER = 'readMemoryQaAnswer';
+/* [face: memoryQaAnswer] [reader: readMemoryQaAnswer] [floor: 1] */
+const QA_SOURCE_REL = 'config/memory-qa-contract.js';
+const QA_MIN_CONSUMERS = 1;
+
+const TOOLS_READER = 'readMemoryToolsEnvelope';
+/* [face: memoryToolsEnvelope] [reader: readMemoryToolsEnvelope] [floor: 1] */
+const TOOLS_MIN_CONSUMERS = 1;
+
+const PHONE_FACT_READER = 'readPhoneFactReceipt';
+/* [face: phoneFactReceipt] [reader: readPhoneFactReceipt] [floor: 1] */
+const PHONE_FACT_SOURCE_REL = 'config/phone-fact-contract.js';
+const PHONE_FACT_MIN_CONSUMERS = 1;
+/** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
+const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
+const PHONE_FACT_MIN_SINKS = 2;
+
 /* ------------------------------------------------------------
  * 注释剥离：J1/J2/J4 都要在**去注释**的源码上判。
  *   为什么必须去注释：本仓大量注释逐字提到桥名与旧写法
@@ -436,6 +462,38 @@ for (const [rel, code] of stripped) {
     if (!rel.startsWith('apps/')) continue;
     const c = countOf(code, CHECKPOINT_READER + '(');
     if (c > 0) { checkpointConsumerCount += c; checkpointConsumerFiles.push(rel); }
+}
+
+/* ── [v3.97.0 · R3-X2/X1] J14/J15/J16：三件新面的出口在场 + 产品侧消费点 ── */
+const qaCode = stripped.get(QA_SOURCE_REL) || '';
+const qaExportsOk = [
+    QA_READER, 'readMemoryQaAnswer', 'readMemoryToolsDescribe', 'readMemoryToolsEnvelope', 'qaRefOf'
+].map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(qaCode) }));
+let qaConsumerCount = 0;
+const qaConsumerFiles = [];
+let toolsConsumerCount = 0;
+const toolsConsumerFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c1 = countOf(code, QA_READER + '(');
+    if (c1 > 0) { qaConsumerCount += c1; qaConsumerFiles.push(rel); }
+    const c2 = countOf(code, TOOLS_READER + '(');
+    if (c2 > 0) { toolsConsumerCount += c2; toolsConsumerFiles.push(rel); }
+}
+const phoneFactCode = stripped.get(PHONE_FACT_SOURCE_REL) || '';
+const phoneFactExportsOk = [
+    PHONE_FACT_READER, 'readPhoneFactFace', 'readPhoneFactBatch', 'readPhoneFactPlanEdit', 'assemblePhoneFact', 'sendPhoneEvent'
+].map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(phoneFactCode) }));
+let phoneFactConsumerCount = 0;
+const phoneFactConsumerFiles = [];
+let phoneFactSinkCount = 0;
+const phoneFactSinkFiles = [];
+for (const [rel, code] of stripped) {
+    if (!rel.startsWith('apps/')) continue;
+    const c = countOf(code, PHONE_FACT_READER + '(');
+    if (c > 0) { phoneFactConsumerCount += c; phoneFactConsumerFiles.push(rel); }
+    const c2 = countOf(code, PHONE_FACT_SINK_TOKEN);
+    if (c2 > 0) { phoneFactSinkCount += c2; phoneFactSinkFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -656,6 +714,62 @@ if (checkpointConsumerCount < CHECKPOINT_MIN_CONSUMERS) {
     console.error('  修法：产品面接 config/checkpoint-content-contract.js 的 readLonshaCheckpointFace。');
 }
 
+/* ── J14/J15/J16 [v3.97.0 · R3-X2/X1] ── */
+/* 出口在场与「有人读」**分别判**（与 J12/J13 同规）：出口被删 = corrupt，出口没人读 = fail。 */
+const missingQaExports = qaExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingQaExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J14 真源 ' + QA_SOURCE_REL + ' 缺出口（' + missingQaExports.length + ' 个）：' + missingQaExports.join(' / '));
+    console.error('  说明：这些出口是 v3.97.0 落的下游消费侧入口，被人删掉就等于那一面又回到「读不出」。');
+}
+if (qaConsumerCount < QA_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J14 ' + QA_READER + ' 只有 ' + qaConsumerCount + ' 个产品侧消费点（下限 ' + QA_MIN_CONSUMERS + '）：');
+    for (const f of qaConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.322.0（B 包 · M3-X1）把「谁答应了什么、后来怎样、为何改变」做成了');
+    console.error('        带出处的自然语言问答（恒定 15 键 + gaps 具名缺口，答不出时不编）。下游零消费 ⇒');
+    console.error('        用户只能看到一条条记忆，问不出「为什么改了约会地点」（第十二次「建好不消费」）。');
+    console.error('  修法：产品面接 config/memory-qa-contract.js 的 readMemoryQaAnswer。');
+}
+const missingToolsExports = qaExportsOk.filter((x) => !x.ok && x.fn === 'readMemoryToolsEnvelope').map((x) => x.fn);
+if (missingToolsExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J15 真源缺出口：readMemoryToolsEnvelope');
+}
+if (toolsConsumerCount < TOOLS_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J15 ' + TOOLS_READER + ' 只有 ' + toolsConsumerCount + ' 个产品侧消费点（下限 ' + TOOLS_MIN_CONSUMERS + '）：');
+    for (const f of toolsConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游把五件能力（证据查询 / 续接包 / 事实预演 / 召回解释 / 知识边界）收成');
+    console.error('        恒定 14 键信封 + 五态（ok|empty|unknown|unavailable|partial）—— 下游零消费 ⇒');
+    console.error('        这五件能力在用户面前不存在（第十三次「建好不消费」）。');
+    console.error('  修法：产品面接 config/memory-qa-contract.js 的 readMemoryToolsEnvelope。');
+}
+const missingPhoneFactExports = phoneFactExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingPhoneFactExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J16 真源 ' + PHONE_FACT_SOURCE_REL + ' 缺出口（' + missingPhoneFactExports.length + ' 个）：' + missingPhoneFactExports.join(' / '));
+}
+if (phoneFactConsumerCount < PHONE_FACT_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J16 ' + PHONE_FACT_READER + ' 只有 ' + phoneFactConsumerCount + ' 个产品侧消费点（下限 ' + PHONE_FACT_MIN_CONSUMERS + '）：');
+    for (const f of phoneFactConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 lonsha v3.314.0（M-X6）把「手机侧只知道送出去了、不知道记忆侧收没收」');
+    console.error('        这条单向化欠债做成了四态回执（accepted/rejected/pending/revoked + 十条穷尽理由），');
+    console.error('        下游零消费 ⇒ 用户永远看不出「这条到底进没进记忆」（第十一次「建好不消费」）。');
+    console.error('  修法：产品面接 config/phone-fact-contract.js 的 readPhoneFactReceipt。');
+}
+/* ★ 写入侧另有下限：只在记忆 App 内核里读一次、却没在任何真实事件处调用它，
+ *   等于「建好不消费」换了个位置复现（读了但没人用）。故另判**真实写入侧调用点**。 */
+if (phoneFactSinkCount < PHONE_FACT_MIN_SINKS) {
+    fail = 1;
+    console.error('[bridge-contract] x J16 事实回执的**写入侧消费口**（' + PHONE_FACT_SINK_TOKEN + '）只有 '
+        + phoneFactSinkCount + ' 处（下限 ' + PHONE_FACT_MIN_SINKS + '）：');
+    for (const f of phoneFactSinkFiles) console.error('    ' + f);
+    console.error('  说明：读一次回执≠真的在事件处用它。上游做的是「付款 / 日历履约 / 剧情事件」');
+    console.error('        三类各完成一条双向闭环（R3-X1 验收原文），至少要两处真实事件侧调用它。');
+}
+
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -670,5 +784,6 @@ console.log('[bridge-contract] ' + EVENT_PLATFORM_READER + ' 消费点 ' + event
 console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsumerCount + ' 个（' + injConsumerFiles.length + ' 文件，下限 ' + INJECTION_READER_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 消费面 ' + evidenceConsumerCount + ' 个（按文件去重，下限 ' + EVIDENCE_MIN_CONSUMERS + '）· ' + FRESHNESS_READER + ' 消费面 ' + freshnessConsumerCount + ' 个（下限 ' + FRESHNESS_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + CHECKPOINT_READER + ' 消费点 ' + checkpointConsumerCount + ' 个（' + checkpointConsumerFiles.length + ' 文件，下限 ' + CHECKPOINT_MIN_CONSUMERS + '）· 真源四出口在场 ' + (checkpointExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] ' + QA_READER + ' 消费点 ' + qaConsumerCount + ' 个 · ' + TOOLS_READER + ' 消费点 ' + toolsConsumerCount + ' 个 · ' + PHONE_FACT_READER + ' 消费点 ' + phoneFactConsumerCount + ' 个 · 写入侧 ' + PHONE_FACT_SINK_TOKEN + ' ' + phoneFactSinkCount + ' 处（下限 ' + PHONE_FACT_MIN_SINKS + '）');
 console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费');
 process.exit(0);

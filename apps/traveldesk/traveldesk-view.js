@@ -153,6 +153,18 @@ export class TraveldeskView {
         let res = null;
         try { res = window.VirtualPhone?.applyFinanceCommitAction?.(String(action || 'commit')) || null; } catch (_e) { res = null; }
         this._flash = (res && res.note) ? res.note : '这一步没接上（宿主未接线）';
+        /* [v3.97.0 · R3-X1] 落账之后**再问一次记忆侧收没收**（上游事实桥回执）：
+         *   本机记了一笔 ≠ 记忆侧认了这一笔。两者是两件事，中间没有任何机制会响，
+         *   故这一步必须在用户看得见的地方明说。取数走宿主唯一出口
+         *   （`VirtualPhone.phoneFactReceiptFor` → 记忆 App 的 `sendPhoneEvent`），
+         *   视图自己不算生命周期四态（那归上游 `lifecycleOf`）。 */
+        try {
+            const r = this._lastReceipt = window.VirtualPhone?.phoneFactReceiptFor?.('finance', {
+                eventId: String((res && res.idemKey) || (res && res.plan) || 'commit'),
+                summary: String((res && res.note) || '')
+            }) || null;
+            if (r && r.receipt) this._flash += '｜记忆侧：' + String(r.receipt.state || '') + '（' + String(r.receipt.reason || '') + '）';
+        } catch (_e) { /* 回执是**增强**，绝不因它抛错把已完成的落账显示成失败 */ }
         this.app.render();
     }
 

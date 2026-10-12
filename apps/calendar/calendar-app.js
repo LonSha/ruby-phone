@@ -151,9 +151,21 @@ export class CalendarApp {
         }), '约定已改期');
     }
     fulfillCommitmentById(id, eventKey = '') {
-        return this.applyCommitmentResult(fulfillCommitment(this.loadCommitments(), {
+        const r = this.applyCommitmentResult(fulfillCommitment(this.loadCommitments(), {
             id, eventKey: eventKey || `fulfill:${id}:${Date.now()}`
         }), '约定已完成');
+        /* [v3.97.0 · R3-X1] 履约完成后**同步告诉记忆侧**（上游事实桥回执）：
+         *   日历自己记「已履约」≠ 记忆侧把这条当既成事实 —— 两者是两件事。
+         *   取数走宿主唯一出口（任意 App 未打开也能取），本控制器不算四态。
+         *   只送「已发生的一次履约」；撤回由上游回执按 `revoked` 语义处理。 */
+        try {
+            const rc = window.VirtualPhone?.phoneFactReceiptFor?.('calendar', {
+                eventId: 'commitment:' + String(id || '') + ':' + String(eventKey || ''),
+                summary: String((r && r.item && r.item.content) || '')
+            });
+            if (rc && rc.receipt) this.lastFactReceipt = rc.receipt;
+        } catch (_e) { /* 回执是**增强**，绝不因它抛错把已完成的履约显示成失败 */ }
+        return r;
     }
     cancelCommitmentById(id, reason = '取消', eventKey = '') {
         return this.applyCommitmentResult(cancelCommitment(this.loadCommitments(), {

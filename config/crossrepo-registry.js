@@ -167,8 +167,13 @@ export const CROSSREPO_FEATURES = Object.freeze([
         id: 'lonsha.evidence',
         label: '九账证据工作台',
         owner: OWNER_LONSHA,
-        since: '3.214.0',
-        sinceSource: '本仓 config/world-bridge.js（v3.214）',
+        /* [v3.97.0 · R3-B 包] 上游 B 包推送后，上游登记表的 evidenceWorkbench 行把
+         *   producer_version 抬到 **v3.307.0**（M-O8 第二刀：九账行上恒定两列 scope/masked、
+         *   `EVIDENCE_VERSION` 2 → 3、秘密正文收口）。本仓口径随之对齐到**完整契约形状**
+         *   齐备的那一版（与上游 `checkpointCompare` 行「取完整契约形状齐备的那一版」同纪律）——
+         *   否则 R4「producer_version 与 since 必须同口径」会常红，而红的原因在上游那份账里。 */
+        since: '3.307.0',
+        sinceSource: '上游 index.js 的 _evidenceWorkbench,searchEvidence（行上恒定两列 scope/masked 自 v3.307.0 起）；上游版本本仓未留档，证据在上游真源',
         fieldKeys: ['evidence'],
         contract: '快照顶层 `evidence`（ledgers / items / summary / selfConsistent / reason）',
         keySites: [
@@ -226,6 +231,73 @@ export const CROSSREPO_FEATURES = Object.freeze([
         standalone: '未装上游 ⇒ 缺席；装了但早于 3.233.0 ⇒ not-produced',
         upstreamFace: 'eventPlatforms',
         declaredConsumer: 'readLonshaEventPlatforms',
+        declaredFloor: 1
+    },
+    {
+        id: 'lonsha.qaAnswer',
+        label: '往事问答（带证据的自然语言记忆问答）',
+        owner: OWNER_LONSHA,
+        since: '3.322.0',
+        sinceSource: '上游 lonsha-memory-plugin/index.js 的 askMemoryQuestion（v3.322.0 B 包 · M3-X1）；上游版本本仓未留档，证据在上游真源',
+        fieldKeys: [],
+        contract: '引擎方法族：`askMemoryQuestion(question, opts)` 返回**恒定 15 键**（version / question / intents / actor / answer[] / gaps[] / refs[] / plans[] / masked / truncated / resourced / total / knownActors / reason / writesNothing），每句 answer 带 kind / planId / text / ref / floor / ledger；`gaps[]` 具名「为什么答不出」（查不到 / 没跑 / 翻过头三者分列）；plans 只带读数**不带 rows**',
+        keySites: [
+            { file: 'apps/memory/memory-app.js', token: 'readMemoryQaAnswer' }
+        ],
+        consumers: [
+            { file: 'apps/memory/memory-app.js', token: 'readMemoryQaAnswer(' },
+            { file: 'apps/memory/memory-view.js', token: 'askPast' }
+        ],
+        invalidation: '内核缺席 ⇒ version=0 + reason + gaps 具名 module 类缺口（**不是**「没有答案」）；旧版无此出口 ⇒ face-absent（等升级）；问了但没命中 ⇒ answer 空 + gaps 具名（**真读数**，与「没这功能」相反）',
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.322.0 ⇒ face-absent（问答族未交付）',
+        upstreamFace: 'memoryQaAnswer',
+        declaredConsumer: 'readMemoryQaAnswer',
+        declaredFloor: 1
+    },
+    {
+        id: 'lonsha.memoryTools',
+        label: '记忆工具信封（五能力的统一只读面）',
+        owner: OWNER_LONSHA,
+        since: '3.322.0',
+        sinceSource: '上游 lonsha-memory-plugin/memory-tools-api.js 的五能力出口（v3.305.0 X9 交付 · v3.322.0 抬版）；上游版本本仓未留档，证据在上游真源',
+        fieldKeys: [],
+        contract: '引擎方法族：`memoryToolsDescribe()`（自述缺哪一格）+ `queryEvidence(spec, opts)` 恒定 14 键信封（kind / api / apiVersion / toolVersion / state / stateLabel / reason / source{module,symbol,path} / revision / revisionSource / scope / data / notes / writesNothing）+ 五态词表 ok|empty|unknown|unavailable|partial',
+        keySites: [
+            { file: 'apps/memory/memory-app.js', token: 'readMemoryToolsEnvelope' }
+        ],
+        /* [v3.97.0 · 自抓缺陷] 初版在这里登记了 `memory-view.js` 消费 `memoryToolsFace` ——
+         *   真码里根本没有这一句（v3190 A3 当场点名：「声称在消费，真码里找不到」）。
+         *   修法不是去视图里补一句无意义调用（计划明文禁止「为让接口有消费而加调用」），
+         *   而是**把不真实的声明拿掉**：view 真消费的是问答出口与事实面自述（另有其条目登记）。 */
+        consumers: [
+            { file: 'apps/memory/memory-app.js', token: 'readMemoryToolsEnvelope(' }
+        ],
+        invalidation: '能力未注入 ⇒ module-absent / 注入但缺符号 ⇒ symbol-absent / 内核模块未加载 ⇒ 宿主降级信封 unavailable（data=null 且 notes 写明成因）；能力在场、真跑过、明确没有 ⇒ empty（data 为真读数）——**「没记录」不等于「他知道没有」**',
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.319.0 ⇒ face-absent（工具信封族未抬版）',
+        upstreamFace: 'memoryToolsEnvelope',
+        declaredConsumer: 'readMemoryToolsEnvelope',
+        declaredFloor: 1
+    },
+    {
+        id: 'lonsha.phoneFact',
+        label: '手机事实回执（确认 / 撤回 / 双向回执）',
+        owner: OWNER_LONSHA,
+        since: '3.314.0',
+        sinceSource: '上游 lonsha-memory-plugin/phone-fact-bridge.js 的 receiptFor / lifecycleOf / handleFact / planEdit（v3.314.0 M-X6）；上游版本本仓未留档，证据在上游真源',
+        fieldKeys: [],
+        contract: '引擎方法族：`handleFact(fact, ctx)` / `handleBatch(facts, ctx)` / `planEdit(action, fact)` / `bridgeState(bridge)`；回执恒定九键 eventId / rootEventId / state / reason / decidable / accepted / nextStep / reasonText / version + 生命周期四态 accepted|rejected|pending|revoked + 十条穷尽回执理由 + 桥能力三态 absent|legacy|capable',
+        keySites: [
+            { file: 'apps/memory/memory-app.js', token: 'readPhoneFactReceipt' }
+        ],
+        consumers: [
+            { file: 'apps/memory/memory-app.js', token: 'readPhoneFactReceipt(' },
+            { file: 'apps/traveldesk/traveldesk-view.js', token: 'phoneFactReceiptFor' },
+            { file: 'apps/calendar/calendar-app.js', token: 'phoneFactReceiptFor' }
+        ],
+        invalidation: '桥缺席 ⇒ state=absent（整条分支不进入，**非**「没事实」）；准入内核缺格 ⇒ decidable:false + admission-unavailable（**不假装 pending、不假装 rejected**）；空批 ⇒ rows 为空数组（不是「有但全被挡」）——★ pending（等用户确认）与 rejected（明确未进账）**刻意不同形**',
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.314.0 ⇒ face-absent（事实桥族未交付）',
+        upstreamFace: 'phoneFactReceipt',
+        declaredConsumer: 'readPhoneFactReceipt',
         declaredFloor: 1
     },
     {

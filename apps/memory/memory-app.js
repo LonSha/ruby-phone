@@ -22,6 +22,20 @@ import {
   senseRows, sceneRows, lifecycleRows, supersedePairs,
   emotionTrace, auditMemory, insightSummary, coverageRows
 } from './memory-insights.js';
+/* [v3.97.0 · R3-X2 / R3-X1] 上游三面的**唯一消费口**（本层只取数，不重算、不合成）：
+ *   · `config/memory-qa-contract.js`     —— 往事问答（memoryQaAnswer）与记忆工具信封
+ *                                            （memoryToolsEnvelope）；
+ *   · `config/phone-fact-contract.js`    —— 手机事实回执（phoneFactReceipt）。
+ *   为什么收在控制器这一层：视图**只吃投影后的数据**（本 App 既有纪律），
+ *   而「上游出口在不在 / 读出来是什么态」属取数事，与渲染无关。 */
+import {
+  readMemoryQaAnswer, readMemoryToolsDescribe, readMemoryToolsEnvelope,
+  MEMORY_QA_FACE_STATES
+} from '../../config/memory-qa-contract.js';
+import {
+  readPhoneFactFace, readPhoneFactReceipt, readPhoneFactBatch, readPhoneFactPlanEdit,
+  assemblePhoneFact
+} from '../../config/phone-fact-contract.js';
 
 export class MemoryApp {
   constructor(phoneShell, storage) {
@@ -127,6 +141,107 @@ export class MemoryApp {
       const pkg = this.insights({ perSense: 1, perScene: 1, perStage: 0 });
       return pkg.summary;
     } catch (_e) { return '记忆总述失败（已降级）'; }
+  }
+
+  /* ========== R3-X2 · 往事问答取数（消费上游 memoryQaAnswer） ========== */
+  /**
+   * 问一句往事。**只搬上游读数，不在这里合成答案、不补缺口**（R3-X2 验收原文：
+   *   「未知时不编答案」「消费上游新面而非新增第 3 套记忆库」）。
+   *
+   * 【人名从哪来】`knownActors` 由本层从**引擎已认的实体名**装配（与上游
+   *   `_qaKnownActors` 同源：图节点 + 实体表），**不由问句猜**。装配失败即给空数组 ——
+   *   空数组让上游如实报「没认出人名」，本层不补、不编。
+   *
+   * @param {string} question
+   * @returns 恒定 15 键 + { state, faceReason }（见 config/memory-qa-contract.js）
+   */
+  askPast(question) {
+    /* ★ **不传 `knownActors`**：上游 `askMemoryQuestion` 的自述是
+     *   `Array.isArray(o.knownActors) ? o.knownActors : this._qaKnownActors(maxActors)`——
+     *   它自己有一个唯一装配点（图节点 + 实体表）。本层再装配一份就是**第二个真源**
+     *   （本仓「同一口径只许一份实现」）；传空数组更糟：那会把上游装配点顶掉，
+     *   把「本层没查出人名」谎报成「一个人名都没有」。故这一格整条交给上游。 */
+    try {
+      return readMemoryQaAnswer(typeof window !== 'undefined' ? window : null, question, {});
+    } catch (_e) {
+      return readMemoryQaAnswer(null, question, {});
+    }
+  }
+
+  /** 记忆工具面自述（缺哪一格、为什么缺）——只转发上游 `memoryToolsDescribe()`。 */
+  memoryToolsFace() {
+    try { return readMemoryToolsDescribe(typeof window !== 'undefined' ? window : null); }
+    catch (_e) { return readMemoryToolsDescribe(null); }
+  }
+
+  /** 结构化证据查询（走记忆工具信封；五态原样搬运）。 */
+  evidenceQuery(spec, opts) {
+    try { return readMemoryToolsEnvelope(typeof window !== 'undefined' ? window : null, spec, opts); }
+    catch (_e) { return readMemoryToolsEnvelope(null, spec, opts); }
+  }
+
+  /* ========== R3-X1 · 手机事实回执取数（消费上游 phoneFactReceipt） ========== */
+  /** 手机事实桥能力自述（面在位?/ 桥三态 / 四态是否穷尽）。只转发上游。 */
+  phoneFactFace() {
+    try { return readPhoneFactFace(typeof window !== 'undefined' ? window : null); }
+    catch (_e) { return readPhoneFactFace(null); }
+  }
+
+  /**
+   * 送一条手机事实（**只算不写**：上游 `handleFact` 是纯函数，落账由 owner 走既有门）。
+   * @returns {{state, reason, eventClass, classKnown, guarded, guard, lifecycle, receipt, plan, notes}}
+   */
+  phoneFactReceipt(fact, ctx) {
+    try { return readPhoneFactReceipt(typeof window !== 'undefined' ? window : null, fact, ctx); }
+    catch (_e) { return readPhoneFactReceipt(null, fact, ctx); }
+  }
+
+  /** 批量送事实（批内去重与单条同函，本层不自写）。 */
+  phoneFactBatch(facts, ctx) {
+    try { return readPhoneFactBatch(typeof window !== 'undefined' ? window : null, facts, ctx); }
+    catch (_e) { return readPhoneFactBatch(null, facts, ctx); }
+  }
+
+  /** 编辑 / 删除 / 撤回 ⇒ 上游换代或撤回计划（只算不写）。 */
+  phoneFactPlanEdit(action, fact) {
+    try { return readPhoneFactPlanEdit(typeof window !== 'undefined' ? window : null, action, fact); }
+    catch (_e) { return readPhoneFactPlanEdit(null, action, fact); }
+  }
+
+  /**
+   * 把「一条手机侧已发生的事」送上游并取回**可显示的回执**（财务/日历/剧情三类共用）。
+   *
+   * 【装配点唯一】`assemblePhoneFact` 住在 `config/phone-fact-contract.js`（**唯一实现**）——
+   *   本方法与宿主口 `VirtualPhone.phoneFactReceiptFor` 都调它，不各拼一份
+   *   （三处各拼一份必然漂移，而 `source` 名对不上时上游只会如实报 unknown）。
+   *
+   * @param {'finance'|'calendar'|'story'} cls
+   * @param {object} payload 见 `assemblePhoneFact`
+   * @param {{userDecision?:'accept'|'decline', revoked?:boolean, editAction?:string, chatId?:string}} [ctx]
+   */
+  sendPhoneEvent(cls, payload, ctx) {
+    const c = Object.assign({}, ctx || {});
+    try { c.chatId = c.chatId || String(this.storage?.currentConversationId || ''); } catch (_e) { /* 忽略 */ }
+    try {
+      return readPhoneFactReceipt(typeof window !== 'undefined' ? window : null, assemblePhoneFact(cls, payload), c);
+    } catch (_e) {
+      return readPhoneFactReceipt(null, assemblePhoneFact(cls, payload), c);
+    }
+  }
+
+  /** 一条回执行是否「用户还需要动手」（供视图决定是否给确认/撤回按钮）。 */
+  static needsUserAction(receipt) {
+    const r = (receipt && typeof receipt === 'object') ? receipt : null;
+    if (!r) return false;
+    const step = String(r.nextStep || '');
+    return step === 'ask-user-confirm' || step === 'retry-when-module-present' || step === 'retry-when-bridge-present';
+  }
+
+  /** 四态 → 是否已落定（**不把 pending 读成 rejected**）。 */
+  static isSettled(receipt) {
+    const r = (receipt && typeof receipt === 'object') ? receipt : null;
+    const st = r ? String(r.state || '') : '';
+    return st === 'accepted' || st === 'rejected' || st === 'revoked';
   }
 
   /* ========== 覆盖度取数：楼层账本现算读数（单一出口） ========== */

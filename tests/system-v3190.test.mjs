@@ -216,8 +216,13 @@ function allGreen() {
         if (f.owner !== 'lonsha-memory-plugin') continue;
         for (const k of f.fieldKeys) fields[k] = { present: true, kind: 'object', reason: 'value' };
     }
+    /* [v3.97.0 交棒] 原文把生产者版本写死成 '3.300.0' —— 那是**锁当版读数**：本版新登记的面
+     *   since 是 3.314.0 / 3.322.0，高于 3.300.0 就被判 outdated，于是「全绿探针」凑不出
+     *   「全部就绪」，C2 那条「没有缺席项时不得写缺席」的反向自证当场失效（实测 ok=16/20）。
+     *   改从**冻读取真源**取当版（生产者的版本号本来就只有上游说得准）。 */
+    const upVer = JSON.parse(readRel('tests/audit/upstream_face_cache.json')).upstreamVersion;
     return {
-        lonsha: { mounted: true, producerVersion: '3.300.0', fields },
+        lonsha: { mounted: true, producerVersion: upVer, fields },
         worldaxis: { mounted: true, gated: false, hasSnapshot: true, readOk: true }
     };
 }
@@ -339,7 +344,12 @@ test('C2 零项就绪时**不得**写「全部就绪」（那是把一个未发�
     const none = REG.registryLine(REG.registryFace(null));
     assert.equal(/全部就绪|全部正常|一切正常/.test(none), false, '零项就绪却给了绿灯：' + none);
     assert.match(none, /缺席/, '零项就绪时必须如实列出缺席数：' + none);
-    assert.match(none, /登记 1[0-9] 项/, '总述必须报出登记总数：' + none);
+    /* [v3.97.0 交棒] 原文把总数锁成 `登记 1[0-9] 项` —— 那是**锁当版读数**：本版新增三条
+     *   跨仓面后总数越过两位数区间，翻红读数只剩「数字不在区间里」。改判真不变量：
+     *   总述报出的数字必须等于登记面本身的条数（两处一致，而不是等于某个历史数字）。 */
+    const regN = REG.CROSSREPO_FEATURES.length;
+    assert.ok(new RegExp('登记 ' + regN + ' 项').test(none),
+        '总述必须报出登记总数（应等于登记面条数 ' + regN + '）：' + none);
     /* 另一头：**真的**没有缺席项时，不得再写「缺席」。
      *   用全绿探针造出那个世界，而不是「只喂一条、指望剩下的碰巧」——
      *   后者验的是算术不是文案（本判据初版就是这么红的）。 */

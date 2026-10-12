@@ -198,7 +198,10 @@ function makeCache(tableText, tweak) {
 function tableTextFromCache(cache) {
     const COLS = ['face', 'owner', 'producer_version', 'upstream_symbol', 'contract_shape',
         'consumer', 'invalid_conditions', 'standalone_behavior', 'absent_vs_empty'];
-    assert.deepEqual(Object.keys(cache.faces).length, 5, '前提：真仓冻读取是 5 面');
+    /* [v3.97.0 交棒] 原文写死 5 面 —— 冻读取随上游提交态刷新（本版由 5 面合法涨到 8 面）后，
+     *   夹具构造当场与真仓脱节。改判真不变量：非零且与真仓冻读取同源（不钉具体数字）。 */
+    assert.ok(Object.keys(cache.faces).length >= 5,
+        '前提：真仓冻读取至少五面，实测 ' + Object.keys(cache.faces).length);
     const lines = ['#' + COLS.join('\t')];
     for (const [face, f] of Object.entries(cache.faces)) {
         lines.push([face, f.owner, f.producerVersion, f.upstreamSymbol, 'fixture',
@@ -266,7 +269,9 @@ test('A3 ★★★ 读数登记表的正则必须真命中本门**真输出**（
     assert.ok(body.includes('跨仓外供面'), '登记表里必须挂着本门的主读数行口径');
     const m = re.exec(res.out);
     assert.ok(m, '主读数正则必须命中真输出');
-    assert.equal(Number(m[1]), 5, '对账面数必须等于真读数（5 面）');
+    /* [v3.97.0 交棒] 同族：对账面数须等于**真仓冻读取**的面数（不再写死 5）。 */
+    const realFaces = Object.keys(JSON.parse(REAL_CACHE_BYTES).faces).length;
+    assert.equal(Number(m[1]), realFaces, '对账面数必须等于真仓冻读取面数（' + realFaces + '）');
 });
 test('A4 ★★★ 道门编号不共号：本门是第十一道，「第十道门」仍属 weak-coercion', () => {
     const gate = read(GATE_REL);
@@ -649,7 +654,9 @@ test('D5b ★★ 只有**部分**行坏时同样拒判（不许只挑好行冻�
     const up = stageUpstream(dir, tableTextFromCache(cache) + 'broken\trow\n');
     const r = runGate(dir, ['--refresh', '--upstream', up, '--reason', '夹具']);
     assert.equal(r.status, 2, '混着坏行必须拒判');
-    assert.match(r.err, /1 行列数不符（合法行 5）/, '报数必须把「坏了几行、好了几行」都说清');
+    /* [v3.97.0 交棒] 原文把「合法行数」写死成 5 —— 冻读取随上游刷新即脱节。改为按真仓冻读取面数断言。 */
+    const nFace = Object.keys(JSON.parse(REAL_CACHE_BYTES).faces).length;
+    assert.match(r.err, new RegExp('1 行列数不符（合法行 ' + nFace + '）'), '报数必须把「坏了几行、好了几行」都说清');
     assert.equal(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'), REAL_CACHE_BYTES,
         '★ 拒判时不得留下半成品冻读取（没冻成就不许有痕迹）');
 });
@@ -677,7 +684,8 @@ test('E3 ★★★ 正常刷新只写本仓冻读取，且**绝不改动真仓�
     assert.equal(r.status, 0, '正常刷新须成功：' + r.err.slice(0, 200));
     const written = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
     assert.equal(written.tableSha1, sha1(table), '刷新后的 sha1 必须等于夹具上游表的那一份');
-    assert.equal(written.tableRows, 5, '面数必须真读出来');
+    /* [v3.97.0 交棒] 同族：面数须等于夹具表真行数（由真仓冻读取导出），不写死。 */
+    assert.equal(written.tableRows, Object.keys(JSON.parse(REAL_CACHE_BYTES).faces).length, '面数必须真读出来');
     assert.equal(written.refreshReason, '夹具：验证刷新只落本仓冻读取', '理由须逐字落盘');
     assert.equal(fs.readFileSync(path.join(ROOT, CACHE_REL), 'utf8'), REAL_CACHE_BYTES,
         '★ 真仓冻读取必须逐字节未动（刷新只写 RP_ROOT 指向的那一份）');

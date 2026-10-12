@@ -1,15 +1,15 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-10-10T05:03:38.808Z",
-  "refreshReason": "[v3.88.0 · R-X4] 本版新增跳项目续玩取数面（config/resume-workbench.js 的 rwProjectsFromPack 为唯一归一）；上游登记表内容与 sha1 未变，仅把冻读取的上游版本从 3.259.0 同步到 3.304.0（同一次刷新取提交态），并重跑 R1-R12 三方对齐。",
+  "refreshedAt": "2026-10-12T11:34:19.132Z",
+  "refreshReason": "[v3.97.0 · B 包手机侧接入] 上游 v3.322.1(f6aaba3) 把三面 consumer 由 none@0 改为真读数（readMemoryQaAnswer@1 / readMemoryToolsEnvelope@1 / readPhoneFactReceipt@1）；冻读取随提交态刷新，消解下游 R11 三条 consumer-none 分歧",
   "upstreamRepo": "lonsha-memory-plugin",
-  "upstreamVersion": "3.304.0",
+  "upstreamVersion": "3.322.0",
   "sourceState": "commit",
-  "upstreamCommit": "cc08a3f",
+  "upstreamCommit": "f6aaba3",
   "worktreeDirty": false,
-  "tableSha1": "c3764ee18e75",
-  "tableRows": 5,
+  "tableSha1": "7631f59d2430",
+  "tableRows": 8,
   "faces": {
     "projectionEnvelope": {
       "owner": "lonsha-memory-plugin",
@@ -34,7 +34,7 @@
     },
     "evidenceWorkbench": {
       "owner": "lonsha-memory-plugin",
-      "producerVersion": "v3.214.0",
+      "producerVersion": "v3.307.0",
       "upstreamSymbol": "index.js::_evidenceWorkbench,searchEvidence",
       "consumer": "readLonshaEvidence@3",
       "standaloneBehavior": "取不到内核即给结构完整的空结果、不抛；下游按 ok|empty|absent 分态，不压成一态"
@@ -45,6 +45,27 @@
       "upstreamSymbol": "snapshot-checkpoint.js::compareCheckpoints,diffPayloads,diffPayloadsDeep,probeStore",
       "consumer": "readLonshaCheckpointFace@1",
       "standaloneBehavior": "store 缺席即 store-absent 归因，不当作「没有检查点」（store-absent 与 not-found 不同形）；下游已接入（ruby-phone v3.20.2：只读真源 config/checkpoint-content-contract.js + 诊断中心接线；下游第九道门新增 J13 按面设下限 1）"
+    },
+    "memoryQaAnswer": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.322.0",
+      "upstreamSymbol": "index.js::askMemoryQuestion,_qaKnownActors,memoryQaLine",
+      "consumer": "readMemoryQaAnswer@1",
+      "standaloneBehavior": "宿主在内核缺席时给**同键**降级回执（version=0 + reason + gaps，答不出时下游也读不到 undefined）；不跑真查询 ⇒ 诊断行如实写「待用」，不把「没问过」写成「没有答案」"
+    },
+    "memoryToolsEnvelope": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.322.0",
+      "upstreamSymbol": "memory-tools-api.js::queryEvidence,getContinuityPack,previewFactAdmission,explainRecall,getKnowledgeBoundary",
+      "consumer": "readMemoryToolsEnvelope@1",
+      "standaloneBehavior": "内核模块未加载时宿主给**同键**降级信封（state=unavailable + reason=module-unavailable + data=null），下游读不到 undefined；五态词表随 describe() 自述（缺哪一格、为什么缺、缺了会怎样）"
+    },
+    "phoneFactReceipt": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.314.0",
+      "upstreamSymbol": "phone-fact-bridge.js::receiptFor,lifecycleOf,handleFact,planEdit,probeCounterpart,BRIDGE_VERSION,RECEIPT_VERSION",
+      "consumer": "readPhoneFactReceipt@1",
+      "standaloneBehavior": "模块未加载时宿主给同键降级读数（ok:false + state:absent + 诊断行「模块未加载（phone-fact-bridge.js）」），下游读不到 undefined；准入内核缺格 ⇒ decidable:false 且诊断行点名缺的那一格（不假装 pending、不假装 rejected）"
     }
   }
 }

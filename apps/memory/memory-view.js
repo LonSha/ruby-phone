@@ -23,11 +23,13 @@ export class MemoryView {
     this._tab = 'overview';
     this._delegated = false;
   }
+
   /** 合法分页清单（顺序即界面顺序） */
   static TABS = Object.freeze([
     { id: 'overview', label: '概览', icon: 'fa-chart-simple' },
     { id: 'sense', label: '五感', icon: 'fa-hand-sparkles' },
     { id: 'scene', label: '场景', icon: 'fa-location-dot' },
+    { id: 'ask', label: '问往事', icon: 'fa-comment-dots' },
     { id: 'audit', label: '体检', icon: 'fa-stethoscope' },
     { id: 'coverage', label: '覆盖度', icon: 'fa-layer-group' }
   ]);
@@ -276,6 +278,66 @@ export class MemoryView {
     return parts.join('\n');
   }
 
+  /* ================= 问往事页（R3-X2） ================= */
+  /**
+   * [v3.97.0 · R3-X2] 「问往事」页：消费上游 `memoryQaAnswer`（唯一真源），
+   *   本视图**只排版**，不合成答案、不补缺口（取数在 `app.askPast()`）。
+   *
+   * 【四态各有各的形（本仓最贵的老账）】
+   *   · 有答案      ⇒ 逐句列出（每句带出处：账名 + 楼层，可点开）
+   *   · 问了没命中  ⇒ 明说「问了、扫了、没命中」+ 缺口具名（**不是**「没这功能」）
+   *   · 本版没出口  ⇒ 明说「本版插件没有问答出口（等升级）」
+   *   · 插件不在场  ⇒ 明说「记忆插件不在场」（**不是**「没有答案」）
+   *   压平任何两态都会造出处置相反的两种处境长得一模一样的读数。
+   */
+  _askHtml(pkg) {
+    const qa = (pkg && typeof pkg === 'object') ? pkg.qa : null;
+    const parts = [];
+    parts.push('  <div class="mem-section">' +
+      '    <div class="mem-section-title"><i class="fa-solid fa-comment-dots"></i> 问往事（带出处）</div>' +
+      '    <div class="mem-search-row"><input id="mem-ask-q" placeholder="例如：上次林安安谈还款 / 为什么改了约会地点" /><button id="mem-ask-btn">问</button></div>' +
+      '    <div class="mem-hint">回答来自记忆插件（唯一真源）；答不出时会给「缺口」而**不编**答案。</div>' +
+      '    <div id="mem-ask-results" class="mem-results"></div>' +
+      '  </div>');
+    if (!qa) return parts.join('\n');
+    parts.push('<div id="mem-ask-face">' + this._askFaceHtml(qa) + '</div>');
+    return parts.join('\n');
+  }
+
+  /** 问往事结果区（供 `_askHtml` 与事件回调共用同一份排版口径）。 */
+  _askFaceHtml(qa) {
+    const r = (qa && typeof qa === 'object') ? qa : null;
+    if (!r) return '';
+    if (r.state === 'engine-absent') {
+      return '<div class="mem-none">记忆插件不在场 —— **不是**「没有答案」（两者处置相反：这个等装插件）</div>';
+    }
+    if (r.state === 'face-absent') {
+      return '<div class="mem-none">本版插件没有问答出口（等升级记忆插件 v3.322+）—— 这不是「没查到」</div>';
+    }
+    if (r.state === 'unusable') {
+      return '<div class="mem-none">问答读不出（' + this._esc(r.faceReason || 'unavailable') + '）—— 这不是「没查到」</div>';
+    }
+    const answer = Array.isArray(r.answer) ? r.answer : [];
+    if (!answer.length) {
+      const gaps = Array.isArray(r.gaps) ? r.gaps : [];
+      return '<div class="mem-none">问了、扫了、**没命中**（真读数）' +
+        (gaps.length ? '<br><span class="mem-hint">缺口：' + gaps.map((g) => this._esc(String((g && g.why) || (g && g.kind) || ''))).join('；') + '</span>' : '') +
+        '</div>';
+    }
+    const rows = answer.map((a) => {
+      const text = this._esc(String((a && a.text) || ''));
+      const ledger = this._esc(String((a && a.ledger) || ''));
+      const floor = (a && a.floor !== null && a.floor !== undefined) ? String(a.floor) : '';
+      const src = (ledger || floor)
+        ? '<div class="mem-res-lbl">出处：' + ledger + (floor ? ' · 第 ' + this._esc(floor) + ' 楼' : '') + '</div>'
+        : '<div class="mem-res-lbl">出处：未给出（**不假装有**）</div>';
+      return '<div class="mem-res"><div class="mem-res-text">' + text + '</div>' + src + '</div>';
+    }).join('');
+    const meta = '答 ' + answer.length + ' 句 · 出处 ' + (Array.isArray(r.refs) ? r.refs.length : 0) + ' 条'
+      + (r.masked ? ' · 遮蔽 ' + r.masked : '') + (r.truncated ? ' · 已截断' : '');
+    return '<div class="mem-hint">' + this._esc(meta) + '</div>' + rows;
+  }
+
   /* ================= 记忆条目行 ================= */
   _row(m) {
     const emo = m.emotion || {};
@@ -303,6 +365,10 @@ export class MemoryView {
     let coverage = null;
     try { coverage = this.app.coverage(); } catch (_e) { coverage = null; }
     pkg.coverage = coverage || { state: 'unavailable', reason: 'coverage-thrown', cov: null };
+    /* [v3.97.0 · R3-X2/R3-X1] 上游三面读数**面自述**（只读、不跑真查询）：
+     *   它回答的是「这三个出口在不在、是哪一态」——不跑真问答（那是按钮的活），
+     *   故本页首次打开不会付出全量扫描代价（与上游「诊断面不许有副作用」同纪律）。 */
+    try { pkg.factFace = this.app.phoneFactFace(); } catch (_e) { pkg.factFace = null; }
     if (!pkg.data) {
       this.container.innerHTML = '<div class="mem-root"><div class="mem-none">记忆系统未初始化，请刷新酒馆后重试</div></div>';
       return;
@@ -313,6 +379,7 @@ export class MemoryView {
     let body;
     if (this._tab === 'sense') body = this._senseHtml(pkg);
     else if (this._tab === 'scene') body = this._sceneHtml(pkg);
+    else if (this._tab === 'ask') body = this._askHtml(pkg);
     else if (this._tab === 'audit') body = this._auditHtml(pkg);
     else if (this._tab === 'coverage') body = this._coverageHtml(pkg);
     else body = this._overviewHtml(pkg);
@@ -350,6 +417,9 @@ export class MemoryView {
     });
     q('#mem-search-btn')?.addEventListener('click', () => this._doSearch());
     q('#mem-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doSearch(); });
+    /* [v3.97.0 · R3-X2] 问往事：取数走 `app.askPast()`（唯一出口），本视图只排版。 */
+    q('#mem-ask-btn')?.addEventListener('click', () => this._doAsk());
+    q('#mem-ask-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doAsk(); });
     q('#mem-auto')?.addEventListener('change', (e) => {
       try { this.app.data?.updateConfig({ autoInject: e.target.checked }); } catch (_e) { /* 忽略 */ }
       window.toastr?.info(e.target.checked ? '已开启自动注入' : '已关闭自动注入', '记忆');
@@ -403,6 +473,24 @@ export class MemoryView {
           '<div class="mem-res-text">' + this._esc(h.content) + '</div></div>';
       }).join('')
       : '<div class="mem-none">没有相关记忆</div>';
+  }
+
+  /**
+   * [v3.97.0 · R3-X2] 问往事：把问句交唯一出口 `app.askPast()`（转发上游 `askMemoryQuestion`），
+   *   再把读数交给 `_askFaceHtml` 排版。**本件不合成答案、不补缺口**。
+   */
+  _doAsk() {
+    const q = (sel) => this.container.querySelector(sel);
+    const kw = q('#mem-ask-q')?.value?.trim();
+    const box = q('#mem-ask-results');
+    const face = q('#mem-ask-face');
+    if (!box && !face) return;
+    if (!kw) { if (box) box.innerHTML = ''; return; }
+    let qa = null;
+    try { qa = this.app.askPast?.(kw) || null; } catch (_e) { qa = null; }
+    const html = this._askFaceHtml(qa);
+    if (face) face.innerHTML = html;
+    else if (box) box.innerHTML = html;
   }
 }
 export default MemoryView;
