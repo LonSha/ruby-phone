@@ -303,26 +303,85 @@ export class LonShaBridge {
             const actors = Array.isArray(opts.actors)
                 ? opts.actors.filter(Boolean).map(a => String(a).trim()).filter(Boolean)
                 : String(opts.actors || '').split(/[\u3001,\uff0c]/).map(s => s.trim()).filter(Boolean);
-            const lines = [];
+            /* [第三期 R3-O2] 三条口径修正（探针可复现的三处有损行为）：
+             *   ① 去重不得按「前 24 字」—— 同一次出行/同一段剧情里，
+             *      两条往事的记述常常开头一模一样（「这是两人上周一起去旧书店之后…」），
+             *      按前缀去重会把「第二件事是还钱」整条丢掉。实测：输入 2 条、输出 1 条。
+             *      改为「证据身份优先、完整内容兜底」：只有**同一条证据**才算重复。
+             *   ② 单条不得硬截到 80 字 —— 金额、否定、约定时间常落在句尾，
+             *      一句切一半 = 把「没答应」读成「答应」。改为在预算内**收束到完整句**，
+             *      必要时向后扩到 hard 上限（无句读的长文本仍退回预算长度，行为可测）。
+             *   ③ 整块不再一律写成「共同经历的」—— 带来源标记（听说/传闻/推测）的条目
+             *      分档标出并改尾注，避免把「听别人说的」渲染成亲历。 */
+            const maxLines = Math.max(1, Math.min(5, Number(opts.maxLines) || 3));
+            const maxChars = Math.max(40, Math.min(200, Number(opts.maxChars) || 80));
+            const hardChars = Math.max(maxChars, Math.min(240, Number(opts.hardChars) || 120));
+            const SENT = '。！？；…\n';
+            /** 预算内收束到完整句：优先取 [预算, hard] 区间内**最后一个**句读位置；
+             *  区间内没有句读（如无标点长文）则退回预算长度（与旧行为同形，便于对照）。 */
+            const trimToSentence = (s, budget, hard) => {
+                if (s.length <= budget) return s;
+                let cut = -1;
+                const limit = Math.min(s.length, hard);
+                for (let i = 0; i < limit; i++) {
+                    if (SENT.indexOf(s[i]) >= 0) cut = i + 1;
+                }
+                if (cut >= budget) return s.slice(0, cut);
+                return s.slice(0, budget);
+            };
+            /** 证据身份：同一条证据的多份呈现才算重复；无身份字段时用完整内容兜底。 */
+            const evidenceKey = (m, raw) => {
+                const idc = String((m && (m.id || m.evidenceId || m.sourceRef || m.ref)) || '').trim();
+                if (idc) return 'id:' + idc;
+                const f = (m && m.floor !== undefined && m.floor !== null) ? String(m.floor) : '';
+                const l = (m && m.layer) ? String(m.layer) : '';
+                if (f || l) return 'fl:' + f + '|' + l + '|' + raw;
+                return 'c:' + raw;
+            };
+            /** 可知范围分档：lived（亲历，默认）/ hearsay（听说·传闻）/ inferred（推测）。 */
+            const originOf = (m) => {
+                if (!m || typeof m !== 'object') return 'lived';
+                const tags = Array.isArray(m.tags) ? m.tags : [];
+                const s = [m.knowledge, m.origin, m.via, m.kind, m.type, m.source]
+                    .concat(tags)
+                    .filter(x => typeof x === 'string')
+                    .join(' ')
+                    .toLowerCase();
+                if (/hearsay|rumou?r|听说|传闻|转述/.test(s)) return 'hearsay';
+                if (/infer|guess|推测|猜想|怀疑/.test(s)) return 'inferred';
+                return 'lived';
+            };
+            const lived = [];
+            const other = [];
             const seen = new Set();
             for (const m of mems) {
                 const raw = String((m && (m.content || m.text)) || '').replace(/\s+/g, ' ').trim();
                 if (!raw) continue;
                 // 严格模式（群聊用）：只保留确实提到在场人物的记忆，防把 A 的往事灌给 B
                 if (opts.strictActors && actors.length && !actors.some(a => raw.includes(a))) continue;
-                const key = raw.slice(0, 24);
+                const key = evidenceKey(m, raw);
                 if (seen.has(key)) continue;
                 seen.add(key);
-                lines.push(`- ${raw.slice(0, 80)}`);
-                if (lines.length >= 3) break;
+                const body = trimToSentence(raw, maxChars, hardChars);
+                const kind = originOf(m);
+                if (kind === 'hearsay') other.push(`- ${body}（听说，非亲历）`);
+                else if (kind === 'inferred') other.push(`- ${body}（推测，未经证实）`);
+                else lived.push(`- ${body}`);
+                if (lived.length + other.length >= maxLines) break;
             }
+            const lines = lived.concat(other);
             if (!lines.length) return '';
             const label = String(opts.label || '').trim() || actors[0] || '角色';
             const userName = String(opts.userName || '').trim() || '你';
-            return `【角色记忆 · 来自剧情】${label}记得这些往事：\n${lines.join('\n')}\n（这些是 ${label} 和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`;
+            const head = `【角色记忆 · 来自剧情】${label}记得这些往事：`;
+            /* 无「听说/推测」条目时保持原文案（三处注入点的既有契约不变）；
+             * 有则明说哪些不是亲历，别当成共同经历复述。 */
+            const tail = other.length
+                ? `（标「听说/推测」的不是 ${label} 亲历，不得当作共同经历；其余是 ${label} 和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`
+                : `（这些是 ${label} 和 ${userName} 在剧情里共同经历的，自然带入，不要生硬复述）`;
+            return `${head}\n${lines.join('\n')}\n${tail}`;
         } catch (e) { return ''; }   // lonsha 记忆注入静默失败，不影响发送
     }
-
     // ---------------- ③ 注入协调: 桥接管手机记忆的注入位 ----------------
     /**
      * 生成前由 RubyPhone 调用 (替代 memoryCore.attachPromptHook 的本地注入)。

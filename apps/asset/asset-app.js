@@ -44,7 +44,7 @@ function parseMaybe(v) {
     try { return JSON.parse(s); } catch (_e) { return v; }
 }
 
-function makeHost(storage) {
+export function makeHost(storage) {
     return {
         getVariables() {
             const out = {};

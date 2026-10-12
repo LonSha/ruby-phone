@@ -137,23 +137,55 @@ export function buildContactInsight(stores, opts = {}) {
     }
 
     /* ③ 通话：扁平列表。**只累加次数，不产生新行** ——
-     *   通话对象往往没有会话 id，凭空建行会造出没有昵称的幽灵联系人。 */
+     *   通话对象往往没有会话 id，凭空建行会造出没有昵称的幽灵联系人。
+     *   [第三期 R3-O1] 同名归属歧义**不再静默算给第一人**，优先级如实分层：
+     *     ① 通话带了 contactId 且能对上已存在行  ⇒ 按 id 精确归属；
+     *     ② 有显式人工认领（opts.callAttribution）⇒ 按认领归属（可撤回）；
+     *     ③ 名字恰好只对上一行                  ⇒ 归属；
+     *     ④ 对上多行且无 id/认领                ⇒ 记入 unattributedCalls（**未归属**，不猜）。
+     *   一行都没对上时保持原语义（不凭空建行）。 */
+    const unattributedCalls = [];
+    let callsByClaim = 0;
+    let callsByContactId = 0;
     try {
         const calls = Array.isArray(src.calls) ? src.calls : null;
         if (calls) {
+            const claims = (opts.callAttribution && typeof opts.callAttribution === 'object') ? opts.callAttribution : {};
             for (const call of calls) {
                 if (!call || typeof call !== 'object') continue;
                 const name = String(call.name || call.contactName || '');
-                if (!name) continue;
-                // 只挂到**已存在的同名联系人**上（精确相等，不模糊匹配）。
-                for (const [key, row] of byKey) {
-                    if (row.name !== name) continue;
-                    row.calls = (row.calls || 0) + 1;
-                    if (!row.at) {
-                        const rec = pickRecentAt([{ value: call.timestamp, via: 'call.timestamp' }]);
-                        if (rec.at) { row.at = rec.at; row.atVia = rec.via; }
+                const callId = String(call.contactId || call.contact_id || '').trim();
+                if (!name && !callId) continue;
+                const stamp = pickRecentAt([{ value: call.timestamp, via: 'call.timestamp' }]);
+                const matches = [];
+                for (const row of byKey.values()) {
+                    if (callId) {
+                        if (String(row.id || '') === callId) matches.push(row);
+                    } else if (name && row.name === name) {
+                        matches.push(row);
                     }
-                    break;
+                }
+                const claimKey = callId ? ('id:' + callId) : ('name:' + name);
+                const claimedId = String(claims[claimKey] || claims[name] || '').trim();
+                const claimedRow = claimedId
+                    ? ([...byKey.values()].find(r => String(r.id || '') === claimedId) || null)
+                    : null;
+                const target = claimedRow || (matches.length === 1 ? matches[0] : null);
+                if (target) {
+                    if (claimedRow) callsByClaim += 1;
+                    else if (callId) callsByContactId += 1;
+                    target.calls = (target.calls || 0) + 1;
+                    if (!target.at && stamp.at) { target.at = stamp.at; target.atVia = stamp.via; }
+                    continue;
+                }
+                if (matches.length > 1) {
+                    let entry = unattributedCalls.find(u => u.name === name);
+                    if (!entry) {
+                        entry = { name: name, count: 0, at: null, atVia: '', candidateIds: matches.map(r => String(r.id || '')) };
+                        unattributedCalls.push(entry);
+                    }
+                    entry.count += 1;
+                    if (entry.at === null && stamp.at) { entry.at = stamp.at; entry.atVia = stamp.via; }
                 }
             }
             sources.push({ id: 'calls', state: 'ok', via: 'getCallHistory()' });
@@ -203,7 +235,11 @@ export function buildContactInsight(stores, opts = {}) {
         importantCount: important.length,
         empty: rows.length === 0,
         staleDays: staleDays,
-        measuredAt: now
+        measuredAt: now,
+        /* [第三期 R3-O1] 归属面如实上报：未归属通话**不补 0、不并进任何联系人**。 */
+        unattributedCalls: unattributedCalls,
+        callsByClaim: callsByClaim,
+        callsByContactId: callsByContactId
     };
 }
 

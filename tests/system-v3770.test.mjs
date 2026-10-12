@@ -107,6 +107,15 @@ const MIRROR_FILES = [
     'config/phone-events.js', 'config/points-engine.js', 'config/runtime-lifecycle.js',
     'config/session-gate.js', 'config/story-clock.js', 'config/tag-filter.js',
     'config/world-bridge.js', 'config/write-receipt.js',
+    /* [v3.96.0 · R3-O6] chat-view 的**静态导入闭包**新增了免实例装配模块与其依赖：
+     *   apps/app-injection.js + 七个装配 App 的 data 模块 + config/injection-priority.js。
+     *   不扩 ⇒ 镜像根上 chat-view 装载失败（探针 exit 2）⇒ B2（位置无关）与 D1/D2/D3/D5
+     *   一起转红：那证明的是「两个根看到的不是同一件事」，不是判据逻辑错。
+     *   口径与 v3.79.0 扩 CSS 面同规：判据面扩了，镜像面就得跟着扩。 */
+    'apps/app-injection.js', 'config/injection-priority.js',
+    'apps/place/place-data.js', 'apps/wallet/wallet-data.js', 'apps/profile/profile-data.js',
+    'apps/plotline/plotline-data.js', 'apps/chars/chars-data.js', 'apps/clock/clock-data.js',
+    'apps/ledger/ledger-data.js',
 ];
 /* [v3.79.0] 递归枚举全仓 .css —— 与 tests/audit/longlist_scale_probe.cjs 里那份**逐字同口径**
  *   （口径片段由本文件末的 D5 判据看守）。为什么两处各写一份而不上收：探针是 .cjs，

@@ -23,6 +23,8 @@ import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
+/* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
+import { mountMissingAppInjection } from './apps/app-injection.js';
 import { createInitialState as createDrivesState, advance as advanceDrives, formatVar as formatDrivesVar, classifyMessageText as classifyDrivesText } from './config/drives-engine.js';
 import { createJiwen } from './config/jiwen-engine.js';
 import { createUpdateChecker, compareSemver as _compareSemverMod } from './phone/update-checker.js';
@@ -232,7 +234,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.95.0';
+const ST_PHONE_VERSION = '3.96.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -430,22 +432,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-17",
+    date: "2026-10-18",
     items: [
-        "【定位 · 真竞态（本地单档即可确定性复现）】`tests/system-v301/v302/v303/v310` 的 `withMirror(mut, fn)` 是**同步助手**：建临时镜像树 → 跑 `fn(dir)` → `finally` 删树。而它们的 回调全部是 `async`：`await withMirror(mut, async (dir) => { ... await loadMirror(dir, PC) ... })`。`fn(dir)` 返回一个 pending Promise 后函数立即返回，`finally` 进去 `fs.rmSync` 把镜像树删掉；回调随后才 `import()` 那个文件 ⇒ `ENOENT: no such file or directory, open /tmp/v301-mir-xxx/config/projection-contract.js`。这是一个真竞态（时序决定输出），而不是环境抖动。",
-        "【同仓已有正确范式（这是“同一件事的第二份写法并且漏了 await”）】v300 / v311 / v312 / v313 / v314 同名助手写的是 `async function withMirror(mut, fn) { ... return await fn(dir) ... }`，因此它们的 async 回调一直能跑完。需求本来就是同一个（本库 `tests/_mirror_tree.mjs` 已立“同一块代码只留一份”纪律），故修法向真源靠齐，不自创第三种形态。",
-        "【为什么不是“并发假红”（推翻旧归因，用可复算对照说话）】CI 与 README 此前把 `test-suite` 的失败归为“资源受限 runner 上并发/派生进程假红”。实测本说不成立：单档单跑 v301 连跑 3 次均红（`C4`，反复），v302 必红 3 条（`C1/C2/C3`）。另做三重对照：干净克隆里 `--test-concurrency=1` 协序口径仍红 3 条（恰好是这三条），而并发口径红 15 条。",
-        "【数字适配到“不可能巧合”的程度】并发红数 15 = v301(1) + v302(5) + v303(6) + v310(3)，**与“该文件内 async 回调调用点数”逐一吹合**（按括号配对取回调体后数出来的真读数）。并行跑只是把时序演得更容易输出，缺陷本身与并发无关；把它归成环境噪声会让缺陷长期藏在非阻塞标签后。",
-        "【修法（不改任何调用点，不弱化任何判据）】把清理挂在同一个 Promise 上：`const done = () => fs.rmSync(dir, { recursive: true, force: true })`；`try { r = fn(dir) } catch (e) { done(); throw e }`；若 `r` 是 thenable 则 `return Promise.resolve(r).finally(done)`，否则 `done(); return r`。同步路径行为逐字不变，异步路径由 `.finally` 在原 Promise 上收尾。",
-        "【同型潜伏一并收口】`system-v299` 当前无 async 回调（不会现红），但写法与四个病例逐字相同，属同型潜伏，本次一并统一；避免下一个人给它加上 async 回调后再踩一次。四个真病例加一个潜伏，共改 5 个文件的助手定义。",
-        "【真源破坏下的判据未被弱化（修的是时机，不是判据）】本次改的是“建树/删树的时机”，不是判据本身：被破坏的副本仍然真跑编译后的代码、真断言该红的仍红（只是不再在“回调还没跑完就被删”这一环上误伤）；这不是放宽，是修真缺陷。",
-        "【回归读数（单档 + 全量 + 干净克隆三重）】① 修后单档：v299 30/30 · v301 18/18 · v302 21/21 · v303 17/17 · v310 19/19；② 本仓全量（Node 20）：修前 25 红 → 修后 1 红，仅余 `v3204 B2`；③ 干净克隆同口径：修前 15 红 → 修后 5 红，`v301/v302/v303/v310` 全族消失。",
-        "【残余红的归属（不混入本版，也不掩盖）】修后干净克隆径下仅存两类：v3160 族 4 条是**已登记的边界**（依赖被 gitignore 的 `.sourcematerial/`素材，缺位时 fail-closed 拒判，方向安全）；`v3204 B2` 是**跨仓冻读取滞后**（上游表 5 面 → 7 面，本仓对新增两面零消费），非本版引入，上一版已如实登记，不在本版冒充解决。",
-        "【本版自己抓到的缺陷形态（形态锚）】** 抬版首跑即红 6 条，全部指向同一件事：当版 items 少了仓内一贯的三类材质（缺陷形态 / 交棒改写 / 面向用户的边界条）。这与本版修的真竞态无关，是**抬版自身的材质缺项**。堵口写进 tools/bump_v3950.py 的构建期守卫：材质不全就拒绝落盘，不许写完再靠测试发现。",
-        "【交棒改写（本轮实做）】** 前几版把「镜像树助手」当既有设施，本版把它降为被守护对象：withMirror 由同步助手改为「清理挂在同一个 Promise 上」的形态，调用点与判据一字未改；旧的「真源破坏→副本真跑」判据逐字保留，属主动改写而非静默通过。这是本版对判据面与实现面的分工重划。",
-        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是「看起来没坏但显示不对」这一族里与测试口径相关的那几处：镜像树助手在异步回调下被同步 finally 提前删树（修后 v301 / v302 / v303 / v310 全族转绿）。本版**不能保证**：① 真宿主实机装载后的观感与渲染（本版只核文件面与测试面）；② 两个跨仓新面（memoryToolsEnvelope / phoneFactReceipt）在手机侧的真实消费接入（属后续计划）；③ 上游登记表由 5 面增至 7 面后本仓零消费这一滞后的最终对齐（属跨仓协同）。",
-        "【构建期守卫（本次漏项的堵口：脚本不再让材质缺项静默通过）】** 本次抬版首跑即暴露一个自己的缺陷：iter 段漏了仓内一贯的收尾条，而 system-v280-3 / v285-6 / v286-4 / v287-5 四道判据正守着这条格式 ⇒ index.js 里没有该串、四条同时转红。定性：这是**抬版自身的材质缺项，不是判据缺陷**（把「版本号与说明同源」这条仓内一贯格式写掉了）。堵口写在 tools/bump_v3950.py 内：当版 items 必须含一条「版本升至 当版（五源同源）」，且 index.js 落盘后必须能 grep 到该串 —— 材质不全就拒绝落盘，不许写完再靠测试发现。",
-        "【版本升至 3.95.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3950.py 对齐 tools/bump_v3940.py）。"
+        "【定位 · 真缺口（本地可确定性复现）】装配类 App 此前只有两条注入路径，而两条都有同一个前提：这个 App 被打开过。主链路靠各 App 在自己构造期往 GENERATE_BEFORE_COMBINE_PROMPTS 挂钩子；微信链路靠 chat-view.js 的 _injectApps 表取已实例化对象。而实例只在 phone:openApp 懒加载时才 new。后果：用户保存过设置后重载，只要没有先点开那个 App，那份设置就完全不生效 —— 不报错、不提示、请求里就是没有那一块。这是本仓最贵的一族形态（不报错、只错行为）：用户会以为「我设了」。",
+        "【本版做什么（把有效装配从「是否打开过」解耦）】新建 apps/app-injection.js：设置按各 App 同一个 storage 键读，默认值一律复用各 App 的 default 设置工厂（不在这里抄第二份，抄了必然漂移）；数据面只读快照走 config/world-bridge.js 的 readPushProbe，各 App 的 read 归因纯函数仍是唯一真源；注入块复用各 App 的提示块纯函数，一个字不改；预算裁定沿用 config/injection-priority.js 的 planInjection。本模块不重写提示词系统，它只把既有纯函数读面在没有实例时接上。",
+        "【与既有两条路径的关系（同事实不重复）】collectMissingAppInjections 只对没有实例的 App 出块。实例在场的 App 仍由它自己的钩子或微信表注入 —— 本模块不抢、也不重复注入同一事实。微信链路的免实例段插在实例表循环之后，两段并列而非互相取代。",
+        "【重型三者为何是 deferred 而不是当场加载】撩语、金手指、资产的正文是 MB 级静态数据与 LA 引擎簇，它们当初就是按需加载的。若本模块静态 import 它们，等于把一个外挂都没装的用户也拖上全部语料 —— 那是把懒加载反向做掉。故先看存储里有没有非空装配清单或已启用配置，有才动态 import 并缓存；加载完成前该 App 本次不出块，并如实记进 deferred。",
+        "【只读纪律与键归属】本模块只读 storage 与只读快照，绝不写任何键、不碰上游状态。它新增读的资产引导键 __la_asset_config_v1 此前只在引擎内部经局部常量使用，不落在键门的常量层抽取面，故从未被 K1 问到归属；本版把该键登记进 scripts/keys-audit.mjs 的登记表并声明会话隔离（机制侧命中既有前缀，声明与机制一致）。",
+        "【本版自己抓到的缺陷形态（形态锚）】** 行为探针首跑即暴露一处自己的缺陷：重型装配的未出块分支一律记 deferred，把「模块已就绪但真没内容」与「模块还没加载完」压成同一形态，违反本仓反复点名的「四态不同形」（二者处置方向相反：前者等用户去装东西，后者等这一次加载完成）。这不是推演出来的，是探针跑出来的；修法是把空块按「模块是否已就绪」分流到 empty 与 deferred 两格，并在负控制里给它配一条定点破坏。另有一处同族缺陷由门禁抓住：本模块初版自写了快照形态判据（三处），撞上「形态判定只许有一份」的既有关禁（J4）；修法是把三处改成只读 readPushProbe 的返回值、形态判定仍只留在真源里。两次都是本版自己引入又自己收口，不是既有缺陷。",
+        "【交棒改写（本轮实做）】** 前几版把「跨 App 注入」完全绑定在 App 实例身上（微信表与各 App 钩子），本版把它降为「实例是快路径、存储读面是底线」：实例在场时行为逐字不变，实例缺位时改由存储读面与快照读面接管。旧的实例表字面一字未动（矩阵复算依赖它），新增的只是一条并列的免实例路径。这是本版对注入时机与注入职责的分工重划，不是放宽判据。",
+        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是「保存了设置但没生效」这一族里与注入路径相关的那几处（修后无实例也能出块，见当版套件行为面与负控制）。本版**不能保证**：① 真宿主实机装载后的观感与渲染（本版只核文件面、纯函数行为面与门禁面）；② 各 App 自己的面归因阶梯在实机上的显示（属各 App 既有套件）；③ 重型三者首次生成时的实际加载耗时（本版只保证未就绪时如实记 deferred、不静默）。",
+        "【回归读数（定向 + 门禁）】当版定向套件 27 例全绿（结构 8 · 行为 10 · 接线 4 · 负控制 5）；门禁面：语法 763 文件 · 导入可解析 · 零消费新增 0 · 生命周期 · 注册 · 键归属 444 键全登记 · 命名导入 · 弱口径 · 屏幕宿主 · 桥契约全部 rc=0。首次把桥契约门纳入本项的自检清单，正因它抓到了上面那三处自写形态判据。",
+        "【版本升至 3.96.0（五源同源）】** manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；本文件新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v3960.py 对齐 tools/bump_v3950.py）。"
     ]
 };
 
@@ -1810,6 +1808,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         try {
             window.VirtualPhone.memoryCore = new MemoryCore(storage);
             window.VirtualPhone.memoryCore.attachPromptHook();
+            /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
+             *   而未打开过的 App 根本没有构造期（实例只在 phone:openApp 懒加载时才 new）。
+             *   后果：保存过设置后重载、只要没先点开那个 App，设置就完全不生效（不报错、只错行为）。
+             *   本挂载点不依赖任何 App 实例，只对**没有实例**的 App 出块 —— 与各 App 自己的钩子、
+             *   微信链路的实例表都不重复。宿主无事件源 / 已挂过时静默返回 false（绝不影响 App 本体）。 */
+            try { mountMissingAppInjection(window, storage); } catch (_e) { /* 静默 */ }
             // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
             try {
                 mountLonShaBridge(storage, window.VirtualPhone.memoryCore);

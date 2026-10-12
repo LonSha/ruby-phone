@@ -429,6 +429,12 @@ const KEY_REGISTRY = [
   { key: 'cheat_state_v1', scope: 'chat', note: '金手指装配清单' },
   { key: 'dt_state_v1', scope: 'chat', note: '撩语装配清单' },
   { key: 'asset_settings_v1', scope: 'chat', note: '资产 App 设置' },
+  /* [v3.95.0 · R3-O6] 资产引擎的引导配置键（onboarded / enabledCategories）。
+   *   机制侧命中 CHAT_DATA_PATTERNS 的 `/^__la_asset_/`（config/storage.js）→ 会话隔离。
+   *   此前只在 asset-store.js 内部经 `const KEY_CONFIG` 使用（不落在 keys-audit 的
+   *   `*_KEY` 常量层抽取面），故从未被 K1 问到归属；R3-O6 的免实例装配
+   *   （apps/app-injection.js 的 assetOnboarded）新增了跨文件读点，本键进入登记面。 */
+  { key: '__la_asset_config_v1', scope: 'chat', note: '资产引擎引导配置（启用状态）' },
   { key: 'place_settings_v1', scope: 'chat', note: '地点图景设置' },
   { key: 'profile_settings_v1', scope: 'chat', note: '档案设置' },
   { key: 'plotline_settings_v1', scope: 'chat', note: '剧情线设置' },

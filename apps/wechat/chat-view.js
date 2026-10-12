@@ -19,6 +19,7 @@ import { captureSessionToken, guardSessionWrite } from '../../config/session-gat
 import { captureWechatChatSnapshot } from './chat-snapshot.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+import { collectMissingAppInjections } from '../app-injection.js';
 /* [v3.18.0 · R-O4] 四条内容生成路径里的「最近正文」循环收敛到同一份实现
  *   （本文件原本藏着全仓最复杂的那个变体：判页系统噪声 + 微信标签剥离），
  *   一致性块（当前剧情时刻 + 知情边界 + 转述链）也由同一面提供。 */
@@ -11655,6 +11656,21 @@ renderChatRoom(chat) {
                         messages.push({ role: 'system', content: _blk, name: _item.name, isPhoneMessage: true });
                     }
                 }
+                /* [v3.96.0 · R3-O6] 免实例装配：上面这张表只能取**已实例化**的 App
+                 *   （未打开过 App 就没有实例，而设置早就存在存储里）。
+                 *   此处补齐「没打开过、但已经保存过设置」的那一批 —— 与上表不重复：
+                 *   collectMissingAppInjections 只出没有实例的 App。
+                 *   自带 storage：本函数下半部分（11860 行）另有一个 `const storage`，
+                 *   它在注入点**之后** ⇒ 此处引用会踩 TDZ，故自取一份。 */
+                try {
+                    const _missStorage = (typeof window !== 'undefined' && window.VirtualPhone && window.VirtualPhone.storage)
+                        ? window.VirtualPhone.storage
+                        : (this.app && this.app.storage) || null;
+                    const _miss = collectMissingAppInjections(window, _missStorage);
+                    for (const _b of _miss.blocks) {
+                        messages.push({ role: 'system', content: _b.content, name: _b.name, isPhoneMessage: true });
+                    }
+                } catch (_e) { /* 免实例装配静默失败，不影响发送 */ }
                 /* [v3.18.0 · R-O4] 跨 App 一致性约束：本机四条内容生成路径（微信/微博/日记/日程）
                  *   此前**各自拿不到同一个「现在」**，也都不知道该角色此刻是否知情；
                  *   后果是同一件事在三个 App 里说法不同（不报错、只互相否定）。

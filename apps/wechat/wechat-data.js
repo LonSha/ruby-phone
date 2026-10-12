@@ -13,6 +13,7 @@ import { parseWechatVoiceContent } from './voice-text.js';
 import { numOrNull } from '../../config/num-gate.js';
 import {
     matchMemberByName,
+    matchMemberCandidates,
     parseSpeakers,
     scheduleSpeakers,
     validateSpeakers,
@@ -2386,8 +2387,30 @@ export class WechatData {
     resolveGroupSpeaker(chatId, name) {
         const members = this.getGroupMembers(chatId);
         if (!members.length) return null;
-        try { return matchMemberByName(name, members); }
+        /* [第三期 R3-O1] 同名多解时返回 null（不猜第一个）：
+         *   此前静默取首个 ⇒ 成员顺序一变归属就变，而界面上完全看不出来。 */
+        try { return matchMemberByName(name, members, { rejectAmbiguous: true }); }
         catch (_e) { return null; }
+    }
+    /**
+     * 群成员归因明细：这个名字**能落到谁身上**，全部如实交给调用方。
+     * 消费 group-scheduler.matchMemberCandidates。
+     * @returns {{target:string, members:Array, candidates:Array, ambiguous:boolean, member:object|null}} 永不抛
+     */
+    resolveGroupSpeakerDetail(chatId, name) {
+        const members = this.getGroupMembers(chatId);
+        const empty = { target: '', members: members, candidates: [], ambiguous: false, member: null };
+        if (!members.length) return empty;
+        try {
+            const c = matchMemberCandidates(name, members);
+            return {
+                target: c.target,
+                members: members,
+                candidates: c.exact.map(m => ({ id: m?.id ?? m?.name, name: String(m?.name || '') })),
+                ambiguous: c.ambiguous,
+                member: c.exact.length === 1 ? c.exact[0] : (c.exact.length === 0 ? (c.looseBest || null) : null)
+            };
+        } catch (_e) { return empty; }
     }
 
     /**
@@ -2402,9 +2425,11 @@ export class WechatData {
         try { parsed = parseSpeakers(rawSpeakers); }
         catch (_e) { parsed = { speakers: [], reason: '', scripts: null }; }
         const decision = scheduleSpeakers(parsed.speakers, members, opts);
+        /* [第三期 R3-O1] 多解名字单独上报：调度层不替用户挑人。 */
+        const ambiguous = Array.isArray(decision.ambiguous) ? decision.ambiguous : [];
         const validated = validateSpeakers(decision, members);
-        if (!validated) return { ok: false, reason: 'no-valid-speakers', speakers: [], names: [], skipped: decision.skipped || [] };
-        return { ok: true, speakers: validated.speakers, names: validated.names, skipped: validated.skipped || [], reason: parsed.reason || '' };
+        if (!validated) return { ok: false, reason: 'no-valid-speakers', speakers: [], names: [], skipped: decision.skipped || [], ambiguous };
+        return { ok: true, speakers: validated.speakers, names: validated.names, skipped: validated.skipped || [], ambiguous, reason: parsed.reason || '' };
     }
 
     /**

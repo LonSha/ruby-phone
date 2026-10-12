@@ -32,29 +32,63 @@ export function normalizeName(s) {
  * @param {Array} members 群成员 [{ id, name, aliases?, avatar? }]
  * @returns {object|null} 匹配到的成员，未匹配返回 null
  */
-export function matchMemberByName(name, members = []) {
+/** 成员名归一候选：把「一个名字」的全部可能归属算清（**不替调用方挑人**）。
+ *  本仓已知存在同名异人（见 config/contact-insight.js 顶部纪律③），
+ *  而 matchMemberByName 此前在精确命中多个时**静默返回首个** ——
+ *  群发言、@、通话统计因此会把甲的事算到乙头上，且**成员顺序一变归属就变**。
+ *  本函数只报事实，不替上层做取舍：
+ *    · exact    —— 精确命中（name 或 alias 归一后相等）的全部成员
+ *    · loose    —— 包含匹配命中的成员（已排除 exact 命中者）
+ *    · looseBest—— loose 中「最短名」那一个（语义与 matchMemberByName 第 2 段一致）
+ *    · ambiguous—— exact 是否多解
+ *  @returns {{ target:string, exact:Array, loose:Array, looseBest:object|null, ambiguous:boolean }}
+ */
+export function matchMemberCandidates(name, members = []) {
     const target = normalizeName(name);
-    if (!target) return null;
+    const out = { target: target, exact: [], loose: [], looseBest: null, ambiguous: false };
+    if (!target) return out;
     const list = Array.isArray(members) ? members : [];
-    // 1) 精确匹配（name 或 alias 归一后相等）
     for (const m of list) {
         const names = [m?.name, ...(Array.isArray(m?.aliases) ? m.aliases : [])].filter(Boolean);
-        if (names.some(n => normalizeName(n) === target)) return m;
+        if (names.some(n => normalizeName(n) === target)) out.exact.push(m);
     }
-    // 2) 包含匹配（target 是某成员名的子串，或反之）——取最短名者优先（防「小明」误中「小明明」）
+    const exactKeys = new Set(out.exact.map(m => m?.id ?? m?.name));
     let best = null;
+    let bestLen = Infinity;
     for (const m of list) {
+        if (exactKeys.has(m?.id ?? m?.name)) continue;
         const names = [m?.name, ...(Array.isArray(m?.aliases) ? m.aliases : [])].filter(Boolean);
         for (const n of names) {
             const nn = normalizeName(n);
             if (nn && (nn.includes(target) || target.includes(nn))) {
-                if (!best || nn.length < normalizeName(best.name).length) best = m;
+                out.loose.push(m);
+                if (nn.length < bestLen) { bestLen = nn.length; best = m; }
+                break;
             }
         }
     }
-    return best;
+    out.looseBest = best;
+    out.ambiguous = out.exact.length > 1;
+    return out;
 }
-
+/**
+ * 成员匹配（兼容原签名）：把 LLM 返回的名字字符串映射回群成员对象。
+ * 支持：精确名 / 别名 / 归一化匹配 / 包含匹配（名含子串，取最短名优先）。
+ * [第三期 R3-O1] **默认不猜**：同名多解一律返回 null，由上层提示用户选择。
+ *   要恢复「静默取首个」的老行为须**显式**传 `{ rejectAmbiguous: false }` ——
+ *   默认值的方向必须站在「不猜」这一侧，否则「顺序一变归属就变」会继续隐形发生。
+ * @param {string} name LLM 返回的名字
+ * @param {Array} members 群成员 [{ id, name, aliases?, avatar? }]
+ * @param {{rejectAmbiguous?:boolean}} [opts]
+ * @returns {object|null} 匹配到的成员，未匹配/多解（rejectAmbiguous）返回 null
+ */
+export function matchMemberByName(name, members = [], opts = {}) {
+    const c = matchMemberCandidates(name, members);
+    if (!c.target) return null;
+    if (c.exact.length > 1) return (opts && opts.rejectAmbiguous === false) ? c.exact[0] : null;
+    if (c.exact.length === 1) return c.exact[0];
+    return c.looseBest || null;
+}
 /**
  * 容错解析 LLM 返回的发言者列表。
  * 兼容：{speakers:[...]} / {speakers:[{name}]} / 裸字符串数组 / 单字符串。
@@ -97,12 +131,26 @@ export function parseSpeakers(raw) {
  */
 export function scheduleSpeakers(names, members = [], opts = {}) {
     const maxSpeakers = Math.max(1, Number(opts.maxSpeakers) || 3);
+    /* [第三期 R3-O1] 默认不猜：同名多解的名字既不入 speakers 也不并入 skipped ——
+     *   「多解」与「未识别」原因不同，混成一个数组会让上层把「请你选一个」
+     *   误报成「这个名字不认识」。歧义单独上报，供 UI 提示用户选择。 */
+    const rejectAmbiguous = opts.rejectAmbiguous !== false;
     const seen = new Set();
     const speakers = [];
     const speakerNames = [];
     const skipped = [];
+    const ambiguous = [];
     for (const name of (Array.isArray(names) ? names : [])) {
-        const m = matchMemberByName(name, members);
+        const c = matchMemberCandidates(name, members);
+        if (!c.target) continue;
+        if (c.ambiguous) {
+            ambiguous.push({
+                name: String(name || '').trim(),
+                candidates: c.exact.map(m => ({ id: m?.id ?? m?.name, name: String(m?.name || '') }))
+            });
+            continue;
+        }
+        const m = matchMemberByName(name, members, { rejectAmbiguous: rejectAmbiguous });
         const key = m ? (m.id ?? m.name) : null;
         if (m && !seen.has(key)) {
             seen.add(key);
@@ -115,10 +163,10 @@ export function scheduleSpeakers(names, members = [], opts = {}) {
     return {
         speakers: speakers.slice(0, maxSpeakers),
         names: speakerNames.slice(0, maxSpeakers),
-        skipped
-    };
+        skipped,
+        ambiguous
+};
 }
-
 /**
  * 校验调度结果：过滤已发言/禁用成员（对齐 groupworld director validate）。
  * @param {{speakers,names}} decision
