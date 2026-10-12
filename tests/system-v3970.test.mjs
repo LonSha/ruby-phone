@@ -489,17 +489,23 @@ test('F7 负控制：把候选折成一条 ⇒ 「多条并列保留」判据必
         2, '原版上两条必须都在');
 });
 /* ══════════════════ E. 版本锚 ══════════════════ */
-test('E1 五源同源：3.97.0 落齐（常量 / 公告块 / 台账 / 包描述 / 迭代日志）', () => {
+test('E1 出生档落齐：3.97.0 在台账与迭代日志里不可抹（版本面已交棒当版档）', () => {
+    /* ★ [v3.98.0 交棒] 本档是 v3.97.0 的**出生版本锚**：`.latest` / `.head` /
+     *   入口常量都是**会随抬版前移**的当版读数 —— 拿它们硬锁 3.97.0 会让下一版
+     *   一抬版就红（那是抬版仪式，不是缺陷）。本仓既有先例：历史档只锁
+     *   「自己那一版在台账里仍在」与「迭代段还在」这两件不回退的事实，
+     *   当前版本面交给当版档案（tests/system-v3980.test.mjs 的 E1）。 */
     const VER = '3.97.0';
-    assert.ok(IDX.includes(`const ST_PHONE_VERSION = '${VER}';`));
-    assert.ok(IDX.includes(`'${VER}'`) || IDX.includes(VER));
-    assert.ok(read('manifest.json').includes(`"version": "${VER}"`));
-    assert.ok(read('package.json').includes(`"version": "${VER}"`));
     const ul = JSON.parse(read('update-log.json'));
-    assert.equal(ul.latest, VER);
-    assert.equal(ul.head, VER);
-    assert.ok(ul.versions[VER], '台账必须有当版条目');
-    assert.ok(Array.isArray(ul.versions[VER].items) && ul.versions[VER].items.length >= 8, '当版条目数须齐（构建期守卫）');
-    assert.ok(ul.versions[VER].items.some((it) => it.startsWith('【版本升至')), '当版必须带收尾条「版本升至 X（五源同源）」');
-    assert.ok(read('ITERATION_LOG.md').includes(`## 迭代 154 — v${VER}`));
+    assert.ok(ul.versions[VER], '台账必须有该版条目（历史不可抹）');
+    assert.ok(Array.isArray(ul.versions[VER].items) && ul.versions[VER].items.length >= 8, '该版条目数须齐（构建期守卫）');
+    assert.ok(ul.versions[VER].items.some((it) => it.startsWith('【版本升至')), '该版必须带收尾条「版本升至 X（五源同源）」');
+    assert.ok(read('ITERATION_LOG.md').includes('## 迭代 154 — v' + VER), '该版迭代段不可抹');
+    /* 版本单调：入口常量必须是**不小于**该版的可数版本（下界形，不钉死当版）。 */
+    const cur = (/const ST_PHONE_VERSION = '([^']+)'/.exec(IDX) || [])[1];
+    const num = (v) => { const m = /^([0-9]+)[.]([0-9]+)[.]([0-9]+)$/.exec(String(v)); return m ? Number(m[1]) * 1000000 + Number(m[2]) * 1000 + Number(m[3]) : NaN; };
+    assert.ok(Number.isFinite(num(cur)), '入口版本常量必须可数：' + cur);
+    assert.ok(num(cur) >= num(VER), '入口版本不得低于该版：' + cur);
+    assert.equal(read('manifest.json').includes('"version": "' + cur + '"'), true, 'manifest 与入口同源（当版由当版档把守）');
+    assert.equal(read('package.json').includes('"version": "' + cur + '"'), true, 'package.json 与入口同源');
 });
