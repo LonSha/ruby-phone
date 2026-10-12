@@ -39,9 +39,11 @@ const exists = (p) => fs.existsSync(path.join(root, p));
 const FACT_REL = 'config/phone-fact-contract.js';
 const QA_REL = 'config/memory-qa-contract.js';
 const FACET_REL = 'config/search-facets.js';
+const ENTITY_REL = 'config/entity-candidates-contract.js';
 const FACT = read(FACT_REL);
 const QA = read(QA_REL);
 const FACET = read(FACET_REL);
+const ENTITY = read(ENTITY_REL);
 const IDX = read('index.js');
 const MEM_APP = read('apps/memory/memory-app.js');
 const MEM_VIEW = read('apps/memory/memory-view.js');
@@ -53,6 +55,14 @@ const CAL_APP = read('apps/calendar/calendar-app.js');
 const F = await import(pathToFileURL(path.join(root, FACT_REL)).href);
 const Q = await import(pathToFileURL(path.join(root, QA_REL)).href);
 const S = await import(pathToFileURL(path.join(root, FACET_REL)).href);
+const E = await import(pathToFileURL(path.join(root, ENTITY_REL)).href);
+/** 去注释（判据纪律：注释里提过一次会冒充真调用 —— 本档多处断言必须先去注释）。 */
+function stripComments(src) {
+    return src.split('\n').map((l) => {
+        const i = l.indexOf('//');
+        return i >= 0 ? l.slice(0, i) : l;
+    }).join('\n');
+}
 
 /* ══════════════════ 共用：真源码副本 + 定点破坏 ══════════════════ */
 const NEG_FILES = [];
@@ -399,6 +409,85 @@ test('D3 负控制：把「没听懂 ⇒ 不筛」改成「全通过」⇒ 可�
     assert.equal(S.facetsOf('').ok, false, '原版上必须真为 false');
 });
 
+/* ══════════════════ F. 上游实体映射面（R3-O1 续 · 同版第二批） ══════════════════
+ * 治的欠债：上游 M3-O3（v3.317.0）把实体映射做成对外读面（resolveEntityAt /
+ *   entityCandidatesFor），并在 open_face_registry.tsv 按 face=entityMapping 登记
+ *   consumer=readEntityCandidates@1 —— 而手机侧此前**零消费**，「手机和主聊天采用同一份
+ *   实体映射」在用户侧不成立（同名异人照样串台）。本面把接入钉住。
+ * 本面判据与 B 面同规格：**五态不同形**、**多条候选不折成一条**、**观测缺失 ≠ 空**。
+ * ══════════════════════════════════════════════════════════════════ */
+test('F1 结构：消费层在位、只读自述、无副作用导入、上游全局名唯一收口', () => {
+    assert.ok(exists(ENTITY_REL), ENTITY_REL + ' 必须存在');
+    assert.ok(!/\.setItem\s*\(|indexedDB|localStorage\s*\.\s*set/.test(ENTITY), '消费层不得写 storage');
+    assert.ok(ENTITY.includes('writesNothing'), '必须自述只读');
+    assert.ok(!/^import /m.test(ENTITY), '不应有副作用导入');
+    assert.equal((ENTITY.match(/LONSHA_PLUGIN_GLOBAL = 'LonShaMemory'/g) || []).length, 1,
+        '上游全局名须唯一收口（两处各写一份探测=本仓治过的重复形态）');
+    assert.ok(ENTITY.includes("face: 'entityMapping'"), '面标识须与上游登记表 face 同名');
+});
+test('F2 词表：五态互异且逐字；候选恒定键面逐字对齐上游映射体', () => {
+    assert.deepEqual(Object.values(E.ENTITY_FACE_STATES),
+        ['engine-absent', 'face-absent', 'unusable', 'empty', 'ok'], '五态须互异且逐字');
+    assert.deepEqual([...E.ENTITY_CANDIDATE_KEYS], ['id', 'name', 'via', 'matchedAlias', 'blockedBy'],
+        '候选键面必须与上游 index.js::entityCandidatesFor 的映射体逐字一致');
+});
+test('F3 ★★★ 行为：缺席 / 旧版 / 读不出 / 空 / 有候选 五态必须分得开', () => {
+    const absent = E.readEntityCandidates(winWith(undefined), 'person', '甲', {});
+    assert.equal(absent.state, E.ENTITY_FACE_STATES.ENGINE_ABSENT, '插件不在场 ⇒ engine-absent（等装插件）');
+    assert.equal(absent.reason, 'plugin-absent', '必须具名归因');
+    assert.deepEqual(absent.candidates, [], '缺席时给恒定键面（不是 undefined）');
+    const old = E.readEntityCandidates(winWith({}), 'person', '甲', {});
+    assert.equal(old.state, E.ENTITY_FACE_STATES.FACE_ABSENT, '插件在、本版没这一口 ⇒ face-absent（等升级）');
+    const boom = E.readEntityCandidates(winWith({ entityCandidatesFor() { throw new Error('x'); } }), 'person', '甲', {});
+    assert.equal(boom.state, E.ENTITY_FACE_STATES.UNUSABLE, '出口抛错 ⇒ unusable（本机读不出）');
+    assert.equal(boom.reason, 'thrown', '必须说清是抛错');
+    const mal = E.readEntityCandidates(winWith({ entityCandidatesFor() { return 'nope'; } }), 'person', '甲', {});
+    assert.equal(mal.state, E.ENTITY_FACE_STATES.UNUSABLE, '返回畸形 ⇒ unusable');
+    assert.equal(mal.reason, 'malformed', '必须说清是畸形而不是空');
+    const empty = E.readEntityCandidates(winWith({ entityCandidatesFor() { return []; } }), 'person', '甲', {});
+    assert.equal(empty.state, E.ENTITY_FACE_STATES.EMPTY, '真查过没有 ⇒ empty（真读数）');
+    const hit = E.readEntityCandidates(winWith({ entityCandidatesFor() { return [{ id: 'a', name: '甲' }, { id: 'b', name: '甲' }]; } }), 'person', '甲', {});
+    assert.equal(hit.state, E.ENTITY_FACE_STATES.OK, '有候选 ⇒ ok');
+    /* ★ 多条候选**不折成一条** —— 上游这一面的存在理由就是「歧义不硬合并的前提是看得见候选」。 */
+    assert.equal(hit.candidates.length, 2, '两条并列候选必须原样保留（折成一条=把「请选择」改回「静默算给第一个」）');
+    /* 四态的 state 必须互异（压平任何两态就是把处置相反的处境显示成同一句话）。 */
+    const states = [absent.state, old.state, boom.state, empty.state];
+    assert.equal(new Set(states).size, 4, '缺席/旧版/读不出/空 四态必须互异，实测 ' + JSON.stringify(states));
+});
+test('F4 观测缺失 ≠ 空：四态的文案必须互异（不许都写成「没有这个人」）', () => {
+    const line = (st, reason) => E.entityFaceLine({ state: st, reason: reason || '', candidates: [] });
+    const lines = [line(E.ENTITY_FACE_STATES.ENGINE_ABSENT, 'plugin-absent'), line(E.ENTITY_FACE_STATES.FACE_ABSENT, 'face-absent'),
+        line(E.ENTITY_FACE_STATES.UNUSABLE, 'thrown'), line(E.ENTITY_FACE_STATES.EMPTY, 'no-candidates')];
+    assert.equal(new Set(lines).size, 4, '四条文案必须互异：' + JSON.stringify(lines));
+    assert.ok(lines[3].includes('查过了'), '空态必须明确是「查过了」——否则与「还没查」同形');
+    assert.ok(!lines[0].includes('没有这个人'), '插件缺席不得写成「查无此人」（等装插件 vs 确无此人，处置相反）');
+    assert.ok(lines[2].includes('thrown') || lines[2].includes('读不出'), '读不出必须点名成因');
+});
+test('F5 接线：手机侧身份消歧真消费该面，且歧义判据把两侧合并（不取其一）', () => {
+    const code = stripComments(read('apps/wechat/wechat-data.js'));
+    assert.ok(/from '\.\.\/\.\.\/config\/entity-candidates-contract\.js'/.test(read('apps/wechat/wechat-data.js')),
+        '必须从真源导入（不许本地再写一份探测）');
+    assert.match(code, /readEntityCandidates\s*\(/, '必须有真调用点');
+    assert.match(code, /ambiguous:\s*base\.ambiguous\s*===\s*true\s*\|\|\s*upCandidates\.length\s*>\s*1/,
+        '歧义判据必须合并「本仓成员表多解」与「上游候选多于一条」——只取其一都会漏（本仓唯一、上游并列时照样串台）');
+    assert.ok(code.includes('resolveGroupSpeakerIdentity'), '消费点必须是身份消歧这一条路径');
+});
+test('F6 负控制：把 empty 写成 ok ⇒ 五态不同形判据必须翻红', async () => {
+    const neg = await breakModule(ENTITY_REL, "return faceRow(ENTITY_FACE_STATES.EMPTY, 'no-candidates');",
+        "return faceRow(ENTITY_FACE_STATES.OK, 'no-candidates');", 'f6');
+    const n = neg.readEntityCandidates(winWith({ entityCandidatesFor() { return []; } }), 'person', '甲', {});
+    assert.equal(n.state, neg.ENTITY_FACE_STATES.OK, '破坏后「真查过、没有」被谎报成 ok（有货）');
+    assert.equal(E.readEntityCandidates(winWith({ entityCandidatesFor() { return []; } }), 'person', '甲', {}).state,
+        E.ENTITY_FACE_STATES.EMPTY, '原版上同判据必须真成立');
+});
+test('F7 负控制：把候选折成一条 ⇒ 「多条并列保留」判据必须翻红', async () => {
+    const neg = await breakModule(ENTITY_REL, '{ candidates: candidates }',
+        '{ candidates: candidates.slice(0, 1) }', 'f7');
+    const n = neg.readEntityCandidates(winWith({ entityCandidatesFor() { return [{ id: 'a' }, { id: 'b' }]; } }), 'person', '甲', {});
+    assert.equal(n.candidates.length, 1, '破坏后两条并列候选被折成一条');
+    assert.equal(E.readEntityCandidates(winWith({ entityCandidatesFor() { return [{ id: 'a' }, { id: 'b' }]; } }), 'person', '甲', {}).candidates.length,
+        2, '原版上两条必须都在');
+});
 /* ══════════════════ E. 版本锚 ══════════════════ */
 test('E1 五源同源：3.97.0 落齐（常量 / 公告块 / 台账 / 包描述 / 迭代日志）', () => {
     const VER = '3.97.0';

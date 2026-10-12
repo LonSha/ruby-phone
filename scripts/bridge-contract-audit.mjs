@@ -255,6 +255,18 @@ const PHONE_FACT_READER = 'readPhoneFactReceipt';
 /* [face: phoneFactReceipt] [reader: readPhoneFactReceipt] [floor: 1] */
 const PHONE_FACT_SOURCE_REL = 'config/phone-fact-contract.js';
 const PHONE_FACT_MIN_CONSUMERS = 1;
+/* ── [v3.97.0 · R3-O1 续] J17：上游实体映射面（entityMapping）必须真被业务面消费 ──
+ * 【为什么必须有】上游 `entityCandidatesFor` 在 A 包（v3.317.0 M3-O3）交付后**本仓零消费**，
+ *   且它在**上游自己的**死代码扫描里差点成为悬空出口（唯一"引用"是它自己 catch 的 errLog 标签串，
+ *   正是本仓治过的「读字符串当调用」假绿通道）。上游已把它如实登记为外供面（face=entityMapping），
+ *   本门把**下游这半边**钉住：登记了 `readEntityCandidates@1` 就必须真有产品侧消费点 ——
+ *   否则「外供面」四个字只是上游单方面的说法（本仓「建好不消费」第十四例的入口就在这里）。
+ * 【口径】① 真源 config/entity-candidates-contract.js 必须导出该出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1（手机侧身份消歧，R3-O1 与 M3-O3 共用同一份映射）。 */
+const ENTITY_READER = 'readEntityCandidates';
+/* [face: entityMapping] [reader: readEntityCandidates] [floor: 1] */
+const ENTITY_SOURCE_REL = 'config/entity-candidates-contract.js';
+const ENTITY_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;
@@ -488,12 +500,23 @@ let phoneFactConsumerCount = 0;
 const phoneFactConsumerFiles = [];
 let phoneFactSinkCount = 0;
 const phoneFactSinkFiles = [];
+/* ── [v3.97.0 · R3-O1 续] J17：实体映射面的真源出口 + 产品侧消费点 ── */
+const entityCode = stripped.get(ENTITY_SOURCE_REL) || '';
+const entityExportsOk = [ENTITY_READER, 'readEntityAt', 'entityFaceLine'].map((fn) => ({
+    fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(entityCode)
+}));
+let entityConsumerCount = 0;
+const entityConsumerFiles = [];
 for (const [rel, code] of stripped) {
     if (!rel.startsWith('apps/')) continue;
     const c = countOf(code, PHONE_FACT_READER + '(');
     if (c > 0) { phoneFactConsumerCount += c; phoneFactConsumerFiles.push(rel); }
     const c2 = countOf(code, PHONE_FACT_SINK_TOKEN);
     if (c2 > 0) { phoneFactSinkCount += c2; phoneFactSinkFiles.push(rel); }
+    /* [v3.97.0 · R3-O1 续] 实体映射面的产品侧消费点（import 名 + 调用形态都算；
+     *   只数 apps/**，config/ 是出口自身）。 */
+    const c3 = countOf(code, ENTITY_READER);
+    if (c3 > 0) { entityConsumerCount += c3; entityConsumerFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -538,6 +561,10 @@ if (LIST) {
     for (const f of checkpointConsumerFiles) console.log('  ' + f);
     if (!checkpointConsumerFiles.length) console.log('  （无 —— 上游检查点内容级对照没人读，第十次「建好不消费」）');
     for (const x of checkpointExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
+    console.log('\n── J17 ' + ENTITY_READER + ' 消费点（只计 apps/**）：' + entityConsumerCount + '（下限 ' + ENTITY_MIN_CONSUMERS + '）──');
+    for (const f of entityConsumerFiles) console.log('  ' + f);
+    if (!entityConsumerFiles.length) console.log('  （无 —— 上游实体映射没人读，手机与主聊天就不是同一份映射）');
+    for (const x of entityExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     process.exit(0);
 }
 
@@ -770,6 +797,21 @@ if (phoneFactSinkCount < PHONE_FACT_MIN_SINKS) {
     console.error('        三类各完成一条双向闭环（R3-X1 验收原文），至少要两处真实事件侧调用它。');
 }
 
+/* ── J17 [v3.97.0 · R3-O1 续] 实体映射面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingEntityExports = entityExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingEntityExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J17 真源 ' + ENTITY_SOURCE_REL + ' 缺出口（' + missingEntityExports.length + ' 个）：' + missingEntityExports.join(' / '));
+}
+if (entityConsumerCount < ENTITY_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J17 ' + ENTITY_READER + ' 只有 ' + entityConsumerCount + ' 个产品侧消费点（下限 ' + ENTITY_MIN_CONSUMERS + '）：');
+    for (const f of entityConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M3-O3（v3.317.0）把实体映射做成对外读面（resolveEntityAt / entityCandidatesFor），');
+    console.error('        并已在 open_face_registry.tsv 按 face=entityMapping 登记 consumer=readEntityCandidates@1；');
+    console.error('        下游零消费 ⇒ 「手机和主聊天采用同一实体映射」在用户侧不成立，同名异人照样串台。');
+    console.error('  修法：手机侧身份消歧接 config/entity-candidates-contract.js 的 ' + ENTITY_READER + '。');
+}
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -785,5 +827,6 @@ console.log('[bridge-contract] ' + INJECTION_READER + ' 消费点 ' + injConsume
 console.log('[bridge-contract] ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READER + ' 消费面 ' + evidenceConsumerCount + ' 个（按文件去重，下限 ' + EVIDENCE_MIN_CONSUMERS + '）· ' + FRESHNESS_READER + ' 消费面 ' + freshnessConsumerCount + ' 个（下限 ' + FRESHNESS_MIN_CONSUMERS + '）');
 console.log('[bridge-contract] ' + CHECKPOINT_READER + ' 消费点 ' + checkpointConsumerCount + ' 个（' + checkpointConsumerFiles.length + ' 文件，下限 ' + CHECKPOINT_MIN_CONSUMERS + '）· 真源四出口在场 ' + (checkpointExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + QA_READER + ' 消费点 ' + qaConsumerCount + ' 个 · ' + TOOLS_READER + ' 消费点 ' + toolsConsumerCount + ' 个 · ' + PHONE_FACT_READER + ' 消费点 ' + phoneFactConsumerCount + ' 个 · 写入侧 ' + PHONE_FACT_SINK_TOKEN + ' ' + phoneFactSinkCount + ' 处（下限 ' + PHONE_FACT_MIN_SINKS + '）');
+console.log('[bridge-contract] ' + ENTITY_READER + ' 消费点 ' + entityConsumerCount + ' 个（' + entityConsumerFiles.length + ' 文件，下限 ' + ENTITY_MIN_CONSUMERS + '）· 真源三出口在场 ' + (entityExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费');
 process.exit(0);

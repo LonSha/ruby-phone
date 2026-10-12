@@ -301,6 +301,26 @@ export const CROSSREPO_FEATURES = Object.freeze([
         declaredFloor: 1
     },
     {
+        id: 'lonsha.entityMapping',
+        label: '实体映射（与主聊天共用的同一份实体注册表）',
+        owner: OWNER_LONSHA,
+        since: '3.317.0',
+        sinceSource: '上游 lonsha-memory-plugin/index.js 的 resolveEntityAt / entityCandidatesFor（v3.317.0 M3-O3）；上游版本本仓未留档，证据在上游真源与 open_face_registry.tsv 的 face=entityMapping 行',
+        fieldKeys: [],
+        contract: '引擎方法族：`resolveEntityAt(kind, value, ctx, carry)` 返回 {ok, reason, entity{id,kind,name}}（未命中 ok:false + 具名 reason，含 registry-unavailable）；`entityCandidatesFor(kind, value, ctx)` 返回**候选数组**（每项 id|name|via|matchedAlias|blockedBy），**多条不并成一条**',
+        keySites: [
+            { file: 'config/entity-candidates-contract.js', token: 'readEntityCandidates' }
+        ],
+        consumers: [
+            { file: 'apps/wechat/wechat-data.js', token: 'readEntityCandidates(' }
+        ],
+        invalidation: '插件不在场 ⇒ engine-absent（等装插件）；插件在、本版无此出口 ⇒ face-absent（等升级）；出口在但抛错 / 注册表未建 ⇒ unusable（registry-unavailable，本机读不出）；注册表在场、真查过、确实无候选 ⇒ empty（**真读数**）——四态处置相反，压平即把「还没装插件」显示成「查无此人」',
+        standalone: '未装上游 ⇒ 缺席；装了但早于 3.317.0 ⇒ face-absent（实体读面未交付）',
+        upstreamFace: 'entityMapping',
+        declaredConsumer: 'readEntityCandidates',
+        declaredFloor: 1
+    },
+    {
         id: 'lonsha.knowledge',
         label: '知情网络（谁不知道某件事）',
         owner: OWNER_LONSHA,

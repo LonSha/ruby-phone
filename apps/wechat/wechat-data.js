@@ -21,6 +21,10 @@ import {
     buildCritiquePrompt,
     parseCritique
 } from './group-scheduler.js';
+/* [v3.97.0 · R3-O1 续] 身份消歧走**上游同一份实体映射**（M3-O3）：本仓自己的成员名归一
+ *   只解决「群成员表里谁叫什么」，解决不了「手机侧与主聊天是不是同一个人」。
+ *   消费侧只搬运，不重算候选（见 config/entity-candidates-contract.js 档头）。 */
+import { readEntityCandidates, entityFaceLine } from '../../config/entity-candidates-contract.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -2391,6 +2395,37 @@ export class WechatData {
          *   此前静默取首个 ⇒ 成员顺序一变归属就变，而界面上完全看不出来。 */
         try { return matchMemberByName(name, members, { rejectAmbiguous: true }); }
         catch (_e) { return null; }
+    }
+    /**
+     * 身份消歧：把「一个名字」的本仓成员归属与**上游实体映射**的候选合并上报。
+     * [v3.97.0 · R3-O1 续] 消费上游 entityMapping 面（M3-O3 「手机和主聊天采用同一实体映射」）。
+     *   · 本仓成员表给出「群里谁叫什么」（`matchMemberCandidates`）；
+     *   · 上游注册表给出「主聊天里这个名字指向哪些实体」（`readEntityCandidates`）；
+     *   两者**并列上报、互不覆盖**：本仓成员表为空不代表上游也没有这个人
+     *   （用户可能加了好友但没建群成员行），反之亦然。任一为空都不得写成「查无此人」。
+     *   上游面缺席时**如实归因**（等装插件 / 等升级 / 本机读不出），与「查过了没有」不同形。
+     * @returns {{target, members, candidates, ambiguous, member, upstream:{state,reason,line,candidates}}} 永不抛
+     */
+    resolveGroupSpeakerIdentity(chatId, name) {
+        const base = this.resolveGroupSpeakerDetail(chatId, name);
+        let up;
+        try {
+            up = readEntityCandidates(typeof window !== 'undefined' ? window : null, 'person', name, {});
+        } catch (_e) {
+            up = { state: 'unusable', reason: 'thrown', candidates: [] };
+        }
+        const upCandidates = Array.isArray(up.candidates) ? up.candidates : [];
+        return Object.assign({}, base, {
+            upstream: {
+                state: String(up.state || ''),
+                reason: String(up.reason || ''),
+                line: entityFaceLine(up),
+                candidates: upCandidates.map((c) => ({ id: c.id, name: c.name, via: c.via, matchedAlias: c.matchedAlias, blockedBy: c.blockedBy }))
+            },
+            /* 合并后的歧义判据：本仓成员表多解 **或** 上游候选多于一条。
+             *   只取其一都会漏：本仓表里唯一、上游却有并列实体（同名异人）时，静默取首个照样串台。 */
+            ambiguous: base.ambiguous === true || upCandidates.length > 1
+        });
     }
     /**
      * 群成员归因明细：这个名字**能落到谁身上**，全部如实交给调用方。

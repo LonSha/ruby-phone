@@ -1,15 +1,15 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-10-12T11:34:19.132Z",
-  "refreshReason": "[v3.97.0 · B 包手机侧接入] 上游 v3.322.1(f6aaba3) 把三面 consumer 由 none@0 改为真读数（readMemoryQaAnswer@1 / readMemoryToolsEnvelope@1 / readPhoneFactReceipt@1）；冻读取随提交态刷新，消解下游 R11 三条 consumer-none 分歧",
+  "refreshedAt": "2026-10-12T11:49:57.024Z",
+  "refreshReason": "[v3.97.0 · R3-O1 续] 上游 42e5e37 新增 face=entityMapping（resolveEntityAt/entityCandidatesFor · consumer=readEntityCandidates@1）；下游本版接入该面，冻读取随提交态刷新",
   "upstreamRepo": "lonsha-memory-plugin",
   "upstreamVersion": "3.322.0",
   "sourceState": "commit",
-  "upstreamCommit": "f6aaba3",
+  "upstreamCommit": "42e5e37",
   "worktreeDirty": false,
-  "tableSha1": "7631f59d2430",
-  "tableRows": 8,
+  "tableSha1": "a59edd6b7ace",
+  "tableRows": 9,
   "faces": {
     "projectionEnvelope": {
       "owner": "lonsha-memory-plugin",
@@ -66,6 +66,13 @@
       "upstreamSymbol": "phone-fact-bridge.js::receiptFor,lifecycleOf,handleFact,planEdit,probeCounterpart,BRIDGE_VERSION,RECEIPT_VERSION",
       "consumer": "readPhoneFactReceipt@1",
       "standaloneBehavior": "模块未加载时宿主给同键降级读数（ok:false + state:absent + 诊断行「模块未加载（phone-fact-bridge.js）」），下游读不到 undefined；准入内核缺格 ⇒ decidable:false 且诊断行点名缺的那一格（不假装 pending、不假装 rejected）"
+    },
+    "entityMapping": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.317.0",
+      "upstreamSymbol": "index.js::resolveEntityAt,entityCandidatesFor",
+      "consumer": "readEntityCandidates@1",
+      "standaloneBehavior": "宿主两态分开兜：未装上游 ⇒ 缺席；装了但早于 v3.317.0 ⇒ 该面不产出（等升级，**不**降级成「没有这个人」）"
     }
   }
 }
