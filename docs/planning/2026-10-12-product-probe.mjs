@@ -1,0 +1,13 @@
+import {pathToFileURL} from 'node:url';
+import path from 'node:path';
+const root=process.argv[2];
+if(!root) throw new Error('Pass the RubyPhone checkout path');
+const load=p=>import(pathToFileURL(path.resolve(root,p)).href);
+const {matchMemberByName}=await load('apps/wechat/group-scheduler.js');
+const {LonShaBridge}=await load('apps/memory/lonsha-bridge.js');
+const {buildContactInsight}=await load('config/contact-insight.js');
+const members=[{id:'a',name:'林安安'},{id:'b',name:'林安安'}];
+const prefix='这是两人上周一起去旧书店之后留下的共同记录正文开头';
+const block=LonShaBridge.prototype.recallBlock.call({recall:()=>[{content:prefix+'，第一件事是借书。'},{content:prefix+'，第二件事是还钱。'}]},'旧书店');
+const insight=buildContactInsight({wechat:{chats:members,loadedIds:['a','b'],buckets:{a:[],b:[]}},sms:[],calls:[{name:'林安安',timestamp:1800000000000}]},{now:1800000001000});
+console.log(JSON.stringify({ambiguousMemberChosen:matchMemberByName('林安安',members)?.id,recallInputCount:2,recallOutputCount:block.split('\n').filter(l=>l.startsWith('- ')).length,contactCallCounts:insight.rows.map(r=>({id:r.id,calls:r.calls}))},null,2));
