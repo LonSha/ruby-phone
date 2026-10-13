@@ -283,17 +283,94 @@ test('D7 工具两向自证：锚点不存在 / 不唯一必须抛', () => {
     assert.throws(() => anchorOnce(DF, 'const', 'z2'), /恰中 1 次/);
     assert.throws(() => anchorOnce(APP, 'render()', 'z3'), /恰中 1 次/);
 });
-/* ══════════════════ E. 版本锚 ══════════════════ */
-test('E1 五源同源：3.99.0 落齐（常量 / 台账 / 包描述 / 迭代日志）', () => {
-    const VER = '3.99.0';
-    assert.ok(IDX.includes("const ST_PHONE_VERSION = '" + VER + "';"), '入口常量');
-    assert.ok(read('manifest.json').includes('"version": "' + VER + '"'), 'manifest');
-    assert.ok(read('package.json').includes('"version": "' + VER + '"'), 'package.json');
-    const ul = JSON.parse(read('update-log.json'));
-    assert.equal(ul.latest, VER);
-    assert.equal(ul.head, VER);
-    assert.ok(ul.versions[VER], '台账必须有当版条目');
-    assert.ok(Array.isArray(ul.versions[VER].items) && ul.versions[VER].items.length >= 6);
-    assert.ok(ul.versions[VER].items.some((it) => it.startsWith('【版本升至')));
-    assert.ok(read('ITERATION_LOG.md').includes('v' + VER), '迭代日志必须有当版');
+/* ══════════════════ E0. 视图行为层（v3.99.1 补：真实 _html 输出验证） ══════════════════ */
+/* 视图纯字符串拼装（零 DOM 依赖），可直接实例化；用真实 _html 输出顺序验收分组。 */
+const VIEW_MOD = await import(pathToFileURL(path.join(root, VIEW_REL)).href);
+function mkRows(cards) {
+    return cards.map((c) => ({
+        id: c.id, label: '卡' + c.id, capability: 'app-only', usable: true,
+        hint: 'hint', why: '', targets: [],
+    }));
+}
+function pos(h, label) { const i = h.indexOf(label); assert.ok(i >= 0, '输出必须含 ' + label); return i; }
+test('E0a 视图输出顺序跟随内核（rows 倒序输入也不改首屏/工具区顺序）', () => {
+    const V = new VIEW_MOD.TaskentryView({});
+    const rows = mkRows(T.TE_CARDS).reverse();   /* 故意倒序：视图若按 rows 原序过滤，顺序必漂 */
+    const vm = {
+        rows, focus: D.focusOf(T.TE_CARDS, {}),
+        pinned: [], pinOrphans: [], pinIds: [], recent: [], recentState: 'ok',
+        recentStale: [], ledger: [], dropped: 0, readings: {}, cap: 'all',
+        tabSource: {}, selfCheck: { problems: [] },
+    };
+    const h = V._html(vm);
+    const ids = D.focusOf(T.TE_CARDS, {}).focus.map((r) => r.id);
+    for (let i = 1; i < ids.length; i++) {
+        assert.ok(pos(h, '卡' + ids[i - 1]) < pos(h, '卡' + ids[i]),
+            '首屏顺序必须跟随内核：' + ids[i - 1] + ' 应在 ' + ids[i] + ' 前');
+    }
 });
+test('E0b 全部卡隐藏：成功分组即使两档全空也不回落原始卡列表，恢复入口仍在', () => {
+    const V = new VIEW_MOD.TaskentryView({});
+    const hiddenAll = T.TE_CARDS.map((c) => c.id);   /* hidden 名单是 string[]（内核窄口） */
+    const fo = D.focusOf(T.TE_CARDS, { hidden: hiddenAll });
+    assert.ok(fo.ok && fo.focus.length === 0 && fo.tools.length === 0, '前置：全隐藏读数为空且 ok');
+    const vm = {
+        rows: mkRows(T.TE_CARDS), focus: fo,
+        pinned: [], pinOrphans: [], pinIds: [], recent: [], recentState: 'ok',
+        recentStale: [], ledger: [], dropped: 0, readings: {}, cap: 'all',
+        tabSource: {}, selfCheck: { problems: [] },
+    };
+    const h = V._html(vm);
+    assert.ok(h.includes('[首屏] 默认聚焦（0）'), '空首屏档如实显示 0，而不是消失');
+    assert.ok(h.includes('按需隐藏 ' + String(T.TE_CARDS.length) + ' 张'), '隐藏计数如实显示');
+    assert.ok(h.includes('>恢复显示<'), '恢复按钮文案完整（旧文案「恢显示」不得再出现）');
+    assert.ok(!h.includes('>恢显示<'), '不得再出现缺字旧文案');
+    for (const c of T.TE_CARDS) {
+        assert.ok(!h.includes('卡' + c.id), '已隐藏的卡 ' + c.id + ' 不得被回落重显');
+    }
+});
+test('E0c 负控制：视图退回成员过滤写法 ⇒ 顺序判据必须转红', () => {
+    const broken = VIEW.replace(
+        "const brief = (fo.focus || []).map(function (x) { return byId[x.id]; }).filter(Boolean);",
+        "const brief = rows.filter(function (r) { return (fo.focus || []).some(function (x) { return x.id === r.id; }); });"
+    );
+    assert.notEqual(broken, VIEW, '破坏必须真的改变源码');
+    const negAbs = path.join(root, 'apps/taskentry/taskentry-view.__neg2__.js');
+    fs.writeFileSync(negAbs, broken);
+    if (!NEG_FILES.includes(negAbs)) NEG_FILES.push(negAbs);
+    return import(pathToFileURL(negAbs).href + '?v=' + Date.now()).then((m) => {
+        const V = new m.TaskentryView({});
+        const rows = mkRows(T.TE_CARDS).reverse();
+        const vm = {
+            rows, focus: D.focusOf(T.TE_CARDS, {}),
+            pinned: [], pinOrphans: [], pinIds: [], recent: [], recentState: 'ok',
+            recentStale: [], ledger: [], dropped: 0, readings: {}, cap: 'all',
+            tabSource: {}, selfCheck: { problems: [] },
+        };
+        const h = V._html(vm);
+        const ids = D.focusOf(T.TE_CARDS, {}).focus.map((r) => r.id);
+        let drifted = false;
+        for (let i = 1; i < ids.length; i++) {
+            if (pos(h, '卡' + ids[i - 1]) >= pos(h, '卡' + ids[i])) drifted = true;
+        }
+        assert.ok(drifted, '破坏生效：倒序输入下顺序判据须能抓到（本用例即该判据本体）');
+    });
+});
+/* ══════════════════ E. 版本锚 ══════════════════ */
+/* [v3.99.1 交棒] 当版五源读数已交棒给 tests/system-v3991.test.mjs 的 E1；
+ * 本组只锁三件不随抬版漂移的事实（v3980→v3990 交棒同法）。 */
+test('E1 历史档：3.99.0 台账条目仍在 + 迭代段不可抹 + 入口版本不低于 3.99.0', () => {
+    const VER = '3.99.0';
+    const ul = JSON.parse(read('update-log.json'));
+    assert.ok(ul.versions[VER], '3.99.0 台账条目必须保留（历史不抹）');
+    assert.ok(Array.isArray(ul.versions[VER].items) && ul.versions[VER].items.length >= 6);
+    assert.ok(read('ITERATION_LOG.md').includes('## 迭代 156 ' + chr8212() + ' v' + VER), '迭代 156 段不可抹');
+    const cur = (IDX.match(/const ST_PHONE_VERSION = '(\d+\.\d+\.\d+)';/) || [])[1] || '0.0.0';
+    assert.ok(cmpVer(cur, VER) >= 0, '入口版本不得低于 3.99.0（实测 ' + cur + '）');
+});
+function chr8212() { return String.fromCharCode(8212); }
+function cmpVer(a, b) {
+    const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) { if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0); }
+    return 0;
+}

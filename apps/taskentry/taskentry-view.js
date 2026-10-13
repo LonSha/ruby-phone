@@ -111,19 +111,23 @@ export class TaskentryView {
         /* [v3.99.0 · R3-O9] 首屏与工具区分列：分组读数来自 config/desk-focus.js 的 focusOf
          *   （本视图不自己归类）。隐藏开关是**显示意图**：不删任何数据（台账与收藏一字不动）。 */
         const fo = vm.focus || {};
-        const focusIds = (fo.focus || []).map(function (x) { return x.id; });
-        const toolsIds = (fo.tools || []).map(function (x) { return x.id; });
         const rows = (vm.rows || []);
-        const brief = rows.filter(function (r) { return focusIds.indexOf(r.id) >= 0; });
-        const desks = rows.filter(function (r) { return toolsIds.indexOf(r.id) >= 0; });
-        if (fo.ok && (brief.length || desks.length)) {
+        const byId = {};
+        for (const r of rows) byId[r.id] = r;
+        /* [v3.99.1] 顺序跟随内核：按 fo.focus / fo.tools 的输出顺序投影行，
+         *   而非按 vm.rows 原序做成员过滤（内核排序若不落到视图，排序等于没排）。 */
+        const brief = (fo.focus || []).map(function (x) { return byId[x.id]; }).filter(Boolean);
+        const desks = (fo.tools || []).map(function (x) { return byId[x.id]; }).filter(Boolean);
+        /* [v3.99.1] 成功的分组读数即使两档都为空也尊重（全部隐藏时如实显示空分组 + 恢复入口），
+         *   不再回落原始卡列表——那会重显已被用户隐藏的卡且丢失恢复按钮。 */
+        if (fo.ok) {
             h += this._group('[首屏] 默认聚焦（' + String(brief.length) + '）', brief, vm, 'focus');
             h += this._group('[工具区] 案头（' + String(desks.length) + '）', desks, vm, 'tools');
             if ((fo.hidden || []).length) {
                 h += '<div class="te-orphan">按需隐藏 ' + String(fo.hidden.length) + ' 张（只不显示，数据仍在）</div>';
                 for (const hd of (fo.hidden || [])) {
                     h += '<div class="te-target"><span class="te-target-name">' + esc(hd.label) + '</span>' +
-                        '<button class="te-open" data-unhide="' + esc(hd.id) + '">恢显示</button></div>';
+                        '<button class="te-open" data-unhide="' + esc(hd.id) + '">恢复显示</button></div>';
                 }
             }
         } else {
