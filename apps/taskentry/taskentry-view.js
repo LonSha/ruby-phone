@@ -108,7 +108,27 @@ export class TaskentryView {
         h += '</div>';
         h += '<div class="te-cards">';
         if (!(vm.rows || []).length) h += '<div class="te-empty">当前筛选下没有卡。</div>';
-        for (const row of (vm.rows || [])) h += this._card(row, vm);
+        /* [v3.99.0 · R3-O9] 首屏与工具区分列：分组读数来自 config/desk-focus.js 的 focusOf
+         *   （本视图不自己归类）。隐藏开关是**显示意图**：不删任何数据（台账与收藏一字不动）。 */
+        const fo = vm.focus || {};
+        const focusIds = (fo.focus || []).map(function (x) { return x.id; });
+        const toolsIds = (fo.tools || []).map(function (x) { return x.id; });
+        const rows = (vm.rows || []);
+        const brief = rows.filter(function (r) { return focusIds.indexOf(r.id) >= 0; });
+        const desks = rows.filter(function (r) { return toolsIds.indexOf(r.id) >= 0; });
+        if (fo.ok && (brief.length || desks.length)) {
+            h += this._group('[首屏] 默认聚焦（' + String(brief.length) + '）', brief, vm, 'focus');
+            h += this._group('[工具区] 案头（' + String(desks.length) + '）', desks, vm, 'tools');
+            if ((fo.hidden || []).length) {
+                h += '<div class="te-orphan">按需隐藏 ' + String(fo.hidden.length) + ' 张（只不显示，数据仍在）</div>';
+                for (const hd of (fo.hidden || [])) {
+                    h += '<div class="te-target"><span class="te-target-name">' + esc(hd.label) + '</span>' +
+                        '<button class="te-open" data-unhide="' + esc(hd.id) + '">恢显示</button></div>';
+                }
+            }
+        } else {
+            for (const row of rows) h += this._card(row, vm);
+        }
         h += '</div>';
         h += '<div class="te-recent"><h3>最近使用</h3>';
         if (vm.recentState !== 'ok') h += '<div class="te-empty">最近使用读不出或还没有记录（' + esc(vm.recentState) + '）。</div>';
@@ -127,6 +147,20 @@ export class TaskentryView {
         h += '</div></div>';
         return h;
     }
+    /**
+     * [v3.99.0 · R3-O9] 一档卡列表（标题 + 逐卡渲染）。
+     *   两档共用同一张卡渲染（卡片模板只有一份），只有标题与隐藏按钮不同。
+     */
+    _group(title, rows, vm, kind) {
+        let h = '<div class="te-group te-group-' + esc(kind) + '"><h3>' + esc(title) + '</h3>';
+        if (!rows.length) h += '<div class="te-empty">这一档下没有卡。</div>';
+        for (const row of rows) {
+            h += this._card(row, vm);
+            h += '<button class="te-hide" data-hide="' + esc(row.id) + '">隐藏这张卡</button>';
+        }
+        h += '</div>';
+        return h;
+    }
     _bind(el) {
         const self = this;
         /* 动作白名单**只有两个**：cap（筛选，纯视图态）/ open（派发）/ pin（收藏）。
@@ -141,6 +175,13 @@ export class TaskentryView {
         });
         el.querySelectorAll('[data-pin]').forEach(function (b) {
             b.addEventListener('click', function () { self.app.toggleCard(b.getAttribute('data-pin')); });
+        });
+        /* [v3.99.0 · R3-O9] 按卡隐藏 / 恢复显示：动作白名单从三个变五个（仍然有限）。 */
+        el.querySelectorAll('[data-hide]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.hideCard(b.getAttribute('data-hide'), true); });
+        });
+        el.querySelectorAll('[data-unhide]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.hideCard(b.getAttribute('data-unhide'), false); });
         });
     }
 }

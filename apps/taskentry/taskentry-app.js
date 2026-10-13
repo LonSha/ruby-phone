@@ -16,6 +16,9 @@ import {
  *   任务入口入口点开后永远是空白。修法：改指真源（不在 task-entry 里转手一份——那会造出第二份声明）。 */
 import { hasTabSource, tabSourceReadings, TAB_SOURCE_NOTE } from '../../config/tab-source.js';
 import { readUsage } from '../../config/usage-tracker.js';
+/* [v3.99.0 · R3-O9] 桌面与返回路径减负：**默认聚焦**与**按卡隐藏**的判定全在
+ *   config/desk-focus.js（纯函数）—— 本件只把读数摆出来，不在这里另写一份归类。 */
+import { focusOf, restorePlan } from '../../config/desk-focus.js';
 import { TaskentryView } from './taskentry-view.js';
 export { TE_PINS_KEY, TE_LEDGER_KEY };
 export class TaskentryApp {
@@ -28,6 +31,11 @@ export class TaskentryApp {
          *   持有它们只为让 _vm 不必二次读盘，也让「读不出」这个事实能被视图说清。 */
         this._pinState = '';
         this._recentState = '';
+        /* [v3.99.0 · R3-O9] 按卡隐藏名单与**上一次离开时的快照**（返回路径恢复读数用）。
+           两者都是本会话内有效：隐藏是显示意图（不属于任何一条数据），
+           快照只用于与「退栈后」比对，不落盘（落盘就把「本次退栈」与「上次会话」混了）。 */
+        this._hidden = [];
+        this._leftSnapshot = null;
         this._dropped = 0;
     }
     _nowMs() {
@@ -129,6 +137,9 @@ export class TaskentryApp {
          *   与卡表读数分列 —— 前者是声明面的宽度，后者是靶心的可达性，两件不同的事）。 */
         const tsRead = tabSourceReadings();
         const sc = this.selfCheck();
+        /* [v3.99.0 · R3-O9] 默认聚焦读数（首屏 / 工具区 / 按需隐藏三档分开报）。
+           卡表与条件都来自真源：卡表用 TE_CARDS，隐藏名单用本会话的 _hidden。 */
+        const focus = focusOf(TE_CARDS, { hidden: this._hidden });
         return {
             cap: this._cap,
             rows: rowsList,
@@ -143,7 +154,10 @@ export class TaskentryApp {
             recentStale: listOf(rec.items).filter((x) => !x.routed),
             recentState: rec.state,
             ledger: listOf(ledger.rows),
-            dropped: this._dropped
+            dropped: this._dropped,
+            /* [v3.99.0 · R3-O9] 聚焦三档读数（视图据此把首屏与工具区分列；
+             *   未收进任何一档的卡在 focus.dropped 里如实报，不静默丢）。 */
+            focus: focus
         };
     }
     /* ---------- 页签真源的可视面（本 App 是**唯一**把真源读数摆给用户看的地方） ---------- */
@@ -157,6 +171,43 @@ export class TaskentryApp {
     selfCheck() {
         const r = taskEntrySelfCheck();
         return { problems: listOf(r.problems), cards: r.cards, caps: r.caps };
+    }
+    /* ---------- [v3.99.0 · R3-O9] 按卡隐藏与返回路径 ---------- */
+    /**
+     * 按卡隐藏（**只改显示意图，不删任何数据**）。
+     *   隐藏不写 storage、不动 te_pins / te_ledger —— 任务入口的收藏与使用台账**一字不动**
+     *   （验收原文「不删数据」的字面落点）；隐藏后该卡仍在卡表里，
+     *   搜索与直接打开 App 都不受影响（「隐藏 App 仍能由搜索打开」）。
+     * @returns {{ok:boolean, hidden:string[], reason:string}}
+     */
+    hideCard(id, on) {
+        const key = toStr(id);
+        if (!key) return { ok: false, hidden: this._hidden.slice(), reason: 'empty-id（没给 id ⇒ 不猜是哪张卡）' };
+        const has = this._hidden.indexOf(key) >= 0;
+        const want = (on === undefined) ? !has : (on === true);
+        if (want && !has) this._hidden = this._hidden.concat([key]);
+        else if (!want && has) this._hidden = this._hidden.filter((x) => x !== key);
+        this.render();
+        return { ok: true, hidden: this._hidden.slice(), reason: '' };
+    }
+    /** 当前隐藏名单（只读副本；视图与诊断面读它）。 */
+    hiddenCards() { return this._hidden.slice(); }
+    /**
+     * 记录「离开时的界面快照」（原页签 / 查询 / 滚动 / 草稿）。
+     *   本件**不做恢复动作**（那由页面栈自己落实，本件不该长出一条第二路由）；
+     *   它只负责把快照留住并给出**恢复读数** —— 「恢复了」与「被静默重置」必须可分辨。
+     *   四个字段都缺 ⇒ 如实报 absent（未记不是「丢了」）。
+     */
+    markLeft(snap) {
+        const s = (snap && typeof snap === 'object') ? snap : null;
+        this._leftSnapshot = s ? {
+            tab: s.tab, query: s.query, scroll: s.scroll, draft: s.draft
+        } : null;
+        return this._leftSnapshot;
+    }
+    /** 返回路径恢复读数（拿「离开时」与「现在」比；本件不替页面栈做恢复）。 */
+    restoreReading(now) {
+        return restorePlan(this._leftSnapshot, now);
     }
     onChatChanged() { this.render(); }
     destroy() { this._view = null; }
