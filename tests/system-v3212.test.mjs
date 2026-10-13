@@ -283,7 +283,8 @@ test('F1 ★ 日历取数探针只许有一个真源（诊断内核不再自写�
         for (const name of fs.readdirSync(dir)) {
             const abs = path.join(dir, name);
             if (fs.statSync(abs).isDirectory()) { walk(abs); continue; }
-            if (!name.endsWith('.js')) continue;
+            /* 负控制临时副本不是真源:别的套件会并发地建与删它们。 */
+            if (!name.endsWith('.js') || name.includes('.__neg__.')) continue;
             const rel = path.relative(ROOT, abs).split(path.sep).join('/');
             if (readRel(rel).includes('currentStoryDate')) hits.push(rel);
         }

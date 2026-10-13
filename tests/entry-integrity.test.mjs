@@ -25,7 +25,7 @@ const ok = (name, cond, detail = '') => {
       if (ent.name === 'node_modules' || ent.name.startsWith('.')) continue;
       const p = path.join(dir, ent.name);
       if (ent.isDirectory()) walk(p);
-      else if (ent.name.endsWith('.js')) files.push(p);
+      else if (ent.name.endsWith('.js') && !ent.name.includes('.__neg__.')) files.push(p);
     }
   };
   walk(root);

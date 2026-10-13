@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -614,6 +614,54 @@ export class DiagnoseView {
     }
     /** [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议卡：三态表 + 项目清单 + 影响范围 + 缺口。
      *  与既有受控恢复交接卡分工：那张答「这一次恢复的预检过了没有」；本卡答「跳项目续玩这条路通不通」。 */
+    /* [第三期 R3-O3] 群聊节奏卡:与 _workflowHtml 同范式(只转发与排版,不自己判读数)。
+    /* 四态归因词与四态私密度都在这里面职一次拆开给读者:「读不到」与「不行」不同形。 */
+    _groupPaceHtml(pkg) {
+        const face = (pkg && pkg.groupPaceFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到群聊节奏面(已降级) —— '
+                + '这是「本层读不出」,**不是**「没人说话」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>'
+            + escapeHtml(groupPaceFaceText(face)) + '</div>';
+        const reasons = Array.isArray(face.reasons) ? face.reasons : [];
+        if (reasons.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + reasons.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.key) + '</code>'
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const privacy = Array.isArray(face.privacy) ? face.privacy : [];
+        if (privacy.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>私密度四档与它们要求的**最低**关系刻度:`'
+                + escapeHtml(privacy.map((x) => x.key + '→' + (x.label || '无下限')).join(' / '))
+                + '`。关系刻度**只判够不够格,不用来排序** </div>';
+        }
+        const pReasons = Array.isArray(face.privacyReasons) ? face.privacyReasons : [];
+        if (pReasons.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + pReasons.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.key) + '</code>'
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const noFace = face.noFace || {};
+        const sample = face.sample || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>两种情形必须不同形: **空历史**('
+            + '真的还没人说过话)报 ' + escapeHtml(String(sample.reason || '—'))
+            + ' · **历史读不到**报 ' + escapeHtml(String(noFace.reason || '—')) + '</div>';
+        html += '<div class=' + Q + 'dg-note' + Q + '>历史读不到时不拿空数组顶替;'
+            + '没人够格时允许沉默,不为凑人数硬塞发言。</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>内核自检报了问题</b>:</div>';
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + problems.map((x) =>
+                '<div class=' + Q + 'dg-trow dg-bad' + Q + '>' + escapeHtml(String(x)) + '</div>').join('') + '</div>';
+        }
+        return html;
+    }
+
     _resumeWorkbenchHtml(pkg) {
         const face = (pkg && pkg.resumeWorkbenchFace) || null;
         if (!face) {
@@ -1435,6 +1483,9 @@ export class DiagnoseView {
         /* [v3.88.0 · R-X4] 续玩工作台卡与受控恢复交接卡**并列**（分工：交接卡量这一次的预检，本卡量跳项目这条路）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跳项目续玩工作台（三态：未选项目 / 清单读不到 / 已选中）</h3>' + this._resumeWorkbenchHtml(pkg) + '</section>');
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>声明式工作流（九态：空闲 / 阻塞 / 预览 / 待确认 / 运行中 / 已暂停 / 完成 / 部分完成 / 已回滚）</h3>' + this._workflowHtml(pkg) + '</section>');
+        /* [第三期 R3-O3] 群聊节奏卡:跟在工作流卡之后
+         *   (两者都是「把读数落成可读面」同族的诊断卡)。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>群聊节奏(冷却 / 未接话题 / 关系相关度 / 允许沉默)</h3>' + this._groupPaceHtml(pkg) + '</section>');
          /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作工作台（五类素材 / 四类发布前检查；发布只委托目标 App 的真源写口）</h3>' + this._creationWorkbenchHtml(pkg) + '</section>');
          /* [v3.91.0 · R-X7] 备份恢复卡与上面两张**并列**（分工：那两张管「一次操作」，本卡管「把整部手机搬走」）。 */

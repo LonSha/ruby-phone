@@ -33,7 +33,7 @@ function walk(dir, out = []) {
     if (['.git', 'node_modules', 'tests', 'scripts'].includes(name) || name.startsWith('.')) continue;
     const abs = path.join(dir, name);
     if (statSync(abs).isDirectory()) walk(abs, out);
-    else if (name.endsWith('.js')) out.push(abs);
+    else if (name.endsWith('.js') && !name.includes('.__neg__.')) out.push(abs);
   }
   return out;
 }

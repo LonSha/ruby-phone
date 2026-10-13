@@ -209,7 +209,7 @@ test('D1 ★ 五域取数口唯一：全仓只许真源一处读这些出口', (
         for (const n of fs.readdirSync(dir)) {
             const abs = path.join(dir, n);
             if (fs.statSync(abs).isDirectory()) walk(abs);
-            else if (n.endsWith('.js')) files.push(path.relative(ROOT, abs).split(path.sep).join('/'));
+            else if (n.endsWith('.js') && !n.includes('.__neg__.')) files.push(path.relative(ROOT, abs).split(path.sep).join('/'));
         }
     })(path.join(ROOT, 'apps'));
     for (const n of fs.readdirSync(path.join(ROOT, 'config'))) {

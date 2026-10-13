@@ -12237,6 +12237,23 @@ renderChatRoom(chat) {
                         .replace(/\{\{wechatContacts\}\}/g, wechatContactsList)
                         .replace(/\{\{customEmojiList\}\}/g, customEmojiList)
                         .replace(/\{\{personalImageTagInfo\}\}/g, personalImageTagInfo);
+                    /* [第三期 R3-O3] 群聊节奏读数进提示词。
+                     * 为什么要在这里进:本段以前,群聊模式的模型只拿到「群成员有谁」与「历史消息」,
+                     * 没有一处告诉它「这一轮该给谁多少台面」—— 于是每轮都是同样那几个人说话、
+                     * 同一件往事被六个人各说一遍。读数由内核纯函数产出,
+                     * 本处只把它**如实**接进去:读不到就写「读不到」,
+                     * 绝不把「没有读数」写成「都可以说」。 */
+                    try {
+                        const pace = this.app.wechatData.planGroupPace(targetChat?.id, {
+                            topic: targetChat?.paceTopic || '',
+                            privacy: targetChat?.pacePrivacy || ''
+                        });
+                        if (pace && pace.line) {
+                            systemPrompt += '\n\n【群聊节奏(R3-O3)\n' + pace.line + '\n'
+                                + '冷却与未接话题只决定「这一轮谁更适合接」,不要把同一件往事让多人各说一遍;'
+                                + '没有到足够资格的人时**允许少说甚至不说**,不要为了凑人数硬塞发言。】';
+                        }
+                    } catch (_e) { /* 读数取不到就不进:宁可没有这段,也不附一句假的 */ }
                 } else if (promptManager?.getPromptForFeature) {
                     // 单聊模式
                     systemPrompt = promptManager.getPromptForFeature('wechat', 'online') || '';

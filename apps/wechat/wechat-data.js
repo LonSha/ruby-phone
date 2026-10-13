@@ -21,6 +21,9 @@ import {
     buildCritiquePrompt,
     parseCritique
 } from './group-scheduler.js';
+/* [第三期 R3-O3] 群聊节奏与角色表达差异:冷却 / 未接话 题 / 关系相关度 / 允许沉默。
+ *   纯函数内核,不读存储不写状态;历史与关系刻度由本层从真源喂进去。 */
+import { planGroupPace, groupPaceLine, normalizeGroupHistory, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
 /* [v3.97.0 · R3-O1 续] 身份消歧走**上游同一份实体映射**（M3-O3）：本仓自己的成员名归一
  *   只解决「群成员表里谁叫什么」，解决不了「手机侧与主聊天是不是同一个人」。
  *   消费侧只搬运，不重算候选（见 config/entity-candidates-contract.js 档头）。 */
@@ -2488,6 +2491,65 @@ export class WechatData {
         catch (_e) { return null; }
     }
 
+
+    /**
+     * 群聊节奏读数:把「最近谁说过什么」从真源读出来,喂给纯函数内核。
+     * [第三期 R3-O3] 本层只做「读与搬」:
+     *   · 最近发言  —— 取该群最后几条**带发言者标识**的消息(取多少条由内核上限决定,本层不自己拟一个);
+     *   · 未接话题  —— 消息自带的话题标识(没有就是没有,不抽前 24 字拼一个 —— 拼出来的话题会把「同一件事荡成好几件」);
+     *   · 关系刻度  —— 从群成员行自带的 tier 读(读不到就是读不到,不默认成陌生人);
+     *   · 私密度    —— 由调用方显式传入(本层**不从正文推断私密度** —— 推断出来的私密度会把不该说的话放给不该说的人)。
+     * 历史读不到时**不拿空数组顶替**:内核会如实报 no-recent-face,
+     * 与「真的没人说过话」不同形。
+     * @returns {{members, history, topic, mentions, privacy, tiers}} 永不抛
+     */
+    groupPaceReadings(chatId, opts = {}) {
+        const base = { members: this.getGroupMembers(chatId), history: null, topic: opts.topic,
+            mentions: opts.mentions, privacy: opts.privacy, tiers: null };
+        if (!base.members.length) return base;
+        /* 历史:读不到(该群读不出消息面)时保持 null,不退化成空数组 */
+        try {
+            const msgs = this.getMessages(chatId);
+            if (Array.isArray(msgs)) {
+                const rows = [];
+                for (const m of msgs.slice(-(GROUP_PACE_LIMITS.coolWindow * 4))) {
+                    const who = String((m && (m.senderName || m.speaker || m.name)) || '').trim();
+                    if (!who) continue;
+                    rows.push({ name: who, topic: String((m && (m.topic || m.topicKey)) || '').trim() });
+                }
+                base.history = rows;
+            }
+        } catch (_e) { base.history = null; }
+        /* 关系刻度:从成员行自带 tier 读;一个都读不到 ⇒ 保持 null */
+        const tiers = {};
+        let anyTier = false;
+        for (const m of base.members) {
+            const t = String((m && m.tier) || '').trim();
+            if (t) { tiers[String(m.name)] = t; anyTier = true; }
+        }
+        base.tiers = anyTier ? tiers : null;
+        return base;
+    }
+
+    /**
+     * 本轮台面分配(R3-O3 主出口):读真源 → 纯函数内核 → 一行读数。
+     * 永不抛;内核异常时如实回报而不假装「没人说话」。
+     */
+    planGroupPace(chatId, opts = {}) {
+        const readings = this.groupPaceReadings(chatId, opts);
+        try {
+            const r = planGroupPace({
+                members: readings.members, history: readings.history, topic: opts.topic,
+                mentions: opts.mentions, privacy: opts.privacy, tiers: readings.tiers
+            }, opts);
+            r.line = groupPaceLine(r);
+            return r;
+        } catch (_e) {
+            return { ok: false, state: 'absent', reason: 'thrown', speakers: [], forced: [],
+                cooled: [], silent: [], readings: {},
+                line: '群聊节奏:读数时抛了' };
+        }
+    }
     getChatBackground(chatId, fallback = '') {
         const chat = this.getChat(chatId);
         return String(

@@ -112,6 +112,11 @@ const MIRROR_FILES = [
      *   不扩 ⇒ 镜像根上 chat-view 装载失败（探针 exit 2）⇒ B2（位置无关）与 D1/D2/D3/D5
      *   一起转红：那证明的是「两个根看到的不是同一件事」，不是判据逻辑错。
      *   口径与 v3.79.0 扩 CSS 面同规：判据面扩了，镜像面就得跟着扩。 */
+    /* [第三期 R3-O3] chat-view 的静态导入闭包又长了:群聊节奏内核
+     *   config/group-pace.js 经 wechat-data 静态引入。不扩 ⇒ 镜像根上 chat-view 装载失败(探针 exit 2)
+     *   ⇒ B2 与 D1/D2/D3/D5 一起转红:那证明的是「两个根看到的不是同一件事」,不是判据逻辑错。
+     *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面同规:判据面扩了,镜像面就得跟着扩。 */
+    'config/group-pace.js',
     'apps/app-injection.js', 'config/injection-priority.js',
     'apps/place/place-data.js', 'apps/wallet/wallet-data.js', 'apps/profile/profile-data.js',
     'apps/plotline/plotline-data.js', 'apps/chars/chars-data.js', 'apps/clock/clock-data.js',

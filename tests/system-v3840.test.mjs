@@ -139,7 +139,9 @@ test('v3840 A3. 全仓再扫一遍：不许有第二处 boundedInt 定义（含�
             if (ent.name.startsWith('.')) continue;
             const abs = path.join(dir, ent.name);
             if (ent.isDirectory()) { if (ent.name !== 'node_modules') walk(abs); continue; }
-            if (!ent.name.endsWith('.js')) continue;
+            /* 负控制临时副本(. __neg__.js)不是真源:别的套件会并发地建与删它们,
+             *   扫描面不排除就会把别人的临时文件当成真源(本套件实测撞过:读不到那份文件而 ENOENT 转红)。 */
+            if (!ent.name.endsWith('.js') || ent.name.includes('.__neg__.')) continue;
             const rel = path.relative(ROOT, abs).split(path.sep).join('/');
             if (rel === M_CLAMP) { defs += 1; continue; }
             const src = fs.readFileSync(abs, 'utf8');

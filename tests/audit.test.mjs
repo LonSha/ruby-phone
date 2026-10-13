@@ -109,7 +109,7 @@ const ok = (name, cond, detail = '') => {
       if (de.isDirectory() && !de.name.startsWith('.')) {
         const sub = path.join(dir, de.name);
         fs.readdirSync(sub).forEach(f => {
-          if (f.endsWith('.js')) {
+          if (f.endsWith('.js') && !f.includes('.__neg__.')) {
             const c = fs.readFileSync(path.join(sub, f), 'utf8');
             if (/debugger|FIXME|XXX:/.test(c)) todo++;
           }

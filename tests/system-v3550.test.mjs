@@ -95,7 +95,7 @@ function idToDir(root, id, dirs) {
  *  *-app.js 的词干）使 f === p + '.js' 或 f 以 p + '-' 开头；无前缀的文件
  *  （如 global-search-engine.js）归「与目录同名的那件 App」。 */
 function ownedFiles(root, id, dir) {
-    const all = fs.readdirSync(path.join(root, 'apps', dir)).filter((f) => f.endsWith('.js'));
+    const all = fs.readdirSync(path.join(root, 'apps', dir)).filter((f) => f.endsWith('.js') && !f.includes('.__neg__.'));
     const stems = all.filter((f) => f.endsWith('-app.js')).map((f) => f.slice(0, -7));
     if (stems.length <= 1) return all;
     return all.filter((f) => {

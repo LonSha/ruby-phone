@@ -289,7 +289,7 @@ const {
             for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
                 const p = path.join(dir, e.name);
                 if (e.isDirectory()) { if (!['node_modules', '.git', 'tests'].includes(e.name)) walk(p, out); }
-                else if (e.name.endsWith('.js')) out.push(p);
+                else if (e.name.endsWith('.js') && !e.name.includes('.__neg__.')) out.push(p);
             }
             return out;
         };

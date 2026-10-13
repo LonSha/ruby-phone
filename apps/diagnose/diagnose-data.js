@@ -164,6 +164,8 @@ import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-
 /* [v3.70.0 · 拓展计划 X6] 创作素材到发布草稿协议面：与 knowledgeBridgeFace 同一族。
  *   来源登记表 + 草稿账本状态 + 表自检。 */
 import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-pipeline.js';
+/* [第三期 R3-O3] 群聊节奏面的唯一消费口(诊断中心同族卡)。 */
+import { groupPaceSelfCheck, groupPaceLine, planGroupPace, GROUP_PACE_REASONS, GROUP_PACE_PRIVACY, GROUP_PACE_PRIVACY_REASONS, GROUP_PACE_TIERS, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
 import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
 /* [v3.82.0 · B 清单] 写作面八张卡的**唯一消费口**：氛围池（B1）/ 关系七级（B2）/
  *   判定与平行线（B3+B4）/ 状态字段（B5）/ 二级摘要（B6）/ 事实表（B7）/ 人工纠错（B8）。
@@ -964,6 +966,70 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
+
+    /* [第三期 R3-O3] 群聊节奏面:内核自检 + 三态归因词 + 上限读数 + 默认样本跑一遍。
+     *   与 workflowFace 同族:本仓一切纯函数面的可见出口就在这里 —— 没有这一个消费点,
+     *   内核就只剩「写了没人用」。
+     *   本卡只读**内核**的自检与常量;不读存储、不读聊天消息(模型侧的真实读数在 wechat 那一层)。 */
+    const groupPaceFace = (() => {
+        try {
+            const self = groupPaceSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const reasons = Object.keys(GROUP_PACE_REASONS).map((k) => ({
+                key: String(k), text: String(GROUP_PACE_REASONS[k]),
+            }));
+            const privacy = Object.keys(GROUP_PACE_PRIVACY).map((k) => ({
+                key: String(k), need: GROUP_PACE_PRIVACY[k], label: GROUP_PACE_TIERS[GROUP_PACE_PRIVACY[k]] || '',
+            }));
+            /* 样本跑一遍:验证内核在**空历史**与**读不到历史**两种情形下不同形 */
+            const sample = planGroupPace({
+                members: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
+                history: [], topic: '样本'
+            });
+            const noFace = planGroupPace({ members: [{ name: 'A' }] });
+            const distinct = (sample.reason === 'ok' || sample.reason === 'all-cooled' || sample.reason === 'no-eligible');
+            let head = '尚未取数';
+            if (!problems.length) {
+                head = distinct
+                    ? ('空历史可判(台面 ' + String(sample.speakers.length) + ' 人) · 读不到历史报 ' + String(noFace.reason))
+                    : '内核自检过而样本归因不对形';
+            }
+            return {
+                ok: problems.length === 0 && distinct,
+                reason: problems.length ? 'self-check' : (distinct ? 'ok' : 'sample-shape'),
+                problems: problems,
+                reasons: reasons,
+                privacy: privacy,
+                privacyReasons: Object.keys(GROUP_PACE_PRIVACY_REASONS).map((k) => ({
+                    key: String(k), text: String(GROUP_PACE_PRIVACY_REASONS[k]),
+                })),
+                tiers: GROUP_PACE_TIERS.slice(),
+                limits: {
+                    coolWindow: GROUP_PACE_LIMITS.coolWindow,
+                    coolPenalty: GROUP_PACE_LIMITS.coolPenalty,
+                    topicBonus: GROUP_PACE_LIMITS.topicBonus,
+                    repeatPenalty: GROUP_PACE_LIMITS.repeatPenalty,
+                    maxSpeakers: GROUP_PACE_LIMITS.maxSpeakers,
+                    minHistory: GROUP_PACE_LIMITS.minHistory,
+                },
+                sample: {
+                    reason: String(sample.reason || ''),
+                    speakers: Array.isArray(sample.speakers) ? sample.speakers.map((m) => String((m && m.name) || '')) : [],
+                    silent: sample.silent === true,
+                },
+                noFace: { reason: String(noFace.reason || ''), ok: noFace.ok === true },
+                line: groupPaceLine(sample),
+                text: '群聊节奏(第三期 R3-O3):冷却窗 ' + String(GROUP_PACE_LIMITS.coolWindow)
+                    + ' 条 / 未接话题加权 ' + String(GROUP_PACE_LIMITS.topicBonus)
+                    + ' / 已接过降权 ' + String(GROUP_PACE_LIMITS.repeatPenalty)
+                    + ';四态私密度(' + privacy.map((x) => x.key).join(' / ') + ');'
+                    + '允许沉默(没人够格时不硬塞)。',
+            };
+        } catch (e) {
+            return { ok: false, reason: 'thrown', problems: [String(e && e.message || e)], line: '' };
+        }
+    })();
+
     /* [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面：与 workflowFace 同范式 ——
      *   五类素材状态 / 四类检查行 / 目标 owner 表 / 发布台账三态。
      *   ★ 与 R-X5 那张卡的分工：那张答「把几步串成流水这条路通不通」，
@@ -1428,7 +1494,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1501,6 +1567,17 @@ export function workflowFaceText(face) {
         return String(f.text || '声明式工作流：无读数');
     } catch (_e) { return '声明式工作流：读取异常（已降级）'; }
 }
+/** [第三期 R3-O3] 群聊节奏协议面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
+ *  与 workflowFaceText 同范式:只做转发与文案,视图不自己拼。
+ *  三态不同形:面缺席 / 尚未取数 / 有读数。 */
+export function groupPaceFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '群聊节奏:读取异常(已降级) —— 这不是「没人说话」';
+        return String(f.text || '群聊节奏:无读数');
+    } catch (_e) { return '群聊节奏:读取异常(已降级)'; }
+}
+
 /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
  *  与 workflowFaceText 同范式：只做转发与文案，视图不自己拼。
  *  三态不同形：面缺席 / 尚未取数 / 有读数。 */
@@ -1861,6 +1938,7 @@ export default {
     financeFaceText,
     financeCommitFaceText,
     workflowFaceText,
+groupPaceFaceText,
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,
     backupFaceText,

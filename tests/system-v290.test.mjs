@@ -165,7 +165,7 @@ test('v290 C. 全仓扫描：三方法各恰 1 处定义（D3 无重复残留）
       if (['.git', 'node_modules', 'tests', 'scripts'].includes(e.name) || e.name.startsWith('.')) continue;
       const abs = path.join(dir, e.name);
       if (e.isDirectory()) walk(abs);
-      else if (e.name.endsWith('.js')) files.push(abs);
+      else if (e.name.endsWith('.js') && !e.name.includes('.__neg__.')) files.push(abs);
     }
   };
   walk(path.join(ROOT, 'apps'));
