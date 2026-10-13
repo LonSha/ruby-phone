@@ -1,15 +1,15 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-10-12T11:49:57.024Z",
-  "refreshReason": "[v3.97.0 · R3-O1 续] 上游 42e5e37 新增 face=entityMapping（resolveEntityAt/entityCandidatesFor · consumer=readEntityCandidates@1）；下游本版接入该面，冻读取随提交态刷新",
+  "refreshedAt": "2026-10-13T17:12:07.898Z",
+  "refreshReason": "[v4.05.0] 上游 lonsha-memory-plugin 在其 v3.323.0 新增三面 relationHistory / causalChain / perspectiveCard(consumer 均为 none@0,下游本仓一个都不消费);冻读取停在 v3.322.0/42e5e37,提交态 sha1 已变 ⇒ 按 R9 口径显式刷新。本版**只**同步这三面的账面,不新增消费点:三门禁面(R8/R10/R11)逐面一致,台账仍空。刷新取上游**提交态**(可回源),非工作树态",
   "upstreamRepo": "lonsha-memory-plugin",
-  "upstreamVersion": "3.322.0",
+  "upstreamVersion": "3.325.0",
   "sourceState": "commit",
-  "upstreamCommit": "42e5e37",
+  "upstreamCommit": "afb6071",
   "worktreeDirty": false,
-  "tableSha1": "a59edd6b7ace",
-  "tableRows": 9,
+  "tableSha1": "f7665fde0dc4",
+  "tableRows": 12,
   "faces": {
     "projectionEnvelope": {
       "owner": "lonsha-memory-plugin",
@@ -73,6 +73,27 @@
       "upstreamSymbol": "index.js::resolveEntityAt,entityCandidatesFor",
       "consumer": "readEntityCandidates@1",
       "standaloneBehavior": "宿主两态分开兜：未装上游 ⇒ 缺席；装了但早于 v3.317.0 ⇒ 该面不产出（等升级，**不**降级成「没有这个人」）"
+    },
+    "relationHistory": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.323.0",
+      "upstreamSymbol": "relation-history.js::build,asOf,line,selfCheck",
+      "consumer": "none@0",
+      "standaloneBehavior": "单装上游：面在场但要宿主喂图边（无图 ⇒ 空读数，不是错误）；单装下游：本面缺席 ⇒ 降级面同键，下游按 version=0 判「这一面不在场」逐格降级"
+    },
+    "causalChain": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.323.0",
+      "upstreamSymbol": "causal-chain.js::build,proposeCandidates,traceBack,todos,line,selfCheck",
+      "consumer": "none@0",
+      "standaloneBehavior": "单装上游：面在场但需宿主喂三账；单装下游：本面缺席 ⇒ 降级面同键，下游按 version=0 逐格降级"
+    },
+    "perspectiveCard": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.323.0",
+      "upstreamSymbol": "perspective-card.js::build,contrast,line,selfCheck",
+      "consumer": "none@0",
+      "standaloneBehavior": "单装上游：面在场但需宿主喂知识轨迹；单装下游：本面缺席 ⇒ 降级面同键，下游按 version=0 逐格降级（**不得**把降级读成「确实不知道」）"
     }
   }
 }

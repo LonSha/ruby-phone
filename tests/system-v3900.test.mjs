@@ -436,7 +436,9 @@ test('v3900 D8. self-proof: the mutant copy is really loaded, and the break real
 test('v3900 E1 version anchor: five sources agree and not below 3.90.0', () => {
     const ver = String(MAN.version);
     const parts = ver.split('.').map(Number);
-    assert.ok(parts[0] === 3 && parts[1] >= 90, '版本必须不低于 3.90.0，实际 ' + ver);
+    /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+    assert.ok(parts[0] > 3 || (parts[0] === 3 && (parts[1] > 90 || (parts[1] === 90 && (parts[2] || 0) >= 0))),
+        '版本不低于 3.90.0(下限形),实际 ' + ver);
     assert.ok(IDX.indexOf("const ST_PHONE_VERSION = '" + ver + "'") >= 0, 'index.js 版本常量必须与 manifest 同源');
     const pkg = JSON.parse(read('package.json'));
     assert.equal(pkg.version, ver, 'package.json 必须同源');

@@ -214,7 +214,9 @@ describe('[V] 版本与导出面', () => {
     test('V1: 版本下限 3.69.0', () => {
         const ver = MANIFEST.version;
         const parts = ver.split('.').map(Number);
-        assert.ok(parts[0] === 3 && parts[1] >= 69, '版本应 >= 3.69.0，实际 ' + ver);
+        /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+        assert.ok(parts[0] > 3 || (parts[0] === 3 && (parts[1] > 69 || (parts[1] === 69 && (parts[2] || 0) >= 0))),
+            '版本不低于 3.69.0(下限形),实际 ' + ver);
     });
 
     test('V2: 导出函数恰好 9 项', () => {

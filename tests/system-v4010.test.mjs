@@ -5,7 +5,14 @@
  * ======================================================== */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+/* [v4.05.0 · 交棒] 镜像克隆一律走**唯一实现** `tests/_mirror_tree.mjs` 的 copyTreeSafe:
+ *   裸 `cpSync` 会在「复制途中源文件消失」时抛 ENOENT(本仓 v3.23.0 的实测竞态),
+ *   而 v3230-A1 常驻守着「tests/ 下不得再出现裸调」。本版收口时这条真红过 ——
+ *   它**不是**本版引入的,是 v4.01.0 / v4.02.0 两个套件当年漏了这一步。
+ *   复制面只有 config/ 一层,无瞬态文件,但纪律不看「会不会真撞上」。
+ *   用法与 fs.cpSync 同形(recursive 由实现内部补)。 */
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -163,7 +170,7 @@ test('C4 视图三段 + 绑定 + CSS', () => {
 /* ---------- D 负控制 ---------- */
 test('D1 负控制：破坏「按目标替换」成按键替换，B5 判据必须转红', async () => {
     const tmp = mkdtempSync(join(tmpdir(), 'v4010d1-'));
-    cpSync(join(ROOT, 'config'), join(tmp, 'config'), { recursive: true });
+    copyTreeSafe(join(ROOT, 'config'), join(tmp, 'config'));
     const tgt = join(tmp, 'config/creation-multi-draft.js');
     let src = readFileSync(tgt, 'utf-8');
     const A = 'const kept = norm.drafts.filter(function (d) { return uniq.indexOf(d.target) < 0; });';

@@ -202,7 +202,9 @@ describe('[V] 版本与导出面', () => {
     test('V1: 版本下限 3.68.0', () => {
         const ver = MANIFEST.version;
         const [major, minor] = ver.split('.').map(Number);
-        assert.ok(major === 3 && minor >= 68, '版本应 >= 3.68.0，实际 ' + ver);
+        /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+        assert.ok(major > 3 || (major === 3 && minor >= 68),
+            '版本不低于 3.68.0(下限形),实际 ' + ver);
     });
 
     test('V2: 导出面恒定 13 个（不含 default）', async () => {

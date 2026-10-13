@@ -19,6 +19,11 @@
 import { defaultPlaceSettings, readSceneFace, projectScene, scenePromptBlock } from './place-data.js';
 import { PlaceView } from './place-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v4.05.0 · R3-X9] 探索内核:清单 / 路径 / 地点卡 / 出行提案。
+ *   本 App 只做三件事:①把已有几面数据**现取**出来交给内核;②把内核的话摆到界面上;
+ *   ③把用户选中的那条提案**交给聊天**(派发 phone:sendToChat,与扭蛋 / 塔罗同一条通道)。
+ *   **本层不移动角色、不写任何地点状态、不编距离** —— 走动只发生在正文里。 */
+import { exploreList, buildRoute, normalizeRoamInputs, buildTravelProposal, roamSelfCheck } from '../../config/place-roam.js';
 /* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
  *   本 App 的数据面照旧读只读快照的场所面（`readSceneFace` 的三态归因一个字不动）——
  *   理由写死在 config/projection-contract.js 的 projectionScopeLine 文件头：
@@ -95,6 +100,100 @@ export class PlaceApp {
         const face = this.sceneFace();
         const proj = projectScene(face.snapshot, { maxEntries: 12 });
         return { face, proj, src: this.sourceFace() };
+    }
+
+    /* ==================== [v4.05.0 · R3-X9] 地点探索与场景漫游 ====================
+     * 【本段只做一件事】把**已经在别处存在**的几面数据现取出来,交给 config/place-roam.js 的纯内核。
+     *   本 App 不回答「怎么走」,也不回答「去过没去过」—— 那些判定在核心里有判据、可单测。
+     *
+     * 【为什么往事与约定要去读约定账】R3-X9 的验收口径要求「从当前地点选目的地可带出已知线索」。
+     *   线索有两类来源:本 App 自己的到访史(已有),以及**用户与角色约好的那些事**(在约定账里)。
+     *   约定账的 owner 仍是 apps/calendar(config/commitment-flow.js),此处**只读镜像**,
+     *   不写、不改、不重算它的状态 —— 不新开第二个 owner,这是本仓跨 App 复用的既定姿势。
+     */
+
+    /**
+     * 往事与约定面:从约定账里取「注了地点」的条目。
+     * **读不到(存储抛 / 结构不是账)返回 null** ⇒ 内核据此说「本面读不到」;
+     * 读到但一条都没注地点 ⇒ 返回 [] ⇒ 内核说「这处还没有记下过的往事或约定」。
+     * 两种处境处置相反(前者等接入,后者等剧情),故不得同形。
+     * @returns {Array|null}
+     */
+    notesFace() {
+        try {
+            const raw = this.storage?.get?.('calendar_commitments', null);
+            const parsed = typeof raw === 'string' ? JSON.parse(raw || 'null') : raw;
+            const items = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : []);
+            const out = [];
+            for (const it of items) {
+                if (!it || typeof it !== 'object') continue;
+                const place = String(it.place || it.location || '').trim();
+                if (!place) continue;
+                out.push({
+                    kind: String(it.status || '') === 'fulfilled' ? '往事' : '约定',
+                    text: String(it.content || it.title || '').trim(),
+                    place,
+                    dateKey: String(it.dateKey || '').trim()
+                });
+            }
+            return out;
+        } catch (_e) { return null; }
+    }
+    /**
+     * 探索输入面(内核的唯一入参形状)。
+     * 面在不在**按读到没读到判**:读不到就不传这一项(内核据此报「这版读不到」),
+     * 而不是传一个空数组 —— 空数组的意思是「有这面,只是空」,两者处置相反。
+     */
+    roamInputs() {
+        const pkg = this.projection();
+        const proj = (pkg && pkg.proj) || null;
+        const ok = !!(proj && proj.ok);
+        const raw = {
+            tree: (ok && Array.isArray(proj.tree)) ? proj.tree : [],
+            currentChain: (ok && Array.isArray(proj.current)) ? proj.current : []
+        };
+        if (ok && Array.isArray(proj.history)) raw.visits = proj.history;
+        if (ok && Array.isArray(proj.presence)) raw.presence = proj.presence;
+        const notes = this.notesFace();
+        if (Array.isArray(notes)) raw.notes = notes;
+        return normalizeRoamInputs(raw);
+    }
+    /** 探索清单(去过 / 待探索 / 可进入 / 未知)。不抛:异常一律降级为一行归因 */
+    exploreFace() {
+        try { return exploreList(this.roamInputs()); }
+        catch (_e) { return { ok: false, state: 'error', reason: 'read-failed', items: [], readings: {} }; }
+    }
+    /** 从当前位置到某处的拓扑(不认识就是不认识:route=unknown,不编距离与耗时) */
+    routeTo(target) {
+        try { return buildRoute(this.roamInputs(), target); }
+        catch (_e) { return null; }
+    }
+    /** 地点卡 + 出行提案文本(只生成话,不移动任何东西) */
+    proposalOf(target) {
+        try { return buildTravelProposal(this.roamInputs(), target); }
+        catch (_e) { return { ok: false, reason: 'read-failed', text: '', lines: [], place: null }; }
+    }
+    /**
+     * 把提案交给聊天 —— **这是「提案」二字的落地处**。
+     * 本方法只把这段文本投进聊天输入框(与扭蛋 / 塔罗同一条 `phone:sendToChat` 通道),
+     * 发不发送由宿主与用户决定;本方法**不改任何地点状态、不移动任何角色**。
+     * @returns {{ok:boolean, reason:string, text:string}}
+     */
+    sendProposalToChat(target) {
+        const p = this.proposalOf(target);
+        const text = (p && p.text) || '';
+        if (!p || !p.ok || !text) return { ok: false, reason: (p && p.reason) || 'no-proposal', text };
+        try {
+            const win = this._win();
+            win.dispatchEvent(new win.CustomEvent('phone:sendToChat', { detail: { message: text } }));
+            this.phoneShell?.showNotification?.('地点', '提案已放进聊天输入框(发送与否由你决定)', '🧭');
+            return { ok: true, reason: 'ok', text };
+        } catch (_e) { return { ok: false, reason: 'dispatch-failed', text }; }
+    }
+    /** 内核自检读数(诊断面用;拿不到时如实说拿不到,不假装通过) */
+    roamProblems() {
+        try { return roamSelfCheck(); }
+        catch (_e) { return { ok: false, problems: ['self-check-failed'] }; }
     }
 
     /** 一行总述（供视图/host 诊断；传入已取好的 pkg 可避免重复读桥） */

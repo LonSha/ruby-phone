@@ -323,7 +323,9 @@ test('v3910 D8. self-proof: the mutant is really loaded and the break really cha
 test('v3910 E1 version anchor: five sources agree and not below 3.91.0', () => {
     const ver = String(MAN.version);
     const parts = ver.split('.').map(Number);
-    assert.ok(parts[0] === 3 && parts[1] >= 91, '版本必须不低于 3.91.0，实际 ' + ver);
+    /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+    assert.ok(parts[0] > 3 || (parts[0] === 3 && (parts[1] > 91 || (parts[1] === 91 && (parts[2] || 0) >= 0))),
+        '版本不低于 3.91.0(下限形),实际 ' + ver);
     assert.ok(IDX.indexOf("const ST_PHONE_VERSION = '" + ver + "'") >= 0);
     assert.equal(JSON.parse(read('package.json')).version, ver);
     const log = JSON.parse(read('update-log.json'));

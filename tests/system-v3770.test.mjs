@@ -116,6 +116,14 @@ const MIRROR_FILES = [
     'apps/place/place-data.js', 'apps/wallet/wallet-data.js', 'apps/profile/profile-data.js',
     'apps/plotline/plotline-data.js', 'apps/chars/chars-data.js', 'apps/clock/clock-data.js',
     'apps/ledger/ledger-data.js',
+    /* [v4.05.0 · 交棒] chat-view 的**静态导入闭包**又长了:本仓在 v3.97.0
+     *   (R3-O1 续:接入上游实体映射面)把 `config/entity-candidates-contract.js`
+     *   接进了 wechat-data 的导入面,而镜像面没跟着扩 —— 后果与 v3.79.0 /
+     *   v3.96.0 那两轮逐字同形:镜像根上 chat-view 装载失败(探针 exit 2),
+     *   B2(位置无关)与 D1/D2/D3/D5 一起转红。
+     *   口径不变:判据面扩了,镜像面就得跟着扩;本行由本仓闭包脚本真算出来
+     *   (chat-view 的静态闭包 34 件,缺的**恰好只有这一件**),不是照着报错抄的。 */
+    'config/entity-candidates-contract.js',
 ];
 /* [v3.79.0] 递归枚举全仓 .css —— 与 tests/audit/longlist_scale_probe.cjs 里那份**逐字同口径**
  *   （口径片段由本文件末的 D5 判据看守）。为什么两处各写一份而不上收：探针是 .cjs，

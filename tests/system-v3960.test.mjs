@@ -490,7 +490,8 @@ test('v3960 E1. 五源同源且不低于 3.96.0', () => {
     const manifest = JSON.parse(read('manifest.json'));
     const log = JSON.parse(read('update-log.json'));
     const ver = pkg.version;
-    assert.ok(/^3\.\d+\.\d+$/.test(ver), 'package.json 版本形异常：' + ver);
+    /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+    assert.ok(/^\d+\.\d+\.\d+$/.test(ver), 'package.json 版本形异常(应形如 x.y.z):' + ver);
     const cmp = (a, b) => {
         const A = a.split('.').map(Number), B = b.split('.').map(Number);
         for (let i = 0; i < 3; i++) { if (A[i] !== B[i]) return A[i] - B[i]; }

@@ -358,8 +358,12 @@ const CLOSURE = [
     // [v3.66.0 · X2] 视图侧新增详情荷载装配件依赖（target_kind 表挂在它上面）
     'config/app-open-detail.js',
     'data/cheat-index.js', 'data/dirtytalk-index.js',
-    // 正文库只为 D1 同源判据与轻索引对照：它们**不在**搜索导入闭包里（见 A5）
-    'data/cheats.js', 'data/dirtytalk.js', 'data/dirtytalk-corpus.js'
+// 正文库只为 D1 同源判据与轻索引对照:它们**不在**搜索导入闭包里(见 A5)
+    'data/cheats.js', 'data/dirtytalk.js', 'data/dirtytalk-corpus.js',
+    // [v4.05.0] v3.97.0 起 search-app 多 import 了 config/search-facets.js(检索分面):
+    //   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
+    //   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。
+    'config/search-facets.js',
 ];
 function mkTree(tag) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3170-' + tag + '-'));

@@ -62,6 +62,10 @@ export class PlaceView {
              *   它读的是同一份 presence 的另一种切法（按「同一处 ≥2 人」分组），
              *   两块放一起读者才能对照「谁在哪」与「哪处有两人以上」。 */
             this._coPresenceCard(proj, face),
+            /* [v4.05.0 · R3-X9] 探索卡:真正把「只能看」变成「能选」的那一块。
+             *   位置有讲究:它排在「谁在这个地方 / 同楼同刻」之后 ——
+             *   读者先看清原地有什么,再决定要去哪;排到最前面等于让人还没看当前就被劝出门。 */
+            this._roamCard(proj, face),
             this._settingsCard(),
             (this._showDiag() ? this._diagCards(proj) : ''),
             '  </div>',
@@ -341,6 +345,96 @@ export class PlaceView {
         ].join('\n');
     }
 
+
+    /**
+     * 探索卡([v4.05.0 · R3-X9])。四块内容,按「先看再从」排:
+     *   ① 清单分组读数(去过 / 可进入 / 待探索 / 未知);
+     *   ② 清单行(点一行即选中,右侧「去这儿」);
+     *   ③ 选中那一条的地点卡(内核给的线索行:这是哪儿 / 可能碰到谁 / 怎么走 / 往事与约定);
+     *   ④ 一行收尾:提案只是提案(不移动角色、不编距离)。
+     *
+     * 【为什么把归因也摆出来】到访史读不到时,清单里每一行都是「未知」——
+     *   若不写清「这版读不到 ≠ 你没去过」,用户会以为这个会话从来没去过任何地方。
+     */
+    _roamCard(proj, face) {
+        const app = this.app;
+        if (!app || typeof app.exploreFace !== 'function') return '';
+        let show = true;
+        try { show = app.getSettings().showRoam !== false; } catch (_e) { show = true; }
+        if (!show) return '';
+        const list = (() => { try { return app.exploreFace(); } catch (_e) { return null; } })();
+        if (!list) return '';
+        const rd = list.readings || {};
+        const head = [
+            '<div class="pl-card-title">去哪走走<span class="pl-count">'
+            + this._esc(String(rd.visited ?? 0)) + ' 去过 · '
+            + this._esc(String(rd.enterable ?? 0)) + ' 可进入 · '
+            + this._esc(String(rd.toExplore ?? 0)) + ' 待探索'
+            + (rd.unknown ? ' · ' + this._esc(String(rd.unknown)) + ' 未知' : '')
+            + '</span></div>'
+        ].join('');
+        if (list.reason === 'no-nodes') {
+            return '<div class="pl-card"><div class="pl-card-title">去哪走走</div>'
+                + '<div class="pl-empty">' + this._esc(list.state === 'empty' ? '这个会话还没登记过场所 —— 剧情里出现地点后这里会长出可去的地方' : '读不到场所') + '</div></div>';
+        }
+        const items = (list.items || []);
+        let max = 12;
+        try { max = Math.max(1, Math.min(40, Number(app.getSettings().roamRows) || 12)); } catch (_e) { max = 12; }
+        const rows = items.slice(0, max).map((it) => {
+            const cls = 'pl-roam-row pl-roam-' + this._esc(it.state || 'unknown') + (it.isCurrent ? ' pl-roam-cur' : '');
+            const marks = [];
+            if (it.visits !== null && it.visits !== undefined && it.visits > 0) marks.push(it.visits + ' 次');
+            if (it.lastFloor !== null && it.lastFloor !== undefined) marks.push('第' + it.lastFloor + '楼');
+            if (it.orphan) marks.push('树里没这处');
+            return [
+                '<div class="' + cls + '">',
+                '  <button class="pl-roam-pick" data-key="' + this._esc(it.key) + '">',
+                '    <span class="pl-roam-name">' + this._esc(it.name || it.key) + '</span>',
+                '    <span class="pl-roam-state">' + this._esc(it.stateText || it.state || '') + '</span>',
+                (marks.length ? '    <span class="pl-roam-mark">' + this._esc(marks.join(' · ')) + '</span>' : ''),
+                '  </button>',
+                '  <button class="pl-roam-go" data-go="' + this._esc(it.key) + '" title="生成出行提案并放进聊天输入框">去这儿</button>',
+                '</div>'
+            ].join('\n');
+        }).join('');
+        const more = items.length > max
+            ? '<div class="pl-empty">还有 ' + (items.length - max) + ' 处没显示(想多看几处可在设置里把行数调大)</div>' : '';
+        const note = rd.hasVisitFace === false
+            ? '<div class="pl-empty">' + this._esc('到访史这版读不到:上面每一处都只能标「未知」,不等于没去过') + '</div>' : '';
+        return [
+            '<div class="pl-card pl-roam">',
+            '  ' + head,
+            '  ' + note,
+            '  ' + (rows || '<div class="pl-empty">这一刻没有可去的地方</div>'),
+            '  ' + more,
+            '  <div class="pl-roam-detail" id="pl-roam-detail"></div>',
+            '  <div class="pl-empty">选一处再点「去这儿」:本机只把提案放进聊天输入框,不替你移动角色,也不编距离与耗时。</div>',
+            '</div>'
+        ].join('\n');
+    }
+    /**
+     * 详情区:把某一处的地点卡铺出来(选中的那一刻)。
+     * 三态如实:提案拿不到(认不出这处)⇒ 明说认不出;拿得到 ⇒ 逐行铺内核给的线索。
+     * **本方法不发任何写动作**:「去这儿」的落点由 app.sendProposalToChat 负责。
+     */
+    _showRoamDetail(key) {
+        const el = this.container;
+        if (!el || typeof el.querySelector !== 'function') return;
+        const box = (() => { try { return el.querySelector('#pl-roam-detail'); } catch (_e) { return null; } })();
+        if (!box || !key) return;
+        const p = (() => { try { return this.app.proposalOf(key); } catch (_e) { return null; } })();
+        if (!p || !p.ok) {
+            const why = (p && p.reason) || 'read-failed';
+            box.innerHTML = '<div class="pl-empty">' + this._esc(
+                why === 'place-unknown' ? '路账里没有登记过这个地方(不猜一个近的顶替)'
+                    : (why === 'target-missing' ? '没选地方' : '这一刻读不到这一处')
+            ) + '</div>';
+            return;
+        }
+        const lines = (p.lines || []).map((x) => '<div class="pl-roam-line">' + this._esc(x) + '</div>').join('');
+        box.innerHTML = '<div class="pl-roam-card">' + lines
+            + '<div class="pl-roam-line pl-roam-reg">' + this._esc(p.registerLine || '') + '</div></div>';
+    }
     _settingsCard() {
         let s = {};
         try { s = this.app.getSettings(); } catch (_e) { s = {}; }
@@ -353,6 +447,12 @@ export class PlaceView {
             '    <input type="range" class="pl-range" id="pl-maxInject" min="1" max="20" value="' + this._esc(s.maxInject) + '"></div>',
             '  <div class="pl-row"><span class="pl-label">显示覆盖度与不变量诊断</span>',
             '    <button class="pl-switch ' + (s.showDiagnostics ? 'on' : '') + '" id="pl-diag">' + (s.showDiagnostics ? '开' : '关') + '</button></div>',
+            /* [v4.05.0 · R3-X9] 探索卡两个开关。关掉只是**少摆一块界面**:
+             *   场所层级 / 到访史 / 在场全部照旧(它们是既有读数面,与本版的新块无关)。 */
+            '  <div class="pl-row"><span class="pl-label">显示探索清单(去哪走走)</span>',
+            '    <button class="pl-switch ' + (s.showRoam ? 'on' : '') + '" id="pl-roam">' + (s.showRoam ? '开' : '关') + '</button></div>',
+            '  <div class="pl-row"><span class="pl-label">清单最多显示 ' + this._esc(s.roamRows) + ' 处</span>',
+            '    <input type="range" class="pl-range" id="pl-roamRows" min="1" max="40" value="' + this._esc(s.roamRows) + '"></div>',
             '</div>'
         ].join('\n');
     }
@@ -410,11 +510,43 @@ export class PlaceView {
             try { this.app.saveSettings({ showDiagnostics: !this.app.getSettings().showDiagnostics }); } catch (_e) {}
             this._draw();
         });
+        q('#pl-roam')?.addEventListener('click', () => {
+            try { this.app.saveSettings({ showRoam: !this.app.getSettings().showRoam }); } catch (_e) {}
+            this._draw();
+        });
         q('#pl-maxInject')?.addEventListener('change', (e) => {
             const v = Math.max(1, Math.min(20, Number(e?.target?.value) || 8));
             try { this.app.saveSettings({ maxInject: v }); } catch (_e) {}
             this._draw();
         });
+        q('#pl-roamRows')?.addEventListener('change', (e) => {
+            const v = Math.max(1, Math.min(40, Number(e?.target?.value) || 12));
+            try { this.app.saveSettings({ roamRows: v }); } catch (_e) {}
+            this._draw();
+        });
+        /* [v4.05.0 · R3-X9] 清单点选:只把该处的地点卡铺进详情区,**不动任何状态**。
+         * 必须走 qa(带能力探测):本层的历史契约是「容器只要有 querySelector 就能渲染」,
+         * 桩容器与只读宿主都不一定有 querySelectorAll —— 直接调会抛,把整张页连坐拖垮。 */
+        const qa = (sel) => {
+            try {
+                if (typeof el.querySelectorAll !== 'function') return [];
+                return Array.from(el.querySelectorAll(sel) || []);
+            } catch (_e) { return []; }
+        };
+        for (const btn of qa('.pl-roam-pick')) {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-key') || '';
+                this._showRoamDetail(key);
+            });
+        }
+        /* 「去这儿」:把提案交给聊天(与扭蛋 / 塔罗同一条通道),**不移动角色**。 */
+        for (const btn of qa('.pl-roam-go')) {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-go') || '';
+                try { this.app.sendProposalToChat(key); } catch (_e) {}
+                this._showRoamDetail(key);
+            });
+        }
     }
 }
 

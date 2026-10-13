@@ -48,12 +48,18 @@ export const IV_TEXT = Object.freeze({
 /** 默认设置（随会话隔离，键须匹配 /^place_/） */
 export function defaultPlaceSettings() {
     return {
-        // 是否把「已登记场所/在场」交给生成侧（与正文地点对齐）
+        // 是否把「已登记场所/在场」交给生成侧(与正文地点对齐)
         injectToPrompt: true,
         // 注入块最多几行场所
         maxInject: 8,
         // 视图是否显示覆盖度/不变量诊断块
-        showDiagnostics: true
+        showDiagnostics: true,
+        /* [v4.05.0 · R3-X9] 探索清单与出行提案(仅界面;本键不改变任何地点状态):
+         *   关掉之后「场所层级 / 到访史」照旧显示(那是既有读数面),
+         *   只是不再多出清单分组与「去这儿」按钮 —— 让不想动手排程的用户少一层噪声。 */
+        showRoam: true,
+        // 清单一行最多显示多少条(1..40;仅显示,不改内核上限)
+        roamRows: 12
     };
 }
 

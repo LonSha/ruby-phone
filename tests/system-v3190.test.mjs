@@ -679,7 +679,13 @@ test('F1 五源同源（下限形），且当版条目非空', () => {
     const pkg = JSON.parse(readRel('package.json'));
     const log = JSON.parse(readRel('update-log.json'));
     const mv = /const ST_PHONE_VERSION = '([0-9.]+)'/.exec(idx)[1];
-    assert.ok(/^3\.(1[89]|[2-9]\d)\./.test(mv), '本套件成立于 RubyPhone 3.19.0 及以后，当前 ' + mv);
+    /* [v4.05.0 交棒] 原判据把主版本线写成了永久约束(跨到 4.x 线必红);改为版本无关的下限形。 */
+    assert.ok(/^\d+\.\d+\.\d+$/.test(mv), '版本形异常(应形如 x.y.z):' + mv);
+    {
+        const _a = mv.split('.').map((n) => Number.parseInt(n, 10) || 0);
+        assert.ok(_a[0] > 3 || (_a[0] === 3 && (_a[1] > 19 || (_a[1] === 19 && _a[2] >= 0))),
+            '本套件成立于 RubyPhone 3.19.0 及以后(下限形),当前 ' + mv);
+    }
     assert.equal(man.version, mv, 'manifest 与入口同源');
     assert.equal(pkg.version, mv, 'package 与 manifest 同源');
     assert.equal(log.latest, mv, 'update-log latest 与 manifest 同源');

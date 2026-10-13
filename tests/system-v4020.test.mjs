@@ -11,7 +11,10 @@
  * ======================================================== */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+/* [v4.05.0 · 交棒] 同 v4010:镜像克隆走唯一实现 copyTreeSafe(v3230-A1 常驻守),
+ *   裸 `cpSync` 在本仓是被实测证伪的写法(复制途中源文件消失即 ENOENT)。 */
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -213,7 +216,7 @@ test('C6 视图层话题段 + 四组绑定 + CSS 输入框', () => {
 /* ---------- D 负控制（真源码破坏 → 同款判据必转红） ---------- */
 test('D1 负控制：破坏「公开须用户确认」，B3 判据必转红', async () => {
     const tmp = mkdtempSync(join(tmpdir(), 'v4020d1-'));
-    cpSync(join(ROOT, 'config'), join(tmp, 'config'), { recursive: true });
+    copyTreeSafe(join(ROOT, 'config'), join(tmp, 'config'));
     const tgt = join(tmp, 'config/topic-echo.js');
     let src = readFileSync(tgt, 'utf-8');
     const A = "        if ((kind === 'publish' || kind === 'repost') && isPublic && !confirmed) {";

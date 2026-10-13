@@ -283,6 +283,17 @@ const STAGE_FILES = [
     // 消费点就在上面的诊断内核里。白名单暂存型套件必须同步补上每条判据的读数来源
     // —— 否则未破坏的副本树会在 J13 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
     'config/checkpoint-content-contract.js',
+    // [v4.05.0] 同 v297:第九道门在 v3.97.0 新增 J14/J15/J16,白名单暂存型套件必须同步补上
+    // 它们的读数来源(真源 + 产品侧消费点),否则未破坏的副本树会红,D0 自证失败。
+    'config/memory-qa-contract.js',
+    'apps/memory/memory-app.js',
+    // [v4.05.0] 续补 J16/J17:事实回执与实体映射两面的读数来源(真源 + 产品侧消费点)。
+    // J16 的写入侧入口按判据要求至少要有 2 处事件侧调用,故日历与出行台两处都在此列。
+    'config/phone-fact-contract.js',
+    'config/entity-candidates-contract.js',
+    'apps/calendar/calendar-app.js',
+    'apps/traveldesk/traveldesk-view.js',
+    'apps/wechat/wechat-data.js',
 ];
 
 function stageTree(extra = {}) {

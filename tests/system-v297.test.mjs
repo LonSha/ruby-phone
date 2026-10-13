@@ -306,6 +306,19 @@ const STAGE_FILES = [
     // 第二个就在这里。白名单暂存型套件必须同步补上每条判据的读数来源，
     // 否则未破坏的副本树会在 J10 上红（D0 自证失败 ⇒ 整组负控制变假绿）。
     'apps/timeweaver/timeweaver-collector.js',
+    // [v4.05.0] 第九道门在 v3.97.0 又长了 J14/J15/J16(上游三件新外供面必须真被业务面消费):
+    // 真源是 `config/memory-qa-contract.js`,而它的产品侧消费点在 `apps/memory/memory-app.js`。
+    // 白名单暂存型套件必须同步补上每条判据的读数来源 —— 否则未破坏的副本树会在 J14/J15 上红
+    // (D0 自证失败 ⇒ 整组负控制变假绿)。本仓此前就漏了这一补,本轮才由 v297/v298 的 D0 抓到。
+    'config/memory-qa-contract.js',
+    'apps/memory/memory-app.js',
+    // [v4.05.0] 续补 J16/J17:事实回执与实体映射两面的读数来源(真源 + 产品侧消费点)。
+    // J16 的写入侧入口按判据要求至少要有 2 处事件侧调用,故日历与出行台两处都在此列。
+    'config/phone-fact-contract.js',
+    'config/entity-candidates-contract.js',
+    'apps/calendar/calendar-app.js',
+    'apps/traveldesk/traveldesk-view.js',
+    'apps/wechat/wechat-data.js',
 ];
 
 function stageTree(extra = {}) {

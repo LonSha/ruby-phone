@@ -12327,6 +12327,88 @@ input:checked + .toggle-slider:before {
 .pl-visit-mark { color: #8ea1b6; font-size: 11px; white-space: nowrap; }
 .pl-visit-bad { color: #f87171; margin-left: 4px; }
 
+
+/* ---------- [v4.05.0 · R3-X9] 探索清单与出行提案(.pl-roam-*) ----------
+ * 四态必须有四种不同的视觉(去过 / 可进入 / 待探索 / 未知):
+ *   未知态**不许画成灰**(灰=「没什么可看的」),它要显得「这里还缺一份数据」;
+ *   待探索留白 + 虚线边,可进入实边,去过实底 —— 用户扫一眼就知道哪些是熟路。
+ * 提案区(.pl-roam-card)与地点图景其余卡片同一底色,只有左边一条竖线区分「这是话,不是读数」。 */
+.pl-roam .pl-roam-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin: 4px 0;
+}
+.pl-roam .pl-roam-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #121922;
+  color: #e8eef6;
+  font-size: 13px;
+}
+.pl-roam .pl-roam-pick:active { background: #1a242f; }
+.pl-roam .pl-roam-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl-roam .pl-roam-state {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.pl-roam .pl-roam-mark {
+  flex: none;
+  font-size: 11px;
+  color: #8ba3b8;
+}
+.pl-roam .pl-roam-visited .pl-roam-pick { border-color: #14b8a6; background: #0f1b1c; }
+.pl-roam .pl-roam-visited .pl-roam-state { background: #14b8a6; color: #04231f; }
+.pl-roam .pl-roam-enterable .pl-roam-pick { border-color: #3b82f6; }
+.pl-roam .pl-roam-enterable .pl-roam-state { background: #3b82f6; color: #041325; }
+.pl-roam .pl-roam-to-explore .pl-roam-pick { border-style: dashed; border-color: #2a3b4d; }
+.pl-roam .pl-roam-to-explore .pl-roam-state { background: #1c2836; color: #9fb6cc; }
+/* 未知态:橙调 —— 「缺一份数据」与「地方不好」是两回事 */
+.pl-roam .pl-roam-unknown .pl-roam-pick { border-color: #b45309; }
+.pl-roam .pl-roam-unknown .pl-roam-state { background: #b45309; color: #2a1602; }
+.pl-roam .pl-roam-cur .pl-roam-name { font-weight: 600; }
+.pl-roam .pl-roam-cur .pl-roam-name::after { content: ' · 就在这儿'; font-size: 11px; color: #8ba3b8; }
+.pl-roam .pl-roam-go {
+  flex: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #2a3b4d;
+  background: #16202b;
+  color: #cfe3f5;
+  font-size: 12px;
+}
+.pl-roam .pl-roam-go:active { background: #1f2c39; }
+.pl-roam .pl-roam-detail:empty { display: none; }
+.pl-roam .pl-roam-card {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 2px solid #14b8a6;
+  background: #10161d;
+  border-radius: 0 8px 8px 0;
+}
+.pl-roam .pl-roam-line {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #cfe3f5;
+  word-break: break-word;
+}
+.pl-roam .pl-roam-reg { color: #8ba3b8; }
+
 /* ---------- [v2.47.0] 金手指 App（.ch-*） ----------
  * 万界武库外挂库：已装配 / 全库浏览 / 设置。
  * 主色取鎏金 #d4af37（与既有 App 主色均不冲突），深色毛玻璃底与既有 App 同规。 */

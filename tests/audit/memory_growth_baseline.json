@@ -329,7 +329,7 @@
     },
     "v3.23.4": {
       "why": "v3.23.4：修本版自己抓到的缺陷 —— 裁决面落在单次采样的浮点斜率上（与本探针自己的「单点不可判，只判趋势」同族）。产品代码未改（只动探针与基线）。",
-      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc；本次 baseline 的 facts / readings / timings / unmeasurable / approx_measurable 逐字取自该输出（零手拄）",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc；本次 baseline 的 facts / readings / timings / unmeasurable / approx_measurable 逐字取自该输出（零手抄）",
       "readings": {
         "readings.host_roundtrip_per_round_median_kb": 0,
         "readings.host_roundtrip_per_round_kb_samples": [
