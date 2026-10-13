@@ -47,3 +47,17 @@
     background: rgba(0,0,0,0.06); color: inherit;
     resize: vertical;
 }
+
+/* [v4.02.0 · R3-X4] 话题页输入框（事件键 / 平台）：与 note-area 同族但单行 */
+.cwb-inp {
+    flex: 1 1 40%;
+    min-width: 120px;
+    font: inherit;
+    font-size: 13px;
+    border: 1px solid rgba(128,128,128,0.4);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.06);
+    color: inherit;
+}
+.cwb-inp::placeholder { opacity: 0.6; }

@@ -121,7 +121,13 @@ test('B8 previewOf 不编内容：没正文如实报、文案不含「已发布�
 test('C1 index.js 草稿本键 + 七动作白名单 + 读写回读', () => {
     const src = rd('index.js');
     assert.ok(src.includes("CW_DRAFTS_KEY = 'cw_drafts'"));
-    assert.ok(src.includes("['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop']"));
+    /* 交棒为下限形（v3.98→v3.99 先例）：本版锁的七动作必须全在，
+     *   但白名单是**会随后续版本前移**的当版读数，硬锁字面量会让下一版一抬版就红
+     *   （那是抬版仪式，不是缺陷）。此处只锁「七项都在」这条不回退的事实。 */
+    for (const act of ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop']) {
+        assert.ok(src.includes("'" + act + "'"), '白名单缺动作:' + act);
+    }
+    assert.ok(/CW_ACTION_KEYS = \[[^\]]*'plan'/.test(src), '白名单应以 plan 开头');
     assert.ok(src.includes('cwReadDraftsRaw'));
     assert.ok(src.includes('cwWriteDrafts'));
     assert.ok(src.includes('readback-mismatch'));

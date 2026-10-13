@@ -1,3 +1,17 @@
+## 迭代 161 — v4.02.0 · 第三期 E 包手机侧第三项：R3-X4 跨社媒同一事件的话题页与舆论演变
+- 【定位 · 计划原文 R3-X4 的真实缺口（修前实测，不是推演）】计划要的是「一件事可在朋友圈/贴吧/小红书表现不同而核心事实一致；删除/辟谣影响后续草稿；私聊秘密不会自动变公共热帖；公开范围由用户确认」，并注明可复用 context-compose 的 retellChains 与 social-knowledge-bridge 的知情过滤。修前实测：retellChains 只把转述**归并计数**（同一传闻不算三条独立证据）、knowledgeCheck 只判**可见性**——两者之间没有任何一层把「同一事件在各平台的发布/转载/评论/辟谣」按事件聚拢成话题页，更没有「辟谣之后新草稿不得照旧编写」「角色不知情不生成反应」「公开条目须用户确认」这三道闸。
+- 【新内核 · config/topic-echo.js（纯函数，只 import 转述链口径一份）】五件事：① 四类条目归一 normalizeTopicEntry（publish 发布 / repost 转载 / comment 评论 / debunk 辟谣，**每条必须带 rootEventId**，没有就如实拒）；② 话题页 buildTopicPage 按 rootEventId 聚拢并分类计数，来源身份**借 context-compose 的 retellNode 标**（转述链口径只有一份实现，不另写）；③ 知情反应 reactionFor（角色不知情 ⇒ 不生成反应；信源数按**来源链**计、绝不把三平台转述读成三个独立信源）；④ 辟谣传播 markDraftsDebunked（同话题**后续**草稿全部标 stale 并带 debunkedBy，**旧条目不删**——撤回≠消失，但不得再被当作现状）；⑤ 公开确认闸 gatePublicity（受众为空 = 公开的发布/转载**必须带用户确认标记**才进本，私域不受此闸）。
+- 【公开确认闸的位置：落在归一百口，不落在动作分支】首版把「公开须确认」放在咽喉动作分支里判，被本版自己的接线判据问出问题——内核才是唯一真源，判定写在消费方就是下一处漂移的种子（与 retellChains「来源端点入链」当年被 source-derivation 门挡下同一形态）。最终闸口在 normalizeTopicEntry：`(kind === 'publish' || kind === 'repost') && isPublic && !confirmed` ⇒ 拒。**评论类不落此闸**（评论不是「发布公开内容」），**私域发布不落此闸**（朋友圈可见范围非空）。
+- 【index.js 咽喉接线（新键 + 动作族，零 owner 调用）】新存储键 cw_topics 与 cw_drafts / cw_published 分开；动作白名单扩到八项（新增 topic）；topic 一个动作带四子命令 record / page / react / debunk，**四支全部不发布**——块内无任何 cwInvokeOwner 与 cwPlanPublish 调用（判据 C3 逐字核对整块）；落盘一律过 cwWriteTopics（写后回读核对行数，读不回返 readback-mismatch 不当成功）；debunk 落地后走 markDraftsDebunked + cwWriteDrafts 把同话题草稿转「已被辟谣」，草稿标记失败时如实报「辟谣已落地」而不吞掉。
+- 【app / 视图 / CSS 三层】creationdesk app 层新增 _topicEvent / _topicPlatform / _topicText / _topicPage 实例态与四方法（setTopicEvent / setTopicPlatform / setTopicText / topicAct，统一转咽喉带 scope/token 守卫），vm 透出话题本读数与话题自检，onChatChanged 重置；视图层新增 _topics 段（事件键与平台输入框 + 五个动作按钮 + 话题页读数回显），组装序 head → states → materials → targets → multiTargets → drafts → **topics** → plan，绑定三输入 + 一组按钮；CSS 追加 .cwb-inp。
+- 【本版自己抓到的缺陷形态（合并前已修）】① 首版 buildTopicPage 的转载来源身份写在三元表达式里且少一个右括号，`node --check` 直接报 `Unexpected token ','`；② 更隐蔽的一处：heredoc 落盘时 246 行 『右中括号 右圆括号 分号』 被折行污染吞掉一个右中括号，落盘成 `});`，**头部截断二分全部报 OK 而整文件红**（截断点落在函数中间时截断件本身也不能解析、被误读成环境问题），最终用字符串/注释感知的括号扫描器（/tmp/bal.py）定位为「241 行开中括号被 246 行的右花括号配平」；③ 归一后 entry 未保留 origin 字段，导致转载永远认不出转述链；④ index.js 话题读写口插入点选在 cwSplitRef 的 docstring 与其函数之间，把注释与函数拆开（排版级，已复位）。
+- 【上一版遗留的真实缺陷：app 层重复应用（本版如实记录并清理）】v4.01.0 的 app 补丁被两个脚本各写了一份：类内 setDraft / setDraftNote / toggleMultiTarget / _draftOf / draftAct **整段重复**，构造函数三行实例态、onChatChanged 三行、vm 六个键也各重复一份。JS 后声明同名方法覆盖前者，**语法合法、行为不变**，故当时的定向套件与十四道门全绿——这是「重复但不报错」的形态：门不会红，只有人工通读才发现。本版清理三处重复（app 194 → 原 257 行含新增，vm 六键去重，构造与 onChatChanged 各保留一份），并把「C3 app 四方法恰一次」写进判据面。
+- 【交棒（下限形，不是放宽）】v4010 的 C1 锁的是上一版**七动作字面量**，本版扩到八动作属抬版仪式性红——照 v3.98→v3.99 先例改写为「七项都在」的下限形（条目不可减、新增可加），本次抬版无需再做二次交棒（v4020 的 E1 为下限形）。
+- 【定向判据】tests/system-v4020.test.mjs 21 例全绿：A 结构 3（四类条目 / 上限 / 六出口 / 内核自检零问题 / 只 import 转述链口径一份）；B 行为 10（缺事件键必拒 / 类别认不出必拒 / 公开未确认必拒且私域不受闸 / 评论不落闸 / 按事件聚拢分类计数且别事件不混入 / 三平台一条链只算 1 个信源 / 不知情不编反应 / 辟谣传播标 stale 别话题不误伤 / 已辟谣不再生成新反应且旧条目仍在 / 读不出与空分开且上限最早先出且同键后到覆盖）；C 接线 6（键与八动作与回读 / 取数口与四子命令 / 话题族零 owner 调用 / 辟谣接草稿本 / app 四方法与 vm 读数与换会话重置 / 视图段与四组绑定与组装序与 CSS）；D 负控制 1（真源码定点破坏「公开须确认」→ B3 判据必转红）；E 版本锚 1（下限形）。旧五套件 65/65 无回归；十四道静态门全 rc=0（keys-audit 为新键 cw_topics 照 v3992/v4010 先例登记，会话隔离 253 → 254）。
+- 【运行时验证边界（如实声明）】本版在无头环境验证的是内核纯函数行为、咽喉四子命令分流、话题本读写回读、草稿本辟谣传播、视图拼装与 CSS；**未做**真实浏览器/真机的话题页触摸端到端（真实在多平台记录条目、看话题页、点辟谣看草稿转「已被辟谣」需真机验证），不宣称流畅。记录的条目落在**虚拟社媒**，不是外网发布。
+- 【本版边界（刻意不做）】不重算可见性（知情与否由调用方过 knowledgeCheck 后传状态进来，本模块只闸不判）；不代发任何平台（topic 四支零 owner 调用）；不新建入口 App（话题段长在既有创作工作台里）；不引入外部数据库。
+- 【版本升至 4.02.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 12 条，本段为 E 包手机侧第三项（R3-X4）的交付记录。
+
 ## 迭代 160 — v4.01.0 · 第三期 E 包手机侧第二项：R3-O8 创作工作台可编辑、可复用
 - 【定位 · 计划原文 R3-O8 的真实缺口（修前实测，不是推演）】计划要的是「一段剧情的多种社媒稿分别编辑互不覆盖、草稿自动保留、改一张图不重跑全部、仅重做所选段、发布仍逐目标确认」。修前实测：工作台是**单素材+单目标**——换目标即覆盖上一份预览；草稿只活在实例内存（onChatChanged 一律清空），**关掉重开什么都留不下**；素材一换整轮重来。三条用户可见缺口（互不覆盖 / 保留 / 不重跑）全部落空。
 - 【新内核 · config/creation-multi-draft.js（纯函数，零 storage 零 window 零 fetch）】多目标草稿的完整生命周期：composeDrafts 逐目标建稿（per-target note/tags 互不覆盖、越权目标进 rejected 不静默丢）、draftKeyOf 沿用 creationIdemKey 不另造键形、normalizeDraft 窄口（缺键/非法态拒；note 裁长如实标 noteTrimmed、tags 去重如实计 droppedTags）、normalizeDraftBook（读不出与空数组分开、上限 24 最早先出）、upsertDraft（同键后到覆盖）、replaceMaterialKeepText（保 note/tags、state 置 stale、version+1、返回 previousKey）、replaceDraftInBook（按旧键撤按新键存，同目标不留两行）、recomposeTargets（按目标替换与继承文字、version+1）、diffDrafts/diffLine（字段级 from/to，键变 comparable:false）、previewOf（没正文如实报、文案不含「已发布」）、cmdSelfCheck。四态：editing / ready / published / stale。
@@ -580,7 +594,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （253 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （254 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -5980,7 +5994,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.01.0`（五源同源）
+- **当前版本**：`4.02.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

@@ -175,6 +175,14 @@ import {
     replaceMaterialKeepText, replaceDraftInBook, recomposeTargets,
     previewOf, diffDrafts, diffLine, cmdSelfCheck as cmdSelfCheckOf,
 } from './config/creation-multi-draft.js';
+/* [v4.02.0 · E 包 R3-X4] 跨社媒同一事件的话题页与舆论演变（纯函数）。
+ *   接在咽喉的理由与 R3-O8 同族：条目 / 知情状态 / 公开确认全由调用方给，
+ *   内核不取数、不写存储、不发布。话题动作族只动「话题本」这一面，
+ *   公开条目必须带用户确认标记才落地（私聊秘密不会自动变公共热帖）。 */
+import {
+    TOPIC_KINDS, TOPIC_LIMITS, normalizeTopicEntry, normalizeTopicBook,
+    buildTopicPage, reactionFor, markDraftsDebunked, topicSelfCheck as topicSelfCheckOf,
+} from './config/topic-echo.js';
 /* [v3.91.0 · 拓展计划 R-X7] 本地备份、迁移与灾难恢复（纯函数协议层）。
  *   接在咽喉的理由与 R-X1..R-X6 同族：导出范围 / 键面 / 包体 / 存量全由调用方给，
  *   **本模块自己不取数、不写存储、不发网络**（默认不上传云端）。
@@ -246,7 +254,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.01.0';
+const ST_PHONE_VERSION = '4.02.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -446,19 +454,18 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-20",
     items: [
-        "【定位 · 计划原文 R3-O8 的真实缺口（修前实测，不是推演）】计划要的是「一段剧情的多种社媒稿分别编辑互不覆盖、草稿自动保留、改一张图不重跑全部、仅重做所选段、发布仍逐目标确认」。修前实测：工作台是**单素材+单目标**——换目标即覆盖上一份预览；草稿只活在实例内存（onChatChanged 一律清空），**关掉重开什么都留不下**；素材一换整轮重来。三条用户可见缺口（互不覆盖 / 保留 / 不重跑）全部落空。",
-        "【新内核 · config/creation-multi-draft.js（纯函数，零 storage 零 window 零 fetch）】多目标草稿的完整生命周期：composeDrafts 逐目标建稿（per-target note/tags 互不覆盖、越权目标进 rejected 不静默丢）、draftKeyOf 沿用 creationIdemKey 不另造键形、normalizeDraft 窄口（缺键/非法态拒；note 裁长如实标 noteTrimmed、tags 去重如实计 droppedTags）、normalizeDraftBook（读不出与空数组分开、上限 24 最早先出）、upsertDraft（同键后到覆盖）、replaceMaterialKeepText（保 note/tags、state 置 stale、version+1、返回 previousKey）、replaceDraftInBook（按旧键撤按新键存，同目标不留两行）、recomposeTargets（按目标替换与继承文字、version+1）、diffDrafts/diffLine（字段级 from/to，键变 comparable:false）、previewOf（没正文如实报、文案不含「已发布」）、cmdSelfCheck。四态：editing / ready / published / stale。",
-        "【替图不丢文字（验收③的机制落点）】换素材会换幂等键：若只按新键 upsert，旧行撤不掉、同目标出现两行重复；若只删旧行，用户写的 note/tags 一并蒸发。修法是内核成对出口：replaceMaterialKeepText 先把旧行的 note/tags 继承进新稿、旧 state 让位给 stale，并返回 previousKey；replaceDraftInBook 按 previousKey 撤旧、按新键存新——文字跨素材存活，本上零重复行。",
-        "【仅重做所选段（验收④的机制落点）】recomposeTargets 按**目标**（不是键）替换与继承：选中目标重跑得到新键新稿、note/tags 从旧行继承、version+1；未选中的草稿**一行都不动**。首版按键留旧行被自检问出问题：换素材改键，旧行按键撤不掉，同目标两行重复——改为按目标替换后 kept 恰为一，未选行原样。",
-        "【本版自己抓到的缺陷形态（内核自检三轮，合并前已修）】① composeDrafts 把 normalizeDraft 的**包装对象** push 进本（应为 .draft），草稿本里躺的不是一个草稿而是「认不认得出这份草稿」的信封，upsert 全部 no-key、自检当场抛 TypeError——逐步调试定位后修为推 nd.draft 并把 normalize 拒收进 rejected；② 多目标样本误用 magazine（其 accepts 不含 track），自检样本与真实目标表错位；③ 超上限样本用 6 个合法目标永远触不到 targetsPerCompose=6 的上限，改为「6 个去重后可编排 + 7 项含未登记目标必拒」双断言。",
-        "【index.js 咽喉接线（不发布是刻意的）】新存储键 cw_drafts 与发布台账 cw_published 分开；动作白名单扩到七项（plan / publish / refresh / compose / edit / redo / drop）；四个新动作**全部不发布**——没有一处 owner 调用，发布仍逐目标走目标 App 的 owner，一次都不代发；落盘一律过 cwWriteDrafts（写后回读核对行数，读不回返 readback-mismatch 不当成功）；refreshCreationdesk 的 cached 增草稿本读数（items 带 previewOf 预览与 materialFound 标记、认不出的行如实计数不静默丢）。",
-        "【app / 视图 / CSS 三层】creationdesk app 层新增 _draftKey / _draftNote / _multiTargets 实例态与四方法（setDraft 选中即装文案、setDraftNote、toggleMultiTarget、draftAct 统一转咽喉带 scope/token 守卫），vm 透出六读数，onChatChanged 重置；视图层组装序 head → states → materials → targets → multiTargets → drafts → plan，四组绑定（多选按钮 / 草稿行点选 / 正文 textarea / 三动作按钮），草稿本「读不到 / 空 / 有」三态分开渲染；CSS 追加 .cwb-note-area。",
-        "【负控制判据的一次自我纠正】首版 D1 断言破坏后 kept 应为 2，实际为 1——破坏「按目标留行」成「按键留行」后，旧 weibo 行恰被保留（kept=1 与正常值巧合相同），判据失效。真正可观测的破坏是 wechat 草稿（朋友圈版）被丢、weibo 两行重复。修正为双断言：wechat 目标行数必 0、weibo 目标行数必 2，与 B5 正判据在同一判别面必然分向。",
-        "【交棒（下限形，不是放宽）】v4000 的 E1 与本版 E1 均为下限形（入口版本不低于 3.99.2 / 4.00.0），本版抬版无需交棒改写；下一版新增媒体任务时沿用 media-task-registry 注册板，不另立第三份任务面。",
-        "【定向判据】tests/system-v4010.test.mjs 17 例全绿：A 结构 3（四态/上限/出口齐备 / cmdSelfCheck 零问题 / 零外部依赖只判真实 import 与调用式）、B 行为 8（逐目标互不覆盖 / 越权进 rejected / 替图保文字 stale 版本+1 / 无重复行 / redo 继承文字 / diff 字段级 / 归一上限最早先出 / preview 不编内容）、C 接线 4（键与白名单与回读 / 四动作分流 / app 四方法 / 视图三段绑定 CSS）、D 负控制 1（真源码定点破坏、双断言必转红）、E 版本锚 1（下限形）。旧四套件 48/48 无回归；十四道静态门全 rc=0（keys-audit 为新键 cw_drafts 照 v3992 先例登记，会话隔离 252 → 253）。",
-        "【运行时验证边界（如实声明）】本版在无头环境验证的是内核纯函数行为、咽喉四动作分流、草稿本读写回读、视图拼装与 CSS；**未做**真实浏览器/真机的多目标编排与替图与重做的触摸端到端（草稿本跨会话保留的落盘面已由 keys-audit 判会话隔离，但真实关掉重开留草稿需真机验证），不宣称流畅。发布到的是**虚拟社媒**，不是外网。",
-        "【本版边界（刻意不做）】不代发不代发布（四动作零 owner 调用）；不重做素材库与发布执行器（草稿仍由 creation-pipeline 的 buildCreationDraft 产，引用不复制）；不引入外部数据库；不把 TTS 分段播放纳入本版。",
-        "【版本升至 4.01.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 13 条，本段为 E 包手机侧第二项（R3-O8）的交付记录。"
+        "【定位 · 计划原文 R3-X4 的真实缺口（修前实测，不是推演）】计划要的是「一件事可在朋友圈/贴吧/小红书表现不同而核心事实一致；删除/辟谣影响后续草稿；私聊秘密不会自动变公共热帖；公开范围由用户确认」，并注明可复用 context-compose 的 retellChains 与 social-knowledge-bridge 的知情过滤。修前实测：retellChains 只把转述**归并计数**（同一传闻不算三条独立证据）、knowledgeCheck 只判**可见性**——两者之间没有任何一层把「同一事件在各平台的发布/转载/评论/辟谣」按事件聚拢成话题页，更没有「辟谣之后新草稿不得照旧编写」「角色不知情不生成反应」「公开条目须用户确认」这三道闸。",
+        "【新内核 · config/topic-echo.js（纯函数，只 import 转述链口径一份）】五件事：① 四类条目归一 normalizeTopicEntry（publish 发布 / repost 转载 / comment 评论 / debunk 辟谣，**每条必须带 rootEventId**，没有就如实拒）；② 话题页 buildTopicPage 按 rootEventId 聚拢并分类计数，来源身份**借 context-compose 的 retellNode 标**（转述链口径只有一份实现，不另写）；③ 知情反应 reactionFor（角色不知情 ⇒ 不生成反应；信源数按**来源链**计、绝不把三平台转述读成三个独立信源）；④ 辟谣传播 markDraftsDebunked（同话题**后续**草稿全部标 stale 并带 debunkedBy，**旧条目不删**——撤回≠消失，但不得再被当作现状）；⑤ 公开确认闸 gatePublicity（受众为空 = 公开的发布/转载**必须带用户确认标记**才进本，私域不受此闸）。",
+        "【公开确认闸的位置：落在归一百口，不落在动作分支】首版把「公开须确认」放在咽喉动作分支里判，被本版自己的接线判据问出问题——内核才是唯一真源，判定写在消费方就是下一处漂移的种子（与 retellChains「来源端点入链」当年被 source-derivation 门挡下同一形态）。最终闸口在 normalizeTopicEntry：`(kind === 'publish' || kind === 'repost') && isPublic && !confirmed` ⇒ 拒。**评论类不落此闸**（评论不是「发布公开内容」），**私域发布不落此闸**（朋友圈可见范围非空）。",
+        "【index.js 咽喉接线（新键 + 动作族，零 owner 调用）】新存储键 cw_topics 与 cw_drafts / cw_published 分开；动作白名单扩到八项（新增 topic）；topic 一个动作带四子命令 record / page / react / debunk，**四支全部不发布**——块内无任何 cwInvokeOwner 与 cwPlanPublish 调用（判据 C3 逐字核对整块）；落盘一律过 cwWriteTopics（写后回读核对行数，读不回返 readback-mismatch 不当成功）；debunk 落地后走 markDraftsDebunked + cwWriteDrafts 把同话题草稿转「已被辟谣」，草稿标记失败时如实报「辟谣已落地」而不吞掉。",
+        "【app / 视图 / CSS 三层】creationdesk app 层新增 _topicEvent / _topicPlatform / _topicText / _topicPage 实例态与四方法（setTopicEvent / setTopicPlatform / setTopicText / topicAct，统一转咽喉带 scope/token 守卫），vm 透出话题本读数与话题自检，onChatChanged 重置；视图层新增 _topics 段（事件键与平台输入框 + 五个动作按钮 + 话题页读数回显），组装序 head → states → materials → targets → multiTargets → drafts → **topics** → plan，绑定三输入 + 一组按钮；CSS 追加 .cwb-inp。",
+        "【本版自己抓到的缺陷形态（合并前已修）】① 首版 buildTopicPage 的转载来源身份写在三元表达式里且少一个右括号，`node --check` 直接报 `Unexpected token ','`；② 更隐蔽的一处：heredoc 落盘时 246 行 『右中括号 右圆括号 分号』 被折行污染吞掉一个右中括号，落盘成 `});`，**头部截断二分全部报 OK 而整文件红**（截断点落在函数中间时截断件本身也不能解析、被误读成环境问题），最终用字符串/注释感知的括号扫描器（/tmp/bal.py）定位为「241 行开中括号被 246 行的右花括号配平」；③ 归一后 entry 未保留 origin 字段，导致转载永远认不出转述链；④ index.js 话题读写口插入点选在 cwSplitRef 的 docstring 与其函数之间，把注释与函数拆开（排版级，已复位）。",
+        "【上一版遗留的真实缺陷：app 层重复应用（本版如实记录并清理）】v4.01.0 的 app 补丁被两个脚本各写了一份：类内 setDraft / setDraftNote / toggleMultiTarget / _draftOf / draftAct **整段重复**，构造函数三行实例态、onChatChanged 三行、vm 六个键也各重复一份。JS 后声明同名方法覆盖前者，**语法合法、行为不变**，故当时的定向套件与十四道门全绿——这是「重复但不报错」的形态：门不会红，只有人工通读才发现。本版清理三处重复（app 194 → 原 257 行含新增，vm 六键去重，构造与 onChatChanged 各保留一份），并把「C3 app 四方法恰一次」写进判据面。",
+        "【交棒（下限形，不是放宽）】v4010 的 C1 锁的是上一版**七动作字面量**，本版扩到八动作属抬版仪式性红——照 v3.98→v3.99 先例改写为「七项都在」的下限形（条目不可减、新增可加），本次抬版无需再做二次交棒（v4020 的 E1 为下限形）。",
+        "【定向判据】tests/system-v4020.test.mjs 21 例全绿：A 结构 3（四类条目 / 上限 / 六出口 / 内核自检零问题 / 只 import 转述链口径一份）；B 行为 10（缺事件键必拒 / 类别认不出必拒 / 公开未确认必拒且私域不受闸 / 评论不落闸 / 按事件聚拢分类计数且别事件不混入 / 三平台一条链只算 1 个信源 / 不知情不编反应 / 辟谣传播标 stale 别话题不误伤 / 已辟谣不再生成新反应且旧条目仍在 / 读不出与空分开且上限最早先出且同键后到覆盖）；C 接线 6（键与八动作与回读 / 取数口与四子命令 / 话题族零 owner 调用 / 辟谣接草稿本 / app 四方法与 vm 读数与换会话重置 / 视图段与四组绑定与组装序与 CSS）；D 负控制 1（真源码定点破坏「公开须确认」→ B3 判据必转红）；E 版本锚 1（下限形）。旧五套件 65/65 无回归；十四道静态门全 rc=0（keys-audit 为新键 cw_topics 照 v3992/v4010 先例登记，会话隔离 253 → 254）。",
+        "【运行时验证边界（如实声明）】本版在无头环境验证的是内核纯函数行为、咽喉四子命令分流、话题本读写回读、草稿本辟谣传播、视图拼装与 CSS；**未做**真实浏览器/真机的话题页触摸端到端（真实在多平台记录条目、看话题页、点辟谣看草稿转「已被辟谣」需真机验证），不宣称流畅。记录的条目落在**虚拟社媒**，不是外网发布。",
+        "【本版边界（刻意不做）】不重算可见性（知情与否由调用方过 knowledgeCheck 后传状态进来，本模块只闸不判）；不代发任何平台（topic 四支零 owner 调用）；不新建入口 App（话题段长在既有创作工作台里）；不引入外部数据库。",
+        "【版本升至 4.02.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 12 条，本段为 E 包手机侧第三项（R3-X4）的交付记录。"
     ]
 };
 
@@ -3888,11 +3895,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     /* [v4.01.0 · R3-O8] 草稿本落盘键。与 cw_published 分开：一个是「要发的稿」，
      *   一个是「已发过的回执」，两份台账不混。 */
     const CW_DRAFTS_KEY = 'cw_drafts';
+    const CW_TOPICS_KEY = 'cw_topics'; /* [v4.02.0 · R3-X4] 话题本：跨社媒同事件条目（发布/转载/评论/辟谣，各带 rootEventId） */
     /* 本模块对外只认这七个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
      *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。
      *   [v4.01.0] 新增四个都只动草稿本：compose（多目标编排）/ edit（改这一份的文案）/ 
      *   redo（只重做所选段）/ drop（丢掉这一份）。 */
-    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop'];
+    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop', 'topic'];
     /** 读草稿本原始值：**读不出来返回 null**（不是空数组——两者处置相反）。 */
     function cwReadDraftsRaw() {
         try {
@@ -3908,6 +3916,20 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         const back = normalizeDraftBook(cwReadDraftsRaw());
         const same = back.readable && back.drafts.length === norm.drafts.length;
         return { ok: same, reason: same ? 'ok' : 'readback-mismatch', drafts: back.drafts };
+    }
+    /* [v4.02.0 · R3-X4] 话题本读写口：与草稿本同范式（读不出返 null；写后回读核对行数）。 */
+    /** 读话题本原始值：读不出返回 null（与草稿本同口径）。 */
+    function cwReadTopicsRaw() {
+        try {
+            const raw = storage.get(CW_TOPICS_KEY, '[]');
+            return typeof raw === 'string' ? raw : JSON.stringify(raw || []);
+        } catch (_e) { return null; }
+    }
+    function cwWriteTopics(entries) {
+        try { storage.set(CW_TOPICS_KEY, JSON.stringify(entries)); } catch (_e) { return { ok: false, reason: 'write-failed', entries: entries }; }
+        const nb = normalizeTopicBook(cwReadTopicsRaw());
+        if (!nb.ok || nb.entries.length !== entries.length) return { ok: false, reason: 'readback-mismatch', entries: entries };
+        return { ok: true, entries: nb.entries };
     }
     /** 引用键拆源与素材 id（与内核同口径）。 */
     function cwSplitRef(ref) {
@@ -4067,6 +4089,17 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 actions: CW_ACTION_KEYS.slice(),
                 steps: CW_STEPS.map(s => Object.assign({}, s, { line: cwStepLine(s) })),
                 multiSelfCheck: cmdSelfCheckOf(),
+                /* [v4.02.0 · R3-X4] 话题本读数：读不出与空分开；被拒条目如实计数。 */
+                topics: (function () {
+                    const tb = normalizeTopicBook(cwReadTopicsRaw());
+                    return {
+                        readable: tb.ok, reason: tb.reason,
+                        count: tb.entries.length, rejected: tb.rejected, dropped: tb.dropped,
+                        kinds: Object.keys(TOPIC_KINDS).length,
+                        limit: TOPIC_LIMITS.entries,
+                    };
+                })(),
+                topicSelfCheck: topicSelfCheckOf(),
                 levels: CW_LEVELS,
                 kinds: CW_KIND_KEYS.slice(),
                 plan: null,
@@ -4103,6 +4136,72 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
              *   · 一律**不发布**：这四支里没有任何 owner 调用；
              *   · 落盘一律走 cwWriteDrafts（写后回读核对行数，读不回不算成功）；
              *   · 白名单动作在 refresh / plan / publish 之前分流，别无谓地搅动发布链。 */
+            /* ══════ [v4.02.0 · R3-X4] 话题动作族：只动话题本与草稿本状态，一律不发布 ══════
+             *   · record：落一条话题条目（publish/repost/comment/debunk 四类，必须带 rootEventId；
+             *     公开条目必须 confirmed===true 才收——「公开范围由用户确认」的闸在内核 normalizeTopicEntry）；
+             *   · page：按 rootEventId 聚话题页（发布/转载/评论/辟谣分类计数 + 转述链 + 辟谣态）；
+             *   · react：按角色知情态生成反应（不知情不编反应；信源数按来源链计不按平台数计）；
+             *   · debunk：辟谣落地 + 同话题草稿标 stale（旧条目不删，撤回≠消失）。 */
+            if (action === 'topic') {
+                const tKind = String(p.topic || p.sub || '').trim();
+                if (!tKind) return { ok: false, note: '话题动作缺子命令（record / page / react / debunk）', kind: 'no-topic-sub' };
+                if (tKind === 'record') {
+                    const n = normalizeTopicEntry({
+                        rootEventId: p.rootEventId, kind: p.kind, platform: p.platform, id: p.id,
+                        text: p.text, by: p.by, visibleTo: p.visibleTo, confirmed: p.confirmed,
+                        origin: p.origin, time: Date.now(),
+                    });
+                    if (!n.ok) return { ok: false, note: '条目被拒：' + n.reason, kind: 'topic-entry-rejected' };
+                    const nb = normalizeTopicBook(cwReadTopicsRaw());
+                    if (!nb.ok && nb.entries.length) return { ok: false, note: '话题本读不出：' + nb.reason, kind: 'topic-book-unreadable' };
+                    /* 同键后到覆盖：先撤旧行再落新行 */
+                    const rows = nb.entries.filter(function (e) { return e.key !== n.entry.key; });
+                    rows.push(n.entry);
+                    const w = cwWriteTopics(rows);
+                    refreshCreationdesk();
+                    return w.ok
+                        ? { ok: true, kind: 'topic-recorded', note: '已记录 ' + TOPIC_KINDS[n.entry.kind].label + '（rootEventId ' + n.entry.rootEventId + '）' + (n.entry.isPublic ? '（公开，用户已确认）' : ''), entry: n.entry, count: rows.length }
+                        : { ok: false, kind: w.reason, note: '话题本落盘失败（不得当作已记录）' };
+                }
+                if (tKind === 'page') {
+                    const rid = String(p.rootEventId || '').trim();
+                    if (!rid) return { ok: false, note: '缺 rootEventId，建不了话题页', kind: 'no-root-event' };
+                    const nb = normalizeTopicBook(cwReadTopicsRaw());
+                    const pg = buildTopicPage(nb.entries, rid);
+                    if (!pg.found) return { ok: false, note: '话题页建不起来：' + pg.reason, kind: 'no-topic-page' };
+                    return { ok: true, kind: 'topic-page', note: pg.summary, page: { byKind: pg.byKind, platforms: pg.platforms, debunked: pg.debunked, debunkedBy: pg.debunkedBy, count: pg.entries.length, chains: pg.chains, summary: pg.summary } };
+                }
+                if (tKind === 'react') {
+                    const nb = normalizeTopicBook(cwReadTopicsRaw());
+                    const pg = buildTopicPage(nb.entries, String(p.rootEventId || '').trim());
+                    const rc = reactionFor(pg, String(p.actor || ''), { knows: p.knows === true, knowsWhy: String(p.knowsWhy || '') });
+                    if (!rc.ok) return { ok: false, note: '不生成反应：' + rc.reason, kind: 'no-reaction' };
+                    return { ok: true, kind: 'topic-reaction', note: rc.text, sourcesCount: rc.sourcesCount };
+                }
+                if (tKind === 'debunk') {
+                    const n = normalizeTopicEntry({
+                        rootEventId: p.rootEventId, kind: 'debunk', platform: p.platform, id: p.id,
+                        text: p.text, by: p.by, time: Date.now(),
+                    });
+                    if (!n.ok) return { ok: false, note: '辟谣条目被拒：' + n.reason, kind: 'topic-entry-rejected' };
+                    const nb = normalizeTopicBook(cwReadTopicsRaw());
+                    const rows = nb.entries.filter(function (e) { return e.key !== n.entry.key; });
+                    rows.push(n.entry);
+                    const w = cwWriteTopics(rows);
+                    if (!w.ok) return { ok: false, kind: w.reason, note: '话题本落盘失败（不得当作已辟谣）' };
+                    /* 辟谣传播：同话题草稿全部标 stale（文字保留、不得当作现状继续发布） */
+                    const bookNorm2 = normalizeDraftBook(cwReadDraftsRaw());
+                    const md = markDraftsDebunked(bookNorm2.drafts, n.entry.rootEventId, n.entry.by || '辟谣人');
+                    let staleNote = '';
+                    if (md.changed > 0) {
+                        const w2 = cwWriteDrafts(md.drafts);
+                        staleNote = w2.ok ? ('；同话题草稿 ' + String(md.changed) + ' 份已标「已被辟谣」') : '；草稿标记失败（辟谣已落地）';
+                    }
+                    refreshCreationdesk();
+                    return { ok: true, kind: 'topic-debunked', note: '已记录辟谣（rootEventId ' + n.entry.rootEventId + '）' + staleNote, changed: md.changed };
+                }
+                return { ok: false, note: '不认识的话题子命令：' + tKind, kind: 'bad-topic-sub' };
+            }
             if (action === 'compose' || action === 'edit' || action === 'redo' || action === 'drop') {
                 const bookRaw = cwReadDraftsRaw();
                 const bookNorm = normalizeDraftBook(bookRaw);

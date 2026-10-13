@@ -49,6 +49,7 @@ export class CreationdeskView {
         h += '<div class="cwb-reads">' + esc(vm.materialsText) + '</div>';
         h += '<div class="cwb-reads">' + esc(vm.publishedText) + '</div>';
         h += '<div class="cwb-reads">' + esc(vm.draftsText) + '</div>';
+        h += '<div class="cwb-reads">' + esc(vm.topicsText) + '</div>';
         h += '<div class="cwb-reads">' + (vm.scopeOk ? '会话身份齐备' : '会话身份缺项（缺项即判「不是同一段」，一律不开工）') + '</div>';
         const sc = vm.selfCheck || {};
         const probs = sc.problems || [];
@@ -155,6 +156,35 @@ export class CreationdeskView {
         h += '</div></div>';
         return h;
     }
+    /** [v4.02.0 · R3-X4] 话题页段：同一事件在各平台的条目聚拢、分类计数、辟谣态。
+     *   公开条目必须用户确认才落（私聊秘密不会自动变公共热帖）。 */
+    _topics(vm) {
+        let h = '<div class="cwb-box"><h3>话题页(同一事件 → 各平台发布/转载/评论/辟谣,核心事实一致)</h3>';
+        const tp = vm.topics || {};
+        h += '<div class="cwb-note">' + esc(vm.topicsText || '') + ' · 上限 ' + String(tp.limit || 0) + ' 条</div>';
+        h += '<div class="cwb-acts">';
+        h += '<input class="cwb-inp" data-cw-topic-event type="text" placeholder="事件键 rootEventId" value="' + esc(vm.topicEvent || '') + '">';
+        h += '<input class="cwb-inp" data-cw-topic-platform type="text" placeholder="平台(weibo / xhs / tieba / wechat)" value="' + esc(vm.topicPlatform || '') + '">';
+        h += '</div>';
+        h += '<textarea class="cwb-note-area" data-cw-topic-text rows="3" placeholder="这条要说什么(核心事实 / 转载 / 评论 / 辟谣说明)">' + esc(vm.topicText || '') + '</textarea>';
+        h += '<div class="cwb-acts">';
+        h += '<button class="cwb-btn" data-cw-topic="page">看话题页(只读)</button>';
+        h += '<button class="cwb-btn" data-cw-topic="record" data-cw-topic-kind="publish">记一条发布(公开需确认)</button>';
+        h += '<button class="cwb-btn" data-cw-topic="record" data-cw-topic-kind="repost">记一条转载</button>';
+        h += '<button class="cwb-btn" data-cw-topic="record" data-cw-topic-kind="comment">记一条评论</button>';
+        h += '<button class="cwb-btn" data-cw-topic="debunk">记辟谣(同话题草稿转「已被辟谣」)</button>';
+        h += '</div>';
+        h += '<div class="cwb-note">辟谣只标「已被辟谣」,**不删旧条目**(撤回≠消失);未标确认的公开条目一律拒收</div>';
+        const pg = vm.topicPage;
+        if (pg && pg.byKind) {
+            h += '<div class="cwb-row"><span class="cwb-row-v">' + esc(pg.summary || '') + '</span></div>';
+            h += '<div class="cwb-note">发布 ' + String(pg.byKind.publish || 0) + ' · 转载 ' + String(pg.byKind.repost || 0)
+                + ' · 评论 ' + String(pg.byKind.comment || 0) + ' · 辟谣 ' + String(pg.byKind.debunk || 0)
+                + (pg.debunked ? (' · 已辟谣(' + esc(pg.debunkedBy || '') + ')') : '') + '</div>';
+        }
+        h += '</div>';
+        return h;
+    }
     _html(vm) {
         let h = '<div class="cwb-wrap">';
         h += this._head(vm);
@@ -163,6 +193,7 @@ export class CreationdeskView {
         h += this._targets(vm);
         h += this._multiTargets(vm);
         h += this._drafts(vm);
+        h += this._topics(vm);
         h += this._plan(vm);
         h += '</div>';
         return h;
@@ -190,6 +221,19 @@ export class CreationdeskView {
         });
         const noteArea = el.querySelector('[data-cw-draft-note]');
         if (noteArea) noteArea.addEventListener('input', function () { self.app.setDraftNote(noteArea.value); });
+        const tEvent = el.querySelector('[data-cw-topic-event]');
+        if (tEvent) tEvent.addEventListener('input', function () { self.app.setTopicEvent(tEvent.value); });
+        const tPlat = el.querySelector('[data-cw-topic-platform]');
+        if (tPlat) tPlat.addEventListener('input', function () { self.app.setTopicPlatform(tPlat.value); });
+        const tText = el.querySelector('[data-cw-topic-text]');
+        if (tText) tText.addEventListener('input', function () { self.app.setTopicText(tText.value); });
+        el.querySelectorAll('[data-cw-topic]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                const sub = b.getAttribute('data-cw-topic');
+                const kind = b.getAttribute('data-cw-topic-kind') || 'publish';
+                self.app.topicAct(sub, { kind: kind, confirmed: true, actor: 'user', knows: true });
+            });
+        });
         el.querySelectorAll('[data-cw-draft]').forEach(function (b) {
             b.addEventListener('click', function () {
                 const k = b.getAttribute('data-cw-key');
