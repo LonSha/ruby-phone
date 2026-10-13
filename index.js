@@ -254,7 +254,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.02.0';
+const ST_PHONE_VERSION = '4.03.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -454,18 +454,19 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-20",
     items: [
-        "【定位 · 计划原文 R3-X4 的真实缺口（修前实测，不是推演）】计划要的是「一件事可在朋友圈/贴吧/小红书表现不同而核心事实一致；删除/辟谣影响后续草稿；私聊秘密不会自动变公共热帖；公开范围由用户确认」，并注明可复用 context-compose 的 retellChains 与 social-knowledge-bridge 的知情过滤。修前实测：retellChains 只把转述**归并计数**（同一传闻不算三条独立证据）、knowledgeCheck 只判**可见性**——两者之间没有任何一层把「同一事件在各平台的发布/转载/评论/辟谣」按事件聚拢成话题页，更没有「辟谣之后新草稿不得照旧编写」「角色不知情不生成反应」「公开条目须用户确认」这三道闸。",
-        "【新内核 · config/topic-echo.js（纯函数，只 import 转述链口径一份）】五件事：① 四类条目归一 normalizeTopicEntry（publish 发布 / repost 转载 / comment 评论 / debunk 辟谣，**每条必须带 rootEventId**，没有就如实拒）；② 话题页 buildTopicPage 按 rootEventId 聚拢并分类计数，来源身份**借 context-compose 的 retellNode 标**（转述链口径只有一份实现，不另写）；③ 知情反应 reactionFor（角色不知情 ⇒ 不生成反应；信源数按**来源链**计、绝不把三平台转述读成三个独立信源）；④ 辟谣传播 markDraftsDebunked（同话题**后续**草稿全部标 stale 并带 debunkedBy，**旧条目不删**——撤回≠消失，但不得再被当作现状）；⑤ 公开确认闸 gatePublicity（受众为空 = 公开的发布/转载**必须带用户确认标记**才进本，私域不受此闸）。",
-        "【公开确认闸的位置：落在归一百口，不落在动作分支】首版把「公开须确认」放在咽喉动作分支里判，被本版自己的接线判据问出问题——内核才是唯一真源，判定写在消费方就是下一处漂移的种子（与 retellChains「来源端点入链」当年被 source-derivation 门挡下同一形态）。最终闸口在 normalizeTopicEntry：`(kind === 'publish' || kind === 'repost') && isPublic && !confirmed` ⇒ 拒。**评论类不落此闸**（评论不是「发布公开内容」），**私域发布不落此闸**（朋友圈可见范围非空）。",
-        "【index.js 咽喉接线（新键 + 动作族，零 owner 调用）】新存储键 cw_topics 与 cw_drafts / cw_published 分开；动作白名单扩到八项（新增 topic）；topic 一个动作带四子命令 record / page / react / debunk，**四支全部不发布**——块内无任何 cwInvokeOwner 与 cwPlanPublish 调用（判据 C3 逐字核对整块）；落盘一律过 cwWriteTopics（写后回读核对行数，读不回返 readback-mismatch 不当成功）；debunk 落地后走 markDraftsDebunked + cwWriteDrafts 把同话题草稿转「已被辟谣」，草稿标记失败时如实报「辟谣已落地」而不吞掉。",
-        "【app / 视图 / CSS 三层】creationdesk app 层新增 _topicEvent / _topicPlatform / _topicText / _topicPage 实例态与四方法（setTopicEvent / setTopicPlatform / setTopicText / topicAct，统一转咽喉带 scope/token 守卫），vm 透出话题本读数与话题自检，onChatChanged 重置；视图层新增 _topics 段（事件键与平台输入框 + 五个动作按钮 + 话题页读数回显），组装序 head → states → materials → targets → multiTargets → drafts → **topics** → plan，绑定三输入 + 一组按钮；CSS 追加 .cwb-inp。",
-        "【本版自己抓到的缺陷形态（合并前已修）】① 首版 buildTopicPage 的转载来源身份写在三元表达式里且少一个右括号，`node --check` 直接报 `Unexpected token ','`；② 更隐蔽的一处：heredoc 落盘时 246 行 『右中括号 右圆括号 分号』 被折行污染吞掉一个右中括号，落盘成 `});`，**头部截断二分全部报 OK 而整文件红**（截断点落在函数中间时截断件本身也不能解析、被误读成环境问题），最终用字符串/注释感知的括号扫描器（/tmp/bal.py）定位为「241 行开中括号被 246 行的右花括号配平」；③ 归一后 entry 未保留 origin 字段，导致转载永远认不出转述链；④ index.js 话题读写口插入点选在 cwSplitRef 的 docstring 与其函数之间，把注释与函数拆开（排版级，已复位）。",
-        "【上一版遗留的真实缺陷：app 层重复应用（本版如实记录并清理）】v4.01.0 的 app 补丁被两个脚本各写了一份：类内 setDraft / setDraftNote / toggleMultiTarget / _draftOf / draftAct **整段重复**，构造函数三行实例态、onChatChanged 三行、vm 六个键也各重复一份。JS 后声明同名方法覆盖前者，**语法合法、行为不变**，故当时的定向套件与十四道门全绿——这是「重复但不报错」的形态：门不会红，只有人工通读才发现。本版清理三处重复（app 194 → 原 257 行含新增，vm 六键去重，构造与 onChatChanged 各保留一份），并把「C3 app 四方法恰一次」写进判据面。",
-        "【交棒（下限形，不是放宽）】v4010 的 C1 锁的是上一版**七动作字面量**，本版扩到八动作属抬版仪式性红——照 v3.98→v3.99 先例改写为「七项都在」的下限形（条目不可减、新增可加），本次抬版无需再做二次交棒（v4020 的 E1 为下限形）。",
-        "【定向判据】tests/system-v4020.test.mjs 21 例全绿：A 结构 3（四类条目 / 上限 / 六出口 / 内核自检零问题 / 只 import 转述链口径一份）；B 行为 10（缺事件键必拒 / 类别认不出必拒 / 公开未确认必拒且私域不受闸 / 评论不落闸 / 按事件聚拢分类计数且别事件不混入 / 三平台一条链只算 1 个信源 / 不知情不编反应 / 辟谣传播标 stale 别话题不误伤 / 已辟谣不再生成新反应且旧条目仍在 / 读不出与空分开且上限最早先出且同键后到覆盖）；C 接线 6（键与八动作与回读 / 取数口与四子命令 / 话题族零 owner 调用 / 辟谣接草稿本 / app 四方法与 vm 读数与换会话重置 / 视图段与四组绑定与组装序与 CSS）；D 负控制 1（真源码定点破坏「公开须确认」→ B3 判据必转红）；E 版本锚 1（下限形）。旧五套件 65/65 无回归；十四道静态门全 rc=0（keys-audit 为新键 cw_topics 照 v3992/v4010 先例登记，会话隔离 253 → 254）。",
-        "【运行时验证边界（如实声明）】本版在无头环境验证的是内核纯函数行为、咽喉四子命令分流、话题本读写回读、草稿本辟谣传播、视图拼装与 CSS；**未做**真实浏览器/真机的话题页触摸端到端（真实在多平台记录条目、看话题页、点辟谣看草稿转「已被辟谣」需真机验证），不宣称流畅。记录的条目落在**虚拟社媒**，不是外网发布。",
-        "【本版边界（刻意不做）】不重算可见性（知情与否由调用方过 knowledgeCheck 后传状态进来，本模块只闸不判）；不代发任何平台（topic 四支零 owner 调用）；不新建入口 App（话题段长在既有创作工作台里）；不引入外部数据库。",
-        "【版本升至 4.02.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 12 条，本段为 E 包手机侧第三项（R3-X4）的交付记录。"
+        "【定位 · 计划原文 R3-X6 的真实缺口(修前实测,不是推演)】计划要的是「旅行可参与:人员、地点顺序、分工、准备清单、共同费用;实际完成后才生成支出与回忆,行程建议始终只是建议」,四条验收为一次三人旅行可安排改期分工结算、同一费用不会两次扣账、预计花费与实际金额分列、拒绝邀请者不被算作参加。修前实测:apps/traveldesk 三层只有「钱怎么算」这一面(traveldesk-data.js 是分账清算内核:汇率折算、三型费用、余额、家庭归并、内外部结算),没有任何一层记录谁参加,没有地点顺序与分工与准备清单,共同费用只有已发生一种形态,结算直接读账本,没有「实际完成后才生成支出」这道闸。",
+        "【新内核 · apps/traveldesk/traveldesk-plan.js(纯函数,只 import config/num-gate.js 一处)】五件事:1 归一 normalizeParty 把成员(邀请三态)与地点与分工与清单与费用各走窄口,认不出的一律保守处置(成员态认不出落 invited 即没答复不算参加,费用态认不出落 estimated 即估的绝不进账本),拒绝进 rejected 带 kind 与 index 与 why,上限最早先出并记 dropped;2 参加者判定 participantsOf 只有 accepted 算参加;3 读数 partyReadings 把预计与实到分列;4 生成支出 commitCosts 只有 actual 才转账本行;5 建议 partyAdvice 只产文本零副作用。另 proposedPeople 现有账本里已有人头一律保留不擅自删人,婉拒者不进名单。",
+        "【拒绝邀请者不被算作参加:三态名单各归各】TVP_MEMBER_STATES 为 invited 与 accepted 与 declined 三态。participantsOf 只认 accepted;declinedOf 与 pendingOf 各报名单;invited 是没答复,既不算参加也不算婉拒。分摊与生成支出都只取 participantsOf,「婉拒的人不出现在分摊里」由内核判定保证,不靠调用方自觉。",
+        "【预计花费与实际金额分列:绝不合并成一个数】partyReadings 返回 estimatedTotal 与 actualTotal 两个字段,任何情况下不合并、不取大、不互相顶替;另报 committedCount(已进账本的真实行数,按 expenses 反查)与 pendingCommit(标了实际但尚未落账的行数)。四类读数另含成员与参加与婉拒与待答、地点、分工与已完成、清单与已勾选、费用条数。",
+        "【实际完成后才生成支出:幂等,同一费用不会两次扣账】commitCosts 只把 state 为 actual 的费用转成账本支出行,生成行 id 固定为 tv_pc_ 加费用 id(账本里已有即 skipped,二次点得到 skipped 而不是第二笔钱);settled 与 estimated 一律不生成,估算绝不冒充已发生。payer 不在这趟人头里的一律拒,理由 payer-not-in-people,绝不静默换人代付。",
+        "【app 层接线:新键 tv_party 与单一动作族 partyAct】新键与 tv_book 分开存(账本是钱怎么算,行程板是人怎么去,混一格会让改期顺手改到钱)。_readPartyRaw 把读不出与空对象分开;partyAct 统一转咽喉,动作族含 intake 与 clear-board 与 people 与 member 与 add-stop 与 add-task 与 add-check 与 add-cost 与 toggle-task 与 toggle-check 与 set-cost-state 与 commit-costs,其中唯一会碰账本的是 commit-costs;commitPartyCosts 落盘后回读核对行数,读不回返 readback-mismatch 不当成功。构造与取数口与换会话三处各自重置实例态。",
+        "【视图与 CSS:估算行与实际行必须不同色】视图段插在结算与结算提交之间,含成员行(参加与婉拒按钮)、地点路线串、分工与清单打勾行、共同费用行(估算与实际各带标实际与改回估算按钮)、把人加进账本人头、生成实际费用的支出、建议文本行与拒绝条数提示。八组绑定全部派给 app 的 partyAct,回报写提示后重渲染;视图不自己算读数(判据钉住视图不得出现内核三个读数入口)。CSS 追加成员行与两种费用行与标签与建议与迷你按钮,估算行与实际行分色,同色即等于在界面上承认估的已经花了。",
+        "【本版自己抓到的缺陷形态(合并前已修)】1 app 补丁首轮锚点把 import 行与两条键常量用换行连成一体,而真源码三条之间有空行,空行是锚点杀手,拆成分步锚点才过;2 视图补丁锚点用了半角圆括号而真源码是全角圆括号,逐字符比对才认出来,锚点必须整字符级比对;3 测试判据里写单引号拼接落进转义地狱,node --check 报 Invalid or unexpected token,改为用字符码拼装清掉全部反斜杠转义;4 负控制把破坏副本写到系统临时目录,而内核按相对路径 import 取数口,放临时目录直接模块找不到(那是环境错不是判据错),改写到内核同目录并在测后删除;5 首跑两红:C2 断言写账本处数等于 3 而真源码是 4(入账与清空与人头增补与生成支出四处),负控制残留文件,两处均为判据口径错而非源码错。",
+        "【交棒:本版判据从一开始即为下限形,不留二次改写】E1 版本锚写成入口版本不低于 4.02.0 的下限形(条目不可减、新增可加),照 v3.98 到 v3.99 的先例办理;v4010 当年锁七动作字面量与 v4020 扩八动作那次仪式性红不再重演,本次抬版无需二次交棒。C2 的写账本处数由本版钉为 4(不是硬锁 1 也不是任意),后续改动由此可判。",
+        "【定向判据与静态门】tests/system-v4030.test.mjs 23 例全绿:A 结构 4(五组上限 / 三态与三费用态常量 / 六个出口 / 内核自检零问题);B 行为 10(成员态认不出落 invited / 费用态认不出落 estimated / 只有 accepted 算参加且婉拒进名单 / 预计与实到分列且不合并 / 只有 actual 才生成且二次生成 skipped / payer 不在人头必拒 / 建议零副作用不写任何东西 / 读不出与空分开 / 上限最早先出 / proposedPeople 保留既有人头且婉拒不进名单);C 接线 7(键与动作族与回读 / 取数口 / 唯一写账本处 / commitPartyCosts 回读核对 / app 实例态三处重置 / 视图段与八组绑定 / 视图不自己算读数);D 负控制 1(真源码定点破坏只有 actual 才生成,对应判据必转红);E 版本锚 1。含 v4030 的七个历史套件全 rc=0(v3990 十七 / v3991 一 / v3992 十四 / v4000 十六 / v4010 十七 / v4020 二十一 / v4030 二十三),十四道静态门全 rc=0(keys-audit 为新键 tv_party 照先例登记,会话隔离 254 到 255)。",
+        "【运行时验证边界(如实声明)】本版在无头环境验证的是内核纯函数行为(三态名单、预计与实到分列、只有实际才生成且幂等)、咽喉动作族分流、行程板读写回读、视图拼装与 CSS 分色;未做真实浏览器或真机的行程板触摸端到端(真实三人旅行安排改期分工结算、真实婉拒不出现在分摊、真实估算不落账需真机验证),不宣称流畅。记录条目落在本地账本与虚拟社媒,不是外网发布。",
+        "【本版边界(刻意不做)】不重算汇率与分账(traveldesk-data.js 仍是唯一清算真源,本模块只决定谁参加与哪些费用算已发生);不代发任何平台;不新建入口 App(行程板长在既有旅行记账台里);不引入外部数据库;行程建议只出文本,绝不代替用户动作。",
+        "【版本升至 4.03.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;迭代段共 13 条,本段为 E 包手机侧第四项(R3-X6)的交付记录。"
     ]
 };
 

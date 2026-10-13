@@ -16,3 +16,11 @@
 .tv-focus-lab { font-weight: 600; }
 .tv-focus-id { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .tv-focus-why { color: #7a7468; }
+/* [v4.03.0 · R3-X6] 协作行程板:预计 / 实际 / 婉拒三件事在视觉上必须分得开。
+ *   ★ 估算行与已发生行同色,就等于在界面上承认「估的已经花了」—— 本仓最贵的一类财务错读数。 */
+.tv-party-mem { border-bottom-style: dotted; }
+.tv-party-cost.is-est { color: #8a7a4a; background: rgba(200, 180, 120, 0.10); }
+.tv-party-cost.is-act { color: #2a5a6a; }
+.tv-party-tag { font-size: 11px; padding: 0 4px; border: 1px solid currentColor; border-radius: 8px; margin-left: 4px; }
+.tv-party-advice { color: #7a7468; font-size: 12px; }
+.tv-mini { padding: 1px 6px; font-size: 11px; margin: 0 2px 0 0; }

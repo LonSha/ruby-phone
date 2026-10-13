@@ -351,6 +351,7 @@ const KEY_REGISTRY = [
   { key: 'sd2_ledger', scope: 'chat', note: '[v3.53.0] SullyOS 治理案头动作台账' },
   { key: 'tv_book', scope: 'chat', note: '[v3.54.0] 旅行记账案头账本（people/families/expenses）' },
   { key: 'tv_ledger', scope: 'chat', note: '[v3.54.0] 旅行记账案头动作台账' },
+  { key: 'tv_party', scope: 'chat', note: '[v4.03.0] 旅行记账案头协作行程板(成员邀请三态/地点顺序/分工/准备清单/共同费用预计与实际两态;上限 成员20 地点40 分工60 清单60 费用80)' },
   { key: 'te_pins', scope: 'chat', note: '[v3.65.0] 任务入口收藏（按用户摆放顺序的卡片 id 列表；上限 12）' },
   { key: 'wf_runs', scope: 'chat', note: '[v3.89.0] 声明式工作流运行台账（本机记「这条流程跑过哪些运行键」：流程 id / 运行键 / 状态 / 时刻 / 归属段；上限 40）' },
   { key: 'cw_published', scope: 'chat', note: '[v3.90.0] 创作工作台发布台账（幂等键 <source>:<materialId>:<targetApp> → 已发布；同键只记一次，上限 150）' },
