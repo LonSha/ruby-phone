@@ -166,6 +166,15 @@ import {
     cwCollectMaterials, cwFindMaterial, cwPlanPublish, cwPlanLine, cwStepLine,
     cwReceiptOf, cwAppendPublished, cwSelfCheck, cwTargetOwnerOf,
 } from './config/creation-workbench.js';
+/* [v4.01.0 · 计划 R3-O8] 创作工作台的多草稿内核（纯函数）。
+ *   接在咽喉的理由与 R-X6 同族：素材引用 / 草稿文字 / 目标清单全由调用方给，
+ *   **内核自己不取数、不写存储、不发布**。四个新动作（compose / edit / redo / drop）
+ *   只动「草稿本」这一面，发布仍逐目标走 cwInvokeOwner 的表，一次都不代发。 */
+import {
+    CMD_LIMITS, composeDrafts, normalizeDraftBook, upsertDraft,
+    replaceMaterialKeepText, replaceDraftInBook, recomposeTargets,
+    previewOf, diffDrafts, diffLine, cmdSelfCheck as cmdSelfCheckOf,
+} from './config/creation-multi-draft.js';
 /* [v3.91.0 · 拓展计划 R-X7] 本地备份、迁移与灾难恢复（纯函数协议层）。
  *   接在咽喉的理由与 R-X1..R-X6 同族：导出范围 / 键面 / 包体 / 存量全由调用方给，
  *   **本模块自己不取数、不写存储、不发网络**（默认不上传云端）。
@@ -237,7 +246,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.00.0';
+const ST_PHONE_VERSION = '4.01.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -437,19 +446,19 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-20",
     items: [
-        "【定位 · 计划原文 R3-O7 的真实缺口（修前实测，不是推演）】计划要的是「统一用户侧任务卡：等待/生成/可播放/失败/结果待核；取消排队、只重试失败步骤、保留已生成成果」。修前实测：传输层早就把中止通道铺好了 —— image-generation-manager 的 NAI 队列等待查 options.signal.aborted、ComfyUI 历史轮询每轮查 signal、TTS 的每一次 fetch 都带 signal，**全仓却没有任何一处用户侧取消入口**；各 App 的生图/语音任务态各自为政（微信的 imageGenStatus、蜜语的生图、TTS 播放互不知晓），没有跨 App 的任务面。这是本仓反复出现的形态：**底下通了、上面没口**。",
-        "【新内核 · config/media-task-registry.js（纯函数）】统一任务态机的唯一实现：六面状态（waiting 排队 / running 生成 / playable 可播放 / failed 失败 / review 结果待核 / cancelled 已取消）+ 迁移白名单 + 取消白名单 + 在飞拦截 + 聚合去重 + 自检。**不写存储**（任务键与状态由调用方持有：微信生图在消息上、TTS 在会话内存），零 storage 零 DOM 零计时 API。",
-        "【取消白名单：可播放成果不允许被取消误伤（验收③的落点）】canCancel 只放 waiting / running；playable 一律拒（「成果已生成，不需要取消」）、failed 拒（「直接重试即可」）、review 拒（「先核对再决定」）、cancelled 拒。applyCancel 在拒时返回 task:null，调用方拿不到半个已取消读数。",
-        "【在飞拦截的语义口径（一次自我纠正）】首版 duplicateGuard 写成「已是 playable/review 且有成果 ⇒ 拦」，被本版自己的用例问出问题：用户点「重新生成」是显式意图，拦掉它等于把「重新生成」按钮做成死的。改为**只拦在飞**（waiting/running）—— 验收原文「已知完成不重复生成」指的是「切 App 回来不重新发起一遍」，不是「用户不能主动重生成」。自检里同步补了双向判据（在飞必拦 / 已完成必放行）。",
-        "【index.js 装配注册板（会话内存，不落盘）】window.VirtualPhone.mediaTasks 四个动作：upsert（过 normalizeTask 窄口 + **迁移守卫**：旧态→新态必须过白名单，cancelled 是终态、playable 不许回 running）、remove、cancel（走 canCancel/applyCancel）、readAll（聚合读数，原名 snapshot，因与推送型桥字段撞形改名）；另加 shouldSkip（在飞拦截）与 selfCheck（内核自检）。**不落盘是有意的**：任务态的生命周期就是会话生命周期，重启后由既有的恢复面接管（wechat-data 的 loading→failed「页面刷新后，之前的生成任务已中断，请点击重试」），这里再做一份持久化就是第二份真源。",
-        "【微信生图全链接线（真实入口、真实操作、真实效果）】四态 upsert 全程：入列 waiting → 调 generate 前 running → 图片/视频落盘后 playable → catch 里 failed。generate 收到 signal（NAI 队列等待 abort 会 leave-queue，**不新增扣费请求**）；气泡在 loading 态渲染「取消」按钮，点击走 cancelImageGeneration：过注册板白名单 → abort 传输层 → 消息回 idle（**不是 failed**）→ 弹「已取消，没有新增扣费请求」。注册前先 remove 旧任务：重修生成是新任务，否则 playable → running 会被迁移白名单拒掉、用户的「重新生成」点了没反应。",
-        "【本版自己抓到的缺陷形态（定向套件 C3 抓出，合并前已修）】生图链有**两段**可失败 —— ① 英文 TAG 生成（LLM 调用）② 真生图。取消只接了后者的 catch；在 TAG 阶段点取消，abort 已置位而 TAG 请求抛错会走 TAG 的 catch，把消息写成 failed 并弹「英文 TAG 生成失败」—— **用户点了取消却看到一条失败红字**，正是本版要治的形态。修法：TAG 的 catch 开头加同一道 abort 守卫（两段各一道，判据 C3 逐点核对「每个 failed 写入点之前都有守卫」）。",
-        "【跨 App 任务卡聚合面（计划原文「统一用户侧任务卡」的落点）】任务入口（apps/taskentry）新增生成任务段：五档计数（等待/生成中/可播放/失败/待核 + 已取消）+ 在飞数 + 按态分组列表（标出「已有成果」）。读数**每次现取不缓存**（注册板是会话内存，缓存必然在任务刚完成时给旧读数）；板不在时报 ready:false + 如实原因，与「板上真的没有任务」（total 0）分得开。CSS 同步落地（.te-media 族 10 条）。",
-        "【交棒改写（判据面，不是放宽）】本版把「用户侧取消」从「传输层有 signal、产品端零入口」改成**单一注册板 + 白名单 + 迁移守卫**：以后新增一类媒体任务（如蜜语生图、通话语音），只需 upsert 一个键、在失败/成功处各收一次尾，取消与聚合与在飞拦截随行给出 —— 是否漏接由「upsert 处数与 catch 处数」回答，不靠人记得。v3992 的 F1/F2 已在上一版落成当版硬锁，本版把 E1 交棒为**下限形**（入口版本不低于 3.99.2）。",
-        "【定向判据与负控制】tests/system-v4000.test.mjs 五面 15 条全绿：A 结构面（六态齐备 / 文案表与迁移表互不越界 / cancelled 终态 / playable 不许回 running / 自检两侧都跑）；B 行为面（净化窄口四拒一收 / 取消白名单六态 + applyCancel 拒时 task:null / 在飞拦截双向 / 聚合去重后到覆盖先到 / 非法输入不抛错）；C 接线面（注册板六动作 + 迁移守卫 + 挂载 / 微信 signal 与五处 upsert 与取消入口 / 两段 catch 都守 abort / 任务入口 app 读数 + 视图段 + CSS）；D 负控制（真源码定点破坏两处：在飞拦截改成 if(true)、取消白名单把 playable 改成可取消，破坏副本上同款判据必转红）；E 版本锚（五源同源不低于 3.99.2）。",
-        "【运行时验证边界（如实声明）】本版在无头环境验证的是**内核纯函数行为、注册板装配、生图链的四态写入顺序与两段 catch 的守卫位置、视图拼装与 CSS**；**未做**真实浏览器/真机的生图取消端到端（NAI 排队中真实点取消、观察 leave-queue 与不扣费需要真实凭据与队列），也未做 TTS 分段播放的中断续播（本版只把 TTS 的 signal 通道与聚合面纳入统一任务卡，分段合成本身不在本版范围）。无凭据时验本地任务态，不假报供应商实测。",
-        "【本版边界（刻意不做）】不新建入口 App（注册板是内存对象，任务段长在既有任务入口里）；不重建工作流运行器；不做 TTS 分段合成（计划原文「语音分段播放与中断后续播」的分段器需另立一期，本版把它的**任务态与取消面**先归到统一任务卡下）；不引入外部数据库。",
-        "【版本升至 4.00.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 12 条，本段为 E 包手机侧第一项（R3-O7）的交付记录。"
+        "【定位 · 计划原文 R3-O8 的真实缺口（修前实测，不是推演）】计划要的是「一段剧情的多种社媒稿分别编辑互不覆盖、草稿自动保留、改一张图不重跑全部、仅重做所选段、发布仍逐目标确认」。修前实测：工作台是**单素材+单目标**——换目标即覆盖上一份预览；草稿只活在实例内存（onChatChanged 一律清空），**关掉重开什么都留不下**；素材一换整轮重来。三条用户可见缺口（互不覆盖 / 保留 / 不重跑）全部落空。",
+        "【新内核 · config/creation-multi-draft.js（纯函数，零 storage 零 window 零 fetch）】多目标草稿的完整生命周期：composeDrafts 逐目标建稿（per-target note/tags 互不覆盖、越权目标进 rejected 不静默丢）、draftKeyOf 沿用 creationIdemKey 不另造键形、normalizeDraft 窄口（缺键/非法态拒；note 裁长如实标 noteTrimmed、tags 去重如实计 droppedTags）、normalizeDraftBook（读不出与空数组分开、上限 24 最早先出）、upsertDraft（同键后到覆盖）、replaceMaterialKeepText（保 note/tags、state 置 stale、version+1、返回 previousKey）、replaceDraftInBook（按旧键撤按新键存，同目标不留两行）、recomposeTargets（按目标替换与继承文字、version+1）、diffDrafts/diffLine（字段级 from/to，键变 comparable:false）、previewOf（没正文如实报、文案不含「已发布」）、cmdSelfCheck。四态：editing / ready / published / stale。",
+        "【替图不丢文字（验收③的机制落点）】换素材会换幂等键：若只按新键 upsert，旧行撤不掉、同目标出现两行重复；若只删旧行，用户写的 note/tags 一并蒸发。修法是内核成对出口：replaceMaterialKeepText 先把旧行的 note/tags 继承进新稿、旧 state 让位给 stale，并返回 previousKey；replaceDraftInBook 按 previousKey 撤旧、按新键存新——文字跨素材存活，本上零重复行。",
+        "【仅重做所选段（验收④的机制落点）】recomposeTargets 按**目标**（不是键）替换与继承：选中目标重跑得到新键新稿、note/tags 从旧行继承、version+1；未选中的草稿**一行都不动**。首版按键留旧行被自检问出问题：换素材改键，旧行按键撤不掉，同目标两行重复——改为按目标替换后 kept 恰为一，未选行原样。",
+        "【本版自己抓到的缺陷形态（内核自检三轮，合并前已修）】① composeDrafts 把 normalizeDraft 的**包装对象** push 进本（应为 .draft），草稿本里躺的不是一个草稿而是「认不认得出这份草稿」的信封，upsert 全部 no-key、自检当场抛 TypeError——逐步调试定位后修为推 nd.draft 并把 normalize 拒收进 rejected；② 多目标样本误用 magazine（其 accepts 不含 track），自检样本与真实目标表错位；③ 超上限样本用 6 个合法目标永远触不到 targetsPerCompose=6 的上限，改为「6 个去重后可编排 + 7 项含未登记目标必拒」双断言。",
+        "【index.js 咽喉接线（不发布是刻意的）】新存储键 cw_drafts 与发布台账 cw_published 分开；动作白名单扩到七项（plan / publish / refresh / compose / edit / redo / drop）；四个新动作**全部不发布**——没有一处 owner 调用，发布仍逐目标走目标 App 的 owner，一次都不代发；落盘一律过 cwWriteDrafts（写后回读核对行数，读不回返 readback-mismatch 不当成功）；refreshCreationdesk 的 cached 增草稿本读数（items 带 previewOf 预览与 materialFound 标记、认不出的行如实计数不静默丢）。",
+        "【app / 视图 / CSS 三层】creationdesk app 层新增 _draftKey / _draftNote / _multiTargets 实例态与四方法（setDraft 选中即装文案、setDraftNote、toggleMultiTarget、draftAct 统一转咽喉带 scope/token 守卫），vm 透出六读数，onChatChanged 重置；视图层组装序 head → states → materials → targets → multiTargets → drafts → plan，四组绑定（多选按钮 / 草稿行点选 / 正文 textarea / 三动作按钮），草稿本「读不到 / 空 / 有」三态分开渲染；CSS 追加 .cwb-note-area。",
+        "【负控制判据的一次自我纠正】首版 D1 断言破坏后 kept 应为 2，实际为 1——破坏「按目标留行」成「按键留行」后，旧 weibo 行恰被保留（kept=1 与正常值巧合相同），判据失效。真正可观测的破坏是 wechat 草稿（朋友圈版）被丢、weibo 两行重复。修正为双断言：wechat 目标行数必 0、weibo 目标行数必 2，与 B5 正判据在同一判别面必然分向。",
+        "【交棒（下限形，不是放宽）】v4000 的 E1 与本版 E1 均为下限形（入口版本不低于 3.99.2 / 4.00.0），本版抬版无需交棒改写；下一版新增媒体任务时沿用 media-task-registry 注册板，不另立第三份任务面。",
+        "【定向判据】tests/system-v4010.test.mjs 17 例全绿：A 结构 3（四态/上限/出口齐备 / cmdSelfCheck 零问题 / 零外部依赖只判真实 import 与调用式）、B 行为 8（逐目标互不覆盖 / 越权进 rejected / 替图保文字 stale 版本+1 / 无重复行 / redo 继承文字 / diff 字段级 / 归一上限最早先出 / preview 不编内容）、C 接线 4（键与白名单与回读 / 四动作分流 / app 四方法 / 视图三段绑定 CSS）、D 负控制 1（真源码定点破坏、双断言必转红）、E 版本锚 1（下限形）。旧四套件 48/48 无回归；十四道静态门全 rc=0（keys-audit 为新键 cw_drafts 照 v3992 先例登记，会话隔离 252 → 253）。",
+        "【运行时验证边界（如实声明）】本版在无头环境验证的是内核纯函数行为、咽喉四动作分流、草稿本读写回读、视图拼装与 CSS；**未做**真实浏览器/真机的多目标编排与替图与重做的触摸端到端（草稿本跨会话保留的落盘面已由 keys-audit 判会话隔离，但真实关掉重开留草稿需真机验证），不宣称流畅。发布到的是**虚拟社媒**，不是外网。",
+        "【本版边界（刻意不做）】不代发不代发布（四动作零 owner 调用）；不重做素材库与发布执行器（草稿仍由 creation-pipeline 的 buildCreationDraft 产，引用不复制）；不引入外部数据库；不把 TTS 分段播放纳入本版。",
+        "【版本升至 4.01.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 13 条，本段为 E 包手机侧第二项（R3-O8）的交付记录。"
     ]
 };
 
@@ -3876,9 +3885,37 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   · **不执行任意用户脚本**：动作白名单只有三个（plan / publish / refresh）。
      */
     const CW_PUBLISHED_KEY = 'cw_published';
-    /* 本模块对外只认这三个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
-     *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。 */
-    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh'];
+    /* [v4.01.0 · R3-O8] 草稿本落盘键。与 cw_published 分开：一个是「要发的稿」，
+     *   一个是「已发过的回执」，两份台账不混。 */
+    const CW_DRAFTS_KEY = 'cw_drafts';
+    /* 本模块对外只认这七个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
+     *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。
+     *   [v4.01.0] 新增四个都只动草稿本：compose（多目标编排）/ edit（改这一份的文案）/ 
+     *   redo（只重做所选段）/ drop（丢掉这一份）。 */
+    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop'];
+    /** 读草稿本原始值：**读不出来返回 null**（不是空数组——两者处置相反）。 */
+    function cwReadDraftsRaw() {
+        try {
+            if (!storage || typeof storage.get !== 'function') return null;
+            const raw = storage.get(CW_DRAFTS_KEY, '[]');
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (_e) { return null; }
+    }
+    /** 写草稿本：**写后回读核对行数**，读不回不算写成功。 */
+    function cwWriteDrafts(rows) {
+        const norm = normalizeDraftBook(rows);
+        try { storage.set(CW_DRAFTS_KEY, JSON.stringify(norm.drafts)); } catch (_e) { return { ok: false, reason: 'write-failed', drafts: norm.drafts }; }
+        const back = normalizeDraftBook(cwReadDraftsRaw());
+        const same = back.readable && back.drafts.length === norm.drafts.length;
+        return { ok: same, reason: same ? 'ok' : 'readback-mismatch', drafts: back.drafts };
+    }
+    /** 引用键拆源与素材 id（与内核同口径）。 */
+    function cwSplitRef(ref) {
+        const s2 = String(ref || '');
+        const i = s2.indexOf(':');
+        if (i <= 0 || i === s2.length - 1) return null;
+        return { source: s2.slice(0, i), materialId: s2.slice(i + 1) };
+    }
 
     /** 读已发布台账：读不出来返回 null（**不是空数组**）。 */
     function cwReadPublished() {
@@ -3996,6 +4033,25 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 vp._creationWorkbench = null;
             }
             vp._creationWorkbenchScope = scope;
+            /* 草稿本：读不出与空分开（normalizeDraftBook 给 readable）。
+             *   与发布台账一样，认不出的行**如实计数**，不静默丢。 */
+            const draftsNorm = normalizeDraftBook(cwReadDraftsRaw());
+            const drafts = {
+                readable: draftsNorm.readable,
+                reason: draftsNorm.reason,
+                items: draftsNorm.drafts.map(function (d) {
+                    const it = cwFindMaterial(materials.items, cwMaterialRef(d.source, d.materialId));
+                    const pv = previewOf(d, it || {});
+                    return {
+                        key: d.key, target: d.target, source: d.source, materialId: d.materialId,
+                        note: d.note, tags: d.tags, version: d.version, state: d.state,
+                        preview: pv.title, previewBody: pv.body, readyToPublish: pv.readyToPublish,
+                        materialFound: !!it,
+                    };
+                }),
+                dropped: draftsNorm.dropped,
+                limit: CMD_LIMITS.drafts,
+            };
             const cached = {
                 at: Date.now(), token: handoffEpoch(),
                 scope: scope,
@@ -4003,9 +4059,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 materials: materials,
                 targets: targets,
                 published: published,
+                drafts: drafts,
+                draftsText: drafts.readable
+                    ? ('草稿 ' + String(drafts.items.length) + ' 份（认不出 ' + String(drafts.dropped) + ' 份）')
+                    : '草稿本**读不到**（不是「没草稿」—— 这两件事处置相反）',
                 selfCheck: cwSelfCheck(''),
                 actions: CW_ACTION_KEYS.slice(),
                 steps: CW_STEPS.map(s => Object.assign({}, s, { line: cwStepLine(s) })),
+                multiSelfCheck: cmdSelfCheckOf(),
                 levels: CW_LEVELS,
                 kinds: CW_KIND_KEYS.slice(),
                 plan: null,
@@ -4038,6 +4099,74 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const item = cwFindMaterial(materials.items, p.ref || '');
             const target = String(p.target || '');
             if (action === 'refresh') { refreshCreationdesk(); return { ok: true, note: '已刷新读数', kind: 'read' }; }
+            /* ══════ [v4.01.0 · R3-O8] 四个只动草稿本的动作 ══════
+             *   · 一律**不发布**：这四支里没有任何 owner 调用；
+             *   · 落盘一律走 cwWriteDrafts（写后回读核对行数，读不回不算成功）；
+             *   · 白名单动作在 refresh / plan / publish 之前分流，别无谓地搅动发布链。 */
+            if (action === 'compose' || action === 'edit' || action === 'redo' || action === 'drop') {
+                const bookRaw = cwReadDraftsRaw();
+                const bookNorm = normalizeDraftBook(bookRaw);
+                const ref = cwSplitRef(p.ref || '');
+                const refTargets = Array.isArray(p.targets) ? p.targets : (target ? [target] : []);
+                if (action === 'compose' || action === 'redo') {
+                    if (!ref) return { ok: false, note: '素材引用不合法（应是 source:sourceId）：' + String(p.ref || ''), kind: 'bad-ref' };
+                    if (!refTargets.length) return { ok: false, note: '还没选目标（至少一个）', kind: 'no-target' };
+                    if (action === 'compose') {
+                        const c = composeDrafts(ref.source, ref.materialId, refTargets, { note: String(p.note || ''), tags: p.tags, at: Date.now() });
+                        if (!c.ok) {
+                            return {
+                                ok: false, kind: 'blocked',
+                                note: (c.drafts.length ? '' : '没有可编排的目标') + (c.rejected.length ? ('；被拒：' + c.rejected.map(x => x.target + '(' + x.reason + ')').join(' / ')) : ''),
+                                rejected: c.rejected,
+                            };
+                        }
+                        let book = bookNorm.drafts;
+                        for (const d of c.drafts) book = upsertDraft(book, d).drafts;
+                        const w = cwWriteDrafts(book);
+                        refreshCreationdesk();
+                        return w.ok
+                            ? { ok: true, kind: 'composed', note: '已编排 ' + String(c.drafts.length) + ' 份草稿（其余目标各自成稿，编辑互不覆盖）' + (c.rejected.length ? ('；被拒 ' + String(c.rejected.length) + ' 个') : ''), rejected: c.rejected, count: c.drafts.length }
+                            : { ok: false, kind: w.reason, note: '草稿落盘失败（不得当作已保留）' };
+                    }
+                    const rc = recomposeTargets(bookNorm.drafts, refTargets, ref.source, ref.materialId, { note: String(p.note || ''), at: Date.now() });
+                    const w = cwWriteDrafts(rc.drafts);
+                    refreshCreationdesk();
+                    return w.ok
+                        ? { ok: true, kind: 'redone', note: '只重做 ' + String(rc.redone.length) + ' 份，其余 ' + String(rc.kept) + ' 份原样保留（文字也留着）', redone: rc.redone.length, kept: rc.kept }
+                        : { ok: false, kind: w.reason, note: '草稿落盘失败（不得当作已保留）' };
+                }
+                /* edit / drop 都按**草稿键**定位那一份。 */
+                const key = String(p.key || '').trim();
+                if (!key) return { ok: false, note: '要先选一份草稿（缺 key）', kind: 'no-key' };
+                const cur = bookNorm.drafts.filter(function (d) { return d.key === key; })[0];
+                if (!cur) return { ok: false, note: '草稿本里没有这一份：' + key, kind: 'no-such-draft' };
+                if (action === 'drop') {
+                    const w = cwWriteDrafts(bookNorm.drafts.filter(function (d) { return d.key !== key; }));
+                    refreshCreationdesk();
+                    return w.ok ? { ok: true, kind: 'dropped', note: '已丢掉这一份（其余不动）' } : { ok: false, kind: w.reason, note: '草稿落盘失败' };
+                }
+                /* edit：改这一份的文案。若同时给了新的素材引用，则走「替图不丢文字」。 */
+                let next = Object.assign({}, cur, {
+                    note: (p.note === undefined ? cur.note : String(p.note || '')),
+                    tags: (Array.isArray(p.tags) ? p.tags : cur.tags),
+                    state: 'editing',
+                    at: Date.now(),
+                });
+                let previousKey = '';
+                if (ref && (ref.source !== cur.source || ref.materialId !== cur.materialId)) {
+                    const r = replaceMaterialKeepText(cur, ref.source, ref.materialId);
+                    if (!r.ok) return { ok: false, note: '替图失败：' + r.reason, kind: 'replace-failed' };
+                    next = Object.assign({}, r.draft, { note: next.note, tags: next.tags, state: 'editing' });
+                    previousKey = r.previousKey;
+                }
+                const w = previousKey ? replaceDraftInBook(bookNorm.drafts, previousKey, next) : upsertDraft(bookNorm.drafts, next);
+                const ww = cwWriteDrafts(w.drafts);
+                refreshCreationdesk();
+                if (!ww.ok) return { ok: false, kind: ww.reason, note: '草稿落盘失败（不得当作已保存）' };
+                const dOld = previousKey ? bookNorm.drafts.filter(function (d) { return d.key === previousKey; })[0] : cur;
+                const dl = diffLine(diffDrafts(dOld, next));
+                return { ok: true, kind: 'edited', note: '已保存这一份：' + dl, diff: dl, key: next.key };
+            }
             const plan = cwPlanPublish({ item: item, target: target, opts: { sensitive: p.sensitive === true, note: String(p.note || '') } });
             face.plan = plan;
             if (plan.blocked) return { ok: false, note: cwPlanLine(plan), kind: 'blocked', blockers: plan.blockers.map(b => String(b.note || b.code)) };

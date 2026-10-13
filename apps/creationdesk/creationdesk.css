@@ -37,3 +37,13 @@
 .cwb-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .cwb-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 11px; }
 .cwb-btn-pub { border-color: #a08a6a; color: #6a5330; }
+
+/* ════════ [v4.01.0 · R3-O8] 草稿本与多目标编排 ════════ */
+.cwb-note-area {
+    width: 100%; box-sizing: border-box;
+    font: inherit; font-size: 13px;
+    border: 1px solid rgba(128,128,128,0.4); border-radius: 6px;
+    padding: 6px 8px; margin-top: 6px;
+    background: rgba(0,0,0,0.06); color: inherit;
+    resize: vertical;
+}
