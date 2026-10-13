@@ -255,6 +255,47 @@ export function parseTxtContent(text, fileName, mode = 'auto') {
     return { title: bookTitle, chapters };
 }
 
+// ---- [v3.99.2 · R3-X8] 阅读标记层（纯函数：书签 / 划线 / 摘录，全部带书/章/段引用） ----
+/** FNV-1a 32 位内容指纹（纯本地，识别「同名不同文件」）。 */
+export function contentHashOf(text) {
+    const t = String(text || '');
+    let h = 0x811c9dc5;
+    for (let i = 0; i < t.length; i++) {
+        h ^= t.charCodeAt(i);
+        h = (h * 0x01000193) >>> 0;
+    }
+    return 'h' + h.toString(16) + '_' + t.length;
+}
+/** 摘录条目净化与校验（窄口：缺引用的摘录不收——丢出处等于丢素材）。 */
+export function normalizeExcerpt(entry) {
+    const e = (entry && typeof entry === 'object') ? entry : {};
+    const text = String(e.text || '').trim();
+    const bookId = String(e.bookId || '').trim();
+    const chapter = Number(e.chapter);
+    const para = Number(e.para);
+    if (!text || !bookId) return null;
+    if (!Number.isInteger(chapter) || chapter < 0) return null;
+    if (!Number.isInteger(para) || para < 0) return null;
+    return {
+        id: 'ex_' + (e.id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6))),
+        text: text.slice(0, 2000),
+        bookId, bookTitle: String(e.bookTitle || ''),
+        chapter, para,
+        chapterTitle: String(e.chapterTitle || ''),
+        createdAt: Number(e.createdAt) || Date.now()
+    };
+}
+/** 摘录列表净化 + 上限（超限丢最旧，不静默膨胀存储）。 */
+export function normalizeExcerptList(list, limit = 200) {
+    const arr = Array.isArray(list) ? list : [];
+    const out = [];
+    for (const it of arr) {
+        const n = normalizeExcerpt(it);
+        if (n) out.push(n);
+    }
+    out.sort((a, b) => b.createdAt - a.createdAt);
+    return out.slice(0, limit);
+}
 // ---- 书架存取 ----
 export class ReadingData {
     constructor(storage) {
@@ -274,8 +315,17 @@ export class ReadingData {
             this.storage?.set?.(this.KEY, JSON.stringify(this.shelf));
         } catch (e) { /* 忽略 */ }
     }
+    /* [v3.99.2 · R3-X8] 按内容指纹找既有条目：同名同指纹 ⇒ 重接（丢附件后重新导入回到原书、
+     *   进度与标记不丢）；同名不同指纹 ⇒ 返回 null（由调用方决定并存，不静默覆盖）。 */
+    findReusable(fileName, contentHash) {
+        if (!fileName || !contentHash) return null;
+        for (const b of this.shelf) {
+            if (b.fileName === fileName && b.contentHash === contentHash) return b;
+        }
+        return null;
+    }
     // 导入一本书到书架
-    addBook(parsed, fileName, encoding, mode = 'auto') {
+    addBook(parsed, fileName, encoding, mode = 'auto', extra = {}) {
         const book = {
             id: 'rd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
             title: parsed.title,
@@ -288,18 +338,30 @@ export class ReadingData {
             chapterCount: parsed.chapters.length,
             // 章节内容存文件路径引用（惰性加载），书架列表不存正文，避免 chatMetadata 膨胀
             // 正文经 objectURL 或 dataURL 存于本 App 内存; 重启后需重新导入
+            // [v3.99.2 · R3-X8] contentHash：同名不同文件（指纹不同）不再静默覆盖，两本并存。
+            contentHash: extra.contentHash || '',
             hasContent: true
         };
-        // 同名覆盖：已存在同样文件名的书直接替换
+        // 同名且同指纹：替换（同一文件重新导入，回到原书进度与标记）。
+        // 同名但指纹不同：**不删旧条目**（同名不同文件并存，由返回值 coexist 告知调用方）。
         let replaced = false;
+        let coexist = false;
+        let reuseId = null;
         this.shelf = this.shelf.filter(b => {
-            if (b.fileName === book.fileName) { replaced = true; return false; }
+            if (b.fileName === book.fileName) {
+                if (b.contentHash === book.contentHash) { replaced = true; reuseId = b.id; return false; }
+                coexist = true; return true;
+            }
             return true;
         });
+        /* 同指纹替换必须**继承旧 id**：进度键（ruby_reading_progress_<id>）与摘录引用
+         *   （bookId）都指着旧 id，换新 id 等于把读者已积累的读数断链——重接的意思就是回到原书。 */
+        if (reuseId) book.id = reuseId;
         this.shelf.unshift(book);
         this._save();
-        return { bookId: book.id, chapters: parsed.chapters, title: parsed.title, author: parsed.author || '', format: parsed.format || 'txt', replaced };
+        return { bookId: book.id, chapters: parsed.chapters, title: parsed.title, author: parsed.author || '', format: parsed.format || 'txt', replaced, coexist, reusedId: reuseId };
     }
+
     removeBook(id) {
         this.shelf = this.shelf.filter(b => b.id !== id);
         this._save();

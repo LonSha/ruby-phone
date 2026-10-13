@@ -80,6 +80,10 @@ export class ReadingView {
         .rd-paste { display:none; }
         .rd-import-wrap { margin-bottom:12px; }
         .rd-import-wrap label.rd-paste-label { display:block; text-align:center; padding:10px; border:1px dashed ${tc.border}; border-radius:8px; font-size:12px; color:${tc.sub}; cursor:pointer; margin-top:8px; }
+        .rd-excerpt { background:${tc.card}; border:1px solid ${tc.border}; border-radius:8px; padding:8px 12px; margin-bottom:8px; }
+        .rd-excerpt-text { font-size:13px; color:${tc.text}; line-height:1.6; }
+        .rd-excerpt-ref { font-size:11px; color:${tc.sub}; margin-top:4px; }
+        .rd-excerpt-empty { font-size:12px; color:${tc.sub}; padding:12px 4px; }
         .rd-progress { height:3px; background:${tc.bar}; }
         .rd-progress > div { height:100%; background:${tc.soft}; width:0; transition:width .2s; }
         </style>
@@ -136,6 +140,12 @@ export class ReadingView {
                 <p>书架上还没有书</p>
                 <p>导入 TXT 或 EPUB，开始阅读</p>
             </div>`;
+        const excerpts = this.app.getExcerpts ? this.app.getExcerpts() : [];
+        const excerptHtml = excerpts.length ? excerpts.slice(0, 30).map(ex => `
+            <div class="rd-excerpt">
+                <div class="rd-excerpt-text">${esc(ex.text.slice(0, 120))}${ex.text.length > 120 ? '…' : ''}</div>
+                <div class="rd-excerpt-ref">《${esc(ex.bookTitle || ex.bookId)}》${esc(ex.chapterTitle || ('第' + (ex.chapter + 1) + '章'))} · 第${ex.para + 1}段</div>
+            </div>`).join('') : '<div class="rd-excerpt-empty">还没有摘录。阅读时点击任意段落即可摘录（自动带书/章/段引用）。</div>';
         return `
         <div class="rd-root">
             <div class="rd-shelf">
@@ -148,6 +158,11 @@ export class ReadingView {
                     <label class="rd-paste-label" id="rd-paste-label">📂 选择 .txt 或 .epub 文件（自动识别编码）</label>
                 </div>
                 ${list}
+                <div class="rd-shelf-head" style="margin-top:18px">
+                    <h2>✂️ 摘录</h2>
+                    <span style="font-size:11px;color:${tc.sub}">${excerpts.length} 条</span>
+                </div>
+                ${excerptHtml}
             </div>
         </div>`;
     }
@@ -156,7 +171,7 @@ export class ReadingView {
         const book = this.currentBook;
         const ch = book.chapters[this.curChapter] || { title: '', paragraphs: [] };
         const paras = ch.paragraphs || [];
-        const content = paras.length ? paras.map(p => `<p>${esc(p)}</p>`).join('') : '<p style="text-indent:0;color:#9a8b76">（本章暂无内容）</p>';
+        const content = paras.length ? paras.map((p, i) => `<p data-para="${i}">${esc(p)}</p>`).join('') : '<p style="text-indent:0;color:#9a8b76">（本章暂无内容）</p>';
         const chapterOptions = book.chapters.map((c, i) =>
             `<option value="${i}" ${i === this.curChapter ? 'selected' : ''}>${esc(c.title || ('第' + (i + 1) + '章'))}</option>`).join('');
         const authorLine = book.author ? ` · ${esc(book.author)}` : '';
@@ -204,6 +219,27 @@ export class ReadingView {
                 this.theme = order[(at < 0 ? 0 : at + 1) % order.length];
                 this._saveProgress();
                 this.render();
+            });
+            /* [v3.99.2 · R3-X8] 点击段落 ⇒ 摘录（带书/章/段引用，入会话键，随书隔离）。 */
+            root.querySelectorAll('.rd-content p[data-para]').forEach(p => {
+                p.style.cursor = 'pointer';
+                p.title = '点击摘录这段';
+                p.addEventListener('click', () => {
+                    const book = this.currentBook;
+                    if (!book) return;
+                    const r = this.app.addExcerpt({
+                        text: (book.chapters[this.curChapter]?.paragraphs || [])[Number(p.dataset.para)] || '',
+                        bookId: book.id, bookTitle: book.title,
+                        chapter: this.curChapter, para: Number(p.dataset.para),
+                        chapterTitle: book.chapters[this.curChapter]?.title || ''
+                    });
+                    if (r && r.ok) {
+                        p.style.background = 'rgba(180,150,90,.18)';
+                        this.app.phoneShell?.showNotification?.('阅读', '已摘录（' + r.count + ' 条）', '✂️');
+                    } else {
+                        this.app.phoneShell?.showNotification?.('阅读', (r && r.error) || '摘录失败', '⚠️');
+                    }
+                });
             });
         } else {
             q('#rd-file')?.addEventListener('change', e => {

@@ -343,6 +343,7 @@ export class PhoneStorage {
             /^ruby_reading_shelf$/,            // 阅读书架
             /^ruby_reading_books$/,            // 阅读书架（历史键名，与 shelf 同义，读侧回落兼容）
             /^ruby_reading_progress_/,         // 阅读进度（前缀型：reading-view 按 bookId 拼接）
+            /^ruby_reading_excerpts$/,          // [v3.99.2 · R3-X8] 阅读摘录（带书/章/段引用，随会话隔离）
             /^ruby_phone_lyrics_settings$/,    // 歌词/氛围设置（music-ambience）
             // [v2.8.10 审计修复] 游戏存档迁移漏项：catbox/werewolf 已迁到 chat_games_*，
             // 以下牌局/棋盘状态仍留在 games_*。此处精确枚举，

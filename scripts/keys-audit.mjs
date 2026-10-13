@@ -425,6 +425,7 @@ const KEY_REGISTRY = [
   { key: 'ruby_reading_shelf', scope: 'chat', note: '阅读书架' },
   { key: 'ruby_reading_books', scope: 'chat', note: '阅读书架（历史键名，读侧回落）' },
   { key: 'ruby_reading_progress_*', scope: 'chat', note: '阅读进度（前缀型，按 bookId 拼接）' },
+  { key: 'ruby_reading_excerpts', scope: 'chat', note: 'v3.99.2 · R3-X8 阅读摘录（带书/章/段引用）' },
   { key: 'ruby_phone_lyrics_settings', scope: 'chat', note: '歌词/氛围设置' },
   { key: 'cheat_state_v1', scope: 'chat', note: '金手指装配清单' },
   { key: 'dt_state_v1', scope: 'chat', note: '撩语装配清单' },

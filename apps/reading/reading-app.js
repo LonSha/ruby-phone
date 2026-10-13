@@ -3,7 +3,7 @@
  * 纯本地 TXT 阅读器；导入/解析/章节/进度全在本机
  * ======================================================== */
 'use strict';
-import { ReadingData, decodeTxtArrayBuffer, parseTxtContent } from './reading-data.js';
+import { ReadingData, decodeTxtArrayBuffer, parseTxtContent, contentHashOf, normalizeExcerpt, normalizeExcerptList } from './reading-data.js';
 import { ReadingView } from './reading-view.js';
 
 export class ReadingApp {
@@ -14,13 +14,34 @@ export class ReadingApp {
         this.view = new ReadingView(this);
         // 内存中的书籍正文缓存: id -> { chapters }
         this._contentCache = new Map();
+        this.EXCERPT_KEY = 'ruby_reading_excerpts';
+        this._loadExcerpts();
     }
 
     onChatChanged() {
         // [v2.23.0] 换会话重绑：重建数据层从新会话键重新载入。
         //   保留实例与构造期注册的常驻监听器，避免重建实例导致监听器累积。
         this.data = new ReadingData(this.storage);
+        this._loadExcerpts();
     }
+    /* [v3.99.2 · R3-X8] 摘录存取（会话隔离键，列表净化走纯函数窄口）。 */
+    _loadExcerpts() {
+        try {
+            const raw = this.storage?.get?.(this.EXCERPT_KEY);
+            this.excerpts = normalizeExcerptList(typeof raw === 'string' ? JSON.parse(raw) : raw);
+        } catch (e) { this.excerpts = []; }
+    }
+    _saveExcerpts() {
+        try { this.storage?.set?.(this.EXCERPT_KEY, JSON.stringify(this.excerpts)); } catch (e) { /* 忽略 */ }
+    }
+    addExcerpt(entry) {
+        const n = normalizeExcerpt(entry);
+        if (!n) return { error: 'excerpt-invalid（缺正文或书/章/段引用不完整，不收）' };
+        this.excerpts = normalizeExcerptList([n].concat(this.excerpts));
+        this._saveExcerpts();
+        return { ok: true, id: n.id, count: this.excerpts.length };
+    }
+    getExcerpts() { return this.excerpts.slice(); }
 
     render() {
         if (!this.phoneShell?.screen) return;
@@ -54,11 +75,23 @@ export class ReadingApp {
                     format: 'txt',
                     chapters: parsed.chapters
                 };
-                const result = this.data.addBook(book, file.name, encoding, 'auto');
+                // [v3.99.2 · R3-X8] 指纹重接：同一文件重新导入 ⇒ 回到原书（进度与摘录标记不丢）；
+                //   同名不同文件 ⇒ 两本并存（不静默覆盖旧书）。
+                const hash = contentHashOf(text);
+                const reusable = this.data.findReusable(file.name, hash);
+                const bookIdToUse = reusable ? reusable.id : null;
+                const result = this.data.addBook(book, file.name, encoding, 'auto', { contentHash: hash });
+                const finalId = bookIdToUse || result.bookId;
                 // 缓存章节正文（供本次会话阅读；书架列表不存正文避免 chatMetadata 膨胀）
-                this._contentCache.set(result.bookId, result.chapters);
+                this._contentCache.set(finalId, result.chapters);
+                if (result.coexist) {
+                    this.phoneShell?.showNotification?.('阅读', '书架上已有同名书（内容不同），两本并存', '📚');
+                }
+                if (bookIdToUse && result.coexist === false && result.replaced) {
+                    this.phoneShell?.showNotification?.('阅读', '《' + result.title + '》重新导入，已回到原书进度与标记', '📖');
+                }
                 this.view.currentBook = {
-                    id: result.bookId,
+                    id: finalId,
                     title: result.title,
                     author: '',
                     format: 'txt',
@@ -93,10 +126,17 @@ export class ReadingApp {
                     format: 'epub',
                     chapters: parsed.chapters
                 };
-                const result = this.data.addBook(book, file.name, 'utf-8', 'auto');
-                this._contentCache.set(result.bookId, result.chapters);
+                const hash = contentHashOf(parsed.chapters.map(c => (c.paragraphs || []).join('|')).join('#'));
+                const reusable = this.data.findReusable(file.name, hash);
+                const bookIdToUse = reusable ? reusable.id : null;
+                const result = this.data.addBook(book, file.name, 'utf-8', 'auto', { contentHash: hash });
+                const finalId = bookIdToUse || result.bookId;
+                this._contentCache.set(finalId, result.chapters);
+                if (result.coexist) {
+                    this.phoneShell?.showNotification?.('阅读', '书架上已有同名书（内容不同），两本并存', '📚');
+                }
                 this.view.currentBook = {
-                    id: result.bookId,
+                    id: finalId,
                     title: result.title,
                     author: result.author,
                     format: 'epub',
