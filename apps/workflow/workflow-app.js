@@ -13,12 +13,16 @@
 'use strict';
 import { WF_FLOWS, WF_STATES, wfStateText, wfSummaryLine, wfLevelLine, workflowSelfCheck } from '../../config/workflow.js';
 import { WorkflowView } from './workflow-view.js';
+import { WorkflowDesign } from './workflow-design.js';
 
 export class WorkflowApp {
     constructor(shell, storage) {
         this.shell = shell || null;
         this.storage = storage || null;
         this._view = null;
+        /* [v4.04.0 . R3-X7] sheji duan: caogao shi **shili tai**(huan huihua ji diu),
+         *   luopan yilu zhuan yanhou(wei yi xie rukou). */
+        this._design = new WorkflowDesign(this);
         this._flash = '';
         this._flashBad = false;
         this._openId = '';
@@ -80,7 +84,8 @@ export class WorkflowApp {
             run: host ? host.run : null,
             runLine: wfSummaryLine(host?.run),
             selfCheck: { problems: self.problems || [], flows: self.flows, owners: self.owners },
-            flash: this._flash, flashBad: this._flashBad
+            flash: this._flash, flashBad: this._flashBad,
+            design: (this._design ? this._design.vm() : null)
         };
     }
     /** 九态互不同形：把每一态的名字与处置都摆出来（不合并、不省略）。 */
@@ -97,8 +102,10 @@ export class WorkflowApp {
         this._openId = '';
         this._flash = '';
         this._flashBad = false;
+        /* caogao sui huihua huan diao: ta bu shi quanju de, shi zhe yi duan li pai de dongxi. */
+        this._design = new WorkflowDesign(this);
         this.render();
     }
-    destroy() { this._view = null; }
+    destroy() { this._view = null; this._design = null; }
 }
 

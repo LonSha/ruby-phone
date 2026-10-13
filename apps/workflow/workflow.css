@@ -34,3 +34,19 @@
 .wfl-row { display: flex; gap: 8px; font-size: 11px; padding: 3px 0; border-bottom: 1px dashed #eee8de; }
 .wfl-row-k { flex: 0 0 84px; color: #33586a; }
 .wfl-row-v { flex: 1 1 auto; color: #6a645c; }
+/* [v4.04.0 . R3-X7] 可视化个人流程编排(设计段)样式 */
+.wfl-design { margin-top: 8px; }
+.wfl-draft { border: 1px solid #e8e2d8; border-radius: 6px; padding: 6px; margin-top: 6px; }
+.wfl-draft-head { display: flex; align-items: center; gap: 8px; }
+.wfl-cond, .wfl-params, .wfl-repeat { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; color: #6a645c; margin-top: 3px; }
+.wfl-pkey { font-size: 10px; color: #33586a; }
+.wfl-input { border: 1px solid #e0dad0; border-radius: 6px; padding: 2px 5px; font-size: 11px; background: #fff; }
+.wfl-input-sel { max-width: 140px; }
+.wfl-input-num { width: 44px; }
+.wfl-input-name { flex: 1 1 auto; min-width: 80px; }
+.wfl-btn-mini { padding: 1px 6px; border-radius: 7px; font-size: 10px; }
+.wfl-btn-mini[disabled] { opacity: .4; }
+.wfl-save { display: flex; gap: 6px; margin-top: 6px; }
+.wfl-saved, .wfl-designs { margin-top: 6px; }
+.wfl-saved-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 10px; padding: 3px 0; border-bottom: 1px dashed #eee8de; }
+.wfl-saved-row .wfl-row-k { flex: 1 1 120px; font-size: 10px; }

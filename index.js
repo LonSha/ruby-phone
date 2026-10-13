@@ -153,6 +153,16 @@ import {
     workflowSelfCheck, wfSameScope,
 } from './config/workflow.js';
 import { createWorkflowRunner } from './config/workflow-runtime.js';
+/* [v4.04.0 · 第三期 E 包手机侧第五项 R3-X7] 可视化个人流程编排(纯函数设计面)。
+ *   与 R-X5 的分工:这一层只做「用户排出来的东西长什么样」——归一 / 合成 / 读数;
+ *   **能不能跑仍由 workflow.js 判**,本处不重判(重判就是第二份口径)。
+ *   用户能挑的动作只有 WD_ACTIONS 五条,挑不出第六件事,也就写不出第六件事。
+ *   拖排 / 条件 / 参数那四个改动函数由 app 与视图直接用(它们是「排」,不是「跑」)。 */
+import {
+    WD_ACTIONS, WD_ACTION_KEYS, WD_LIMITS, WD_ID_PREFIX, WD_REASONS, WD_DEFAULT_NAME,
+    normalizeTemplate, normalizeTemplates, composeFlow, templateReadings, templateLine,
+    designerSelfCheck,
+} from './config/workflow-designer.js';
 /* [v3.90.0 · 拓展计划 R-X6] 素材到发布的完整创作工作台（纯函数协议层）。
  *   本模块修的是**上一版的真实缺口的续集**：v3.70.0 的 creation-pipeline 把「八来源 / 六目标 /
  *   草稿 / 幂等账本」都建好了，但产品端只消费了其中一个导出（normalizeCreationLedger），
@@ -254,7 +264,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.03.0';
+const ST_PHONE_VERSION = '4.04.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -454,19 +464,22 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-20",
     items: [
-        "【定位 · 计划原文 R3-X6 的真实缺口(修前实测,不是推演)】计划要的是「旅行可参与:人员、地点顺序、分工、准备清单、共同费用;实际完成后才生成支出与回忆,行程建议始终只是建议」,四条验收为一次三人旅行可安排改期分工结算、同一费用不会两次扣账、预计花费与实际金额分列、拒绝邀请者不被算作参加。修前实测:apps/traveldesk 三层只有「钱怎么算」这一面(traveldesk-data.js 是分账清算内核:汇率折算、三型费用、余额、家庭归并、内外部结算),没有任何一层记录谁参加,没有地点顺序与分工与准备清单,共同费用只有已发生一种形态,结算直接读账本,没有「实际完成后才生成支出」这道闸。",
-        "【新内核 · apps/traveldesk/traveldesk-plan.js(纯函数,只 import config/num-gate.js 一处)】五件事:1 归一 normalizeParty 把成员(邀请三态)与地点与分工与清单与费用各走窄口,认不出的一律保守处置(成员态认不出落 invited 即没答复不算参加,费用态认不出落 estimated 即估的绝不进账本),拒绝进 rejected 带 kind 与 index 与 why,上限最早先出并记 dropped;2 参加者判定 participantsOf 只有 accepted 算参加;3 读数 partyReadings 把预计与实到分列;4 生成支出 commitCosts 只有 actual 才转账本行;5 建议 partyAdvice 只产文本零副作用。另 proposedPeople 现有账本里已有人头一律保留不擅自删人,婉拒者不进名单。",
-        "【拒绝邀请者不被算作参加:三态名单各归各】TVP_MEMBER_STATES 为 invited 与 accepted 与 declined 三态。participantsOf 只认 accepted;declinedOf 与 pendingOf 各报名单;invited 是没答复,既不算参加也不算婉拒。分摊与生成支出都只取 participantsOf,「婉拒的人不出现在分摊里」由内核判定保证,不靠调用方自觉。",
-        "【预计花费与实际金额分列:绝不合并成一个数】partyReadings 返回 estimatedTotal 与 actualTotal 两个字段,任何情况下不合并、不取大、不互相顶替;另报 committedCount(已进账本的真实行数,按 expenses 反查)与 pendingCommit(标了实际但尚未落账的行数)。四类读数另含成员与参加与婉拒与待答、地点、分工与已完成、清单与已勾选、费用条数。",
-        "【实际完成后才生成支出:幂等,同一费用不会两次扣账】commitCosts 只把 state 为 actual 的费用转成账本支出行,生成行 id 固定为 tv_pc_ 加费用 id(账本里已有即 skipped,二次点得到 skipped 而不是第二笔钱);settled 与 estimated 一律不生成,估算绝不冒充已发生。payer 不在这趟人头里的一律拒,理由 payer-not-in-people,绝不静默换人代付。",
-        "【app 层接线:新键 tv_party 与单一动作族 partyAct】新键与 tv_book 分开存(账本是钱怎么算,行程板是人怎么去,混一格会让改期顺手改到钱)。_readPartyRaw 把读不出与空对象分开;partyAct 统一转咽喉,动作族含 intake 与 clear-board 与 people 与 member 与 add-stop 与 add-task 与 add-check 与 add-cost 与 toggle-task 与 toggle-check 与 set-cost-state 与 commit-costs,其中唯一会碰账本的是 commit-costs;commitPartyCosts 落盘后回读核对行数,读不回返 readback-mismatch 不当成功。构造与取数口与换会话三处各自重置实例态。",
-        "【视图与 CSS:估算行与实际行必须不同色】视图段插在结算与结算提交之间,含成员行(参加与婉拒按钮)、地点路线串、分工与清单打勾行、共同费用行(估算与实际各带标实际与改回估算按钮)、把人加进账本人头、生成实际费用的支出、建议文本行与拒绝条数提示。八组绑定全部派给 app 的 partyAct,回报写提示后重渲染;视图不自己算读数(判据钉住视图不得出现内核三个读数入口)。CSS 追加成员行与两种费用行与标签与建议与迷你按钮,估算行与实际行分色,同色即等于在界面上承认估的已经花了。",
-        "【本版自己抓到的缺陷形态(合并前已修)】1 app 补丁首轮锚点把 import 行与两条键常量用换行连成一体,而真源码三条之间有空行,空行是锚点杀手,拆成分步锚点才过;2 视图补丁锚点用了半角圆括号而真源码是全角圆括号,逐字符比对才认出来,锚点必须整字符级比对;3 测试判据里写单引号拼接落进转义地狱,node --check 报 Invalid or unexpected token,改为用字符码拼装清掉全部反斜杠转义;4 负控制把破坏副本写到系统临时目录,而内核按相对路径 import 取数口,放临时目录直接模块找不到(那是环境错不是判据错),改写到内核同目录并在测后删除;5 首跑两红:C2 断言写账本处数等于 3 而真源码是 4(入账与清空与人头增补与生成支出四处),负控制残留文件,两处均为判据口径错而非源码错。",
-        "【交棒:本版判据从一开始即为下限形,不留二次改写】E1 版本锚写成入口版本不低于 4.02.0 的下限形(条目不可减、新增可加),照 v3.98 到 v3.99 的先例办理;v4010 当年锁七动作字面量与 v4020 扩八动作那次仪式性红不再重演,本次抬版无需二次交棒。C2 的写账本处数由本版钉为 4(不是硬锁 1 也不是任意),后续改动由此可判。",
-        "【定向判据与静态门】tests/system-v4030.test.mjs 23 例全绿:A 结构 4(五组上限 / 三态与三费用态常量 / 六个出口 / 内核自检零问题);B 行为 10(成员态认不出落 invited / 费用态认不出落 estimated / 只有 accepted 算参加且婉拒进名单 / 预计与实到分列且不合并 / 只有 actual 才生成且二次生成 skipped / payer 不在人头必拒 / 建议零副作用不写任何东西 / 读不出与空分开 / 上限最早先出 / proposedPeople 保留既有人头且婉拒不进名单);C 接线 7(键与动作族与回读 / 取数口 / 唯一写账本处 / commitPartyCosts 回读核对 / app 实例态三处重置 / 视图段与八组绑定 / 视图不自己算读数);D 负控制 1(真源码定点破坏只有 actual 才生成,对应判据必转红);E 版本锚 1。含 v4030 的七个历史套件全 rc=0(v3990 十七 / v3991 一 / v3992 十四 / v4000 十六 / v4010 十七 / v4020 二十一 / v4030 二十三),十四道静态门全 rc=0(keys-audit 为新键 tv_party 照先例登记,会话隔离 254 到 255)。",
-        "【运行时验证边界(如实声明)】本版在无头环境验证的是内核纯函数行为(三态名单、预计与实到分列、只有实际才生成且幂等)、咽喉动作族分流、行程板读写回读、视图拼装与 CSS 分色;未做真实浏览器或真机的行程板触摸端到端(真实三人旅行安排改期分工结算、真实婉拒不出现在分摊、真实估算不落账需真机验证),不宣称流畅。记录条目落在本地账本与虚拟社媒,不是外网发布。",
-        "【本版边界(刻意不做)】不重算汇率与分账(traveldesk-data.js 仍是唯一清算真源,本模块只决定谁参加与哪些费用算已发生);不代发任何平台;不新建入口 App(行程板长在既有旅行记账台里);不引入外部数据库;行程建议只出文本,绝不代替用户动作。",
-        "【版本升至 4.03.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;迭代段共 13 条,本段为 E 包手机侧第四项(R3-X6)的交付记录。"
+        "【定位 · 计划原文 R3-X7 的真实缺口(修前实测,不是推演)】计划原文要的是「在现有白名单动作上提供拖排与条件分支与参数绑定,保存个人模板;首批动作限摘要与保存草稿与提醒与日历与确认结算,绝不执行任意 JS;用户不改代码能配置活动结束到生成回顾草稿到提醒;每步可预览,写动作需确认;循环有上限;失败从可靠检查点继续」。修前实测:config/workflow.js 的 WF_FLOWS 只有 resume-brief 与 settle-to-calendar 两条固定流程,用户改不了顺序也加不了条件,也没有模板台账;工作流三层里没有任何一层能让用户排自己的流程。",
+        "【新内核 · config/workflow-designer.js(纯函数,只 import workflow.js 与 num-gate.js 两处)】五条白名单动作 WD_ACTIONS 的 owner 与输入面与输出面与是否写 由内核钉死,用户挑不出第六件事,也就写不出第六件事。用户能改的只有四件事:顺序 moveStep,条件 setBranch,参数 bindParams,组数 setRepeat。另含归一 normalizeTemplate 与台账三态 normalizeTemplates 与合成 composeFlow 与读数 templateReadings 与行面 templateLine 与自检 designerSelfCheck。",
+        "【条件分支三态:要么跑要么不跑,绝不静默放行】wfBranchMet 只有三态 —— when 为空即无条件,present 成立,absent 成立。条件面在本轮读不出来一律按 absent 算(用户自己设的闸,读不出来就当作闸没成立,不许把闸静默拆掉)。空数组与空串与空对象一律算「没有」,不算有值。",
+        "【条件跳过不是失败:与重放严格区分】applyFlowPlan 把条件不成立的步标 skipped 并带 skipReason 为 branch-not-met 与 branch 读数,与幂等命中的 replayed 严格分开:压平会让用户以为「我设的闸生效过」而它只是这次没成立。bad 判定豁免 branch-not-met(设计生效不是出错),但被回滚掉的步与被 owner 拒绘的步仍算 bad。",
+        "【上游跳过传染下游:不当缺件假报】一步被条件跳过时,它本轮的产出面登记进 skippedFaces,下游读这个面的一并跳过并标 skipped-upstream,不报 input-missing 也不报 input-unreadable 三种原因各归各的处置,压平即错读数。运行器只在循环里推 available 与 skippedFaces,「跳过」写进运行记录那一步由 applyFlowPlan 收口(判定只写一处)。",
+        "【认不出即拒与保守处置:四样各走各的窄口】动作认不出则整步丢(没有安全默认值);条件认不出或条件面缺名则整步丢(只丢闸等于把用户设的写闸拆掉,那更贵);写步带重复则丢重复只留一组(发两次提醒与落两笔账正是重复的害处);参数键未声明则只丢那一个键。四类拒绝都记 rejected 带 kind 与 index 与 why,不静默。",
+        "【越界即拒不夹取:拖排与组数一格不放过】moveStep 对越界与同位置一律拒(同位置不算挪动),对空入参拒;setRepeat 对写步一律拒(写步只许一组),对越界一律拒;上限最早先出并把被挤掉的条数如实报在 dropped 里,不隐藏输入。四个改动函数都是纯函数,不改入参(判据钉住)。",
+        "【合成流程不新开第二套运行器】composeFlow 合成的流程形状与 WF_FLOWS 条目一样,走 wfFlowOf 同一个取数口(内置优先,外部面由咽喉从已归一模板合成后传入);照样过 owner 注册表与写步可写与步骤上限与默认 dry-run 与幂等与跨段,一条都不例外。展开后步骤数超上限即拒,不静默截断。内置两条流程不并入个人面。",
+        "【咽喉唯一设计写入口:默认 dry-run 与读不到即拒与写后回读】新键 wf_templates 与 wf_runs 分开(执行账与设计账,混一格会让重命名一条模板看起来像又跑过一次)。applyWorkflowDesignAction 只认 save 与 rename 与 remove 三个动作;confirm 不为真一律拒;台账读不到即拒,绝不拿空台账覆盖用户的模板;落盘后回读核对行数与目标 id,读不回返 readback-mismatch 不当成功。",
+        "【视图模型:草稿是实例态,换会话必丢】app 层挂设计段与视图模型带 design;换会话与销毁两处各自重建实例(草稿是这一段里排的东西,不是全局的);视图层只渲染与绑事件,本层零存储调用,所有设计动作都转咽喉;设计段只走咽喉两个口(只读口与唯一写入口),零脚本执行。",
+        "【本版自己抓到的缺陷形态(合并前已修)】1 index.js 咽喉补丁的 C 锚点用半角冒号与半角颠号,而真源码是全角,零命中一行不差,逐字符对码才认出来,锚点必须整字符级比对;2 锚点行尾多了一个换行,而真源码那一行下面紧跟代码,锚点必须含行尾换行才算整行;3 同一补丁重跑第二次时前一轮已改过源码,断言命中零次报错,而我在看到报错前已把它回滚重跑,把成功当失败(补丁必须幂等或先回滚再跑);4 测试判据扫内核与视图的依赖词时把注释里的 window 与 storage 也算进去,必须先去注释再扫;5 负控制把破坏副本写到系统临时目录,而内核按相对路径 import,放临时目录直接模块找不到(那是环境错不是判据错),改写到内核同目录并在测后删除;6 首跑三红:A5 与 C8 为注释误伤,B8 为 planFlow 未给输入面(合成流程不享受任何便利,输入面照给)。",
+        "【交棒:本版判据从一开始即为下限形,不留二次改写】E1 版本锚写成入口版本不低于 4.03.0 的下限形(条目不可减、新增可加);C1 到 C12 钉住的是「哪一层做哪件事」而不是行号与字面量,后续改动由此可判,本版抬版无需二次交棒。",
+        "【定向判据与静态门】tests/system-v4040.test.mjs 33 例全绿:A 结构 5(内核自检与十个出口 / 五条动作 owner 已登记且写步可写 / 上限冻结且不超运行器上限 / 十五个归因词 / 零依赖边界只 import 两处且代码里无 window 与 storage 与 eval);B 行为 12(动作认不出则整步丢 / 条件设不全则整步丢且不拆闸 / 写步不许重复且越界不夹取 / 参数只丢那一个键 / 拖排越界与同位置拒且不改入参 / 参数整体替换 / 设条件与取消条件 / 合成走同一套判定 / 合成超上限即拒 / 条件跳过不是失败 / 台账三态 / 读数只描述不动作);C 接线 12(咽喉动作白名单与新键 / 三个设计动作与默认 dry-run / 读不到即拒 / 运行器只多接外部流程面 / 只读口现取 / 内置流程不回退 / app 层三处 / 视图层三处 / 设计段零存储与零脚本 / CSS / 键登记 / 运行器跳过面);D 负控制 3(真源码定点破坏条件面缺则整步丢与写步不许重复与条件读不出按 absent 算,三组对应判据必转红);E 版本锚 1。含 v4040 的八个套件全绿(v3890 二十二与 v3990 十七与 v3991 一与 v3992 十四与 v4000 十六与 v4010 十七与 v4020 二十一与 v4030 二十三与 v4040 三十三,合计一百四十四)。十四道静态门全 rc=0(keys-audit 为新键 wf_templates 照先例登记,会话隔离 255 到 256)。",
+        "【运行时验证边界(如实声明)】本版在无头环境验证的是内核纯函数行为(五条动作归一与三态条件与拖排越界即拒与写步不许重复与合成展开越界即拒)、运行器分支传染(上游跳过下游一并跳过)、咽喉设计动作分流与读写回读;未做真实浏览器或真机的可视化拖排触摸端到端(真实拖动排序与点条件下拉与绑定参数与保存模板与重启后模板仍在,需真机验证),不宣称流畅。模板台账落在本机会话键 wf_templates,不是外网发布;合成的流程仍只能做白名单五件事,不执行任意脚本。",
+        "【本版边界(刻意不做)】不开放任意 JS 与自定义步骤与表达式与循环语法;不做跨会话或跨用户模板分享(模板是本机这一段的设计账);不新建入口 App(编排面长在既有工作流 App 里);不重写运行器的执行路径(设计面只多几条可选流程);不把条件读不出来当成放行,也不把跳过当成失败。",
+        "【版本升至 4.04.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;迭代段共 16 条,本段为 E 包手机侧第五项(R3-X7)的交付记录。"
     ]
 };
 
@@ -3662,7 +3675,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
     /* 本模块对外只认这五个动作（用户脚本无法绕过白名单）。声明在取数口之前 ——
      *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。 */
-    const WF_ACTION_KEYS = ['preview', 'run', 'pause', 'resume', 'rollback'];
+    const WF_ACTION_KEYS = ['preview', 'run', 'pause', 'resume', 'rollback', 'design'];
 
     /* [v3.89.0 · 拓展计划 R-X5] 声明式工作流的**唯一取数口**（与 R-X1..R-X4 四条同族）。
      *   · 「流程声明」是内置的（config/workflow.js 的步骤表）—— 用户改不了，也无需改；
@@ -3689,7 +3702,27 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const runs = wfReadRuns();
             const runsNorm = wfRunsOf(runs);
 
-            /* 输入面：每一项都**现取**，每一项都可能「本机暂时给不出」。 */
+            /* [v4.04.0 · R3-X7] 个人模板:现取 + 归一 + 合成。
+             *   · 读不到(null)与一条都没有([])**分开** —— 读不到时不许写回(否则会把别人的模板清掉);
+             *   · 合成失败的模板**留在读数里并带上问题**,绝不隐藏:用户排的流程没接上,要看得见。 */
+            const tplRaw = wfReadTemplates();
+            const tplNorm = normalizeTemplates(tplRaw);
+            const designFlows = [];
+            const designs = [];
+            for (const t of tplNorm.templates) {
+                const comp = composeFlow(t);
+                const rd = templateReadings(t);
+                designs.push({
+                    id: t.id, name: rd.name, line: templateLine(t),
+                    steps: rd.steps, expanded: rd.expanded, reads: rd.reads, writes: rd.writes,
+                    branches: rd.branches, repeats: rd.repeats, actions: rd.actions,
+                    needsConfirm: rd.needsConfirm, problems: comp.problems.slice(),
+                    composable: !!comp.flow, at: t.at,
+                });
+                if (comp.flow) designFlows.push(comp.flow);
+            }
+
+            /* 输入面:每一项都**现取**,每一项都可能「本机暂时给不出」。 */
             const inputs = {};
             try { inputs['archive-pack'] = storage.get?.('archive_pack') ?? null; } catch (_e1) { inputs['archive-pack'] = null; }
             inputs['resume-face'] = vp._resumeWorkbench || null;
@@ -3711,6 +3744,23 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 });
             }
 
+            /* [v4.04.0 · R3-X7] 合成流程**走同一套 previewFlow** —— 不新开一条判据。
+             *   它们的步骤 owner / 写声明 / 输入面一样逐条过;闸不过的步在这里就已经被标出来。 */
+            for (const df of designFlows) {
+                const pv = previewFlow({ flowId: df.id, scope: { chatId: chatId, branchKey: branchKey }, inputs: inputs, runs: runsNorm.entries, at: null, flows: designFlows });
+                flows.push({
+                    id: df.id, label: df.label, hint: df.hint, composed: true,
+                    steps: pv.steps.map((st) => ({
+                        id: st.id, label: st.label, level: st.level, levelLabel: (WF_LEVELS[st.level] || {}).label || '',
+                        writes: st.writes, owner: st.owner, ownerWhat: st.ownerWhat, out: st.out,
+                        faces: st.faces, problems: st.problems, line: wfStepLine(st),
+                        skipReason: st.skipReason || '',
+                    })),
+                    scopeState: pv.scopeState, willWrite: false,
+                    needsConfirm: pv.needsConfirm, blocked: pv.blocked, problems: pv.problems,
+                });
+            }
+
             const scope = { chatId, branchKey };
             if (vp._workflowRun && (!wfSameScope(vp._workflowRun.scope, scope)
                 || vp._workflowToken !== handoffEpoch())) vp._workflowRun = null;
@@ -3723,6 +3773,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 scope: { chatId: chatId, branchKey: branchKey },
                 scopeState: flows.length ? flows[0].scopeState : 'absent',
                 runs: runsNorm, flows: flows,
+                templates: tplNorm, designs: designs,
+                designActions: Object.freeze(['save', 'rename', 'remove']),
+                /* 运行器按 id 取外部流程只认这一份(不另写一份清单)。 */
+                designFlows: designFlows,
+                designer: designerSelfCheck(),
                 inputs: inputs,
                 selfCheck: workflowSelfCheck(),
                 levels: wfLevelLine(),
@@ -3743,6 +3798,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   · “能不能跑”全由内核判（本处不重判）；本处只做一件事：把意图交给真源。
      * @returns {{ok:boolean, note:string, state:string, kind:string}}
      */
+    /* [v4.04.0 · R3-X7] 个人 **流程模板** 台账键。与 wf_runs **分开**:
+     *   wf_runs 是「跑过哪些运行键」的执行账,本键是「用户排了哪几条流程」的设计账;
+     *   混一格会让「重命名一条模板」看起来像「又跑过一次」,两件事的处置完全相反。 */
+    const WF_TEMPLATES_KEY = 'wf_templates';
     let workflowRunner = null;
     function wfReadRuns() {
         try {
@@ -3756,6 +3815,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             scope: () => { refreshWorkflow(); return window.VirtualPhone?._workflow?.scope || {}; },
             token: () => handoffEpoch(),
             inputs: () => window.VirtualPhone?._workflow?.inputs || {},
+            /* [v4.04.0 · R3-X7] 外部流程面:个人模板合成的那几条。
+             *   它只是**多几条可选流程**,执行路径 / 判定 / 幂等一条都没变 —— 不新增第二套运行器。 */
+            flows: () => window.VirtualPhone?._workflow?.designFlows || [],
             readRuns: wfReadRuns,
             writeRuns: rows => storage.set(WF_RUNS_KEY, JSON.stringify(rows)),
             invoke: wfInvokeOwner,
@@ -3765,6 +3827,85 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             yieldStep: () => new Promise(resolve => setTimeout(resolve, 0)),
         });
         return workflowRunner.act(action);
+    }
+
+    /* [v4.04.0 · R3-X7] 模板台账的读口(读不到与空台账分开)。 */
+    function wfReadTemplates() {
+        try {
+            if (!storage || typeof storage.get !== 'function') return null;
+            const raw = storage.get(WF_TEMPLATES_KEY, '[]');
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch (_e) { return null; }
+    }
+
+    /**
+     * [v4.04.0 · R3-X7] **唯一模板写入口**。三个动作(save / rename / remove)全收在这一处。
+     *   · 默认 dry-run:confirm 不为 true 一律拒(与工作流执行同一纪律);
+     *   · 台账**读不到即拒**,绝不拿一份空台账覆盖用户的模板;
+     *   · 落盘后**回读核对**(行数与目标 id 都在才算成功),读不回返 readback-mismatch;
+     *   · 上限「最早先出」,被挤掉的条数如实报(不隐藏)。
+     */
+    function applyWorkflowDesignAction(action) {
+        const act = (action && typeof action === 'object') ? action : {};
+        const vp = window.VirtualPhone;
+        if (!vp) return { ok: false, note: '咽喉未就绪', reason: 'no-host' };
+        refreshWorkflow();
+        const scope = vp._workflow?.scope || {};
+        if (!wfSameScope(act.scope, scope) || act.token !== vp._workflow?.token) {
+            return { ok: false, note: '会话或世代已变,请重新预览并确认', reason: 'scope-changed' };
+        }
+        const kind = String(act.action || '');
+        if (['save', 'rename', 'remove'].indexOf(kind) < 0) {
+            return { ok: false, note: '本口只认 save / rename / remove 三个动作', reason: 'action-unknown' };
+        }
+        if (act.confirm !== true) {
+            return { ok: false, note: '默认 dry-run:保存模板需显式确认', reason: 'not-confirmed' };
+        }
+        const raw = wfReadTemplates();
+        const norm = normalizeTemplates(raw);
+        if (!norm.readable) {
+            return { ok: false, note: '模板台账读不到,不覆盖(读不到不等于一条都没有)', reason: WD_REASONS.TEMPLATES_UNREADABLE };
+        }
+        const rows = norm.templates.slice();
+        const idIn = String(act.id || '');
+        const at = rows.findIndex((r) => r.id === idIn);
+        if (kind === 'save') {
+            const normed = normalizeTemplate(act.template || {});
+            if (!normed.template.steps.length) {
+                return { ok: false, note: '这条流程一步都没有(或步骤都认不出),不保存', reason: WD_REASONS.NO_STEPS, rejected: normed.rejected };
+            }
+            const id = idIn || (WD_ID_PREFIX + String(Date.now()));
+            const row = Object.assign({}, normed.template, { id: id, at: Date.now() });
+            const next = [row].concat(rows.filter((r) => r.id !== id)).slice(0, WD_LIMITS.templates);
+            storage.set(WF_TEMPLATES_KEY, JSON.stringify(next));
+            const back = normalizeTemplates(wfReadTemplates());
+            const ok = back.readable && back.templates.some((r) => r.id === id)
+                && back.templates.length === next.length;
+            return {
+                ok: ok, note: ok ? ('模板已保存(台账 ' + String(next.length) + ' 条)') : '模板保存未确认',
+                reason: ok ? '' : 'readback-mismatch', id: id,
+                rejected: normed.rejected, dropped: normed.dropped,
+                squeezed: Math.max(0, rows.filter((r) => r.id !== id).length + 1 - WD_LIMITS.templates),
+            };
+        }
+        if (at < 0) return { ok: false, note: '没有这条模板', reason: WD_REASONS.TEMPLATE_UNKNOWN };
+        if (kind === 'rename') {
+            const name = String(act.name == null ? '' : act.name).replace(/\s+/g, ' ').trim().slice(0, WD_LIMITS.nameMax) || WD_DEFAULT_NAME;
+            const next = rows.map((r, i) => (i === at ? Object.assign({}, r, { name: name }) : r));
+            storage.set(WF_TEMPLATES_KEY, JSON.stringify(next));
+            const back = normalizeTemplates(wfReadTemplates());
+            const hit = back.readable ? back.templates.find((r) => r.id === idIn) : null;
+            const ok = !!hit && hit.name === name;
+            return { ok: ok, note: ok ? '已改名' : '改名未确认', reason: ok ? '' : 'readback-mismatch' };
+        }
+        const next = rows.filter((r) => r.id !== idIn);
+        storage.set(WF_TEMPLATES_KEY, JSON.stringify(next));
+        const back = normalizeTemplates(wfReadTemplates());
+        const ok = back.readable && !back.templates.some((r) => r.id === idIn);
+        return {
+            ok: ok, note: ok ? '已删除该模板(已跑过的运行台账不动)' : '删除未确认',
+            reason: ok ? '' : 'readback-mismatch',
+        };
     }
 
     function wfInvokeOwner(ownerKey, req) {
@@ -12388,6 +12529,24 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 financeCommitFace: function () { const v = window.VirtualPhone; return v ? v._financeCommitCache || null : null; },
                 resumeWorkbenchFace: function () { const v = window.VirtualPhone; return v ? v._resumeWorkbench || null : null; },
                 workflowFace: function () { refreshWorkflow(); const v = window.VirtualPhone; return v ? v._workflow || null : null; },
+                /* [v4.04.0 · R3-X7] 可视化流程编排:只读读数口 + 唯一设计动作口(保存 / 改名 / 删)。
+                 *   只读口每次读都先 refreshWorkflow(模板台账是现取的,不缓存陈读数)。 */
+                applyWorkflowDesignAction: applyWorkflowDesignAction,
+                workflowDesignFace: function () {
+                    refreshWorkflow();
+                    const v = window.VirtualPhone;
+                    const w = v ? v._workflow : null;
+                    if (!w) return null;
+                    return {
+                        scope: w.scope, token: w.token,
+                        actions: WD_ACTION_KEYS.slice(),
+                        actionFaces: WD_ACTION_KEYS.map((k) => ({ key: k, label: WD_ACTIONS[k].label, hint: WD_ACTIONS[k].hint, writes: WD_ACTIONS[k].writes, params: WD_ACTIONS[k].params.slice() })),
+                        limits: WD_LIMITS,
+                        templates: w.templates, designs: w.designs,
+                        designFlows: w.designFlows, designActions: w.designActions,
+                        selfCheck: w.designer,
+                    };
+                },
                 /* [v3.90.0 · R-X6] 创作工作台的只读读数口（视图与诊断读这一份）；动作入口只此一处。 */
                 creationWorkbenchFace: function () { refreshCreationdesk(); const v = window.VirtualPhone; return v ? v._creationWorkbench || null : null; },
                 applyCreationdeskAction: applyCreationdeskAction,

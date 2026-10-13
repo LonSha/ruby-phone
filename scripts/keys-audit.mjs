@@ -354,6 +354,7 @@ const KEY_REGISTRY = [
   { key: 'tv_party', scope: 'chat', note: '[v4.03.0] 旅行记账案头协作行程板(成员邀请三态/地点顺序/分工/准备清单/共同费用预计与实际两态;上限 成员20 地点40 分工60 清单60 费用80)' },
   { key: 'te_pins', scope: 'chat', note: '[v3.65.0] 任务入口收藏（按用户摆放顺序的卡片 id 列表；上限 12）' },
   { key: 'wf_runs', scope: 'chat', note: '[v3.89.0] 声明式工作流运行台账（本机记「这条流程跑过哪些运行键」：流程 id / 运行键 / 状态 / 时刻 / 归属段；上限 40）' },
+  { key: 'wf_templates', scope: 'chat', note: '[v4.04.0 . R3-X7] 个人流程模板设计台账(用户排的流程:模板 id / 名字 / 步骤序 / 条件 / 参数;与 wf_runs 执行账分开,上限 24)' },
   { key: 'cw_published', scope: 'chat', note: '[v3.90.0] 创作工作台发布台账（幂等键 <source>:<materialId>:<targetApp> → 已发布；同键只记一次，上限 150）' },
   { key: 'cw_drafts', scope: 'chat', note: '[v4.01.0] 创作工作台草稿本（多目标草稿行：幂等键/source/materialId/target/note/tags/state/version；同键后到覆盖，上限 24，最早先出）' },
   { key: 'cw_topics', scope: 'chat', note: '[v4.02.0] 创作工作台话题本（跨社媒同事件条目：rootEventId/kind 发布或转载或评论或辟谣/platform/id/text/confirmed；公开条目须用户确认；上限 120，最早先出）' },

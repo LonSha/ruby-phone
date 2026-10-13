@@ -12,6 +12,7 @@
  *     「受限声明式」的意思就是「认得出的动作是有限的」。
  * ========================================================= */
 'use strict';
+import { designHtml, bindDesign } from './workflow-design.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -112,6 +113,7 @@ export class WorkflowView {
         for (const f of (vm.flows || [])) h += this._flow(f);
         h += '</div>';
         h += this._stateBox(vm);
+        if (vm.design) h += designHtml(vm.design);
         h += '</div>';
         return h;
     }
@@ -129,5 +131,7 @@ export class WorkflowView {
                 self.app.act(act, id, extra);
             });
         });
+        /* sheji duan de bangding zhuan gei workflow-design.js(na li ye bu xie cunchu). */
+        bindDesign(el, self.app ? self.app._design : null);
     }
 }

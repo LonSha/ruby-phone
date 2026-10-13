@@ -83,14 +83,21 @@ export function createWorkflowRunner(ports) {
             }
             const results = [];
             const available = Object.assign({}, input);
+            const skippedFaces = [];
             let rec = applyFlowPlan(plan, results);
             rec.state = 'running';
             lock.run = rec;
-            if (!checkpoint(rec, token)) return result(false, '运行检查点未确认，未调用 owner', rec, kind);
+            if (!checkpoint(rec, token)) return result(false, '运行检查点未确认,未调用 owner', rec, kind);
             for (const it of plan.steps) {
+                /* [v4.04.0 · R3-X7] 条件分支:用户设的闸不过 ⇒ 这一步不进执行(跳过要看得见),
+                 *   并且把它本轮的产出面登记下来 —— 下游读它的那些步一并跳过,不当缺件中断。
+                 *   ★ 这里只推 available 与 skippedFaces(喂给 owner 的输入);
+                 *     「跳过」写进运行记录那一步由 applyFlowPlan 收口(判定只写一处)。 */
+                if (it.skipReason) { if (it.out) skippedFaces.push(it.out); continue; }
                 if (!it.run) { available[it.out] = it.previous && it.previous.value; continue; }
-                if (!live(scope, token)) return result(false, '会话已变，停止后续写入');
+                if (!live(scope, token)) return result(false, '会话已变,停止后续写入');
                 if (lock.paused) break;
+                if (it.in.some(key => skippedFaces.indexOf(key) >= 0)) continue;
                 const reads = {};
                 for (const key of it.in) reads[key] = available[key];
                 if (it.in.some(key => reads[key] === undefined || reads[key] === null)) break;

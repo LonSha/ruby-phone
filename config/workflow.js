@@ -305,6 +305,62 @@ export const WF_FLOWS = Object.freeze([
 /** 流程 id 索引（咽喉与视图按 id 取流程，不各写一份清单）。 */
 export const WF_FLOW_INDEX = new Map(WF_FLOWS.map((f) => [f.id, f]));
 
+/**
+ * [v4.04.0 · R3-X7] 取一条流程声明:**先查内置,再查调用方带来的外部流程**(个人模板合成的)。
+ *
+ * 为什么外部流程要走同一个取数口:个人模板合成的流程**照样是流程** ——
+ *   它必须过同一套判定(owner 注册表 / 写步可写 / 步骤上限 / 默认 dry-run / 幂等 / 跨段)。
+ *   若给模板单开一条「快捷通道」,那就是第二份运行口径(本仓反复栽过的那件事)。
+ * 外部流程**只能由调用方(咽喉)从已归一化的模板合成后传进来**;
+ *   本模块不认识模板,也不读任何存储 —— 设计面与执行面的分工不混。
+ * @returns {Object|null} 形状与 WF_FLOWS 的条目一样(id / label / hint / steps)
+ */
+export function wfFlowOf(flowId, external) {
+    const id = wfStr(flowId, 80);
+    if (!id) return null;
+    const builtin = WF_FLOW_INDEX.get(id) || null;
+    if (builtin) return builtin;
+    const rows = wfArr(external);
+    if (!rows) return null;
+    for (const r of rows) {
+        const o = wfObj(r);
+        if (o && wfStr(o.id, 80) === id) return o;
+    }
+    return null;
+}
+
+/** 条件面在本轮是否「有值」。空数组 / 空串 / 空对象一律算没有(不是「有」)。 */
+function wfFacePresent(v) {
+    if (v === null || v === undefined) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (typeof v === 'object') return Object.keys(v).length > 0;
+    return !!v;
+}
+
+/**
+ * [v4.04.0 · R3-X7] 判一步的条件分支是否成立。
+ *
+ * 两种态(present / absent)+ 一种「无条件」(when 为空)—— 不写成第三个词,免得两处口径。
+ * ★ 为什么「条件面读不出来」也按 absent 算(而不是「未知所以放行」):这一步是**用户自己设的闸**;
+ *   判据读不出来时放行,等于把用户设的闸悄悄拆掉。宁可这一步不跑并在行面上写明原因 ——
+ *   「少跑一步」看得见,「闸被静默拆掉」看不见。
+ */
+export function wfBranchMet(when, available) {
+    const w = wfObj(when);
+    if (!w) return { met: true, present: null, face: '', state: '', text: '无条件' };
+    const face = wfStr(w.face, 60);
+    const state = wfStr(w.state, 20);
+    const ins = wfObj(available) || {};
+    const has = !!face && Object.prototype.hasOwnProperty.call(ins, face);
+    const present = has && wfFacePresent(ins[face]);
+    const want = state !== 'absent';
+    return {
+        met: present === want, present: present, face: face, state: state,
+        text: face + (state === 'absent' ? ' 为空时跑' : ' 有值时跑') + '(当前' + (present ? '有值' : '为空') + ')',
+    };
+}
+
 /** 流程 id 清单（判据据此核「按 id 取得到 / 表里没有的 id 必被拒」）。 */
 const WF_FLOW_IDS = Object.freeze(WF_FLOWS.map((f) => f.id));
 
@@ -414,9 +470,10 @@ export function wfIdemKey(flowId, runKey) {
  *   ③ 输入面名字缺在输入对象里 ⇒ input-missing；④ 输入面值为 null ⇒ input-unreadable。
  * 只读步与草稿步无输入也能跑（它们是取数面，不是写面）。
  */
-function wfStepIn(step, inputs) {
+function wfStepIn(step, inputs, skippedFaces) {
     const row = wfObj(step) || {};
     const ins = wfArr(inputs) ? null : wfObj(inputs);
+    const skips = wfArr(skippedFaces) || [];
     const ownerKey = wfStr(row.owner, 60);
     const owner = WF_OWNERS[ownerKey] || null;
     const writes = row.writes === true;
@@ -432,8 +489,19 @@ function wfStepIn(step, inputs) {
         out: wfStr(row.out, 40),
         note: wfStr(row.note, 120),
         in: (wfArr(row.in) || []).slice(),
+        params: wfObj(row.params) || {},
         problems: [],
     };
+    /* [v4.04.0 · R3-X7] 条件分支:用户自己设的闸先判。
+     * ★ 顺序是有意的:闸不过 ⇒ 这一步**不跑**,它的输入面缺不缺都不再是问题
+     *   (「这一步跳过」和「这一步缺件」是两件事,压一起会让行面说错话)。
+     * ★ 闸不过时**连同下游输入面一起免检**:跳过的步骤本来就不产出,下游缺它而报缺件是假报。 */
+    const branch = wfBranchMet(row.when, ins);
+    if (!branch.met) {
+        base.branch = branch;
+        base.skipReason = 'branch-not-met';
+        return base;
+    }
     if (!owner) base.problems.push(WF_REASONS.NO_OWNER);
     else if (writes && owner.writable !== true) base.problems.push(WF_REASONS.OWNER_NOT_WRITABLE);
     const faces = wfArr(row.in) || [];
@@ -441,6 +509,15 @@ function wfStepIn(step, inputs) {
     for (const face of faces) {
         const name = wfStr(face, 60);
         if (!name) continue;
+        /* [v4.04.0 · R3-X7] 上游有一步被条件跳过、而它正是本步的输入面 ⇒ 本步一并跳过。
+         * ★ 为什么不能当「缺件」报:跳过的步本来就不产出,报缺件是**假报**;
+         *   也不能当「读不到」(input-unreadable)—— 那是「本机暂时给不出」的另一件事。
+         *   三种原因各归各的处置,压平即错读数。 */
+        if (skips.indexOf(name) >= 0) {
+            faceReads.push({ face: name, state: 'skipped-upstream' });
+            base.skipReason = 'branch-not-met';
+            continue;
+        }
         if (!ins || !Object.prototype.hasOwnProperty.call(ins, name)) {
             faceReads.push({ face: name, state: 'missing' });
             base.problems.push(WF_REASONS.INPUT_MISSING);
@@ -485,7 +562,7 @@ function wfStepPhase(row) {
  */
 export function previewFlow(input) {
     const inp = wfObj(input) || {};
-    const flow = WF_FLOW_INDEX.get(wfStr(inp.flowId, 80)) || null;
+    const flow = wfFlowOf(inp.flowId, inp.flows);
     if (!flow) {
         return {
             flowId: wfStr(inp.flowId, 80), label: '', scopeState: wfScopeState(inp.scope),
@@ -501,16 +578,22 @@ export function previewFlow(input) {
         };
     }
     const available = Object.assign({}, inp.inputs || {});
+    const skippedFaces = [];
     const steps = flow.steps.map((s) => {
-        const judged = wfStepIn(s, available);
-        if (!judged.problems.length) available[s.out] = { planned: true };
+        const judged = wfStepIn(s, available, skippedFaces);
+        if (judged.skipReason) {
+            /* 被跳过的步**不产出**本轮的值,并把它要产出的面名登记下来给下游判「跳过」。
+             *   这里不写 `{planned:true}`:让下游把「上游跳过」与「上游会产出」分开。 */
+            if (judged.out) skippedFaces.push(judged.out);
+        } else if (!judged.problems.length) available[s.out] = { planned: true };
         return judged;
     });
     const problems = [];
     for (const s of steps) for (const p of s.problems) if (problems.indexOf(p) < 0) problems.push(p);
     const scopeState = wfScopeState(inp.scope);
     if (scopeState !== 'ok') problems.push(scopeState === 'absent' ? WF_REASONS.SCOPE_MISSING : WF_REASONS.SCOPE_CHANGED);
-    const needsConfirm = steps.some((s) => s.writes);
+    /* 只有**真会跑**的写步才要求确认:闸不过的写步跑不到,要求它确认是假要求。 */
+    const needsConfirm = steps.some((s) => s.writes && !s.skipReason);
     const blocked = problems.length > 0;
     return {
         flowId: flow.id, label: flow.label, scopeState: scopeState,
@@ -536,7 +619,7 @@ export function previewFlow(input) {
 export function planFlow(input) {
     const inp = wfObj(input) || {};
     const flowId = wfStr(inp.flowId, 80);
-    const flow = WF_FLOW_INDEX.get(flowId) || null;
+    const flow = wfFlowOf(flowId, inp.flows);
     const scopeState = wfScopeState(inp.scope);
     if (!flow) return { kind: 'reject', why: WF_REASONS.FLOW_UNKNOWN, flowId: flowId, idemKey: null, steps: [], willWrite: false };
     if (scopeState === 'absent') return { kind: 'reject', why: WF_REASONS.SCOPE_MISSING, flowId: flowId, idemKey: null, steps: [], willWrite: false };
@@ -554,7 +637,7 @@ export function planFlow(input) {
     }
 
     const steps = preview.steps;
-    const needConfirm = steps.some((s) => s.writes);
+    const needConfirm = steps.some((s) => s.writes && !s.skipReason);
     if (needConfirm && inp.confirm !== true) {
         return {
             kind: 'reject', why: WF_REASONS.NOT_CONFIRMED, flowId: flowId, idemKey: idemKey,
@@ -578,8 +661,16 @@ export function planFlow(input) {
     }
     const intents = steps.map((s) => ({
         stepId: s.id, label: s.label, owner: s.owner, ownerModule: s.ownerModule,
-        level: s.level, writes: s.writes, out: s.out, run: true,
+        level: s.level, writes: s.writes, out: s.out,
+        /* 闸不过的步骤**不进执行**:run:false 且带 skipReason ——
+         * 跳过要看得见(行面写「条件不成立」),不能静默当作没这一步。 */
+        run: !s.skipReason,
+        skipReason: s.skipReason || '',
         in: s.in, payload: wfPayloadOf(s, inp.inputs),
+        /* [v4.04.0 · R3-X7] 条件分支与参数绑定一起进意图:
+         *   · 闸不过 ⇒ run:false(skipReason=branch-not-met)—— 跳过要看得见,不能静默;
+         *   · 绑定的参数进 payload.params,owner 按自己的白名单取用。 */
+        when: s.branch || null, params: s.params || {},
     }));
     if (hit && hit.state !== 'done') {
         if (!hit.steps.length || hit.state === 'rolledback' || hit.steps.some(s => s.state === 'running')) {
@@ -643,10 +734,28 @@ export function applyFlowPlan(plan, stepResults) {
         const o = wfObj(r);
         if (o) byId[wfStr(o.stepId, 60)] = o;
     }
-    const intents = wfArr(p.steps) || [];
+const intents = wfArr(p.steps) || [];
+    /* [v4.04.0 · R3-X7] 条件跳过会**传染下游**:上游被跳过 ⇒ 它本轮不产出 ⇒ 读它的那一步一并跳过。
+     *   判定与 previewFlow 同一口径,且**只写这一次**(运行记录自己算得出来,就不必靠调用方收集)。
+     *   为什么不能当「没结果所以待跑」:那会让整条流程停在 pending 上叫 partial —— 而它其实是
+     *   「用户的闸生效,该跳的都跳了」,那是设计结果。 */
+    const skippedFaces = [];
     const steps = intents.map((it) => {
         const base = { stepId: it.stepId, label: it.label, owner: it.owner, writes: it.writes === true, out: it.out };
-        if (it.run !== true) return Object.assign(base, it.previous || {}, { state: WF_STEP_STATES.replayed, detail: '幂等命中，未重复执行' });
+        const ins = wfArr(it.in) || [];
+        const upstreamSkip = ins.some((f) => skippedFaces.indexOf(f) >= 0);
+        if (it.skipReason || upstreamSkip) {
+            /* [v4.04.0 · R3-X7] 条件分支不成立 ⇒ skipped(**不是 replayed**):
+             *   重放是「这条以前成过,本轮不重跑」,条件跳过是「本轮闸没过,压根没轮到它」。
+             *   压平这两态会让用户以为「我设的闸生效过」—— 而它可能只是这次没成立。 */
+            if (it.out) skippedFaces.push(it.out);
+            return Object.assign(base, {
+                state: WF_STEP_STATES.skipped,
+                detail: it.skipReason ? '条件不成立(未执行)' : '上游条件不成立,本步未执行',
+                branch: it.when || null, skipReason: 'branch-not-met',
+            });
+        }
+        if (it.run !== true) return Object.assign(base, it.previous || {}, { state: WF_STEP_STATES.replayed, detail: '幂等命中,未重复执行' });
         const r = byId[it.stepId] || null;
         if (!r) return Object.assign(base, { state: WF_STEP_STATES.pending, detail: '还没跑' });
         if (r.ok === true) return Object.assign(base, { state: WF_STEP_STATES.ok, detail: wfStr(r.detail, 120), value: r.value, receipt: r.receipt });
@@ -655,10 +764,15 @@ export function applyFlowPlan(plan, stepResults) {
         return Object.assign(base, { state: WF_STEP_STATES.failed, detail: wfStr(r.detail, 120) || wfStr(r.why, 40) || '失败' });
     });
     const executed = steps.filter((s) => s.state === WF_STEP_STATES.ok || s.state === WF_STEP_STATES.failed || s.state === WF_STEP_STATES.skipped).length;
-    /* ★ run 的口径：**计划是否要跑这一步**（fresh 计划全部 true，replay 计划全 false）。
-     *   它**不是**「这一步写不写」—— 把两者混为一谈会让只读步在 fresh 计划里就被画成重放，
-     *   而那正是「把没跑写成跑过了」这一类错读数（本模块自检当场报出的第一处真缺陷）。 */
-    const bad = steps.filter((s) => s.state === WF_STEP_STATES.failed || s.state === WF_STEP_STATES.skipped || s.state === WF_STEP_STATES.pending || s.state === 'running');
+    /* ★ run 的口径:**计划是否要跑这一步**(fresh 计划全部 true,replay 计划全 false)。
+     *   它**不是**「这一步写不写」—— 把两者混为一谈会让只读步在 fresh 计划里就被画成重放,
+     *   而那正是「把没跑写成跑过了」这一类错读数(本模块自检当场报出的第一处真缺陷)。 */
+    /* [v4.04.0 · R3-X7] 条件不成立的步**不算失败**:用户设的闸没过,流程照约定跳过那一步 ——
+     *   那是设计生效,不是出错。但回滚掉的步与被 owner 拒绝的步仍算 bad(它们是「该做没做成」)。
+     *   判据只认 skipReason 这个词,不认 state 的字面 —— 免得将来把别的 skipped 混进这条豁免。 */
+    const isBranchSkip = (s) => s.skipReason === 'branch-not-met';
+    const bad = steps.filter((s) => !isBranchSkip(s) && (s.state === WF_STEP_STATES.failed || s.state === WF_STEP_STATES.skipped || s.state === WF_STEP_STATES.pending || s.state === 'running'));
+    const skippedByBranch = steps.filter(isBranchSkip).length;
     let state;
     if (kind === 'replay') state = WF_STATES.done.key;
     else if (bad.length === 0) state = WF_STATES.done.key;
@@ -668,6 +782,7 @@ export function applyFlowPlan(plan, stepResults) {
         state: state, flowId: wfStr(p.flowId, 80), idemKey: p.idemKey || null,
         scope: p.scope || null, at: p.at ?? null, runKey: wfStr(p.runKey, 80),
         steps: steps, executed: executed, failed: bad.length, why: '', replayed: kind === 'replay',
+        skippedByBranch: skippedByBranch,
     };
 }
 
@@ -929,9 +1044,45 @@ export function workflowSelfCheck() {
     push(res.run.steps.filter((s) => s.state === WF_STEP_STATES.replayed).length === 2, '续跑未把已成步骤标重放');
     push(res.todo === 1, '续跑应把未成的步骤交回重试（且只交回那一步）');
 
-    /* 15 不执行任意 JS：本模块导出面无 eval / Function / setTimeout 串。 */
+/* 15 不执行任意 JS:本模块导出面无 eval / Function / setTimeout 串。 */
     const ids = WF_OWNER_KEYS.filter((k) => !WF_OWNERS[k]);
     push(ids.length === 0, 'owner 注册表有悬空键');
+
+    /* 16 [v4.04.0 · R3-X7] 外部流程(个人模板合成的)走同一个取数口,且内置优先。 */
+    const ext = [{ id: 'tpl-x', label: 'X', hint: '', steps: [{ id: 's1', label: 'S', in: [], out: 'o', writes: false, owner: 'brief-read' }] }];
+    push(!!wfFlowOf('tpl-x', ext), '外部流程按 id 取不到');
+    push(wfFlowOf('tpl-x', null) === null, '没有外部面时竟取到流程');
+    push(wfFlowOf('resume-brief', ext) === WF_FLOWS[0], '内置与外部同名时内置未优先');
+    push(wfFlowOf('', ext) === null, '空 id 竟取到流程');
+
+    /* 17 [v4.04.0] 条件分支三态:无条件跑、有值跑、空值不跑(空数组与空串都算空)。 */
+    push(wfBranchMet(null, {}).met === true, '无条件竟不成立');
+    push(wfBranchMet({ face: 'brief', state: 'present' }, { brief: { a: 1 } }).met === true, '有值时 present 闸未成立');
+    push(wfBranchMet({ face: 'brief', state: 'present' }, {}).met === false, '读不出来时 present 闸竟成立(闸被静默拆掉)');
+    push(wfBranchMet({ face: 'brief', state: 'absent' }, {}).met === true, '为空时 absent 闸未成立');
+    push(wfBranchMet({ face: 'brief', state: 'present' }, { brief: [] }).met === false, '空数组竟算有值');
+    push(wfBranchMet({ face: 'brief', state: 'present' }, { brief: '  ' }).met === false, '空串竟算有值');
+
+    /* 18 [v4.04.0] 闸不过的步:不进执行、标 skipped、且下游输入面一并跳过(不当缺件假报)。 */
+    const gatedFlow = [Object.freeze({
+        id: 'tpl-gate', label: 'G', hint: '', steps: Object.freeze([
+            Object.freeze({ id: 's1', label: '只读', in: [], out: 'brief', writes: false, owner: 'brief-read', when: { face: 'resume-face', state: 'present' } }),
+            Object.freeze({ id: 's2', label: '存稿', in: Object.freeze(['brief']), out: 'draft', writes: true, owner: 'archive-draft' }),
+        ]),
+    })];
+    const gp = planFlow({ flowId: 'tpl-gate', scope: { chatId: 'c', branchKey: 'main' }, runKey: 'g1', confirm: true, runs: [], flows: gatedFlow });
+    push(gp.kind === 'fresh', '闸不过的模板流程竟开不了工(应可跑但跳过闸后步):' + gp.kind + '/' + gp.why);
+    const grun = applyFlowPlan(gp, []);
+    push(grun.steps[0].state === WF_STEP_STATES.skipped, '闸不过的步未被标为跳过');
+    push(grun.steps[1].state === WF_STEP_STATES.skipped, '上游跳过时下游未被一并跳过(会假报缺件)');
+    push(grun.state === WF_STATES.done.key, '全跳过竟不是 done(跳过的步不是失败步)');
+    const gpv = previewFlow({ flowId: 'tpl-gate', scope: { chatId: 'c', branchKey: 'main' }, inputs: { 'resume-face': null }, flows: gatedFlow });
+    push(gpv.steps[0].problems.indexOf(WF_REASONS.INPUT_UNREADABLE) < 0, '闸不过的步仍按缺件判(两种原因压平)');
+    push(gpv.steps[0].skipReason === 'branch-not-met', '闸不过的步没记 skipReason');
+    push(gpv.needsConfirm === false, '跑不到的写步竟要求确认(假要求)');
+    const gpv2 = previewFlow({ flowId: 'tpl-gate', scope: { chatId: 'c', branchKey: 'main' }, inputs: { 'resume-face': { a: 1 }, brief: { t: 'x' } }, flows: gatedFlow });
+    push(gpv2.needsConfirm === true, '真会跑的写步未要求确认');
+    push(gpv2.blocked === false, '闸成立时应可跑');
 
     return {
         version: WF_VERSION, flowIds: WF_FLOW_IDS, flows: WF_FLOWS.length, owners: WF_OWNER_KEYS.length,
