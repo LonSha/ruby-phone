@@ -29,3 +29,14 @@
 .te-source-read { font-size: 11px; opacity: .7; }
 .te-selfcheck { padding: 4px 10px; font-size: 11px; opacity: .7; }
 .te-selfcheck-bad { border-left: 2px solid #a0553f; opacity: 1; font-weight: 600; }
+/* [v4.00.0 · R3-O7] 跨 App 生成任务段（等待/生成/可播放/失败/待核） */
+.te-media { padding: 6px 10px; margin: 6px 0; border-left: 2px solid #7a8f6a; }
+.te-media h3 { font-size: 12px; margin: 0 0 4px; font-weight: 600; }
+.te-media-counts { font-size: 11px; color: #6a645c; margin-bottom: 4px; }
+.te-media-live { color: #a0553f; font-weight: 600; }
+.te-media-group { margin-top: 4px; }
+.te-media-head { font-size: 11px; color: #7a746a; font-weight: 600; }
+.te-media-row { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed #eee8de; }
+.te-media-title { flex: 1 1 auto; }
+.te-media-app { flex: 0 0 auto; font-size: 11px; color: #9a948a; }
+.te-media-has { flex: 0 0 auto; font-size: 10px; color: #4a6a4a; border: 1px solid #b8ccb8; border-radius: 8px; padding: 0 6px; }

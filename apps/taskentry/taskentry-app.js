@@ -157,7 +157,32 @@ export class TaskentryApp {
             dropped: this._dropped,
             /* [v3.99.0 · R3-O9] 聚焦三档读数（视图据此把首屏与工具区分列；
              *   未收进任何一档的卡在 focus.dropped 里如实报，不静默丢）。 */
-            focus: focus
+            focus: focus,
+            /* [v4.00.0 · R3-O7] 跨 App 媒体任务读数（生图/语音的中断续用）。
+             *   **每次现取、不缓存**：注册板是会话内存，读数随生成进度实时变；
+             *   缓存一份必然在「任务刚完成」时给出旧读数（本仓反复抓到的形态）。
+             *   板未就绪（宿主早期/无壳环境）时如实报 absent，不造一个空的成功读数。 */
+            media: this._mediaReadings()
+        };
+    }
+    /**
+     * [v4.00.0 · R3-O7] 媒体任务聚合读数。
+     *   板不在（window.VirtualPhone.mediaTasks 缺失）⇒ ready:false + 如实原因，
+     *   与「板上真的没有任务」（total === 0）是两件不同的事，必须分得开。
+     */
+    _mediaReadings() {
+        const board = (typeof window !== 'undefined' && window.VirtualPhone)
+            ? window.VirtualPhone.mediaTasks : null;
+        if (!board || typeof board.readAll !== 'function') {
+            return { ready: false, reason: '任务注册板未就绪', total: 0, counts: null, groups: null };
+        }
+        const snap = board.readAll();
+        return {
+            ready: true,
+            reason: '',
+            total: snap.total,
+            counts: snap.counts,
+            groups: snap.groups
         };
     }
     /* ---------- 页签真源的可视面（本 App 是**唯一**把真源读数摆给用户看的地方） ---------- */
@@ -170,7 +195,11 @@ export class TaskentryApp {
     /** 自检读数（页签真源结构 + 卡表结构 + 词表），由视图头部如实展示。 */
     selfCheck() {
         const r = taskEntrySelfCheck();
-        return { problems: listOf(r.problems), cards: r.cards, caps: r.caps };
+        /* [v4.00.0 · R3-O7] 注册板内核自检（板在才读；不在时报 null 而不是假绿）。 */
+        const board = (typeof window !== 'undefined' && window.VirtualPhone)
+            ? window.VirtualPhone.mediaTasks : null;
+        const mediaCheck = (board && typeof board.selfCheck === 'function') ? board.selfCheck() : null;
+        return { problems: listOf(r.problems), cards: r.cards, caps: r.caps, mediaCheck: mediaCheck };
     }
     /* ---------- [v3.99.0 · R3-O9] 按卡隐藏与返回路径 ---------- */
     /**

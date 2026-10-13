@@ -86,6 +86,10 @@ export class ChatView {
         this._wechatTtsCacheOrder = [];
         this._wechatTtsCacheLimit = 24;
         this._imagePromptGenerationLocks = new Set();
+        /* [v4.00.0 · R3-O7] 在飞生图的中止控制面：任务键 → AbortController。
+         *   传输层（NAI 队列等待 / ComfyUI 历史轮询 / fetch）早已接 signal，
+         *   只差把用户侧的取消接到同一个 signal 上。 */
+        this._imageAbortControllers = new Map();
         this.customEmojiSelectionMode = false;
         this.customEmojiManageMenuOpen = false;
         this.selectedCustomEmojiIds = new Set();
@@ -4667,6 +4671,20 @@ renderChatRoom(chat) {
         /* [v3.58.0 · 计划 O4] 令牌在**第一次 await 之前**记：下面每一段等待之后都要先过栅栏。
          *   `loading` 那一笔写回就在本行之后、且不在任何 await 之后，故不需要栅栏。 */
         const sessionToken = captureSessionToken(storage);
+        /* [v4.00.0 · R3-O7] 任务入统一注册板（会话内存）。
+         *   先 remove 旧任务：本轮生成是新任务（重新生成/重试是显式意图），
+         *   否则 playable → running 会被迁移白名单拒掉、用户的「重新生成」点了没反应。 */
+        const mediaTaskKey = `wechat:img:${chatId}:${safeMessageId}`;
+        const mediaBoard = window.VirtualPhone?.mediaTasks || null;
+        const mediaAbort = (typeof AbortController === 'function') ? new AbortController() : null;
+        if (mediaAbort) this._imageAbortControllers.set(mediaTaskKey, mediaAbort);
+        if (mediaBoard) {
+            mediaBoard.remove(mediaTaskKey);
+            mediaBoard.upsert({
+                key: mediaTaskKey, app: 'wechat', kind: 'image',
+                state: 'waiting', title: (message.mediaType || '图片') + '生成', hasResult: false
+            });
+        }
         this.app.wechatData.updateMessageById(chatId, safeMessageId, {
             imageGenStatus: 'loading',
             imageGenerationId: generationId,
@@ -4686,6 +4704,14 @@ renderChatRoom(chat) {
         try {
             promptText = await this._resolveWechatImageGenerationPrompt(sourcePromptText);
         } catch (error) {
+            /* [v4.00.0 · R3-O7] TAG 阶段的取消也是取消：abort 后 TAG 请求会抛错，
+             *   若不拦就写成 failed 并弹「英文 TAG 生成失败」——用户点了取消却看到失败红字。 */
+            if (mediaAbort && mediaAbort.signal.aborted) {
+                this._cleanupWechatImageAbort(mediaTaskKey);
+                this._refreshVisibleChatMessages(chatId);
+                this._imagePromptGenerationLocks.delete(generationLockKey);
+                return;
+            }
             const promptError = String(error?.message || '英文 TAG 生成失败').trim();
             /* [v3.58.0 · 计划 O4] 失败状态也要过栅栏：把上一段会话的 TAG 失败写进
              *   当前会话的消息、并在当前会话弹通知，同样是串味。跨会话时只收锁走人。 */
@@ -4731,11 +4757,20 @@ renderChatRoom(chat) {
         const generationPrompt = this._buildWechatImagePromptWithContactTags(message, promptText);
 
         try {
+            if (mediaBoard) {
+                mediaBoard.upsert({
+                    key: mediaTaskKey, app: 'wechat', kind: 'image',
+                    state: 'running', title: (message.mediaType || '图片') + '生成', hasResult: false
+                });
+            }
             const result = await imageManager.generate({
                 app: 'wechat',
                 prompt: generationPrompt,
                 novelAIReferences,
-                referenceImages: novelAIReferences
+                referenceImages: novelAIReferences,
+                /* [v4.00.0 · R3-O7] 中止通道接进传输层：NAI 队列等待收到 abort 会
+                 *   leave-queue（不新增扣费请求），fetch 直接中断。 */
+                signal: mediaAbort ? mediaAbort.signal : undefined
             });
             // 视频类 provider（RunningHub 等）返回 videoBlob，走视频持久化并标记媒体类型
             const isVideoResult = result?.mediaType === 'video'
@@ -4768,6 +4803,13 @@ renderChatRoom(chat) {
                     imageGenerationWidth: Number(result?.width || result?.requestedWidth || 0) || '',
                     imageGenerationHeight: Number(result?.height || result?.requestedHeight || 0) || ''
                 });
+                if (mediaBoard) {
+                    mediaBoard.upsert({
+                        key: mediaTaskKey, app: 'wechat', kind: 'video',
+                        state: 'playable', title: '视频生成', hasResult: true
+                    });
+                }
+                this._cleanupWechatImageAbort(mediaTaskKey);
                 this._refreshVisibleChatMessages(chatId);
                 return;
             }
@@ -4800,8 +4842,24 @@ renderChatRoom(chat) {
                 imageGenerationHeight: Number(result?.height || result?.requestedHeight || 0) || ''
             });
             this._cleanupReplacedWechatGeneratedImage(previousImageUrl, imageUrl);
+            if (mediaBoard) {
+                mediaBoard.upsert({
+                    key: mediaTaskKey, app: 'wechat', kind: 'image',
+                    state: 'playable', title: (message.mediaType || '图片') + '生成',
+                    hasResult: true
+                });
+            }
+            this._cleanupWechatImageAbort(mediaTaskKey);
             this._refreshVisibleChatMessages(chatId);
         } catch (error) {
+            /* [v4.00.0 · R3-O7] 用户主动取消不是失败：abort 后传输层会抛错，
+             *   而消息状态已由 cancelImageGeneration 收回 idle —— 这里不再写 failed、
+             *   也不弹「生图失败」（否则用户点了取消却看到一条失败红字）。 */
+            if (mediaAbort && mediaAbort.signal.aborted) {
+                this._cleanupWechatImageAbort(mediaTaskKey);
+                this._refreshVisibleChatMessages(chatId);
+                return;
+            }
             const rawMessage = String(error?.message || '').trim();
             const friendlyMessage = /安全策略拒绝|content[_\s-]?policy|content[_\s-]?filter|policy[_\s-]?violation|moderation|safety/i.test(rawMessage)
                 ? rawMessage
@@ -4824,6 +4882,13 @@ renderChatRoom(chat) {
                 imageGenerationRuntimeId: '',
                 imageGenError: friendlyMessage
             });
+            if (mediaBoard) {
+                mediaBoard.upsert({
+                    key: mediaTaskKey, app: 'wechat', kind: 'image',
+                    state: 'failed', title: (message.mediaType || '图片') + '生成', hasResult: false
+                });
+            }
+            this._cleanupWechatImageAbort(mediaTaskKey);
             this._refreshVisibleChatMessages(chatId);
             this.app.phoneShell?.showNotification('生图失败', friendlyMessage, '❌');
         } finally {
@@ -4831,6 +4896,44 @@ renderChatRoom(chat) {
         }
     }
 
+    /** 清掉在飞中止记录（终态后不留残管）。 */
+    _cleanupWechatImageAbort(key) {
+        try { this._imageAbortControllers.delete(String(key || '')); } catch (_e) { /* 静默 */ }
+    }
+    /**
+     * [v4.00.0 · R3-O7] 取消一次在飞的生图。
+     *   只有 waiting / running 可取消（白名单在 config/media-task-registry.js）；
+     *   取消即 abort 传输层 —— NAI 队列等待会 leave-queue（**不新增扣费请求**）；
+     *   消息回 idle（不是 failed —— 用户主动取消不是失败），已有成果保留（重新生成中途取消）。
+     * @returns {{ok:boolean, why:string}}
+     */
+    cancelImageGeneration(messageId) {
+        const chatId = String(this.app.currentChat?.id || '').trim();
+        const safeMessageId = String(messageId || '').trim();
+        if (!chatId || !safeMessageId) return { ok: false, why: '缺少会话或消息 id' };
+        const key = `wechat:img:${chatId}:${safeMessageId}`;
+        const board = window.VirtualPhone?.mediaTasks || null;
+        if (!board) return { ok: false, why: '任务注册板未就绪' };
+        const gate = board.cancel(key);
+        if (!gate.ok) return { ok: false, why: gate.why || '不可取消' };
+        const ac = this._imageAbortControllers.get(key);
+        if (ac) {
+            try { ac.abort(); } catch (_e) { /* abort 失败也要继续收状态 */ }
+            this._imageAbortControllers.delete(key);
+        }
+        const message = this.app.wechatData.getMessages(chatId)
+            .find((item) => String(item?.id || '').trim() === safeMessageId);
+        if (!message) return { ok: true, why: '' };
+        this.app.wechatData.updateMessageById(chatId, safeMessageId, {
+            imageGenStatus: String(message.generatedImageUrl || '').trim() ? 'done' : 'idle',
+            imageGenerationId: '',
+            imageGenerationRuntimeId: '',
+            imageGenError: ''
+        });
+        this._refreshVisibleChatMessages(chatId);
+        this.app.phoneShell?.showNotification('已取消', '已取消这次生成，没有新增扣费请求', '🚫');
+        return { ok: true, why: '' };
+    }
     async _persistWechatGeneratedImage(imageUrl, { chatId = '', messageId = '', promptText = '', generationId = '' } = {}) {
         const safeUrl = String(imageUrl || '').trim();
         if (!safeUrl) return '';
@@ -5116,6 +5219,10 @@ renderChatRoom(chat) {
                                 box-shadow:none;
                             ">${generationStatus === 'loading' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : defaultIcon}</div>
                             <div style="font-size:12px; line-height:1.35; color:rgba(156,156,166,0.95); text-align:center; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.18);">${statusText}</div>
+                            ${generationStatus === 'loading' ? `<div class="message-image-prompt-cancel" data-message-id="${cardId}" title="取消这次生成（不新增扣费请求）" style="
+                                position:absolute; right:6px; top:6px; background:rgba(0,0,0,0.55); color:#fff;
+                                border-radius:999px; padding:4px 8px; font-size:10px; line-height:1; cursor:pointer;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.18);">取消</div>` : ''}
                         </div>
                         <div class="message-image-prompt-show-back" data-message-id="${cardId}" title="查看${msg.mediaType || '图片'}描述" style="
                             position:absolute;
@@ -8005,6 +8112,15 @@ renderChatRoom(chat) {
                 } else {
                     this.rejectMusicInvite(messageId);
                 }
+            });
+        });
+        currentView.querySelectorAll('.message-image-prompt-cancel').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const messageId = e.currentTarget.dataset.messageId;
+                if (messageId) this.cancelImageGeneration(messageId);
             });
         });
         currentView.querySelectorAll('.message-image-prompt-generate').forEach(card => {

@@ -24,6 +24,7 @@ import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
+import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask as mtrNormalizeTask, summarizeTasks as mtrSummarizeTasks,  canTransition as mtrCanTransition, duplicateGuard as mtrDuplicateGuard, selfCheck as mtrSelfCheck } from './config/media-task-registry.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
 import { mountMissingAppInjection } from './apps/app-injection.js';
@@ -236,7 +237,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '3.99.2';
+const ST_PHONE_VERSION = '4.00.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -436,17 +437,19 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-20",
     items: [
-        "【定位 · 真缺口】R3-X8 计划原文有两条线：① 正文作为独立本地附件持久化——原文明确标注「需确认实施决策」，宿主附件存储与本地 Blob 边界未定，**本版不动它**（不擅改持久化铁律）；② 书签/划线/摘录成素材、同名不同文件不静默覆盖、丢附件可重新定位——这半不需要先确认存储形态，本版落地。现状实测：ReadingData.addBook 对同名文件无条件静默覆盖（同名不同文件丢书），正文仅驻内存、重启即丢进度链，无摘录能力。",
-        "【本版做什么】① 内容指纹 contentHashOf（FNV-1a + 长度后缀，纯本地）：addBook 按指纹分流——同名同指纹替换、同名异指纹**并存**（旧书不删，返回值 coexist 如实告知）；② findReusable 按（文件名 + 指纹）重接：丢附件后重新导入同一文件回到原书条目 id，进度键与摘录引用因此都指得回去；③ 摘录层 normalizeExcerpt/normalizeExcerptList 窄口：缺正文或缺书/章/段引用不收，上限 200 超限丢最旧；App 层 addExcerpt 真写入会话键 ruby_reading_excerpts（CHAT_DATA_PATTERNS + K1 登记同步）；视图：阅读态点段落即摘录（data-para 段索引）、书架页摘录列表显示书/章/段引用。",
-        "【本版自己抓到的缺陷形态（形态锚）】首版指纹替换生成了**新条目 id**——B1 用例当场抓红：进度键（ruby_reading_progress_旧id）与摘录引用（bookId=旧id）全断链，「重接」名存实亡。修法：同指纹替换**继承旧 id**（reuseId 回填），重接的意思就是回到原书，不是换壳。",
-        "【判据自伤（判据侧，不是实现缺陷）】E1 负控制锚点在 id 继承修复后失配（判据抄的是修复前源码行）——修真缺陷后判据必须逐字跟上；另 B3 初版断言里混入一处笔误自引用（D.ReadingBookHack），静态读数即发现即改。",
-        "【验收对照（计划原文四条）】同名不同文件不静默覆盖 ⇒ B1（异指纹并存 + 旧书仍在）；丢附件可重新定位 ⇒ B2（重导回原 id）+ id 继承（进度与引用不断链）；摘录保留书/章/段引用 ⇒ A2（窄口拒收不完整引用）+ D1（视图引用 1 基段号显示）；正文不塞入提示词或 chatMetadata ⇒ B3（shelf 落盘不含 chapters/paragraphs 字段、体积有上界断言）+ 摘录只存文本片段与引用。",
-        "【交棒改写（本轮实做）】tests/system-v3991.test.mjs 的 E1 **主动改写为下限形**：当版五源读数交棒给新档 tests/system-v3992.test.mjs 的 F1/F2；本档只锁不随抬版漂移的历史事实。与 v3980→v3990、v3990→v3991 两次交棒同法。",
-        "【负控制】E1：把异指纹并存改回无条件同名覆盖 ⇒ 并存与旧书仍在判据转红（真源码破坏 + 原版同判据为真）；E2：摘录窄口放宽（缺章段也收）⇒ 引用完整性判据转红。",
-        "【运行时验证边界（与工程文档同源）】** 本版挡得住的是：同名异指纹并存与旧书不覆盖、同文件重导回原 id（进度与摘录引用不断链）、摘录引用完整性（窄口拒收 + 视图引用显示）、摘录落会话键且不串味、shelf 落盘不含正文。**挡不住**的是真实浏览器触摸与阅读手感（未测不宣称）；正文附件持久化是**需用户确认的实施决策**，本版不动。",
-        "【如实不做】正文附件持久化（需用户确认实施决策后另做）；书签与划线的独立 UI（本版摘录即划线的最小可用形——点段落收摘录并保留引用，独立划线选择手势留待真机验收后迭代）；真实浏览器触摸体验未测不宣称。",
-        "【回归读数】当版套件 tests/system-v3992.test.mjs 14 例（A3/B3/C2/D2/E2/F2）；keys/weak-coercion/dead-exports/lifecycle/registry 五门 rc=0；语法门 773 文件。",
-        "【版本升至 3.99.2（五源同源）】** manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG.md 新增本迭代段；边界文档按当版复校。抬版走仓内唯一范式（tools/bump_v3992.py 对齐 tools/bump_v3991.py）。"
+        "【定位 · 计划原文 R3-O7 的真实缺口（修前实测，不是推演）】计划要的是「统一用户侧任务卡：等待/生成/可播放/失败/结果待核；取消排队、只重试失败步骤、保留已生成成果」。修前实测：传输层早就把中止通道铺好了 —— image-generation-manager 的 NAI 队列等待查 options.signal.aborted、ComfyUI 历史轮询每轮查 signal、TTS 的每一次 fetch 都带 signal，**全仓却没有任何一处用户侧取消入口**；各 App 的生图/语音任务态各自为政（微信的 imageGenStatus、蜜语的生图、TTS 播放互不知晓），没有跨 App 的任务面。这是本仓反复出现的形态：**底下通了、上面没口**。",
+        "【新内核 · config/media-task-registry.js（纯函数）】统一任务态机的唯一实现：六面状态（waiting 排队 / running 生成 / playable 可播放 / failed 失败 / review 结果待核 / cancelled 已取消）+ 迁移白名单 + 取消白名单 + 在飞拦截 + 聚合去重 + 自检。**不写存储**（任务键与状态由调用方持有：微信生图在消息上、TTS 在会话内存），零 storage 零 DOM 零计时 API。",
+        "【取消白名单：可播放成果不允许被取消误伤（验收③的落点）】canCancel 只放 waiting / running；playable 一律拒（「成果已生成，不需要取消」）、failed 拒（「直接重试即可」）、review 拒（「先核对再决定」）、cancelled 拒。applyCancel 在拒时返回 task:null，调用方拿不到半个已取消读数。",
+        "【在飞拦截的语义口径（一次自我纠正）】首版 duplicateGuard 写成「已是 playable/review 且有成果 ⇒ 拦」，被本版自己的用例问出问题：用户点「重新生成」是显式意图，拦掉它等于把「重新生成」按钮做成死的。改为**只拦在飞**（waiting/running）—— 验收原文「已知完成不重复生成」指的是「切 App 回来不重新发起一遍」，不是「用户不能主动重生成」。自检里同步补了双向判据（在飞必拦 / 已完成必放行）。",
+        "【index.js 装配注册板（会话内存，不落盘）】window.VirtualPhone.mediaTasks 四个动作：upsert（过 normalizeTask 窄口 + **迁移守卫**：旧态→新态必须过白名单，cancelled 是终态、playable 不许回 running）、remove、cancel（走 canCancel/applyCancel）、readAll（聚合读数，原名 snapshot，因与推送型桥字段撞形改名）；另加 shouldSkip（在飞拦截）与 selfCheck（内核自检）。**不落盘是有意的**：任务态的生命周期就是会话生命周期，重启后由既有的恢复面接管（wechat-data 的 loading→failed「页面刷新后，之前的生成任务已中断，请点击重试」），这里再做一份持久化就是第二份真源。",
+        "【微信生图全链接线（真实入口、真实操作、真实效果）】四态 upsert 全程：入列 waiting → 调 generate 前 running → 图片/视频落盘后 playable → catch 里 failed。generate 收到 signal（NAI 队列等待 abort 会 leave-queue，**不新增扣费请求**）；气泡在 loading 态渲染「取消」按钮，点击走 cancelImageGeneration：过注册板白名单 → abort 传输层 → 消息回 idle（**不是 failed**）→ 弹「已取消，没有新增扣费请求」。注册前先 remove 旧任务：重修生成是新任务，否则 playable → running 会被迁移白名单拒掉、用户的「重新生成」点了没反应。",
+        "【本版自己抓到的缺陷形态（定向套件 C3 抓出，合并前已修）】生图链有**两段**可失败 —— ① 英文 TAG 生成（LLM 调用）② 真生图。取消只接了后者的 catch；在 TAG 阶段点取消，abort 已置位而 TAG 请求抛错会走 TAG 的 catch，把消息写成 failed 并弹「英文 TAG 生成失败」—— **用户点了取消却看到一条失败红字**，正是本版要治的形态。修法：TAG 的 catch 开头加同一道 abort 守卫（两段各一道，判据 C3 逐点核对「每个 failed 写入点之前都有守卫」）。",
+        "【跨 App 任务卡聚合面（计划原文「统一用户侧任务卡」的落点）】任务入口（apps/taskentry）新增生成任务段：五档计数（等待/生成中/可播放/失败/待核 + 已取消）+ 在飞数 + 按态分组列表（标出「已有成果」）。读数**每次现取不缓存**（注册板是会话内存，缓存必然在任务刚完成时给旧读数）；板不在时报 ready:false + 如实原因，与「板上真的没有任务」（total 0）分得开。CSS 同步落地（.te-media 族 10 条）。",
+        "【交棒改写（判据面，不是放宽）】本版把「用户侧取消」从「传输层有 signal、产品端零入口」改成**单一注册板 + 白名单 + 迁移守卫**：以后新增一类媒体任务（如蜜语生图、通话语音），只需 upsert 一个键、在失败/成功处各收一次尾，取消与聚合与在飞拦截随行给出 —— 是否漏接由「upsert 处数与 catch 处数」回答，不靠人记得。v3992 的 F1/F2 已在上一版落成当版硬锁，本版把 E1 交棒为**下限形**（入口版本不低于 3.99.2）。",
+        "【定向判据与负控制】tests/system-v4000.test.mjs 五面 15 条全绿：A 结构面（六态齐备 / 文案表与迁移表互不越界 / cancelled 终态 / playable 不许回 running / 自检两侧都跑）；B 行为面（净化窄口四拒一收 / 取消白名单六态 + applyCancel 拒时 task:null / 在飞拦截双向 / 聚合去重后到覆盖先到 / 非法输入不抛错）；C 接线面（注册板六动作 + 迁移守卫 + 挂载 / 微信 signal 与五处 upsert 与取消入口 / 两段 catch 都守 abort / 任务入口 app 读数 + 视图段 + CSS）；D 负控制（真源码定点破坏两处：在飞拦截改成 if(true)、取消白名单把 playable 改成可取消，破坏副本上同款判据必转红）；E 版本锚（五源同源不低于 3.99.2）。",
+        "【运行时验证边界（如实声明）】本版在无头环境验证的是**内核纯函数行为、注册板装配、生图链的四态写入顺序与两段 catch 的守卫位置、视图拼装与 CSS**；**未做**真实浏览器/真机的生图取消端到端（NAI 排队中真实点取消、观察 leave-queue 与不扣费需要真实凭据与队列），也未做 TTS 分段播放的中断续播（本版只把 TTS 的 signal 通道与聚合面纳入统一任务卡，分段合成本身不在本版范围）。无凭据时验本地任务态，不假报供应商实测。",
+        "【本版边界（刻意不做）】不新建入口 App（注册板是内存对象，任务段长在既有任务入口里）；不重建工作流运行器；不做 TTS 分段合成（计划原文「语音分段播放与中断后续播」的分段器需另立一期，本版把它的**任务态与取消面**先归到统一任务卡下）；不引入外部数据库。",
+        "【版本升至 4.00.0（五源同源）】update-log / manifest / package / index.js 常量与公告块 / ITERATION_LOG 五处同步；迭代段共 12 条，本段为 E 包手机侧第一项（R3-O7）的交付记录。"
     ]
 };
 
@@ -1802,6 +1805,58 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         timeManager = new TimeManager(storage);
         promptManager = new PromptManager(storage);
         ttsManager = new TtsManager(storage);
+        /* [v4.00.0 · R3-O7] 生图与语音的统一任务注册板（会话内存，不落盘）。
+         *   任务态的生命周期就是会话生命周期：重启后微信生图的 loading 恢复面
+         *   （wechat-data 的 loading→failed）照旧接管，这里不做第二份持久化。
+         *   板上只有三个动作：upsert（登记/更新，过 normalizeTask 窄口）、
+         *   cancel（过 canCancel/applyCancel 白名单——可播放成果不允许被取消误伤）、
+         *   readAll（聚合读数，供任务入口/诊断消费）。
+         *   [v4.00.0] 原名 snapshot()，改名理由见 tools/patch_v4000_j2.py ——
+         *   上游推送型桥的 snapshot 是对象字段，本板动作与它同名会让维护者
+         *   把字段当函数 call（本仓 bridge-contract 门 J2 钉住的正是这个形态）。 */
+        if (!window.VirtualPhone) window.VirtualPhone = {}; // [v4.00.0 · R3-O7] 防御式初始化（装配点早于主装配区）
+        const mediaTaskMap = new Map();
+        window.VirtualPhone.mediaTasks = {
+            upsert(raw) {
+                const norm = mtrNormalizeTask(raw);
+                if (!norm.ok) return { saved: false, why: norm.reason };
+                const prev = mediaTaskMap.get(norm.task.key);
+                if (prev) {
+                    /* 迁移守卫：旧态 → 新态必须过白名单（cancelled 是终态、playable 不许回 running）。
+                     *   守卫拒时不改板也不抛错——返回拒因，调用方决定要不要以新键重新登记。 */
+                    const gate = mtrCanTransition(prev.state, norm.task.state);
+                    if (!gate.ok) return { saved: false, why: 'transition-rejected: ' + gate.reason, task: prev };
+                }
+                mediaTaskMap.set(norm.task.key, norm.task);
+                return { saved: true, why: '', task: norm.task };
+            },
+            remove(key) {
+                const k = String(key || '').trim();
+                return { saved: mediaTaskMap.delete(k), why: k ? '' : 'empty-key' };
+            },
+            cancel(key) {
+                const k = String(key || '').trim();
+                const task = mediaTaskMap.get(k);
+                if (!task) return { ok: false, why: 'no-such-task', task: null };
+                const gate = mtrCanCancel(task);
+                if (!gate.ok) return { ok: false, why: gate.reason, task: null };
+                const applied = mtrApplyCancel(task);
+                if (!applied.ok) return { ok: false, why: applied.reason, task: null };
+                mediaTaskMap.set(k, applied.task);
+                return { ok: true, why: '', task: applied.task };
+            },
+            readAll() {
+                return mtrSummarizeTasks(Array.from(mediaTaskMap.values()));
+            },
+            /* 已知完成不重复生成：同键任务已有成果时，新的生成请求应被拦（调用方据此短路）。 */
+            shouldSkip(key) {
+                return mtrDuplicateGuard(Array.from(mediaTaskMap.values()), key);
+            },
+            /* 内核自检读数（诊断/测试面消费）。 */
+            selfCheck() {
+                return mtrSelfCheck();
+            }
+        };
         asrManager = new AsrManager(storage);          // [v2.13.0] ASR
         imageGenerationManager = new ImageGenerationManager(storage);
         worldbookManager = new WorldbookManager(storage);
@@ -12129,6 +12184,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 apiManager: new ApiManager(storage),
                 promptManager: null,
                 ttsManager: ttsManager,
+                mediaTasks: window.VirtualPhone ? window.VirtualPhone.mediaTasks : null, // [v4.00.0 · R3-O7]
                 asrManager: asrManager,          // [v2.13.0] 语音输入
                 imageGenerationManager: imageGenerationManager,
                 worldbookManager: worldbookManager,
