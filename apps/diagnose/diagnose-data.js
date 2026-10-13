@@ -168,6 +168,8 @@ import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-
 import { groupPaceSelfCheck, groupPaceLine, planGroupPace, GROUP_PACE_REASONS, GROUP_PACE_PRIVACY, GROUP_PACE_PRIVACY_REASONS, GROUP_PACE_TIERS, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
 /* [第三期 R3-X5] 人物回忆册面的唯一消费口(诊断中心同族卡)。 */
 import { relationAlbumSelfCheck, relationAlbumLine, buildRelationAlbum, readRelationHistory, RELATION_ALBUM_STATES, RELATION_ALBUM_REASONS, ALBUM_SCOPES, ALBUM_SCOPE_TEXT, ALBUM_KINDS, ALBUM_LIMITS } from '../../config/relation-album-contract.js';
+/* [第三期 R3-X3] 约会与日程可玩流程面的唯一消费口(诊断中心同族卡)。 */
+import { datePlaybookSelfCheck, datePlaybookLine, buildDatePlaybook, PLAY_STEPS, PLAY_STEP_TEXT, PLAY_STATES, PLAY_REASONS, PLAY_LIMITS } from '../../config/date-playbook.js';
 import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
 /* [v3.82.0 · B 清单] 写作面八张卡的**唯一消费口**：氛围池（B1）/ 关系七级（B2）/
  *   判定与平行线（B3+B4）/ 状态字段（B5）/ 二级摘要（B6）/ 事实表（B7）/ 人工纠错（B8）。
@@ -1050,6 +1052,11 @@ export function collectDiagnose(win, storage) {
                 key: String(k), text: String(RELATION_ALBUM_REASONS[k]),
             }));
             const upstream = (() => { try { return readRelationHistory(null, {}); } catch (_e) { return null; } })();
+
+    /* [第三期 R3-X3] 约会可玩流程面:五步台面 + 五态 + 八词归因
+     *   + 一个样本跑一遍(验证「到场必须等人证」与「没互动不给回顾」两条硬口径)。
+     *   与 relationAlbumFace 同族:本仓一切纯函数面的可见出口就在这里。 */
+
             const sample = buildRelationAlbum({
                 subject: { id: 'u', name: '样本' },
                 events: [
@@ -1090,6 +1097,59 @@ export function collectDiagnose(win, storage) {
                     + kinds.map((x) => x.label).join(' / ') + ');'
                     + '转折直接用上游 relationHistory 的产物,不在本仓重算;'
                     + '撤回的事件不进册。',
+            };
+        } catch (e) {
+            return { ok: false, reason: 'thrown', problems: [String(e && e.message || e)], line: '' };
+        }
+    })();
+
+    const datePlayFace = (() => {
+        try {
+            const self = datePlaybookSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const steps = PLAY_STEPS.map((k) => ({ key: String(k), label: String(PLAY_STEP_TEXT[k] || '') }));
+            const states = Object.keys(PLAY_STATES).map((k) => ({
+                key: String(PLAY_STATES[k]), label: String(PLAY_REASONS[PLAY_STATES[k]] || ''),
+            }));
+            const reasons = Object.keys(PLAY_REASONS).map((k) => ({
+                key: String(k), text: String(PLAY_REASONS[k]),
+            }));
+            const c = { id: 'sample', actor: 'A', with: 'B', content: '样本约会', status: 'confirmed', dateKey: '2026-01-01', time: '19:00', place: 'P' };
+            const sample = buildDatePlaybook({ commitment: c, currentFloor: 10 });
+            const withProof = buildDatePlaybook({ commitment: c, currentFloor: 10, marks: {
+                prepare: { floor: 5, eventKey: 'e1' }, depart: { floor: 6, eventKey: 'e2' } } });
+            const rolled = buildDatePlaybook({ commitment: c, currentFloor: 3, marks: { prepare: { floor: 5, eventKey: 'e1' } } });
+            const arr = sample.steps.find((x) => x.key === 'arrive');
+            const distinct = arr && arr.state === PLAY_STATES.NEEDS_EVIDENCE
+                && Array.isArray(rolled.steps) && rolled.steps.some((x) => x.state === PLAY_STATES.STALE)
+                && !sample.draft;
+            let head = '尚未取数';
+            if (!problems.length) {
+                head = distinct
+                    ? ('五步台面可算(当前能做 ' + String(sample.ready || '无') + ' · 到场 ' + String(arr.state) + ')')
+                    : '内核自检过而样本形态不对';
+            }
+            return {
+                ok: problems.length === 0 && distinct,
+                reason: problems.length ? 'self-check' : (distinct ? 'ok' : 'sample-shape'),
+                problems: problems,
+                steps: steps,
+                states: states,
+                reasons: reasons,
+                limits: { steps: PLAY_LIMITS.steps, todoItems: PLAY_LIMITS.todoItems,
+                    invitationChars: PLAY_LIMITS.invitationChars, draftChars: PLAY_LIMITS.draftChars },
+                sample: {
+                    ready: String(sample.ready || ''),
+                    arriveState: String(arr ? arr.state : ''),
+                    withProofReady: String(withProof.ready || ''),
+                    rolledStale: rolled.steps.filter((x) => x.state === PLAY_STATES.STALE).length,
+                    hasDraft: !!sample.draft,
+                },
+                line: datePlaybookLine(sample),
+                text: '约会可玩流程(第三期 R3-X3):五步('
+                    + steps.map((x) => x.label).join(' → ') + ');到场必须等人证'
+                    + '(正文或用户确认)——到点了就当到了是把时间当成了事实;'
+                    + '回档后未来步骤作废;用剧情时钟不用现实闹钟。',
             };
         } catch (e) {
             return { ok: false, reason: 'thrown', problems: [String(e && e.message || e)], line: '' };
@@ -1561,7 +1621,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1654,6 +1714,17 @@ export function relationAlbumFaceText(face) {
         return String(f.text || '人物回忆册:无读数');
     } catch (_e) { return '人物回忆册:读取异常(已降级)'; }
 }
+/** [第三期 R3-X3] 约会可玩流程面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
+ *  与 relationAlbumFaceText 同范式:只做转发与文案,视图不自己拼。
+ *  三态不同形:面缺席 / 尚未取数 / 有读数。 */
+export function datePlayFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '约会流程:读取异常(已降级) —— 这不是「没有约定」';
+        return String(f.text || '约会流程:无读数');
+    } catch (_e) { return '约会流程:读取异常(已降级)'; }
+}
+
 
 
 /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
@@ -2018,6 +2089,7 @@ export default {
     workflowFaceText,
 groupPaceFaceText,
 relationAlbumFaceText,
+datePlayFaceText,
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,
     backupFaceText,

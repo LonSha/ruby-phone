@@ -23,6 +23,10 @@ import {
  *   AI 一轮再等一次），回信时可能已经换了会话。它写 `calendar_memos`（按会话隔离），
  *   旧回信落回来会把上一段会话的日程排进新会话的日历，并在新会话桌面弹「已添加 N 条日程」。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+import { numOrNull } from '../../config/num-gate.js';
+/* [第三期 R3-X3] 约会与日程的可玩执行流程(五步台面)。
+ *   纯函数内核,读本层已有的约定账与剧情楼层;不新开第二个 owner。 */
+import { buildDatePlaybook, advanceStep, datePlaybookLine, PLAY_STEPS, PLAY_STATES } from '../../config/date-playbook.js';
 
 export class CalendarApp {
     constructor(phoneShell, storage) {
@@ -112,6 +116,73 @@ export class CalendarApp {
     syncCommitmentsToCalendar() {
         const projection = commitmentCalendarProjection(this.loadCommitments());
         return this.calendarData.syncCommitmentProjection(projection);
+    }
+
+    /**
+     * 取当前剧情楼层(**回档判定用**;读不到返 null,不猜 0楼)。
+     * [第三期 R3-X3] 本层只读**剧情时间**面,不读现实时间:
+     *   用现实时间判回档,会把「玩家回到旧楼层」误读成「约会已经过时」。 */
+    currentStoryFloor() {
+        try {
+            const vp = (typeof window !== 'undefined' && window.VirtualPhone) ? window.VirtualPhone : null;
+            const sc = vp && vp._storyClock ? vp._storyClock : null;
+            const f = sc ? sc.floor : null;
+            /* 取数走仓内唯一实现(不要就地再写一份弱口径)。 */
+            return numOrNull(f);
+        } catch (_e) { return null; }
+    }
+
+    /**
+     * 一条约定的五步台面(prepare → depart → arrive → interact → wrapUp)。
+     * [第三期 R3-X3] 本层只做「读与搬」:约定从本层账取、步骤读数从跳转记录取(没有就是没有,不拟一个),楼层从剧情时钟取(读不到传 null)。
+     * 永不抛;内核异常时如实回报而不假装「没这条约定」。
+     */
+    commitmentPlaybook(commitmentId) {
+        try {
+            const want = String(commitmentId || '').trim();
+            if (!want) return { ok: false, reason: 'no-commitment', steps: [], line: '约会流程:无读数' };
+            const items = (this.loadCommitments() || {}).items || [];
+            const c = items.find((x) => String(x && x.id) === want) || null;
+            if (!c) return { ok: false, reason: 'no-commitment', steps: [], line: '约会流程:无读数' };
+            const marks = {};
+            for (const k of PLAY_STEPS) {
+                const raw = (c.steps && typeof c.steps === 'object') ? c.steps[k] : null;
+                marks[k] = (raw && typeof raw === 'object')
+                    ? { floor: raw.floor, eventKey: raw.eventKey, confirmed: raw.confirmed === true }
+                    : null;
+            }
+            const r = buildDatePlaybook({ commitment: c, marks: marks, currentFloor: this.currentStoryFloor() }, {});
+            r.line = datePlaybookLine(r);
+            return r;
+        } catch (_e) {
+            return { ok: false, reason: 'no-commitment', steps: [], line: '约会流程:读数时抛了' };
+        }
+    }
+
+    /**
+     * 推进一步(校验准入,但**不代替正文或用户**做那一步)。
+     * 到场步骤必须带人证(eventKey 或 userConfirmed)。
+     * @returns {{ok, step, reason, state, needsWrite?}} 永不抛
+     */
+    advanceCommitmentStep(commitmentId, stepKey, evidence = {}) {
+        try {
+            const want = String(commitmentId || '').trim();
+            if (!want) return { ok: false, step: String(stepKey || ''), reason: 'no-commitment', state: null };
+            const items = (this.loadCommitments() || {}).items || [];
+            const c = items.find((x) => String(x && x.id) === want) || null;
+            if (!c) return { ok: false, step: String(stepKey || ''), reason: 'no-commitment', state: null };
+            const marks = {};
+            for (const k of PLAY_STEPS) {
+                const raw = (c.steps && typeof c.steps === 'object') ? c.steps[k] : null;
+                marks[k] = (raw && typeof raw === 'object')
+                    ? { floor: raw.floor, eventKey: raw.eventKey, confirmed: raw.confirmed === true }
+                    : null;
+            }
+            return advanceStep({ commitment: c, marks: marks, currentFloor: this.currentStoryFloor() },
+                String(stepKey || ''), evidence || {});
+        } catch (_e) {
+            return { ok: false, step: String(stepKey || ''), reason: 'no-commitment', state: null };
+        }
     }
     applyCommitmentResult(result, successText) {
         if (!result?.ok) {

@@ -238,6 +238,7 @@ test('v293 D. 负控制：源键退回「含状态与 revision」→ 全程多�
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
+    'config/date-playbook.js': read('config/date-playbook.js'),
   });
   try {
     const traced = await commitmentTrace(dir);
@@ -270,6 +271,7 @@ test('v293 D2. 负控制：抽掉整族回收 → 终态幽灵复现（B 判据�
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
+    'config/date-playbook.js': read('config/date-playbook.js'),
   });
   try {
     const { host, app, ns } = await boot(dir);

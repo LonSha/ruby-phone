@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -618,6 +618,46 @@ export class DiagnoseView {
     /* 四态归因词与四态私密度都在这里面职一次拆开给读者:「读不到」与「不行」不同形。 */
     /* [第三期 R3-X5] 人物回忆册卡:与 _groupPaceHtml 同范式(只转发与排版)。
     /* 三份归属与上游五态都在这里拆开给读者:「读不到」与「没什么可回忆的」不同形。 */
+    /* [第三期 R3-X3] 约会可玩流程卡:与 _relationAlbumHtml 同范式(只转发与排版)。
+    /* 五步台面与八词归因都在这里拆开给读者;
+     *   「到点了就当到了」与「等人证」必须在界面上看得出区别。 */
+    _datePlayHtml(pkg) {
+        const face = (pkg && pkg.datePlayFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到约会流程面(已降级) —— '
+                + '这是「本层读不出」,**不是**「没有约定」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>'
+            + escapeHtml(datePlayFaceText(face)) + '</div>';
+        const steps = Array.isArray(face.steps) ? face.steps : [];
+        if (steps.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>五步:'
+                + escapeHtml(steps.map((x) => x.label).join(' → '))
+                + '。**到场必须等人证**(正文或用户确认)——'
+                + '到点了就当到了是把时间当成了事实。</div>';
+        }
+        const reasons = Array.isArray(face.reasons) ? face.reasons : [];
+        if (reasons.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + reasons.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.key) + '</code>'
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const sample = face.sample || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>样本实测:当前能做 '
+            + escapeHtml(String(sample.ready || '无')) + ' · 到场步骤状态 '
+            + escapeHtml(String(sample.arriveState || '—')) + ' · 回档后作废 '
+            + escapeHtml(String(sample.rolledStale || 0)) + ' 步 · '
+            + (sample.hasDraft ? '有回顾草稿' : '**没互动故不给回顾草稿**') + '</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>内核自检报了问题</b>:</div>';
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + problems.map((x) =>
+                '<div class=' + Q + 'dg-trow dg-bad' + Q + '>' + escapeHtml(String(x)) + '</div>').join('') + '</div>';
+        }
+        return html;
+    }
     _relationAlbumHtml(pkg) {
         const face = (pkg && pkg.relationAlbumFace) || null;
         if (!face) {
@@ -1536,6 +1576,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>群聊节奏(冷却 / 未接话题 / 关系相关度 / 允许沉默)</h3>' + this._groupPaceHtml(pkg) + '</section>');
         /* [第三期 R3-X5] 人物回忆册卡:跟在群聊节奏卡之后(两者都是「把关系读数落成可读面」同族的诊断卡)。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>人物关系回忆册(三份归属 / 上游转折面 / 撤回即不再生成)</h3>' + this._relationAlbumHtml(pkg) + '</section>');
+        /* [第三期 R3-X3] 约会流程卡:跟在回忆册卡之后(两者都是「把约定读数落成可读面」同族的诊断卡)。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>约会与日程的可玩执行流程(五步 / 到场等人证 / 回档即作废)</h3>' + this._datePlayHtml(pkg) + '</section>');
          /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */
          h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>创作工作台（五类素材 / 四类发布前检查；发布只委托目标 App 的真源写口）</h3>' + this._creationWorkbenchHtml(pkg) + '</section>');
          /* [v3.91.0 · R-X7] 备份恢复卡与上面两张**并列**（分工：那两张管「一次操作」，本卡管「把整部手机搬走」）。 */

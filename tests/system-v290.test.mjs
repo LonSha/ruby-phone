@@ -238,6 +238,8 @@ test('v290 D2. 负控制：恢复 app 自持第二个 store → lost update 复�
     'config/tag-filter.js': read('config/tag-filter.js'),
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
+    /* [第三期 R3-X3] calendar-app 新引了约会可玩流程内核;少一件即 ERR_MODULE_NOT_FOUND。 */
+    'config/date-playbook.js': read('config/date-playbook.js'),
   });
   try {
     const { PhoneStorage } = await import('file://' + path.join(dir, 'config/storage.js'));
