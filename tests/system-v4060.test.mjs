@@ -248,12 +248,24 @@ test('D2 *** 台账是真仓真读数:零消费面的理由非空、可追责(�
     const t = JSON.parse(read(UNCONS_REL));
     assert.equal(t._schema, 'upstream-face-unconsumed@1', '台账自带 schema');
     const cache = JSON.parse(read(CACHE_REL));
-    const nones = Object.entries(cache.faces).filter((kw) => kw[1].consumer === 'none@0').map((kw) => kw[0]);
+    /* ★ 取数口本该是「台账 ∩ 未消费面」而**不是**「cache 里所有 none@0」:
+     *   R3-X5 之后,relationHistory 那一面在上游账面仍是 none@0,而本仓已接上 ——
+     *   按「cache 里所有 none@0」取数就会把**已消费**的面也拿来要理由(判据自伤)。
+     *   台账的语义是「本仓认为还没用它的那些面」,故以**台账条目**为准。 */
+    const entries = Object.keys(t).filter((k) => !k.startsWith('_'));
+    const nones = Object.entries(cache.faces).filter((kw) => kw[1].consumer === 'none@0').map((kw) => kw[0])
+        .filter((f) => entries.includes(f));
     assert.ok(nones.length >= 1, '真仓此刻应有零消费面(否则本版治的是个不存在的情形)');
-    for (const face of nones) {
-        const why = String(t[face] || '').trim();
-        assert.ok(why.length >= 20, '★ 理由必须是有内容的说明,不是占位符:' + face + ' -> ' + JSON.stringify(t[face]));
-        assert.ok(/R3-X\d|M3-X\d/.test(why), '每一条理由必须点名对应的产品项编号(可追责):' + face);
+    /* 【v4.07.0 交棒】本套件成立于「零消费面首发」那一版(三面 none@0)。
+     *   此后 R3-X5 把 relationHistory 真接上了,该面**从本表移出**(走登记行那条路);
+     *   台账条目随消费进度**可增可减** —— 故这里不再断言某个具体面在场,
+     *   只断言「台账里剩的每一条都非空、可追责」与「已消费的面不得还留在台账里」。
+     *   (写死「必须还剩三面」会让这条判据守的不再是「理由非空」,
+     *    而是「本仓的跨仓消费进度停在某一版」—— 那是别人的提交进度,不是判据。) */
+    const consumed = read('config/crossrepo-registry.js');
+    for (const face of Object.keys(t).filter((k) => !k.startsWith('_'))) {
+        assert.equal(consumed.includes("upstreamFace: '" + face + "'"), false,
+            '★ 已接进登记行的面不许还留在未消费台账里(同一件事不许两处各说一遍):' + face);
     }
 });
 

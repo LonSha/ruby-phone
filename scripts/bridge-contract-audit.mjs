@@ -267,6 +267,14 @@ const ENTITY_READER = 'readEntityCandidates';
 /* [face: entityMapping] [reader: readEntityCandidates] [floor: 1] */
 const ENTITY_SOURCE_REL = 'config/entity-candidates-contract.js';
 const ENTITY_MIN_CONSUMERS = 1;
+/* [第三期 R3-X5] 人物关系回忆册的转折面消费上游 relationHistory。
+ *   上游在 v3.323.0(M3-X2)交付这一面时 consumer 如实写 none@0(下游一个都不消费),
+ *   本版把它接上—— 故上游那一面的 consumer 字段会由上游自己更新为真。
+ *   本仓这边的对账三件套写在注册表那一行里,这里只挂**机器可读标签**。 */
+const RELATION_ALBUM_READER = 'readRelationHistory';
+/* [face: relationHistory] [reader: readRelationHistory] [floor: 1] */
+const RELATION_ALBUM_SOURCE_REL = 'config/relation-album-contract.js';
+const RELATION_ALBUM_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;

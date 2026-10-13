@@ -93,6 +93,43 @@ function replaceOnce(s, from, to) {
 }
 
 /** 夹具树：真仓 config/ + 门禁脚本 + 冻读取 + 未消费台账 + 上游台账 + ESM 标记。 */
+/**
+ * 把**夹具 cache** 里那些「本仓其实在消费、而上游账面仍写 none@0」的面改成一致。
+ *   为什么需要它:夹具的 cache 是真仓拷贝,而真仓可能真有未结的跨仓分歧。
+ *   夹具一旦带着它,台账就必须跟着解释它 —— 那会让「自造 N 条分歧」的用例
+ *   因为多出第 N+1 条真分歧而红,而红因指向的其实是**真仓此刻的状态**。
+ *   本函数只改**夹具那一份**,真仓一个字节不动。
+ */
+function normalizeFixtureCache(dir) {
+    try {
+        const reg = fs.readFileSync(path.join(dir, REGISTRY_REL), 'utf8');
+        const triples = [];
+        const re = /upstreamFace:\s*'([^']+)'[\s\S]{0,400}?declaredConsumer:\s*'([^']+)'[\s\S]{0,200}?declaredFloor:\s*(\d+)/g;
+        let m = null;
+        while ((m = re.exec(reg))) triples.push({ face: m[1], consumer: m[2], floor: Number(m[3]) });
+        if (!triples.length) return;
+        const cp = path.join(dir, CACHE_REL);
+        const c = JSON.parse(fs.readFileSync(cp, 'utf8'));
+        let touched = 0;
+        for (const t of triples) {
+            const f = c.faces && c.faces[t.face];
+            if (!f) continue;
+            if (String(f.consumer) === 'none@0') { f.consumer = t.consumer + '@' + t.floor; touched += 1; }
+        }
+        if (touched) fs.writeFileSync(cp, JSON.stringify(c, null, 2) + '\n');
+        /* ★ 归一化与台账**必须同时做**:只改冻读取而不清台账项,就会造出
+         *   「登记着不存在的分歧」—— C0(基线自证)当场抓住的那一形。
+         *   夹具的两份数据是一对,改一份就得改另一份。 */
+        const lp = path.join(dir, LAG_REL);
+        const lg = JSON.parse(fs.readFileSync(lp, 'utf8'));
+        if (Array.isArray(lg.items)) {
+            const before = lg.items.length;
+            lg.items = lg.items.filter((it) => !(it && it.kind === 'consumer-none'
+                && triples.some((t) => t.face === it.face)));
+            if (lg.items.length !== before) fs.writeFileSync(lp, JSON.stringify(lg, null, 2) + '\n');
+        }
+    } catch (_e) { /* 归一化失败不算缺陷:用例会在台账那一步如实报出来 */ }
+}
 function stageTree(overrides = {}) {
     const dir = tmp('rp_v3204_');
     fs.writeFileSync(path.join(dir, 'package.json'),
@@ -107,6 +144,14 @@ function stageTree(overrides = {}) {
     for (const rel of [BRIDGE_REL, CACHE_REL, UNCONS_REL, LAG_REL]) {
         fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel));
     }
+    /* 【v4.07.0 自足化】夹具的冻读取是**真仓那一份**的拷贝,而真仓此刻可能真有
+     *   跨仓分歧(本版起 R3-X5 接上了上游 relationHistory,而上游账面还写 none@0)。
+     *   夹具若原样带着那条分歧,它的台账就**必须**同时带那条解释 —— 否则
+     *   「自造两条分歧 + 逐条解释」的用例会因为夹具里多出第三条真分歧而转红。
+     *   那等于「判据的前提是别人的提交进度」(本套件自己在 v3.20.5 收账时就治过这一形)。
+     *   故这里把夹具 cache 里**与夹具 registry 不一致**的 `none@0` 面改写成 registry
+     *   声明的出口:分歧集合从此完全由夹具自己产生(自造分歧仍由 stageDivergence 注入)。 */
+    normalizeFixtureCache(dir);
     /* 【R12（v3.23.4）：夹具必须带**挂载点文件**】见 v3203 同处注释；路径从登记行读（一处真源）。 */
     for (const rel of REVERSE_MOUNT_FILES) {
         const dst = path.join(dir, rel);
@@ -294,10 +339,12 @@ test('B2 ★★★ 给了 --upstream ⇒ 复核的是**提交态**，且如实�
 });
 test('B3 ★★ 夹具里 --upstream 同源 ⇒ 绿且报提交态一致（夹具自带 git 仓，不依赖真兄弟仓）', () => {
     const dir = stageTree();
-    const cache = JSON.parse(REAL_CACHE_BYTES);
+    /* ★ 取**夹具里已归一化的那一份**(见 normalizeFixtureCache):
+     *   取真仓字节会与夹具里的那份不同源(归一化改过 consumer),上游表与冻读取就分叉了。 */
+    const cache = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
     const table = tableTextFromCache(cache);
     const up = stageUpstream(dir, table);
-    const c = JSON.parse(REAL_CACHE_BYTES);
+    const c = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
     c.tableSha1 = sha1(table);
     c.worktreeDirty = false;
     fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(c, null, 2) + '\n');
@@ -322,11 +369,12 @@ test('B5 ★★★ 上游**只有工作树脏**（未提交）而提交态未变
     /* 这正是本版的分野：上一版会把「工作树有人改了」读成「上游表变了」（答非所问），
      * 本版按提交态判 ⇒ 绿；但脏这件事不许被吞掉，故必须有 note。 */
     const dir = stageTree();
-    const cache = JSON.parse(REAL_CACHE_BYTES);
+    /* ★ 同 B3:取夹具里已归一化的那一份(否则上游表与冻读取不同源)。 */
+    const cache = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
     const table = tableTextFromCache(cache);
     const up = stageUpstream(dir, table);
     fs.appendFileSync(path.join(up, 'tests', 'audit', 'open_face_registry.tsv'), '# dirty worktree\n');
-    const c = JSON.parse(REAL_CACHE_BYTES);
+    const c = JSON.parse(fs.readFileSync(path.join(dir, CACHE_REL), 'utf8'));
     c.tableSha1 = sha1(table);
     c.worktreeDirty = false;
     fs.writeFileSync(path.join(dir, CACHE_REL), JSON.stringify(c, null, 2) + '\n');

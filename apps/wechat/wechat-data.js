@@ -24,6 +24,9 @@ import {
 /* [第三期 R3-O3] 群聊节奏与角色表达差异:冷却 / 未接话 题 / 关系相关度 / 允许沉默。
  *   纯函数内核,不读存储不写状态;历史与关系刻度由本层从真源喂进去。 */
 import { planGroupPace, groupPaceLine, normalizeGroupHistory, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
+/* [第三期 R3-X5] 人物关系回忆册:消费上游 relationHistory 面
+ *   (转折直接用它的产物,不在这里重算一份)与本仓事件面。 */
+import { buildRelationAlbum, readRelationHistory, relationAlbumLine, RELATION_ALBUM_STATES } from '../../config/relation-album-contract.js';
 /* [v3.97.0 · R3-O1 续] 身份消歧走**上游同一份实体映射**（M3-O3）：本仓自己的成员名归一
  *   只解决「群成员表里谁叫什么」，解决不了「手机侧与主聊天是不是同一个人」。
  *   消费侧只搬运，不重算候选（见 config/entity-candidates-contract.js 档头）。 */
@@ -2550,6 +2553,47 @@ export class WechatData {
                 line: '群聊节奏:读数时抛了' };
         }
     }
+
+    /**
+     * 人物关系回忆册(R3-X5 主出口):把上游转折面与本仓事件面合成一本。
+     * [第三期 R3-X5] 本层只做「读与搬」:
+     *   · 事件面  —— 从该聊天的消息取已**标了类型与在场名单**的那些;没标类型的不拟一个(拟出来的「共同细历」与编造无异);
+     *   · 转折面  —— 从上游 relationHistory 读;不在场就如实标不在场,不拿空转折列表冒充「关系没变过」;
+     *   · 撤回    —— 已撤回的事件不进册(由内核判,本层不过滤也不补救)。
+     * @returns 恒定键面的读数 永不抛
+     */
+    relationAlbumOf(chatId, subjectName) {
+        const w = (typeof window !== 'undefined' && window) ? window : null;
+        let upstream = null;
+        try { upstream = readRelationHistory(w, {}); }
+        catch (_e) { upstream = null; }
+        let events = [];
+        try {
+            const msgs = this.getMessages(chatId);
+            if (Array.isArray(msgs)) {
+                events = msgs.map((m) => ({
+                    id: String((m && (m.id || m.msgId)) || ''),
+                    kind: String((m && (m.albumKind || m.eventKind)) || ''),
+                    label: String((m && (m.albumLabel || m.eventLabel)) || ''),
+                    floor: (m && Number.isFinite(Number(m.floor))) ? Number(m.floor) : null,
+                    present: Array.isArray(m && m.present) ? m.present : null,
+                    with: (m && m.with != null) ? m.with : null,
+                    revoked: !!(m && (m.revoked === true || m.withdrawn === true))
+                })).filter((e) => e.id || e.label || e.with);
+            }
+        } catch (_e) { events = null; }
+        try {
+            const r = buildRelationAlbum({ subject: { name: String(subjectName || '').trim() }, events: events, upstream: upstream }, {});
+            r.line = relationAlbumLine(r);
+            r.upstreamState = upstream ? upstream.state : RELATION_ALBUM_STATES.UNUSABLE;
+            return r;
+        } catch (_e) {
+            return { state: RELATION_ALBUM_STATES.UNUSABLE, reason: 'unusable', subject: { id: '', name: String(subjectName || '') },
+                albums: [], counts: { pairs: 0, entries: 0, shared: 0, onesided: 0, hearsay: 0, revoked: 0, dropped: 0, byName: 0 },
+                turnsFace: false, line: '人物回忆册:读数时抛了', truncated: 0, degraded: true, upstreamState: 'unusable' };
+        }
+    }
+
     getChatBackground(chatId, fallback = '') {
         const chat = this.getChat(chatId);
         return String(

@@ -117,6 +117,9 @@ const MIRROR_FILES = [
      *   ⇒ B2 与 D1/D2/D3/D5 一起转红:那证明的是「两个根看到的不是同一件事」,不是判据逻辑错。
      *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面同规:判据面扩了,镜像面就得跟着扩。 */
     'config/group-pace.js',
+    /* [第三期 R3-X5] 又长了一件:relation-album-contract.js 经 wechat-data
+     *   静态引入(人物关系回忆册)。口径同 v3.79.0 扩 CSS 面、第三期 R3-O3 扩群聊节奏面。 */
+    'config/relation-album-contract.js',
     'apps/app-injection.js', 'config/injection-priority.js',
     'apps/place/place-data.js', 'apps/wallet/wallet-data.js', 'apps/profile/profile-data.js',
     'apps/plotline/plotline-data.js', 'apps/chars/chars-data.js', 'apps/clock/clock-data.js',

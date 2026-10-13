@@ -321,6 +321,25 @@ export const CROSSREPO_FEATURES = Object.freeze([
         declaredFloor: 1
     },
     {
+        id: 'lonsha.relationAlbum',
+        label: '人物关系变化史(回忆册的转折面)',
+        owner: OWNER_LONSHA,
+        since: '3.323.0',
+        sinceSource: '上游 lonsha-memory-plugin/index.js 的 relationHistory / relationHistoryAt(v3.323.0 M3-X2)与内核 relation-history.js;证据在上游真源与 open_face_registry.tsv 的 face=relationHistory 行',
+        fieldKeys: [],
+        contract: '引擎方法族:`relationHistory(opts)` 返回 kind=relation_history 的读数(pairs / counts / truncated / turnsTruncated / byName / malformedInput / writesNothing / degraded);`relationHistoryAt(floor)` 给指定时点快照(时点读不到如实标 floor=null,不猜 0 楼);缺席面给恒定键面且 version=0(「不在场」与「一个都没有」不同形)',
+        keySites: [
+            { file: 'config/relation-album-contract.js', token: 'engine.relationHistory' }
+        ],
+        consumers: [
+            { file: 'config/relation-album-contract.js', token: 'readRelationHistory(' }        ],
+        invalidation: '插件不在场 ⇒ engine-absent(等装插件);插件在、本版无此出口 ⇒ face-absent(等升级);出口在但调用抛错 / 面形态不对 ⇒ unusable(本机读不出);读到了、真的没有转折 ⇒ empty(真读数)——四态处置相反,压平即把「还没装插件」显示成「你们没什么可回忆的」',
+        standalone: '未装上游 ⇒ 回忆册照常出册(事件面是本仓自己的),但转折面如实标不在场——不拿一个空转折列表冒充「你们关系没变过」',
+        upstreamFace: 'relationHistory',
+        declaredConsumer: 'readRelationHistory',
+        declaredFloor: 1
+    },
+    {
         id: 'lonsha.knowledge',
         label: '知情网络（谁不知道某件事）',
         owner: OWNER_LONSHA,

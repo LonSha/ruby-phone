@@ -166,6 +166,8 @@ import { knowledgeSelfCheck, KNOWLEDGE_LEDGER_LIMIT } from '../../config/social-
 import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-pipeline.js';
 /* [第三期 R3-O3] 群聊节奏面的唯一消费口(诊断中心同族卡)。 */
 import { groupPaceSelfCheck, groupPaceLine, planGroupPace, GROUP_PACE_REASONS, GROUP_PACE_PRIVACY, GROUP_PACE_PRIVACY_REASONS, GROUP_PACE_TIERS, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
+/* [第三期 R3-X5] 人物回忆册面的唯一消费口(诊断中心同族卡)。 */
+import { relationAlbumSelfCheck, relationAlbumLine, buildRelationAlbum, readRelationHistory, RELATION_ALBUM_STATES, RELATION_ALBUM_REASONS, ALBUM_SCOPES, ALBUM_SCOPE_TEXT, ALBUM_KINDS, ALBUM_LIMITS } from '../../config/relation-album-contract.js';
 import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
 /* [v3.82.0 · B 清单] 写作面八张卡的**唯一消费口**：氛围池（B1）/ 关系七级（B2）/
  *   判定与平行线（B3+B4）/ 状态字段（B5）/ 二级摘要（B6）/ 事实表（B7）/ 人工纠错（B8）。
@@ -1030,6 +1032,71 @@ export function collectDiagnose(win, storage) {
         }
     })();
 
+    /* [第三期 R3-X5] 人物关系回忆册面:内核自检 + 三份归属的人读字样
+     *   + 七类纪念页素材 + 上游转折面的五态 + 一个样本跑一遍。
+     *   与 groupPaceFace 同族:本仓一切纯函数面的可见出口就在这里。
+     *   本卡只读**内核**与**上游读面**;不读本仓存储。 */
+    const relationAlbumFace = (() => {
+        try {
+            const self = relationAlbumSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const scopes = Object.keys(ALBUM_SCOPES).map((k) => ({
+                key: String(ALBUM_SCOPES[k]), text: String(ALBUM_SCOPE_TEXT[ALBUM_SCOPES[k]] || ''),
+            }));
+            const kinds = Object.keys(ALBUM_KINDS).map((k) => ({
+                key: String(k), label: String(ALBUM_KINDS[k].label),
+            }));
+            const states = Object.keys(RELATION_ALBUM_REASONS).map((k) => ({
+                key: String(k), text: String(RELATION_ALBUM_REASONS[k]),
+            }));
+            const upstream = (() => { try { return readRelationHistory(null, {}); } catch (_e) { return null; } })();
+            const sample = buildRelationAlbum({
+                subject: { id: 'u', name: '样本' },
+                events: [
+                    { id: 's1', kind: 'firstMeet', present: ['u', 'B'], floor: 1 },
+                    { id: 's2', kind: 'gift', with: { id: 'B' }, present: ['B'], floor: 2 },
+                ],
+                upstream: upstream,
+            });
+            const distinct = sample.counts.shared === 1 && sample.counts.onesided === 1;
+            let head = '尚未取数';
+            if (!problems.length) {
+                head = distinct
+                    ? ('样本可判(共同 ' + String(sample.counts.shared) + ' / 单方 ' + String(sample.counts.onesided)
+                        + ') · 上游转折面 ' + String(upstream ? upstream.state : 'unusable'))
+                    : '内核自检过而样本归属不对形';
+            }
+            return {
+                ok: problems.length === 0 && distinct,
+                reason: problems.length ? 'self-check' : (distinct ? 'ok' : 'sample-shape'),
+                problems: problems,
+                scopes: scopes,
+                kinds: kinds,
+                states: states,
+                limits: { entries: ALBUM_LIMITS.entries, turns: ALBUM_LIMITS.turns, label: ALBUM_LIMITS.label },
+                sample: {
+                    state: String(sample.state || ''), reason: String(sample.reason || ''),
+                    shared: sample.counts.shared, onesided: sample.counts.onesided,
+                    hearsay: sample.counts.hearsay, revoked: sample.counts.revoked, pairs: sample.counts.pairs,
+                },
+                upstream: {
+                    state: String(upstream ? upstream.state : 'unusable'),
+                    reason: String(upstream ? upstream.reason : 'unusable'),
+                    pairs: Array.isArray(upstream && upstream.pairs) ? upstream.pairs.length : 0,
+                },
+                line: relationAlbumLine(sample),
+                text: '人物回忆册(第三期 R3-X5):三份归属不得合并('
+                    + scopes.map((x) => x.text).join(' / ') + ');七类素材('
+                    + kinds.map((x) => x.label).join(' / ') + ');'
+                    + '转折直接用上游 relationHistory 的产物,不在本仓重算;'
+                    + '撤回的事件不进册。',
+            };
+        } catch (e) {
+            return { ok: false, reason: 'thrown', problems: [String(e && e.message || e)], line: '' };
+        }
+    })();
+
+
     /* [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面：与 workflowFace 同范式 ——
      *   五类素材状态 / 四类检查行 / 目标 owner 表 / 发布台账三态。
      *   ★ 与 R-X5 那张卡的分工：那张答「把几步串成流水这条路通不通」，
@@ -1494,7 +1561,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1577,6 +1644,17 @@ export function groupPaceFaceText(face) {
         return String(f.text || '群聊节奏:无读数');
     } catch (_e) { return '群聊节奏:读取异常(已降级)'; }
 }
+/** [第三期 R3-X5] 人物回忆册面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
+ *  与 groupPaceFaceText 同范式:只做转发与文案,视图不自己拼。
+ *  三态不同形:面缺席 / 尚未取数 / 有读数。 */
+export function relationAlbumFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '人物回忆册:读取异常(已降级) —— 这不是「你们没什么可回忆的」';
+        return String(f.text || '人物回忆册:无读数');
+    } catch (_e) { return '人物回忆册:读取异常(已降级)'; }
+}
+
 
 /** [v3.90.0 · 拓展计划 R-X6] 创作工作台协议面的一行读数（唯一实现在本文件 collectDiagnose 内取的那一面）。
  *  与 workflowFaceText 同范式：只做转发与文案，视图不自己拼。
@@ -1939,6 +2017,7 @@ export default {
     financeCommitFaceText,
     workflowFaceText,
 groupPaceFaceText,
+relationAlbumFaceText,
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,
     backupFaceText,
