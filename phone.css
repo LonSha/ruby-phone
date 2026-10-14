@@ -13945,7 +13945,15 @@ input:checked + .toggle-slider:before {
   color: #e5e7eb;
   font-size: 12px;
 }
-
+/* [v4.11.0] 未归属通话 · 人工认领（R3-O1） */
+.uq-claim { border-color: rgba(56, 189, 248, .35); }
+.uq-claim h3 { color: #7dd3fc; }
+.uq-claim-row { padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, .05); }
+.uq-claim-row:last-child { border-bottom: none; }
+.uq-claim-cands { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.uq-claim-btn { padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(56, 189, 248, .4); background: rgba(56, 189, 248, .1); color: #bae6fd; font-size: 11px; cursor: pointer; }
+.uq-claim-btn.is-active { border-color: rgba(56, 189, 248, .9); background: rgba(56, 189, 248, .28); color: #f0f9ff; }
+.uq-revoke-btn { padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(248, 113, 113, .45); background: rgba(248, 113, 113, .1); color: #fca5a5; font-size: 11px; cursor: pointer; }
 /* ---------- [v3.21.0] 番茄钟 App（.fc-*） ---------- */
 .fc-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 .fc-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }

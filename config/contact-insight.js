@@ -153,7 +153,10 @@ export function buildContactInsight(stores, opts = {}) {
             const claims = (opts.callAttribution && typeof opts.callAttribution === 'object') ? opts.callAttribution : {};
             for (const call of calls) {
                 if (!call || typeof call !== 'object') continue;
-                const name = String(call.name || call.contactName || '');
+                /* [v4.11.0] 真实通话记录的字段是 caller（PhoneCallView._addCallRecord 写入），
+                 *   此前只读 name/contactName ⇒ 生产通话被**静默跳过**（不报错、只漏数据）。
+                 *   读取顺序：caller 优先（生产真源），name/contactName 保留兼容。 */
+                const name = String(call.caller || call.name || call.contactName || '').trim();
                 const callId = String(call.contactId || call.contact_id || '').trim();
                 if (!name && !callId) continue;
                 const stamp = pickRecentAt([{ value: call.timestamp, via: 'call.timestamp' }]);
@@ -170,10 +173,15 @@ export function buildContactInsight(stores, opts = {}) {
                 const claimedRow = claimedId
                     ? ([...byKey.values()].find(r => String(r.id || '') === claimedId) || null)
                     : null;
-                const target = claimedRow || (matches.length === 1 ? matches[0] : null);
+                /* [v4.11.0] 归属优先级**按本段注释声明的顺序**落实:contactId 是
+                 *   记录级事实(这条通话确实来自这个联系人),认领是姓名级的兜底信号,
+                 *   故 **contactId 精确匹配优先于认领** —— 修前 claimedRow 排在前面,
+                 *   认领会把有 ID 的通话从正确行挪走(「声明 ↔ 真码」脱节的又一例)。 */
+                const idMatch = (callId && matches.length >= 1) ? matches[0] : null;
+                const target = idMatch || claimedRow || (matches.length === 1 ? matches[0] : null);
                 if (target) {
-                    if (claimedRow) callsByClaim += 1;
-                    else if (callId) callsByContactId += 1;
+                    if (idMatch && callId) callsByContactId += 1;
+                    else if (claimedRow) callsByClaim += 1;
                     target.calls = (target.calls || 0) + 1;
                     if (!target.at && stamp.at) { target.at = stamp.at; target.atVia = stamp.via; }
                     continue;

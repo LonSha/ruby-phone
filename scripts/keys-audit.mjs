@@ -381,6 +381,7 @@ const KEY_REGISTRY = [
   { key: 'memory_onboarded_v1', scope: 'chat', note: '记忆引导完成标记' },
   { key: 'phone_call_contacts', scope: 'chat', note: '通话联系人' },
   { key: 'phone_call_history', scope: 'chat', note: '通话记录' },
+  { key: 'phone_call_attribution', scope: 'chat', note: '通话同名人工认领账（R3-O1）' },
   { key: 'phone_call_sms_conversations', scope: 'chat', note: '短信会话' },
   { key: 'phone_call_sms_processed_batches', scope: 'chat', note: '短信批处理游标' },
   { key: 'tw_letters', scope: 'chat', note: '织光机收藏册' },

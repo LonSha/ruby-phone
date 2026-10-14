@@ -19,6 +19,7 @@ import {
 import {
     buildContactInsight, STALE_DAYS_DEFAULT
 } from '../../config/contact-insight.js';
+import { readCallAttribution } from '../../config/call-attribution.js';
 
 export const USAGE_APP_ICON = '📊';
 
@@ -96,11 +97,21 @@ export function collectUsage(storage) {
     };
 }
 
-/** 联系人互动读数（计划 #53）。 */
-export function collectContactInsight(win, staleDays) {
+/**
+ * 联系人互动读数（计划 #53）。
+ * [v4.11.0] 通话同名歧义的人工认领账随取数一并读出并传入
+ * buildContactInsight（R3-O1：旧记录可人工认领、撤销认领后恢复未归属）。
+ * 认领账读不到时传 `{}`（没有任何显式认领），**不隐藏问题**：
+ * 未归属通话仍如实出现在 insight.unattributedCalls。
+ */
+export function collectContactInsight(win, staleDays, storage) {
     const wechat = readWechatStores(win);
     const phone = readPhoneStores(win);
-    return buildContactInsight({ wechat: wechat, sms: phone.sms, calls: phone.calls }, { staleDays: staleDays });
+    const callAttribution = storage ? readCallAttribution(storage) : {};
+    return buildContactInsight(
+        { wechat: wechat, sms: phone.sms, calls: phone.calls },
+        { staleDays: staleDays, callAttribution: callAttribution }
+    );
 }
 
 /** 时长可读化再导出（视图与注入共用同一实现，避免第二份）。 */

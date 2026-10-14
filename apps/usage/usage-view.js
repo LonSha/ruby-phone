@@ -202,7 +202,47 @@ export class UsageView {
         if (ins.partialWechat > 0) {
             parts.push('<div class="uq-dim uq-note">有 ' + ins.partialWechat + ' 个微信会话的正文尚未载入内存，其条数如实标为「未知」（下界），不按 0 计。</div>');
         }
+        // [v4.11.0] 未归属通话卡（R3-O1）：同名歧义不猜，交给用户人工认领
+        parts.push(this._unattributedHTML(ins));
         return parts.join('\n');
+    }
+    /* ---------------- [v4.11.0] 未归属通话（R3-O1 人工认领） ---------------- */
+    /**
+     * 未归属通话卡。展示通话姓名、次数、候选联系人（来自 insight.unattributedCalls
+     * 的 candidateIds），并提供「认领」「撤销认领」按钮。
+     * ★ 候选从内核来（内核按会话三源算出），视图不重算——同一份判据只有一个真源。
+     * ★ 没有认领账时按钮是「认领」；已有认领时显示当前归属并提供「撤销认领」。
+     */
+    _unattributedHTML(ins) {
+        try {
+            if (!ins) return '';
+            const un = ins.unattributedCalls || [];
+            const claims = this.app.callAttribution();
+            const parts = [];
+            parts.push('<div class="uq-card uq-claim"><h3>未归属通话（' + un.length + '）</h3>');
+            parts.push('<div class="uq-dim uq-note">同名联系人无法自动区分时不猜——这里列出需要人工认领的通话。认领后计入该联系人的互动统计；撤销后恢复未归属。</div>');
+            for (const u of un) {
+                const claimedId = claims[u.name] || '';
+                const candHtml = (u.candidateIds || []).map((cid) => {
+                    const row = ins.rows.find((r) => String(r.id || '') === String(cid));
+                    const label = this._esc((row && row.name) ? row.name : cid);
+                    const active = claimedId && String(cid) === String(claimedId);
+                    return '<button type="button" class="uq-claim-btn' + (active ? ' is-active' : '') + '"'
+                        + ' data-claim-name="' + this._esc(u.name) + '"'
+                        + ' data-claim-id="' + this._esc(cid) + '">'
+                        + (active ? '✓ ' : '') + label + '</button>';
+                }).join(' ');
+                const revoke = claimedId
+                    ? '<button type="button" class="uq-revoke-btn" data-revoke-name="' + this._esc(u.name) + '">撤销认领</button>'
+                    : '';
+                parts.push('<div class="uq-claim-row"><div class="uq-row"><span class="uq-row-name">'
+                    + this._esc(u.name) + '</span><span class="uq-row-val">'
+                    + u.count + ' 次未归属</span></div>'
+                    + '<div class="uq-claim-cands">' + candHtml + revoke + '</div></div>');
+            }
+            parts.push('</div>');
+            return parts.join('\n');
+        } catch (_e) { return ''; }
     }
 
     _settingsHTML() {
@@ -237,6 +277,25 @@ export class UsageView {
             this.app.saveSettings();
             this.app.probe();
             this.refresh();
+        });
+        /* [v4.11.0] 认领 / 撤销认领（R3-O1）：写后立即 probe + refresh，
+         * 认领效果当帧可见；撤销后该姓名恢复未归属。 */
+        this._root.querySelectorAll('.uq-claim-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const name = btn.getAttribute('data-claim-name');
+                const cid = btn.getAttribute('data-claim-id');
+                if (!name || !cid) return;
+                this.app.claimCall(name, cid);
+                this.refresh();
+            });
+        });
+        this._root.querySelectorAll('.uq-revoke-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const name = btn.getAttribute('data-revoke-name');
+                if (!name) return;
+                this.app.unclaimCall(name);
+                this.refresh();
+            });
         });
     }
 

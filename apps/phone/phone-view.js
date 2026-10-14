@@ -3403,10 +3403,18 @@ export class PhoneCallView {
         const now = timeInfo || (timeManager
             ? timeManager.getCurrentStoryTime()
             : { time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }), date: '', weekday: '' });
-
+        /* [v4.11.0] 新通话记录写入稳定 contactId（微信联系人真源；R3-O1）：
+         * 拿得到就写（下帧联系人洞察可精确归属），拿不到**不猜**——
+         * 旧记录与歧义情形走 UsageView 的「人工认领」，绝不按姓名静默归属。 */
+        let contactId = '';
+        try {
+            const resolved = this._resolveWechatContact(callerName);
+            contactId = String(resolved?.id || '').trim();
+        } catch (_e) { contactId = ''; }
         this.app.phoneCallData.addCallRecord({
             id: Date.now().toString(),
             caller: callerName,
+            contactId: contactId,
             time: now.time || '',
             date: now.date || '',
             weekday: now.weekday || '',

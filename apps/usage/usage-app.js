@@ -9,6 +9,7 @@ import {
 } from './usage-data.js';
 import { contactPromptBlock } from '../../config/contact-insight.js';
 import { usageSelfCheck } from '../../config/usage-tracker.js';
+import { claimCall, unclaimCall, readCallAttribution } from '../../config/call-attribution.js';
 import { UsageView } from './usage-view.js';
 
 const SETTINGS_KEY = 'usage_settings_v1';
@@ -32,11 +33,38 @@ export class UsageApp {
     /** 现取两个读数（每次 render / refresh 都重取，不持副本 —— 防陈旧）。 */
     probe() {
         try { this._usage = collectUsage(this.storage); } catch (_e) { this._usage = null; }
-        try { this._insight = collectContactInsight(this._win(), this.settings.staleDays); } catch (_e) { this._insight = null; }
+        try { this._insight = collectContactInsight(this._win(), this.settings.staleDays, this.storage); } catch (_e) { this._insight = null; }
     }
-
     usage() { return this._usage; }
     insight() { return this._insight; }
+
+    /* ---------------- [v4.11.0] 通话人工认领（R3-O1） ---------------- */
+    /**
+     * 认领账的当前读数（视图回显用）。
+     * 返回归一后的 `{ 通话姓名: 联系人ID }`；读不到为空对象，永不抛。
+     */
+    callAttribution() {
+        try { return readCallAttribution(this.storage); } catch (_e) { return {}; }
+    }
+    /**
+     * 把某个通话姓名认领给某个联系人。
+     * 空名 / 空 ID 如实拒绝（不猜）；成功后**立即现取**洞察，
+     * 认领效果当帧可见（不依赖下一次 render）。
+     */
+    claimCall(name, contactId) {
+        const ok = claimCall(this.storage, name, contactId);
+        if (ok) this.probe();
+        return ok;
+    }
+    /**
+     * 撤销认领：撤掉后**立即现取**洞察，该姓名恢复未归属（R3-O1 验收原文）。
+     * 没认领过 / 写入失败都如实返回 false。
+     */
+    unclaimCall(name) {
+        const ok = unclaimCall(this.storage, name);
+        if (ok) this.probe();
+        return ok;
+    }
 
     /**
      * 采集面自检（「采集这层到底在不在工作」）。

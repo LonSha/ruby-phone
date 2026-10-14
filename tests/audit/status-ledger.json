@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.10.0",
+  "version": "4.11.0",
   "version_sources": {
-    "package": "4.10.0",
-    "manifest": "4.10.0",
-    "update_log_latest": "4.10.0",
-    "index_const": "4.10.0"
+    "package": "4.11.0",
+    "manifest": "4.11.0",
+    "update_log_latest": "4.11.0",
+    "index_const": "4.11.0"
   },
   "version_same": true,
   "gates": {
@@ -47,7 +47,7 @@
     "check_chain_len": 15
   },
   "tests": {
-    "test_files": 253,
+    "test_files": 254,
     "audit_dir_exists": true,
     "audit_files": 23
   },
@@ -80,8 +80,8 @@
   "scale": {
     "app_dirs": 86,
     "apps_ids": 87,
-    "index_lines": 15915,
-    "css_bytes": 648496,
+    "index_lines": 15917,
+    "css_bytes": 649351,
     "crossrepo": {
       "produced_faces": 25
     }
@@ -102,7 +102,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 251,
+        "suite_files": 252,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -127,7 +127,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "381dadf2ef34f1f2"
+    "sha256_16": "a5da7386b3198474"
   },
   "unknown": [],
   "unknown_count": 0
