@@ -8,7 +8,7 @@
  *   actor / answer[] / gaps[] / refs[] / plans[] / masked / truncated / resourced / total /
  *   knownActors / reason / writesNothing），每句 answer 带 kind / planId / text / ref / floor /
  *   ledger；`gaps[]` 具名「为什么答不出」（查不到 / 没跑 / 翻过头**三者分列**）。
- *   同期的 **memoryToolsEnvelope**（v3.305.0 交付、v3.322.0 抬版）把五件能力
+ *   同期的 **memoryToolsEnvelope**（v3.305.0 交付、**此后零改动**）把五件能力
  *   （queryEvidence / getContinuityPack / previewFactAdmission / explainRecall /
  *   getKnowledgeBoundary）收成恒定 14 键信封 + 五态（ok / empty / unknown / unavailable / partial）。
  *   而本仓实测（`grep -RIn 'askMemoryQuestion|memoryToolsEnvelope|queryEvidence' apps config`）

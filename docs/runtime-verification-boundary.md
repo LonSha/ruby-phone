@@ -1,4 +1,4 @@
-# ruby-phone 运行时验证边界（v2.82.0 起；**v4.09.0 复校**）
+# ruby-phone 运行时验证边界（v2.82.0 起；**v4.10.0 复校**）
 
 > 本文件回答一个容易被含糊过去的问题：**哪些结论有证据，哪些没有。**
 > 写它的直接动机是 `计划.txt` 建议「新增一个浏览器运行时冒烟层」——
@@ -297,7 +297,7 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 下面两行是**机器可读**的复校契约：门禁会真跑 `syntax` / `import-resolve` 两道门，
 把它们的读数与这两行逐项比对，不一致即转红（防「文档写了实测、其实是抄的旧数」）。
 
-- 语法 794 文件
+- 语法 795 文件
 （**v3.83.0 复校**：本版新增 4 个 `.js` —— 产品侧一件真源 `config/num-clamp.js`（有界取数的唯一实现）+ `config/diagnose-action.js`（诊断处置面，v3.83.0）与两个判据套件 `tests/system-v3820.test.mjs` / `tests/system-v3830.test.mjs`（另有 v3.81.0 起累计的 `config/portable-payload.js` / `config/submodel-isolation.js` / `config/ambience-pool.js` / `config/relation-tier.js` / `config/scene-rules.js` / `config/state-fields.js` / `config/archive-digest.js` / `config/memory-correction.js` / `config/craft-cards.js` 与对应套件）。语法面 710 → **731**；导入面 399 → **415** 文件、660 → **695** 条（11 处 `boundedInt` 副本改引唯一实现，各 +1 条静态说明符）。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
 （**v3.79.0 复校**：本版新增 11 个 `.js`/`.mjs` —— 产品侧两件真源 `config/motion.js`（动效档位 + 后台降频闸 + 恢复重取合成器）与 `config/perf-sampler.js`（有界被动采样器）+ `tests/system-v3790.test.mjs` 判据套件 + 探针与基线两件（`tests/audit/perf_sampler_probe.cjs` / `perf_sampler_baseline.json`）+ `tests/browser/scenarios/` 两份交付场景与六份取证场景（`_diag21`~`_diag26`，取证前缀不进扫描面但进语法门）。语法面 699 → **710**。★ 导入门方面：`config/motion.js` 与 `config/perf-sampler.js` 各被 `index.js` 静态导入一条（+2 文件 / +2 条），其余新件都在 `tests/`（不进导入门扫描面），故导入面 397 → **399** 文件、658 → **660** 条。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
 （**v3.72.0 复校**：X3~X8 七件新协议模块（`config/schedule-bridge.js` / `finance-overview.js` / `social-knowledge-bridge.js` / `creation-pipeline.js` / `character-slot-manager.js` / `branch-contrast.js` / `resume-handoff.js`）与对应判据套件落进语法门扫描面，语法面 651 → **663**。★ 本行只记真跑读数（`node scripts/syntax-check.mjs` 现场取），不手抄。旧值 651 是 v3.66.0 的读数，v3.67.0~v3.72.0 六版未复校该行 —— 本轮补上。）

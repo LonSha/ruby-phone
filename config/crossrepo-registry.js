@@ -258,8 +258,8 @@ export const CROSSREPO_FEATURES = Object.freeze([
         id: 'lonsha.memoryTools',
         label: '记忆工具信封（五能力的统一只读面）',
         owner: OWNER_LONSHA,
-        since: '3.322.0',
-        sinceSource: '上游 lonsha-memory-plugin/memory-tools-api.js 的五能力出口（v3.305.0 X9 交付 · v3.322.0 抬版）；上游版本本仓未留档，证据在上游真源',
+        since: '3.305.0',
+        sinceSource: '上游 lonsha-memory-plugin/memory-tools-api.js 的五能力出口（v3.305.0 M-X9 交付、**该面供给模块此后零改动**）；★ 本格此前写着 3.322.0 —— 那是**照抄上游失真账面**的连带:上游那张表该列自 v3.319.0 起被每一次抬版脚本机械改写,本仓跟着抄成了「抬版幻影」,而上游 v3.328.1 已把账面回真（判据改绑供给模块诞生版,不再绑宿主版）；上游版本本仓未留档，证据在上游真源',
         fieldKeys: [],
         contract: '引擎方法族：`memoryToolsDescribe()`（自述缺哪一格）+ `queryEvidence(spec, opts)` 恒定 14 键信封（kind / api / apiVersion / toolVersion / state / stateLabel / reason / source{module,symbol,path} / revision / revisionSource / scope / data / notes / writesNothing）+ 五态词表 ok|empty|unknown|unavailable|partial',
         keySites: [

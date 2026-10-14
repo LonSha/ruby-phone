@@ -3,7 +3,7 @@
  *
  * 【本版治的是什么】上游已交付、手机侧此前**零消费**的三件外供面：
  *   · phoneFactReceipt（上游 v3.314.0 M-X6）→ 手机事件成为可确认的剧情记忆（R3-X1）
- *   · memoryQaAnswer（上游 v3.322.0 M3-X1）+ memoryToolsEnvelope（v3.319.0/3.322.0）
+ *   · memoryQaAnswer（上游 v3.322.0 M3-X1）+ memoryToolsEnvelope（**上游 v3.305.0** · 供给模块零改动）
  *     → 手机内有出处的往事问答（R3-X2）
  *   · 搜索从字面命中到找对那件事（R3-O4：人物/日期/类型组合筛选 + 中文词序容错 + 精确落点）
  *

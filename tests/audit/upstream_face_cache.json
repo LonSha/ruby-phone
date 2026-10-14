@@ -1,14 +1,14 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-10-13T17:12:07.898Z",
-  "refreshReason": "[v4.05.0] 上游 lonsha-memory-plugin 在其 v3.323.0 新增三面 relationHistory / causalChain / perspectiveCard(consumer 均为 none@0,下游本仓一个都不消费);冻读取停在 v3.322.0/42e5e37,提交态 sha1 已变 ⇒ 按 R9 口径显式刷新。本版**只**同步这三面的账面,不新增消费点:三门禁面(R8/R10/R11)逐面一致,台账仍空。刷新取上游**提交态**(可回源),非工作树态",
+  "refreshedAt": "2026-10-14T08:07:47.068Z",
+  "refreshReason": "上游推进 237aac6 -> 0f2f7fd(v3.328.1)。本次刷新链是两步:其一,上游 v3.328.0 抬版把 memoryToolsEnvelope.producer_version 连带改写成 v3.328.0,而该面的供给模块 memory-tools-api.js 自 v3.305.0 起零改动,属账面失真;其二,本仓第十一道门 R4 当场抓到「上游账面 v3.328.0 ≠ 本仓口径 3.322.0」,已在上游修正该格回 v3.305.0(0f2f7fd)。冻结范围仍是提交态,不含工作树。",
   "upstreamRepo": "lonsha-memory-plugin",
-  "upstreamVersion": "3.325.0",
+  "upstreamVersion": "3.328.0",
   "sourceState": "commit",
-  "upstreamCommit": "afb6071",
+  "upstreamCommit": "0f2f7fd",
   "worktreeDirty": false,
-  "tableSha1": "f7665fde0dc4",
+  "tableSha1": "96d0ee4f257a",
   "tableRows": 12,
   "faces": {
     "projectionEnvelope": {
@@ -55,7 +55,7 @@
     },
     "memoryToolsEnvelope": {
       "owner": "lonsha-memory-plugin",
-      "producerVersion": "v3.322.0",
+      "producerVersion": "v3.305.0",
       "upstreamSymbol": "memory-tools-api.js::queryEvidence,getContinuityPack,previewFactAdmission,explainRecall,getKnowledgeBoundary",
       "consumer": "readMemoryToolsEnvelope@1",
       "standaloneBehavior": "内核模块未加载时宿主给**同键**降级信封（state=unavailable + reason=module-unavailable + data=null），下游读不到 undefined；五态词表随 describe() 自述（缺哪一格、为什么缺、缺了会怎样）"
