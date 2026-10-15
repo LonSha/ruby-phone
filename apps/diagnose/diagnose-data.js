@@ -168,6 +168,11 @@ import { creationSelfCheck, CREATION_LEDGER_LIMIT } from '../../config/creation-
 import { groupPaceSelfCheck, groupPaceLine, planGroupPace, GROUP_PACE_REASONS, GROUP_PACE_PRIVACY, GROUP_PACE_PRIVACY_REASONS, GROUP_PACE_TIERS, GROUP_PACE_LIMITS } from '../../config/group-pace.js';
 /* [第三期 R3-X5] 人物回忆册面的唯一消费口(诊断中心同族卡)。 */
 import { relationAlbumSelfCheck, relationAlbumLine, buildRelationAlbum, readRelationHistory, RELATION_ALBUM_STATES, RELATION_ALBUM_REASONS, ALBUM_SCOPES, ALBUM_SCOPE_TEXT, ALBUM_KINDS, ALBUM_LIMITS } from '../../config/relation-album-contract.js';
+/* [第三期 R3-O2] 视角卡面的唯一消费口(诊断中心同族卡)。
+ *   上游 v3.323.0(M3-X4)交付 perspectiveCard 面后本仓 consumer=none@0,
+ *   理由台账逐字写着「手机侧还没有一处能分辨『未知道』与『面不在场』」——
+ *   本卡就是那一处:五态分形 + 四格原样透传 + unrecorded 与 unknown 结构上不可混读。 */
+import { readPerspectiveFace, knowsFact, perspectiveLine, perspectiveSelfCheck, PERSPECTIVE_STATES, PERSPECTIVE_REASONS, PERSPECTIVE_SLOTS, PERSPECTIVE_LIMITS } from '../../config/perspective-card-contract.js';
 /* [第三期 R3-X3] 约会与日程可玩流程面的唯一消费口(诊断中心同族卡)。 */
 import { datePlaybookSelfCheck, datePlaybookLine, buildDatePlaybook, PLAY_STEPS, PLAY_STEP_TEXT, PLAY_STATES, PLAY_REASONS, PLAY_LIMITS } from '../../config/date-playbook.js';
 import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageReceiptLedger } from '../../config/character-slot-manager.js';
@@ -1621,7 +1626,84 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    /* [第三期 R3-O2] 视角卡面:内核自检 + 五态 + 四格人读字样
+     *   + 一个样本跑一遍(验证「unrecorded 与 unknown 结构上不可混读」这条硬口径)。
+     *   与 relationAlbumFace 同族:本仓一切纯函数面的可见出口就在这里。
+     *   本卡只读**内核**与**上游读面**;不读本仓存储,也不替角色下结论。 */
+    const perspectiveFace = (() => {
+        try {
+            const self = perspectiveSelfCheck();
+            const problems = Array.isArray(self && self.problems) ? self.problems.map(String) : [];
+            const states = Object.keys(PERSPECTIVE_REASONS).map((k) => ({
+                key: String(k), text: String(PERSPECTIVE_REASONS[k]),
+            }));
+            const slots = Object.keys(PERSPECTIVE_SLOTS).map((k) => ({
+                key: String(k), text: String(PERSPECTIVE_SLOTS[k]),
+            }));
+            /* 真实读数:插件不在场时必须是 engine-absent(**不是** empty)。 */
+            const live = (() => { try { return readPerspectiveFace(null, {}); } catch (_e) { return null; } })();
+            /* 样本:一张**只有 unrecorded** 的卡 —— 它必须落 ok、unknown 必须为 0;
+             *   再问一条没记过的事实,判决必须是 cannot-say(不许答成 unaware)。 */
+            const probeWin = {
+                LonShaPerspectiveCard: {
+                    build: () => ({
+                        kind: 'perspective_card', version: 1,
+                        cards: [{
+                            character: '样本', lived: [], heard: [], misled: [], unknown: [],
+                            unrecorded: 3, viaUnknown: 0, ambiguousIdentity: false
+                        }]
+                    })
+                }
+            };
+            const sample = (() => { try { return readPerspectiveFace(probeWin, { character: '样本' }); } catch (_e) { return null; } })();
+            const verdict = (() => {
+                try { return knowsFact(probeWin, '样本', '一条没记过的事'); }
+                catch (_e) { return null; }
+            })();
+            const unrecordedKept = !!sample && sample.state === PERSPECTIVE_STATES.OK
+                && sample.counts.unrecorded === 3 && sample.counts.unknown === 0;
+            const cannotSay = !!verdict && verdict.verdict === 'cannot-say';
+            let head = '尚未取数';
+            if (!problems.length) {
+                head = (unrecordedKept && cannotSay)
+                    ? ('样本可判(未记录 ' + String(sample.counts.unrecorded) + ' 未计入 unknown;没记过的事判 cannot-say)'
+                        + ' · 本机上游面 ' + String(live ? live.state : 'unusable'))
+                    : '内核自检过而样本格位不对形';
+            }
+            return {
+                ok: problems.length === 0 && unrecordedKept && cannotSay,
+                reason: problems.length ? 'self-check' : ((unrecordedKept && cannotSay) ? 'ok' : 'sample-shape'),
+                problems: problems,
+                states: states,
+                slots: slots,
+                limits: { cards: PERSPECTIVE_LIMITS.cards, perSlot: PERSPECTIVE_LIMITS.perSlot, fact: PERSPECTIVE_LIMITS.fact },
+                sample: {
+                    state: String(sample ? sample.state : ''),
+                    unrecorded: sample ? sample.counts.unrecorded : 0,
+                    unknown: sample ? sample.counts.unknown : 0,
+                    silentCapable: !!(sample && sample.silentCapable),
+                },
+                verdict: {
+                    verdict: String(verdict ? verdict.verdict : ''),
+                    reason: String(verdict ? verdict.reason : ''),
+                    slot: String(verdict ? verdict.slot : ''),
+                },
+                live: {
+                    state: String(live ? live.state : 'unusable'),
+                    reason: String(live ? live.reason : 'unusable'),
+                    silentCapable: !!(live && live.silentCapable),
+                },
+                line: perspectiveLine(live),
+                text: '视角卡(第三期 R3-O2):四格('
+                    + slots.map((x) => x.text).join(' / ')
+                    + ');「未记录」**不当「不知道」用**(上游明令:禁止把降级读成确实不知道);'
+                    + '判不了的动作只落 unrecorded,silentCapable 为假时不替沉默作证。',
+            };
+        } catch (_e) {
+            return { ok: false, reason: 'thrown', problems: ['视角卡面取数抛错'], states: [], slots: [], limits: {}, sample: {}, verdict: {}, live: {}, line: '视角卡:取数抛错', text: '视角卡(第三期 R3-O2):取数抛错' };
+        }
+    })();
+    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1713,6 +1795,18 @@ export function relationAlbumFaceText(face) {
         if (!f) return '人物回忆册:读取异常(已降级) —— 这不是「你们没什么可回忆的」';
         return String(f.text || '人物回忆册:无读数');
     } catch (_e) { return '人物回忆册:读取异常(已降级)'; }
+}
+/** [第三期 R3-O2] 视角卡面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
+ *  与 relationAlbumFaceText 同范式:只做转发与文案,视图不自己拼。
+ *  三态不同形:面缺席(读不出) / 尚未取数 / 有读数;
+ *  ★ 且**四格逐格报出** —— 把 unrecorded 并进 unknown 就是把「我们没记过」
+ *    读成「该角色确实不知道」,与上游「禁止把降级读成确实不知道」正面冲突。 */
+export function perspectiveFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '视角卡:读取异常(已降级) —— 这不是「这个角色什么都不知道」';
+        return String(f.text || '视角卡:无读数');
+    } catch (_e) { return '视角卡:读取异常(已降级)'; }
 }
 /** [第三期 R3-X3] 约会可玩流程面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
  *  与 relationAlbumFaceText 同范式:只做转发与文案,视图不自己拼。
@@ -2089,6 +2183,7 @@ export default {
     workflowFaceText,
 groupPaceFaceText,
 relationAlbumFaceText,
+perspectiveFaceText,
 datePlayFaceText,
     resumeWorkbenchFaceText,
     creationWorkbenchFaceText,

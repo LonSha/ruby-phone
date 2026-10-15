@@ -252,7 +252,9 @@ export class ReadingView {
                 btn.addEventListener('click', () => this.app.openBook(btn.dataset.id));
             });
             root.querySelectorAll('.rd-mini.del')?.forEach(btn => {
-                btn.addEventListener('click', () => { this.app.data.removeBook(btn.dataset.id); this.render(); });
+                /* [第三期 R3-X8] 删书改走 App 的 removeBook:书目条目与本机正文附件一起删,
+                 *   否则附件层会留正文孤儿(删过的书重启后又"回来"一半)。 */
+                btn.addEventListener('click', () => { this.app.removeBook(btn.dataset.id); this.render(); });
             });
         }
     }

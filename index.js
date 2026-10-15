@@ -264,7 +264,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.11.0';
+const ST_PHONE_VERSION = '4.12.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -462,20 +462,25 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-26",
+    date: "2026-10-27",
     items: [
-        "【本版做的是第三期 A 包手机侧首项:R3-O1 联系人身份与重名消歧的**消费侧闭环**】计划原文要的是「群发言、@、短信/通话统计用稳定角色/联系人 ID;别名仅用于候选查找,歧义提示选择并保留绑定;历史记录无 ID 时不猜」。本版钉住验收原文的后两条:旧记录可人工认领,撤销认领后恢复未归属。",
-        "【修前实测的缺口有三处,不是推演】一 内核侧:contact-insight.js 读通话时只读 call.name 与 call.contactName,而 PhoneCallView._addCallRecord 写入的真实字段是 **caller** —— 于是**每一条生产通话都被静默跳过**,界面读数恒为「这个人从没打过电话」,不报错、不崩溃、只错读数,正是本仓点名的最贵形态,且既有 v3150 判据全部用的是 name 字段的合成输入,所以长期全绿。二 消费侧:内核虽已支持 callAttribution 参数与 unattributedCalls 输出,但 collectContactInsight 只传 staleDays,认领账**全库零消费**,界面无候选、无认领、无撤销 —— 内核能力悬空(本仓另一个熟形态)。三 生产侧:新通话记录不写 contactId,连能自动归属的那些也一律只能靠人认领。",
-        "【顺手抓到并修掉的第四处:声明与真码脱节】内核那段注释**自己**写着归属优先级是「一 有 contactId 按 id 精确归属;二 有认领按认领……」,而真码是 claimedRow 排在 target 前面 —— 于是有 contactId 的通话会被姓名级认领**从正确那一行挪到别处**。本版按注释声明的顺序落实:contactId 是记录级事实,认领是姓名级兜底信号,id 匹配优先。这条是「给人读的那一句与真源脱节」的又一例,由本版新判据 B6 钉住。",
-        "【新内核 · config/call-attribution.js】会话级认领账,三条纪律:一 **不猜** —— 空名、空 ID、纯空白一律如实拒绝且**不落任何键**(被拒绝的调用留下幽灵键会让账目与真相不符);二 **可撤销** —— 撤销即删键,没认领过时如实返回 false 而不报错不补写;三 **不抛** —— 读抛异常或存储里是坏 JSON,一律按「没有任何显式认领」处置(这一处置不会产生错归属,故与「读不到」合并安全)。归一出口 readCallAttribution 只认「非空名到非空 ID」的纯对象,数组与字符串按畸形丢弃。",
-        "【键归属与生命周期】新键 phone_call_attribution 靠既有前缀 /^phone_call_/ 落在 chatMetadata,已按 K1 登记为 chat 作用域;认领是「这个会话里这个人是谁」的判断,跨角色不得串味,换会话与清数据两条路径随既有机制一并生效。本版**不新增 App、不新增路由、不改全局设置面**。",
-        "【接线三层,每层都接在既有真源上】一 取数层 apps/usage/usage-data.js:collectContactInsight 增第三参 storage,读出认领账并传入内核(第三参可选,既有两处调用点不破);二 控制器 apps/usage/usage-app.js:新增 callAttribution 读出口与 claimCall、unclaimCall 两个写出口,写成功后**立即现取**洞察,认领效果当帧可见,失败如实返回 false;三 视图 apps/usage/usage-view.js:联系人页新增「未归属通话」卡,列出通话姓名、未归属次数与候选联系人按钮,已认领时显示当前归属并给「撤销认领」,候选一律来自内核的 candidateIds,视图不重算。",
-        "【新通话记录补稳定 ID】PhoneCallView._addCallRecord 在写记录时经既有 _resolveWechatContact 解析微信联系人并写入 contactId;拿不到写空串,**绝不**按姓名猜、也**不**用电话联系人本地的 id 冒充微信 id。下帧联系人洞察即可按 id 精确归属;旧记录与歧义情形仍走人工认领。",
-        "【新套件 · tests/system-v4110.test.mjs 二十例】A 口径四例(键归属真在前缀面而非注释里 / 归一形态 / 四个出口各有真消费点 / 零宿主边界);B 行为七例(空值如实拒绝且不落键 / 认领生效加撤销恢复未归属加幂等 / 读不抛且坏 JSON 按空账 / 生产通话必须被统计 / 认领后计入该行且不连带 / contactId 优先于认领 / 取数层真把账传下去);C 接线四例(视图卡与按钮且**事件真的被绑定**、样式两侧投递、控制器写后现取、电话记录写 contactId 且不冒充、键登记与清理路径);D 负控制四例(阳性对照加三条真源码定点破坏:caller 字段、空值拒绝、撤销删键,每条都配原版上同款判据必真的反向对照);E 版本锚一例(下限形)。",
-        "【本版自己抓到的缺陷形态两处,都在判据自身上(合并前逐条修掉,留痕)】一 C3 首版用 indexOf 取「第一次出现」切函数体,结果切在了函数体内的调用处而不是函数末尾,切片只剩几十字节 —— 判据看似在跑,其实读的是空区段(本仓记过的「判据自身静默失效」);改成按「下一个方法定义签名」定位切片末端。二 B6 首版按注释声明的优先级写断言,当场转红 —— 这一次红是对的:它抓出的是**真码**(claimedRow 优先),故本版修的是实现而不是断言。两者恰好一个是判据错了、一个是实现在错,分辨它们靠的是「先问这一条断言在原版上该不该真」。",
-        "【运行时验证边界(如实声明)】本版在无头环境验证的是认领账内核行为(拒绝与撤销与不抛与归一)、内核归属优先级三态(caller 归属与 contactId 优先与未归属)、取数层真传账、以及按真源码文本核对的接线与样式投递。**未做**真实宿主下「在手机上点候选按钮之后那张卡是否真的变了、撤销之后那一行是否真的回到未归属」——那需要在真机浏览器里走一遍旅程。另:未归属通话卡只在**同名多候选**时出现(唯一姓名匹配会直接归属),故单角色会话看不到这张卡,这是设计而非缺陷。；本版只保证无头层的判定，不能保证真机上那张卡与那一行的视觉与交互；遇到「看起来没坏但显示不对」的问题，属本仓登记的第二类，需在真机复现后再修。",
-        "【定向判据与全量门】新套件 tests/system-v4110.test.mjs 二十例全绿;既有 v3150 与 v3190 与 v3203 与 v3204 与 v4080 与 v4090 与 v4100 复跑全绿;语法门与导入门与键门在本版改动后单独跑过均通过;全量 npm run check 退出码零。",
-        "【版本升至 4.11.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;本段共 12 条。"
+        "【本版做的是第三期两项:R3-O2 角色可知范围(消费上游视角卡面)与 R3-X8 阅读正文的本地附件持久化】R3-O2 计划原文要的是「区分亲历、听说、推测,不再把所有召回都措辞成共同经历;角色可知范围优先消费上游现有能力」;R3-X8 计划原文要的是「正文作为独立本地附件持久化,metadata 只存引用与进度;可书签、划线、摘录成素材;优先复用宿主附件存储」,并带一条硬约束:正文不得塞入提示词或 chatMetadata。",
+        "【R3-O2 修前实测的缺口不是推演,而是跨仓台账上的一格】上游 lonsha-memory-plugin 在 v3.323.0(M3-X4)交付了视角卡面 perspective-card.js,其契约里明写一条禁令「不得把降级读成确实不知道」;而本仓 tests/audit/upstream_face_unconsumed.json 里那一格逐字写着 consumer=none@0,理由是「手机侧目前还没有一处能分辨『未知道』与『面不在场』」——先接会把降级误读成事实。这正是本仓最贵的那类老账(「读不到」与「空」同形),只不过这次它挡在跨仓面上。",
+        "【新内核 · config/perspective-card-contract.js】只做三件事,不重算任何上游口径:一 五态分形——模块未装 engine-absent、面不在场 face-absent(version=0)、出口抛错或形态不对 unusable、真跑过但该角色无轨迹 empty、读到四格 ok;二 四格原样透传 lived 与 heard 与 misled 与 unknown(不在这里重算一份,重算就是第二套可知范围口径);三 unrecorded 与 unknown 严格分开——上游把判不开的动作(doubt 与 correct 与 retract)单独落进 unrecorded 并逐字提醒「不当『不知道』用」,本模块把这条提醒变成结构上不可混读:两者各有各的格子与人读字样,且 silentCapable 只对「四格齐且 unrecorded 可数」的面为真。",
+        "【数值取值门走全仓唯一实现】视角卡要读的 floor 恰是「没给」与「给了 0」必须分开的那种读数(Number(null) 恒等于 0 会把两者塌成同一个数),故引用 config/num-gate.js 的 numOrNull 并局部命名为 floorOrNull 以保留楼层语义(实现唯一,名字本地),由既有弱口径门 weak-coercion-audit.mjs 守这一面。",
+        "【R3-O2 接进诊断面,三层都在既有真源上】取数层 apps/diagnose/diagnose-data.js 新增 readPerspectiveFace 调用(实时面与样本探针两处),成卡字段 perspectiveFace;视图层 apps/diagnose/diagnose-view.js 新增 _perspectiveHtml 渲染「角色可知范围」卡(亲历 / 听说 / 误信 / 明确不知 / 未记录),并以 perspectiveFaceText 作为具名一行读数出口,视图不重算任何判定。本版**不**把它接进往事问答与群聊与主聊天生成链——那三处的消费属后续增强,如实留白。",
+        "【跨仓三件套收口(同一件事不许两处各说一遍)】一 config/crossrepo-registry.js 新增登记行 lonsha.perspectiveCard(归属仓与起始版本 3.323.0 与契约形状与消费点与失效条件与单独安装行为齐备,declaredConsumer=readPerspectiveFace,declaredFloor=1);二 tests/audit/upstream_face_unconsumed.json 移除 perspectiveCard(已消费的面不许还留在未消费台账里);三 tests/audit/upstream_face_lag.json 新增 perspectiveCard 的 consumer-none 滞后项——上游账面仍写 none@0,而本仓真码已有消费点,故差异走「上游台账待同步」通路并记明上游提交 0f2f7fd,上游一提交该条即因「分歧已消失」而转红。",
+        "【第九道门新增 J18,把下游这半边钉住】scripts/bridge-contract-audit.mjs 按 J17(entityMapping)的范式新增 J18:真源 config/perspective-card-contract.js 必须真导出四个出口,且产品面 apps 下的 readPerspectiveFace 调用点不得少于下限 1(写 1 不留余量是刻意的——少一个就意味着这一面又回到「建好不消费」)。同时挂上机器可读标签,形态与既有各面逐字一致,第十一道门 R5 据此对账「声明 ↔ 计数」。",
+        "【白名单暂存型套件同步补读数来源】v297 与 v298 的副本树是显式白名单(不是 v299 起的全量镜像),门禁每长一条判据就必须补上该判据的读数来源,否则未破坏的副本树会在 J18 上红、D0 自证失败、整组负控制变成假绿——本版实测正是先在 D0 上抓到这条,再补 config/perspective-card-contract.js 进两份白名单。",
+        "【R3-X8 修前实测的缺口写在代码自己的注释里】apps/reading/reading-app.js 的 openBook 那句注释就是缺口本身:「正文未在内存(重启后):书架条目仅有元数据,提示需重新导入」——重启后书架里每本书都打不开,读者必须重新导入同一个文件。",
+        "【宿主存储边界的实测读数,不是推演】真 SillyTavern 1.19.0 里经 CDP 在页面上下文实测:localStorage 可用但配额仅 4MB;indexedDB 可用;chatMetadata 只有本仓自己的 st_virtual_phone 一个键。故正文落 localStorage 会「一处膨胀、全机受伤」,改走 indexedDB(本机、不联网、不进 chatMetadata)。",
+        "【新附件层 · apps/reading/reading-attachment.js】IndexedDB 库 ruby-phone-reading 的对象仓 bodies,以 bookId 存正文、以 contentHash 支撑重定位;正文不写 chatMetadata、不写提示词、不写 localStorage、不碰 DOM、不走网络。缺 IndexedDB 时报 unavailable 而非伪装成 empty;空附件、超限、写失败、正常读取各有各的状态(五态分形)。",
+        "【阅读导入 API 已异步化,调用方不得再假设同步完成】importFile(file) 现在返回 Promise,TXT 与 EPUB 两条路径都会先尝试重定位、再写入附件,并返回 _lastImport;打开书会回读附件,删除书会连正文一起删,丢附件可重新定位,盘库不读正文。专项判据 tests/system-v4120.test.mjs 二十六例与旧阅读冒烟 tests/reading-app.test.mjs 十一例全绿。",
+        "【本版自己抓到的缺陷形态两处,都在接线与判据的接缝上(合并前逐条修掉,留痕)】一 R3-X8 的调用方仍按同步语义读 currentBook 与章节与标题,导入异步化之后这些读数会落在写入之前——判据把 await app.importFile(file) 之后的阅读态当作唯一判据,才把这类「看起来导入成功、其实读的是旧态」抓住;二 白名单型套件的 J18 读数来源漏补,未破坏的副本树先在 D0 上转红——分辨它与真缺陷靠的是「先问这一条断言在原版上该不该真」。",
+        "【交棒改写】本版把 R3-O2 的跨仓归属从「未消费理由台账」交棒到「登记行 + 门禁标签」那条路,并把上游账面那一格交棒成上游台账待同步项;下一版若上游改写了 consumer 列,滞后台账项须删除(登记着不存在的分歧就是掩饰)。相关各条判据一律写成下限形,下一版抬版无需二次改写。",
+        "【运行时验证边界(如实声明)】本版在无头环境验证的是:视角卡五态互不同形、四格与 unrecorded 的透传形态、knowsFact 的三态出口、诊断取数层与视图层的真消费、跨仓登记行与两份台账与门禁标签三处逐字对齐;以及阅读附件层的存与取往返、重启续读、丢附件重定位、删书不留孤儿、盘库不出正文、零网络与零提示词。**未做**真实宿主下「用户打开一本书、重启宿主、再打开同一本书是否真的回到同章同位置」与「角色在真聊天里是否真的按可知范围措辞」——那两件都需要在真机浏览器里走一遍旅程。另:R3-O2 当前只覆盖诊断面可见出口,往事问答与群聊与主聊天生成链尚未消费该面,如实留白而不以诊断接线冒充全面收口。【边界与真机分工(用户可读那句)】自动化门禁能保证结构正确与接线完整,但它不能保证真机上的视觉排版与真实网络往返与宿主存储迁移;遇到「看起来没坏但显示不对」的问题,属于真机复现类,须上真机复现后再修。",
+        "【定向判据与全量门】新套件 tests/system-v4120.test.mjs 二十六例全绿,阅读冒烟 tests/reading-app.test.mjs 十一例全绿;跨仓门与桥契约门与登记门与键门单独跑过均通过;既有 v297 与 v298 与 v299 与 v3190 与 v3203 与 v3204 与 v4060 与 v4080 复跑全绿;全量 npm run check 退出码零。",
+        "【版本升至 4.12.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;本段共 17 条。"
     ]
 };
 

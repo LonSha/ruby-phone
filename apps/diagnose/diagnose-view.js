@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, perspectiveFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -621,6 +621,46 @@ export class DiagnoseView {
     /* [第三期 R3-X3] 约会可玩流程卡:与 _relationAlbumHtml 同范式(只转发与排版)。
     /* 五步台面与八词归因都在这里拆开给读者;
      *   「到点了就当到了」与「等人证」必须在界面上看得出区别。 */
+    /* [第三期 R3-O2] 视角卡卡:与 _relationAlbumHtml 同范式(只转发与排版)。
+     *   ★ 四格**分列**给读者看(亲历 / 听说 / 误信 / 明确不知 / 未记录),
+     *     并把「未记录」与「明确不知」在版面上分开 —— 合并任意两格就会把
+     *     「我们没记过」读成「该角色确实不知道」,那正是上游明令禁止的一条。
+     *   面缺席时的话术与「没记过」不同形:前者是「本层读不出」,后者是「真跑过、没轨迹」。 */
+    _perspectiveHtml(pkg) {
+        const face = (pkg && pkg.perspectiveFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到视角卡面(已降级) —— '
+                + '这是「本层读不出」,**不是**「这个角色什么都不知道」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>'
+            + escapeHtml(perspectiveFaceText(face)) + '</div>';
+        const slots = Array.isArray(face.slots) ? face.slots : [];
+        if (slots.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + slots.map((r) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(r.key) + '</code>'
+                + '<span class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(r.text) + '</span>'
+                + '</div>').join('') + '</div>';
+        }
+        const sample = (face && face.sample) || {};
+        const verdict = (face && face.verdict) || {};
+        const live = (face && face.live) || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>本机上游面:<b>'
+            + escapeHtml(String(live.state || 'unusable')) + '</b>'
+            + '(能替沉默作证:' + (live.silentCapable ? '是' : '否') + ')。'
+            + '样本格位:未记录 ' + escapeHtml(String(sample.unrecorded || 0))
+            + ' / 明确不知 ' + escapeHtml(String(sample.unknown || 0))
+            + '(两格不许并成一格)。'
+            + '没记过的事判成 <b>' + escapeHtml(String(verdict.verdict || 'cannot-say'))
+            + '</b>(归因 ' + escapeHtml(String(verdict.reason || '')) + ')。</div>';
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>内核自检报了问题</b>:</div>';
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + problems.map((x) =>
+                '<div class=' + Q + 'dg-trow dg-bad' + Q + '>' + escapeHtml(String(x)) + '</div>').join('') + '</div>';
+        }
+        return html;
+    }
     _datePlayHtml(pkg) {
         const face = (pkg && pkg.datePlayFace) || null;
         if (!face) {
@@ -1576,6 +1616,9 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>群聊节奏(冷却 / 未接话题 / 关系相关度 / 允许沉默)</h3>' + this._groupPaceHtml(pkg) + '</section>');
         /* [第三期 R3-X5] 人物回忆册卡:跟在群聊节奏卡之后(两者都是「把关系读数落成可读面」同族的诊断卡)。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>人物关系回忆册(三份归属 / 上游转折面 / 撤回即不再生成)</h3>' + this._relationAlbumHtml(pkg) + '</section>');
+        /* [第三期 R3-O2] 视角卡卡:跟在回忆册卡之后(两者都是「把关系读数落成可读面」同族的诊断卡;
+         *   回忆册答「这对人之间发生过什么」,视角卡答「这条事实这个人此刻知不知道」)。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>角色可知范围(视角卡:亲历 / 听说 / 误信 / 明确不知 / 未记录)</h3>' + this._perspectiveHtml(pkg) + '</section>');
         /* [第三期 R3-X3] 约会流程卡:跟在回忆册卡之后(两者都是「把约定读数落成可读面」同族的诊断卡)。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>约会与日程的可玩执行流程(五步 / 到场等人证 / 回档即作废)</h3>' + this._datePlayHtml(pkg) + '</section>');
          /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */

@@ -275,6 +275,21 @@ const RELATION_ALBUM_READER = 'readRelationHistory';
 /* [face: relationHistory] [reader: readRelationHistory] [floor: 1] */
 const RELATION_ALBUM_SOURCE_REL = 'config/relation-album-contract.js';
 const RELATION_ALBUM_MIN_CONSUMERS = 1;
+/* ── [v4.12.0 · R3-O2] J18：上游视角卡面（perspectiveCard）必须真被业务面消费 ──
+ * 【为什么必须有】上游在 v3.323.0(M3-X4)交付视角卡面(`perspective-card.js`)，它的契约里
+ *   **明写一条禁令**：「不得把降级读成确实不知道」。本仓 `tests/audit/upstream_face_unconsumed.json`
+ *   里 perspectiveCard 那一格此前逐字写着 consumer=none@0，理由是我们**还没有一处能分辨
+ *   「未知道」与「面不在场」** —— 先接会把降级误读成事实（本仓最贵的那类老账）。
+ *   v4.12.0 的 R3-O2 交付了 `config/perspective-card-contract.js`（五态分形 + 四格原样透传 +
+ *   `unrecorded` 与 `unknown` 结构上不可混读），并由诊断内核真消费 ⇒ 该面**已不是零消费面**，
+ *   上游账面那一格成为陈旧账（走第十一道门 R11 的「上游台账待同步」通路）。
+ * 【判据口径】① 真源 config/perspective-card-contract.js 必须导出该出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1。写 1 不留余量是刻意的 ——
+ *   少一个就意味着这一面又回到零消费，而它恰好是「建好不消费」第十六例的入口。 */
+const PERSPECTIVE_READER = 'readPerspectiveFace';
+/* [face: perspectiveCard] [reader: readPerspectiveFace] [floor: 1] */
+const PERSPECTIVE_SOURCE_REL = 'config/perspective-card-contract.js';
+const PERSPECTIVE_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;
@@ -513,6 +528,12 @@ const entityCode = stripped.get(ENTITY_SOURCE_REL) || '';
 const entityExportsOk = [ENTITY_READER, 'readEntityAt', 'entityFaceLine'].map((fn) => ({
     fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(entityCode)
 }));
+/* ── [v4.12.0 · R3-O2] J18：视角卡面的真源出口 + 产品侧消费点 ── */
+const perspectiveCode = stripped.get(PERSPECTIVE_SOURCE_REL) || '';
+const perspectiveExportsOk = [PERSPECTIVE_READER, 'knowsFact', 'perspectiveLine', 'perspectiveSelfCheck']
+    .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(perspectiveCode) }));
+let perspectiveConsumerCount = 0;
+const perspectiveConsumerFiles = [];
 let entityConsumerCount = 0;
 const entityConsumerFiles = [];
 for (const [rel, code] of stripped) {
@@ -525,6 +546,9 @@ for (const [rel, code] of stripped) {
      *   只数 apps/**，config/ 是出口自身）。 */
     const c3 = countOf(code, ENTITY_READER);
     if (c3 > 0) { entityConsumerCount += c3; entityConsumerFiles.push(rel); }
+    /* [v4.12.0 · R3-O2] 视角卡面的产品侧消费点（只数 apps/**，config/ 是出口自身）。 */
+    const c4 = countOf(code, PERSPECTIVE_READER + '(');
+    if (c4 > 0) { perspectiveConsumerCount += c4; perspectiveConsumerFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -573,6 +597,10 @@ if (LIST) {
     for (const f of entityConsumerFiles) console.log('  ' + f);
     if (!entityConsumerFiles.length) console.log('  （无 —— 上游实体映射没人读，手机与主聊天就不是同一份映射）');
     for (const x of entityExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
+    console.log('\n── J18 ' + PERSPECTIVE_READER + ' 消费点（只计 apps/**）：' + perspectiveConsumerCount + '（下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）──');
+    for (const f of perspectiveConsumerFiles) console.log('  ' + f);
+    if (!perspectiveConsumerFiles.length) console.log('  （无 —— 上游视角卡没人读，角色可知范围就没有单一真源）');
+    for (const x of perspectiveExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     process.exit(0);
 }
 
@@ -820,6 +848,21 @@ if (entityConsumerCount < ENTITY_MIN_CONSUMERS) {
     console.error('        下游零消费 ⇒ 「手机和主聊天采用同一实体映射」在用户侧不成立，同名异人照样串台。');
     console.error('  修法：手机侧身份消歧接 config/entity-candidates-contract.js 的 ' + ENTITY_READER + '。');
 }
+/* ── J18 [v4.12.0 · R3-O2] 视角卡面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingPerspectiveExports = perspectiveExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingPerspectiveExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J18 真源 ' + PERSPECTIVE_SOURCE_REL + ' 缺出口（' + missingPerspectiveExports.length + ' 个）：' + missingPerspectiveExports.join(' / '));
+}
+if (perspectiveConsumerCount < PERSPECTIVE_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J18 ' + PERSPECTIVE_READER + ' 只有 ' + perspectiveConsumerCount + ' 个产品侧消费点（下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）：');
+    for (const f of perspectiveConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M3-X4（v3.323.0）把视角卡做成对外读面（lived / heard / misled / unknown 四格），');
+    console.error('        其契约明写「不得把降级读成确实不知道」；下游零消费 ⇒ 这一面回到「建好不消费」，');
+    console.error('        而「角色可知范围」在用户侧就没有单一真源（各处自己猜一份）。');
+    console.error('  修法：手机侧接 config/perspective-card-contract.js 的 ' + PERSPECTIVE_READER + '。');
+}
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -836,5 +879,6 @@ console.log('[bridge-contract] ' + EVIDENCE_READER + ' / ' + EVIDENCE_FACE_READE
 console.log('[bridge-contract] ' + CHECKPOINT_READER + ' 消费点 ' + checkpointConsumerCount + ' 个（' + checkpointConsumerFiles.length + ' 文件，下限 ' + CHECKPOINT_MIN_CONSUMERS + '）· 真源四出口在场 ' + (checkpointExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + QA_READER + ' 消费点 ' + qaConsumerCount + ' 个 · ' + TOOLS_READER + ' 消费点 ' + toolsConsumerCount + ' 个 · ' + PHONE_FACT_READER + ' 消费点 ' + phoneFactConsumerCount + ' 个 · 写入侧 ' + PHONE_FACT_SINK_TOKEN + ' ' + phoneFactSinkCount + ' 处（下限 ' + PHONE_FACT_MIN_SINKS + '）');
 console.log('[bridge-contract] ' + ENTITY_READER + ' 消费点 ' + entityConsumerCount + ' 个（' + entityConsumerFiles.length + ' 文件，下限 ' + ENTITY_MIN_CONSUMERS + '）· 真源三出口在场 ' + (entityExportsOk.every((x) => x.ok) ? '是' : '否'));
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费');
+console.log('[bridge-contract] ' + PERSPECTIVE_READER + ' 消费点 ' + perspectiveConsumerCount + ' 个（' + perspectiveConsumerFiles.length + ' 文件，下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）· 真源四出口在场 ' + (perspectiveExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费');
 process.exit(0);

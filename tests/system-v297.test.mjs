@@ -319,6 +319,11 @@ const STAGE_FILES = [
     'apps/calendar/calendar-app.js',
     'apps/traveldesk/traveldesk-view.js',
     'apps/wechat/wechat-data.js',
+    /* [v4.12.0] 第九道门新增 J18（上游视角卡面必须真被业务面消费）：真源是
+     *   `config/perspective-card-contract.js`（本处显式加入），消费点就在上面的
+     *   `apps/diagnose/diagnose-data.js` 里。白名单暂存型套件必须同步补上每条判据的读数来源
+     *   —— 否则未破坏的副本树会在 J18 上红（D0 自证失败 ⇒ 整组负控制变假绿）。 */
+    'config/perspective-card-contract.js',
 ];
 
 function stageTree(extra = {}) {

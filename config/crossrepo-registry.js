@@ -340,6 +340,26 @@ export const CROSSREPO_FEATURES = Object.freeze([
         declaredFloor: 1
     },
     {
+        id: 'lonsha.perspectiveCard',
+        label: '角色可知范围(视角卡:亲历 / 听说 / 误信 / 明确不知)',
+        owner: OWNER_LONSHA,
+        since: '3.323.0',
+        sinceSource: '上游 lonsha-memory-plugin/index.js 的 perspectiveCard 出口(v3.323.0 M3-X4)与 perspective-card.js;证据在上游真源与 open_face_registry.tsv 的 face=perspectiveCard 行',
+        fieldKeys: [],
+        contract: '引擎方法 / 模块出口两路:`engine.perspectiveCard(opts)` 或 `LonShaPerspectiveCard.build(traces, opts)`,返回 kind=perspective_card 的读数(lived / heard / misled / unknown 四格 + unrecorded 不可用格 + version / truncated / malformedInput);上游契约里**明写一条禁令**「不得把降级读成确实不知道」,故缺席面给恒定键面且 version=0(「不在场」与「这个角色什么都不知道」不同形)',
+        keySites: [
+            { file: 'config/perspective-card-contract.js', token: 'engine.perspectiveCard' }
+        ],
+        consumers: [
+            { file: 'apps/diagnose/diagnose-data.js', token: 'readPerspectiveFace(' }
+        ],
+        invalidation: '插件不在场 / 模块未加载 ⇒ engine-absent(等装插件);插件在、本版无此面 ⇒ face-absent(等升级到 v3.323.0+);出口在但调用抛错 / 面形态不对 ⇒ unusable(本机读不出,不是这个角色什么都不知道);真跑过、该角色无轨迹 ⇒ empty(**真读数**);读到四格 ⇒ ok——五态处置相反,压平即把「还没装插件」显示成「他确实不知道」',
+        standalone: '未装上游 ⇒ 诊断面照常出卡,但视角面如实标不在场;**不退回本地猜一份可知范围**——上游不在就不给四格,也绝不把 `misled`(曾误信)或 `unrecorded`(本模块无判定)读成世界真相或「不知道」',
+        upstreamFace: 'perspectiveCard',
+        declaredConsumer: 'readPerspectiveFace',
+        declaredFloor: 1
+    },
+    {
         id: 'lonsha.knowledge',
         label: '知情网络（谁不知道某件事）',
         owner: OWNER_LONSHA,
