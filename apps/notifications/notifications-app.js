@@ -93,6 +93,17 @@ export class NotificationCenterApp {
         .nc-ac-btn:hover { background:rgba(255,255,255,.22); }
         .nc-ac-open { background:rgba(76,139,245,.35); color:#fff; }
         .nc-ac-btn-off { opacity:.4; cursor:not-allowed; }
+        /* [v4.19.0 · R4-O7] 通知按事情收拢的分组壳(与 phone.css 同款)。 */
+        .nc-digest-line { padding:6px 16px 4px; font-size:11px; color:#8b8f96; }
+        .nc-group { border-radius:14px; margin-bottom:8px; background:rgba(255,255,255,.05); overflow:hidden; }
+        .nc-group.nc-unread { background:rgba(76,139,245,.10); }
+        .nc-group-head { padding:11px 10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+        .nc-group-ico { flex:0 0 26px; text-align:center; color:#9aa0a6; }
+        .nc-group-t1 { flex:1 1 100%; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+        .nc-group-t2 { flex:1 1 100%; font-size:12.5px; color:#b6bac0; line-height:1.45; word-break:break-word; }
+        .nc-group-body { padding:0 8px 8px; }
+        .nc-apptag.nc-cross { background:rgba(242,181,68,.18); color:#f2b544; }
+        .nc-apptag.nc-muted { background:rgba(255,255,255,.08); color:#8b8f96; }
         </style>`;
     }
 

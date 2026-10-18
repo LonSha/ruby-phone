@@ -10902,6 +10902,25 @@ input:checked + .toggle-slider:before {
     letter-spacing: 0.4px;
     margin-bottom: 3px;
 }
+/* [v4.13.0 · R4-O1] 出处跳转按钮:与标签同排,压在右侧。
+   存在理由:出处从「一行字」变成「可点开」之后,按钮必须**看得出是按钮**——
+   与标签同色系的浅底 + 下划线,不用重色块,免得每条答案都跳出来抢视线。 */
+.mem-src-go {
+    margin-left: 6px;
+    padding: 0 7px;
+    height: 17px;
+    border: 1px solid #c7c9e8;
+    border-radius: 8px;
+    background: #f4f5ff;
+    color: #4f46e5;
+    font-size: 9.5px;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.mem-src-go:hover { background: #e8eaff; }
+.mem-src-go:active { transform: scale(0.94); }
 
 .mem-res-score {
     background: #6366f1;
@@ -20633,3 +20652,210 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     background: #2a2a2c;
     border-color: #3a3a3c;
 }
+
+/* ========================================
+   🎯 [v4.13.0 · R4-O1] 主聊天楼层定位高亮
+   ========================================
+   宿主的 locateChatFloor 滚到该楼之后给一个短促的视觉落点。
+   为什么要有:只滚不动画时,长聊天里用户仍不知道「哪一条才是刚跳到的」——
+   滚到位但看不出位置,与「没滚」在体验上接近。1.6 秒后由 JS 摘掉类名。 */
+#chat .mes.mes-located-flash {
+    animation: rp-locate-flash 1.6s ease-out;
+}
+@keyframes rp-locate-flash {
+    0%   { box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.95), 0 0 0 3px rgba(99, 102, 241, 0.16); }
+    60%  { box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.55), 0 0 0 3px rgba(99, 102, 241, 0.08); }
+    100% { box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0), 0 0 0 3px rgba(99, 102, 241, 0); }
+}
+
+/* [v4.14.0 · R4-O2] 问往事的运行态:取消按钮与状态行。
+   为什么要有:大库上问一句要扫九账全量,没有这两个元素就只能盯着不动的界面猜
+   「到底在跑还是死了」。取消按钮同色系但更轻,不与「问」抢主角。 */
+.mem-ask-cancel {
+    margin-left: 6px;
+    padding: 0 10px;
+    height: 30px;
+    border: 1px solid #d8dae8;
+    border-radius: 10px;
+    background: #fbfbfe;
+    color: #6b6b85;
+    font-size: 12px;
+    cursor: pointer;
+}
+.mem-ask-cancel:hover { background: #f0f1f8; }
+.mem-ask-cancel:active { transform: scale(0.95); }
+.mem-ask-runline { margin: 6px 0 2px; color: #6366f1; }
+.mem-ask-canceled {
+    color: #b45309 !important;
+    background: #fff7ed;
+    border-radius: 8px;
+    padding: 8px 10px !important;
+}
+
+/* [v4.18.0 · R4-O6] 段落窗口的两个读数元素。
+   为什么要有:长章只渲染邻域之后,用户必须看得到「你在全章的哪一段」与「两头还有没有」——
+   看不到就会以为这一章只有这么短。 */
+.rd-para-note {
+    font-size: 10.5px;
+    color: #9a8b76;
+    text-align: center;
+    padding: 6px 0 2px;
+}
+.rd-para-more {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 8px 0 16px;
+}
+
+/* [v4.19.0 · R4-O7] 通知按事情收拢的分组壳与行。
+   为什么要有:同一件事的多次更新若各自平铺,用户看不出「这是一件事」。 */
+.nc-digest-line { padding:6px 16px 4px; font-size:11px; color:#8b8f96; }
+.nc-group { border-radius:14px; margin-bottom:8px; background:rgba(255,255,255,.05); overflow:hidden; }
+.nc-group.nc-unread { background:rgba(76,139,245,.10); }
+.nc-group-head { padding:11px 10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.nc-group-ico { flex:0 0 26px; text-align:center; color:#9aa0a6; }
+.nc-group-t1 { flex:1 1 100%; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.nc-group-t2 { flex:1 1 100%; font-size:12.5px; color:#b6bac0; line-height:1.45; word-break:break-word; }
+.nc-group-body { padding:0 8px 8px; }
+.nc-apptag.nc-cross { background:rgba(242,181,68,.18); color:#f2b544; }
+.nc-apptag.nc-muted { background:rgba(255,255,255,.08); color:#8b8f96; }
+
+/* [v4.22.0 · R4-X1] 接着上一句:读数行 / 候选行 / 回话行 / 轨迹。
+   为什么读数行给独立底色:它与上面「问往事」的结果区是同页并列,
+   不给底色分会分不清「这一行说的是谁的条件」。 */
+.mem-fu-section { border-top: 1px dashed #e3e5f0; padding-top: 10px; }
+.mem-fu-face {
+    margin: 4px 0 8px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #33334a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.mem-fu-cands { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.mem-fu-cand {
+    padding: 4px 10px;
+    border: 1px solid #c7cbf0;
+    border-radius: 999px;
+    background: #fff;
+    color: #4338ca;
+    font-size: 12px;
+    cursor: pointer;
+}
+.mem-fu-cand:hover { background: #eef0ff; }
+.mem-fu-cand:active { transform: scale(0.96); }
+.mem-fu-note:empty { display: none; }
+.mem-fu-note-text { color: #b45309; font-size: 12px; }
+.mem-fu-trace { margin-top: 8px; }
+.mem-fu-trace-title { color: #8a8aa0; font-size: 11px; margin-bottom: 4px; }
+.mem-fu-scroll { color: #8a8aa0; font-size: 11px; margin-bottom: 4px; }
+.mem-fu-trace-row {
+    color: #4b4b63;
+    font-size: 11px;
+    line-height: 1.6;
+    padding-left: 8px;
+    border-left: 2px solid #e3e5f0;
+}
+/* [v4.23.0 · R4-X2] 资料导入向导:面读数 / 阶段行 / 逐段行 / 同名待认 / 导入账。
+   为什么逐段行给独立框:它与上面「接着上一句」的轨迹同为「一段一条」的长列表,
+   不分开会在长资料上分不清哪一条属于哪一面。 */
+.mem-lore-section { border-top: 1px dashed #e3e5f0; padding-top: 10px; }
+.mem-lore-face {
+    margin: 4px 0 8px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #33334a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.mem-lore-text {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 4px 0 6px;
+    padding: 7px 9px;
+    border: 1px solid #d8dbe8;
+    border-radius: 8px;
+    background: #fff;
+    color: #33334a;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+.mem-lore-mini {
+    padding: 4px 10px;
+    border: 1px solid #c7cbf0;
+    border-radius: 8px;
+    background: #fff;
+    color: #4338ca;
+    font-size: 12px;
+    cursor: pointer;
+}
+.mem-lore-mini:hover { background: #eef0ff; }
+.mem-lore-mini:disabled { color: #a0a3b1; border-color: #e3e5f0; cursor: not-allowed; background: #f7f8fc; }
+.mem-lore-num {
+    width: 72px;
+    padding: 4px 8px;
+    border: 1px solid #d8dbe8;
+    border-radius: 8px;
+    font-size: 12px;
+}
+.mem-lore-stages { margin: 6px 0; }
+.mem-lore-stage {
+    color: #4b4b63;
+    font-size: 11.5px;
+    line-height: 1.7;
+    padding-left: 8px;
+    border-left: 2px solid #e3e5f0;
+}
+.mem-lore-rows-title { color: #8a8aa0; font-size: 11px; margin: 8px 0 4px; }
+.mem-lore-rows { max-height: 320px; overflow-y: auto; }
+.mem-lore-row {
+    border: 1px solid #e3e5f0;
+    border-radius: 10px;
+    padding: 7px 9px;
+    margin-bottom: 6px;
+    background: #fff;
+}
+.mem-lore-rowhead { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mem-lore-pickwrap { font-size: 11.5px; color: #4b4b63; display: flex; align-items: center; gap: 4px; }
+.mem-lore-clswrap { font-size: 11.5px; color: #4b4b63; display: flex; align-items: center; gap: 4px; }
+.mem-lore-cls {
+    padding: 2px 6px;
+    border: 1px solid #d8dbe8;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 11.5px;
+}
+.mem-lore-verdict { font-size: 11px; color: #8a4b0f; background: #fdf3e6; border-radius: 999px; padding: 1px 8px; }
+.mem-lore-title { font-size: 12.5px; color: #26263a; margin-top: 5px; font-weight: 600; }
+.mem-lore-snip { font-size: 11.5px; color: #5c5c72; line-height: 1.55; margin-top: 2px; }
+.mem-lore-tags { font-size: 11px; color: #b45309; margin-top: 3px; }
+.mem-lore-needwrap { margin-top: 8px; }
+.mem-lore-need { border: 1px dashed #e0c9a0; border-radius: 10px; padding: 7px 9px; margin-bottom: 6px; background: #fffdf7; }
+.mem-lore-needtxt { font-size: 11.5px; color: #7a5a1f; line-height: 1.5; }
+.mem-lore-owners { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.mem-lore-owner {
+    padding: 3px 10px;
+    border: 1px solid #e0c9a0;
+    border-radius: 999px;
+    background: #fff;
+    color: #8a4b0f;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+.mem-lore-owner:hover { background: #fdf3e6; }
+.mem-lore-resolved { font-size: 11.5px; color: #2f7a4f; margin-bottom: 4px; }
+.mem-lore-ledger {
+    margin-top: 8px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #4b4b63;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.mem-lore-note:empty { display: none; }
+.mem-lore-note-text { color: #b45309; font-size: 12px; }

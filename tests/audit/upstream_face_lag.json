@@ -3,6 +3,14 @@
   "note": "（收账后空表：上游 813ab3a 已把 checkpointCompare 三格改为 v3.252.0 / readLonshaCheckpointFace@1 / 下游已接入，跨仓分歧已消失。）",
   "items": [
     {
+      "face": "causalChain",
+      "kind": "consumer-none",
+      "upSays": "none@0",
+      "ourSays": "readCausalBoard@1",
+      "upstreamCommit": "30feb80",
+      "reason": "上游在 v3.323.0(M3-X3)交付这一面时如实写 none@0(当时下游确实一个都不消费),且本仓 upstream_face_unconsumed.json 里那一格的理由逐字写着「手机侧的消费点属 R3-X4 的后续增强」—— 那条理由当时是对的。本仓 v4.27.0 的 R4-X6(可操作的线索与未完事项板)把它接上了:config/causal-board-contract.js 的 readCausalBoard / readCausalTodos / readCausalTrace / readCausalProposals 四出口真读该面(四收口分列 / 推测边与已确认边两个数组不可混读 / 图外 id 追链与「追到头了」不同形),消费点下限 1(登记行 lonsha.causalChain、桥契约面标签与两侧逐字对齐)。故上游那一格已陈旧 —— 它需要在下一次更新自己的 consumer 列时改写。上游一提交,本条立刻变成「登记了不存在的分歧」而转红 —— 那正是台账双向闭合的用意:它不许腐化成掩饰。"
+    },
+    {
       "face": "relationHistory",
       "kind": "consumer-none",
       "upSays": "none@0",

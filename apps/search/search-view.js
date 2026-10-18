@@ -47,6 +47,19 @@ export class SearchView {
     render() {
         const shell = this.app?.phoneShell;
         if (!shell?.setContent) return;
+        /* [v4.15.0 · R4-O3] **先读快照再画**：快照里有上次离开时的
+         *   页签(来源筛选)与查询词。画完再贴会先闪一下空面。
+         *   ★ 同一会话内的重绘不重读(否则会把用户刚改的搜索词顶掉)。 */
+        if (this._restored === null || this._restored === undefined) {
+            let res = null;
+            try { res = this.app.restoreState?.() || null; } catch (_e) { res = null; }
+            this._restored = (res && res.ok === true) ? res : { ok: false, state: (res && res.state) || 'unreadable', snapshot: null };
+            if (this._restored.ok === true) {
+                const s = this._restored.snapshot;
+                if (s.tab !== null) this._scope = s.tab;
+                if (s.query !== null) this._keyword = s.query;
+            }
+        }
         // [v2.81.0] 面板重开 = 一次新检索：丢掉上一轮的结果快照。
         //   否则源头改了以后，重开面板仍按旧索引给旧结果（_paint 那条路保持不变，
         //   输入过程中照样复用同一份内存索引，不重扫全库）。
@@ -258,6 +271,28 @@ export class SearchView {
         }
     }
     /** 分片进度：只改进度条文字，不重绘结果区（重绘会打断用户正在看的列表） */
+
+    /* ================= [v4.15.0 · R4-O3] 状态捕获 ================= */
+    /**
+     * 捕获一次四格。**节流 400ms**:输入过程里每敲一个字写一次盘
+     *   会把本机存储当成高频落盘器用。节流丢的是**最后 400ms**的输入,
+     *   而那一段会在下一次点击/关闭时补上 —— 代价是「滞后几百毫秒」,
+     *   而不节流的代价是「每一个字都要等一次同步写」。
+     *   ★ 不使用 setTimeout:view 不持定时器(reg lifecycle 会判定未登记的定时器)。
+     *   改用「上次写的时刻」做时间闸门 —— 同样能控住频率,且无定时器。
+     */
+    _capture() {
+        const now = Date.now();
+        if (this._lastCaptureAt && now - this._lastCaptureAt < 400) return false;
+        this._lastCaptureAt = now;
+        let r = null;
+        try {
+            r = this.app.captureState?.({
+                tab: this._scope, query: this._keyword, anchor: '', scroll: 0
+            }) || null;
+        } catch (_e) { r = null; }
+        return !!(r && r.ok === true);
+    }
     _progress(p) {
         const root = this.app.phoneShell?.screen;
         const bar = root?.querySelector('#gs-scanbar');
@@ -402,6 +437,8 @@ export class SearchView {
              *   不作废它就会把**旧词**的命中写回面板（不报错、只错结果）。 */
             this._qtoken();
             this._paint();
+            /* [v4.15.0 · R4-O3] 输入后捕获一次(节流:不能每敲一个字写一次盘)。 */
+            this._capture();
             // 清空按钮随输入显现/消失
             const bar = root.querySelector('.gs-searchbar');
             const has = !!this._keyword;
@@ -429,6 +466,7 @@ export class SearchView {
                 this._qtoken();
                 this._scope = String(btn.dataset.scope || '');
                 this._result = null;
+                this._capture();
                 this.render();
             });
         });

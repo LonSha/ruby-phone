@@ -276,13 +276,29 @@ export function normalizeExcerpt(entry) {
     if (!text || !bookId) return null;
     if (!Number.isInteger(chapter) || chapter < 0) return null;
     if (!Number.isInteger(para) || para < 0) return null;
+    /* [v4.24.0 · R4-X8] id 前缀**只加一次**：本函数是幂等的净化口，二次净化（备份导出后再
+     *   读回、列表重排）若再叠一层前缀，同一摘录的 id 每过一遍就长一截。
+     *   ★ 前缀只拼一次的写法要**先算底串再拼**：`'ex_' + (x || y)` 里 `+` 优先于 `||`，
+     *     写成 `'ex_' + x || y` 时空 id 会得到字面量 `'ex_'`（每一类空 id 撞成同一个）。 */
+    const idBase = String(e.id || '').replace(/^ex_/, '').slice(0, 40)
+        || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
     return {
-        id: 'ex_' + (e.id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6))),
+        id: 'ex_' + idBase,
         text: text.slice(0, 2000),
         bookId, bookTitle: String(e.bookTitle || ''),
         chapter, para,
         chapterTitle: String(e.chapterTitle || ''),
-        createdAt: Number(e.createdAt) || Date.now()
+        createdAt: Number(e.createdAt) || Date.now(),
+        /* [v4.24.0 · R4-X8] 三格笔记字段（改版判定与「批注不是原文」的物质基础）：
+         *   · bookHash  —— 摘录时那本书的**内容指纹**。没有它，书改了版就无从比对，
+         *                  回跳会静默落在另一段上（本项要治的第一个病）。
+         *   · annotation——用户自己的解释。与 text（原文）**分格存放**，不掺。
+         *   · tags      ——检索用的标签。
+         *   旧条目（v3.99.2 及更早落的盘）没有这三格：读回来时 bookHash 为空，
+         *   锚点核对会判成 UNPINNED「需确认」—— 这正是应有的处置，不补假指纹。 */
+        bookHash: String(e.bookHash || ''),
+        annotation: String(e.annotation || '').slice(0, 500),
+        tags: Array.isArray(e.tags) ? e.tags.map(t => String(t)).filter(t => t.trim()).slice(0, 8) : []
     };
 }
 /** 摘录列表净化 + 上限（超限丢最旧，不静默膨胀存储）。 */
@@ -362,6 +378,37 @@ export class ReadingData {
         return { bookId: book.id, chapters: parsed.chapters, title: parsed.title, author: parsed.author || '', format: parsed.format || 'txt', replaced, coexist, reusedId: reuseId };
     }
 
+    /* [v4.21.0 · R4-O9] 收下**外来条目**(从书库包导入)。
+     *   为什么不能走 addBook:addBook 按「文件名 + 指纹」判并存或替换,而导入侧的身份是
+     *   **bookId**(进度键 ruby_reading_progress_<id> 与摘录引用都指着它)。
+     *   若导入时按文件名另发一个新 id,「重复导入不产生双书」当场不成立 ——
+     *   同一本书会在书架上出现两次,一次有进度、一次没有。
+     *   故:同 id 就地更新(保留 addedAt 与进度键),异 id 追加;全程不抛。 */
+    adoptBook(entry) {
+        const e = (entry && typeof entry === 'object') ? entry : {};
+        const id = String(e.id == null ? '' : e.id).trim();
+        if (!id) return { ok: false, reason: 'no-subject' };
+        const at = this.shelf.findIndex(b => b.id === id);
+        const old = at >= 0 ? this.shelf[at] : null;
+        const book = {
+            id,
+            title: String(e.title == null ? '' : e.title),
+            fileName: String(e.fileName == null ? '' : e.fileName),
+            author: String(e.author == null ? '' : e.author),
+            encoding: String(e.encoding == null ? '' : e.encoding) || 'utf-8',
+            format: String(e.format == null ? '' : e.format) || 'txt',
+            mode: String(e.mode == null ? '' : e.mode) || 'auto',
+            /* 导入进来的书**没有本机的导入时刻**:沿用旧条目的 addedAt(若这本本机有过),
+             *   否则记导入时刻 —— 拿包里的 0 当 addedAt 会在书架上显示「1970 年 1 月 1 日」。 */
+            addedAt: (old && old.addedAt) || Number(e.addedAt) || Date.now(),
+            chapterCount: Number(e.chapterCount) || 0,
+            contentHash: String(e.contentHash == null ? '' : e.contentHash),
+            hasContent: true
+        };
+        if (at >= 0) this.shelf[at] = book; else this.shelf.unshift(book);
+        this._save();
+        return { ok: true, id, replaced: at >= 0, count: this.shelf.length };
+    }
     removeBook(id) {
         this.shelf = this.shelf.filter(b => b.id !== id);
         this._save();

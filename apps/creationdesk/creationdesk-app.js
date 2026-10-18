@@ -14,6 +14,21 @@
 'use strict';
 import { cwPlanLine, cwSelfCheck, CW_STEPS } from '../../config/creation-workbench.js';
 import { CreationdeskView } from './creationdesk-view.js';
+/* [v4.17.0 · R4-O5] 编辑缓冲(纯函数)。本层只转交:归一与三态判定全在那件里,
+ *   **已发布不许被覆盖这条红线也由它守**(本层不自己判一份)。 */
+import {
+    editBufferKey, normalizeEditBuffer, editBufferState,
+    editRecoveryPlan, applyRecoveryChoice, afterSaveAttempt
+} from '../../config/edit-buffer.js';
+import { writeReceipt } from '../../config/write-receipt.js';
+/* [v4.25.0 · R4-X3] 故事年鉴(纯契约)。
+ *   创作台侧只消费**两件**:① 年鉴面读数(建章册一行 + 派发相);
+ *   ② 把某一版年鉴导出文本取来当**草稿素材**(不把它写进剧情事实,也不发布)。
+ *   去剧透/编辑/过期判定全在阅读侧与上游,本件不另写第二份口径。 */
+import {
+    saOutletProbe, planSaOutlet, readAnnualBuild, readingVersionOf, exportTextOf,
+    bookLine
+} from '../../config/story-annual-contract.js';
 
 export class CreationdeskApp {
     constructor(shell, storage) {
@@ -42,6 +57,38 @@ export class CreationdeskApp {
             return (vp && typeof vp.creationWorkbenchFace === 'function') ? vp.creationWorkbenchFace() : null;
         } catch (_e) { return null; }
     }
+    /* ══════════ [v4.25.0 · R4-X3] 故事年鉴（创作台侧：取材，不改事实） ══════════
+     * 【为什么创作台要读它】计划落点原文：「reading + creationdesk……编辑文稿、导出本地可读文件」。
+     *   年鉴是**文稿**，创作台的职责就是把稿子变成可用的素材 —— 这里取它的导出文本当草稿素材。
+     * 【不做什么】不写剧情事实、不发布、不自己判去剧透（那一律走上游 + 阅读侧）。
+     * ------------------------------------------------------------------ */
+    /** 宿主 window（读上游插件句柄用；无头环境降级成 globalThis）。 */
+    _hostWin() {
+        try { return (typeof window !== 'undefined') ? window : globalThis; } catch (_e) { return globalThis; }
+    }
+    /** 年鉴面读数（建章册一行 + 派发相；出口名只在契约件里出现）。 */
+    annualFace() {
+        const probe = saOutletProbe(this._hostWin());
+        const book = readAnnualBuild(this._hostWin(), null, {});
+        let line = '';
+        try { line = bookLine(book); } catch (_e) { line = '年鉴读数读不到（不假装为 0 章）'; }
+        return { probe: probe, outlet: planSaOutlet(probe.hasBuild, probe.hasEdit), book: book, line: line };
+    }
+    /** 年鉴一行读数（视图借用；判据全在内核 `bookLine`）。 */
+    annualLine() {
+        try { return String(this.annualFace().line || ''); }
+        catch (_e) { return '年鉴读数读不到（不假装为 0 章）'; }
+    }
+    /** 取一份年鉴草稿素材（按本机进度裁阅读版；**只返回文本，不写任何键**）。 */
+    annualDraftMaterial(opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        const book = readAnnualBuild(this._hostWin(), null, {});
+        const all = (book && Array.isArray(book.chapters)) ? book.chapters : [];
+        if (!all.length) return { ok: false, text: '', line: bookLine(book) };
+        const ver = readingVersionOf(all, { readThrough: o.readThrough });
+        const text = exportTextOf(ver, { bookTitle: o.bookTitle || '故事年鉴', versionLabel: o.versionLabel || '' });
+        return { ok: true, text: text, line: (bookLine(book) + ' · 取稿 ' + String(text.length) + ' 字') };
+    }
     /* ---------- 交互：全部转咽喉 ---------- */
     setPick(ref) { this._pickRef = String(ref || ''); this.render(); return this._pickRef; }
     setTarget(t) { this._target = String(t || ''); this.render(); return this._target; }
@@ -55,6 +102,90 @@ export class CreationdeskApp {
         this._draftNote = d ? d.note : '';
         this.render();
         return this._draftKey;
+    }
+    /* ---------- [v4.17.0 · R4-O5] 编辑缓冲:半成品不再随页面/刷新/切会话丢掉 ---------- */
+    /**
+     * 写一份半成品缓冲。**节流 400ms**:每次敲键都同步写盘会把本机存储当高频落盘器用。
+     *   节流丢的是**最后 400ms** 的输入,而那段会在下一次点击/关闭时补上。
+     * @returns {{ok:boolean, key:string, why:string}}
+     */
+    saveEditBuffer(target) {
+        /* 键名**逐字常量**:keys 门的抽取器认 `const XXX = 'edit_buffer_...'` 这一形态。 */
+        const EDIT_BUFFER_KEY = 'edit_buffer_creationdeskApp';
+        const key = EDIT_BUFFER_KEY;
+        if (editBufferKey('creationdeskApp') !== key) {
+            return { ok: false, key: key, why: 'key-drift(键名与真源不一致)' };
+        }
+        const now = (typeof Date.now === 'function') ? Date.now() : 0;
+        if (this._bufLastAt && now && now - this._bufLastAt < 400) {
+            return { ok: true, key: key, why: 'throttled' };
+        }
+        this._bufLastAt = now;
+        const pack = normalizeEditBuffer({
+            text: this._draftNote, caret: 0,
+            target: String(target || this._target || ''),
+            version: 1, published: false
+        });
+        /* 空缓冲**不写盘**(写一份空的等于把已存的顶掉)。 */
+        if (!pack.hasText) return { ok: false, key: key, why: 'empty-not-written' };
+        try {
+            const w = writeReceipt(this.storage, key, JSON.stringify({
+                text: pack.text, caret: pack.caret, target: pack.target,
+                version: pack.version, published: pack.published, chatId: this._chatId()
+            }));
+            return { ok: !!(w && w.saved === true), key: key, why: (w && w.why) || '' };
+        } catch (_e) { return { ok: false, key: key, why: 'write-threw' }; }
+    }
+    /** 本会话身份(取不到返回空串;纯函数对空串与空串判「同一段」)。 */
+    _chatId() {
+        try { return String(this.storage?.currentConversationId || ''); } catch (_e) { return ''; }
+    }
+    /** 读回缓冲(**只读,不判**;三态判定交给 `decideRecovery`)。 */
+    loadEditBuffer() {
+        const key = 'edit_buffer_creationdeskApp';
+        let raw = undefined;
+        try { raw = this.storage?.get?.(key, undefined); } catch (_e) { raw = undefined; }
+        if (raw === undefined || raw === null || raw === '') return null;
+        let obj = raw;
+        if (typeof raw === 'string') {
+            try { obj = JSON.parse(raw); } catch (_e) { return null; }
+        }
+        return (obj && typeof obj === 'object') ? obj : null;
+    }
+    /**
+     * 恢复判定(**只判,不改任何东西**):给出三态与可选处置。
+     *   ★ **默认什么都不动**(keep-editing)—— 验收原文要求「恢复旧缓冲需选择,不自动覆盖」。
+     */
+    decideRecovery() {
+        const buf = this.loadEditBuffer();
+        const saved = { text: String(this._draftNote || ''), published: false };
+        return editRecoveryPlan(buf, saved);
+    }
+    /** 采纳某个恢复选择(写盘/清盘都由这里做;**纯函数只算不写**)。 */
+    applyRecovery(choice) {
+        const buf = this.loadEditBuffer();
+        const saved = { text: String(this._draftNote || ''), published: false };
+        const r = applyRecoveryChoice(choice, buf, saved);
+        const key = 'edit_buffer_creationdeskApp';
+        if (r.ok && r.applied === 'drop-buffer') {
+            try { this.storage?.set?.(key, ''); } catch (_e) { /* 清不掉不影响结论 */ }
+        }
+        if (r.ok && r.applied === 'restore-buffer' && r.buffer && r.buffer.text !== null) {
+            this._draftNote = String(r.buffer.text);
+            this.render();
+        }
+        return r;
+    }
+    /** 保存回执 → 缓冲处置(**失败必须保留文字**;成功才清)。 */
+    settleSave(receipt) {
+        const buf = this.loadEditBuffer();
+        const r = afterSaveAttempt(receipt, buf);
+        const key = 'edit_buffer_creationdeskApp';
+        if (r.state === 'saved') {
+            try { this.storage?.set?.(key, ''); } catch (_e) { /* 清不掉不影响结论 */ }
+        }
+        this._lastSaveState = r.state;
+        return r;
     }
     setDraftNote(note) { this._draftNote = String(note || ''); return this._draftNote; }
     /** 多目标勾选：一个目标一份稿，勾几个就编排几份（**不互覆盖**）。 */
@@ -215,6 +346,8 @@ export class CreationdeskApp {
             selfCheck: self,
             drafts: (host && host.drafts) || { readable: false, items: [], dropped: 0, limit: 0 },
             draftsText: (host && host.draftsText) || '草稿本**读不到**（不是「没草稿」）',
+            /* [v4.25.0 · R4-X3] 故事年鉴读数（创作台侧取材口径；判据全在契约件）。 */
+            annualText: this.annualLine(),
             multiSelfCheck: (host && host.multiSelfCheck) || null,
             draftKey: this._draftKey,
             draftNote: this._draftNote,

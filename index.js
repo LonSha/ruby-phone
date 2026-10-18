@@ -18,6 +18,10 @@ import { PhoneCallData, parseSmsMessagesFromText } from './apps/phone/phone-data
 import { normalizeOpenDetail, applyOpenDetail } from './config/app-open-detail.js';
 // [v3.66.0 · X2] 跨 App 靶心投递（与页签同一处装配：先 setTab、再投 ref、最后 render）
 import { applyOpenRef } from './config/open-ref.js';
+/* [v4.13.0 · R4-O1] 宿主楼层定位口的**契约名**(`locateChatFloor`)。挂载时用这个常量
+ *   而不是手写字面量 —— `config/source-locator.js::locateTarget` 按同一个常量取这一格,
+ *   两侧各写一遍就必然有一天漂开,而漂开的表现是「按钮点了没反应」(不报错)。 */
+import { HOST_LOCATE_METHOD } from './config/source-locator.js';
 /* [v3.97.0 · R3-X1] 手机事实回执的唯一装配点（三类来源共用；与记忆 App 同源转发） */
 import { sendPhoneEvent } from './config/phone-fact-contract.js';
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
@@ -264,7 +268,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.12.0';
+const ST_PHONE_VERSION = '4.27.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -462,25 +466,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-27",
+    date: "2026-11-12",
     items: [
-        "【本版做的是第三期两项:R3-O2 角色可知范围(消费上游视角卡面)与 R3-X8 阅读正文的本地附件持久化】R3-O2 计划原文要的是「区分亲历、听说、推测,不再把所有召回都措辞成共同经历;角色可知范围优先消费上游现有能力」;R3-X8 计划原文要的是「正文作为独立本地附件持久化,metadata 只存引用与进度;可书签、划线、摘录成素材;优先复用宿主附件存储」,并带一条硬约束:正文不得塞入提示词或 chatMetadata。",
-        "【R3-O2 修前实测的缺口不是推演,而是跨仓台账上的一格】上游 lonsha-memory-plugin 在 v3.323.0(M3-X4)交付了视角卡面 perspective-card.js,其契约里明写一条禁令「不得把降级读成确实不知道」;而本仓 tests/audit/upstream_face_unconsumed.json 里那一格逐字写着 consumer=none@0,理由是「手机侧目前还没有一处能分辨『未知道』与『面不在场』」——先接会把降级误读成事实。这正是本仓最贵的那类老账(「读不到」与「空」同形),只不过这次它挡在跨仓面上。",
-        "【新内核 · config/perspective-card-contract.js】只做三件事,不重算任何上游口径:一 五态分形——模块未装 engine-absent、面不在场 face-absent(version=0)、出口抛错或形态不对 unusable、真跑过但该角色无轨迹 empty、读到四格 ok;二 四格原样透传 lived 与 heard 与 misled 与 unknown(不在这里重算一份,重算就是第二套可知范围口径);三 unrecorded 与 unknown 严格分开——上游把判不开的动作(doubt 与 correct 与 retract)单独落进 unrecorded 并逐字提醒「不当『不知道』用」,本模块把这条提醒变成结构上不可混读:两者各有各的格子与人读字样,且 silentCapable 只对「四格齐且 unrecorded 可数」的面为真。",
-        "【数值取值门走全仓唯一实现】视角卡要读的 floor 恰是「没给」与「给了 0」必须分开的那种读数(Number(null) 恒等于 0 会把两者塌成同一个数),故引用 config/num-gate.js 的 numOrNull 并局部命名为 floorOrNull 以保留楼层语义(实现唯一,名字本地),由既有弱口径门 weak-coercion-audit.mjs 守这一面。",
-        "【R3-O2 接进诊断面,三层都在既有真源上】取数层 apps/diagnose/diagnose-data.js 新增 readPerspectiveFace 调用(实时面与样本探针两处),成卡字段 perspectiveFace;视图层 apps/diagnose/diagnose-view.js 新增 _perspectiveHtml 渲染「角色可知范围」卡(亲历 / 听说 / 误信 / 明确不知 / 未记录),并以 perspectiveFaceText 作为具名一行读数出口,视图不重算任何判定。本版**不**把它接进往事问答与群聊与主聊天生成链——那三处的消费属后续增强,如实留白。",
-        "【跨仓三件套收口(同一件事不许两处各说一遍)】一 config/crossrepo-registry.js 新增登记行 lonsha.perspectiveCard(归属仓与起始版本 3.323.0 与契约形状与消费点与失效条件与单独安装行为齐备,declaredConsumer=readPerspectiveFace,declaredFloor=1);二 tests/audit/upstream_face_unconsumed.json 移除 perspectiveCard(已消费的面不许还留在未消费台账里);三 tests/audit/upstream_face_lag.json 新增 perspectiveCard 的 consumer-none 滞后项——上游账面仍写 none@0,而本仓真码已有消费点,故差异走「上游台账待同步」通路并记明上游提交 0f2f7fd,上游一提交该条即因「分歧已消失」而转红。",
-        "【第九道门新增 J18,把下游这半边钉住】scripts/bridge-contract-audit.mjs 按 J17(entityMapping)的范式新增 J18:真源 config/perspective-card-contract.js 必须真导出四个出口,且产品面 apps 下的 readPerspectiveFace 调用点不得少于下限 1(写 1 不留余量是刻意的——少一个就意味着这一面又回到「建好不消费」)。同时挂上机器可读标签,形态与既有各面逐字一致,第十一道门 R5 据此对账「声明 ↔ 计数」。",
-        "【白名单暂存型套件同步补读数来源】v297 与 v298 的副本树是显式白名单(不是 v299 起的全量镜像),门禁每长一条判据就必须补上该判据的读数来源,否则未破坏的副本树会在 J18 上红、D0 自证失败、整组负控制变成假绿——本版实测正是先在 D0 上抓到这条,再补 config/perspective-card-contract.js 进两份白名单。",
-        "【R3-X8 修前实测的缺口写在代码自己的注释里】apps/reading/reading-app.js 的 openBook 那句注释就是缺口本身:「正文未在内存(重启后):书架条目仅有元数据,提示需重新导入」——重启后书架里每本书都打不开,读者必须重新导入同一个文件。",
-        "【宿主存储边界的实测读数,不是推演】真 SillyTavern 1.19.0 里经 CDP 在页面上下文实测:localStorage 可用但配额仅 4MB;indexedDB 可用;chatMetadata 只有本仓自己的 st_virtual_phone 一个键。故正文落 localStorage 会「一处膨胀、全机受伤」,改走 indexedDB(本机、不联网、不进 chatMetadata)。",
-        "【新附件层 · apps/reading/reading-attachment.js】IndexedDB 库 ruby-phone-reading 的对象仓 bodies,以 bookId 存正文、以 contentHash 支撑重定位;正文不写 chatMetadata、不写提示词、不写 localStorage、不碰 DOM、不走网络。缺 IndexedDB 时报 unavailable 而非伪装成 empty;空附件、超限、写失败、正常读取各有各的状态(五态分形)。",
-        "【阅读导入 API 已异步化,调用方不得再假设同步完成】importFile(file) 现在返回 Promise,TXT 与 EPUB 两条路径都会先尝试重定位、再写入附件,并返回 _lastImport;打开书会回读附件,删除书会连正文一起删,丢附件可重新定位,盘库不读正文。专项判据 tests/system-v4120.test.mjs 二十六例与旧阅读冒烟 tests/reading-app.test.mjs 十一例全绿。",
-        "【本版自己抓到的缺陷形态两处,都在接线与判据的接缝上(合并前逐条修掉,留痕)】一 R3-X8 的调用方仍按同步语义读 currentBook 与章节与标题,导入异步化之后这些读数会落在写入之前——判据把 await app.importFile(file) 之后的阅读态当作唯一判据,才把这类「看起来导入成功、其实读的是旧态」抓住;二 白名单型套件的 J18 读数来源漏补,未破坏的副本树先在 D0 上转红——分辨它与真缺陷靠的是「先问这一条断言在原版上该不该真」。",
-        "【交棒改写】本版把 R3-O2 的跨仓归属从「未消费理由台账」交棒到「登记行 + 门禁标签」那条路,并把上游账面那一格交棒成上游台账待同步项;下一版若上游改写了 consumer 列,滞后台账项须删除(登记着不存在的分歧就是掩饰)。相关各条判据一律写成下限形,下一版抬版无需二次改写。",
-        "【运行时验证边界(如实声明)】本版在无头环境验证的是:视角卡五态互不同形、四格与 unrecorded 的透传形态、knowsFact 的三态出口、诊断取数层与视图层的真消费、跨仓登记行与两份台账与门禁标签三处逐字对齐;以及阅读附件层的存与取往返、重启续读、丢附件重定位、删书不留孤儿、盘库不出正文、零网络与零提示词。**未做**真实宿主下「用户打开一本书、重启宿主、再打开同一本书是否真的回到同章同位置」与「角色在真聊天里是否真的按可知范围措辞」——那两件都需要在真机浏览器里走一遍旅程。另:R3-O2 当前只覆盖诊断面可见出口,往事问答与群聊与主聊天生成链尚未消费该面,如实留白而不以诊断接线冒充全面收口。【边界与真机分工(用户可读那句)】自动化门禁能保证结构正确与接线完整,但它不能保证真机上的视觉排版与真实网络往返与宿主存储迁移;遇到「看起来没坏但显示不对」的问题,属于真机复现类,须上真机复现后再修。",
-        "【定向判据与全量门】新套件 tests/system-v4120.test.mjs 二十六例全绿,阅读冒烟 tests/reading-app.test.mjs 十一例全绿;跨仓门与桥契约门与登记门与键门单独跑过均通过;既有 v297 与 v298 与 v299 与 v3190 与 v3203 与 v3204 与 v4060 与 v4080 复跑全绿;全量 npm run check 退出码零。",
-        "【版本升至 4.12.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;本段共 17 条。"
+        "【版本升至 4.27.0（五源同源）：第四期 R4-X6 可操作的线索与未完事项板】",
+        "【新增 config/causal-board-contract.js：六态分形（插件不在场 / 面不在场 / 本机读不出 / 没给看谁 / 真读数无内容 / 读到）；四收口 unresolved / resolved / cancelled / broken 按上游 id 数组**分列**，不自己重判 closure 字段；已确认边与推测边**两个数组**，推测边只进 speculative 一列、一条都不混进 edges；追溯只走已确认边，not-in-graph 与「追到头了」不同形；行动路由声明式（commitment 去日程 / seed 去剧情线 / event 去记忆 / note 去剧情线）；禁用键深度扫描（百分比 / 置信度 / 优先级一族）】",
+        "【本版自己抓到的缺陷形态：修前实测「上游名面已在、手机侧零消费」——上游因果面 v3.323.0（M3-X3）的 causal-chain.js 早已有 build / proposeCandidates / traceBack / todos 出口，而手机侧 grep causalChain 零命中，于是「未结约定」与「已解决伏笔」在界面上同形、「仅推测因果」与「已确认因果」也同形，三者处置相反却看不出来】",
+        "【本版自己抓到的缺陷形态：视图里写了第二份状态判定词与手写归因文案表（b.state === engine-absent 这一族），内核改名那天这些比较会**静默落空**，于是「插件没装」被显示成「读到了一份空图」——两个处置正好相反（该去装插件 vs 该去聊一楼）而没有任何东西会响；补丁把判定收回内核 boardGateOf / traceNoteOf，接线层判定词零残留】",
+        "【交棒改写：新增 apps/plotline/plotline-board.js 接线件（取数 + 持起点 + 落点形状，只搬不重算；起点是用户显式点选，空值即清空不回落成默认第一条）；plotline-app.js 增十个 board 出口与换会话作废起点；plotline-view.js 增因果板卡片（四收口分组 + 推测边单列 + 三个动作按钮）；plotline.css 增 pn-cb 系列样式】",
+        "【交棒改写：scripts/bridge-contract-audit.mjs 新增 J20（因果面真源四出口 + 产品侧消费点下限 1）与门禁标签；config/crossrepo-registry.js 新增登记行 lonsha.causalChain（since 取上游 producer_version 3.323.0 同口径）；tests/audit/upstream_face_unconsumed.json 把 causalChain 移出（本表此刻空表是真读数）、tests/audit/upstream_face_lag.json 记入 causalChain / consumer-none 一条分歧（上游账面仍写 none@0）】",
+        "【运行时验证边界：本版接线为真跑（真契约件 + 真接线件 + 假存储走完整旅程），但真实 SillyTavern 宿主里的点击流、回源事件 phone:causalSource 与去行动事件 phone:openApp 的最终落点**未跑** —— 本卡只派发事件、不执行跳转，其**在真实宿主上的最终效果待实机复核**；登记入 docs/runtime-verification-boundary.md】",
+        "【本版新增判据 tests/system-v4270.test.mjs，五组覆盖口径 / 内核行为 / 接线行为 / 负控制 / 版本锚】",
+        "【不做（计划原文三条）：不扩大 MAX_OPEN（上限沿上游既有量级，不新造第二套）；不增加第二套任务事实库（四收口与待办一律搬上游读数）；不把「提醒过」当「履约」（零写面，读数里 writesNothing 恒 true）】",
+        "【本版自己抓到的缺陷形态：历史套件的版本锚**写错了主语** —— tests/system-v4260 的 E1 把「v4.26.0 这一版公告记全了」写成了「当前这一版记全了」（跟随 pkg.version），抬到 v4.27.0 的那一刻必红；已改为锁自己那一版的字面量，本版新套件从一开始就按此形态写"
     ]
 };
 
@@ -1018,6 +1015,62 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!Number.isNaN(mesId)) return mesId;
         }
         return getLatestAssistantFloorFromContext();
+    }
+    /* ============================================================
+     * [v4.13.0 · R4-O1] 宿主的「定位到主聊天某一楼」口(单个消费方:记忆 App 的出处跳转)。
+     * ------------------------------------------------------------
+     * 【为什么必须有这一口】修前实测:仓库里**根本没有**任何一处能把用户带到
+     *   「主聊天的第 N 楼」(`grep scrollToFloor / gotoFloor / jumpToFloor` 全仓零命中)。
+     *   于是「往事答案的出处可点开」在宿主侧无路可走 —— 计划原文点名的正是这一格。
+     *
+     * 【契约:不回报 = 没成】调用方(`config/source-locator.js::locateTarget`)按
+     *   「返回对象且 ok === true」才算成;**返回非对象、缺 ok、ok 为非布尔一律算没成**。
+     *   这条是刻意的:本仓最贵的缺陷形态正是「函数没抛错、只是默默没生效」。
+     *
+     * 【归因里没有一种叫「点了但没到」】
+     *   floor-not-given      —— 没给可用楼层(0 是**合法**楼层,已过 stFloorOrNull 门)
+     *   floor-out-of-range   —— 负楼(畸形输入,如实拒)
+     *   chat-unavailable     —— 宿主上下文取不到(不是「这一楼没了」)
+     *   not-found            —— 楼层超出当前 chat(删楼/换会话之后的失效引用)
+     *   not-rendered         —— 消息在 chat 里但 DOM 没有它(渲染未就绪;与 not-found 分开)
+     *
+     * 【副作用两条,都只服务于「看得见」】滚到该楼 + 短暂高亮;若手机面板正盖在
+     *   聊天上则顺手收起 —— 否则用户点了按钮却仍盯着手机屏,是「点了没反应」的另一种形态。
+     *   两者失败都**不改变结论**:那只是没看清,不是没找到。
+     * ============================================================ */
+    function locateChatFloor(floor, opts = {}) {
+        const f = stFloorOrNull(floor);
+        if (f === null) return { ok: false, reason: 'floor-not-given' };
+        if (f < 0) return { ok: false, reason: 'floor-out-of-range' };
+        let chat = null;
+        try {
+            const ctx = (typeof getContext === 'function') ? getContext() : null;
+            chat = (ctx && Array.isArray(ctx.chat)) ? ctx.chat : null;
+        } catch (_e) { chat = null; }
+        if (!chat) return { ok: false, reason: 'chat-unavailable' };
+        if (f >= chat.length) return { ok: false, reason: 'not-found' };
+        let el = null;
+        try { el = document.querySelector('#chat .mes[mesid="' + f + '"]'); } catch (_e) { el = null; }
+        if (!el) return { ok: false, reason: 'not-rendered' };
+        try {
+            if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
+        } catch (_e) { /* 滚动失败不算定位失败:元素确实在,只是没滚到位 */ }
+        try {
+            if (el.classList && typeof el.classList.add === 'function') {
+                el.classList.add('mes-located-flash');
+                if (typeof setTimeout === 'function') {
+                    setTimeout(() => { try { el.classList.remove('mes-located-flash'); } catch (_e2) { /* 忽略 */ } }, 1600);
+                }
+            }
+        } catch (_e) { /* 高亮是锦上添花,失败不改变结论 */ }
+        try {
+            const panel = document.getElementById('phone-panel');
+            const icon = document.getElementById('phoneDrawerIcon');
+            if (panel && panel.classList && panel.classList.contains('phone-panel-open') && typeof toggleDrawer === 'function') {
+                toggleDrawer(icon, panel);
+            }
+        } catch (_e) { /* 关面板失败不改结论:那只是看不到,不是找不到 */ }
+        return { ok: true, floor: f, ledger: String((opts && opts.ledger) || '') };
     }
 
     function checkBetaLock() {
@@ -5823,8 +5876,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             line: (ctx) => updateGapLine(ctx),
         };
     } catch (_e) { /* 全局不可写时不阻断初始化 */ }
-    // [v2.27.0] 常驻资源诊断：window.VirtualPhone.runtimeStats()
+// [v2.27.0] 常驻资源诊断:window.VirtualPhone.runtimeStats()
     window.VirtualPhone.runtimeStats = getRuntimeStats;
+    /* [v4.13.0 · R4-O1] 宿主楼层定位口:名字**取自契约常量**(`HOST_LOCATE_METHOD`),
+     *   不在两侧各写一遍字面量 —— 名字漂了就是静默失联(`config/source-locator.js`
+     *   的 `locateTarget` 按同一个常量去取这一格)。挂在这里而不是让记忆 App 自己摸 DOM:
+     *   定位主聊天楼是**宿主的活**,手机侧只该通过这一口委托。 */
+    try { window.VirtualPhone[HOST_LOCATE_METHOD] = locateChatFloor; }
+    catch (_e) { /* 全局不可写时不阻断初始化 */ }
     // [v2.33.0] 过早回收**成因**（供测试与控制台单独查）：回答「这些过早回收是谁造成的」——
     //   与 releaseTally 分工：后者给总数与判词，本函数给构成（tidy / host-prefix /
     //   host-exact / host-all / shutdown）。挂在 VirtualPhone 上是为了让成因可单独断言。

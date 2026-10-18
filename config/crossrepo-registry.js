@@ -360,6 +360,46 @@ export const CROSSREPO_FEATURES = Object.freeze([
         declaredFloor: 1
     },
     {
+        id: 'lonsha.testimonyBoard',
+        label: '证词对照（同一事件的多方说法与争议未裁决三档）',
+        owner: OWNER_LONSHA,
+        since: '3.343.0',
+        sinceSource: '上游 lonsha-memory-plugin/testimony-board.js（v3.343.0 M4-X5）与 index.js 的 testimonyBoard / testimonyRevoke 出口；证据在上游真源与 open_face_registry.tsv 的 face=testimonyBoard 行（本版三处同批补登记）',
+        fieldKeys: [],
+        contract: '引擎方法 / 模块出口两路：`engine.testimonyBoard(opts)` 或 `LonShaTestimonyBoard.build(traces, opts)`，返回 kind=testimony_board 的读数（boards[] / counts / version / malformedInput / degraded）；每板带 eventKey / state / testimonies[] / disputes{items[],kinds{ambiguous,below-threshold,transmittal-only}} / identities{surface,revealed,homonym,unspecified,split}。★ 面状态四态 supported|contested|undecided|withdrawn 与未裁决三档**必须分列**（合成一格就分不出「为什么暂不能下结论」）；★ 撤回走 `engine.testimonyRevoke(dropped, opts)` 或 `LonShaTestimonyBoard.revokeEvidence(read, dropped)`，撤到无独立支持 ⇒ undecided / withdrawn，**不退化成 contested**（不静默留一个没人能举证的争议）',
+        keySites: [
+            { file: 'config/perspective-contrast-contract.js', token: 'eng.testimonyBoard' }
+        ],
+        consumers: [
+            { file: 'apps/chars/chars-perspective.js', token: 'readTestimonyBoard(' }
+        ],
+        invalidation: '插件不在场 / 模块未加载 ⇒ engine-absent（等装插件）；插件在、本版无此面 ⇒ face-absent（等升级到 v3.343.0+）；出口在但调用抛错 / degraded / malformedInput ⇒ unusable（本机读不出，**不是**「他们都没说法」）；真跑过、没有同事件的多方说法 ⇒ empty（**真读数**）——四态处置相反，压平即把「还没装插件」显示成「他们都没说法」',
+        standalone: '未装上游 ⇒ 群像页的证词面对照区如实标不在场，**不退回本地猜一份对照**；四态与未裁决三档原样端出，**不以一票多数裁真相**（谁也不投谁的票）',
+        upstreamFace: 'testimonyBoard',
+        declaredConsumer: 'readTestimonyBoard',
+        declaredFloor: 1
+    },
+    {
+        id: 'lonsha.causalChain',
+        label: '因果线索与未完事项（未结约定 / 伏笔 / 已收口 / 仅推测）',
+        owner: OWNER_LONSHA,
+        since: '3.323.0',
+        sinceSource: '上游 lonsha-memory-plugin/causal-chain.js（v3.323.0 M3-X3）与 index.js 的 causalChainGraph / causalChainTodos / causalChainTrace / causalChainProposals 四出口；证据在上游真源与 open_face_registry.tsv 的 face=causalChain 行（该行上游早已登记，本版补的是**下游两处**：本登记行与本门 J20 标签）',
+        fieldKeys: [],
+        contract: '引擎方法 / 模块出口两路：`engine.causalChainGraph(opts)` 或 `LonShaCausalChain.build(sources, opts)`，返回 kind=causal_chain 的读数（nodes[] / edges[] / speculative[] / unresolved[] / resolved[] / cancelled[] / broken[] / counts / truncated / malformedInput / writesNothing / degraded）。★ **推测边与已确认边是两个数组**（结构上不可混读，并入 edges 即等于把「猜的」当「有据的」）；★ 四收口 resolved|cancelled|broken|unresolved **分列**（合成一格就分不出「不用再提」与「还没做」）；★ 追溯走 `engine.causalChainTrace(id, opts)`，**只走已确认边**，图外 id ⇒ known=false + reason=not-in-graph（**不是**「追到了头」）；★ 候选边走 `engine.causalChainProposals(opts)`，恒为推测、手机端不替用户确认',
+        keySites: [
+            { file: 'config/causal-board-contract.js', token: 'eng.causalChainGraph' }
+        ],
+        consumers: [
+            { file: 'apps/plotline/plotline-board.js', token: 'readCausalBoard(' }
+        ],
+        invalidation: '插件不在场 / 模块未加载 ⇒ engine-absent（等装插件）；插件在、本版无此面（上游降级面 version=0）⇒ face-absent（等升级到 v3.323.0+）；出口在但调用抛错 / malformedInput / degraded ⇒ unusable（本机读不出，**不是**「这条线没有前因」）；没给要追的起点 ⇒ no-subject（**不是**「追到头了」，更不许默认挑一条线）；真跑过、图里零节点 ⇒ empty（**真读数**）——五态处置相反，压平即把「还没装插件」显示成「故事里没有任何线索」',
+        standalone: '未装上游 ⇒ 剧情线页照常出卡（大纲/承诺/支线是本仓自己的），但因果板如实标不在场，**不退回本地猜一份因果**；四收口与推测边原样端出，**不替用户标已解决**（零写面，writesNothing 恒 true）——「提醒过」不等于「履约」，确认与收口动作归上游 owner',
+        upstreamFace: 'causalChain',
+        declaredConsumer: 'readCausalBoard',
+        declaredFloor: 1
+    },
+    {
         id: 'lonsha.knowledge',
         label: '知情网络（谁不知道某件事）',
         owner: OWNER_LONSHA,

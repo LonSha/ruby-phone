@@ -15,6 +15,18 @@
  *   ③ 事件不累积：分页切换用容器级委托 + 幂等标志，重复 render 不叠加监听。
  */
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.13.0 · R4-O1] 出处靶心归一(纯函数)。本视图只用它排版:哪一行给按钮、
+ *   按钮点了该去哪、去不成该说什么。**视图不自己判靶心形态** —— 自己判的话
+ *   `kind` 会漂(chat / floor / chat-floor 迟早三种写法同时存在),而
+ *   「本版宿主没有定位口」与「这一楼删了」会被压成同一句「打不开」——
+ *   前者等升级、后者去翻历史楼,处置相反。 */
+import { normalizeSource, isLocatable, sourceLocatorLine, sourceOpenRef, locateResultLine } from '../../config/source-locator.js';
+/* [v4.14.0 · R4-O2] 运行态与进度的人读文案:六态互不同形全在那件里,
+ *   本视图**不自己判一份**(自己判就会把「已取消」与「被新问题顶掉」压成同一句)。 */
+import { ASK_RUN_STATES, askRunLine } from '../../config/ask-request.js';
+/* [v4.22.0 · R4-X1] 追问轨迹一行的人读文案(口要在哪、各态怎么说,全在契约件里一处判)。
+ *   本视图**不自己拼**那一行:自己拼就会把「待消歧(本次没查)」与「沿用条件」压成同一句。 */
+import { traceLineOf, ASK_THREAD_LIMITS } from '../../config/memory-ask-thread.js';
 export class MemoryView {
   constructor(app) {
     this.app = app;
@@ -295,18 +307,370 @@ export class MemoryView {
     const parts = [];
     parts.push('  <div class="mem-section">' +
       '    <div class="mem-section-title"><i class="fa-solid fa-comment-dots"></i> 问往事（带出处）</div>' +
-      '    <div class="mem-search-row"><input id="mem-ask-q" placeholder="例如：上次林安安谈还款 / 为什么改了约会地点" /><button id="mem-ask-btn">问</button></div>' +
+      '    <div class="mem-search-row"><input id="mem-ask-q" placeholder="例如：上次林安安谈还款 / 为什么改了约会地点" /><button id="mem-ask-btn">问</button>'
+      + '<button id="mem-ask-cancel" class="mem-ask-cancel" hidden>取消</button></div>' +
+      '    <div id="mem-ask-run" class="mem-ask-run"></div>' +
       '    <div class="mem-hint">回答来自记忆插件（唯一真源）；答不出时会给「缺口」而**不编**答案。</div>' +
       '    <div id="mem-ask-results" class="mem-results"></div>' +
       '  </div>');
+    /* [v4.22.0 · R4-X1] 追问面**独立于问答面**渲染:插件不在场 / 没有追问出口 /
+     *   有出口但本会话还没开始,三态各有各的话。**不能连坐**——问答面读不出
+     *   (`qa` 为空)是常有的事,而追问面此时照样该如实说出自己是哪一态。 */
+    parts.push('<div id="mem-fu-host">' + this._askFollowUpHtml() + '</div>');
+    /* [v4.23.0 · R4-X2] 资料导入面**独立于问答面**渲染(同追问面规格):问答面读不出是
+     *   常有的事,导入面此时照样该如实说出自己是哪一态。 */
+    parts.push('<div id="mem-lore-host">' + this._loreHtml() + '</div>');
     if (!qa) return parts.join('\n');
     parts.push('<div id="mem-ask-face">' + this._askFaceHtml(qa) + '</div>');
     return parts.join('\n');
   }
 
+  /* ================= [v4.22.0 · R4-X1] 接着上一句（追问会话） ================= */
+  /**
+   * 追问面排版。**只取数、不合成**:
+   *   读数行来自 `app.askThreadLine()`,候选行来自 `app.askCandidateRows()`,
+   *   轨迹行来自纯函数 `traceLineOf`(各态怎么说,不在此处重判一份)。
+   *
+   * 【为什么整块可以重画】这一区没有用户输入之外的**未提交状态**:
+   *   输入框的值在重画后由 `_doFollowUp` 主动清掉,候选与轨迹都是取数结果,
+   *   所以「重画 = 重新取数」不会丢任何东西(比逐元素打补丁更不容易漂)。
+   *
+   * @param {string} note 本次追问的一句回话(瞬时,不参与持久化)
+   */
+  _askFollowUpHtml() {
+    const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+    const face = String(read(() => this.app.askThreadLine?.(), '') || '');
+    const rows = read(() => this.app.askCandidateRows?.(), []) || [];
+    const trace = read(() => this.app.askTrace?.(), []) || [];
+    const cands = (Array.isArray(rows) && rows.length)
+      ? rows.map((r) => '<button class="mem-fu-cand" data-name="' + this._esc(String((r && r.name) || '')) + '">'
+          + this._esc(String((r && r.line) || '')) + '</button>').join('')
+      : '<span class="mem-hint">没有待消歧的候选（这一排只在「指代不定」时出现人可选）</span>';
+    const tlines = (Array.isArray(trace) && trace.length)
+      ? trace.map((s) => '<div class="mem-fu-trace-row">' + this._esc(traceLineOf(s)) + '</div>').join('')
+      : '<span class="mem-hint">还没有追问过</span>';
+    /* 滚动提示:轨迹到上限后**一直**是上限条数,不显示这一行用户看不出早前的已不再回看。 */
+    const dropped = Number(read(() => this.app.askDroppedTotal?.(), 0)) || 0;
+    const scroll = dropped > 0
+      ? '<div class="mem-fu-scroll">早前 ' + this._esc(String(dropped)) + ' 轮已不再回看（只留最近 ' + this._esc(String(ASK_THREAD_LIMITS.turns)) + ' 轮）</div>'
+      : '';
+    const note = String(this._fuNote || '');
+    return '  <div class="mem-section mem-fu-section">' +
+      '    <div class="mem-section-title"><i class="fa-solid fa-turn-down"></i> 接着上一句</div>' +
+      '    <div id="mem-fu-face" class="mem-fu-face">' + this._esc(face) + '</div>' +
+      '    <div class="mem-search-row"><input id="mem-fu-q" placeholder="例如：那后来呢 / 另一个人呢 / 她那晚之后呢" /><button id="mem-fu-btn">追问</button></div>' +
+      '    <div class="mem-hint">追问会**沿用**上一轮认下的人与时点；上面那一屏「问往事」每次都从头问。</div>' +
+      '    <div id="mem-fu-cands" class="mem-fu-cands">' + cands + '</div>' +
+      '    <div id="mem-fu-note" class="mem-fu-note">' + (note ? '<span class="mem-fu-note-text">' + this._esc(note) + '</span>' : '') + '</div>' +
+      '    <div class="mem-fu-trace"><div class="mem-fu-trace-title">追问轨迹（只回看条件，不留答案全文）</div>' + scroll + tlines + '</div>' +
+      '  </div>';
+  }
+
+  /** 追问一句:取数走 `app.askFollowUp()`(唯一出口;它负责派发与回落告知)。 */
+  _doFollowUp() {
+    const q = (sel) => this.container.querySelector(sel);
+    const kw = q('#mem-fu-q')?.value?.trim();
+    if (!kw) return;
+    let res = null;
+    try { res = this.app.askFollowUp?.(kw) || null; } catch (_e) { res = null; }
+    if (!res) {
+      this._paintFollowUp('追问口读不出：本版 App 未接线（不是「没查到」）');
+      return;
+    }
+    const notes = [];
+    if (res.note) notes.push(res.note);
+    if (!res.ok) notes.push('本次没有问到（' + String(res.note || '原因未给') + '）');
+    this._paintFollowUp(notes.join(' '));
+    if (q('#mem-fu-q')) q('#mem-fu-q').value = '';
+  }
+
+  /** 消歧点选(**只读**;没认下就保持待消歧)——不替用户在候选里猜一个。 */
+  _pickAskCandidate(name) {
+    let res = null;
+    try { res = this.app.resolveAskPick?.(name) || null; } catch (_e) { res = null; }
+    if (!res) { this._paintFollowUp('消歧口读不出：本版 App 未接线'); return; }
+    this._paintFollowUp(String(res.note || ''));
+  }
+
+  /** 追问区整块重画(面 / 候选 / 轨迹 / 回话一并,避免三处各画各的)。 */
+  _paintFollowUp(note) {
+    this._fuNote = String(note == null ? '' : note);
+    const host = this.container.querySelector('#mem-fu-host');
+    if (host) host.innerHTML = this._askFollowUpHtml();
+  }
+
+  /* ================= [v4.23.0 · R4-X2] 设定资料导入向导 ================= */
+  /**
+   * 资料导入分区排版。**只取数、不合成**：
+   *   六阶段行来自 `app.loreWizard().stages`（文案在契约件里一处判），
+   *   逐段行来自同一个投影（判定已由内核译成五态词）。
+   *
+   * 【为什么不新增分页】`tests/system-v257.test.mjs` 的 F4 用正则扫全文钉死了六页清单，
+   *   新增任意页 id 都会打断它；故本区并入既有「问往事」页，与「接着上一句」并列。
+   *
+   * 【为什么要说清三件事】读数里最容易被压平的三对：
+   *   「未判」 vs 「没有」（映射面没给清单 / 冲突面没给事实）；
+   *   「重复导入」 vs 「这次没写」；「计划」 vs 「落笔」。
+   *   压平任意一对都会让用户**以为导进去了**，而其实一个字节没落。
+   */
+  _loreHtml() {
+    const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+    const w = read(() => this.app.loreWizard?.(), null);
+    if (!w) {
+      return '  <div class="mem-section mem-lore-section">' +
+        '    <div class="mem-section-title"><i class="fa-solid fa-file-import"></i> 资料导入</div>' +
+        '    <div class="mem-none">导入口读不出：本版 App 未接线（不是「这份资料导不进去」）</div>' +
+        '  </div>';
+    }
+    const f = w.face || {};
+    const classes = Array.isArray(w.classes) ? w.classes : [];
+    const rows = Array.isArray(w.rows) ? w.rows : [];
+    const needs = Array.isArray(w.needs) ? w.needs : [];
+    const resolved = Array.isArray(w.resolved) ? w.resolved : [];
+    /* 六阶段行：缺哪一段就少一行（不补空行 —— 补了就看不出「还没走到」）。 */
+    const stages = (Array.isArray(w.stages) ? w.stages : [])
+      .map((s) => '<div class="mem-lore-stage">' + this._esc(s) + '</div>').join('');
+    /* 逐段行：每行可改类、可选入；判定词来自内核译文。 */
+    const rowHtml = rows.map((r) => {
+      const opts = classes.map((c) =>
+        '<option value="' + this._esc(c.cls) + '"' + (c.cls === r.cls ? ' selected' : '') + '>' +
+        this._esc(c.label || c.cls) + '</option>').join('');
+      const tags = [];
+      if (r.manual) tags.push('人工改过');
+      /* 受限段：上游会**跳过并具名**，落笔时一个字节都不写 —— 必须在选之前就说。 */
+      if (r.sensitive) tags.push('受限正文(上游会跳过并具名)');
+      return '      <div class="mem-lore-row">' +
+        '        <div class="mem-lore-rowhead">' +
+        '          <label class="mem-lore-pickwrap"><input type="checkbox" class="mem-lore-pick" data-key="' + this._esc(r.key) + '"' +
+        (r.picked ? ' checked' : '') + ' />选入</label>' +
+        (classes.length
+          ? '<span class="mem-lore-clswrap">改类<select class="mem-lore-cls" data-key="' + this._esc(r.key) + '">' + opts + '</select></span>'
+          : '<span class="mem-lore-clswrap">类：' + this._esc(r.clsLabel || r.cls) + '（本版插件没给可改类选项）</span>') +
+        '          <span class="mem-lore-verdict">' + this._esc(r.verdictLine || '') + '</span>' +
+        '        </div>' +
+        '        <div class="mem-lore-title">' + this._esc(r.title || r.key) + '</div>' +
+        '        <div class="mem-lore-snip">' + this._esc(r.snippet || '') + '</div>' +
+        (tags.length ? '<div class="mem-lore-tags">' + this._esc(tags.join(' · ')) + '</div>' : '') +
+        '      </div>';
+    }).join('');
+    const rowsBlock = rows.length ? rowHtml
+      : '<div class="mem-none">还没有逐段读数（先读一份资料，再过一遍预览）</div>';
+    /* 同名待认：未裁决的段留在待认里，不静默合并。 */
+    const needsHtml = needs.map((n) => {
+      const btns = (Array.isArray(n.names) ? n.names : []).map((nm) =>
+        '<button class="mem-lore-owner" data-key="' + this._esc(n.itemKey) + '" data-owner="' + this._esc(nm) + '">认作 ' + this._esc(nm) + '</button>').join('');
+      return '      <div class="mem-lore-need"><div class="mem-lore-needtxt">' + this._esc(n.itemKey) +
+        '：与已登记的同名角色对不上（' + this._esc(n.why || 'needs-confirm') + '）—— **未认下不合并**</div>' +
+        '<div class="mem-lore-owners">' + (btns || '<span class="mem-hint">上游没给候选</span>') + '</div></div>';
+    }).join('');
+    const resolvedHtml = resolved.length
+      ? resolved.map((x) => '<div class="mem-lore-resolved">已认下：' + this._esc(x.itemKey) + ' → ' + this._esc(x.owner) + '</div>').join('')
+      : '';
+    /* 落笔按钮只在**真有落笔口**时给出；只有预览口时如实说「只能看不能落」。 */
+    const canApply = w.outlet === 'parse+apply';
+    const dup = (w.plan && w.plan.duplicate === true);
+    const note = String(w.note || '');
+    return '  <div class="mem-section mem-lore-section">' +
+      '    <div class="mem-section-title"><i class="fa-solid fa-file-import"></i> 资料导入（设定 / 前史分层）</div>' +
+      '    <div id="mem-lore-face" class="mem-lore-face">' + this._esc(w.line || '') + '</div>' +
+      '    <div class="mem-hint">导入的是**资料**：设定规则与前史各归各的段；不把「看过一本书」当成角色经历过。</div>' +
+      '    <div class="mem-search-row">' +
+      '      <input type="file" id="mem-lore-file" accept=".txt,.md,.text,text/plain" style="display:none" />' +
+      '      <button id="mem-lore-pickfile">选文件</button>' +
+      '      <button id="mem-lore-read" class="mem-lore-mini">读粘贴的正文</button>' +
+      '      <button id="mem-lore-reset" class="mem-lore-mini">重来一份</button>' +
+      '    </div>' +
+      '    <textarea id="mem-lore-text" class="mem-lore-text" rows="3" placeholder="或直接粘贴资料正文（剧本 / 设定 / 前史）。不默认上传整本书。"></textarea>' +
+      '    <div class="mem-hint">长资料请用「选范围逐段读」：整篇超上限会被上游判截断（读数会说明，不当作读完了）。</div>' +
+      '    <div class="mem-search-row">' +
+      '      <input id="mem-lore-from" class="mem-lore-num" placeholder="从" />' +
+      '      <input id="mem-lore-to" class="mem-lore-num" placeholder="到" />' +
+      '      <button id="mem-lore-win" class="mem-lore-mini">选范围逐段读</button>' +
+      '      <button id="mem-lore-winnext" class="mem-lore-mini">接着读下一段</button>' +
+      '    </div>' +
+      '    <div id="mem-lore-stages" class="mem-lore-stages">' + stages + '</div>' +
+      '    <div class="mem-search-row">' +
+      '      <button id="mem-lore-preview" class="mem-lore-mini">过一遍预览</button>' +
+      '      <button id="mem-lore-plan" class="mem-lore-mini">出计划（只算不写）</button>' +
+      '      <button id="mem-lore-apply" class="mem-lore-mini mem-lore-apply"' + ((canApply && !dup) ? '' : ' disabled') + '>' +
+      (canApply ? '确认导入' : '本版插件不能落笔') + '</button>' +
+      '    </div>' +
+      '    <div class="mem-lore-rows-title">逐段（共 ' + this._esc(String(w.rowTotal || 0)) + ' 段，这里列 ' +
+      this._esc(String(rows.length)) + ' 段' +
+      (w.truncatedRows ? '，还有 ' + this._esc(String(w.truncatedRows)) + ' 段没列出来' : '') + '）</div>' +
+      '    <div id="mem-lore-rows" class="mem-lore-rows">' + rowsBlock + '</div>' +
+      (needs.length || resolvedHtml
+        ? '    <div class="mem-lore-needwrap"><div class="mem-lore-rows-title">同名角色映射（待认 ' +
+          this._esc(String(w.pendingCount || 0)) + ' 段）</div>' + resolvedHtml + needsHtml + '</div>'
+        : '') +
+      '    <div id="mem-lore-ledger" class="mem-lore-ledger">' + this._esc(this._loreLedgerLine(w)) + '</div>' +
+      '    <div id="mem-lore-note" class="mem-lore-note">' + (note ? '<span class="mem-lore-note-text">' + this._esc(note) + '</span>' : '') + '</div>' +
+      '  </div>';
+  }
+  /** 导入账那一行（**重开可查**的落点；读数口径取自内核的六阶段行）。 */
+  _loreLedgerLine(w) {
+    const led = w && w.ledger;
+    if (!led) return '导入账：还没落过任何资料（重开也是这个读数）';
+    const seen = Number(led.seen || 0);
+    if (!seen) return '导入账：还没落过任何资料（重开也是这个读数）';
+    const rb = (led.lastApply && led.lastApply.readback === null) ? '未尝试'
+      : (led.lastApply && led.lastApply.readback) ? '是' : '否';
+    return '导入账：已落 ' + String(seen) + ' 篇 · ' + String(led.chars || 0) + ' 字符 · 人工决定 ' +
+      String(led.decisions || 0) + ' 条（重启后仍在）· 上次回读 ' + rb;
+  }
+  /** 导入区整块重画（面 / 阶段 / 逐段 / 待认 / 账 / 回话一并，避免几处各画各的）。 */
+  _paintLore(note) {
+    this._loreNote = String(note == null ? '' : note);
+    const host = this.container.querySelector('#mem-lore-host');
+    if (!host) return;
+    const keep = this._loreNote;
+    host.innerHTML = this._loreHtml();
+    /* 回话是**瞬时**的：取数口里那一份可能还是上一跳留的，这里以本次为准。 */
+    const noteEl = host.querySelector('#mem-lore-note');
+    if (noteEl) noteEl.innerHTML = keep ? '<span class="mem-lore-note-text">' + this._esc(keep) + '</span>' : '';
+    this._loreSyncInputs();
+  }
+  /** 读进来的源与游标回填到输入框（重画后用户能看出「手上是哪一份、读到哪了」）。 */
+  _loreSyncInputs() {
+    let cur = 0;
+    try { cur = Number(this.app?.loreWizard?.()?.cursor || 0) || 0; } catch (_e) { cur = 0; }
+    const to = this.container.querySelector('#mem-lore-to');
+    if (to && !to.value) to.value = String(cur);
+  }
+  /** 选文件（交给控制器读；解码口径只有阅读 App 那一份）。 */
+  _lorePickFile() {
+    const el = this.container.querySelector('#mem-lore-file');
+    el?.click();
+  }
+  _loreOnFileChosen(file) {
+    let p = null;
+    try { p = this.app.loreReadFile?.(file); } catch (_e) { p = null; }
+    if (!p || typeof p.then !== 'function') {
+      this._paintLore('读文件口读不出：本版 App 未接线（不是「文件有问题」）');
+      return;
+    }
+    this._paintLore('正在读…');
+    p.then((r) => {
+      this._paintLore(String((r && r.note) || '读完了'));
+      if (r && r.ok) this._loreAfterRead();
+    }, (e) => {
+      this._paintLore('读文件失败：' + String((e && e.message) || e));
+    });
+  }
+  /** 读粘贴的正文（与选文件同一条下游路径）。 */
+  _loreReadPasted() {
+    const ta = this.container.querySelector('#mem-lore-text');
+    const text = String(ta?.value || '');
+    if (!text.trim()) { this._paintLore('先粘一段正文（空的读不出任何段）'); return; }
+    let r = null;
+    try { r = this.app.loreReadSource?.(text, '粘贴的资料') ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('读资料口读不出：本版 App 未接线'); return; }
+    this._paintLore('已读进粘贴的正文（' + String(text.length) + ' 字符）');
+    this._loreAfterRead();
+  }
+  /** 读完一份源之后**自动**过一遍实体映射与预览（省一次点击，读数照样逐项说清）。 */
+  _loreAfterRead() {
+    try { this.app.loreEntities?.({}); } catch (_e) { /* 忽略 */ }
+    let pv = null;
+    try { pv = this.app.lorePreview?.(null, {}) ?? null; } catch (_e) { pv = null; }
+    if (pv && pv.confirmedChecked === false) {
+      this._paintLore('已预览：**已确认事实面未判**（手机不自己装配事实账）—— 那不等于「无冲突」');
+    } else {
+      this._paintLore('已预览');
+    }
+  }
+  /** 选范围逐段读（范围没给就按游标续读）。 */
+  _loreReadWindow(useInputs) {
+    const q = (sel) => this.container.querySelector(sel);
+    let range = null;
+    if (useInputs) {
+      const from = String(q('#mem-lore-from')?.value || '').trim();
+      const to = String(q('#mem-lore-to')?.value || '').trim();
+      range = {};
+      if (from) range.from = Number(from);
+      if (to) range.to = Number(to);
+      if (!from && !to) range = null;
+    }
+    let r = null;
+    try { r = this.app.loreReadWindow?.(range, {}) ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('逐段读口读不出：本版 App 未接线'); return; }
+    this._paintLore('读了这一段');
+    this._loreAfterRead();
+  }
+  /** 逐段改类（**零写**；非法类名由上游拒收，本处只把原话显示出来）。 */
+  _loreSetClass(key, cls) {
+    let r = null;
+    try { r = this.app.loreSetClass?.(key, cls) ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('改类口读不出：本版 App 未接线'); return; }
+    const bad = (Array.isArray(r.rejected) ? r.rejected : []).filter((x) => String(x.key) === String(key));
+    if (bad.length) { this._paintLore('这一段没改成：' + String(bad[0].why || '上游拒收')); return; }
+    this._paintLore('已把这一段改成「' + String(cls) + '」（还没落笔）');
+  }
+  /** 逐段选入开关（只记选择；未选段由上游具名 not-selected）。 */
+  _loreTogglePick(key, on) {
+    try { this.app.loreTogglePick?.(key, on); } catch (_e) { /* 忽略 */ }
+  }
+  /** 同名映射点选（**只读**；没认下保持待认）。 */
+  _loreConfirmOwner(key, owner) {
+    let r = null;
+    try { r = this.app.loreConfirmPick?.(key, owner) ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('映射确认口读不出：本版 App 未接线'); return; }
+    const ok = (Array.isArray(r.resolved) ? r.resolved : []).some((x) => String(x.itemKey) === String(key));
+    this._paintLore(ok ? ('已认下：' + String(key) + ' → ' + String(owner)) : ('没认下「' + String(owner) + '」：保持待认（候选里没有这个名字）'));
+    if (ok) this._loreAfterRead();
+  }
+  /** 出计划（**只算不写**）。 */
+  _loreMakePlan() {
+    let r = null;
+    try { r = this.app.loreMakePlan?.(null, {}) ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('计划口读不出：本版 App 未接线'); return; }
+    this._paintLore('');
+    const host = this.container.querySelector('#mem-lore-host');
+    if (host) { host.innerHTML = this._loreHtml(); this._loreSyncInputs(); this._paintLore(''); }
+  }
+  /** 确认导入（**真写入**；没预览就不去调上游 —— 上游自己拒一次不如这里先说清）。 */
+  _loreApply() {
+    let p = null;
+    try { p = this.app.loreApplyNow?.({}) ?? null; } catch (_e) { p = null; }
+    if (!p || typeof p.then !== 'function') {
+      this._paintLore('落笔口读不出：本版 App 未接线（不是「导入失败」）');
+      return;
+    }
+    const btn = this.container.querySelector('#mem-lore-apply');
+    if (btn) btn.disabled = true;
+    this._paintLore('正在落笔…');
+    p.then((r) => {
+      const st = String((r && r.state) || '');
+      if (r && r.duplicate) {
+        this._paintLore('重复提交：上游幂等挡住了，**一个字都没写**（不是「这次没写」）');
+      } else if (r && r.ok) {
+        this._paintLore('已落 ' + String(r.applied || 0) + ' 段 · 核验 ' + String(r.verified || 0) + ' 段（逐段核过真账）');
+      } else {
+        this._paintLore('没落成：' + String((r && (r.reason || r.faceReason)) || st || '原因未给'));
+      }
+      this._paintLore(this._loreNote);
+      const host = this.container.querySelector('#mem-lore-host');
+      if (host) { host.innerHTML = this._loreHtml(); this._loreSyncInputs(); this._paintLore(this._loreNote); }
+    }, (e) => {
+      this._paintLore('落笔抛错：' + String((e && e.message) || e));
+    });
+  }
+  /** 重来一份（只动本会话现场，不碰上游任何账）。 */
+  _loreReset() {
+    try { this.app.loreReset?.(); } catch (_e) { /* 忽略 */ }
+    const host = this.container.querySelector('#mem-lore-host');
+    if (host) { host.innerHTML = this._loreHtml(); this._loreSyncInputs(); }
+    this._paintLore('已重来一份（上游的导入账不动）');
+  }
   /** 问往事结果区（供 `_askHtml` 与事件回调共用同一份排版口径）。 */
-  _askFaceHtml(qa) {
+  _askFaceHtml(qa, runState) {
     const r = (qa && typeof qa === 'object') ? qa : null;
+    /* [v4.14.0 · R4-O2] 取消态:**先**说清「下面是已处理部分」,再列答案 ——
+     *   顺序反了,读者会先把它当全量结论记住。 */
+    if (runState === ASK_RUN_STATES.CANCELED) {
+      const body = r ? this._askBodyHtml(r) : '';
+      return '<div class="mem-none mem-ask-canceled">已取消 —— 下面是**已处理部分**,不是全量结论</div>' + body;
+    }
     if (!r) return '';
     if (r.state === 'engine-absent') {
       return '<div class="mem-none">记忆插件不在场 —— **不是**「没有答案」（两者处置相反：这个等装插件）</div>';
@@ -317,6 +681,12 @@ export class MemoryView {
     if (r.state === 'unusable') {
       return '<div class="mem-none">问答读不出（' + this._esc(r.faceReason || 'unavailable') + '）—— 这不是「没查到」</div>';
     }
+    return this._askBodyHtml(r);
+  }
+
+  /** 答案主体(有答案 / 没命中的排版;**取消态与正常态共用同一份口径**)。 */
+  _askBodyHtml(r) {
+    if (!r || typeof r !== 'object') return '';
     const answer = Array.isArray(r.answer) ? r.answer : [];
     if (!answer.length) {
       const gaps = Array.isArray(r.gaps) ? r.gaps : [];
@@ -326,16 +696,58 @@ export class MemoryView {
     }
     const rows = answer.map((a) => {
       const text = this._esc(String((a && a.text) || ''));
-      const ledger = this._esc(String((a && a.ledger) || ''));
-      const floor = (a && a.floor !== null && a.floor !== undefined) ? String(a.floor) : '';
-      const src = (ledger || floor)
-        ? '<div class="mem-res-lbl">出处：' + ledger + (floor ? ' · 第 ' + this._esc(floor) + ' 楼' : '') + '</div>'
-        : '<div class="mem-res-lbl">出处：未给出（**不假装有**）</div>';
-      return '<div class="mem-res"><div class="mem-res-text">' + text + '</div>' + src + '</div>';
+      /* [v4.13.0 · R4-O1] 出处行从「一行字」变成「可点开的靶心」。
+       *   归一交给纯函数(config/source-locator.js),本视图只排版 ——
+       *   六态互不同形是那件契约的核心(压平任意两态都会造出处置相反的处境长得一样)。 */
+      return '<div class="mem-res"><div class="mem-res-text">' + text + '</div>'
+        + this._srcHtml(normalizeSource(a || {}), a) + '</div>';
     }).join('');
     const meta = '答 ' + answer.length + ' 句 · 出处 ' + (Array.isArray(r.refs) ? r.refs.length : 0) + ' 条'
       + (r.masked ? ' · 遮蔽 ' + r.masked : '') + (r.truncated ? ' · 已截断' : '');
     return '<div class="mem-hint">' + this._esc(meta) + '</div>' + rows;
+  }
+
+  /**
+   * [v4.13.0 · R4-O1] 一条答案的出处行(唯一实现:首帧与 `_doAsk` 重绘共用同一份口径)。
+   *
+   * 【修前实测处境】`出处:承诺 · 第 12 楼` 只是一个 `mem-res-lbl` 普通 div ——
+   *   注释与计划都写着「可点开」,而答案行上**没有任何跳转按钮**。
+   *   而 `qaRefOf` 与 `applyOpenRef` 早就在仓里,只是这条路一个消费点都没有。
+   *
+   * 【可点与不可点各有各的形】能去(chat / memory 两态)给按钮;其余四态**不给按钮**,
+   *   并把「为什么不能去」如实念出——`no-target`(未给出出处)与
+   *   `location-unavailable`(本版宿主没有楼层口,等升级)与 `not-found`(删了,去翻历史楼)
+   *   处置**相反**,压成一句「打不开」就是把用户丢在没答案里。
+   *
+   * @param {{state:string,kind:string,id:string,floor:number|null,label:string}} t 归一后的靶心
+   * @param {object} a 上游答案项(`{ref, floor, ledger}`,用于把原始值原样带进 data 属性)
+   */
+  _srcHtml(t, a) {
+    const target = t || normalizeSource(null);
+    const label = target.label ? this._esc(target.label) : '';
+    let line;
+    if (target.state === 'chat') {
+      line = '出处:' + label + ' · 第 ' + target.floor + ' 楼';
+    } else if (target.state === 'memory') {
+      line = '出处:' + label + '(只有引用键,没有楼层)';
+    } else if (target.state === 'no-target') {
+      line = '出处:未给出(**不假装有**)';
+    } else {
+      /* ref-invalid / location-unavailable / not-found 三态:如实念出是哪一态。 */
+      line = '出处:' + label + ' ' + this._esc(sourceLocatorLine(target));
+    }
+    let btn = '';
+    if (isLocatable(target)) {
+      const raw = JSON.stringify({
+        ref: (a && a.ref !== undefined) ? a.ref : null,
+        floor: (a && a.floor !== undefined) ? a.floor : null,
+        ledger: (a && a.ledger !== undefined) ? a.ledger : ''
+      });
+      const goLabel = (target.state === 'chat') ? '打开原文' : '去总结记忆';
+      btn = '<button class="mem-src-go" data-src="' + this._esc(raw) +
+        '" title="' + this._esc(sourceLocatorLine(target)) + '">' + this._esc(goLabel) + '</button>';
+    }
+    return '<div class="mem-res-lbl">' + line + btn + '</div>';
   }
 
   /* ================= 记忆条目行 ================= */
@@ -418,8 +830,30 @@ export class MemoryView {
     q('#mem-search-btn')?.addEventListener('click', () => this._doSearch());
     q('#mem-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doSearch(); });
     /* [v3.97.0 · R3-X2] 问往事：取数走 `app.askPast()`（唯一出口），本视图只排版。 */
+    /* [v4.14.0 · R4-O2] 问往事:取数走 `app.askPastAsync()`(唯一出口;旧插件自动回落同步),
+     *   本视图只排版。取消按钮默认隐藏,只在问的期间出现(见 `_doAsk` 的 `setRun`)。 */
     q('#mem-ask-btn')?.addEventListener('click', () => this._doAsk());
     q('#mem-ask-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doAsk(); });
+    q('#mem-ask-cancel')?.addEventListener('click', () => this._cancelAsk());
+    /* [v4.22.0 · R4-X1] 追问:输入口两条(点按钮 / 回车),与「问往事」同规格。
+     *   为什么单独一个输入框而不复用上面那个:两者的**语义相反** —— 「问往事」每问
+     *   都从头查,追问沿用上一轮条件;共用一个框会让用户分不清这一次到底带没带上文。 */
+    q('#mem-fu-btn')?.addEventListener('click', () => this._doFollowUp());
+    q('#mem-fu-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doFollowUp(); });
+    /* [v4.23.0 · R4-X2] 资料导入:选文件 / 读粘贴 / 选范围逐段读 / 过预览 / 出计划 / 落笔。
+     *   落笔是异步的(上游走 PrequelSystem owner 四步),故这里等 Promise 回执再显示。 */
+    q('#mem-lore-file')?.addEventListener('change', (e) => {
+      const f = (e.target && e.target.files && e.target.files[0]) || null;
+      if (f) this._loreOnFileChosen(f);
+    });
+    q('#mem-lore-pickfile')?.addEventListener('click', () => this._lorePickFile());
+    q('#mem-lore-read')?.addEventListener('click', () => this._loreReadPasted());
+    q('#mem-lore-win')?.addEventListener('click', () => this._loreReadWindow(true));
+    q('#mem-lore-winnext')?.addEventListener('click', () => this._loreReadWindow(false));
+    q('#mem-lore-preview')?.addEventListener('click', () => this._loreAfterRead());
+    q('#mem-lore-plan')?.addEventListener('click', () => this._loreMakePlan());
+    q('#mem-lore-apply')?.addEventListener('click', () => this._loreApply());
+    q('#mem-lore-reset')?.addEventListener('click', () => this._loreReset());
     q('#mem-auto')?.addEventListener('change', (e) => {
       try { this.app.data?.updateConfig({ autoInject: e.target.checked }); } catch (_e) { /* 忽略 */ }
       window.toastr?.info(e.target.checked ? '已开启自动注入' : '已关闭自动注入', '记忆');
@@ -448,9 +882,101 @@ export class MemoryView {
         if (btn && this.container.contains(btn)) {
           const mid = btn.getAttribute('data-mid');
           if (mid && this.app.data?.pin?.(mid, true)) this._draw();
+          return;
+        }
+        /* [v4.13.0 · R4-O1] 出处跳转(容器级委托,幂等同上)。
+         *   两类靶心分派**互不相同**:
+         *     · chat 靶心   ⇒ 交 `app.locateSource()`(它调宿主 `locateChatFloor`);
+         *     · memory 靶心 ⇒ 派跨 App 事件(走既有 `config/open-ref.js` 已登记归属),
+         *                     并顺便把记忆 App 收起 —— 目标是另一个 App,留在原地会
+         *                     看着像「点了没反应」。
+         *   ★ 失败必须出声:定位不成一律 toast 出**那一态的原话**(六态互不同形)。 */
+        const srcBtn = e.target.closest('.mem-src-go');
+        if (srcBtn && this.container.contains(srcBtn)) {
+          this._goSource(srcBtn);
+        }
+        /* [v4.22.0 · R4-X1] 消歧候选点选(容器级委托,幂等同上)。
+         *   未认下**不产确定结论**:上游说没这个人就保持待消歧,本处只把原话显示出来。 */
+        /* [v4.23.0 · R4-X2] 导入面的三处点选(容器级委托,幂等同上):
+         *   · 改类   —— 每行一个 select,交给上游 applyOverrides(本层不算一遍);
+         *   · 选入   —— 只记选择,未选段由上游具名 not-selected;
+         *   · 同名认人 —— 未认下保持待认,不静默合并。 */
+        const clsSel = e.target.closest('.mem-lore-cls');
+        if (clsSel && this.container.contains(clsSel)) {
+          this._loreSetClass(clsSel.getAttribute('data-key') || '', clsSel.value);
+          return;
+        }
+        const pickBox = e.target.closest('.mem-lore-pick');
+        if (pickBox && this.container.contains(pickBox)) {
+          this._loreTogglePick(pickBox.getAttribute('data-key') || '', pickBox.checked === true);
+          return;
+        }
+        const ownerBtn = e.target.closest('.mem-lore-owner');
+        if (ownerBtn && this.container.contains(ownerBtn)) {
+          this._loreConfirmOwner(ownerBtn.getAttribute('data-key') || '', ownerBtn.getAttribute('data-owner') || '');
+          return;
+        }
+        const cand = e.target.closest('.mem-fu-cand');
+        if (cand && this.container.contains(cand)) {
+          this._pickAskCandidate(cand.getAttribute('data-name') || '');
+          return;
         }
       });
     }
+  }
+
+  /**
+   * [v4.13.0 · R4-O1] 出处按钮的落点(容器级委托的唯一消费点)。
+   *
+   * 【为什么不用 `app.locateSource()` 一把包完】memory 靶心**要派跨 App 事件**,
+   *   而事件只有视图层才该派(宿主 `phone:openApp` 的消费方是 index.js 的路由;
+   *   取数层派 UI 事件会把「谁来打开哪个 App」写进内核)。故此处只做两件事:
+   *   解析按钮上的原始出处 → 按靶心态分派。
+   *
+   * 【失败必出声】定位不成一律 toast 出**那一态的原话**:
+   *   `location-unavailable`(本版宿主没有楼层口,等升级)与 `not-found`(删了,
+   *   去翻历史楼)处置**相反**,静默吞掉就等于把用户丢在「点了没反应」里。
+   */
+  _goSource(btn) {
+    let raw = null;
+    try { raw = JSON.parse(btn.getAttribute('data-src') || 'null'); }
+    catch (_e) { raw = null; }
+    /* 解析失败**不静默**:按钮是自家渲染的,走到这里说明 data-src 被写坏了。 */
+    if (!raw || typeof raw !== 'object') {
+      window.toastr?.error('这条出处读不出(按钮数据坏了)', '记忆');
+      return;
+    }
+    const target = normalizeSource(raw);
+    if (target.state === 'memory') {
+      const ref = sourceOpenRef(target);
+      if (!ref) {
+        window.toastr?.warn('这条出处没有可用的引用键', '记忆');
+        return;
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('phone:openApp', {
+          detail: { appId: ref.appId, ref }
+        }));
+      } catch (_e) {
+        window.toastr?.error('打开总结记忆失败', '记忆');
+      }
+      return;
+    }
+    if (target.state === 'chat') {
+      /* 取数走控制器(它调宿主定位口);本视图不直接摸 window 上的宿主口。 */
+      let res = null;
+      try { res = this.app.locateSource?.(raw) || null; } catch (_e) { res = null; }
+      const r = (res && typeof res === 'object') ? res : { ok: false, method: 'none', reason: 'unavailable' };
+      if (r.ok) {
+        window.toastr?.success(locateResultLine(r), '记忆');
+      } else {
+        window.toastr?.warn(locateResultLine(r), '记忆');
+      }
+      return;
+    }
+    /* 其余四态:按钮本不该出现(渲染时就只给 chat / memory 两态按钮);
+     *   真走到这里如实报出是哪一态,不假装跳了。 */
+    window.toastr?.warn(sourceLocatorLine(target), '记忆');
   }
 
   _doSearch() {
@@ -479,6 +1005,13 @@ export class MemoryView {
    * [v3.97.0 · R3-X2] 问往事：把问句交唯一出口 `app.askPast()`（转发上游 `askMemoryQuestion`），
    *   再把读数交给 `_askFaceHtml` 排版。**本件不合成答案、不补缺口**。
    */
+  /**
+   * [v4.14.0 · R4-O2] 问往事(**异步派发**):有异步口走异步(可取消、有进度、片间让出),
+   *   没有则回落同步并**如实告知**(「本版插件没有异步问答出口」不等于「后台跑」)。
+   *
+   * 【旧回信不写面板】控制器会把被顶掉的那一条报成 `stale-dropped`且 `receipt` 为 null:
+   *   本处对该态**只显示一条提示**,不把上一次的答案重新画上去(那正是本版要治的形态)。
+   */
   _doAsk() {
     const q = (sel) => this.container.querySelector(sel);
     const kw = q('#mem-ask-q')?.value?.trim();
@@ -486,11 +1019,81 @@ export class MemoryView {
     const face = q('#mem-ask-face');
     if (!box && !face) return;
     if (!kw) { if (box) box.innerHTML = ''; return; }
-    let qa = null;
-    try { qa = this.app.askPast?.(kw) || null; } catch (_e) { qa = null; }
-    const html = this._askFaceHtml(qa);
-    if (face) face.innerHTML = html;
-    else if (box) box.innerHTML = html;
+    const paint = (html) => {
+      const f = q('#mem-ask-face') || face;
+      if (f) f.innerHTML = html;
+      else if (box) box.innerHTML = html;
+    };
+    const setRun = (state, progress) => {
+      const el = q('#mem-ask-run');
+      if (el) el.innerHTML = this._askRunHtml(state, progress);
+      const btn = q('#mem-ask-cancel');
+      if (btn) btn.hidden = (state !== ASK_RUN_STATES.RUNNING);
+    };
+    if (typeof this.app.askPastAsync !== 'function') {
+      /* 控制器无异步口(异常情形:旧版插件下仍应在位)⇒ 退回同步。 */
+      let qa = null;
+      try { qa = this.app.askPast?.(kw) || null; } catch (_e) { qa = null; }
+      paint(this._askFaceHtml(qa));
+      return;
+    }
+    setRun(ASK_RUN_STATES.RUNNING, null);
+    let promise = null;
+    try {
+      promise = this.app.askPastAsync(kw, {
+        chatId: this._chatId(),
+        onProgress: (p) => setRun(ASK_RUN_STATES.RUNNING, p),
+        onDone: (receipt, runState) => {
+          if (runState === ASK_RUN_STATES.STALE_DROPPED) {
+            setRun(runState, null);
+            return;   /* 旧回信:不把它画上去 */
+          }
+          setRun(runState, null);
+          paint(this._askFaceHtml(receipt, runState));
+        }
+      });
+    } catch (_e) { promise = null; }
+    if (!promise || typeof promise.then !== 'function') {
+      let qa = null;
+      try { qa = this.app.askPast?.(kw) || null; } catch (_e) { qa = null; }
+      setRun(ASK_RUN_STATES.DONE, null);
+      paint(this._askFaceHtml(qa));
+    }
   }
+
+  /** 当前会话身份(只读,不写)——作为任务身份的会话部分。取不到返回空串(纯函数会写 na)。 */
+  _chatId() {
+    try {
+      const s = this.app?.storage;
+      return String(s?.currentConversationId || '');
+    } catch (_e) { return ''; }
+  }
+
+  /** 运行态一行(六态各有各的形;文案取自纯函数件)。 */
+  _askRunHtml(state, progress) {
+    const line = askRunLine(state, { progress });
+    if (!line) return '';
+    return '<div class="mem-hint mem-ask-runline">' + this._esc(line) + '</div>';
+  }
+  /**
+   * [v4.14.0 · R4-O2] 用户按了取消。**只打标记,不打断调用栈** ——
+   *   上游在**下一个协作分片让出点**读这个标记并停下(它自己那一层是 `queryAsync` 的片间检查)。
+   *   本处立刻把按钮收起并写一行「正在停…」:让用户看到按键**已经受理**,
+   *   而不是盯着一个不动的界面怀疑没点上。
+   */
+  _cancelAsk() {
+    let res = null;
+    try { res = this.app.cancelAskNow?.() || null; } catch (_e) { res = null; }
+    const btn = this.container.querySelector('#mem-ask-cancel');
+    if (btn) btn.hidden = true;
+    const el = this.container.querySelector('#mem-ask-run');
+    if (el) {
+      const ok = !!(res && res.ok === true);
+      el.innerHTML = '<div class="mem-hint mem-ask-runline">' + this._esc(
+        ok ? '已受理取消 —— 正在停(下一片生效)' : '当前没有在问的请求'
+      ) + '</div>';
+    }
+  }
+
 }
 export default MemoryView;

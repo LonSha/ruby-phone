@@ -15,6 +15,9 @@ import {
     moveStep, bindParams, setBranch, setRepeat,
     composeFlow, templateLine,
 } from '../../config/workflow-designer.js';
+import {
+    OP_PARAM_STATES, opFaceOptions, stepParamsOf, flowPreviewOf,
+} from '../../config/object-picker.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -127,6 +130,16 @@ export class WorkflowDesign {
         this._rerender();
         return true;
     }
+    /** [v4.20.0 . R4-O8] 从候选里点一个对象填进参数(与手填走同一个绑定口,不另开写路径)。 */
+    pick(index, key, value) {
+        const d = this._draft;
+        const i = Number(index);
+        const okIdx = (i >= 0 && i < d.steps.length);
+        const obj = Object.assign({}, (okIdx && d.steps[i] && d.steps[i].params) || {});
+        const v = String(value == null ? '' : value);
+        if (v) obj[key] = v; else delete obj[key];
+        return this.params(i, obj);
+    }
     repeat(index, count) {
         const r = setRepeat(this._draft, index, count);
         if (!r.ok) { this._note('组数没设上(' + r.why + '):写动作一律只跑一组,越界一律拒(不夹取)', true); this._rerender(); return false; }
@@ -177,6 +190,10 @@ export class WorkflowDesign {
         const rows = Array.isArray(tpl.templates) ? tpl.templates : [];
         const d = this._draft;
         const comp = composeFlow(d);
+        /* [v4.20.0 . R4-O8] 候选对象来自宿主读数(已存模板名)。读不到就传 null 下去,
+         * 让选择器亮「候选读不到」;在这里补一个空数组冒充「一个都没有」是本仓最贵的那类错。 */
+        const pickCand = { templates: (tpl.readable === false) ? null : rows.map((t) => String(t.name || '')) };
+        const pvw = flowPreviewOf(d, pickCand);
         const actions = (h && Array.isArray(h.actionFaces) && h.actionFaces.length)
             ? h.actionFaces
             : WD_ACTION_KEYS.map((k) => ({ key: k, label: WD_ACTIONS[k].label, hint: WD_ACTIONS[k].hint, writes: WD_ACTIONS[k].writes, params: WD_ACTIONS[k].params.slice() }));
@@ -185,6 +202,7 @@ export class WorkflowDesign {
             scopeOk: !!h,
             limits: (h && h.limits) ? h.limits : WD_LIMITS,
             actions: actions,
+            previewText: pvw.text, previewRows: pvw.rows,
             templatesReadable: tpl.readable !== false,
             templatesText: (tpl.readable === false)
                 ? '模板台账**读不到**(读不到不等于一条都没有 -- 读不到时一律不覆盖)'
@@ -195,6 +213,9 @@ export class WorkflowDesign {
             draftComposable: !!comp.flow, draftProblems: comp.problems.slice(),
             draftSteps: d.steps.map((s, i) => {
                 const act = WD_ACTIONS[String(s.action || '')] || null;
+                const sp = stepParamsOf(s, act, pickCand);
+                const fo = opFaceOptions(act ? act.in.slice() : null);
+                const pvRow = pvw.rows[i] || null;
                 return {
                     index: i, action: String(s.action || ''),
                     actionLabel: act ? act.label : '认不出的动作',
@@ -205,6 +226,10 @@ export class WorkflowDesign {
                     paramKeys: act ? act.params.slice() : [],
                     faces: act ? act.in.slice() : [],
                     stepOwner: act ? act.owner : '',
+                    /* [v4.20.0 . R4-O8] 参数 / 条件 / 预览一律走对象选择器:
+                     * 界面只出中文名与候选项,内部键留在 data 属性里给绑定用。 */
+                    paramRows: sp.rows, paramsReadable: sp.readable,
+                    faceOptions: fo.options, previewText: pvRow ? pvRow.sentence : '',
                 };
             }),
         };
@@ -234,6 +259,13 @@ export function designHtml(vm) {
     h += '<button class="wfl-btn" data-wf-dnew="1">新建空草稿</button></div>';
     h += '<div class="wfl-reads">草稿可合成:' + (v.draftComposable ? '是(合成后照样过运行器同一套判定)' : '否') +
         ((v.draftProblems || []).length ? (' . 待修 ' + esc(v.draftProblems.join(' / '))) : '') + '</div>';
+    /* [v4.20.0 . R4-O8] 会替谁做什么:先给人话,再给可点的步骤。 */
+    h += '<div class="wfl-preview"><div class="wfl-step-label">会替本项目做什么</div>';
+    h += '<div class="wfl-reads">' + esc(v.previewText || '') + '</div>';
+    for (const p of (v.previewRows || [])) {
+        h += '<div class="wfl-ptext' + (p.writes ? ' wfl-ptext-write' : '') + '">' + esc(p.sentence) + '</div>';
+    }
+    h += '</div>';
     const steps = v.draftSteps || [];
     if (!steps.length) h += '<div class="wfl-flow-hint">草稿还是空的 -- 点上面任意动作加一步。</div>';
     for (const st of steps) {
@@ -246,7 +278,7 @@ export function designHtml(vm) {
         h += '<div class="wfl-cond">条件:';
         if (st.faces.length) {
             h += '<select class="wfl-input wfl-input-sel" data-wf-face="' + String(st.index) + '">';
-            for (const f of st.faces) h += '<option value="' + esc(f) + '"' + ((st.when && st.when.face === f) ? ' selected' : '') + '>' + esc(f) + '</option>';
+            for (const f of (st.faceOptions || [])) h += '<option value="' + esc(f.value) + '"' + ((st.when && st.when.face === f.value) ? ' selected' : '') + '>' + esc(f.label) + '</option>';
             h += '</select>';
             h += '<button class="wfl-btn wfl-btn-mini" data-wf-when="' + String(st.index) + ':present">在场才跑</button>';
             h += '<button class="wfl-btn wfl-btn-mini" data-wf-when="' + String(st.index) + ':absent">缺席才跑</button>';
@@ -255,11 +287,23 @@ export function designHtml(vm) {
             h += '<span class="wfl-flow-hint">这一步没有输入面,设不了条件</span>';
         }
         h += '</div>';
-        if (st.paramKeys.length) {
-            h += '<div class="wfl-params">参数:';
-            for (const k of st.paramKeys) {
-                h += '<span class="wfl-pkey">' + esc(k) + '</span>';
-                h += '<input class="wfl-input" data-wf-param="' + String(st.index) + ':' + esc(k) + '" value="' + esc(st.params[k] || '') + '" placeholder="可留空" />';
+        if ((st.paramRows || []).length) {
+            /* [v4.20.0 . R4-O8] 参数行不再露内部键:中文名 + 手填框 + 候选下拉 + 一句态说明。 */
+            h += '<div class="wfl-params">';
+            for (const r of st.paramRows) {
+                h += '<div class="wfl-prow">';
+                h += '<span class="wfl-pkey" title="' + esc(r.hint || '') + '">' + esc(r.label) + '</span>';
+                h += '<input class="wfl-input" data-wf-param="' + String(st.index) + ':' + esc(r.key) + '" value="' + esc(r.value) + '" placeholder="可留空" />';
+                if ((r.options || []).length) {
+                    h += '<select class="wfl-input wfl-input-sel" data-wf-pick="' + String(st.index) + ':' + esc(r.key) + '">';
+                    h += '<option value="">从候选里挑(可不选)</option>';
+                    for (const o of r.options) {
+                        h += '<option value="' + esc(o.value) + '"' + ((r.value && r.value === o.value) ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+                    }
+                    h += '</select>';
+                }
+                h += '<span class="wfl-pstate' + ((r.state === OP_PARAM_STATES.unknownKey || r.state === OP_PARAM_STATES.candidatesMissing) ? ' wfl-pstate-bad' : '') + '">' + esc(r.line) + '</span>';
+                h += '</div>';
             }
             h += '</div>';
         }
@@ -324,6 +368,10 @@ export function bindDesign(el, design) {
             obj[parts.slice(1).join(':')] = String(m.value || '');
         });
         design.params(i, obj);
+    });
+    on('[data-wf-pick]', 'change', function (n) {
+        const p = String(n.getAttribute('data-wf-pick')).split(':');
+        design.pick(Number(p[0]), p.slice(1).join(':'), String(n.value || ''));
     });
     on('[data-wf-repeat]', 'change', function (n) { design.repeat(Number(n.getAttribute('data-wf-repeat')), Number(String(n.value || '1'))); });
     on('[data-wf-name]', 'input', function (n) { design.renameDraft(n.value); });

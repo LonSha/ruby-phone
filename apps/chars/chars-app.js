@@ -27,6 +27,12 @@ import { readPushProbe } from '../../config/world-bridge.js';
  *   投影只补「这份读数是哪一次的」（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
  *   不替换数据源的理由见 config/projection-contract.js 的 projectionScopeLine 文件头。 */
 import { readProjection, projectionScopeLine } from '../../config/projection-contract.js';
+/* [v4.26.0 · R4-X5] 角色信息差与证词对照的接线件。
+ *   为什么单开一件而不是塞进 chars-data.js：data 那件的立身之本是「快照角色状态表的投影」
+ *   （纯函数、零 perspective 概念），而本面消费的是**另一条上游通路**
+ *   （`LonShaMemory.perspectiveContrast` / `testimonyBoard`），且要「两路出口 + 模式闸 + 版式」。
+ *   归因与口径**全部**转手 config/perspective-contrast-contract.js（同一口径只许一份实现）。 */
+import { CharsPerspective } from './chars-perspective.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^chars_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'chars_settings_v1';
 export class CharsApp {
@@ -34,6 +40,8 @@ export class CharsApp {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.view = new CharsView(this);
+        /* [v4.26.0 · R4-X5] 信息差 / 证词对照接线件（只读；零写上游）。 */
+        this.perspective = new CharsPerspective(this);
         /** 最近一次探针归因（供诊断显示；不参与渲染数据） */
         this._lastProbe = null;
         this._hooked = false;
@@ -124,6 +132,12 @@ export class CharsApp {
                     if (!payload || !Array.isArray(payload.prompt)) return;
                     const block = this.promptBlock();
                     if (block) payload.prompt.push({ role: 'system', content: block });
+                    /* [v4.26.0 · R4-X5] 模式闸下的信息差块。
+                     *   ★ 角色模式：只写当前角色**可知**的格，对方独有的事实**一条都不进块**
+                     *     （验收第 ③ 条「切换不把全知正文塞入角色生成上下文」的落点）；
+                     *   ★ 模式非法 / 读数不 OK ⇒ promptBlock 返回 ''（不给块，不拿猜的模式喂全知正文）。 */
+                    const pBlock = this.perspectivePromptBlock();
+                    if (pBlock) payload.prompt.push({ role: 'system', content: pBlock });
                 } catch (_e) { /* 静默失败：生成照常进行 */ }
             });
             this._hooked = true;
@@ -135,6 +149,56 @@ export class CharsApp {
      */
     onChatChanged() {
         this._lastProbe = null;
+        /* [v4.26.0 · R4-X5] 换会话作废视角现场（当前角色 / 身份视图）。
+         *   ★ 模式**不**作废：它是随会话隔离的设置，不是读数；
+         *   ★ 作废的是场景态 —— 否则上一会话选中的角色名会进新会话的角色模式生成块。 */
+        try { this.perspective?.resetScene?.(); } catch (_e) { /* 不抛 */ }
+    }
+    /* ══════════ [v4.26.0 · R4-X5] 角色信息差与证词对照 ══════════
+     * 【本段只做接线：归因 / 模式闸 / 身份面 / 版式全在 config/perspective-contrast-contract.js】
+     * 【跨仓分工】去剧透与可知范围一律走上游口径（对比读数、identity 分面、四态三档全是上游给的），
+     *   手机只搬不重算。本段**不判**哪个名字是真名，**不合成**信息差分数，**不以一票多数裁真相**。
+     * 【三条「不做」原文】不再造知识权限规则、不新增好感度算法、不以一票多数裁真相。
+     * ------------------------------------------------------------------ */
+    /** 一次取齐「模式 + 对照 + 证词 + 版式」（视图用它，保证同一份读数上的四面同源）。 */
+    perspectivePack(a, b, opts) { return this.perspective.pack(a, b, opts || {}); }
+    /** 对照一行读数（视图借用；判定在内核 contrastLine）。 */
+    perspectiveContrastLine(read) { return this.perspective.contrastLineOf(read); }
+    /** 证词一行读数（视图借用；四态与未裁决三档在内核分列）。 */
+    perspectiveTestimonyLine(read) { return this.perspective.testimonyLineOf(read); }
+    /** 模式（**显式选择**；默认作者）。 */
+    perspectiveMode() { return this.perspective.mode(); }
+    /** 切模式（**只改呈现**，零写账）。 */
+    setPerspectiveMode(mode) { return this.perspective.setMode(mode); }
+    /** 换会话作废视角现场（当前角色 / 身份视图）；模式作为设置不作废。 */
+    resetPerspectiveScene() { return this.perspective.resetScene(); }
+    /** 模式取值清单（界面选项的唯一出处）。 */
+    perspectiveModeIds() { return this.perspective.modeIds(); }
+    /** 身份视图取值清单（界面选项的唯一出处）。 */
+    perspectiveFaceIds() { return this.perspective.faceIds(); }
+    /** 当前角色（角色模式下的「我」）。 */
+    perspectiveCurrent() { return this.perspective.current(); }
+    setPerspectiveCurrent(name) { return this.perspective.setCurrent(name); }
+    /** 身份视图（未揭穿 / 已揭穿 / 全呈；默认未揭穿）。 */
+    perspectiveFace() { return this.perspective.face(); }
+    setPerspectiveFace(face) { return this.perspective.setFace(face); }
+    /** 版式（窄屏逐人切换 / 宽屏并排）。 */
+    perspectiveLayout(width) { return this.perspective.layout(width); }
+    /**
+     * 撤回一条证据 ⇒ 把上游重算后的争议状态摆出来。
+     *   ★ 手机端**不发撤回**（撤回是上游控制面的动作）；本口只搬上游给的读数，
+     *     故本方法**零写上游**、不产生新账（changed 以两侧都认得的状态为准，认不出不谎报）。
+     */
+    perspectiveRevoke(dropped, opts) { return this.perspective.revoke(dropped, opts || {}); }
+    /**
+     * 生成侧信息差块（模式闸下）。
+     *   ★ 角色模式：对方独有的事实一条都不进块（验收第 ③ 条的语义落点）；
+     *   ★ 模式非法 / 读数不 OK ⇒ ''（不给块）。
+     */
+    perspectivePromptBlock(a, b, opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        const read = (o.read && typeof o.read === 'object') ? o.read : this.perspective.contrast(a, b, o);
+        return this.perspective.promptBlock(read, o);
     }
     render() {
         this.view.render(this.phoneShell?.layerHost?.('chars-main') || this.phoneShell?.screen);

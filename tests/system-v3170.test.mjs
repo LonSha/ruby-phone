@@ -259,7 +259,14 @@ test('v3170 A5. 依赖面收敛（三正文库不再进搜索闭包）', () => {
     for (const heavy of ['data/cheats.js', 'data/dirtytalk.js', 'data/dirtytalk-corpus.js', 'apps/cheat/cheat-data.js', 'apps/dirtytalk/dt-data.js']) {
         assert.equal(c.files.includes(heavy), false, '搜索 App 导入闭包不得含 ' + heavy);
     }
-    assert.ok(c.bytes < 400000, '闭包字节必须到 400KB 以下（实测 ' + c.bytes + '）');
+    /* ★ 口径修正（本版）：上限原是当版量级（400KB），而闭包自 v4.15.0 起
+     *   多进了 config/view-state.js（页面状态恢复）等文件，实测 405367 ⇒ 假红。
+     *   本条要守的是「三正文库不进搜索闭包」（上面五条 assert 已经钉住），
+     *   字节数只是**量级哨兵**（防有人把正文库整本 import 进来）。
+     *   故上限抬到真实量级之上并留余量，同时保留百分比级的越界敏感度。 */
+    assert.ok(c.bytes < 460000,
+      '闭包字节必须仍在同一量级（上限 460KB，实测 ' + c.bytes + '）——'
+      + '越过即是有人把正文库或大件引进来了');
 });
 
 /* ══════════════ B ── 引擎行为面 ══════════════ */
@@ -364,6 +371,10 @@ const CLOSURE = [
     //   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
     //   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。
     'config/search-facets.js',
+    /* [v4.20.0] v4.15.0 起 search-app 多 import 了 config/view-state.js(页面状态恢复):
+     *   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
+     *   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。 */
+    'config/view-state.js',
 ];
 function mkTree(tag) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3170-' + tag + '-'));

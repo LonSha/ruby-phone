@@ -19,6 +19,10 @@
 'use strict';
 import { defaultPlotlineSettings, readPlotlineFace, outlineStage, promiseList, arcList, knowledgeList, parallelList, secretList, recallEchoList, echoLifeList, plotlinePromptBlock, characterBoundary } from './plotline-data.js';
 import { PlotlineView } from './plotline-view.js';
+/* [v4.27.0 · R4-X6] 因果线索与未完事项板的**接线件**（取数 + 起点 + 落点形状）。
+ *   本 App 只把它转手给视图，**不重判任何一格**；因果面本身的取数与归因全在
+ *   config/causal-board-contract.js（纯契约件）里，与其它面同一个取法。 */
+import { PlotlineBoard } from './plotline-board.js';
 import { readPushProbe } from '../../config/world-bridge.js';
 /* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
  *   数据面照旧读只读快照的大纲面与世界推进面（`readPlotlineFace` 的三态归因一个字不动）；
@@ -32,6 +36,8 @@ export class PlotlineApp {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.view = new PlotlineView(this);
+        /** [v4.27.0 · R4-X6] 因果板接线件（只持有「用户选了哪条线」，不持有读数） */
+        this.board = new PlotlineBoard(this);
         /** 最近一次探针归因（供诊断显示；不参与渲染数据） */
         this._lastProbe = null;
         this._hooked = false;
@@ -144,12 +150,70 @@ export class PlotlineApp {
             this._hooked = true;
         } catch (_e) { /* 宿主无事件源：不挂钩子 */ }
     }
+    /* ========== [v4.27.0 · R4-X6] 因果线索与未完事项板（只转发，不重判） ========== */
+    /**
+     * 一次取齐「因果图 + 未解待办 + 追溯 + 候选边 + 三行读数 + 当前起点」。
+     *   ★ 没选起点时追溯如实给 `no-subject` —— **不默认挑一条线**（那会把
+     *     「用户没说要追哪条」伪装成「这条线没有源头」）。
+     */
+    boardPack(opts) {
+        try { return this.board.pack(opts || {}); }
+        catch (_e) { return this.board.pack({}); }
+    }
+    /** 当前追踪起点（空串 = 还没选） */
+    boardFocus() {
+        try { return this.board.focus; } catch (_e) { return ''; }
+    }
+    /** 设为要追的那条线（空值即清空，不回落成「默认第一条」） */
+    setBoardFocus(id) {
+        try { return this.board.setFocus(id); } catch (_e) { return ''; }
+    }
+    /**
+     * 该去哪个 App（**声明式**：本出口不执行跳转，只把内核给的路由转出来）。
+     *   为什么必须走这里：App 名映射只许有一份（内核的 CB_ACTIONS）——
+     *   视图里再写一份，两处必然漂移，而漂移的那一天没人会响。
+     */
+    boardActionFor(kind) {
+        try { return this.board.actionFor(kind); } catch (_e) { return null; }
+    }
+    /** 类别标签 / 收口标签（视图不写第二份标签表） */
+    boardKindLabel(kind) {
+        try { return this.board.kindLabel(kind); } catch (_e) { return String(kind == null ? '' : kind); }
+    }
+    boardClosureLabel(closure) {
+        try { return this.board.closureLabel(closure); } catch (_e) { return String(closure == null ? '' : closure); }
+    }
+    /** 四收口 id 列表（视图的遍历顺序也**只有内核那一份**，不写第二份顺序表） */
+    boardClosureIds() {
+        try { return this.board.closureIds(); } catch (_e) { return []; }
+    }
+    /** 节点类别 id 列表（同上：界面选项的唯一出处是内核） */
+    boardKindIds() {
+        try { return this.board.kindIds(); } catch (_e) { return []; }
+    }
+    /**
+     * 这一面能不能读 + 读不到时的处置建议（**判定词只许内核一份**）。
+     *   视图拿这个出口决定「先报读不到」还是「画板子」，不自己比状态字面量 ——
+     *   自己比就会在内核改名时静默走到「读到」那一支。
+     */
+    boardGate(read) {
+        try { return this.board.gate(read); }
+        catch (_e) { return { readable: false, hint: '因果板不可读' }; }
+    }
+    /** 追溯读数的一句说明（'' = 没有要说的） */
+    boardTraceNote(read) {
+        try { return this.board.traceNote(read); }
+        catch (_e) { return ''; }
+    }
     /**
      * 换会话 / 清数据：本 App **不持有任何读数副本**，故无需重绑数据层；
      * 仅丢弃上一次的探针归因（那是旧会话的读数），下一次渲染现取。
      */
     onChatChanged() {
         this._lastProbe = null;
+        /* [v4.27.0 · R4-X6] 换会话也丢掉「上一次选了哪条线」：那是旧会话的选择，
+         *   而因果图随会话变 —— 留着它会把新会话里一个同名的节点当成旧选择。 */
+        try { this.board.resetScene(); } catch (_e) { /* 静默：换会话绝不能因接线件而报错 */ }
     }
     render() {
         this.view.render(this.phoneShell?.layerHost?.('plotline-main') || this.phoneShell?.screen);

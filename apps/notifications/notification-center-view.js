@@ -8,6 +8,12 @@
  * 样式在通知中心 App 的 CSS 里（apps/notifications/notification-center.css → phone.css 合并）。
  * ======================================================== */
 'use strict';
+/* [v4.19.0 · R4-O7] 通知按「事情」收拢(纯函数)。
+ *   为什么要有这一层:既有落账层只有**同 senderKey 且 3 分钟内**一道合并,
+ *   而计划原文点名的缺口是「同一发送者的不同事件与同一事件的多次更新缺少面向用户的整理方式」。 */
+import {
+    ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
+} from '../../config/notice-digest.js';
 
 function esc(s) {
     return String(s ?? '')
@@ -41,6 +47,10 @@ export class NotificationCenterView {
         this._filter = '';        // '' = 全部；否则 appId
         this._keyword = '';
         this._flash = '';
+        /* [v4.19.0 · R4-O7] 收拢态:展开过的事情分组(键 = 事情身份);
+         *   静音规则表(**实例态**;本版不做持久化 —— 如实留白,见档头)。 */
+        this._expanded = new Set();
+        this._mutes = [];
     }
 
     // ---------------- 渲染 ----------------
@@ -67,7 +77,7 @@ export class NotificationCenterView {
             <div class="nc-filters">${this._filterChips(all)}</div>
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
             ${this._actionSection()}
-            <div class="nc-list">${rows.length ? rows.map(n => this._row(n)).join('') : this._empty()}</div>
+            <div class="nc-list">${this._listHtml(rows)}</div>
         </div>`;
         shell.setContent(this.app.css() + html, 'notifications-main');
         this._bind();
@@ -178,6 +188,86 @@ export class NotificationCenterView {
         return out;
     }
 
+    /* ================= [v4.19.0 · R4-O7] 按「事情」收拢 ================= */
+    /**
+     * 列表体:先经 `digestOf` 收拢,再**按组渲染**。
+     *   · 组只有一条 ⇒ 直接用它那一行(与既有观感一致,不额外加壳);
+     *   · 组多于一条 ⇒ 组头(代表条 + 条数 + 跨 App 标记 + 静音钮)+ 展开后的成员行。
+     *   ★ 行渲染口径只有一份:`_row`(本层不重写行)。
+     */
+    _listHtml(rows) {
+        if (!rows.length) return this._empty();
+        const d = digestOf(rows);
+        if (!d.ok) return this._empty();
+        this._lastDigest = d;
+        const parts = d.groups.map((g) => {
+            if (g.count <= 1) return this._row(g.lead);
+            return this._groupHtml(g);
+        });
+        const line = '<div class="nc-digest-line">' + esc(digestLine(d)) + '</div>';
+        return line + parts.join('');
+    }
+    /** 一个「事情」组:**组头 + (展开时)成员行**。 */
+    _groupHtml(g) {
+        const lead = g.lead || {};
+        const refs = groupRefsOf(g);
+        const open = this._expanded.has(g.key);
+        const unreadCls = g.unread > 0 ? ' nc-unread' : '';
+        const appTag = APP_LABEL[lead.appId] || lead.appId || '系统';
+        const why = g.state === ND_GROUP_STATES.EVENT
+            ? ('同一件事 ×' + g.count)
+            : ('同一来源 ×' + g.count + '(缺事件 ID,按来源兜底)');
+        const cross = g.spansApps ? '<span class="nc-apptag nc-cross">跨 App 同一件事</span>' : '';
+        const muted = this._isMuted(lead);
+        const body = open
+            ? '<div class="nc-group-body">' + g.ids.map((id) => {
+                const n = this._byId(id);
+                return n ? this._row(n) : '';
+            }).join('') + '</div>'
+            : '';
+        return `<div class="nc-group${unreadCls}" data-gkey="${esc(g.key)}">
+            <div class="nc-group-head nc-jumpable" data-lead="${esc(refs.leadId)}" data-app="${esc(lead.appId || '')}">
+                <div class="nc-group-ico"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="nc-group-t1">
+                    <span class="nc-name">${esc(lead.title || '')}</span>
+                    <span class="nc-count">${esc(why)}</span>
+                    ${cross}
+                    ${muted ? '<span class="nc-apptag nc-muted">已静音(仅不打扰)</span>' : ''}
+                </div>
+                <div class="nc-group-t2">${esc(lead.message || '')}</div>
+                <button class="nc-ac-btn nc-group-toggle" data-toggle="${esc(g.key)}">${open ? '收起' : '展开 ' + g.count}</button>
+                <button class="nc-ac-btn nc-group-mute" data-mute="${esc(lead.appId || '')}">${muted ? '取消静音' : '静音此 App'}</button>
+            </div>
+            ${body}
+        </div>`;
+    }
+    /** 按 id 取一条(**只读**:从当前可见行里找;找不到如实返回 null,不补空壳)。 */
+    _byId(id) {
+        const key = String(id || '');
+        try {
+            return (this.app.log.list() || []).find((n) => String(n.id) === key) || null;
+        } catch (_e) { return null; }
+    }
+    /** 该条是否被静音(**只读**,不改任何东西)。 */
+    _isMuted(rec) {
+        try { return mutedOf(rec, this._mutes).muted; } catch (_e) { return false; }
+    }
+    /** 静音 / 取消静音(**只影响打断,不删消息**)。 */
+    _toggleMute(appId) {
+        const v = String(appId || '').trim();
+        if (!v) { this._flash = '这条通知没有来源 App,没法按 App 静音'; return false; }
+        const rule = normalizeMuteRule({ appId: v });
+        if (!rule.ok) { this._flash = '静音规则不成立(' + rule.reason + ')'; return false; }
+        const at = this._mutes.findIndex((r) => r && r.dim === 'appId' && r.value === v);
+        if (at >= 0) {
+            this._mutes.splice(at, 1);
+            this._flash = '已取消静音:' + (APP_LABEL[v] || v) + '(历史一条没少)';
+            return true;
+        }
+        this._mutes.push({ dim: 'appId', value: v });
+        this._flash = '已静音:' + (APP_LABEL[v] || v) + '(只是不再打断,历史仍留在这里)';
+        return true;
+    }
     _row(n) {
         const fa = ICON_FA[n.icon] || 'fa-solid fa-bell';
         const avatarRaw = String(n.meta?.avatar || '').trim();
@@ -233,6 +323,23 @@ export class NotificationCenterView {
     _bind() {
         const root = this.app.phoneShell?.screen;
         if (!root) return;
+        /* [v4.19.0 · R4-O7] 组头三件事:展开/收起、静音、点代表条直达。 */
+        root.querySelectorAll('.nc-group-toggle').forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const k = String(b.dataset.toggle || '');
+                if (!k) return;
+                if (this._expanded.has(k)) this._expanded.delete(k); else this._expanded.add(k);
+                this.render();
+            });
+        });
+        root.querySelectorAll('.nc-group-mute').forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this._toggleMute(b.dataset.mute)) this.render();
+                else this.render();
+            });
+        });
         root.querySelector('#nc-read-all')?.addEventListener('click', () => {
             const r = this.app.log.markAllRead();
             this._flash = r.count ? `已把 ${r.count} 条标记为已读` : '没有未读通知';

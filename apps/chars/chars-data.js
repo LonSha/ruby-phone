@@ -41,7 +41,11 @@ export function defaultCharsSettings() {
         // 是否把「当前被追踪角色状态」交给生成侧（与正文角色状态对齐）
         injectToPrompt: true,
         // 注入块最多几个角色
-        maxInject: 5
+        maxInject: 5,
+        // [v4.26.0 · R4-X5] 视角模式：author（作者全知，默认）| character（角色可知面）。
+        //   空串 ⇒ 按作者处置（planPerspectiveMode 的唯一归一口径）；非法值由内核报 mode-invalid 且**不给生成块**
+        //   （宁可少一块上下文，也不拿猜出来的模式去喂全知正文）。
+        perspectiveMode: 'author'
     };
 }
 /** 纯文本裁剪（防单条无界） */

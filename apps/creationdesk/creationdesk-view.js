@@ -49,6 +49,7 @@ export class CreationdeskView {
         h += '<div class="cwb-reads">' + esc(vm.materialsText) + '</div>';
         h += '<div class="cwb-reads">' + esc(vm.publishedText) + '</div>';
         h += '<div class="cwb-reads">' + esc(vm.draftsText) + '</div>';
+        h += '<div class="cwb-reads">' + esc(vm.annualText || '') + '</div>';
         h += '<div class="cwb-reads">' + esc(vm.topicsText) + '</div>';
         h += '<div class="cwb-reads">' + (vm.scopeOk ? '会话身份齐备' : '会话身份缺项（缺项即判「不是同一段」，一律不开工）') + '</div>';
         const sc = vm.selfCheck || {};

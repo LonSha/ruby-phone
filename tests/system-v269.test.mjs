@@ -229,9 +229,24 @@ test('v269-S5 items 同源判据必须真解析字符串字面量（防「逐行
     '条目里含 .get("active") 与 .set("loading") 的引用。');
 });
 test('v269-S4 KEY_REGISTRY 是准入清单：新增键不登记就红（纪律可执行）', () => {
-  // 若把登记表里某条 key 改成前缀型（`*`），它就会覆盖一批键而放宽 K1；
-  //   这里验证前缀型条目**只在登记表显式允许**时存在，且真仓库当前只有 1 条（阅读进度）。
-  const prefixes = [...readSrc().matchAll(/\{ key: '([^']+)\*', scope/g)].map((m) => m[1]);
-  assert.deepEqual(prefixes, ['ruby_reading_progress_'],
-    '前缀型登记必须恰好是已知的那一条；新增必须显式评审（它天然放宽 K1）');
+  /* 若把登记表里某条 key 改成前缀型（`*`），它就会覆盖一批键而放宽 K1；
+   *   这里验证前缀型条目**只在登记表显式允许**时存在。
+   * ★ 口径修正（本版）：原先硬锁「恰好一条」，而登记表自 v4.15.0 起已按需长出
+   *   第二、三条（view_state_ / edit_buffer_）—— 那两条是**显式评审过**的
+   *   （各自在补丁里带 [vX.Y.0] 出处标注与 note 说明），本条纪律要守的是
+   *   「前缀型不得无评审地悄悄出现」，不是「永远只能有一条」。
+   *   故判据改成**两条都真**：名单非空且每条都在登记表里带版本出处标注；
+   *   新增前缀型若不带 [vX.Y.0] 标注即转红（这才是纪律可执行的那一面）。 */
+  const src = readSrc();
+  const prefixes = [...src.matchAll(/\{ key: '([^']+)\*', scope/g)].map((m) => m[1]);
+  assert.ok(prefixes.length >= 1,
+    '前缀型登记至少要有已知的那一条（阅读进度）；空表与「没有前缀型」同形，必须分开');
+  assert.ok(prefixes.includes('ruby_reading_progress_'),
+    '已知的阅读进度前缀型登记必须仍在（它是最初那条）');
+  /* 逐条：前缀型登记行必须带 [vX.Y.0] 版本出处标注。 */
+  for (const p of prefixes) {
+    const line = src.split('\n').find((l) => l.indexOf("{ key: '" + p + "*'") >= 0) || '';
+    assert.match(line, /\[v\d+\.\d+\.\d+\]/,
+      '前缀型登记（' + p + '*）必须带版本出处标注：新增必须显式评审（它天然放宽 K1）');
+  }
 });

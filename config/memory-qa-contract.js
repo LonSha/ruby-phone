@@ -249,6 +249,88 @@ export function readMemoryToolsEnvelope(win, spec, opts) {
 }
 
 /**
+ * [v4.14.0 · R4-O2] 问一句往事(**异步版**:走上游 `askMemoryQuestionAsync`)。
+ *
+ * 【与同步版的关系】上游 lonsha-memory-plugin v3.332.0(M4-O4)交付了异步出口:
+ *   与 `askMemoryQuestion` **同一个 planQuestion / queryAsync / composeAnswer**,
+ *   只换执行时机(逐条计划片间让出主线程),回执在同步版全键之外增四键
+ *   `async / taskId / state / processed`。本函数是它在下游的**唯一消费点**。
+ *
+ * 【为什么单列一支而不是改同步版】同步版是旧插件的**兼容路径**(上游明写
+ *   「askMemoryQuestion 保持原样,不迁移不删除」)。下游要同时留住两条:
+ *   有异步口走异步,没有就走同步 —— 由 `config/ask-request.js::planAskPhase` 一处判,
+ *   本函数只负责「异步这条路怎么读」。
+ *
+ * 【五态与同步版同一套】唯一新增的读数是 `upstreamState`:
+ *   `canceled`(取消:answer/gaps **是已处理部分**)与 `absent`(内核模块不在)分列,
+ *   不压平 —— 压平就会把「我按了取消」显示成「本版没有这一面」。
+ *   同时保留 `faceReason = 'canceled'`,供视图与请求跟踪器交叉核对。
+ *
+ * @param {object} [win] 显式注入 window
+ * @param {string} question 用户问句
+ * @param {object} [opts] { knownActors?, maxActors?, maxSentences?, pageSize?, maxPerLedger?,
+ *                          taskId?, shouldCancel?, onProgress? }
+ * @returns {Promise<object>} 恒定 15 键 + { state, faceReason, async, taskId, upstreamState, processed }
+ */
+export async function readMemoryQaAnswerAsync(win, question, opts) {
+    const o = opts || {};
+    const base4 = { async: true, taskId: String(o.taskId || ''), upstreamState: '', processed: null };
+    try {
+        const plugin = pluginOf(win);
+        if (!plugin) return Object.assign(emptyQa(question, 'plugin-absent', MEMORY_QA_FACE_STATES.ENGINE_ABSENT), base4, { async: false });
+        if (typeof plugin.askMemoryQuestionAsync !== 'function') {
+            /* 插件在场但没有异步出口 ⇒ **与「没有问答出口」分开**:
+             *   这一态由调用方退回落同步(照旧可用),不是「没这功能」。 */
+            return Object.assign(emptyQa(question, 'async-face-absent', MEMORY_QA_FACE_STATES.FACE_ABSENT), base4, { async: false });
+        }
+        const r = await plugin.askMemoryQuestionAsync(question, o);
+        if (!r || typeof r !== 'object') {
+            return Object.assign(emptyQa(question, 'malformed', MEMORY_QA_FACE_STATES.UNUSABLE), base4);
+        }
+        const answer = Array.isArray(r.answer) ? r.answer : [];
+        const gaps = Array.isArray(r.gaps) ? r.gaps : [];
+        const version = Number(r.version) || 0;
+        const upstreamState = String(r.state || '');
+        let state, faceReason;
+        if (version === 0 && String(r.reason || '')) {
+            state = MEMORY_QA_FACE_STATES.ENGINE_ABSENT; faceReason = String(r.reason);
+        } else if (upstreamState === 'canceled') {
+            /* ★ 取消态**单列**:与 empty 处置相反(前者「还能再问」,后者「换个问法」),
+             *   而且它的 answer 是**已处理部分** —— 不许当全量结论读(上游逐字提醒过)。 */
+            state = MEMORY_QA_FACE_STATES.EMPTY; faceReason = 'canceled';
+        } else if (answer.length) {
+            state = MEMORY_QA_FACE_STATES.OK; faceReason = 'ok';
+        } else {
+            state = MEMORY_QA_FACE_STATES.EMPTY; faceReason = 'no-answer';
+        }
+        return {
+            state, faceReason,
+            version,
+            question: String(r.question || question || ''),
+            intents: Array.isArray(r.intents) ? r.intents : [],
+            actor: r.actor === undefined ? null : r.actor,
+            answer,
+            gaps,
+            refs: Array.isArray(r.refs) ? r.refs : [],
+            plans: Array.isArray(r.plans) ? r.plans : [],
+            masked: Number(r.masked) || 0,
+            truncated: r.truncated === true,
+            resourced: Number(r.resourced) || 0,
+            total: Number(r.total) || 0,
+            knownActors: Number(r.knownActors) || 0,
+            reason: String(r.reason || ''),
+            writesNothing: true,
+            /* 异步面四键(与上游逐字同形,不重命名)。 */
+            async: true,
+            taskId: String(r.taskId === undefined || r.taskId === null ? (o.taskId || '') : r.taskId),
+            upstreamState,
+            processed: (r.processed && typeof r.processed === 'object') ? r.processed : null
+        };
+    } catch (_e) {
+        return Object.assign(emptyQa(question, 'thrown', MEMORY_QA_FACE_STATES.UNUSABLE), base4);
+    }
+}
+/**
  * 转成可打开的出处引用（走仓内唯一靶心件 `config/open-ref.js`）。
  *   **为什么在这里转换**：上游 ref 的形状是 `{ref, floor, ledger}`（九账行身份），
  *   与本仓 `OPEN_REF_KINDS` 的七 kind 不是同一套键（本仓 kind 是 App 归属词）。
@@ -296,6 +378,7 @@ export default {
     MEMORY_TOOLS_KEYS,
     MEMORY_TOOLS_STATES,
     readMemoryQaAnswer,
+    readMemoryQaAnswerAsync,
     readMemoryToolsDescribe,
     readMemoryToolsEnvelope,
     qaRefOf,

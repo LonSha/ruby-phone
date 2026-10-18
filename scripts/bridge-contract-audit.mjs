@@ -290,6 +290,39 @@ const PERSPECTIVE_READER = 'readPerspectiveFace';
 /* [face: perspectiveCard] [reader: readPerspectiveFace] [floor: 1] */
 const PERSPECTIVE_SOURCE_REL = 'config/perspective-card-contract.js';
 const PERSPECTIVE_MIN_CONSUMERS = 1;
+/* ── [v4.26.0 · R4-X5] J19：上游证词面（testimonyBoard）必须真被业务面消费 ──
+ * 【为什么必须有】上游在 v3.343.0(M4-X5)交付证词面(`testimony-board.js`)，它答的是
+ *   「同一事件的多方说法」与「争议未裁决」——立身之本含**按 evidenceKey 去重**、
+ *   **未裁决三档分列**（ambiguous / below-threshold / transmittal-only）、
+ *   **撤回证据后重算争议状态**（撤到无独立支持 ⇒ undecided / withdrawn，不退化成 contested）。
+ *   而这一面**上游当时漏登外供表**（`open_face_registry.tsv` 只登记到 perspectiveCard），
+ *   本仓 `grep -RIn 'testimonyBoard' apps config`（消费者侧）此前同样零命中。
+ *   v4.26.0 的 R4-X5 把它接上：三处同批落地（上游补表行 / 本仓 registry 登记行 / 本门标签）。
+ * 【判据口径】① 真源 config/perspective-contrast-contract.js 必须导出该出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1。写 1 不留余量是刻意的 ——
+ *   少一个就意味着这一面又回到零消费。
+ *   ③ 标签 [face: testimonyBoard] 与上游表行 consumer 列逐字一致（下游 R5 判这一条）。 */
+const TESTIMONY_READER = 'readTestimonyBoard';
+/* [face: testimonyBoard] [reader: readTestimonyBoard] [floor: 1] */
+const TESTIMONY_SOURCE_REL = 'config/perspective-contrast-contract.js';
+const TESTIMONY_MIN_CONSUMERS = 1;
+/* ── [v4.27.0 · R4-X6] J20：上游因果线索面（causalChain）必须真被业务面消费 ──
+ * 【为什么必须有】上游在 v3.323.0（M3-X3）交付了因果链面（`causal-chain.js`），它答的是
+ *   「这件事是怎么来的」与「哪些约定/伏笔还没收口」——立身之本含**推测边与已确认边分两个数组**
+ *   （结构上不可混读）、**四收口分列**（resolved|cancelled|broken|unresolved）、
+ *   **图外 id 追链与「追到头」不同形**（前者 known=false + reason=not-in-graph）。
+ *   而这一面在本仓 `grep -RIn 'causalChain' apps config`（消费者侧）此前零命中；
+ *   本仓对它唯一的声明是未消费理由台账里那句「手机侧的消费点属 R3-X4 的后续增强」——
+ *   那是**声明**，而不是判据。v4.27.0 的 R4-X6 把它接上（上游表行早已在，故本版补的是
+ *   **下游两处**：本仓 registry 登记行 + 本门标签）。
+ * 【判据口径】① 真源 config/causal-board-contract.js 必须导出该四出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1。写 1 不留余量是刻意的 ——
+ *   少一个就意味着这一面又回到零消费（「建好不消费」第十七例的入口）。
+ *   ③ 标签 [face: causalChain] 与上游表行 consumer 列同一口径（下游 R5 判这一条）。 */
+const CAUSAL_READER = 'readCausalBoard';
+/* [face: causalChain] [reader: readCausalBoard] [floor: 1] */
+const CAUSAL_SOURCE_REL = 'config/causal-board-contract.js';
+const CAUSAL_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;
@@ -532,8 +565,20 @@ const entityExportsOk = [ENTITY_READER, 'readEntityAt', 'entityFaceLine'].map((f
 const perspectiveCode = stripped.get(PERSPECTIVE_SOURCE_REL) || '';
 const perspectiveExportsOk = [PERSPECTIVE_READER, 'knowsFact', 'perspectiveLine', 'perspectiveSelfCheck']
     .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(perspectiveCode) }));
+/* ── [v4.26.0 · R4-X5] J19：证词面的真源出口 + 产品侧消费点 ── */
+const testimonyCode = stripped.get(TESTIMONY_SOURCE_REL) || '';
+const testimonyExportsOk = [TESTIMONY_READER, 'readTestimonyRevoke', 'testimonyLine', 'pcxSelfCheck']
+    .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(testimonyCode) }));
+/* ── [v4.27.0 · R4-X6] J20：因果线索面的真源四出口 + 产品侧消费点 ── */
+const causalCode = stripped.get(CAUSAL_SOURCE_REL) || '';
+const causalExportsOk = [CAUSAL_READER, 'readCausalTodos', 'readCausalTrace', 'readCausalProposals']
+    .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(causalCode) }));
 let perspectiveConsumerCount = 0;
 const perspectiveConsumerFiles = [];
+let testimonyConsumerCount = 0;
+const testimonyConsumerFiles = [];
+let causalConsumerCount = 0;
+const causalConsumerFiles = [];
 let entityConsumerCount = 0;
 const entityConsumerFiles = [];
 for (const [rel, code] of stripped) {
@@ -549,6 +594,12 @@ for (const [rel, code] of stripped) {
     /* [v4.12.0 · R3-O2] 视角卡面的产品侧消费点（只数 apps/**，config/ 是出口自身）。 */
     const c4 = countOf(code, PERSPECTIVE_READER + '(');
     if (c4 > 0) { perspectiveConsumerCount += c4; perspectiveConsumerFiles.push(rel); }
+    /* [v4.26.0 · R4-X5] 证词面的产品侧消费点（只数 apps/**）。 */
+    const c5 = countOf(code, TESTIMONY_READER + '(');
+    if (c5 > 0) { testimonyConsumerCount += c5; testimonyConsumerFiles.push(rel); }
+    /* [v4.27.0 · R4-X6] 因果线索面的产品侧消费点（只数 apps/**）。 */
+    const c6 = countOf(code, CAUSAL_READER + '(');
+    if (c6 > 0) { causalConsumerCount += c6; causalConsumerFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -598,6 +649,11 @@ if (LIST) {
     if (!entityConsumerFiles.length) console.log('  （无 —— 上游实体映射没人读，手机与主聊天就不是同一份映射）');
     for (const x of entityExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     console.log('\n── J18 ' + PERSPECTIVE_READER + ' 消费点（只计 apps/**）：' + perspectiveConsumerCount + '（下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）──');
+    console.log('\n── J19 ' + TESTIMONY_READER + ' 消费点（只计 apps/**）：' + testimonyConsumerCount + '（下限 ' + TESTIMONY_MIN_CONSUMERS + '）──');
+    console.log('\n── J20 ' + CAUSAL_READER + ' 消费点（只计 apps/**）：' + causalConsumerCount + '（下限 ' + CAUSAL_MIN_CONSUMERS + '）──');
+    for (const f of causalConsumerFiles) console.log('  ' + f);
+    if (!causalConsumerFiles.length) console.log('  （无 —— 上游因果面没人读，「这条线怎么来的」就只能靠猜）');
+    for (const x of causalExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     for (const f of perspectiveConsumerFiles) console.log('  ' + f);
     if (!perspectiveConsumerFiles.length) console.log('  （无 —— 上游视角卡没人读，角色可知范围就没有单一真源）');
     for (const x of perspectiveExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
@@ -863,6 +919,38 @@ if (perspectiveConsumerCount < PERSPECTIVE_MIN_CONSUMERS) {
     console.error('        而「角色可知范围」在用户侧就没有单一真源（各处自己猜一份）。');
     console.error('  修法：手机侧接 config/perspective-card-contract.js 的 ' + PERSPECTIVE_READER + '。');
 }
+/* ── J19 [v4.26.0 · R4-X5] 证词面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingTestimonyExports = testimonyExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingTestimonyExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J19 真源 ' + TESTIMONY_SOURCE_REL + ' 缺出口（' + missingTestimonyExports.length + ' 个）：' + missingTestimonyExports.join(' / '));
+}
+if (testimonyConsumerCount < TESTIMONY_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J19 ' + TESTIMONY_READER + ' 只有 ' + testimonyConsumerCount + ' 个产品侧消费点（下限 ' + TESTIMONY_MIN_CONSUMERS + '）：');
+    for (const f of testimonyConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M4-X5（v3.343.0）把「同一事件的多方说法与争议未裁决」做成对外读面');
+    console.error('        （四态 supported/contested/undecided/withdrawn + 未裁决三档分列 + 撤回重算），');
+    console.error('        并已在 open_face_registry.tsv 按 face=testimonyBoard 补登记 consumer=readTestimonyBoard@1；');
+    console.error('        下游零消费 ⇒ 「同一事件多种说法在手机上聚合」在用户侧不成立，未决只会被读成一个布尔。');
+    console.error('  修法：手机侧接 config/perspective-contrast-contract.js 的 ' + TESTIMONY_READER + '。');
+}
+/* ── J20 [v4.27.0 · R4-X6] 因果线索面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingCausalExports = causalExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingCausalExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J20 真源 ' + CAUSAL_SOURCE_REL + ' 缺出口（' + missingCausalExports.length + ' 个）：' + missingCausalExports.join(' / '));
+}
+if (causalConsumerCount < CAUSAL_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J20 ' + CAUSAL_READER + ' 只有 ' + causalConsumerCount + ' 个产品侧消费点（下限 ' + CAUSAL_MIN_CONSUMERS + '）：');
+    for (const f of causalConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M3-X3（v3.323.0）把「因果链推导与候选边与回溯」做成对外读面');
+    console.error('        （四收口分列 + 推测边与已确认边两个数组 + 图外 id 追链与「追到头」不同形），');
+    console.error('        下游零消费 ⇒ 「未结约定 / 已解决伏笔 / 仅推测因果」在手机上同形，而三者处置相反');
+    console.error('        （前者要去做 / 中者不必再提 / 后者不能当事实）。');
+    console.error('  修法：手机侧接 config/causal-board-contract.js 的 ' + CAUSAL_READER + '。');
+}
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -880,5 +968,7 @@ console.log('[bridge-contract] ' + CHECKPOINT_READER + ' 消费点 ' + checkpoin
 console.log('[bridge-contract] ' + QA_READER + ' 消费点 ' + qaConsumerCount + ' 个 · ' + TOOLS_READER + ' 消费点 ' + toolsConsumerCount + ' 个 · ' + PHONE_FACT_READER + ' 消费点 ' + phoneFactConsumerCount + ' 个 · 写入侧 ' + PHONE_FACT_SINK_TOKEN + ' ' + phoneFactSinkCount + ' 处（下限 ' + PHONE_FACT_MIN_SINKS + '）');
 console.log('[bridge-contract] ' + ENTITY_READER + ' 消费点 ' + entityConsumerCount + ' 个（' + entityConsumerFiles.length + ' 文件，下限 ' + ENTITY_MIN_CONSUMERS + '）· 真源三出口在场 ' + (entityExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + PERSPECTIVE_READER + ' 消费点 ' + perspectiveConsumerCount + ' 个（' + perspectiveConsumerFiles.length + ' 文件，下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）· 真源四出口在场 ' + (perspectiveExportsOk.every((x) => x.ok) ? '是' : '否'));
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费');
+console.log('[bridge-contract] ' + TESTIMONY_READER + ' 消费点 ' + testimonyConsumerCount + ' 个（' + testimonyConsumerFiles.length + ' 文件，下限 ' + TESTIMONY_MIN_CONSUMERS + '）· 真源四出口在场 ' + (testimonyExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] ' + CAUSAL_READER + ' 消费点 ' + causalConsumerCount + ' 个（' + causalConsumerFiles.length + ' 文件，下限 ' + CAUSAL_MIN_CONSUMERS + '）· 真源四出口在场 ' + (causalExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费 / 证词面多方说法被业务面消费 / 因果线索与未完事项被业务面消费');
 process.exit(0);

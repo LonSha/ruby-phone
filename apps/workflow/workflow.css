@@ -40,6 +40,14 @@
 .wfl-draft-head { display: flex; align-items: center; gap: 8px; }
 .wfl-cond, .wfl-params, .wfl-repeat { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; color: #6a645c; margin-top: 3px; }
 .wfl-pkey { font-size: 10px; color: #33586a; }
+/* [v4.20.0 . R4-O8] 参数行与预览:中文名 + 候选下拉 + 一句态说明 */
+.wfl-prow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: 100%; }
+.wfl-pstate { font-size: 10px; color: #7a746c; }
+.wfl-pstate-bad { color: #b4552f; }
+.wfl-preview { margin: 4px 0; padding: 4px 6px; border-left: 2px solid #d8d2c8; }
+.wfl-ptext { font-size: 10px; color: #55504a; line-height: 1.5; }
+.wfl-ptext-write { color: #8a4a2a; }
+
 .wfl-input { border: 1px solid #e0dad0; border-radius: 6px; padding: 2px 5px; font-size: 11px; background: #fff; }
 .wfl-input-sel { max-width: 140px; }
 .wfl-input-num { width: 44px; }

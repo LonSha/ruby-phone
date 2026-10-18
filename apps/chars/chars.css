@@ -173,4 +173,57 @@
   margin-top: 6px;
   font-size: 10px;
   color: #64748b;
+}/* ══════════ [v4.26.0 · R4-X5] 角色信息差与证词对照 ══════════ */
+.cs-px-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cs-seg-group {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.cs-seg {
+  background: transparent;
+  border: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.cs-seg.on {
+  background: #38bdf8;
+  color: #04202e;
+  font-weight: 700;
+}
+.cs-input {
+  width: 46%;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+/* 提示行：逐字强调「角色模式只写可知内容」—— 不是装饰，是这一面的语义落点。 */
+.cs-px-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.7;
+  margin-top: 4px;
+}
+.cs-px-note {
+  font-size: 11px;
+  line-height: 1.7;
+  margin-bottom: 6px;
+}
+.cs-px-warn { color: #fbbf24; }
+/* 窄屏（<720px）：版式由内核判为 paged，逐人切换 —— 这里只保证一列排得开。 */
+@media (max-width: 719px) {
+  .cs-px-row { flex-wrap: wrap; }
+  .cs-input { width: 100%; }
 }

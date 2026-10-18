@@ -880,8 +880,42 @@ export class PhoneShell {
             e.preventDefault();
             e.stopPropagation();
             if (this.isAtHomeScreen()) return;
-            this.goHome();
+            /* [v4.15.0 · R4-O3] 逐层退优先:与右滑同一条路。
+             *   修前这里直接 `goHome()` —— 从搜索跳进某个 App 再按返回,
+             *   用户被**丢回桌面**而不是回到搜索;而右滑那条路是逐层退。
+             *   两条路给出两个语义,用户看到的却是**同一个「返回」**。
+             *   退不动(已在第二层 / 无当前层)才回桌面 —— 回桌面仍是最后一档,不取消。 */
+            const back = this.backOneLayer();
+            if (!back || back.ok !== true) this.goHome();
         });
+    }
+    /* ============================================================
+     * [v4.15.0 · R4-O3] 逐层退一层(可回报)。
+     * ------------------------------------------------------------
+     * 【为什么是包一层而不是重写】右滑返回(SWIPE_BACK)已经是本仓的
+     *   **返回语义真源**：它负责压栈与弹栈、并带 250ms 派发 → 550ms
+     *   检查层是否真的移动(没动就回弹并把层推回历史栈)。
+     *   再写一份必然漂移（本仓「同一口径只许一份实现」）。
+     *
+     * 【回报里没有一种叫「点了但没退」】这里只回报**能不能发起**：
+     *   `at-home`（已在主屏）/ `last-layer`（已在第二层，再退就是桌面）/
+     *   `no-current-layer`（取不到当前层，无法滑）/ `ok`。
+     *   发起之后真正退不退得动由应用自己的 handleSwipeBack 说话，
+     *   且底层还有 `_dispatchSwipeBackWithFallback` 的回弹保护 —— 故此处不假报「已退成」。
+     * ============================================================ */
+    backOneLayer() {
+        if (this.isAtHomeScreen()) return { ok: false, reason: 'at-home' };
+        if (!Array.isArray(this.viewHistory) || this.viewHistory.length <= 1) {
+            return { ok: false, reason: 'last-layer' };
+        }
+        const target = this.container?.querySelector?.('.phone-view-current');
+        if (!target) return { ok: false, reason: 'no-current-layer' };
+        try {
+            this._dispatchSwipeBackWithFallback(target);
+        } catch (_e) {
+            return { ok: false, reason: 'dispatch-threw' };
+        }
+        return { ok: true, reason: '', layers: this.viewHistory.length };
     }
 
     /* 可见性：主屏幕隐藏，其余视图显示。

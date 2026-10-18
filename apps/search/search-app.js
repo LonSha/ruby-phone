@@ -16,7 +16,19 @@ import { SearchView } from './search-view.js';
  *   （`applyFacets`）——**不重排相关性**（排序仍归引擎的 `scoreHit`），
  *   也**不新建索引、不新建性能守卫**（计划原文逐字点名）。 */
 import { facetsOf, applyFacets } from '../../config/search-facets.js';
-
+/* [v4.15.0 · R4-O3] 页面状态捕获与恢复(纯函数)。
+ *   本层只做两件:把四格交给它归一,以及读写那一个会话键。
+ *   **会话围栏由它说话**(appId + chatId 两格逐次比对)——本层不自己判一份。 */
+import {
+    viewStateKey, captureViewState, restoreViewState, needsRequery
+} from '../../config/view-state.js';
+/* ★ 键名必须以**字面量**出现在产品面上(实测):
+ *   keys 门的 K3 判的是「真仓库里有没有这个键的使用点」,而抽取器认的是
+ *   `storage.get('字面量')` 与 `const XXX_KEY = '字面量'` 两种形态。
+ *   键名只写在 `viewStateKey('search')` 里(拼接形)时抽取器看不见它 ——
+ *   K3 会当场报「幽灵放行条」(它本就该这么做:登记着不存在的使用点就是掩饰)。
+ *   故把 appId 收成恒定字面量常量。 */
+export const VIEW_STATE_KEY = 'view_state_search';
 export class SearchApp {
     constructor(phoneShell, storage, deps = {}) {
         this.phoneShell = phoneShell;
@@ -260,6 +272,10 @@ export class SearchApp {
     onChatChanged() {
         this.invalidateAll();
         this._syncHostSources();
+        /* [v4.15.0 · R4-O3] 换会话必须把视图里那份内存快照也丢掉。
+         *   为什么：键前缀只保证**存储位置**按会话隔开，
+         *   不保证「手上这份是给谁的」——不丢就会把上一段的搜索词贴回新会话。 */
+        try { if (this.view) this.view._restored = null; } catch (_e) { /* 视图不在也没什么可丢 */ }
     }
     /** 本轮代际的「取消」谓言（交给引擎的 `isCancelled`） */
     cancelToken(gen) {
@@ -273,6 +289,44 @@ export class SearchApp {
         this._syncHostSources();
         this.view.render();
     }
+
+    /* ================= [v4.15.0 · R4-O3] 状态捕获 / 恢复 ================= */
+    /** 本会话身份(只读)。取不到返回空串(纯函数对空串与空串判「同一段」)。 */
+    _chatId() {
+        try { return String(this.storage?.currentConversationId || ''); } catch (_e) { return ''; }
+    }
+    /**
+     * 把当前四格写成快照(落 chatMetadata,跟会话走)。
+     *   快照里带 appId 与 chatId **两格身份** —— 恢复时逐次比对,不匹配即拒(不贴错)。
+     * @returns {{ok:boolean, key:string, reason:string}}
+     */
+    captureState(raw) {
+        const key = VIEW_STATE_KEY;
+        if (!key) return { ok: false, key: '', reason: 'no-key' };
+        /* 键名由常量给(**字面量已出现在产品面上**),`viewStateKey` 仍用于校验拼法一致。 */
+        const expect = viewStateKey('search');
+        if (expect !== key) return { ok: false, key: key, reason: 'key-drift' };
+        const pack = captureViewState('search', raw, this._chatId());
+        if (!pack) return { ok: false, key: key, reason: 'capture-failed' };
+        try {
+            this.storage?.set?.(key, JSON.stringify(pack));
+            return { ok: true, key: key, reason: '' };
+        } catch (_e) { return { ok: false, key: key, reason: 'write-threw' }; }
+    }
+    /**
+     * 读回快照并判定**能不能恢复**(五态互不同形)。
+     *   ★ 本方法**不改任何东西** —— 把快照交回给视图,由视图决定怎么用。
+     *   为什么这么分:控制器不碰 DOM(本 App 既有纪律)。
+     */
+    restoreState() {
+        const key = VIEW_STATE_KEY;
+        if (!key) return { ok: false, state: 'unreadable', snapshot: null, why: 'no-key' };
+        let raw = undefined;
+        try { raw = this.storage?.get?.(key, undefined); } catch (_e) { raw = undefined; }
+        return restoreViewState('search', raw, this._chatId());
+    }
+    /** 恢复后是否需要重跑一次检索(查询词还在但结果已随重绘丢)。 */
+    restoredNeedsRequery(snapshot) { return needsRequery(snapshot); }
 
     css() {
         return `<style>

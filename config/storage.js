@@ -276,6 +276,24 @@ export class PhoneStorage {
             //   两者都是逐会话的：不隔离的话换个角色会看到上一个角色收藏的卡
             //   （且台账会把别人的点击算进自己的最近使用）。
             /^te_/,
+            /* [v4.15.0 · R4-O3] 页面状态快照(view_state_<appId>):
+             *   一条前缀覆盖一键,键无元字符,按仓内口径「无需宽匹配登记」。
+             *   为什么必须隔离:快照里装的是「这个角色这段对话里最后停在哪个页签/搜了什么词/滚到哪」——
+             *   不隔离就会把上一个角色的搜索词与滚动位置贴回新会话(本仓最贵的那族静默错结果)。
+             *   与 config/view-state.js 的 `viewStateKey()` 同源（前缀只许在一处定义）。 */
+            /^view_/,
+            /* [v4.17.0 · R4-O5] 编辑缓冲(edit_buffer_<appId>):
+             *   一条前缀覆盖一键,键无元字符,按仓内口径「无需宽匹配登记」。
+             *   它装的是「没点保存的半成品」——本来只活在实例字段里,
+             *   开页面/刷新/切会话三个动作里全丢。不隔离就会把上一个角色的半成品贴回新会话。
+             *   与 config/edit-buffer.js 的 `editBufferKey()` 同源(前缀只许在一处定义)。 */
+            /^edit_/,
+            /* [v4.17.0 · R4-O5] 编辑缓冲(edit_buffer_<appId>):
+             *   一条前缀覆盖一键,键无元字符,按仓内口径「无需宽匹配登记」。
+             *   它装的是「没点保存的半成品」——本来只活在实例字段里,
+             *   开页面/刷新/切会话三个动作里全丢。不隔离就会把上一个角色的半成品贴回新会话。
+             *   与 config/edit-buffer.js 的 `editBufferKey()` 同源(前缀只许在一处定义)。 */
+            /^edit_/,
             // [v3.67.0 · 拓展计划 X3] 日程提醒协议账本（schedule_ledger）：
             //   一条前缀覆盖一键，键无元字符，按仓内口径「无需宽匹配登记」。
             //   账本记的是「这个角色/这段对话里提醒过什么、撤了什么」——
@@ -344,6 +362,7 @@ export class PhoneStorage {
             /^ruby_reading_books$/,            // 阅读书架（历史键名，与 shelf 同义，读侧回落兼容）
             /^ruby_reading_progress_/,         // 阅读进度（前缀型：reading-view 按 bookId 拼接）
             /^ruby_reading_excerpts$/,          // [v3.99.2 · R3-X8] 阅读摘录（带书/章/段引用，随会话隔离）
+            /^ruby_reading_annual_readthrough$/,// [v4.25.0 · R4-X3] 故事年鉴本机阅读进度（读到第几章；随会话隔离）
             /^ruby_phone_lyrics_settings$/,    // 歌词/氛围设置（music-ambience）
             // [v2.8.10 审计修复] 游戏存档迁移漏项：catbox/werewolf 已迁到 chat_games_*，
             // 以下牌局/棋盘状态仍留在 games_*。此处精确枚举，

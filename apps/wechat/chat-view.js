@@ -10,6 +10,10 @@
 import { ImageCropper } from '../settings/image-cropper.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.16.0 · R4-O4] 尾部窗口:长聊天只渲染最近 N 条,而不重铺整段记录。
+ *   为什么用**尾部**而不是 `windowOf`:后者从头部切(服务瀑布流),
+ *   而聊天用户看的是最近 N 条 —— 两种切片方向相反。 */
+import { tailWindowOf } from '../../config/list-window.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：微信生图是本仓最长的在飞请求之一
  *   （先等英文 TAG 一轮 AI、再等图片 provider、再等上传落盘）。
  *   它写的是 `wechat_messages_*`（按会话隔离的键），旧回信落回来会把图片挂到
@@ -48,6 +52,11 @@ const WECHAT_STICKER_ALAPI_CACHE_KEY = 'phone_wechat_alapi_sticker_cache_v1';
 const WECHAT_STICKER_ALAPI_CACHE_MAX = 240;
 const WECHAT_STICKER_ALAPI_CACHE_TTL = 90 * 24 * 60 * 60 * 1000;
 // 聊天界面视图
+/* [v4.16.0 · R4-O4] 同时渲染的消息上限(满足计划原文验收的「同时渲染不超过 300 条消息」)。
+ *   值取 **200** 而不是 300:`normalizePageSize` 的硬上限就是 200(它防的正是「一次铺太多」),
+ *   写 300 会与**实际发生的事**不符 —— 声明与真码脱节是本仓治过多次的那一类。
+ *   为什么写成模块常量而不是散在调用处:改上限只该改一处(本仓「同一口径只许一份实现」)。 */
+const CHAT_WINDOW_SIZE = 200;
 export class ChatView {
     constructor(wechatApp) {
         this.app = wechatApp;
@@ -2993,6 +3002,29 @@ renderChatRoom(chat) {
             && this._getCurrentMessageSelectionChatId() === currentChatId;
     }
 
+    /**
+     * [v4.16.0 · R4-O4] 当前已加载的尾部窗口大小(缺省等于 CHAT_WINDOW_SIZE)。
+     *   用户往回翻时靠 `showEarlierMessages()` 把它放大, 而**不是**把整段一次铺出去。
+     */
+    windowSize() {
+        const n = numOrNull(this._loadedWindow);
+        return (n !== null && n > 0) ? Math.floor(n) : CHAT_WINDOW_SIZE;
+    }
+    /**
+     * [v4.16.0 · R4-O4] 再往回看一页(把尾部窗口放大 `CHAT_WINDOW_SIZE` 条)。
+     *   拉实际数据的“还有更早的”与“已到开头”分开：后者如实返回 false, 不假装还能再拉。
+     * @returns {{ok:boolean, loaded:number, hasMore:boolean}}
+     */
+    showEarlierMessages() {
+        const chatId = String(this.app.currentChat?.id || '').trim();
+        if (!chatId) return { ok: false, loaded: 0, hasMore: false };
+        const total = (this.app.wechatData.getMessages(chatId) || []).length;
+        const next = Math.min(total, this.windowSize() + CHAT_WINDOW_SIZE);
+        const changed = next > this.windowSize();
+        this._loadedWindow = next;
+        if (changed) this._refreshCurrentChatMessages();
+        return { ok: changed, loaded: next, hasMore: next < total };
+    }
     _refreshCurrentChatMessages(options = {}) {
         const chatId = String(this.app.currentChat?.id || '').trim();
         const messagesDiv = this._getVisibleChatMessagesContainer(chatId);
@@ -3049,7 +3081,14 @@ renderChatRoom(chat) {
         }
 
         // 全量渲染回退路径（结构变更/删除/编辑/首次渲染）
-        messagesDiv.innerHTML = this.renderMessagesWithDateDividers(messages, userInfo);
+        /* [v4.16.0 · R4-O4] **只渲染尾部窗口**:几千条的会话一次铺进 DOM 会把首屏变成一次长任务。
+         *   切片只影响**交给渲染函数的数组** —— 不改数据源、不删历史。
+         *   ★ `currIds` 仍然记**全量** id:增量追加的判据(纯尾部追加)靠它才不会误判。 */
+        const win = tailWindowOf(messages, {
+            loaded: this._loadedWindow, pageSize: CHAT_WINDOW_SIZE
+        });
+        this._lastRenderedWindow = win;
+        messagesDiv.innerHTML = this.renderMessagesWithDateDividers(win.items, userInfo);
         this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
         this._lastRenderedMsgIds[chatId] = currIds;
 

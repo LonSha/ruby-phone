@@ -468,11 +468,19 @@ test('D1 ★★★ 破坏「缺库 → unavailable」⇒ 同一判据必转红(�
 });
 
 test('D2 ★★★ 破坏「删书连正文一起删」⇒ 同一判据必转红(留孤儿)', async () => {
-    const dir = breakCopy(APP, 'try { removeBookBody(this._hostWin(), id).catch(() => null); } catch (_e) { /* 附件删不掉不阻塞书目删除 */ }',
+    /* ★ 锚点重取（本版）：锚点原写「try { removeBookBody(...).catch(...) }」整行，
+     *   而 v4.19.0 起撤销路径里另有一处 `const r = await removeBookBody(...)`
+     *   ⇒ 破坏后副本里仍含 `removeBookBody(`，`src2.includes(...) === false` 不成立，
+     *   负控制变成「因判据前提断言失败而红」而不是「因破坏而红」。
+     *   修法：锚点取**删书路径那一处**的最小唯一文本（含 try 前缀，撤销路径没有它），
+     *   并同步把「副本里这一处已消失」的断言改成只认该调用形态。 */
+    const dir = breakCopy(APP,
+        'try { removeBookBody(this._hostWin(), id).catch(() => null); } catch (_e) { /* 附件删不掉不阻塞书目删除 */ }',
         'void 0;');
     const src2 = fs.readFileSync(path.join(dir, APP), 'utf8');
-    assert.equal(src2.includes('removeBookBody('), false, '破坏副本:App 已不再删附件');
-    assert.ok(appSrc.includes('removeBookBody('), '原版必须删附件');
+    assert.equal(src2.includes('this._hostWin(), id).catch(() => null)'), false,
+        '破坏副本:App 的删书路径已不再删附件');
+    assert.ok(appSrc.includes('this._hostWin(), id).catch(() => null)'), '原版必须删附件');
     /* 行为面:原版删完附件为空(这条在原版必真,是 D2 的正向对照) */
     const win = idbWin();
     await A.putBookBody(win, { bookId: 'dx', contentHash: 'hx', chapters: chapters(1) });

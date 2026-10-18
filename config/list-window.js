@@ -128,6 +128,200 @@ export function patchOf(before, after) {
     return out;
 }
 /** 两侧条目哪些字段真的变了（供上报与诊断；**不改不报**）。 */
+/**
+ * [v4.16.0 · R4-O4] **尾部**窗口切片(聊天与任何「最新在下」的长列表)。
+ *
+ * 为什么必须与 `windowOf` 分开:`windowOf` 从**头部**切
+ *   (`items = notes.slice(0, next)`)—— 它服务瀑布流(先看最新 30 条就晶)。
+ *   而聊天用户看的是**最近 N 条**(B端在下、新消息在底)。
+ *   两种切片方向相反:把聊天硬塞进 `windowOf` 会「先渲染最早的 30 条」,
+ *   那正好是把用户丢在聊天开头。
+ *
+ * 三态分开(与 `windowOf` 同规):
+ *   · `items`  本次该交给渲染的段(尾部 loaded 条);
+ *   · `added`  相对上一次**新出现**的那几条(增量追加用);
+ *   · `hasMore`还有更早的没载入——「没了」与「还没请求」不得同形。
+ *
+ * @param {Array} items 全量顺序数组(时间从早到晚)
+ * @param {{loaded?:number, pageSize?:number, prevCount?:number}} [opts]
+ *   `loaded` 本次打算呈现的尾部条数;缺省取 `pageSize`
+ *   `prevCount` 上一次的**总条数**(用于算 added)
+ */
+export function tailWindowOf(items, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const size = normalizePageSize(o.pageSize, 300);
+    const out = {
+        ok: false, items: [], added: [], start: 0, end: 0,
+        loaded: 0, total: 0, hasMore: false, appended: false, reason: ''
+    };
+    if (!Array.isArray(items)) {
+        out.reason = 'items-not-array(拿不到列表 ⇒ 判不了,不是空列表)';
+        return out;
+    }
+    out.ok = true;
+    out.total = items.length;
+    const ld = numOrNull(o.loaded);
+    const want = (ld === null) ? size : Math.max(size, Math.floor(ld));
+    const take = Math.min(want, items.length);
+    out.loaded = take;
+    out.start = items.length - take;
+    out.end = items.length;
+    out.items = items.slice(out.start);
+    const pc = numOrNull(o.prevCount);
+    if (o.prevCount === undefined || pc === null) {
+        out.added = [];
+        out.appended = false;
+    } else {
+        const prev = Math.max(0, Math.floor(pc));
+        /* 增量只在「新条目是尾部追加」时算:总数减少(删/撤回)不当增量。 */
+        const grew = items.length > prev;
+        out.added = grew ? items.slice(prev) : [];
+        out.appended = grew && out.added.length > 0;
+    }
+    out.hasMore = out.start > 0;
+    out.reason = items.length === 0 ? 'empty-list(列表真的是空的)'
+        : (out.hasMore ? 'has-more' : 'exhausted(已到开头)');
+    return out;
+}
+
+/**
+ * [v4.16.0 · R4-O4] 把新来的尾部消息**追加**到上一屏(而不重铺整段)。
+ *
+ * 为什么要单独一支:「本次该渲染哪些」与「已经画在屏上的是哪些」是**两件事**。
+ *   该数组一旦被当成「重新画一遍」的依据,正在翻旧记录的人就会被拉到底部
+ *   (而他的滚动位置是**他自己的意愿**, 不是应该被顺手抹掉的状态)。
+ *
+ * @param {Array} prev 上一屏已渲染的条目(时间顺序与 next 同)
+ * @param {Array} next 本次全量顺序数组
+ * @returns {{ok:boolean, appended:boolean, appendItems:Array, removed:boolean, reason:string}}
+ *   `removed: true` 表示**不能靠追加完成**(有删/有改/顺序变)—— 调用方必须走重建路径。
+ */
+/**
+ * [v4.18.0 · R4-O6] 段落邻域窗口(中段切片:以锚点为中心 ± 半径)。
+ *
+ * 为什么不能用已有两支:`windowOf` 从头部切、`tailWindowOf` 从尾部切,
+ *   而「读者停在第 N 段」要看的是**它前后各 R 段**。三种切片方向各不相同
+ *   (头 / 尾 / 中),硬塞进任一支都会得出「用户不在他要看的位置」。
+ *
+ * 三态分开:· `items` 本次该渲染的段; · `start`/`end` 它在全章里的区间;
+ *   · `hasBefore`/`hasAfter` 两头是否还有更多——「已到开头」与「还没加载」不得同形。
+ *
+ * @param {Array} paras 全章段落(顺序数组)
+ * @param {{anchor?:number, radius?:number, pageSize?:number}} [opts]
+ *   `anchor` 锚点下标(经 `anchorOf` 归一);
+ *   `radius` 半径(缺省取 pageSize 的一半,上限与既有页长同口径 200)
+ */
+export function paraWindowOf(paras, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const size = normalizePageSize(o.pageSize, 250);
+    const rRaw = numOrNull(o.radius);
+    const radius = (rRaw === null || rRaw <= 0) ? Math.max(1, Math.floor((size - 1) / 2)) : Math.min(200, Math.floor(rRaw));
+    const out = {
+        ok: false, items: [], start: 0, end: 0, anchor: null,
+        loaded: 0, total: 0, hasBefore: false, hasAfter: false, reason: ''
+    };
+    if (!Array.isArray(paras)) {
+        out.reason = 'paras-not-array(拿不到段落 ⇒ 判不了,不是空章)';
+        return out;
+    }
+    out.ok = true;
+    out.total = paras.length;
+    if (paras.length === 0) {
+        out.reason = 'empty-chapter(本章真的没内容)';
+        return out;
+    }
+    const aRaw = numOrNull(o.anchor);
+    /* 锚点缺省⇒首段(与既有「从头开始」同义);**超出范围则夹到合法区间**并如实报 anchor。 */
+    let anchor = (aRaw === null) ? 0 : Math.floor(aRaw);
+    if (anchor < 0) anchor = 0;
+    if (anchor > paras.length - 1) anchor = paras.length - 1;
+    out.anchor = anchor;
+    const start = Math.max(0, anchor - radius);
+    const end = Math.min(paras.length, anchor + radius + 1);
+    out.start = start;
+    out.end = end;
+    out.items = paras.slice(start, end);
+    out.loaded = out.items.length;
+    out.hasBefore = start > 0;
+    out.hasAfter = end < paras.length;
+    out.reason = out.hasBefore || out.hasAfter ? 'has-more(两头还有)' : 'whole-chapter(全章都在窗口内)';
+    return out;
+}
+
+/**
+ * [v4.18.0 · R4-O6] 把任意「段落身份」归一成**下标**。
+ *   · 数字下标优先;· 字符串形带 `para:` 前缀的 id 次之;
+ *   · 读不出如实 `null` —— **不补 0**:0 是合法首段,与「没给锚点」处置相反。
+ */
+export function anchorOf(paras, raw) {
+    const n = numOrNull(raw);
+    if (n !== null) {
+        const i = Math.floor(n);
+        return (i >= 0) ? i : null;
+    }
+    if (typeof raw === 'string') {
+        const m = /^para:(\d+)$/.exec(raw.trim());
+        if (m) {
+            const i = Math.floor(Number(m[1]));
+            return Number.isFinite(i) ? i : null;
+        }
+        /* 带 `data-para` 属性的属性名也认(视图直接传 el.dataset.para 时是纯数字串,已由上面收住)。 */
+    }
+    return null;
+}
+
+/** [v4.18.0 · R4-O6] 段落窗口的一句话读数(与既有 `line` 同规格)。 */
+export function paraLine(w) {
+    try {
+        const x = w || {};
+        if (!x.ok) return '段落窗口 —(' + (x.reason || '判不了') + ')';
+        if (!x.total) return '段落窗口 —(' + (x.reason || '空章') + ')';
+        return '段落 ' + (x.start + 1) + '-' + x.end + '/' + x.total + ' · 锚在第 ' + (x.anchor + 1) + ' 段'
+            + (x.hasBefore ? ' · 前面还有' : ' · 已到开头')
+            + (x.hasAfter ? ' · 后面还有' : ' · 已到末尾');
+    } catch (_e) { return '—(段落窗口读数异常)'; }
+}
+
+export function mergeTailWindow(prev, next) {
+    const a = Array.isArray(prev) ? prev : null;
+    const b = Array.isArray(next) ? next : null;
+    const out = { ok: false, appended: false, appendItems: [], removed: false, reason: '' };
+    if (!a || !b) {
+        out.reason = '两侧不是数组(判不了 ⇒ 按需重建处理)';
+        out.removed = true;
+        return out;
+    }
+    out.ok = true;
+    const keyOf = (x, i) => String((x && x.id !== undefined) ? x.id : ('#' + i));
+    const aIds = a.map(keyOf);
+    const bIds = b.map(keyOf);
+    /* 前缀必须一致:否则不是「追加」而是「改了”(删/改/换会话)。 */
+    const samePrefix = aIds.length <= bIds.length
+        && aIds.every((id, i) => id === bIds[i]);
+    if (!samePrefix) {
+        out.removed = true;
+        out.reason = '前缀不一致(有删或有改 ⇒ 必须重建)';
+        return out;
+    }
+    const extra = b.slice(aIds.length);
+    out.appendItems = extra;
+    out.appended = extra.length > 0;
+    out.reason = out.appended ? 'pure-append(纯尾部追加)' : 'no-change';
+    return out;
+}
+
+/** [v4.16.0 · R4-O4] 尾部窗口的一句话读数(与既有 `line` 同规格)。 */
+export function tailLine(w) {
+    try {
+        const x = w || {};
+        if (!x.ok) return '聊天窗口 —(' + (x.reason || '判不了') + ')';
+        return '聊天窗口 最近 ' + x.loaded + '/' + x.total + ' 条'
+            + (x.appended ? ' · 新增 ' + x.added.length : '')
+            + (x.hasMore ? ' · 还有更早的' : ' · 已到开头');
+    } catch (_e) { return '—(窗口读数异常)'; }
+}
+
+/** 两侧条目哪些字段真的变了(供上报与诊断;**不改不报**)。 */
 export function diffFields(before, after) {
     const a = (before && typeof before === 'object') ? before : {};
     const b = (after && typeof after === 'object') ? after : {};
@@ -168,4 +362,8 @@ export function line(w) {
             + (x.hasMore ? ' · 还有' : ' · 已到末尾');
     } catch (_e) { return '—（列表窗口异常）'; }
 }
-export default { normalizePageSize, windowOf, patchOf, diffFields, keepState, line };
+export default {
+    normalizePageSize, windowOf, patchOf, diffFields, keepState, line,
+    tailWindowOf, mergeTailWindow, tailLine,
+    paraWindowOf, anchorOf, paraLine
+};

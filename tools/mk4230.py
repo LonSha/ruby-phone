@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""mk4230.py — 生成 v4.23.0 的迭代段 tools/iter182_seg.md 与抬版脚本 tools/bump_v4230.py。
+抬版脚本由本文件从 tools/bump_v4220.py 派生（仓内唯一抬版口径，不另立第二份）。
+段文件自查与 bump 脚本的 parse_items **同口径**：收集 strip 后以「- 」起头的整行、再去前缀。
+"""
+import io
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NL = chr(10)
+SEG = '''## 迭代 182 — v4.23.0 · 第四期 R4-X2 设定资料导入向导
+# 占位：下列条目由 tools/bump_v4230.py 写入 ITERATION_LOG.md 与本版 update-log 条目
+- 【本版做的是第四期拓展项第二件:R4-X2 设定资料导入向导】计划原文要的是「完整长文含尾章事实、同名角色、混合规则与前史;逐段可改类、可取消;确认后能查询且重启保留;拒绝项不入库、重复提交不重复导入」,并明写不做:不抓取网络小说、不默认上传整本书、不新增事实数据库。
+- 【落点原文点名的那半句】「手机负责文件/选区/预览,最终写入在记忆插件原生确认页完成,现有跨仓桥仍只读;没有经评审的交接能力时不得私开写桥」。故本版**不新开跨仓写桥**:落笔走的是上游已有的 loreImportApply 一口,手机侧一个字节都不自己写。
+- 【修前实测的缺口(读码可复算,不是推演)】上游 v3.327.0 起了分层导入面、v3.339.0 把它闭合到真写入,十二个 loreImport 出口齐全;而本仓实测在 apps 与 config 两处 grep 该族名**零命中** —— 同族「建好不消费」的第十五例。当时手机侧只有「导入为书读」一条路:那份资料进了书架,于是「世界观规则」与「前史事件」在读数上同形,而作者真正要的正是哪几段是约束、哪几段是已经发生过的过去。
+- 【新契约件 · config/lore-import-contract.js(纯函数,零 DOM 零存储零联网零时钟)】六态面状态(插件不在场 / 本版没这一面 / 本机读不出 / 读得出但不能落 / 空了 / 好)、三派发相(预览加落笔 / 只能看不能落 / 连预览都没有)、六阶段旅程(解析 实体 预览 计划 落笔 账)、五态判定词翻译、三条上限(逐段八十行 / 摘录八十字符 / 候选六个),以及十四项自检。
+- 【为什么出口名只许在一处】首版 App 自己写 typeof 判上游出口来算派发相 —— 于是同一个出口名出现在两处。后果不是报错:上游改名或加别名时,契约件那份跟着改、App 那份悄悄落空,派发相静默退化成「只能看不能落」,而落笔口其实就在那儿。本版新增 loreOutletProbe 把这唯一出现点收回契约件,接口只交两格真假。
+- 【缺件优先于流程前置】插件不在场时用户点确认导入,读数若落成「还没过预览」,他收到的处置是去跑一遍预览 —— 而真实处置是去装插件;两者处置相反,且后者听起来像自己少做了一步。本版把缺件判定写在任何流程前置条件之前,并把这条钉进自检与负控制。
+- 【本版自己抓到的第一处缺陷:窗口读被读成截断】上游两种回执都带 completeness.partial,但只有 source.truncated 为真才是真截断。首版把 partial 一并算作截断,于是「还有下一段」被读成「资料被截断」——用户按提示去点选范围时那一窗其实已经读进来了,他被赶去重复一个刚做过的动作。不报错,只把成功说成失败。本版把两处口径收成一处,并写成定向判据。
+- 【本版自己抓到的第二处缺陷:四处弱口径取数】首版式样把「没给」与「给了 0」读成同一个数,而两者处置相反(续读游标 vs 真的要读第零段起)。被 weakened 取数门实测抓到,本版改走全仓唯一实现 config/num-gate.js,不就地再写一份。
+- 【本版自己抓到的第三处缺陷:首点未播种默认选择】首版第一次点选就直接置「用户点过了」并把这一格写进空的选中集,于是用户取消任意一行时,其余没点过的段被静默当成未选:界面上所有复选框一起空掉,而用户只动了其中一行。
+- 【本版自己抓到的第四处缺陷:待认数取错格子】这一格原先取的是「一段都没命中」的段数,不是待认条数。资料里段段都提到角色时它恒为零,界面写着待认零段而下面明明摆着待认条目;用户以为没有要认的东西,直接往里落 —— 未认下不许合并这条口径就断在这一格读数上。本版改成与待认清单同源,数与清单分开算迟早会分叉。
+- 【本版自己抓到的第五处缺陷:候选摆的是被命中的名字,不是主人】同名多主时,候选该摆的是甲·A宇宙与甲·B宇宙这样的主人;首版摆的是被命中的那个名字。用户点「认作 甲」并不构成裁决(认完仍是甲,界面看着像认过了),而这正是同名未认不合并要防的那一步。本版从命中的主人表去重保序取候选,并保留被命中名字单列一格。
+- 【本版自己抓到的第六处缺陷:认下之后清单不移出】清单读的是实体面候选,而认了谁落在映射面;两份分开算,用户点完认作之后清单原样还在,于是他再认一遍、再认一遍。本版在遍历待认时按映射面给出的已认下键剔除,只做剔除、不重算谁要认。
+- 【App 侧接线】二十一具名 import 与全套取数编排:面读数与派发相走契约件、异步读文件(多编码解码复用阅读 App 那一份唯一实现)、选范围逐段读与游标续读、逐段改类与改类被拒时如实带出理由、同名认人只写映射不改事实、出计划只算不写、确认导入走上游唯一一口、导入账只读。换会话时整块丢掉本会话现场(与追问轨迹同规),但不动上游任何账。
+- 【视图只排版,取数全在控制器】「资料导入(设定与前史分层)」分区:六阶段行缺哪一段就少一行、逐段行带改类下拉与选入勾与判定词、受限段在选之前就说明「上游会跳过并具名」、同名待认给主人候选按钮、落笔按钮只在真有落笔口时给出(只有预览口时如实说只能看不能落)。三处点选走容器级委托并当场核实在容器内(绑在行上的监听在整块重绘后会失联)。导入面**独立于问答面**渲染并排在问答面提前返回之前:插件不在场恰恰是导入面最该站出来说话的时刻,不连坐、不静默留白。
+- 【不自己立第二份口径】类目表来自上游自述(上游没给标签就如实显示原始类名,不自己编中文);已登记实体名单与已确认事实一律由调用方给,本层不装配;多编码解码复用阅读 App 的实现,不另立第二张候选表;样式两侧投递的类集合以集合比对钉住。
+- 【交棒改写】本版把 R4-X2 的验收从「能读进来一份资料」交棒到「读进来的每一段各有归属、且用户认过的人真的算数」:判据写成真跑形(真 App 加假插件走完整旅程)与下限形(六态互不同形、三派发相互不同形、破坏真源码后同款判据必转红),下一版抬版无需二次改写。
+- 【运行时验证边界(如实声明)】本版在无头环境验证的是:六态归一与分形、三派发组合、窗口续读与游标、逐段改类与拒收具名、同名待认与认人后移出、真 App 走完读与逐段与预览与计划与落笔与账、重复提交不重复导入、换会话作废现场、十二项负控制(每条配原版必真的反向对照)。本版不能保证的是:真机浏览器上选本地文件的那一步(无头环境没有文件选择器),以及真实上游插件在真数据上的落笔回读 —— 后者需要真模型与真数据在场,未实测故不标效果已验。
+- 【定向判据与版本锚】新套件 tests/system-v4230.test.mjs 三十二例全绿(口径四、内核行为七、接线七、负控制十三含正向对照、版本锚一);抬版按仓内唯一范式 tools/bump_v4230.py 对齐 tools/bump_v4220.py。
+- 【版本升至 4.23.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;本段共 19 条。
+'''
+DOC = '''#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""bump_v4230.py — 抬 v4.23.0(五源同源,单版)。
+范式沿用 tools/bump_v4220.py(同仓唯一抬版口径,不另立第二份)。
+本版 v4.23.0 做的是第四期拓展项第二件:R4-X2 设定资料导入向导 ——
+新增纯契约 config/lore-import-contract.js(六态面状态 / 三派发相 / 六阶段旅程 /
+五态判定词翻译 / 十四项自检),
+apps/memory/memory-app.js 增导入向导全套取数与编排并修「出口名两处」「首点未播种」
+「待认数取错」「候选列错」「认下不移出」「缺件未优先」六处缺陷,
+apps/memory/memory-view.js 增「资料导入(设定与前史分层)」分区与三处容器级委托点选。
+新增判据 tests/system-v4230.test.mjs 三十二例,新增 tools/iter182_seg.md(本版迭代段)。
+"""'''
+
+def wr(rel, s):
+    with io.open(os.path.join(ROOT, rel), 'w', encoding='utf-8') as f:
+        f.write(s)
+def rd(rel):
+    with io.open(os.path.join(ROOT, rel), encoding='utf-8') as f:
+        return f.read()
+
+def main():
+    assert chr(92) not in SEG, 'seg must not contain backslash'
+    assert '[' not in SEG and ']' not in SEG, 'seg must not contain brackets'
+    items = [l.strip()[2:].strip() for l in SEG.split(NL) if l.strip().startswith('- ')]
+    assert len(items) >= 8, len(items)
+    for it in items:
+        assert it.startswith(chr(0x3010)), it[:24]
+        assert chr(0x3011) in it, it[:24]
+        assert chr(34) not in it, it[:24]
+        assert chr(92) not in it, it[:24]
+        assert '[' not in it and ']' not in it, it[:24]
+    assert any(it.startswith('【版本升至') for it in items), 'missing closing item'
+    assert any(it.startswith('【本版做的是') for it in items), 'missing subject item'
+    assert any('运行时验证边界' in it for it in items), 'missing runtime-boundary item'
+    assert any('本版自己抓到' in it for it in items), 'missing flaw-form item'
+    assert any('交棒改写' in it for it in items), 'missing handoff item'
+    wr('tools/iter182_seg.md', SEG)
+    src = rd('tools/bump_v4220.py')
+    old_doc_end = src.index('"""', src.index('"""') + 3) + 3
+    body = src[old_doc_end:]
+    old_steps = "    ('4.22.0', '2026-11-05', '4.21.0', 'tools/iter181_seg.md', 181),"
+    new_steps = "    ('4.23.0', '2026-11-06', '4.22.0', 'tools/iter182_seg.md', 182),"
+    assert body.count(old_steps) == 1, body.count(old_steps)
+    body = body.replace(old_steps, new_steps, 1)
+    wr('tools/bump_v4230.py', DOC + body)
+    print('seg items %d | bump written' % len(items))
+    return 0
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -48,6 +48,7 @@ export class CharsView {
             this._reasonCard(face),
             this._sourceCard(src),
             this._rolesCard(face, proj),
+            this._perspectiveCard(),
             this._settingsCard(),
             '  </div>',
             '</div>'
@@ -121,6 +122,66 @@ export class CharsView {
             '</div>'
         ].join('\n');
     }
+    /* ══════════ [v4.26.0 · R4-X5] 角色信息差与证词对照 ══════════
+     * 【这一面存在的理由（修前实测）】上游视角卡面(v3.323.0)与证词面(v3.343.0)早已交付，
+     *   而手机侧此前**零消费**（chars/ 下 grep 'perspective' 零命中）：写群像 / 悬疑时
+     *   作者看不到「甲亲历、乙听说、丙误信」的**并排**对照，也看不出「同一事件的多种说法」
+     *   为何暂不能下结论（未裁决三档被压成一个布尔）。
+     * 【本面只摆读数，不做判定】文案全走 App 内核转发（视图不自拼归因、不自己数计数）。
+     * 【作者 / 角色模式与身份视图都是**显式选择**】默认作者 + 未揭穿；切换只改呈现、不改账。 */
+    _perspectiveCard() {
+        /* 选项清单**从内核取**（不在这里再写一份 'author'/'character'/'surface' 字面量）：
+         *   视图只负责把内核给的 id 配上人读标签 —— 判定与取值清单全在内核。 */
+        const MODE_LABEL = { author: '作者（全知）', character: '角色（可知面）' };
+        const FACE_LABEL = { surface: '未揭穿', revealed: '已揭穿', all: '全呈' };
+        let modeIds = Object.keys(MODE_LABEL);
+        let faceIds = Object.keys(FACE_LABEL);
+        let curMode = { ok: true, mode: '', text: '' };
+        let face = '';
+        let cur = '';
+        /* 版式兜底：**不写任何版式字面量** —— 版式判定只许内核一份实现（layoutOf）；
+         *   视图读不到时只给空文案，由内核按「宽度读不出 ⇒ 窄屏」保守处置。 */
+        let layout = { layout: '', text: '' };
+        try {
+            modeIds = this.app.perspectiveModeIds();
+            faceIds = this.app.perspectiveFaceIds();
+            curMode = this.app.perspectiveMode();
+            face = this.app.perspectiveFace();
+            cur = this.app.perspectiveCurrent();
+            layout = this.app.perspectiveLayout(this._width());
+        } catch (_e) { /* 读数失败：按上面兜底的空清单呈现（不抛、不猜） */ }
+        const modeBtn = (id, label, active) =>
+            '<button class="cs-seg ' + (active ? 'on' : '') + '" data-px-mode="' + id + '">' + this._esc(label) + '</button>';
+        const faceBtn = (id, label, active) =>
+            '<button class="cs-seg ' + (active ? 'on' : '') + '" data-px-face="' + id + '">' + this._esc(label) + '</button>';
+        /* 模式非法：如实报错、**不猜一个默认**（那是把「用户选错了」显示成「用户选了作者」）。 */
+        const invalid = curMode.ok ? '' :
+            '<div class="cs-px-note cs-px-warn">' + this._esc(curMode.text || '模式取值非法') + '</div>';
+        return [
+            '<div class="cs-card cs-px">',
+            '  <div class="cs-card-title">信息差与证词对照<span class="cs-count">' + this._esc(layout.text || '') + '</span></div>',
+            invalid,
+            '  <div class="cs-px-row"><span class="cs-label">视角模式</span>',
+            '    <span class="cs-seg-group">' + modeIds.map((id) => modeBtn(id, MODE_LABEL[id] || id, curMode.mode === id)).join('') + '</span></div>',
+            '  <div class="cs-px-row"><span class="cs-label">身份视图</span>',
+            '    <span class="cs-seg-group">' + faceIds.map((id) => faceBtn(id, FACE_LABEL[id] || id, face === id)).join('') + '</span></div>',
+            '  <div class="cs-px-row"><span class="cs-label">当前角色（角色模式的主体）</span>',
+            '    <input class="cs-input" id="cs-px-cur" maxlength="40" value="' + this._esc(cur) + '" placeholder="未选（角色模式下必填）"></div>',
+            '  <div class="cs-px-hint">' + this._esc('角色模式只写当前角色**可知**的内容：对方独有的事实一条都不进生成上下文（切换模式不改变任何账）。') + '</div>',
+            '</div>'
+        ].join('\n');
+    }
+    /** 可用宽度（读不出返回 null ⇒ 内核按**窄屏**保守处置，不按 0 猜）。 */
+    _width() {
+        try {
+            const el = this.container;
+            const w = el && typeof el.clientWidth === 'number' ? el.clientWidth : NaN;
+            if (Number.isFinite(w) && w > 0) return w;
+            const win = (typeof window !== 'undefined') ? window : null;
+            const iw = win && win.innerWidth;
+            return (Number.isFinite(iw) && iw > 0) ? iw : null;
+        } catch (_e) { return null; }
+    }
     /** 字段值可读化（与内核 fmtFieldVal 同口径，视图独立不引内核私有函数） */
     _fmtVal(v) {
         if (v === null || v === undefined) return '未记';
@@ -158,6 +219,26 @@ export class CharsView {
         q('#cs-maxInject')?.addEventListener('change', (e) => {
             const v = Math.max(1, Math.min(15, Number(e?.target?.value) || 5));
             try { this.app.saveSettings({ maxInject: v }); } catch (_e) {}
+            this._draw();
+        });
+        /* [v4.26.0 · R4-X5] 视角模式 / 身份视图 / 当前角色（**显式选择**；切换只改呈现）。 */
+        /* ★ 循环变量**不得**叫 el：与外层 `const el` 同名会让整个循环头落在 TDZ 里
+         *   （首版就是这么写的，`Cannot access 'el' before initialization` ⇒
+         *    三处绑定永远不生效：点了没反应、也不报错到界面上）。 */
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-px-mode]') : [])) {
+            btn.addEventListener('click', () => {
+                try { this.app.setPerspectiveMode(btn.getAttribute('data-px-mode')); } catch (_e) {}
+                this._draw();
+            });
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-px-face]') : [])) {
+            btn.addEventListener('click', () => {
+                try { this.app.setPerspectiveFace(btn.getAttribute('data-px-face')); } catch (_e) {}
+                this._draw();
+            });
+        }
+        q('#cs-px-cur')?.addEventListener('change', (e) => {
+            try { this.app.setPerspectiveCurrent(e?.target?.value); } catch (_e) {}
             this._draw();
         });
     }

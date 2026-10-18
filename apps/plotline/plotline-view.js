@@ -62,6 +62,7 @@ export class PlotlineView {
             this._parallelCard(face, (pkg && pkg.parallels) || []),
             this._secretCard(face, (pkg && pkg.secrets) || []),
             this._echoCard(face, (pkg && pkg.recallEchoes) || [], (pkg && pkg.echoLives) || []),
+            this._boardCard(),
             this._settingsCard(),
             '  </div>',
             '</div>'
@@ -296,6 +297,153 @@ export class PlotlineView {
             '</div>'
         ].join('\n');
     }
+    /**
+     * [v4.27.0 · R4-X6] 因果线索与未完事项板。
+     *
+     * 【这一面治的欠债】上游因果面（v3.323.0）早已交付，而手机侧零消费 ⇒
+     *   「未结约定 / 已解决伏笔 / 仅推测因果」在界面上**同形**（都是「一条记录」），
+     *   而三者处置相反：第一条要去做、第二条不必再提、第三条**不能当事实**。
+     *   本卡把三者的**区分**做成可见的（四收口逐格 + 推测边单列 + 单列文案）。
+     *
+     * 【三条不做】不排序不评分（不写「重要度」）；不把推测边并入已确认边；
+     *   不替用户标已解决（这里**一个写口都没有**，只有读与「去哪个 App」的声明）。
+     */
+    _boardCard() {
+        let pkg = null;
+        try { pkg = this.app.boardPack(); } catch (_e) { pkg = null; }
+        const b = (pkg && pkg.board) || null;
+        const lines = (pkg && pkg.lines) || {};
+        /* 归因优先：读不到就先说读不到（五态分开），不与「没有线索」同形。 */
+        /* ★ 归因**只由内核判**（走 App 出口）：本卡不写第二份状态判定词。
+         *   自己写的话，内核改名那天这些比较会静默落空 ⇒ 走进 else ⇒
+         *   「插件没装」被显示成「没有线索」，而两个处置正好相反。 */
+        const gate = (() => {
+            try { return this.app.boardGate(b); }
+            catch (_e) { return { readable: false, hint: '因果板不可读' }; }
+        })();
+        let body;
+        if (!gate.readable) {
+            body = '<div class="pn-empty">' + this._esc(gate.hint) + '</div>';
+        } else {
+            const closure = b.closure || {};
+            /* 四收口 id 与顺序**从 App 出口读**（视图不写第二份顺序表）。 */
+            const ids = (() => {
+                try { return this.app.boardClosureIds(); } catch (_e) { return []; }
+            })();
+            const closureHtml = ids.map((key) => {
+                const list = (closure[key] || []).map((id) => this._nodeLine(b, id));
+                return [
+                    '<div class="pn-cb-group">',
+                    '  <div class="pn-cb-group-title">' + this._esc(this.app.boardClosureLabel(key))
+                    + '<span class="pn-count">' + list.length + '</span></div>',
+                    '  ' + (list.length ? list.join('\n') : '<div class="pn-empty">没有</div>'),
+                    '</div>'
+                ].join('\n');
+            }).join('\n');
+            const confirmed = (b.edges || []).map((e) => this._edgeLine(e, false));
+            const spec = (b.speculative || []).map((e) => this._edgeLine(e, true));
+            const todos = ((pkg && pkg.todos && pkg.todos.todos) || []).map((t) => this._nodeLine(b, t.id, t));
+            const trace = (pkg && pkg.trace) || null;
+            body = [
+                '<div class="pn-cb-line">' + this._esc(lines.board || '') + '</div>',
+                '<div class="pn-cb-line">' + this._esc(lines.todos || '') + '</div>',
+                closureHtml,
+                '<div class="pn-cb-group">',
+                '  <div class="pn-cb-group-title">已确认边<span class="pn-count">' + confirmed.length + '</span></div>',
+                '  ' + (confirmed.length ? confirmed.join('\n') : '<div class="pn-empty">没有</div>'),
+                '</div>',
+                /* ★ 推测边**永远单列**，并逐条带上「不当事实」的标记：它是本卡最重要的一格。 */
+                '<div class="pn-cb-group pn-cb-spec">',
+                '  <div class="pn-cb-group-title">仅推测（不当事实）<span class="pn-count">' + spec.length + '</span></div>',
+                '  ' + (spec.length ? spec.join('\n') : '<div class="pn-empty">没有</div>'),
+                '</div>',
+                '<div class="pn-cb-group">',
+                '  <div class="pn-cb-group-title">未结待办<span class="pn-count">' + todos.length + '</span></div>',
+                '  ' + (todos.length ? todos.join('\n') : '<div class="pn-empty">没有</div>'),
+                '</div>',
+                '<div class="pn-cb-trace">' + this._esc(lines.trace || '') + '</div>',
+                this._tracePathHtml(trace)
+            ].join('\n');
+        }
+        return [
+            '<div class="pn-card">',
+            '  <div class="pn-card-title">线索与未完事项<span class="pn-count">'
+            + (gate.readable && b.counts && b.counts.nodes ? b.counts.nodes + ' 个节点' : '—') + '</span></div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+    /** 一条节点：类别 / 标签 / 收口 / 三个动作（追这条线 · 回源 · 去行动） */
+    _nodeLine(b, id, alt) {
+        const node = this._nodeOf(b, id) || alt || null;
+        if (!node) return '';
+        const kind = node.kind || '';
+        const act = kind ? this.app.boardActionFor(kind) : null;
+        const closure = node.closure || this._closureOf(b, id);
+        return [
+            '<div class="pn-cb-node">',
+            '  <div class="pn-cb-node-main">'
+            + (kind ? '<span class="pn-cb-kind">' + this._esc(this.app.boardKindLabel(kind)) + '</span>' : '')
+            + '<span class="pn-cb-text">' + this._esc(node.label || node.id || '') + '</span>'
+            + (closure ? '<span class="pn-cb-closure">' + this._esc(this.app.boardClosureLabel(closure)) + '</span>' : '')
+            + '</div>',
+            (node.floor != null ? '  <div class="pn-item-meta">第' + this._esc(node.floor) + '楼</div>' : ''),
+            '  <div class="pn-cb-acts">',
+            '    <button class="pn-cb-btn" data-pb-focus="' + this._esc(node.id) + '">追这条线</button>',
+            (node.ref
+                ? '    <button class="pn-cb-btn" data-pb-src="' + this._esc(node.ref) + '" data-pb-node="' + this._esc(node.id) + '">回源</button>'
+                : '    <button class="pn-cb-btn" disabled title="这条没有回源凭证">无回源凭证</button>'),
+            (act ? '    <button class="pn-cb-btn" data-pb-act="' + this._esc(kind) + '" data-pb-ref="' + this._esc(node.ref || '') + '">' + this._esc(act.label) + '</button>' : ''),
+            '  </div>',
+            '</div>'
+        ].join('\n');
+    }
+    /** 一条边（`speculative=true` 时逐条标「不当事实」） */
+    _edgeLine(e, speculative) {
+        return [
+            '<div class="pn-cb-edge' + (speculative ? ' pn-cb-edge-spec' : '') + '">',
+            '  <span class="pn-cb-edge-from">' + this._esc(e.from) + '</span>',
+            '  <span class="pn-cb-edge-arrow">→</span>',
+            '  <span class="pn-cb-edge-to">' + this._esc(e.to) + '</span>',
+            (speculative ? '<span class="pn-cb-warn">仅推测 · 不当事实</span>' : ''),
+            (e.label ? '<span class="pn-cb-edge-label">' + this._esc(e.label) + '</span>' : ''),
+            '</div>'
+        ].join('\n');
+    }
+    /** 追溯链（「追这条线」的读数；没选起点时如实显示归因，不画一条假链） */
+    _tracePathHtml(trace) {
+        if (!trace) return '';
+        /* ★ 「起点不在图里」这句说明**由内核给**（视图不写第二份判定词）。
+         *   读不出时给空串，由内核的 ok 位决定要不要继续画链。 */
+        const note = (() => {
+            try { return this.app.boardTraceNote(trace); }
+            catch (_e) { return ''; }
+        })();
+        if (note) return '<div class="pn-cb-trace-note">' + this._esc(note) + '</div>';
+        if (!trace.ok) return '';
+        const path = (trace.path || []).map((x) => this._esc(x)).join(' ← ');
+        return [
+            '<div class="pn-cb-trace-path">' + (path || '（空链）') + '</div>',
+            ((trace.roots || []).length ? '<div class="pn-cb-trace-note">源头：' + this._esc((trace.roots || []).join('、')) + '</div>' : ''),
+            (trace.cycles ? '<div class="pn-cb-trace-note">回环 ' + trace.cycles + ' 处（已截断，不无限展开）</div>' : '')
+        ].join('\n');
+    }
+    _nodeOf(b, id) {
+        const list = (b && b.nodes) || [];
+        for (const n of list) if (n && n.id === id) return n;
+        return null;
+    }
+    _closureOf(b, id) {
+        const c = (b && b.closure) || {};
+        /* 遍历顺序同样从 App 出口读（不写第二份收口序）。 */
+        const keys = (() => {
+            try { return this.app.boardClosureIds(); } catch (_e) { return []; }
+        })();
+        for (const k of keys) {
+            if ((c[k] || []).indexOf(id) >= 0) return k;
+        }
+        return '';
+    }
     _settingsCard() {
         let s = {};
         try { s = this.app.getSettings(); } catch (_e) { s = {}; }
@@ -327,5 +475,44 @@ export class PlotlineView {
             try { this.app.saveSettings({ maxInject: v }); } catch (_e) {}
             this._draw();
         });
+        /* [v4.27.0 · R4-X6] 因果板的三个动作：追这条线 / 回源 / 去行动。
+         *   起点是**用户显式点选**（不默认挑一条）；回源把上游给的凭证**原样**派发；
+         *   行动走 App 的 boardActionFor（App 名只有内核那一份，这里不写第二份）。
+         *   ★ 循环变量刻意叫 btn 而不是 el —— 外层 const el 是容器，
+         *     同名遮蔽会让整段循环头落进 TDZ（本仓 v4.26.0 真踩过：绑定永不生效且不报错）。 */
+        const all = (sel) => {
+            try { return (el && el.querySelectorAll) ? Array.from(el.querySelectorAll(sel)) : []; }
+            catch (_e) { return []; }
+        };
+        for (const btn of all('[data-pb-focus]')) {
+            btn.addEventListener('click', () => {
+                try { this.app.setBoardFocus(btn.getAttribute('data-pb-focus') || ''); } catch (_e) { /* 忽略 */ }
+                this._draw();
+            });
+        }
+        for (const btn of all('[data-pb-src]')) {
+            btn.addEventListener('click', () => {
+                const ref = btn.getAttribute('data-pb-src') || '';
+                const id = btn.getAttribute('data-pb-node') || '';
+                if (!ref) { win.toastr?.warn('这条没有回源凭证', '剧情线'); return; }
+                try { win.dispatchEvent(new win.CustomEvent('phone:causalSource', { detail: { ref, id } })); }
+                catch (_e) { win.toastr?.info('回源凭证：' + ref, '剧情线'); }
+            });
+        }
+        for (const btn of all('[data-pb-act]')) {
+            btn.addEventListener('click', () => {
+                const act = (() => {
+                    try { return this.app.boardActionFor(btn.getAttribute('data-pb-act') || ''); }
+                    catch (_e) { return null; }
+                })();
+                /* 未知类别**不猜去处**：如实说这条线没有可去的 App（不硬投到某个页面）。 */
+                if (!act) { win.toastr?.warn('这条线没有可去的页面', '剧情线'); return; }
+                try {
+                    win.dispatchEvent(new win.CustomEvent('phone:openApp', {
+                        detail: { appId: act.app, ref: { kind: 'causal', ref: btn.getAttribute('data-pb-ref') || '' } }
+                    }));
+                } catch (_e) { win.toastr?.error('打开 ' + act.app + ' 失败', '剧情线'); }
+            });
+        }
     }
 }
