@@ -772,7 +772,7 @@ test('G6 要求文本可选中复制（源把结果塞进 toast，一转身就�
 });
 test('G7 四个页签都在、且与 App 的四个真键同名', () => {
     const code = stripComments(read(AR_VIEW));
-    for (const t of ['pack', 'face', 'reset', 'ledger']) {
+    for (const t of ['pack', 'face', 'reset', 'ledger', 'canon']) {
         assert.ok(code.indexOf(Q + t + Q) >= 0, '页签 ' + t + ' 不在');
     }
 });
@@ -898,7 +898,7 @@ const DAMAGE = {
         '    clearLedger() {' + NL + "        this._packRaw = ''; this._persistPack(); this.probe();" + NL + '        const had = this._ledger.length;'],
     /* ㉒ App：页签自由字符串（源用自由字符串，错一个就画空白页）。 */
     q22: [AR_APP,
-        "        const ok = ['pack', 'face', 'reset', 'ledger'];" + NL + "        this._tab = ok.indexOf(k) >= 0 ? k : 'pack';",
+        "        const ok = ['pack', 'face', 'reset', 'ledger', 'canon'];" + NL + "        this._tab = ok.indexOf(k) >= 0 ? k : 'pack';",
         "        this._tab = k;"],
     /* ㉓ App：草稿不落盘（源把草稿与进度挤一个对象，写一次带上）。 */
     q23: [AR_APP,
@@ -916,7 +916,9 @@ const DAMAGE = {
     /* ✈ [v3.88.0 · R-X4] 本条的锂点随当版前移：换会话时选中项与项目清单也要归零（否则会把上一个对话的选中项带过来）。 */
     q25: [AR_APP,
         '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL
-        + '        this._sel = null;' + NL + '        this._proj = null;' + NL
+        + '        this._sel = null;' + NL
+        + '        try { this.canon.resetScene(); } catch (_e) { }' + NL
+        + '        this._proj = null;' + NL
         + "        this._focus = '';" + NL + "        this._input = '';" + NL + '        this._now = 0;' + NL + '        this.probe();',
         '    onChatChanged() {' + NL + "        this._tab = 'pack';" + NL
         + "        this._focus = '';" + NL + "        this._input = '';" + NL + '        this._now = 0;'],
@@ -966,9 +968,13 @@ function stageTree() {
     /* [v3.88.0 · R-X4] 存档台新引了跳项目续玩的唯一归一（真源 + 它的数值门），副本树要同步。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'resume-workbench.js'), path.join(dir, 'config', 'resume-workbench.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    /* [v4.28.0 · R4-X4] 存档台第五页签的取数件引了纯契约件（后者引 num-gate）。
+     *   ★ 副本树必须跟着长：少拷一件，appmod 类负控制全部报 MODULE_NOT_FOUND，
+     *     判据根本没跑到 —— 破坏有没有发生已经不重要了（典型假红）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'branch-canon-contract.js'), path.join(dir, 'config', 'branch-canon-contract.js'));
     const ad = path.join(dir, 'apps', 'archive');
     fs.mkdirSync(ad, { recursive: true });
-    for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js']) {
+    for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js', 'archive-canon.js']) {
         fs.copyFileSync(path.join(ROOT, 'apps', 'archive', f), path.join(ad, f));
     }
     return dir;

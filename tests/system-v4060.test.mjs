@@ -203,7 +203,14 @@ test('B4 *** 真仓裸跑:绿,且面数与问题数如实报出(本版不新增�
     assert.equal(r.status, 0, '真仓必须绿:' + r.err.slice(0, 300));
     assert.ok(r.out.includes('问题 0'), '★ 问题数必须如实为 0:' + r.out.split('\n')[0]);
     assert.ok(r.out.includes('面' + '（' + '消费侧' + '）'), '★ 必须报出消费侧面数:' + r.out.split('\n')[0]);
-    assert.ok(r.out.includes('12 面' + '（' + '消费侧' + '）'), '★ 上游现在 12 面,本版既不添消费点也不减面:' + r.out.split('\n')[0]);
+    /* 【v4.28.0 交棒】原文把面数写死成 `12 面` —— 那是**锁当版读数**：
+     *   R4-X5 补 testimonyBoard 行（12→13）、R4-X4 补 branchCanon 行（13→14）之后，
+     *   翻红读数只剩「数字不是 12」，而这条要守的是「门如实报出真面数」。
+     *   改判真不变量：报出的数字必须等于冻读取里真有的面数（两处一致，
+     *   而不是等于某个历史数字）—— 与 v3190 C2 治掉 `登记 1[0-9] 项` 同一修法。 */
+    const faceN = Object.keys(JSON.parse(read(CACHE_REL)).faces).length;
+    assert.ok(r.out.includes(faceN + ' 面' + '（' + '消费侧' + '）'),
+        '★ 门必须如实报出冻读取真面数（' + faceN + '）:' + r.out.split('\n')[0]);
     assert.ok(r.out.includes('1 面' + '（' + '本仓产出侧 · R12' + '）'), '★ 反向面读数也要如实:' + r.out.split('\n')[0]);
 });
 test('B5 *** 真仓未被破坏的副本树必须绿(后续每条负控制的前提)', () => {
@@ -253,9 +260,21 @@ test('D2 *** 台账是真仓真读数:零消费面的理由非空、可追责(�
      *   按「cache 里所有 none@0」取数就会把**已消费**的面也拿来要理由(判据自伤)。
      *   台账的语义是「本仓认为还没用它的那些面」,故以**台账条目**为准。 */
     const entries = Object.keys(t).filter((k) => !k.startsWith('_'));
-    const nones = Object.entries(cache.faces).filter((kw) => kw[1].consumer === 'none@0').map((kw) => kw[0])
-        .filter((f) => entries.includes(f));
-    assert.ok(nones.length >= 1, '真仓此刻应有零消费面(否则本版治的是个不存在的情形)');
+    /* 【v4.28.0 交棒】原文在此断言 `nones.length >= 1`（「真仓此刻应有零消费面」）——
+     *   那是**拿别人的提交进度当前提**：R4-X6（v4.27.0）把 causalChain 接进登记行后
+     *   台账归零，断言当场塌。与 v3.20.5 在 v3204 A4 上治掉的是同一形态
+     *   （判据守的不再是纪律，而是「本仓的跨仓消费进度停在某一版」）。
+     *   台账的实质是两件事：① 剩的每条理由必须非空、可追责；
+     *   ② 已接进登记行的面不许还留着（见下方那条）。而「零消费面这一情形
+     *   真的被处理」由 B1/B2/B3 的 ghostFace 夹具证明 —— 那条路与上游提不提交无关。
+     *   （`cache` 仍要读：台账与冻读取是**两份**来源，台账条目不必是
+     *    cache 里 none@0 的子集，这一点必须在这里点明。） */
+    assert.ok(Object.prototype.hasOwnProperty.call(cache, 'faces'),
+        '冻读取必须真在场（否则「台账与冻读取是两份来源」无从谈起）');
+    for (const face of entries) {
+        assert.ok(String(t[face]).trim().length > 0,
+            '★ 台账里 `' + face + '` 的理由为空（沉默不许存在）');
+    }
     /* 【v4.07.0 交棒】本套件成立于「零消费面首发」那一版(三面 none@0)。
      *   此后 R3-X5 把 relationHistory 真接上了,该面**从本表移出**(走登记行那条路);
      *   台账条目随消费进度**可增可减** —— 故这里不再断言某个具体面在场,

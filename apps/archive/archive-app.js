@@ -61,6 +61,11 @@ import { writeReceipt } from '../../config/write-receipt.js';
  *   本件是「项目清单」的取数源，咽喉是消费者；两处各写一套字段礼规会在改字段名时
  *   静默归一成一行空项目（不报错）—— 故归一只能有一份，这里只 import。 */
 import { rwProjectsFromPack } from '../../config/resume-workbench.js';
+/* [v4.28.0 · 第四期 R4-X4] 支线结局选择与接续的**取数接线件**。
+ *   本件是「存档台第五页签」的取数源；判定词与标签表都在纯契约件
+ *   （config/branch-canon-contract.js）里，接线件只转发、视图只画 ——
+ *   三处各写一份必然漂移，而漂移那天没人会响。 */
+import { ArchiveCanon } from './archive-canon.js';
 export const AR_PACK_KEY = 'archive_pack';
 export const AR_FACE_KEY = 'archive_face';
 export const AR_DRAFT_KEY = 'archive_draft';
@@ -154,6 +159,13 @@ export class ArchiveApp {
         /* 项目清单读数（null = 读不到；[] = 认得出但没有项目身份）。
          *   ★ 两者**不同形**：读不到要如实说读不到，空清单是真的没有。 */
         this._proj = null;
+        /* [v4.28.0 · R4-X4] 支线结局面（六路读数 + 四行读数）。
+         *   本件只持「用户选了哪一位冲突」—— 读数一律现取，绝不缓存副本。 */
+        this.canon = new ArchiveCanon(this);
+    }
+    /* [v4.28.0 · R4-X4] 宿主窗口（与 plotline-app 同取法：注入优先，回落全局） */
+    _win() {
+        try { return (typeof window !== 'undefined') ? window : globalThis; } catch (_e) { return globalThis; }
     }
     /* ---------- storage 三态（本仓纪律：抛异常不等于「没记过」） ---------- */
     _storageUsable() {
@@ -646,18 +658,87 @@ export class ArchiveApp {
     setInput(t) { this._input = (typeof t === 'string') ? t : ''; return this._input; }
     clearInput() { this._input = ''; return ''; }
     tab() { return this._tab; }
+    /* ========== [v4.28.0 · R4-X4] 支线结局选择与接续（只转发，不重判） ==========
+     *   【为什么出口要这么多】每一路答的是**不同的问题**，合成一路就会把
+     *   「还没选完」与「选了也没东西可接」读成同一句话，而两者处置相反
+     *   （回去选 / 去补结局条文）。判定与标签一律走内核，本层不做第二份。 */
+    /** 一次取齐「冲突列举 + 结算计划 + 交接预览 + 落卷 + 凭据 + 撤销 + 四行读数 + 当前起点」。
+     *   ★ 没选冲突位时如实报「还没选」—— **不默认挑第一位**（那会把「用户还没定」
+     *     伪装成「这一位已经定了」）。 */
+    canonPack(opts) {
+        try { return this.canon.pack(opts || {}); }
+        catch (_e) { return this.canon.pack({}); }
+    }
+    /** 当前选中的冲突位（空串 = 还没选） */
+    canonSlot() {
+        try { return this.canon.slot; } catch (_e) { return ''; }
+    }
+    /** 设为要定的那一位（空值即清空，**不回落成「默认第一位」**） */
+    setCanonSlot(key) {
+        try { return this.canon.setSlot(key); } catch (_e) { return ''; }
+    }
+    /** 四档决定 id 列表（界面按钮的**唯一出处**是内核，不写第二份顺序表） */
+    canonDecisionIds() {
+        try { return this.canon.decisionIds(); } catch (_e) { return []; }
+    }
+    /** 四档决定标签（视图不写第二份标签表） */
+    canonDecisionLabel(d) {
+        try { return this.canon.decisionLabel(d); } catch (_e) { return String(d == null ? '' : d); }
+    }
+    /** 冲突档 / 落卷三态 / 出处三态 / 缺格三因 / 撤销四表 —— 标签一律转内核表 */
+    canonClashLabel(v) {
+        try { return this.canon.clashLabel(v); } catch (_e) { return String(v == null ? '' : v); }
+    }
+    canonAdoptLabel(v) {
+        try { return this.canon.adoptLabel(v); } catch (_e) { return String(v == null ? '' : v); }
+    }
+    canonProvLabel(v) {
+        try { return this.canon.provLabel(v); } catch (_e) { return String(v == null ? '' : v); }
+    }
+    canonUnmappedLabel(v) {
+        try { return this.canon.unmappedLabel(v); } catch (_e) { return String(v == null ? '' : v); }
+    }
+    canonRevokeLabel(v) {
+        try { return this.canon.revokeLabel(v); } catch (_e) { return String(v == null ? '' : v); }
+    }
+    /** 撤销四张表的表名出处（**唯一出处是内核**，视图不写第二份表名表） */
+    canonRevokeBuckets() {
+        try { return this.canon.revokeBuckets(); } catch (_e) { return []; }
+    }
+    /** 五态各一句状态提示（界面文案的唯一出处 = 内核表，视图不写第二份） */
+    canonStateHint(st) {
+        try { return this.canon.stateHint(st); } catch (_e) { return ''; }
+    }
+    /**
+     * 这一面能不能读 + 读不到时的处置建议（**判定词只许内核一份**）。
+     *   视图拿这个出口决定「先报读不到」还是「画板子」，不自己比状态字面量 ——
+     *   自己比就会在内核改名时静默走到「读到」那一支。
+     */
+    canonGate(read) {
+        try { return this.canon.gate(read); }
+        catch (_e) { return { readable: false, hint: '支线结局面不可读' }; }
+    }
+    /** 落卷读数的一句说明（'' = 没有要说的） */
+    canonNote(read) {
+        try { return this.canon.note(read); }
+        catch (_e) { return ''; }
+    }
     setTab(t) {
         const k = toStr(t);
-        const ok = ['pack', 'face', 'reset', 'ledger'];
+        const ok = ['pack', 'face', 'reset', 'ledger', 'canon'];
         this._tab = ok.indexOf(k) >= 0 ? k : 'pack';
         return this._tab;
     }
     /* ---------- 生命周期 ---------- */
     /** 换会话：包 / 对账 / 草稿 / 台账 全是「这段关系的账」，故全部重取。
-     *  ★ 四格的装载由 probe **一处**承担（单一装载路径）。 */
+     *  ★ 四格的装载由 probe **一处**承担（单一装载路径）。
+     *  ★ [v4.28.0 · R4-X4] 同时丢掉「上一次要定哪一位冲突」：那是旧会话的选择，
+     *    而正史面随会话变 —— 留着它会把新会话里一个同名的冲突位当成旧选择。
+     *    （降级为静默：换会话绝不能因接线件而报错。） */
     onChatChanged() {
         this._tab = 'pack';
         this._sel = null;
+        try { this.canon.resetScene(); } catch (_e) { }
         this._proj = null;
         this._focus = '';
         this._input = '';

@@ -39,9 +39,9 @@ export const TAB_SOURCE_NOTE = 'apps/** 真源码的页签白名单快照；由 
 export const TABS_BY_APP = Object.freeze({
     /* ---------- shape: array（app 层显式数组夹取） ---------- */
     archive: Object.freeze({
-        tabs: Object.freeze(['pack', 'face', 'reset', 'ledger']),
+        tabs: Object.freeze(['pack', 'face', 'reset', 'ledger', 'canon']),
         file: 'apps/archive/archive-app.js', shape: 'array',
-        note: '存档台；兜底包页'
+        note: '存档台；兜底包页；canon=支线结局（v4.28.0 · R4-X4）'
     }),
     cotdesk: Object.freeze({
         tabs: Object.freeze(['items', 'config', 'sides', 'ledger']),

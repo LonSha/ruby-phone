@@ -1,15 +1,15 @@
 {
   "schema": "upstream-face-cache@2",
   "note": "上游跨仓外供登记表的**冻读取**（本文件由 scripts/upstream-face-audit.mjs --refresh 生成，不得手改）。为什么冻：上游 tests/audit/scan_cross_repo_binding.mjs 的 P2 明令在役测试面不得引用兄弟仓库 —— 直读兄弟仓会把开发机的目录布局写进判据。故只读一次、冻成本文件，本仓门禁在仓内闭链对账；刷新必须显式带理由（防「冻」被随手刷掉）。【@2 起】另冻 `sourceState` / `upstreamCommit` / `worktreeDirty` 三格**来源读数**：默认取上游**提交态**（可回源）；`worktree` 只能显式 `--from-worktree` 拿，且被 R10 判缺陷。",
-  "refreshedAt": "2026-10-18T13:55:14.891Z",
-  "refreshReason": "上游补登记第四期 M4-X5 证词面外供行(testimonyBoard, commit 30feb80): 下游 R4-X5 三处同批落地的第一处。本轮把上游表行/本仓 registry 登记行(lonsha.testimonyBoard)/本门 J19 标签同批落地, 故按 R9 纪律显式刷新冻读取,不沿用旧冻读取。",
+  "refreshedAt": "2026-10-18T19:29:23.999Z",
+  "refreshReason": "R4-X4 三处同批：上游补登记 branchCanon 行（M4-X3 正史落卷面 v3.342.0 漏登），本仓冻读取随之刷新（13→14 面）",
   "upstreamRepo": "lonsha-memory-plugin",
   "upstreamVersion": "3.347.0",
   "sourceState": "commit",
-  "upstreamCommit": "30feb80",
+  "upstreamCommit": "598d72d",
   "worktreeDirty": false,
-  "tableSha1": "e458bb46411a",
-  "tableRows": 13,
+  "tableSha1": "59e7eaf2aa66",
+  "tableRows": 14,
   "faces": {
     "projectionEnvelope": {
       "owner": "lonsha-memory-plugin",
@@ -101,6 +101,13 @@
       "upstreamSymbol": "testimony-board.js::build,revokeEvidence,line,selfCheck",
       "consumer": "readTestimonyBoard@1",
       "standaloneBehavior": "未装上游 ⇒ 手机端证词面如实标不在场，不退回本地猜一份对照；四态与未裁决三档原样端出，不以一票多数裁真相"
+    },
+    "branchCanon": {
+      "owner": "lonsha-memory-plugin",
+      "producerVersion": "v3.342.0",
+      "upstreamSymbol": "branch-canon.js::conflicts,planCanon,buildContinuePack,adoptionBrief,revokeGuard,selfCheck",
+      "consumer": "readBranchCanonState@1",
+      "standaloneBehavior": "未装上游 ⇒ 存档台第五页签如实标不在场，不退回本地猜一份选择；落卷与撤回归上游 owner（手机端零写盘，writesNothing 恒 true），分卷写入与撤销只走 storyCanonAdoptConfirm"
     }
   }
 }

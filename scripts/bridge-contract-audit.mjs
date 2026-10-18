@@ -323,6 +323,24 @@ const CAUSAL_READER = 'readCausalBoard';
 /* [face: causalChain] [reader: readCausalBoard] [floor: 1] */
 const CAUSAL_SOURCE_REL = 'config/causal-board-contract.js';
 const CAUSAL_MIN_CONSUMERS = 1;
+/* ── [v4.28.0 · R4-X4] J21：上游支线结局接续面（branchCanon）必须真被业务面消费 ──
+ * 【为什么必须有】上游在 v3.342.0（M4-X3）交付正史落卷面（`branch-canon.js`），它答的是
+ *   「哪条支线结局成为后续正史、其余支线怎么留痕」——立身之本含**三态不许压平**
+ *   （ready|blocked|empty；blocked 与 empty 处置相反：一个回去选、一个去补结局条文）、
+ *   **选择计划四档分列**（chosen|coexisted|excluded|pending + provenance 覆盖每条结局）、
+ *   **撤销四表分列**（revocable|keptForeign|keptManual|keptLater）且 deletesManual /
+ *   branchWrites 写成读数（撤销只撤本次接续，原分支原文不动）。
+ *   而这一面**上游当时漏登外供表**（`open_face_registry.tsv` 此前只登记到 testimonyBoard），
+ *   本仓 `grep -RIn 'branchCanon' apps config`（消费者侧）此前同样零命中。
+ *   v4.28.0 的 R4-X4 把它接上：三处同批落地（上游补表行 / 本仓 registry 登记行 / 本门标签）。
+ * 【判据口径】① 真源 config/branch-canon-contract.js 必须导出该四出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1。写 1 不留余量是刻意的 ——
+ *   少一个就意味着这一面又回到零消费。
+ *   ③ 标签 [face: branchCanon] 与上游表行 consumer 列逐字一致（下游 R5 判这一条）。 */
+const BRANCH_CANON_READER = 'readBranchCanonState';
+/* [face: branchCanon] [reader: readBranchCanonState] [floor: 1] */
+const BRANCH_CANON_SOURCE_REL = 'config/branch-canon-contract.js';
+const BRANCH_CANON_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;
@@ -573,12 +591,18 @@ const testimonyExportsOk = [TESTIMONY_READER, 'readTestimonyRevoke', 'testimonyL
 const causalCode = stripped.get(CAUSAL_SOURCE_REL) || '';
 const causalExportsOk = [CAUSAL_READER, 'readCausalTodos', 'readCausalTrace', 'readCausalProposals']
     .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(causalCode) }));
+/* ── [v4.28.0 · R4-X4] J21：支线结局接续面的真源四出口 + 产品侧消费点 ── */
+const branchCanonCode = stripped.get(BRANCH_CANON_SOURCE_REL) || '';
+const branchCanonExportsOk = [BRANCH_CANON_READER, 'readBranchCanonPlan', 'readBranchCanonAdopt', 'readBranchCanonRevokeGuard']
+    .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(branchCanonCode) }));
 let perspectiveConsumerCount = 0;
 const perspectiveConsumerFiles = [];
 let testimonyConsumerCount = 0;
 const testimonyConsumerFiles = [];
 let causalConsumerCount = 0;
 const causalConsumerFiles = [];
+let branchCanonConsumerCount = 0;
+const branchCanonConsumerFiles = [];
 let entityConsumerCount = 0;
 const entityConsumerFiles = [];
 for (const [rel, code] of stripped) {
@@ -600,6 +624,9 @@ for (const [rel, code] of stripped) {
     /* [v4.27.0 · R4-X6] 因果线索面的产品侧消费点（只数 apps/**）。 */
     const c6 = countOf(code, CAUSAL_READER + '(');
     if (c6 > 0) { causalConsumerCount += c6; causalConsumerFiles.push(rel); }
+    /* [v4.28.0 · R4-X4] 支线结局接续面的产品侧消费点（只数 apps/**）。 */
+    const c7 = countOf(code, BRANCH_CANON_READER + '(');
+    if (c7 > 0) { branchCanonConsumerCount += c7; branchCanonConsumerFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -651,6 +678,10 @@ if (LIST) {
     console.log('\n── J18 ' + PERSPECTIVE_READER + ' 消费点（只计 apps/**）：' + perspectiveConsumerCount + '（下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）──');
     console.log('\n── J19 ' + TESTIMONY_READER + ' 消费点（只计 apps/**）：' + testimonyConsumerCount + '（下限 ' + TESTIMONY_MIN_CONSUMERS + '）──');
     console.log('\n── J20 ' + CAUSAL_READER + ' 消费点（只计 apps/**）：' + causalConsumerCount + '（下限 ' + CAUSAL_MIN_CONSUMERS + '）──');
+    console.log('\n── J21 ' + BRANCH_CANON_READER + ' 消费点（只计 apps/**）：' + branchCanonConsumerCount + '（下限 ' + BRANCH_CANON_MIN_CONSUMERS + '）──');
+    for (const f of branchCanonConsumerFiles) console.log('  ' + f);
+    if (!branchCanonConsumerFiles.length) console.log('  （无 —— 上游支线结局面没人读，「选哪条成为正史」就只能靠猜）');
+    for (const x of branchCanonExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     for (const f of causalConsumerFiles) console.log('  ' + f);
     if (!causalConsumerFiles.length) console.log('  （无 —— 上游因果面没人读，「这条线怎么来的」就只能靠猜）');
     for (const x of causalExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
@@ -951,6 +982,22 @@ if (causalConsumerCount < CAUSAL_MIN_CONSUMERS) {
     console.error('        （前者要去做 / 中者不必再提 / 后者不能当事实）。');
     console.error('  修法：手机侧接 config/causal-board-contract.js 的 ' + CAUSAL_READER + '。');
 }
+/* ── J21 [v4.28.0 · R4-X4] 支线结局接续面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingBranchCanonExports = branchCanonExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingBranchCanonExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J21 真源 ' + BRANCH_CANON_SOURCE_REL + ' 缺出口（' + missingBranchCanonExports.length + ' 个）：' + missingBranchCanonExports.join(' / '));
+}
+if (branchCanonConsumerCount < BRANCH_CANON_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J21 ' + BRANCH_CANON_READER + ' 只有 ' + branchCanonConsumerCount + ' 个产品侧消费点（下限 ' + BRANCH_CANON_MIN_CONSUMERS + '）：');
+    for (const f of branchCanonConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M4-X3（v3.342.0）把「选哪条支线结局成为后续正史 / 其余怎么留痕 / 撤销只撤本次接续」');
+    console.error('        做成对外读面（三态 ready|blocked|empty 不许压平 + 四档分列 + 撤销四表分列），');
+    console.error('        并已由本版在 open_face_registry.tsv 按 face=branchCanon 补登记 consumer=readBranchCanonState@1；');
+    console.error('        下游零消费 ⇒ 「选定的那条成为正史」在用户侧不成立，互斥结局仍会同时进新卷。');
+    console.error('  修法：手机侧接 config/branch-canon-contract.js 的 ' + BRANCH_CANON_READER + '。');
+}
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -970,5 +1017,6 @@ console.log('[bridge-contract] ' + ENTITY_READER + ' 消费点 ' + entityConsume
 console.log('[bridge-contract] ' + PERSPECTIVE_READER + ' 消费点 ' + perspectiveConsumerCount + ' 个（' + perspectiveConsumerFiles.length + ' 文件，下限 ' + PERSPECTIVE_MIN_CONSUMERS + '）· 真源四出口在场 ' + (perspectiveExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + TESTIMONY_READER + ' 消费点 ' + testimonyConsumerCount + ' 个（' + testimonyConsumerFiles.length + ' 文件，下限 ' + TESTIMONY_MIN_CONSUMERS + '）· 真源四出口在场 ' + (testimonyExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + CAUSAL_READER + ' 消费点 ' + causalConsumerCount + ' 个（' + causalConsumerFiles.length + ' 文件，下限 ' + CAUSAL_MIN_CONSUMERS + '）· 真源四出口在场 ' + (causalExportsOk.every((x) => x.ok) ? '是' : '否'));
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费 / 证词面多方说法被业务面消费 / 因果线索与未完事项被业务面消费');
+console.log('[bridge-contract] ' + BRANCH_CANON_READER + ' 消费点 ' + branchCanonConsumerCount + ' 个（' + branchCanonConsumerFiles.length + ' 文件，下限 ' + BRANCH_CANON_MIN_CONSUMERS + '）· 真源四出口在场 ' + (branchCanonExportsOk.every((x) => x.ok) ? '是' : '否'));
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费 / 证词面多方说法被业务面消费 / 因果线索与未完事项被业务面消费 / 支线结局接续被业务面消费');
 process.exit(0);
