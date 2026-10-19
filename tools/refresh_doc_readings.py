@@ -21,7 +21,8 @@
 用法：
   python3 tools/refresh_doc_readings.py            # 干跑：只打印将要改成什么
   python3 tools/refresh_doc_readings.py --write    # 真写
-  python3 tools/refresh_doc_readings.py --why "..." --write
+  python3 tools/refresh_doc_readings.py --why="..." --write   # 等号形（主推）
+  python3 tools/refresh_doc_readings.py --why "..." --write    # 空格形也吃
 退出码：0 = 一致（无需改动或已写入）；1 = 干跑下发现漂移（CI 可据此转红）；2 = 取数失败。
 """
 import io
@@ -58,10 +59,23 @@ def run_gate(script):
 
 
 def flag(name, default=None):
+    """取 `--name=值` 与 `--name 值` 两种写法（等号形优先）。
+
+    为什么要吃两种：本文件的用法注释与历史抬版脚本注释都写的是空格形
+    `--why "..."`，而初版实现只认等号形 —— 按注释敲时来由段**静默不写**，
+    退出码还是 0（数字一致、复校标记在场），没有任何东西会响。
+    这是「看起来没坏但结果不对」在工具自己身上的同形，故两侧一起收：
+    实现吃两种写法，注释改写等号形（主推形态）。
+    """
     pre = '--' + name + '='
-    for a in sys.argv:
+    for i, a in enumerate(sys.argv):
         if a.startswith(pre):
             return a[len(pre):]
+    for i, a in enumerate(sys.argv):
+        if a == '--' + name and i + 1 < len(sys.argv):
+            nxt = sys.argv[i + 1]
+            if not nxt.startswith('--'):
+                return nxt
     return default
 
 

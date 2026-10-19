@@ -13,6 +13,9 @@ import { ContactsView } from './contacts-view.js';
 import { MomentsView } from './moments-view.js?v=20260802-chat-moments-feed';
 import { WechatData } from './wechat-data.js?v=20260906-global-chat-background-sync';
 import { ImageCropper } from '../settings/image-cropper.js';
+/* [v4.29.0 · R4-X7] 群聊投票接线件（取数 / 持起点 / 落点形状）。
+ *   判定词与标签表**只许内核一份**（config/group-vote-contract.js），本件只转发。 */
+import { GroupVote } from './group-vote.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
@@ -50,6 +53,8 @@ export class WechatApp {
         this.chatView = new ChatView(this);
         this.contactsView = new ContactsView(this);
         this.momentsView = new MomentsView(this);
+        /* [v4.29.0 · R4-X7] 群聊投票面：只持「用户点了哪个选项」，读数一律现取。 */
+        this.groupVote = new GroupVote(this);
         this._ensureWechatAvatarPoolLoaded();
 
         // 加载样式
@@ -1428,6 +1433,118 @@ export class WechatApp {
     color: rgba(255,255,255,0.66) !important;
     text-shadow: 0 1px 3px rgba(0,0,0,0.72);
 }
+
+/* ========================================
+   [v4.29.0 · R4-X7] 群聊投票卡
+   平票与「无人支持」在**视觉上也不许同形**：前者给可点的选项行，
+   后者只给一句「等人表态」—— 两态处置相反（你来挑 / 等大家回）。
+   ======================================== */
+.message-group-vote {
+    width: clamp(200px, 62vw, 248px);
+    max-width: calc(100vw - 120px);
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 11px 9px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    font-size: 12px;
+    color: #111;
+}
+.message-left .message-group-vote { border-top-left-radius: 3px; }
+.message-right .message-group-vote { border-top-right-radius: 3px; }
+.message-group-vote-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.message-group-vote-title { font-size: 12px; font-weight: 600; color: #111; }
+.message-group-vote-badge {
+    font-size: 10px;
+    color: #8a8a8a;
+    background: rgba(0,0,0,0.04);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.message-group-vote-question {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+    line-height: 1.4;
+    margin-bottom: 7px;
+    word-break: break-word;
+}
+.message-group-vote-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 7px;
+    border-radius: 7px;
+    background: rgba(0,0,0,0.03);
+    margin-bottom: 5px;
+}
+.message-group-vote-row.is-picked { background: rgba(7,193,96,0.10); }
+.message-group-vote-row.is-tied { background: rgba(255,152,0,0.12); }
+.message-group-vote-opt { flex: 1; min-width: 0; }
+.message-group-vote-opt-name {
+    font-size: 12px;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message-group-vote-opt-meta { font-size: 10px; color: #8a8a8a; margin-top: 1px; }
+.message-group-vote-pick {
+    flex: 0 0 auto;
+    height: 24px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 999px;
+    background: #07c160;
+    color: #fff;
+    font-size: 11px;
+    cursor: pointer;
+}
+.message-group-vote-pick.is-on { background: rgba(0,0,0,0.08); color: #444; }
+.message-group-vote-foot {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    font-size: 10px;
+    color: #8a8a8a;
+    line-height: 1.5;
+}
+.message-group-vote-actions { display: flex; gap: 6px; margin-top: 7px; }
+.message-group-vote-btn {
+    flex: 1;
+    height: 28px;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.message-group-vote-btn.is-glass { background: rgba(0,0,0,0.05); color: #444; }
+.message-group-vote-btn.is-primary { background: #07c160; color: #fff; font-weight: 600; }
+.message-group-vote-btn:disabled { opacity: 0.5; cursor: default; }
+.message-group-vote-line {
+    margin-top: 6px;
+    font-size: 10px;
+    color: #9a9a9a;
+    line-height: 1.5;
+    word-break: break-word;
+}
+.message-group-vote-statement {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 11px;
+    color: #444;
+}
+.message-group-vote-statement.is-support { background: rgba(7,193,96,0.12); color: #07883f; }
+.message-group-vote-statement.is-oppose { background: rgba(244,67,54,0.12); color: #c62828; }
+.message-group-vote-statement.is-abstain { background: rgba(0,0,0,0.05); color: #757575; }
 
 .message-music-card.state-invite .message-music-card-status {
     color: #1ed760;
@@ -6062,6 +6179,9 @@ export class WechatApp {
         if (chat) {
             if (String(this.currentChat?.id || '') !== String(chatId || '')) {
                 this.chatView?.resetTransientInputPanels?.();
+                /* [v4.29.0 · R4-X7] 换会话作废「点了哪个选项」—— 上一个群的选位
+                 *   拿到这个群来用会把 A 群的共识当成 B 群的结果（读数本来就不缓存）。 */
+                try { this.groupVote?.resetScene?.(); } catch (_e) { }
             }
             // 🔥 核心修复：在进入聊天窗口之前，强行触发一次 getMessages 拉取独立存储，防止界面白板
             this.wechatData.getMessages(chatId);
@@ -7942,5 +8062,70 @@ export class WechatApp {
         setTimeout(() => {
             this.contactsView.showAddFriendPage(); // 再打开添加好友页面
         }, 50);
+    }
+    /* ================================================================
+     * [v4.29.0 · R4-X7] 群聊投票面出口（十个）
+     *   与 plotline/archive 两件同规格：本层只转发，**不重判任何一格**。
+     *   本层一个字节都不落盘：表决结果要变成约定得用户显式转交、落点在约定 owner。
+     * ================================================================ */
+    /** 一次取齐（读数 + 计数 + 确认 + 两行读数 + 门 + 选位）。 */
+    votePack(chatId, opts) {
+        const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
+        try { return this.groupVote.pack(id, opts || {}); }
+        catch (_e) { return this.groupVote.pack(id, {}); }
+    }
+    /** 主读数（四态分形）。 */
+    voteRead(chatId, opts) {
+        const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
+        try { return this.groupVote.tally(id, opts || {}); }
+        catch (_e) { return this.groupVote.tally(id, {}); }
+    }
+    /** 用户点选的选项（'' = 还没点）。 */
+    votePicked() {
+        try { return this.groupVote.picked; } catch (_e) { return ''; }
+    }
+    /** 设为要点的那一个；空值即清空（**不回落成票最多的那个**）。 */
+    setVotePicked(optionId) {
+        try { return this.groupVote.setPicked(optionId); } catch (_e) { return ''; }
+    }
+    /** 这一面能不能读（判定词只许内核一份，本层只转发）。 */
+    voteGate(read) {
+        try { return this.groupVote.gate(read); } catch (_e) { return this.groupVote.gate(null); }
+    }
+    /** 读数的一句说明（'' = 没有要说的）。 */
+    voteNote(read) {
+        try { return this.groupVote.note(read); } catch (_e) { return ''; }
+    }
+    /** 三态表态的 id 列表与标签（界面文案的唯一出处 = 内核表）。 */
+    voteChoiceIds() {
+        try { return this.groupVote.choiceIds(); } catch (_e) { return []; }
+    }
+    voteChoiceLabel(c) {
+        try { return this.groupVote.choiceLabel(c); } catch (_e) { return String(c == null ? '' : c); }
+    }
+    /** 四类人的 id 列表与标签（缺席不被代投 / 表外不计票 两格在界面上的唯一出处）。 */
+    voteBucketIds() {
+        try { return this.groupVote.memberBucketIds(); } catch (_e) { return []; }
+    }
+    voteBucketLabel(b) {
+        try { return this.groupVote.memberBucketLabel(b); } catch (_e) { return String(b == null ? '' : b); }
+    }
+    /** 被拒时的一句话（判定词与文案只许内核一份，本层只转发）。 */
+    voteReasonHint(r) {
+        try { return this.groupVote.reasonHint(r); } catch (_e) { return ''; }
+    }
+    /** 中文标签 -> 表态 id（唯一映射在内核）。 */
+    voteChoiceIdByLabel(t) {
+        try { return this.groupVote.choiceIdByLabel(t); } catch (_e) { return ''; }
+    }
+    /** 确认一份活动（幂等）：只把结果转交给约定 owner，**本层零写盘**。 */
+    voteConfirm(chatId, optionId) {
+        const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
+        try { return this.groupVote.confirm(id, optionId); }
+        catch (_e) { return this.groupVote.confirm(id, ''); }
+    }
+    /** 自检：转发内核十条口径真跑。 */
+    voteSelfCheck() {
+        try { return this.groupVote.selfCheck(); } catch (_e) { return { problems: ['selfcheck-threw'] }; }
     }
 }

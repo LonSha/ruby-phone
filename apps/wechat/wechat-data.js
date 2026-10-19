@@ -3295,6 +3295,14 @@ getMessagePreview(message) {
             return '[一起听歌]';
         case 'music_invite':
             return '[音乐邀请]';
+        /* [v4.29.0 · R4-X7] 群投票三态在列表页**不同形**（合成一句就分不出
+         *   「等人表态」与「已定活动」）。 */
+        case 'group_vote':
+            return '[群投票]';
+        case 'group_vote_statement':
+            return '[投票表态]';
+        case 'group_vote_activity':
+            return '[群投票结果：已定活动，仍未成为约定]';
         default:
             return stripSpeechPrefix(message.content || '');
     }

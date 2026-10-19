@@ -324,6 +324,19 @@ const STAGE_FILES = [
      *   `apps/diagnose/diagnose-data.js` 里。白名单暂存型套件必须同步补上每条判据的读数来源
      *   —— 否则未破坏的副本树会在 J18 上红（D0 自证失败 ⇒ 整组负控制变假绿）。 */
     'config/perspective-card-contract.js',
+    /* [v4.29.0] 补 J19/J20/J21 三面的读数来源（真源 + 产品侧消费点）：
+     *   J19 证词面（perspective-contrast）/ J20 因果线索面（causal-board）/
+     *   J21 支线结局面（branch-canon）。白名单暂存型套件每随门禁长一条判据，
+     *   就必须同步补上该判据的读数来源 —— 否则未破坏的副本树会在这三条上读到
+     *   「缺出口 / 消费点 0」而红（D0 自证失败 ⇒ 整组负控制变假绿）。
+     *   本仓自 J18 之后连续三轮漏补（J19 v4.26 / J20 v4.27 / J21 v4.28 都没跟），
+     *   本轮由 v297/v298 的 D0 一并抓到。 */
+    'config/perspective-contrast-contract.js',
+    'config/causal-board-contract.js',
+    'config/branch-canon-contract.js',
+    'apps/chars/chars-perspective.js',
+    'apps/plotline/plotline-board.js',
+    'apps/archive/archive-canon.js',
 ];
 
 function stageTree(extra = {}) {

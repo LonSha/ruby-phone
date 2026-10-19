@@ -18,7 +18,7 @@
   ]
  },
  "readings": {
-  "files_scanned": 453,
+  "files_scanned": 461,
   "consume_points": 23,
   "consume_files": 6,
   "local_engine_hits": 0
@@ -623,8 +623,23 @@
     "真机里「点搜索结果能否真落到那一条上」仍归 R-O3（真宿主实机验证）—— 本门只证明索引面与消费面在场，不证明真机上的落点。",
     "本版只重绑枚举面读数，**不动**判定（verdict 与 criteria 散文除 files_scanned 引用外逐字不变）。"
    ]
+  },
+  "v4.29.0": {
+   "what": "R4-X7 群聊投票与协商式活动安排：枚举面重绑（消费点 23 点 / 6 文件一格未动）",
+   "why": "v4.29.0 收口：枚举面随本轮落盘的新件（config/group-vote-contract.js 真源 + apps/wechat/group-vote.js 接线件 + tests/system-v4290.test.mjs 判据套件）再变，「扫到的文件数」这类读数必然跟着涨。这是「输入面变了、读数跟着变」的显式动作，不是转写漂移；站点数 / 消费点 / 上游面等**形态读数一格未动**。",
+   "readings": {
+    "files_scanned": 461
+   },
+   "unchanged": [
+    "consume_points",
+    "consume_files",
+    "local_engine_hits"
+   ],
+   "not_done": [
+    "探针只扫已知消费点文件的**静态命中**；新 App 的私有运行态不计入。"
+   ]
   }
  },
- "refreshed_at": "v4.12.0",
+ "refreshed_at": "v4.29.0",
  "refresh_note": "本基线在 v4.12.0 被显式刷新过一次(不是抬版侧写),原因只有一类:本版落盘的新文件(新增内核与当版判据档在内)使全仓枚举面再变,于是「扫到的文件数 / 站点数」这类读数必然跟着涨。这是「输入面变了、读数跟着变」的显式动作,不是转写漂移。刷新由 tools/refresh_baselines_v4120.py 完成(零手抄、幂等、冻结 measured_at、冻结面跳过、名单不一致即报错)。measured_at 仍是建基线时的当版,未被改写。R-X9 落地的文件使**全仓枚举面**从 419 涨到 422，于是「扫到的文件数」这条读数必然跟着涨。这是「**输入面变了、读数跟着变**」的显式动作，不是转写漂移。刷新由 tools/refresh_baselines_v3930.py 完成（零手抄、幂等、冻结 measured_at、冻结面跳过、名单不一致即报错）。measured_at 仍是建基线时的当版，未被改写。"
 }

@@ -52,7 +52,16 @@ export const PHONE_EVENTS = Object.freeze({
     PET_STATECHANGE: 'phone:pet-statechange',
     // [v3.79.0] 动效闸门的恢复信号：后台降频的消费方用它触发「现取」，
     //   避免恢复瞬间每个消费方各跑一次全量重算（合成器管攒下的，本信号管现取）。
-    MOTION_RESUME: 'phone:motionResume'
+    MOTION_RESUME: 'phone:motionResume',
+    // [v4.29.0] 由双向对账扫出（第二例）：R4-X4 的支线结局落卷凭据转交与
+    //   R4-X6 的因果线追溯起点是两个**真派发**的对外事件，当时漏登本契约表。
+    //   与 v2.26.0 的 PET_STATECHANGE 同形：有派发、无契约 ⇒ 打错一个字只会静默失联。
+    //   成因同族：全量回归被禁期间没人跑到那条对账判据。
+    CANON_ADOPT: 'phone:canonAdopt',
+    CAUSAL_SOURCE: 'phone:causalSource',
+    // [v4.29.0 · R4-X7] 群聊投票的**确认转交**：本仓只把「哪一份活动、谁参加」
+    //   原样交给约定 owner（日历），自己零写盘 —— 表决不直接变成承诺。
+    GROUP_VOTE_CONFIRM: 'phone:groupVoteConfirm'
 });
 
 /**
@@ -131,6 +140,24 @@ export const PHONE_EVENT_CONTRACT = Object.freeze({
     [PHONE_EVENTS.MOTION_RESUME]: {
         kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
         note: '动效闸门恢复：detail 带 {active,reason,panelOpen,docVisible,flushed}。'
+    },
+    [PHONE_EVENTS.CANON_ADOPT]: {
+        kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',
+        note: '支线结局落卷凭据转交（v4.28.0 · R4-X4）：detail 带 '
+            + '{adoptionId,packId,volumeId}。手机侧零写盘，落卷与撤销归上游 owner —— '
+            + '本事件只是把上游给的凭据原样递出去。'
+    },
+    [PHONE_EVENTS.CAUSAL_SOURCE]: {
+        kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',
+        note: '因果线追溯起点（v4.27.0 · R4-X6）：detail 带 {ref,id}。'
+            + '把「用户要追哪条线」转给宿主，本仓不替它确认因果。'
+    },
+    [PHONE_EVENTS.GROUP_VOTE_CONFIRM]: {
+        kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',
+        note: '群聊投票结果确认转交（v4.29.0 · R4-X7）：detail 带 '
+            + '{activityId,optionId,round,participants[]}。★ 本事件**不产出承诺** —— '
+            + '约定 owner（日历）拿到这份活动读数后由用户显式落笔，'
+            + '手机侧一个字节都不写（writesNothing 恒 true）。'
     },
 });
 

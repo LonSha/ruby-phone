@@ -192,7 +192,7 @@ test('C3 items 逐字同源（index.js 与 update-log）', () => {
   const body = idx.slice(from, to);
   const items = [...body.split('\n')]
     .map((l) => l.trim())
-    .filter((l) => l.startsWith('"') && l.includes('。'))
+    .filter((l) => l.startsWith('"'))
   // [v2.69.0 修复] 原判据是「逐行剥引号」，隐含假设「串内无转义引号」：
   //   条目里出现 ".get(\"active\")" 这类内容时会剥出残留 \" ⇒ 假红灯（内容其实逐字同源）；
   //   条目跨行时后几条漏比 ⇒ 假绿灯。改为**真解析字符串字面量**，escape 语义由语言保证。
