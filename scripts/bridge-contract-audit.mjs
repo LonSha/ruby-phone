@@ -341,6 +341,25 @@ const BRANCH_CANON_READER = 'readBranchCanonState';
 /* [face: branchCanon] [reader: readBranchCanonState] [floor: 1] */
 const BRANCH_CANON_SOURCE_REL = 'config/branch-canon-contract.js';
 const BRANCH_CANON_MIN_CONSUMERS = 1;
+/* ── [v4.30.0 · R4-X9] J22：上游取材面（materialPack）必须真被业务面消费 ──
+ * 【为什么必须有】上游在 v3.346.0（M4-X8）交付按下一幕任务组织的取材面（`material-pack.js`），
+ *   它答的是「下一幕要做的是赴约 / 重逢 / 推进 / 收束 —— 这一幕该带哪几样材料?」
+ *   ——立身之本含**任务轴真的改变产物**（四份 TASK_PRIORITY 各是同一 FACETS 十格的**不同排法**）、
+ *   **矛盾当前值不并列**（同 conflictGroup 只留楼层最新一条，其余具名 superseded）、
+ *   **两条闸默认闭且分别计数**（restricted 越界知情 / future 未发生）、
+ *   **缺口逐面具名**（关键面零材料另进 gapsCritical）、
+ *   **入参畸形与池空不同形**（malformedInput + judged:false ≠ judged:true + pack 空）。
+ *   而这一面**上游当时漏登外供表**（`open_face_registry.tsv` 此前只登记到 branchCanon），
+ *   本仓 `grep -RIn 'materialPack' apps config`（消费者侧）此前同样零命中。
+ *   v4.30.0 的 R4-X9 把它接上：三处同批落地（上游补表行 / 本仓 registry 登记行 / 本门标签）。
+ * 【判据口径】① 真源 config/material-board-contract.js 必须导出该四出口；
+ *   ② 产品面 apps/** 的消费点不得少于下限 1。写 1 不留余量是刻意的 ——
+ *   少一个就意味着这一面又回到零消费。
+ *   ③ 标签 [face: materialPack] 与上游表行 consumer 列逐字一致（下游 R5 判这一条）。 */
+const MATERIAL_PACK_READER = 'readMaterialPack';
+/* [face: materialPack] [reader: readMaterialPack] [floor: 1] */
+const MATERIAL_PACK_SOURCE_REL = 'config/material-board-contract.js';
+const MATERIAL_PACK_MIN_CONSUMERS = 1;
 /** 事实回执的三个写入侧消费口（真跑一条手机事件的地方；与「读了但没人用」不同）。 */
 const PHONE_FACT_SINK_TOKEN = 'phoneFactReceiptFor';
 const PHONE_FACT_MIN_SINKS = 2;
@@ -595,6 +614,10 @@ const causalExportsOk = [CAUSAL_READER, 'readCausalTodos', 'readCausalTrace', 'r
 const branchCanonCode = stripped.get(BRANCH_CANON_SOURCE_REL) || '';
 const branchCanonExportsOk = [BRANCH_CANON_READER, 'readBranchCanonPlan', 'readBranchCanonAdopt', 'readBranchCanonRevokeGuard']
     .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(branchCanonCode) }));
+/* ── [v4.30.0 · R4-X9] J22：取材面的真源四出口 + 产品侧消费点 ── */
+const materialPackCode = stripped.get(MATERIAL_PACK_SOURCE_REL) || '';
+const materialPackExportsOk = [MATERIAL_PACK_READER, 'readMaterialPackSheet', 'readMaterialPackHeld', 'readMaterialPackPick']
+    .map((fn) => ({ fn, ok: new RegExp('export\\s+function\\s+' + fn + '\\s*\\(').test(materialPackCode) }));
 let perspectiveConsumerCount = 0;
 const perspectiveConsumerFiles = [];
 let testimonyConsumerCount = 0;
@@ -603,6 +626,8 @@ let causalConsumerCount = 0;
 const causalConsumerFiles = [];
 let branchCanonConsumerCount = 0;
 const branchCanonConsumerFiles = [];
+let materialPackConsumerCount = 0;
+const materialPackConsumerFiles = [];
 let entityConsumerCount = 0;
 const entityConsumerFiles = [];
 for (const [rel, code] of stripped) {
@@ -627,6 +652,9 @@ for (const [rel, code] of stripped) {
     /* [v4.28.0 · R4-X4] 支线结局接续面的产品侧消费点（只数 apps/**）。 */
     const c7 = countOf(code, BRANCH_CANON_READER + '(');
     if (c7 > 0) { branchCanonConsumerCount += c7; branchCanonConsumerFiles.push(rel); }
+    /* [v4.30.0 · R4-X9] 取材面的产品侧消费点（只数 apps/**）。 */
+    const c8 = countOf(code, MATERIAL_PACK_READER + '(');
+    if (c8 > 0) { materialPackConsumerCount += c8; materialPackConsumerFiles.push(rel); }
 }
 
 /* ------------------------------------------------------------
@@ -679,6 +707,10 @@ if (LIST) {
     console.log('\n── J19 ' + TESTIMONY_READER + ' 消费点（只计 apps/**）：' + testimonyConsumerCount + '（下限 ' + TESTIMONY_MIN_CONSUMERS + '）──');
     console.log('\n── J20 ' + CAUSAL_READER + ' 消费点（只计 apps/**）：' + causalConsumerCount + '（下限 ' + CAUSAL_MIN_CONSUMERS + '）──');
     console.log('\n── J21 ' + BRANCH_CANON_READER + ' 消费点（只计 apps/**）：' + branchCanonConsumerCount + '（下限 ' + BRANCH_CANON_MIN_CONSUMERS + '）──');
+    console.log('\n── J22 ' + MATERIAL_PACK_READER + ' 消费点（只计 apps/**）：' + materialPackConsumerCount + '（下限 ' + MATERIAL_PACK_MIN_CONSUMERS + '）──');
+    for (const f of materialPackConsumerFiles) console.log('  ' + f);
+    if (!materialPackConsumerFiles.length) console.log('  （无 —— 上游取材面没人读，「这一幕该带哪几样材料」就只能靠猜）');
+    for (const x of materialPackExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
     for (const f of branchCanonConsumerFiles) console.log('  ' + f);
     if (!branchCanonConsumerFiles.length) console.log('  （无 —— 上游支线结局面没人读，「选哪条成为正史」就只能靠猜）');
     for (const x of branchCanonExportsOk) console.log('  ' + (x.ok ? '·' : 'x') + ' 真源出口 ' + x.fn);
@@ -998,6 +1030,22 @@ if (branchCanonConsumerCount < BRANCH_CANON_MIN_CONSUMERS) {
     console.error('        下游零消费 ⇒ 「选定的那条成为正史」在用户侧不成立，互斥结局仍会同时进新卷。');
     console.error('  修法：手机侧接 config/branch-canon-contract.js 的 ' + BRANCH_CANON_READER + '。');
 }
+/* ── J22 [v4.30.0 · R4-X9] 取材面：真源出口 + 产品侧消费点（下游这半边） ── */
+const missingMaterialPackExports = materialPackExportsOk.filter((x) => !x.ok).map((x) => x.fn);
+if (missingMaterialPackExports.length) {
+    corrupt = 1;
+    console.error('[bridge-contract] x J22 真源 ' + MATERIAL_PACK_SOURCE_REL + ' 缺出口（' + missingMaterialPackExports.length + ' 个）：' + missingMaterialPackExports.join(' / '));
+}
+if (materialPackConsumerCount < MATERIAL_PACK_MIN_CONSUMERS) {
+    fail = 1;
+    console.error('[bridge-contract] x J22 ' + MATERIAL_PACK_READER + ' 只有 ' + materialPackConsumerCount + ' 个产品侧消费点（下限 ' + MATERIAL_PACK_MIN_CONSUMERS + '）：');
+    for (const f of materialPackConsumerFiles) console.error('    ' + f);
+    console.error('  说明：上游 M4-X8（v3.346.0）把「下一幕任务该带哪几样材料」做成对外读面（任务轴四类 + 四份面优先级 +');
+    console.error('        矛盾取代具名 + 未发生与受限两闸 + 缺口逐面具名），');
+    console.error('        并已由本版在 open_face_registry.tsv 按 face=materialPack 补登记 consumer=readMaterialPack@1；');
+    console.error('        下游零消费 ⇒ 「按下一幕目标组织取材集合」在用户侧不成立，四种任务的产物仍会同形。');
+    console.error('  修法：手机侧接 config/material-board-contract.js 的 ' + MATERIAL_PACK_READER + '。');
+}
 if (corrupt) process.exit(2);
 if (fail) {
     console.error('[bridge-contract] x 桥消费面契约未通过');
@@ -1018,5 +1066,5 @@ console.log('[bridge-contract] ' + PERSPECTIVE_READER + ' 消费点 ' + perspect
 console.log('[bridge-contract] ' + TESTIMONY_READER + ' 消费点 ' + testimonyConsumerCount + ' 个（' + testimonyConsumerFiles.length + ' 文件，下限 ' + TESTIMONY_MIN_CONSUMERS + '）· 真源四出口在场 ' + (testimonyExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + CAUSAL_READER + ' 消费点 ' + causalConsumerCount + ' 个（' + causalConsumerFiles.length + ' 文件，下限 ' + CAUSAL_MIN_CONSUMERS + '）· 真源四出口在场 ' + (causalExportsOk.every((x) => x.ok) ? '是' : '否'));
 console.log('[bridge-contract] ' + BRANCH_CANON_READER + ' 消费点 ' + branchCanonConsumerCount + ' 个（' + branchCanonConsumerFiles.length + ' 文件，下限 ' + BRANCH_CANON_MIN_CONSUMERS + '）· 真源四出口在场 ' + (branchCanonExportsOk.every((x) => x.ok) ? '是' : '否'));
-console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费 / 证词面多方说法被业务面消费 / 因果线索与未完事项被业务面消费 / 支线结局接续被业务面消费');
+console.log('[bridge-contract] v 桥名单一真源 / 调用式绝迹 / 形态判据唯一 / 出口在场且真被消费 / 字段三态被消费 / 文案表键不手写 / 投影归属面被业务面消费 / 探针自述面落下成面 / 注入实际读数被业务面消费 / 事件来源构成被业务面消费 / 九账证据面被业务面消费 / 投影新鲜度归因被业务面消费 / 检查点内容级对照被业务面消费 / 视角卡可知范围被业务面消费 / 证词面多方说法被业务面消费 / 因果线索与未完事项被业务面消费 / 支线结局接续被业务面消费 / 下一幕取材面被业务面消费');
 process.exit(0);

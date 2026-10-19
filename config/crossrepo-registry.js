@@ -420,6 +420,26 @@ export const CROSSREPO_FEATURES = Object.freeze([
         declaredFloor: 1
     },
     {
+        id: 'lonsha.materialPack',
+        label: '面向下一幕的写作取材板（按任务组织事实 / 矛盾取代具名 / 未发生与受限两闸 / 缺口逐面具名）',
+        owner: OWNER_LONSHA,
+        since: '3.346.0',
+        sinceSource: '上游 lonsha-memory-plugin/material-pack.js（v3.346.0 M4-X8）与 index.js 的 materialPack / _materialPackLine / _materialInventory 出口；证据在上游真源与 open_face_registry.tsv 的 face=materialPack 行（该行上游在 v3.346.0 漏登，本版三处同批补齐）',
+        fieldKeys: [],
+        contract: '引擎方法 / 模块出口两路：`engine.materialPack(task, opts)` 或 `LonShaMaterialPack.build(task, inventory, opts)`，返回 kind=material_pack 的读数（pack[] / packIds[] / sheet[] / gaps[] / gapsCritical[] / held{restricted,future,superseded,unclassified} / budget / overBudget[] / cost / counts / reasons / orderIsRank / writesNothing / devisesNothing）。★ 任务四类 meet|reunion|advance|resolve **穷尽**，四份 TASK_PRIORITY 各是同一 FACETS（十格）的**不同排法**（不另造词表）；★ 同 conflictGroup 多个当前值 ⇒ 只留楼层最新一条，其余标 superseded 并**具名**（不并列当真、不偷偷丢掉）；★ 两条闸默认闭：restricted 与 future 不进包且**分别计数**，held 里具名；★ 缺口 gaps 逐面具名，任务关键面零材料另进 gapsCritical；★ 入参畸形（inventory 非数组 ⇒ judged:false + malformedInput:true）与池空（judged:true + pack 空）**不同形**；★ 预算只给条数与越预算名单，**不裁到 token**（裁剪归 injection-router，本面不新造第二套预算系统）',
+        keySites: [
+            { file: 'config/material-board-contract.js', token: 'eng.materialPack' }
+        ],
+        consumers: [
+            { file: 'apps/creationdesk/creationdesk-board.js', token: 'readMaterialPack(' }
+        ],
+        invalidation: '插件不在场 ⇒ engine-absent（等装插件）；插件在、本版无此面（上游降级面 version=0）⇒ face-absent（等升级到 v3.346.0+）；出口在但调用抛错 / judged:false 装配未到 ⇒ unusable（本机读不出，**不是**「这一幕没有材料」）；真跑过、材料池里一条可用材料都没有 ⇒ empty（**真读数**）——五态处置相反，压平即把「还没装插件」显示成「这一幕没有材料」',
+        standalone: '未装上游 ⇒ 创作台取材板如实标不在场，不退回本地猜一份材料清单；按任务组织事实与矛盾取代判据全归上游 owner（手机端零写盘，writesNothing 恒 true），手机只做**取舍与目标选择**（选人物 / 地点 / 时点 / 写作目标）并把选定集合交回既有预算 owner 与草稿 owner——「选好了」不等于「已经生成」，交接与落笔归既有 owner',
+        upstreamFace: 'materialPack',
+        declaredConsumer: 'readMaterialPack',
+        declaredFloor: 1
+    },
+    {
         id: 'lonsha.knowledge',
         label: '知情网络（谁不知道某件事）',
         owner: OWNER_LONSHA,

@@ -312,6 +312,14 @@ const STAGE_FILES = [
     'apps/chars/chars-perspective.js',
     'apps/plotline/plotline-board.js',
     'apps/archive/archive-canon.js',
+    /* [v4.30.0] 补 J22 一面的读数来源（真源 + 产品侧消费点）：
+     *   J22 取材面（material-board）。白名单暂存型套件每随门禁长一条判据，
+     *   就必须同步补上该判据的读数来源 —— 否则未破坏的副本树会在这条上读到
+     *   「缺出口 / 消费点 0」而红（D0 自证失败 ⇒ 整组负控制变假绿）。
+     *   上一轮 v4.29.0 才补过 J19/J20/J21（自 J18 之后连续三轮漏补），
+     *   本轮 J22 随门禁同批跟上，不再重演那个欠账。 */
+    'config/material-board-contract.js',
+    'apps/creationdesk/creationdesk-board.js',
 ];
 
 function stageTree(extra = {}) {

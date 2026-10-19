@@ -8,6 +8,8 @@
  *     之外一律不认 —— 「受限」的意思就是「认得出的动作是有限的」。
  *   · **不写存储**：所有动作都转 app.act()，由咽喉收口；本层零 storage 调用。
  *   · **不自己判**：blocker 名单与计划行文案全部来自内核（cwPlanPublish / cwPlanLine）。
+ *   · **[v4.30.0 · R4-X9] 取材板段同样不落笔**：它只把「用户选了哪一幕 / 哪个时点 / 哪几条」转给 App，
+ *     真正的交接（进主聊天 / 进创作草稿）归既有 owner；读不出时不摆条目行、也不画交接按钮。
  * ========================================================= */
 'use strict';
 const AMP = String.fromCharCode(38);
@@ -186,6 +188,72 @@ export class CreationdeskView {
         h += '</div>';
         return h;
     }
+    /** [v4.30.0 · R4-X9] 取材板段：选目标 → 预览取材集合 → 选定交给既有 owner。
+     *   读不出时不摆条目行、也不画交接按钮（**不拿空板冒充**）。 */
+    _board(vm) {
+        const b = vm.board || null;
+        let h = '<div class="cwb-box"><h3>面向下一幕的取材板（按任务组织事实；取舍归你，落笔归既有 owner）</h3>';
+        if (!b || !b.read) {
+            h += '<div class="cwb-row"><span class="cwb-row-v">取材板读数还没取到（咽喉那一轮尚未跑）</span></div>';
+            return h + '</div>';
+        }
+        const g = b.gate || {};
+        h += '<div class="cwb-note">' + esc(b.lines.pack || '') + '</div>';
+        /* ★ 读不到时不摆选项行、也不画交接按钮（不拿空板冒充）。 */
+        if (!g.readable) {
+            h += '<div class="cwb-row cwb-st-bad"><span class="cwb-row-v">' + esc(g.hint || '') + '</span></div>';
+            if (b.note) h += '<div class="cwb-note">' + esc(b.note) + '</div>';
+            return h + '</div>';
+        }
+        /* 任务轴四类（标签来自内核表，视图不写第二份）。 */
+        h += '<div class="cwb-acts">';
+        for (const t of (this.app.boardTaskIds())) {
+            const on = b.task === t;
+            h += '<button class="cwb-tgt' + (on ? ' cwb-tgt-on' : '') + '" data-cw-btask="' + esc(t) + '">' +
+                (on ? '本幕 ' : '') + esc(this.app.boardTaskLabel(t)) + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="cwb-acts">';
+        h += '<input class="cwb-inp" data-cw-basof type="number" placeholder="时点(楼层号，留空=不设)" value="' + esc(b.asOf === null || b.asOf === undefined ? '' : String(b.asOf)) + '">';
+        h += '</div>';
+        h += '<div class="cwb-note">时点用来**分列**：选定之后才发生的事实进「时点之后」，不许提前进入（本板不替你推进时间）</div>';
+        /* 包内条目（勾选即取舍；勾了但不在包里的如实进 notInPack）。 */
+        const pack = (b.read.pack || []);
+        h += '<div class="cwb-row"><span class="cwb-row-k">本幕材料</span><span class="cwb-row-v">' + esc(b.lines.sheet || '') + '</span></div>';
+        if (!pack.length) {
+            h += '<div class="cwb-row"><span class="cwb-row-v">池里一条都没进包 —— 去看「被挡住」里是谁（不是「没有材料」）</span></div>';
+        }
+        for (const m of pack) {
+            const on = (b.picked || []).indexOf(m.id) >= 0;
+            h += '<div class="cwb-mat' + (on ? ' cwb-mat-on' : '') + '">';
+            h += '<button class="cwb-pick" data-cw-bpick="' + esc(m.id) + '">' + (on ? '已选' : '选中') + '</button>';
+            h += '<span class="cwb-mat-label">' + esc(m.title || m.id) + '</span>';
+            h += '<span class="cwb-mat-meta">' + esc(m.facetLabel) + ' · ' + esc(m.source) + (m.floor === null ? '' : ' · 楼层 ' + String(m.floor)) + '</span>';
+            h += '</div>';
+        }
+        h += '<div class="cwb-row"><span class="cwb-row-k">被挡住</span><span class="cwb-row-v">' + esc(b.lines.held || '') + '</span></div>';
+        const hd = b.held || {};
+        for (const key of ['restricted', 'future', 'unclassified', 'superseded']) {
+            const rows = ((hd.held || {})[key] || []);
+            for (const r of rows.slice(0, 6)) {
+                h += '<div class="cwb-row"><span class="cwb-row-k">' + esc(this.app.boardHeldBucketLabel(key)) + '</span><span class="cwb-row-v">' + esc(r.title || r.id) + (r.supersededBy ? '（被 ' + esc(r.supersededBy) + ' 取代）' : '') + '</span></div>';
+            }
+        }
+        /* 选定读数（三类**分列**：能交 / 不在本幕包里 / 时点之后）。 */
+        h += '<div class="cwb-note">' + esc(b.lines.pick || '') + '</div>';
+        const pk = b.pick || {};
+        for (const r of (pk.afterAsOf || []).slice(0, 6)) {
+            h += '<div class="cwb-row cwb-st-bad"><span class="cwb-row-k">' + esc(this.app.boardPickHeldLabel('after-as-of')) + '</span><span class="cwb-row-v">' + esc(r.title || r.id) + ' · 楼层 ' + String(r.floor) + '</span></div>';
+        }
+        for (const r of (pk.notInPack || []).slice(0, 6)) {
+            h += '<div class="cwb-row cwb-st-empty"><span class="cwb-row-k">' + esc(this.app.boardPickHeldLabel('not-in-pack')) + '</span><span class="cwb-row-v">' + esc(r.id) + '</span></div>';
+        }
+        h += '<div class="cwb-acts">';
+        h += '<button class="cwb-btn" data-cw-bhandoff>把选定交给既有 owner（本板不落笔）</button>';
+        h += '<button class="cwb-btn" data-cw-bcancel>取消（不触发生成）</button>';
+        h += '</div>';
+        return h + '</div>';
+    }
     _html(vm) {
         let h = '<div class="cwb-wrap">';
         h += this._head(vm);
@@ -195,6 +263,7 @@ export class CreationdeskView {
         h += this._multiTargets(vm);
         h += this._drafts(vm);
         h += this._topics(vm);
+        h += this._board(vm);
         h += this._plan(vm);
         h += '</div>';
         return h;
@@ -234,6 +303,21 @@ export class CreationdeskView {
                 const kind = b.getAttribute('data-cw-topic-kind') || 'publish';
                 self.app.topicAct(sub, { kind: kind, confirmed: true, actor: 'user', knows: true });
             });
+        });
+        /* [v4.30.0 · R4-X9] 取材板绑定：动作全转 app（视图不自己记、不落笔）。 */
+        el.querySelectorAll('[data-cw-btask]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.setBoardTask(b.getAttribute('data-cw-btask')); });
+        });
+        const bAsOf = el.querySelector('[data-cw-basof]');
+        if (bAsOf) bAsOf.addEventListener('change', function () { self.app.setBoardAsOf(bAsOf.value); });
+        el.querySelectorAll('[data-cw-bpick]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.toggleBoardPicked(b.getAttribute('data-cw-bpick')); });
+        });
+        el.querySelectorAll('[data-cw-bhandoff]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.boardHandoff(); });
+        });
+        el.querySelectorAll('[data-cw-bcancel]').forEach(function (b) {
+            b.addEventListener('click', function () { self.app.cancelBoard(); });
         });
         el.querySelectorAll('[data-cw-draft]').forEach(function (b) {
             b.addEventListener('click', function () {

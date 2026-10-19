@@ -21,6 +21,10 @@ import {
     editRecoveryPlan, applyRecoveryChoice, afterSaveAttempt
 } from '../../config/edit-buffer.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [v4.30.0 · R4-X9] 取材板接线件（夹在契约件与视图之间：取数 / 持起点 / 落点形状）。
+ *   本层只转交：任务轴与面优先级、矛盾取代、两条闸、缺口计数**全归上游**，
+ *   手机侧只做取舍与目标选择（选人物 / 地点 / 时点 / 写作目标）。 */
+import { CreationdeskBoard } from './creationdesk-board.js';
 /* [v4.25.0 · R4-X3] 故事年鉴(纯契约)。
  *   创作台侧只消费**两件**:① 年鉴面读数(建章册一行 + 派发相);
  *   ② 把某一版年鉴导出文本取来当**草稿素材**(不把它写进剧情事实,也不发布)。
@@ -47,6 +51,8 @@ export class CreationdeskApp {
         this._topicPlatform = '';
         this._topicText = '';
         this._topicPage = null;
+        /* [v4.30.0 · R4-X9] 取材板接线件（持用户的**选择**，不缓存读数） */
+        this._board = new CreationdeskBoard(this);
         this._flash = '';
         this._flashBad = false;
     }
@@ -283,6 +289,45 @@ export class CreationdeskApp {
         this.render();
         return r;
     }
+    /* ══════════ [v4.30.0 · R4-X9] 面向下一幕的写作取材板 ══════════
+     * 【为什么创作台要读它】计划落点原文：「creationdesk 复用 context-compose / 注入预算 owner；
+     *   M4-X8 负责按任务组织事实，手机负责取舍和目标选择。引用动态重取，不存第二套世界状态。」
+     * 【不做什么】不装配材料池、不裁到 token、不落笔 —— 全归既有 owner（本层零写盘）。
+     * ------------------------------------------------------------------ */
+    /** 取材板四路读数一次取齐（视图借用；判定全在契约件）。 */
+    boardPack(opts) {
+        try { return this._board.packAll(opts); }
+        catch (_e) {
+            return { read: null, sheet: null, held: null, pick: null, lines: { pack: '取材:读数失败（已降级）', sheet: '逐面:读数失败（已降级）', held: '被挡住:读数失败（已降级）', pick: '选定:读数失败（已降级）' }, gate: null, note: '', task: '', asOf: null, picked: [], state: '' };
+        }
+    }
+    /** 取材板一行主读数（视图借用；判据全在内核 `packLine`）。 */
+    boardLine() {
+        try { return String(this.boardPack().lines.pack || ''); }
+        catch (_e) { return '取材:读数失败（已降级）'; }
+    }
+    /** 选下一幕任务（**用户显式选择**；空值即清空，不回落成「推进」）。 */
+    setBoardTask(t) { const r = this._board.setTask(t); this.render(); return r; }
+    /** 选时点（楼层号；空值即清空，**不默认挑一个**）。 */
+    setBoardAsOf(v) { const r = this._board.setAsOf(v); this.render(); return r; }
+    /** 勾 / 取消勾一条取材（视图不自己记；勾了但不在包里的如实进 notInPack）。 */
+    toggleBoardPicked(id) { const r = this._board.togglePicked(id); this.render(); return r; }
+    /** 取材板交接读数（**只算并端出**：进主聊天 / 进草稿归既有 owner）。 */
+    boardHandoff() {
+        try { return this._board.handoff(); }
+        catch (_e) { return { ok: false, kind: 'material_board_handoff', reason: 'threw', ids: [], count: 0, chars: 0, items: [], notInPack: [], afterAsOf: [], writesNothing: true }; }
+    }
+    /* ========== 取材板标签出口（界面文案的唯一出处 = 内核表，本层只转发） ========== */
+    boardTaskIds() { try { return this._board.taskIds(); } catch (_e) { return []; } }
+    boardTaskLabel(t) { try { return this._board.taskLabel(t); } catch (_e) { return String(t == null ? '' : t); } }
+    boardHeldBucketIds() { try { return this._board.heldBucketIds(); } catch (_e) { return []; } }
+    boardHeldBucketLabel(b) { try { return this._board.heldBucketLabel(b); } catch (_e) { return String(b == null ? '' : b); } }
+    boardPickHeldIds() { try { return this._board.pickHeldIds(); } catch (_e) { return []; } }
+    boardPickHeldLabel(b) { try { return this._board.pickHeldLabel(b); } catch (_e) { return String(b == null ? '' : b); } }
+    boardStateHint(s) { try { return this._board.stateHint(s); } catch (_e) { return ''; } }
+    boardLimits() { try { return this._board.limits(); } catch (_e) { return {}; } }
+    /** 取消取材（**不触发生成**；验收②）。 */
+    cancelBoard() { const r = this._board.cancel(); this.render(); return r; }
     async act(action) {
         const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
         if (!vp || typeof vp.applyCreationdeskAction !== 'function') {
@@ -364,6 +409,11 @@ export class CreationdeskApp {
             topicPlatform: this._topicPlatform,
             topicText: this._topicText,
             topicPage: this._topicPage,
+            /* [v4.30.0 · R4-X9] 取材板读数（创作台侧取舍与目标选择；判据全在契约件）。 */
+            board: (function () {
+                try { return this._board ? this._board.packAll() : null; }
+                catch (_e) { return null; }
+            }).call(this),
             flash: this._flash,
             flashBad: this._flashBad,
         };
@@ -384,6 +434,8 @@ export class CreationdeskApp {
         this._topicPage = null;
         this._flash = '';
         this._flashBad = false;
+        /* [v4.30.0 · R4-X9] 取材板也丢实例态：换角色后上一个角色选的任务 / 时点 / 勾选不能留着。 */
+        if (this._board && typeof this._board.resetScene === 'function') this._board.resetScene();
         this.render();
     }
     destroy() { this._view = null; }
