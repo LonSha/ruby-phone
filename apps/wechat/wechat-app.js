@@ -24,6 +24,13 @@ import {
   planRumorState, normalizeRumorFace, rumorLineOf, corroborationLineOf,
   rumorRowsOf, rumorSelfCheck
 } from '../../config/rumor-source-contract.js';
+/* [v4.40.0 · R5-X5] 共同往事选择器（纯契约：只判「这一组里谁能说哪件旧事」）。
+ *   与 R5-X4 的「独立来源」同规：**判不了**（有人没知情数据）必须与**不知情**分形。 */
+import {
+  SHARED_STATES, SHARED_ITEM_STATES, SHARED_FORBIDDEN_KEYS, SHARED_LIMITS,
+  membersKeyOf, normalizeSharedItem, buildSharedPast, sharedPastLine,
+  sharedItemRows, handoffGate, sharedPastSelfCheck
+} from '../../config/shared-past-contract.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
@@ -84,6 +91,95 @@ export class WechatApp {
     }
 
     // 🔥 处理滑动返回（智能模拟点击原生返回按钮）
+    /* ========== [v4.40.0 · R5-X5] 群聊前的共同往事选择器 ========== */
+    /**
+     * 上游共享往事面在不在（**只判「有没有那口」**，不判数据）。
+     */
+    _sharedPastPlugin() {
+        try {
+            const win = (typeof window !== 'undefined') ? window : globalThis;
+            return win ? win.LonShaMemory : null;
+        } catch (_e) { return null; }
+    }
+    /** 上一次预览的成员指纹（**换会话整块作废**：那是本会话的现场）。 */
+    sharedPastPrevKey() {
+        return String(this._sharedPastKey || '');
+    }
+    /**
+     * 一次取齐**当前这一组**的共享往事面（只读：本层不判谁该知道、不推算亲密度）。
+     *
+     * 【取数从哪来】上游 `sharedPastOf(members, opts)`（M5-X5，本版未实现）——
+     *   上游不在场时按计划原文落**纯本地降级**：从本机既有的关系回忆册
+     *   （`wechatData` 的群成员 + 会话里的旧事）取，**没有知情名单的一律判不了**。
+     *
+     * @param {Array<string>} members 当前选中的组员
+     * @returns {{state:string, line:string, gate:object, rows:Array, face:object}}
+     */
+    sharedPastPack(members) {
+        const group = Array.isArray(members) ? members.filter(Boolean).map((x) => String(x).trim()).filter(Boolean) : [];
+        const plugin = this._sharedPastPlugin();
+        const hasFace = !!(plugin && typeof plugin.sharedPastOf === 'function');
+        let recv = null;
+        if (hasFace) {
+            try { recv = plugin.sharedPastOf(group, {}) || null; }
+            catch (_e) { recv = { thrown: true }; }
+        } else {
+            recv = this._localSharedPast(group);
+        }
+        const face = buildSharedPast(Object.assign({}, (recv && typeof recv === 'object') ? recv : {}, {
+            members: group,
+            /* ★ 上一次指纹原样带上：**成员一变，旧预览整块作废**（验收原文那一格）。 */
+            prevKey: this.sharedPastPrevKey(),
+        }));
+        return {
+            state: face.state, face: face, line: sharedPastLine(face),
+            gate: handoffGate(face), rows: sharedItemRows(face),
+        };
+    }
+    /**
+     * 本机可判的旧事（**只给能判的**：没有知情名单的一律留空 ⇒ 契约件判不了）。
+     *   为什么不从「同群成员都见过这条消息」推知情：见计划原文
+     *   「不做：不从亲密度推定群成员知情」——同群只证明「都在这群里」，
+     *   证明不了「都看过这条」。
+     */
+    _localSharedPast(group) {
+        const out = [];
+        try {
+            const chatId = this.currentChat?.id;
+            const all = this.wechatData?.getMessages?.(chatId) || [];
+            const seen = new Set();
+            for (const m of all) {
+                const text = String(m?.content == null ? '' : m.content).trim();
+                if (!text || seen.has(text)) continue;
+                seen.add(text);
+                /* ★ **不填 knowers**：本机没有知情数据 ⇒ 契约件判 `unknown`
+                 *   「判不了」—— 那正是计划原文要求的「无知情数据提示无法判定」。 */
+                out.push({ id: String(m?.id || ''), label: text.slice(0, 40) });
+                if (out.length >= SHARED_LIMITS.items) break;
+            }
+        } catch (_e) { /* 取不到即不声明 */ }
+        return { items: out, members: group };
+    }
+    /**
+     * 记下本次预览的成员指纹（**交接前**由视图调用）。
+     *   为什么要有这一步：验收原文要求「加入丙后重新预览移除秘密，不能沿旧草稿一键误发」——
+     *   故每次预览都要把「这次是哪一组」记下来，下次成员变了才判得出作废。
+     */
+    sharedPastMark() {
+        this._sharedPastKey = membersKeyOf(Array.isArray(this._sharedPastMembers) ? this._sharedPastMembers : []);
+        return this._sharedPastKey;
+    }
+    /** 记下本次预览的成员（与 mark 配对使用）。 */
+    sharedPastSetMembers(members) {
+        this._sharedPastMembers = Array.isArray(members) ? members.slice() : [];
+        return this._sharedPastMembers.length;
+    }
+    /** 共同往事契约件自检的**真消费点**（方法名与 import 不同名，防同类遮蔽）。 */
+    sharedPastContractSelfCheck() {
+        try { return sharedPastSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], states: 0, itemStates: 0 }; }
+    }
+
     /* ========== [v4.39.0 · R5-X4] 传闻源头读数（只转发，不重判） ========== */
     /**
      * 上游传闻面出口在不在（**只判「有没有那口」**，不判数据）。

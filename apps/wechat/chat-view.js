@@ -14130,6 +14130,68 @@ renderChatRoom(chat) {
         });
     }
 
+    /* ================= [v4.40.0 · R5-X5] 「共同往事」选择器面板 ================= */
+    /**
+     * 为**当前这一组**挑安全可共享的旧事。
+     *
+     * 【这一面治的欠债】群聊里想提一件旧事时，此前只能凭人脑记「丙不知道这件事」；
+     *   而**加一个人就整个结论作废**这件事在界面上没有任何落点。
+     *   本面板分列「可共享 / 不许说 / 判不了」，并在成员变更时**整块作废**。
+     *
+     * 【三条纪律】
+     *   ① 判定走 `app.sharedPastPack(members)`（控制器转交纯契约件）——
+     *      本视图**不自己判**谁该知道（那是本项最容易写错的一处）；
+     *   ② 交接前必须过 `gate`（成员变了 ⇒ **拦住**，不能沿旧草稿一键误发）；
+     *   ③ 不从亲密度推定知情：本机没有知情数据时**如实报判不了**。
+     */
+    openSharedPastPanel() {
+        const currentView = this.getCurrentWechatView();
+        if (!currentView) return;
+        const members = (() => {
+            try {
+                const id = this.app?.currentChat?.id;
+                const list = this.app?.wechatData?.getGroupMembers?.(id) || [];
+                return Array.isArray(list) ? list.map((x) => String(x == null ? '' : x).trim()).filter(Boolean) : [];
+            } catch (_e) { return []; }
+        })();
+        let pack = null;
+        try {
+            this.app?.sharedPastSetMembers?.(members);
+            pack = this.app?.sharedPastPack?.(members) || null;
+        } catch (_e) { pack = null; }
+        /* 每次预览都记下「这次是哪一组」：下次成员变了才判得出作废。 */
+        try { this.app?.sharedPastMark?.(); } catch (_e) { /* 忽略 */ }
+        const line = pack ? String(pack.line || '') : '共同往事：本版 App 未接线（不是「没有可共享的旧事」）';
+        const gate = (pack && pack.gate) ? pack.gate : { ok: false, line: '判不了（没有这一面）' };
+        const rows = (pack && Array.isArray(pack.rows)) ? pack.rows : [];
+        const rowHtml = rows.length
+            ? rows.map((r) => '<div class="wx-shared-row">' + this._escapeHtml(String((r && r.line) || '')) + '</div>').join('')
+            : '<div class="wx-shared-none">这一组还没有可列的旧事</div>';
+
+        currentView.querySelectorAll('.wx-shared-panel').forEach((p) => p.remove());
+        const panel = document.createElement('div');
+        panel.className = 'wx-shared-panel';
+        panel.style.cssText = 'position:absolute;left:0;right:0;bottom:0;z-index:10060;'
+            + 'background:rgba(255,255,255,0.97);backdrop-filter:blur(8px);'
+            + 'border-top-left-radius:12px;border-top-right-radius:12px;'
+            + 'box-shadow:0 -2px 12px rgba(0,0,0,0.16);padding:12px 14px;max-height:66%;overflow:auto;';
+        panel.innerHTML = ''
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+            + '<b style="font-size:14px;">共同往事（这一组）</b>'
+            + '<button type="button" class="wx-shared-close" style="border:none;background:transparent;font-size:16px;cursor:pointer;color:#666;">×</button>'
+            + '</div>'
+            + '<div style="font-size:12px;color:#333;line-height:1.6;">' + this._escapeHtml(line) + '</div>'
+            + '<div style="font-size:12px;color:#9a3412;background:#fff7ed;border-radius:6px;padding:6px 8px;margin:6px 0;">'
+            + this._escapeHtml(String(gate.line || '')) + '</div>'
+            + '<div style="font-size:11px;color:#8a8aa0;margin:4px 0;">逐件（「不许说」与「判不了」是两件事）</div>'
+            + '<div>' + rowHtml + '</div>'
+            + '<div style="font-size:11px;color:#8a8aa0;margin-top:8px;">本面板不从亲密度推定知情：本机没有知情数据时如实说「判不了」。</div>';
+        const host = currentView.querySelector('.wechat-app') || currentView;
+        if (!host?.appendChild) return;
+        host.appendChild(panel);
+        panel.querySelector('.wx-shared-close')?.addEventListener('click', () => panel.remove());
+    }
+
     /* ================= [v4.39.0 · R5-X4] 「来自哪里」传闻源头面板 ================= */
     /**
      * 从一条消息进入传闻源头图。
@@ -14271,6 +14333,11 @@ renderChatRoom(chat) {
         if (isTextMessage || isImageMessage) {
             buttonsHtml += `<button type="button" class="msg-action-btn" data-action="rumor-source" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">来自哪里</button>`;
         }
+        /* [v4.40.0 · R5-X5] 「共同往事」：为**当前这一组**挑安全可共享的旧事。
+         *   只在**群聊**里给（本项要治的是「一屋子人里谁能说哪件旧事」）。 */
+        if (this.app?.currentChat?.type === 'group') {
+            buttonsHtml += `<button type="button" class="msg-action-btn" data-action="shared-past" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">共同往事</button>`;
+        }
         buttonsHtml += `<button type="button" class="msg-action-btn" data-action="recall" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">撤回</button>`;
         buttonsHtml += `<button type="button" class="msg-action-btn" data-action="delete" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #ff3b30; border: none; padding: 4px 8px; font-size: 11px; cursor: pointer;">删除</button>`;
 
@@ -14370,6 +14437,8 @@ renderChatRoom(chat) {
                     this.enterMessageSelectionMode(targetMessage?.id || null);
                 } else if (action === 'rumor-source') {
                     this.openRumorSourcePanel(safeIndex, actionMessageId);
+                } else if (action === 'shared-past') {
+                    this.openSharedPastPanel();
                 } else if (action === 'recall') {
                     this.recallMessage(safeIndex, actionMessageId);
                 } else if (action === 'quote') {
