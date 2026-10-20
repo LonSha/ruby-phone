@@ -16,6 +16,14 @@ import { ImageCropper } from '../settings/image-cropper.js';
 /* [v4.29.0 · R4-X7] 群聊投票接线件（取数 / 持起点 / 落点形状）。
  *   判定词与标签表**只许内核一份**（config/group-vote-contract.js），本件只转发。 */
 import { GroupVote } from './group-vote.js';
+/* [v4.39.0 · R5-X4] 传闻源头契约（纯契约：只做读数与归一，不判内容真假）。
+ *   本 App 只把「这一条消息在传闻面上的读数」取好交给视图 ——
+ *   **独立来源怎么算**只许契约件那一份口径（视图再算一遍必然漂移）。 */
+import {
+  RUMOR_STATES, RUMOR_ORIGINS, RUMOR_LIMITS, RUMOR_FORBIDDEN_KEYS,
+  planRumorState, normalizeRumorFace, rumorLineOf, corroborationLineOf,
+  rumorRowsOf, rumorSelfCheck
+} from '../../config/rumor-source-contract.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
@@ -76,6 +84,87 @@ export class WechatApp {
     }
 
     // 🔥 处理滑动返回（智能模拟点击原生返回按钮）
+    /* ========== [v4.39.0 · R5-X4] 传闻源头读数（只转发，不重判） ========== */
+    /**
+     * 上游传闻面出口在不在（**只判「有没有那口」**，不判数据）。
+     *   严格判 `typeof === 'function'`（与物品卡/目标树同规）。
+     */
+    _rumorPlugin() {
+        try {
+            const win = (typeof window !== 'undefined') ? window : globalThis;
+            return win ? win.LonShaMemory : null;
+        } catch (_e) { return null; }
+    }
+    /**
+     * 一条消息在传闻面上的读数（**只读**：本层不判内容真假、不判独立来源）。
+     *
+     * 【取数从哪来】上游 `rumorSources(claim, opts)`（M5-X4，本版未实现）——
+     *   上游不在场时按计划原文落**纯本地降级**：只有本机可见的转发痕迹
+     *   （同群同文的多次出现）能算「转述」，而**独立来源一律判不了**（不硬算）。
+     *
+     * @param {object} message 微信消息对象
+     * @returns {{state:string, line:string, corroboration:string, rows:Array, face:object}}
+     */
+    rumorFaceOf(message) {
+        const msg = (message && typeof message === 'object') ? message : {};
+        const claim = String(msg.content == null ? '' : msg.content).trim();
+        const plugin = this._rumorPlugin();
+        const hasFace = !!(plugin && typeof plugin.rumorSources === 'function');
+        /* 本地可见的转发痕迹：同群同文的其它条数（**只算转述，不算独立来源**）。 */
+        const local = this._localRetellOf(msg);
+        /* ★ 上游不在场时**照样**把本机痕迹交下去（哪怕是空数组）：
+         *   空数组 ⇒ 契约件判 `no-chain`「这一条没有可回溯来源」——
+         *   那比 `absent`「读不到从哪来」对用户有用得多，且两者**不同形**
+         *   （本仓最贵的形态：把「确实没记来源」与「读不到」压成一格）。 */
+        const recv = hasFace
+            ? (() => {
+                try { return plugin.rumorSources(claim, { messageId: String(msg.id || '') }) || null; }
+                catch (_e) { return { thrown: true, claim: claim }; }
+            })()
+            : { claim: claim, sources: local, refutes: [] };
+        const face = normalizeRumorFace(recv);
+        return {
+            state: face.state, face: face,
+            line: rumorLineOf(face), corroboration: corroborationLineOf(face),
+            rows: rumorRowsOf(face),
+        };
+    }
+    /**
+     * 本机可见的同文转发痕迹（**只作转述来源**，绝不算独立来源）。
+     *   为什么只算转述：同一段话在本机出现两次，只证明「这句话被说了两次」——
+     *   证明不了「有两个人各自知道这件事」（那才是独立来源）。
+     */
+    _localRetellOf(message) {
+        const out = [];
+        try {
+            const chatId = this.currentChat?.id;
+            const all = this.wechatData?.getMessages?.(chatId) || [];
+            const text = String(message?.content == null ? '' : message.content).trim();
+            if (!text) return out;
+            const selfId = String(message?.id || '');
+            for (const m of all) {
+                if (String(m?.id || '') === selfId) continue;
+                if (String(m?.content == null ? '' : m.content).trim() !== text) continue;
+                out.push({
+                    id: String(m?.id || ''), label: String(m?.sender || m?.senderName || '同一句话的另一处'),
+                    origin: RUMOR_ORIGINS.RETELL, rootKey: 'local:' + text.slice(0, 40),
+                    state: m?.recalled === true ? 'withdrawn' : 'live',
+                });
+                if (out.length >= RUMOR_LIMITS.sources) break;
+            }
+        } catch (_e) { /* 取不到即不声明 */ }
+        return out;
+    }
+    /** 传闻契约件自检的**真消费点**。
+     *   ★ 方法名必须与 import 进来的 `rumorSelfCheck` **不同名**：
+     *   同类方法同名会在类体内遮蔽那个 import 绑定 —— 于是方法体里那一句
+     *   `return rumorSelfCheck()` 变成**调用自己**（无限递归），且**不报语法错**。
+     *   本仓治理过的「同名遮蔽」形态之一（与 TDZ 遮蔽同族）。 */
+    rumorContractSelfCheck() {
+        try { return rumorSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], states: 0, origins: 0 }; }
+    }
+
     handleSwipeBack() {
         // 1. 400ms 防抖
         const now = Date.now();

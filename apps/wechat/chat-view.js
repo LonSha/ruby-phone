@@ -14130,6 +14130,71 @@ renderChatRoom(chat) {
         });
     }
 
+    /* ================= [v4.39.0 · R5-X4] 「来自哪里」传闻源头面板 ================= */
+    /**
+     * 从一条消息进入传闻源头图。
+     *
+     * 【这一面治的欠债】「一条消息被转了三次」与「三个目击者各说了一遍」此前完全同形，
+     *   而两者处置相反（前者仍是孤证、后者才算互相印证）。本面板把
+     *   **独立来源数 / 转述数 / 未标注数 / 反证数 / 已撤回数**分列摆出来。
+     *
+     * 【三条纪律】
+     *   ① 取数走 `app.rumorFaceOf(msg)`（控制器转交纯契约件）—— 本视图**不自己判**
+     *      「算不算独立来源」（那是本项最容易写错的一处）；
+     *   ② 没有证据链就**不画任何线**（只列真实存在的来源，不猜）；
+     *   ③ 被撤回的源**照旧列出**并标失效，不许从清单里拿掉。
+     */
+    openRumorSourcePanel(messageIndex, messageId) {
+        const currentView = this.getCurrentWechatView();
+        if (!currentView) return;
+        const messages = this.app?.wechatData?.getMessages?.(this.app?.currentChat?.id) || [];
+        const byId = String(messageId || '').trim();
+        const message = byId
+            ? (messages.find((m) => String(m?.id || '').trim() === byId) || messages[messageIndex])
+            : messages[messageIndex];
+        if (!message) return;
+        let face = null;
+        try { face = this.app.rumorFaceOf?.(message) || null; } catch (_e) { face = null; }
+        /* 取数口读不出时**如实说读不出**，不假装「没有来源」（两者处置相反）。 */
+        const line = face ? String(face.line || '') : '来源：本版 App 未接线（不是「没有来源」）';
+        const corroboration = face ? String(face.corroboration || '') : '判不了';
+        const rows = (face && Array.isArray(face.rows)) ? face.rows : [];
+        const rowHtml = rows.length
+            ? rows.map((r) => '<div class="wx-rumor-row">' + this._escapeHtml(String((r && r.line) || '')) + '</div>').join('')
+            : '<div class="wx-rumor-none">没有可列出的来源（**不画编造的连线**）</div>';
+
+        currentView.querySelectorAll('.wx-rumor-panel').forEach((p) => p.remove());
+        const panel = document.createElement('div');
+        panel.className = 'wx-rumor-panel';
+        panel.style.cssText = 'position:absolute;left:0;right:0;bottom:0;z-index:10050;'
+            + 'background:rgba(255,255,255,0.97);backdrop-filter:blur(8px);'
+            + 'border-top-left-radius:12px;border-top-right-radius:12px;'
+            + 'box-shadow:0 -2px 12px rgba(0,0,0,0.16);padding:12px 14px;max-height:62%;overflow:auto;';
+        panel.innerHTML = ''
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+            + '<b style="font-size:14px;">来自哪里</b>'
+            + '<button type="button" class="wx-rumor-close" style="border:none;background:transparent;font-size:16px;cursor:pointer;color:#666;">×</button>'
+            + '</div>'
+            + '<div style="font-size:12px;color:#333;line-height:1.6;">' + this._escapeHtml(line) + '</div>'
+            + '<div style="font-size:12px;color:#9a3412;background:#fff7ed;border-radius:6px;padding:6px 8px;margin:6px 0;">'
+            + this._escapeHtml(corroboration) + '</div>'
+            + '<div style="font-size:11px;color:#8a8aa0;margin:4px 0;">逐条来源（反证排在最前；被撤回的照旧列出）</div>'
+            + '<div>' + rowHtml + '</div>'
+            + '<div style="font-size:11px;color:#8a8aa0;margin-top:8px;">本面板只列**真实存在的来源**：没有证据链时一条都不画。</div>';
+        const host = currentView.querySelector('.wechat-app') || currentView;
+        if (!host?.appendChild) return;
+        host.appendChild(panel);
+        panel.querySelector('.wx-rumor-close')?.addEventListener('click', () => panel.remove());
+    }
+
+    /**
+     * 取一条消息在传闻面上的读数（**只转发**：控制器转交纯契约件）。
+     *   与 `pgRowFace` 同族：视图不查图、不自己判「算不算独立来源」。
+     */
+    rumorFaceOf(message) {
+        try { return this.app?.rumorFaceOf?.(message) || null; } catch (_e) { return null; }
+    }
+
     showMessageMenu(messageIndex) {
         const currentView = this.getCurrentWechatView();
         const messagesDiv = currentView?.querySelector('#chat-messages');
@@ -14198,6 +14263,13 @@ renderChatRoom(chat) {
         }
         if (hasCallTranscript) {
             buttonsHtml += `<button type="button" class="msg-action-btn" data-action="view" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">查看</button>`;
+        }
+        /* [v4.39.0 · R5-X4] 「来自哪里」：从一条消息进入传闻源头图。
+         *   只在**文本 / 图片 / 微博卡**这类「可以是被转述的内容」上给；
+         *   它回答的是本项要的那一问：「这几条到底是一个来源，还是几个独立来源」——
+         *   **热度高 ≠ 独立来源多**。 */
+        if (isTextMessage || isImageMessage) {
+            buttonsHtml += `<button type="button" class="msg-action-btn" data-action="rumor-source" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">来自哪里</button>`;
         }
         buttonsHtml += `<button type="button" class="msg-action-btn" data-action="recall" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #333; border: none; border-right: 0.5px solid rgba(0,0,0,0.08); padding: 4px 8px; font-size: 11px; cursor: pointer;">撤回</button>`;
         buttonsHtml += `<button type="button" class="msg-action-btn" data-action="delete" data-index="${messageIndex}" data-message-id="${this._escapeHtml(messageId)}" style="background: transparent; color: #ff3b30; border: none; padding: 4px 8px; font-size: 11px; cursor: pointer;">删除</button>`;
@@ -14296,6 +14368,8 @@ renderChatRoom(chat) {
                 } else if (action === 'multi-select') {
                     const targetMessage = messages?.[safeIndex];
                     this.enterMessageSelectionMode(targetMessage?.id || null);
+                } else if (action === 'rumor-source') {
+                    this.openRumorSourcePanel(safeIndex, actionMessageId);
                 } else if (action === 'recall') {
                     this.recallMessage(safeIndex, actionMessageId);
                 } else if (action === 'quote') {
