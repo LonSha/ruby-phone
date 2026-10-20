@@ -23,6 +23,14 @@ import {
  *   AI 一轮再等一次），回信时可能已经换了会话。它写 `calendar_memos`（按会话隔离），
  *   旧回信落回来会把上一段会话的日程排进新会话的日历，并在新会话桌面弹「已添加 N 条日程」。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+/* [v4.41.0 · R5-X8] 周期日程、单次例外与多人空档（纯契约：只做读数与归一）。
+ *   日历侧既有 `isRecurringType` **只认生日/纪念日** —— 本件补的是「每周/每月重复时段」
+ *   与「只改这一次」的例外；并给多人空档一个「未知 ≠ 空闲」的判定口。 */
+import {
+  REC_EXCEPTION, REC_FREQ, REC_STATES, SLOT_STATES, REC_LIMITS,
+  normalizeRule, expandOccurrences, applyExceptions, findCommonSlots,
+  commonSlotLine, recurrenceSelfCheck
+} from '../../config/recurrence-contract.js';
 import { numOrNull } from '../../config/num-gate.js';
 /* [第三期 R3-X3] 约会与日程的可玩执行流程(五步台面)。
  *   纯函数内核,读本层已有的约定账与剧情楼层;不新开第二个 owner。 */
@@ -42,6 +50,50 @@ export class CalendarApp {
         //   匿名 add 会随每次重建累积（与 album 同型缺陷，同 weibo 范式）
         this._onSwipeBack = () => this.handleSwipeBack();
         window.addEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
+    }
+
+    /* ========== [v4.41.0 · R5-X8] 周期日程、单次例外与多人空档 ========== */
+    /**
+     * 展开一条日程的周期各期（**只读**：本层不算规则，转交纯契约件）。
+     *   @param {object} memo 日程（含 `freq`/`rule`）
+     *   @param {number} [count] 展开几期（默认 4：验收原文「四周安排」）
+     */
+    recurrenceFace(memo, count) {
+        try { return expandOccurrences(memo, Number(count) > 0 ? Number(count) : 4); }
+        catch (_e) { return expandOccurrences({ thrown: true }, 1); }
+    }
+    /** 把单次例外应用到展开结果上（**只动点名的那一期**）。 */
+    recurrenceWithExceptions(memo, exceptions, count) {
+        const face = this.recurrenceFace(memo, count);
+        try { return applyExceptions(face, exceptions); }
+        catch (_e) { return applyExceptions(face, []); }
+    }
+    /**
+     * 一条日程是不是**周期**日程（视图据此决定要不要画「例外」那一排）。
+     *   ★ 与既有 `isRecurringType`（只认生日/纪念日）**不是同一件事**：
+     *   那一件判「按年重复的纪念日」，本件判「每周/每月的固定时段」——
+     *   两者并存，视图按需取用（本层不改既有那一件的口径）。
+     */
+    isWeeklyMonthly(memo) {
+        try {
+            const f = this.recurrenceFace(memo, 1);
+            return f.state === REC_STATES.RECURRING;
+        } catch (_e) { return false; }
+    }
+    /**
+     * 多人共同空档（**只读**）。
+     *   逐人的忙时表由调用方给（本层不推算谁忙）；`unread` 的人**不算空闲**。
+     */
+    commonSlots(slots, busyByMember) {
+        try { return findCommonSlots(slots, busyByMember); }
+        catch (_e) {
+            return { state: REC_STATES.UNREADABLE, slots: [], free: [], busy: [], unknown: [], line: '共同空档：读不到' };
+        }
+    }
+    /** 周期契约件自检的**真消费点**（方法名与 import 不同名，防同类遮蔽）。 */
+    recurrenceContractSelfCheck() {
+        try { return recurrenceSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], exceptionActions: 0, slotStates: 0 }; }
     }
 
     render() {

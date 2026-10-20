@@ -28,6 +28,10 @@ export class CalendarView {
         this.holidayDraftTitle = '';
         this.holidayDraftMonth = '';
         this.holidayDraftDay = '';
+        /* [v4.41.0 · R5-X8] 本会话对某几期的**单次例外**（只动那一期；不落盘）。
+         *   为什么只留在内存：计划原文「不接系统日历/闹钟」—— 这一屏是**预览**，
+         *   用户看着结果决定要不要真改；真改仍走既有日程保存路径。 */
+        this._recurrenceExceptions = [];
     }
 
     async loadCSS() {
@@ -527,9 +531,54 @@ export class CalendarView {
                         </form>
                     ` : `
                         <div class="yzp-calendar-detail-body">${this.escapeHtml(memo.title)}</div>
+                        ${this.renderRecurrenceBlock(memo)}
                         ${this.renderCommitmentActions(memo)}
                     `}
                 </section>
+            </div>
+        `;
+    }
+
+    /**
+     * [v4.41.0 · R5-X8] 周期与单次例外区块。
+     *
+     * 【这一面治的欠债】日历侧既有 `isRecurringType` **只认生日/纪念日**；
+     *   而「每周三晚八点」这种固定时段与「只改第二周」这件事在界面上没有落点。
+     *
+     * 【两条纪律】
+     *   ① 展开与例外全走 `app.recurrenceFace()` / `app.recurrenceWithExceptions()`
+     *      （控制器转交纯契约件）—— 本视图**不自己算规则**；
+     *   ② 「跳过」与「取消」必须**分句显示**（前者系列仍在、后者不再生成）。
+     */
+    renderRecurrenceBlock(memo) {
+        let face = null;
+        try { face = this.app?.recurrenceFace?.(memo, 4) || null; } catch (_e) { face = null; }
+        if (!face) return '';
+        /* 非周期日程不画这一块（不占版面）。 */
+        if (face.state !== 'recurring') return '';
+        const rows = (() => {
+            let applied = null;
+            try { applied = this.app?.recurrenceWithExceptions?.(memo, this._recurrenceExceptions || [], 4) || null; } catch (_e) { applied = null; }
+            return (applied && Array.isArray(applied.occurrences)) ? applied.occurrences : [];
+        })();
+        const rowHtml = rows.map((o) => {
+            const act = String(o.action || '');
+            const tag = act === 'move' ? '改到 ' + String(o.at || '')
+                : (act === 'skip' ? '跳过（系列仍在）'
+                    : (act === 'cancel' ? '取消（不再生成）'
+                        : (act === 'unknown' ? '这一次没被改动（动作名不认识）' : '照常')));
+            return '<div class="yzp-calendar-recur-row" data-index="' + String(o.index) + '">第 ' + String(o.index + 1) + ' 期 · ' + this.escapeHtml(tag) + '</div>';
+        }).join('');
+        return `
+            <div class="yzp-calendar-recur-block" id="yzp-calendar-recur-block">
+                <div class="yzp-calendar-recur-title">周期与单次例外</div>
+                <div class="yzp-calendar-recur-hint">改某一期只动那一期；「跳过」与「取消」是两件事。</div>
+                <div class="yzp-calendar-recur-rows">${rowHtml}</div>
+                <div class="yzp-calendar-recur-actions">
+                    <button type="button" class="yzp-calendar-recur-btn" data-recur-act="move" data-recur-index="1">改第二期</button>
+                    <button type="button" class="yzp-calendar-recur-btn" data-recur-act="skip" data-recur-index="2">跳过第三期</button>
+                    <button type="button" class="yzp-calendar-recur-btn" data-recur-act="cancel" data-recur-index="3">取消第四期</button>
+                </div>
             </div>
         `;
     }
@@ -941,6 +990,26 @@ export class CalendarView {
                 this.app.calendarData.deleteMemo(btn.dataset.memoDelete);
                 this.activeDeleteMemoId = '';
                 this.render();
+            });
+        });
+        /* [v4.41.0 · R5-X8] 单次例外的三个动作（**只动点名的那一期**）。
+         *   本处只把选择记进内存预览，**不写盘**（计划原文「不接系统日历/闹钟」）；
+         *   用户看着结果决定要不要真改。 */
+        root.querySelectorAll('[data-recur-act]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const act = String(btn.dataset.recurAct || '');
+                const idx = Number(btn.dataset.recurIndex);
+                if (!act || !Number.isInteger(idx)) return;
+                const rest = (this._recurrenceExceptions || []).filter((x) => Number(x.index) !== idx);
+                rest.push(act === 'move'
+                    ? { index: idx, action: 'move', at: '周五 20:00' }
+                    : { index: idx, action: act });
+                this._recurrenceExceptions = rest;
+                this.render();
+                const word = act === 'move' ? '已把这一期改到别的时间' : (act === 'skip' ? '这一期已跳过（系列仍在）' : '这一期已取消（不再生成）');
+                this.app.phoneShell?.showNotification?.('日历', word, '📅');
             });
         });
         root.querySelectorAll('[data-holiday-settings-delete]').forEach(btn => {

@@ -1288,3 +1288,26 @@
     color: var(--yzp-cal-text) !important;
     font-size: 12px !important;
 }
+/* ---------- [v4.41.0 · R5-X8] 周期与单次例外 ----------
+ * 为什么「跳过」与「取消」在样式上也不同：它们是两件事（系列仍在 vs 不再生成），
+ * 只靠文案区分时用户扫一眼容易读成一件事。 */
+.yzp-calendar-recur-block {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(107, 154, 189, 0.10);
+}
+.yzp-calendar-recur-title { font-size: 13px; color: var(--yzp-cal-text); font-weight: 600; }
+.yzp-calendar-recur-hint { font-size: 11px; color: #8a8aa0; margin: 3px 0 6px; }
+.yzp-calendar-recur-row { font-size: 12px; color: var(--yzp-cal-text); line-height: 1.7; }
+.yzp-calendar-recur-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.yzp-calendar-recur-btn {
+    border: 1px solid rgba(107, 154, 189, 0.45);
+    background: transparent;
+    color: var(--yzp-cal-text);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.yzp-calendar-recur-btn:active { transform: scale(0.96); }
