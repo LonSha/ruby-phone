@@ -24,6 +24,14 @@ import { PlotlineView } from './plotline-view.js';
  *   config/causal-board-contract.js（纯契约件）里，与其它面同一个取法。 */
 import { PlotlineBoard } from './plotline-board.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v4.38.0 · R5-X2] 目标树契约（纯契约：只做读数与归一，不写任何事实）。
+ *   本版按计划原文「先做计划编辑后接事实状态」落**纯计划模式**：
+ *   勾选只表达用户计划，事实达成必须由证据/确认产生（两格分列）。 */
+import {
+  GT_STATES, GT_PLAN, GT_FACT, GT_BLOCK, GT_LIMITS,
+  planGoalState, normalizeGoalNode, stepGateLine, planVsFactLine,
+  goalTreeRows, goalTreeSelfCheck
+} from '../../config/goal-tree-contract.js';
 /* [v3.0.1] 投影契约的**归属面**（L-F5 的遗留观察项之一）。
  *   数据面照旧读只读快照的大纲面与世界推进面（`readPlotlineFace` 的三态归因一个字不动）；
  *   投影只补「这份读数是哪一次的」（会话 / 场景 / 世界 / 修订 / 时效 / 权限）。
@@ -205,6 +213,79 @@ export class PlotlineApp {
         try { return this.board.traceNote(read); }
         catch (_e) { return ''; }
     }
+    /* ========== [v4.38.0 · R5-X2] 目标树（纯计划模式） ========== */
+    /**
+     * 上游目标事实面在不在（**只判「有没有那口」**，不判数据）。
+     *   严格判 `typeof === 'function'`（与因果板/物品卡同规）。
+     */
+    _goalPlugin() {
+        const win = this._win();
+        try { return win ? win.LonShaMemory : null; } catch (_e) { return null; }
+    }
+    /** 本会话的**目标树草稿**（只在本机；本 App 不写任何上游账）。 */
+    goalDrafts() {
+        if (!this._goalDraft || typeof this._goalDraft !== 'object') this._goalDraft = {};
+        return this._goalDraft;
+    }
+    /**
+     * 一条目标的读数（**只读**：本层不推算、不写事实）。
+     *
+     * 【计划与事实必须两格】`planDone` 来自用户勾选（本机草稿），`factState` 来自上游；
+     *   合成一格就会出现「用户勾了一下，界面说这件事发生了」。
+     *
+     * @param {string} goal 目标名
+     * @returns {{state:string, goal:string, gate:string, planVsFact:string, rows:Array, tree:object}}
+     */
+    goalNode(goal) {
+        const name = String(goal == null ? '' : goal).trim();
+        const plugin = this._goalPlugin();
+        const hasFacts = !!(plugin && typeof plugin.goalFacts === 'function');
+        const drafts = this.goalDrafts();
+        const planDone = !!drafts[name];
+        /* ★ 派发相的第二个入参必须是「**本机是否真有这条计划**」，不是「用户有没有打名字」。
+         *   首版传 `!!name` ⇒ 只要打了名字就报 `planned`，于是
+         *   「没打过草稿」与「有一条计划」被压成同一格 —— 用户看到「你在计划里还没勾」，
+         *   而其实他**根本没建过这条计划**（两者处置相反）。真缺陷，本版当场修。 */
+        const hasPlan = Object.prototype.hasOwnProperty.call(drafts, name);
+        const phase = planGoalState(hasFacts, hasPlan);
+        let recv = null;
+        if (phase === GT_STATES.TRACKED) {
+            try { recv = plugin.goalFacts(name) || null; }
+            catch (_e) { recv = { thrown: true, goal: name }; }
+        }
+        const node = normalizeGoalNode(recv, { planDone: planDone, hasPlan: hasPlan });
+        return {
+            state: node.state, goal: node.goal || name, node: node,
+            gate: stepGateLine(node), planVsFact: planVsFactLine(node),
+            rows: goalTreeRows(node, {}).rows,
+        };
+    }
+    /** 勾/取消勾（**只在本机**：勾选只表达计划，不写成事实）。 */
+    goalPlanToggle(goal, done) {
+        const name = String(goal == null ? '' : goal).trim();
+        if (!name) return { ok: false, note: '先给这个目标起个名（空名勾不了）' };
+        const d = this.goalDrafts();
+        if (done === true) d[name] = true; else delete d[name];
+        return {
+            ok: true, planDone: done === true,
+            note: done === true
+                ? '已在**计划**里勾上「' + name + '」（只是你的计划：事实达成要由证据/确认产生）'
+                : '已取消「' + name + '」的计划勾选（事实侧不受影响）',
+        };
+    }
+    /** 计划里勾了几条（读数；不参与任何事实判定）。 */
+    goalPlanCount() { return Object.keys(this.goalDrafts()).length; }
+    /** 目标树自检的**真消费点**。 */
+    goalTreeSelfCheck() {
+        try { return goalTreeSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], states: 0, blocks: 0 }; }
+    }
+    /** 一次取齐「当前目标读数 + 计划条数」（视图用它，保证同一份读数上两面同源）。 */
+    goalPack(goal) {
+        const one = this.goalNode(goal);
+        return { one: one, planCount: this.goalPlanCount(), self: this.goalTreeSelfCheck() };
+    }
+
     /**
      * 换会话 / 清数据：本 App **不持有任何读数副本**，故无需重绑数据层；
      * 仅丢弃上一次的探针归因（那是旧会话的读数），下一次渲染现取。
@@ -214,6 +295,10 @@ export class PlotlineApp {
         /* [v4.27.0 · R4-X6] 换会话也丢掉「上一次选了哪条线」：那是旧会话的选择，
          *   而因果图随会话变 —— 留着它会把新会话里一个同名的节点当成旧选择。 */
         try { this.board.resetScene(); } catch (_e) { /* 静默：换会话绝不能因接线件而报错 */ }
+        /* [v4.38.0 · R5-X2] 目标树草稿同样是**本会话**现场：换会话整块丢掉。
+         *   不丢的后果不是报错，而是把上一段勾过的计划画进新会话那一屏 ——
+         *   用户以为这一段的剧情目标已经推进了（与追问轨迹/物品草稿同族）。 */
+        this._goalDraft = {};
     }
     render() {
         this.view.render(this.phoneShell?.layerHost?.('plotline-main') || this.phoneShell?.screen);

@@ -63,6 +63,7 @@ export class PlotlineView {
             this._secretCard(face, (pkg && pkg.secrets) || []),
             this._echoCard(face, (pkg && pkg.recallEchoes) || [], (pkg && pkg.echoLives) || []),
             this._boardCard(),
+            this._goalCard(),
             this._settingsCard(),
             '  </div>',
             '</div>'
@@ -298,6 +299,96 @@ export class PlotlineView {
         ].join('\n');
     }
     /**
+     * [v4.38.0 · R5-X2] 目标树（纯计划模式）。
+     *
+     * 【这一面治的欠债】手机侧已有「线索与未完事项板」，它能列**账里有什么**，
+     *   但没有任何一格能表达**用户自己的目标与前置条件**。于是用户想把
+     *   「搬家」拆成「签约 → 取钥匙 → 搬东西」时只能在聊天里自己记。
+     *
+     * 【两条纪律】
+     *   ① **勾选只表达计划**：那一句由契约件一处判（`planVsFact`），视图不自己拼 ——
+     *      自己拼就会把「你勾了」与「这件事发生了」压成同一句，而那正是本项要治的。
+     *   ② **受阻与缺数据分形**：前置没完成 ⇒ 「先做那一件」；前置没记过 ⇒
+     *      「判不了顺序」。两句话都由契约件出，本卡只排版。
+     */
+    _goalCard() {
+        const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+        const name = String(this._goalName || '');
+        const pack = name ? read(() => this.app.goalPack?.(name), null) : null;
+        const one = (pack && pack.one) || null;
+        const planCount = Number((pack && pack.planCount) || 0);
+        const self = (pack && pack.self) || { problems: [] };
+        const rows = (one && Array.isArray(one.rows)) ? one.rows : [];
+        const rowHtml = rows.length
+            ? rows.map((r) => '<div class="pn-goal-row" style="--depth:' + String(r.depth || 1) + '">' +
+                this._esc(String((r && r.line) || '')) + '</div>').join('')
+            : '<span class="pn-hint">' + (name ? '这一条还没有展开的行' : '先写一个目标名') + '</span>';
+        const body = one
+            ? '    <div class="pn-goal-face">' + this._esc(String(one.gate || '')) + '</div>' +
+              '    <div class="pn-goal-pv">' + this._esc(String(one.planVsFact || '')) + '</div>'
+            : '    <div class="pn-goal-face">目标树：先在上面写一个目标（例如「搬家」）</div>' +
+              '    <div class="pn-goal-pv">判不了（还没有选中的目标）</div>';
+        const selfWarn = (Array.isArray(self.problems) && self.problems.length)
+            ? '<div class="pn-goal-selfwarn">自检有问题：' + this._esc(self.problems.join(' | ')) + '</div>'
+            : '';
+        return [
+            '  <div class="pn-card pn-goal-card">',
+            '  <div class="pn-card-title">目标树（计划）<span class="pn-count">' + planCount + ' 条已勾</span></div>',
+            '  <div class="pn-goal-input"><input id="pn-goal-name" placeholder="例如：搬家 / 签约" value="' + this._esc(name) + '" /><button id="pn-goal-look">看这一条</button></div>',
+            '  <div class="pn-hint">勾选只表达**你的计划**；事实达成要由证据/确认产生（两件事分开记）。</div>',
+            body,
+            '  <div class="pn-goal-rows"><div class="pn-goal-rows-title">展开（最多三层）</div>' + rowHtml + '</div>',
+            '  <div class="pn-goal-actions">',
+            '    <button id="pn-goal-done" class="pn-goal-mini">在计划里勾上</button>',
+            '    <button id="pn-goal-undo" class="pn-goal-mini">取消勾选</button>',
+            '  </div>',
+            selfWarn,
+            '  <div id="pn-goal-note" class="pn-goal-note">' + (this._goalNote ? '<span class="pn-goal-note-text">' + this._esc(String(this._goalNote)) + '</span>' : '') + '</div>',
+            '  </div>'
+        ].join('\n');
+    }
+    /** 看一条目标（只转交取数，不改任何状态）。 */
+    _goalLookup() {
+        const el = this.container.querySelector('#pn-goal-name');
+        const v = String(el?.value || '').trim();
+        this._goalName = v;
+        this._goalNote = v ? '' : '先写一个目标名（空名读不出树）';
+        this._paintGoal();
+    }
+    /** 勾 / 取消勾（**只在本机**；控制器负责说清「只是计划」）。 */
+    _goalToggle(done) {
+        const el = this.container.querySelector('#pn-goal-name');
+        const name = String(this._goalName || el?.value || '').trim();
+        if (!name) { this._goalNote = '先写一个目标名'; this._paintGoal(); return; }
+        this._goalName = name;
+        let res = null;
+        try { res = this.app.goalPlanToggle?.(name, done) || null; } catch (_e) { res = null; }
+        if (!res) { this._goalNote = '计划口读不出：本版 App 未接线（不是「勾上了」）'; this._paintGoal(); return; }
+        this._goalNote = String(res.note || '');
+        this._paintGoal();
+    }
+    /** 目标树整块重画（面 / 计划对事实 / 展开 / 勾数 / 回话一并）。
+     *   ★ 不新建 `document.createElement`：本仓视图只操作**自己的容器**
+     *   （`document` 在 TH 沙箱与测试里都可能不可用，且视图直摸 document 是既有纪律外的事）。
+     *   做法：把整块 HTML 作为字符串塞进一个临时容器元素的 innerHTML，再取首元素替换。 */
+    _paintGoal() {
+        const host = this.container.querySelector('.pn-goal-card');
+        if (!host || !host.parentNode) return;
+        const box = this.container.ownerDocument?.createElement?.('div') || null;
+        if (!box) { host.innerHTML = this._goalCardInner(); return; }
+        box.innerHTML = this._goalCard();
+        const next = box.firstElementChild;
+        if (next) host.parentNode.replaceChild(next, host);
+    }
+    /** 目标卡**内层**（没有外层 `.pn-goal-card` 时用于原地重画）。 */
+    _goalCardInner() {
+        const full = this._goalCard();
+        const i = full.indexOf('>');
+        const j = full.lastIndexOf('</div>');
+        return (i >= 0 && j > i) ? full.slice(i + 1, j) : full;
+    }
+
+    /**
      * [v4.27.0 · R4-X6] 因果线索与未完事项板。
      *
      * 【这一面治的欠债】上游因果面（v3.323.0）早已交付，而手机侧零消费 ⇒
@@ -466,6 +557,12 @@ export class PlotlineView {
             try { win.dispatchEvent(new win.CustomEvent('phone:goHome')); } catch (_e) { /* 宿主无事件：忽略 */ }
         });
         q('#pn-refresh')?.addEventListener('click', () => this._draw());
+        /* [v4.38.0 · R5-X2] 目标树三处点选（**只读或本机**动作，不写任何事实）：
+         *   看一条 / 在计划里勾上 / 取消勾选。 */
+        q('#pn-goal-look')?.addEventListener('click', () => this._goalLookup());
+        q('#pn-goal-name')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._goalLookup(); });
+        q('#pn-goal-done')?.addEventListener('click', () => this._goalToggle(true));
+        q('#pn-goal-undo')?.addEventListener('click', () => this._goalToggle(false));
         q('#pn-inject')?.addEventListener('click', () => {
             try { this.app.saveSettings({ injectToPrompt: !this.app.getSettings().injectToPrompt }); } catch (_e) {}
             this._draw();
