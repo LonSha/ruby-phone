@@ -85,6 +85,10 @@ Status: proposed
 
 [第三期优化](../../proposed/architecture/2026-10-12-product-optimization-v3.md)及[本期优化](../../proposed/architecture/2026-10-15-product-optimization-v4.md)的相关底座直接复用。旧一期/二期拓展只保留历史理由，不继续沿旧排序施工；declarative-workflow 与 host-capability-health 的既有决定无冲突，本期不扩大它们。
 
+## 第五期接续说明（2026-10-20）
+
+本篇保留第四期的理由、版本与验证边界；后续排序由[第五期X九项](2026-10-20-product-expansion-v5.md)接管。两篇部分重叠而非完全替代：已有模块继续复用，第五期按具体语义/真实消费缺口补闭环，并明确区分新能力；不得将本篇历史“当前缺口”直接复活成从零任务。
+
 ## Alternatives considered
 
 - **每项新建 App**：入口显眼，但手机已有大量 App，会进一步分散流程；优先在已有页面增加任务入口。
