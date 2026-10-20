@@ -4236,22 +4236,30 @@ renderChatRoom(chat) {
      * 一次渲染内复用同一份读数（投票卡可能有好几张）。
      *   ★ 缓存键含「消息条数 + 末条 id」：任何一条新消息 / 删楼都会换键，
      *     故**不会**出现「读数与消息面不一致」的陈旧卡（本仓反复治过的那类）。
+     *   ★ [v4.31.0 · R5-O3] 缓存键再含**票号**：同一次渲染里两张票各取各的，
+     *     共用一格会把后一张的读数顶掉前一张（那正是「两张票混成一题」的观感来源）。
      */
-    _votePackCached(chatId, msgs) {
+    _votePackCached(chatId, msgs, pollId) {
         const list = Array.isArray(msgs) ? msgs : [];
         const last = list.length ? String(list[list.length - 1]?.id || '') : '';
-        const key = String(chatId || '') + '|' + list.length + '|' + last;
+        const pid = String(pollId == null ? '' : pollId).trim();
+        const key = String(chatId || '') + '|' + list.length + '|' + last + '|' + pid;
         const cached = this._voteCache;
         if (cached && cached.key === key && cached.pack) return cached.pack;
         let pack = null;
-        try { pack = this.app.votePack ? this.app.votePack(chatId) : null; } catch (_e) { pack = null; }
+        try { pack = this.app.votePack ? this.app.votePack(chatId, pid ? { pollId: pid } : {}) : null; } catch (_e) { pack = null; }
         if (!pack) return null;
         this._voteCache = { key: key, pack: pack };
         return pack;
     }
     _renderGroupVoteCard(msg) {
         const chatId = this.app.currentChat?.id || '';
-        const pack = this._votePackCached(chatId, this.app.wechatData.getMessages(chatId));
+        /* ★ 票号由**接线件**算（视图不写第二份派生规则）：认不出该消息 ⇒ 空票号，
+         *   退回既有兼容形状（第一张票）—— 旧消息零改动。 */
+        const pollId = this.app.votePollIdOfMessage
+            ? String(this.app.votePollIdOfMessage(chatId, msg && msg.id) || '')
+            : '';
+        const pack = this._votePackCached(chatId, this.app.wechatData.getMessages(chatId), pollId);
         const read = (pack && pack.read) || null;
         const gv = (msg.groupVote && typeof msg.groupVote === 'object') ? msg.groupVote : {};
         const question = String(gv.question || msg.content || '').trim();
@@ -4299,7 +4307,7 @@ renderChatRoom(chat) {
         const actionsHtml = gate.readable ? `
             <div class="message-group-vote-actions">
                 <button type="button" class="message-group-vote-btn is-glass" data-action="clear-vote-option">清掉选位</button>
-                <button type="button" class="message-group-vote-btn is-primary" data-action="confirm-group-vote" data-message-id="${this._escapeHtml(String(msg.id || ''))}">确认活动</button>
+                <button type="button" class="message-group-vote-btn is-primary" data-action="confirm-group-vote" data-message-id="${this._escapeHtml(String(msg.id || ''))}" data-poll-id="${this._escapeHtml(pollId)}">确认活动</button>
             </div>
         ` : '';
         return `
@@ -8355,7 +8363,9 @@ renderChatRoom(chat) {
                 if (this._isMessageSelectionActiveForCurrentChat()) return;
                 e.preventDefault();
                 e.stopPropagation();
-                this.confirmGroupVote();
+                /* ★ [v4.31.0 · R5-O3] 把这张卡的**票号**原样带下去（渲染时由接线件写在
+                 *   data-poll-id 上）：同群两张票各确认各的。取不到 ⇒ 空串（旧卡零改动）。 */
+                this.confirmGroupVote(btn.dataset.pollId || '');
             });
         });
         currentView.querySelectorAll('.message-image-prompt-cancel').forEach(btn => {
@@ -13120,10 +13130,14 @@ renderChatRoom(chat) {
      *        「未重复生成」；再把结果经 `phone:groupVoteConfirm` 转交给约定 owner。
      *   ★ 本卡**不产出承诺**：约定落笔在日历，这里一个字节都没写上游。
      */
-    confirmGroupVote() {
+    confirmGroupVote(pollId) {
         const chatId = this.app.currentChat?.id || '';
         if (!chatId) return;
-        const res = this.app.voteConfirm ? this.app.voteConfirm(chatId) : null;
+        /* ★ [v4.31.0 · R5-O3] 票号由**调用方**（按钮的 data-poll-id）传进来：
+         *   同群两张票各确认各的，不再都落到第一张票的读数上。
+         *   不传 ⇒ 空串，退回既有兼容形状（旧调用点与旧消息零改动）。 */
+        const want = String(pollId == null ? '' : pollId).trim();
+        const res = this.app.voteConfirm ? this.app.voteConfirm(chatId, undefined, want) : null;
         if (!res) return;
         if (!res.ok) {
             /* 拒收理由**原样**转出（含内核给的归因词），视图不自己编一句。 */

@@ -8119,10 +8119,20 @@ export class WechatApp {
         try { return this.groupVote.choiceIdByLabel(t); } catch (_e) { return ''; }
     }
     /** 确认一份活动（幂等）：只把结果转交给约定 owner，**本层零写盘**。 */
-    voteConfirm(chatId, optionId) {
+    voteConfirm(chatId, optionId, pollId) {
         const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
-        try { return this.groupVote.confirm(id, optionId); }
-        catch (_e) { return this.groupVote.confirm(id, ''); }
+        try { return this.groupVote.confirm(id, optionId, pollId); }
+        catch (_e) { return this.groupVote.confirm(id, '', pollId); }
+    }
+    /** [v4.31.0 · R5-O3] 该群**所有**票身份（视图据此先选一张再统计）。 */
+    votePollIds(chatId) {
+        const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
+        try { return this.groupVote.pollIds(id); } catch (_e) { return []; }
+    }
+    /** [v4.31.0 · R5-O3] 按消息 id 取票身份（票号算法只许接线件一份）。 */
+    votePollIdOfMessage(chatId, messageId) {
+        const id = String(chatId == null ? (this.currentChat?.id || '') : chatId);
+        try { return this.groupVote.pollIdOfMessage(id, messageId); } catch (_e) { return ''; }
     }
     /** 自检：转发内核十条口径真跑。 */
     voteSelfCheck() {

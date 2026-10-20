@@ -22,9 +22,11 @@
 
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 
-export const BRIDGE_VERSION = '1';
+export const BRIDGE_VERSION = '2';
 const HANDOFF_TAG = 'state_handoff';
 export const LEDGER_LIMIT = 50;
+/** [v4.31.0 · R5-O4] 事件账上限（与事实账同量级；两者各自裁剪，互不挤占）。 */
+export const LEDGER_EVENT_LIMIT = 50;
 
 /** 交接块正则：允许属性，内容惰性匹配到第一个闭合标签。 */
 const HANDOFF_RE = /<state_handoff\b[^>]*>([\s\S]*?)<\/state_handoff>/gi;
@@ -209,7 +211,9 @@ export function applyFacts(healthData, facts) {
         skipped.push({ ...fact, reason: 'effect-unsupported' });
       }
     } catch (e) {
-      skipped.push({ type: fact && fact.type, reason: 'apply-error' });
+      // [v4.31.0 · R5-O4] 保留原事实的身份字段（name/note/hours）：只留 type 会让「失败的那条」
+      //   和原事实算出的键对不上，重试时被当成已处置 —— 正是「可重试」退化成「静默丢事实」的入口。
+      skipped.push({ ...(fact && typeof fact === 'object' ? fact : {}), reason: 'apply-error' });
     }
   }
   return { applied, recorded, skipped };
@@ -217,6 +221,43 @@ export function applyFacts(healthData, facts) {
 
 function factKey(fact) {
   return [fact.type, fact.name || '', fact.note || '', fact.hours != null ? fact.hours : ''].join('|');
+}
+
+/**
+ * [v4.31.0 · R5-O4] 交接事件的**内容指纹**（纯算术、无随机、无时钟）。
+ *   用途：区分「同一条消息被重放」与「同一条消息的正文被改过（编辑 / 重生成）」——
+ *   两者处置相反：前者静默跳过（幂等），后者必须**报出来**（不静默屏蔽、也不重复应用）。
+ *   只取已校验事实的规范串：改标点/改排版而事实不变的编辑，不算换了一件事。
+ */
+export function fingerprintOf(facts) {
+  const rows = (Array.isArray(facts) ? facts : []).map((f) => factKey(f || {})).sort();
+  const s = rows.join('\u0001');
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return ('fp' + h.toString(16) + ':' + rows.length + ':' + s.length);
+}
+
+/**
+ * [v4.31.0 · R5-O4] 事件身份键（**同一件事的唯一归属**）。
+ *   取值优先级（可证边界，不猜）：
+ *     ① 宿主给的消息身份（`meta.eventKey`，如 `msg:12`）⇒ 用它 ——
+ *        同一楼层重发 / 重开重放都是同一条；不同楼层同文则是两件事，各计一次；
+ *     ② 宿主给不出身份 ⇒ 回落内容指纹（`fp@...`）：只能证明「同样的事实来过一次」，
+ *        故结果里 `identified:false` 如实标出，**不假装按事件去重**。
+ *   ★ 身份里**不含** swipe / 版本号：重生成会换 swipe，若把它算进身份，
+ *     同一条消息的两次生成会被当成两件事各自生效（正是本版要防的双计）。
+ */
+export function eventKeyOf(meta, fingerprint) {
+  const m = (meta && typeof meta === 'object') ? meta : {};
+  const given = String(m.eventKey == null ? '' : m.eventKey).trim();
+  // 宿主把空值拼进身份（`msg:undefined` / `msg:null` / `msg:NaN`）时**不得当身份用**：
+  //   那会让所有取不到 id 的消息共用同一个身份，把几件不同的事去重成一件（静默丢事实）。
+  //   这类输入与「宿主给不出身份」同等处置 —— 回落内容指纹，identified:false。
+  if (given && !/:(?:undefined|null|NaN)$/.test(given)) return { key: given.slice(0, 120), identified: true };
+  return { key: ('fp@' + String(fingerprint || '')).slice(0, 120), identified: false };
 }
 
 /**
@@ -234,23 +275,64 @@ export class HandoffLedger {
   load() {
     try {
       const raw = this.storage?.get?.(this.key);
-      if (raw && Array.isArray(raw.entries)) return raw;
+      if (raw && Array.isArray(raw.entries)) {
+        // [v4.31.0 · R5-O4] 事件账与事实账**同住一个键**（不新增持久化键、不造第二份真源），
+        //   两者各自裁剪、互不挤占：事实账满了不挤掉事件痕迹，反之亦然。
+        if (!Array.isArray(raw.events)) raw.events = [];
+        return raw;
+      }
     } catch (e) { /* 降级为空账本 */ }
-    return { version: BRIDGE_VERSION, entries: [] };
+    return { version: BRIDGE_VERSION, entries: [], events: [] };
   }
 
   /**
+   * [v4.31.0 · R5-O4] 取该**事件**的既有痕迹（没有则 null）。
+   *   用途：`processReply` 的**应用前**幂等闸——先认这件事处理到哪一步，再决定投递什么。
+   *   判据只认身份键本身（不做相似度、不按事实内容猜），判不了就是判不了。
+   *   返回 `{ key, fp, settled: string[] , ...}`；`settled` 是该事件里**已处置过**的事实键。
+   */
+  eventOf(eventKey) {
+    const key = clampStr(eventKey || '', 120);
+    if (!key) return null;
+    const state = this.load();
+    const hit = state.events.find((e) => e && e.key === key);
+    if (!hit) return null;
+    if (!Array.isArray(hit.settled)) hit.settled = [];
+    return hit;
+  }
+  /**
    * 记录一批事实。重复事实（同类型+同说明）不重复入账。
+   * [v4.31.0 · R5-O4] 同时登记**事件**（同一件事只记一次），供应用前幂等闸查询。
+   *   事实账与事件账同住一个键、**各自裁剪**：事实账满了不挤掉事件痕迹，反之亦然
+   *   （旧实现只有一个数组，上限一到就把最早的记录连同「这件事发生过」一起裁掉）。
+   * @param {object[]} facts
+   * @param {object} meta
+   * @param {object} opts
+   *   `opts.eventKey` —— 由 `eventKeyOf` 算出的身份键（单一出处）；缺省时回落内容指纹；
+   *   `opts.settled`  —— 本事件里**已处置过**的事实键清单。给了它，本次只对「尚未处置」
+   *     的那部分事实入账；不给则视为全量（旧调用点语义逐字不变）。
+   *   `opts.held`     —— 本事件里**投递没成功**的事实键清单（如 `apply-error`）。
+   *     它们既不入事实账、也**不算已处置**：留在「待处置」里等重试。
    * @returns {number} 新增条数
    */
-  record(facts, meta = {}) {
+  record(facts, meta = {}, opts = {}) {
     const state = this.load();
-    const seen = new Set(state.entries.map((e) => e.key));
+    const all = Array.isArray(facts) ? facts : [];
+    // [v4.31.0 · R5-O4] 幂等的落点在**事实粒度**而非整条消息：
+    //   中途失败（第二条事实抛错）时重试，第一条不能再来一遍，
+    //   而没成功的那些必须仍然算「待处置」——否则「可重试」就变成了「静默丢事实」。
+    const settled = new Set(Array.isArray(opts.settled) ? opts.settled : []);
+    const held = new Set(Array.isArray(opts.held) ? opts.held : []);
+    const pending = all.filter((f) => {
+      const k = factKey(f || {});
+      return !settled.has(k) && !held.has(k);
+    });
+    const seenFacts = new Set(state.entries.map((e) => e.key));
     let added = 0;
-    for (const fact of Array.isArray(facts) ? facts : []) {
+    for (const fact of pending) {
       const key = factKey(fact);
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (seenFacts.has(key)) continue;
+      seenFacts.add(key);
       state.entries.push({
         key,
         type: fact.type,
@@ -266,6 +348,28 @@ export class HandoffLedger {
     if (state.entries.length > LEDGER_LIMIT) {
       state.entries = state.entries.slice(state.entries.length - LEDGER_LIMIT);
     }
+    const fp = fingerprintOf(all);
+    const key = clampStr(opts.eventKey || eventKeyOf({}, fp).key, 120);
+    const hit = state.events.find((e) => e && e.key === key);
+    const merged = new Set([
+      ...(hit && Array.isArray(hit.settled) ? hit.settled : []),
+      ...pending.map((f) => factKey(f || {})),
+    ]);
+    const row = {
+      key,
+      fp,
+      rows: all.length,
+      // 「这条身份是不是宿主给的可证身份」与 eventKeyOf 同源判据：回落指纹一律带 fp@ 前缀。
+      identified: !/^fp@/.test(key),
+      settled: [...merged],
+      source: clampStr(meta.source || '', 40),
+      at: Date.now(),
+    };
+    if (hit) Object.assign(hit, row);
+    else state.events.push(row);
+    if (state.events.length > LEDGER_EVENT_LIMIT) {
+      state.events = state.events.slice(state.events.length - LEDGER_EVENT_LIMIT);
+    }
     state.version = BRIDGE_VERSION;
     try { this.storage?.set?.(this.key, state); } catch (e) { /* 持久化失败不阻断 */ }
     return added;
@@ -273,22 +377,58 @@ export class HandoffLedger {
 }
 
 /**
- * 端到端处理一条回复：提取 → 规范化 → 应用 → 入账。
+ * 端到端处理一条回复：提取 → 规范化 → **应用前幂等闸** → 应用 → 入账。
  * 没有任何交接块时返回 null（调用方据此跳过）。
+ *
+ * [v4.31.0 · R5-O4] 幂等落在**事件 + 事实**双层：
+ *   ① 事件层：同一件事（同 `eventKey`）重放 ⇒ 已处置的事实**不再投递**（`duplicate:true`，静默）；
+ *      不同消息即使正文相同也是**两件不同的事**（`eventKey` 不同、`fp` 相同）⇒ 各计一次；
+ *   ② 事实层：投递抛错的那条**不算已处置**（进 `held`），重试时只补它，成功过的不会重来。
+ * 身份从 `meta` 传入（见 `eventKeyOf`）；调用方给不出身份时如实回落内容指纹并标 `identified:false`，
+ * **不假装按事件去重**。适配层仍然只投递事件、不计算任何生理数值。
+ *
+ * @param {string} text
+ * @param {object} healthData
+ * @param {object} ledger
+ * @param {object} [meta] 宿主可证身份，如 `{ eventKey: 'msg:12', source: 'chat' }`
  */
-export function processReply(text, healthData, ledger) {
+export function processReply(text, healthData, ledger, meta = {}) {
   let extracted;
   try {
     extracted = extractStateHandoff(text);
   } catch (e) {
-    return { blocks: 0, accepted: [], rejected: [{ reason: 'extract-error' }], applied: [], recorded: [], skipped: [], ledgerAdded: 0 };
+    return { blocks: 0, accepted: [], rejected: [{ reason: 'extract-error' }], applied: [], recorded: [], skipped: [], ledgerAdded: 0, duplicate: false, eventKey: '', identified: false, deferred: 0, held: [] };
   }
   if (!extracted.blocks) return null;
   const { accepted, rejected } = normalizeFacts(extracted.facts);
-  const { applied, recorded, skipped } = applyFacts(healthData, accepted);
+  const fp = fingerprintOf(accepted);
+  const { key: eventKey, identified } = eventKeyOf(meta, fp);
+  // 应用前幂等闸：先认这件事处理到哪一步。账本缺失/查询抛错 ⇒ 当作「没有痕迹」，
+  //   宁可重复一次也不静默吞掉事实（只读不抛：这里不向外抛任何异常）。
+  let settled = [];
+  if (ledger && typeof ledger.eventOf === 'function') {
+    try {
+      const hit = ledger.eventOf(eventKey);
+      if (hit && Array.isArray(hit.settled)) settled = hit.settled;
+    } catch (e) { settled = []; }
+  }
+  const settledSet = new Set(settled);
+  const pending = accepted.filter((f) => !settledSet.has(factKey(f || {})));
+  const duplicate = accepted.length > 0 && pending.length === 0;
+  const { applied, recorded, skipped } = applyFacts(healthData, pending);
+  // 投递失败的（apply-error）**不算已处置**：留给重试补投，否则「可重试」等于「静默丢事实」。
+  //   确定性结论（未知病症 / 效果不支持）重试也不会变，按已处置处理，避免无限重试。
+  const heldKeys = [];
+  const noData = skipped.some((s) => s && s.reason === 'no-health-data');
+  if (noData) for (const f of pending) heldKeys.push(factKey(f || {}));
+  else for (const s of skipped) if (s && s.reason === 'apply-error') heldKeys.push(factKey(s || {}));
   let ledgerAdded = 0;
-  if (ledger && typeof ledger.record === 'function') {
-    try { ledgerAdded = ledger.record(accepted); } catch (e) { ledgerAdded = 0; }
+  // 没有任何**已校验事实**时不落事件：全部被拒（意图/未知类型）的回复不是一件事，
+  //   给它留事件痕迹只会灌满 LEDGER_EVENT_LIMIT、把真事件挤掉（上限是 50，很窄）。
+  if (ledger && accepted.length > 0 && typeof ledger.record === 'function') {
+    try {
+      ledgerAdded = ledger.record(pending, meta, { eventKey, settled, held: heldKeys });
+    } catch (e) { ledgerAdded = 0; }
   }
   return {
     blocks: extracted.blocks,
@@ -298,5 +438,11 @@ export function processReply(text, healthData, ledger) {
     recorded,
     skipped,
     ledgerAdded,
+    // ★ 新字段（只增不改）：调用方据此区分「静默跳过」与「真的没内容」，不需要猜。
+    duplicate,
+    eventKey,
+    identified,
+    deferred: accepted.length - pending.length,
+    held: heldKeys,
   };
 }

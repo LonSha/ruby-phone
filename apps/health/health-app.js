@@ -47,7 +47,13 @@ export class HealthApp {
             const text = msg && typeof msg.mes === 'string' ? msg.mes : '';
             if (!text || !text.includes('state_handoff')) return;
             const ledger = new HandoffLedger(this.storage);
-            const result = processReply(text, this.data, ledger);
+            // [v4.31.0 · R5-O4] 向下传**宿主可证身份**：同一楼层重放 ⇒ 同一件事（幂等跳过）；
+            //   不同楼层即使正文相同 ⇒ 两件事，各计一次。
+            //   ★ 身份里**不含** swipe：重生成会换 swipe，算进去会把同一条消息的两次生成
+            //     当成两件事各自生效（正是本版要防的双计）。
+            //   取不到 id 时如实传空，由 eventKeyOf 回落内容指纹并标 identified:false。
+            const eventKey = (messageId == null || messageId === '') ? '' : ('msg:' + messageId);
+            const result = processReply(text, this.data, ledger, { eventKey, source: 'chat' });
             if (result && (result.applied.length || result.recorded.length)) {
               this.view?.rerender?.();
             }

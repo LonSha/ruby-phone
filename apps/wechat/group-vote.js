@@ -21,6 +21,13 @@
  * 【为什么不在实例里缓存读数】与同族两件同一理由：投票面随消息变，
  *   任何实例级缓存都会在新消息 / 删楼回滚后变成陈旧数据。故本件只持有
  *   `_picked`（用户的选择，不是读数），`resetScene()` 把它清掉。
+ *
+ * 【v4.31.0 · R5-O3 追加：同群多张票不串议题、不串轮次】
+ *   修前缺陷（计划原文）：`readings` 遍历整群、保留**首个**问题、**合并所有选项**、
+ *   取**最大** round —— 同群里两张同时开放的票被混成「第一题的两个选项」。
+ *   本版给每张票一个稳定 `pollId`，选项 / 表态 / 活动 / 轮次一律**归属该票**；
+ *   归属判定只走可证边界（显式 ID / 选项唯一命中 / 该群只有一张票），
+ *   同名选项命中多张票时**不猜**，如实计入 `unattributed`。
  * ======================================================== */
 'use strict';
 import {
@@ -64,18 +71,94 @@ export class GroupVote {
         catch (_e) { return null; }
     }
     /**
+     * [v4.31.0 · R5-O3] 取投票身份键（**同一张票的唯一归属**）。
+     *   修前缺口（R5-O3 现状证据原文）：`readings` 遍历整群、保留**首个**问题、
+     *   **合并所有选项**、取**最大** round —— 于是同群里两张同时开放的票
+     *   （「周一午餐/面」与「周五郊游/公园」）被混成「第一题的两个选项」，
+     *   计票结果张冠李戴。故本件给每张票一个稳定 `pollId`，选项 / 表态 / 活动
+     *   一律归属该 ID 与轮次，**不再跨票合并**。
+     *   取值优先级（**可证边界**，不猜）：
+     *     ① 消息自带的 `groupVote.pollId`（新消息由视图写入）；
+     *     ② 无显式 ID 时按 `msgId` 派生 —— 稳定且可复算，故退出重开仍定位同一票；
+     *     ③ 都没有 ⇒ 空串（该条归入「无归属」，由调用方决定要不要算，**不静默并入第一张票**）。
+     */
+    pollIdOf(msg, gv) {
+        const explicit = String((gv && gv.pollId) || '').trim();
+        if (explicit) return explicit.slice(0, 80);
+        const msgId = String((msg && msg.id) || '').trim();
+        if (msgId) return ('poll@' + msgId).slice(0, 80);
+        return '';
+    }
+    /** [v4.31.0 · R5-O3] 列出该群**所有**投票身份（按出现顺序去重；视图据此先选一张再统计）。 */
+    pollIds(chatId) {
+        const r = this.readings(chatId);
+        if (!r) return [];
+        const out = [];
+        for (const p of r.polls) if (out.indexOf(p.pollId) < 0) out.push(p.pollId);
+        return out;
+    }
+    /**
+     * [v4.31.0 · R5-O3] 按**消息 id** 取该条投票消息的票身份。
+     *   视图的「确认」按钮带 `data-message-id`，据此把票号原样带下去 ——
+     *   票号怎么算**只许本件一份**（视图不写第二份派生规则）。
+     * @returns {string} 票身份（'' = 认不出该消息）
+     */
+    pollIdOfMessage(chatId, messageId) {
+        const d = this._data();
+        if (!d) return '';
+        const id = String(messageId == null ? '' : messageId).trim();
+        if (!id) return '';
+        let msgs = null;
+        try { msgs = d.getMessages(chatId); } catch (_e) { msgs = null; }
+        if (!Array.isArray(msgs)) return '';
+        for (const raw of msgs) {
+            const m = (raw && typeof raw === 'object') ? raw : null;
+            if (!m || String(m.id || '').trim() !== id) continue;
+            return this.pollIdOf(m, (m.groupVote && typeof m.groupVote === 'object') ? m.groupVote : {});
+        }
+        return '';
+    }
+    /**
+     * [v4.31.0 · R5-O3] 把一条**表态**归到哪张票 —— **只走可证边界，判不了就不归**。
+     *   优先级：
+     *     ① 表态自带 `pollId` ⇒ 只认那张票；指名了一张**不存在**的票 ⇒ 不归
+     *        （**不并入别的票**：把 A 票的表态算到 B 票上比不算更危险）；
+     *     ② 无显式 ID ⇒ 按「选项在**哪几张**票里」判：**恰命中一张**才算归属；
+     *        命中多张（两票都有「面」）⇒ 不归（不按名字猜、不归最近一票）；
+     *     ③ 选项压根没给出（如弃权）或命中零张 ⇒ 只有**该群仅一张票**时才归它。
+     * @returns {object|null} 归属的票桶；null = 判不了
+     */
+    _pollForStatement(gv, optionRaw, polls) {
+        const explicit = String((gv && gv.pollId) || '').trim();
+        if (explicit) return polls.filter((p) => p.pollId === explicit)[0] || null;
+        const raw = String(optionRaw == null ? '' : optionRaw).trim();
+        if (raw) {
+            const hits = polls.filter((p) => p.options.some((o) => o.id === raw || o.label === raw));
+            if (hits.length === 1) return hits[0];
+            if (hits.length > 1) return null;
+        }
+        return polls.length === 1 ? polls[0] : null;
+    }
+    /**
      * 取数：把该群的消息面读成契约件要的形状。
      *   ★ 读不到消息面 ⇒ 返回 null（**不退化成空数组**）：内核据此报「读不出」，
      *     与「真的没人投过票」不同形 —— 后者会让界面说「等大家表态」，而其实
      *     是消息压根没读出来。
-     * @returns {{question,round,options,members,statements,activities}|null} 永不抛
+     *   ★ [v4.31.0 · R5-O3] 两遍扫描：**先认票、再落表态**。表态要归到哪张票，
+     *     得先知道该群有哪些票、每张票有哪些选项 —— 单遍扫描里「表态先到」时
+     *     它要投的选项还没被读出来，只能瞎猜。
+     * @param {string} chatId
+     * @param {string} [pollId] 只取这一张票（空 ⇒ 取**第一张**票的兼容形状，逐票分列在 `polls`）
+     * @returns {{question,round,options,members,statements,activities,polls,pollId,pollFound,
+     *            unattributedStatements,unattributedActivities}|null} 永不抛
      */
-    readings(chatId) {
+    readings(chatId, pollId) {
         const d = this._data();
         if (!d) return null;
         let msgs = null;
         try { msgs = d.getMessages(chatId); } catch (_e) { msgs = null; }
         if (!Array.isArray(msgs)) return null;
+        const want = String(pollId == null ? '' : pollId).trim();
         let members = [];
         try { members = d.getGroupMembers(chatId) || []; } catch (_e) { members = []; }
         const user = (() => {
@@ -87,92 +170,138 @@ export class GroupVote {
         const selfName = String(user.name || '我').trim() || '我';
         if (!memberRows.some((m) => m.id === meId)) memberRows.push({ id: meId, name: selfName });
         const byName = new Map(memberRows.map((m) => [m.name, m.id]));
-        const options = [];
-        const statements = [];
-        const activities = [];
-        let question = '';
-        let round = 1;
+        /* ── 第一遍：**票本身**（问题 / 轮次 / 选项）。修前是四个共享累加器
+         *    （question 保首个、options 全合并、round 取最大）—— 那正是
+         *    「两张票混成一题」的落点。 */
+        const polls = [];
+        const byPoll = new Map();
+        const bucketOf = (pid) => {
+            if (byPoll.has(pid)) return byPoll.get(pid);
+            const b = { pollId: pid, question: '', round: 1, options: [], statements: [], activities: [], order: polls.length };
+            byPoll.set(pid, b);
+            polls.push(b);
+            return b;
+        };
         for (const raw of msgs) {
             const msg = (raw && typeof raw === 'object') ? raw : null;
             if (!msg) continue;
-            const type = String(msg.type || '').trim();
-            if (type !== 'group_vote' && type !== 'group_vote_statement') continue;
+            if (String(msg.type || '').trim() !== 'group_vote') continue;
             const gv = (msg.groupVote && typeof msg.groupVote === 'object') ? msg.groupVote : {};
-            const msgId = String(msg.id || '').trim();
-            if (type === 'group_vote') {
-                const r = Math.max(1, Math.floor(Number(gv.round) || 1));
-                round = Math.max(round, r);
-                if (!question) question = String(gv.question || msg.content || '').trim();
-                const list = Array.isArray(gv.options) ? gv.options : [];
-                for (const it of list) {
-                    const label = String((it && (it.label || it.text)) || it || '').trim();
-                    if (!label) continue;
-                    const id = String((it && it.id) || label).trim();
-                    if (options.some((o) => o.id === id)) continue;
-                    options.push({
-                        id: id,
-                        label: label,
-                        kind: String((it && it.kind) || 'other').trim(),
-                        round: Math.max(1, Math.floor(Number(it && it.round) || r))
-                    });
-                }
-            } else {
-                /* 表态消息：**谁**对**哪个选项**说了**什么**。
-                 *   ★ 人不在成员表里 ⇒ 照样带上（内核会把它归到 foreign 且**不计票**）——
-                 *     本件不在这里静默丢弃：丢掉一个「表外人」比显示出来更危险
-                 *     （改名 / 退群 / 上层给错 id 三种情形在界面上会变得无法分辨）。 */
-                const who = String(gv.memberId || msg.senderName || msg.from || '').trim();
-                const whoName = String(gv.memberName || msg.senderName || msg.from || '').trim();
-                const memberId = String(gv.memberId || '').trim()
-                    || (who === 'me' ? meId : (byName.get(whoName) || byName.get(who) || whoName));
-                const optionRaw = String(gv.optionId || gv.option || '').trim();
-                const opt = options.filter((o) => o.id === optionRaw || o.label === optionRaw)[0];
-                const choice = String(gv.choice || '').trim().toLowerCase();
-                if (!memberId || !opt || GV_CHOICES.indexOf(choice) < 0) continue;
-                statements.push({
-                    memberId: memberId,
-                    optionId: opt.id,
-                    choice: choice,
-                    /* ★ 事件键 = 消息 id：同一条消息重复出现不算两票（归一阶段丢）；
-                     *   两条不同消息改主意 ⇒ 走内核第二层「只认最后一条」。 */
-                    eventKey: msgId || (memberId + '|' + opt.id + '|' + choice),
-                    /* ★ 楼层号走**唯一取数口**（`config/num-gate.js` 的 numOrNull），
-                     *   不就地再写一份 `Number.isFinite(Number(...))` ——
-                     *   那是第九道门的 W1 签名（弱口径），换了名字也还是弱口径。 */
-                    floor: numOrNull(msg.tavernMessageIndex),
-                    note: String(gv.note || '').trim()
+            const b = bucketOf(this.pollIdOf(msg, gv));
+            const r = Math.max(1, Math.floor(Number(gv.round) || 1));
+            b.round = Math.max(b.round, r);
+            if (!b.question) b.question = String(gv.question || msg.content || '').trim();
+            const list = Array.isArray(gv.options) ? gv.options : [];
+            for (const it of list) {
+                const label = String((it && (it.label || it.text)) || it || '').trim();
+                if (!label) continue;
+                const id = String((it && it.id) || label).trim();
+                if (b.options.some((o) => o.id === id)) continue;
+                b.options.push({
+                    id: id,
+                    label: label,
+                    kind: String((it && it.kind) || 'other').trim(),
+                    round: Math.max(1, Math.floor(Number(it && it.round) || r))
                 });
             }
         }
-        /* 已生成的活动：从消息里读回（确认过的活动会落成一条消息）。 */
+        /* ── 第二遍：表态消息 —— **谁**对**哪个选项**说了**什么**。
+         *   ★ 归属判不了就**不归**（进 `unattributedStatements` 具名），
+         *     绝不静默并入第一张票：那正是本版要切断的那件事。 */
+        const unattributedStatements = [];
+        for (const raw of msgs) {
+            const msg = (raw && typeof raw === 'object') ? raw : null;
+            if (!msg) continue;
+            if (String(msg.type || '').trim() !== 'group_vote_statement') continue;
+            const gv = (msg.groupVote && typeof msg.groupVote === 'object') ? msg.groupVote : {};
+            const msgId = String(msg.id || '').trim();
+            /* ★ 人不在成员表里 ⇒ 照样带上（内核会把它归到 foreign 且**不计票**）——
+             *   本件不在这里静默丢弃：丢掉一个「表外人」比显示出来更危险
+             *   （改名 / 退群 / 上层给错 id 三种情形在界面上会变得无法分辨）。 */
+            const who = String(gv.memberId || msg.senderName || msg.from || '').trim();
+            const whoName = String(gv.memberName || msg.senderName || msg.from || '').trim();
+            const memberId = String(gv.memberId || '').trim()
+                || (who === 'me' ? meId : (byName.get(whoName) || byName.get(who) || whoName));
+            const optionRaw = String(gv.optionId || gv.option || '').trim();
+            const choice = String(gv.choice || '').trim().toLowerCase();
+            const target = this._pollForStatement(gv, optionRaw, polls);
+            if (!target) {
+                unattributedStatements.push({
+                    eventKey: msgId || (memberId + '|' + optionRaw + '|' + choice),
+                    memberId: memberId,
+                    option: optionRaw,
+                    choice: choice,
+                    why: polls.length ? 'poll-ambiguous' : 'no-poll'
+                });
+                continue;
+            }
+            const opt = target.options.filter((o) => o.id === optionRaw || o.label === optionRaw)[0];
+            if (!memberId || !opt || GV_CHOICES.indexOf(choice) < 0) continue;
+            target.statements.push({
+                memberId: memberId,
+                optionId: opt.id,
+                choice: choice,
+                /* ★ 事件键 = 消息 id：同一条消息重复出现不算两票（归一阶段丢）；
+                 *   两条不同消息改主意 ⇒ 走内核第二层「只认最后一条」。 */
+                eventKey: msgId || (memberId + '|' + opt.id + '|' + choice),
+                /* ★ 楼层号走**唯一取数口**（`config/num-gate.js` 的 numOrNull），
+                 *   不就地再写一份 `Number.isFinite(Number(...))` ——
+                 *   那是第九道门的 W1 签名（弱口径），换了名字也还是弱口径。 */
+                floor: numOrNull(msg.tavernMessageIndex),
+                note: String(gv.note || '').trim()
+            });
+        }
+        /* ── 已生成的活动：从消息里读回（确认过的活动会落成一条消息）。
+         *   ★ 活动**按 pollId 归属**：带 `pollId` 的活动只进那一张票，
+         *     免得「确认过 A 票」在 B 票的卡上显示成已确认。
+         *   ★ 无 `pollId` 的活动只在**该群仅一张票**时归它 —— 多票时归任何一张
+         *     都可能把 A 的确认史当成 B 的（活动 id 由「选项 + 参与名单」派生，
+         *     两票同选项同参与人时**会撞**）。 */
+        const unattributedActivities = [];
         for (const raw of msgs) {
             const msg = (raw && typeof raw === 'object') ? raw : null;
             if (!msg) continue;
             if (String(msg.type || '').trim() !== 'group_vote_activity') continue;
             const act = (msg.groupVoteActivity && typeof msg.groupVoteActivity === 'object') ? msg.groupVoteActivity : null;
-            if (act && act.id) activities.push(act);
+            if (!act || !act.id) continue;
+            const actPoll = String(act.pollId || '').trim();
+            const owner = actPoll ? (byPoll.get(actPoll) || null) : (polls.length === 1 ? polls[0] : null);
+            if (!owner) { unattributedActivities.push(act); continue; }
+            owner.activities.push(act);
         }
+        /* [v4.31.0 · R5-O3] 兼容面：不传 pollId 时 question/round/options/statements/activities
+         *   取**第一张票**的形状 —— 既有调用点零改动；`polls` 逐票分列，
+         *   要精确统计某一张票就传 pollId（或读 `polls`）。
+         *   两张票混成一题的缺陷正是在这里被切断的：第一张票的 options 与
+         *   statements 里**不再**出现第二张票的东西。 */
+        const pick = want ? (byPoll.get(want) || null) : (polls.length ? polls[0] : null);
         return {
-            question: question,
-            round: round,
-            options: options,
+            question: pick ? pick.question : '',
+            round: pick ? pick.round : 1,
+            options: pick ? pick.options : [],
             members: memberRows,
-            statements: statements,
-            activities: activities
+            statements: pick ? pick.statements : [],
+            activities: pick ? pick.activities : [],
+            polls: polls,
+            pollId: pick ? pick.pollId : '',
+            pollFound: want ? !!pick : true,
+            unattributedStatements: unattributedStatements,
+            unattributedActivities: unattributedActivities
         };
     }
     /** 主读数（转手内核；读不到消息面时如实报 no-options，**不假装成「没人表态」**）。 */
     tally(chatId, opts) {
-        const r = this.readings(chatId);
+        const o = opts || {};
+        const r = this.readings(chatId, o.pollId);
         if (!r) {
             return tallyVote({ round: 1, options: [], members: [], statements: [] });
         }
-        try { return tallyVote(r, opts || {}); }
+        try { return tallyVote(r, o); }
         catch (_e) { return tallyVote({ round: 1, options: [], members: [], statements: [] }); }
     }
     /** 五态计数（转手内核）。 */
-    summary(chatId) {
-        const r = this.readings(chatId);
+    summary(chatId, pollId) {
+        const r = this.readings(chatId, pollId);
         if (!r) return summarizeVote({ round: 1, options: [], members: [], statements: [] });
         try { return summarizeVote(r); }
         catch (_e) { return summarizeVote({ round: 1, options: [], members: [], statements: [] }); }
@@ -181,14 +310,22 @@ export class GroupVote {
      * 确认一份活动（**幂等**：同一份结果两次确认恒得同一个 id）。
      *   ★ `optionId` 缺省时用**用户已点选**的那个；两者都空 ⇒ 内核如实拒收
      *     （平票时本件**不替他挑**）。
+     *   ★ [v4.31.0 · R5-O3] 传 `pollId` 时只在该票的读数上确认，并把 `pollId`
+     *     写进产出的活动 —— 落成消息后下次读数才认得出「这是哪张票的活动」。
      * @returns {{ok,reason,activity,replayed,state,options,wrote}}
      */
-    confirm(chatId, optionId) {
-        const r = this.readings(chatId);
+    confirm(chatId, optionId, pollId) {
+        const want = String(pollId == null ? '' : pollId).trim();
+        const r = this.readings(chatId, want);
         const pick = String(optionId == null ? this._picked : optionId).trim();
-        if (!r) return confirmActivity({ round: 1, options: [], members: [], statements: [] }, { optionId: pick });
-        try { return confirmActivity(r, { optionId: pick }); }
-        catch (_e) { return confirmActivity({ round: 1, options: [], members: [], statements: [] }, { optionId: pick }); }
+        let res;
+        if (!r) res = confirmActivity({ round: 1, options: [], members: [], statements: [] }, { optionId: pick });
+        else {
+            try { res = confirmActivity(r, { optionId: pick }); }
+            catch (_e) { res = confirmActivity({ round: 1, options: [], members: [], statements: [] }, { optionId: pick }); }
+        }
+        if (want && res && res.activity) res.activity.pollId = want;
+        return res;
     }
     /* ========== 两行读数（转手内核，视图不写第二套文案） ========== */
     voteLineOf(read) { try { return voteLine(read); } catch (_e) { return '投票:读数失败（已降级）'; } }
@@ -236,9 +373,10 @@ export class GroupVote {
     /* ========== 一次取齐（视图用；保证同一份读数上的多面同源） ========== */
     pack(chatId, opts) {
         const o = opts || {};
+        const want = String(o.pollId == null ? '' : o.pollId).trim();
         const read = this.tally(chatId, o);
-        const sum = this.summary(chatId);
-        const conf = this.confirm(chatId);
+        const sum = this.summary(chatId, want);
+        const conf = this.confirm(chatId, undefined, want);
         return {
             read: read,
             summary: sum,
@@ -247,7 +385,8 @@ export class GroupVote {
             gate: this.gate(read),
             note: this.note(read),
             picked: this._picked,
-            state: read.state
+            state: read.state,
+            pollId: want
         };
     }
     /** 换会话 / 清数据：只丢弃「上一次点了哪个选项」（读数本来就不缓存） */
