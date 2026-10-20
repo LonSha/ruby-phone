@@ -648,6 +648,26 @@
     font-size: 12px;
 }
 .mem-lore-stages { margin: 6px 0; }
+/* [v4.33.0 · R5-O6] 三份版本 + 变更读数行。
+ *   三行同形、只有内容不同 —— 修前它们恒指同一份，界面因此永远说「什么都没变」。
+ *   变更行单独给底色：它是**结论**，其余三行是**事实**（哪一版、哪一段）。 */
+.mem-lore-versions {
+    margin: 6px 0;
+    padding: 6px 9px;
+    border: 1px solid #e3e5f0;
+    border-radius: 8px;
+    background: #fafbff;
+}
+.mem-lore-verline { color: #4b4b63; font-size: 11.5px; line-height: 1.7; }
+.mem-lore-changed {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed #e3e5f0;
+    color: #26263a;
+    font-size: 11.5px;
+    line-height: 1.6;
+    word-break: break-all;
+}
 .mem-lore-stage {
     color: #4b4b63;
     font-size: 11.5px;

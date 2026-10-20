@@ -466,6 +466,39 @@ export class MemoryView {
     const resolvedHtml = resolved.length
       ? resolved.map((x) => '<div class="mem-lore-resolved">已认下：' + this._esc(x.itemKey) + ' → ' + this._esc(x.owner) + '</div>').join('')
       : '';
+    /* [v4.33.0 · R5-O6] 三份版本各一行 + 变更读数行。
+     *   【为什么三行都要】已应用 / 候选 / 阅读窗口修前恒指同一份 —— 于是界面永远说
+     *   「什么都没变」,而真实处境可能是「没得比」或「窗口外的段根本没读到」。
+     *   【为什么读数行不在这里拼】句子由契约件 `loreChangedLine` **唯一实现**产出
+     *   (「没有基线」/「还没比过」/「窗口候选」三句各不相同),视图只排版 ——
+     *   在这里再拼一份就是第二个真源,迟早与判据分叉。
+     *   【为什么「只剩引用」要显眼】正文归上游与附件 owner,本版刻意不复制全文;
+     *   此时**比不了也回不去**,不能显示成「还没有应用过」。 */
+    const V = w.versions || null;
+    const ap = (V && V.applied) || null;
+    const cd = (V && V.candidate) || null;
+    const wn = (V && V.window) || null;
+    const verBlock = V
+      ? '    <div id="mem-lore-versions" class="mem-lore-versions">' +
+        '<div class="mem-lore-verline">已应用：' + (ap && ap.has
+          ? (this._esc(String(ap.file || '未命名')) + ' · ' + this._esc(String(ap.key || '')) +
+            ' · ' + this._esc(String(ap.chars || 0)) + ' 字符 / ' + this._esc(String(ap.sections || 0)) + ' 段' +
+            (ap.bodyInHand ? '' : ' · **只剩引用**(正文不在手上 ⇒ 比不了,也回不去)'))
+          : '还没有应用过任何版本(**不是**「什么都没变」)') + '</div>' +
+        '<div class="mem-lore-verline">候选：' + (cd && cd.has
+          ? (this._esc(String(cd.file || '未命名')) + ' · ' + this._esc(String(cd.key || '')) +
+            ' · ' + this._esc(String(cd.chars || 0)) + ' 字符 / ' + this._esc(String(cd.sections || 0)) + ' 段' +
+            (cd.partial ? ' · **部分候选**(窗口读 / 被截短 —— 窗口外的段不得据此判「已删除」)' : ''))
+          : '还没有读进任何一份') + '</div>' +
+        '<div class="mem-lore-verline">阅读窗口：' + (wn && wn.has
+          ? (this._esc(String(wn.from || 0)) + ' ~ ' + this._esc(String(wn.to || 0)))
+          : '整篇(没有窗口)') + '</div>' +
+        /* ★ 这一格**不许兜底拼句**:读数由契约件 `loreChangedLine` 唯一产出,
+         *   投影总会给一句(哪怕是「还没比过」)。在这里写 `|| '变更:…'` 就是
+         *   第二份实现 —— 判据实测抓到过:视图里那句兜底文案会被当成「自己拼句子」。 */
+        '<div id="mem-lore-changed" class="mem-lore-changed">' + this._esc(String(w.changedLine || '')) + '</div>' +
+        '</div>'
+      : '';
     /* 落笔按钮只在**真有落笔口**时给出；只有预览口时如实说「只能看不能落」。 */
     const canApply = w.outlet === 'parse+apply';
     const dup = (w.plan && w.plan.duplicate === true);
@@ -473,6 +506,7 @@ export class MemoryView {
     return '  <div class="mem-section mem-lore-section">' +
       '    <div class="mem-section-title"><i class="fa-solid fa-file-import"></i> 资料导入（设定 / 前史分层）</div>' +
       '    <div id="mem-lore-face" class="mem-lore-face">' + this._esc(w.line || '') + '</div>' +
+      verBlock +
       '    <div class="mem-hint">导入的是**资料**：设定规则与前史各归各的段；不把「看过一本书」当成角色经历过。</div>' +
       '    <div class="mem-search-row">' +
       '      <input type="file" id="mem-lore-file" accept=".txt,.md,.text,text/plain" style="display:none" />' +
@@ -491,6 +525,8 @@ export class MemoryView {
       '    <div id="mem-lore-stages" class="mem-lore-stages">' + stages + '</div>' +
       '    <div class="mem-search-row">' +
       '      <button id="mem-lore-preview" class="mem-lore-mini">过一遍预览</button>' +
+      '      <button id="mem-lore-compare" class="mem-lore-mini">对账（与已应用版本比）</button>' +
+      '      <button id="mem-lore-discard" class="mem-lore-mini">取消候选（回到已应用）</button>' +
       '      <button id="mem-lore-plan" class="mem-lore-mini">出计划（只算不写）</button>' +
       '      <button id="mem-lore-apply" class="mem-lore-mini mem-lore-apply"' + ((canApply && !dup) ? '' : ' disabled') + '>' +
       (canApply ? '确认导入' : '本版插件不能落笔') + '</button>' +
@@ -573,11 +609,58 @@ export class MemoryView {
     try { this.app.loreEntities?.({}); } catch (_e) { /* 忽略 */ }
     let pv = null;
     try { pv = this.app.lorePreview?.(null, {}) ?? null; } catch (_e) { pv = null; }
+    /* [v4.33.0 · R5-O6] 顺手对一次账：基线（已应用那一版）与候选（刚读进来的这份）分家后，
+     *   这一步才第一次**真**比得出来。修前这里不调也能「看着有读数」—— 那是因为读数恒为
+     *   「全部同值」（拿候选与自己比），看着像比过了。 */
+    try { this.app.loreCompareSource?.({}); } catch (_e) { /* 比不了不影响读进 */ }
     if (pv && pv.confirmedChecked === false) {
       this._paintLore('已预览：**已确认事实面未判**（手机不自己装配事实账）—— 那不等于「无冲突」');
     } else {
       this._paintLore('已预览');
     }
+  }
+  /**
+   * [v4.33.0 · R5-O6] 源更新对账（**只读**，不写任何账）。
+   *   为什么单独给一个按钮：自动那一次是「读完顺手比」，而用户改完手上的文件想**再比一次**
+   *   时不该被迫重读一遍（重读会把候选换成同一份，读数看起来一样，但多了几次无用解析）。
+   */
+  _loreCompare() {
+    let r = null;
+    try { r = this.app.loreCompareSource?.({}) ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('对账口读不出：本版 App 未接线'); return; }
+    const st = String(r.state || '');
+    if (r.oldChecked === false && r.faceReason === 'baseline-body-absent') {
+      this._paintLore('比不了：已应用的那一版**只剩引用**（正文不在手上）—— 不是「没有已应用版本」，也不是「全部新增」');
+    } else if (r.oldChecked === false) {
+      this._paintLore('比不了：还没有应用过任何版本 ⇒ 无从对账（**不是**「什么都没变」）');
+    } else if (r.partialCandidate === true) {
+      this._paintLore('对完账（**窗口候选**：移除清单不可采信 —— 窗口外的段不是被删了）');
+    } else {
+      this._paintLore('对完账（' + (st === 'ok' ? '比出来了' : '读数 ' + st) + '）');
+    }
+    this._loreRepaint();
+  }
+  /**
+   * [v4.33.0 · R5-O6] **取消候选**：放掉手上这份新读进来的，回到已应用的那一版。
+   *   计划验收原文「选B→显示真实差异→**取消仍是A**」靠这一口落地；回不去时如实说清是
+   *   哪一种回不去（「只剩引用」/「没有应用过」处置相反，不许压平）。
+   */
+  _loreDiscard() {
+    let r = null;
+    try { r = this.app.loreDiscardCandidate?.() ?? null; } catch (_e) { r = null; }
+    if (!r) { this._paintLore('取消候选口读不出：本版 App 未接线'); return; }
+    if (r.ok) {
+      this._paintLore(String(r.note || '已回到已应用的那一版'));
+      this._loreRepaint();
+      return;
+    }
+    this._paintLore('回不去：' + String(r.note || r.reason || '原因未给'));
+    this._loreRepaint();
+  }
+  /** 导入区整块重画（几处按钮共用同一份重画口径，避免各画各的）。 */
+  _loreRepaint() {
+    const host = this.container.querySelector('#mem-lore-host');
+    if (host) { host.innerHTML = this._loreHtml(); this._loreSyncInputs(); this._paintLore(this._loreNote); }
   }
   /** 选范围逐段读（范围没给就按游标续读）。 */
   _loreReadWindow(useInputs) {
@@ -851,6 +934,8 @@ export class MemoryView {
     q('#mem-lore-win')?.addEventListener('click', () => this._loreReadWindow(true));
     q('#mem-lore-winnext')?.addEventListener('click', () => this._loreReadWindow(false));
     q('#mem-lore-preview')?.addEventListener('click', () => this._loreAfterRead());
+    q('#mem-lore-compare')?.addEventListener('click', () => this._loreCompare());
+    q('#mem-lore-discard')?.addEventListener('click', () => this._loreDiscard());
     q('#mem-lore-plan')?.addEventListener('click', () => this._loreMakePlan());
     q('#mem-lore-apply')?.addEventListener('click', () => this._loreApply());
     q('#mem-lore-reset')?.addEventListener('click', () => this._loreReset());

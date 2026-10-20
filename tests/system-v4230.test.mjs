@@ -634,14 +634,20 @@ test('B6 类目行是翻译不是重算：保序、求和等于上游段数、�
     assert.equal(big.items.length, 100);
     assert.ok(big.items.length > K.LORE_LIMITS.rows, '上游给 100 段而渲染上限 80 ⇒ 截断要如实报');
 });
-test('B7 自检十四项零问题，且各态计数与词表同源', () => {
+test('B7 自检十八项零问题，且各态计数与词表同源', () => {
     const r = K.loreSelfCheck();
     assert.deepEqual(r.problems, [], '★ 内核自检必须零问题');
     assert.equal(r.states, 6);
     assert.equal(r.outlets, 3);
     assert.equal(r.stages, 6);
     assert.equal(Object.keys(K.LORE_FACE_STATES).length, 6);
-    assert.ok(kernelSrc.indexOf('判据自证(十四项)') >= 0, '自检项数与实现同源（加了口径必须加自证）');
+    /* [v4.33.0 · R5-O6] 订正（原文锁 '判据自证(十四项)'）：本版契约件新增第八组口径
+     *   —— 版本引用稳定性 / 改一字键必变 / 「没有基线」≠「没有变化」/ 窗口候选必须具名
+     *   —— 共四项目证，故头部计数由「十四项」升为「十八项」。
+     *   这里**不是**放宽判据：锁的仍是「实现里写下的项数」与判据期望同源这一件事，
+     *   只是口径加了四项，同源的另一端跟着走（加了口径必须加自证，否则下一版少一项没人知道）。 */
+    assert.ok(kernelSrc.indexOf('判据自证(十八项)') >= 0, '自检项数与实现同源（加了口径必须加自证）');
+    assert.equal(kernelSrc.indexOf('判据自证(十四项)') < 0, true, '旧计数必须已被换掉（留着就是两处真源）');
     assert.equal(K.loreStageLine('parse', null), 'parse:读不到');
     assert.deepEqual(K.pickableClassesOf(null), [], '没有自述时选项表应为空（不编一份类目表）');
     assert.deepEqual(K.pickableClassesOf({ classes: ['a'], classLabels: [] }).map((x) => x.label), ['a'],

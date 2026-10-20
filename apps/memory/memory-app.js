@@ -61,6 +61,7 @@ import {
   readLoreParse, readLoreParseWindow, readLoreEntities, readLorePreview,
   readLorePlan, readLoreOverride, readLoreConfirmMapping, readLoreChanged,
   readLoreApply, readLoreLedger,
+  loreVersionRef, loreChangedLine,
   admitOf, admitLineOf, loreFaceLine, loreJourneyLines, loreSelfCheck
 } from '../../config/lore-import-contract.js';
 import {
@@ -375,13 +376,59 @@ export class MemoryApp {
   _blankLore() {
     return {
       file: '', source: '', cursor: 0,
+      /* [v4.33.0 · R5-O6] 三份版本必须分家:
+       *   `base` / `parsed` —— **候选**（这一次读进来的那一份，下游预览/计划/落笔都吃它）；
+       *   `appliedBase` / `appliedRef` —— **已应用**的那一版（基线；只有落笔成功才更新）；
+       *   `windowRead` —— 这一次读到的**窗口**（候选只覆盖全文件的某一段时如实标出）。
+       *   修前每次 `loreReadSource` 都把 base 与 parsed 一起换成新解析 —— 于是
+       *   「已应用版本」与「正在读的候选」永远是同一份，变更读数恒为「全部同值」，
+       *   用户看到「什么都没变」而真实处境是「没得比」（两者处置相反）。 */
       base: null, parsed: null, windowRead: null,
+      appliedBase: null, appliedRef: null, appliedFile: '', appliedSource: '',
+      candidateRef: null, candidatePartial: false,
       entities: null, preview: null, override: null, mapping: null, changed: null,
       plan: null, applied: null, ledger: null,
       edits: [], picks: {}, sel: {}, selTouched: false, note: ''
     };
   }
   _loreState() { if (!this._lore || typeof this._lore !== 'object') this._lore = this._blankLore(); return this._lore; }
+  /**
+   * [v4.33.0 · R5-O6] 已应用版本的**引用**落在本地存储里（正文不落 —— 只存引用）。
+   *
+   * 【为什么只存引用】计划原文的「不做」:不默认永久复制两个全文到 PhoneStorage。
+   *   引用由 `loreVersionRef` 纯算术产出(文件名 + 字符数 + 段键与指纹)，
+   *   故重开 App 后仍能回答「当前采用的是哪一版」；正文仍归上游与附件 owner。
+   * 【为什么按会话分键】资料导入账在上游是**会话内**的（`loreImportLedger` 不进携带面）,
+   *   手机这一份引用跟着同一条口径，换会话不带走别人的「已应用」。
+   */
+  _loreRefKey() {
+    let cid = '';
+    try { cid = String(this.storage?.currentConversationId || ''); } catch (_e) { cid = ''; }
+    return 'ruby_lore_applied_ref_v1' + (cid ? (':' + cid) : '');
+  }
+  _loreLoadAppliedRef() {
+    try {
+      const raw = this.storage?.get?.(this._loreRefKey());
+      if (!raw) return null;
+      const o = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+      if (!o || typeof o !== 'object' || !o.key) return null;
+      return { file: String(o.file || ''), chars: Number(o.chars) || 0, sections: Number(o.sections) || 0, key: String(o.key) };
+    } catch (_e) { return null; }
+  }
+  _loreSaveAppliedRef(ref) {
+    try {
+      if (ref && ref.key) this.storage?.set?.(this._loreRefKey(), JSON.stringify(ref));
+      else this.storage?.remove?.(this._loreRefKey());
+    } catch (_e) { /* 存储不可用一律降级：读数仍在内存里，不阻断导入 */ }
+  }
+  /** 已应用版本引用（内存里没有就回落到存储；再没有就 null —— **不猜一份**）。 */
+  loreAppliedRef() {
+    const L = this._loreState();
+    if (L.appliedRef && L.appliedRef.key) return L.appliedRef;
+    const stored = this._loreLoadAppliedRef();
+    if (stored) L.appliedRef = stored;
+    return stored;
+  }
 
   /**
    * 导入面读数(**只读,不跑真解析**)。
@@ -469,6 +516,12 @@ export class MemoryApp {
    *
    * 【换源即作废旧下游】解析换了源,旧预览 / 旧计划 / 旧落笔读数当场作废 ——
    *   拿旧预览去落笔就是「落一份对不上的资料」,而且它不报错(只是落的不是你手上这份)。
+   *
+   * 【[v4.33.0 · R5-O6] 但**已应用的那一版不许跟着换**】修前这里把 `base` 与 `parsed`
+   *   一起换成新解析,而「已应用版本」当时就是这两个字段本身 —— 于是选一份新文件的那一刻,
+   *   基线被候选顶掉,变更读数恒为「全部同值」,用户看到「什么都没变」而真实处境是
+   *   「没得比」(处置相反:放心 vs 去确认应用)。修后基线单独住在 `appliedBase` /
+   *   `appliedRef`,**只有落笔成功才更新**。
    */
   loreReadSource(text, fileName, opts) {
     const win = (typeof window !== 'undefined') ? window : null;
@@ -479,12 +532,28 @@ export class MemoryApp {
     L.base = readLoreParse(win, { text: L.source, file: L.file }, opts || {});
     L.parsed = L.base;
     L.windowRead = null;
+    this._loreMarkCandidate(L.base, false);
     L.entities = null; L.preview = null; L.override = null; L.mapping = null;
     L.changed = null; L.plan = null; L.applied = null;
     L.edits = []; L.picks = {}; L.sel = {}; L.selTouched = false;
     return L.parsed;
   }
-
+  /**
+   * [v4.33.0 · R5-O6] 候选版本的形态标记（**唯一装配点**）。
+   *
+   * 【为什么「窗口读」必须传下去】变更读数里的 `removed` 清单在窗口读下**不可采信**
+   *   ——窗口外的段不是被删了,只是这一次没读到。契约件据此给 `removedTrusted:false`,
+   *   本层不自己判一遍(同一口径只许一份实现)。
+   * 【为什么截断也算部分】被上游切短的源只覆盖了前一段,同样不足以判「移除」。
+   */
+  _loreMarkCandidate(parsed, isWindow) {
+    const L = this._loreState();
+    const p = (parsed && typeof parsed === 'object') ? parsed : null;
+    const truncated = !!(p && p.state === LORE_FACE_STATES.BLOCKED && p.faceReason === 'source-truncated');
+    L.candidatePartial = (isWindow === true) || truncated;
+    L.candidateRef = loreVersionRef(L.file, p);
+    return L.candidateRef;
+  }
   /**
    * 读下一个窗口(**长资料的正规入口**;范围没给就按游标续读)。
    *   截断源在整篇读里已被拒(上游给 `source-truncated`),本口给「显式选范围」一条真路径。
@@ -509,6 +578,8 @@ export class MemoryApp {
     L.base = r;
     L.parsed = r;
     L.windowRead = (r && typeof r.window === 'object') ? r.window : null;
+    /* ★ 窗口读 = 候选只覆盖全文件的某一段 ⇒ 如实标成部分候选。 */
+    this._loreMarkCandidate(r, true);
     /* [v4.23.0 · 自抓缺陷] 同上：上游窗口坐标「没给」不许被读成 0（0 是合法坐标）。 */
     const winToNum = numOrNull(r && r.window ? r.window.to : null);
     L.cursor = (winToNum !== null) ? winToNum : from;
@@ -517,18 +588,69 @@ export class MemoryApp {
     L.edits = []; L.picks = {}; L.sel = {}; L.selTouched = false;
     return r;
   }
-
   /**
-   * 源更新对账(**只重审变更段**)。拿当前源重读一次,与上一版逐段对差。
-   *   上游口径:段序对不上按标题再对一次;标题也找不到的旧段仍计 removed(不许静默丢)。
+   * 源更新对账(**只重审变更段**)。拿**候选**重读一次,与**已应用的那一版**逐段对差。
+   *
+   * 【[v4.33.0 · R5-O6] 比的是谁与谁】修前 `oldParsed` 传的是 `L.base` —— 而 `L.base`
+   *   刚刚被新读进来的候选覆盖过,于是「拿候选与自己比」,结果恒为「全部同值」:
+   *   界面写着「什么都没变」,而用户手上明明是一份改过的资料(不报错,只是错读数)。
+   *   修后基线固定取 `appliedBase`(落笔成功时留下的那一份)。
+   *
+   * 【为什么「只有引用、没有正文」要单独一态】重启后存储里只剩一把引用(本版刻意
+   *   不复制全文),此时**比不了** —— 那既不是「没有已应用版本」也不是「全部新增」。
+   *   三者处置相反,压平任意两对都会让用户对着一份没比过的资料做决定。
    */
   loreCompareSource(opts) {
     const win = (typeof window !== 'undefined') ? window : null;
     const L = this._loreState();
-    if (!L.base || !L.source) { L.changed = null; return null; }
-    const next = readLoreParse(win, { text: L.source, file: L.file }, opts || {});
-    L.changed = readLoreChanged(win, L.base, next);
+    if (!L.parsed) { L.changed = null; return null; }
+    const baseline = L.appliedBase;
+    if (!baseline) {
+      const ref = this.loreAppliedRef();
+      L.changed = ref
+        ? {
+          state: LORE_FACE_STATES.BLOCKED, faceReason: 'baseline-body-absent',
+          added: [], removed: [], changed: [], same: [],
+          counts: { added: 0, removed: 0, changed: 0, same: 0 },
+          oldChecked: false, partialCandidate: L.candidatePartial === true, removedTrusted: false,
+          why: ['baseline-ref-only']
+        }
+        : readLoreChanged(win, null, L.parsed, { partialCandidate: L.candidatePartial === true });
+      return L.changed;
+    }
+    L.changed = readLoreChanged(win, baseline, L.parsed, { partialCandidate: L.candidatePartial === true });
     return L.changed;
+  }
+  /**
+   * [v4.33.0 · R5-O6] **取消候选**：把手上这份新读进来的放掉,回到已应用的那一版。
+   *
+   * 【为什么必须有这一口】计划验收原文「选B→显示真实差异→**取消仍是A**」——
+   *   没有这一口,用户看完差异只能靠「再读一遍 A」回到原状,而重读 A 需要 A 的正文,
+   *   本版又刻意不复制全文 ⇒ 事实上回不去。
+   * 【为什么读不出就如实说】已应用版本的正文只在本次会话里(落笔时留下的那一份);
+   *   重启后只剩引用,此时**回不去正文**,只能如实报「只有引用」。
+   */
+  loreDiscardCandidate() {
+    const L = this._loreState();
+    const ref = this.loreAppliedRef();
+    if (!L.appliedBase) {
+      return {
+        ok: false, reason: ref ? 'baseline-body-absent' : 'no-applied-source',
+        note: ref
+          ? '已应用的那一版只剩引用(' + String(ref.file || '未命名') + ' · ' + String(ref.key) + '),正文不在手上 ⇒ 回不去(不是「没有已应用版本」)'
+          : '还没有应用过任何版本 ⇒ 没有可回的基线'
+      };
+    }
+    L.file = String(L.appliedFile || L.file || '');
+    L.source = String(L.appliedSource || '');
+    L.base = L.appliedBase;
+    L.parsed = L.appliedBase;
+    L.windowRead = null;
+    this._loreMarkCandidate(L.appliedBase, false);
+    L.entities = null; L.preview = null; L.override = null; L.mapping = null;
+    L.changed = null; L.plan = null; L.applied = null;
+    L.edits = []; L.picks = {}; L.sel = {}; L.selTouched = false;
+    return { ok: true, reason: '', note: '已回到已应用的那一版(' + String(L.file || '未命名') + ')' };
   }
 
   /** 实体映射(**未给清单 ⇒ 未判**,本层不替上游装配「已登记实体名单」)。 */
@@ -675,6 +797,13 @@ export class MemoryApp {
    *
    * 【本层不替上游确认】没预览就不去调上游 —— 契约件已经如实报 `no-preview`。
    *   同理,人工校订与选入原样交给上游(它自己会先叠校订再出计划),本层不再算一遍。
+   *
+   * 【[v4.33.0 · R5-O6] 只有落笔成功才更新基线】修前「已应用版本」就是 `base`/`parsed`
+   *   本身 —— 于是选新文件的那一刻基线就没了。修后基线住 `appliedBase`/`appliedRef`,
+   *   而**唯一更新点在这里**,且以「这一份真的落上去了」为条件:
+   *     · `ok:true` ⇒ 基线换成**刚刚落的那一份**(候选就转正了,变更读数随之复位);
+   *     · 没落成(被拒 / 抛错 / 插件不在场)⇒ 基线**一字不动**(否则读数会假装落过了)。
+   *   `duplicate` 也算落过(上游口径),故同样转正 —— 两处只在读数那一格分开。
    */
   async loreApplyNow(opts) {
     const win = (typeof window !== 'undefined') ? window : null;
@@ -689,6 +818,17 @@ export class MemoryApp {
     if (sel.length) o.selected = sel;
     L.applied = await readLoreApply(win, L.parsed, L.preview, o);
     L.ledger = readLoreLedger(win);
+    if (L.applied && L.applied.ok === true) {
+      /* 候选转正：基线 = 刚刚落的那一份；引用同步落到存储（重开仍答得出「采用哪一版」）。 */
+      L.appliedBase = L.parsed;
+      L.appliedFile = String(L.file || '');
+      L.appliedSource = String(L.source || '');
+      const ref = loreVersionRef(L.appliedFile, L.appliedBase);
+      L.appliedRef = ref;
+      this._loreSaveAppliedRef(ref);
+      /* 基线换了 ⇒ 旧对账读数当场作废(它比的是上一版基线,留着就是错读数)。 */
+      L.changed = null;
+    }
     return L.applied;
   }
 
@@ -799,9 +939,56 @@ export class MemoryApp {
       preview: pv,
       plan: L.plan, applied: L.applied, ledger: L.ledger,
       changed: L.changed, window: L.windowRead,
+      /* ★ [v4.33.0 · R5-O6] 三份版本各自可辨认（视图只吃这份投影，不自己拼）：
+       *   `applied` 已应用（落笔成功那一版）· `candidate` 正在读的候选 · `window` 这次读到的窗口。
+       *   引用只有一把键、没有正文，故**不复制全文**；读数行由契约件唯一实现产出。
+       *   修前这三者恒指同一份 ⇒ 界面永远说「什么都没变」。 */
+      versions: this.loreVersions(),
+      changedLine: loreChangedLine(L.changed, { applied: L.appliedRef, candidate: L.candidateRef }),
       cursor: Number(L.cursor || 0), sourceChars: String(L.source || '').length,
       pickedCount: picked.length,
       note: String(L.note || '')
+    };
+  }
+  /**
+   * [v4.33.0 · R5-O6] 三份版本的**一句读数**（视图与判据都读这一处，不各拼一份）。
+   *
+   * 【为什么「没有」与「读不出」要分开】「还没有应用过」⇒ 去读一份并应用；
+   *   「应用过但正文不在手上（只剩引用）」⇒ 正文归上游/附件 owner，本层**不猜一份**。
+   *   两句话压平，用户会去重读一份其实还在的资料。
+   */
+  loreVersions() {
+    const L = this._loreState();
+    const ref = this.loreAppliedRef();
+    const hasBody = !!L.appliedBase;
+    return {
+      applied: {
+        has: hasBody || !!ref,
+        bodyInHand: hasBody,
+        file: String((hasBody ? L.appliedFile : (ref && ref.file)) || ''),
+        key: String((L.appliedRef && L.appliedRef.key) || (ref && ref.key) || ''),
+        chars: Number(((L.appliedRef && L.appliedRef.chars) || (ref && ref.chars)) || 0),
+        sections: Number(((L.appliedRef && L.appliedRef.sections) || (ref && ref.sections)) || 0),
+        note: (hasBody || ref)
+          ? (hasBody ? '已应用版本在手上' : '已应用版本只剩引用(正文不在手上 ⇒ 比不了,也回不去)')
+          : '还没有应用过任何版本'
+      },
+      candidate: {
+        has: !!L.parsed,
+        partial: L.candidatePartial === true,
+        file: String(L.file || ''),
+        key: String((L.candidateRef && L.candidateRef.key) || ''),
+        chars: Number((L.candidateRef && L.candidateRef.chars) || 0),
+        sections: Number((L.candidateRef && L.candidateRef.sections) || 0),
+        note: L.parsed
+          ? (L.candidatePartial === true
+            ? '候选只覆盖一段/被上游截短 ⇒ 窗口外的段不得据此判「已删除」'
+            : '候选覆盖整篇')
+          : '还没有读进任何一份'
+      },
+      window: L.windowRead
+        ? { has: true, from: Number(L.windowRead.from || 0), to: Number(L.windowRead.to || 0) }
+        : { has: false, from: 0, to: 0 }
     };
   }
 

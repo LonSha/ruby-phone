@@ -450,12 +450,24 @@ export function readLoreConfirmMapping(win, parsed, mapping, opts) {
     }
 }
 
-/** 变更段(**源更新只重审变更段**;段序对不上按标题再对一次,标题也找不到仍计 removed)。 */
-export function readLoreChanged(win, oldParsed, newParsed) {
+/**
+ * 变更段(**源更新只重审变更段**;段序对不上按标题再对一次,标题也找不到仍计 removed)。
+ *
+ * [v4.33.0 · R5-O6] 新增 `opts.partialCandidate`:候选那一侧若是**窗口读**
+ *   (只读到全文件的某一段),上游照样会给 `removed` 清单 —— 而窗口外的段
+ *   并不是「被删掉了」,只是这一次没读到。两者的处置相反(去删 vs 接着读下一窗),
+ *   压平就是「读 B 的中间窗口,把 A 的全文当成已删除」——本版计划原文点名的那一条。
+ *   故本件把「候选是否只是窗口」如实标出,并给出 `removedTrusted`
+ *   (**窗口读时 false** —— 移除清单不可采信,不许据此删任何东西)。
+ */
+export function readLoreChanged(win, oldParsed, newParsed, opts) {
+    const o2 = (opts && typeof opts === 'object') ? opts : {};
+    const partial = bool(o2.partialCandidate);
     const empty = {
         state: LORE_FACE_STATES.ENGINE_ABSENT, faceReason: 'plugin-absent',
         added: [], removed: [], changed: [], same: [],
-        counts: { added: 0, removed: 0, changed: 0, same: 0 }, oldChecked: false, why: []
+        counts: { added: 0, removed: 0, changed: 0, same: 0 }, oldChecked: false,
+        partialCandidate: partial, removedTrusted: false, why: []
     };
     const o = outletOf(win, 'loreImportChanged');
     if (!o.plugin) return empty;
@@ -464,17 +476,87 @@ export function readLoreChanged(win, oldParsed, newParsed) {
         const r = o.plugin[o.name](oldParsed, newParsed);
         if (!r || typeof r !== 'object') return Object.assign({}, empty, { state: LORE_FACE_STATES.UNUSABLE, faceReason: 'malformed' });
         const c = (r.counts && typeof r.counts === 'object') ? r.counts : {};
+        const oldChecked = bool(r.oldChecked);
         return {
-            state: bool(r.oldChecked) ? LORE_FACE_STATES.OK : LORE_FACE_STATES.EMPTY,
-            faceReason: bool(r.oldChecked) ? 'compared' : 'no-old-source',
+            state: oldChecked ? LORE_FACE_STATES.OK : LORE_FACE_STATES.EMPTY,
+            faceReason: oldChecked ? 'compared' : 'no-old-source',
             added: arr(r.added).slice(), removed: arr(r.removed).slice(),
             changed: arr(r.changed).slice(), same: arr(r.same).slice(),
             counts: { added: readNum(c.added, 0), removed: readNum(c.removed, 0), changed: readNum(c.changed, 0), same: readNum(c.same, 0) },
-            oldChecked: bool(r.oldChecked), why: arr(r.why).map(txt).filter(Boolean)
+            oldChecked: oldChecked,
+            partialCandidate: partial,
+            /* 移除清单只在「有基线 + 候选是整篇读」时才可采信。 */
+            removedTrusted: oldChecked && !partial,
+            why: arr(r.why).map(txt).filter(Boolean)
         };
     } catch (_e) {
         return Object.assign({}, empty, { state: LORE_FACE_STATES.UNUSABLE, faceReason: 'thrown' });
     }
+}
+
+/**
+ * [v4.33.0 · R5-O6] 一份已解析资料的**版本引用**(纯算术:无随机、无时钟、无存储)。
+ *
+ * 【为什么只要引用不要正文】本版计划原文的「不做」写着:不默认永久复制两个全文到
+ *   PhoneStorage,仅保存版本引用。故本函数产出的是一把**可复算的键**:
+ *   文件名 + 字符数 + 每段的 键与内容指纹 —— 同一份资料重读一次键不变,
+ *   改一个字键就变。手机只把这一把键留在本地存储里,正文仍归上游与附件 owner。
+ *
+ * @returns {{file:string, chars:number, sections:number, key:string}}
+ */
+export function loreVersionRef(file, parsed) {
+    const p = (parsed && typeof parsed === 'object') ? parsed : null;
+    const items = p ? arr(p.items) : [];
+    const parts = [];
+    for (const it of items) parts.push(txt(it && it.key) + ':' + txt(it && it.textHash));
+    const chars = (p && p.source && typeof p.source === 'object') ? readNum(p.source.chars, 0) : 0;
+    return { file: txt(file), chars: chars, sections: items.length, key: 'lv_' + fnv1a(txt(file) + '|' + chars + '|' + parts.join(',')) };
+}
+/** FNV-1a(32 位):纯算术指纹,只用于「还是不是同一份」,不当任何真源。 */
+function fnv1a(s) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+    return ('0000000' + h.toString(16)).slice(-8);
+}
+/**
+ * [v4.33.0 · R5-O6] 版本与变更的**一行读数**(唯一实现;视图与诊断共用)。
+ *
+ * 【为什么「没有基线」必须单独一句】它是本版最贵的一格:旧实现每次选新文件都把
+ *   基线覆盖掉,于是「已应用版本」与「正在读的候选」永远是同一份 —— 变更读数
+ *   恒为「全部同值」,用户看到的是「什么都没变」,而真实处境是「没得比」。
+ *   两者处置相反(去确认应用 vs 放心),压成一句就是把「没比过」说成「没有变化」。
+ */
+export function loreChangedLine(changed, refs) {
+    const c = (changed && typeof changed === 'object') ? changed : null;
+    const r = (refs && typeof refs === 'object') ? refs : {};
+    const tag = function (x) {
+        const y = (x && typeof x === 'object') ? x : null;
+        if (!y || !txt(y.key)) return '未读入';
+        return (txt(y.file) || '未命名') + '(' + readNum(y.chars, 0) + ' 字符 · ' + txt(y.key) + ')';
+    };
+    if (!c) return '变更:还没比过(选一份新版本再比)';
+    if (!bool(c.oldChecked)) {
+        /* ★ 三态不许压平：「还没比过」/「没有已应用版本」/「应用过但正文不在手上」处置各不相同。
+         *   第三态只有引用（本版刻意不复制全文），此时**比不了** —— 它既不是「没有应用过」
+         *   （用户不必去重新应用一份），也不是「全部新增」（那种说法会把人推向一次盲目落笔）。
+         *   压平的后果：重开后界面说「没有已应用版本可作基线」，而它上一行刚写过
+         *   「已应用：a.txt（只剩引用）」—— 同一块读数自相矛盾。 */
+        if (txt(c.faceReason) === 'baseline-body-absent') {
+            return '变更:比不了 —— 已应用的那一版只剩引用(' + tag(r.applied)
+                + ')，正文不在手上 ⇒ 谈不上「哪些变了」(**不是**「没有应用过」,也**不是**「全部新增」)';
+        }
+        return '变更:没有已应用版本可作基线 —— 谈不上「哪些变了」(**不是**「全部新增」)';
+    }
+    const n = (c.counts && typeof c.counts === 'object') ? c.counts : {};
+    let s = '变更:已应用 ' + tag(r.applied) + ' → 候选 ' + tag(r.candidate)
+        + ' · 新增 ' + readNum(n.added, 0) + ' · 变更 ' + readNum(n.changed, 0)
+        + ' · 移除 ' + readNum(n.removed, 0) + ' · 同值 ' + readNum(n.same, 0);
+    if (bool(c.partialCandidate)) {
+        const w = (r.window && typeof r.window === 'object') ? r.window : null;
+        s += ' ｜ 候选是**窗口读**(只读到 ' + (w ? (readNum(w.from, 0) + '-' + readNum(w.to, 0)) : '未知范围')
+            + ')—— 窗口外的段不得据此判「已删除」';
+    }
+    return s;
 }
 
 /**
@@ -680,7 +762,7 @@ export function loreJourneyLines(stageReads) {
     return out;
 }
 
-/** 判据自证(十四项)。 */
+/** 判据自证(十八项)。 */
 export function loreSelfCheck() {
     const problems = [];
     const states = Object.keys(LORE_FACE_STATES).map(function (k) { return LORE_FACE_STATES[k]; });
@@ -797,6 +879,35 @@ export function loreSelfCheck() {
     if (loreStageLine('parse', null) !== 'parse:读不到') problems.push('空读数应读成「读不到」');
     if (arr(pickableClassesOf(null)).length !== 0) problems.push('没有自述时选项表应为空(不编一份类目表)');
 
+    /* 八 [v4.33.0 · R5-O6] 版本引用与变更读数。
+     *   「没有基线」与「没有变化」必须不同句 —— 这是本版治的那一格;
+     *   窗口候选的移除清单不可采信,必须与整篇读不同形。 */
+    const refA = loreVersionRef('a.txt', { source: { chars: 10 }, items: [{ key: 'k1', textHash: 'h1' }] });
+    const refA2 = loreVersionRef('a.txt', { source: { chars: 10 }, items: [{ key: 'k1', textHash: 'h1' }] });
+    const refB = loreVersionRef('a.txt', { source: { chars: 10 }, items: [{ key: 'k1', textHash: 'h2' }] });
+    if (!refA.key || refA.key !== refA2.key) problems.push('同一份资料重读一次版本键必须不变');
+    if (refA.key === refB.key) problems.push('改一个字版本键必须变(否则「更新」判不出来)');
+    if (refA.sections !== 1 || refA.chars !== 10) problems.push('版本引用必须带上段数与字符数');
+    if (loreVersionRef('', null).key === '') problems.push('空资料也要给出一把键(不许空串冒充)');
+    const noBase = { state: LORE_FACE_STATES.EMPTY, oldChecked: false, counts: { added: 0, removed: 0, changed: 0, same: 0 }, partialCandidate: false, removedTrusted: false };
+    const noChange = { state: LORE_FACE_STATES.OK, oldChecked: true, counts: { added: 0, removed: 0, changed: 0, same: 3 }, partialCandidate: false, removedTrusted: true };
+    if (loreChangedLine(noBase, {}) === loreChangedLine(noChange, {})) problems.push('「没有基线」与「没有变化」必须不同句');
+    if (loreChangedLine(noBase, {}).indexOf('没有已应用版本') < 0) problems.push('没有基线必须写在读数里');
+    if (loreChangedLine(null, {}) === loreChangedLine(noBase, {})) problems.push('「还没比过」与「没有基线」必须不同句');
+    /* 「应用过但正文不在手上」与「从没应用过」也必须分句（两者处置相反）。 */
+    const refOnly = loreChangedLine(
+        { state: LORE_FACE_STATES.BLOCKED, faceReason: 'baseline-body-absent', oldChecked: false, counts: { added: 0, removed: 0, changed: 0, same: 0 }, partialCandidate: false, removedTrusted: false },
+        { applied: refA });
+    if (refOnly === loreChangedLine(noBase, {})) problems.push('「只剩引用」与「没有应用过」必须不同句');
+    if (refOnly.indexOf('只剩引用') < 0) problems.push('只剩引用必须写在读数里:' + refOnly);
+    const winCand = { state: LORE_FACE_STATES.OK, oldChecked: true, counts: { added: 0, removed: 2, changed: 0, same: 1 }, partialCandidate: true, removedTrusted: false };
+    const fullCand = Object.assign({}, winCand, { partialCandidate: false, removedTrusted: true });
+    if (loreChangedLine(winCand, { window: { from: 0, to: 40000 } }).indexOf('窗口读') < 0) problems.push('窗口候选必须写在读数里');
+    if (loreChangedLine(winCand, {}) === loreChangedLine(fullCand, {})) problems.push('窗口候选与整篇候选必须不同句(否则「没读到」被读成「已删除」)');
+    /* 移除清单的可采信性:窗口读必须 false(不据它删任何东西)。 */
+    if (readLoreChanged(null, {}, {}, { partialCandidate: true }).removedTrusted !== false) problems.push('窗口候选的移除清单不可采信');
+    if (readLoreChanged(null, {}, {}).removedTrusted !== false) problems.push('没有插件时移除清单同样不可采信');
+
     return { problems: problems, states: states.length, outlets: Object.keys(LORE_OUTLETS).length, stages: LORE_STAGES.length };
 }
 
@@ -820,6 +931,8 @@ export default {
     readLoreOverride,
     readLoreConfirmMapping,
     readLoreChanged,
+    loreVersionRef,
+    loreChangedLine,
     readLoreApply,
     readLoreLedger,
     loreFaceLine,
