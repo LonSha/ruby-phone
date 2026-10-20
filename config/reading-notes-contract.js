@@ -371,6 +371,66 @@ export function searchLine(res) {
     return s;
 }
 /* ───────── ⑥ 摘录锚点核对（改版书必须提示） ───────── */
+/**
+ * 按书**逐本读正文**核对摘录锚点（生成器；[v4.35.0 · R5-O8]）。
+ *   为什么需要它：修前「研究清单」只拿运行时缓存里的正文交给 `buildResearchList`，
+ *   冷启动（重启后直接进研究页、没先打开过书）时缓存是空的 ⇒ 每条摘录都落成
+ *   `FINGERPRINT`「未定论」。那个态**不算错**（它说的是实话：这次没读正文），
+ *   但它把两件不同的事压成同一格：
+ *     ① 这本书**根本没存过正文附件**（换设备 / 没导入）⇒ 该显示「缺失」；
+ *     ② 附件在、只是**这次没读**（重启后的第一眼）⇒ 该显示「正在核对」再变结论。
+ *   本生成器把「读不到」如实写进读数（`chapters:null` + `why` 说清是没存过），
+ *   并**照样产出这一条**（不跳过它 —— 跳过就等于把「没读到」伪装成「没有这条摘录」）。
+ *   ★ 让出粒度是**每本**（不是每 N 本）：一本书本身可能就是百万字级，按本让出才贴近
+ *     取消预算；且**入口先让出一次** —— 书目为空时下面一次都不会让出，取消就永远
+ *     受理不到（与 R5-O7 同一族形态：同一功能两种脾气，用户只会认为按钮时灵时不灵）。
+ *   ★ 声明处同样不写 `export`（理由见 `buildIndexChunks` 上方注释）。
+ * @param {Array} books 书目 `[{id, title, contentHash}]`
+ * @param {(book:object)=>Promise|object} readBook 宿主给的读正文口（返回 Promise 或同步值）
+ * @param {{missing?:Array}} [opts] 已知「这本没存过附件」的集合（可选；不传就现读现判）
+ * @returns {Generator<void, Array, void>} `next().value`（done 时）才是读数数组
+ */
+function* readBooksForAnchors(books, readBook, opts) {
+    const list = Array.isArray(books) ? books : [];
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const missSet = new Set();
+    for (const raw of (Array.isArray(o.missing) ? o.missing : [])) {
+        const id = trimStr(raw);
+        if (id) missSet.add(id);
+    }
+    const out = [];
+    yield null;   // 阶段入口先让出一次（书目为空也至少有一个受理窗口）
+    for (const it of list) {
+        const b = (it && typeof it === 'object') ? it : {};
+        const id = trimStr(b.id || b.bookId);
+        if (!id) { yield null; continue; }
+        const base = { id: id, title: trimStr(b.title), contentHash: trimStr(b.contentHash), chapters: null, why: '' };
+        /* 调用方**自带正文**（同步入口的老用法）：直接用，不调读口 ——
+         *   两条入口（同步抽干 / 分片异步）必须给出同一份读数，差别只许在节奏上。
+         *   若这里改调读口，同步入口就会把「调用方已经拿到手的正文」丢掉，
+         *   于是同一批摘录在同步与分片两条路上得到不同的锚点结论。 */
+        const own = Array.isArray(b.chapters) ? b.chapters : null;
+        if (own) { out.push(Object.assign(base, { chapters: own, why: 'ok' })); yield null; continue; }
+        if (missSet.has(id)) {
+            out.push(Object.assign(base, { why: '这本书没存过正文附件（换设备或没导入过）⇒ 锚点判不了，不是「没问题」' }));
+            yield null;
+            continue;
+        }
+        let r = null;
+        try { r = yield (readBook ? readBook(b) : null); } catch (_e) { r = null; }
+        /* ★ 只认 `chapters` 是数组，**不额外要求 `r.ok === true`**：
+         *   App 的读口 `bookReadOf` 给的是 `{id,title,contentHash,chapters,why}`，
+         *   本来就没有 `ok` 格 —— 多加一条要求会让「读到了正文」被判成「读不到」，
+         *   而那正是本版要治的形态（把读到与读不到压成同一格）。 */
+        const chapters = (r && Array.isArray(r.chapters)) ? r.chapters : null;
+        if (!chapters) missSet.add(id);
+        out.push(Object.assign(base, {
+            chapters: chapters,
+            why: chapters ? 'ok' : '正文读不到（没存过附件 / 本环境没有附件层）',
+        }));
+    }
+    return out;
+}
 /** 核文本用的探针：规范空白后取前 40 字（太短则全用）；取不到如实 ''。 */
 function excerptProbeText(text) {
     const t = normWs(text);
@@ -456,10 +516,65 @@ export function anchorLine(anchor) {
  * @returns {{ok:boolean, items:Array, byTag:Array, counts:object, line:string}}
  */
 export function buildResearchList(excerpts, books) {
+    /* 同步抽干生成器：**唯一实现只有一份**（`researchListChunks`）。
+     *   为什么不做成「同步一份、分片一份」：与建索引同规 —— 两份必然漂移，
+     *   而漂移的表现是「同一批摘录，重开第一眼与核对之后看到的条目不一样」，
+     *   不报错、只是错数。故分片是**唯一真源**，同步入口只是把它抽干。 */
+    const gen = researchListChunks(excerpts, books, null, null);
+    let step = gen.next();
+    while (!step.done) step = gen.next();
+    return step.value;
+}
+/**
+ * 一条摘录的**研究条目**（原文 / 我写的 / 出处读数三件套；[v4.35.0 · R5-O8]）。
+ *   ★ 这是清单条目的**唯一装配点**：同步入口与分片入口都从这里取 ——
+ *     两份装配必然漂移，而漂移的表现是「同一批摘录在两条路上得到不同的出处结论」。
+ * @param {object} excerpt 摘录条目
+ * @param {object|null} book 该书读数（`chapters` 缺席 = 这次没读正文）
+ * @returns {{note:object, anchor:object, item:object}}
+ */
+function researchItemsOf(excerpt, book) {
+    const e = (excerpt && typeof excerpt === 'object') ? excerpt : {};
+    const note = excerptNoteOf(e);
+    const bookId = trimStr(e.bookId);
+    const bk = (book && typeof book === 'object') ? book : null;
+    const anchor = checkExcerptAnchor(e, bk);
+    return {
+        note: note,
+        anchor: anchor,
+        item: {
+            id: trimStr(e.id), bookId: bookId,
+            bookTitle: trimStr(e.bookTitle) || trimStr(bk && bk.title),
+            chapterTitle: trimStr(e.chapterTitle), position: anchor.position,
+            quote: note.text,                 // 原文
+            annotation: note.annotation,      // 不是原文
+            tags: note.tags,
+            hasAnnotation: note.hasAnnotation,
+            anchor: { state: anchor.state, why: anchor.why, needsConfirm: anchor.needsConfirm, settled: anchor.settled },
+        },
+    };
+}
+/**
+ * 研究清单**按书分片**版（生成器；[v4.35.0 · R5-O8]）。
+ *   与同步入口逐字段等价（同一 `researchItemsOf` 装配），差别只在「读正文 / 归条」
+ *   之间**逐本让出**，于是驱动器能受理取消、能报「正在核对」。
+ *   ★ 冷启动（运行时缓存空）时它**会去读附件**再归条 —— 这正是本版要治的那条：
+ *     修前清单只吃运行时缓存，重启后第一眼全是「未定论」，而其中「附件压根没存过」
+ *     与「这次没读」被压成同一格，用户看到的就是「这个清单核不了」。
+ *   ★ 声明处同样不写 `export`（理由见 `buildIndexChunks` 上方注释）。
+ * @param {Array} excerpts 摘录条目
+ * @param {Array} books 书目 `[{id, title, contentHash, chapters?}]`
+ * @param {(book:object)=>Promise|object} readBook 读正文口（同步入口传 null）
+ * @param {{missing?:Array}} [opts] 已知「没存过附件」的集合
+ * @returns {Generator<void, object, void>} `next().value`（done 时）才是清单对象
+ */
+function* researchListChunks(excerpts, books, readBook, opts) {
     const list = Array.isArray(excerpts) ? excerpts : [];
-    const bs = Array.isArray(books) ? books : [];
+    /* 读正文这一段交给同一个生成器（`readBooksForAnchors`）：
+     *   它是**逐本让出**的那一段，也是最贵的一段，取消要在这里受理得到。 */
+    const reads = yield* readBooksForAnchors(books, readBook, opts);
     const byId = new Map();
-    for (const b of bs) {
+    for (const b of (Array.isArray(reads) ? reads : [])) {
         const id = trimStr(b && (b.id || b.bookId));
         if (id) byId.set(id, b);
     }
@@ -468,25 +583,17 @@ export function buildResearchList(excerpts, books) {
     let withAnnotation = 0;
     let needsConfirm = 0;
     let unverified = 0;
+    yield null;   // 读完之后、归条之前再让出一次（条目多时归条本身也是一段活）
     for (const e of list) {
         if (!e || typeof e !== 'object') continue;
-        const note = excerptNoteOf(e);
-        const bookId = trimStr(e.bookId);
-        const anchor = checkExcerptAnchor(e, byId.get(bookId) || null);
+        const built = researchItemsOf(e, byId.get(trimStr(e.bookId)) || null);
+        const note = built.note;
+        const anchor = built.anchor;
         if (note.hasAnnotation) withAnnotation += 1;
         if (anchor.needsConfirm) needsConfirm += 1;
         if (!anchor.settled && !anchor.needsConfirm) unverified += 1;
         for (const t of note.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
-        items.push({
-            id: trimStr(e.id), bookId: bookId,
-            bookTitle: trimStr(e.bookTitle) || trimStr(byId.get(bookId) && byId.get(bookId).title),
-            chapterTitle: trimStr(e.chapterTitle), position: anchor.position,
-            quote: note.text,                 // 原文
-            annotation: note.annotation,      // 不是原文
-            tags: note.tags,
-            hasAnnotation: note.hasAnnotation,
-            anchor: { state: anchor.state, why: anchor.why, needsConfirm: anchor.needsConfirm, settled: anchor.settled },
-        });
+        items.push(built.item);
     }
     const byTag = [];
     for (const [tag, count] of tagCount) byTag.push({ tag: tag, count: count });
@@ -496,6 +603,11 @@ export function buildResearchList(excerpts, books) {
         tagged: byTag.reduce(function (n, t) { return n + t.count; }, 0),
         tags: byTag.length, needsConfirm: needsConfirm, unverified: unverified,
         quoteOnly: items.length - withAnnotation,
+        /* [v4.35.0 · R5-O8] 两格**回源读数**：几本在书目里、几本这次真读到了正文。
+         *   为什么必须分开报：「没存过附件」与「这次没读」在界面上是两句话，
+         *   而在修前它们都表现为「未定论」—— 混成一格正是本版要治的形态。 */
+        books: byId.size,
+        read: (Array.isArray(reads) ? reads.filter(function (r) { return Array.isArray(r.chapters); }).length : 0),
     };
     return { ok: true, items: items, byTag: byTag, counts: counts, line: researchLine({ items: items, byTag: byTag, counts: counts }) };
 }
@@ -507,6 +619,16 @@ export function researchLine(list) {
         + ' · 只存原文 ' + String(c.quoteOnly || 0) + ' · 标签 ' + String(c.tags || 0) + ' 种';
     if (c.needsConfirm) s += ' · **锚点需确认 ' + String(c.needsConfirm) + ' 条**（改版书 / 无指纹 / 错位）';
     if (c.unverified) s += ' · 未定论 ' + String(c.unverified) + ' 条（只核了指纹或正文读不到）';
+    /* [v4.35.0 · R5-O8] 回源读数：**这次真读到几本正文**。
+     *   为什么要单列这一句：修前清单只吃运行时缓存，冷启动时「一本都没读」与
+     *   「读了但都对不上」在界面上长得一样（都是「未定论」）—— 这一句把它们分开：
+     *   读到 0 本时读数会**明说是没读到**，而不是让用户以为清单核过了没问题。 */
+    if (c.books !== undefined) {
+        const readN = Number(c.read || 0);
+        const bookN = Number(c.books || 0);
+        s += ' · 这次读到正文 ' + String(readN) + '/' + String(bookN) + ' 本';
+        if (bookN > 0 && readN === 0) s += '（**一本都没读到** ⇒ 出处读数是「没核成」，不是「都对得上」）';
+    }
     s += ' · 批注是**自己的解释**，不算原文';
     return s;
 }
@@ -606,6 +728,24 @@ export function notesSelfCheck() {
     if (!v1.key || v1.key !== v2.key) problems.push('自检：同一版本没给出同一个索引键');
     if (v1.key === v3.key) problems.push('自检：改了内容指纹却给出同一个索引键（会把旧索引当成新的）');
     if (v4.key !== '') problems.push('自检：没有指纹时不该给出可复用的索引键');
+    /* 八 [v4.35.0 · R5-O8] 研究清单：分片与同步**逐字段等价**，且冷启动**真的去读了正文**。
+     *   为什么这条必须真跑：分片清单最危险的形态不是报错，而是「分片版把读正文这一步
+     *   省掉了」—— 界面上什么都不会响，只是每一条都显示「未定论」，
+     *   而用户读到的是「这个清单核不了」。 */
+    const exR = [{ id: 'e1', text: '原文一句', bookId: 'b1', bookHash: 'h9', chapter: 0, para: 0, annotation: '我的解释' }];
+    const syncR = buildResearchList(exR, [{ id: 'b1', title: '书', contentHash: 'h9', chapters: [{ paragraphs: ['原文一句'] }] }]);
+    let readsCalled = 0;
+    const genR = researchListChunks(exR, [{ id: 'b1', title: '书', contentHash: 'h9' }], function () {
+        readsCalled += 1;
+        return { chapters: [{ paragraphs: ['原文一句'] }] };
+    }, null);
+    let stepR = genR.next();
+    while (!stepR.done) stepR = genR.next(stepR.value);
+    const chunkR = stepR.value;
+    if (readsCalled <= 0) problems.push('自检：分片研究清单一次都没去读正文（冷启动会全落成「未定论」）');
+    if (!chunkR || chunkR.counts.total !== syncR.counts.total) problems.push('自检：分片研究清单与同步版的条数不一致');
+    if (!chunkR || !chunkR.items[0] || chunkR.items[0].anchor.settled !== true) problems.push('自检：分片研究清单读了正文却没把锚点定论下来');
+    if (!chunkR || chunkR.counts.read !== 1) problems.push('自检：分片研究清单没把「这次读到几本正文」如实计上');
     return { problems: problems, states: stateKeys.length, confirmStates: ANCHOR_CONFIRM_STATES.length, limits: Object.keys(SEARCH_LIMITS).length };
 }
 export default {
@@ -616,6 +756,11 @@ export default {
     buildResearchList, researchLine, notesSelfCheck,
 };
 export { buildIndexChunks, searchBookChunks };
+/* [v4.35.0 · R5-O8] 研究清单分片出口**另起一块**，不改上面那一块：
+ *   v4.34.0 的判据（tests/system-v4340.test.mjs 的 A4）锁着上一块的**精确形态** ——
+ *   那是**那一版的事实**，本版不为了自己方便去改历史判据（改判据与放宽门禁只差一步）。
+ *   门禁的成块路径认得多个转出块，故增补一块即可。 */
+export { researchListChunks };
 /* 两个生成器出口走**具名转出块**（不是 `export function*`）：
  *   全仓零消费导出门禁的抽取路径不认 `export function*`，而它对此的立场是
  *   **fail-closed 拒判**（E9）而非放行 —— 那条 B5 判据锁的正是「生成器声明必须被兜住」。

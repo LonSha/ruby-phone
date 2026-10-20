@@ -27,7 +27,7 @@ import {
     normalizeAnnotation, normalizeNoteTags,
     buildIndexChunks, searchBookChunks, searchLine,
     indexVersionOf, checkExcerptAnchor, anchorLine,
-    buildResearchList, notesSelfCheck, SEARCH_LIMITS,
+    buildResearchList, researchListChunks, notesSelfCheck, SEARCH_LIMITS,
 } from '../../config/reading-notes-contract.js';
 /* ★ 为什么这里**不**再导入 `buildSearchIndex` / `searchInBook`：
  *   [v4.34.0 · R5-O7] 起 App 的查找路径一律走**分片生成器**（`buildIndexChunks` /
@@ -71,6 +71,11 @@ export class ReadingApp {
          *   序号只增不减: 任务 id 在会话内唯一,判据与日志据此对得上号。 */
         this._findTask = null;
         this._findSeq = 0;
+        /* [v4.35.0 · R5-O8] 研究清单的**任务身份**与序号（与查找同规：身份是取消与作废的唯一凭据）。
+         *   为什么清单也要身份：换书、换会话、再点一次「重新核对」三件事都会让上一轮过期，
+         *   而它们的正确处置是一样的（**不许把上一轮的读数画上去**）。 */
+        this._anchorTask = null;
+        this._anchorSeq = 0;
         /* [第三期 R3-X8] 最近一次导入的 Promise：视图/测试/诊断可 await 到「真的导完了」。 */
         this._lastImport = null;
         this.EXCERPT_KEY = 'ruby_reading_excerpts';
@@ -914,6 +919,81 @@ export class ReadingApp {
             if (k.indexOf(pre) === 0) { this._indexCache.delete(k); dropped += 1; }
         }
         return dropped;
+    }
+    /* ══════════ [v4.35.0 · R5-O8] 研究摘录**重开后自动回源核对** ══════════
+     * 【修前的病灶（读码可复算）】`researchList()` 只拿运行时缓存 `_contentCache` 里的正文
+     *   交给 `buildResearchList`；重启后直接进研究页（没先打开过书）时缓存是空的
+     *   ⇒ 每条摘录都落成 `FINGERPRINT`「未定论」。那个态不算撒谎（它说的是「这次没读正文」），
+     *   但它把两件不同的事压成同一格：**附件压根没存过**（缺失）与**这次没读**（正在核对）。
+     * 【本段只做接线】读哪本、怎么核、逐条怎么装全在 `config/reading-notes-contract.js`
+     *   （`researchListChunks` / `researchItemsOf`），本件不写第二份装配。
+     * 【不做什么（计划「不做」原文）】
+     *   · **不重建研究笔记功能**：条目就是既有那一批摘录，只是出处读数这次是真核出来的；
+     *   · **不只改「未核对」文案**：修前的问题不在字，在「没去读」—— 改字是掩盖，不是修；
+     *   · **不把「读不到正文」说成「摘录过期」**：两者在读数里分开报，用户要能分辨。
+     * ------------------------------------------------------------------ */
+    /** 新建一枚研究清单任务身份。 */
+    newAnchorTask() {
+        const self = this;
+        this._anchorSeq += 1;
+        const task = {
+            id: 'rd_anchor_' + String(this._anchorSeq),
+            cancelled: false,
+            cancel() { task.cancelled = true; return self._anchorTask === task; },
+        };
+        return task;
+    }
+    /** 当前研究清单任务（没有就是 null，**不报一个假的空任务**）。 */
+    currentAnchorTask() { return this._anchorTask || null; }
+    /** 取消当前研究清单任务。 */
+    cancelAnchor() {
+        const t = this._anchorTask;
+        if (!t) return { ok: false, why: 'no-task（这一轮没有正在跑的清单核对）' };
+        t.cancel();
+        return { ok: true, taskId: t.id };
+    }
+    /**
+     * 研究清单（**异步、分片、可取消**）：冷启动也去读附件再归条。
+     *   读口一律走既有的 `bookReadOf`（缓存优先、再附件）—— 本件不另开一条读取路径。
+     * @param {{task?:object, onProgress?:Function}} [opts]
+     * @returns {Promise<object>}
+     */
+    async researchListAsync(opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        const task = o.task || this.newAnchorTask();
+        this._anchorTask = task;
+        const books = this.data.getBooks().map((b) => ({ id: b.id, title: b.title, contentHash: b.contentHash }));
+        const isCancelled = function () { return task.cancelled === true; };
+        let reads = 0;
+        let yielded = 0;
+        const emit = function (phase, done, total) {
+            if (typeof o.onProgress === 'function') {
+                try { o.onProgress({ phase: phase, done: done, total: total, reads: reads, yielded: yielded, taskId: task.id }); } catch (_e) { /* 进度回调抛错不影响核对 */ }
+            }
+        };
+        emit('read', 0, books.length);
+        const gen = researchListChunks(this.excerpts, books, (b) => this.bookReadOf(b && b.id), null);
+        let step = gen.next();
+        while (!step.done) {
+            /* 生成器 yield 出的是「该读哪一本」的**读口返回值**（Promise 或同步值），
+             *   驱动器负责 await —— 于是契约件保持零 DOM 零存储零时钟，
+             *   而「读附件」这件异步活留在本件（它本来就是本件的活）。 */
+            if (step.value) reads += 1;
+            emit('read', reads, books.length);
+            await this._yieldTurn();
+            yielded += 1;
+            if (isCancelled()) {
+                gen.return();
+                return {
+                    ok: false, cancelled: true, cancelledAt: 'anchor-read',
+                    reads: reads, yielded: yielded, taskId: task.id,
+                    line: '清单核对已取消（**没核完**：已读 ' + String(reads) + ' 本，这份读数不当结论）',
+                };
+            }
+            step = gen.next(await Promise.resolve(step.value));
+        }
+        const res = step.value || { ok: false, items: [], byTag: [], counts: {}, line: '' };
+        return Object.assign({}, res, { reads: reads, yielded: yielded, taskId: task.id, cancelled: false });
     }
     /** 创作素材清单（原文与自己的解释**分列**;需确认的条目照样标出来）。 */
     researchList() {

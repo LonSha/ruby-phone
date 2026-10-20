@@ -62,6 +62,12 @@ export class ReadingView {
         this._anchorSig = '';
         this._noteEditId = '';
         this._noteDraft = '';
+        /* [v4.35.0 · R5-O8] 研究清单的**回源核对现场**（运行态 / 进度 / 读数 / 跑过没）。
+         *   全在视图实例上，**不落存储**（运行态不是数据）；换会话一并作废。 */
+        this._researchLine = '';
+        this._researchRunning = false;
+        this._researchProgress = null;
+        this._researchTried = false;
         this._flash = '';
         /* [v4.25.0 · R4-X3] 故事年鉴面现场：章册缓存 / 选中的那一版 / 正在编哪一章的题。
          *   全在视图实例上，**不落存储**（草稿态不是数据）；换会话一并作废。 */
@@ -78,6 +84,18 @@ export class ReadingView {
          *   本层新增的几口（核对出处 / 存批注 / 删摘录）都会自己收尾重绘；
          *   没有宿主屏时抛异常会把「已经存好」的批注报成失败。 */
         if (!this.app?.phoneShell?.screen || typeof this.app.phoneShell.setContent !== 'function') return;
+        /* [v4.35.0 · R5-O8] 研究清单**重开自动回源核对**：本屏画出来后跑一次（每次进入只跑一次）。
+         *   为什么放在画之后：先让用户看到「正在核对」，而不是先卡住再出内容。
+         *   为什么必须自动：清单每条都带出处读数，而读数要正文才算得出来 ——
+         *   重启后不先打开书就看清单，修前会显示一片「未定论」，等于把「还没核」显示成「核不了」。
+         *   为什么用 setTimeout 而不是直接 await：render 是同步排版路径，
+         *   在里面 await 会把这一帧的绘制拖到读附件之后（那正是修前的观感）。 */
+        if (!this._researchRunning && !this._researchTried) {
+            this._researchTried = true;
+            const g = (typeof globalThis !== 'undefined' && globalThis) ? globalThis : {};
+            const kick = () => { this.refreshResearch({ silent: true }).catch(() => { /* 自动那一轮不弹通知 */ }); };
+            if (typeof g.setTimeout === 'function') g.setTimeout(kick, 0); else kick();
+        }
         const tc = this._themeCss();
         const html = `
         <style>
@@ -418,10 +436,76 @@ export class ReadingView {
         this.render();
         return r;
     }
-    /** 研究清单一行读数（真消费点：界面读一次，而不是只把汇总挂在导出面上）。 */
+    /**
+     * 研究清单一行读数（真消费点：界面读一次，而不是只把汇总挂在导出面上）。
+     *   [v4.35.0 · R5-O8] 优先给**这次回源核出来的**读数；还没有时退回同步汇总 ——
+     *   但**不把同步汇总说成已核对**（那条读数里的「未定论」本来就写着「正文没读到」）。
+     */
     researchText() {
+        if (this._researchLine) return String(this._researchLine);
         try { return String((this.app.researchList() || {}).line || ''); }
         catch (_e) { return '研究清单读不到（不假装为 0 条）'; }
+    }
+    /**
+     * 重开研究页时**自动回源核对**（[v4.35.0 · R5-O8]）。
+     *   为什么必须自动：清单的每一条都带出处读数，而读数要正文才算得出来；
+     *   重启后不先打开书就看清单，修前会显示一片「未定论」——
+     *   那等于把「还没核」显示成「核不了」，而用户没有任何办法把它变好。
+     *   ★ 上一轮没跑完就再点一次：先把上一轮**顶掉**（换任务身份），
+     *     否则先回来的是旧读数，用户看到的却是刚点的那一次。
+     * @param {{silent?:boolean}} [opts]
+     */
+    async refreshResearch(opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        if (this._researchRunning) this.app.cancelAnchor?.();
+        const task = this.app.newAnchorTask();
+        this._researchRunning = true;
+        this._researchProgress = null;
+        this._researchLine = '正在核对清单出处…（**没核完之前这屏的读数不当结论**）';
+        this.render();
+        let res = null;
+        try {
+            res = await this.app.researchListAsync({
+                task: task,
+                onProgress: (p) => { this._researchProgress = p; if (this.app.phoneShell?.screen) this.render(); },
+            });
+        } catch (_e) { res = null; }
+        this._researchRunning = false;
+        this._researchProgress = null;
+        if (!res) {
+            this._researchLine = '清单核对**读不到**（不是「全都对得上」）';
+            this.render();
+            return null;
+        }
+        if (res.cancelled === true) {
+            this._researchLine = String(res.line || '清单核对已取消（没核完）');
+            this.render();
+            return res;
+        }
+        this._researchLine = String(res.line || '');
+        if (!o.silent) this.app.phoneShell?.showNotification?.('阅读', this._researchLine, '🧭');
+        this.render();
+        return res;
+    }
+    /** 取消正在跑的那一轮清单核对（[v4.35.0 · R5-O8]）。 */
+    cancelResearch() {
+        const r = this.app.cancelAnchor ? this.app.cancelAnchor() : { ok: false, why: 'no-task' };
+        this.app.phoneShell?.showNotification?.('阅读',
+            (r && r.ok) ? '已取消这次清单核对（没核完的那部分不当结论）' : '这一轮没有正在跑的清单核对', '⏹');
+        this.render();
+        return r;
+    }
+    /**
+     * 清单核对进度一行读数（[v4.35.0 · R5-O8]）。
+     *   ★ 与查找进度同规：这一行的唯一职责是让「正在跑」与「卡住了」长得不一样；
+     *     没跑完就永远说「正在」，不许出现「已完成」。
+     */
+    _researchProgressLine() {
+        if (!this._researchRunning && !this._researchProgress) return '';
+        const p = this._researchProgress || {};
+        const done = Number(p.done || 0);
+        const total = Number(p.total || 0);
+        return '正在核对清单出处 · 已读 ' + String(done) + '/' + String(total) + ' 本（**没核完之前这屏的读数不当结论**）';
     }
     /* ══════════ [v4.25.0 · R4-X3] 故事年鉴面（按卷章读 / 编辑草稿 / 导出） ══════════
      * 【本段只排版与派发：建章册、两版、编辑、过期、成稿、裁阅读版、导出全走 App 与内核】
@@ -609,6 +693,13 @@ export class ReadingView {
         try { this.app.cancelFind?.(); } catch (_e) { /* 取消失败不阻塞现场作废 */ }
         this._findRunning = false;
         this._findProgress = null;
+        /* [v4.35.0 · R5-O8] 清单核对的运行态一并作废，并**先把正在跑的那一轮取消掉** ——
+         *   否则它跑完会把上一会话的清单读数画进新会话（与查找同规）。 */
+        try { this.app.cancelAnchor?.(); } catch (_e) { /* 取消失败不阻塞现场作废 */ }
+        this._researchRunning = false;
+        this._researchProgress = null;
+        this._researchLine = '';
+        this._researchTried = false;
         this._anchorById = {};
         this._anchorLine = '';
         this._anchorSig = '';
@@ -681,9 +772,14 @@ export class ReadingView {
                     <h2>🧾 创作素材清单</h2>
                     <span style="font-size:11px;color:${tc.sub}">原文与我写的分列</span>
                 </div>
+                <div class="rd-import-wrap" style="display:flex;flex-wrap:wrap;gap:6px">
+                    <button class="rd-mini" id="rd-research-refresh">重新核对清单出处</button>
+                    ${this._researchRunning ? '<button class="rd-mini" id="rd-research-cancel">取消</button>' : ''}
+                </div>
                 <div class="rd-excerpt">
                     <div class="rd-excerpt-text" style="font-size:12px">${esc(this.researchText())}</div>
                 </div>
+                <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(this._researchProgressLine())}</div>
                 <div class="rd-shelf-head" style="margin-top:18px">
                     <h2>📖 故事年鉴</h2>
                     <span style="font-size:11px;color:${tc.sub}">按卷章读 · 导出离线可读</span>
@@ -829,6 +925,9 @@ export class ReadingView {
                 const r = await this.refreshAnchors();
                 this.app.phoneShell?.showNotification?.('阅读', (r && r.line) || '核对读不到', '🧭');
             });
+            /* [v4.35.0 · R5-O8] 清单出处回源核对：重开自动跑一次（见 render），这里给手动重跑与取消。 */
+            q('#rd-research-refresh')?.addEventListener('click', async () => { await this.refreshResearch(); });
+            q('#rd-research-cancel')?.addEventListener('click', () => this.cancelResearch());
             /* ══ [v4.25.0 · R4-X3] 故事年鉴面：重读 / 切版 / 编辑章题 / 记进度 / 导出 ══
              *   三条纪律：① 默认给**阅读版**（作者版须显式切）；
              *   ② 编辑只交上游出口；③ 导出只是本地文件，不联网发布。 */
