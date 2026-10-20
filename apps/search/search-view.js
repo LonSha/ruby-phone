@@ -164,7 +164,13 @@ export class SearchView {
         const bits = [];
         if (c.keyword) bits.push('关键词「' + esc(c.keyword) + '」（词序容错）');
         if (c.person) bits.push('人物「' + esc(c.person) + '」');
-        if (c.from || c.to) bits.push('时间 ' + esc(String(c.from || '')) + ' ~ ' + esc(String(c.to || '')));
+        /* [v4.32.0 · R5-O5] 上界**闭开**时如实显示成「起 ~ 止（不含止）」：
+         *   相对词（昨天/上周）给的是闭开区间，显示成闭区间会让用户以为今天也算在内 ——
+         *   而本版正是为了修掉「昨天把今天算进来」这件事。显式 ISO 区间仍是闭区间。 */
+        if (c.from || c.to) {
+            const span = esc(String(c.from || '')) + ' ~ ' + esc(String(c.to || ''));
+            bits.push(c.toExcl ? '时间 ' + span + '（不含 ' + esc(String(c.toExcl)) + '）' : '时间 ' + span);
+        }
         if (Array.isArray(c.kinds) && c.kinds.length) bits.push('类型 ' + esc(c.kinds.join('/')));
         const n = Number(f.kept) || 0;
         const d = Number(f.dropped) || 0;

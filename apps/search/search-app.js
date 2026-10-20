@@ -15,7 +15,7 @@ import { SearchView } from './search-view.js';
  *   本 App 只做两件事：把问句交它抽条件（`facetsOf`），再拿条件**过滤**既有命中
  *   （`applyFacets`）——**不重排相关性**（排序仍归引擎的 `scoreHit`），
  *   也**不新建索引、不新建性能守卫**（计划原文逐字点名）。 */
-import { facetsOf, applyFacets } from '../../config/search-facets.js';
+import { facetsOf, applyFacets, recallTermsOf } from '../../config/search-facets.js';
 /* [v4.15.0 · R4-O3] 页面状态捕获与恢复(纯函数)。
  *   本层只做两件:把四格交给它归一,以及读写那一个会话键。
  *   **会话围栏由它说话**(appId + chatId 两格逐次比对)——本层不自己判一份。 */
@@ -39,6 +39,11 @@ export class SearchApp {
         this._chatContextProvider = (typeof deps.chatContextProvider === 'function')
             ? deps.chatContextProvider
             : () => this._chatContext();
+        /* [v4.32.0 · R5-O5] 相对时间的基准时钟可注入（默认现取本机时间）。
+         *   为什么要有这一格：判据要在**固定时钟**下复跑「昨天」的区间；
+         *   而生产路径仍取本机现在 —— 取值点只有这一处，视图不另算一遍
+         *   （同一读数两处实现必然漂移，本仓反复治理过的那类）。 */
+        this._now = (typeof deps.now === 'function') ? deps.now : () => Date.now();
         this.engine = this._buildEngine();
         /* [v3.17.0 R-O1] 全历史模式与取消代际：
          *   `_fullMode` = 用户显式开了全历史（默认仍是快速档，600/源）；
@@ -102,7 +107,7 @@ export class SearchApp {
      *   免得视图另算一遍（同一读数两处实现必然漂移）。
      */
     facets(query) {
-        return facetsOf(query, { knownActors: this._knownActors(), now: Date.now() });
+        return facetsOf(query, { knownActors: this._knownActors(), now: this._now() });
     }
 
     /** 引擎已知人名清单（**装配点唯一**：群像角色表 ∪ 微信通讯录）。取不到即空数组。 */
@@ -162,20 +167,31 @@ export class SearchApp {
     search(kw, opt = {}) {
         const sourceIds = this.view && this.view._scope ? [this.view._scope] : [];
         const scopeOpt = Array.isArray(sourceIds) && sourceIds[0] ? { sourceIds: sourceIds } : {};
+        /* [v4.32.0 · R5-O5] 候选阶段改用**主题词**而非机械整句：
+         *   问句「昨天 林安安 还款」整串在正文里连续出现是不可能的，修前因此整句零命中 ——
+         *   过滤器再准也是在空集上筛（计划原文「候选阶段用主题 / 结构化条件而非机械整句」）。
+         *   词表由 `recallTermsOf` 拆（唯一出处），本层不自己切句。
+         *   ★ 拆不出词 ⇒ 空数组 ⇒ 引擎沿用整句比中（旧行为一字不改）。 */
+        const recallOpt = (() => {
+            try {
+                const terms = recallTermsOf(this.facets(kw));
+                return terms.length ? { terms: terms } : {};
+            } catch (_e) { return {}; }
+        })();
         if (!this._fullMode) {
-            return { result: this._filterByFacets(this.engine.query(kw, scopeOpt), kw), promise: null };
+            return { result: this._filterByFacets(this.engine.query(kw, Object.assign({}, scopeOpt, recallOpt)), kw), promise: null };
         }
         if (typeof this.engine.searchAll !== 'function') {
             /* [v3.17.0 R-O1] 内核没有分片入口时的**诚实降级**：
              *   同步跑一次全历史查（如实报覆盖度），而不是退回
              *   「只搜前 600 条还不说」—— 后者正是本版要消灭的那个形态。
              *   判据不问源码文本，只问行为（见 tests/system-v3170 C6）。 */
-            return { result: this.engine.query(kw, Object.assign({}, scopeOpt, { full: true })), promise: null };
+            return { result: this.engine.query(kw, Object.assign({}, scopeOpt, recallOpt, { full: true })), promise: null };
         }
         const gen = ++this._scanGen;
         this._scanning = true;
         const self = this;
-        const p = Promise.resolve().then(() => this.engine.searchAll(kw, Object.assign({}, scopeOpt, {
+        const p = Promise.resolve().then(() => this.engine.searchAll(kw, Object.assign({}, scopeOpt, recallOpt, {
             full: true,
             onProgress: typeof opt.onProgress === 'function' ? opt.onProgress : null,
             /* [v3.75.0 + R-O5] 索引阶段也受理作废：全历史档最贵的一段就是建索引

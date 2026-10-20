@@ -297,16 +297,27 @@ test('B9 搜索筛选：时间读不出的行不因时间被筛掉；未命中�
     const now = Date.parse('2026-10-12T12:00:00Z');
     const f = S.facetsOf('昨天 林安安 还款', { knownActors: ['林安安'], now });
     assert.ok(f.from && f.to, '「昨天」须给区间');
-    const today = S.matchFacets({ ts: now, title: '', body: '林安安 还款' }, f);
-    assert.equal(today.pass, true, '今天的行必须在区间内：' + JSON.stringify(today));
-    const old = S.matchFacets({ ts: now - 10 * 86400000, title: '', body: '林安安 还款' }, f);
+    /* ★ [v4.32.0 · R5-O5 判据订正] 本条原先锁的是**闭区间**语义
+     *   （`to = 今天` 且判定 `day > to` ⇒ 断言「今天的行必须在区间内」）。
+     *   而「昨天还款把今天的行一起算进来」正是本版点名的缺陷形态：
+     *   修后相对词给**闭开区间**（`toExcl = 今天零点`），今天落在区间外。
+     *   ⇒ 判据改为：昨天的行在内、今天的行**在区间外且具名 `time`**。
+     *   为什么不是「删掉这条」：闭开边界必须有人锁，否则下次改动会悄悄退回闭区间。
+     * ★ 行要带 `sourceId: 'wallet'`：问句里的「还款」是财务触发词，类型条件
+     *   （白名单）会先筛掉**源未登记**的行 —— 不带就量不到时间边界（量到的是 kind）。 */
+    const today = S.matchFacets({ ts: now, sourceId: 'wallet', title: '', body: '林安安 还款' }, f);
+    assert.equal(today.pass, false, '今天的行必须落在区间外（闭开上界）：' + JSON.stringify(today));
+    assert.ok(today.reasons.includes('time'), '被时间筛掉必须**具名**，不许静默丢');
+    const yest = S.matchFacets({ ts: now - 86400000, sourceId: 'wallet', title: '', body: '林安安 还款' }, f);
+    assert.equal(yest.pass, true, '昨天的行必须在区间内：' + JSON.stringify(yest));
+    const old = S.matchFacets({ ts: now - 10 * 86400000, sourceId: 'wallet', title: '', body: '林安安 还款' }, f);
     assert.ok(old.reasons.includes('time'), '十天前的行必须因时间被筛掉并**具名**');
-    const noTs = S.matchFacets({ ts: null, createdAt: '', title: '', body: '林安安 还款' }, f);
+    const noTs = S.matchFacets({ ts: null, createdAt: '', sourceId: 'wallet', title: '', body: '林安安 还款' }, f);
     assert.equal(noTs.reasons.includes('time'), false, '读不出时间的行不得被当 0 判掉');
     // 逐条各自可归因
     const applied = S.applyFacets([
-        { title: 'a', body: '林安安 还款' },
-        { title: 'b', body: '周砚 还款' }
+        { sourceId: 'wallet', title: 'a', body: '林安安 还款' },
+        { sourceId: 'wallet', title: 'b', body: '周砚 还款' }
     ], S.facetsOf('林安安 还款', { knownActors: ['林安安'] }));
     assert.equal(applied.kept, 1);
     assert.equal(applied.dropped, 1);
@@ -338,9 +349,16 @@ test('B10 出处归一：无 ref 且无楼层 ⇒ ok:false 且保留原因，不
 test('C1 搜索两档共用同一份筛选口径（同步档 + 全历史档），且不重排相关性', () => {
     assert.equal((SEARCH_APP.match(/^    _filterByFacets\(result, kw\) \{$/gm) || []).length, 1,
         '筛选口径只许一份实现（0 处=没做筛选，2 处=第二份口径）');
-    assert.ok(SEARCH_APP.includes('this._filterByFacets(this.engine.query(kw, scopeOpt), kw)'), '快速档必须过筛');
+    /* ★ [v4.32.0 · R5-O5 判据订正] 原判据把**调用点文本逐字**钉死
+     *   （`this.engine.query(kw, scopeOpt)`）。R5-O5 在候选阶段多接了一格召回词
+     *   （`Object.assign({}, scopeOpt, recallOpt)`），文本一变判据就红 ——
+     *   而它本来要锁的是「快速档这一口**过了筛**」，不是「参数长什么样」。
+     *   ⇒ 改锁**语义**：这一句里同时出现 `_filterByFacets(` 与 `engine.query(`，
+     *     且这一口确实把召回词接上了（`recallOpt`）。 */
+    assert.ok(/this\._filterByFacets\(this\.engine\.query\(kw,[^)]*\)/.test(SEARCH_APP), '快速档必须过筛');
+    assert.ok(SEARCH_APP.includes('recallOpt'), '候选阶段必须接上主题词召回（R5-O5）');
     assert.ok(SEARCH_APP.includes('return self._filterByFacets(r, kw);'), '全历史档落地口必须过筛');
-    assert.ok(SEARCH_APP.includes("import { facetsOf, applyFacets } from '../../config/search-facets.js';"));
+    assert.ok(SEARCH_APP.includes("import { facetsOf, applyFacets, recallTermsOf } from '../../config/search-facets.js';"));
     /* [v3.97.0 · 自抓缺陷] 原判据直接扫原文 —— 而本文件的注释里正在讲解「排序仍归引擎的
      *   scoreHit」，于是判据把**注释**当成了「本层在重算相关性」（又一次读注释当代码）。
      *   只扫去注释后的真码。 */

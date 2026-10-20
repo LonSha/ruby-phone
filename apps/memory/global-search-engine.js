@@ -362,6 +362,30 @@ export class GlobalSearchEngine {
         return scoreHit(it.title, String(it.body || '') + String(it.bodyFull || ''), q);
     }
     /**
+     * [v4.32.0 · R5-O5] **候选召回**判分：把问句拆出的若干主题词**各自**比一遍，
+     *   取最高分（任一词命中即入候选）。
+     *
+     * 【为什么候选阶段不能沿用 `_score`（整句连续包含）】修前 `search-app` 把
+     *   `'昨天 林安安 还款'` 整串交下来，而 `scoreHit` 要求**连续同序**：
+     *   正文里不会有这九个字连在一起，于是候选集**整句零命中** —— 过滤器再准
+     *   也是在空集上筛。计划原文点名「候选阶段用主题 / 结构化条件而非机械整句」。
+     * 【与判定层的分工】召回要**宽**（宁可多带几条给 `matchFacets` 逐条裁），
+     *   判定要**准**（条件不符者具名筛掉）。故这里是「任一词命中」，不是「全部命中」。
+     * @returns {{score:number, term:string}} score < 0 表示一个词都没命中
+     */
+    _scoreTerms(it, terms) {
+        const list = Array.isArray(terms) ? terms : [];
+        let best = -1;
+        let bestTerm = '';
+        const title = it.title;
+        const body = String(it.body || '') + String(it.bodyFull || '');
+        for (const t of list) {
+            const s = scoreHit(title, body, t);
+            if (s > best) { best = s; bestTerm = t; }
+        }
+        return { score: best, term: bestTerm };
+    }
+    /**
      * [v3.17.0 R-O1] 覆盖度声明的**公共**出口。
      * 为什么不让 UI 直接调 `_scope()`：跨类调私有方法会把「报什么」
      *   变成 UI 自己的信规（实测断言也无从下手）；本出口只说「按当前档位扫完是什么样」。
@@ -431,12 +455,22 @@ export class GlobalSearchEngine {
         }
         const weightOf = {};
         for (const s of this._sources) weightOf[s.id] = s.weight;
+        /* [v4.32.0 · R5-O5] 候选召回词（不传 ⇒ 空数组 ⇒ 沿用整句比中，行为一字不改）。
+         *   调用方（search-app）把问句拆出的主题词交下来，本层**只认词表**、
+         *   不自己拆句 —— 拆句口径的唯一出处是 config/search-facets.js。 */
+        const terms = Array.isArray(opts.terms) ? opts.terms.map(norm).filter(Boolean) : [];
         const hits = [];
         for (const it of all) {
             if (allow && !allow.has(it.sourceId)) continue;
-            const score = this._score(it, q);
+            let score = this._score(it, q);
+            let snipQ = q;
+            if (terms.length) {
+                /* 整句未命中时，退回**逐词取最高分**：任一词命中即入候选。 */
+                const byTerm = this._scoreTerms(it, terms);
+                if (byTerm.score > score) { score = byTerm.score; snipQ = byTerm.term; }
+            }
             if (score < 0) continue;
-            const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), q);
+            const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), snipQ);
             hits.push({
                 ...it,
                 score: score * (weightOf[it.sourceId] || 1),
@@ -511,6 +545,8 @@ export class GlobalSearchEngine {
             : null;
         const weightOf = {};
         for (const s of this._sources) weightOf[s.id] = s.weight;
+        /* [v4.32.0 · R5-O5] 候选召回词（与同步档同一份口径：不传即空 ⇒ 行为一字不改）。 */
+        const terms = Array.isArray(opts.terms) ? opts.terms.map(norm).filter(Boolean) : [];
         const hits = [];
         const scannedBySource = {};
         /* [v3.75.0 + R-O5] 取消谓言提到开头：索引阶段（阶段一）也要能看到它。
@@ -569,9 +605,15 @@ export class GlobalSearchEngine {
                 if (allow && !allow.has(it.sourceId)) continue;
                 scannedBySource[it.sourceId] = (scannedBySource[it.sourceId] || 0) + 1;
                 if (!q) continue;
-                const score = this._score(it, q);
+                let score = this._score(it, q);
+                let snipQ = q;
+                if (terms.length) {
+                    /* [v4.32.0 · R5-O5] 整句未命中 ⇒ 逐词取最高分（与同步档同款）。 */
+                    const byTerm = this._scoreTerms(it, terms);
+                    if (byTerm.score > score) { score = byTerm.score; snipQ = byTerm.term; }
+                }
                 if (score < 0) continue;
-                const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), q);
+                const snip = makeSnippet(String(it.body || '') + String(it.bodyFull || ''), snipQ);
                 hits.push({ ...it, score: score * (weightOf[it.sourceId] || 1), snippet: snip.text, snippetHit: !!snip.hit });
             }
             if (typeof opts.onProgress === 'function') {

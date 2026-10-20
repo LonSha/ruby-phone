@@ -30,9 +30,43 @@ function emptyFacets(raw) {
     return {
         raw: String(raw == null ? '' : raw),
         keyword: '', person: '', known: false,
-        from: null, to: null, kinds: [],
+        from: null, to: null, toExcl: null, kinds: [],
         gaps: [], ok: false
     };
+}
+
+/**
+ * [v4.32.0 · R5-O5] 内容类型 → 它落在**哪些既有检索源**上（源 id 取自
+ * `apps/memory/global-search-engine.js::buildDefaultSources` 的登记名）。
+ *
+ * 【为什么必须有一张表】修前 `facetsOf` 抽得出 `kinds`，而 `matchFacets` **一格都没读它** ——
+ *   条件是抽给用户看的，一条都没参与筛选。这正是本版治的第二种形态：
+ *   界面上写着「类型 财务」，结果里照样混进日记，而一个字符都不报错。
+ * 【为什么一个类型对多个源】「财务」在既有源里分落钱袋、旅行费用与世界账本三处
+ *   （同一件事的记录方式不止一种）；只认一处会让另外两处的真命中被静默筛掉。
+ * 【未知源怎么办】`kindOfRow` 返回空数组 ⇒ **该行不因类型被筛掉**
+ *   （与「读不出时间的行不因时间被筛掉」同规：宁可多留一条，不可静默丢一条）。
+ */
+export const FACET_KIND_SOURCES = Object.freeze({
+    finance: Object.freeze(['wallet', 'traveldesk-expense', 'ledger']),
+    calendar: Object.freeze(['calendar', 'annidate-item']),
+    story: Object.freeze(['plotline', 'tavern', 'summdesk-memory']),
+    memory: Object.freeze(['memory', 'summdesk-memory'])
+});
+
+/**
+ * [v4.32.0 · R5-O5] 一行的内容类型（可多属；**读不出即空数组**，不猜）。
+ * @returns {string[]} 该行命中的类型名（顺序与 `FACET_KIND_SOURCES` 的键序一致）
+ */
+export function kindOfRow(row) {
+    const r = (row && typeof row === 'object') ? row : {};
+    const sid = String(r.sourceId || '').trim();
+    if (!sid) return [];
+    const out = [];
+    for (const [kind, sources] of Object.entries(FACET_KIND_SOURCES)) {
+        if (sources.indexOf(sid) >= 0) out.push(kind);
+    }
+    return out;
 }
 
 /** 内容类型词表（kind → 触发词）。未登记的触发词不进条件（不猜类型）。 */
@@ -134,12 +168,19 @@ export function facetsOf(query, opts) {
     out.person = person;
     out.known = !!person;
 
-    /* ② 时间区间：显式 `@起..止`（ISO 日期）或相对词（今天/昨天/上周/上个月…）。 */
+    /* ② 时间区间：显式 `@起..止`（ISO 日期）或相对词（今天/昨天/上周/上个月…）。
+     *   ★ [v4.32.0 · R5-O5] 相对词给的是**闭开区间**：from = 起始那天，
+     *     toExcl = **今天零点**（区间写成 [起, 今天零点)，即「到今天为止、不含今天」）。修前 to = **今天**且判定用 `day > to`，
+     *     于是「昨天还款」把**今天**的记录一起算进来 —— 计划原文点名的
+     *     「matchFacets 让今天无关日记通过」。为什么是闭开而不是「同一天」：
+     *     记录的时间戳带时分，拿「昨天」当单日闭区间会漏掉昨天 23:xx 之后的时刻；
+     *     闭开区间一句话说清「从昨天零点起、到今天零点止」，两边都不含糊。 */
     const iso = /@(\d{4}-\d{2}-\d{2})(?:\.\.(\d{4}-\d{2}-\d{2}))?/.exec(q);
     const nowMs = numOrNull(o.now) ?? Date.now();
     if (iso) {
         out.from = iso[1];
         out.to = iso[2] || iso[1];
+        /* 显式 ISO 区间是**闭区间**（用户写死了两端，语义由他定）：toExcl 留空。 */
     } else {
         for (const [word, days] of Object.entries(FACET_TIME_WORDS)) {
             if (q.indexOf(word) < 0) continue;
@@ -148,9 +189,11 @@ export function facetsOf(query, opts) {
                 out.gaps.push({ kind: 'time-vague', why: '「' + word + '」是相对指代，不给具体区间（不猜时间）' });
                 break;
             }
-            const from = new Date(nowMs - days * 86400000);
-            out.from = isoOf(from);
+            out.from = isoOf(new Date(nowMs - days * 86400000));
             out.to = isoOf(new Date(nowMs));
+            /* 闭开上界 = **今天**（当天零点，不含）：于是「昨天」恰是 [昨天, 今天)，
+             *   「上周」恰是 [七天前, 今天) —— 今天与未来都不进区间。 */
+            out.toExcl = isoOf(new Date(nowMs));
             break;
         }
     }
@@ -217,14 +260,31 @@ export function matchFacets(row, facets) {
         const cov = tokenCoverage(hay, f.keyword);
         if (!cov.hit) reasons.push('keyword');
     }
-    /* ③ 时间：读不出时间的行**不因时间被筛掉**（不拿 null 当 0 判掉真命中的行）。 */
-    if (f.from || f.to) {
+    /* ③ 时间：读不出时间的行**不因时间被筛掉**（不拿 null 当 0 判掉真命中的行）。
+     *   ★ [v4.32.0 · R5-O5] 上界走**闭开**（`toExcl`）时用 `day >= toExcl` 判掉 ——
+     *     「昨天」不再把今天算进来；显式 ISO 区间没有 toExcl，仍按闭区间判。 */
+    if (f.from || f.to || f.toExcl) {
         const ts = tsOf(r);
         if (ts !== null) {
             const day = isoOf(new Date(ts));
-            if (f.from && day && day < f.from) reasons.push('time');
-            if (f.to && day && day > f.to) reasons.push('time');
+            if (day) {
+                if (f.from && day < f.from) reasons.push('time');
+                if (f.toExcl) { if (day >= f.toExcl) reasons.push('time'); }
+                else if (f.to && day > f.to) reasons.push('time');
+            }
         }
+    }
+    /* ④ [v4.32.0 · R5-O5] 内容类型：抽得出的条件**必须真参与筛选**。
+     *   修前 `kinds` 抽了却一格没读 —— 界面写着「类型 财务」、结果里照样混进日记。
+     *   ★ 语义是**白名单**（与时间/人名那种「读不出就放过」不同）：用户说「财务」
+     *     就是要财务那几处，日记（已知源、不属任何财务源）必须被筛掉 ——
+     *     这正是验收原文「昨天还款只出昨天财务还款，昨天日记排除」。
+     *   ★ 筛掉的行**具名归因**（`byReason.kind` 计数可见）：白名单不等于静默丢，
+     *     `applyFacets` 的读数会把「因类型不符筛掉几条」如实报出来。
+     *   ★ 多类型条件取**并集**（用户写「剧情 记忆」是想要两者之一，不是同时满足）。 */
+    if (Array.isArray(f.kinds) && f.kinds.length) {
+        const mine = kindOfRow(r);
+        if (!mine.some((k) => f.kinds.indexOf(k) >= 0)) reasons.push('kind');
     }
     return { pass: reasons.length === 0, reasons };
 }
@@ -282,14 +342,55 @@ export function applyFacets(rows, facets) {
         byReason,
         conditions: {
             keyword: f.keyword || '', person: f.person || '',
-            from: f.from || null, to: f.to || null, kinds: Array.isArray(f.kinds) ? f.kinds.slice() : []
+            from: f.from || null, to: f.to || null, toExcl: f.toExcl || null,
+            kinds: Array.isArray(f.kinds) ? f.kinds.slice() : []
         }
     };
+}
+
+/**
+ * [v4.32.0 · R5-O5] 候选阶段的**召回词**：把问句拆成可各自命中的若干「主题词」。
+ *
+ * 【为什么候选阶段不能拿整句去比字面】计划原文：「候选阶段用主题/结构化条件而非机械整句」。
+ *   修前 `search-app` 把 `'昨天 林安安 还款'` **整串**交给引擎，而引擎的
+ *   `scoreHit` 是**连续包含**判定 —— 正文里不会有「昨天 林安安 还款」这九个字连在一起，
+ *   于是候选集**整句零命中**：过滤器再怎么准也无从下手（筛的是空集）。
+ *   这正是计划原文点名的「不能把函数输出说成 UI 结果」那一半。
+ *
+ * 【为什么是「任一命中」而不是「全部命中」】召回阶段要**宽**（宁可多带几条给过滤器），
+ *   判定阶段要**准**（`matchFacets` 逐条具名筛）。两者职责不同，故这里取并集：
+ *   含人名或含任一主题词的行走进候选，再由条件逐条裁。
+ *
+ * @returns {string[]} 去重后的召回词（**空数组 = 没有可拆的词** ⇒ 调用方沿用整句）
+ */
+export function recallTermsOf(facets) {
+    const f = (facets && typeof facets === 'object') ? facets : null;
+    if (!f) return [];
+    const out = [];
+    const push = (s) => {
+        const t = norm(s);
+        if (t && out.indexOf(t) < 0) out.push(t);
+    };
+    /* 人名是**最强**召回词（用户明确点名了谁）。 */
+    if (f.person) push(f.person);
+    /* ★ [v4.32.0 · 自抓缺陷] 类型触发词要**加回来**：`facetsOf` 抽关键词时把
+     *   触发词（如「还款」）从残余主题里剥掉了，于是「昨天 还款」这类**无人名**问句
+     *   的召回词表会是空的 —— 调用方只能退回整句，整句又零命中，等于本版没修。
+     *   触发词是用户真说出口的内容词，纳入召回是对的（类型条件仍照旧在筛选层管范围）。 */
+    for (const words of Object.values(FACET_KINDS)) {
+        for (const w of words) if (String(f.raw || '').indexOf(w) >= 0) push(w);
+    }
+    /* 残余主题词按空格切开，各自成词（bigram 覆盖判定在 `tokenCoverage` 那一层）。 */
+    for (const tk of String(f.keyword || '').split(/\s+/)) push(tk);
+    return out;
 }
 
 export default {
     FACET_KINDS,
     FACET_TIME_WORDS,
+    FACET_KIND_SOURCES,
+    kindOfRow,
+    recallTermsOf,
     bigramsOf,
     tokenCoverage,
     facetsOf,
