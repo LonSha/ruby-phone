@@ -54,6 +54,9 @@ export class ReadingView {
          *   全在视图实例上，**不落存储**（草稿态不是数据）。 */
         this._findQuery = '';
         this._findRes = null;
+        /* [v4.34.0 · R5-O7] 查找的运行态与进度（运行态不是数据，不落存储；换会话作废）。 */
+        this._findRunning = false;
+        this._findProgress = null;
         this._anchorById = {};
         this._anchorLine = '';
         this._anchorSig = '';
@@ -279,18 +282,42 @@ export class ReadingView {
             <div class="rd-import-wrap" style="display:flex;gap:6px;align-items:center">
                 <input class="rd-find-input" id="rd-find-input" placeholder="全书找一句（记得住句子、记不住章也行）" value="${esc(this._findQuery)}" />
                 <button class="rd-mini" id="rd-find-run">查找</button>
+                ${this._findRunning ? '<button class="rd-mini" id="rd-find-cancel">取消</button>' : ''}
             </div>
             <div class="rd-excerpt">
                 <div class="rd-excerpt-text" style="font-size:12px">${r ? esc(this._findLine(r)) : '还没找过。**扫全书**，末章与跨段的命中都能找到。'}</div>
             </div>
+            <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(this._findProgressLine())}</div>
             ${rows}`;
+    }
+    /**
+     * 查找进度一行读数（[v4.34.0 · R5-O7]）。
+     *   ★ 这一行的**唯一职责**是让「正在跑」与「卡住了」长得不一样：
+     *     大书建索引要跨许多轮宏任务，没有这一行时用户只能看着旧读数发呆。
+     *   ★ 进度里不许出现「已完成」这种话：查找没结束就永远是「正在」。
+     */
+    _findProgressLine() {
+        const p = this._findProgress;
+        if (!p) return this._findRunning ? '正在建索引…' : '';
+        if (p.phase === 'index') return '正在建索引 ' + String(p.done) + '/' + String(p.total) + ' 章…（可点取消）';
+        if (p.phase === 'scan') return '正在全书找句 ' + String(p.done) + '/' + String(p.total) + ' 章…（可点取消）';
+        if (p.phase === 'index-reused') return '这本这一版已经建过索引，直接用（' + String(p.total) + ' 章）';
+        return '';
+    }
+    /** 取消正在跑的那一轮查找（[v4.34.0 · R5-O7]）。 */
+    cancelFind() {
+        const r = this.app.cancelFind ? this.app.cancelFind() : { ok: false, why: 'no-task（这一轮没有正在跑的查找）' };
+        if (r && r.ok) this.app.phoneShell?.showNotification?.('阅读', '已取消这次查找（一条命中都不给，免得你以为是全部）', '⏹');
+        else this.app.phoneShell?.showNotification?.('阅读', '这一轮没有正在跑的查找', '⏹');
+        this.render();
+        return r;
     }
     /** 查找一行读数（本层只做拼接，**判据全在 searchLine**）。 */
     _findLine(r) {
         try { return String(this.app.searchLineOf ? this.app.searchLineOf(r) : ''); }
         catch (_e) { return '查找读数读不到（不假装为 0 处）'; }
     }
-    /** 跑一次全书查找（索引现建现弃，**不落盘**）。 */
+    /** 跑一次全书查找（[v4.34.0 · R5-O7]：索引按版本复用、分片让出、可取消）。 */
     async runFind(q) {
         const query = String(q == null ? '' : q);
         this._findQuery = query;
@@ -300,9 +327,25 @@ export class ReadingView {
             this.render();
             return null;
         }
+        /* ★ 上一轮还没跑完就再点一次：先把上一轮**顶掉**（换任务身份），
+         *   否则两轮会互相覆盖读数 —— 先回来的是旧查询的结果，用户看到的却是新查询。 */
+        if (this._findRunning) this.app.cancelFind?.();
+        const task = this.app.newFindTask();
+        this._findRunning = true;
+        this._findProgress = null;
+        this.render();
         let res = null;
-        try { res = await this.app.searchBook(query, {}); }
-        catch (_e) { res = null; }
+        try {
+            res = await this.app.searchBook(query, {
+                task: task,
+                onProgress: (p) => { this._findProgress = p; if (this.phoneShell?.screen) this.render(); },
+            });
+        } catch (_e) { res = null; }
+        this._findRunning = false;
+        this._findProgress = null;
+        /* ★ 被顶掉 / 被取消的那一轮**不许画上去**：它是旧书的旧读数。
+         *   界面照旧显示上一次的读数行（那才是用户点的那一次）。 */
+        if (res && res.stale === true) { this.render(); return res; }
         this._findRes = res;
         this.render();
         return res;
@@ -561,6 +604,11 @@ export class ReadingView {
     onChatChanged() {
         this._findQuery = '';
         this._findRes = null;
+        /* [v4.34.0 · R5-O7] 查找的运行态与进度：换会话必须一并作废，并且
+         *   **先把正在跑的那一轮取消掉** —— 否则它跑完会把上一会话的读数画进新会话。 */
+        try { this.app.cancelFind?.(); } catch (_e) { /* 取消失败不阻塞现场作废 */ }
+        this._findRunning = false;
+        this._findProgress = null;
         this._anchorById = {};
         this._anchorLine = '';
         this._anchorSig = '';
@@ -771,6 +819,9 @@ export class ReadingView {
                 const input = q('#rd-find-input');
                 await this.runFind(input ? input.value : '');
             });
+            /* [v4.34.0 · R5-O7] 取消：大书上建索引要跨许多轮宏任务，没有这一口
+             *   用户只能干等 —— 而「能不能取消」正是本版验收点名的一条。 */
+            q('#rd-find-cancel')?.addEventListener('click', () => this.cancelFind());
             q('#rd-find-input')?.addEventListener('keydown', async (e) => {
                 if (e && e.key === 'Enter') await this.runFind(e.target ? e.target.value : '');
             });

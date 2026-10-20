@@ -1,0 +1,142 @@
+{
+ "file": "tests/audit/reading_find_scale_probe.cjs",
+ "probe": "tests/audit/reading_find_scale_probe.cjs",
+ "note": "全书连续找句的规模读数：合成书（约 200 万汉字）+ 真模块（无浏览器 / 无附件层）。读数不代表实机；取消的**用户可感知延迟**须真 DOM 层另测。计数段可复算，计时段只比同量级。 【改前/后双格】readings/timing/criteria = 改后（v4.34.0 落地后）；readings_before/timing_before/criteria_before = 改前（在 v4.33.0 真代码上跑出来的历史读数）。为什么两格都要：计划原文要求「记录改前/后首查、续查及内存」——只有改后那份就分不清「本来就这样」与「本版改成的」。为什么改前那格不与现场复跑比对：它记的是历史，现场跑的是现在的代码。",
+ "measured_at": "v4.33.0",
+ "host": {
+  "chapters": 1000,
+  "paras_per_chapter": 100,
+  "filler_len": 20,
+  "total_chars": 2000000
+ },
+ "readings": {
+  "chapters": 1000,
+  "paras": 100000,
+  "total_chars": 2000000,
+  "hits_head": 1,
+  "hits_mid": 1,
+  "hits_tail": 1,
+  "scanned_head": 1000,
+  "scanned_mid": 1000,
+  "scanned_tail": 1000,
+  "all_ok": 1,
+  "index_builds_available": 1,
+  "index_builds_total": 1,
+  "index_builds_before": "0/1/1",
+  "index_reused_seq": "false/true/true",
+  "index_builds_after_first": 1
+ },
+ "timing": {
+  "first_ms": 86.37,
+  "second_ms": 57.93,
+  "third_ms": 47.81,
+  "warm_over_cold": 0.671,
+  "heap_before_mb": 5.89,
+  "heap_after_mb": 16.69,
+  "heap_delta_mb": 10.8
+ },
+ "criteria": [
+  {
+   "id": "R1",
+   "desc": "三次查询全部跑通（ok === true）",
+   "pass": true,
+   "got": 1
+  },
+  {
+   "id": "R2",
+   "desc": "末章那一句找得到（扫全章）",
+   "pass": true,
+   "got": "1/1000"
+  },
+  {
+   "id": "R3",
+   "desc": "索引构建次数有观测口（改前为 null，属「本版没有这条读数」）",
+   "pass": true,
+   "got": 1
+  },
+  {
+   "id": "R4",
+   "desc": "连续三次查询只建一次同版本索引（改前不成立，正是本版要治的）",
+   "pass": true,
+   "got": "1 / 0/1/1"
+  },
+  {
+   "id": "R5",
+   "desc": "第 2、3 次查询走的是**复用**（结构证据；改前这一格不存在）",
+   "pass": true,
+   "got": "false/true/true"
+  },
+  {
+   "id": "R6",
+   "desc": "续查不慢于首查（**不比绝对值**：分片让出本身要付宏任务代价，首查含建索引）",
+   "pass": true,
+   "got": 0.671
+  }
+ ],
+ "verdict": "准入读数（基线）：改前每次查询都现建索引、且无任何复用读数 ⇒ R3 报 0（无观测口）、R4/R5 不成立，正是 R5-O7 要治的。【为什么这里不判「续查必须快 N 倍」】分片让出把一段同步台阶换成了许多轮宏任务，**绝对耗时可能变长**（本机实测首查 94ms vs 改前 16ms）—— 换来的是「期间计时器与点击事件能跑到」。计划原文要的是「记录改前/后首查、续查及内存」，不是「承诺更快」；把这条写成本版承诺就是自造判据。",
+ "not_done": [
+  "未做实机取证：无浏览器、无真 SillyTavern 宿主、无真实附件层；合成书的段远短于真实段落，绝对耗时不可外推。",
+  "未测真 IndexedDB / localStorage 读取耗时：正文在本探针里是内存数组（真实路径要先回读附件）。",
+  "未测手机端后台节流窗口：Node 事件循环上的让出证据不代表移动端定时器行为。",
+  "未测取消的用户可感知延迟：那是真 DOM 层读数（≤200ms 的验收口径），归浏览器门。"
+ ],
+ "changed_at": "v4.34.0",
+ "readings_before": {
+  "chapters": 1000,
+  "paras": 100000,
+  "total_chars": 2000000,
+  "hits_head": 1,
+  "hits_mid": 1,
+  "hits_tail": 1,
+  "scanned_head": 1000,
+  "scanned_mid": 1000,
+  "scanned_tail": 1000,
+  "all_ok": 1,
+  "index_builds_available": 0,
+  "index_builds_total": null,
+  "index_builds_growth": null
+ },
+ "timing_before": {
+  "first_ms": 16.25,
+  "second_ms": 17.77,
+  "third_ms": 16.53,
+  "warm_over_cold": 1.094,
+  "heap_before_mb": 5.77,
+  "heap_after_mb": 22.34,
+  "heap_delta_mb": 16.57
+ },
+ "criteria_before": [
+  {
+   "id": "R1",
+   "desc": "三次查询全部跑通（ok === true）",
+   "pass": true,
+   "got": 1
+  },
+  {
+   "id": "R2",
+   "desc": "末章那一句找得到（扫全章）",
+   "pass": true,
+   "got": "1/1000"
+  },
+  {
+   "id": "R3",
+   "desc": "索引构建次数有观测口（改前为 null，属「本版没有这条读数」）",
+   "pass": true,
+   "got": 0
+  },
+  {
+   "id": "R4",
+   "desc": "连续三次查询只建一次同版本索引（改前不成立，正是本版要治的）",
+   "pass": false,
+   "got": null
+  },
+  {
+   "id": "R5",
+   "desc": "续查明显快于首查（复用生效；改前同量级）",
+   "pass": false,
+   "got": 1.094
+  }
+ ],
+ "verdict_before": "准入读数（基线）：改前每次查询都现建索引 ⇒ R4 不成立、R5 不成立，正是 R5-O7 要治的两条。",
+ "criteria_before_note": "改前 R4/R5 不成立属**预期**：那时每次查询都现建索引、且 App 上没有任何复用读数。判据看守的是改后那一组（criteria）。"
+}

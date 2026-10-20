@@ -35,6 +35,15 @@ export const SEARCH_LIMITS = Object.freeze({
     collect: 2000,   // 单次扫描收集上限（防超长书把内存吃满；触顶如实报）
     query: 60,       // 查询串长度上限
     snippet: 60,     // 命中上下文每侧字符数
+    /* [v4.34.0 · R5-O7] 两格**节奏上限**（不是结果上限：分片只影响让出节奏，
+     *   不影响扫到的章与命中的条数 —— 这是与上面四格的根本区别，故注释分开写）。
+     *   为什么要有它们：200 万汉字的书建一次索引 ≈16ms、扫一遍 ≈17ms，
+     *   一次做完就是**一段同步台阶**：计时器与点击事件排在宏任务队列里，
+     *   要等它返回才轮得到 —— 用户点「取消」不会有任何反应。
+     *   粒度取值是「单片耗时远小于取消反馈预算（200ms）」推出来的，不是拍的：
+     *   1000 章的书按 50 章/片 ⇒ 20 片，单片 ≈0.8ms，取消最坏等一片 + 一轮宏任务。 */
+    buildChunk: 50,  // 建索引每片处理多少章
+    scanChunk: 25,   // 比中每片扫多少章
 });
 export const NOTE_LIMITS = Object.freeze({
     annotation: 500, // 一条批注的字数上限
@@ -81,6 +90,18 @@ function str(v) { return String(v == null ? '' : v); }
 function trimStr(v) { return str(v).trim(); }
 /** 折叠空白（核文本用：段落的换行/多空格不该让等值判定失败）。 */
 function normWs(s) { return str(s).replace(/\s+/g, ' ').trim(); }
+/**
+ * 取**节奏上限**（分片粒度）。与结果上限走同一个取数门 `numOrNull`：
+ *   本仓只许有一个数值口径，「这格是节奏、那格是结果」不是另开一门的理由。
+ *   取不到 / 非正数 ⇒ 退回 `dflt`（**不退回 0**：0 会让分片消失，变成「没有让出」，
+ *   那正是本版要治的形态，绝不能因为一格读数缺失而静默复发）。
+ */
+function chunkSizeOf(raw, dflt) {
+    const n = numOrNull(raw);
+    if (n === null || n <= 0) return dflt;
+    return Math.max(1, Math.floor(n));
+}
+
 /* ───────── ④ 批注与标签（批注不是原文） ───────── */
 /**
  * 批注归一：控制字符换成空格，超长截断到上限。取不到 / 非字符串 **如实 ''**（不编内容）。
@@ -133,6 +154,28 @@ export function excerptNoteOf(excerpt) {
  *            chapters:Array, totalParas:number, totalChars:number, reason:string}}
  */
 export function buildSearchIndex(book) {
+    /* 同步抽干生成器：**唯一实现只有一份**（`buildIndexChunks`）。
+     *   为什么不做成「同步一份、分片一份」：本仓最忌同一口径两份实现 ——
+     *   两份必然会漂移，而漂移的表现是「同一个查询在取消路径与普通路径上命中不同」，
+     *   不报错、只是错数。故分片是**唯一真源**，同步入口只是把它抽干。 */
+    const gen = buildIndexChunks(book);
+    let step = gen.next();
+    while (!step.done) step = gen.next();
+    return step.value;
+}
+/**
+ * 由章节数组**按章分片**建索引（生成器；[v4.34.0 · R5-O7]）。
+ *   每 `SEARCH_LIMITS.buildChunk` 章 `yield` 一次，驱动器决定是否等待 ——
+ *   于是「建索引」这段最贵的工作不再是一整块同步台阶。
+ *   分片只影响**节奏**：无论怎么分，返回的索引对象逐字段与 `buildSearchIndex` 相同。
+ *   宿主能力（`for...of` 逐章）之外没有别的依赖，故本件仍是零 DOM / 零存储 / 零时钟。
+ *   ★ 声明处**不写 `export`**：全仓零消费导出门禁（`scripts/dead-export-check.mjs`）
+ *     刻意不认 `export function*` 这一写法（E9/B5 判据锁着「生成器声明必须被兜住」），
+ *     故出口统一在文件末的 `export { ... }` 块里给 —— 那才是门禁能枚举成员的通道。
+ * @param {object} book 同 `buildSearchIndex`
+ * @returns {Generator<void, object, void>} `next().value`（done 时）才是索引对象
+ */
+function* buildIndexChunks(book) {
     const b = (book && typeof book === 'object') ? book : {};
     const out = {
         ok: false, bookId: trimStr(b.id || b.bookId), title: trimStr(b.title),
@@ -144,6 +187,7 @@ export function buildSearchIndex(book) {
         out.reason = 'no-chapters（拿不到这本书的正文 ⇒ 判不了，不是「书里没有」）';
         return out;
     }
+    const chunk = chunkSizeOf(SEARCH_LIMITS.buildChunk, 50);
     for (let i = 0; i < chapters.length; i++) {
         const c = (chapters[i] && typeof chapters[i] === 'object') ? chapters[i] : {};
         const ps = Array.isArray(c.paragraphs) ? c.paragraphs : [];
@@ -162,10 +206,33 @@ export function buildSearchIndex(book) {
         });
         out.totalParas += ps.length;
         out.totalChars += off;
+        /* 每片末让出一次。用 `(i + 1) % chunk` 而不是「凑够 chunk 就重置计数」：
+         *   后者在 chapters 很长时要多维护一个变量，且与「第几章」对不上号。 */
+        if ((i + 1) % chunk === 0 && i + 1 < chapters.length) yield;
     }
     out.ok = true;
     out.reason = 'indexed';
     return out;
+}
+/**
+ * 索引的**版本键**（[v4.34.0 · R5-O7] 复用缓存的唯一判据）。
+ *   为什么不能只用书 ID：同一本书**可以改版**（重导同名文件、换版本 txt）——
+ *   正文一变，旧索引的章文本与段起点全部失效，而「书 ID 没变」会让缓存
+ *   把旧索引端上来：查出来的段号指到别的段上，界面一声不响。
+ *   故键 = 书 ID + 内容版本（`contentHash`，M5 的正文 owner 给的同一枚指纹）。
+ *   为什么不是「索引对象自己算个 hash」：算 hash 要把整本正文再读一遍，
+ *   那正是本版要省掉的那段成本；而 `contentHash` 是现成的、且与摘录锚点同源。
+ * @returns {{bookId:string, contentHash:string, key:string}} key 空串表示**判不了**
+ *   （缺书 ID 或缺指纹 ⇒ 不许复用：宁可重建，不可错认版本）
+ */
+export function indexVersionOf(book) {
+    const b = (book && typeof book === 'object') ? book : {};
+    const bookId = trimStr(b.id || b.bookId || b.bookId);
+    const contentHash = trimStr(b.contentHash);
+    /* 键分隔符用 `#` 并**逐个字段兜底**：`a#b` 与 `a#` + `b` 这类拼接歧义
+     *   在两边都空时会出现，故键为空（`#`）时一律当「判不了」。 */
+    const key = (bookId && contentHash) ? (bookId + '#' + contentHash) : '';
+    return { bookId: bookId, contentHash: contentHash, key: key };
 }
 /** 命中坐标 → 段号（starts 升序，取最后一个 ≤ off 的）。 */
 function paraAt(ch, off) {
@@ -198,6 +265,23 @@ function mkHit(ch, at, len, limitSnippet) {
  *            lastHit:object|null, reason:string}}
  */
 export function searchInBook(index, query, opts) {
+    /* 同步抽干生成器：与建索引同规 —— 分片是**唯一真源**，同步入口只是把它抽干。
+     *   既有调用方（视图的普通查找、system-v4240 的全部判据）行为一字不改。 */
+    const gen = searchBookChunks(index, query, opts);
+    let step = gen.next();
+    while (!step.done) step = gen.next();
+    return step.value;
+}
+/**
+ * 全书找句**按章分片**版（生成器；[v4.34.0 · R5-O7]）。
+ *   每 `SEARCH_LIMITS.scanChunk` 章 `yield` 一次 —— 驱动器据此让出宏任务并受理取消。
+ *   分片只影响**节奏**：无论怎么分，返回的结果对象逐字段与 `searchInBook` 相同
+ *   （包括「被取消时绝不返回半份结果」这条：半份结果比空结果更糟 ——
+ *   用户会以为「只有这些」。取消由驱动器负责如实报，本生成器只负责扫）。
+ *   ★ 声明处同样不写 `export`（理由见 `buildIndexChunks` 上方注释）。
+ * @returns {Generator<void, object, void>} `next().value`（done 时）才是结果对象
+ */
+function* searchBookChunks(index, query, opts) {
     const o = (opts && typeof opts === 'object') ? opts : {};
     const limitSnippet = SEARCH_LIMITS.snippet;
     const q = trimStr(query).slice(0, SEARCH_LIMITS.query);
@@ -205,9 +289,10 @@ export function searchInBook(index, query, opts) {
     const rawLimit = numOrNull(o.limit);
     const limit = (rawLimit === null || rawLimit <= 0) ? SEARCH_LIMITS.hits : Math.floor(rawLimit);
     const caseSensitive = o.caseSensitive === true;
+    const list = Array.isArray(ix.chapters) ? ix.chapters : [];
     const out = {
         ok: false, query: q, hits: [], totalHits: 0, truncated: false,
-        chaptersScanned: 0, chaptersTotal: Array.isArray(ix.chapters) ? ix.chapters.length : 0,
+        chaptersScanned: 0, chaptersTotal: list.length,
         firstHit: null, lastHit: null, reason: '',
     };
     if (!ix.ok) { out.reason = 'index-unavailable（拿不到索引 ⇒ **搜不了**,不是「书里没有」：' + (ix.reason || '') + '）'; return out; }
@@ -216,23 +301,29 @@ export function searchInBook(index, query, opts) {
     const collected = [];
     const cap = SEARCH_LIMITS.collect;
     let capped = false;
-    for (const ch of (Array.isArray(ix.chapters) ? ix.chapters : [])) {
-        if (!ch || typeof ch.text !== 'string') continue;
-        const hay = caseSensitive ? ch.text : ch.text.toLowerCase();
-        let from = 0;
-        while (from <= hay.length - needle.length) {
-            const at = hay.indexOf(needle, from);
-            if (at < 0) break;
-            /* 折叠可能改变长度（个别字符），故用原文切片复核一次：对不上就往下找，不认这条。 */
-            const raw = ch.text.slice(at, at + q.length);
-            if (caseSensitive ? raw === q : raw.toLowerCase() === needle) {
-                collected.push(mkHit(ch, at, q.length, limitSnippet));
-                if (collected.length >= cap) { capped = true; break; }
+    const chunk = chunkSizeOf(SEARCH_LIMITS.scanChunk, 25);
+    for (let ci = 0; ci < list.length; ci++) {
+        const ch = list[ci];
+        /* 章体不可读**照样记进已扫章数**（它确实被扫过了）——
+         *   修前用 `continue` 跳过，那一章既不计数也不让出：分片节奏被它带偏。 */
+        if (ch && typeof ch.text === 'string') {
+            const hay = caseSensitive ? ch.text : ch.text.toLowerCase();
+            let from = 0;
+            while (from <= hay.length - needle.length) {
+                const at = hay.indexOf(needle, from);
+                if (at < 0) break;
+                /* 折叠可能改变长度（个别字符），故用原文切片复核一次：对不上就往下找，不认这条。 */
+                const raw = ch.text.slice(at, at + q.length);
+                if (caseSensitive ? raw === q : raw.toLowerCase() === needle) {
+                    collected.push(mkHit(ch, at, q.length, limitSnippet));
+                    if (collected.length >= cap) { capped = true; break; }
+                }
+                from = at + Math.max(1, needle.length);
             }
-            from = at + Math.max(1, needle.length);
         }
         out.chaptersScanned += 1;
         if (capped) break;
+        if ((ci + 1) % chunk === 0 && ci + 1 < list.length) yield;
     }
     out.ok = true;
     out.totalHits = collected.length;
@@ -473,11 +564,61 @@ export function notesSelfCheck() {
     );
     if (!rl.counts.needsConfirm) problems.push('自检：清单里没把需确认的条目标出来');
     if (rl.counts.withAnnotation !== 1) problems.push('自检：带批注的条目没计上');
+    /* 六 [v4.34.0 · R5-O7] 分片与同步**逐字段等价**（分片只许改节奏，不许改结果）。
+     *   为什么这条必须真跑：分片最危险的形态不是报错，而是「分片版少扫了一章 /
+     *   多收了一条」—— 界面上什么都不会响，只是命中列表与不取消时不一样。 */
+    const manyCh = [];
+    for (let i = 0; i < SEARCH_LIMITS.buildChunk * 2 + 7; i++) {
+        manyCh.push({ title: '第' + (i + 1) + '章', paragraphs: ['甲' + i + '一句', '乙' + i + '一句'] });
+    }
+    const ixSync = buildSearchIndex({ id: 'b3', contentHash: 'h3', chapters: manyCh });
+    const gen = buildIndexChunks({ id: 'b3', contentHash: 'h3', chapters: manyCh });
+    let yields = 0;
+    let step = gen.next();
+    while (!step.done) { yields += 1; step = gen.next(); }
+    const ixChunk = step.value;
+    if (ixChunk.totalParas !== ixSync.totalParas || ixChunk.totalChars !== ixSync.totalChars) {
+        problems.push('自检：分片建索引与同步建索引的段数/字数不一致');
+    }
+    if (ixChunk.chapters.length !== ixSync.chapters.length) problems.push('自检：分片建索引少建了章');
+    for (let i = 0; i < ixSync.chapters.length; i++) {
+        if (ixChunk.chapters[i].text !== ixSync.chapters[i].text
+            || ixChunk.chapters[i].starts.length !== ixSync.chapters[i].starts.length) {
+            problems.push('自检：分片建索引第 ' + String(i + 1) + ' 章与同步版不一致');
+            break;
+        }
+    }
+    if (yields <= 0) problems.push('自检：分片建索引一次都没让出（跨过片边界却不让出）');
+    const rSync = searchInBook(ixSync, '乙3一句');
+    const gen2 = searchBookChunks(ixSync, '乙3一句');
+    let step2 = gen2.next();
+    while (!step2.done) step2 = gen2.next();
+    const rChunk = step2.value;
+    if (rChunk.totalHits !== rSync.totalHits || rChunk.chaptersScanned !== rSync.chaptersScanned
+        || rChunk.hits.length !== rSync.hits.length) {
+        problems.push('自检：分片搜索与同步搜索的命中/已扫章数不一致');
+    }
+    /* 七 [v4.34.0 · R5-O7] 版本键三性：同版本同键 / 改指纹即变 / 缺指纹为空（判不了）。 */
+    const v1 = indexVersionOf({ id: 'b1', contentHash: 'h1' });
+    const v2 = indexVersionOf({ id: 'b1', contentHash: 'h1' });
+    const v3 = indexVersionOf({ id: 'b1', contentHash: 'h2' });
+    const v4 = indexVersionOf({ id: 'b1' });
+    if (!v1.key || v1.key !== v2.key) problems.push('自检：同一版本没给出同一个索引键');
+    if (v1.key === v3.key) problems.push('自检：改了内容指纹却给出同一个索引键（会把旧索引当成新的）');
+    if (v4.key !== '') problems.push('自检：没有指纹时不该给出可复用的索引键');
     return { problems: problems, states: stateKeys.length, confirmStates: ANCHOR_CONFIRM_STATES.length, limits: Object.keys(SEARCH_LIMITS).length };
 }
 export default {
     SEARCH_LIMITS, NOTE_LIMITS, EXCERPT_ANCHOR_STATES, ANCHOR_CONFIRM_STATES,
     anchorNeedsConfirm, anchorSettled, normalizeAnnotation, normalizeNoteTags, excerptNoteOf,
-    buildSearchIndex, searchInBook, searchLine, checkExcerptAnchor, anchorLine,
+    buildSearchIndex, searchInBook, searchLine,
+    indexVersionOf, checkExcerptAnchor, anchorLine,
     buildResearchList, researchLine, notesSelfCheck,
 };
+export { buildIndexChunks, searchBookChunks };
+/* 两个生成器出口走**具名转出块**（不是 `export function*`）：
+ *   全仓零消费导出门禁的抽取路径不认 `export function*`，而它对此的立场是
+ *   **fail-closed 拒判**（E9）而非放行 —— 那条 B5 判据锁的正是「生成器声明必须被兜住」。
+ *   两条路可选：① 给门禁补一条抽取路径（会同时改掉 B9 的清单断言）；
+ *   ② 声明处不写 `export`、出口在本块里给（block 路径认得并会枚举成员名）。
+ *   本版取 ②：**不为了加一个出口去放宽一道门禁** —— 门禁的覆盖面比本版方便更重要。 */

@@ -25,9 +25,15 @@ import {
  *   索引**不落盘**:每次由当前章节数组现建(计划原文「只增本地可重建索引」)。 */
 import {
     normalizeAnnotation, normalizeNoteTags,
-    buildSearchIndex, searchInBook, searchLine, checkExcerptAnchor, anchorLine,
-    buildResearchList, notesSelfCheck,
+    buildIndexChunks, searchBookChunks, searchLine,
+    indexVersionOf, checkExcerptAnchor, anchorLine,
+    buildResearchList, notesSelfCheck, SEARCH_LIMITS,
 } from '../../config/reading-notes-contract.js';
+/* ★ 为什么这里**不**再导入 `buildSearchIndex` / `searchInBook`：
+ *   [v4.34.0 · R5-O7] 起 App 的查找路径一律走**分片生成器**（`buildIndexChunks` /
+ *   `searchBookChunks`），那两个同步出口在本件里已零调用。留着它们看着无害，实际是把
+ *   「import 行也算一次消费」当成挡箭牌 —— 本仓最忌「导出了、挂出来了、产品端零消费」，
+ *   故宁可让它们只由契约件内部与判据消费（`notesSelfCheck` 与 tests 都在调）。 */
 /* [v4.25.0 · R4-X3] 可阅读、可编辑的故事年鉴(纯契约)。
  *   本件只做接线:**建章册 / 两版 / 编辑草稿 / 过期判定 / 成稿 / 按进度裁阅读版 / 导出**
  *   全在那件里(同一口径只许一份实现)。去剧透**不走本件**——它一律走上游
@@ -49,6 +55,22 @@ export class ReadingApp {
         this.view = new ReadingView(this);
         // 内存中的书籍正文缓存: id -> { chapters }
         this._contentCache = new Map();
+        /* [v4.34.0 · R5-O7] 全书找句的**索引缓存**: 版本键(`书ID#内容指纹`) -> 索引对象。
+         *   三件事说清楚,免得后来者把它当成第二份正文库:
+         *     · 它装的是**由正文派生的可重建物**(章文本 + 段起点表),进程退出即无;
+         *     · **一个字都不落盘**(`indexCacheInfo().persisted === false`);
+         *     · 条数**有界**(`_indexCacheMax`),超出先丢最旧的那份 ——
+         *       不设界就是拿用户内存赌他的书库有多大。
+         *   为什么必须按版本键而不是按书 ID: 同一本书可以改版,正文一变,
+         *   旧索引的段号全指错,而「书 ID 没变」会让缓存把旧索引端上来。 */
+        this._indexCache = new Map();
+        this._indexCacheMax = 4;
+        this._indexHits = 0;
+        this._indexBuilds = 0;
+        /* [v4.34.0 · R5-O7] 当前查找任务(取消与作废的唯一凭据)与序号。
+         *   序号只增不减: 任务 id 在会话内唯一,判据与日志据此对得上号。 */
+        this._findTask = null;
+        this._findSeq = 0;
         /* [第三期 R3-X8] 最近一次导入的 Promise：视图/测试/诊断可 await 到「真的导完了」。 */
         this._lastImport = null;
         this.EXCERPT_KEY = 'ruby_reading_excerpts';
@@ -145,6 +167,9 @@ export class ReadingApp {
         if (!id) return false;
         this.data.removeBook(id);
         this._contentCache.delete(id);
+        /* [v4.34.0 · R5-O7] 索引缓存跟着正文走：书删了，它的索引（各版本）也必须走 ——
+         *   留着就是「删掉的书还能被查到」那类不报错、只错数据的形态。 */
+        this.dropIndexFor(id);
         try { removeBookBody(this._hostWin(), id).catch(() => null); } catch (_e) { /* 附件删不掉不阻塞书目删除 */ }
         return true;
     }
@@ -407,7 +432,7 @@ export class ReadingApp {
                     const r = await removeBookBody(this._hostWin(), u.bookId);
                     if (r && r.state === ATTACHMENT_STATES.OK && r.removed) done += 1; else missed += 1;
                 }
-                else if (u.action === 'remove-book') { this.data.removeBook(u.bookId); this._contentCache.delete(u.bookId); done += 1; }
+                else if (u.action === 'remove-book') { this.data.removeBook(u.bookId); this._contentCache.delete(u.bookId); this.dropIndexFor(u.bookId); done += 1; }
                 else { missed += 1; }
             } catch (_e) { missed += 1; /* 单本失败如实计入未成（注释说不算成功，就得真不算） */ }
         }
@@ -596,26 +621,299 @@ export class ReadingApp {
     }
     /**
      * 全书找句（**扫全章**,末章命中与跨段命中都要能找到）。
-     *   索引每次现建、用完即弃（计划落点原文:「只增本地**可重建**索引」）——
-     *   落一份索引进存储就等于把全书正文复制了一份,那是「不把全书送进每轮提示词」的同一族违规。
-     * @returns {Promise<object>} 与 `searchInBook` 同形（多一格 `book` 读数）
+     *   [v4.34.0 · R5-O7] 索引**按版本复用**、建与扫都**分片让出**、**可取消**。
+     *
+     * 【修前实测（本版基线，`tests/audit/reading_find_scale_baseline.json`）】
+     *   200 万汉字的书：首查 16.25ms / 续查 17.77ms / 第三次 16.53ms ——
+     *   三次同量级，因为每次调用都 `buildSearchIndex` 现建、用完即弃；
+     *   App 上**没有任何「建了几次」的计数口**（探针取到的是 null，不是 0）。
+     *   更贵的是形态：建索引与扫全书各是一段**同步台阶**，期间计时器与点击事件
+     *   排在宏任务队列里轮不到 —— 用户点「取消」不会有任何反应（本仓
+     *   `global-search-engine` 已在 v3.60.0 为搜索立过同款纪律，本版把它接到阅读侧）。
+     *
+     * 【本版做的三件事（都只改节奏，不改结果）】
+     *   ① **复用**：键 = 书 ID + 内容版本（`indexVersionOf`）。正文一变，键就变，
+     *      旧索引自然落空 —— 不会把改版前的段号端上来。
+     *   ② **分片让出**：建索引按 `buildChunk` 章一片、比中按 `scanChunk` 章一片，
+     *      片末 `await this._yieldTurn()` 让出一轮**宏任务**（不是微任务：微任务队列
+     *      在同一轮事件循环里会被抽干，等于没让）。
+     *   ③ **取消 + 任务身份**：`o.task`（由 `newFindTask()` 造）是取消与作废的唯一凭据。
+     *      被取消 ⇒ `cancelled: true` 且**一条命中都不返回**（半份结果比空结果更糟：
+     *      用户会以为「只有这些」）；被**后一次查询顶掉** ⇒ `stale: true`，
+     *      界面据此不许把它画上去（换书/换会话后旧结果不许覆盖新书）。
+     *
+     * 【不做什么（计划「不做」原文）】
+     *   · 不在没有基线时宣称更快 —— 上面那三格就是基线，本版读数记在同名探针里；
+     *   · **不把缓存误称永久复制正文**：索引只是内存里由正文派生的**可重建**物，
+     *     条数有界、进程退出即无，且**一个字都不落盘**（`indexCacheInfo().persisted === false`）。
+     * @returns {Promise<object>} 与 `searchInBook` 同形（多 `book` / `task` / `cancelled` /
+     *   `stale` / `progress` / `index` 几格读数）
      */
     async searchBook(query, opts) {
+        const self = this;
         const o = (opts && typeof opts === 'object') ? opts : {};
         const bookId = String(o.bookId == null ? '' : o.bookId);
         const cur = this.view && this.view.currentBook;
         const target = bookId || (cur && cur.id) || '';
+        /* 任务身份：调用方给就用它的（视图要能拿着这枚凭据去取消），没给就现造一枚。 */
+        const task = (o.task && typeof o.task === 'object') ? o.task : this.newFindTask();
+        /* 新任务顶掉旧任务：旧的那一枚立刻作废 —— 这就是「换书后旧结果不能覆盖新书」
+         *   的落点。它不再受理（后续每片都查得到 `task !== this._findTask`）。 */
+        this._findTask = task;
         const read = await this.bookReadOf(target);
-        const index = buildSearchIndex({
-            id: read.id, title: read.title, contentHash: read.contentHash,
-            chapters: read.chapters === null ? undefined : read.chapters,
-        });
-        const res = searchInBook(index, query, { limit: o.limit, caseSensitive: o.caseSensitive === true });
+        const isCancelled = function () { return task.cancelled === true || task !== self._findTask; };
+        const progress = { phase: 'idle', done: 0, total: 0 };
+        const onProgress = (typeof o.onProgress === 'function') ? o.onProgress : null;
+        const bump = function (phase, done, total) {
+            progress.phase = phase; progress.done = done; progress.total = total;
+            if (onProgress) { try { onProgress({ phase: phase, done: done, total: total, taskId: task.id }); } catch (_e) { /* 进度回调抛错不得影响检索 */ } }
+        };
+        /* ★ 这里必须捕获 `self`：本件是 'use strict' 模块，`stale()` 直接调用时
+         *   `this` 是 undefined —— 首版写成普通函数，C6 判据当场抛
+         *   「Cannot read properties of undefined (reading '_findTask')」。
+         *   教训是：判「这枚任务还是不是当前任务」必须问**实例**，不能问调用栈上的 this。 */
+        const stale = function () { return task !== self._findTask; };
+        /* ── 阶段一：取索引（同版本复用；没有就分片建） ── */
+        const got = await this._indexFor(read, { isCancelled: isCancelled, bump: bump });
+        if (got.cancelled) {
+            return this._cancelledFind(read, query, got, { cancelledAt: 'index', indexedChapters: got.indexedChapters, scannedChapters: 0, task: task, stale: stale() });
+        }
+        const index = got.index;
+        /* ── 阶段二：分片比中 ── */
+        const scan = await this._scanFor(index, query, o, { isCancelled: isCancelled, bump: bump });
+        if (scan.cancelled) {
+            /* ★ 取消态的返回体**只有一处装配点**（`_cancelledFind`）。
+             *   首版比中阶段另手搓了一个结果体，于是 `chaptersScanned` 等格直接缺失 ——
+             *   「扫到哪」变成 undefined，界面与判据都读不到。字段齐不齐是**读数诚实**问题。 */
+            return this._cancelledFind(read, query, got, {
+                cancelledAt: 'scan', scannedChapters: scan.scannedChapters,
+                task: task, stale: stale(), scan: scan,
+            });
+        }
+        const res = scan.res;
         res.book = { id: read.id, title: read.title, contentHash: read.contentHash, readable: read.chapters !== null, why: read.why };
+        res.task = { id: task.id };
+        res.cancelled = scan.cancelled === true;
+        res.stale = stale();
+        res.progress = { phase: progress.phase, done: progress.done, total: progress.total };
+        res.index = {
+            reused: got.reused === true, builds: got.builds,
+            key: got.ver.key, chunks: got.chunks, yielded: got.yielded + scan.yielded,
+        };
+        if (scan.cancelled) {
+            res.hits = [];
+            res.totalHits = 0;
+            res.firstHit = null; res.lastHit = null;
+            res.truncated = false;
+            res.reason = 'cancelled（你点了取消：这次一条命中都没给 —— 半份结果比空结果更糟）';
+            res.cancelledAt = 'scan';
+        }
         if (!index.ok && read.chapters === null) {
             res.reason = 'body-unreadable（' + read.why + '：**搜不了**,不是「书里没有」）';
         }
         return res;
+    }
+    /** 取消态的返回体：读数**如实**（建到哪、扫到哪），命中一律为空。 */
+    _cancelledFind(read, query, got, extra) {
+        const at = String(extra.cancelledAt || '');
+        const scan = extra.scan || null;
+        return {
+            ok: false, query: String(query == null ? '' : query), hits: [], totalHits: 0,
+            truncated: false, chaptersScanned: Number(extra.scannedChapters) || 0,
+            chaptersTotal: got.totalChapters || 0, firstHit: null, lastHit: null,
+            reason: at === 'index'
+                ? 'cancelled（你点了取消：索引还没建完就停了 —— 一条命中都没给）'
+                : 'cancelled（你点了取消：一条命中都没给 —— 半份结果比空结果更糟）',
+            cancelled: true, cancelledAt: at, stale: extra.stale === true,
+            task: { id: extra.task ? extra.task.id : '' },
+            book: {
+                id: read.id, title: read.title, contentHash: read.contentHash,
+                readable: read.chapters !== null, why: read.why,
+            },
+            index: {
+                reused: got.reused === true, builds: got.builds, key: got.ver.key,
+                chunks: got.chunks, yielded: got.yielded + (scan ? scan.yielded : 0),
+                indexedChapters: at === 'index' ? (Number(extra.indexedChapters) || 0) : got.totalChapters,
+            },
+            progress: {
+                phase: at,
+                done: at === 'index' ? 0 : (scan ? Number(scan.scannedChapters) || 0 : 0),
+                total: got.totalChapters || 0,
+            },
+        };
+    }
+    /**
+     * 取这本书当前版本的索引：**同版本复用**，否则分片建（片间让出 + 受理取消）。
+     *   为什么复用放在这里而不是放进契约件：契约件是**纯函数**（零存储零时钟），
+     *   而缓存是一份**实例态**；把实例态塞进纯契约会让它没法单测（本仓 A2 判据守着这条）。
+     *   版本键由契约件给（`indexVersionOf`）——「什么算同一版本」这一口径仍只有一份。
+     */
+    async _indexFor(read, ctx) {
+        const ver = indexVersionOf({ id: read.id, contentHash: read.contentHash });
+        const totalChapters = Array.isArray(read.chapters) ? read.chapters.length : 0;
+        const base = { ver: ver, reused: false, builds: 0, chunks: 0, yielded: 0, totalChapters: totalChapters, index: null, cancelled: false, cancelledAt: '' };
+        /* ★ 阶段**入口**先让出一次（[v4.34.0 修】）——理由不是性能，是**契约一致性**：
+         *   首版只在「跨过片边界」时让出，于是**章数少于片长**的书一次都不让出，
+         *   用户点的取消根本没有受理窗口（判据 C4/D3 当场抓住：`_yieldTurn` 调用 0 次）。
+         *   后果在中等规模上更明显：40 章的书（片长 50）点了取消毫无反应，
+         *   而 60 章的书却能取消 —— 同一功能两种脾气，用户只会认为「这个按钮时灵时不灵」。
+         *   成本是每个阶段多一轮宏任务（≈0ms），换来「任何规模都至少有一个受理窗口」。 */
+        await this._yieldTurn();
+        if (ctx.isCancelled()) {
+            return Object.assign(base, { cancelled: true, cancelledAt: 'index', chunks: 0, yielded: 1, indexedChapters: 0 });
+        }
+        if (ver.key) {
+            const hit = this._indexCache.get(ver.key);
+            if (hit && hit.ok) {
+                this._indexHits += 1;
+                ctx.bump('index-reused', totalChapters, totalChapters);
+                return Object.assign(base, { reused: true, index: hit });
+            }
+        }
+        const gen = buildIndexChunks({
+            id: read.id, title: read.title, contentHash: read.contentHash,
+            chapters: read.chapters === null ? undefined : read.chapters,
+        });
+        let step = gen.next();
+        let chunks = 0;
+        let yielded = 1;
+        while (!step.done) {
+            chunks += 1;
+            const doneCh = Math.min(totalChapters, chunks * this._buildChunkSize());
+            ctx.bump('index', doneCh, totalChapters);
+            await this._yieldTurn();
+            yielded += 1;
+            if (ctx.isCancelled()) {
+                /* 索引阶段被作废：`gen.return()` 让生成器就地收束 —— **不建完**。
+                 *   读数如实报「建到第几章」（不是全量，也不是上一轮的陈旧值）。 */
+                gen.return();
+                return Object.assign(base, { cancelled: true, cancelledAt: 'index', chunks: chunks, yielded: yielded, indexedChapters: doneCh });
+            }
+            step = gen.next();
+        }
+        const index = step.value;
+        this._indexBuilds += 1;
+        if (ver.key && index && index.ok) this._rememberIndex(ver.key, index);
+        ctx.bump('scan', 0, totalChapters);
+        return Object.assign(base, { index: index, builds: 1, chunks: chunks, yielded: yielded });
+    }
+    /**
+     * 分片比中（片间让出 + 受理取消）。取消 ⇒ 一条命中都不返回。
+     *   ★ 入口同样先让出一次（理由见 `_indexFor`）；取消时返回体**统一由
+     *     `_cancelledFind` 组装** —— 首版这里手搓了一个只有 `ok`/`query` 的结果体，
+     *     于是取消读数里 `chaptersScanned` 等格直接缺失（判据 C5 抓住：
+     *     「扫到哪」变成 `undefined`）。字段齐不齐是**读数诚实**问题，不是排版问题。
+     */
+    async _scanFor(index, query, o, ctx) {
+        const total = (index && Array.isArray(index.chapters)) ? index.chapters.length : 0;
+        await this._yieldTurn();
+        if (ctx.isCancelled()) return { cancelled: true, yielded: 1, chunks: 0, scannedChapters: 0, total: total };
+        const gen = searchBookChunks(index, query, { limit: o.limit, caseSensitive: o.caseSensitive === true });
+        let step = gen.next();
+        let chunks = 0;
+        let yielded = 1;
+        while (!step.done) {
+            chunks += 1;
+            const res0 = this._scanPeek(gen, step, total, chunks);
+            ctx.bump('scan', res0.done, total);
+            await this._yieldTurn();
+            yielded += 1;
+            if (ctx.isCancelled()) {
+                gen.return();
+                return { cancelled: true, yielded: yielded, chunks: chunks, scannedChapters: res0.done, total: total };
+            }
+            step = gen.next();
+        }
+        return { cancelled: false, res: step.value, yielded: yielded, chunks: chunks };
+    }
+    /**
+     * 扫描进度（**只读推断，不改生成器**）：生成器每片处理 `scanChunk` 章，
+     *   故「已处理章数」= 片数 × 片长（夹到总章数）。为什么不去改生成器让它 yield 出进度：
+     *   那会把「节奏」塞进契约件的返回值里，而契约件的返回值是**结果口径**（有判据锁着）。
+     */
+    _scanPeek(_gen, _step, total, chunks) {
+        return { done: Math.min(total, chunks * this._scanChunkSize()) };
+    }
+    _buildChunkSize() {
+        const n = Number(SEARCH_LIMITS.buildChunk);
+        return (Number.isFinite(n) && n > 0) ? Math.floor(n) : 50;
+    }
+    _scanChunkSize() {
+        const n = Number(SEARCH_LIMITS.scanChunk);
+        return (Number.isFinite(n) && n > 0) ? Math.floor(n) : 25;
+    }
+    /**
+     * 片间让出**宏任务**（不是微任务）。与 `global-search-engine._yieldTurn` 同款理由：
+     *   微任务队列在同一轮事件循环里会被抽干，只 await 一枚已决 Promise 等于没让；
+     *   计时器（含用户点取消后那枚零延迟计时器）与点击事件排在**宏任务**队列里。
+     *   宿主没有 setTimeout 就退 setImmediate / 微任务：内核可单测，也不因宿主差异抛错。
+     * @returns {Promise<void>}
+     */
+    _yieldTurn() {
+        return new Promise((resolve) => {
+            const g = (typeof globalThis !== 'undefined' && globalThis) ? globalThis : {};
+            if (typeof g.setTimeout === 'function') { g.setTimeout(resolve, 0); return; }
+            if (typeof g.setImmediate === 'function') { g.setImmediate(resolve); return; }
+            resolve();
+        });
+    }
+    /**
+     * 新建一枚**查找任务**身份（取消与作废的唯一凭据）。
+     *   为什么要有身份而不是一个布尔「取消」：布尔说不清「是谁取消了谁」——
+     *   换书、换会话、再点一次查找，三件事都会让上一轮的结果过期，而它们的
+     *   正确处置是一样的（**不许画上去**），故统一用「当前任务是谁」来判。
+     * @returns {{id:string, cancelled:boolean, cancel:Function}}
+     */
+    newFindTask() {
+        const self = this;
+        this._findSeq += 1;
+        const task = {
+            id: 'rd_find_' + String(this._findSeq),
+            cancelled: false,
+            cancel() { task.cancelled = true; return self._findTask === task; },
+        };
+        return task;
+    }
+    /** 当前查找任务（视图/诊断可读；没有就是 null，**不报一个假的空任务**）。 */
+    currentFindTask() { return this._findTask || null; }
+    /** 取消当前查找任务（视图在换书/换会话/重新查找时调）。 */
+    cancelFind() {
+        const t = this._findTask;
+        if (!t) return { ok: false, why: 'no-task（这一轮没有正在跑的查找）' };
+        t.cancel();
+        return { ok: true, taskId: t.id };
+    }
+    /** 索引复用的**计数证据**（探针与判据读它；改前这一口不存在）。 */
+    indexBuildCount() { return this._indexBuilds; }
+    /** 索引缓存读数：条数有界、**不落盘**（计划「不做」原文：不把缓存误称永久复制正文）。 */
+    indexCacheInfo() {
+        return {
+            keys: Array.from(this._indexCache.keys()),
+            count: this._indexCache.size,
+            max: this._indexCacheMax,
+            hits: this._indexHits,
+            builds: this._indexBuilds,
+            persisted: false,
+            note: '索引是**由正文派生的可重建物**：只在内存里、条数有界、进程退出即无，一个字都不落盘。',
+        };
+    }
+    /** 记一份索引（有界：超出上限先丢最旧的那份 —— 不设界就是拿用户内存赌书库大小）。 */
+    _rememberIndex(key, index) {
+        this._indexCache.set(key, index);
+        while (this._indexCache.size > this._indexCacheMax) {
+            const oldest = this._indexCache.keys().next();
+            if (oldest.done) break;
+            this._indexCache.delete(oldest.value);
+        }
+    }
+    /** 丢掉某本书的全部索引版本（正文改了 / 书删了；**按书 ID 前缀**丢，不按精确键）。 */
+    dropIndexFor(bookId) {
+        const pre = String(bookId == null ? '' : bookId) + '#';
+        let dropped = 0;
+        for (const k of Array.from(this._indexCache.keys())) {
+            if (k.indexOf(pre) === 0) { this._indexCache.delete(k); dropped += 1; }
+        }
+        return dropped;
     }
     /** 创作素材清单（原文与自己的解释**分列**;需确认的条目照样标出来）。 */
     researchList() {
