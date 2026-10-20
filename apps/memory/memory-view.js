@@ -342,6 +342,25 @@ export class MemoryView {
     const face = String(read(() => this.app.askThreadLine?.(), '') || '');
     const rows = read(() => this.app.askCandidateRows?.(), []) || [];
     const trace = read(() => this.app.askTrace?.(), []) || [];
+    /* [v4.36.0 · R5-O9] **时点条件那一格走唯一出处**（`app.askTimeLine()` →
+     *   契约件 `timeConditionLine`）。视图**不许**自己拼「时点 ≥N楼」：
+     *   旧口径就是在这里（或那一层）硬拼的，于是「截至当时」被读成「以后」——
+     *   方向正好相反，而数字看着是对的。
+     *   【为什么单独一行显示】它与「人物」不是同一类条件：用户判断「这一问看的是哪一段」
+     *   只需要这一句，混在人物后面会读成附注。 */
+    const timeLine = String(read(() => this.app.askTimeLine?.(), '') || '');
+    const timeRow = timeLine
+      ? '<div id="mem-fu-time" class="mem-fu-time">' + this._esc(timeLine) + '</div>'
+      : '<div id="mem-fu-time" class="mem-fu-time mem-fu-time-none">本会话还没有时点条件（问一句带「第 N 楼」的就会定下）</div>';
+    /* [v4.36.0 · R5-O9] **可撤条件**按钮：轴名与「能不能撤」全部取自上游那张表
+     *   （`app.askClearAxes()`），视图**不另立一份轴名清单** —— 两份清单迟早分叉，
+     *   而分叉的后果是「按钮点了没反应」（界面说能撤、上游说没这轴）。 */
+    const axes = read(() => this.app.askClearAxes?.(), []) || [];
+    const clearRow = (Array.isArray(axes) && axes.length)
+      ? '<div class="mem-fu-clear"><span class="mem-fu-clear-label">撤掉某个继承条件：</span>' +
+        axes.map((a) => '<button class="mem-fu-clear-btn" data-axis="' + this._esc(String(a)) + '">撤 ' + this._esc(String(a)) + '</button>').join('') +
+        '</div>'
+      : '<div class="mem-fu-clear"><span class="mem-hint">本版插件没给可撤条件清单（追问那一层不支持按轴清除）</span></div>';
     const cands = (Array.isArray(rows) && rows.length)
       ? rows.map((r) => '<button class="mem-fu-cand" data-name="' + this._esc(String((r && r.name) || '')) + '">'
           + this._esc(String((r && r.line) || '')) + '</button>').join('')
@@ -358,6 +377,8 @@ export class MemoryView {
     return '  <div class="mem-section mem-fu-section">' +
       '    <div class="mem-section-title"><i class="fa-solid fa-turn-down"></i> 接着上一句</div>' +
       '    <div id="mem-fu-face" class="mem-fu-face">' + this._esc(face) + '</div>' +
+      timeRow +
+      clearRow +
       '    <div class="mem-search-row"><input id="mem-fu-q" placeholder="例如：那后来呢 / 另一个人呢 / 她那晚之后呢" /><button id="mem-fu-btn">追问</button></div>' +
       '    <div class="mem-hint">追问会**沿用**上一轮认下的人与时点；上面那一屏「问往事」每次都从头问。</div>' +
       '    <div id="mem-fu-cands" class="mem-fu-cands">' + cands + '</div>' +
@@ -389,6 +410,19 @@ export class MemoryView {
     let res = null;
     try { res = this.app.resolveAskPick?.(name) || null; } catch (_e) { res = null; }
     if (!res) { this._paintFollowUp('消歧口读不出：本版 App 未接线'); return; }
+    this._paintFollowUp(String(res.note || ''));
+  }
+
+  /**
+   * [v4.36.0 · R5-O9] 撤掉某个继承条件（**只转交**；本视图不自己改任何条件）。
+   *   `axis` 取自上游给的可清轴表（按钮是照那张表画出来的）。
+   *   回话**照抄控制器给的 note** —— 它已经把「清成了什么 / 没清成什么」分开说了，
+   *   视图再拼一句就会把「清掉了」与「本来就没有」压成同一句。
+   */
+  _clearAskCondition(axis) {
+    let res = null;
+    try { res = this.app.clearAskCondition?.(axis) || null; } catch (_e) { res = null; }
+    if (!res) { this._paintFollowUp('清除口读不出：本版 App 未接线（不是「清掉了」）'); return; }
     this._paintFollowUp(String(res.note || ''));
   }
 
@@ -982,6 +1016,13 @@ export class MemoryView {
         }
         /* [v4.22.0 · R4-X1] 消歧候选点选(容器级委托,幂等同上)。
          *   未认下**不产确定结论**:上游说没这个人就保持待消歧,本处只把原话显示出来。 */
+        /* [v4.36.0 · R5-O9] 可撤条件按钮(容器级委托,幂等同上):
+         *   轴名取自按钮的 data-axis(它又取自上游那张表) —— 视图不另立清单。 */
+        const clearBtn = e.target.closest('.mem-fu-clear-btn');
+        if (clearBtn && this.container.contains(clearBtn)) {
+          this._clearAskCondition(clearBtn.getAttribute('data-axis') || '');
+          return;
+        }
         /* [v4.23.0 · R4-X2] 导入面的三处点选(容器级委托,幂等同上):
          *   · 改类   —— 每行一个 select,交给上游 applyOverrides(本层不算一遍);
          *   · 选入   —— 只记选择,未选段由上游具名 not-selected;

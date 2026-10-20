@@ -75,6 +75,13 @@ export function traceStepOf(recv, question) {
         candidates: (Array.isArray(r.candidates) ? r.candidates : []).map(str).filter(Boolean)
             .slice(0, ASK_THREAD_LIMITS.candidates),
         atFloor: (r.atFloor === null || r.atFloor === undefined) ? null : (Number(r.atFloor) || 0),
+        /* [v4.36.0 · R5-O9] **时间操作与清除**也要进轨迹：轨迹是「只回看条件」的那一屏，
+         *   而「这一轮按哪个方向查的」「这一轮清掉了什么」正是条件本身。
+         *   不留下来，用户回看时看到的仍是旧口径那一句「时点 ≥N楼」——
+         *   把「截至当时」读成「从此以后」正是本项要治的错读数。 */
+        timeOp: str(r.timeOp),
+        timeOpLabel: str(r.timeOpLabel),
+        cleared: (Array.isArray(r.cleared) ? r.cleared : []).map(str).filter(Boolean),
         refs: Array.isArray(r.refs) ? r.refs.length : 0,
     };
 }
@@ -94,6 +101,10 @@ export function receiptOfStep(step) {
         actors: Array.isArray(s.actors) ? s.actors.slice() : [],
         candidates: Array.isArray(s.candidates) ? s.candidates.slice() : [],
         atFloor: (s.atFloor === null || s.atFloor === undefined) ? null : (Number(s.atFloor) || 0),
+        /* [v4.36.0 · R5-O9] 方向与清除原样带回（**形状翻译**，不重算）。 */
+        timeOp: str(s.timeOp),
+        timeOpLabel: str(s.timeOpLabel),
+        cleared: Array.isArray(s.cleared) ? s.cleared.slice() : [],
         inherit: (Array.isArray(s.inheritAxes) ? s.inheritAxes : []).map(function (a) { return { axis: a }; }),
         condition: (Array.isArray(s.conditionAxes) ? s.conditionAxes : []).map(function (a) { return { axis: a }; }),
     };
@@ -141,11 +152,66 @@ export function traceLineOf(step) {
     if (s.turn) bits.push('第 ' + String(s.turn) + ' 轮');
     if (s.actor) bits.push('人物 ' + s.actor);
     if (s.awaiting) bits.push('待消歧(本次没查)');
+    /* [v4.36.0 · R5-O9] 轨迹行也报**方向**：轨迹是「只回看条件」的那一屏，
+     *   而「按哪个方向查的」正是条件本身（回看时看不出方向，等于条件没记下来）。 */
+    if (s.atFloor !== null && s.atFloor !== undefined) {
+        const tl = timeConditionLine(s.atFloor, s.timeOp);
+        if (tl) bits.push(tl);
+    }
     if (Array.isArray(s.inheritAxes) && s.inheritAxes.length) bits.push('沿用 ' + s.inheritAxes.join('/'));
     if (Array.isArray(s.conditionAxes) && s.conditionAxes.length) bits.push('新设 ' + s.conditionAxes.join('/'));
+    if (Array.isArray(s.cleared) && s.cleared.length) bits.push('已清除 ' + s.cleared.join('/'));
     if (s.refs) bits.push('出处 ' + String(s.refs) + ' 条');
     const head = s.question ? ('「' + s.question + '」 ') : '';
     return head + (bits.length ? bits.join(' · ') : '无约束');
+}
+
+/** 时间操作三态 + 空（未定）+ 一格「不认识」。**方向与锚是两件事**（同一个数字两种相反的查询方向）。 */
+export const ASK_TIME_OPS = Object.freeze({
+    AT: 'at',           // 时点下界（第 N 楼起）
+    AS_OF: 'as-of',     // 截至当时（**上界**：只看到第 N 楼为止）
+    SINCE: 'since',     // 从此以后（下界：第 N 楼之后）
+    NONE: '',           // 上游没给方向（**旧口径**：那时 `atFloor` 本来就只表示下界）
+    UNKNOWN: 'unknown', // 给了方向但不认识 ⇒ 不猜（**不得**按 `≥` 兜底）
+});
+/** 方向的人读文案（**唯一出处**；视图与读数行都取它，不各写一份）。 */
+export const ASK_TIME_OP_LABEL = Object.freeze({
+    at: '第 N 楼起（含该楼）',
+    'as-of': '截至当时（只看到该楼为止）',
+    since: '从此以后（该楼之后）',
+    '': '旧口径下界（上游未给方向）',
+    unknown: '方向不认识',
+});
+/**
+ * 时点条件的人读文案（**唯一出处**）。
+ *
+ * 【本项要治的错读数】旧口径只有 `atFloor` 一个数，于是三种**方向相反**的问句
+ *   在读数上是同一句「时点 ≥N楼」：
+ *     · 「第20楼她做了什么」  —— 下界
+ *     · 「截至第20楼她住哪」  —— **上界**（只看到那为止）
+ *     · 「第20楼以后呢」      —— 下界（从那时起往后）
+ *   把「截至当时」写成「时点 ≥N楼」，用户读到的是「从现在往后都算」——
+ *   而真实查询恰恰相反（只看那之前）。不报错、只是错读数，且**时点看起来是对的**。
+ *
+ * 【为什么缺方向仍写 `≥`】缺方向**不是**「方向未定」，是**旧口径的既有语义**：
+ *   M5-O1 之前上游根本不产方向，`atFloor` 在那时就只表示下界。把这一格改写成
+ *   「方向未定」会把历史读数一起改错（且会破掉锁着旧句式的历史判据）。
+ *   真正不许兜底的是**给了但不认识**的方向 —— 那一格必须自己成句。
+ *
+ * @param {number|null} atFloor
+ * @param {string} timeOp
+ * @returns {string} 人读文案；无时点条件时给空串（由调用方决定要不要说「没有」）
+ */
+export function timeConditionLine(atFloor, timeOp) {
+    if (atFloor === null || atFloor === undefined) return '';
+    const n = Number(atFloor);
+    if (!Number.isFinite(n)) return '';
+    const op = str(timeOp);
+    if (op === ASK_TIME_OPS.AS_OF) return '时点 截至第' + String(n) + '楼（只看到那为止）';
+    if (op === ASK_TIME_OPS.SINCE) return '时点 第' + String(n) + '楼以后';
+    if (op === ASK_TIME_OPS.UNKNOWN) return '时点 第' + String(n) + '楼（方向不认识，未按任何方向查）';
+    /* `at` 与「上游没给方向」同句：两者语义相同（旧口径的 `atFloor` 就是下界）。 */
+    return '时点 ≥' + String(n) + '楼';
 }
 
 /**
@@ -154,6 +220,7 @@ export function traceLineOf(step) {
  * @returns {{phase:string, turn:number, state:string, awaiting:boolean, accepted:boolean,
  *            candidates:Array<string>, inherit:Array, condition:Array, inheritAxes:Array<string>,
  *            conditionAxes:Array<string>, subjects:Array<string>, atFloor:number|null,
+ *            timeOp:string, timeOpLabel:string, cleared:Array<string>, clearAxes:Array<string>,
  *            followUp:boolean, why:string}}
  */
 export function normalizeThreadFace(recv) {
@@ -162,7 +229,8 @@ export function normalizeThreadFace(recv) {
         return {
             phase: ASK_THREAD_PHASES.ABSENT, turn: 0, state: '', awaiting: false, accepted: false,
             candidates: [], inherit: [], condition: [], inheritAxes: [], conditionAxes: [],
-            subjects: [], atFloor: null, followUp: false, why: '插件不在场:没有追问面',
+            subjects: [], atFloor: null, timeOp: '', timeOpLabel: '', cleared: [], clearAxes: [],
+            followUp: false, why: '插件不在场:没有追问面',
         };
     }
     /* 追问回执与普通回执的**唯一**分界是上游自己的 `followUp` 标志:
@@ -186,6 +254,13 @@ export function normalizeThreadFace(recv) {
     const why = awaiting
         ? ('指代不定,等你在候选里选一个再问 —— 本次**没有查**(替用户猜一个名字比不查更贵)')
         : (!followUp ? '本次走的是普通问答:上一轮的人与时点**没有被继承**' : '');
+    const rawOp = str(r.timeOp);
+    /* [v4.36.0 · R5-O9] 方向归一：只认上游三态；**给了但不认识**单独成格
+     *   （`unknown`）而不是归空 —— 归空会与「旧口径没给方向」同形，
+     *   而两者处置相反（一个要说「方向不认识」、一个按历史下界读）。
+     *   上游没给（空）⇒ 空：那是旧口径的既有语义。 */
+    const KNOWN_OPS = [ASK_TIME_OPS.AT, ASK_TIME_OPS.AS_OF, ASK_TIME_OPS.SINCE];
+    const timeOp = (rawOp === '') ? '' : (KNOWN_OPS.indexOf(rawOp) >= 0 ? rawOp : ASK_TIME_OPS.UNKNOWN);
     return {
         phase: phase, turn: Number(r.turn) || 0, state: state, awaiting: awaiting,
         /* accepted 只在追问面有意义:普通回执里它无从谈起,默认 true 是把
@@ -195,6 +270,15 @@ export function normalizeThreadFace(recv) {
         inheritAxes: inherit.map(function (x) { return str(x && x.axis); }).filter(Boolean),
         conditionAxes: condition.map(function (x) { return str(x && x.axis); }).filter(Boolean),
         subjects: actors, atFloor: (r.atFloor === null || r.atFloor === undefined) ? null : (Number(r.atFloor) || 0),
+        /* [v4.36.0 · R5-O9] 时间**方向**与**清除读数**。
+         *   · `timeOp` 只认上游那三态，其余归空（**不猜方向** —— 把不认识读成 'at'
+         *     会让「截至当时」悄悄按上界查，而读数上看着像对的）；
+         *   · `cleared` 是**做成了什么**（与 gaps 里那几条「没做成」分列）；
+         *   · `clearAxes` 是上游给的可清轴表（手机照它给按钮，不另抄一份轴名清单）。 */
+        timeOp: timeOp,
+        timeOpLabel: str(r.timeOpLabel),
+        cleared: (Array.isArray(r.cleared) ? r.cleared : []).map(str).filter(Boolean),
+        clearAxes: (Array.isArray(r.clearAxes) ? r.clearAxes : []).map(str).filter(Boolean),
         followUp: followUp, why: why,
     };
 }
@@ -205,9 +289,16 @@ export function carryLineOf(face) {
     if (!f) return '还没有追问过';
     const bits = [];
     if (f.subjects.length) bits.push('人物 ' + f.subjects.join('/'));
-    if (f.atFloor !== null) bits.push('时点 ≥' + String(f.atFloor) + '楼');
+    /* [v4.36.0 · R5-O9] 时点那一格**走唯一出处**（`timeConditionLine`）：
+     *   旧口径在这里硬写「时点 ≥N楼」，于是「截至第20楼」被读成「第20楼以后」——
+     *   方向正好相反，而数字看着是对的。方向与人读文案都只在本件声明一次。 */
+    const tline = timeConditionLine(f.atFloor, f.timeOp);
+    if (tline) bits.push(tline);
     if (f.inheritAxes.length) bits.push('沿用 ' + f.inheritAxes.join('/'));
     if (f.conditionAxes.length) bits.push('新设 ' + f.conditionAxes.join('/'));
+    /* [v4.36.0 · R5-O9] 清除是**这一轮做成的动作**，与沿用/新设并列报出 ——
+     *   不报的话，用户看到条件不见了却不知道是自己撤的（以为被系统吞了）。 */
+    if (Array.isArray(f.cleared) && f.cleared.length) bits.push('已清除 ' + f.cleared.join('/'));
     if (!bits.length) return f.turn ? ('第 ' + String(f.turn) + ' 轮 · 没有沿用任何条件') : '还没有追问过';
     /* 「认不出人」只在**真的说了要沿用主体却没人**时才说 —— 否则如实说没沿用任何条件:
      *   两者处置相反（一个是「名字没认出来」,一个是「这一轮压根没带条件」）。 */
@@ -275,6 +366,33 @@ export function askThreadSelfCheck() {
     if (candidateRowsOf(aw).length !== 2) problems.push('候选应逐个可点');
     if (candidateRowsOf(aw)[0].line === candidateRowsOf(aw)[1].line) problems.push('候选行必须各自可辨认');
 
+    /* 三半 时间方向:三种方向必须三句不同（把「截至当时」读成「以后」正是本项要治的）。 */
+    const lineAt = timeConditionLine(20, ASK_TIME_OPS.AT);
+    const lineAsOf = timeConditionLine(20, ASK_TIME_OPS.AS_OF);
+    const lineSince = timeConditionLine(20, ASK_TIME_OPS.SINCE);
+    if (!lineAt || !lineAsOf || !lineSince) problems.push('有时点条件时必须给得出人读文案');
+    if (new Set([lineAt, lineAsOf, lineSince]).size !== 3) problems.push('三种时间方向必须三句不同(实测:' + [lineAt, lineAsOf, lineSince].join(' | ') + ')');
+    if (lineAsOf.indexOf('截至') < 0) problems.push('as-of 必须说清是「截至当时」(只看到那为止)');
+    if (lineAsOf.indexOf('以后') >= 0) problems.push('★ as-of 不许写成「以后」——方向正好相反,而数字看着是对的');
+    if (lineSince.indexOf('以后') < 0) problems.push('since 必须说清是「从此以后」');
+    if (lineAt.indexOf('≥') < 0) problems.push('at 保持旧口径的下界写法(历史读数与既有判据锁着这一句)');
+    /* 方向不认识 ⇒ **不得**按 `≥` 兜底（兜底就是旧口径那条错读数的老路）。 */
+    const lineUnknown = timeConditionLine(20, ASK_TIME_OPS.UNKNOWN);
+    if (lineUnknown === lineAt) problems.push('★ 方向不认识时不许兜底成「≥N楼」（那正是本项要治的错读数）');
+    if (lineUnknown.indexOf('不认识') < 0) problems.push('方向不认识必须如实说「不认识」');
+    /* 无时点条件 ⇒ 空串（由调用方决定要不要说「没有」）。 */
+    if (timeConditionLine(null, ASK_TIME_OPS.AT) !== '') problems.push('没有时点条件时应给空串');
+    /* 归一:上游给了不认识的方向 ⇒ 记 unknown,不许归空（归空与旧口径没给同形）。 */
+    const fuBad = normalizeThreadFace({ followUp: true, turn: 1, threadState: 'open', atFloor: 9, timeOp: 'bogus' });
+    if (fuBad.timeOp !== ASK_TIME_OPS.UNKNOWN) problems.push('不认识的方向必须记 unknown(实测 ' + fuBad.timeOp + ')');
+    const fuNone = normalizeThreadFace({ followUp: true, turn: 1, threadState: 'open', atFloor: 9 });
+    if (fuNone.timeOp !== '') problems.push('上游没给方向时归空(旧口径)');
+    if (fuBad.timeOp === fuNone.timeOp) problems.push('★「方向不认识」与「旧口径没给方向」必须不同形');
+    /* 清除读数:做成了什么与没做成什么分列。 */
+    const fuClear = normalizeThreadFace({ followUp: true, turn: 2, threadState: 'open', cleared: ['atFloor', 'timeOp'] });
+    if (fuClear.cleared.length !== 2) problems.push('清除读数必须原样归一（做成了什么）');
+    if (!carryLineOf(fuClear).includes('已清除')) problems.push('沿用读数必须报出这一轮清掉了什么');
+
     /* 三半 轨迹行:沿用不同条件必须不同句;待消歧不许写成「沿用」。 */
     const t1 = traceLineOf(traceStepOf({ followUp: true, turn: 1, actor: '甲', inherit: [{ axis: 'subject' }] }, '甲后来呢'));
     const t2 = traceLineOf(traceStepOf({ followUp: true, turn: 2, actor: '乙', condition: [{ axis: 'time' }] }, '另一个人呢'));
@@ -327,6 +445,10 @@ export default {
     ASK_THREAD_PHASES,
     ASK_FOLLOWUP_OUTLETS,
     ASK_THREAD_LIMITS,
+    /* [v4.36.0 · R5-O9] 时间方向三态与清除读数随件导出（视图与控制器都从这里取，不另抄）。 */
+    ASK_TIME_OPS,
+    ASK_TIME_OP_LABEL,
+    timeConditionLine,
     planFollowUpOutlet,
     traceStepOf,
     appendTrace,

@@ -53,7 +53,9 @@ import {
 import {
   ASK_THREAD_PHASES, ASK_FOLLOWUP_OUTLETS, ASK_THREAD_LIMITS,
   planFollowUpOutlet, traceStepOf, appendTrace, normalizeThreadFace,
-  receiptOfStep, carryLineOf, threadFaceLine, candidateRowsOf, askThreadSelfCheck, droppedTotalOf
+  receiptOfStep, carryLineOf, threadFaceLine, candidateRowsOf, askThreadSelfCheck, droppedTotalOf,
+  /* [v4.36.0 · R5-O9] 时间方向三态 + 清除读数（口径唯一出处在本件，视图不另拼一句）。 */
+  ASK_TIME_OPS, ASK_TIME_OP_LABEL, timeConditionLine
 } from '../../config/memory-ask-thread.js';
 import {
   LORE_FACE_STATES, LORE_OUTLETS, LORE_ADMIT, LORE_LIMITS,
@@ -289,9 +291,11 @@ export class MemoryApp {
    *   绝不替用户猜一个名字。
    *
    * @param {string} question
+   * @param {object} [opts] [v4.36.0 · R5-O9] `{ clear:Array<string> }` —— 点名撤掉的继承条件
    * @returns {{ok:boolean, outlet:string, face:object|null, receipt:object|null, line:string, note:string}}
    */
-  askFollowUp(question) {
+  askFollowUp(question, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
     const outlet = this.planAskFollowUpOutlet();
     const q = String(question == null ? '' : question);
     if (!q.trim()) return { ok: false, outlet: outlet, face: null, receipt: null, line: '', note: '追问要先有一句话' };
@@ -300,9 +304,14 @@ export class MemoryApp {
     }
     const win = (typeof window !== 'undefined') ? window : null;
     const plugin = (() => { try { return win ? win.LonShaMemory : null; } catch (_e) { return null; } })();
+    /* [v4.36.0 · R5-O9] 清除表原样下传（**本层不先过滤**：轴名合法性只有上游那张
+     *   可清轴表说了算；本层再判一份就是第二个真源）。只在追问出口上带 ——
+     *   普通问答没有「继承」这回事，带了也无处可清，故如实不带。 */
+    const clear = (Array.isArray(o.clear) ? o.clear.slice() : []);
+    const callOpts = clear.length ? { clear: clear } : {};
     let receipt = null;
     if (outlet === ASK_FOLLOWUP_OUTLETS.FOLLOWUP) {
-      try { receipt = plugin.askMemoryQuestionFollowUp(q, {}) || null; } catch (_e) { receipt = null; }
+      try { receipt = plugin.askMemoryQuestionFollowUp(q, callOpts) || null; } catch (_e) { receipt = null; }
     } else {
       try { receipt = (typeof plugin.askMemoryQuestion === 'function') ? (plugin.askMemoryQuestion(q, {}) || null) : null; } catch (_e) { receipt = null; }
     }
@@ -320,7 +329,79 @@ export class MemoryApp {
        *   把累计读数写成增量读数,用户看到的是「只丢了一轮」而实际丢了五轮）。 */
       note = '已按 ' + String(ASK_THREAD_LIMITS.turns) + ' 轮上限滚动,早前 ' + String(kept.droppedTotal) + ' 轮不再回看';
     }
-    return { ok: true, outlet: outlet, face: face, receipt: receipt, line: threadFaceLine(face), note: note };
+    /* [v4.36.0 · R5-O9] 清除结果**当面说清**：
+     *   · 清成了什么（`cleared`）与没清成什么（上游 gaps 里的 clear-* 具名）分列 ——
+     *     合成一句会让「清掉了」与「本来就没有」长得一样，用户以为动作生效了；
+     *   · 本层**不自己判**哪条清成了：读数全取自上游回执。 */
+    if (clear.length) {
+      const done = Array.isArray(face.cleared) ? face.cleared : [];
+      const miss = (receipt && Array.isArray(receipt.gaps))
+        ? receipt.gaps.filter((g) => g && (g.kind === 'clear-nothing' || g.kind === 'clear-overridden' || g.kind === 'clear-axis-unknown')) : [];
+      const bits = [];
+      if (done.length) bits.push('已清除 ' + done.join('/'));
+      if (miss.length) bits.push('未清除:' + miss.map((g) => String((g && g.why) || '')).filter(Boolean).join('；'));
+      if (!done.length && !miss.length) {
+        /* 上游没给任何清除读数 ⇒ 如实说「没读到结果」，**不许**报「已清除」。 */
+        bits.push('清除结果没读出来（上游未给读数）—— 不当成已清除');
+      }
+      if (bits.length) note = note ? (note + ' · ' + bits.join(' · ')) : bits.join(' · ');
+    }
+    return { ok: true, outlet: outlet, face: face, receipt: receipt, line: threadFaceLine(face), note: note, cleared: face.cleared.slice(), clearRequested: clear.slice() };
+  }
+
+  /**
+   * [v4.36.0 · R5-O9] 撤掉某个继承条件（**委托上游**，本层不自己改 thread）。
+   *
+   * 【为什么必须走上游】thread 归上游持有并随聊天持久化；本层自己抹一格，
+   *   下一次追问上游照样按它记着的那份算 —— 界面显示清掉了、实际没清。
+   *
+   * 【为什么不是「重新问一遍」】重问一句会重新认主体（用户只想撤时间、不想换人），
+   *   而且那句话本身还可能再带一个新时点。
+   *
+   * @param {string} axis 可清轴名（取自上游 `clearAxes`；本层不另立轴名清单）
+   * @param {string} [question] 顺带问的一句；不给则只清条件不提问（空问句走「继续」）
+   * @returns {{ok:boolean, axis:string, cleared:Array<string>, note:string, face:object|null}}
+   */
+  clearAskCondition(axis, question) {
+    const a = String(axis == null ? '' : axis).trim();
+    const outlet = this.planAskFollowUpOutlet();
+    if (!a) return { ok: false, axis: '', cleared: [], note: '没点名要清哪一轴', face: this.askThreadFace() };
+    if (outlet !== ASK_FOLLOWUP_OUTLETS.FOLLOWUP) {
+      /* 没有追问出口 ⇒ 没有「继承」可清。**不许**回落普通问答假装清过了。 */
+      return { ok: false, axis: a, cleared: [], note: '本版插件没有追问出口:没有可撤的继承条件（不是「清掉了」）', face: this.askThreadFace() };
+    }
+    /* 轴名合法性由上游那张表说了算；本层只在**上游给过表**时做一次预检，
+     *   让「这个轴不能清」在点下去那一刻就说清，而不是等一轮往返。 */
+    const face0 = this.askThreadFace();
+    if (Array.isArray(face0.clearAxes) && face0.clearAxes.length && face0.clearAxes.indexOf(a) < 0) {
+      return { ok: false, axis: a, cleared: [], note: '「' + a + '」不在可清轴表里（' + face0.clearAxes.join('/') + '）—— 未清除任何东西', face: face0 };
+    }
+    /* 空问句走「继续」：清除本身就是一个动作，不必逼用户再打一句问句。 */
+    const q = String(question == null ? '' : question).trim() || '继续';
+    const res = this.askFollowUp(q, { clear: [a] });
+    const done = (res && Array.isArray(res.cleared)) ? res.cleared : [];
+    const ok = done.length > 0;
+    return {
+      ok: ok, axis: a, cleared: done,
+      note: ok ? ('已撤掉「' + a + '」的条件，下一句追问不会再带上它')
+        : ('没撤掉「' + a + '」：' + String((res && res.note) || '上游没给读数') + '（不当作已清除）'),
+      face: (res && res.face) || this.askThreadFace(),
+    };
+  }
+
+  /** [v4.36.0 · R5-O9] 可清轴表（照上游给的那张；上游没给 ⇒ 空数组，视图据此不画按钮）。 */
+  askClearAxes() {
+    const f = this.askThreadFace();
+    return Array.isArray(f.clearAxes) ? f.clearAxes.slice() : [];
+  }
+
+  /**
+   * [v4.36.0 · R5-O9] 时点条件的人读文案（**唯一出处**在本层转交的契约件里）。
+   *   视图要显示「这一问到底看的是哪一段」时必须走这里，不许自己拼 `≥`。
+   */
+  askTimeLine() {
+    const f = this.askThreadFace();
+    return timeConditionLine(f.atFloor, f.timeOp);
   }
 
   /**

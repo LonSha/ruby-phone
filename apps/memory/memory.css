@@ -579,6 +579,33 @@
     font-size: 12px;
     line-height: 1.5;
 }
+/* [v4.36.0 · R5-O9] 时点条件行 + 可撤条件按钮。
+   为什么时点单独一行:它与「人物」不是同一类条件 —— 用户判断「这一问看的是哪一段」
+   只需要这一句,混在人物后面会被读成附注。三种方向各自成句(截至当时 / 以后 / ≥N楼),
+   颜色比面读数行浅一档,是为了不与「追问:…」那一行抢主次。 */
+.mem-fu-time {
+    margin: 0 0 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: #eef1fa;
+    color: #2f3a63;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.mem-fu-time-none { background: #f7f7fa; color: #8a8aa0; }
+.mem-fu-clear { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; }
+.mem-fu-clear-label { color: #6b6b85; font-size: 11px; }
+.mem-fu-clear-btn {
+    padding: 3px 9px;
+    border: 1px solid #d8dbe8;
+    border-radius: 999px;
+    background: #fbfbfe;
+    color: #4b4b63;
+    font-size: 11px;
+    cursor: pointer;
+}
+.mem-fu-clear-btn:hover { background: #f1f2f9; border-color: #c7cbf0; }
+.mem-fu-clear-btn:active { transform: scale(0.96); }
 .mem-fu-cands { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
 .mem-fu-cand {
     padding: 4px 10px;
