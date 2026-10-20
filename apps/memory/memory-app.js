@@ -70,6 +70,14 @@ import {
   readPhoneFactFace, readPhoneFactReceipt, readPhoneFactBatch, readPhoneFactPlanEdit,
   assemblePhoneFact
 } from '../../config/phone-fact-contract.js';
+/* [v4.37.0 · R5-X1] 随身物品与借还事项的可操作卡片（纯契约：只做读数与归一，
+ *   不推算谁持有、不自己建物品账）。上游 M5-X1 未实现时按计划原文先做**只读卡 + 本地草稿**，
+ *   并把「插件不在场」与「上游在、这件没借过」分形。 */
+import {
+  CUSTODY_STATES, CUSTODY_ACTIONS, CUSTODY_LIMITS,
+  planCustodyState, normalizeCustodyCard, custodyLineOf, shouldReturnLine,
+  handoverRowsOf, custodySelfCheck
+} from '../../config/item-custody-contract.js';
 /* [v4.13.0 · R4-O1] 出处靶心归一与定位手(纯函数)。本层只转交:chat 靶心调宿主
  *   `locateChatFloor`,memory 靶心交回视图派跨 App 事件(见该方法内注释)。 */
 import { normalizeSource, locateTarget } from '../../config/source-locator.js';
@@ -107,6 +115,12 @@ export class MemoryApp {
      *   不丢的后果不是报错,而是把上一段会话读进来的资料画进这一屏,用户以为
      *   手上那份已经读好了 —— 与追问轨迹同族的错数据形态。 */
     this._lore = null;
+    /* [v4.37.0 · R5-X1] 借还草稿与选中物品同样是**本会话**现场：换会话整块丢掉。
+     *   不丢的后果不是报错，而是把上一段的「想还给乙」画进新会话那一屏，
+     *   用户以为这一段的持有关系已经变了 —— 与追问轨迹同族的错数据形态。 */
+    this._custodyDrafts = {};
+    this._itemName = '';
+    this._itemNote = '';
     try {
       // 记忆核心由 index.js 统一 reload，这里只重新指向（实例可能被重建）
       this.data = (window.VirtualPhone && window.VirtualPhone.memoryCore) || null;
@@ -445,6 +459,77 @@ export class MemoryApp {
 
   /** 「本次沿用哪些条件」——计划验收原文点名要显示的那一屏。 */
   askCarryLine() { return carryLineOf(this.askThreadFace()); }
+
+  /* ========== [v4.37.0 · R5-X1] 随身物品与借还事项的可操作卡片 ========== */
+  /**
+   * 上游履约出口在不在（**只判「有没有那口」**，不判数据）。
+   *   与追问面同规：严格判 `typeof === 'function'`，宽松判会把字符串读成「有出口」。
+   */
+  _custodyPlugin() {
+    const win = (typeof window !== 'undefined') ? window : null;
+    try { return win ? win.LonShaMemory : null; } catch (_e) { return null; }
+  }
+  /** 本会话的**本地草稿**（借还意向）。手机只存草稿/引用，不写上游账。 */
+  _custodyDraft() {
+    if (!this._custodyDrafts || typeof this._custodyDrafts !== 'object') this._custodyDrafts = {};
+    return this._custodyDrafts;
+  }
+  /**
+   * 一张物品卡（**只读**：本层不推算谁持有、不自己建物品账）。
+   *
+   * 【三态必须分形】上游不在场 / 上游在但这一件没借过 / 只有本地草稿 ——
+   *   压平任意两态都会造出处置相反的处境长得一样（装插件 vs 换件 vs 写草稿）。
+   *
+   * @param {string} item 物品名
+   * @param {object} [opts] { sourceKey } 同名物品按来源区分
+   * @returns {{state:string, item:string, line:string, should:string, rows:Array, card:object}}
+   */
+  itemCustody(item, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const name = String(item == null ? '' : item).trim();
+    const plugin = this._custodyPlugin();
+    const hasCustody = !!(plugin && typeof plugin.itemCustody === 'function');
+    const drafts = this._custodyDraft();
+    const draft = !!drafts[name];
+    /* 派发相：有履约口走履约面；没有但有草稿 ⇒ 只可写草稿；两样都没有 ⇒ 不在场。 */
+    const phase = planCustodyState(hasCustody, draft);
+    let recv = null;
+    if (phase === CUSTODY_STATES.READY) {
+      try {
+        recv = plugin.itemCustody(name, { sourceKey: o.sourceKey }) || null;
+      } catch (_e) {
+        /* 取数抛了：**如实报读不到**，不许假装「没有借还关系」（两者处置相反）。 */
+        recv = { thrown: true, item: name };
+      }
+    }
+    const card = normalizeCustodyCard(recv, { draft: draft });
+    return {
+      state: card.state, item: card.item || name, card: card,
+      line: custodyLineOf(card), should: shouldReturnLine(card),
+      rows: handoverRowsOf(card),
+    };
+  }
+  /** 物品卡自检的**真消费点**（诊断/视图可随时读一次）。 */
+  itemCustodySelfCheck() {
+    try { return custodySelfCheck(); }
+    catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], states: 0, actions: 0 }; }
+  }
+  /**
+   * 写/清一条**本地草稿**（借还意向）。
+   *   【为什么不直接写事实】上游 M5-X1 未实现 ⇒ 手机**不许**自己建物品账
+   *   （计划原文「不做：不复制物品账」）；草稿只在本机，且读数里明说「只可写草稿」。
+   */
+  itemCustodyDraft(item, text) {
+    const name = String(item == null ? '' : item).trim();
+    if (!name) return { ok: false, note: '先给这件东西起个名（空名存不出草稿）' };
+    const t = String(text == null ? '' : text).trim();
+    const d = this._custodyDraft();
+    if (!t) { delete d[name]; return { ok: true, cleared: true, note: '已清掉「' + name + '」的草稿' }; }
+    d[name] = t;
+    return { ok: true, cleared: false, note: '已存「' + name + '」的草稿（**只是草稿**：没有写成事实，也没有改持有人）' };
+  }
+  /** 本机有几条草稿（视图那一屏的读数；不参与任何事实判定）。 */
+  itemCustodyDraftCount() { return Object.keys(this._custodyDraft()).length; }
 
   /* ========== [v4.23.0 · R4-X2] 设定资料导入向导(消费上游 loreImport* 十二口) ========== */
   /** 上游插件句柄(**安全取**,不抛)。与追问面同款:视图不摸 window,取数全在本层。 */

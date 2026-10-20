@@ -579,6 +579,49 @@
     font-size: 12px;
     line-height: 1.5;
 }
+/* [v4.37.0 · R5-X1] 随身物品与借还卡。
+   为什么「该不该还」单独一行且给独立底色：那是用户来这一屏的理由（本项验收原文
+   点名的那一问）；混在状态行里会被读成附注。 */
+.mem-item-section { border-top: 1px dashed #e3e5f0; padding-top: 10px; }
+.mem-item-face {
+    margin: 4px 0 6px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #33334a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.mem-item-should {
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.mem-item-rows { margin-top: 6px; }
+.mem-item-rows-title { color: #8a8aa0; font-size: 11px; margin-bottom: 4px; }
+.mem-item-row {
+    color: #4b4b63;
+    font-size: 11px;
+    line-height: 1.6;
+    padding-left: 8px;
+    border-left: 2px solid #e3e5f0;
+}
+.mem-item-mini {
+    padding: 3px 9px;
+    border: 1px solid #d8dbe8;
+    border-radius: 999px;
+    background: #fbfbfe;
+    color: #4b4b63;
+    font-size: 11px;
+    cursor: pointer;
+}
+.mem-item-mini:hover { background: #f1f2f9; border-color: #c7cbf0; }
+.mem-item-note:empty { display: none; }
+.mem-item-note-text { color: #b45309; font-size: 12px; }
 /* [v4.36.0 · R5-O9] 时点条件行 + 可撤条件按钮。
    为什么时点单独一行:它与「人物」不是同一类条件 —— 用户判断「这一问看的是哪一段」
    只需要这一句,混在人物后面会被读成附注。三种方向各自成句(截至当时 / 以后 / ≥N楼),

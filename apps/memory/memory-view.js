@@ -26,6 +26,9 @@ import { normalizeSource, isLocatable, sourceLocatorLine, sourceOpenRef, locateR
 import { ASK_RUN_STATES, askRunLine } from '../../config/ask-request.js';
 /* [v4.22.0 · R4-X1] 追问轨迹一行的人读文案(口要在哪、各态怎么说,全在契约件里一处判)。
  *   本视图**不自己拼**那一行:自己拼就会把「待消歧(本次没查)」与「沿用条件」压成同一句。 */
+/* [v4.37.0 · R5-X1] 随身物品与借还事项的可操作卡片。
+ *   与追问面同规格：**只取数、不推算** —— 谁持有、该不该还全由契约件一处判
+ *   （`app.itemCustody()` 转交），视图只排版。 */
 import { traceLineOf, ASK_THREAD_LIMITS } from '../../config/memory-ask-thread.js';
 export class MemoryView {
   constructor(app) {
@@ -317,6 +320,9 @@ export class MemoryView {
      *   有出口但本会话还没开始,三态各有各的话。**不能连坐**——问答面读不出
      *   (`qa` 为空)是常有的事,而追问面此时照样该如实说出自己是哪一态。 */
     parts.push('<div id="mem-fu-host">' + this._askFollowUpHtml() + '</div>');
+    /* [v4.37.0 · R5-X1] 随身物品与借还卡**独立于问答面**渲染（同追问面规格）：
+   *   问答面读不出是常有的事，物品卡此时照样该如实说出自己是哪一态。 */
+    parts.push('<div id="mem-item-host">' + this._itemCustodyHtml() + '</div>');
     /* [v4.23.0 · R4-X2] 资料导入面**独立于问答面**渲染(同追问面规格):问答面读不出是
      *   常有的事,导入面此时照样该如实说出自己是哪一态。 */
     parts.push('<div id="mem-lore-host">' + this._loreHtml() + '</div>');
@@ -431,6 +437,72 @@ export class MemoryView {
     this._fuNote = String(note == null ? '' : note);
     const host = this.container.querySelector('#mem-fu-host');
     if (host) host.innerHTML = this._askFollowUpHtml();
+  }
+
+  /* ================= [v4.37.0 · R5-X1] 随身物品与借还卡 ================= */
+  /**
+   * 物品卡排版。**只取数、不推算**：
+   *   谁持有、该不该还、历次交接全来自 `app.itemCustody()`（它转交纯契约件），
+   *   本视图**不自己判**那一句 —— 自己判就会把「赠与不产生欠还」与「借出中」压成同一句。
+   *
+   * 【为什么把「该不该还」单独一行】那是本项验收原文点名的那一问；混在状态行里
+   *   会被读成附注，而它其实是用户来这一屏的理由。
+   */
+  _itemCustodyHtml() {
+    const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+    const name = String(this._itemName || '');
+    const card = name ? read(() => this.app.itemCustody?.(name), null) : null;
+    const drafts = Number(read(() => this.app.itemCustodyDraftCount?.(), 0)) || 0;
+    const rows = (card && Array.isArray(card.rows)) ? card.rows : [];
+    const rowHtml = rows.length
+      ? rows.map((r) => '<div class="mem-item-row">' + this._esc(String((r && r.line) || '')) + '</div>').join('')
+      : '<span class="mem-hint">' + (name ? '这一件还没有可回看的交接记录' : '先输入一件东西的名字') + '</span>';
+    const body = card
+      ? '    <div id="mem-item-face" class="mem-item-face">' + this._esc(String(card.line || '')) + '</div>' +
+        '    <div id="mem-item-should" class="mem-item-should">' + this._esc(String(card.should || '')) + '</div>'
+      : '    <div id="mem-item-face" class="mem-item-face">物品卡：先在上面写一件东西的名字</div>' +
+        '    <div id="mem-item-should" class="mem-item-should">判不了（还没有选中的物品）</div>';
+    return '  <div class="mem-section mem-item-section">' +
+      '    <div class="mem-section-title"><i class="fa-solid fa-box-archive"></i> 随身物品与借还</div>' +
+      '    <div class="mem-search-row"><input id="mem-item-name" placeholder="例如：那把钥匙 / 借给乙的书" value="' + this._esc(name) + '" /><button id="mem-item-btn">看这一件</button></div>' +
+      '    <div class="mem-hint">本屏**不推算**谁持有：只把上游给的持有关系翻成人话；上游没给就说没给。</div>' +
+      body +
+      '    <div class="mem-item-rows"><div class="mem-item-rows-title">历次交接（只回看关系，不留物品正文）</div>' + rowHtml + '</div>' +
+      '    <div class="mem-search-row">' +
+      '      <input id="mem-item-draft" placeholder="想借/想还？先写一句草稿" />' +
+      '      <button id="mem-item-save" class="mem-item-mini">存草稿</button>' +
+      '      <button id="mem-item-clear" class="mem-item-mini">清草稿</button>' +
+      '    </div>' +
+      '    <div class="mem-hint">草稿只在本机，**不会**写成事实、也不会改持有人' +
+      (drafts ? '（现有 ' + String(drafts) + ' 条草稿）' : '（还没有草稿）') + '。</div>' +
+      '    <div id="mem-item-note" class="mem-item-note">' + (this._itemNote ? '<span class="mem-item-note-text">' + this._esc(String(this._itemNote)) + '</span>' : '') + '</div>' +
+      '  </div>';
+  }
+  /** 看一件东西（只转交取数，不改任何状态）。 */
+  _itemLookup() {
+    const el = this.container.querySelector('#mem-item-name');
+    const v = String(el?.value || '').trim();
+    this._itemName = v;
+    this._itemNote = v ? '' : '先输入一件东西的名字（空名读不出卡）';
+    this._paintItem();
+  }
+  /** 存/清一条本地草稿（**只在本机**；控制器负责说清「只是草稿」）。 */
+  _itemDraftSave(clear) {
+    const nameEl = this.container.querySelector('#mem-item-name');
+    const name = String(this._itemName || nameEl?.value || '').trim();
+    if (!name) { this._itemNote = '先输入一件东西的名字'; this._paintItem(); return; }
+    this._itemName = name;
+    const txt = clear ? '' : String(this.container.querySelector('#mem-item-draft')?.value || '').trim();
+    let res = null;
+    try { res = this.app.itemCustodyDraft?.(name, txt) || null; } catch (_e) { res = null; }
+    if (!res) { this._itemNote = '草稿口读不出：本版 App 未接线（不是「存过了」）'; this._paintItem(); return; }
+    this._itemNote = String(res.note || '');
+    this._paintItem();
+  }
+  /** 物品卡整块重画（面 / 该不该还 / 交接 / 草稿计数 / 回话一并）。 */
+  _paintItem() {
+    const host = this.container.querySelector('#mem-item-host');
+    if (host) host.innerHTML = this._itemCustodyHtml();
   }
 
   /* ================= [v4.23.0 · R4-X2] 设定资料导入向导 ================= */
@@ -1016,11 +1088,25 @@ export class MemoryView {
         }
         /* [v4.22.0 · R4-X1] 消歧候选点选(容器级委托,幂等同上)。
          *   未认下**不产确定结论**:上游说没这个人就保持待消歧,本处只把原话显示出来。 */
-        /* [v4.36.0 · R5-O9] 可撤条件按钮(容器级委托,幂等同上):
+        /* [v4.37.0 · R5-X1] 可撤条件按钮(容器级委托,幂等同上):
          *   轴名取自按钮的 data-axis(它又取自上游那张表) —— 视图不另立清单。 */
         const clearBtn = e.target.closest('.mem-fu-clear-btn');
         if (clearBtn && this.container.contains(clearBtn)) {
           this._clearAskCondition(clearBtn.getAttribute('data-axis') || '');
+          return;
+        }
+        /* [v4.37.0 · R5-X1] 物品卡三处点选（容器级委托，幂等同上）：
+         *   看一件 / 存草稿 / 清草稿 —— 全是**只读或本机**动作，不写上游账。 */
+        if (e.target.closest('#mem-item-btn') && this.container.contains(e.target.closest('#mem-item-btn'))) {
+          this._itemLookup();
+          return;
+        }
+        if (e.target.closest('#mem-item-save') && this.container.contains(e.target.closest('#mem-item-save'))) {
+          this._itemDraftSave(false);
+          return;
+        }
+        if (e.target.closest('#mem-item-clear') && this.container.contains(e.target.closest('#mem-item-clear'))) {
+          this._itemDraftSave(true);
           return;
         }
         /* [v4.23.0 · R4-X2] 导入面的三处点选(容器级委托,幂等同上):
