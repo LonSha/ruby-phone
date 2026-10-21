@@ -21069,3 +21069,74 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 }
 .mem-lore-note:empty { display: none; }
 .mem-lore-note-text { color: #b45309; font-size: 12px; }
+/* ================= [v4.46.0 · R5-X6] 作者改设定的影响预览 =================
+ * 三态各色（受影响 / 不受影响 / 判不了）：三态在口径上处置相反，
+ *   在屏上也不许长成一样 —— 颜色是用户唯一不读字就能分辨的那一层。 */
+.mem-sr-section { border: 1px solid #e3e5f0; border-radius: 12px; padding: 10px; background: #fbfbfe; }
+.mem-sr-face {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #3f3f57;
+    font-size: 12px;
+    line-height: 1.6;
+}
+.mem-sr-state-refused, .mem-sr-state-unreadable { background: #fdf0f0; color: #9b2c2c; }
+.mem-sr-state-absent { background: #fdf7ec; color: #8a5a12; }
+.mem-sr-state-ready { background: #eef7f1; color: #24603c; }
+.mem-sr-state-empty { background: #f2f3f8; color: #4b4b63; }
+.mem-sr-rows { margin-top: 8px; }
+.mem-sr-rows-title { font-size: 11.5px; color: #7b7b90; margin-bottom: 5px; }
+.mem-sr-row {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    padding: 5px 8px;
+    border-radius: 7px;
+    margin-bottom: 4px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.mem-sr-tag {
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.06);
+    font-size: 11px;
+}
+.mem-sr-affected { background: #eef7f1; color: #24603c; }
+.mem-sr-unaffected { background: #f2f3f8; color: #4b4b63; }
+.mem-sr-untracked, .mem-sr-no-fact { background: #fdf7ec; color: #8a5a12; }
+.mem-sr-decrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 7px 12px; }
+.mem-sr-dec, .mem-sr-undec {
+    padding: 3px 10px;
+    border: 1px solid #cfd3e6;
+    border-radius: 999px;
+    background: #fff;
+    color: #3f3f57;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+.mem-sr-dec:hover, .mem-sr-undec:hover { background: #f2f3fb; }
+.mem-sr-cur { font-size: 11px; color: #7b7b90; }
+.mem-sr-gate {
+    margin-top: 8px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #3f3f57;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.mem-sr-ledger {
+    margin-top: 8px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: #f4f5fb;
+    color: #4b4b63;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.mem-sr-note:empty { display: none; }
+.mem-sr-note-text { color: #b45309; font-size: 12px; }

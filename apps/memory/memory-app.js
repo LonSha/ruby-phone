@@ -78,6 +78,16 @@ import {
   planCustodyState, normalizeCustodyCard, custodyLineOf, shouldReturnLine,
   handoverRowsOf, custodySelfCheck
 } from '../../config/item-custody-contract.js';
+/* [v4.46.0 · R5-X6] 作者改设定的影响预览（纯契约件：口径表 / 五态 / 逐项 / 确认闸 /
+ *   撤销三态 / 台账行的唯一出处全在 `config/setting-rewrite-contract.js`）。
+ *   本层只做三件事：引用取数（本机降级**只认字面出现**）、逐项选择的会话现场、
+ *   台账落盘与回读。上游记忆插件没有 R5-X6 出口（与 R5-X1 物品账同处境），
+ *   故不假装调上游 —— 等上游有出口再接，接不上就明说「本机数据源 / 判不了」。 */
+import {
+  SR_FACT_LABEL, SR_STATES, SR_DECISION_LABEL, SR_LIMITS,
+  buildImpactPreview, impactRows, planDecisions, commitGate, planUndo,
+  srLedgerLine, srSelfCheck
+} from '../../config/setting-rewrite-contract.js';
 /* [v4.13.0 · R4-O1] 出处靶心归一与定位手(纯函数)。本层只转交:chat 靶心调宿主
  *   `locateChatFloor`,memory 靶心交回视图派跨 App 事件(见该方法内注释)。 */
 import { normalizeSource, locateTarget } from '../../config/source-locator.js';
@@ -121,6 +131,11 @@ export class MemoryApp {
     this._custodyDrafts = {};
     this._itemName = '';
     this._itemNote = '';
+    /* [v4.46.0 · R5-X6] 改设定旅程同样是**本会话**现场：换会话整块丢掉。
+     *   不丢的后果不是报错，而是把上一段的「旧居 → 新居」预览画进新会话这一屏，
+     *   用户以为手上这份预览是这一段的 —— 与借还草稿同族的错数据形态。
+     *   台账在存储里（重开可查），不随会话丢。 */
+    this._sr = null;
     try {
       // 记忆核心由 index.js 统一 reload，这里只重新指向（实例可能被重建）
       this.data = (window.VirtualPhone && window.VirtualPhone.memoryCore) || null;
@@ -530,6 +545,320 @@ export class MemoryApp {
   }
   /** 本机有几条草稿（视图那一屏的读数；不参与任何事实判定）。 */
   itemCustodyDraftCount() { return Object.keys(this._custodyDraft()).length; }
+  /* ========== [v4.46.0 · R5-X6] 作者改设定的影响预览 ========== */
+  /**
+   * 上游改写出口在不在（**只判「有没有那口」**，不判数据）。
+   *
+   * R5-X6 上游尚未实现（与 R5-X1 物品账同处境）⇒ 本版一律走**本机降级**：
+   *   只读本机已落盘的既有键，读数里如实标「本机数据源」。
+   * 留这个探测点是为了上游有出口时**不必改结构**（只换取数那一层）。
+   */
+  _srPlugin() {
+    const win = (typeof window !== 'undefined') ? window : null;
+    try { return win ? win.LonShaMemory : null; } catch (_e) { return null; }
+  }
+  /** 上游有没有改写出口（有就走上游；本版实测为 false ⇒ 走本机降级）。 */
+  settingImpactHasUpstream() {
+    const p = this._srPlugin();
+    return !!(p && typeof p.settingImpact === 'function');
+  }
+  /** 改设定旅程现场（懒初始化；换会话在 `onChatChanged` 里整块丢掉）。 */
+  _blankSr() {
+    return { kind: '', from: '', to: '', face: null, picks: {}, note: '', ledgerNote: '' };
+  }
+  _srState() { if (!this._sr || typeof this._sr !== 'object') this._sr = this._blankSr(); return this._sr; }
+  /** 台账键（**本机唯一真源**；不写上游，也不新建事务服务）。 */
+  _srLedgerKey() { return 'setting_rewrite_ledger_v1'; }
+  /**
+   * 台账（**重开可查**的落点）。读不出来如实给空台账 —— 空台账是真读数，
+   *   而「读不出来」与「还没确认过」在这里**同形**（都是空 entries）：
+   *   故本方法只负责给结构，措辞一律由契约件 `srLedgerLine` 出。
+   */
+  settingRewriteLedger() {
+    let raw = null;
+    try { raw = this.storage?.get?.(this._srLedgerKey(), null) ?? null; } catch (_e) { raw = null; }
+    let obj = raw;
+    if (typeof raw === 'string') { try { obj = JSON.parse(raw); } catch (_e) { obj = null; } }
+    const entries = (obj && Array.isArray(obj.entries)) ? obj.entries : [];
+    return { entries: entries };
+  }
+  _srLedgerSave(ledger) {
+    try { this.storage?.set?.(this._srLedgerKey(), ledger); return true; } catch (_e) { return false; }
+  }
+  /**
+   * 本机降级的数据源（**只读已落盘的既有键**，不新建账、不复制副本）。
+   *
+   * 每桶独立 try/catch：坏桶只让自己缺席（那一类进「判不了」），不连坐其余类。
+   *   · `ok:true`  ⇒ 这一类**有数据源**（哪怕一条都没有 ⇒ 契约件判 `empty`，真读数）；
+   *   · `ok:false` ⇒ 本机没有这一类的数据源 ⇒ **不是**「没有受影响的引用」。
+   *     ★ 这两态必须分形：压平之后「本机没接财务面」会被读成「财务没被影响」，
+   *       而验收原文要的恰恰是「不误改无关财务」**与**「未追踪明确标未知覆盖」两句
+   *       分别可见 —— 前者是口径的必然（与有没有数据源无关），后者是数据的运气。
+   */
+  _srBuckets() {
+    const out = {};
+    const getRaw = (k) => { try { return this.storage?.get?.(k, null) ?? null; } catch (_e) { return null; } };
+    const toArr = (v) => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch (_e) { return []; } }
+      return [];
+    };
+    const toObj = (v) => {
+      if (v && typeof v === 'object' && !Array.isArray(v)) return v;
+      if (typeof v === 'string') { try { const p = JSON.parse(v); return (p && typeof p === 'object' && !Array.isArray(p)) ? p : {}; } catch (_e) { return {}; } }
+      return {};
+    };
+    const s = (v) => String(v == null ? '' : v).trim();
+    const put = (kind, raw, build) => {
+      if (raw == null) { out[kind] = { ok: false, items: [] }; return; }   // 没有数据源
+      let items = [];
+      try { items = build(raw) || []; } catch (_e) { items = []; }
+      out[kind] = { ok: true, items: items };                             // 有数据源（空也是真读数）
+    };
+    /* 约定 ← 日历备忘（既有键 `calendar_memos`；字段实证 title / dateKey / time） */
+    put('commitment', getRaw('calendar_memos'), (raw) => toArr(raw).map((m, i) => ({
+      id: 'memo:' + i, label: s(m && m.title) || '备忘', ref: 'calendar:' + i,
+      text: [s(m && m.title), s(m && m.dateKey), s(m && m.time)].join(' ')
+    })));
+    /* 会面 ← 通话/短信记录（既有键 `phone_call_history`；字段实证 caller / status / transcript） */
+    put('meeting', getRaw('phone_call_history'), (raw) => toArr(raw).map((h, i) => ({
+      id: 'call:' + i, label: s(h && (h.caller || h.name || h.number)) || '通话', ref: 'call:' + i,
+      text: [s(h && h.caller), s(h && h.status),
+        Array.isArray(h && h.transcript) ? h.transcript.map((t) => s(t && (t.content || t.text))).join(' ') : ''].join(' ')
+    })));
+    /* 人物档案 ← 记忆条目（既有键 `memory_core_v1` / `memory_core`；longTerm[]） */
+    const coreRaw = getRaw('memory_core_v1') ?? getRaw('memory_core');
+    put('person', coreRaw, (raw) => {
+      const c = toObj(raw);
+      return toArr(c.longTerm || c.memories).map((m, i) => ({
+        id: 'mem:' + i, label: s(m && (m.title || m.place)) || '记忆条目', ref: 'memory:' + i,
+        text: [s(m && m.title), s(m && m.place), s(m && m.content), s(m && m.text)].join(' ')
+      }));
+    });
+    /* 章节正文 ← 酒馆楼层（宿主上下文不可得 ⇒ 这一类没有数据源，**不是**「没有受影响的」） */
+    let chat = null;
+    try { chat = (window.SillyTavern?.getContext?.() || {}).chat || null; } catch (_e) { chat = null; }
+    put('chapter', Array.isArray(chat) ? chat : null, (raw) => raw.map((m, i) => ({
+      id: 'floor:' + i, label: '第 ' + (i + 1) + ' 楼', ref: 'chat:' + i,
+      text: s(m && (m.mes || m.content))
+    })));
+    /* 私人笔记 ← 日记（既有键 `diary_entries`；口径表把它恒列豁免面） */
+    put('note', getRaw('diary_entries'), (raw) => toArr(raw).map((e, i) => ({
+      id: 'diary:' + i, label: s(e && e.title) || '日记', ref: 'diary:' + i,
+      text: [s(e && e.title), s(e && e.content), s(e && e.text)].join(' ')
+    })));
+    /* 财务账 ← 旅行记账（既有键 `tv_book.expenses`；字段实证 id / note / payer / amount） */
+    put('finance', getRaw('tv_book'), (raw) => {
+      const b = toObj(raw);
+      return toArr(b.expenses).map((e, i) => ({
+        id: 'exp:' + (s(e && e.id) || i), label: s(e && e.note) || ('费用 ' + (s(e && e.id) || i)),
+        ref: 'traveldesk:' + (s(e && e.id) || i),
+        text: [s(e && e.note), s(e && e.payer), s(e && e.amount), s(e && e.finalCNY)].join(' ')
+      }));
+    });
+    return out;
+  }
+  /**
+   * 引用取数：**只认字面出现**（计划原文「不猜」）。
+   *
+   * 语义相似不算命中 —— 猜出来的「受影响」会让用户去改一件本来无关的事，
+   *   而那个错误**看不见**（本仓最贵的形态）。
+   * `trackedKinds` 只收**有数据源**的类：没有数据源的类不进 tracked，
+   *   于是契约件把它判成「会受影响但判不了」（未追踪），而不是「没有受影响的」。
+   */
+  _srGatherRefs(from, buckets) {
+    const needle = String(from == null ? '' : from).trim();
+    const rows = [];
+    const trackedKinds = [];
+    if (!needle) return { refs: rows, trackedKinds: trackedKinds };
+    for (const k of Object.keys(buckets)) {
+      const b = buckets[k];
+      if (!b || b.ok !== true) continue;         // 没有数据源 ⇒ 不进 tracked（判不了）
+      trackedKinds.push(k);
+      const items = Array.isArray(b.items) ? b.items : [];
+      for (const it of items) {
+        const t = String((it && it.text) || '');
+        if (t.indexOf(needle) < 0) continue;     // ★ 字面出现才算（不猜、不做语义近似）
+        rows.push({
+          id: String(it.id || ''), kind: k,
+          label: String(it.label || ''), ref: String(it.ref || '')
+        });
+        if (rows.length >= SR_LIMITS.refs) break;
+      }
+      if (rows.length >= SR_LIMITS.refs) break;
+    }
+    return { refs: rows, trackedKinds: trackedKinds };
+  }
+  /**
+   * 影响预览（**唯一装配点**：本层取数，判定全在契约件）。
+   *
+   * @param {object} fact `{ kind, text }` 原事实（**必须有 text**）
+   * @param {string} next 新设定
+   * @param {object} [opts] `{ prevKey }` 上一次预览的事实指纹（不同 ⇒ 旧预览作废）
+   * @returns {object} 面读数（`line` 是唯一的人读出处）
+   */
+  settingImpactPreview(fact, next, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const s = this._srState();
+    const f = (fact && typeof fact === 'object') ? fact : {};
+    const kind = String(f.kind == null ? '' : f.kind).trim();
+    const from = String(f.text == null ? '' : f.text).trim();
+    const to = String(next == null ? '' : next).trim();
+    let face = null;
+    try {
+      const g = this._srGatherRefs(from, this._srBuckets());
+      face = buildImpactPreview({
+        fact: { kind: kind, text: from }, next: to,
+        refs: g.refs, trackedKinds: g.trackedKinds, prevKey: o.prevKey
+      });
+    } catch (e) {
+      /* 取数抛了：如实报**读不到**（不是「没有受影响的引用」—— 两者处置相反）。 */
+      face = buildImpactPreview({
+        fact: { kind: kind, text: from }, next: to,
+        refs: [], trackedKinds: [], thrown: true
+      });
+    }
+    s.kind = kind; s.from = from; s.to = to;
+    s.face = face; s.picks = {}; s.note = '';
+    return face;
+  }
+  /** 当前预览的读数（唯一出处；没有预览时明说「先填」）。 */
+  settingImpactLine() {
+    const s = this._srState();
+    return s.face ? String(s.face.line || '') : '改设定：先填原事实与新设定（空输入一个字都不写）';
+  }
+  /** 当前预览的态（视图按态分色；不重判，只转交）。 */
+  settingImpactState() { const s = this._srState(); return (s.face && s.face.state) || 'none'; }
+  /** 逐行（四态各有各的形；只排版，不重判）。 */
+  settingImpactRows() { const s = this._srState(); return impactRows(s.face); }
+  /** 可选的事实种类（视图下拉的唯一出处）。 */
+  settingImpactFactOptions() {
+    return Object.keys(SR_FACT_LABEL).map((k) => ({ kind: k, label: SR_FACT_LABEL[k] }));
+  }
+  /** 两种决定的清单（视图按钮的唯一出处）。 */
+  settingImpactDecisionOptions() {
+    return Object.keys(SR_DECISION_LABEL).map((d) => ({ decision: d, label: SR_DECISION_LABEL[d] }));
+  }
+  /** 本次已记下的逐项选择（只回看选择，不回看正文）。 */
+  settingImpactPicks() {
+    const s = this._srState();
+    const p = (s.picks && typeof s.picks === 'object') ? s.picks : {};
+    return Object.keys(p).map((id) => ({ id: id, decision: p[id], label: SR_DECISION_LABEL[p[id]] || p[id] }));
+  }
+  /**
+   * 记一项决定（**不许默认**：没记就是没决定，闸门据此拦住确认）。
+   *   「保留原样」与「按新设定重算」处置相反，故只有这两种，不合并成一个「更新」。
+   */
+  settingImpactDecide(id, decision) {
+    const s = this._srState();
+    const k = String(id == null ? '' : id).trim();
+    const d = String(decision == null ? '' : decision).trim();
+    if (!k) return { ok: false, note: '没有说改哪一项' };
+    if (!SR_DECISION_LABEL[d]) {
+      return { ok: false, note: '「' + d + '」不是本版的两种决定之一（保留原样 / 按新设定重算）' };
+    }
+    if (!s.picks || typeof s.picks !== 'object') s.picks = {};
+    s.picks[k] = d;
+    return { ok: true, note: '已记下：' + SR_DECISION_LABEL[d] };
+  }
+  /** 清掉一项决定（回到「还没决定」——那是**真读数**，不是「已保留」）。 */
+  settingImpactUndecide(id) {
+    const s = this._srState();
+    const k = String(id == null ? '' : id).trim();
+    if (!k || !s.picks || typeof s.picks !== 'object') return { ok: false, note: '这一项本来就没决定' };
+    const had = !!s.picks[k];
+    delete s.picks[k];
+    return { ok: true, note: had ? '已清掉这一项的决定（回到还没决定）' : '这一项本来就没决定' };
+  }
+  /** 逐项计划（未决定 / 给不该改的项下决定 —— 一律由契约件判，本层不重判）。 */
+  settingImpactPlan() {
+    const s = this._srState();
+    return planDecisions(s.face, s.picks);
+  }
+  /** 确认闸的读数（**只看不写**：视图在确认前就能看到闸怎么说）。 */
+  settingImpactGate() {
+    const s = this._srState();
+    return commitGate(s.face, this.settingImpactPlan());
+  }
+  /**
+   * 确认（**过闸才落台账**；验收原文「取消零写」）。
+   *
+   * 【为什么闸不放行时一个字节都不写】「取消」与「确认」在用户眼里只差一次点击，
+   *   而两者处置相反：闸不放行还写台账，用户下一次回读会以为**处理过了**。
+   * 【为什么重复确认不双插】同一次改写（同一指纹）再点一次只更新既有那一笔，
+   *   台账行数不涨 —— 否则「本机记了 N 次」这个读数会被连点刷成假的。
+   * 【为什么 `localOnly` 恒真】上游没有 R5-X6 出口 ⇒ 这一次改写**只落本机**，
+   *   台账读数里必须分列（`srLedgerLine` 的「只落本机」那一列就是它）。
+   */
+  settingImpactConfirm() {
+    const s = this._srState();
+    const plan = this.settingImpactPlan();
+    const gate = commitGate(s.face, plan);
+    if (!gate.ok) { s.note = gate.line; return { ok: false, gate: gate, note: gate.line }; }
+    const f = s.face;
+    const key = String(f.key || '');
+    if (!key) { s.note = '判不了：这一次改写没有身份（不落台账）'; return { ok: false, gate: gate, note: s.note }; }
+    const ledger = this.settingRewriteLedger();
+    const rows = plan.rows.filter((r) => r && r.decision)
+      .map((r) => ({ id: r.id, decision: r.decision, line: r.line }));
+    const cov = {
+      tracked: f.coverage.tracked.slice(), untracked: f.coverage.untracked.slice(),
+      unaffected: f.coverage.unaffected.slice(), complete: !!f.coverage.complete
+    };
+    const dup = ledger.entries.find((e) => e && String(e.key) === key) || null;
+    let note = '';
+    if (dup) {
+      /* 同一次改写重复确认：只更新既有那一笔（不双插），并如实说「没有新增」。 */
+      dup.rows = rows; dup.cov = cov; dup.undone = false;
+      dup.from = f.from; dup.to = f.to; dup.factKind = f.factKind;
+      note = gate.line + '；这一次改写**本来就在台账里**（只更新了那一笔，没有新增）';
+    } else {
+      ledger.entries.push({
+        key: key, seq: ledger.entries.length + 1,
+        factKind: f.factKind, from: f.from, to: f.to,
+        undone: false, localOnly: true, rows: rows, cov: cov
+      });
+      note = gate.line;
+    }
+    /* [v4.46.0 · R5-X6] 台账上限（`SR_LIMITS.ledger`）：本机只留最近 N 次改写。
+       ★ 丢最旧这件事必须**说出来**：静默丢会让用户回读时把「被裁掉的那几次」
+       读成「本来就没记过」—— 而两者处置相反（没记过 ⇒ 重做一次；
+       记过但已不在本机 ⇒ 那份决定已经回不来了）。
+       裁剪只在**超出上限**时发生，且只动最旧的那些，不动这一次。 */
+    let trimmed = 0;
+    while (ledger.entries.length > SR_LIMITS.ledger) { ledger.entries.shift(); trimmed += 1; }
+    if (trimmed) {
+        note = note + '；本机台账只留最近 ' + SR_LIMITS.ledger + ' 次改写，**丢了最旧的 '
+            + trimmed + ' 次**（重开看不到那几次了）';
+    }
+    const saved = this._srLedgerSave(ledger);
+    s.note = saved ? note : (note + '；但台账**没写进去**（存储不可用）—— 重开查不到这一次');
+    return { ok: true, gate: gate, key: key, saved: saved, note: s.note };
+  }
+  /**
+   * 撤销（验收原文「确认后重开与撤销可回读」）。
+   *   三态由契约件判：可撤 / **已经撤过**（noop）/ **本机台账里没有这一次**（refused）。
+   *   把「撤过了」报成「撤成功」，用户会以为刚刚发生了一次撤销。
+   */
+  settingImpactUndo(key) {
+    const s = this._srState();
+    const k = String(key == null ? '' : key).trim() || String((s.face && s.face.key) || '');
+    const ledger = this.settingRewriteLedger();
+    const r = planUndo(ledger, k);
+    if (!r.ok) { s.ledgerNote = r.line; return { ok: false, undo: r, note: r.line }; }
+    const hit = ledger.entries.find((e) => e && String(e.key) === String(k)) || null;
+    if (hit) hit.undone = true;
+    const saved = this._srLedgerSave(ledger);
+    s.ledgerNote = saved ? r.line : (r.line + '；但台账**没写回去**（存储不可用）');
+    return { ok: true, undo: r, saved: saved, note: s.ledgerNote };
+  }
+  /** 台账一行（**重开可查**；空台账如实说，已撤与只落本机分列）。 */
+  settingRewriteLedgerLine() { return srLedgerLine(this.settingRewriteLedger()); }
+  /** 契约件自检的真消费点（诊断/视图可随时读一次）。 */
+  settingRewriteSelfCheck() {
+    try { return srSelfCheck(); }
+    catch (e) { return { problems: ['自检抛了:' + String((e && e.message) || e)], factKinds: 0, refKinds: 0 }; }
+  }
 
   /* ========== [v4.23.0 · R4-X2] 设定资料导入向导(消费上游 loreImport* 十二口) ========== */
   /** 上游插件句柄(**安全取**,不抛)。与追问面同款:视图不摸 window,取数全在本层。 */

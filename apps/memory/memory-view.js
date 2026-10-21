@@ -37,6 +37,9 @@ export class MemoryView {
     /** 当前分页（重绘后保持；非法值回落 overview） */
     this._tab = 'overview';
     this._delegated = false;
+    /* [v4.46.0 · R5-X6] 改设定那一屏的回话（**本会话**现场：只回看操作结果，不持数据）。
+     *   与 `_itemNote` 同规：控制器给措辞，本层只显示。 */
+    this._srNote = '';
   }
 
   /** 合法分页清单（顺序即界面顺序） */
@@ -323,6 +326,9 @@ export class MemoryView {
     /* [v4.37.0 · R5-X1] 随身物品与借还卡**独立于问答面**渲染（同追问面规格）：
    *   问答面读不出是常有的事，物品卡此时照样该如实说出自己是哪一态。 */
     parts.push('<div id="mem-item-host">' + this._itemCustodyHtml() + '</div>');
+    /* [v4.46.0 · R5-X6] 改设定影响面**独立于问答面**渲染（同追问面规格）：
+     *   问答面读不出是常有的事，影响面此时照样该如实说出自己是哪一态。 */
+    parts.push('<div id="mem-sr-host">' + this._settingRewriteHtml() + '</div>');
     /* [v4.23.0 · R4-X2] 资料导入面**独立于问答面**渲染(同追问面规格):问答面读不出是
      *   常有的事,导入面此时照样该如实说出自己是哪一态。 */
     parts.push('<div id="mem-lore-host">' + this._loreHtml() + '</div>');
@@ -503,6 +509,120 @@ export class MemoryView {
   _paintItem() {
     const host = this.container.querySelector('#mem-item-host');
     if (host) host.innerHTML = this._itemCustodyHtml();
+  }
+  /* ================= [v4.46.0 · R5-X6] 作者改设定的影响预览 ================= */
+  /**
+   * 改设定分区排版。**只取数、不重判**：
+   *   读数行来自 `app.settingImpactLine()`，逐行来自 `app.settingImpactRows()`，
+   *   闸读数来自 `app.settingImpactGate()`，台账行来自 `app.settingRewriteLedgerLine()`
+   *   —— 措辞全在契约件里一处判，本视图只排版。
+   *
+   * 【为什么每一态都要在屏上各有一句】验收原文两格都点名要**看得见**：
+   *   · 「不误改无关财务」—— 那是「明确不受影响」这一列；
+   *   · 「未追踪关系明确标未知覆盖」—— 那是「判不了」这一列。
+   *   视图若把它们并成一句「已检查」，用户读到的就是「都看过了」而真实处境是「有一半没看」。
+   */
+  _settingRewriteHtml() {
+    const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+    const kinds = read(() => this.app.settingImpactFactOptions?.(), []) || [];
+    const decs = read(() => this.app.settingImpactDecisionOptions?.(), []) || [];
+    const rows = read(() => this.app.settingImpactRows?.(), []) || [];
+    const picks = read(() => this.app.settingImpactPicks?.(), []) || [];
+    const pickOf = {};
+    for (const p of picks) if (p && p.id) pickOf[String(p.id)] = String(p.decision || '');
+    const gate = read(() => this.app.settingImpactGate?.(), null);
+    const kindSel = kinds.map((k) =>
+      '<option value="' + this._esc(k.kind) + '">' + this._esc(k.label) + '</option>').join('');
+    const decBtns = decs.map((d) =>
+      '<button class="mem-sr-dec" data-decision="' + this._esc(d.decision) + '">' + this._esc(d.label) + '</button>').join('');
+    /* 逐行：受影响项给两个决定按钮（**不许默认**）；其余态只显示读数行。 */
+    const rowHtml = rows.length
+      ? rows.map((r) => {
+        const need = !!(r && r.needDecision);
+        const cur = pickOf[String(r.id || '')] || '';
+        const dec = need
+          ? '      <div class="mem-sr-decrow" data-id="' + this._esc(r.id) + '">' + decBtns
+            + '<button class="mem-sr-undec" data-id="' + this._esc(r.id) + '">清决定</button>'
+            + '<span class="mem-sr-cur">' + this._esc(cur || '还没决定') + '</span></div>'
+          : '';
+        return '    <div class="mem-sr-row mem-sr-' + this._esc(String(r.state || '')) + '">'
+          + '<span class="mem-sr-tag">' + this._esc(String(r.tag || '')) + '</span>'
+          + '<span class="mem-sr-text">' + this._esc(String(r.line || '')) + '</span></div>'
+          + dec;
+      }).join('\n')
+      : '    <div class="mem-hint">还没有预览（先填上面两格再点「看影响」）</div>';
+    const gateLine = gate ? String(gate.line || '') : '确认闸：还没有预览';
+    return '  <div class="mem-section mem-sr-section">' +
+      '    <div class="mem-section-title"><i class="fa-solid fa-pen-ruler"></i> 改设定：会牵动哪些地方</div>' +
+      '    <div class="mem-hint">改的是**成立的设定本身**（住所 / 身份 / 关系 / 时间 / 钱款），' +
+      '不是改某一条记忆的对错。逐项由你决定**保留原样**还是**按新设定重算**。</div>' +
+      '    <div class="mem-search-row">' +
+      '      <select id="mem-sr-kind">' + kindSel + '</select>' +
+      '      <input id="mem-sr-from" placeholder="原事实（例如：旧居在城西）" />' +
+      '      <input id="mem-sr-to" placeholder="新设定（例如：搬到城南）" />' +
+      '      <button id="mem-sr-preview">看影响</button>' +
+      '    </div>' +
+      '    <div id="mem-sr-face" class="mem-sr-face mem-sr-state-' + this._esc(String(read(() => this.app.settingImpactState?.(), 'none') || 'none')) + '">'
+      + this._esc(String(read(() => this.app.settingImpactLine?.(), '') || '')) + '</div>' +
+      '    <div id="mem-sr-rows" class="mem-sr-rows"><div class="mem-sr-rows-title">逐行（受影响 / 不受影响 / 判不了，三态各列）</div>' + rowHtml + '</div>' +
+      '    <div id="mem-sr-gate" class="mem-sr-gate">' + this._esc(gateLine) + '</div>' +
+      '    <div class="mem-search-row">' +
+      '      <button id="mem-sr-confirm">确认（过闸才落台账）</button>' +
+      '      <button id="mem-sr-undo" class="mem-item-mini">撤销这一次</button>' +
+      '    </div>' +
+      '    <div id="mem-sr-ledger" class="mem-sr-ledger">'
+      + this._esc(String(read(() => this.app.settingRewriteLedgerLine?.(), '') || '')) + '</div>' +
+      '    <div id="mem-sr-note" class="mem-item-note">' + (this._srNote ? '<span class="mem-item-note-text">' + this._esc(String(this._srNote)) + '</span>' : '') + '</div>' +
+      '  </div>';
+  }
+  /** 看影响（只转交取数，不改任何状态）。 */
+  _srPreview() {
+    const q = (sel) => this.container.querySelector(sel);
+    const kind = String(q('#mem-sr-kind')?.value || '').trim();
+    const from = String(q('#mem-sr-from')?.value || '').trim();
+    const to = String(q('#mem-sr-to')?.value || '').trim();
+    if (!from || !to) {
+      /* 空输入**一个字都不写**（拒收是真读数，不是「没有受影响的」）。 */
+      this._srNote = '先填原事实与新设定（空输入一个字都不写）';
+      try { this.app.settingImpactPreview?.({ kind: kind, text: from }, to); } catch (_e) { /* 忽略 */ }
+      this._paintSr();
+      return;
+    }
+    try { this.app.settingImpactPreview?.({ kind: kind, text: from }, to); } catch (_e) { /* 忽略 */ }
+    this._srNote = '';
+    this._paintSr();
+  }
+  /** 记一项决定（只转交，措辞由控制器给）。 */
+  _srDecide(id, decision) {
+    let res = null;
+    try { res = this.app.settingImpactDecide?.(id, decision) || null; } catch (_e) { res = null; }
+    this._srNote = res ? String(res.note || '') : '决定口读不出：本版 App 未接线（不是「记下了」）';
+    this._paintSr();
+  }
+  _srUndecide(id) {
+    let res = null;
+    try { res = this.app.settingImpactUndecide?.(id) || null; } catch (_e) { res = null; }
+    this._srNote = res ? String(res.note || '') : '决定口读不出：本版 App 未接线';
+    this._paintSr();
+  }
+  /** 确认（**过闸才落台账**；不过闸时控制器一个字节都不写）。 */
+  _srConfirm() {
+    let res = null;
+    try { res = this.app.settingImpactConfirm?.() || null; } catch (_e) { res = null; }
+    this._srNote = res ? String(res.note || '') : '确认口读不出：本版 App 未接线（不是「确认过了」）';
+    this._paintSr();
+  }
+  /** 撤销（三态各有各的话：可撤 / 已撤过 / 本机台账里没有这一次）。 */
+  _srUndo() {
+    let res = null;
+    try { res = this.app.settingImpactUndo?.() || null; } catch (_e) { res = null; }
+    this._srNote = res ? String(res.note || '') : '撤销口读不出：本版 App 未接线';
+    this._paintSr();
+  }
+  /** 改设定分区整块重画（读数 / 逐行 / 闸 / 台账 / 回话一并）。 */
+  _paintSr() {
+    const host = this.container.querySelector('#mem-sr-host');
+    if (host) host.innerHTML = this._settingRewriteHtml();
   }
 
   /* ================= [v4.23.0 · R4-X2] 设定资料导入向导 ================= */
@@ -1107,6 +1227,32 @@ export class MemoryView {
         }
         if (e.target.closest('#mem-item-clear') && this.container.contains(e.target.closest('#mem-item-clear'))) {
           this._itemDraftSave(true);
+          return;
+        }
+        /* [v4.46.0 · R5-X6] 改设定面五处点选（容器级委托，幂等同上）：
+         *   看影响 / 记决定 / 清决定 / 确认 / 撤销 —— 全是**取数或本机**动作，
+         *   一个字节都不写聊天原文（确认只落本机台账，过闸才落）。 */
+        if (e.target.closest('#mem-sr-preview') && this.container.contains(e.target.closest('#mem-sr-preview'))) {
+          this._srPreview();
+          return;
+        }
+        if (e.target.closest('#mem-sr-confirm') && this.container.contains(e.target.closest('#mem-sr-confirm'))) {
+          this._srConfirm();
+          return;
+        }
+        if (e.target.closest('#mem-sr-undo') && this.container.contains(e.target.closest('#mem-sr-undo'))) {
+          this._srUndo();
+          return;
+        }
+        const srDec = e.target.closest('.mem-sr-dec');
+        if (srDec && this.container.contains(srDec)) {
+          const row = srDec.closest('.mem-sr-decrow');
+          this._srDecide(row ? (row.getAttribute('data-id') || '') : '', srDec.getAttribute('data-decision') || '');
+          return;
+        }
+        const srUndec = e.target.closest('.mem-sr-undec');
+        if (srUndec && this.container.contains(srUndec)) {
+          this._srUndecide(srUndec.getAttribute('data-id') || '');
           return;
         }
         /* [v4.23.0 · R4-X2] 导入面的三处点选(容器级委托,幂等同上):
