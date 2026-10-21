@@ -18,6 +18,13 @@
 'use strict';
 import { defaultPlaceSettings, readSceneFace, projectScene, scenePromptBlock } from './place-data.js';
 import { PlaceView } from './place-view.js';
+/* [v4.43.0 · R5-X3] 多人行踪时间带与会面证据（纯契约：只做读数与归一，不推算位置）。
+ *   与既有 `presenceAt`（「此刻这个地点有谁」）**不是同一件事**：
+ *   本件答的是「某个时间窗里这几个人各自在哪几段有据在场、谁和谁**可能**共处过」。 */
+import {
+  BAND_STATES, MEET_STATES, BAND_LIMITS,
+  normalizeBand, coPresenceOf, buildPresenceBand, presenceBandLine, presenceBandSelfCheck
+} from '../../config/presence-band-contract.js';
 import { readPushProbe } from '../../config/world-bridge.js';
 /* [v4.05.0 · R3-X9] 探索内核:清单 / 路径 / 地点卡 / 出行提案。
  *   本 App 只做三件事:①把已有几面数据**现取**出来交给内核;②把内核的话摆到界面上;
@@ -158,6 +165,70 @@ export class PlaceApp {
         if (Array.isArray(notes)) raw.notes = notes;
         return normalizeRoamInputs(raw);
     }
+    /* ========== [v4.43.0 · R5-X3] 多人行踪时间带与会面证据 ========== */
+    /**
+     * 把上游 scene 面的在场记录**翻成行踪片段**（本层只翻译形状，不推算位置）。
+     *
+     * 【★ 为什么没有 ref 的片段判「未知」而不是「在场」】上游给的在场记录若**没带出处**
+     *   （`ref`），那这一段的正文**读不到** —— 把它当「有据在场」会让用户以为
+     *   「他一直在那儿」，而其实只是没数据。故一律如实落 `unknown`（不画连续线）。
+     * 【★ 为什么 conflictWith 单列】同一时段两处都报了是**数据冲突**，
+     *   不是「同时在两处」—— 两者处置相反（前者要人去核，后者是超能力）。
+     */
+    bandCharsFromScene(names) {
+        const want = Array.isArray(names) ? names.map((x) => String(x == null ? '' : x).trim()).filter(Boolean) : [];
+        const out = [];
+        let presence = null;
+        let readOk = false;
+        try {
+            const pkg = this.projection();
+            const proj = (pkg && pkg.proj) || null;
+            /* ★ 只有「真读到在场面」才算读过：面缺席 / 抛错都算**没读到** ——
+             *   那与「读了、确实没有片段」是两件事（后者才是「没行踪」）。 */
+            if (proj && proj.ok && Array.isArray(proj.presence)) { presence = proj.presence; readOk = true; }
+        } catch (_e) { presence = null; readOk = false; }
+        for (const name of want) {
+            const segs = readOk
+                ? presence.filter((g) => String(g && g.name) === name).map(function (g) {
+                    const e = (g && typeof g === 'object') ? g : {};
+                    return {
+                        from: String(e.from || ''), to: String(e.to || ''),
+                        place: String(e.key || e.place || ''), ref: String(e.ref || ''),
+                        conflictWith: String(e.conflictWith || ''),
+                        absent: e.absent === true,
+                        unread: e.unread === true || !String(e.ref || ''),
+                    };
+                })
+                /* ★ 这一轮**没读到**在场面 ⇒ 如实给一条「未知」片段，
+                 *   而不是给零片段（零片段会被读成「他没有任何行踪」——那是另一件事）。 */
+                : [{ from: '', to: '', place: '', ref: '', conflictWith: '', absent: false, unread: true }];
+            out.push({ id: name, name: name, segments: segs });
+        }
+        return out;
+    }
+    /** 一次取齐行踪带（**只读**：本层不判重叠，转交纯契约件）。 */
+    presenceBand(names, opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        try {
+            return buildPresenceBand({
+                chars: this.bandCharsFromScene(names),
+                evidenced: o.evidenced === true,
+            });
+        } catch (_e) {
+            return buildPresenceBand({ thrown: true });
+        }
+    }
+    /** 行踪带一行读数（视图只排版）。 */
+    presenceBandLineOf(face) {
+        try { return presenceBandLine(face); }
+        catch (_e) { return '行踪带：读不到'; }
+    }
+    /** 行踪契约件自检的**真消费点**（方法名与 import 不同名，防同类遮蔽）。 */
+    presenceBandSelfCheck() {
+        try { return presenceBandSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], bandStates: 0, meetStates: 0 }; }
+    }
+
     /** 探索清单(去过 / 待探索 / 可进入 / 未知)。不抛:异常一律降级为一行归因 */
     exploreFace() {
         try { return exploreList(this.roamInputs()); }

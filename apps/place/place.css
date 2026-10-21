@@ -316,3 +316,28 @@
   word-break: break-word;
 }
 .pl-roam .pl-roam-reg { color: #8ba3b8; }
+/* ---------- [v4.43.0 · R5-X3] 行踪时间带与会面证据 ----------
+ * 为什么「可能共处」与「有互动证据」用不同底色：它们是两件事（前者没有证据），
+ * 只靠文案区分时用户扫一眼容易读成「见过了」。 */
+.pl-band-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.pl-band-chip {
+    border: 1px solid #2b4a63;
+    background: transparent;
+    color: #cfe3f5;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.pl-band-chip.on { background: #2b4a63; }
+.pl-band-actions { margin: 0 0 6px; }
+.pl-band-ev {
+    border: 1px solid #3a5c78;
+    background: transparent;
+    color: #9fc0da;
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.pl-band-row { font-size: 12px; color: #cfe3f5; line-height: 1.7; word-break: break-word; }

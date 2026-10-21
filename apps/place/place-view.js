@@ -18,6 +18,11 @@ export class PlaceView {
         this.container = null;
         /** 最近一次渲染用的读数包（供绑定回调判断是否可用） */
         this._pkg = null;
+        /* [v4.43.0 · R5-X3] 行踪时间带选中的角色（**只在本会话**：不落盘）。
+         *   为什么留在内存：本项是**读侧**功能（计划原文「读侧功能不写故事」），
+         *   选择本身不是数据。 */
+        this._bandNames = [];
+        this._bandEvidenced = false;
     }
 
     render(container) {
@@ -62,6 +67,9 @@ export class PlaceView {
              *   它读的是同一份 presence 的另一种切法（按「同一处 ≥2 人」分组），
              *   两块放一起读者才能对照「谁在哪」与「哪处有两人以上」。 */
             this._coPresenceCard(proj, face),
+            /* [v4.43.0 · R5-X3] 行踪时间带：与「同楼同刻」并列 —— 前者是**瞬时**读数，
+             *   本卡是**时间窗**读数（两人同地不同时间不算见面）。 */
+            this._presenceBandCard(),
             /* [v4.05.0 · R3-X9] 探索卡:真正把「只能看」变成「能选」的那一块。
              *   位置有讲究:它排在「谁在这个地方 / 同楼同刻」之后 ——
              *   读者先看清原地有什么,再决定要去哪;排到最前面等于让人还没看当前就被劝出门。 */
@@ -347,6 +355,53 @@ export class PlaceView {
 
 
     /**
+     * [v4.43.0 · R5-X3] 多人行踪时间带与会面证据。
+     *
+     * 【与上一块的差别（两块必须并存，不能合并）】
+     *   `_coPresenceCard`（同楼同刻）答的是「**此刻**哪处 ≥2 人」——它是**瞬时**读数；
+     *   本卡答的是「**一段时间窗里**这几个人各自在哪几段有据在场、谁和谁**可能**共处过」。
+     *   验收原文点名要治的是后者：**「两人相同场所在不同时间不显示已见面」**。
+     *
+     * 【三条纪律】
+     *   ① 判定走 `app.presenceBand()`（控制器转交纯契约件）—— 本视图**不自己判**重叠；
+     *   ② **未知区间不画连续线**：那一段如实标「未知」，不给任何连线；
+     *   ③ **可能共处 ≠ 已见面**：没有互动证据时只说「可能共处」。
+     */
+    _presenceBandCard() {
+        const names = Array.isArray(this._bandNames) ? this._bandNames : [];
+        const face = (() => { try { return this.app.presenceBand?.(names, { evidenced: this._bandEvidenced === true }) || null; } catch (_e) { return null; } })();
+        const line = face ? String(this.app.presenceBandLineOf?.(face) || '') : '行踪带：本版 App 未接线（不是「没有行踪」）';
+        const rows = (face && Array.isArray(face.pairs)) ? face.pairs : [];
+        const rowHtml = rows.length
+            ? rows.map((p) => {
+                /* ★ 显示文案取自读数口给的 `why`（契约件已把三态说清），
+                 *   视图**不自己比状态字面量** —— 自己比就会在契约件改名时静默落空，
+                 *   于是「判不了」被显示成「没有重叠」（两者处置相反）。 */
+                const tag = String(p.why || '');
+                const spans = (Array.isArray(p.pairs) ? p.pairs : []).map((x) => {
+                    const fmt = (n) => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+                    return fmt(x.from) + '–' + fmt(x.to) + ' @ ' + String(x.place || '');
+                }).join('；');
+                return '<div class="pl-band-row">' + this._esc(String(p.aName || p.a) + ' × ' + String(p.bName || p.b))
+                    + ' · ' + this._esc(tag) + (spans ? ' · ' + this._esc(spans) : '') + '</div>';
+            }).join('')
+            : '<div class="pl-empty">' + this._esc('还没有重叠片段（选两人以上再看）') + '</div>';
+        const chips = names.map((n) => '<button class="pl-band-chip on" data-band-name="' + this._esc(n) + '">' + this._esc(n) + ' ×</button>').join('');
+        return [
+            '<div class="pl-card">',
+            '  <div class="pl-card-title">行踪时间带<span class="pl-count">' + names.length + ' 人</span></div>',
+            '  <div class="pl-empty">' + this._esc(line) + '</div>',
+            '  <div class="pl-band-chips">' + chips + '</div>',
+            '  <div class="pl-band-actions"><button class="pl-band-ev" id="pl-band-evidenced">'
+            + (this._bandEvidenced === true ? '已按「有互动证据」算（点一下改回）' : '只有互动证据才算见面（点一下改）') + '</button></div>',
+            '  <div class="pl-hint">未知片段**不画连续线**；重叠但没有互动证据时只说「可能共处」，不认定见面。</div>',
+            '  ' + rowHtml,
+            '</div>'
+        ].join('\n');
+    }
+
+
+    /**
      * 探索卡([v4.05.0 · R3-X9])。四块内容,按「先看再从」排:
      *   ① 清单分组读数(去过 / 可进入 / 待探索 / 未知);
      *   ② 清单行(点一行即选中,右侧「去这儿」);
@@ -502,6 +557,24 @@ export class PlaceView {
             try { win.dispatchEvent(new win.CustomEvent('phone:goHome')); } catch (_e) { /* 宿主无事件：忽略 */ }
         });
         q('#pl-refresh')?.addEventListener('click', () => this._draw());
+        /* [v4.43.0 · R5-X3] 行踪时间带的两个动作（容器级委托）：
+         *   点在场的人名 ⇒ 加入/移出选择（**只在本会话**）；
+         *   点「找可能共处」⇒ 带互动证据开关重算（开关默认关：无证据只说「可能共处」）。 */
+        el.querySelectorAll('[data-band-name]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const name = String(btn.getAttribute('data-band-name') || '');
+                if (!name) return;
+                const cur = Array.isArray(this._bandNames) ? this._bandNames.slice() : [];
+                const i = cur.indexOf(name);
+                if (i >= 0) cur.splice(i, 1); else cur.push(name);
+                this._bandNames = cur;
+                this._draw();
+            });
+        });
+        q('#pl-band-evidenced')?.addEventListener('click', () => {
+            this._bandEvidenced = !this._bandEvidenced;
+            this._draw();
+        });
         q('#pl-inject')?.addEventListener('click', () => {
             try { this.app.saveSettings({ injectToPrompt: !this.app.getSettings().injectToPrompt }); } catch (_e) {}
             this._draw();
