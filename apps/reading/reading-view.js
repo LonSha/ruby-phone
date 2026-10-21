@@ -437,6 +437,43 @@ export class ReadingView {
         return r;
     }
     /**
+     * [v4.42.0 · R5-X9] 跨书专题夹区块。
+     *
+     * 【这一面治的欠债】摘录只能挂在**一本书**下面；没有任何一格能表达
+     *   「这一篇论证跨了哪几本」。于是「三本书同名人物」在界面上无法区分。
+     *
+     * 【三条纪律】
+     *   ① 判定走 `app.topicDossier()`（控制器转交纯契约件）—— 本视图**不自己判**
+     *      「哪条回不到原处」（那是本项最容易写错的一处）；
+     *   ② **原句 / 我的解释 / 反证三栏分列**（批注不伪装原文）；
+     *   ③ **失效的引用照旧列出**并标出来，不静默丢。
+     */
+    _dossierHtml(tc) {
+        const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
+        const refs = read(() => this.app.dossierRefs?.(), []) || [];
+        const selected = read(() => this.app.dossierSelected?.(), []) || [];
+        const face = read(() => this.app.topicDossier?.({ title: this._dossierTitle || '', refs: refs, selected: selected }), null);
+        const line = face ? String(face.line || '') : '专题夹：本版 App 未接线（不是「没有内容」）';
+        const rows = face ? (read(() => this.app.topicDossierRows?.(face), []) || []) : [];
+        const rowHtml = rows.length
+            ? rows.map((r) => '<div class="rd-dossier-row" data-dossier-index="' + String(r.index) + '">' + esc(String((r && r.line) || '')) + '</div>').join('')
+            : '<div class="rd-excerpt-empty" style="padding:0 4px 8px">还没有引用任何段落（把书里的原句加进来，再写你的解释与反证）</div>';
+        const exportLine = face ? (read(() => this.app.topicDossierExport?.(face), null) || {}).line || '' : '';
+        return `
+                <div class="rd-excerpt">
+                    <div class="rd-excerpt-text" style="font-size:12px">${esc(line)}</div>
+                </div>
+                <div class="rd-import-wrap" style="display:flex;flex-wrap:wrap;gap:6px">
+                    <button class="rd-mini" id="rd-dossier-export">导出成稿</button>
+                    <button class="rd-mini" id="rd-dossier-clear">清空勾选</button>
+                </div>
+                <div class="rd-dossier-rows">${rowHtml}</div>
+                <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(String(exportLine || ''))}</div>
+                <div class="rd-excerpt-empty" style="padding:0 4px 8px">未选择的资料**不进成稿**；每条引用都带书名 / 章节 / 版本 / 定位。</div>
+        `;
+    }
+
+    /**
      * 研究清单一行读数（真消费点：界面读一次，而不是只把汇总挂在导出面上）。
      *   [v4.35.0 · R5-O8] 优先给**这次回源核出来的**读数；还没有时退回同步汇总 ——
      *   但**不把同步汇总说成已核对**（那条读数里的「未定论」本来就写着「正文没读到」）。
@@ -781,6 +818,11 @@ export class ReadingView {
                 </div>
                 <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(this._researchProgressLine())}</div>
                 <div class="rd-shelf-head" style="margin-top:18px">
+                    <h2>🗂 跨书专题夹</h2>
+                    <span style="font-size:11px;color:${tc.sub}">原句 / 我的解释 / 反证 三栏</span>
+                </div>
+                ${this._dossierHtml(tc)}
+                <div class="rd-shelf-head" style="margin-top:18px">
                     <h2>📖 故事年鉴</h2>
                     <span style="font-size:11px;color:${tc.sub}">按卷章读 · 导出离线可读</span>
                 </div>
@@ -928,6 +970,23 @@ export class ReadingView {
             /* [v4.35.0 · R5-O8] 清单出处回源核对：重开自动跑一次（见 render），这里给手动重跑与取消。 */
             q('#rd-research-refresh')?.addEventListener('click', async () => { await this.refreshResearch(); });
             q('#rd-research-cancel')?.addEventListener('click', () => this.cancelResearch());
+            /* [v4.42.0 · R5-X9] 专题夹两处点选（**只读或本机**动作，不写盘）：
+             *   导出成稿（只含勾过的）/ 清空勾选（只清选择，不动摘录）。 */
+            q('#rd-dossier-export')?.addEventListener('click', () => {
+                const refs = (() => { try { return this.app.dossierRefs?.() || []; } catch (_e) { return []; } })();
+                const sel = (() => { try { return this.app.dossierSelected?.() || []; } catch (_e) { return []; } })();
+                const face = (() => { try { return this.app.topicDossier?.({ refs: refs, selected: sel }) || null; } catch (_e) { return null; } })();
+                const ex = face ? (this.app.topicDossierExport?.(face) || null) : null;
+                const line = (ex && ex.line) ? String(ex.line) : '不能导出：读不到（不是「没有内容」）';
+                this._dossierNote = line;
+                this.app.phoneShell?.showNotification?.('阅读', line, '🗂');
+                this.render();
+            });
+            q('#rd-dossier-clear')?.addEventListener('click', () => {
+                this.app.dossierClearSelection?.();
+                this._dossierNote = '已清空勾选（**只清选择**，摘录一条都没动）';
+                this.render();
+            });
             /* ══ [v4.25.0 · R4-X3] 故事年鉴面：重读 / 切版 / 编辑章题 / 记进度 / 导出 ══
              *   三条纪律：① 默认给**阅读版**（作者版须显式切）；
              *   ② 编辑只交上游出口；③ 导出只是本地文件，不联网发布。 */

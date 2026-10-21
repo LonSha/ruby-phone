@@ -29,6 +29,13 @@ import {
     indexVersionOf, checkExcerptAnchor, anchorLine,
     buildResearchList, researchListChunks, notesSelfCheck, SEARCH_LIMITS,
 } from '../../config/reading-notes-contract.js';
+/* [v4.42.0 · R5-X9] 跨书专题夹（纯契约：只做读数与归一，不取数不写盘）。
+ *   本层只把「书目 + 引用 + 勾选」交下去 —— **同名不同书怎么分**只许契约件那一份口径。 */
+import {
+    DOSSIER_STATES, REF_STATES, REF_COLUMNS, DOSSIER_LIMITS, DOSSIER_FORBIDDEN_KEYS,
+    normalizeRefSource, refStateOf, buildTopicDossier, dossierLine,
+    dossierRows, dossierExport, dossierSelfCheck
+} from '../../config/topic-dossier-contract.js';
 /* ★ 为什么这里**不**再导入 `buildSearchIndex` / `searchInBook`：
  *   [v4.34.0 · R5-O7] 起 App 的查找路径一律走**分片生成器**（`buildIndexChunks` /
  *   `searchBookChunks`），那两个同步出口在本件里已零调用。留着它们看着无害，实际是把
@@ -1003,6 +1010,108 @@ export class ReadingApp {
         }));
         return buildResearchList(this.excerpts, books);
     }
+    /* ========== [v4.42.0 · R5-X9] 跨书专题夹 ========== */
+    /**
+     * 专题夹的**引用集**（由本机摘录现装配：每条摘录 = 一条引用）。
+     *   【为什么直接从摘录装配而不是另建一份专题库】计划原文「研究夹只存题目/引用/用户文字」
+     *   —— 摘录本来就是「书里的原句 + 我写的批注」那一份，再建一份就是第二个真源。
+     *   【三栏怎么分】摘录的 `text` 进**原句**栏；`annotation` 进**解释**栏；
+     *   用户在专题里单独写的反证（`_dossierCounters`）进**反证**栏。
+     */
+    dossierRefs() {
+        const out = [];
+        const counters = (this._dossierCounters && typeof this._dossierCounters === 'object') ? this._dossierCounters : {};
+        /* ★ 书目**单独取一次**并包 try：取不到时**照样产出每一条引用**（只是书名留空）——
+         *   契约件据此判「回不到原处」。若把取书目放进下面那个大 try 里，
+         *   一次取书失败会让**整份引用集消失**，而那是「引文静默消失」（本项要治的形态）。
+         *   ★ 一次取、循环里查表：不在循环里逐条调 `getBooks()`（那是 O(n·m) 的取数）。 */
+        let books = [];
+        try { books = this.data.getBooks() || []; } catch (_e) { books = []; }
+        const byId = new Map();
+        for (const b of books) byId.set(String(b && b.id), b);
+        for (const e of (Array.isArray(this.excerpts) ? this.excerpts : [])) {
+            const id = String(e.id || '');
+            const book = byId.get(String(e.bookId || '')) || null;
+            const src = {
+                bookId: String(e.bookId || ''), bookTitle: (book && book.title) || '',
+                chapter: String(e.chapter || ''), contentHash: String(e.contentHash || ''),
+                para: (e.para === null || e.para === undefined) ? null : Number(e.para),
+            };
+            out.push({ id: id, column: 'quote', text: String(e.text || ''), source: src });
+            const ann = String(e.annotation || '').trim();
+            if (ann) out.push({ id: id + ':explain', column: 'explain', text: ann, source: src });
+            const ctr = String(counters[id] || '').trim();
+            if (ctr) out.push({ id: id + ':counter', column: 'counter', text: ctr, source: src });
+        }
+        return out;
+    }
+    /** 用户勾过的引用 id（**导出只认它**：未选择的资料不进成稿）。 */
+    dossierSelected() {
+        return Array.isArray(this._dossierSelected) ? this._dossierSelected.slice() : [];
+    }
+    /** 勾 / 取消勾一条引用（**只在本机**：本层不写盘）。 */
+    dossierToggle(refId, on) {
+        const id = String(refId == null ? '' : refId).trim();
+        if (!id) return { ok: false, note: '没点名要勾哪一条' };
+        const list = this.dossierSelected().filter((x) => x !== id);
+        if (on === true) list.push(id);
+        this._dossierSelected = list;
+        return { ok: true, selected: list.length, on: on === true };
+    }
+    /** 清空勾选（**只清选择**，不动任何摘录）。 */
+    dossierClearSelection() {
+        this._dossierSelected = [];
+        return { ok: true, selected: 0 };
+    }
+
+    /**
+     * 书目（**按书 ID 建索引**：同名两本书是两本，不能按名字合并）。
+     *   ★ 与 `researchList` 的读口同规：正文只在**缓存里真有**时才给 ——
+     *   本件不为了画一屏而现读整本正文（那是 R5-O7/O8 治过的成本）。
+     */
+    bookMapForDossier() {
+        const map = new Map();
+        try {
+            for (const b of this.data.getBooks()) {
+                map.set(String(b.id), {
+                    contentHash: b.contentHash,
+                    chapters: this._contentCache.get(b.id) || undefined,
+                });
+            }
+        } catch (_e) { /* 取不到即给空表（契约件据此判「回不到原处」） */ }
+        return map;
+    }
+    /**
+     * 一次取齐整个专题夹的面（**只读**：本层不判「哪条回不到原处」，转交纯契约件）。
+     * @param {object} opts `{ title, refs, selected }`
+     */
+    topicDossier(opts) {
+        const o = (opts && typeof opts === 'object') ? opts : {};
+        try {
+            return buildTopicDossier({
+                title: o.title, refs: o.refs, selected: o.selected,
+                booksById: this.bookMapForDossier(),
+            });
+        } catch (_e) {
+            return buildTopicDossier({ thrown: true });
+        }
+    }
+    /** 专题行（视图只排版；原句/解释/反证分栏与失效标记全由契约件出）。 */
+    topicDossierRows(face) {
+        try { return dossierRows(face); }
+        catch (_e) { return []; }
+    }
+    /** 导出成稿（**只含勾过且仍可回源的**）。 */
+    topicDossierExport(face) {
+        try { return dossierExport(face); }
+        catch (_e) { return { ok: false, reason: 'thrown', text: '', line: '不能导出：读不到（不是「没有内容」）' }; }
+    }
+    /** 专题契约件自检的**真消费点**。 */
+    topicDossierSelfCheck() {
+        try { return dossierSelfCheck(); }
+        catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], states: 0, refStates: 0, columns: 0 }; }
+    }
+
     /** 查找一行读数(视图借用;判据全在内核 `searchLine`,本件不另写一份)。 */
     searchLineOf(res) { return searchLine(res); }
     /** 内核自检的**真消费点**:视图/诊断可随时读一次,而不是只把自检挂在导出面上。 */
