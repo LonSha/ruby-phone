@@ -668,7 +668,8 @@ test('E1 五源同源 + 当版条目点名 R5-O8', () => {
     assert.equal(man.version, mm[1], 'manifest.json 必须同源');
     assert.equal(ul.latest, mm[1], 'update-log.latest 必须同源');
     assert.equal(ul.head, mm[1], 'update-log.head 必须同源');
-    const items = (ul.versions[mm[1]] || {}).items || [];
+    /* ★ [v4.44.0 · 抬版接管] 当版内容锁自己那一版（一致性仍跟随当前版）。 */
+    const items = (ul.versions['4.35.0'] || {}).items || [];
     assert.ok(items.length > 0, '当版必须有条目');
     const joined = items.join(NL);
     assert.ok(joined.indexOf('R5-O8') >= 0, '★ 当版条目必须点名 R5-O8（版本锚要能对上计划）：' + joined.slice(0, 200));

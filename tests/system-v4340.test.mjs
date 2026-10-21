@@ -631,8 +631,10 @@ test('F1 五源同源 + 当版条目点名 R5-O7', () => {
     assert.ok(m, 'index.js 里必须有版本常量');
     const versions = [pkg.version, man.version, ul.latest, m[1]];
     for (const v of versions) assert.equal(v, versions[0], '五源必须同源：' + JSON.stringify(versions));
-    assert.equal(ul.versions[versions[0]] != null, true, '当版条目必须在 update-log 里');
-    const items = ul.versions[versions[0]].items || [];
+    /* ★ [v4.44.0 · 抬版接管] 当版**内容**锁自己那一版（见 tools/patch_x6e.py 档头同因）。 */
+    const own = ul.versions['4.34.0'];
+    assert.equal(own != null, true, '当版条目必须在 update-log 里');
+    const items = own.items || [];
     assert.ok(items.length >= 8, '当版条目必须够（当前 ' + items.length + ' 条）');
     assert.ok(items.join(NL).indexOf('R5-O7') >= 0, '当版条目必须点名 R5-O7');
     /* 迭代段里的标志语必须逐字同源（本仓被这条坑过：写错一个字，四条判据连锁转红）。 */

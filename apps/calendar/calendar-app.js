@@ -32,6 +32,29 @@ import {
   commonSlotLine, recurrenceSelfCheck
 } from '../../config/recurrence-contract.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.44.0 · R5-O2] 群投票 → 日历事项的**交接凭据**（纯契约：只做归一与读数）。
+ *   修前：微信侧派发 `phone:groupVoteConfirm` 后弹「已转交日历确认」，而日历侧
+ *   连监听器都没有（全仓接收者实测 0 个），那句提示是谎报。本件补的是
+ *   「收到凭据 → 用户在表单补日期时段 → 提交后建事项」这条链上的归一与读数。 */
+import {
+    GV_HANDOFF_STATES,
+    handoffLine,
+    handoffStateLabel,
+    handoffStateIds,
+    handoffSelfCheck
+} from '../../config/group-vote-handoff.js';
+/* [v4.44.0 · R5-O2] 草稿与幂等台账**两键读写的唯一实现**（宿主与日历两侧都委派到这里，
+ *   不各写一份「读 JSON / 判重 / 落盘」—— 两份必然漂移，漂移后果是
+ *   「宿主说收到了、日历说没有」这种最难查的读数分歧）。 */
+import {
+    receiveHandoff,
+    pendingHandoff,
+    consumeHandoff,
+    appliedKeys,
+    isApplied,
+    markApplied,
+    voteHandoffStoreSelfCheck
+} from './vote-handoff-store.js';
 /* [第三期 R3-X3] 约会与日程的可玩执行流程(五步台面)。
  *   纯函数内核,读本层已有的约定账与剧情楼层;不新开第二个 owner。 */
 import { buildDatePlaybook, advanceStep, datePlaybookLine, PLAY_STEPS, PLAY_STATES } from '../../config/date-playbook.js';
@@ -94,6 +117,192 @@ export class CalendarApp {
     recurrenceContractSelfCheck() {
         try { return recurrenceSelfCheck(); }
         catch (_e) { return { problems: ['自检抛了:' + String((_e && _e.message) || _e)], exceptionActions: 0, slotStates: 0 }; }
+    }
+
+    /* ========== [v4.44.0 · R5-O2] 群投票 → 日历事项的**交接口** ==========
+     * 【修前实测处境】微信侧确认投票后派发 `phone:groupVoteConfirm` 并弹「已转交日历确认」，
+     *   而全仓对 `GROUP_VOTE_CONFIRM` 的接收者实测为 **0 个** —— 日历侧连监听器都没有，
+     *   更没有把「哪一份活动、谁参加」变成一条日程的入口。那句提示是**谎报**。
+     *
+     * 【本区做四件事，**都不含「替用户决定日期」**】
+     *   ① `receiveVoteHandoff` —— 收下凭据、归一、落**草稿**（不建事项）。
+     *      草稿就是「待你补日期与时段」那一步的载体：这一步之后日历上**还没有**任何日程。
+     *   ② `pendingVoteHandoff` / `consumeVoteHandoff` —— 表单打开时取用草稿（后者取完即清）。
+     *   ③ `commitVoteHandoff` —— **用户显式提交**后，建日程 + 建约定 + 记幂等台账。
+     *   ④ `voteAppliedKeys` / `markVoteApplied` —— 幂等台账：同一 `activityId` 第二次转交
+     *      **不重复建**，如实报 `replayed`（重复转交不双建）。
+     *
+     * 【为什么草稿与台账都要落盘】重复转交的判定必须跨「关掉表单再点一次确认」成立；
+     *   只留内存的话，用户重开一次手机就又能建出第二条 —— 那正是本项要治的「双建」。
+     *   两键都命中 `^calendar_`（随会话隔离），换角色不会带着上一个角色的待办。 */
+
+    /** 收下一份群投票凭据（**只落草稿，不建事项**）。永不抛。 */
+    receiveVoteHandoff(detail) {
+        try { return receiveHandoff(this.storage, detail); }
+        catch (_e) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.FAILED, why: 'store-threw', handoff: null, line: '' };
+            read.line = handoffLine(read);
+            return read;
+        }
+    }
+
+    /** 读草稿（**不消费**；视图渲染表单时用）。读不到 ⇒ null（不猜一份出来）。 */
+    pendingVoteHandoff() {
+        try { return pendingHandoff(this.storage); } catch (_e) { return null; }
+    }
+
+    /** 取用草稿（取完即清：一次转交只喂一次表单，不让它反复预填）。 */
+    consumeVoteHandoff() {
+        try { return consumeHandoff(this.storage); } catch (_e) { return null; }
+    }
+
+    /** 幂等台账（活动 id 列表；上限走契约件唯一出处）。 */
+    voteAppliedKeys() {
+        try { return appliedKeys(this.storage); } catch (_e) { return []; }
+    }
+
+    /** 这一份活动建过事项没有（'' ⇒ false）。 */
+    isVoteApplied(activityKey) {
+        try { return isApplied(this.storage, activityKey); } catch (_e) { return false; }
+    }
+
+    /** 记一次「这份活动已建过事项」（超上限丢最旧，不静默截断新记录）。 */
+    markVoteApplied(activityKey) {
+        try { return markApplied(this.storage, activityKey); } catch (_e) { return false; }
+    }
+
+    /**
+     * **用户显式提交**：把这份活动落成日历事项（+ 约定）。
+     *   ★ `input.dateKey` 必须由用户给（表单上的那一天）；本层**不替它猜日期**：
+     *     没有合法日期就如实拒收 —— 猜一个「今天」会在日历上留一条用户没定的日程。
+     *   ★ 幂等：同一活动第二次提交恒报 `replayed`，不重复建（台账前置判定）。
+     * @returns {{ok,state,why,line,memo,commitment,title}}
+     */
+    commitVoteHandoff(input = {}) {
+        const explicit = (input.handoff && typeof input.handoff === 'object') ? input.handoff : null;
+        /* 凭据从哪来：调用方显式给 → 表单待落笔的那份 → 本次会话**最后经手**的那份。
+         *   ★ 第三个来源是为「同一场投票第二次提交」准备的：第一次建成后草稿就清了
+         *     （清草稿 = 这次转交的使命已完成），第二次提交时表单可能已经不带凭据 ——
+         *     但「同一场投票只该建一次」这条口径不因此失效（见下方台账前置判定）。 */
+        const h = explicit || this.pendingVoteHandoff() || this._lastVoteHandoff || null;
+        if (!h || !h.ok || !h.activityKey) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.FAILED, why: 'handoff-no-activity', line: '' };
+            read.line = handoffLine(read);
+            return read;
+        }
+        /* ★ [v4.44.0 · R5-O2 收尾] 台账判定必须**早于**日期判定：建过就是建过，
+         *   此时用户填的是哪一天已经无关紧要（不会建第二条），报 `invalid-date` 只会误导。 */
+        if (this.isVoteApplied(h.activityKey)) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.REPLAYED, why: '', handoff: h, line: '' };
+            read.line = handoffLine(read);
+            return read;
+        }
+        this._lastVoteHandoff = h;
+        const dateKey = String(input.dateKey || '').trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.FAILED, why: 'invalid-date', handoff: h, line: '' };
+            read.line = '交不过去：日期要年-月-日（本层不替你猜哪一天）';
+            return read;
+        }
+        const title = String(input.title || h.title || '').trim().slice(0, 160);
+        if (!title) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.FAILED, why: 'no-title', handoff: h, line: '' };
+            read.line = '交不过去：这一条没有名字（不知道要建什么）';
+            return read;
+        }
+        const time = String(input.time || '').trim().slice(0, 16);
+        const place = String(input.place || h.place || '').trim().slice(0, 80);
+        const type = String(input.type || 'event').trim();
+        let memo = null;
+        try {
+            memo = this.calendarData.addMemo({ dateKey: dateKey, title: title, time: time, type: type, source: 'group_vote' });
+        } catch (_e) { memo = null; }
+        if (!memo) {
+            const read = { ok: false, state: GV_HANDOFF_STATES.FAILED, why: 'memo-failed', handoff: h, line: '' };
+            read.line = '交不过去：日程没写进日历（不是「已经建好了」）';
+            return read;
+        }
+        /* 约定（可选）：`with` 取参与名单里第一位**非自己**的人名；名单空则不建约定。
+         *   ★ 约定写入仍走既有 `proposeCommitment` → `confirmCommitment` 链，
+         *     本层不另写一份「约定」实现。 */
+        let commitment = null;
+        /* 有没有**该写约定**的对象：名单里除了自己还有别人 ⇒ 这份约定本该写进记忆。
+         *   一个都没有（只有自己 / 名单为空）⇒ 约定这一环**不适用**，
+         *   读数尾巴按 `null` 处理（不把「不适用」说成「记忆未登记」）。 */
+        let hasCounterpart = false;
+        try {
+            const ctx0 = this._getContext?.() || {};
+            const me0 = String(ctx0.name1 || '玩家');
+            hasCounterpart = (h.participants || []).some((n) => String(n) !== me0);
+        } catch (_e) { hasCounterpart = false; }
+        try {
+            const ctx = this._getContext?.() || {};
+            const meName = String(ctx.name1 || '玩家');
+            const other = (h.participants || []).filter((n) => String(n) !== meName)[0] || '';
+            const proposed = this.proposeCommitmentFromMemo({
+                actor: String(ctx.name2 || '角色'),
+                with: other,
+                content: title,
+                dateKey: dateKey,
+                time: time,
+                place: place,
+                eventKey: 'vote:' + h.activityKey
+            });
+            if (proposed?.ok && proposed.item) {
+                const confirmed = this.confirmCommitmentById(proposed.item.id, 'vote-confirm:' + h.activityKey);
+                commitment = (confirmed?.item) || proposed.item;
+            }
+        } catch (_e) { commitment = null; }
+        this.markVoteApplied(h.activityKey);
+        /* ★ 建成了才清草稿：这份转交的使命已完成（不清的话，下次打开表单会又预填一份
+         *   已经建过的活动，用户再提交就撞台账的 replayed —— 白挨一次「不重复建」）。
+         *   失败路径**不清**：凭据要留给用户改完再提交。 */
+        try { this.consumeVoteHandoff(); } catch (_e) { /* 清不掉不影响「事项已建」的读数 */ }
+        try { this.syncCommitmentsToCalendar(); } catch (_e) { /* 投影失败不影响「事项已建」的读数 */ }
+        /* [v4.44.0 · R5-O2 验收] 「缺插件可只存日历并提示未登记记忆」：
+         *   该有约定对象、却没能建出约定（记忆侧没登记 / 拒绝 / 抛错）⇒ `memoryRegistered = false`，
+         *   读数如实补一句；**日历这条照样成立**（`ok: true` 不改）。
+         *   不需要约定对象时给 `null`（不适用，不是「未登记」）。 */
+        const memoryRegistered = hasCounterpart ? !!commitment : null;
+        const read = {
+            ok: true, state: GV_HANDOFF_STATES.CREATED, why: '',
+            handoff: h, memo: memo, commitment: commitment, title: title,
+            memoryRegistered: memoryRegistered
+        };
+        read.line = handoffLine(read);
+        return read;
+    }
+
+    /** 交接契约件自检的**真消费点**（方法名与 import 不同名，防同类遮蔽）。 */
+    voteHandoffSelfCheck() {
+        const problems = [];
+        let states = 0;
+        let reasons = 0;
+        try {
+            const a = handoffSelfCheck();
+            if (Array.isArray(a.problems)) problems.push(...a.problems);
+            states = Number(a.states) || 0;
+            reasons = Number(a.reasons) || 0;
+        } catch (_e) { problems.push('契约件自检抛了:' + String((_e && _e.message) || _e)); }
+        let keys = 0;
+        try {
+            const b = voteHandoffStoreSelfCheck();
+            if (Array.isArray(b.problems)) problems.push(...b.problems);
+            keys = Number(b.keys) || 0;
+        } catch (_e) { problems.push('两键读写自检抛了:' + String((_e && _e.message) || _e)); }
+        return { problems: problems, states: states, reasons: reasons, keys: keys };
+    }
+
+    /** 交接四态的中文标签（'' = 认不出；视图不写第二份映射）。 */
+    voteHandoffStateLabel(state) {
+        try { return handoffStateLabel(state); }
+        catch (_e) { return ''; }
+    }
+
+    /** 交接四态的 id 列表（视图不写第二份状态表）。 */
+    voteHandoffStateIds() {
+        try { return handoffStateIds(); }
+        catch (_e) { return []; }
     }
 
     render() {

@@ -24,6 +24,17 @@ import { applyOpenRef } from './config/open-ref.js';
 import { HOST_LOCATE_METHOD } from './config/source-locator.js';
 /* [v3.97.0 · R3-X1] 手机事实回执的唯一装配点（三类来源共用；与记忆 App 同源转发） */
 import { sendPhoneEvent } from './config/phone-fact-contract.js';
+/* [v4.44.0 · 第五期 R5-O2] 群投票 → 日历事项的交接：① 契约件（归一 / 四态 / 读数唯一出处）；
+ *   ② 两键读写件（草稿 + 幂等台账的**唯一实现**，日历 App 与本处都委派到它）。
+ *   为什么宿主也要持有这份读写：`phone:groupVoteConfirm` 到达时日历 App 可能**还没被懒加载**
+ *   （用户没打开过日历），此时若只等日历实例，「已转交」又会变成一句空话。 */
+/* ★ 别名：`handoffLine` 这个名字本文件已由 v3.72.0 的 `config/resume-handoff.js`
+ *   （续玩交接三段闸门）占用 —— 那是**另一件事**的读数。同名不同物正是本仓
+ *   最忌讳的形态（改名与遮蔽都会让读码的人认错那一行在念谁），故此处显式取别名。 */
+import {
+    GV_HANDOFF_STATES, handoffLine as gvHandoffLine, normalizeHandoff
+} from './config/group-vote-handoff.js';
+import { receiveHandoff } from './apps/calendar/vote-handoff-store.js';
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
@@ -268,7 +279,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.43.0';
+const ST_PHONE_VERSION = '4.44.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -466,24 +477,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-04-06",
+    date: "2026-04-07",
     items: [
-        "【版本升至 4.43.0（五源同源）：第五期 R5-X3 多人行踪时间带与会面证据】`place-roam.js::presenceAt` 已能回答「**此刻**这个地点有谁在场」；但全仓零 `band` / `overlap` / `coPresence` 命中：没有任何一格能表达「甲 10:00–12:00 在钟楼、乙 11:00–13:00 也在钟楼」。于是「两人同一地点但**不同时间**」与「真的碰上过」在界面上**完全同形**。",
-        "【契约件新增片段四态 × 会面四态】片段：有据在场 / **未知** / **互斥地点（数据冲突）** / 明确不在。会面：**可能共处** / **有互动证据** / 判不了 / 没有重叠。",
-        "【★★ 可能共处 ≠ 已见面（本项核心）】验收原文「重叠但无互动证据**仅标可能共处**」—— 本件只判「时间与地点都重叠」，要判「已见面」必须显式给互动证据。判据 D2 锁住它。",
-        "【★★ 未知区间不参与重叠判定（不画连续线）】把「不知道」当「在场」会给出根本没证据的会面 —— 那正是本项最贵的错读数。未知片段一律跳过，且读数明说「不是「没见」」。判据 D1 锁住它。",
-        "【★ 没 ref 的在场记录判「未知」而不是「在场」】上游给的记录若没带出处，那一段正文读不到 —— 把它当「有据在场」会让用户以为「他一直在那儿」。判据 D3 锁住它。",
-        "【互斥地点单列】同一时段两处都报了是**数据冲突**，不是「同时在两处」（前者要人去核，后者是超能力）。判据 D4 锁住它。",
-        "【不认的时刻串不猜】`HH:MM` 之外一律 null（不判重叠）；判据 D5 锁住它。",
-        "【控制器四口】`bandCharsFromScene` / `presenceBand` / `presenceBandLineOf` / `presenceBandSelfCheck`；与既有 `presenceAt` **不是同一件事**（前者瞬时、本件时间窗）。",
-        "【视图行踪时间带卡】与「同楼同刻」并列（不合并）；点人名加/移出选择、互动证据开关；样式双侧投递（`place.css` 与 `phone.css`）。",
-        "【本版自己抓到的真缺陷（当场修）】`bandCharsFromScene` 首版在「面缺席 / 取数抛」时给**零片段** ⇒ 那会被读成「他没有任何行踪」，而正确读数是「这一段没读到」（未知）。修法：只有**真读到在场面**才算读过，否则如实给一条未知片段。判据 C4 当场抓到。",
-        "【本版自己抓到的三处判据缺陷】① A2 首版判「视图不得出现 `'possible'`」—— 而我加的显示分支里正好写了它；改为视图**不自己比状态字面量**（显示文案取读数口给的 `why`）。② D1 首版只去掉那一条 `continue`，但后面还有 `state !== PRESENT` 挡着 ⇒ 计数不变，**红得落点不对**；真落点是「未知被归进 present 分支」。③ D5 首版同样落点不对（`null` 仍参与比较 ⇒ NaN 比较恒假）；真落点是「认不出 ⇒ 0」。",
-        "【判据 tests/system-v4430.test.mjs 二十一条】六组：口径（片段/会面各态互不同形、判定唯一出处、纯契约零副作用、视图接线与样式双侧）/ 内核行为（同地不同时间不算见面、重叠无证据只标可能共处、未知不参与重叠、互斥地点单列、不认时刻不猜）/ 接线行为（无 ref 判未知 / 两人重叠可能共处 / 一个角色 too-few / 取数抛了不假装没行踪 / 视图不直摸契约件）/ 五条定点破坏负控制（各带原版必真的反向对照）/ 版本锚。",
-        "【不做：不接现实定位/地图API】本件不读任何设备定位、不联网、不读时钟；只对**调用方给的片段**做归一与重叠判定。",
-        "【不做：不用动画代替准确时间】重叠判定按 `HH:MM` 折算的**分钟数**比较（精确值），不是动画时长或近似位置。",
-        "【看起来没坏但显示不对】本版四处缺陷都不报错、不崩界面，只是「没读到被读成没行踪」「视图自持字面量」「两处破坏落点不对」。",
-        "【运行时验证边界】本版未做浏览器/真宿主取证。「320/375px 下可切人物和时段，返回保持视窗」属**真 DOM/浏览器**读数，归浏览器门 `tests/browser/gate.mjs`；本版判的是它的可判定前件（选人名可加/移出、读数如实）。docs/runtime-verification-boundary.md 的当版实测数字由 tools/refresh_doc_readings.py 现场跑两道门写入。"
+        "【版本升至 4.44.0（五源同源）：第五期 R5-O2 群投票确认后确实能建立日历事项】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4440.test.mjs`（六组 24 条）当版跑绿。",
+        "【自己抓到的缺陷①：那句「已转交日历确认」在接收者为 0 时也照样念】实测 `grep -rn 'GROUP_VOTE_CONFIRM' apps/ config/ index.js` 只命中**派发点本身**与 `config/phone-events.js` 的登记表 —— 日历侧一个监听器都没有；而日历是懒加载 App（不在 `config/app-lazy-routes.js` 表内，属 `index.js` 的 14 个内联分支），用户没打开过日历时连实例都不存在。于是「已转交」是**谎报**，属本仓反复治过的「看起来没坏但显示不对」。修法不是给派发点补一句文案，而是**真的建接收者**：宿主挂 `PHONE_EVENTS.GROUP_VOTE_CONFIRM` 监听器，落草稿走两键读写唯一实现，再把回执**同步**写回微信侧（监听器同步跑，派发返回时回执已就位）。",
+        "【自己抓到的缺陷②：草稿「取用即清」会让用户白丢一份转交】视图首版在打开表单时调 `consumeVoteHandoff()`（取完即清）。读码时发现后果：用户打开表单看一眼、关掉，凭据就没了 —— 而「打开看一眼」根本不该等于「放弃这份安排」。改为 `pendingVoteHandoff()`（只读不消费），清掉凭据的时机收窄到**唯一一处**：用户显式提交且真的建成了（`commitVoteHandoff` 里清）。**失败路径不清**（凭据要留给用户改完再提交）。",
+        "【自己抓到的缺陷③：`replayed` 时若仍落草稿，表单会预填一份**已经建过**的活动】那样用户再提交一次就撞台账的 `replayed`，白挨一次「不重复建」，体验上像是系统在推诿。两键读写件因此在判重命中时**不落草稿**，并配判据 C2 与负控制 F2（破坏该分支 ⇒ 同款判据必转红）。",
+        "【自己抓到的缺陷④：`handoffLine` 这个名字在 `index.js` 里已被 v3.72.0 的续玩交接占用】两件不同的事（续玩三段闸门 vs 群投票转交）同名会让读码的人认错那一行在念谁。首版直接具名导入即被 `node --check` 拦下（`Identifier 'handoffLine' has already been declared`），改为 `handoffLine as gvHandoffLine` 并写明理由 —— 本仓「同名不同物」比改名更该防。",
+        "【交棒改写：把「念假设」改成「念回执」】微信侧不再自己拼一句结论，而是：派发前清空回执位 → 派发（宿主同步写回执）→ **读回执再念**。三种说法互不同形：收下了（`received`，明说**还没成事项**）、重复转交（`replayed`）、拒收（`failed`，带归因词）；**没有回执就如实说「没有接收者」**，不再假装已转交。判据 E2 把「清空 → 派发 → 读回执」的**顺序**也锁了。",
+        "【「缺插件可只存日历并提示未登记记忆」的落法】交接口在建成事项后给出 `memoryRegistered` 三态：`true`（约定建成）/ `false`（该有约定对象却没能建 ⇒ 读数补一句「记忆未登记：日历独立成立」）/ `null`（名单里只有自己 ⇒ 约定这一环**不适用**，**不加尾巴**）。把「不适用」说成「未登记」是另一种谎报，判据 B5/D5 分别锁住这两个方向。",
+        "【「不替用户猜日期」是硬边界】交接口要求 `input.dateKey` 是 `年-月-日` 十字符形状（四位年-两位月-两位日），没有合法日期就如实拒收 `invalid-date` 且**零写盘**（判据 D1 逐个试 `''` / `今天` / `2026/04/06` / `2026-4-6` / `null`）。猜一个「今天」会在日历上留一条用户没定的日程 —— 那比「没建」更难收拾。",
+        "【「不双建」的落法：幂等键 = 活动 id，台账落盘】台账与草稿都落 `^calendar_` 前缀的键（随会话隔离，换角色不带着上一个角色的待办）。台账超上限**丢最旧**而不是静默截断新记录（判据 C3 验最新一条必须在）。重复转交的判定必须跨「关掉表单再点一次确认」成立 —— 只留内存的话重开一次手机就又能建出第二条。",
+        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4440.test.mjs`）：契约件纯函数、两键读写用内存假件、交接口用**真原型 + 假依赖**构造（不 `new`：构造期会装全局监听器）。**未在浏览器里真点过一遍**：微信确认按钮 → 宿主监听器 → 日历表单预填 → 提交建事项这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
+        "【不做面在代码上可判】不把投票自动当承诺（`proposeCommitmentFromMemo` 只许出现在 `commitVoteHandoff` 之后）；不另建跨 App 消息总线（零 `fetch` / `XMLHttpRequest` / `WebSocket` / `EventSource` / `postMessage`）；不引入常驻定时器。判据 E5 逐项扫。",
+        "【样式双侧投递】`apps/calendar/calendar.css`（link 加载面）与 `phone.css`（运行时投递面）都要有「群投票凭据条」那四类；漏一侧会复现「样式在某些入口下不见了」这种最难查的形态。落盘用 `tools/patch_o2_css.py`，锚点取 v4.41.0 R5-X8 那段周期样式的注释头（恰中 1 次，重复执行即 SKIP）。",
+        "【本版新增件的分工】`config/group-vote-handoff.js`（纯契约：归一 / 五态 / 读数 / 上限 / 键名 / 自检，零 DOM 零存储零时钟）、`apps/calendar/vote-handoff-store.js`（两键读写的**唯一实现**：宿主与日历 App 都委派到这里，防止「宿主说收到了、日历说没有」的读数分歧）、`apps/calendar/calendar-app.js` 交接口（收 / 读 / 取 / 台账 / 提交）、`apps/calendar/calendar-view.js`（表单预填 + 凭据条 + 提交接线 + 取消清凭据）。",
+        "【抬版连带面：十一条历史套件的版本锚被抬版连带转红（本仓已登记过的同因形态）】本版跑定点回归时实测 v4330 至 v4430 十一条套件各有 1 条红，红在同一个位置：它们用 `const ver = pkg.version` **同时**断「五源一致」与「当版公告记了本版那件事」——抬版那一刻 `ver` 变成 4.44.0，而 4.44.0 的公告里当然没有 R5-O7 / R5-O8 / 等编号。其中八条在 HEAD b29df6b 上就已是红的（`log.latest` 还是 4.43.0），只有 v4430 是本版抬版带红的。这不是产品缺陷，是**判据的主语写错了**：它想说的是「v4.34.0 这一版记全了」，写成了「当前这一版记全了」——两者只在抬版前那一瞬同义。本仓 v4.27.0 的 `tools/patch_x6e.py` 档头已逐字记过同因（v4260 那条），故本版按同仓口径接管：一致性继续跟随当前版，当版**内容**锁**自己那一版**的字面量，**断言强度不变**（只换主语，不放宽）。接管工具 `tools/takeover_v4440_anchors.py`（锚点各断言恰中 1 次，失配即整件退出），十一条全部转绿；旧写法逐字留档在该工具档头。"
     ]
 };
 
@@ -12857,6 +12866,52 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     console.warn('[VirtualPhone] 低内存资源回收失败:', error);
                 }
             }
+
+            /* [v4.44.0 · 第五期 R5-O2] 群投票确认的**真实接收者**。
+             * 【修前实测处境】`grep -rn 'GROUP_VOTE_CONFIRM' apps/ config/ index.js`
+             *   只命中派发点与事件登记表 —— **接收者为 0**；而日历是懒加载 App
+             *   （不在 `config/app-lazy-routes.js` 的表里，属内联分支），用户没打开过日历
+             *   时连实例都不存在。微信侧那句「已转交日历确认」因此是**谎报**。
+             * 【本处做三件事，都不建事项】
+             *   ① 落草稿 —— 走 `vote-handoff-store.js` 的两键读写**唯一实现**
+             *      （不为这一件事去 `new CalendarApp`：那会把日历实例的构造期监听器
+             *      提前装进来，且用户其实没打开过日历）；
+             *   ② 把回执**同步**写回微信侧 —— 监听器是同步跑的，所以派发返回时微信侧
+             *      已经拿到真实结果；那句提示从此念的是真话；
+             *   ③ 不建任何事项 —— 落笔在用户于日历表单上显式提交时（`commitVoteHandoff`）。
+             * 【为什么不用 runtime-lifecycle 登记】与相邻的 `phone:goHome` 等同一时机绑一次、
+             *   同在 phoneShell 存续期内，不随 App 开关重复注册（那族登记治的是「实例重建累积」）。 */
+            window.addEventListener(PHONE_EVENTS.GROUP_VOTE_CONFIRM, (e) => {
+                const detail = (e && e.detail) || null;
+                let read = null;
+                try {
+                    /* 认不出的凭据也要给出**如实**回执（不许静默丢弃、更不许报成已收到）。 */
+                    const norm = normalizeHandoff(detail);
+                    if (norm && norm.ok) {
+                        read = receiveHandoff(storage, detail);
+                    } else {
+                        read = {
+                            ok: false, state: GV_HANDOFF_STATES.FAILED,
+                            why: String((norm && norm.why) || 'handoff-not-object'),
+                            handoff: null, line: ''
+                        };
+                        read.line = gvHandoffLine(read);
+                    }
+                } catch (_e) {
+                    read = {
+                        ok: false, state: GV_HANDOFF_STATES.FAILED,
+                        why: 'host-threw', handoff: null, line: ''
+                    };
+                    read.line = gvHandoffLine(read);
+                }
+                /* 回执同步送回去。取**当前**微信视图：用户没开过微信时没人在等这句提示。 */
+                try {
+                    const wv = window.VirtualPhone?.wechatApp?.view;
+                    if (wv && typeof wv.noteGroupVoteHandoffReceipt === 'function') {
+                        wv.noteGroupVoteHandoffReceipt(read);
+                    }
+                } catch (_e) { /* 回执没送到不影响「草稿已落」这件事本身 */ }
+            });
 
             // 监听返回主页
             window.addEventListener('phone:goHome', () => {

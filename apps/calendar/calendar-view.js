@@ -32,6 +32,11 @@ export class CalendarView {
          *   为什么只留在内存：计划原文「不接系统日历/闹钟」—— 这一屏是**预览**，
          *   用户看着结果决定要不要真改；真改仍走既有日程保存路径。 */
         this._recurrenceExceptions = [];
+        /* [v4.44.0 · R5-O2] 待落笔的群投票凭据（取用一次后置 null）。
+         *   `_votePrefillTried` 防「每次 render 都把用户改过的草稿覆盖回去」。 */
+        this._voteHandoff = null;
+        this._votePrefillTried = false;
+        this._voteHandoffLine = '';
     }
 
     async loadCSS() {
@@ -108,6 +113,33 @@ export class CalendarView {
         if (this.currentView === 'settings') {
             this.renderSettings(theme);
             return;
+        }
+        /* [v4.44.0 · R5-O2] 打开「添加备忘录」时，若有一份**待落笔的群投票凭据**，
+         *   把它取来预填进表单：这一步就是「补日期与时段」。
+         *   ★ 这里是 `pending` 而不是 `consume`：打开表单看一眼又关掉**不该丢掉凭据**
+         *     （取用即清会让用户白丢一份转交，比谎报更难收拾）。清掉它的时机只有一个：
+         *     用户显式提交且建成了（App 层 `commitVoteHandoff` 里清）。 */
+        if (this.addPanelOpen && !this._votePrefillTried) {
+            this._votePrefillTried = true;
+            let h = null;
+            try { h = this.app.pendingVoteHandoff?.() || null; } catch (_e) { h = null; }
+            if (h) {
+                this._voteHandoff = h;
+                /* ★ 每次打开表单都按**这份凭据**重铺草稿：上一轮用户改到一半又关掉的内容
+                 *   不该把下一次的预填盖住（那份内容已随关面板丢弃，不是他的输入）。 */
+                this.draftMemoTitle = String(h.title || '').slice(0, 160);
+                this.draftMemoTime = String(h.time || '').slice(0, 16);
+                /* 投票来的活动默认落在「活动」类型上（用户仍可在表单里改）。 */
+                this.selectedMemoType = 'event';
+            } else {
+                this._voteHandoff = null;
+            }
+        }
+        if (!this.addPanelOpen) {
+            /* 关掉表单后再开：允许重新预填**同一份**（若还没建）或**下一份**转交。
+             *   ★ 只清内存态，不动 store 里的草稿 —— 关面板 = 不新建，不是 = 丢掉。 */
+            this._votePrefillTried = false;
+            this._voteHandoff = null;
         }
         const heroHolidayIcon = this.getHeroHolidayIcon(storyDate);
         const heroUrl = this.getHeroImageUrl(theme, storyDate);
@@ -235,6 +267,13 @@ export class CalendarView {
                         </button>
                     </div>
                     <form class="yzp-calendar-add-form" id="yzp-calendar-add-form" autocomplete="off">
+                        ${this._voteHandoff ? `
+                        <div class="yzp-calendar-vote-handoff" id="yzp-calendar-vote-handoff">
+                            <div class="yzp-calendar-vote-handoff-head">来自群投票</div>
+                            <div class="yzp-calendar-vote-handoff-body">${this.escapeHtml(String(this._voteHandoff.title || ''))}${Array.isArray(this._voteHandoff.participants) && this._voteHandoff.participants.length ? '（' + this._voteHandoff.participants.length + ' 人：' + this.escapeHtml(this._voteHandoff.participants.join('、')) + '）' : ''}</div>
+                            <div class="yzp-calendar-vote-handoff-foot">**还没成事项** —— 补上日期与时段再提交；投票胜出只是安排建议。</div>
+                        </div>
+                        ` : ''}
                         <textarea class="yzp-calendar-memo-input" id="yzp-calendar-memo-input" maxlength="160" placeholder="输入备忘内容">${this.escapeHtml(this.draftMemoTitle)}</textarea>
                         <input class="yzp-calendar-time-input" id="yzp-calendar-time-input" maxlength="16" placeholder="时间，例如 19:00" value="${this.escapeAttr(this.draftMemoTime)}">
                         <div class="yzp-calendar-type-wrap">
@@ -637,22 +676,30 @@ export class CalendarView {
                 this.visibleMonth = parsed.month;
                 this.render();
             });
-        });
         root.querySelector('#yzp-calendar-add-overlay')?.addEventListener('click', (e) => {
             if (e.target?.id !== 'yzp-calendar-add-overlay') return;
             this.addPanelOpen = false;
             this.typePickerOpen = false;
+            /* [v4.44.0 · R5-O2] 关掉表单 = 放弃这份凭据：**取消不新建**（验收原文）。
+             *   凭据是「一次性的落笔机会」，用户关掉面板就不再预填下一次。 */
+            this._voteHandoff = null;
+            this._voteHandoffLine = '';
             this.render();
         });
         root.querySelector('#yzp-calendar-add-close')?.addEventListener('click', () => {
             this.addPanelOpen = false;
             this.typePickerOpen = false;
+            this._voteHandoff = null;
+            this._voteHandoffLine = '';
             this.render();
         });
         root.querySelector('#yzp-calendar-add-cancel')?.addEventListener('click', () => {
             this.addPanelOpen = false;
             this.typePickerOpen = false;
+            this._voteHandoff = null;
+            this._voteHandoffLine = '';
             this.render();
+        });
         });
         root.querySelector('#yzp-calendar-open-settings')?.addEventListener('click', (e) => {
             e.preventDefault();
@@ -791,7 +838,35 @@ export class CalendarView {
             const dateKey = this.toDateKey(this.selectedDate);
             const time = String(timeInput?.value || '').trim();
             const type = this.selectedMemoType || 'daily';
-            this.app.calendarData.addMemo({ dateKey, title, time, type });
+            /* [v4.44.0 · R5-O2] 这份表单是从**群投票转交**来的：走交接口提交，
+             *   由它一次做完「建日程 + 建约定 + 记幂等台账」，并把回执如实回报。
+             *   ★ 只有用户**显式提交**才走这里 —— 打开表单、预填、关掉，一个字节都不写。
+             *   ★ 台账在交接口里判重：同一场投票重复转交再提交，不会双建。 */
+            if (this._voteHandoff) {
+                const handoff = this._voteHandoff;
+                let receipt = null;
+                try {
+                    receipt = this.app.commitVoteHandoff?.({ dateKey, title, time, type }) || null;
+                } catch (_e) { receipt = null; }
+                const ok = !!receipt?.ok;
+                this.app.phoneShell?.showNotification?.(
+                    '日历',
+                    String(receipt?.line || (ok ? '已建立日历事项。' : '没能建立日历事项。')),
+                    ok ? '📅' : '⚠️'
+                );
+                if (ok) {
+                    this._voteHandoff = null;
+                    this._voteHandoffLine = '';
+                } else {
+                    /* 没建成：**保住**这份凭据与用户填的内容，让用户改完再提交。 */
+                    this._voteHandoff = handoff;
+                    this.addPanelOpen = true;
+                    this.render();
+                    return;
+                }
+            } else {
+                this.app.calendarData.addMemo({ dateKey, title, time, type });
+            }
             if (type === 'date') {
                 const context = this.app._getContext?.() || {};
                 this.app.proposeCommitmentFromMemo?.({

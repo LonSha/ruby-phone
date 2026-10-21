@@ -5013,6 +5013,40 @@ input:checked + .toggle-slider:before {
     .yzp-calendar-memo-text,
     .yzp-calendar-memo-time-inline,
     .yzp-calendar-detail-date,
+/* ---------- [v4.44.0 · R5-O2] 群投票凭据条（待落笔的转交） ----------
+/* 为什么这条要长得跟普通表单行不一样：它承载的是「**还没成事项**」这个状态。
+ * 转交进来了 ≠ 已经约好了；样式上必须让用户一眼看出「这还差我补一步」。 */
+#phone-panel-content .phone-screen .yzp-calendar-vote-handoff,
+.yzp-calendar-vote-handoff {
+    margin: 0 0 10px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px dashed rgba(107, 154, 189, 0.55);
+    background: rgba(107, 154, 189, 0.10);
+}
+#phone-panel-content .phone-screen .yzp-calendar-vote-handoff-head,
+.yzp-calendar-vote-handoff-head {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: #6b9abd;
+    font-weight: 600;
+}
+#phone-panel-content .phone-screen .yzp-calendar-vote-handoff-body,
+.yzp-calendar-vote-handoff-body {
+    margin-top: 3px;
+    font-size: 13px;
+    color: var(--yzp-cal-text, #171b1f);
+    line-height: 1.6;
+    word-break: break-word;
+}
+#phone-panel-content .phone-screen .yzp-calendar-vote-handoff-foot,
+.yzp-calendar-vote-handoff-foot {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #8a8aa0;
+    line-height: 1.5;
+}
+
 /* ---------- [v4.41.0 · R5-X8] 周期与单次例外 ----------
  * 为什么「跳过」与「取消」在样式上也不同：它们是两件事（系列仍在 vs 不再生成），
  * 只靠文案区分时用户扫一眼容易读成一件事。 */

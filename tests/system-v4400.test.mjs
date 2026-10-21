@@ -455,15 +455,19 @@ test('E1 五源同源 + 当版条目点名 R5-X5', () => {
     const pkg = JSON.parse(read('package.json'));
     const man = JSON.parse(read('manifest.json'));
     const log = JSON.parse(read('update-log.json'));
-    const ver = pkg.version;
-    assert.match(ver, /^\d+\.\d+\.\d+$/, '版本号形态必须正常:' + ver);
-    assert.equal(man.version, ver, 'manifest 与 package 必须同版');
-    assert.equal(log.latest, ver, 'update-log.latest 必须同版');
-    assert.equal(log.head, ver, 'update-log.head 必须同版');
+    /* ★ [v4.44.0 · 抬版接管] 一致性跟随当前版；当版**内容**锁自己那一版。
+     *   修前两句共用一个 `ver` ⇒ 抬版后「本版公告记了本版那件事」被判成假：
+     *   那不是产品缺陷，是判据的主语写错了（见 tools/patch_x6e.py 档头同因）。 */
+    const cur = pkg.version;
+    assert.match(cur, /^\d+\.\d+\.\d+$/, '版本号形态必须正常:' + cur);
+    assert.equal(man.version, cur, 'manifest 与 package 必须同版');
+    assert.equal(log.latest, cur, 'update-log.latest 必须同版');
+    assert.equal(log.head, cur, 'update-log.head 必须同版');
+    const ver = '4.40.0';
     assert.ok(log.versions[ver], '当版条目必须存在');
     const items = (log.versions[ver].items || []).join(NL);
     assert.ok(items.indexOf('R5-X5') >= 0, '当版条目必须点名 R5-X5');
     assert.ok(items.indexOf('第五期') >= 0, '当版条目必须点名第五期');
     assert.ok(items.indexOf('版本升至 ' + ver) >= 0, '当版条目必须带收口条目');
-    assert.ok(read('index.js').indexOf("const ST_PHONE_VERSION = '" + ver + "';") >= 0, 'index.js 版本常量必须同源');
+    assert.ok(read('index.js').indexOf("const ST_PHONE_VERSION = '" + cur + "';") >= 0, 'index.js 版本常量必须同源');
 });

@@ -733,12 +733,14 @@ test('E1 版本五源同源 + 当版条目齐全', () => {
     const idx = read('index.js');
     const m = idx.match(/const ST_PHONE_VERSION = '([^']+)'/);
     assert.ok(m, 'index.js 必须声明版本常量');
+    /* ★ [v4.44.0 · 抬版接管] 一致性跟随当前版；当版内容锁自己那一版。 */
+    const cur = pkg.version;
+    assert.match(cur, /^\d+\.\d+\.\d+$/, '版本号形态必须正常:' + cur);
+    assert.equal(man.version, cur, 'manifest.json 必须与 package 同版');
+    assert.equal(log.latest, cur, 'update-log.latest 必须同版');
+    assert.equal(log.head, cur, 'update-log.head 必须同版');
+    assert.equal(m[1], cur, 'index.js 版本常量必须同源');
     const ver = '4.33.0';
-    assert.equal(pkg.version, ver, 'package.json');
-    assert.equal(man.version, ver, 'manifest.json');
-    assert.equal(log.latest, ver, 'update-log.latest');
-    assert.equal(log.head, ver, 'update-log.head');
-    assert.equal(m[1], ver, 'index.js 版本常量必须同源');
     const entry = log.versions[ver];
     assert.ok(entry, 'update-log.versions 必须有当版条目');
     assert.ok(Array.isArray(entry.items) && entry.items.length >= 8, '当版条目实测 ' + (entry.items ? entry.items.length : 0) + ' 条，应不少于 8');

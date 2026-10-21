@@ -45,6 +45,12 @@ import { childRuntime } from '../../config/runtime-lifecycle.js';
  *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
  *   于是通道缓存写失败也被当成写下去了（下次用同一张图再挂一次远端请求）。 */
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [v4.44.0 · R5-O2] 群投票交接的状态常量。**本侧不自持状态串** ——
+ *   回执全文（`read.line` / `read.ok` / `read.state`）由宿主（`index.js`）经契约件给出，
+ *   本侧只挑一个图标。修前首版这里写的是裸字面量 `'received'`：
+ *   那让「状态」有了第二份出处（契约件一份、本文件一份），
+ *   而本仓对同族缺陷的判定很明确 —— 同名不同物比改名更该防。 */
+import { GV_HANDOFF_STATES } from '../../config/group-vote-handoff.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -61,6 +67,11 @@ export class ChatView {
     constructor(wechatApp) {
         this.app = wechatApp;
         this.inputText = '';
+        /* [v4.44.0 · R5-O2] 群投票转交的**回执位**：宿主（index.js）在
+         *   `phone:groupVoteConfirm` 的监听器里**同步**把它写进来，`confirmGroupVote`
+         *   随后念的就是这份真实结果 —— 修前那句「已转交」在没有任何接收者时也照样念。
+         *   ★ 只留内存：回执是「刚刚那一次派发的答复」，跨会话留着只会读到陈的。 */
+        this._groupVoteHandoffReceipt = null;
         this.showEmoji = false;
         this.showMore = false;
         this.showQuickReplies = false;
@@ -13121,6 +13132,19 @@ renderChatRoom(chat) {
     }
 
     /**
+     * [v4.44.0 · R5-O2] 收下宿主对本次转交的**回执**（由 `index.js` 的
+     *   `phone:groupVoteConfirm` 监听器**同步**调用）。
+     *   【为什么要有这个口】修前 `confirmGroupVote` 派发完就无条件念「已转交日历确认」——
+     *   而全仓接收者为 0，那句是**谎报**。回执位让提示念的是真结果：
+     *   收下了 / 重复转交 / 拒收（带归因词），三种说法互不同形。
+     *   【只收不判】判定与读数全部在契约件（`handoffLine`）里，本口不写第二份文案表。
+     */
+    noteGroupVoteHandoffReceipt(read) {
+        this._groupVoteHandoffReceipt = (read && typeof read === 'object') ? read : null;
+        return this._groupVoteHandoffReceipt;
+    }
+
+    /**
      * [v4.29.0 · R4-X7] 确认一份群投票结果。
      *   【这一步做两件事，都不是「变成约定」】
      *     ① 把**用户点选的那一个选项**交给内核判定（平票点名非并列项会被内核拒收 ——
@@ -13171,6 +13195,10 @@ renderChatRoom(chat) {
         /* 转交约定 owner（日历）：本卡只把「哪一份活动、谁参加」原样递出去。 */
         try {
             const win = (typeof window !== 'undefined') ? window : globalThis;
+            /* ★ [v4.44.0 · R5-O2] 派发前先把回执位清空：上一次确认的答复不能当这一次的。
+             *   监听器（宿主）是**同步**跑的，所以下一行返回时回执已就位 ——
+             *   修前这里紧接着无条件念「已转交日历确认」，而实测接收者为 0，那是谎报。 */
+            this._groupVoteHandoffReceipt = null;
             win.dispatchEvent(new win.CustomEvent(PHONE_EVENTS.GROUP_VOTE_CONFIRM, {
                 detail: {
                     activityId: String(act.id || ''),
@@ -13179,7 +13207,17 @@ renderChatRoom(chat) {
                     participants: Array.isArray(act.participants) ? act.participants.slice() : []
                 }
             }));
-            this.app.phoneShell?.showNotification('投票', '已转交日历确认：' + String(act.label || '') + '（本卡零写盘，重复确认不会重复生成）。', '✅');
+            /* 念**回执**，不念假设：收下了说收下了、重复转交说重复、拒收说为什么。 */
+            const receipt = this._groupVoteHandoffReceipt;
+            const line = String((receipt && receipt.line) || '');
+            if (!receipt) {
+                /* 没有任何接收者 ⇒ 如实说「没有接收者」，不再假装已转交。 */
+                this.app.phoneShell?.showNotification('投票', '**没有接收者**：日历没接这一份（本卡零写盘，不代写事项）。', '⚠️');
+            } else if (receipt.ok) {
+                this.app.phoneShell?.showNotification('投票', line + '（本卡零写盘，重复确认不会重复生成）。', receipt.state === GV_HANDOFF_STATES.RECEIVED ? '✅' : 'ℹ️');
+            } else {
+                this.app.phoneShell?.showNotification('投票', line || '这一份转交不过去。', '⚠️');
+            }
         } catch (_e) {
             this.app.phoneShell?.showNotification('投票', '宿主没接确认口 —— 活动：' + String(act.label || '') + '（本卡不代写）。', '⚠️');
         }
