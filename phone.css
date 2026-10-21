@@ -20388,6 +20388,8 @@ input:checked + .toggle-slider:before {
 .cwb-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .cwb-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 11px; }
 .cwb-btn-pub { border-color: #a08a6a; color: #6a5330; }
+.cwb-btn-warn { border-color: #b08a3a; color: #7a5a10; }
+.cwb-st-ok { color: #4a7a4a; }
 /* ══════════════ [v3.89.0] 声明式工作流（workflow） ══════════════ */
 /* workflow.css — [v3.89.0 · 拓展计划 R-X5] 声明式工作流 · 样式层 */
 .wfl-root { all: initial; }

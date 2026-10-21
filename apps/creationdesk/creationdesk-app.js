@@ -25,6 +25,9 @@ import { writeReceipt } from '../../config/write-receipt.js';
  *   本层只转交：任务轴与面优先级、矛盾取代、两条闸、缺口计数**全归上游**，
  *   手机侧只做取舍与目标选择（选人物 / 地点 / 时点 / 写作目标）。 */
 import { CreationdeskBoard } from './creationdesk-board.js';
+/* [v4.45.0 · 第五期 R5-O1] 取材板交接契约件：**去向表与文案的唯一出处**。
+ *   本层只转发（界面不写第二份去向表）；判定与落笔分别在契约件与宿主。 */
+import { handoffTargetIds as mbhTargetIds, handoffTargetLabel as mbhTargetLabel, MBH_STATES } from '../../config/material-board-handoff.js';
 /* [v4.25.0 · R4-X3] 故事年鉴(纯契约)。
  *   创作台侧只消费**两件**:① 年鉴面读数(建章册一行 + 派发相);
  *   ② 把某一版年鉴导出文本取来当**草稿素材**(不把它写进剧情事实,也不发布)。
@@ -53,6 +56,8 @@ export class CreationdeskApp {
         this._topicPage = null;
         /* [v4.30.0 · R4-X9] 取材板接线件（持用户的**选择**，不缓存读数） */
         this._board = new CreationdeskBoard(this);
+        /* [v4.45.0 · R5-O1] 交接单预览行（**纯读数**；预览不落笔，落笔在 boardCommit）。 */
+        this._boardPreview = '';
         this._flash = '';
         this._flashBad = false;
     }
@@ -317,6 +322,95 @@ export class CreationdeskApp {
         try { return this._board.handoff(); }
         catch (_e) { return { ok: false, kind: 'material_board_handoff', reason: 'threw', ids: [], count: 0, chars: 0, items: [], notInPack: [], afterAsOf: [], writesNothing: true }; }
     }
+    /* ══════════ [v4.45.0 · R5-O1] 取材板交接：**真落笔** ══════════
+     * 【修前实测处境】`boardHandoff()` 端出的只有三个 owner **字符串**（composeOwner /
+     *   budgetOwner / draftOwner）：谁都没被调用，一个字节都没落笔，而按钮点下去
+     *   界面看起来像交过去了。计划原文点名：「owner 字符串不是实际交接」。
+     * 【本层做两件】① 把「用户选的这几条 + 去哪儿」交给**宿主的 board 动作**（那里才落笔）；
+     *   ② 收下回执如实念（五态：drafted / replayed / pending / failed / unreceived）。
+     * 【本层不做】不自己落盘（写口只有一处）、不发布、不生成、不发消息。
+     *   ★ 失败**不清选择**（用户改完能重试）——「交不过去」与「已经交出去了」必须分得开。
+     * ------------------------------------------------------------------ */
+    /**
+     * 把选定交给既有 owner（**真落笔**；两条去向：创作草稿 / 下一次主聊天）。
+     * @param {string} target 'draft' | 'chat'
+     * @returns {Promise<{ok,state,note,target,count,key}>}
+     */
+    async boardCommit(target) {
+        const t = String(target || '').trim();
+        const pick = this._board.pick();
+        const items = (pick.items || []).map(function (m) {
+            return {
+                id: m.id, source: m.source, facet: m.facet, facetLabel: m.facetLabel,
+                title: m.title, floor: m.floor
+            };
+        });
+        const handoff = {
+            target: t,
+            task: this._board.task,
+            taskLabel: this._board.taskLabel ? this._board.taskLabel(this._board.task) : '',
+            asOf: this._board.asOf,
+            items: items
+        };
+        const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+        if (!vp || typeof vp.applyCreationdeskAction !== 'function') {
+            /* 入口不在位 ⇒ **如实报没有接收者**，不许报成功（计划原文：目标缺席不报成功）。 */
+            const note = '**没有接收者**：创作工作台入口不在位（本板零写盘，不代写）';
+            this._flash = note; this._flashBad = true; this.render();
+            return { ok: false, state: MBH_STATES.UNRECEIVED, note: note, target: t, count: items.length, key: '' };
+        }
+        const face = this._displayedFace;
+        const payload = {
+            action: 'board', handoff: handoff,
+            scope: face && face.scope, token: face && face.token
+        };
+        let r;
+        try { r = await vp.applyCreationdeskAction(payload); }
+        catch (e) { r = { ok: false, note: '执行失败：' + String(e.message || e), state: 'failed' }; }
+        const now = this.host();
+        if (now && (now.token !== payload.token)) return r;
+        this._flash = String((r && r.note) || '');
+        this._flashBad = !(r && r.ok === true);
+        /* ★ 落进草稿本之后**顺手把那一份选中**（用户立刻能在草稿本里打开看它）。 */
+        if (r && r.ok === true && r.state === MBH_STATES.DRAFTED && r.key) this._draftKey = String(r.key);
+        this.render();
+        return {
+            ok: !!(r && r.ok === true),
+            state: String((r && r.state) || 'failed'),
+            note: this._flash, target: t, count: items.length,
+            key: String((r && r.key) || '')
+        };
+    }
+/**
+     * 预览交接单（**纯读数，不落笔**）：把「会交哪几条、幂等键是什么、两套来源词表怎么分」
+     *   拼成一行给用户看一眼 —— 计划原文要求「**预览内容后**交给原 owner」。
+     *   ★ 预览**不改变任何状态**：草稿本与待用登记一个字节都不动（落笔在 boardCommit）。
+     */
+    setBoardPreview(read) {
+        const r = (read && typeof read === 'object') ? read : null;
+        if (!r || !r.ok) {
+            this._boardPreview = '这份选定还交不出去（先勾几条本幕材料；不在包里 / 时点之后的要先处理）';
+            this.render();
+            return this._boardPreview;
+        }
+        this._boardPreview = ('交 ' + String(r.count) + ' 条 · ' + String(r.chars) + ' 字 · 幂等键 '
+            + String(r.ids.slice(0, 2).join('+')) + (r.ids.length > 2 ? '…' : '')
+            + '（素材来源是**记忆事实**，与 App 内容来源不是同一张表）');
+        this.render();
+        return this._boardPreview;
+    }
+    /** 取材板交接的两处落点读数（宿主给；读不到 ⇒ null，**不拟一份**）。 */
+    boardHandoffFace() {
+        const host = this.host();
+        if (!host) return { pending: null, draftedCount: null };
+        return {
+            pending: host.boardPending || null,
+            draftedCount: (typeof host.boardDraftedCount === 'number') ? host.boardDraftedCount : null
+        };
+    }
+    /** 去向 id 与标签（界面不写第二份去向表）。 */
+    boardTargetIds() { try { return mbhTargetIds(); } catch (_e) { return []; } }
+    boardTargetLabel(t) { try { return mbhTargetLabel(t); } catch (_e) { return ''; } }
     /* ========== 取材板标签出口（界面文案的唯一出处 = 内核表，本层只转发） ========== */
     boardTaskIds() { try { return this._board.taskIds(); } catch (_e) { return []; } }
     boardTaskLabel(t) { try { return this._board.taskLabel(t); } catch (_e) { return String(t == null ? '' : t); } }
@@ -414,6 +508,7 @@ export class CreationdeskApp {
                 try { return this._board ? this._board.packAll() : null; }
                 catch (_e) { return null; }
             }).call(this),
+            boardPreview: String(this._boardPreview || ''),
             flash: this._flash,
             flashBad: this._flashBad,
         };
@@ -434,6 +529,7 @@ export class CreationdeskApp {
         this._topicPage = null;
         this._flash = '';
         this._flashBad = false;
+        this._boardPreview = '';
         /* [v4.30.0 · R4-X9] 取材板也丢实例态：换角色后上一个角色选的任务 / 时点 / 勾选不能留着。 */
         if (this._board && typeof this._board.resetScene === 'function') this._board.resetScene();
         this.render();

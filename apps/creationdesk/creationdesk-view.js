@@ -249,9 +249,41 @@ export class CreationdeskView {
             h += '<div class="cwb-row cwb-st-empty"><span class="cwb-row-k">' + esc(this.app.boardPickHeldLabel('not-in-pack')) + '</span><span class="cwb-row-v">' + esc(r.id) + '</span></div>';
         }
         h += '<div class="cwb-acts">';
-        h += '<button class="cwb-btn" data-cw-bhandoff>把选定交给既有 owner（本板不落笔）</button>';
+        /* [v4.45.0 · R5-O1] 修前这里只有一个按钮，点了只返回三个 owner **字符串**（谁都没被调用）。
+         *   现在这一排分两层，与计划原文「**预览内容后**交给原 owner」对齐：
+         *     · `data-cw-bhandoff` —— **预览**交接单（纯读数：交哪几条、幂等键、两套来源词表的说明），
+         *       一个字节都不落笔；
+         *     · `data-cw-bcommit` —— 两个**真去向**（加入创作草稿 / 用于下一次主聊天），
+         *       交给宿主真落笔；主聊天那条只**登记**（**登记 ≠ 已发送**）。 */
+        h += '<button class="cwb-btn" data-cw-bhandoff>预览交接单（不落笔）</button>';
+        /* ★ 去向按钮由 App 的去向表驱动；**App 没提供这张表时如实退化为「不可交」**
+         *   （不炸界面、也不假装有路可走）—— 历史判据的轻量 mock 走的就是这一支。 */
+        const targetIds = (typeof this.app.boardTargetIds === 'function') ? this.app.boardTargetIds() : [];
+        if (!targetIds.length) {
+            h += '<span class="cwb-note">去向表没取到（App 未就绪）—— 交接先搁着，别当交过去了</span>';
+        }
+        for (const t of targetIds) {
+            const label = (typeof this.app.boardTargetLabel === 'function') ? this.app.boardTargetLabel(t) : t;
+            const needConfirm = (t === 'chat');
+            h += '<button class="cwb-btn' + (needConfirm ? ' cwb-btn-warn' : '') + '" data-cw-bcommit="' + esc(t) + '">'
+                + esc(label) + (needConfirm ? '（登记，不发送）' : '') + '</button>';
+        }
         h += '<button class="cwb-btn" data-cw-bcancel>取消（不触发生成）</button>';
         h += '</div>';
+        /* 预览行（点「预览交接单」之后出现；纯读数，不落笔）。 */
+        if (vm.boardPreview) {
+            h += '<div class="cwb-note">交接单预览：' + esc(vm.boardPreview) + '</div>';
+        }
+        /* 两处落点读数（**如实分列**：登记了 ≠ 已发送；草稿本里有几行来自本板）。 */
+        const hf = (typeof this.app.boardHandoffFace === 'function') ? this.app.boardHandoffFace() : null;
+        if (hf && hf.pending) {
+            h += '<div class="cwb-note cwb-st-ok">下一次主聊天要带的材料：' + String(hf.pending.count)
+                + ' 条（' + esc(hf.pending.key) + '）· **还没发送**'
+                + (hf.pending.sent ? '（已发出：留痕在场）' : '') + '</div>';
+        }
+        if (hf && typeof hf.draftedCount === 'number') {
+            h += '<div class="cwb-note">草稿本里由本板落下的：' + String(hf.draftedCount) + ' 份</div>';
+        }
         return h + '</div>';
     }
     _html(vm) {
@@ -314,7 +346,26 @@ export class CreationdeskView {
             b.addEventListener('click', function () { self.app.toggleBoardPicked(b.getAttribute('data-cw-bpick')); });
         });
         el.querySelectorAll('[data-cw-bhandoff]').forEach(function (b) {
-            b.addEventListener('click', function () { self.app.boardHandoff(); });
+            b.addEventListener('click', function () {
+                /* 纯读数（**不落笔**）：把交接单端出来给用户看一眼，再决定交给哪一处。 */
+                const r = self.app.boardHandoff();
+                self.app.setBoardPreview(r);
+            });
+        });
+        /* [v4.45.0 · R5-O1] 两个**真去向**按钮：交给宿主落笔（本视图不落盘、不发布）。
+         *   ★ 主聊天那条**先要用户显式确认**（计划原文：「发送主聊天必须另行显式确认」）——
+         *     而且确认的是「**登记**下一次要带」，不是「现在发送」（发送在主聊天里再确认一次）。 */
+        el.querySelectorAll('[data-cw-bcommit]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                const t = b.getAttribute('data-cw-bcommit') || '';
+                if (t === 'chat') {
+                    const ok = (typeof window !== 'undefined' && typeof window.confirm === 'function')
+                        ? window.confirm('把选定的材料登记为「下一次主聊天要带的材料」？\n（只登记，不发送 —— 发送要你在主聊天里再确认一次）')
+                        : true;
+                    if (!ok) return;
+                }
+                Promise.resolve(self.app.boardCommit(t)).catch(function () { /* 回执在 app 层已如实落到 flash */ });
+            });
         });
         el.querySelectorAll('[data-cw-bcancel]').forEach(function (b) {
             b.addEventListener('click', function () { self.app.cancelBoard(); });

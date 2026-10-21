@@ -198,7 +198,7 @@ import {
 import {
     CMD_LIMITS, composeDrafts, normalizeDraftBook, upsertDraft,
     replaceMaterialKeepText, replaceDraftInBook, recomposeTargets,
-    previewOf, diffDrafts, diffLine, cmdSelfCheck as cmdSelfCheckOf,
+    previewOf, diffDrafts, diffLine, cmdSelfCheck as cmdSelfCheckOf, normalizeDraft,
 } from './config/creation-multi-draft.js';
 /* [v4.02.0 · E 包 R3-X4] 跨社媒同一事件的话题页与舆论演变（纯函数）。
  *   接在咽喉的理由与 R3-O8 同族：条目 / 知情状态 / 公开确认全由调用方给，
@@ -208,6 +208,21 @@ import {
     TOPIC_KINDS, TOPIC_LIMITS, normalizeTopicEntry, normalizeTopicBook,
     buildTopicPage, reactionFor, markDraftsDebunked, topicSelfCheck as topicSelfCheckOf,
 } from './config/topic-echo.js';
+/* [v4.45.0 · 第五期 R5-O1] 取材板 → 「创作草稿」/「下一次主聊天」的交接。
+ *   为什么宿主也要持有这两件：取材板点下去要**真落笔**（草稿本与待用登记两处），
+ *   而这两处的写口只有一处该存在（本仓「同一口径只许一份实现」）——
+ *   契约件给判定与文案，两键读写件给落盘，宿主只做「把意图交上去 + 读回核对」。
+ *   ★ 修前 `boardHandoff()` 端出的只有三个 owner **字符串**：谁都没被调用，
+ *     一个字节都没落笔，而界面显示得像交过去了（「看起来没坏但显示不对」同族）。 */
+import {
+    MBH_STATES, MBH_TARGETS, MBH_DRAFT_SOURCE,
+    normalizeHandoff as mbhNormalize, handoffLine as mbhLine,
+} from './config/material-board-handoff.js';
+import {
+    receiveHandoff as mbhReceive, pendingHandoff as mbhPending,
+    consumeHandoff as mbhConsume, markSent as mbhMarkSent,
+    appliedKeys as mbhAppliedKeys, isApplied as mbhIsApplied,
+} from './apps/creationdesk/board-chat-store.js';
 /* [v3.91.0 · 拓展计划 R-X7] 本地备份、迁移与灾难恢复（纯函数协议层）。
  *   接在咽喉的理由与 R-X1..R-X6 同族：导出范围 / 键面 / 包体 / 存量全由调用方给，
  *   **本模块自己不取数、不写存储、不发网络**（默认不上传云端）。
@@ -279,7 +294,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.44.0';
+const ST_PHONE_VERSION = '4.45.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -477,22 +492,25 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-04-07",
+    date: "2026-04-08",
     items: [
-        "【版本升至 4.44.0（五源同源）：第五期 R5-O2 群投票确认后确实能建立日历事项】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4440.test.mjs`（六组 24 条）当版跑绿。",
-        "【自己抓到的缺陷①：那句「已转交日历确认」在接收者为 0 时也照样念】实测 `grep -rn 'GROUP_VOTE_CONFIRM' apps/ config/ index.js` 只命中**派发点本身**与 `config/phone-events.js` 的登记表 —— 日历侧一个监听器都没有；而日历是懒加载 App（不在 `config/app-lazy-routes.js` 表内，属 `index.js` 的 14 个内联分支），用户没打开过日历时连实例都不存在。于是「已转交」是**谎报**，属本仓反复治过的「看起来没坏但显示不对」。修法不是给派发点补一句文案，而是**真的建接收者**：宿主挂 `PHONE_EVENTS.GROUP_VOTE_CONFIRM` 监听器，落草稿走两键读写唯一实现，再把回执**同步**写回微信侧（监听器同步跑，派发返回时回执已就位）。",
-        "【自己抓到的缺陷②：草稿「取用即清」会让用户白丢一份转交】视图首版在打开表单时调 `consumeVoteHandoff()`（取完即清）。读码时发现后果：用户打开表单看一眼、关掉，凭据就没了 —— 而「打开看一眼」根本不该等于「放弃这份安排」。改为 `pendingVoteHandoff()`（只读不消费），清掉凭据的时机收窄到**唯一一处**：用户显式提交且真的建成了（`commitVoteHandoff` 里清）。**失败路径不清**（凭据要留给用户改完再提交）。",
-        "【自己抓到的缺陷③：`replayed` 时若仍落草稿，表单会预填一份**已经建过**的活动】那样用户再提交一次就撞台账的 `replayed`，白挨一次「不重复建」，体验上像是系统在推诿。两键读写件因此在判重命中时**不落草稿**，并配判据 C2 与负控制 F2（破坏该分支 ⇒ 同款判据必转红）。",
-        "【自己抓到的缺陷④：`handoffLine` 这个名字在 `index.js` 里已被 v3.72.0 的续玩交接占用】两件不同的事（续玩三段闸门 vs 群投票转交）同名会让读码的人认错那一行在念谁。首版直接具名导入即被 `node --check` 拦下（`Identifier 'handoffLine' has already been declared`），改为 `handoffLine as gvHandoffLine` 并写明理由 —— 本仓「同名不同物」比改名更该防。",
-        "【交棒改写：把「念假设」改成「念回执」】微信侧不再自己拼一句结论，而是：派发前清空回执位 → 派发（宿主同步写回执）→ **读回执再念**。三种说法互不同形：收下了（`received`，明说**还没成事项**）、重复转交（`replayed`）、拒收（`failed`，带归因词）；**没有回执就如实说「没有接收者」**，不再假装已转交。判据 E2 把「清空 → 派发 → 读回执」的**顺序**也锁了。",
-        "【「缺插件可只存日历并提示未登记记忆」的落法】交接口在建成事项后给出 `memoryRegistered` 三态：`true`（约定建成）/ `false`（该有约定对象却没能建 ⇒ 读数补一句「记忆未登记：日历独立成立」）/ `null`（名单里只有自己 ⇒ 约定这一环**不适用**，**不加尾巴**）。把「不适用」说成「未登记」是另一种谎报，判据 B5/D5 分别锁住这两个方向。",
-        "【「不替用户猜日期」是硬边界】交接口要求 `input.dateKey` 是 `年-月-日` 十字符形状（四位年-两位月-两位日），没有合法日期就如实拒收 `invalid-date` 且**零写盘**（判据 D1 逐个试 `''` / `今天` / `2026/04/06` / `2026-4-6` / `null`）。猜一个「今天」会在日历上留一条用户没定的日程 —— 那比「没建」更难收拾。",
-        "【「不双建」的落法：幂等键 = 活动 id，台账落盘】台账与草稿都落 `^calendar_` 前缀的键（随会话隔离，换角色不带着上一个角色的待办）。台账超上限**丢最旧**而不是静默截断新记录（判据 C3 验最新一条必须在）。重复转交的判定必须跨「关掉表单再点一次确认」成立 —— 只留内存的话重开一次手机就又能建出第二条。",
-        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4440.test.mjs`）：契约件纯函数、两键读写用内存假件、交接口用**真原型 + 假依赖**构造（不 `new`：构造期会装全局监听器）。**未在浏览器里真点过一遍**：微信确认按钮 → 宿主监听器 → 日历表单预填 → 提交建事项这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
-        "【不做面在代码上可判】不把投票自动当承诺（`proposeCommitmentFromMemo` 只许出现在 `commitVoteHandoff` 之后）；不另建跨 App 消息总线（零 `fetch` / `XMLHttpRequest` / `WebSocket` / `EventSource` / `postMessage`）；不引入常驻定时器。判据 E5 逐项扫。",
-        "【样式双侧投递】`apps/calendar/calendar.css`（link 加载面）与 `phone.css`（运行时投递面）都要有「群投票凭据条」那四类；漏一侧会复现「样式在某些入口下不见了」这种最难查的形态。落盘用 `tools/patch_o2_css.py`，锚点取 v4.41.0 R5-X8 那段周期样式的注释头（恰中 1 次，重复执行即 SKIP）。",
-        "【本版新增件的分工】`config/group-vote-handoff.js`（纯契约：归一 / 五态 / 读数 / 上限 / 键名 / 自检，零 DOM 零存储零时钟）、`apps/calendar/vote-handoff-store.js`（两键读写的**唯一实现**：宿主与日历 App 都委派到这里，防止「宿主说收到了、日历说没有」的读数分歧）、`apps/calendar/calendar-app.js` 交接口（收 / 读 / 取 / 台账 / 提交）、`apps/calendar/calendar-view.js`（表单预填 + 凭据条 + 提交接线 + 取消清凭据）。",
-        "【抬版连带面：十一条历史套件的版本锚被抬版连带转红（本仓已登记过的同因形态）】本版跑定点回归时实测 v4330 至 v4430 十一条套件各有 1 条红，红在同一个位置：它们用 `const ver = pkg.version` **同时**断「五源一致」与「当版公告记了本版那件事」——抬版那一刻 `ver` 变成 4.44.0，而 4.44.0 的公告里当然没有 R5-O7 / R5-O8 / 等编号。其中八条在 HEAD b29df6b 上就已是红的（`log.latest` 还是 4.43.0），只有 v4430 是本版抬版带红的。这不是产品缺陷，是**判据的主语写错了**：它想说的是「v4.34.0 这一版记全了」，写成了「当前这一版记全了」——两者只在抬版前那一瞬同义。本仓 v4.27.0 的 `tools/patch_x6e.py` 档头已逐字记过同因（v4260 那条），故本版按同仓口径接管：一致性继续跟随当前版，当版**内容**锁**自己那一版**的字面量，**断言强度不变**（只换主语，不放宽）。接管工具 `tools/takeover_v4440_anchors.py`（锚点各断言恰中 1 次，失配即整件退出），十一条全部转绿；旧写法逐字留档在该工具档头。"
+        "【版本升至 4.45.0（五源同源）：第五期 R5-O1 取材板真正交给草稿或下一次主聊天】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4450.test.mjs`（六组 31 条）当版跑绿。",
+        "【自己抓到的缺陷①：`boardHandoff()` 端出的三个 owner 只是**字符串**，谁都没被调用】计划原文点名：「owner 字符串不是实际交接」。实测复核：`creationdesk-app.js` 的 `boardHandoff()` 返回一份读数，里面只有 `handoff: { composeOwner, budgetOwner, draftOwner }` —— 三个字符串；按钮点下去与不点，世界完全一样（不报错、不崩界面，只是把「什么都没发生」显示成「已经交给既有 owner 了」）。修法不是补一句文案，而是**真建落笔方**：宿主加 `board` 动作分支，草稿走既有 `cwWriteDrafts`（写后回读核对行数，读不回不算成功），主聊天那条走两键读写件登记。",
+        "【自己抓到的缺陷②：两边的来源词表**不是同一张**，硬塞就是让同一问题出现两套答案】取材板的 `source` 是**记忆事实的来源**（continuity / recall / scene-book / relation / promise / pov / fated-recall / lore / note / caller）；`config/creation-pipeline.js` 的 `CREATION_SOURCES` 是**App 内容的来源**（musicdesk / stickerdesk / soundkit / pixiv / lofter / magazine / pvdesk / doujin）。拿前者去 `buildCreationDraft` 必被 `source-not-found` 拒。本版的回答是**不假装同表**：落进草稿本的行如实带 `source: 'material-board'` 与自己的 refs，并把「它是记忆事实、不是 App 内容」写进读数（判据 A3 锁这条）。",
+        "【自己抓到的缺陷③：认不出出处的那一条若被静默丢掉，用户看到的是「交过去了」而草稿里少了一条】归一因此**整单拒收**（`handoff-no-ref`）并把被拒的那一条**具名**列出来 —— 丢一条而报成功就是谎报（判据 B3）。",
+        "【自己抓到的缺陷④：「登记」被读成「已发送」是本项最该防的谎报】主聊天那条只到**登记**（`pending`），读数明说「**还没发送** —— 发送要你在主聊天里另行确认」；取用口 `boardChatTake` 只取用、**不顺手写 sent**，留痕 `boardChatMarkSent` 归「真发出去之后」由调用方如实给（判据 D3、负控制 F4）。",
+        "【两条去向各有各的落点，写后回读才算成功】草稿 → 既有草稿本（幂等键 = 去向 + 任务 + 引用集；同一份选定第二次交报 `replayed`，不重复插）；主聊天 → 两键读写件登记（超上限**丢最旧**，不静默截断新记录）。**写不进去一律如实报 failed**（负控制 F3 破坏「写失败报 failed」⇒ 同款判据必转红）。",
+        "【交棒改写：把「点一下」改成「预览 → 选去向 → 落笔」】视图这一排现在是三层，与计划原文「**预览内容后**交给原 owner」对齐：`data-cw-bhandoff`（**预览交接单**，纯读数不落笔）、`data-cw-bcommit`（两个**真去向**：加入创作草稿 / 用于下一次主聊天）、`data-cw-bcancel`（取消不新建）。主聊天那条**先弹显式确认**，且确认文案说清「只登记，不发送」。",
+        "【「失败保留选择并允许重试」的落法】交接失败**不清用户的选择**（不清 `_picked`、不清时点），读数点明「你选的与填的都还留着，可以重试」；入口不在位（`VirtualPhone` 缺席 / 咽喉未就绪）如实报 `unreceived`「**没有接收者**」，**不许报成功**（判据 D4）。",
+        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4450.test.mjs`）：契约件纯函数、两键读写用内存假件、宿主与视图只做**源码形态**判定（`board` 动作在场、白名单只追加、预览不调落笔口）。**未在浏览器里真点过一遍**：取材 → 勾两条 → 加入创作草稿 → 在草稿本里打开看到来源与内容这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
+        "【自己抓到的缺陷⑤（本版引入 · 门禁抓的，不是人眼看的）：新契约件里就地写了一遍弱口径】`config/material-board-handoff.js` 的 `floor` / `asOf` 两处首版写成 `Number.isFinite(Number(v)) ? Math.floor(Number(v)) : null`。本仓自 v3.12.0 起把「数值取值」收成**唯一实现**（`config/num-gate.js` 的 `numOrNull`）并配常驻门禁 `scripts/weak-coercion-audit.mjs`，因为该写法会把 `''` / `[]` / `false` 读成 `0`，与「上游**没给**」塌成同一个读数（两者处置常常相反）。实测：本版新件落地后门禁从 1 处（存量 `config/goal-tree-contract.js`）涨到 **3 处**，把两处改成**纯转发** `numOrNull` 后回落 1 处。★ 教训与 v3.12.0 档头同款：门立住了不等于下一个人不会再写一遍弱的那版 —— 新件必须**引门**，不是**再写一遍**。",
+        "【门禁读数如实：本版只降自己引入的，不动存量】`weak-coercion` 门禁剩 1 处（`config/goal-tree-contract.js:201`，本版范围外）**原样留着不顺手改**：那属于另一项的范围，顺手改会把两件事的 diff 混在一起，也让「本版引入了什么」这句话不再可判。本版只保证**自己新加的文件零弱口径**。",
+        "【公告读数不得手抄：判据条数写错即「只错结果」】本版公告首稿写「本版判据（六组 26 条）当版跑绿」，而套件实测 **31 条**。四处同源面（迭代段 / `ITERATION_LOG.md` / `update-log.json` items / `index.js` 公告块）一致地写着 26，读者据此核对会以为漏了 5 条判据 —— 这正是本仓最贵的「不报错、不崩溃、只错结果」的最小形态。已四处同改并自证（旧串 0 残留 / 新串全在场）。",
+        "【本版四道门禁与全量回归的实测口径（写清哪些是存量、哪些是本版）】四道门（syntax / import-resolve / dead-export / named-import）全绿；本版判据 31/31 全绿；历史套件 v3900(21) / v4010(17) / v4300(35) / v4440(36) 全绿。全量 `npm test` 在本仓**存量**上有红项（`system-v290/v293/v296/v310/v311/v3120/v325/v326/v327/v328/v3570/v3770` 等，与 `weak-coercion` 的存量项同族）：实测在**干净 HEAD 副本**（4.44.0，`git archive` 展开后独立跑）上红项与本工作区**逐套件红数完全一致** ⇒ 这批红**非本版引入**，不在本版范围内顺手改（会把两件事混在一起）。",
+        "【不做面在代码上可判】不自动发布（零 `addMoment` / `publishUserPost` / `createNovel`）；不生成正文（零 `generateContent`）；不另建跨 App 消息总线（零 `fetch` / `XMLHttpRequest` / `WebSocket` / `EventSource` / `postMessage`）；不新建草稿库（本版只新开**一个**键 `cw_board_chat_pending`，草稿仍落既有 `cw_drafts`）。判据 E4 逐项扫。",
+        "【样式双侧投递】`apps/creationdesk/creationdesk.css`（link 加载面）与 `phone.css`（运行时投递面）都要有去向按钮的警示态（`.cwb-btn-warn`）与「登记了」的读数态（`.cwb-st-ok`）；漏一侧会复现「样式在某些入口下不见了」这种最难查的形态。",
+        "【本版新增件的分工】`config/material-board-handoff.js`（纯契约：归一 / 五态 / 两去向 / 归因词 / 上限 / 键名 / 自检，零 DOM 零存储零时钟）、`apps/creationdesk/board-chat-store.js`（待用登记的**唯一实现**：登记 / 读 / 取用即清 / 留痕 / 台账，宿主与主聊天侧都委派到它）、`index.js` 的 `board` 动作分支与三个主聊天侧出口（取用 / 留痕 / 台账读数）、`apps/creationdesk/creationdesk-app.js` 的 `boardCommit`（真落笔）与 `setBoardPreview`（纯预览）、`apps/creationdesk/creationdesk-view.js` 的三层按钮与两处落点读数。",
+        "【抬版连带面沿用 v4.44.0 的接管口径】本版抬版同样会带动历史套件「当版内容」锚；那些已由 `tools/takeover_v4440_anchors.py` 改成锁自己那一版，本版判据 F6 守住这个不变量（不再需要人肉重查一遍）。"
     ]
 };
 
@@ -4111,7 +4129,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   取数口要在读数里带上它，而 const 有暂时性死区，先后必须对。
      *   [v4.01.0] 新增四个都只动草稿本：compose（多目标编排）/ edit（改这一份的文案）/ 
      *   redo（只重做所选段）/ drop（丢掉这一份）。 */
-    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop', 'topic'];
+    /* [v4.45.0 · R5-O1] 末位追加 `board`：取材板交接的**真落笔**入口。
+     *   ★ 追加不动首项（v4.01.0 的判据锁「白名单应以 plan 开头」）；
+     *     本仓判据只锁首项与「有白名单判定」，不锁成员个数。 */
+    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop', 'topic', 'board'];
     /** 读草稿本原始值：**读不出来返回 null**（不是空数组——两者处置相反）。 */
     function cwReadDraftsRaw() {
         try {
@@ -4293,6 +4314,26 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 targets: targets,
                 published: published,
                 drafts: drafts,
+                /* [v4.45.0 · R5-O1] 取材板交接的两处落点读数（**如实分列**）：
+                 *   · pending —— 已登记、**未发送**的下一次主聊天材料（没有 ⇒ null，不拟一份）；
+                 *   · drafted —— 草稿本里由取材板落下的那几行（按来源标识认，不猜）。
+                 *   把「登记了」读成「已发送」是本项最该防的那件事，故两者**分开报**。 */
+                boardPending: (function () {
+                    try {
+                        const h = mbhPending(storage);
+                        if (!h) return null;
+                        return {
+                            key: h.key, target: h.target, task: h.task,
+                            count: h.count, sent: h.sent, refs: h.refs.slice(),
+                        };
+                    } catch (_e) { return null; }
+                })(),
+                boardDraftedCount: (function () {
+                    try {
+                        const nb = normalizeDraftBook(cwReadDraftsRaw());
+                        return nb.drafts.filter(function (d) { return d.source === MBH_DRAFT_SOURCE; }).length;
+                    } catch (_e) { return 0; }
+                })(),
                 draftsText: drafts.readable
                     ? ('草稿 ' + String(drafts.items.length) + ' 份（认不出 ' + String(drafts.dropped) + ' 份）')
                     : '草稿本**读不到**（不是「没草稿」—— 这两件事处置相反）',
@@ -4413,6 +4454,108 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 }
                 return { ok: false, note: '不认识的话题子命令：' + tKind, kind: 'bad-topic-sub' };
             }
+            /* ══════ [v4.45.0 · 第五期 R5-O1] 取材板交接：**真落笔** ══════
+             *   两条去向各自落到它该落的地方，且都**写后回读**：
+             *     · draft → 既有草稿本（`cwWriteDrafts`：读不回不算成功）；
+             *     · chat  → 两键读写件的待用登记（**登记 ≠ 已发送**）。
+             *   ★ 不发布、不生成、不发消息：本分支没有任何 owner 调用与请求构造。
+             *   ★ 记忆事实与 App 内容是**两套来源词表**，故草稿行如实带
+             *     `source: MBH_DRAFT_SOURCE`（`material-board`）与自己的 refs ——
+             *     拿记忆来源名去冒充 App 内容来源，会让「这条素材来自哪个 App」出现两套答案。 */
+            if (action === 'board') {
+                const input = (p.handoff && typeof p.handoff === 'object') ? p.handoff : p;
+                const norm = mbhNormalize({
+                    target: input.target, task: input.task, taskLabel: input.taskLabel,
+                    asOf: input.asOf, items: input.items,
+                });
+                if (!norm.ok) {
+                    const read = { ok: false, state: MBH_STATES.FAILED, why: norm.why, count: 0 };
+                    return { ok: false, kind: norm.why, note: mbhLine(read), state: MBH_STATES.FAILED, why: norm.why };
+                }
+                if (norm.target === MBH_TARGETS.DRAFT) {
+                    /* 落既有草稿本：**幂等键就是 norm.key**（同一份选定 + 同一去向只落一行）。 */
+                    const bookNorm = normalizeDraftBook(cwReadDraftsRaw());
+                    const exists = bookNorm.drafts.some(function (d) { return d.key === norm.key; });
+                    if (exists) {
+                        const read = { ok: true, state: MBH_STATES.REPLAYED, count: norm.items.length };
+                        refreshCreationdesk();
+                        return { ok: true, kind: 'board-replayed', note: mbhLine(read), state: MBH_STATES.REPLAYED, key: norm.key };
+                    }
+                    const nd = normalizeDraft({
+                        key: norm.key,
+                        source: MBH_DRAFT_SOURCE,
+                        materialId: norm.refs.join(','),
+                        target: 'draft',
+                        note: norm.note,
+                        tags: norm.tags,
+                        version: 1,
+                        state: 'editing',
+                        at: Date.now(),
+                    });
+                    if (!nd.ok) {
+                        const read = { ok: false, state: MBH_STATES.FAILED, why: 'handoff-no-ref', writeWhy: 'normalize:' + nd.reason, count: norm.items.length };
+                        return { ok: false, kind: 'board-normalize', note: mbhLine(read), state: MBH_STATES.FAILED };
+                    }
+                    const book = upsertDraft(bookNorm.drafts, nd.draft);
+                    const w = cwWriteDrafts(book.drafts);
+                    refreshCreationdesk();
+                    if (!w.ok) {
+                        const read = { ok: false, state: MBH_STATES.FAILED, why: '', writeWhy: w.reason, count: norm.items.length };
+                        return { ok: false, kind: w.reason, note: mbhLine(read), state: MBH_STATES.FAILED };
+                    }
+                    const read = { ok: true, state: MBH_STATES.DRAFTED, count: norm.items.length };
+                    return { ok: true, kind: 'board-drafted', note: mbhLine(read), state: MBH_STATES.DRAFTED, key: norm.key, count: norm.items.length };
+                }
+                /* chat：登记「下一次要带的材料」（**登记 ≠ 已发送**）。 */
+                const rec = mbhReceive(storage, {
+                    target: norm.target, task: norm.task, taskLabel: norm.taskLabel,
+                    asOf: norm.asOf, items: norm.items,
+                });
+                refreshCreationdesk();
+                return {
+                    ok: rec.state === MBH_STATES.PENDING,
+                    kind: 'board-' + rec.state,
+                    note: rec.line,
+                    state: rec.state,
+                    why: rec.why,
+                    key: norm.key,
+                    count: norm.items.length,
+                };
+            }
+
+    /**
+     * [v4.45.0 · R5-O1] **主聊天侧取用口**（登记 → 取用 → 真发出去之后留痕）。
+     *   为什么要有这一口：计划原文「发送主聊天必须另行显式确认，取材板不自行生成或发消息」——
+     *   取材板只**登记**（`board` 动作的 chat 去向），取用与留痕归主聊天侧。
+     *   ★ 取用**不等于已发送**：`consume` 只把登记交给调用方；只有调用方在**真发出去之后**
+     *     调 `markSent` 才留痕。把这两步并成一步，就会把「带上了」显示成「发出去了」。
+     * @returns {{ok:boolean, kind:string, note:string, pending:object|null}}
+     */
+    function boardChatTake() {
+        try {
+            const h = mbhConsume(storage);
+            if (!h) return { ok: false, kind: 'no-pending', note: '没有登记过「下一次主聊天要带的材料」（不是「取用失败」）', pending: null };
+            return {
+                ok: true, kind: 'taken',
+                note: '已取出 ' + String(h.count) + ' 条材料（**还没发送** —— 发送由你在主聊天里确认）',
+                pending: h,
+            };
+        } catch (e) {
+            return { ok: false, kind: 'take-threw', note: '取用失败：' + String((e && e.message) || e), pending: null };
+        }
+    }
+    /** 真发出去之后如实留痕（**本函数不判断「发没发」**，由调用方给事实）。 */
+    function boardChatMarkSent(key) {
+        try { return { ok: mbhMarkSent(storage, key) === true }; }
+        catch (_e) { return { ok: false }; }
+    }
+    /** 取材板交接的台账读数（已登记过的幂等键 + 某键在不在册）—— 只读，供诊断面用。 */
+    function boardChatLedger(key) {
+        try {
+            const keys = mbhAppliedKeys(storage);
+            return { keys: keys, count: keys.length, has: mbhIsApplied(storage, String(key || '')) };
+        } catch (_e) { return { keys: [], count: 0, has: false }; }
+    }
             if (action === 'compose' || action === 'edit' || action === 'redo' || action === 'drop') {
                 const bookRaw = cwReadDraftsRaw();
                 const bookNorm = normalizeDraftBook(bookRaw);
@@ -12625,6 +12768,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 /* [v3.90.0 · R-X6] 创作工作台的只读读数口（视图与诊断读这一份）；动作入口只此一处。 */
                 creationWorkbenchFace: function () { refreshCreationdesk(); const v = window.VirtualPhone; return v ? v._creationWorkbench || null : null; },
                 applyCreationdeskAction: applyCreationdeskAction,
+                /* [v4.45.0 · R5-O1] 取材板交接的**主聊天侧**三个口（取用 / 留痕 / 台账读数）。
+                 *   与 `board` 动作成对：动作口负责登记，这三个口负责取用与留痕。 */
+                boardChatTake: boardChatTake,
+                boardChatMarkSent: boardChatMarkSent,
+                boardChatLedger: boardChatLedger,
                 /* [v3.91.0 · R-X7] 备份与恢复：只读读数口 + 唯一动作口（导出 / 预览 / 提交 / 撤销）。 */
                 backupFace: function () { refreshBackup(); const v = window.VirtualPhone; return v ? v._backup || null : null; },
                 applyBackupAction: applyBackupAction,
