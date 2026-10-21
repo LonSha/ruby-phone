@@ -200,6 +200,17 @@ import {
     replaceMaterialKeepText, replaceDraftInBook, recomposeTargets,
     previewOf, diffDrafts, diffLine, cmdSelfCheck as cmdSelfCheckOf, normalizeDraft,
 } from './config/creation-multi-draft.js';
+/* [v4.47.0 · 第五期 R5-X7] 可丢弃的假设场景双栏试写（纯契约件）。
+ *   接在咽喉的理由与 R5-O1 同族：两栏文本 / 基线 / 上游探测全由调用方给，
+ *   契约件不取数、不写存储、不发布；**试写不是既成结局** —— 正史零写由本层守。
+ *   落笔只有一处：既有草稿本 `cw_drafts`（source = HY_DRAFT_SOURCE）；
+ *   转正式分支**只判闸、只转交**（adoptGate 不给凭据，接续归上游 owner）。 */
+import {
+    HY_STATES, HY_LANES, HY_LANE_STATES, HY_DECISIONS, HY_KEYS, HY_DRAFT_SOURCE,
+    HY_LIMITS, normalizeTrial as hyNormalize, laneLine as hyLaneLine,
+    compareLanes as hyCompare, readHypoTrial as hyProbe, adoptGate as hyAdoptGate,
+    discardPlan as hyDiscardPlan, trialLine as hyTrialLine, hySelfCheck as hySelfCheckOf,
+} from './config/hypo-trial-contract.js';
 /* [v4.02.0 · E 包 R3-X4] 跨社媒同一事件的话题页与舆论演变（纯函数）。
  *   接在咽喉的理由与 R3-O8 同族：条目 / 知情状态 / 公开确认全由调用方给，
  *   内核不取数、不写存储、不发布。话题动作族只动「话题本」这一面，
@@ -294,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.46.0';
+const ST_PHONE_VERSION = '4.47.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -492,24 +503,24 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-04-09",
+    date: "2026-04-10",
     items: [
-        "【版本升至 4.46.0（五源同源）：第五期 R5-X6 作者改设定的影响预览】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4460.test.mjs`（六组 32 条）当版跑绿。",
-        "【本版治的缺陷形态（读码可复算，不是推演）】改设定的射程在本版之前没有任何落点：用户把「住在城西」改成「搬到城南」，而会面、人物档案、章节正文、约定四类里挂着他旧住处的条目一条都不会说话。他要么全改（改到与设定无关的财务），要么全不改（漏掉该改的）。两种都**不可见** —— 正是本仓反复治过的「看起来没坏但显示不对」。",
-        "【自己抓到的缺陷①：打包面漏投本版样式，界面在打包环境下裸奔且不报错】实测 `phone.css` 里 `mem-sr` 的 3 次命中**全是 `.mem-src-go` 的子串误命中**，真正的 `.mem-sr-*` 一个都没进去（源文件 `apps/memory/memory.css` 有、打包面没有）。修法不是手工改两处（那必然会再犯），而是新建幂等回灌脚本 `tools/sync_css_v4460.py`：源文件永远是唯一真源，打包面只是它的投影；判据 E3 另按「本版段逐字同源」锁住。",
-        "【自己抓到的缺陷②：`SR_LIMITS.ledger` 导出了但全库零调用（本仓主线的功能级失效）】契约件注释写着「本机台账最多留几次改写」，而消费点只有 `refs` 与 `label` 两处，`ledger` **一次都没被用过** ⇒ 台账可以无限长，读数里「本机记了 N 次」会被永久累积刷大。修法：确认落盘前裁到上限，且**丢最旧必须说出来**（静默丢会让用户把「被裁掉的那几次」读成「本来就没记过」，而两者处置相反：没记过 ⇒ 重做一次；记过但已不在本机 ⇒ 那份决定已经回不来了）。",
-        "【口径内核：五态与四态互不同形，判定顺序是本件的核心（改序即改结论）】`spares` 判定必须**先于** tracked 判定：与设定无关的引用面无论有没有数据源都明确不受影响（那是口径的必然，不是数据的运气）。顺序倒了，财务就会因「本机没接财务数据源」被读成「判不了」，而验收原文要的恰恰是「不误改无关财务」这句可见的读数。负控制 F1 定点破坏这一行，同款判据必转红。",
-        "【自己抓到的缺陷③：判据靶子若裸判 App 与视图，会误伤既有的导入面与覆盖面读数】`absent` / `empty` / `unreadable` 这些字面量在 App 别处是**合法的**（Lore 导入面、chat 覆盖面各有各的态），拿它们当「状态唯一出处」的靶子会假红。故 A4 把靶子收窄到 SR 块（`_srPlugin` → `_lorePlugin` 之间），只判块内不得自持第二份状态表。",
-        "【自己抓到的缺陷④：负向判据只去注释会自指，把正确写法判红】F6 检查历史套件「不得拿当前版去索引当版条目」时，被检查的套件里正写着同款判据的锚点字符串 ⇒ 只去注释会让判据命中**自己**。修法是加 `stripStrings`（去字符串字面量）版本，负向检查只用它。这正是本仓负控制三形里的「自我指涉」。",
-        "【防漏报那一格：类目受影响却一条具体引用都没取到】只报「受影响 1 条」会让用户以为「这次只牵动会面」，而人物档案那一类同样会受影响、只是没取到条目。本版把它单独算出来（`faceAffectedNoRefs`）、进读数（点明「一条具体引用都没取到 —— 不能凭一个类名去改」）、并**拦住确认**（已定好的逐项决定不足以覆盖这一类）。漏报比误改更隐蔽。",
-        "【覆盖诚实性：未追踪必须说出来，全覆盖也不许含糊】只要有一类受影响面没被追踪，读数就明说「未追踪 N 类」并点明「判不了，别当成「都追到了」」；全覆盖时也照样明说「受影响的引用面都接上了数据源」。验收原文点名不做的那句「全库无遗漏」在代码里零出现（判据 B3 逐词扫）。",
-        "【宿主落笔：过闸才写、重复不双插、缺材料整单拒收、目标缺席不报成功】闸不放行时台账**一个字节都不写**（取消零写）；同一份改写重复确认只更新既有那一笔并如实说「本来就在台账里（没有新增）」；缺原事实 / 缺新设定 / 认不出种类一律整单拒收且零写；撤销三态分形（可撤 / 已经撤过报不用撤 / 本机台账里没有这一次报没见过），把「撤过了」报成「撤成功」会让用户以为刚刚发生了一次撤销。",
-        "【交棒改写：把「点一下」改成「预览 → 逐项决定 → 过闸确认」三层】视图这一排与计划原文「先看清会牵动哪些既有引用」对齐：`mem-sr-preview`（看影响，纯读数不落笔）、逐行的两个决定按钮与「清决定」（**不许默认**：没记就是没决定，闸门据此拦住）、`mem-sr-confirm`（过闸才落台账）、`mem-sr-undo`（撤销这一次）。空输入拦在视图并如实说「一个字都不写」。",
-        "【不做：在代码上可判】不批量覆写（确认只写台账，不写正文 —— 正文改写是 owner 的事）；不猜语义相似（引用取数只认**字面出现**，猜出来的「受影响」会让用户去改一件本来无关的事，而那个错误看不见）；不发消息、不生成正文、不联网（判据 D6 与 E4 逐项扫 `chat.push` / `setChatMessages` / `generateQuietPrompt` / `fetch` / `XMLHttpRequest` / `WebSocket` / 协议头）；不新建事务服务（台账落既有存储键，本版零新增键）。",
-        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4460.test.mjs`）：契约件纯函数、台账用内存假件、宿主与视图只做**源码形态**判定（元素在场、事件落点、读数全部来自 App 出口、样式双侧同源）。**未在浏览器里真点过一遍**：改设定 → 看影响 → 逐项决定 → 确认 → 重开回读 → 撤销这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
-        "【抬版连带面沿用 v4.44.0 与 v4.45.0 的接管口径】本版抬版同样会带动历史套件「当版内容」锚；那些已由既有接管脚本改成锁自己那一版，本版判据 F6 守住这个不变量（不再需要人肉重查一遍）。本版另新增一处自证：`stripStrings` 去字符串版负向检查，防判据自指。",
-        "【本版门禁与全量回归的实测口径（写清哪些是存量、哪些是本版）】本版判据 32/32 全绿；`npm run syntax`（870 文件）/ `import-resolve`（856 条静态导入）/ `dead-exports`（无新增零消费导出）/ `named-import`（827 条）/ `keys`（453 个键全登记）/ `registry`（样式投递未覆盖 0）/ `lifecycle` / `bridge-contract` / `screen-host` / `session-writeback` / `hardlink-safety` / `upstream-face` 全绿。全量 `npm test` 实测 4864 条 / 红 28 条，红项落在 14 个历史套件（v290 / v293 / v296 / v310 / v311 / v3120 / v3201 / v325 / v326 / v327 / v328 / v3570 / v3730 / v3770），已在**干净 HEAD 副本**（`git archive` 展开后独立跑）上复现同一批红 ⇒ 这批红**非本版引入**，不在本版范围内顺手改（顺手改会把两件事的 diff 混在一起，也让「本版引入了什么」这句话不再可判）。",
-        "【本版工作区里那处与 v4.37.0 有关、但不属本版的存量缺口（如实登记，不动手）】`npm run source-derivation` 报「枚举面出现未登记的库：`config/item-custody-contract.js`(1)」——该件是上一版 R5-X1（随身物品与借还）留下的，尚未登记进 `scripts/source-derivation-audit.mjs` 的 LEDGER。它在**干净 HEAD 副本上同样报**（非本版引入）。按仓内既有口径不在本版顺手改：登记一行会与本版 diff 混在一起，也让「本版引入了什么」不再可判。此处只登记事实与证据（干净副本同报），留待 R5-X1 收尾时处理。"
+        "【版本升至 4.47.0（五源同源）：第五期 R5-X7 可丢弃的假设场景双栏试写】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4470.test.mjs`（六组 36 条）当版跑绿。",
+        "【本版治的缺陷形态（读码可复算，不是推演）】全仓 `grep -rIn '双栏试写' apps config` **零命中**：正史选择（`config/branch-canon-contract.js`，v4.28.0）只能对**已经存在的**两条分支做「选哪条进新卷」，而「还没创建正式分支前，先拿两种假设各试写一栏看看」这一步**没有任何落点**。后果三件都不是报错：① 用户只能先建一条正式分支再删 —— 建了就有痕迹，「预演」被读成「已经这么定了」；② 「两栏基线不同」与「同基线可比」在界面上同形（都只是两段文本），而两者处置相反；③ 「丢弃」没有范围（容易做成「把键全删」），预演没伤正史反而被它删了。",
+        "【口径内核：判定**有顺序**（改序即改结论）】`normalizeTrial` 必须按「缺基线 → 这一栏没写假设 → 两栏同一假设」判：基线是先决条件 —— 没有基线，「两栏对照」根本无从谈起，故缺基线优先于「这一栏没写假设」。首版自检的 `缺基线必须拒` 红项正是顺序倒置所致（缺基线判定被 `refusedLanes` 提前挡掉）。负控制 F1 定点破坏这一行，同款判据必转红。",
+        "【本版最贵的一格：可比性三态 + `mixedWithBaseline`】同基线才叫「同一场景的两条岔路」（差异来自假设本身，可以照着决定采纳哪栏）；基线不同 ⇒ 差异里混着基线差（照着决定会改错东西）。故 `compareLanes` 在基线不同时，差异行**每一行**都带 `mixedWithBaseline: true`；「有一栏没记基线」再单列第三态（处置又不同：补基线，而不是改一栏）。负控制 F3 破坏该标记 ⇒ 同款判据必转红。",
+        "【自己抓到的缺陷①（**门禁看不见**，靠读码复算抓的）：本机键落错了存储面 ⇒ 换角色串味】首版键名 `hy_trial` **不命中 `config/storage.js` 的 CHAT_DATA_PATTERNS 任何一条** ⇒ `_isChatData()` 判 false ⇒ 落进 **extensionSettings（全局）** ⇒「换角色后上一个角色的两栏预演还在」。这正是 v2.8.10 那类串味事故（成就/抽卡/生理/塔罗互相污染）的同族形态：**不报错、不崩溃、只错数据**。为什么 `keys` 门没抓住：它只抽三类键面（storage 调用的字面量实参 / 键常量声明 / `this.<prop>` 间接键），**对象字面量里的键值不在射程内**（`HY_KEYS = Object.freeze({ trial: … })` 正属此形，同族的 `MBH_KEYS.pending` 处境相同）。修法：键名改为 `cw_hy_trial`（沿用创作工作台本机数据族，不新开前缀），并新增判据 A4 —— **真调 `PhoneStorage._isChatData()`** 判归属，外加反坐实（裸 `hy_trial_probe` 必须判 false）。负控制 F5 破坏键名 ⇒ 同款判据必转红。",
+        "【自己抓到的缺陷②（门禁抓的）：新件里就地写了一遍弱口径】`creationdesk-app.js` 的 `hyLanes()` 首版写成 `Number.isFinite(Number(base)) ? … : …` —— 本仓自 v3.12.0 起把数值取值收成**唯一实现**（`config/num-gate.js` 的 `numOrNull`）并配常驻门禁 `scripts/weak-coercion-audit.mjs`。实测：本版落地后该门从 1 处（存量 `goal-tree-contract.js`）涨到 **2 处**，正是本版新件写的那一处。改成**纯转发** `numOrNull` 后回落 1 处。★ 教训与 v3.12.0 档头同款：门立住了不等于下一个人不会再写一遍 —— 新件必须**引门**，不是**再写一遍**。",
+        "【自己抓到的缺陷③：视图拿**文案子串**猜态 ⇒ 文案一改按钮就静默消失】`_hypo` 段首版用 `(vm.hyCompareLabel || '').indexOf('同基线') >= 0` 判「采纳按钮画不画」。这条错法的表现不是报错，是**改一次文案按钮就没了**。修法：App 新增出口 `hyAdoptReady()`（判据 = 契约件可比性态 + 选中栏 + **那一栏真有试写文本**），视图只读出口；另修视图绑定处伸手读 App 私有态 `self.app._hy` 的写法（改读出口 `hyKindOf()`）。判据 A5 与负控制 F6 锁这两条。",
+        "【自己抓到的缺陷④：段边界两套实现必然漂移，幂等脚本自己坏了】新写的回灌脚本 `tools/sync_css_v4470.py` 首版用「段头 → 文件尾」判「是否已同源」，而**creationdesk 段在 phone.css 里不是最后一节**（其后还接着 workflow 等段）：第二次跑报「差异 54 字 / 源段 1084 字」—— 幂等性自己坏了。根因不是取段写错，是**判同源与做插入用了两套边界**。修法：两条路径统一锚在「段末行 → 下一个 App 段头」。同一处错法在判据 E3 里也犯了一次（段头取到文件尾 ⇒ 假红），已同步修正。",
+        "【自己抓到的缺陷⑤：负向判据的自指面比想象中更宽 —— 正则字面量会让状态机错位】F8 检查「历史套件不得拿当前版去索引当版条目」时用了 `stripStrings`。实测：该状态机**不识别正则字面量**，被检查文件里一旦有含引号的正则（形如斜杠方括号单引号双引号斜杠），状态机会错位、后续字符串清不掉 ⇒ 负向判据命中**判据自己的锚点字符串**（v4.46.0 自指）。修法不是把状态机写得更聪明（正则 vs 除号在 JS 里本就不可判），而是**把自指对象排除出射程**：对当版与上一版只判正向不变量。",
+        "【验收四条各自的落点】① 可比：`compareLanes` 同基线报 `same-baseline` 且差异行不标 mixed（判据 B2）；② 正史零写：`adopt` 只判闸、只交回选中栏、如实报 `canonWrites: 0`，试写分支里逐词扫掉 `chat.push` / `setChatMessages` / `generateQuietPrompt` / `addMoment` / `fetch(` 等（判据 D2）；③ 关页重开保留但不自动生成：两栏落本机键 `cw_hy_trial`（拒收也留住用户写过的两栏）、本层零生成（判据 C1/C2）；④ 丢弃清临时选择、采纳不双建分支：`discard` 走契约件 `discardPlan` 如实报清掉几栏与多少字、且**不动草稿本**，`keep` 的幂等键（栏+基线+文本指纹）保证同一份选定只落一行（判据 D3/D5）。",
+        "【交棒改写：把「点一下」改成「两栏并列 → 显式试写 → 逐栏决定」】视图这一排与计划原文「分别预览材料 / 约束并可显式试写」对齐：基线输入（**留空即没给，不默认挑一个**）、两栏各自的假设种类按钮（再点一次即取消，**不回落成「接受」**）与假设说明、逐栏试写 textarea、选中栏、`run`（显式试写，只落本机试写区）、`keep`（保留为草稿）、`discard`（丢弃这次预演，**先弹显式确认并说清「正史一个字节都不会动」**）。采纳按钮**只在出口说就绪时才画**，否则如实显示「采纳按钮先不画」并说明条件。",
+        "【不做：在代码上可判】不自动多模型竞赛（禁用键表 `score/rank/best/recommend/…` 12 个 + 深度扫描真跑）；不后台无限续写（无 `setInterval` / `requestAnimationFrame`，试写文本只由用户显式给）；不增加第二套生成 API（零 `generateContent` / `generateQuietPrompt`）；不联网（零 `fetch(` / `XMLHttpRequest` / `WebSocket` / 协议头）。",
+        "【顺手补的一处既有缺口（本版引入的样式段一并带上，如实登记）】视图用 `.cwb-btn-on` 标「已选中」态，而**全仓两侧样式都没有定义这个类**（实测 `grep -c cwb-btn-on` 在源面与打包面都是 0）⇒ 选中与未选中在屏上同形。本版把该类补进源样式并经回灌脚本投递到打包面（判据 E3 覆盖）。它与本版同属创作台一面，故不另开版本。",
+        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4470.test.mjs`）：契约件纯函数真跑、宿主与视图只做**源码形态**判定（四支子命令在场、白名单只追加、落笔只许两处、样式双侧同源）。★ 宿主面**不做真调**：`index.js` 在无头环境装载即 `window is not defined`（`applyCreationdeskAction` 活在 `init()` 闭包里，依赖酒馆上下文），全仓既有套件同规。**未在浏览器里真点过一遍**：两栏并列 → 显式试写 → 保留为草稿 → 丢弃 / 采纳这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
+        "【抬版连带面沿用 v4.44.0 ~ v4.46.0 的接管口径】本版抬版同样会带动历史套件「当版内容」锚；那些已由既有接管脚本改成锁自己那一版，本版判据 F8 守住这个不变量（并把 v4.45.0 一并纳入正向不变量检查）。本版另新增一处自证：F8 里把「负向判据的自指面」写清（正则字面量导致状态机错位），防后人重犯。",
+        "【本版门禁与全量回归的实测口径（写清哪些是存量、哪些是本版）】本版判据 36/36 全绿；`npm run syntax`（870 文件）/ `import-resolve`（860 条静态导入）/ `dead-exports`（无新增零消费导出）/ `named-import`（831 条）/ `keys`（453 个键全登记）/ `registry`（样式投递未覆盖 0）/ `weak-coercion`（回落存量 1 处）全绿。**两处存量红项如实登记、不在本版顺手改**：① `weak-coercion` 报 `config/goal-tree-contract.js:201`（旧版遗留）；② `source-derivation` 报「枚举面出现未登记的库：`config/item-custody-contract.js`(1)」（R5-X1 遗留）。两者在**干净 HEAD 副本**上同样报 ⇒ 非本版引入；顺手改会与本版 diff 混在一起，让「本版引入了什么」不再可判。"
     ]
 };
 
@@ -4131,7 +4142,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     /* [v4.45.0 · R5-O1] 末位追加 `board`：取材板交接的**真落笔**入口。
      *   ★ 追加不动首项（v4.01.0 的判据锁「白名单应以 plan 开头」）；
      *     本仓判据只锁首项与「有白名单判定」，不锁成员个数。 */
-    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop', 'topic', 'board'];
+    const CW_ACTION_KEYS = ['plan', 'publish', 'refresh', 'compose', 'edit', 'redo', 'drop', 'topic', 'board', 'hypo'];
     /** 读草稿本原始值：**读不出来返回 null**（不是空数组——两者处置相反）。 */
     function cwReadDraftsRaw() {
         try {
@@ -4351,6 +4362,53 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     };
                 })(),
                 topicSelfCheck: topicSelfCheckOf(),
+                /* [v4.47.0 · 第五期 R5-X7] 假设试写读数（**如实分列**：试写 ≠ 已采纳）。
+                 *   · probe  —— 上游试写面在不在（不在 ⇒ 本机手工试写，照样可用）；
+                 *   · lanes  —— 逐栏三态（还没写 / 有文本 / 这一栏不合格）；
+                 *   · comparable —— 两栏基线是否相同（同基线才叫「同一场景的两条岔路」）。 */
+                hypoTrial: (function () {
+                    let cur = null;
+                    try {
+                        const raw = storage && typeof storage.get === 'function' ? storage.get(HY_KEYS.trial, '') : '';
+                        if (raw) cur = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                    } catch (_e) { cur = null; }
+                    const trial = (cur && cur.trial) || null;
+                    const probe = hyProbe((typeof window !== 'undefined') ? window : globalThis, {
+                        materials: null, materialsReadable: false
+                    });
+                    if (!trial) {
+                        const face = { ok: false, state: HY_STATES.EMPTY, reason: 'empty', lanes: {}, probe: probe };
+                        face.line = hyTrialLine(face);
+                        return { present: false, face: face, line: face.line, selfCheck: hySelfCheckOf() };
+                    }
+                    const lanesOut = {};
+                    for (const id of HY_LANES) {
+                        const l = (trial.lanes || {})[id] || {};
+                        lanesOut[id] = {
+                            id: id, label: l.label, state: l.state, chars: l.chars,
+                            line: hyLaneLine(l),
+                            assume: l.assume || null,
+                            baseline: l.baseline || null
+                        };
+                    }
+                    const cmp = hyCompare((trial.lanes || {}).a, (trial.lanes || {}).b);
+                    const written = HY_LANES.filter(function (id) {
+                        return (trial.lanes || {})[id] && trial.lanes[id].state === HY_LANE_STATES.WRITTEN;
+                    }).length;
+                    const face = {
+                        ok: written > 0,
+                        state: (written > 0 ? HY_STATES.READY : HY_STATES.EMPTY),
+                        reason: (written > 0 ? 'ok' : 'empty'),
+                        lanes: lanesOut, comparable: cmp, probe: probe,
+                        baseline: trial.baseline, picked: trial.picked, written: written
+                    };
+                    face.line = hyTrialLine(face);
+                    return {
+                        present: true, face: face, line: face.line,
+                        decisions: HY_DECISIONS.slice(), limits: HY_LIMITS,
+                        selfCheck: hySelfCheckOf()
+                    };
+                })(),
                 levels: CW_LEVELS,
                 kinds: CW_KIND_KEYS.slice(),
                 plan: null,
@@ -4520,6 +4578,170 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     key: norm.key,
                     count: norm.items.length,
                 };
+            }
+            /* ══════ [v4.47.0 · 第五期 R5-X7] 可丢弃的假设场景双栏试写 ══════
+             *   计划原文：「选择基线时点与两种假设，分别预览材料 / 约束并可显式试写；
+             *     对照文本保留为草稿；只有用户选择转为正式分支后才调用原接续确认。」
+             *   ★ 本分支**只落两处**：① 本机键 HY_KEYS.trial（`cw_hy_trial`；试写区本身，随会话隔离）；
+             *     ② 既有草稿本 cw_drafts（用户选「保留为草稿」时，source=hypo-trial）。
+             *   ★ **正史零写**：adopt 只走 adoptGate 判闸并把选中的那一栏交回调用方，
+             *     本层不写任何剧情事实、不建分支、不发请求（计划原文「不增加第二套生成 API」）。
+             *   ★ 试写文本由用户显式给（或由上游既有生成通道产出后经本口收下）——
+             *     本层**不自己生成**，故不存在「后台无限续写」。 */
+            if (action === 'hypo') {
+                const sub = String(p.sub || '').trim();
+                const readTrial = function () {
+                    try {
+                        const raw = storage && typeof storage.get === 'function' ? storage.get(HY_KEYS.trial, '') : '';
+                        if (!raw) return null;
+                        return (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                    } catch (_e) { return null; }
+                };
+                const writeTrial = function (obj) {
+                    try {
+                        if (!storage || typeof storage.set !== 'function') return false;
+                        storage.set(HY_KEYS.trial, JSON.stringify(obj));
+                        return true;
+                    } catch (_e) { return false; }
+                };
+                const probe = hyProbe((typeof window !== 'undefined') ? window : globalThis, {
+                    materials: (p.materials === undefined ? null : p.materials),
+                    materialsReadable: (p.materialsReadable === true)
+                });
+                /* ── discard：清本机临时选择（**正史零写**，且如实报清掉了几栏） ── */
+                if (sub === 'discard') {
+                    const cur = readTrial();
+                    const dp = hyDiscardPlan((cur && cur.trial) || {});
+                    writeTrial({ trial: null, at: Date.now() });
+                    refreshCreationdesk();
+                    return {
+                        ok: true, kind: 'hypo-discarded', note: dp.note,
+                        clearedTexts: dp.clearedTexts, clearedChars: dp.clearedChars,
+                        canonWrites: 0
+                    };
+                }
+                /* ── run：收下基线 + 两栏（含试写文本），落本机键 ── */
+                if (sub === 'run') {
+                    const norm = hyNormalize({
+                        baseline: p.baseline, lanes: p.lanes, picked: p.picked
+                    });
+                    const lanesOut = {};
+                    for (const id of HY_LANES) {
+                        const l = (norm.trial.lanes || {})[id] || {};
+                        lanesOut[id] = {
+                            id: id, label: l.label, state: l.state, chars: l.chars,
+                            line: hyLaneLine(l),
+                            assume: l.assume || null,
+                            baseline: l.baseline || null
+                        };
+                    }
+                    const cmp = hyCompare((norm.trial.lanes || {}).a, (norm.trial.lanes || {}).b);
+                    if (!norm.ok) {
+                        /* 拒收时**照样把用户写过的两栏留住**（换个走向就能接着写）。 */
+                        writeTrial({
+                            trial: {
+                                baseline: norm.trial.baseline,
+                                lanes: norm.trial.lanes,
+                                picked: norm.trial.picked
+                            },
+                            at: Date.now()
+                        });
+                        const face = {
+                            ok: false, state: HY_STATES.REFUSED, reason: norm.why,
+                            lanes: lanesOut, comparable: cmp, probe: probe
+                        };
+                        face.line = hyTrialLine(face);
+                        refreshCreationdesk();
+                        return { ok: false, kind: 'hypo-' + norm.why, note: face.line, face: face };
+                    }
+                    if (!writeTrial({
+                        trial: {
+                            baseline: norm.trial.baseline,
+                            lanes: norm.trial.lanes,
+                            picked: norm.trial.picked
+                        },
+                        at: Date.now()
+                    })) {
+                        return { ok: false, kind: 'hypo-write-failed', note: '试写区落盘失败（**不得当作试写跑过了**）' };
+                    }
+                    const written = HY_LANES.filter(function (id) {
+                        return (norm.trial.lanes || {})[id] && norm.trial.lanes[id].state === HY_LANE_STATES.WRITTEN;
+                    }).length;
+                    const face = {
+                        ok: true,
+                        state: (written > 0 ? HY_STATES.READY : HY_STATES.EMPTY),
+                        reason: (written > 0 ? 'ok' : 'empty'),
+                        lanes: lanesOut, comparable: cmp, probe: probe,
+                        baseline: norm.trial.baseline, picked: norm.trial.picked, written: written
+                    };
+                    face.line = hyTrialLine(face);
+                    refreshCreationdesk();
+                    return { ok: true, kind: 'hypo-' + face.state, note: face.line, face: face };
+                }
+                /* ── keep：把选中的那一栏收进既有草稿本（**只落草稿，不落正史**） ── */
+                if (sub === 'keep') {
+                    const cur = readTrial();
+                    const trial = (cur && cur.trial) || null;
+                    const picked = String(p.picked || (trial && trial.picked) || '').trim();
+                    const lane = (trial && trial.lanes && trial.lanes[picked]) || null;
+                    if (!lane || lane.state !== HY_LANE_STATES.WRITTEN) {
+                        return {
+                            ok: false, kind: 'hypo-keep-not-written',
+                            note: '这一栏还没有试写文本 —— 收进草稿的是**你写过的内容**，不是「跑过了」'
+                        };
+                    }
+                    /* 幂等键 = 栏 id + 基线 + 文本指纹（同一份选定只落一行）。 */
+                    const fp = String(lane.chars) + '-' + String(lane.text.length);
+                    const key = 'hy-' + picked + '-' + String((trial.baseline && trial.baseline.at) || 0) + '-' + fp;
+                    const bookNorm = normalizeDraftBook(cwReadDraftsRaw());
+                    const exists = bookNorm.drafts.some(function (d) { return d.key === key; });
+                    if (exists) {
+                        const note = '这一栏已经在草稿本里了（同一份选定不重复落）';
+                        /* state field removed: no consumer (App reads ok/note only);
+                         *   'replayed' collides with GV_HANDOFF_STATES in v4440 A2 audit */
+                        return { ok: true, kind: 'hypo-keep-replayed', note: note, key: key };
+                    }
+                    const nd = normalizeDraft({
+                        key: key,
+                        source: HY_DRAFT_SOURCE,
+                        materialId: picked,
+                        target: 'draft',
+                        note: String(lane.text || ''),
+                        tags: ['预演', picked],
+                        version: 1,
+                        state: 'editing',
+                        at: Date.now()
+                    });
+                    if (!nd.ok) {
+                        return { ok: false, kind: 'hypo-keep-normalize', note: '草稿被拒：' + String(nd.reason || '') };
+                    }
+                    const book = upsertDraft(bookNorm.drafts, nd.draft);
+                    const w = cwWriteDrafts(book.drafts);
+                    refreshCreationdesk();
+                    if (!w.ok) {
+                        return { ok: false, kind: w.reason, note: '草稿本落盘失败（**不得当作已保留**）' };
+                    }
+                    return {
+                        ok: true, kind: 'hypo-keep-drafted', key: key, state: 'drafted',
+                        note: '已收进草稿本（**预演，不是既成结局**）：' + String(lane.chars) + ' 字'
+                    };
+                }
+                /* ── adopt：只判闸、只转交（**本层零写正史**） ── */
+                if (sub === 'adopt') {
+                    const cur = readTrial();
+                    const trial = (cur && cur.trial) || null;
+                    const picked = String(p.picked || (trial && trial.picked) || '').trim();
+                    if (trial && picked) trial.picked = picked;
+                    const gate = hyAdoptGate(trial || {}, { hasAdoptFace: probe.hasFace === true });
+                    refreshCreationdesk();
+                    return {
+                        ok: gate.ok === true, kind: 'hypo-adopt-' + gate.why,
+                        note: gate.hint, why: gate.why, picked: gate.picked || '',
+                        /* ★ 本层一个正史字节都没落：接续归上游 owner（计划原文）。 */
+                        canonWrites: 0
+                    };
+                }
+                return { ok: false, kind: 'hypo-bad-sub', note: '不认识的试写子命令（run / keep / adopt / discard）：' + sub };
             }
 
     /**

@@ -743,8 +743,8 @@ test('F5 版本锚：五源同源 + 当版条目在场 + 迭代段条目数达�
     assert.equal(log.head, log.latest, 'update-log 的 head 必须跟上 latest');
     assert.ok(Object.prototype.hasOwnProperty.call(log.versions, log.latest), '当版条目必须在 versions 里');
     /* 当版条目必须点名 R5-X6（防「抬了版却没落本版内容」）。 */
-    const entry = JSON.stringify(log.versions[log.latest]);
-    assert.ok(entry.indexOf('R5-X6') >= 0, '★ 当版条目必须点名 R5-X6');
+    const entry = JSON.stringify(log.versions['4.46.0']);
+    assert.ok(entry.indexOf('R5-X6') >= 0, '★ 本版条目必须点名 R5-X6');
     /* 迭代段在场且条目数达标。 */
     const iter = read('tools/iter205_seg.md');
     const countOf = (s, sub) => s.split(sub).length - 1;

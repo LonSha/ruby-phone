@@ -20390,6 +20390,32 @@ input:checked + .toggle-slider:before {
 .cwb-btn-pub { border-color: #a08a6a; color: #6a5330; }
 .cwb-btn-warn { border-color: #b08a3a; color: #7a5a10; }
 .cwb-st-ok { color: #4a7a4a; }
+/* ========== [v4.47.0 · R5-X7] 假设场景双栏试写 ========== */
+/* 为什么这几条要长得跟普通表单行不一样：它承载的是「预演」这个状态 ——
+ * 两栏并列、基线共起点、试写文本可丢弃。屏上必须让用户一眼看出
+ * 「这还不是既成结局」；否则「先试试看」会被读成「已经这么定了」。
+ * 态在屏上不许同形：还没写 / 已有文本 / 这一栏不合格 三种处置相反。 */
+.cwb-hy { border-color: #dfe6ef; background: #fbfcfe; }
+.cwb-hy-line { color: #3c4a58; }
+.cwb-hy-lane {
+    margin-top: 8px;
+    padding: 7px 9px;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #cfd8e3;
+    border-radius: 7px;
+    background: #fff;
+}
+.cwb-hy-lane-on { border-left-color: #4a5a6a; background: #f5f8fa; }
+.cwb-hy-head { display: flex; align-items: baseline; gap: 8px; }
+.cwb-hy-name { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: #3c4a58; }
+.cwb-hy-state { font-size: 10px; color: #9a948a; }
+.cwb-hy-st-pending { color: #9a948a; }
+.cwb-hy-st-written { color: #4a7a4a; font-weight: 600; }
+.cwb-hy-st-refused { color: #a0553f; font-weight: 600; }
+.cwb-hy-row { color: #6a645c; }
+.cwb-hy-cmp { color: #33586a; }
+/* 选中态按钮：既有缺口（视图用了这个类，两侧样式都没定义）。 */
+.cwb-btn-on { border-color: #4a5a6a; background: #eef2f5; color: #2f3d4a; font-weight: 600; }
 /* ══════════════ [v3.89.0] 声明式工作流（workflow） ══════════════ */
 /* workflow.css — [v3.89.0 · 拓展计划 R-X5] 声明式工作流 · 样式层 */
 .wfl-root { all: initial; }

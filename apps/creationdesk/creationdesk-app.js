@@ -28,6 +28,23 @@ import { CreationdeskBoard } from './creationdesk-board.js';
 /* [v4.45.0 · 第五期 R5-O1] 取材板交接契约件：**去向表与文案的唯一出处**。
  *   本层只转发（界面不写第二份去向表）；判定与落笔分别在契约件与宿主。 */
 import { handoffTargetIds as mbhTargetIds, handoffTargetLabel as mbhTargetLabel, MBH_STATES } from '../../config/material-board-handoff.js';
+/* [v4.47.0 · 第五期 R5-X7] 可丢弃的假设场景双栏试写（契约件）。
+ *   本层只持**用户的临时选择**（两栏假设 + 基线 + 选中栏）与转交；
+ *   态 / 文案 / 可比性判定全在契约件与宿主，界面不写第二份。
+ *   ★ 试写**不是既成结局**：本层不生成、不采纳、不落正史。 */
+import {
+    HY_STATES, HY_LANES, HY_LANE_LABEL, HY_LANE_STATES, HY_ASSUME_KINDS, HY_ASSUME_LABEL,
+    HY_DECISIONS, HY_DECISION_LABEL, HY_COMPARABLE, HY_COMPARABLE_LABEL, HY_LANE_STATE_LABEL,
+    compareLanes as hyCompareLanes, normalizeLane as hyNormalizeLane,
+    laneLine as hyLaneLine, trialLine as hyTrialLine,
+} from '../../config/hypo-trial-contract.js';
+/* [v4.47.0 / R5-X7] 数值取值门走全仓唯一实现（config/num-gate.js）。
+ *   为什么必须引门而不是就地再写一遍：Number.isFinite(Number(v)) 会把
+ *   '' / [] / false 读成 0，与「上游没给」塌成同一个读数，而两者处置相反
+ *   （留空 => 等用户补基线；0 => 那是一个真时点）。本仓自 v3.12.0 起有常驻
+ *   门禁 scripts/weak-coercion-audit.mjs 守这条，本版新件首版正是被它抓住的。
+ */
+import { numOrNull } from '../../config/num-gate.js';
 /* [v4.25.0 · R4-X3] 故事年鉴(纯契约)。
  *   创作台侧只消费**两件**:① 年鉴面读数(建章册一行 + 派发相);
  *   ② 把某一版年鉴导出文本取来当**草稿素材**(不把它写进剧情事实,也不发布)。
@@ -58,6 +75,16 @@ export class CreationdeskApp {
         this._board = new CreationdeskBoard(this);
         /* [v4.45.0 · R5-O1] 交接单预览行（**纯读数**；预览不落笔，落笔在 boardCommit）。 */
         this._boardPreview = '';
+        /* [v4.47.0 · R5-X7] 假设试写区交互态：两栏假设 + 各自试写文本 + 基线 + 选中栏。
+         *   ★ 它**不是**剧情事实：只活在实例态与本机键（`cw_hy_trial`，随会话隔离），换会话一律作废。 */
+        this._hy = {
+            baseline: '',
+            a: { kind: '', text: '', written: '' },
+            b: { kind: '', text: '', written: '' },
+            picked: '',
+            flash: '',
+            flashBad: false
+        };
         this._flash = '';
         this._flashBad = false;
     }
@@ -408,6 +435,174 @@ export class CreationdeskApp {
             draftedCount: (typeof host.boardDraftedCount === 'number') ? host.boardDraftedCount : null
         };
     }
+    /* ══════════ [v4.47.0 · 第五期 R5-X7] 可丢弃的假设场景双栏试写 ══════════
+     * 【为什么要有它】正史选择（archive 的支线结局）只能对**已经存在的**两条分支做取舍；
+     *   而「还没建正式分支前，先拿两种假设各写一栏看看」此前**全仓零落点**（grep 零命中）。
+     *   于是用户要么在脑子里比，要么**先建一条正式分支再删** —— 而正式分支是既成结局，
+     *   建了就有痕迹，「预演」被读成「已经这么定了」。
+     * 【本层做什么】持用户的临时选择 + 转交；`run` 落本机键、`keep` 落既有草稿本、
+     *   `adopt` 只判闸并交回选中栏、`discard` 清临时选择（**正史零写**）。
+     * 【本层不做什么】不生成文本、不建分支、不写剧情事实、不发请求
+     *   （计划原文三条不做：不自动多模型竞赛 / 不后台无限续写 / 不增加第二套生成 API）。
+     * ------------------------------------------------------------------ */
+    /** 试写区读数（宿主给；读不到 ⇒ null，**不拟一份**）。 */
+    hyFace() {
+        const host = this.host();
+        if (!host || !host.hypoTrial) return null;
+        return host.hypoTrial.face || null;
+    }
+    /** 试写区一行主读数（判据全在契约件 `trialLine`）。 */
+    hyLine() {
+        const host = this.host();
+        if (host && host.hypoTrial && host.hypoTrial.line) return String(host.hypoTrial.line);
+        try {
+            return hyTrialLine({ state: HY_STATES.EMPTY });
+        } catch (_e) { return '假设试写：读数读不到（不假装为空）'; }
+    }
+    /** 两栏读数（本机交互态现算；**不冒充已试写**）。
+     *   ★ 这里刻意**不覆盖**态与行文案：态与 `line` 一律由契约件的 `normalizeLane` /
+     *     `laneLine` 算 —— 两份实现必然漂移，而漂移的表现是「同一栏在两条路上得到
+     *     不同的读数」，不报错、只是错数。 */
+    hyLanes() {
+        const out = {};
+        for (const id of HY_LANES) {
+            const local = this._hy[id] || { kind: '', text: '', written: '' };
+            const base = String(this._hy.baseline || '').trim();
+            /* 留空 => 没给基线（等用户补）；给了非数 => 也没给。两者都不许塌成 0。 */
+            const at = numOrNull(base);
+            const bl = (at === null)
+                ? { at: null, label: '', given: false }
+                : { at: at, label: '', given: true };
+            const one = hyNormalizeLane(id, {
+                assume: { kind: String(local.kind || ''), text: String(local.text || '') },
+                baseline: bl,
+                text: String(local.written || '')
+            });
+            const lane = one.lane || { id: id, label: HY_LANE_LABEL[id], state: '', chars: 0, line: '' };
+            lane.written = String(local.written || '');
+            out[id] = lane;
+        }
+        return out;
+    }
+    /** 可比性（**真算**：同基线才叫「同一场景的两条岔路」；基线不同 ⇒ 差异里混着基线差）。 */
+    hyCompare() {
+        const lanes = this.hyLanes();
+        try { return hyCompareLanes(lanes.a, lanes.b); }
+        catch (_e) {
+            /* 读不出可比性 ⇒ 按**比不了**报（不许塌成「同基线」：那会让采纳按钮亮起来）。 */
+            return { comparable: HY_COMPARABLE.MISSING, label: HY_COMPARABLE_LABEL[HY_COMPARABLE.MISSING], diffCount: 0 };
+        }
+    }
+    /** 可比性标签（界面只读这一处，不写第二份）。 */
+    hyCompareLabel() {
+        const c = this.hyCompare();
+        return String((c && c.label) || HY_COMPARABLE_LABEL[HY_COMPARABLE.MISSING] || '');
+    }
+    /** 可比性态（界面判「采纳按钮画不画」用；**不许**用文案子串去猜）。 */
+    hyComparableState() {
+        const c = this.hyCompare();
+        return String((c && c.comparable) || HY_COMPARABLE.MISSING);
+    }
+    /** 采纳按钮画不画（界面不许拿文案子串猜：判据是契约件的可比性态 + 选中栏）。
+     *   用文案子串判的后果不是报错，是文案一改按钮就静默消失。 */
+    hyAdoptReady() {
+        /* ★ 三个条件都要：同基线（可比）+ 选中了某栏 + **那一栏真有试写文本**。
+         *   少判最后一条就会亮出一个点下去必然被闸拒的按钮 —— 本仓纪律：
+         *   「亮一个走不通的按钮比不亮更贵」。 */
+        if (this.hyComparableState() !== HY_COMPARABLE.SAME) return false;
+        const id = String(this._hy.picked || '');
+        if (HY_LANES.indexOf(id) < 0) return false;
+        const lane = this.hyLanes()[id] || {};
+        return lane.state === HY_LANE_STATES.WRITTEN;
+    }
+    /** 一栏当前的假设种类（界面「再点一次即取消」读它；不读实例私有态）。 */
+    hyKindOf(lane) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        return id ? String((this._hy[id] || {}).kind || '') : '';
+    }
+    /** 这一栏有没有写过的文本（回填用；**与「试写跑过了」不是一回事**）。 */
+    hyWrittenOf(lane) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        return id ? String((this._hy[id] || {}).written || '') : '';
+    }
+    /** 基线（楼层号；空值即清空，**不默认挑一个**）。 */
+    hySetBaseline(v) { this._hy.baseline = String(v == null ? '' : v).trim(); this.render(); return this._hy.baseline; }
+    /** 一栏的假设种类（空值即清空，**不回落成「接受」**）。 */
+    hySetAssumeKind(lane, kind) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        if (!id) return '';
+        this._hy[id].kind = String(kind || '').trim();
+        this.render();
+        return this._hy[id].kind;
+    }
+    /** 一栏的假设说明。 */
+    hySetAssumeText(lane, text) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        if (!id) return '';
+        this._hy[id].text = String(text || '');
+        return this._hy[id].text;
+    }
+    /** 一栏的试写文本（**用户显式写**：本层不代写、不后台续写）。 */
+    hySetWritten(lane, text) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        if (!id) return '';
+        this._hy[id].written = String(text || '');
+        return this._hy[id].written;
+    }
+    /** 选中要采纳的那一栏（空值即取消选中）。 */
+    hyPick(lane) {
+        const id = HY_LANES.indexOf(String(lane || '')) >= 0 ? String(lane) : '';
+        this._hy.picked = id;
+        this.render();
+        return id;
+    }
+    /** 假设种类 id 与标签（界面不写第二份种类表）。 */
+    hyAssumeIds() { return HY_ASSUME_KINDS.slice(); }
+    hyAssumeLabel(k) { return HY_ASSUME_LABEL[String(k || '')] || ''; }
+    hyDecisionIds() { return HY_DECISIONS.slice(); }
+    hyDecisionLabel(d) { return HY_DECISION_LABEL[String(d || '')] || ''; }
+    hyLaneStateLabel(s) { return HY_LANE_STATE_LABEL[String(s || '')] || ''; }
+    /** Good-tempered wrapper: old suites construct view with shell:null (no real App). */
+    hyLaneState(s) { try { return this.hyLaneStateLabel(s); } catch (_e) { return ''; } }
+    /**
+     * 试写区动作统一入口（与 draftAct 同范式：只转咽喉，不直连、不落正史）。
+     * @param {string} sub run | keep | adopt | discard
+     */
+    async hyAct(sub) {
+        const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+        if (!vp || typeof vp.applyCreationdeskAction !== 'function') {
+            /* 入口不在位 ⇒ **如实报没有接收者**，不许报成功。 */
+            this._hy.flash = '**没有接收者**：创作工作台入口不在位（本层零写盘，不代写）';
+            this._hy.flashBad = true;
+            this.render();
+            return { ok: false, note: this._hy.flash };
+        }
+        const face = this._displayedFace;
+        const lanes = {};
+        for (const id of HY_LANES) {
+            const l = this._hy[id] || { kind: '', text: '', written: '' };
+            lanes[id] = {
+                assume: { kind: String(l.kind || ''), text: String(l.text || '') },
+                text: String(l.written || '')
+            };
+        }
+        const payload = {
+            action: 'hypo', sub: String(sub || ''),
+            baseline: numOrNull(this._hy.baseline),
+            lanes: lanes,
+            picked: this._hy.picked,
+            scope: face && face.scope, token: face && face.token
+        };
+        let r;
+        try { r = await vp.applyCreationdeskAction(payload); }
+        catch (e) { r = { ok: false, note: '执行失败：' + String(e.message || e) }; }
+        const now = this.host();
+        if (now && (now.token !== payload.token)) return r;
+        this._hy.flash = String((r && r.note) || '');
+        this._hy.flashBad = !(r && r.ok === true);
+        this.render();
+        return r;
+    }
     /** 去向 id 与标签（界面不写第二份去向表）。 */
     boardTargetIds() { try { return mbhTargetIds(); } catch (_e) { return []; } }
     boardTargetLabel(t) { try { return mbhTargetLabel(t); } catch (_e) { return ''; } }
@@ -509,6 +704,18 @@ export class CreationdeskApp {
                 catch (_e) { return null; }
             }).call(this),
             boardPreview: String(this._boardPreview || ''),
+            /* [v4.47.0 · 第五期 R5-X7] 假设试写读数（**如实分列**：试写 ≠ 已采纳 ≠ 已落正史）。 */
+            hyLine: this.hyLine(),
+            hyFace: this.hyFace(),
+            hyLanes: this.hyLanes(),
+            hyCompareLabel: this.hyCompareLabel(),
+            hyBaseline: String(this._hy.baseline || ''),
+            hyPicked: String(this._hy.picked || ''),
+            /* 界面「采纳按钮画不画」与「一栏现在是什么种类」的真源（视图不猜文案、不读私有态）。 */
+            hyComparable: this.hyComparableState(),
+            hyAdoptReady: this.hyAdoptReady(),
+            hyFlash: String(this._hy.flash || ''),
+            hyFlashBad: this._hy.flashBad === true,
             flash: this._flash,
             flashBad: this._flashBad,
         };
@@ -530,6 +737,8 @@ export class CreationdeskApp {
         this._flash = '';
         this._flashBad = false;
         this._boardPreview = '';
+        /* [v4.47.0 · R5-X7] 试写区实例态一律丢（换角色后上一个角色的两栏预演不能留着）。 */
+        this._hy = { baseline: '', a: { kind: '', text: '', written: '' }, b: { kind: '', text: '', written: '' }, picked: '', flash: '', flashBad: false };
         /* [v4.30.0 · R4-X9] 取材板也丢实例态：换角色后上一个角色选的任务 / 时点 / 勾选不能留着。 */
         if (this._board && typeof this._board.resetScene === 'function') this._board.resetScene();
         this.render();
