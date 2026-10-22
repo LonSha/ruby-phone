@@ -1,5 +1,5 @@
 {
-  "latest": "4.53.0",
+  "latest": "4.54.0",
   "versions": {
     "4.51.0": {
       "version": "4.51.0",
@@ -4805,6 +4805,15 @@
         "R6-X6 手机原生推理剧: 消息、时间、证词与行动共同组成可玩的谜题",
         "四个纯契约内核模块: relation-revisit.js + district-network.js + voice-narrative.js + mystery-engine.js",
         "定向测试 system-v4530.test.mjs 24条全绿含3条真源码破坏负控制"
+      ]
+    },
+    "4.54.0": {
+      "date": "2026-10-22",
+      "summary": [
+        "R6-X7 跨媒介互动连载: 一部故事可以在聊天、阅读与小剧场间展开",
+        "R6-X9 平行人生试玩场: 在另一条路线中真正使用另一部手机",
+        "两个纯契约内核模块: serial-narrative.js + parallel-life.js",
+        "定向测试 system-v4540.test.mjs 全绿含3条真源码破坏负控制"
       ]
     }
   },
