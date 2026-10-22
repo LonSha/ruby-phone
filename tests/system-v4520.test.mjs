@@ -54,14 +54,15 @@ function cleanup(tmpPath) {
 /* ============================================================
  * A 面：版本锚与结构自证
  * ========================================================== */
-test('A1 manifest.json 版本抬到 4.52.0', () => {
+test('A1 manifest.json 版本 >= BORN_V', () => {
     const man = JSON.parse(read('manifest.json'));
-    assert.equal(man.version, BORN_V);
+    assert.ok(vnum(man.version) >= vnum(BORN_V), `manifest version ${man.version} < ${BORN_V}`);
 });
-
-test('A2 index.js ST_PHONE_VERSION 为 4.52.0', () => {
+test('A2 index.js ST_PHONE_VERSION >= BORN_V', () => {
     const src = read('index.js');
-    assert.ok(src.includes("const ST_PHONE_VERSION = '" + BORN_V + "'"), 'ST_PHONE_VERSION 未找到');
+    const m = src.match(/ST_PHONE_VERSION\s*=\s*'([^']+)'/);
+    assert.ok(m, 'ST_PHONE_VERSION not found');
+    assert.ok(vnum(m[1]) >= vnum(BORN_V), `ST_PHONE_VERSION ${m[1]} < ${BORN_V}`);
 });
 
 test('A3 四模块 VERSION 常量与冻结词表完备', () => {
