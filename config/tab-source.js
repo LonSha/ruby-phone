@@ -145,6 +145,11 @@ export const TABS_BY_APP = Object.freeze({
         tabs: Object.freeze(['guard']),
         file: 'apps/sullydesk/sullydesk-app.js', shape: 'single',
         note: '外发前体检：单页，视图无 tab 分支（兜底串是 guard，不是 board —— 三个案头各有各的兜底名）'
+    }),
+    affairs: Object.freeze({
+        tabs: Object.freeze(['board']),
+        file: 'apps/affairs/affairs-app.js', shape: 'single',
+        note: '事务台（v4.48.0 · R6-O1）：单页，视图无 tab 分支（不设页签 —— 事务只有一屏读数，分页会把它拆成两份）'
     })
 });
 

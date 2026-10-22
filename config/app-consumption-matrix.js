@@ -170,6 +170,14 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "backupdesk", name: "备份恢复", dir: "backupdesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "caphealth", name: "能力体检", dir: "caphealth", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "accessdesk", name: "无障碍操作台", dir: "accessdesk", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    /* [v4.48.0 · 第六期 R6-O1] 事务台：F1 命中（App 自己挂 GENERATE_BEFORE_COMBINE_PROMPTS 注入进行中事务读数）、
+     *   F6 命中（进 ST_PHONE_REBIND_APP_KEYS）。F2/F3/F4/F5 本版为**不适用**而非漏配：
+     *   事务只持引用不持正文，不产可被全局搜索索引的正文（索引方是各源 App）；
+     *   不产系统通知（转阶段由用户显式点击发起，不做后台代理）；
+     *   不进微信会话独立注入路径（那一路是「微信里说话时的即时约束」，事务是跨 App 的持续态，
+     *   在主钩子上注入一次即可，两处都注会得到两份同一读数）；
+     *   不读上游契约面（R6-O2 连续通信才接 phone-chat-memory）。 */
+    Object.freeze({ appId: "affairs", name: "事务台", dir: "affairs", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
 ]);
 
 /** 便捷取用口：逐面统计命中数（诊断面与判据共用；不自持第二份数据）。

@@ -1228,6 +1228,16 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v4.48.0 · 第六期 R6-O1] 以事情为中心的手机：进行中事务的阶段 / 参与者 / 待决 / 动作引用。
+        //   与「任务入口」（点过什么）/「剧情线」（账里有什么）分形：本 App 回答「这件事进行到哪一步」。
+        id: 'affairs',
+        name: '事务台',
+        icon: '🗂️',
+        color: '#6f7bb8',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

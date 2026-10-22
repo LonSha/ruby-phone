@@ -1,3 +1,18 @@
+## 迭代 208 · v4.48.0（2026-10-22）
+- 【版本升至 4.48.0（五源同源）：第六期批次 A 之 R6-O1 以事情为中心的手机（事务台）】** 五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json；本版判据 tests/system-v4480.test.mjs（六面 23 条，含负控制三向自证）当版跑绿。
+- 【本版治的缺陷形态（读码可复算，不是推演）】既有三处入口各只答一个问题、且都答不了「这件事现在进行到哪」：config/task-entry.js（v3.65.0）的 TE_CARDS 是**单次动作**的声明面（点一下就走，走完即了）；config/open-ref.js（v3.66.0）只负责把**跳转靶心**落到目标页，且 `applyOpenRef` 对 `{ok:false,reason}` 如实归为 `target-missed:<reason>` —— 它连「上次跳到哪」都不留；apps/plotline 答的是「账里有什么」，apps/life 的 life_events 只存**已发生**的事。后果三件都不报错：① 同一件事的参与者散在五个 App 各自的存储里（日历有承诺、阅读有摘录、聊天有约定），谁也说不清「这件事一共牵扯谁」；② 关机重开只剩一堆互不相干的记录，看不出「哪一步已经做了」⇒ 重复执行已完成动作；③ 两件同名的事（两次「小组会议」）在任何按标题聚合的界面上都必然串进度。
+- 【本版最贵的一格：四态里 absent 与 unreadable 必须分列】`affairStateOf` 给的是 absent / active / closed / unreadable 四格，刻意**不压平**成三格：「本来就没有这件事」与「有但读不出来」在界面上同形（都是空白），处置却相反 —— 前者该新建，后者该修存储。压平它就是把「存储坏了」伪装成「还没开始」。
+- 【口径内核：判定面只在内核一处（config/affair-state.js，471 行纯契约）】词表六阶段（planning/scheduled/doing/wrapping/closed/unknown）、待决两态、事务四态、归因十二项、上限八项全部 Object.freeze；归一层（normalizeAffair/normalizeAffairRef/sameAffairRef）、判定层（findAffair/createAffair/trimAffairs/transitionAffairStage/appendAffairAction/appendAffairDecision/resolveAffairDecision/addAffairParticipants/attachAffairRef，每步统一返回 `{ok, why, affair, list}`）、投影层（activeAffairs/affairStateOf/affairSummaryLine/affairMaterial/affairSelfCheck）、存储口（AFF_KEY='affairs_v1'/readAffairs/writeAffairs，全文件只有这两处 storage 调用）。App 侧只做「读存储 → 交内核归一 → 给视图/生成侧」三分转发，判据 C1 用「App 内不许出现归因字面量」把这条按住。
+- 【三条不能松的机制：id 不靠 title、动作必带 sourceRef、活跃永不回收】`findAffair` 按 id 精确匹配（id 形如 `aff_<base36(now)>_<random>`）—— 这正是两件同名并行的保证（判据 B3 造两件同名活动并推不同步数，任一件都不许被另一件带动）；`appendAffairAction` 要求 sourceRef 的 kind+id 齐备否则 `no-source`，并按 sourceRef 去重返 `dup-ref` —— 这是「不重复执行已完成动作」的机制（判据 B2 关机重开后同 ref 重挂被拒）；`trimAffairs` 只在超 40 条时回收**最老的 closed**，活跃事务永不回收（判据 B5）。
+- 【本版最贵的第二格：resolveAffairDecision 留痕不删】待决项解决后必须留 resolvedBy / resolvedAt / outcome 三格，而不是把条目删掉。删掉等于「这件事从没悬过」—— 事后回看分不清「当时没这个选项」与「早就定了」。拒绝路径同样如实（目标非 open 态 → `decision-not-open`）。
+- 【自己抓到的缺陷（读码复算抓的，门禁看不见）：读数句运算符优先级】`affairSummaryLine` 首版写成 `parts.push('最近动作：' + last.result || last.sourceRef.label || last.sourceRef.id)` —— `+` 比 `||` 结合更紧，`result` 为空时表达式恒为**真值串**「最近动作：」，回退分支永远走不到：界面上会出现一条只有标题没有内容的动作行，不报错、只错读数。已修为显式括号 + 中间变量 `const desc = last.result || last.sourceRef.label || last.sourceRef.id;`。该坑写成本版判据 B7，并作为 D1 负控制破坏五（把 desc 改回 `last.result || ''` 必须被抓）——**同一条缺陷既进正向判据又进负控制**，防止修完再被改回去。
+- 【同族坑（上一版档头记过、本版又踩一次）：`_esc` 的 .replace(/&/g,'&') 被 shell 吃成恒等转义】heredoc 与内联 python 的引号转义会把 `'&amp;'` 还原成 `'&'`，转义函数随即退化成恒等函数而**判据仍绿**（因为判据只查「有 .replace」，不查实际替换成了什么）。本版定死写法：落到 `/tmp/*.py` 再执行，且 C5 判据按**替换目标字面量**逐项核对（`&amp;` / `&lt;` / `&gt;` / `&#x26quot;` 四个必须同时在文件中出现）。
+- 【四处注册 + 六道静态门禁全绿（新增 App 的真实成本面）】config/apps.js 的 APPS 加 affairs（name='事务台'，icon='🗂️'，color='#6f7bb8'）；config/app-lazy-routes.js 加表行（key='affairsApp'/cls='AffairsApp'/errTitle='事务台App'）；config/tab-source.js 加 single 形态行（tabs 只有 board 一项，无 tab 分支，判据 C5 按住）；index.js 的 ST_PHONE_REBIND_APP_KEYS 加 'affairsApp'（**上一次归因与页签是实例态**，换会话必须丢；事务本体在 affairs_v1 里随会话隔离）；scripts/keys-audit.mjs 登记 affairs_v1（scope: chat）；config/app-consumption-matrix.js 加 affairs 行（F1_inject/F6_lifecycle 为真，其余四面逐条写明「不适用」的理由）。门禁实测：registry 88/88/114 无孤儿、keys 454 条登记 ✓、lifecycle 73 key 无未接线出口 ✓、source-derivation 16 条 ✓、dead-export 零新增 ✓、named-import 834 条全可满足 ✓、screen-host 不直接写 .phone-screen ✓。
+- 【样式双侧（本仓硬纪律）】apps/affairs/affairs.css（`.af-*` 前缀族，主色暮蓝紫 #6f7bb8，含 340px 窄屏段，**不用横向滚动兜窄屏**）+ phone.css 追加同名段 3642 字节；由落盘脚本幂等追加（已含 `.af-root {` 则跳过）。判据 E3 双侧核对类前缀族一致，不信任一侧自述。
+- 【交棒改写：接管三条历史套件的版本锚（只换主语/换锚点，断言强度不变）】本版抬版会连带三条历史套件转红（v3760 B3/F1、v4380 D3、v4470 F7），其红因**不是本版引入**：v3760 的两条硬锁 `log.latest` 与「当版公告记了本版那件事」，与 v4.27.0 tools/patch_x6e.py 档头记过的同因形态一致（判据**主语写错**：想说「v3.76.0 这一版记全了」，写成了「当前这一版记全了」）；v4380 D3 的破坏锚点仍是旧字面量 `Math.min(Number(o.depth), …)`，源码已改为 numOrNull 形态；v4470 F7 同属抬版后判据主语错位。本版按仓内既有口径接管这三处（断言强度不变，只换主语/换锚点），落 tools/takeover_v4480_anchors.py，逐条锚点各断言恰中 1 次，失配即整件退出。
+- 【运行时验证边界 · 看起来没坏但显示不对】本版全部判据在无头环境跑（node --test tests/system-v4480.test.mjs + 六道静态门禁）：负控制走**真源码破坏 → 加载破坏副本 → 在副本上重跑同款真判据**三向自证（真仓必绿 / 五个破坏副本必红 / 锚点不唯一必抛），消费矩阵与磁盘真源对账（不信矩阵自述）。**未在浏览器里真点过一遍**：事务台卡片在真机窄屏下的排版、转阶段按钮的点选链路、GENERATE_BEFORE_COMBINE_PROMPTS 注入块在真实生成里的观感，均须实机核验。真宿主里「看起来没坏但显示不对」的那类读数（窄屏换行、存储迁移后的旧数据归一、注入块位置），无头判据**不能保证** —— 须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。
+- 【不做：本版只做批次 A 的 R6-O1，不混入 R6-O2 / M6-O1 / M6-O5】第六期批次 A 余下三项与 B~F 五批保持 proposed。不接管任何 App 的存储（只持引用不复制正文，判据 B1 用「动作字段不得夹带正文」按住）；不做万能工作台；不做后台轮询；不复制事实所有者。
+
 ## 迭代 207 · v4.47.1（2026-10-22）
 - 【版本升至 4.47.1（五源同源）：基线修复批次】本版是**存量修复批**，不新增产品功能：修复第六期规划收口时登记的 29 项基线测试失败（已确认为非本轮引入）。五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json。
 - 【本版治的缺陷形态（读码可复算，不是推演）】六类存量失败各有真根因：① `apps/place/place-view.js` 的行踪时间带（v4.43.0）裸调 el.querySelectorAll —— 本层历史契约是「容器只要有 querySelector 就能渲染」，桩容器上抛 TypeError，v310/v311 七项连坐拖垮；② `config/goal-tree-contract.js`（v4.38.0）就地写弱口径 Number.isFinite(Number(x)) —— 违反 v3.12.0 起全仓唯一实现纪律（numOrNull）；③ `config/item-custody-contract.js`（v4.37.0）落地后未登记进 source-derivation LEDGER —— 门禁从落地当版起一直红着；④ v290/v293/v3770 镜像清单未随 calendar-app / chat-view 静态闭包增长而扩（v4.41.0 周期契约 + v4.44.0 群投票交接共四件）—— 副本树装载失败即 ERR_MODULE_NOT_FOUND；⑤ 三份探针基线 files_scanned 463→476/477 漂移未随抬版刷新（既有 refresh_baselines 机制未跑）；⑥ 边界文档当版实测数字 867/487,854 与真跑 872/489,861 漂移（refresh_doc_readings 未跑）。
@@ -1409,7 +1424,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （300 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （301 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -6809,7 +6824,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.47.1`（五源同源）
+- **当前版本**：`4.48.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/
