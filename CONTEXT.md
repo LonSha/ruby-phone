@@ -181,7 +181,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
   另：`numOrNull` 三份实现（`config/projection-contract.js` / `config/injection-contract.js` /
   `apps/place/place-data.js`）自 v3.3.1 起**逐字同口径**（强：先看类型），判据见 `tests/system-v313.test.mjs`。
 - **lonsha → ruby**（两条通路）：① 官方门面 `window.LonShaMemory.getPublicData()`（图谱/摘要/日记/POV/时间线/状态/账本/向量，由 apps/memory/graph-bridge.js 消费）；② 只读快照桥 `window.lonsha_memory_bridge_v1.snapshot`（v3.88 起，含 protagonist / lifeDetails / characters / moneyLedger / outline / worldProg / clock / recallAudit）。
-- **注入格式化单一真源**：`LonShaBridge.prototype.recallBlock(queryText, opts)` —— `opts = { topN, label, userName, actors, strictActors }`。统一块头、首 24 字去重、每条裁 80 字、最多 3 条；`strictActors: true` 只保留提及在场人物的记忆（群聊防串味）；无命中返回 `''`（不产生空块）。**新增注入点必须走此方法，禁止在调用方另拼格式**（微信单聊 / 微信群聊 / 蜜语 honey 三处已统一）。
+- **注入格式化单一真源**：`LonShaBridge.prototype.recallBlock(queryText, opts)`（2026-10-22按现役源码订正）。`opts` 支持 `topN / label / userName / actors / strictActors / maxLines / maxChars / hardChars`；按证据身份去重，缺身份时按完整内容；默认最多3条（可设1–5），每条默认80字预算/120字硬边界，在可用句读处收束，无合适句读才退回预算截取。来源分为亲历/听说/推测，不一律称共同经历。`strictActors: true` 按在场人物过滤，无命中返回空串。新增注入点仍走此方法，不在调用方另拼格式；微信单聊/群聊与蜜语使用同一入口。
 
 ## 织光机 (apps/timeweaver/)
 - timeweaver-engine.js：纯函数内核（collectFragments 聚合 / composeLetter 本地规则成信），零 LLM、零副作用。

@@ -1,5 +1,7 @@
 # 📱 RubyPhone — a simulated smartphone UI for SillyTavern
 
+> **产品规划（2026-10-22）**：[第六期18项大更新](PLAN.md)，与另一项目合计36项；仅规划、尚未实施。以连续记忆/生活/创作为主，守卫不独立计项。既有能力及本轮证据见[取证记录](docs/planning/2026-10-22-product-evidence-v6.md)。
+
 > A full-featured, realistic mobile terminal for SillyTavern chat.
 > 独立实现（RubyPhone 自有代码）：原生物理手势视图栈 + 双轨模型传输，并无缝吸收两个社区项目的机制设计： a social-feed phone (Xiaohongshu feed + Tieba threads + public-opinion feed) and a playbook / status-bar plugin (458 curated playbooks injected on demand, 666 achievements, live HUD).
 > **Zero external database — fully native, install and go.**
