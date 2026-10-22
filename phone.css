@@ -21320,3 +21320,107 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     .af-new { flex-direction: column; }
     .af-primary { width: 100%; }
 }
+
+
+/* ==== [v4.49.0 · R6-O2] 会话台（apps/comms/comms.css 同名段）==== */
+/* ========================================================
+ * comms.css — [v4.49.0 · 第六期 R6-O2] 会话台样式
+ * --------------------------------------------------------
+ * 前缀族 `.cm-*`（唯一族，与 affairs 的 `.af-*` 不重合）。
+ * 主色：暮青蓝 #5c8f9e（与事务台的暮蓝紫 #6f7bb8 明确区分 ——
+ *   两个 App 都是「读数台」，颜色不分家时用户分不清自己在哪一页）。
+ * 窄屏纪律（本仓硬纪律）：**不用横向滚动兜窄屏**，340px 段内收窄内边距与字号。
+ * ============================================================ */
+.cm-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 12px 20px;
+    color: #e8eef2;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.cm-head { display: flex; flex-direction: column; gap: 2px; }
+.cm-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.cm-sub { margin: 0; font-size: 11px; color: #9db4be; }
+.cm-new { display: flex; gap: 6px; align-items: center; }
+.cm-new-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid #33505b;
+    border-radius: 6px;
+    background: #16262c;
+    color: #e8eef2;
+    font-size: 12px;
+}
+.cm-new-btn {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border: 1px solid #4b7d8c;
+    border-radius: 6px;
+    background: #24414a;
+    color: #d7e9ef;
+    font-size: 12px;
+    cursor: pointer;
+}
+.cm-new-btn:active { background: #2d535e; }
+.cm-pending { margin: 0; font-size: 11px; color: #f0c98a; }
+.cm-pending-none { color: #7f9aa3; }
+.cm-empty { margin: 0; font-size: 12px; color: #94aab3; }
+.cm-list { display: flex; flex-direction: column; gap: 8px; }
+.cm-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px 10px;
+    border: 1px solid #2c454e;
+    border-left: 3px solid #5c8f9e;
+    border-radius: 8px;
+    background: #142228;
+}
+.cm-card-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.cm-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-attn { flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 999px; }
+.cm-attn-settled { background: #23413a; color: #8fd6bd; }
+.cm-attn-unread { background: #4a2a2a; color: #f0a0a0; }
+.cm-attn-unanswered { background: #4a3d22; color: #f0cd8a; }
+.cm-counts { margin: 0; font-size: 11px; color: #a8c1ca; }
+.cm-dangling { margin: 0; font-size: 11px; color: #f0a0a0; }
+.cm-wander { margin: 0; font-size: 11px; color: #d9b06a; }
+.cm-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.cm-pt { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.cm-pt-kind { flex: 0 0 auto; padding: 0 5px; border-radius: 4px; background: #22383f; color: #a9c9d3; }
+.cm-k-missed { background: #4a2a2a; color: #f0a0a0; }
+.cm-k-call { background: #23413a; color: #8fd6bd; }
+.cm-pt-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cbdfe6; }
+.cm-pt-btn {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    border: 1px solid #3d6270;
+    border-radius: 4px;
+    background: #1d333b;
+    color: #bcd8e1;
+    font-size: 10px;
+    cursor: pointer;
+}
+.cm-acts { display: flex; justify-content: flex-end; }
+.cm-act {
+    padding: 4px 9px;
+    border: 1px solid #3d6270;
+    border-radius: 6px;
+    background: #1d333b;
+    color: #bcd8e1;
+    font-size: 11px;
+    cursor: pointer;
+}
+@media (max-width: 340px) {
+    .cm-root { padding: 8px 7px 16px; font-size: 12px; gap: 8px; }
+    .cm-title { font-size: 14px; }
+    .cm-sub { font-size: 10px; }
+    .cm-new-name, .cm-new-btn { font-size: 11px; }
+    .cm-card { padding: 7px 8px; }
+    .cm-name { font-size: 12px; }
+    .cm-pt-label { max-width: 96px; }
+    .cm-act { font-size: 10px; padding: 3px 7px; }
+}

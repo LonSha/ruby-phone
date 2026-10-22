@@ -1238,6 +1238,14 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        id: 'comms',
+        name: '会话台',
+        icon: '💬',
+        color: '#5c8f9e',
+        badge: 0,
+        data: {},
+    },
 ];
 // 手机配置
 export const PHONE_CONFIG = {

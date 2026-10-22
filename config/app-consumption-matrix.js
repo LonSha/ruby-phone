@@ -178,6 +178,7 @@ export const MATRIX = Object.freeze([
      *   在主钩子上注入一次即可，两处都注会得到两份同一读数）；
      *   不读上游契约面（R6-O2 连续通信才接 phone-chat-memory）。 */
     Object.freeze({ appId: "affairs", name: "事务台", dir: "affairs", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "comms", name: "会话台", dir: "comms", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
 ]);
 
 /** 便捷取用口：逐面统计命中数（诊断面与判据共用；不自持第二份数据）。

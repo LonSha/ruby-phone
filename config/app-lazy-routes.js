@@ -103,6 +103,7 @@ export const APP_LAZY_ROUTES = [
     /* [v4.48.0 · 第六期 R6-O1] 事务台：结构上与其他行完全同构（无额外构造参数/缓存同步），
      *   故走表驱动装配器；生成侧注入由 App 自己挂 GENERATE_BEFORE_COMBINE_PROMPTS（F1 面）。 */
     { id: "affairs", module: "./apps/affairs/affairs-app.js", key: "affairsApp", cls: "AffairsApp", errTitle: "事务台App" },
+    { id: "comms", module: "./apps/comms/comms-app.js", key: "commsApp", cls: "CommsApp", errTitle: "会话台App" },
 ];
 
 /* 索引（appId → 行）：装配器查表用，一次建好避免每次 openApp 线性扫。 */

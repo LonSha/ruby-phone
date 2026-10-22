@@ -150,6 +150,11 @@ export const TABS_BY_APP = Object.freeze({
         tabs: Object.freeze(['board']),
         file: 'apps/affairs/affairs-app.js', shape: 'single',
         note: '事务台（v4.48.0 · R6-O1）：单页，视图无 tab 分支（不设页签 —— 事务只有一屏读数，分页会把它拆成两份）'
+    }),
+    comms: Object.freeze({
+        tabs: Object.freeze(['board']),
+        file: 'apps/comms/comms-app.js', shape: 'single',
+        note: '[v4.49.0 · R6-O2] 会话台：单页读数（一段交流的接触点四类含漏接/注意面三态含未读未回/漏接续谈），视图无 tab 分支。',
     })
 });
 

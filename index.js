@@ -305,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.48.0';
+const ST_PHONE_VERSION = '4.49.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -468,6 +468,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
                       //             换会话必须丢（那是旧会话的判定：留着会把「上一段被拒的操作」
                       //             贴到新会话的事务台上）；事务本体在 affairs_v1 那一格（前缀 ^aff_），
                       //             随会话隔离，下一次 render 现取。
+    'commsApp',   // [v4.49.0 · 第六期 R6-O2] 会话台：上一次动作归因（_lastAction）与页签是**实例态** ——
+                      //             换会话必须丢（否则旧会话的「刚标记过已回」会贴到新会话的会话台上）；
+                      //             交流本体在 comm_threads_v1 那一格（前缀 ^comm），随会话隔离。
     'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
@@ -509,19 +512,22 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-22",
     items: [
-        "【版本升至 4.48.0（五源同源）：第六期批次 A 之 R6-O1 以事情为中心的手机（事务台）】** 五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json；本版判据 tests/system-v4480.test.mjs（六面 23 条，含负控制三向自证）当版跑绿。",
-        "【本版治的缺陷形态（读码可复算，不是推演）】既有三处入口各只答一个问题、且都答不了「这件事现在进行到哪」：config/task-entry.js（v3.65.0）的 TE_CARDS 是**单次动作**的声明面（点一下就走，走完即了）；config/open-ref.js（v3.66.0）只负责把**跳转靶心**落到目标页，且 `applyOpenRef` 对 `{ok:false,reason}` 如实归为 `target-missed:<reason>` —— 它连「上次跳到哪」都不留；apps/plotline 答的是「账里有什么」，apps/life 的 life_events 只存**已发生**的事。后果三件都不报错：① 同一件事的参与者散在五个 App 各自的存储里（日历有承诺、阅读有摘录、聊天有约定），谁也说不清「这件事一共牵扯谁」；② 关机重开只剩一堆互不相干的记录，看不出「哪一步已经做了」⇒ 重复执行已完成动作；③ 两件同名的事（两次「小组会议」）在任何按标题聚合的界面上都必然串进度。",
-        "【本版最贵的一格：四态里 absent 与 unreadable 必须分列】`affairStateOf` 给的是 absent / active / closed / unreadable 四格，刻意**不压平**成三格：「本来就没有这件事」与「有但读不出来」在界面上同形（都是空白），处置却相反 —— 前者该新建，后者该修存储。压平它就是把「存储坏了」伪装成「还没开始」。",
-        "【口径内核：判定面只在内核一处（config/affair-state.js，471 行纯契约）】词表六阶段（planning/scheduled/doing/wrapping/closed/unknown）、待决两态、事务四态、归因十二项、上限八项全部 Object.freeze；归一层（normalizeAffair/normalizeAffairRef/sameAffairRef）、判定层（findAffair/createAffair/trimAffairs/transitionAffairStage/appendAffairAction/appendAffairDecision/resolveAffairDecision/addAffairParticipants/attachAffairRef，每步统一返回 `{ok, why, affair, list}`）、投影层（activeAffairs/affairStateOf/affairSummaryLine/affairMaterial/affairSelfCheck）、存储口（AFF_KEY='affairs_v1'/readAffairs/writeAffairs，全文件只有这两处 storage 调用）。App 侧只做「读存储 → 交内核归一 → 给视图/生成侧」三分转发，判据 C1 用「App 内不许出现归因字面量」把这条按住。",
-        "【三条不能松的机制：id 不靠 title、动作必带 sourceRef、活跃永不回收】`findAffair` 按 id 精确匹配（id 形如 `aff_<base36(now)>_<random>`）—— 这正是两件同名并行的保证（判据 B3 造两件同名活动并推不同步数，任一件都不许被另一件带动）；`appendAffairAction` 要求 sourceRef 的 kind+id 齐备否则 `no-source`，并按 sourceRef 去重返 `dup-ref` —— 这是「不重复执行已完成动作」的机制（判据 B2 关机重开后同 ref 重挂被拒）；`trimAffairs` 只在超 40 条时回收**最老的 closed**，活跃事务永不回收（判据 B5）。",
-        "【本版最贵的第二格：resolveAffairDecision 留痕不删】待决项解决后必须留 resolvedBy / resolvedAt / outcome 三格，而不是把条目删掉。删掉等于「这件事从没悬过」—— 事后回看分不清「当时没这个选项」与「早就定了」。拒绝路径同样如实（目标非 open 态 → `decision-not-open`）。",
-        "【自己抓到的缺陷（读码复算抓的，门禁看不见）：读数句运算符优先级】`affairSummaryLine` 首版写成 `parts.push('最近动作：' + last.result || last.sourceRef.label || last.sourceRef.id)` —— `+` 比 `||` 结合更紧，`result` 为空时表达式恒为**真值串**「最近动作：」，回退分支永远走不到：界面上会出现一条只有标题没有内容的动作行，不报错、只错读数。已修为显式括号 + 中间变量 `const desc = last.result || last.sourceRef.label || last.sourceRef.id;`。该坑写成本版判据 B7，并作为 D1 负控制破坏五（把 desc 改回 `last.result || ''` 必须被抓）——**同一条缺陷既进正向判据又进负控制**，防止修完再被改回去。",
-        "【同族坑（上一版档头记过、本版又踩一次）：`_esc` 的 .replace(/&/g,'&') 被 shell 吃成恒等转义】heredoc 与内联 python 的引号转义会把 `'&amp;'` 还原成 `'&'`，转义函数随即退化成恒等函数而**判据仍绿**（因为判据只查「有 .replace」，不查实际替换成了什么）。本版定死写法：落到 `/tmp/*.py` 再执行，且 C5 判据按**替换目标字面量**逐项核对（`&amp;` / `&lt;` / `&gt;` / `&#x26quot;` 四个必须同时在文件中出现）。",
-        "【四处注册 + 六道静态门禁全绿（新增 App 的真实成本面）】config/apps.js 的 APPS 加 affairs（name='事务台'，icon='🗂️'，color='#6f7bb8'）；config/app-lazy-routes.js 加表行（key='affairsApp'/cls='AffairsApp'/errTitle='事务台App'）；config/tab-source.js 加 single 形态行（tabs 只有 board 一项，无 tab 分支，判据 C5 按住）；index.js 的 ST_PHONE_REBIND_APP_KEYS 加 'affairsApp'（**上一次归因与页签是实例态**，换会话必须丢；事务本体在 affairs_v1 里随会话隔离）；scripts/keys-audit.mjs 登记 affairs_v1（scope: chat）；config/app-consumption-matrix.js 加 affairs 行（F1_inject/F6_lifecycle 为真，其余四面逐条写明「不适用」的理由）。门禁实测：registry 88/88/114 无孤儿、keys 454 条登记 ✓、lifecycle 73 key 无未接线出口 ✓、source-derivation 16 条 ✓、dead-export 零新增 ✓、named-import 834 条全可满足 ✓、screen-host 不直接写 .phone-screen ✓。",
-        "【样式双侧（本仓硬纪律）】apps/affairs/affairs.css（`.af-*` 前缀族，主色暮蓝紫 #6f7bb8，含 340px 窄屏段，**不用横向滚动兜窄屏**）+ phone.css 追加同名段 3642 字节；由落盘脚本幂等追加（已含 `.af-root {` 则跳过）。判据 E3 双侧核对类前缀族一致，不信任一侧自述。",
-        "【交棒改写：三条历史套件的版本锚已在前一版收口，本版实测无需接管】本版抬版会连带三条历史套件转红（v3760 B3/F1、v4380 D3、v4470 F7），其红因**不是本版引入**：v3760 的两条硬锁 `log.latest` 与「当版公告记了本版那件事」，与 v4.27.0 tools/patch_x6e.py 档头记过的同因形态一致（判据**主语写错**：想说「v3.76.0 这一版记全了」，写成了「当前这一版记全了」）；v4380 D3 的破坏锚点仍是旧字面量 `Math.min(Number(o.depth), …)`，源码已改为 numOrNull 形态；v4470 F7 同属抬版后判据主语错位。本版按仓内既有口径接管这三处（断言强度不变，只换主语/换锚点），落 tools/takeover_v4480_anchors.py，逐条锚点各断言恰中 1 次，失配即整件退出。",
-        "【运行时验证边界 · 看起来没坏但显示不对】本版全部判据在无头环境跑（node --test tests/system-v4480.test.mjs + 六道静态门禁）：负控制走**真源码破坏 → 加载破坏副本 → 在副本上重跑同款真判据**三向自证（真仓必绿 / 五个破坏副本必红 / 锚点不唯一必抛），消费矩阵与磁盘真源对账（不信矩阵自述）。**未在浏览器里真点过一遍**：事务台卡片在真机窄屏下的排版、转阶段按钮的点选链路、GENERATE_BEFORE_COMBINE_PROMPTS 注入块在真实生成里的观感，均须实机核验。真宿主里「看起来没坏但显示不对」的那类读数（窄屏换行、存储迁移后的旧数据归一、注入块位置），无头判据**不能保证** —— 须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
-        "【不做：本版只做批次 A 的 R6-O1，不混入 R6-O2 / M6-O1 / M6-O5】第六期批次 A 余下三项与 B~F 五批保持 proposed。不接管任何 App 的存储（只持引用不复制正文，判据 B1 用「动作字段不得夹带正文」按住）；不做万能工作台；不做后台轮询；不复制事实所有者。"
+        "【版本升至 4.49.0（五源同源）：第六期批次 A 之 R6-O2「连续通信」】本版把消息、来电、漏接与短信收进**同一段交流**：新建独立 App「会话台」（apps/comms/ 三件套 + config/comm-thread.js 纯契约内核 + config/comm-time.js 时间解析纯件），并在四处注册 / 键与前缀族 / 消费矩阵 / 样式双侧全部落位。至此第六期批次 A 的手机仓两项（R6-O1 事务台、R6-O2 会话台）全部完成。",
+        "【缺陷形态：归一造成身份断裂，挂点静默丢失】内核首版的 `findThread` 从 `normalizeThreads(list)` 里取，返回的是**归一副本**；而写回路径用 `arr.indexOf(t)` 按**引用**找下标 —— 副本不在真数组里，`indexOf` 恒 `-1`，于是 `next` 的第 -1 号属性被写入：数组被挂到 `-1` 号属性上、原位置纹丝不动，**挂点静默丢失（不报错、只丢数据）**。修法不是加兜底，而是读侧与写侧锚在**同一份真数组**上：`findThread` 改为返回原数组元素（保引用身份），新增 `indexOfThread`（按 id 查真下标）与 `locate`（`{raw, cur, idx}` 三元组），四个写方法统一走「raw 保身份、cur 保形态、idx 是唯一写回落点」。",
+        "【同族：归一不幂等，坏形态读两遍就变好段】`normalizePoint` 首版拿**兜底后的值**判可读性（`hasKind(kind)`，而 `kind` 已把不认识的兜成 `message`），二次归一就会把 `readable:false` 洗成 `true`；`normalizeThread` 同病（`points` 不是数组时首归被判不可读，但 `points` 已兜成空数组，二归看见的是「一个正常的空数组」）。修法：判定一律看 `*Raw` 原始值，并让「不可读」**粘住**（`t.readable === false` 时保持不可读）。纪律一句话：**归一的产物必须能被归一自己再吃一遍而结论不变**。",
+        "【最贵的一格：漏接单列】`COMM_KINDS.MISSED` 单列，不并进消息数也不当作「没发生」；`resumeOf` 报 `endedOnMissed`（末次接触是漏接 ⇒ **正悬着**，该回拨而不是安静）与 `resumedAfterMissed`。把漏接并进消息数，等于把「他没接」读成「他发过消息」，是本仓最典型的假读数。",
+        "【口径内核：误合比漏合更伤】静默超 `gapHours=12` 一律判 `gap-too-long` 并**开新段**，绝不顺着时间线硬续。这是本件唯一一处「宁可保守」：把两段不相关的交流缝成一段，会污染整段读数；漏合只是少一段，用户自己再挂一次即可。",
+        "【未读与未回分列】`markPointSeen` 与 `markPointAnswered` 是两个独立动作，`attentionOf` 里 `unread` 优先于 `unanswered`（没看的比看了没回的更急）。「看了」顺手把「回了」也算上是本仓最典型的假读数之一。",
+        "【四态不压平：absent ≠ unreadable】`absent`（本来没有）该开新段，`unreadable`（有但读不出来）该修存储，处置相反；压平成一个「没有」会让坏存储永远不被发现。",
+        "【时间诚实面：读不出就是 null，绝不补「现在」】`config/comm-time.js` 的 `parseCommStamp` 缺年可补**故事年**（显式参数，不算猜），非法月日（13 月、2 月 30 日）一律 `null`，绝不静默归一。与 `contact-insight` 的「读不到 ≠ 0」同族：那里补 0 会算成「55 年没联系」，这里补 `now` 会算成「三天前的漏接是刚刚发生的」。`stampOfCall` 是通话记录文本时间（`date:'2026年10月22日'` + `time:'14:30'`）进交流内核的唯一入口。",
+        "【自己抓到的缺陷：判据自弱与自指涉】本版判据 E1 负控制抓到两处**判据自己的毛病**：① R5 只查 `'NO_SOURCE'` 这个词出现过没有，而词表定义与档头注释里都写着它，把守卫改成 `if (false)` 词还在、判据照旧绿 —— 结论面必须是那行**真守卫**本体；② A4 要查「本文件不得出现自证串」，而它自己就写着那两个串当探针，`indexOf` 又命中了自身行首，切完仍留着断言行 —— 扫描面必须减去 A4 自身段且锚点带行首换行。",
+        "【同族坑：判据扫到注释里的示例】R9 的优先级坑正则（加号后跟标识符再接竖线竖线）命中了内核档头**正把这个坑当教训写着**的示例文字，把「记着这个坑」判成「犯了这个坑」。修法是把扫描面限定在**去注释的真代码**上（同 dead-export E6）。",
+        "【四处注册】APPS 加 `comms` 项（暮青蓝 #5c8f9e，与 affairs 的暮蓝紫 #6f7bb8 区分）；懒加载路由表加 `commsApp/CommsApp`；页签真源表加 `single` 形态行（只有 `board` 一个页签）；REBIND 表加 `'commsApp'`（`_lastAction` 与页签是实例态，换会话必须丢；交流本体在 `comm_threads_v1` 随会话隔离）。",
+        "【键与隔离】`scripts/keys-audit.mjs` 登记 `comm_threads_v1`（scope `chat`）；`config/storage.js` 的会话前缀族加 `/^comm/` —— 不隔离就会把上一个角色的未读未回贴回新会话。",
+        "【样式双侧】源面 `apps/comms/comms.css`（`.cm-*` 前缀族 + 340px 窄屏段）与运行时投递面 `phone.css` 同名段双侧一致，由判据 D3 逐字比对。",
+        "【运行时验证边界】本版只做静态与内核级验证：`node --test tests/system-v4490.test.mjs` 22 条全绿、十道静态门禁全绿、`node --check` 全部通过。**未做**真机/真会话的端到端点击验证（会话台在真机上的触达手感、长列表滚动、窄屏换行后的可读性需在浏览器里复核），故本版不宣称「运行时已验证」。",
+        "【交棒改写：三条历史套件的版本锚】v3760 / v4380 / v4470 三条历史套件的版本锚已在各自收口版里落定，本版实测无需接管；本套件 `tests/system-v4490.test.mjs` 的 `MIN_VERSION = '4.49.0'` 是**本版唯一**的版本下限锚。",
+        "【不做：不并入上游记忆】会话台只读本机的通话/短信/微信痕迹，**不写**上游记忆、不改注入面；跨设备同步、语音转写、未读角标推送都不在本版范围（它们属于后续批次）。"
     ]
 };
 
