@@ -368,6 +368,8 @@ const KEY_REGISTRY = [
    *   刻意只存**引用**（open-ref 的 kind/id）与交互状态，不存源 App 正文 —— 不复制事实所有者。 */
   { key: 'affairs_v1', scope: 'chat', note: '[v4.48.0 · R6-O1] 进行中事务（阶段六态/参与者/待决选择两态/动作结果含源引用/引用桶；上限 40 条，最老 closed 先回收，活跃永不回收）' },
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
+  { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },
+  { key: 'creation_projects_v1', scope: 'chat', note: '[v4.50.0 · R6-O5] 长篇创作作品编排（作品级章节/素材依赖/跨章节局部改稿/脱机韧性）' },
   { key: 'schedule_ledger', scope: 'chat', note: '[v3.67.0] 日程提醒协议账本（四源归一后的幂等键/撤回/改期/回档留痕；上限 240）' },
   { key: 'finance_ledger', scope: 'chat', note: '[v3.68.0] 财务结算提交追踪账本（旅行分摊结算草稿的幂等提交/撤回留痕；上限 120）' },
   { key: 'ac_ledger', scope: 'chat', note: '[v3.85.0] 统一行动中心账本（五源归一后的幂等键/撤回/改期/回档/已处理留痕；上限 240）' },

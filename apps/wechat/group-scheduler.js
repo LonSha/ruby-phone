@@ -236,3 +236,20 @@ export function parseCritique(raw) {
         characterCritiques: (obj.characterCritiques && typeof obj.characterCritiques === 'object') ? obj.characterCritiques : {}
     };
 }
+
+/* ============================================================
+ * [v4.50.0 · R6-O3] 群聊议事状态机与群像互动接线
+ * ============================================================ */
+import * as GD from '../../config/group-deliberation.js';
+export { GD };
+
+/**
+ * 结合议事状态与成员列表调度发言者（优先推给被点名提问者、持异议者与未表态者）
+ */
+export function scheduleDeliberationSpeakers(topic, activeMembers = [], opts = {}) {
+    if (!topic) return scheduleSpeakers([], activeMembers, opts);
+    const memberIds = (Array.isArray(activeMembers) ? activeMembers : []).map(m => m?.id ?? m?.name ?? m).filter(Boolean);
+    const suggestedIds = GD.suggestNextSpeakers(topic, memberIds);
+    const max = typeof opts.maxSpeakers === 'number' ? opts.maxSpeakers : 3;
+    return suggestedIds.slice(0, max);
+}

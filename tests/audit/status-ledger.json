@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.49.0",
+  "version": "4.50.0",
   "version_sources": {
-    "package": "4.49.0",
-    "manifest": "4.49.0",
-    "update_log_latest": "4.49.0",
-    "index_const": "4.49.0"
+    "package": "4.50.0",
+    "manifest": "4.50.0",
+    "update_log_latest": "4.50.0",
+    "index_const": "4.50.0"
   },
   "version_same": true,
   "gates": {

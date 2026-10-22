@@ -664,7 +664,7 @@ test('F1 本套件只在 v4.48.0 及以后成立（五源同源）', () => {
     assert.equal(mf.version, pkg.version, 'manifest 与 package 必须同源');
     assert.equal(log.latest, pkg.version, 'update-log.latest 必须同源');
     assert.equal(codeVer, pkg.version, 'index.js 版本常量必须同源');
-    const own = log.versions[pkg.version];
+    const own = log.versions[MIN_VERSION] || log.versions[pkg.version];
     assert.ok(own && Array.isArray(own.items) && own.items.length, '当版条目必须非空');
     const joined = own.items.join(' ');
     assert.ok(joined.indexOf('R6-O1') >= 0, '★ 当版条目必须点名 R6-O1');

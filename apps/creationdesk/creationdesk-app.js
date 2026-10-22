@@ -14,6 +14,8 @@
 'use strict';
 import { cwPlanLine, cwSelfCheck, CW_STEPS } from '../../config/creation-workbench.js';
 import { CreationdeskView } from './creationdesk-view.js';
+/* [v4.50.0 · R6-O5] 长篇创作工程契约（纯函数） */
+import * as CP from '../../config/creation-project.js';
 /* [v4.17.0 · R4-O5] 编辑缓冲(纯函数)。本层只转交:归一与三态判定全在那件里,
  *   **已发布不许被覆盖这条红线也由它守**(本层不自己判一份)。 */
 import {
@@ -741,7 +743,62 @@ export class CreationdeskApp {
         this._hy = { baseline: '', a: { kind: '', text: '', written: '' }, b: { kind: '', text: '', written: '' }, picked: '', flash: '', flashBad: false };
         /* [v4.30.0 · R4-X9] 取材板也丢实例态：换角色后上一个角色选的任务 / 时点 / 勾选不能留着。 */
         if (this._board && typeof this._board.resetScene === 'function') this._board.resetScene();
+        /* [v4.50.0 · R6-O5] 换角色重置长篇工程缓存态 */
+        this._projectWork = null;
         this.render();
     }
+
+    /* ============================================================
+     * [v4.50.0 · R6-O5] 长篇创作工程接线（脱机韧性 + 选择性改稿 + 虚拟发布）
+     * ============================================================ */
+    getProjectWork() {
+        if (this._projectWork) return this._projectWork;
+        if (this.storage && typeof this.storage.get === 'function') {
+            const raw = this.storage.get(CP.CP_STORAGE_KEY, null);
+            if (raw) {
+                this._projectWork = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                return this._projectWork;
+            }
+        }
+        return null;
+    }
+
+    saveProjectWork(work) {
+        if (!work || typeof work !== 'object') return false;
+        this._projectWork = work;
+        if (this.storage && typeof this.storage.set === 'function') {
+            this.storage.set(CP.CP_STORAGE_KEY, work);
+            return true;
+        }
+        return false;
+    }
+
+    planPlotRevision(chapterId, plotPatch, opts) {
+        const cur = this.getProjectWork();
+        if (!cur) return { ok: false, reason: 'no-active-work' };
+        const res = CP.planPlotRevision(cur, chapterId, plotPatch, opts);
+        if (res.ok && res.work) {
+            this.saveProjectWork(res.work);
+        }
+        return res;
+    }
+
+    revertPlotRevision(revisionId) {
+        const cur = this.getProjectWork();
+        if (!cur) return false;
+        const next = CP.revertPlotRevision(cur, revisionId);
+        return this.saveProjectWork(next);
+    }
+
+    publishProjectTargets(chapterId, targets) {
+        const cur = this.getProjectWork();
+        if (!cur) return { ok: false, reason: 'no-active-work' };
+        const res = CP.publishProjectTargets(cur, chapterId, targets);
+        if (res.ok && res.work) {
+            this.saveProjectWork(res.work);
+        }
+        return res;
+    }
+
     destroy() { this._view = null; }
 }

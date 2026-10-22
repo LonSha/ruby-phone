@@ -1,6 +1,23 @@
 {
-  "latest": "4.49.0",
+  "latest": "4.50.0",
   "versions": {
+    "4.50.0": {
+      "version": "4.50.0",
+      "date": "2026-10-22",
+      "items": [
+        "【版本升至 4.50.0（五源同源）：第六期批次 B 双项交付（R6-O3 群聊议事与群像互动 / R6-O5 长篇创作项目作品编排）】本版在手机端完成第六期批次 B 的两项核心能力：新增群聊议事契约内核（config/group-deliberation.js）与长篇作品编排契约内核（config/creation-project.js），分别在微信群调度器（apps/wechat/group-scheduler.js）与创作台（apps/creationdesk/creationdesk-app.js）完成落盘与接线，并在 keys-audit 与 storage 会话隔离前缀族中全面就位。",
+        "【缺陷形态：跨角色无出处读心与全员同步知情】多角色群聊在推进复杂议程时，角色容易在无铺垫的情况下引用别人私有材料或未在群内披露的秘密。本版在议事内核严格建立私有知情边界（knownEvidence）：新披露证据只影响知情人物立场，外部未披露证据被拦截并标记 leakPrevented，严防跨角色读心。",
+        "【自己抓到的缺陷：C3 脱机断言测试用例自身变量二次赋值遗漏】在撰写脱机韧性验收用例时，测试桩使用了 const 声明 offlineWork 并调用 upsertChapter 纯函数而未接收返回值，导致断言读到未更新的原对象。经现场捕捉并修正，验证了纯函数不可变契约的自洽性。",
+        "【群像互动内核：四态立场与议程不断线】议事内核支持 propose/support/reserve/oppose 四态立场及理由与证据关联；支持拆出分话题（branch）与合并回主议题（merge）；支持成员退出后立场保留（withdrawn）且原议题继续推进，投票改期不丢失议程上下文。",
+        "【议事台账与调度：未回应问题队列驱动发言优先级】议题维护 openQuestions 未回应问题队列；suggestNextSpeakers 优先调度被直接点名提问的受询者，其次调度持反对/保留立场的角色阐明理由，再次调度未表态者，杜绝机械轮询。",
+        "【长篇创作工程：跨章节选择性连带改稿与人工文字保护】长篇作品以 ProjectWork 管理章节、角色出场、素材依赖与多平台派生稿；planPlotRevision 允许作者修改情节后显式指定更新哪些派生稿（selectedTargets），未选稿件严格保持 untouched，人工编辑的文字绝不被冲掉。",
+        "【局部撤销机制：回滚情节且不冲掉用户派生编辑】revertPlotRevision 支持撤销特定情节修订，精准回滚章节情节摘要至旧版，同时保留原有草稿与未受损素材资产，保障长篇创作安全感。",
+        "【多目标虚拟发布闭环：朋友圈与长文双通道流水收束】publishProjectTargets 支持多平台虚拟发布流水凭单生成，闭环跑通 moments 与 blog 两大去向，满足长篇项目作品级分发需求。",
+        "【键与隔离：group_deliberation_v1 与 creation_projects_v1 进 keys-audit 与 storage 前缀族】在 scripts/keys-audit.mjs 登记 group_deliberation_v1 与 creation_projects_v1（scope chat），在 config/storage.js 登记 /^group_deliberation/ 与 /^creation_project/ 会话隔离正则族，杜绝跨会话串味。",
+        "【运行时验证边界】本版完成静态门禁与契约级单元验收：node --test tests/system-v4500.test.mjs 17 条用例全绿（含三项真源码破坏负控制），node --check 全部通过。真实手机界面交互及模型实时生成效果需在后续真机/真会话阶段进一步复核。",
+        "【不做：不启动多个自治无界大模型代理与不发布到真实外部互联网】本版群聊议事聚焦结构化议题与立场调度，不启动无限自治代理；长篇创作聚焦作品编排与跨章节连带改稿，不承诺发布到真实外部互联网平台。"
+      ]
+    },
     "4.49.0": {
       "version": "4.49.0",
       "date": "2026-10-22",
@@ -4752,5 +4769,5 @@
       ]
     }
   },
-  "head": "4.49.0"
+  "head": "4.50.0"
 }

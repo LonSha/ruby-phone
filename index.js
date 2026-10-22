@@ -305,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.49.0';
+const ST_PHONE_VERSION = '4.50.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -512,22 +512,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-22",
     items: [
-        "【版本升至 4.49.0（五源同源）：第六期批次 A 之 R6-O2「连续通信」】本版把消息、来电、漏接与短信收进**同一段交流**：新建独立 App「会话台」（apps/comms/ 三件套 + config/comm-thread.js 纯契约内核 + config/comm-time.js 时间解析纯件），并在四处注册 / 键与前缀族 / 消费矩阵 / 样式双侧全部落位。至此第六期批次 A 的手机仓两项（R6-O1 事务台、R6-O2 会话台）全部完成。",
-        "【缺陷形态：归一造成身份断裂，挂点静默丢失】内核首版的 `findThread` 从 `normalizeThreads(list)` 里取，返回的是**归一副本**；而写回路径用 `arr.indexOf(t)` 按**引用**找下标 —— 副本不在真数组里，`indexOf` 恒 `-1`，于是 `next` 的第 -1 号属性被写入：数组被挂到 `-1` 号属性上、原位置纹丝不动，**挂点静默丢失（不报错、只丢数据）**。修法不是加兜底，而是读侧与写侧锚在**同一份真数组**上：`findThread` 改为返回原数组元素（保引用身份），新增 `indexOfThread`（按 id 查真下标）与 `locate`（`{raw, cur, idx}` 三元组），四个写方法统一走「raw 保身份、cur 保形态、idx 是唯一写回落点」。",
-        "【同族：归一不幂等，坏形态读两遍就变好段】`normalizePoint` 首版拿**兜底后的值**判可读性（`hasKind(kind)`，而 `kind` 已把不认识的兜成 `message`），二次归一就会把 `readable:false` 洗成 `true`；`normalizeThread` 同病（`points` 不是数组时首归被判不可读，但 `points` 已兜成空数组，二归看见的是「一个正常的空数组」）。修法：判定一律看 `*Raw` 原始值，并让「不可读」**粘住**（`t.readable === false` 时保持不可读）。纪律一句话：**归一的产物必须能被归一自己再吃一遍而结论不变**。",
-        "【最贵的一格：漏接单列】`COMM_KINDS.MISSED` 单列，不并进消息数也不当作「没发生」；`resumeOf` 报 `endedOnMissed`（末次接触是漏接 ⇒ **正悬着**，该回拨而不是安静）与 `resumedAfterMissed`。把漏接并进消息数，等于把「他没接」读成「他发过消息」，是本仓最典型的假读数。",
-        "【口径内核：误合比漏合更伤】静默超 `gapHours=12` 一律判 `gap-too-long` 并**开新段**，绝不顺着时间线硬续。这是本件唯一一处「宁可保守」：把两段不相关的交流缝成一段，会污染整段读数；漏合只是少一段，用户自己再挂一次即可。",
-        "【未读与未回分列】`markPointSeen` 与 `markPointAnswered` 是两个独立动作，`attentionOf` 里 `unread` 优先于 `unanswered`（没看的比看了没回的更急）。「看了」顺手把「回了」也算上是本仓最典型的假读数之一。",
-        "【四态不压平：absent ≠ unreadable】`absent`（本来没有）该开新段，`unreadable`（有但读不出来）该修存储，处置相反；压平成一个「没有」会让坏存储永远不被发现。",
-        "【时间诚实面：读不出就是 null，绝不补「现在」】`config/comm-time.js` 的 `parseCommStamp` 缺年可补**故事年**（显式参数，不算猜），非法月日（13 月、2 月 30 日）一律 `null`，绝不静默归一。与 `contact-insight` 的「读不到 ≠ 0」同族：那里补 0 会算成「55 年没联系」，这里补 `now` 会算成「三天前的漏接是刚刚发生的」。`stampOfCall` 是通话记录文本时间（`date:'2026年10月22日'` + `time:'14:30'`）进交流内核的唯一入口。",
-        "【自己抓到的缺陷：判据自弱与自指涉】本版判据 E1 负控制抓到两处**判据自己的毛病**：① R5 只查 `'NO_SOURCE'` 这个词出现过没有，而词表定义与档头注释里都写着它，把守卫改成 `if (false)` 词还在、判据照旧绿 —— 结论面必须是那行**真守卫**本体；② A4 要查「本文件不得出现自证串」，而它自己就写着那两个串当探针，`indexOf` 又命中了自身行首，切完仍留着断言行 —— 扫描面必须减去 A4 自身段且锚点带行首换行。",
-        "【同族坑：判据扫到注释里的示例】R9 的优先级坑正则（加号后跟标识符再接竖线竖线）命中了内核档头**正把这个坑当教训写着**的示例文字，把「记着这个坑」判成「犯了这个坑」。修法是把扫描面限定在**去注释的真代码**上（同 dead-export E6）。",
-        "【四处注册】APPS 加 `comms` 项（暮青蓝 #5c8f9e，与 affairs 的暮蓝紫 #6f7bb8 区分）；懒加载路由表加 `commsApp/CommsApp`；页签真源表加 `single` 形态行（只有 `board` 一个页签）；REBIND 表加 `'commsApp'`（`_lastAction` 与页签是实例态，换会话必须丢；交流本体在 `comm_threads_v1` 随会话隔离）。",
-        "【键与隔离】`scripts/keys-audit.mjs` 登记 `comm_threads_v1`（scope `chat`）；`config/storage.js` 的会话前缀族加 `/^comm/` —— 不隔离就会把上一个角色的未读未回贴回新会话。",
-        "【样式双侧】源面 `apps/comms/comms.css`（`.cm-*` 前缀族 + 340px 窄屏段）与运行时投递面 `phone.css` 同名段双侧一致，由判据 D3 逐字比对。",
-        "【运行时验证边界】本版只做静态与内核级验证：`node --test tests/system-v4490.test.mjs` 22 条全绿、十道静态门禁全绿、`node --check` 全部通过。**未做**真机/真会话的端到端点击验证（会话台在真机上的触达手感、长列表滚动、窄屏换行后的可读性需在浏览器里复核），故本版不宣称「运行时已验证」。",
-        "【交棒改写：三条历史套件的版本锚】v3760 / v4380 / v4470 三条历史套件的版本锚已在各自收口版里落定，本版实测无需接管；本套件 `tests/system-v4490.test.mjs` 的 `MIN_VERSION = '4.49.0'` 是**本版唯一**的版本下限锚。",
-        "【不做：不并入上游记忆】会话台只读本机的通话/短信/微信痕迹，**不写**上游记忆、不改注入面；跨设备同步、语音转写、未读角标推送都不在本版范围（它们属于后续批次）。"
+        "【版本升至 4.50.0（五源同源）：第六期批次 B 双项交付（R6-O3 群聊议事与群像互动 / R6-O5 长篇创作项目作品编排）】本版在手机端完成第六期批次 B 的两项核心能力：新增群聊议事契约内核（config/group-deliberation.js）与长篇作品编排契约内核（config/creation-project.js），分别在微信群调度器（apps/wechat/group-scheduler.js）与创作台（apps/creationdesk/creationdesk-app.js）完成落盘与接线，并在 keys-audit 与 storage 会话隔离前缀族中全面就位。",
+        "【缺陷形态：跨角色无出处读心与全员同步知情】多角色群聊在推进复杂议程时，角色容易在无铺垫的情况下引用别人私有材料或未在群内披露的秘密。本版在议事内核严格建立私有知情边界（knownEvidence）：新披露证据只影响知情人物立场，外部未披露证据被拦截并标记 leakPrevented，严防跨角色读心。",
+        "【自己抓到的缺陷：C3 脱机断言测试用例自身变量二次赋值遗漏】在撰写脱机韧性验收用例时，测试桩使用了 const 声明 offlineWork 并调用 upsertChapter 纯函数而未接收返回值，导致断言读到未更新的原对象。经现场捕捉并修正，验证了纯函数不可变契约的自洽性。",
+        "【群像互动内核：四态立场与议程不断线】议事内核支持 propose/support/reserve/oppose 四态立场及理由与证据关联；支持拆出分话题（branch）与合并回主议题（merge）；支持成员退出后立场保留（withdrawn）且原议题继续推进，投票改期不丢失议程上下文。",
+        "【议事台账与调度：未回应问题队列驱动发言优先级】议题维护 openQuestions 未回应问题队列；suggestNextSpeakers 优先调度被直接点名提问的受询者，其次调度持反对/保留立场的角色阐明理由，再次调度未表态者，杜绝机械轮询。",
+        "【长篇创作工程：跨章节选择性连带改稿与人工文字保护】长篇作品以 ProjectWork 管理章节、角色出场、素材依赖与多平台派生稿；planPlotRevision 允许作者修改情节后显式指定更新哪些派生稿（selectedTargets），未选稿件严格保持 untouched，人工编辑的文字绝不被冲掉。",
+        "【局部撤销机制：回滚情节且不冲掉用户派生编辑】revertPlotRevision 支持撤销特定情节修订，精准回滚章节情节摘要至旧版，同时保留原有草稿与未受损素材资产，保障长篇创作安全感。",
+        "【多目标虚拟发布闭环：朋友圈与长文双通道流水收束】publishProjectTargets 支持多平台虚拟发布流水凭单生成，闭环跑通 moments 与 blog 两大去向，满足长篇项目作品级分发需求。",
+        "【键与隔离：group_deliberation_v1 与 creation_projects_v1 进 keys-audit 与 storage 前缀族】在 scripts/keys-audit.mjs 登记 group_deliberation_v1 与 creation_projects_v1（scope chat），在 config/storage.js 登记 /^group_deliberation/ 与 /^creation_project/ 会话隔离正则族，杜绝跨会话串味。",
+        "【运行时验证边界】本版完成静态门禁与契约级单元验收：node --test tests/system-v4500.test.mjs 17 条用例全绿（含三项真源码破坏负控制），node --check 全部通过。真实手机界面交互及模型实时生成效果需在后续真机/真会话阶段进一步复核。",
+        "【不做：不启动多个自治无界大模型代理与不发布到真实外部互联网】本版群聊议事聚焦结构化议题与立场调度，不启动无限自治代理；长篇创作聚焦作品编排与跨章节连带改稿，不承诺发布到真实外部互联网平台。"
     ]
 };
 
