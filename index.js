@@ -305,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.50.0';
+const ST_PHONE_VERSION = '4.51.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -512,17 +512,15 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-22",
     items: [
-        "【版本升至 4.50.0（五源同源）：第六期批次 B 双项交付（R6-O3 群聊议事与群像互动 / R6-O5 长篇创作项目作品编排）】本版在手机端完成第六期批次 B 的两项核心能力：新增群聊议事契约内核（config/group-deliberation.js）与长篇作品编排契约内核（config/creation-project.js），分别在微信群调度器（apps/wechat/group-scheduler.js）与创作台（apps/creationdesk/creationdesk-app.js）完成落盘与接线，并在 keys-audit 与 storage 会话隔离前缀族中全面就位。",
-        "【缺陷形态：跨角色无出处读心与全员同步知情】多角色群聊在推进复杂议程时，角色容易在无铺垫的情况下引用别人私有材料或未在群内披露的秘密。本版在议事内核严格建立私有知情边界（knownEvidence）：新披露证据只影响知情人物立场，外部未披露证据被拦截并标记 leakPrevented，严防跨角色读心。",
-        "【自己抓到的缺陷：C3 脱机断言测试用例自身变量二次赋值遗漏】在撰写脱机韧性验收用例时，测试桩使用了 const 声明 offlineWork 并调用 upsertChapter 纯函数而未接收返回值，导致断言读到未更新的原对象。经现场捕捉并修正，验证了纯函数不可变契约的自洽性。",
-        "【群像互动内核：四态立场与议程不断线】议事内核支持 propose/support/reserve/oppose 四态立场及理由与证据关联；支持拆出分话题（branch）与合并回主议题（merge）；支持成员退出后立场保留（withdrawn）且原议题继续推进，投票改期不丢失议程上下文。",
-        "【议事台账与调度：未回应问题队列驱动发言优先级】议题维护 openQuestions 未回应问题队列；suggestNextSpeakers 优先调度被直接点名提问的受询者，其次调度持反对/保留立场的角色阐明理由，再次调度未表态者，杜绝机械轮询。",
-        "【长篇创作工程：跨章节选择性连带改稿与人工文字保护】长篇作品以 ProjectWork 管理章节、角色出场、素材依赖与多平台派生稿；planPlotRevision 允许作者修改情节后显式指定更新哪些派生稿（selectedTargets），未选稿件严格保持 untouched，人工编辑的文字绝不被冲掉。",
-        "【局部撤销机制：回滚情节且不冲掉用户派生编辑】revertPlotRevision 支持撤销特定情节修订，精准回滚章节情节摘要至旧版，同时保留原有草稿与未受损素材资产，保障长篇创作安全感。",
-        "【多目标虚拟发布闭环：朋友圈与长文双通道流水收束】publishProjectTargets 支持多平台虚拟发布流水凭单生成，闭环跑通 moments 与 blog 两大去向，满足长篇项目作品级分发需求。",
-        "【键与隔离：group_deliberation_v1 与 creation_projects_v1 进 keys-audit 与 storage 前缀族】在 scripts/keys-audit.mjs 登记 group_deliberation_v1 与 creation_projects_v1（scope chat），在 config/storage.js 登记 /^group_deliberation/ 与 /^creation_project/ 会话隔离正则族，杜绝跨会话串味。",
-        "【运行时验证边界】本版完成静态门禁与契约级单元验收：node --test tests/system-v4500.test.mjs 17 条用例全绿（含三项真源码破坏负控制），node --check 全部通过。真实手机界面交互及模型实时生成效果需在后续真机/真会话阶段进一步复核。",
-        "【不做：不启动多个自治无界大模型代理与不发布到真实外部互联网】本版群聊议事聚焦结构化议题与立场调度，不启动无限自治代理；长篇创作聚焦作品编排与跨章节连带改稿，不承诺发布到真实外部互联网平台。"
+        "【新增】能改道的多人活动契约 (config/multi-activity-reroute.js, R6-O4 内核，迟到保留到场事实/成员退出防伪造亲历/经费与已支付保护/局部改道协商/共同经历与精准分账)",
+        "【新增】主动研读工作室契约 (config/reading-studio.js, R6-O6 内核，围绕研读问题组织跨书阅读/段落回源不可篡改/正反观点对照/疑问批注/论证草稿衍生/资料改版保护作者正文)",
+        "【新增】委托创作与交付生命周期契约 (config/commission-pipeline.js, R6-X4 配套内核，需求/样稿/范围变更/返修/验收五阶段流/加需求必须重新协商/取消保留草稿与定金结算)",
+        "【新增】师友共学与能力成长契约 (config/mentorship-colearn.js, R6-X8 配套内核，伴学任务/针对作品片段引用反馈/师友分歧自主选择/严禁跳过练习虚构经验)",
+        "【存储隔离】键审计与隔离正则齐备 (scripts/keys-audit.mjs 登记 multi_activity_reroute_v1 与 reading_studio_v1 范围 chat，config/storage.js 登记正则隔离族防串味)",
+        "【缺陷形态】本版自己抓到的缺陷形态：改道重排阶段若未区分已完成与待执行段会导致历史支出被重复累加扣款，改以已完成段状态为锚只重排未完成段并平移已支付资金",
+        "【交棒改写】历史套件版本锚主动改写下限形 (system-v4480/v4490/v4500 的 own 改用下限判定兼容后续版本持续推进)",
+        "【运行时验证边界】运行时验证边界：本版四项内核均为无宿主依赖的纯契约与算法，脱机及重开后完整恢复案卷、批注、草稿与活动分账",
+        "【版本升至】版本升至 4.51.0（五源同源）"
     ]
 };
 

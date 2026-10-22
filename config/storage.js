@@ -288,6 +288,10 @@ export class PhoneStorage {
             /^group_deliberation/,
             /* [v4.50.0 · R6-O5] 长篇创作工程(creation_projects_v1): 隔离长篇作品编排与修订历史。 */
             /^creation_project/,
+            /* [v4.51.0 · R6-O4] 能改道的多人活动(multi_activity_reroute_v1): 隔离多人活动改道状态。 */
+            /^multi_activity_reroute/,
+            /* [v4.51.0 · R6-O6] 主动研读工作室(reading_studio_v1): 隔离研读案卷、批注与草稿。 */
+            /^reading_studio/,
             /* [v4.15.0 · R4-O3] 页面状态快照(view_state_<appId>):
              *   一条前缀覆盖一键,键无元字符,按仓内口径「无需宽匹配登记」。
              *   为什么必须隔离:快照里装的是「这个角色这段对话里最后停在哪个页签/搜了什么词/滚到哪」——

@@ -370,6 +370,8 @@ const KEY_REGISTRY = [
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
   { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },
   { key: 'creation_projects_v1', scope: 'chat', note: '[v4.50.0 · R6-O5] 长篇创作作品编排（作品级章节/素材依赖/跨章节局部改稿/脱机韧性）' },
+  { key: 'multi_activity_reroute_v1', scope: 'chat', note: '[v4.51.0 · R6-O4] 能改道的多人活动状态机（迟到保留到场/成员退出防伪造亲历/已付费不重扣/实际到场分账）' },
+  { key: 'reading_studio_v1', scope: 'chat', note: '[v4.51.0 · R6-O6] 主动研读工作室状态机（核心问题/观点对照/疑问批注/论证草稿/改版保护作者正文）' },
   { key: 'schedule_ledger', scope: 'chat', note: '[v3.67.0] 日程提醒协议账本（四源归一后的幂等键/撤回/改期/回档留痕；上限 240）' },
   { key: 'finance_ledger', scope: 'chat', note: '[v3.68.0] 财务结算提交追踪账本（旅行分摊结算草稿的幂等提交/撤回留痕；上限 120）' },
   { key: 'ac_ledger', scope: 'chat', note: '[v3.85.0] 统一行动中心账本（五源归一后的幂等键/撤回/改期/回档/已处理留痕；上限 240）' },
