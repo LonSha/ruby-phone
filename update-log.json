@@ -1,5 +1,5 @@
 {
-  "latest": "4.51.0",
+  "latest": "4.52.0",
   "versions": {
     "4.51.0": {
       "version": "4.51.0",
@@ -4781,6 +4781,19 @@
         "【新增·原创】织光机 Timeweaver AI 时光信（App 控制器层 composeAILetter）：本地规则 composeLetter 之上加 LLM 升华——把聚合出的编年数据（碎片数/情绪均值/第一次/亲密度榜首/高光片段/明暗时光）作为事实素材，交 apiManager.callAI 用「见证你这段时光的挚友」口吻写成 3-5 段有温度的信。引擎纯函数不动保持可测，本地规则版保留为离线/降级兜底；view 加「✨ 求 AI 升华这封信」按钮 + AI 信优先渲染 + 加载/错误态。",
         "【新增·跨项目记忆协同】微信 buildMessagesArray 注入 LonSha 剧情记忆：发送时经 window.VirtualPhone.lonshaBridge.recall(角色名+用户输入, top3) 取相关记忆，注入【角色记忆·来自剧情】system 块——手机角色「记得」lonsha 正文里和 {{user}} 共同经历的事，自然带入不生硬复述。注入静默失败兜底不影响发送。",
         "【新增·工程防线】tests/lonsha-bridge-contract.test.mjs（4 项）：桥方法行为契约（onFloorRollback/recall/applyCoordinatedInjection/onChatChanged 原型方法 + recall 禁用时安全返回[]）/ 微信 lonsha 注入接线 / 双端 onFloorRollback 契约对称 / recall 返回结构契约（content/score/layer）。"
+      ]
+    },
+    "4.52.0": {
+      "version": "4.52.0",
+      "date": "2026-10-22",
+      "items": [
+        "【新增】续玩再入场内核 (config/story-reentry.js, R6-O8 内核，从读简报升级为重新进入正在运转的故事/补看选项含群消息社媒约定/窄屏一句话入口/主线推进标 stale)",
+        "【新增】持续社媒生态内核 (config/social-ecosystem.js, R6-O9 内核，同一事件在不同圈层产生不同讨论/澄清只影响已看见的人/私聊不进公共话题)",
+        "【新增】共同生活剧场内核 (config/daily-theater.js, R6-X1 内核，一天有安排/打断/回应/余韵的戏剧节奏/打断不等于取消/余韵跨日回响)",
+        "【新增】社团共营内核 (config/club-coop.js, R6-X3 内核，从群投票到完成长期协作/分工变更有历史/换负责人待办交接但私人消息不交接/项目结束审计)",
+        "【缺陷形态】本版自己抓到的缺陷形态：投票→日历交接凭据解决了票变事项但缺从方案到完成的长期协作层；resume-brief 只给读数不给接续旅程入口",
+        "【运行时验证边界】四项内核均为纯函数零依赖，不读存储不碰DOM不读时钟，脱机及重开后完整恢复接续旅程/圈层讨论/日程节奏/项目审计",
+        "【版本升至】版本升至 4.52.0（manifest.json + index.js ST_PHONE_VERSION 同源）"
       ]
     }
   },
