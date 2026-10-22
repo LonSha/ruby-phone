@@ -136,6 +136,12 @@ const MIRROR_FILES = [
      *   ⇒ B2(位置无关)与 D1/D2/D3/D5 一起转红:那证明的是「两个根看到的不是同一件事」。
      *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面、v4.05.0 扩实体映射面逐字同规。 */
     'config/list-window.js',
+    /* [v4.47.1] chat-view 的静态闭包又长了一件:config/group-vote-handoff.js
+     *   (v4.44.0 群投票交接凭据,经 chat-view 直接静态引入)。不扩 ⇒ 镜像根上
+     *   chat-view 装载失败(探针 exit 2) ⇒ B2(位置无关)与 D1/D2/D3/D5 一起转红。
+     *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面逐字同规;由闭包脚本真算
+     *   (chat-view 静态闭包 38 件,缺的恰好只有这一件)。 */
+    'config/group-vote-handoff.js',
     /* [v4.20.0 · 补漏] v4.05.0 的注释声称把 entity-candidates-contract.js 补进了本清单，
      *   但**字面量从未落地**（注释留着、条目没加）—— 既有漂移，由本版闭包脚本真算出来：
      *   chat-view 的静态闭包 37 件，缺的**恰好只有这一件**（v4.05.0 那轮的注释还逐字写着

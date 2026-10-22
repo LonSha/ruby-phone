@@ -239,6 +239,11 @@ test('v293 D. 负控制：源键退回「含状态与 revision」→ 全程多�
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
     'config/date-playbook.js': read('config/date-playbook.js'),
+    /* [v4.47.1] calendar-app 的静态闭包又长了三件（v4.41.0 周期契约 + v4.44.0 群投票交接）。
+     *   少一件即 ERR_MODULE_NOT_FOUND —— 与 v3.58.0/第三期 R3-X3 同款交棒形态。 */
+    'config/recurrence-contract.js': read('config/recurrence-contract.js'),
+    'config/group-vote-handoff.js': read('config/group-vote-handoff.js'),
+    'apps/calendar/vote-handoff-store.js': read('apps/calendar/vote-handoff-store.js'),
   });
   try {
     const traced = await commitmentTrace(dir);
@@ -272,6 +277,11 @@ test('v293 D2. 负控制：抽掉整族回收 → 终态幽灵复现（B 判据�
     'config/phone-events.js': read('config/phone-events.js'),
     'config/commitment-flow.js': read('config/commitment-flow.js'),
     'config/date-playbook.js': read('config/date-playbook.js'),
+    /* [v4.47.1] calendar-app 的静态闭包又长了三件（v4.41.0 周期契约 + v4.44.0 群投票交接）。
+     *   少一件即 ERR_MODULE_NOT_FOUND —— 与 v3.58.0/第三期 R3-X3 同款交棒形态。 */
+    'config/recurrence-contract.js': read('config/recurrence-contract.js'),
+    'config/group-vote-handoff.js': read('config/group-vote-handoff.js'),
+    'apps/calendar/vote-handoff-store.js': read('apps/calendar/vote-handoff-store.js'),
   });
   try {
     const { host, app, ns } = await boot(dir);

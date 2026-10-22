@@ -85,6 +85,10 @@ const TOUCHED = [
   // [v3.97.0 · R3-O4 交棒] 搜索 App 本轮首次进枚举面（筛后按来源标签分组渲染）：
   //   与 action-center 同款交棒 —— 副本树不带它，B0「未破坏副本自身全绿」会把它报成行尸条目。
   'apps/search/search-app.js',
+  // [v4.47.1 · 交棒] R5-X1 的契约件 config/item-custody-contract.js 本轮首次登记进 LEDGER
+  //   （kind: not-a-derivation）。与 action-center 同款交棒：副本树不带它，
+  //   “未破坏副本自身全绿”就会把它报成行尸条目（B0 假红）。
+  'config/item-custody-contract.js',
 ];
 
 function stageTree(extra = {}) {

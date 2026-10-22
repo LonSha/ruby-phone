@@ -113,6 +113,11 @@ export const LEDGER = [
      *   与同目录已在册的 `search-view.js` / `global-search-engine.js` 同属「sourceId 是来源标签」一类。 */
     { file: 'apps/search/search-app.js', kind: 'not-a-derivation', note: '搜索 App：筛后按来源标签重新分组渲染（源身份是展示标签，不承载派生条目生命周期）。' },
     { file: 'config/schedule-bridge.js', kind: 'not-a-derivation', note: '日程提醒协议桥：sourceKey 是来源 App 的标签（schedule/wechat/task/health），不承载派生条目生命周期。' },
+    /* [v4.47.1] R5-X1（v4.37.0）新增的契约件此前未登记 —— 门禁从落地当版起一直红着。
+     *   本件是**纯契约**：把上游「关系引用」翻成人能读的几行（六态分形），
+     *   零 DOM 零存储零联网零时钟，不持有、不回收任何来源条目 ⇒ 不是派生库。
+     *   枚举面命中的是 CUSTODY_* 词表里的 sourceId 字段名（纯读数），无生命周期。 */
+    { file: 'config/item-custody-contract.js', kind: 'not-a-derivation', note: '随身物品与借还的可操作契约件：六态分形只做读数与归一，不承载派生条目生命周期（枚举面命中为词表字段名）。' },
     { file: 'config/action-center.js', kind: 'not-a-derivation', note: '统一行动中心：sourceId 是**五源待处理项的来源事件 id**（约定的 apt_x / 账单的 from>to / 通知 id），只用于幂等键与撤回归因，本层不持有、也不回收来源条目（回收由各源自己做）。枚举面命中 4 处均为键构造与留痕行。' },
     { file: 'config/branch-contrast.js', kind: 'not-a-derivation', inFace: false, note: '分支对照工作区：纯函数只读对照，不承载派生条目生命周期。' },
     { file: 'config/resume-handoff.js', kind: 'not-a-derivation', inFace: false, note: '受控恢复交接：纯函数预检/执行/回读，不承载派生条目生命周期。' },

@@ -439,8 +439,8 @@ test('D2 ★★★★ 破坏「缺数据与受阻分形」⇒ 同款判据必转
 
 test('D3 ★★★★ 破坏「三层上限」⇒ 同款判据必转红（无限展开）', async () => {
     const dir = breakCopy(KERNEL_REL,
-        '        ? Math.min(Number(o.depth), GT_LIMITS.depth) : GT_LIMITS.depth;',
-        '        ? Number(o.depth) : GT_LIMITS.depth;');
+        '        ? Math.min(depthNum, GT_LIMITS.depth) : GT_LIMITS.depth;',
+        '        ? depthNum : GT_LIMITS.depth;');
     const mk = await loadKernel(dir, 'd3');
     const deep = { goal: 'L1', children: [{ goal: 'L2', children: [{ goal: 'L3', children: [{ goal: 'L4' }] }] }] };
     const tree = mk.goalTreeRows(deep, { depth: 99 });

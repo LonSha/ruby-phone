@@ -1,3 +1,16 @@
+## 迭代 207 · v4.47.1（2026-10-22）
+- 【版本升至 4.47.1（五源同源）：基线修复批次】本版是**存量修复批**，不新增产品功能：修复第六期规划收口时登记的 29 项基线测试失败（已确认为非本轮引入）。五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json。
+- 【本版治的缺陷形态（读码可复算，不是推演）】六类存量失败各有真根因：① `apps/place/place-view.js` 的行踪时间带（v4.43.0）裸调 el.querySelectorAll —— 本层历史契约是「容器只要有 querySelector 就能渲染」，桩容器上抛 TypeError，v310/v311 七项连坐拖垮；② `config/goal-tree-contract.js`（v4.38.0）就地写弱口径 Number.isFinite(Number(x)) —— 违反 v3.12.0 起全仓唯一实现纪律（numOrNull）；③ `config/item-custody-contract.js`（v4.37.0）落地后未登记进 source-derivation LEDGER —— 门禁从落地当版起一直红着；④ v290/v293/v3770 镜像清单未随 calendar-app / chat-view 静态闭包增长而扩（v4.41.0 周期契约 + v4.44.0 群投票交接共四件）—— 副本树装载失败即 ERR_MODULE_NOT_FOUND；⑤ 三份探针基线 files_scanned 463→476/477 漂移未随抬版刷新（既有 refresh_baselines 机制未跑）；⑥ 边界文档当版实测数字 867/487,854 与真跑 872/489,861 漂移（refresh_doc_readings 未跑）。
+- 【交棒改写：v4.47.0 的运行时验证边界条目补齐标志语】v4.47.0 的 item13 缺【看起来没坏但显示不对】标志语（历史每版都带），v328 A2/B1 两条同源判据转红。本版升版时在新迭代段中补齐该标志语与「不能保证」语义，属**交棒改写**而非新缺陷。
+- 【修复①：place-view 容器能力探测】行踪时间带的按钮收集收成 bandBtns（保持 forEach 形态，回退路径为空数组），裸调改能力探测 typeof el.querySelectorAll === 'function'。v4430 的「人物选择必须真接线」判据核对该文件的 data-band-name 字面量——补丁保留该字面量（在 Array.from 内），v4430 21/21 全绿。
+- 【修复②：goal-tree-contract 取值走门】maxDepth 改用 numOrNull(o.depth)（import 全仓唯一实现 config/num-gate.js），非正深度回退 GT_LIMITS.depth 语义不变。weak-coercion 门禁全绿（回落存量 1 处清零）。
+- 【修复③：item-custody-contract 登记进 LEDGER】kind: not-a-derivation（纯契约件，只做读数与归一，不承载派生条目生命周期），note 写明枚举面命中为词表字段名。source-derivation 门禁全绿，v296 A2 转绿，v3120 C4 / v3570 R1/N1 一并转绿。
+- 【修复④：镜像清单补件】v290 D2 / v293 D / D2 的 stageTree 补 recurrence-contract.js / group-vote-handoff.js / vote-handoff-store.js（由闭包脚本真算，calendar-app 静态闭包 11 件缺的恰好这三件）；v3770 MIRROR_FILES 补 group-vote-handoff.js（chat-view 静态闭包 38 件缺的恰好只有这一件）。v290/v293/v3770 共 10 项全绿。
+- 【修复⑤：基线现场读数写回（零手抄）】走既有机制 tools/refresh_baselines_v3750.py --write：long_chat L5 散文同步 files=477；schedule_conflict / branch_play files_scanned 463→476；status-ledger 由 tools/gen_status_ledger.mjs --write 重生成。v325/v326/v327/v3730 共 65 项全绿。
+- 【修复⑥：边界文档读数刷新（零手抄）】走既有机制 tools/refresh_doc_readings.py --write：语法 867→872 文件、导入 487→489 文件 854→861 条。v3201 E2 / v328 C1 转绿。★ 本两行由该工具现场跑两道门后写入，不手抄。
+- 【运行时验证边界 · 看起来没坏但显示不对】本版全部判据在无头环境跑（node --test 各修复套件）：镜像树负控制在副本上重跑同款真判据、基线对账走探针现场读数、文档读数走门禁真跑。**未在浏览器里真点过一遍**：place-view 行踪时间带的真按钮点选链路仍须实机核验。真宿主里「看起来没坏但显示不对」的那类读数（窄屏排版、真实存储迁移、注入块观感），无头判据**不能保证** —— 须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。
+- 【不做：本轮不混入 36 项计划实施】第六期 36 项产品计划保持 proposed，不混入本修复批；红项修复也不扩成守卫治理项目。全量回归收口跑一次 npm run check。
+
 ## 迭代 206 · v4.47.0（2026-04-10）
 - 【版本升至 4.47.0（五源同源）：第五期 R5-X7 可丢弃的假设场景双栏试写】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4470.test.mjs`（六组 34 条）当版跑绿。
 - 【本版治的缺陷形态（读码可复算，不是推演）】全仓 `grep -rIn '双栏试写' apps config` **零命中**：正史选择（`config/branch-canon-contract.js`，v4.28.0）只能对**已经存在的**两条分支做「选哪条进新卷」，而「还没创建正式分支前，先拿两种假设各试写一栏看看」这一步**没有任何落点**。后果三件都不是报错：① 用户只能先建一条正式分支再删 —— 建了就有痕迹，「预演」被读成「已经这么定了」；② 「两栏基线不同」与「同基线可比」在界面上同形（都只是两段文本），而两者处置相反；③ 「丢弃」没有范围（容易做成「把键全删」），预演没伤正史反而被它删了。
@@ -1396,7 +1409,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （299 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （300 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -6796,7 +6809,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.47.0`（五源同源）
+- **当前版本**：`4.47.1`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

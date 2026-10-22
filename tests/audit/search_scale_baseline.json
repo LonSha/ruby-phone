@@ -50,15 +50,15 @@
   "full_scanned_n10000": 10000
  },
  "timing": {
-  "full_scan_ms_n10000": 50.59,
-  "cancel_index_ms_n10000": 8.17,
-  "cancel_match_ms_n10000": 40.08,
-  "take_ms_n10000": 0.78,
-  "cap_scan_ms_n80000": 353.98,
-  "scan_ms_n1000": 5.83,
-  "scan_ms_n5000": 34.14,
-  "scan_ms_n10000": 48.79,
-  "heap_used_mb_after": 102.3
+  "full_scan_ms_n10000": 73.58,
+  "cancel_index_ms_n10000": 9.18,
+  "cancel_match_ms_n10000": 39.94,
+  "take_ms_n10000": 1.18,
+  "cap_scan_ms_n80000": 338.94,
+  "scan_ms_n1000": 5.41,
+  "scan_ms_n5000": 29.38,
+  "scan_ms_n10000": 123.28,
+  "heap_used_mb_after": 69.6
  },
  "criteria": [
   {

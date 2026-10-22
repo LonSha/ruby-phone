@@ -61,14 +61,20 @@ def main():
     live['probe'] = probe
     if os.path.exists(os.path.join(ROOT, base)):
         old = json.loads(rd(base))
+        # ★ 冻结纪律（tests/system-v3760 B3/F1）：基线已存在时，measured_at 是建基线时的
+        #   **冻结历史值**，抬版不得改写 —— 刷新只允许动 readings/timing，不允许动版本字段。
+        if 'measured_at' in old:
+            live['measured_at'] = old['measured_at']
         if old.get('readings') == live.get('readings') and old.get('measured_at') == live.get('measured_at'):
             print('[refresh] ① %s：读数与首测版均已同源，跳过' % base)
         else:
             if WRITE:
                 write_json(base, live)
-                print('[refresh] ① %s 已按现场读数重写（measured_at=%s）' % (base, live['measured_at']))
+                print('[refresh] ① %s 已按现场读数重写（measured_at 冻结在 %s，不随抬版改写）'
+                      % (base, live['measured_at']))
             else:
-                print('[refresh]（dry）① %s 需重写（measured_at %s → %s）' % (base, old.get('measured_at'), live['measured_at']))
+                print('[refresh]（dry）① %s 需重写（measured_at 冻结在 %s）'
+                      % (base, live['measured_at']))
     else:
         if WRITE:
             write_json(base, live)

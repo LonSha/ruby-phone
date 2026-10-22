@@ -762,8 +762,13 @@ test('F7 版本锚：五源同源 + 当版条目在场 + 迭代段条目数达�
     assert.equal(new Set(vers).size, 1, '五源版本必须一致：' + JSON.stringify(vers));
     assert.equal(log.head, log.latest, 'update-log 的 head 必须跟上 latest');
     assert.ok(Object.prototype.hasOwnProperty.call(log.versions, log.latest), '当版条目必须在 versions 里');
-    /* 当版条目必须点名 R5-X7（防「抬了版却没落本版内容」）。 */
-    const entry = JSON.stringify(log.versions[log.latest]);
+    /* ★ [v4.47.1 · 抬版接管] 当版**内容**锁自己那一版（4.47.0 / R5-X7 / iter206），
+     *   一致性仍跟随当前版 —— 与 tests/system-v4380 E1 同款接管口径（v4.44.0 首创）：
+     *   修前用 log.latest 索引当版条目并要求点名 R5-X7，抬版后当版主语错位（判据主语
+     *   写错，不是产品缺陷），沿用「当前版一致性 + 自己那版内容」的分流修法。 */
+    const ownVer = '4.47.0';
+    assert.ok(log.versions[ownVer], '本版条目（' + ownVer + '）必须存在');
+    const entry = JSON.stringify(log.versions[ownVer]);
     assert.ok(entry.indexOf('R5-X7') >= 0, '★ 当版条目必须点名 R5-X7');
     /* 迭代段在场且条目数达标。 */
     const iter = read('tools/iter206_seg.md');

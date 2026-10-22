@@ -560,7 +560,16 @@ export class PlaceView {
         /* [v4.43.0 · R5-X3] 行踪时间带的两个动作（容器级委托）：
          *   点在场的人名 ⇒ 加入/移出选择（**只在本会话**）；
          *   点「找可能共处」⇒ 带互动证据开关重算（开关默认关：无证据只说「可能共处」）。 */
-        el.querySelectorAll('[data-band-name]').forEach((btn) => {
+        /* [v4.47.1] 容器级查询必须带能力探测：本层的历史契约是「容器只要有
+         *   querySelector 就能渲染」，桩容器与只读宿主都不一定有 querySelectorAll
+         *   （历史套件 v310/v311 的桩就只有 querySelector）。v4.43.0 这段曾裸调
+         *   el.querySelectorAll ⇒ 在桩容器上抛 TypeError，把整张页连坐拖垮。
+         *   收集面收成 bandBtns（保持 forEach 形态，回退路径为空数组）。 */
+        const bandBtns = (() => {
+            try { return (typeof el.querySelectorAll === 'function') ? Array.from(el.querySelectorAll('[data-band-name]') || []) : []; }
+            catch (_e) { return []; }
+        })();
+        bandBtns.forEach((btn) => {
             btn.addEventListener('click', () => {
                 const name = String(btn.getAttribute('data-band-name') || '');
                 if (!name) return;

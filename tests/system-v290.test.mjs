@@ -240,6 +240,12 @@ test('v290 D2. 负控制：恢复 app 自持第二个 store → lost update 复�
     'config/commitment-flow.js': read('config/commitment-flow.js'),
     /* [第三期 R3-X3] calendar-app 新引了约会可玩流程内核;少一件即 ERR_MODULE_NOT_FOUND。 */
     'config/date-playbook.js': read('config/date-playbook.js'),
+    /* [v4.47.1] calendar-app 的静态闭包又长了三件（v4.41.0 周期契约 + v4.44.0 群投票交接）。
+     *   少一件即 ERR_MODULE_NOT_FOUND —— 与 v3.58.0/第三期 R3-X3 同款交棒形态。
+     *   清单由闭包脚本真算（/tmp/rp_cal_closure.mjs），缺的恰好这三件。 */
+    'config/recurrence-contract.js': read('config/recurrence-contract.js'),
+    'config/group-vote-handoff.js': read('config/group-vote-handoff.js'),
+    'apps/calendar/vote-handoff-store.js': read('apps/calendar/vote-handoff-store.js'),
   });
   try {
     const { PhoneStorage } = await import('file://' + path.join(dir, 'config/storage.js'));

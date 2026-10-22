@@ -1,6 +1,23 @@
 {
-  "latest": "4.47.0",
+  "latest": "4.47.1",
   "versions": {
+    "4.47.1": {
+      "version": "4.47.1",
+      "date": "2026-10-22",
+      "items": [
+        "【版本升至 4.47.1（五源同源）：基线修复批次】本版是**存量修复批**，不新增产品功能：修复第六期规划收口时登记的 29 项基线测试失败（已确认为非本轮引入）。五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json。",
+        "【本版治的缺陷形态（读码可复算，不是推演）】六类存量失败各有真根因：① `apps/place/place-view.js` 的行踪时间带（v4.43.0）裸调 el.querySelectorAll —— 本层历史契约是「容器只要有 querySelector 就能渲染」，桩容器上抛 TypeError，v310/v311 七项连坐拖垮；② `config/goal-tree-contract.js`（v4.38.0）就地写弱口径 Number.isFinite(Number(x)) —— 违反 v3.12.0 起全仓唯一实现纪律（numOrNull）；③ `config/item-custody-contract.js`（v4.37.0）落地后未登记进 source-derivation LEDGER —— 门禁从落地当版起一直红着；④ v290/v293/v3770 镜像清单未随 calendar-app / chat-view 静态闭包增长而扩（v4.41.0 周期契约 + v4.44.0 群投票交接共四件）—— 副本树装载失败即 ERR_MODULE_NOT_FOUND；⑤ 三份探针基线 files_scanned 463→476/477 漂移未随抬版刷新（既有 refresh_baselines 机制未跑）；⑥ 边界文档当版实测数字 867/487,854 与真跑 872/489,861 漂移（refresh_doc_readings 未跑）。",
+        "【交棒改写：v4.47.0 的运行时验证边界条目补齐标志语】v4.47.0 的 item13 缺【看起来没坏但显示不对】标志语（历史每版都带），v328 A2/B1 两条同源判据转红。本版升版时在新迭代段中补齐该标志语与「不能保证」语义，属**交棒改写**而非新缺陷。",
+        "【修复①：place-view 容器能力探测】行踪时间带的按钮收集收成 bandBtns（保持 forEach 形态，回退路径为空数组），裸调改能力探测 typeof el.querySelectorAll === 'function'。v4430 的「人物选择必须真接线」判据核对该文件的 data-band-name 字面量——补丁保留该字面量（在 Array.from 内），v4430 21/21 全绿。",
+        "【修复②：goal-tree-contract 取值走门】maxDepth 改用 numOrNull(o.depth)（import 全仓唯一实现 config/num-gate.js），非正深度回退 GT_LIMITS.depth 语义不变。weak-coercion 门禁全绿（回落存量 1 处清零）。",
+        "【修复③：item-custody-contract 登记进 LEDGER】kind: not-a-derivation（纯契约件，只做读数与归一，不承载派生条目生命周期），note 写明枚举面命中为词表字段名。source-derivation 门禁全绿，v296 A2 转绿，v3120 C4 / v3570 R1/N1 一并转绿。",
+        "【修复④：镜像清单补件】v290 D2 / v293 D / D2 的 stageTree 补 recurrence-contract.js / group-vote-handoff.js / vote-handoff-store.js（由闭包脚本真算，calendar-app 静态闭包 11 件缺的恰好这三件）；v3770 MIRROR_FILES 补 group-vote-handoff.js（chat-view 静态闭包 38 件缺的恰好只有这一件）。v290/v293/v3770 共 10 项全绿。",
+        "【修复⑤：基线现场读数写回（零手抄）】走既有机制 tools/refresh_baselines_v3750.py --write：long_chat L5 散文同步 files=477；schedule_conflict / branch_play files_scanned 463→476；status-ledger 由 tools/gen_status_ledger.mjs --write 重生成。v325/v326/v327/v3730 共 65 项全绿。",
+        "【修复⑥：边界文档读数刷新（零手抄）】走既有机制 tools/refresh_doc_readings.py --write：语法 867→872 文件、导入 487→489 文件 854→861 条。v3201 E2 / v328 C1 转绿。★ 本两行由该工具现场跑两道门后写入，不手抄。",
+        "【运行时验证边界 · 看起来没坏但显示不对】本版全部判据在无头环境跑（node --test 各修复套件）：镜像树负控制在副本上重跑同款真判据、基线对账走探针现场读数、文档读数走门禁真跑。**未在浏览器里真点过一遍**：place-view 行踪时间带的真按钮点选链路仍须实机核验。真宿主里「看起来没坏但显示不对」的那类读数（窄屏排版、真实存储迁移、注入块观感），无头判据**不能保证** —— 须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
+        "【不做：本轮不混入 36 项计划实施】第六期 36 项产品计划保持 proposed，不混入本修复批；红项修复也不扩成守卫治理项目。全量回归收口跑一次 npm run check。"
+      ]
+    },
     "4.47.0": {
       "version": "4.47.0",
       "date": "2026-04-10",
@@ -4694,5 +4711,5 @@
       ]
     }
   },
-  "head": "4.47.0"
+  "head": "4.47.1"
 }

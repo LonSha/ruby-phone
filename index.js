@@ -305,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.47.0';
+const ST_PHONE_VERSION = '4.47.1';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -503,24 +503,19 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-04-10",
+    date: "2026-10-22",
     items: [
-        "【版本升至 4.47.0（五源同源）：第五期 R5-X7 可丢弃的假设场景双栏试写】`index.js` / `package.json` / `manifest.json` / `update-log.json` / `tests/audit/status-ledger.json` 五处同改；本版判据 `tests/system-v4470.test.mjs`（六组 36 条）当版跑绿。",
-        "【本版治的缺陷形态（读码可复算，不是推演）】全仓 `grep -rIn '双栏试写' apps config` **零命中**：正史选择（`config/branch-canon-contract.js`，v4.28.0）只能对**已经存在的**两条分支做「选哪条进新卷」，而「还没创建正式分支前，先拿两种假设各试写一栏看看」这一步**没有任何落点**。后果三件都不是报错：① 用户只能先建一条正式分支再删 —— 建了就有痕迹，「预演」被读成「已经这么定了」；② 「两栏基线不同」与「同基线可比」在界面上同形（都只是两段文本），而两者处置相反；③ 「丢弃」没有范围（容易做成「把键全删」），预演没伤正史反而被它删了。",
-        "【口径内核：判定**有顺序**（改序即改结论）】`normalizeTrial` 必须按「缺基线 → 这一栏没写假设 → 两栏同一假设」判：基线是先决条件 —— 没有基线，「两栏对照」根本无从谈起，故缺基线优先于「这一栏没写假设」。首版自检的 `缺基线必须拒` 红项正是顺序倒置所致（缺基线判定被 `refusedLanes` 提前挡掉）。负控制 F1 定点破坏这一行，同款判据必转红。",
-        "【本版最贵的一格：可比性三态 + `mixedWithBaseline`】同基线才叫「同一场景的两条岔路」（差异来自假设本身，可以照着决定采纳哪栏）；基线不同 ⇒ 差异里混着基线差（照着决定会改错东西）。故 `compareLanes` 在基线不同时，差异行**每一行**都带 `mixedWithBaseline: true`；「有一栏没记基线」再单列第三态（处置又不同：补基线，而不是改一栏）。负控制 F3 破坏该标记 ⇒ 同款判据必转红。",
-        "【自己抓到的缺陷①（**门禁看不见**，靠读码复算抓的）：本机键落错了存储面 ⇒ 换角色串味】首版键名 `hy_trial` **不命中 `config/storage.js` 的 CHAT_DATA_PATTERNS 任何一条** ⇒ `_isChatData()` 判 false ⇒ 落进 **extensionSettings（全局）** ⇒「换角色后上一个角色的两栏预演还在」。这正是 v2.8.10 那类串味事故（成就/抽卡/生理/塔罗互相污染）的同族形态：**不报错、不崩溃、只错数据**。为什么 `keys` 门没抓住：它只抽三类键面（storage 调用的字面量实参 / 键常量声明 / `this.<prop>` 间接键），**对象字面量里的键值不在射程内**（`HY_KEYS = Object.freeze({ trial: … })` 正属此形，同族的 `MBH_KEYS.pending` 处境相同）。修法：键名改为 `cw_hy_trial`（沿用创作工作台本机数据族，不新开前缀），并新增判据 A4 —— **真调 `PhoneStorage._isChatData()`** 判归属，外加反坐实（裸 `hy_trial_probe` 必须判 false）。负控制 F5 破坏键名 ⇒ 同款判据必转红。",
-        "【自己抓到的缺陷②（门禁抓的）：新件里就地写了一遍弱口径】`creationdesk-app.js` 的 `hyLanes()` 首版写成 `Number.isFinite(Number(base)) ? … : …` —— 本仓自 v3.12.0 起把数值取值收成**唯一实现**（`config/num-gate.js` 的 `numOrNull`）并配常驻门禁 `scripts/weak-coercion-audit.mjs`。实测：本版落地后该门从 1 处（存量 `goal-tree-contract.js`）涨到 **2 处**，正是本版新件写的那一处。改成**纯转发** `numOrNull` 后回落 1 处。★ 教训与 v3.12.0 档头同款：门立住了不等于下一个人不会再写一遍 —— 新件必须**引门**，不是**再写一遍**。",
-        "【自己抓到的缺陷③：视图拿**文案子串**猜态 ⇒ 文案一改按钮就静默消失】`_hypo` 段首版用 `(vm.hyCompareLabel || '').indexOf('同基线') >= 0` 判「采纳按钮画不画」。这条错法的表现不是报错，是**改一次文案按钮就没了**。修法：App 新增出口 `hyAdoptReady()`（判据 = 契约件可比性态 + 选中栏 + **那一栏真有试写文本**），视图只读出口；另修视图绑定处伸手读 App 私有态 `self.app._hy` 的写法（改读出口 `hyKindOf()`）。判据 A5 与负控制 F6 锁这两条。",
-        "【自己抓到的缺陷④：段边界两套实现必然漂移，幂等脚本自己坏了】新写的回灌脚本 `tools/sync_css_v4470.py` 首版用「段头 → 文件尾」判「是否已同源」，而**creationdesk 段在 phone.css 里不是最后一节**（其后还接着 workflow 等段）：第二次跑报「差异 54 字 / 源段 1084 字」—— 幂等性自己坏了。根因不是取段写错，是**判同源与做插入用了两套边界**。修法：两条路径统一锚在「段末行 → 下一个 App 段头」。同一处错法在判据 E3 里也犯了一次（段头取到文件尾 ⇒ 假红），已同步修正。",
-        "【自己抓到的缺陷⑤：负向判据的自指面比想象中更宽 —— 正则字面量会让状态机错位】F8 检查「历史套件不得拿当前版去索引当版条目」时用了 `stripStrings`。实测：该状态机**不识别正则字面量**，被检查文件里一旦有含引号的正则（形如斜杠方括号单引号双引号斜杠），状态机会错位、后续字符串清不掉 ⇒ 负向判据命中**判据自己的锚点字符串**（v4.46.0 自指）。修法不是把状态机写得更聪明（正则 vs 除号在 JS 里本就不可判），而是**把自指对象排除出射程**：对当版与上一版只判正向不变量。",
-        "【验收四条各自的落点】① 可比：`compareLanes` 同基线报 `same-baseline` 且差异行不标 mixed（判据 B2）；② 正史零写：`adopt` 只判闸、只交回选中栏、如实报 `canonWrites: 0`，试写分支里逐词扫掉 `chat.push` / `setChatMessages` / `generateQuietPrompt` / `addMoment` / `fetch(` 等（判据 D2）；③ 关页重开保留但不自动生成：两栏落本机键 `cw_hy_trial`（拒收也留住用户写过的两栏）、本层零生成（判据 C1/C2）；④ 丢弃清临时选择、采纳不双建分支：`discard` 走契约件 `discardPlan` 如实报清掉几栏与多少字、且**不动草稿本**，`keep` 的幂等键（栏+基线+文本指纹）保证同一份选定只落一行（判据 D3/D5）。",
-        "【交棒改写：把「点一下」改成「两栏并列 → 显式试写 → 逐栏决定」】视图这一排与计划原文「分别预览材料 / 约束并可显式试写」对齐：基线输入（**留空即没给，不默认挑一个**）、两栏各自的假设种类按钮（再点一次即取消，**不回落成「接受」**）与假设说明、逐栏试写 textarea、选中栏、`run`（显式试写，只落本机试写区）、`keep`（保留为草稿）、`discard`（丢弃这次预演，**先弹显式确认并说清「正史一个字节都不会动」**）。采纳按钮**只在出口说就绪时才画**，否则如实显示「采纳按钮先不画」并说明条件。",
-        "【不做：在代码上可判】不自动多模型竞赛（禁用键表 `score/rank/best/recommend/…` 12 个 + 深度扫描真跑）；不后台无限续写（无 `setInterval` / `requestAnimationFrame`，试写文本只由用户显式给）；不增加第二套生成 API（零 `generateContent` / `generateQuietPrompt`）；不联网（零 `fetch(` / `XMLHttpRequest` / `WebSocket` / 协议头）。",
-        "【顺手补的一处既有缺口（本版引入的样式段一并带上，如实登记）】视图用 `.cwb-btn-on` 标「已选中」态，而**全仓两侧样式都没有定义这个类**（实测 `grep -c cwb-btn-on` 在源面与打包面都是 0）⇒ 选中与未选中在屏上同形。本版把该类补进源样式并经回灌脚本投递到打包面（判据 E3 覆盖）。它与本版同属创作台一面，故不另开版本。",
-        "【运行时验证边界】本版全部判据在无头环境跑（`node --test tests/system-v4470.test.mjs`）：契约件纯函数真跑、宿主与视图只做**源码形态**判定（四支子命令在场、白名单只追加、落笔只许两处、样式双侧同源）。★ 宿主面**不做真调**：`index.js` 在无头环境装载即 `window is not defined`（`applyCreationdeskAction` 活在 `init()` 闭包里，依赖酒馆上下文），全仓既有套件同规。**未在浏览器里真点过一遍**：两栏并列 → 显式试写 → 保留为草稿 → 丢弃 / 采纳这条端到端链路，仍须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
-        "【抬版连带面沿用 v4.44.0 ~ v4.46.0 的接管口径】本版抬版同样会带动历史套件「当版内容」锚；那些已由既有接管脚本改成锁自己那一版，本版判据 F8 守住这个不变量（并把 v4.45.0 一并纳入正向不变量检查）。本版另新增一处自证：F8 里把「负向判据的自指面」写清（正则字面量导致状态机错位），防后人重犯。",
-        "【本版门禁与全量回归的实测口径（写清哪些是存量、哪些是本版）】本版判据 36/36 全绿；`npm run syntax`（870 文件）/ `import-resolve`（860 条静态导入）/ `dead-exports`（无新增零消费导出）/ `named-import`（831 条）/ `keys`（453 个键全登记）/ `registry`（样式投递未覆盖 0）/ `weak-coercion`（回落存量 1 处）全绿。**两处存量红项如实登记、不在本版顺手改**：① `weak-coercion` 报 `config/goal-tree-contract.js:201`（旧版遗留）；② `source-derivation` 报「枚举面出现未登记的库：`config/item-custody-contract.js`(1)」（R5-X1 遗留）。两者在**干净 HEAD 副本**上同样报 ⇒ 非本版引入；顺手改会与本版 diff 混在一起，让「本版引入了什么」不再可判。"
+        "【版本升至 4.47.1（五源同源）：基线修复批次】本版是**存量修复批**，不新增产品功能：修复第六期规划收口时登记的 29 项基线测试失败（已确认为非本轮引入）。五处版本源同步：index.js / package.json / manifest.json / update-log.json / tests/audit/status-ledger.json。",
+        "【本版治的缺陷形态（读码可复算，不是推演）】六类存量失败各有真根因：① `apps/place/place-view.js` 的行踪时间带（v4.43.0）裸调 el.querySelectorAll —— 本层历史契约是「容器只要有 querySelector 就能渲染」，桩容器上抛 TypeError，v310/v311 七项连坐拖垮；② `config/goal-tree-contract.js`（v4.38.0）就地写弱口径 Number.isFinite(Number(x)) —— 违反 v3.12.0 起全仓唯一实现纪律（numOrNull）；③ `config/item-custody-contract.js`（v4.37.0）落地后未登记进 source-derivation LEDGER —— 门禁从落地当版起一直红着；④ v290/v293/v3770 镜像清单未随 calendar-app / chat-view 静态闭包增长而扩（v4.41.0 周期契约 + v4.44.0 群投票交接共四件）—— 副本树装载失败即 ERR_MODULE_NOT_FOUND；⑤ 三份探针基线 files_scanned 463→476/477 漂移未随抬版刷新（既有 refresh_baselines 机制未跑）；⑥ 边界文档当版实测数字 867/487,854 与真跑 872/489,861 漂移（refresh_doc_readings 未跑）。",
+        "【交棒改写：v4.47.0 的运行时验证边界条目补齐标志语】v4.47.0 的 item13 缺【看起来没坏但显示不对】标志语（历史每版都带），v328 A2/B1 两条同源判据转红。本版升版时在新迭代段中补齐该标志语与「不能保证」语义，属**交棒改写**而非新缺陷。",
+        "【修复①：place-view 容器能力探测】行踪时间带的按钮收集收成 bandBtns（保持 forEach 形态，回退路径为空数组），裸调改能力探测 typeof el.querySelectorAll === 'function'。v4430 的「人物选择必须真接线」判据核对该文件的 data-band-name 字面量——补丁保留该字面量（在 Array.from 内），v4430 21/21 全绿。",
+        "【修复②：goal-tree-contract 取值走门】maxDepth 改用 numOrNull(o.depth)（import 全仓唯一实现 config/num-gate.js），非正深度回退 GT_LIMITS.depth 语义不变。weak-coercion 门禁全绿（回落存量 1 处清零）。",
+        "【修复③：item-custody-contract 登记进 LEDGER】kind: not-a-derivation（纯契约件，只做读数与归一，不承载派生条目生命周期），note 写明枚举面命中为词表字段名。source-derivation 门禁全绿，v296 A2 转绿，v3120 C4 / v3570 R1/N1 一并转绿。",
+        "【修复④：镜像清单补件】v290 D2 / v293 D / D2 的 stageTree 补 recurrence-contract.js / group-vote-handoff.js / vote-handoff-store.js（由闭包脚本真算，calendar-app 静态闭包 11 件缺的恰好这三件）；v3770 MIRROR_FILES 补 group-vote-handoff.js（chat-view 静态闭包 38 件缺的恰好只有这一件）。v290/v293/v3770 共 10 项全绿。",
+        "【修复⑤：基线现场读数写回（零手抄）】走既有机制 tools/refresh_baselines_v3750.py --write：long_chat L5 散文同步 files=477；schedule_conflict / branch_play files_scanned 463→476；status-ledger 由 tools/gen_status_ledger.mjs --write 重生成。v325/v326/v327/v3730 共 65 项全绿。",
+        "【修复⑥：边界文档读数刷新（零手抄）】走既有机制 tools/refresh_doc_readings.py --write：语法 867→872 文件、导入 487→489 文件 854→861 条。v3201 E2 / v328 C1 转绿。★ 本两行由该工具现场跑两道门后写入，不手抄。",
+        "【运行时验证边界 · 看起来没坏但显示不对】本版全部判据在无头环境跑（node --test 各修复套件）：镜像树负控制在副本上重跑同款真判据、基线对账走探针现场读数、文档读数走门禁真跑。**未在浏览器里真点过一遍**：place-view 行踪时间带的真按钮点选链路仍须实机核验。真宿主里「看起来没坏但显示不对」的那类读数（窄屏排版、真实存储迁移、注入块观感），无头判据**不能保证** —— 须实机核验（无头判据只证明各层契约成立，不证明界面能跑）。",
+        "【不做：本轮不混入 36 项计划实施】第六期 36 项产品计划保持 proposed，不混入本修复批；红项修复也不扩成守卫治理项目。全量回归收口跑一次 npm run check。"
     ]
 };
 

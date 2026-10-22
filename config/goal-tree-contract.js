@@ -27,6 +27,8 @@
  * ============================================================ */
 
 /** 目标树面态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { numOrNull } from './num-gate.js';
+
 export const GT_STATES = Object.freeze({
     ABSENT: 'absent',            // 上游不在场：没有事实面（纯计划模式仍可用）
     NO_GOAL: 'no-goal',          // 上游在场，但这一条目标没记过（与「问不了」相反）
@@ -198,8 +200,12 @@ export function planVsFactLine(node) {
  */
 export function goalTreeRows(root, opts) {
     const o = (opts && typeof opts === 'object') ? opts : {};
-    const maxDepth = Number.isFinite(Number(o.depth)) && Number(o.depth) > 0
-        ? Math.min(Number(o.depth), GT_LIMITS.depth) : GT_LIMITS.depth;
+    /* [v4.47.1] 数值取值一律走全仓唯一实现 numOrNull（v3.12.0 起的纪律）：
+     *   就地写 Number.isFinite(Number(x)) 会被 weak-coercion 门禁判红，
+     *   且 Number(null)/Number('')/Number([]) 全塌成 0 —— 「没给」与「给了 0」同形。 */
+    const depthNum = numOrNull(o.depth);
+    const maxDepth = (depthNum !== null && depthNum > 0)
+        ? Math.min(depthNum, GT_LIMITS.depth) : GT_LIMITS.depth;
     const rows = [];
     let truncated = 0;
     const walk = (node, depth) => {
