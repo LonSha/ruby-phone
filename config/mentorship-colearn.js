@@ -10,15 +10,12 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { numOrNull } from './num-gate.js';
 
 function normStr(v) {
     return String(v ?? '').trim();
 }
 
-function numOr(v, def = 0) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-}
 
 export function createColearnTrack(raw = {}) {
     const id = normStr(raw.id) || `track_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -30,7 +27,7 @@ export function createColearnTrack(raw = {}) {
     })) : [];
 
     const practices = Array.isArray(raw.practices) ? raw.practices.map(p => ({
-        round: numOr(p.round, 1),
+        round: (numOrNull(p.round) ?? 1),
         title: normStr(p.title),
         workSnippet: normStr(p.workSnippet),
         feedbacks: Array.isArray(p.feedbacks) ? p.feedbacks.map(f => ({
@@ -49,7 +46,7 @@ export function createColearnTrack(raw = {}) {
         learner,
         mentors,
         practices,
-        updatedAt: numOr(raw.updatedAt, Date.now()),
+        updatedAt: (numOrNull(raw.updatedAt) ?? Date.now()),
     };
 }
 

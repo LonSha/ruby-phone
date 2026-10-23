@@ -10,6 +10,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { numOrNull } from './num-gate.js';
 
 export const COMMISSION_STAGES = Object.freeze({
     BRIEF: 'brief',
@@ -24,10 +25,6 @@ function normStr(v) {
     return String(v ?? '').trim();
 }
 
-function numOr(v, def = 0) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-}
 
 export function createCommission(raw = {}) {
     const id = normStr(raw.id) || `comm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -37,8 +34,8 @@ export function createCommission(raw = {}) {
 
     const stage = Object.values(COMMISSION_STAGES).includes(raw.stage) ? raw.stage : COMMISSION_STAGES.BRIEF;
     const requirements = Array.isArray(raw.requirements) ? raw.requirements.map(normStr).filter(Boolean) : [];
-    const agreedFee = numOr(raw.agreedFee, 100);
-    const depositPaid = numOr(raw.depositPaid, 0);
+    const agreedFee = (numOrNull(raw.agreedFee) ?? 100);
+    const depositPaid = (numOrNull(raw.depositPaid) ?? 0);
 
     return {
         version: 1,
@@ -54,7 +51,7 @@ export function createCommission(raw = {}) {
         scopeChanges: Array.isArray(raw.scopeChanges) ? raw.scopeChanges.map(c => ({ ...c })) : [],
         feedbackHistory: Array.isArray(raw.feedbackHistory) ? raw.feedbackHistory.map(f => ({ ...f })) : [],
         settlement: raw.settlement ? { ...raw.settlement } : null,
-        updatedAt: numOr(raw.updatedAt, Date.now()),
+        updatedAt: (numOrNull(raw.updatedAt) ?? Date.now()),
     };
 }
 
@@ -66,7 +63,7 @@ export function acceptBrief(commission, deposit = 30) {
     if (c.stage !== COMMISSION_STAGES.BRIEF) return { ok: false, reason: 'invalid_stage' };
 
     c.stage = COMMISSION_STAGES.CONCEPT;
-    c.depositPaid = numOr(deposit, 30);
+    c.depositPaid = (numOrNull(deposit) ?? 30);
     c.updatedAt = Date.now();
     return { ok: true, commission: c };
 }
@@ -95,7 +92,7 @@ export function proposeScopeChange(commission, changePayload) {
     const change = {
         changeId: normStr(changePayload.changeId || `chg_${Date.now()}`),
         additionalRequirements: Array.isArray(changePayload.additionalRequirements) ? changePayload.additionalRequirements.map(normStr) : [],
-        feeDelta: numOr(changePayload.feeDelta, 20),
+        feeDelta: (numOrNull(changePayload.feeDelta) ?? 20),
         status: 'pending', // pending | agreed | rejected
     };
     c.stage = COMMISSION_STAGES.CHANGE_SCOPE;
@@ -130,7 +127,7 @@ export function acceptAndSettle(commission, rating = 5, review = '非常满意')
         finalFee: c.agreedFee,
         remainingPaid: Math.max(0, c.agreedFee - c.depositPaid),
         isSettled: true,
-        rating: numOr(rating, 5),
+        rating: (numOrNull(rating) ?? 5),
         review: normStr(review),
         completedAt: Date.now(),
     };

@@ -305,7 +305,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.54.0';
+const ST_PHONE_VERSION = '4.54.1';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -510,17 +510,23 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-22",
+    date: "2026-10-23",
     items: [
-        "【新增】能改道的多人活动契约 (config/multi-activity-reroute.js, R6-O4 内核，迟到保留到场事实/成员退出防伪造亲历/经费与已支付保护/局部改道协商/共同经历与精准分账)",
-        "【新增】主动研读工作室契约 (config/reading-studio.js, R6-O6 内核，围绕研读问题组织跨书阅读/段落回源不可篡改/正反观点对照/疑问批注/论证草稿衍生/资料改版保护作者正文)",
-        "【新增】委托创作与交付生命周期契约 (config/commission-pipeline.js, R6-X4 配套内核，需求/样稿/范围变更/返修/验收五阶段流/加需求必须重新协商/取消保留草稿与定金结算)",
-        "【新增】师友共学与能力成长契约 (config/mentorship-colearn.js, R6-X8 配套内核，伴学任务/针对作品片段引用反馈/师友分歧自主选择/严禁跳过练习虚构经验)",
-        "【存储隔离】键审计与隔离正则齐备 (scripts/keys-audit.mjs 登记 multi_activity_reroute_v1 与 reading_studio_v1 范围 chat，config/storage.js 登记正则隔离族防串味)",
-        "【缺陷形态】本版自己抓到的缺陷形态：改道重排阶段若未区分已完成与待执行段会导致历史支出被重复累加扣款，改以已完成段状态为锚只重排未完成段并平移已支付资金",
-        "【交棒改写】历史套件版本锚主动改写下限形 (system-v4480/v4490/v4500 的 own 改用下限判定兼容后续版本持续推进)",
-        "【运行时验证边界】运行时验证边界：本版四项内核均为无宿主依赖的纯契约与算法，脱机及重开后完整恢复案卷、批注、草稿与活动分账",
-        "【版本升至】版本升至 4.51.0（五源同源）"
+        "【致命修复】v4.45.0 起 index.js 启动即崩：取材板主聊天侧三口（boardChatTake / boardChatMarkSent / boardChatLedger）被插进 applyCreationdeskAction 函数体中间，跨函数作用域致 init() 抛 ReferenceError 被 try/catch 吞掉 ⇒ injectWhenReady 不再执行 ⇒ 悬浮球 / 魔法棒入口 / 面板 / 三击唤醒全部不挂载，v4.45.0 至 v4.54.0 十个版本连带受影响。三函数已搬回模块作用域，启动链实测走通。",
+        "【新增】启动链运行时冒烟门 tests/boot-smoke.test.mjs：零依赖最小宿主桩真加载入口，断言 VirtualPhone 装配完成，配同形破坏负控制与锚点唯一性两条自证。既有门禁为何拦不住：语法门只证能解析，文本断言插在哪都绿。",
+        "【缺陷形态】本版自己抓到的缺陷：冒烟门首版用 process.exit 收口事件循环，导致同文件后两条判据根本没执行（日志只有一条用例），负控制形同自我豁免。改法是给桩 setInterval 一律 unref 并显式清理，让事件循环自然排空，绝不在判据文件里提前杀进程。",
+        "【缺陷形态】本版自己抓到的第二处缺陷：冒烟门首版裸调 fs.cpSync 造镜像树，被 v3230 的共享实现判据当场判红（tests 下不得出现裸 cpSync）。已改为引用 tests/_mirror_tree.mjs 的 copyTreeSafe。",
+        "【故障可见性】init() 的 catch 现在把真实异常写进 window.__phoneBootFailed（message / stack / at）。这是本次事故静默十个版本的直接反制：今后用户再遇无面板，控制台与诊断面能读到真实原因，而不是一片安静。",
+        "【门禁还债】零消费导出账本由 24 条扩到 96 条：第六期批次 B 至 F 的纯契约内核逐条登记冻结理由（批次 A 至 F 此前从未跑过 dead-export 门）。",
+        "【元数据还债】update-log 的 v4.54.0 条目补齐 items（批次 F 提交时为空，致 audit 与 entry-integrity 双红）；status-ledger 重生成（此前停在 4.51.0）；update-log 的 head 归位 latest；b5bae92 仓库整理把仍在被 33 个套件读取的 ITERATION_LOG.md 与宪法 CONTEXT.md 一并归档，本版恢复回根目录，并回滚此前为适配归档路径而改的判据读路径。",
+        "【运行时验证边界】运行时验证边界：本版修的是启动链装配，冒烟门在无浏览器的最小宿主里证明装配完成与入口挂载；真宿主（SillyTavern 本体）里的视觉排版、指针事件真实派发与宿主 !important 压制仍不能验 —— 看起来没坏但显示不对这类形态仍需真机复现。",
+        "【交棒改写】历史套件的版本锚继续沿用下限形接管口径（当版套件锁自己的版本字面量，一致性判据跟随 pkg.version），本版新增的 boot-smoke 不自带版本锚，避免抬版连带转红。",
+        "【版本升至】版本升至 4.54.1（五源同源）。",
+        "【还债·唯一实现】第六期四个内核（commission-pipeline / mentorship-colearn / multi-activity-reroute / reading-studio）各自复制了一份弱口径 numOr，被 weak-coercion 门判红 4 处。改为统一 import 唯一实现 config/num-gate.js 的 numOrNull（21 处调用改写），门复跑「全仓无同族弱口径」。连带修掉一处负控制基建缺陷：破坏副本原本落在 os.tmpdir()，相对 import 一搬就解析不到 ⇒ 三条负控制变成「加载失败」而非「判据转红」，改为落在源文件同目录。",
+        "【还债·判据交棒】零消费账本从 24 条扩到 96 条后，v243/v244/v245 三条套件的「零消费 <= 25」与「账本恰好 24 条」硬口径连带转红。按本仓下限形接管纪律改写为**台账自洽**：门读数的零消费条数必须等于账本条目数（少=漏网，多=旧条目残留），历史事实仍以 >= 24 钉住。",
+        "【还债·活基线】四份活基线按探针现场刷新 12 处（longlist_scale / schedule_conflict / branch_play / long_chat / lifecycle_declarative）：第六期新增文件与 App 使枚举面合法增长（如 css 90→92、files 476→499、app_classes 83→85）。用既有 tools/refresh_baselines_v4300.py --write 显式刷新，幂等复跑 0 处，measured_at 保持冻结历史值。",
+        "【还债·镜像面】v3770 的 MIRROR_FILES 缺 config/group-deliberation.js（第六期批次 B 经 wechat-data 静态引入）。缺口由脚本遍历 chat-view 静态闭包（39 件）与镜像清单求差真算出来，缺的恰好只有这一件；补入后 B2 与 D1/D2/D3/D5 五条一起转绿。",
+        "【还债·登记面】tests/system-v255 的 dirMap 未登记第六期批次 A 两个新 App（affairsApp / commsApp），A5「每个 App 都实现 onChatChanged」因此判红。按该套件的既有约定（新 App 必须同步扩展登记表）补入并写明各自的实例态与重取面。"
     ]
 };
 
@@ -4744,39 +4750,6 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 return { ok: false, kind: 'hypo-bad-sub', note: '不认识的试写子命令（run / keep / adopt / discard）：' + sub };
             }
 
-    /**
-     * [v4.45.0 · R5-O1] **主聊天侧取用口**（登记 → 取用 → 真发出去之后留痕）。
-     *   为什么要有这一口：计划原文「发送主聊天必须另行显式确认，取材板不自行生成或发消息」——
-     *   取材板只**登记**（`board` 动作的 chat 去向），取用与留痕归主聊天侧。
-     *   ★ 取用**不等于已发送**：`consume` 只把登记交给调用方；只有调用方在**真发出去之后**
-     *     调 `markSent` 才留痕。把这两步并成一步，就会把「带上了」显示成「发出去了」。
-     * @returns {{ok:boolean, kind:string, note:string, pending:object|null}}
-     */
-    function boardChatTake() {
-        try {
-            const h = mbhConsume(storage);
-            if (!h) return { ok: false, kind: 'no-pending', note: '没有登记过「下一次主聊天要带的材料」（不是「取用失败」）', pending: null };
-            return {
-                ok: true, kind: 'taken',
-                note: '已取出 ' + String(h.count) + ' 条材料（**还没发送** —— 发送由你在主聊天里确认）',
-                pending: h,
-            };
-        } catch (e) {
-            return { ok: false, kind: 'take-threw', note: '取用失败：' + String((e && e.message) || e), pending: null };
-        }
-    }
-    /** 真发出去之后如实留痕（**本函数不判断「发没发」**，由调用方给事实）。 */
-    function boardChatMarkSent(key) {
-        try { return { ok: mbhMarkSent(storage, key) === true }; }
-        catch (_e) { return { ok: false }; }
-    }
-    /** 取材板交接的台账读数（已登记过的幂等键 + 某键在不在册）—— 只读，供诊断面用。 */
-    function boardChatLedger(key) {
-        try {
-            const keys = mbhAppliedKeys(storage);
-            return { keys: keys, count: keys.length, has: mbhIsApplied(storage, String(key || '')) };
-        } catch (_e) { return { keys: [], count: 0, has: false }; }
-    }
             if (action === 'compose' || action === 'edit' || action === 'redo' || action === 'drop') {
                 const bookRaw = cwReadDraftsRaw();
                 const bookNorm = normalizeDraftBook(bookRaw);
@@ -4871,6 +4844,40 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         } catch (e) {
             return { ok: false, note: '执行失败：' + String((e && e.message) || e), kind: 'error' };
         }
+    }
+
+    /**
+     * [v4.45.0 · R5-O1] **主聊天侧取用口**（登记 → 取用 → 真发出去之后留痕）。
+     *   为什么要有这一口：计划原文「发送主聊天必须另行显式确认，取材板不自行生成或发消息」——
+     *   取材板只**登记**（`board` 动作的 chat 去向），取用与留痕归主聊天侧。
+     *   ★ 取用**不等于已发送**：`consume` 只把登记交给调用方；只有调用方在**真发出去之后**
+     *     调 `markSent` 才留痕。把这两步并成一步，就会把「带上了」显示成「发出去了」。
+     * @returns {{ok:boolean, kind:string, note:string, pending:object|null}}
+     */
+    function boardChatTake() {
+        try {
+            const h = mbhConsume(storage);
+            if (!h) return { ok: false, kind: 'no-pending', note: '没有登记过「下一次主聊天要带的材料」（不是「取用失败」）', pending: null };
+            return {
+                ok: true, kind: 'taken',
+                note: '已取出 ' + String(h.count) + ' 条材料（**还没发送** —— 发送由你在主聊天里确认）',
+                pending: h,
+            };
+        } catch (e) {
+            return { ok: false, kind: 'take-threw', note: '取用失败：' + String((e && e.message) || e), pending: null };
+        }
+    }
+    /** 真发出去之后如实留痕（**本函数不判断「发没发」**，由调用方给事实）。 */
+    function boardChatMarkSent(key) {
+        try { return { ok: mbhMarkSent(storage, key) === true }; }
+        catch (_e) { return { ok: false }; }
+    }
+    /** 取材板交接的台账读数（已登记过的幂等键 + 某键在不在册）—— 只读，供诊断面用。 */
+    function boardChatLedger(key) {
+        try {
+            const keys = mbhAppliedKeys(storage);
+            return { keys: keys, count: keys.length, has: mbhIsApplied(storage, String(key || '')) };
+        } catch (_e) { return { keys: [], count: 0, has: false }; }
     }
 
     /**
@@ -16397,6 +16404,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         } catch (e) {
             console.error('❌ 虚拟手机初始化失败:', e);
+            /* [v4.54.1] 故障可见性出口：init 的这条 catch 会**吞掉装配期的任何异常**
+             *   （v4.45.0 的 boardChatTake 作用域错位就是这样静默了十个版本 —— 用户只看到
+             *   「没有面板」，控制台这行又极易被海量日志淹没）。把失败钉在 window 上，
+             *   诊断页与 boot-smoke 冒烟门都能读到：坏了，至少有人知道。 */
+            try { window.__phoneBootFailed = { message: String((e && e.message) || e), stack: String((e && e.stack) || ''), at: Date.now() }; } catch (_e) { /* 忽略 */ }
         }
     }  // 结束 init() 函数
 

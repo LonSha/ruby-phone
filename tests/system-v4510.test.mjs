@@ -343,7 +343,13 @@ function breakSource(relPath, anchor, replacement) {
         throw new Error(`[breakSource] 破坏锚点必须在 ${relPath} 中恰好出现 1 次，实测 ${n} 次`);
     }
     const broken = orig.replace(anchor, replacement);
-    const tmp = path.join(os.tmpdir(), `broken-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.js`);
+    /* [v4.54.1] 副本必须落在**源文件同目录**，不能放 os.tmpdir()：
+     *   本版把这四个内核的弱口径 numOr 收成唯一实现（import { numOrNull } from './num-gate.js'），
+     *   而相对 import 是按**文件路径**解析的 —— 副本一搬到 /tmp，`./num-gate.js` 就指向不存在的
+     *   文件，负控制变成「加载失败」而不是「判据转红」，三条 E 组同时假红。
+     *   同目录还带来两个好处：同一模块图、同一解析规则，与被破坏的真文件处境一致。 */
+    const tmp = path.join(path.dirname(path.resolve(ROOT, relPath)),
+        `.broken-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.js`);
     fs.writeFileSync(tmp, broken, 'utf8');
     return tmp;
 }

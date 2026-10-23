@@ -16,19 +16,19 @@
     {
       "file": "apps/health/bio-engine.js",
       "name": "SPECIAL_STAGES",
-      "line": 17,
+      "line": 18,
       "reason": "生理阶段数据表（特殊阶段定义），属机制数据面：产品读取路径尚未接入，仅回归测试引用。接入点未定，暂冻结。"
     },
     {
       "file": "apps/health/bio-engine.js",
       "name": "HUMAN_PREGNANCY_DAYS",
-      "line": 53,
+      "line": 54,
       "reason": "同上，妊娠天数常量，数据面预留。"
     },
     {
       "file": "apps/health/bio-engine.js",
       "name": "isPregnancyish",
-      "line": 255,
+      "line": 259,
       "reason": "妊娠近义判定辅助，引擎对外小工具，仅测试引用；接入点未定。"
     },
     {
@@ -40,7 +40,7 @@
     {
       "file": "apps/health/medical-core.js",
       "name": "ACUTE_TO_CHRONIC_P",
-      "line": 28,
+      "line": 34,
       "reason": "急性转慢性的概率阈值常量，数据面；当前引擎未读。"
     },
     {
@@ -70,8 +70,134 @@
     {
       "file": "apps/settings/image-cropper.js",
       "name": "cropImage",
-      "line": 750,
+      "line": 748,
       "reason": "裁剪逻辑已内联在 image-cropper 的交互流程中，本导出为拆分时可复用面，全仓仅声明行。"
+    },
+    {
+      "file": "apps/wechat/group-scheduler.js",
+      "name": "scheduleDeliberationSpeakers",
+      "line": 249,
+      "reason": "群聊发言调度内核（v2.39 建制）：scheduleDeliberationSpeakers 为议事产品的装配入口，产品接线在后续批次，先冻结。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "CC_VERSION",
+      "line": 37,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "PROJECT_PHASES",
+      "line": 38,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "createProject",
+      "line": 74,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "reassignDivision",
+      "line": 105,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "handoverLeadership",
+      "line": 149,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "auditProjectClosure",
+      "line": 186,
+      "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "acceptBrief",
+      "line": 64,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "submitDraft",
+      "line": 77,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "proposeScopeChange",
+      "line": 93,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "agreeScopeChange",
+      "line": 110,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "acceptAndSettle",
+      "line": 126,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/commission-pipeline.js",
+      "name": "cancelCommission",
+      "line": 144,
+      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "DT_VERSION",
+      "line": 37,
+      "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "buildDaySchedule",
+      "line": 72,
+      "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "injectInterruption",
+      "line": 106,
+      "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "buildResponseChain",
+      "line": 144,
+      "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "deriveDayRhythm",
+      "line": 169,
+      "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/district-network.js",
+      "name": "createPlace",
+      "line": 47,
+      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/district-network.js",
+      "name": "deriveOpportunities",
+      "line": 74,
+      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/district-network.js",
+      "name": "getPlaceFamiliarity",
+      "line": 144,
+      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/floor-store.js",
@@ -80,10 +206,142 @@
       "reason": "floor-store 整个模块（TH 五档降级链 + 内存影子层 + 两阶段批量写）当前零消费，接入点未定，暂整体冻结。"
     },
     {
+      "file": "config/group-deliberation.js",
+      "name": "GD_STORAGE_KEY",
+      "line": 44,
+      "reason": "R6-O3 群聊议事纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
       "file": "config/life-events.js",
       "name": "isHighValueChatLifeEventInput",
       "line": 34,
       "reason": "life-events 模块消费面未定，本项为高价值输入筛选判据，随模块冻结。"
+    },
+    {
+      "file": "config/mentorship-colearn.js",
+      "name": "submitPractice",
+      "line": 59,
+      "reason": "R6-X8 师友共学与能力成长纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/mentorship-colearn.js",
+      "name": "chooseDirection",
+      "line": 90,
+      "reason": "R6-X8 师友共学与能力成长纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "MAR_STORAGE_KEY",
+      "line": 30,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "reportParticipantDelay",
+      "line": 126,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "markParticipantArrived",
+      "line": 141,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "reportParticipantWithdraw",
+      "line": 156,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "startSegment",
+      "line": 178,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "completeSegment",
+      "line": 192,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "proposeActivityReroute",
+      "line": 222,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "confirmActivityReroute",
+      "line": 242,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "applyActivityReroute",
+      "line": 262,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "settleActivity",
+      "line": 301,
+      "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "createMystery",
+      "line": 44,
+      "reason": "R6-X6 推理剧纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "createProgress",
+      "line": 95,
+      "reason": "R6-X6 推理剧纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "submitHypothesis",
+      "line": 114,
+      "reason": "R6-X6 推理剧纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "queryWitness",
+      "line": 175,
+      "reason": "R6-X6 推理剧纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "getDiscoveredClues",
+      "line": 210,
+      "reason": "R6-X6 推理剧纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "createParallelLife",
+      "line": 37,
+      "reason": "R6-X9 平行人生试玩场纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "forkRoute",
+      "line": 59,
+      "reason": "R6-X9 平行人生试玩场纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "switchRoute",
+      "line": 93,
+      "reason": "R6-X9 平行人生试玩场纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "harvestAndDiscard",
+      "line": 121,
+      "reason": "R6-X9 平行人生试玩场纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/phone-chat-memory.js",
@@ -122,6 +380,66 @@
       "reason": "难度表，同上。"
     },
     {
+      "file": "config/reading-studio.js",
+      "name": "RS_STORAGE_KEY",
+      "line": 16,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/reading-studio.js",
+      "name": "linkBookToDossier",
+      "line": 136,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/reading-studio.js",
+      "name": "addContrastingView",
+      "line": 174,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/reading-studio.js",
+      "name": "addAnnotation",
+      "line": 187,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/reading-studio.js",
+      "name": "updateDraft",
+      "line": 200,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/reading-studio.js",
+      "name": "handleBookVersionUpdate",
+      "line": 220,
+      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "createRevisitSession",
+      "line": 43,
+      "reason": "R6-O7 关系往事重访纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "quoteOldMessages",
+      "line": 81,
+      "reason": "R6-O7 关系往事重访纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "addRevisitExchange",
+      "line": 106,
+      "reason": "R6-O7 关系往事重访纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "closeRevisit",
+      "line": 136,
+      "reason": "R6-O7 关系往事重访纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
       "file": "config/runtime-lifecycle.js",
       "name": "childRuntimeCount",
       "line": 459,
@@ -140,10 +458,124 @@
       "reason": "已知缺口：onceFlag 有 8 处调用，而复位面零消费（幂等标记可设不可清）；但清除时机未定，贸然接线会破坏幂等语义，待专项处理。"
     },
     {
+      "file": "config/serial-narrative.js",
+      "name": "createSerial",
+      "line": 38,
+      "reason": "R6-X7 跨媒介互动连载纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "createReaderProgress",
+      "line": 66,
+      "reason": "R6-X7 跨媒介互动连载纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "advanceChapter",
+      "line": 88,
+      "reason": "R6-X7 跨媒介互动连载纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "applyAuthorRevision",
+      "line": 117,
+      "reason": "R6-X7 跨媒介互动连载纯契约内核（批次F）：导出面由 system-v4540 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "SE_VERSION",
+      "line": 37,
+      "reason": "R6-O9 持续社媒生态纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "normalizeCircleLayer",
+      "line": 59,
+      "reason": "R6-O9 持续社媒生态纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "deriveCircleDiscussion",
+      "line": 75,
+      "reason": "R6-O9 持续社媒生态纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "gateClarificationScope",
+      "line": 112,
+      "reason": "R6-O9 持续社媒生态纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "isolatePrivateFromPublic",
+      "line": 139,
+      "reason": "R6-O9 持续社媒生态纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "REENTRY_VERSION",
+      "line": 38,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "REENTRY_STEP_KINDS",
+      "line": 39,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "buildReentryPath",
+      "line": 68,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "deriveCatchupChoices",
+      "line": 141,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "buildReentryBrief",
+      "line": 157,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "gateReentry",
+      "line": 172,
+      "reason": "续玩再入场纯契约内核（R6-O8）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
       "file": "config/tag-filter.js",
       "name": "hasGaigaiTagFilter",
       "line": 65,
       "reason": "探测 window.Gaigai / window.YuzukiMemory 的能力判定，属宿主环境相关的可选能力面，接入点未定。"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "createNarrative",
+      "line": 43,
+      "reason": "R6-X5 声音叙事纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "playbackStep",
+      "line": 75,
+      "reason": "R6-X5 声音叙事纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "replaceCue",
+      "line": 139,
+      "reason": "R6-X5 声音叙事纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "textPreview",
+      "line": 164,
+      "reason": "R6-X5 声音叙事纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
     }
   ]
 }

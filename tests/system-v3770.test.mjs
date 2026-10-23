@@ -142,6 +142,15 @@ const MIRROR_FILES = [
      *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面逐字同规;由闭包脚本真算
      *   (chat-view 静态闭包 38 件,缺的恰好只有这一件)。 */
     'config/group-vote-handoff.js',
+    /* [v4.54.1] chat-view 的静态闭包又长了一件:config/group-deliberation.js
+     *   (第六期批次 B · R6-O3 群聊议事契约,经 wechat-data 静态引入)。
+     *   缺口由脚本真算出来 —— 遍历 apps/wechat/chat-view.js 的静态导入闭包
+     *   (39 件)与 MIRROR_FILES 求差,缺的**恰好只有这一件**(chat-view 自身由 CV 常量单独列出)。
+     *   不扩 ⇒ 镜像根上 chat-view 装载失败(探针 exit 2)⇒ B2 与 D1/D2/D3/D5 一起转红:
+     *   那证明的是「两个根看到的不是同一件事」,不是判据逻辑错。
+     *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面、v4.05.0 扩实体映射面、v4.20.0 扩列表窗口面、
+     *   v4.47.1 扩群投票交接面逐字同规:判据面扩了,镜像面就得跟着扩。 */
+    'config/group-deliberation.js',
     /* [v4.20.0 · 补漏] v4.05.0 的注释声称把 entity-candidates-contract.js 补进了本清单，
      *   但**字面量从未落地**（注释留着、条目没加）—— 既有漂移，由本版闭包脚本真算出来：
      *   chat-view 的静态闭包 37 件，缺的**恰好只有这一件**（v4.05.0 那轮的注释还逐字写着

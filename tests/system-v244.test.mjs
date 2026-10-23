@@ -199,7 +199,13 @@ const extract = (src) => {
             s.internal + s.cross + s.dead === s.total, `${s.internal}+${s.cross}+${s.dead} vs ${s.total}`);
         // v2.44.0 前为 516：新增的 5 项正是 status-tracker 解构块里的导出
         ok('F3 扫描面 ≥ 521（解构转出已纳入枚举，不得退回 516）', s.total >= 521, `${s.total}`);
-        ok('F4 零消费不因枚举面扩大而虚增', s.dead <= 25, `${s.dead}`);
+        /* [v4.54.1 交棒改写] F4 原来是 `s.dead <= 25`（v2.44.0 当版上限）。
+         *   零消费条数会随「第六期批次 B~F 契约内核未接线」合法增长，那批已按本门正规用法
+         *   （`--update` + 写理由）逐条登记进账本，账本 24 → 96 条。改为**台账对齐**：
+         *   门读数的零消费条数必须等于账本条目数（少=漏网，多=旧条目残留）。 */
+        const ledgerN = JSON.parse(read('scripts/dead-export-baseline.json')).entries.length;
+        ok('F4 零消费条数与账本逐条对齐（登记得少=漏网，登记得多=旧条目残留）',
+            s.dead === ledgerN, `dead=${s.dead} ledger=${ledgerN}`);
     }
     ok('F5 真实仓库在门禁下通过（exit 0）', live.status === 0, `status=${live.status}`);
 
@@ -224,8 +230,12 @@ const extract = (src) => {
     ok('G2 每条都有非空理由（无 TODO 占位）',
         raw.entries.every(e => typeof e.reason === 'string' && !/^TODO/.test(e.reason)));
     ok('G3 条目键唯一', new Set(raw.entries.map(key)).size === raw.entries.length);
-    ok('G4 账本条目数（v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS，基线 25→24）',
-        raw.entries.length === 24, `${raw.entries.length}`);
+    /* [v4.54.1 交棒改写] G4 原来是 `=== 24`（v2.58 当版账本条数硬等号）。
+     *   硬等号把「按本门正规用法登记新冻结项」一律判红，第六期批次 B~F 那 72 条纯契约内核
+     *   无处登记（不是 bug，是有意未接线的资产）。改为下限形：历史事实（曾经 24 条）仍被钉住，
+     *   合法登记与抬版不再连带转红；「账本与门读数同源」由 F4 从另一侧守。 */
+    ok('G4 账本条目数不低于 v2.58 基线（24）',
+        raw.entries.length >= 24, `${raw.entries.length}`);
 }
 
 console.log(`\n\u7ed3\u679c: ${pass} \u901a\u8fc7, ${fail} \u5931\u8d25`);

@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.51.0",
+  "version": "4.54.1",
   "version_sources": {
-    "package": "4.51.0",
-    "manifest": "4.51.0",
-    "update_log_latest": "4.51.0",
-    "index_const": "4.51.0"
+    "package": "4.54.1",
+    "manifest": "4.54.1",
+    "update_log_latest": "4.54.1",
+    "index_const": "4.54.1"
   },
   "version_same": true,
   "gates": {
@@ -47,7 +47,7 @@
     "check_chain_len": 15
   },
   "tests": {
-    "test_files": 291,
+    "test_files": 299,
     "audit_dir_exists": true,
     "audit_files": 25
   },
@@ -78,19 +78,19 @@
     "chromium_env_note": "未显式指定 RUBY_PHONE_CHROMIUM —— 走 Playwright 缓存探测通道；本格为 null 表示「未指定」，不表示「没有浏览器」"
   },
   "scale": {
-    "app_dirs": 86,
-    "apps_ids": 87,
-    "index_lines": 16406,
-    "css_bytes": 669470,
+    "app_dirs": 88,
+    "apps_ids": 89,
+    "index_lines": 16423,
+    "css_bytes": 677083,
     "crossrepo": {
       "produced_faces": 30
     }
   },
   "material_split": {
     "material_dir": ".sourcematerial",
-    "material_present": true,
-    "material_files": 2,
-    "material_files_note": "私有素材目录在场，文件数为实读",
+    "material_present": false,
+    "material_files": null,
+    "material_files_note": "`.sourcematerial/` 不在场（私有素材未随仓分发）⇒ 文件数无意义，记 null；本格为 null 表示「没有这个目录」，不表示「目录里是 0 个文件」",
     "suite_files": 2,
     "suite_list": [
       "system-v3160.test.mjs",
@@ -102,7 +102,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 289,
+        "suite_files": 297,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -115,8 +115,8 @@
           "system-v3160.test.mjs",
           "system-v3171.test.mjs"
         ],
-        "runnable": true,
-        "why": "私有素材在场 ⇒ 本组可跑（真跑结果归各档门禁，本格只说可跑性）"
+        "runnable": false,
+        "why": "私有素材缺席（.gitignore 不 track ⇒ 干净检出必然如此）⇒ **本组不可跑**：如实登记 unrunnable，既不报通过，也不算作产品红"
       }
     ],
     "note": "本格只报**可跑性**（静态可判定），不报跑绿与否 —— 那要真执行，归门禁输出。「套件数 ≠ 通过数」；素材缺席组不得计入任何「通过」分子。"
@@ -127,7 +127,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "040ea80e4f443b27"
+    "sha256_16": "cfe02d55fe158ab0"
   },
   "unknown": [],
   "unknown_count": 0

@@ -11,6 +11,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { numOrNull } from './num-gate.js';
 
 export const MAR_SEGMENT_STATES = Object.freeze({
     PLANNED: 'planned',
@@ -33,10 +34,6 @@ function normStr(v) {
     return String(v ?? '').trim();
 }
 
-function numOr(v, def = 0) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-}
 
 /**
  * 创建或标准化多人活动结构
@@ -48,8 +45,8 @@ export function createMultiActivity(raw = {}) {
 
     const participants = (Array.isArray(raw.participants) ? raw.participants : []).map(normParticipant).filter(Boolean);
     const segments = (Array.isArray(raw.segments) ? raw.segments : []).map(normSegment).filter(Boolean);
-    const budgetInitial = numOr(raw.budget?.initial, 500);
-    const budgetSpent = numOr(raw.budget?.spent, 0);
+    const budgetInitial = (numOrNull(raw.budget?.initial) ?? 500);
+    const budgetSpent = (numOrNull(raw.budget?.spent) ?? 0);
 
     return {
         version: 1,
@@ -68,7 +65,7 @@ export function createMultiActivity(raw = {}) {
         pendingProposals: (Array.isArray(raw.pendingProposals) ? raw.pendingProposals : []).map(normProposal).filter(Boolean),
         rerouteHistory: (Array.isArray(raw.rerouteHistory) ? raw.rerouteHistory : []).slice(0, 20),
         settlement: raw.settlement ? { ...raw.settlement } : null,
-        updatedAt: numOr(raw.updatedAt, Date.now()),
+        updatedAt: (numOrNull(raw.updatedAt) ?? Date.now()),
     };
 }
 
@@ -82,7 +79,7 @@ function normParticipant(p) {
     return {
         actor,
         status,
-        delayMinutes: numOr(p.delayMinutes, 0),
+        delayMinutes: (numOrNull(p.delayMinutes) ?? 0),
         arrivalTime: p.arrivalTime ? normStr(p.arrivalTime) : null,
         withdrawnReason: p.withdrawnReason ? normStr(p.withdrawnReason) : null,
     };
@@ -96,8 +93,8 @@ function normSegment(s) {
         name: normStr(s.name) || id,
         type: normStr(s.type || 'activity'), // 'dining', 'sightseeing', 'travel', 'discussion'
         location: normStr(s.location || '待定地点'),
-        plannedCost: numOr(s.plannedCost, 0),
-        actualCost: numOr(s.actualCost, 0),
+        plannedCost: (numOrNull(s.plannedCost) ?? 0),
+        actualCost: (numOrNull(s.actualCost) ?? 0),
         isPaid: !!s.isPaid,
         status: Object.values(MAR_SEGMENT_STATES).includes(s.status) ? s.status : MAR_SEGMENT_STATES.PLANNED,
         attendeeActors: Array.isArray(s.attendeeActors) ? s.attendeeActors.map(normStr).filter(Boolean) : [],
@@ -113,7 +110,7 @@ function normProposal(p) {
         reason: normStr(p.reason),
         description: normStr(p.description),
         proposedSegments: Array.isArray(p.proposedSegments) ? p.proposedSegments.map(normSegment).filter(Boolean) : [],
-        costDelta: numOr(p.costDelta, 0),
+        costDelta: (numOrNull(p.costDelta) ?? 0),
         confirmedActors: Array.isArray(p.confirmedActors) ? p.confirmedActors.map(normStr) : [],
         requiredConfirmers: Array.isArray(p.requiredConfirmers) ? p.requiredConfirmers.map(normStr) : [],
     };
@@ -129,7 +126,7 @@ export function reportParticipantDelay(activity, actor, delayMinutes = 15, note 
     if (!target) return { ok: false, reason: 'participant_not_found' };
 
     target.status = MAR_PARTICIPANT_STATES.DELAYED;
-    target.delayMinutes = numOr(delayMinutes, 15);
+    target.delayMinutes = (numOrNull(delayMinutes) ?? 15);
 
     act.updatedAt = Date.now();
     return { ok: true, activity: act, participant: target };
@@ -197,7 +194,7 @@ export function completeSegment(activity, segmentId, actualAttendeeActors = [], 
     seg.status = MAR_SEGMENT_STATES.COMPLETED;
     seg.attendeeActors = actualAttendeeActors.length > 0 ? actualAttendeeActors.map(normStr) : seg.attendeeActors;
     if (actualCost != null) {
-        seg.actualCost = numOr(actualCost, seg.plannedCost);
+        seg.actualCost = (numOrNull(actualCost) ?? seg.plannedCost);
     } else {
         seg.actualCost = seg.plannedCost;
     }

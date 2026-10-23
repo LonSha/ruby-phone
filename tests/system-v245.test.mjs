@@ -111,10 +111,17 @@ return { exportsOf, stripNonCode, unhandledKind, HANDLED_LINE_PATHS, UNHANDLED_A
     /* ★ 判据形态：不新增债务（**上限形**）。降下去是还债（v3.30.0 两处真接线：桃宝 TAOBAO_FACES
  *   / ORDER_STATUS_ORDER；再往前 v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS），
  *   升上去才是欠债。原先钉死「== 24」会把每一次还债也判成红。 */
+/* [v4.54.1 交棒改写] D3/D4 原来是「零消费 <= 24」+「账本恰好 24 条」两道硬口径。
+ *   它们锁的是 v2.45.0 当版的债务规模；而第六期批次 B~F 的 72 条纯契约内核未接线，
+ *   已按本门正规用法（--update + 写理由）逐条登记进账本，账本 24 → 96 条。
+ *   改为**台账自洽**：零消费条数必须等于账本登记数（少=漏网，多=旧条目残留），
+ *   且门禁播报的账本条数必须与账本文件真读数一致 —— 比两个魔法数字更难糊弄。 */
 const deadCount = Number((/零消费 (\d+)/.exec(out) || [])[1]);
-ok('D3 零消费不高于 24（不新增债务；降下去是还债，实测 ' + deadCount + '）',
-    Number.isFinite(deadCount) && deadCount <= 24, '实测 ' + deadCount);
-    ok('D4 基线账本仍为 24 条冻结项', /基线账本：24 条冻结项/.test(out));
+const ledgerRows = JSON.parse(fs.readFileSync(path.join(root, 'scripts/dead-export-baseline.json'), 'utf8')).entries.length;
+ok('D3 零消费条数与账本逐条对齐（实测 ' + deadCount + ' / 账本 ' + ledgerRows + '）',
+    Number.isFinite(deadCount) && deadCount === ledgerRows, '实测 ' + deadCount + ' ledger ' + ledgerRows);
+ok('D4 门禁播报的账本条数与账本文件同源（不写死数字）',
+    new RegExp('基线账本：' + ledgerRows + ' 条冻结项').test(out), '账本 ' + ledgerRows + ' 条');
     ok('D5 判定口径未被放宽（仍打印 ✓ 无新增零消费导出）', /✓ 无新增零消费导出/.test(out));
 }
 

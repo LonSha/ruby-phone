@@ -12,6 +12,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { numOrNull } from './num-gate.js';
 
 export const RS_STORAGE_KEY = 'reading_studio_v1';
 
@@ -19,10 +20,6 @@ function normStr(v) {
     return String(v ?? '').trim();
 }
 
-function numOr(v, def = 0) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-}
 
 /**
  * 创建或标准化研读案卷结构
@@ -41,7 +38,7 @@ export function createReadingDossier(raw = {}) {
         ? {
             title: normStr(raw.draft.title) || title,
             sections: Array.isArray(raw.draft.sections) ? raw.draft.sections.map(normSection) : [],
-            updatedAt: numOr(raw.draft.updatedAt, Date.now()),
+            updatedAt: (numOrNull(raw.draft.updatedAt) ?? Date.now()),
         }
         : {
             title,
@@ -60,7 +57,7 @@ export function createReadingDossier(raw = {}) {
         contrastingViews,
         annotations,
         draft,
-        updatedAt: numOr(raw.updatedAt, Date.now()),
+        updatedAt: (numOrNull(raw.updatedAt) ?? Date.now()),
     };
 }
 
@@ -90,7 +87,7 @@ function normExcerpt(e) {
         verbatimText: normStr(e.verbatimText || e.text),
         isStale: !!e.isStale,
         staleReason: normStr(e.staleReason || ''),
-        addedAt: numOr(e.addedAt, Date.now()),
+        addedAt: (numOrNull(e.addedAt) ?? Date.now()),
     };
 }
 
@@ -117,7 +114,7 @@ function normAnnotation(a) {
         excerptId,
         question: normStr(a.question),
         comment: normStr(a.comment),
-        createdAt: numOr(a.createdAt, Date.now()),
+        createdAt: (numOrNull(a.createdAt) ?? Date.now()),
     };
 }
 

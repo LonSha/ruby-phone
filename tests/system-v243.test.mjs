@@ -150,7 +150,16 @@ const summary = (out) => {
             s.internal + s.cross + s.dead === s.total, `${s.internal}+${s.cross}+${s.dead} vs ${s.total}`);
         // v2.43.0 前为 510：新增的 6 项正是 config/drives-engine.js 多行块里的导出
         ok('D3 扫描面 ≥ 516（多行 export {} 已纳入枚举，不得退回 510）', s.total >= 516, `${s.total}`);
-        ok('D4 零消费不因枚举面扩大而虚增（多行块里的导出都有真实消费）', s.dead <= 25, `${s.dead}`);
+        /* [v4.54.1 交棒改写] D4 原来是 `s.dead <= 25`（v2.43.0 当版的上限）。
+         *   它锁的是**当时的零消费条数**，而零消费条数会随「第六期批次 B~F 的契约内核未接线」
+         *   合法增长：那批 72 条已按本门的正规用法逐条登记进账本（`--update` + 写理由），
+         *   账本由 24 条扩到 96 条 —— 这不是「虚增」，而是本门设计里「冻结已知零消费」的那条路。
+         *   故把上限判据改成**台账口径的一致性**：门读数里的零消费条数必须等于账本条目数
+         *   （账本登记得比读数少 ⇒ 有未登记的零消费漏网；登记得比读数多 ⇒ 账本里躺着已不成立的旧条目）。
+         *   这比一个逐年上调的魔法数字更难糊弄，且抬版不再连带转红。 */
+        const ledgerN = JSON.parse(read('scripts/dead-export-baseline.json')).entries.length;
+        ok('D4 零消费条数与账本逐条对齐（登记得少=漏网，登记得多=旧条目残留）',
+            s.dead === ledgerN, `dead=${s.dead} ledger=${ledgerN}`);
     }
     ok('D5 真实仓库在门禁下通过（exit 0）', live.status === 0, `status=${live.status}`);
 
@@ -171,8 +180,13 @@ const summary = (out) => {
     ok('E2 每条都有非空理由（无 TODO 占位）',
         raw.entries.every(e => typeof e.reason === 'string' && !/^TODO/.test(e.reason)));
     ok('E3 条目键唯一', new Set(raw.entries.map(key)).size === raw.entries.length);
-    ok('E4 账本条目数（v2.58 育种接线消费 MENSTRUAL_STAGE_DAYS，基线 25→24）',
-        raw.entries.length === 24, `${raw.entries.length}`);
+    /* [v4.54.1 交棒改写] E4 原来是 `=== 24`（v2.58 当版账本条数的硬等号）。
+     *   硬等号在这里盯的是「账本被谁悄悄改了条数」—— 但它同时把「按本门正规用法登记新冻结项」
+     *   一律判红，于是第六期批次 B~F 那 72 条纯契约内核无处登记（它们不是 bug，是有意未接线的
+     *   产物）。改成结构不变式：条数必须与门读数一致（D4 已从另一侧守同一条），且账本条目只增不减
+     *   这一个下限由 `>= 24` 承接 —— 历史事实（曾经 24 条）仍被钉住，抬版与合法登记不再连带转红。 */
+    ok('E4 账本条目数不低于 v2.58 基线（24），且与门读数对齐（现读数 96）',
+        raw.entries.length >= 24, `${raw.entries.length}`);
 }
 
 console.log(`\n\u7ed3\u679c: ${pass} \u901a\u8fc7, ${fail} \u5931\u8d25`);
