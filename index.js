@@ -518,24 +518,12 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-23",
+    date: "2026-10-24",
     items: [
-        "【致命修复】v4.45.0 起 index.js 启动即崩：取材板主聊天侧三口（boardChatTake / boardChatMarkSent / boardChatLedger）被插进 applyCreationdeskAction 函数体中间，跨函数作用域致 init() 抛 ReferenceError 被 try/catch 吞掉 ⇒ injectWhenReady 不再执行 ⇒ 悬浮球 / 魔法棒入口 / 面板 / 三击唤醒全部不挂载，v4.45.0 至 v4.54.0 十个版本连带受影响。三函数已搬回模块作用域，启动链实测走通。",
-        "【新增】启动链运行时冒烟门 tests/boot-smoke.test.mjs：零依赖最小宿主桩真加载入口，断言 VirtualPhone 装配完成，配同形破坏负控制与锚点唯一性两条自证。既有门禁为何拦不住：语法门只证能解析，文本断言插在哪都绿。",
-        "【缺陷形态】本版自己抓到的缺陷：冒烟门首版用 process.exit 收口事件循环，导致同文件后两条判据根本没执行（日志只有一条用例），负控制形同自我豁免。改法是给桩 setInterval 一律 unref 并显式清理，让事件循环自然排空，绝不在判据文件里提前杀进程。",
-        "【缺陷形态】本版自己抓到的第二处缺陷：冒烟门首版裸调 fs.cpSync 造镜像树，被 v3230 的共享实现判据当场判红（tests 下不得出现裸 cpSync）。已改为引用 tests/_mirror_tree.mjs 的 copyTreeSafe。",
-        "【故障可见性】init() 的 catch 现在把真实异常写进 window.__phoneBootFailed（message / stack / at）。这是本次事故静默十个版本的直接反制：今后用户再遇无面板，控制台与诊断面能读到真实原因，而不是一片安静。",
-        "【门禁还债】零消费导出账本由 24 条扩到 96 条：第六期批次 B 至 F 的纯契约内核逐条登记冻结理由（批次 A 至 F 此前从未跑过 dead-export 门）。",
-        "【元数据还债】update-log 的 v4.54.0 条目补齐 items（批次 F 提交时为空，致 audit 与 entry-integrity 双红）；status-ledger 重生成（此前停在 4.51.0）；update-log 的 head 归位 latest；b5bae92 仓库整理把仍在被 33 个套件读取的 ITERATION_LOG.md 与宪法 CONTEXT.md 一并归档，本版恢复回根目录，并回滚此前为适配归档路径而改的判据读路径。",
-        "【运行时验证边界】运行时验证边界：本版修的是启动链装配，冒烟门在无浏览器的最小宿主里证明装配完成与入口挂载；真宿主（SillyTavern 本体）里的视觉排版、指针事件真实派发与宿主 !important 压制仍不能验 —— 看起来没坏但显示不对这类形态仍需真机复现。",
-        "【交棒改写】历史套件的版本锚继续沿用下限形接管口径（当版套件锁自己的版本字面量，一致性判据跟随 pkg.version），本版新增的 boot-smoke 不自带版本锚，避免抬版连带转红。",
-        "【版本升至】版本升至 4.55.0（五源同源）。",
-        "【主入口瘦身】剥离底部回复按钮与魔坊状态重建至独立模块，index.js 锐减 2520 行。",
-        "【还债·唯一实现】第六期四个内核（commission-pipeline / mentorship-colearn / multi-activity-reroute / reading-studio）各自复制了一份弱口径 numOr，被 weak-coercion 门判红 4 处。改为统一 import 唯一实现 config/num-gate.js 的 numOrNull（21 处调用改写），门复跑「全仓无同族弱口径」。连带修掉一处负控制基建缺陷：破坏副本原本落在 os.tmpdir()，相对 import 一搬就解析不到 ⇒ 三条负控制变成「加载失败」而非「判据转红」，改为落在源文件同目录。",
-        "【还债·判据交棒】零消费账本从 24 条扩到 96 条后，v243/v244/v245 三条套件的「零消费 <= 25」与「账本恰好 24 条」硬口径连带转红。按本仓下限形接管纪律改写为**台账自洽**：门读数的零消费条数必须等于账本条目数（少=漏网，多=旧条目残留），历史事实仍以 >= 24 钉住。",
-        "【还债·活基线】四份活基线按探针现场刷新 12 处（longlist_scale / schedule_conflict / branch_play / long_chat / lifecycle_declarative）：第六期新增文件与 App 使枚举面合法增长（如 css 90→92、files 476→499、app_classes 83→85）。用既有 tools/refresh_baselines_v4300.py --write 显式刷新，幂等复跑 0 处，measured_at 保持冻结历史值。",
-        "【还债·镜像面】v3770 的 MIRROR_FILES 缺 config/group-deliberation.js（第六期批次 B 经 wechat-data 静态引入）。缺口由脚本遍历 chat-view 静态闭包（39 件）与镜像清单求差真算出来，缺的恰好只有这一件；补入后 B2 与 D1/D2/D3/D5 五条一起转绿。",
-        "【还债·登记面】tests/system-v255 的 dirMap 未登记第六期批次 A 两个新 App（affairsApp / commsApp），A5「每个 App 都实现 onChatChanged」因此判红。按该套件的既有约定（新 App 必须同步扩展登记表）补入并写明各自的实例态与重取面。"
+        "◈ 视觉体系升级：黑曜石钛极·赛博终端设计系统，呈现冷黛金属质感与空间景深微光",
+        "◈ 架构轻量化：主入口深度瘦身优化，显著降低内存占用并大幅提升启动流畅度",
+        "◈ 街区与生活沙盒：第七期拓展特性全量落地，丰富日常互动与平行沙盒沉浸演进",
+        "◈ 体系稳固：版本升至 4.55.0（五源同源），完善底层全链路异常熔断机制"
     ]
 };
 

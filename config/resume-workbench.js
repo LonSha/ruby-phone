@@ -241,6 +241,176 @@ export const RW_REASON_TEXT = Object.freeze({
     'face-unreadable': '取数失败（不是「这一面是空的」）'
 });
 
+/* ────── [R7-O8] 中断恢复工作台通道与状态 ────── */
+export const RW_INTERRUPTION_CHANNELS = Object.freeze({
+    REQUIRES_RESPONSE: 'requires_response',     // 需回应（未读消息/未决邀请）
+    ACTIONABLE_RESUME: 'actionable_resume',     // 可继续（未完成草稿/进行中事务）
+    ENVIRONMENT_CHANGED: 'environment_changed'  // 已变化（世界线/关系状态变动）
+});
+
+export const RW_ITEM_ACTIONS = Object.freeze({
+    ENTER: 'enter',       // 进入并跳转处理
+    SNOOZE: 'snooze',     // 稍后提醒
+    DISMISS: 'dismiss'    // 略过/已知晓
+});
+
+export const RW_ITEM_STATUS = Object.freeze({
+    PENDING: 'pending',
+    ENTERED: 'entered',
+    SNOOZED: 'snoozed',
+    DISMISSED: 'dismissed'
+});
+
+/**
+ * 规范化单个中断恢复条目
+ */
+export function normalizeInterruptionItem(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = rwStr(raw.id, 64);
+    if (!id) return null;
+    const projectId = rwStr(raw.projectId, 64) || 'global';
+    const title = rwStr(raw.title, 120) || '未命名事项';
+    const detail = rwStr(raw.detail, 300);
+    const channel = Object.values(RW_INTERRUPTION_CHANNELS).includes(raw.channel) ? raw.channel : RW_INTERRUPTION_CHANNELS.ACTIONABLE_RESUME;
+    const status = Object.values(RW_ITEM_STATUS).includes(raw.status) ? raw.status : RW_ITEM_STATUS.PENDING;
+    const sourceAppId = rwStr(raw.sourceAppId, 32) || 'system';
+    const targetTab = rwStr(raw.targetTab, 32) || null;
+    const timestamp = typeof raw.timestamp === 'number' ? raw.timestamp : Date.now();
+    const openRef = (raw.openRef && typeof raw.openRef === 'object') ? Object.freeze({ ...raw.openRef }) : null;
+
+    return Object.freeze({
+        id,
+        projectId,
+        title,
+        detail,
+        channel,
+        status,
+        sourceAppId,
+        targetTab,
+        openRef,
+        timestamp
+    });
+}
+
+/**
+ * 构建中断恢复卡组（按需回应、可继续、已变化三通道聚合，排除已确认条目）
+ */
+export function buildInterruptionDeck(opts = {}) {
+    const rawItems = Array.isArray(opts.items) ? opts.items : [];
+    const confirmedSet = new Set(Array.isArray(opts.confirmedIds) ? opts.confirmedIds.map(String) : []);
+    const filterProjectId = rwStr(opts.projectId, 64);
+
+    const requiresResponse = [];
+    const actionableResume = [];
+    const environmentChanged = [];
+
+    for (const item of rawItems) {
+        const norm = normalizeInterruptionItem(item);
+        if (!norm) continue;
+        // 复开不重复报告已确认变化
+        if (confirmedSet.has(norm.id) || norm.status === RW_ITEM_STATUS.ENTERED || norm.status === RW_ITEM_STATUS.DISMISSED) {
+            continue;
+        }
+        // 项目隔离：若指定了 projectId 则只看该项目，项目切换不串数据
+        if (filterProjectId && norm.projectId !== 'global' && norm.projectId !== filterProjectId) {
+            continue;
+        }
+
+        if (norm.channel === RW_INTERRUPTION_CHANNELS.REQUIRES_RESPONSE) {
+            requiresResponse.push(norm);
+        } else if (norm.channel === RW_INTERRUPTION_CHANNELS.ACTIONABLE_RESUME) {
+            actionableResume.push(norm);
+        } else {
+            environmentChanged.push(norm);
+        }
+    }
+
+    return Object.freeze({
+        projectId: filterProjectId || null,
+        requiresResponse: Object.freeze(requiresResponse),
+        actionableResume: Object.freeze(actionableResume),
+        environmentChanged: Object.freeze(environmentChanged),
+        totalPending: requiresResponse.length + actionableResume.length + environmentChanged.length
+    });
+}
+
+/**
+ * 用户对某中断条目做出选择（进入、略过或稍后）
+ * 契约：选定该项进行操作后，其他所有项的状态保持原状，绝不产生无谓关联变更
+ */
+export function transitionInterruptionItem(deck, itemId, action, now = Date.now()) {
+    if (!deck || typeof deck !== 'object') {
+        return { ok: false, why: 'invalid-deck', nextDeck: deck, item: null, confirmedId: null };
+    }
+    const all = [
+        ...(deck.requiresResponse || []),
+        ...(deck.actionableResume || []),
+        ...(deck.environmentChanged || [])
+    ];
+    const target = all.find(it => it.id === itemId);
+    if (!target) {
+        return { ok: false, why: 'item-not-found', nextDeck: deck, item: null, confirmedId: null };
+    }
+
+    let newStatus = target.status;
+    let confirmedId = null;
+    let openDetail = null;
+
+    if (action === RW_ITEM_ACTIONS.ENTER) {
+        newStatus = RW_ITEM_STATUS.ENTERED;
+        confirmedId = target.id;
+        openDetail = {
+            appId: target.sourceAppId,
+            tab: target.targetTab,
+            openRef: target.openRef
+        };
+    } else if (action === RW_ITEM_ACTIONS.DISMISS) {
+        newStatus = RW_ITEM_STATUS.DISMISSED;
+        confirmedId = target.id;
+    } else if (action === RW_ITEM_ACTIONS.SNOOZE) {
+        newStatus = RW_ITEM_STATUS.SNOOZED;
+    } else {
+        return { ok: false, why: 'invalid-action', nextDeck: deck, item: null, confirmedId: null };
+    }
+
+    const updatedItem = Object.freeze({
+        ...target,
+        status: newStatus,
+        updatedAt: now
+    });
+
+    // 重新构建 deck：已 confirmed (ENTERED/DISMISSED) 的条目从待办 deck 中移除，其余项完全保留
+    const nextRequires = (deck.requiresResponse || [])
+        .filter(it => it.id !== target.id)
+        .concat(newStatus === RW_ITEM_STATUS.SNOOZED && target.channel === RW_INTERRUPTION_CHANNELS.REQUIRES_RESPONSE ? [updatedItem] : []);
+
+    const nextActionable = (deck.actionableResume || [])
+        .filter(it => it.id !== target.id)
+        .concat(newStatus === RW_ITEM_STATUS.SNOOZED && target.channel === RW_INTERRUPTION_CHANNELS.ACTIONABLE_RESUME ? [updatedItem] : []);
+
+    const nextEnv = (deck.environmentChanged || [])
+        .filter(it => it.id !== target.id)
+        .concat(newStatus === RW_ITEM_STATUS.SNOOZED && target.channel === RW_INTERRUPTION_CHANNELS.ENVIRONMENT_CHANGED ? [updatedItem] : []);
+
+    const nextDeck = Object.freeze({
+        projectId: deck.projectId,
+        requiresResponse: Object.freeze(nextRequires),
+        actionableResume: Object.freeze(nextActionable),
+        environmentChanged: Object.freeze(nextEnv),
+        totalPending: nextRequires.length + nextActionable.length + nextEnv.length
+    });
+
+    return {
+        ok: true,
+        why: '',
+        action,
+        item: updatedItem,
+        openDetail,
+        confirmedId,
+        nextDeck
+    };
+}
+
 /* ────── 小工具（本模块自用） ────── */
 
 /** 一面读不到 ⇒ 一条 gap（**不是**「这一面是空的」）。 */
@@ -935,7 +1105,9 @@ export function resumeWorkbenchSelfCheck() {
     if (rwProjectsFromPack({ raw: '{}', at: 1 }).length !== 0) problems.push('不含项目身份的包必须给空清单（不是硬塞一行）');
     if (rwProjectsFromPack(null).length !== 0) problems.push('非对象必须给空清单');
     if (rwProjectsFromPack({ projectId: 'p', floorEnd: 0 })[0].lastFloor !== 0) problems.push('0 楼是合法停点（不得补 0 也不得丢 0）');
-
+    /* ⑮ [R7-O8] 中断恢复工作台通道与动作自检 */
+    if (Object.keys(RW_INTERRUPTION_CHANNELS).length !== 3) problems.push('RW_INTERRUPTION_CHANNELS 必须为 3 通道');
+    if (Object.keys(RW_ITEM_ACTIONS).length !== 3) problems.push('RW_ITEM_ACTIONS 必须为 3 动作');
     return { problems: problems };
 }
 
@@ -958,5 +1130,11 @@ export default {
     rwRestoreOutcome,
     rwLevelLine,
     rwSummaryLine,
-    resumeWorkbenchSelfCheck
+    resumeWorkbenchSelfCheck,
+    RW_INTERRUPTION_CHANNELS,
+    RW_ITEM_ACTIONS,
+    RW_ITEM_STATUS,
+    normalizeInterruptionItem,
+    buildInterruptionDeck,
+    transitionInterruptionItem
 };

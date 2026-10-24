@@ -107,17 +107,40 @@ export function createUpdateChecker(deps) {
 
         overlay.id = 'st-phone-update-modal';
         overlay.className = 'st-phone-update-modal';
+        const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const MAX_PRIMARY = 3;
+        const primaryItems = items.slice(0, MAX_PRIMARY);
+        const overflowItems = items.slice(MAX_PRIMARY);
+
+        let listHtml = '';
+        if (items.length) {
+            listHtml = `<ul class="st-phone-update-list">
+                ${primaryItems.map(item => `<li>${esc(item)}</li>`).join('')}
+            </ul>`;
+            if (overflowItems.length) {
+                listHtml += `
+                <details class="st-phone-update-fold">
+                    <summary class="st-phone-update-fold-summary">▸ 更多细节 (${overflowItems.length} 项)</summary>
+                    <ul class="st-phone-update-list st-phone-update-list-more">
+                        ${overflowItems.map(item => `<li>${esc(item)}</li>`).join('')}
+                    </ul>
+                </details>`;
+            }
+        }
+
         overlay.innerHTML = `
             <div class="st-phone-update-dialog" role="dialog" aria-modal="true" aria-labelledby="st-phone-update-title">
-                <div class="st-phone-update-mark">${mode === 'remote' ? '↗' : '✓'}</div>
+                <button type="button" class="st-phone-update-close" aria-label="关闭">✕</button>
+                <div class="st-phone-update-header-row">
+                    <div class="st-phone-update-mark">${mode === 'remote' ? '↗' : '◈'}</div>
+                    <div class="st-phone-update-title-box">
+                        <div class="st-phone-update-title" id="st-phone-update-title">${title}</div>
+                        <div class="st-phone-update-subtitle">${subtitle}</div>
+                    </div>
+                </div>
                 <div class="st-phone-update-content">
-                    <div class="st-phone-update-kicker">${mode === 'remote' ? '需要手动更新' : '本次更新内容'}</div>
-                    <div class="st-phone-update-title" id="st-phone-update-title">${title}</div>
-                    <div class="st-phone-update-subtitle">${subtitle}</div>
-                    ${items.length ? `<ul class="st-phone-update-list">
-                        ${items.map(item => `<li>${String(item || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`).join('')}
-                    </ul>` : ''}
-                    ${mode === 'remote' ? '<div class="st-phone-update-note">请在酒馆扩展管理中更新，或手动替换插件文件。</div>' : ''}
+                    ${listHtml}
+                    ${mode === 'remote' ? '<div class="st-phone-update-note">可在扩展管理器中获取更新或手动替换文件。</div>' : ''}
                     <div class="st-phone-update-actions">
                         <button type="button" class="st-phone-update-btn st-phone-update-btn-primary">${primaryText}</button>
                     </div>
@@ -138,9 +161,13 @@ export function createUpdateChecker(deps) {
         };
 
         overlay.querySelector('.st-phone-update-btn-primary')?.addEventListener('click', close);
+        overlay.querySelector('.st-phone-update-close')?.addEventListener('click', close);
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay && mode === 'remote') close();
+            if (e.target === overlay) close();
         });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') close();
+        }, { signal: viewportController.signal });
         window.addEventListener('resize', syncUpdateModalViewport, { passive: true, signal: viewportController.signal });
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', syncUpdateModalViewport, { passive: true, signal: viewportController.signal });
