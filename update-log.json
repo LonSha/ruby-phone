@@ -1,6 +1,17 @@
 {
-  "latest": "4.54.1",
+  "latest": "4.55.0",
   "versions": {
+    "4.55.0": {
+      "version": "4.55.0",
+      "date": "2026-10-24",
+      "title": "v4.55.0 index.js 深度瘦身（第一批）：剥离底部内嵌回复按钮与魔坊状态同步",
+      "items": [
+        "【主入口瘦身】剥离 createInlineReplyButton 核心逻辑（1805行）至 phone/inline-reply-button.js。",
+        "【主入口瘦身】剥离 getOrCreateMofoData/rebuildMofoStateFromCurrentChat/buildMofoOfflinePromptContent（746行）至 apps/mofo/mofo-sync.js。",
+        "【体积削减】index.js 从 16423 行大幅压降至 13904 行，净削减 2519 行（-15.3%）。",
+        "【门禁全通】通过全量 14 项架构审计与启动冒烟测试（boot-smoke H1/H2/H3 100% 绿灯）。"
+      ]
+    },
     "4.54.1": {
       "version": "4.54.1",
       "date": "2026-10-23",
@@ -4845,5 +4856,5 @@
       ]
     }
   },
-  "head": "4.54.1"
+  "head": "4.55.0"
 }
