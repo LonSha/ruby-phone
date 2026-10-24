@@ -316,6 +316,14 @@ export class PhoneStorage {
             /^cbe_/,
             // [R8-X9] 双人共建的手机世界（cbw_co_built_world_v1）
             /^cbw_/,
+            // [v4.57.0 · R-EX2] 剧情待办与约定日程（qss_qianshi_schedule_v1）
+            /^qss_/,
+            // [v4.57.0 · R-EX3] 道具背包与权属流转（ibp_inventory_backpack_v1）
+            /^ibp_/,
+            // [v4.57.0 · R-EX4] 角色等权多档案备忘录（cds_character_dossier_v1）
+            /^cds_/,
+            // [v4.57.0 · R-EX5] 历史卷宗回放与长剧本浏览（vch_volume_chronicle_v1）
+            /^vch_/,
             /* [v4.48.0 · R6-O1] 以事情为中心的事务(affairs_v1):键无元字符,按仓内口径「无需宽匹配登记」。
              *   它装的是「这个角色这段对话里正在进行的事」——阶段/参与者/待决选择/动作引用。
              *   不隔离就会把上一个角色的筹备进度贴回新会话(与 te_ 同族静默错串)。 */

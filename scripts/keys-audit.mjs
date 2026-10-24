@@ -382,6 +382,10 @@ const KEY_REGISTRY = [
   { key: 'trb_touch_readability_v1', scope: 'chat', note: '[v4.56.0 · R8-O9] 触摸与可读性基线（小屏适配、减弱动画与高可读排版）' },
   { key: 'cbe_creator_bundle_v1', scope: 'chat', note: '[v4.56.0 · R8-X8] 手机内生创作者生态（主题/规则/工作包组合分发与安装）' },
   { key: 'cbw_co_built_world_v1', scope: 'chat', note: '[v4.56.0 · R8-X9] 双人共建的手机世界（角色形态建议、共同历史演化与审批）' },
+  { key: 'qss_qianshi_schedule_v1', scope: 'chat', note: '[v4.57.0 · R-EX2] 剧情待办与约定日程（约定状态流转、逾期检测与角色分组）' },
+  { key: 'ibp_inventory_backpack_v1', scope: 'chat', note: '[v4.57.0 · R-EX3] 道具背包与权属流转（道具状态机held/lost/consumed与转赠溯源）' },
+  { key: 'cds_character_dossier_v1', scope: 'chat', note: '[v4.57.0 · R-EX4] 角色等权多档案备忘录（双段关系态度、经历摘要与反极化性格偏移）' },
+  { key: 'vch_volume_chronicle_v1', scope: 'chat', note: '[v4.57.0 · R-EX5] 历史卷宗回放与长剧本浏览（分卷编年史、高光里程碑与人物检索）' },
   /* [v4.48.0 · 第六期 R6-O1] 事务台的**事务本体**（阶段/参与者/待决/动作引用/引用桶）。
    *   必须随会话隔离：不隔离会把上一段剧情的筹备进度贴到新会话的同一件事上
    *   （前缀 /^aff/ 在 config/storage.js 登记，本节按 K1 逐键列名、不靠兜底）。
@@ -712,7 +716,8 @@ const KEY_REGISTRY = [
   { key: 'wechat-group-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
   { key: 'wechat-moments-context-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
   { key: 'wechat-single-call-history-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
-  { key: 'wechat-single-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' }
+{ key: 'wechat-single-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: '__rubyphone_loader_owner', scope: 'global', note: '[v4.57.0 · R-EX1] 单实例互斥令牌守卫（全局互斥挂钩，防多实例幽灵重影）' },
 ];
 
 const matches = (entry, key) => entry.key.endsWith('*')
