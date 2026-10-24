@@ -280,6 +280,42 @@ export class PhoneStorage {
             /^ir_/,
             // [R7-O2] 行动回执与补救（ar_receipts_v1）：随会话隔离行动回执、幂等凭证与补救方案
             /^ar_/,
+            // [R8-O1] 手机使用范式（up_paradigm_state_v1）
+            /^up_/,
+            // [R8-O3] 原位续办锚点（ra_anchor_state_v1）
+            /^ra_/,
+            // [R8-O4] 人物回应节奏（rc_cadence_state_v1）
+            /^rc_/,
+            // [R8-X1] 主题包状态（tp_theme_state_v1）
+            /^tp_/,
+            // [R8-X2] 规则剧场（rt_rules_state_v1）
+            /^rt_/,
+            // [R8-O2] 可逆行动栈（as_action_stack_v1）
+            /^as_/,
+            // [R8-O7] 授权继承与到期（ae_auth_expire_v1）
+            /^ae_/,
+            // [R8-O8] 本地恢复中心（rh_recovery_hub_v1）
+            /^rh_/,
+            // [R8-X3] 有因果的城市经济（ue_urban_economy_v1）
+            /^ue_/,
+            // [R8-X4] 可变化的角色居所（cd_dwelling_state_v1）
+            /^cd_/,
+            // [R8-X6] 可交易的生活资产（la_living_assets_v1）
+            /^la_/,
+            // [R8-O5] 差异优先的编辑台（ded_diff_editor_v1）
+            /^ded_/,
+            // [R8-O6] 用户工作包（uwp_work_packages_v1）
+            /^uwp_/,
+            // [R8-X5] 角色共同媒体台（jms_media_studio_v1）
+            /^jms_/,
+            // [R8-X7] 可复演的生活节目录（lpr_program_replay_v1）
+            /^lpr_/,
+            // [R8-O9] 触摸与可读性基线（trb_touch_readability_v1）
+            /^trb_/,
+            // [R8-X8] 手机内生创作者生态（cbe_creator_bundle_v1）
+            /^cbe_/,
+            // [R8-X9] 双人共建的手机世界（cbw_co_built_world_v1）
+            /^cbw_/,
             /* [v4.48.0 · R6-O1] 以事情为中心的事务(affairs_v1):键无元字符,按仓内口径「无需宽匹配登记」。
              *   它装的是「这个角色这段对话里正在进行的事」——阶段/参与者/待决选择/动作引用。
              *   不隔离就会把上一个角色的筹备进度贴回新会话(与 te_ 同族静默错串)。 */
