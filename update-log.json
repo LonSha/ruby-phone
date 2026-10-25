@@ -1,6 +1,19 @@
 {
-  "latest": "4.75.0",
+  "latest": "4.80.0",
   "versions": {
+    "4.80.0": {
+      "date": "2026-10-26",
+      "title": "v4.80.0 功能更新与机制落地",
+      "description": "R10 · 拟真多通道通信、全局通知中心调度、四时光影自适应与潜意识梦境镜像",
+      "items": [
+        "◈ R10-O1 · 微信多通道拟真打字生命周期、语音波形合成与撤回反悔留痕 (config/mimic-comm-engine.js)",
+        "◈ R10-O2 · 系统级常驻通知中心、免打扰优先级穿透与多应用折叠聚合 (config/system-notification-dispatcher.js)",
+        "◈ R10-O3 · 全天候环境光影演算、四时色温演化与天气粒子霜化滤镜 (config/dynamic-atmosphere-lighting.js)",
+        "◈ R10-O4 · 跨应用全局倒排统一搜索、搜索热度与快捷指令意图解析 (config/spotlight-universal-search.js)",
+        "◈ R10-X3 · 全景社交朋友圈 2.0 图文发布、角色自驱动点赞与性格回复 (config/dynamic-moments-feed.js)",
+        "◈ R10-X9 · 记忆引擎深层反哺之手机潜意识梦境镜像与深夜草稿物化 (config/subconscious-dreamscape-mirror.js)"
+      ]
+    },
     "4.75.0": {
       "date": "2026-10-25",
       "description": "R9-X6~X9 · 资产流转、复演节目单、离线创作者包与角色主动提案",
