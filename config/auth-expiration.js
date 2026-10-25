@@ -11,7 +11,7 @@
  * ======================================================== */
 'use strict';
 
-export const AE_STORAGE_KEY = 'ae_auth_expire_v1';
+const AE_STORAGE_KEY = 'ae_auth_expire_v1';
 
 export const GRANT_STATUS = Object.freeze({
     ACTIVE: 'active',

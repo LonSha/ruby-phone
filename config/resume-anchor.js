@@ -11,7 +11,7 @@
  * ======================================================== */
 'use strict';
 
-export const RA_STORAGE_KEY = 'ra_anchor_state_v1';
+const RA_STORAGE_KEY = 'ra_anchor_state_v1';
 export const RA_MAX_ANCHORS = 50;
 
 export const ANCHOR_TYPES = Object.freeze({

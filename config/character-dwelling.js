@@ -10,7 +10,7 @@
  * ======================================================== */
 'use strict';
 
-export const CD_STORAGE_KEY = 'cd_dwelling_state_v1';
+const CD_STORAGE_KEY = 'cd_dwelling_state_v1';
 export const CD_MAX_ITEMS = 25;
 
 function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }

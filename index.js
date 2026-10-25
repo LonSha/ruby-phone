@@ -47,6 +47,7 @@ import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
+import { SubsystemOrchestrator } from './config/subsystem-orchestrator.js';
 import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask as mtrNormalizeTask, summarizeTasks as mtrSummarizeTasks,  canTransition as mtrCanTransition, duplicateGuard as mtrDuplicateGuard, selfCheck as mtrSelfCheck } from './config/media-task-registry.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
@@ -313,7 +314,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.57.0';
+const ST_PHONE_VERSION = '4.75.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -1994,6 +1995,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         // 记忆系统: 全局单例, 启动即活 (后台采集/巩固/AI注入 不依赖 App 打开)
         try {
+            window.VirtualPhone.subsystems = new SubsystemOrchestrator(storage);
             window.VirtualPhone.memoryCore = new MemoryCore(storage);
             window.VirtualPhone.memoryCore.attachPromptHook();
             /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
@@ -6132,6 +6134,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     }
 
 
+    window.VirtualPhone.runtimeStats = getRuntimeStats;
     // [v4.55.0] 魔坊状态重建与离线提示词逻辑外移至 apps/mofo/mofo-sync.js (-746行)
     bindMofoSyncDeps({
         storage,

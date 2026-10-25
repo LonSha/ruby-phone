@@ -10,7 +10,7 @@
  * ======================================================== */
 'use strict';
 
-export const AS_STORAGE_KEY = 'as_action_stack_v1';
+const AS_STORAGE_KEY = 'as_action_stack_v1';
 export const AS_MAX_STACK = 40;
 
 export const ACTION_STATUS = Object.freeze({

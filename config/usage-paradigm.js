@@ -12,7 +12,7 @@
  * ======================================================== */
 'use strict';
 
-export const UP_STORAGE_KEY = 'up_paradigm_state_v1';
+const UP_STORAGE_KEY = 'up_paradigm_state_v1';
 
 export const PARADIGM_IDS = Object.freeze({
     CREATIVE: 'creative',     // 创作工坊：文字、长篇、媒体、设计优先

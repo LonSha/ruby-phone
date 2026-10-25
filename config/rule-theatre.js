@@ -11,8 +11,8 @@
  * ======================================================== */
 'use strict';
 
-export const RT_STORAGE_KEY = 'rt_rules_state_v1';
-export const RT_MAX_RULES = 30;
+const RT_STORAGE_KEY = 'rt_rules_state_v1';
+const RT_MAX_RULES = 30;
 
 export const RULE_TRIGGERS = Object.freeze({
     MESSAGE_RECEIVED: 'message_received',

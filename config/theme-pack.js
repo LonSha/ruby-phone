@@ -10,7 +10,7 @@
  * ======================================================== */
 'use strict';
 
-export const TP_STORAGE_KEY = 'tp_theme_state_v1';
+const TP_STORAGE_KEY = 'tp_theme_state_v1';
 
 export const THEME_PRESETS = Object.freeze({
     OBSIDIAN_PURE: {

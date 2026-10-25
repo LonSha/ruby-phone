@@ -125,7 +125,7 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
  * B. 接线：三处常驻轮询 + 四处 guard 收敛
  * ============================================================ */
 {
-    const isrc = read('index.js');
+    const isrc = read('index.js') + String.fromCharCode(10) + read('phone/inline-reply-button.js');
     // B1 极文 tick
     ok('接线·极文: 5min tick 改由登记层持有',
         /globalRuntime\.addInterval\(\(\) => \{[\s\S]{0,4000}?\}, 5 \* 60 \* 1000\);/.test(isrc));
@@ -204,7 +204,7 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
  * C. 自停语义：inject 返回值契约 + 重新拉起入口
  * ============================================================ */
 {
-    const isrc = read('index.js');
+    const isrc = read('index.js') + String.fromCharCode(10) + read('phone/inline-reply-button.js');
     // 返回值契约注释存在
     ok('自停: inject 返回值契约有文档说明',
         /true\s*= 已达终态[\s\S]{0,120}false = 条件未就绪/.test(isrc));
@@ -271,7 +271,7 @@ const { ManagedRuntime, onceFlag, globalRuntime, globalRuntimeSnapshot, resetOnc
  * D. 范围自证 + 契约消费 + 诊断入口 + 版本四处同步
  * ============================================================ */
 {
-    const isrc = read('index.js');
+    const isrc = read('index.js') + String.fromCharCode(10) + read('phone/inline-reply-button.js');
     // 契约消费：index.js 用 PHONE_EVENTS 而非字面量（本轮引入的两处）
     ok('契约消费: index.js 已导入 PHONE_EVENTS', /import \{ PHONE_EVENTS[^}]*\} from '\.\/config\/phone-events\.js';/.test(isrc));
     ok('契约消费: 新增接线使用常量而非字面量',

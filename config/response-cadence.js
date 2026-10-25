@@ -11,7 +11,7 @@
  * ======================================================== */
 'use strict';
 
-export const RC_STORAGE_KEY = 'rc_cadence_state_v1';
+const RC_STORAGE_KEY = 'rc_cadence_state_v1';
 
 export const CADENCE_STATES = Object.freeze({
     IMMEDIATE: 'immediate',         // 即时在线，秒回

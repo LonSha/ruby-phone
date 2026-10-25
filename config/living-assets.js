@@ -10,8 +10,8 @@
  * ======================================================== */
 'use strict';
 
-export const LA_STORAGE_KEY = 'la_living_assets_v1';
-export const LA_MAX_ASSETS = 30;
+const LA_STORAGE_KEY = 'la_living_assets_v1';
+const LA_MAX_ASSETS = 30;
 
 export const LIVING_ASSET_KINDS = Object.freeze({
     ARTWORK: 'artwork',

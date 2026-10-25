@@ -10,9 +10,9 @@
  * ======================================================== */
 'use strict';
 
-export const UE_STORAGE_KEY = 'ue_urban_economy_v1';
+const UE_STORAGE_KEY = 'ue_urban_economy_v1';
 
-export const ASSET_TYPES = Object.freeze({
+const ASSET_TYPES = Object.freeze({
     CURRENCY: 'currency',
     TRUST: 'trust',
     PLEDGE: 'pledge',
