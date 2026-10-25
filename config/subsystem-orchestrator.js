@@ -64,6 +64,24 @@ import { executeTransaction } from './urban-economy.js';
 import { resolveActiveParadigm, switchParadigm, saveCustomParadigm, resolveAppOrder, filterNoticesByParadigm } from './usage-paradigm.js';
 import { saveWorkPackage, startWorkPackageInstance, advanceInstanceStep } from './user-work-package.js';
 import { VolumeChronicleManager } from './volume-chronicle.js';
+import { DynamicAtmosphereLighting } from './dynamic-atmosphere-lighting.js';
+import { DynamicMomentsFeed } from './dynamic-moments-feed.js';
+import { MimicCommEngine } from './mimic-comm-engine.js';
+import { SpotlightUniversalSearch } from './spotlight-universal-search.js';
+import { SubconsciousDreamscapeMirror } from './subconscious-dreamscape-mirror.js';
+import { SystemNotificationDispatcher } from './system-notification-dispatcher.js';
+import { SmartGalleryVault } from './smart-gallery-vault.js';
+import { BatteryThermodynamics } from './battery-thermodynamics.js';
+import { CellularSignalSim } from './cellular-signal-sim.js';
+import { VirtualFileSystem } from './virtual-file-system.js';
+import { HapticPredictiveIme } from './haptic-predictive-ime.js';
+import { CloudDriveSync } from './cloud-drive-sync.js';
+import { ShortVideoLiveHub } from './short-video-live-hub.js';
+import { HyperlocalDeliveryService } from './hyperlocal-delivery-service.js';
+import { AmbientAudioWiretap } from './ambient-audio-wiretap.js';
+import { SmartBandBiometrics } from './smart-band-biometrics.js';
+import { ParallelPersonaSpaces } from './parallel-persona-spaces.js';
+import { CalendarAutonomousLifeEngine } from './calendar-autonomous-life.js';
 
 export class SubsystemOrchestrator {
     constructor(storage) {
@@ -74,6 +92,27 @@ export class SubsystemOrchestrator {
         this.schedules = new QianshiScheduleManager();
         this.advisor = new InteractionAdvisor();
         this.mutexGuard = new LoaderMutexTokenGuard();
+        
+        // 第十期 (R10) 拟真与认知机制全量汇流挂载
+        this.mimicComm = new MimicCommEngine({ storage });
+        this.notifications = new SystemNotificationDispatcher({ storage });
+        this.atmosphere = new DynamicAtmosphereLighting();
+        this.spotlight = new SpotlightUniversalSearch({ storage });
+        this.moments = new DynamicMomentsFeed({ storage });
+        this.subconscious = new SubconsciousDreamscapeMirror({ storage });
+        this.galleryVault = new SmartGalleryVault({ storage });
+        this.battery = new BatteryThermodynamics({ storage });
+        this.cellular = new CellularSignalSim({ storage });
+        this.vfs = new VirtualFileSystem({ storage });
+        this.ime = new HapticPredictiveIme();
+        this.cloudDrive = new CloudDriveSync({ storage });
+        this.shortVideo = new ShortVideoLiveHub({ storage });
+        this.delivery = new HyperlocalDeliveryService({ storage });
+        this.wiretap = new AmbientAudioWiretap({ storage });
+        this.smartBand = new SmartBandBiometrics({ storage });
+        this.personaSpaces = new ParallelPersonaSpaces({ storage });
+        this.calendarLife = new CalendarAutonomousLifeEngine();
+
         this._initializedAt = Date.now();
     }
 
@@ -458,5 +497,52 @@ export class SubsystemOrchestrator {
         const resumed = resumeProactiveScheduler();
         const adjudicated = adjudicateCharacterProposal(charId, proposal);
         return { rejected, resumed, adjudicated };
+    }
+
+    /**
+     * 第十期 (R10) 全局生活流时钟推进 (跨应用动力学、生理、弱网与光影协同)
+     */
+    advanceAutonomousLifeStep(elapsedMinutes = 15, currentScenario = 'NORMAL', actorStates = {}) {
+        // 1. 电池动力学流转
+        const batteryReport = this.battery.tick(elapsedMinutes);
+
+        // 2. 环境弱网模拟与离线冲刷
+        const netReport = this.cellular.applyEnvironmentScenario(currentScenario);
+
+        // 3. 生理手环联动
+        let biometricsReport = null;
+        if (currentScenario === 'PANIC' || currentScenario === 'CONFRONTATION') {
+            biometricsReport = this.smartBand.modulateBiometricsByEvent(currentScenario);
+            if (biometricsReport.alert) {
+                this.notifications.post({
+                    appId: 'smart_band',
+                    title: '健康异动预警',
+                    body: biometricsReport.alert.message,
+                    priority: 'URGENT'
+                });
+            }
+        }
+
+        // 4. 日程扫描与提醒生成
+        const upcomingAlerts = this.calendarLife.scanUpcomingAlerts(Date.now(), 15 * 60 * 1000);
+        upcomingAlerts.forEach(alert => {
+            this.notifications.post({
+                appId: 'calendar',
+                title: alert.title,
+                body: alert.content,
+                priority: alert.urgency
+            });
+        });
+
+        // 5. 光影环境自适应
+        const atmosphereSnapshot = this.atmosphere.computeAtmosphere(14, 'CLEAR');
+
+        return {
+            battery: batteryReport,
+            cellular: netReport,
+            biometrics: biometricsReport,
+            alerts: upcomingAlerts,
+            atmosphere: atmosphereSnapshot
+        };
     }
 }
