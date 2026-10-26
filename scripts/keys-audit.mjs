@@ -188,6 +188,22 @@ const isChatByMechanism = (key) => patterns.some((p) => {
  * ⚠️ 这是**准入清单**：新增键必须登记，否则 K1 红灯；K3 检查每条是否还活着。 */
 const KEY_REGISTRY = [
   // ══ 会话隔离（chatMetadata）══
+  // ══ [v4.85.0 · R10] 第十期拟真机制会话隔离数据 ══
+  { key: 'audio_wiretap_records', scope: 'chat', note: '环境窃听解密与录音留痕' },
+  { key: 'autonomous_life_events_history', scope: 'chat', note: '角色自驱生活偶发事件发生历史' },
+  { key: 'battery_thermo_state', scope: 'chat', note: '电池热动力学与电量放电状态' },
+  { key: 'cellular_sim_outbox', scope: 'chat', note: '弱网模拟与离线冲刷出站队列' },
+  { key: 'cloud_drive_sync_records', scope: 'chat', note: '虚拟云盘文件与同端同步记录' },
+  { key: 'dreamscape_mirror_records', scope: 'chat', note: '手机潜意识梦境镜像与深夜草稿物化' },
+  { key: 'gallery_public_photos', scope: 'chat', note: '智能相册公开流照片' },
+  { key: 'gallery_vault_photos', scope: 'chat', note: '智能相册隐秘保险箱照片' },
+  { key: 'hyperlocal_delivery_orders', scope: 'chat', note: '同城外卖投喂与骑手履约订单' },
+  { key: 'moments_feed_posts_v2', scope: 'chat', note: '全景朋友圈2.0动态流与角色互动' },
+  { key: 'parallel_persona_spaces_data', scope: 'chat', note: '多账户分身空间隔离数据' },
+  { key: 'smart_band_biometrics_data', scope: 'chat', note: '健康手环生理指标与心率压力' },
+  { key: 'sv_videos_feed', scope: 'chat', note: '拟真短视频与直播动态流' },
+  { key: 'sys_notifications_queue', scope: 'chat', note: '系统级常驻通知中心待投递队列' },
+  { key: 'vfs_files_registry', scope: 'chat', note: '虚拟文件系统目录与文件注册表' },
   { key: 'wechat_data', scope: 'chat', note: '微信主数据' },
   { key: 'wechat_contact_memory_v1', scope: 'chat', note: '微信联系人记忆' },
   { key: 'wechat_message_sound_enabled', scope: 'chat', note: '微信消息音开关' },

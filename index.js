@@ -314,7 +314,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.75.0';
+const ST_PHONE_VERSION = '4.85.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -519,12 +519,12 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-24",
+    date: "2026-03-31",
     items: [
-        "◈ 视觉体系升级：黑曜石钛极·赛博终端设计系统，呈现冷黛金属质感与空间景深微光",
-        "◈ 架构轻量化：主入口深度瘦身优化，显著降低内存占用并大幅提升启动流畅度",
-        "◈ 街区与生活沙盒：第七期拓展特性全量落地，丰富日常互动与平行沙盒沉浸演进",
-        "◈ 体系稳固：版本升至 4.55.0（五源同源），完善底层全链路异常熔断机制"
+        "◈ R10-O1~O9 拟真通信、常驻通知、光影演算、全局搜索、智能相册、电池动力、弱网排队、虚拟文件系统与触感输入法全量落地",
+        "◈ R10-X1~X9 虚拟网盘、短视频直播、全景朋友圈2.0、外卖投喂、窃听解密、生理手环、分身空间、日程管家与梦境镜像全量落地",
+        "◈ 机制编排中枢：subsystem-orchestrator 汇流 18 项机制，支持 advanceAutonomousLifeStep 生活流全局协同推进",
+        "◈ 体系稳固：全仓 637 模块与全覆盖契约套件（前沿机制、深层优化、系统编排集成）自动化测试 100% 通过"
     ]
 };
 

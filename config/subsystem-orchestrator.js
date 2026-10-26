@@ -67,7 +67,8 @@ import { VolumeChronicleManager } from './volume-chronicle.js';
 import { DynamicAtmosphereLighting } from './dynamic-atmosphere-lighting.js';
 import { DynamicMomentsFeed } from './dynamic-moments-feed.js';
 import { MimicCommEngine } from './mimic-comm-engine.js';
-import { SpotlightUniversalSearch } from './spotlight-universal-search.js';
+import { SpotlightUniversalSearch, SEARCH_DOMAINS } from './spotlight-universal-search.js';
+import { AutonomousLifeScheduler } from './autonomous-life-scheduler.js';
 import { SubconsciousDreamscapeMirror } from './subconscious-dreamscape-mirror.js';
 import { SystemNotificationDispatcher } from './system-notification-dispatcher.js';
 import { SmartGalleryVault } from './smart-gallery-vault.js';
@@ -98,6 +99,7 @@ export class SubsystemOrchestrator {
         this.notifications = new SystemNotificationDispatcher({ storage });
         this.atmosphere = new DynamicAtmosphereLighting();
         this.spotlight = new SpotlightUniversalSearch({ storage });
+        this.autonomousScheduler = new AutonomousLifeScheduler({ storage });
         this.moments = new DynamicMomentsFeed({ storage });
         this.subconscious = new SubconsciousDreamscapeMirror({ storage });
         this.galleryVault = new SmartGalleryVault({ storage });
@@ -503,6 +505,10 @@ export class SubsystemOrchestrator {
      * 第十期 (R10) 全局生活流时钟推进 (跨应用动力学、生理、弱网与光影协同)
      */
     advanceAutonomousLifeStep(elapsedMinutes = 15, currentScenario = 'NORMAL', actorStates = {}) {
+        // 0. 自主生活节律与意图检索域校验
+        const searchDomains = Object.values(SEARCH_DOMAINS);
+        const routinePhase = this.autonomousScheduler ? this.autonomousScheduler.resolveRoutinePhase(new Date().getHours()) : null;
+
         // 1. 电池动力学流转
         const batteryReport = this.battery.tick(elapsedMinutes);
 
