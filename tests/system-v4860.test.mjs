@@ -67,16 +67,18 @@ import { HealthData } from '../apps/health/health-data.js';
 /* ============================================================ */
 /* A 面：版本锚与结构自证                                       */
 /* ============================================================ */
-test('A1: manifest.json 与 package.json 版本对齐 BORN_V', () => {
+const vnumCmp = (a, b) => { const A = a.split('.').map(Number), B = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) { if (A[i] !== B[i]) return A[i] - B[i]; } return 0; };
+test('A1: manifest.json 与 package.json 版本 >= BORN_V（下限形交棒）', () => {
   const man = JSON.parse(read('manifest.json'));
   const pkg = JSON.parse(read('package.json'));
-  assert.equal(man.version, BORN_V, 'manifest 版本必须为 4.86.0');
-  assert.equal(pkg.version, BORN_V, 'package.json 版本必须为 4.86.0');
+  assert.ok(vnumCmp(man.version, BORN_V) >= 0, 'manifest 版本 ' + man.version + ' < ' + BORN_V);
+  assert.ok(vnumCmp(pkg.version, BORN_V) >= 0, 'package 版本 ' + pkg.version + ' < ' + BORN_V);
 });
 
-test('A2: update-log.json latest 指针与版本条目完整', () => {
+test('A2: update-log.json latest 指针与版本条目完整（下限形交棒）', () => {
   const log = JSON.parse(read('update-log.json'));
-  assert.equal(log.latest, BORN_V, 'update-log latest 指针必须为 4.86.0');
+  assert.ok(vnumCmp(log.latest, BORN_V) >= 0, 'update-log latest ' + log.latest + ' < ' + BORN_V);
   assert.ok(log.versions[BORN_V], '必须存在 4.86.0 版本条目');
   assert.ok(Array.isArray(log.versions[BORN_V].items), '条目 items 必须为数组');
   assert.ok(log.versions[BORN_V].items.length >= 3, '4.86.0 至少记录 3 项技术改动');

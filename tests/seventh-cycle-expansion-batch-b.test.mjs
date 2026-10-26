@@ -44,7 +44,7 @@ test('RubyPhone · 第七期拓展批次 B · R7-X3 创作者生涯与委托市�
         // 1. 澄清与报价
         comm = clarifyAndQuoteCommission(comm, {
             budget: 500,
-            deadline: Date.now() + 10 * 86400000,
+            dueTime: Date.now() + 10 * 86400000,
             license: LICENSE_TYPES.COMMERCIAL_EXCLUSIVE,
             requirements: '突出古树与晨光'
         });

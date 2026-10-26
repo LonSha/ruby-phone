@@ -57,6 +57,10 @@ export const PHONE_EVENTS = Object.freeze({
     //   R4-X6 的因果线追溯起点是两个**真派发**的对外事件，当时漏登本契约表。
     //   与 v2.26.0 的 PET_STATECHANGE 同形：有派发、无契约 ⇒ 打错一个字只会静默失联。
     //   成因同族：全量回归被禁期间没人跑到那条对账判据。
+    // [v4.87.0] 外壳代退一层（_forceLayerBack）成功后派发：宿主（index.js）据此把
+    //   currentApp 对齐到退到的那一层 —— 43 个 view 经 getContentContainer() 按
+    //   currentApp 取图层，不同步会把下一次渲染写进上一个 App 的图层（静默错位）。
+    VIEW_BACK: 'phone:viewBack',
     CANON_ADOPT: 'phone:canonAdopt',
     CAUSAL_SOURCE: 'phone:causalSource',
     // [v4.29.0 · R4-X7] 群聊投票的**确认转交**：本仓只把「哪一份活动、谁参加」
@@ -151,6 +155,11 @@ export const PHONE_EVENT_CONTRACT = Object.freeze({
         kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',
         note: '因果线追溯起点（v4.27.0 · R4-X6）：detail 带 {ref,id}。'
             + '把「用户要追哪条线」转给宿主，本仓不替它确认因果。'
+    },
+    [PHONE_EVENTS.VIEW_BACK]: {
+        kind: PHONE_EVENT_KINDS.NAVIGATION, target: 'window',
+        note: '外壳代退一层成功（v4.87.0）：detail 带 {appId, from}，宿主消费。'
+            + '仅在外壳替「没实现返回逻辑的 App」退层时派发；App 自行处理返回不派发。'
     },
     [PHONE_EVENTS.GROUP_VOTE_CONFIRM]: {
         kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',

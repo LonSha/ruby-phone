@@ -305,7 +305,10 @@ const idxCode = codeOf(idx);
         && /releaseVerdict:\s*\{\s*rows:\s*\[\]/.test(idxCode));
     ok('D5 两个新账本从内核导入（不是本地造对象）',
         /childRuntimePrematureLog/.test(idxCode.split('\n').find(l => l.includes("from './config/runtime-lifecycle.js'")) || ''));
-    ok('D6 一行入口暴露给控制台', /window\.VirtualPhone\.releaseTally\s*=/.test(idxCode));
+    /* [v4.87.0 交棒] v4.55.0 把魔坊状态同步剥出 index.js（apps/mofo/mofo-sync.js），
+     *   releaseTally 一行入口真身在 mofo-sync —— 判据改读真身文件。 */
+    ok('D6 一行入口暴露给控制台（真身：apps/mofo/mofo-sync.js）',
+        /window\.VirtualPhone\.releaseTally\s*=/.test(codeOf(read('apps/mofo/mofo-sync.js'))));
 
     /* D7 判词函数的自洽检查（fail-closed）：真实执行，三种输入都要不抛且结论正确 */
     {
@@ -464,9 +467,9 @@ function negative(fn, label) {
         const rlCode = codeOf(read('config/runtime-lifecycle.js'));
         ok('F9a 剥注释副本不得残留本版注释独有字样（宿主）',
             !idxCode.includes('回收口径一句话：控制台执行'));
-        ok('F9b 剥注释不得吞掉代码本体（宿主）',
+        ok('F9b 剥注释不得吞掉代码本体（宿主 + 入口真身）',
             idxCode.includes('function explainReleaseTally')
-            && idxCode.includes('window.VirtualPhone.releaseTally'));
+            && codeOf(read('apps/mofo/mofo-sync.js')).includes('window.VirtualPhone.releaseTally'));
         ok('F9c 剥注释副本不得残留本版注释独有字样（内核）',
             !rlCode.includes('账本口径分账（v2.31 的「按对象计一笔」保留为 released）'));
         ok('F9d 剥注释不得吞掉代码本体（内核）',

@@ -18,15 +18,15 @@
   ]
  },
  "readings": {
-  "files_scanned": 499,
+  "files_scanned": 588,
   "rollback_points": 41,
   "rollback_files": 4,
   "rollback_entry_defs": 12,
   "upstream_global_read_sites": 4,
-  "chat_data_patterns": 334,
+  "chat_data_patterns": 396,
   "namespace_store_sites": 5,
   "checkpoint_face_hits": 0,
-  "preview_face_hits": 34,
+  "preview_face_hits": 36,
   "branch_face_hits": 0,
   "upstream_modules_scanned": 65,
   "upstream_branch_domain_modules": 18,

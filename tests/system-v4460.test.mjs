@@ -609,11 +609,14 @@ test('E3 样式双侧投递：源样式与 phone.css 打包侧逐类同投', () 
     for (const st of ['affected', 'unaffected', 'untracked', 'no-fact']) {
         assert.ok(appCssSrc.indexOf('.mem-sr-' + st) >= 0, '缺逐行态配色 ' + st);
     }
-    /* 段头必须独立成行（本仓踩过粘连坑），且打包侧与源段逐字同源。 */
+    /* 段头必须独立成行（本仓踩过粘连坑），且打包侧与源段逐字同源。
+     * [v4.87.0 交棒] 提取到下一段注释（v4.48.0）前为止，防止 phone.css 追加后续段落导致 slice 尾部溢出 */
     const seg = (src) => {
         const i = src.indexOf('[v4.46.0 · R5-X6]');
         assert.ok(i >= 0, '缺本版段头');
-        return src.slice(i).trim();
+        const rest = src.slice(i);
+        const j = rest.indexOf('/* ===== [v4.');
+        return (j < 0 ? rest : rest.slice(0, j)).trim();
     };
     assert.equal(seg(bundleCssSrc), seg(appCssSrc), '★ phone.css 的本版段必须与 apps/memory/memory.css 逐字同源');
 });

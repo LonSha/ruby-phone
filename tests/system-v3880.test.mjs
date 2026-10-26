@@ -716,7 +716,8 @@ test('v3880 E1. 版本锚（下限形）：五源同源且不低于 3.88.0', () 
         return 0;
     };
     assert.ok(cmp(nums[0], '3.88.0') >= 0, '版本不得低于 3.88.0（本版是它的落地版）：' + nums[0]);
-    const entry = log.versions && log.versions[log.latest];
+    /* ★ [v4.87.0 · 抬版接管] 当版条目锁历史成立版 3.88.0 */
+    const entry = log.versions && log.versions['3.88.0'];
     assert.ok(entry, '当版条目必须在 update-log 里');
     assert.ok(Array.isArray(entry.items) && entry.items.length >= 8,
         '当版条目数下限 8（计划交付至少八条）：' + (entry.items || []).length);
@@ -726,9 +727,13 @@ test('v3880 E1. 版本锚（下限形）：五源同源且不低于 3.88.0', () 
         assert.ok(!/[\[\]\\]/.test(s), '条目内不许出现方括号与反斜杠：' + s.slice(0, 24));
         assert.ok(!s.includes(String.fromCharCode(34)), '条目内不许出现双引号：' + s.slice(0, 24));
     }
-    const block = idx.slice(idx.indexOf('const ST_PHONE_CURRENT_UPDATE = {'));
-    for (const it of entry.items) {
-        assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
+    /* ★ [v4.87.0 · 抬版接管] 公告块只在当版（当前最高版）保持逐条同源，历史版不强约束最新弹窗内容 */
+    const curEntry = log.versions && log.versions[log.latest];
+    if (log.latest === '3.88.0') {
+        const block = idx.slice(idx.indexOf('const ST_PHONE_CURRENT_UPDATE = {'));
+        for (const it of curEntry.items) {
+            assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
+        }
     }
     /* [v3.89.0 交棒] 原句把上一版专有词（**v3.88.0 复校**）当复校锚 —— 抬版即红，
      *   且把本层这件事偷换成上一版那件事。改写为**下限形**：复校标记必须是当版，

@@ -14,8 +14,15 @@ import { ManagedRuntime, childRuntime } from '../config/runtime-lifecycle.js';  
 import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
 // [v2.99.0] 返回键守卫：缝合自上游「瑟瑟小手机 V1.059」的 __ubBackGuard。
 //   本仓此前全库零 popstate —— 物理返回键与浏览器返回完全不响应；
-//   右滑手势（SWIPE_BACK）只退视图、不关浮层。两者分工见 config/back-guard.js 头注。
+//   右滑手势（SWIPE_BACK，即 'phone:swipeBack'）只退视图、不关浮层。两者分工见 config/back-guard.js 头注。
 import { installBackGuard, registerBackCloser } from '../config/back-guard.js';
+/* [v4.87.0] App 表面色（深/浅两档的唯一真源）。
+ *   为什么要它：真机实测「约会大作战」整页透出桌面壁纸与状态栏 —— 图层建的时候是
+ *   `background: transparent`，而该 App 的 CSS 从未声明根容器背景（只有 padding），
+ *   且它的字色是**浅色**（标题色是 #f0f0f0 一类的浅灰）。
+ *   所以修法不能一律补白：浅底 + 浅字 = 字直接消失（比透底更糟）。
+ *   深/浅两档按各 App 的实际字色统计得出，表与判据同在 config/app-surfaces.js。 */
+import { appSurface, appSurfaceColor, normalizeSurfaceAppId } from '../config/app-surfaces.js';
 
 export class PhoneShell {
     constructor() {
@@ -35,6 +42,14 @@ export class PhoneShell {
         this.lockScreen = null;
         // 🔥 视觉历史栈（滑动返回用）
         this.viewHistory = [];
+        /* [v4.87.0] 视图状态版本号：**唯一**用于「App 到底接没接住这次返回」的判据。
+         *   为什么要这个数：修前返回键的判据是「550ms 后图层还偏着没偏」——
+         *   而滑动残留的 transform 与「App 有没有换页」是两件事，于是把
+         *   「已换页但仍带 transform」误判成「没退」，反过来把弹出的历史栈又压回去
+         *   （真机实测：返回键点了原地不动，下一次点击被判定在桌面而静默拒绝）。
+         *   现在改成：派发 `phone:swipeBack` 前后对比本计数器 —— 只要 App 中途走过
+         *   `_applyViewLayerState`（setContent / layerHost 任一），就是真接住了。 */
+        this._viewStateVersion = 0;
         // [v2.17.0] 横幅交互回调（由 index.js 注入）：
         //   onBannerAction(appId, notif)  点击横幅 → 跳转目标 App；未注入则点击仅收起横幅。
         //   onBannerDismiss(notif)        点击收起时通知宿主（用于把该条落账标记已读）。
@@ -690,29 +705,73 @@ export class PhoneShell {
         if (resetOpacity) target.style.opacity = '';
     }
 
+    /* ============================================================
+     * [v4.87.0] 右滑/返回键的**唯一**回退机制
+     * ------------------------------------------------------------
+     * 修前实测（真机截图：「约会大作战」按返回键点了原地不动）：
+     *   ① 派发前先把 `viewHistory` 弹掉一层（`poppedView`），App 若没接住，
+     *      历史栈已经和 DOM 脱钩 —— 回弹逻辑再把 `poppedView` 压回去也只是
+     *      假装恢复，栈序已经变了；
+     *   ② 判定「App 有没有接住」用的是 **550ms 后图层还偏不偏**（transform 字符串）。
+     *      transform 残留 ≠ App 没换页：真正换过页的 App 也可能带着手势位移，
+     *      于是被判成「没退」，图层被 `_resetSwipeLayer` 拉回原位 —— 用户看到
+     *      「点了返回，画面弹回去」，再点一次时 `isAtHomeScreen()` 已因栈错位
+     *      返回 true，直接静默 return（返回键彻底瘫痪）。
+     *   全仓 89 个 App 只有 13 个实现了 `handleSwipeBack`，其余 76 个**从来
+     *   没有人接这个事件**，所以上面两条几乎是必然触发的。
+     *
+     * 现在做三件事：
+     *   ① 不再预先弹栈 —— App 自己 setContent / goHome 会正确维护历史栈；
+     *   ② 判据换成 `_viewStateVersion`（`_applyViewLayerState` 每跑一次自增）：
+     *      App 只要换过页 / 回过桌面 / 重建过图层，就一定变过，**与 transform 无关**；
+     *   ③ 两个观察窗（600ms + 500ms）都没变过 ⇒ 判定「无 App 接住」，由外壳
+     *      **代为退一层**（`_forceLayerBack`）；退不动就回桌面。
+     *      这是「默认安全降级」：76 个没写返回逻辑的 App 从此也能退出。
+     * ============================================================ */
     _dispatchSwipeBackWithFallback(target) {
         const startViewId = target?.getAttribute?.('data-view-id') || '';
-        let poppedView = null;
+        const startVersion = this._viewStateVersion;
         setTimeout(() => {
-            if (this.viewHistory.length > 1) {
-                poppedView = this.viewHistory.pop();
-            }
-            window.dispatchEvent(new CustomEvent('phone:swipeBack'));
-
-            setTimeout(() => {
-                if (!target || !target.isConnected) return;
-                const currentView = this.container?.querySelector('.phone-view-current');
-                const currentViewId = currentView?.getAttribute?.('data-view-id') || '';
-                const transform = String(target.style.transform || '').trim();
-                const isStillShifted = !!transform && !/^translate3d\(\s*0(?:px)?\s*,\s*0(?:px)?\s*,\s*0(?:px)?\s*\)$/i.test(transform);
-                if (currentView === target && currentViewId === startViewId && isStillShifted) {
-                    this._resetSwipeLayer(target, { animate: true, resetOpacity: false });
-                    if (poppedView?.id && !this.viewHistory.some(item => item.id === poppedView.id)) {
-                        this.viewHistory.push(poppedView);
-                    }
+            window.dispatchEvent(new CustomEvent(PHONE_EVENTS.SWIPE_BACK, { detail: { source: 'back', viewId: startViewId } }));
+            const settle = (delay, isFinal) => setTimeout(() => {
+                /* 【判据】App 真的动过视图状态 ⇒ 它接住了，外壳不再插手。
+                 *   只把可能残留的手势位移复位（这一步纯视觉，幂等）。 */
+                if (this._viewStateVersion !== startVersion) {
+                    if (target && target.isConnected) this._resetSwipeLayer(target, { animate: true, resetOpacity: false });
+                    return;
                 }
-            }, 550);
+                if (!isFinal) { settle(500, true); return; }
+                /* 【降级】两个窗口都没人接：外壳替它退一层。 */
+                this._forceLayerBack(target);
+            }, delay);
+            settle(600, false);
         }, 250);
+    }
+
+    /* [v4.87.0] 无 App 接住返回事件时的安全降级：退到历史栈里的**真正上一层**。
+     *   为什么不是一律 goHome：从搜索点进某个没写返回逻辑的 App，用户的预期是
+     *   回到搜索而不是回桌面（本仓 v4.15.0 已把「逐层退」定为返回语义，这里沿用）。
+     *   为什么退不动才 goHome：回桌面永远是最后一档，不取消。
+     *   退成后派发 `phone:viewBack`，让宿主（index.js）把 currentApp 同步过去 ——
+     *   否则 `getContentContainer()` 仍按旧 appId 建层，下一次渲染会写进错误的图层。 */
+    _forceLayerBack(target) {
+        const hist = Array.isArray(this.viewHistory) ? this.viewHistory : [];
+        const startViewId = target?.getAttribute?.('data-view-id') || '';
+        const idx = hist.findIndex(v => v && v.id === startViewId);
+        const from = Math.max(0, (idx > 0 ? idx - 1 : hist.length - 2));
+        for (let i = from; i >= 0; i--) {
+            const id = hist[i] && hist[i].id;
+            if (!id || id === 'home') continue;
+            this._applyViewLayerState(id);
+            try {
+                window.dispatchEvent(new CustomEvent('phone:viewBack', {
+                    detail: { appId: normalizeSurfaceAppId(id), from: normalizeSurfaceAppId(startViewId) }
+                }));
+            } catch (_e) { /* 宿主没接也无妨：图层已经退回上一层 */ }
+            return { ok: true, reason: 'layer-back', to: id };
+        }
+        this.goHome();
+        return { ok: true, reason: 'home' };
     }
 
      bindPanelEvents() {
@@ -926,6 +985,13 @@ export class PhoneShell {
         const atHome = this.isAtHomeScreen();
         btn.classList.toggle('is-hidden', atHome);
         btn.setAttribute('aria-hidden', String(atHome));
+        /* [v4.87.0] 深色表面 App 上返回键要换成深底浅字，否则白胶囊压在深色页上
+         *   会像一块补丁（真机截图里它比 App 内容还亮）。
+         *   为什么用类而不是 CSS 兄弟选择器：按钮在 `.phone-screen` 直系、
+         *   图层在 `.view-stack-container` 里，二者是堂兄弟，`~` 够不到。 */
+        const curId = this.container?.querySelector?.('.phone-view-current')?.getAttribute?.('data-view-id') || '';
+        const darkSurface = !atHome && appSurface(curId) === 'dark';
+        btn.classList.toggle('is-dark-surface', darkSurface);
         // 内联 display 兜底：宿主可能在别处用 !important 压过样式表（本仓已知形态），
         //   故走 inline style 直写，不依赖 CSS 优先级。
         btn.style.display = atHome ? 'none' : '';
@@ -1323,7 +1389,14 @@ export class PhoneShell {
             if (!create) return null;
             layer = document.createElement('div');
             layer.setAttribute('data-view-id', id);
-            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:transparent;overflow:hidden;border-radius:inherit;';
+            /* [v4.87.0] 底板按 App 的**字色倾向**铺深/浅两档，不再一律透明也不再一律白。
+             *   修前：`background: transparent` ⇒ 整个应用层透出桌面壁纸、状态栏时钟与电量
+             *   （真机实测截图「约会大作战」整页透底）。
+             *   修法：home 图层保持透明（桌面自己要显示壁纸），其余图层铺实底。 */
+            const surface = (normalizeSurfaceAppId(id) === 'home') ? 'transparent' : appSurfaceColor(id);
+            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;'
+                + `background:${surface};overflow:hidden;border-radius:inherit;`;
+            layer.setAttribute('data-app-surface', normalizeSurfaceAppId(id) === 'home' ? 'home' : appSurface(id));
             stack.appendChild(layer);
         }
         /* 登记为当前层：否则这个图层不会被置顶（返回键不出现），且下一次 setContent
@@ -1337,6 +1410,11 @@ export class PhoneShell {
      *   「直接写图层宿主」的 App 也必须走同一套—— 否则它们写进去的图层不会被置顶（返回键不出现），
      *   且会在下一次 setContent 的 GC 里被当成孤儿删掉。 */
     _applyViewLayerState(viewId) {
+        /* [v4.87.0] 视图状态版本号自增：**只**用于回答「这次返回有没有 App 接住」。
+         *   任何一次真正的换页/建层都会走到这里（setContent 与 layerHost 共用），
+         *   故它是比「图层 transform 还偏不偏」可靠得多的判据（详见
+         *   `_dispatchSwipeBackWithFallback` 头注里记的那两个真机缺陷）。 */
+        this._viewStateVersion = (Number(this._viewStateVersion) || 0) + 1;
         if (viewId === 'home') this.viewHistory = [];
         const existingIndex = this.viewHistory.findIndex(v => v.id === viewId);
         if (existingIndex !== -1) {

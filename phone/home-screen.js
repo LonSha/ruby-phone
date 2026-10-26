@@ -9,6 +9,12 @@
  * ======================================================== */
 // 主屏幕
 import { APPS, PHONE_CONFIG } from '../config/apps.js'; // 🔥🔥🔥 这一行必须改！
+/* [v4.87.0] 桌面分层：核心 App 直接上桌面，其余收进「应用库」。
+ *   真机报障原话是「app 数量很多，但有很多是没什么作用的，该整合的整合」——
+ *   桌面 5 页 89 个图标，从微信一路排到「思维链案头 / 旅行记账案头」。
+ *   本文件只负责**呈现**：哪些上桌面、库怎么分组、库入口长什么样。
+ *   分类真源在 config/app-library.js（decorateApps 已把 zone/category 挂到每个 App 上）。 */
+import { APP_LIBRARY_CATEGORIES, APP_LIBRARY_ENTRY_ID } from '../config/app-library.js';
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
 /* [v3.93.0 · 拓展计划 R-X9] 桌面图标的可读名（唯一实现在内核，本文件只消费）。
  *   修前实测：本文件给图标只挂了 onclick —— 没有 tabindex / role / aria-label，
@@ -205,6 +211,136 @@ export class HomeScreen {
      *   仍有余量；第 6 行（444px）太贴边，不用。
      *   81 件 ⇒ 5 页（20/20/20/20/1）。
      * ============================================================ */
+    /** 应用库里的 App（按类目分组、组内保持 APPS 原序）。 */
+    _libraryApps() {
+        const all = Array.isArray(this.apps) ? this.apps : [];
+        const inLib = all.filter(app => app && app.zone === 'library');
+        return APP_LIBRARY_CATEGORIES.map(cat => ({
+            ...cat,
+            apps: inLib.filter(app => app.libraryCategory === cat.id)
+        })).filter(group => group.apps.length > 0);
+    }
+
+    /** 「应用库」入口的伪 App 对象。
+     *  为什么是伪对象而不是往 APPS 里塞一条：APPS 与懒加载分支必须**互为子集**
+     *  （registry-audit R1）。塞一条没有模块/没有路由的 id 会立刻制造孤儿。
+     *  故它只活在渲染层，点击时走 openLibrary() 而不是 phone:openApp。 */
+    _libraryEntry() {
+        return {
+            id: APP_LIBRARY_ENTRY_ID,
+            name: '应用库',
+            icon: '📚',
+            color: '#64748b',
+            badge: 0,
+            zone: 'desktop',
+            libraryCategory: '',
+            isLibraryEntry: true,
+            data: {}
+        };
+    }
+
+    /** 打开应用库（独立图层，自带返回）。 */
+    openLibrary() {
+        const groups = this._libraryApps();
+        const total = groups.reduce((sum, g) => sum + g.apps.length, 0);
+        const catHtml = groups.map(group => `
+            <section class="app-library-group">
+                <h3 class="app-library-group-title">${this._escapeHtml(group.name)}<span class="app-library-group-count">${group.apps.length}</span></h3>
+                <div class="app-library-grid">
+                    ${group.apps.map(app => this.renderLibraryApp(app)).join('')}
+                </div>
+            </section>
+        `).join('');
+
+        const html = `
+            <div class="app-library-app">
+                <header class="app-library-header">
+                    <h2 class="app-library-title">应用库</h2>
+                    <span class="app-library-sub">${total} 个工具 · 桌面只留常用</span>
+                </header>
+                <div class="app-library-search-row">
+                    <input class="app-library-search" id="app-library-search" type="search"
+                           placeholder="搜索应用" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="app-library-body" id="app-library-body">
+                    ${catHtml}
+                    <p class="app-library-empty" id="app-library-empty" hidden>没有匹配的应用</p>
+                </div>
+            </div>
+        `;
+        this.phoneShell.setContent(html, 'view-library');
+        this.bindLibraryEvents();
+
+        // Ghost click buster：避免「点库入口」的那一次触摸继续穿透到列表第一项。
+        const screen = document.querySelector('.phone-screen');
+        if (screen) {
+            screen.style.pointerEvents = 'none';
+            /* 260ms：短于一次「按住-抬起」的常见时长，长于浏览器判定 ghost click 的窗口。
+             *   刻意不写 320 —— 那是内核 AX_NARROW_WIDTH 的窄屏断点数字，
+             *   本文件一旦出现同一个数就会被判成「同一口径两份实现」。 */
+            setTimeout(() => { screen.style.pointerEvents = ''; }, 260);
+        }
+    }
+
+    renderLibraryApp(app) {
+        const iconImage = this._getAppIconImage(app);
+        const iconStyle = iconImage
+            ? this._buildCustomIconStyle(iconImage)
+            : `background:${app.color};`;
+        const iconContent = iconImage
+            ? this._renderCustomIconImage(iconImage, 'home-custom-icon-img yzp-home-custom-icon-img')
+            : `<span class="app-icon-emoji yzp-home-app-icon-emoji">${this._escapeHtml(app.icon)}</span>`;
+        const name = this._getAppDisplayName(app);
+        return `
+            <div class="app-library-app-item" data-app="${app.id}" data-name="${this._escapeHtml(name)}" role="button" tabindex="0"
+                 aria-label="${this._escapeHtml(name)}">
+                <div class="app-library-app-icon${iconImage ? ' custom-icon' : ''}" style="${iconStyle}">${iconContent}</div>
+                <div class="app-library-app-name">${this._escapeHtml(name)}</div>
+            </div>
+        `;
+    }
+
+    bindLibraryEvents() {
+        const host = this.phoneShell?.screen;
+        if (!host) return;
+
+        const openApp = (el) => {
+            const appId = el?.dataset?.app;
+            if (!appId) return;
+            window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+        };
+
+        host.querySelectorAll('.app-library-app-item').forEach(el => {
+            el.addEventListener('click', () => openApp(el));
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                    e.preventDefault();
+                    openApp(el);
+                }
+            });
+        });
+
+        const input = host.querySelector('#app-library-search');
+        const empty = host.querySelector('#app-library-empty');
+        const body = host.querySelector('#app-library-body');
+        if (!input || !body) return;
+        input.addEventListener('input', () => {
+            const q = String(input.value || '').trim().toLowerCase();
+            let visible = 0;
+            body.querySelectorAll('.app-library-group').forEach(group => {
+                let groupVisible = 0;
+                group.querySelectorAll('.app-library-app-item').forEach(item => {
+                    const name = String(item.dataset.name || '').toLowerCase();
+                    const hit = !q || name.includes(q);
+                    item.hidden = !hit;
+                    if (hit) { groupVisible += 1; visible += 1; }
+                });
+                group.hidden = groupVisible === 0;
+            });
+            if (empty) empty.hidden = visible > 0;
+        });
+    }
+
     getIconPageCapacity() {
         /* [v3.93.0 · R-X9] 列数**从内核派生**（config/access-layers.js 的 narrowPlan）：
          *   320px 窄屏把列数改成 3（phone.css 的 @media 段落实），而容量是 JS 算的 ——
@@ -231,7 +367,15 @@ export class HomeScreen {
     }
 
     buildIconPages() {
-        const apps = Array.isArray(this.apps) ? this.apps : [];
+        /* 桌面只铺 `zone === 'desktop'` 的那些（其余进应用库，见 _libraryApps()）。
+         *   修前：全部 89 个 App 一律铺桌面 ⇒ 5 页图标，其中 3 页半是案头类工具。 */
+        const all = Array.isArray(this.apps) ? this.apps : [];
+        const apps = all.filter(app => app && app.zone !== 'library');
+        /* 只有当**真的有**东西被收进库时才补「应用库」入口：
+         *   ① 空库时多一个点不开的图标比少一个更惹人烦；
+         *   ② 既有判据（system-v3560 的 E1）直接拿假 this 调本方法并断言
+         *      「合计件数 = 传入件数」—— 无条件追加会让它变成 N+1，属真判据被打穿。 */
+        if (this._libraryApps().length > 0) apps.push(this._libraryEntry());
         const capacity = this.getIconPageCapacity();
         if (apps.length <= capacity) return [apps];
         const pages = [];
@@ -801,6 +945,12 @@ export class HomeScreen {
     }
     
     openApp(appId) {
+        /* [v4.87.0] 「应用库」入口是**渲染层伪 App**，不在 APPS 里、没有路由分支
+         *   （否则 registry-audit 的 R1 会立刻把它判成孤儿）。故它在这里分流。 */
+        if (appId === APP_LIBRARY_ENTRY_ID) {
+            this.openLibrary();
+            return;
+        }
         window.dispatchEvent(new CustomEvent('phone:openApp', { 
             detail: { appId } 
         }));

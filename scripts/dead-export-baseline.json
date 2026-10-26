@@ -32,12 +32,6 @@
       "reason": "妊娠近义判定辅助，引擎对外小工具，仅测试引用；接入点未定。"
     },
     {
-      "file": "apps/health/bio-races.js",
-      "name": "EMBRYO_TYPES",
-      "line": 686,
-      "reason": "种族胎养类型表，数据面预留，仅测试引用。"
-    },
-    {
       "file": "apps/health/medical-core.js",
       "name": "ACUTE_TO_CHRONIC_P",
       "line": 34,
@@ -118,37 +112,37 @@
     {
       "file": "config/commission-pipeline.js",
       "name": "acceptBrief",
-      "line": 64,
+      "line": 61,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/commission-pipeline.js",
       "name": "submitDraft",
-      "line": 77,
+      "line": 74,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/commission-pipeline.js",
       "name": "proposeScopeChange",
-      "line": 93,
+      "line": 90,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/commission-pipeline.js",
       "name": "agreeScopeChange",
-      "line": 110,
+      "line": 107,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/commission-pipeline.js",
       "name": "acceptAndSettle",
-      "line": 126,
+      "line": 123,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/commission-pipeline.js",
       "name": "cancelCommission",
-      "line": 144,
+      "line": 141,
       "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
@@ -220,73 +214,73 @@
     {
       "file": "config/mentorship-colearn.js",
       "name": "submitPractice",
-      "line": 59,
+      "line": 56,
       "reason": "R6-X8 师友共学与能力成长纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/mentorship-colearn.js",
       "name": "chooseDirection",
-      "line": 90,
+      "line": 87,
       "reason": "R6-X8 师友共学与能力成长纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "MAR_STORAGE_KEY",
-      "line": 30,
+      "line": 31,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "reportParticipantDelay",
-      "line": 126,
+      "line": 123,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "markParticipantArrived",
-      "line": 141,
+      "line": 138,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "reportParticipantWithdraw",
-      "line": 156,
+      "line": 153,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "startSegment",
-      "line": 178,
+      "line": 175,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "completeSegment",
-      "line": 192,
+      "line": 189,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "proposeActivityReroute",
-      "line": 222,
+      "line": 219,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "confirmActivityReroute",
-      "line": 242,
+      "line": 239,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "applyActivityReroute",
-      "line": 262,
+      "line": 259,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
       "file": "config/multi-activity-reroute.js",
       "name": "settleActivity",
-      "line": 301,
+      "line": 298,
       "reason": "R6-O4 能改道的多人活动纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次；先冻结防静默腐烂。"
     },
     {
@@ -382,37 +376,37 @@
     {
       "file": "config/reading-studio.js",
       "name": "RS_STORAGE_KEY",
-      "line": 16,
+      "line": 17,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/reading-studio.js",
       "name": "linkBookToDossier",
-      "line": 136,
+      "line": 133,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/reading-studio.js",
       "name": "addContrastingView",
-      "line": 174,
+      "line": 171,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/reading-studio.js",
       "name": "addAnnotation",
-      "line": 187,
+      "line": 184,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/reading-studio.js",
       "name": "updateDraft",
-      "line": 200,
+      "line": 197,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/reading-studio.js",
       "name": "handleBookVersionUpdate",
-      "line": 220,
+      "line": 217,
       "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {

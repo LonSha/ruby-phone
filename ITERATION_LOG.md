@@ -1,3 +1,10 @@
+## 迭代 213 · v4.87.0（2026-10-26）— 双表面铺色、返回导航代退与应用库分层
+- 【新增】App 表面色唯一真源 config/app-surfaces.js：对全仓 351 个 App JS 的 CSS 做字色亮度统计（0.2126R+0.7152G+0.0722B），38 个深底设计 / 51 个浅底，外壳 layerHost 建层按此铺色，修「约会大作战整页透出桌面壁纸/状态栏时钟与电池」。
+- 【重写】返回导航：原 _dispatchSwipeBackWithFallback 派发前就 viewHistory.pop()，且以 550ms 后 transform 是否残留判成败，把「已换页但带手势位移」误判失败回拉压栈 ⇒ 返回键点了卡死。改用 _viewStateVersion 单调计数判据（_applyViewLayerState 每次自增）+ 600/500ms 双观察窗；新增 _forceLayerBack 沿视图历史代退一层，派发 phone:viewBack 让 index.js 同步 currentApp（43 个 view 按 currentApp 取图层，不同步会写错层）。
+- 【新增】应用库分层 config/app-library.js：21 个桌面核心直接上桌面，68 个工具收进应用库（7 类目 + 搜索 + 键盘可达 + 320ms→260ms ghost-click buster）；__library 是渲染层伪 App，刻意不进 APPS（防 registry-audit R1 孤儿），只在 home-screen.openApp() 分流。
+- 【UI】返回键收进状态栏横向空隙（时间 22–60px、灵动岛 137px 起），89 个 App 无需各自改 padding；syncBackButtonVisibility 按图层表面深浅切换 is-dark-surface 配色（按钮与图层是堂兄弟，CSS 兄弟选择器够不到，走 JS）。
+- 【交棒改写】system-v4860 的版本锚 A1/A2 改下限形（当版一致性由本版五源同源判据接管）；system-v226 契约表登记新事件 phone:viewBack（NAVIGATION/window）。
+- 【版本升至】版本升至 4.87.0（五源同源）。
 ## 迭代 212 · v4.54.1（2026-10-23）— 启动链 P0 修复（装了没面板）
 - 【致命修复】v4.45.0 起 index.js 启动即崩：取材板主聊天侧三口（boardChatTake / boardChatMarkSent / boardChatLedger）被插进 applyCreationdeskAction 函数体中间，跨函数作用域致 init() 抛 ReferenceError 被 try/catch 吞掉 ⇒ injectWhenReady 不再执行 ⇒ 悬浮球 / 魔法棒入口 / 面板 / 三击唤醒全部不挂载，v4.45.0 至 v4.54.0 十个版本连带受影响。三函数已搬回模块作用域，启动链实测走通。
 - 【新增】启动链运行时冒烟门 tests/boot-smoke.test.mjs：零依赖最小宿主桩真加载入口，断言 VirtualPhone 装配完成，配同形破坏负控制与锚点唯一性两条自证。既有门禁为何拦不住：语法门只证能解析，文本断言插在哪都绿。
@@ -6885,7 +6892,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.54.1`（五源同源）
+- **当前版本**：`4.87.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

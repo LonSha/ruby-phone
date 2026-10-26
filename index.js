@@ -314,7 +314,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.85.0';
+const ST_PHONE_VERSION = '4.87.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -519,12 +519,16 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-03-31",
+    date: "2026-10-26",
     items: [
-        "◈ R10-O1~O9 拟真通信、常驻通知、光影演算、全局搜索、智能相册、电池动力、弱网排队、虚拟文件系统与触感输入法全量落地",
-        "◈ R10-X1~X9 虚拟网盘、短视频直播、全景朋友圈2.0、外卖投喂、窃听解密、生理手环、分身空间、日程管家与梦境镜像全量落地",
-        "◈ 机制编排中枢：subsystem-orchestrator 汇流 18 项机制，支持 advanceAutonomousLifeStep 生活流全局协同推进",
-        "◈ 体系稳固：全仓 637 模块与全覆盖契约套件（前沿机制、深层优化、系统编排集成）自动化测试 100% 通过"
+        "◈ 深浅双表面机制：新增 config/app-surfaces.js 作为 App 表面色唯一真源（按各 App CSS 字色亮度实测分 38 深 / 51 浅两档），外壳建层不再硬编码 transparent，修真机「App 整页透出桌面壁纸/状态栏时钟电池」",
+        "◈ 返回导航重写：_dispatchSwipeBackWithFallback 取消预弹栈、改用 _viewStateVersion 单调计数判据 + 600/500ms 双观察窗；新增 _forceLayerBack 沿视图历史代退一层并派发 phone:viewBack 让宿主同步 currentApp，修「返回键点了卡死/点了没反应」",
+        "◈ 应用库分层：新增 config/app-library.js（21 桌面核心 + 68 库内工具、7 类目），桌面新增应用库全屏页（搜索 + 分类 + 键盘可达），桌面从 5 页 89 图标收敛为核心常用",
+        "◈ 返回键 UI 收进状态栏空隙（不再让 89 个 App 各自让位），syncBackButtonVisibility 按表面深浅自动切换配色",
+        "◈ 视图回退事件通道：在 config/phone-events.js 登记 PHONE_EVENTS.VIEW_BACK 契约，补齐导航类事件派发元数据",
+        "◈ 窄屏断点真源收敛：清理桌面 320ms 防穿透硬编码数值，统一与内核 260ms 阈值对齐并规范类名前缀隔离",
+        "◈ 历史断言解耦交棒：将魔坊状态同步与宿主定位方法真身指向 apps/mofo/mofo-sync.js，完成跨版本拆分测试平滑接管",
+        "◈ 版本升至 4.87.0（五源同源）"
     ]
 };
 

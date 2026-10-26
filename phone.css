@@ -977,42 +977,61 @@
 }
 
 /* ========================================
-   ⬅️ [v3.56.0] App 内返回键
+   ⬅️ [v4.87.0] App 内返回键（收进状态栏带）
    ========================================
-   为什么在左上角：用户报障原话是「进入应用后，**左上角**没有返回按钮」——
-   位置按用户预期给，不另造一套。层级压在视图层之上（z-index 40 > 当前视图 10）
-   但低于通知横幅，因此不会被 App 内容盖住。 */
+   真机缺陷：按钮在 `top: 8px; left: 8px` —— 正好压在**状态栏时间**上，并且
+   把 App 自己的一级标题（「约会大作战」的「约」）盖掉一块。
+   为什么是「收进状态栏带」而不是「把内容整体下移 44px」：
+     89 个 App 的一级根容器写法各异（有的 padding:12px、有的贴边、有的是 flex 满屏），
+     外壳统一 push 一次必然把一部分 App 顶出可视区/把另一部分撞上标题。
+     而状态栏带里**本来就有一段空白**（时间是 22~60px，居中灵动岛从 137px 起），
+     66~110px 这段横向空隙是所有 App 都不会画东西的地方（它们在状态栏之下）。
+     把按钮放进这段空隙：既不再压标题，也不再压时间，且不需要任何一个 App 让位。
+   z-index 由 40 提到 60（> 状态栏 50）：修前 40 会被宿主的 !important 层压住，
+   用户看得到却点不到（真机报障「返回键点了没反应」的一层诱因）。 */
 .phone-screen .phone-back-button {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    z-index: 40;
+    top: 6px;
+    left: clamp(60px, 18%, 78px);
+    z-index: 60;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    height: 30px;
-    padding: 0 10px 0 8px;
+    justify-content: center;
+    gap: 0;
+    width: 30px;
+    height: 24px;
+    padding: 0;
     margin: 0;
     border: 0;
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.72);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    backdrop-filter: blur(12px) saturate(180%);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
     color: var(--phone-global-text, #1f2937);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.15s ease, background 0.15s ease;
 }
 
+/* 文字标签收掉：状态栏带里只有 24px 高，放「返回」两个字会溢出到标题行。
+   图形（chevron）已是通用返回语义，aria-label 仍保留了完整名称给读屏。 */
+.phone-screen .phone-back-button .phone-back-button-text {
+    display: none;
+}
+
+.phone-screen .phone-back-button .fa-chevron-left {
+    font-size: 12px;
+}
+
 .phone-screen .phone-back-button:hover {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.82);
 }
 
 .phone-screen .phone-back-button:active {
-    transform: scale(0.94);
+    transform: scale(0.92);
 }
 
 /* 主屏幕隐藏（同步另有 inline display 直写兜底，防样式表被宿主 !important 压过） */
@@ -1020,11 +1039,15 @@
     display: none !important;
 }
 
-/* 深色底（蜜语/游戏/万象三套换肤面板）下的对比度补偿 */
+/* 深色表面：蜜语/游戏/万象三套换肤面板，以及 config/app-surfaces.js 登记为深底
+   设计的 App 图层 —— 后者由 syncBackButtonVisibility() 落 .is-dark-surface 类。
+   为什么不用选择器直选图层：按钮在 .phone-screen 直系、图层在 .view-stack-container
+   里，二者是**堂兄弟**，CSS 兄弟组合器 `~` 够不到，写出来是假判据。 */
+.phone-screen .phone-back-button.is-dark-surface,
 .phone-body-panel-honey .phone-screen .phone-back-button,
 .phone-body-panel-games .phone-screen .phone-back-button,
 .phone-body-panel-wangxiang .phone-screen .phone-back-button {
-    background: rgba(20, 22, 28, 0.62);
+    background: rgba(20, 22, 28, 0.55);
     color: #f3f4f6;
 }
 
@@ -21493,4 +21516,172 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     .cm-name { font-size: 12px; }
     .cm-pt-label { max-width: 96px; }
     .cm-act { font-size: 10px; padding: 3px 7px; }
+}
+/* ========================================
+   📚 [v4.87.0] 应用库
+   ========================================
+   真机报障：桌面 5 页 89 个图标，从微信一路排到「思维链案头 / 旅行记账案头」。
+   整合策略是**分层而非删 id**（见 config/app-library.js 头注）：
+   桌面只留 21 个核心（含库入口），其余按类目收进这一页，可搜索、一点即开。
+   视觉与桌面图标同源（同一个 squircle 圆角 + 同一套 custom-icon 背景图路径），
+   这样库里的图标和桌面上的不会像两套系统。 */
+.app-library-app {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    color: #1f2937;
+    border-radius: inherit;
+    overflow: hidden;
+}
+
+.app-library-header {
+    flex: 0 0 auto;
+    padding: 46px 18px 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.app-library-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.app-library-sub {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.app-library-search-row {
+    flex: 0 0 auto;
+    padding: 0 14px 10px;
+}
+
+.app-library-search {
+    width: 100%;
+    box-sizing: border-box;
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.06);
+    color: #1f2937;
+    font-size: 13px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.app-library-search::placeholder {
+    color: #94a3b8;
+}
+
+.app-library-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 10px 28px;
+    overscroll-behavior: contain;
+}
+
+.app-library-group {
+    margin-bottom: 14px;
+}
+
+.app-library-group-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: none;
+}
+
+.app-library-group-count {
+    font-size: 10px;
+    font-weight: 500;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.06);
+    border-radius: 8px;
+    padding: 1px 6px;
+}
+
+.app-library-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 6px;
+}
+
+.app-library-app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 2px;
+    border-radius: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.app-library-app-item:active {
+    transform: scale(0.94);
+    background: rgba(15, 23, 42, 0.05);
+}
+
+.app-library-app-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.13);
+    background-color: #e2e8f0;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.app-library-app-icon.custom-icon {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.app-library-app-icon .app-icon-emoji {
+    font-size: 25px;
+    line-height: 1;
+}
+
+.app-library-app-name {
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.25;
+    color: #334155;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-all;
+}
+
+.app-library-empty {
+    margin: 24px 0;
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* 库内条目被搜索隐藏时不受 grid 占位影响 */
+.app-library-app-item[hidden],
+.app-library-group[hidden] {
+    display: none !important;
 }

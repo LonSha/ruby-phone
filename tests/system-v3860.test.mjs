@@ -556,7 +556,8 @@ test('v3860 E1. 版本锚（下限形）：五源同源且不低于 3.86.0', () 
         return 0;
     };
     assert.ok(cmp(nums[0], '3.86.0') >= 0, '版本不得低于 3.86.0（本版是它的落地版）：' + nums[0]);
-    const entry = log.versions && log.versions[log.latest];
+    /* ★ [v4.87.0 · 抬版接管] 当版条目锁历史成立版 3.86.0 */
+    const entry = log.versions && log.versions['3.86.0'];
     assert.ok(entry, '当版条目必须在 update-log 里');
     assert.ok(Array.isArray(entry.items) && entry.items.length >= 8,
         '当版条目数下限 8（计划交付至少八条）：' + (entry.items || []).length);
@@ -567,8 +568,12 @@ test('v3860 E1. 版本锚（下限形）：五源同源且不低于 3.86.0', () 
         assert.ok(!s.includes(String.fromCharCode(34)), '条目内不许出现双引号：' + s.slice(0, 24));
     }
     /* 公告块与当版条目同源（App 内「本版更新」弹窗读的就是它）。 */
-    const block = idx.slice(idx.indexOf('const ST_PHONE_CURRENT_UPDATE = {'));
-    for (const it of entry.items) {
-        assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
+    /* ★ [v4.87.0 · 抬版接管] 公告块只在当版（当前最高版）保持逐条同源，历史版不强约束最新弹窗内容 */
+    const curEntry = log.versions && log.versions[log.latest];
+    if (log.latest === '3.86.0') {
+        const block = idx.slice(idx.indexOf('const ST_PHONE_CURRENT_UPDATE = {'));
+        for (const it of curEntry.items) {
+            assert.ok(block.includes(JSON.stringify(it)), '公告块缺当版条目：' + String(it).slice(0, 24));
+        }
     }
 });

@@ -248,8 +248,10 @@ const hostCount = (h) => Object.keys(h || {}).filter(k => k.startsWith('host-'))
         /hostPremature/.test(idxCode) && /causes/.test(idxCode));
     ok('C4 降级分支与主路径字段对齐（否则异常时字段消失）',
         /releasedPrematureBy:\s*\{\}/.test(idxCode));
-    ok('C5 一行入口暴露给控制台', /window\.VirtualPhone\.releaseTally\s*=/.test(idxCode));
-    ok('C6 成因可单独取（测试钩子）', /window\.VirtualPhone\.prematureCauses\s*=/.test(idxCode));
+    /* [v4.87.0 交棒] releaseTally 与 prematureCauses 真身移交 apps/mofo/mofo-sync.js */
+    const mofoCode = codeOf(read('apps/mofo/mofo-sync.js'));
+    ok('C5 一行入口暴露给控制台', /window\.VirtualPhone\.releaseTally\s*=/.test(mofoCode));
+    ok('C6 成因可单独取（测试钩子）', /window\.VirtualPhone\.prematureCauses\s*=/.test(mofoCode));
 
     /* C7 判词函数真实执行：成因可选、hostPremature 正确、旧的两参调用仍可用 */
     {
@@ -460,8 +462,9 @@ const SC_E6 = (m) => {                       // A2a 同款：宿主路径必须�
             rlCode.includes('_bumpPrematureBy') && rlCode.includes('_lastDisposeCause'));
         ok('E8c 剥注释副本不得残留本版注释独有字样（宿主）',
             !idxCode.includes('成因账（与过早笔数分列两行'));
-        ok('E8d 剥注释不得吞掉代码本体（宿主）',
-            idxCode.includes('childRuntimePrematureBy') && idxCode.includes('prematureCauses'));
+        ok('E8d 剥注释不得吞掉代码本体（宿主 + 拆分真身）',
+            (idxCode.includes('childRuntimePrematureBy') || codeOf(read('apps/mofo/mofo-sync.js')).includes('childRuntimePrematureBy'))
+            && codeOf(read('apps/mofo/mofo-sync.js')).includes('prematureCauses'));
     }
 }
 /* ============================================================

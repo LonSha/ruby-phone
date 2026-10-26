@@ -7,6 +7,7 @@
  *
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
+import { decorateApps } from './app-library.js';
 // APP配置文件
 export const DEFAULT_APP_ICONS = Object.freeze({
     wechat: new URL('../phone/wechat.png', import.meta.url).href,
@@ -1247,6 +1248,13 @@ export const APPS = [
         data: {},
     },
 ];
+
+/* [v4.87.0] 桌面分层：核心 20 → 桌面直接可见；其余 → 「应用库」按类目收纳。
+ *   为什么不删 id：删 id 就得同步删路由与存储前缀，用户已落盘的数据会成孤儿，
+ *   而这些 App 本身是有真实功能的（见 config/app-library.js 头注）。
+ *   不改 APPS 的数组长度 ⇒ registry-audit 的 R1 双向覆盖与 R3 计数闸全部不受影响。 */
+decorateApps(APPS);
+
 // 手机配置
 export const PHONE_CONFIG = {
     brand: 'iPhone',

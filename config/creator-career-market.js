@@ -89,7 +89,7 @@ export function normalizeCommission(raw = {}) {
         status,
         license,
         budget: Math.max(0, safeNum(raw.budget, 100)),
-        deadline: safeNum(raw.deadline, Date.now() + 7 * 86400000),
+        dueTime: safeNum(raw.dueTime, Date.now() + 7 * 86400000),
         requirements: safeStr(raw.requirements, ''),
         draftArtifactUrl: safeStr(raw.draftArtifactUrl, ''),
         finalArtifactUrl: safeStr(raw.finalArtifactUrl, ''),
@@ -108,7 +108,7 @@ export function normalizeCommission(raw = {}) {
 /**
  * 创作者发起需求澄清，确立报价与授权
  */
-export function clarifyAndQuoteCommission(commission, { budget, deadline, license, requirements }, now = Date.now()) {
+export function clarifyAndQuoteCommission(commission, { budget, dueTime, license, requirements }, now = Date.now()) {
     const norm = normalizeCommission(commission);
     if (!norm) return null;
 
@@ -116,7 +116,7 @@ export function clarifyAndQuoteCommission(commission, { budget, deadline, licens
         ...norm,
         status: COMMISSION_STATUS.QUOTED,
         budget: budget !== undefined ? Math.max(0, safeNum(budget, norm.budget)) : norm.budget,
-        deadline: deadline !== undefined ? safeNum(deadline, norm.deadline) : norm.deadline,
+        dueTime: dueTime !== undefined ? safeNum(dueTime, norm.dueTime) : norm.dueTime,
         license: license !== undefined && Object.values(LICENSE_TYPES).includes(license) ? license : norm.license,
         requirements: requirements !== undefined ? safeStr(requirements, norm.requirements) : norm.requirements,
         updatedAt: now
