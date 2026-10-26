@@ -1,3 +1,32 @@
+import {
+  createEmptySires,
+  normalizeSires,
+  getSireRecord,
+  upsertSireRecord,
+  deleteSireRecord,
+  resolveSireBase,
+  getSpermQualityFactors,
+  describeSpermQuality,
+} from './sires-core.js';
+import {
+  recordIntimacyInsert,
+  recordIntimacySemen,
+  getIntimacyRanking,
+  formatIntimacyPromptLine,
+  getSheathStretch,
+  getCompatMultiplier,
+} from './intimacy-core.js';
+import {
+  getProfileSemenCapacity,
+  getSemenCapacity,
+} from './semen-capacity.js';
+import {
+  clampIndividualBodySize,
+  describeBodySizeFit,
+  getExpectedBodySize,
+  resolveBodySize,
+} from './body-size.js';
+import { toSimplifiedName, toTraditionalName } from './race-names.js';
 /**
  * 健康与生理 App - 数据管理
  * 28 天周期沿用生理引擎 5.49；妊娠/产程/种族孕速移植自 Liuuuu54/st_bs_biotracker
@@ -171,6 +200,9 @@ export class HealthData {
     this.healthTab = 'cycle';
     this.lastNotify = '';
     this.conditions = [];
+    this.bodySize = 4;
+    this.sires = createEmptySires();
+    this.intimacy = {};
     this.lastAdvance = '';
     this.loadState();
   }
@@ -227,6 +259,9 @@ export class HealthData {
       if (d.needs) this.needs = normalizeNeeds(d.needs);
       if (d.lineage) this.lineage = normalizeLineage(d.lineage);
       if (Array.isArray(d.conditions)) this.conditions = d.conditions.map(c => normalizeCondition(c)).filter(c => c.name);
+      if (d.bodySize != null) this.bodySize = clampIndividualBodySize(d.bodySize);
+      if (d.sires) this.sires = normalizeSires(d.sires);
+      if (d.intimacy && typeof d.intimacy === 'object') this.intimacy = d.intimacy;
       if (typeof d.lastAdvance === 'string') this.lastAdvance = d.lastAdvance;
       if (typeof d.healthTab === 'string') this.healthTab = d.healthTab;
       if (typeof d.lastNotify === 'string') this.lastNotify = d.lastNotify;
@@ -289,6 +324,9 @@ export class HealthData {
         healthTab: this.healthTab,
         lastNotify: this.lastNotify,
         conditions: this.conditions,
+        bodySize: this.bodySize,
+        sires: this.sires,
+        intimacy: this.intimacy,
         lastAdvance: this.lastAdvance,
         updatedAt: Date.now(),
       });
@@ -471,6 +509,55 @@ export class HealthData {
   togglePregnancy(pregnant, weeks = 4) {
     if (pregnant) this.conceive({ weeks });
     else this.clearPregnancy('解密妊娠，回到常规周期');
+  }
+
+  
+  getSheathStretch() {
+    return getSheathStretch({ naturalBirthExperience: this.naturalBirthExperience });
+  }
+
+  getSemenCapacity() {
+    return getProfileSemenCapacity({
+      base: { stage: this.stage, uterinePressure: 0, bodySize: this.bodySize },
+      pregnant: { effectivePregnantDays: this.effectivePregnantDays, fetuses: this.fetuses },
+    });
+  }
+
+  recordIntimacy(partner, { spermValue = 0, quality = 1, minutesPassed = 0, compatLabel = null } = {}) {
+    const sire = getSireRecord({ sires: this.sires }, partner);
+    const effectiveQuality = sire?.spermQuality != null ? sire.spermQuality : quality;
+    const femaleBS = resolveBodySize({ bodySize: this.bodySize });
+    const maleBS = resolveBodySize({ bodySize: sire?.bodySize || 4 });
+    const fit = describeBodySizeFit({ female: femaleBS, male: maleBS, femaleStretch: this.getSheathStretch() }) || { label: '体型相仿', gap: 0 };
+    const compat = getCompatMultiplier(fit);
+    const profileWrap = { intimacy: this.intimacy };
+    recordIntimacyInsert(profileWrap, partner, { minutesPassed, compat, compatLabel: compatLabel || fit.label });
+    if (spermValue > 0) {
+      recordIntimacySemen(profileWrap, partner, { minutesPassed, quality: effectiveQuality });
+    }
+    this.intimacy = profileWrap.intimacy;
+    this.saveState();
+  }
+
+  upsertSire(name, fields = {}) {
+    const chatState = { sires: this.sires, characters: {} };
+    const res = upsertSireRecord(chatState, name, fields);
+    this.sires = chatState.sires;
+    this.saveState();
+    return res;
+  }
+
+  deleteSire(name) {
+    const chatState = { sires: this.sires };
+    const res = deleteSireRecord(chatState, name);
+    this.sires = chatState.sires;
+    this.saveState();
+    return res;
+  }
+
+  getIntimacyPrompt() {
+    const ranking = getIntimacyRanking({ intimacy: this.intimacy });
+    return formatIntimacyPromptLine(ranking);
   }
 
   clearPregnancy(reason) {

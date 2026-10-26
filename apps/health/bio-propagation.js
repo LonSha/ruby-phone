@@ -1,3 +1,15 @@
+import {
+  CONCEPTION_WEIGHT_LOG_SD,
+  getConceptionStageWeight,
+  resolveConceptionWeightRatio,
+} from './body-size.js';
+import {
+  deriveFetusAncestry,
+  getBloodlineInfo,
+  getCompanionEggsMeanByRace,
+  getSpermDoseCompanionMultiplier,
+  rollCompanionEggCount,
+} from './bio-races.js';
 /**
  * bio-propagation.js — 异种繁殖推演（Breeding Simulator）
  * 算法移植自 Liuuuu54/st_bs_biotracker v0.9.9（scripts/calculator.js + race_config.js 全纯算法部分）
@@ -11,7 +23,7 @@
  */
 import {
   VIVIPAROUS_RACES, OVIPAROUS_RACES, OVOVIVIPAROUS_RACES,
-  METOVIVIPAROUS_RACES, AMORPHOUS_RACES, RACE_PHYSIOLOGY,
+  METOVIVIPAROUS_RACES, AMORPHOUS_RACES, RACE_PHYSIOLOGY, canonicalizeRaceName,
 } from './bio-races.js';
 import { MENSTRUAL_STAGES, MENSTRUAL_STAGE_DAYS } from './bio-engine.js';
 import { numOrNull } from '../../config/num-gate.js';
@@ -177,11 +189,12 @@ export function getEmbryoTypeByRace(race) {
     const speed = Number(getRacePhysiologyProfile(part)?.gestationSpeciesSpeed);
     if (Number.isFinite(speed) && speed < lowestSpeed) { lowestSpeed = speed; dominantRace = part; }
   }
-  if (VIVIPAROUS_RACES.includes(dominantRace)) return '胎生';
-  if (OVIPAROUS_RACES.includes(dominantRace)) return '卵生';
-  if (OVOVIVIPAROUS_RACES.includes(dominantRace)) return '卵胎生';
-  if (METOVIVIPAROUS_RACES.includes(dominantRace)) return '胎转卵生';
-  if (AMORPHOUS_RACES.includes(dominantRace)) return '不定型';
+  const canonical = canonicalizeRaceName ? canonicalizeRaceName(dominantRace) : dominantRace;
+  if (VIVIPAROUS_RACES.includes(dominantRace) || VIVIPAROUS_RACES.includes(canonical)) return '胎生';
+  if (OVIPAROUS_RACES.includes(dominantRace) || OVIPAROUS_RACES.includes(canonical)) return '卵生';
+  if (OVOVIVIPAROUS_RACES.includes(dominantRace) || OVOVIVIPAROUS_RACES.includes(canonical)) return '卵胎生';
+  if (METOVIVIPAROUS_RACES.includes(dominantRace) || METOVIVIPAROUS_RACES.includes(canonical)) return '胎转卵生';
+  if (AMORPHOUS_RACES.includes(dominantRace) || AMORPHOUS_RACES.includes(canonical)) return '不定型';
   return '胎生';
 }
 export function getClutchSizeMeanByRace(race) {
@@ -327,11 +340,10 @@ export function calculateOffspringPreview({
     if (!slowest || speed < slowest.speed) return { race, speed };
     return slowest;
   }, null);
-  const eggBreedTolerance = clampNumber(eggProfile.breedTolerance, 0.1, 100, 1);
-  const spermBreedTolerance = clampNumber(spermProfile.breedTolerance, 0.1, 100, 1);
-  const dominance = (spermBreedTolerance - eggBreedTolerance) / Math.max(eggBreedTolerance + spermBreedTolerance, 0.1);
-  const breedWeightRatio = clampNumber(1 + (dominance * 0.65), 0.625, 1.6, 1);
-  const stageWeight = { 黄体期: 1.2, 排卵期: 1.1, 卵泡期: 1, 产后恢复: 1 / 1.1, 月经期: 1 / 1.2 }[String(conceptionStage || '')] || 1;
+
+  const stageWeight = getConceptionStageWeight(conceptionStage);
+  const { ratio: breedWeightRatio, basis: weightRatioBasis } = resolveConceptionWeightRatio({ race: eggRace }, { race: spermRace });
+  const weightSd = CONCEPTION_WEIGHT_LOG_SD;
   const genderRatio = profile.genderRatio;
   const sexMultipliers = genderRatio === null || Number(genderRatio) === -1
     ? [1]
