@@ -97,13 +97,76 @@ export class PhoneCallData {
         }
         return false;
     }
-
     // 保存通话记录
     saveCallHistory() {
         if (this._callHistory) {
             this.storage.set('phone_call_history', this._callHistory);
         }
     }
+
+    /* ---------- [v4.88.0] 静默升级拨号的静默账 ----------
+     * config/callhome-escalation.js 的判据要三格：`lastContactAt` / `lastAutoCallDay` / `dnd`。
+     * 前两格必须由本层**如实持有**，缺一格就会退化成「不知道就每次都拨」。
+     * 独立键而不是塞进通话记录：记录会被删除（用户清历史），而静默账是**长时事实**；
+     * 混在一起的后果是「清一次历史 → 静默归零 → 立刻被拨一次」。
+     * 键名 `phone_call_escalation` 命中既有 `/^phone_call_/`（config/storage.js）⇒ 会话隔离。 */
+    getEscalationLedger() {
+        if (!this._escalationLedger) {
+            const saved = this.storage.get('phone_call_escalation', null);
+            let parsed = null;
+            if (saved) {
+                try { parsed = typeof saved === 'string' ? JSON.parse(saved) : saved; } catch (_e) { parsed = null; }
+            }
+            this._escalationLedger = {
+                // 毫秒时间戳或 null（null = 从来没有过联系，不是 0）
+                /* 正值才算「有过来往」：0 / 负数与「没给」同读 null（不猜）。 */
+                lastContactAt: (() => {
+                    const v = numOrNull(parsed && parsed.lastContactAt);
+                    return (v !== null && v > 0) ? v : null;
+                })(),
+                // 本地日字符串 YYYY-MM-DD 或 null（**不是**时间戳，归一在 localDayOf 一处）
+                lastAutoCallDay: (parsed && typeof parsed.lastAutoCallDay === 'string' && parsed.lastAutoCallDay)
+                    ? parsed.lastAutoCallDay
+                    : null,
+                autoCalls: Math.max(0, numOrNull(parsed && parsed.autoCalls) ?? 0),
+                lastVerdict: (parsed && typeof parsed.lastVerdict === 'string') ? parsed.lastVerdict : ''
+            };
+        }
+        return this._escalationLedger;
+    }
+
+    saveEscalationLedger() {
+        if (this._escalationLedger) this.storage.set('phone_call_escalation', this._escalationLedger);
+    }
+
+    /** 记一次「人和手机之间有过来往」（通话、短信都算）。dnd 不算来往，故不由这里写。 */
+    markContactAt(at) {
+        const n = Number(at);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        const led = this.getEscalationLedger();
+        led.lastContactAt = n;
+        this.saveEscalationLedger();
+        return led.lastContactAt;
+    }
+
+    /** 记一次自动拨出（只有真的拨了才写，被拦下不写 —— 当日额度不能被拦消耗）。 */
+    markAutoCall(dayKey) {
+        const day = String(dayKey || '').trim();
+        if (!day) return null;
+        const led = this.getEscalationLedger();
+        led.lastAutoCallDay = day;
+        led.autoCalls += 1;
+        this.saveEscalationLedger();
+        return day;
+    }
+
+    /** 只记裁决结果（供诊断面看「最近一次为什么没拨」）。 */
+    markEscalationVerdict(reason) {
+        const led = this.getEscalationLedger();
+        led.lastVerdict = String(reason || '');
+        this.saveEscalationLedger();
+    }
+
 
     getContacts() {
         if (!this._contacts) {
@@ -397,5 +460,7 @@ export class PhoneCallData {
         this._contacts = null;
         this._smsConversations = null;
         this._smsProcessedBatches = null;
+        /* [v4.88.0] 静默账也要丢：它随会话隔离（/^phone_call_/），换会话留着就是陈旧读数。 */
+        this._escalationLedger = null;
     }
 }

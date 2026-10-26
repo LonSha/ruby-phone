@@ -13,6 +13,11 @@
  * ======================================================== */
 
 const LONSHA_STORAGE_KEY = 'lonsha_memory';
+/* [v4.89.0 · 第九批缝入] 图检索的邻居扩散改用能量传播（config/activation-diffusion.js，缝自 ST-BME 的 PEDSA）。
+ *   改前：一跳邻居一律 `_score: 0.5`、抑制关系（仇人/前妻）照样给正分 —— 图存了强弱与关系类型，检索面全丢。
+ *   改后：种子按命中强度给能量，逐层乘 decayFactor 衰减，抑制边传负能量，每步 Top-K 有界、能量钳位 ±2。 */
+import { diffuseWithSuppression, buildAdjacency } from '../../config/activation-diffusion.js';
+import { numOrNull } from '../../config/num-gate.js';
 
 export class GraphBridge {
     constructor(storage) {
@@ -144,20 +149,45 @@ export class GraphBridge {
         }
         hit.sort((a, b) => b._score - a._score);
         const top = hit.slice(0, limit);
-
-        // 2) 一跳邻居 (关系扩散)
+        /* 2) 邻居扩散：不再是「一跳一律 0.5」，而是把命中当种子跑能量传播。
+         *   命中强度归一成能量（score/2.2 落在 (0,1]，与 clamp 上限 2 不冲突），
+         *   抑制关系由 activation-diffusion 按 label 识别后自动传负能量。 */
         const idset = new Set(top.map(n => n.id));
+        const byId = new Map(nodes.map(n => [String(n.id), n]));
+        const seeds = top
+            /* [v4.89.0] 取值走 num-gate（弱口径下 `_score:''` 会被当成 0 混进种子）。 */
+            .map(n => ({ id: String(n.id), score: numOrNull(n._score) }))
+            .filter(n => n.score !== null)
+            .map(n => ({ id: n.id, energy: Math.max(0.05, n.score / 2.2) }));
+        const spread = diffuseWithSuppression(
+            buildAdjacency(edges.map(e => ({ from: e.from, to: e.to, strength: e.strength ?? e.weight, label: e.label }))),
+            seeds,
+            { maxSteps: 2 }
+        );
         const neighbors = [];
-        for (const e of edges) {
-            if (idset.has(e.from) || idset.has(e.to)) {
-                const otherId = idset.has(e.from) ? e.to : e.from;
-                if (!idset.has(otherId)) {
-                    const nb = nodes.find(n => n.id === otherId);
-                    if (nb) { neighbors.push({ ...nb, _score: 0.5, _kind: 'neighbor', _via: e.label || 'related' }); idset.add(otherId); }
-                }
-            }
+        for (const item of spread.active) {
+            if (idset.has(item.nodeId)) continue;
+            const nb = byId.get(item.nodeId);
+            /* 能量低到 0.05 以下的邻居不进结果 —— 否则「扩散」等于把整张图倒进来 */
+            if (!nb || item.energy < 0.05) continue;
+            neighbors.push({ ...nb, _score: Number(item.energy.toFixed(4)), _kind: 'neighbor', _via: labelOf(edges, top, item.nodeId) });
+            idset.add(item.nodeId);
         }
-        return top.concat(neighbors.slice(0, Math.max(0, limit - top.length)));
+        neighbors.sort((a, b) => b._score - a._score);
+        /* 被抑制（负能量）的邻居也带上：`_score` 保负号、`_kind` 标 suppressed。
+         *   静默丢掉的话，用户看不到「他前妻是谁」——而那往往正是检索的目的。 */
+        const suppressed = [];
+        for (const item of spread.suppressed) {
+            if (idset.has(item.nodeId)) continue;
+            const nb = byId.get(item.nodeId);
+            if (!nb || Math.abs(item.energy) < 0.05) continue;
+            suppressed.push({ ...nb, _score: Number(item.energy.toFixed(4)), _kind: 'suppressed', _via: labelOf(edges, top, item.nodeId) });
+            idset.add(item.nodeId);
+        }
+        suppressed.sort((a, b) => a._score - b._score);
+        /* 天棚：正能量邻居优先占位，剩下的位子才给抑制项 */
+        const room = Math.max(0, limit - top.length);
+        return top.concat(neighbors.slice(0, room)).concat(suppressed.slice(0, Math.max(0, room - neighbors.length)));
     }
 
     /** 取节点的关系列表 (用于展示 "A —认识→ B") */
@@ -311,6 +341,33 @@ export class GraphBridge {
     }
 
     invalidate() { this._cache = null; this._cacheAt = 0; }
+}
+
+/** 关系标签：扩散回来的边要给出来路，否则用户看到「A 认识 B」却不知道是哪种关系。
+ *   先找直接边；找不到说明是二跳，再找「命中点 → 中间人」那一跳的标签（`经朋友`）。
+ *   两跳都找不到才回落 `related` —— 回落不等于没有，只是无从说起。 */
+function labelOf(edges, froms, toId) {
+    const fromIds = new Set(froms.map(n => String(n.id)));
+    const direct = (a, b) => {
+        for (const e of edges) {
+            const f = String(e.from);
+            const t = String(e.to);
+            if ((a.has(f) && b.has(t)) || (a.has(t) && b.has(f))) return e.label || 'related';
+        }
+        return '';
+    };
+    const own = new Set([toId]);
+    const hitDirect = direct(fromIds, own);
+    if (hitDirect) return hitDirect;
+    for (const e of edges) {
+        const f = String(e.from);
+        const t = String(e.to);
+        const mid = fromIds.has(f) ? t : (fromIds.has(t) ? f : '');
+        if (!mid || mid === toId) continue;
+        const hop = direct(new Set([mid]), own);
+        if (hop) return '经' + hop;
+    }
+    return 'related';
 }
 
 export default GraphBridge;

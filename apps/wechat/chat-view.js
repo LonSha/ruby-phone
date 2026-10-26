@@ -31,6 +31,29 @@ import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/
 import { CatboxData } from '../games/catbox/catbox-data.js';
 import { parseWangxiangTaskTags, tokenizeWangxiangTaskTags } from '../wangxiang/wangxiang-task-parser.js';
 import { parseWechatVoiceContent } from './voice-text.js';
+/* [v4.88.0 · 第七批缝入] 逐句去重（ackem/sentenceDedup）+ 语音回声剥离（SullyOS/voiceTextDedup）。
+ *   两件都作用在**同一处**：一批回复上屏之前。去重治「一轮里同一句话说两遍」，
+ *   剥回声治「语音条已经说过，正文又用散句复述一遍」。 */
+import { shouldEmitSentence, recordShownSentence, createDedupState } from '../../config/turn-claim-dedup.js';
+/* [v4.88.0 · 第七批缝入] 话题沉醉守卫（ackem/originEscalationGuard）。
+ *   治的是「同一个话题连着聊五六轮，角色越钻越细、把用户忘了」。 */
+import { advanceSaturation, saturationInjection, defaultSaturationState, normalizeSaturationState, saturationLine } from '../../config/topic-saturation-guard.js';
+/* [v4.88.0 · 第七批缝入] 重绘代次栅栏（SullyOS/amsgCloudOwnerGeneration）。
+ *   abort 只能掐传输层；已经 resolve 的回调仍会回来写。代次是**写入侧**的最后一道：
+ *   起跑时钉住代次，提交前比对，变过即弃。 */
+import { invalidateOwner, captureWriteCheck, epochLine } from '../../config/redraw-generation.js';
+/* [v4.88.0 · 第七批缝入] 完成断言门（ackem/outputGuard）。
+ *   治「角色说『我已经把日程改好了』但这一轮什么也没做」—— 空口断言比不说更坏：
+ *   用户会去找那条根本不存在的日程。 */
+import { guardCompletion, gateSummaryLine } from '../../config/completion-claim-gate.js';
+/* [v4.88.0 · 第七批缝入] 通话快照轮换保留（SullyOS/callSnapshotRetention）。
+ *   视频通话的每一帧都是 base64，全程留着会把会话撑爆；而整条删掉又会让
+ *   「那天到底看到了什么」变成一片空白。只清引用 + 补占位，是这个折中的落点。 */
+import { applySnapshotRetention, retentionLine, DEFAULT_RETAINED_ROUNDS } from '../../config/snapshot-retention.js';
+/* [v4.88.0 · 第七批缝入] 完成断言门（ackem/outputGuard）。
+ *   治「角色说『我已经把日程改好了』但这一轮什么也没做」—— 空口断言比不说更坏：
+ *   用户会去找那条根本不存在的日程。 */
+import { stripVoiceEcho } from '../../config/echo-prose-strip.js';
 import { GIFTS, GIFT_CATEGORIES, getGiftById, getGiftImageUrl, listGiftsByCategory } from './gift-catalog.js';
 import { detectImageMime, normalizeImageDataUrlMime, resolveImageMime } from '../../config/image-mime.js';
 import {
@@ -4844,6 +4867,12 @@ renderChatRoom(chat) {
             && String(message.imageGenerationRuntimeId || '').trim() === String(this.app.wechatData.imageGenerationRuntimeId || '').trim()
         ) return;
         this._imagePromptGenerationLocks.add(generationLockKey);
+        /* [v4.88.0] 代次栅栏：先作废这一格的旧代次（在飞的老回写从此写不进来），再钉住新代次。
+         *   必须钉在**任何 await 之前** —— 钉晚一步，中间那一段 await 归来的旧回调已经写过了。 */
+        const redrawOwner = `wechat:img:${chatId}:${safeMessageId}`;
+        invalidateOwner(redrawOwner);
+        const epochCheck = captureWriteCheck([redrawOwner]);
+        const epochStale = () => epochCheck().ok !== true;
 
         const rawPromptText = String(message.imagePrompt || message.content || '').trim();
         const parsedRawPrompt = this._parseImagePromptText(rawPromptText);
@@ -4912,6 +4941,8 @@ renderChatRoom(chat) {
                 return;
             }
             const promptError = String(error?.message || '英文 TAG 生成失败').trim();
+            /* 代次已变 ⇒ 这一笔属于上一代，不写（它会盖掉新一代刚写的 loading）。 */
+            if (epochStale()) { this._imagePromptGenerationLocks.delete(generationLockKey); return; }
             /* [v3.58.0 · 计划 O4] 失败状态也要过栅栏：把上一段会话的 TAG 失败写进
              *   当前会话的消息、并在当前会话弹通知，同样是串味。跨会话时只收锁走人。 */
             if (!guardSessionWrite(storage, sessionToken, 'wechat-image-prompt-failed')) {
@@ -4989,6 +5020,7 @@ renderChatRoom(chat) {
                  *   不当前即走人：上传好的文件成为孤儿（无引用），但会话一致性优先 ——
                  *   把上一段会话的视频挂进当前会话是用户看得见的错，孤儿文件不是。 */
                 if (!guardSessionWrite(storage, sessionToken, 'wechat-image-video')) return;
+                if (epochStale()) return;
                 this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                     mediaType: '视频',
                     imagePrompt: promptText,
@@ -5027,6 +5059,7 @@ renderChatRoom(chat) {
             if (String(latestMessage?.imageGenerationId || '') !== generationId) return;
             /* [v3.58.0 · 计划 O4] 图片落盘前的会话栅栏：与上面视频那条同源同理。 */
             if (!guardSessionWrite(storage, sessionToken, 'wechat-image')) return;
+            if (epochStale()) return;
             this.app.wechatData.updateMessageById(chatId, safeMessageId, {
                 mediaType: '图片',
                 imagePrompt: promptText,
@@ -10723,6 +10756,143 @@ renderChatRoom(chat) {
         }
     }
 
+    /**
+     * [v4.88.0 · 第七批缝入] 从一段用户输入里取**话题键**。
+     *   取最长的那一段（按标点切），超 8 字截断。刻意不用分词、不用词频：
+     *   判据要能被用户复述（「你一直在说这个」），一分词就再也说不清这个键是哪来的。
+     *   整段没有 4 字以上的段 ⇒ 交空串，让守卫**不动状态**（不猜）。
+     * @param {string} text
+     * @returns {string}
+     */
+    _topicKeyOf(text) {
+        const segs = String(text || '')
+            .split(/[\s，,。.！!？?；;：:、"“”'‘’（）()\[\]【】…—·]+/)
+            .map((x) => x.trim())
+            .filter((x) => x.length >= 4);
+        if (!segs.length) return '';
+        segs.sort((a, b) => b.length - a.length);
+        return segs[0].slice(0, 8);
+    }
+    /**
+     * [v4.88.0 · 第七批缝入] 话题沉醉守卫：推进一回合，必要时把硬话插到 user 之前。
+     *
+     *   状态按**会话**存（`this._saturation = { chatId, state, turn }`）：切了聊天就换段，
+     *   否则 A 的话题连击会把 B 的第一句话按住。
+     *
+     *   三条纪律：
+     *     · 判不出话题键 ⇒ 内核保证原样返回，这里也不动状态；
+     *     · guard 只在**越线那一轮**注入一次，冷却期内不再注入（内核 hold 挡住）；
+     *     · 注入块用 splice 插在**最后一条 user 之前**：它是「本回合怎么聊」的约束，
+     *       跟在 user 后面会被当成对上一轮的注解。
+     * @param {Array} messages
+     * @param {string} chatId
+     * @param {string} prompt
+     * @returns {object} 本回合读数（排错用）
+     */
+    _applySaturationGuard(messages, chatId, prompt) {
+        const sid = String(chatId || '');
+        if (!this._saturation || this._saturation.chatId !== sid) {
+            this._saturation = { chatId: sid, state: defaultSaturationState(), turn: 0 };
+        }
+        this._saturation.turn += 1;
+        const next = advanceSaturation(this._saturation.state, this._topicKeyOf(prompt), this._saturation.turn);
+        const inj = saturationInjection(next, next.guardTriggered === true);
+        this._saturation.state = normalizeSaturationState(next);
+        if (inj.block) {
+            const at = Math.max(0, messages.length - 1);
+            messages.splice(at, 0, { role: 'system', content: inj.block, name: 'SYSTEM (话题转回)', isPhoneMessage: true });
+        }
+        return {
+            state: this._saturation.state.state, streak: this._saturation.state.streak,
+            triggered: next.guardTriggered === true, hold: next.hold === true,
+            budget: inj.budget, line: saturationLine(this._saturation.state)
+        };
+    }
+    /**
+     * [v4.88.0 · 第七批缝入] 一批回复上屏前的两道净化：先剥语音回声、再逐句去重。
+     *
+     *   为什么两件事必须**同一处、且按这个顺序**：
+     *     · 回声剥离要看到 `<语音>` 块才知道哪几行是复述 —— 去重先跑会把语音块当独立句计账，
+     *       随后被剥掉的散句白占一份配额，于是真正的重复句反而放行；
+     *     · 去重必须**逐句**做且**跨消息**：一句拆成两条气泡，在界面上就是两条，
+     *       单条内部去重一条也拦不住。
+     *
+     *   纪律：
+     *     · 只动正文，不动特殊消息（转账 / 红包 —— 它们按类型渲染，正文常为空）；
+     *     · 语音条本身（type==='voice'）不剥 —— 那就是「说过的话」的原件；
+     *     · 去重态**每批一个**（就地 createDedupState，不挂实例）：
+     *       上一轮说过的话这一轮再说在聊天里是正常的，跨轮去重会误杀寒暄；
+     *     · 全被去重掉时**原样返回**（一轮不能空手而归）。
+     * @param {Array} list
+     * @returns {Array}
+     */
+    _purifyReplyBatch(list) {
+        const arr = Array.isArray(list) ? list : [];
+        if (!arr.length) return arr;
+        const stripped = arr.map((item) => {
+            if (!item || item.specialMessage) return item;
+            if (item.type === 'voice') return item;
+            const text = String(item.content || '');
+            if (!text) return item;
+            const r = stripVoiceEcho(text);
+            if (!r.removed.length || !r.text) return item;
+            return { ...item, content: r.text, echoRemoved: r.removed.length };
+        });
+        const state = createDedupState();
+        const kept = [];
+        for (const item of stripped) {
+            if (!item || item.specialMessage) { kept.push(item); continue; }
+            const content = String(item.content || '').trim();
+            if (!content) { kept.push(item); continue; }
+            const verdict = shouldEmitSentence(content, state);
+            if (!verdict.emit) {
+                /* 记下被哪一句挡下：排错时一眼看到，不必复现。 */
+                kept.push({ ...item, dedupSkipped: verdict.reason, dedupAgainst: verdict.against });
+                continue;
+            }
+            recordShownSentence(state, content);
+            kept.push(item);
+        }
+        const survivors = kept.filter((x) => x && !x.dedupSkipped);
+        if (!survivors.length) return arr;
+        const alive = kept.filter((x) => x && (!x.dedupSkipped || x.specialMessage));
+        return this._gateCompletionClaims(alive);
+    }
+    /**
+     * [v4.88.0 · 第七批缝入] 第三道：完成断言过门。
+     *
+     *   三条判据（都由内核做，这里只备料）：
+     *     · `status: 'succeeded'` —— 这一轮**确实拿到回复了**（否则一律降级成中性句）；
+     *     · `runId` —— 本批唯一，回执不会被上一批冒充；
+     *     · `receipt` —— 这一批里真带出来的东西：消息本身（message）永远算有；
+     *       图片/视频 URL 算 file；带 `[定位]` 算 message；没有的就是没有。
+     *   刻意建 receipt 而不用「全放行」：全放行等于这扇门白装。
+     * @param {Array} list
+     * @returns {Array}
+     */
+    _gateCompletionClaims(list) {
+        const arr = Array.isArray(list) ? list : [];
+        if (!arr.length) return arr;
+        const runId = 'wf_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        let demotedTotal = 0;
+        const out = arr.map((item, i) => {
+            if (!item || item.specialMessage) return item;
+            const text = String(item.content || '');
+            if (!text) return item;
+            const receipt = { message: 'sent:' + i };
+            if (/https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|mp4)/i.test(text)) receipt.file = 'inline-url';
+            if (/\[定位\]/.test(text)) receipt.message += '+loc';
+            const r = guardCompletion(text, { status: 'succeeded', runId, receipt });
+            if (!r.demoted) return item;
+            demotedTotal += r.demoted;
+            return { ...item, content: r.text, claimDemoted: r.demoted, claimRows: r.rows.filter((x) => x.kind === 'demoted') };
+        });
+        this._claimFace = {
+            line: gateSummaryLine({ asserted: demotedTotal, evidenced: 0, demoted: demotedTotal }),
+            demoted: demotedTotal, runId
+        };
+        return out;
+    }
     async sendToAI(message, targetChatId = null, options = {}) {
         if (!this.isOnlineMode()) {
             return false;
@@ -11322,12 +11492,16 @@ renderChatRoom(chat) {
             parsedMessages = parsedMessages
                 .map(stripOfflineTransferTagFromMessage)
                 .filter(item => String(item?.content || item?.specialMessage?.content || '').trim() || item?.specialMessage);
+            /* [v4.88.0] 上屏前两道净化（剥回声 → 逐句去重）。放在这里而不是渲染循环里：
+             *   渲染循环还管打字延迟与已读回执，净化逻辑混进去就再也拆不出来。 */
+            parsedMessages = this._purifyReplyBatch(parsedMessages);
             Object.keys(backgroundMessages).forEach(chatName => {
                 backgroundMessages[chatName] = (backgroundMessages[chatName] || [])
                     .map(message => this._normalizeGeneratedUserReply(message, chatName))
                     .filter(Boolean)
                     .map(stripOfflineTransferTagFromMessage)
                     .filter(item => String(item?.content || item?.specialMessage?.content || '').trim() || item?.specialMessage);
+                backgroundMessages[chatName] = this._purifyReplyBatch(backgroundMessages[chatName]);
             });
 
             // 处理后台窗口消息 (静默存入，红点提示)
@@ -13016,6 +13190,10 @@ renderChatRoom(chat) {
             name: 'USER (系统指令)',
             isPhoneMessage: true
         });
+        /* [v4.88.0] 话题沉醉守卫（越线一轮才注入，其余轮只推进读数）。 */
+        try {
+            this._saturationFace = this._applySaturationGuard(messages, targetChat?.id || '', prompt);
+        } catch (_e) { /* 守卫坏了不影响发送 */ }
 
         return messages;
     }
@@ -16140,6 +16318,46 @@ ${groupParticipants.join('、') || '暂无成员'}
     }
 
     // 🔥 添加通话记录到聊天（使用剧情时间）
+    /**
+     * [v4.88.0 · 第七批缝入] 给通话记录挑出「快照引用」，并按轮次只留最近几张。
+     *
+     *   引用从消息**自身**取（`content` / `transcript[].text` 里的图片地址或 data URI）——
+     *   本仓没有独立帧存储层，帧就是塞在 transcript 里的。取不到就不标：
+     *   内核的 `isCallSnapshotOf` 因 ref 为空而跳过（认不出的不算快照）。
+     * @param {string} chatId
+     * @returns {{cleared:number, line:string}}
+     */
+    _pruneCallSnapshots(chatId) {
+        const data = this.app?.wechatData;
+        if (!data || typeof data.getMessages !== 'function' || typeof data.updateMessageById !== 'function') {
+            return { cleared: 0, line: '' };
+        }
+        const sid = String(chatId || '');
+        if (!sid) return { cleared: 0, line: '' };
+        const messages = data.getMessages(sid) || [];
+        const withRefs = messages.map((m) => {
+            if (!m || m.type !== 'call_record') return m;
+            const meta = (m.metadata && typeof m.metadata === 'object') ? { ...m.metadata } : {};
+            if (meta.source !== 'call' || !meta.callSessionId) {
+                meta.source = 'call';
+                meta.callSessionId = sid;
+            }
+            if (!meta.cameraSnapshotRef) {
+                const pool = [String(m.content || '')]
+                    .concat(Array.isArray(m.transcript) ? m.transcript.map((t) => String((t && t.text) || '')) : []);
+                const hit = pool.join(' ').match(/(?:data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]{40,}|https?:\/\/[^\s"')]+\.(?:png|jpe?g|webp))/i);
+                if (hit) meta.cameraSnapshotRef = hit[0];
+            }
+            return { ...m, metadata: meta };
+        });
+        const applied = applySnapshotRetention(withRefs, sid, DEFAULT_RETAINED_ROUNDS);
+        if (!applied.cleared) return { cleared: 0, line: retentionLine(0) };
+        for (const m of applied.messages) {
+            if (!m || !m._expiredRef) continue;
+            data.updateMessageById(sid, m.id, { metadata: m.metadata, content: m.content });
+        }
+        return { cleared: applied.cleared, line: retentionLine(applied.cleared) };
+    }
     addCallRecord(callType, status, duration, options = {}) {
         const elapsedSeconds = Math.max(0, Number(options?.elapsedSeconds) || 0);
         const callStartTime = options?.callStartTime || null;
@@ -16163,6 +16381,8 @@ ${groupParticipants.join('、') || '暂无成员'}
             date: storyTime?.date,
             weekday: storyTime?.weekday
         });
+        /* 只在通话记录落库之后轮换：先保新再清旧，顺序反了会把刚写的那张清掉。 */
+        try { this._callRetention = this._pruneCallSnapshots(this.app.currentChat?.id); } catch (_e) { /* 忽略 */ }
 
     }
 

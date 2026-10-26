@@ -49,6 +49,9 @@ import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 import { SubsystemOrchestrator } from './config/subsystem-orchestrator.js';
 import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask as mtrNormalizeTask, summarizeTasks as mtrSummarizeTasks,  canTransition as mtrCanTransition, duplicateGuard as mtrDuplicateGuard, selfCheck as mtrSelfCheck } from './config/media-task-registry.js';
+/* [v4.88.0 · 第七批缝入] 后台任务停滞告警（MIRROW/task_stall_policy）。**只告不杀** ——
+ *   盘上的「生成中」卡住两小时也没有任何读数，用户能做的只有自己猜。 */
+import { checkStall, stallLine } from './config/stall-watch.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
 import { mountMissingAppInjection } from './apps/app-injection.js';
@@ -314,7 +317,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.87.0';
+const ST_PHONE_VERSION = '4.91.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -519,16 +522,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-26",
+    date: "2026-10-27",
     items: [
-        "◈ 深浅双表面机制：新增 config/app-surfaces.js 作为 App 表面色唯一真源（按各 App CSS 字色亮度实测分 38 深 / 51 浅两档），外壳建层不再硬编码 transparent，修真机「App 整页透出桌面壁纸/状态栏时钟电池」",
-        "◈ 返回导航重写：_dispatchSwipeBackWithFallback 取消预弹栈、改用 _viewStateVersion 单调计数判据 + 600/500ms 双观察窗；新增 _forceLayerBack 沿视图历史代退一层并派发 phone:viewBack 让宿主同步 currentApp，修「返回键点了卡死/点了没反应」",
-        "◈ 应用库分层：新增 config/app-library.js（21 桌面核心 + 68 库内工具、7 类目），桌面新增应用库全屏页（搜索 + 分类 + 键盘可达），桌面从 5 页 89 图标收敛为核心常用",
-        "◈ 返回键 UI 收进状态栏空隙（不再让 89 个 App 各自让位），syncBackButtonVisibility 按表面深浅自动切换配色",
-        "◈ 视图回退事件通道：在 config/phone-events.js 登记 PHONE_EVENTS.VIEW_BACK 契约，补齐导航类事件派发元数据",
-        "◈ 窄屏断点真源收敛：清理桌面 320ms 防穿透硬编码数值，统一与内核 260ms 阈值对齐并规范类名前缀隔离",
-        "◈ 历史断言解耦交棒：将魔坊状态同步与宿主定位方法真身指向 apps/mofo/mofo-sync.js，完成跨版本拆分测试平滑接管",
-        "◈ 版本升至 4.87.0（五源同源）"
+        "【版本升至 4.91.0（五源同源）：v4.90.0 公告末条自己写了三条「没做什么」，本版不许它们继续躺着 —— 三条全部接进产品路径，判据档逐条钉「真接通了没有」】",
+        "【欠债一 · 来源许可的 inspect 交互面接进 UI】修前 inspect 只在纯函数层自证，用户摸不到。现加 `inspectExcludedBooks` 快照口（身份先拍、书单再去重、回来再比对身份）与排除面弹层：计数行可数、两节分列已排除与仍在用、每行一个翻转按钮改的是排除表而不是界面。身份在读取途中变了就整份作废（两份名单都空）并给各自的因，绝不给半份名单 —— 半份名单比没有更坏。",
+        "【欠债二 · 条目设置面板】修前 `entrySettings` 只能由调用方现传，产品端零调用点。现加按 App 乘按角色的设置键族、读写口与设置面板（触发形态 / 插入位置 / 出口名 / 排序 / 手填值 / 倒序起点 / 标题模板 / 三个布尔），越界不在界面拦（纯件夹紧并回读数）。键刻意与排除表**分键**：清排除表不该顺手冲掉条目设置。",
+        "【欠债三 · 年龄推算全档移植】按源 `timeRel.ts` 的五态落 `ageDisplayOf` / `ageDisplay` / `ageDisplayLine`，并由档案端真调：字段投影只对年龄走推算、锚点不再单列成行而是落进说明小字、注入块同样给推算值（模型照抄确数会在跳时间后自相矛盾）。算得出才打「约」，不足一年原样不加「约」，算不出留因不猜。",
+        "【本版自己抓到的缺陷①（判据面，语法级）】当版档首跑当场死在 `await m.listAvailableWorldbooks = async () => …`：`await` 不能修饰赋值左值，两处同形。改成裸赋值后过。",
+        "【本版自己抓到的缺陷②（替身面，假阴）】DOM 替身的 `find()` 会命中原先已被移除的旧弹层 —— 第二次开面板时拿到旧 modal，点它的关闭落在第一个已经 settle 的闭包上，`await done` 永远等不到（面板连续开关这一最日常的用法直接挂死超时）。修法是 `find` 只认活着的节点并取最后建的，等于 querySelector 的活语义。",
+        "【本版自己抓到的缺陷③（判据面，三处不实）】缺省 position 写成 1（实际缺省是 0，判据在替身上假红）；写入路径两级判据的读通道恒返回空 entries，第二次写入看不见第一条、下标越界；一年闸判据拿 1994 的锚点对 2024 的现在时间（实际差 30 年）去断言「不足一年必须原样」，测的根本不是不足一年。",
+        "【本版自己抓到的缺陷④（真源码，样式）】v4.90.0 给行内加眼睛按钮时漏改列数：网格仍是三列而每行已有四个子元素（勾选 / 文案 / 眼睛 / 条目），第四个子元素必然掉行。本版改四列并把归因写进注释，免下一版又当「本来就是四列」。",
+        "【交棒改写：v4.90.0 的 A1 等值锚改下限形】上版出生时五源都是 4.90.0，A1 写成等值锚，抬版即红（那是抬版仪式不是缺陷）。按仓内既定口径改成下限形并交给当版档接管「是否等于某值」。另：`story-time-rel.js` 文件头那句「本件不带年龄面」随本版落地已成假话，一并改掉。",
+        "【键归属表态：模板插值键仍不登记，理由写清】新两族键都是 `phone_worldbook_entrysettings_` 加插值的模板键，落在 `CALL_RE` 的引号字面量扫描面之外，实跑 500 键全登记、零条 worldbook 键、门是绿的。刻意不为它们把扫描面放宽到通配（那正是 v2.69.0 要治的「归属不可知」），理由登记在门禁散文里。",
+        "【负向自证：真源码破坏两向跑三条】把 stale 判定拆掉，则换了会话也照样 ready；把写入路径的显式 options 去掉，则显式传的设置被吞；把一年闸拆掉，则不足一年也打「约」。每条都先证明判据在原版上真、再证明它在破坏副本上假。",
+        "【运行时验证边界】弹层观感、遮罩层级、四列在窄屏的实际排版仍未验：替身不解析 HTML、不跑 CSS、不做命中测试，它只证「结构画出来了、按钮改的是真数据」，不证「看着对」。风险形态还是那句老话「看起来没坏但显示不对」—— 替身与门禁都只能证结构，不能保证观感与真宿主时序。真机与真酒馆宿主照旧只能人工复核，详见边界文档。",
+        "【门禁】15 道全绿。新导出一律带产品端消费点（不是只被测试引用），零消费基线不涨。",
+        "【没做什么（如实）】弹层没有做拖动与多点定位；设置面板没有做「恢复缺省」一键复位；年龄推算只接档案卡，未接角色卡与关系档案。"
     ]
 };
 
@@ -1951,6 +1960,21 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   把字段当函数 call（本仓 bridge-contract 门 J2 钉住的正是这个形态）。 */
         if (!window.VirtualPhone) window.VirtualPhone = {}; // [v4.00.0 · R3-O7] 防御式初始化（装配点早于主装配区）
         const mediaTaskMap = new Map();
+        /* 停滞判据需要「上一次有进展的时刻」：本板只在**状态或成果变化**时刷新它，
+         *   重复上报同一状态不刷新（否则调用方每 tick 心跳一次就永远不告警）。 */
+        const mediaTaskStamp = new Map();
+        const stampKey = (task) => {
+            const sig = [task.state, task.hasResult === true ? 'r' : '-'].join('|');
+            const prev = mediaTaskStamp.get(task.key);
+            /* 这一格同时是 checkStall 的**持久状态**（它靠 state.stalled 记住「已告过」），
+             *   所以状态一变就要重建 —— 重建即擦掉告警（那是新的一段进展）。 */
+            if (!prev || prev.sig !== sig) {
+                mediaTaskStamp.set(task.key, {
+                    sig, at: Date.now(),
+                    status: task.state === 'running' ? 'running' : 'other'
+                });
+            }
+        };
         window.VirtualPhone.mediaTasks = {
             upsert(raw) {
                 const norm = mtrNormalizeTask(raw);
@@ -1963,11 +1987,34 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (!gate.ok) return { saved: false, why: 'transition-rejected: ' + gate.reason, task: prev };
                 }
                 mediaTaskMap.set(norm.task.key, norm.task);
+                stampKey(norm.task);
                 return { saved: true, why: '', task: norm.task };
             },
             remove(key) {
                 const k = String(key || '').trim();
+                mediaTaskStamp.delete(k);
                 return { saved: mediaTaskMap.delete(k), why: k ? '' : 'empty-key' };
+            },
+            /* 停滞读数：逐个在飞任务判一次（**不改任务**、不发取消）。越线只告一次，
+             *   恢复后自动擦告警（判据在 config/stall-watch.js，本处只喂时间与状态）。 */
+            readStalls(opts = {}) {
+                const thresholdSeconds = Number(opts.thresholdSeconds) || undefined;
+                const rows = [];
+                for (const task of mediaTaskMap.values()) {
+                    /* 必须用**同一格对象**：checkStall 会在它上面写/擦 `stalled`，
+                     *   每次新建一个的话「已告过」永远记不住，同一段停滞会被反复告。 */
+                    const state = mediaTaskStamp.get(task.key);
+                    if (!state) continue;
+                    state.last_progress = state.at || undefined;
+                    const r = checkStall({
+                        name: task.key, state, now: Date.now(), thresholdSeconds,
+                        unbounded: ['wechat:video', ':video']
+                    });
+                    if (r.verdict === 'stalled' || r.verdict === 'still') {
+                        rows.push({ key: task.key, app: task.app, kind: task.kind, verdict: r.verdict, line: stallLine(r) });
+                    }
+                }
+                return { total: mediaTaskMap.size, stalled: rows.length, rows };
             },
             cancel(key) {
                 const k = String(key || '').trim();
@@ -2008,6 +2055,36 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
              *   本挂载点不依赖任何 App 实例，只对**没有实例**的 App 出块 —— 与各 App 自己的钩子、
              *   微信链路的实例表都不重复。宿主无事件源 / 已挂过时静默返回 false（绝不影响 App 本体）。 */
             try { mountMissingAppInjection(window, storage); } catch (_e) { /* 静默 */ }
+            /* [v4.89.0 · 第九批缝入] 子系统自检的**产品端读数口**。
+             *   为什么要有：`runSelfChecks` 此前全库零调用点（写完没人跑，等于没有）。
+             *   两个口分工写死：同步口给结论「同步那部分绿不绿」，异步口把完整结论落缓存；
+             *   一次的异步完整自检在启动后台跑，失败静默（自检坏了不许影响启动）。 */
+            try {
+                /* 为什么先抓一次 `vpRef`：下面的 async 口在 `await` **之后**才写缓存，
+                 *   而宿主夹具（tests/boot-smoke）会在拆全局时把 window 摘回 undefined ——
+                 *   那时再读裸 `window` 就是 ReferenceError，且它落在 unhandledRejection 上
+                 *   （不报错、只在测试末尾冒一句异步活动，本版实测踩到）。
+                 *   抓成闭包变量后，await 之后不再碰全局。 */
+                const vpRef = window.VirtualPhone;
+                const sub = vpRef.subsystems;
+                if (sub) {
+                    vpRef.subsystemSelfCheckSync = () => {
+                        try { return sub.runSelfChecksSync(); } catch (e) { return { ok: false, problems: ['threw: ' + String((e && e.message) || e)], totalChecks: 0, passedChecks: 0, skippedChecks: 0, problems2: null, lines: {} }; }
+                    };
+                    vpRef.subsystemSelfCheckAsync = async () => {
+                        try {
+                            const r = await sub.runSelfChecks();
+                            vpRef._selfcheck = { at: Date.now(), report: r };
+                            return r;
+                        } catch (e) {
+                            const bad = { ok: false, problems: ['threw: ' + String((e && e.message) || e)], totalChecks: 0, passedChecks: 0, skippedChecks: 0, lines: {} };
+                            vpRef._selfcheck = { at: Date.now(), report: bad };
+                            return bad;
+                        }
+                    };
+                    void vpRef.subsystemSelfCheckAsync();
+                }
+            } catch (_e) { /* 静默：自检面挂了不影响启动 */ }
             // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
             try {
                 mountLonShaBridge(storage, window.VirtualPhone.memoryCore);

@@ -54,6 +54,10 @@ import { readInjection, injectionLine, injectionVerdictText, outcomeText, blockL
  *   does not provide an export named 'blockLine'），连带 diagnose 入口点开后永远是空白（外壳不崩、日志一行错）。
  *   修法：把它们原样转出（不新造第二份实现）—— 与 default 对象共用同一个来源。 */
 export { injectionLine, injectionVerdictText, blockLine };
+/* [v4.88.0 · 第七批缝入] 导出脱敏（config/secret-redaction.js）。
+ *   接在诊断中心：这里是本仓**一切可粘贴出去的东西**的出口，配了密钥的 profile
+ *   正是从这里被人复制进 issue。修前全库零脱敏 —— 导出即明文。 */
+import { redact, redactSummaryLine } from '../../config/secret-redaction.js';
 
 /* [v3.10.0 · G-3] 知情网络的消费侧真源（上游 worldProg.knowledge 的「谁不知道」面）。
  *   接在诊断中心的理由与投影面/注入面/证据面**同一族**：本仓一切「上游读数」的
@@ -507,6 +511,63 @@ export function collectDiagnose(win, storage) {
         return { ok: true, reason: 'ok', chat: one(true), global: one(false) };
     })();
 
+    /* ── [v4.88.0 · 第七批缝入] 密钥脱敏面 ──
+     *   这一面回答的是「照现在这份配置粘贴出去，会带几个真 key」。
+     *   取数走**真源两层**：优先 apiManager 的脱敏投影（它有 _resolvePhoneApiConfig 的
+     *   合并语义，能脱到真正生效的那个 profile），没有实例时退回裸 storage 读。
+     *   三态互不同形（本仓老规矩）：
+     *     · 读不到（无 storage / 无键）→ 说「读不到」，**不说**「没有密钥」；
+     *     · 读到但没有敏感字段 → 「未遮」，这是**好读数**；
+     *     · 读到且遮了 → 逐条点名遮了哪几处。
+     *   只报不写：本面对 storage 零写入。 */
+    const secretFace = (() => {
+        try {
+            /* 必须把入参 win 交给 hostWindow：不传时它回落全局 window，
+             *   而无头/套件环境下没有全局 window ⇒ 有实例也读不到（本面会谎报 storage-absent）。 */
+            const w2 = hostWindow(win);
+            /* 取数优先 apiManager 的**已脱敏投影**：它同时带 hits / line，
+             *   本面直接用它，不在这里再 redact 一次 —— 同一份值脱两遍的话，
+             *   `***` 这种已经遮过的短值会被判成「太短不遮」，读数与真源分叉。 */
+            const pick = () => {
+                const mgr = w2 && w2.VirtualPhone ? w2.VirtualPhone.apiManager : null;
+                if (mgr && typeof mgr.redactedActiveProfile === 'function') {
+                    const r = safe(() => mgr.redactedActiveProfile(), null);
+                    if (r && r.ok === true && Array.isArray(r.hits)) {
+                        return { source: 'api-manager', value: r.value, hits: r.hits, line: String(r.line || '') };
+                    }
+                }
+                if (!storage || typeof storage.get !== 'function') return { source: 'none', value: null };
+                const raw = safe(() => storage.get('phone_api_config'), null);
+                if (!raw) return { source: 'no-config', value: null };
+                let parsed = raw;
+                if (typeof raw === 'string') parsed = safe(() => JSON.parse(raw), null);
+                return { source: 'storage', value: parsed, hits: null, line: '' };
+            };
+            const got = pick();
+            if (got.value === null) {
+                return {
+                    ok: false, reason: got.source === 'no-config' ? 'no-api-config' : 'storage-absent',
+                    source: got.source, hits: [], line: '', text: ''
+                };
+            }
+            const own = (got.hits === null)
+                ? (safe(() => redact(got.value), null) || { value: null, hits: [] })
+                : got;
+            const hits = Array.isArray(own.hits) ? own.hits : [];
+            const line = got.line || redactSummaryLine(hits);
+            return {
+                ok: true, reason: '', source: got.source, hits,
+                masked: own.value,
+                line,
+                text: '导出脱敏(第七批):' + line + ';'
+                    + (hits.length
+                        ? '这些位置原样贴出去就是明文密钥,发 issue 前无需再手改;'
+                        : '当前配置没有可遮的凭据 —— 这是**好读数**,不是「脱敏没生效」。')
+            };
+        } catch (_e) {
+            return { ok: false, reason: 'thrown', source: 'none', hits: [], line: '', text: '导出脱敏:取数抛错' };
+        }
+    })();
     /* ── [v3.10.0 · G-3] 知情网络面（上游 v3.219.0 的 `worldProg.knowledge`）──
      *   修前的真实处境：`knowledgeList()` 把账里的认知列出来了（有渲染出口），
      *   但**「谁不知道某件事」全库零消费** —— 手机里的对话/动态只凭「角色名出现了」说话，
@@ -1703,7 +1764,45 @@ export function collectDiagnose(win, storage) {
             return { ok: false, reason: 'thrown', problems: ['视角卡面取数抛错'], states: [], slots: [], limits: {}, sample: {}, verdict: {}, live: {}, line: '视角卡:取数抛错', text: '视角卡(第三期 R3-O2):取数抛错' };
         }
     })();
-    return { at, snapshotAt, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate };
+    /* [v4.89.0 · 第九批缝入] 子系统自检面。三态互不相同：
+     *   · 口不在位 → 说「不在位」（不是全绿，也不是全红）；
+     *   · 口在但那一轮还没跑完 → 说「尚未完成」；
+     *   · 跑完了 → 报 passed / skipped / problems 三个数并逐条点名。
+     *   ★ 四件异步件按设计不参与同步口 ⇒ skipped>0 是正常的，**不当作问题**，
+     *     但也绝不把它算进 passed —— 两者一混，「有 4 件没检」就被读成「全绿」。
+     */
+    const selfCheckFace = (() => {
+        try {
+            const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+            const hasSync = !!(vp && typeof vp.subsystemSelfCheckSync === 'function');
+            const hasAsync = !!(vp && typeof vp.subsystemSelfCheckAsync === 'function');
+            const cache = (vp && vp._selfcheck && vp._selfcheck.report) ? vp._selfcheck.report : null;
+            if (!hasSync && !hasAsync) {
+                return { ok: false, linked: false, reason: 'not-mounted', at: 0, passed: 0, skipped: 0, problems: [], lines: {}, text: '' };
+            }
+            const srcReport = cache || (hasSync ? safe(() => vp.subsystemSelfCheckSync(), null) : null);
+            if (!srcReport || typeof srcReport !== 'object') {
+                return { ok: true, linked: true, reason: 'not-run-yet', at: 0, passed: 0, skipped: 0, problems: [], lines: {}, text: '' };
+            }
+            const problems = Array.isArray(srcReport.problems) ? srcReport.problems.map(String) : [];
+            return {
+                ok: problems.length === 0,
+                linked: true,
+                /* 缓存里那份是**含异步**的完整结论；同步口那份一定带 skipped。
+                 *   把来源写进面里，读的人才不会把「同步那份」当成「全部检过」。 */
+                reason: cache ? 'full' : 'sync-only',
+                at: Number((vp && vp._selfcheck && vp._selfcheck.at) || 0),
+                passed: Number(srcReport.passedChecks || 0),
+                skipped: Number(srcReport.skippedChecks || 0),
+                problems: problems,
+                lines: (srcReport.lines && typeof srcReport.lines === 'object') ? Object.assign({}, srcReport.lines) : {},
+                text: ''
+            };
+        } catch (_e) {
+            return { ok: false, linked: true, reason: 'thrown', at: 0, passed: 0, skipped: 0, problems: ['自检面取数抛错'], lines: {}, text: '' };
+        }
+    })();
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -1718,6 +1817,16 @@ export function disposalFaceText(face) {
     return String(f.text || '诊断处置：无读数');
 }
 
+/** [v4.88.0 · 第七批缝入] 脱敏面的一行读数（唯一实现在 collectDiagnose 内那一面）。
+ *  三态：读不到说读不到；遮了逐条点名；未遮也说出来（「未遮」是好读数）。 */
+export function secretFaceText(face) {
+    const f = (face && typeof face === 'object') ? face : null;
+    if (!f || f.ok !== true) {
+        return '导出脱敏：读不到（归因 ' + String((f && f.reason) || 'unknown')
+            + '）—— 这不是「配置里没有密钥」';
+    }
+    return '导出脱敏（来源 ' + String(f.source || '') + '）：' + String(f.line || '未遮');
+}
 /** [v3.82.0 · B 清单] 写作面的一行读数（**唯一实现**在 `collectDiagnose` 内取的那一面）。
  *  这里只做转发与文案：视图不自己拼。三态互不相同：
  *   · 面缺席 → 说「读不到」并给归因，**不说**「八张卡都在」；
@@ -1807,6 +1916,34 @@ export function perspectiveFaceText(face) {
         if (!f) return '视角卡:读取异常(已降级) —— 这不是「这个角色什么都不知道」';
         return String(f.text || '视角卡:无读数');
     } catch (_e) { return '视角卡:读取异常(已降级)'; }
+}
+/**
+ * [v4.89.0 · 第九批缝入] 子系统自检面的一行读数。四态互不相同：
+ *   · 面缺席 → 说「读不到」并说清不是「全绿」；
+ *   · 口不在位 → 说「不在位」（挂载点没起来，与「检过没问题」是两回事）；
+ *   · 尚未跑完 → 说「尚未完成」；
+ *   · 有结论 → passed / skipped / problems 三个数分列。
+ *   ★ skipped 单列到底：四件异步件按设计不进同步口，「跳过」既不算过也不算错，
+ *     所以本函数**永远不在 skipped>0 时说「全绿」**。
+ */
+export function selfCheckFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '子系统自检：读取异常（已降级）—— 这不是「全部自检通过」';
+        if (f.linked === false) return '子系统自检：读数口不在位（挂载未起）—— 这不是「全绿」';
+        const passed = Number(f.passed || 0);
+        const skipped = Number(f.skipped || 0);
+        const problems = Array.isArray(f.problems) ? f.problems : [];
+        const scope = (f.reason === 'sync-only') ? '仅同步面' : '含异步面';
+        if (problems.length) {
+            return '子系统自检（' + scope + '）：**有 ' + String(problems.length) + ' 条问题** —— '
+                + problems.join(' · ') + '（通过 ' + String(passed) + ' 项，跳过 ' + String(skipped) + ' 项）';
+        }
+        const tail = skipped > 0
+            ? '；跳过 ' + String(skipped) + ' 项（异步件不进同步口，**不等于**通过）'
+            : '；无跳过';
+        return '子系统自检（' + scope + '）：通过 ' + String(passed) + ' 项' + tail;
+    } catch (_e) { return '子系统自检：读取异常（已降级）'; }
 }
 /** [第三期 R3-X3] 约会可玩流程面的一行读数(唯一实现在本文件 collectDiagnose 内取的那一面)。
  *  与 relationAlbumFaceText 同范式:只做转发与文案,视图不自己拼。
@@ -2157,6 +2294,7 @@ export default {
     CONSUMED_FIELDS,
     schemaStateText,
     storageFaceLine,
+    secretFaceText,
     evidenceFaceText,
     SOURCE_KEY_SITES,
     collectDiagnose,
@@ -2189,6 +2327,7 @@ datePlayFaceText,
     creationWorkbenchFaceText,
     backupFaceText,
     capHealthFaceText,
+    selfCheckFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,

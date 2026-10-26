@@ -84,15 +84,25 @@ let seq = 0;
 const realSetInterval = globalThis.setInterval;
 const realClearInterval = globalThis.clearInterval;
 const realSetTimeout = globalThis.setTimeout;
+const realClearTimeout = globalThis.clearTimeout;
+/* [v4.88.0 · 夹具接管] 锁屏时钟自 v4.88.0 起由固定 setInterval 改为
+ *   **setTimeout 自调度**（config/gaze-backoff.js 的退避裁决给下一次延迟）。
+ *   夹具只替 setInterval 时，真定时器落在真 setTimeout 上、不进口袋 ——
+ *   C1b 从 1 变 0（假红），而 C1d「dispose 清掉定时器」反而被人为凑绿
+ *   （口袋本来就是空的）。故两类句柄一并接管：判据重新看得见时钟。 */
 function installFakeClock() {
     timers.clear(); seq = 0;
-    globalThis.setInterval = (fn) => { const id = ++seq; timers.set(id, { fn }); return id; };
+    const hold = (fn) => { const id = ++seq; timers.set(id, { fn }); return id; };
+    globalThis.setInterval = hold;
+    globalThis.setTimeout = hold;
     globalThis.clearInterval = (id) => { timers.delete(id); };
+    globalThis.clearTimeout = (id) => { timers.delete(id); };
 }
 function restoreRealClock() {
     globalThis.setInterval = realSetInterval;
     globalThis.clearInterval = realClearInterval;
     globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
 }
 globalThis.window = Object.assign(makeTarget('window'), { VirtualPhone: { storage: { get: () => null, set: () => {} } } });
 globalThis.document = Object.assign(makeTarget('document'), {
@@ -434,7 +444,17 @@ const {
     const blk = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];
     ok('E8a 内置公告存在且 version 引用常量（不硬编码版本号）',
         blk.length > 0 && /version:\s*ST_PHONE_VERSION/.test(blk));
-    const inner = blk.slice(blk.indexOf('items: [') + 'items: ['.length, blk.lastIndexOf(']'));
+    /* [v4.89.0 交棒] 公告块自本版起随 update-log 同构带 highlights。
+       原切片取「块内最后一个 ]」，那是「块里只有 items 一个数组」的形状假设 ——
+       假设不成立后 items 切片会把 highlights 一并吞进来，JSON.parse 必然失败
+       （本版实测：E8b/E8c/E8d 三红，ann=null）。改成锚到 items 自己的收尾，
+       **强度不降**：items 仍须可解析为字符串数组（E8b）、每条仍须与日志逐字同源（E8c）、
+       条数下限仍在（E8d）。取不到收尾时回落到原写法，不静默变空。 */
+    const iStart = blk.indexOf('items: [') + 'items: ['.length;
+    const iEnd = blk.indexOf('\n    ],', iStart);
+    const inner = iEnd > iStart
+        ? blk.slice(iStart, iEnd)
+        : blk.slice(iStart, blk.lastIndexOf(']'));
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('E8b 内置公告可被解析为字符串数组',

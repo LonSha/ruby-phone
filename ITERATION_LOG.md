@@ -1,3 +1,68 @@
+## 迭代 217 · v4.91.0（2026-10-27）— 第十一批：把上版如实登记的三条欠债逐条做成产品实现
+- 【版本升至 4.91.0（五源同源）：v4.90.0 公告末条自己写了三条「没做什么」，本版不许它们继续躺着 —— 三条全部接进产品路径，判据档逐条钉「真接通了没有」】
+- 【欠债一 · 来源许可的 inspect 交互面接进 UI】修前 inspect 只在纯函数层自证，用户摸不到。现加 `inspectExcludedBooks` 快照口（身份先拍、书单再去重、回来再比对身份）与排除面弹层：计数行可数、两节分列已排除与仍在用、每行一个翻转按钮改的是排除表而不是界面。身份在读取途中变了就整份作废（两份名单都空）并给各自的因，绝不给半份名单 —— 半份名单比没有更坏。
+- 【欠债二 · 条目设置面板】修前 `entrySettings` 只能由调用方现传，产品端零调用点。现加按 App 乘按角色的设置键族、读写口与设置面板（触发形态 / 插入位置 / 出口名 / 排序 / 手填值 / 倒序起点 / 标题模板 / 三个布尔），越界不在界面拦（纯件夹紧并回读数）。键刻意与排除表**分键**：清排除表不该顺手冲掉条目设置。
+- 【欠债三 · 年龄推算全档移植】按源 `timeRel.ts` 的五态落 `ageDisplayOf` / `ageDisplay` / `ageDisplayLine`，并由档案端真调：字段投影只对年龄走推算、锚点不再单列成行而是落进说明小字、注入块同样给推算值（模型照抄确数会在跳时间后自相矛盾）。算得出才打「约」，不足一年原样不加「约」，算不出留因不猜。
+- 【本版自己抓到的缺陷①（判据面，语法级）】当版档首跑当场死在 `await m.listAvailableWorldbooks = async () => …`：`await` 不能修饰赋值左值，两处同形。改成裸赋值后过。
+- 【本版自己抓到的缺陷②（替身面，假阴）】DOM 替身的 `find()` 会命中原先已被移除的旧弹层 —— 第二次开面板时拿到旧 modal，点它的关闭落在第一个已经 settle 的闭包上，`await done` 永远等不到（面板连续开关这一最日常的用法直接挂死超时）。修法是 `find` 只认活着的节点并取最后建的，等于 querySelector 的活语义。
+- 【本版自己抓到的缺陷③（判据面，三处不实）】缺省 position 写成 1（实际缺省是 0，判据在替身上假红）；写入路径两级判据的读通道恒返回空 entries，第二次写入看不见第一条、下标越界；一年闸判据拿 1994 的锚点对 2024 的现在时间（实际差 30 年）去断言「不足一年必须原样」，测的根本不是不足一年。
+- 【本版自己抓到的缺陷④（真源码，样式）】v4.90.0 给行内加眼睛按钮时漏改列数：网格仍是三列而每行已有四个子元素（勾选 / 文案 / 眼睛 / 条目），第四个子元素必然掉行。本版改四列并把归因写进注释，免下一版又当「本来就是四列」。
+- 【交棒改写：v4.90.0 的 A1 等值锚改下限形】上版出生时五源都是 4.90.0，A1 写成等值锚，抬版即红（那是抬版仪式不是缺陷）。按仓内既定口径改成下限形并交给当版档接管「是否等于某值」。另：`story-time-rel.js` 文件头那句「本件不带年龄面」随本版落地已成假话，一并改掉。
+- 【键归属表态：模板插值键仍不登记，理由写清】新两族键都是 `phone_worldbook_entrysettings_` 加插值的模板键，落在 `CALL_RE` 的引号字面量扫描面之外，实跑 500 键全登记、零条 worldbook 键、门是绿的。刻意不为它们把扫描面放宽到通配（那正是 v2.69.0 要治的「归属不可知」），理由登记在门禁散文里。
+- 【负向自证：真源码破坏两向跑三条】把 stale 判定拆掉，则换了会话也照样 ready；把写入路径的显式 options 去掉，则显式传的设置被吞；把一年闸拆掉，则不足一年也打「约」。每条都先证明判据在原版上真、再证明它在破坏副本上假。
+- 【运行时验证边界】弹层观感、遮罩层级、四列在窄屏的实际排版仍未验：替身不解析 HTML、不跑 CSS、不做命中测试，它只证「结构画出来了、按钮改的是真数据」，不证「看着对」。风险形态还是那句老话「看起来没坏但显示不对」—— 替身与门禁都只能证结构，不能保证观感与真宿主时序。真机与真酒馆宿主照旧只能人工复核，详见边界文档。
+- 【门禁】15 道全绿。新导出一律带产品端消费点（不是只被测试引用），零消费基线不涨。
+- 【没做什么（如实）】弹层没有做拖动与多点定位；设置面板没有做「恢复缺省」一键复位；年龄推算只接档案卡，未接角色卡与关系档案。
+
+## 迭代 216 · v4.90.0（2026-10-27）— 第十批缝入：来源许可 / 剧情时间相对化 / 世界书条目设置面
+- 【版本升至 4.90.0（五源同源）：第九批侦察台账剩下的四件真缺口全落，合成三件纯函数内核（来源许可 / 剧情时间相对化 / 世界书条目设置面）】
+- 【本版自己抓到的缺陷①（判据面，抬工前自检当场暴露）：三件内核的首版自检共 7 条断言写错】「小数不得被当日期」实得架空分支照样取到日数、「一个月内必须落天后」实得命中同日起月档的「下个月1号」、「到达 30 天仍未满月」实得 30 天整已翻月档（源 timeRel.ts:363 是严格小于 30）、标题补零期望写成带方括号（源表里单层方括号的壳会被吃掉，只有双层写法才留一层方括号）、多处占位误以为「只换第一个」（源 replace 带 g，全部换）。逐条比对源与源的测试表后订正，强度不降反增：补了 29 与 30 天边界成对断言，及「格式化 到 反解」回环五连。
+- 【本版自己抓到的缺陷②（真源码，产品端）：勾了整本世界书却一条都不注入】`_resolveSourceEntrySelection` 只认 `entryIdsBySource` 里的显式条目选择，未点过条目按钮时 `configuredIds` 为空集，连带 `selectedEntries` 也为空 —— 「勾一本但没点条目按钮」恰是最常见用法。改成未显式配置时以全部启用条目兜底，显式配置仍以配置为准。
+- 【本版自己抓到的缺陷③（真源码，产品端）：默认标题模板会把用户标题整条吃掉】缺省模板写成单个占位时，补序号后的产出只有编号，原标题无占位可落。缺省值改回源的兜底形态（序号占位加分隔符加标题占位），并固定「先补序号、再换 title 占位、最后净化」的顺序（顺序反了会把原标题里的数字卷进序号替换）。
+- 【来源许可（第 5 件，缝自 ST-MyriadKnots）】2000 书 / 1200 字双上限（超限截断不拒收）、NFKD 去重音加小写规范化、`world::uid` 键与 locator 末段回退、非 worldbook 直通、认不出书名的 worldbook 候选如实排除、宿主已禁用或 availability 为 disabled 一律排除、inspect 前后身份比对判 stale 三因分形。接在 `_loadSelectedWorldbookSources` 的选中面之后，UI 每行加一只眼睛开关（只翻转许可位、不动勾选）。
+- 【剧情时间相对化（第 6 件，缝自 baibai timeRel）】standard 与 fantasy 双型解析、历法前缀存在时跳过周 / 月 / 年口语档、天月年降级、解析不出回空串。`storyTime` 此前落库后零消费者，现接进注入块逐条前缀剧情距离并进时间线视图的 storyAge 字段；归因分「没给事件时间 / 算不出（跨架空月等）」，算不出时不写前缀而把因留在读数里。
+- 【世界书条目设置面（第 2、7 件，缝自 memorybooks addlore）】受控字段白名单 28 格、position 合法集 0 1 2 3 5 6 7、order 三档（auto / reverse / manual）越界夹紧并回报、reverseStart 夹在 100 到 9999、constVectMode 三色映射常驻与向量化两布尔、position 为 outlet 位才写 outletName 否则删除、标题占位补零与反解、控制字符剥离与剥空兜底。只加工本次新增条目，replaced 不动（那是用户可能手调过的）。
+- 【交棒改写：三件都进同步自检表，不进异步表，另交棒四条抬版即红的老判据】三件零 IO、不看时钟、不 await，挤进异步表会让 `res.ok === true` 恒不成立、真绿变假红。同时各配一行现场参数的读数据（与 writeGuardSamePath 同法），空参调用只会得到「无读数」。抬版当场被四条老判据打红，逐条交棒：五源等值锚（v4890 A1）改下限形并交给当版档接管；件数写死（v4890 F6 的 31 与 32）改按 totalChecks 推算；当版切片按首个右方括号截断（v312 E2 / v3150 E1 / v3160 F1 / v324 A4）反过来把「公告条目不得含方括号」钉成硬约束（本版首抬时正是被它抓住，条目改写后收口）；证据面台账（探针基线与状态账本）走专用刷新工具现场重取自证，不手改数。
+- 【负向自证：真源码破坏两向跑】排除表读空 到 四条断言同红且含「排除命中必须留因」；昨天档拆掉 到 「昨天必须直给」红；fallback 参数被无视 到 「fallback 本身是合法位时必须用它」红；还原后三件全回绿。接线侧另跑：注入过滤被切到 注入本数回 2；设置面换空壳 到 position、order、displayIndex 三条全缺席。
+- 【读数口径两条】设置面读数单独留一格 `_lastEntrySettingsLine`，不混进写入账行（那行是「写了几条」的账，混进夹紧降级会既不是账也不是诊断）；`storyAgeLine` 不再自拼第二份原因（`storyTimeLine` 自己已按因分项，拼了同一句说两遍）。
+- 【运行时验证边界】真机浏览器与真酒馆宿主仍未验：世界书那只眼睛开关、注入块里的方括号前缀、条目在世界书编辑器里的实际排序都只能由真宿主证。风险形态是那句老话「看起来没坏但显示不对」—— 门禁只能证结构正确，不能保证观感与真宿主时序，详见边界文档。
+- 【门禁】15 道全绿。新导出一律有产品端消费点（不是只被测试引用），新键按 App × 按角色分桶且不做上级回退（清单不该被上一级覆盖）。
+- 【没做什么（如实）】来源许可的 inspect 交互面只在纯函数层自证，没接 UI 弹层；`ageDisplay` 全档未移植；条目设置还没有设置面板，只能走 `writeMemoryEntries` 的 options 传。
+
+## 迭代 215 · v4.89.0（2026-10-26）— 第九批缝入：扩散召回与队列整形四件
+- 【版本升至 4.89.0（五源同源）：第九批缝入八件合成四件内核（激活扩散 / 召回注入计划 / 有界后台队列 / 上游失败整形）】五处版本面同改；本版判据 `tests/system-v4890.test.mjs`（六面 29 条）当版跑绿。
+- 【本版自己抓到的缺陷①（判据面，抬版当场暴露）：`tests/system-v231.test.mjs` 的公告切片是形状假设】E8b 用「块内最后一个 `]`」切 items —— 那假设公告块里只有一个数组。本版随 update-log 同构给公告块加了 `highlights`，假设即破：items 切片把 highlights 一并吞下，`JSON.parse` 必失败，E8b/E8c/E8d 三红、`ann=null`。修法改成锚 items 自己的收尾行，取不到才回落原写法 —— **强度不降**（仍须可解析、仍须逐字同源、条数下限仍在）。
+- 【本版自己抓到的缺陷②（判据面，语义而非形状）：版本锚写成了当版等值锚】`tests/system-v4880.test.mjs` 把诞生版 `BORN_V` 同时当等值锚用，抬到 4.89.0 即 A1 三处 + A2 一处全红（红的是判据不是仓）；`tests/system-v3580.test.mjs` 的 R4 用 `sessionGate }` 定位返回面，那是「它恰是最后一个字段」的假设 —— 本版把 `selfCheckFace` 接在它后面，当场假红。A1/A2 改下限形（五源彼此一致 + 不低于诞生版、条目读当版），R4 改 `\bsessionGate\s*[,}]` 与位置无关。
+- 【本版自己抓到的缺陷③（真源码，产品端）：`runSelfChecks` 全库零调用点】自检写完没人跑，等于没有。本版给启动段挂同步 / 异步两个读数口、后台跑一次落缓存，诊断中心新增自检卡 —— **不是**「加了接口就算接通」。
+- 【交棒改写：把「一次跑完全部」拆成同步 11 件 / 异步 4 件】`runSelfChecks` 改 async 并走 `runLimited` 限并发逐件兜错，另出 `runSelfChecksSync()` 把异步件如实标 `skipped`（不冒充已检）；跳过数单列、不进 passed/problems，诊断文案在 skipped>0 时**永不说全绿**（「跳过 4 项（异步件不进同步口，不等于通过）」）。
+- 【本版最贵的一格：中枢读 `res.bad` 而全部内核返回 `problems`】既有十一件内核自检失败也会被算成通过 —— 不报错、只给假绿。修成单一取值口 `kernelProblemsOf`（problems 优先、bad 兼容、空回落空数组）两处共用。
+- 【负向自证：真源码破坏两向跑】`findUpstreamFailureDetails` 插 `return null;` ⇒ 整形退回原始 JSON；`stripErrorPrefixes` 直返原文 ⇒ 残留 `Bad request:`；中枢把 `res.problems` 读成 `return []` ⇒ 失败件被算通过；后台队列自检注入 20ms 延迟 ⇒ async 入口报 problems、sync 入口仍 0（设计如此，证明两口径真分开）。
+- 【诊断面六态，互不同形】`not-mounted` / `not-run-yet` / `sync-only` / `full` 四态 reason 各写各的；同步口被当全量读时如实说「异步件没进同步口」。
+- 【门禁】14 道全绿（其中 `weak-coercion` 本版自己写红 3 处，全部改成 `numOrNull` 单一实现后转绿）。
+- 【闭包实算而非估计】`MIRROR_FILES` 用闭包脚本真跑 44 件求差，差集只剩种子 `app-injection.js` 自身 —— 四件新内核不在 chat-view/app-injection 闭包内，本轮不必扩表（不是「看着不像要扩」）。
+- 【读数口径两条新纪律】① 「未取实况」与「空」必须分形（`diffusionLine(null)` 说未取实况，不编 0）；② skipped 单列到底，`selfCheckFaceText` 在 skipped>0 时不说全绿。
+- 【没做什么（如实）】真机浏览器未验；第 5 件来源许可、第 6 件相对时间推断、第 2 件的 addlore 世界书条目设置面、第 7 件余下的 `normalizeLorebookEntrySettings` / `applyLorebookEntrySettings` 归一均未落。**[v4.90.0 回改：这四件已在下一版（第十批）全部落地，本条据实保留为「v4.89.0 当时的真实状态」，不追改成本版已做。]**
+- 【全链末读数】语法门 / 导入门读数由 `tools/refresh_doc_readings.py` 现场重取后落边界文档（不手抄）；`npm test` 本轮首次出现 65 红，已逐条归因为「判据坏了 2 + 真缺陷 1 + 文档事实陈旧 62」并全部清零。
+
+## 迭代 214 · v4.88.0（2026-10-26）— 第七批缝入：十一件「表面没有、机制里有」的内核
+- 【侦察】机制形态正则 + 文件名指纹 + 本仓差集三重全量重扫 238 个参考仓（不靠词表），捞出十一件纯函数内核并逐个读穿导出面与实现，再逐件落到宿主消费点。
+- 【新增】完成断言门 config/completion-claim-gate.js（ackem/outputGuard）：六域断言分域取证、八态中性句、asserted/evidenced/demoted 三态互不同形；接在微信上屏前，无回执即降级成中性句。
+- 【新增】写目标守卫 config/write-guard.js（companion-emergence/write_guard.py）：三条保留目录硬拒、create/append/overwrite 互斥、文本 1MB 与媒体 24MB 分档字节帽；接进 VFS writeFile 的 commit 侧。
+- 【致命修复】VFS 大小写别名归一：新增 _findPathVariant/_resolveKey，写侧归一目录与文件键、读侧与删侧对称解析，修「写进去了 readFile 却返回 null」（写守卫接上后暴露的第一处真缺陷）。
+- 【新增】导出脱敏 config/secret-redaction.js（VCPToolBox/toolResultPrivacyGuard）：边界锚定敏感键（含中文密钥/令牌）、八组高置信 token 前缀不看键名也遮、前后各留 4 位；apiManager.redactedActiveProfile 给真源合并后的脱敏投影，诊断中心新增脱敏面三态卡片。
+- 【新增】逐句去重 config/turn-claim-dedup.js（ackem/sentenceDedup）与语音回声剥离 config/echo-prose-strip.js（SullyOS/voiceTextDedup）合成 _purifyReplyBatch，按「先剥回声再逐句去重」固定顺序接在微信上屏前。
+- 【新增】话题沉醉守卫 config/topic-saturation-guard.js（ackem/originEscalationGuard）：五态、连击 2/4/5 三档、越线注入硬话并进 8 轮冷却，硬话插在最后一条 user 之前。
+- 【新增】在场状态仲裁 config/presence-arbitration.js（clawd-on-desk/state-priority）：十一态优先级表、三种强制抬升、全 headless 回落 idle 但错误穿透；接进通知中心做 suppressedBy 压制与按在场优先级排序。
+- 【新增】后台停滞告警 config/stall-watch.js（MIRROW/task_stall_policy）：四态 verdict、三类豁免、只首次告 elapsed、时钟回拨不告；接在媒体任务注册板 readStalls，只告不杀。
+- 【新增】通话快照轮换保留 config/snapshot-retention.js（SullyOS/callSnapshotRetention）：只留最近 3 张、只清引用不删消息、正文补图片占位符、跨会话不误伤。
+- 【新增】附件同目标合并 config/attachment-merge.js（ackem/dedupeAndLimit）：按 path 去重、优先级高者胜、平级取长者、超预算只标 omitted 并带 ref 指路；接在免实例装配的 planInjection 之前。
+- 【新增】重绘代次栅栏 config/redraw-generation.js（SullyOS/amsgCloudOwnerGeneration）：起跑时钉住代次、提交前比对、变过即弃，补 abort 掐不住已 resolve 回调的那一段。
+- 【子系统中枢接管】十一件内核各自带 *SelfCheck()，全部接进 runSelfChecks（28 项全绿），并输出 writeGuardSamePath / writeGuardReject / redrawEpochs / presenceRank / redactSummary 五个现场读数行。
+- 【弱口径清零】25 处 numOrNull(...) ?? 默认值收口（gaze-backoff / dream-guard / toy-command-chain / callhome-escalation / binaural-walk / phone-data），全仓弱口径审计转绿；顺手修 binaural-walk 的 f.peekRms → f.peakRms 笔误。
+- 【新增】tests/system-v4880.test.mjs 六面 33 项：含 11 条真源码破坏负控制（两向自证 + 锚点恰中 1 次 + 副本 data: URL 装载）。
+- 【自己抓到的缺陷（逐条留档）】① sameVirtualPath 未 import 致 ReferenceError；② /documents/A.TXT 目录侧未归一，写守卫报「目录不存在」；③ _purifyReplyBatch 误插在类外致语法红；④ guardCompletion 重复 import；⑤ 脱敏面在诊断侧对已遮值二次 redact，让 *** 被判「太短不遮」而与真源分叉，改为直接吃 redactedActiveProfile 的 hits/line；⑥ hostWindow() 漏传 win 致无头环境谎报 storage-absent。
+- 【交棒改写】v231 的夹具只替 setInterval，而锁屏时钟自本版改 setTimeout 自调度 ⇒ C1b 从 1 变 0（假红）、C1d 反而被人为凑绿；夹具改为同时接管 setTimeout/clearTimeout。v3550 的 mofo 从 NA 台账移出（mofo-sync.js 真 import config/update-gap.js，F5 成立）并把矩阵行 F5_upstreamRead 改 true 附行内理由。
+- 【版本升至】版本升至 4.88.0（五源同源）。
 ## 迭代 213 · v4.87.0（2026-10-26）— 双表面铺色、返回导航代退与应用库分层
 - 【新增】App 表面色唯一真源 config/app-surfaces.js：对全仓 351 个 App JS 的 CSS 做字色亮度统计（0.2126R+0.7152G+0.0722B），38 个深底设计 / 51 个浅底，外壳 layerHost 建层按此铺色，修「约会大作战整页透出桌面壁纸/状态栏时钟与电池」。
 - 【重写】返回导航：原 _dispatchSwipeBackWithFallback 派发前就 viewHistory.pop()，且以 550ms 后 transform 是否残留判成败，把「已换页但带手势位移」误判失败回拉压栈 ⇒ 返回键点了卡死。改用 _viewStateVersion 单调计数判据（_applyViewLayerState 每次自增）+ 600/500ms 双观察窗；新增 _forceLayerBack 沿视图历史代退一层，派发 phone:viewBack 让 index.js 同步 currentApp（43 个 view 按 currentApp 取图层，不同步会写错层）。
@@ -1492,7 +1557,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （304 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （331 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -6892,7 +6957,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.87.0`（五源同源）
+- **当前版本**：`4.91.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

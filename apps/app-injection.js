@@ -46,6 +46,11 @@
 'use strict';
 import { readPushProbe } from '../config/world-bridge.js';
 import { planInjection, INJECTION_TIERS } from '../config/injection-priority.js';
+/* [v4.88.0 · 第七批缝入] 同目标合并 + 超额省略（ackem/dedupeAndLimit）。
+ *   为什么必须在 planInjection **之前**：预算裁的是「块」，而同一份数据可能被两个 App
+ *   各出一块（同一条路径 / 同一个 ref）—— 先裁后合并，等于让重复项先白占两份额度，
+ *   真正该进的块被挤掉，然后重复项再合并成一份，账面上还看不出少了什么。 */
+import { finalizeAttachments, mergeLine } from '../config/attachment-merge.js';
 import { numOrNull } from '../config/num-gate.js';
 import { defaultPlaceSettings, readSceneFace, scenePromptBlock } from './place/place-data.js';
 import { defaultWalletSettings, readWalletFace, walletPromptBlock } from './wallet/wallet-data.js';
@@ -416,6 +421,18 @@ export function collectMissingAppInjections(win, storage, opts = {}) {
         /* 预算裁定：档位序已由 LIGHT_SPECS / heavyTiers 固定，这里只做「谁让位」的算术。
          *   不编预算：调用方不给就走 MAX_SAFE_INTEGER（等价于「本次不裁」）。 */
         const budgetGiven = numOrNull(opts.budgetChars);
+        /* 同目标先合并：路径相同者只留一份（优先级高者胜、平级取长者）。
+         *   `source` 用档位值 —— 正是本模块已有的语义，不另立第二套优先级表。 */
+        const merged = finalizeAttachments(candidates.map(function (c) {
+            return { path: c.appId, source: c.tier, label: c.name, body: c.content, appId: c.appId, name: c.name, tier: c.tier };
+        }), { cap: Number.MAX_SAFE_INTEGER });
+        notes.merge = { merged: merged.merged, omitted: merged.omitted, line: mergeLine(merged) };
+        if (merged.merged) {
+            candidates.length = 0;
+            for (const it of merged.items) {
+                candidates.push({ appId: it.appId, name: it.name, tier: it.tier, content: it.body });
+            }
+        }
         const planRows = candidates.map(function (c) {
             return { ref: c.appId, label: c.name, tier: c.tier, content: c.content, chars: c.content.length };
         });

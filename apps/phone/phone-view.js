@@ -21,6 +21,13 @@ import { formatWechatChatListTime } from '../wechat/chat-list-time.js';
  *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
  *   开关照样翻过去，重开设置页才发现没存住。现在走 writeConfirmed（写 + 回读一次）。 */
 import { writeConfirmed, phaseSettled, phaseText } from '../../config/write-receipt.js';
+/* [v4.88.0] 静默升级拨号四门控（缝自 Cheiineeey/callhome）。纯函数在内核，
+ *   本文件只做取数与执行；dnd 的键从系统开关真源读，不在这里另写一份键名。 */
+import { judgeEscalation, ESCALATE_BLOCK_REASONS } from '../../config/callhome-escalation.js';
+import { SYS_KEYS } from '../../config/system-controls.js';
+/* [v4.88.0] 出声才走位（缝自 Saekisui/binaural-voice）：纯函数内核判「这帧算不算出声、
+ *   pan 该多少」，本文件只喂帧与写 panner；拿不到 WebAudio 就如实回落不接管播放。 */
+import { pushWalkFrame, initialWalkState, laneProgress } from '../../config/binaural-walk.js';
 
 export class PhoneCallView {
     constructor(app) {
@@ -2231,6 +2238,7 @@ export class PhoneCallView {
                 <div class="phone-call-incoming-avatar">${avatarHtml}</div>
                 <div class="phone-call-incoming-name">${callerName}</div>
                 <div class="phone-call-incoming-status">来电<span class="phone-call-typing-dots"></span></div>
+                ${this._renderEscalationReason()}
                 <div class="phone-call-incoming-btns">
                     <button class="phone-call-btn phone-call-btn-reject" id="phone-call-reject">
                         <i class="fa-solid fa-phone-slash"></i>
@@ -3319,15 +3327,21 @@ export class PhoneCallView {
 
             await new Promise((resolve, reject) => {
                 this.audioPlayer.onended = () => {
+                    this._stopBinaural();
                     if (bubble) bubble.classList.remove('voice-playing');
                     this.currentPlayingBubble = null;
                     resolve();
                 };
                 this.audioPlayer.onerror = (e) => {
+                    this._stopBinaural();
                     if (bubble) bubble.classList.remove('voice-playing');
                     this.currentPlayingBubble = null;
                     resolve();
                 };
+                /* [v4.88.0 · binaural-voice] 出声才走位：接到播放器之后再起帧推进。
+                 *   **失败即回落**（_startBinaural 返回 null 时声音照旧从 audioPlayer 直接出），
+                 *   故这条机制不可能让「本来能播」变成「播不了」。 */
+                this._startBinaural(this.audioPlayer);
                 this.audioPlayer.play().catch(() => resolve());
             });
 
@@ -3422,6 +3436,138 @@ export class PhoneCallView {
             status: status,
             transcript: transcript || []
         });
+        /* [v4.88.0] 静默账：只有**有过来往**才刷新 lastContactAt。
+         *   接通 / 被拒 / 未接都算「角色主动找过」—— 唯独 `canceled`（用户自己按掉
+         *   的拨号）不算：那说明用户在场，静默期间本来就不该累积。 */
+        if (status !== 'canceled') {
+            this.app.phoneCallData.markContactAt?.(Date.now());
+        }
+    }
+
+    /* ============================================================
+     * [v4.88.0] 静默升级拨号（config/callhome-escalation.js 的宿主消费面）
+     * ------------------------------------------------------------
+     * 分工：内核只裁决（纯函数、无状态、可穷举），本方法只做**取数 + 执行 + 落账**。
+     * 取数三格里有两条硬纪律：
+     *   ① `dnd` 从 `config/system-controls.js` 的 SYS_KEYS.DND 真源读，**不自己判**——
+     *      免打扰有两套（通知横幅 / 系统开关），自判第二份必然漂移；
+     *   ② 静默账缺 `lastContactAt` 时**如实交 null**，内核据此不拨（不猜「就当刚联系过」）。
+     * 调用时机由宿主在「生成完成 / 收到消息」后自行决定；本方法幂等，
+     * 当日已拨则内核直接拦下（不会重复拨）。
+     * ============================================================ */
+    async tickEscalation(callerName) {
+        const name = String(callerName || '').trim();
+        if (!name) return { allow: false, reason: 'no-caller' };
+        const data = this.app.phoneCallData;
+        if (!data?.getEscalationLedger) return { allow: false, reason: 'no-ledger' };
+        // 通话中 / 来电中不打扰（已经在通了）。
+        if (this.currentView === 'active' || this.currentView === 'incoming') {
+            return { allow: false, reason: 'in-call' };
+        }
+        const dnd = (() => {
+            try { return this.app.storage?.get?.(SYS_KEYS.DND) === true; } catch (_e) { return false; }
+        })();
+        const led = data.getEscalationLedger();
+        const verdict = judgeEscalation({
+            lastContactAt: led.lastContactAt,
+            lastAutoCallDay: led.lastAutoCallDay,
+            dnd: dnd
+        });
+        /* 拦截原因必须来自内核那张**门控顺序表**：表外的值说明内核与宿主对不上了
+         *   （改了门控却漏改一侧），如实加 `unknown:` 前缀，不让它对不上还长得一样。 */
+        const reason = ESCALATE_BLOCK_REASONS.indexOf(verdict.reason) >= 0
+            ? verdict.reason
+            : 'unknown:' + String(verdict.reason || '');
+        data.markEscalationVerdict?.(reason);
+        if (!verdict.allow) return { ...verdict, reason };
+        // 只认「拨了才算」，故先落账再拨：拨号页自身还有 1.2s 决策窗，
+        //   若等接听再落账，同一时段再 tick 一次会**重复拨**。
+        data.markAutoCall?.(verdict.dayKey);
+        data.markContactAt?.(Date.now());
+        this._pendingEscalationReason = String(verdict.reasonText || '');
+        this.renderIncomingCall(name);
+        return verdict;
+    }
+    /** 最近一次自动拨号的理由模板（来电页显示用；普通来电为 ''）。 */
+    takeEscalationReason() {
+        const r = String(this._pendingEscalationReason || '');
+        this._pendingEscalationReason = '';
+        return r;
+    }
+
+    /* ---------- [v4.88.0 · binaural-voice] 出声才走位 · 宿主侧 ----------
+     * 分工与内核一致：内核判「这一帧算不算出声、pan 该多少」，这里只做
+     *   **取帧 → 喂内核 → 写 pan**。三条硬边界：
+     *   ① 拿不到 WebAudio 的分支（没有 AudioContext / createMediaElementSource 抛错）
+     *      ⇒ 返回 null 并**不接管播放**，声音照旧由 audioPlayer 直出；
+     *   ② pan 落到一个 StereoPannerNode 上（浏览器路由给它，audioPlayer 仍照常 play/pause）；
+     *   ③ 帧循环用 requestAnimationFrame（不是定时器）：页面隐藏自然停，
+     *      这一点与「只在出声时走位」是同一个目标的两面。
+     * 实测口径：本仓此前全仓无 `createStereoPanner` / `createMediaElementSource`。
+     * ============================================================ */
+    _startBinaural(el) {
+        this._stopBinaural();
+        try {
+            if (!el) return null;
+            const w = (typeof window !== 'undefined') ? window : null;
+            const C = w && (w.AudioContext || w.webkitAudioContext);
+            if (!C) return null;
+            if (!this._binauralCtx) this._binauralCtx = new C();
+            const ctx = this._binauralCtx;
+            if (typeof ctx.createStereoPanner !== 'function') return null;
+            if (typeof ctx.createMediaElementSource !== 'function') return null;
+            if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume().catch(() => {});
+            const src = ctx.createMediaElementSource(el);
+            const panner = ctx.createStereoPanner();
+            src.connect(panner);
+            panner.connect(ctx.destination);
+            this._binauralNodes = { src, panner };
+            this._binauralState = initialWalkState(0);
+            // 从右到左走完（说话人换边站），幅度由目标位的线性逼近给出。
+            this._binauralLane = { from: 0.6, to: -0.6 };
+            const tick = () => {
+                if (!this._binauralState) return;
+                const st = this._binauralState;
+                const target = this._binauralLane.from
+                    + (this._binauralLane.to - this._binauralLane.from) * laneProgress(st.tauMs, 6000);
+                /* rms/peak 的取法：audioPlayer 上没有逐帧电平，且 TTS 音频本身是持续人声，
+                 *   故用「播放中 ⇒ rms=1 / 暂停 ⇒ 0.02」当电平源（peak 恒 1）。
+                 *   这是本件的**已知近似**，写在这里而不是让读者以为在算真 RMS。 */
+                const playing = !el.paused && !el.ended;
+                const out = pushWalkFrame(st, { rms: playing ? 1 : 0.02, peakRms: 1, targetPan: target, frameMs: 16 });
+                this._binauralState = out;
+                try { if (this._binauralNodes?.panner) this._binauralNodes.panner.pan.value = out.pan; } catch (_e) { /* 单帧写失败忽略 */ }
+                this._binauralRaf = w.requestAnimationFrame(tick);
+            };
+            this._binauralRaf = w.requestAnimationFrame(tick);
+            return this._binauralNodes;
+        } catch (_e) {
+            // 任一步抛错：拆干净并如实回落（不接管）。
+            this._stopBinaural();
+            return null;
+        }
+    }
+
+    _stopBinaural() {
+        try { if (this._binauralRaf && typeof window !== 'undefined') window.cancelAnimationFrame(this._binauralRaf); } catch (_e) { /* 忽略 */ }
+        this._binauralRaf = null;
+        this._binauralState = null;
+        try { this._binauralNodes?.src?.disconnect?.(); } catch (_e) { /* 忽略 */ }
+        try { this._binauralNodes?.panner?.disconnect?.(); } catch (_e) { /* 忽略 */ }
+        this._binauralNodes = null;
+    }
+
+
+    /**
+     * 来电页的理由块：**取走即清**（renderIncomingCall 每次渲染都调一次，
+     * 不取走会在下一次普通来电时重复显示上一次的理由）。
+     * 空串返回 '' —— 不占位、不留空 div（普通来电不该多出一行空白）。
+     */
+    _renderEscalationReason() {
+        const r = this.takeEscalationReason();
+        const text = String(r || '').trim();
+        if (!text) return '';
+        return `<div class="phone-call-incoming-reason">${this._escapeHtml(text)}</div>`;
     }
 
     _resolveWechatContact(callerName) {

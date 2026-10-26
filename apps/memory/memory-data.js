@@ -11,6 +11,11 @@ import { EmotionTagger, calculateDecayScore, consolidateMemories, searchMemories
 import { MemoryPool } from './memory-pool.js';
 import { cleanFloorForSummary } from '../../config/message-clean.js';
 import { decorateRecall, pruneByLifecycle, RECALL_PERMISSION } from '../../config/recall-filter.js';
+/* [v4.89.0 · 第九批缝入] 召回注入计划（config/recall-injection-plan.js）。
+ *   修前 buildPromptDirective 按分数一刀切后原样铺进块：同分靠召回循环顺序、
+ *   锚点与背景同形、带 `~` 的谨慎条目与可引用条目混排 —— 注入块没有层次。
+ *   本件按「角色 → 优先级 → 原序」重排，并把角色标签写进行内（模型据标签判分量）。 */
+import { planFromCandidates, compareNodesByRecallInjectionPlan, recallPlanLine } from '../../config/recall-injection-plan.js';
 import { scanSupersede, reviveSuperseded, SUPERSEDE_STATUS } from '../../config/supersede-engine.js';
 /* [v3.80.0 · 缝入 A3] 结构化记忆块：模型在正文里**显式声明**要记的事。
  *   修前记忆全靠被动采集（正文丢桶、后续检索捞回来），于是「共同经历」这类
@@ -24,6 +29,12 @@ import {
     SHARED_MEMORY_KEY, LEVELS as SHARED_LEVELS, emptyStore, normalizeStore,
     remember as sharedRemember, recall as sharedRecall, sharedMemoryLine as sharedMemoryLineOf
 } from '../../config/shared-memory.js';
+/* [v4.90.0 · 第十批缝入 6/8] 剧情时间的相对化（取证台账第 6 件）。
+ *   修前 `storyTime`（本文件 :192 落库的那格）**落库后没有任何消费者** ——
+ *   注入块与时间线都只按 `createdAt`（现实毫秒戳）排，于是「三十年前的旧事」
+ *   与「刚才那一轮」在记忆里同样新鲜，模型无从判断哪件事更早。
+ *   纯函数那一半在 config/story-time-rel.js（零 IO、不看时钟）。 */
+import { storyTimeAge, storyTimeLine } from '../../config/story-time-rel.js';
 
 /** [v3.3.0] 楼层取值门（删楼回滚族）：只认数字与非空数字字符串，其余如实 null。
  *  与 `config/projection-contract.js` / `config/injection-contract.js` 的 `numOrNull`、
@@ -39,6 +50,8 @@ function floorOrNull(v) {
     return null;
 }
 
+/** [v4.89.0] 角色中文标签在本层只用于行内标注，故单独取一份只读引用（不各写一遍文案）。 */
+const ROLE_LABEL_OF = Object.freeze({ anchor: '锚点', cause: '因果', pov: '视角', constraint: '约束', background: '背景' });
 export class MemoryCore {
     constructor(storage) {
         this.storage = storage;
@@ -381,7 +394,10 @@ export class MemoryCore {
         poolRes.matched.forEach(m => out.push({ layer: m._layer || 'pool', content: m.content, _score: m._score, emotion: m.emotion || null, metadata: m.metadata || {}, createdAt: m.createdAt }));
         // 2) 长期记忆关键词
         const longRes = searchMemories(this.longTerm, query, {});
-        longRes.forEach(m => out.push({ layer: 'long-term', content: m.content, _score: m._score, importance: m.importance, emotion: m.emotion || null, metadata: m.metadata || {}, createdAt: m.createdAt }));
+        /* [v4.90.0 · 第十批缝入 6/8] 召回结果带出 `storyTime`（注入侧才能算相对前缀）。
+         *   只带这一格，不动召回排序 —— 排序按现实 `createdAt` 是本仓既有口径，
+         *   本版不改排序，只让模型**看得见**每条记忆在剧情里有多远。 */
+        longRes.forEach(m => out.push({ layer: 'long-term', content: m.content, _score: m._score, importance: m.importance, emotion: m.emotion || null, metadata: m.metadata || {}, createdAt: m.createdAt, storyTime: m.storyTime || null }));
         // 去重
         const seen = new Set();
         const uniq = out.filter(x => { if (!x.content || seen.has(x.content)) return false; seen.add(x.content); return true; });
@@ -400,7 +416,11 @@ export class MemoryCore {
             return true;
         });
         // 权限分级 + 分段衰减排序 + 截断
-        return decorateRecall(rankedOut, { topN });
+        const decorated = decorateRecall(rankedOut, { topN });
+        /* [v4.89.0 · 第九批缝入] 逐条上 `id`（计划按 id 认条）。序号即召回序 ——
+         *   计划原序取的就是它，故重排完全并列时回到这里，不会变成不稳定排序。 */
+        for (let i = 0; i < decorated.length; i += 1) decorated[i].id = 'rc-' + i;
+        return decorated;
     }
 
     /**
@@ -450,6 +470,26 @@ export class MemoryCore {
         } catch (e) { return []; }
     }
 
+    /** [v4.90.0 · 第十批缝入 6/8] 当前剧情时刻的纯文本（给相对化内核当 `now`）。
+     *   取数口唯一走 `timeManager.getCurrentStoryTime()`（本仓剧情日期只许一个来源）。
+     *   取不到就回空串 —— 内核据此给 `no-now-time` 归因，**不拿现实时间顶替剧情时间**。 */
+    _nowStoryTimeText() {
+        try {
+            const tm = (typeof window !== 'undefined') ? window.VirtualPhone?.timeManager : null;
+            const cur = tm?.getCurrentStoryTime?.();
+            if (!cur) return '';
+            const date = String(cur.date ?? '').trim();
+            const time = String(cur.time ?? '').trim();
+            if (!date) return '';
+            return time ? date + ' ' + time : date;
+        } catch (_e) { return ''; }
+    }
+    /** 一条记忆的剧情时间相对前缀（`三十年前` / `昨天`）。给不出就空串。 */
+    storyAgeOf(entry) {
+        if (!entry || !entry.storyTime) return '';
+        const res = storyTimeAge(entry.storyTime, this._nowStoryTimeText());
+        return res.ok ? String(res.label || '') : '';
+    }
     /**
      * 生成注入 prompt 的【记忆】块 (纯本地, 无 LLM)
      * @param recentTexts 最近消息文本 (user/ai 交替), 用于相关性召回
@@ -464,7 +504,7 @@ export class MemoryCore {
         // 召回不足时补最新记忆 (保证近期事件不丢)
         if (items.length < 3) {
             const newest = [...this.longTerm].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3)
-                .map(m => ({ layer: 'long-term', content: m.content, _score: 0.3, importance: m.importance }));
+                .map(m => ({ layer: 'long-term', content: m.content, _score: 0.3, importance: m.importance, storyTime: m.storyTime || null }));
             const have = new Set(items.map(x => x.content));
             items = items.concat(newest.filter(n => !have.has(n.content)));
         }
@@ -474,16 +514,61 @@ export class MemoryCore {
         const injectItems = items.filter(it => it._permission !== RECALL_PERMISSION.ASSOCIATE);
         if (!injectItems.length) return '';
 
+        /* [v4.89.0 · 第九批缝入] 按召回注入计划重排（角色 → 优先级 → 原序）。
+         *   `sort` 在 V8 上是稳定排序，且第三段比较就是计划原序，故并列不会被抖散。 */
+        const plan = planFromCandidates(injectItems);
+        const ordered = [...injectItems].sort((l, r) => compareNodesByRecallInjectionPlan(plan.plan, l, r));
+        const roleOf = new Map(plan.plan.items.map(it => [it.memoryId, it.role]));
+        this._lastRecallPlan = plan;   // 诊断页读它，不重算第二份
         let block = '【角色的长期记忆库 — 以下是角色在此聊天中沉淀的真实经历, 引用时须自然, 不得虚构】';
         const prem = this.pool.pool.premise;
         if (prem && prem.text) block += '\n◆ 背景前提: ' + prem.text;
         block += '\n◆ 相关记忆片段:';
-        for (const it of injectItems.slice(0, this.config.injectTopN)) {
+        /* [v4.90.0 · 第十批缝入 6/8] 每条前缀一段剧情时间距离（`三十年前` / `昨天`）。
+         *   归因分三态：能给前缀 / 记忆没有剧情时间 / 有剧情时间但算不出（跨架空月等）。
+         *   后两态**不写前缀**而不是写「未知」—— 一片「未知」会把块变噪，归因留在读数里。 */
+        const ageStats = { labeled: 0, skipped: 0, byReason: {} };
+        const bump = (reason) => { ageStats.skipped += 1; ageStats.byReason[reason] = (ageStats.byReason[reason] || 0) + 1; };
+        const nowText = this._nowStoryTimeText();
+        for (const it of ordered.slice(0, this.config.injectTopN)) {
             const permTag = it._permission === RECALL_PERMISSION.CITE ? '' : (it._permission === RECALL_PERMISSION.CAUTIOUS ? ' ~' : '');
-            block += '\n- ' + it.content.replace(/\s+/g, ' ').slice(0, 160) + permTag;
+            /* 角色标签只在**非背景**时给：全是标签会让块变噪；背景就是默认位，标了等于没标。 */
+            const role = roleOf.get(it.id);
+            const roleTag = (role && role !== 'background') ? '(' + (ROLE_LABEL_OF[role] || role) + ') ' : '';
+            let ageTag = '';
+            if (it.storyTime) {
+                const ageRes = storyTimeAge(it.storyTime, nowText);
+                if (ageRes.ok) { ageTag = '〔' + ageRes.label + '〕'; ageStats.labeled += 1; }
+                else bump(ageRes.reason);
+            } else {
+                bump('no-event-time');
+            }
+            block += '\n- ' + ageTag + roleTag + it.content.replace(/\s+/g, ' ').slice(0, 160) + permTag;
+        }
+        this._lastStoryAgeStats = { labeled: ageStats.labeled, skipped: ageStats.skipped, byReason: ageStats.byReason };
+        if (ageStats.labeled > 0) {
+            block += '\n◆ 时间口径: 方括号内是该条记忆距今的剧情时间距离（不是现实时间）；没有方括号的是算不出的，按内容自行判断早晚。';
         }
         block += '\n◆ 使用规则: 记忆与当前剧情冲突时以剧情为准; 记忆片段可触发角色的情绪反应, 但不得机械复读原文; 总引用不超过3条, 保持对话自然; 带 ~ 标记的记忆若要引用须用「好像记得…」等留有余地口吻。';
         return block;
+    }
+
+    /**
+     * [v4.89.0 · 第九批缝入] 上一轮注入计划的读数行（诊断/记忆体检读它，不重算第二份）。
+     * 没有跑过注入时如实说「没跑过」，不假装空计划。
+     */
+    recallPlanLine() {
+        if (!this._lastRecallPlan) return '本轮还没跑过注入计划（不是空计划）';
+        return recallPlanLine(this._lastRecallPlan);
+    }
+    /** [v4.90.0 · 第十批缝入 6/8] 上一轮剧情时间标注的读数行。
+     *   没跑过 ⇒ 如实说没跑过；跑过但一条都没标出 ⇒ 也要说清是「没有剧情时间」还是
+     *   「算不出」（两种处置相反：前者等上游补时间，后者要宽松解析），故走 `storyTimeLine` 的分态。 */
+    storyAgeLine() {
+        if (!this._lastStoryAgeStats) return '本轮还没跑过剧情时间标注（不是零条）';
+        /* `storyTimeLine` 自己已按因分项（"没给事件时间 1 / 跨架空月算不出 1"），
+         *   故这里**不再**拼第二份「因：」—— 拼了就是同一句原因说两遍。 */
+        return storyTimeLine(this._lastStoryAgeStats);
     }
 
     // ---------------- [RA] 楼层失效 (重写/swipe/回填覆盖时调用) ----------------
@@ -544,11 +629,19 @@ export class MemoryCore {
         };
     }
 
-    /** 时间线视图: 长期记忆按时间倒序 */
+    /** 时间线视图: 长期记忆按时间倒序。
+     *   [v4.90.0 · 第十批缝入 6/8] 每条附一段剧情时间距离 `storyAge`
+     *   （没给 `storyTime` 或算不出时为空串，键面恒定 —— 读者不必再判 undefined）。 */
     getTimeline(limit = 60) {
+        const nowText = this._nowStoryTimeText();
         return [...this.longTerm]
             .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-            .slice(0, limit);
+            .slice(0, limit)
+            .map((one) => {
+                if (!one || typeof one !== 'object') return one;
+                const res = one.storyTime ? storyTimeAge(one.storyTime, nowText) : null;
+                return Object.assign({}, one, { storyAge: res && res.ok ? String(res.label || '') : '' });
+            });
     }
 
     clear() {

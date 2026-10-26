@@ -9,7 +9,7 @@
 'use strict';
 
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
-import { schemaStateText, storageFaceLine, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
+import { schemaStateText, storageFaceLine, secretFaceText, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
@@ -17,7 +17,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, perspectiveFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, perspectiveFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, selfCheckFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -626,6 +626,31 @@ export class DiagnoseView {
      *     并把「未记录」与「明确不知」在版面上分开 —— 合并任意两格就会把
      *     「我们没记过」读成「该角色确实不知道」,那正是上游明令禁止的一条。
      *   面缺席时的话术与「没记过」不同形:前者是「本层读不出」,后者是「真跑过、没轨迹」。 */
+    /**
+     * [v4.89.0 · 第九批缝入] 子系统自检卡。纯渲染：全部文案来自 `selfCheckFaceText`。
+     *   与能力体检卡**并列**（分工：那张量「六项能力现在通不通」，本卡量「十一件内核自检还绿不绿」）。
+     */
+    _selfCheckHtml(pkg) {
+        const face = (pkg && pkg.selfCheckFace) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>读不到子系统自检面（已降级）—— '
+                + '这是「本层读不出」，**不是**「全部自检通过」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(selfCheckFaceText(face)) + '</div>';
+        const lines = (face.lines && typeof face.lines === 'object') ? face.lines : {};
+        const keys = Object.keys(lines);
+        if (keys.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>' + keys.map((k) =>
+                '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>'
+                + escapeHtml(k) + '</code><span class=' + Q + ' dg-sub' + Q + '>'
+                + escapeHtml(String(lines[k])) + '</span></div>').join('') + '</div>';
+        }
+        if (face.linked === false) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>语义：挂载点没起来。查启动段而不是查内核 —— '
+                + '口不在位时一条内核都没检过，全绿是假象。</div>';
+        }
+        return html;
+    }
     _perspectiveHtml(pkg) {
         const face = (pkg && pkg.perspectiveFace) || null;
         if (!face) {
@@ -1412,6 +1437,35 @@ export class DiagnoseView {
             + '「本版没这面」同形 —— 前者<b>重发一轮就好</b>，后者只能等升级，压成一态就是错读数。</div>';
     }
 
+    /**
+     * [v4.88.0 · 第七批缝入] 导出脱敏面：把「照这份配置贴出去会不会带出真 key」摆出来。
+     *  三态互不同形（与 _storageHtml 同范式）：
+     *   · 读不到 → `dg-bad` 并给归因，明确写「这不是配置里没有密钥」；
+     *   · 读到但未遮 → 说「未遮」并标明这是**好读数**；
+     *   · 读到且遮了 → 逐条点名（读到哪一处就是哪一处，不汇总成「若干」）。
+     */
+    _secretHtml(pkg) {
+        const f = (pkg && pkg.secretFace) || {};
+        if (f.ok !== true) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>导出脱敏：读不到（归因 '
+                + escapeHtml(String(f.reason || 'unknown'))
+                + '）—— 这只说明本页取不到配置，不代表配置里没有密钥。</div>';
+        }
+        const hits = Array.isArray(f.hits) ? f.hits : [];
+        let html = '<div class=' + Q + 'dg-row' + Q + '>'
+            + this._chip(hits.length ? ('已遮 ' + hits.length + ' 处') : '未遮（无敏感字段）', hits.length ? 'warn' : 'muted')
+            + this._chip('来源 ' + String(f.source || ''), 'muted') + '</div>';
+        if (hits.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>'
+                + hits.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>· ' + escapeHtml(String(p)) + '</div>').join('')
+                + '</div>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>' + escapeHtml(secretFaceText(f)) + '</div>'
+            + '<div class=' + Q + 'dg-note' + Q + '>口径纪律：<b>只遮不删</b> —— 数字 / 布尔 / 短值原样留着'
+            + '（版本号、端口、开关一眼要能读），被遮的保留前 4 后 4 以便对号；'
+            + '前缀能认出的 token（sk- / ghp_ / glpat- 等）不看键名也遮 —— 键名会拼错，前缀不会。</div>';
+        return html;
+    }
     /** [v3.5.1 · F-8] 存档健康面：P-4 的两个裁定读数（存储时代 / 迁移账本）**首次可见**。
      *  只呈现，不判定也不迁移：卡片上写下的每一个字都来自 storage 的两个只读出口，
      *  两个分域（本会话档 / 全局档）分开列 —— 它们是两本不同的账。 */
@@ -1619,6 +1673,8 @@ export class DiagnoseView {
         /* [第三期 R3-O2] 视角卡卡:跟在回忆册卡之后(两者都是「把关系读数落成可读面」同族的诊断卡;
          *   回忆册答「这对人之间发生过什么」,视角卡答「这条事实这个人此刻知不知道」)。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>角色可知范围(视角卡:亲历 / 听说 / 误信 / 明确不知 / 未记录)</h3>' + this._perspectiveHtml(pkg) + '</section>');
+        /* [v4.89.0 · 第九批缝入] 子系统自检卡紧跟其后（同族：都是「把内部读数落成可看的面」）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>子系统自检（同步面绿不绿 / 跳过几件异步件 / 逐条问题）</h3>' + this._selfCheckHtml(pkg) + '</section>');
         /* [第三期 R3-X3] 约会流程卡:跟在回忆册卡之后(两者都是「把约定读数落成可读面」同族的诊断卡)。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>约会与日程的可玩执行流程(五步 / 到场等人证 / 回档即作废)</h3>' + this._datePlayHtml(pkg) + '</section>');
          /* [v3.90.0 · R-X6] 创作工作台卡与声明式工作流卡**并列**（分工：那张量「几步串成一条路」，本卡量「一个素材发到一个 App」）。 */
@@ -1647,6 +1703,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>导出脱敏</h3>' + this._secretHtml(pkg) + '</section>');
         h.push('</div>');
         container.innerHTML = h.join('');
     }

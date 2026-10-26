@@ -21,6 +21,10 @@
  * ======================================================== */
 'use strict';
 import { faceFieldState } from '../../config/world-bridge.js';
+/* [v4.91.0 · 本仓不做第二套年龄口径] 年龄不是状态而是时间的函数：存储永远是
+ *   「记录时的原文 + 锚点时间」，显示时相对当前故事时间推算。四个纯助手各管一段，
+ *   哪个都不许在这里就地重写（重写就是第二套口径，长岁会算错）。 */
+import { ageDisplay, ageDisplayOf, ageDisplayLine, weekdayLabel, relativeTimeLabel } from '../../config/story-time-rel.js';
 /** 归因文案（五态；与 readProfileFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const PROFILE_REASONS = Object.freeze({
     'ready': '档案就绪',
@@ -98,18 +102,84 @@ export function readProfileFace(probe) {
     return out;
 }
 /**
+ * 年龄格投影：把「原文 + 锚点」还原成**此刻该显示的那个年龄**。
+ *   上游存的是记录时的原文（`24岁`）与记录时的故事时间（`ageTime`）——
+ *   直接拍平显示会让时间跳跃后永远停在 24 岁。故这里走推算，并把状态位带出来
+ *   （`estimated` 才打「约」，`raw-uncomputable` 保留原文并让调用方看着办）。
+ * @returns {{state:string, text:string, anchor:string, note:string}}
+ */
+export function protagonistAge(protagonist, now) {
+    try {
+        const p = (protagonist && typeof protagonist === 'object') ? protagonist : {};
+        const raw = (typeof p.age === 'string' || typeof p.age === 'number') ? String(p.age) : '';
+        const anchor = typeof p.ageTime === 'string' ? clip(p.ageTime, 40) : '';
+        const res = ageDisplayOf(raw, anchor, typeof now === 'string' ? now : '');
+        const note = {
+            'empty': '没写年龄',
+            'raw-no-anchor': '没有记录时间，无从推算',
+            'raw-within-year': '记录至今不足一年（还没到长一岁）',
+            'estimated': '按记录时间推算（不知生日，可能差一岁）',
+            'raw-uncomputable': '算不出（模糊写法 / 时间倒流 / 跨架空月），原样保留'
+        }[res.state] || res.state;
+        return { state: res.state, text: clip(res.text, 60), anchor: anchor, note: note };
+    } catch (_e) { return { state: 'empty', text: '', anchor: '', note: '投影失败' }; }
+}
+/**
+ * 一行年龄读数（给界面看一眼「它是怎么来的」，不是只给结果）：
+ *   显示串 + 状态归因 + 锚点的周几与相对时间。
+ *   为什么要把周几与相对时间摆出来：孤零零一个 `1994/3/1` 看不出远近，
+ *   而「周三 · 32年前」能让人自己判断这个锚点是不是记岔了。
+ */
+export function protagonistAgeLine(protagonist, now) {
+    try {
+        const p = (protagonist && typeof protagonist === 'object') ? protagonist : {};
+        const raw = (typeof p.age === 'string' || typeof p.age === 'number') ? String(p.age) : '';
+        if (!raw) return '';
+        const anchor = typeof p.ageTime === 'string' ? p.ageTime : '';
+        const cur = typeof now === 'string' ? now : '';
+        const shown = ageDisplay(raw, anchor, cur);
+        const state = ageDisplayOf(raw, anchor, cur).state;
+        const parts = [{
+            'raw-no-anchor': '没记录时间，无从推算',
+            'raw-within-year': '记录至今不足一年',
+            'estimated': '按记录时间推算（不知生日，可能差一岁）',
+            'raw-uncomputable': '算不出，原样保留'
+        }[state] || state];
+        if (anchor) {
+            const wd = weekdayLabel(anchor);
+            const rel = relativeTimeLabel(anchor, cur);
+            const anchorBits = [clip(anchor, 40), wd, rel].filter(Boolean);
+            parts.push('记录于 ' + anchorBits.join(' · '));
+        }
+        return clip(shown, 60) + '（' + parts.join('；') + '）';
+    } catch (_e) { return ''; }
+}
+/**
  * 主角字段投影：把对象拍平成可读的「字段: 值」行（只取字符串/数值字段，不展开嵌套对象）。
  * 键名原样保留（上游字段名即事实源），不翻译不猜测。
  * @param {object|null} protagonist
- * @returns {Array<{key:string, value:string}>}
+ * @param {{now?:string}} [opts] `now` = 当前故事时间（缺它就退化成原样显示）
+ * @returns {Array<{key:string, value:string, ageState?:string, note?:string}>}
  */
-export function protagonistFields(protagonist) {
+export function protagonistFields(protagonist, opts = {}) {
     const out = [];
     try {
         if (!protagonist || typeof protagonist !== 'object') return out;
+        const now = typeof opts.now === 'string' ? opts.now : '';
         for (const [k, v] of Object.entries(protagonist)) {
             if (v === null || v === undefined || v === '') continue;
             if (typeof v === 'object') continue; // 嵌套结构不展开：宁可少显示，不编
+            if (k === 'age') {
+                const age = protagonistAge(protagonist, now);
+                if (!age.text) continue;
+                /* 推算出来的年龄必须能一眼看出是推算的：状态与说明都带上，
+                 *   界面据此显示小字，注入块据此不必再解释。 */
+                out.push({ key: clip(k, 40), value: age.text, ageState: age.state, note: age.note });
+                continue;
+            }
+            /* `ageTime` 是年龄的锚点、不是一条独立事实：单列一行只会让人看到
+             *   一串日期，看不出它是干什么的。 */
+            if (k === 'ageTime') continue;
             out.push({ key: clip(k, 40), value: clip(v, 200) });
         }
         return out;
@@ -142,16 +212,17 @@ export function lifeDetailsGroups(lifeDetails) {
  * 一致性块：把「主角档案 + 生活细节」交给生成侧，
  * 让正文里的主角与记忆插件记的主角**是同一个**（无内容返回 ''，不产生空块）。
  * @param {{protagonist?:object|null, lifeDetails?:Array}} face
- * @param {{maxLines?:number}} [opts]
+ * @param {{maxLines?:number, now?:string}} [opts] `now` 用于把年龄推到当前故事时间
  */
 export function profilePromptBlock(face, opts = {}) {
     try {
         const maxLines = Math.max(1, Number(opts.maxLines) || 8);
         if (!face || typeof face !== 'object') return '';
-        const fields = protagonistFields(face.protagonist);
+        const fields = protagonistFields(face.protagonist, { now: opts.now });
         const groups = lifeDetailsGroups(face.lifeDetails);
         const lines = [];
         if (fields.length) {
+            /* 年龄带上「约」是刻意的：模型若照抄一个确数，跳时间后就与下一轮矛盾。 */
             lines.push('- 主角档案：' + fields.slice(0, 8).map((f) => f.key + ' ' + f.value).join('；'));
         }
         const life = [...groups.pinned, ...groups.active];
@@ -164,4 +235,19 @@ export function profilePromptBlock(face, opts = {}) {
         if (!lines.length) return '';
         return '【本世界主角的档案与生活细节（记忆插件档案面，正文不得与之矛盾）】\n' + lines.slice(0, maxLines + 3).join('\n');
     } catch (_e) { return ''; }
+}
+/**
+ * 年龄推算的读数行（诊断用）：只数**推算过**的，原样与算不出分开报。
+ *   为什么不在注入块里也写它：块是给模型的，读数是给调参的人的，混在一起两头都不是。
+ */
+export function profileAgeLine(protagonist, now) {
+    try {
+        const one = protagonistAge(protagonist, now);
+        if (one.state === 'empty') return ageDisplayLine({});
+        const stats = { estimated: 0, raw: 0, unknown: 0 };
+        if (one.state === 'estimated') stats.estimated += 1;
+        else if (one.state === 'raw-uncomputable' || one.state === 'raw-no-anchor') stats.unknown += 1;
+        else stats.raw += 1;
+        return ageDisplayLine(stats);
+    } catch (_e) { return ageDisplayLine({}); }
 }

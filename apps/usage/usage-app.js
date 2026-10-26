@@ -5,7 +5,7 @@
 
 import {
     defaultInsightSettings, normalizeInsightSettings,
-    collectUsage, collectContactInsight, formatDuration
+    collectUsage, collectContactInsight, formatDuration, collectAddressAmbiguity
 } from './usage-data.js';
 import { contactPromptBlock } from '../../config/contact-insight.js';
 import { usageSelfCheck } from '../../config/usage-tracker.js';
@@ -21,6 +21,7 @@ export class UsageApp {
         this.settings = { ...defaultInsightSettings() };
         this._usage = null;      // [v3.15.0] 读数**不缓存跨轮**（onChatChanged 只丢不取）
         this._insight = null;
+        this._ambiguity = null;
         this._view = null;
         this._hookBound = false;
         this._loadSettings();
@@ -34,9 +35,21 @@ export class UsageApp {
     probe() {
         try { this._usage = collectUsage(this.storage); } catch (_e) { this._usage = null; }
         try { this._insight = collectContactInsight(this._win(), this.settings.staleDays, this.storage); } catch (_e) { this._insight = null; }
+        /* [v4.88.0 · voice-familiarity] 歧义读数：与联系人洞察同一次 probe 取，
+         *   候选名单走**通讯录真源**（phoneCallData.getContacts，与拨号页同一份），
+         *   不另造一份联系人清单。取不到就 null（视图据此说「拿不到」，不报 0 条）。 */
+        try {
+            const pcd = this._win()?.VirtualPhone?.phoneApp?.phoneCallData;
+            const names = (typeof pcd?.getContacts === 'function' ? pcd.getContacts() : [])
+                .map(c => String(c?.name || '').trim()).filter(Boolean);
+            const phone = { calls: pcd?.getCallHistory?.(), sms: pcd?.getSmsConversations?.() };
+            this._ambiguity = names.length ? collectAddressAmbiguity(phone, names) : null;
+        } catch (_e) { this._ambiguity = null; }
     }
     usage() { return this._usage; }
     insight() { return this._insight; }
+    /** [v4.88.0] 说话人歧义读数（认不下的名字 + 为什么；null = 取不到）。 */
+    ambiguity() { return this._ambiguity; }
 
     /* ---------------- [v4.11.0] 通话人工认领（R3-O1） ---------------- */
     /**

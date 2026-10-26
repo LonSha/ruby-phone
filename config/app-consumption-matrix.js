@@ -67,10 +67,16 @@ export const FACE_META = Object.freeze({
 
 /** 「六面全无」台账：只有这些 App 需要理由，且与磁盘双向对账（见判据套件 B 组）。 */
 export const NA = Object.freeze({
-    mofo: "魔坊空壳占位（mofo-app.js 头注自述「空壳占位」）：只有模板导入导出与运行态迁移，无生成侧接入面；通知走 phoneShell.showNotification 即时提示、不经落点映射表。",
     games: "游戏厅：内建八款游戏各自的 AI 提示词构造器（getDefault*Prompt）只喂给本 App 自己的牌局生成，不属平台级注入面；战绩落盘是本会话私有库、不被全局搜索索引，也不进通知落点表。",
     settings: "设置 App：纯配置读写与界面装配，本身不产出可搜索内容、不产通知、不向生成侧注入约束（它是被其它 App 读取的设置真源）。",
     mood: "心境 App：源文件头注自述「只读聚合，不直接写引擎状态」——它读 drives/jiwen/记忆三处引擎读数做可视化，不落盘自有数据、因此无搜索/通知/注入/生命周期四面。"
+    /* ★ [v4.88.0] 本版把 mofo 从这台账里**移出**：魔坊此前是「六面全无」的
+     *   空壳占位（理由原文：只有模板导入导出与运行态迁移，通知走即时提示）
+     *   —— 本版它的 mofo-sync.js 真 import 了上游契约面 update-gap.js
+     *   （readUnupdatedFloorCount / recordTableUpdateFloor，治「表更新到第几层」），
+     *   F5 因此成立，六面全无的前提不再成立。其余五面仍无（它依旧不挂主钩子、
+     *   不被全局搜索索引、不走落点表、不在微信链路、不进会话重绑表），
+     *   那五条「不适用」的口径写在矩阵那一行的行内注释里。 */
     /* ★ [v3.58.0 · 计划 O4] 本版把 search 从这台账里**移出**：它原本是「六面全无」，
      *   本版给它接上了 F6_lifecycle（进 ST_PHONE_REBIND_APP_KEYS）——
      *   此前它不在表里（入口只在「点开搜索」时懒加载），换会话后 `_scanGen` 不推进、
@@ -86,7 +92,9 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "wechat", name: "微信", dir: "wechat", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "weibo", name: "微博", dir: "weibo", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "honey", name: "蜜语", dir: "honey", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
-    Object.freeze({ appId: "mofo", name: "魔坊", dir: "mofo", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
+    /* [v4.88.0] F5 成立：mofo-sync.js import config/update-gap.js（上游契约面）。
+      其余五面不适用：不挂 GENERATE_BEFORE_COMBINE_PROMPTS、不被全局搜索索引、不走通知落点表、不在微信 _injectApps 表、不进 ST_PHONE_REBIND_APP_KEYS。 */
+    Object.freeze({ appId: "mofo", name: "魔坊", dir: "mofo", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: true, F6_lifecycle: false }) }),
     Object.freeze({ appId: "wangxiang", name: "万象", dir: "wangxiang", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "phone", name: "通话", dir: "phone", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "diary", name: "日记", dir: "diary", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),

@@ -185,7 +185,18 @@ test('R10-X9 · 记忆引擎深层反哺之潜意识梦境镜像与物化草稿'
         sensoryTraces: ['海潮微风', '雨水打湿的衣领']
     };
 
-    const dream = mirror.mirrorCognitiveState(cognitivePayload, '林安安');
+    /* [v4.88.0 交棒改写] mirrorCognitiveState 自本版起先过 config/dream-guard.js 的
+     *   空梦拦截（正文不足 80 字判 too-short 并返回 `{ok:false, retry:true}` 不落库，
+     *   这是**新行为**、不是回归）。本条夹具给的素材只有 29 字，首轮必然被挡；
+     *   故把 `attempt` 取到上限（2 = DREAM_MAX_RETRIES），让它走 give-up 那条
+     *   「不再重试但仍产出记录」的路径 —— 本条要钉的是**原型映射与物化产物**，
+     *   不是拦截时机（拦截时机由 dream-guard 自己的判据守）。
+     *   首轮被挡那一形态也一并钉住：不传 attempt 时必须拿不到 archetype。 */
+    const blocked = mirror.mirrorCognitiveState(cognitivePayload, '林安安');
+    assert.equal(blocked.retry, true, '素材 29 字首轮必须被空梦拦截退回（新行为）');
+    assert.equal(blocked.record, null, '被挡的那轮不得落库');
+    const dream = mirror.mirrorCognitiveState(cognitivePayload, '林安安', { attempt: 2 });
+    assert.equal(dream.retry, undefined, '重试用完即产出记录（give-up 不是「什么都别存」）');
     assert.equal(dream.archetype, DREAM_ARCHETYPES.ABYSS_CONFRONTATION, '创伤高解离应映射为深渊对质梦境');
     assert.ok(dream.tensionScore >= 0.8, '紧张度应处于高位');
 

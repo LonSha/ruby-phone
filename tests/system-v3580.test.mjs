@@ -50,6 +50,52 @@ function readFrom(root, rel) {
     return readRel(rel);
 }
 const hits = (s, sub) => s.split(sub).length - 1;
+/* ============================================================
+ * 正则字面量识别（v4.88.0 补 —— 既有假红的根因，不是放宽）
+ * ============================================================ */
+/* 为什么必须补：本仓 index.js 里有 `.replace(/"/g, '"')` 这种**引号就在正则体里**的写法。
+ *   两个扫描器原先只认字符串与注释，碰到 `/` 一律当除号放过去，于是正则体开头那个 `"`
+ *   被当成「字符串开始」，一路吃到下一处 `"` —— 引号配对从此整体错位，
+ *   第 9977 行往后近五万字符的真实代码被整段抹成空格。
+ *   后果（实测，HEAD 上逐字同样成立）：`clear` 面上 `_chatSessionGeneration += 1;` 命中 **0**，
+ *   R3 的三条同址断言随之一起假红，D14 因为要复跑 R3 也一起红。
+ *   判据强度不变 —— 补的是「这个 `/` 到底是除号还是正则开头」。
+ * 只在**表达式起始位**认正则（前一个非空白字符属于 RX_PREV，或是关键字），这样 `a / b` 不会误判；
+ * 正则体里允许 `\x` 转义与 `[...]` 字符类，结束后吃掉 flags。 */
+const RX_PREV = '=(:,[!&|?{};+*-<>~%^';
+function rxStartsAt(src, i) {
+    let k = i - 1;
+    while (k >= 0 && (src[k] === ' ' || src[k] === '\t' || src[k] === NL)) k -= 1;
+    if (k < 0) return true;
+    if (RX_PREV.indexOf(src[k]) >= 0) return true;
+    if (/[A-Za-z_$]/.test(src[k])) {
+        let j = k;
+        while (j >= 0 && /[A-Za-z_$]/.test(src[j])) j -= 1;
+        const word = src.slice(j + 1, k + 1);
+        return ['return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void', 'do', 'else'].indexOf(word) >= 0;
+    }
+    return true;
+}
+/** 返回正则字面量右端（含 flags）；读不到闭合就返回 -1（交给调用方当除号处理）。 */
+function rxEnd(src, i) {
+    const n = src.length;
+    let j = i + 1;
+    let inClass = false;
+    while (j < n) {
+        const c = src[j];
+        if (c === BS) { j += 2; continue; }
+        if (c === NL) return -1;
+        if (c === '[') inClass = true;
+        else if (c === ']') inClass = false;
+        else if (c === '/' && !inClass) {
+            j += 1;
+            while (j < n && /[gimsuyvd]/.test(src[j])) j += 1;
+            return j;
+        }
+        j += 1;
+    }
+    return -1;
+}
 
 /* ============================================================
  * 两个输入面（本套件首跑踩过的那一坑，务必保留说明）
@@ -70,6 +116,11 @@ function codeKeepStr(src) {
             for (let k = i; k < stop; k++) out[k] = ' ';
             i = stop; continue;
         }
+        /* 正则字面量：整串照抄（其内容属于代码，不属于字符串） */
+        if (c === '/' && rxStartsAt(src, i)) {
+            const rxStop = rxEnd(src, i);
+            if (rxStop > 0) { for (let k = i; k < rxStop; k++) out[k] = src[k]; i = rxStop; continue; }
+        }
         out[i] = c; i += 1;
     }
     return out.join('');
@@ -84,6 +135,11 @@ function codeOnly(src) {
         const c = src[i]; const c2 = src[i + 1];
         if (c === '/' && c2 === '*') { const end = src.indexOf('*/', i + 2); const stop = end < 0 ? n : end + 2; blank(i, stop); i = stop; continue; }
         if (c === '/' && c2 === '/') { const end = src.indexOf(NL, i + 2); const stop = end < 0 ? n : end; blank(i, stop); i = stop; continue; }
+        /* 正则字面量：整串抹掉（正则体里的引号不是字符串开头） */
+        if (c === '/' && rxStartsAt(src, i)) {
+            const rxStop = rxEnd(src, i);
+            if (rxStop > 0) { blank(i, rxStop); i = rxStop; continue; }
+        }
         if (c === Q || c === String.fromCharCode(34) || c === tick) {
             let j = i + 1;
             while (j < n) {
@@ -431,7 +487,10 @@ function diagnoseProblems(root) {
     if (hits(dcode, 'sessionDropLog()') < 1) bad.push('R4 诊断内核未调读出口');
     if (hits(dcode, 'export function sessionGateFaceText(') !== 1) bad.push('R4 缺一行读数出口 sessionGateFaceText');
     if (hits(dcode, 'sessionGateFaceText,') !== 1) bad.push('R4 一行读数未进默认导出面');
-    if (hits(dcode, 'sessionGate }') < 1) bad.push('R4 账本面未进 collectDiagnose 的返回面');
+    /* [v4.89.0 交棒] 原锚点是 `sessionGate }` —— 那要求 sessionGate 恰是返回对象**最后一个字段**。
+       后续面一多就会被后面那个字段挡住（本版 selfCheckFace 接在它后面，当场假红）。
+       改成认「字段在返回面出现且以逗号或收尾花括号结尾」，与位置无关。 */
+    if (!/\bsessionGate\s*[,}]/.test(deref)) bad.push('R4 账本面未进 collectDiagnose 的返回面');
     /* 视图面消费：既要在导入面点到名，也要真调它（只导入不调 = 接线在场而行为没有） */
     if (!/sessionGateFaceText/.test(vcode)) bad.push('R4 诊断视图零消费（账本被读出来却没人显示）');
     if (hits(codeOnly(vraw), 'sessionGateFaceText(') < 1) bad.push('R4 诊断视图只导入不调用');

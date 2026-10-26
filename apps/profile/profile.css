@@ -96,6 +96,23 @@
   line-height: 1.6;
   word-break: break-all;
 }
+.pf-field-note {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.5;
+  letter-spacing: .2px;
+}
+/* [v4.91.0] 年龄来历整行：推算/原样/算不出都在这条里说清 */
+.pf-age-line {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.55;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, .1);
+  letter-spacing: .2px;
+}
 /* ---- 生活小档案（分层） ---- */
 .pf-tier {
   border-top: 1px solid rgba(255, 255, 255, .06);

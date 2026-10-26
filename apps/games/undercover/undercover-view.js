@@ -15,6 +15,13 @@ const UNDERCOVER_AI_AVATAR_URLS = Array.from({ length: 6 }, (_, index) => (
     new URL(`./assets/t${index + 1}.png`, import.meta.url).href
 ));
 
+/* [v4.88.0] 按座位投影（缝自 SerenQi/rain-go）。
+ *   修前视图直接读 `player.role` / `player.word` —— 也就是「视图知道全部」，
+ *   于是「谁该看到什么」没有载体：观战回看与玩家视角共用一份渲染，
+ *   任何一处想按座位看都得自己重新比一遍座位号。
+ *   本版起：词与身份一律从 `projectSeatView` 取，视图不再自己判可见性。 */
+import { projectSeatView, projectMessage } from '../../../config/seat-view-projection.js';
+
 export class UndercoverView {
     constructor(app) {
         this.app = app;
@@ -125,7 +132,7 @@ export class UndercoverView {
                                     <span>你的词</span>
                                     <i class="fa-solid fa-angles-right" aria-hidden="true"></i>
                                 </span>
-                                <strong>${this._escape(game.phase === 'matching' ? '正在发牌' : (game.userWord || game.players.find(player => player.isUser)?.word || '未知'))}</strong>
+                                <strong>${this._escape(game.phase === 'matching' ? '正在发牌' : (this._viewSelfWord(game) || '未知'))}</strong>
                             </div>
                         </div>
                     </section>
@@ -170,6 +177,26 @@ export class UndercoverView {
 
     isGameOpen() {
         return this._gameOpen;
+    }
+
+    /* ---------- [v4.88.0 · rain-go 座位投影] ----------
+     * 视图只看投影结果，不自己判「谁该看到什么」。viewer 由本局 user 的座位算出：
+     * 用户被淘汰后仍用自己的座位（投影里自己的词始终可见 —— 出局不删牌），
+     * 座位找不到时交 null 走观战视图，并**如实返回空串**（不猜一个别人的词）。 */
+    _viewerOf(game) {
+        const userRow = (Array.isArray(game?.players) ? game.players : []).find(player => player?.isUser);
+        const seat = Number(userRow?.seat || 0);
+        return Number.isInteger(seat) && seat > 0 ? { seat } : null;
+    }
+
+    /** 投影视图（所有可见性判定的唯一入口）。 */
+    _viewOf(game) {
+        return projectSeatView(game, this._viewerOf(game));
+    }
+
+    /** 用户自己的词（投影取值；拿不到返回 ''，由调用方决定「未知」怎么写）。 */
+    _viewSelfWord(game) {
+        try { return String(this._viewOf(game).selfWord || ''); } catch (_e) { return ''; }
     }
 
     handleBack() {
@@ -483,8 +510,14 @@ export class UndercoverView {
     }
 
     _renderChatMessage(message = {}, players = []) {
-        const isUser = message.source === 'user';
-        const isSystem = message.source === 'system';
+        /* [v4.88.0 · rain-go 座位投影] 「这条是谁说的」改由投影层判（projectMessage），
+         *   不再只看 `message.source` —— 两处判断并存时，座位与 source 一旦不一致
+         *   （例如 user 消息的 senderSeat 缺失），气泡会挂在错误的说话人上。
+         *   保留 `source === 'user'` 兜底：座位推不出 viewer 时（观战/异常档）
+         *   仍要把用户自己的气泡染成 is-user，那是身份不是可见性。 */
+        const pm = projectMessage(message, this._viewerOf({ players }));
+        const isUser = pm.isSelf || message.source === 'user';
+        const isSystem = pm.isSystem;
         if (isSystem) {
             return `
                 <article class="games-undercover-chat-message is-system" data-message-id="${this._escapeAttr(message.id || '')}">
@@ -788,14 +821,15 @@ export class UndercoverView {
             const result = game.winner === 'civilian'
                 ? '平民找出了卧底'
                 : (game.winner === 'undercover' ? '卧底坚持到了最后' : '本局已经结束');
-            const undercoverPlayer = (game.players || []).find(player => (
-                player.role === 'undercover' || Number(player.seat) === Number(game.undercoverSeat)
-            ));
-            const civilianPlayer = (game.players || []).find(player => player.role === 'civilian');
-            const civilianWord = String(game.wordPair?.civilian || civilianPlayer?.word || '未知').trim();
-            const undercoverWord = String(game.wordPair?.undercover || undercoverPlayer?.word || '未知').trim();
-            const undercoverName = undercoverPlayer
-                ? `${Number(undercoverPlayer.seat)}号 ${undercoverPlayer.name || '玩家'}`
+            /* [v4.88.0 · rain-go 座位投影] 结算页是**观战视角**（对局已结束 ⇒ 全揭），
+             *   词对与身份一律从投影层取：视图不再自己 `find(player => player.role === ...)`。
+             *   这不只是整洁 —— 修前「谁的身份与词是什么」在两处各判一次，一处改了另一处必漂。 */
+            const view = projectSeatView(game, null);
+            const civilianWord = String(game.wordPair?.civilian || '未知').trim();
+            const undercoverWord = String(game.wordPair?.undercover || '未知').trim();
+            const undercoverRow = view.players.find(row => row.role === 'undercover') || null;
+            const undercoverName = undercoverRow
+                ? `${Number(undercoverRow.seat)}号 ${undercoverRow.name || '玩家'}`
                 : '未知';
             return `
                 <div class="games-undercover-vote-panel is-result">

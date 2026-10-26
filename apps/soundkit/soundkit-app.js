@@ -38,6 +38,9 @@ import {
 } from './soundkit-data.js';
 import { SoundkitView } from './soundkit-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [v4.88.0] 串行链（缝自 c3ll256/dsh-toy）：试听有自动收尾且会被连点打断，
+ *   与玩具指令的 start/stop 是同一形态，故复用同一条令牌链而非另造一套。 */
+import { ToyCommandChain, validateControl, TOY_REJECT_REASONS } from '../../config/toy-command-chain.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^soundkit_/`，
    否则跨会话串味。源把提示音写回宿主对象（切角色时**原样留着**）。 */
@@ -74,6 +77,14 @@ export class SoundkitApp {
         this._view = null;
         this._audioCtx = null;
         this._lastPlay = null;
+        /* [v4.88.0 · dsh-toy 串行链] 试听是「带停止动作、会被下一次点击打断」的指令族，
+         *   正是串行链的适用形态：连点两个槽位时，先前那次的收尾会把后一次的振荡器
+         *   一起停掉（体感「点第二下没响」）。令牌让收尾只认自己那一次。
+         *   队列上限取 3：试听是短动作，排太多没意义，超限如实回 queue-full。 */
+        this._chain = new ToyCommandChain({ maxQueue: 3, autoStopMs: 1200 });
+        this._chainTimer = null;
+        /* token → slotKey：排队中的条目要记住**是哪个槽位**（链本身不认识槽位）。 */
+        this._chainQueue = new Map();
         this._loadSettings();
         /* ★ 构造末尾就取一次数：否则 `recipes` / `slotRows()` 在 `render()` 之前是空的
          *   —— 任何先读后画的路径（换会话后马上取读数、宿主先问一句状态）都会把
@@ -375,13 +386,56 @@ export class SoundkitApp {
      * ★ 计划由数据层纯函数算（无头可判），这里只负责真的发声。
      */
     play(slotKey) {
+        /* [v4.88.0 · dsh-toy] 先过串行链再真发声。三种拒绝互不同形：
+         *   · 队列满 ⇒ `{ok:false, reason:'chain-queue-full'}`（用户能看见「点太快了」）；
+         *   · 上一声还没收尾 ⇒ 排队，**不并发**（并发时两批振荡器叠在一起，
+         *     后一批的 exponentialRamp 会被前一批 master 的收尾带走）；
+         *   · 空闲 ⇒ 立刻派发。
+         * 时长取 plan.totalMs（音效实际长度），越界由 validateControl 夹边界。 */
+        const b0 = this.bindings[slotKey];
+        const s0 = resolveSound(b0, this.recipes);
+        const p0 = playbackPlan({ ...s0, volume: normalizeVolume(s0.volume * this.masterVolume) });
+        if (!p0.ok) {
+            this._lastPlay = { slot: slotKey, kind: s0.kind, ok: false, reason: p0.reason, totalMs: p0.totalMs };
+            return { ok: false, reason: p0.reason, totalMs: 0, steps: [] };
+        }
+        const dispatched = this._chain.dispatch('preview', { strength: 1, durationMs: p0.totalMs }, { autoStop: true });
+        if (!dispatched.ok) {
+            /* 拒绝码按内核那张表归一：表外的值归 invalid 并带上原值，
+             *   否则新加一种拒绝会在这里变成 'chain-undefined'。 */
+            const code = TOY_REJECT_REASONS.indexOf(dispatched.rejected) >= 0 ? dispatched.rejected : ('invalid:' + String(dispatched.rejected));
+            const reason = code === 'queue-full' ? 'chain-queue-full' : 'chain-' + code;
+            this._lastPlay = { slot: slotKey, kind: s0.kind, ok: false, reason, totalMs: p0.totalMs };
+            return { ok: false, reason, totalMs: p0.totalMs, steps: p0.steps };
+        }
+        if (dispatched.queued) {
+            /* 排队：只登记意图，等前一声 settle 推进到它时再真正发声。
+             *   返回 `queued:true` 是**如实**的 —— 不能报 ok:true 让界面以为已经响了。 */
+            this._chainQueue.set(dispatched.token, slotKey);
+            this._lastPlay = { slot: slotKey, kind: s0.kind, ok: true, queued: true, reason: null, totalMs: p0.totalMs };
+            return { ok: true, queued: true, token: dispatched.token, reason: null, totalMs: p0.totalMs, steps: p0.steps };
+        }
+        return this._playNow(slotKey, dispatched.token, p0);
+    }
+
+    /**
+     * 真发声（串行链的「当前」那一条）。分离出来是因为排队推进也要用同一段。
+     * 收尾走令牌：只有 `isStale(token)` 为假才允许本轮收尾动共享的 master/settle，
+     * 这样「上一声的 1.2s 定时器」不会把这一声停掉。
+     */
+    _playNow(slotKey, token, plan) {
         const b = this.bindings[slotKey];
         const sound = resolveSound(b, this.recipes);
-        const plan = playbackPlan({ ...sound, volume: normalizeVolume(sound.volume * this.masterVolume) });
-        this._lastPlay = { slot: slotKey, kind: sound.kind, ok: plan.ok, reason: plan.reason, totalMs: plan.totalMs };
-        if (!plan.ok) return { ok: false, reason: plan.reason, totalMs: 0, steps: [] };
+        this._lastPlay = { slot: slotKey, kind: sound.kind, ok: plan.ok, reason: plan.reason, totalMs: plan.totalMs, token };
+        if (!plan.ok) {
+            this._settleToken(token);
+            return { ok: false, reason: plan.reason, totalMs: 0, steps: [] };
+        }
         const ctx = this._ctx();
-        if (!ctx) return { ok: false, reason: 'no_audio_context', totalMs: plan.totalMs, steps: plan.steps };
+        if (!ctx) {
+            this._settleToken(token);
+            return { ok: false, reason: 'no_audio_context', totalMs: plan.totalMs, steps: plan.steps };
+        }
         try {
             if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume().catch(() => {});
             const master = ctx.createGain();
@@ -402,7 +456,25 @@ export class SoundkitApp {
                 osc.start(start);
                 osc.stop(start + (st.stopAt - st.startAt) + 0.03);
             }
+            /* 收尾：按音频真实时长 + 60ms 余量，**收尾前再核一次令牌**。
+             *   核不到（已被后来的指令取代）就只 settle 自己那一格，不动定时器。 */
+            this._clearChainTimer();
+            this._chainTimer = setTimeout(() => {
+                this._chainTimer = null;
+                if (this._chain.isStale(token)) { this._settleToken(token); return; }
+                this._settleToken(token);
+                const next = this._chain.current();
+                const nextSlot = next ? this._chainQueue.get(next.token) : null;
+                if (next && nextSlot) {
+                    this._chainQueue.delete(next.token);
+                    const nb = this.bindings[nextSlot];
+                    const ns = resolveSound(nb, this.recipes);
+                    const np = playbackPlan({ ...ns, volume: normalizeVolume(ns.volume * this.masterVolume) });
+                    this._playNow(nextSlot, next.token, np);
+                }
+            }, Math.max(80, Number(plan.totalMs) + 60));
         } catch (e) {
+            this._settleToken(token);
             return { ok: false, reason: 'play_failed', face: playbackErrorFace(e), totalMs: plan.totalMs, steps: plan.steps };
         }
         if (!this.ledger.previewedKeys.includes(slotKey)) {
@@ -410,6 +482,19 @@ export class SoundkitApp {
             this._persistLedger();
         }
         return { ok: true, reason: null, totalMs: plan.totalMs, steps: plan.steps };
+    }
+
+    _settleToken(token) {
+        try { this._chain.settle(token); } catch (_e) { /* 推进失败不得让链死锁 */ }
+    }
+
+    _clearChainTimer() {
+        if (this._chainTimer) { clearTimeout(this._chainTimer); this._chainTimer = null; }
+    }
+
+    /** 串行链读数（诊断面用；`queued` 是等待中的条数，超限被拒会记在 rejected）。 */
+    chainStats() {
+        return this._chain ? this._chain.stats() : null;
     }
     /** 播放计划（**纯读数**，不出声 —— 无头环境也能判配方对不对）。 */
     planOf(slotKey) {
@@ -486,6 +571,11 @@ export class SoundkitApp {
         this._tab = 'slots';
         this._audioCtx = null;
         this._lastPlay = null;
+        /* [v4.88.0] 换会话时串行链要换新：旧会话排队中的槽位指向的绑定可能已变，
+         *   推进它们会放出声不对的音。定时器一并停（否则 old timer 还会来 settle）。 */
+        this._clearChainTimer();
+        this._chain = new ToyCommandChain({ maxQueue: 3, autoStopMs: 1200 });
+        this._chainQueue = new Map();
         this._loadSettings();
         this.probe();
         if (this._view) this._view.refresh();

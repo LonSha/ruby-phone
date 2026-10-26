@@ -11,6 +11,9 @@
  */
 
 import { currentTrack as _currentTrack } from '../config/system-controls.js';
+/* [v4.88.0] 时钟轮询的静止退避（缝自 jiangxi1129/gaze）。纯函数内核：
+ *   本文件只持有 streak/interval 两个读数并按裁决自调度，不自己算倍率。 */
+import { judgeGazeTick, initialGazeState } from '../config/gaze-backoff.js';
 
 function _esc(s) {
     return String(s ?? '')
@@ -52,10 +55,25 @@ export class LockScreen {
   }
 
   _clearClock() {
-    if (this._clockTimer) {
-      clearInterval(this._clockTimer);
-      this._clockTimer = null;
+    /* [v4.88.0] 自调度后句柄既可能是 interval（旧路径）也可能是 timeout，两种都清。
+     *   踩坑点：先置 null 再判断会让第二个 if 恒假 —— 故先取副本。 */
+    const handle = this._clockTimer;
+    this._clockTimer = null;
+    if (handle) {
+      clearInterval(handle);
+      clearTimeout(handle);
     }
+  }
+
+  /** [v4.88.0] 排下一次时钟 tick（自调度：裁决给出的间隔就是下一次的延迟）。 */
+  _scheduleClockTick(verdict) {
+    this._clearClock();
+    const ms = Math.max(200, Number(verdict?.intervalMs) || 10000);
+    this._clockTimer = setTimeout(() => {
+      this._clockTimer = null;
+      if (!this._root) return;
+      try { this._clockTick(); } catch (_e) { /* 单帧失败不得让链断掉 */ }
+    }, ms);
   }
   /**
    * [v2.31.0] 实例销毁：宿主丢弃本实例时调用（面板重建 / 清数据 / 换会话）。
@@ -187,17 +205,49 @@ export class LockScreen {
      *   「醒来即对齐」，不再按周期跑（**降频不是杀死** —— 时钟是用户正在看的信息，
      *   不能整个停掉，但没必要在页面看不见时每 10 秒重算一次。
      *   实测口径：`document.hidden` 为真时该轮询改由恢复事件驱动（见 _bind 的可见性监听）。 */
+    /* [v4.88.0] 时钟轮询改「自调度 + 静止退避」（config/gaze-backoff.js）。
+     * 修前是固定 setInterval(10s)：页面停在这一屏，时间串几分钟不变，
+     * 每分钟照样白算 6 次 DOM 查询与 3 次 textContent 写。
+     * 落地口径（与内核语义对齐）：
+     *   · `distance` = 时间串「变没变」——不变 0、变了 1，阈值 0.5 判；
+     *   · 基线间隔就是原来的 10s（外观完全不变），静止后按 ×1.5 退避、封顶 120s；
+     *   · 时间一变立刻回 10s（用户最可能在这时正在看）；
+     *   · 页面隐藏时 `sleeping: true` 走密集段（≤1s），这样解锁/回前台后
+     *     第一帧就对得上，不用等一个退避周期。
+     * ★ **仍只用一个定时器句柄**（_clockTimer）：自调度不是「多一个定时器」，
+     *   而是把同一个改成 setTimeout 链，_clearClock 的语义不变。 */
     this._clockTick = () => {
-      if (typeof document !== 'undefined' && document.hidden === true) return;   // 隐藏期不重算
+      if (typeof document !== 'undefined' && document.hidden === true) {
+        // 隐藏：**不排下一次**（依赖既有的 visibilitychange 恢复监听补一次 tick）。
+        //   与 v3.79.0 的原始口径一致：「隐藏期不重算，由恢复事件驱动」。
+        //   链在此自然停住，句柄置 null 后 _clearClock 仍是幂等的。
+        const handle = this._clockTimer;
+        this._clockTimer = null;
+        if (handle) { clearInterval(handle); clearTimeout(handle); }
+        return;
+      }
       const next = this._nowParts();
-      const timeEl = root.querySelector('#pls-time');
-      const dateEl = root.querySelector('#pls-date');
-      const helloEl = root.querySelector('#pls-hello');
-      if (timeEl) timeEl.textContent = next.time;
-      if (dateEl) dateEl.textContent = next.date;
-      if (helloEl) helloEl.textContent = next.greeting;
+      const signature = next.time + '|' + next.date + '|' + next.greeting;
+      const moved = signature !== this._clockSignature;
+      const verdict = judgeGazeTick(this._clockState, {
+        distance: moved ? 1 : 0,
+        windowKey: 'locked'
+      }, { threshold: 0.5, baseIntervalMs: 10000 });
+      this._clockState = { staticStreak: verdict.staticStreak, intervalMs: verdict.intervalMs, windowKey: verdict.windowKey };
+      if (moved || verdict.reset) {
+        this._clockSignature = signature;
+        const timeEl = root.querySelector('#pls-time');
+        const dateEl = root.querySelector('#pls-date');
+        const helloEl = root.querySelector('#pls-hello');
+        if (timeEl) timeEl.textContent = next.time;
+        if (dateEl) dateEl.textContent = next.date;
+        if (helloEl) helloEl.textContent = next.greeting;
+      }
+      this._scheduleClockTick(verdict);
     };
-    this._clockTimer = setInterval(this._clockTick, 10000);
+    this._clockState = initialGazeState('locked', { baseIntervalMs: 10000 });
+    this._clockSignature = '';
+    this._scheduleClockTick(this._clockState);
   }
 
   _bind(root) {

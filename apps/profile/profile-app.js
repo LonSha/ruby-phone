@@ -17,7 +17,7 @@
  *   故 onChatChanged() 只丢弃上一次的探针归因，不持有任何数据副本。
  * ======================================================== */
 'use strict';
-import { defaultProfileSettings, readProfileFace, protagonistFields, lifeDetailsGroups, profilePromptBlock } from './profile-data.js';
+import { defaultProfileSettings, readProfileFace, protagonistFields, lifeDetailsGroups, profilePromptBlock, protagonistAgeLine, profileAgeLine } from './profile-data.js';
 import { ProfileView } from './profile-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^profile_/`，否则跨会话串味 */
@@ -65,12 +65,31 @@ export class ProfileApp {
         this._lastProbe = probe;
         return readProfileFace(probe);
     }
+    /**
+     * 当前故事时间（只有这一个取时口，与 memory-data 同规）。
+     *   拿不到就空串 —— 空串在 `ageDisplayOf` 是 `raw-no-anchor`（原样），不是「算错」。
+     */
+    nowStoryTime() {
+        try {
+            const tm = this._win()?.VirtualPhone?.timeManager;
+            const cur = tm?.getCurrentStoryTime?.();
+            if (!cur) return '';
+            const date = String(cur.date ?? '').trim();
+            if (!date) return '';
+            const time = String(cur.time ?? '').trim();
+            return time ? date + ' ' + time : date;
+        } catch (_e) { return ''; }
+    }
     /** 一次取齐「归因 + 两块投影」（视图用它，保证同一次读数的脸与数据是同一份） */
     projection() {
         const face = this.profileFace();
-        const fields = protagonistFields(face.protagonist);
+        const now = this.nowStoryTime();
+        const fields = protagonistFields(face.protagonist, { now });
         const groups = lifeDetailsGroups(face.lifeDetails);
-        return { face, fields, groups };
+        /* 年龄那一行单独出：`fields` 里的值是结果，这一行说「它是怎么来的」——
+         *   放在同一个物件里随 projection 一次给出，视图不必二次取时（二次取时可能跨过时间推进）。 */
+        const ageLine = protagonistAgeLine(face.protagonist, now);
+        return { face, fields, groups, ageLine, ageStats: profileAgeLine(face.protagonist, now) };
     }
     /** 一行总述（供视图/host 诊断） */
     summaryLine() {
@@ -78,7 +97,7 @@ export class ProfileApp {
             const pkg = this.projection();
             const face = pkg.face;
             if (face.reason !== 'ready' && face.reason !== 'empty') return face.text;
-            return `主角字段 ${pkg.fields.length} 项 · 生活细节 ${pkg.groups.total} 条`;
+            return `主角字段 ${pkg.fields.length} 项 · 生活细节 ${pkg.groups.total} 条 · ${pkg.ageStats}`;
         } catch (_e) { return '档案总述失败（已降级）'; }
     }
     /**
@@ -90,7 +109,9 @@ export class ProfileApp {
             const s = this.getSettings();
             if (!s.injectToPrompt) return '';
             const maxLines = Math.max(1, Number(s.maxInject) || 8);
-            return profilePromptBlock(this.profileFace(), { maxLines });
+            /* now 必须在**每次**调用时现取：注入块是「此轮的主角此刻多大」，
+             *   缓存下来就会在时间推进后交出一份旧的。 */
+            return profilePromptBlock(this.profileFace(), { maxLines, now: this.nowStoryTime() });
         } catch (_e) { return ''; }
     }
     /** 挂生成前钩子（构造期一次；宿主无 eventSource 时静默不挂，不影响 App 本体） */

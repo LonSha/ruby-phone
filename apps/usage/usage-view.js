@@ -204,7 +204,42 @@ export class UsageView {
         }
         // [v4.11.0] 未归属通话卡（R3-O1）：同名歧义不猜，交给用户人工认领
         parts.push(this._unattributedHTML(ins));
+        /* [v4.88.0] 名字认不下的名单（voice-familiarity 的宿主读数面）。
+         *   与上一张卡**不是同一件事**：上一张是「同名人多条通话未归属」，
+         *   这一张是「名字像到分不开、连候选是谁都要先问」。
+         *   判据在 usage-data 的 judgeContactAddress，视图只显示。 */
+        parts.push(this._ambiguityHTML());
         return parts.join('\n');
+    }
+
+    /* ---------------- [v4.88.0] 说话人歧义边距读数 ---------------- */
+    _ambiguityHTML() {
+        try {
+            const a = this.app.ambiguity();
+            if (a === null) return '';
+            if (!a.judged) return '';
+            const asks = [...a.ambiguous, ...a.belowFloor];
+            if (!asks.length) {
+                return '<div class="uq-card"><h3>名字认不下（0）</h3>'
+                    + '<div class="uq-dim uq-note">' + a.judged + ' 个称呼都能一句话对上通讯录（边距内外分得开）。</div></div>';
+            }
+            const parts = [];
+            parts.push('<div class="uq-card uq-claim"><h3>名字认不下（' + asks.length + '）</h3>');
+            parts.push('<div class="uq-dim uq-note">称呼与通讯录里多人贴得太近时**不硬选**：'
+                + '「分不开」问是哪一位，「都不像」等于通讯录里没有这个人。</div>');
+            for (const r of a.ambiguous) {
+                parts.push('<div class="uq-row"><span class="uq-row-name">' + this._esc(r.spokenName) + '</span>'
+                    + '<span class="uq-row-val uq-stale">分不开：' + this._esc((r.options || []).join(' / ')) + '</span></div>');
+            }
+            for (const r of a.belowFloor) {
+                parts.push('<div class="uq-row"><span class="uq-row-name">' + this._esc(r.spokenName) + '</span>'
+                    + '<span class="uq-row-val">都不像（最高分 ' + Number(r.bestScore || 0).toFixed(2) + ' 低于下限）</span></div>');
+            }
+            parts.push('<div class="uq-dim uq-note">判定边距 ' + a.rows[0]?.margin?.toFixed?.(3)
+                + (a.rows[0]?.marginSource === 'default' ? '（通讯录未给下限，用默认边距）' : '（按语料下限校准）') + '。</div>');
+            parts.push('</div>');
+            return parts.join('\n');
+        } catch (_e) { return ''; }
     }
     /* ---------------- [v4.11.0] 未归属通话（R3-O1 人工认领） ---------------- */
     /**

@@ -8,6 +8,28 @@
  *   纯函数那一半（去重 / 归一 / 合并 / 读数行）在 config/worldbook-write.js（零 IO，
  *   便于负控制直接破坏）；本文件只留**宿主交互**那一半（读→合并→写→刷缓存）。 */
 import { mergeEntries, toEntriesMap, worldbookWriteLine } from './worldbook-write.js';
+/* [v4.89.0 · 第九批缝入] 有界并发与写入串行化（config/background-queue.js）。
+ *   修前两处真缺陷：① `listAvailableWorldbooks` 用 `Promise.all(books.map(...))` —— 有多少本书
+ *   就同时打多少次读，世界书多的用户一次刷列表就是几十路并发；
+ *   ② `writeMemoryEntries` 的「读→合并→写」三步没有互斥，两次并发写同一本书时
+ *   双方都读到同一份旧表、各自整表回写 ⇒ 后写的那次把前一次的新增整批覆盖掉，
+ *   症状是「写了两条只剩一条」，不报错。 */
+import { runLimited, createBoundedQueue } from './background-queue.js';
+/* [v4.90.0 · 第十批缝入 5/8] 来源许可（按书名排除）。纯函数那一半在
+ *   config/source-permission.js（零 IO，便于负控制直接破坏）。修前本模块
+ *   「注入哪几本」只有一个按 App 的布尔：一开就把选中的书全量拼进去，
+ *   没有「这一本在这个 App 里排除掉」这一格。 */
+import {
+    canonicalBookName, normalizeExcludedBooks, filterSourcesByPermission,
+    filterBookNamesByPermission, dedupeBookNames, inspectVerdict
+} from './source-permission.js';
+/* [v4.90.0 · 第十批缝入 2+7/8] 世界书条目设置面（position / order / 常驻三色 / 标题序号 / 净化）。
+ *   纯函数那一半在 config/worldbook-entry-settings.js。修前写出去的记忆条目**全是默认形态**：
+ *   position 不写、order 不写、标题是 `记忆 <uid>` 裸名，列表里没有序号可读、也没法让某条常驻。 */
+import {
+    applyLorebookEntrySettings, formatEntryTitleAtNumber, sanitizeEntryTitle,
+    normalizeLorebookEntrySettings, nextEntryNumber, entrySettingsLine
+} from './worldbook-entry-settings.js';
 
 const WORLD_INFO_GET_ENDPOINT = '/api/worldinfo/get';
 const WORLD_INFO_SAVE_ENDPOINT = '/api/worldinfo/edit';
@@ -254,6 +276,9 @@ export class WorldbookManager {
         this._cacheAt = 0;
         this._worldInfoModulePromise = null;
         this._stContextModulePromise = null;
+        /* [v4.89.0] 写入串行队列：一次只跑一个「读→合并→写」，后来的排队。
+         *   满队不是失败：`writeMemoryEntries` 据 `queued:false` 如实回 `busy`。 */
+        this._writeQueue = createBoundedQueue({ maxItems: 8, maxRetries: 1, retryBaseMs: 120 });
     }
 
     _getWorldNamesFromWindow() {
@@ -528,10 +553,31 @@ export class WorldbookManager {
      *
      * @returns {{ok:boolean, reason:string, name:string, added:Array, skipped:Array,
      *            replaced:Array, line:string, entries:number}}
-     *   `reason`：`'ok'` / `'no-name'` / `'empty'` / `'read-failed'` / `'write-failed'`
-     *   —— 五态互不同形（写失败与没东西可写处置相反：前者要重试，后者不用）。
+     *   `reason`：`'ok'` / `'no-name'` / `'empty'` / `'read-failed'` / `'write-failed'` / `'busy'`
+     *   —— 六态互不同形（写失败要重试、没东西可写不用、`busy` 要等一会再来）。
+     *
+     * [v4.89.0 · 第九批缝入] 本方法是**排队入口**，真正的三步在 `_writeMemoryEntriesNow`。
+     *   串行化前：两次并发写同一本书，双方都读到同一份旧表、各自整表回写 ⇒
+     *   后写的那次把前一次的新增整批覆盖掉（`mergeEntries` 只保证单次合并正确，
+     *   挡不住两个合并结果互相覆盖），症状是「写了两条只剩一条」且不报错。
+     *   队列满（8 条）时如实回 `busy`，不无限堆积。
      */
     async writeMemoryEntries(name, incoming, options = {}) {
+        const slot = this._writeQueue.enqueue(
+            'worldbook-write',
+            () => this._writeMemoryEntriesNow(name, incoming, options),
+            { retryable: false }
+        );
+        const shape = (reason) => {
+            const r = { ok: false, reason: reason, name: safeString(name), added: [], skipped: [], replaced: [], line: '', entries: 0 };
+            this._lastWriteReceipt = Object.assign({ at: Date.now() }, r);
+            return r;
+        };
+        if (!slot.queued) return shape('busy');
+        const result = await slot.done;
+        return result || shape('write-failed');
+    }
+    async _writeMemoryEntriesNow(name, incoming, options = {}) {
         const cleanName = safeString(name);
         const empty = { ok: false, reason: 'no-name', name: '', added: [], skipped: [], replaced: [], line: '', entries: 0 };
         /* [v3.83.0 · 计划 R-O7] **真回执**：写入的结论留一份在实例上，供诊断页读。
@@ -563,6 +609,39 @@ export class WorldbookManager {
             forceRewriteSource: options.forceRewriteSource === true,
             maxEntries: options.maxEntries
         });
+        /* [v4.90.0 · 第十批缝入 2+7/8] 新增条目过一道**设置面**：位置 / 排序 / 三色形态 /
+         *   受控字段默认值 / 带序号的标题。三条边界：
+         *     ① 只加工 `merged.added`（本次新写的），`merged.replaced` 是用户自己条目里的
+         *        我写过的那条，它的设置是用户可能手调过的，重铺一遍等于覆盖他的调整；
+         *     ② 序号从**现有条目**按同一模板往后数（`nextEntryNumber`），不按数组下标 ——
+         *        下标会因为中间删过条目而回退，回退就撞号；
+         *     ③ 标题只补序号不换内容：`comment` 已带占位则替换，否则前置（forceNumber）。 */
+        /* [v4.91.0] 设置来源两级：调用方显式传的优先（一次性覆盖），否则用存起来的那份。
+         *   存的那份按 App 分桶，`appKey` 由调用方给；给不出就落 `common` 桶 ——
+         *   落 common 也不串味（bucket 本身就是键的一部分），只是与各 App 的分开。 */
+        const settings = normalizeLorebookEntrySettings(
+            options.entrySettings !== undefined ? options.entrySettings : this.getEntrySettings(safeString(options.appKey) || 'common')
+        ).settings;
+        const addedSet = new Set(merged.added.map((one) => one.uid));
+        let seq = nextEntryNumber(merged.entries.filter((one) => !addedSet.has(Number(one.uid))), settings.titleFormat);
+        let settingsNotes = [];
+        for (const entry of merged.entries) {
+            if (!addedSet.has(Number(entry.uid))) continue;
+            const applied = applyLorebookEntrySettings(entry, settings, { orderNumber: seq });
+            settingsNotes = settingsNotes.concat(applied.notes);
+            /* 标题两步：① 模板补序号（forceNumber 兜住「模板里没占位」）；② 才把 `{{title}}`
+             *   换成原标题 —— 顺序反了会把原标题里的数字卷进序号替换。
+             *   ② 必须做：默认模板只有 `[000]`，不换就会把用户的标题整条吃掉（只留编号）。
+             *   换完再净化（控制字符 / 剥空兜底）。 */
+            const titled = formatEntryTitleAtNumber(settings.titleFormat, seq, { forceNumber: true });
+            entry.comment = sanitizeEntryTitle(String(titled).replace(/\{\{title\}\}/g, String(entry.comment ?? '')));
+            seq += 1;
+        }
+        /* 设置面的读数单独留一格（回执里可查），不混进 `line` ——
+         *   `line` 是「写了几条」的账，把夹紧/降级混进去会让那行既不是账也不是诊断。 */
+        this._lastEntrySettingsLine = merged.added.length
+            ? entrySettingsLine({ settings: settings, notes: settingsNotes })
+            : '';
         const line = worldbookWriteLine(merged);
         if (merged.added.length === 0 && merged.replaced.length === 0) {
             /* 「没有新增」不是失败：全部命中重复/空内容/超限，三态在 skipped 里可查。
@@ -617,8 +696,10 @@ export class WorldbookManager {
         }
 
         const books = await this.fetchAllAvailableWorldBooks();
+        /* [v4.89.0] 有界并发：每次最多 4 本书同时读（原为全量同时打）。
+         *   `failFast:false` —— 单本读失败只让那一本为空，不许把整次列表刷挂。 */
         this._cache = includeEntries
-            ? await Promise.all(books.map((book) => this._loadWorldContent(book)))
+            ? await runLimited(books, (book) => this._loadWorldContent(book), { concurrency: 4, failFast: false })
             : books;
         this._cacheAt = now;
         return this._cache;
@@ -665,6 +746,316 @@ export class WorldbookManager {
         if (appKey === 'wechat') return 'wechat-use-worldbook';
         if (appKey === 'games') return 'games-use-worldbook';
         return '';
+    }
+    /* [v4.90.0 · 第十批缝入 5/8] 来源许可（按书名排除）的键族。
+     *   **按 App × 按角色**分桶，与 selection / enabled 同族同粒度：同一个 App 里
+     *   「这本不带、那本带」是**每张卡各自的判断**（玩 A 卡排掉的仙侠设定集，
+     *   玩 B 卡时正好要用），全局一份会互相冲掉。故这里**不做 global / app 级回退**，
+     *   与 getEnabled 那三档回退刻意不同 —— 那是开关，这是清单，清单不该被上一级覆盖。 */
+    getExcludedBooksKey(appKey) {
+        return `phone_worldbook_excluded_${appKey}_char_${this._getCharacterScopeKey()}`;
+    }
+    /** 读排除表（已归一：去空 / 去重 / 双上限截断）。坏值一律降级成空表，绝不因它吞掉注入。 */
+    getExcludedBooks(appKey) {
+        let raw = null;
+        try { raw = this.storage?.get?.(this.getExcludedBooksKey(appKey), null); } catch (_e) { raw = null; }
+        return normalizeExcludedBooks(raw);
+    }
+    /** 写排除表。写的是归一后的**原文**（用户的写法原样留着，只在判等时用规范化键）。 */
+    async setExcludedBooks(appKey, books) {
+        const list = normalizeExcludedBooks(books);
+        try { await this.storage?.set?.(this.getExcludedBooksKey(appKey), list); } catch (_e) { /* 写不进就下次再说 */ }
+        return list;
+    }
+    /** 单本开合（UI 一行一个开关用它）。返回写完的**全表**，调用方可直接重渲染。 */
+    async setBookExcluded(appKey, bookName, excluded) {
+        const name = safeString(bookName);
+        if (!name) return this.getExcludedBooks(appKey);
+        const key = canonicalBookName(name);
+        const now = this.getExcludedBooks(appKey);
+        const has = now.some((one) => canonicalBookName(one) === key);
+        if (excluded && !has) now.push(name);
+        if (!excluded && has) return this.setExcludedBooks(appKey, now.filter((one) => canonicalBookName(one) !== key));
+        return this.setExcludedBooks(appKey, now);
+    }
+    /* [v4.91.0 · 第十一批 5/8 收口] inspect 交互面的**取数那一半**。
+     *   修前 `inspectVerdict` / `filterBookNamesByPermission` / `dedupeBookNames` 只有纯函数层自证：
+     *   「这次会话里到底有哪些书、我排掉了几本、这份快照还作不作数」在界面上**没有一处可看**。
+     *   用户只能从列表逐行读状态，书一多就不可数 —— 而「排了几本」正是排除表唯一的心智模型。
+     *
+     *   身份比对放在这里（纯件只判、不取）：拉书单是异步的，拉的过程中用户可能换会话。
+     *   判 stale 而不是重拉一次 —— 重拉仍可能在重拉途中再换，循环没有终点。 */
+    _permissionIdentity() {
+        const context = this._getContext();
+        return {
+            chatId: safeString(context?.chatMetadata?.file_name || context?.chatId),
+            hostChatId: safeString(context?.characterId ?? context?.name2)
+        };
+    }
+    /**
+     * 取一份**排除面快照**（ready / stale 两态，互不同形）。
+     *   stale 时两份名单都给空数组并带因 —— 空数组与「真的没有书」必须分得开，
+     *   故状态位在前、名单在后，调用方不许只看名单长度。
+     * @returns {{status:'ready'|'stale', reason:string, excluded:Array<string>, kept:Array<string>, total:number}}
+     */
+    async inspectExcludedBooks(appKey) {
+        const start = this._permissionIdentity();
+        let names = [];
+        let listReason = '';
+        try {
+            const sources = await this.listAvailableWorldbooks({ includeEntries: false, force: true });
+            names = (Array.isArray(sources) ? sources : [])
+                .map((source) => safeString(source?.name))
+                .filter(Boolean);
+        } catch (_e) { listReason = 'list-failed'; }
+        const verdict = inspectVerdict(start, this._permissionIdentity());
+        if (verdict.status !== 'ready') {
+            return { status: 'stale', reason: verdict.reason || listReason || 'stale', excluded: [], kept: [], total: 0 };
+        }
+        const books = dedupeBookNames(names);
+        const excludedSet = new Set(this.getExcludedBooks(appKey).map(canonicalBookName));
+        /* 两份名单一次算清（同一份 books 派生，不各扫一遍 —— 各扫会给出互不相补的两份）。 */
+        const kept = filterBookNamesByPermission({ bookNames: books, excludedBooks: [] })
+            .filter((name) => !excludedSet.has(canonicalBookName(name)));
+        const excluded = books.filter((name) => excludedSet.has(canonicalBookName(name)));
+        return { status: 'ready', reason: listReason, excluded: excluded, kept: kept, total: books.length };
+    }
+    /**
+     * 打开排除面弹层：把「共几本 / 排了几本」摆成可数的两份名单，每行可当场翻转。
+     *   弹层只读一次快照，**不在弹层里重拉** —— 重拉会让手指下的行位移。
+     */
+    async openPermissionInspectDialog(appKey) {
+        const existing = document.querySelector('.phone-worldbook-perm-modal');
+        existing?._phoneWorldbookPermClose?.();
+        const modal = document.createElement('div');
+        modal.className = 'phone-worldbook-perm-modal';
+        modal.innerHTML = `
+            <button class="phone-worldbook-perm-backdrop" type="button" data-action="close" aria-label="关闭"></button>
+            <section class="phone-worldbook-perm-dialog" role="dialog" aria-modal="true" aria-label="世界书排除面">
+                <header class="phone-worldbook-perm-head">
+                    <div class="phone-worldbook-perm-heading">
+                        <h3>排除面</h3>
+                        <span class="phone-worldbook-perm-count">读不到快照</span>
+                    </div>
+                    <button class="phone-worldbook-perm-close" type="button" data-action="close" title="关闭" aria-label="关闭">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="phone-worldbook-perm-body"><div class="phone-worldbook-status">正在读取当前世界书…</div></div>
+                <footer class="phone-worldbook-perm-actions">
+                    <button type="button" class="phone-worldbook-perm-done" data-action="close">关闭</button>
+                </footer>
+            </section>
+        `;
+        const host = document.querySelector('#phone-panel-content .phone-screen');
+        if (!host) throw new Error('未找到小手机屏幕容器，无法打开排除面');
+        host.appendChild(modal);
+        return new Promise((resolve) => {
+            let settled = false;
+            const body = modal.querySelector('.phone-worldbook-perm-body');
+            const count = modal.querySelector('.phone-worldbook-perm-count');
+            const onKeyDown = (event) => { if (event.key === 'Escape') close(); };
+            const close = () => {
+                if (settled) return;
+                settled = true;
+                document.removeEventListener('keydown', onKeyDown);
+                modal.remove();
+                resolve(true);
+            };
+            modal._phoneWorldbookPermClose = close;
+            modal.querySelectorAll('[data-action="close"]').forEach((button) => {
+                button.addEventListener('click', close);
+            });
+            document.addEventListener('keydown', onKeyDown);
+            const draw = (snapshot) => {
+                body.replaceChildren();
+                if (!snapshot || snapshot.status !== 'ready') {
+                    const why = {
+                        'chat-changed': '读取途中换了会话：这份名单属于上一个会话，请重开。',
+                        'host-chat-changed': '读取途中换了角色：这份名单属于上一个角色，请重开。',
+                        'no-chat-id': '当前没有会话标识，判不出名单归属。',
+                        'list-failed': '世界书列表读取失败（不是「一本都没有」）。'
+                    }[snapshot?.reason] || '快照已过期，请重开。';
+                    count.textContent = '快照过期';
+                    const hint = document.createElement('div');
+                    hint.className = 'phone-worldbook-status is-error';
+                    hint.textContent = why;
+                    body.append(hint);
+                    return;
+                }
+                count.textContent = `已排除 ${snapshot.excluded.length} / 共 ${snapshot.total} 本`;
+                const section = (title, list, isExcluded) => {
+                    const box = document.createElement('div');
+                    box.className = 'phone-worldbook-perm-section';
+                    const head = document.createElement('div');
+                    head.className = 'phone-worldbook-perm-section-title';
+                    head.textContent = `${title}（${list.length}）`;
+                    box.append(head);
+                    if (!list.length) {
+                        const empty = document.createElement('div');
+                        empty.className = 'settings-hint';
+                        empty.textContent = isExcluded ? '还没有排除任何一本。' : '每一本都被排除了。';
+                        box.append(empty);
+                        return box;
+                    }
+                    for (const name of list) {
+                        const row = document.createElement('div');
+                        row.className = 'phone-worldbook-perm-row' + (isExcluded ? ' is-excluded' : '');
+                        const label = document.createElement('span');
+                        label.className = 'phone-worldbook-perm-name';
+                        label.textContent = name;
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'phone-worldbook-perm-toggle';
+                        button.textContent = isExcluded ? '恢复' : '排除';
+                        button.addEventListener('click', async () => {
+                            await this.setBookExcluded(appKey, name, !isExcluded);
+                            const top = modal.querySelector('.phone-worldbook-perm-count');
+                            if (top) top.textContent = '已改动，重读中…';
+                            draw(await this.inspectExcludedBooks(appKey));
+                        });
+                        row.append(label, button);
+                        box.append(row);
+                    }
+                    return box;
+                };
+                body.append(
+                    section('已排除 · 不注入', snapshot.excluded, true),
+                    section('仍在用', snapshot.kept, false)
+                );
+            };
+            void this.inspectExcludedBooks(appKey).then(draw).catch(() => draw({ status: 'stale', reason: 'list-failed' }));
+        });
+    }
+    /* [v4.91.0 · 第十一批] 条目设置面板的**存储面**。
+     *   修前 `entrySettings` 只能由调用方在 `writeMemoryEntries(name, entries, { entrySettings })`
+     *   里现传 —— 产品端一个调用点都没有，等于「机制在、用户摸不到」。
+     *
+     *   键同样按 App × 按角色分桶（与 selection / excluded 同族同粒度，同样不做上级回退）：
+     *   同一个 App 里「这张卡要常驻、那张卡要关键字触发」是各自的判断。
+     *   刻意与排除表**分键**：排除表是「哪几本进来」，设置是「进来的写成什么样」，
+     *   两者的重置节奏不同（清排除表不该顺手把设置也冲掉）。 */
+    getEntrySettingsKey(appKey = 'common') {
+        return `phone_worldbook_entrysettings_${appKey || 'common'}_char_${this._getCharacterScopeKey()}`;
+    }
+    /** 读设置（已归一；坏值一律降级成缺省表，绝不因设置坏掉而写坏条目）。 */
+    getEntrySettings(appKey = 'common') {
+        let raw = null;
+        try { raw = this.storage?.get?.(this.getEntrySettingsKey(appKey), null); } catch (_e) { raw = null; }
+        if (typeof raw === 'string') {
+            try { raw = JSON.parse(raw); } catch (_e) { raw = null; }
+        }
+        return normalizeLorebookEntrySettings(raw).settings;
+    }
+    /** 打补丁式写设置（只并入传进来的格子，其余保持），返回写完的整份归一结果。 */
+    async setEntrySettings(appKey, patch) {
+        const merged = Object.assign({}, this.getEntrySettings(appKey), (patch && typeof patch === 'object') ? patch : {});
+        const next = normalizeLorebookEntrySettings(merged);
+        try { await this.storage?.set?.(this.getEntrySettingsKey(appKey), next.settings); } catch (_e) { /* 写不进就下次再说 */ }
+        return next.settings;
+    }
+    /**
+     * 打开条目设置面板。控件与 `applyLorebookEntrySettings` 的受控面一一对应，
+     * 越界不在这里拦（纯件会夹紧并回读数）—— 面板只负责把当前值摆出来。
+     * `position === 7`（outlet）时才出 outletName 输入格。
+     */
+    async openEntrySettingsDialog(appKey) {
+        const existing = document.querySelector('.phone-worldbook-set-modal');
+        existing?._phoneWorldbookSetClose?.();
+        const current = this.getEntrySettings(appKey);
+        const modal = document.createElement('div');
+        modal.className = 'phone-worldbook-set-modal';
+        const modeOptions = [['link', '向量化（默认）'], ['green', '关键字触发'], ['blue', '常驻（每轮都带）']]
+            .map(([v, label]) => `<option value="${v}" ${current.constVectMode === v ? 'selected' : ''}>${label}</option>`).join('');
+        const posOptions = ['0', '1', '2', '3', '5', '6', '7']
+            .map((v) => `<option value="${v}" ${String(current.position) === v ? 'selected' : ''}>${v}${v === '7' ? '（出口）' : ''}</option>`).join('');
+        const orderOptions = [['auto', '按自身序号'], ['reverse', '按倒序'], ['manual', '手填固定值']]
+            .map(([v, label]) => `<option value="${v}" ${current.orderMode === v ? 'selected' : ''}>${label}</option>`).join('');
+        modal.innerHTML = `
+            <button class="phone-worldbook-set-backdrop" type="button" data-action="close" aria-label="关闭"></button>
+            <section class="phone-worldbook-set-dialog" role="dialog" aria-modal="true" aria-label="记忆条目设置">
+                <header class="phone-worldbook-set-head">
+                    <h3>记忆条目设置</h3>
+                    <button class="phone-worldbook-set-close" type="button" data-action="close" title="关闭" aria-label="关闭">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="phone-worldbook-set-body">
+                    <label class="phone-worldbook-set-row"><span>触发形态</span>
+                        <select data-field="constVectMode">${modeOptions}</select></label>
+                    <label class="phone-worldbook-set-row"><span>插入位置</span>
+                        <select data-field="position">${posOptions}</select></label>
+                    <label class="phone-worldbook-set-row" data-outlet><span>出口名</span>
+                        <input type="text" data-field="outletName" value="${escapeHtml(current.outletName || '')}" placeholder="位置 7 才用"></label>
+                    <label class="phone-worldbook-set-row"><span>排序</span>
+                        <select data-field="orderMode">${orderOptions}</select></label>
+                    <label class="phone-worldbook-set-row" data-manual><span>手填值</span>
+                        <input type="number" data-field="orderValue" value="${current.orderValue}" min="0" max="9999"></label>
+                    <label class="phone-worldbook-set-row" data-reverse><span>倒序起点</span>
+                        <input type="number" data-field="reverseStart" value="${current.reverseStart}" min="100" max="9999"></label>
+                    <label class="phone-worldbook-set-row"><span>标题模板</span>
+                        <input type="text" data-field="titleFormat" value="${escapeHtml(current.titleFormat || '')}"></label>
+                    <label class="phone-worldbook-set-row is-check"><span>防递归</span>
+                        <input type="checkbox" data-field="preventRecursion" ${current.preventRecursion ? 'checked' : ''}></label>
+                    <label class="phone-worldbook-set-row is-check"><span>递归时才带</span>
+                        <input type="checkbox" data-field="delayUntilRecursion" ${current.delayUntilRecursion ? 'checked' : ''}></label>
+                    <label class="phone-worldbook-set-row is-check"><span>忽略预算</span>
+                        <input type="checkbox" data-field="ignoreBudget" ${current.ignoreBudget ? 'checked' : ''}></label>
+                    <div class="phone-worldbook-set-hint">序号按占位补零（例如三个零补成三位）。单层方括号的壳会被吃掉，写两层才留住一层。</div>
+                </div>
+                <footer class="phone-worldbook-set-actions">
+                    <button type="button" class="phone-worldbook-set-cancel" data-action="close">取消</button>
+                    <button type="button" class="phone-worldbook-set-confirm" data-action="save">保存</button>
+                </footer>
+            </section>
+        `;
+        const host = document.querySelector('#phone-panel-content .phone-screen');
+        if (!host) throw new Error('未找到小手机屏幕容器，无法打开条目设置');
+        host.appendChild(modal);
+        return new Promise((resolve) => {
+            let settled = false;
+            const field = (name) => modal.querySelector('[data-field="' + name + '"]');
+            const syncCond = () => {
+                const outletRow = modal.querySelector('[data-outlet]');
+                if (outletRow) outletRow.hidden = field('position')?.value !== '7';
+                const manualRow = modal.querySelector('[data-manual]');
+                if (manualRow) manualRow.hidden = field('orderMode')?.value !== 'manual';
+                const reverseRow = modal.querySelector('[data-reverse]');
+                if (reverseRow) reverseRow.hidden = field('orderMode')?.value !== 'reverse';
+            };
+            field('position')?.addEventListener('change', syncCond);
+            field('orderMode')?.addEventListener('change', syncCond);
+            syncCond();
+            const close = (saved) => {
+                if (settled) return;
+                settled = true;
+                document.removeEventListener('keydown', onKeyDown);
+                modal.remove();
+                resolve(!!saved);
+            };
+            const onKeyDown = (event) => { if (event.key === 'Escape') close(false); };
+            modal._phoneWorldbookSetClose = () => close(false);
+            modal.querySelectorAll('[data-action="close"]').forEach((button) => {
+                button.addEventListener('click', () => close(false));
+            });
+            document.addEventListener('keydown', onKeyDown);
+            modal.querySelector('[data-action="save"]')?.addEventListener('click', async () => {
+                const patch = {
+                    constVectMode: field('constVectMode')?.value,
+                    position: field('position')?.value,
+                    outletName: field('outletName')?.value,
+                    orderMode: field('orderMode')?.value,
+                    orderValue: field('orderValue')?.value,
+                    reverseStart: field('reverseStart')?.value,
+                    titleFormat: field('titleFormat')?.value,
+                    preventRecursion: !!field('preventRecursion')?.checked,
+                    delayUntilRecursion: !!field('delayUntilRecursion')?.checked,
+                    ignoreBudget: !!field('ignoreBudget')?.checked
+                };
+                try { await this.setEntrySettings(appKey, patch); } catch (_e) { /* 写不进就下次再说 */ }
+                close(true);
+            });
+        });
     }
 
     isSessionIsolatedApp(appKey) {
@@ -836,12 +1227,20 @@ export class WorldbookManager {
             .filter((entryId) => availableIds.has(entryId));
         const configuredSet = new Set(configuredIds);
         const sourceSelected = selection?.initialized === true && this.matchesSelection(source, selection.ids);
+        /* [v4.90.0 · 第十批缝入 5/8 · 既有缺陷] 没对这一本做过**条目级**选择时，
+         *   `configuredIds` 是空集 ⇒ `selectedEntries` 也是空 ⇒ **勾了整本却一条都不注入**。
+         *   成因是 `_findExplicitEntrySelection` 只认 `entryIdsBySource` 里的显式记录，
+         *   而「勾一本但没点条目按钮」是最常见的用法。这里补上「未显式配置 ⇒ 全部可用条目都算」：
+         *   `allEntries` 已按 `includeDisabled:true` 取过，故这里要自己筛一遍启用态。 */
+        const fallbackEntries = explicit.initialized ? [] : allEntries.filter((entry) => entry.enabled);
         return {
             sourceSelected,
             explicit: explicit.initialized,
             configuredIds,
-            selectedIds: sourceSelected ? configuredIds : [],
-            selectedEntries: sourceSelected ? allEntries.filter((entry) => configuredSet.has(entry.uid)) : [],
+            selectedIds: sourceSelected ? (explicit.initialized ? configuredIds : fallbackEntries.map((e) => e.uid)) : [],
+            selectedEntries: sourceSelected
+                ? (explicit.initialized ? allEntries.filter((entry) => configuredSet.has(entry.uid)) : fallbackEntries)
+                : [],
             allEntries
         };
     }
@@ -916,21 +1315,28 @@ export class WorldbookManager {
                 return (bSelected - aSelected) || String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
             });
             const savedQuery = safeString(container.dataset.phoneWorldbookSearchQuery);
+            const excludedSet = new Set(this.getExcludedBooks(appKey).map(canonicalBookName));
             const sourceRows = displaySources.map((source) => {
                 const entryState = this.getSourceEntrySelectionState(appKey, source);
                 const totalCount = entryState.allEntries.length;
                 const selectedCount = entryState.selectedIds.length;
                 const checked = entryState.sourceSelected && selectedCount > 0;
                 const unavailable = totalCount === 0;
+                /** [v4.90.0 · 第十批缝入 5/8] 这本已上排除表：勾着但不注入。 */
+                const excluded = excludedSet.has(canonicalBookName(source.name));
                 const sourceId = escapeHtml(source.id);
-                const status = unavailable ? '读取失败或没有条目' : `${selectedCount}/${totalCount} 条已选`;
+                const baseStatus = unavailable ? '读取失败或没有条目' : `${selectedCount}/${totalCount} 条已选`;
+                const status = excluded ? '已排除 · 不注入' : baseStatus;
                 return `
-                    <div class="phone-worldbook-source-row${checked ? ' is-selected' : ''}" data-source-id="${sourceId}">
+                    <div class="phone-worldbook-source-row${checked ? ' is-selected' : ''}${excluded ? ' is-excluded' : ''}" data-source-id="${sourceId}">
                         <input class="phone-worldbook-source-toggle" type="checkbox" value="${sourceId}" ${checked ? 'checked' : ''} ${unavailable ? 'disabled' : ''} aria-label="选择 ${escapeHtml(source.name)}">
                         <div class="phone-worldbook-source-copy">
                             <div class="phone-worldbook-source-name">${escapeHtml(source.name)}</div>
                             <div class="phone-worldbook-source-meta">${escapeHtml(source.sourceLabel || '世界书')} · ${escapeHtml(status)}</div>
                         </div>
+                        <button class="phone-worldbook-exclude-toggle${excluded ? ' is-on' : ''}" type="button" data-source-id="${sourceId}" title="${excluded ? '恢复这本（当前不注入）' : '在这个 App 里排除这本'}" aria-pressed="${excluded ? 'true' : 'false'}">
+                            <i class="fa-solid ${excluded ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>
+                        </button>
                         <button class="phone-worldbook-entry-trigger" type="button" data-source-id="${sourceId}" title="选择条目" aria-label="选择 ${escapeHtml(source.name)} 的条目" ${unavailable ? 'disabled' : ''}>
                             <i class="fa-solid fa-list-check" aria-hidden="true"></i>
                         </button>
@@ -946,6 +1352,14 @@ export class WorldbookManager {
                     </button>
                 </div>
                 <div class="phone-worldbook-search-result" aria-live="polite" ${savedQuery ? '' : 'hidden'}></div>
+                <div class="phone-worldbook-toolbar">
+                    <button class="phone-worldbook-perm-trigger" type="button" title="看排除面（共几本 / 排了几本）" aria-label="看排除面">
+                        <i class="fa-solid fa-eye-low-vision" aria-hidden="true"></i><span>排除面</span>
+                    </button>
+                    <button class="phone-worldbook-set-trigger" type="button" title="记忆条目设置（形态 / 位置 / 排序 / 标题）" aria-label="记忆条目设置">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i><span>条目设置</span>
+                    </button>
+                </div>
                 <div class="phone-worldbook-source-list">${sourceRows}</div>
             `;
 
@@ -993,7 +1407,25 @@ export class WorldbookManager {
                 searchInput.focus();
             });
             applySearch();
-
+            /* [v4.91.0] 两个入口：排除面（可数）与条目设置（用户摸得到的设置面板）。 */
+            container.querySelector('.phone-worldbook-perm-trigger')?.addEventListener('click', () => {
+                this.openPermissionInspectDialog(appKey).catch((error) => console.warn('[WorldbookManager] 打开排除面失败:', error));
+            });
+            container.querySelector('.phone-worldbook-set-trigger')?.addEventListener('click', () => {
+                this.openEntrySettingsDialog(appKey).catch((error) => console.warn('[WorldbookManager] 打开条目设置失败:', error));
+            });
+            /* [v4.90.0 · 第十批缝入 5/8] 排除开关：只翻转许可位，**不动勾选**。
+             *   与勾选分开的理由：用户排掉一本书往往只是「这次别用它」，勾选是他挑过条目的
+             *   劳动成果，不该因为排除而丢掉；反过来恢复时也不该替他决定要不要勾。 */
+            container.querySelectorAll('.phone-worldbook-exclude-toggle').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const source = sourceById.get(String(button.dataset.sourceId || ''));
+                    if (!source) return;
+                    const nowExcluded = button.getAttribute('aria-pressed') === 'true';
+                    await this.setBookExcluded(appKey, source.name, !nowExcluded);
+                    await this.renderWorldbookSelector(container, appKey, options);
+                });
+            });
             container.querySelectorAll('.phone-worldbook-source-toggle').forEach((input) => {
                 input.addEventListener('change', async () => {
                     const source = sourceById.get(String(input.value));
@@ -1127,17 +1559,35 @@ export class WorldbookManager {
 
     async _loadSelectedWorldbookSources(appKey, options = {}) {
         if (!this.getEnabled(appKey)) return [];
-
         const sources = await this.listAvailableWorldbooks(options);
         if (sources.length === 0) return [];
-
         const selection = this.getSelectionState(appKey);
         const selectedSources = selection.initialized
             ? sources.filter((source) => this.matchesSelection(source, selection.ids))
             : [];
         if (selectedSources.length === 0) return [];
-
-        return Promise.all(selectedSources.map((source) => this._loadWorldContent(source)));
+        /* [v4.90.0 · 第十批缝入 5/8] 过一道来源许可：勾过的书里凡上了排除表的整本不带。
+         *   只过滤**已选中**的那一批（未选中的本来就不注入，再过滤一遍徒增 dropper 噪声）。
+         *   命中一律记为 `excluded-book`；kind 给 'worldbook' 是本模块的口径 ——
+         *   这一层只有书，没有别的来源混进来。 */
+        const excludedBooks = this.getExcludedBooks(appKey);
+        const permitted = excludedBooks.length
+            ? filterSourcesByPermission({
+                excludedBooks: excludedBooks,
+                candidates: selectedSources.map((source) => ({
+                    kind: 'worldbook',
+                    world: source?.name,
+                    hostEnabled: source?.hostEnabled,
+                    availability: source?.availability
+                }))
+            }).kept.map((one) => one.world)
+            : null;
+        const keptSources = permitted
+            ? selectedSources.filter((source) => permitted.includes(source?.name))
+            : selectedSources;
+        if (keptSources.length === 0) return [];
+        /* [v4.89.0] 同上：选中面一次最多读 4 本。 */
+        return runLimited(keptSources, (source) => this._loadWorldContent(source), { concurrency: 4, failFast: false });
     }
 
     async buildWorldbookMessages(appKey, options = {}) {

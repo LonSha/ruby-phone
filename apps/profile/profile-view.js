@@ -47,7 +47,7 @@ export class ProfileView {
             '  </header>',
             '  <div class="pf-body">',
             this._reasonCard(face),
-            this._heroCard(face, fields),
+            this._heroCard(face, fields, pkg),
             this._lifeCard(face, groups),
             this._settingsCard(),
             '  </div>',
@@ -73,7 +73,7 @@ export class ProfileView {
             '</div>'
         ].join('\n');
     }
-    _heroCard(face, fields) {
+    _heroCard(face, fields, pkg) {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
@@ -85,16 +85,23 @@ export class ProfileView {
                 '<div class="pf-field">',
                 '  <span class="pf-field-key">' + this._esc(f.key) + '</span>',
                 '  <span class="pf-field-val">' + this._esc(f.value) + '</span>',
+                /* [v4.91.0] 推算出来的值必须自带「这是推算的」小字：
+                 *   不加就会与手写确数在界面上完全同形，用户无从判断该不该信。 */
+                (f.note ? '  <span class="pf-field-note">' + this._esc(f.note) + '</span>' : ''),
                 '</div>'
-            ].join('\n'));
+            ].filter(Boolean).join('\n'));
             body = rows.join('\n');
         }
+        /* 年龄的来历单列一行（只在有年龄时出）：放字段区之上，
+         *   让「这个数是怎么来的」先于数字被看到。 */
+        const ageLine = (pkg && pkg.ageLine) ? ('  <div class="pf-age-line">' + this._esc(pkg.ageLine) + '</div>') : '';
         return [
             '<div class="pf-card">',
             '  <div class="pf-card-title">主角档案<span class="pf-count">' + (ready ? fields.length + ' 项' : '—') + '</span></div>',
+            ageLine,
             '  ' + body,
             '</div>'
-        ].join('\n');
+        ].filter(Boolean).join('\n');
     }
     _lifeItem(d, tier) {
         return [

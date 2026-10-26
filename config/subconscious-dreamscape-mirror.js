@@ -13,7 +13,18 @@
  *    - 微信深夜未发告白与撤销草稿 (Unsent Midnight Drafts)
  * 3. 梦境解析与清醒度计算 (Lucidity & Tension Index):
  *    - 推演梦境紧张度 (tensionScore) 与清醒度 (lucidityDegree)
- * ======================================================== */
+ *
+ * 【v4.88.0 补缝 · dream-guard 空梦拦截】
+ *   本件此前只解包 → 拼文案 → 落库，**没有对「梦写成了什么」做任何检查**：
+ *   `coreUrge` / `suppressedDesire` 都是空串时，产出的正文仍然是
+ *   「好像一直想对你说一句话：“”，但醒来喉咙发紧。」——字数够、读起来像梦、
+ *   其实一个字的内容都没有，而且它会被 `getLatestDream()` 当成最新一条读到。
+ *   现在进 `mirrorCognitiveState` 之前先过 `judgeDreamText`：
+ *   空话/过短即返回 `ok:false, retry:true` 且**不落库**（脏结果不该占掉最新位），
+ *   重试次数用完给 `give-up`。判定内核在 `config/dream-guard.js`，本件只调用。
+ * ============================================================ */
+
+import { judgeDreamText, DREAM_VERDICTS, dreamContextBlock } from './dream-guard.js';
 
 export const DREAM_ARCHETYPES = Object.freeze({
     LABYRINTH_ESCAPE: 'LABYRINTH_ESCAPE',       // 迷宫逃离/焦虑
@@ -51,10 +62,23 @@ export class SubconsciousDreamscapeMirror {
      * @param {string} actorName 角色名称
      * @returns {Object} 梦境镜像产物
      */
-    mirrorCognitiveState(cognitivePayload = {}, actorName = '主角') {
+    mirrorCognitiveState(cognitivePayload = {}, actorName = '主角', opts = {}) {
         const undercurrent = cognitivePayload.unconsciousDrive || cognitivePayload.undercurrent || null;
         const dissociation = cognitivePayload.traumaDissociation || cognitivePayload.dissociation || null;
         const sensory = Array.isArray(cognitivePayload.sensoryTraces) ? cognitivePayload.sensoryTraces : [];
+
+        /* [v4.88.0 · dream-guard] 先判「素材够不够写一场梦」。
+         *   `attempt` 由调用方按次传入；到顶返回 verdict:'give-up'，此时仍产出记录
+         *   （give-up 的意义是「别再试了」，不是「什么都别存」），但 `gate.ok` 如实为 false。 */
+        const sourceText = [
+            undercurrent?.coreUrge, undercurrent?.suppressedDesire, ...sensory
+        ].filter(Boolean).join(' ');
+        const gate = judgeDreamText(sourceText, { attempt: opts.attempt });
+        if (!gate.ok && gate.retry) {
+            /* 还能再来一次：不落库、不占最新位，直接把裁决交回调用方。 */
+            return { ok: false, retry: true, verdict: gate.verdict, reason: gate.reason, record: null };
+        }
+
 
         // 1. 判定梦境原型与紧张度
         let archetype = DREAM_ARCHETYPES.WHISPER_CONFESSION;
@@ -116,6 +140,11 @@ export class SubconsciousDreamscapeMirror {
         if (this.dreamLogs.length > this.maxLogs) this.dreamLogs.pop();
         this._save();
 
+        /* [v4.88.0] 返回值仍是**记录本身**（老调用方 `dream.archetype` 照样工作），
+         *   裁决面挂两个非侵入字段：`gate`（为什么不算好梦）与 `ok`。
+         *   整条记录不包一层 `{record}` —— 那会让既有读法全部失效。 */
+        record.gate = { verdict: gate.verdict, ok: gate.ok, reason: gate.reason };
+        record.ok = gate.ok;
         return record;
     }
 
@@ -124,5 +153,21 @@ export class SubconsciousDreamscapeMirror {
      */
     getLatestDream() {
         return this.dreamLogs[0] || null;
+    }
+
+    /**
+     * [v4.88.0] 近期梦境上下文块（给生成侧用）。
+     *   块的语义由 dream-guard 写死：「是梦，不是现实发生过的事」——
+     *   缺这句，模型会把梦里的事当正史写进后续。
+     *   条数/窗口走内核默认（18h / 2 条），空内容返回空串。
+     */
+    contextBlock(opts = {}) {
+        try {
+            const rows = this.dreamLogs.map((d) => ({
+                text: String(d?.artifacts?.memoFragment?.content || '').trim(),
+                at: Number(d?.timestamp) || 0
+            })).filter((r) => r.text && r.at > 0);
+            return dreamContextBlock(rows, opts);
+        } catch (_e) { return ''; }
     }
 }

@@ -157,8 +157,27 @@ const MIRROR_FILES = [
      *   「缺的恰好只有这一件」，等于当时看见了却没写下去）。
      *   后果与注释里预言的一模一样：镜像根上 chat-view 装载失败（探针 exit 2）⇒
      *   B2（位置无关）与 D1/D2/D3/D5 一起转红 —— 而那证明的是「两个根看到的不是同一件事」，
-     *   不是判据逻辑错。口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面同规。 */
+     *   不是判据逻辑错。口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面同规。
+     *   [v4.88.0 · 真落地] 上面这段是 v4.20.0 写的，把「看见了却没写下去」记成了留痕，
+     *   但**字面量仍然没补**（v4.88.0 的闭包脚本再次把它算成 chat-view 静态闭包的唯一缺口）。
+     *   本版这次真写下去 —— 注释与字面量分家过一轮，就不再靠人记得。 */
     'config/entity-candidates-contract.js',
+    /* [v4.88.0] 本版把六件净化/守卫内核接进了 chat-view 的上屏链路、把 attachment-merge
+     *   接进了 app-injection（chat-view 的静态闭包 ⇒ 镜像面必须覆盖）。缺口照旧由脚本真算：
+     *   遍历 chat-view + app-injection 的静态导入闭包与 MIRROR_FILES 求差，缺的是这七件。
+     *   不扩 ⇒ 镜像根上 chat-view 装载失败（探针 exit 2）⇒ B2(位置无关)与 D1/D2/D3/D5 一起转红。
+     *   口径与 v3.79.0 扩 CSS 面、v3.96.0 扩装配面、v4.05.0 扩实体映射面、v4.20.0 扩列表窗口面、
+     *   v4.47.1 扩群投票交接面、v4.54.1 扩群聊议事面逐字同规。 */
+    'config/turn-claim-dedup.js', 'config/topic-saturation-guard.js',
+    'config/redraw-generation.js', 'config/completion-claim-gate.js',
+    'config/snapshot-retention.js', 'config/echo-prose-strip.js',
+    'config/attachment-merge.js',
+    /* [v4.91.0 · 交棒补漏] chat-view 的静态闭包又长了一件:config/story-time-rel.js
+     *   (v4.90.0 把剧情时间相对化接进注入块,经 app-injection/profile-data 进来)。
+     *   上一版没跟着扩镜像面 —— 后果与历次逐字同形:镜像根上 chat-view 装载失败(探针 exit 2),
+     *   B2(位置无关)与 D1/D2/D3/D5 一起转红。缺口照旧由脚本真算
+     *   (chat-view + app-injection 的静态闭包 47 件,缺的恰好只有这一件)。 */
+    'config/story-time-rel.js',
 ];
 /* [v3.79.0] 递归枚举全仓 .css —— 与 tests/audit/longlist_scale_probe.cjs 里那份**逐字同口径**
  *   （口径片段由本文件末的 D5 判据看守）。为什么两处各写一份而不上收：探针是 .cjs，

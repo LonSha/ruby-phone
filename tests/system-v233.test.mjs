@@ -537,7 +537,12 @@ const SC_E6 = (m) => {                       // A2a 同款：宿主路径必须�
     /* G9 内置公告与日志逐字同源 */
     const blk = (idx.match(/const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/) || [''])[0];
     ok('G9a 内置公告存在且 version 引用常量', blk.length > 0 && /version:\s*ST_PHONE_VERSION/.test(blk));
-    const inner = blk.slice(blk.indexOf('items: [') + 'items: ['.length, blk.lastIndexOf(']'));
+    /* [v4.89.0 交棒] 「取块内最后一个 ]」假设了块里只有一个数组；自本版起公告块随 update-log
+       同构带 highlights，必须锚 items 自己的收尾行（与 v231 同一根因、同一修法）。
+       取不到收尾时回落原写法，强度不降。 */
+    const __i0 = blk.indexOf('items: [') + 'items: ['.length;
+    const __i1 = blk.indexOf('\n    ],', __i0);
+    const inner = __i1 > __i0 ? blk.slice(__i0, __i1) : blk.slice(__i0, blk.lastIndexOf(']'));
     let ann = null;
     try { ann = JSON.parse('[' + inner.replace(/,\s*$/, '') + ']'); } catch (_e) { ann = null; }
     ok('G9b 公告可解析为字符串数组', Array.isArray(ann) && ann.every(s => typeof s === 'string'));

@@ -434,6 +434,7 @@ const KEY_REGISTRY = [
   { key: 'phone_call_contacts', scope: 'chat', note: '通话联系人' },
   { key: 'phone_call_history', scope: 'chat', note: '通话记录' },
   { key: 'phone_call_attribution', scope: 'chat', note: '通话同名人工认领账（R3-O1）' },
+  { key: 'phone_call_escalation', scope: 'chat', note: '[v4.88.0] 静默升级拨号账（上次联系 / 当日自动拨 / 催促档）' },
   { key: 'phone_call_sms_conversations', scope: 'chat', note: '短信会话' },
   { key: 'phone_call_sms_processed_batches', scope: 'chat', note: '短信批处理游标' },
   { key: 'tw_letters', scope: 'chat', note: '织光机收藏册' },

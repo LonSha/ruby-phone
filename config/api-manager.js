@@ -19,6 +19,11 @@ import { getMemoryTagFilterInfo } from './tag-filter.js';
 import { buildSubmodelParams, judgeSubmodelIsolation, isolationLine } from './submodel-isolation.js';
 // @@ 工具调用中的最终回复正文提取（OpenAI tool_calls / function_call / Gemini functionCall）
 import { extractToolCallFragments, mergeToolCallFragments, extractFinalResponseToolContent } from './tool-call-content.js';
+/* [v4.88.0 · 第七批缝入] 配置面脱敏（导出/贴出前用，纯函数）。 */
+import { redact, redactSummaryLine } from './secret-redaction.js';
+/* [v4.89.0 · 第九批缝入] 上游失败码表 + 错误文本整形。修前：`_formatError` 无码表、只看第一层、
+ *   不剥前缀，失败详情埋在 `error.details` 里时整串丢成压缩 JSON，用户看不出该查网络还是该换地址。 */
+import { findUpstreamFailureDetails, upstreamFailureFallbackText, readableErrorText } from './upstream-failure.js';
 
 export class ApiManager {
     constructor(storage) {
@@ -61,10 +66,21 @@ export class ApiManager {
 
         const parts = [];
         const name = String(error?.name || '').trim();
-        const message = String(error?.message || '').trim();
+        const rawMessage = String(error?.message || '').trim();
+        /* 上游把 `Bad request: 模型不支持该参数` 整串抛上来时，前缀与真正的因同权，
+         *   用户得自己找后半段；剥到稳定为止（剥空则回落原文，不丢信息）。 */
+        const stripped = rawMessage ? readableErrorText(rawMessage) : '';
+        const message = stripped || rawMessage;
         const status = error?.status || error?.statusCode || error?.code || '';
         const statusText = String(error?.statusText || '').trim();
 
+        /* 详情码：`network.timeout` 与 `network.dns_failed` 在界面上处置相反，
+         *   故已知码给专句并置顶；挖不到就什么都不加（不编理由）。 */
+        const details = findUpstreamFailureDetails(error);
+        if (details) {
+            parts.push(upstreamFailureFallbackText(details));
+            parts.push(`code=${details.code}`);
+        }
         if (name) parts.push(name);
         if (message) parts.push(message);
         if (status || statusText) parts.push(`status=${status || '?'}${statusText ? ` ${statusText}` : ''}`);
@@ -103,12 +119,18 @@ export class ApiManager {
         if (body) {
             try {
                 const parsed = JSON.parse(body);
+                /* 先试详情码：`{error:{code,category,message_key}}` 这种形状里
+                 *   `parsed.error` 是对象，旧代码 `typeof message === 'string'` 不成立，
+                 *   于是整串压缩 JSON 上屏 —— 有码却没人看得懂。 */
+                const details = findUpstreamFailureDetails(parsed);
+                if (details) return upstreamFailureFallbackText(details);
                 const message = parsed?.error?.message || parsed?.message || parsed?.detail || parsed?.error;
-                if (typeof message === 'string' && message.trim()) return message.trim().slice(0, 1000);
+                if (typeof message === 'string' && message.trim()) return readableErrorText(message).slice(0, 1000);
             } catch (_e) {
                 // 不是 JSON 时保留纯文本错误。
             }
-            return body.replace(/\s+/g, ' ').slice(0, 1000);
+            const flat = body.replace(/\s+/g, ' ').slice(0, 1000);
+            return readableErrorText(flat) || flat;
         }
         return statusMessages[status] || '响应体为空';
     }
@@ -122,6 +144,50 @@ export class ApiManager {
             && /invalid\s+url|err_invalid_url|failed\s+to\s+parse\s+(?:the\s+)?url|cannot\s+parse\s+url/i.test(String(rawBody || ''));
     }
 
+    /**
+     * 当前生效 API 配置的**脱敏投影**（诊断中心 / 用户复制配置时用）。
+     *   为什么放在这里而不是诊断侧：脱敏要脱的是**真正生效的那一套**
+     *   （`_resolvePhoneApiConfig` 已经把 profile 与全局合并过了）；
+     *   诊断侧自己读裸 storage 只能看到配置原文，看不到合并结果 ——
+     *   两份取数必然分叉，而分叉的那天不会报错，只会漏脱一个 key。
+     *
+     *   只读不写；任何取数失败都如实返 ok:false + reason（**不说「没有密钥」**）。
+     * @param {string} [appId]
+     * @returns {{ok:boolean, reason:string, source:string, value:any, hits:string[], line:string}}
+     */
+    redactedActiveProfile(appId = '') {
+        const fail = (reason) => ({ ok: false, reason, source: 'none', value: null, hits: [], line: '' });
+        let raw = null;
+        let source = 'storage';
+        try {
+            raw = this.storage && typeof this.storage.get === 'function'
+                ? this.storage.get('phone_api_config')
+                : null;
+        } catch (_e) { return fail('storage-threw'); }
+        if (!raw) {
+            /* 手机档没有时本管理器实际会落到酒馆的 gg_api —— 那一份也脱，不装作没有配置。 */
+            try {
+                const alt = (typeof localStorage !== 'undefined') ? localStorage.getItem('gg_api') : null;
+                if (!alt) return fail('no-api-config');
+                raw = alt;
+                source = 'tavern';
+            } catch (_e) { return fail('storage-threw'); }
+        }
+        let parsed = raw;
+        if (typeof raw === 'string') {
+            try { parsed = JSON.parse(raw); } catch (_e) { return fail('config-unparsable'); }
+        }
+        if (!parsed || typeof parsed !== 'object') return fail('config-unparsable');
+        const merged = (source === 'storage') ? this._resolvePhoneApiConfig(parsed, appId) : parsed;
+        try {
+            const r = redact(merged);
+            return {
+                ok: true, reason: '', source, value: r.value,
+                hits: Array.isArray(r.hits) ? r.hits : [],
+                line: redactSummaryLine(r.hits)
+            };
+        } catch (_e) { return fail('redact-threw'); }
+    }
     _resolvePhoneApiConfig(rawConfig, appId = '') {
         if (!rawConfig || typeof rawConfig !== 'object') return rawConfig;
 

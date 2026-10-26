@@ -71,6 +71,34 @@ import { SpotlightUniversalSearch, SEARCH_DOMAINS } from './spotlight-universal-
 import { AutonomousLifeScheduler } from './autonomous-life-scheduler.js';
 import { SubconsciousDreamscapeMirror } from './subconscious-dreamscape-mirror.js';
 import { SystemNotificationDispatcher } from './system-notification-dispatcher.js';
+/* [v4.88.0 · 第七批缝入] 十一件新内核的健康自检与一行读数。
+ *   接在这里的理由：本中枢的 runSelfChecks 就是「全部子系统的健康自检」出口，
+ *   新内核属于同一族。一行读数同时留下（否则那些 *Line 只有测试消费，
+ *   而本仓的规矩是**产品端零消费即死导出**）。 */
+import { completionGateSelfCheck, gateSummaryLine } from './completion-claim-gate.js';
+import { writeGuardSelfCheck, sameVirtualPath, writeRejectLine } from './write-guard.js';
+import { redactionSelfCheck, redactSummaryLine } from './secret-redaction.js';
+import { dedupSelfCheck, dedupSummaryLine } from './turn-claim-dedup.js';
+import { saturationSelfCheck, saturationLine } from './topic-saturation-guard.js';
+import { presenceSelfCheck, presenceLine, priorityOf } from './presence-arbitration.js';
+import { echoStripSelfCheck, echoStripLine } from './echo-prose-strip.js';
+import { stallSelfCheck, stallLine } from './stall-watch.js';
+import { retentionSelfCheck, retentionLine } from './snapshot-retention.js';
+import { mergeSelfCheck, mergeLine } from './attachment-merge.js';
+import { redrawSelfCheck, epochLine, captureEpochs } from './redraw-generation.js';
+/* [v4.90.0 · 第十批缝入 5+6+2/7/8] 三件纯函数内核的自检进同步表。
+ *   三件都零 IO、不看时钟、不 await —— 若挂进 `_kernelAsyncChecks`，`res.ok === true` 恒不成立，
+ *   真绿会变成假红（那条纪律写在 `_kernelAsyncChecks` 的档头，v4.89.0 已付过一次代价）。 */
+import { sourcePermissionSelfCheck, sourcePermissionLine, filterSourcesByPermission } from './source-permission.js';
+import { storyTimeRelSelfCheck, storyTimeLine } from './story-time-rel.js';
+import { worldbookEntrySettingsSelfCheck, entrySettingsLine, applyLorebookEntrySettings } from './worldbook-entry-settings.js';
+/* [v4.89.0 · 第九批缝入] 四件内核（前两件是纯函数，后两件带 async：队列自检要真等）。
+ *   为什么仍挂在这里：runSelfChecks 是「全部子系统的健康自检」出口，新内核同族；
+ *   一行读数同时留下（本仓规矩：产品端零消费即死导出）。 */
+import { activationDiffusionSelfCheck, diffusionLine } from './activation-diffusion.js';
+import { recallInjectionPlanSelfCheck, recallPlanLine } from './recall-injection-plan.js';
+import { backgroundQueueSelfCheck, queueReadLine, runLimited } from './background-queue.js';
+import { upstreamFailureSelfCheck, upstreamFailureLine } from './upstream-failure.js';
 import { SmartGalleryVault } from './smart-gallery-vault.js';
 import { BatteryThermodynamics } from './battery-thermodynamics.js';
 import { CellularSignalSim } from './cellular-signal-sim.js';
@@ -83,6 +111,19 @@ import { AmbientAudioWiretap } from './ambient-audio-wiretap.js';
 import { SmartBandBiometrics } from './smart-band-biometrics.js';
 import { ParallelPersonaSpaces } from './parallel-persona-spaces.js';
 import { CalendarAutonomousLifeEngine } from './calendar-autonomous-life.js';
+
+/**
+ * [v4.89.0] 内核自检结果 → 失败列表的唯一口径。
+ *   兼容 `problems` / `bad` 两种字段名：本仓十一件既有内核返回 `problems`，
+ *   而 orchestrator 原先只认 `bad` —— 于是既有件**自检失败也被算成通过**。
+ *   这里两种都认，空结果回落空数组（不把「没字段」当失败，也不当成功）。
+ */
+function kernelProblemsOf(res) {
+    if (!res || typeof res !== 'object') return [];
+    if (Array.isArray(res.problems)) return res.problems;
+    if (Array.isArray(res.bad)) return res.bad;
+    return [];
+}
 
 export class SubsystemOrchestrator {
     constructor(storage) {
@@ -121,7 +162,44 @@ export class SubsystemOrchestrator {
     /**
      * 执行全部 17 个子系统的健康自检并生成状态报告
      */
-    runSelfChecks() {
+    /**
+     * [v4.88.0 · 第七批缝入] 十一件内核的自检与读数行（与既有子系统同一张表）。
+     *   `kind: 'kernel'` 让消费方能区分「既有子系统」与「本次缝入的纯函数内核」，
+     *   不必靠键名猜。自检失败时把 bad 逐条翻成 problems —— 上游表用的就是 problems 字段，
+     *   这里不另立第二种失败形状。
+     */
+    _kernelChecks() {
+        return {
+            completionClaimGate: { run: completionGateSelfCheck, line: gateSummaryLine },
+            writeGuard: { run: writeGuardSelfCheck, line: null },
+            secretRedaction: { run: redactionSelfCheck, line: redactSummaryLine },
+            turnClaimDedup: { run: dedupSelfCheck, line: dedupSummaryLine },
+            topicSaturation: { run: saturationSelfCheck, line: saturationLine },
+            presenceArbitration: { run: presenceSelfCheck, line: presenceLine },
+            echoProseStrip: { run: echoStripSelfCheck, line: echoStripLine },
+            stallWatch: { run: stallSelfCheck, line: stallLine },
+            snapshotRetention: { run: retentionSelfCheck, line: retentionLine },
+            attachmentMerge: { run: mergeSelfCheck, line: mergeLine },
+            redrawGeneration: { run: redrawSelfCheck, line: epochLine },
+            sourcePermission: { run: sourcePermissionSelfCheck, line: sourcePermissionLine },
+            storyTimeRel: { run: storyTimeRelSelfCheck, line: storyTimeLine },
+            worldbookEntrySettings: { run: worldbookEntrySettingsSelfCheck, line: entrySettingsLine }
+        };
+    }
+    /**
+     * [v4.89.0 · 第九批缝入] 四件带 async 的内核自检。**与同步表分开**，因为它们必须 await ——
+     *   挤进 `_kernelChecks` 会让 `v.run()` 返回 Promise 而 `res.ok === true` 恒不成立，
+     *   11 件真假绿变 4 件假红（这不报错，只是全绿不再可信）。
+     */
+    _kernelAsyncChecks() {
+        return {
+            activationDiffusion: { run: activationDiffusionSelfCheck, line: diffusionLine },
+            recallInjectionPlan: { run: recallInjectionPlanSelfCheck, line: recallPlanLine },
+            backgroundQueue: { run: backgroundQueueSelfCheck, line: queueReadLine },
+            upstreamFailure: { run: upstreamFailureSelfCheck, line: upstreamFailureLine }
+        };
+    }
+    _syncChecks() {
         const checks = {
             actionReceipt: actionReceiptSelfCheck(),
             characterPresence: characterPresenceSelfCheck(),
@@ -139,28 +217,105 @@ export class SubsystemOrchestrator {
             proactiveProposal: proactiveProposalSelfCheck(),
             relicCollection: relicCollectionSelfCheck(),
             scenarioAuthoringDesk: scenarioAuthoringDeskSelfCheck(),
-            sharingBoundary: sharingBoundarySelfCheck()
+            sharingBoundary: sharingBoundarySelfCheck(),
+            /* 十一件纯函数内核（自检与读数行同在，见 _kernelChecks） */
+            ...Object.fromEntries(Object.entries(this._kernelChecks()).map(([k, v]) => {
+                let res = null;
+                try { res = v.run(); } catch (e) { res = { ok: false, bad: ['threw: ' + String((e && e.message) || e)] }; }
+                const bad = kernelProblemsOf(res);
+                return [k, { problems: bad, ok: res && res.ok === true, kind: 'kernel' }];
+            }))
         };
 
+        return checks;
+    }
+    /**
+     * 全部自检（含四件异步）—— 队列自检要真等重试退避，故本入口是 async。
+     *   异步件走 `runLimited` 限并发（本仓新内核自己就是干这个的，不用就还是靠自检自证），
+     *   并 `failFast:false`：一件炸掉不许带走另外三件。
+     */
+    async runSelfChecks() {
+        const checks = this._syncChecks();
+        const entries = Object.entries(this._kernelAsyncChecks());
+        await runLimited(entries, async ([k, v]) => {
+            let res = null;
+            try { res = await v.run(); } catch (e) { res = { ok: false, bad: ['threw: ' + String((e && e.message) || e)] }; }
+            const bad = kernelProblemsOf(res);
+            checks[k] = { problems: bad, ok: res && res.ok === true, kind: 'kernel' };
+            return k;
+        }, { concurrency: 2, failFast: false });
+        return this._composeReport(checks);
+    }
+    /**
+     * 同步自检：给「不能 await 的调用点」（诊断面每帧取数）用。
+     *   四件异步件**如实标 skipped**、且不计入 problems —— 不冒充已检、也不判红。
+     *   代价写在这里：`ok:true` 只代表同步那部分全绿，不代表四件异步件也绿；
+     *   要那份含异步的结论必须走 `runSelfChecks()`。
+     */
+    runSelfChecksSync() {
+        const checks = this._syncChecks();
+        for (const k of Object.keys(this._kernelAsyncChecks())) {
+            checks[k] = { problems: [], ok: false, skipped: true, kind: 'kernel-async' };
+        }
+        return this._composeReport(checks);
+    }
+    /** problems / lines / 计数的唯一收尾口（两条入口共用，避免两份拼装逻辑漂移）。 */
+    _composeReport(checks) {
         const problems = [];
         let totalChecks = 0;
         let passedChecks = 0;
+        let skippedChecks = 0;
 
         for (const [key, res] of Object.entries(checks)) {
             totalChecks++;
             const p = (res && Array.isArray(res.problems)) ? res.problems : [];
             if (p.length > 0) {
                 problems.push(`${key}: ${p.join('; ')}`);
+            } else if (res && res.skipped === true) {
+                skippedChecks++;
             } else {
                 passedChecks++;
             }
         }
 
+        /* 内核读数行（只在内核自检通过时才有意义；失败的已在 problems 里点名）。 */
+        const lines = {};
+        for (const [k, v] of Object.entries({ ...this._kernelChecks(), ...this._kernelAsyncChecks() })) {
+            if (!v.line) continue;
+            const d = checks[k];
+            if (!d || !d.ok) continue;
+            try { lines[k] = v.line(); } catch (_e) { lines[k] = '读数抛错'; }
+        }
+        /* 需要现场的两个口径读数：路径同一性（守卫的比较基准）与代次快照（重绘栅栏的基准）。 */
+        lines.writeGuardSamePath = String(sameVirtualPath('/Documents/a.txt', '/documents/A.TXT'));
+        lines.writeGuardReject = writeRejectLine({ path: '/a.txt', reason: 'bad-path', detail: '只有一级' });
+        /* [v4.90.0 · 第十批缝入] 三件新内核的读数行都要**现场参数**才不是「无读数」：
+         *   与上面两行同法。合并排除表给一发（同键不同写法必须被排掉才证明规范化在生效），
+         *   时间给一发跨月（架空跨月算不出，必须落到「跨架空月」这一因），
+         *   设置给一发越界手填（必须夹到 9999 并报出来）。 */
+        lines.sourcePermission = sourcePermissionLine(filterSourcesByPermission({
+            excludedBooks: ['ＴＯＭＢ', '被排的书'],
+            candidates: [
+                { kind: 'worldbook', world: '被排的书' },
+                { kind: 'worldbook', world: '留着的书' },
+                { kind: 'worldbook', world: 'Tomb' },
+                { kind: 'worldbook', hostEnabled: false }
+            ]
+        }));
+        lines.storyTimeRel = storyTimeLine({ labeled: 1, skipped: 1, byReason: { ok: 1, 'cross-fantasy-month': 1 } });
+        lines.worldbookEntrySettings = entrySettingsLine(
+            applyLorebookEntrySettings({}, { orderMode: 'manual', orderValue: 99999, position: 4 }, { orderNumber: 3 })
+        );
+        lines.redrawEpochs = JSON.stringify(captureEpochs(['wechat:img:s:c']));
+        lines.presenceRank = 'error=' + priorityOf('error') + ' idle=' + priorityOf('idle');
+        lines.redactSummary = redactSummaryLine(['apiKey', 'proxy_password']);
         return {
             ok: problems.length === 0,
             totalChecks,
             passedChecks,
+            skippedChecks,
             problems,
+            lines,
             details: checks
         };
     }
