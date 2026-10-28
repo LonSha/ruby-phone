@@ -317,10 +317,13 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.91.0';
+const ST_PHONE_VERSION = '4.92.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
+/* [v4.92.0] 像素皮肤：独立于 phone.css 的 pixel-skin.css（复古掌机 OS 视觉）。
+ *   与全局 CSS 同一路数（fetch→style 标签注入），版本号联动刷新缓存。 */
+const ST_PHONE_PIXEL_CSS_URL = new URL(`./phone/pixel-skin.css?v=${ST_PHONE_VERSION}`, import.meta.url).href;
 const ST_PHONE_HONEY_MODULE_URL = new URL(`./apps/honey/honey-app.js?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`, import.meta.url).href;
 const ST_PHONE_HONEY_CSS_URL = new URL(`./apps/honey/honey.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_HONEY_ASSET_REVISION}`, import.meta.url).href;
 const ST_PHONE_HONEY_LOGO_URL = new URL('./apps/honey/honey.png', import.meta.url).href;
@@ -522,22 +525,20 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-27",
+    date: "2026-10-28",
     items: [
-        "【版本升至 4.91.0（五源同源）：v4.90.0 公告末条自己写了三条「没做什么」，本版不许它们继续躺着 —— 三条全部接进产品路径，判据档逐条钉「真接通了没有」】",
-        "【欠债一 · 来源许可的 inspect 交互面接进 UI】修前 inspect 只在纯函数层自证，用户摸不到。现加 `inspectExcludedBooks` 快照口（身份先拍、书单再去重、回来再比对身份）与排除面弹层：计数行可数、两节分列已排除与仍在用、每行一个翻转按钮改的是排除表而不是界面。身份在读取途中变了就整份作废（两份名单都空）并给各自的因，绝不给半份名单 —— 半份名单比没有更坏。",
-        "【欠债二 · 条目设置面板】修前 `entrySettings` 只能由调用方现传，产品端零调用点。现加按 App 乘按角色的设置键族、读写口与设置面板（触发形态 / 插入位置 / 出口名 / 排序 / 手填值 / 倒序起点 / 标题模板 / 三个布尔），越界不在界面拦（纯件夹紧并回读数）。键刻意与排除表**分键**：清排除表不该顺手冲掉条目设置。",
-        "【欠债三 · 年龄推算全档移植】按源 `timeRel.ts` 的五态落 `ageDisplayOf` / `ageDisplay` / `ageDisplayLine`，并由档案端真调：字段投影只对年龄走推算、锚点不再单列成行而是落进说明小字、注入块同样给推算值（模型照抄确数会在跳时间后自相矛盾）。算得出才打「约」，不足一年原样不加「约」，算不出留因不猜。",
-        "【本版自己抓到的缺陷①（判据面，语法级）】当版档首跑当场死在 `await m.listAvailableWorldbooks = async () => …`：`await` 不能修饰赋值左值，两处同形。改成裸赋值后过。",
-        "【本版自己抓到的缺陷②（替身面，假阴）】DOM 替身的 `find()` 会命中原先已被移除的旧弹层 —— 第二次开面板时拿到旧 modal，点它的关闭落在第一个已经 settle 的闭包上，`await done` 永远等不到（面板连续开关这一最日常的用法直接挂死超时）。修法是 `find` 只认活着的节点并取最后建的，等于 querySelector 的活语义。",
-        "【本版自己抓到的缺陷③（判据面，三处不实）】缺省 position 写成 1（实际缺省是 0，判据在替身上假红）；写入路径两级判据的读通道恒返回空 entries，第二次写入看不见第一条、下标越界；一年闸判据拿 1994 的锚点对 2024 的现在时间（实际差 30 年）去断言「不足一年必须原样」，测的根本不是不足一年。",
-        "【本版自己抓到的缺陷④（真源码，样式）】v4.90.0 给行内加眼睛按钮时漏改列数：网格仍是三列而每行已有四个子元素（勾选 / 文案 / 眼睛 / 条目），第四个子元素必然掉行。本版改四列并把归因写进注释，免下一版又当「本来就是四列」。",
-        "【交棒改写：v4.90.0 的 A1 等值锚改下限形】上版出生时五源都是 4.90.0，A1 写成等值锚，抬版即红（那是抬版仪式不是缺陷）。按仓内既定口径改成下限形并交给当版档接管「是否等于某值」。另：`story-time-rel.js` 文件头那句「本件不带年龄面」随本版落地已成假话，一并改掉。",
-        "【键归属表态：模板插值键仍不登记，理由写清】新两族键都是 `phone_worldbook_entrysettings_` 加插值的模板键，落在 `CALL_RE` 的引号字面量扫描面之外，实跑 500 键全登记、零条 worldbook 键、门是绿的。刻意不为它们把扫描面放宽到通配（那正是 v2.69.0 要治的「归属不可知」），理由登记在门禁散文里。",
-        "【负向自证：真源码破坏两向跑三条】把 stale 判定拆掉，则换了会话也照样 ready；把写入路径的显式 options 去掉，则显式传的设置被吞；把一年闸拆掉，则不足一年也打「约」。每条都先证明判据在原版上真、再证明它在破坏副本上假。",
-        "【运行时验证边界】弹层观感、遮罩层级、四列在窄屏的实际排版仍未验：替身不解析 HTML、不跑 CSS、不做命中测试，它只证「结构画出来了、按钮改的是真数据」，不证「看着对」。风险形态还是那句老话「看起来没坏但显示不对」—— 替身与门禁都只能证结构，不能保证观感与真宿主时序。真机与真酒馆宿主照旧只能人工复核，详见边界文档。",
-        "【门禁】15 道全绿。新导出一律带产品端消费点（不是只被测试引用），零消费基线不涨。",
-        "【没做什么（如实）】弹层没有做拖动与多点定位；设置面板没有做「恢复缺省」一键复位；年龄推算只接档案卡，未接角色卡与关系档案。"
+        "【版本升至 4.92.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG.md 新增本迭代段并把元信息「当前版本」行改当版；边界文档 docs/runtime-verification-boundary.md 按当版复校（v4.92.0 复校）。",
+        "【像素 OS 重绘】RubyPhone 从「华为药丸+灵动岛+玻璃拟态+emoji 彩色块」四套混搭，重绘为复古掌机像素 OS。新增 phone/pixel-engine.js（16 色盘唯一真源 + 像素纪律 lint + 掌机 B 键视图栈）与 phone/pixel-skin.css（零圆角阶梯切角、硬边光影、帧进动画、排版双轨）。",
+        "【统一图标】消灭「PNG 拟物 / imageManager 自定义 / 彩色底 emoji」三套混杂：8 个核心 App 全部由 tools/gen_pixel_icons.py 生成 24×24 像素 SVG（整数坐标、16 色盘、crispEdges），注册表 config/app-icons.js 统一收口，未登记的不再吃 app.color 彩色块。",
+        "【聚合缩减数量】用户原话「很多用不到，聚合起来」：桌面从 89 平铺收敛为「8 核心 + 7 聚合壳（社交/内容/创作/生活/财务/身体/系统）」= 15 格一页。新增 config/app-clusters.js 唯一真源，聚合壳为 isCluster 伪对象（伪 id 带 __cluster_ 前缀防路由冲突），89 项功能全部保留在壳内二级列表，能力零删除。",
+        "【单返回键】全局唯一返回入口改为左下掌机 B 键「◀ 退」（pixel-skin.css 隐藏各 App 私有返回 wechat-back-btn/ach-back-btn/tb-back-btn 等）。pixel-engine.createViewStack 维护 desktop→cluster→app→detail 逐级出栈，桌面根层级再按只抖动（px-shake steps 帧进）。",
+        "【摄像头不压字】居中灵动岛（phone-punch-hole, 原 z-index:15 悬浮压正文）改为左上 8px 像素镜头点，z-index 降到 6 与状态栏同层。",
+        "【像素壁纸】新增 phone/wallpaper-pixel.svg（夜空硬切色带+像素星+山丘轮廓），由 pixel-engine 供默认桌面。",
+        "【判据档】tests/system-v4920.test.mjs 五面校验：五源同源/像素资产在场/像素纪律（整数坐标·无 circle·crispEdges）/聚合架构（能力零删除）/单返回键栈行为/摄像头不压正文，含负控制（破坏 SVG 必红）。",
+        "【本版自己抓到的缺陷】① app-clusters.js 首版 TDZ（APP_CLUSTERS 在 CLUSTER_BG 声明前引用，import 即 ReferenceError，调换顺序修复）；② tools/patch_v4920_home_icons.py 锚点 5/6 失配（renderDock/renderAppIcon 实际源码有额外空行命中 0 次中止，该批改动随方向大改整体废弃）；③ dead-export 首跑 F4 报 1≠0（5 个零消费导出：删 pixelPaletteCss/injectPixelPalette/injectPixelSkin、openCluster 改用 clusterByCategory 真接线、lintPixelSvg 由新测试消费，基线 --update 至 96 条）。",
+        "【交棒改写】v3770 探针基线 tests/audit/longlist_scale_baseline.json 的 after_motion_css.css_files_scanned 从 92 抬到 93（本版新增 pixel-skin.css，px-shake 为 steps 一次动画无 infinite 不计入动效计数，stage 字段保持 v3.79.0 冻结值不改写）；v325/v326 探针基线 files_scanned 同步抬到 615；v3750 H1 要求 ITERATION_LOG.md 元信息行与边界文档复校标记随抬版前移，本版如实补齐。",
+        "【像素皮肤加载链】index.js 新增 ST_PHONE_PIXEL_CSS_URL；font-scale.js 的 ensureGlobalPhoneCSS 在主 CSS 注入成功后追加 fetch pixel-skin.css 写入 #rp-pixel-skin（失败静默降级）。pixel-skin 选择器统一加 #phone-panel-content 前缀压过 phone.css 的玻璃拟态 !important。",
+        "【运行时验证边界】本层能验的是像素引擎/聚合表/图标集/皮肤/单返回键栈的纯函数口径与五源同源；不能保证的是真宿主里像素皮肤加载后观感、真机触摸反馈与真机排版——看起来没坏但显示不对，本版不能保证该形态在真机上一出现就被发现。"
     ]
 };
 
@@ -10429,6 +10430,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         ST_PHONE_VERSION,
         ST_PHONE_CSS_REVISION,
         ST_PHONE_GLOBAL_CSS_URL,
+        ST_PHONE_PIXEL_CSS_URL,
     });
     function normalizePhoneShellScalePercent(value) { return fontScaleManager.normalizePhoneShellScalePercent(value); }
     function applyPhoneShellScale(value) { return fontScaleManager.applyPhoneShellScale(value); }

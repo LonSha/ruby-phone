@@ -1,0 +1,226 @@
+/* ============================================================
+ * phone/pixel-skin.css — RubyPhone 复古像素 OS 皮肤（v4.92.0）
+ * ------------------------------------------------------------
+ * 铁律（与 pixel-engine.js 同源，门禁 tests/system-v4920 校验）：
+ *   · 只用 16 色盘 --px-* 变量，禁盘外 HEX；
+ *   · 零圆角（border-radius 恒 0），切角走 .pxcorner 的 clip-path 阶梯；
+ *   · box-shadow blur 恒 0，立体感靠 .pxbox/.pxinset 明暗双线；
+ *   · 帧进动画 steps()/瞬切，禁平滑缓动；image-rendering: pixelated。
+ * 排版双轨：外壳（标题/按钮/图标标签/Tab）用等宽像素字体 8/10/12px + 硬投影；
+ *   正文（聊天/日记/阅读）在 .pxcontent 面板内用清晰无衬线 13-15px、行高 1.6。
+ * ============================================================ */
+
+:root{
+  --px-black:#1a1c2c; --px-dkblue:#333c57; --px-blue:#5d7fa6; --px-ltblue:#8fd3ff;
+  --px-white:#f4f4f4; --px-cream:#ffedd0; --px-red:#d93744; --px-pink:#f77b8f;
+  --px-orange:#f9a03f; --px-yellow:#f9e14e; --px-green:#3fae49; --px-ltgreen:#9de64e;
+  --px-dkgreen:#27613b; --px-brown:#8a5636; --px-dkbrown:#5a3d28; --px-gray:#7d8590;
+}
+
+/* ---------------- 像素基底工具类 ---------------- */
+#phone-panel-content .pxbox{
+  background:var(--px-cream); color:var(--px-black);
+  border:2px solid var(--px-black);
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35);
+}
+#phone-panel-content .pxinset{
+  box-shadow: inset -2px -2px 0 rgba(255,255,255,.4), inset 2px 2px 0 rgba(0,0,0,.4);
+}
+/* 阶梯切角（2px 档） */
+#phone-panel-content .pxcorner{
+  clip-path: polygon(0 2px,2px 2px,2px 0, calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,
+    100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,
+    2px 100%,2px calc(100% - 2px),0 calc(100% - 2px));
+}
+/* 阶梯切角（4px 档，大面板用） */
+#phone-panel-content .pxcorner-lg{
+  clip-path: polygon(0 4px,2px 4px,2px 2px,4px 2px,4px 0, calc(100% - 4px) 0,calc(100% - 4px) 2px,
+    calc(100% - 2px) 2px,calc(100% - 2px) 4px,100% 4px, 100% calc(100% - 4px),
+    calc(100% - 2px) calc(100% - 4px),calc(100% - 2px) calc(100% - 2px),calc(100% - 4px) calc(100% - 2px),
+    calc(100% - 4px) 100%, 4px 100%,4px calc(100% - 2px),2px calc(100% - 2px),2px calc(100% - 4px),0 calc(100% - 4px));
+}
+
+/* ---------------- 全局像素接管 ---------------- */
+#phone-panel-content .phone-body-panel{
+  font-family:"Courier New",ui-monospace,monospace;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background:var(--px-black);
+}
+/* 正文可读区：覆盖像素字体，恢复清晰阅读 */
+#phone-panel-content .pxcontent,
+#phone-panel-content .wechat-message-text,
+#phone-panel-content .diary-content,
+#phone-panel-content .reading-content{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",sans-serif;
+  font-size:14px; line-height:1.6; color:var(--px-black);
+  background:var(--px-cream);
+  text-shadow:none;
+}
+
+/* ---------------- 摄像头点（左上，不压内容） ---------------- */
+#phone-panel-content .phone-punch-hole{
+  position:absolute !important; top:6px !important; left:8px !important;
+  transform:none !important;
+  width:8px !important; height:8px !important;
+  background:var(--px-ltblue) !important;
+  border:2px solid var(--px-black) !important;
+  border-radius:0 !important;
+  box-shadow: inset 1px 1px 0 var(--px-white) !important;
+  z-index:6 !important; /* 与状态栏同层，不再悬浮压正文 */
+}
+#phone-panel-content .phone-punch-hole::before,
+#phone-panel-content .phone-punch-hole::after{ content:none !important; display:none !important; }
+
+/* ---------------- 状态栏 ---------------- */
+#phone-panel-content .phone-statusbar{
+  background:var(--px-black) !important;
+  border-bottom:2px solid var(--px-dkblue) !important;
+  height:22px !important;
+  color:var(--px-cream) !important;
+  font-family:"Courier New",ui-monospace,monospace !important;
+  font-size:10px !important; letter-spacing:1px !important;
+  text-shadow:1px 1px 0 var(--px-black) !important;
+  padding-left:22px !important; /* 给镜头点让位 */
+}
+#phone-panel-content .phone-statusbar .time{ color:var(--px-cream) !important; font-size:10px !important; }
+
+/* ---------------- 桌面背景（抖动硬切，禁平滑渐变） ---------------- */
+#phone-panel-content .home-screen{
+  background-color:var(--px-dkblue) !important;
+  background-image:
+    repeating-conic-gradient(rgba(255,255,255,.04) 0% 25%, transparent 0% 50%) !important;
+  background-size:4px 4px !important;
+}
+
+/* ---------------- 桌面图标（统一像素框，消灭彩色 emoji 块） ---------------- */
+#phone-panel-content .phone-screen .app-icon-bg{
+  border-radius:0 !important;
+  border:2px solid var(--px-black) !important;
+  background:var(--px-cream) !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35) !important;
+  clip-path: polygon(0 2px,2px 2px,2px 0, calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,
+    100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,
+    2px 100%,2px calc(100% - 2px),0 calc(100% - 2px));
+}
+/* 图标内的 emoji / 图像：统一像素化，emoji 走统一墨色 */
+#phone-panel-content .phone-screen .app-icon-bg .app-icon-emoji{
+  font-size:22px !important; color:var(--px-black) !important; text-shadow:none !important;
+}
+#phone-panel-content .phone-screen .home-custom-icon-img{ image-rendering:pixelated !important; }
+/* 图标标签 */
+#phone-panel-content .phone-screen .app-name{
+  font-family:"Courier New",ui-monospace,monospace !important;
+  font-size:8px !important; color:var(--px-white) !important;
+  text-shadow:1px 1px 0 var(--px-black) !important; letter-spacing:.5px !important;
+}
+
+/* ---------------- 聚合壳（文件夹） ---------------- */
+#phone-panel-content .phone-screen .app-cluster-icon{
+  border:2px solid var(--px-black) !important; border-radius:0 !important;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35) !important;
+}
+
+/* ---------------- 唯一返回键（左下掌机 B 键） ---------------- */
+#phone-panel-content .phone-screen .phone-back-button{
+  top:auto !important; left:8px !important; bottom:8px !important;
+  width:44px !important; height:22px !important;
+  background:var(--px-yellow) !important; color:var(--px-black) !important;
+  border:2px solid var(--px-black) !important; border-radius:0 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35) !important;
+  font-family:"Courier New",ui-monospace,monospace !important;
+  font-size:10px !important; font-weight:bold !important;
+  z-index:70 !important;
+  transition:none !important; /* 帧进：瞬切 */
+}
+#phone-panel-content .phone-screen .phone-back-button:active{
+  box-shadow: inset -2px -2px 0 rgba(255,255,255,.4), inset 2px 2px 0 rgba(0,0,0,.4) !important;
+  transform:translateY(1px) !important;
+}
+/* B 键内不再用 fontawesome chevron，用像素 ◀ 字符 */
+#phone-panel-content .phone-screen .phone-back-button .fa-chevron-left{ display:none !important; }
+#phone-panel-content .phone-screen .phone-back-button .phone-back-button-text{
+  display:inline !important; font-size:10px !important; color:var(--px-black) !important;
+  text-shadow:none !important;
+}
+#phone-panel-content .phone-screen .phone-back-button .phone-back-button-text::before{
+  content:"◀ ";
+}
+
+/* ---------------- 隐藏各 App 私有返回按钮（单返回键铁律） ---------------- */
+#phone-panel-content .wechat-back-btn,
+#phone-panel-content .ach-back-btn,
+#phone-panel-content .tb-back-btn,
+#phone-panel-content .hl-back-btn,
+#phone-panel-content .xhs-back-btn,
+#phone-panel-content .playbook-back-btn,
+#phone-panel-content .mofo-detail-back-btn,
+#phone-panel-content .mofo-editor-back-btn{
+  display:none !important;
+}
+
+/* ---------------- 弹窗/卡片像素化 ---------------- */
+#phone-panel-content .modal,
+#phone-panel-content .app-modal,
+#phone-panel-content .cluster-modal{
+  border-radius:0 !important; border:2px solid var(--px-black) !important;
+  background:var(--px-cream) !important;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35) !important;
+  font-family:"Courier New",ui-monospace,monospace !important;
+}
+
+/* ---------------- 滚动条像素化 ---------------- */
+#phone-panel-content .phone-screen::-webkit-scrollbar{ width:8px; }
+#phone-panel-content .phone-screen::-webkit-scrollbar-track{ background:var(--px-dkblue); }
+#phone-panel-content .phone-screen::-webkit-scrollbar-thumb{
+  background:var(--px-gray); border:2px solid var(--px-black); border-radius:0;
+}
+
+/* 桌面根层级抖动动画（掌机 B 键到底反馈），steps 帧进 */
+@keyframes px-shake{
+  0%{transform:translateX(0)} 25%{transform:translateX(-2px)}
+  50%{transform:translateX(2px)} 75%{transform:translateX(-2px)} 100%{transform:translateX(0)}
+}
+#phone-panel-content .px-shake{ animation:px-shake .09s steps(4) 1 !important; }
+
+/* ---------------- 聚合壳弹窗（像素文件夹二级列表） ---------------- */
+#phone-panel-content .cluster-modal{
+  position:absolute; inset:26px 10px 40px; overflow:auto;
+  padding:10px; background:var(--px-cream);
+}
+#phone-panel-content .cluster-modal-head{
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:2px solid var(--px-black); padding-bottom:6px; margin-bottom:8px;
+}
+#phone-panel-content .cluster-modal-title{
+  font-family:"Courier New",ui-monospace,monospace; font-size:12px; font-weight:bold;
+  color:var(--px-black); letter-spacing:1px;
+}
+#phone-panel-content .cluster-modal-count{
+  font-family:"Courier New",ui-monospace,monospace; font-size:10px;
+  background:var(--px-yellow); color:var(--px-black); border:2px solid var(--px-black);
+  padding:0 4px;
+}
+#phone-panel-content .cluster-modal-grid{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px 6px;
+}
+#phone-panel-content .cluster-app-item{
+  display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+}
+#phone-panel-content .cluster-app-item:active{ transform:translateY(1px); }
+#phone-panel-content .cluster-app-icon{
+  width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+  background:var(--px-cream);
+}
+#phone-panel-content .cluster-app-icon .app-icon-emoji{ font-size:22px; color:var(--px-black); text-shadow:none; }
+#phone-panel-content .cluster-app-icon .home-custom-icon-img{ width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+#phone-panel-content .cluster-app-name{
+  font-family:"Courier New",ui-monospace,monospace; font-size:8px; color:var(--px-black);
+  text-align:center;
+}
+#phone-panel-content .cluster-modal-hint{
+  margin-top:10px; text-align:center; font-family:"Courier New",ui-monospace,monospace;
+  font-size:8px; color:var(--px-gray);
+}

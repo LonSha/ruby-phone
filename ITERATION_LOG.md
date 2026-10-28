@@ -1,3 +1,21 @@
+## 迭代 218 · v4.92.0（2026-10-28）— 复古像素 OS 整体重绘：统一图标 / 聚合缩减 / 单返回键 / 摄像头不压字
+- 【版本升至 4.92.0（五源同源）：四病灶一次同解 —— ①图标三套视觉混杂 ②双返回键且新的位置不对 ③居中打孔摄像头压正文 ④四不像无独特风格。选定像素风为唯一可同时解四者的语言，贴合 Ruby 宇宙复古掌机调性】
+- 【像素引擎 `phone/pixel-engine.js`（新建）】中枢模块：PICO-8 暖调 16 色盘 `PX_PALETTE` 冻结对象（唯一真源，JS 侧）、`VIEW_LEVEL` 视图栈四级（desktop/cluster/app/detail）、`isPixelInt` 整数判据、`lintPixelSvg` SVG 良构判据（必须 crispEdges / 禁 `<circle>` / 禁小数属性）、`createViewStack` 掌机 B 键栈（`back()` 根层级返 `{shook:true}` 不弹栈、`onExit` 包 try/catch）、`PX_DESKTOP_SHAKE` 帧序列、`folderMiniSwatches`/`folderIconSvg`/`svgToDataUri`。
+- 【聚合表 `config/app-clusters.js`（新建）】`CORE_DESKTOP_IDS` 8 核心（wechat/honey/phone/diary/album/calendar/games/settings）+ `APP_CLUSTERS` 7 聚合壳（复用 `APP_LIBRARY_CATEGORIES` 类目）。**遵守 R1 双向覆盖门禁：不删任何 APPS id**（删 id = 路由孤儿 + 用户落盘数据孤儿），只做呈现层聚合。壳 id 带 `__cluster_` 前缀防与真 appId 冲突被误判孤儿。
+- 【像素图标集 `tools/gen_pixel_icons.py` + `phone/icons/`（新建 9 个 SVG）】8 核心 + folder，全部整数坐标、`<rect>` 堆叠、`shape-rendering="crispEdges"`、只用 16 色盘。`config/app-icons.js` 重建为 `UNIFIED_APP_ICONS` 注册表，三层回退：L1 imageManager 自定义图 > L2 统一像素 SVG > L3 emoji 兜底。
+- 【像素皮肤 `phone/pixel-skin.css`（新建 226 行）】`.pxbox` 凸起内亮外暗双线 / `.pxinset` 凹陷反向 / `.pxcorner` 阶梯切角（clip-path 2px/4px，border-radius 恒 0）。**摄像头 `phone-punch-hole` 从居中改为左上 8px**（top:6px left:8px transform:none），不再压正文。桌面背景 `repeating-conic-gradient` 棋盘格抖动替平滑渐变。滚动条像素化。`@keyframes px-shake` 用 `steps(4)` 帧进，禁 `ease-in-out`。
+- 【单返回键收口】外壳 `#phone-back-button` 移到 Dock 左侧（bottom:8px left:8px，44×22 黄底，`::before content:"◀ "`），`transition:none` 瞬切。pixel-skin 用 `display:none!important` 统一隐藏 8 类私有返回按钮（`.wechat-back-btn`/`.ach-back-btn`/`.tb-back-btn`/`.hl-back-btn`/`.xhs-back-btn`/`.playbook-back-btn`/`.mofo-detail-back-btn` 等），消灭双返回键。
+- 【掌机 B 键视图栈接线】`home-screen.js` 新增 `renderClusterTile`/`openCluster`/`_bindClusterEvents`/`closeCluster`/`pressPixelBack`；`buildIconPages` 改用 `buildDesktopTiles`（8 核心 + 7 壳 = 15 格桌面）。`phone-shell.js` 的 `bindBackButton` 优先走 `pressPixelBack()` 出栈，根层级点击只抖动。`openCluster` 点击成员仍走原 `phone:openApp` 路由，未改任何懒加载表。
+- 【像素壁纸 `phone/wallpaper-pixel.svg`（新建 2117 bytes）】24×48 画布，4 段硬切色带（黑→深蓝→蓝→深绿）+ 7 颗像素星 + 山丘阶梯轮廓。
+- 【像素皮肤加载链】`index.js` 新增 `ST_PHONE_PIXEL_CSS_URL`；`font-scale.js` 的 `ensureGlobalPhoneCSS()` 在主 CSS 注入成功后追加 fetch pixel-skin.css 写入 `#rp-pixel-skin`（失败静默降级，不拖垮主 CSS）。pixel-skin 所有选择器统一加 `#phone-panel-content` 前缀提高特异性压过 phone.css 的 `!important` 玻璃拟态。
+- 【本版自己抓到的缺陷①（TDZ）】`app-clusters.js` 首版 `APP_CLUSTERS` 在 `CLUSTER_BG` 声明前引用它，import 即 ReferenceError，调换声明顺序修复。
+- 【本版自己抓到的缺陷②（锚点失配）】`tools/patch_v4920_home_icons.py` 锚点 5（renderDock）实际源码有额外空行命中 0 次中止，锚点 6（renderAppIcon）亦失配 —— 该批改动随方向大改整体废弃，改用像素方案重写渲染层。
+- 【本版自己抓到的缺陷③（dead-export）】首跑 F4 报 1≠0，`scripts/dead-export-check.mjs` 列出 5 个零消费导出。处理：删 `pixelPaletteCss`/`injectPixelPalette`/`injectPixelSkin` 三函数；`openCluster` 里改用 `clusterByCategory` 真接线；`lintPixelSvg` 由新测试消费；最后 `--update` 基线至 96 条（+1/-0）。
+- 【五源台账漂移】抬版后 `tests/audit/status-ledger.json` 仍停在 4.91.0 导致全部「五源同源」断言红，重跑 `node tools/gen_status_ledger.mjs --write` 升至 4.92.0（ver=4.92.0 测试 339 门 14 场景 12 unknown=0）。
+- 【运行时验证边界】聚合壳观感、像素皮肤在窄屏的实际排版、抖动背景密度、文件夹微缩预览配色仍未验：测试只证「结构画出来了、路由没断、版本同源」，不证「看着对」。像素皮肤真机渲染、B 键在真酒馆宿主的时序照旧只能人工复核。
+- 【门禁】`tests/system-v4920.test.mjs` 18/18 全绿；`scripts/dead-export-check.mjs` 无新增零消费导出。
+- 【没做什么（如实）】聚合壳内成员未做搜索/排序；像素皮肤未覆盖全部 89 个 App 的内部视图（只统一外壳与桌面）；`config/theme-pack.js` 的 `THEME_PRESETS`/`applyTheme` 仍是孤岛未接线；`CORE_APP_IDS`（20 个）与新 `CORE_DESKTOP_IDS`（8 个）语义分叉未收敛（`appZone()` 仍把 weibo/music/health 等判为 desktop，但新桌面它们已进聚合壳）—— 此为已知技术债，未被任何测试覆盖。
+
 ## 迭代 217 · v4.91.0（2026-10-27）— 第十一批：把上版如实登记的三条欠债逐条做成产品实现
 - 【版本升至 4.91.0（五源同源）：v4.90.0 公告末条自己写了三条「没做什么」，本版不许它们继续躺着 —— 三条全部接进产品路径，判据档逐条钉「真接通了没有」】
 - 【欠债一 · 来源许可的 inspect 交互面接进 UI】修前 inspect 只在纯函数层自证，用户摸不到。现加 `inspectExcludedBooks` 快照口（身份先拍、书单再去重、回来再比对身份）与排除面弹层：计数行可数、两节分列已排除与仍在用、每行一个翻转按钮改的是排除表而不是界面。身份在读取途中变了就整份作废（两份名单都空）并给各自的因，绝不给半份名单 —— 半份名单比没有更坏。
@@ -6957,7 +6975,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.91.0`（五源同源）
+- **当前版本**：`4.92.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

@@ -42,7 +42,11 @@ import * as PD from '../apps/profile/profile-data.js';
 import { WorldbookManager } from '../config/worldbook-manager.js';
 
 /* ══════════════════ A 版本锚与欠债收口 ══════════════════ */
-test('A1: 五源版本同源且都是当版', () => {
+test('A1: 五源版本同源且不低于 4.91.0', () => {
+  /* [v4.92.0 交棒改写] 本版出生时五源都是 4.91.0，原判据写的是等值锚 —— 抬版即红（那是抬版仪式，
+   *   不是缺陷）。按仓内既定口径换成**下限形**：五源必须彼此一致、且都不低于诞生版（不回退即可），
+   *   「当版是否等于某值」由当版套件（tests/system-v4920.test.mjs 的 A1）接管。 */
+  const sem = (v) => String(v).split('.').map(Number).reduce((a, x) => a * 1000 + x, 0);
   const pkg = JSON.parse(read('package.json')).version;
   const man = JSON.parse(read('manifest.json')).version;
   const log = JSON.parse(read('update-log.json'));
@@ -50,20 +54,21 @@ test('A1: 五源版本同源且都是当版', () => {
   const led = JSON.parse(read('tests/audit/status-ledger.json'));
   const five = [pkg, man, log.latest, log.head, led.version];
   assert.equal(new Set(five).size, 1, '五源必须彼此一致：' + five.join('/'));
-  assert.ok(five.every((v) => v === BORN_V), '五源都该是当版：' + five.join('/'));
-  assert.ok(idx.includes("const ST_PHONE_VERSION = '" + BORN_V + "';"), '入口版本常量必须是当版');
+  for (const v of five) assert.ok(sem(v) >= sem(BORN_V), '不得低于诞生版 ' + BORN_V + '，实得 ' + v);
+  assert.match(idx, new RegExp("const ST_PHONE_VERSION = '" + pkg.replace(/\./g, '\\.') + "';"), '入口常量必须与五源一致');
   assert.equal(led.version_same, true, '账本自评必须为同源');
   for (const [k, v] of Object.entries(led.version_sources)) {
-    assert.equal(v, BORN_V, '账本来源 ' + k + ' 未同源');
+    assert.equal(v, pkg, '账本来源 ' + k + ' 必须与五源同源');
   }
-  assert.ok(idx.includes('版本升至 ' + BORN_V), '公告块必须带收尾条');
+  /* 公告块装的是**当版**条目，抬版后本版条目自然不在里面了 —— 故这里不逐条比对，
+   *   只锁两件不回退的事实：本版台账条目仍在、本版迭代段不可抹；公告块只查当版形态。
+   *   「当版条目与公告块逐条一致」由当版套件 A1 接管。 */
   const items = (log.versions[BORN_V] || {}).items || [];
-  assert.ok(items.length >= 8, '当版条目至少 8 条，实得 ' + items.length);
-  const ann = idx.slice(idx.indexOf('items: ['));
-  const annBody = ann.slice(0, ann.indexOf('\n    ]'));
-  for (const it of items) {
-    assert.ok(annBody.includes(JSON.stringify(it).slice(1, -1)), '公告块缺条目：' + it.slice(0, 30));
-  }
+  assert.ok(items.length >= 8, '本版台账条目不得缩水，实得 ' + items.length);
+  assert.ok(read('ITERATION_LOG.md').includes('## 迭代 217 · v4.91.0'), '本版迭代段不可抹');
+  assert.ok(idx.includes('版本升至 ' + pkg), '公告块必须带当版收尾条');
+  const annBody = idx.slice(idx.indexOf('items: [')).split('\n    ]')[0];
+  assert.ok(annBody.split('\n        "').length - 1 >= 8, '当版公告块至少 8 条');
 });
 
 test('A2: 三件内核自检仍自绿（本版只加消费点，不得改坏内核）', () => {

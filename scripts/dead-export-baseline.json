@@ -570,6 +570,12 @@
       "name": "textPreview",
       "line": 164,
       "reason": "R6-X5 声音叙事纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
+    },
+    {
+      "file": "phone/pixel-engine.js",
+      "name": "lintPixelSvg",
+      "line": 54,
+      "reason": "像素纪律 lint 工具，产品端当前无直接调用（消费在判据套件 v4920），保留供后续产品端 SVG 生成/校验接线"
     }
   ]
 }

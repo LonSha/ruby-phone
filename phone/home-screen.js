@@ -15,6 +15,11 @@ import { APPS, PHONE_CONFIG } from '../config/apps.js'; // 🔥🔥🔥 这一�
  *   本文件只负责**呈现**：哪些上桌面、库怎么分组、库入口长什么样。
  *   分类真源在 config/app-library.js（decorateApps 已把 zone/category 挂到每个 App 上）。 */
 import { APP_LIBRARY_CATEGORIES, APP_LIBRARY_ENTRY_ID } from '../config/app-library.js';
+/* [v4.92.0] 像素 OS：桌面收敛为「8 核心 + 7 聚合壳」。聚合真源在 config/app-clusters.js，
+ *   像素图标在 config/app-icons.js，文件夹像素 SVG 由 pixel-engine 运行时拼。 */
+import { buildDesktopTiles, isCoreDesktop, clusterByCategory } from '../config/app-clusters.js';
+import { unifiedIconOf, hasUnifiedIcon } from '../config/app-icons.js';
+import { folderIconSvg, svgToDataUri, createViewStack, VIEW_LEVEL, PX_BACK_NUDGE_MS, PX_DESKTOP_SHAKE } from './pixel-engine.js';
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
 /* [v3.93.0 · 拓展计划 R-X9] 桌面图标的可读名（唯一实现在内核，本文件只消费）。
  *   修前实测：本文件给图标只挂了 onclick —— 没有 tabindex / role / aria-label，
@@ -31,6 +36,10 @@ export class HomeScreen {
         this.phoneShell = phoneShell;
         this.apps = apps || APPS; // 🔥 修复：确保 apps 有默认值
         this._homeRenderVersion = 0;
+        /* [v4.92.0] 掌机 B 键视图栈：desktop → cluster → app → detail。
+         *   左下「◀ 退」是唯一返回入口；本栈只管「像素 B 键」的语义，
+         *   物理返回与右滑仍走 config/back-guard.js / SWIPE_BACK。 */
+        this._viewStack = createViewStack();
         // [v2.31.0] 实例级资源域：本实例在 window 上注册的 4 个长期存活监听器
         //   （updateWallpaper / updateAppIcon / updateCardLayoutCss / timeUpdated）
         //   彼此用 `if (!this._xxxEventBound)` 互相隔离 —— 于是**没有任何一处**
@@ -367,20 +376,16 @@ export class HomeScreen {
     }
 
     buildIconPages() {
-        /* 桌面只铺 `zone === 'desktop'` 的那些（其余进应用库，见 _libraryApps()）。
-         *   修前：全部 89 个 App 一律铺桌面 ⇒ 5 页图标，其中 3 页半是案头类工具。 */
+        /* [v4.92.0] 像素 OS 桌面收敛：不再铺「zone==='desktop' 的 20 个 + 库入口」，
+         *   改铺「8 核心 App + 7 个聚合壳」（buildDesktopTiles）。89 个功能全保留在壳内，
+         *   桌面固定 15 格一页。聚合壳是 isCluster 伪对象，渲染走 renderClusterTile。 */
         const all = Array.isArray(this.apps) ? this.apps : [];
-        const apps = all.filter(app => app && app.zone !== 'library');
-        /* 只有当**真的有**东西被收进库时才补「应用库」入口：
-         *   ① 空库时多一个点不开的图标比少一个更惹人烦；
-         *   ② 既有判据（system-v3560 的 E1）直接拿假 this 调本方法并断言
-         *      「合计件数 = 传入件数」—— 无条件追加会让它变成 N+1，属真判据被打穿。 */
-        if (this._libraryApps().length > 0) apps.push(this._libraryEntry());
+        const tiles = buildDesktopTiles(all);
         const capacity = this.getIconPageCapacity();
-        if (apps.length <= capacity) return [apps];
+        if (tiles.length <= capacity) return [tiles];
         const pages = [];
-        for (let i = 0; i < apps.length; i += capacity) {
-            pages.push(apps.slice(i, i + capacity));
+        for (let i = 0; i < tiles.length; i += capacity) {
+            pages.push(tiles.slice(i, i + capacity));
         }
         return pages;
     }
@@ -551,6 +556,24 @@ export class HomeScreen {
         return null;
     }
 
+    /** 三层图标回退的判定中枢（v4.92.0）。
+     *  返回 { image, unified, neutral }：
+     *    image   —— L1/L2 的位图 URL（L1 自定义图优先，L2 统一 SVG 次之）；走图片渲染分支。
+     *    unified —— 是否命中统一 SVG 集（命中则加 `unified-icon` 类，由 CSS 统一底色/着色）。
+     *    neutral —— 是否裸落 L3（无任何图，只剩 emoji）；CSS 给中性灰底，不再吃 app.color。
+     *  为什么集中成一个方法：此前 5 个渲染点（网格/社交行/自由布局/库/dock）各自
+     *  手写同一串三元判断，彩色块兜底在 5 处各复制了一遍 —— 统一视觉必须一处改完。 */
+    _iconPresentation(app) {
+        const id = app && app.id;
+        const custom = this._getCustomIcon(id) || String(app?.defaultIcon || '').trim() || null;
+        const uni = custom ? null : unifiedIconOf(id);
+        const image = custom || uni || null;
+        return { image, unified: !!uni, neutral: !image };
+    }
+    /** L2/L3 的容器 style：统一集走 tint 着色，裸落 emoji 不给背景色（交给 CSS 中性底）。 */
+    _iconFallbackStyle() {
+        return `--unified-tint:${UNIFIED_ICON_TINT};`;
+    }
     _getAppIconImage(app) {
         if (!app) return null;
         return this._getCustomIcon(app.id) || String(app.defaultIcon || '').trim() || null;
@@ -837,16 +860,103 @@ export class HomeScreen {
         }).join('');
     }
     
-    renderAppIcon(app) {
-        const badge = app.badge > 0 ? `<span class="app-badge">${app.badge}</span>` : '';
-        const iconImage = this._getAppIconImage(app);
-        
-        const iconStyle = '';
+    /* [v4.92.0] 渲染聚合壳（像素文件夹）桌面图标。
+     *   点击不进 phone:openApp，而是 openCluster 打开聚合壳弹窗（二级列表）。 */
+    renderClusterTile(cluster) {
+        const memberColors = (cluster.members || []).slice(0, 4).map(m => m.color).filter(Boolean);
+        const svg = folderIconSvg(cluster.iconBg, memberColors);
+        const url = svgToDataUri(svg);
+        const name = this._escapeHtml(cluster.name || '文件夹');
+        return `
+            <div class="app-icon yzp-home-app-icon yzp-home-app-action app-cluster-tile" data-cluster="${this._escapeHtml(cluster.clusterOf)}" role="button" tabindex="0" aria-label="${name}">
+                <div class="app-icon-bg yzp-home-app-icon-bg app-cluster-icon" style="background-image:url('${url}');background-size:contain;background-position:center;background-repeat:no-repeat;background-color:transparent;"></div>
+                <div class="app-name yzp-home-app-name" aria-hidden="true">${name}</div>
+            </div>
+        `;
+    }
+    /* [v4.92.0] 打开聚合壳弹窗：列出该类目下全部 App，点击打开。
+     *   视图栈压入 cluster 层，B 键（左下「◀ 退」）退回桌面。 */
+    openCluster(categoryId) {
+        const all = Array.isArray(this.apps) ? this.apps : [];
+        const members = all.filter(a => a && !isCoreDesktop(a.id) && (a.libraryCategory || 'system') === categoryId);
+        const cat = clusterByCategory(categoryId) || { name: '文件夹', hint: '' };
+        const items = members.map(app => {
+            const pres = this._iconPresentation(app);
+            const uni = unifiedIconOf(app.id);
+            const img = uni || pres.image;
+            const iconHtml = img
+                ? this._renderCustomIconImage(img, 'home-custom-icon-img')
+                : `<span class="app-icon-emoji">${this._escapeHtml(app.icon)}</span>`;
+            return `<div class="cluster-app-item" data-app="${app.id}" role="button" tabindex="0" aria-label="${this._escapeHtml(this._getAppDisplayName(app))}">
+                <div class="cluster-app-icon pxbox pxcorner">${iconHtml}</div>
+                <div class="cluster-app-name">${this._escapeHtml(this._getAppDisplayName(app))}</div>
+            </div>`;
+        }).join('');
+        const html = `
+            <div class="cluster-modal pxbox pxcorner-lg" role="dialog" aria-label="${this._escapeHtml(cat.name)}">
+                <div class="cluster-modal-head">
+                    <span class="cluster-modal-title">${this._escapeHtml(cat.name)}</span>
+                    <span class="cluster-modal-count">${members.length}</span>
+                </div>
+                <div class="cluster-modal-grid">${items}</div>
+                <div class="cluster-modal-hint">◀ 退 返回桌面</div>
+            </div>
+        `;
+        this._viewStack.push(VIEW_LEVEL.CLUSTER, categoryId, () => this.closeCluster());
+        this.phoneShell.setContent(html, 'view-cluster');
+        this._bindClusterEvents();
+    }
+    _bindClusterEvents() {
+        const host = this.phoneShell?.screen;
+        if (!host) return;
+        host.querySelectorAll('.cluster-app-item').forEach(el => {
+            const open = () => {
+                const appId = el?.dataset?.app;
+                if (!appId) return;
+                this._viewStack.push(VIEW_LEVEL.APP, appId);
+                window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+            };
+            el.addEventListener('click', open);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+            });
+        });
+    }
+    /* 关闭聚合壳（B 键出栈时由 onExit 调用）：回到桌面。 */
+    closeCluster() {
+        try { this.phoneShell?.goHome?.(); } catch (_e) { /* 不抛 */ }
+    }
+    /* [v4.92.0] 像素 B 键（左下「◀ 退」）的统一入口：出栈一级；根层级抖动。 */
+    pressPixelBack() {
+        const r = this._viewStack.back();
+        if (r.shook) {
+            const el = this.phoneShell?.screen;
+            if (el) {
+                el.classList.remove('px-shake');
+                void el.offsetWidth;
+                el.classList.add('px-shake');
+            }
+            return r;
+        }
+        /* 出了栈：若是回到桌面则显式回主页（聚合壳/详情都收拢）。 */
+        if (r.level === VIEW_LEVEL.DESKTOP) this.closeCluster();
+        return r;
+    }
 
+    renderAppIcon(app) {
+        /* [v4.92.0] 聚合壳走独立渲染分支（文件夹像素图标 + 聚合壳弹窗）；
+         *   普通核心 App 走像素图标（L1 像素 SVG 优先，L2 自定义图，L3 中性 emoji）。 */
+        if (app && app.isCluster) return this.renderClusterTile(app);
+        const badge = app.badge > 0 ? `<span class="app-badge">${app.badge}</span>` : '';
+        /* 像素 OS：统一像素图标（unifiedIconOf）优先于 PNG/自定义图，
+         *   让桌面回到单一视觉语言；无像素图才退回原 defaultIcon/emoji。 */
+        const uni = unifiedIconOf(app.id);
+        const iconImage = uni || this._getAppIconImage(app);
+
+        const iconStyle = '';
         const iconContent = iconImage
             ? this._renderCustomIconImage(iconImage, 'home-custom-icon-img yzp-home-custom-icon-img')
             : `<span class="app-icon-emoji yzp-home-app-icon-emoji">${app.icon}</span>`;
-
         const customClass = iconImage ? 'custom-icon' : '';
 
         /* [v3.93.0 · R-X9] 可读名与键盘可达**在同一处**给：名字取不到就如实空串
@@ -873,12 +983,18 @@ export class HomeScreen {
         const icons = this.phoneShell.screen.querySelectorAll('.yzp-home-app-action, .yzp-home-dock-app, .app-icon, .dock-app');
         icons.forEach(icon => {
             const activate = () => {
+                /* [v4.92.0] 聚合壳（像素文件夹）优先：data-cluster 在 → 开聚合壳弹窗，
+                 *   不走 phone:openApp（它不是真 App，没有路由）。 */
+                const clusterId = icon.dataset.cluster;
+                if (clusterId) { this.openCluster(clusterId); return; }
                 const appId = icon.dataset.app;
                 if (!appId) return;
                 this.openApp(appId);
             };
             icon.onclick = (e) => {
                 e.stopPropagation();
+                const clusterId = icon.dataset.cluster;
+                if (clusterId) { this.openCluster(clusterId); return; }
                 const appId = icon.dataset.app;
                 this.openApp(appId);
             };

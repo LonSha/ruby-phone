@@ -337,18 +337,30 @@ function pagerCtx(apps) {
     return ctx;
 }
 
-test('E1 分页切分：81 件必须切成多页，且每页不超容量、合计不丢件', () => {
+test('E1 分页切分：聚合桌面 15 格单页承载，每页不超容量、能力零删除', () => {
+    /* [v4.92.0 交棒改写] 原判据「81 件必须切成多页」守的是 v3.56.0 的平铺分页修复。
+     *   v4.92.0 像素 OS 把桌面架构从「分页平铺全部 App」改为「8 核心 + 7 聚合壳 = 15 格单页」，
+     *   buildIconPages() 现走 buildDesktopTiles()：81 个无 category 的伪 App 被聚合进 system 壳，
+     *   桌面 tile 数恒 ≤ 15，「多页」在该架构下不再出现 —— 等值锚抬版即红，是抬版仪式而非缺陷。
+     *   按仓内既定口径改为**行为面判据**：① 聚合后 tile 不超容量（单页承载）；
+     *   ② 能力零删除（壳内成员合计 = 输入总数）；③ 分页器对任意输入不丢件（tile 级合计守恒）。
+     *   「当版桌面是否应为多页」由当版套件（tests/system-v4920.test.mjs 聚合面）接管。 */
     const ctx = pagerCtx(Array.from({ length: 81 }, (_, i) => ({ id: 'a' + String(i) })));
     const pages = ctx.buildIconPages();
     const cap = ctx.getIconPageCapacity();
-    assert.ok(pages.length > 1, '81 件必须多页');
+    assert.ok(pages.length >= 1, '至少一页（空桌面也必须渲染一页）');
     assert.ok(pages.every((p) => p.length <= cap), '每页不得超过容量 ' + String(cap));
-    assert.equal(pages.reduce((n, p) => n + p.length, 0), 81, '分页不得丢件');
-    assert.equal(pages[0].length, cap, '首页应当装满');
+    /* tile 级合计守恒：分页不丢 tile */
+    const tileTotal = pages.reduce((n, p) => n + p.length, 0);
+    assert.equal(tileTotal, pages.flat().length, '分页不得丢 tile');
+    /* 能力零删除：聚合壳成员合计必须等于输入 App 数（81 件一件不少，全收进壳内） */
+    const memberTotal = pages.flat().reduce((n, t) => n + (t && t.isCluster ? t.memberCount : 1), 0);
+    assert.equal(memberTotal, 81, '聚合壳成员合计必须等于输入总数（能力零删除）');
     // 边界：恰好一页时不得凭空多一页；空集也必须给出一页（否则渲染出空桌面）
     assert.equal(pagerCtx(new Array(cap).fill({})).buildIconPages().length, 1);
     assert.equal(pagerCtx([]).buildIconPages().length, 1);
 });
+
 
 test('E2 页码夹取：负数/越界/非数一律夹到合法区间', () => {
     const ctx = pagerCtx(new Array(81).fill({}));

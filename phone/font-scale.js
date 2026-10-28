@@ -24,7 +24,7 @@
  * @param {string} deps.ST_PHONE_GLOBAL_CSS_URL
  */
 export function createFontScaleManager(deps) {
-    const { ST_PHONE_VERSION, ST_PHONE_CSS_REVISION, ST_PHONE_GLOBAL_CSS_URL } = deps;
+    const { ST_PHONE_VERSION, ST_PHONE_CSS_REVISION, ST_PHONE_GLOBAL_CSS_URL, ST_PHONE_PIXEL_CSS_URL } = deps;
 
     // 原闭包捕获的 let storage —— 显式注入
     let storage = null;
@@ -324,13 +324,24 @@ export function createFontScaleManager(deps) {
                 }
 
                 const style = document.createElement('style');
-                style.id = styleId;
-                style.setAttribute('data-source', ST_PHONE_GLOBAL_CSS_URL);
-                style.setAttribute('data-version', ST_PHONE_VERSION);
-                style.setAttribute('data-revision', ST_PHONE_CSS_REVISION);
-                style.textContent = finalCssText;
-                existing?.remove();
-                document.head.appendChild(style);
+            style.id = styleId;
+            style.setAttribute('data-source', ST_PHONE_GLOBAL_CSS_URL);
+            style.setAttribute('data-version', ST_PHONE_VERSION);
+            style.setAttribute('data-revision', ST_PHONE_CSS_REVISION);
+            style.textContent = finalCssText;
+            existing?.remove();
+            document.head.appendChild(style);
+            /* [v4.92.0] 像素皮肤：主 CSS 注入成功后，追加 pixel-skin.css（像素 OS 视觉）。
+             *   失败不阻塞主 CSS —— 像素化是呈现层增强，降级即回到原视觉。 */
+            try {
+                const pr = await fetch(ST_PHONE_PIXEL_CSS_URL, { cache: 'no-cache' });
+                if (pr.ok) {
+                    const pcss = await pr.text();
+                    let pstyle = document.getElementById('rp-pixel-skin');
+                    if (!pstyle) { pstyle = document.createElement('style'); pstyle.id = 'rp-pixel-skin'; document.head.appendChild(pstyle); }
+                    pstyle.textContent = pcss;
+                }
+            } catch (_e) { /* 像素皮肤加载失败静默降级 */ }
             } catch (err) {
                 console.error('❌ phone.css 动态注入失败:', err);
             }

@@ -1,6 +1,24 @@
 {
-  "latest": "4.91.0",
+  "latest": "4.92.0",
   "versions": {
+    "4.92.0": {
+      "version": "4.92.0",
+      "date": "2026-10-28",
+      "items": [
+        "【版本升至 4.92.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG.md 新增本迭代段并把元信息「当前版本」行改当版；边界文档 docs/runtime-verification-boundary.md 按当版复校（v4.92.0 复校）。",
+        "【像素 OS 重绘】RubyPhone 从「华为药丸+灵动岛+玻璃拟态+emoji 彩色块」四套混搭，重绘为复古掌机像素 OS。新增 phone/pixel-engine.js（16 色盘唯一真源 + 像素纪律 lint + 掌机 B 键视图栈）与 phone/pixel-skin.css（零圆角阶梯切角、硬边光影、帧进动画、排版双轨）。",
+        "【统一图标】消灭「PNG 拟物 / imageManager 自定义 / 彩色底 emoji」三套混杂：8 个核心 App 全部由 tools/gen_pixel_icons.py 生成 24×24 像素 SVG（整数坐标、16 色盘、crispEdges），注册表 config/app-icons.js 统一收口，未登记的不再吃 app.color 彩色块。",
+        "【聚合缩减数量】用户原话「很多用不到，聚合起来」：桌面从 89 平铺收敛为「8 核心 + 7 聚合壳（社交/内容/创作/生活/财务/身体/系统）」= 15 格一页。新增 config/app-clusters.js 唯一真源，聚合壳为 isCluster 伪对象（伪 id 带 __cluster_ 前缀防路由冲突），89 项功能全部保留在壳内二级列表，能力零删除。",
+        "【单返回键】全局唯一返回入口改为左下掌机 B 键「◀ 退」（pixel-skin.css 隐藏各 App 私有返回 wechat-back-btn/ach-back-btn/tb-back-btn 等）。pixel-engine.createViewStack 维护 desktop→cluster→app→detail 逐级出栈，桌面根层级再按只抖动（px-shake steps 帧进）。",
+        "【摄像头不压字】居中灵动岛（phone-punch-hole, 原 z-index:15 悬浮压正文）改为左上 8px 像素镜头点，z-index 降到 6 与状态栏同层。",
+        "【像素壁纸】新增 phone/wallpaper-pixel.svg（夜空硬切色带+像素星+山丘轮廓），由 pixel-engine 供默认桌面。",
+        "【判据档】tests/system-v4920.test.mjs 五面校验：五源同源/像素资产在场/像素纪律（整数坐标·无 circle·crispEdges）/聚合架构（能力零删除）/单返回键栈行为/摄像头不压正文，含负控制（破坏 SVG 必红）。",
+        "【本版自己抓到的缺陷】① app-clusters.js 首版 TDZ（APP_CLUSTERS 在 CLUSTER_BG 声明前引用，import 即 ReferenceError，调换顺序修复）；② tools/patch_v4920_home_icons.py 锚点 5/6 失配（renderDock/renderAppIcon 实际源码有额外空行命中 0 次中止，该批改动随方向大改整体废弃）；③ dead-export 首跑 F4 报 1≠0（5 个零消费导出：删 pixelPaletteCss/injectPixelPalette/injectPixelSkin、openCluster 改用 clusterByCategory 真接线、lintPixelSvg 由新测试消费，基线 --update 至 96 条）。",
+        "【交棒改写】v3770 探针基线 tests/audit/longlist_scale_baseline.json 的 after_motion_css.css_files_scanned 从 92 抬到 93（本版新增 pixel-skin.css，px-shake 为 steps 一次动画无 infinite 不计入动效计数，stage 字段保持 v3.79.0 冻结值不改写）；v325/v326 探针基线 files_scanned 同步抬到 615；v3750 H1 要求 ITERATION_LOG.md 元信息行与边界文档复校标记随抬版前移，本版如实补齐。",
+        "【像素皮肤加载链】index.js 新增 ST_PHONE_PIXEL_CSS_URL；font-scale.js 的 ensureGlobalPhoneCSS 在主 CSS 注入成功后追加 fetch pixel-skin.css 写入 #rp-pixel-skin（失败静默降级）。pixel-skin 选择器统一加 #phone-panel-content 前缀压过 phone.css 的玻璃拟态 !important。",
+        "【运行时验证边界】本层能验的是像素引擎/聚合表/图标集/皮肤/单返回键栈的纯函数口径与五源同源；不能保证的是真宿主里像素皮肤加载后观感、真机触摸反馈与真机排版——看起来没坏但显示不对，本版不能保证该形态在真机上一出现就被发现。"
+      ]
+    },
     "4.91.0": {
       "version": "4.91.0",
       "date": "2026-10-27",
@@ -5146,5 +5164,5 @@
       ]
     }
   },
-  "head": "4.91.0"
+  "head": "4.92.0"
 }

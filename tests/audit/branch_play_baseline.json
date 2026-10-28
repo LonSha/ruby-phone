@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 613,
+    "files_scanned": 615,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,

@@ -73,7 +73,7 @@
     "rendered_lines_n4000": 800,
     "after_motion_css": {
       "stage": "v3.79.0 收口：扫描面由 phone.css 扩为递归全仓，判定由计数改为按动画名 + 分类闭合",
-      "css_files_scanned": 92,
+      "css_files_scanned": 93,
       "infinite_sites": 21,
       "infinite_names": 19,
       "decorative_names": 12,
