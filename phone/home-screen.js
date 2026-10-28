@@ -19,7 +19,7 @@ import { APP_LIBRARY_CATEGORIES, APP_LIBRARY_ENTRY_ID } from '../config/app-libr
  *   像素图标在 config/app-icons.js，文件夹像素 SVG 由 pixel-engine 运行时拼。 */
 import { buildDesktopTiles, isCoreDesktop, clusterByCategory } from '../config/app-clusters.js';
 import { unifiedIconOf, hasUnifiedIcon } from '../config/app-icons.js';
-import { folderIconSvg, svgToDataUri, createViewStack, VIEW_LEVEL, PX_BACK_NUDGE_MS, PX_DESKTOP_SHAKE } from './pixel-engine.js';
+import { folderIconSvg, svgToDataUri, createViewStack, VIEW_LEVEL, PX_BACK_NUDGE_MS, PX_DESKTOP_SHAKE, appIconSvg } from './pixel-engine.js';
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
 /* [v3.93.0 · 拓展计划 R-X9] 桌面图标的可读名（唯一实现在内核，本文件只消费）。
  *   修前实测：本文件给图标只挂了 onclick —— 没有 tabindex / role / aria-label，
@@ -840,6 +840,21 @@ export class HomeScreen {
         const dockApps = this.getDockApps();
 
         return dockApps.map(app => {
+            /* [v4.93.0] 真机反馈「dock 四个图标不是像素风」：它们原先取 phone/*.png
+             *   512×512 拟物位图，与像素引擎的桌面语言割裂。现在**优先**取像素图案
+             *   （appIconSvg），未登记像素图案的 App 才回落到 defaultIcon/emoji 旧链路
+             *   —— 只换呈现层，路由/数据/能力面零改动。 */
+            const pxSvg = appIconSvg(app && app.id);
+            if (pxSvg) {
+                const pxUrl = svgToDataUri(pxSvg);
+                const a11yPx = iconA11yName({ displayName: this._getAppDisplayName(app), name: app.name, ariaLabel: app.ariaLabel });
+                const ariaPx = a11yNameUsable(a11yPx) ? ` aria-label="${this._escapeHtml(a11yPx.name)}"` : '';
+                return `
+                <div class="dock-app yzp-home-dock-app px-dock-app" data-app="${app.id}" role="button" tabindex="0"${ariaPx}>
+                    <span class="px-dock-icon" style="background-image:url('${pxUrl}');background-size:contain;background-position:center;background-repeat:no-repeat;"></span>
+                </div>
+            `;
+            }
             const iconImage = this._getAppIconImage(app);
 
             const iconStyle = iconImage

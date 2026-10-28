@@ -2843,6 +2843,32 @@
     }
 }
 
+/* [v4.93.0] dock 像素图标容器：真机反馈「dock 四个图标不是像素风」。
+ *   旧的 dock-app 是液体玻璃（border-radius + backdrop-blur + 高光渐变），
+ *   与像素引擎的「零圆角 + 硬边 + 无模糊」直接冲突。这里给像素图标单独一条：
+ *   圆角 0、去模糊、去高光，尺寸由图标自带黑边呈现质感。 */
+#phone-panel-content .phone-screen .dock-app.px-dock-app {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+    image-rendering: pixelated;
+}
+
+#phone-panel-content .phone-screen .dock-app.px-dock-app::before {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .dock-app.px-dock-app .px-dock-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+}
+
 #phone-panel-content .phone-screen .home-layout-cards .dock-app {
     width: clamp(34px, 8.5vw, 44px);
     height: clamp(34px, 8.5vw, 44px);
