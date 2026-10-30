@@ -10,9 +10,16 @@ import {
 import { contactPromptBlock } from '../../config/contact-insight.js';
 import { usageSelfCheck } from '../../config/usage-tracker.js';
 import { claimCall, unclaimCall, readCallAttribution } from '../../config/call-attribution.js';
+import {
+    PARADIGM_IDS, DEFAULT_PARADIGMS, normalizeParadigmState,
+    resolveActiveParadigm, switchParadigm, saveCustomParadigm,
+} from '../../config/usage-paradigm.js';
 import { UsageView } from './usage-view.js';
-
 const SETTINGS_KEY = 'usage_settings_v1';
+/* [v4.94.0 · R11-O3] 使用范式的持久键。与 `usage_settings_v1` **分键**：
+ *   范式是「主屏怎么排、通知留几条」这类跨 App 的全局选择，清洞察设置不该顺手重置它。
+ *   主屏（phone/home-screen.js）读同一个键 —— 这里写入、那里生效，中间没有别的副本。 */
+export const PARADIGM_KEY = 'usage_paradigm_v1';
 
 export class UsageApp {
     constructor(phoneShell, storage) {
@@ -139,6 +146,105 @@ export class UsageApp {
             this._view = new UsageView(this, this.shell, this.storage);
         }
         this._view.render();
+    }
+
+    /* ---------- [v4.94.0 · R11-O3] 使用范式：读写口 ----------
+     * 为什么放在洞察 App 里：范式改变的是「主屏排什么、通知留几条」，而本 App 恰是
+     *   全仓唯一展示「你在手机上怎么用」的地方。放进 settings App 会让「读使用习惯」
+     *   与「改使用范式」分处两地，用户找不到因果关系。
+     * ⚠️ 这里只做读写与合法性判定，**排序与过滤本身**在 config/usage-paradigm.js 的
+     *   纯函数里、由主屏调用 —— 不在 App 里复制一份排序逻辑（那是最容易两边走岔的形态）。 */
+    readParadigmState() {
+        try {
+            const raw = this.storage ? this.storage.get(PARADIGM_KEY) : null;
+            const obj = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+            return normalizeParadigmState(obj);
+        } catch (_e) { return normalizeParadigmState(null); }
+    }
+
+    /** 当前生效的范式定义（含自定）。读不到就退回内置「生活」。 */
+    activeParadigm() {
+        try { return resolveActiveParadigm(this.readParadigmState()); } catch (_e) { return null; }
+    }
+
+    /** 可选项清单：内置三档 + 已存的自定范式，供界面列出。 */
+    paradigmOptions() {
+        const st = this.readParadigmState();
+        const out = Object.values(DEFAULT_PARADIGMS).map((p) => ({ ...p, builtin: true }));
+        for (const p of Object.values(st.customParadigms || {})) out.push({ ...p, builtin: false });
+        return { activeId: st.activeId, options: out };
+    }
+
+    /**
+     * 切换范式并落盘。
+     * @returns {{success:boolean, reason?:string, activeId:string, paradigm:object|null}}
+     *   失败**不改盘**：未知 id 时原样返回当前状态（不静默落到生活档 —— 那会让用户以为切成功了）。
+     */
+    switchTo(targetId, reason = 'user-switch') {
+        const before = this.readParadigmState();
+        let res = null;
+        try { res = switchParadigm(before, targetId, { reason }); } catch (_e) { res = null; }
+        if (!res || !res.success) {
+            return {
+                success: false,
+                reason: (res && res.reason) || 'switch-threw',
+                activeId: before.activeId,
+                paradigm: this.activeParadigm(),
+            };
+        }
+        try {
+            if (this.storage) this.storage.set(PARADIGM_KEY, JSON.stringify(res.state));
+        } catch (_e) { /* 写盘失败：状态没落下去，如实说没切成功 */ return { success: false, reason: 'persist-failed', activeId: before.activeId, paradigm: this.activeParadigm() }; }
+        return { success: true, noop: !!res.noop, activeId: res.state.activeId, paradigm: this.activeParadigm() };
+    }
+
+    /** 保存自定义范式（同名 id 覆盖）。返回落盘后的状态。 */
+    saveParadigm(customSpec) {
+        const before = this.readParadigmState();
+        let res = null;
+        try { res = saveCustomParadigm(before, customSpec); } catch (_e) { res = null; }
+        if (!res || !res.success) return { success: false, reason: (res && res.reason) || 'save-threw', activeId: before.activeId };
+        try {
+            if (this.storage) this.storage.set(PARADIGM_KEY, JSON.stringify(res.state));
+        } catch (_e) { return { success: false, reason: 'persist-failed', activeId: before.activeId }; }
+        return { success: true, paradigm: res.paradigm, activeId: before.activeId };
+    }
+
+    /** 范式 id 常量转出：界面按钮表用它，避免把 id 字符串散在各处。 */
+    paradigmIds() { return { ...PARADIGM_IDS }; }
+
+    /**
+     * 把某一档复制成「自定」档并切过去。
+     * ★ 为什么不是「让用户填一张表单」（本版选择不做，理由如实写下）：
+     *   表单要 id / 名字 / 优先清单 / 阈值四组输入，而 `priorityApps` 的合法值
+     *   是 App id 的闭集 —— 让用户在输入框里手打 `wechat`，打错就是「静默不生效」，
+     *   打对了也没什么可惊喜的。故本版只给「以某一档为底复制一份」这一个动作：
+     *   用户拿到一个可改的起点（落进 customParadigms，后续版本再做编辑器即可），
+     *   而不是一张打错就白填的表。
+     * ★ 为什么固定 id 用 `custom`：本版只支持一份自定档。重复使用即覆盖 ——
+     *   这比悄悄堆积 `custom-1`/`custom-2` 好：不会让范式列表无限变长，
+     *   也不会让用户看见一堆自己没起过名字的档。
+     * @returns {{success:boolean, reason?:string, activeId:string}}
+     */
+    copyToCustomParadigm(baseId) {
+        const before = this.readParadigmState();
+        const base = resolveActiveParadigm({ ...before, activeId: baseId || before.activeId });
+        if (!base) return { success: false, reason: 'no-base', activeId: before.activeId };
+        const saved = this.saveParadigm({
+            id: PARADIGM_IDS.CUSTOM,
+            name: (base.name || '当前档') + '（自定）',
+            badge: base.badge || '自定',
+            description: '由「' + (base.name || base.id) + '」复制而来，可自行调整',
+            priorityApps: base.priorityApps,
+            deprioritizedApps: base.deprioritizedApps,
+            noticeThreshold: base.noticeThreshold,
+            quickActions: base.quickActions
+        });
+        if (!saved || !saved.success) {
+            return { success: false, reason: (saved && saved.reason) || 'save-failed', activeId: before.activeId };
+        }
+        // 复制完立刻切过去：用户按的是「复制并改用」，不是「存一份以后再说」。
+        return this.switchTo(PARADIGM_IDS.CUSTOM, 'user-copy');
     }
 
     _loadSettings() {

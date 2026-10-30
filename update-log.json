@@ -1,6 +1,278 @@
 {
-  "latest": "4.92.0",
+  "latest": "4.99.8",
   "versions": {
+    "4.99.8": {
+      "version": "4.99.8",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.8（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4998.py 对齐 tools/bump_v4997.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X4 做了什么】`config/sharing-boundary.js`（三级范围 / 五态授权 / 收件人视角 / 撤回）、`config/portable-recovery-hub.js`（备份包体检）、`config/offline-creator-bundle-pipeline.js`（创作者包选择性导入计划）三件内核从建起那天就被 tests 逐条消费，但**产品端零 import**。本版把它们接进备份台：起草分享 → 按收件人看他会看到什么 → 记一次已读 → 撤回（并如实留痕），以及导入前先看包体认不认、创作者包会装哪几类。",
+        "【为什么先加一层翻译，而不是 App 直接拼】三件内核的返回体形状各不相同（授权判 status，体检给 ok 与两个计数，包计划给 success 与两组数组）。视图若各写一遍取值，就是同一口径三份实现；改内核时三处都要找一遍。故新增 `config/share-migrate-bridge.js`：内核判、桥翻形状、视图只消费 label。",
+        "【五态必须五句话】authorized / masked_partial / unauthorized / expired / revoked 逐条给中文文案，且**只有前两态算能看**。把遮蔽态与原文态压成一句，等于骗用户「他看到的和你一样」——这是本面最贵的一种错，因为发送方会照着这句话决定发不发。",
+        "【不可读就是不给内容】无权 / 过期 / 撤回三态一律 content 为空串，**哪怕内核把内容带了出来**。判据 G2 用真源码破坏钉死：若把不可读分支改成用草案原文兜底（一种很像好意的写法），同款判据必须转红。",
+        "【撤回不抹记忆】内核的契约是「撤回未来访问，不伪造记忆抹除」，故撤回后已读账原样保留，界面必须说出「撤回前已读 N 人，这段痕迹不会被抹掉」。判据 G3 钉死：抹掉这句即转红。",
+        "【四态不同形（本版自己抓到的一处真缺陷）】备份包体检原先只有「没包 / 不认 / 认出来」三态，而 App 层 catch 到内核抛错后把读数置空 —— 界面于是把「体检这一步自己坏了」念成「还没有包体可体检」，也就是把我们的代码炸了演成「你没选包」。本版把抛错单立成 threw 一态（catch 时按 `inspect_threw:` 前缀转给桥），四态四句话。",
+        "【安全阻断不许降级成警告】创作者包计划里 errors 是安全阻断（包里带可执行脚本），warnings 是缺依赖提示（能装但缺东西）。两者都不为空，若用「不为空就挡住」或「不为空就警告」一刀切，就会把带脚本的包念成一句普通提示。故 blocked 只跟 errors 走，判据 G5 钉死。",
+        "【体检只跑一遍（本版自己纠正的一处设计）】桥最初带一个 `payloadInspectOf` 便捷口，自己调内核 —— 而调用点（备份台）本来就持有同一份 import，等于一次点击跑两遍内核；且那个便捷口在产品端没人用，死导出检查当场红（693 文件面新增一条零消费导出）。改为桥只留翻形状的一支（`payloadInspectFrom`），App 侧调一次内核、抛错也按形状转过去。这不是门禁逼出来的妥协：同一件事跑两遍本身就是缺陷。",
+        "【写不下去就不许选中】起草分享要走落盘回执；写盘失败时若仍把选中项指向这份草案，下一次读盘就找不到它，界面会显示「选了一份不存在的草案」。判据 F2 与负控制 G6 双向钉死。",
+        "【读不到 ≠ 没分享过】分享台账读不出（无存储 / 读抛错 / 坏 JSON）与空台账分两句：前者说「读不到」，后者才说「这个会话还没起草过分享」；且读不到时**不许**在它上面盲写。",
+        "【视图不写第二套判据】视图里不许出现五个授权态字面量，也不许自己判包体检 / 创作者包的状态，只消费桥给的 label 与 blocked。「预览」**刻意不做成按钮**——选人即算，做成按钮会让人以为「点了才算过一遍」。",
+        "【键随会话隔离】新增 `share_drafts_v1`（三处同源：App 常量 / config/storage.js 的 share_ 前缀 / scripts/keys-audit.mjs 登记）。落全局会让另一个角色看到「你分享给了谁、谁读过」，那是串味里最难看的一种。",
+        "【判据 27 条全绿】tests/system-v4998.test.mjs：A1-A4 五态五句话 / 坏值如实念 / 不可读不给内容 / 内核抛错另立一态；B1-B3 撤回留痕 / 读不到不许念成没分享过 / 不改入参；C1-C3 体检四形不同 / 真内核读数能翻 / 桥不持有体检内核；D1 安全阻断与缺依赖提示不同形；E1-E4 产品端真 import / 视图无第二套字面量 / 键三处同源 / 桥是纯函数层；F1-F6 起草到撤回全链 / 写不下去不选中 / 读不到与空台账分两句 / 视图真渲染 / 换会话丢实例态 / 体检四态上到界面；G1-G6 六条负控制全部双向断言（原版上真、破坏副本上假）。",
+        "【交棒改写（下限形）】本版收尾时改写/收窄了三处旧口径，逐条记录，不静默通过：① 三张取证基线按真值刷新 —— branch_play 与 schedule_conflict 的 files_scanned 624→625、long_chat 的 scan.files 625→626 与 criteria 的 L5 格 got_text 同步，顺带修掉一条**跨版未刷**的遗留：branch_play 的 chat_data_patterns 402→405（本版 config/storage.js 新增 share_ 会话前缀与两行说明注释，探针口径把段内注释行也计入，与既有「行首注释也算一条」一致）；刷新由 tools/refresh_baselines_v4998.py 完成（零手抄、幂等、冻结 measured_at）。② 弱档模块账本 82→80：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 真接进产品面后按 --update 摘除，并在账本 note 里写明是人工摘除而非漂移。③ 抬版脚本的 parse_items 白名单**收回**到与历史判据一致：v4996/v4997 曾把「不做：」加进交棒锚的白名单，于是脚本放行、而 v3171/v3201/v3213 的形态锚转红 —— 脚本口径宽于判据口径，是同一件事的两份实现，本版把它收窄。这三条都是「下限形」：放宽的是脚本与基线读数，收紧的是判据锚，方向都是少给自己留后门。",
+        "【不做：三件明确不做的事】不改三件内核的判据本体（它们是纯函数、有既有测试、改了会动中枢既有口径）；不给备份包体检加「导入影响范围 diff」（那是 v4.96.0 恢复快照面已交付的能力，本版不重复造）；不让分享面走宿主咽喉（它读写的是本 App 自己的会话键，与包面动作的失败回执来源不同，故三族 data 属性刻意不同名）。",
+        "【运行时验证边界（v4.99.8 复校）】本版全部验证在无头环境完成（真 class + 真纯函数 + 真源码破坏，未装载 DOM 也不跑 CSS），未在浏览器里跑过：收件人视角的实际观感、撤回后对方入口是否真的消失、长列表滚动性能均未实测；本版判据能证明的是：五态文案两两不同、不可读时一个字节都不透、撤回留痕不被抹掉、体检四态不同形、安全阻断不降级、写不下去不选中、读不到不许念成没分享过、六条负控制破坏后同款判据真转红。它不能保证的是：真机上收件人视角的观感、撤回后对方入口的真实消失与长列表滚动性能。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。全量门禁走 npm test；本项验收另跑 node --test tests/system-v4998.test.mjs。",
+        "【五道门同步】syntax 1097 文件 / import-resolve 640 文件 1079 条 / dead-export 693 文件 4738 export（内部消费 3315 · 跨文件消费 1342 · 零消费 81）· 冻结基线 81 条 / keys-audit 506 键全登记（会话隔离 312 · 全局 191 · 历史键 3）/ registry 89 App · 89 懒加载分支 · 样式投递 79 件未覆盖 0 —— 全绿。"
+      ]
+    },
+    "4.99.7": {
+      "version": "4.99.7",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.7（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4997.py 对齐 tools/bump_v4996.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X7 余项做了什么】`config/usage-paradigm.js` 的 `filterNoticesByParadigm` 从 R8 起就写好了，但产品端一次都没调用过（全仓实测：只有中枢的一句注释和测试提到它）。本版把它接进通知中心：范式阈值决定留哪条，被滤掉的进「已按范式隐藏」区块，可展开、可点开、可删。",
+        "【本版自己抓到的缺陷：直连等于全丢】过滤内核只看 `item.level` / `isUrgent` / `isImportant`，而通知中心两种行一个都不带：落账层的行**根本没有 level 字段**（`push()` 也不收），中枢映射行把优先级塞在 `meta.hubPriority` 里。探针实测直连后 `urgent_only` 把 7 条全丢光，连中枢那条 URGENT 的健康预警也一起丢，且不报错。修法不是改内核，而是加一层形状态翻译（`config/notice-paradigm-bridge.js`）：把行翻成内核认的形状，留谁丢谁仍然只有内核一处口径。",
+        "【三态不同形，这一版新增四处】① 阈值写了但不认识（坏数据）≠ 范式没设阈值（设计内默认），两者都落「全部保留」但文案分开；② 范式**读不到**（坏 JSON / 没有存储）≠ 你现在是生活档 —— 读不到就**不过滤**，并明写「不是你在生活档」；③ 过滤自己抛错 ≠ 没有隐藏 —— 抛错时全量显示并报失效；④ `all` 档不占位（没藏东西就别喊），非 `all` 档但没藏东西则说「这次没有需要隐藏的」。",
+        "【隐藏不是删除】「已按范式隐藏 N 条」区块里的每条都是真行：能点开跳转、能删、能标已读，删的也是真源那一条。渲染与展开**不写任何账本**（判据 C4 钉死：渲染前后真源条数不变、`sys_notifs` 零写入）。",
+        "【顺带修掉的一处真缺陷】搜索框打字时的重绘走的是另一条链（直接 `log.list()`），绕过了范式过滤 —— 后果是「一打字，被藏起来的通知全冒出来」，只在输入时出现、不报错。现在搜索与首次渲染共用同一条链（feed → 范式 → chip → 关键词）。",
+        "【顺序也是判据】先范式后 chip：chip 的计数必须反映「范式之后还剩多少」。写反了的表现是点开某个 chip 变成空列表 —— 不报错、不崩，只是看着像没通知。",
+        "【只读出口补齐】组内成员行与隐藏区展开要靠 id 反查，此前只查落账层 ⇒ `hub_` 前缀的行永远找不到、成员行静默留空。本版在 App 侧加 `rowById()` 只读出口（视图不 import 桥，映射仍只有一处），找不到如实返回 null 而不补空壳。",
+        "【接线自证】App 真 import 内核与桥各一处；视图 `_visibleRows` 里不许出现 `urgent` / `threshold` / `.level` 任何判档词；范式键只许出现在三处（通知 App 常量、洞察 App 的 `PARADIGM_KEY`、主屏字面量），多一处就是第二份真源。",
+        "【两张账本同时少一条】导出级冻结基线 82 → 81、绑定级冻结基线 115 → 114，掉的都是 `config/usage-paradigm.js::filterNoticesByParadigm` 这一条 —— 项被清出账本的原因只能是「门禁探针已看不见它」（它被产品侧真调用了），不是靠白名单或豁免挂掉的；两张账本都必须 `--update` 后条目数真的减一，只改一张说明另一个探针没跟着走。",
+        "【判据 27 条全绿】tests/system-v4997.test.mjs：A1-A3 档次判定有出处 / 入参一字不动 / 阈值三态（只比被关心的三个字段，不锁死返回体形状）；B1-B4 三档留得对 / 中枢 URGENT 不被误杀 / 脏输入不炸 / 与内核逐条对拍；C1-C5 隐藏不消失 / 展开实名可点可删 / all 档不占位 / 隐藏≠删除 / 只读反查口；D1-D2 范式读口四态 / 读不到不过滤；E1-E7 真 import / 视图无第二套判据 / 键三处同源 / 先范后 chip / 档名文案只在桥层 / 三档文案行为判据 / 成功形与失败形都带 label；F1 搜索重链；G1-G5 五条负控制全部双向断言（原版上真、破坏副本上假）。",
+        "【本版自己抓到的判据坑两条】① `css()` 会把样式表拼进同一个 HTML，判据搜 `nc-hid` 时命中的是 `.nc-hid` 样式定义 ⇒ 这条判据永远为真（假绿），改为只认渲染出来的 nc-hid 元素（比对 class 属性而非裸词）；② 负控制拆桥时只拆 `hubPriority` 一条路径不红 —— hub 行同时带名字档与数字档，另一条照样翻译成功，必须一次拆全，否则是「破坏没打中分辨力点」而非判据失效。",
+        "【交棒改写】v41000 的 F1 判据原文只允许 App import `mergeFeed` 一个函数；本版 `rowById` 需要同一桥上的 `mapHubNotification`，故把那条判据的允许名单改成「该桥上的纯函数」，纪律未松：视图仍然一个都不许 import（这条断言原样保留）。",
+        "【不做的事】不改 `filterNoticesByParadigm` 的判据本体（它是纯函数、有既有测试、改了会动到中枢的既有口径）；不给落账层加 `level` 字段（`push()` 加字段要动 200 条历史与多条写入点，超出本项范围，桥能翻译就不必动真源）；不让范式过滤影响角标未读数（未读是「有多少条等你」的事实，不是「现在给你看几条」）。",
+        "【运行时验证边界（v4.99.7 复校）】本版全部验证在无头环境完成（DOM 替身 + 真 class + 真纯函数），未在浏览器里跑过：范式切换后的实际观感、隐藏区展开动画、长列表滚动性能均未实测；本版判据能证明的是：形状态翻译把两种行翻成内核认的档、三档留得对、中枢 URGENT 不被误杀、脏输入不炸、范式读不到时不过滤且说得出原因、隐藏区里的行仍是真行、五条负控制破坏后同款判据真转红。它不能保证的是：真机上切换范式后的实际观感、隐藏区展开动画与长列表滚动性能（无头环境不装载视图 DOM 也不跑 CSS）。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。全量门禁走 `npm test`；本项验收另跑 `node --test tests/system-v4997.test.mjs`。",
+        "【五道门同步】syntax 1095 文件 / import-resolve 639 文件 1075 条 / dead-export 692 文件 4731 export（跨文件消费 1338 · 零消费 81）· 冻结基线 81 条 / keys-audit 505 键全登记（会话隔离 311 · 全局 191 · 历史键 3）/ registry 89 App · 89 懒加载分支 · 样式投递 79 件未覆盖 0 —— 全绿。",
+        "【本版顺带修掉的跨版遗留：七支历史套件的负控制闭包落后一整版】v4.99.5 落地的 `config/spotlight-face-bridge.js` 被 `apps/search/search-app.js` 静态导入后，v281 / v3170 / v3201 / v325 / v326 / v327 / v328 / v3760 等历史套件的负控制「副本闭包」（CLOSURE 白名单）没有同步 —— 副本一 import 就 ERR_MODULE_NOT_FOUND，于是红出来的原因是「缺文件」而不是「破坏生效」，正是本仓最贵的那类假红。本版把闭包补齐四件（映射层 / 内核 / 应用注册表 / 注册表读出件），并把 v3170 A5 的闭包字节量级哨兵按新真值 405367→525604 抬到 560KB（五条「重库不进闭包」断言一条没动）。这不是本版引入的缺陷，但由本版暴露并修掉，如实登记。"
+      ]
+    },
+    "4.99.6": {
+      "version": "4.99.6",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.6（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4996.py 对齐 tools/bump_v4995.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X8 做了什么】电池动力学 / 蜂窝弱网 / 健康手环三个内核早在 R10 就写好、也被中枢实例化过，但产品端全仓零 import。本版新建 config/device-face-bridge.js（277 行纯映射层），把三域读数接成产品面：状态栏电量与信号格、锁屏电量整句、健康 App 心率曲线、设置页设备读数块。三域分别是 battery / signal / band，元信息与归因词表都收在桥接层里，产品端只消费不另写一份。",
+        "【三条真缺陷一次治掉：两个真源 / 声明了却零写入 / 读不到就编一个】① 状态栏原本读宿主的 navigator.getBattery，与虚拟手机自己 tick 出来的电量是两个真源（剧情里手机放电到 5，状态栏还显示宿主笔记本的 100）；② 手环的 historyLog 从声明至今全库零写入，也没被 _save 带走，「心率曲线」在手机里从来没存在过；③ 锁屏读不到回落 78，构造期电量假值 85，模板预写假读数 —— 78 不是用户电量也不是缺数据，是编出来的一个看起来正常的读数。三条都是同一族谎报形态：显示了一个没人测量过的数字。",
+        "【三态不同形：计划点名的纪律落地】读不到（missing）/ 读取失败（threw）/ 正常（ok）是三件不同的事，不许粉饰成同一句话。桥接层把它们分档：ok 给数字与折线，weak（0 格但读数正常）变色不动透明度，missing 与 threw 都只给短横线而绝不带旧值，且两档文案分开（数据缺失 / 读取失败）。无服务与读不到必须分两句 —— 把后者说成前者等于把系统坏了粉饰成你在地下室，剧情上会骗到人。",
+        "【弱网可见：0 格与 1 格在 DOM 上真的看得出不同】信号格数走 data-bars 属性（同时也是无障碍改进：读屏念得出几格），CSS 侧弱档是变色 #e6a23c 而不是降透明到看不见 —— 弱网态本来就该显眼，降透明是把这个状态藏起来。未知态另有自己的选择器（灰格 + 半透明 + 斜纹），三档互不同形。",
+        "【曲线可回溯：≥10 点、按时间升序、随盘走】bandSeriesOf 先按时间升序排再判点数，enough 为 count 大于等于 HEALTH_SERIES_MIN（10）；historyLog 补了唯一写入口 sample(now) 并进了 _save 与 _load（恢复时 slice 裁剪到 BAND_HISTORY_MAX 240）。生理变动之后自动采样（modulateBiometricsByEvent 末尾自己调 sample），不靠谁记得手动记一笔。点数不足与一次没采到分两句：刚戴上不是手环没在跑。",
+        "【本版自己抓到：DOM 桩不解析 HTML，「画出来才看得见」的效果在无头夹具里无处落脚】首跑 C1 报信号格必须有 5 格可点亮但实测 1 不等于 5。根因不是实现：五个格子是模板字符串里的静态片段，而 DOM 替身按文件头自述不解析 HTML 也不做命中测试，querySelectorAll 只会按 innerHTML 里 class 出现次数造空壳。修法两层：实现侧补 data-bars 属性（真正的好处是无障碍），判据侧改读属性，并补第四档断言（中枢换桩之后格数必须回落 0，不许停在上一拍的 1 格）。",
+        "【本版自己抓到：判据自己算错域数】首跑 F3 报 2 不等于 1 —— 信号 missing 加曲线 empty 两域都不是 ok，汇总应报 1/3 域可读而我只期望 1 个坏域。这是判据自身的偏差，不是被测对象的错。修后补两条：一域坏不许把另一域读数带没（电量仍要如实给 50），三域全坏必须说都没读到（不是一切正常）。",
+        "【本版自己抓到：负控制写成两句不同，等于没打中分辨力点】首跑 G2 报破坏后同款判据必须转红但实测仍绿。根因是原谓词只断言无服务与读不到两句文案不同，而破坏把读取失败与数据缺失合并成同一句时两句仍然不同（一是真无服务，一是破坏后的假无服务），破坏没打中分辨力点。修法新增纯谓词 unknownNotBlamedOnSignal，直接断言读不到那一档的文案本身必须含数据缺失且含不是无服务。教训：负控制要打中判据的分辨力点，不是随便找个不等就够。",
+        "【本版自己抓到：判据抛错会让夹具挂死，表象是跑不完而不是一条红了】首跑套件被外部超时 SIGTERM，输出只有 Terminated。根因是壳在 createInPanel 里挂了一个 30 秒时钟轮询，某条判据在 try 块中间抛错时 shell.destroy() 永远走不到，进程被 interval 钉住。修法：installShellHost 加回收登记表 track(shell)，restore() 里逐个 destroy 且收尾失败不掩盖原错。判据红不该让门禁挂死 —— 挂死时先试 --test-force-exit 才看得到红在哪。",
+        "【本版自己抓到：幂等门写法易误伤末尾那次刷新】initBattery 第一版写成 if (seedRequested) return，会连带把末尾 refreshDeviceFace() 一起跳过，重入时状态栏就停在旧读数上。改成只拦播种（if 非则播种，末尾刷新照走）。同族教训：加幂等门之前先想清楚这一门拦的到底是什么。",
+        "【dead-export 报四条零消费，修法是真接线不是加白名单】桥接层的 DEVICE_FACE_DOMAINS / DEVICE_DOMAIN_META / deviceFaceOf / deviceLineOf 被门报产品端零消费（该门口径：只有测试引用等于产品端零消费）。本版没有加白名单也没跑 --update 刷基线，而是在设置页常规页签真接线：新增设备读数块三域各一行，带 data-device-domain 与 data-device-state，下方汇总句。这正是本版主题的镜像面 —— 声明了却零消费，治它的办法是让产品端真的用起来。",
+        "【只读不写：本版不新增任何存储键】三域真源分别在中枢的三个既有实例里，桥接层只读 battery_thermo_state / cellular_sim_outbox / smart_band_biometrics_data 三个既有键，不新开键。设置页只信宿主的 window.VirtualPhone.deviceFace，不反查中枢实例 —— 否则设置页就是第二个真源。",
+        "【正式套件 tests/system-v4996.test.mjs：27 条全绿】A 桥接层四条（导出面 / 纯映射只依赖 num-gate / 三态不同形 / 无服务与读不到分两句）；B 恒等两条（逐档对拍 / 一次性种子之后仍读实例那一份）；C 弱网可见两条（DOM 三档 / CSS 源码面）；D 桩面四条（换桩报数据缺失不含旧值 / 读数口抛错报读取失败 / batteryLevel 回 null / 锁屏同源不编百分比）；E 曲线五条（点数够且升序且跨度可算 / 三档分三句 / 健康 App 真画折线且不足不画 / 采样落盘可回溯且上限裁剪 / 生理变动自动采样）；F 接线自证四条（三处 import 加壳不反查中枢加 onTick 重画 / 三内核 face 不抛 / 三域汇总口 / 设置页读数面三域各一行且不反查中枢）；G 负控制六条（旧值 / 无服务与读不到 / 曲线排序 / 采样落盘 / 锚点自证 / 设置页归因合并），每条都是双向断言：先断言同款判据在原版上为真，再断言在真源码破坏副本上为假。",
+        "【交棒改写 + 不做：R11-X4（分享与迁移增量）、X7（使用范式通知过滤余项）、X9（记忆与回放）三项产品扩展仍有余项未动；本版未把信号做成多制式图标（2G 到 5G 各一版），只按格数打档；未给心率曲线做坐标轴刻度与 tooltip（无头环境验不到交互，等真机要求再接）；未把设置页设备读数块做成可点击跳转（读数归读数，跳转属 App 打开语义，等真有需求再接）；未把三域读数写进 state_bar 或存档摘要（那属 X9 回放面的活）。】",
+        "【运行时验证边界（v4.99.6 复校）】本版判据能证明的是：三域取数与三态判档在受控桩数据下逐档成立、三句话互不同形、状态栏读数与中枢实例 face 逐档恒等、中枢换桩后各处一律报数据缺失且不含旧值、曲线升序与落盘与上限裁剪真生效、真源码破坏后同款判据真转红。它不能保证的是：真机上状态栏格子在浅色与深色两套主题下的对比度观感、以及真机弱网切换的响应时延（无头环境不装载视图 DOM 也不跑 CSS，CSS 侧只证源码面选择器分档）。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。"
+      ]
+    },
+    "4.99.5": {
+      "version": "4.99.5",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.5（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4995.py 对齐 tools/bump_v4994.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X5 做了什么】config/spotlight-universal-search.js（四域 SEARCH_DOMAINS + 三门口诀语法 + deepLink 载荷）早就写好，也被中枢 new 出来过，但产品端全仓零 import，且 new 出来之后从未调用过 search —— 所谓「跨域全局检索」在手机里根本不存在。本版新建 config/spotlight-face-bridge.js（197 行纯映射层），把内核结果接成产品面：搜索 App 里多出一块「全局检索」读数区，四域各出真实命中（通讯录 / 微信会话 / 日记 / App 注册表），并带一句意图行（发微信 / 转账 / 写日记三门口诀各给一条）。",
+        "【三态不同形：计划原文点名的纪律落地】内核没接上（宿主无 / 中枢无 / 内核无 / 读抛错）与某域取到但 0 条、某域取不到，是三件不同的事，不许粉饰成同一句话。桥接层把它们分三档：ready（count 大于 0）/ empty（count 为 0，该域暂无数据）/ missing（ok 为 false，数据源没取到，不是没有内容）；一句话读数另有四档文案（零命中 / 内核没挂上 / 读抛错 / 正常），实测三句互不相同（C1 判据钉死）。塌成一格就是把「系统坏了」说成「没搜到」。",
+        "【SETTINGS 域灌的是 App 注册表，命中行自带直达落点】四域里 CONTACTS 取 phone_call_contacts 并集 cachedWechatData.getContacts，WECHAT 取 wechat_data.chats，DIARY 取 diary_entries，SETTINGS 取 APPS 注册表 —— 搜一个 App 名就直达那个 App（每行带 deepLink.targetApp，走 config/app-open-detail.js 的 buildOpenDetail 同一支笔，不手写对象字面量）。这也正是计划里「同时作为 R11-O7 应用库搜索的后端」那句话的落点。",
+        "【本版自己抓到：负控制 verify 方向反了（三条 G 首跑全红）】首跑 17/20，G1/G2/G3 三条负控制全红。根因不在实现，而在判据：首版 verify 断言的是「破坏之后仍应等于正确值 / 仍应单列 / 仍应被截」—— 这是把负控制写成了对破坏结果的期待，破坏没发生时反而会绿，破坏真发生时才红，方向整个反了。修法：抽出 faceCriterion 三个纯谓词（triState / missingIsSpoken / limitHolds），每条负控制先断言「同款判据在原版上必须为真」，再断言「同款判据在破坏副本上必须为假」—— 双向都钉住，判据本身假与被测对象坏才分得开。修后 20/20。",
+        "【本版自己抓到：写大脚本用 heredoc 会被 shell 吞引号】生成 tools/bump_v4994.py 与 X3 夹具时，用 heredoc 传 python（单引号包裹的 PYEOF 与 EOF 都被绕过），引号被吃、缩进被破坏，脚本落盘即坏。这条在上一轮已总结过，本版又一次踩到 —— 复杂脚本一律写文件（create_file 直接落盘 /tmp/星.py），再 AST 校验后执行。",
+        "【本版自己抓到：派生脚本元组拼接多带一个空行】tools/refresh_baselines_v4994.py 的派生脚本用切片去掉尾行再拼新散文时多带一个换行，落盘后在元组拼接点留下空行（create_file 的 edit 因锚点不匹配失败），改用单独 _fix_ref4994.py 修掉。派生脚本落盘后必须 diff 核对（本版 diff 仅 4 到 5 处，符合范式）。",
+        "【本版自己抓到：edit_file 锚点取得太短，误伤 scopeSummary 注释段】首补丁把 apps/search/search-app.js 里 scopeSummary 的注释段错改成了 _knownActors 的标题与函数签名，立刻回滚修正。教训：OLD 锚点必须取得够长、够独特，注释头这种在多处出现的短句不能单独当锚点。",
+        "【桥接层房式五条】① 只做纯映射与三态合并，不含 storage、不写键、不 new 实例（D3 判据扫过）；② 活体真源在 App 侧，持久化不在桥里；③ 三态不同形（C1 钉死）；④ 每行带可派发载荷，走 buildOpenDetail 同一支笔；⑤ 取数口径一律走 config/num-gate.js 的 numOrNull，避免就地写一份弱口径副本（本仓治过四轮的 Number(null) 等于 0 的塌陷，weak-coercion 门会报 W1）。",
+        "【只读不写：本版不新增任何存储键】X5 是把已有检索接出来，不是再造一套账号数据 —— 桥接层与 App 侧只读 phone_call_contacts / wechat_data / diary_entries 三个既有键，禁 sp 与 spotlight 前缀新键（D4 判据扫过）。这条纪律的来由：一旦为了「记一下搜索结果」新开键，X9 的回放面与存档面就要多养一份状态。",
+        "【意图行只派发打开，不代用户执行】三门口诀（发微信 / 转账 / 写日记）各给一条意图行并各带自己的落点（wechat 到会话位 / wallet 到转账位 / diary 到撰写位），点击只派发 phone:openApp —— 「解析出意图」与「代用户把那笔转账做完」是两件事，视图里不许出现 executeTransaction / sendMessage / appendTransactionStep / mintAsset 这一类调用面（E2 判据切片扫过）。",
+        "【正式套件 tests/system-v4995.test.mjs：20 条全绿】A 映射五条（导出面齐 / 未知域如实回落 / 行形状与 buildOpenDetail 逐字段同形 / 只读不改入参 / 坏输入不抛）；B 四域真出结果两条（四个关键词各验一次，不靠同一条命中充数）；C 三态不同形两条（三句话两两不等 / 零命中但四域都接上就不许说没接上）；D 接线自证四条（App 真 import 内核与桥 / 视图走 app.spotlightFace 不自做第二套读数 / 映射唯一出处 / 不新增键面）；E 意图行两条；F 性能一条（240 条命中映射仍在预算内，行数被上限截住而 counts.total 仍报全部命中数）；G 负控制四条（三态塌成一格 / 域缺席被说成暂无数据 / 行数上限被抹掉 / 负控制自证：锚点不存在或不唯一时必须抛）。",
+        "【基线与账本随新文件重刷】新增 config/spotlight-face-bridge.js 与 tests/system-v4995.test.mjs 使枚举面加二：语法门 1088 到 1090 个文件；导入门 636 到 637 个文件；method-consumption 与弱档模块基线按当版实刷；四张探针基线的 files_scanned 与 scan.files 由 tools/refresh_baselines_v4995.py 同步刷（longlist 与 lifecycle 同源跳过），刷完幂等复跑须为待写 0 处。status-ledger 与 method-consumption 两张账本各走自己的生成脚本。",
+        "【运行时验证边界（v4.99.5 复校）】本版判据能证明的是：四域取数与三态判档在受控桩数据下逐档成立、三句话互不同形、行形状与打开载荷同源、映射不改入参、240 条命中仍在预算内、四条负控制破坏后同款判据真转红。它不能保证的是：真机上微信与日记两域在大数据量下的首屏观感（无头环境不装载视图 DOM，200 条以上首屏低于 300ms 只能证映射侧而非渲染侧）、以及真机焦点与输入法联动下意图行的行为。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【交棒改写 + 不做：R11-X4（分享与迁移）、X7（使用范式通知过滤余项）、X8（拟真读数）、X9（记忆与回放）四项产品扩展未动；未把 SETTINGS 域的命中做成「打开 App 内某个页签」（本版只到 App 一级，页签级落点等真有需求再接）；未给四域命中做统一排序（各域自带 relevanceScore，跨域比较是权重语义问题，留给 X7 的使用范式统一处理）；未把意图行接成可执行动作（本版只到派发打开，真执行属另一类授权语义）；tools/refresh_baselines_v4995.py 只覆盖五张探针基线，两张账本各走自己的生成脚本。】"
+      ]
+    },
+    "4.99.4": {
+      "version": "4.99.4",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.4（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4994.py 对齐 tools/bump_v4993.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X3 做了什么】四件生活流内核（autonomous-life-scheduler / calendar-autonomous-life / daily-rhythm / response-cadence）早就写好、也早就被中枢实例化，但唯一的推进口 SubsystemOrchestrator.advanceAutonomousLifeStep **产品端零调用**（全仓只有 tests/ 一处）—— 手机永远不会自己推进时间，所谓「自驱生活」只在测试进程里存在。本版新建 config/life-clock.js（299 行低频时钟）：它不做业务，只做「什么时候推进、推了多少、谁来落盘」；index.js 装配框里建实例、挂表（60s/步）、把实例与两个前台口挂到宿主；状态栏时间右侧多一格「今日已推进 N 步」；日历 App 多一行「今日生活流」（含最近一步的来源）。",
+        "【本版自己抓到：哨兵值歧义（lastTickAt !== 0 当「推过没推过」）】首跑 27 条判据时 B2/B3/B4/C2/E1 五条同一根因报红：核心当时用 `prev = state.lastTickAt` 的 falsy 判「首拍」，而 0 是**合法时间值**（拨表、时钟回拨、存档损坏都可能给出 0）—— 于是每一拍都被当成首拍，防抖、按流逝换算、步进封顶三者一并失效（不报错，只是推进量永远是 1）。修法：加显式布尔 everTicked，旧存档按 lastTickAt > 0 迁移推断。",
+        "【本版自己抓到：名字撞桥契约（.snapshot( ）】bridge-contract 门报 J2：apps/calendar/calendar-app.js 仍在用 .snapshot( 调用式读桥。核心本意是「时钟的读数面」，而这个名字在本仓是「调用式读桥」的信号（lonsha 桥是推送型，snapshot 是对象，调它必抛 TypeError）。改名 face()（语义也更准：它给的就是读数面），三处调用点同步。",
+        "【本版自己抓到：弱口径写法两处】weak-coercion 门报 W1 共 3 处：config/life-clock.js 的 batteryPct 与 config/economy-face-bridge.js 的 safeNum，都是就地写一份 `Number.isFinite(Number(v))`——那是本仓治过四轮的「弱口径副本」（`Number(null) === 0`：「没给」与「给了 0」塔成一个读数）。两处改走 config/num-gate.js 的 numOrNull（唯一实现）；safeNum 只补「取不到用默认值」语义，不重写取值口径。",
+        "【时钟的形态：只推进不做业务】三条硬约束（计划原文）写在内核里：① 不许裸 setInterval 无节制推进（走登记层 addInterval，60s/步，单次 tick 封顶 12 步，真实流逝不足 8 分钟不推）；② 可暂停（pause 后一步不加，恢复时计时起点重置，暂停那段不允许被补拍）；③ 推进量落盘可查（lc_life_clock_v1：步数/累计分钟/上次时刻/最近 N 步的「为什么发生」，写不进去就如实报 storageOk:false）。★ 推进逻辑不在这里重写：本件只是 advanceAutonomousLifeStep 的调用方，业务语义有一份实现（中枢里那份）。",
+        "【四档不可用如实回因（不返 0 冒充「没推进」）】no_reader（无读口）/ read_threw（读报错）/ no_step_method（中枢缺能力，靠能力探测不靠 identity）/ all_threw（一步都没成：不记账、不动 lastTickAt，下次 tick 仍是同一段流逝）；状态另一档 paused（用户主动停的，不是坏了）。face().status 三档 running/paused/unmounted，unmounted 不偏装在跑。",
+        "【正式套件 tests/system-v4994.test.mjs：29 条全绿】A 三档不可用；B 推进语义（首拍/防抖/按流逝换算/步进封顶/暂停/恢复）；C 落盘（一次写齐/重载计数连续/写失败如实说/暂停态随盘）；D 接线与键面（index.js 装配与挂表/状态栏那格真在场/三处键面同源/无裸 setInterval/无第二个业务实现，加日历侧两条 D5a/D5b）；E 真跑通（多次 tick 累计 + 每步来源摘要 + 与真中枢联跑）；F 四条负控制（抹掉暂停判定/抹掉防抖/失败也记账/未挂表也报 running）。",
+        "【套件首跑 20/27，七条失败里五条是内核真缺陷、两条是判据自己写错】真缺陷即上述哨兵值歧义（5 条）；判据错误两条：B4 把首拍当第二拍（首拍按定义只推一步，不可能 capped）；F3 只看 snapshot 不看返回形状（在 t=0 边界上「破坏后步数仍为 0」—— 入譴校那条判据没有分辨力）。修后 29/29。",
+        "【夹具再踩同族坑：副本缺相对依赖】改名引入 num-gate 后，四条负控制全红，报的是 ERR_MODULE_NOT_FOUND: /tmp/rp_x3_xxx/num-gate.js—— 夹具只复制了被测文件，没把它的相对依赖一并拿进去，于是负控制退化成「夹具坏了」而不是「判据转红」（X2 当年踩过同族坑）。修法：夹具扫源码里的 `from './x.js'` 并逐个同层复制进副本目录。",
+        "【基线与账本随新文件重刷】新增 config/life-clock.js 与 tests/system-v4994.test.mjs 使枚举面加二：语法门 1085 到 1088 个文件；导入门 633 到 636 个文件；method-consumption 死方法 314（基线 314，新增 0）、模块入度 279 件（product 196）；弱档 83（基线 83，新增 0）；四张探针基线的 files_scanned / scan.files 同步上涨（由 tools/refresh_baselines_v4994.py 刷）。",
+        "【运行时验证边界（v4.99.4 复校）】本版判据能证明的是：推进语义（首拍/防抖/换算/封顶）在受控时间下逐档成立、暂停真一步不推、重载后计数连续、写失败不静默、与真中枢联跑时推进真被调到、四条破坏后同款判据转红。它不能保证的是：真机上长时静置后日历栅格与状态栏那格的渲染（无头环境不装载视图 DOM）、以及真机后台节流对 60s 轮询的实际影响；这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【交棒改写 + 不做：R11-X4（分享与迁移）、X5（全局搜索）、X7（使用范式）、X8（拟真读数）、X9（记忆与回放）五项产品扩展未动；未把自驱事件写回日历真源（中枢的 CalendarAutonomousLifeEngine 与日历 App 的 calendarData 是两张表，合并属分类语义问题，留给 X9 的回放面统一处理）；未做多档节奏预设与玩家可调步长（本版只把硬约束落地，参数化等真有需求再做）；未给时钟加窗口前台/后台自适应（依赖登记层的回收语义）；tools/refresh_baselines_v4994.py 只覆盖五张探针基线（本版实刷四张，longlist 与 lifecycle 同源跳过），status-ledger 与 method-consumption 两张账本各走自己的生成脚本。】"
+      ]
+    },
+    "4.99.3": {
+      "version": "4.99.3",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.3（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4993.py 对齐 tools/bump_v4992.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X2 做了什么】四件经济内核早就写好、也早就 import 进了 config/subsystem-orchestrator.js，但**产品端零读零写**（全仓 apps/ 零命中）：urban-economy 的 executeTransaction、crossapp-transaction-stack 的 createTransaction/appendTransactionStep/commitTransaction/previewRollback/executeRollback、living-assets 的 mintAsset/transferAsset、lineage-living-assets 的 transitionLivingAsset。两把落盘键（ue_urban_economy_v1 / la_living_assets_v1）在 keys-audit 里登记着，却从来没有写入方 —— 有键、有门禁、有内核，没有出口。改造面四处：新建 apps/wallet/economy-store.js（427 行真源，独占三键读写）；新建 config/economy-face-bridge.js（277 行纯读纯函数桥）；apps/wallet/wallet-app.js 加读口 economyFace / economyPreviewUndo / economyGetAsset 与六个写口；apps/wallet/wallet-view.js 加「我的账 / 交易与撤销 / 资产与归属」三张卡与六种操作点绑定。",
+        "【本版自己抓到：发起不留痕、钱扣了不落盘、写了却没人用的三个写口】第一处：三处 start* 都只改内存不落盘，唯一 save() 在 commit/rollback 里 —— 后果是「发起」这一步重载即消失，而验收明文要求三步各留一条可见记录（发起是第一步），修法是三处 start* 各自落盘并落 E4 判据（发起后立即重开一个真源读盘，那条记录必须还在）。第二处：EconomyStore.restoreFrom 与 WalletApp.economySaveAll 两个写口写好却零调用，被 scripts/method-consumption-audit.mjs 当场抓出（属新增死方法）—— 处置是**删掉**而不是登记进基线，因为「外部没有手动存一次的场景」是真事实，留一个零调用写口正是本仓在治的形态。第三处：orchestrator 里那四个「消费者」把纯函数签名当别的签名调（transactEconomy 把 executeTransaction({source,target,...}) 当 (state, spec)、circulateLivingAsset 同样错位、transitionLivingAsset 被塞第二参 'active' 而它要的是 {action} 且合法值只有 borrowed/gifted/breached/recovered）⇒ 这条路在本仓此前一次都没走通过。",
+        "【桥的形态：纯读 + 纯函数，不是第二份真源】config/economy-face-bridge.js 不含 storage、不写任何键、不 new 任何实例：mapTransactionRow / mapAssetRow / mapBalanceRow 三个纯映射，mergeEconomyFaces(store) 返 faces / counts / notes。faces 各面为 null 表示读不到（与空数组不同形），notes.mustShowWhy 为真时视图必须明写读不到，why 取值 ok | no_store | bad_shape | read_threw，perFace 逐面独立归因（一面缺件不牵连另一面）。依赖只能单向：真源不 import 桥（C1 判据钉住）。",
+        "【undoState 五态：已撤销必须压过其余，部分不许说成可全撤】mapTransactionRow 给每笔算 undoState：undoable（committed 且有 compensator 且无可逆步骤）/ partial（committed 但含不可逆步骤）/ undone（已回滚）/ pending / failed。★ 判定次序有语义：rolled_back 必须**先判**，否则一个已撤销的行会被算成 undoable，界面就给出「已撤销却还能再撤」的按钮（G1 负控制专打这一处）。余额映射同理：一个可信数都没有时返回 null 而不是 0 —— 0 元是可信的数，与「没有数」不同形。",
+        "【回滚不留静默：撤销后行仍在列表，谱系是「再加一条」不是「抹掉中间那条」】executeRollback 是纯内核：它算补偿计划、把状态置 rolled_back，但**不动账**；真正把钱与归属改回去的是真源的 _applyCompensations（LIFO 逆序，逐项失败不影响其余项）。撤销后的事务行**留在列表里**带 rolledBackAt 与补偿条数（从列表消失＝静默恢复，计划明令禁止，G3 负控制专打这一处）；转赠撤销后资产归属回到原主，且 provenanceChain 由 2 条变 3 条（追加一条「撤销归还」记录，不是把 transfer 那条删掉）。含不可逆步骤的事务（如购置会铸资产上链留谱系）撤销后记 partialRollback: true 与 irreversibleSteps —— 状态是「部分完成」而不是「成功」，钱退回来但已铸的来历撤不掉。",
+        "【三态不同形 + 三键一次写齐】读到了有 N 条 → 正常列表带计数；读到了 0 条 → 「还没有发起过交易 / 还没有登记过任何资产」；读不到 → 「读不到（这是「读不到」，不是「没有发生过交易」）」——三面各一句独立措辞，F 类判据逐句正则钉住。三把键（ue_ / la_ / et_economy_tx_v1）同属一笔账：save() 一次写三键、restore() 一次读回，半截持久化会让「钱扣了但资产没登记」。新键 et_economy_tx_v1 已在 config/storage.js 的 CHAT_DATA_PATTERNS 登记 /^et_/（随会话隔离）并在 scripts/keys-audit.mjs 的 KEY_REGISTRY 逐条登记。",
+        "【本版踩到的坑：键写成对象属性会被 K3 判幽灵放行条】新键初版写成 ECONOMY_KEYS 对象字面量里的裸字符串，keys-audit 报「K3 有 1 条登记已失效（真仓库零命中）」—— 根因是键面抽取器认的是 XXX_KEY = '<lit>' 这一常量形式（CONST_RE），对象属性不在扫描面。修法是逐把声明为 UE_STORAGE_KEY / LA_STORAGE_KEY / ET_TX_STORAGE_KEY 三常量，ECONOMY_KEYS 从常量取值、不另抄一份字面量，并落 F2 判据钉住这个形式（否则下次有人改回对象属性，K3 会以「幽灵放行条」的名义拒判）。",
+        "【正式套件 tests/system-v4993.test.mjs：23 条全绿】A~G 七组：A 三条纯映射各自形状显式、undoState 五态判定、不合格行不补空壳、余额一个可信数都没有时返 null；B 三态不同形、单面缺件与读抛错归因分开、撤销预告对未提交与已撤销如实拒绝；C 桥代码不碰 storage（剥注释后判动作，并用真源源码做分辨力对照）；D 三键一次写齐、冷启一次读回、脏行跳过不抛；E 转账三步（发起真扣钱 → 提交 → 撤销后余额回原值）、转赠归属往返且谱系留痕、不可逆走「部分完成」、发起即落盘扛重载、失败路径如实回因不静默成功；F 视图走 App 的 economyFace() 且不 import 桥不碰真源、App 八个读口写口齐备且键与 keys-audit 登记一致、换会话真源作废重挂；G 四条负控制（抹掉已撤销压过其余、状态改了但不退钱、撤销后把行从列表删掉、视图自己 import 桥 ⇒ 副本上同款判据必须转红）。",
+        "【套件首跑 17/22，五条失败里四条是判据/夹具写错、一条是判据自相矛盾】① B4 调 previewUndo 而未 import（桥的导出叫 previewUndo，套件里按 bridgePreviewUndo 别名导入），改用别名；② F3 取 onChatChanged 的 indexOf 切到了**头注里**提到的那一次（注释里也写了这个方法名），改成按真方法定义行定位并加「必须找到」断言；③ G2/G3 的 ERR_MODULE_NOT_FOUND：夹具的依赖复制只收 ./ 前缀，而 apps/ 下的真源依赖是 ../config/x.js ⇒ 副本缺 config 依赖，负控制变成「夹具坏了」而不是「判据转红」，修法是把 startsWith('./') 放宽为 startsWith('.')；④ G1 判据自相矛盾（先断言必须等于 UNDONE 又断言必须不等于），改成断言破坏后**不再是** undone（落到 undoable）并在原版上复核仍为 undone。修毕 23/23。另有 E4 是**真产品缺口**：补判据时才发现三处 start* 都没落盘。",
+        "【基线与账本随新文件重刷】新增 config/economy-face-bridge.js 与 apps/wallet/economy-store.js 与 tests/system-v4993.test.mjs 使枚举面加三：语法门 1082 到 1085 个文件；method-consumption 死方法 316 到 314（基线 318，**新增 0**），且四件经济内核所在模块与三个 orchestrator 消费者方法从「死」面退出（config/crossapp-transaction-stack.js、config/living-assets.js、config/urban-economy.js 三件已进入产品面，executeCompositeAction / rollbackCompositeAction / transactEconomy / circulateLivingAsset 四条基线方法已被重新消费）—— 这正是 X2 的成效读数；弱档模块 83（基线 86，新增 0）。",
+        "【运行时验证边界（v4.99.3 复校）】本版判据能证明的是：三面映射各自的字段搬家正确、undoState 五态判定与已撤销的优先级、桥是纯读纯函数且依赖单向、三键一次写齐与一次读回、发起/提交/撤销三步的真读写与「撤销后余额与归属回到原值」、不可逆步骤走「部分完成」、撤销后行仍在列表且谱系是追加而非抹除、视图不 import 桥不碰真源、四条负控制破坏后同款判据转红。它不能保证的是真机环境下三把键的落盘在存储配额紧张或被系统节流时是否仍能落盘，以及真机上从钱包 App 点进三级页的渲染路径与内联表单的交互（无头环境不装载视图 DOM）。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【交棒改写 + 不做：R11-X3（生活流真运行）、X5（全局搜索）、X8（拟真读数）、X4（分享与迁移）、X7（使用范式）、X9（记忆与回放）六项产品扩展未动；未把 lineage-living-assets 的 transitionLivingAsset 接进视野（它要的 {action} 四态语义与「转赠」这一种操作不是一一对应，硬接会把 borrowed/breached/recovered 三种语义压成一种，留给 X9 的回放面按剧情推进消费）；未做多币种与汇率（内核只有 currency/trust 两面）；未给交易行加楼层锚与跨 App 靶心 ref（数据无条目锚，造 ref 就是假定位）；未把 economyFace 的 notes 接进诊断 App 的读数面；未给真源加版本迁移逻辑（version 字段已留，迁移留给真的有格式变更时再做）；tools/refresh_baselines_v4993.py 只覆盖五张探针基线，status-ledger 与 method-consumption 两张账本各走自己的生成脚本。】"
+      ]
+    },
+    "4.99.2": {
+      "version": "4.99.2",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.2（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4992.py 对齐 tools/bump_v4991.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X1 做了什么】把三件早已挂进中枢却产品端零读的管理器接进群像 App 的档案面：InventoryBackpackManager（随身物）、CharacterDossierManager（关系与关键记录）、VolumeChronicleManager（按时间切的卷宗回顾）。修前实测：三件在 config/subsystem-orchestrator.js 挂成 subsystems.backpack/.dossiers/.volumes，scripts/keys-audit.mjs 也逐键登记了三把落盘键，但产品端零 import、零 storage.set —— 数据没有出口，用户看不到「角色身上有什么、跟谁什么关系、前几卷发生过什么」。改造面四处：三件管理器各加 serialize()/restore()；新建 config/archive-face-bridge.js（纯读纯函数桥）；apps/chars/chars-app.js 加中枢解析口 archiveFace() 与七个写口；apps/chars/chars-view.js 加档案卡与六种操作点绑定。",
+        "【本版自己抓到：拼错状态永不告警，读档把历史抹掉】三件管理器此前没有任何持久化能力：背包的 items 是纯内存 Map，进程重载即空，而 keys-audit 登记的三把键从未有写入方 —— 这是最难发现的形态（键有登记、门禁全绿、用户的数据每次会话都消失）。补 serialize/restore 时抓到第二个同族隐患：恢复若走 registerItem 重新登记，每次读档都会为每件物品伪造一条 acquired 历史，把「读档」变成「再次获得」，且转赠溯源链会被二次污染。故 restore 逐条校验 id+name 后原样写 Map、history 一字不改（头注写明理由），并落 D1/G3 双判据钉住。",
+        "【桥的形态：纯读 + 纯函数，不是第二份真源】config/archive-face-bridge.js（158 行）不含 storage、不含持久化：mapBackpackRow / mapDossierRow / mapVolumeRow 三个纯映射，mergeArchiveFaces(hub, opts) 返 faces / counts / notes。faces 各面为 null 表示读不到（与空数组不同形），notes.mustShowWhy 为真时视图必须明写读不到，why 取值 ok|no_subsystems|no_backpack|no_dossiers|no_volumes|backpack_read_threw|dossiers_read_threw|volumes_read_threw。持久化契约归各数据主（serialize/restore 在管理器身上），写口只在本 App 的 _archiveSaveAll / _archiveRestoreAll 两处，三键一次写齐、一次读回 —— 不做只写改动那一件的半截持久化。",
+        "【三态不同形的具体落点】读到了有 N 条 → 正常列表带计数；读到了 0 条 → 「还没有录入物品 / 还没有登记的档案 / 还没有封存的卷宗」；读不到 → 「读不到（这是「读不到」，不是「没有物品」）」。三面各一句独立措辞，F2 判据逐句正则钉住。中枢缺席另分两档归因：宿主上没有 subsystems 记 no_host，有容器但三件缺位记 no_subsystems，两档不许压成一句坏了。",
+        "【每块都有可操作点（计划明文不许只读塞设置里）】背包行：转赠（改持有者并记一条 transfer 历史）、消耗或遗失（状态机 held/lost/consumed）、录入新物品；档案行：登记开档、标注性格偏移（behavior/meaning/avoidReadingAs 三段）、详情（按名直取完整档案，消费 archiveGetDossier）；卷宗行：回顾（按卷号直取 recap，消费 archiveGetVolume）并走 phone:openApp 去日记 App 按时间线翻。卷宗数据无条目 id 与楼层锚，故不造靶心 ref、不谎称已定位到楼层 —— 与 X2 不声称已跳到的口径一致，边界写进操作归因一行。",
+        "【正式套件 tests/system-v4992.test.mjs：23 条全绿】A~G 七组：A 三条纯映射各自形状显式、不合格行不补空壳；B 三态不同形与单面缺件、读抛错归因独立；C 桥代码不碰 storage（剥注释后判动作，并用 App 源码做分辨力对照）、合并不改写入参且产出新对象；D 三件 serialize→restore 往返，history 逐条等值不重生成，脏行跳过不抛；E 三键一次写齐、冷启一次读回（含按 owner 过滤不得串味）、中枢缺席不静默成功、七个写口逐个真写；F 视图走 App 的 archiveFace() 且不 import 桥不碰 subsystems、三态文案逐句在场、三件各带 serialize/restore；G 四条负控制（抹掉归因、null 改空数组、restore 丢 history、视图自己 import 桥 ⇒ 副本上同款判据必须转红）。",
+        "【套件首跑 17/23，六条失败里五条是判据写错、一条是产品缺口】① E2 断言主角面必须有那件物品，而夹具已把它转赠给林薇 —— 判据写错了预期，改成主角面为空数组（空不等于读不到）、另按 owner=林薇 取到那一件；② E3 断言 why 为 no_subsystems，实跑是 no_host（VirtualPhone 上根本没有 subsystems 键），两档归因本就分开，改为两档各测一次；③ F1 把能力探测判在 App 上，而探测住在桥里（与 X6 同款分工），判据改判桥源码；④ G1/G3/G4 三条负控制锚点全中 0 次（mustShowWhy=false 的写法、items.set 的行文、视图根本没有 import 行），改用实测恰中 1 次的锚点，并把破坏点语义改准（G3 改为 restore 丢弃 history）。⑤ 唯一真产品缺口由 method-consumption 静态门抓到：archiveGetDossier 与 archiveGetVolume 两个读口写好了却视图零调用，属新增死方法 —— 补上档案行详情按钮与卷宗行回顾读取后，死方法新增回落 0。",
+        "【基线与账本随新文件重刷】新增 config/archive-face-bridge.js 与 tests/system-v4992.test.mjs 使枚举面加一：语法门 1080 到 1082 个文件（新桥 + 新套件）、导入门 632 到 633 个文件 1054 到 1055 条（新桥无外部依赖、新套件新增一条相对导入）；tools/refresh_baselines_v4992.py 刷五张探针基线的 files_scanned 与 scan.files；gen_status_ledger --write 重写当版读数；method-consumption 更新死方法 317 条（基线 328，新增 0）与弱档模块 86 件（新增 0）；gen_plan_baseline --write 后复检一致。",
+        "【运行时验证边界（v4.99.2 复校）】本版判据能证明的是：三面映射各自的字段搬家正确、三态在数据结构上不同形、桥是纯读纯函数、serialize 与 restore 内容逐字往返且历史不被重生成、三键一次写齐与一次读回、中枢缺席两档归因分开、四条负控制破坏后同款判据转红。它不能保证的是真机环境下三把键的落盘在存储配额紧张或被系统节流时是否仍能落盘，以及真机上从角色 App 点进三级页的渲染路径（无头环境不装载视图 DOM）。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【交棒改写 + 不做：R11-X2（交易与资产面）、X5（全局搜索）、X3（生活流真运行）、X8（拟真读数）、X4（分享与迁移）、X7（使用范式）、X9（记忆与回放）七项产品扩展未动；本版未给卷宗建跨 App 靶心 ref（数据无条目锚，造 ref 就是假定位）；未把 archiveFace 的 notes 接进诊断 App 的读数面；未给三件管理器加版本迁移逻辑（version 字段已留，迁移留给真的有格式变更时再做）；tools/refresh_baselines_v4992.py 只覆盖五张探针基线，status-ledger 与 method-consumption 两张账本各走自己的生成脚本。【本版交棒改写一处：tests/system-v328.test.mjs 的 C1 与 v4992 抬版后的 E1/E2/G3 同族判据原本按上一版边界文档的语法门读数（1080 文件）与「不做」单形态锚核定，本版新增一个桥文件与一个套件后真跑读数变为 1082 文件、导入门 633 文件 1055 条，判据改按当版真跑取数（不写死数字、改为现取现比），并同步在边界文档两行改写；这不是放宽判据，而是让判据的取数面回到真源。】"
+      ]
+    },
+    "4.99.1": {
+      "version": "4.99.1",
+      "date": "2026-10-30",
+      "items": [
+        "【版本升至 4.99.1（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4991.py 对齐 tools/bump_v4990.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X6 做了什么】把中枢派发器（SystemNotificationDispatcher，落 sys_notifications_queue）接进通知中心 App（原先只读 NotificationLog 落 sys_notifs）——两张表此前互不相通，中枢派发的「健康异动预警」「日程提醒」用户永远看不到。这是九项产品扩展的模板项：最小可证的「中枢 → 产品」通道，给后面八项定装配范式。改造面三处：apps/notifications/notifications-app.js 加 _resolveHub()（能力探测 getClusteredNotifications）、feed()（合并读）、ackHub(id)（写回中枢那张表并调 hub._save()）；notification-center-view.js 的 render() 改走 this.app.feed()；config/notification-hub-bridge.js 全新桥接层。",
+        "【本版自己抓到的真缺陷：免打扰一条都拦不住，且不报错】SystemNotificationDispatcher.post() 用 NOTIFICATION_PRIORITY.URGENT（数字 3）做小于比较，而所有真调用点传的都是字符串（subsystem-orchestrator.js:684 传 'URGENT'、calendar-autonomous-life.js 的 urgency 是 'URGENT'/'NORMAL'）。'NORMAL' < 3 在 JS 中退化为 NaN 比较返回 false ⇒ dndEnabled 为真时一个字符串优先级的通知都拦不住。因为不抛错、只是「开关拨了没反应」，属最难发现的形态。修法是入口归一而非改调用点（调用点分散且将来还会新增）：normalizePriority() 认字符串名/数字档、数字越界夹紧、认不出回落 NORMAL 而非 URGENT——拼错的字符串不许把用户从免打扰里拽出来。落盘同时写 priority（数字）与 priorityName（可读名），冷启后仍能判断 3 原本是什么。",
+        "【桥接层的形态：纯读 + 纯函数，不是第二份真源】config/notification-hub-bridge.js（115 行）不含 storage：mapHubNotification(raw) 把 {timestamp,body} 映射成 {ts,message}、count 恒 1、id 加 hub_ 前缀、meta.hubSource/hubPriority/hubDeepLink 落行；mergeFeed(logRows, hubRows, opts) 合并两表、ts 降序（0 沉底）、返回 counts{log,hub,hubMapped,hubDropped,total} 与 notes{logReadable,hubReadable,hubWhy,complete}。写回各回各家：ackHub 只写中枢那张表、不动 sys_notifs。任何把中枢行 append 进 sys_notifs 的做法都会造成「同一条通知存两处、读一次变两次、清空只清一边」的第二份真源问题。",
+        "【三态不同形的具体落点】mergeFeed 的 notes{logReadable, hubReadable, hubWhy, complete} 是唯一判据面；视图 _hubNote 按三支渲染：中枢有 N 条显示小字、0 条不占位、读不到显示警示并明写「这是「读不到」，不是「没有通知」」。hubWhy 取值 'no_host'|'no_subsystems'|'no_dispatcher'|'read_threw'|'not_array'。视图不得自己 import 桥、不得引用 subsystems（F1 判据用正则钉住），否则就是第二份「怎么读」的口径。",
+        "【正式套件 tests/system-v41000.test.mjs：16 条全绿】A~G 七组：A 映射与合并、B 排序与 0 沉底、C 已读回写不污染 sys_notifs、D 中枢缺失三因、E 免打扰对字符串优先级真生效（修前 'NORMAL' 未拦、修后拦住）、F 桥不碰 storage（纯读自证 + 对照 system-notification-dispatcher.js 必须命中）、G 三条负控制（mapHubNotification 改错 timestamp、mergeFeed 改错排序、视图直接 import 桥 ⇒ 同款判据必须转红）。另有 /tmp/x6_smoke.mjs 端到端 22 条先行自测。",
+        "【套件首跑 15/16，两条失败都是夹具不是产品，抬版后 C1 又抓到第三处，全量回归再抓第四处】① G 负控制只抄单文件副本，同目录相对依赖缺失 ⇒ ERR_MODULE_NOT_FOUND（与 v3201 的 N5 同款陷阱），修法 copyWithRelDeps() 递归解析 from './x' 并逐个复制，加「至少解析出一个依赖」断言；② F2 直接对全文正则 !/storage/，命中了自己注释里「不碰任何 storage」字样，修法先剥块注释与行注释再判，并加对照断言（同一手法用在 system-notification-dispatcher.js 上必须命中）；③ 抬版后 C1 转红暴露导入门扫描器的同族缺陷：静态导入正则的桥接段过宽（点号通配跨字符串），公告块两条互不相干的字符串被粘成一条假断链，修法是桥接段改用禁跨引号的字符类并落 v4.99.1 回归钉注释，真跑静态相对导入 1052 到 1054 条（旧读数含一条假导入）；④ 全量回归中 v315 B1 偶发红：v4980 A3 的负控制在仓根篡改并恢复 PLAN.md，「恢复内容」不等于「恢复树」（mtime 必变），与并发隔离快照（size:mtimeMs 对账）互踩，修法是 finally 里写回原内容后用 utimesSync 恢复原 mtime。四处均已固化。",
+        "【基线与账本随新文件重刷】新增 config/notification-hub-bridge.js 与 tests/system-v41000.test.mjs 使枚举面加一：tools/refresh_baselines_v4990.py 实刷 schedule_conflict 与 branch_play 的 files_scanned 616→617、long_chat 的 scan.files 与 criteria L5 617→618（longlist 与 lifecycle 同源跳过），写盘后复跑「已与现场同源，跳过」合计待写 0 处，幂等自证成立；gen_status_ledger --write 得 ver=4.99.0 测试 347 门 17 场景 12 unknown=0（抬版后随 bump 重写为当版）；method-consumption 更新死方法 328 / 弱档模块 86 件；gen_plan_baseline 两处漂移（config_count 268 件、tests_count 347 套件）--write 后复检一致。",
+        "【运行时验证边界（v4.99.1 复校）】本版判据能证明的是：映射与合并的纯函数行为、免打扰对字符串优先级真生效、已读回写不污染另一张表、中枢缺失三因各自可分辨、桥不碰 storage、三条负控制破坏后同款判据转红。它不能保证的是真机环境下中枢派发器的 _save()（localStorage 写）在存储配额紧张或被系统节流时是否仍能落盘——判据量的是本机一次性同步行为而不是分布。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。另有一处交棒改写：tests/tenth-cycle-orchestrator-integration.test.mjs 的 URGENT 警报判据原为字符串严格相等，依赖修前「字符串原样透传」的缺陷行为，本版入口归一后改写为数字档或可读名二选一（量的是同一件事：紧急警报穿透免打扰）。",
+        "【不做：R11-X1（人物档案面）、X2（交易与资产面）、X5（全局搜索）等其余八项产品扩展未动，X6 是它们的模板项故先行；X3（生活流真运行）先于 X8（拟真读数）的依赖关系未触发；本版未把 mergeFeed 的 notes 接进任何诊断 App 的读数面；tools/refresh_baselines_v4990.py 只覆盖五张探针基线，status-ledger 与 method-consumption 两张账本各走自己的生成脚本。】"
+      ]
+    },
+    "4.99.0": {
+      "version": "4.99.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.99.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4990.py 对齐 tools/bump_v4970.py，只换 STEPS，逻辑一字未改）。",
+        "【本版处置的七条红，一条不是判据写错】上一轮末尾留下七条红：N5（v3201 夹具）、F8（v4940 台账对账）、A1（v4980 PLAN 基线）、以及三条同源基线漂移（v325 / v326 / v327 的 A2 与 v327 的 FM1）。七条里六条是「产物过时」，只有 F8 是**真缺陷**——见下条。处置顺序按「先证根因、再动产物、最后复跑全量」，全量回归从 7 红变成 5425 条断言 0 失败。",
+        "【F8 的真缺陷形态：R11-O4 的产物从没接线】scripts/doc-path-claim-audit.mjs 早在盘上（151 行加 403 行基线），v4980 的 B 组也在真跑它，但它从未进过 package.json 的 scripts、scripts.check 门链、config/gate-tiers.json 的静态档、config/gate-budget.json 的预算表、scripts/check-file.mjs 的 READS 读数表、CONTEXT.md 的门链转写——六处 grep 全部为 0。它是「没接线的代码」：坏了会响，没接线永远不响；替它响的是 F8 那条旁证判据（台账静态门文件数 17 必须等于分档表静态档条目数，实测 17 !== 16）。修法必须是把**产物接进去**，不是把数字改小——改 gen_status_ledger 的过滤口径能让 F8 变绿，但那是把判据改瞎换来的绿。",
+        "【F8 的六处接线与它自己的不变量】① package.json 加 doc-path-claim 脚本；② scripts.check 在 hardlink-safety 与 upstream-face 之间插入，尾锚不变量是链仍以 upstream-face 收尾；③ gate-tiers 静态档在 upstream-face 下标处插入并把 why 的「这十六道门回答」改成十七道；④ gate-budget 插 doc-path-claim 一条（实测 1100 到 1143 毫秒，取 1150，limit 按 margin_pct 10 得 1265），total_ms 由 114250 重算为 115400；⑤ check-file.mjs 的 READS 加四条读数（共扫描 N 处声明 / 本仓 N 处 / 上游 N 处 / N 未登记落空）；⑥ CONTEXT.md 改「十八道子门」、链上插位、并加一行「本行再次订正 · v4.99.0」留档。接完后门链实跑 doc-path-claim 一次：共扫描 3525 处声明（本仓 3402 处，上游 28 处），0 未登记落空。",
+        "【本版自己抓到的缺陷形态 · 三条（都是补丁自证拦下的，全部写进注释当回归钉）】① 把时点快照当永久约束：补丁首版断言静态档尾锚必须是 upstream-face，当场失败——静态档尾部合法地留着两条 node scripts 形态的门（named-import 与 screen-host），于是改成按 upstream-face 的下标取插入点；② 同一形态的第二个：首版断言静态档序列必须与预算表序列相等，当场失败——预算表含 test（它是最贵的一门，必须计费）而静态档不含 test（判据门归定向档），于是拆成两次比对，预算表按全序比、静态档按 v4940 既定口径只比交集同序；③ 同一形态的第三个：三处写法根本不同（链是 npm run X、静态档是 npm run X 或 node scripts X-check.mjs、预算表是裸键 X），须先全部归一成裸名再比。这三条同族于 v3201 首版曾把链逐字钉死成十一道门。",
+        "【N5 的形态：夹具的旧假设过期会伪装成被测对象不一致】N5 报 1 !== 2，被观测行为是「不剥上下文时门会绿着不跑」，而执行器本身没坏：夹具把 check-file.mjs 当自足单文件抄到临时目录，而 R11-O9 已给执行器加了同目录相对 import（gate-budget-freshness.mjs）。修法是让夹具从源码里解析同目录相对依赖并逐个复制，另加一条断言断言至少解析出一个依赖（防将来依赖被去掉后这段变成空动作）。修的是夹具，不是判据。修毕该套件 28 条全绿。",
+        "【三条基线漂移的处置：走工具，不许改判据】schedule_conflict 与 branch_play 的 readings.files_scanned 由 615 变 616，long_chat 的 scan.files 与 criteria L5 由 616 变 617，成因统一为「本批次落盘的新文件使枚举面加一」——属输入面变了、读数跟着变的显式刷新，不是判据漂移。刷新由 tools/refresh_baselines_v4990.py 完成（由 v4910 逐字派生，只改版本常量与末尾来由散文），继承七条纪律：探针 rc 非零即中止不写、只在现场与基线不同才写盘（幂等）、判据散文逐条按 id 对齐条数不同即报错、现场值命中未复核或冻结证据的冻结面跳过、标量才可对平、不碰首测版的 measured_at、名单不一致即报错不静默。实跑五处待写、写盘后再跑一次得「已与现场同源，跳过」五条，幂等自证成立。",
+        "【A1 的处置：PLAN 基线表接回机器台账】修前 gen_plan_baseline --check 报两条错（门禁道数未对齐、体量项 config_count 未对齐），--write 后 PLAN.md 的 config 行变 267 件、门禁行含十八道静态门全过，再 --check 输出一致。口径说明：computePlanBaseline 用的是 readdirSync(config).length，含 gate-budget.json 与 gate-tiers.json 两个 json，故 267；只数 .js 是 265，两个口径都有出处，判据跟的是前者。",
+        "【旧套件一条未改，如实记】上一版 tests/system-v4970.test.mjs 只守它自己那一版处置的三条链，本版的判据面是「接线是否真通、夹具假设是否成立、基线是否与现场同源」，与该套件不重叠，未交棒改写。本版牵动的六处门禁件（package.json / gate-tiers / gate-budget / check-file / CONTEXT.md / gen_status_ledger）都不是判据写错，而是「新增一门就必须在六处同时登记」这类看守判据正常发挥了作用。",
+        "【运行时验证边界（v4.99.0 复校）】本版判据能证明的是：新增的 doc-path-claim 门在链上真跑且读数可解析、静态档与门链交集同序、预算表全序与实测耗时在余量内、夹具解析到的相对依赖全部存在、四条取证基线与现场读数逐字段同源。它**不能保证**的是真机环境下 doc-path-claim 全量扫描（3525 处声明，单跑约 1.1 秒）在低端设备上是否仍落在 1265 毫秒余量内——判据量的是本机一次实测而不是分布。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【没做什么（如实）】R11-X1 到 R11-X9 九项产品扩展一项未动（本版只清红与接线，不开新面）；L11-O1 与 L11-O4 与 L11-O5 与 L11-O8 以及 L11-X 系列在另一仓，本版零改动；tools/refresh_baselines_v4990.py 只覆盖四类探针基线，status-ledger 与 method-consumption 两张账本仍各走各的生成脚本；doc-path-claim 只判「声明的路径存在」，不判「文档里说的行为与源码行为一致」。"
+      ]
+    },
+    "4.97.0": {
+      "version": "4.97.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.97.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4970.py 对齐 tools/bump_v4960.py，once 断言锚点恰中 1 次，逻辑一字未改 —— 改逻辑等于让五源同源这件事有两份实现）。",
+        "【本批的三件内核与它们的落点】config/district-network.js 接进地点图景 App（apps/place）：街区登记、机会三态、到访与熟悉度三件事此前只有内核、产品面零消费；config/commission-pipeline.js 接进创作台 App（apps/creationdesk）：委托六阶段推进、加需求显式协商、取消保留草稿；config/reading-studio.js 接进研读 App（apps/reading）：建卷、挂书、摘录、观点对照、批注、草稿、改版标注。三件在本批之前都是 tier=zero（importers 为零），本批之后三张账本里零残留。",
+        "【判据纪律：内核判、App 只做读写与渲染】三条链的 App 层一律只持台账与用户选择，五阶段推进 / 加需求是否生效 / 改版如何处置 / 熟悉度档位全由内核判，App 不写第二份口径。为此把 proposeScopeChange 的状态串从内联字面量提成内核导出的 SCOPE_CHANGE_STATUS，App 侧引用常量而不是手写 'pending' —— 判据 A2（v4.95.0 旧档）正是钉「App 不得自持交接状态字面量」，本批第一版就是在这里踩红。",
+        "【读不出与空台账分两句，三条链同口径】每条链的读口都返回 readable/why/列表三段，四类读失败各自点名（无存储 / 读抛错 / 坏 JSON / 可读但零条），前三类拒收且一个字节不改盘，第四类才当「还没登记过」。写口返回 saved/why，写失败以 ledger-why / write-why 前缀透出原因，绝不当成功。视图文案同样分两句：读不到必须说「读不到」并明写「不是没有 X」，空台账另给一句。",
+        "【本版自己抓到的缺陷 · 六条（全部按形态写进注释当回归钉）】① place 写读不同名：recordDistrictVisit 写在 'user' 名下、districtFace 却按 null 读机会与熟悉度，导致已参加与熟悉度永远读不回来 —— 两处都传 'user'；② reading 批注字段静默丢弃：视图传 text，内核 normAnnotation 只认 question / comment，normStr(undefined) 得空串，批注行留下但正文为空且 ok:true —— 改传 comment；③ reading 草稿整段覆盖：内核 updateDraft 收到 sections 即整段替换（内核单测对照：连写两次单节后 sections.length 仍为 1），视图每次只传单节数组，写得越多丢得越多 —— 改为读回已写节再 concat 追加；④ reading 摘录缺必填项：normExcerpt 必填 bookId，视图只传 text 导致永久 invalid_excerpt_payload —— 补 bookId 并改用 verbatimText；⑤ 内核 addExcerpt 的书名回填是死代码：normExcerpt 已把 bookTitle 预填成 bookId，`if (!e.bookTitle)` 永不成立，摘录书名永远显示 bookId 而不是已挂书目的真书名 —— 改为只有占位值（等于 bookId / 'v1.0'）或空值才回填，调用方显式给的真书名一律不覆盖；⑥ reading 视图对 linkBookToDossier 零消费：视图根本没有挂书入口，用户只能把摘录挂在「未指明书目」占位书上，而改版政策按 bookId 匹配，改版标注永远不会命中 —— 补 data-rd-studio-book 按钮（有书「换挂一本」/ 无书「挂一本书」）与绑定。",
+        "【两条判据自己写错的形态，如实留在档里】① E2 用 `f.count ?? f.placeCount` 取计数，`??` 把 null 当空值回退，而三条链的计数字段名并不统一（place 用 placeCount，另两条用 count）且读不出时值就是 null —— `null ?? undefined` 得 undefined，对 null 的断言直接炸；改为按字段存在性挑（'count' in f ? f.count : f.placeCount），null 是有效值不算空；② D3 断言文案写「待核实」，而 App 层实际文案是「待核验」，判定词与产品文案必须逐字对齐，否则判据自己先红。",
+        "【本批还牵出三处存量门禁的连带漂移，逐条处置】① place.css 新增街区卡规则 88 条多于运行时载体 phone.css 的 77 条，v2.46.0 的 A8「源文件不得多于运行时载体」直接报红 —— 把整段规则合并进 phone.css（不只在源文件里写）；② 本批新增方法与注释使行号整体下移，v4.94.0 的 E1 方法面账本按 (rel, line, name) 逐条对源码时 6 条对不上 —— 用 scripts/method-consumption-audit.mjs --update 刷新行号（事前备份账本、事后比对条目集合：329 到 329、新增 0、复活 0，证明只是行号漂移不是处置落空）；③ 新增判据文件与 phone.css 增长使 tests/audit/status-ledger.json 的 test_files 与 scale.css_bytes 两格漂移 —— 用 tools/gen_status_ledger.mjs --write 重生成。",
+        "【当版测试档 tests/system-v4970.test.mjs（24 条）】A 键单一真源（三键各只一处字面量 + 已在 keys-audit 登记 + 读写走常量）/ B 街区链（四道校验各报各的、机会三态各归各位、到访写读同名、三种拒绝不改盘、无场景头如实说只能标 missed）/ C 委托链（五阶段逐步推进每步真写回、取消保留草稿、步骤转交器三道前置拒绝）/ D 研读链（全链路落盘且内容保真、草稿是追加不是覆盖、改版标 stale 且观点一条不动、摘录缺 bookId 必拒）/ E 归因三态（三路读失败各自点名、空台账可读且文案不同形、写盘拒绝归因）/ F 接线自证（App 真 import 内核具名导出、视图真消费接线方法、绑定有容器级能力探测）/ G 账本清账与内核独立可用（三件内核不在三张账本冻结条目里、仍是 tier=product、纯函数仍可独立调用）。",
+        "【负控制（证明断言不是自我实现）】B1 六道拒绝之后必须有一条合法登记成功；B2 换事件 id 必须仍 active；B3 写读同名 + 三次到访升 regular；C2 未交草稿的那笔取消必须 0；D2 附内核单测反证 updateDraft 确实是替换；D3 改版后观点数不变且原文逐字保真，另给 book_not_found 负控制；D4 缺 bookId 必拒、补上必成；F1 挖掉导入名后正则必须看得见；F2 挑一个不存在的方法名证明正则不是「怎么查都有」；G1 三账本不得清空且三内核必须被某 App 真 import；G2 zero 档不得为空档。",
+        "【旧套件一条未改，如实记】v4.96.0 的 tests/system-v4960.test.mjs 只守它自己那一版处置的两条链加两条假驱动，本批处置的三件模块不在它的判据面内，该套件一字未动、也不需要交棒改写；本批处置的落点全部收在 tests/system-v4970.test.mjs 的 G 面里。本批牵动的三处存量判据（v2.46.0 A8、v4.94.0 E1、v3.73.0 S3）都不是判据写错，而是「源文件与运行时载体必须同步」「账本行号必须跟着源码」这类看守判据正常发挥了作用，处置的是产物不是判据。",
+        "【运行时验证边界（v4.97.0 复校）】本版判据能证明的是：三件内核被三个 App 真 import 且真调用、读写落盘与回读一致、机会三态与熟悉度档位按内核判、委托五阶段每步真写回、研读全链路内容字段保真、改版处置不动作者原文与观点、读失败与空台账分两句不同形。它**不能保证**的是真机上 place 链的机会判定所依赖的场景头（lonsha_memory_bridge_v1.snapshot.scene.header 的 date / period）在跨会话切换与插件升级窗口内的时序 —— 无桥时判据能证明的是 slotsKnown:false 且文案如实，不能证明桥在极端时序下给出的 date/period 与当前楼层一致。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【没做什么（如实）】zero 档只从 15 件降到 12 件，余 12 件（club-coop / daily-theater / mentorship-colearn / multi-activity-reroute / mystery-engine / parallel-life / relation-revisit / serial-narrative / social-ecosystem / story-reentry / time-env / voice-narrative）本批一条未动；三张账本仍是 82 / 115 / 87 条的存量，本批只清掉三件模块与它们相关的方法条，不清零；三条链都只做到「能登记、能推进、能落盘、能归因」，街区链没有「按熟悉度解锁新机会」的玩法层，委托链没有超时自动取消，研读链没有跨卷对照视图。"
+      ]
+    },
+    "4.96.0": {
+      "version": "4.96.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.96.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4960.py 对齐 tools/bump_v4950.py，once 断言锚点恰中 1 次）。",
+        "【本批处置口径：先分真假驱动，再决定接线还是退役】上一版逐条探针只判出「产品端不可达 33 条」，但不可达不等于都该接线。本版对每条先读其中枢包装方法的**调用实参**：参数形状对得上内核签名才接；形状对、内容空的（返回四个非空对象、实际 keyCount=0）一律退役，不塞白名单、不改名重挂 —— 那是把假驱动搬个地方。",
+        "【链路第二条：recovery-hub 与 portable-recovery-hub → 本地备份恢复 App】两件内核此前 importers 只有 orchestrator 与测试。快照面接在备份恢复 App 而不是新开入口：本 App 已是「导出包 → 逐条计划 → 确认提交 → 撤销」的受控恢复面，恢复快照正是同一件事的另一半；放别处会变成第二个备份入口，两份口径各算一次。新增七个成员（读台账 / 拍点 / 比差异 / 选择性还原 / 解码 / 包体体检 / 视图模型），constructor 与 onChatChanged 各初始化四个实例态字段。",
+        "【拍点取数与导出口径同源，不另造第二份】dataMap 的键按 会话前缀双冒号 拼装，取数完全复用宿主 keys.chat 与 keys.global（与 export 同一份枚举读数）。键面不可读时**直接拒绝拍点**：读不出与没有数据是两件事，在「不知道有什么」的状态下拍一个零点，用户会把它当成可用的救命点。判据 B2 就是钉这一条（负控制：有数据时 keyCount 必须大于 0，键面收窄时它必须跟着变）。",
+        "【选择性还原只写选定键】还原语义收窄为「只写用户勾选的那一组」，不做一次性全量写回 —— 全量写回等于把用户后来新增的数据抹掉。写口统一走写回执内核（saved 这一格只证明调用落了，不叫 committed），写后逐键回读比对，回读不上的计作未确认并如实报出来。空选直接拒绝，不许把「没选」解释成「全量」。",
+        "【链路第三条：rule-theatre → 小剧场 App 的规则面板】本 App 本来就是「用声明式条件编排一段小剧场」的面，规则剧场是同一件事的条件化形态。语义边界照实写进代码头：规则**不改本 App 的生成流**，它只产出「触发了哪些白名单动作」的纯数据，本 App 只显示不代发 —— 通知有通知中心的 owner、日历有日历的 owner，在这里替它们写就是第二份 owner 口径。规则面板独立成节，触发器 / 运算符 / 动作三张表全部取自内核，视图不写第三个选项。",
+        "【读不出与空台账分两句，两条链同口径】四类读失败各自点名（无存储 / 读抛错 / 坏 JSON / 可读但零条），前三类拒收且不改盘，第四类才当「还没拍过 / 还没编过」处理。这条在两条链上都配了判据：读不出时提交必须走状态不可读这一支，空台账必须能正常收下 —— 两者处置相反，塌成一格就会出现「台账坏了但界面说没编过」。",
+        "【本版自己抓到的缺陷 · 四条】① 退役说明写在注释里，而方法面判活按行首匹配、注释被置空但**注释文本仍在原文面**，两条法子被注释里的名字判活，死方法账本读数是 331 而真值 329、复活告警点名它们，等于「既没接线也没退役」；② 根因不是判据错，是**处置没落到代码面**，故按口径手工删条（新增 tools/clear_method_ledger_o3_b2.py，删前要求 orchestrator 里已无方法声明、删后要求计数只减预期值，仍禁用 --update）；③ 当场接线时 orchestrator 里留下两条已退役内核的 import 与一条重复的 resume-anchor import，语法门直接报标识符重复声明 —— 这就是把退役做到一半的直接后果，三步清干净后语法门 1071 文件全过；④ 规则条数上限 30 是**文案说过、代码没做**：内核里那个常量从未被读过，本版把它导出并由 registerRule 真当守卫（超限拒收且原因可读，同 id 覆盖在满额时仍放行），并补判据 F2b 把文案与代码钉在一起。",
+        "【两条判据自己写错的形态，如实留在档里】① B3 首版连拍 13 次只得到 3 条，看着像「上限失效」，实为内核快照 id 用毫秒时间戳、同毫秒连拍互相覆盖 —— 判据测的不是上限裁剪，先把时间轴推起来再测，并加「最新的必须在、最老的必须已被挤掉」两条把「挤最老」与「随机丢一个」分开；② F2 首版不给 id 就提交三次，跨毫秒会变成三条、同毫秒会撞号，两种都不是「同 id 覆盖」，改为显式钉 id 并加「换 id 必须新增一条」作负控制。两条的错法与修法都写在注释里，不删。",
+        "【旧套件一条未改，如实记】上一版 tests/system-v4950.test.mjs 的 F4 只守它自己那一版处置的模块（范式模块已摘出账本），本版处置的三件模块不在它的判据面内，因此该套件一字未动、也不需要交棒改写；本版处置的落点全部收在 tests/system-v4960.test.mjs 的 G3 里（按本版清单逐条核对，并带「账本不该被清空」的负控制）。此前 v4.94.0 与 v4.95.0 之间那次交棒改写（等值锚改下限形）是因为五源版本号直接相等，本版不涉及同类问题。",
+        "【当版测试档 tests/system-v4960.test.mjs（22 条）】A 键单一真源（字面量只准一处 + keys-audit 已登记 + 读写走常量）/ B 拍点真的拍到东西（keyCount 大于 0、键面读不到时拒绝拍空点、上限按最老挤掉）/ C 差异逐键分档（新增与变更与移除各归各位）/ D 选择性还原只写选定键（未选的一个字节不动、空选拒绝）/ E 读失败三路各自点名、空台账可分 / F 规则白名单非法规格不落盘、同 id 覆盖、上限真守卫、回放只显示不代发、表单值不猜类型 / G 接线自证与两张账本清账（含把条目塞回去必须命中的负控制）。",
+        "【运行时验证边界（v4.96.0 复校）】本版判据能证明的是：内核被 App 真 import 且真调用、拍点取数来自宿主键面、写口回执口径与仓内唯一实现一致、写后回读一致、规则白名单拒收与命中路径均按内核判。它**不能保证**的是真机上宿主键面的枚举时机与防抖落盘时序 —— 备份恢复 App 的键面读数来自 backupFace 的缓存快照，若用户在极端时序下（刚换会话、缓存尚未刷新）立刻拍点，取到的是上一次刷新的键面。这类「看起来没坏但显示不对」（快照内容偏旧而界面一切正常）属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【没做什么（如实）】本版只处置 3 条链与 2 条假驱动方法，余 30 条不可达链一条未动；死方法账本 331 降到 329、弱档模块 93 降到 90，剩下的 329 与 90 仍是冻结存量；10 个产品面零消费实例类未逐个定生死；规则面板没有「暂停某条规则」的按钮（内核有 enabled 字段，本版只落盘不提供开关）。"
+      ]
+    },
+    "4.95.0": {
+      "version": "4.95.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.95.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v4950.py 对齐 tools/bump_v4910.py）。",
+        "【清账口径先定：判活不靠「名字出现在哪」，靠「谁 import 它」】首版探针用「聚合器体里的底层函数在产品面是否出现」判活，结果 33 条全判「应接线」—— 那个 1 次命中其实就是**声明文件自己**。排除声明文件后反向全绿、34 条全判「应退役」，因为聚合器里的调用也一并被排除了，等于把底逐层抽掉。改用**真 import 语句**判可达（谁 import 了这个模块）才得到可信结论：33 条链的产品端不可达、仅「可读性审计」那一条可达。两次假结论都留在探针脚本里作对照，不删。",
+        "【链路第一条：manageUsageParadigm → config/usage-paradigm.js → 主屏 + 洞察 App】该模块此前 importers 只有 orchestrator 与一个测试，productImporters 为空。本版两端接线：洞察 App 加读写口（readParadigmState / activeParadigm / paradigmOptions / switchTo / saveParadigm / copyToCustomParadigm），主屏 buildIconPages 真调 resolveAppOrder。模块入度实测 orchestrator-only 79 → 78、product 180 → 182，账本条目手工摘除一条（94 → 93），**未用 --update**。",
+        "【范式存储键与设置键分键】新键 usage_paradigm_v1（App 导出 PARADIGM_KEY），与既有 usage_settings_v1 分键。理由：清洞察 App 的展示设置不该顺手把全局范式重置回生活档 —— 那会在用户毫无预期时改掉主屏排序。主屏与 App 读同一个键，没有第二份副本（判据 A1 用「把值写到别的键上主屏必须读不到」作负控制）。",
+        "【只重排不删格】resolveAppOrder 是稳定排序（high / normal / low 三段，段内保持原序）。主屏只按它的结果排，不据此删任何格子 —— 范式是「先看哪个」不是「禁用哪个」，删格会让用户换挡后以为 App 丢了。判据 C1 逐档核对换挡前后格子集合恒等。",
+        "【本版自己抓到的缺陷 · 四条】① home-screen.js 只 import 了 resolveAppOrder、漏了 resolveActiveParadigm，而 _activeParadigm 整段包在 try/catch 里，未定义标识符被 catch 吞掉、兜底那一次同样抛错 ⇒ 永久退回生活档，「换挡没反应但界面全绿」；② 首版只对 15 个桌面格子排序，而范式里的优先项（accounting / focus / reading-studio / worldbook）绝大多数是聚合壳**内部成员** —— 换挡后桌面几乎不动，功能看着像摆设，改为先排全部 App、再由壳内最靠前成员的名次推壳次序；③ paradigmIds 与 saveParadigm 一度被门判成死方法（新加即零消费），前者删除转出、后者接上「另存为自定档」真实入口，**没有**塞白名单；④ 判据 F4 自己写错了字段名（账本条目叫 rel，写成 module || file），导致「账本里明明还有这条」时判据照样绿 —— 修法是先钉字段名再下结论，并加「把条目塞回去必须命中」作负控制。",
+        "【失败必须说出来，不许静默回退】switchTo 遇到未知 id 返回 success=false + reason=unknown-paradigm-id，**不改盘**；写盘抛错返回 persist-failed，不谎报成功。UI 侧把失败记进 View 的 _lastSwitchFail 并在面板底部出一条警示卡，切成功即清痕（否则一次失败会永久挂在界面上，比不显示更误导）。",
+        "【自定档的取舍：另存不填表】本版只提供「以当前档为底另存一份自定档」一个动作，不做四组输入的表单。理由如实体现在代码注释里：priorityApps 的合法值是 App id 闭集，让用户手打 id，打错就是静默不生效。固定 id 用 custom、重复另存即覆盖 —— 不堆积 custom-1/custom-2，避免范式列表无限变长、也不让用户看见一堆自己没起过名字的档。",
+        "【跨模块转写：交棒改写】tests/system-v4940.test.mjs 的 F6 从等值锚（assert.equal(pkg, BORN_V)）改成下限形（五源一致 + 不低于诞生版），当版落点判定交给 tests/system-v4950.test.mjs。与 v4.94.0 对 v4930 F6 的改法同一先例：旧套件只守「不许倒退」。",
+        "【当版测试档 tests/system-v4950.test.mjs（16 条）】A 键单一真源（含「写到别的键必须读不到」负控制）/ B 切换真的改主屏（四档必须给出四个不同桌面序，且逐档点名首格）/ C 换挡前后格子集合恒等 / D 未知 id 与写盘抛错都不改盘、无挂载不抛错 / E 自定档立刻生效且不堆积 / F 接线自证（import 面、View 真调 App 接口、壳按成员名次排、账本已清条）。",
+        "【运行时验证边界（v4.95.0 复校）】本版接线的判据能证明的是：静态 import 边存在、函数被真调用、存储键读写往返一致、排序结果在不同档之间确实不同。它不能保证的是真机上主屏刷新时机 —— 切档后主屏是否立刻重绘取决于 phone-shell 的视图重进路径（本版未改该路径，靠用户从洞察 App 退回桌面时自然重建）。若真机上出现「切了档但桌面没变」，那是刷新时机问题而非排序逻辑问题；遇到「看起来没坏但显示不对」仍属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【账本行号重定位工具（本版新增）】源码插入让 phone/home-screen.js 里其后的方法行号整体后移，tests/system-v4940.test.mjs 的 E1（拿账本行号回读真源码、断言那行含方法名）一次判红三处。判断为**账本陈旧**而非判据错：账本行号是唯一能证明「账本没被整体替换过」的凭据，放弃它账本与源码就只剩名字相等、重名方法会互相顶替而无人察觉。故新增 tools/relocate_method_baseline.mjs 按 (rel, cls) 定位类体范围、只改 line 字段（条目集合与 classInstantiated 一条不动），命中 3 处（62→70 / 722→785 / 797→860），偏移量与插入行数一致；候选不唯一即 exit 2 中止，不猜行号。",
+        "【没做什么（如实）】33 条不可达链中只处置了 1 条，余 32 条与 orchestrator 的 34 条零消费方法一条未动；10 个产品面零消费的实例类（mutexGuard / mimicComm / autonomousScheduler / galleryVault / vfs / cloudDrive / shortVideo / smartBand / personaSpaces / calendarLife）未逐个定生死；通知阈值（filterNoticesByParadigm）仍未接产品端 —— 它需要一个真读通知等级的消费点，本版不做半截；自定档没有编辑器，只能整份复制。"
+      ]
+    },
+    "4.94.0": {
+      "version": "4.94.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.94.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版仍走仓内唯一范式脚本（本次 tools/bump_v4940.py 对齐 tools/bump_v4910.py）。",
+        "【类方法面判据 R11-O2 上半】新增 scripts/lib/dead-surface.mjs：collectClassMethods 枚举 export class 的类体公开方法、buildNameIndex 建「名字→出现位置」索引、findDeadMethods 判死。判据取**最保守口径**：某公开方法名在全仓真代码（掩码面与原文面并集）里除声明行外一次都不出现，才算死方法。刻意不采用「类级绑定面」缩小扫描面 —— 框架大量通过回调调用 App 方法（view 里写 app.某方法，而 view 与 app 之间根本没有 import 边），按类级绑定面判会把整批 App 方法判成死，实测 GamesApp 一次假报 77 条、人工核对 0 条真死。",
+        "【模块入度面判据 R11-O2 下半】config/ 与 phone/ 顶层 .js 逐件算入度，分三档 product / orchestrator-only / zero。只判增量：新增落到 orchestrator-only 或 zero 即红，存量冻结。实测 274 件：product 180 / orchestrator-only 79 / zero 15，弱档合计 94 件。",
+        "【两份冻结账本】scripts/dead-method-baseline.json 332 条（所属类被 new 过 197 / 从未被 new 135，每条带 classInstantiated 以便分档处置）、scripts/dead-module-baseline.json 94 件。两份都只判增量：新增未登记 ⇒ rc=1；基线项复活只告警不红；--update 与 --list 双向可选。存量一条未清 —— 计划明令不许一次性清零，那会牵连整批 App。",
+        "【量出来的实情】类方法面 4803 条公开方法里 332 条零提及。这个读数与计划里「orchestrator 41 个方法中 34 个零消费」完全吻合（实测正是 34 条）。旧门禁只在导出名字级看消费，判据一进方法级就松 —— 332 条不是本版引入的缺陷，是旧判据一直看不见的存量。",
+        "【扫描面塌陷自证 fail-closed】门禁内置三条下限：文件 ≥ 380、带方法类 ≥ 150、公开方法 ≥ 2500。任一不达标 ⇒ exit 2 拒绝出表。这条不是防误报，是防「扫描面塌了还判绿」—— 探测器坏了必须响，不许静音。",
+        "【本版自己抓到的缺陷 · 七条】① CLASS_RE.lastIndex 写法错：matchAll 返回独立迭代器，改正则 lastIndex 既无意义又让下一轮跳过整段，293 个类只认出 2 个；② 模块入度对不含引号的纯计算文件误抛错，改为整面自证（全表零入度且确有 import 语句时才报错）；③ 正则字面量里的量词花括号（形如数字区间写法）让类体配对错位，只认出 231/293 个类 —— 补 isRegexStart 启发式判定并把正则字面量整段置空；④ 方法行号差 1（setLevel 声明在第 64 行报成 63），基准改为从类体左花括号切片并按换行计数加一；⑤ 夹具模式（--root 指到别处）照样读本仓基线：332 条基线在合成树上一条都不存在 ⇒ 全被判「已复活」，一次刷 332 条假告警；⑥ 修⑤时第一版只切了基线读取，增量判红仍照旧跑，夹具里那条 zero 模块立刻被判红 —— 夹具模式必须「只出自证读数、不做增量判红」这才算改到；⑦ 夹具写法本身也踩了一次：单行类体 `export class Tt { m() {} }` 的方法进不了枚举面（方法枚举按行首匹配），已作已知边界写进库层头注释（方向是漏报，不出假红）。第⑤⑥条是同一个坑的两层：先污染输出，再漏改判定。",
+        "【负向自证 · 五向全过】N1 向真类加新死方法 ⇒ rc=1 且点名；N2 新建零 import 的 config 件 ⇒ rc=1 且标 zero 档；N3 空扫描面 ⇒ exit 2（加不加 --fixture 都是 exit 2）；N4 破坏点锚点全仓唯一（锚不唯一即不可信）；N5 掩码保长度且正则量词不吞后继类。整轮按「干净面 rc=0 → 破坏 → 还原逐字节一致 rc=0」两向跑，避免只跑一向把假绿当结论。另加 F4b：夹具模式带 --update 一律 exit 2 —— 一次 --root 指错就能把 332 条存量账本洗成夹具那几条。",
+        "【已知边界 · 如实登记】类字段箭头函数不是方法、不在枚举面；访问器（get 与 set）与下划线或井号前缀的私有方法不判；动态拼出的名字不覆盖；方法名以字符串形式出现在事件表里会被原文面并集计入而判活 —— 方向是漏报。这套口径是下界，宁可漏报不出假红。",
+        "【交棒改写：v4930 的 F6 等值锚改下限形】tests/system-v4930.test.mjs 的 F6 把当版专有读数钉成等值锚（本档绑定版 4.93.0），抬版即红，而且把「当版的落点」偷换成「上一版那件事」。按仓内既定先例改写为下限形：只判版本不低于诞生版、五源彼此一致，当版落点判定交给 tests/system-v4940.test.mjs。这不是放宽判据，是把当版判定交给当版套件，旧套件只守「不许倒退」这一向。",
+        "【运行时验证边界（v4.94.0 复校）】方法面判据能保证的是「这个名字在全仓真代码里有没有被提过」这一层静态事实：掩码保行号、正则字面量整段置空、扫描面塌陷 exit 2。它不能保证的是运行期真实的到达路径 —— 反射式调用、宿主侧按配置拼出的方法名、条件分支内才发生的一次调用，都可能被本判据记为未消费。类方法面尤其如此：方法与框架回调之间没有静态边，本判据只能证「名字没出现过」，不能证「这个方法真跑得到」。遇到「看起来没坏但显示不对」仍属真机复现那一类，详见 docs/runtime-verification-boundary.md。",
+        "【门链与预算表同源收口】新增第 17 段门后，config/gate-budget.json 补入 method-consuming 预算（现场实测约 7.0s，limit_ms 由 margin_pct 自算，total_ms 由各门求和重算为 114250）、config/gate-tiers.json 静态档按 check 链同序插入（此前插入位错在 bind-consuming 之前，与链序不一致，本版按链序订正）、CONTEXT.md 的门链转写由「十六道」改「十七道」并插名 —— 三处都由判据逐字看守（C4 逐位核名与顺序、静态档存在性、台账现场取数）。同时 tests/audit/status-ledger.json 按 tools/gen_status_ledger.mjs 现场重算（静态门文件 15→16、链长 16→17），docs/runtime-verification-boundary.md 的 syntax 读数按 tools/refresh_doc_readings.py 现场重取（1065→1067）。",
+        "【没做什么（如实）】332 条死方法与 94 件弱档模块一条未清，本版只把「看得见」做成门禁；类字段箭头函数、访问器、私有方法三类形态没进枚举面；模块面只覆盖 config/ 与 phone/ 顶层，子目录件不判；计划里写的 76 件产品端零 import 与实测 79 件 orchestrator-only 有差，差异来自扫描面 skipDirs 与 test-only 档处理方式不同，实现取含 tests 的视角分档。"
+      ]
+    },
+    "4.93.0": {
+      "version": "4.93.0",
+      "date": "2026-10-29",
+      "items": [
+        "【版本升至 4.93.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐。",
+        "【绑定级消费门禁 R11-O1】新增 scripts/lib/binding-consumption.mjs：把「谁来消费某个导出」的判定单位从「全仓任何叫这个名字的」升级为「模块解析后的绑定」。覆盖 named 导入（含别名）、`import * as NS` + `NS.X`、CJS 解构与 `.A`、`export {...} from` 重导出穿透、动态 import 六类写法（`= await import()`／解构 await／`.then(m=>)`／instrumentImport 包装／Promise.all 位置解构／helper 表）、常量折叠与赋值别名、lazy-route 表 cls 装配。",
+        "【同名重绑定陷阱】`index.js` 里 `const module = await import(...)` 出现 11 次、`mod` 7 次，同一局部名在不同分支指向不同模块。若按「文件名+局部名」匹配 `module.X`，11 个模块会各自白拿全部成员名，判据当场全绿。故对有位置的动态绑定按位置切区间：一个绑定只管辖到同文件下一个同名绑定为止。",
+        "【门禁落地】新增 scripts/bind-consumption-audit.mjs 与冻结账本 scripts/bind-dead-baseline.json，维度 131 条（no-ref 99 / name-clash 32），接入 `npm run check` 成为第 16 段。判据只判增量、存量冻结：新增未登记 ⇒ exit 1；扫描面塌陷或 `--root` 指到小目录未加 `--fixture` ⇒ exit 2；基线项复活只提示不红。",
+        "【账本自解释】每条基线项带 evidence 分级与 refs：no-ref 表示产品扫描面内除本文件外零次提及该名字（任何消费形态都必须写字面名，一次不出现 ⇒ 铁真孤儿）；name-clash 表示产品面有提及但逐点核对后没有一处是从目标模块 import 的（同名异构）。",
+        "【探测器自证 fail-closed】新增 PARSER-GAP 判据：若绑定级判据说零消费、而原文里确有 import 从该模块取了该名，说明解析器漏了消费形态，此时 exit 2 并拒绝出表，防止把假红冻结进账本。",
+        "【真源码破坏取证】`config/diff-editor-desk.js::computeParagraphDiff` 在产品端只被 orchestrator 导入另两个名字，desk 版本身零消费；旧的名字级门禁判绿（假绿），新的绑定级门禁单独点名。测试档 tests/system-v4930.test.mjs 以 F1/F2 固化这两条负控制。",
+        "【纯转出模块识别】`apps/games/games-data.js` 与 `apps/games/games-view.js` 全文只有一行 `export { ... } from`，本身不声明任何成员；旧枚举会把转出成员当成本模块导出，造出 `games-data.js::HAND_LABELS` 这类伪条目（该名字在本文件正文根本不出现 ⇒ 必然误判零消费）。新枚举识别 export-from 并跳过，同时把下游消费经重导出穿透记到源模块。",
+        "【新增测试档】tests/system-v4930.test.mjs 共 16 条：A 同名异构夹具／B 重导出穿透三条／C 命名空间同名重绑定／D lazy-route 装配／E 真仓账本自洽与零新增／F 探测器自证四条（新死导出 rc=1、真源码破坏点名、空根 rc=2、--fixture 放行、check 链接线、版本同源）。",
+        "【本版自己抓到的缺陷 · 三条】① `exportsOf` 把纯转出模块的 `export { … } from` 也当成本模块的声明，凭空造出 `games-data.js::HAND_LABELS` 这类伪条目（该名字在本文件正文根本不出现 ⇒ 必然误判零消费）；② 修它时第一版又踩第二次：export-from 识别跑在**去字符串**的 codeTexts 上，`from` 后面的引号已被置空，识别永不命中 —— 改成只匹配 `from` 关键字原文后才真生效；③ 夹具自证初版把 `loadTree` 当可迭代对象解构（它返回 `{ texts, bindTexts, codeTexts }`），当场报 `tree is not iterable`：这条错在**自证工具自己**，若跳过不修就会把「夹具没跑起来」当成「夹具全过」。",
+        "【交棒改写 · 旧判据改下限形】`tests/system-v4920.test.mjs` 的 A1 原把当版专有读数钉成等值锚 —— 抬版即红，且把「本版的落点」偷换成「上一版那件事」。按 v4910 先例改写为**下限形**：只判「不低于 4.92.0」，当版落点判定交棒给 `tests/system-v4930.test.mjs` 的 F6。这不是放宽判据，是**把当版判定交给当版套件**（旧套件只守「不许倒退」这一向）。",
+        "【运行时验证边界（v4.93.0 复校）】绑定级门禁能保证的是「导出有没有**绑定级**消费方」这一层：扫描面塌陷会 exit 2 拒绝出表、解析器漏形态会以 PARSER-GAP fail-closed，但**不能保证**「真宿主里被消费的那条路径真的跑到了」——遇到「看起来没坏但显示不对」的问题仍属真机复现那一类，需在真 SillyTavern 里验（详见 docs/runtime-verification-boundary.md）。",
+        "【门链与预算表同源收口】新增第 16 段门后，`config/gate-budget.json` 补入该门预算（现场实测 7.1s，limit_ms 由 margin_pct 自算，total_ms 重算）、`config/gate-tiers.json` 静态档按 check 链同序插入、`CONTEXT.md` 的门链转写由「十五道」改「十六道」并插名 —— 三处都由判据逐字看守（C4 / F1 / 静态档存在性）。同时 `docs/runtime-verification-boundary.md` 的实测行按 `tools/refresh_doc_readings.py` 现场重取（语法 1062 → 1065）。"
+      ]
+    },
     "4.92.0": {
       "version": "4.92.0",
       "date": "2026-10-28",
@@ -5164,5 +5436,5 @@
       ]
     }
   },
-  "head": "4.92.0"
+  "head": "4.99.8"
 }

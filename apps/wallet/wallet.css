@@ -174,3 +174,60 @@
   margin-top: 8px;
   font-size: 11px;
 }
+
+/* ══════════ [v4.99.3 · R11-X2] 交易与资产面 ══════════ */
+/* 「读不到」与「没有」必须看得出不同：读不到用告警色 + 显式措辞 */
+.wl-cannot {
+  color: #f59e0b;
+}
+.wl-eco-ops {
+  gap: 8px;
+  margin-top: 8px;
+}
+.wl-act {
+  min-width: 56px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wl-act:hover { background: #273449; }
+.wl-act-undo {
+  border-color: #b45309;
+  color: #fbbf24;
+}
+.wl-tx-st {
+  padding: 8px 0;
+  border-bottom: 1px solid #1e293b;
+}
+.wl-tx-st.undone {
+  opacity: 0.72;
+}
+.wl-tx-st.undone .wl-tx-name {
+  text-decoration: line-through;
+}
+.wl-tx-st.partial .wl-tx-time {
+  color: #fbbf24;
+}
+.wl-asset {
+  padding: 8px 0;
+  border-bottom: 1px solid #1e293b;
+}
+.wl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.wl-input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+.wl-detail { margin-top: 8px; }

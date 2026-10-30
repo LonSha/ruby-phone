@@ -48,6 +48,9 @@ import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 import { SubsystemOrchestrator } from './config/subsystem-orchestrator.js';
+/* [v4.99.4 · R11-X3] 生活流的**低频时钟**：它不做业务，只把中枢的 `advanceAutonomousLifeStep`
+ *   接成「手机自己会动」。修前该方法产品端零调用，自驱生活只在测试里存在。 */
+import { createLifeClock, CLOCK_LIMITS } from './config/life-clock.js';
 import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask as mtrNormalizeTask, summarizeTasks as mtrSummarizeTasks,  canTransition as mtrCanTransition, duplicateGuard as mtrDuplicateGuard, selfCheck as mtrSelfCheck } from './config/media-task-registry.js';
 /* [v4.88.0 · 第七批缝入] 后台任务停滞告警（MIRROW/task_stall_policy）。**只告不杀** ——
  *   盘上的「生成中」卡住两小时也没有任何读数，用户能做的只有自己猜。 */
@@ -317,7 +320,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.92.0';
+const ST_PHONE_VERSION = '4.99.8';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -525,20 +528,26 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-28",
+    date: "2026-10-30",
     items: [
-        "【版本升至 4.92.0（五源同源）】manifest.json / package.json / index.js 的版本常量与公告块 / update-log.json 的 latest 与 head 与新条目一次抬齐；ITERATION_LOG.md 新增本迭代段并把元信息「当前版本」行改当版；边界文档 docs/runtime-verification-boundary.md 按当版复校（v4.92.0 复校）。",
-        "【像素 OS 重绘】RubyPhone 从「华为药丸+灵动岛+玻璃拟态+emoji 彩色块」四套混搭，重绘为复古掌机像素 OS。新增 phone/pixel-engine.js（16 色盘唯一真源 + 像素纪律 lint + 掌机 B 键视图栈）与 phone/pixel-skin.css（零圆角阶梯切角、硬边光影、帧进动画、排版双轨）。",
-        "【统一图标】消灭「PNG 拟物 / imageManager 自定义 / 彩色底 emoji」三套混杂：8 个核心 App 全部由 tools/gen_pixel_icons.py 生成 24×24 像素 SVG（整数坐标、16 色盘、crispEdges），注册表 config/app-icons.js 统一收口，未登记的不再吃 app.color 彩色块。",
-        "【聚合缩减数量】用户原话「很多用不到，聚合起来」：桌面从 89 平铺收敛为「8 核心 + 7 聚合壳（社交/内容/创作/生活/财务/身体/系统）」= 15 格一页。新增 config/app-clusters.js 唯一真源，聚合壳为 isCluster 伪对象（伪 id 带 __cluster_ 前缀防路由冲突），89 项功能全部保留在壳内二级列表，能力零删除。",
-        "【单返回键】全局唯一返回入口改为左下掌机 B 键「◀ 退」（pixel-skin.css 隐藏各 App 私有返回 wechat-back-btn/ach-back-btn/tb-back-btn 等）。pixel-engine.createViewStack 维护 desktop→cluster→app→detail 逐级出栈，桌面根层级再按只抖动（px-shake steps 帧进）。",
-        "【摄像头不压字】居中灵动岛（phone-punch-hole, 原 z-index:15 悬浮压正文）改为左上 8px 像素镜头点，z-index 降到 6 与状态栏同层。",
-        "【像素壁纸】新增 phone/wallpaper-pixel.svg（夜空硬切色带+像素星+山丘轮廓），由 pixel-engine 供默认桌面。",
-        "【判据档】tests/system-v4920.test.mjs 五面校验：五源同源/像素资产在场/像素纪律（整数坐标·无 circle·crispEdges）/聚合架构（能力零删除）/单返回键栈行为/摄像头不压正文，含负控制（破坏 SVG 必红）。",
-        "【本版自己抓到的缺陷】① app-clusters.js 首版 TDZ（APP_CLUSTERS 在 CLUSTER_BG 声明前引用，import 即 ReferenceError，调换顺序修复）；② tools/patch_v4920_home_icons.py 锚点 5/6 失配（renderDock/renderAppIcon 实际源码有额外空行命中 0 次中止，该批改动随方向大改整体废弃）；③ dead-export 首跑 F4 报 1≠0（5 个零消费导出：删 pixelPaletteCss/injectPixelPalette/injectPixelSkin、openCluster 改用 clusterByCategory 真接线、lintPixelSvg 由新测试消费，基线 --update 至 96 条）。",
-        "【交棒改写】v3770 探针基线 tests/audit/longlist_scale_baseline.json 的 after_motion_css.css_files_scanned 从 92 抬到 93（本版新增 pixel-skin.css，px-shake 为 steps 一次动画无 infinite 不计入动效计数，stage 字段保持 v3.79.0 冻结值不改写）；v325/v326 探针基线 files_scanned 同步抬到 615；v3750 H1 要求 ITERATION_LOG.md 元信息行与边界文档复校标记随抬版前移，本版如实补齐。",
-        "【像素皮肤加载链】index.js 新增 ST_PHONE_PIXEL_CSS_URL；font-scale.js 的 ensureGlobalPhoneCSS 在主 CSS 注入成功后追加 fetch pixel-skin.css 写入 #rp-pixel-skin（失败静默降级）。pixel-skin 选择器统一加 #phone-panel-content 前缀压过 phone.css 的玻璃拟态 !important。",
-        "【运行时验证边界】本层能验的是像素引擎/聚合表/图标集/皮肤/单返回键栈的纯函数口径与五源同源；不能保证的是真宿主里像素皮肤加载后观感、真机触摸反馈与真机排版——看起来没坏但显示不对，本版不能保证该形态在真机上一出现就被发现。"
+        "【版本升至 4.99.8（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4998.py 对齐 tools/bump_v4997.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X4 做了什么】`config/sharing-boundary.js`（三级范围 / 五态授权 / 收件人视角 / 撤回）、`config/portable-recovery-hub.js`（备份包体检）、`config/offline-creator-bundle-pipeline.js`（创作者包选择性导入计划）三件内核从建起那天就被 tests 逐条消费，但**产品端零 import**。本版把它们接进备份台：起草分享 → 按收件人看他会看到什么 → 记一次已读 → 撤回（并如实留痕），以及导入前先看包体认不认、创作者包会装哪几类。",
+        "【为什么先加一层翻译，而不是 App 直接拼】三件内核的返回体形状各不相同（授权判 status，体检给 ok 与两个计数，包计划给 success 与两组数组）。视图若各写一遍取值，就是同一口径三份实现；改内核时三处都要找一遍。故新增 `config/share-migrate-bridge.js`：内核判、桥翻形状、视图只消费 label。",
+        "【五态必须五句话】authorized / masked_partial / unauthorized / expired / revoked 逐条给中文文案，且**只有前两态算能看**。把遮蔽态与原文态压成一句，等于骗用户「他看到的和你一样」——这是本面最贵的一种错，因为发送方会照着这句话决定发不发。",
+        "【不可读就是不给内容】无权 / 过期 / 撤回三态一律 content 为空串，**哪怕内核把内容带了出来**。判据 G2 用真源码破坏钉死：若把不可读分支改成用草案原文兜底（一种很像好意的写法），同款判据必须转红。",
+        "【撤回不抹记忆】内核的契约是「撤回未来访问，不伪造记忆抹除」，故撤回后已读账原样保留，界面必须说出「撤回前已读 N 人，这段痕迹不会被抹掉」。判据 G3 钉死：抹掉这句即转红。",
+        "【四态不同形（本版自己抓到的一处真缺陷）】备份包体检原先只有「没包 / 不认 / 认出来」三态，而 App 层 catch 到内核抛错后把读数置空 —— 界面于是把「体检这一步自己坏了」念成「还没有包体可体检」，也就是把我们的代码炸了演成「你没选包」。本版把抛错单立成 threw 一态（catch 时按 `inspect_threw:` 前缀转给桥），四态四句话。",
+        "【安全阻断不许降级成警告】创作者包计划里 errors 是安全阻断（包里带可执行脚本），warnings 是缺依赖提示（能装但缺东西）。两者都不为空，若用「不为空就挡住」或「不为空就警告」一刀切，就会把带脚本的包念成一句普通提示。故 blocked 只跟 errors 走，判据 G5 钉死。",
+        "【体检只跑一遍（本版自己纠正的一处设计）】桥最初带一个 `payloadInspectOf` 便捷口，自己调内核 —— 而调用点（备份台）本来就持有同一份 import，等于一次点击跑两遍内核；且那个便捷口在产品端没人用，死导出检查当场红（693 文件面新增一条零消费导出）。改为桥只留翻形状的一支（`payloadInspectFrom`），App 侧调一次内核、抛错也按形状转过去。这不是门禁逼出来的妥协：同一件事跑两遍本身就是缺陷。",
+        "【写不下去就不许选中】起草分享要走落盘回执；写盘失败时若仍把选中项指向这份草案，下一次读盘就找不到它，界面会显示「选了一份不存在的草案」。判据 F2 与负控制 G6 双向钉死。",
+        "【读不到 ≠ 没分享过】分享台账读不出（无存储 / 读抛错 / 坏 JSON）与空台账分两句：前者说「读不到」，后者才说「这个会话还没起草过分享」；且读不到时**不许**在它上面盲写。",
+        "【视图不写第二套判据】视图里不许出现五个授权态字面量，也不许自己判包体检 / 创作者包的状态，只消费桥给的 label 与 blocked。「预览」**刻意不做成按钮**——选人即算，做成按钮会让人以为「点了才算过一遍」。",
+        "【键随会话隔离】新增 `share_drafts_v1`（三处同源：App 常量 / config/storage.js 的 share_ 前缀 / scripts/keys-audit.mjs 登记）。落全局会让另一个角色看到「你分享给了谁、谁读过」，那是串味里最难看的一种。",
+        "【判据 27 条全绿】tests/system-v4998.test.mjs：A1-A4 五态五句话 / 坏值如实念 / 不可读不给内容 / 内核抛错另立一态；B1-B3 撤回留痕 / 读不到不许念成没分享过 / 不改入参；C1-C3 体检四形不同 / 真内核读数能翻 / 桥不持有体检内核；D1 安全阻断与缺依赖提示不同形；E1-E4 产品端真 import / 视图无第二套字面量 / 键三处同源 / 桥是纯函数层；F1-F6 起草到撤回全链 / 写不下去不选中 / 读不到与空台账分两句 / 视图真渲染 / 换会话丢实例态 / 体检四态上到界面；G1-G6 六条负控制全部双向断言（原版上真、破坏副本上假）。",
+        "【交棒改写（下限形）】本版收尾时改写/收窄了三处旧口径，逐条记录，不静默通过：① 三张取证基线按真值刷新 —— branch_play 与 schedule_conflict 的 files_scanned 624→625、long_chat 的 scan.files 625→626 与 criteria 的 L5 格 got_text 同步，顺带修掉一条**跨版未刷**的遗留：branch_play 的 chat_data_patterns 402→405（本版 config/storage.js 新增 share_ 会话前缀与两行说明注释，探针口径把段内注释行也计入，与既有「行首注释也算一条」一致）；刷新由 tools/refresh_baselines_v4998.py 完成（零手抄、幂等、冻结 measured_at）。② 弱档模块账本 82→80：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 真接进产品面后按 --update 摘除，并在账本 note 里写明是人工摘除而非漂移。③ 抬版脚本的 parse_items 白名单**收回**到与历史判据一致：v4996/v4997 曾把「不做：」加进交棒锚的白名单，于是脚本放行、而 v3171/v3201/v3213 的形态锚转红 —— 脚本口径宽于判据口径，是同一件事的两份实现，本版把它收窄。这三条都是「下限形」：放宽的是脚本与基线读数，收紧的是判据锚，方向都是少给自己留后门。",
+        "【不做：三件明确不做的事】不改三件内核的判据本体（它们是纯函数、有既有测试、改了会动中枢既有口径）；不给备份包体检加「导入影响范围 diff」（那是 v4.96.0 恢复快照面已交付的能力，本版不重复造）；不让分享面走宿主咽喉（它读写的是本 App 自己的会话键，与包面动作的失败回执来源不同，故三族 data 属性刻意不同名）。",
+        "【运行时验证边界（v4.99.8 复校）】本版全部验证在无头环境完成（真 class + 真纯函数 + 真源码破坏，未装载 DOM 也不跑 CSS），未在浏览器里跑过：收件人视角的实际观感、撤回后对方入口是否真的消失、长列表滚动性能均未实测；本版判据能证明的是：五态文案两两不同、不可读时一个字节都不透、撤回留痕不被抹掉、体检四态不同形、安全阻断不降级、写不下去不选中、读不到不许念成没分享过、六条负控制破坏后同款判据真转红。它不能保证的是：真机上收件人视角的观感、撤回后对方入口的真实消失与长列表滚动性能。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。全量门禁走 npm test；本项验收另跑 node --test tests/system-v4998.test.mjs。",
+        "【五道门同步】syntax 1097 文件 / import-resolve 640 文件 1079 条 / dead-export 693 文件 4738 export（内部消费 3315 · 跨文件消费 1342 · 零消费 81）· 冻结基线 81 条 / keys-audit 506 键全登记（会话隔离 312 · 全局 191 · 历史键 3）/ registry 89 App · 89 懒加载分支 · 样式投递 79 件未覆盖 0 —— 全绿。"
     ]
 };
 
@@ -2048,6 +2057,119 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         // 记忆系统: 全局单例, 启动即活 (后台采集/巩固/AI注入 不依赖 App 打开)
         try {
             window.VirtualPhone.subsystems = new SubsystemOrchestrator(storage);
+            /* [v4.99.4 · R11-X3] 两个前台口（声明式提升至本块）：
+             *   lifeClockFace()        —— 读数（状态栏/日历/诊断共用的唯一入口）；
+             *   refreshLifeClockFace() —— 把读数画到状态栏那一格。
+             *   ★ 两个口都不抛：前台指示坏了不能把推进也带挂（推进是真行为，指示只是显示）。 */
+            function lifeClockFace() {
+                try {
+                    const lc = window.VirtualPhone?.lifeClock;
+                    if (!lc || typeof lc.face !== 'function') {
+                        return { status: 'unmounted', mounted: false, steps: 0, why: 'no_clock', line: '生活流：未装配' };
+                    }
+                    const snap = lc.face();
+                    let line = '';
+                    try { line = lc.line(); } catch (_e) { line = ''; }
+                    return Object.assign({}, snap, { line });
+                } catch (e) {
+                    return { status: 'unmounted', mounted: false, steps: 0, why: 'read_threw', line: '生活流：读不到（' + String((e && e.message) || e) + '）' };
+                }
+            }
+            function refreshLifeClockFace() {
+                const host = phoneShell && phoneShell.container;
+                if (!host || typeof host.querySelector !== 'function') return false;
+                const chip = host.querySelector('.statusbar-left .life-clock-chip');
+                if (!chip) return false;   // 本版状态栏尚未画出这格（旧宿主）：不补一个假元素
+                const face = lifeClockFace();
+                chip.textContent = face.line;
+                chip.setAttribute('data-status', String(face.status || ''));
+                chip.setAttribute('title', '生活流时钟：' + String(face.line || ''));
+                return true;
+            }
+            /* [v4.99.4 · R11-X3] 生活流低频时钟：把中枢的 advanceAutonomousLifeStep 接成业务面。
+             *   三条硬约束写在内核里（间隔 60s 起步 / 步进封顶 / 真实流逝不足 8 分钟不推）；
+             *   本处只负责：拿中枢、挂表、把实例交给 App 与状态栏。
+             *   ★ 接不到中枢时不抛（启动不能因为一个后台时钟而挂），但 snapshot 会如实报 unmounted。 */
+            try {
+                const lifeClock = createLifeClock({
+                    storage,
+                    runtime: globalRuntime,
+                    readHub: () => {
+                        const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+                        if (!vp) return { ok: false, why: 'no_host', hub: null };
+                        const hub = vp.subsystems || null;
+                        if (!hub) return { ok: false, why: 'no_subsystems', hub: null };
+                        if (typeof hub.advanceAutonomousLifeStep !== 'function') return { ok: false, why: 'no_step_method', hub };
+                        return { ok: true, why: '', hub };
+                    },
+                    onTick: () => {
+                        try { refreshLifeClockFace(); } catch (_e) { /* 前台指示挂了不影响推进 */ }
+                        /* [v4.99.6 · R11-X8] 推进之后设备读数跟着重画：这一拍里电量被 tick 掉了、
+                         *   信号可能被换了场景 —— 状态栏不重画就会停在上一拍的读数上（显示旧值）。 */
+                        try {
+                            const sh = (typeof phoneShell !== 'undefined') ? phoneShell : null;
+                            if (sh && typeof sh.refreshDeviceFace === 'function') sh.refreshDeviceFace();
+                        } catch (_e) { /* 读数面挂了不影响推进 */ }
+                    }
+                });
+                window.VirtualPhone.lifeClock = lifeClock;
+                window.VirtualPhone.lifeClockFace = lifeClockFace;
+                window.VirtualPhone.lifeClockPause = () => lifeClock.pause();
+                window.VirtualPhone.lifeClockResume = () => lifeClock.resume();
+                const mountRes = lifeClock.mount();
+                console.log('[LifeClock] 已装配：' + (mountRes.mounted ? '时钟已挂表 ' + String(CLOCK_LIMITS.TICK_MS / 1000) + 's/步' : '未挂表（' + mountRes.why + '）；仍可手动 tick()'));
+            } catch (e) {
+                console.warn('[LifeClock] 装配失败（不阻断启动）:', e);
+            }
+            /* [v4.99.6 · R11-X8] 设备读数面（拟真读数）：把中枢的三件拟真内核接成产品面。
+             *   要治的缺陷：电池动力学 / 蜂窝弱网 / 健康手环三个内核早在 R10 就写好、
+             *   也被中枢实例化了，但**产品端没有一处读它们** ——
+             *   状态栏读的是宿主真机的电池（剧情里手机放电到 5% 时它还显示 100%），
+             *   信号是一个恒定图标（打到 0 格屏幕上看不出来），手环那条曲线永远是空的。
+             *   本处只做三件事：① 把读数口注入外壳；② 把三个实例挂到宿主供 App 与诊断读；
+             *   ③ 在推进之后刷新状态栏。★ 装配不到的域**不假装读到**（读数口如实返回 ok:false）。 */
+            try {
+                const sub = window.VirtualPhone.subsystems || null;
+                const readOne = (inst) => {
+                    if (!inst || typeof inst.face !== 'function') {
+                        return { ok: false, why: sub ? 'no_domain' : 'no_subsystems' };
+                    }
+                    try { return inst.face(); } catch (e) { return { ok: false, why: 'read_threw' }; }
+                };
+                /* 信号那一路还带 outboxPendingCount：有挂起中的离线消息时状态栏要说得出「几条在等」。 */
+                window.VirtualPhone.deviceFace = () => ({
+                    battery: readOne(sub && sub.battery),
+                    signal: readOne(sub && sub.cellular),
+                    band: sub && sub.smartBand && typeof sub.smartBand === 'object'
+                        ? { ok: true, why: '', band: { historyLog: sub.smartBand.historyLog || [] } }
+                        : { ok: false, why: sub ? 'no_domain' : 'no_subsystems' }
+                });
+                /* 一次性播种：宿主机电量只允许当**初值**，此后一律以中枢实例为准（一个真源）。 */
+                window.VirtualPhone.seedDeviceBattery = (seed) => {
+                    if (!sub || !sub.battery || typeof sub.battery.seedOnce !== 'function') {
+                        return { seeded: false, level: null, why: sub ? 'no_domain' : 'no_subsystems' };
+                    }
+                    try { return sub.battery.seedOnce(seed); } catch (e) { return { seeded: false, level: null, why: 'read_threw' }; }
+                };
+                /* 状态栏设备面刷新（壳不在场时静默返回 false，不造一个假元素）。 */
+                window.VirtualPhone.refreshDeviceFace = () => {
+                    try {
+                        const sh = (typeof phoneShell !== 'undefined') ? phoneShell : null;
+                        return !!(sh && typeof sh.refreshDeviceFace === 'function' && sh.refreshDeviceFace());
+                    } catch (e) { return false; }
+                };
+                /* 把读数口注入外壳（壳只读、不反查中枢 —— 壳不成为第二个真源）。 */
+                try {
+                    const sh = (typeof phoneShell !== 'undefined') ? phoneShell : null;
+                    if (sh) {
+                        sh.readDeviceFace = window.VirtualPhone.deviceFace;
+                        sh.seedDeviceBattery = window.VirtualPhone.seedDeviceBattery;
+                    }
+                } catch (_e) { /* 壳未装配：下一轮 createPhoneInPanel 会再注入 */ }
+                console.log('[DeviceFace] 已装配：' + (sub ? '三域读数口就绪（电量 / 信号 / 生命体征曲线）' : '中枢缺席（读数如实报缺失）'));
+            } catch (e) {
+                console.warn('[DeviceFace] 装配失败（不阻断启动）:', e);
+            }
             window.VirtualPhone.memoryCore = new MemoryCore(storage);
             window.VirtualPhone.memoryCore.attachPromptHook();
             /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
@@ -6547,6 +6669,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
 
         phoneShell = new PhoneShell();
         phoneShell.createInPanel(container);
+        /* [v4.99.6 · R11-X8] 设备读数面注入：**壳每次重建都要重新注入**
+         *   （读数口是挂在实例上的字段，新实例默认没有）。
+         *   读不到中枢时也注入 —— 读数口自己会如实返回 ok:false，
+         *   于是状态栏显示「--」而不是一个编出来的 85%。 */
+        try {
+            const vp = window.VirtualPhone || {};
+            if (typeof vp.deviceFace === 'function') phoneShell.readDeviceFace = vp.deviceFace;
+            if (typeof vp.seedDeviceBattery === 'function') phoneShell.seedDeviceBattery = vp.seedDeviceBattery;
+            if (typeof phoneShell.refreshDeviceFace === 'function') phoneShell.refreshDeviceFace();
+        } catch (_e) { /* 注入失败不影响手机可用（读数口缺失时状态栏停在 --） */ }
         // [v2.17.0] 横幅通知交互：点击横幅 → 标记已读 + 直达目标 App（注入失败不影响手机可用）
         try { bindBannerInteractions(phoneShell); } catch (_e) { /* 忽略 */ }
         // [v2.16.0] 安装系统通知落账层（`sys_notifs` 命中 /^sys_/ → chatMetadata，随会话隔离）

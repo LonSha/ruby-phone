@@ -20,6 +20,12 @@ export const SLEEP_STAGES = Object.freeze({
     REM: 'REM',
     AWAKE: 'AWAKE'
 });
+/* [v4.99.6 · R11-X8] 采样历史上限。
+ *   为什么要有：`historyLog` 从 R10 起就声明在构造器里，但**全库没有一处写过它** ——
+ *   「心率曲线」这件事在手机里从来没存在过（健康 App 只能显示一个当前值）。
+ *   现在补上采样口与落盘；上限按「一晚睡眠 8h × 每 2 分钟一点」再留余量取 240，
+ *   免得长剧情里数组无界增长（那是本仓治过的长线熵增形态之一）。 */
+export const BAND_HISTORY_MAX = 240;
 
 export class SmartBandBiometrics {
     constructor(opts = {}) {
@@ -28,10 +34,12 @@ export class SmartBandBiometrics {
         this.stressLevel = 25; // 0 ~ 100
         this.sleepStage = SLEEP_STAGES.AWAKE;
         this.dailySteps = 4520;
+        /* [v4.99.6 · R11-X8] 采样历史：每点 { t, hr, stage }。
+         *   与 _save 的那几个字段不同，它**当初没被 _save 带走**（落盘对象里没有 historyLog），
+         *   于是即便有人写了采样，重载也会整条曲线消失。本版一并补进落盘。 */
         this.historyLog = [];
         this._load();
     }
-
     _load() {
         if (!this.storage?.get) return;
         try {
@@ -40,10 +48,16 @@ export class SmartBandBiometrics {
                 if (raw.heartRate) this.heartRate = raw.heartRate;
                 if (raw.stressLevel) this.stressLevel = raw.stressLevel;
                 if (raw.dailySteps) this.dailySteps = raw.dailySteps;
+                // [v4.99.6 · R11-X8] 曲线可回溯：重载后采样历史必须还在，
+                //   否则「回看这条曲线」在换楼/重开后就成了空的。
+                if (Array.isArray(raw.historyLog)) {
+                    this.historyLog = raw.historyLog
+                        .filter(p => p && typeof p === 'object')
+                        .slice(-BAND_HISTORY_MAX);
+                }
             }
         } catch (_e) {}
     }
-
     _save() {
         if (!this.storage?.set) return;
         try {
@@ -51,6 +65,8 @@ export class SmartBandBiometrics {
                 heartRate: this.heartRate,
                 stressLevel: this.stressLevel,
                 dailySteps: this.dailySteps,
+                // [v4.99.6 · R11-X8] 曲线随盘走（上限见 BAND_HISTORY_MAX）。
+                historyLog: this.historyLog.slice(-BAND_HISTORY_MAX),
                 updatedAt: Date.now()
             });
         } catch (_e) {}
@@ -111,13 +127,35 @@ export class SmartBandBiometrics {
         }
 
         this._save();
-
+        /* [v4.99.6 · R11-X8] 每次生理变动之后自动采一点 —— 曲线于是「自己长出来」。
+         *   ★ 这一步只做采样、不改前面算出来的返回值（返回值是业务结论，采样是留痕）。 */
+        try { this.sample(meta && meta.at); } catch (_e) { /* 采样坏了不改业务结论 */ }
         return {
             heartRate: this.heartRate,
             stressLevel: this.stressLevel,
             resonanceTitle,
             alert
         };
+    }
+
+    /**
+     * [v4.99.6 · R11-X8] 采一个点进曲线（historyLog 的**唯一**写入口）。
+     *   为什么要有这个口：`historyLog` 从 R10 声明至今全库零写入 —— 曲线永远空着，
+     *   健康 App 只能显示「当前值」这一个数。采样挂在**每次生理状态变动之后**自动发生，
+     *   不依赖谁记得手动记一笔（那种「靠自觉」的口最后总是没人调，本仓治过同族）。
+     * @param {number} [now] 采样时刻（毫秒）；显式传入便于判据用受控时间。
+     * @returns {{t:number, hr:number, stage:string}} 本点
+     */
+    sample(now) {
+        const n = Number(now);
+        const t = Number.isFinite(n) ? n : Date.now();
+        const point = { t, hr: this.heartRate, stage: this.sleepStage };
+        this.historyLog.push(point);
+        if (this.historyLog.length > BAND_HISTORY_MAX) {
+            this.historyLog = this.historyLog.slice(-BAND_HISTORY_MAX);
+        }
+        this._save();
+        return point;
     }
 
     /**

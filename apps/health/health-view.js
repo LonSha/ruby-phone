@@ -16,6 +16,12 @@ import {
 // [v2.60.0] 起名台 + 手术库：纯本地只读数据源（人名库 / 手术术式库），不写状态
 import { nameLangs, nameStats, generateName } from './name-service.js';
 import { surgeryChapters, surgeryByChapter, surgeryStats, surgerySummary } from './surgery-service.js';
+/* [v4.99.6 · R11-X8] 生命体征曲线：健康 App 是它唯一的产品面。
+ *   修前：手环的 historyLog 从 R10 起声明至今**全库零写入**，健康 App 只能显示
+ *   「当前心率」这一个数 —— 「看这条曲线」在手机里从来没发生过。
+ *   现在曲线由 config/device-face-bridge.js 的 bandSeriesOf 单一实现判定：
+ *   点数够不够、可不可回溯，都由它算；本视图只负责把结论画成一条线。 */
+import { bandSeriesOf, HEALTH_SERIES_MIN } from '../../config/device-face-bridge.js';
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -239,7 +245,13 @@ export class HealthView {
       h("div", cls("hl-surg-foot"), esc(surgStatsLine)) +
       h("div", cls("hl-surg-list"), surgItems || h("div", cls("hl-card-desc"), "本章无术式。"))
     );
-    const cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
+    let cycleBody = ring + cards + raceBox + controlBox + fetusSection + injectBox;
+    /* [v4.99.6 · R11-X8] 生命体征曲线（产品面）：
+     *   数据源 = 中枢的手环实例（`subsystems.smartBand.historyLog`），
+     *   算不算「一条能看的曲线」由 bandSeriesOf 单一实现判定；本处**只画**。
+     *   三态各不相同：点数够 = 真折线；点数不足 = 明写「不足 N 点」；
+     *   读不到 = 明写读不到，且**不画一条空线冒充**（旧行为里这种情况连块都没有）。 */
+    cycleBody = cycleBody + this._bandSection();
     // ---- 育种推演（breeding）----
     // [v2.58.0] 纯只读展示：用当前母体种族做蛋方，分别对「同种/跨种」推演三类结果。零 LLM、不写状态。
     const breedEgg = data.race || '人类';
@@ -303,7 +315,51 @@ export class HealthView {
     container.innerHTML = h("div", cls("hl-root"), header + tabs + h("main", cls("hl-body"), body));
     this._bindEvents();
   }
-
+  /**
+   * [v4.99.6 · R11-X8] 生命体征曲线块。
+   *   读数从哪来：中枢的手环实例（`window.VirtualPhone.subsystems.smartBand.historyLog`）。
+   *   ★ 本方法**只画不判**：点数够不够、算不算可回溯，一律由 config/device-face-bridge.js
+   *     的 bandSeriesOf 判（那里是单一实现）。视图自己再判一次就会长出第二份口径。
+   *   ★ 读不到时**不画线**：画一条空线 = 把「读不到」粉饰成「心跳平稳」，是谎报。
+   */
+  _bandSection() {
+    let read = null;
+    try {
+      const band = window.VirtualPhone?.subsystems?.smartBand;
+      read = band ? { ok: true, why: '', band: { historyLog: band.historyLog || [] } }
+        : { ok: false, why: 'no_domain' };
+    } catch (e) {
+      read = { ok: false, why: 'read_threw' };
+    }
+    const face = bandSeriesOf(read);
+    const pts = face.points || [];
+    /* 只有「点数够」才画折线；不足或读不到都不画，避免把缺数据画成平稳。 */
+    let chart = h("div", cls("hl-band-empty"), esc(face.line));
+    if (face.state === "ok") {
+      const hr = pts.map((p) => p.hr);
+      const lo = Math.min(...hr) - 5;
+      const hi = Math.max(...hr) + 5;
+      const span = Math.max(1, hi - lo);
+      const W = 300, H = 68;
+      const step = pts.length > 1 ? (W / (pts.length - 1)) : 0;
+      const yOf = (v) => (H - ((v - lo) / span) * H).toFixed(2);
+      const d = pts.map((p, i) => ((i === 0 ? "M" : "L") + (i * step).toFixed(2) + " " + yOf(p.hr))).join(" ");
+      chart = h("div", cls("hl-band-chart"),
+        "<svg viewBox=\"0 0 " + W + " " + H + "\" preserveAspectRatio=\"none\" class=\"hl-band-svg\" role=\"img\" aria-label=\"" + esc(face.line) + "\">" +
+        "<polyline class=\"hl-band-line\" points=\"" + pts.map((p, i) => (i * step).toFixed(2) + "," + yOf(p.hr)).join(" ") + "\" />" +
+        "<path class=\"hl-band-area\" d=\"" + d + " L" + W + " " + H + " L0 " + H + " Z\" />" +
+        "</svg>" +
+        h("div", cls("hl-band-axis"),
+          h("span", "", esc(String(lo + 5) + " bpm")) +
+          h("span", "", esc(String(hr[hr.length - 1]) + " bpm 最新")) +
+          h("span", "", esc(String(hi - 5) + " bpm"))));
+    }
+    return h("div", cls("hl-controls-section hl-band-box"),
+      h("div", cls("hl-section-title"), "生命体征曲线 · 手环（采样 " + face.count + " 点" +
+        (face.enough ? "" : " / 需 " + HEALTH_SERIES_MIN + " 点") + "）") +
+      chart +
+      h("p", cls("hl-band-note"), esc(face.line + "；曲线与状态栏读数同源于中枢的手环实例。")));
+  }
   _bindEvents() {
     const root = this.container;
     const data = this.app.data;

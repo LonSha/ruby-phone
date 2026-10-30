@@ -45,6 +45,9 @@ export class WalletView {
             '  </header>',
             '  <div class="wl-body">',
             this._reasonCard(face),
+            this._economyCard(),
+            this._txStackCard(),
+            this._assetCard(),
             this._accountsCard(face, proj),
             this._txCard(face, proj),
             this._settingsCard(),
@@ -127,6 +130,139 @@ export class WalletView {
             '</div>'
         ].join('\n');
     }
+    /* ══════════ [v4.99.3 · R11-X2] 交易与资产三张卡 ══════════
+     * 【三态不同形】读到有数据 → 列表带计数；读到 0 条 → 「还没有…」；
+     *   读不到 → 「读不到（这不是「没有」，是读不到）」——三面各一句独立措辞。
+     * 【回滚不留静默】撤销过的行**照样在列表里**，带「已撤销」标记与补偿条数。 */
+    /** 余额与信任面（中枢真源） */
+    _economyCard() {
+        let pkg = null;
+        try { pkg = this.app.economyFace(); } catch (_e) { pkg = null; }
+        const faces = (pkg && pkg.faces) || {};
+        const notes = (pkg && pkg.notes) || {};
+        const b = faces.balances;
+        let body;
+        if (!b) {
+            /* 读不到 == 不是「没有」 */
+            body = '<div class="wl-empty wl-cannot">读不到余额（这是「读不到」，不是「没有钱」）'
+                + (notes.mustShowWhy ? ' · 归因：' + this._esc(notes.why) : '') + '</div>';
+        } else {
+            body = [
+                '<div class="wl-acct">',
+                '  <div class="wl-acct-name">现钱</div>',
+                '  <div class="wl-acct-amount">' + this._fmt(b.currency) + ' 元</div>',
+                '  <div class="wl-acct-meta">信任 ' + this._esc(b.trust) + ' · 有往来的地点 ' + this._esc(b.locationCount) + ' 处</div>',
+                '</div>'
+            ].join('\n');
+        }
+        return [
+            '<div class="wl-card" id="wl-eco">',
+            '  <div class="wl-card-title">我的账（可发起交易）<span class="wl-count">' + (b ? '可读写' : '读不到') + '</span></div>',
+            '  ' + body,
+            '  <div class="wl-row wl-eco-ops">',
+            '    <button class="wl-act" id="wl-newtransfer">转账</button>',
+            '    <button class="wl-act" id="wl-newpurchase">购置</button>',
+            '    <button class="wl-act" id="wl-newgift">转赠</button>',
+            '  </div>',
+            '  <div id="wl-eco-form"></div>',
+            '</div>'
+        ].join('\n');
+    }
+    /** 事务栈面：发起 → 提交 → 撤销，撤销后行仍在（带痕迹） */
+    _txStackCard() {
+        let pkg = null;
+        try { pkg = this.app.economyFace(); } catch (_e) { pkg = null; }
+        const faces = (pkg && pkg.faces) || {};
+        const notes = (pkg && pkg.notes) || {};
+        const txs = faces.transactions;
+        let body;
+        if (txs === null) {
+            body = '<div class="wl-empty wl-cannot">读不到事务（这是「读不到」，不是「没有发生过交易」）'
+                + (notes.mustShowWhy ? ' · 归因：' + this._esc(notes.why) : '') + '</div>';
+        } else if (!txs.length) {
+            body = '<div class="wl-empty">还没有发起过交易（点上面的转账/购置试试）</div>';
+        } else {
+            body = txs.map((t) => {
+                const st = this._txStateText(t);
+                const undoBtn = (t.status === 'committed')
+                    ? '    <button class="wl-act wl-act-undo" data-undo="' + this._esc(t.id) + '">撤销</button>'
+                    : (t.status === 'pending'
+                        ? '    <button class="wl-act" data-commit="' + this._esc(t.id) + '">提交</button>'
+                        : '');
+                return [
+                    '<div class="wl-tx-st ' + this._esc(t.undoState) + '">',
+                    '  <div class="wl-tx-main">',
+                    '    <span class="wl-tx-name">' + this._esc(t.label) + '</span>',
+                    '    <span class="wl-tx-delta">' + (t.amount ? this._fmt(t.amount) + ' 元' : '—') + '</span>',
+                    '  </div>',
+                    '  <div class="wl-tx-desc">' + this._esc(t.from) + ' → ' + this._esc(t.to)
+                        + (t.assetTitle ? ' · ' + this._esc(t.assetTitle) : '') + '</div>',
+                    '  <div class="wl-tx-time">' + this._esc(st) + '</div>',
+                    undoBtn,
+                    '</div>'
+                ].filter(Boolean).join('\n');
+            }).join('\n');
+        }
+        return [
+            '<div class="wl-card">',
+            '  <div class="wl-card-title">交易与撤销<span class="wl-count">' + (txs === null ? '—' : txs.length + ' 笔') + '</span></div>',
+            '  ' + body,
+            '</div>'
+        ].join('\n');
+    }
+    /** 事务状态一行话（**已撤销必须看得见**；部分完成不许说成成功） */
+    _txStateText(t) {
+        const when = t.createdAt ? new Date(t.createdAt).toLocaleString('zh-CN') : '';
+        if (t.status === 'rolled_back') {
+            return '已撤销' + (t.rolledBackAt ? '（' + new Date(t.rolledBackAt).toLocaleString('zh-CN') + '）' : '')
+                + ' · 补偿 ' + (t.compensationCount || 0) + ' 条'
+                + (t.irreversibleCount > 0 ? ' · 其中 ' + t.irreversibleCount + ' 步不可逆（只撤销了一部分）' : '');
+        }
+        if (t.status === 'pending') return '待提交' + (when ? ' · ' + when : '');
+        if (t.status === 'committed') {
+            const tail = t.irreversibleCount > 0
+                ? ' · 含 ' + t.irreversibleCount + ' 步不可逆（撤销只能部分）'
+                : ' · 可完整撤销';
+            return '已提交' + (when ? ' · ' + when : '') + tail;
+        }
+        if (t.status === 'failed') return '失败' + (when ? ' · ' + when : '');
+        return when;
+    }
+    /** 资产面（权属谱系；可转赠） */
+    _assetCard() {
+        let pkg = null;
+        try { pkg = this.app.economyFace(); } catch (_e) { pkg = null; }
+        const faces = (pkg && pkg.faces) || {};
+        const notes = (pkg && pkg.notes) || {};
+        const assets = faces.assets;
+        let body;
+        if (assets === null) {
+            body = '<div class="wl-empty wl-cannot">读不到资产（这是「读不到」，不是「没有资产」）'
+                + (notes.mustShowWhy ? ' · 归因：' + this._esc(notes.why) : '') + '</div>';
+        } else if (!assets.length) {
+            body = '<div class="wl-empty">还没有登记过任何资产（购置或转赠会长出来）</div>';
+        } else {
+            body = assets.map((a) => [
+                '<div class="wl-asset">',
+                '  <div class="wl-tx-main">',
+                '    <span class="wl-tx-name">' + this._esc(a.title) + '</span>',
+                '    <span class="wl-tx-delta">' + this._esc(a.currentOwner) + '</span>',
+                '  </div>',
+                '  <div class="wl-tx-desc">' + this._esc(a.kind) + ' · 谱系 ' + this._esc(a.provenanceLen) + ' 条'
+                    + (a.lastEvent ? ' · 最近 ' + this._esc(a.lastEvent) : '') + '</div>',
+                '  <button class="wl-act" data-asset="' + this._esc(a.id) + '">详情</button>',
+                '  <button class="wl-act" data-gift="' + this._esc(a.id) + '">转赠</button>',
+                '</div>'
+            ].join('\n')).join('\n');
+        }
+        return [
+            '<div class="wl-card">',
+            '  <div class="wl-card-title">资产与归属<span class="wl-count">' + (assets === null ? '—' : assets.length + ' 件') + '</span></div>',
+            '  ' + body,
+            '  <div id="wl-asset-detail"></div>',
+            '</div>'
+        ].join('\n');
+    }
     _settingsCard() {
         let s = {};
         try { s = this.app.getSettings(); } catch (_e) { s = {}; }
@@ -158,5 +294,158 @@ export class WalletView {
             try { this.app.saveSettings({ maxInject: v }); } catch (_e) {}
             this._draw();
         });
+        /* ══════════ [v4.99.3 · R11-X2] 交易操作绑定（发起 → 提交 → 撤销） ══════════ */
+        q('#wl-newtransfer')?.addEventListener('click', () => this._formTransfer());
+        q('#wl-newpurchase')?.addEventListener('click', () => this._formPurchase());
+        q('#wl-newgift')?.addEventListener('click', () => this._formGift());
+        /* 提交 / 撤销：逐行按钮（事件委托，不逐行绑） */
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-commit]') : [])) {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-commit');
+                try { this.app.economyCommit(id); } catch (_e) {}
+                this._draw();
+            });
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-undo]') : [])) {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-undo');
+                this._doUndo(id);
+            });
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-asset]') : [])) {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-asset');
+                let a = null;
+                try { a = this.app.economyGetAsset(id); } catch (_e) { a = null; }
+                const box = q('#wl-asset-detail');
+                if (!box) return;
+                if (!a) { box.innerHTML = '<div class="wl-empty wl-cannot">这件资产的详情读不到（不是「没有」）</div>'; return; }
+                const chain = Array.isArray(a.provenanceChain) ? a.provenanceChain : [];
+                box.innerHTML = [
+                    '<div class="wl-card wl-detail">',
+                    '  <div class="wl-card-title">' + this._esc(a.title) + ' 的来历</div>',
+                    '  <div class="wl-tx-desc">当前归属：' + this._esc(a.currentOwner) + ' · 类别 ' + this._esc(a.kind) + '</div>',
+                    chain.length
+                        ? chain.map((c) => '  <div class="wl-tx-time">' + this._esc(c.event) + ' · '
+                            + this._esc(c.from === null || c.from === undefined ? '—' : c.from) + ' → ' + this._esc(c.to)
+                            + (c.note ? ' · ' + this._esc(c.note) : '') + '</div>').join('\n')
+                        : '  <div class="wl-empty">没有来历记录</div>',
+                    '</div>'
+                ].join('\n');
+            });
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-gift]') : [])) {
+            btn.addEventListener('click', () => this._formGift(btn.getAttribute('data-gift')));
+        }
+    }
+    /* ---------- 报酬/交易表单（内联，不弹窗：小屏一致） ---------- */
+    _formBox(html) {
+        const box = (() => { try { return this.container?.querySelector?.('#wl-eco-form'); } catch (_e) { return null; } })();
+        if (box) box.innerHTML = html;
+    }
+    _formTransfer() {
+        this._formBox([
+            '<div class="wl-form">',
+            '  <input class="wl-input" id="wl-f-amount" type="number" min="1" placeholder="金额">',
+            '  <input class="wl-input" id="wl-f-to" placeholder="给谁">',
+            '  <button class="wl-act" id="wl-f-go">确认转账</button>',
+            '</div>'
+        ].join('\n'));
+        this._bindFormGo('wl-f-go', () => {
+            const amount = Number(this.container?.querySelector?.('#wl-f-amount')?.value) || 0;
+            const to = this.container?.querySelector?.('#wl-f-to')?.value || '';
+            const r = (() => { try { return this.app.economyStartTransfer({ amount, to, from: 'user' }); } catch (e) { return { ok: false, reason: 'threw' }; } })();
+            this._afterWrite(r);
+        });
+    }
+    _formPurchase() {
+        this._formBox([
+            '<div class="wl-form">',
+            '  <input class="wl-input" id="wl-f-price" type="number" min="0" placeholder="价格">',
+            '  <input class="wl-input" id="wl-f-title" placeholder="买什么（会登记成资产）">',
+            '  <button class="wl-act" id="wl-f-go">确认购置</button>',
+            '</div>'
+        ].join('\n'));
+        this._bindFormGo('wl-f-go', () => {
+            const price = Number(this.container?.querySelector?.('#wl-f-price')?.value) || 0;
+            const assetTitle = this.container?.querySelector?.('#wl-f-title')?.value || '';
+            const r = (() => { try { return this.app.economyStartPurchase({ price, assetTitle }); } catch (e) { return { ok: false, reason: 'threw' }; } })();
+            this._afterWrite(r);
+        });
+    }
+    _formGift(assetId) {
+        let preset = '';
+        if (assetId) { try { const a = this.app.economyGetAsset(assetId); preset = a ? a.title : ''; } catch (_e) { preset = ''; } }
+        this._formBox([
+            '<div class="wl-form">',
+            (preset ? '  <div class="wl-tx-desc">要转赠：' + this._esc(preset) + '</div>' : ''),
+            (assetId ? '' : '  <input class="wl-input" id="wl-f-asset" placeholder="资产 id 或名称">'),
+            '  <input class="wl-input" id="wl-f-to" placeholder="转给谁">',
+            '  <button class="wl-act" id="wl-f-go">确认转赠</button>',
+            '</div>'
+        ].filter(Boolean).join('\n'));
+        this._bindFormGo('wl-f-go', () => {
+            let id = assetId || '';
+            if (!id) {
+                const typed = this.container?.querySelector?.('#wl-f-asset')?.value || '';
+                /* 允许输入名称：按名找 id（找不到就如实失败，不猜一个出来） */
+                try {
+                    const pkg = this.app.economyFace();
+                    const hit = (pkg?.faces?.assets || []).find((a) => a.title === typed || a.id === typed);
+                    id = hit ? hit.id : typed;
+                } catch (_e) { id = typed; }
+            }
+            const to = this.container?.querySelector?.('#wl-f-to')?.value || '';
+            const r = (() => { try { return this.app.economyStartGift({ assetId: id, to }); } catch (e) { return { ok: false, reason: 'threw' }; } })();
+            this._afterWrite(r);
+        });
+    }
+    _bindFormGo(btnId, fn) {
+        const b = (() => { try { return this.container?.querySelector?.('#' + btnId); } catch (_e) { return null; } })();
+        if (b) b.addEventListener('click', fn);
+    }
+    /** 写后统一处理：成功与失败都要**说清楚**（失败不许静默） */
+    _afterWrite(r) {
+        const ok = r && r.ok;
+        const box = (() => { try { return this.container?.querySelector?.('#wl-eco-form'); } catch (_e) { return null; } })();
+        if (box && !ok) {
+            box.innerHTML = '<div class="wl-empty wl-cannot">没有成功：'
+                + this._esc(this._failText(r && r.reason)) + '</div>';
+            return;
+        }
+        this._draw();
+    }
+    /** 失败归因文案（把内核的 reason 翻成人话；未知原值照显，不吞） */
+    _failText(reason) {
+        const map = {
+            'amount-must-be-positive': '金额必须大于 0',
+            'insufficient-currency': '钱不够',
+            'insufficient-trust': '信任度不够',
+            'missing-asset-title': '没填买什么',
+            'asset-not-found': '找不到这件资产',
+            'owner-mismatch': '持有者对不上（可能已被转走）',
+            'no_store': '交易真源不可用',
+            'infeasible': '这笔交易当前不可行'
+        };
+        return map[reason] || ('未成功（原值：' + String(reason || '未知') + '）');
+    }
+    /** 撤销：先看预告再执行 —— 部分撤销必须在点击后就写明，不是执行完才说 */
+    _doUndo(txId) {
+        let pv = null;
+        try { pv = this.app.economyPreviewUndo(txId); } catch (_e) { pv = null; }
+        if (!pv || !pv.canUndo) {
+            const box = (() => { try { return this.container?.querySelector?.('#wl-eco-form'); } catch (_e) { return null; } })();
+            if (box) box.innerHTML = '<div class="wl-empty wl-cannot">这笔不能撤销：' + this._esc(String(pv && pv.reason)) + '</div>';
+            return;
+        }
+        const r = (() => { try { return this.app.economyRollback(txId); } catch (e) { return { ok: false, reason: 'threw' }; } })();
+        const box = (() => { try { return this.container?.querySelector?.('#wl-eco-form'); } catch (_e) { return null; } })();
+        if (box && r && r.ok) {
+            /* 已撤销的行**留在列表里**，这里给一句即时回执 */
+            box.innerHTML = '<div class="wl-empty">已撤销'
+                + (r.tx && r.tx.partialRollback ? '（**只撤销了一部分**：有不可逆步骤，钱退回来了，已铸的来历撤不掉）' : '（钱与归属已回到原值，痕迹留在列表里）')
+                + '</div>';
+        }
+        this._draw();
     }
 }

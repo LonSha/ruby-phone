@@ -14,6 +14,9 @@
 import {
     ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
 } from '../../config/notice-digest.js';
+/* [v4.99.7 · R11-X7] 中枢行反查不在这里 import 桥：
+ *   视图**不许**自己去碰第二张表（v41000 F1 的规矩：映射只能有一处）。
+ *   改为让 App 侧提供 `rowById()` 只读出口，视图只问不管。 */
 
 function esc(s) {
     return String(s ?? '')
@@ -47,6 +50,7 @@ export class NotificationCenterView {
         this._filter = '';        // '' = 全部；否则 appId
         this._keyword = '';
         this._flash = '';
+        this._hiddenOpen = false;
         /* [v4.19.0 · R4-O7] 收拢态:展开过的事情分组(键 = 事情身份);
          *   静音规则表(**实例态**;本版不做持久化 —— 如实留白,见档头)。 */
         this._expanded = new Set();
@@ -58,9 +62,18 @@ export class NotificationCenterView {
     render() {
         const shell = this.app?.phoneShell;
         if (!shell?.setContent) return;
-        const log = this.app.log;
-        const all = log.list();
-        const rows = this._visibleRows(all);
+        /* [v4.99.0 · R11-X6] 数据不再直接读 `log.list()`，改走 App 的 `feed()`
+         *   —— 那里**合并**了中枢派发器那张表（第二张真源的可读出口）。
+         *   视图不自己去碰第二张表：碰了就是两份「怎么读」的口径。 */
+        const feed = (typeof this.app?.feed === 'function') ? this.app.feed() : { rows: this.app.log.list(), counts: {}, notes: { logReadable: true, hubReadable: false, complete: false } };
+        const all = Array.isArray(feed.rows) ? feed.rows : [];
+        /* [v4.99.7 · R11-X7] 范式阈值过滤：**在 feed() 之后、chip/关键词过滤之前**。
+         *   顺序不是随意的：范式是「这台手机现在只留什么」，chip 与搜索是「我在这一屏里找什么」。
+         *   先范式后 chip，chip 的计数才能反映「范式之后还剩多少」——否则点开会变空。 */
+        const split = (typeof this.app?.splitByParadigm === 'function')
+            ? this.app.splitByParadigm(all)
+            : { rows: all, hidden: [], applied: false, threshold: 'all', fallback: false, ok: true, why: '', paradigm: { ok: true, why: '', paradigm: null }, counts: { total: all.length, visible: all.length, hidden: 0 } };
+        const rows = this._visibleRows(split.rows);
         const html = `
         <div class="nc-wrap">
             <div class="nc-topbar">
@@ -74,15 +87,100 @@ export class NotificationCenterView {
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input id="nc-search" class="nc-search" type="search" placeholder="搜索通知" value="${esc(this._keyword)}" />
             </div>
-            <div class="nc-filters">${this._filterChips(all)}</div>
+            <div class="nc-filters">${this._filterChips(split.rows)}</div>
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
+            ${this._paradigmNote(split)}
+            ${this._hubNote(feed)}
             ${this._actionSection()}
+            ${this._hiddenSection(split)}
             <div class="nc-list">${this._listHtml(rows)}</div>
         </div>`;
         shell.setContent(this.app.css() + html, 'notifications-main');
         this._bind();
     }
 
+    /* ---------------- [v4.99.7 · R11-X7] 范式读数行 ----------------
+     *   ★ 四种读数**必须不同形**（本仓既有纪律，这一处最容易压平）：
+     *     · 范式读到、阈值 all          → **不显示**（没隐藏任何东西，就别占位喊「我没隐藏」）；
+     *     · 范式读到、阈值非 all、隐 0 条 → 一行「已按范式留 N 条，这次没有需要隐藏的」；
+     *     · 范式读到、隐了 N 条         → 一行指路「已按范式隐藏 N 条（在下方可展开）」；
+     *     · 范式**读不到**              → 一行警示 + 明写「本次不过滤」，不是「你是生活档」。
+     *   坏阈值（`fallback`）另说一句：阈值写了但不认识 → 说出来，别当成设计内默认。
+     */
+    _paradigmNote(split) {
+        const s = split || {};
+        const pr = s.paradigm || {};
+        if (pr.ok === false) {
+            const why = String(pr.why || '');
+            return `<div class="nc-digest-line nc-hub-warn">⚠️ 使用范式没读到${why ? '（' + esc(why) + '）' : ''} —— 本次不过滤，全部照常显示（不是「你在生活档」）</div>`;
+        }
+        if (s.ok === false) {
+            const why = String(s.why || '');
+            return `<div class="nc-digest-line nc-hub-warn">⚠️ 范式过滤失效${why ? '（' + esc(why) + '）' : ''} —— 已全量显示，没有被悄悄藏掉的通知</div>`;
+        }
+        if (!s.applied) {
+            if (s.fallback) {
+                return `<div class="nc-digest-line nc-hub-warn">⚠️ 这个范式的通知阈值写的是「${esc(s.raw || '')}」，认不出来 —— 按「全部保留」处理</div>`;
+            }
+            return '';
+        }
+        const hiddenN = Number(s.counts && s.counts.hidden) || 0;
+        const pname = String((pr.paradigm && pr.paradigm.name) || '');
+        /* 档次文案由桥层给（`split.label`）：视图不再自己写档名字面量 ——
+         *   否则内核改名/加档时视图不会跟着变，也没有判据替它响。 */
+        const thrText = String(s.label || '');
+        if (!hiddenN) {
+            return `<div class="nc-digest-line">已按范式${pname ? '「' + esc(pname) + '」' : ''}${esc(thrText)} · 这次没有需要隐藏的</div>`;
+        }
+        return `<div class="nc-digest-line">已按范式${pname ? '「' + esc(pname) + '」' : ''}${esc(thrText)} · 隐藏了 ${hiddenN} 条（下面可展开）</div>`;
+    }
+    /* ---------------- [v4.99.7 · R11-X7] 被范式隐藏的通知 ----------------
+     *   ★ 验收语写死：**「被隐藏的通知在中心里显示『已按范式隐藏』而非消失」**。
+     *     所以这里不是简单折叠，而是给出一块**可展开的实名清单**（照样能点开、能删）。
+     *   ★ 三条不变量：
+     *     ① 只在 `applied && hiddenN > 0` 时出现（没隐藏就不占位，也不喊「隐藏了 0 条」）；
+     *     ② 展开后每行仍是 `_row()`（行渲染口径只有一份，不在这里重写第二种观感）；
+     *     ③ 隐藏≠删除：展开不写任何账本，`_row` 里的删除钮才是唯一的删（且删的是真源那条）。
+     */
+    _hiddenSection(split) {
+        const s = split || {};
+        if (!s.applied) return '';
+        const hidden = Array.isArray(s.hidden) ? s.hidden : [];
+        if (!hidden.length) return '';
+        const open = this._hiddenOpen === true;
+        const head = `<div class="nc-hid-head">` +
+            `<i class="fa-solid fa-eye-slash"></i>` +
+            `<span class="nc-hid-title">已按范式隐藏 ${hidden.length} 条</span>` +
+            `<span class="nc-hid-sub">下面的通知没被删，只是当前范式下不打扰</span>` +
+            `<button class="nc-ac-btn nc-hid-toggle" data-hid-toggle="1">${open ? '收起' : '展开'}</button>` +
+            `</div>`;
+        const body = open
+            ? `<div class="nc-hid-body">${hidden.map(n => this._row(n)).join('')}</div>`
+            : '';
+        return `<div class="nc-hid">${head}${body}</div>`;
+    }
+    /* ---------------- [v4.99.0 · R11-X6] 中枢那张表的读数行 ----------------
+     *   ★ 三态**必须不同形**（本仓既有纪律，这里最容易破）：
+     *     · 两侧都读到、中枢有 N 条 → 一行小字说明「其中 N 条来自系统中枢」；
+     *     · 中枢读到了但 0 条        → **不显示任何行**（没有内容就不占位）；
+     *     · 中枢**读不到**           → 一行警示，并明写「不是没有通知」。
+     *   第三类压成第一类（或干脆不显示）= 把「系统坏了」粉饰成「一切正常」。
+     */
+    _hubNote(feed) {
+        const n = (feed && feed.notes) || {};
+        const c = (feed && feed.counts) || {};
+        if (n.hubReadable === false) {
+            const why = String(n.hubWhy || '');
+            return `<div class="nc-digest-line nc-hub-warn">⚠️ 系统中枢那一侧没读到${why ? '（' + esc(why) + '）' : ''} —— 这是「读不到」，不是「没有通知」</div>`;
+        }
+        if (Number(c.hubMapped) > 0) {
+            const bad = Number(c.hubDropped) > 0
+                ? `，另有 ${Number(c.hubDropped)} 条形状不合格未呈现`
+                : '';
+            return `<div class="nc-digest-line">其中 ${Number(c.hubMapped)} 条来自系统中枢（日程提醒 / 健康预警）${bad}</div>`;
+        }
+        return '';
+    }
     /* ---------------- [v3.85.0 · R-X1] 行动中心两列 ----------------
      *   数据**只**从宿主缓存读（`VirtualPhone._actionCenterCache`，由 config/action-center.js
      *   在咽喉处算好后挂上）：本视图不重算、不过滤、不判断哪条属哪列 ——
@@ -241,9 +339,21 @@ export class NotificationCenterView {
             ${body}
         </div>`;
     }
-    /** 按 id 取一条(**只读**:从当前可见行里找;找不到如实返回 null,不补空壳)。 */
+    /** 按 id 取一条(**只读**;从当前可见行里找;找不到如实返回 null,不补空壳)。
+     *  [v4.99.7 · R11-X7] 补中枢那张表：隐藏区展开后若只查 `log.list()`，
+     *    hub 行（id 前缀 `hub_`）永远找不到 ⇒ 组内成员行静默留空。
+     *    这里按 id 前缀分流，仍然**只读**（不写任何一张表）。 */
     _byId(id) {
         const key = String(id || '');
+        if (!key) return null;
+        /* [v4.99.7 · R11-X7] `hub_` 行交给 App 的只读出口反查（视图不 import 桥、不碰第二张表）。
+         *   为什么不在旧路径里静默返回 null：`_byId` 是「组内成员行」的唯一入口，
+         *   返回 null ⇒ 成员行**静默留空**（不报错、不缺勤），与「组里本来就没有」同形。 */
+        if (/^hub_/.test(key)) {
+            try {
+                return (typeof this.app?.rowById === 'function') ? (this.app.rowById(key) || null) : null;
+            } catch (_e) { return null; }
+        }
         try {
             return (this.app.log.list() || []).find((n) => String(n.id) === key) || null;
         } catch (_e) { return null; }
@@ -340,6 +450,15 @@ export class NotificationCenterView {
                 else this.render();
             });
         });
+        /* [v4.99.7 · R11-X7] 隐藏区展开/收起：**纯视图态**，不写盘、不碰账本。
+         *   折叠态存在实例上（`_hiddenOpen`），切走 App 再回来复位为收起 —— 与 `_expanded` 同款。 */
+        root.querySelectorAll('.nc-hid-toggle').forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._hiddenOpen = this._hiddenOpen !== true;
+                this.render();
+            });
+        });
         root.querySelector('#nc-read-all')?.addEventListener('click', () => {
             const r = this.app.log.markAllRead();
             this._flash = r.count ? `已把 ${r.count} 条标记为已读` : '没有未读通知';
@@ -358,12 +477,20 @@ export class NotificationCenterView {
             // 只重绘列表与筛选，避免输入框失焦
             const listEl = root.querySelector('.nc-list');
             const chipsEl = root.querySelector('.nc-filters');
-            const all = this.app.log.list();
+            /* [v4.99.7 · R11-X7] 搜索重绘必须**同一条过滤链**（feed → 范式 → chip → 关键词）。
+             *   首版这里直接 `log.list()` 再 `_visibleRows`，绕过了范式过滤 ——
+             *   后果是「一打字，被范式藏起来的通知全冒出来」，且只在输入时出现、不报错。
+             *   现在与 render() 走同一段口径：id 分叉就是两份实现，这里只允许一条链。 */
+            const feed = (typeof this.app?.feed === 'function') ? this.app.feed() : { rows: this.app.log.list() };
+            const all = Array.isArray(feed.rows) ? feed.rows : [];
+            const split = (typeof this.app?.splitByParadigm === 'function')
+                ? this.app.splitByParadigm(all)
+                : { rows: all, hidden: [], applied: false, counts: { total: all.length, visible: all.length, hidden: 0 } };
             if (listEl) {
-                const rows = this._visibleRows(all);
+                const rows = this._visibleRows(split.rows);
                 listEl.innerHTML = rows.length ? rows.map(n => this._row(n)).join('') : this._empty();
             }
-            if (chipsEl) chipsEl.innerHTML = this._filterChips(all);
+            if (chipsEl) chipsEl.innerHTML = this._filterChips(split.rows);
             this._bindItems();
         });
         root.querySelectorAll('.nc-chip').forEach(btn => {

@@ -19,6 +19,10 @@
 import { defaultWalletSettings, readWalletFace, projectWallet, walletPromptBlock } from './wallet-data.js';
 import { WalletView } from './wallet-view.js';
 import { readPushProbe } from '../../config/world-bridge.js';
+/* [v4.99.3 · R11-X2] 交易与资产真源（发起/提交/撤销）。三把键（ue_/la_/et_）的
+ *   读写**只此一处**；桥（config/economy-face-bridge.js）只做纯映射，视图不 import 桥。 */
+import { EconomyStore } from './economy-store.js';
+import { mergeEconomyFaces, previewUndo as bridgePreviewUndo } from '../../config/economy-face-bridge.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^wallet_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'wallet_settings_v1';
 export class WalletApp {
@@ -26,6 +30,10 @@ export class WalletApp {
         this.phoneShell = phoneShell;
         this.storage = storage;
         this.view = new WalletView(this);
+        /* [v4.99.3 · R11-X2] 交易与资产真源。构造期不读盘（storage 可能在 App 构造时
+         *   尚未就绪）：首次 economyFace() / 写操作前经 _ensureEconomyStore() 懒加载一次。 */
+        this._economyStore = null;
+        this._economyLoaded = false;
         /** 最近一次探针归因（供诊断显示；不参与渲染数据） */
         this._lastProbe = null;
         this._hooked = false;
@@ -117,7 +125,88 @@ export class WalletApp {
      */
     onChatChanged() {
         this._lastProbe = null;
+        /* [v4.99.3 · R11-X2] 换会话：真源作废并重挂（三键随会话隔离，不带着上一角色的账本） */
+        this._economyStore = null;
+        this._economyLoaded = false;
     }
+
+    /* ══════════ [v4.99.3 · R11-X2] 交易与资产面（发起 → 提交 → 撤销） ══════════
+     * 【为什么读盘懒加载】storage 在 App 构造期可能尚未可用；构造期读盘会静默拿到
+     *   空账并把它当真（最贵的形态）。故首次真正要用时才建实例并读一次。
+     * 【为什么视图不碰桥】与 X1/X6 同款分工：视图经 economyFace() 拿读数，
+     *   不 import 桥、不引用 subsystems（F 类判据用正则钉住）。 */
+    /** 真源实例（懒建 + 懒读一次；存储不可用 ⇒ 实例仍可用，只是不落盘） */
+    _ensureEconomyStore() {
+        if (!this._economyStore) {
+            try { this._economyStore = new EconomyStore(this.storage); } catch (_e) { this._economyStore = null; return null; }
+        }
+        if (!this._economyLoaded) {
+            try { this._economyStore.restore(); } catch (_e) { /* 读失败：保持空态，不假装读到 */ }
+            this._economyLoaded = true;
+        }
+        return this._economyStore;
+    }
+    /** 三面合并读（视图唯一入口；真源缺席时 faces 全 null + mustShowWhy） */
+    economyFace() {
+        const store = this._ensureEconomyStore();
+        if (!store) {
+            return { faces: { balances: null, transactions: null, assets: null },
+                     counts: { balances: 0, transactions: 0, assets: 0 },
+                     notes: { why: 'no_store', mustShowWhy: true, perFace: {} } };
+        }
+        return mergeEconomyFaces(store);
+    }
+    /** 撤销预告（视图在按钮旁就写明「能撤到什么程度」；含不可逆步骤时明写只能部分撤） */
+    economyPreviewUndo(txId) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, canUndo: false, reason: 'no_store', compensationCount: 0, irreversibleCount: 0, irreversibleSteps: [], compensations: [] };
+        try { return store.previewUndo(txId); }
+        catch (_e) { return { ok: false, canUndo: false, reason: 'preview-threw', compensationCount: 0, irreversibleCount: 0, irreversibleSteps: [], compensations: [] }; }
+    }
+    /** 单件资产详情（含权属谱系；视图展开用） */
+    economyGetAsset(assetId) {
+        const store = this._ensureEconomyStore();
+        if (!store) return null;
+        try { return store.getAsset(assetId); } catch (_e) { return null; }
+    }
+    /* -------- 写口：发起 -------- */
+    /** 发起转账（真扣账 → 返 tx；失败返 reason，视图转归因文案，不抛） */
+    economyStartTransfer(spec) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, reason: 'no_store', tx: null };
+        try { return store.startTransfer(spec || {}); }
+        catch (e) { return { ok: false, reason: 'start-threw:' + (e && e.message ? e.message : 'unknown'), tx: null }; }
+    }
+    /** 发起购置（扣钱可逆 + 铸资产不可逆 ⇒ 撤销走「部分完成」） */
+    economyStartPurchase(spec) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, reason: 'no_store', tx: null };
+        try { return store.startPurchase(spec || {}); }
+        catch (e) { return { ok: false, reason: 'start-threw:' + (e && e.message ? e.message : 'unknown'), tx: null }; }
+    }
+    /** 发起转赠（改归属并留谱系） */
+    economyStartGift(spec) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, reason: 'no_store', tx: null };
+        try { return store.startGift(spec || {}); }
+        catch (e) { return { ok: false, reason: 'start-threw:' + (e && e.message ? e.message : 'unknown'), tx: null }; }
+    }
+    /* -------- 写口：提交 / 撤销 -------- */
+    /** 提交事务（pending → committed；未提交的账不得撤销） */
+    economyCommit(txId) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, reason: 'no_store' };
+        try { return store.commit(txId); } catch (_e) { return { ok: false, reason: 'commit-threw' }; }
+    }
+    /** 撤销（真改余额与归属，行**留在列表里**带 rolledBackAt；含不可逆步骤标 partial） */
+    economyRollback(txId) {
+        const store = this._ensureEconomyStore();
+        if (!store) return { ok: false, reason: 'no_store', tx: null };
+        try { return store.rollback(txId); }
+        catch (e) { return { ok: false, reason: 'rollback-threw:' + (e && e.message ? e.message : 'unknown'), tx: null }; }
+    }
+    /* ★ 不提供 economySaveAll()：发起/提交/撤销三处各自落盘，外部没有「手动存一次」的场景。
+     *   留一个零调用的写口正是本仓在治的形态（写了但没人用） —— 死方法门当场会抓。 */
     render() {
         this.view.render(this.phoneShell?.layerHost?.('wallet-main') || this.phoneShell?.screen);
     }

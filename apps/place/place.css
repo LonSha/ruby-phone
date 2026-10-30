@@ -341,3 +341,87 @@
     cursor: pointer;
 }
 .pl-band-row { font-size: 12px; color: #cfe3f5; line-height: 1.7; word-break: break-word; }
+/* ---------- [v4.97.0 · R11-O3 第三批] 街区机会卡 ----------
+ * 与探索卡同一行式排版（地名 + 状态徽章），但状态语义不同：
+ *   可参加用实底（行动可期）/ 已参加描边 / 已错过灰调（错过不伪造，也不羞辱）。
+ * 登记表单输入框与徽章共用小号排版，保持「读数为主、动作轻置」的密度。 */
+.pl-district .pl-district-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #121922;
+}
+.pl-district .pl-district-place {
+  flex: none;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #e8eef6;
+}
+.pl-district .pl-district-ev {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #cfe3f5;
+}
+.pl-district .pl-district-st {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.pl-district-active .pl-district-st { background: #14b8a6; color: #04231f; }
+.pl-district-done .pl-district-st { background: transparent; color: #14b8a6; border: 1px solid #14b8a6; }
+.pl-district-missed .pl-district-st { background: #1c2836; color: #9fb6cc; }
+.pl-district-go {
+  flex: none;
+  background: transparent;
+  color: #9fc0da;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.pl-district-go:active { background: #1f2c39; }
+#pl-district-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+#pl-district-form[style*='none'] { display: none !important; }
+.pl-district .pl-in, #pl-district-form .pl-in {
+  width: 100%;
+  box-sizing: border-box;
+  background: #10161d;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+#pl-district-form .pl-btn {
+  align-self: flex-start;
+  background: #16202b;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+#pl-district-form .pl-btn:active { background: #1f2c39; }
+.pl-district > .pl-btn {
+  margin-top: 6px;
+  background: #16202b;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}

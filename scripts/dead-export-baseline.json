@@ -110,42 +110,6 @@
       "reason": "R6-X3 社团共营纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
     },
     {
-      "file": "config/commission-pipeline.js",
-      "name": "acceptBrief",
-      "line": 61,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/commission-pipeline.js",
-      "name": "submitDraft",
-      "line": 74,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/commission-pipeline.js",
-      "name": "proposeScopeChange",
-      "line": 90,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/commission-pipeline.js",
-      "name": "agreeScopeChange",
-      "line": 107,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/commission-pipeline.js",
-      "name": "acceptAndSettle",
-      "line": 123,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/commission-pipeline.js",
-      "name": "cancelCommission",
-      "line": 141,
-      "reason": "R6-X4 委托创作与交付生命周期纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
       "file": "config/daily-theater.js",
       "name": "DT_VERSION",
       "line": 37,
@@ -174,24 +138,6 @@
       "name": "deriveDayRhythm",
       "line": 169,
       "reason": "第六期批次内建内核的导出面，产品接线在后续批次；由当版定向测试消费，先冻结防静默腐烂。"
-    },
-    {
-      "file": "config/district-network.js",
-      "name": "createPlace",
-      "line": 47,
-      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/district-network.js",
-      "name": "deriveOpportunities",
-      "line": 74,
-      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/district-network.js",
-      "name": "getPlaceFamiliarity",
-      "line": 144,
-      "reason": "R6-X2 街区与人情网络纯契约内核（批次E）：导出面由 system-v4530 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/floor-store.js",
@@ -372,42 +318,6 @@
       "name": "DIFFICULTIES",
       "line": 16,
       "reason": "难度表，同上。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "RS_STORAGE_KEY",
-      "line": 17,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "linkBookToDossier",
-      "line": 133,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "addContrastingView",
-      "line": 171,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "addAnnotation",
-      "line": 184,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "updateDraft",
-      "line": 197,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
-    },
-    {
-      "file": "config/reading-studio.js",
-      "name": "handleBookVersionUpdate",
-      "line": 217,
-      "reason": "R6-O6 主动研读工作室纯契约内核（批次C）：导出面由 system-v4520 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/relation-revisit.js",

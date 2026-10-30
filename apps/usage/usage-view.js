@@ -27,6 +27,9 @@ export class UsageView {
         this.storage = storage;
         this._root = null;
         this._tab = 'usage';
+        /* [v4.94.0 · R11-O3] 上一次切换范式的失败（{id, reason} 或 null）。
+         * 存在 View 上而不是 App 上：这是**这一屏的显示状态**，不该跟着范式一起落盘。 */
+        this._lastSwitchFail = null;
     }
 
     render() {
@@ -54,8 +57,104 @@ export class UsageView {
         parts.push('<button type="button" class="uq-tab' + (this._tab === 'contact' ? ' is-active' : '') + '" data-tab="contact">联系人互动</button>');
         parts.push('</div>');
         parts.push(this._tab === 'usage' ? this._usageHTML() : this._contactHTML());
+        parts.push(this._paradigmHTML());
         parts.push(this._settingsHTML());
         return parts.join('\n');
+    }
+
+    /* ---------------- [v4.94.0 · R11-O3] 使用范式 ----------------
+     * 为什么这一块必须存在：`config/usage-paradigm.js` 整套（切换 / 自定 / 排序 / 通知过滤）
+     *   此前只有 orchestrator 与测试在调，产品端零消费 —— 也就是说「范式」在手机里
+     *   从来没有一个能被用户按到的地方。只把它接到主屏排序还不够：用户得先能换挡。
+     * 界面规则：当前档必须显式标「使用中」；切换失败要**说出来**（不静默回退成生活档，
+     *   那会让用户以为切成功了）；每档都写明它会怎样影响主屏，别让用户猜。 */
+
+    /**
+     * 范式面板。
+     * ★ 为什么每档都要显式写「它会把谁排到前面」（而不是只列名字）：
+     *   范式的作用在**别的屏幕**上（主屏排序）才看得见。若这里只给五个按钮，
+     *   用户按下去当帧没有任何反馈，就会以为「点了没反应」—— 然后又按回原来那档。
+     *   故每档下面直书「优先：…／靠后：…」，并把「当前档」标成使用中。
+     * ★ 为什么列表顺序必须取 `paradigmOptions()` 的返回序而不是自己排：
+     *   内置各档的顺序来自 `DEFAULT_PARADIGMS` 的对象字面量序（生活 → 创作 → 研读
+     *   → 沉浸 → 极简），那是库层的声明序；界面自己再排一次就成了第二份真源，
+     *   日后库层插一档、界面漏一档，用户会看到「少了一个范式」而不是报错。
+     */
+    _paradigmHTML() {
+        const res = this.app.paradigmOptions();
+        const active = this.app.activeParadigm();
+        const parts = [];
+        parts.push('<div class="uq-card uq-settings uq-paradigm"><h3>使用范式</h3>');
+        parts.push('<div class="uq-dim uq-note">换挡会改变主屏上 App 的先后次序（<b>只重排，不删格</b>），'
+            + '并决定通知保留到哪一级。当前：<b>' + this._esc(active ? (active.name || active.id) : '（读不出来）') + '</b></div>');
+        parts.push('<div class="uq-pg-list">');
+        for (const p of res.options) {
+            const isOn = p.id === res.activeId;
+            parts.push('<div class="uq-pg-row' + (isOn ? ' is-active' : '') + '">');
+            parts.push('<div class="uq-pg-main">');
+            parts.push('<span class="uq-pg-name">' + this._esc(p.name || p.id) + '</span>');
+            if (!p.builtin) parts.push('<span class="uq-pg-tag">自定</span>');
+            parts.push('<span class="uq-pg-state">' + (isOn ? '使用中' : '') + '</span>');
+            parts.push('<div class="uq-dim uq-pg-desc">' + this._esc(p.description || '') + '</div>');
+            parts.push('<div class="uq-dim uq-pg-apps">优先：' + this._esc(this._appListLabel(p.priorityApps))
+                + (Array.isArray(p.deprioritizedApps) && p.deprioritizedApps.length
+                    ? '　靠后：' + this._esc(this._appListLabel(p.deprioritizedApps)) : '') + '</div>');
+            parts.push('</div>');
+            parts.push('<div class="uq-pg-act">');
+            if (isOn) {
+                parts.push('<button type="button" class="uq-pg-btn" disabled>使用中</button>');
+            } else {
+                parts.push('<button type="button" class="uq-pg-btn" data-paradigm="'
+                    + this._esc(p.id) + '">切到这一档</button>');
+            }
+            parts.push('</div>');
+            parts.push('</div>');
+        }
+        parts.push('</div>');
+        /* 「以当前档为底另存一份自定档」——本版唯一的自定入口。
+         * ★ 为什么挂在**当前档**上、而不是每行一个按钮：自定的语义是「在我现在这档上改」，
+         *   不是「把别的某档搬过来」。挂在当前档上，用户的心智是「我现在这档 → 派生一份」。 */
+        const ids = this.app.paradigmIds();
+        const isCustomNow = !!(active && active.id === ids.CUSTOM);
+        parts.push('<div class="uq-pg-copy">');
+        if (isCustomNow) {
+            parts.push('<span class="uq-dim uq-note">当前用的就是自定档；再点一次会以它为底重新复制（覆盖旧的自定档）。</span>');
+            parts.push('<button type="button" class="uq-pg-copy-btn" data-copy="'
+                + this._esc(ids.CUSTOM) + '">重新复制一份</button>');
+        } else {
+            parts.push('<span class="uq-dim uq-note">想改优先项？以当前档为底另存一份自定档（本版只存一份，重复即覆盖）。</span>');
+            parts.push('<button type="button" class="uq-pg-copy-btn" data-copy="'
+                + this._esc(active ? active.id : ids.LIFE) + '">另存为自定档</button>');
+        }
+        parts.push('</div>');
+        // 切换失败的历史（只在真有失败时出现）：静默失败是这一块最贵的错，必须留痕。
+        const lastFail = (this._lastSwitchFail && this._lastSwitchFail.id) ? this._lastSwitchFail : null;
+        if (lastFail) {
+            parts.push('<div class="uq-card uq-warn uq-pg-fail">没切成功（'
+                + this._esc(this._switchFailLabel(lastFail.reason)) + '），当前仍是 '
+                + this._esc(active ? (active.name || active.id) : '原档') + '。'
+                + '<span class="uq-dim">「切了但没生效」比「切不动」更糟：它会让下一次排序看着像 bug。</span></div>');
+        }
+        parts.push('</div>');
+        return parts.join('\n');
+    }
+
+    /** App id 列表 → 中文名（用 APP_LABELS 这个显示回落表，缺名就用 id 本身）。 */
+    _appListLabel(ids) {
+        const arr = Array.isArray(ids) ? ids : [];
+        if (!arr.length) return '（无）';
+        const names = arr.map((id) => APP_LABELS[id] || String(id));
+        // 太长的清单截断显示：优先项应当一眼看完，不是让你数到第七个。
+        if (names.length <= 6) return names.join('、');
+        return names.slice(0, 6).join('、') + ' 等 ' + names.length + ' 个';
+    }
+
+    /** 切换失败原因 → 人话。 */
+    _switchFailLabel(reason) {
+        if (reason === 'unknown-paradigm-id') return '这一档不存在（可能刚被删掉）';
+        if (reason === 'persist-failed') return '存盘失败，换了也没记住';
+        if (reason === 'switch-threw') return '切换时抛错（已降级，未改盘）';
+        return String(reason || '原因未给');
     }
 
     /* ---------------- #52 使用统计 ---------------- */
@@ -297,6 +396,28 @@ export class UsageView {
             btn.addEventListener('click', () => {
                 const t = btn.getAttribute('data-tab');
                 if (t && t !== this._tab) { this._tab = t; this.refresh(); }
+            });
+        });
+        /* [v4.94.0 · R11-O3] 范式切换：失败要留痕（写进 _lastSwitchFail），下次渲染
+         * 会在面板底部出一条警示卡。切成功则清痕 —— 否则一次失败会永久挂在界面上，
+         * 用户成功切过之后还会看到「没切成功」，那比不显示更误导。 */
+        this._root.querySelectorAll('.uq-pg-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-paradigm');
+                if (!id) return;
+                const res = this.app.switchTo(id);
+                this._lastSwitchFail = res && res.success ? null : { id, reason: (res && res.reason) || 'unknown' };
+                this.refresh();
+            });
+        });
+        /* 「另存为自定档」：复制 + 立刻切过去（App.copyToCustomParadigm 一次做完）。
+         * 失败同样留痕 —— 它内部走 save + switch 两道盘，任一道失败都要说出来。 */
+        this._root.querySelectorAll('.uq-pg-copy-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const base = btn.getAttribute('data-copy');
+                const res = this.app.copyToCustomParadigm(base);
+                this._lastSwitchFail = res && res.success ? null : { id: base || 'custom', reason: (res && res.reason) || 'unknown' };
+                this.refresh();
             });
         });
         const inject = this._root.querySelector('#uq-inject');

@@ -390,6 +390,23 @@ test('N5 ★★ 上下文自证：把「剥上下文」这一行破坏掉 ⇒ �
     const dir = tmp('rp_cf_n5_');
     const broken = path.join(dir, 'check-file-broken.mjs');
     fs.writeFileSync(broken, SRC.split(anchor).join('/* 破坏：不再剥上下文 */'));
+    /* ★ [v4.99.0 修复] 副本必须**自带执行器自己的相对依赖**。
+     *   本套件原先只把 `check-file.mjs` 单文件抄到临时目录 —— 那在「执行器是自足单文件」时成立。
+     *   而 R11-O9 给执行器加了一个同目录相对 import（`./gate-budget-freshness.mjs`，时效判据真源），
+     *   于是副本一跑就 `ERR_MODULE_NOT_FOUND`、**exit 1 而不是 2**，本判据当场转红。
+     *   ★ 归因要诚实：红的**不是**「剥上下文」这件被观测行为，而是**夹具把执行器当成自足文件**这个
+     *     隐含假设过期了。这类「夹具自身的旧假设伪装成被测对象不一致」是本仓登记过的形态
+     *     （同族：v3.20.1 初版夹具写裸门名导致七条判据齐齐变红）。
+     *   修法：从真源码里把**同目录相对 import** 全部解析出来一并抄过去，并断言至少抄到 1 个
+     *     —— 否则将来有人把依赖去掉，这条「带依赖」的保证会静默失效（夹具退回旧假设而无人知）。 */
+    const relDeps = [...SRC.matchAll(/from\s+'(\.\/[^']+)'/g)].map((m) => m[1]);
+    assert.ok(relDeps.length >= 1,
+        '前提：执行器必须真有同目录相对依赖（否则本段「带依赖抄副本」是空动作）——实测 ' + relDeps.length);
+    for (const dep of relDeps) {
+        const src = path.join(ROOT, 'scripts', path.basename(dep));
+        assert.ok(fs.existsSync(src), '执行器声明的相对依赖必须在场：scripts/' + path.basename(dep));
+        fs.copyFileSync(src, path.join(dir, path.basename(dep)));
+    }
     assert.equal(typeof process.env.NODE_TEST_CONTEXT, 'string',
         '前提：本套件必须真跑在测试运行器子进程里，否则这条破坏测不到东西');
     const bad = spawnSync(process.execPath, [broken, '--root', repo, '--log', path.join(dir, 'x.log')],

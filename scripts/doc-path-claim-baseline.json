@@ -1,0 +1,403 @@
+{
+  "schema": "doc-path-claim-baseline@1",
+  "upstream_allowed": [
+    "tests/audit/dead_code_budget.js",
+    "tests/audit/dead_code_budget.json",
+    "tests/audit/open_face_registry.tsv",
+    "tests/audit/open_face_registry_inbound.tsv",
+    "tests/audit/scan_cross_repo_binding.mjs",
+    "tests/audit/scan_doc_truthfulness.mjs",
+    "tests/audit/scan_open_faces.mjs",
+    "tests/audit/scan_plan_currency.mjs",
+    "tests/audit/scan_ui_runtime.mjs",
+    "tests/audit/scan_version_guard.mjs",
+    "tests/audit/upstream_face_cache.js",
+    "tests/audit/upstream_face_lag.js",
+    "tests/audit/upstream_face_unconsumed.js",
+    "tests/run.mjs"
+  ],
+  "fixtures_or_placeholders": [
+    "scripts/audit-y.mjs",
+    "scripts/fake-audit.mjs",
+    "tests/_xxx_run.mjs",
+    "tests/a.test.mjs",
+    "tests/empty.test.mjs",
+    "tests/mini.test.mjs",
+    "tests/system-v100.test.mjs",
+    "tests/system-v999.test.mjs",
+    "tests/system-vNNNN.test.mjs",
+    "tests/use.test.mjs",
+    "tests/x.test.mjs",
+    "tests/xxx.test.mjs"
+  ],
+  "known_aliases": {
+    "scripts/dead-export-baseline.js": "scripts/dead-export-baseline.json",
+    "scripts/dead-method-baseline.js": "scripts/dead-method-baseline.json",
+    "scripts/dead-module-baseline.js": "scripts/dead-module-baseline.json",
+    "scripts/bind-dead-baseline.js": "scripts/bind-dead-baseline.json",
+    "tests/audit/status-ledger.js": "tests/audit/status-ledger.json",
+    "scripts/lifecycle-baseline.js": "scripts/lifecycle-baseline.json"
+  },
+  "historical_records": [
+    {
+      "path": "scripts/avatar-frames/001.js",
+      "refs": [
+        "apps/avatarframe/avatarframe-data.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/build-artifact.js",
+      "refs": [
+        "apps/asset/engine/asset-holdings.js",
+        "apps/asset/engine/asset-keys.js",
+        "apps/asset/engine/asset-ledger.js",
+        "apps/asset/engine/asset-market.js",
+        "apps/asset/engine/asset-settlement.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/calculator.js",
+      "refs": [
+        "apps/health/bio-propagation.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/fetus_sprite.js",
+      "refs": [
+        "apps/uterus/uterus-data.js",
+        "docs/ref-upstream-2026-10.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/gen-surgery-preview.js",
+      "refs": [
+        "apps/health/surgery-library.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/lifecycle-baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/lifecycle-baseline.json",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/stage_config.js",
+      "refs": [
+        "apps/uterus/uterus-data.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/state_migration.js",
+      "refs": [
+        "ITERATION_LOG.md",
+        "apps/diagdesk/diagdesk-data.js",
+        "docs/ref-upstream-2026-10.md",
+        "scripts/doc-path-claim-baseline.json",
+        "tools/iter105_items.json",
+        "tools/iter105_seg.md",
+        "update-log.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/thought-chain/001.js",
+      "refs": [
+        "ITERATION_LOG.md",
+        "apps/cotdesk/cotdesk-data.js",
+        "scripts/doc-path-claim-baseline.json",
+        "tools/iter104_items.json",
+        "tools/iter104_seg.md",
+        "update-log.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/uterus_layout.js",
+      "refs": [
+        "apps/uterus/uterus-data.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/util/command-error-utils.js",
+      "refs": [
+        "config/upstream-failure.js",
+        "scripts/doc-path-claim-baseline.json",
+        "tools/recon9_ledger.md"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "scripts/world-info.js",
+      "refs": [
+        "config/worldbook-manager.js",
+        "scripts/doc-path-claim-baseline.json",
+        "scripts/import-resolve-check.mjs"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/_audit_lib.mjs",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json",
+        "scripts/upstream-face-audit.mjs"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/_repo_css.mjs",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json",
+        "tests/system-v3790.test.mjs"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/.tmp_v315_probe_1790708298427.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json",
+        "tests/_mirror_tree.mjs",
+        "tests/system-v3230.test.mjs"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/branch_play_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/bump-drill.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/catalog_reference_consumers.tsv",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/cheat-packs-before-v3160.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/lifecycle_declarative_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/long_chat_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/longlist_scale_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/memory_growth_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/perf_sampler_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/reading_find_scale_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/schedule_conflict_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/search_scale_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/gate_timing_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/perf_baseline.js",
+      "refs": [
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/probe_v289b.mjs",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/projection-absence.test.mjs",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/race_icons.test.mjs",
+      "refs": [
+        "apps/health/bio-races.js",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/system-v4870.test.mjs",
+      "refs": [
+        ".agents/notes/proposed/architecture/2026-10-29-product-optimization-v11.md",
+        "scripts/doc-path-claim-audit.mjs",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3213_projection_cache_freshness.test.mjs",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3214_evidence_workbench.test.mjs",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3215_repair_write_channel.test.mjs",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3220_relation_mutual_knowledge.test.mjs",
+      "refs": [
+        "FOUR_RELEASE_PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3221_scene_face_migration.test.mjs",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3253_open_face_registry.test.mjs",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3258_inbound_face_registry.test.mjs",
+      "refs": [
+        "ITERATION_LOG.md",
+        "PLAN.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/v3260_a1_narrative_generators.test.mjs",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tools/patch_v4920_home_icons.py",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json",
+        "update-log.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tools/takeover_v4480_anchors.py",
+      "refs": [
+        "ITERATION_LOG.md",
+        "scripts/doc-path-claim-baseline.json",
+        "tools/iter208_seg.md",
+        "update-log.json"
+      ],
+      "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    }
+  ]
+}

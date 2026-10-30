@@ -21,13 +21,13 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
-- `npm run check` = **十五道子门**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `lifecycle`
-  → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `hardlink-safety` → `upstream-face`。
+- `npm run check` = **十八道子门**串联：**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `bind-consuming` → `method-consuming` → `lifecycle` → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `hardlink-safety` → `doc-path-claim` → `upstream-face`。
   > 【本行订正 · v3.78.0】新增第十五段 `hardlink-safety`（`scripts/hardlink-safety-check.mjs`：
   > 硬链接安全的四判据 —— 真调用面 / 工作树被改写 / 版本库可用 / HEAD 可达），故本行由「十四道」改「**十五道**」。
   > 同规：只照 `package.json` 的 `scripts.check` 抄，不凭印象 —— C4 判据当场就会替我们核对。
   > ⚠️ 位置也有不变量：本仓链**以 `upstream-face` 收尾**（`tests/system-v3201` A4 与 `system-v3203` A1 两处判据看守），
   > 故新门插在它**之前**而不是追加到末尾 —— 这条是踩过的：一版曾把新门追加到链尾，当场被两条判据抓红。
+  > 【本行再次订正 · v4.99.0】新增第十七段 `doc-path-claim`（`scripts/doc-path-claim-audit.mjs`：R11-O4 的文档路径存活审计），故本行由「十七道」改「**十八道**」。★ 这一次的来由值得留档：那道门的产物早就在盘上、套件也早就在跑它，**但它从没进过 check 链** —— 于是 F8「台账静态门文件数 == 分档表静态档条目数」报 `17 !== 16`，那一声就是替它响的（没接线的代码不会自己响）。
   > 注意两个数**不是一回事**，别互相顶替：**链段数 15**（本行转写的那个数，含 `test` 与 `import-resolve`）
   > vs **静态门脚本数** `static_gate_files` = **14**（`tests/audit/status-ledger.json` 里那个数；
   > `scripts/` 下按命名规约收进来的 `*-check.mjs` / `*-audit.mjs`）。本行受 C4 看守的是前者。

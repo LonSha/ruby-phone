@@ -16,6 +16,21 @@ import { cwPlanLine, cwSelfCheck, CW_STEPS } from '../../config/creation-workben
 import { CreationdeskView } from './creationdesk-view.js';
 /* [v4.50.0 · R6-O5] 长篇创作工程契约（纯函数） */
 import * as CP from '../../config/creation-project.js';
+/* [v4.97.0 · R11-O3 第三批] 委托创作生命周期契约。本层只持台账与用户选择，
+ *   五阶段推进 / 加需求显式协商 / 取消保留草稿**全由内核判**，本件不写第二份口径。
+ *   判定全在 commission-pipeline 内核，本件只落盘与归因（读不出与空台账分两句）。 */
+import {
+    COMMISSION_STAGES,
+    SCOPE_CHANGE_STATUS,
+    createCommission as kernCreateCommission,
+    acceptBrief as kernAcceptBrief,
+    submitDraft as kernSubmitDraft,
+    proposeScopeChange as kernProposeScopeChange,
+    agreeScopeChange as kernAgreeScopeChange,
+    acceptAndSettle as kernAcceptAndSettle,
+    cancelCommission as kernCancelCommission,
+} from '../../config/commission-pipeline.js';
+export const CW_COMMISSION_KEY = 'cw_commission_v1';
 /* [v4.17.0 · R4-O5] 编辑缓冲(纯函数)。本层只转交:归一与三态判定全在那件里,
  *   **已发布不许被覆盖这条红线也由它守**(本层不自己判一份)。 */
 import {
@@ -800,5 +815,108 @@ export class CreationdeskApp {
         return res;
     }
 
+    /* ============================================================
+     * [v4.97.0 · R11-O3 第三批] 委托创作生命周期接线（commission-pipeline 内核）
+     *   台账形如 { commissions: { id: commission } }。App 侧只做四件事：
+     *   读台账（读不出与空分开）/ 落盘 / 把用户意图转交内核 / 归因如实回。
+     *   五阶段推进、加需求协商、取消保留草稿的判定全在内核，本件不写第二份。
+     * ============================================================ */
+    _readCommissionState() {
+        if (!this.storage || typeof this.storage.get !== 'function') {
+            return { readable: false, why: 'no_storage', commissions: {} };
+        }
+        let raw;
+        try { raw = this.storage.get(CW_COMMISSION_KEY); }
+        catch (_e) { return { readable: false, why: 'read_threw', commissions: {} }; }
+        if (raw === undefined || raw === null || raw === '') {
+            return { readable: true, why: '', commissions: {} };
+        }
+        let parsed = raw;
+        if (typeof raw === 'string') {
+            try { parsed = JSON.parse(raw); }
+            catch (_e) { return { readable: false, why: 'bad_json', commissions: {} }; }
+        }
+        const commissions = (parsed && typeof parsed === 'object' && parsed.commissions && typeof parsed.commissions === 'object')
+            ? parsed.commissions : {};
+        return { readable: true, why: '', commissions };
+    }
+    _writeCommissionState(commissions) {
+        if (!this.storage || typeof this.storage.set !== 'function') {
+            return { saved: false, why: 'no_api' };
+        }
+        try {
+            const out = this.storage.set(CW_COMMISSION_KEY, JSON.stringify({ version: 1, commissions }));
+            if (out === false) return { saved: false, why: 'write_refused' };
+            return { saved: true, why: '' };
+        } catch (_e) { return { saved: false, why: 'write_threw' }; }
+    }
+    /** 建一笔委托（登记需求）并落盘。 */
+    createCommission(raw) {
+        let c;
+        try { c = kernCreateCommission(raw || {}); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        const read = this._readCommissionState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        read.commissions[c.id] = c;
+        const w = this._writeCommissionState(read.commissions);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return { ok: true, id: c.id, commission: c };
+    }
+    /** 按步骤转交内核后落盘；找不到该委托先拒绝，不让内核吃 undefined。 */
+    _commissionStep(id, fn, ...args) {
+        const cid = String(id || '').trim();
+        if (!cid) return { ok: false, reason: 'missing-id' };
+        const read = this._readCommissionState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        const cur = read.commissions[cid];
+        if (!cur) return { ok: false, reason: 'commission-not-found' };
+        let res;
+        try { res = fn(cur, ...args); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        if (!res || !res.ok) return res || { ok: false, reason: 'kernel-refused' };
+        /* 内核返回的是**新对象**（createCommission 克隆受控），必须写回台账再落盘，
+         *   否则步骤推进全部静默丢失（草稿数不变、阶段不前进、结算读不到）。 */
+        if (res.commission && typeof res.commission === 'object') read.commissions[cid] = res.commission;
+        const w = this._writeCommissionState(read.commissions);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return res;
+    }
+    acceptBrief(id, deposit) { return this._commissionStep(id, (c) => kernAcceptBrief(c, deposit)); }
+    submitDraft(id, draftPayload) { return this._commissionStep(id, (c) => kernSubmitDraft(c, draftPayload || {})); }
+    proposeScopeChange(id, changePayload) { return this._commissionStep(id, (c) => kernProposeScopeChange(c, changePayload || {})); }
+    agreeScopeChange(id, changeId) { return this._commissionStep(id, (c, ref) => kernAgreeScopeChange(c, ref), changeId); }
+    acceptAndSettle(id, rating, review) { return this._commissionStep(id, (c) => kernAcceptAndSettle(c, rating, review)); }
+    cancelCommission(id, reason) { return this._commissionStep(id, (c) => kernCancelCommission(c, reason)); }
+    /** 面读数：列表 + 每笔的阶段/费用/草稿数/未决变更数。 */
+    commissionFace() {
+        const read = this._readCommissionState();
+        if (!read.readable) {
+            return { ok: false, why: read.why, line: '委托台账读不到（' + read.why + '）—— 不是「没有委托」', rows: [], count: null };
+        }
+        const ids = Object.keys(read.commissions);
+        if (!ids.length) {
+            return { ok: true, why: 'empty', line: '这个会话还没登记过创作委托', rows: [], count: 0 };
+        }
+        const stageText = {
+            brief: '待确认需求', concept: '概念样稿', change_scope: '变更协商中',
+            revision: '返修中', acceptance: '已验收结算', cancelled: '已取消',
+        };
+        const rows = ids.map((id) => {
+            const c = read.commissions[id];
+            /* [v4.97.0] 状态串只从内核取：原先这里手写 'pending'，与内核里那份是两份口径。 */
+            const pending = (c.scopeChanges || []).filter((x) => x && x.status === SCOPE_CHANGE_STATUS.PENDING);
+            return {
+                id, title: c.title, client: c.client, stage: c.stage,
+                stageText: stageText[c.stage] || c.stage,
+                agreedFee: c.agreedFee, depositPaid: c.depositPaid,
+                drafts: (c.drafts || []).length,
+                pendingChanges: pending.length,
+                /* 未决变更明细：视图「同意/拒绝」按钮要按 changeId 对号，不在此给会点错账。 */
+                pendingList: pending.map((x) => ({ changeId: x.changeId, feeDelta: x.feeDelta, reqs: (x.additionalRequirements || []).join('、') })),
+                settlement: c.settlement || null,
+            };
+        });
+        return { ok: true, why: 'ready', line: '已登记 ' + ids.length + ' 笔委托', rows, count: ids.length };
+    }
     destroy() { this._view = null; }
 }

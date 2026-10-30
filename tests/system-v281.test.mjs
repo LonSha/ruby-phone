@@ -142,6 +142,18 @@ const CLOSURE = [
      *   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
      *   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。 */
     'config/view-state.js',
+    /* [v4.99.7] v4.99.5 落地的 config/spotlight-face-bridge.js（全局检索面纯映射层）
+     *   被 apps/search/search-app.js 静态导入 —— 闭包不带它，负数副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。
+     *   ★ 这一条是本版真红过的形态：不是本版引入，但由本版补上、并写进日志。 */
+    'config/spotlight-face-bridge.js',
+    /* [v4.99.7] v4.99.5 的全局检索面把 search-app 的静态依赖面撑大三件：
+     *   spotlight-universal-search（内核本体）、apps.js（应用注册表，SETTINGS 域的灌入源）、
+     *   app-library.js（注册表读出件）。CLOSURE 不补齐 ⇒ 副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。 */
+    'config/spotlight-universal-search.js',
+    'config/apps.js',
+    'config/app-library.js',
 ];
 
 function makeCopy(tag) {

@@ -23,6 +23,14 @@ export class CharsView {
         this.container = container;
         this._draw();
     }
+    /* [v4.99.2 · R11-X1] 首次渲染档案面前先读回存档一次（幂等：restore 用
+     * 落盘数据覆盖内存实例，无存档时保持空态、不报错）。 */
+    _archiveHydrated = false;
+    _ensureArchiveHydrated() {
+        if (this._archiveHydrated) return;
+        try { this.app._archiveRestoreAll?.(); } catch (_e) { /* 读回失败保持空态 */ }
+        this._archiveHydrated = true;
+    }
     _esc(s) {
         return String(s === null || s === undefined ? '' : s)
             .replace(/&/g, '&amp;')
@@ -37,6 +45,9 @@ export class CharsView {
         const face = (pkg && pkg.face) || { reason: 'bridge-absent', text: '群像不可读', state: 'absent' };
         const proj = (pkg && pkg.proj) || { roles: [], count: 0 };
         const src = (pkg && pkg.src) || null;
+        this._ensureArchiveHydrated();
+        let archive = null;
+        try { archive = this.app.archiveFace(); } catch (_e) { archive = null; }
         const html = [
             '<div class="cs-root">',
             '  <header class="cs-header">',
@@ -48,6 +59,7 @@ export class CharsView {
             this._reasonCard(face),
             this._sourceCard(src),
             this._rolesCard(face, proj),
+            this._archiveCard(archive),
             this._perspectiveCard(),
             this._settingsCard(),
             '  </div>',
@@ -183,6 +195,127 @@ export class CharsView {
         } catch (_e) { return null; }
     }
     /** 字段值可读化（与内核 fmtFieldVal 同口径，视图独立不引内核私有函数） */
+    /* ══════════ [v4.99.2 · R11-X1] 人物档案面（背包 / 档案 / 卷宗） ══════════
+     * 【三态不同形】readable（数组）= 正常 / 空数组 = 「还没有」（与读不到不同形）/
+     *   null = 「读不到」（明写警示，不许静默显示为空）。
+     * 【操作点】背包三键（录入 / 转赠 / 消耗或遗失）、档案两键（登记 / 标注偏移）——
+     *   判定与数据全走 app 写口（本视图只搬不判）。 */
+    _archiveCard(archive) {
+        if (!archive) {
+            return [
+                '<div class="cs-card cs-archive cs-archive-off">',
+                '  <div class="cs-card-title">档案（背包 · 人物 · 卷宗）</div>',
+                '  <div class="cs-empty cs-arch-warn">档案面读不到 —— 这是「读不到」，不是「还没有」。</div>',
+                '</div>'
+            ].join('\n');
+        }
+        const notes = archive.notes || {};
+        const counts = archive.counts || {};
+        const f = archive.faces || { backpack: null, dossiers: null, volumes: null };
+        const parts = [];
+        parts.push(this._archiveBackpackBlock(f.backpack));
+        parts.push(this._archiveDossierBlock(f.dossiers));
+        parts.push(this._archiveVolumeBlock(f.volumes, counts.volumeStats));
+        return [
+            '<div class="cs-card cs-archive">',
+            '  <div class="cs-card-title">档案（背包 · 人物 · 卷宗）' +
+                (notes.mustShowWhy
+                    ? '<span class="cs-count cs-arch-warn">部分读不到（' + this._esc(notes.why || '') + '）</span>'
+                    : '') + '</div>',
+            parts.filter(Boolean).join('\n'),
+            '  <div class="cs-arch-actions">',
+            '    <input class="cs-input cs-arch-item-name" id="cs-arch-item-name" maxlength="40" placeholder="物品名（录入背包）">',
+            '    <button class="cs-seg" id="cs-arch-add">录入</button>',
+            '    <input class="cs-input cs-arch-char-name" id="cs-arch-char-name" maxlength="40" placeholder="角色名（登记档案）">',
+            '    <button class="cs-seg" id="cs-arch-dossier">登记档案</button>',
+            '  </div>',
+            '  <div class="cs-arch-note" id="cs-arch-note"></div>',
+            '</div>'
+        ].join('\n');
+    }
+    _archiveBackpackBlock(rows) {
+        if (rows === null) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">背包</div><div class="cs-empty cs-arch-warn">读不到（这是「读不到」，不是「没有物品」）</div></div>';
+        }
+        if (!rows.length) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">背包</div><div class="cs-empty">还没有录入物品（剧情道具 / 纪念品可手动录入）</div></div>';
+        }
+        const items = rows.slice(0, 12).map((r) => [
+            '      <div class="cs-arch-item">',
+            '        <span class="cs-role-name">' + this._esc(r.name) + '</span>',
+            '        <span class="cs-chip">' + this._esc(r.status) + '</span>',
+            '        <span class="cs-role-floor">' + this._esc(r.source) + '</span>',
+            '        <button class="cs-seg cs-arch-xfer" data-xfer="' + this._esc(r.id) + '">转赠</button>',
+            '        <button class="cs-seg cs-arch-consume" data-consume="' + this._esc(r.id) + '">消耗</button>',
+            '      </div>'
+        ].join('')).join('\n');
+        return [
+            '  <div class="cs-arch-block">',
+            '    <div class="cs-arch-head">背包<span class="cs-count">' + rows.length + ' 件（持有 ' + rows.filter((r) => r.status === 'held').length + '）</span></div>',
+            items,
+            (rows.length > 12 ? '    <div class="cs-more">仅显示前 12 件（共 ' + rows.length + '）</div>' : ''),
+            '  </div>'
+        ].filter(Boolean).join('\n');
+    }
+    _archiveDossierBlock(rows) {
+        if (rows === null) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">人物档案</div><div class="cs-empty cs-arch-warn">读不到（这是「读不到」，不是「没有档案」）</div></div>';
+        }
+        if (!rows.length) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">人物档案</div><div class="cs-empty">还没有登记的档案（录入角色名即可开档）</div></div>';
+        }
+        const items = rows.slice(0, 12).map((r) => [
+            '      <div class="cs-arch-item">',
+            '        <span class="cs-role-name">' + this._esc(r.name) + '</span>',
+            '        <span class="cs-chip">' + this._esc(r.formattedAttitudeText) + '</span>',
+            (r.hasShift ? '<span class="cs-chip">' + this._esc(r.shiftSummary) + '</span>' : ''),
+            '        <button class="cs-seg cs-arch-shift" data-shift="' + this._esc(r.name) + '">标注偏移</button>',
+            '        <button class="cs-seg cs-arch-detail" data-detail="' + this._esc(r.name) + '">详情</button>',
+            '      </div>'
+        ].filter(Boolean).join('')).join('\n');
+        return [
+            '  <div class="cs-arch-block">',
+            '    <div class="cs-arch-head">人物档案<span class="cs-count">' + rows.length + ' 份</span></div>',
+            items,
+            (rows.length > 12 ? '    <div class="cs-more">仅显示前 12 份（共 ' + rows.length + '）</div>' : ''),
+            '  </div>'
+        ].filter(Boolean).join('\n');
+    }
+    _archiveVolumeBlock(rows, stats) {
+        if (rows === null) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">卷宗</div><div class="cs-empty cs-arch-warn">读不到（这是「读不到」，不是「没有卷」）</div></div>';
+        }
+        if (!rows.length) {
+            return '<div class="cs-arch-block"><div class="cs-arch-head">卷宗</div><div class="cs-empty">还没有封存的卷宗（长线剧情分卷后在此回顾）</div></div>';
+        }
+        const items = rows.slice(0, 8).map((r) => [
+            '      <div class="cs-arch-item">',
+            '        <span class="cs-chip">VOL.' + String(r.index).padStart(2, '0') + '</span>',
+            '        <span class="cs-role-name">' + this._esc(r.title) + '</span>',
+            '        <span class="cs-role-floor">' + this._esc(r.timeRange) + '</span>',
+            '        <span class="cs-chip">' + r.entryCount + '条 · ' + r.majorEventCount + '转折</span>',
+            '        <button class="cs-seg cs-arch-vol" data-vol="' + Number(r.index) + '">回顾</button>',
+            '      </div>'
+        ].join('')).join('\n');
+        const statsLine = stats
+            ? ' · 累计 ' + stats.totalEntriesArchived + ' 条 / ' + stats.totalMajorEvents + ' 次重大转折'
+            : '';
+        return [
+            '  <div class="cs-arch-block">',
+            '    <div class="cs-arch-head">卷宗<span class="cs-count">' + rows.length + ' 卷' + statsLine + '</span></div>',
+            items,
+            (rows.length > 8 ? '    <div class="cs-more">仅显示前 8 卷（共 ' + rows.length + '）</div>' : ''),
+            '  </div>'
+        ].filter(Boolean).join('\n');
+    }
+    /** 档案操作归因一行（操作成功 / 失败都如实写出来，不吞） */
+    _archNote(el, text, warn) {
+        if (!el) return;
+        try {
+            el.textContent = text;
+            el.className = 'cs-arch-note' + (warn ? ' cs-arch-warn' : '');
+        } catch (_e) { /* 宿主节点不可用：不抛 */ }
+    }
     _fmtVal(v) {
         if (v === null || v === undefined) return '未记';
         if (typeof v === 'boolean') return v ? '开' : '关';
@@ -241,5 +374,88 @@ export class CharsView {
             try { this.app.setPerspectiveCurrent(e?.target?.value); } catch (_e) {}
             this._draw();
         });
+        /* ══════════ [v4.99.2 · R11-X1] 档案面操作点绑定 ══════════
+         * 【骨架】录入 / 登记档案 / 转赠 / 消耗 / 标注偏移 / 卷宗回顾。
+         * 【纪律】视图只搬参数不做判定：成功失败都从 app 写口转回来、
+         *   归因写进 #cs-arch-note 一行（_archNote），不吞、不猜、不静默。 */
+        const archNote = q('#cs-arch-note');
+        const after = (fn) => {
+            try { fn(); } catch (e) {
+                this._archNote(archNote, '操作失败：' + (e && e.message ? e.message : '未知错误'), true);
+                return;
+            }
+            this._draw();
+        };
+        q('#cs-arch-add')?.addEventListener('click', () => after(() => {
+            const name = (q('#cs-arch-item-name')?.value || '').trim();
+            if (!name) throw new Error('物品名不能为空');
+            this.app.archiveRegisterItem({ name });
+            this._archNote(archNote, '已录入「' + name + '」', false);
+        }));
+        q('#cs-arch-dossier')?.addEventListener('click', () => after(() => {
+            const name = (q('#cs-arch-char-name')?.value || '').trim();
+            if (!name) throw new Error('角色名不能为空');
+            this.app.archiveUpsertDossier({ name, identity: '重要角色' });
+            this._archNote(archNote, '已为「' + name + '」开档', false);
+        }));
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-xfer]') : [])) {
+            btn.addEventListener('click', () => after(() => {
+                const id = btn.getAttribute('data-xfer');
+                const to = win.prompt?.('转赠给谁？（持有者名）') || '';
+                if (!to) throw new Error('未填转赠对象');
+                this.app.archiveTransferItem(id, to, '转赠');
+                this._archNote(archNote, '已转赠给「' + to + '」', false);
+            }));
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-consume]') : [])) {
+            btn.addEventListener('click', () => after(() => {
+                const id = btn.getAttribute('data-consume');
+                const which = win.confirm?.('消耗（用掉）还是遗失？确定=消耗，取消=遗失');
+                this.app.archiveChangeItemStatus(id, which ? 'consumed' : 'lost', '');
+                this._archNote(archNote, which ? '已标记消耗' : '已标记遗失', false);
+            }));
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-shift]') : [])) {
+            btn.addEventListener('click', () => after(() => {
+                const name = btn.getAttribute('data-shift');
+                const behavior = win.prompt?.('偏移行为（如：开始回避目光）') || '';
+                if (!behavior) throw new Error('偏移行为不能为空');
+                const meaning = win.prompt?.('这个行为意味着什么？') || '';
+                const avoid = win.prompt?.('不要误解为（如：讨厌对方）') || '';
+                this.app.archiveRecordShift(name, { behavior, meaning, avoidReadingAs: avoid });
+                this._archNote(archNote, '已为「' + name + '」标注偏移', false);
+            }));
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-detail]') : [])) {
+            btn.addEventListener('click', () => {
+                /* 档案行只带摘要面字段；完整档案（经历摘要 / 关系与态度 / 偏移理由）
+                 * 按名直取 —— 这是 app.archiveGetDossier 的唯一消费点。 */
+                const name = btn.getAttribute('data-detail');
+                let d = null;
+                try { d = this.app.archiveGetDossier(name); } catch (_e) { d = null; }
+                if (!d) { this._archNote(archNote, '读不到「' + name + '」的完整档案', true); return; }
+                this._archNote(archNote,
+                    '「' + name + '」· ' + (d.identity || '') + ' · ' + (d.formattedAttitudeText || '')
+                    + ' · 经历：' + (d.experienceBrief || '待补充')
+                    + ' · 互动：' + (d.recentInteractions || '暂无')
+                    + (d.personalityShift ? ' · 偏移：' + d.personalityShift.statement : ''),
+                    false);
+            });
+        }
+        for (const btn of (el.querySelectorAll ? el.querySelectorAll('[data-vol]') : [])) {
+            btn.addEventListener('click', () => {
+                /* 卷宗行摘要里没有 recap（概览正文）：按卷号直取完整卷宗再摆出来，
+                 * 然后用同一条 phone:openApp 通路去日记 App 按时间线翻。
+                 * 卷宗数据**没有**条目 id / 楼层锚 —— 不造 ref、不谎称「已定位到楼层」。 */
+                const idx = Number(btn.getAttribute('data-vol'));
+                let v = null;
+                try { v = this.app.archiveGetVolume(idx); } catch (_e) { v = null; }
+                const recap = v && v.recap ? v.recap : '（本卷无概览）';
+                this._archNote(archNote,
+                    '第' + idx + '卷 · ' + ((v && v.timeRange) || '') + ' · ' + recap,
+                    false);
+                try { win.dispatchEvent(new win.CustomEvent('phone:openApp', { detail: { appId: 'diary' } })); } catch (_e) {}
+            });
+        }
     }
 }

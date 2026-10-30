@@ -54,6 +54,56 @@ export class BatteryThermodynamics {
             }
         } catch (_e) {}
     }
+    /* [v4.99.6 · R11-X8] 读数面（`face()`）：产品端读电量的**唯一**入口。
+     *   为什么要有：状态栏此前读的是 `navigator.getBattery()`（宿主真机的电池），
+     *   与这里 tick 出来的虚拟电量各是一个真源 —— 剧情里手机放电到 5% 时状态栏仍显示宿主那格。
+     *   现在把两个真源合并成一个：**宿主那格只允许当一次性初值**（seedFromHost），
+     *   此后一律以本实例为准。face() 不抛（读坏了不能把状态栏带挂），但如实标 ok:false。
+     * @returns {{ok:boolean, why:string, battery?:{level:number, charging:boolean, throttling:boolean, temperature:number, powerState:string, criticalAlert:*}}}
+     */
+    face() {
+        try {
+            return {
+                ok: true,
+                why: '',
+                battery: {
+                    level: this.level,
+                    charging: !!this.isCharging,
+                    throttling: !!this.isThrottling,
+                    temperature: this.temperature,
+                    powerState: this.isCharging
+                        ? (this.level >= 100 ? POWER_STATES.FULL : POWER_STATES.CHARGING)
+                        : (this.level <= 10 ? POWER_STATES.CRITICAL : POWER_STATES.DISCHARGING),
+                    criticalAlert: this.level <= 5 ? 'CRITICAL_LAST_CALL' : (this.level <= 20 ? 'LOW_BATTERY_WARNING' : null)
+                }
+            };
+        } catch (e) {
+            return { ok: false, why: 'read_threw', detail: String((e && e.message) || e) };
+        }
+    }
+    /**
+     * [v4.99.6 · R11-X8] 一次性播种：只在**首次装配**（盘上还没有本实例的状态）时接纳外部初值。
+     *   为什么要限一次：宿主真机电量与虚拟电量同时活着就是两个真源。
+     *   盘上已有状态 ⇒ 返回 {seeded:false}，绝不覆盖用户剧情里推进出来的电量。
+     * @param {{level:*, charging:*}} seed
+     * @returns {{seeded:boolean, level:number, why:string}}
+     */
+    seedOnce(seed) {
+        const has = (() => {
+            if (!this.storage?.get) return false;
+            try {
+                const saved = this.storage.get('battery_thermo_state', null);
+                return !!(saved && typeof saved.level === 'number');
+            } catch (_e) { return false; }
+        })();
+        if (has) return { seeded: false, level: this.level, why: 'already_saved' };
+        const lv = Number(seed && seed.level);
+        if (!Number.isFinite(lv)) return { seeded: false, level: this.level, why: 'bad_seed' };
+        this.level = Math.max(0, Math.min(100, lv));
+        this.isCharging = !!(seed && seed.charging);
+        this._save();
+        return { seeded: true, level: this.level, why: '' };
+    }
 
     _save() {
         if (!this.storage?.set) return;

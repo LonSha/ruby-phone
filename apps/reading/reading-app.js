@@ -51,6 +51,19 @@ import {
     readingVersionOf, coverOf, tocOf, exportTextOf,
     bookLine, versionsLine, saSelfCheck, SA_OUTLETS,
 } from '../../config/story-annual-contract.js';
+/* [v4.97.0 · R11-O3 第三批] 研读案卷契约。书架面已有摘录/专题夹/年鉴/备份，
+ *   本件补的是「围绕一个问题的案卷」：问题 → 挂书 → 摘录 → 对照观点 → 批注 → 初稿。
+ *   判定与归一全在契约件（含「绝不静默覆盖作者正文」的改版政策），本层只转交与落盘。 */
+import {
+    RS_STORAGE_KEY,
+    createReadingDossier as kernCreateDossier,
+    linkBookToDossier as kernLinkBook,
+    addExcerpt as kernAddExcerpt,
+    addContrastingView as kernAddView,
+    addAnnotation as kernAddAnnotation,
+    updateDraft as kernUpdateDraft,
+    handleBookVersionUpdate as kernVersionUpdate,
+} from '../../config/reading-studio.js';
 /* [v4.25.0 · R4-X3] 年鉴阅读进度键(**逐字常量**:keys 门的抽取器认这一形态)。 */
 const READING_ANNUAL_PROGRESS_KEY = 'ruby_reading_annual_readthrough';
 
@@ -1300,7 +1313,101 @@ export class ReadingApp {
         };
         this.view._loadProgress(bookId);
         this.render();
-        return true;
+return true;
+    }
+    /* ══════════ [v4.97.0 · R11-O3 第三批] 研读案卷（reading-studio 契约件） ══════════
+     * 台账形如 { dossiers: { id: dossier } }。本层四件事：读台账（读不出与空分开）、
+     *   落盘、把用户动作转交契约件、归因如实回。案卷推进/摘录归一/改版政策全在契约件。 */
+    _readStudioState() {
+        if (!this.storage || typeof this.storage.get !== 'function') {
+            return { readable: false, why: 'no_storage', dossiers: {} };
+        }
+        let raw;
+        try { raw = this.storage.get(RS_STORAGE_KEY); }
+        catch (_e) { return { readable: false, why: 'read_threw', dossiers: {} }; }
+        if (raw === undefined || raw === null || raw === '') {
+            return { readable: true, why: '', dossiers: {} };
+        }
+        let parsed = raw;
+        if (typeof raw === 'string') {
+            try { parsed = JSON.parse(raw); }
+            catch (_e) { return { readable: false, why: 'bad_json', dossiers: {} }; }
+        }
+        const dossiers = (parsed && typeof parsed === 'object' && parsed.dossiers && typeof parsed.dossiers === 'object')
+            ? parsed.dossiers : {};
+        return { readable: true, why: '', dossiers };
+    }
+    _writeStudioState(dossiers) {
+        if (!this.storage || typeof this.storage.set !== 'function') {
+            return { saved: false, why: 'no_api' };
+        }
+        try {
+            const out = this.storage.set(RS_STORAGE_KEY, JSON.stringify({ version: 1, dossiers }));
+            if (out === false) return { saved: false, why: 'write_refused' };
+            return { saved: true, why: '' };
+        } catch (_e) { return { saved: false, why: 'write_threw' }; }
+    }
+    /** 建案卷（围绕一个研读问题）并落盘。 */
+    createReadingDossier(raw) {
+        let d;
+        try { d = kernCreateDossier(raw || {}); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        const read = this._readStudioState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        read.dossiers[d.id] = d;
+        const w = this._writeStudioState(read.dossiers);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return { ok: true, id: d.id, dossier: d };
+    }
+    /** 按步骤转交契约件后落盘（契约件返回新对象，必须写回台账）。 */
+    _dossierStep(id, fn, ...args) {
+        const did = String(id || '').trim();
+        if (!did) return { ok: false, reason: 'missing-id' };
+        const read = this._readStudioState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        const cur = read.dossiers[did];
+        if (!cur) return { ok: false, reason: 'dossier-not-found' };
+        let res;
+        try { res = fn(cur, ...args); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        if (!res || !res.ok) return res || { ok: false, reason: 'kernel-refused' };
+        if (res.dossier && typeof res.dossier === 'object') read.dossiers[did] = res.dossier;
+        const w = this._writeStudioState(read.dossiers);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return res;
+    }
+    linkBookToDossier(id, bookPayload) { return this._dossierStep(id, (d) => kernLinkBook(d, bookPayload || {})); }
+    addExcerptToDossier(id, payload) { return this._dossierStep(id, (d) => kernAddExcerpt(d, payload || {})); }
+    addContrastingViewToDossier(id, payload) { return this._dossierStep(id, (d) => kernAddView(d, payload || {})); }
+    addAnnotationToDossier(id, payload) { return this._dossierStep(id, (d) => kernAddAnnotation(d, payload || {})); }
+    updateDossierDraft(id, payload) { return this._dossierStep(id, (d) => kernUpdateDraft(d, payload || {})); }
+    /** 书改版：契约件按「绝不静默覆盖作者正文」政策标 stale，返回受影响摘录数。 */
+    handleBookVersionUpdate(id, bookId, newVersion) {
+        return this._dossierStep(id, (d) => kernVersionUpdate(d, String(bookId || ''), String(newVersion || '')));
+    }
+    /** 面读数：案卷列表 + 每卷的挂书/摘录/观点/批注/草稿节计数。 */
+    readingStudioFace() {
+        const read = this._readStudioState();
+        if (!read.readable) {
+            return { ok: false, why: read.why, line: '研读案卷台账读不到（' + read.why + '）—— 不是「没有案卷」', rows: [], count: null };
+        }
+        const ids = Object.keys(read.dossiers);
+        if (!ids.length) {
+            return { ok: true, why: 'empty', line: '这个会话还没建过研读案卷', rows: [], count: 0 };
+        }
+        const rows = ids.map((id) => {
+            const d = read.dossiers[id];
+            return {
+                id, title: d.title, question: d.researchQuestion, status: d.status,
+                books: (d.books || []).length,
+                excerpts: (d.excerpts || []).length,
+                staleExcerpts: (d.excerpts || []).filter((e) => e && e.isStale).length,
+                views: (d.contrastingViews || []).length,
+                annotations: (d.annotations || []).length,
+                draftSections: (d.draft && Array.isArray(d.draft.sections)) ? d.draft.sections.length : 0,
+            };
+        });
+        return { ok: true, why: 'ready', line: '已建 ' + ids.length + ' 卷研读案卷', rows, count: ids.length };
     }
 }
 

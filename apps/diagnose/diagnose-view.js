@@ -7,9 +7,10 @@
  * 漂移就是这类：视图的键与真源常量不同形，兜底改写归因）。
  * ======================================================== */
 'use strict';
-
 import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, injectionLine, injectionVerdictText, blockLine, summarizeDiagnose } from './diagnose-data.js';
 import { schemaStateText, storageFaceLine, secretFaceText, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
+/* [v4.98.0 · R11-O8 收口] 图标覆盖率面的一行文案转发（视图不自己拼，与全页同纪律）。 */
+import { iconFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
@@ -1551,6 +1552,41 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v4.98.0 · R11-O8 收口] 像素图标覆盖率面。
+     *  三态不同形（与全页同纪律）：
+     *    · 面缺席（内核没取到）⇒ 明说「读取异常」，并**禁止**读成「89 件全覆盖」；
+     *    · 面在、有缺件 ⇒ 红档 + 逐件点名（缺件 = 会掉 emoji 兜底的那些）；
+     *    · 面在、在册却无磁盘映射 ⇒ 红档点名 —— 这一类在册、URL 非空、**文件不存在**，
+     *      是最容易被当成「已覆盖」的形态，故与「缺件」分开陈列而不是合并计数。 */
+    _iconFaceHtml(pkg) {
+        const face = (pkg && pkg.iconFace) || null;
+        const text = iconFaceText(face);
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>' + escapeHtml(text) + '</div>';
+        }
+        const missing = Array.isArray(face.missing) ? face.missing : [];
+        const unmapped = Array.isArray(face.unmapped) ? face.unmapped : [];
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(text) + '</div>';
+        html += '<div class=' + Q + 'dg-chips' + Q + '>'
+            + this._chip('覆盖 ' + String(face.covered) + '/' + String(face.total), face.ok ? 'ok' : 'warn')
+            + this._chip('百分比 ' + String(Math.round(face.ratio * 100)) + '%', face.ratio >= 1 ? 'ok' : 'warn')
+            + this._chip('缺件 ' + String(missing.length), missing.length ? 'bad' : 'ok')
+            + this._chip('在册无映射 ' + String(unmapped.length), unmapped.length ? 'bad' : 'ok')
+            + '</div>';
+        if (missing.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>这些 App 没有像素图标（会落到 emoji / PNG 兜底，'
+                + '外观与「统一像素」的声明不符）：' + escapeHtml(missing.join(' · ')) + '</div>';
+        }
+        if (unmapped.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>这些 id 在册但**磁盘上找不到对应文件**'
+                + '（URL 非空、覆盖率显示覆盖，实际是空图）：' + escapeHtml(unmapped.join(' · ')) + '</div>';
+        }
+        if (!missing.length && !unmapped.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>全部 89 件 App 都有像素图标，且在册 id 都能落到磁盘上。'
+                + '新增 App 若忘了跑生成器，这里会当场点名。</div>';
+        }
+        return html;
+    }
     /** [v3.55.0 · 计划 A2] App 消费面矩阵卡：把「哪些 App 接上了哪些平台面」摆出来。
      *   本方法**只排版**：逐面命中数、逐行命中面、台账理由全部来自内核读数（一句话总述也是内核给的）。
      *   视图自己数一遍条数就是同一口径的第二份实现 —— 本仓治理过多轮的形态。 */
@@ -1647,6 +1683,10 @@ export class DiagnoseView {
          *   「检查点内容级对照」之前：两者同族（都答「本仓在消费谁产出的哪一面」），
          *   但登记面答的是**向外看**的上游契约，本卡答的是**向内看**的平台级覆盖 —— 先看外部哪些面在，再看自己家的 App 有没有接上。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>App 消费面矩阵（哪些 App 接上了哪些平台面）</h3>' + this._appFacesHtml(pkg) + '</section>');
+        /* [v4.98.0 · R11-O8 收口] 图标覆盖率面：与上面那张矩阵同族 ——
+         *   都是「平台级覆盖读数」，此前只有测试在跑，手机上不可见。
+         *   本面尤其需要可见：缺件的症状是**静默**的（只是那张图不是像素风）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>像素图标覆盖率（统一像素声明是否成立）</h3>' + this._iconFaceHtml(pkg) + '</section>');
         /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
          *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），
          *   本卡答「这些接线**真的挡下过谁**」（行为发生过）。接线在场不等于行为发生过。 */

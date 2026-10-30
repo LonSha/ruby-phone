@@ -43,16 +43,18 @@ import { advanceScenarioNode } from './orchestrated-life-scenario.js';
 import { parallelLifeSandboxSelfCheck } from './parallel-life-sandbox.js';
 import { personalDossierSelfCheck } from './personal-dossier.js';
 import { resolveWorldState } from './phone-world-state-machine.js';
-import { inspectBackupPayload } from './portable-recovery-hub.js';
+/* [v4.96.0 · R11-O3] 三条 import 已随方法退役删除：
+ *   `./portable-recovery-hub.js`（inspectBackupPayload）、`./recovery-hub.js`（createSnapshot /
+ *   computeSnapshotDiff / restoreSnapshot）、`./rule-theatre.js`（registerRule / evaluateEvent）。
+ *   这七件内核的**真消费方**现在是 owner App（apps/backupdesk 与 apps/theater），
+ *   中原那层包装只会让入度读数虚高（模块「被 import」就算已消费，正是本计划 Problem 2 的成因）。 */
 import { adjudicateCharacterProposal } from './proactive-proposal-co-builder.js';
 import { rejectProposal, resumeProactiveScheduler, proactiveProposalSelfCheck } from './proactive-proposal.js';
 import { QianshiScheduleManager } from './qianshi-schedule.js';
-import { createSnapshot, computeSnapshotDiff, restoreSnapshot } from './recovery-hub.js';
 import { relicCollectionSelfCheck } from './relic-collection.js';
 import { createReplayableProgram, replayProgramStepByPerspective } from './replayable-phone-program.js';
 import { evaluateCadence, createMissedPacket, consumeMissedPacket } from './response-cadence.js';
 import { recordAnchor, transitionAnchorStatus } from './resume-anchor.js';
-import { registerRule, evaluateEvent } from './rule-theatre.js';
 import { allocateAppLease } from './runtime-resource-lease-budget.js';
 import { scenarioAuthoringDeskSelfCheck } from './scenario-authoring-desk.js';
 import { buildShareDraft, previewRecipientView, markRecipientRead, revokeShare, sharingBoundarySelfCheck } from './sharing-boundary.js';
@@ -61,7 +63,9 @@ import { auditJourneyReadability } from './touch-interaction-journey-audit.js';
 import { evaluateViewport, generateReadabilityStyle } from './touch-readability-baseline.js';
 import { createContextCard, mergeContextItem, summarizeContextCard } from './unified-context-card.js';
 import { executeTransaction } from './urban-economy.js';
-import { resolveActiveParadigm, switchParadigm, saveCustomParadigm, resolveAppOrder, filterNoticesByParadigm } from './usage-paradigm.js';
+/* [v4.96.0 · R11-O3] usage-paradigm 的具名导入已随本方法的退役一并删除：
+ *   产品端真消费方是 phone/home-screen.js 与 apps/usage/usage-app.js，
+ *   中枢这层包装曾在「模块入度」上把该模块记成已消费，而产品端一直是零调用。 */
 import { saveWorkPackage, startWorkPackageInstance, advanceInstanceStep } from './user-work-package.js';
 import { VolumeChronicleManager } from './volume-chronicle.js';
 import { DynamicAtmosphereLighting } from './dynamic-atmosphere-lighting.js';
@@ -550,15 +554,23 @@ export class SubsystemOrchestrator {
     }
 
     /**
-     * 恢复中心快照与校验
+     * 恢复中心快照与校验 —— [v4.96.0 · R11-O3] **已退役**。
+     *   为什么删而不是接线：本方法此前是 createSnapshot / computeSnapshotDiff / restoreSnapshot /
+     *   inspectBackupPayload 的一层包装，但**每一条都调错了**：
+     *     · `createSnapshot(payload)` 把「载荷」当「台账状态」传（内核签名是 (state,label,dataMap)）；
+     *     · `restoreSnapshot(snap.id)` 传的是 id 字符串（内核要的是快照对象）；
+     *     · `computeSnapshotDiff(snap, payload)` 拿 createSnapshot 的**返回值**（不是 snapshot）去比。
+     *   实测它返回四个非空对象，看着全对，实际 keyCount=0 —— 是「形状对、内容空」的假驱动。
+     *   真接线已按计划做到 owner App：`apps/backupdesk/backupdesk-app.js` 的
+     *   captureSnapshot / diffSnapshot / restoreSnapshotKeys / inspectPayload 直接对内核取值，
+     *   一次包装都不留（留一层就多一处口径）。故本方法与对应 import 一并删除。
      */
-    manageRecoverySnapshot(payload) {
-        const snap = createSnapshot(payload);
-        const diff = computeSnapshotDiff(snap, payload);
-        const restored = restoreSnapshot(snap.id);
-        const inspected = inspectBackupPayload(payload);
-        return { snap, diff, restored, inspected };
-    }
+
+    /* [v4.96.0 · R11-O3] 规则剧场（原 theatreRule）**已退役**。
+     *   为什么删而不是接线：`registerRule(rule)` 少了 state 参数（内核签名 (state, spec)，状态需落盘），
+     *   `evaluateEvent(event)` 同样少了 state —— 两个调用恒拿不到真台账，属同族的假驱动。
+     *   真接线在 `apps/theater/theater-app.js`（readRuleState / submitRule / evaluateRuleEvent），
+     *   规则面板三张白名单直接来自内核。故本方法与 `registerRule` / `evaluateEvent` 两条 import 一并删除。 */
 
     /**
      * 回应节奏与未读包裹
@@ -568,15 +580,6 @@ export class SubsystemOrchestrator {
         const packet = createMissedPacket(charId, { text: 'Hello' });
         const consumed = consumeMissedPacket(packet.id);
         return { cadence, packet, consumed };
-    }
-
-    /**
-     * 规则剧场
-     */
-    theatreRule(rule, event) {
-        const reg = registerRule(rule);
-        const evalRes = evaluateEvent(event);
-        return { reg, evalRes };
     }
 
     /**
@@ -625,17 +628,16 @@ export class SubsystemOrchestrator {
     }
 
     /**
-     * 手机使用范式管理
+     * 手机使用范式管理 —— [v4.96.0 · R11-O3] **已退役**。
+     *   为什么删：本方法的五条调用看着都在，但每一条都是「替产品端先跑一遍」——
+     *   `switchParadigm(paradigmKey)` 会把用户真选的那一档塞进入口参数、`saveCustomParadigm`
+     *   每次都写一份 key='custom' 的固定副本、`filterNoticesByParadigm([])` 传的是空数组
+     *   （恒得空结果）。产品端真接线在 owner 位：`phone/home-screen.js` 调 resolveAppOrder /
+     *   resolveActiveParadigm，`apps/usage/usage-app.js` 读写范式键并提供切换与另存入口。
+     *   留着这层包装只会让「模块被 import 就算已消费」的读数虚高 —— 那正是本计划 Problem 2。
+     *   ★ 上一版曾把它从方法面账本里手工摘除（当成已接线），本版实测它**在产品端仍零调用**、
+     *     当场被门的「新增死方法」判回来。这说明摘账必须以真调用点为据，不能以「模块已有人用」为据。
      */
-    manageUsageParadigm(paradigmKey) {
-        const active = resolveActiveParadigm();
-        const switched = switchParadigm(paradigmKey);
-        const custom = saveCustomParadigm({ key: 'custom', name: 'Custom' });
-        const order = resolveAppOrder(['chat', 'calendar']);
-        const notices = filterNoticesByParadigm([]);
-        return { active, switched, custom, order, notices };
-    }
-
     /**
      * 用户工作包
      */
@@ -682,6 +684,14 @@ export class SubsystemOrchestrator {
                     priority: 'URGENT'
                 });
             }
+        }
+        /* [v4.99.6 · R11-X8] **每推进一步就采一个点**，让心率曲线自己长出来。
+         *   修前：手环只在 PANIC / CONFRONTATION 两种场景被调到，其余时间的曲线一片空白 ——
+         *   「回看这条曲线」永远只有事件那几个散点。生活流本就按步推进，采样挂在这里最自然。
+         *   ★ 采在 modulate 之后但不重复采：上面那两种场景已经在 modulate 内部采过一点。
+         *   ★ 采样失败不影响本步的其它结论（曲线是留痕，不是业务）。 */
+        if (!biometricsReport) {
+            try { this.smartBand.sample(); } catch (_e) { /* 采样坏了不改这一步的结果 */ }
         }
 
         // 4. 日程扫描与提醒生成

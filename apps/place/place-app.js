@@ -37,6 +37,17 @@ import { exploreList, buildRoute, normalizeRoamInputs, buildTravelProposal, roam
  *   上游投影只外供 6 项窄面，而本面要的是**整面场所树**，用投影替换数据源等于把
  *   跨仓稳定契约变成上游内部结构的镜像。故这里接的是**「这份读数是哪一次的」**这一面。 */
 import { readProjection, projectionScopeLine } from '../../config/projection-contract.js';
+/* [v4.97.0 · R11-O3 第三批] 街区机会内核接到本 App（此前 importers 为零，tier=zero）。
+ *   为什么接在这里：内核头注写明「地点会提供机会，而不只是显示谁在那里」——
+ *   而本 App 正是「谁在那里」的读数面，缺的正是「这里此刻有什么可参与」的另一半。
+ *   放别处会变成第二个「地点」入口，两份口径各算一次。
+ *   ★ 只接内核真身，不搬 orchestrator 的包装方法：内核判，本件只做读写与渲染。
+ *   ★ 营业时间槽用上游场景头的日期/时段读数（projectScene().header），不新造第二份时钟。 */
+import {
+    createPlace, deriveOpportunities, recordVisit, getPlaceFamiliarity,
+} from '../../config/district-network.js';
+/* 街区机会台账的键：随会话隔离（命中 config/storage.js 既有 /^place_/ 前缀，零机制面改动）。 */
+export const PLACE_DISTRICT_KEY = 'place_district_v1';
 
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^place_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'place_settings_v1';
@@ -66,6 +77,123 @@ export class PlaceApp {
             this.storage?.set?.(SETTINGS_KEY, JSON.stringify(next), false);
             return next;
         } catch (_e) { return this.getSettings(); }
+    }
+    /* ========== [v4.97.0 · R11-O3 第三批] 街区机会面（判定全在 district-network 内核） ========== */
+    /**
+     * 读街区台账：**读不出与空台账分开**（前者「读不到」，后者「还没登记过地点」）。
+     * 台账形如 { places: { placeId: placeObj } }，placeObj 由内核 createPlace 产出。
+     */
+    _readDistrictState() {
+        if (!this.storage || typeof this.storage.get !== 'function') {
+            return { readable: false, why: 'no_storage', places: {} };
+        }
+        let raw;
+        try { raw = this.storage.get(PLACE_DISTRICT_KEY); }
+        catch (_e) { return { readable: false, why: 'read_threw', places: {} }; }
+        if (raw === undefined || raw === null || raw === '') {
+            return { readable: true, why: '', places: {} };
+        }
+        let parsed = raw;
+        if (typeof raw === 'string') {
+            try { parsed = JSON.parse(raw); }
+            catch (_e) { return { readable: false, why: 'bad_json', places: {} }; }
+        }
+        const places = (parsed && typeof parsed === 'object' && parsed.places && typeof parsed.places === 'object')
+            ? parsed.places : {};
+        return { readable: true, why: '', places };
+    }
+    _writeDistrictState(places) {
+        if (!this.storage || typeof this.storage.set !== 'function') {
+            return { saved: false, why: 'no_api' };
+        }
+        try {
+            const out = this.storage.set(PLACE_DISTRICT_KEY, JSON.stringify({ version: 1, places }));
+            if (out === false) return { saved: false, why: 'write_refused' };
+            return { saved: true, why: '' };
+        } catch (_e) { return { saved: false, why: 'write_threw' }; }
+    }
+    /**
+     * 登记一处可提供机会的地点（作者侧动作）。时间窗由用户按剧情补设，不编真实距离。
+     * @returns {{ok:boolean, reason?:string, placeId?:string}}
+     */
+    registerDistrictPlace(placeId, name, timeWindows, orgs) {
+        const pid = String(placeId || '').trim();
+        const nm = String(name || '').trim();
+        if (!pid || !nm) return { ok: false, reason: 'missing-id-or-name' };
+        if (!Array.isArray(timeWindows) || !timeWindows.length) {
+            return { ok: false, reason: 'time-windows-required' };
+        }
+        for (const tw of timeWindows) {
+            if (!tw || typeof tw !== 'object' || !String(tw.day || '').trim()) return { ok: false, reason: 'bad-time-window' };
+            if (!Array.isArray(tw.slots) || !tw.slots.length) return { ok: false, reason: 'bad-time-window' };
+        }
+        const read = this._readDistrictState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        if (read.places[pid]) return { ok: false, reason: 'place-exists' };
+        let place;
+        try { place = createPlace({ placeId: pid, name: nm, timeWindows, orgs: Array.isArray(orgs) ? orgs : [] }); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        read.places[pid] = place;
+        const w = this._writeDistrictState(read.places);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return { ok: true, placeId: pid };
+    }
+    /**
+     * 算「此刻这里有什么可参与」：时间槽读上游场景头（date→day、period→slot），
+     * 缺头时如实报「现在几时读不到」，**不猜一个时段顶替**。
+     * 机会按当前在场的角色当 userId 语境（内核用不到具名用户时传 null）。
+     */
+    districtFace() {
+        const read = this._readDistrictState();
+        const ids = Object.keys(read.places);
+        if (!read.readable) {
+            return { ok: false, why: read.why, line: '街区台账读不到（' + read.why + '）—— 不是「没有地点」', rows: [], placeCount: null };
+        }
+        if (!ids.length) {
+            return { ok: true, why: 'empty', line: '这个会话还没登记过可提供机会的地点', rows: [], placeCount: 0 };
+        }
+        /* 场景头的 date/period 是自由文本；内核要 day 与 slot 标识。取不到就按「不营业」算，
+         *   内核会如实把全部机会标 missed（错过不伪造已到场），并把原因写进 face.line。 */
+        let header = null;
+        try { header = (this.projection().proj || {}).header; } catch (_e) { header = null; }
+        const day = header && header.date ? String(header.date) : '';
+        const slot = header && header.period ? String(header.period) : '';
+        const slotsKnown = !!(day && slot);
+        const rows = [];
+        for (const pid of ids) {
+            const place = read.places[pid];
+            if (!place || typeof place !== 'object') continue;
+            const events = this._eventsForPlace(pid);
+            /* [v4.97.0] 写读同一份用户名：到访记在 'user' 名下，面读数也按 'user' 查，
+             *   否则 already-attended 与熟悉度读数永远落空（写读不同名 = 白记）。 */
+            const opps = deriveOpportunities(place, day || '—', slot || '—', events, 'user');
+            const fam = getPlaceFamiliarity(place, 'user');
+            for (const o of opps) rows.push({ placeId: pid, placeName: place.name, status: o.status, label: o.label || o.id, familiarity: fam });
+        }
+        const line = slotsKnown
+            ? ('已登记 ' + ids.length + ' 处 · 当前 ' + day + ' ' + slot)
+            : ('已登记 ' + ids.length + ' 处 · 本楼场景头未登记日期/时段，机会只能按「不营业」如实标 missed');
+        return { ok: true, why: 'ready', line, rows, placeCount: ids.length, slotsKnown };
+    }
+    /** 每处地点的可参与事件：由用户在界面上补设（内核不编事件，上限在内核侧已封 5 条/处）。 */
+    _eventsForPlace(placeId) {
+        const s = this.getSettings();
+        const all = Array.isArray(s.districtEvents) ? s.districtEvents : [];
+        return all.filter((e) => e && e.placeId === placeId)
+            .map((e) => ({ id: String(e.id || ''), label: String(e.label || ''), condition: e.condition ? String(e.condition) : undefined }));
+    }
+    /** 记录一次到访（用户确认「我参加了这场」）：内核判熟悉度升级，本件只落盘。 */
+    recordDistrictVisit(placeId, eventId, metCharacterIds) {
+        const read = this._readDistrictState();
+        if (!read.readable) return { ok: false, reason: 'ledger-' + read.why };
+        const place = read.places[String(placeId || '')];
+        if (!place) return { ok: false, reason: 'place-unknown' };
+        if (!String(eventId || '').trim()) return { ok: false, reason: 'event-missing' };
+        try { recordVisit(place, 'user', String(eventId), Array.isArray(metCharacterIds) ? metCharacterIds : []); }
+        catch (_e) { return { ok: false, reason: 'kernel-refused' }; }
+        const w = this._writeDistrictState(read.places);
+        if (!w.saved) return { ok: false, reason: 'write-' + w.why };
+        return { ok: true };
     }
 
     _win() {

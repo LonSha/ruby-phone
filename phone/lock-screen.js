@@ -139,9 +139,20 @@ export class LockScreen {
     }
   }
 
-  _battery() {
-    const n = Number(this.phoneShell?.batteryLevel);
-    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 78;
+  /* [v4.99.6 · R11-X8] 锁屏电量**整句**：读数正常给「电量 N%」，
+   *   读不到就给归因句（「数据缺失 / 读取失败（不是「没电」）」）——
+   *   屏幕上既不出现一个假数字，也不让用户以为手机没电了。
+   *   ★ 数字只从壳刚画完的那份读数面里取（`_lastDeviceFace.battery`，它来自中枢实例）。
+   *   修前这里是 `Number(phoneShell.batteryLevel)` 且读不到回落 **78** ——
+   *   78 不是用户电量、也不是「缺数据」，是**编出来的一个看起来正常的读数**
+   *   （宿主里那个 78% 从来不存在）。这正是本版要治的谎报形态，故连兜底一起删。 */
+  _batteryLine() {
+    const f = this.phoneShell?._lastDeviceFace?.battery;
+    if (f && f.state === 'ok' && Number.isFinite(Number(f.level))) {
+      return '电量 ' + Math.max(0, Math.min(100, Math.round(Number(f.level)))) + '%';
+    }
+    if (f && typeof f.line === 'string' && f.line) return f.line;
+    return '电量：数据缺失（不是「没电」）';
   }
 
   /** [v2.16.0] 最近未读通知（最多 5 条）；无通知层则返回空数组 */
@@ -166,7 +177,7 @@ export class LockScreen {
     this._root?.remove();
     const parts = this._nowParts();
     const wp = this._wallpaper();
-    const bat = this._battery();
+    const batLine = this._batteryLine();
     const notes = this._recentNotifications();
     const track = this._nowPlaying();
     const root = document.createElement('div');
@@ -193,7 +204,7 @@ export class LockScreen {
       '<div class="pls-hello" id="pls-hello">' + _esc(parts.greeting) + '</div>' +
       '<div class="pls-date" id="pls-date">' + parts.date + '</div>' +
       '<div class="pls-time" id="pls-time">' + parts.time + '</div>' +
-      '<div class="pls-battery">电量 ' + bat + '%</div>' +
+      '<div class="pls-battery">' + batLine + '</div>' +
       trackHtml +
       notesHtml +
       '<div class="pls-hint">上滑解锁</div>';

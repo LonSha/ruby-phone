@@ -154,10 +154,15 @@ export function addExcerpt(dossier, excerptPayload) {
     if (!e) return { ok: false, reason: 'invalid_excerpt_payload' };
 
     // 自动补全书名和版本
+    // [v4.97.0 · R11-O3 第三批] 修死代码：normExcerpt 已把 bookTitle 预填成
+    // normStr(e.bookTitle || bookId)、bookVersion 预填成 'v1.0'，所以原先的
+    // `if (!e.bookTitle)` / `if (!e.bookVersion)` 永不成立——摘录书名永远显示 bookId
+    // 而不是已挂书目的真书名。判据：只有「占位值」（等于 bookId / 'v1.0'）或空值
+    // 才回填，调用方显式给的真书名/真版本一律不覆盖。
     const book = d.books.find(b => b.bookId === e.bookId);
     if (book) {
-        if (!e.bookTitle) e.bookTitle = book.title;
-        if (!e.bookVersion) e.bookVersion = book.version;
+        if (!e.bookTitle || e.bookTitle === e.bookId) e.bookTitle = book.title;
+        if (!e.bookVersion || e.bookVersion === 'v1.0') e.bookVersion = book.version;
     }
 
     d.excerpts.push(e);

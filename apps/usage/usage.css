@@ -121,3 +121,82 @@
   font-size: 11px;
   cursor: pointer;
 }
+/* [v4.94.0 · R11-O3] 使用范式面板。
+ * 排版取向：一行一档（左：名字 + 说明 + 影响面；右：按钮），
+ * 这样「它会影响谁」和「按哪个键」在同一行，眼睛不用来回跳。 */
+.uq-paradigm { border-color: rgba(244, 114, 182, .28); }
+.uq-paradigm h3 { color: #f9a8d4; }
+.uq-pg-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.uq-pg-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  background: rgba(255, 255, 255, .02);
+}
+/* 当前档用左侧色条 + 淡底标出来：只靠按钮文字「使用中」在滚动时容易看漏。 */
+.uq-pg-row.is-active {
+  border-color: rgba(244, 114, 182, .55);
+  background: rgba(244, 114, 182, .1);
+  box-shadow: inset 3px 0 0 #f472b6;
+}
+.uq-pg-main { flex: 1; min-width: 0; }
+.uq-pg-name { font-size: 12px; color: #e5e7eb; font-weight: 600; }
+.uq-pg-row.is-active .uq-pg-name { color: #fce7f3; }
+.uq-pg-tag {
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, .5);
+  color: #94a3b8;
+  font-size: 10px;
+}
+.uq-pg-state { margin-left: 5px; font-size: 10px; color: #f9a8d4; }
+.uq-pg-desc { font-size: 11px; line-height: 1.5; margin-top: 2px; }
+.uq-pg-apps { font-size: 10px; line-height: 1.5; margin-top: 2px; }
+.uq-pg-act { flex: 0 0 auto; }
+.uq-pg-btn {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 114, 182, .45);
+  background: rgba(244, 114, 182, .12);
+  color: #fbcfe8;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.uq-pg-btn:hover:not(:disabled) { background: rgba(244, 114, 182, .24); }
+/* 当前档的按钮禁用：禁用态必须明显弱于可点态，否则用户会一直点它。 */
+.uq-pg-btn:disabled {
+  border-color: rgba(148, 163, 184, .28);
+  background: transparent;
+  color: #64748b;
+  cursor: default;
+}
+.uq-pg-fail { border-color: rgba(248, 113, 113, .5); }
+/* 「另存为自定档」那一行：说明在左、按钮在右，紧跟列表之后 */
+.uq-pg-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
+.uq-pg-copy .uq-note { flex: 1; min-width: 0; }
+.uq-pg-copy-btn {
+  flex: 0 0 auto;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px dashed rgba(148, 163, 184, .6);
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.uq-pg-copy-btn:hover { border-color: rgba(244, 114, 182, .7); color: #fbcfe8; }

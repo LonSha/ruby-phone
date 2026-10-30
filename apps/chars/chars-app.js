@@ -33,8 +33,19 @@ import { readProjection, projectionScopeLine } from '../../config/projection-con
  *   （`LonShaMemory.perspectiveContrast` / `testimonyBoard`），且要「两路出口 + 模式闸 + 版式」。
  *   归因与口径**全部**转手 config/perspective-contrast-contract.js（同一口径只许一份实现）。 */
 import { CharsPerspective } from './chars-perspective.js';
+/* [v4.99.2 · R11-X1] 人物档案面桥接件（背包 / 档案 / 卷宗三面合并读）。
+ *   纪律与 X6 的 notification-hub-bridge 同款：本 App 只经桥读中枢实例、
+ *   视图不 import 桥、不引用 subsystems（F 类判据用正则钉住）。
+ *   持久化走各数据主自己的 serialize/restore，写键已在 keys-audit 登记。 */
+import { mergeArchiveFaces } from '../../config/archive-face-bridge.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^chars_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'chars_settings_v1';
+/** [v4.99.2 · R11-X1] 档案三件的落盘键（与 keys-audit 登记逐字一致；写口仅 _archiveSaveAll） */
+const ARCHIVE_KEYS = {
+    backpack: 'ibp_inventory_backpack_v1',
+    dossiers: 'cds_character_dossier_v1',
+    volumes: 'vch_volume_chronicle_v1'
+};
 export class CharsApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
@@ -202,6 +213,130 @@ export class CharsApp {
     }
     render() {
         this.view.render(this.phoneShell?.layerHost?.('chars-main') || this.phoneShell?.screen);
+    }
+
+    /* ══════════ [v4.99.2 · R11-X1] 人物档案面（背包 / 档案 / 卷宗） ══════════
+     * 【接线模板对齐 X6】中枢实例挂在 window.VirtualPhone.subsystems
+     *   （index.js:2048 装配）；本 App 只经 mergeArchiveFaces 纯读合并呈现。
+     * 【持久化】三件管理器的 serialize/restore 是它们自己的契约；本 App 的写口
+     *   只有 _archiveSaveAll（一次写齐三键）与 _archiveRestoreAll（一次读回），
+     *   均挂在本 App（数据主不含 storage —— 它们零依赖纯内存类）。
+     * 【不造第二份真源】中枢的 Map 是唯一活实例；本 App 从不缓存行数组，
+     *   每次渲染现取（与群像主面的「现取不缓存」纪律同款）。 */
+
+    /** 中枢实例解析：{ ok, why, hub }（能力探测三面管理器在场） */
+    _resolveArchiveHub() {
+        try {
+            const win = this._win();
+            const host = (win && win.VirtualPhone) || null;
+            const hub = (host && host.subsystems) || null;
+            if (!hub) return { ok: false, why: 'no_host', hub: null };
+            if (!hub.backpack || !hub.dossiers || !hub.volumes) return { ok: false, why: 'no_subsystems', hub };
+            return { ok: true, why: 'ok', hub };
+        } catch (_e) {
+            return { ok: false, why: 'read_threw', hub: null };
+        }
+    }
+
+    /** 档案三面合并读（视图唯一入口；中枢缺席时 faces 全 null + mustShowWhy） */
+    archiveFace(opts) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) {
+            return { faces: { backpack: null, dossiers: null, volumes: null },
+                     counts: { backpack: 0, dossiers: 0, volumes: 0 },
+                     notes: { why: r.why, mustShowWhy: true } };
+        }
+        return mergeArchiveFaces(r.hub, opts);
+    }
+
+    /** 三件一次落盘（写口收敛为一处；失败不抛、返回 false） */
+    _archiveSaveAll() {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) return false;
+        try {
+            this.storage?.set?.(ARCHIVE_KEYS.backpack, JSON.stringify(r.hub.backpack.serialize()));
+            this.storage?.set?.(ARCHIVE_KEYS.dossiers, JSON.stringify(r.hub.dossiers.serialize()));
+            this.storage?.set?.(ARCHIVE_KEYS.volumes, JSON.stringify(r.hub.volumes.serialize()));
+            return true;
+        } catch (_e) { return false; }
+    }
+
+    /** 三件一次读回（会话切换 / 冷启后由视图触发；无存档时保持空态） */
+    _archiveRestoreAll() {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) return false;
+        try {
+            const readJson = (key) => {
+                const raw = this.storage?.get?.(key, null);
+                if (raw === null || raw === undefined || raw === '') return null;
+                try { return JSON.parse(raw); } catch (_e) { return null; }
+            };
+            r.hub.backpack.restore(readJson(ARCHIVE_KEYS.backpack));
+            r.hub.dossiers.restore(readJson(ARCHIVE_KEYS.dossiers));
+            r.hub.volumes.restore(readJson(ARCHIVE_KEYS.volumes));
+            return true;
+        } catch (_e) { return false; }
+    }
+
+    /* ---------- 用户可操作点（计划要求：背包可增减、档案可标注、卷宗可查询） ---------- */
+
+    /** 录入物品（背包）→ 落盘 → 返回登记后的物品（失败抛原错，视图转归因文案） */
+    archiveRegisterItem(item) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) throw new Error('档案中枢不可用（' + r.why + '）');
+        const rec = r.hub.backpack.registerItem(item);
+        this._archiveSaveAll();
+        return rec;
+    }
+
+    /** 转赠物品（背包）→ 落盘 */
+    archiveTransferItem(itemId, newOwner, reason) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) throw new Error('档案中枢不可用（' + r.why + '）');
+        const rec = r.hub.backpack.transferItem(itemId, newOwner, reason || '');
+        this._archiveSaveAll();
+        return rec;
+    }
+
+    /** 标注物品状态：消耗 / 遗失（背包）→ 落盘 */
+    archiveChangeItemStatus(itemId, status, note) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) throw new Error('档案中枢不可用（' + r.why + '）');
+        const rec = r.hub.backpack.changeStatus(itemId, status, note || '');
+        this._archiveSaveAll();
+        return rec;
+    }
+
+    /** 录入 / 更新角色档案（档案）→ 落盘 */
+    archiveUpsertDossier(data) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) throw new Error('档案中枢不可用（' + r.why + '）');
+        const rec = r.hub.dossiers.upsertDossier(data);
+        this._archiveSaveAll();
+        return rec;
+    }
+
+    /** 标注性格偏移（档案）→ 落盘 */
+    archiveRecordShift(name, shift) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) throw new Error('档案中枢不可用（' + r.why + '）');
+        const rec = r.hub.dossiers.recordPersonalityShift(name, shift);
+        this._archiveSaveAll();
+        return rec;
+    }
+
+    /** 按名取完整档案卡（档案；读口，无写） */
+    archiveGetDossier(name) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) return null;
+        try { return r.hub.dossiers.getDossier(name); } catch (_e) { return null; }
+    }
+
+    /** 按卷号取卷宗详情（卷宗；读口，无写） */
+    archiveGetVolume(index) {
+        const r = this._resolveArchiveHub();
+        if (!r.ok) return null;
+        try { return r.hub.volumes.getVolume(index); } catch (_e) { return null; }
     }
 }
 export default CharsApp;

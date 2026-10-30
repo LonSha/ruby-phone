@@ -32,6 +32,40 @@ export const NOTIFICATION_CHANNELS = Object.freeze({
     DELIVERY: 'delivery',
     SYSTEM: 'system'
 });
+/* [v4.99.0 · R11-X6] 优先级**两种写法都要认**（字符串名 / 数字档）。
+ *
+ * 【为什么必须在这里归一，而不是在调用点逐个改】
+ *   修前 `post()` 直接拿 `notif.priority` 与 `NOTIFICATION_PRIORITY.URGENT`（数字 3）
+ *   做 `<` 比较。而**所有真调用点传的都是字符串**（`subsystem-orchestrator.js:684`
+ *   传 'URGENT'、`calendar-autonomous-life.js:178` 的 urgency 也是 'URGENT'/'NORMAL'）。
+ *   `'NORMAL' < 3` 在 JS 里是 **false**（比较退化成 NaN）⇒ 免打扰**一条都拦不住**，
+ *   而且这条缺陷不报错、只是「开关拨了没反应」—— 本仓最贵的形态。
+ *
+ * 【口径】认不出的一律回落 NORMAL，**不回落到 URGENT**：
+ *   认不出就穿透免打扰，等于让一个拼错的字符串把用户从免打扰里拽出来。
+ *   同时另给 `priorityName` 让渲染层与持久化能拿回可读名（见 `_priorityName`）。
+ */
+export function normalizePriority(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        /* 数字档：越界按最近的合法档夹紧（不静默放行到 URGENT）。 */
+        const vals = Object.values(NOTIFICATION_PRIORITY);
+        const lo = Math.min(...vals), hi = Math.max(...vals);
+        return Math.min(hi, Math.max(lo, Math.round(value)));
+    }
+    const key = String(value || '').trim().toUpperCase();
+    if (key && Object.prototype.hasOwnProperty.call(NOTIFICATION_PRIORITY, key)) {
+        return NOTIFICATION_PRIORITY[key];
+    }
+    return NOTIFICATION_PRIORITY.NORMAL;
+}
+/** 数字档 → 可读名（认不出回落 'NORMAL'，与 normalizePriority 同口径）。 */
+export function priorityName(value) {
+    const n = normalizePriority(value);
+    for (const [k, v] of Object.entries(NOTIFICATION_PRIORITY)) {
+        if (v === n) return k;
+    }
+    return 'NORMAL';
+}
 
 export class SystemNotificationDispatcher {
     constructor(opts = {}) {
@@ -89,8 +123,10 @@ export class SystemNotificationDispatcher {
      */
     post(notif) {
         if (!notif || !notif.title) return null;
-
-        const priority = notif.priority || NOTIFICATION_PRIORITY.NORMAL;
+        /* [v4.99.0 · R11-X6] 归一在入口一次做完：下面的比较、排序、持久化全用数字档。
+         *   修前这一行是 `notif.priority || NOTIFICATION_PRIORITY.NORMAL` —— 字符串原样进来，
+         *   `'NORMAL' < 3` 退化成 NaN ⇒ 免打扰全放行（缺陷，见文件头 normalizePriority 注释）。 */
+        const priority = normalizePriority(notif.priority);
         
         // 免打扰拦截：仅允许 URGENT 穿透
         if (this.dndEnabled && priority < NOTIFICATION_PRIORITY.URGENT) {
@@ -124,6 +160,9 @@ export class SystemNotificationDispatcher {
             title: String(notif.title).trim(),
             body: String(notif.body || '').trim(),
             priority,
+            /* [v4.99.0 · R11-X6] 可读名跟着一起落盘：持久化里只有数字 3 时，
+             *   下一次冷启读回来的人无从判断它原本是 'URGENT' 还是个越界夹紧值。 */
+            priorityName: priorityName(priority),
             timestamp: notif.timestamp || Date.now(),
             read: false,
             deepLink: notif.deepLink || null, // { targetApp, view, params }

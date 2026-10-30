@@ -10,9 +10,11 @@
  *     ⑤ 会话隔离，支持单条规则暂停、执行计数与测试回放。
  * ======================================================== */
 'use strict';
-
 const RT_STORAGE_KEY = 'rt_rules_state_v1';
-const RT_MAX_RULES = 30;
+/** 规则条数上限。[v4.96.0 · R11-O3 批次2] 由 `const` 改 `export`：
+ *   此前它是一个**从未被使用的常量**，而 App 侧文案已经写着「上限 30 条」——
+ *   文案在说一件代码没做的事。改为导出后由 App 守卫直接取它，读数与文案同一真源。 */
+export const RT_MAX_RULES = 30;
 
 export const RULE_TRIGGERS = Object.freeze({
     MESSAGE_RECEIVED: 'message_received',
@@ -115,6 +117,12 @@ export function registerRule(state, spec) {
         return { success: false, reason: check.reason, state: s };
     }
     const id = safeStr(spec.id);
+    /* [v4.96.0 · R11-O3 批次2] 上限守卫：同 id 是更新（不占新名额），新 id 超过
+     *   RT_MAX_RULES 条则**拒收**而不是静默丢弃或无限增长。此前这个常量从未被读过，
+     *   而界面文案早就写着「上限 30 条」—— 文案与代码各说一套。 */
+    if (!s.rules[id] && Object.keys(s.rules).length >= RT_MAX_RULES) {
+        return { success: false, reason: 'too-many-rules', state: s };
+    }
     const rule = {
         id,
         name: safeStr(spec.name),

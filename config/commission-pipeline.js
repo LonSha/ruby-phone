@@ -20,6 +20,15 @@ export const COMMISSION_STAGES = Object.freeze({
     ACCEPTANCE: 'acceptance',
     CANCELLED: 'cancelled',
 });
+/* [v4.97.0 · R11-O3 第三批] 范围变更三态的唯一出处。
+ *   原先 proposeScopeChange 内联写 `status: 'pending'`，而 App 侧的读数又要按同一串
+ *   过滤 —— 于是 App 里出现了第二份手写 `x.status === 'pending'`。按本仓「同一份口径
+ *   只许有一处真源」，状态表只能由内核导出、App 只引用。 */
+export const SCOPE_CHANGE_STATUS = Object.freeze({
+    PENDING: 'pending',
+    AGREED: 'agreed',
+    REJECTED: 'rejected',
+});
 
 function normStr(v) {
     return String(v ?? '').trim();
@@ -93,7 +102,7 @@ export function proposeScopeChange(commission, changePayload) {
         changeId: normStr(changePayload.changeId || `chg_${Date.now()}`),
         additionalRequirements: Array.isArray(changePayload.additionalRequirements) ? changePayload.additionalRequirements.map(normStr) : [],
         feeDelta: (numOrNull(changePayload.feeDelta) ?? 20),
-        status: 'pending', // pending | agreed | rejected
+        status: SCOPE_CHANGE_STATUS.PENDING,
     };
     c.stage = COMMISSION_STAGES.CHANGE_SCOPE;
     c.scopeChanges.push(change);
@@ -109,7 +118,7 @@ export function agreeScopeChange(commission, changeId) {
     const chg = c.scopeChanges.find(x => x.changeId === changeId);
     if (!chg) return { ok: false, reason: 'change_not_found' };
 
-    chg.status = 'agreed';
+    chg.status = SCOPE_CHANGE_STATUS.AGREED;
     c.agreedFee += chg.feeDelta;
     c.requirements.push(...chg.additionalRequirements);
     c.stage = COMMISSION_STAGES.REVISION;

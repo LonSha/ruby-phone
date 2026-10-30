@@ -55,7 +55,12 @@ test('第十期 (R10) 编排中枢全量挂载与协同流推进契约验证', a
     const clusters = orchestrator.notifications.getClusteredNotifications();
     assert.ok(clusters.length >= 1, '通知中心应接收到紧急生命体征或日程通知');
     const allNotifs = orchestrator.notifications.notifications;
-    const hasEmergency = allNotifs.some(n => n.priority === 'URGENT');
+    /* [v4.99.1 交棒改写] 原判据 `n.priority === 'URGENT'`（字符串比较）依赖的是修前
+     *  缺陷行为：post() 曾把字符串原样透传进落盘条目（数值比较全部退化为 NaN）。
+     *  v4.99.1 入口归一后落盘统一为数字档 + priorityName 可读名，判据随之改写为
+     *  「数字档达到 URGENT 或可读名为 URGENT」——量的是同一件事（紧急警报穿透免打扰），
+     *  不再依赖「缺陷让字符串漏进来」这一形态。 */
+    const hasEmergency = allNotifs.some(n => n.priority === 3 || n.priorityName === 'URGENT');
     assert.equal(hasEmergency, true, '应存在穿透免打扰的 URGENT 级警报');
   });
 });

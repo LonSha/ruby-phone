@@ -28,6 +28,15 @@ function makeNode(tag, calls) {
         disabled: false,
         type: '',
         dataset: {},
+        /* [v4.99.6 · R11-X8] 读数面判据要读回**写进去的宽度**（`.battery-level` 的 style.width：
+         *   读数接上时 47%、读不到时必须回落 0%）—— 原替身没有 style 字段，
+         *   于是「读不到时不许停在旧宽度」这条断言无处可落（赋值会直接抛）。
+         *   纯增字段：既有判据（v4.91.0 弹层面）不读 style，行为逐字不变。 */
+        style: {
+            setProperty(k, v) { node.style[k] = String(v); },
+            removeProperty(k) { delete node.style[k]; },
+            getPropertyValue(k) { return node.style[k] || ''; }
+        },
         children: [],
         _attrs: new Map(),
         appendChild(c) { node.children.push(c); return c; },

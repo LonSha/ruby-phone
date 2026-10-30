@@ -388,9 +388,12 @@ const KEY_REGISTRY = [
   { key: 'as_action_stack_v1', scope: 'chat', note: '[v4.56.0 · R8-O2] 可逆行动栈（动作撤销、副作用补偿与跨App轻量引用追溯）' },
   { key: 'ae_auth_expire_v1', scope: 'chat', note: '[v4.56.0 · R8-O7] 授权继承与到期（角色查看授权、派生继承与生命周期自动过期）' },
   { key: 'rh_recovery_hub_v1', scope: 'chat', note: '[v4.56.0 · R8-O8] 本地恢复中心（快照创建、差异预览与一键受控恢复）' },
+  { key: 'share_drafts_v1', scope: 'chat', note: '[v4.99.8 · R11-X4] 分享草案台账（受众名单 / 已读账 / 撤回事实；撤回保留撤回前已读痕迹）' },
   { key: 'ue_urban_economy_v1', scope: 'chat', note: '[v4.56.0 · R8-X3] 有因果的城市经济（地点交换网络、信任与名额流转）' },
   { key: 'cd_dwelling_state_v1', scope: 'chat', note: '[v4.56.0 · R8-X4] 可变化的角色居所（房间摆设、回忆共鸣与关系演变空间）' },
   { key: 'la_living_assets_v1', scope: 'chat', note: '[v4.56.0 · R8-X6] 可交易的生活资产（作品/信物/名额流转谱系与持有历史）' },
+  { key: 'et_economy_tx_v1', scope: 'chat', note: '[v4.99.3 · R11-X2] 交易真源（钱包发起→提交→撤销三态事务行与补偿痕迹）' },
+  { key: 'lc_life_clock_v1', scope: 'chat', note: '[v4.99.4 · R11-X3] 生活流低频时钟（推进步数 / 累计分钟 / 上次推进时刻 / 最近 N 步的「为什么发生」）' },
   { key: 'ded_diff_editor_v1', scope: 'chat', note: '[v4.56.0 · R8-O5] 差异优先的编辑台（段级差异对比、人工锁定段保护与局部采纳）' },
   { key: 'uwp_work_packages_v1', scope: 'chat', note: '[v4.56.0 · R8-O6] 用户工作包（手机流程模板、可跳过步骤与并行执行）' },
   { key: 'jms_media_studio_v1', scope: 'chat', note: '[v4.56.0 · R8-X5] 角色共同媒体台（节目作品共创、角色审稿提案与发布谱系）' },
@@ -496,6 +499,10 @@ const KEY_REGISTRY = [
    *   （apps/app-injection.js 的 assetOnboarded）新增了跨文件读点，本键进入登记面。 */
   { key: '__la_asset_config_v1', scope: 'chat', note: '资产引擎引导配置（启用状态）' },
   { key: 'place_settings_v1', scope: 'chat', note: '地点图景设置' },
+  /* [v4.97.0 · R11-O3 第三批] 三件 zero 内核接线的落盘键。全部会话隔离：
+   *   街区机会/创作委托/研读案卷统计的都是「这个会话里的剧情与创作」，落全局会串味。 */
+  { key: 'place_district_v1', scope: 'chat', note: '[v4.97.0 · R11-O3] 街区机会台账（placeId → createPlace 产出的地点对象；时间窗/可参与事件/到访与熟悉度）' },
+  { key: 'cw_commission_v1', scope: 'chat', note: '[v4.97.0 · R11-O3] 创作委托台账（五阶段生命周期：brief→concept→change_scope→revision→acceptance；加需求显式协商，取消保留草稿）' },
   { key: 'profile_settings_v1', scope: 'chat', note: '档案设置' },
   { key: 'plotline_settings_v1', scope: 'chat', note: '剧情线设置' },
   { key: 'wallet_settings_v1', scope: 'chat', note: '钱袋设置' },
@@ -507,6 +514,11 @@ const KEY_REGISTRY = [
    *   采集只写 stats，设置只写 settings —— 两类数据分开，避免「改设置顺手把读数一起写回去」。 */
   { key: 'usage_stats_v1', scope: 'chat', note: '使用统计（次数/时长/时段，不含任何内容）' },
   { key: 'usage_settings_v1', scope: 'chat', note: '洞察设置（注入开关 / 疏远阈值）' },
+  /* [v4.95.0 · R11-O3] 使用范式（主屏排序 + 通知阈值）。
+   * 为什么同样是会话隔离而**不是**全局：范式回答的是「这个手机在这个故事里怎么用」
+   *   —— 创作向的会话想看创作档、日常向的想看生活档。落全局会让 A 角色的沉浸档
+   *   跟着 B 角色一起走，与本 App 另两键同一取舍（上面的 /^usage_/ 已覆盖，此处是登记）。 */
+  { key: 'usage_paradigm_v1', scope: 'chat', note: '使用范式（当前档 / 自定档 / 切换史）' },
   { key: 'worldpulse_state_v1', scope: 'chat', note: '世界脉搏状态' },
   { key: 'worldpulse_history_v1', scope: 'chat', note: '世界脉搏历史' },
   { key: 'worldpulse_settings_v1', scope: 'chat', note: '世界脉搏设置' },

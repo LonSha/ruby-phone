@@ -68,4 +68,22 @@ export class VolumeChronicleManager {
             characterTags: v.characters.slice(0, 4)
         }));
     }
+
+    /**
+     * [v4.99.2 · R11-X1] 序列化（持久化契约归数据主）。syncVolumes 的输入
+     * 就是纯数组，序列化按同形状带出。
+     */
+    serialize() {
+        return { version: 1, volumes: this.volumes };
+    }
+
+    /**
+     * [v4.99.2 · R11-X1] 从序列化数据恢复。直接走 syncVolumes（同一套
+     * 归一化兜底），无卷时给空数组（视为有效载荷）。
+     */
+    restore(data) {
+        if (!data || typeof data !== 'object' || !Array.isArray(data.volumes)) return false;
+        this.syncVolumes(data.volumes);
+        return true;
+    }
 }

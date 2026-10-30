@@ -12,6 +12,12 @@ import { PHONE_CONFIG } from '../config/apps.js';
 import { LockScreen } from './lock-screen.js';
 import { ManagedRuntime, childRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0/v2.31.0] 运行时资源登记与统一回收
 import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
+/* [v4.99.6 · R11-X8] 设备读数面（电量 / 信号）：
+ *   两个域此前在壳里各有自己的假值（85% 与恒定 Wi-Fi 图标），读数与中枢内核无关。
+ *   本版把显示层改成只认「注入的读数面」（index.js 装配时注入），壳自己不做业务判断；
+ *   三态（ok / missing / threw）的判定由 config/device-face-bridge.js 单一实现，
+ *   壳只负责把结论画出来 —— 免得壳里再长出一份口径。 */
+import { batteryFaceOf, signalFaceOf, seedFromHost } from '../config/device-face-bridge.js';
 // [v2.99.0] 返回键守卫：缝合自上游「瑟瑟小手机 V1.059」的 __ubBackGuard。
 //   本仓此前全库零 popstate —— 物理返回键与浏览器返回完全不响应；
 //   右滑手势（SWIPE_BACK，即 'phone:swipeBack'）只退视图、不关浮层。两者分工见 config/back-guard.js 头注。
@@ -36,9 +42,21 @@ export class PhoneShell {
         this.touchCurrentX = 0;
         this.isSwiping = false;
         this.swipeThreshold = 80; // 滑动触发阈值
-        // 🔋 电池状态
-        this.batteryLevel = 85;
+        /* [v4.99.6 · R11-X8] 电量初值**不再凭空写 85**。
+         *   修前状态栏读 `navigator.getBattery()`（宿主真机的电池），
+         *   与虚拟手机自己 tick 出来的电量是两个真源：剧情里手机放电到 5%，
+         *   状态栏仍显示宿主那格 100%。现在宿主那格只当**一次性种子**，
+         *   此后一律读中枢的 BatteryThermodynamics；读数没接上时显示「--」，
+         *   绝不拿上一次的值冒充当前读数。
+         *   故此处初值是 null（未知），不是 85（假装知道）。 */
+        this.batteryLevel = null;
         this.isCharging = false;
+        /* [v4.99.6 · R11-X8] 设备读数面注入点（index.js 装配）：返回
+         *   { battery:{ok,why,battery}, signal:{ok,why,signal} } 一类的读数元信息。
+         *   由壳自己画到状态栏，壳**主动去读读数的对象**（不反查中枢，避免壳变成第二个真源）。 */
+        this.readDeviceFace = null;
+        this._lastDeviceFace = null;
+        this._seedBatteryRequested = false;
         this.lockScreen = null;
         // 🔥 视觉历史栈（滑动返回用）
         this.viewHistory = [];
@@ -84,17 +102,30 @@ export class PhoneShell {
         <div class="phone-statusbar">
             <div class="statusbar-left">
                 <span class="time">${this.getCurrentTime()}</span>
+                <!-- [v4.99.4 · R11-X3] 生活流时钟的**前台可见指示**：旧行为是「推进了也无人知道」。
+                     ★ 内容由 index.js 的 refreshLifeClockFace() 回填；此处只画一个空壳，
+                       不在模板里提前写一个假的读数（否则会出现「显示 0 步」的谎报）。 -->
+                <span class="life-clock-chip" data-status="unmounted" title="生活流时钟：待启动"></span>
             </div>
             <div class="statusbar-right">
-                <!-- Wi-Fi 信号 -->
+                <!-- [v4.99.6 · R11-X8] 蜂窝信号格：修前这里是一个**恒定**的 Wi-Fi 图标，
+                     电梯/地下密室把信号打到 0 也看不出任何变化。现在画成真格子，
+                     内容由 refreshDeviceFace() 回填；此处只画空壳，不预写一个假读数。 -->
+                <div class="phone-cell-signal" role="img" aria-label="蜂窝信号：读数待接" data-status="missing">
+                    <i class="cell-bar" data-bar="1"></i><i class="cell-bar" data-bar="2"></i><i class="cell-bar" data-bar="3"></i><i class="cell-bar" data-bar="4"></i><i class="cell-bar" data-bar="5"></i>
+                </div>
+                <!-- Wi-Fi 信号（保留：系统控制中心仍用它表示 Wi-Fi 开关） -->
                 <div class="phone-wifi-signal" role="img" aria-label="Wi-Fi 已连接">
                     <i class="fa-solid fa-wifi" aria-hidden="true"></i>
                 </div>
                 <!-- 🔋 横向电池：百分比显示在电池槽内 -->
-                <div class="battery-icon" id="battery-icon" aria-label="电量 ${this.batteryLevel}%">
+                <!-- [v4.99.6 · R11-X8] 修前这里直接渲染 this.batteryLevel（构造期写的假值 85）。
+                     现在只画空壳（--），由 refreshDeviceFace() 按**中枢读数**回填；
+                     读数没接上就停在 -- 并标 data-status=missing，不显示一个假数字。 -->
+                <div class="battery-icon" id="battery-icon" data-status="missing" aria-label="电量：读数待接">
                     <div class="battery-body">
-                        <div class="battery-level" id="battery-level" style="width: ${this.batteryLevel}%"></div>
-                        <span class="battery-text" id="battery-text">${this.batteryLevel}</span>
+                        <div class="battery-level" id="battery-level" style="width: 0%"></div>
+                        <span class="battery-text" id="battery-text">--</span>
                     </div>
                     <div class="battery-head"></div>
                 </div>
@@ -180,62 +211,122 @@ export class PhoneShell {
         this._timeUpdateEventBound = true;
         this.bindGlobal(window, PHONE_EVENTS.TIME_UPDATED, () => {
             this.updateStatusBarTime();
+            /* [v4.99.6 · R11-X8] 时间一推进，设备读数跟着重画：
+             *   电量是 tick 出来的、信号是场景打档打出来的，而「时间推进」正是这两件事
+             *   发生的时刻 —— 不在这里重画，状态栏就会一直停在上一拍的读数上（显示旧值）。 */
+            try { this.refreshDeviceFace(); } catch (_e) { /* 读数面挂了不影响时钟 */ }
         });
     }
 
-    // 🔋 初始化电池API
+    /* [v4.99.6 · R11-X8] 宿主真机电量 → **一次性种子**。
+     *   修前：`navigator.getBattery()` 的每一次 levelchange 都直接改状态栏 —— 于是宿主
+     *   笔记本的电池成了手机电量的真源；虚拟手机自己 tick 到 5%，状态栏还是 100%。
+     *   现在：宿主那格只允许进一次（由中枢的 BatteryThermodynamics.seedOnce 决定收不收），
+     *   此后显示一律由 refreshDeviceFace() 从中枢读数回填 —— 一个真源。
+     *   ★ 拿不到宿主读数时**什么都不做**（不回落 78% 那种编出来的值）。 */
     async initBattery() {
-        try {
-            // 尝试使用真实电池API
-            if ('getBattery' in navigator) {
-                const battery = await navigator.getBattery();
-                console.log('🔋 电池API已连接:', battery.level * 100 + '%', battery.charging ? '充电中' : '未充电');
-                this.updateBatteryDisplay(battery.level * 100, battery.charging);
-
-                // 监听电池变化
-                battery.addEventListener('levelchange', () => {
-                    this.updateBatteryDisplay(battery.level * 100, battery.charging);
-                });
-                battery.addEventListener('chargingchange', () => {
-                    this.updateBatteryDisplay(battery.level * 100, battery.charging);
-                });
-            } else {
-                // 不支持Battery API，显示模拟电量
-                console.log('🔋 浏览器不支持Battery API，使用模拟值');
-                this.updateBatteryDisplay(78, false);  // 显示78%
+        /* [v4.99.6 · R11-X8] 幂等门：播种**一个壳实例只请求一次**。
+         *   为什么要这个读数：`createInPanel` 在宿主里可重入（本仓有 4 条重入路径），
+         *   同一实例重复走这条链路时，宿主那格会被反复当「初值」递进去 ——
+         *   真正拦住的仍是中枢的 seedOnce（盘上已有状态就不收），但壳这一侧
+         *   不该重复发请求（发了也白发，且日志会骗人）。
+         *   ★ 拦的只是**播种**：末尾那次 refreshDeviceFace() 每次都照走
+         *     （重入时状态栏本就该重画一遍，提前 return 会让它停在旧读数上）。 */
+        if (!this._seedBatteryRequested) {
+            this._seedBatteryRequested = true;
+            try {
+                if ('getBattery' in navigator) {
+                    const battery = await navigator.getBattery();
+                    const seed = seedFromHost({ ok: true, level: battery.level * 100, charging: battery.charging });
+                    if (seed.ok && typeof this.seedDeviceBattery === 'function') {
+                        const res = this.seedDeviceBattery(seed);
+                        console.log('[DeviceFace] 宿主电量作为一次性初值：' + (res && res.seeded ? ('已采纳 ' + res.level + '%') : ('未采纳（' + ((res && res.why) || 'no_hub') + '）')));
+                    }
+                } else {
+                    console.log('[DeviceFace] 宿主无电池 API：不编造初值，等中枢读数');
+                }
+            } catch (e) {
+                console.warn('[DeviceFace] 宿主电池读数失败（不编造初值）:', e);
             }
-        } catch (e) {
-            // 出错时显示模拟电量
-            console.warn('🔋 电池API错误:', e);
-            this.updateBatteryDisplay(78, false);  // 显示78%
         }
+        this.refreshDeviceFace();
     }
 
-    // 🔋 更新电池显示
+    /* [v4.99.6 · R11-X8] 状态栏设备读数刷新：电量与信号**都只读中枢**。
+     *   两个真源合并成一个之后，「显示旧值」这条谎报路径也就一并被堵住：
+     *   读数不是 ok 时一律画 -- / 灰格，并标 data-status（missing / threw），
+     *   **绝不沿用 this.batteryLevel 的上一次值**。 */
+    refreshDeviceFace() {
+        const host = this.container;
+        if (!host || typeof host.querySelector !== 'function') return false;
+        let raw = null;
+        try {
+            raw = (typeof this.readDeviceFace === 'function') ? this.readDeviceFace() : null;
+        } catch (e) {
+            raw = { battery: { ok: false, why: 'read_threw' }, signal: { ok: false, why: 'read_threw' } };
+        }
+        const bFace = batteryFaceOf(raw && raw.battery);
+        const sFace = signalFaceOf(raw && raw.signal);
+        this._lastDeviceFace = { battery: bFace, signal: sFace };
+        this.batteryLevel = (bFace.state === 'ok') ? bFace.level : null;
+        this.isCharging = bFace.charging === true;
+
+        const levelEl = host.querySelector('.battery-level');
+        const textEl = host.querySelector('.battery-text');
+        const iconEl = host.querySelector('.battery-icon');
+        const ok = bFace.state === 'ok';
+        if (levelEl) levelEl.style.width = ok ? (bFace.level + '%') : '0%';
+        if (textEl) textEl.textContent = ok ? String(bFace.level) : '--';
+        if (iconEl) {
+            iconEl.classList.toggle('charging', this.isCharging);
+            iconEl.classList.toggle('battery-low', ok && bFace.level <= 20);
+            iconEl.classList.toggle('battery-medium', ok && bFace.level > 20 && bFace.level <= 50);
+            iconEl.classList.toggle('battery-unknown', !ok);
+            iconEl.setAttribute('data-status', bFace.state);
+            iconEl.setAttribute('aria-label', bFace.line);
+            iconEl.setAttribute('title', bFace.line);
+        }
+        const sigEl = host.querySelector('.phone-cell-signal');
+        if (sigEl) {
+            const bars = (sFace.bars === null) ? 0 : sFace.bars;
+            const bars_ = sigEl.querySelectorAll?.('.cell-bar') || [];
+            for (const el of bars_) {
+                const idx = Number(el.getAttribute('data-bar'));
+                el.classList.toggle('on', Number.isFinite(idx) && idx <= bars);
+            }
+            sigEl.classList.toggle('cell-weak', sFace.state === 'weak');
+            sigEl.classList.toggle('cell-unknown', sFace.state !== 'ok' && sFace.state !== 'weak');
+            sigEl.setAttribute('data-status', sFace.state);
+            /* [v4.99.6 · R11-X8] 点亮格数另记一份 `data-bars`：
+             *   ① 无障碍：读屏念得出「几格」，不必去数五个 <i> 的 class；
+             *   ② 可判性：格子是靠 `classList.toggle('on')` 点亮的，而那种「画出来才看得见」
+             *      的效果在无头夹具里没有样式可依 —— 把格数做成一个属性，判据才有落脚处
+             *      （读数面这条链上的判据一律只读属性与文案，不依赖排版）。 */
+            sigEl.setAttribute('data-bars', String(bars));
+            sigEl.setAttribute('aria-label', sFace.line);
+            sigEl.setAttribute('title', sFace.line);
+        }
+        return true;
+    }
+
+    /* [v4.99.6 · R11-X8] 兼容口：外部（含旧测试夹具）仍可能直接推一个电量进来。
+     *   本版起它**不再改真源**，只把值写进显示层 —— 真源在中枢实例里。
+     *   之所以保留而不是删掉：仓外调用点无法穷举，删掉会让那些调用静默失效。 */
     updateBatteryDisplay(level, charging) {
         const parsedLevel = Number(level);
-        const nextLevel = Number.isFinite(parsedLevel) ? Math.round(parsedLevel) : this.batteryLevel;
-        this.batteryLevel = Math.min(100, Math.max(0, nextLevel));
+        if (!Number.isFinite(parsedLevel)) return;
+        this.batteryLevel = Math.min(100, Math.max(0, Math.round(parsedLevel)));
         this.isCharging = Boolean(charging);
-
         const levelEl = this.container?.querySelector('.battery-level');
         const textEl = this.container?.querySelector('.battery-text');
         const iconEl = this.container?.querySelector('.battery-icon');
-
-        if (levelEl) {
-            levelEl.style.width = `${this.batteryLevel}%`;
-        }
-        if (textEl) {
-            textEl.textContent = String(this.batteryLevel);
-        }
+        if (levelEl) levelEl.style.width = `${this.batteryLevel}%`;
+        if (textEl) textEl.textContent = String(this.batteryLevel);
         if (iconEl) {
             iconEl.classList.toggle('charging', this.isCharging);
             iconEl.classList.toggle('battery-low', this.batteryLevel <= 20);
             iconEl.classList.toggle('battery-medium', this.batteryLevel > 20 && this.batteryLevel <= 50);
-            iconEl.setAttribute(
-                'aria-label',
-                `电量 ${this.batteryLevel}%${this.isCharging ? '，充电中' : ''}`
-            );
+            iconEl.setAttribute('aria-label', `电量 ${this.batteryLevel}%${this.isCharging ? '，充电中' : ''}`);
         }
     }
 

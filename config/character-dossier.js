@@ -93,4 +93,26 @@ export class CharacterDossierManager {
             shiftSummary: d.personalityShift ? d.personalityShift.statement : '性格状态稳定'
         }));
     }
+
+    /**
+     * [v4.99.2 · R11-X1] 序列化（持久化契约归数据主）。map 键就是 name，
+     * 恢复按行 upsert 语义重建（name 已在行内，不依赖键序）。
+     */
+    serialize() {
+        return { version: 1, dossiers: Array.from(this.dossiers.values()) };
+    }
+
+    /**
+     * [v4.99.2 · R11-X1] 从序列化数据恢复。走**本类自己的** upsert 语义
+     * （与「角色数据来源是手动 upsert」同一条路径），脏行跳过不抛。
+     */
+    restore(data) {
+        this.dossiers = new Map();
+        if (!data || typeof data !== 'object' || !Array.isArray(data.dossiers)) return false;
+        for (const d of data.dossiers) {
+            if (!d || typeof d !== 'object' || !d.name) continue;
+            this.upsertDossier(d);
+        }
+        return true;
+    }
 }

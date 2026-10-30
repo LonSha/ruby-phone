@@ -132,6 +132,16 @@ import { precheckLine, handoffLine, handoffGateLine, handoffDropLog } from '../.
  *   ★ 本内核只**陈列**矩阵模块的读数，不在这里复算第二份：六个布尔值的真源复算在判据套件里
  *     （声明与事实分开存放，两者不一致时才有判别力）；内核再算一份就变成同源自述、必然恒绿。 */
 import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-consumption-matrix.js';
+/* [v4.98.0 · R11-O8 收口] 像素图标覆盖率读数面。
+ *   为什么要接在这里（此前只有判据在读它）：R11-O8 把图标从 8/89 补到 89/89 之后，
+ *   `unifiedIconCoverage()` 的读数**只被测试消费** —— 也就是说「覆盖率掉了」这件事
+ *   只有在跑 `npm test` 时才可见，用户手上的手机看不到。而本仓纪律是
+ *   「一切平台级读数的可见出口就是诊断中心」。
+ *   ★ 这个面尤其需要的理由：图标缺件的**症状是静默的**（只是那张图不是像素风、
+ *     或是一个指向不存在文件的 URL）。它不报错、不崩溃、覆盖率还可能显示 100%
+ *     （v4.98.0 首版 `__folder` 就是「在册、URL 非空、文件不存在」的形态），
+ *     故必须把 `missing` 与 `unmapped` **分开点名**陈列。 */
+import { unifiedIconCoverage } from '../../config/app-icons.js';
 /* [v3.66.0 · 拓展计划 X2 第一切片] 跨 App「定位引用」协议面的**运行时可见出口**。
  *   为什么要接在这里：本切片新造了七条靶心（旅行费用 / 总结记忆 / 纪念日条目 / 曲库曲目 /
  *   Pixiv 作品 / Pixiv 插画 / 老福特文章），消费侧散在六个 App 里。协议件自己的登记表
@@ -708,6 +718,34 @@ export function collectDiagnose(win, storage) {
                 line: '消费面矩阵：' + String(total) + ' 件 App × ' + String(FACE_KEYS.length)
                     + ' 条平台级消费面（逐面命中数见下）；六面全无 ' + String(zero)
                     + ' 件已入「不适用」台账（逐条附理由）。'
+            };
+        } catch (_e) { return null; }
+    })();
+    /* ── [v4.98.0 · R11-O8 收口] 像素图标覆盖率面 ──
+     *   摆的是什么：89 件 App 的像素图标覆盖读数（分子 / 分母 / 百分比）、
+     *   缺件点名（会被静默 emoji 兜底的）、以及在册却无磁盘映射的点名。
+     *   三条纪律与全页一致：只读（读的是 config/app-icons.js 的现算读数）、
+     *   不抛（单面 try/catch）、不猜（取不到即 null 并如实说，不伪造 100%）。 */
+    const iconFace = (() => {
+        try {
+            const cov = unifiedIconCoverage();
+            if (!cov) return null;
+            const missing = Array.isArray(cov.missing) ? cov.missing.map(String) : [];
+            const unmapped = Array.isArray(cov.unmapped) ? cov.unmapped.map(String) : [];
+            /* ★ 判红的口径与判据一致：缺件 或 在册无映射 —— 两者都让「统一像素」这个声明失真。
+             *   `unmapped` 尤其不能漏判：那种格子看起来有图（URL 非空），实际是 404。 */
+            const problems = [];
+            if (missing.length) problems.push('有 ' + String(missing.length) + ' 件 App 没有像素图标');
+            if (unmapped.length) problems.push('有 ' + String(unmapped.length) + ' 件在册但磁盘无对应文件');
+            return {
+                ok: problems.length === 0,
+                problems: problems,
+                total: Number(cov.total || 0),
+                covered: Number(cov.covered || 0),
+                ratio: Number(cov.ratio || 0),
+                missing: missing,
+                unmapped: unmapped,
+                line: String(cov.line || '图标覆盖率：无读数')
             };
         } catch (_e) { return null; }
     })();
@@ -1802,7 +1840,7 @@ export function collectDiagnose(win, storage) {
             return { ok: false, linked: true, reason: 'thrown', at: 0, passed: 0, skipped: 0, problems: ['自检面取数抛错'], lines: {}, text: '' };
         }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2277,6 +2315,15 @@ export function summarizeDiagnose(pkg) {
         if (failed.length) bad.push('启动期有 ' + failed.length + ' 个模块加载失败（' + failed.map((s) => s.name).slice(0, 3).join('、') + '）');
     }
     if (p.audit && Array.isArray(p.audit.bad) && p.audit.bad.length) bad.push('源键规则违规 ' + p.audit.bad.length + ' 处');
+    /* [v4.98.0 · R11-O8 收口] 图标覆盖率的坏消息：**有缺件 / 有在册无映射**进首行。
+     *   为什么这算「用户能处理的事」：缺件的症状是**静默**的（那张图不是像素风，
+     *   或干脆是一个空图），用户看得见异常却不知道为什么 —— 首行一句话把它接到这里。
+     *   ★ 面缺席（内核没取到）**不进首行**：那是本页读数的降级，与「真没落地」不同形，
+     *     它已经在卡片里如实说明了（本仓「坏消息先说，但不把降级当缺陷报」）。 */
+    const icf = p.iconFace || null;
+    if (icf && Array.isArray(icf.problems) && icf.problems.length) {
+        bad.push('像素图标：' + icf.problems.join('、'));
+    }
     if (bad.length) return '需注意：' + bad.join(' · ');
     const ok = [];
     if (rep.anyReadable) ok.push('至少一台上游桥可读');
@@ -2288,6 +2335,17 @@ export function summarizeDiagnose(pkg) {
  *  这里只做转发 —— 诊断内核持有 face，不再重取快照（同轮两个取数点即错记录形态）。 */
 export function evidenceFaceText(face) {
     return evidenceFaceLine(face);
+}
+/** [v4.98.0 · R11-O8 收口] 像素图标覆盖率面的一行读数（唯一实现在 `collectDiagnose` 内取的那一面）。
+ *  与 capHealthFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  ★ 三态不同形：面缺席（内核没取到）/ 面在但读数缺失 / 有读数 —— 压成一态就会把
+ *    「取不到」洗成「覆盖率 100%」，而图标缺件本身就是静默症状，正是最不该洗的那一类。 */
+export function iconFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '图标覆盖率：读取异常（已降级）—— 这不是「89 件全覆盖」';
+        return String(f.line || '图标覆盖率：无读数');
+    } catch (_e) { return '图标覆盖率：读取异常（已降级）'; }
 }
 
 export default {
@@ -2331,5 +2389,6 @@ datePlayFaceText,
     provenanceFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,
-    characterSlotFaceText
+    characterSlotFaceText,
+    iconFaceText
 };

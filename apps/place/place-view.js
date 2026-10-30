@@ -74,6 +74,9 @@ export class PlaceView {
              *   位置有讲究:它排在「谁在这个地方 / 同楼同刻」之后 ——
              *   读者先看清原地有什么,再决定要去哪;排到最前面等于让人还没看当前就被劝出门。 */
             this._roamCard(proj, face),
+            /* [v4.97.0 · R11-O3 第三批] 街区机会卡：紧跟在探索卡之后 —— 前者答「能去哪」，
+             *   本卡答「去了有什么可参与」（同一处地点的两种读数，读者顺路对照）。 */
+            this._districtCard(),
             this._settingsCard(),
             (this._showDiag() ? this._diagCards(proj) : ''),
             '  </div>',
@@ -472,6 +475,68 @@ export class PlaceView {
      * 三态如实:提案拿不到(认不出这处)⇒ 明说认不出;拿得到 ⇒ 逐行铺内核给的线索。
      * **本方法不发任何写动作**:「去这儿」的落点由 app.sendProposalToChat 负责。
      */
+    /**
+     * 街区机会卡（[v4.97.0 · R11-O3 第三批]）。与探索卡分工：前者答「能去哪」，
+     *   本卡答「去了有什么可参与」—— 每处地点按当前日期/时段判营业，再列出
+     *   可参与的事件机会（`active` 可参加 / `already-attended` 已参加过 /
+     *   `missed` 错过不伪造已到场）。到访记录升级地点熟悉度（内核判，本件落盘）。
+     * 【归因优先】台账读不到与「还没登记过」分两句，不混成「没有地点」。
+     */
+    _districtCard() {
+        const app = this.app;
+        if (!app || typeof app.districtFace !== 'function') return '';
+        let show = true;
+        try { show = app.getSettings().showDistrict !== false; } catch (_e) { show = true; }
+        if (!show) return '';
+        let face;
+        try { face = app.districtFace(); } catch (_e) { return ''; }
+        if (!face) return '';
+        const head = '<div class="pl-card-title">街区机会<span class="pl-count">'
+            + this._esc(String(face.line || '')) + '</span></div>';
+        if (!face.ok || !face.rows.length) {
+            return '<div class="pl-card"><div class="pl-card-title">街区机会</div>'
+                + '<div class="pl-empty">' + this._esc(face.line || '街区台账读不到') + '</div>'
+                + '<button class="pl-btn" id="pl-district-add">登记一处地点</button>'
+                + '<div id="pl-district-form" style="display:none">'
+                + '<input class="pl-in" id="pl-d-id" placeholder="地点 ID（如 coffee-shop）">'
+                + '<input class="pl-in" id="pl-d-name" placeholder="地点名称（如 街角咖啡馆）">'
+                + '<input class="pl-in" id="pl-d-days" placeholder="营业日（逗号分隔，如 周一,周三）">'
+                + '<input class="pl-in" id="pl-d-slots" placeholder="时段标签（逗号分隔，如 上午,下午,晚上）">'
+                + '<input class="pl-in" id="pl-d-ev" placeholder="可参与事件（格式：ID:标签，逗号分隔）">'
+                + '<button class="pl-btn" id="pl-district-save">登记</button>'
+                + '</div></div>';
+        }
+        const rows = face.rows.map((r) => {
+            const st = String(r.status || 'missed');
+            const stText = st === 'active' ? '可参加' : (st === 'already-attended' ? '已参加' : '已错过');
+            const stCls = st === 'active' ? 'pl-district-active' : (st === 'already-attended' ? 'pl-district-done' : 'pl-district-missed');
+            return [
+                '<div class="pl-district-row ' + stCls + '">',
+                '  <span class="pl-district-place">' + this._esc(r.placeName) + '</span>',
+                '  <span class="pl-district-ev">' + this._esc(r.label) + '</span>',
+                '  <span class="pl-district-st">' + stText + '</span>',
+                (st === 'active'
+                    ? '  <button class="pl-district-go" data-pid="' + this._esc(r.placeId) + '" data-eid="' + this._esc(r.id) + '">记录到访</button>'
+                    : ''),
+                '</div>'
+            ].join('\n');
+        }).join('');
+        return [
+            '<div class="pl-card pl-district">',
+            '  ' + head,
+            '  ' + rows,
+            '  <button class="pl-btn" id="pl-district-add">登记一处地点</button>',
+            '  <div id="pl-district-form" style="display:none">',
+            '    <input class="pl-in" id="pl-d-id" placeholder="地点 ID（如 coffee-shop）">',
+            '    <input class="pl-in" id="pl-d-name" placeholder="地点名称（如 街角咖啡馆）">',
+            '    <input class="pl-in" id="pl-d-days" placeholder="营业日（逗号分隔，如 周一,周三）">',
+            '    <input class="pl-in" id="pl-d-slots" placeholder="时段标签（逗号分隔，如 上午,下午,晚上）">',
+            '    <input class="pl-in" id="pl-d-ev" placeholder="可参与事件（格式：ID:标签，多条逗号分隔，如 e1:常客闲聊,e2:老板拼桌）">',
+            '    <button class="pl-btn" id="pl-district-save">登记</button>',
+            '  </div>',
+            '</div>'
+        ].join('\n');
+    }
     _showRoamDetail(key) {
         const el = this.container;
         if (!el || typeof el.querySelector !== 'function') return;
@@ -625,8 +690,46 @@ export class PlaceView {
         for (const btn of qa('.pl-roam-go')) {
             btn.addEventListener('click', () => {
                 const key = btn.getAttribute('data-go') || '';
-                try { this.app.sendProposalToChat(key); } catch (_e) {}
+try { this.app.sendProposalToChat(key); } catch (_e) {}
                 this._showRoamDetail(key);
+            });
+        }
+        /* [v4.97.0 · R11-O3 第三批] 街区机会卡的三组动作（全部容器级查询带能力探测）：
+         *   ① 展开登记表单（不写任何状态，只翻 display）；
+         *   ② 登记提交：表单拼参数走 app.registerDistrictPlace，失败把 reason 弹回表单；
+         *   ③ 记录到访：按行上带的 placeId/eventId 走 app.recordDistrictVisit 后整页重画。 */
+        q('#pl-district-add')?.addEventListener('click', () => {
+            const f = q('#pl-district-form');
+            if (f) f.style.display = (f.style.display === 'none') ? '' : 'none';
+        });
+        q('#pl-district-save')?.addEventListener('click', () => {
+            const v = (id) => { try { return String((q(id) || {}).value || '').trim(); } catch (_e) { return ''; } };
+            const days = v('#pl-d-days').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+            const slotLabels = v('#pl-d-slots').split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+            const timeWindows = days.map((day) => ({
+                day,
+                slots: slotLabels.map((label) => ({ start: label, end: label, label }))
+            }));
+            const events = v('#pl-d-ev').split(/[,，]/).map((s) => s.trim()).filter(Boolean).map((pair) => {
+                const i = pair.indexOf(':');
+                return { id: i >= 0 ? pair.slice(0, i) : pair, label: i >= 0 ? pair.slice(i + 1) : pair };
+            });
+            let r;
+            try { r = this.app.registerDistrictPlace(v('#pl-d-id'), v('#pl-d-name'), timeWindows, []); }
+            catch (_e) { r = { ok: false, reason: 'threw' }; }
+            if (!r || !r.ok) {
+                try { if (q('#pl-d-id')) q('#pl-d-id').placeholder = '登记失败：' + ((r && r.reason) || '未知'); } catch (_e) {}
+                return;
+            }
+            try { this.app.saveSettings({ districtEvents: [].concat(this.app.getSettings().districtEvents || [], events) }); } catch (_e) {}
+            this._draw();
+        });
+        for (const btn of qa('.pl-district-go')) {
+            btn.addEventListener('click', () => {
+                const pid = btn.getAttribute('data-pid') || '';
+                const eid = btn.getAttribute('data-eid') || '';
+                try { this.app.recordDistrictVisit(pid, eid, []); } catch (_e) {}
+                this._draw();
             });
         }
     }

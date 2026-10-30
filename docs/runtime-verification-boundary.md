@@ -1,4 +1,4 @@
-# ruby-phone 运行时验证边界（v2.82.0 起；**v4.92.0 复校**）
+# ruby-phone 运行时验证边界（v2.82.0 起；**v4.99.8 复校**）
 
 > 本文件回答一个容易被含糊过去的问题：**哪些结论有证据，哪些没有。**
 > 写它的直接动机是 `计划.txt` 建议「新增一个浏览器运行时冒烟层」——
@@ -307,7 +307,10 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 下面两行是**机器可读**的复校契约：门禁会真跑 `syntax` / `import-resolve` 两道门，
 把它们的读数与这两行逐项比对，不一致即转红（防「文档写了实测、其实是抄的旧数」）。
 
-- 语法 1062 文件
+- 语法 1098 文件
+（**v4.99.8 复校**：本版 R11-X4 新增 `config/share-migrate-bridge.js`（分享与迁移面的形状态翻译层）与 `tests/system-v4998.test.mjs`（27 条判据套件），语法面 1095 → **1097**、导入面 639 → **640** 文件 / 1075 → **1079** 条（桥被备份台静态导入三条具名 + 备份台新增对 `config/sharing-boundary.js` 的三条具名导入）。本行由 `tools/refresh_doc_readings.py --write` 现场跑两道门后写入，不手抄。★ 边界：本版判据全部是无头纯函数、真 class 与源码面断言，**未装载 DOM、不跑 CSS**；真机上收件人视角的实际观感、撤回后对方入口是否真的消失、长列表滚动性能与「看起来没坏但显示不对」那一类**仍未验证**。）
+（**v4.99.7 复校**：本版 R11-X7 余项新增 `config/notice-paradigm-bridge.js`（使用范式→通知中心的形状翻译层）与 `tests/system-v4997.test.mjs`（27 条判据套件），语法面 1082 → **1095**、导入面 633 → **639** 文件 / 1055 → **1075** 条（桥被通知 App 静态导入，另有一条由 `apps/search/search-app.js` 指向 v4.99.5 引入的 `config/spotlight-face-bridge.js`）。**本行只记真跑读数**：两道门现场各跑一遍，读数直接落笔（脚本里不写字面量）。★ 边界：本版判据全部是无头纯函数与源码面断言，真宿主里切换范式后的实际观感、隐藏区展开动画、长列表滚动性能与「看起来没坏但显示不对」那一类**仍未验证**。
+（**v4.99.1 复校**：本版 R11-X6 新增 `config/notification-hub-bridge.js`（中枢→通知中心纯读桥接层）与 `tests/system-v41000.test.mjs`（X6 判据套件），语法面 1078 → **1080**（一次 80 万字节的瞬态垃圾文件落过 tests/audit 目录已被清，读数以清场后为准）、导入面 631 → **632** 文件 / 1052 → **1054** 条（其中一条是扫描器缺陷制造的假导入，见下）（桥被 App 侧静态导入）。**本行只记真跑读数**：两道门现场各跑一遍，读数直接落笔（脚本里不写字面量）。★ 边界：X6 的 mergeFeed 三态判据全部是无头纯函数断言，真宿主里通知中心打开时中枢 _save() 与 localStorage 的实际时序仍未验证。
 （**v4.25.0 复校**：本版新增 `config/story-annual-contract.js`（故事年鉴纯契约件）与 `tests/system-v4250.test.mjs`（R4-X3 判据套件）、`tools/bump_v4250.py` 不计入 .js 面，另随本轮批次新增 12 个 `tests/system-v41xx~v42xx.test.mjs` 与 12 个 `config/*.js`。**本行只记真跑读数**：两道门现场各跑一遍，读数直接落笔（脚本里不写字面量）。★ 边界：本版治的三处病灶全在**账册归一与裁章口径**上，真宿主里那一轮真实对话的卷章结构与真机渲染**仍未验证**。
 （**v3.83.0 复校**：本版新增 4 个 `.js` —— 产品侧一件真源 `config/num-clamp.js`（有界取数的唯一实现）+ `config/diagnose-action.js`（诊断处置面，v3.83.0）与两个判据套件 `tests/system-v3820.test.mjs` / `tests/system-v3830.test.mjs`（另有 v3.81.0 起累计的 `config/portable-payload.js` / `config/submodel-isolation.js` / `config/ambience-pool.js` / `config/relation-tier.js` / `config/scene-rules.js` / `config/state-fields.js` / `config/archive-digest.js` / `config/memory-correction.js` / `config/craft-cards.js` 与对应套件）。语法面 710 → **731**；导入面 399 → **415** 文件、660 → **695** 条（11 处 `boundedInt` 副本改引唯一实现，各 +1 条静态说明符）。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
 （**v3.79.0 复校**：本版新增 11 个 `.js`/`.mjs` —— 产品侧两件真源 `config/motion.js`（动效档位 + 后台降频闸 + 恢复重取合成器）与 `config/perf-sampler.js`（有界被动采样器）+ `tests/system-v3790.test.mjs` 判据套件 + 探针与基线两件（`tests/audit/perf_sampler_probe.cjs` / `perf_sampler_baseline.json`）+ `tests/browser/scenarios/` 两份交付场景与六份取证场景（`_diag21`~`_diag26`，取证前缀不进扫描面但进语法门）。语法面 699 → **710**。★ 导入门方面：`config/motion.js` 与 `config/perf-sampler.js` 各被 `index.js` 静态导入一条（+2 文件 / +2 条），其余新件都在 `tests/`（不进导入门扫描面），故导入面 397 → **399** 文件、658 → **660** 条。**零条既有导入被删**。★ 本行只记真跑读数：两道门现场各跑一遍，读数直接落笔。）
@@ -325,7 +328,10 @@ node scripts/import-resolve-check.mjs --list    # 列出全部静态导入与解
 （**v3.44.0 复校**：本版新增 4 个 .js —— `apps/doujin/` 三件（数据层 / App 层 / 视图层）+ `tests/system-v3440.test.mjs` 一个判据套件（该件的 `doujin.css` 是样式不是 .js，不计入语法面）；导入面 332 → **335** 文件、519 → **522** 条静态说明符 —— 增量全部来自新件的模块间引用（App→数据层 / App→视图层 / 视图层→数据层，共 3 条）与新套件自身的 import。**无一处是既有读数倒退**。）
 （**v3.43.0 复校**：本版新增 4 个 .js —— `apps/pvdesk/` 三件（数据层 / App 层 / 视图层）+ `tests/system-v3430.test.mjs` 一个判据套件（该件的 `pvdesk.css` 是样式不是 .js，不计入语法面）；导入面 326 → **332** 文件、511 → **519** 条静态说明符 —— 增量全部来自新件的模块间引用（数据层→数值门 / App→数据层 / App→视图层 / App→数值门 / 视图层→数据层，共 5 条）与新套件自身的 import。**无一处是既有读数倒退**。）
 （**v3.27.0 复校**：本版新增 13 个 .js —— `apps/avatarframe/` / `apps/shop/` / `apps/block/` / `apps/weather/` 各三个（四件新 App 的三层），共 12 个，＋ `tests/system-v3270.test.mjs` 一个判据套件（四件的 `*.css` 是样式不是 .js，不计入语法面）；导入面 270 → **282** 文件、423 → **439** 条静态说明符 —— 增量全部来自四件新 App 的模块间引用与新套件的 import，**无一处是既有读数倒退**。其余各门读数见 `ITERATION_LOG.md` 迭代 85 段。）
-- 导入 630 文件 1044 条
+- 导入 640 文件 1079 条
+（**v4.94.0 复校**：v4.94.0 复校：R11-O2 类方法面 + 模块入度面门落地（scripts/lib/dead-surface.mjs + scripts/method-consumption-audit.mjs + 两份冻结账本），门链 16→17 段。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）
+（**v4.93.0 复校**：v4.94.0 复校：R11-O2 类方法面 + 模块入度面门落地（新增 scripts/lib/dead-surface.mjs 与 scripts/method-consumption-audit.mjs，链段 16→17）。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）
+（**v4.93.0 复校**：绑级零消费导出审计门 R11-O1 落地（新增 scripts/lib/binding-consumption.mjs / scripts/bind-consumption-audit.mjs / 131 条冻结账本 / tests/system-v4930.test.mjs），语法面 1062 → 1065，导入面读数未动。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）
 （**v4.91.0 复校**：v4.91.0 第十一批：三条欠债做成产品实现，读数现场重取。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）
 （**v4.90.0 复校**：v4.90.0 第十批缝入：来源许可 / 剧情时间相对化 / 世界书条目设置面三件内核接线与五源抬版。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）
 （**v4.89.0 复校**：v4.89.0 第九批缝入：激活扩散 / 召回注入计划 / 有界后台队列 / 上游失败整形四件内核接线与五源抬版；读数现场重取。★ 本两行由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄；该工具干跑模式在发现漂移时返回 1，可直接挂进 CI。）

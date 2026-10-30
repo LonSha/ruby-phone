@@ -24,6 +24,15 @@ import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
 import { ImageCropper } from './image-cropper.js';
+/* [v4.99.6 · R11-X8] 设备读数面（设置 · 常规那一格）。
+ *   为什么放在这里：桥接层的 `DEVICE_FACE_DOMAINS` / `DEVICE_DOMAIN_META` / `deviceFaceOf`
+ *   / `deviceLineOf` 如果只有 tests 引用，就又是本仓治了六次的同一个形态 ——
+ *   「内核写好了、导出挂出来了、产品端零消费」。设置页是用户能**看见读数**的地方，
+ *   于是它就是这四个出口的产品面：三域各一行（域中文名 + 读数/归因句 + 状态）。
+ *   ★ 只显示、不接管：读数的活体真源在中枢实例里，这里只把结论画出来。 */
+import {
+    DEVICE_FACE_DOMAINS, DEVICE_DOMAIN_META, DEVICE_FEED_REASONS, SIGNAL_BARS_MAX, deviceFaceOf, deviceLineOf
+} from '../../config/device-face-bridge.js';
 import { AlbumData } from '../album/album-data.js';
 import { AlbumImagePicker } from '../album/album-image-picker.js';
 import { DEFAULT_APP_ICONS, PHONE_CONFIG } from '../../config/apps.js';
@@ -1096,6 +1105,60 @@ export class SettingsApp {
         window.dispatchEvent(new CustomEvent('phone:goHome'));
     }
 
+    /* [v4.99.6 · R11-X8] 设置页的设备读数快照（三域各一行 + 汇总一句）。
+     *   取数口径：只信宿主装配的那一个读数口（`window.VirtualPhone.deviceFace`），
+     *   拿不到就把三域都当「读不到」——**不反查中枢实例**（否则设置页成为第二个真源）。
+     *   为什么用 deviceFaceOf/deviceLineOf：三态判定与文案是桥接层的单一实现，
+     *   本页只负责排成三行；若在这里再判一次，就会出现第二份口径（本仓治过同族）。
+     * @returns {{rows:Array<{domain:string,label:string,line:string,state:string,whyLine:string}>, summary:string}}
+     */
+    _deviceFaceSnapshot() {
+        let reads = null;
+        /* 归因初值取桥接层的词表常量（不在这里另写一份字符串，免得两处漂移）。 */
+        let readWhy = DEVICE_FEED_REASONS.NO_HOST;
+        try {
+            const vp = window.VirtualPhone;
+            if (vp && typeof vp.deviceFace === 'function') {
+                reads = vp.deviceFace();
+                readWhy = '';
+            } else if (vp) {
+                readWhy = 'no_device_face';
+            }
+        } catch (_e) {
+            reads = null;
+            readWhy = 'read_threw';
+        }
+        const face = reads ? deviceFaceOf(reads) : null;
+        /* 归因句：与读数面同纪律 —— 读不到就说清是哪一档，不写成同一句「暂无数据」。 */
+        const whyLineOf = (d) => {
+            if (!reads) {
+                return readWhy === 'read_threw'
+                    ? '读数口抛错（不是「没电 / 无服务」）'
+                    : '读数口未装配（不是「没电 / 无服务」）';
+            }
+            if (d.state === 'ok' || d.state === 'weak') return '读数正常';
+            if (d.state === 'empty') return '一次都还没采到（不是「没有心跳」）';
+            if (d.state === 'thin') return '点数还不够画一条线';
+            return (d.state === 'threw') ? '读取失败（不是「没电 / 无服务」）' : '数据缺失（不是「没电 / 无服务」）';
+        };
+        const rows = [
+            DEVICE_FACE_DOMAINS.BATTERY, DEVICE_FACE_DOMAINS.SIGNAL, DEVICE_FACE_DOMAINS.BAND
+        ].map((domain) => {
+            const meta = DEVICE_DOMAIN_META[domain] || { domain, label: domain, emptyLine: domain + '：数据缺失' };
+            const d = face ? face[domain] : null;
+            return {
+                domain,
+                label: meta.label,
+                state: d ? d.state : 'missing',
+                line: d ? deviceLineOf(d) : meta.emptyLine,
+                whyLine: whyLineOf(d || { state: 'missing' })
+            };
+        });
+        const summary = face
+            ? face.line + '（信号上限 ' + SIGNAL_BARS_MAX + ' 格；曲线同源于中枢手环实例）'
+            : '设备读数：三域都没读到（不是「一切正常」）';
+        return { rows, summary };
+    }
     render() {
         const context = this.storage.getContext();
         const isLobbyMode = this._isLobbyMode(context);
@@ -2125,6 +2188,25 @@ export class SettingsApp {
                                 <div class="setting-value">${charName}</div>
                             </div>
                         </div>
+
+                        <!-- [v4.99.6 · R11-X8] 设备读数（拟真读数面的产品面）
+                             ★ 这里是**只读展示**：电量/信号/生命体征的真源在中枢实例里，
+                               本块把它们的读数与归因句原样列出来。读不到就写「数据缺失」，
+                               绝不显示上一次的值、也不编一个看起来正常的数字（本版治的就是这个）。 -->
+                        ${(() => {
+                            const face = this._deviceFaceSnapshot();
+                            return `
+                        <div class="setting-section yzp-settings-device-face">
+                            <div class="setting-section-title">🔋 设备读数</div>
+                            ${face.rows.map((r) => `
+                            <div class="setting-item yzp-device-face-row" data-device-domain="${r.domain}" data-device-state="${r.state}">
+                                <div class="setting-label">${r.label}</div>
+                                <div class="setting-value"><span class="yzp-device-face-line">${r.line}</span></div>
+                                <div class="setting-desc yzp-device-face-why">${r.whyLine}</div>
+                            </div>`).join('')}
+                            <div class="setting-desc yzp-device-face-sum">${face.summary}</div>
+                        </div>`;
+                        })()}
 
                         <div class="setting-section" style="padding: 10px 12px;">
                             <button id="setting-reset-all-prompts" class="setting-btn" style="width: 100%; padding: 9px 12px; font-size: 12px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border: 1px solid rgba(7,193,96,0.25); color: #0b8f52; border-radius: 10px; font-weight: 700;">

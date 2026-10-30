@@ -52,6 +52,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+/* ★ [v4.98.0 · R11-O9] 预算时效判据（三态 fresh / stale / unmeasured）。
+ *   与 tests/system-v4990.test.mjs 共用同一份 `evaluateBudgetFreshness` ——
+ *   各写一遍必然漂移，漂移后果是「同一份预算在两处显示成两种新旧」。 */
+import { checkGateBudgetFreshness } from './gate-budget-freshness.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -116,6 +120,21 @@ const READS = {
      *   主读数取**面数**（同一次运行里对账了几面）—— 这条读数必须随冻读取一起动：
      *   上游新增一面而冻读取没刷，面数不变、R3 会报「有面但下游没登记」；
      *   冻读取刷了而上游那面撤了，面数会掉 —— 两种漂移都在这条读数上可见。 */
+    /* ── [v4.99.0 · F8 修复] 第十七道门：文档路径声明（R11-O4 的真产物）。
+     *   ★ 这道门的**产物早就在盘上**（151 行 + 403 行 baseline），也从没进过任何门禁链 ——
+     *     于是它所看守的「散文声称有判据 / 文件其实不在」这一整面，只在
+     *     tests/system-v4980.test.mjs 里被套件跑，**不参与 `npm run check`**。
+     *     F8 的 `static_gate_files 17 !== tiers.static.commands.length 16` 正是替它响的那一声：
+     *     17 个门文件里恰好这一个没进分档表。修的是接线，不是数字。 */
+    'doc-path-claim': [
+        { id: 'claims', label: '扫描到的路径声明数', re: /共扫描 (\d+) 处声明/, g: 1 },
+        { id: 'local', label: '本仓有效声明数', re: /本仓 (\d+) 处/, g: 1 },
+        { id: 'upstream', label: '上游合法声明数', re: /上游 (\d+) 处/, g: 1 },
+        /* ★ 这条读数是**这门存在的全部理由**：未登记落空数必须为 0。
+         *   非 0 时门自己会 exit 1；此处登记它是为了让 check:file 的汇总行
+         *   在**全绿那次**也能读到「0」——「没红」与「没读数」不是一回事。 */
+        { id: 'violations', label: '未登记落空声明', re: /(\d+) 未登记落空/, g: 1 }
+    ],
     'upstream-face': [
         { id: 'faces', label: '对账面数', re: /跨仓外供面「声明 ↔ 真码」对账：(\d+) 面/, g: 1 },
         { id: 'produced', label: '本仓产出面数（R12）', re: /面（消费侧）\/ (\d+) 面（本仓产出侧 · R12）/, g: 1 },
@@ -143,6 +162,30 @@ const READS = {
          *   它一旦非 0，门自己会 exit 1；此处登记它是为了让 check:file 的汇总行
          *   也能在**全绿那次**读到「0」——「没红」与「没读数」不是一回事。 */
         { id: 'bypass', label: '直写外壳的调用点', re: /直接写外壳的调用点 (\d+)/, g: 1 }
+    ],
+    /* ── [v4.98.0 · R11-O9 附带修复] 这两道门是 v3.x 末期进链的，**当时没登记主读数**，
+     *   于是 `npm run check:file` 每次都在「每道门都必须有主读数」那一步 exit 2 拒判 ——
+     *   也就是说：它从来没有跑到过预算对账段，本版挂在它后面的预算**时效**段
+     *   也从来没有被任何人看见过。这不是「门坏了」，是「执行器早就停在前一章」。
+     *   ★ 这条修复本身就是本仓纪律的实例：**一段没人跑到过的代码等于不存在**，
+     *     而它失败得毫无声响（exit 2 只打印一行，没人跑 check:file 就永远发现不了）。 */
+    'bind-consuming': [
+        { id: 'files', label: '扫描文件数', re: /扫描 (\d+) 文件/, g: 1 },
+        { id: 'exports', label: '导出声明数', re: /\/ (\d+) 导出 \//, g: 1 },
+        /* 两条读数合成一格：起点是「绑定级死」总数，斜杠后是基线数，末段是**新增**数。
+         *   新增才是这门判红与否的真值，故单独立一条读数（0 = 没有新增未登记死导出）。 */
+        { id: 'dead', label: '绑定级死导出', re: /绑定级死 (\d+)/, g: 1 },
+        { id: 'baseline', label: '基线条数', re: /基线 (\d+)(?: \/ 新增 (\d+))?/, g: 1 },
+        { id: 'added', label: '新增未登记', re: /基线 (\d+)(?: \/ 新增 (\d+))?/, g: 2 }
+    ],
+    'method-consuming': [
+        { id: 'files', label: '扫描文件数', re: /扫描 (\d+) 文件/, g: 1 },
+        { id: 'classes', label: '带方法类数', re: /(\d+) 个带方法类/, g: 1 },
+        { id: 'methods', label: '公开方法条数', re: /(\d+) 条公开方法/, g: 1 },
+        { id: 'dead', label: '死方法数', re: /死方法 (\d+)/, g: 1 },
+        /* 模块入度那一行的三段（product / orchestrator-only / zero）**不登记**：
+         *   它们是分布读数，不像「新增」那样有判红语义；登记面只留判据真用得上的。 */
+        { id: 'added', label: '新增未登记', re: /基线 \d+ \/ 新增 (\d+)/, g: 1 }
     ],
     'session-writeback': [
         { id: 'files', label: '扫描生产文件数', re: /扫描 (\d+) 个生产 \.js/, g: 1 },
@@ -297,6 +340,33 @@ summary.push('');
         summary.push('    预算状态：' + (over.length
             ? over.length + ' 道门超预算（**告警**，不改判绿 —— 门慢不等于判据坏）'
             : '全部在预算内'));
+    }
+    /* ★ [v4.98.0 · R11-O9] 预算**时效**：上面那段问的是「超没超」，这一段问的是
+     *   「这份基线还准吗」。修前实况：`measured_at` 是 v3.23.1、当版 4.94.0，
+     *   中间隔了 166 次发布 —— 一整套超预算告警其实是在拿一百多版前的基线比对。
+     *   三态不同形（fresh / stale / unmeasured），**告警不改退出码**（fail-open）。
+     *   ★ 为什么不在这里自己算：版本口径与三态判定属同一份真源，
+     *     判据（tests/system-v4990.test.mjs）与本执行器必须共用
+     *     `scripts/gate-budget-freshness.mjs` 的 `evaluateBudgetFreshness` ——
+     *     各写一遍必然漂移，而漂移的后果是「同一份预算在两处显示成两种新旧」。 */
+    {
+        let fresh = null;
+        try {
+            /* ★ 必须传 ROOT：夹具通道（--root）下读的应是**夹具那份**预算，
+             *   否则夹具里「没预算」会被真仓的预算掩盖成一个假绿。 */
+            const fr = checkGateBudgetFreshness(ROOT);
+            fresh = fr;
+        } catch (e) {
+            fresh = { status: 'unmeasured', why: '时效判据本身抛错：' + String(e && e.message) };
+        }
+        summary.push('');
+        if (!fresh || fresh.status === 'unmeasured') {
+            summary.push('  预算时效：问不出（' + ((fresh && fresh.why) || '未取到') + '）—— 不告警，但**说原因**');
+        } else if (fresh.status === 'stale') {
+            summary.push('  预算时效：‼ ' + fresh.why + '（**告警**，不改退出码 —— 基线旧不等于判据坏）');
+        } else {
+            summary.push('  预算时效：✓ ' + fresh.why);
+        }
     }
 }
 summary.push('  读数（主读数，逐门）：');

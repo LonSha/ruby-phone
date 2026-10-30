@@ -8,19 +8,22 @@
         "npm run syntax",
         "npm run import-resolve",
         "npm run dead-exports",
+        "npm run bind-consuming",
+        "npm run method-consuming",
         "npm run lifecycle",
         "npm run registry",
         "npm run keys",
         "npm run source-derivation",
         "npm run bridge-contract",
         "npm run weak-coercion",
-        "npm run hardlink-safety",
-        "npm run upstream-face",
         "npm run session-writeback",
+        "npm run hardlink-safety",
+        "npm run doc-path-claim",
+        "npm run upstream-face",
         "node scripts/named-import-check.mjs",
         "node scripts/screen-host-check.mjs"
       ],
-      "why": "这十三道门回答「结构有没有坏」。它们不回答「用户点得到吗」—— 那条归浏览器档。session-writeback 额外回答「写回口的时序对不对」（令牌必须在第一个 await 之前记下）—— 接线在场不等于语义活着。"
+      "why": "这十七道门回答「结构有没有坏」。它们不回答「用户点得到吗」—— 那条归浏览器档。session-writeback 额外回答「写回口的时序对不对」（令牌必须在第一个 await 之前记下）—— 接线在场不等于语义活着。"
     },
     "targeted": {
       "label": "定向套件（进程内，毫秒~秒级）",

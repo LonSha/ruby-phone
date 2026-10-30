@@ -192,7 +192,16 @@ const CLOSURE_APP = CLOSURE_ENGINE.concat(CLOSURE_VIEW_EXTRA).concat([APP, 'apps
      *   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
      *   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。 */
     'config/search-facets.js',
-    'config/view-state.js']);
+    'config/view-state.js',
+    /* [v4.99.7] v4.99.5 的全局检索面把四件真依赖塞进 search-app 的静态导入面：
+     *   spotlight-face-bridge（映射层本体）、spotlight-universal-search（内核）、
+     *   apps.js（应用注册表）、app-library.js（注册表读出件）。
+     *   闭包不补齐 ⇒ 副本 import 就是 ERR_MODULE_NOT_FOUND，
+     *   负控制会变成「因缺文件而红」而不是「因破坏而红」（本仓最贵的那类假红）。 */
+    'config/spotlight-face-bridge.js',
+    'config/spotlight-universal-search.js',
+    'config/apps.js',
+    'config/app-library.js']);
 function mkTree(tag, files) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3760-' + tag + '-'));
     for (const f of files) {

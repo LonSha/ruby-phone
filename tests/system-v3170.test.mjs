@@ -264,8 +264,12 @@ test('v3170 A5. 依赖面收敛（三正文库不再进搜索闭包）', () => {
      *   本条要守的是「三正文库不进搜索闭包」（上面五条 assert 已经钉住），
      *   字节数只是**量级哨兵**（防有人把正文库整本 import 进来）。
      *   故上限抬到真实量级之上并留余量，同时保留百分比级的越界敏感度。 */
-    assert.ok(c.bytes < 460000,
-      '闭包字节必须仍在同一量级（上限 460KB，实测 ' + c.bytes + '）——'
+    /* ★ 口径再修正（v4.99.7）：v4.99.5 的 R11-X5 把全局检索面接进 search-app，
+     *   闭包真涨了三件（spotlight-universal-search / apps.js 注册表 / app-library），
+     *   405367 → 525604。这是**输入面真变大**，不是有人引正文库进来 ——
+     *   上面那五条「重库不进闭包」的 assert 一条没动，量级哨兵按新真值抬到 560KB。 */
+    assert.ok(c.bytes < 560000,
+      '闭包字节必须仍在同一量级（上限 560KB，实测 ' + c.bytes + '）——'
       + '越过即是有人把正文库或大件引进来了');
 });
 
@@ -375,6 +379,18 @@ const CLOSURE = [
      *   闭包不带它,副本 import 就是 ERR_MODULE_NOT_FOUND,
      *   负控制会变成「因缺文件而红」而不是「因破坏而红」(同一支笔的教训反复出现)。 */
     'config/view-state.js',
+    /* [v4.99.7] v4.99.5 落地的 config/spotlight-face-bridge.js（全局检索面纯映射层）
+     *   被 apps/search/search-app.js 静态导入 —— 闭包不带它，负数副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。
+     *   ★ 这一条是本版真红过的形态：不是本版引入，但由本版补上、并写进日志。 */
+    'config/spotlight-face-bridge.js',
+    /* [v4.99.7] v4.99.5 的全局检索面把 search-app 的静态依赖面撑大三件：
+     *   spotlight-universal-search（内核本体）、apps.js（应用注册表，SETTINGS 域的灌入源）、
+     *   app-library.js（注册表读出件）。CLOSURE 不补齐 ⇒ 副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。 */
+    'config/spotlight-universal-search.js',
+    'config/apps.js',
+    'config/app-library.js',
 ];
 function mkTree(tag) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3170-' + tag + '-'));

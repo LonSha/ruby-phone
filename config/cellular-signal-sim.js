@@ -52,6 +52,54 @@ export class CellularSignalSim {
     }
 
     /**
+     * [v4.99.6 · R11-X8] 读数面（`face()`）：产品端读信号的**唯一**入口。
+     *   为什么要有：状态栏那个 Wi-Fi 图标是**静态**的 —— 电梯/地下密室把格子打到 0，
+     *   屏幕上看不出任何变化，剧情里「发不出去消息」于是变成了一件没有屏幕依据的事。
+     *   本口不抛（读坏了不能把状态栏带挂），读不到如实标 ok:false。
+     * @returns {{ok:boolean, why:string, signal?:{bars:number, networkType:string, noService:boolean, weak:boolean, outboxPendingCount:number, activeDataSim:string}}}
+     */
+    face() {
+        try {
+            const noService = this.signalBars === 0 || this.networkType === NETWORK_TYPES.NO_SERVICE;
+            return {
+                ok: true,
+                why: '',
+                signal: {
+                    bars: this.signalBars,
+                    networkType: this.networkType,
+                    noService,
+                    weak: noService || this.signalBars <= 1,
+                    outboxPendingCount: this.outboxQueue.length,
+                    activeDataSim: this.activeDataSim
+                }
+            };
+        } catch (e) {
+            return { ok: false, why: 'read_threw', detail: String((e && e.message) || e) };
+        }
+    }
+    /**
+     * [v4.99.6 · R11-X8] 按**格数**直接设定信号（剧情驱动用）。
+     *   与 applyEnvironmentScenario 的分工：那个口按「场景名」（电梯/隧道）打档，
+     *   这个口按「具体几格」打档 —— 剧情说「只剩一格信号」时前者表达不出来。
+     *   制式按格数如实回落（0 格只能是 NO_SERVICE），不凭空给一个好看的 5G。
+     */
+    setSignalBars(bars, networkType) {
+        const n = Number(bars);
+        if (!Number.isFinite(n)) return false;
+        this.signalBars = Math.max(0, Math.min(5, Math.round(n)));
+        if (typeof networkType === 'string' && Object.values(NETWORK_TYPES).includes(networkType)) {
+            this.networkType = networkType;
+        } else if (this.signalBars === 0) {
+            this.networkType = NETWORK_TYPES.NO_SERVICE;
+        } else if (this.networkType === NETWORK_TYPES.NO_SERVICE) {
+            this.networkType = NETWORK_TYPES.THREE_G;
+        }
+        if (this.signalBars > 0 && this.outboxQueue.length > 0) {
+            return this.flushOutbox();
+        }
+        return { flushed: 0, pending: this.outboxQueue.length };
+    }
+    /**
      * 设置环境物理场景（模拟电梯、地下密室、隧道）
      * @param {string} scenario 'NORMAL' | 'ELEVATOR' | 'SUBWAY_TUNNEL' | 'BASEMENT'
      */

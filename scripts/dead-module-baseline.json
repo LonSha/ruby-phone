@@ -1,0 +1,698 @@
+{
+  "note": "模块入度面冻结账本（R11-O2）。判据：config/ 与 phone/ 顶层模块「新增落入 orchestrator-only 或 zero」即红；存量 79+15 冻结。 【v4.95.0 · R11-O3】config/usage-paradigm.js 已人工摘除：phone/home-screen.js 与 apps/usage/usage-app.js 真 import 它，升入 product 面（productImporters 不再是空数组）。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】已人工摘除（非 --update 的副作用）：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 已真接进 apps/backupdesk（分享五态授权 / 创作者包选择性导入计划，经 config/share-migrate-bridge.js 翻形状），两者从 orchestrator-only 升入 product 面，故弱档模块账本 82 → 80。同版还抓到一个真缺陷：`_shareVm` 里另写了一遍 `sharePreviewOf`，使 `previewShare` 退化成只有判据在调的死方法；`markShareRead`（记一次已读）更是产品面零调用 —— 于是「撤回前已读 N 人」这句留痕在界面上永远是 0 人。两处已接线（视图给出「记他读过了」入口）。",
+  "schema": "dead-module-baseline@1",
+  "generated_at": "2026-10-30T15:20:17.221Z",
+  "generated_version_hint": "auto",
+  "rule": "只判增量：已建件只有中枢引、或完全孤岛，是存量债（计划 O2 明令不许一次性清零），不是本版引入的问题。",
+  "entries": [
+    {
+      "rel": "config/action-receipt.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/intent-relay-receipt.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/action-stack.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/ambient-audio-wiretap.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/auth-expiration.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/autonomous-life-scheduler.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/battery-thermodynamics.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/system-v4996.test.mjs",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/cadence-topic-thread.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-cadence-topic.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/calendar-autonomous-life.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/causal-district-economy.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-district-economy.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/cellular-signal-sim.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/system-v4996.test.mjs",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/character-dossier.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs",
+        "tests/system-v4992.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/character-dwelling-network.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-dwelling-network.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/character-dwelling.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/character-presence.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/cloud-drive-sync.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/club-coop.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/co-built-world.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/community-autonomy.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/creator-bundle-ecosystem.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/creator-career-market.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/daily-rhythm.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-batch-b.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/daily-theater.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/diff-editor-desk.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/diff-review-pipeline.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "tests/ninth-cycle-diff-review.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/district-opportunities.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-a.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/dynamic-atmosphere-lighting.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/dynamic-moments-feed.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/festival-customs.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-a.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/floor-store.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "tests/floor-store.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/haptic-predictive-ime.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/hyperlocal-delivery-service.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/incident-workspace.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-incident-workspace.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/intent-relay.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/intent-relay-receipt.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/interaction-advisor.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/inventory-backpack.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs",
+        "tests/system-v4992.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/joint-media-serial-studio.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-serial-studio.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/joint-media-studio.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/life-program-replay.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/lineage-living-assets.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-living-assets.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/lineage-versioning.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/loader-mutex-token.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/mentorship-colearn.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/mentorship-practice.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/mimic-comm-engine.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/multi-activity-reroute.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/multimedia-serial-studio.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/multiproject-resume-anchor.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-resume-anchor.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/mystery-engine.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/orchestrated-life-scenario.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-life-scenario.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/parallel-life-sandbox.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/parallel-life.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/parallel-persona-spaces.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/personal-dossier.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/phone-world-state-machine.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-world-state.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/proactive-proposal-co-builder.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-proactive-proposal.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/proactive-proposal.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/qianshi-schedule.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/relation-revisit.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/relic-collection.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-d.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/replayable-phone-program.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-replayable-program.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/response-cadence.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-a.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/resume-anchor.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-a.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/runtime-resource-lease-budget.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-lease-budget.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/scenario-authoring-desk.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/seventh-cycle-expansion-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/serial-narrative.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/smart-band-biometrics.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/system-v4996.test.mjs",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/social-ecosystem.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/story-reentry.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/subconscious-dreamscape-mirror.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/tenth-cycle-frontier-mechanisms.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/theme-pack.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-a.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/time-env.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/touch-interaction-journey-audit.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-touch-journey.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/unified-context-card.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-context-card.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/user-work-package.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/eighth-cycle-batch-c.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/virtual-file-system.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/system-v4880.test.mjs",
+        "tests/tenth-cycle-deep-optimizations.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "config/voice-narrative.js",
+      "tier": "zero",
+      "importers": [],
+      "productImporters": []
+    },
+    {
+      "rel": "config/volume-chronicle.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "config/subsystem-orchestrator.js",
+        "tests/ninth-cycle-frontier-mechanisms.test.mjs",
+        "tests/system-v4992.test.mjs"
+      ],
+      "productImporters": []
+    },
+    {
+      "rel": "phone/phone-shell.js",
+      "tier": "orchestrator-only",
+      "importers": [
+        "tests/system-v226.test.mjs",
+        "tests/system-v231.test.mjs",
+        "tests/system-v4996.test.mjs"
+      ],
+      "productImporters": []
+    }
+  ]
+}

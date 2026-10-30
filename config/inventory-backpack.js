@@ -110,4 +110,36 @@ export class InventoryBackpackManager {
         }
         return list;
     }
+
+    /**
+     * [v4.99.2 · R11-X1] 序列化（持久化契约归数据主：怎么存是这个类自己的事）。
+     * 历史数组**逐条原样**带出 —— restore 不重新走 registerItem（那会每次重载
+     * 都伪造一条 'acquired' 历史，把「读档」变成「再次获得」）。
+     */
+    serialize() {
+        return { version: 1, items: Array.from(this.items.values()) };
+    }
+
+    /**
+     * [v4.99.2 · R11-X1] 从序列化数据恢复。字段校验宽松容错（脏数据跳过不抛），
+     * history 原样保留（见 serialize 头注），返回是否有效载荷。
+     */
+    restore(data) {
+        this.items = new Map();
+        if (!data || typeof data !== 'object' || !Array.isArray(data.items)) return false;
+        for (const it of data.items) {
+            if (!it || typeof it !== 'object' || !it.id || !it.name) continue;
+            this.items.set(String(it.id), {
+                id: String(it.id),
+                name: String(it.name),
+                owner: it.owner || 'protagonist',
+                source: it.source || '剧情获得',
+                significance: it.significance || '随身纪念物',
+                status: ['held', 'lost', 'consumed'].includes(it.status) ? it.status : 'held',
+                history: Array.isArray(it.history) ? it.history : [],
+                createdAt: it.createdAt || Date.now()
+            });
+        }
+        return true;
+    }
 }

@@ -11,6 +11,17 @@
 
 import { GlobalSearchEngine, buildDefaultSources, makeTavernSource } from '../memory/global-search-engine.js';
 import { SearchView } from './search-view.js';
+/* [v4.99.5 · R11-X5] 全局检索面（Spotlight）接入。
+ *   分工写死：本 App 只做两件事 —— **取四域真源灌进内核** 与 **把内核读数交给桥接层**；
+ *   映射（行形状 / 域覆盖三态 / 一句话读数）全在 config/spotlight-face-bridge.js（纯函数），
+ *   本件不写第二套口径。取数**只读既有落盘键**，不为这件事新增任何存储键。 */
+import {
+    mapSpotlightRows, mapDomainCoverage, spotlightLine, domainNotes,
+    SPOTLIGHT_FEED_REASONS, SPOTLIGHT_DOMAIN_META
+} from '../../config/spotlight-face-bridge.js';
+import { buildOpenDetail } from '../../config/app-open-detail.js';
+import { APPS } from '../../config/apps.js';
+import { SpotlightUniversalSearch, SEARCH_DOMAINS } from '../../config/spotlight-universal-search.js';
 /* [v3.97.0 · R3-O4] 问句 → 受控条件（人名 / 时间 / 类型 + 词序容错）的唯一实现。
  *   本 App 只做两件事：把问句交它抽条件（`facetsOf`），再拿条件**过滤**既有命中
  *   （`applyFacets`）——**不重排相关性**（排序仍归引擎的 `scoreHit`），
@@ -54,6 +65,8 @@ export class SearchApp {
         this._fullMode = false;
         this._scanGen = 0;
         this._scanning = false;
+        /* [v4.99.5 · R11-X5] Spotlight 内核实例（惰性建；这里先置 null，不做任何 IO）。 */
+        this._spotlightEngine = null;
         this.view = new SearchView(this);
     }
 
@@ -128,6 +141,161 @@ export class SearchApp {
             if (Array.isArray(rows)) for (const c of rows) push(c && (c.name || c.remark || c.nickname || c.id));
         } catch (_e) { /* 同上 */ }
         return out;
+    }
+
+    /* ════════ [v4.99.5 · R11-X5] 全局检索面（Spotlight 内核）接入 ════════
+     * 为什么接在搜索 App：整机已有 36 源引擎（GlobalSearchEngine），但那个内核
+     *   **没有域概念、也没有快捷意图语法**；Spotlight 恰好互补（四域清单 + 意图路由）。
+     *   两者共用一个面板、各说各的话：36 源引擎画主列表，Spotlight 画**域覆盖读数**
+     *   与**意图行**——不合并、不互相冒充（合并会造出第二份「命中总数」的口径）。
+     * ★ 本件只做取数与投递，映射全在 config/spotlight-face-bridge.js。
+     */
+
+    /** 惰性单例：内核不带 storage 也能跑（它的倒排索引全在内存里）。 */
+    _spotlight() {
+        if (this._spotlightEngine) return this._spotlightEngine;
+        try { this._spotlightEngine = new SpotlightUniversalSearch({ maxHistory: 20 }); } catch (_e) { this._spotlightEngine = null; }
+        return this._spotlightEngine;
+    }
+
+    /**
+     * 取四域真源并灌进内核。**只读既有落盘键**（不为本项新增任何存储键）。
+     * 每域返回 `{domain,count,ok,why}`：`ok:false` 才是「数据源没取到」（与「取到了但 0 条」不同形）。
+     */
+    _spotlightSources() {
+        const read = (key, dflt) => {
+            try { const v = this.storage?.get?.(key, dflt); return v === undefined || v === null ? dflt : v; } catch (_e) { return dflt; }
+        };
+        const arr = (v) => {
+            if (Array.isArray(v)) return v;
+            if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch (_e) { return []; } }
+            return [];
+        };
+        const obj = (v) => {
+            if (v && typeof v === 'object' && !Array.isArray(v)) return v;
+            if (typeof v === 'string') { try { const p = JSON.parse(v); return (p && typeof p === 'object') ? p : {}; } catch (_e) { return {}; } }
+            return {};
+        };
+        /* ① CONTACTS：通话联系人账 ∪ 微信通讯录（两处都是既有键，取不到算「这一域没取到」）。 */
+        const contacts = [];
+        const seenC = new Set();
+        let contactsOk = false;
+        try {
+            const rows = arr(read('phone_call_contacts', []));
+            if (rows.length || read('phone_call_contacts', null) !== null) contactsOk = true;
+            for (const c of rows) {
+                const n = String((c && (c.name || c.nickname)) || '').trim();
+                if (n && !seenC.has(n)) { seenC.add(n); contacts.push({ id: n, title: n, subtitle: '通话联系人', content: n }); }
+            }
+        } catch (_e) { contactsOk = false; }
+        try {
+            const wd = globalThis?.window?.VirtualPhone?.cachedWechatData;
+            const rows = (wd && typeof wd.getContacts === 'function') ? wd.getContacts() : null;
+            if (Array.isArray(rows)) {
+                contactsOk = true;
+                for (const c of rows) {
+                    const n = String((c && (c.name || c.remark || c.nickname)) || '').trim();
+                    if (n && !seenC.has(n)) { seenC.add(n); contacts.push({ id: n, title: n, subtitle: '微信联系人', content: n }); }
+                }
+            }
+        } catch (_e) { /* 单来源失败不牵连另一来源 */ }
+        /* ② WECHAT：会话表（既有键 wechat_data）。 */
+        const wd = obj(read('wechat_data', {}));
+        const chats = arr(wd.chats || wd.conversations);
+        const wechat = [];
+        for (const ch of chats) {
+            if (!ch) continue;
+            const id = String(ch.id || ch.name || '').trim();
+            if (!id) continue;
+            wechat.push({
+                id, title: String(ch.name || ch.title || id), subtitle: '微信会话',
+                content: String(ch.lastMessage || ch.preview || ''),
+                deepLink: { targetApp: 'wechat', view: 'chat', params: { id } }
+            });
+        }
+        /* ③ DIARY：日记条目（既有键 diary_entries）。 */
+        const entries = arr(read('diary_entries', []));
+        const diary = [];
+        for (const e of entries) {
+            if (!e) continue;
+            const id = String(e.id || e.date || '').trim();
+            if (!id) continue;
+            diary.push({
+                id, title: String(e.title || e.date || '日记'), subtitle: '日记',
+                content: String(e.content || e.text || ''),
+                deepLink: { targetApp: 'diary', view: 'list', params: { id } }
+            });
+        }
+        /* ④ SETTINGS：应用注册表（89 个 App 的 id/name）——搜 App 名直接开 App。
+         *   这一域的数据源是**代码里的注册表**（不是落盘键），故只要 APPS 是数组就算取到。 */
+        const apps = Array.isArray(APPS) ? APPS : [];
+        const settings = [];
+        for (const a of apps) {
+            if (!a || !a.id) continue;
+            settings.push({
+                id: String(a.id), title: String(a.name || a.id), subtitle: '应用', content: String(a.id),
+                /* 搜到某个 App 名就**直达那个 App**（不是「去设置页」）——
+                 *   meta 的 appId 只是「这一域的默认落点」，命中行自带的 deepLink 优先。 */
+                deepLink: { targetApp: String(a.id) }
+            });
+        }
+        const settingsOk = Array.isArray(APPS);
+        return {
+            entities: [
+                { domain: SEARCH_DOMAINS.CONTACTS, rows: contacts },
+                { domain: SEARCH_DOMAINS.WECHAT, rows: wechat },
+                { domain: SEARCH_DOMAINS.DIARY, rows: diary },
+                { domain: SEARCH_DOMAINS.SETTINGS, rows: settings }
+            ],
+            coverage: [
+                { domain: SEARCH_DOMAINS.CONTACTS, count: contacts.length, ok: contactsOk, why: contactsOk ? '' : 'phone_call_contacts 读不到且宿主通讯录不可用' },
+                { domain: SEARCH_DOMAINS.WECHAT, count: wechat.length, ok: true, why: '' },
+                { domain: SEARCH_DOMAINS.DIARY, count: diary.length, ok: true, why: '' },
+                { domain: SEARCH_DOMAINS.SETTINGS, count: settings.length, ok: settingsOk, why: settingsOk ? '' : '应用注册表不可读' }
+            ]
+        };
+    }
+
+    /**
+     * 全局检索面读数口（视图唯一入口）。
+     * 三态**互不同形**：内核没接上 → `ok:false` + why；接上了但零命中 → 空 rows + 域覆盖说话。
+     * @returns {{ok:boolean, why:string, rows:Array, counts:object, domains:Array, intentAction:object|null, line:string, notes:Array}}
+     */
+    spotlightFace(kw) {
+        const empty = (why) => ({
+            ok: false, why, rows: [], counts: { total: 0, byDomain: {} },
+            domains: [], intentAction: null, line: spotlightLine({ ok: false, why }), notes: []
+        });
+        const searcher = this._spotlight();
+        if (!searcher || typeof searcher.indexEntities !== 'function' || typeof searcher.search !== 'function') {
+            return empty(SPOTLIGHT_FEED_REASONS.NO_SPOTLIGHT);
+        }
+        const src = this._spotlightSources();
+        for (const ent of src.entities) {
+            try { searcher.indexEntities(ent.domain, ent.rows); } catch (_e) { /* 单域索引失败不阻断余下三域 */ }
+        }
+        const q = String(kw || '').trim();
+        if (!q) {
+            /* 空查询：不检索，但仍如实报**域覆盖**（用户一打开就知道哪几域有内容）。 */
+            const domains = mapDomainCoverage(src.coverage);
+            return {
+                ok: true, why: SPOTLIGHT_FEED_REASONS.OK, rows: [], counts: { total: 0, byDomain: {} },
+                domains, intentAction: null,
+                line: spotlightLine({ ok: true, counts: { total: 0 }, domains }), notes: domainNotes(domains)
+            };
+        }
+        let raw = null;
+        try { raw = searcher.search(q, { limit: 60 }); } catch (_e) { raw = null; }
+        if (!raw) return empty(SPOTLIGHT_FEED_REASONS.READ_THREW);
+        const mapped = mapSpotlightRows(raw, {
+            coverage: src.coverage, limit: 60, buildOpenDetail: buildOpenDetail
+        });
+        const domains = mapped.domains;
+        return {
+            ok: true, why: '', rows: mapped.rows, counts: mapped.counts, domains,
+            intentAction: mapped.intentAction,
+            line: spotlightLine(mapped), notes: domainNotes(domains)
+        };
     }
 
     /**
@@ -395,6 +563,24 @@ export class SearchApp {
         .gs-scan-text { flex:1; min-width:0; }
         .gs-scan-cancel { flex:0 0 auto; border:none; border-radius:999px; padding:4px 10px; font-size:11px; background:rgba(255,255,255,.12); color:#e8eaed; cursor:pointer; }
         .gs-group-rest { font-size:10.5px; color:#f2b544; padding:2px 8px 8px; line-height:1.6; }
+        /* [v4.99.5 · R11-X5] 全局检索面读数条：域覆盖四态 + 快捷指令行。 */
+        .gs-spot { margin:0 16px 8px; padding:9px 11px; border-radius:12px; background:rgba(76,139,245,.08); border:1px solid rgba(76,139,245,.16); }
+        .gs-spot-off { background:rgba(242,181,68,.10); border-color:rgba(242,181,68,.22); }
+        .gs-spot-line { font-size:12px; color:#9dc0ff; }
+        .gs-spot-off .gs-spot-line { color:#f2b544; }
+        .gs-spot-sub { font-size:11px; color:#8b8f96; margin-top:3px; }
+        .gs-spot-doms { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+        .gs-dom { font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); color:#b6bac0; display:inline-flex; align-items:center; gap:4px; }
+        .gs-dom-on { background:rgba(76,139,245,.22); color:#cfe0ff; }
+        .gs-dom-empty { background:rgba(255,255,255,.06); color:#8b8f96; }
+        .gs-dom-miss { background:rgba(242,181,68,.16); color:#f2b544; }
+        .gs-dom-n { font-size:10px; opacity:.8; font-weight:600; }
+        .gs-spot-note { font-size:11px; color:#8b8f96; margin-top:5px; line-height:1.5; }
+        .gs-spot-miss { color:#e0b050; }
+        .gs-intent { display:flex; align-items:center; gap:8px; margin-top:8px; padding:7px 9px; border-radius:10px; background:rgba(76,139,245,.14); cursor:pointer; }
+        .gs-intent:hover { background:rgba(76,139,245,.24); }
+        .gs-intent-k { font-size:10.5px; padding:1px 7px; border-radius:999px; background:rgba(255,255,255,.12); color:#b6bac0; }
+        .gs-intent-v { flex:1; min-width:0; font-size:11.5px; color:#dfe1e5; }
         </style>`;
     }
 }

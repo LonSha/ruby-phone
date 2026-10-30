@@ -23,6 +23,21 @@
 .bk-row-v { flex: 1 1 auto; color: #6a645c; }
 .bk-row-conflict .bk-row-k { color: #8a7f4a; }
 .bk-row-bad .bk-row-k { color: #a0553f; }
+/* [v4.96.0 · R11-O3 第二批] 恢复快照面：挑中的那一行要能一眼看出是「正在比这一个」，
+ *   否则用户会以为比的是上一条（差异区在下、行在上，位置差得远）。 */
+.bk-row-picked { background: #eef2f5; border-radius: 6px; }
+.bk-snap .bk-row { align-items: center; }
+.bk-snap .bk-chip { flex: 0 0 auto; }
 .bk-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .bk-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 11px; }
 .bk-btn-go { border-color: #a08a6a; color: #6a5330; }
+/* [v4.99.8 · R11-X4] 分享与迁移审阅面：与快照面**刻意不同色**（一个是「拍点还原」，
+ *   一个是「发出去之前先看清楚」）。用户在同一屏里翻到下半段时要立刻知道换面了。 */
+.bk-share { border-color: #e0d8ea; }
+.bk-share h3 { color: #5a4a6a; }
+.bk-share .bk-row { align-items: center; }
+.bk-share .bk-chip { flex: 0 0 auto; }
+/* 收件人视角那一行要能压过其它读数 —— 它是本面唯一「看过才算数」的东西。 */
+.bk-share .bk-row-hear { background: #f6f2fa; border-radius: 6px; padding: 4px 6px; }
+/* 已撤回的行整行降权：它仍然在场（撤回不删数据），但不该抢走注意力。 */
+.bk-share .bk-row-revoked { opacity: .62; }

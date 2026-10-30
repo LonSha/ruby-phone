@@ -1344,3 +1344,10 @@
     color: #8a8aa0;
     line-height: 1.5;
 }
+/* [v4.99.4 · R11-X3] 今日视图的生活流条：三档状态不同形（读到/未装配），
+ *   不把「没装配」画得像「没推进」。 */
+.yzp-calendar-lifeclock{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 10px 2px;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.4;background:rgba(0,0,0,.28);}
+.yzp-calendar-lifeclock.is-unknown{opacity:.62;border:1px dashed currentColor;}
+.yzp-calendar-lifeclock .yzp-lifeclock-line{font-weight:600;}
+.yzp-calendar-lifeclock .yzp-lifeclock-why{opacity:.8;}
+.yzp-calendar-lifeclock .yzp-lifeclock-src{opacity:.72;}

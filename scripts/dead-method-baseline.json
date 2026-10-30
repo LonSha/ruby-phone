@@ -1,0 +1,2529 @@
+{
+  "note": "类方法面冻结账本（R11-O2）。判据：公开方法名在**全仓除声明行外零出现**即记死。新增未登记即红；条目被真接线后应清理。口径见 scripts/lib/dead-surface.mjs 头注释。 【v4.95.0 · R11-O3】SubsystemOrchestrator.manageUsageParadigm 已人工摘除：产品端真接线（phone/home-screen.js 调 resolveAppOrder、apps/usage/usage-app.js 读范式键），门的复活告警点名了它。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】本版新增的两条死方法当场被抓并修掉，故条数未增（315 → 315）：`BackupdeskApp.previewShare` 与 `BackupdeskApp.markShareRead` 此前只有判据在调、产品面零调用 —— 前者因为 `_shareVm` 里另写了一份 `sharePreviewOf`（同一件事两份口径），后者因为界面没有「记已读」入口。修法是**真接线**，不是写进账本：判据绿而对用户不存在，是本面最贵的一种假绿。",
+  "schema": "dead-method-baseline@1",
+  "generated_at": "2026-10-30T15:20:17.208Z",
+  "generated_version_hint": "auto",
+  "rule": "只判增量。存量冻结是为了「不一次性清零牵连整批 App」（计划明令）。每条带 classInstantiated 以便分档处置。",
+  "entries": [
+    {
+      "rel": "apps/album/album-data.js",
+      "cls": "AlbumData",
+      "name": "isManagedImagePath",
+      "line": 303,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/annidate/annidate-app.js",
+      "cls": "AnnidateApp",
+      "name": "intakeItems",
+      "line": 56,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/archive/archive-app.js",
+      "cls": "ArchiveApp",
+      "name": "canonSlot",
+      "line": 673,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/bilibili/bili-data.js",
+      "cls": "BiliData",
+      "name": "ingestModelText",
+      "line": 155,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "isWeeklyMonthly",
+      "line": 100,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "commonSlots",
+      "line": 110,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "recurrenceContractSelfCheck",
+      "line": 117,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "voteHandoffSelfCheck",
+      "line": 277,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "voteHandoffStateLabel",
+      "line": 297,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "voteHandoffStateIds",
+      "line": 303,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "commitmentPlaybook",
+      "line": 424,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "advanceCommitmentStep",
+      "line": 451,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-app.js",
+      "cls": "CalendarApp",
+      "name": "commitmentSummary",
+      "line": 530,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/calendar/calendar-data.js",
+      "cls": "CalendarData",
+      "name": "togglePinned",
+      "line": 235,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/calendar/calendar-view.js",
+      "cls": "CalendarView",
+      "name": "shiftMonth",
+      "line": 1161,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/chars/chars-app.js",
+      "cls": "CharsApp",
+      "name": "perspectivePack",
+      "line": 175,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/chars/chars-app.js",
+      "cls": "CharsApp",
+      "name": "perspectiveContrastLine",
+      "line": 177,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/chars/chars-app.js",
+      "cls": "CharsApp",
+      "name": "perspectiveTestimonyLine",
+      "line": 179,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/chars/chars-app.js",
+      "cls": "CharsApp",
+      "name": "resetPerspectiveScene",
+      "line": 185,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/chars/chars-app.js",
+      "cls": "CharsApp",
+      "name": "perspectiveRevoke",
+      "line": 203,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/comms/comms-app.js",
+      "cls": "CommsApp",
+      "name": "pointOf",
+      "line": 103,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/comms/comms-app.js",
+      "cls": "CommsApp",
+      "name": "selfCheckAll",
+      "line": 125,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "annualDraftMaterial",
+      "line": 138,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "setNote",
+      "line": 151,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "saveEditBuffer",
+      "line": 167,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "applyRecovery",
+      "line": 220,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "settleSave",
+      "line": 235,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "hyDecisionIds",
+      "line": 579,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "boardHeldBucketIds",
+      "line": 629,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "boardPickHeldIds",
+      "line": 631,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "boardStateHint",
+      "line": 633,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-app.js",
+      "cls": "CreationdeskApp",
+      "name": "boardLimits",
+      "line": 634,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/creationdesk/creationdesk-board.js",
+      "cls": "CreationdeskBoard",
+      "name": "facetIds",
+      "line": 153,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/date/date-app.js",
+      "cls": "DateApp",
+      "name": "cleanUrl",
+      "line": 248,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/date/date-app.js",
+      "cls": "DateApp",
+      "name": "checkScene",
+      "line": 249,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/date/date-app.js",
+      "cls": "DateApp",
+      "name": "planBorrow",
+      "line": 270,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/date/date-app.js",
+      "cls": "DateApp",
+      "name": "dayStart",
+      "line": 467,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/date/date-app.js",
+      "cls": "DateApp",
+      "name": "spanSince",
+      "line": 470,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "archiveAt",
+      "line": 267,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "deltaCells",
+      "line": 406,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "flowCells",
+      "line": 414,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "versionCells",
+      "line": 422,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "fieldCells",
+      "line": 427,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "stepCells",
+      "line": 435,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagdesk/diagdesk-app.js",
+      "cls": "DiagdeskApp",
+      "name": "typeUnknownCount",
+      "line": 459,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagnose/diagnose-app.js",
+      "cls": "DiagnoseApp",
+      "name": "silenceSummaryLine",
+      "line": 69,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/diagnose/diagnose-view.js",
+      "cls": "DiagnoseView",
+      "name": "resetSilence",
+      "line": 1629,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/diary/diary-data.js",
+      "cls": "DiaryData",
+      "name": "setPageBg",
+      "line": 123,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/diary/diary-data.js",
+      "cls": "DiaryData",
+      "name": "getPageLineHeight",
+      "line": 236,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/diary/diary-data.js",
+      "cls": "DiaryData",
+      "name": "setPageLineHeight",
+      "line": 241,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/diary/diary-data.js",
+      "cls": "DiaryData",
+      "name": "generateEntryPhotos",
+      "line": 622,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/diary/diary-data.js",
+      "cls": "DiaryData",
+      "name": "setEntryOfflineHidden",
+      "line": 957,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/doujin/doujin-app.js",
+      "cls": "DoujinApp",
+      "name": "shopNameOf",
+      "line": 383,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/doujin/doujin-app.js",
+      "cls": "DoujinApp",
+      "name": "gaugeInfo",
+      "line": 560,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/focus/focus-app.js",
+      "cls": "FocusApp",
+      "name": "sessionSeconds",
+      "line": 133,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/focus/focus-app.js",
+      "cls": "FocusApp",
+      "name": "recordLine",
+      "line": 278,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/gacha/gacha-app.js",
+      "cls": "GachaApp",
+      "name": "shareToChat",
+      "line": 29,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/gacha/gacha-data.js",
+      "cls": "GachaData",
+      "name": "addCoins",
+      "line": 153,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/board/shogi-engine.js",
+      "cls": "ShogiEngine",
+      "name": "isUserPiece",
+      "line": 40,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/catbox/catbox-data.js",
+      "cls": "CatboxData",
+      "name": "reloadForCurrentChat",
+      "line": 128,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/catbox/catbox-data.js",
+      "cls": "CatboxData",
+      "name": "getCats",
+      "line": 138,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/catbox/catbox-data.js",
+      "cls": "CatboxData",
+      "name": "getBackgrounds",
+      "line": 142,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/catbox/catbox-data.js",
+      "cls": "CatboxData",
+      "name": "getInventorySummaryText",
+      "line": 445,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/games-app.js",
+      "cls": "GamesApp",
+      "name": "setUndercoverPrompt",
+      "line": 1013,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/games/games-app.js",
+      "cls": "GamesApp",
+      "name": "resetUndercoverPrompt",
+      "line": 1030,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/games/poker/poker-app.js",
+      "cls": "PokerApp",
+      "name": "openPoker",
+      "line": 487,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/games/poker/poker-data.js",
+      "cls": "PokerData",
+      "name": "safeAiAction",
+      "line": 237,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/poker/poker-data.js",
+      "cls": "PokerData",
+      "name": "buildAiChatContextForPlayer",
+      "line": 348,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/scriptkill/scriptkill-data.js",
+      "cls": "ScriptKillData",
+      "name": "setAssignMode",
+      "line": 287,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/scriptkill/scriptkill-data.js",
+      "cls": "ScriptKillData",
+      "name": "requiredAiCount",
+      "line": 309,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/scriptkill/scriptkill-data.js",
+      "cls": "ScriptKillData",
+      "name": "uncollectedClues",
+      "line": 493,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/games/sudoku/sudoku-data.js",
+      "cls": "SudokuData",
+      "name": "newDaily",
+      "line": 41,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/health-data.js",
+      "cls": "HealthData",
+      "name": "recordIntimacy",
+      "line": 526,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/health-data.js",
+      "cls": "HealthData",
+      "name": "upsertSire",
+      "line": 542,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/health-data.js",
+      "cls": "HealthData",
+      "name": "deleteSire",
+      "line": 550,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/health-data.js",
+      "cls": "HealthData",
+      "name": "getIntimacyPrompt",
+      "line": 558,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/kettle/kettle-app.js",
+      "cls": "KettleApp",
+      "name": "roundLabelOf",
+      "line": 412,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/kettle/kettle-app.js",
+      "cls": "KettleApp",
+      "name": "optionTextOf",
+      "line": 413,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/lofter/lofter-app.js",
+      "cls": "LofterApp",
+      "name": "lengthOptions",
+      "line": 264,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/lofter/lofter-app.js",
+      "cls": "LofterApp",
+      "name": "lengthOf",
+      "line": 265,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/lofter/lofter-app.js",
+      "cls": "LofterApp",
+      "name": "authorReply",
+      "line": 393,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/loverspace/loverspace-app.js",
+      "cls": "LoverSpaceApp",
+      "name": "footprintsOfToday",
+      "line": 186,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/loverspace/loverspace-app.js",
+      "cls": "LoverSpaceApp",
+      "name": "nextToday",
+      "line": 196,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/awakening-engine.js",
+      "cls": "AwakeningEngine",
+      "name": "maybeEcho",
+      "line": 190,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/awakening-engine.js",
+      "cls": "AwakeningEngine",
+      "name": "maybeMisremember",
+      "line": 219,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/global-search-engine.js",
+      "cls": "GlobalSearchEngine",
+      "name": "lastErrors",
+      "line": 213,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/graph-bridge.js",
+      "cls": "GraphBridge",
+      "name": "getCharacterNodes",
+      "line": 125,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/graph-bridge.js",
+      "cls": "GraphBridge",
+      "name": "pushPhoneMemories",
+      "line": 254,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/graph-bridge.js",
+      "cls": "GraphBridge",
+      "name": "buildRecallBlock",
+      "line": 332,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "askCarryLine",
+      "line": 476,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "itemCustodySelfCheck",
+      "line": 528,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "settingImpactHasUpstream",
+      "line": 561,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "settingRewriteSelfCheck",
+      "line": 858,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "planLoreImportOutlet",
+      "line": 962,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "loreClasses",
+      "line": 965,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "loreLedger",
+      "line": 1331,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "loreImportSelfCheck",
+      "line": 1337,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "isAskingCanceled",
+      "line": 1581,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "evidenceQuery",
+      "line": 1614,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "phoneFactBatch",
+      "line": 1636,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "phoneFactPlanEdit",
+      "line": 1642,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-app.js",
+      "cls": "MemoryApp",
+      "name": "needsUserAction",
+      "line": 1669,
+      "isStatic": true,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/memory/memory-data.js",
+      "cls": "MemoryCore",
+      "name": "memoryBlockLineNow",
+      "line": 278,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/memory-data.js",
+      "cls": "MemoryCore",
+      "name": "storyAgeOf",
+      "line": 488,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/memory-data.js",
+      "cls": "MemoryCore",
+      "name": "storyAgeLine",
+      "line": 567,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memtable/memtable-app.js",
+      "cls": "MemtableApp",
+      "name": "fieldHistoryOf",
+      "line": 248,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/mofo/mofo-data.js",
+      "cls": "MofoData",
+      "name": "getBootstrapState",
+      "line": 26,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/music/music-ambience.js",
+      "cls": "MusicAmbience",
+      "name": "detach",
+      "line": 200,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/music/music-ambience.js",
+      "cls": "MusicAmbience",
+      "name": "destroyAmbience",
+      "line": 322,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/music/music-app.js",
+      "cls": "MusicApp",
+      "name": "shareCurrentTrackToWechat",
+      "line": 224,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/music/music-data.js",
+      "cls": "MusicData",
+      "name": "setAutoPlay",
+      "line": 772,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/music/music-data.js",
+      "cls": "MusicData",
+      "name": "getRepeatOne",
+      "line": 828,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/music/music-data.js",
+      "cls": "MusicData",
+      "name": "setRepeatOne",
+      "line": 832,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/musicdesk/musicdesk-app.js",
+      "cls": "MusicdeskApp",
+      "name": "sortWhyOf",
+      "line": 532,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/musicdesk/musicdesk-app.js",
+      "cls": "MusicdeskApp",
+      "name": "queueKeepOf",
+      "line": 791,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "levelLabelOf",
+      "line": 518,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "moodLabelOf",
+      "line": 519,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "actionLabelOf",
+      "line": 520,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "wishTextOf",
+      "line": 522,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "wishStateOf",
+      "line": 683,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/needsim/needsim-app.js",
+      "cls": "NeedsimApp",
+      "name": "closeMemory",
+      "line": 807,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/notifications/notifications-app.js",
+      "cls": "NotificationCenterApp",
+      "name": "ackHub",
+      "line": 183,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/phone/phone-view.js",
+      "cls": "PhoneCallView",
+      "name": "tickEscalation",
+      "line": 3458,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/piggy/piggy-app.js",
+      "cls": "PiggyApp",
+      "name": "lastRefreshedCards",
+      "line": 88,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/pixiv/pixiv-app.js",
+      "cls": "PixivApp",
+      "name": "readingMinutesOf",
+      "line": 305,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/pixiv/pixiv-app.js",
+      "cls": "PixivApp",
+      "name": "openedIllustId",
+      "line": 877,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/place/place-app.js",
+      "cls": "PlaceApp",
+      "name": "routeTo",
+      "line": 366,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/place/place-app.js",
+      "cls": "PlaceApp",
+      "name": "roamProblems",
+      "line": 393,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/plotline/plotline-app.js",
+      "cls": "PlotlineApp",
+      "name": "boardFocus",
+      "line": 172,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/plotline/plotline-app.js",
+      "cls": "PlotlineApp",
+      "name": "boardKindIds",
+      "line": 199,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/plotline/plotline-board.js",
+      "cls": "PlotlineBoard",
+      "name": "clearFocus",
+      "line": 97,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/pvdesk/pvdesk-app.js",
+      "cls": "PvdeskApp",
+      "name": "lyricsModeOf",
+      "line": 538,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/pvdesk/pvdesk-app.js",
+      "cls": "PvdeskApp",
+      "name": "scriptOf",
+      "line": 617,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualTwoVersions",
+      "line": 147,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualVersionsLine",
+      "line": 149,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualCompose",
+      "line": 155,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualCover",
+      "line": 161,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualToc",
+      "line": 163,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "annualSelfCheck",
+      "line": 185,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "currentFindTask",
+      "line": 903,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "indexBuildCount",
+      "line": 912,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "currentAnchorTask",
+      "line": 967,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "dossierToggle",
+      "line": 1066,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-app.js",
+      "cls": "ReadingApp",
+      "name": "topicDossierSelfCheck",
+      "line": 1123,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/reading/reading-view.js",
+      "cls": "ReadingView",
+      "name": "checkAnnualStale",
+      "line": 739,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "stateLabelOf",
+      "line": 395,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "severityOf",
+      "line": 396,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "roomOf",
+      "line": 536,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "topNOf",
+      "line": 538,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "injectEnabledOf",
+      "line": 539,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "runRerank",
+      "line": 586,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/recall/recall-app.js",
+      "cls": "RecallApp",
+      "name": "closeReceipt",
+      "line": 662,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/regexfilter/regexfilter-app.js",
+      "cls": "RegexFilterApp",
+      "name": "previewPreset",
+      "line": 144,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/search/search-app.js",
+      "cls": "SearchApp",
+      "name": "restoredNeedsRequery",
+      "line": 513,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "uploadWallpaper",
+      "line": 417,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "uploadAppIcon",
+      "line": 427,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "uploadAvatar",
+      "line": 437,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "deleteWallpaper",
+      "line": 501,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "deleteAppIcon",
+      "line": 507,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "deleteAvatar",
+      "line": 513,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
+      "name": "getAvatar",
+      "line": 774,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/shop/shop-app.js",
+      "cls": "ShopApp",
+      "name": "presetCategories",
+      "line": 97,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/socialguard/socialguard-app.js",
+      "cls": "SocialguardApp",
+      "name": "cleanNotifications",
+      "line": 137,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/socialguard/socialguard-app.js",
+      "cls": "SocialguardApp",
+      "name": "deletePost",
+      "line": 141,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/socialguard/socialguard-app.js",
+      "cls": "SocialguardApp",
+      "name": "summaryFor",
+      "line": 151,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/soundkit/soundkit-app.js",
+      "cls": "SoundkitApp",
+      "name": "chainStats",
+      "line": 496,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sourcebook/sourcebook-app.js",
+      "cls": "SourcebookApp",
+      "name": "spanLabelOf",
+      "line": 379,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sourcebook/sourcebook-app.js",
+      "cls": "SourcebookApp",
+      "name": "toneLabelOf",
+      "line": 380,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sourcebook/sourcebook-app.js",
+      "cls": "SourcebookApp",
+      "name": "guardLabelOf",
+      "line": 381,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sourcebook/sourcebook-app.js",
+      "cls": "SourcebookApp",
+      "name": "capsuleCount",
+      "line": 446,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/stickerdesk/stickerdesk-app.js",
+      "cls": "StickerdeskApp",
+      "name": "intakeCategories",
+      "line": 90,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/stickerdesk/stickerdesk-app.js",
+      "cls": "StickerdeskApp",
+      "name": "doRename",
+      "line": 100,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/stickerdesk/stickerdesk-app.js",
+      "cls": "StickerdeskApp",
+      "name": "doDissolve",
+      "line": 108,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/stickerdesk/stickerdesk-app.js",
+      "cls": "StickerdeskApp",
+      "name": "doMove",
+      "line": 116,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sullydesk/sullydesk-app.js",
+      "cls": "SullydeskApp",
+      "name": "setRoster",
+      "line": 72,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/sullydesk/sullydesk-app.js",
+      "cls": "SullydeskApp",
+      "name": "filterBy",
+      "line": 76,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/summdesk/summdesk-app.js",
+      "cls": "SummdeskApp",
+      "name": "setCursors",
+      "line": 71,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/taobao/taobao-app.js",
+      "cls": "TaobaoApp",
+      "name": "lastPushed",
+      "line": 126,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/taobao/taobao-app.js",
+      "cls": "TaobaoApp",
+      "name": "templateSteps",
+      "line": 143,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/taskentry/taskentry-app.js",
+      "cls": "TaskentryApp",
+      "name": "tabSourceOf",
+      "line": 190,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/taskentry/taskentry-app.js",
+      "cls": "TaskentryApp",
+      "name": "hiddenCards",
+      "line": 223,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/taskentry/taskentry-app.js",
+      "cls": "TaskentryApp",
+      "name": "restoreReading",
+      "line": 238,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/theater/theater-data.js",
+      "cls": "TheaterData",
+      "name": "applyGenerated",
+      "line": 136,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/uterus/uterus-app.js",
+      "cls": "UterusApp",
+      "name": "subjectAt",
+      "line": 205,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/uterus/uterus-app.js",
+      "cls": "UterusApp",
+      "name": "themeOf",
+      "line": 211,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/uterus/uterus-app.js",
+      "cls": "UterusApp",
+      "name": "sacCells",
+      "line": 337,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/wangxiang/points.js",
+      "cls": "PointsLedger",
+      "name": "failTask",
+      "line": 176,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wangxiang/points.js",
+      "cls": "PointsLedger",
+      "name": "redeem",
+      "line": 193,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wangxiang/points.js",
+      "cls": "PointsLedger",
+      "name": "getLedger",
+      "line": 210,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wangxiang/points.js",
+      "cls": "PointsLedger",
+      "name": "getDaily",
+      "line": 215,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wangxiang/points.js",
+      "cls": "PointsLedger",
+      "name": "getAchievementDefs",
+      "line": 216,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wangxiang/wangxiang-app.js",
+      "cls": "WangxiangApp",
+      "name": "acceptTask",
+      "line": 1355,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/wechat/contacts-view.js",
+      "cls": "ContactsView",
+      "name": "scrollToGroupSection",
+      "line": 1415,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/group-vote.js",
+      "cls": "GroupVote",
+      "name": "verdictIds",
+      "line": 356,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/group-vote.js",
+      "cls": "GroupVote",
+      "name": "optionKindIds",
+      "line": 360,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/group-vote.js",
+      "cls": "GroupVote",
+      "name": "optionKindLabel",
+      "line": 361,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/group-vote.js",
+      "cls": "GroupVote",
+      "name": "messageKinds",
+      "line": 372,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "getHoneyHistoryInjectionChats",
+      "line": 416,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "recordWalletTransaction",
+      "line": 1933,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "resolveGroupSpeaker",
+      "line": 2397,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "resolveGroupSpeakerIdentity",
+      "line": 2415,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "planGroupSpeakers",
+      "line": 2462,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "buildGroupForceSpeakInstruction",
+      "line": 2480,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "buildGroupCritiquePrompt",
+      "line": 2486,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "parseGroupCritique",
+      "line": 2492,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "relationAlbumOf",
+      "line": 2565,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "syncAvatarByChat",
+      "line": 3652,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "isPossibleName",
+      "line": 4287,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "guessAvatar",
+      "line": 4514,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "addGroupMember",
+      "line": 5165,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/wechat-data.js",
+      "cls": "WechatData",
+      "name": "removeGroupMember",
+      "line": 5176,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/weibo/weibo-data.js",
+      "cls": "WeiboData",
+      "name": "correctFloor",
+      "line": 586,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/weibo/weibo-data.js",
+      "cls": "WeiboData",
+      "name": "isApiRunning",
+      "line": 623,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/weibo/weibo-data.js",
+      "cls": "WeiboData",
+      "name": "checkHotSearchChanged",
+      "line": 2331,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/widget/widget-app.js",
+      "cls": "WidgetApp",
+      "name": "varTypes",
+      "line": 95,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "apps/worldpulse/worldpulse-app.js",
+      "cls": "WorldpulseApp",
+      "name": "loreDryRunFace",
+      "line": 172,
+      "isStatic": false,
+      "classInstantiated": false
+    },
+    {
+      "rel": "config/ambient-audio-wiretap.js",
+      "cls": "AmbientAudioWiretap",
+      "name": "stopRecording",
+      "line": 56,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/ambient-audio-wiretap.js",
+      "cls": "AmbientAudioWiretap",
+      "name": "decryptWiretapAudio",
+      "line": 83,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/ambient-audio-wiretap.js",
+      "cls": "AmbientAudioWiretap",
+      "name": "getEvidenceRecordings",
+      "line": 95,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/autonomous-life-scheduler.js",
+      "cls": "AutonomousLifeScheduler",
+      "name": "triggerAutonomousEvent",
+      "line": 77,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/autonomous-life-scheduler.js",
+      "cls": "AutonomousLifeScheduler",
+      "name": "getRecentEvents",
+      "line": 122,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/battery-thermodynamics.js",
+      "cls": "BatteryThermodynamics",
+      "name": "setAppLoad",
+      "line": 119,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/battery-thermodynamics.js",
+      "cls": "BatteryThermodynamics",
+      "name": "setCharging",
+      "line": 123,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/calendar-autonomous-life.js",
+      "cls": "CalendarAutonomousLifeEngine",
+      "name": "generateSpontaneousEvent",
+      "line": 78,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/calendar-autonomous-life.js",
+      "cls": "CalendarAutonomousLifeEngine",
+      "name": "resolveEvent",
+      "line": 125,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cellular-signal-sim.js",
+      "cls": "CellularSignalSim",
+      "name": "setSignalBars",
+      "line": 86,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cellular-signal-sim.js",
+      "cls": "CellularSignalSim",
+      "name": "dispatchMessage",
+      "line": 135,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cellular-signal-sim.js",
+      "cls": "CellularSignalSim",
+      "name": "switchDataSim",
+      "line": 177,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cellular-signal-sim.js",
+      "cls": "CellularSignalSim",
+      "name": "toggleSimSlot",
+      "line": 184,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cloud-drive-sync.js",
+      "cls": "CloudDriveSync",
+      "name": "actorUploadSecretFragment",
+      "line": 91,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/cloud-drive-sync.js",
+      "cls": "CloudDriveSync",
+      "name": "decryptDownload",
+      "line": 109,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/dynamic-moments-feed.js",
+      "cls": "DynamicMomentsFeed",
+      "name": "publishPost",
+      "line": 49,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/dynamic-moments-feed.js",
+      "cls": "DynamicMomentsFeed",
+      "name": "simulateAutonomousReactions",
+      "line": 125,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/floor-store.js",
+      "cls": "FloorStore",
+      "name": "readByTarget",
+      "line": 92,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/floor-store.js",
+      "cls": "FloorStore",
+      "name": "mergeWithExternal",
+      "line": 241,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/global-social-store.js",
+      "cls": "GlobalSocialStore",
+      "name": "appendMessage",
+      "line": 274,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/global-social-store.js",
+      "cls": "GlobalSocialStore",
+      "name": "getConversationMessages",
+      "line": 330,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/global-social-store.js",
+      "cls": "GlobalSocialStore",
+      "name": "removeConversation",
+      "line": 343,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/haptic-predictive-ime.js",
+      "cls": "HapticPredictiveIme",
+      "name": "triggerKeyHaptic",
+      "line": 49,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/haptic-predictive-ime.js",
+      "cls": "HapticPredictiveIme",
+      "name": "getPredictions",
+      "line": 72,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/haptic-predictive-ime.js",
+      "cls": "HapticPredictiveIme",
+      "name": "learnWord",
+      "line": 94,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/hyperlocal-delivery-service.js",
+      "cls": "HyperlocalDeliveryService",
+      "name": "advanceOrderStatus",
+      "line": 94,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/hyperlocal-delivery-service.js",
+      "cls": "HyperlocalDeliveryService",
+      "name": "getActiveOrders",
+      "line": 119,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/interaction-advisor.js",
+      "cls": "InteractionAdvisor",
+      "name": "analyzeBehavior",
+      "line": 44,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/interaction-advisor.js",
+      "cls": "InteractionAdvisor",
+      "name": "formatShiftStatement",
+      "line": 73,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/loader-mutex-token.js",
+      "cls": "LoaderMutexTokenGuard",
+      "name": "isHolding",
+      "line": 65,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/loader-mutex-token.js",
+      "cls": "LoaderMutexTokenGuard",
+      "name": "bindAutoRelease",
+      "line": 75,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/mimic-comm-engine.js",
+      "cls": "MimicCommEngine",
+      "name": "planTypingSchedule",
+      "line": 44,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/mimic-comm-engine.js",
+      "cls": "MimicCommEngine",
+      "name": "synthesizeVoiceWaveform",
+      "line": 85,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/mimic-comm-engine.js",
+      "cls": "MimicCommEngine",
+      "name": "generateRecallTrace",
+      "line": 124,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/parallel-persona-spaces.js",
+      "cls": "ParallelPersonaSpaces",
+      "name": "createPersonaSpace",
+      "line": 59,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/parallel-persona-spaces.js",
+      "cls": "ParallelPersonaSpaces",
+      "name": "unlockAndSwitchSpace",
+      "line": 85,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/parallel-persona-spaces.js",
+      "cls": "ParallelPersonaSpaces",
+      "name": "triggerCamouflagePanic",
+      "line": 99,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/parallel-persona-spaces.js",
+      "cls": "ParallelPersonaSpaces",
+      "name": "isAppVisibleInCurrentSpace",
+      "line": 117,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/prompt-manager.js",
+      "cls": "PromptManager",
+      "name": "getPromptPresets",
+      "line": 2283,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/prompt-manager.js",
+      "cls": "PromptManager",
+      "name": "getEnabledPromptsForChat",
+      "line": 2539,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/prompt-manager.js",
+      "cls": "PromptManager",
+      "name": "exportConfig",
+      "line": 2659,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/prompt-manager.js",
+      "cls": "PromptManager",
+      "name": "importConfig",
+      "line": 2670,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/qianshi-schedule.js",
+      "cls": "QianshiScheduleManager",
+      "name": "addOrUpdateSchedule",
+      "line": 22,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/qianshi-schedule.js",
+      "cls": "QianshiScheduleManager",
+      "name": "updateStatus",
+      "line": 52,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/qianshi-schedule.js",
+      "cls": "QianshiScheduleManager",
+      "name": "listSchedules",
+      "line": 67,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/qianshi-schedule.js",
+      "cls": "QianshiScheduleManager",
+      "name": "getSummaryCounts",
+      "line": 82,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/runtime-lifecycle.js",
+      "cls": "ManagedRuntime",
+      "name": "addObserver",
+      "line": 131,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/runtime-lifecycle.js",
+      "cls": "ManagedRuntime",
+      "name": "releaseTrace",
+      "line": 297,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/runtime-lifecycle.js",
+      "cls": "ManagedRuntime",
+      "name": "tagsOf",
+      "line": 319,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "publishVideo",
+      "line": 58,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "likeVideo",
+      "line": 80,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "startLiveStream",
+      "line": 92,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "sendDanmaku",
+      "line": 111,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "sendGift",
+      "line": 134,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/short-video-live-hub.js",
+      "cls": "ShortVideoLiveHub",
+      "name": "endLiveStream",
+      "line": 161,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-band-biometrics.js",
+      "cls": "SmartBandBiometrics",
+      "name": "syncSleepSession",
+      "line": 164,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "cls": "SmartGalleryVault",
+      "name": "addPhoto",
+      "line": 58,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "cls": "SmartGalleryVault",
+      "name": "unlockVault",
+      "line": 100,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "cls": "SmartGalleryVault",
+      "name": "lockVault",
+      "line": 122,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "cls": "SmartGalleryVault",
+      "name": "movePhotoSecrecy",
+      "line": 132,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/smart-gallery-vault.js",
+      "cls": "SmartGalleryVault",
+      "name": "queryPhotos",
+      "line": 156,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "manageAuthGrant",
+      "line": 361,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "revokeAuth",
+      "line": 367,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "trackCadenceThread",
+      "line": 374,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "syncDwellingItem",
+      "line": 393,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "coordinatePresence",
+      "line": 403,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "evolveCoBuiltWorld",
+      "line": 414,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "manageCreatorBundle",
+      "line": 424,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "manageDailyRhythm",
+      "line": 435,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "handleDiffEditing",
+      "line": 444,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "checkDistrictOpportunities",
+      "line": 453,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "advanceIncident",
+      "line": 462,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "relayIntent",
+      "line": 472,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "manageMediaProject",
+      "line": 486,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "replayLifeExperience",
+      "line": 498,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "pauseMentorship",
+      "line": 520,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "anchorWorkspaceResume",
+      "line": 527,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "planOfflineBundleImport",
+      "line": 538,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "advanceScenario",
+      "line": 545,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "checkResponseCadence",
+      "line": 578,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "leaseAppResource",
+      "line": 588,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "controlSharing",
+      "line": 595,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "rollbackPhoneTheme",
+      "line": 606,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "auditReadability",
+      "line": 613,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "mergeContextCard",
+      "line": 623,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "manageWorkPackage",
+      "line": 644,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/subsystem-orchestrator.js",
+      "cls": "SubsystemOrchestrator",
+      "name": "adjudicateProposal",
+      "line": 654,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/system-notification-dispatcher.js",
+      "cls": "SystemNotificationDispatcher",
+      "name": "clearPresence",
+      "line": 111,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/system-notification-dispatcher.js",
+      "cls": "SystemNotificationDispatcher",
+      "name": "acknowledge",
+      "line": 222,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/system-notification-dispatcher.js",
+      "cls": "SystemNotificationDispatcher",
+      "name": "setDnd",
+      "line": 245,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/virtual-file-system.js",
+      "cls": "VirtualFileSystem",
+      "name": "deleteFile",
+      "line": 192,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/virtual-file-system.js",
+      "cls": "VirtualFileSystem",
+      "name": "shareToApp",
+      "line": 207,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/worldbook-manager.js",
+      "cls": "WorldbookManager",
+      "name": "setSelection",
+      "line": 1252,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/worldbook-manager.js",
+      "cls": "WorldbookManager",
+      "name": "setEntrySelection",
+      "line": 1289,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/worldbook-manager.js",
+      "cls": "WorldbookManager",
+      "name": "buildWorldbookMessage",
+      "line": 1615,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/home-screen.js",
+      "cls": "HomeScreen",
+      "name": "isHomeScreenVisible",
+      "line": 70,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/home-screen.js",
+      "cls": "HomeScreen",
+      "name": "renderDiaryCard",
+      "line": 795,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/home-screen.js",
+      "cls": "HomeScreen",
+      "name": "renderFeatureCard",
+      "line": 870,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/phone-shell.js",
+      "cls": "PhoneShell",
+      "name": "updateBatteryDisplay",
+      "line": 315,
+      "isStatic": false,
+      "classInstantiated": true
+    }
+  ]
+}

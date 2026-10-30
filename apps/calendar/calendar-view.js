@@ -166,6 +166,7 @@ export class CalendarView {
                     <div class="yzp-calendar-hero ${heroHolidayIcon ? 'is-holiday' : ''}" aria-hidden="true">
                         <img src="${this.escapeAttr(heroUrl)}" data-default-src="${this.escapeAttr(defaultHeroUrl)}" onerror="this.onerror=null;this.src=this.dataset.defaultSrc;this.closest('.yzp-calendar-hero')?.classList.remove('is-holiday');" alt="">
                     </div>
+                    ${this.renderLifeClockStrip()}
                     ${this.renderCalendarGrid(storyDate)}
                     ${this.renderMemoSection(storyDate)}
                 </main>
@@ -179,6 +180,37 @@ export class CalendarView {
         requestAnimationFrame(() => this.bindEvents());
     }
 
+    /* ══ [v4.99.4 · R11-X3] 今日视图的生活流条 ════════════════════════════
+     * 【验收语要求「静置 30 分钟 → 日历真多出事件**且能说出触发来源**」】
+     *   这一条就是「能说出来源」那一半：把最近一步的推进计数与其可读摘要（提醒标题）直接画在日历上方。
+     *   ★ 只读：推进计数的唯一写方是时钟（本层不写任何键）；读不到就如实显示 why，不隐藏这一行。
+     *   为什么不在读不到时直接返空：那会让「没装配」与「没推进」在界面上长得一模一样。 */
+    lifeClockFace() {
+        try {
+            const call = this.app && typeof this.app.lifeClockFace === 'function' ? () => this.app.lifeClockFace() : null;
+            if (!call) return { ok: false, why: 'no_app_face', line: '生活流：日历侧无读数口' };
+            return call();
+        } catch (_e) {
+            return { ok: false, why: 'read_threw', line: '生活流：读不到' };
+        }
+    }
+    renderLifeClockStrip() {
+        const face = this.lifeClockFace();
+        const line = String((face && face.line) || '');
+        const ok = !!(face && face.ok);
+        const recent = (ok && Array.isArray(face.recent) && face.recent.length) ? face.recent[0] : null;
+        const detail = (recent && Array.isArray(recent.detail) && recent.detail.length) ? recent.detail[0] : null;
+        const titles = (detail && Array.isArray(detail.alertTitles)) ? detail.alertTitles : [];
+        const why = detail && detail.why && detail.why !== 'ok' ? detail.why : '';
+        const steps = ok ? Number(face.steps || 0) : 0;
+        return `
+            <div class="yzp-calendar-lifeclock ${ok ? 'is-ok' : 'is-unknown'}" data-status="${this.escapeAttr(String((face && face.status) || 'unmounted'))}">
+                <span class="yzp-lifeclock-line">${this.escapeHtml(line)}</span>
+                ${why ? `<span class="yzp-lifeclock-why">上一步异常：${this.escapeHtml(why)}</span>` : ''}
+                ${titles.length ? `<span class="yzp-lifeclock-src">最近一步来源：${this.escapeHtml(titles.slice(0, 2).join(' / '))}</span>` : ''}
+                ${ok && steps === 0 ? '<span class="yzp-lifeclock-src">还没有推进过（静置后会自己出现）</span>' : ''}
+            </div>`;
+    }
     renderCalendarGrid(storyDate) {
         const weeks = ['日', '一', '二', '三', '四', '五', '六'];
         const days = this.buildMonthDays(this.visibleYear, this.visibleMonth);

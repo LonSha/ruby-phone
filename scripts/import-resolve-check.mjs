@@ -156,9 +156,15 @@ function stripCommentsAndStrings(src) {
 
 const STATIC_RES = [
   // import ... from '...'  /  import '...'
-  /import\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g,
-  // export ... from '...'
-  /export\s+[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
+  // ★ 桥接段禁跨引号（v4.99.1 自缺陷回归钉）：桥接用 [^'"`]*? 而不是 [\s\S]*? ——
+  //   后者会把「字符串 A 里的文档性字样 import …」与「字符串 B 里的 from './x'」
+  //   粘接成一条假导入（index.js 公告块就中过这一招：两条互不相干的公告字符串
+  //   被粘成 import './x'，真门禁当场误报断链）。引号是字符串边界：合法的多行
+  //   import { a, b } from './mod.js' 中段不含引号，不受影响；模板串已被替换成
+  //   `TEMPLATE` 占位（无引号），同样不受影响。
+  /import\s+(?:[^'"`]*?\s+from\s+)?['"]([^'"]+)['"]/g,
+  // export ... from '...'（同款禁跨引号桥接）
+  /export\s+[^'"`]*?\s+from\s+['"]([^'"]+)['"]/g
 ];
 
 const problems = [];

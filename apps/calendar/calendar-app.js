@@ -305,6 +305,29 @@ export class CalendarApp {
         catch (_e) { return []; }
     }
 
+    /* ═════════ [v4.99.4 · R11-X3] 今日视图的生活流读数 ═════════
+     * 【这一格为什么必须在日历里】验收语是「静置 30 分钟 → 日历真多出事件且能说出触发来源」。
+     *   日历是那些事件的落点，那么「这些事件为什么会出现」就必须在同一屏能读到。
+     * ★ 本口只读不写：推进计数的唯一写方是时钟自己（日历只读它的 snapshot）。
+     *   取不到时钟时**如实说 why**，不返一个假的「0 步」（那会把「没启动」说成「没推进」）。 */
+    lifeClockFace() {
+        try {
+            const vp = (typeof window !== 'undefined' && window.VirtualPhone) ? window.VirtualPhone : null;
+            if (!vp) return { ok: false, why: 'no_host', line: '生活流：宿主未装配' };
+            if (typeof vp.lifeClockFace === 'function') {
+                const face = vp.lifeClockFace();
+                return Object.assign({ ok: true, why: '' }, face);
+            }
+            const lc = vp.lifeClock || null;
+            if (!lc || typeof lc.face !== 'function') return { ok: false, why: 'no_clock', line: '生活流：未装配' };
+            const snap = lc.face();
+            let line = '';
+            try { line = lc.line(); } catch (_e) { line = ''; }
+            return Object.assign({ ok: true, why: '' }, snap, { line });
+        } catch (e) {
+            return { ok: false, why: 'read_threw', line: '生活流：读不到（' + String((e && e.message) || e) + '）' };
+        }
+    }
     render() {
         if (!this.phoneShell?.setContent) {
             console.warn('[Calendar] phoneShell 未就绪，跳过渲染');

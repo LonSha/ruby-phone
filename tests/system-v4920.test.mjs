@@ -25,12 +25,20 @@ const read = (p) => fs.readFileSync(rel(p), 'utf8');
 const BORN_V = '4.92.0';
 
 /* ══════════════════ A 版本锚与像素资产在场 ══════════════════ */
-test('A1: 五源版本同源且都是当版', () => {
+test('A1: 五源版本同源且不低于 4.92.0', () => {
+  /* [v4.93.0 交棒改写] 本版出生时五源都是 4.92.0，原判据写的是等值锚 —— 抬版即红（那是抬版仪式，
+   *   不是缺陷）。按仓内既定口径换成**下限形**：五源必须彼此一致、且都不低于诞生版（不回退即可），
+   *   「当版是否等于某值」由当版套件（tests/system-v4930.test.mjs 的 F6）接管。 */
+  const sem = (v) => String(v).split('.').map(Number).reduce((a, x) => a * 1000 + x, 0);
   const pkg = JSON.parse(read('package.json')).version;
   const man = JSON.parse(read('manifest.json')).version;
   const log = JSON.parse(read('update-log.json'));
   assert.equal(new Set([pkg, man, log.latest, log.head]).size, 1, '四源必须一致');
-  assert.ok([pkg, man, log.latest, log.head].every(v => v === BORN_V), '都该是当版 ' + BORN_V);
+  for (const v of [pkg, man, log.latest, log.head]) {
+    assert.ok(sem(v) >= sem(BORN_V), '不得低于诞生版 ' + BORN_V + '，实得 ' + v);
+  }
+  const items = (log.versions[BORN_V] || {}).items || [];
+  assert.ok(items.length >= 8, '本版台账条目不得缩水，实得 ' + items.length);
 });
 
 test('A2: 像素引擎与像素皮肤在场', () => {

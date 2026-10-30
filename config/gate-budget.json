@@ -2,10 +2,10 @@
   "_comment": "门禁逐门耗时预算（B3 下段「超阈值告警」的真源）。check-file.mjs 只读它、不自带阈值 —— 与「门清单真源是 package.json scripts.check」同款纪律。ms = 实测基线；limit_ms = 告警口径（ms × (1 + margin_pct/100)）。门不在本表 / 本文件不在场 ⇒ 只报耗时、不告警（fail-open：门慢不等于判据坏）。",
   "schema": "gate-budget@1",
   "margin_pct": 10,
-  "measured_at": "v3.23.1",
+  "measured_at": "v4.94.0",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 100150,
+  "total_ms": 115400,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -26,6 +26,16 @@
       "ms": 2762,
       "limit_ms": 3038,
       "why": "死导出门要建 import 图，随模块数涨"
+    },
+    "bind-consuming": {
+      "ms": 7100,
+      "limit_ms": 7810,
+      "why": "绑定级门要建两遍绑定索引再逐条穿透重导出（最多 4 跳），扫描面比 dead-exports 宽（多出动态 import 的六类写法）——慢下来通常意味着 chase 跳数或原文扫描被放大"
+    },
+    "method-consuming": {
+      "ms": 7000,
+      "limit_ms": 7700,
+      "why": "类方法面 + 模块入度面要建一遍全仓名字索引（4803 条公开方法名）再逐条比对出现位置，外加 274 件 config/phone 模块的 import 图 —— 扫描面比 dead-exports 宽，但比 bind-consuming 窄。慢下来通常意味着名字索引被重复建立（应按次建、按批查）。"
     },
     "lifecycle": {
       "ms": 726,
@@ -76,6 +86,11 @@
       "ms": 800,
       "limit_ms": 880,
       "why": "硬链接安全门只做两件轻活：扫 685 个文件的真调用面 + 有界数几处目录里的 .l2s 别名；与 screen-host 同量级。慢下来通常意味着扫描面被扩到全仓，或某个目录突然多出上万条别名（本仓实测：一次损坏就会注入数万条）"
+    },
+    "doc-path-claim": {
+      "ms": 1150,
+      "limit_ms": 1265,
+      "why": "文档路径声明门要 walk 全仓 3522 处 tests/scripts/tools 形态的路径声明并逐条查磁盘存在性，扫描面与语法门同量级但每处多一次 path.join + existsSync；慢下来通常意味着扫描面被扩到 node_modules，或 skipFiles 白名单被误删。"
     },
     "upstream-face": {
       "ms": 650,

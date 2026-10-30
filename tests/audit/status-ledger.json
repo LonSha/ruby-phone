@@ -1,23 +1,26 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.92.0",
+  "version": "4.99.8",
   "version_sources": {
-    "package": "4.92.0",
-    "manifest": "4.92.0",
-    "update_log_latest": "4.92.0",
-    "index_const": "4.92.0"
+    "package": "4.99.8",
+    "manifest": "4.99.8",
+    "update_log_latest": "4.99.8",
+    "index_const": "4.99.8"
   },
   "version_same": true,
   "gates": {
-    "static_gate_files": 14,
+    "static_gate_files": 17,
     "static_gate_list": [
+      "bind-consumption-audit.mjs",
       "bridge-contract-audit.mjs",
       "dead-export-check.mjs",
+      "doc-path-claim-audit.mjs",
       "hardlink-safety-check.mjs",
       "import-resolve-check.mjs",
       "keys-audit.mjs",
       "lifecycle-audit.mjs",
+      "method-consumption-audit.mjs",
       "named-import-check.mjs",
       "registry-audit.mjs",
       "screen-host-check.mjs",
@@ -32,6 +35,8 @@
       "import-resolve",
       "test",
       "dead-exports",
+      "bind-consuming",
+      "method-consuming",
       "lifecycle",
       "registry",
       "keys",
@@ -42,12 +47,13 @@
       "screen-host",
       "session-writeback",
       "hardlink-safety",
+      "doc-path-claim",
       "upstream-face"
     ],
-    "check_chain_len": 15
+    "check_chain_len": 18
   },
   "tests": {
-    "test_files": 339,
+    "test_files": 354,
     "audit_dir_exists": true,
     "audit_files": 25
   },
@@ -80,8 +86,8 @@
   "scale": {
     "app_dirs": 88,
     "apps_ids": 89,
-    "index_lines": 13979,
-    "css_bytes": 697022,
+    "index_lines": 14111,
+    "css_bytes": 705842,
     "crossrepo": {
       "produced_faces": 30
     }
@@ -102,7 +108,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 337,
+        "suite_files": 352,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -127,7 +133,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "630a77962bfee816"
+    "sha256_16": "a4f4e706f9641588"
   },
   "unknown": [],
   "unknown_count": 0

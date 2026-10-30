@@ -21,3 +21,22 @@
 .th-roll-clear { border:0; border-radius:12px; padding:4px 10px; background:rgba(0,0,0,.06); color:#5a4e42; font-size:12px; }
 .th-roll-clear:active { background:rgba(0,0,0,.12); }
 .th-roll-preview { margin:0; padding:0 10px 10px; font-size:12px; color:#5a4e42; max-height:160px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
+/* [v4.96.0 · R11-O3 第二批] 规则剧场面板：与既有小剧场同一张纸的观感（不自立门户）。
+ *   刻意不做折叠 —— 规则只有两三行，藏起来反而让人以为这功能不存在。 */
+.th-rules { margin:4px 12px 8px; border-radius:12px; background:#fff; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.th-rules h3 { margin:0; font-size:13px; color:#5a4e42; }
+.th-rule-count { font-size:11px; color:#8a7f74; }
+.th-rule-list { display:flex; flex-direction:column; gap:4px; }
+.th-rule { display:flex; flex-direction:column; gap:2px; padding:6px 8px; border-radius:10px; background:#faf7f2; }
+.th-rule b { font-size:12px; }
+.th-rule-meta { font-size:11px; color:#8a7f74; }
+.th-rule-fired { font-size:11px; color:#3f6a4a; background:#eef6f0; border-radius:8px; padding:6px 8px; }
+.th-flash { font-size:11px; color:#3f6a4a; background:#eef6f0; border-radius:8px; padding:6px 8px; }
+.th-flash-bad { color:#8a4030; background:#faf0ec; }
+.th-rule-form { display:flex; flex-direction:column; gap:6px; }
+.th-rule-form input, .th-rule-form select { border:0; border-radius:10px; padding:8px 10px; background:#f4f0e8; color:#2c241c; font-size:12px; }
+.th-rule-line { display:flex; align-items:center; gap:8px; }
+.th-rule-line label { flex:0 0 40px; font-size:11px; color:#8a7f74; }
+.th-rule-line input, .th-rule-line select { flex:1 1 auto; }
+.th-rule-acts { display:flex; gap:8px; }
+.th-rule-acts button { flex:1; border:0; border-radius:10px; padding:9px 8px; background:#2c241c; color:#fff; font-size:12px; }

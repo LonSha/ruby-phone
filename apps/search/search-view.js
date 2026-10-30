@@ -81,6 +81,7 @@ export class SearchView {
                 ${this._keyword ? '<button class="gs-clear" id="gs-clear" title="清空"><i class="fa-solid fa-xmark"></i></button>' : ''}
             </div>
             <div class="gs-scopes" id="gs-scopes">${this._scopeChips()}</div>
+            ${this._spotlightHtml()}
             <div class="gs-results" id="gs-results">${this._resultsHtml()}</div>
         </div>`;
         shell.setContent(this.app.css() + html, 'search-main');
@@ -100,6 +101,48 @@ export class SearchView {
             return `<button class="gs-chip${on}" data-scope="${esc(id)}">${esc(icon)} ${esc(label)}</button>`;
         };
         return chip('', '全部', '🔎') + sources.map(s => chip(s.id, s.label, s.icon)).join('');
+    }
+    /**
+     * [v4.99.5 · R11-X5] 全局检索面读数条（域覆盖 + 快捷意图）。
+     * 【为什么这一块必须存在】Spotlight 内核的四域清单与意图语法此前**一次都没露过面**；
+     *   用户看不到「哪几域接上了」，就只能把「这一域没数据」当成「搜不到」。
+     * 【三态不许同形（计划原文点名）】
+     *   · 内核没接上   → 整条变成一句「没接上」+ 明写「不是没有结果」；
+     *   · 某域取不到   → 该域单列「数据源没取到（不是没有内容）」；
+     *   · 某域取到但空 → 该域单列「暂无数据」。
+     * 视图**只排版**：读数是 `app.spotlightFace(kw)` 算的（唯一入口），本件不自己数一遍。
+     */
+    _spotlightHtml() {
+        let face = null;
+        try { face = this.app.spotlightFace?.(this._keyword) || null; } catch (_e) { face = null; }
+        if (!face) return '';
+        if (face.ok !== true) {
+            return `<div class="gs-spot gs-spot-off" id="gs-spot">
+                <div class="gs-spot-line">${esc(String(face.line || '全局检索没接上'))}</div>
+                <div class="gs-spot-sub">这一条不是「没有结果」，是检索面没接上。</div>
+            </div>`;
+        }
+        const domains = Array.isArray(face.domains) ? face.domains : [];
+        const chips = domains.map(d => {
+            const cls = d.state === 'ready' ? 'gs-dom-on' : (d.state === 'missing' ? 'gs-dom-miss' : 'gs-dom-empty');
+            const tag = d.state === 'ready' ? (String(d.count) + ' 条') : (d.state === 'missing' ? '没取到' : '暂无');
+            return `<span class="gs-dom ${cls}" title="${esc(String(d.label))}">${esc(String(d.icon || ''))} ${esc(String(d.label))}<b class="gs-dom-n">${esc(tag)}</b></span>`;
+        }).join('');
+        const notes = (Array.isArray(face.notes) ? face.notes : []).map(n =>
+            `<div class="gs-spot-note${n.kind === 'missing' ? ' gs-spot-miss' : ''}">${esc(String(n.line || ''))}</div>`).join('');
+        const intent = face.intentAction
+            ? `<div class="gs-intent" id="gs-intent" data-app="${esc(String(face.intentAction.appId || ''))}"${face.intentAction.tab ? ` data-tab="${esc(String(face.intentAction.tab))}"` : ''}>
+                    <span class="gs-intent-k">快捷指令</span>
+                    <span class="gs-intent-v">${esc(String(face.intentAction.type || ''))}${face.intentAction.target ? ' → ' + esc(String(face.intentAction.target)) : ''}${face.intentAction.amount !== null && face.intentAction.amount !== undefined ? ' · ' + esc(String(face.intentAction.amount)) : ''}</span>
+                    <span class="gs-jump">去办 ›</span>
+               </div>`
+            : '';
+        return `<div class="gs-spot" id="gs-spot">
+            <div class="gs-spot-line">${esc(String(face.line || ''))}</div>
+            <div class="gs-spot-doms">${chips}</div>
+            ${notes}
+            ${intent}
+        </div>`;
     }
 
     /**
@@ -543,6 +586,19 @@ export class SearchView {
                     window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, null, ref) }));
                 } catch (_e) { /* 忽略 */ }
             });
+        });
+        /* [v4.99.5 · R11-X5] 快捷指令行：点它把用户送到那条意图指向的 App（带页签）。
+         *   ★ 只派发**打开**，不替用户执行意图里那笔转账 / 那条消息 ——
+         *     「解析出意图」与「代用户完成」是两件事，后者要用户自己点确认
+         *     （X2 的撤销面与 X5 的意图面都不许替用户拍板）。 */
+        root.querySelector('#gs-intent')?.addEventListener('click', (ev) => {
+            const el = ev.currentTarget;
+            const appId = String(el?.dataset?.app || '');
+            if (!appId) return;
+            const tab = String(el?.dataset?.tab || '');
+            try {
+                window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, tab || null, null) }));
+            } catch (_e) { /* 忽略 */ }
         });
     }
 }

@@ -11,18 +11,27 @@
  *   这些案头每一个背后都有真实的运行时、会话存储键与路由分支
  *   （`scripts/registry-audit.mjs` 的 R1 要求 `APPS` 与懒加载分支**互为子集**）。
  *   删 id = 同时删路由 = 用户已落盘的数据变成孤儿；而且其中确实有会被用到的
- *   （体检、周期数学、纪念日……）。故一层不动数据，只改**呈现**：
- *     · `desktop` —— 桌面上直接可见的高频入口（20 个，见 CORE_APP_IDS）；
- *     · `library` —— 收进「应用库」，按类目分组、可搜索，一次点击即可打开。
- *   桌面因此回到 2 页（20 核心 + 1 应用库入口），而功能一个都没少。
+ *   （体检、周期数学、纪念日……）。故一层不动数据，只改**呈现**。
  *
- * 判据来源：核心 20 个按「实机反馈里真正在用的那几类」定 —— 社交 / 通话 / 内容 /
- *   影像 / 日程 / 游戏 / 钱包 / 健康 / 记忆 / 设置 / 搜索 / 通知。
- *   `tests/system-v4870.test.mjs` 会校验本表**覆盖 APPS 全集且无孤儿**
- *   （新增 App 必须显式归类，否则门禁红灯 —— 不允许再默默长回 89 个图标）。
+ * 三层语义（[v4.98.0 · R11-O6] 一次说清；三者关系与优先级不许再混 —— v4.92.0 就是混出来的）：
+ *   ① `CORE_APP_IDS`（**21** 个）= **预装不可删** —— 只表达「用户侧卸不掉」，不表达呈现；
+ *   ② `CORE_DESKTOP_IDS`（**8** 个，定义在 `app-clusters.js`）= **桌面首屏平铺** —— 纯呈现策略；
+ *   ③ `APP_CATEGORY`（**89** 键）= **库类目** —— 必须覆盖 `APPS` 全集；聚合壳 / 应用库 /
+ *      搜索 / 使用范式全部按它取类目。
+ *   优先级：**桌面铺什么看 ②，库怎么分组看 ③，①只说明哪些不能卸**。
+ *   ★ 为什么 ③ 必须覆盖 89、而不是「只覆盖进库的那些」：缺登记会静默 fallback `'system'`，
+ *     于是 13 个核心 App（微博 / 音乐 / 健康 / 钱袋 / 记忆 / B站 / 贴吧 / 小红书 / 世界脉搏 /
+ *     搜索 / 通知 / 魔坊 / 万象）整批躺进「系统与诊断」壳 —— 那正是用户截图里最刺眼的错分。
+ *     **核心 App 不进壳 ≠ 不需要类目**。
+ *   `tests/system-v4920.test.mjs` 与 `tests/system-v4990.test.mjs` 校验本表覆盖 `APPS` 全集、
+ *   壳成员上限与上述三层语义（新增 App 必须显式归类，否则门禁红灯）。
  * ============================================================ */
 
-/** 桌面直接可见的核心入口（顺序即桌面图标顺序）。 */
+/** 预装不可删的核心 App（**21** 个）。顺序沿用 v2.x 桌面原序，供库 / 搜索兜底排序。
+ *  ★ 它**不是**「桌面上铺几个」的真源 —— 桌面首屏是 `app-clusters.js` 的
+ *    `CORE_DESKTOP_IDS`（8 个）；本表只表达「用户侧不可卸载」。
+ *  ★ 与 `APP_CATEGORY` 的关系：本表任一 id 都**必须**在类目表里有登记（判据看守）。 */
+
 export const CORE_APP_IDS = Object.freeze([
     'wechat', 'weibo', 'honey', 'mofo', 'wangxiang', 'phone',
     'diary', 'album', 'music', 'calendar',
@@ -45,6 +54,12 @@ export const APP_LIBRARY_CATEGORIES = Object.freeze([
 /** appId → 类目 id。必须覆盖 APPS 全集（门禁校验，不允许默默漏归类）。 */
 export const APP_CATEGORY = Object.freeze({
     /* —— 社交与形象 —— */
+    /* [v4.98.0 · R11-O6] 核心 App 的类目也必须登记（不进壳 ≠ 不需类目）——
+     *   缺登记会静默 fallback 'system'，正是本轮 13 处错分的成因。 */
+    wechat: 'social',
+    honey: 'social',
+    phone: 'social',
+    wangxiang: 'social',
     cheat: 'social',
     dirtytalk: 'social',
     profile: 'social',
@@ -62,6 +77,14 @@ export const APP_CATEGORY = Object.freeze({
     affairs: 'social',
 
     /* —— 内容与阅读 —— */
+    weibo: 'content',
+    album: 'content',
+    music: 'content',
+    games: 'content',
+    xhs: 'content',
+    tieba: 'content',
+    bilibili: 'content',
+    worldpulse: 'content',
     theater: 'content',
     reading: 'content',
     lofter: 'content',
@@ -77,6 +100,9 @@ export const APP_CATEGORY = Object.freeze({
     tarot: 'content',
 
     /* —— 创作与记录 —— */
+    diary: 'creative',
+    memory: 'creative',
+    mofo: 'creative',
     playbook: 'creative',
     achievement: 'creative',
     plotline: 'creative',
@@ -91,6 +117,7 @@ export const APP_CATEGORY = Object.freeze({
     graph: 'creative',
 
     /* —— 生活与时间 —— */
+    calendar: 'life',
     clock: 'life',
     focus: 'life',
     punchcard: 'life',
@@ -103,6 +130,7 @@ export const APP_CATEGORY = Object.freeze({
     workflow: 'life',
 
     /* —— 财务 —— */
+    wallet: 'money',
     ledger: 'money',
     asset: 'money',
     accounting: 'money',
@@ -110,6 +138,7 @@ export const APP_CATEGORY = Object.freeze({
     traveldesk: 'money',
 
     /* —— 身体与亲密 —— */
+    health: 'body',
     uterus: 'body',
     periodmath: 'body',
     annidate: 'body',
@@ -118,6 +147,10 @@ export const APP_CATEGORY = Object.freeze({
     diagdesk: 'body',
 
     /* —— 系统与诊断 —— */
+    /* 真·系统/诊断类只应在此；内容/社交类 App 若有成员被塞进来，一定是类目漏登记。 */
+    settings: 'system',
+    search: 'system',
+    notifications: 'system',
     usage: 'system',
     regexfilter: 'system',
     freehome: 'system',
@@ -131,7 +164,12 @@ export const APP_CATEGORY = Object.freeze({
  *   由外壳直接渲染，故绝不能出现在注册三件套任一侧，否则 R1 立刻变孤儿）。 */
 export const APP_LIBRARY_ENTRY_ID = '__library';
 
-/** 该 app 在桌面还是在应用库。未归类的一律进库（宁可收起来，不占桌面）。 */
+/** 该 app 是否属于「预装核心」这一族（`desktop`），其余归 `library`。
+ *  ★ [v4.98.0 · R11-O6] 本函数的 `desktop` **不等于**「桌面上铺出来」——
+ *    桌面首屏由 `app-clusters.js` 的 `CORE_DESKTOP_IDS` + 聚合壳决定（8+7=15 格，见 buildDesktopTiles）。
+ *    本函数现在服务两处：① 应用库（R11-O7 复活后）按 `library` 族给默认排序权重；
+ *    ② 兼容 v4.87 的两分法语义，不制造第二套「什么进库」的真源。
+ *  ★ 判据 `tests/system-v4990.test.mjs` 看守「凡是 CORE_APP_IDS 必有类目」，防止再次错分。 */
 export function appZone(appId) {
     const id = String(appId || '');
     return CORE_APP_IDS.includes(id) ? 'desktop' : 'library';

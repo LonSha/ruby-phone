@@ -347,6 +347,51 @@ export class CreationdeskView {
         }
         return h + '</div>';
     }
+    /**
+     * 委托台账卡（[v4.97.0 · R11-O3 第三批]）。五阶段生命周期一行一读：
+     *   阶段徽章 + 费用 + 草稿数 + 未决变更；动作按阶段给（确认需求 / 交样稿 /
+     *   提加需求 / 同意变更 / 验收 / 取消）。取消与丢弃同款走显式确认。
+     * 归因与 app.commissionFace 同口径：读不到 ≠ 没有委托，分两句。
+     */
+    _commissions(vm) {
+        const app = this.app;
+        let h = '<div class="cwb-box"><h3>创作委托（五阶段：需求 → 样稿 → 变更协商 → 返修 → 验收）</h3>';
+        let face;
+        try { face = (typeof app.commissionFace === 'function') ? app.commissionFace() : null; } catch (_e) { face = null; }
+        if (!face || !face.ok) {
+            h += '<div class="cwb-note">' + esc((face && face.line) || '委托台账读不到') + '</div></div>';
+            return h;
+        }
+        if (!face.rows.length) {
+            h += '<div class="cwb-note">' + esc(face.line) + '。用下方表单登记一笔。</div>';
+        }
+        for (const r of face.rows) {
+            const setl = r.settlement || null;
+            h += '<div class="cwb-row"><span class="cwb-row-k">' + esc(r.title) + '（' + esc(r.client) + '）</span>'
+                + '<span class="cwb-row-v">' + esc(r.stageText) + ' · 费 ' + esc(String(r.agreedFee))
+                + '（定金 ' + esc(String(r.depositPaid)) + '）· 草稿 ' + esc(String(r.drafts)) + ' 份'
+                + (r.pendingChanges ? ' · <b>未决变更 ' + String(r.pendingChanges) + ' 条</b>' : '')
+                + (setl && setl.isCancelled ? ' · 已取消（保留草稿 ' + esc(String(setl.draftsPreservedCount)) + ' 份）' : '')
+                + (setl && setl.isSettled ? ' · 尾款 ' + esc(String(setl.remainingPaid)) + ' 已结' : '')
+                + '</span></div>';
+            for (const p of (r.pendingList || [])) {
+                h += '<div class="cwb-note">待确认：+「' + esc(p.reqs) + '」加费 ' + esc(String(p.feeDelta))
+                    + ' <button class="cwb-btn" data-cw-cagree="' + esc(p.changeId) + '" data-cw-cid="' + esc(r.id) + '">同意</button></div>';
+            }
+            h += '<div class="cwb-actions">';
+            if (r.stage === 'brief') h += '<button class="cwb-btn" data-cw-cact="brief" data-cw-cid="' + esc(r.id) + '">确认需求（付定金）</button>';
+            if (r.stage === 'concept' || r.stage === 'revision') h += '<button class="cwb-btn" data-cw-cact="draft" data-cw-cid="' + esc(r.id) + '">交一版样稿</button>';
+            if (r.stage === 'concept' || r.stage === 'revision') h += '<button class="cwb-btn" data-cw-cact="scope" data-cw-cid="' + esc(r.id) + '">提议加需求</button>';
+            if (r.stage === 'acceptance' || r.stage === 'cancelled') h += '<button class="cwb-btn" data-cw-cact="cancel" data-cw-cid="' + esc(r.id) + '">取消委托</button>';
+            if (r.stage !== 'acceptance' && r.stage !== 'cancelled') h += '<button class="cwb-btn" data-cw-cact="settle" data-cw-cid="' + esc(r.id) + '">验收结算</button>';
+            h += '</div>';
+        }
+        h += '<div class="cwb-actions">'
+            + '<input data-cw-ctitle placeholder="委托标题（如 画一张立绘）" style="max-width:60%">'
+            + '<button class="cwb-btn" data-cw-cact="create">登记新委托</button>'
+            + '</div>';
+        return h + '</div>';
+    }
     _html(vm) {
         let h = '<div class="cwb-wrap">';
         h += this._head(vm);
@@ -357,6 +402,7 @@ export class CreationdeskView {
         h += this._drafts(vm);
         h += this._topics(vm);
         h += this._board(vm);
+        h += this._commissions(vm);
         h += this._hypo(vm);
         h += this._plan(vm);
         h += '</div>';
@@ -469,6 +515,44 @@ export class CreationdeskView {
                 const k = b.getAttribute('data-cw-key');
                 if (k) self.app.setDraft(k);
                 self.app.draftAct(b.getAttribute('data-cw-draft'));
+            });
+        });
+        /* [v4.97.0 · R11-O3 第三批] 委托生命周期绑定：全部转 app（视图不自己记、不判阶段）。
+         *   取消走显式确认（与丢弃同款）；「提议加需求」用 window.prompt 收需求内容。 */
+        el.querySelectorAll('[data-cw-cact]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                const act = b.getAttribute('data-cw-cact') || '';
+                const cid = b.getAttribute('data-cw-cid') || '';
+                try {
+                    if (act === 'create') {
+                        const title = (el.querySelector('[data-cw-ctitle]') || {}).value || '';
+                        self.app.createCommission({ title: title });
+                    } else if (act === 'brief') {
+                        self.app.acceptBrief(cid);
+                    } else if (act === 'draft') {
+                        self.app.submitDraft(cid, { content: '样稿 ' + new Date().toLocaleString() });
+                    } else if (act === 'scope') {
+                        const req = (typeof window !== 'undefined' && typeof window.prompt === 'function')
+                            ? window.prompt('要加的需求（确认后由委托人决定是否同意）', '') : '';
+                        if (!req) return;
+                        self.app.proposeScopeChange(cid, { additionalRequirements: [String(req)] });
+                    } else if (act === 'settle') {
+                        self.app.acceptAndSettle(cid);
+                    } else if (act === 'cancel') {
+                        const ok = (typeof window !== 'undefined' && typeof window.confirm === 'function')
+                            ? window.confirm('取消这笔委托？\n（草稿全部保留，按已付定金结算）') : true;
+                        if (!ok) return;
+                        self.app.cancelCommission(cid);
+                    }
+                } catch (_e) { /* 归因在 app 层，不整页连坐 */ }
+                self.app.render();
+            });
+        });
+        el.querySelectorAll('[data-cw-cagree]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                try { self.app.agreeScopeChange(b.getAttribute('data-cw-cid'), b.getAttribute('data-cw-cagree')); }
+                catch (_e) { /* 同上 */ }
+                self.app.render();
             });
         });
     }

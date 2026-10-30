@@ -448,6 +448,50 @@ export class ReadingView {
      *   ② **原句 / 我的解释 / 反证三栏分列**（批注不伪装原文）；
      *   ③ **失效的引用照旧列出**并标出来，不静默丢。
      */
+    /* [v4.97.0 · R11-O3 第三批] 研读案卷段：读不到 / 没建过 / 有卷 三态不同形；
+     *   每卷一行计数（挂书/摘录/过期摘录/对照观点/批注/草稿节），动作按钮转 app。
+     *   摘录过期时如实标「N 条摘录因书改版待复核」（绝不静默覆盖作者正文）。 */
+    _studioHtml(tc) {
+        let face;
+        try { face = this.app.readingStudioFace ? this.app.readingStudioFace() : null; } catch (_e) { face = null; }
+        if (!face || !face.ok) {
+            return '<div class="rd-excerpt-empty">' + esc((face && face.line) || '研读案卷台账读不到') + '</div>';
+        }
+        if (!face.rows.length) {
+            return '<div class="rd-excerpt-empty">' + esc(face.line)
+                + '。在下方输入研读问题即可建一卷。</div>'
+                + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+                + '<input id="rd-studio-q" placeholder="研读问题（如 这本书怎么处理告别的）" style="flex:1;min-width:50%;font-size:12px;padding:6px 8px;border:1px solid ' + tc.border + ';border-radius:6px;background:' + tc.card + ';color:' + tc.text + '">'
+                + '<button class="rd-mini" id="rd-studio-create">建案卷</button></div>';
+        }
+        const rows = face.rows.map((r) => {
+            const stale = r.staleExcerpts ? ' · <b>' + esc(String(r.staleExcerpts)) + ' 条摘录因书改版待复核</b>' : '';
+            /* [v4.97.0] 挂书入口：没有挂书就没有「摘录出自哪本书」，而内核 normExcerpt 必填
+             *   bookId —— 缺这一级时用户只能记在「未指明书目」上，改版政策也就无从生效
+             *   （改版是按 bookId 匹配的）。故每卷必须能挂一本具体的书。 */
+            const bookBtn = r.books
+                ? '<button class="rd-mini" data-rd-studio-book data-id="' + esc(r.id) + '">换挂一本</button>'
+                : '<button class="rd-mini" data-rd-studio-book data-id="' + esc(r.id) + '">挂一本书</button>';
+            return '<div class="rd-excerpt">'
+                + '<div class="rd-excerpt-text"><b>' + esc(r.title) + '</b></div>'
+                + '<div class="rd-excerpt-ref">问题：' + esc(r.question) + ' · 状态 ' + esc(r.status) + '</div>'
+                + '<div class="rd-excerpt-ref">挂书 ' + esc(String(r.books)) + ' · 摘录 ' + esc(String(r.excerpts)) + stale
+                + ' · 对照观点 ' + esc(String(r.views)) + ' · 批注 ' + esc(String(r.annotations))
+                + ' · 草稿 ' + esc(String(r.draftSections)) + ' 节</div>'
+                + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+                + bookBtn
+                + '<button class="rd-mini" data-rd-studio-exc data-id="' + esc(r.id) + '">记一条摘录</button>'
+                + '<button class="rd-mini" data-rd-studio-view data-id="' + esc(r.id) + '">记对照观点</button>'
+                + '<button class="rd-mini" data-rd-studio-note data-id="' + esc(r.id) + '">记批注</button>'
+                + '<button class="rd-mini" data-rd-studio-draft data-id="' + esc(r.id) + '">写一节草稿</button>'
+                + '<button class="rd-mini" data-rd-studio-bump data-id="' + esc(r.id) + '">标注书已改版</button>'
+                + '</div></div>';
+        }).join('');
+        return rows
+            + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+            + '<input id="rd-studio-q" placeholder="再建一卷：研读问题" style="flex:1;min-width:50%;font-size:12px;padding:6px 8px;border:1px solid ' + tc.border + ';border-radius:6px;background:' + tc.card + ';color:' + tc.text + '">'
+            + '<button class="rd-mini" id="rd-studio-create">建案卷</button></div>';
+    }
     _dossierHtml(tc) {
         const read = (fn, dft) => { try { return fn() ?? dft; } catch (_e) { return dft; } };
         const refs = read(() => this.app.dossierRefs?.(), []) || [];
@@ -823,6 +867,11 @@ export class ReadingView {
                 </div>
                 ${this._dossierHtml(tc)}
                 <div class="rd-shelf-head" style="margin-top:18px">
+                    <h2>🧭 研读案卷</h2>
+                    <span style="font-size:11px;color:${tc.sub}">围绕一个问题读多本书</span>
+                </div>
+                ${this._studioHtml(tc)}
+                <div class="rd-shelf-head" style="margin-top:18px">
                     <h2>📖 故事年鉴</h2>
                     <span style="font-size:11px;color:${tc.sub}">按卷章读 · 导出离线可读</span>
                 </div>
@@ -1077,6 +1126,83 @@ export class ReadingView {
                 this.app.phoneShell?.showNotification?.('阅读', String((r && r.note) || ''), '↩️');
                 this.render();
             });
+            /* [v4.97.0 · R11-O3 第三批] 研读案卷绑定：建卷/记摘录/记观点/标改版，全转 app。 */
+            q('#rd-studio-create')?.addEventListener('click', () => {
+                const inp = q('#rd-studio-q');
+                const question = String((inp && inp.value) || '').trim();
+                if (!question) { this.app.phoneShell?.showNotification?.('阅读', '先写下这卷案卷要回答的问题', '✏️'); return; }
+                const r = this.app.createReadingDossier({ researchQuestion: question });
+                this.app.phoneShell?.showNotification?.('阅读', r && r.ok ? '案卷已建：' + r.dossier.title : '建卷失败：' + ((r && r.reason) || '未知'), r && r.ok ? '🧭' : '⚠️');
+                this.render();
+            });
+            const studioPrompt = (sel, fn, label) => {
+                this.app.phoneShell?.screen?.querySelectorAll(sel).forEach((b) => {
+                    b.addEventListener('click', () => {
+                        const id = b.getAttribute('data-id') || '';
+                        try { fn(id); } catch (_e) { /* 归因在 app 层 */ }
+                        this.render();
+                    });
+                });
+            };
+            studioPrompt('[data-rd-studio-book]', (id) => {
+                /* [v4.97.0] 挂书：没有这一步，摘录只能挂在「未指明书目」上，而改版政策
+                 *   按 bookId 匹配 —— 挂不上具体的书，改版标注就永远不会命中。 */
+                const books = (this.app.data.getBooks() || []);
+                const first = books[0] || null;
+                if (!first) { this.app.phoneShell?.showNotification?.('阅读', '书架是空的，先导入一本书', '⚠️'); return; }
+                const r = this.app.linkBookToDossier(id, {
+                    bookId: String(first.id), title: String(first.title || ''), version: String(first.contentHash || first.version || 'v1'),
+                });
+                if (!r || !r.ok) this.app.phoneShell?.showNotification?.('阅读', '挂书失败：' + ((r && r.reason) || '未知'), '⚠️');
+            }, '挂书');
+            studioPrompt('[data-rd-studio-exc]', (id) => {
+                const text = this.app.phoneShell?.prompt ? this.app.phoneShell.prompt('要记入案卷的原句（先抄句，出处稍后补）', '') : '';
+                if (text) {
+                    /* [v4.97.0] 内核 normExcerpt 必填 bookId（缺则 invalid_excerpt_payload）：
+                     *   视图兜底用「未指明书目」作自由摘录的占位书目，挂上具体书再补出处。
+                     *   同时喂 verbatimText（内核认这个字段名，text 只是别名）。 */
+                    const r = this.app.addExcerptToDossier(id, { bookId: '未指明书目', verbatimText: String(text) });
+                    if (!r || !r.ok) this.app.phoneShell?.showNotification?.('阅读', '记摘录失败：' + ((r && r.reason) || '未知'), '⚠️');
+                }
+            }, '摘录');
+            studioPrompt('[data-rd-studio-view]', (id) => {
+                const claim = this.app.phoneShell?.prompt ? this.app.phoneShell.prompt('一条对照观点（这本书主张什么）', '') : '';
+                if (claim) {
+                    const r = this.app.addContrastingViewToDossier(id, { claimText: String(claim) });
+                    if (!r || !r.ok) this.app.phoneShell?.showNotification?.('阅读', '记观点失败：' + ((r && r.reason) || '未知'), '⚠️');
+                }
+            }, '观点');
+            studioPrompt('[data-rd-studio-note]', (id) => {
+                const text = this.app.phoneShell?.prompt ? this.app.phoneShell.prompt('批注内容（你自己的想法，不混入原文）', '') : '';
+                if (text) {
+                    /* [v4.97.0] 内核 normAnnotation 只认 question/comment 两字段，没装 text 字段 ——
+                     *   旧写法 `text:` 的内容会被 normStr 静默丢弃（批注行留在台账里但内容为空）。 */
+                    const r = this.app.addAnnotationToDossier(id, { comment: String(text) });
+                    if (!r || !r.ok) this.app.phoneShell?.showNotification?.('阅读', '记批注失败：' + ((r && r.reason) || '未知'), '⚠️');
+                }
+            }, '批注');
+            studioPrompt('[data-rd-studio-draft]', (id) => {
+                const body = this.app.phoneShell?.prompt ? this.app.phoneShell.prompt('这一节写什么', '') : '';
+                if (body) {
+                    /* [v4.97.0] 内核 updateDraft 传 sections 数组即整段替换 —— 旧写法每次
+                     *   都用单节数组覆盖，写得越多丢得越多。这里读回已写节再追加（视图不判状态、
+                     *   只算「已写几节」，追加语义由 App 侧保证，内核语义不动）。 */
+                    const face = this.app.readingStudioFace();
+                    const row = (face && face.rows || []).find((x) => x.id === id);
+                    const prior = (row && row.draftSections) ? row.draftSections : 0;
+                    const cur = this.app._readStudioState().dossiers[id];
+                    const secs = ((cur && cur.draft && Array.isArray(cur.draft.sections)) ? cur.draft.sections : []).concat([{ heading: '第' + String(prior + 1) + '节', body: String(body) }]);
+                    const r = this.app.updateDossierDraft(id, { sections: secs });
+                    if (!r || !r.ok) this.app.phoneShell?.showNotification?.('阅读', '写草稿失败：' + ((r && r.reason) || '未知'), '⚠️');
+                }
+            }, '草稿');
+            studioPrompt('[data-rd-studio-bump]', (id) => {
+                const books = (this.app.data.getBooks() || []);
+                const first = books[0] || null;
+                if (!first) { this.app.phoneShell?.showNotification?.('阅读', '书架上没有书，先导入或选一本书', '⚠️'); return; }
+                const r = this.app.handleBookVersionUpdate(id, first.id, String(first.contentHash || first.version || 'bumped'));
+                this.app.phoneShell?.showNotification?.('阅读', r && r.ok ? '已按「不覆盖正文」政策标注：' + String(r.staleExcerptsCount ?? 0) + ' 条摘录待复核' : '标注失败：' + ((r && r.reason) || '未知'), r && r.ok ? '🔖' : '⚠️');
+            }, '改版');
         }
     }
 

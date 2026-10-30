@@ -18,6 +18,14 @@ import { APP_LIBRARY_CATEGORIES, APP_LIBRARY_ENTRY_ID } from '../config/app-libr
 /* [v4.92.0] 像素 OS：桌面收敛为「8 核心 + 7 聚合壳」。聚合真源在 config/app-clusters.js，
  *   像素图标在 config/app-icons.js，文件夹像素 SVG 由 pixel-engine 运行时拼。 */
 import { buildDesktopTiles, isCoreDesktop, clusterByCategory } from '../config/app-clusters.js';
+/* [v4.94.0 · R11-O3] 使用范式 → 桌面排序。此前 `resolveAppOrder` 只有 orchestrator 与
+ *   tests 在调，产品端零消费 —— 即「范式」整套机制在产品里根本不生效。
+ *   现在主屏的 buildIconPages 真调它，范式切换才第一次改得到用户看得见的东西。
+ * ⚠️ `resolveActiveParadigm` 必须一起 import（首版漏了，教训写在这里）：`_activeParadigm()`
+ *   整段包在 try/catch 里，未定义标识符被 catch 吞掉后又兜底调一次同名函数——
+ *   那一次同样抛错，于是永久返回 null、`resolveAppOrder` 永远吃内置生活档。
+ *   症状是「换挡没反应但界面全绿」，与库层无关，纯粹是本文件漏了一行 import。 */
+import { resolveAppOrder, resolveActiveParadigm } from '../config/usage-paradigm.js';
 import { unifiedIconOf, hasUnifiedIcon } from '../config/app-icons.js';
 import { folderIconSvg, svgToDataUri, createViewStack, VIEW_LEVEL, PX_BACK_NUDGE_MS, PX_DESKTOP_SHAKE, appIconSvg } from './pixel-engine.js';
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
@@ -222,8 +230,15 @@ export class HomeScreen {
      * ============================================================ */
     /** 应用库里的 App（按类目分组、组内保持 APPS 原序）。 */
     _libraryApps() {
+        /* [v4.98.0 · R11-O7] 库 = **全量**（89 项），不再只取 `zone === 'library'` 的 68 项。
+         *   理由：聚合壳（8 核心 + 7 壳）已经承担「按类目浏览」，库的**独占价值**是
+         *   「一处搜到全部」；若库也按 zone 过滤，21 个核心 App 在库里永远搜不到 ——
+         *   而它们恰恰是用户最常要找的（微信 / 设置 / 搜索 / 通知…），这正是 R11-O6
+         *   三层语义里「① 预装核心 ≠ 呈现层」的落地处。
+         *   分工写死在这里，防止三套呈现再互相打架：
+         *     **壳 = 分类浏览（8+7 格）、库 = 全量搜索（89 项）、范式 = 优先级排序（R11-X7）**。 */
         const all = Array.isArray(this.apps) ? this.apps : [];
-        const inLib = all.filter(app => app && app.zone === 'library');
+        const inLib = all.filter(app => app && typeof app === 'object');
         return APP_LIBRARY_CATEGORIES.map(cat => ({
             ...cat,
             apps: inLib.filter(app => app.libraryCategory === cat.id)
@@ -236,6 +251,9 @@ export class HomeScreen {
      *  故它只活在渲染层，点击时走 openLibrary() 而不是 phone:openApp。 */
     _libraryEntry() {
         return {
+            /* [v4.98.0 · R11-O7] 本方法此前**全库零调用**（v4.92.0 丢入口的实证之一）。
+             *   现由 `buildIconPages()` 的库入口闸门与 `renderLibraryDockTile()` 的
+             *   数据源共用；保留伪对象形态，不往 APPS 里塞一条（R1 会判孤儿）。 */
             id: APP_LIBRARY_ENTRY_ID,
             name: '应用库',
             icon: '📚',
@@ -375,17 +393,72 @@ export class HomeScreen {
         } catch (_e) { return 'standard'; }
     }
 
+    /**
+     * [v4.94.0 · R11-O3] 读当前使用范式（与洞察 App 同一个键，没有第二份副本）。
+     * 读不到 / 解析失败一律退回内置「生活」档 —— 主屏排序不能因为一个坏键就空白。
+     */
+    _activeParadigm() {
+        try {
+            const st = (typeof window !== 'undefined') && window.VirtualPhone ? window.VirtualPhone.storage : null;
+            const raw = st && typeof st.get === 'function' ? st.get('usage_paradigm_v1') : null;
+            const obj = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+            return resolveActiveParadigm(obj);
+        } catch (_e) {
+            try { return resolveActiveParadigm(null); } catch (_e2) { return null; }
+        }
+    }
+
     buildIconPages() {
         /* [v4.92.0] 像素 OS 桌面收敛：不再铺「zone==='desktop' 的 20 个 + 库入口」，
          *   改铺「8 核心 App + 7 个聚合壳」（buildDesktopTiles）。89 个功能全保留在壳内，
-         *   桌面固定 15 格一页。聚合壳是 isCluster 伪对象，渲染走 renderClusterTile。 */
+         *   桌面固定 15 格一页。聚合壳是 isCluster 伪对象，渲染走 renderClusterTile。
+         * [v4.94.0 · R11-O3] 范式接入：`resolveAppOrder` 按当前范式把「优先 App」提到前、
+         *   「降权 App」压到后。**只重排，不删格** —— 范式是「先看哪个」，不是「禁用哪个」；
+         *   删格会让用户在换挡后以为 App 丢了。稳定排序保证同档内仍按 APPS 原序，
+         *   不出现「每次换挡都乱一遍」。
+         * ★ 为什么壳的先后要由**壳内成员的名次**决定（本版实测踩到的坑）：
+         *   范式里写的优先项（accounting / focus / reading-studio / worldbook …）绝大多数
+         *   **不是**核心桌面 id，而是聚合壳里的成员。只对 15 个桌面格子排序的话，
+         *   生活档里真正会动的只有 wechat / calendar 两个，其余四档几乎全无变化 ——
+         *   用户换挡后看不到区别，会当成「这个功能是摆设」。故：先让 resolveAppOrder
+         *   排**全部 App**，再由成员名次推出壳的名次（取壳内最靠前的那个成员）。
+         * ★ 为什么名次表要从 resolveAppOrder 的输出里**反推**、而不是在这里再写一遍
+         *   「优先/降权」判断：那正是会两边走岔的第二份真源。这里只做「查表 + 排序」，
+         *   谁该在前面完全由库层那一个函数说了算。 */
         const all = Array.isArray(this.apps) ? this.apps : [];
+        const paradigm = this._activeParadigm();
+        // 名次表：库层排序结果 → appId 的顺序号（越小越靠前）。降权项因此自然落在末尾。
+        const orderRank = new Map();
+        resolveAppOrder(all, paradigm).forEach((a, i) => {
+            if (a && a.id) orderRank.set(a.id, i);
+        });
+        const rankOf = (id) => {
+            const r = orderRank.get(id);
+            return typeof r === 'number' ? r : Number.MAX_SAFE_INTEGER;
+        };
+        /* 壳：取壳内最靠前的成员名次 —— 「装着我最想用的那个 App 的文件夹」该被先看到。
+         * 空壳不会走到这里（buildDesktopTiles 已按 memberCount > 0 过滤）。 */
+        const rankOfTile = (t) => {
+            if (t && t.isCluster) {
+                let best = Number.MAX_SAFE_INTEGER;
+                for (const m of (t.members || [])) {
+                    const r = rankOf(m && m.id);
+                    if (r < best) best = r;
+                }
+                return best;
+            }
+            return rankOf(t && t.id);
+        };
         const tiles = buildDesktopTiles(all);
+        const ordered = tiles
+            .map((t, i) => ({ t, i, r: rankOfTile(t) }))
+            .sort((x, y) => (x.r - y.r) || (x.i - y.i))   // 同档内保持原序（稳定）
+            .map((x) => x.t);
         const capacity = this.getIconPageCapacity();
-        if (tiles.length <= capacity) return [tiles];
+        if (ordered.length <= capacity) return [ordered];
         const pages = [];
-        for (let i = 0; i < tiles.length; i += capacity) {
-            pages.push(tiles.slice(i, i + capacity));
+        for (let i = 0; i < ordered.length; i += capacity) {
+            pages.push(ordered.slice(i, i + capacity));
         }
         return pages;
     }
@@ -839,7 +912,7 @@ export class HomeScreen {
     renderDock() {
         const dockApps = this.getDockApps();
 
-        return dockApps.map(app => {
+        const dockTiles = dockApps.map(app => {
             /* [v4.93.0] 真机反馈「dock 四个图标不是像素风」：它们原先取 phone/*.png
              *   512×512 拟物位图，与像素引擎的桌面语言割裂。现在**优先**取像素图案
              *   （appIconSvg），未登记像素图案的 App 才回落到 defaultIcon/emoji 旧链路
@@ -872,7 +945,31 @@ export class HomeScreen {
                     ${iconContent}
                 </div>
             `;
-        }).join('');
+        });
+        /* [v4.98.0 · R11-O7] 应用库入口接回 dock（计划选项 A = 复活）。
+         *   修前实况：v4.92.0 桌面改成「8 核心 + 7 聚合壳」后，库里 143 行代码
+         *   （`_libraryApps / _libraryEntry / openLibrary / renderLibraryApp /
+         *   bindLibraryEvents` + `phone.css` 22 条规则）**失去唯一入口**：
+         *   `_libraryEntry()` 全库仅定义处、零调用；`openLibrary()` 的唯一调用点是
+         *   `openApp(APP_LIBRARY_ENTRY_ID)` 分支，而那个伪 id 已不在任何图标上。
+         *   ⇒ 一个功能面对用户静默消失，且没有任何门或测试提到它。
+         *   为什么放 dock 而不是「桌面第 16 格」：桌面格数由 `buildDesktopTiles`
+         *   （8+7=15）这一条真源决定，硬塞第 16 格会让「桌面铺什么」出现第二份真源；
+         *   dock 是常驻条，天然适合「跨类目的全量入口」。 */
+        dockTiles.push(this.renderLibraryDockTile());
+        return dockTiles.join('');
+    }
+    /** 应用库在 dock 上的入口格（像素文件夹 + 无 emoji 冒充）。
+     *  点击链路：dock 图标 `data-app="__library"` → `openApp()` 的伪 id 分支 →
+     *  `openLibrary()`；伪 id 不进 `APPS`，故 registry-audit 的 R1 不会判它孤儿。 */
+    renderLibraryDockTile() {
+        const svg = folderIconSvg('#64748b', ['#f77b8f', '#9de64e', '#f9e14e']);
+        const url = svgToDataUri(svg);
+        return `
+            <div class="dock-app yzp-home-dock-app px-dock-app app-library-dock-entry" data-app="${APP_LIBRARY_ENTRY_ID}" role="button" tabindex="0" aria-label="应用库（全量搜索）">
+                <span class="px-dock-icon" style="background-image:url('${url}');background-size:contain;background-position:center;background-repeat:no-repeat;"></span>
+            </div>
+        `;
     }
     
     /* [v4.92.0] 渲染聚合壳（像素文件夹）桌面图标。

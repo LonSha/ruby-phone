@@ -12981,6 +12981,90 @@ input:checked + .toggle-slider:before {
   word-break: break-word;
 }
 .pl-roam .pl-roam-reg { color: #8ba3b8; }
+/* ---------- [v4.97.0 · R11-O3 第三批] 街区机会卡 ----------
+ * 与探索卡同一行式排版（地名 + 状态徽章），但状态语义不同：
+ *   可参加用实底（行动可期）/ 已参加描边 / 已错过灰调（错过不伪造，也不羞辱）。
+ * 登记表单输入框与徽章共用小号排版，保持「读数为主、动作轻置」的密度。 */
+.pl-district .pl-district-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #121922;
+}
+.pl-district .pl-district-place {
+  flex: none;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #e8eef6;
+}
+.pl-district .pl-district-ev {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #cfe3f5;
+}
+.pl-district .pl-district-st {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.pl-district-active .pl-district-st { background: #14b8a6; color: #04231f; }
+.pl-district-done .pl-district-st { background: transparent; color: #14b8a6; border: 1px solid #14b8a6; }
+.pl-district-missed .pl-district-st { background: #1c2836; color: #9fb6cc; }
+.pl-district-go {
+  flex: none;
+  background: transparent;
+  color: #9fc0da;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.pl-district-go:active { background: #1f2c39; }
+#pl-district-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+#pl-district-form[style*='none'] { display: none !important; }
+.pl-district .pl-in, #pl-district-form .pl-in {
+  width: 100%;
+  box-sizing: border-box;
+  background: #10161d;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+#pl-district-form .pl-btn {
+  align-self: flex-start;
+  background: #16202b;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+#pl-district-form .pl-btn:active { background: #1f2c39; }
+.pl-district > .pl-btn {
+  margin-top: 6px;
+  background: #16202b;
+  border: 1px solid #2a3b4d;
+  border-radius: 8px;
+  color: #cfe3f5;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
 
 /* ---------- [v2.47.0] 金手指 App（.ch-*） ----------
  * 万界武库外挂库：已装配 / 全库浏览 / 设置。
@@ -22064,3 +22148,102 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 .app-library-group[hidden] {
     display: none !important;
 }
+/* [v4.99.4 · R11-X3] 生活流时钟的状态栏指示。
+ *   为什么要单独一个类：它不是第二个时间（时间已在左侧），而是「手机自己在动」的证据。
+ *   三档颜色对应三种状态（运行 / 已暂停 / 未装配）：未装配用低对比度，不冒充「在跑」。 */
+.phone-statusbar .statusbar-left .life-clock-chip{display:inline-block;max-width:1.6em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-left:4px;font-size:9px;line-height:1;opacity:.85;vertical-align:middle;}
+.phone-statusbar .statusbar-left .life-clock-chip[data-status="paused"]{opacity:.55;}
+.phone-statusbar .statusbar-left .life-clock-chip[data-status="unmounted"]{opacity:.35;}
+
+/* ============================================================
+ * [v4.99.6 · R11-X8] 状态栏「拟真读数」两件：蜂窝信号格 + 电量未知态
+ * ------------------------------------------------------------
+ * 为什么要这几条：
+ *   · 修前右侧只有一个**恒定**的 Wi-Fi 图标：内核把信号打到 0 格（电梯 / 地下密室 /
+ *     隧道），屏幕上看不出任何变化 —— 剧情里「消息发不出去」于是没有屏幕依据。
+ *   · 修前电量格直接渲染构造期写死的 85（后来是宿主真机的电池）：读数没接上时，
+ *     屏幕**照样显示一个数字**，读者无法区分「手机还有 78%」与「根本读不到」。
+ * 三态显形（这是本版的主题）：ok = 正常亮起；weak = 降透明 + 变色；
+ *   missing / threw = 灰格 + 斜纹，且**没有数字**（-- 而不是旧值）。
+ * ============================================================ */
+.phone-statusbar .phone-cell-signal{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;flex:0 0 auto;margin-right:1px;}
+.phone-statusbar .phone-cell-signal .cell-bar{display:block;width:2.5px;background:#333;border-radius:1px;opacity:.22;}
+.phone-statusbar .phone-cell-signal .cell-bar[data-bar="1"]{height:4px;}
+.phone-statusbar .phone-cell-signal .cell-bar[data-bar="2"]{height:6px;}
+.phone-statusbar .phone-cell-signal .cell-bar[data-bar="3"]{height:8px;}
+.phone-statusbar .phone-cell-signal .cell-bar[data-bar="4"]{height:10px;}
+.phone-statusbar .phone-cell-signal .cell-bar[data-bar="5"]{height:12px;}
+.phone-statusbar .phone-cell-signal .cell-bar.on{opacity:1;}
+.phone-statusbar .phone-cell-signal.cell-weak .cell-bar.on{background:#e6a23c;}
+.phone-statusbar .phone-cell-signal.cell-unknown .cell-bar{opacity:.12;}
+/* 无服务（0 格但读数正常）：格子全灰 —— 与「读不到」（cell-unknown）分清 */
+.phone-statusbar .phone-cell-signal[data-status="weak"] .cell-bar.on{background:#e6a23c;}
+.phone-statusbar .phone-cell-signal[data-status="missing"] .cell-bar,
+.phone-statusbar .phone-cell-signal[data-status="threw"] .cell-bar{opacity:.12;}
+/* 电量读数不可用时：格子留白 + 文字位显示 --，颜色降饱和以免被误读成「低电量」 */
+.phone-statusbar .battery-icon[data-status="missing"] .battery-text,
+.phone-statusbar .battery-icon[data-status="threw"] .battery-text{font-size:9px;color:#888;}
+.phone-statusbar .battery-icon[data-status="missing"] .battery-body,
+.phone-statusbar .battery-icon[data-status="threw"] .battery-body{border-color:#999;background:rgba(255,255,255,.45);}
+
+/* ============================================================
+ * [v4.99.6 · R11-X8] 设备读数面：状态栏格子 + 设置页三域读数
+ * ------------------------------------------------------------
+ * 三态不同形 —— 这是本版的视觉判据，也是「读不到不许长得像正常」的落地：
+ *   ok     = 正常亮（格子满亮 / 读数正常色）
+ *   weak   = 变色（#e6a23c）——弱网必须**看得见**，不是降透到看不见
+ *   missing= 灰格 + 半透明（数据缺失）
+ *   threw  = 灰格 + 斜纹（读取失败，与「缺失」分档）
+ * ============================================================ */
+.phone-cell-signal {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 1.5px;
+    height: 12px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.phone-cell-signal .cell-bar {
+    display: block;
+    width: 2.5px;
+    border-radius: 1px;
+    background: currentColor;
+    opacity: .22;
+}
+.phone-cell-signal .cell-bar[data-bar="1"] { height: 4px; }
+.phone-cell-signal .cell-bar[data-bar="2"] { height: 6px; }
+.phone-cell-signal .cell-bar[data-bar="3"] { height: 8px; }
+.phone-cell-signal .cell-bar[data-bar="4"] { height: 10px; }
+.phone-cell-signal .cell-bar[data-bar="5"] { height: 12px; }
+.phone-cell-signal .cell-bar.on { opacity: 1; }
+/* 弱网：变色而不是变淡（变淡等于「看不见」，那正是本版要治的病）。 */
+.phone-cell-signal.cell-weak .cell-bar.on { background: #e6a23c; }
+/* 读不到：格子压到几乎看不见，但保留位置（不塌陷导致布局跳动）。 */
+.phone-cell-signal.cell-unknown .cell-bar { opacity: .12; }
+.phone-cell-signal[data-status="weak"] { color: #e6a23c; }
+.phone-cell-signal[data-status="missing"],
+.phone-cell-signal[data-status="threw"] { color: #9aa0a6; }
+/* 电量未知：边框变灰、底色半透，且**没有数字**（写的是 --，不是旧值）。 */
+.battery-icon[data-status="missing"],
+.battery-icon[data-status="threw"] { opacity: .75; }
+.battery-icon[data-status="missing"] .battery-body,
+.battery-icon[data-status="threw"] .battery-body {
+    border-color: #999 !important;
+    background: rgba(255,255,255,.4) !important;
+}
+.battery-icon[data-status="missing"] .battery-text,
+.battery-icon[data-status="threw"] .battery-text {
+    font-size: 9px;
+    color: #888 !important;
+}
+/* 设置页三域读数：读不到那两档左侧加一条色带，一眼能分「缺失」与「读取失败」。 */
+.yzp-settings-device-face .yzp-device-face-row {
+    border-left: 3px solid transparent;
+    padding-left: 8px;
+}
+.yzp-settings-device-face .yzp-device-face-row[data-device-state="missing"] { border-left-color: #9aa0a6; }
+.yzp-settings-device-face .yzp-device-face-row[data-device-state="threw"] { border-left-color: #d9534f; }
+.yzp-settings-device-face .yzp-device-face-row[data-device-state="weak"] { border-left-color: #e6a23c; }
+.yzp-settings-device-face .yzp-device-face-row[data-device-state="ok"] { border-left-color: #30c46b; }
+.yzp-settings-device-face .yzp-device-face-why { font-size: 11px; opacity: .75; }
+.yzp-settings-device-face .yzp-device-face-sum { margin-top: 6px; }

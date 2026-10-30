@@ -6,10 +6,34 @@
  * 样式：css() 提供面板样式，由 PhoneShell.setContent 注入到视图内。
  * ======================================================== */
 'use strict';
-
 import { NotificationLog } from '../../config/system-notifications.js';
-import { NotificationCenterView } from './notification-center-view.js';
+/* [v4.99.0 · R11-X6] 中枢派发器 → 通知中心（第二张真源的可读出口）。
+ *   分工写死：本 App **只读**中枢那张表（`_resolveHub` 拿实例、`_hubRows` 取行），
+ *   不往里写、不把它的行抄进 `sys_notifs`。写回各回各家 —— 抄一份就是两份真源。
+ *   映射与合并全在 config/notification-hub-bridge.js（纯函数），本件不写第二套口径。 */
+import { mergeFeed, mapHubNotification } from '../../config/notification-hub-bridge.js';
+/* [v4.99.7 · R11-X7] 使用范式 → 通知中心（**阈值过滤**的唯一口径）。
+ *   分工写死：阈值留哪条、丢哪条由 `config/usage-paradigm.js` 的 `filterNoticesByParadigm`
+ *   决定；「通知行没有 level 字段」这层形状差异由 `config/notice-paradigm-bridge.js` 翻译。
+ *   本件**不写第三套过滤判据** —— 写了改阈值时三边必然走岔。
+ *   ⚠️ 历史上该内核被错用过一次（`config/subsystem-orchestrator.js:634` 记的教训：
+ *     每次写一份 key='custom' 的固定副本、`filterNoticesByParadigm([])` 传空数组）。
+ *     这里两处都避开：范式**从盘上读**（与主屏/洞察 App 同一个键），行**真的传进去**。 */
+import { resolveActiveParadigm } from '../../config/usage-paradigm.js';
+import { splitNoticesByParadigm } from '../../config/notice-paradigm-bridge.js';
 
+/** 范式键。与 `apps/usage/usage-app.js` 的 `PARADIGM_KEY`、`phone/home-screen.js` 的
+ *  字面量 `'usage_paradigm_v1'` 必须是同一个（这里不 import App，避免 App 互相依赖成环；
+ *  三处字面量由 tests/system-v4997.test.mjs 的「键唯一」判据钉住）。 */
+export const NOTICE_PARADIGM_KEY = 'usage_paradigm_v1';
+import { NotificationCenterView } from './notification-center-view.js';
+/**
+ * [v4.99.0 · R11-X6] 三类读数必须**不同形**（本仓既有纪律，这里最容易破）：
+ *   · 读到了、有 N 条        → 正常画列表；
+ *   · 读到了、0 条           → 「还没派发过」；
+ *   · **读不到**（没有中枢 / 中枢那侧读抛错）→ 「有一侧没读到」+ 明写「不是没有通知」。
+ * 第三类压成第二类，就等于把「系统坏了」粉饰成「一切正常」。
+ */
 export class NotificationCenterApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
@@ -18,6 +42,156 @@ export class NotificationCenterApp {
         this.view = new NotificationCenterView(this);
         // 优先复用宿主共享的落账层（showNotification 写入的同一份）
         this.log = this._resolveLog();
+    }
+    /* ---------- [v4.99.0 · R11-X6] 中枢派发器的读口（**只读**） ---------- */
+    /**
+     * 取中枢的通知派发器实例。取不到**不是错误**（宿主可能还没装配），
+     * 但必须让上层能把它与「取到了、但是空的」分开 —— 故返回 {ok, why, hub}。
+     */
+    _resolveHub() {
+        let vp = null;
+        try { vp = (typeof window !== 'undefined') ? window.VirtualPhone : null; } catch (_e) { vp = null; }
+        if (!vp) return { ok: false, why: 'no_host', hub: null };
+        const sub = vp.subsystems || null;
+        if (!sub) return { ok: false, why: 'no_subsystems', hub: null };
+        const hub = sub.notifications || null;
+        if (!hub || typeof hub.getClusteredNotifications !== 'function') {
+            return { ok: false, why: 'no_dispatcher', hub: null };
+        }
+        return { ok: true, why: '', hub };
+    }
+    /**
+     * 读中枢那张表。**读抛错也当读不到**（不回落空数组冒充「没有通知」）。
+     * @returns {{readable:boolean, why:string, rows:Array}}
+     */
+    _hubRows() {
+        const r = this._resolveHub();
+        if (!r.ok) return { readable: false, why: r.why, rows: [] };
+        let raw;
+        try { raw = r.hub.notifications; } catch (_e) { return { readable: false, why: 'read_threw', rows: [] }; }
+        if (!Array.isArray(raw)) return { readable: false, why: 'not_array', rows: [] };
+        return { readable: true, why: '', rows: raw };
+    }
+    /**
+     * 合并两张表 → 交给视图渲染的唯一入口（视图**不自己去碰**第二张表）。
+     * @returns {{rows:Array, counts:object, notes:object}}
+     */
+    feed() {
+        const hub = this._hubRows();
+        let logRows = [];
+        let logReadable = true;
+        try {
+            logRows = this.log.list();
+            if (!Array.isArray(logRows)) { logRows = []; logReadable = false; }
+        } catch (_e) { logRows = []; logReadable = false; }
+        return mergeFeed(logRows, hub.rows, { logReadable, hubReadable: hub.readable, hubWhy: hub.why });
+    }
+    /**
+     * [v4.99.7 · R11-X7] 读当前使用范式（与主屏、洞察 App **同一个键**，没有第二份副本）。
+     * 读不到 / 解析失败 / 宿主没装配 storage 一律退回内核默认（内置「生活」档）——
+     *   通知中心不能因为一个坏键就整片空白。但**读不到这件事本身要能被说出**：
+     *   返回 `{ok, why, paradigm}`，`ok:false` 时界面按「范式没读到，本次不隐藏任何通知」呈现，
+     *   不能静默当成「生活档」——那会让「范式系统坏了」伪装成「你现在是生活档」。
+     */
+    _resolveParadigm() {
+        const key = NOTICE_PARADIGM_KEY;
+        let st = null;
+        try { st = this.storage || (typeof window !== 'undefined' ? window.VirtualPhone?.storage : null); } catch (_e) { st = null; }
+        if (!st || typeof st.get !== 'function') {
+            return { ok: false, why: 'no_storage', paradigm: this._defaultParadigm(), key };
+        }
+        let raw = null;
+        try { raw = st.get(key); } catch (_e) { return { ok: false, why: 'read_threw', paradigm: this._defaultParadigm(), key }; }
+        if (raw === null || raw === undefined || raw === '') {
+            /* 键还没写过 = 用户没切过范式。这是**正常初态**，不是读不到。 */
+            return { ok: true, why: 'unset', paradigm: this._defaultParadigm(), key };
+        }
+        let obj = raw;
+        if (typeof raw === 'string') {
+            try { obj = JSON.parse(raw); } catch (_e) { return { ok: false, why: 'parse_threw', paradigm: this._defaultParadigm(), key }; }
+        }
+        try {
+            const p = resolveActiveParadigm(obj);
+            if (!p) return { ok: false, why: 'resolve_null', paradigm: this._defaultParadigm(), key };
+            return { ok: true, why: '', paradigm: p, key };
+        } catch (_e) {
+            return { ok: false, why: 'resolve_threw', paradigm: this._defaultParadigm(), key };
+        }
+    }
+    /** 内核默认范式（内置「生活」档）。取不到就给一个 `null`，由内核自己回落 —— 不硬编码第二份。 */
+    _defaultParadigm() {
+        try { return resolveActiveParadigm(null); } catch (_e) { return null; }
+    }
+    /**
+     * [v4.99.7 · R11-X7] 把 `feed()` 的行按当前范式分「留下 / 被隐藏」。
+     * @param {Array} rows `feed().rows`
+     * @returns {{rows:Array, hidden:Array, applied:boolean, threshold:string, fallback:boolean,
+     *            ok:boolean, why:string, paradigm:{ok:boolean,why:string,paradigm:object|null},
+     *            counts:{total:number,visible:number,hidden:number}}}
+     *   两处失败必须与「没隐藏」区分开：
+     *     · 范式**读不到** → `paradigm.ok:false`，此时**不隐藏任何通知**（applied:false），
+     *       界面写成「范式没读到，本次不过滤」而不是「你现在是生活档」；
+     *     · 过滤**自己抛错** → `ok:false` + `why`，界面明写「过滤失效，已全量显示」。
+     */
+    splitByParadigm(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const pr = this._resolveParadigm();
+        if (!pr.ok) {
+            return {
+                rows: list.slice(), hidden: [], applied: false, threshold: 'all', fallback: false,
+                ok: true, why: '', paradigm: pr,
+                counts: { total: list.length, visible: list.length, hidden: 0 }
+            };
+        }
+        const s = splitNoticesByParadigm(list, pr.paradigm);
+        return {
+            rows: s.visible, hidden: s.hidden, applied: s.applied, threshold: s.threshold,
+            fallback: s.fallback, ok: s.ok, why: s.why, paradigm: pr, counts: s.counts
+        };
+    }
+    /**
+     * [v4.99.7 · R11-X7] 按 id 反查一条（**只读**，映射走桥的同一份纯函数）。
+     *   为什么放在 App 而不是视图：视图不许 import 桥（v41000 F1：映射只能有一处）。
+     *   三条不变量：
+     *     ① `hub_` 前缀走中枢那张表，其它走落账层；
+     *     ② 找不到如实 null，**不补空壳**（补空壳会让「组内成员丢了」看起来正常）；
+     *     ③ 读抛错也当找不到（同上，不抛给渲染层 —— 渲染层抛错会整片白屏）。
+     * @param {string} id
+     * @returns {object|null}
+     */
+    rowById(id) {
+        const key = String(id || '');
+        if (!key) return null;
+        if (/^hub_/.test(key)) {
+            const raw = key.replace(/^hub_/, '');
+            if (!raw) return null;
+            const r = this._resolveHub();
+            if (!r.ok) return null;
+            let list = null;
+            try { list = r.hub.notifications; } catch (_e) { return null; }
+            if (!Array.isArray(list)) return null;
+            const found = list.find(n => n && String(n.id) === raw);
+            return found ? mapHubNotification(found) : null;
+        }
+        try {
+            const rows = this.log.list();
+            if (!Array.isArray(rows)) return null;
+            return rows.find(n => n && String(n.id) === key) || null;
+        } catch (_e) { return null; }
+    }
+    /** [v4.99.0 · R11-X6] 中枢那张表的标记已读（写回**别人家**的表，故单独一个口）。 */
+    ackHub(id) {
+        const raw = String(id || '').replace(/^hub_/, '');
+        if (!raw) return false;
+        const r = this._resolveHub();
+        if (!r.ok) return false;
+        try {
+            const target = r.hub.notifications.find(n => String(n.id) === raw);
+            if (!target) return false;
+            target.read = true;
+            if (typeof r.hub._save === 'function') r.hub._save();
+            return true;
+        } catch (_e) { return false; }
     }
 
     _resolveLog() {
@@ -104,6 +278,15 @@ export class NotificationCenterApp {
         .nc-group-body { padding:0 8px 8px; }
         .nc-apptag.nc-cross { background:rgba(242,181,68,.18); color:#f2b544; }
         .nc-apptag.nc-muted { background:rgba(255,255,255,.08); color:#8b8f96; }
+        /* [v4.99.7 · R11-X7] 被范式隐藏的区块（可展开实名清单）。 */
+        .nc-hub-warn { color:#f2b544; }
+        .nc-hid { margin:0 16px 10px; padding:8px 10px; border-radius:12px; background:rgba(255,255,255,.05); border:1px dashed rgba(255,255,255,.14); }
+        .nc-hid-head { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11.5px; color:#9aa0a6; }
+        .nc-hid-title { color:#c9ccd1; font-weight:600; }
+        .nc-hid-sub { flex:1 1 100%; color:#8b8f96; font-size:11px; line-height:1.45; }
+        .nc-hid-toggle { margin-left:auto; }
+        .nc-hid-body { margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,.08); opacity:.82; }
+        .nc-hid-body .nc-item { background:rgba(255,255,255,.03); }
         </style>`;
     }
 

@@ -1,0 +1,830 @@
+{
+  "note": "",
+  "generated_at": "2026-10-30T14:17:43.125Z",
+  "generated_version_hint": "auto",
+  "rule": "绑定级零消费冻结账本：新增项必须显式登记理由；条目被真接线后应清理。口径见 scripts/bind-consumption-audit.mjs 头注释。",
+  "entries": [
+    {
+      "file": "apps/annidate/annidate-data.js",
+      "name": "trimRows",
+      "line": 12,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/cardtable/cardtable-app.js",
+        "apps/cardtable/cardtable-data.js",
+        "apps/diagdesk/diagdesk-app.js",
+        "apps/diagdesk/diagdesk-data.js"
+      ]
+    },
+    {
+      "file": "apps/cardtable/cardtable-data.js",
+      "name": "isPlain",
+      "line": 13,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/annidate/annidate-app.js",
+        "apps/annidate/annidate-data.js",
+        "apps/diagdesk/diagdesk-app.js",
+        "apps/diagdesk/diagdesk-data.js"
+      ]
+    },
+    {
+      "file": "apps/games/poker/poker-data.js",
+      "name": "HAND_LABELS",
+      "line": 1035,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/games-data.js"
+      ]
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "SPECIAL_STAGES",
+      "line": 14,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "HUMAN_PREGNANCY_DAYS",
+      "line": 50,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/bio-engine.js",
+      "name": "isPregnancyish",
+      "line": 254,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/bio-races.js",
+      "name": "getDerivedTypeInheritanceProfile",
+      "line": 1295,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-propagation.js"
+      ]
+    },
+    {
+      "file": "apps/health/bio-races.js",
+      "name": "deriveFetusRace",
+      "line": 1631,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-propagation.js"
+      ]
+    },
+    {
+      "file": "apps/health/bio-races.js",
+      "name": "getFetusInheritanceTag",
+      "line": 1647,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-propagation.js",
+        "apps/health/health-view.js"
+      ]
+    },
+    {
+      "file": "apps/health/bio-races.js",
+      "name": "getSpermDoseDifficultyBonus",
+      "line": 1707,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-propagation.js",
+        "apps/health/health-view.js"
+      ]
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "ACUTE_TO_CHRONIC_P",
+      "line": 26,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "clampIntDefault",
+      "line": 99,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "cnStatus",
+      "line": 108,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/health/medical-core.js",
+      "name": "severityGrade",
+      "line": 110,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/periodmath/periodmath-data.js",
+      "name": "trimRows",
+      "line": 17,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/annidate/annidate-data.js",
+        "apps/cardtable/cardtable-app.js",
+        "apps/cardtable/cardtable-data.js",
+        "apps/diagdesk/diagdesk-app.js"
+      ]
+    },
+    {
+      "file": "apps/phone/first-chunk-barrier.js",
+      "name": "createFirstChunkBarrier",
+      "line": 4,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/punchcard/punchcard-data.js",
+      "name": "toggleItem",
+      "line": 161,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/punchcard/punchcard-app.js",
+        "apps/punchcard/punchcard-view.js"
+      ]
+    },
+    {
+      "file": "apps/settings/image-cropper.js",
+      "name": "cropImage",
+      "line": 466,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "apps/shop/shop-data.js",
+      "name": "categoryLabel",
+      "line": 128,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/medical-core.js"
+      ]
+    },
+    {
+      "file": "apps/uterus/uterus-data.js",
+      "name": "MENSTRUAL_STAGES",
+      "line": 18,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-engine.js",
+        "apps/health/bio-propagation.js",
+        "apps/health/health-data.js"
+      ]
+    },
+    {
+      "file": "apps/uterus/uterus-data.js",
+      "name": "PREGNANCY_STAGES",
+      "line": 19,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-engine.js"
+      ]
+    },
+    {
+      "file": "apps/uterus/uterus-data.js",
+      "name": "MENSTRUAL_STAGE_DAYS",
+      "line": 21,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-engine.js",
+        "apps/health/bio-propagation.js"
+      ]
+    },
+    {
+      "file": "apps/uterus/uterus-data.js",
+      "name": "LABOR_STAGE_BASE_HOURS",
+      "line": 30,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-engine.js"
+      ]
+    },
+    {
+      "file": "apps/uterus/uterus-data.js",
+      "name": "LABOR_STAGE_INCREMENT",
+      "line": 31,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/health/bio-engine.js"
+      ]
+    },
+    {
+      "file": "apps/wechat/group-scheduler.js",
+      "name": "scheduleDeliberationSpeakers",
+      "line": 167,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "assets/vendor/fzstd.js",
+      "name": "ZstdErrorCode",
+      "line": 38,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/character-dossier.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "CC_VERSION",
+      "line": 4,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "PROJECT_PHASES",
+      "line": 5,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "createProject",
+      "line": 32,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "reassignDivision",
+      "line": 58,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "handoverLeadership",
+      "line": 93,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/club-coop.js",
+      "name": "auditProjectClosure",
+      "line": 126,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/co-built-world.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/completion-claim-gate.js",
+      "name": "CLAIM_DOMAINS",
+      "line": 5,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/completion-claim-gate.js",
+      "name": "SAFE_STATUS_LINE",
+      "line": 15,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/completion-claim-gate.js",
+      "name": "GATE_REASONS",
+      "line": 27,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/creator-bundle-ecosystem.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "DT_VERSION",
+      "line": 4,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "buildDaySchedule",
+      "line": 33,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "injectInterruption",
+      "line": 62,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "buildResponseChain",
+      "line": 94,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/daily-theater.js",
+      "name": "deriveDayRhythm",
+      "line": 115,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/diff-editor-desk.js",
+      "name": "STORAGE_KEY",
+      "line": 9,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/diff-editor-desk.js",
+      "name": "computeParagraphDiff",
+      "line": 34,
+      "evidence": "name-clash",
+      "refs": [
+        "config/diff-review-pipeline.js"
+      ]
+    },
+    {
+      "file": "config/diff-review-pipeline.js",
+      "name": "computeParagraphDiff",
+      "line": 10,
+      "evidence": "name-clash",
+      "refs": [
+        "config/diff-editor-desk.js"
+      ]
+    },
+    {
+      "file": "config/floor-store.js",
+      "name": "isFloorStoreLive",
+      "line": 216,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/group-deliberation.js",
+      "name": "GD_STORAGE_KEY",
+      "line": 31,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/inventory-backpack.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/joint-media-studio.js",
+      "name": "STORAGE_KEY",
+      "line": 22,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/life-events.js",
+      "name": "isHighValueChatLifeEventInput",
+      "line": 32,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/life-program-replay.js",
+      "name": "STORAGE_KEY",
+      "line": 8,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/mentorship-colearn.js",
+      "name": "submitPractice",
+      "line": 43,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/mentorship-colearn.js",
+      "name": "chooseDirection",
+      "line": 72,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "MAR_STORAGE_KEY",
+      "line": 19,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "reportParticipantDelay",
+      "line": 106,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "markParticipantArrived",
+      "line": 119,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "reportParticipantWithdraw",
+      "line": 131,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "startSegment",
+      "line": 151,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "completeSegment",
+      "line": 163,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "proposeActivityReroute",
+      "line": 188,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "confirmActivityReroute",
+      "line": 206,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "applyActivityReroute",
+      "line": 221,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multi-activity-reroute.js",
+      "name": "settleActivity",
+      "line": 254,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/multiproject-resume-anchor.js",
+      "name": "resolveAnchorLocation",
+      "line": 23,
+      "evidence": "name-clash",
+      "refs": [
+        "config/resume-anchor.js"
+      ]
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "createMystery",
+      "line": 6,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "createProgress",
+      "line": 53,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "submitHypothesis",
+      "line": 65,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "queryWitness",
+      "line": 118,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/mystery-engine.js",
+      "name": "getDiscoveredClues",
+      "line": 148,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "createParallelLife",
+      "line": 6,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "forkRoute",
+      "line": 22,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "switchRoute",
+      "line": 51,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/parallel-life.js",
+      "name": "harvestAndDiscard",
+      "line": 73,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
+      "name": "recentStoryContext",
+      "line": 50,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
+      "name": "phoneReplySystemPrompt",
+      "line": 66,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/phone-chat-memory.js",
+      "name": "buildReplyPrompt",
+      "line": 71,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/phone-emoji.js",
+      "name": "getPhoneInlineEmojis",
+      "line": 13,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/points-engine.js",
+      "name": "TASK_TYPES",
+      "line": 5,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/points-engine.js",
+      "name": "DIFFICULTIES",
+      "line": 6,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/qianshi-schedule.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "createRevisitSession",
+      "line": 6,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "quoteOldMessages",
+      "line": 38,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "addRevisitExchange",
+      "line": 58,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/relation-revisit.js",
+      "name": "closeRevisit",
+      "line": 83,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/resume-anchor.js",
+      "name": "resolveAnchorLocation",
+      "line": 117,
+      "evidence": "name-clash",
+      "refs": [
+        "config/multiproject-resume-anchor.js"
+      ]
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "childRuntimeCount",
+      "line": 323,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "rebindGlobal",
+      "line": 454,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/runtime-lifecycle.js",
+      "name": "resetOnceFlags",
+      "line": 466,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "createSerial",
+      "line": 8,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "createReaderProgress",
+      "line": 31,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "advanceChapter",
+      "line": 46,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/serial-narrative.js",
+      "name": "applyAuthorRevision",
+      "line": 66,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "SE_VERSION",
+      "line": 4,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "normalizeCircleLayer",
+      "line": 23,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "deriveCircleDiscussion",
+      "line": 34,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "gateClarificationScope",
+      "line": 64,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/social-ecosystem.js",
+      "name": "isolatePrivateFromPublic",
+      "line": 86,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "REENTRY_VERSION",
+      "line": 5,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "REENTRY_STEP_KINDS",
+      "line": 6,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "buildReentryPath",
+      "line": 25,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "deriveCatchupChoices",
+      "line": 96,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "buildReentryBrief",
+      "line": 110,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/story-reentry.js",
+      "name": "gateReentry",
+      "line": 122,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/tag-filter.js",
+      "name": "hasGaigaiTagFilter",
+      "line": 30,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/touch-readability-baseline.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/user-work-package.js",
+      "name": "STORAGE_KEY",
+      "line": 11,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "createNarrative",
+      "line": 9,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "playbackStep",
+      "line": 36,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "replaceCue",
+      "line": 93,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/voice-narrative.js",
+      "name": "textPreview",
+      "line": 112,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "config/volume-chronicle.js",
+      "name": "STORAGE_KEY",
+      "line": 3,
+      "evidence": "name-clash",
+      "refs": [
+        "apps/games/board/board-data.js",
+        "apps/games/catbox/catbox-data.js",
+        "apps/games/game2048/game2048-data.js",
+        "apps/games/guesswhat/guesswhat-data.js"
+      ]
+    },
+    {
+      "file": "phone/pixel-engine.js",
+      "name": "lintPixelSvg",
+      "line": 23,
+      "evidence": "no-ref"
+    },
+    {
+      "file": "workers/nai-queue-worker.js",
+      "name": "NaiQueueDO",
+      "line": 40,
+      "evidence": "no-ref"
+    }
+  ]
+}
