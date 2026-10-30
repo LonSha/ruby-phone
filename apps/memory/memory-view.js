@@ -40,6 +40,15 @@ export class MemoryView {
     /* [v4.46.0 · R5-X6] 改设定那一屏的回话（**本会话**现场：只回看操作结果，不持数据）。
      *   与 `_itemNote` 同规：控制器给措辞，本层只显示。 */
     this._srNote = '';
+    /* [v4.99.9 · R11-X9] 幕次页的**现场态**（只活在这一屏：换页即丢，不落盘）。
+     *   ★ 这三项都不是读数：读数每次都从盘上现取（`app.replayLedger()`），
+     *     现场只记「用户点到哪一段 / 哪一幕 / 哪个视角」。 */
+    this._rpPick = '';
+    this._rpAct = 0;
+    /* ★ 视角初值是**空串**，不是某个视角名：判据（E 段）要求视图里不出现三个视角字面量。
+     *   空白由 `app.replayViewerOptions()[0]` 归一（见 `_replayViewerHtml`），
+     *   视图因此一个视角名都不写 —— 与 chars 侧「视图不 import 桥」同一条纪律。 */
+    this._rpViewer = '';
   }
 
   /** 合法分页清单（顺序即界面顺序） */
@@ -49,7 +58,11 @@ export class MemoryView {
     { id: 'scene', label: '场景', icon: 'fa-location-dot' },
     { id: 'ask', label: '问往事', icon: 'fa-comment-dots' },
     { id: 'audit', label: '体检', icon: 'fa-stethoscope' },
-    { id: 'coverage', label: '覆盖度', icon: 'fa-layer-group' }
+    { id: 'coverage', label: '覆盖度', icon: 'fa-layer-group' },
+    /* [v4.99.9 · R11-X9] 幕次页：按「幕」回看一段时间里发生过的程序，可切三视角。
+     *   数据只读已落盘台账（`lpr_program_replay_v1`），**不按设定现生成**
+     *   —— 生成出来的「回看」与存档对不上，等于另写一份历史。 */
+    { id: 'replay', label: '幕次', icon: 'fa-clock-rotate-left' }
   ]);
   render(container) {
     this.container = container;
@@ -294,6 +307,105 @@ export class MemoryView {
       parts.push('<div class="mem-none">还没有可统计的 AI 楼层<br><span class="mem-hint">番外楼与空楼不计入覆盖度</span></div>');
     }
     return parts.join('\n');
+  }
+
+  /* ================= [v4.99.9 · R11-X9] 幕次页 ================= */
+  /**
+   * 「幕次」页：按「幕」回看一段时间里发生过的程序，可切三视角（本人 / 对方 / 旁观）。
+   *
+   * 【只读已落盘记录】计划原文硬约束：「不许回看时重新生成内容（会与存档不一致）；
+   *   必须是读取已落盘记录」。故本页**一句都不生成**，全部取数来自
+   *   `app.replayLedger()` → `config/replay-face-bridge.js` → 内核 `lpr_program_replay_v1`。
+   *
+   * 【三态文案不在这里写】读不到 / 内容坏了 / 还没录过 / 有 N 段，桥给 label，本页只画。
+   *
+   * 【视角兜底必须说出来】内核 `getActPerspective` 在「该角色没有主观回忆」时
+   *   **永远**回落成「以旁观者的视角注视着<幕名>」；桥给 `isFallback` 让本页明写
+   *   「这是一句兜底叙述」。不写就等于替角色编了一段他没说过的内心。
+   */
+  _replayHtml() {
+    const ledger = this.app.replayLedger();
+     /* 「有没有节目」看条数，不看 state 字符串（视图不另记一份状态表）；
+      *   读不到 / 坏了 / 没录过 这三种「没有」各自有桥写好的 label。 */
+     if (!ledger || !(ledger.count > 0)) {
+      return '<div class="mem-none">' + this._esc((ledger && ledger.label) || '回看台账读不到') +
+        '<br><span class="mem-hint">这里只显示已落盘的回看记录，不会按设定现编一段</span></div>';
+    }
+    /* 选中项归一：台账换了（增删节目）之后旧选择可能已不存在 —— 界面不许指着不存在的东西。 */
+    if (!this._rpPick || !ledger.rows.some((r) => r.id === this._rpPick)) {
+      this._rpPick = ledger.rows[0].id;
+      this._rpAct = 0;
+    }
+    const summary = this.app.replaySummary(this._rpPick);
+    const acts = this.app.replayActs(this._rpPick);
+    const actIndex = this._effectiveActIndex(acts);
+    const parts = [];
+    parts.push('<div class="mem-section"><div class="mem-section-title"><i class="fa-solid fa-clapperboard"></i> 回看节目（' +
+      this._esc(ledger.label) + '）</div>' +
+      '<div class="mem-rp-progs">' +
+      ledger.rows.map((row) => '<button class="mem-rp-prog' + (row.id === this._rpPick ? ' on' : '') +
+        '" data-rp-prog="' + this._esc(row.id) + '">' +
+        '<span class="mem-rp-prog-title">' + this._esc(row.title) + '</span>' +
+        '<span class="mem-rp-prog-meta">' + this._esc(row.occasion) + ' · ' + row.actCount + ' 幕</span>' +
+        '</button>').join('') +
+      '</div></div>');
+
+    parts.push('<div class="mem-section"><div class="mem-section-title"><i class="fa-solid fa-list-ol"></i> 幕次</div>' +
+      '<div class="mem-hint">' + this._esc(summary.label) + '</div>');
+    if (acts.state === 'ok') {
+      parts.push('<div class="mem-rp-acts">' + acts.rows.map((act) =>
+        '<button class="mem-rp-act' + (act.actIndex === actIndex ? ' on' : '') + '" data-rp-act="' + act.actIndex + '">' +
+        '<span class="mem-rp-act-idx">第 ' + act.actIndex + ' 幕</span>' +
+        '<span class="mem-rp-act-title">' + this._esc(act.title) + '</span>' +
+        '<span class="mem-rp-act-meta">' + this._esc((act.location ? act.location + ' · ' : '') + act.line) + '</span>' +
+        '</button>').join('') + '</div>');
+    } else {
+      parts.push('<div class="mem-none" style="padding:10px">' + this._esc(acts.label) + '</div>');
+    }
+    parts.push('</div>');
+
+    if (acts.state === 'ok' && actIndex) {
+      parts.push(this._replayViewerHtml(actIndex));
+    }
+    return parts.join('\n');
+  }
+
+  /** 当前生效的幕号：现场态优先，否则第一幕，再否则 0（= 没有幕）。 */
+  _effectiveActIndex(acts) {
+    const rows = (acts && Array.isArray(acts.rows)) ? acts.rows : [];
+    if (!rows.length) return 0;
+    if (rows.some((r) => r.actIndex === this._rpAct)) return this._rpAct;
+    return rows[0].actIndex;
+  }
+
+  /** 三视角区：切换条 + 当前视角正文（兜底句明写出来）。 */
+  _replayViewerHtml(actIndex) {
+    const opts = (typeof this.app.replayViewerOptions === 'function') ? this.app.replayViewerOptions() : [];
+    if (!opts.length) return '';
+    const known = opts.some((o) => o.kind === this._rpViewer);
+    const active = known ? this._rpViewer : opts[0].kind;
+    const views = this.app.replayPerspectives(this._rpPick, actIndex);
+    const cur = views.find((v) => v.kind === active) || views[0];
+    const bar = opts.map((o) => '<button class="mem-rp-viewer' + (o.kind === active ? ' on' : '') +
+      '" data-rp-viewer="' + this._esc(o.kind) + '">' + this._esc(o.label) + '</button>').join('');
+    if (!cur) {
+      return '<div class="mem-section"><div class="mem-section-title"><i class="fa-solid fa-eye"></i> 视角</div>' +
+        '<div class="mem-rp-vbar">' + bar + '</div>' +
+        '<div class="mem-none" style="padding:10px">这一格取不到</div></div>';
+    }
+    let body;
+    if (cur.ok) {
+      body = '<div class="mem-rp-view">' +
+        (cur.isFallback ? '<div class="mem-rp-fallback">这段没有该角色的主观回忆，下面是一句兜底叙述（不是记录）。</div>' : '') +
+        '<div class="mem-rp-text">' + this._esc(cur.view) + '</div>' +
+        '<div class="mem-rp-vmeta">' + this._esc(cur.actTitle + (cur.characterId ? ' · ' + cur.characterId : '')) + '</div>' +
+        '</div>';
+    } else {
+      body = '<div class="mem-none" style="padding:10px">' + this._esc(cur.label) + '：这一格取不到（' +
+        this._esc(cur.why) + '）</div>';
+    }
+    return '<div class="mem-section"><div class="mem-section-title"><i class="fa-solid fa-eye"></i> 视角</div>' +
+      '<div class="mem-rp-vbar">' + bar + '</div>' + body + '</div>';
   }
 
   /* ================= 问往事页（R3-X2） ================= */
@@ -1103,6 +1215,8 @@ export class MemoryView {
     else if (this._tab === 'ask') body = this._askHtml(pkg);
     else if (this._tab === 'audit') body = this._auditHtml(pkg);
     else if (this._tab === 'coverage') body = this._coverageHtml(pkg);
+    /* [v4.99.9 · R11-X9] 幕次页：取数走 `app.replay*()`（唯一出口），本视图只排版。 */
+    else if (this._tab === 'replay') body = this._replayHtml();
     else body = this._overviewHtml(pkg);
 
     const core = pkg.data;
@@ -1277,6 +1391,33 @@ export class MemoryView {
         const cand = e.target.closest('.mem-fu-cand');
         if (cand && this.container.contains(cand)) {
           this._pickAskCandidate(cand.getAttribute('data-name') || '');
+          return;
+        }
+        /* [v4.99.9 · R11-X9] 幕次页三处点选（容器级委托，幂等同上）：
+         *   选节目 / 选幕 / 切视角 —— 全是**现场态**，一个字节都不落盘。 */
+        const rpProg = e.target.closest('.mem-rp-prog');
+        if (rpProg && this.container.contains(rpProg)) {
+          const id = rpProg.getAttribute('data-rp-prog') || '';
+          if (id && id !== this._rpPick) {
+            this._rpPick = id;
+            this._rpAct = 0;
+            this._draw();
+          }
+          return;
+        }
+        const rpAct = e.target.closest('.mem-rp-act');
+        if (rpAct && this.container.contains(rpAct)) {
+          const n = Number.parseInt(rpAct.getAttribute('data-rp-act') || '', 10);
+          this._rpAct = Number.isFinite(n) ? n : 0;
+          this._draw();
+          return;
+        }
+        const rpViewer = e.target.closest('.mem-rp-viewer');
+        if (rpViewer && this.container.contains(rpViewer)) {
+          /* ★ 退回用空串而不是某个视角名：视图不写视角字面量，未选时由上面的
+           *   `known ? ... : opts[0].kind` 归一（`rpViewer` 只在点上出过值才进这里）。 */
+          this._rpViewer = rpViewer.getAttribute('data-rp-viewer') || '';
+          this._draw();
           return;
         }
       });

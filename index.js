@@ -320,7 +320,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.99.8';
+const ST_PHONE_VERSION = '4.99.9';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -530,24 +530,21 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-10-30",
     items: [
-        "【版本升至 4.99.8（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4998.py 对齐 tools/bump_v4997.py，只换 STEPS 与头注，逻辑一字未改）。",
-        "【R11-X4 做了什么】`config/sharing-boundary.js`（三级范围 / 五态授权 / 收件人视角 / 撤回）、`config/portable-recovery-hub.js`（备份包体检）、`config/offline-creator-bundle-pipeline.js`（创作者包选择性导入计划）三件内核从建起那天就被 tests 逐条消费，但**产品端零 import**。本版把它们接进备份台：起草分享 → 按收件人看他会看到什么 → 记一次已读 → 撤回（并如实留痕），以及导入前先看包体认不认、创作者包会装哪几类。",
-        "【为什么先加一层翻译，而不是 App 直接拼】三件内核的返回体形状各不相同（授权判 status，体检给 ok 与两个计数，包计划给 success 与两组数组）。视图若各写一遍取值，就是同一口径三份实现；改内核时三处都要找一遍。故新增 `config/share-migrate-bridge.js`：内核判、桥翻形状、视图只消费 label。",
-        "【五态必须五句话】authorized / masked_partial / unauthorized / expired / revoked 逐条给中文文案，且**只有前两态算能看**。把遮蔽态与原文态压成一句，等于骗用户「他看到的和你一样」——这是本面最贵的一种错，因为发送方会照着这句话决定发不发。",
-        "【不可读就是不给内容】无权 / 过期 / 撤回三态一律 content 为空串，**哪怕内核把内容带了出来**。判据 G2 用真源码破坏钉死：若把不可读分支改成用草案原文兜底（一种很像好意的写法），同款判据必须转红。",
-        "【撤回不抹记忆】内核的契约是「撤回未来访问，不伪造记忆抹除」，故撤回后已读账原样保留，界面必须说出「撤回前已读 N 人，这段痕迹不会被抹掉」。判据 G3 钉死：抹掉这句即转红。",
-        "【四态不同形（本版自己抓到的一处真缺陷）】备份包体检原先只有「没包 / 不认 / 认出来」三态，而 App 层 catch 到内核抛错后把读数置空 —— 界面于是把「体检这一步自己坏了」念成「还没有包体可体检」，也就是把我们的代码炸了演成「你没选包」。本版把抛错单立成 threw 一态（catch 时按 `inspect_threw:` 前缀转给桥），四态四句话。",
-        "【安全阻断不许降级成警告】创作者包计划里 errors 是安全阻断（包里带可执行脚本），warnings 是缺依赖提示（能装但缺东西）。两者都不为空，若用「不为空就挡住」或「不为空就警告」一刀切，就会把带脚本的包念成一句普通提示。故 blocked 只跟 errors 走，判据 G5 钉死。",
-        "【体检只跑一遍（本版自己纠正的一处设计）】桥最初带一个 `payloadInspectOf` 便捷口，自己调内核 —— 而调用点（备份台）本来就持有同一份 import，等于一次点击跑两遍内核；且那个便捷口在产品端没人用，死导出检查当场红（693 文件面新增一条零消费导出）。改为桥只留翻形状的一支（`payloadInspectFrom`），App 侧调一次内核、抛错也按形状转过去。这不是门禁逼出来的妥协：同一件事跑两遍本身就是缺陷。",
-        "【写不下去就不许选中】起草分享要走落盘回执；写盘失败时若仍把选中项指向这份草案，下一次读盘就找不到它，界面会显示「选了一份不存在的草案」。判据 F2 与负控制 G6 双向钉死。",
-        "【读不到 ≠ 没分享过】分享台账读不出（无存储 / 读抛错 / 坏 JSON）与空台账分两句：前者说「读不到」，后者才说「这个会话还没起草过分享」；且读不到时**不许**在它上面盲写。",
-        "【视图不写第二套判据】视图里不许出现五个授权态字面量，也不许自己判包体检 / 创作者包的状态，只消费桥给的 label 与 blocked。「预览」**刻意不做成按钮**——选人即算，做成按钮会让人以为「点了才算过一遍」。",
-        "【键随会话隔离】新增 `share_drafts_v1`（三处同源：App 常量 / config/storage.js 的 share_ 前缀 / scripts/keys-audit.mjs 登记）。落全局会让另一个角色看到「你分享给了谁、谁读过」，那是串味里最难看的一种。",
-        "【判据 27 条全绿】tests/system-v4998.test.mjs：A1-A4 五态五句话 / 坏值如实念 / 不可读不给内容 / 内核抛错另立一态；B1-B3 撤回留痕 / 读不到不许念成没分享过 / 不改入参；C1-C3 体检四形不同 / 真内核读数能翻 / 桥不持有体检内核；D1 安全阻断与缺依赖提示不同形；E1-E4 产品端真 import / 视图无第二套字面量 / 键三处同源 / 桥是纯函数层；F1-F6 起草到撤回全链 / 写不下去不选中 / 读不到与空台账分两句 / 视图真渲染 / 换会话丢实例态 / 体检四态上到界面；G1-G6 六条负控制全部双向断言（原版上真、破坏副本上假）。",
-        "【交棒改写（下限形）】本版收尾时改写/收窄了三处旧口径，逐条记录，不静默通过：① 三张取证基线按真值刷新 —— branch_play 与 schedule_conflict 的 files_scanned 624→625、long_chat 的 scan.files 625→626 与 criteria 的 L5 格 got_text 同步，顺带修掉一条**跨版未刷**的遗留：branch_play 的 chat_data_patterns 402→405（本版 config/storage.js 新增 share_ 会话前缀与两行说明注释，探针口径把段内注释行也计入，与既有「行首注释也算一条」一致）；刷新由 tools/refresh_baselines_v4998.py 完成（零手抄、幂等、冻结 measured_at）。② 弱档模块账本 82→80：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 真接进产品面后按 --update 摘除，并在账本 note 里写明是人工摘除而非漂移。③ 抬版脚本的 parse_items 白名单**收回**到与历史判据一致：v4996/v4997 曾把「不做：」加进交棒锚的白名单，于是脚本放行、而 v3171/v3201/v3213 的形态锚转红 —— 脚本口径宽于判据口径，是同一件事的两份实现，本版把它收窄。这三条都是「下限形」：放宽的是脚本与基线读数，收紧的是判据锚，方向都是少给自己留后门。",
-        "【不做：三件明确不做的事】不改三件内核的判据本体（它们是纯函数、有既有测试、改了会动中枢既有口径）；不给备份包体检加「导入影响范围 diff」（那是 v4.96.0 恢复快照面已交付的能力，本版不重复造）；不让分享面走宿主咽喉（它读写的是本 App 自己的会话键，与包面动作的失败回执来源不同，故三族 data 属性刻意不同名）。",
-        "【运行时验证边界（v4.99.8 复校）】本版全部验证在无头环境完成（真 class + 真纯函数 + 真源码破坏，未装载 DOM 也不跑 CSS），未在浏览器里跑过：收件人视角的实际观感、撤回后对方入口是否真的消失、长列表滚动性能均未实测；本版判据能证明的是：五态文案两两不同、不可读时一个字节都不透、撤回留痕不被抹掉、体检四态不同形、安全阻断不降级、写不下去不选中、读不到不许念成没分享过、六条负控制破坏后同款判据真转红。它不能保证的是：真机上收件人视角的观感、撤回后对方入口的真实消失与长列表滚动性能。这类「看起来没坏但显示不对」属真机复现那一类，详见 docs/runtime-verification-boundary.md。全量门禁走 npm test；本项验收另跑 node --test tests/system-v4998.test.mjs。",
-        "【五道门同步】syntax 1097 文件 / import-resolve 640 文件 1079 条 / dead-export 693 文件 4738 export（内部消费 3315 · 跨文件消费 1342 · 零消费 81）· 冻结基线 81 条 / keys-audit 506 键全登记（会话隔离 312 · 全局 191 · 历史键 3）/ registry 89 App · 89 懒加载分支 · 样式投递 79 件未覆盖 0 —— 全绿。"
+        "【版本升至 4.99.9（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4999.py 对齐 tools/bump_v4998.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R11-X9 做了什么】`config/life-program-replay.js`（多幕结构与同一段经历的多角色视角）、`config/replayable-phone-program.js`（节目单与当时谁能看到什么）、`config/smart-gallery-vault.js`（相册保险箱）三件内核从建起那天就被 tests 逐条消费，但产品端零 import。本版把它们接进相册的「回看」页与记忆的「幕次」页：按幕回看一段时间里发生过什么、可切本人对方旁观三视角、影像按密级分公开流与保险箱。",
+        "【为什么先加一层翻译】三件内核的返回体形状各不相同：`getActPerspective` 永远返回一个 view（没有该角色回忆时回落成「以旁观者的视角注视着某幕」）、`playbackProgramSummary` 不可用时只给一句无可用节目录连标题都没有、`replayProgramStepByPerspective` 的看不到细节与这一步不存在是两种失败。故新增 `config/replay-face-bridge.js`（15 个导出）：内核判、桥翻形状、视图只消费 label 与布尔。",
+        "【兜底句必须标出来】内核在没有该角色主观回忆时给的回落句是**兜底叙述，不是记录**。桥据此给 `isFallback`，album 与 memory 两侧都必须明写「这段没有该角色的主观回忆，下面是一句兜底叙述」。不标就等于替角色编了一段他没说过的内心。判据 G2 用真源码破坏钉死（把 `isFallback: !hasNote` 改成常 false 即转红）。",
+        "【锁着就是拿不到画面】这是本层对保险箱的唯一承诺：锁着时 `vaultRows` 一条 url 都不给，只给项数摘要。内核 `vaultPhotos` 锁着时**仍然带 url**，谁直接读谁就绕过锁。判据 D2 断言私密路径连字符串都不许出现在给视图的那一份里；负控制 G1 把 `unlocked ? _photoRow : _lockedRow` 改成恒 `_photoRow` 即转红。",
+        "【三处两件不同的事必须不同形】台账：读不到 ≠ 内容坏了 ≠ 还没录过 ≠ 录了 N 段；幕次：没有节目 ≠ 没有幕次字段 ≠ 零幕 ≠ 有 N 幕；对白重建：没这个节目 ≠ 没这一幕 ≠ 这一幕没对白 ≠ 有 N 句。压平任意两态，处置相反的处境就长得一样了（该报 bug 与被念成「你还什么都没录」）。",
+        "【「谁能看到什么」与「主观回忆」是两件事】`actStepsOf` 把这一幕**已录对白**重建成节目单（说话人=行动者、正文=当时可见材料、`isPrivate` 取录制时写入的标记），答的是「有几句是我当时能听清的」；`perspectiveOf` 答的是「他有回忆吗」。压成一块就会把「没回忆」读成「没说过话」。",
+        "【台账此前没有人写（本版自己抓到的最大一处功能级失效）】回看页读的是 `lpr_program_replay_v1`，但全仓除测试夹具外**没有任何写入入口**——也就是说判据全绿、用户永远看到「还没录过」。本版补上唯一写入口 `AlbumData.archiveChat()`：从宿主 `SillyTavern.getContext()`（本仓 82 处在用的通用口）取已落盘对话，用 `programSpecFromChat` 切成幕（perAct 条一幕），交给中枢的 `replayLifeExperience` 录制后写盘。**归档只截取原文，`perspectives` 与 `location` 恒空**——聊天记录里没有「谁当时怎么想」这一层，顺手拿台词当内心就是把说过的话演成回忆。",
+        "【假驱动修正：replayLifeExperience】该方法修前四处全传错参（`recordLifeProgram({id,title})` 状态被当成节目、`getActPerspective(programId,perspective)`、`playbackProgramSummary(programId)`、`createReplayableProgram({id})`），净效果是**每次调用都成功返回、每一项都是空的**——本仓最贵的「不报错、只错结果」形态。本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，并由归档**真调用**；中枢抛错时回落内核直调（回落用的是同一个内核，不另写一份录制逻辑）。",
+        "【本版实测抓到的缺陷（都不是推演）】① `AlbumData.programPerspectives` 里少写 `this.` ⇒ 三格取数抛 ReferenceError，而节目列表与幕次列表照常显示（界面看着有内容、只少一格），负控制 G4 钉死；② `MemoryView` 的视角现场态初值写成 `'self'` 字面量 ⇒ 视图在写第二套判据，判据 E2 当场逼出；③ album 视图原先 import 桥取文案 ⇒ 与记忆侧「视图不 import 桥」纪律不一致，改为经 `AlbumData.viewerOptions()` / `secrecyChoices()` 转出。",
+        "【视图不写第二套判据】两个视图里不许出现 self / other / bystander 三个字面量，不许拿 `vault.state` / `ledger.state` 做字符串比对（只消费桥给的 `readable` / `locked` / `count`），不许直读内核内部字段（`vaultPhotos` / `isUnlocked` / `subjectiveView` / `narrativeSnippet`）。",
+        "【键随会话隔离】台账键三处同源：内核 `STORAGE_KEY` → 桥以 `STORAGE_KEY as REPLAY_LEDGER_KEY` 转出（**桥里不写 `lpr_program_replay_v1` 字面量**）→ `config/storage.js` 的 `/^lpr_/` 会话前缀 → `scripts/keys-audit.mjs` 的 `scope: 'chat'` 登记。",
+        "【判据 38 条全绿】tests/system-v4999.test.mjs：A1-A3 台账四态 / 行读数一处实现 / 读不到与空台账分两句；B1-B2 幕次四态 / N 人有回忆；C1-C5 兜底标记 / 旁观取公共叙述 / 坏视角如实念 / 对方 id 三级来源 / 文案唯一出处；D1-D4 保险箱四态 / 锁着零 url / 解锁才给 url / 密级文案；E1-E4 产品端真 import / 视图无第二套字面量 / 键四处同源 / 桥是纯函数层且不改入参；F1-F7 全链 / 三态分辨 / 入箱即消失 / 解锁不回主列表 / 保险箱坏不连坐 / 台账坏不白屏 / 总述不伪造标题；G1-G5 五条负控制双向断言；H1-H8 归档四态 / 真写盘回读 / 不覆盖旧记录 / 写不下去如实报失败 / 只截取不生成 / 入口真接线 / 真走中枢 / 中枢抛错回落。",
+        "【交棒改写（下限形）】本版收尾时的三处口径改动，逐条记录，不静默通过：① `tests/system-v257.test.mjs` 的 F4 页清单由六项改七项（新增幕次页）——该条锁的是**页清单**，幕次页自身行为判据在 v4999 档，不在那一档重复；② 三本冻结账本**人工逐条手删**（非 --update，避免整本重写把 generated_at 一起洗掉）：方法面摘 4 条（保险箱三条 + replayLifeExperience 一条）、模块入度面摘 3 条（三件内核已进产品面）、绑定面摘 1 条（`life-program-replay.js` 的 `STORAGE_KEY` 已真接线），各本 note 里写明摘除原因与摘除前门禁的实测点名；③ 文档当版实测数字由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄。",
+        "【未验证边界·运行时验证边界】回看页在真机登录态下的观感（DOM 渲染、锁着时 img 是否真不加载、锁着图块的 CSS 兜底）本轮未在浏览器里跑过，仍不能验——这是一类「看起来没坏但显示不对」的边界；`ALBUM_CSS_URL` 的 `r=20261030-album-replay` 只是防缓存串，无判据依赖。"
     ]
 };
 

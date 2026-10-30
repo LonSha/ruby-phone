@@ -91,6 +91,14 @@ import {
 /* [v4.13.0 · R4-O1] 出处靶心归一与定位手(纯函数)。本层只转交:chat 靶心调宿主
  *   `locateChatFloor`,memory 靶心交回视图派跨 App 事件(见该方法内注释)。 */
 import { normalizeSource, locateTarget } from '../../config/source-locator.js';
+/* [v4.99.9 · R11-X9] 幕次视图取数：**只读已落盘记录**（`lpr_program_replay_v1`）。
+ *   三态（读不到 / 还没录过 / 有 N 段）、视角兜底标记、保险箱四态全部由
+ *   `config/replay-face-bridge.js` 一处判；本层只回答「盘上读到什么」，与相册侧同规
+ *   （视图不 import 桥，判据只能有一处）。 */
+import {
+  replayStateOf, actRowsOf, perspectiveOf, programSummaryOf, viewerLabelOf,
+  REPLAY_LEDGER_KEY, REPLAY_VIEWERS, viewerKnown
+} from '../../config/replay-face-bridge.js';
 
 export class MemoryApp {
   constructor(phoneShell, storage) {
@@ -1721,6 +1729,88 @@ export class MemoryApp {
       return { state: 'unavailable', reason: 'thrown:' + String((e && e.message) || e), cov: coverageRows(null) };
     }
   }
+
+  /* ========== [v4.99.9 · R11-X9] 幕次视图取数（只读已落盘记录） ========== */
+  /**
+   * 回看台账（`lpr_program_replay_v1`）的分态读数。
+   *
+   * 【为什么原始串不在这里 parse】
+   *   「读不到 / 内容坏了 / 还没录过 / 有 N 段」四态的分辨只在 `replay-face-bridge.js`
+   *   一处做；本层多写一份 try-catch 就会有两套口径，改内核时两处都要找。
+   *   故本层只做两件事：取盘上原值、把原值整袋交给桥。
+   *
+   * 【为什么读失败不抛】
+   *   记忆主页在这里就要能打开；台账坏了只是「幕次」那一页显示读不到，
+   *   不能让整个记忆 App 白屏（与相册侧同一条规矩）。
+   *
+   * @returns {{state:string,label:string,rows:Array,count:number,readable:boolean,why:string,programs:object}}
+   */
+  replayLedger() {
+    let raw = null;
+    let readThrew = false;
+    let why = '';
+    try {
+      raw = this.storage?.get?.(REPLAY_LEDGER_KEY, null) ?? null;
+    } catch (e) {
+      readThrew = true;
+      why = String((e && e.message) || 'read_threw');
+    }
+    if (readThrew) {
+      return {
+        state: 'missing', label: '回看台账读不到（不是「还没录过」）',
+        rows: [], count: 0, readable: false, why, programs: {}
+      };
+    }
+    return replayStateOf(raw);
+  }
+
+  /** 按 id 取一个节目（台账里没有时返回 null，**不编一个空节目**）。 */
+  replayProgram(programId) {
+    const id = String(programId || '');
+    if (!id) return null;
+    const programs = this.replayLedger().programs || {};
+    return programs[id] || null;
+  }
+
+  /** 一个节目的幕次行（视图直接画 rows）。 */
+  replayActs(programId) {
+    return actRowsOf(this.replayProgram(programId));
+  }
+
+  /** 一个节目的总述（`playbackProgramSummary` 的形状翻译）。 */
+  replaySummary(programId) {
+    return programSummaryOf(this.replayProgram(programId));
+  }
+
+  /** 单幕某视角（self / other / bystander）。非法视角名交桥如实念，不回落成本人。 */
+  replayPerspective(programId, actIndex, kind, opts) {
+    const k = String(kind || '');
+    if (!viewerKnown(k)) return perspectiveOf(null, 0, k, opts);
+    return perspectiveOf(this.replayProgram(programId), actIndex, k, opts);
+  }
+  /** 三视角一次取齐（视图画切换条用）。 */
+  replayPerspectives(programId, actIndex, opts) {
+    const rows = [];
+    for (const kind of [REPLAY_VIEWERS.SELF, REPLAY_VIEWERS.OTHER, REPLAY_VIEWERS.BYSTANDER]) {
+      if (!viewerKnown(kind)) continue;
+      rows.push(this.replayPerspective(programId, actIndex, kind, opts));
+    }
+    return rows;
+  }
+
+  /**
+   * 三视角的**枚举与文案**（视图画格子的唯一出处）。
+   *   ★ 视图不 import 桥：视角名写死三份是「同一口径 N 份实现」的老病，
+   *     故连「本人/对方/旁观」这三个字也由本层转出（与 album 侧同一条纪律）。
+   * @returns {Array<{kind:string, label:string}>}
+   */
+  replayViewerOptions() {
+    return [REPLAY_VIEWERS.SELF, REPLAY_VIEWERS.OTHER, REPLAY_VIEWERS.BYSTANDER].map((kind) => ({
+      kind,
+      label: viewerLabelOf(kind)
+    }));
+  }
+
 
   /** 立即巩固（视图 🌙 按钮与体检建议共用同一入口，避免两处各写一遍） */
   sleepNow() {

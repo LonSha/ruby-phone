@@ -45,14 +45,15 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.99.8**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十八道静态门全过**；全量 `node --test tests/*.test.mjs` **354 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.99.8 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **275** 件、tests **354** 套件、scripts **28** 件；`index.js` **868676 字节 / 14111 行**；`phone.css` **705842 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 版本 | **v4.99.9**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十八道静态门全过**；全量 `node --test tests/*.test.mjs` **355 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.99.9 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **276** 件、tests **355** 套件、scripts **28** 件；`index.js` **867831 字节 / 14108 行**；`phone.css` **708497 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
 
 > 本表已于 **2026-10-09（v3.74.0）复算一次**（版本 / 门禁 / 体量三行按磁盘实读改写）。★ R-O9（v3.73.0）已把「版本 / 门禁 / 测试 / 浏览器层 / 素材 / 规模」六面收进**机器可读台账** `tests/audit/status-ledger.json`（生成器与判据**共用同一份取数函数**，漂移即红，抬版时跑 `node tools/gen_status_ledger.mjs --write`）。**本表仍没有判据看守** —— 台账量的是同一批事实，但本表这几行散文仍靠人记得复算；读数出处逐条写在最右列，复算时按列跑命令即可。
+> **[v4.99.9 · R11-O5 已纠正]** 上一句「本表仍没有判据看守」自 v4.98.0 起**已不成立**：`tests/system-v4980.test.mjs` 的 A1 会把本表三行与 `tools/gen_plan_baseline.mjs` 的机器读数逐项比对（版本 / apps / config / tests / scripts / index 行数 / css 字节），A3 另有负控制（篡改本表即转红）。本节读数由该工具取数，不手抄。
 
 ---
 

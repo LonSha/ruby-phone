@@ -1,5 +1,5 @@
 {
-  "note": "",
+  "note": " 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，条数 114 → 113）：`config/life-program-replay.js:8 STORAGE_KEY`（`evidence:\"name-clash\"`）此前是因为\"同名绑定在别处出现过、但本文件这一处零消费\"被记死的；X9 之后它被**真接线**：`config/replay-face-bridge.js` 以 `STORAGE_KEY as REPLAY_LEDGER_KEY` 转出，相册与记忆两侧的取数口都用这个常量去读盘（桥里刻意不写 `lpr_program_replay_v1` 字面量，两处写字面量就会有一处先漂）。摘除前实测：`bind-consumption-audit` 报「1 条基线项已复活（config/life-program-replay.js:8 STORAGE_KEY）」。",
   "generated_at": "2026-10-30T14:17:43.125Z",
   "generated_version_hint": "auto",
   "rule": "绑定级零消费冻结账本：新增项必须显式登记理由；条目被真接线后应清理。口径见 scripts/bind-consumption-audit.mjs 头注释。",
@@ -411,18 +411,6 @@
       "name": "isHighValueChatLifeEventInput",
       "line": 32,
       "evidence": "no-ref"
-    },
-    {
-      "file": "config/life-program-replay.js",
-      "name": "STORAGE_KEY",
-      "line": 8,
-      "evidence": "name-clash",
-      "refs": [
-        "apps/games/board/board-data.js",
-        "apps/games/catbox/catbox-data.js",
-        "apps/games/game2048/game2048-data.js",
-        "apps/games/guesswhat/guesswhat-data.js"
-      ]
     },
     {
       "file": "config/mentorship-colearn.js",

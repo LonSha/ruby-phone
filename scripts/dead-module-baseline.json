@@ -1,5 +1,5 @@
 {
-  "note": "模块入度面冻结账本（R11-O2）。判据：config/ 与 phone/ 顶层模块「新增落入 orchestrator-only 或 zero」即红；存量 79+15 冻结。 【v4.95.0 · R11-O3】config/usage-paradigm.js 已人工摘除：phone/home-screen.js 与 apps/usage/usage-app.js 真 import 它，升入 product 面（productImporters 不再是空数组）。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】已人工摘除（非 --update 的副作用）：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 已真接进 apps/backupdesk（分享五态授权 / 创作者包选择性导入计划，经 config/share-migrate-bridge.js 翻形状），两者从 orchestrator-only 升入 product 面，故弱档模块账本 82 → 80。同版还抓到一个真缺陷：`_shareVm` 里另写了一遍 `sharePreviewOf`，使 `previewShare` 退化成只有判据在调的死方法；`markShareRead`（记一次已读）更是产品面零调用 —— 于是「撤回前已读 N 人」这句留痕在界面上永远是 0 人。两处已接线（视图给出「记他读过了」入口）。",
+  "note": "模块入度面冻结账本（R11-O2）。判据：config/ 与 phone/ 顶层模块「新增落入 orchestrator-only 或 zero」即红；存量 79+15 冻结。 【v4.95.0 · R11-O3】config/usage-paradigm.js 已人工摘除：phone/home-screen.js 与 apps/usage/usage-app.js 真 import 它，升入 product 面（productImporters 不再是空数组）。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】已人工摘除（非 --update 的副作用）：config/sharing-boundary.js 与 config/offline-creator-bundle-pipeline.js 已真接进 apps/backupdesk（分享五态授权 / 创作者包选择性导入计划，经 config/share-migrate-bridge.js 翻形状），两者从 orchestrator-only 升入 product 面，故弱档模块账本 82 → 80。同版还抓到一个真缺陷：`_shareVm` 里另写了一遍 `sharePreviewOf`，使 `previewShare` 退化成只有判据在调的死方法；`markShareRead`（记一次已读）更是产品面零调用 —— 于是「撤回前已读 N 人」这句留痕在界面上永远是 0 人。两处已接线（视图给出「记他读过了」入口）。 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，条数 80 → 77）：`config/life-program-replay.js`、`config/replayable-phone-program.js`、`config/smart-gallery-vault.js` 三件此前只有中枢与 tests/ 引、产品面零 import；X9 把它们经 `config/replay-face-bridge.js` 接进「相册 · 回看」页与「记忆 · 幕次」页（台账四态 / 幕次四态 / 三视角 / 对白重建 / 保险箱四态），产品面 import 数已由 0 变非 0。摘除前实测：`method-consumption-audit` 报「3 件基线模块已进入产品面」并逐条点名。",
   "schema": "dead-module-baseline@1",
   "generated_at": "2026-10-30T15:20:17.221Z",
   "generated_version_hint": "auto",
@@ -334,15 +334,6 @@
       "productImporters": []
     },
     {
-      "rel": "config/life-program-replay.js",
-      "tier": "orchestrator-only",
-      "importers": [
-        "config/subsystem-orchestrator.js",
-        "tests/eighth-cycle-batch-c.test.mjs"
-      ],
-      "productImporters": []
-    },
-    {
       "rel": "config/lineage-living-assets.js",
       "tier": "orchestrator-only",
       "importers": [
@@ -517,15 +508,6 @@
       "productImporters": []
     },
     {
-      "rel": "config/replayable-phone-program.js",
-      "tier": "orchestrator-only",
-      "importers": [
-        "config/subsystem-orchestrator.js",
-        "tests/ninth-cycle-replayable-program.test.mjs"
-      ],
-      "productImporters": []
-    },
-    {
       "rel": "config/response-cadence.js",
       "tier": "orchestrator-only",
       "importers": [
@@ -582,15 +564,6 @@
       "importers": [
         "config/subsystem-orchestrator.js",
         "tests/system-v4996.test.mjs",
-        "tests/tenth-cycle-deep-optimizations.test.mjs"
-      ],
-      "productImporters": []
-    },
-    {
-      "rel": "config/smart-gallery-vault.js",
-      "tier": "orchestrator-only",
-      "importers": [
-        "config/subsystem-orchestrator.js",
         "tests/tenth-cycle-deep-optimizations.test.mjs"
       ],
       "productImporters": []

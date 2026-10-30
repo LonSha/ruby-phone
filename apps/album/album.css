@@ -777,6 +777,404 @@
     line-height: 1.1;
 }
 
+/* ══════════ [v4.99.9 · R11-X9] 回看页 ══════════
+ * 与相册主列表同一套底色与卡片语言（白卡 + 细边 + 8px 圆角），
+ * 只多「锁着的格子不许出画面」与「兑底叙述要能被看见」两处。 */
+
+#phone-panel-content .phone-screen .album-replay-entry {
+    height: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border: 1px solid #e2e5e8;
+    border-radius: 8px;
+    background: #fff;
+    color: #292c31;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .album-replay-entry i {
+    font-size: 11px;
+    color: #327ec5;
+}
+
+#phone-panel-content .phone-screen .album-replay-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 20px;
+}
+
+#phone-panel-content .phone-screen .album-replay-block {
+    padding: 10px 11px 11px;
+    border: 1px solid #e6e8eb;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    box-sizing: border-box;
+}
+
+#phone-panel-content .phone-screen .album-replay-block.is-unreadable {
+    border-color: #efa9a9;
+    background: rgba(255, 244, 244, 0.94);
+}
+
+#phone-panel-content .phone-screen .album-replay-block.is-locked {
+    border-color: #e6d7b4;
+}
+
+#phone-panel-content .phone-screen .album-replay-block-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #292c31;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+#phone-panel-content .phone-screen .album-replay-block-title i {
+    font-size: 11px;
+    color: #327ec5;
+}
+
+#phone-panel-content .phone-screen .album-replay-block.is-unreadable .album-replay-block-title i,
+#phone-panel-content .phone-screen .album-vault-block.is-locked .album-replay-block-title i {
+    color: #b3701f;
+}
+
+#phone-panel-content .phone-screen .album-replay-block-count {
+    margin-left: auto;
+    color: #8b9097;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+#phone-panel-content .phone-screen .album-replay-note {
+    margin-top: 7px;
+    color: #7c8288;
+    font-size: 10px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+#phone-panel-content .phone-screen .album-vault-secrecy-hint {
+    color: #a2a7ad;
+    font-size: 9px;
+}
+
+#phone-panel-content .phone-screen .album-replay-btn {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 12px;
+    border: 1px solid #d7dbe0;
+    border-radius: 7px;
+    background: #fff;
+    color: #327ec5;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* ---------- 节目列表 ---------- */
+
+#phone-panel-content .phone-screen .album-replay-program-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#phone-panel-content .phone-screen .album-replay-program {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 8px 10px;
+    border: 1px solid #e6e8eb;
+    border-radius: 8px;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .album-replay-program.is-active {
+    border-color: #327ec5;
+    background: #f2f7fd;
+}
+
+#phone-panel-content .phone-screen .album-replay-program-title {
+    max-width: 100%;
+    color: #292c31;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .album-replay-program-meta {
+    color: #8b9097;
+    font-size: 9px;
+    line-height: 1.3;
+}
+
+/* ---------- 幕次 ---------- */
+
+#phone-panel-content .phone-screen .album-replay-acts {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+#phone-panel-content .phone-screen .album-replay-act {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-column-gap: 7px;
+    align-items: baseline;
+    padding: 7px 9px;
+    border: 1px solid #e6e8eb;
+    border-radius: 8px;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .album-replay-act.is-active {
+    border-color: #327ec5;
+    background: #f2f7fd;
+}
+
+#phone-panel-content .phone-screen .album-replay-act-index {
+    grid-row: 1;
+    color: #327ec5;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .album-replay-act-title {
+    grid-row: 1;
+    color: #292c31;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .album-replay-act-meta {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    color: #8b9097;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+/* ---------- 三视角 ---------- */
+
+#phone-panel-content .phone-screen .album-replay-viewer-bar {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+#phone-panel-content .phone-screen .album-replay-viewer {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 28px;
+    padding: 0 6px;
+    border: 1px solid #e2e5e8;
+    border-radius: 7px;
+    background: #fff;
+    color: #4a4f55;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+#phone-panel-content .phone-screen .album-replay-viewer.is-active {
+    border-color: #327ec5;
+    background: #327ec5;
+    color: #fff;
+}
+
+#phone-panel-content .phone-screen .album-replay-viewer.is-unavailable {
+    color: #a8adb3;
+    border-style: dashed;
+}
+
+#phone-panel-content .phone-screen .album-replay-view {
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #f6f8fa;
+}
+
+#phone-panel-content .phone-screen .album-replay-view-text {
+    color: #33383e;
+    font-size: 11px;
+    line-height: 1.65;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+#phone-panel-content .phone-screen .album-replay-view-meta {
+    margin-top: 6px;
+    color: #9aa0a6;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+/* 兑底句必须看得见，否则就等于替角色编了一段他没说过的内心。 */
+#phone-panel-content .phone-screen .album-replay-fallback {
+    margin-bottom: 6px;
+    padding: 5px 7px;
+    border-left: 2px solid #d9a13a;
+    border-radius: 4px;
+    background: #fdf6e7;
+    color: #9a6d16;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+/* ---------- 保险箱 ---------- */
+
+#phone-panel-content .phone-screen .album-vault-lockbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#phone-panel-content .phone-screen .album-vault-lockbox input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 28px;
+    padding: 0 9px;
+    box-sizing: border-box;
+    border: 1px solid #d7dbe0;
+    border-radius: 7px;
+    background: #fff;
+    color: #292c31;
+    font-size: 11px;
+}
+
+#phone-panel-content .phone-screen .album-vault-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#phone-panel-content .phone-screen .album-vault-grid {
+    margin-top: 9px;
+}
+
+#phone-panel-content .phone-screen .album-vault-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: #f1f3f5;
+}
+
+#phone-panel-content .phone-screen .album-vault-tile img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+/* 双保险：锁着的格子即使渲染逻辑漏了 img，CSS 也不让它透出来。 */
+#phone-panel-content .phone-screen .album-vault-tile.is-locked img {
+    display: none !important;
+}
+
+#phone-panel-content .phone-screen .album-vault-tile.is-locked {
+    border-style: dashed;
+    border-color: #ddd1b3;
+    background: repeating-linear-gradient(45deg, #f7f2e6, #f7f2e6 6px, #f2ecdd 6px, #f2ecdd 12px);
+}
+
+#phone-panel-content .phone-screen .album-vault-tile-lock {
+    color: #b3701f;
+    font-size: 13px;
+    line-height: 1;
+}
+
+#phone-panel-content .phone-screen .album-vault-tile-label {
+    max-width: 100%;
+    padding: 0 3px;
+    color: #8b9097;
+    font-size: 8px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- 这一幕当时谁能看到什么 ---------- */
+
+#phone-panel-content .phone-screen .album-replay-steps {
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e5e8;
+}
+
+#phone-panel-content .phone-screen .album-replay-steps-title {
+    color: #8b9097;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+#phone-panel-content .phone-screen .album-replay-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-column-gap: 6px;
+    align-items: baseline;
+    margin-top: 5px;
+}
+
+#phone-panel-content .phone-screen .album-replay-step-actor {
+    color: #327ec5;
+    font-size: 9px;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+#phone-panel-content .phone-screen .album-replay-step-text {
+    color: #4a4f55;
+    font-size: 10px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+/* 「你看不到细节」与「这一步什么都没发生」不同形：虚线边 + 灰字。 */
+#phone-panel-content .phone-screen .album-replay-step.is-hidden-info .album-replay-step-text {
+    padding: 2px 6px;
+    border: 1px dashed #d7dbe0;
+    border-radius: 5px;
+    background: #f6f7f9;
+    color: #9aa0a6;
+    font-style: italic;
+}
+
 @media (max-width: 310px) {
     #phone-panel-content .phone-screen .album-header {
         padding-right: 9px;
@@ -800,3 +1198,5 @@
         padding-left: 4px !important;
     }
 }
+/* [v4.99.9 · R11-X9] 归档条：回看台账的唯一写入口。*/.album-archive-bar .album-replay-note { margin-top: 6px; }
+.album-archive-bar .album-vault-actions { margin-top: 8px; }

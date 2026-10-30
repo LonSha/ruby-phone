@@ -246,7 +246,10 @@ test('F4 分页结构：页 id 唯一 + 非法分页回落 overview（v3.97.0 �
   /* [v3.97.0 · R3-X2] 新增第六页「问往事」：消费上游 memoryQaAnswer / memoryToolsEnvelope
    *   的带证据问答面（上游 v3.322.0 M3-X1）。本条只锁「页清单」，问往事页自身的行为判据
    *   在新套件里。 */
-  assert.deepEqual([...new Set(ids)].sort(), ['ask', 'audit', 'coverage', 'overview', 'scene', 'sense'].sort());
+  /* [v4.99.9 · R11-X9] 新增第七页「幕次」：按幕回看已落盘的生活节目录，三视角可切。
+   *   ★ 本条锁的是**页清单**（历史先例：v3.97.0 加第六页时同样改在这里），
+   *     幕次页自身的行为判据在 `tests/system-v4999.test.mjs`，不在本档重复一遍。 */
+  assert.deepEqual([...new Set(ids)].sort(), ['ask', 'audit', 'coverage', 'overview', 'replay', 'scene', 'sense'].sort());
   assert.ok(viewSrc.includes("this._tab = 'overview'"), '非法 _tab 必须回落 overview');
 });
 

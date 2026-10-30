@@ -494,14 +494,45 @@ export class SubsystemOrchestrator {
 
     /**
      * 经历与生活节目录复演
+     *
+     * 【v4.99.9 · R11-X9 修正：本方法此前是**纸面假驱动**】
+     *   修前四行全部把参数传错（实测，逐行对照内核签名）：
+     *     · `recordLifeProgram({ id, title })` —— 签名是 `(state, programSpec, now)`，
+     *       只给一个对象 ⇒ 状态被当成「一段没有幕的节目」、spec 落空 ⇒ 永远 `title-required`；
+     *     · `getActPerspective(programId, perspective)` —— 签名是 `(program, actIndex, characterId)`，
+     *       传字符串进去 ⇒ 恒 `null`（内核第一行就 `Array.isArray(program.acts)` 挡掉）；
+     *     · `playbackProgramSummary(programId)` —— 签名是 `(program)` ⇒ 恒 `{valid:false}`；
+     *     · `createReplayableProgram({ id })` —— 签名是 `(programTitle, steps)` ⇒
+     *       标题变成 `[object Object]`、步数 0。
+     *   四处错参的净效果是：**每次调用都成功返回、每一项都是空的**。这正是本仓最贵的
+     *   「不报错、不崩溃、只错结果」形态，故不能留着当「将来能用」。
+     *
+     * 【现在的口径】按内核真实签名重写，并让调用方**显式给出**台账状态与节目规格 ——
+     *   本方法不再自己编一个节目（编出来的「回放」与存档对不上，与 X9 的硬约束同源）。
+     *
+     * @param {object} state `lpr_program_replay_v1` 的归一化状态（`normalizeLifeProgramState` 产物）
+     * @param {{id?:string, title:string, acts?:Array, participants?:Array, occasion?:string}} programSpec
+     * @param {number} actIndex 1 起的幕号
+     * @param {string} characterId 视角角色 id
+     * @returns {{recorded:object, actPersp:object|null, summary:object, steps:object[]}}
      */
-    replayLifeExperience(programId, perspective) {
-        const recorded = recordLifeProgram({ id: programId, title: 'Replay Program' });
-        const actPersp = getActPerspective(programId, perspective);
-        const summary = playbackProgramSummary(programId);
-        const repProg = createReplayableProgram({ id: programId });
-        const stepPersp = replayProgramStepByPerspective(repProg, 0, perspective);
-        return { recorded, actPersp, summary, repProg, stepPersp };
+    replayLifeExperience(state, programSpec, actIndex, characterId) {
+        const recorded = recordLifeProgram(state, programSpec);
+        const program = (recorded && recorded.success) ? recorded.program : null;
+        const actPersp = program ? getActPerspective(program, actIndex, characterId) : null;
+        const summary = playbackProgramSummary(program);
+        /* 逐步视角：由**已录对白**重建节目单（与 X9 相册侧 `actStepsOf` 同一口径），
+         *   本方法不生成任何一句叙事。 */
+        const dialogues = (program && Array.isArray(program.acts))
+            ? ((program.acts.find((a) => a && Number(a.actIndex) === Number(actIndex)) || {}).dialogues || [])
+            : [];
+        const rp = createReplayableProgram((program && program.title) || '', dialogues.map((d) => ({
+            actorId: d && d.speaker,
+            actionDescription: d && d.text,
+            visibleData: { text: d && d.text, isPrivate: d && d.isPrivate === true }
+        })));
+        const steps = rp.steps.map((_s, i) => replayProgramStepByPerspective(rp, i, characterId));
+        return { recorded, actPersp, summary, steps };
     }
 
     /**
