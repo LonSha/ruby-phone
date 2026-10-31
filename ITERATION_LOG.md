@@ -1,3 +1,20 @@
+## 迭代 234 · v4.100.0（2026-10-31）— R13-O1：浏览器层从「挂不上链」到「真跑一次」（并当场揭出 139 条被「没跑」掩盖的真红点）
+- 【版本升至 4.100.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4100.py 对齐 tools/bump_v4999.py，只换 STEPS、SEG 与头注，逻辑一字未改）。
+- 【R13-O1 做了什么】`tests/browser/gate.mjs` 早就建好、写得比多数门都严（三层 fail-closed：环境无浏览器 exit 2 / 结构低于下限 exit 2 / 读数 FAIL exit 1），但**它从来没有被接进 `npm run check`，也从来没有真跑过一次并留下读数**。本版把这条缝补掉三件：判据不再漂移、门接进链、真跑一次并把读数落成台账。
+- 【判据不再随 App 数漂移】`tests/browser/scenarios/o1-app-enumeration.scen.js` 的 `enumeration-source` 原先写死 `ids.length === 83`，而真源 `config/apps.js` 的 `APPS.length` 当版实测 **89**。改法是**跟随真源**（`ids.length === APPS.length`）**再加一条真源自身没塌的下限**（`APPS_MIN = 60`）。为什么不直接把 83 改成 89：那样下次加一个 App 又红一次，于是一年红一次、没人当回事；为什么不能只写 `ids.length === ids.length`：那等于把判据删了还留着名字。两个条件同时成立才算通过。
+- 【接链要的是**包装层**，不是改门】新增 `scripts/browser-gate-run.mjs`：逃生口（`SKIP_BROWSER=1` 必须打印三行「未执行」声明）、摘要（十九道门里浏览器层要几十秒，输出压成可读几行）、退出码原样透传。**判据一条都不搬**——判据永远只有一份，在 `gate.mjs` 与场景文件里。`package.json` 新增 `browser` 键并把 `check` 链从十八道扩到 **十九道**，`CONTEXT.md:24` 的「十八道子门」同批改「十九道」并补 `browser` 一项（该行被 `tests/system-v3190.test.mjs` 的 C4 **逐字同构**看守，不同批改就会假红）。
+- 【真跑一次：环境里真有 Chromium】`/root/.cache/ms-playwright/chromium-1148/chrome-linux/chrome`（400MB）正落在 `browser-runner.mjs` 的 `CANDIDATE_GLOBS` 探测路径上，也可用 `RUBY_PHONE_CHROMIUM` 显式覆盖。首次真跑读数：**12 场景 × 4 视口 = 512 条读数 / 139 条 FAIL**。「门建好了」与「门在跑」之间那道缝，就藏在这 139 条里。
+- 【本版自己抓到的最大一处缺陷：门一接链就会永远红】139 条红点全是真缺陷（`scenario-threw` 12 条、`data-open:music`/`clock`/`ledger` 各 3 条报「入口不在任何可达页」、`pager-dots-present | dots=0`、`search-icon-on-page2 | 分页没生效` 等），但把它们直接顶在 `npm run check` 上，整条链会从今天起**永远红**。而「永远红」= 人人绕开 = 第二道门当场失效，比没接链更坏。本仓对此已有成熟形态（`scripts/dead-export-baseline.json` 一类冻结账本），故补第五件：**存量逐条冻结、只拦新增**。
+- 【冻结账本的纪律边界】新增 `scripts/browser-known-failures.json`，逐条记 (场景, 视口, 读数名, 摘录, hits, status)，任何一条都是可复核真读数。门只对**账本外的新增 FAIL** 报错：修好一条不会因为条数变了而假红，新增一条立刻红。账本带 `expires_at`（到期版本），到期未清则本门 exit 1 点名，不许无限期挂着；`status` 三档 `open`/`fixed`/`wontfix`（后者必须写理由）。
+- 【冻结换不来任何一条绿】**未执行 ≠ 通过**一字不改（无浏览器时 gate 自己 exit 2，包装层原样透传 2）；**覆盖不足 ≠ 通过**一字不改（结构下限、读数下限仍由 gate 判）；冻结只针对「已经如实报出来的红点」。因此报告里必须同时打印「已知红 N 条 / 新增红 0 条」，让人一眼看出这是**带着 139 条债在跑**，而不是「浏览器层通过了」。
+- 【读数台账不是顺手写，是另一件工具】新增 `tools/browser-readings.mjs`（`tests/audit/browser_readings.json`，schema `browser-readings@1`）：本工具**不判 ok、不重算判据**，只把 `gate.mjs` 的真实输出逐行搬运；未执行时**不写台账**（写空台账等于制造假证据），exit 2；台账带 `measured_at`/`version`/`browser`/`source.sha256`，任何一份证据都能自证是哪次跑出来的。
+- 【台账带覆盖自证：让「只跑到 4/12」藏不住】第一版只把数字记下来，于是「跑了 12 个还是 4 个」读不出来。本版加 `scene_coverage`（`on_disk` / `measured` / `missing` / `extra` / `complete`），口径与 `gate.mjs` 的 `listScenes()` **一字对齐**（`_` 前缀是取证用的一次性探针，不算正式场景）——不对齐就会把 25 个 `_diag*.scen.js` 误报成「缺失」，覆盖自证反成噪音源。
+- 【回放模式：把「跑」与「记账」解耦】直线模式要求子进程撑到把 512 行证据全吐完；实测在高内存压力下 Chromium 被中途干掉，读数半途断在第 4 个场景（137 条 vs 真实 512 条）。故加 `--from=<日志>` 回放：gate 先把**真日志**落文件（那本身就是一次真跑），工具再从那份真日志搬读数。代价诚实写明：回放**观测不到 gate 退出码**，台账记 `null` 并在 `gate_exit_code_note` 注明，不猜不补。
+- 【本版实测抓到的第二处缺陷：/tmp 累积泄漏】首次采集只跑到 4 场景，排查确认**不是场景代码问题**（单场景 `run-scenario.mjs` 跑 `o1-search-cancel` 得 12 条读数齐全），而是 `/tmp` 残留 **1341 个目录**（`rp_v*` 1295 个，为 `npm run check` 各套件 `mkdtemp` 遗留）、占 2.2G、内存仅剩 734MB。清理到 240M 后复跑仍断在第 4 场景——所以根因是**内存压力**而非磁盘满，这直接催生了上面的回放模式。这条与 `lonsha` v3.431.0「tmpfs 吃内存」是同一族病，本仓此前没有同类治理。
+- 【边界文档按实测改写：只加更正，不抹历史】`docs/runtime-verification-boundary.md` 顶部原有「本仓至今没有可运行浏览器的验证环境」，那句从 v3.27.0 起写了十一个版本。决策：**正文那 11 处一字不改**（它们是各版本当时真实处境的诚实留档，逐条改写会让历史失真），只在顶部 `v4.99.9 复校` 锚点后追加一段 R13-O1 实测更正（判据不再漂移 / 接进链 / 真跑一次并留读数 + 本期实测读数 + 诚实边界）。文件 435 → 460 行。
+- 【交棒改写（下限形）】本版收尾时的三处口径改动，逐条记录，不静默通过：① `tests/system-v3190.test.mjs` 的 C4 判据把 `CONTEXT.md:24` 的门名清单从十八项改十九项（新增 `browser`）——该条锁的是**门清单与 package.json 逐字同构**，浏览器层自身判据在 v4100 档，不在那一档重复；② `tools/browser-readings.mjs` 的 `scenariosOnDisk()` 从「全部 `*.scen.js`」改为「排除 `_` 前缀」，因为 `gate.mjs` 的 `listScenes()` 就是这么筛的，台账口径必须与门同源；③ `tools/browser-readings.mjs` 首发版无回放模式，改后 `gate_exit_code` 可为 `null` 并配 `gate_exit_code_note` 说明「回放观测不到退出码」，**不把 null 折算成 0**。
+- 【运行时验证边界】门真跑一次**不等于** 89 个入口都合格——恰恰相反，真跑当场把此前一直被「没跑」掩盖的 139 条红点全报了出来。本版保证的是「枚举面真被打开过一遍 + 红点被如实报出并冻结可追踪」；内容正确性、跨 App 状态一致性仍不在 R13-O1 射程，其中 10 条 `scenario-threw` 留给 R13-O3 与 R13-O6 消化。
+
 ## 迭代 233 · v4.99.9（2026-10-30）— R11-X9：三件内核接成用户真能翻的「回看」（相册回看页 + 记忆幕次页 + 保险箱分区）
 - 【版本升至 4.99.9（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4999.py 对齐 tools/bump_v4998.py，只换 STEPS 与头注，逻辑一字未改）。
 - 【R11-X9 做了什么】`config/life-program-replay.js`（多幕结构与同一段经历的多角色视角）、`config/replayable-phone-program.js`（节目单与当时谁能看到什么）、`config/smart-gallery-vault.js`（相册保险箱）三件内核从建起那天就被 tests 逐条消费，但产品端零 import。本版把它们接进相册的「回看」页与记忆的「幕次」页：按幕回看一段时间里发生过什么、可切本人对方旁观三视角、影像按密级分公开流与保险箱。
@@ -1811,7 +1828,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （347 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （348 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -7211,7 +7228,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.99.9`（五源同源）
+- **当前版本**：`4.100.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

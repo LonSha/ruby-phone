@@ -3,14 +3,6 @@
   "why": "计划文档里声明的「未来才落地」的交付物路径。与 historical_records（曾经存在、现已删除的旧路径）语义不同：这一类从未存在过。台账自带到期自锁，见 scripts/doc-path-claim-audit.mjs 的 loadPlannedLedger。",
   "entries": [
     {
-      "path": "tests/audit/browser_readings.json",
-      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
-      "epoch": "R13",
-      "land_version": "v5.0.0",
-      "date": "2026-10-31",
-      "why": "R13-O1 第 3 步交付物：真跑一次浏览器层后落的读数档（场景数/视口数/每场景读数条数/耗时/浏览器版本）"
-    },
-    {
       "path": "tests/audit/undo_gaps.tsv",
       "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
       "epoch": "R13",

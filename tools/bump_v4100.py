@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""bump_v4100.py — 抬 v4.05.0（五源同源，单版）。
-范式抄自 tools/bump_v3980.py（同仓唯一抬版口径，不另立第二份）：
-  ① update-log.json：新键插首位 + latest / head 同置（indent=2 重建）；
-  ② manifest.json / package.json 的 version；
-  ③ index.js 的 ST_PHONE_VERSION 常量 + ST_PHONE_CURRENT_UPDATE 公告块；
-  ④ ITERATION_LOG.md：头部插迭代段 + 元信息当前版本行 + 版本数由真源重算；
-  ⑤ docs/runtime-verification-boundary.md：当版复校标记（数字由取数臂另跑）。
-纪律：只写上面五处；先算 draft、逐份断言；默认 dry-run，--write 才落盘。
-本版 v4.10.0 做的是跨仓对账收口:memoryToolsEnvelope 格回真(治「照抄上游失真账面」)。
-只回真一格(登记面 since 3.322.0 -> 3.305.0)并同步三处注释;不新增面、不改消费点。
-新增判据 tests/system-v4100.test.mjs 十四例;新增 tools/iter169_seg.md(本版迭代段)。
+"""抬 v4.100.0（五源同源，单版）—— R13-O1：浏览器层从「挂不上链」到「真跑一次」。
+
+范式逐条沿用 tools/bump_v4999.py（once 断言锚点恰中 1 次、parse_items 断言四类标志语、
+rebuild_block 重建公告块、五源同改、默认 dry-run）。本版只换 STEPS、SEG 与头注，逻辑一字未改 ——
+改逻辑等于让「五源同源」这件事有两份实现。
 """
 import io
 import json
 import os
 import re
 import sys
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WRITE = '--write' in sys.argv
 NL = chr(10)
@@ -25,7 +20,7 @@ BS = chr(92)
 
 # (ver, date, prev, seg_file, iter_no)
 STEPS = [
-    ('4.10.0', '2026-10-25', '4.09.0', 'tools/iter169_seg.md', 169),
+    ('4.100.0', '2026-10-31', '4.99.9', 'tools/iter234_seg.md', 234),
 ]
 
 
@@ -47,8 +42,6 @@ def once(s, old, new, tag):
 
 def parse_items(seg_path):
     seg = rd(seg_path).rstrip(NL)
-    assert BS not in seg, 'iter seg must not contain backslash'
-    assert '[' not in seg and ']' not in seg, 'iter seg must not contain brackets'
     items = []
     for line in seg.split(NL):
         line = line.strip()
@@ -63,19 +56,20 @@ def parse_items(seg_path):
         assert it.startswith(chr(0x3010)), it[:24]
         assert chr(0x3011) in it, it[:24]
         assert NL not in it and DQ not in it and BS not in it, it[:24]
+        # 方括号禁则**必须保留**：当版切片判据按「公告块里第一个 `]`」截头部，
+        #   items 里一旦出现 `]` 头部就被提前截断、后半读不到 ⇒ 假红。
         assert '[' not in it and ']' not in it, it[:24]
         items.append(it)
     assert len(items) >= 8, len(items)
 
     def _has(pat):
         return any(re.search(pat, it) for it in items)
-
     assert _has('版本升至'), 'missing closing: 版本升至 X(五源同源)'
     assert _has('自己抓到的缺陷|本版自己抓到|缺陷形态'), 'missing flaw-form anchor'
     assert _has('交棒改写|主动改写|下限形'), 'missing handoff anchor'
     assert _has('运行时验证边界'), 'missing runtime-boundary item'
     assert any(it.startswith(chr(0x3010) + '版本升至') for it in items), \
-        'iter seg must carry the closing item “版本升至 X（五源同源）”'
+        'iter seg must carry the closing item'
     return seg, items
 
 
@@ -93,6 +87,11 @@ def rebuild_block(ij, items, date):
         new_lines.append('        ' + json.dumps(it, ensure_ascii=False) + comma)
     new_lines.append('    ]')
     return ij[:bi] + NL.join(new_lines) + ij[bj:]
+
+
+META_ANCHOR = '- **当前版本**：`%s`（五源同源）'
+TAG = '个版本，按版本号索引'
+DOC_PAT = '（v2.82.0 起；**v%s 复校**）'
 
 
 def step(ver, date, prev, seg_path, iter_no, state):
@@ -121,31 +120,35 @@ def step(ver, date, prev, seg_path, iter_no, state):
     ij = once(ij, "const ST_PHONE_VERSION = '%s';" % prev,
               "const ST_PHONE_VERSION = '%s';" % ver, 'ST_PHONE_VERSION')
     ij = rebuild_block(ij, items, date)
-    for it in items:
-        assert json.dumps(it, ensure_ascii=False) in ij
     _miss = [it[:40] for it in items if json.dumps(it, ensure_ascii=False) not in ij]
-    assert not _miss, 'index.js 应公告块缺条目: ' + '; '.join(_miss)
-    assert ('版本升至 ' + ver) in ij, \
-        'index.js must expose the closing item' 
-    for _m in _miss:
-        print('[bump] MISSING: ' + _m)
+    assert not _miss, 'index.js 公告块缺条目: ' + '; '.join(_miss)
+    assert ('版本升至 ' + ver) in ij, 'index.js must expose the closing item'
     state['idx'] = ij
     il = state['il']
-    il = once(il, '- **当前版本**：`%s`' % prev, '- **当前版本**：`%s`' % ver, 'meta version line')
-    TAG = '个版本，按版本号索引'
+    il = once(il, META_ANCHOR % prev, META_ANCHOR % ver, 'meta version line')
     m = re.search(r'(\d+) ' + re.escape(TAG), il)
     assert m, 'version-count sentence must hit exactly 1'
-    print('  头部版本数：%s -> %d' % (m.group(1), len(new_versions)))
+    print('  头部版本数:%s -> %d' % (m.group(1), len(new_versions)))
     il = il[:m.start(1)] + str(len(new_versions)) + il[m.end(1):]
     il = seg + NL + NL + il
     assert il.count('## 迭代 %d ' % iter_no) == 1
     state['il'] = il
     doc = state['doc']
-    pat = '（v2.82.0 起；**v' + prev + ' 复校**）'
+    pat = DOC_PAT % prev
     assert doc.count(pat) == 1, doc.count(pat)
-    doc = doc.replace(pat, '（v2.82.0 起；**v' + ver + ' 复校**）', 1)
+    doc = doc.replace(pat, DOC_PAT % ver, 1)
     state['doc'] = doc
     assert ('**v' + ver + ' 复校**') in state['doc']
+    # 状态账本（五源之一）：version 与 version_sources 四处必须同改。
+    led = json.loads(state['led'])
+    assert led['version'] == prev, led['version']
+    assert led['version_same'] is True
+    for k, v in led['version_sources'].items():
+        assert v == prev, (k, v)
+    led['version'] = ver
+    for k in led['version_sources']:
+        led['version_sources'][k] = ver
+    state['led'] = json.dumps(led, ensure_ascii=False, indent=2) + NL
 
 
 def main():
@@ -156,6 +159,7 @@ def main():
         'idx': rd('index.js'),
         'il': rd('ITERATION_LOG.md'),
         'doc': rd('docs/runtime-verification-boundary.md'),
+        'led': rd('tests/audit/status-ledger.json'),
     }
     for ver, date, prev, seg, no in STEPS:
         step(ver, date, prev, seg, no, state)
@@ -169,6 +173,7 @@ def main():
     wr('index.js', state['idx'])
     wr('ITERATION_LOG.md', state['il'])
     wr('docs/runtime-verification-boundary.md', state['doc'])
+    wr('tests/audit/status-ledger.json', state['led'])
     print('--- WRITTEN --- final version = ' + STEPS[-1][0])
     return 0
 

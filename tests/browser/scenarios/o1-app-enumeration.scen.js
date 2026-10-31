@@ -1,13 +1,13 @@
 /* ============================================================
- * tests/browser/scenarios/o1-app-enumeration.scen.js — O1 场景：82 个入口逐个开屏
+ * tests/browser/scenarios/o1-app-enumeration.scen.js — O1 场景：全部入口逐个开屏
  * ------------------------------------------------------------
- * 本场景回答的问题：把 config/apps.js 的**全部** 82 条 id 真开一遍，
+ * 本场景回答的问题：把 config/apps.js 的**全部**条目（真源 APPS.length，当前 89）真开一遍，
  *   每个入口的**首屏**在真排版引擎下是否有真盒、是否真可点、是否有可见内容。
  *
  * 为什么必须逐个开而不是抽查几个：
  *   「入口存在」与「入口可用」在静态检查下同形 —— 历史两次事故（返回按钮缺席 /
  *   设置页空白）都是「元素在 DOM 里、但用户点开是空的」。逐条枚举是唯一能证明
- *   「82 条都真能打开」的形态。
+ *   「全部条目都真能打开」的形态。
  *
  * 四类「看起来没坏但显示不对」在本场景里的对应读数：
  *   ① 入口被遮挡 → icon-hit-test / open-hit-test（elementFromPoint 命中的是不是本体）
@@ -19,7 +19,22 @@ import { installBrowserHost, waitFor } from '/tests/browser/host-stub.mjs';
 const mod = await import('/config/apps.js');
 const APPS = mod.APPS;
 const ids = APPS.map((a) => a.id);
-report({ name: 'enumeration-source', ok: ids.length === 83, detail: 'config/apps.js 条目 = ' + ids.length + '（判据要求 83）' });
+/* ★ R13-O1 第 1 步：本行原写死 `ids.length === 83`，而真源早已是 89 条 ——
+ *   即「这条判据只要真跑就必然红」，而它至今没红，唯一解释是**这门没跑过**
+ *   （package.json 无 browser 键，见证据页 3.2）。这正是 O1 立要修的那一格。
+ *
+ *   修法不是把 83 改成 89（下次加 App 又红一次，且同样靠人记得改），而是：
+ *     ① 判据值取自真源本身（APPS 的长度），随 App 数自动跟随；
+ *     ② 另加 APPS_MIN 下限守卫 —— 否则「真源被误删成 3 条」时，
+ *        `ids.length === APPS.length` 恒真，等于把判据删了（本仓明令禁止的假绿形态）。
+ *   两条件同时成立才算通过：跟随真源 + 真源本身没塌。
+ */
+const APPS_MIN = 60; // 下限：真源塌陷（被删空 / 被截断）时必须转红，而不是自动跟随到 3 条
+report({
+  name: 'enumeration-source',
+  ok: ids.length === APPS.length && ids.length >= APPS_MIN,
+  detail: 'config/apps.js 条目 = ' + ids.length + '（真源 APPS.length=' + APPS.length + '，下限 ' + APPS_MIN + '）',
+});
 installBrowserHost({
   chat: Array.from({ length: 3 }, (_, i) => ({ mes: '楼层' + i, is_user: i % 2 === 0, swipes: ['x'], swipe_id: 0 })),
 });
@@ -36,7 +51,7 @@ report({ name: 'shell-ready', ok: !!(panelUp && homeUp), detail: 'panel=' + !!pa
 /* ★ 本版自己抓到的第 7 处判据缺陷（首版漏步）：首版**没关実例弹窗**。
  *   実例弹窗（`#st-phone-update-modal`，由 update-checker 异步弹出）的内容块
  *   `st-phone-update-content` 覆盖整个视口 ⇒ App 首屏内每一个探测点都命中弹窗，
- *   而弹窗不属任何 [data-view-id] 图层 ⇒ `selfHit=0` ⇒ 全 82 条误判「首屏不可命中」（假红）。
+ *   而弹窗不属任何 [data-view-id] 图层 ⇒ `selfHit=0` ⇒ 全量误判「首屏不可命中」（假红）。
  *   本仓其余 7 个场景**全都**有这一步（o1-core-flow 的注释已明写：
  *   「不关掉它，后面每一步的坐标命中测试都会命中弹窗而不是手机面板」），
  *   首版漏了 ⇒ 重复踩坑。修法：补上关闭步，并**在全量逐开之后再确认一次它没回来**
@@ -60,7 +75,7 @@ const homeView = document.querySelector('.view-stack-container [data-view-id="ho
 report({ name: 'view-stack-present', ok: !!homeView, detail: 'home 图层 = ' + !!homeView });
 /* ── 一、主屏图标：真盒 + 真命中（★ 只量当前页） ──
  * ★ 本版自己抓到的判据缺陷（首版写法错）：首版对**全部** 86 个图标元素做命中测试，
- *   得到 62 个「未命中」—— 逐条取证后发现它们全在第 1~4 页（`aria-hidden=true`），
+ *   得到大量「未命中」—— 逐条取证后发现它们全在非当前页（`aria-hidden=true`），
  *   盒模型 x 从 464 起、而视口宽 390 ⇒ 它们**本来就在视口外**，是分页的正确行为。
  *   判据与实现粒度不匹配，就会把「设计如此」判成「入口被遮挡」（假红）。
  *   修法：只对**当前页**（aria-hidden !== 'true'）的图标做命中测试，

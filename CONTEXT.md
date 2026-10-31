@@ -21,7 +21,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
 
 ## 发布链路
 - 修改后必须通过 `npm run syntax`（即 `node scripts/syntax-check.mjs`）全量语法校验，再跑 `npm test`；`npm run check` 一次跑完全部门。
-- `npm run check` = **十八道子门**串联：**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `bind-consuming` → `method-consuming` → `lifecycle` → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `hardlink-safety` → `doc-path-claim` → `upstream-face`。
+- `npm run check` = **十九道子门**串联：**串联：`syntax` → `import-resolve` → `test` → `dead-exports` → `bind-consuming` → `method-consuming` → `lifecycle` → `registry` → `keys` → `source-derivation` → `bridge-contract` → `weak-coercion` → `named-import` → `screen-host` → `session-writeback` → `hardlink-safety` → `doc-path-claim` → `upstream-face` → `browser`。
   > 【本行订正 · v3.78.0】新增第十五段 `hardlink-safety`（`scripts/hardlink-safety-check.mjs`：
   > 硬链接安全的四判据 —— 真调用面 / 工作树被改写 / 版本库可用 / HEAD 可达），故本行由「十四道」改「**十五道**」。
   > 同规：只照 `package.json` 的 `scripts.check` 抄，不凭印象 —— C4 判据当场就会替我们核对。

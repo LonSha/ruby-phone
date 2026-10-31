@@ -1,0 +1,1016 @@
+{
+  "schema": "browser-known-failures@1",
+  "note": "浏览器层存量红点冻结账本。门（scripts/browser-gate-run.mjs）只拦「本账本之外的新增 FAIL」；修好一条请把它改成 status=fixed（保留作回归证据链），确不修的写 wontfix 并说明理由。到期版本未清空则本门 exit 1 点名。",
+  "version": "4.100.0",
+  "expires_at": "4.110.0",
+  "updated_at": "2026-10-31",
+  "total": 138,
+  "distinct": 138,
+  "scenes": {
+    "o1-app-data-states.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "data-open:music",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "data-open:clock",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "data-open:ledger",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "data-group-summary",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "fixture=data-injected opened=2/5 failures=3"
+      },
+      {
+        "viewport": "390x844",
+        "name": "data-open:music",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "data-open:clock",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "data-open:ledger",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "data-group-summary",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "fixture=data-injected opened=2/5 failures=3"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "data-open:music",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "data-open:clock",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "data-open:ledger",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "data-group-summary",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "fixture=data-injected opened=2/5 failures=3"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "data-open:music",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "data-open:clock",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "data-open:ledger",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "data-group-summary",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "fixture=data-injected opened=2/5 failures=3"
+      }
+    ],
+    "o1-app-enumeration.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "home-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "页数=1"
+      },
+      {
+        "viewport": "320x568",
+        "name": "home-reachable-ids",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
+      },
+      {
+        "viewport": "390x844",
+        "name": "home-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "页数=1"
+      },
+      {
+        "viewport": "390x844",
+        "name": "home-reachable-ids",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "home-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "页数=1"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "home-reachable-ids",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "home-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "页数=1"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "home-reachable-ids",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
+      }
+    ],
+    "o1-chat-switch.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "app-opens-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "320x568",
+        "name": "back-button-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "320x568",
+        "name": "home-intact-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "icons=15 dots=0"
+      },
+      {
+        "viewport": "390x844",
+        "name": "app-opens-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "390x844",
+        "name": "back-button-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "390x844",
+        "name": "home-intact-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "icons=15 dots=0"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "app-opens-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "back-button-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "home-intact-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "icons=15 dots=0"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "app-opens-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "back-button-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "home-intact-after-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "icons=15 dots=0"
+      }
+    ],
+    "o1-core-flow.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "open-app-gacha",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "320x568",
+        "name": "app-content-has-box",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "null"
+      },
+      {
+        "viewport": "320x568",
+        "name": "back-button-in-app",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
+      },
+      {
+        "viewport": "390x844",
+        "name": "open-app-gacha",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "390x844",
+        "name": "app-content-has-box",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "null"
+      },
+      {
+        "viewport": "390x844",
+        "name": "back-button-in-app",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "open-app-gacha",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "app-content-has-box",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "null"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "back-button-in-app",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "open-app-gacha",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "找不到图标 幸运转盘"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "app-content-has-box",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "null"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "back-button-in-app",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
+      }
+    ],
+    "o1-search-cancel.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "pager-dots-present",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dots=0"
+      },
+      {
+        "viewport": "320x568",
+        "name": "pager-dot-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "320x568",
+        "name": "page2-moved-into-view",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
+      },
+      {
+        "viewport": "320x568",
+        "name": "page2-icons-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "reachable=0/0"
+      },
+      {
+        "viewport": "320x568",
+        "name": "search-icon-on-page2",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "第 2 页没有搜索图标（分页没生效）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "search-app-opens",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "未渲染"
+      },
+      {
+        "viewport": "320x568",
+        "name": "search-mode-btn-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "320x568",
+        "name": "full-mode-toggled",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "按钮文字="
+      },
+      {
+        "viewport": "320x568",
+        "name": "scan-bar-lights-up",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "search-cancel-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "missing"
+      },
+      {
+        "viewport": "320x568",
+        "name": "search-input-survives-cancel",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "输入框被取消操作打散"
+      },
+      {
+        "viewport": "320x568",
+        "name": "back-button-visible-in-search",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "390x844",
+        "name": "pager-dots-present",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dots=0"
+      },
+      {
+        "viewport": "390x844",
+        "name": "pager-dot-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "390x844",
+        "name": "page2-moved-into-view",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
+      },
+      {
+        "viewport": "390x844",
+        "name": "page2-icons-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "reachable=0/0"
+      },
+      {
+        "viewport": "390x844",
+        "name": "search-icon-on-page2",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "第 2 页没有搜索图标（分页没生效）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "search-app-opens",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "未渲染"
+      },
+      {
+        "viewport": "390x844",
+        "name": "search-mode-btn-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "390x844",
+        "name": "full-mode-toggled",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "按钮文字="
+      },
+      {
+        "viewport": "390x844",
+        "name": "scan-bar-lights-up",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "search-cancel-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "missing"
+      },
+      {
+        "viewport": "390x844",
+        "name": "search-input-survives-cancel",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "输入框被取消操作打散"
+      },
+      {
+        "viewport": "390x844",
+        "name": "back-button-visible-in-search",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "pager-dots-present",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dots=0"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "pager-dot-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "page2-moved-into-view",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "page2-icons-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "reachable=0/0"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "search-icon-on-page2",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "第 2 页没有搜索图标（分页没生效）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "search-app-opens",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "未渲染"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "search-mode-btn-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "full-mode-toggled",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "按钮文字="
+      },
+      {
+        "viewport": "768x1024",
+        "name": "scan-bar-lights-up",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "search-cancel-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "missing"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "search-input-survives-cancel",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "输入框被取消操作打散"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "back-button-visible-in-search",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "pager-dots-present",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dots=0"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "pager-dot-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "page2-moved-into-view",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "page2-icons-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "reachable=0/0"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "search-icon-on-page2",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "第 2 页没有搜索图标（分页没生效）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "search-app-opens",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "未渲染"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "search-mode-btn-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "no-element"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "full-mode-toggled",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "按钮文字="
+      },
+      {
+        "viewport": "1280x800",
+        "name": "scan-bar-lights-up",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "search-cancel-reachable",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "missing"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "search-input-survives-cancel",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "输入框被取消操作打散"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "back-button-visible-in-search",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "display=none"
+      }
+    ],
+    "o1-shell-smoke.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "icons-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "pages=1 dots=0",
+        "flaky": true
+      },
+      {
+        "viewport": "390x844",
+        "name": "icons-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "pages=1 dots=0",
+        "flaky": true
+      },
+      {
+        "viewport": "1280x800",
+        "name": "icons-paged",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "pages=1 dots=0",
+        "flaky": true
+      }
+    ],
+    "o6-longlist-extreme.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "o6x-extreme-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false entryLap=15200ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "o6x-extreme-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "o6x-extreme-media-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6x-extreme-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false entryLap=15210ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6x-extreme-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6x-extreme-media-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6x-extreme-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false entryLap=15200ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6x-extreme-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6x-extreme-media-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6x-extreme-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false entryLap=15201ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6x-extreme-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6x-extreme-media-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      }
+    ],
+    "o6-longlist-perf.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "o6-longchat-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "o6-longlist-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
+      },
+      {
+        "viewport": "320x568",
+        "name": "o6-media-lazy-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
+      },
+      {
+        "viewport": "320x568",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6-longchat-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6-longlist-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
+      },
+      {
+        "viewport": "390x844",
+        "name": "o6-media-lazy-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
+      },
+      {
+        "viewport": "390x844",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6-longchat-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6-longlist-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6-media-lazy-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6-longchat-open",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6-longlist-scale",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6-media-lazy-contract",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'setAttribute')"
+      }
+    ],
+    "o6-motion-throttle.scen.js": [
+      {
+        "viewport": "390x844",
+        "name": "o6m-background-throttle",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "data-bg=doc-hidden runningAnims before=3 after=2 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）",
+        "flaky": true
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o6m-background-throttle",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）",
+        "flaky": true
+      },
+      {
+        "viewport": "1280x800",
+        "name": "o6m-background-throttle",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）",
+        "flaky": true
+      }
+    ],
+    "o7-perf-probe.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'querySelectorAll')"
+      },
+      {
+        "viewport": "390x844",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'querySelectorAll')"
+      },
+      {
+        "viewport": "768x1024",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'querySelectorAll')"
+      },
+      {
+        "viewport": "1280x800",
+        "name": "scenario-threw",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "Cannot read properties of null (reading 'querySelectorAll')"
+      }
+    ]
+  },
+  "flaky_note": "★ flaky=true 表示该读数在本仓实测中**随视口/时序漂移**（同一读数名，有时红有时绿）。它不是「可忽略」，而是「尚未定相」；判定面按 (场景, 读数名) 放行，但**视口明细仍逐条留档**。",
+  "flaky_reads": [
+    {
+      "scene": "o1-shell-smoke.scen.js",
+      "name": "icons-paged",
+      "why": "pages/dots 读数在分页初始化与 shell 首帧之间存在竞态，实测在 320/390/1280 三档出现过，在 768 档未出现"
+    },
+    {
+      "scene": "o6-motion-throttle.scen.js",
+      "name": "o6m-background-throttle",
+      "why": "runningAnims 计数受真实动画帧驱动（before 实测出现 2 与 3 两种值），后台节流窗口本身稳定"
+    }
+  ]
+}

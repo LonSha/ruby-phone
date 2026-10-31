@@ -320,7 +320,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.99.9';
+const ST_PHONE_VERSION = '4.100.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -528,23 +528,23 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-30",
+    date: "2026-10-31",
     items: [
-        "【版本升至 4.99.9（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4999.py 对齐 tools/bump_v4998.py，只换 STEPS 与头注，逻辑一字未改）。",
-        "【R11-X9 做了什么】`config/life-program-replay.js`（多幕结构与同一段经历的多角色视角）、`config/replayable-phone-program.js`（节目单与当时谁能看到什么）、`config/smart-gallery-vault.js`（相册保险箱）三件内核从建起那天就被 tests 逐条消费，但产品端零 import。本版把它们接进相册的「回看」页与记忆的「幕次」页：按幕回看一段时间里发生过什么、可切本人对方旁观三视角、影像按密级分公开流与保险箱。",
-        "【为什么先加一层翻译】三件内核的返回体形状各不相同：`getActPerspective` 永远返回一个 view（没有该角色回忆时回落成「以旁观者的视角注视着某幕」）、`playbackProgramSummary` 不可用时只给一句无可用节目录连标题都没有、`replayProgramStepByPerspective` 的看不到细节与这一步不存在是两种失败。故新增 `config/replay-face-bridge.js`（15 个导出）：内核判、桥翻形状、视图只消费 label 与布尔。",
-        "【兜底句必须标出来】内核在没有该角色主观回忆时给的回落句是**兜底叙述，不是记录**。桥据此给 `isFallback`，album 与 memory 两侧都必须明写「这段没有该角色的主观回忆，下面是一句兜底叙述」。不标就等于替角色编了一段他没说过的内心。判据 G2 用真源码破坏钉死（把 `isFallback: !hasNote` 改成常 false 即转红）。",
-        "【锁着就是拿不到画面】这是本层对保险箱的唯一承诺：锁着时 `vaultRows` 一条 url 都不给，只给项数摘要。内核 `vaultPhotos` 锁着时**仍然带 url**，谁直接读谁就绕过锁。判据 D2 断言私密路径连字符串都不许出现在给视图的那一份里；负控制 G1 把 `unlocked ? _photoRow : _lockedRow` 改成恒 `_photoRow` 即转红。",
-        "【三处两件不同的事必须不同形】台账：读不到 ≠ 内容坏了 ≠ 还没录过 ≠ 录了 N 段；幕次：没有节目 ≠ 没有幕次字段 ≠ 零幕 ≠ 有 N 幕；对白重建：没这个节目 ≠ 没这一幕 ≠ 这一幕没对白 ≠ 有 N 句。压平任意两态，处置相反的处境就长得一样了（该报 bug 与被念成「你还什么都没录」）。",
-        "【「谁能看到什么」与「主观回忆」是两件事】`actStepsOf` 把这一幕**已录对白**重建成节目单（说话人=行动者、正文=当时可见材料、`isPrivate` 取录制时写入的标记），答的是「有几句是我当时能听清的」；`perspectiveOf` 答的是「他有回忆吗」。压成一块就会把「没回忆」读成「没说过话」。",
-        "【台账此前没有人写（本版自己抓到的最大一处功能级失效）】回看页读的是 `lpr_program_replay_v1`，但全仓除测试夹具外**没有任何写入入口**——也就是说判据全绿、用户永远看到「还没录过」。本版补上唯一写入口 `AlbumData.archiveChat()`：从宿主 `SillyTavern.getContext()`（本仓 82 处在用的通用口）取已落盘对话，用 `programSpecFromChat` 切成幕（perAct 条一幕），交给中枢的 `replayLifeExperience` 录制后写盘。**归档只截取原文，`perspectives` 与 `location` 恒空**——聊天记录里没有「谁当时怎么想」这一层，顺手拿台词当内心就是把说过的话演成回忆。",
-        "【假驱动修正：replayLifeExperience】该方法修前四处全传错参（`recordLifeProgram({id,title})` 状态被当成节目、`getActPerspective(programId,perspective)`、`playbackProgramSummary(programId)`、`createReplayableProgram({id})`），净效果是**每次调用都成功返回、每一项都是空的**——本仓最贵的「不报错、只错结果」形态。本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，并由归档**真调用**；中枢抛错时回落内核直调（回落用的是同一个内核，不另写一份录制逻辑）。",
-        "【本版实测抓到的缺陷（都不是推演）】① `AlbumData.programPerspectives` 里少写 `this.` ⇒ 三格取数抛 ReferenceError，而节目列表与幕次列表照常显示（界面看着有内容、只少一格），负控制 G4 钉死；② `MemoryView` 的视角现场态初值写成 `'self'` 字面量 ⇒ 视图在写第二套判据，判据 E2 当场逼出；③ album 视图原先 import 桥取文案 ⇒ 与记忆侧「视图不 import 桥」纪律不一致，改为经 `AlbumData.viewerOptions()` / `secrecyChoices()` 转出。",
-        "【视图不写第二套判据】两个视图里不许出现 self / other / bystander 三个字面量，不许拿 `vault.state` / `ledger.state` 做字符串比对（只消费桥给的 `readable` / `locked` / `count`），不许直读内核内部字段（`vaultPhotos` / `isUnlocked` / `subjectiveView` / `narrativeSnippet`）。",
-        "【键随会话隔离】台账键三处同源：内核 `STORAGE_KEY` → 桥以 `STORAGE_KEY as REPLAY_LEDGER_KEY` 转出（**桥里不写 `lpr_program_replay_v1` 字面量**）→ `config/storage.js` 的 `/^lpr_/` 会话前缀 → `scripts/keys-audit.mjs` 的 `scope: 'chat'` 登记。",
-        "【判据 38 条全绿】tests/system-v4999.test.mjs：A1-A3 台账四态 / 行读数一处实现 / 读不到与空台账分两句；B1-B2 幕次四态 / N 人有回忆；C1-C5 兜底标记 / 旁观取公共叙述 / 坏视角如实念 / 对方 id 三级来源 / 文案唯一出处；D1-D4 保险箱四态 / 锁着零 url / 解锁才给 url / 密级文案；E1-E4 产品端真 import / 视图无第二套字面量 / 键四处同源 / 桥是纯函数层且不改入参；F1-F7 全链 / 三态分辨 / 入箱即消失 / 解锁不回主列表 / 保险箱坏不连坐 / 台账坏不白屏 / 总述不伪造标题；G1-G5 五条负控制双向断言；H1-H8 归档四态 / 真写盘回读 / 不覆盖旧记录 / 写不下去如实报失败 / 只截取不生成 / 入口真接线 / 真走中枢 / 中枢抛错回落。",
-        "【交棒改写（下限形）】本版收尾时的三处口径改动，逐条记录，不静默通过：① `tests/system-v257.test.mjs` 的 F4 页清单由六项改七项（新增幕次页）——该条锁的是**页清单**，幕次页自身行为判据在 v4999 档，不在那一档重复；② 三本冻结账本**人工逐条手删**（非 --update，避免整本重写把 generated_at 一起洗掉）：方法面摘 4 条（保险箱三条 + replayLifeExperience 一条）、模块入度面摘 3 条（三件内核已进产品面）、绑定面摘 1 条（`life-program-replay.js` 的 `STORAGE_KEY` 已真接线），各本 note 里写明摘除原因与摘除前门禁的实测点名；③ 文档当版实测数字由 `tools/refresh_doc_readings.py` 现场跑两道门后写入，不手抄。",
-        "【未验证边界·运行时验证边界】回看页在真机登录态下的观感（DOM 渲染、锁着时 img 是否真不加载、锁着图块的 CSS 兜底）本轮未在浏览器里跑过，仍不能验——这是一类「看起来没坏但显示不对」的边界；`ALBUM_CSS_URL` 的 `r=20261030-album-replay` 只是防缓存串，无判据依赖。"
+        "【版本升至 4.100.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4100.py 对齐 tools/bump_v4999.py，只换 STEPS、SEG 与头注，逻辑一字未改）。",
+        "【R13-O1 做了什么】`tests/browser/gate.mjs` 早就建好、写得比多数门都严（三层 fail-closed：环境无浏览器 exit 2 / 结构低于下限 exit 2 / 读数 FAIL exit 1），但**它从来没有被接进 `npm run check`，也从来没有真跑过一次并留下读数**。本版把这条缝补掉三件：判据不再漂移、门接进链、真跑一次并把读数落成台账。",
+        "【判据不再随 App 数漂移】`tests/browser/scenarios/o1-app-enumeration.scen.js` 的 `enumeration-source` 原先写死 `ids.length === 83`，而真源 `config/apps.js` 的 `APPS.length` 当版实测 **89**。改法是**跟随真源**（`ids.length === APPS.length`）**再加一条真源自身没塌的下限**（`APPS_MIN = 60`）。为什么不直接把 83 改成 89：那样下次加一个 App 又红一次，于是一年红一次、没人当回事；为什么不能只写 `ids.length === ids.length`：那等于把判据删了还留着名字。两个条件同时成立才算通过。",
+        "【接链要的是**包装层**，不是改门】新增 `scripts/browser-gate-run.mjs`：逃生口（`SKIP_BROWSER=1` 必须打印三行「未执行」声明）、摘要（十九道门里浏览器层要几十秒，输出压成可读几行）、退出码原样透传。**判据一条都不搬**——判据永远只有一份，在 `gate.mjs` 与场景文件里。`package.json` 新增 `browser` 键并把 `check` 链从十八道扩到 **十九道**，`CONTEXT.md:24` 的「十八道子门」同批改「十九道」并补 `browser` 一项（该行被 `tests/system-v3190.test.mjs` 的 C4 **逐字同构**看守，不同批改就会假红）。",
+        "【真跑一次：环境里真有 Chromium】`/root/.cache/ms-playwright/chromium-1148/chrome-linux/chrome`（400MB）正落在 `browser-runner.mjs` 的 `CANDIDATE_GLOBS` 探测路径上，也可用 `RUBY_PHONE_CHROMIUM` 显式覆盖。首次真跑读数：**12 场景 × 4 视口 = 512 条读数 / 139 条 FAIL**。「门建好了」与「门在跑」之间那道缝，就藏在这 139 条里。",
+        "【本版自己抓到的最大一处缺陷：门一接链就会永远红】139 条红点全是真缺陷（`scenario-threw` 12 条、`data-open:music`/`clock`/`ledger` 各 3 条报「入口不在任何可达页」、`pager-dots-present | dots=0`、`search-icon-on-page2 | 分页没生效` 等），但把它们直接顶在 `npm run check` 上，整条链会从今天起**永远红**。而「永远红」= 人人绕开 = 第二道门当场失效，比没接链更坏。本仓对此已有成熟形态（`scripts/dead-export-baseline.json` 一类冻结账本），故补第五件：**存量逐条冻结、只拦新增**。",
+        "【冻结账本的纪律边界】新增 `scripts/browser-known-failures.json`，逐条记 (场景, 视口, 读数名, 摘录, hits, status)，任何一条都是可复核真读数。门只对**账本外的新增 FAIL** 报错：修好一条不会因为条数变了而假红，新增一条立刻红。账本带 `expires_at`（到期版本），到期未清则本门 exit 1 点名，不许无限期挂着；`status` 三档 `open`/`fixed`/`wontfix`（后者必须写理由）。",
+        "【冻结换不来任何一条绿】**未执行 ≠ 通过**一字不改（无浏览器时 gate 自己 exit 2，包装层原样透传 2）；**覆盖不足 ≠ 通过**一字不改（结构下限、读数下限仍由 gate 判）；冻结只针对「已经如实报出来的红点」。因此报告里必须同时打印「已知红 N 条 / 新增红 0 条」，让人一眼看出这是**带着 139 条债在跑**，而不是「浏览器层通过了」。",
+        "【读数台账不是顺手写，是另一件工具】新增 `tools/browser-readings.mjs`（`tests/audit/browser_readings.json`，schema `browser-readings@1`）：本工具**不判 ok、不重算判据**，只把 `gate.mjs` 的真实输出逐行搬运；未执行时**不写台账**（写空台账等于制造假证据），exit 2；台账带 `measured_at`/`version`/`browser`/`source.sha256`，任何一份证据都能自证是哪次跑出来的。",
+        "【台账带覆盖自证：让「只跑到 4/12」藏不住】第一版只把数字记下来，于是「跑了 12 个还是 4 个」读不出来。本版加 `scene_coverage`（`on_disk` / `measured` / `missing` / `extra` / `complete`），口径与 `gate.mjs` 的 `listScenes()` **一字对齐**（`_` 前缀是取证用的一次性探针，不算正式场景）——不对齐就会把 25 个 `_diag*.scen.js` 误报成「缺失」，覆盖自证反成噪音源。",
+        "【回放模式：把「跑」与「记账」解耦】直线模式要求子进程撑到把 512 行证据全吐完；实测在高内存压力下 Chromium 被中途干掉，读数半途断在第 4 个场景（137 条 vs 真实 512 条）。故加 `--from=<日志>` 回放：gate 先把**真日志**落文件（那本身就是一次真跑），工具再从那份真日志搬读数。代价诚实写明：回放**观测不到 gate 退出码**，台账记 `null` 并在 `gate_exit_code_note` 注明，不猜不补。",
+        "【本版实测抓到的第二处缺陷：/tmp 累积泄漏】首次采集只跑到 4 场景，排查确认**不是场景代码问题**（单场景 `run-scenario.mjs` 跑 `o1-search-cancel` 得 12 条读数齐全），而是 `/tmp` 残留 **1341 个目录**（`rp_v*` 1295 个，为 `npm run check` 各套件 `mkdtemp` 遗留）、占 2.2G、内存仅剩 734MB。清理到 240M 后复跑仍断在第 4 场景——所以根因是**内存压力**而非磁盘满，这直接催生了上面的回放模式。这条与 `lonsha` v3.431.0「tmpfs 吃内存」是同一族病，本仓此前没有同类治理。",
+        "【边界文档按实测改写：只加更正，不抹历史】`docs/runtime-verification-boundary.md` 顶部原有「本仓至今没有可运行浏览器的验证环境」，那句从 v3.27.0 起写了十一个版本。决策：**正文那 11 处一字不改**（它们是各版本当时真实处境的诚实留档，逐条改写会让历史失真），只在顶部 `v4.99.9 复校` 锚点后追加一段 R13-O1 实测更正（判据不再漂移 / 接进链 / 真跑一次并留读数 + 本期实测读数 + 诚实边界）。文件 435 → 460 行。",
+        "【交棒改写（下限形）】本版收尾时的三处口径改动，逐条记录，不静默通过：① `tests/system-v3190.test.mjs` 的 C4 判据把 `CONTEXT.md:24` 的门名清单从十八项改十九项（新增 `browser`）——该条锁的是**门清单与 package.json 逐字同构**，浏览器层自身判据在 v4100 档，不在那一档重复；② `tools/browser-readings.mjs` 的 `scenariosOnDisk()` 从「全部 `*.scen.js`」改为「排除 `_` 前缀」，因为 `gate.mjs` 的 `listScenes()` 就是这么筛的，台账口径必须与门同源；③ `tools/browser-readings.mjs` 首发版无回放模式，改后 `gate_exit_code` 可为 `null` 并配 `gate_exit_code_note` 说明「回放观测不到退出码」，**不把 null 折算成 0**。",
+        "【运行时验证边界】门真跑一次**不等于** 89 个入口都合格——恰恰相反，真跑当场把此前一直被「没跑」掩盖的 139 条红点全报了出来。本版保证的是「枚举面真被打开过一遍 + 红点被如实报出并冻结可追踪」；内容正确性、跨 App 状态一致性仍不在 R13-O1 射程，其中 10 条 `scenario-threw` 留给 R13-O3 与 R13-O6 消化。"
     ]
 };
 
