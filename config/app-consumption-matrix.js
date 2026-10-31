@@ -67,9 +67,8 @@ export const FACE_META = Object.freeze({
 
 /** 「六面全无」台账：只有这些 App 需要理由，且与磁盘双向对账（见判据套件 B 组）。 */
 export const NA = Object.freeze({
-    games: "游戏厅：内建八款游戏各自的 AI 提示词构造器（getDefault*Prompt）只喂给本 App 自己的牌局生成，不属平台级注入面；战绩落盘是本会话私有库、不被全局搜索索引，也不进通知落点表。",
-    settings: "设置 App：纯配置读写与界面装配，本身不产出可搜索内容、不产通知、不向生成侧注入约束（它是被其它 App 读取的设置真源）。",
-    mood: "心境 App：源文件头注自述「只读聚合，不直接写引擎状态」——它读 drives/jiwen/记忆三处引擎读数做可视化，不落盘自有数据、因此无搜索/通知/注入/生命周期四面。"
+    settings: "设置 App（逐面判过，结论是不可接）：F1 注入 —— 它是设置的**真源**，注入块由各 App 自己去读设置后挂，设置页自己挂注入等于让一个开关替所有 App 说话；F2 搜索 —— 它落盘的全是键值配置（字体、主题、开关），搜出来的结果对用户没有「找到一段内容」的意义，接进去只会稀释搜索质量；F3 通知 —— 设置页没有「发生了一件事」这种事件，它只在被打开时渲染；F4 微信链路 —— 微信链路注入的是文风与人物约束，设置页不产这类约束；F5 上游读数 —— 它不读任何上游契约面；F6 生命周期 —— 它持的全部状态都是即时从 storage 现取的（无实例级缓存、无未提交草稿），进表只会多一次空转。",
+    mood: "心境 App（逐面判过，结论是不可接）：F1 注入 —— 它是**读**引擎读数做可视化的只读面板，源文件头注自述「只读聚合，不直接写引擎状态」，它没有自己的状态要注入；F2 搜索 —— 它不落盘自有数据（每次打开现算），没有可被索引的内容；F3 通知 —— 心境变化由 drives 引擎产生、通知落点应挂在产生事件的那一侧而不是渲染侧；F4 微信链路 —— 同上，它不产文风/人物约束；F5 上游读数 —— 它读的是本仓 drives / jiwen / 记忆三处引擎，不是 14 个上游契约面之一；F6 生命周期 —— 无实例级缓存与草稿，构造即现取、离开即丢，进表只多一次空转。"
     /* ★ [v4.88.0] 本版把 mofo 从这台账里**移出**：魔坊此前是「六面全无」的
      *   空壳占位（理由原文：只有模板导入导出与运行态迁移，通知走即时提示）
      *   —— 本版它的 mofo-sync.js 真 import 了上游契约面 update-gap.js
@@ -98,10 +97,15 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "wangxiang", name: "万象", dir: "wangxiang", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "phone", name: "通话", dir: "phone", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "diary", name: "日记", dir: "diary", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
-    Object.freeze({ appId: "music", name: "音乐", dir: "music", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
+        /* [v4.103.0 · R13-O9] F6 成立：本版把它登记进 ST_PHONE_REBIND_APP_KEYS。
+       此前它在 onChatChanged() 里被**显式调用**（`musicApp.onChatChanged(storage)`），
+       而清当前数据 / 清全部数据两条路径压根没有这一句 —— 正是「三处手抄、漏一处即静默串味」。
+       并入表后表驱动路径不传 storage，走它形参默认值 `= this.storage`；PhoneStorage 单实例
+       且只 new 一次（index.js:1957），换会话只换 currentChatId 字段，故取到同一个活对象。 */
+    Object.freeze({ appId: "music", name: "音乐", dir: "music", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "album", name: "相册", dir: "album", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "calendar", name: "日历", dir: "calendar", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
-    Object.freeze({ appId: "games", name: "游戏", dir: "games", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
+    Object.freeze({ appId: "games", name: "游戏", dir: "games", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "settings", name: "设置", dir: "settings", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: false }) }),
     Object.freeze({ appId: "playbook", name: "灵感工坊", dir: "playbook", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "achievement", name: "成就簿", dir: "achievement", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
@@ -118,7 +122,11 @@ export const MATRIX = Object.freeze([
     Object.freeze({ appId: "reading", name: "阅读", dir: "reading", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "gacha", name: "幸运转盘", dir: "gacha", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "timeweaver", name: "织光机", dir: "timeweaver", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: true, F6_lifecycle: true }) }),
-    Object.freeze({ appId: "worldpulse", name: "世界脉搏", dir: "worldpulse", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: true, F6_lifecycle: false }) }),
+        /* [v4.103.0 · R13-O9] F6 成立：本版把它登记进 ST_PHONE_REBIND_APP_KEYS。
+       此前同样只有 onChatChanged() 里那一条显式调用（`worldpulseApp.onChatChanged?.()`）。
+       与 music 的差别：它不吃 storage 形参，内部现取 this.storage 重绑楼层监听并重校基线
+       （实例跨会话复用，旧监听挂在旧上下文），故表驱动不传 storage 对它零影响。 */
+    Object.freeze({ appId: "worldpulse", name: "世界脉搏", dir: "worldpulse", faces: Object.freeze({ F1_inject: false, F2_search: true, F3_notify: true, F4_wechatLink: false, F5_upstreamRead: true, F6_lifecycle: true }) }),
     Object.freeze({ appId: "place", name: "地点图景", dir: "place", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: true, F6_lifecycle: true }) }),
     Object.freeze({ appId: "cheat", name: "金手指", dir: "cheat", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "dirtytalk", name: "撩语", dir: "dirtytalk", faces: Object.freeze({ F1_inject: true, F2_search: true, F3_notify: false, F4_wechatLink: true, F5_upstreamRead: true, F6_lifecycle: true }) }),

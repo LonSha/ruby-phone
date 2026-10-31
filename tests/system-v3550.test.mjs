@@ -1,13 +1,19 @@
 // tests/system-v3550.test.mjs — App 消费面矩阵 [v3.55.0 · 计划 A2]
 //
-// 本套件守五件事（五面判据 + 一张破坏表）：
+// 本套件守六件事（六面判据 + 一张破坏表）：
 //   ① A 面逐列复算：矩阵的 81 行 × 6 列全部由本套件从**磁盘真源独立复算**再逐格对账
 //      （同源自述必然恒绿 —— 判据不读矩阵的结论，只读它声明的行与列）；
 //   ② B 面 NA 台账双向对账：磁盘上六面全无 ⇔ 台账里有它，两个方向都要报红；
-//   ③ F 面诊断接线：内核真陈列、视图真建卡、视图不得自算第二份；
-//   ④ G 面判据工具自证：扫描器下限锚（防「空对空」）+ 口径可分辨（防「换个读法结果一样」，
+//      B3 另加一层：每条理由必须**六面各说一句**，且禁止「不适用」当理由
+//      （B2 的字数下限挡不住「只说了一面」的笼统结论，而那是本仓真实缺陷形态）；
+//   ③ C 面「重绑表是唯一出口」三条：有 onChatChanged 的 App 必须在表里 /
+//      onChatChanged() 体内不得再有绕开表的显式调用 / 表里不得有幽灵条目。
+//      [v4.103.0 · R13-O9] 新增 —— 矩阵的 F6 只看得见「进没进表」，
+//      看不见「方法写好了却靠一条显式调用在跑」，那种形态此前全仓无门看守；
+//   ④ F 面诊断接线：内核真陈列、视图真建卡、视图不得自算第二份；
+//   ⑤ G 面判据工具自证：扫描器下限锚（防「空对空」）+ 口径可分辨（防「换个读法结果一样」，
 //      那样等于这条口径根本没被验证）+ 版本下限锚；
-//   ⑤ D 面真源码定点破坏 ⇒ 同款真判据必须转红（破坏只落副本树，真仓全程只读）。
+//   ⑥ D 面真源码定点破坏 ⇒ 同款真判据必须转红（破坏只落副本树，真仓全程只读）。
 //
 // 判据纪律（本仓硬纪律）：判据不许恒绿；破坏锚点必须恰中 1 次（不唯一即抛）；
 // 破坏只落副本树；词法扩展名一律 String.fromCharCode 拼（源码里零反斜杠字面量）。
@@ -307,6 +313,141 @@ function naProblems(root) {
     return bad;
 }
 
+/* ------------------------------------------------------------
+ * B3 面与 C 面：台账理由的面级下限 + 「表是唯一出口」三条判据
+ *   [v4.103.0 · R13-O9] 为什么要另立 B3 而不是调高 B2 的字数下限：
+ *     B2 只挡得住「空串 / 三个字」，挡不住「本 App 是纯设置页，无内容可被搜索」这种
+ *     **只说了一面**的写法 —— 而本仓的真实缺陷形态正是「六面里有一面其实可接，
+ *     却被一句笼统结论盖过去」。故 B3 要求六面各说一句，并且禁止「不适用」当理由。
+ *   C 面治的是另一种形态：**方法写好了、也在被调，但不是走那张唯一真源表**。
+ *     wangxiang-app.js 的注释里记着它的名字 ——「三处手抄、漏一处即静默串味」。
+ *     矩阵的 F6 只看得见「进没进表」，看不见「有没有绕开表的私路」，故须另立判据。
+ * ------------------------------------------------------------ */
+
+/** 六面的「词面」：键名或中文面名出现其一即算点了这一面。 */
+const FACE_TOKENS = [
+    ['F1_inject', ['F1', '注入']],
+    ['F2_search', ['F2', '搜索']],
+    ['F3_notify', ['F3', '通知']],
+    ['F4_wechatLink', ['F4', '微信']],
+    ['F5_upstreamRead', ['F5', '上游']],
+    ['F6_lifecycle', ['F6', '生命周期']],
+];
+
+/** B3 面：台账每条理由必须逐面点名，且不得拿「不适用」当理由。 */
+function naFaceProblems(root) {
+    const bad = [];
+    const M = parseMatrix(root);
+    const ids = Object.keys(M.na);
+    if (ids.length === 0) bad.push('na-face-empty');
+    for (const id of ids) {
+        const why = String(M.na[id]);
+        for (const pair of FACE_TOKENS) {
+            const toks = pair[1];
+            if (!toks.some((t) => why.indexOf(t) >= 0)) bad.push('na-face-absent:' + id + ':' + pair[0]);
+        }
+        if (why.indexOf('不适用') >= 0) bad.push('na-face-placeholder:' + id);
+    }
+    return bad;
+}
+
+/** 递归列出 apps/ 下的 .js 相对路径（发现面用真仓，读取面走 readFrom）。 */
+function listAppJs(root) {
+    const base = path.join(root, 'apps');
+    const out = [];
+    const walk = (dir) => {
+        let ents = [];
+        try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_e) { return; }
+        for (const e of ents) {
+            const abs = path.join(dir, e.name);
+            if (e.isDirectory()) walk(abs);
+            else if (e.name.endsWith('.js')) out.push(path.relative(root, abs).split(path.sep).join('/'));
+        }
+    };
+    walk(base);
+    return out;
+}
+
+/** 去注释：行内 `//` 若不是紧跟在 `:`（http:// 之类）之后，视为注释起点。 */
+function stripLineComments(src) {
+    return src.split(NL).map((l) => {
+        const i = l.indexOf('//');
+        if (i < 0) return l;
+        if (i > 0 && l[i - 1] === ':') return l;
+        return l.slice(0, i);
+    }).join(NL);
+}
+
+/** C 面三条判据的取数函数（一次算齐，三个测试各取所需）。
+ *   ① 定义了 onChatChanged 的 App 类，其实例键必须在表里；
+ *   ② onChatChanged() 体内不得再有绕开表的显式调用（唯一允许的接收者是 phone[key]）；
+ *   ③ 表里不得有幽灵条目（每个键都必须有真挂载点）。 */
+function rebindProblems(root) {
+    const bad = [];
+    const src = readFrom(root, INDEX_REL);
+    const ti = src.indexOf('const ST_PHONE_REBIND_APP_KEYS = [');
+    if (ti < 0) return ['rebind-table-missing'];
+    const blk = src.slice(ti, src.indexOf('];', ti));
+    /* 取表键：**不能按「一行一条」取** —— 本表实测有多条并行的写法
+     *   （`    'bilibiliApp', 'theaterApp',`）。按行取会让这类键整批消失在判据视野里，
+     *   于是 C1 把已登记的 App 全报成「没进表」（本版首跑实测踩中，报 20 条假红）。
+     *   正确取法：先剥注释，再取块内**所有**单引号字面量。 */
+    const table = [...stripLineComments(blk).matchAll(new RegExp(Q + '([A-Za-z0-9_]+)' + Q, 'g'))].map((m) => m[1]);
+    if (table.length < 40) bad.push('rebind-table-too-few:' + table.length);
+
+    /* 挂载点：懒加载路由表的 key + 全仓 window.VirtualPhone.X = new … */
+    const routeSrc = readRepoTable();
+    const mount = new Set([...routeSrc.matchAll(new RegExp('key: "([A-Za-z0-9_]+)"', 'g'))].map((m) => m[1]));
+    const files = [INDEX_REL].concat(listAppJs(ROOT));
+    const MOUNT_RE = new RegExp('window' + BS + '.VirtualPhone' + BS + '.' + '([A-Za-z0-9_]+)' + BS + 's*=' + BS + 's*new', 'g');
+    for (const rel of files) {
+        const t = readFrom(root, rel);
+        for (const m of t.matchAll(MOUNT_RE)) mount.add(m[1]);
+    }
+
+    /* 类 → 实例键：路由表给 key/cls，内联挂载给 key/类名，两处并起来 */
+    const clsToKey = {};
+    for (const m of routeSrc.matchAll(new RegExp('key: "([A-Za-z0-9_]+)", cls: "([A-Za-z0-9_]+)"', 'g'))) clsToKey[m[2]] = m[1];
+    const INLINE_RE = new RegExp('window' + BS + '.VirtualPhone' + BS + '.([A-Za-z0-9_]+)' + BS + 's*=' + BS + 's*new' + BS + 's*(?:module' + BS + '.' + ')?([A-Za-z0-9_]+)' + BS + '(', 'g');
+    for (const rel of files) {
+        const t = readFrom(root, rel);
+        for (const m of t.matchAll(INLINE_RE)) if (!(m[2] in clsToKey)) clsToKey[m[2]] = m[1];
+    }
+
+    /* ① 定义了就必领登记（只判 *-app.js 里的 App 类；视图类由所属 App 代管） */
+    const EXPORT_CLS = new RegExp('export' + BS + 's+class' + BS + 's+([A-Za-z0-9_]+)');
+    const HAS_METHOD = new RegExp(BS + 'bonChatChanged' + BS + 's*' + BS + '(');
+    let appWithMethod = 0;
+    for (const rel of files) {
+        if (!rel.endsWith('-app.js')) continue;
+        const t = readFrom(root, rel);
+        const cm = t.match(EXPORT_CLS);
+        if (!cm) continue;
+        if (!HAS_METHOD.test(t)) continue;
+        appWithMethod += 1;
+        const key = clsToKey[cm[1]];
+        if (!key) { bad.push('rebind-class-unmounted:' + cm[1]); continue; }
+        if (table.indexOf(key) < 0) bad.push('rebind-method-not-registered:' + key);
+    }
+    if (appWithMethod < 40) bad.push('rebind-apps-too-few:' + appWithMethod);
+
+    /* ② 表以外不得有私路：代码面里所有 onChatChanged 调用的接收者只能是 phone[key] */
+    const code = stripLineComments(src);
+    const CALL_RE = new RegExp(
+        '([A-Za-z0-9_$]+(?:' + BS + '.' + '[A-Za-z0-9_$]+|' + BS + '[[A-Za-z0-9_$]+' + BS + '])*)' +
+        BS + 's*' + BS + '?' + '?' + BS + '.' + BS + 's*onChatChanged' + BS + 's*' + BS + '?' + '?' + BS + '.' + '?' + BS + 's*' + BS + '(', 'g');
+    let calls = 0;
+    for (const m of code.matchAll(CALL_RE)) {
+        calls += 1;
+        if (m[1] !== 'phone[key]') bad.push('rebind-explicit-call:' + m[1]);
+    }
+    if (calls === 0) bad.push('rebind-calls-empty');
+
+    /* ③ 幽灵条目 */
+    for (const k of table) if (!mount.has(k)) bad.push('rebind-ghost-key:' + k);
+    return bad;
+}
+
 /** F 面：诊断接线（内核真陈列 + 视图真建卡 + 视图不自算第二份）。 */
 function wiringProblems(root) {
     const bad = [];
@@ -413,6 +554,41 @@ test('B2 ★★ NA 台账每条理由必须可读（不是占位符），且与�
     }
     const zero = M.rows.filter((r) => FACE_KEYS.every((k) => r.faces[k] !== true)).map((r) => r.appId).sort();
     assert.deepEqual(Object.keys(M.na).sort(), zero, '台账键集必须等于「六面全无」的行集');
+});
+
+test('B3 ★★ NA 理由必须逐面点名（六面各说一句），且不得拿「不适用」当理由', () => {
+    const bad = naFaceProblems(ROOT);
+    assert.deepEqual(bad, [], 'NA 理由不合格：' + bad.join(' | '));
+});
+
+test('C1 ★★★ 表是唯一出口（一）：定义了 onChatChanged 的 App 必须在 REBIND 表里', () => {
+    /* ★ 下限锚必须一起断言：扫描面塌陷（一条 app 都没扫到 / 表没解析出来）时，
+     *   method-not-registered 自然是空的 —— 只 filter 那一条就会**静默转绿**。
+     *   本仓口径：判据不许恒绿，所以「扫到的面太少」本身就是红。 */
+    const all = rebindProblems(ROOT);
+    const bad = all.filter((x) => x.indexOf('rebind-method-not-registered') === 0
+        || x.indexOf('rebind-class-unmounted') === 0
+        || x.indexOf('rebind-apps-too-few') === 0
+        || x.indexOf('rebind-table-too-few') === 0
+        || x.indexOf('rebind-table-missing') === 0);
+    assert.deepEqual(bad, [], '★ 方法写好了却没进表 ⇒ 清当前数据 / 清全部数据两条路径漏绑：' + bad.join(' | '));
+});
+
+test('C2 ★★★ 表是唯一出口（二）：onChatChanged() 体内不得再出现绕开表的显式调用', () => {
+    /* 同样带下限锚：`rebind-calls-empty` 表示一条 onChatChanged 调用都没扫到，
+     *   那时 explicit-call 必然为空 —— 不把它算进来就是恒绿。 */
+    const bad = rebindProblems(ROOT).filter((x) => x.indexOf('rebind-explicit-call') === 0
+        || x.indexOf('rebind-calls-empty') === 0
+        || x.indexOf('rebind-table-missing') === 0);
+    assert.deepEqual(bad, [], '★ 绕开表的显式调用会重演「三处手抄、漏一处即静默串味」：' + bad.join(' | '));
+});
+
+test('C3 ★★ 表里不得有幽灵条目：每个键都必须有真挂载点', () => {
+    /* 反向同理：表若一条都没解析出来，幽灵条目也一条都不会有 —— 那是最坏的假绿形态。 */
+    const bad = rebindProblems(ROOT).filter((x) => x.indexOf('rebind-ghost-key') === 0
+        || x.indexOf('rebind-table-too-few') === 0
+        || x.indexOf('rebind-table-missing') === 0);
+    assert.deepEqual(bad, [], '表里登记了没有挂载点的键（改个名字就永远静默不生效）：' + bad.join(' | '));
 });
 
 test('F1 ★★★ 诊断内核真陈列：矩阵五个导出全部被产品端消费，且读数包里有 appFaces', () => {
@@ -527,6 +703,22 @@ const D = [
         "+ this._appFacesHtml(pkg) + '</section>');",
         "+ '</section>');",
         'wiringProblems'],
+    /* [v4.103.0 · R13-O9] 三条新破坏：把本版刚补上的两种形态各破坏一次 ——
+     *   D10 把一个「定义了 onChatChanged 又在表里」的 App 改名移出表 ⇒ C1 必须转红；
+     *   D11 在表以外再长出一条显式调用 ⇒ C2 必须转红（这正是本版修掉的那个真实形态）；
+     *   D12 把台账里的一面用一句话糊过去 ⇒ B3 必须转红。 */
+    ['D10 有方法的 App 被移出重绑表（清数据路径漏绑）', INDEX_REL,
+        "    'gamesApp',",
+        "    'zzGamesApp',",
+        'rebindProblems'],
+    ['D11 表以外又长出显式调用（三处手抄复发）', INDEX_REL,
+        'try { phone[key]?.onChatChanged?.(); }',
+        'try { phone[key]?.onChatChanged?.(); } try { phone.gamesApp?.onChatChanged?.(); }',
+        'rebindProblems'],
+    ['D12 台账某面被一句话糊过去（不说理由）', MATRIX_REL,
+        'F5 上游读数 —— 它不读任何上游契约面',
+        '其余没什么好说的',
+        'naFaceProblems'],
 ];
 
 /** 破坏落副本树：只写被改的那一个文件（其余回落到真仓，不复制整棵树）。
@@ -544,6 +736,7 @@ function breakIn(rel, from, to) {
 }
 
 const JUDGES = { matrixProblems: matrixProblems, naProblems: naProblems, wiringProblems: wiringProblems,
+    rebindProblems: rebindProblems, naFaceProblems: naFaceProblems,
     toolProblems: toolProblems, versionProblems: versionProblems };
 
 async function runBreak(row) {
@@ -555,16 +748,20 @@ async function runBreak(row) {
     return bad;
 }
 
-test('D1~D8 破坏表：每条真源码定点破坏都必须让对应判据转红', async () => {
+test('D1~D12 破坏表：每条真源码定点破坏都必须让对应判据转红', async () => {
     for (const row of D) {
         const bad = await runBreak(row);
         assert.ok(Array.isArray(bad) && bad.length >= 1, row[0] + ' 破坏未被观测到（判据没响）');
     }
 });
 
-test('D9 真仓只读：全部破坏跑完后，真仓四面判据必须仍然干净', () => {
+test('D9 真仓只读：全部破坏跑完后，真仓六面判据必须仍然干净', () => {
     assert.deepEqual(matrixProblems(ROOT), []);
     assert.deepEqual(naProblems(ROOT), []);
     assert.deepEqual(wiringProblems(ROOT), []);
     assert.deepEqual(toolProblems(ROOT), []);
+    /* [v4.103.0 · R13-O9] 新增两面一并回读：破坏只落副本树，真仓必须一格未动。
+     *   漏掉这两行的话，D10/D11/D12 可能「真仓本来就红」而冒充「破坏生效」。 */
+    assert.deepEqual(naFaceProblems(ROOT), []);
+    assert.deepEqual(rebindProblems(ROOT), []);
 });

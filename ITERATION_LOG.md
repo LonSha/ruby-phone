@@ -1,3 +1,24 @@
+## 迭代 237 · v4.103.0 · R13-O9 六面全无 App 逐件结案（一件接上 / 两件判明不该接 / 挖出四例同形态缺陷）
+
+- 【版本升至 4.103.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4103.py 对齐 tools/bump_v4102.py，只换 STEPS 与头注，逻辑一字未改）。
+- 【计划书说 4 件，实测 3 件】R13-O9 立项口径是「六面全无 4 件 App 逐件结案」，实测 MATRIX 89 行里六面全无的只有 games / settings / mood 三件。少的那一件是 mofo —— 它已在 v4.88.0 因 mofo-sync.js 真 import 了上游契约面 update-gap.js 而移出台账，留痕写在 NA 的注释里。计划书的数字是立项时读数，本版不回头改它，只把实测差写进 PLAN.md 的当版状态表。
+- 【一件能接：games 接 F6 生命周期】gamesApp 持八款游戏（猫盒 / 棋盘 / 狼人 / 卧底 / 猜猜 / 海龟汤 / 剧本杀 / 飞行棋）各自的会话存档库，构造期把当前会话的存档载入实例内存。换会话必须重绑，否则「切换角色后沿用上一只小猫」。矩阵 games 行的 F6_lifecycle 由 false 变 true，同时从 NA 台账移出。
+- 【两件不该接：settings 与 mood 逐面判】settings 判词：F1 它是设置的真源，注入块由各 App 自己读了设置后挂，设置页自己挂注入等于让一个开关替所有 App 说话；F2 落盘的全是键值配置（字体 / 主题 / 开关），搜出来对用户没有「找到一段内容」的意义；F3 设置页没有「发生了一件事」这种事件；F4 微信链路注入的是文风与人物约束，设置页不产这类约束；F5 不读任何上游契约面；F6 全部状态都是即时从 storage 现取的（无实例级缓存、无未提交草稿），进表只多一次空转。
+- 【mood 的判词同样是六面逐面】mood 判词：F1 它是读引擎读数做可视化的只读面板（源文件头注自述「只读聚合，不直接写引擎状态」），没有自己的状态要注入；F2 不落盘自有数据（每次打开现算），无可索引内容；F3 心境变化由 drives 引擎产生，通知落点应挂在产生事件的那一侧而不是渲染侧；F4 同上，不产文风 / 人物约束；F5 读的是本仓 drives / jiwen / 记忆三处引擎，不是 14 个上游契约面之一；F6 无实例级缓存与草稿，构造即现取、离开即丢。
+- 【判词不是推演，是实测校验过的】settings 的构造字段实测只有 phoneShell / storage / settings / imageManager / _albumImagePicker / currentTab —— 确实没有草稿字段，F6 那条「无未提交草稿」据此成立；mood 全文件 storage.set 零命中、mood-app.js 只有一行 import —— F2 那条「不落盘自有数据」据此成立。写理由之前先把这两条查了，不是先写理由再找依据。
+- 【挖出四例同形态缺陷：方法写好了、也在被调，但不是走那张唯一真源表】games / music / worldpulse / lonshaBridge 四者都定义了 onChatChanged、都在 index.js 的 onChatChanged() 函数体里被显式调用、都不在 ST_PHONE_REBIND_APP_KEYS 里。后果是「清当前数据」与「清全部数据」两条路径压根没有那一条调用（只有「换会话」这一条覆盖到），而四者的失效方式都是不报错、只错结果：B 会话的悬浮窗还挂着 A 会话的曲目 / B 会话的楼层事件按 A 会话的基线判定 / 上一会话建的 BM25 索引没失效 / 切换角色后沿用上一只小猫。
+- 【修法是四条一起并进表、四条显式调用全部收回】不是「再补两个调用点」。wangxiang-app.js 的注释里写着这个形态的名字：补一个显式调用点等于重新引入「三处手抄、漏一处即静默串味」。本版把四者登记进 ST_PHONE_REBIND_APP_KEYS（74 键到 78 键），并把 onChatChanged() 体内那四条显式调用连同 P2 / P3 里 worldpulse 的两条一并收回成注释 —— 注释里留了去向与理由，不悄悄删。
+- 【music 并表后不传 storage 为什么等价，论证写在表里】它每次都由调用点显式传 storage，并入表后传入 undefined 就会走 onChatChanged(storage = this.storage) 的默认值。本仓 PhoneStorage 是单实例且在整个生命周期内只 new 一次（index.js:1957），换会话只换 currentChatId 字段、不换对象，故默认值取到的是同一个活对象 —— 行为等价。这条论证写在表内那条注释里，因为它正是「能不能这么改」的全部依据。
+- 【worldpulse 与 lonshaBridge 不吃 storage 形参，故不需要那条等价论证】worldpulse 的 onChatChanged 内部现取 this.storage 重绑楼层监听并重校基线；lonshaBridge 的 onChatChanged 只把 _bm25Dirty 置真。两者对表驱动路径不传参零敏感。差别写清了，避免下次有人照抄 music 的论证去解释一个不吃参数的 App。
+- 【本版自己抓到的缺陷形态：判据的扫描面比它要判的东西窄】新写的 C1 首跑报 20 条假红，把一批明明已登记的 App 报成「没进表」。根因不是代码错，是取表键时按「一行一条」的正则取，而这张表实测有多条并行的写法（一行里两个键）。按行取会让这类键整批消失在判据视野里 —— 这正是本仓反复出现的「扫描面口径必须跟着代码走」的又一例。修法是把取键改成先剥注释再取块内所有单引号字面量。
+- 【本版自己抓到的第二个缺陷：判据在扫描面塌陷时会静默转绿】C1 / C2 / C3 最初只 filter 自己那一条问题码，于是「一条 app 都没扫到」「表没解析出来」「一条 onChatChanged 调用都没扫到」三种塌陷都会让被 filter 的那条自然为空 —— 判据静默转绿。修法是把下限锚一起断言（apps-too-few / table-too-few / table-missing / calls-empty），塌陷本身就是红。
+- 【新增判据 C1 / C2 / C3：表是唯一出口】C1 定义了 onChatChanged 的 App 必须在 REBIND 表里；C2 onChatChanged() 体内不得再出现绕开表的显式调用（唯一允许的接收者是表循环里那个按表键取到的实例）；C3 表里不得有幽灵条目（每个键都必须有真挂载点，懒加载路由表或 window.VirtualPhone.X = new）。此前全仓无门看守这种形态 —— 矩阵的 F6 只看得见「进没进表」，看不见「有没有绕开表的私路」。
+- 【新增判据 B3：NA 理由必须六面各说一句】B2 的字数下限只能挡「空串 / 三个字」，挡不住「本 App 是纯设置页，无内容可被搜索」这种只说了一面的写法 —— 而本仓的真实缺陷形态正是六面里有一面其实可接、却被一句笼统结论盖过去。B3 要求六面各点名且禁止「不适用」当理由，与 B2 并存不替代。
+- 【破坏表 D1 至 D8 扩到 D1 至 D12】新增三条：D10 把一个有方法又在表里的 App 改名移出表，C1 必须转红；D11 在表以外再长出一条显式调用，C2 必须转红（这正是本版修掉的那个真实形态）；D12 把台账里的一面用一句话糊过去，B3 必须转红。三条都实测转红，且 D9 真仓只读回读同步从四面扩到六面 —— 漏掉这一扩的话，新破坏可能「真仓本来就红」而冒充「破坏生效」。
+- 【交棒改写与下限形两处】v3550 套件的文件头注原文写「本套件守五件事」，本版改成六件事并把 C 面与 B3 逐条写进头注（头注不跟着涨就会变成下一份与实际不符的声明）；D9 的测试名从「真仓四面判据」改成「真仓六面判据」，与断言条数一一对上。两处都是下限形改写，不是新功能。
+- 【读数】v3550 套件 14 例到 18 例全绿；MATRIX 89 行不变；F6_lifecycle 命中 74 到 77；NA 3 件到 2 件；ST_PHONE_REBIND_APP_KEYS 74 键到 78 键。定向回归：syntax（1100 文件）/ import-resolve（638 文件 1092 条）/ named-import（634 文件 1062 条）/ keys（505 使用点 161 条前缀 505 条登记）/ lifecycle（85 个含生命周期出口的 App 类、78 key）/ registry（APPS 89、懒加载分支 89）/ bind-consuming / method-consuming（死方法 311 新增 0）/ dead-exports（零消费 27）/ weak-coercion / source-derivation / bridge-contract / screen-host / session-writeback / hardlink-safety / doc-path-claim（4016 处声明 0 落空）/ upstream-face 共 17 道门逐门 OK。
+- 【运行时验证边界】本版只证明「重绑表是唯一出口」这一形态在源码层成立，并把它的缺口做成会响的判据。它不证明换会话后四件 App 在真宿主里的重绑真的跑通 —— 那要真机换一次会话看悬浮窗、看游戏存档、看楼层基线，仍归 R-O3 家族。C2 抓的是静态代码面的私路，抓不到运行时才出现的时序问题（例如某条 onChatChanged 内部又异步回调另一条）。
+
 ## 迭代 236 · v4.102.0 · R13-O3 第六期内核清账（四件接线 / 八件退役 / 台账十二行）
 
 - 【版本升至 4.102.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4102.py 对齐 tools/bump_v4101.py，只换 STEPS 与头注，逻辑一字未改）。
@@ -1866,7 +1887,7 @@
 > 本文件记录**自主迭代模式**下每一轮的：做了什么 / 为什么 / 影响范围 / 验证方式 / 遗留项。
 >
 > 与 `update-log.json` 的分工：`update-log.json` 是面向用户与更新弹窗的**权威变更日志**
-> （350 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
+> （351 个版本，按版本号索引，`latest` 指针驱动 App 内「本版更新」弹窗，且与
 > `index.js` 的 `ST_PHONE_CURRENT_UPDATE.items` 由测试强制**逐字同源**）。
 > 本文件是**工程侧的过程记录**，允许包含未发布到更新弹窗的技术细节与已知遗留。
 > 不另建 `CHANGELOG.md`，避免与 `update-log.json` 形成两份真相。
@@ -7266,7 +7287,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.102.0`（五源同源）
+- **当前版本**：`4.103.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

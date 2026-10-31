@@ -323,7 +323,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.102.0';
+const ST_PHONE_VERSION = '4.103.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -492,11 +492,33 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'commsApp',   // [v4.49.0 · 第六期 R6-O2] 会话台：上一次动作归因（_lastAction）与页签是**实例态** ——
                       //             换会话必须丢（否则旧会话的「刚标记过已回」会贴到新会话的会话台上）；
                       //             交流本体在 comm_threads_v1 那一格（前缀 ^comm），随会话隔离。
-    'searchApp'       // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
+    'searchApp',      // [v3.58.0] 全局搜索：持本轮扫描代际（_scanGen）与指向当前会话的宿主源表 ——
                       //             换会话必须作废旧扫描并重新对齐源表（旧源表的 chatContext 还指着
                       //             上一段对话的 history 数组）。此前它不在表里：换会话后旧扫描仍算
                       //             「当前代际」，扫完把上一段会话的命中写进面板（不报错、只错结果）。
-
+    'gamesApp',       // [v4.103.0 · R13-O9] 游戏厅：八款游戏（猫盒 / 棋盘 / 狼人 / 卧底 / 猜猜 /
+                      //             海龟汤 / 剧本杀 / 飞行棋）各自持会话存档库，构造期把当前会话的存档
+                      //             载入实例内存。此前它在 onChatChanged() 里有一条**绕开本表**的显式调用
+                      //             （`gamesApp.onChatChanged?.(storage)`），等价于「三处手抄、漏一处即静默
+                      //             串味」的老形态：清当前数据 / 清全部数据两条路径各写一遍、换会话只靠那一条。
+                      //             本版把它登记进表、并把那条显式调用删掉 —— 单一真源收口，同时让它
+                      //             在「六面」矩阵里 F6_lifecycle 从 false 变 true。
+    'musicApp',       // [v4.103.0 · R13-O9] 音乐：持播放队列 / 悬浮窗状态 / 本会话卡片索引 —— 换会话必须
+                      //             重扫当前会话卡片并刷新悬浮窗（否则 B 会话的悬浮窗还挂着 A 会话的曲目）。
+                      //             此前同样是 onChatChanged() 里的显式调用，本版并进表。
+                      //             ★ 与 gamesApp 的差别：它每次都由调用点**显式传 storage**，
+                      //             并入表后传入 undefined ⇒ 走 `onChatChanged(storage = this.storage)` 的
+                      //             默认值，取到的是构造期那份 storage。本仓 PhoneStorage 是**单实例**且在
+                      //             整个生命周期内只 new 一次（index.js:1957），换会话只换 currentChatId 字段、
+                      //             不换对象，故默认值取到的是同一个活对象 —— 行为等价。
+    'worldpulseApp',  // [v4.103.0 · R13-O9] 世界脉搏：换会话要重绑楼层监听并重校基线（实例跨会话复用），
+                      //             否则 B 会话的楼层事件会按 A 会话的基线判定。
+                      //             此前同样是 onChatChanged() 里的显式调用，本版并进表。
+    'lonshaBridge',   // [v4.103.0 · R13-O9] 上游桥：onChatChanged() 只做一件事 —— 把 `_bm25Dirty` 置真，
+                      //             即「上一会话建的 BM25 索引现在失效了」。此前它在 onChatChanged() 里被显式调用，
+                      //             P2 清当前数据 / P3 清全部数据两条路径都**没有这一句**（第四例同形态缺陷）。
+                      //             并入表后三条路径共用同一出口。它不吃 storage 形参（内部持构造期那份），
+                      //             故表驱动不传 storage 对它零影响。
 ];
 // [v3.3.0] 楼层取值门（删楼回滚族）。
 //   存在理由：`Number(null) === Number('') === Number([]) === 0`、`Number(true) === 1`，
@@ -533,24 +555,24 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-01",
     items: [
-        "【版本升至 4.102.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4102.py 对齐 tools/bump_v4101.py，只换 STEPS 与头注，逻辑一字未改）。",
-        "【R13-O3 做了什么】method-consumption-audit 的 zero 档（产品面零 import 的模块）从 12 件清到 0 件。不是一次清零，而是逐件判 A/B：A 类（能力只差一个界面）= 接线；B 类（同类能力已有更强实现且已进产品面）= 删文件。判完写进 tests/audit/r6_kernel_disposition.tsv，12 行乘 6 列：decision / module / bytes / product_consumer / why_this_decision / what_is_given_up。",
-        "【A 类 4 件：接线，不是加功能】daily-theater 接 apps/diary 的「今天」页；mystery-engine 接 apps/games 的「推理谜题」页（新建桥 config/mystery-face-bridge.js 228 行 + 视图 apps/games/mystery/mystery-view.js 234 行 + mystery.css 351 行）；voice-narrative 接 apps/album 的「声音」页（新建桥 config/voice-face-bridge.js 222 行 + 视图 apps/album/album-voice-view.js 244 行 + album-voice.css 312 行）；time-env 接 index.js 装配点。",
-        "【time-env 判的是修活的，不是接线】全仓 grep timeEnv 只有两处命中，都在 apps/settings/settings-app.js（1201 读 / 6326 写）—— 没有任何地方给 window.VirtualPhone.timeEnv 赋过值。后果是设置页那个「时间-环境感知注入」开关读永远 undefined（界面按默认 true 显示）、写只落 storage 而没人消费、TimeEnvManager.attachPromptHook() 从未被调用过。修法是在 index.js 的 memoryCore.attachPromptHook() 之后加一段 try 包裹的实例装配与钩子挂载。这不是新增能力，这是把一个已写好、已登记在设置页、已写进 storage 的能力接上电；本仓最贵的一类债不是没做，是做了但没通电。",
-        "【B 类 8 件退役，逐件写清当年为什么做、为什么不用、放弃了什么】计划书原文明令不许「留着以后可能用」（那正是这批债的成因），故每件都写到「哪一层放弃、由谁承担、没丢什么」的粒度：club-coop 11755 字节（五人团队两次分工变更 + 换负责人待办交接；群投票链已走 group-vote-contract + group-vote-handoff 整条真产品链，放弃分工变更与换负责人交接，群投票与交接凭据仍在微信链上）；mentorship-colearn 3387 字节（只有三个导出，师友共学最薄切片，无 App 承载；放弃师友分歧并存，群组商议由 group-deliberation + group-pace 承担）；multi-activity-reroute 13076 字节（本期最大一件；日程链已走 schedule-bridge + life-events，放弃中途改道的局部重排与按亲历者精确分账）；parallel-life 5676 字节（branch-canon-contract 已接 apps/archive、branch-contrast 已接 index.js；放弃 A/B 两线分别操作）；relation-revisit 6884 字节（life-program-replay + replay-face-bridge 已接 album 回看页；放弃按范围引用旧消息）；serial-narrative 5725 字节（replayable-phone-program + replay-face-bridge 已覆盖节目幕次独立进度与正史分离；放弃章节分岔）；social-ecosystem 9125 字节（topic-echo 已接 index.js、topic-dossier-contract 已接 apps/reading；放弃三圈层讨论差异，澄清传播由 topic-echo 的 debunk 承担）；story-reentry 10044 字节（resume-brief 经 timeweaver-collector 真消费、resume-workbench + action-center 齐备；放弃接续旅程路径，续玩简报由 resume-brief 承担）。",
-        "【B 类里的一次自我更正留在台账里】parallel-life 那行最初把替代品写成 parallel-persona-spaces，实测它只有 subsystem-orchestrator 引、产品面零 import，不能算「更强实现」；处理方式不是删掉理由换一条更顺的，而是在台账里明写这次更正，替代品换成 branch-canon-contract 加 branch-contrast。更正留在台账里，不悄悄抹掉。",
-        "【本版自己抓到的缺陷形态一：桥接层第一版签名全错】config/mystery-face-bridge.js 第一版 133 行是按内核头注猜的签名，最小宿主一跑全部返回 ok:false。读 config/mystery-engine.js（v4.53.0）真码才发现三处硬差异：queryWitness 返回 responded/text/leakedUnread 而不是 answer、getDiscoveredClues 返回对象数组而不是 id 数组、submitHypothesis 返回 correct/feedback/newlyRevealed/unlockedClues。最关键的一条是内核 submitHypothesis 只读 progress.readClueIds 判断必需线索读齐否、自己从不写入 readClueIds 与 discoveredClueIds，且内核里没有任何「发现线索」的入口 —— 玩家怎么发现一条线索被内核留给了宿主。这条缺口写进新桥头注，成为桥存在的另一半理由。教训是内核签名必须实测，不能凭注释臆想。",
-        "【本版自己抓到的缺陷形态二：删测试块时把函数定义一起删了】四个 R6 期套件在删完 8 个文件后全部于 import 阶段中断，先按 test 名精确删除 26 个依赖退役模块的块（v4510 删 5 块、v4520 删 12 块、v4530 删 3 块、v4540 删 6 块），再清 import 行与 A3/A4 公共断言。回跑时 v4510 报 ReferenceError: breakSource is not defined —— 因为它的函数定义夹在被删的 E 面测试块之间，删块时被一起删了。补回函数并把头注改成「本函数的现存消费者是 E2 与 E3」。",
-        "【本版自己抓到的缺陷形态三：文件删了登记还在放行】删完 multi-activity-reroute.js 后 npm run keys fail-closed 当场点名：K3 有 1 条登记已失效（真仓库零命中）—— 幽灵放行条 multi_activity_reroute_v1。修法是删登记（505 条 / 隔离正则 161 条），但保留 config/storage.js 的隔离正则并在注释里写明理由：登记管「现在还有谁在用」，正则管「过去的残留别串门」，老用户手机里可能还留着这个键。",
-        "【三个错误断言都是我写错的】voice-narrative 桥里踩到三处：其一总时长从 147000 扩到 290000 才够三角色五分钟场景；其二原本断言「素材全齐时 15 项全有音频」是错的 —— q14 的 assetRef 是空串，素材再齐也仍缺，内核标 no-asset-ref 是正确行为，改断言为 14 项加 1 条缺失；其三原本断言「播放中 pause 应 ok:false」把状态机搞反了，改为 ok:true 并补「已暂停时再 pause 不改状态」。",
-        "【判据不能指向不存在的源码】v4540 删到只剩 A1/A2/A4 三条，在文件头注里写明 A3 与 D1~D3 一并删除的理由：判据不能指向不存在的源码；保留 A1/A2/A4 是因为本版 4.54.0 的版本下界锚仍然有效，且它是「这一批出生就带版本闸」的历史事实，不该随模块退役一起消失。这是本仓对历史判据的一贯口径：事实留，指向空处的断言删。",
-        "【交棒改写（下限形）】PLAN.md 顶部那张第六期十八项表原本只有立项标题、没有状态，本轮不删不改标题行，在其下新增「第六期十八项逐件实测状态」一节：判据口径为 config 里内核文件是否存在 + 产品面 apps/、index.js、phone/ 是否有真 import，逐件给出内核文件、产品面消费点、状态三列，实测得 7 件已交付 / 4 件 A 类接线完成 / 8 件 B 类退役。不用「已完成 / 待实施」这类二值标记，因为实测出的第三态（内核在、产品面有门、但体验未验收）占多数。",
-        "【诚实边界写进代码注释，不写进提交信息】三处新视图都把自己的天花板写在文件里：mystery-view.js 写「进度只活在这一页，离开即重置；要跨会话存档得先把 progress 接到 storage，那是下一格，本版不做，也不假装做了」；album-voice-view.js 写「本页不持有 audio 元素，因为库里没有真音频，假装播就是把缺失说成成功」；voice-face-bridge.js 写「本桥不调用 TTS、不播音频、不读也不写 storage：它只产出文字」。理由是提交信息半年后没人读，注释在文件里天天被读。",
-        "【定向回归（铁律：36 项做完前不跑全量）】四个套件回跑 v4510 八条、v4520 九条、v4530 十六条、v4540 三条，合计 36 条全绿（此前是 pass 0 / fail 1）。十六道静态门逐门取 rc 全部 OK：syntax 1100 文件 / import-resolve / dead-exports / bind-consuming / method-consuming / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / named-import / screen-host / session-writeback / hardlink-safety / doc-path-claim（扫 3985 处声明、0 落空）/ upstream-face。视图层另跑三组自建最小 DOM 宿主断言：mystery 十二条、voice 十三条（桥十一条另计）、time-env 九条。全程未跑 npm run check 全量，未跑 npm test 全量。",
-        "【zero 归零的复核读数】method-consumption-audit 更新后：死方法 311 条（基线 311 / 新增 0）；模块入度 279 件（product 214 / orchestrator-only 65）；弱档 65 件（基线 65 / 新增 0）；zero 档 0 件。dead-export 基线 68 降到 27 条（摘除已删文件的导出账）。dead-module-baseline.json 的 entries 74 降到 65。",
-        "【台账落盘与占位撒账】临时台账落盘为 tests/audit/r6_kernel_disposition.tsv（13 行含表头）；scripts/doc-path-claim-planned-deliverables.json 的 entries 从 3 降到 2（撤掉该条占位并注明已履行），doc-path-claim 门复跑 0 落空。",
-        "【运行时验证边界】本项对 88 个 App 的既有功能零改动；新增的是三个页面（游戏大厅推理谜题、相册声音、日记今天）与一处装配点。能保证的是内核能力有了门、且门在无头环境下按契约工作（最小 DOM 宿主断言全绿）；不能保证的是这些页面在真机上好玩好看、在 360px 窄屏下不挤 —— 无头宿主的 scan 用正则扫标签、只支持 data-x 两种选择器，它证明的是 DOM 结构按顺序生成，不是浏览器里看着对。八件 B 类退役的部分是永久放弃，此后不再存在，不保留任何「以后可能用」的残件。",
-        "【产物】新增 config/mystery-face-bridge.js 228 行、apps/games/mystery/mystery-view.js 234 行、apps/games/mystery/mystery.css 351 行、config/voice-face-bridge.js 222 行、apps/album/album-voice-view.js 244 行、apps/album/album-voice.css 312 行、tests/audit/r6_kernel_disposition.tsv 13 行；改 index.js、apps/games/games-app.js、apps/games/poker/poker-view.js、apps/games/poker/poker.css、apps/album/album-app.js、apps/album/album-view.js、config/storage.js、scripts/keys-audit.mjs、scripts/dead-module-baseline.json、scripts/dead-export-baseline.json、scripts/dead-method-baseline.json、四个 R6 套件、PLAN.md、scripts/doc-path-claim-planned-deliverables.json；删 config/club-coop.js、config/mentorship-colearn.js、config/multi-activity-reroute.js、config/parallel-life.js、config/relation-revisit.js、config/serial-narrative.js、config/social-ecosystem.js、config/story-reentry.js 共 8 件 63671 字节。"
+        "【版本升至 4.103.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4103.py 对齐 tools/bump_v4102.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【计划书说 4 件，实测 3 件】R13-O9 立项口径是「六面全无 4 件 App 逐件结案」，实测 MATRIX 89 行里六面全无的只有 games / settings / mood 三件。少的那一件是 mofo —— 它已在 v4.88.0 因 mofo-sync.js 真 import 了上游契约面 update-gap.js 而移出台账，留痕写在 NA 的注释里。计划书的数字是立项时读数，本版不回头改它，只把实测差写进 PLAN.md 的当版状态表。",
+        "【一件能接：games 接 F6 生命周期】gamesApp 持八款游戏（猫盒 / 棋盘 / 狼人 / 卧底 / 猜猜 / 海龟汤 / 剧本杀 / 飞行棋）各自的会话存档库，构造期把当前会话的存档载入实例内存。换会话必须重绑，否则「切换角色后沿用上一只小猫」。矩阵 games 行的 F6_lifecycle 由 false 变 true，同时从 NA 台账移出。",
+        "【两件不该接：settings 与 mood 逐面判】settings 判词：F1 它是设置的真源，注入块由各 App 自己读了设置后挂，设置页自己挂注入等于让一个开关替所有 App 说话；F2 落盘的全是键值配置（字体 / 主题 / 开关），搜出来对用户没有「找到一段内容」的意义；F3 设置页没有「发生了一件事」这种事件；F4 微信链路注入的是文风与人物约束，设置页不产这类约束；F5 不读任何上游契约面；F6 全部状态都是即时从 storage 现取的（无实例级缓存、无未提交草稿），进表只多一次空转。",
+        "【mood 的判词同样是六面逐面】mood 判词：F1 它是读引擎读数做可视化的只读面板（源文件头注自述「只读聚合，不直接写引擎状态」），没有自己的状态要注入；F2 不落盘自有数据（每次打开现算），无可索引内容；F3 心境变化由 drives 引擎产生，通知落点应挂在产生事件的那一侧而不是渲染侧；F4 同上，不产文风 / 人物约束；F5 读的是本仓 drives / jiwen / 记忆三处引擎，不是 14 个上游契约面之一；F6 无实例级缓存与草稿，构造即现取、离开即丢。",
+        "【判词不是推演，是实测校验过的】settings 的构造字段实测只有 phoneShell / storage / settings / imageManager / _albumImagePicker / currentTab —— 确实没有草稿字段，F6 那条「无未提交草稿」据此成立；mood 全文件 storage.set 零命中、mood-app.js 只有一行 import —— F2 那条「不落盘自有数据」据此成立。写理由之前先把这两条查了，不是先写理由再找依据。",
+        "【挖出四例同形态缺陷：方法写好了、也在被调，但不是走那张唯一真源表】games / music / worldpulse / lonshaBridge 四者都定义了 onChatChanged、都在 index.js 的 onChatChanged() 函数体里被显式调用、都不在 ST_PHONE_REBIND_APP_KEYS 里。后果是「清当前数据」与「清全部数据」两条路径压根没有那一条调用（只有「换会话」这一条覆盖到），而四者的失效方式都是不报错、只错结果：B 会话的悬浮窗还挂着 A 会话的曲目 / B 会话的楼层事件按 A 会话的基线判定 / 上一会话建的 BM25 索引没失效 / 切换角色后沿用上一只小猫。",
+        "【修法是四条一起并进表、四条显式调用全部收回】不是「再补两个调用点」。wangxiang-app.js 的注释里写着这个形态的名字：补一个显式调用点等于重新引入「三处手抄、漏一处即静默串味」。本版把四者登记进 ST_PHONE_REBIND_APP_KEYS（74 键到 78 键），并把 onChatChanged() 体内那四条显式调用连同 P2 / P3 里 worldpulse 的两条一并收回成注释 —— 注释里留了去向与理由，不悄悄删。",
+        "【music 并表后不传 storage 为什么等价，论证写在表里】它每次都由调用点显式传 storage，并入表后传入 undefined 就会走 onChatChanged(storage = this.storage) 的默认值。本仓 PhoneStorage 是单实例且在整个生命周期内只 new 一次（index.js:1957），换会话只换 currentChatId 字段、不换对象，故默认值取到的是同一个活对象 —— 行为等价。这条论证写在表内那条注释里，因为它正是「能不能这么改」的全部依据。",
+        "【worldpulse 与 lonshaBridge 不吃 storage 形参，故不需要那条等价论证】worldpulse 的 onChatChanged 内部现取 this.storage 重绑楼层监听并重校基线；lonshaBridge 的 onChatChanged 只把 _bm25Dirty 置真。两者对表驱动路径不传参零敏感。差别写清了，避免下次有人照抄 music 的论证去解释一个不吃参数的 App。",
+        "【本版自己抓到的缺陷形态：判据的扫描面比它要判的东西窄】新写的 C1 首跑报 20 条假红，把一批明明已登记的 App 报成「没进表」。根因不是代码错，是取表键时按「一行一条」的正则取，而这张表实测有多条并行的写法（一行里两个键）。按行取会让这类键整批消失在判据视野里 —— 这正是本仓反复出现的「扫描面口径必须跟着代码走」的又一例。修法是把取键改成先剥注释再取块内所有单引号字面量。",
+        "【本版自己抓到的第二个缺陷：判据在扫描面塌陷时会静默转绿】C1 / C2 / C3 最初只 filter 自己那一条问题码，于是「一条 app 都没扫到」「表没解析出来」「一条 onChatChanged 调用都没扫到」三种塌陷都会让被 filter 的那条自然为空 —— 判据静默转绿。修法是把下限锚一起断言（apps-too-few / table-too-few / table-missing / calls-empty），塌陷本身就是红。",
+        "【新增判据 C1 / C2 / C3：表是唯一出口】C1 定义了 onChatChanged 的 App 必须在 REBIND 表里；C2 onChatChanged() 体内不得再出现绕开表的显式调用（唯一允许的接收者是表循环里那个按表键取到的实例）；C3 表里不得有幽灵条目（每个键都必须有真挂载点，懒加载路由表或 window.VirtualPhone.X = new）。此前全仓无门看守这种形态 —— 矩阵的 F6 只看得见「进没进表」，看不见「有没有绕开表的私路」。",
+        "【新增判据 B3：NA 理由必须六面各说一句】B2 的字数下限只能挡「空串 / 三个字」，挡不住「本 App 是纯设置页，无内容可被搜索」这种只说了一面的写法 —— 而本仓的真实缺陷形态正是六面里有一面其实可接、却被一句笼统结论盖过去。B3 要求六面各点名且禁止「不适用」当理由，与 B2 并存不替代。",
+        "【破坏表 D1 至 D8 扩到 D1 至 D12】新增三条：D10 把一个有方法又在表里的 App 改名移出表，C1 必须转红；D11 在表以外再长出一条显式调用，C2 必须转红（这正是本版修掉的那个真实形态）；D12 把台账里的一面用一句话糊过去，B3 必须转红。三条都实测转红，且 D9 真仓只读回读同步从四面扩到六面 —— 漏掉这一扩的话，新破坏可能「真仓本来就红」而冒充「破坏生效」。",
+        "【交棒改写与下限形两处】v3550 套件的文件头注原文写「本套件守五件事」，本版改成六件事并把 C 面与 B3 逐条写进头注（头注不跟着涨就会变成下一份与实际不符的声明）；D9 的测试名从「真仓四面判据」改成「真仓六面判据」，与断言条数一一对上。两处都是下限形改写，不是新功能。",
+        "【读数】v3550 套件 14 例到 18 例全绿；MATRIX 89 行不变；F6_lifecycle 命中 74 到 77；NA 3 件到 2 件；ST_PHONE_REBIND_APP_KEYS 74 键到 78 键。定向回归：syntax（1100 文件）/ import-resolve（638 文件 1092 条）/ named-import（634 文件 1062 条）/ keys（505 使用点 161 条前缀 505 条登记）/ lifecycle（85 个含生命周期出口的 App 类、78 key）/ registry（APPS 89、懒加载分支 89）/ bind-consuming / method-consuming（死方法 311 新增 0）/ dead-exports（零消费 27）/ weak-coercion / source-derivation / bridge-contract / screen-host / session-writeback / hardlink-safety / doc-path-claim（4016 处声明 0 落空）/ upstream-face 共 17 道门逐门 OK。",
+        "【运行时验证边界】本版只证明「重绑表是唯一出口」这一形态在源码层成立，并把它的缺口做成会响的判据。它不证明换会话后四件 App 在真宿主里的重绑真的跑通 —— 那要真机换一次会话看悬浮窗、看游戏存档、看楼层基线，仍归 R-O3 家族。C2 抓的是静态代码面的私路，抓不到运行时才出现的时序问题（例如某条 onChatChanged 内部又异步回调另一条）。"
     ]
 };
 
@@ -10452,26 +10474,26 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             const autoCalendarState = ensureAutoCalendarState();
             autoCalendarState._autoCalendarGeneration += 1;
             autoCalendarState._autoCalendarQueued = false;
-            // 🎵 音乐：清空缓存 + 刷新悬浮窗 + 扫描当前会话卡片
-            if (window.VirtualPhone.musicApp) {
-                window.VirtualPhone.musicApp.onChatChanged(storage);
-            }
-            // 🎮 猫盒：重新绑定当前会话存档，避免切换角色后沿用上一只小猫
-            if (window.VirtualPhone.gamesApp) {
-                window.VirtualPhone.gamesApp.onChatChanged?.(storage);
-            }
+            // 🎵 音乐：[v4.103.0 · R13-O9] 原为此处显式 `musicApp.onChatChanged(storage)`，
+            //   现由上方 rebindLazyApps() 经 ST_PHONE_REBIND_APP_KEYS 统一覆盖（已登记进表）。
+            //   这里的 storage 是同一个活对象（单实例、只换 currentChatId），故与显式传入等价。
+            // 🎮 猫盒：[v4.103.0 · R13-O9] 原为此处显式 `gamesApp.onChatChanged?.(storage)`，
+            //   现由上方 rebindLazyApps() 经 ST_PHONE_REBIND_APP_KEYS 统一覆盖（该 App 已登记进表）。
+            //   与 wangxiangApp 同一处置口径：补一个显式调用点等于重新引入「三处手抄、漏一处即静默
+            //   串味」的形态。注意 rebindLazyApps() 调用时**不传 storage**，故 gamesApp.onChatChanged
+            //   的形参默认值 `= this.storage` 是关键 —— 它已经这样写了，这里不需要改它。
             // 🧠 记忆系统: 切换会话时重载当前会话记忆，防止跨会话串味
             if (window.VirtualPhone.memoryCore) {
                 window.VirtualPhone.memoryCore.reload?.();
             }
-            if (window.VirtualPhone.lonshaBridge) {
-                window.VirtualPhone.lonshaBridge.onChatChanged?.();
-            }
-            // 🌍 世界脉搏：换会话重绑楼层监听并重校基线（实例跨会话复用；
-            //   旧监听挂在旧上下文、新会话基线为 0 会误触发一次脉冲）
-            if (window.VirtualPhone.worldpulseApp) {
-                window.VirtualPhone.worldpulseApp.onChatChanged?.();
-            }
+            // 🌉 上游桥：[v4.103.0 · R13-O9] 原为此处显式 `lonshaBridge.onChatChanged?.()`（它只置
+            //   `_bm25Dirty`），现由上方 rebindLazyApps() 经 ST_PHONE_REBIND_APP_KEYS 统一覆盖。
+            //   把它并进表不是为了省一行，是为了让 P2/P3 两条路径也吃到这一下（此前它们都没有）。
+            // 🌍 世界脉搏：[v4.103.0 · R13-O9] 原为此处显式 `worldpulseApp.onChatChanged?.()`，
+            //   现由上方 rebindLazyApps() 经 ST_PHONE_REBIND_APP_KEYS 统一覆盖（该 App 已登记进表）。
+            //   与 musicApp 的差别在于它**不吃 storage 形参**：onChatChanged() 内部现取 this.storage
+            //   重绑楼层监听并重校基线（理由是实例跨会话复用、旧监听挂在旧上下文），故表驱动路径
+            //   不传 storage 对它零影响 —— 不需要像 musicApp 那样论证默认值等价。
         }
         // [v2.31.0] 界面槽位随会话重生。此前本路径（P1 换会话）与 P2 都只做
         //   `homeScreen.render()`（实例不换 → 旧实例的 4 个 window 监听器一直挂着），
@@ -11513,8 +11535,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { resetPhoneEventFireLog(); } catch (_e) { /* 忽略 */ }
-                // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
-                try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
+                // [v2.21.0 → v4.103.0 · R13-O9] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，
+                //   需要同步重校。此处原有一条显式调用，现由紧随其后的 rebindLazyApps() 经
+                //   ST_PHONE_REBIND_APP_KEYS 统一覆盖（本版已把 worldpulseApp 登记进表）——
+                //   同一动作只留一个出口，删掉这一条是为了不让「三处手抄」在 P2/P3 上再长回来。
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 mirrorBadgesToHome(); // [v2.91.0] 清数据后把归零镜像到 home.apps，防幽灵红点
                 totalNotifications = 0;
@@ -11619,8 +11643,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 try { notificationLog?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { window.VirtualPhone?.jiwen?.reset?.(); } catch (_e) { /* 忽略 */ }
                 try { resetPhoneEventFireLog(); } catch (_e) { /* 忽略 */ }
-                // [v2.21.0] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，同步重校
-                try { window.VirtualPhone?.worldpulseApp?.onChatChanged?.(); } catch (_e) { /* 忽略 */ }
+                // [v2.21.0 → v4.103.0 · R13-O9] 世界脉搏：状态键已随数据清空，监听若仍在会退回 0 基线误触发脉冲，
+                //   需要同步重校。此处原有一条显式调用，现由紧随其后的 rebindLazyApps() 经
+                //   ST_PHONE_REBIND_APP_KEYS 统一覆盖（本版已把 worldpulseApp 登记进表）——
+                //   同一动作只留一个出口，删掉这一条是为了不让「三处手抄」在 P2/P3 上再长回来。
                 currentApps = JSON.parse(JSON.stringify(APPS));
                 mirrorBadgesToHome(); // [v2.91.0] 清数据后把归零镜像到 home.apps，防幽灵红点
                 totalNotifications = 0;
