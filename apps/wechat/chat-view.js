@@ -31,6 +31,9 @@ import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/
 import { CatboxData } from '../games/catbox/catbox-data.js';
 import { parseWangxiangTaskTags, tokenizeWangxiangTaskTags } from '../wangxiang/wangxiang-task-parser.js';
 import { parseWechatVoiceContent } from './voice-text.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件空态最多（27 处），本版只分形用户真正会停下来的两处：
+ *   自定义表情为空（真的没有）／共同往事读不出来（≠ 没有可共享的旧事）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 /* [v4.88.0 · 第七批缝入] 逐句去重（ackem/sentenceDedup）+ 语音回声剥离（SullyOS/voiceTextDedup）。
  *   两件都作用在**同一处**：一批回复上屏之前。去重治「一轮里同一句话说两遍」，
  *   剥回声治「语音条已经说过，正文又用散句复述一遍」。 */
@@ -4475,7 +4478,7 @@ renderChatRoom(chat) {
                     ${this.emojiTab === 'custom' ? `
                         <!-- 自定义表情 -->
                         ${customEmojis.length === 0 ? `
-                            <div class="wechat-custom-emoji-empty" role="status">
+                            <div class="wechat-custom-emoji-empty" ${FACE_ATTR}="no-data" data-face="empty" role="status">
                                 <span>还没有添加表情</span>
                                 <small>点击下方加号添加</small>
                             </div>
@@ -14380,9 +14383,12 @@ renderChatRoom(chat) {
         const line = pack ? String(pack.line || '') : '共同往事：本版 App 未接线（不是「没有可共享的旧事」）';
         const gate = (pack && pack.gate) ? pack.gate : { ok: false, line: '判不了（没有这一面）' };
         const rows = (pack && Array.isArray(pack.rows)) ? pack.rows : [];
+        /* [R13-O6] 「判不了（没有这一面）」与「这一组真的没有旧事」处置相反：前者去看诊断，后者换一组。 */
+        const rowWhy = !(pack && pack.face) ? 'not-mounted' : (!gate.ok ? 'read-failed' : 'no-data');
         const rowHtml = rows.length
             ? rows.map((r) => '<div class="wx-shared-row">' + this._escapeHtml(String((r && r.line) || '')) + '</div>').join('')
-            : '<div class="wx-shared-none">这一组还没有可列的旧事</div>';
+            : '<div class="wx-shared-none" ' + FACE_ATTR + '="' + rowWhy + '" data-face="' + (rowWhy === 'no-data' ? 'empty' : 'absent') + '">'
+                + (rowWhy === 'no-data' ? '这一组还没有可列的旧事' : '这一组的旧事读不出来（这不等于没有旧事）') + '</div>';
 
         currentView.querySelectorAll('.wx-shared-panel').forEach((p) => p.remove());
         const panel = document.createElement('div');

@@ -11,6 +11,10 @@
  * 结构：_esc + _draw + _bind（与 bili-view / peek-view 同风格）。
  * ============================================================ */
 'use strict';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。
+ *   本件原本已把「读不到 / 还没有 / 上游没这面」三种话分开写，但机器读不到这个区别：
+ *   缺一个属性，判据/诊断只能靠读中文。本版把区别挂到属性上。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class PlaceView {
     constructor(app) {
@@ -153,7 +157,7 @@ export class PlaceView {
             ? '<div class="pl-chain">' + chain.map((seg, i) =>
                 (i ? '<i class="pl-chain-sep">›</i>' : '') + '<span class="pl-chip">' + this._esc(seg) + '</span>'
               ).join('') + '</div>'
-            : '<div class="pl-empty">' + this._esc(face.reason === 'ready' ? '还没有记录当前位置（剧情里出现位置移动后会有）' : '读不到当前位置') + '</div>';
+            : '<div class="pl-empty" ' + FACE_ATTR + '="' + (face.reason === 'ready' ? 'no-data' : 'read-failed') + '" data-face="' + (face.reason === 'ready' ? 'empty' : 'absent') + '">' + this._esc(face.reason === 'ready' ? '还没有记录当前位置（剧情里出现位置移动后会有）' : '读不到当前位置（这不等于没有位置）') + '</div>';
         return [
             '<div class="pl-card">',
             '  <div class="pl-card-title">当前所在</div>',
@@ -241,8 +245,12 @@ export class PlaceView {
             return [
                 '<div class="pl-card">',
                 '  <div class="pl-card-title">到访史</div>',
-                '  <div class="pl-empty">' + this._esc(
-                    hasFace ? (face.reason === 'ready' ? '还没有到访记录' : '读不到到访史') : '上游这版没有到访史面（需插件 v3.220 或更新）'
+                '  <div class="pl-empty" ' + FACE_ATTR + '="'
+                    + (hasFace ? (face.reason === 'ready' ? 'no-data' : 'read-failed') : 'not-mounted')
+                    + '" data-face="'
+                    + (hasFace ? (face.reason === 'ready' ? 'empty' : 'absent') : 'absent')
+                    + '">' + this._esc(
+                    hasFace ? (face.reason === 'ready' ? '还没有到访记录' : '读不到到访史（这不等于没去过）') : '上游这版没有到访史面（需插件 v3.220 或更新）'
                 ) + '</div>',
                 '</div>'
             ].join('\n');
@@ -388,7 +396,7 @@ export class PlaceView {
                 return '<div class="pl-band-row">' + this._esc(String(p.aName || p.a) + ' × ' + String(p.bName || p.b))
                     + ' · ' + this._esc(tag) + (spans ? ' · ' + this._esc(spans) : '') + '</div>';
             }).join('')
-            : '<div class="pl-empty">' + this._esc('还没有重叠片段（选两人以上再看）') + '</div>';
+            : '<div class="pl-empty" ' + FACE_ATTR + '="no-data" data-face="empty">' + this._esc('还没有重叠片段（选两人以上再看）') + '</div>';
         const chips = names.map((n) => '<button class="pl-band-chip on" data-band-name="' + this._esc(n) + '">' + this._esc(n) + ' ×</button>').join('');
         return [
             '<div class="pl-card">',
@@ -463,7 +471,7 @@ export class PlaceView {
             '<div class="pl-card pl-roam">',
             '  ' + head,
             '  ' + note,
-            '  ' + (rows || '<div class="pl-empty">这一刻没有可去的地方</div>'),
+            '  ' + (rows || '<div class="pl-empty" ' + FACE_ATTR + '="no-data" data-face="empty">这一刻没有可去的地方</div>'),
             '  ' + more,
             '  <div class="pl-roam-detail" id="pl-roam-detail"></div>',
             '  <div class="pl-empty">选一处再点「去这儿」:本机只把提案放进聊天输入框,不替你移动角色,也不编距离与耗时。</div>',

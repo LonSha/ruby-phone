@@ -1,0 +1,582 @@
+{
+  "schema": 1,
+  "attr": "data-face-why",
+  "owner": "config/empty-face.js",
+  "generatedBy": "R13-O6 未分形台账（v4.109.0）",
+  "rules": [
+    "本台账只登记**尚未接线**的 App。已接线的 App 出现在这里就是错的（判据 D1 会报红）。",
+    "reason=view-pending：有空态文案但本版没排到（计划书口径：先做高频 App，其余进台账）。",
+    "reason=no-empty-face：本件渲染面不产生空列表，无需分形（不是漏做）。",
+    "reason=no-view：本 App 没有 *-view.js，空态在 *-app.js 里渲染，不在本项射程。",
+    "台账条目必须在磁盘上真实存在；删了 App 不删条目同样是错（判据会报红）。"
+  ],
+  "shapedCount": 25,
+  "unshapedCount": 63,
+  "unshaped": [
+    {
+      "app": "diagnose",
+      "views": [
+        "apps/diagnose/diagnose-view.js"
+      ],
+      "emptyTexts": 9,
+      "reason": "view-pending",
+      "note": "有 9 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "music",
+      "views": [
+        "apps/music/music-view.js"
+      ],
+      "emptyTexts": 5,
+      "reason": "view-pending",
+      "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "needsim",
+      "views": [
+        "apps/needsim/needsim-view.js"
+      ],
+      "emptyTexts": 5,
+      "reason": "view-pending",
+      "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "search",
+      "views": [
+        "apps/search/search-view.js"
+      ],
+      "emptyTexts": 5,
+      "reason": "view-pending",
+      "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "loverspace",
+      "views": [
+        "apps/loverspace/loverspace-view.js"
+      ],
+      "emptyTexts": 4,
+      "reason": "view-pending",
+      "note": "有 4 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "memtable",
+      "views": [
+        "apps/memtable/memtable-view.js"
+      ],
+      "emptyTexts": 4,
+      "reason": "view-pending",
+      "note": "有 4 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "taobao",
+      "views": [
+        "apps/taobao/taobao-view.js"
+      ],
+      "emptyTexts": 4,
+      "reason": "view-pending",
+      "note": "有 4 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "uterus",
+      "views": [
+        "apps/uterus/uterus-view.js"
+      ],
+      "emptyTexts": 4,
+      "reason": "view-pending",
+      "note": "有 4 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "recall",
+      "views": [
+        "apps/recall/recall-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "regexfilter",
+      "views": [
+        "apps/regexfilter/regexfilter-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "shop",
+      "views": [
+        "apps/shop/shop-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "socialguard",
+      "views": [
+        "apps/socialguard/socialguard-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "sourcebook",
+      "views": [
+        "apps/sourcebook/sourcebook-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "traveldesk",
+      "views": [
+        "apps/traveldesk/traveldesk-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "widget",
+      "views": [
+        "apps/widget/widget-view.js"
+      ],
+      "emptyTexts": 3,
+      "reason": "view-pending",
+      "note": "有 3 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "avatarframe",
+      "views": [
+        "apps/avatarframe/avatarframe-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "block",
+      "views": [
+        "apps/block/block-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "comms",
+      "views": [
+        "apps/comms/comms-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "cotdesk",
+      "views": [
+        "apps/cotdesk/cotdesk-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "date",
+      "views": [
+        "apps/date/date-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "doujin",
+      "views": [
+        "apps/doujin/doujin-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "notifications",
+      "views": [
+        "apps/notifications/notification-center-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "piggy",
+      "views": [
+        "apps/piggy/piggy-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "punchcard",
+      "views": [
+        "apps/punchcard/punchcard-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "theater",
+      "views": [
+        "apps/theater/theater-view.js"
+      ],
+      "emptyTexts": 2,
+      "reason": "view-pending",
+      "note": "有 2 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "accessdesk",
+      "views": [
+        "apps/accessdesk/accessdesk-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "accounting",
+      "views": [
+        "apps/accounting/accounting-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "affairs",
+      "views": [
+        "apps/affairs/affairs-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "backupdesk",
+      "views": [
+        "apps/backupdesk/backupdesk-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "bilibili",
+      "views": [
+        "apps/bilibili/bili-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "calendar",
+      "views": [
+        "apps/calendar/calendar-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "clock",
+      "views": [
+        "apps/clock/clock-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "focus",
+      "views": [
+        "apps/focus/focus-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "freehome",
+      "views": [
+        "apps/freehome/freehome-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "gacha",
+      "views": [
+        "apps/gacha/gacha-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "health",
+      "views": [
+        "apps/health/health-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "ledger",
+      "views": [
+        "apps/ledger/ledger-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "lexiscore",
+      "views": [
+        "apps/lexiscore/lexiscore-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "mofo",
+      "views": [
+        "apps/mofo/mofo-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "musicdesk",
+      "views": [
+        "apps/musicdesk/musicdesk-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "stickerdesk",
+      "views": [
+        "apps/stickerdesk/stickerdesk-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "sullydesk",
+      "views": [
+        "apps/sullydesk/sullydesk-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "tarot",
+      "views": [
+        "apps/tarot/tarot-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "tieba",
+      "views": [
+        "apps/tieba/tieba-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "worldpulse",
+      "views": [
+        "apps/worldpulse/worldpulse-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "xhs",
+      "views": [
+        "apps/xhs/xhs-view.js"
+      ],
+      "emptyTexts": 1,
+      "reason": "view-pending",
+      "note": "有 1 处空态文案，按「先做高频 app，其余进台账」口径排队"
+    },
+    {
+      "app": "achievement",
+      "views": [
+        "apps/achievement/achievement-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "annidate",
+      "views": [
+        "apps/annidate/annidate-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "asset",
+      "views": [
+        "apps/asset/asset-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "caphealth",
+      "views": [
+        "apps/caphealth/caphealth-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "cardtable",
+      "views": [
+        "apps/cardtable/cardtable-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "cheat",
+      "views": [
+        "apps/cheat/cheat-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "creationdesk",
+      "views": [
+        "apps/creationdesk/creationdesk-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "dirtytalk",
+      "views": [
+        "apps/dirtytalk/dt-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "games",
+      "views": [
+        "apps/games/games-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "kettle",
+      "views": [
+        "apps/kettle/kettle-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "mood",
+      "views": [
+        "apps/mood/mood-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "periodmath",
+      "views": [
+        "apps/periodmath/periodmath-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "playbook",
+      "views": [
+        "apps/playbook/playbook-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "settings",
+      "views": [],
+      "emptyTexts": 0,
+      "reason": "no-view",
+      "note": "本 App 没有 *-view.js（渲染在 *-app.js 里），空态不在本项射程"
+    },
+    {
+      "app": "summdesk",
+      "views": [
+        "apps/summdesk/summdesk-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "weather",
+      "views": [
+        "apps/weather/weather-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    },
+    {
+      "app": "workflow",
+      "views": [
+        "apps/workflow/workflow-view.js"
+      ],
+      "emptyTexts": 0,
+      "reason": "no-empty-face",
+      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+    }
+  ]
+}

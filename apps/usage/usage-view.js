@@ -6,6 +6,8 @@
 import { formatDuration } from '../../config/usage-tracker.js';
 import { insightSummaryLine } from '../../config/contact-insight.js';
 import { USAGE_APP_ICON } from './usage-data.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 /** App id → 中文名（桌面条目是单一真源；这里只做**显示**用的回落表）。 */
 const APP_LABELS = Object.freeze({
@@ -191,7 +193,7 @@ export class UsageView {
         const u = this.app.usage();
         const parts = [];
         if (!u) {
-            parts.push('<div class="uq-card uq-warn">读数不可用：使用统计取数失败（不显示 0 —— 读不到与「没用过」是两件事）。</div>');
+            parts.push('<div class="uq-card uq-warn" ' + FACE_ATTR + '="read-failed" data-face="absent">读数不可用：使用统计取数失败（不显示 0 —— 读不到与「没用过」是两件事）。</div>');
             // ★ 取数失败时**更要**显示采集面自检：它才是「采集到底在不在工作」的那个读数。
             parts.push(this._selfCheckHTML());
             return parts.join('\n');
@@ -202,7 +204,7 @@ export class UsageView {
 
         if (s.empty) {
             // 空态必须说清「还没开始记」而不是「你用了 0 分钟」。
-            parts.push('<div class="uq-card uq-empty">还没有使用记录。<br><span class="uq-dim">本版起，每次打开 App 会记一条（次数 / 时长 / 时段）；不记任何内容。</span></div>');
+            parts.push('<div class="uq-card uq-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有使用记录。<br><span class="uq-dim">本版起，每次打开 App 会记一条（次数 / 时长 / 时段）；不记任何内容。</span></div>');
             return parts.join('\n');
         }
 
@@ -270,7 +272,7 @@ export class UsageView {
         }
 
         if (ins.empty) {
-            parts.push('<div class="uq-card uq-empty">还没有可统计的联系人。<br><span class="uq-dim">（若你已有会话却看到这句，请先打开一次微信/电话 App，让数据载入内存。）</span></div>');
+            parts.push('<div class="uq-card uq-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有可统计的联系人。<br><span class="uq-dim">（若你已有会话却看到这句，请先打开一次微信/电话 App，让数据载入内存。）</span></div>');
             return parts.join('\n');
         }
 

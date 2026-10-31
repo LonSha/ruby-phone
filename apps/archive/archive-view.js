@@ -26,6 +26,8 @@
 'use strict';
 import { AR_TEXT_MAX, AR_LOG_MAX, AR_TABLE_MAX, AR_BUNDLE_MAX, AR_TABLE_SHAPES } from './archive-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件三处空态里第一处已是「读不到 ≠ 没有」，只缺机器可读属性。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -186,7 +188,7 @@ export class ArchiveView {
             return parts.join('');
         }
         if (face !== 'ok') {
-            parts.push('<div class="arc-note">还没有可以认的包：' + this._esc(app.faceText())
+            parts.push('<div class="arc-note" ' + FACE_ATTR + '="read-failed" data-face="absent">还没有可以认的包：' + this._esc(app.faceText())
                 + '（**不是**「这份包没有项目」）</div>');
             parts.push('</div>');
             return parts.join('');
@@ -352,7 +354,7 @@ export class ArchiveView {
         const parts = [];
         const sum = app.tableSum();
         if (!sum || !sum.tables) {
-            parts.push('<div class="arc-empty">还没有可以对账的包 —— 先去「包」页签贴回一份。</div>');
+            parts.push('<div class="arc-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有可以对账的包 —— 先去「包」页签贴回一份。</div>');
             parts.push('</div>');
             return parts.join('');
         }
@@ -476,7 +478,7 @@ export class ArchiveView {
         const parts = [];
         parts.push(this._sec('全量重置会动到哪些', '源式全量重置是两重确认后清全库 + 清 localStorage + 重载页面 —— 本件只列清单'));
         if (!rows.length) {
-            parts.push('<div class="arc-empty">还没有可以对账的包 —— 先去看得出表的包。</div>');
+            parts.push('<div class="arc-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有可以对账的包 —— 先去看得出表的包。</div>');
             parts.push('</div>');
             return parts.join('');
         }

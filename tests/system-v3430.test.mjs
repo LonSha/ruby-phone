@@ -1193,6 +1193,12 @@ function stageTree() {
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v4.109.0 · R13-O6] view 已把空态分形接进 pvdesk，副本树必须带上它和它的三个上游。
+     *   ★ 依赖清单是手工白名单：view 新增任何 config/* import，这里不跟就会报 MODULE_NOT_FOUND，
+     *     破坏类负控制全部假红（判据根本没跑到）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'empty-face.js'), path.join(dir, 'config', 'empty-face.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'destructive-confirm.js'), path.join(dir, 'config', 'destructive-confirm.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'undo-capability.js'), path.join(dir, 'config', 'undo-capability.js'));
     const kd = path.join(dir, 'apps', 'pvdesk');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['pvdesk-data.js', 'pvdesk-view.js', 'pvdesk-app.js']) {

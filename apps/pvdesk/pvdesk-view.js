@@ -28,6 +28,8 @@ import {
 } from './pvdesk-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）：本件空态全是「真的还没有」，一律 empty/no-data；仍挂属性以便与「读失败」分开。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
@@ -236,7 +238,7 @@ export class PvdeskView {
         parts.push('<p class="pvd-hint">每一镜给一段可直接拿去用的要求文本：画风锚 + 机型 + 情绪 + '
             + '这一镜挂到的立绘 + 「只画这一帧」的约束。点一行看这一镜的详情。</p>');
         if (rows.length === 0) {
-            parts.push('<div class="pvd-empty">还没有镜头 —— 去「题面」页贴一段分镜脚本。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有镜头 —— 去「题面」页贴一段分镜脚本。</div>');
             parts.push('<button type="button" data-act="tab-brief">去题面</button>');
         } else {
             for (let i = 0; i < rows.length; i++) {
@@ -265,7 +267,7 @@ export class PvdeskView {
         const refs = app.refRows();
         parts.push('<div class="pvd-sub">参考素材台账（源缩成一句「图1～图N」，超了只报一句「已裁剪」）</div>');
         if (refs.length === 0) {
-            parts.push('<div class="pvd-empty">这一份还没挂过参考素材。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">这一份还没挂过参考素材。</div>');
         } else {
             parts.push('<table class="pvd-table"><thead><tr><th>素材</th><th>用到几镜</th><th>哪几镜</th>'
                 + '<th>当前上限</th><th>状态</th></tr></thead><tbody>');
@@ -292,7 +294,7 @@ export class PvdeskView {
         parts.push('<div class="pvd-sub">图号 → 镜号映射（源把它写成「连号就写区间」这一形；'
             + '把「只取前几镜做参考帧」填成正数就会生成映射行）</div>');
         if (map.lines.length === 0) {
-            parts.push('<div class="pvd-empty">还没取参考帧。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没取参考帧。</div>');
         }
         parts.push('<div class="pvd-warn">立绘号「' + this._esc(PV_FIG_MARKS[0] + '」与「' + PV_FIG_MARKS[1])
             + '」都认（源口径：图 与 図 一个都不漏）</div>');
@@ -330,7 +332,7 @@ export class PvdeskView {
         parts.push(this._chip('台词行', rows.length, 0));
         parts.push('</div>');
         if (rows.length === 0) {
-            parts.push('<div class="pvd-empty">还没从镜头里读到对白 —— 台词写成「…」引号包起来就会被收进来。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没从镜头里读到对白 —— 台词写成「…」引号包起来就会被收进来。</div>');
         } else {
             parts.push('<table class="pvd-table"><thead><tr><th>镜头</th><th>这一镜几秒</th><th>台词</th>'
                 + '<th>字数</th><th>字形</th><th>这一镜放得下</th><th>结论</th></tr></thead><tbody>');
@@ -401,7 +403,7 @@ export class PvdeskView {
         parts.push('<div class="pvd-row"><span>语速口径</span>'
             + this._sel('lang', cat.langs, pol.lang, '') + '</div>');
         if (cues.length === 0) {
-            parts.push('<div class="pvd-empty">还没有成句的歌词。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有成句的歌词。</div>');
         } else {
             parts.push('<table class="pvd-table"><thead><tr><th>时刻</th><th>主行</th><th>副行</th>'
                 + '<th>主行哪来</th><th>副行哪来</th></tr></thead><tbody>');
@@ -475,7 +477,7 @@ export class PvdeskView {
         parts.push('<p class="pvd-hint">台账是「写过的每一份」，题面是「眼下这一份」—— 源把两者与成片任务混在一处，'
             + '清一次任务列表会把题面一起清掉。</p>');
         if (rows.length === 0) {
-            parts.push('<div class="pvd-empty">台账还空着 —— 配好一份之后在「成文」页存进台账。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">台账还空着 —— 配好一份之后在「成文」页存进台账。</div>');
         } else {
             parts.push('<table class="pvd-table"><thead><tr><th>标题</th><th>镜头</th><th>字数</th><th>形态</th>'
                 + '<th>存于</th><th></th></tr></thead><tbody>');
@@ -492,7 +494,7 @@ export class PvdeskView {
         parts.push('<div class="pvd-sub">动作台账：留着 ' + this._count(info.kept) + ' / ' + this._count(info.max)
             + ' 条' + (info.dropped > 0 ? ('，被挤掉 <b>' + String(info.dropped) + '</b> 条') : '') + '</div>');
         if (ledger.length === 0) {
-            parts.push('<div class="pvd-empty">还没有动作记录。</div>');
+            parts.push('<div class="pvd-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有动作记录。</div>');
         } else {
             parts.push('<table class="pvd-table"><thead><tr><th>时刻</th><th>动作</th><th>结果</th>'
                 + '<th>原因</th></tr></thead><tbody>');

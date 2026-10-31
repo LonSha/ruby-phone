@@ -18,6 +18,8 @@ const GT = String.fromCharCode(62);
 const QUOTE = String.fromCharCode(34);
 const QUOTE_ESC = AMP + 'quot;';
 const DASH = String.fromCharCode(45, 45);
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 function esc(s) {
     return String(s === undefined || s === null ? '' : s)
         .split(AMP).join(AMP + 'amp;')
@@ -142,7 +144,7 @@ export class TaskentryView {
         /* [v4.00.0 · R3-O7] 生成任务段在收藏之上：用户点开入口首先要知道「有什么在跑」。 */
         h += this._media(vm);
         h += '<div class="te-pinned"><h3>收藏（按你摆的顺序）</h3>';
-        if (!(vm.pinned || []).length) h += '<div class="te-empty">还没有收藏。在下面任何一张卡上点「收藏」。</div>';
+        if (!(vm.pinned || []).length) h += '<div class="te-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有收藏。在下面任何一张卡上点「收藏」。</div>';
         for (const p of (vm.pinned || [])) {
             h += '<div class="te-target"><span class="te-target-name">' + esc(p.label) + '</span>' +
                 '<span class="te-target-note">' + esc(p.tab || '整张卡') + '</span>' +
@@ -180,7 +182,14 @@ export class TaskentryView {
         }
         h += '</div>';
         h += '<div class="te-recent"><h3>最近使用</h3>';
-        if (vm.recentState !== 'ok') h += '<div class="te-empty">最近使用读不出或还没有记录（' + esc(vm.recentState) + '）。</div>';
+        if (vm.recentState !== 'ok') {
+            /* [R13-O6] 源把「读不出」与「还没有记录」压成同一句（本件注释里自己都写着两件事）。 */
+            const notEmpty = vm.recentState !== 'empty';
+            h += '<div class="te-empty" ' + FACE_ATTR + '="' + (notEmpty ? 'read-failed' : 'no-data')
+                + '" data-face="' + (notEmpty ? 'absent' : 'empty') + '">'
+                + (notEmpty ? '最近使用读不出来（这不等于你还没用过）' : '最近使用还没有记录。')
+                + '（' + esc(vm.recentState) + '）。</div>';
+        }
         for (const r of (vm.recent || [])) {
             h += '<div class="te-target"><span class="te-target-name">' + esc(r.appId) + '</span>' +
                 '<span class="te-target-note">' + String(r.count) + ' 次</span>' +
@@ -190,7 +199,7 @@ export class TaskentryView {
         if ((vm.recentStale || []).length) h += '<div class="te-orphan">另有 ' + String(vm.recentStale.length) + ' 条已去不了（历史读数，不当最近使用摆出）</div>';
         h += '</div>';
         h += '<div class="te-ledger"><h3>台账</h3>';
-        if (!(vm.ledger || []).length) h += '<div class="te-empty">台账还没有记录。</div>';
+        if (!(vm.ledger || []).length) h += '<div class="te-empty" ' + FACE_ATTR + '="no-data" data-face="empty">台账还没有记录。</div>';
         for (const e of (vm.ledger || []).slice(0, 20)) h += '<div class="te-row"><span>' + esc(e.action) + '</span><span>' + esc(e.detail || DASH) + '</span></div>';
         if (vm.dropped > 0) h += '<div class="te-orphan">台账挤掉 ' + String(vm.dropped) + ' 条</div>';
         h += '</div></div>';

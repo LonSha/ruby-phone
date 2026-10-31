@@ -10,6 +10,8 @@
 // [v2.28.0] 实例级资源域（视图内一次性轮询等常驻资源随实例回收）
 import { childRuntime } from '../../config/runtime-lifecycle.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件空态最多（36 处），分形落在四处用户会停下来的地方：关注列表 / Tag 历史 / 视频池 / 已通过好友。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class HoneyView {
     constructor(app) {
         this.app = app;
@@ -2211,7 +2213,7 @@ export class HoneyView {
             }
         }
         if (!history.length) {
-            return '<div class="honey-scene-tag-history-empty">暂无AI返回Tag记录</div>';
+            return '<div class="honey-scene-tag-history-empty" ' + FACE_ATTR + '="no-data" data-face="empty">暂无AI返回Tag记录</div>';
         }
         return history
             .slice()
@@ -2841,7 +2843,7 @@ export class HoneyView {
                 `;
             }).join('')
             : `
-                <div class="honey-follow-empty">
+                <div class="honey-follow-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="honey-follow-empty-icon"><i class="fa-regular fa-heart"></i></div>
                     <div class="honey-follow-empty-title">暂无关注的主播</div>
                     <div class="honey-follow-empty-desc">进入直播间点击关注后，会在这里沉淀主播历史记录。</div>
@@ -3095,7 +3097,7 @@ export class HoneyView {
                     </span>
                 </div>
             `).join('')
-            : '<div class="honey-follow-empty-desc">还没有通过的好友，开播后陌生网友会向你发来申请。</div>';
+            : '<div class="honey-follow-empty-desc" ' + FACE_ATTR + '="no-data" data-face="empty">还没有通过的好友，开播后陌生网友会向你发来申请。</div>';
 
         const html = `
             <div class="honey-app honey-page-mine has-theme-background">
@@ -3446,7 +3448,12 @@ export class HoneyView {
 
         if (videos.length === 0) {
             container.classList.remove('is-expanded');
-            container.innerHTML = '<div class="honey-custom-video-empty">当前视频池为空，将使用纯黑背景。</div>';
+            /* [R13-O6] 「本版没有视频面」与「视频池真的空」处置相反：前者等接线，后者去设置页上传。 */
+            const vMounted = Array.isArray(videos);
+            container.innerHTML = '<div class="honey-custom-video-empty" ' + FACE_ATTR + '="' + (vMounted ? 'no-data' : 'not-mounted')
+                + '" data-face="' + (vMounted ? 'empty' : 'absent') + '">'
+                + (vMounted ? '当前视频池为空，将使用纯黑背景。' : '这一版没有视频池面（不是你没上传视频）。')
+                + '</div>';
             return;
         }
 

@@ -8,6 +8,8 @@ import { buildNarrative } from './timeweaver-collector.js';
 import { injectionLine, blockLine } from '../../config/injection-contract.js';
 // [v3.5.0] F-2 下游侧：来源构成的一行读数取自桥真源（本文件不拼口径，只渲染）
 import { eventPlatformsLine } from '../../config/world-bridge.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件两处空态：碎片真没有（empty）／回望面读不到（absent）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -32,7 +34,7 @@ export class TimeweaverView {
      *   此前这个屏幕只有一句「还没有可织的碎片」，把另一类真实可续状态一起说没了。 */
     _empty(m) {
         const resumeBlock = m ? this._resumeBlock(m) : '';
-        return `<div class="tw-wrap"><div class="tw-empty">
+        return `<div class="tw-wrap"><div class="tw-empty" ${FACE_ATTR}="no-data" data-face="empty">
           <div class="tw-empty-icon">🕰️</div>
           <div class="tw-empty-title">织光机还没有可织的碎片</div>
           <div class="tw-empty-sub">去写写日记、拍张照片、聊聊蜜语、解锁成就……<br>当生活散落足够的碎片，这里会为你织出一部可回望的时光。</div>
@@ -182,7 +184,7 @@ export class TimeweaverView {
     _recall(m) {
         const r = m.recall;
         if (!r) {
-            return `<div class="tw-hint">还没有可回望的痕迹。<br><br>
+            return `<div class="tw-hint" ${FACE_ATTR}="not-mounted" data-face="absent">回望面读不到（**这不等于**你没有回望过）。<br><br>
               <span style="font-size:11px;line-height:1.9">这一栏读取的是 LonSha 记忆引擎的「召回自检」——<br>
               当正文生成时它每轮记录『想起了哪段剧情』。<br>
               装上记忆插件并聊过几轮之后，这里会亮起你反复回望的时光。</span></div>`;

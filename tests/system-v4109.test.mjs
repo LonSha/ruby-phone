@@ -131,7 +131,7 @@ test('C2: 渲染出的空态 HTML 里，非 ok 三态的 (属性值 + 文案) �
 });
 
 /* ------------------------------------------------------------
- * D 组：真接线（已分形的 app 必须真的带属性）
+ * D 组：真接线（已分形的 app 必须真的带属性）+ 未分形台账
  * ------------------------------------------------------------ */
 /* 已分形的 app：每个都要有非 ok 空态且带 data-face-why。
  *   为什么用清单而不是「全仓扫」：本项验收口径就是「先做高频 app，其余进台账」，
@@ -139,32 +139,106 @@ test('C2: 渲染出的空态 HTML 里，非 ok 三态的 (属性值 + 文案) �
  *   但清单必须真的存在且真接了 —— 谎报一条就转红。 */
 const SHAPED = [
   'apps/album/album-view.js',
+  'apps/archive/archive-view.js',
   'apps/chars/chars-view.js',
-  'apps/wallet/wallet-view.js',
-  'apps/plotline/plotline-view.js',
+  'apps/diagdesk/diagdesk-view.js',
   'apps/diary/diary-view.js',
-  'apps/memory/memory-view.js'
+  'apps/honey/honey-view.js',
+  'apps/lofter/lofter-view.js',
+  'apps/magazine/magazine-view.js',
+  'apps/memory/memory-view.js',
+  'apps/peek/peek-view.js',
+  'apps/phone/phone-view.js',
+  'apps/pixiv/pixiv-view.js',
+  'apps/place/place-view.js',
+  'apps/plotline/plotline-view.js',
+  'apps/profile/profile-view.js',
+  'apps/pvdesk/pvdesk-view.js',
+  'apps/reading/reading-view.js',
+  'apps/soundkit/soundkit-view.js',
+  'apps/taskentry/taskentry-view.js',
+  'apps/timeweaver/timeweaver-view.js',
+  'apps/usage/usage-view.js',
+  'apps/wallet/wallet-view.js',
+  'apps/wangxiang/wangxiang-view.js',
+  'apps/wechat/chat-view.js',
+  'apps/weibo/weibo-view.js',
 ];
 
-test('D1: 已分形的 app 清单逐条真带 data-face-why（谎报一条即红）', () => {
-  assert.ok(SHAPED.length >= 6, '已分形 app 至少 6 个，实测 ' + SHAPED.length);
+/* 未分形台账：计划书要求「其余进台账」——没有台账，「其余」就是查无此项。 */
+const LEDGER_PATH = 'config/empty-face-unshaped.json';
+const readLedger = () => JSON.parse(rd(LEDGER_PATH));
+
+test('D1: 已分形清单逐条真带 data-face-why（谎报一条即红）', () => {
+  assert.ok(SHAPED.length >= 20, '已分形 app 至少 20 个（计划书验收下限），实测 ' + SHAPED.length);
   for (const f of SHAPED) {
     const p = path.join(ROOT, f);
     assert.ok(fs.existsSync(p), f + ' 必须存在');
     const src = fs.readFileSync(p, 'utf8');
     assert.ok(src.includes('FACE_ATTR'), f + ' 必须用统一属性常量（不许硬写字符串）');
-    assert.ok(/data-face="|data-face=.\$\{/.test(src) || src.includes('FACE_ATTR'), f + ' 必须带上 face 标记');
+    assert.ok(src.includes('data-face='), f + ' 必须带上 face 标记（只挂 why 不够）');
   }
 });
 
-test('D2: 已分形的 app 里，删掉「读不到 ≠ 还没有」这层区分就能被看见', () => {
-  /* 反向探针：已分形的 app 必须同时出现「真的没有」与「读不到」两种处置，
-     否则它只是改了文案、没有真的分形。至少一个 app 要能证明这一点。 */
+test('D2: 已分形清单里至少 4 个同时区分「空」与「读不到」', () => {
+  /* 反向探针：只改了文案、没真的分形的 app 在这里过不去。 */
   const both = SHAPED.filter((f) => {
     const s = fs.readFileSync(path.join(ROOT, f), 'utf8');
     return /absent|read-failed|读不到/.test(s) && /empty|no-data|还没有/.test(s);
   });
   assert.ok(both.length >= 4, '至少 4 个已分形 app 同时区分「空」与「读不到」，实测 ' + both.length);
+});
+
+/* 台账审计单独提成函数：D3 用真台账跑它，E5 用破坏版台账跑它 ——
+ *   这样「判据能抓到两头都写」是**同一份判据**自证的，不是两套逻辑各说各话。 */
+function auditLedger(doc) {
+  assert.equal(doc.attr, FACE_ATTR, '台账的属性名必须与真源同源');
+  const rows = doc.unshaped;
+  assert.ok(Array.isArray(rows) && rows.length > 0, '台账必须有条目');
+  const legal = ['view-pending', 'no-empty-face', 'no-view'];
+  const seen = new Set();
+  for (const r of rows) {
+    assert.ok(r.app, '台账每行必须有 app');
+    assert.ok(!seen.has(r.app), '台账里同一个 app 不许出现两遍：' + r.app);
+    seen.add(r.app);
+    assert.ok(legal.includes(r.reason), '台账 reason 必须在闭集里：' + r.reason);
+    assert.ok(String(r.note || '').length >= 6, '台账每行必须有人话说明（' + r.app + '）');
+    /* no-view 那一类本来就没有 *-view.js（渲染在 *-app.js 里），空数组是对的；
+     *   其余两类必须有具体视图 —— 否则台账指向空气，等于没登记。 */
+    assert.ok(Array.isArray(r.views), '台账每行必须有 views 字段（' + r.app + '）');
+    if (r.reason === 'no-view') assert.equal(r.views.length, 0, 'no-view 类不许列视图（' + r.app + '）');
+    else assert.ok(r.views.length > 0, '台账每行必须列出它的视图文件（' + r.app + '）');
+    for (const v of r.views) {
+      assert.ok(fs.existsSync(path.join(ROOT, v)), '台账指向的视图必须真实存在：' + v);
+      /* 台账里的文件不许已经分形 —— 两头都写就是自相矛盾。 */
+      const src = fs.readFileSync(path.join(ROOT, v), 'utf8');
+      assert.equal(src.includes('FACE_ATTR'), false, v + ' 已分形，必须从台账里摘掉');
+    }
+  }
+  /* 反向：已分形清单里的 app 不许在台账里出现。 */
+  const shapedApps = new Set(SHAPED.map((f) => f.split('/')[1]));
+  const clash = [...shapedApps].filter((a) => seen.has(a));
+  assert.deepEqual(clash, [], '已分形的 app 不许同时留在台账里：' + clash.join(','));
+  return rows.length;
+}
+
+test('D3: 未分形台账必须存在、条目真实且**不得与已分形清单重叠**', () => {
+  const n = auditLedger(readLedger());
+  assert.ok(n > 0, '台账条目数必须 > 0');
+});
+
+test('D4: 台账口径与磁盘对得上（view-pending 必须真有空态文案，no-empty-face 必须真没有）', () => {
+  const rows = readLedger().unshaped;
+  const EMPTY = /还没有|暂无|为空|没有内容|空着/;
+  const wrong = [];
+  for (const r of rows) {
+    if (r.reason === 'no-view') continue;
+    const texts = r.views.map((v) => fs.readFileSync(path.join(ROOT, v), 'utf8')).join('\n');
+    const has = EMPTY.test(texts);
+    if (r.reason === 'view-pending' && !has) wrong.push(r.app + '：标了排队却没有空态文案');
+    if (r.reason === 'no-empty-face' && has) wrong.push(r.app + '：标了无需分形却真有空态文案');
+  }
+  assert.deepEqual(wrong, [], '台账口径与磁盘不一致：' + wrong.join(' / '));
 });
 
 /* ------------------------------------------------------------
@@ -218,4 +292,26 @@ test('E4: 把 faceHtml 的属性去掉 ⇒ C2 那条必须转红', async () => {
   const m = await load(file);
   const html = m.faceHtml('empty');
   assert.equal(html.includes(m.FACE_ATTR), false, '★ 破坏版必须不再带 data-face-why');
+});
+
+test('E5: 把一个已分形的 app 写回台账 ⇒ D3 的台账审计必须转红（两头都写要被抓）', () => {
+  const doc = readLedger();
+  const shapedApp = SHAPED[0].split('/')[1];
+  const shapedView = SHAPED[0];
+  doc.unshaped = doc.unshaped.concat([{
+    app: shapedApp, views: [shapedView], emptyTexts: 0,
+    reason: 'view-pending', note: '（破坏版：这条本该已分形）'
+  }]);
+  assert.throws(() => auditLedger(doc), /已分形|不许同时留在台账/,
+    '★ 台账里出现已分形 app 时，D3 的判据必须报红');
+});
+
+test('E6: 台账把已分形的文件标成 view-pending ⇒ 同一个判据必须报红（谎报一条即红）', () => {
+  const doc = readLedger();
+  doc.unshaped = doc.unshaped.concat([{
+    app: 'zz-fake-app', views: [SHAPED[1]], emptyTexts: 0,
+    reason: 'view-pending', note: '（破坏版：这个文件其实已分形）'
+  }]);
+  assert.throws(() => auditLedger(doc), /已分形，必须从台账里摘掉/,
+    '★ 台账把已分形文件记成未分形时，判据必须报红');
 });

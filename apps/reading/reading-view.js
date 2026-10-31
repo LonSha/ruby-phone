@@ -12,6 +12,8 @@ import { L0_ASSETS } from '../../config/l0-assets.js';
  *   为什么不能用已有两支:`windowOf` 头部切、`tailWindowOf` 尾部切,
  *   而「读者停在第 N 段」要看的是**它前后各 R 段** —— 中段。 */
 import { paraWindowOf, anchorOf, paraLine } from '../../config/list-window.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 /* 纸纹 key → URL 表（从 L0 取数口读，避免本文件自持第二条路径） */
 const PAPER_TEXTURE_URLS = Object.freeze(Object.fromEntries(
@@ -812,7 +814,7 @@ export class ReadingView {
                 </div>
             </div>`;
         }).join('') : `
-            <div class="rd-empty">
+            <div class="rd-empty" ${FACE_ATTR}="no-data" data-face="empty">
                 <div class="rd-empty-icon">📖</div>
                 <p>书架上还没有书</p>
                 <p>导入 TXT 或 EPUB，开始阅读</p>
@@ -822,7 +824,7 @@ export class ReadingView {
          *   `_anchorLine` 是上一次核对的读数，核对过就常驻显示在标题旁（改版提示不靠弹窗一闪而过）。 */
         const excerptHtml = excerpts.length
             ? this._noteRowsHtml(tc, excerpts.slice(0, 30))
-            : '<div class="rd-excerpt-empty">还没有摘录。阅读时点击任意段落即可摘录（自动带书/章/段引用）。</div>';
+            : '<div class="rd-excerpt-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有摘录。阅读时点击任意段落即可摘录（自动带书/章/段引用）。</div>';
         return `
         <div class="rd-root">
             <div class="rd-shelf">
@@ -908,7 +910,7 @@ export class ReadingView {
         const paraNote = (win.ok && (win.hasBefore || win.hasAfter))
             ? '<div class="rd-para-note" id="rd-para-note">' + esc(paraLine(win)) + '</div>'
             : '';
-        const content = paras.length ? win.items.map((p, k) => `<p data-para="${win.start + k}">${esc(p)}</p>`).join('') : '<p style="text-indent:0;color:#9a8b76">（本章暂无内容）</p>';
+        const content = paras.length ? win.items.map((p, k) => `<p data-para="${win.start + k}">${esc(p)}</p>`).join('') : '<p style="text-indent:0;color:#9a8b76" ' + FACE_ATTR + '="no-data" data-face="empty">（本章暂无内容）</p>';
         const chapterOptions = book.chapters.map((c, i) =>
             `<option value="${i}" ${i === this.curChapter ? 'selected' : ''}>${esc(c.title || ('第' + (i + 1) + '章'))}</option>`).join('');
         const authorLine = book.author ? ` · ${esc(book.author)}` : '';

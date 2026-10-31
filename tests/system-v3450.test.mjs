@@ -972,6 +972,8 @@ function stageTree() {
      *   ★ 副本树必须跟着长：少拷一件，appmod 类负控制全部报 MODULE_NOT_FOUND，
      *     判据根本没跑到 —— 破坏有没有发生已经不重要了（典型假红）。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'branch-canon-contract.js'), path.join(dir, 'config', 'branch-canon-contract.js'));
+    /* [v4.109.0 · R13-O6] 存档台的空态分形把 view 接到 empty-face 上，副本树必须跟上。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'empty-face.js'), path.join(dir, 'config', 'empty-face.js'));
     const ad = path.join(dir, 'apps', 'archive');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js', 'archive-canon.js']) {

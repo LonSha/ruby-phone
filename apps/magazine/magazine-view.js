@@ -42,6 +42,8 @@ const DQUOTE = '"';
 /** `&` 的**拼装形**（不写实体字面量：落盘传输链会把 `&amp;` 这类字面量解码成真字符，
  *  于是 `_esc` 静默失效却不报错 —— v3.35.0 在数据层当场踩过这个坑）。 */
 const AMP = String.fromCharCode(38);
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 /** 三态人话（「还没有稿件」与「读不出来」**不许同形**）。 */
 const FACE_META = {
@@ -146,8 +148,13 @@ export class MagazineView {
         if (!arr.length) {
             const e = app.empty();
             parts.push('<div class="mgz-empty">');
-            parts.push('<div class="mgz-empty-text">' + this._esc(e.reason === MAGAZINE_REASONS.storage_absent
-                ? '读不出来（存储不可用）' : '还没有稿件 —— 去「取材」页产一份要求文本，把结果贴回来') + '</div>');
+            /* [R13-O6] 「读不出来」与「还没有稿件」处置相反：前者去诊断，后者去取材。 */
+            const noData = e.reason !== MAGAZINE_REASONS.storage_absent;
+            parts.push('<div class="mgz-empty-text" ' + FACE_ATTR + '="' + (noData ? 'no-data' : 'read-failed')
+                + '" data-face="' + (noData ? 'empty' : 'absent') + '">'
+                + this._esc(noData
+                    ? '还没有稿件 —— 去「取材」页产一份要求文本，把结果贴回来'
+                    : '读不出来（存储不可用）—— 这**不是**「你没有稿件」') + '</div>');
             parts.push('</div>');
             return parts.join('');
         }

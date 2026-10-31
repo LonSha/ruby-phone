@@ -16,6 +16,8 @@
 'use strict';
 import { SOUNDKIT_FACES } from './soundkit-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 /** HTML 转义要 replace 掉的「双引号」——用**字符数组 + split/join**，不写成正则字面量。
  *  ★ 本仓判据共用的剥注释器（stripComments）是字符状态机、**不解析正则字面量**：
@@ -236,7 +238,14 @@ export class SoundkitView {
         parts.push('<div class="snd-sec-title">我的配方（' + recipes.recipes + ' 条 / 上限 '
             + cat.limits.maxRecipes + '）</div>');
         parts.push('<div class="snd-recipes">');
-        if (!app.recipes.length) parts.push('<div class="snd-note">还没有自定义配方</div>');
+        if (!app.recipes.length) {
+            /* [R13-O6] 「存储不可用」时列表读不出来 —— 那不是「你没有配方」。 */
+            const recFace = face === SOUNDKIT_FACES.storage_absent ? 'read-failed' : 'no-data';
+            parts.push('<div class="snd-note" ' + FACE_ATTR + '="' + recFace + '" data-face="'
+                + (recFace === 'no-data' ? 'empty' : 'absent') + '">'
+                + (recFace === 'no-data' ? '还没有自定义配方' : '配方这会儿读不出来（存储不可用）—— 不是没有配方')
+                + '</div>');
+        }
         for (const r of app.recipes) {
             parts.push('<div class="snd-recipe-row" data-key="' + this._esc(r.key) + '">');
             parts.push('<span class="snd-recipe-name">' + this._esc(r.label) + '</span>');

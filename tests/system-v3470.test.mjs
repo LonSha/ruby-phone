@@ -894,6 +894,8 @@ function stageTree() {
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     /* [v3.58.0 · 计划 O5] diagdesk 已把写回执接进唯一实现，副本树必须带上它。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v4.109.0 · R13-O6] diagdesk 的空态分形把 view 接到 empty-face 上，副本树必须跟上。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'empty-face.js'), path.join(dir, 'config', 'empty-face.js'));
     const ad = path.join(dir, 'apps', 'diagdesk');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['diagdesk-data.js', 'diagdesk-app.js', 'diagdesk-view.js']) {

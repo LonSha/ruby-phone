@@ -1,6 +1,8 @@
 /**
  * 查手机 App - 视图
  */
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 function formatCount(count) {
   if (count >= 10000) return (count / 10000).toFixed(count >= 100000 ? 0 : 1).replace(/\.0$/, '') + '万';
   if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
@@ -35,7 +37,7 @@ export class PeekView {
     const chips = names.map((name) => {
       const active = name === view.selectedName ? ' active' : '';
       return '<button class="pk-chip' + active + '" data-name="' + this._esc(name) + '">' + this._esc(name) + '</button>';
-    }).join('') || '<span class="pk-empty">还没有可查的角色</span>';
+    }).join('') || '<span class="pk-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有可查的角色</span>';
 
     let body = '';
     if (section && section.id === 'daily' && section.daily) {
@@ -194,7 +196,7 @@ export class PeekView {
         + '<h4>' + this._esc(a.title) + '</h4>'
         + (a.content ? '<p>' + this._esc(a.content) + '</p>' : '')
         + '</article>';
-    }).join('') || '<div class="pk-empty">还没有广播</div>';
+    }).join('') || '<div class="pk-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有广播</div>';
     return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
       + '<div class="pk-db-root">'
       + '  <header class="pk-db-head"><div class="pk-db-logo">豆</div><div><b>豆瓣</b><span>记录 · 发现 · 讨论</span></div></header>'
@@ -237,7 +239,7 @@ export class PeekView {
         + '<div class="pk-bv-info"><b>' + this._esc(v.title) + '</b>' + tag
         + '  <span>' + this._esc(v.author || '') + ' · ' + formatCount(v.playCount) + '播放 · ' + v.danmakuCount + '弹幕</span>'
         + '</div></article>';
-    }).join('') || '<div class="pk-empty">还没有观看记录</div>';
+    }).join('') || '<div class="pk-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有观看记录</div>';
     return '<button class="pk-back" id="pk-back-section"><i class="fa-solid fa-chevron-left"></i> 返回概览</button>'
       + '<div class="pk-bv-root">'
       + '  <header class="pk-bv-head"><div class="pk-bv-logo">B</div><div><b>哔哩哔哩</b><span>干杯 ~</span></div></header>'

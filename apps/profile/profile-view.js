@@ -12,6 +12,7 @@
  * ============================================================ */
 'use strict';
 import { TIER_TEXT } from './profile-data.js';
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class ProfileView {
     constructor(app) {
         this.app = app;
@@ -77,9 +78,12 @@ export class ProfileView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="pf-empty">' + this._esc(face.reason === 'empty' ? '还没有主角档案（随剧情自动建立）' : '读不到主角档案') + '</div>';
+            /* [R13-O6] 「读不到」与「还没有」处置相反：前者去诊断，后者推进剧情 —— 不许同一句话。 */
+            const hWhy = face.reason === 'empty' ? 'no-data' : 'read-failed';
+            const hFace = face.reason === 'empty' ? 'empty' : 'absent';
+            body = '<div class="pf-empty" ' + FACE_ATTR + '="' + hWhy + '" data-face="' + hFace + '">' + this._esc(face.reason === 'empty' ? '还没有主角档案（随剧情自动建立）' : '读不到主角档案（这不等于没有档案）') + '</div>';
         } else if (!fields.length) {
-            body = '<div class="pf-empty">档案在，但还没有可读字段</div>';
+            body = '<div class="pf-empty" ' + FACE_ATTR + '="no-data" data-face="empty">档案在，但还没有可读字段</div>';
         } else {
             const rows = fields.map((f) => [
                 '<div class="pf-field">',
@@ -116,9 +120,11 @@ export class ProfileView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="pf-empty">' + this._esc(face.reason === 'empty' ? '还没有生活小档案' : '读不到生活小档案') + '</div>';
+            const lWhy = face.reason === 'empty' ? 'no-data' : 'read-failed';
+            const lFace = face.reason === 'empty' ? 'empty' : 'absent';
+            body = '<div class="pf-empty" ' + FACE_ATTR + '="' + lWhy + '" data-face="' + lFace + '">' + this._esc(face.reason === 'empty' ? '还没有生活小档案' : '读不到生活小档案（这不等于没有）') + '</div>';
         } else if (!groups.total) {
-            body = '<div class="pf-empty">还没有生活小档案（生活细节会随剧情沉淀）</div>';
+            body = '<div class="pf-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有生活小档案（生活细节会随剧情沉淀）</div>';
         } else {
             const tiers = [['pinned', '常驻'], ['active', '进行中'], ['archive', '已归档']];
             body = tiers.map(([k, label]) => {

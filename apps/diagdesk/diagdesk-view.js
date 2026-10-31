@@ -23,6 +23,8 @@
 'use strict';
 import { DD_TEXT_MAX, DD_LEDGER_MAX, DD_ROWS_MAX, DD_ROLES_MAX, DD_DEPTH_MAX, DD_STATUS_TEXT, DD_DELTA_TEXT } from './diagdesk-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -99,8 +101,13 @@ export class DiagdeskView {
     _note(text, tone) {
         return '<div class="dd-note dd-note-' + this._esc(tone || 'ok') + '">' + this._esc(text) + '</div>';
     }
-    _empty(text) {
-        return '<div class="dd-empty">' + this._esc(text) + '</div>';
+    /* [v4.109.0 · R13-O6] 空态四态：本件三个调用点里有两个是「还没贴存档」（真读数），
+     *   一个是「贴了但还没有记录」（真读数）—— 全是 empty；只有传 why 时才可能是别的态。
+     *   属性必须挂，否则用户看不出「本件真的没东西」与「本件读失败」的区别。 */
+    _empty(text, why) {
+        const code = why || 'no-data';
+        const face = (code === 'no-data') ? 'empty' : (code === 'filtered-out' || code === 'locked' || code === 'no-permission' ? 'blocked' : 'absent');
+        return '<div class="dd-empty" ' + FACE_ATTR + '="' + this._esc(code) + '" data-face="' + face + '">' + this._esc(text) + '</div>';
     }
     _tag(text, tone) {
         return '<span class="dd-tag dd-tag-' + this._esc(tone || 'ok') + '">' + this._esc(text) + '</span>';

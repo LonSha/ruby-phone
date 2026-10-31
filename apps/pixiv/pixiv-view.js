@@ -19,6 +19,8 @@ import {
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
  *    v3.31.0 在 date-view 上当场踩到，本件一律照 date / lofter 的写法抄。 */
 const DQUOTE = '"';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 /** `&` 的**拼装形**（不写实体字面量：落盘传输链会把 `&amp;` 这类字面量解码成真字符，
  *  于是 `_esc` 静默失效却不报错 —— 本件在数据层当场踩过这个坑）。 */
 const AMP = String.fromCharCode(38);
@@ -161,8 +163,14 @@ export class PixivView {
         parts.push('<h3 class="pxv-title">作品（' + list.length + ' / 池里 '
             + app.readings().totalNovels + '）</h3>');
         if (!list.length) {
-            parts.push('<div class="pxv-empty">池里还没有带正文的作品。'
-                + '去下面的「投稿」贴一段宿主写的正文，或者关掉「隐藏没有正文的作品」。</div>');
+            /* [R13-O6] 「池子真的空」与「有作品但全被隐藏开关滤掉」处置相反：后者去关开关。 */
+            const hiddenOut = Number(app.readings && app.readings().totalNovels) > 0;
+            parts.push('<div class="pxv-empty" ' + FACE_ATTR + '="' + (hiddenOut ? 'filtered-out' : 'no-data')
+                + '" data-face="' + (hiddenOut ? 'blocked' : 'empty') + '">'
+                + (hiddenOut
+                    ? '有作品，但都被「隐藏没有正文的作品」挡住了（关掉那个开关就能看到）。'
+                    : '池里还没有带正文的作品。去下面的「投稿」贴一段宿主写的正文。')
+                + '</div>');
         } else {
             if (months.length > 1) {
                 for (const m of months) {
@@ -304,8 +312,10 @@ export class PixivView {
                 + all.orphans + ' 条的父评论找不到（也挂到最上面一层）。</div>');
         }
         if (!all.rows.length) {
-            parts.push('<div class="pxv-empty">' + (cf.face === PIXIV_COMMENT_FACES.not_read
-                ? '还没读过这一話的评论。' : '这一話还没有人说话。') + '</div>');
+            const notRead = cf.face === PIXIV_COMMENT_FACES.not_read;
+            parts.push('<div class="pxv-empty" ' + FACE_ATTR + '="' + (notRead ? 'read-failed' : 'no-data')
+                + '" data-face="' + (notRead ? 'absent' : 'empty') + '">'
+                + (notRead ? '还没读过这一話的评论（不等于没人说话）。' : '这一話还没有人说话。') + '</div>');
         }
         for (const r of all.rows) {
             parts.push('<div class="pxv-cmt" data-depth="' + r.depth + '">');
@@ -378,7 +388,7 @@ export class PixivView {
         parts.push('<h3 class="pxv-title">插画登记（' + list.length + ' / ' + app.limits().maxIllusts + '）</h3>');
         parts.push('<div class="pxv-hint">这一面**只登记「你画过什么」**：提示词、尺寸、张数、谁画的。'
             + '不存图、不存地址、不渲染图片 —— 出图请在你自己的对话端做。</div>');
-        if (!list.length) parts.push('<div class="pxv-empty">还没有登记。</div>');
+        if (!list.length) parts.push('<div class="pxv-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有登记。</div>');
         for (const i of list) {
             parts.push('<div class="pxv-ill">');
             parts.push('<div class="pxv-ill-prompt">' + this._esc(i.prompt) + '</div>');

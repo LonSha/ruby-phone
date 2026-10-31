@@ -8,6 +8,9 @@
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量，不许在本件手写字符串）。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
+
 const WANGXIANG_BACKGROUND_URL = new URL('./wangxiang.png', import.meta.url).href;
 const WANGXIANG_TITLE_URL = new URL('./wxbt.png', import.meta.url).href;
 const WANGXIANG_NAV_BACKGROUND_URL = new URL('./wxanbj.png', import.meta.url).href;
@@ -455,12 +458,13 @@ export class WangxiangView {
     }
 
     _renderManagedTaskContent() {
+        const mounted = typeof this.app.getManagedTasks === 'function';
         const groups = this._getManagedTaskGroups();
         if (groups.length) return groups.map(group => this._renderManagedTaskGroup(group)).join('');
         return `
-            <div class="wangxiang-my-tasks-empty">
+            <div class="wangxiang-my-tasks-empty" ${FACE_ATTR}="${mounted ? 'no-data' : 'not-mounted'}" data-face="${mounted ? 'empty' : 'absent'}">
                 <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
-                <strong>暂无已接取任务</strong>
+                <strong>${mounted ? '暂无已接取任务' : '这一版没有已接任务面（不是没有接任务）'}</strong>
             </div>
         `;
     }
@@ -807,6 +811,7 @@ export class WangxiangView {
     }
 
     _renderInventoryContent() {
+        const invMounted = typeof this.app.getInventoryItems === 'function';
         const items = this.app.getInventoryItems?.() || [];
         const totalQuantity = items.reduce((sum, item) => sum + Math.max(1, Number(item?.quantity || 1)), 0);
         return `
@@ -819,9 +824,9 @@ export class WangxiangView {
                     ${items.map(item => this._renderInventoryItem(item)).join('')}
                 </div>
             ` : `
-                <div class="wangxiang-inventory-empty">
+                <div class="wangxiang-inventory-empty" ${FACE_ATTR}="${invMounted ? 'no-data' : 'not-mounted'}" data-face="${invMounted ? 'empty' : 'absent'}">
                     <i class="fa-solid fa-box-open" aria-hidden="true"></i>
-                    <strong>背包暂无物品</strong>
+                    <strong>${invMounted ? '背包暂无物品' : '这一版没有背包面（不是背包空）'}</strong>
                 </div>
             `}
         `;
@@ -1748,12 +1753,15 @@ export class WangxiangView {
     }
 
     _renderTaskListContent() {
+        /* [v4.109.0 · R13-O6] 「这一版没有任务面」与「任务池正好是空的」处置相反：
+         *   前者等升级/等接线（absent），后者下拉刷新即可（empty）。源把两件事压成一句「暂无任务」。 */
+        const mounted = typeof this.app.getGeneratedTasks === 'function';
         const tasks = this._getTaskItems();
         if (tasks.length) return tasks.map(task => this._renderTaskCard(task)).join('');
         return `
-            <div class="wangxiang-task-empty">
+            <div class="wangxiang-task-empty" ${FACE_ATTR}="${mounted ? 'no-data' : 'not-mounted'}" data-face="${mounted ? 'empty' : 'absent'}">
                 <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
-                <strong>暂无任务</strong>
+                <strong>${mounted ? '暂无任务' : '这一版没有任务面（不是没有任务）'}</strong>
             </div>
         `;
     }

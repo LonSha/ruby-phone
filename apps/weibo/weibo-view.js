@@ -17,6 +17,8 @@ import { replacePhoneInlineEmojiTokens } from '../../config/phone-emoji.js';
  *   数据层那一轮 AI 已经过了栅栏，但循环本身还在往会话里写。
  *   只在数据层设栅栏、不管这里的延迟写，等于栅栏只建了一半。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。四处空态处置各不相同，先把区别挂到属性上。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class WeiboView {
     constructor(weiboApp) {
@@ -261,7 +263,7 @@ export class WeiboView {
 
         if (searches.length === 0) {
             return `
-                <div class="weibo-empty">
+                <div class="weibo-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="weibo-empty-icon">🔥</div>
                     <p>暂无热搜内容</p>
                     <p class="weibo-empty-sub">点击推荐tab刷新后自动生成热搜</p>
@@ -307,7 +309,7 @@ export class WeiboView {
                 </div>
 
                 ${posts.length === 0 ? `
-                    <div class="weibo-empty">
+                    <div class="weibo-empty" ${FACE_ATTR}="no-data" data-face="empty">
                         <p>暂无推荐内容</p>
                         <p class="weibo-empty-sub">长按上方用户信息区后下拉可刷新</p>
                     </div>
@@ -334,7 +336,7 @@ export class WeiboView {
                 </div>
 
                 ${posts.length === 0 ? `
-                    <div class="weibo-empty">
+                    <div class="weibo-empty" ${FACE_ATTR}="no-data" data-face="empty">
                         <p>还没有发布微博</p>
                         <p class="weibo-empty-sub">点击上方发布你的第一条微博</p>
                     </div>
@@ -646,7 +648,7 @@ export class WeiboView {
                             ${detail.posts.map(post => this.renderWeiboPost(post, 'hotSearch')).join('')}
                         `
                 : `
-                            <div class="weibo-empty">
+                            <div class="weibo-empty" ${FACE_ATTR}="not-ready" data-face="absent">
                                 <div class="weibo-empty-icon">🔍</div>
                                 <p>暂无内容</p>
                                 <p class="weibo-empty-sub" id="weibo-auto-gen-hint">正在自动生成...</p>

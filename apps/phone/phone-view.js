@@ -28,6 +28,8 @@ import { SYS_KEYS } from '../../config/system-controls.js';
 /* [v4.88.0] 出声才走位（缝自 Saekisui/binaural-voice）：纯函数内核判「这帧算不算出声、
  *   pan 该多少」，本文件只喂帧与写 panner；拿不到 WebAudio 就如实回落不接管播放。 */
 import { pushWalkFrame, initialWalkState, laneProgress } from '../../config/binaural-walk.js';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件空态集中在通话 / 短信两条线。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class PhoneCallView {
     constructor(app) {
@@ -112,7 +114,7 @@ export class PhoneCallView {
 
         let listHtml = '';
         if (history.length === 0) {
-            listHtml = '<div class="phone-call-empty">暂无通话记录</div>';
+            listHtml = '<div class="phone-call-empty" ' + FACE_ATTR + '="no-data" data-face="empty">暂无通话记录</div>';
         } else {
             // 倒序显示
             const reversed = [...history].reverse();
@@ -265,7 +267,7 @@ export class PhoneCallView {
                 `;
             }).join('')
             : `
-                <div class="phone-sms-empty">
+                <div class="phone-sms-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="phone-sms-empty-icon"><i class="fa-regular fa-message"></i></div>
                     <div class="phone-sms-empty-title">暂无短信</div>
                 </div>
@@ -422,7 +424,7 @@ export class PhoneCallView {
         const messagesHtml = messages.length > 0
             ? this._renderSmsMessages(messages)
             : `
-                <div class="phone-sms-empty phone-sms-thread-empty">
+                <div class="phone-sms-empty phone-sms-thread-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="phone-sms-empty-icon"><i class="fa-regular fa-message"></i></div>
                     <div class="phone-sms-empty-title">暂无短信</div>
                 </div>
@@ -950,7 +952,7 @@ export class PhoneCallView {
             conversationItem.remove();
             if (!listRoot.querySelector('.phone-sms-conversation')) {
                 listRoot.insertAdjacentHTML('beforeend', `
-                    <div class="phone-sms-empty">
+                    <div class="phone-sms-empty" ${FACE_ATTR}="no-data" data-face="empty">
                         <div class="phone-sms-empty-icon"><i class="fa-regular fa-message"></i></div>
                         <div class="phone-sms-empty-title">暂无短信</div>
                     </div>
@@ -1116,7 +1118,7 @@ export class PhoneCallView {
             this._syncSmsDateDividers(messagesRoot);
             if (messagesRoot && !messagesRoot.querySelector('.phone-sms-bubble-row')) {
                 messagesRoot.insertAdjacentHTML('beforeend', `
-                    <div class="phone-sms-empty phone-sms-thread-empty">
+                    <div class="phone-sms-empty phone-sms-thread-empty" ${FACE_ATTR}="no-data" data-face="empty">
                         <div class="phone-sms-empty-icon"><i class="fa-regular fa-message"></i></div>
                         <div class="phone-sms-empty-title">暂无短信</div>
                     </div>
@@ -1633,7 +1635,7 @@ export class PhoneCallView {
                     </button>
                 </div>
             `).join('')
-            : '<div class="phone-call-empty">暂无联系人，请先添加姓名</div>';
+            : '<div class="phone-call-empty" ' + FACE_ATTR + '="no-data" data-face="empty">暂无联系人，请先添加姓名</div>';
         const shellBg = this._getSystemWallpaperShellBackgroundConfig('phone-call-contacts');
 
         const html = `

@@ -23,6 +23,8 @@ import {
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
  *    v3.31.0 在 date-view 上当场踩到，本件一律照 date 的写法抄。 */
 const DQUOTE = '"';
+/* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件三态本来就分得开，缺的只是**机器可读**的那一半。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 /** 「多久以前」的人话（只看毫秒与 Date，不 import App —— 免得 App <-> View 成环）。 */
 function agoText(ms) {
     const n = Number(ms);
@@ -139,6 +141,7 @@ export class LofterView {
     /* ---------- 首页 ---------- */
     _homePanel() {
         const app = this.app;
+        const face = app.faceReason();
         const arts = app.articlesAll();
         const hot = app.hotTags();
         const parts = [];
@@ -153,8 +156,15 @@ export class LofterView {
             parts.push('</div>');
         }
         if (!arts.length) {
-            parts.push('<div class="lof-empty">还没有稿子。先去下面的「收下别处产出的短文」格子，'
-                + '把模型给你写的整段贴回来 —— 本 App 自己不会去调模型。</div>');
+            /* [R13-O6] 存储不可用 ⇒ absent（去诊断）；键面缺席 ⇒ absent（等一次生成）；真的没稿 ⇒ empty。 */
+            const homeFace = face === LOFTER_REASONS.storage_absent ? 'read-failed'
+                : (face === LOFTER_REASONS.key_absent ? 'not-ready' : 'no-data');
+            parts.push('<div class="lof-empty" ' + FACE_ATTR + '="' + homeFace + '" data-face="'
+                + (homeFace === 'no-data' ? 'empty' : 'absent') + '">'
+                + (homeFace === 'no-data'
+                    ? '还没有稿子。先去下面的「收下别处产出的短文」格子，把模型给你写的整段贴回来 —— 本 App 自己不会去调模型。'
+                    : '稿子列表这会儿读不上来（存储或账还没就位）—— **不是**「你没有稿子」。')
+                + '</div>');
         } else {
             const months = app.byMonth();
             for (const g of months) {
@@ -337,7 +347,14 @@ export class LofterView {
         // 评论：楼中楼
         parts.push('<div class="lof-cmts">');
         const rows = app.commentRows(a.id);
-        if (!rows.length) parts.push('<div class="lof-empty">还没有人说话。</div>');
+        if (!rows.length) {
+            /* [R13-O6] 「没读过」与「读过了、真的没人说话」是两回事：源压成一个 boolean。 */
+            const cf2 = commentCountFace(app.commentsOf(a.id));
+            const unread = cf2.count === null;
+            parts.push('<div class="lof-empty" ' + FACE_ATTR + '="' + (unread ? 'read-failed' : 'no-data')
+                + '" data-face="' + (unread ? 'absent' : 'empty') + '">'
+                + (unread ? '这一篇的评论还没读到（不等于没人说话）' : '还没有人说话。') + '</div>');
+        }
         for (const n of rows) {
             parts.push('<div class="lof-cmt" data-depth="' + n.depth + '">');
             parts.push('<span class="lof-cmt-indent">' + '\u00a0'.repeat(Math.max(0, n.depth - 1) * 2) + '</span>');
