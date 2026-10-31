@@ -15,6 +15,7 @@
  * ======================================================== */
 'use strict';
 import { SOUNDKIT_FACES } from './soundkit-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** HTML 转义要 replace 掉的「双引号」——用**字符数组 + split/join**，不写成正则字面量。
  *  ★ 本仓判据共用的剥注释器（stripComments）是字符状态机、**不解析正则字面量**：
@@ -453,6 +454,11 @@ export class SoundkitView {
                 this._flash = r.ok ? '已生成分享码（长度 ' + r.code.length + '）' : '导出失败：' + r.reason;
                 if (r.ok) this._draft.code = r.code;
             } else if (act === 'delete-recipe') {
+                if (!confirmDestroy({
+                    appId: 'soundkit',
+                    action: '删掉这条配方',
+                    what: '配方本身，以及绑它的槽位（会一并解绑）',
+                })) return;
                 const r = this.app.deleteRecipe(key);
                 this._flash = r.ok ? '已删除配方（绑它的槽位一并解绑）' : '这条配方本来就不在';
             } else if (act === 'import-code') {

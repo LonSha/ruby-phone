@@ -28,6 +28,7 @@
 import {
     SOURCEBOOK_FACES, CREATED_STATES, SPAN_UNKNOWN_LABEL, RECIPIENT_KINDS
 } from './sourcebook-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义耍 replace 的三个字符 —— 用**拼装形**，不写实体字面量。 */
 const DQUOTE = String.fromCharCode(34);
@@ -354,6 +355,11 @@ export class SourcebookView {
             const r = app.acceptEcho(i, this._field('echo'));
             this._flash = r.ok ? this._acceptWhy(r) : this._rejectWhy(r);
         } else if (act === 'clear-ledger') {
+            if (!confirmDestroy({
+                appId: 'sourcebook',
+                action: '清空台账',
+                what: '胶囊动作台账',
+            })) return;
             app.clearLedger();
             this._flash = '台账清空了';
         }

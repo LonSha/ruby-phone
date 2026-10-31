@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形；键面不重列。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -70,8 +71,20 @@ export class FreehomeView {
                     const ta = el.querySelector('[data-in="layout"]');
                     self.app.intakeLayout(ta ? ta.value : '');
                 } else if (act === 'audit') { self.app.audit(); self.app.render(); }
-                else if (act === 'clear') { self.app.clearLayout(); }
-                else if (act === 'clear-ledger') { self.app.clearLedger(); }
+                else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'freehome',
+                        action: '清空桌面布局',
+                        what: '当前布局',
+                    })) return;
+                    self.app.clearLayout(); }
+                else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'freehome',
+                        action: '清空台账',
+                        what: '布局动作台账',
+                    })) return;
+                    self.app.clearLedger(); }
             });
         });
     }

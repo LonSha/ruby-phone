@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形；零外链加载（不出图）。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -70,8 +71,20 @@ export class StickerdeskView {
                 if (act === 'intake') {
                     const ta = el.querySelector('[data-in="text"]');
                     self.app.intakeText(ta ? ta.value : '');
-                } else if (act === 'clear') { self.app.clearAll(); }
-                else if (act === 'clear-ledger') { self.app.clearLedger(); }
+                } else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'stickerdesk',
+                        action: '清空全部表情',
+                        what: '所有已贴进来的表情',
+                    })) return;
+                    self.app.clearAll(); }
+                else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'stickerdesk',
+                        action: '清空台账',
+                        what: '表情册动作台账',
+                    })) return;
+                    self.app.clearLedger(); }
             });
         });
     }

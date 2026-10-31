@@ -17,6 +17,7 @@
 'use strict';
 import { RECALL_FACES, RECALL_CHANNELS, RECALL_CHANNEL_META, RECALL_ROOM_WEIGHTS }
     from './recall-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 /** HTML 转义要 replace 掉的「双引号」—— 用**字符数组 + split/join**，不写成正则字面量。
  *  ★ 本仓判据共用的剥注释器（stripComments）是字符状态机、**不解析正则字面量**：
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
@@ -346,6 +347,11 @@ export class RecallView {
             const v = app.decide(null, {});
             this._flash = v.inject ? ('可以注入 ' + v.count + ' 条') : ('不注入：' + app.skipLabelOf(v.reason));
         } else if (act === 'clear-snaps') {
+            if (!confirmDestroy({
+                appId: 'recall',
+                action: '清空全部候选',
+                what: '所有召回候选快照',
+            })) return;
             app.clearSnapshots();
             this._flash = '全部候选清空了';
         } else if (act === 'add-receipt') {
@@ -358,6 +364,11 @@ export class RecallView {
             });
             this._flash = '记了一张：召回到 ' + card.hits + ' 条，' + (card.inject ? '注入' : '不注入（' + app.skipLabelOf(card.reason) + '）');
         } else if (act === 'clear-receipts') {
+            if (!confirmDestroy({
+                appId: 'recall',
+                action: '清空台账',
+                what: '召回回执记录',
+            })) return;
             app.clearReceipts();
             this._flash = '台账清空了';
         } else if (act === 'open-rec') {

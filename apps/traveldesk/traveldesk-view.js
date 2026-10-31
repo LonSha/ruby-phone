@@ -4,6 +4,7 @@
  * 四格：账本（贴回 JSON 入账） / 汇率试算 / 结算读数 / 台账。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -244,8 +245,20 @@ export class TraveldeskView {
                 else if (act === 'tvp-cost-state') { const r = self.app.partyAct('set-cost-state', { id: b.getAttribute('data-id'), state: b.getAttribute('data-state') }); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }
                 else if (act === 'intake') { self.app.intakeBook(val('book')); self.app.render(); }
                 else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
-                else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
-                else if (act === 'clear-ledger') { self.app.clearLedger(); self.app.render(); }
+                else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'traveldesk',
+                        action: '清空全部旅行账',
+                        what: '人 / 家庭 / 支出三张表',
+                    })) return;
+                    self.app.clearAll(); self.app.render(); }
+                else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'traveldesk',
+                        action: '清空台账',
+                        what: '旅行记账动作台账',
+                    })) return;
+                    self.app.clearLedger(); self.app.render(); }
                 else if (act === 'settle') { self.app.settle(); self.app.render(); }
                 else if (act === 'fc-commit') { self._commit('commit'); }
                 else if (act === 'fc-revoke') { self._commit('revoke'); }

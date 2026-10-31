@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -76,7 +77,13 @@ export class SummdeskView {
                     const ra = el.querySelector('[data-in="range"]');
                     self.app.intakeSummary(ta ? ta.value : '', ra ? ra.value : '');
                     self.app.render();
-                } else if (act === 'clear') { self.app.clearMemories(); self.app.render(); }
+                } else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'summdesk',
+                        action: '清空全部总结',
+                        what: '所有已产出的总结记忆',
+                    })) return;
+                    self.app.clearMemories(); self.app.render(); }
                 else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
             });
         });

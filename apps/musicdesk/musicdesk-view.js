@@ -22,6 +22,7 @@
  *   由 App 的各类 Rows() 现算给出 —— 视图不持第二份清单，
  *   否则真源表增删一态，视图会静默少画一态而不报错（本仓 J7 形态）。 */
 import { MUS_FACES, MUS_STATES, MUS_PLAYBACK_MODES } from './musicdesk-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义要 replace 的三个字符 —— 用**拼装形**，不写实体字面量。 */
 const DQUOTE = String.fromCharCode(34);
@@ -420,12 +421,22 @@ export class MusicdeskView {
             return;
         }
         if (act === 'clear-songs') {
+            if (!confirmDestroy({
+                appId: 'musicdesk',
+                action: '清空曲库',
+                what: '所有已录入的曲目（歌词与台账没动）',
+            })) return;
             const r = app.clearSongs();
             this._flash = ('清掉 ' + r.cleared + ' 首（歌词与台账没动）');
             this.refresh();
             return;
         }
         if (act === 'clear-ledger') {
+            if (!confirmDestroy({
+                appId: 'musicdesk',
+                action: '清空台账',
+                what: '曲库动作台账',
+            })) return;
             app.clearLedger();
             this._flash = '台账清空了';
             this.refresh();

@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -66,7 +67,13 @@ export class PeriodmathView {
                 const act = b.getAttribute('data-act');
                 if (act === 'toggle') { self.app.togglePeriod(); self.app.render(); }
                 else if (act === 'alert') { self.app.checkAlert(); self.app.render(); }
-                else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
+                else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'periodmath',
+                        action: '清空周期数据与设置',
+                        what: '已录入的周期记录与参数',
+                    })) return;
+                    self.app.clearAll(); self.app.render(); }
                 else if (act === 'intake') {
                     const ta = el.querySelector('[data-in="cycles"]');
                     self.app.intakeCycles(ta ? ta.value : ''); self.app.render();

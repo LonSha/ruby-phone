@@ -132,6 +132,15 @@ import { precheckLine, handoffLine, handoffGateLine, handoffDropLog } from '../.
  *   ★ 本内核只**陈列**矩阵模块的读数，不在这里复算第二份：六个布尔值的真源复算在判据套件里
  *     （声明与事实分开存放，两者不一致时才有判别力）；内核再算一份就变成同源自述、必然恒绿。 */
 import { FACE_KEYS, FACE_META, NA, MATRIX, faceCounts } from '../../config/app-consumption-matrix.js';
+/* [v4.105.0 · R13-O2] 销毁能力声明面的读数来源。
+ *   为什么接在这里：`config/undo-capability.js` 与 `config/destructive-confirm.js` 是本轮新增的
+ *   唯一实现，而本仓 dead-export 门的口径是「**测试不算消费** —— 只有测试引用 = 产品端零消费」。
+ *   诊断中心是本仓「一切平台级读数的可见出口」，故这两个模块的产品消费点就在这里。
+ *   ★ 内核只**陈列**声明与自证结果，不复算分档 —— 事实复算（磁盘上有没有 registerRestorer /
+ *     confirmDestroy）是判据套件的事；内核再算一份就是同源自述、必然恒绿。 */
+import { undoModeCounts, undoSummaryLine, undoDeclarationOf } from '../../config/undo-capability.js';
+import { describeDestroy } from '../../config/destructive-confirm.js';
+import { APPS } from '../../config/apps.js';
 /* [v4.98.0 · R11-O8 收口] 像素图标覆盖率读数面。
  *   为什么要接在这里（此前只有判据在读它）：R11-O8 把图标从 8/89 补到 89/89 之后，
  *   `unifiedIconCoverage()` 的读数**只被测试消费** —— 也就是说「覆盖率掉了」这件事
@@ -746,6 +755,83 @@ export function collectDiagnose(win, storage) {
                 missing: missing,
                 unmapped: unmapped,
                 line: String(cov.line || '图标覆盖率：无读数')
+            };
+        } catch (_e) { return null; }
+    })();
+    /* ── [v4.105.0 · R13-O2] 销毁动作分级面（89 件 App 各自「删了能不能回来」）──
+     *   摆的是什么：三档分布（可撤销 / 不可撤销但已确认 / 不可撤销且未确认）、逐档点名、
+     *   以及一条**两侧都跑的自证** —— 这是本面最要紧的部分。
+     *   为什么必须两侧都跑：本仓最贵的形态是**恒真判据**。只验「undo 档的文案说能恢复」
+     *   时，一个永远返回 recoverable=true 的实现也会让这面全绿。故同时验反向：
+     *   irreversible 档的文案必须说「不可撤回」，且**调用方传 undoable:true 也不许改口**
+     *   （这句是 `config/destructive-confirm.js` 头注里那条纪律的可执行形式：
+     *    可撤销性只认声明面，不认调用方 —— 调用方只想少弹一个框）。
+     *   三条纪律与全页一致：只读（只算字符串，不投递、不碰 App 实例）、不抛（单面 try/catch）、
+     *   不猜（取不到即 null，不伪造「89 件全覆盖」）。 */
+    const undoFace = (() => {
+        try {
+            const count = undoModeCounts();
+            /* 取数走全仓唯一口径 `numOrNull`（本文件第 208 行已 import）：
+             *   `Number.isFinite(Number(x))` 会把「没给」与「给了 0」塌成同一个读数，
+             *   而这两者在这里的处置相反 —— 没给 ⇒ 面缺席（说不出来）；给了 0 ⇒ 真读数。
+             *   ★ 这一处是本版自己写的弱口径，被 weak-coercion 门当场抓出来的。 */
+            const declared = numOrNull(count && count.total);
+            if (!count || declared === null || declared <= 0) return null;
+            const realApps = Array.isArray(APPS) ? APPS.length : 0;
+            const problems = [];
+            /* 声明条数必须等于 APPS 真源条数。★ 这是本面唯一一处**跨源**对账，故有判别力：
+             *   声明表（config/undo-capability.js）与 App 清单（config/apps.js）是两份独立的真源，
+             *   任一边增删而另一边没跟，这里当场点名 —— 目录口径漏 graph 那一类正是这么发生的。 */
+            if (realApps > 0 && declared !== realApps) {
+                problems.push('声明 ' + String(declared) + ' 条，而 APPS 真源有 ' + String(realApps)
+                    + ' 件 App —— 有 App 没被声明（或声明里多了不存在的 id）');
+            }
+            /* ★ 残留账（irreversible）**不记成 problem**：它是本轮如实记账的那一部分，
+             *   不是「这张卡坏了」。若记成 problem，这张卡会永久红 —— 而永久红会训练用户忽略红，
+             *   比不报更糟。故它只作为 warn 芯片 + 一句话摆出来，并由判据套件把它冻结成数字
+             *   （59 这个数一旦变动，判据当场红），责任落在该落的地方。 */
+            /* 两侧自证：正向（undo 档文案必须说回收站）+ 反向（irreversible 档文案必须说不可撤回，
+             *   且调用方传 undoable:true 也不许改口）。任一侧不成立即记一条。 */
+            const undoProbe = describeDestroy({ appId: 'diary', action: '删除', what: 'x' });
+            if (!undoProbe || undoProbe.recoverable !== true) {
+                problems.push('自证正向：undo 档（diary）的文案必须判为可恢复');
+            } else if (!String(undoProbe.text || '').includes('回收站')) {
+                problems.push('自证正向：可恢复的文案里必须指出「设置 → 回收站」这条路，否则用户不知道去哪找');
+            }
+            const irrProbe = describeDestroy({ appId: 'archive', action: '删除', what: 'x', undoable: true });
+            if (!irrProbe || irrProbe.recoverable !== false) {
+                problems.push('自证反向：irreversible 档（archive）传 undoable:true 之后仍必须判为不可恢复'
+                    + '（可撤销性只认声明面，不认调用方）');
+            } else if (!String(irrProbe.text || '').includes('不可撤回')) {
+                problems.push('自证反向：不可恢复的文案里必须明确说「不可撤回」');
+            }
+            /* 逐档点名：诊断卡要能一眼看到哪些 App 落在哪一档（只说计数等于没说）。
+             *   只点名 undo / confirm 两档：irreversible 有 59 件，逐条铺开会把卡片撑爆 ——
+             *   它靠「不可撤销且未确认 N」那个计数芯片 + 判据套件逐条守，不在这里铺。 */
+            const named = { undo: [], confirm: [] };
+            for (const app of (Array.isArray(APPS) ? APPS : [])) {
+                const id = String((app && app.id) || '');
+                if (!id) continue;
+                const decl = undoDeclarationOf(id);
+                if (!decl) continue;
+                if (decl.mode === 'undo' || decl.mode === 'confirm') named[decl.mode].push(id);
+            }
+            const rows = ['undo', 'confirm', 'irreversible'].map((m) => ({
+                mode: m,
+                count: Number(count[m] || 0),
+                apps: named[m] || [],
+            }));
+            return {
+                ok: problems.length === 0,
+                problems: problems,
+                total: declared,
+                appsTotal: realApps,
+                undo: Number(count.undo || 0),
+                confirm: Number(count.confirm || 0),
+                irreversible: Number(count.irreversible || 0),
+                residual: Number(count.irreversible || 0),
+                rows: rows,
+                line: String(undoSummaryLine() || '销毁动作分级：无读数')
             };
         } catch (_e) { return null; }
     })();
@@ -1840,7 +1926,7 @@ export function collectDiagnose(win, storage) {
             return { ok: false, linked: true, reason: 'thrown', at: 0, passed: 0, skipped: 0, problems: ['自检面取数抛错'], lines: {}, text: '' };
         }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2348,6 +2434,24 @@ export function iconFaceText(face) {
     } catch (_e) { return '图标覆盖率：读取异常（已降级）'; }
 }
 
+/* [v4.105.0 · R13-O2] 销毁动作分级面的一行读数（唯一实现在 `collectDiagnose` 内取的那一面）。
+ *  三态不同形（与全页同纪律）：
+ *   · 面缺席 ⇒ 明说「读取异常」，并**禁止**读成「89 件全覆盖」——
+ *     声明面取不到时最容易被洗成「都分级好了」；
+ *   · 面在、有问题 ⇒ 逐条点名（残留账数量 / 条数对不上 / 自证失败）；
+ *   · 面在、没问题 ⇒ 报三档分布 + 可撤销与已确认两档的 App id（点得出名字才算说清）。 */
+export function undoFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '销毁动作分级：读取异常（已降级）—— 这不是「89 件都分好级了」';
+        if (f.ok !== true) {
+            return '销毁动作分级：**有 ' + String((f.problems || []).length) + ' 条问题** —— '
+                + (f.problems || []).map(String).join(' · ');
+        }
+        return String(f.line || '销毁动作分级：无读数');
+    } catch (_e) { return '销毁动作分级：读取异常（已降级）'; }
+}
+
 export default {
     CONSUMED_FIELDS,
     schemaStateText,
@@ -2390,5 +2494,6 @@ datePlayFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,
     characterSlotFaceText,
-    iconFaceText
+    iconFaceText,
+    undoFaceText
 };

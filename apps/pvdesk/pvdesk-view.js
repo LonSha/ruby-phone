@@ -27,6 +27,7 @@ import {
     PV_DURATION_MIN, PV_DURATION_MAX
 } from './pvdesk-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
@@ -579,18 +580,33 @@ export class PvdeskView {
             return;
         }
         if (name === 'clear-draft') {
+            if (!confirmDestroy({
+                appId: 'pvdesk',
+                action: '清掉这份草稿',
+                what: '还没保存的 PV 草稿',
+            })) return;
             app.clearDraft();
             this._flash = '草稿已清掉';
             this.refresh();
             return;
         }
         if (name === 'clear-ledger') {
+            if (!confirmDestroy({
+                appId: 'pvdesk',
+                action: '清空台账',
+                what: 'PV 动作台账',
+            })) return;
             app.clearLedger();
             this._flash = '动作台账已清';
             this.refresh();
             return;
         }
         if (name === 'clear-brief') {
+            if (!confirmDestroy({
+                appId: 'pvdesk',
+                action: '清空题面与台账',
+                what: 'PV 题面与动作台账',
+            })) return;
             app.clearBrief();
             this._flash = '题面与台账已清空';
             this.refresh();

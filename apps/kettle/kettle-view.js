@@ -22,6 +22,7 @@
  *   由 App 的 roundRows() / optionRows() 现算给出 —— 视图不持第二份清单，
  *   否则真源表增删一档，视图会静默少画一档而不报错（本仓 J7 形态）。 */
 import { KETTLE_FACES, KETTLE_ROUND_UNKNOWN } from './kettle-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义要 replace 的三个字符 —— 用**拼装形**，不写实体字面量。 */
 const DQUOTE = String.fromCharCode(34);
@@ -326,6 +327,11 @@ export class KettleView {
             const r = app.parseReply(i, this._field('reply'));
             this._flash = r.ok ? this._parseWhy(r) : this._parseFail(r);
         } else if (act === 'clear-ledger') {
+            if (!confirmDestroy({
+                appId: 'kettle',
+                action: '清空台账',
+                what: '对话水壶的动作记录',
+            })) return;
             app.clearLedger();
             this._flash = '台账清空了';
         }

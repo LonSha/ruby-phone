@@ -26,6 +26,7 @@ import {
     DJ_SHELF_MAX, DJ_SHELF_STORE_MAX
 } from './doujin-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义要 replace 的几个字符 —— 用**拼装形**，不写实体字面量。 */
 const AMP = String.fromCharCode(38);
@@ -580,6 +581,11 @@ export class DoujinView {
             return;
         }
         if (act === 'remove_listing') {
+            if (!confirmDestroy({
+                appId: 'doujin',
+                action: '删掉这条店头',
+                what: '这条店头的名字 / 价格 / 描述',
+            })) return;
             const r = app.removeListing(id);
             this._flash = '删掉 ' + String(r.removed) + ' 条';
             this.refresh();
@@ -607,6 +613,11 @@ export class DoujinView {
             return;
         }
         if (act === 'clear_cart') {
+            if (!confirmDestroy({
+                appId: 'doujin',
+                action: '清空购物车',
+                what: '车里所有行',
+            })) return;
             const r = app.clearCart();
             this._flash = '清掉 ' + String(r.cleared) + ' 行';
             this.refresh();
@@ -618,15 +629,33 @@ export class DoujinView {
             this.refresh();
             return;
         }
-        if (act === 'clear_draft') { const r = app.clearDraft(); this._flash = writeLanded(r) ? '草稿已清' : '没成'; this.refresh(); return; }
+        if (act === 'clear_draft') {
+            if (!confirmDestroy({
+                appId: 'doujin',
+                action: '清掉这份草稿',
+                what: '还没保存的店头草稿',
+            })) return;
+            const r = app.clearDraft(); this._flash = writeLanded(r) ? '草稿已清' : '没成'; this.refresh(); return; }
         if (act === 'shelf_remove') {
             const r = app.removeFromShelf(Number(id));
             this._flash = writeLanded(r) ? ('剩下 ' + String(r.kept) + ' 份') : ('没删：' + (r.why ? this._whyText(r.why) : '没落下去'));
             this.refresh();
             return;
         }
-        if (act === 'clear_ledger') { app.clearLedger(); this._flash = '动作记录已清'; this.refresh(); return; }
-        if (act === 'clear_shop') { app.clearShop(); this._flash = '店头与车已清（动作记录留着）'; this.refresh(); return; }
+        if (act === 'clear_ledger') {
+            if (!confirmDestroy({
+                appId: 'doujin',
+                action: '清空动作记录',
+                what: '店头操作台账',
+            })) return;
+            app.clearLedger(); this._flash = '动作记录已清'; this.refresh(); return; }
+        if (act === 'clear_shop') {
+            if (!confirmDestroy({
+                appId: 'doujin',
+                action: '清空店头与车',
+                what: '整间店头与购物车（动作记录留着）',
+            })) return;
+            app.clearShop(); this._flash = '店头与车已清（动作记录留着）'; this.refresh(); return; }
     }
     _whyText(w) {
         const k = String(w || '');

@@ -7,6 +7,7 @@
  * （v3430~v3480 案头先例），不碰 document.getElementById / document.body。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 const DASH = String.fromCharCode(45,45);
 
@@ -280,12 +281,32 @@ export class MemtableView {
                 } else if (act === 'apply') {
                     self.app.onApply();
                 } else if (act === 'clear-templates') {
+                    if (!confirmDestroy({
+                        appId: 'memtable',
+                        action: '清空模板',
+                        what: '所有结构化记忆模板',
+                    })) return;
                     self.app.clearTemplates();
                 } else if (act === 'clear-data') {
+                    if (!confirmDestroy({
+                        appId: 'memtable',
+                        action: '清空数据',
+                        what: '所有已录入的结构化数据',
+                    })) return;
                     self.app.clearData();
                 } else if (act === 'clear-xml') {
+                    if (!confirmDestroy({
+                        appId: 'memtable',
+                        action: '清空 XML',
+                        what: '已贴进来的 XML 文本',
+                    })) return;
                     self.app.clearXml();
                 } else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'memtable',
+                        action: '清空台账',
+                        what: '案头动作台账',
+                    })) return;
                     self.app.clearLedger();
                 }
             });

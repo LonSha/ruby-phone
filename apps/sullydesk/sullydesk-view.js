@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -70,7 +71,13 @@ export class SullydeskView {
                     const ta = el.querySelector('[data-in="export"]');
                     self.app.auditExportText(ta ? ta.value : '', act === 'audit-expect');
                     self.app.render();
-                } else if (act === 'clear-ledger') { self.app.clearLedger(); }
+                } else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'sullydesk',
+                        action: '清空台账',
+                        what: '导出审计台账',
+                    })) return;
+                    self.app.clearLedger(); }
             });
         });
     }

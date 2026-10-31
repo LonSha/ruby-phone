@@ -11,6 +11,8 @@ import { collectDiagnose, fieldReasonText, bridgeReasonText, projAbsentText, sou
 import { schemaStateText, storageFaceLine, secretFaceText, evidenceFaceText, knowledgeFaceText, storyClockFaceText } from './diagnose-data.js';
 /* [v4.98.0 · R11-O8 收口] 图标覆盖率面的一行文案转发（视图不自己拼，与全页同纪律）。 */
 import { iconFaceText } from './diagnose-data.js';
+/* [v4.105.0 · R13-O2] 销毁动作分级面的一行文案转发（同 iconFaceText：视图不自拼结论）。 */
+import { undoFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
@@ -1587,6 +1589,37 @@ export class DiagnoseView {
         }
         return html;
     }
+    /** [v4.105.0 · R13-O2] 销毁动作分级卡：89 件 App 各自「删了能不能回来」。
+     *   本方法**只排版**：三档计数、逐档 id 与「有问题的提示」全部来自内核读数。
+     *   三态不同形：面缺席 ⇒ 红档说读取异常（不许读成「全覆盖」）；有问题 ⇒ 红档点名；
+     *   没问题 ⇒ 绿档，并把 undo / confirm 两档的 App id 逐个列出 —— 只说计数等于没说。 */
+    _undoFaceHtml(pkg) {
+        const face = (pkg && pkg.undoFace) || null;
+        const text = undoFaceText(face);
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>' + escapeHtml(text) + '</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(text) + '</div>';
+        html += '<div class=' + Q + 'dg-chips' + Q + '>'
+            + this._chip('可撤销 ' + String(face.undo), face.undo > 0 ? 'ok' : 'warn')
+            + this._chip('不可撤销但已确认 ' + String(face.confirm), 'ok')
+            + this._chip('不可撤销且未确认 ' + String(face.irreversible), face.irreversible > 0 ? 'warn' : 'ok')
+            + this._chip('声明 ' + String(face.total) + '/' + String(face.appsTotal), face.total === face.appsTotal ? 'ok' : 'bad')
+            + '</div>';
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        rows.forEach((r) => {
+            if (!r || !Array.isArray(r.apps) || !r.apps.length) return;
+            const tone = r.mode === 'undo' ? 'ok' : '';
+            html += '<div class=' + Q + 'dg-trow' + Q + '>'
+                + this._chip(r.mode === 'undo' ? '可撤销' : '已二次确认', tone)
+                + '<span>' + escapeHtml(r.apps.join(' · ')) + '</span></div>';
+        });
+        if (Array.isArray(face.problems) && face.problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>'
+                + escapeHtml(face.problems.join(' · ')) + '</div>';
+        }
+        return html;
+    }
     /** [v3.55.0 · 计划 A2] App 消费面矩阵卡：把「哪些 App 接上了哪些平台面」摆出来。
      *   本方法**只排版**：逐面命中数、逐行命中面、台账理由全部来自内核读数（一句话总述也是内核给的）。
      *   视图自己数一遍条数就是同一口径的第二份实现 —— 本仓治理过多轮的形态。 */
@@ -1687,6 +1720,10 @@ export class DiagnoseView {
          *   都是「平台级覆盖读数」，此前只有测试在跑，手机上不可见。
          *   本面尤其需要可见：缺件的症状是**静默**的（只是那张图不是像素风）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>像素图标覆盖率（统一像素声明是否成立）</h3>' + this._iconFaceHtml(pkg) + '</section>');
+        /* [v4.105.0 · R13-O2] 销毁动作分级卡紧跟图标覆盖率卡：两张卡同族 ——
+         *   都是「平台级声明是否成立」的读数（一张问图标齐不齐，一张问删了能不能回来）。
+         *   放在这里而不是页面尾部：用户最需要看到它的时候，正是他准备点「清空」之前。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>销毁动作分级（89 件 App 删了能不能回来）</h3>' + this._undoFaceHtml(pkg) + '</section>');
         /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
          *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），
          *   本卡答「这些接线**真的挡下过谁**」（行为发生过）。接线在场不等于行为发生过。 */

@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形；零图片。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -69,7 +70,13 @@ export class CardtableView {
                 const act = b.getAttribute('data-act');
                 if (act === 'new-all') { self.app.newDeck('all'); self.app.render(); }
                 else if (act === 'new-lenormand') { self.app.newDeck('lenormand'); self.app.render(); }
-                else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
+                else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'cardtable',
+                        action: '清空牌桌',
+                        what: '当前牌阵与摆位',
+                    })) return;
+                    self.app.clearAll(); self.app.render(); }
             });
         });
         el.querySelectorAll('[data-idx]').forEach(function (b) {

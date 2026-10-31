@@ -4,6 +4,7 @@
  * ======================================================== */
 'use strict';
 import { daysOf } from './annidate-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -79,7 +80,13 @@ export class AnnidateView {
             b.addEventListener('click', function () {
                 const act = b.getAttribute('data-act');
                 if (act === 'check') { self.app.checkAlerts(); self.app.render(); }
-                else if (act === 'clear') { self.app.clearAll(); self.app.render(); }
+                else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'annidate',
+                        action: '清空全部纪念日条目',
+                        what: '所有条目的标题与日期，重录只能靠你再抄一遍',
+                    })) return;
+                    self.app.clearAll(); self.app.render(); }
                 else if (act === 'unfocus') { self.app.clearRef(); self.app.render(); }
             });
         });

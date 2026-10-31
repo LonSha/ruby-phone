@@ -3,6 +3,7 @@
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形。
  * ======================================================== */
 'use strict';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -68,8 +69,20 @@ export class LexiscoreView {
                 } else if (act === 'query') {
                     const ta = el.querySelector('[data-in="query"]');
                     self.app.query(ta ? ta.value : '');
-                } else if (act === 'clear') { self.app.clearEntries(); }
-                else if (act === 'clear-ledger') { self.app.clearLedger(); }
+                } else if (act === 'clear') {
+                    if (!confirmDestroy({
+                        appId: 'lexiscore',
+                        action: '清空评分条目',
+                        what: '所有已录入的文本条目',
+                    })) return;
+                    self.app.clearEntries(); }
+                else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'lexiscore',
+                        action: '清空台账',
+                        what: '评分动作台账',
+                    })) return;
+                    self.app.clearLedger(); }
             });
         });
     }

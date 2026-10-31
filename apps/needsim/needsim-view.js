@@ -22,6 +22,7 @@
  *   由 App 的各类 Rows() 现算给出 —— 视图不持第二份清单，
  *   否则真源表增删一态，视图会静默少画一态而不报错（本仓 J7 形态）。 */
 import { SIMS_FACES } from './needsim-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 /** 转义要 replace 的三个字符 —— 用**拼装形**，不写实体字面量。 */
 const DQUOTE = String.fromCharCode(34);
@@ -347,6 +348,11 @@ export class NeedsimView {
             app.requestText({ role: '这个角色' });
             this._flash = '要求文本已产（贴到你惯用的对话端）';
         } else if (act === 'reset') {
+            if (!confirmDestroy({
+                appId: 'needsim',
+                action: '重置六项需求',
+                what: '当前六项需求值（会回到初值）',
+            })) return;
             app.resetNeeds();
             this._flash = '六项回到初值（这不是「读不出来」，是按初值重来）';
         } else if (act === 'do') {
@@ -362,9 +368,19 @@ export class NeedsimView {
             const r = app.setWish({ title: this._field('wtitle'), desc: this._field('wdesc'), need: '', actionId: '' });
             this._flash = r.ok ? '愿望存下了' : (r.reason === 'no_title' ? '还没写标题' : '还没写说明');
         } else if (act === 'clear-mem') {
+            if (!confirmDestroy({
+                appId: 'needsim',
+                action: '清空记忆流',
+                what: '所有需求记忆（需求与池子没动）',
+            })) return;
             const r = app.clearMemories();
             this._flash = '记忆流清空了（清掉 ' + r.cleared + ' 条；需求与池子没动）';
         } else if (act === 'clear-ledger') {
+            if (!confirmDestroy({
+                appId: 'needsim',
+                action: '清空台账',
+                what: '沙盘动作台账',
+            })) return;
             app.clearLedger();
             this._flash = '台账清空了';
         }

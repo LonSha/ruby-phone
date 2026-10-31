@@ -6,6 +6,7 @@
  * ======================================================== */
 'use strict';
 import { visibleTo, isStoryAlive, seenAtOf } from './socialguard-data.js';
+import { confirmDestroy } from '../../config/destructive-confirm.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -149,10 +150,25 @@ export class SocialguardView {
                 } else if (act === 'check') {
                     self.app.checkPost(id, 'user', 'user');
                 } else if (act === 'clear-posts') {
+                    if (!confirmDestroy({
+                        appId: 'socialguard',
+                        action: '清空帖子快照',
+                        what: '可见性判定用的帖子快照',
+                    })) return;
                     self.app.clearPosts();
                 } else if (act === 'clear-contacts') {
+                    if (!confirmDestroy({
+                        appId: 'socialguard',
+                        action: '清空联系人快照',
+                        what: '可见性判定用的联系人快照',
+                    })) return;
                     self.app.clearContacts();
                 } else if (act === 'clear-ledger') {
+                    if (!confirmDestroy({
+                        appId: 'socialguard',
+                        action: '清空台账',
+                        what: '治理动作台账',
+                    })) return;
                     self.app.clearLedger();
                 }
             });
