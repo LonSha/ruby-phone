@@ -19,6 +19,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { installRuntimeHost, resetHostFlags } from './_runtime_host.mjs';
+import { stageTreeWithDeps } from './_stage-tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -27,14 +28,11 @@ const CAL_SRC = read('apps/calendar/calendar-data.js');
 
 const urlOf = (root, rel) => pathToFileURL(path.join(root, rel)).href;
 
+/** 把若干仓库文件按相对路径写进临时树（**相对 import 依赖自动补齐** —— 见 tests/_stage-tree.mjs）。
+ *  [v4.106.0 · R13-O4] 旧实现是手写清单，v4.104.0 加 recycle-bin 后本套件的负控制
+ *    在副本上抛 ERR_MODULE_NOT_FOUND（判据红的是「树没装全」，不是「破坏被抓到」）。 */
 function stageTree(files) {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'v292-tree-'));
-  for (const [rel, content] of Object.entries(files)) {
-    const abs = path.join(dir, rel);
-    mkdirSync(path.dirname(abs), { recursive: true });
-    writeFileSync(abs, content);
-  }
-  return dir;
+  return stageTreeWithDeps(files, { prefix: 'v292-tree-', root: ROOT }).dir;
 }
 const replaceOnce = (s, from, to) => {
   const n = s.split(from).length - 1;

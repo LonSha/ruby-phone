@@ -206,6 +206,10 @@ import { characterSlotSelfCheck, IMAGE_RECEIPT_LEDGER_LIMIT, normalizeImageRecei
  *   「内核建好了、导出挂出来了、产品端零消费」。 */
 import { craftFaces, craftLine } from '../../config/craft-cards.js';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.106.0 · R13-O4] 时间双轨面：两个钟的边界与字段级归属（唯一实现在 config/time-source.js）。
+ *   诊断中心消费它，是因为「哪个 App 在什么条件下用了墙钟」必须是**可答的问题** ——
+ *   把这张表建好却不读，等于又造一个「建好了没人用」的面。 */
+import { CLOCKS, FIELD_CLOCKS, FIELD_CLOCK_WHY, fieldClockOf, storyNow, storyNowMs, storySourceLine, wallNow } from '../../config/time-source.js';
 /* [v3.88.0 · 拓展计划 R-X4] 跳项目续玩工作台协议面：与 financeCommitFace 同范式——
  *   只读自检 + 三态表 + 宿主缓存读数（选中项 / 清单 / 影响范围 / 在飞旧回信）+ 缺口。
  *   ★ 本面与既有的受控恢复交接面**不是重复**：那张量的是「这一次恢复的预检」，
@@ -1926,7 +1930,87 @@ export function collectDiagnose(win, storage) {
             return { ok: false, linked: true, reason: 'thrown', at: 0, passed: 0, skipped: 0, problems: ['自检面取数抛错'], lines: {}, text: '' };
         }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace };
+    /* ── [v4.106.0 · R13-O4] 时间双轨面 ──
+     *   摆的是什么：本机此刻**两个钟**各自的读数（剧情钟 / 墙钟）、两者相差多久、以及
+     *   `FIELD_CLOCKS` 那张归属表的逐字段理由。
+     *   为什么算「用户能处理的事」：本仓同时存在两个钟，而用户最容易察觉、又最难描述
+     *   的一类错就是「微信说 2044 年、相册说 2026 年」—— 这一面把那句话说成一个读数，
+     *   并指明**该去哪一侧找**（字段归属）。
+     *   第三样东西是**写点对账**：批次 1 七处落盘的字段名逐个过一遍归属表，未登记的
+     *   当场点名 —— 下一个写点随手加个 `xxAt` 就会在这里现形，而不是等用户某天发现
+     *   两个 App 显示的年份不同。
+     *   三条纪律与全页一致：只读（不写任何存储）、不抛（单面 try/catch）、不猜
+     *   （剧情钟读不到就如实说读不到，**绝不拿墙钟充数**）。 */
+    const timeFace = (() => {
+        try {
+            const before = wallNow();
+            const s = storyNow(w);
+            /* 便捷口 `storyNowMs` 与全量口 `storyNow` **必须同源**：它只该是一个解构
+             *   包装，不能自己再写一份取数（那就是口径第五度形态）。拿「同一次读数」
+             *   给它作判据 —— 若哪天它被改写成独立实现，这里当场报。
+             *   两者都只问同一个 timeManager，故正常时恒相等。 */
+            const storyMs = storyNowMs(w);
+            /* 两个钟的定义取自 `CLOCKS`（不在这里写一遍字面量）：本仓只承认两个钟，
+             *   出现第三个就意味着又有一处「各挑各的钟」。 */
+            const clockKeys = Object.keys(CLOCKS);
+            const byClock = {};
+            for (const k of clockKeys) byClock[k] = [];
+            const badClock = [];
+            const noWhy = [];
+            for (const f of Object.keys(FIELD_CLOCKS)) {
+                const c = fieldClockOf(f);
+                if (!Object.prototype.hasOwnProperty.call(byClock, c)) { badClock.push(f); continue; }
+                byClock[c].push({ field: f, why: String(FIELD_CLOCK_WHY[f] || '') });
+                if (!String(FIELD_CLOCK_WHY[f] || '').trim()) noWhy.push(f);
+            }
+            /* 批次 1 已落盘的写点（逐处列出它写了哪些字段）。这份清单的价值不在计数，
+             *   而在**未登记即报**：字段名写错或忘了登记归属，这里会点名。 */
+            const WRITE_SITES = [
+                { app: '微信·消息', site: 'wechat-data.js addMessage', fields: ['timestamp', 'storyAt', 'realTimestamp'] },
+                { app: '微信·钱包流水', site: 'wechat-data.js _appendWalletTransaction', fields: ['timestamp', 'realTimestamp'] },
+                { app: '微信·朋友圈快照', site: 'wechat-data.js _getMomentStoryTimeSnapshot', fields: ['date', 'time', 'weekday', 'timestamp'] },
+                { app: '相册·索引', site: 'album-data.js getMedia', fields: ['storyAt', 'createdAt'] },
+                { app: '相册·上传', site: 'settings/image-upload.js', fields: ['storyAt', 'createdAt'] },
+                { app: '日历·备忘', site: 'calendar-data.js addMemo', fields: ['storyAt', 'createdAt'] },
+                { app: '日记·条目', site: 'diary-data.js addEntry', fields: ['storyAt', 'createdAt'] }
+            ];
+            const unregistered = [];
+            const sites = WRITE_SITES.map((it) => {
+                const rows = it.fields.map((f) => {
+                    const c = fieldClockOf(f);
+                    if (c === null) unregistered.push(it.site + '::' + f);
+                    return { field: f, clock: c };
+                });
+                return { app: it.app, site: it.site, rows: rows };
+            });
+            const wallMs = wallNow();
+            const storyOk = s.ok === true && storyMs !== null;
+            const skewDays = storyOk ? Math.round((storyMs - wallMs) / 86400000) : null;
+            const problems = [];
+            if (badClock.length) problems.push('归属表里这些字段的钟不合法：' + badClock.join('、'));
+            if (noWhy.length) problems.push('归属表里这些字段没有理由：' + noWhy.join('、'));
+            if (unregistered.length) problems.push('批次 1 写点写了未登记归属的字段：' + unregistered.join('、'));
+            if (storyMs !== s.ms) problems.push('取数口自相矛盾：storyNowMs 与 storyNow 读数不同（便捷口另写了一份取数？）');
+            return {
+                ok: problems.length === 0,
+                problems: problems,
+                line: storySourceLine(s),
+                story: {
+                    ok: s.ok, ms: storyMs, date: String(s.date || ''), time: String(s.time || ''),
+                    weekday: String(s.weekday || ''), source: String(s.source || ''),
+                    reason: String(s.reason || ''), degraded: s.degraded === true
+                },
+                wall: { ms: wallMs },
+                skewDays: skewDays,
+                clocks: clockKeys,
+                byClock: byClock,
+                sites: sites,
+                unregistered: unregistered,
+                costMs: Math.max(0, wallMs - before)
+            };
+        } catch (_e) { return null; }
+    })();
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2452,6 +2536,34 @@ export function undoFaceText(face) {
     } catch (_e) { return '销毁动作分级：读取异常（已降级）'; }
 }
 
+/** [v4.106.0 · R13-O4] 时间双轨面的一行读数（视图不自拼结论）。
+ *  三态不同形（与全页同纪律）：
+ *   · 面缺席 ⇒ 明说「读取异常」，并**禁止**读成「两个钟一致」；
+ *   · 面在、有问题 ⇒ 逐条点名（未登记归属 / 没有理由 / 钟不合法）；
+ *   · 面在、没问题 ⇒ 报两个钟各自的读数 + 相差多久 + 该去两侧里哪一侧找。 */
+export function timeFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '时间双轨：读取异常（已降级）—— 这不是「两个钟已经一致」';
+        if (Array.isArray(f.problems) && f.problems.length) {
+            return '时间双轨：**有 ' + String(f.problems.length) + ' 条问题** —— ' + f.problems.map(String).join(' · ');
+        }
+        const st = f.story || {};
+        const wl = f.wall || {};
+        const storySide = st.ok === true
+            ? ('剧情钟 ' + String(st.date || '') + ' ' + String(st.time || '')
+                + (st.weekday ? '（' + String(st.weekday) + '）' : '')
+                + (st.source ? ' · 来源 ' + String(st.source) : ''))
+            : ('剧情钟**读不到**（' + String(f.line || '原因未给') + '）—— 本页不拿墙钟充数');
+        const skew = (typeof f.skewDays === 'number')
+            ? '；两钟相差 ' + (f.skewDays >= 0 ? '' : '−') + String(Math.abs(f.skewDays)) + ' 天'
+            : '';
+        return '时间双轨：' + storySide + ' / 墙钟 ' + String(wl.ms || 0) + '（本机真实毫秒）' + skew
+            + '。字段归属见下（剧情钟 ' + String((f.byClock && f.byClock.story || []).length)
+            + ' 个 / 墙钟 ' + String((f.byClock && f.byClock.wall || []).length) + ' 个）。';
+    } catch (_e) { return '时间双轨：读取异常（已降级）'; }
+}
+
 export default {
     CONSUMED_FIELDS,
     schemaStateText,
@@ -2495,5 +2607,6 @@ datePlayFaceText,
     creationFaceText,
     characterSlotFaceText,
     iconFaceText,
-    undoFaceText
+    undoFaceText,
+    timeFaceText
 };

@@ -29,6 +29,9 @@ import { captureSessionToken, guardSessionWrite } from '../../config/session-gat
  *   恢复后条目 id **逐字原样**回来，故日记配图键 bg_<id> / lh_<id> 的引用不会断成孤儿。
  */
 import * as recycleBin from '../../config/recycle-bin.js';
+/* [v4.106.0 · R13-O4] 两个钟的唯一取数口：日记此前**只有墙钟**（`createdAt = Date.now()`），
+ *   于是「这篇日记写在剧情里的哪一天」只能从正文那行日期反解。本版补剧情轨 `storyAt`。 */
+import { stampPair } from '../../config/time-source.js';
 
 export class DiaryData {
     constructor(storage) {
@@ -352,8 +355,26 @@ export class DiaryData {
 
     addEntry(entry) {
         const entries = this.getEntries();
-        entry.id = entry.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        entry.createdAt = entry.createdAt || Date.now();
+        /* [v4.106.0 · R13-O4] 日记此前**只有墙钟**：`createdAt = Date.now()`，于是「这篇日记
+         *   写在剧情里的哪一天」只能从正文里那行 `2044年10月28日` 反解（`_dateToTimestamp`），
+         *   正文没写日期就等于不知道。本版补剧情轨 `storyAt`：
+         *   · `storyAt` = 正文日期（若有，取当天 12:00 与既有排法一致）→ 否则剧情钟当下；
+         *   · `createdAt` / id 仍是墙钟（排序稳定性与 id 唯一性，剧情回拨不许让它倒退）。
+         *   `id` 用墙钟也是纪律：日记配图键 `bg_<id>` / `lh_<id>` 依赖它，若改用剧情钟，
+         *   同一剧情日连写两篇会撞 id。 */
+        const stamp = stampPair(typeof window === 'undefined' ? null : window);
+        entry.id = entry.id || stamp.wallAt.toString(36) + Math.random().toString(36).slice(2, 6);
+        entry.createdAt = entry.createdAt || stamp.wallAt;
+        if (entry.storyAt === undefined || entry.storyAt === null) {
+            /* 口径：**剧情钟优先，正文日期只在读不到剧情钟时兜底**。
+             * 为什么不反过来（正文日期看起来更「贴近内容」）：验收线要求「同一时刻造的
+             *   消息 / 照片 / 日程 / 日记，四者读回的 ts 逐位相等」。正文日期只能反解到
+             *   当天 12:00（`_dateToTimestamp`），若以它为准，同一时刻写的日记必然与
+             *   消息差几小时 —— 差几小时不报错，但「这四个 App 说的是同一个时刻」就不成立了。
+             * 正文日期仍然有用：它是**日期**（哪天写的），`entry.date` 一个字没动。 */
+            const fromText = this._dateToTimestamp(entry.date || entry.content);
+            entry.storyAt = stamp.storyAt !== null ? stamp.storyAt : (fromText > 0 ? fromText : null);
+        }
         const author = String(entry.author || this._extractAuthorFromContent(entry.content)).trim();
         if (author) entry.author = author;
         entry.photos = this.mergeEntryPhotos(entry.photos, this.extractPhotoPrompts(entry.content, { author }).photos);
@@ -377,7 +398,10 @@ export class DiaryData {
             endIndex: Number.isFinite(meta.endIndex) ? meta.endIndex : null,
             imported: !!meta.imported,
             manual: meta.manual !== false,
-            createdAt: meta.createdAt || Date.now()
+            /* [v4.106.0 · R13-O4] 这里不写 `|| Date.now()`：`addEntry` 就是唯一的落点
+             *   （它会按「正文日期 → 剧情钟当下」补齐 `storyAt`，并按墙钟补 id / createdAt）。
+             *   在调用点再兜一次墙钟，等于让「这条日记属于哪一刻」有两处说法。 */
+            createdAt: meta.createdAt
         });
     }
 
@@ -385,12 +409,14 @@ export class DiaryData {
         const diaries = this.parseImportedDiaries(rawText);
         if (diaries.length === 0) return [];
 
-        const now = Date.now();
+        const now = stampPair(typeof window === 'undefined' ? null : window).wallAt;
         return diaries.map((diary, index) => this.createManualEntry(diary.content, {
             title: diary.title,
             date: diary.date,
             author: diary.author,
             imported: true,
+            /* 导入批次必须保持**输入顺序**：同一正文日期的一串日记若时间戳相同，
+             *   列表顺序会由排序的稳定性碰运气。故用墙钟基点 + 序号（机器用途，属墙钟）。 */
             createdAt: (this._dateToTimestamp(diary.date || diary.content) || now) + index
         }));
     }

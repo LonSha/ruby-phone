@@ -35,6 +35,9 @@ import {
     viewerLabelOf, secrecyOptions, programSpecFromChat
 } from '../../config/replay-face-bridge.js';
 import { recordLifeProgram } from '../../config/life-program-replay.js';
+/* [v4.106.0 · R13-O4] 相册的**读数口径**收口到唯一实现：`storyTsOf` 只认剧情轨
+ *   （`storyAt` → 老字段 `timestamp`），**绝不回退 `createdAt`**（那是墙钟）。 */
+import { storyTsOf } from '../../config/time-source.js';
 
 export class AlbumData {
     constructor(storage) {
@@ -56,7 +59,14 @@ export class AlbumData {
             if (vaultExcluded.has(normalized)) return;
             if (!this.isManagedMediaPath(normalized)) return;
 
+            /* [v4.106.0 · R13-O4] 相册此前只认 `createdAt`（墙钟）—— 于是「同一时刻拍的照片
+             *   和发出的消息」在相册里显示的是本机时间，与消息那一行差了一个时代。
+             *   本版把两条轨分开带上：`createdAt`（墙钟，排序与去重用）与 `storyAt`
+             *   （剧情轨，用户看见的那一行；历史数据没有它 ⇒ **null**，不拿墙钟冒充）。
+             *   排序口径一并改：**先按剧情轨排，再退墙钟**。理由：用户看的是「什么时候拍的」，
+             *   而墙钟只反映「哪次导入写的索引」。两者都读不到时才用 `order`（扫描序）。 */
             const createdAt = Number(meta?.createdAt || 0);
+            const storyAtRaw = storyTsOf({ storyAt: meta?.storyAt });
 
             const existing = items.get(normalized);
             if (existing) {
@@ -66,6 +76,11 @@ export class AlbumData {
                 existing.refCount += 1;
                 if (Number.isFinite(createdAt) && createdAt > existing.createdAt) {
                     existing.createdAt = createdAt;
+                }
+                /* 同一条路径被多个来源扫到时取**最晚的剧情时刻**（与 createdAt 同一口径：
+                 *   一条影像在多个 App 里被引用，用户看的是最后出现的那一刻）。 */
+                if (storyAtRaw !== null && (existing.storyAt === null || storyAtRaw > existing.storyAt)) {
+                    existing.storyAt = storyAtRaw;
                 }
                 return;
             }
@@ -79,6 +94,7 @@ export class AlbumData {
                 sources: sourceLabel ? [sourceLabel] : [],
                 refCount: 1,
                 createdAt: Number.isFinite(createdAt) ? createdAt : 0,
+                storyAt: storyAtRaw,
                 order: order++
             });
         };
@@ -89,6 +105,12 @@ export class AlbumData {
 
         return Array.from(items.values())
             .sort((a, b) => {
+                /* 剧情轨优先（用户看的是「什么时候拍的」），读不到才退墙钟，
+                 * 两者都没有才退扫描序（`order`）—— 与旧行为在历史数据上完全等价。 */
+                const sa = a.storyAt === null ? 0 : Number(a.storyAt || 0);
+                const sb = b.storyAt === null ? 0 : Number(b.storyAt || 0);
+                const storyDiff = sb - sa;
+                if (storyDiff) return storyDiff;
                 const createdDiff = Number(b.createdAt || 0) - Number(a.createdAt || 0);
                 return createdDiff || (a.order - b.order);
             })
@@ -568,7 +590,9 @@ export class AlbumData {
             list.forEach(item => {
                 const path = typeof item === 'string' ? item : item?.path;
                 addImage(path, this._labelFromUploadPrefix(item?.prefix), {
-                    createdAt: Number(item?.createdAt || 0)
+                    createdAt: Number(item?.createdAt || 0),
+                    /* [v4.106.0 · R13-O4] 索引里新写入的剧情轨原样透传（历史条目没有它 ⇒ null）。 */
+                    storyAt: item?.storyAt
                 });
             });
         } catch (e) { }

@@ -13,6 +13,8 @@ import { schemaStateText, storageFaceLine, secretFaceText, evidenceFaceText, kno
 import { iconFaceText } from './diagnose-data.js';
 /* [v4.105.0 · R13-O2] 销毁动作分级面的一行文案转发（同 iconFaceText：视图不自拼结论）。 */
 import { undoFaceText } from './diagnose-data.js';
+/* [v4.106.0 · R13-O4] 时间双轨面的一行文案转发（同 iconFaceText：视图不自拼结论）。 */
+import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
@@ -1554,6 +1556,62 @@ export class DiagnoseView {
         return html;
     }
 
+    /** [v4.106.0 · R13-O4] 时间双轨卡：两个钟各自的读数 + 字段级归属 + 写点对账。
+     *   本方法**只排版**：两个钟的读数、相差几天、逐字段理由、未登记点名全部来自内核。
+     *   三态不同形：面缺席 ⇒ 红档说读取异常（不许读成「两个钟一致」）；有问题 ⇒ 红档点名；
+     *   没问题 ⇒ 绿档，并把剧情钟 / 墙钟两侧的字段逐个列出 —— 只说计数等于没说
+     *   （「该去两侧里哪一侧找」正是这一面的用处）。 */
+    _timeFaceHtml(pkg) {
+        const face = (pkg && pkg.timeFace) || null;
+        const text = timeFaceText(face);
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>' + escapeHtml(text) + '</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(text) + '</div>';
+        const st = face.story || {};
+        const byClock = face.byClock || {};
+        const storyN = (byClock.story || []).length;
+        const wallN = (byClock.wall || []).length;
+        html += '<div class=' + Q + 'dg-chips' + Q + '>'
+            + this._chip('剧情钟 ' + (st.ok ? '可读' : '读不到'), st.ok ? 'ok' : 'warn')
+            + this._chip('两钟相差 ' + (typeof face.skewDays === 'number' ? String(face.skewDays) + ' 天' : '不可算'),
+                typeof face.skewDays === 'number' && Math.abs(face.skewDays) > 30 ? 'warn' : 'ok')
+            + this._chip('剧情钟字段 ' + String(storyN), 'ok')
+            + this._chip('墙钟字段 ' + String(wallN), 'ok')
+            + this._chip('未登记 ' + String((face.unregistered || []).length), (face.unregistered || []).length ? 'bad' : 'ok')
+            + '</div>';
+        if (!st.ok) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>剧情钟读不到（' + escapeHtml(String(st.reason || '原因未给'))
+                + '）。本页**不拿墙钟充数** —— 那种写法会把「剧情里是 1943 年」读成「现在是 2026 年」。</div>';
+        }
+        /* 两侧字段逐条列出（含理由）：这一面的用处是「该去哪一侧找」，只说计数等于没说。 */
+        [['story', '剧情钟（用户能看见的时刻）'], ['wall', '墙钟（机器自己用的时刻）']].forEach(([k, label]) => {
+            const rows = Array.isArray(byClock[k]) ? byClock[k] : [];
+            if (!rows.length) return;
+            html += '<div class=' + Q + 'dg-note' + Q + '>' + escapeHtml(label) + '：'
+                + escapeHtml(rows.map((r) => r.field).join(' · ')) + '</div>';
+            rows.forEach((r) => {
+                html += '<div class=' + Q + 'dg-trow' + Q + '>'
+                    + this._chip(String(r.field), k === 'story' ? 'ok' : '')
+                    + '<span>' + escapeHtml(String(r.why || '（无理由）')) + '</span></div>';
+            });
+        });
+        const sites = Array.isArray(face.sites) ? face.sites : [];
+        if (sites.length) {
+            html += '<div class=' + Q + 'dg-note' + Q + '>批次 1 写点对账（字段名逐个过归属表，未登记当场点名）：</div>';
+            sites.forEach((it) => {
+                html += '<div class=' + Q + 'dg-trow' + Q + '>'
+                    + this._chip(String(it.app), 'ok')
+                    + '<span>' + escapeHtml(String(it.site)) + ' → '
+                    + escapeHtml((it.rows || []).map((r) => r.field + (r.clock ? '(' + r.clock + ')' : '(未登记)')).join(' · '))
+                    + '</span></div>';
+            });
+        }
+        if (Array.isArray(face.problems) && face.problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>' + escapeHtml(face.problems.join(' · ')) + '</div>';
+        }
+        return html;
+    }
     /** [v4.98.0 · R11-O8 收口] 像素图标覆盖率面。
      *  三态不同形（与全页同纪律）：
      *    · 面缺席（内核没取到）⇒ 明说「读取异常」，并**禁止**读成「89 件全覆盖」；
@@ -1719,6 +1777,7 @@ export class DiagnoseView {
         /* [v4.98.0 · R11-O8 收口] 图标覆盖率面：与上面那张矩阵同族 ——
          *   都是「平台级覆盖读数」，此前只有测试在跑，手机上不可见。
          *   本面尤其需要可见：缺件的症状是**静默**的（只是那张图不是像素风）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>时间双轨（剧情钟 / 墙钟 · 字段级归属 · 批次 1 写点对账）</h3>' + this._timeFaceHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>像素图标覆盖率（统一像素声明是否成立）</h3>' + this._iconFaceHtml(pkg) + '</section>');
         /* [v4.105.0 · R13-O2] 销毁动作分级卡紧跟图标覆盖率卡：两张卡同族 ——
          *   都是「平台级声明是否成立」的读数（一张问图标齐不齐，一张问删了能不能回来）。

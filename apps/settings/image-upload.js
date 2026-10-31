@@ -9,6 +9,8 @@
  * ======================================================== */
 import { detectImageMime } from '../../config/image-mime.js';
 import { writeReceiptAsync } from '../../config/write-receipt.js';
+/* [v4.106.0 · R13-O4] 两个钟的唯一取数口：相册上传索引此前只有墙钟。 */
+import { stampPair } from '../../config/time-source.js';
 
 // ==========================================
 // 图片上传管理 - 全部存酒馆服务端，彻底告别 localStorage 和 Base64
@@ -328,10 +330,18 @@ export class ImageUploadManager {
             const raw = this.storage.get('phone_album_upload_index', '[]');
             const list = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
             const normalizedList = Array.isArray(list) ? list : [];
+            const stamp = stampPair(typeof window === 'undefined' ? null : window);
             const nextItem = {
                 path,
                 prefix: String(prefix || ''),
-                createdAt: Date.now()
+                /* [v4.106.0 · R13-O4] 相册照片此前**只有墙钟**（`createdAt: Date.now()`），
+                 *   而 `AlbumData.getMedia` 又只读这一个字段排序 —— 于是「照片时间」与
+                 *   「消息时间」永远对不上（一个剧情、一个本机）。
+                 *   本版补剧情轨 `storyAt`：`createdAt` 仍是墙钟（排序稳定性 / 审计），
+                 *   `storyAt` 才是用户看见的那一行时间。读不到剧情钟时它是 **null**，
+                 *   由视图侧显式显示「时间未知」，不拿墙钟冒充。 */
+                storyAt: stamp.storyAt,
+                createdAt: stamp.wallAt
             };
             const next = [
                 nextItem,

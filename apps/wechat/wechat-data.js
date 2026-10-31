@@ -261,6 +261,17 @@ export function extractMomentsJsonPayloads(rawText = '') {
  *   微信是本仓最贵的数据面：一条消息背后是一次 AI 生成，一次误删就是一整段剧情没了。
  *   批量路径（删到末尾 / 多选删除）**不逐条写盘** —— 见 _recycleBatch 的三行说明。 */
 import * as recycleBin from '../../config/recycle-bin.js';
+/* [v4.106.0 · R13-O4] 两个钟的唯一取数口（剧情钟 = 角色世界里的现在；墙钟 = 本机时间）。
+ *   本文件的写点此前一律 `Date.now()` —— 于是「消息发生在剧情里的哪一刻」这件事，
+ *   在手机消息侧从来没有落过盘（`realTimestamp` 存的也是墙钟）。 */
+import { stampPair, storyTsOf, storyNow, storyNowWallFallback } from '../../config/time-source.js';
+
+/* [v4.106.0 · R13-O4] 剧情钟时刻；读不到时**显式**降级到墙钟（唯一出口在 config/time-source.js）。
+ *   为什么要有这个小函数：本文件有 8 处 `chat.timestamp` 写点各自写了一遍 `|| Date.now()`，
+ *   而那是「用户看见的会话时间」，属剧情钟字段（FIELD_CLOCKS.timestamp = 'story'）。
+ *   散着写兜底的后果：同一个会话在消息页与列表页显示两个时代，且都不报错。 */
+const storyTsNow = () => storyNowWallFallback(typeof window === 'undefined' ? null : window).ms;
+
 
 export class WechatData {
     constructor(storage) {
@@ -609,7 +620,7 @@ export class WechatData {
                     const chat = chats.find(c => c.id === chatId);
                     if (chat && !chat.timestamp) {
                         const lastMsg = messages[messages.length - 1];
-                        chat.timestamp = lastMsg.timestamp || Date.now();
+                        chat.timestamp = lastMsg.timestamp || storyTsNow();
                         chat.date = lastMsg.date || chat.date || '';
                     }
                 } catch (e) {
@@ -1919,8 +1930,15 @@ export class WechatData {
             date: String(meta.date || storyTime.date || '').trim(),
             time: String(meta.time || storyTime.time || '').trim(),
             weekday: String(meta.weekday || storyTime.weekday || '').trim(),
-            timestamp: Number.isFinite(timestamp) && timestamp > 0 ? timestamp : (Number(storyTime.timestamp) || Date.now()),
-            realTimestamp: Number(meta.realTimestamp) || Date.now(),
+            /* [v4.106.0 · R13-O4] `timestamp` 是用户看见的「这笔钱什么时候转的」⇒ 剧情钟；
+             *   读不到剧情时刻就**留 null**（`storyTsOf` 的强口径会把 null 读回 null，
+             *   界面如实显示「时间未知」），不再拿墙钟冒充 —— 冒充的后果是账本上出现
+             *   「2044 年剧情里有一笔 2026 年的转账」，而且没人能看出这是冒充的。
+             *   `realTimestamp` 仍是墙钟（审计用：这笔流水是哪次生成写下的）。 */
+            timestamp: Number.isFinite(timestamp) && timestamp > 0
+                ? timestamp
+                : storyTsOf({ timestamp: storyTime.timestamp }),
+            realTimestamp: Number(meta.realTimestamp) || stampPair(typeof window === 'undefined' ? null : window).wallAt,
             /* [v3.12.0] 取数走唯一实现：`null` 经 `Number` 是 0，于是「这笔转账没记余额」
              *  会被写成 `balanceBefore: 0` —— 流水一旦落盘就再也分不出「余额是 0」还是「没记」。 */
             balanceBefore: numOrNull(balanceState.balanceBefore),
@@ -2330,7 +2348,7 @@ export class WechatData {
                 chat.lastMessage = this.getMessagePreview(messages[latestChangedIndex]);
                 chat.time = messages[latestChangedIndex].time || chat.time || '';
                 chat.date = messages[latestChangedIndex].date || '';
-                chat.timestamp = messages[latestChangedIndex].timestamp || chat.timestamp || Date.now();
+                chat.timestamp = messages[latestChangedIndex].timestamp || chat.timestamp || storyTsNow();
             }
 
             this._messagesLoaded[safeChatId] = true;
@@ -2671,7 +2689,7 @@ export class WechatData {
             time: '刚刚',
             date: '',
             unread: 0,
-            timestamp: Date.now(),
+            timestamp: storyTsNow(),
             members: chatInfo.members || []
         };
 
@@ -2888,39 +2906,23 @@ export class WechatData {
     }
 
     _getStoryTimeFallback() {
-        try {
-            const timeManager = window.VirtualPhone?.timeManager;
-            if (timeManager?.getCurrentStoryTime) {
-                const storyTime = timeManager.getCurrentStoryTime();
-                if (storyTime?.time && storyTime?.date) {
-                    /* [v3.12.0] 取数走唯一实现：旧写法把空白串 / 空数组读成 0，于是**跳过**
-                     *  后面那条回落解析。 */
-                    const stTs = numOrNull(storyTime.timestamp);
-                    const parsedTimestamp = stTs !== null
-                        ? stTs
-                        : (typeof timeManager.parseTimeToTimestamp === 'function'
-                            ? timeManager.parseTimeToTimestamp(storyTime)
-                            : Date.now());
-                    return {
-                        time: storyTime.time,
-                        date: storyTime.date,
-                        weekday: storyTime.weekday || '星期一',
-                        timestamp: parsedTimestamp
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('⚠️ 获取剧情时间兜底失败:', e);
-        }
-
-        const now = new Date();
-        const pad = (value) => String(value).padStart(2, '0');
-        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        /* [v4.106.0 · R13-O4] 取数与降级都收敛到 `config/time-source.js` 一个出口：
+         *   · 取数：`storyNowWallFallback` 内部先问 timeManager（唯一剧情源），
+         *     读不到才降级到墙钟，并把**为什么降级**带回来（`degraded` / `reason`）；
+         *   · 旧写法在这里自己拼了一遍墙钟兜底（`new Date()` + 自家 pad/weekdays），
+         *     与相册 / 日历 / 日记各自拼的那几份形状不同 —— 于是「同一时刻」在四个
+         *     App 里能读出四个值。这正是本版要治的缺陷。
+         * 保留旧返回形状（time/date/weekday/timestamp）不改：调用点多达二十余处，
+         *   改形状会把「时间源收口」变成「数据结构迁移」。 */
+        const s = storyNowWallFallback(typeof window === 'undefined' ? null : window);
         return {
-            time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
-            date: `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日`,
-            weekday: weekdays[now.getDay()],
-            timestamp: now.getTime()
+            time: s.time,
+            date: s.date,
+            weekday: s.weekday || '星期一',
+            timestamp: s.ms,
+            degraded: s.degraded === true,
+            source: s.source,
+            reason: s.reason
         };
     }
     
@@ -3103,6 +3105,14 @@ export class WechatData {
         if (!message.weekday) {
             message.weekday = storyTimeFallback.weekday;
         }
+        /* [v4.106.0 · R13-O4] 两个钟分开取、分开落：
+         *   · `stamp.storyAt` —— 剧情时刻（用户看见的那一行时间）；
+         *   · `stamp.wallAt`  —— 墙钟（`realTimestamp`：这是第几次生成写下的）。
+         * 旧写法三条分支各自 `|| Date.now()`，意味着**剧情时间解析失败时消息 timestamp
+         *   会静默变成墙钟**，而界面照常显示 —— 「不报错、只错结果」的典型形态。
+         * 新写法：解析不出来就留 `storyAt`（null），由 `_stampMessageId` 之后的读取口径
+         *   `storyTsOf` 如实回答「这条消息没有剧情时刻」，不拿墙钟冒充。 */
+        const stamp = stampPair(typeof window === 'undefined' ? null : window);
         if (!message.timestamp) {
             // 🔥 优先根据 date + time 计算剧情时间戳（修复线下转线上跨天时间不更新）
             if (message.date && message.time) {
@@ -3113,20 +3123,26 @@ export class WechatData {
                         const dateObj = new Date(parseInt(dateParts[1]), parseInt(dateParts[2]) - 1, parseInt(dateParts[3]), parseInt(timeParts[1]), parseInt(timeParts[2]));
                         message.timestamp = dateObj.getTime();
                     } else {
-                        message.timestamp = storyTimeFallback.timestamp || Date.now();
+                        message.timestamp = storyTimeFallback.timestamp;
                     }
                 } catch (e) {
-                    message.timestamp = storyTimeFallback.timestamp || Date.now();
+                    message.timestamp = storyTimeFallback.timestamp;
                 }
             } else {
-                message.timestamp = storyTimeFallback.timestamp || Date.now();
+                message.timestamp = storyTimeFallback.timestamp;
             }
         }
+        /* 剧情轨落盘（新字段，历史数据没有它；读取一律走 `storyTsOf` 兼容）。 */
+        if (message.storyAt === undefined || message.storyAt === null) {
+            message.storyAt = storyTsOf({ timestamp: message.timestamp }) !== null
+                ? storyTsOf({ timestamp: message.timestamp })
+                : stamp.storyAt;
+        }
         if (!message.realTimestamp) {
-            message.realTimestamp = Date.now();
+            message.realTimestamp = stamp.wallAt;
         }
         if (!message.id) {
-            message.id = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            message.id = `msg_${stamp.wallAt}_${Math.random().toString(36).slice(2, 6)}`;
         }
 
         if (message.type === 'wangxiang_task_confirmation') {
@@ -3198,7 +3214,7 @@ export class WechatData {
                 chat.lastMessage = this.getMessagePreview(latestPreviewMsg);
                 chat.time = latestPreviewMsg.time || chat.time || '';
                 chat.date = latestPreviewMsg.date || '';
-                chat.timestamp = latestPreviewMsg.timestamp || chat.timestamp || Date.now();
+                chat.timestamp = latestPreviewMsg.timestamp || chat.timestamp || storyTsNow();
             }
         }
 
@@ -3235,7 +3251,7 @@ export class WechatData {
             chat.lastMessage = this.getMessagePreview(messages[targetIndex]);
             chat.time = messages[targetIndex].time || chat.time || '';
             chat.date = messages[targetIndex].date || '';
-            chat.timestamp = messages[targetIndex].timestamp || chat.timestamp || Date.now();
+            chat.timestamp = messages[targetIndex].timestamp || chat.timestamp || storyTsNow();
         }
 
         this._messagesLoaded[safeChatId] = true;
@@ -3782,21 +3798,19 @@ getWeekday(date) {
     }
 
     _getMomentStoryTimeSnapshot() {
-        const timeManager = globalThis.window?.VirtualPhone?.timeManager;
-        const storyTime = timeManager?.getCurrentStoryTime?.() || {};
-        const now = new Date();
-        const time = String(storyTime.time || '').trim()
-            || now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-        const date = String(storyTime.date || '').trim();
-        const weekday = String(storyTime.weekday || '').trim();
-        const parsedTimestamp = date && typeof timeManager?.parseTimeToTimestamp === 'function'
-            ? Number(timeManager.parseTimeToTimestamp({ time, date, weekday }))
-            : Number(storyTime.timestamp || 0);
+        /* [v4.106.0 · R13-O4] 三天前发的朋友圈，不该因为「现在读不到剧情钟」而显示成本机此刻。
+         *   旧写法三处兜底都落墙钟（`new Date()` 的 toLocaleTimeString、以及 timestamp 的
+         *   `|| Date.now()`）—— 于是「没记到剧情时间」被静默伪装成「就是现在」。
+         *   新写法：日期 / 时刻 / 星期 / 时间戳**一律只从剧情钟取**；读不到就留空 / null，
+         *   由视图显式显示「时间未知」（`storySourceLine` 那句话就是给这个场景准备的）。 */
+        const s = storyNow(typeof window === 'undefined' ? null : window);
         return {
-            time,
-            date,
-            weekday,
-            timestamp: Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : Date.now()
+            time: s.ok ? s.time : '',
+            date: s.ok ? s.date : '',
+            weekday: s.ok ? s.weekday : '',
+            timestamp: s.ms,
+            degraded: s.degraded === true,
+            reason: s.reason
         };
     }
 
@@ -4862,7 +4876,7 @@ parseAIResponse(text) {
                         chat.lastMessage = this.getMessagePreview(latestPreviewMsg);
                         chat.time = latestPreviewMsg.time || '';
                         chat.date = latestPreviewMsg.date || '';
-                        chat.timestamp = latestPreviewMsg.timestamp || Date.now();
+                        chat.timestamp = latestPreviewMsg.timestamp || storyTsNow();
                     } else {
                         chat.lastMessage = '';
                         chat.time = '';
@@ -4958,7 +4972,7 @@ parseAIResponse(text) {
                         chat.lastMessage = this.getMessagePreview(lastMsg);
                         chat.time = lastMsg.time;
                         chat.date = lastMsg.date || '';
-                        chat.timestamp = lastMsg.timestamp || Date.now();
+                        chat.timestamp = lastMsg.timestamp || storyTsNow();
                     } else {
                         chat.lastMessage = '';
                         chat.time = '';
@@ -5267,7 +5281,7 @@ parseAIResponse(text) {
             time: '刚刚',
             date: '',
             unread: 0,
-            timestamp: Date.now(),
+            timestamp: storyTsNow(),
             members: groupInfo.members || [],
             createdAt: new Date().toISOString()
         };

@@ -8,6 +8,8 @@ import { LifeEventStore } from '../../config/life-events.js';
  *   日程备忘带跨 App 引用：生活线按 `calendar:<id>:<type>` 挂着它 —— 恢复时 id
  *   必须逐字原样回来，否则时间线上那一条会变成永远对不上的孤儿（而且不报错）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
+/* [v4.106.0 · R13-O4] 两个钟的唯一取数口：日程此前只有墙钟（`createdAt: Date.now()`）。 */
+import { stampPair } from '../../config/time-source.js';
 
 export class CalendarData {
     constructor(storage) {
@@ -127,9 +129,15 @@ export class CalendarData {
         const safeTitle = String(title || '').trim();
         if (!safeDateKey || !safeTitle) return null;
         const safeType = this.normalizeType(type);
+        /* [v4.106.0 · R13-O4] 日程此前**只有墙钟**（`createdAt: Date.now()`）。
+         *   `dateKey` 是剧情日期没错，但它只有「哪一天」没有「哪一刻」—— 于是日程与
+         *   消息对不上时刻是必然的。本版补剧情轨 `storyAt`：
+         *     · `storyAt` = 剧情钟当下（与消息 / 照片 / 日记同源，四者可逐位相等）；
+         *     · `createdAt` / id 仍是墙钟（排序稳定性 + id 唯一，剧情回拨不许让它倒退）。 */
+        const stamp = stampPair(typeof window === 'undefined' ? null : window);
 
         const memo = {
-            id: `calendar_memo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            id: `calendar_memo_${stamp.wallAt}_${Math.random().toString(36).slice(2, 8)}`,
             dateKey: safeDateKey,
             title: safeTitle.slice(0, 160),
             time: String(time || '').trim().slice(0, 16),
@@ -139,7 +147,9 @@ export class CalendarData {
             globalReminder: globalReminder === null || typeof globalReminder === 'undefined'
                 ? this.isRecurringType(safeType)
                 : globalReminder === true,
-            createdAt: Date.now(),
+            /* 剧情轨（新字段）：读不到剧情钟时**是 null**，不拿墙钟冒充。 */
+            storyAt: stamp.storyAt,
+            createdAt: stamp.wallAt,
             pinned: false
         };
 

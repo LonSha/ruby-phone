@@ -28,6 +28,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { installRuntimeHost, resetHostFlags } from './_runtime_host.mjs';
+import { stageTreeWithDeps } from './_stage-tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -44,15 +45,14 @@ const realStorage = () => import(url('config/storage.js'));
 const realCalData = () => import(url('apps/calendar/calendar-data.js'));
 const realCalApp = () => import(url('apps/calendar/calendar-app.js'));
 
-/** 把若干仓库文件按相对路径写进临时树，返回临时 root（副本加载用；真仓库只读） */
+/** 把若干仓库文件按相对路径写进临时树，返回临时 root（副本加载用；真仓库只读）。
+ *  [v4.106.0 · R13-O4] 改用 `_stage-tree.mjs`：**相对 import 依赖自动补齐**。
+ *    旧实现是一份手写清单，每新增一个跨模块依赖就会让负控制用例抛
+ *    `ERR_MODULE_NOT_FOUND`（副本上少一件）——判据表面在验「破坏后必须转红」，
+ *    实际验的是「临时树没装全」。v4.104.0 加 recycle-bin、v4.106.0 加 time-source
+ *    都踩过同一个坑，故改成按源码 import 递归补齐。 */
 function stageTree(files) {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'v290-tree-'));
-  for (const [rel, content] of Object.entries(files)) {
-    const abs = path.join(dir, rel);
-    mkdirSync(path.dirname(abs), { recursive: true });
-    writeFileSync(abs, content);
-  }
-  return dir;
+  return stageTreeWithDeps(files, { prefix: 'v290-tree-', root: ROOT }).dir;
 }
 /** 锚点替换：计数必须恰为 1，否则测试自身有问题 */
 const replaceOnce = (s, from, to) => {

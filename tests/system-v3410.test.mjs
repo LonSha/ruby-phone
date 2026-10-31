@@ -22,6 +22,7 @@ import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/needsim/needsim-data.js';
 import * as APP from '../apps/needsim/needsim-app.js';
 import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
+import { stageTreeWithDeps } from './_stage-tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -773,9 +774,25 @@ test('E3 视图不自己算内核（那是数据层与 App 的事）', () => {
     for (const bad of ['Math.round', 'Math.floor', 'Math.max', 'JSON.parse', 'JSON.stringify', 'clampNeed', 'sanitizeEffects']) {
         assert.equal(view.includes(bad), false, '视图不许自己算：' + bad);
     }
-    /* 视图只许从数据层取**键面真源**（清单由 App 现算给出）。 */
+    /* 视图只许从数据层取**键面真源**（清单由 App 现算给出）。
+     * [v4.106.0 · R13-O4] 这条判据在 v4.105.0 之后开始红，原因不是视图在算内核，
+     *   而是 R13-O2 给本视图加了 `confirmDestroy`（销毁二次确认的**唯一实现**）。
+     *   处置：不是放宽成「任意 import 都行」（那等于把这条判据废掉），而是改成
+     *   **白名单 + 逐条理由**：
+     *     · `./needsim-data.js` —— 键面真源（本判据要守的那一件事）；
+     *     · `../../config/destructive-confirm.js` —— 不是内核，是确认框的唯一实现；
+     *       视图不许自己拼 confirm 文案（那会让「可撤销性」按 App 分成几套）。
+     *   白名单以外仍然报错。 */
+    const ALLOWED_VIEW_IMPORTS = [
+        './needsim-data.js',
+        '../../config/destructive-confirm.js'
+    ];
     const imports = [...read(NS_VIEW).matchAll(/from '[^']+'/g)].map((m) => m[0]);
-    assert.ok(imports.length >= 1 && imports.every((x) => x.includes('./needsim-data.js')), '视图的 import 面：' + imports.join(','));
+    assert.ok(imports.length >= 1, '视图至少要 import 键面真源');
+    const unexpected = imports.filter((x) => !ALLOWED_VIEW_IMPORTS.some((a) => x.includes(a)));
+    assert.deepEqual(unexpected, [],
+        '视图 import 面出现未登记来源（新增来源必须先在 ALLOWED_VIEW_IMPORTS 里写明理由）：'
+        + imports.join(','));
 });
 
 /* ══════════════════════ F — 视图层 ══════════════════════ */
@@ -1199,18 +1216,18 @@ const DAMAGE = {
         '        return String(v === null || v === undefined ? 0 : v);'],
 };
 
-/** 造一棵**真目录结构**的暂存树（破坏副本按真相对路径落盘，相对 import 才解得了）。 */
+/** 造一棵**真目录结构**的暂存树（破坏副本按真相对路径落盘，相对 import 才解得了）。
+ *  [v4.106.0 · R13-O4] 改用 `_stage-tree.mjs` 的依赖自动补齐：旧实现只手抄了
+ *    num-gate / write-receipt 两件，v4.105.0 给 needsim-view 加了 destructive-confirm
+ *    之后，I17/I19 两条负控制就在副本上抛 ERR_MODULE_NOT_FOUND —— 红的是「树没装全」，
+ *    不是「破坏被抓到」。自动补齐后这类手抄清单不再需要维护。 */
 function stageTree() {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v3410_'));
-    fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
-    fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
-    fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
-    const kd = path.join(dir, 'apps', 'needsim');
-    fs.mkdirSync(kd, { recursive: true });
-    for (const f of ['needsim-data.js', 'needsim-view.js', 'needsim-app.js']) {
-        fs.copyFileSync(path.join(ROOT, 'apps', 'needsim', f), path.join(kd, f));
+    const files = {};
+    for (const rel of ['apps/needsim/needsim-data.js', 'apps/needsim/needsim-view.js', 'apps/needsim/needsim-app.js',
+        'config/num-gate.js', 'config/write-receipt.js']) {
+        files[rel] = fs.readFileSync(path.join(ROOT, rel), 'utf8');
     }
-    return dir;
+    return stageTreeWithDeps(files, { prefix: 'rp_v3410_', root: ROOT }).dir;
 }
 
 /** NEG：破坏键 / 类别 / 判据 / 期望报出的问题前缀。 */
