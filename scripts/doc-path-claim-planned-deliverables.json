@@ -25,14 +25,6 @@
       "land_version": "v5.0.0",
       "date": "2026-10-31",
       "why": "R13-O2 声明的条件判据文件名占位（xxx 表示随实施确定的具体版本号），实施时须落实名并从台账移除"
-    },
-    {
-      "path": "tests/system-vxxxx.test.mjs",
-      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
-      "epoch": "R13",
-      "land_version": "v5.0.0",
-      "date": "2026-10-31",
-      "why": "R13-O7 声明的条件判据文件名占位（xxxx 同上），实施时须落实名并从台账移除"
     }
   ]
 }

@@ -202,7 +202,7 @@ Status: proposed
   1. 三处换挡：`PLAN.md` 顶部入口（第九期 → 第十三期）· `PLAN.md`「当前优先级」节（v3.x 排序 → R13 排序）· `TODO.md:1` 的「最近更新」（v4.54.0 → 当期）。
   2. 一处判据：把 `tools/gen_plan_baseline.mjs` 的射程从「基线表三行」**扩到这三处**——顶部入口里的期号与日期、优先级节里的编号集合、`TODO.md` 的版本号，全部与真源比对。
   3. 负控制：篡改任一处即红（三种破坏各一条）。
-- **owner 接线点**：`tools/gen_plan_baseline.mjs`（扩射程）· `tests/system-vxxxx.test.mjs`（A 组追加）· `PLAN.md` / `TODO.md`（换挡）。
+- **owner 接线点**：`tools/gen_plan_baseline.mjs`（扩射程）· `tests/system-v4107.test.mjs`（A 组 + 负控制，已于 v4.100.0 落实名）· `PLAN.md` / `TODO.md`（换挡）。
 - **用户可见入口**：无（维护面）。
 - **撤销/降级**：判据可按「只报不红」起一段时间（先观测），确认无假红后再转硬红——**但必须在条目里写明何时转硬红**，否则就是永久软门。
 - **定向回归**：三种破坏（改期号 / 删一个编号 / 改 TODO 版本）各转红一次；原件对照必须绿。

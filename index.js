@@ -320,7 +320,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.100.0';
+const ST_PHONE_VERSION = '4.101.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -528,23 +528,22 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-10-31",
+    date: "2026-11-01",
     items: [
-        "【版本升至 4.100.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4100.py 对齐 tools/bump_v4999.py，只换 STEPS、SEG 与头注，逻辑一字未改）。",
-        "【R13-O1 做了什么】`tests/browser/gate.mjs` 早就建好、写得比多数门都严（三层 fail-closed：环境无浏览器 exit 2 / 结构低于下限 exit 2 / 读数 FAIL exit 1），但**它从来没有被接进 `npm run check`，也从来没有真跑过一次并留下读数**。本版把这条缝补掉三件：判据不再漂移、门接进链、真跑一次并把读数落成台账。",
-        "【判据不再随 App 数漂移】`tests/browser/scenarios/o1-app-enumeration.scen.js` 的 `enumeration-source` 原先写死 `ids.length === 83`，而真源 `config/apps.js` 的 `APPS.length` 当版实测 **89**。改法是**跟随真源**（`ids.length === APPS.length`）**再加一条真源自身没塌的下限**（`APPS_MIN = 60`）。为什么不直接把 83 改成 89：那样下次加一个 App 又红一次，于是一年红一次、没人当回事；为什么不能只写 `ids.length === ids.length`：那等于把判据删了还留着名字。两个条件同时成立才算通过。",
-        "【接链要的是**包装层**，不是改门】新增 `scripts/browser-gate-run.mjs`：逃生口（`SKIP_BROWSER=1` 必须打印三行「未执行」声明）、摘要（十九道门里浏览器层要几十秒，输出压成可读几行）、退出码原样透传。**判据一条都不搬**——判据永远只有一份，在 `gate.mjs` 与场景文件里。`package.json` 新增 `browser` 键并把 `check` 链从十八道扩到 **十九道**，`CONTEXT.md:24` 的「十八道子门」同批改「十九道」并补 `browser` 一项（该行被 `tests/system-v3190.test.mjs` 的 C4 **逐字同构**看守，不同批改就会假红）。",
-        "【真跑一次：环境里真有 Chromium】`/root/.cache/ms-playwright/chromium-1148/chrome-linux/chrome`（400MB）正落在 `browser-runner.mjs` 的 `CANDIDATE_GLOBS` 探测路径上，也可用 `RUBY_PHONE_CHROMIUM` 显式覆盖。首次真跑读数：**12 场景 × 4 视口 = 512 条读数 / 139 条 FAIL**。「门建好了」与「门在跑」之间那道缝，就藏在这 139 条里。",
-        "【本版自己抓到的最大一处缺陷：门一接链就会永远红】139 条红点全是真缺陷（`scenario-threw` 12 条、`data-open:music`/`clock`/`ledger` 各 3 条报「入口不在任何可达页」、`pager-dots-present | dots=0`、`search-icon-on-page2 | 分页没生效` 等），但把它们直接顶在 `npm run check` 上，整条链会从今天起**永远红**。而「永远红」= 人人绕开 = 第二道门当场失效，比没接链更坏。本仓对此已有成熟形态（`scripts/dead-export-baseline.json` 一类冻结账本），故补第五件：**存量逐条冻结、只拦新增**。",
-        "【冻结账本的纪律边界】新增 `scripts/browser-known-failures.json`，逐条记 (场景, 视口, 读数名, 摘录, hits, status)，任何一条都是可复核真读数。门只对**账本外的新增 FAIL** 报错：修好一条不会因为条数变了而假红，新增一条立刻红。账本带 `expires_at`（到期版本），到期未清则本门 exit 1 点名，不许无限期挂着；`status` 三档 `open`/`fixed`/`wontfix`（后者必须写理由）。",
-        "【冻结换不来任何一条绿】**未执行 ≠ 通过**一字不改（无浏览器时 gate 自己 exit 2，包装层原样透传 2）；**覆盖不足 ≠ 通过**一字不改（结构下限、读数下限仍由 gate 判）；冻结只针对「已经如实报出来的红点」。因此报告里必须同时打印「已知红 N 条 / 新增红 0 条」，让人一眼看出这是**带着 139 条债在跑**，而不是「浏览器层通过了」。",
-        "【读数台账不是顺手写，是另一件工具】新增 `tools/browser-readings.mjs`（`tests/audit/browser_readings.json`，schema `browser-readings@1`）：本工具**不判 ok、不重算判据**，只把 `gate.mjs` 的真实输出逐行搬运；未执行时**不写台账**（写空台账等于制造假证据），exit 2；台账带 `measured_at`/`version`/`browser`/`source.sha256`，任何一份证据都能自证是哪次跑出来的。",
-        "【台账带覆盖自证：让「只跑到 4/12」藏不住】第一版只把数字记下来，于是「跑了 12 个还是 4 个」读不出来。本版加 `scene_coverage`（`on_disk` / `measured` / `missing` / `extra` / `complete`），口径与 `gate.mjs` 的 `listScenes()` **一字对齐**（`_` 前缀是取证用的一次性探针，不算正式场景）——不对齐就会把 25 个 `_diag*.scen.js` 误报成「缺失」，覆盖自证反成噪音源。",
-        "【回放模式：把「跑」与「记账」解耦】直线模式要求子进程撑到把 512 行证据全吐完；实测在高内存压力下 Chromium 被中途干掉，读数半途断在第 4 个场景（137 条 vs 真实 512 条）。故加 `--from=<日志>` 回放：gate 先把**真日志**落文件（那本身就是一次真跑），工具再从那份真日志搬读数。代价诚实写明：回放**观测不到 gate 退出码**，台账记 `null` 并在 `gate_exit_code_note` 注明，不猜不补。",
-        "【本版实测抓到的第二处缺陷：/tmp 累积泄漏】首次采集只跑到 4 场景，排查确认**不是场景代码问题**（单场景 `run-scenario.mjs` 跑 `o1-search-cancel` 得 12 条读数齐全），而是 `/tmp` 残留 **1341 个目录**（`rp_v*` 1295 个，为 `npm run check` 各套件 `mkdtemp` 遗留）、占 2.2G、内存仅剩 734MB。清理到 240M 后复跑仍断在第 4 场景——所以根因是**内存压力**而非磁盘满，这直接催生了上面的回放模式。这条与 `lonsha` v3.431.0「tmpfs 吃内存」是同一族病，本仓此前没有同类治理。",
-        "【边界文档按实测改写：只加更正，不抹历史】`docs/runtime-verification-boundary.md` 顶部原有「本仓至今没有可运行浏览器的验证环境」，那句从 v3.27.0 起写了十一个版本。决策：**正文那 11 处一字不改**（它们是各版本当时真实处境的诚实留档，逐条改写会让历史失真），只在顶部 `v4.99.9 复校` 锚点后追加一段 R13-O1 实测更正（判据不再漂移 / 接进链 / 真跑一次并留读数 + 本期实测读数 + 诚实边界）。文件 435 → 460 行。",
-        "【交棒改写（下限形）】本版收尾时的三处口径改动，逐条记录，不静默通过：① `tests/system-v3190.test.mjs` 的 C4 判据把 `CONTEXT.md:24` 的门名清单从十八项改十九项（新增 `browser`）——该条锁的是**门清单与 package.json 逐字同构**，浏览器层自身判据在 v4100 档，不在那一档重复；② `tools/browser-readings.mjs` 的 `scenariosOnDisk()` 从「全部 `*.scen.js`」改为「排除 `_` 前缀」，因为 `gate.mjs` 的 `listScenes()` 就是这么筛的，台账口径必须与门同源；③ `tools/browser-readings.mjs` 首发版无回放模式，改后 `gate_exit_code` 可为 `null` 并配 `gate_exit_code_note` 说明「回放观测不到退出码」，**不把 null 折算成 0**。",
-        "【运行时验证边界】门真跑一次**不等于** 89 个入口都合格——恰恰相反，真跑当场把此前一直被「没跑」掩盖的 139 条红点全报了出来。本版保证的是「枚举面真被打开过一遍 + 红点被如实报出并冻结可追踪」；内容正确性、跨 App 状态一致性仍不在 R13-O1 射程，其中 10 条 `scenario-threw` 留给 R13-O3 与 R13-O6 消化。"
+        "【版本升至 4.101.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4101.py 对齐 tools/bump_v4100.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R13-O7 做了什么】把「基线表已交给机器、入口和优先级还是手写」这半截补完：`tools/gen_plan_baseline.mjs` 的射程从基线表三行扩到**三处入口** —— PLAN.md 顶部期号与日期、PLAN.md 「## 优先级」节的当期编号集合、TODO.md 顶部「最近更新」版本号。三项全部回真源取数，判据里不写死任何常量。",
+        "【真源怎么取】期号从优化计划书标题的「第<中文数字>期」正则解析、日期从计划书文件名里的 `YYYY-MM-DD` 解析、编号集合从两份计划书正文的 `### R<n>-*` 标题抽取、版本号走 `collectStatus()`（与 status-ledger 同源）。工具里写死期号是这一项最容易踩的坑：下一期换挡时它会说「一致」而实际没对齐。",
+        "【fail-closed 三处】计划书链接不存在、标题里读不到期号、两份计划书一条编号都抽不到 —— 三种一侓报错。若只是「抽到空集，循环零条 ⇒ 零错误 ⇒ 通过」，那这个门就成了反的：真源塌了反而全绿。",
+        "【只判不写的那一格】`--write` 只回写 TODO.md 的版本号（机械可算），PLAN 的期号与优先级排序**只判不写**。自动生成优先级节等于让工具替我决定接下来做什么 —— 计划书自己写的诚实边界是「排序判断永远是人做的」，这一条已落进判据 B1：写入函数一旦出现 `PLAN.md` 或 `## 优先级` 就转红。",
+        "【换挡三处都做了】PLAN.md 顶部已是第十三期（2026-10-31）；「## 优先级」节从第六期排序换成 R13 交付顺序（先让门有电 → 再收存量债 → 再开用户的手 → 再统一口径 → 拓展九项），四项排序理由逐条继承计划书原话；旧排序以 `>` 引用块原样留档，标明「已被 R13 接管，不得当作当期优先」。TODO.md 顶面从 v4.99.9 到 v4.100.0 再到当版，那个 45 版滞后的洞本合同关闭。",
+        "【本版自己抓到的缺陷形态（第三处假绿）】验收套件首发时 A1～A4 全部直接调 `computePlanEntries()`。做负控制时把 `checkPlanBaseline()` 里那两行接线摘掉，**13 条依然全绿** —— 因为「校对了」与「门上报出来了」是两件事。这正是本仓反复付代价的形态：函数写好了、零调用点。故补 A5 走**门本身**（`checkPlanBaseline`，`npm run check` 与 v4980-A1 都走它），并用「真源码摘接线 → 子进程跑门 → 门对同一破坏失去反应」做双向证明。",
+        "【A3 的判据形态也改过一次】最初写成「源码里必须有正则」（文本判据），只能证明「正则还在文件里」，证不了「取数真的跟着真源走」。改为行为级：把计划书标题里的「第十三期」改成「第九十九期」，断言工具读出的期号跟着变成「九十九」、且同时报出「顶部入口未换挡」。写死期号的实现会在这一步读回「十三」而转红。",
+        "【占位文件名履行】立项时登记在未来交付物台账里的那个 `system-vxxxx` 占位文件名，本轮落实名 `tests/system-v4107.test.mjs`（13 条：A1-A5 入口校对与接门 / B1-B3 写入射程与占位撒账 / C1-C5 五条负控制），并从 `scripts/doc-path-claim-planned-deliverables.json` 撒账、把计划书 owner 接线点写回真名。新增判据 B3 守「占位履行后必须撒账」，否则「说得清为什么不在」会永久生效。**文案口径**：履行之后全仓不再写出那个占位文件名（连本文也不例外），否则 doc-path-claim 门会把它当成一条新的落空声明。",
+        "【交棒改写（下限形）】旧「## 优先级」五条（T1 / B1 / S1 / B2-B3 / W1-W2-X1）不删不改，整体以引用块形式降为历史段；新节只声明当期排序与四项理由，不重写历史判断。这类改写一律保留原文字面，避免「换挡时顺手把旧结论也改了口」。",
+        "【定向回归（铁律：36 项做完前不跑全量）】`node --test tests/system-v4107.test.mjs` 13/13 · `tests/system-v4980.test.mjs` 11/11 · `tests/system-v4100.test.mjs` 25/25 · `tests/system-v3190.test.mjs` 31/31 · `tests/system-v328.test.mjs` 10/10。`node tools/gen_plan_baseline.mjs --check` exit 0（基线表 + 三处入口均与真源一致）。`node scripts/doc-path-claim-audit.mjs` 扫 3912 处声明、0 未登记落空。",
+        "【抬版后必须跑的两个工具】新增测试文件使枚举面加一：`node tools/gen_status_ledger.mjs --write` 得 ver=4.101.0 测试 357 门 17 场景 12 unknown=0；`node tools/gen_plan_baseline.mjs --write` 重写基线表三行与 TODO 版本号。不跑这两个会必红（v4980 的 A1/A2 看守）。",
+        "【运行时验证边界】本项只动入口与数字，不碰任何 App 的功能实现，故 89 个入口在真机上表现如何**依旧没变**；本版能保证的只是「PLAN/TODO 三处入口与计划书真源一致」这一件维护面的事。这类「文档写着已完成、入口还停在上上期」的形态属于**看起来没坏但显示不对**：`TODO.md` 顶面停在 v4.54.0 差了 45 个版本，任何只读入口的读者都会据此以为后续版本没做事。**不能保证**的是「优先级节里的排序选择对不对」—— 那不是机器能判的，本条只守编号一个不少与期号/日期/版本号一致，排序判断仍归人。",
+        "【产物】`tools/bump_v4101.py`（182 行，只换 STEPS 与头注）、`tools/iter235_seg.md`（本段）、`tests/system-v4107.test.mjs`（13 条）、`tools/gen_plan_baseline.mjs`（171 → 330 行，新增 `parsePlanEntry` / `computePlanEntries` / `writePlanEntries` 三个导出，`checkPlanBaseline` 接上入口校对，`--check` 文案改为同时声明两段射程）。"
     ]
 };
 
