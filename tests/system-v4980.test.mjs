@@ -149,3 +149,141 @@ test('B4: 负控制 — 扫描面塌陷时必须 fail-closed（exit 2），杜�
     fs.rmSync(emptyDir, { recursive: true, force: true });
   }
 });
+
+/* ------------------------------------------------------------
+ * C 组：计划交付物台账（R13-O7 配套）—— 门禁不是避难所
+ * ------------------------------------------------------------
+ * 背景：v13 计划文档声明了若干「未来才落地」的交付物路径，被 R11-O4 判红。
+ * 语义上它们既不是历史存量（曾经存在、现已删除），也不是夹具占位，
+ * 故新增 planned 台账；本组四道判据守住这一类不被滥用。
+ * ------------------------------------------------------------ */
+const PLANNED_ABS = path.join(ROOT, 'scripts/doc-path-claim-planned-deliverables.json');
+
+test('C1: 计划交付物台账必须合法，且当期计划声明的未来路径被放行而非当违规', () => {
+  const ledger = JSON.parse(fs.readFileSync(PLANNED_ABS, 'utf8'));
+  assert.equal(ledger.schema, 'doc-path-claim-planned@1', '台账 schema 锚必须正确');
+  assert.ok(Array.isArray(ledger.entries) && ledger.entries.length > 0, '台账须至少登记一条当期计划交付物');
+  assert.ok(ledger.entries.length <= 24, '计划交付物条数有上限，杜绝堆成避难所');
+  for (const e of ledger.entries) {
+    for (const k of ['path', 'plan', 'epoch', 'land_version', 'date', 'why']) {
+      assert.ok(e[k], `条目 ${e.path || '(无 path)'} 缺字段 ${k}`);
+    }
+    assert.ok(
+      fs.existsSync(path.join(ROOT, e.plan)),
+      `条目 ${e.path} 的计划文档 ${e.plan} 必须真实存在`
+    );
+    assert.ok(
+      !fs.existsSync(path.join(ROOT, e.path)),
+      `条目 ${e.path} 不得已经落在磁盘上（落地即须移出台账）`
+    );
+  }
+
+  const res = auditDocPathClaims(ROOT);
+  assert.equal(res.plannedErrors.length, 0, '真台账不应有失格条目：' + res.plannedErrors.join('; '));
+  assert.equal(res.violations.length, 0, '计划声明的未来路径不得再被算作违规');
+  assert.equal(res.exitCode, 0, '真仓当前必须 exit 0');
+  assert.ok(res.plannedClaims > 0, '当期计划声明的未来路径应当被计入 plannedClaims');
+});
+
+test('C2: 负控制 — 已到期的计划交付物条目必须自曝报红（exit 1）', () => {
+  const tmpDir = path.join(ROOT, 'node_modules', '.tmp_planned_due');
+  const tmpLedger = path.join(ROOT, 'node_modules', '.tmp_planned_due.json');
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const claim = 'tests/audit/' + 'probe-due-v9999.tsv';
+  try {
+    fs.writeFileSync(
+      tmpLedger,
+      JSON.stringify({
+        schema: 'doc-path-claim-planned@1',
+        entries: [
+          {
+            path: claim, plan: 'PLAN.md', epoch: 'R99',
+            land_version: 'v0.0.1', date: '2026-01-01', why: 'negative control',
+          },
+        ],
+      }),
+      'utf8'
+    );
+    fs.writeFileSync(path.join(tmpDir, 'note.md'), '计划声明 `' + claim + '`。\n', 'utf8');
+
+    const res = auditDocPathClaims(tmpDir, { fixture: true, plannedLedgerPath: tmpLedger });
+    assert.equal(res.plannedErrors.length, 1, '到期条目必须报失格');
+    assert.match(res.plannedErrors[0], /已到期/, '失格原因须点名到期');
+    assert.equal(res.status, 'violation', '有失格条目时状态不得为 ok');
+    assert.equal(res.exitCode, 1, '到期条目必须 exit 1');
+    // 到期即移出放行集 ⇒ 该路径退回普通违规（不静默放行，这是自锁的本意）
+    assert.equal(res.violations.length, 1, '到期条目必须退回违规');
+    assert.equal(res.violations[0].claimPath, claim, '退回违规的必须是同一条路径');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpLedger, { force: true });
+  }
+});
+
+test('C3: 负控制 — 已落地路径的台账条目必须移除（留着即报红）', () => {
+  const tmpDir = path.join(ROOT, 'node_modules', '.tmp_planned_landed');
+  const tmpLedger = path.join(ROOT, 'node_modules', '.tmp_planned_landed.json');
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const landed = 'tests/system-v4980.test.mjs';
+  try {
+    fs.writeFileSync(
+      tmpLedger,
+      JSON.stringify({
+        schema: 'doc-path-claim-planned@1',
+        entries: [
+          {
+            path: landed, plan: 'PLAN.md', epoch: 'R99',
+            land_version: 'v999.0.0', date: '2026-01-01', why: 'negative control',
+          },
+        ],
+      }),
+      'utf8'
+    );
+    fs.writeFileSync(path.join(tmpDir, 'note.md'), '判据见 `' + landed + '`。\n', 'utf8');
+
+    const res = auditDocPathClaims(tmpDir, { fixture: true, plannedLedgerPath: tmpLedger });
+    assert.equal(res.plannedErrors.length, 1, '已落地条目必须报失格');
+    assert.match(res.plannedErrors[0], /已落地/, '失格原因须点名已落地');
+    assert.equal(res.exitCode, 1, '已落地仍留在台账必须 exit 1');
+    // 夹具根是 tmpDir，该路径在此根下不存在；且条目已移出放行集 ⇒ 退回违规
+    assert.equal(res.violations.length, 1, '已落地条目在夹具根下须退回违规');
+    assert.equal(res.violations[0].claimPath, landed, '退回违规的必须是同一条路径');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpLedger, { force: true });
+  }
+});
+
+test('C4: 负控制 — 计划文档不在场的条目不算数，路径退回违规', () => {
+  const tmpDir = path.join(ROOT, 'node_modules', '.tmp_planned_nodoc');
+  const tmpLedger = path.join(ROOT, 'node_modules', '.tmp_planned_nodoc.json');
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const claim = 'tests/audit/' + 'probe-nodoc-v9999.tsv';
+  const ghostPlan = '.agents/notes/proposed/architecture/' + '2026-13-ghost-plan.md';
+  try {
+    fs.writeFileSync(
+      tmpLedger,
+      JSON.stringify({
+        schema: 'doc-path-claim-planned@1',
+        entries: [
+          {
+            path: claim, plan: ghostPlan, epoch: 'R99',
+            land_version: 'v999.0.0', date: '2026-01-01', why: 'negative control',
+          },
+        ],
+      }),
+      'utf8'
+    );
+    fs.writeFileSync(path.join(tmpDir, 'note.md'), '计划声明 `' + claim + '`。\n', 'utf8');
+
+    const res = auditDocPathClaims(tmpDir, { fixture: true, plannedLedgerPath: tmpLedger });
+    assert.equal(res.plannedErrors.length, 1, '计划文档缺位的条目必须报失格');
+    assert.match(res.plannedErrors[0], /计划文档/, '失格原因须点名计划文档不在场');
+    assert.equal(res.violations.length, 1, '条目失效后该路径必须退回违规');
+    assert.equal(res.violations[0].claimPath, claim, '退回违规的必须是同一条路径');
+    assert.equal(res.exitCode, 1, '必须 exit 1');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpLedger, { force: true });
+  }
+});

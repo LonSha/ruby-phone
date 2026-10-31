@@ -1,0 +1,46 @@
+{
+  "schema": "doc-path-claim-planned@1",
+  "why": "计划文档里声明的「未来才落地」的交付物路径。与 historical_records（曾经存在、现已删除的旧路径）语义不同：这一类从未存在过。台账自带到期自锁，见 scripts/doc-path-claim-audit.mjs 的 loadPlannedLedger。",
+  "entries": [
+    {
+      "path": "tests/audit/browser_readings.json",
+      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
+      "epoch": "R13",
+      "land_version": "v5.0.0",
+      "date": "2026-10-31",
+      "why": "R13-O1 第 3 步交付物：真跑一次浏览器层后落的读数档（场景数/视口数/每场景读数条数/耗时/浏览器版本）"
+    },
+    {
+      "path": "tests/audit/undo_gaps.tsv",
+      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
+      "epoch": "R13",
+      "land_version": "v5.0.0",
+      "date": "2026-10-31",
+      "why": "R13-O2 交付物：88 个 app 的 undoCapability 分档后，irreversible 残留逐条登记表"
+    },
+    {
+      "path": "tests/audit/r6_kernel_disposition.tsv",
+      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
+      "epoch": "R13",
+      "land_version": "v5.0.0",
+      "date": "2026-10-31",
+      "why": "R13-O3 交付物：R6 九件内核逐件 A/B 决策登记表（接线/归档/合并）"
+    },
+    {
+      "path": "tests/system-v4xxx.test.mjs",
+      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
+      "epoch": "R13",
+      "land_version": "v5.0.0",
+      "date": "2026-10-31",
+      "why": "R13-O2 声明的条件判据文件名占位（xxx 表示随实施确定的具体版本号），实施时须落实名并从台账移除"
+    },
+    {
+      "path": "tests/system-vxxxx.test.mjs",
+      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
+      "epoch": "R13",
+      "land_version": "v5.0.0",
+      "date": "2026-10-31",
+      "why": "R13-O7 声明的条件判据文件名占位（xxxx 同上），实施时须落实名并从台账移除"
+    }
+  ]
+}
