@@ -257,6 +257,11 @@ export function extractMomentsJsonPayloads(rawText = '') {
     return { payloads, cleanedText };
 }
 
+/* [v4.104.0 · R13-O8] 删除先落回收站（唯一软删实现在 config/recycle-bin.js）。
+ *   微信是本仓最贵的数据面：一条消息背后是一次 AI 生成，一次误删就是一整段剧情没了。
+ *   批量路径（删到末尾 / 多选删除）**不逐条写盘** —— 见 _recycleBatch 的三行说明。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class WechatData {
     constructor(storage) {
         this.storage = storage;
@@ -266,6 +271,15 @@ export class WechatData {
         this.messageKeyPrefix = 'wechat_msg';  // 🔥 消息单独存储的键前缀
         this.lobbyGlobalMessageKeyPrefix = 'phone_wechat_msg_lobby'; // 🔥 大厅模式消息全局存储键前缀
         this.walletDefaultKey = '__default__'; // 会话钱包默认键（用于未指定chatId时）
+        /* [v4.104.0 · R13-O8] 批量删除时的回收站暂存数组。
+         *   不是 null 时 deleteMessage 只 push 规格、不落盘；批量入口在末尾 softDeleteMany 一次写。
+         *   理由：删到末尾可能一次几千条，逐条 softDelete 是 O(N×M) 的落盘量，实测会卡住几秒。
+         *   刻意用「数组即开关」而不是布尔标记 —— 少一个可能与真实数据脱节的状态位。 */
+        this._recycleBatch = null;
+        /* 回收站写回口：朋友圈 / 消息 / 会话三键各一个（形状不同，不能合成一个） */
+        recycleBin.registerRestorer('wechat_moment', (payload, meta) => this._restoreMomentFromBin(payload, meta));
+        recycleBin.registerRestorer('wechat_message', (payload, meta) => this._restoreMessageFromBin(payload, meta));
+        recycleBin.registerRestorer('wechat_chat', (payload, meta) => this._restoreChatFromBin(payload, meta));
         this.globalSocialStore = new GlobalSocialStore(storage);
         this._lobbyPersonaProfileCache = new Map();
         this._lobbyPersonaCacheTTL = 10 * 60 * 1000;
@@ -3931,7 +3945,32 @@ getWeekday(date) {
         if (!safeId || !Array.isArray(this.data.moments)) return false;
         const index = this.data.moments.findIndex(m => String(m?.id || '').trim() === safeId);
         if (index < 0) return false;
+        const removed = this.data.moments[index];
+        /* [v4.104.0 · R13-O8] 朋友圈先落回收站（正文 + 配图链接 + 点赞评论全在 payload 里） */
+        recycleBin.softDelete(this.storage, {
+            app: 'wechat_moment',
+            kind: 'moment',
+            id: safeId,
+            label: String(removed?.content || removed?.author || '').replace(/\s+/g, ' ').slice(0, 40),
+            payload: removed,
+            meta: { index },
+            hard: () => {}
+        });
         this.data.moments.splice(index, 1);
+        this.saveData();
+        return true;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：朋友圈 */
+    _restoreMomentFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        if (!Array.isArray(this.data.moments)) this.data.moments = [];
+        if (this.data.moments.some(m => String(m?.id || '').trim() === id)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= this.data.moments.length) this.data.moments.splice(at, 0, payload);
+        else this.data.moments.unshift(payload);
         this.saveData();
         return true;
     }
@@ -4608,6 +4647,22 @@ parseAIResponse(text) {
             const deletedMsg = this.data.messages[chatId][messageIndex];
             const deletedMessages = [deletedMsg];
 
+            /* [v4.104.0 · R13-O8] 先落回收站。批量上下文里只暂存（见 _recycleBatch），
+             *   单条删除时立即写盘。kind 记 'message'，meta 带 chatId + index ——
+             *   **chatId 是必需的**：只存消息本身的话，恢复时不知道该放回哪个会话。 */
+            const binSpec = {
+                app: 'wechat_message',
+                kind: 'message',
+                id: String(deletedMsg?.id || (chatId + ':' + messageIndex)),
+                label: String(this.getMessagePreview ? this.getMessagePreview(deletedMsg) : '')
+                    .replace(/\s+/g, ' ').slice(0, 40),
+                payload: deletedMsg,
+                meta: { chatId: String(chatId || ''), index: messageIndex },
+                hard: () => {}
+            };
+            if (Array.isArray(this._recycleBatch)) this._recycleBatch.push(binSpec);
+            else recycleBin.softDelete(this.storage, binSpec);
+
             // 🔥 如果删除的是通话记录(call_record)，同时删除相关的通话文字(call_text)
             if (deletedMsg.type === 'call_record') {
                 const callType = deletedMsg.callType;
@@ -4679,13 +4734,23 @@ parseAIResponse(text) {
         this.getMessages(safeChatId);
         let deletedCount = 0;
 
-        ids.forEach((id) => {
-            const messages = this.data.messages[safeChatId] || [];
-            const index = messages.findIndex(msg => String(msg?.id || '').trim() === id);
-            if (index === -1) return;
-            this.deleteMessage(safeChatId, index);
-            deletedCount++;
-        });
+        /* [v4.104.0 · R13-O8] 批量上下文：回收站只暂存，末尾一次落盘 */
+        const outer = this._recycleBatch;
+        this._recycleBatch = [];
+        try {
+            ids.forEach((id) => {
+                const messages = this.data.messages[safeChatId] || [];
+                const index = messages.findIndex(msg => String(msg?.id || '').trim() === id);
+                if (index === -1) return;
+                this.deleteMessage(safeChatId, index);
+                deletedCount++;
+            });
+        } finally {
+            const specs = this._recycleBatch;
+            this._recycleBatch = outer;
+            if (!Array.isArray(outer) && specs.length) recycleBin.softDeleteMany(this.storage, specs);
+            else if (Array.isArray(outer)) outer.push.apply(outer, specs);
+        }
 
         return deletedCount;
     }
@@ -4702,9 +4767,20 @@ parseAIResponse(text) {
         if (startIndex === -1) return 0;
 
         let deletedCount = 0;
-        while ((this.data.messages[safeChatId] || []).length > startIndex) {
-            this.deleteMessage(safeChatId, startIndex);
-            deletedCount++;
+        /* [v4.104.0 · R13-O8] 同上：从这条删到尾可能几千条，回收站只在末尾写一次。
+         *   越界保护靠原条件（length > startIndex），不改判定 —— 本项只加落盘方式。 */
+        const outer = this._recycleBatch;
+        this._recycleBatch = [];
+        try {
+            while ((this.data.messages[safeChatId] || []).length > startIndex) {
+                this.deleteMessage(safeChatId, startIndex);
+                deletedCount++;
+            }
+        } finally {
+            const specs = this._recycleBatch;
+            this._recycleBatch = outer;
+            if (!Array.isArray(outer) && specs.length) recycleBin.softDeleteMany(this.storage, specs);
+            else if (Array.isArray(outer)) outer.push.apply(outer, specs);
         }
 
         return deletedCount;
@@ -4961,6 +5037,23 @@ parseAIResponse(text) {
     deleteChat(chatId) {
         this.getMessages(chatId);
         const deletedMessages = Array.isArray(this.data.messages[chatId]) ? [...this.data.messages[chatId]] : [];
+        /* [v4.104.0 · R13-O8] 整个会话进回收站：payload = 会话元信息 + 它的全部消息。
+         *   一次删除动的是「联系人 + 所有聊天记录」，最贵的一类操作，必须能回来。
+         *   消息**不逐条**再进一次回收站（那样恢复会变成「恢复会话 + 恢复几千条消息」两套
+         *   互相打架的路径）；恢复器按 meta 一次性写回。 */
+        const chatMeta = (Array.isArray(this.data.chats) ? this.data.chats : [])
+            .find(c => String(c?.id || '') === String(chatId || '')) || null;
+        if (chatMeta) {
+            recycleBin.softDelete(this.storage, {
+                app: 'wechat_chat',
+                kind: 'chat',
+                id: String(chatMeta.id || chatId),
+                label: String(chatMeta.name || chatMeta.contactName || '').slice(0, 40),
+                payload: { chat: chatMeta, messages: deletedMessages },
+                meta: { chatId: String(chatMeta.id || chatId) },
+                hard: () => {}
+            });
+        }
         this.data.chats = this.data.chats.filter(c => c.id !== chatId);
         delete this.data.messages[chatId];
         this._removeWalletTransactionsForChat(chatId);
@@ -4981,6 +5074,43 @@ parseAIResponse(text) {
         this.saveData();
     }
     
+    /** [v4.104.0 · R13-O8] 回收站写回口：单条消息回原会话原位置（chatId 从 meta 取） */
+    _restoreMessageFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const chatId = String((meta && meta.chatId) || '').trim();
+        if (!chatId) return false;
+        this.getMessages(chatId);
+        if (!Array.isArray(this.data.messages[chatId])) this.data.messages[chatId] = [];
+        const mid = String(payload?.id || '').trim();
+        if (mid && this.data.messages[chatId].some(m => String(m?.id || '').trim() === mid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= this.data.messages[chatId].length) {
+            this.data.messages[chatId].splice(at, 0, payload);
+        } else {
+            this.data.messages[chatId].push(payload);
+        }
+        this._messagesDirty[chatId] = true;
+        this.saveData();
+        return true;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：整个会话 + 它的全部消息一起回来 */
+    _restoreChatFromBin(payload) {
+        if (!payload || typeof payload !== 'object') return false;
+        const chat = payload.chat;
+        const chatId = String(chat?.id || '').trim();
+        if (!chatId) return false;
+        if (!Array.isArray(this.data.chats)) this.data.chats = [];
+        if (!this.data.chats.some(c => String(c?.id || '') === chatId)) this.data.chats.unshift(chat);
+        const msgs = Array.isArray(payload.messages) ? payload.messages : [];
+        if (msgs.length > 0) {
+            this.data.messages[chatId] = msgs;
+            this._messagesDirty[chatId] = true;
+        }
+        this.saveData();
+        return true;
+    }
+
     // 🚫 拉黑联系人
     blockContact(contactId) {
         const contact = this.getContact(contactId);

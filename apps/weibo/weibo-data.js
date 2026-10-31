@@ -21,6 +21,9 @@ import { collectRecentChat, contextFaces, consistencyBlock, retellNode } from '.
  *   完全不知道会话已经换了。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 
+/* [v4.104.0 · R13-O8] 删微博先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class WeiboData {
     constructor(storage) {
         this.storage = storage;
@@ -30,6 +33,8 @@ export class WeiboData {
         this._likedRecommendPostsKey = 'weibo_liked_recommend_posts';
         this._likedHotSearchIndexKey = 'weibo_liked_hot_search_index';
         this._beautifyFields = ['avatar', 'banner', 'avatarFrameCss'];
+        /* [v4.104.0 · R13-O8] 向回收站登记「我的微博」写回口 */
+        recycleBin.registerRestorer('weibo_post', (payload, meta) => this._restoreUserPostFromBin(payload, meta));
 
         // API调用队列（防并发）
         this._apiQueue = Promise.resolve();
@@ -182,6 +187,27 @@ export class WeiboData {
             } catch (e) { }
         }
         return [];
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：微博放回「我的」列表（按 index 回原位） */
+    _restoreUserPostFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        const posts = this.getUserPosts();
+        if (posts.some(p => String(p?.id || '') === id)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= posts.length) posts.splice(at, 0, payload);
+        else posts.unshift(payload);
+        this.saveUserPosts(posts);
+        /* 动态数跟着回来 —— 删除时减过 1，恢复不减回去就会出现「帖子在、计数对不上」。
+         *   与删除侧同口径：两侧都走 profile.posts 这一个字段。 */
+        try {
+            const profile = this.getProfile();
+            profile.posts = Math.max(0, (parseInt(profile.posts, 10) || 0) + 1);
+            this.saveProfile(profile);
+        } catch (_e) { /* 计数修正失败不该判整条恢复失败 */ }
+        return true;
     }
 
     saveUserPosts(posts) {
@@ -1678,6 +1704,19 @@ export class WeiboData {
 
         // 🔥 提取要删除的微博中的图片列表，返回给前端去清理服务器文件
         const deletedPost = posts[idx];
+        /* [v4.104.0 · R13-O8] 先落回收站、再真删。微博是用户手写正文 + AI 生图的地方，
+         *   删错了重写成本极高（这也是本项存在的理由）。图片文件本身**不进**回收站：
+         *   文件清理是前端 ImageManager 的活，回收站只保业务对象（图链接还在 payload 里，
+         *   但文件若已被清则恢复出来是坏链 —— 这条边界写在 docs/runtime-verification-boundary.md）。 */
+        recycleBin.softDelete(this.storage, {
+            app: 'weibo_post',
+            kind: 'post',
+            id: String(deletedPost?.id || postId),
+            label: String(deletedPost?.content || '').replace(/\s+/g, ' ').slice(0, 40),
+            payload: deletedPost,
+            meta: { index: idx },
+            hard: () => {}
+        });
         const imagesToDelete = Array.isArray(deletedPost.images) ? [...deletedPost.images] : [];
         if (Array.isArray(deletedPost.imageGenerationStates)) {
             deletedPost.imageGenerationStates.forEach((state) => {

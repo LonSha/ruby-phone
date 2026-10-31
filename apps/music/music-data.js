@@ -15,6 +15,9 @@ const MUSIC_EXTERNAL_SOURCE_URL = 'https://drive.baibai.cv/f/ZKEBuW/Music.js';
 const MUSIC_EXTERNAL_SOURCE_ID = 'st-phone-baibai-music-source';
 const MUSIC_VOLUME_STORAGE_KEY = 'global_music_volume';
 
+/* [v4.104.0 · R13-O8] 删歌先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class MusicData {
     constructor(storage) {
         this.storage = storage;
@@ -22,6 +25,8 @@ export class MusicData {
         this.syncVolume();
         this.audioPlayer.loop = this.getPlaybackMode() === 'repeat-one';
         this._playlist = null;     // lazy load，存储键 music_playlist
+        /* [v4.104.0 · R13-O8] 向回收站登记歌曲写回口（恢复 = 追加回歌单末尾） */
+        recycleBin.registerRestorer('music_song', (payload) => this._restoreSongFromBin(payload));
         this._favorites = null;    // 收藏夹列表
         this._favoritesGlobalKey = 'global_music_favorites'; // 全局共享（跨会话）
         this._favoritesLegacyChatKey = 'music_favorites';    // 旧版：按会话存储
@@ -89,6 +94,20 @@ export class MusicData {
 
     savePlaylist() {
         this.storage.set('music_playlist', JSON.stringify(this._playlist || []));
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：歌追加回歌单末尾（理由见 _songBinId 注释） */
+    _restoreSongFromBin(payload) {
+        if (!payload || typeof payload !== 'object') return false;
+        const name = String(payload?.name || '').trim();
+        if (!name) return false;
+        const playlist = this.getPlaylist();
+        const key = this._getSongDedupKey(name, String(payload?.artist || '未知'));
+        if (playlist.some(s => this._getSongDedupKey(s?.name, s?.artist) === key)) return true;
+        playlist.push(payload);
+        this.savePlaylist();
+        this._notifyStateChange();
+        return true;
     }
 
     // ========== 收藏夹管理 ==========
@@ -250,9 +269,31 @@ export class MusicData {
         return this.getPlaylist()[index] || null;
     }
 
+    /* [v4.104.0 · R13-O8] 歌曲**没有 id**（歌单元素是按 name+artist 去重的记录），
+     *   故回收站条目的业务 id 用「歌名 / 歌手 / 加入序号」拼一个**可复现、可读**的串，
+     *   不用随机数 —— 随机会让同一次删除在两次调用里得到不同 binId，恢复时对不上。
+     *   恢复写回 = 追加到歌单末尾（歌单是有序队列，插回原位置会打断用户后来的排序意图；
+     *   「歌回来了」比「位置也对」更重要，且把这条取舍写在这里而不是让用户猜）。 */
+    _songBinId(song, index) {
+        return 'song:' + String(song?.name || '').trim() + '/' + String(song?.artist || '').trim() + '/' + String(index);
+    }
+
     removeSong(index) {
         const playlist = this.getPlaylist();
         if (index < 0 || index >= playlist.length) return;
+
+        const removedSong = playlist[index];
+        if (removedSong) {
+            recycleBin.softDelete(this.storage, {
+                app: 'music_song',
+                kind: 'song',
+                id: this._songBinId(removedSong, index),
+                label: (String(removedSong?.name || '').trim() + ' - ' + String(removedSong?.artist || '').trim()).slice(0, 40),
+                payload: removedSong,
+                meta: { index },
+                hard: () => {}
+            });
+        }
 
         const wasPlaying = this.isPlaying && this.currentIndex === index;
         playlist.splice(index, 1);

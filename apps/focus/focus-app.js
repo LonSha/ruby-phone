@@ -25,6 +25,11 @@ const SESSIONS_KEY = 'focus_sessions';
 /* 只保留最近 200 次记录：聚合只看最近，长尾没有价值，留着只会撑存档。 */
 const SESSION_KEEP = 200;
 
+/* [v4.104.0 · R13-O8] 删任务先落回收站（唯一软删实现在 config/recycle-bin.js）。
+ *   任务带**历史统计**（focus_sessions 按 taskId 归档）：删掉任务后统计还在、任务没了，
+ *   恢复时 id 逐字回来才能重新对上那些记录 —— 这正是本项「id 原样回来」最实际的用例。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class FocusApp {
     constructor(phoneShell, storage) {
         this.shell = phoneShell;
@@ -33,6 +38,8 @@ export class FocusApp {
         this.tasks = [];
         this.sessions = [];
         this.face = FOCUS_REASONS.storage_absent;
+        /* [v4.104.0 · R13-O8] 向回收站登记任务写回口 */
+        recycleBin.registerRestorer('focus_task', (payload, meta) => this._restoreTaskFromBin(payload, meta));
         this.stats = null;
         /* 运行态（不落盘）：本轮专注的真实秒数由墙钟算，倒计时显示走 deadline。 */
         this._running = false;
@@ -105,8 +112,35 @@ export class FocusApp {
 
     removeTask(taskId) {
         const before = this.tasks.length;
+        const target = this.tasks.find((t) => t.id === taskId) || null;
+        const at = target ? this.tasks.indexOf(target) : -1;
+        if (target) {
+            recycleBin.softDelete(this.storage, {
+                app: 'focus_task',
+                kind: 'task',
+                id: String(target.id),
+                label: String(target?.title || target?.name || '').slice(0, 40),
+                payload: target,
+                meta: { index: at },
+                hard: () => {}
+            });
+        }
         this.tasks = this.tasks.filter((t) => t.id !== taskId);
         if (this.tasks.length !== before) this.saveTasks();
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：任务放回原位（历史统计按 taskId 自动重新对上） */
+    _restoreTaskFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        if (!Array.isArray(this.tasks)) this.tasks = [];
+        if (this.tasks.some((t) => String(t?.id || '') === id)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= this.tasks.length) this.tasks.splice(at, 0, payload);
+        else this.tasks.push(payload);
+        this.saveTasks();
+        return true;
     }
 
     saveTasks() {

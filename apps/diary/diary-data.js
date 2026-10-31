@@ -24,6 +24,11 @@ import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/
  *   令牌在**出发那一刻**记（不是回来时记 —— 回来时取到的是「现在」，
  *   判当前必然恒真，栅栏等于没建），写回前问一句「还是那段会话吗」。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+/* [v4.104.0 · R13-O8] 删除先落回收站。**唯一软删实现**在 config/recycle-bin.js ——
+ *   本文件不再自己写一份「先存起来再删」（那种写法会让「回收站行为」按 App 分成几套）。
+ *   恢复后条目 id **逐字原样**回来，故日记配图键 bg_<id> / lh_<id> 的引用不会断成孤儿。
+ */
+import * as recycleBin from '../../config/recycle-bin.js';
 
 export class DiaryData {
     constructor(storage) {
@@ -31,6 +36,43 @@ export class DiaryData {
         this._entries = null;
         this._settings = null;
         this.stopBatch = false; // 分批停止标志
+        /* [v4.104.0 · R13-O8] 向回收站登记「怎么把一条日记写回去」。
+         *   用注册表而不是让 config 反向 import 本文件：依赖方向只能是 apps → config。
+         *   恢复 = 放回原位（meta.index 在册就用它，否则追加到末尾）+ 把配图键补回去。
+         *   **id 不改**：payload 就是删除前那个对象，recycle-bin 还会再核对一次 id 没漂移。 */
+        recycleBin.registerRestorer('diary', (payload, meta) => this._restoreEntryFromBin(payload, meta));
+    }
+
+    /**
+     * [v4.104.0 · R13-O8] 回收站写回口。刻意不复用 deleteEntry —— 恢复不是「删除的反向调用」，
+     *   它只需要两件事：把条目放回去、把关联的配图键补回去。
+     *   meta 可能为 null（旧记录 / 存档被清）：此时追加到末尾，**不报失败** ——
+     *   位置丢了还能恢复内容，位置丢了就判失败等于「因为排序信息没了所以不让你恢复」。
+     */
+    _restoreEntryFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload.id || '').trim();
+        if (!id) return false;
+        const entries = this.getEntries();
+        /* 幂等：已经在列表里就只补配图键（防同一条被恢复两次出现两份） */
+        if (!entries.some(e => String(e?.id || '') === id)) {
+            const at = Number(meta && meta.index);
+            if (Number.isFinite(at) && at >= 0 && at <= entries.length) entries.splice(at, 0, payload);
+            else entries.push(payload);
+            this.saveEntries();
+        }
+        const extras = (meta && meta.extras && typeof meta.extras === 'object') ? meta.extras : null;
+        if (extras) {
+            const settings = this.getSettings();
+            let touched = false;
+            for (const k of Object.keys(extras)) {
+                if (extras[k] == null) continue;
+                settings[k] = extras[k];
+                touched = true;
+            }
+            if (touched) this.saveSettings();
+        }
+        return true;
     }
 
     // ==================== 数据读写 ====================
@@ -358,20 +400,47 @@ export class DiaryData {
         const idx = entries.findIndex(e => e.id === entryId);
         if (idx !== -1) {
             const entry = entries[idx];
-            const managedImages = [
-                ...this._collectManagedDiaryImagesFromEntry(entry),
-                this.getPageBg(entryId)
-            ];
-            entries.splice(idx, 1);
-            this.saveEntries();
+            /* [v4.104.0 · R13-O8] 先落回收站、再真删。meta 里带「原位置 + 两个配图键」：
+             *   位置决定恢复后条目排回哪一行；配图键（bg_/lh_）在下面 _hardDeleteEntry 里会被
+             *   一并清掉，不存进回收站的话「恢复了日记但页面背景没了」—— 那种半恢复比不恢复更难懂。 */
             const settings = this.getSettings();
-            delete settings[`bg_${entryId}`];
-            delete settings[`lh_${entryId}`];
-            this.saveSettings();
-            this._cleanupManagedDiaryImages(managedImages);
-            return true;
+            return recycleBin.softDelete(this.storage, {
+                app: 'diary',
+                kind: 'entry',
+                id: String(entry?.id || entryId),
+                label: String(entry?.date || entry?.content || '').replace(/\s+/g, ' ').slice(0, 40),
+                payload: entry,
+                meta: {
+                    index: idx,
+                    extras: {
+                        [`bg_${entry?.id || entryId}`]: settings[`bg_${entry?.id || entryId}`] ?? null,
+                        [`lh_${entry?.id || entryId}`]: settings[`lh_${entry?.id || entryId}`] ?? null
+                    }
+                },
+                hard: () => this._hardDeleteEntry(entryId)
+            }).ok === true;
         }
         return false;
+    }
+
+    /** 真正的删除（原 deleteEntry 的体内逻辑，[v4.104.0] 抽出供软删回调调用） */
+    _hardDeleteEntry(entryId) {
+        const entries = this.getEntries();
+        const idx = entries.findIndex(e => e.id === entryId);
+        if (idx === -1) return false;
+        const entry = entries[idx];
+        const managedImages = [
+            ...this._collectManagedDiaryImagesFromEntry(entry),
+            this.getPageBg(entryId)
+        ];
+        entries.splice(idx, 1);
+        this.saveEntries();
+        const settings = this.getSettings();
+        delete settings[`bg_${entryId}`];
+        delete settings[`lh_${entryId}`];
+        this.saveSettings();
+        this._cleanupManagedDiaryImages(managedImages);
+        return true;
     }
 
     deleteEntries(entryIds = []) {
@@ -384,6 +453,29 @@ export class DiaryData {
 
         const entries = this.getEntries();
         const deletedEntries = entries.filter(entry => ids.has(String(entry?.id || '')));
+        /* [v4.104.0 · R13-O8] 批量删除逐条进回收站（不是整批一条）。理由：批量删的
+         *   本质仍是「删了 N 条」，用户可能只想恢复其中一条 —— 整批记成一条记录，
+         *   恢复就等于把不想要的那几条也一起放回来了。hard 在这里是空操作：
+         *   真正的批量摘除紧接在下面做一次（一次 saveEntries，不是 N 次）。 */
+        const settingsForBin = this.getSettings();
+        recycleBin.softDeleteMany(this.storage, deletedEntries.map(entry => {
+            const entryId = String(entry?.id || '');
+            return {
+                app: 'diary',
+                kind: 'entry',
+                id: entryId,
+                label: String(entry?.date || entry?.content || '').replace(/\s+/g, ' ').slice(0, 40),
+                payload: entry,
+                meta: {
+                    index: entries.indexOf(entry),
+                    extras: {
+                        [`bg_${entryId}`]: settingsForBin[`bg_${entryId}`] ?? null,
+                        [`lh_${entryId}`]: settingsForBin[`lh_${entryId}`] ?? null
+                    }
+                },
+                hard: () => {}
+            };
+        }).filter(x => x.id));
         const managedImages = deletedEntries.flatMap(entry => [
             ...this._collectManagedDiaryImagesFromEntry(entry),
             this.getPageBg(entry?.id)
@@ -407,6 +499,32 @@ export class DiaryData {
     clearAllEntries() {
         const entries = this.getEntries();
         const settings = this.getSettings();
+        /* [v4.104.0 · R13-O8] 一键清空同样进回收站。不接的话本项会自相矛盾：
+         *   逐条删能捞回来、点「清空全部」却全没了 —— 而清空恰恰是**最容易误触**的那个动作
+         *   （一次点击 = 几十条）。
+         *   ★ 诚实边界：回收站上限 200 条（先进先出，保新弃旧），所以清空 500 条时只有
+         *     最后 200 条能回来。这不是实现偷懒，而是「有界账本」的另一面 ——
+         *     上限存在的理由是防回收站本身把存档撑爆；这里如实写出来，不让它变成静默行为。 */
+        if (entries.length > 0) {
+            recycleBin.softDeleteMany(this.storage, entries.map(entry => {
+                const entryId = String(entry?.id || '');
+                return {
+                    app: 'diary',
+                    kind: 'entry',
+                    id: entryId,
+                    label: String(entry?.date || entry?.content || '').replace(/\s+/g, ' ').slice(0, 40),
+                    payload: entry,
+                    meta: {
+                        index: entries.indexOf(entry),
+                        extras: {
+                            [`bg_${entryId}`]: settings[`bg_${entryId}`] ?? null,
+                            [`lh_${entryId}`]: settings[`lh_${entryId}`] ?? null
+                        }
+                    },
+                    hard: () => {}
+                };
+            }).filter(x => x.id));
+        }
         const managedImages = [
             ...entries.flatMap(entry => this._collectManagedDiaryImagesFromEntry(entry)),
             ...Object.entries(settings)

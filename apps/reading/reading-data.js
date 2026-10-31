@@ -313,12 +313,17 @@ export function normalizeExcerptList(list, limit = 200) {
     return out.slice(0, limit);
 }
 // ---- 书架存取 ----
+/* [v4.104.0 · R13-O8] 下架先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class ReadingData {
     constructor(storage) {
         this.storage = storage;
         this.KEY = 'ruby_reading_shelf';
         this.shelf = [];
         this._load();
+        /* [v4.104.0 · R13-O8] 向回收站登记书架写回口 */
+        recycleBin.registerRestorer('reading_book', (payload, meta) => this._restoreBookFromBin(payload, meta));
     }
     _load() {
         try {
@@ -409,9 +414,39 @@ export class ReadingData {
         this._save();
         return { ok: true, id, replaced: at >= 0, count: this.shelf.length };
     }
+    /* [v4.104.0 · R13-O8] 下架一本书 → 先落回收站。
+     *   书**没有正文在书架里**（章节惰性加载，重启后本就要重新导入），故回收站存的是
+     *   书架条目本身（进度 / 标记 / contentHash 都在）—— 恢复后**阅读进度与标记不丢**。
+     *   这个取舍要说清楚：恢复回来的不是「能直接翻开的书」，而是「还认得这本书的那一条」。 */
     removeBook(id) {
+        const target = this.shelf.find(b => b.id === id) || null;
+        if (target) {
+            const at = this.shelf.findIndex(b => b.id === id);
+            recycleBin.softDelete(this.storage, {
+                app: 'reading_book',
+                kind: 'book',
+                id: String(target.id),
+                label: String(target.title || target.fileName || '').slice(0, 40),
+                payload: target,
+                meta: { index: at },
+                hard: () => {}
+            });
+        }
         this.shelf = this.shelf.filter(b => b.id !== id);
         this._save();
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：书放回书架（按 meta.index 回原位，没有就追加） */
+    _restoreBookFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        if (this.shelf.some(b => String(b?.id || '') === id)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= this.shelf.length) this.shelf.splice(at, 0, payload);
+        else this.shelf.push(payload);
+        this._save();
+        return true;
     }
     getBook(id) {
         return this.shelf.find(b => b.id === id) || null;

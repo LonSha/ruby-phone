@@ -4,6 +4,11 @@
  * ======================================================== */
 
 import { LifeEventStore } from '../../config/life-events.js';
+/* [v4.104.0 · R13-O8] 删除先落回收站（唯一软删实现在 config/recycle-bin.js）。
+ *   日程备忘带跨 App 引用：生活线按 `calendar:<id>:<type>` 挂着它 —— 恢复时 id
+ *   必须逐字原样回来，否则时间线上那一条会变成永远对不上的孤儿（而且不报错）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class CalendarData {
     constructor(storage) {
         this.storage = storage;
@@ -17,6 +22,42 @@ export class CalendarData {
         this.autoScheduleEnabledKey = 'calendar_auto_schedule_enabled';
         this._memos = null;
         this._holidays = null;
+        /* [v4.104.0 · R13-O8] 回收站恢复器：放回原位 + **重建生活线事件**。
+         *   后者不能省：删除时 forgetDomainLifeEvent 已把派生事件撤掉，
+         *   只放回备忘不重建事件 = 恢复了半条（日程在、时间线上没有）。 */
+        recycleBin.registerRestorer('calendar_memo', (payload, meta) => this._restoreMemoFromBin(payload, meta));
+        recycleBin.registerRestorer('calendar_holiday', (payload) => this._restoreHolidayFromBin(payload));
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：备忘 */
+    _restoreMemoFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        const memos = this.getMemos();
+        if (!memos.some(m => String(m?.id || '') === id)) {
+            const at = Number(meta && meta.index);
+            if (Number.isFinite(at) && at >= 0 && at <= memos.length) memos.splice(at, 0, payload);
+            else memos.push(payload);
+            this.saveMemos();
+        }
+        /* 派生面重建：与新建走同一个出口（refreshDomainLifeEvent 自带幂等 upsert），
+         *   刻意不手写一份 add —— 同一件事只许一个实现。 */
+        try { this.refreshDomainLifeEvent(payload); } catch (_e) { /* 派生失败不该判整条恢复失败 */ }
+        return true;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：节假日 */
+    _restoreHolidayFromBin(payload) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        const holidays = this.getHolidays();
+        if (!holidays.some(h => String(h?.id || '') === id)) {
+            holidays.push(payload);
+            this.saveHolidays();
+        }
+        return true;
     }
 
     getMemos() {
@@ -152,6 +193,17 @@ export class CalendarData {
         const idx = memos.findIndex(memo => String(memo?.id || '') === safeId);
         if (idx < 0) return false;
         const removed = memos[idx];
+        /* [v4.104.0 · R13-O8] 先落回收站、再真删。payload 是备忘对象本身（**不含**下面
+         *   才设的 typeBeforeChange —— 恢复后它就是用户当初删的那个样子）。 */
+        const bin = recycleBin.softDelete(this.storage, {
+            app: 'calendar_memo',
+            kind: 'memo',
+            id: safeId,
+            label: String(removed?.title || removed?.dateKey || '').slice(0, 40),
+            payload: removed,
+            meta: { index: idx },
+            hard: () => {}
+        });
         memos.splice(idx, 1);
         this.saveMemos();
         this.forgetDomainLifeEvent(removed);   // [v2.77.0] 源头没了，时间线不得留幽灵
@@ -159,6 +211,8 @@ export class CalendarData {
         //   forgetDomainLifeEvent 认不出它 —— 删掉投影备忘同样要把约定条目收走。
         const owner = String(removed?.commitmentSourceId || '').trim();
         if (owner) this.forgetCommitmentLifeEvent(owner);
+        /* bin.soft=false 只代表「这次没留」（开关关着 / 存不下 / 写盘失败），
+         *   不影响删除本身成功 —— 与 recycle-bin 的口径一致。 */
         return true;
     }
 
@@ -419,6 +473,18 @@ export class CalendarData {
         const holidays = this.getHolidays();
         const idx = holidays.findIndex(item => String(item?.id || '') === safeId);
         if (idx < 0) return false;
+        const removed = holidays[idx];
+        /* [v4.104.0 · R13-O8] 节假日同样进回收站：自定义节假日是用户手填的，
+         *   删掉一次就得重新数日子 —— 这是「最贵操作是删除」的又一个例子。 */
+        recycleBin.softDelete(this.storage, {
+            app: 'calendar_holiday',
+            kind: 'holiday',
+            id: safeId,
+            label: String(removed?.name || removed?.dateKey || '').slice(0, 40),
+            payload: removed,
+            meta: { index: idx },
+            hard: () => {}
+        });
         holidays.splice(idx, 1);
         this.saveHolidays();
         return true;

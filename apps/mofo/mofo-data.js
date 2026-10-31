@@ -11,6 +11,9 @@
 // 魔坊APP数据层
 // ========================================
 
+/* [v4.104.0 · R13-O8] 删除先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class MofoData {
     constructor(storage) {
         this.storage = storage;
@@ -21,6 +24,8 @@ export class MofoData {
         this.SESSION_STATE_KEY = 'chat_mofo_runtime_states';
         this.DELETED_IDS_KEY = 'mofo_deleted_item_ids';
         this.MAX_DELETED_IDS = 2000;
+        /* [v4.104.0 · R13-O8] 向回收站登记条目写回口 */
+        recycleBin.registerRestorer('mofo_item', (payload, meta) => this._restoreItemFromBin(payload, meta));
     }
 
     getBootstrapState() {
@@ -642,6 +647,24 @@ export class MofoData {
         this.storage.set(this.DELETED_IDS_KEY, normalized.slice(-this.MAX_DELETED_IDS));
     }
 
+    /** [v4.104.0 · R13-O8] 回收站写回口：条目放回 + 撤墓碑 */
+    _restoreItemFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        const list = this._ensureCache();
+        if (!list.some(item => String(item.id) === id)) {
+            const at = Number(meta && meta.index);
+            if (Number.isFinite(at) && at >= 0 && at <= list.length) list.splice(at, 0, payload);
+            else list.push(payload);
+            this._commit();
+        }
+        /* 墓碑必须撤：删除时打了它，恢复不撤就等于「条目在、但系统还认为它被删过」——
+         *   那种状态不会报错，只会在下一次合并/同步时把它当已删跳过。 */
+        this._unmarkDeletedItemId(id);
+        return true;
+    }
+
     _markDeletedItemId(itemId) {
         const id = String(itemId || '').trim();
         if (!id) return false;
@@ -1092,6 +1115,19 @@ export class MofoData {
         const list = this._ensureCache();
         const idx = list.findIndex(item => String(item.id) === String(id));
         if (idx < 0) return false;
+        const removed = list[idx];
+        /* [v4.104.0 · R13-O8] 先落回收站（payload 是条目定义本身）。恢复时还要把
+         *   `_markDeletedItemId` 打的那个墓碑标记撤掉 —— 见 _restoreItemFromBin：
+         *   墓碑不清的话，条目回来了但下一次合并又把用户删过的那条当已删。 */
+        recycleBin.softDelete(this.storage, {
+            app: 'mofo_item',
+            kind: 'item',
+            id: String(removed.id),
+            label: String(removed?.name || removed?.title || '').slice(0, 40),
+            payload: removed,
+            meta: { index: idx },
+            hard: () => {}
+        });
         list.splice(idx, 1);
         this._commit();
         this._removeSessionRuntime(id);

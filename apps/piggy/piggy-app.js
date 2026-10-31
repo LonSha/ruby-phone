@@ -27,6 +27,12 @@ import { PiggyView } from './piggy-view.js';
 const SETTINGS_KEY = 'piggy_settings';
 const STATE_KEY = 'piggy_state';
 
+/* [v4.104.0 · R13-O8] 删流水/销卡先落回收站（唯一软删实现在 config/recycle-bin.js）。
+ *   流水删除会**反向调回余额**（见 removeTransactions 的注释）：恢复时余额必须跟着反向，
+ *   否则「流水分回来了、罐里的钱没回来」—— 这是本项里最容易做半截的一处，故恢复走
+ *   同一个状态归一化出口，不手写一份余额加减。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class PiggyApp {
     constructor(phoneShell, storage) {
         this.shell = phoneShell;
@@ -37,6 +43,11 @@ export class PiggyApp {
         this._proj = null;
         /* 运行态（不落盘）：本次渲染内是否做过额度刷新，供视图提示用 */
         this._lastRefreshedCards = 0;
+        /* [v4.104.0 · R13-O8] 向回收站登记两个写回口（流水 / 亲属卡）。**登记必须在构造期**：
+         *   回收站是模块级注册表，App 打开过一次才登记得上；没登记的 App 恢复时会明确报
+         *   restorer-missing（可读原因），而不是静默失败。 */
+        recycleBin.registerRestorer('piggy_tx', (payload, meta) => this._restoreTxFromBin(payload, meta));
+        recycleBin.registerRestorer('piggy_card', (payload, meta) => this._restoreCardFromBin(payload, meta));
         this._view = null;
         this._hookBound = false;
         this._loadSettings();
@@ -138,6 +149,21 @@ export class PiggyApp {
     /** 删一笔（反向调回余额由数据层负责）。返回实际删掉的条数。 */
     removeTransaction(id) {
         if (!this.state) return 0;
+        const sid = String(id);
+        const tx = Array.isArray(this.state.transactions)
+            ? (this.state.transactions.find((t) => String(t?.id || '') === sid) || null)
+            : null;
+        if (tx) {
+            recycleBin.softDelete(this.storage, {
+                app: 'piggy_tx',
+                kind: 'transaction',
+                id: sid,
+                label: String(tx?.title || tx?.note || tx?.category || '').slice(0, 40),
+                payload: tx,
+                meta: { index: this.state.transactions.indexOf(tx) },
+                hard: () => {}
+            });
+        }
         const r = removeTransactions(this.state, [String(id)]);
         if (r.removed > 0) {
             this.state = r.state;
@@ -145,6 +171,25 @@ export class PiggyApp {
             this.probe();
         }
         return r.removed;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：流水放回并**反向调回余额** */
+    _restoreTxFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const sid = String(payload?.id || '').trim();
+        if (!sid) return false;
+        const base = this.state || normalizePiggyState(null);
+        const txs = Array.isArray(base.transactions) ? base.transactions.slice() : [];
+        if (txs.some((t) => String(t?.id || '') === sid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= txs.length) txs.splice(at, 0, payload);
+        else txs.push(payload);
+        /* 走归一化出口而不是手写余额加减：归一化会按流水重算余额，
+         *   这正是删除侧反向调余额的同一套口径（同一件事只许一个实现）。 */
+        this.state = normalizePiggyState({ ...base, transactions: txs });
+        this._write(this.state);
+        this.probe();
+        return true;
     }
 
     /* ---------- 亲属卡 ---------- */
@@ -172,6 +217,18 @@ export class PiggyApp {
     removeCard(id) {
         if (!this.state) return 0;
         const sid = String(id);
+        const targetCard = this.state.cards.find((c) => c.id === sid) || null;
+        if (targetCard) {
+            recycleBin.softDelete(this.storage, {
+                app: 'piggy_card',
+                kind: 'card',
+                id: sid,
+                label: String(targetCard?.bankName || targetCard?.cardHolder || '').slice(0, 40),
+                payload: targetCard,
+                meta: { index: this.state.cards.indexOf(targetCard) },
+                hard: () => {}
+            });
+        }
         const kept = this.state.cards.filter((c) => c.id !== sid);
         const removed = this.state.cards.length - kept.length;
         if (removed > 0) {
@@ -180,6 +237,23 @@ export class PiggyApp {
             this.probe();
         }
         return removed;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：亲属卡放回原位 */
+    _restoreCardFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const sid = String(payload?.id || '').trim();
+        if (!sid) return false;
+        const base = this.state || normalizePiggyState(null);
+        const cards = Array.isArray(base.cards) ? base.cards.slice() : [];
+        if (cards.some((c) => String(c?.id || '') === sid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= cards.length) cards.splice(at, 0, payload);
+        else cards.push(payload);
+        this.state = { ...base, cards };
+        this._write(this.state);
+        this.probe();
+        return true;
     }
 
     /* ---------- 注入 ---------- */

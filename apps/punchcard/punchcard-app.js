@@ -24,6 +24,9 @@ import { PunchcardView } from './punchcard-view.js';
 const SETTINGS_KEY = 'punchcard_settings';
 const CARDS_KEY = 'punchcard_cards';
 
+/* [v4.104.0 · R13-O8] 删卡/删项先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class PunchcardApp {
     constructor(phoneShell, storage) {
         this.shell = phoneShell;
@@ -31,6 +34,9 @@ export class PunchcardApp {
         this.settings = { ...defaultPunchSettings() };
         this.cards = [];
         this.face = PUNCH_REASONS.storage_absent;
+        /* [v4.104.0 · R13-O8] 向回收站登记两个写回口（卡 / 项，形状不同不能合并） */
+        recycleBin.registerRestorer('punchcard_card', (payload, meta) => this._restoreCardFromBin(payload, meta));
+        recycleBin.registerRestorer('punchcard_item', (payload, meta) => this._restoreItemFromBin(payload, meta));
         this._proj = null;
         this._view = null;
         this._hookBound = false;
@@ -118,6 +124,19 @@ export class PunchcardApp {
 
     /** 删一张卡。返回实际删掉的张数。 */
     deleteCard(cardId) {
+        const sid = String(cardId == null ? '' : cardId);
+        const target = this.cards.find((c) => String(c?.id || '') === sid) || null;
+        if (target) {
+            recycleBin.softDelete(this.storage, {
+                app: 'punchcard_card',
+                kind: 'card',
+                id: String(target.id),
+                label: String(target?.title || target?.name || '').slice(0, 40),
+                payload: target,
+                meta: { index: this.cards.indexOf(target) },
+                hard: () => {}
+            });
+        }
         const r = removeCard(this.cards, cardId);
         if (r.removed > 0) {
             this.cards = r.cards;
@@ -127,8 +146,42 @@ export class PunchcardApp {
         return r.removed;
     }
 
+    /** [v4.104.0 · R13-O8] 回收站写回口：整张打卡卡放回原位 */
+    _restoreCardFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const id = String(payload?.id || '').trim();
+        if (!id) return false;
+        if (!Array.isArray(this.cards)) this.cards = [];
+        if (this.cards.some((c) => String(c?.id || '') === id)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= this.cards.length) this.cards.splice(at, 0, payload);
+        else this.cards.push(payload);
+        this._write(this.cards);
+        this.probe();
+        return true;
+    }
+
     /** 删一项。返回实际删掉的条数。 */
     deleteItem(cardId, itemId) {
+        const cid = String(cardId == null ? '' : cardId);
+        const iid = String(itemId == null ? '' : itemId);
+        const card = this.cards.find((c) => String(c?.id || '') === cid) || null;
+        const target = card && Array.isArray(card.items)
+            ? (card.items.find((it) => String(it?.id || '') === iid) || null)
+            : null;
+        if (target) {
+            /* [v4.104.0 · R13-O8] 项进回收站时 meta 必须带 cardId：项 id 只在卡内唯一，
+             *   跨卡可能撞车，只凭 itemId 恢复会放错卡（不报错、只错位置）。 */
+            recycleBin.softDelete(this.storage, {
+                app: 'punchcard_item',
+                kind: 'item',
+                id: iid,
+                label: String(target?.title || target?.name || '').slice(0, 40),
+                payload: target,
+                meta: { cardId: cid, index: card.items.indexOf(target) },
+                hard: () => {}
+            });
+        }
         const r = removeItem(this.cards, cardId, itemId);
         if (r.removed > 0) {
             this.cards = r.cards;
@@ -136,6 +189,24 @@ export class PunchcardApp {
             this.probe();
         }
         return r.removed;
+    }
+
+    /** [v4.104.0 · R13-O8] 回收站写回口：项回原卡原位置 */
+    _restoreItemFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const iid = String(payload?.id || '').trim();
+        const cid = String((meta && meta.cardId) || '').trim();
+        if (!iid || !cid) return false;
+        const card = this.cards.find((c) => String(c?.id || '') === cid) || null;
+        if (!card) return false;
+        if (!Array.isArray(card.items)) card.items = [];
+        if (card.items.some((it) => String(it?.id || '') === iid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= card.items.length) card.items.splice(at, 0, payload);
+        else card.items.push(payload);
+        this._write(this.cards);
+        this.probe();
+        return true;
     }
 
     /* ---------- 注入 ---------- */

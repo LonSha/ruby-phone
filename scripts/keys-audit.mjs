@@ -222,6 +222,15 @@ const KEY_REGISTRY = [
   { key: 'weibo_hot_searches', scope: 'chat', note: '微博热搜' },
   { key: 'weibo_floor_settings', scope: 'chat', note: '微博楼层设置' },
   { key: 'weibo_auto_last_floor', scope: 'chat', note: '微博自动发帖游标' },
+  /* [v4.104.0 · R13-O8] 回收站两键。刻意分两种 scope：
+   *   recycle_bin_v1（记录）随会话 —— 删掉的是这段会话里的东西，
+   *     落全局会让另一个角色看到「别人删过什么」；
+   *   recycle_bin_enabled（开关）走全局 —— 它是用户对这台手机的偏好，
+   *     不是某段剧情的状态。两者共用一个前缀就会被一起隔离，故记录格
+   *     在 CHAT_DATA_PATTERNS 里是**精确匹配** `/^recycle_bin_v1$/`。
+   */
+  { key: 'recycle_bin_v1', scope: 'chat', note: '回收站记录（软删快照 + 删除时间）' },
+  { key: 'recycle_bin_enabled', scope: 'global', note: '回收站开关（关掉即退回硬删）' },
   { key: 'diary_entries', scope: 'chat', note: '日记条目（home-screen 只读消费）' },
   { key: 'diary_settings', scope: 'chat', note: '日记设置' },
   { key: 'diary_auto_settings', scope: 'chat', note: '日记自动织信设置' },
@@ -711,6 +720,10 @@ const KEY_REGISTRY = [
   { key: 'phone-settings-general-personalization-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
   { key: 'phone-settings-general-text-color-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
   { key: 'phone-settings-general-time-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
+  /* [v4.104.0 · R13-O8] 回收站分区的展开态。**必须是 global**：它是「本机 UI 状态」，
+   *   不是某个角色的数据 —— 切到另一个角色后回收站仍然要展开/收起一致，否则用户会觉得
+   *   「换个角色回收站就自己折上了」。同族既有键（general-*）全部 global，这里对齐。 */
+  { key: 'phone-settings-recycle-bin-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
   { key: 'phone-settings-memory-permission-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
   { key: 'phone-settings-memory-tag-filter-open', scope: 'global', note: '设置页分组展开态（本机 UI 状态）' },
   { key: 'phone-shell-scale', scope: 'global', note: '外壳缩放百分比（旧键；与 sys_shell_scale 双写，控制中心与设置页读）' },

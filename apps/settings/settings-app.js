@@ -37,6 +37,12 @@ import { AlbumData } from '../album/album-data.js';
 import { AlbumImagePicker } from '../album/album-image-picker.js';
 import { DEFAULT_APP_ICONS, PHONE_CONFIG } from '../../config/apps.js';
 import * as PhoneTagFilter from '../../config/tag-filter.js';
+/* [v4.104.0 · R13-O8] 回收站（唯一软删实现的产品面）。
+ *   为什么放在设置页：本仓此前「回收站」三字只存在于相册/日历/日记各自的本地实现里，
+ *   语义互不相同（有的只藏图不藏条目、有的只是软隐藏标记），用户学到的「删了能回来」
+ *   每次都长得不一样。这一格是本项唯一的用户可见入口 —— 各 App 的删除按钮只负责
+ *   「移入回收站」，能不能捞回来由这里统一说清（含捞不回来的原因）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
 import { SYS_KEYS } from '../../config/system-controls.js';
 import {
@@ -2808,6 +2814,7 @@ export class SettingsApp {
                                     清空所有角色数据
                                 </button>
                             </div>
+                            ${this.renderRecycleBinSection()}
                             </div>
                         </details>
 
@@ -4908,6 +4915,239 @@ export class SettingsApp {
                 <input class="app-name-custom-input" data-app-id="${this._escapeHtml(app.id)}" maxlength="8" value="${this._escapeHtml(String(customNames[app.id] || ''))}" placeholder="${this._escapeHtml(app.name)}">
             </label>
         `).join('');
+    }
+
+    /* ==========================================================
+     * 🗑️ 回收站（[v4.104.0 · R13-O8]）
+     * 本格回答的唯一问题：**我刚才删掉的东西还能不能拿回来，怎么拿回来。**
+     * 口径纪律：
+     *   1) 只显示、不接管 —— 落盘与恢复语义全在 config/recycle-bin.js，这里不做第二套；
+     *   2) 捞不回来时**说出原因**（App 没打开 / 快照缺失 / id 漂移），
+     *      不把失败画成一个什么都不发生的按钮；
+     *   3) 列表不载 payload（listBin 已给瘦身版），200 条也不会在渲染时复制正文。
+     * ========================================================== */
+
+    /** 回收站里的 app 标识 → 用户看得懂的名字。未知标识原样显示（不猜）。 */
+    _recycleBinAppLabel(app) {
+        const MAP = {
+            diary: '日记',
+            calendar_memo: '日历 · 备忘',
+            calendar_holiday: '日历 · 假期',
+            music_song: '音乐',
+            reading_book: '阅读',
+            weibo_post: '微博',
+            phone_call: '通话记录',
+            phone_contact: '联系人',
+            phone_sms: '短信',
+            phone_sms_chat: '短信会话',
+            wechat_moment: '微信 · 朋友圈',
+            wechat_message: '微信 · 消息',
+            wechat_chat: '微信 · 会话',
+            mofo_item: '魔法工坊',
+            focus_task: '专注',
+            punchcard_card: '打卡 · 卡片',
+            punchcard_item: '打卡 · 项目',
+            piggy_tx: '存钱罐 · 流水',
+            piggy_card: '存钱罐 · 亲属卡'
+        };
+        const key = String(app || '');
+        return MAP[key] || key || '未知来源';
+    }
+
+    /** 删除时间显示：今天只给时分，跨天给月-日 时:分（省宽度，也不失判据）。 */
+    _recycleBinTimeText(ts) {
+        const n = Number(ts);
+        if (!Number.isFinite(n) || n <= 0) return '时间未知';
+        const d = new Date(n);
+        const pad = (v) => String(v).padStart(2, '0');
+        const now = new Date();
+        const sameDay = d.getFullYear() === now.getFullYear()
+            && d.getMonth() === now.getMonth()
+            && d.getDate() === now.getDate();
+        const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return sameDay ? `今天 ${hm}` : `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hm}`;
+    }
+
+    renderRecycleBinSection() {
+        const isOpen = this.storage.get('phone-settings-recycle-bin-open') === true;
+        let stats = { total: 0, restorable: 0, noPayload: 0, byApp: {}, totalChars: 0, limit: 200, enabled: true };
+        let rows = [];
+        try {
+            stats = recycleBin.binStats(this.storage);
+            rows = recycleBin.listBin(this.storage);
+        } catch (e) {
+            console.warn('[Settings] 回收站读数失败:', e);
+        }
+        const enabled = stats.enabled !== false;
+        const approxKb = stats.totalChars > 0 ? Math.max(1, Math.round(stats.totalChars / 1024)) : 0;
+
+        /* 按 app 分组：分组顺序 = 最近删除时间倒序（listBin 已排好），
+         *   组内保持同一顺序 —— 用户找的是「刚删的那条」，不是「字母序」。 */
+        const groupOrder = [];
+        const grouped = new Map();
+        for (const row of rows) {
+            const app = String(row?.app || 'unknown');
+            if (!grouped.has(app)) { grouped.set(app, []); groupOrder.push(app); }
+            grouped.get(app).push(row);
+        }
+
+        const rowHtml = (row) => {
+            const binId = this._escapeHtml(String(row?.binId || ''));
+            const label = String(row?.label || '').trim();
+            const kind = String(row?.kind || '');
+            const title = label || (kind === 'entry' ? '（无标题条目）' : `（无标题 · ${kind || 'item'}）`);
+            const canRestore = row?.hasPayload === true;
+            return `
+                <div class="recycle-bin-row" style="display:flex; align-items:center; gap:8px; padding:7px 0; border-top:1px solid #f2f2f2;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:12px; color:#333; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this._escapeHtml(title)}</div>
+                        <div style="font-size:10px; color:#999; margin-top:2px;">${this._escapeHtml(this._recycleBinTimeText(row?.deletedAt))}${canRestore ? '' : ' · 无快照（无法恢复）'}</div>
+                    </div>
+                    ${canRestore ? `<button type="button" class="recycle-bin-act" data-bin-act="restore" data-bin-id="${binId}" style="flex:none; padding:4px 8px; font-size:11px; border:1px solid #cfe3d8; background:#fff; color:#0b8f52; border-radius:6px; cursor:pointer;">恢复</button>` : ''}
+                    <button type="button" class="recycle-bin-act" data-bin-act="purge" data-bin-id="${binId}" style="flex:none; padding:4px 8px; font-size:11px; border:1px solid #f1c7c3; background:#fff; color:#d93025; border-radius:6px; cursor:pointer;">彻底删除</button>
+                </div>
+            `;
+        };
+
+        const listHtml = groupOrder.length === 0
+            ? '<div style="font-size:11px; color:#999; padding:8px 0;">回收站是空的。删掉的内容会先出现在这里，能逐条拿回来。</div>'
+            : groupOrder.map((app) => `
+                <div class="recycle-bin-group" style="margin-top:8px;">
+                    <div style="font-size:11px; font-weight:700; color:#666; display:flex; justify-content:space-between;">
+                        <span>${this._escapeHtml(this._recycleBinAppLabel(app))}</span>
+                        <span style="font-weight:400; color:#bbb;">${grouped.get(app).length} 条</span>
+                    </div>
+                    ${grouped.get(app).map(rowHtml).join('')}
+                </div>
+            `).join('');
+
+        return `
+            <details data-settings-fold-key="phone-settings-recycle-bin-open" ${isOpen ? 'open' : ''} style="margin: 8px 0 0; border: 1px solid #ececec; border-radius: 10px; background: #fff; overflow: hidden;">
+                <summary style="height: 38px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: #333; background: #fafafa;">
+                    <span>🗑️ 回收站${stats.total > 0 ? `（${stats.total}）` : ''}</span>
+                    ${SETTINGS_FOLD_ARROW_HTML}
+                </summary>
+                <div style="padding: 10px 10px 12px;">
+                    <div class="setting-item setting-toggle" style="margin: 0;">
+                        <div>
+                            <div class="setting-label">删除先进回收站</div>
+                            <div class="setting-desc">开启后删除的内容会先留在这里，可以逐条拿回来。关闭则删除立即生效、无法恢复。</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="recycle-bin-enabled" ${enabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="font-size:11px; color:#888; line-height:1.5; margin-top:6px;">
+                        共 ${stats.total} 条 · 可恢复 ${stats.restorable} 条${stats.total ? ` · 约 ${approxKb} KB` : ''}${stats.total >= stats.limit ? ` · 已达上限 ${stats.limit} 条（更早的会自动清出）` : ''}
+                        ${stats.noPayload > 0 ? `<br>其中 ${stats.noPayload} 条没有快照，只能彻底删除。` : ''}
+                        <br>恢复需要对应 App 至少打开过一次；回收站占本地空间，不跨设备同步，也不参与备份。
+                    </div>
+
+                    <div id="recycle-bin-list" style="margin-top:4px;">${listHtml}</div>
+
+                    <div style="display:grid; grid-template-columns:1fr; gap:6px; margin-top:12px;">
+                        <button type="button" id="recycle-bin-clear" class="setting-btn" style="padding:6px 10px; font-size:11px; background: rgba(255,255,255,0.9); border:1px solid #f1c7c3; border-radius:6px; color:#d93025; cursor:pointer;">
+                            清空回收站
+                        </button>
+                    </div>
+                </div>
+            </details>
+        `;
+    }
+
+    /** 回收站事件（[v4.104.0 · R13-O8]）。行是动态渲染的，故用委托而不是逐行绑。 */
+    bindRecycleBinEvents(settingsRoot = this._getActiveSettingsRoot()) {
+        const scopedDoc = this._createSettingsScopedDocument(settingsRoot);
+        const $ = (sel) => settingsRoot?.querySelector?.(sel) || scopedDoc.querySelector(sel);
+
+        settingsRoot?.querySelectorAll?.('#recycle-bin-enabled').forEach((el) => {
+            el.addEventListener('change', () => {
+                const next = el.checked === true;
+                recycleBin.setRecycleBinEnabled(this.storage, next);
+                this.phoneShell?.showNotification?.(
+                    next ? '已开启' : '已关闭',
+                    next ? '删除会先进回收站，可逐条恢复' : '删除立即生效，不再留痕',
+                    next ? '✅' : '⚠️'
+                );
+                this.render();
+            });
+        });
+
+        const list = $('#recycle-bin-list');
+        list?.addEventListener('click', async (event) => {
+            const btn = event.target?.closest?.('.recycle-bin-act');
+            if (!btn) return;
+            const binId = String(btn.dataset?.binId || '');
+            const act = String(btn.dataset?.binAct || '');
+            if (!binId) return;
+
+            if (act === 'restore') {
+                const r = recycleBin.restoreById(this.storage, binId);
+                if (r.ok) {
+                    this.phoneShell?.showNotification?.('已恢复', '这一条已放回原来的位置', '✅');
+                } else {
+                    /* 失败必须说原因：`restorer-missing` 最容易被当成 bug —— 它其实是
+                     *   「那个 App 这次会话还没打开过」，打开后再点一次就能成。 */
+                    const hint = r.reason === 'restorer-missing'
+                        ? '请先打开对应的 App，再回来恢复（回收站里的记录还在）'
+                        : (r.text || '恢复失败');
+                    this.phoneShell?.showNotification?.('没能恢复', hint, '⚠️');
+                }
+                this.render();
+                return;
+            }
+
+            if (act === 'purge') {
+                const ok = await this._showPhoneConfirm({
+                    title: '彻底删除这条？',
+                    message: '删掉后就再也拿不回来了。',
+                    confirmText: '彻底删除',
+                    danger: true
+                });
+                if (!ok) return;
+                const r = recycleBin.purgeBinEntry(this.storage, binId);
+                this.phoneShell?.showNotification?.(
+                    r.ok ? '已删除' : '删除失败',
+                    r.ok ? '这一条已永久移除' : (r.text || '这一条已经不在了'),
+                    r.ok ? '🗑️' : '⚠️'
+                );
+                this.render();
+            }
+        });
+
+        $('#recycle-bin-clear')?.addEventListener('click', async () => {
+            /* 二次确认的两段必须都点到：先问「确定清空」，再问「再次确认」。
+             *   这是全仓唯一一个「一次点击删掉全部备份」的动作，而它删掉的
+             *   恰恰是用户本来想找回来的东西。 */
+            const prompt = recycleBin.clearBinPrompt(this.storage);
+            if (recycleBin.binStats(this.storage).total <= 0) {
+                this.phoneShell?.showNotification?.('回收站是空的', '没有东西可清', 'ℹ️');
+                return;
+            }
+            const first = await this._showPhoneConfirm({
+                title: '清空回收站？',
+                message: prompt,
+                confirmText: '继续',
+                danger: true
+            });
+            if (!first) return;
+            const second = await this._showPhoneConfirm({
+                title: '再次确认',
+                message: '清空后这些记录无法恢复，确定吗？',
+                confirmText: '清空',
+                danger: true
+            });
+            if (!second) return;
+            const r = recycleBin.clearBin(this.storage, 'clear-all');
+            this.phoneShell?.showNotification?.(
+                r.ok ? '已清空' : '未清空',
+                r.ok ? `已移除 ${r.cleared} 条记录` : (r.text || '清空被拒绝'),
+                r.ok ? '🗑️' : '⚠️'
+            );
+            this.render();
+        });
     }
 
     // 🔥 渲染快捷栏配置
@@ -10915,6 +11155,9 @@ export class SettingsApp {
                 }
             }
         });
+
+        // 🗑️ 回收站（[v4.104.0 · R13-O8]）
+        this.bindRecycleBinEvents(settingsRoot);
 
         // ⏰ 时间管理功能
         // 显示当前手机时间

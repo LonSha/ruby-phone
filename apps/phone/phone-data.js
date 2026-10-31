@@ -51,6 +51,9 @@ export function parseSmsMessagesFromText(text = '') {
     return messages;
 }
 
+/* [v4.104.0 · R13-O8] 删除先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
+import * as recycleBin from '../../config/recycle-bin.js';
+
 export class PhoneCallData {
     constructor(storage) {
         this.storage = storage;
@@ -58,6 +61,15 @@ export class PhoneCallData {
         this._contacts = null;
         this._smsConversations = null;
         this._smsProcessedBatches = null;
+        /* [v4.104.0 · R13-O8] 向回收站登记四个写回口（通话记录 / 联系人 / 短消息 / 短信会话）。
+         *   登记必须在构造期：回收站是模块级注册表，App 打开过一次才登记得上；
+         *   没登记的 App 恢复时会明确报 restorer-missing（可读原因），而不是静默失败。
+         *   ★ 四个口都按 id 去重后再插入：恢复器可能被连点两次，出现两份同 id 的条目
+         *     会让「联系人被通话/微信引用」这类跨表关系指向其中一份、另一份成幽灵。 */
+        recycleBin.registerRestorer('phone_call', (payload, meta) => this._restoreCallFromBin(payload, meta));
+        recycleBin.registerRestorer('phone_contact', (payload, meta) => this._restoreContactFromBin(payload, meta));
+        recycleBin.registerRestorer('phone_sms', (payload, meta) => this._restoreSmsMessageFromBin(payload, meta));
+        recycleBin.registerRestorer('phone_sms_chat', (payload, meta) => this._restoreSmsChatFromBin(payload, meta));
     }
 
     // 获取通话记录（lazy load）
@@ -86,11 +98,21 @@ export class PhoneCallData {
         this.saveCallHistory();
     }
 
-    // 删除通话记录
+    // 删除通话记录（[v4.104.0 · R13-O8] 先落回收站）
     deleteCallRecord(id) {
         const history = this.getCallHistory();
         const idx = history.findIndex(r => r.id === id);
         if (idx !== -1) {
+            const removed = history[idx];
+            recycleBin.softDelete(this.storage, {
+                app: 'phone_call',
+                kind: 'call',
+                id: String(removed?.id || id),
+                label: String(removed?.name || removed?.number || '').slice(0, 40),
+                payload: removed,
+                meta: { index: idx },
+                hard: () => {}
+            });
             history.splice(idx, 1);
             this.saveCallHistory();
             return true;
@@ -212,6 +234,18 @@ export class PhoneCallData {
         const contacts = this.getContacts();
         const idx = contacts.findIndex(item => String(item?.id || '').trim() === safeId);
         if (idx < 0) return false;
+        const removed = contacts[idx];
+        /* [v4.104.0 · R13-O8] 删联系人先落回收站：联系人 id 被短信/通话/微信多处引用，
+         *   恢复时 id 逐字回来才不会让那些引用断成孤儿。 */
+        recycleBin.softDelete(this.storage, {
+            app: 'phone_contact',
+            kind: 'contact',
+            id: safeId,
+            label: String(removed?.name || removed?.phone || '').slice(0, 40),
+            payload: removed,
+            meta: { index: idx },
+            hard: () => {}
+        });
         contacts.splice(idx, 1);
         this.saveContacts();
         return true;
@@ -427,6 +461,26 @@ export class PhoneCallData {
         );
         if (messageIndex < 0) return null;
 
+        /* [v4.104.0 · R13-O8] 先落回收站再删。meta 里必须带**会话名**（chatId）——
+         *   消息本身不知道自己属于哪个会话，只留 payload 的话恢复时无处可放。
+         *   若这一条是会话里的最后一条，删除会连带摘掉整个会话，故把会话的三格外壳
+         *   （id / name / createdAt）一起存进 meta：恢复时要能把这个壳重建出来。 */
+        const willRemoveConversation = conversation.messages.length === 1;
+        recycleBin.softDelete(this.storage, {
+            app: 'phone_sms',
+            kind: 'sms',
+            id: safeMessageId,
+            label: String(conversation.messages[messageIndex]?.text || '').replace(/\s+/g, ' ').slice(0, 40),
+            payload: conversation.messages[messageIndex],
+            meta: {
+                chatId: String(conversation?.name || ''),
+                index: messageIndex,
+                conversation: willRemoveConversation
+                    ? { id: conversation?.id || '', name: conversation?.name || '', createdAt: conversation?.createdAt || 0 }
+                    : null
+            },
+            hard: () => {}
+        });
         const [message] = conversation.messages.splice(messageIndex, 1);
         const conversationRemoved = conversation.messages.length === 0;
         if (conversationRemoved) {
@@ -449,9 +503,106 @@ export class PhoneCallData {
         );
         if (conversationIndex < 0) return null;
 
+        /* [v4.104.0 · R13-O8] 整个会话（含全部消息）进回收站：payload 就是会话对象本身，
+         *   恢复即把整段对话原样放回 ——「删掉一个联系人的短信」不该只能一条条捞回来。 */
+        const doomed = conversations[conversationIndex];
+        recycleBin.softDelete(this.storage, {
+            app: 'phone_sms_chat',
+            kind: 'sms-chat',
+            id: String(doomed?.id || normalizedName),
+            label: String(`与 ${doomed?.name || contactName} 的短信`).slice(0, 40),
+            payload: doomed,
+            meta: { index: conversationIndex },
+            hard: () => {}
+        });
         const [conversation] = conversations.splice(conversationIndex, 1);
         this.saveSmsConversations();
         return conversation || null;
+    }
+
+    /* ---------- [v4.104.0 · R13-O8] 回收站写回口（四个） ---------- */
+
+    /** 通话记录放回原位置。meta 为 null 时追加到末尾（位置丢了还能恢复内容）。 */
+    _restoreCallFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const history = this.getCallHistory();
+        const pid = String(payload?.id || '');
+        if (pid && history.some(r => String(r?.id || '') === pid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= history.length) history.splice(at, 0, payload);
+        else history.push(payload);
+        this.saveCallHistory();
+        return true;
+    }
+
+    /** 联系人放回原位置。联系人 id 被短信/通话/微信多处引用，id 逐字回来引用才不会断。 */
+    _restoreContactFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const contacts = this.getContacts();
+        const pid = String(payload?.id || '').trim();
+        if (pid && contacts.some(c => String(c?.id || '').trim() === pid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= contacts.length) contacts.splice(at, 0, payload);
+        else contacts.push(payload);
+        this.saveContacts();
+        return true;
+    }
+
+    /**
+     * 短消息放回原会话。**必须有 chatId**（会话名）：消息本身不知道自己属于哪个会话，
+     *   没有会话名就只能猜，猜错比恢复失败更糟（消息会跑到别人的对话里）。
+     *   会话已不存在时，用删除时记下的外壳重建一个空会话再放消息 —— 那正是
+     *   「删掉最后一条导致整段会话消失」的情形，重建才能让这条消息有家可回。
+     */
+    _restoreSmsMessageFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const chatName = String((meta && meta.chatId) || '').trim();
+        if (!chatName) return false;
+        const key = chatName.toLocaleLowerCase('zh-CN');
+        const conversations = this.getSmsConversations();
+        let conversation = conversations.find(c =>
+            String(c?.name || '').trim().toLocaleLowerCase('zh-CN') === key
+        ) || null;
+        if (!conversation) {
+            const seed = (meta && meta.conversation && typeof meta.conversation === 'object') ? meta.conversation : null;
+            if (!seed) return false;
+            const now = Date.now();
+            conversation = {
+                id: String(seed.id || `phone_sms_${now}`),
+                name: String(seed.name || chatName),
+                messages: [],
+                createdAt: Number(seed.createdAt) || now,
+                updatedAt: now
+            };
+            conversations.push(conversation);
+        }
+        if (!Array.isArray(conversation.messages)) conversation.messages = [];
+        const mid = String(payload?.id || '').trim();
+        if (mid && conversation.messages.some(m => String(m?.id || '').trim() === mid)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= conversation.messages.length) {
+            conversation.messages.splice(at, 0, payload);
+        } else {
+            conversation.messages.push(payload);
+        }
+        conversation.updatedAt = Number(payload?.createdAt || Date.now());
+        this.saveSmsConversations();
+        return true;
+    }
+
+    /** 整个短信会话放回原位置（会话内消息随 payload 一起回来，不用逐条放）。 */
+    _restoreSmsChatFromBin(payload, meta) {
+        if (!payload || typeof payload !== 'object') return false;
+        const key = String(payload?.name || '').trim().toLocaleLowerCase('zh-CN');
+        if (!key) return false;
+        const conversations = this.getSmsConversations();
+        /* 幂等：同名会话已在（用户可能先恢复单条、再恢复整会话）就算成功，不造第二份 */
+        if (conversations.some(c => String(c?.name || '').trim().toLocaleLowerCase('zh-CN') === key)) return true;
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= conversations.length) conversations.splice(at, 0, payload);
+        else conversations.push(payload);
+        this.saveSmsConversations();
+        return true;
     }
 
     // 清空缓存（切换聊天时调用）
