@@ -17,6 +17,35 @@
 | R6-O8 | 续玩再入场：从读简报升级为重新进入正在运转的故事 | R6-X8 | 师友共学与能力成长：学习产生作品和关系，而不是经验条 |
 | R6-O9 | 持续社媒生态：同一事件在不同圈层产生不同讨论与后续 | R6-X9 | 平行人生试玩场：在另一条路线中真正使用另一部手机 |
 
+### 第六期十八项逐件实测状态（v4.102.0 · R13-O3 复核）
+
+上表是**立项标题**，不是状态。下表是 2026-11-01 按磁盘实读的逐件状态 —— 判据口径为「`config/` 里的内核文件是否存在」+「产品面（`apps/` · `index.js` · `phone/`）是否有真 import」。不再用「已完成 / 待实施」这类二值标记，因为实测出的第三态（内核在、产品面有门、但体验未验收）占了多数。
+
+| 编号 | 内核文件 | 产品面消费点 | 状态 |
+|---|---|---|---|
+| R6-O1 | `config/affair-state.js` | `apps/affairs/affairs-app.js`（事务台 App） | **已交付** |
+| R6-O2 | `config/comm-thread.js` + `config/comm-time.js` | `apps/comms/comms-app.js`（会话台 App） | **已交付** |
+| R6-O3 | `config/group-deliberation.js` | `apps/wechat/group-scheduler.js` | **已交付** |
+| R6-O4 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-O5 | `config/creation-project.js` | `apps/creationdesk/creationdesk-app.js` | **已交付** |
+| R6-O6 | `config/reading-studio.js` | `apps/reading/reading-app.js` | **已交付** |
+| R6-O7 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-O8 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-O9 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-X1 | `config/daily-theater.js` | `apps/diary/diary-view.js#renderToday`（「今天」页） | **A 类接线完成**（v4.102.0） |
+| R6-X2 | `config/district-network.js` | `apps/place/place-app.js` | **已交付** |
+| R6-X3 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-X4 | `config/commission-pipeline.js` | `apps/creationdesk/creationdesk-app.js` | **已交付** |
+| R6-X5 | `config/voice-narrative.js` | `apps/album/album-voice-view.js`（「声音」页） | **A 类接线完成**（v4.102.0） |
+| R6-X6 | `config/mystery-engine.js` | `apps/games/mystery/mystery-view.js`（「推理谜题」页） | **A 类接线完成**（v4.102.0） |
+| R6-X7 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-X8 | — | — | **B 类退役**（v4.102.0 删文件） |
+| R6-X9 | — | — | **B 类退役**（v4.102.0 删文件） |
+
+> 另有 `config/time-env.js` 一件不在上表 18 项内，但同属 R6 期内核，R13-O3 把它判为 A 类并接进 `index.js` 装配点 —— 理由不是「加新功能」而是「修活的」：此前 `window.VirtualPhone.timeEnv` 全库零赋值，设置页那个「时间-环境感知注入」开关读永远 `undefined`（界面按默认 true 显示）、写只落 storage 而没人消费，`attachPromptHook()` 从未被调用过。
+>
+> 逐件的决策与放弃内容见 `tests/audit/r6_kernel_disposition.tsv`（12 行 × 6 列）。**四件 A 类的诚实边界**：只保证「能力有了门」，**不保证**体验达标 —— 体验好不好要另算。**八件 B 类的诚实边界**：那部分能力**永久放弃**，不是「留着以后可能用」；每行 `what_is_given_up` 列写清了放弃了哪一层、以及由谁承担、没有丢什么。
+
 > **第五期历史入口**：[优化](.agents/notes/proposed/architecture/2026-10-20-product-optimization-v5.md) · [拓展](.agents/notes/proposed/feature/2026-10-20-product-expansion-v5.md)。手机侧v4.31～4.47已有18项实现覆盖；旧“全部待实施”已不成立，但实现覆盖不等于所有真实宿主及模型内容验收通过。逐项映射与边界见第六期证据页。
 > **第四期历史入口**：[优化](.agents/notes/proposed/architecture/2026-10-15-product-optimization-v4.md) · [拓展](.agents/notes/proposed/feature/2026-10-15-product-expansion-v4.md)。第四期当时已推进至4.30.0，旧导航“全部待实施/v4.12.0”已过时；详细版本留在旧计划、update-log与ITERATION_LOG。这仅确认实现记录，不保证每条真实旅程通过；第五期发现的具体缺口不抹掉已实现底座。
 
@@ -47,9 +76,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.101.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 版本 | **v4.102.0**（五源同源） | `update-log.json` latest / `package.json` |
 | 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **356 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.101.0 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **276** 件、tests **356** 套件、scripts **31** 件；`index.js` **866493 字节 / 14107 行**；`phone.css` **708497 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 体量 | **v4.102.0 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **271** 件、tests **356** 套件、scripts **31** 件；`index.js` **872924 字节 / 14125 行**；`phone.css` **708497 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |

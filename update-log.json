@@ -1,6 +1,30 @@
 {
-  "latest": "4.101.0",
+  "latest": "4.102.0",
   "versions": {
+    "4.102.0": {
+      "version": "4.102.0",
+      "date": "2026-11-01",
+      "items": [
+        "【版本升至 4.102.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4102.py 对齐 tools/bump_v4101.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R13-O3 做了什么】method-consumption-audit 的 zero 档（产品面零 import 的模块）从 12 件清到 0 件。不是一次清零，而是逐件判 A/B：A 类（能力只差一个界面）= 接线；B 类（同类能力已有更强实现且已进产品面）= 删文件。判完写进 tests/audit/r6_kernel_disposition.tsv，12 行乘 6 列：decision / module / bytes / product_consumer / why_this_decision / what_is_given_up。",
+        "【A 类 4 件：接线，不是加功能】daily-theater 接 apps/diary 的「今天」页；mystery-engine 接 apps/games 的「推理谜题」页（新建桥 config/mystery-face-bridge.js 228 行 + 视图 apps/games/mystery/mystery-view.js 234 行 + mystery.css 351 行）；voice-narrative 接 apps/album 的「声音」页（新建桥 config/voice-face-bridge.js 222 行 + 视图 apps/album/album-voice-view.js 244 行 + album-voice.css 312 行）；time-env 接 index.js 装配点。",
+        "【time-env 判的是修活的，不是接线】全仓 grep timeEnv 只有两处命中，都在 apps/settings/settings-app.js（1201 读 / 6326 写）—— 没有任何地方给 window.VirtualPhone.timeEnv 赋过值。后果是设置页那个「时间-环境感知注入」开关读永远 undefined（界面按默认 true 显示）、写只落 storage 而没人消费、TimeEnvManager.attachPromptHook() 从未被调用过。修法是在 index.js 的 memoryCore.attachPromptHook() 之后加一段 try 包裹的实例装配与钩子挂载。这不是新增能力，这是把一个已写好、已登记在设置页、已写进 storage 的能力接上电；本仓最贵的一类债不是没做，是做了但没通电。",
+        "【B 类 8 件退役，逐件写清当年为什么做、为什么不用、放弃了什么】计划书原文明令不许「留着以后可能用」（那正是这批债的成因），故每件都写到「哪一层放弃、由谁承担、没丢什么」的粒度：club-coop 11755 字节（五人团队两次分工变更 + 换负责人待办交接；群投票链已走 group-vote-contract + group-vote-handoff 整条真产品链，放弃分工变更与换负责人交接，群投票与交接凭据仍在微信链上）；mentorship-colearn 3387 字节（只有三个导出，师友共学最薄切片，无 App 承载；放弃师友分歧并存，群组商议由 group-deliberation + group-pace 承担）；multi-activity-reroute 13076 字节（本期最大一件；日程链已走 schedule-bridge + life-events，放弃中途改道的局部重排与按亲历者精确分账）；parallel-life 5676 字节（branch-canon-contract 已接 apps/archive、branch-contrast 已接 index.js；放弃 A/B 两线分别操作）；relation-revisit 6884 字节（life-program-replay + replay-face-bridge 已接 album 回看页；放弃按范围引用旧消息）；serial-narrative 5725 字节（replayable-phone-program + replay-face-bridge 已覆盖节目幕次独立进度与正史分离；放弃章节分岔）；social-ecosystem 9125 字节（topic-echo 已接 index.js、topic-dossier-contract 已接 apps/reading；放弃三圈层讨论差异，澄清传播由 topic-echo 的 debunk 承担）；story-reentry 10044 字节（resume-brief 经 timeweaver-collector 真消费、resume-workbench + action-center 齐备；放弃接续旅程路径，续玩简报由 resume-brief 承担）。",
+        "【B 类里的一次自我更正留在台账里】parallel-life 那行最初把替代品写成 parallel-persona-spaces，实测它只有 subsystem-orchestrator 引、产品面零 import，不能算「更强实现」；处理方式不是删掉理由换一条更顺的，而是在台账里明写这次更正，替代品换成 branch-canon-contract 加 branch-contrast。更正留在台账里，不悄悄抹掉。",
+        "【本版自己抓到的缺陷形态一：桥接层第一版签名全错】config/mystery-face-bridge.js 第一版 133 行是按内核头注猜的签名，最小宿主一跑全部返回 ok:false。读 config/mystery-engine.js（v4.53.0）真码才发现三处硬差异：queryWitness 返回 responded/text/leakedUnread 而不是 answer、getDiscoveredClues 返回对象数组而不是 id 数组、submitHypothesis 返回 correct/feedback/newlyRevealed/unlockedClues。最关键的一条是内核 submitHypothesis 只读 progress.readClueIds 判断必需线索读齐否、自己从不写入 readClueIds 与 discoveredClueIds，且内核里没有任何「发现线索」的入口 —— 玩家怎么发现一条线索被内核留给了宿主。这条缺口写进新桥头注，成为桥存在的另一半理由。教训是内核签名必须实测，不能凭注释臆想。",
+        "【本版自己抓到的缺陷形态二：删测试块时把函数定义一起删了】四个 R6 期套件在删完 8 个文件后全部于 import 阶段中断，先按 test 名精确删除 26 个依赖退役模块的块（v4510 删 5 块、v4520 删 12 块、v4530 删 3 块、v4540 删 6 块），再清 import 行与 A3/A4 公共断言。回跑时 v4510 报 ReferenceError: breakSource is not defined —— 因为它的函数定义夹在被删的 E 面测试块之间，删块时被一起删了。补回函数并把头注改成「本函数的现存消费者是 E2 与 E3」。",
+        "【本版自己抓到的缺陷形态三：文件删了登记还在放行】删完 multi-activity-reroute.js 后 npm run keys fail-closed 当场点名：K3 有 1 条登记已失效（真仓库零命中）—— 幽灵放行条 multi_activity_reroute_v1。修法是删登记（505 条 / 隔离正则 161 条），但保留 config/storage.js 的隔离正则并在注释里写明理由：登记管「现在还有谁在用」，正则管「过去的残留别串门」，老用户手机里可能还留着这个键。",
+        "【三个错误断言都是我写错的】voice-narrative 桥里踩到三处：其一总时长从 147000 扩到 290000 才够三角色五分钟场景；其二原本断言「素材全齐时 15 项全有音频」是错的 —— q14 的 assetRef 是空串，素材再齐也仍缺，内核标 no-asset-ref 是正确行为，改断言为 14 项加 1 条缺失；其三原本断言「播放中 pause 应 ok:false」把状态机搞反了，改为 ok:true 并补「已暂停时再 pause 不改状态」。",
+        "【判据不能指向不存在的源码】v4540 删到只剩 A1/A2/A4 三条，在文件头注里写明 A3 与 D1~D3 一并删除的理由：判据不能指向不存在的源码；保留 A1/A2/A4 是因为本版 4.54.0 的版本下界锚仍然有效，且它是「这一批出生就带版本闸」的历史事实，不该随模块退役一起消失。这是本仓对历史判据的一贯口径：事实留，指向空处的断言删。",
+        "【交棒改写（下限形）】PLAN.md 顶部那张第六期十八项表原本只有立项标题、没有状态，本轮不删不改标题行，在其下新增「第六期十八项逐件实测状态」一节：判据口径为 config 里内核文件是否存在 + 产品面 apps/、index.js、phone/ 是否有真 import，逐件给出内核文件、产品面消费点、状态三列，实测得 7 件已交付 / 4 件 A 类接线完成 / 8 件 B 类退役。不用「已完成 / 待实施」这类二值标记，因为实测出的第三态（内核在、产品面有门、但体验未验收）占多数。",
+        "【诚实边界写进代码注释，不写进提交信息】三处新视图都把自己的天花板写在文件里：mystery-view.js 写「进度只活在这一页，离开即重置；要跨会话存档得先把 progress 接到 storage，那是下一格，本版不做，也不假装做了」；album-voice-view.js 写「本页不持有 audio 元素，因为库里没有真音频，假装播就是把缺失说成成功」；voice-face-bridge.js 写「本桥不调用 TTS、不播音频、不读也不写 storage：它只产出文字」。理由是提交信息半年后没人读，注释在文件里天天被读。",
+        "【定向回归（铁律：36 项做完前不跑全量）】四个套件回跑 v4510 八条、v4520 九条、v4530 十六条、v4540 三条，合计 36 条全绿（此前是 pass 0 / fail 1）。十六道静态门逐门取 rc 全部 OK：syntax 1100 文件 / import-resolve / dead-exports / bind-consuming / method-consuming / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / named-import / screen-host / session-writeback / hardlink-safety / doc-path-claim（扫 3985 处声明、0 落空）/ upstream-face。视图层另跑三组自建最小 DOM 宿主断言：mystery 十二条、voice 十三条（桥十一条另计）、time-env 九条。全程未跑 npm run check 全量，未跑 npm test 全量。",
+        "【zero 归零的复核读数】method-consumption-audit 更新后：死方法 311 条（基线 311 / 新增 0）；模块入度 279 件（product 214 / orchestrator-only 65）；弱档 65 件（基线 65 / 新增 0）；zero 档 0 件。dead-export 基线 68 降到 27 条（摘除已删文件的导出账）。dead-module-baseline.json 的 entries 74 降到 65。",
+        "【台账落盘与占位撒账】临时台账落盘为 tests/audit/r6_kernel_disposition.tsv（13 行含表头）；scripts/doc-path-claim-planned-deliverables.json 的 entries 从 3 降到 2（撤掉该条占位并注明已履行），doc-path-claim 门复跑 0 落空。",
+        "【运行时验证边界】本项对 88 个 App 的既有功能零改动；新增的是三个页面（游戏大厅推理谜题、相册声音、日记今天）与一处装配点。能保证的是内核能力有了门、且门在无头环境下按契约工作（最小 DOM 宿主断言全绿）；不能保证的是这些页面在真机上好玩好看、在 360px 窄屏下不挤 —— 无头宿主的 scan 用正则扫标签、只支持 data-x 两种选择器，它证明的是 DOM 结构按顺序生成，不是浏览器里看着对。八件 B 类退役的部分是永久放弃，此后不再存在，不保留任何「以后可能用」的残件。",
+        "【产物】新增 config/mystery-face-bridge.js 228 行、apps/games/mystery/mystery-view.js 234 行、apps/games/mystery/mystery.css 351 行、config/voice-face-bridge.js 222 行、apps/album/album-voice-view.js 244 行、apps/album/album-voice.css 312 行、tests/audit/r6_kernel_disposition.tsv 13 行；改 index.js、apps/games/games-app.js、apps/games/poker/poker-view.js、apps/games/poker/poker.css、apps/album/album-app.js、apps/album/album-view.js、config/storage.js、scripts/keys-audit.mjs、scripts/dead-module-baseline.json、scripts/dead-export-baseline.json、scripts/dead-method-baseline.json、四个 R6 套件、PLAN.md、scripts/doc-path-claim-planned-deliverables.json；删 config/club-coop.js、config/mentorship-colearn.js、config/multi-activity-reroute.js、config/parallel-life.js、config/relation-revisit.js、config/serial-narrative.js、config/social-ecosystem.js、config/story-reentry.js 共 8 件 63671 字节。"
+      ]
+    },
     "4.101.0": {
       "version": "4.101.0",
       "date": "2026-11-01",
@@ -5498,5 +5522,5 @@
       ]
     }
   },
-  "head": "4.101.0"
+  "head": "4.102.0"
 }

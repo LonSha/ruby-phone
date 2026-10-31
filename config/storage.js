@@ -360,7 +360,13 @@ export class PhoneStorage {
             /^group_deliberation/,
             /* [v4.50.0 · R6-O5] 长篇创作工程(creation_projects_v1): 隔离长篇作品编排与修订历史。 */
             /^creation_project/,
-            /* [v4.51.0 · R6-O4] 能改道的多人活动(multi_activity_reroute_v1): 隔离多人活动改道状态。 */
+            /* [v4.51.0 · R6-O4 / v4.102.0 R13-O3] 能改道的多人活动(multi_activity_reroute_v1)。
+             *   写它的内核 multi-activity-reroute.js 已在 R13-O3 判为 B 类退役并删除，
+             *   所以「还有谁会写这个键」的答案是「没有人」。正则留着有两个理由：
+             *   ① 老用户的手机里可能还残留这个键，不隔离就会把它贴回新会话（本仓最贵的那族静默错结果）；
+             *   ② 删正则比留正则更贵 —— 留着的成本是一行，删错的成本是一条错串。
+             *   键登记（scripts/keys-audit.mjs）已随文件一起删掉：登记管的是「现在还有谁在用」，
+             *   正则管的是「过去的残留别串门」，两者不是一回事。 */
             /^multi_activity_reroute/,
             /* [v4.51.0 · R6-O6] 主动研读工作室(reading_studio_v1): 隔离研读案卷、批注与草稿。 */
             /^reading_studio/,

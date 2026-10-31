@@ -22,12 +22,10 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const rel = (p) => path.join(ROOT, p);
 const read = (p) => fs.readFileSync(rel(p), 'utf8');
 const BORN_V = '4.53.0';
-const RR_REL = 'config/relation-revisit.js';
 const DN_REL = 'config/district-network.js';
 const VN_REL = 'config/voice-narrative.js';
 const ME_REL = 'config/mystery-engine.js';
 
-const RR = await import(pathToFileURL(rel(RR_REL)).href);
 const DN = await import(pathToFileURL(rel(DN_REL)).href);
 const VN = await import(pathToFileURL(rel(VN_REL)).href);
 const ME = await import(pathToFileURL(rel(ME_REL)).href);
@@ -61,13 +59,13 @@ test('A2: index.js ST_PHONE_VERSION >= BORN_V', () => {
   assert.ok(vnum(m[1]) >= vnum(BORN_V), `ST_PHONE_VERSION ${m[1]} < ${BORN_V}`);
 });
 
-test('A3: 四模块 VERSION 常量与冻结词表存在', async () => {
-  for (const [name, mod] of [['RR', RR], ['DN', DN], ['VN', VN], ['ME', ME]]) {
+test('A3: 三模块 VERSION 常量与冻结词表存在', async () => {
+  for (const [name, mod] of [['DN', DN], ['VN', VN], ['ME', ME]]) {
     // 模块成功 import 即证明 ESM 结构完整
     assert.ok(typeof mod === 'object', `${name} module not loaded`);
   }
   // 检查源文件中有 VERSION 常量
-  for (const f of [RR_REL, DN_REL, VN_REL, ME_REL]) {
+  for (const f of [DN_REL, VN_REL, ME_REL]) {
     const code = read(f);
     assert.ok(code.includes(`'${BORN_V}'`), `${f} missing VERSION ${BORN_V}`);
   }
@@ -79,68 +77,6 @@ test('A4: BORN_V 自锚', () => {
 
 /* ============================================================ */
 /* B 面：R6-O7 可重访的关系往事                                  */
-/* ============================================================ */
-test('B1: 一人愿意重谈、一人回避，不强制统一立场', () => {
-  const session = RR.createRevisitSession({
-    pastId: 'past_001',
-    originalPast: { summary: '去年秋天在画廊相遇', messages: [] },
-    participants: [
-      { actorId: 'alice', stance: 'willing' },
-      { actorId: 'bob', stance: 'avoiding' },
-    ],
-    quoteScope: ['msg_1', 'msg_2'],
-  });
-  assert.equal(session.stances.alice, 'willing');
-  assert.equal(session.stances.bob, 'avoiding');
-  // 立场保持各自原始值，不合并
-  assert.notEqual(session.stances.alice, session.stances.bob);
-});
-
-test('B2: 私人旧消息可选引用范围，不整段泄露', () => {
-  const oldMessages = [
-    { id: 'msg_1', from: 'alice', text: '那天真开心', isPrivate: false },
-    { id: 'msg_2', from: 'bob', text: '我的秘密日记内容', isPrivate: true },
-    { id: 'msg_3', from: 'alice', text: '普通消息', isPrivate: false },
-  ];
-  // 只引用 msg_1，msg_2 是私人消息且不在范围内
-  const quoted = RR.quoteOldMessages(oldMessages, ['msg_1'], 'charlie');
-  assert.equal(quoted[0].quoted, true); // msg_1 在范围内
-  assert.equal(quoted[0].text, '那天真开心');
-  // msg_2 私人消息不在范围内且查看者非发送者 → 隐藏
-  assert.equal(quoted[1].quoted, false);
-  assert.equal(quoted[1].hidden, true);
-  assert.equal(quoted[1].text, '[该消息不在分享范围内]');
-  // msg_3 不在范围内但不私密 → 标注未引用
-  assert.equal(quoted[2].quoted, false);
-  assert.equal(quoted[2].text, '[未引用]');
-});
-
-test('B3: 重访产生新记录而非改写旧经历', () => {
-  const originalPast = { summary: '原版经历', messages: [{ id: 'msg_1', text: '原文' }] };
-  const session = RR.createRevisitSession({
-    pastId: 'past_002',
-    originalPast,
-    participants: [{ actorId: 'alice', stance: 'willing' }],
-    quoteScope: ['msg_1'],
-  });
-  // 添加新交流
-  RR.addRevisitExchange(session, { from: 'alice', kind: 'inquiry', text: '你还记得那天吗？' });
-  RR.addRevisitExchange(session, { from: 'alice', kind: 'response', text: '是的，我一直记得' });
-  // 关闭
-  const result = RR.closeRevisit(session);
-  // 新记录存在且标 newRecord
-  assert.equal(result.closedSession.exchanges.length, 2);
-  assert.equal(result.closedSession.exchanges[0].newRecord, true);
-  // 旧经历未改写
-  assert.equal(result.originalPast.summary, '原版经历');
-  assert.equal(result.originalPast.messages.length, 1);
-  assert.equal(result.originalPast.messages[0].text, '原文');
-  // 两者可分别阅读
-  assert.notEqual(result.closedSession.exchanges[0].text, result.originalPast.messages[0].text);
-});
-
-/* ============================================================ */
-/* C 面：R6-X2 街区与人情网络                                    */
 /* ============================================================ */
 test('C1: 三处地点有不同时间窗，错过机会后不伪造已到场', () => {
   const places = [
@@ -399,20 +335,6 @@ test('E4: 不同解法可得到不同但自洽的收束', () => {
 /* ============================================================ */
 /* F 面：负控制三向自证                                         */
 /* ============================================================ */
-test('F1: 负控制——破坏引用范围检查（scope 判断改 if(true) 使所有消息暴露）→ 可观测', async () => {
-  // 破坏 quoteOldMessages 中的 scope 判断：所有消息都被视为在范围内
-  const brokenUrl = breakSource(RR_REL,
-    'if (scopeSet.has(msg.id))',
-    'if (true)');
-  const brokenMod = await import(brokenUrl);
-  const oldMessages = [
-    { id: 'msg_1', from: 'bob', text: '秘密内容', isPrivate: true },
-  ];
-  // 破坏后：私人消息也被视为在范围内，全文暴露
-  const result = brokenMod.quoteOldMessages(oldMessages, [], 'charlie');
-  assert.equal(result[0].text, '秘密内容'); // 私人内容被泄露 → 破坏可观测
-  assert.equal(result[0].quoted, true); // 被标为已引用
-});
 
 test('F2: 负控制——破坏熟悉度升级（stranger 不升级）→ 可观测', async () => {
   // 破坏 recordVisit 中的熟悉度升级逻辑

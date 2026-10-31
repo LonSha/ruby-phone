@@ -97,6 +97,10 @@ export class AlbumView {
                                 <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
                                 <span>回看</span>
                             </button>
+                            <button type="button" class="album-replay-entry" id="album-voice-entry" aria-label="声音">
+                                <i class="fa-solid fa-waveform-lines" aria-hidden="true"></i>
+                                <span>声音</span>
+                            </button>
                         `}
                         ${this.selectionMode ? `
                             <button type="button" class="album-select-btn" id="album-select-all">${allSelected ? '取消全选' : '全选'}</button>
@@ -615,6 +619,11 @@ export class AlbumView {
             this.replayMode = true;
             this.sourceMenuOpen = false;
             this.render();
+        });
+        /* [v4.102.0 · R13-O3] 进「声音」：交给 AlbumApp.openVoice（视图自己不持局）。 */
+        root.querySelector('#album-voice-entry')?.addEventListener('click', () => {
+            this.sourceMenuOpen = false;
+            this.app.openVoice?.();
         });
         root.querySelector('#album-source-filter')?.addEventListener('click', () => {
             this.sourceMenuOpen = !this.sourceMenuOpen;

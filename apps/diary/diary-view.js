@@ -14,11 +14,12 @@
 /* [v3.24.0 · L0-1] 封面画框：26 套内置素材从取数口读（路径不在本文件手写）。
  *   选择列表由 `L0_ASSETS.frames` 生成 ⇒ 加一套画框只改取数口一处。 */
 import { L0_ASSETS, galleryFrameUrl } from '../../config/l0-assets.js';
+import { buildTodayFace, todayHeadline } from '../../config/day-rhythm-bridge.js';
 
 export class DiaryView {
     constructor(app) {
         this.app = app;
-        this.currentView = 'cover'; // 'cover' | 'toc' | 'page' | 'settings' | 'edit' | 'new' | 'import'
+        this.currentView = 'cover'; // 'cover' | 'toc' | 'today' | 'page' | 'settings' | 'edit' | 'new' | 'import'
         this.currentEntryId = null;
         this.settingsPanelOpen = false;
         this.tocOrder = 'desc';
@@ -42,6 +43,13 @@ export class DiaryView {
         link.rel = 'stylesheet';
         link.href = new URL('./diary.css?v=1.0.0', import.meta.url).href;
         document.head.appendChild(link);
+        /* [v4.102.0 · R13-O3] 「今天」页样式单文件：与日记主样式分开加载，
+         *   这样删掉这一页只需删一个 link，不必回主样式里挑行。 */
+        const todayLink = document.createElement('link');
+        todayLink.id = 'diary-today-css';
+        todayLink.rel = 'stylesheet';
+        todayLink.href = new URL('./diary-today.css?v=1.0.0', import.meta.url).href;
+        document.head.appendChild(todayLink);
         this._cssLoaded = true;
     }
 
@@ -53,6 +61,7 @@ export class DiaryView {
         switch (this.currentView) {
             case 'cover': result = this.renderCover(); break;
             case 'toc': result = this.renderTOC(); break;
+            case 'today': result = this.renderToday(); break;
             case 'page': result = this.renderPage(); break;
             case 'settings': result = this.renderSettings(); break;
             case 'edit': result = this.renderEdit(); break;
@@ -200,6 +209,7 @@ export class DiaryView {
                             ${deleteSelectedBtn}
                             ${manageBtns}
                             ${entryTools}
+                            <button class="diary-toc-btn" id="diary-today-btn" title="今天">今天</button>
                             <button class="diary-toc-btn diary-pencil-btn" id="diary-manual-write" title="设置">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
@@ -218,7 +228,84 @@ export class DiaryView {
         this._bindTOCEvents();
     }
 
+    // ==================== 今天视图（R13-O3 · daily-theater 接线） ====================
+    /* 这一页存在的理由：`config/daily-theater.js` 自 v4.52.0 起就有完整的「一天的节奏」
+     *   能力，但产品端零 import —— 能力只差一个界面。本页就是那个界面。
+     * 纪律：本页只读既有日记条目，不新增任何写路径；内核说「算不出来」时照原话显示，
+     *   不说成「今天没有安排」；剧情日由调用方给，视图不读时钟。 */
+    renderToday() {
+        const data = this.app.diaryData;
+        const entries = data.getEntries() || [];
+        const sorted = this._sortEntries(entries);
+        const day = sorted.length ? String(sorted[0].date || '').slice(0, 10) : '';
+        const face = buildTodayFace({ day, entries });
+        const headline = todayHeadline(face);
+        const enterClass = this.isBackNav ? '' : 'diary-view-enter';
+
+        let bodyHtml;
+        if (!face.ok) {
+            bodyHtml = `
+                <div class="diary-today-empty">
+                    <div class="diary-today-empty-text">${this._esc(headline)}</div>
+                    <div class="diary-today-empty-hint">这一页只按已有记录排时间线，不替你决定今天。</div>
+                </div>
+            `;
+        } else {
+            const rows = face.rows.map((r) => `
+                <div class="diary-today-row${r.state === 'paused' ? ' is-paused' : ''}">
+                    <div class="diary-today-slot">${this._esc(r.label || r.slot)}</div>
+                    <div class="diary-today-main">
+                        <div class="diary-today-task">${this._esc(r.task)}</div>
+                        ${r.role ? `<div class="diary-today-role">${this._esc(r.role)}</div>` : ''}
+                    </div>
+                    <div class="diary-today-state">${this._esc(r.stateText)}</div>
+                </div>
+            `).join('');
+            const irNote = face.interrupted
+                ? (face.interrupted._rejected
+                    ? `<div class="diary-today-note">打断未被接受：${this._esc(face.interrupted._rejected)}</div>`
+                    : `<div class="diary-today-note">这一天被打断了一次</div>`)
+                : '';
+            bodyHtml = `
+                <div class="diary-today-summary">${this._esc(headline)}</div>
+                ${irNote}
+                <div class="diary-today-list">${rows}</div>
+            `;
+        }
+
+        const html = `
+            <div class="diary-app">
+                <div class="diary-today ${enterClass}">
+                    <div class="diary-toc-header">
+                        <div class="diary-toc-title">今天</div>
+                        <div class="diary-toc-actions">
+                            <button class="diary-toc-btn" id="diary-today-back" title="返回">✕</button>
+                        </div>
+                    </div>
+                    <div class="diary-today-body">
+                        ${bodyHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+        this.app.phoneShell.setContent(html, 'diary-today');
+        const back = document.getElementById('diary-today-back');
+        if (back) back.onclick = () => { this.isBackNav = true; this.currentView = 'toc'; this.render(); };
+    }
+
+    /** 最小转义：这一页显示的是用户自己写的内容，必须过一遍。 */
+    _esc(x) {
+        return String(x === null || x === undefined ? '' : x)
+            .split('&').join('&amp;')
+            .split('<').join('&lt;')
+            .split('>').join('&gt;')
+            .split('"').join('&quot;');
+    }
+
+
     _bindTOCEvents() {
+        const todayBtn = document.getElementById('diary-today-btn');
+        if (todayBtn) todayBtn.onclick = () => { this.currentView = 'today'; this.render(); };
         const syncTocSelectionUI = () => {
             const liveIds = new Set();
             document.querySelectorAll('.phone-view-current .diary-toc-item').forEach(item => {

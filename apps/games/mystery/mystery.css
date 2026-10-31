@@ -1,0 +1,351 @@
+/* ============================================================
+ * apps/games/mystery/mystery.css — [v4.102.0 · R13-O3]
+ *   「推理谜题」页样式
+ * ------------------------------------------------------------
+ * 纪律：
+ *   · 不做入场动画。这一页要读字，动了就看不清（同 diary-today.css 的理由）。
+ *   · 颜色只有三档语义：is-ok（成立/承认）/ is-bad（不成立/不知情）/ 中性。
+ *     线索的「无用」标签不报警色，它只是标注 —— 玩家该自己判断。
+ *   · 窄屏（<360px）把证人行竖排，避免 select 与按钮互相挤。
+ * ============================================================ */
+
+.gm-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #12131a;
+    color: #e8e6e1;
+}
+
+.gm-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gm-top > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.gm-sub {
+    font-size: 11px;
+    color: #9a978f;
+    margin-top: 3px;
+}
+
+.gm-icon {
+    flex: 0 0 auto;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #d8d5cd;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.gm-icon:active {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.gm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px 26px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.gm-section {
+    margin-bottom: 18px;
+}
+
+.gm-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #b8a884;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+}
+
+/* 提示条：成立=绿、不成立=暗红、中性=蓝灰。不用纯红纯绿，避免像系统报错。 */
+.gm-notice {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border-left: 3px solid #6f7b8c;
+    background: rgba(111, 123, 140, 0.14);
+}
+
+.gm-notice-ok {
+    border-left-color: #6f9f7e;
+    background: rgba(111, 159, 126, 0.14);
+}
+
+.gm-notice-bad {
+    border-left-color: #a4676b;
+    background: rgba(164, 103, 107, 0.14);
+}
+
+.gm-notice-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.gm-notice-detail {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #c9c6bd;
+}
+
+/* ---------- 证据 ---------- */
+.gm-clues,
+.gm-witnesses,
+.gm-solutions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gm-clue {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gm-clue.is-read {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.gm-clue.is-red {
+    border-style: dashed;
+}
+
+.gm-clue-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gm-clue-id {
+    font-size: 11px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: #8f8c84;
+}
+
+.gm-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #a09d95;
+}
+
+.gm-read {
+    margin-left: auto;
+    padding: 3px 12px;
+    border: 1px solid rgba(184, 168, 132, 0.45);
+    border-radius: 999px;
+    background: transparent;
+    color: #c9b58c;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.gm-read:active {
+    background: rgba(184, 168, 132, 0.18);
+}
+
+.gm-clue-text {
+    margin-top: 7px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #ddd9d0;
+}
+
+/* 未读正文用「省略号占位」而不是模糊效果：模糊在小屏上读起来像渲染坏了 */
+.gm-clue-text.is-hidden {
+    color: #77746d;
+    font-style: italic;
+}
+
+.gm-empty {
+    padding: 14px 12px;
+    border-radius: 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    font-size: 12px;
+    color: #8a877f;
+    line-height: 1.7;
+}
+
+/* ---------- 证人 ---------- */
+.gm-witness {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gm-witness-name {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.gm-witness-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.gm-witness-pick {
+    flex: 1;
+    min-width: 0;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #1b1d25;
+    color: #ddd9d0;
+    font-size: 12px;
+}
+
+.gm-ask {
+    flex: 0 0 auto;
+    height: 30px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e4e1d9;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gm-ask:active {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.gm-witness-said {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.65;
+    min-height: 1px;
+}
+
+.gm-witness-said.is-answer {
+    color: #bcd3c2;
+}
+
+.gm-witness-said.is-refuse {
+    color: #a99a9c;
+}
+
+/* ---------- 提假说 ---------- */
+.gm-solution {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gm-solution-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gm-solution-title {
+    font-size: 13px;
+    font-weight: 700;
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-submit {
+    flex: 0 0 auto;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(111, 159, 126, 0.5);
+    background: transparent;
+    color: #9dbfa8;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.gm-submit:active {
+    background: rgba(111, 159, 126, 0.2);
+}
+
+.gm-solution-need {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    font-size: 11px;
+    color: #8f8c84;
+}
+
+.gm-need {
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px;
+}
+
+.gm-need.is-got {
+    border-color: rgba(111, 159, 126, 0.5);
+    color: #a8c9b3;
+}
+
+.gm-need.is-unread {
+    border-color: rgba(184, 168, 132, 0.45);
+    color: #c2ae86;
+}
+
+.gm-need.is-missing {
+    color: #7b7871;
+}
+
+.gm-foot {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #726f68;
+}
+
+@media (max-width: 359px) {
+    .gm-witness-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gm-ask {
+        width: 100%;
+    }
+
+    .gm-solution-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .gm-submit {
+        width: 100%;
+    }
+}

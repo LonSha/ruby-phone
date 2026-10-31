@@ -11,14 +11,6 @@
       "why": "R13-O2 交付物：88 个 app 的 undoCapability 分档后，irreversible 残留逐条登记表"
     },
     {
-      "path": "tests/audit/r6_kernel_disposition.tsv",
-      "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
-      "epoch": "R13",
-      "land_version": "v5.0.0",
-      "date": "2026-10-31",
-      "why": "R13-O3 交付物：R6 九件内核逐件 A/B 决策登记表（接线/归档/合并）"
-    },
-    {
       "path": "tests/system-v4xxx.test.mjs",
       "plan": ".agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md",
       "epoch": "R13",

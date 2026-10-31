@@ -28,6 +28,8 @@ import { ScriptKillData, ownerDisplayOf } from './scriptkill/scriptkill-data.js'
 import { ScriptKillView } from './scriptkill/scriptkill-view.js';
 import { LudoData, rollLudoDice, isLudoEventCell, LUDO_AI_EVENTS, LUDO_QUESTION_TYPES, ludoModeLabel } from './ludo/ludo-data.js';
 import { LudoView } from './ludo/ludo-view.js';
+// [v4.102.0 · R13-O3] 推理谜题：mystery-engine 的第一个产品端界面。
+import { MysteryView } from './mystery/mystery-view.js';
 
 const CATBOX_CSS_URL = new URL('./catbox/catbox.css?v=1.0.0', import.meta.url).href;
 const WEREWOLF_CSS_URL = new URL('./werewolf/werewolf.css?v=1.0.49', import.meta.url).href;
@@ -106,6 +108,7 @@ export class GamesApp extends PokerApp {
         this.scriptKillView = new ScriptKillView(this);
         this.ludoData = new LudoData(storage);
         this.ludoView = new LudoView(this);
+        this.mysteryView = new MysteryView(this);
         this._werewolfDriving = false;
         this._werewolfNightDriving = false;
         this._lastWerewolfApiRequestAt = 0;
@@ -174,6 +177,15 @@ export class GamesApp extends PokerApp {
         this.applyPhoneChromeTheme();
         this.currentView = 'ludo';
         this.ludoView.render();
+    }
+
+    /* [v4.102.0 · R13-O3] 推理谜题入口。
+     * 只切视图 + 交给视图自己开局：不在这里碰 storage、不预热谜题 ——
+     * 进度本来就不跨会话（见 mystery-view.js 头注的诚实边界）。 */
+    openMystery() {
+        this.applyPhoneChromeTheme();
+        this.currentView = 'mystery';
+        this.mysteryView.render();
     }
 
     // [v3.32.0] 两个对话型对局共用的一次性 API 冷却：避免连续请求打满代理。
@@ -2720,6 +2732,7 @@ export class GamesApp extends PokerApp {
         this.guessWhatView?.destroy?.();
         this.scriptKillView?.destroy?.();
         this.ludoView?.destroy?.();
+        this.mysteryView?.destroy?.();
         super.backToLobby();
     }
 
@@ -2736,6 +2749,7 @@ export class GamesApp extends PokerApp {
         this.guessWhatView?.destroy?.();
         this.scriptKillView?.destroy?.();
         this.ludoView?.destroy?.();
+        this.mysteryView?.destroy?.();
     }
 
 
@@ -3808,7 +3822,10 @@ export class GamesApp extends PokerApp {
         if (this.currentView === 'ludo' && this.ludoView?.handleBack?.()) {
             return;
         }
-        if (this.currentView === 'game2048' || this.currentView === 'sudoku' || this.currentView === 'catbox' || this.currentView === 'werewolf' || this.currentView === 'undercover' || this.currentView === 'seaturtle' || this.currentView === 'guesswhat' || this.currentView === 'scriptkill' || this.currentView === 'ludo') {
+        if (this.currentView === 'mystery' && this.mysteryView?.handleBack?.()) {
+            return;
+        }
+        if (this.currentView === 'game2048' || this.currentView === 'sudoku' || this.currentView === 'catbox' || this.currentView === 'werewolf' || this.currentView === 'undercover' || this.currentView === 'seaturtle' || this.currentView === 'guesswhat' || this.currentView === 'scriptkill' || this.currentView === 'ludo' || this.currentView === 'mystery') {
             this.backToLobby();
             return;
         }

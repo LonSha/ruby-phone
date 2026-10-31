@@ -1,0 +1,117 @@
+
+/* ============================================================
+ * 「今天」页样式（R13-O3 · daily-theater 接线，v4.102.0）
+ * ------------------------------------------------------------
+ * 这一页与目录页共享 .diary-toc-header / .diary-toc-btn，只补列表与空态。
+ * 设计纪律：**不做动画**。这一页是「读一天」，不是「演一天」——
+ *   加动效会让人以为有东西在自动发生，而它其实只是把已有记录排成时间线。
+ * ============================================================ */
+.diary-app .diary-today {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--diary-bg, #efe9dd);
+}
+
+.diary-app .diary-today-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px 24px;
+}
+
+.diary-app .diary-today-summary {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--diary-text-muted);
+    padding: 4px 0 10px;
+    border-bottom: 1px dashed var(--diary-line, rgba(0, 0, 0, 0.12));
+    margin-bottom: 10px;
+}
+
+.diary-app .diary-today-note {
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    border-left: 3px solid #c9a227;
+    background: rgba(201, 162, 39, 0.08);
+    color: var(--diary-text-muted);
+}
+
+.diary-app .diary-today-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.diary-app .diary-today-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid var(--diary-line, rgba(0, 0, 0, 0.08));
+}
+
+/* 被打断的时段只靠左侧色条区分，不加抖动/闪烁：那是「演示」不是「记录」。 */
+.diary-app .diary-today-row.is-paused {
+    border-left: 3px solid #b5651d;
+}
+
+.diary-app .diary-today-slot {
+    flex: 0 0 44px;
+    font-size: 12px;
+    color: var(--diary-text-muted);
+    padding-top: 2px;
+}
+
+.diary-app .diary-today-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.diary-app .diary-today-task {
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.diary-app .diary-today-role {
+    font-size: 12px;
+    color: var(--diary-text-muted);
+    margin-top: 2px;
+}
+
+.diary-app .diary-today-state {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--diary-text-muted);
+    padding-top: 2px;
+    white-space: nowrap;
+}
+
+.diary-app .diary-today-empty {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.diary-app .diary-today-empty-text {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--diary-text-muted);
+}
+
+.diary-app .diary-today-empty-hint {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--diary-text-muted);
+    opacity: 0.75;
+    margin-top: 8px;
+}
+
+/* 窄屏（320/390）：时段标签收窄，避免任务名被压成一列字。 */
+@media (max-width: 420px) {
+    .diary-app .diary-today-slot { flex-basis: 38px; font-size: 11px; }
+    .diary-app .diary-today-task { font-size: 13px; }
+}

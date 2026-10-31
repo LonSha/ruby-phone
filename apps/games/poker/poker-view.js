@@ -172,6 +172,19 @@ export class PokerView {
                             <i class="fa-solid fa-chevron-right games-game-chevron"></i>
                     </button>
 
+                    <button class="games-game-card games-mystery-card" id="games-open-mystery" type="button">
+                        <div class="games-game-art">
+                            <div class="games-mystery-lobby-art" aria-hidden="true">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </div>
+                        </div>
+                        <div class="games-game-info">
+                            <div class="games-game-title">推理谜题</div>
+                            <div class="games-game-desc">看证据 · 问证人 · 提假说</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right games-game-chevron"></i>
+                    </button>
+
                     <button class="games-game-card games-catbox-card" id="games-open-catbox" type="button">
                         <div class="games-game-art">
                             <div class="games-catbox-lobby-art" aria-hidden="true">
@@ -600,6 +613,9 @@ export class PokerView {
         });
         document.getElementById('games-open-board')?.addEventListener('click', () => {
             this.app.openBoard();
+        });
+        document.getElementById('games-open-mystery')?.addEventListener('click', () => {
+            this.app.openMystery();
         });
         document.getElementById('games-open-catbox')?.addEventListener('click', () => {
             this.app.openCatbox();

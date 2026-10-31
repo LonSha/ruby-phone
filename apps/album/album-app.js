@@ -10,6 +10,8 @@
 
 import { AlbumData } from './album-data.js?v=1.4.2&r=20260726-album-media';
 import { ALBUM_CSS_URL, AlbumView } from './album-view.js?v=1.4.2&r=20260802-album-toolbar';
+// [v4.102.0 · R13-O3] 声音叙事页：voice-narrative 的第一个产品端界面（相册音频面）。
+import { AlbumVoiceView } from './album-voice-view.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
 
 export class AlbumApp {
@@ -23,6 +25,7 @@ export class AlbumApp {
 
         this.albumData = new AlbumData(storage);
         this.albumView = new AlbumView(this);
+        this.voiceView = new AlbumVoiceView(this);
 
         // [v2.25.0] 监听器改由实例字段持有：albumApp 在清数据时被置 null 重建，
         //   构造期直接 add 匿名函数会使每次重建净增 5 个全局监听器（泄漏）。
@@ -83,6 +86,14 @@ export class AlbumApp {
         const domCurrentView = document.querySelector('.phone-view-current');
         if (!domCurrentView?.querySelector?.('.album-app')) return;
 
+        /* [v4.102.0 · R13-O3] 演出页先吃掉一层返回：演出页 → 相册主列表。
+         *   放在最前，因为它比「预览/选择/分类」都更靠外一层。 */
+        if (this.voiceMode) {
+            this.voiceView.handleBack();
+            this.voiceMode = false;
+            return;
+        }
+
         if (this.albumView.previewOpen) {
             this.albumView.closePreview();
             return;
@@ -116,8 +127,17 @@ export class AlbumApp {
         this.albumView.render();
     }
 
+    /* [v4.102.0 · R13-O3] 打开「声音叙事」页。只切模式，不在 App 层碰数据。 */
+    openVoice() {
+        this.voiceMode = true;
+        this.albumView.replayMode = false;
+        this.voiceView.render();
+    }
+
     deactivate() {
         this.albumView?.closePreview?.();
+        this.voiceView?.destroy?.();
+        this.voiceMode = false;
     }
     // [v2.25.0] 实例销毁：解绑构造期注册的 5 个全局监听器（置 null 重建前调用）
     destroy() {

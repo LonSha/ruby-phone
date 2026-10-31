@@ -47,6 +47,9 @@ import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
+// [v4.102.0 · R13-O3] 时间-环境感知注入：此前 `window.VirtualPhone.timeEnv` 全库从未被赋值，
+//   设置页那个开关读到的永远是 undefined（拿默认值 true 显示、写回 storage 却没人消费）。
+import TimeEnvManager from './config/time-env.js';
 import { SubsystemOrchestrator } from './config/subsystem-orchestrator.js';
 /* [v4.99.4 · R11-X3] 生活流的**低频时钟**：它不做业务，只把中枢的 `advanceAutonomousLifeStep`
  *   接成「手机自己会动」。修前该方法产品端零调用，自驱生活只在测试里存在。 */
@@ -320,7 +323,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.101.0';
+const ST_PHONE_VERSION = '4.102.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -530,20 +533,24 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-01",
     items: [
-        "【版本升至 4.101.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4101.py 对齐 tools/bump_v4100.py，只换 STEPS 与头注，逻辑一字未改）。",
-        "【R13-O7 做了什么】把「基线表已交给机器、入口和优先级还是手写」这半截补完：`tools/gen_plan_baseline.mjs` 的射程从基线表三行扩到**三处入口** —— PLAN.md 顶部期号与日期、PLAN.md 「## 优先级」节的当期编号集合、TODO.md 顶部「最近更新」版本号。三项全部回真源取数，判据里不写死任何常量。",
-        "【真源怎么取】期号从优化计划书标题的「第<中文数字>期」正则解析、日期从计划书文件名里的 `YYYY-MM-DD` 解析、编号集合从两份计划书正文的 `### R<n>-*` 标题抽取、版本号走 `collectStatus()`（与 status-ledger 同源）。工具里写死期号是这一项最容易踩的坑：下一期换挡时它会说「一致」而实际没对齐。",
-        "【fail-closed 三处】计划书链接不存在、标题里读不到期号、两份计划书一条编号都抽不到 —— 三种一侓报错。若只是「抽到空集，循环零条 ⇒ 零错误 ⇒ 通过」，那这个门就成了反的：真源塌了反而全绿。",
-        "【只判不写的那一格】`--write` 只回写 TODO.md 的版本号（机械可算），PLAN 的期号与优先级排序**只判不写**。自动生成优先级节等于让工具替我决定接下来做什么 —— 计划书自己写的诚实边界是「排序判断永远是人做的」，这一条已落进判据 B1：写入函数一旦出现 `PLAN.md` 或 `## 优先级` 就转红。",
-        "【换挡三处都做了】PLAN.md 顶部已是第十三期（2026-10-31）；「## 优先级」节从第六期排序换成 R13 交付顺序（先让门有电 → 再收存量债 → 再开用户的手 → 再统一口径 → 拓展九项），四项排序理由逐条继承计划书原话；旧排序以 `>` 引用块原样留档，标明「已被 R13 接管，不得当作当期优先」。TODO.md 顶面从 v4.99.9 到 v4.100.0 再到当版，那个 45 版滞后的洞本合同关闭。",
-        "【本版自己抓到的缺陷形态（第三处假绿）】验收套件首发时 A1～A4 全部直接调 `computePlanEntries()`。做负控制时把 `checkPlanBaseline()` 里那两行接线摘掉，**13 条依然全绿** —— 因为「校对了」与「门上报出来了」是两件事。这正是本仓反复付代价的形态：函数写好了、零调用点。故补 A5 走**门本身**（`checkPlanBaseline`，`npm run check` 与 v4980-A1 都走它），并用「真源码摘接线 → 子进程跑门 → 门对同一破坏失去反应」做双向证明。",
-        "【A3 的判据形态也改过一次】最初写成「源码里必须有正则」（文本判据），只能证明「正则还在文件里」，证不了「取数真的跟着真源走」。改为行为级：把计划书标题里的「第十三期」改成「第九十九期」，断言工具读出的期号跟着变成「九十九」、且同时报出「顶部入口未换挡」。写死期号的实现会在这一步读回「十三」而转红。",
-        "【占位文件名履行】立项时登记在未来交付物台账里的那个 `system-vxxxx` 占位文件名，本轮落实名 `tests/system-v4107.test.mjs`（13 条：A1-A5 入口校对与接门 / B1-B3 写入射程与占位撒账 / C1-C5 五条负控制），并从 `scripts/doc-path-claim-planned-deliverables.json` 撒账、把计划书 owner 接线点写回真名。新增判据 B3 守「占位履行后必须撒账」，否则「说得清为什么不在」会永久生效。**文案口径**：履行之后全仓不再写出那个占位文件名（连本文也不例外），否则 doc-path-claim 门会把它当成一条新的落空声明。",
-        "【交棒改写（下限形）】旧「## 优先级」五条（T1 / B1 / S1 / B2-B3 / W1-W2-X1）不删不改，整体以引用块形式降为历史段；新节只声明当期排序与四项理由，不重写历史判断。这类改写一律保留原文字面，避免「换挡时顺手把旧结论也改了口」。",
-        "【定向回归（铁律：36 项做完前不跑全量）】`node --test tests/system-v4107.test.mjs` 13/13 · `tests/system-v4980.test.mjs` 11/11 · `tests/system-v4100.test.mjs` 25/25 · `tests/system-v3190.test.mjs` 31/31 · `tests/system-v328.test.mjs` 10/10。`node tools/gen_plan_baseline.mjs --check` exit 0（基线表 + 三处入口均与真源一致）。`node scripts/doc-path-claim-audit.mjs` 扫 3912 处声明、0 未登记落空。",
-        "【抬版后必须跑的两个工具】新增测试文件使枚举面加一：`node tools/gen_status_ledger.mjs --write` 得 ver=4.101.0 测试 357 门 17 场景 12 unknown=0；`node tools/gen_plan_baseline.mjs --write` 重写基线表三行与 TODO 版本号。不跑这两个会必红（v4980 的 A1/A2 看守）。",
-        "【运行时验证边界】本项只动入口与数字，不碰任何 App 的功能实现，故 89 个入口在真机上表现如何**依旧没变**；本版能保证的只是「PLAN/TODO 三处入口与计划书真源一致」这一件维护面的事。这类「文档写着已完成、入口还停在上上期」的形态属于**看起来没坏但显示不对**：`TODO.md` 顶面停在 v4.54.0 差了 45 个版本，任何只读入口的读者都会据此以为后续版本没做事。**不能保证**的是「优先级节里的排序选择对不对」—— 那不是机器能判的，本条只守编号一个不少与期号/日期/版本号一致，排序判断仍归人。",
-        "【产物】`tools/bump_v4101.py`（182 行，只换 STEPS 与头注）、`tools/iter235_seg.md`（本段）、`tests/system-v4107.test.mjs`（13 条）、`tools/gen_plan_baseline.mjs`（171 → 330 行，新增 `parsePlanEntry` / `computePlanEntries` / `writePlanEntries` 三个导出，`checkPlanBaseline` 接上入口校对，`--check` 文案改为同时声明两段射程）。"
+        "【版本升至 4.102.0（五源同源）】manifest.json / package.json / index.js 版本常量与公告块 / update-log.json 的 latest 与 head 与新条目 / tests/audit/status-ledger.json 的 version 与四处 version_sources 一次抬齐；ITERATION_LOG 新增本迭代段并把元信息「当前版本」行改当版；边界文档按当版复校。抬版沿用仓内范式脚本（本次 tools/bump_v4102.py 对齐 tools/bump_v4101.py，只换 STEPS 与头注，逻辑一字未改）。",
+        "【R13-O3 做了什么】method-consumption-audit 的 zero 档（产品面零 import 的模块）从 12 件清到 0 件。不是一次清零，而是逐件判 A/B：A 类（能力只差一个界面）= 接线；B 类（同类能力已有更强实现且已进产品面）= 删文件。判完写进 tests/audit/r6_kernel_disposition.tsv，12 行乘 6 列：decision / module / bytes / product_consumer / why_this_decision / what_is_given_up。",
+        "【A 类 4 件：接线，不是加功能】daily-theater 接 apps/diary 的「今天」页；mystery-engine 接 apps/games 的「推理谜题」页（新建桥 config/mystery-face-bridge.js 228 行 + 视图 apps/games/mystery/mystery-view.js 234 行 + mystery.css 351 行）；voice-narrative 接 apps/album 的「声音」页（新建桥 config/voice-face-bridge.js 222 行 + 视图 apps/album/album-voice-view.js 244 行 + album-voice.css 312 行）；time-env 接 index.js 装配点。",
+        "【time-env 判的是修活的，不是接线】全仓 grep timeEnv 只有两处命中，都在 apps/settings/settings-app.js（1201 读 / 6326 写）—— 没有任何地方给 window.VirtualPhone.timeEnv 赋过值。后果是设置页那个「时间-环境感知注入」开关读永远 undefined（界面按默认 true 显示）、写只落 storage 而没人消费、TimeEnvManager.attachPromptHook() 从未被调用过。修法是在 index.js 的 memoryCore.attachPromptHook() 之后加一段 try 包裹的实例装配与钩子挂载。这不是新增能力，这是把一个已写好、已登记在设置页、已写进 storage 的能力接上电；本仓最贵的一类债不是没做，是做了但没通电。",
+        "【B 类 8 件退役，逐件写清当年为什么做、为什么不用、放弃了什么】计划书原文明令不许「留着以后可能用」（那正是这批债的成因），故每件都写到「哪一层放弃、由谁承担、没丢什么」的粒度：club-coop 11755 字节（五人团队两次分工变更 + 换负责人待办交接；群投票链已走 group-vote-contract + group-vote-handoff 整条真产品链，放弃分工变更与换负责人交接，群投票与交接凭据仍在微信链上）；mentorship-colearn 3387 字节（只有三个导出，师友共学最薄切片，无 App 承载；放弃师友分歧并存，群组商议由 group-deliberation + group-pace 承担）；multi-activity-reroute 13076 字节（本期最大一件；日程链已走 schedule-bridge + life-events，放弃中途改道的局部重排与按亲历者精确分账）；parallel-life 5676 字节（branch-canon-contract 已接 apps/archive、branch-contrast 已接 index.js；放弃 A/B 两线分别操作）；relation-revisit 6884 字节（life-program-replay + replay-face-bridge 已接 album 回看页；放弃按范围引用旧消息）；serial-narrative 5725 字节（replayable-phone-program + replay-face-bridge 已覆盖节目幕次独立进度与正史分离；放弃章节分岔）；social-ecosystem 9125 字节（topic-echo 已接 index.js、topic-dossier-contract 已接 apps/reading；放弃三圈层讨论差异，澄清传播由 topic-echo 的 debunk 承担）；story-reentry 10044 字节（resume-brief 经 timeweaver-collector 真消费、resume-workbench + action-center 齐备；放弃接续旅程路径，续玩简报由 resume-brief 承担）。",
+        "【B 类里的一次自我更正留在台账里】parallel-life 那行最初把替代品写成 parallel-persona-spaces，实测它只有 subsystem-orchestrator 引、产品面零 import，不能算「更强实现」；处理方式不是删掉理由换一条更顺的，而是在台账里明写这次更正，替代品换成 branch-canon-contract 加 branch-contrast。更正留在台账里，不悄悄抹掉。",
+        "【本版自己抓到的缺陷形态一：桥接层第一版签名全错】config/mystery-face-bridge.js 第一版 133 行是按内核头注猜的签名，最小宿主一跑全部返回 ok:false。读 config/mystery-engine.js（v4.53.0）真码才发现三处硬差异：queryWitness 返回 responded/text/leakedUnread 而不是 answer、getDiscoveredClues 返回对象数组而不是 id 数组、submitHypothesis 返回 correct/feedback/newlyRevealed/unlockedClues。最关键的一条是内核 submitHypothesis 只读 progress.readClueIds 判断必需线索读齐否、自己从不写入 readClueIds 与 discoveredClueIds，且内核里没有任何「发现线索」的入口 —— 玩家怎么发现一条线索被内核留给了宿主。这条缺口写进新桥头注，成为桥存在的另一半理由。教训是内核签名必须实测，不能凭注释臆想。",
+        "【本版自己抓到的缺陷形态二：删测试块时把函数定义一起删了】四个 R6 期套件在删完 8 个文件后全部于 import 阶段中断，先按 test 名精确删除 26 个依赖退役模块的块（v4510 删 5 块、v4520 删 12 块、v4530 删 3 块、v4540 删 6 块），再清 import 行与 A3/A4 公共断言。回跑时 v4510 报 ReferenceError: breakSource is not defined —— 因为它的函数定义夹在被删的 E 面测试块之间，删块时被一起删了。补回函数并把头注改成「本函数的现存消费者是 E2 与 E3」。",
+        "【本版自己抓到的缺陷形态三：文件删了登记还在放行】删完 multi-activity-reroute.js 后 npm run keys fail-closed 当场点名：K3 有 1 条登记已失效（真仓库零命中）—— 幽灵放行条 multi_activity_reroute_v1。修法是删登记（505 条 / 隔离正则 161 条），但保留 config/storage.js 的隔离正则并在注释里写明理由：登记管「现在还有谁在用」，正则管「过去的残留别串门」，老用户手机里可能还留着这个键。",
+        "【三个错误断言都是我写错的】voice-narrative 桥里踩到三处：其一总时长从 147000 扩到 290000 才够三角色五分钟场景；其二原本断言「素材全齐时 15 项全有音频」是错的 —— q14 的 assetRef 是空串，素材再齐也仍缺，内核标 no-asset-ref 是正确行为，改断言为 14 项加 1 条缺失；其三原本断言「播放中 pause 应 ok:false」把状态机搞反了，改为 ok:true 并补「已暂停时再 pause 不改状态」。",
+        "【判据不能指向不存在的源码】v4540 删到只剩 A1/A2/A4 三条，在文件头注里写明 A3 与 D1~D3 一并删除的理由：判据不能指向不存在的源码；保留 A1/A2/A4 是因为本版 4.54.0 的版本下界锚仍然有效，且它是「这一批出生就带版本闸」的历史事实，不该随模块退役一起消失。这是本仓对历史判据的一贯口径：事实留，指向空处的断言删。",
+        "【交棒改写（下限形）】PLAN.md 顶部那张第六期十八项表原本只有立项标题、没有状态，本轮不删不改标题行，在其下新增「第六期十八项逐件实测状态」一节：判据口径为 config 里内核文件是否存在 + 产品面 apps/、index.js、phone/ 是否有真 import，逐件给出内核文件、产品面消费点、状态三列，实测得 7 件已交付 / 4 件 A 类接线完成 / 8 件 B 类退役。不用「已完成 / 待实施」这类二值标记，因为实测出的第三态（内核在、产品面有门、但体验未验收）占多数。",
+        "【诚实边界写进代码注释，不写进提交信息】三处新视图都把自己的天花板写在文件里：mystery-view.js 写「进度只活在这一页，离开即重置；要跨会话存档得先把 progress 接到 storage，那是下一格，本版不做，也不假装做了」；album-voice-view.js 写「本页不持有 audio 元素，因为库里没有真音频，假装播就是把缺失说成成功」；voice-face-bridge.js 写「本桥不调用 TTS、不播音频、不读也不写 storage：它只产出文字」。理由是提交信息半年后没人读，注释在文件里天天被读。",
+        "【定向回归（铁律：36 项做完前不跑全量）】四个套件回跑 v4510 八条、v4520 九条、v4530 十六条、v4540 三条，合计 36 条全绿（此前是 pass 0 / fail 1）。十六道静态门逐门取 rc 全部 OK：syntax 1100 文件 / import-resolve / dead-exports / bind-consuming / method-consuming / lifecycle / registry / keys / source-derivation / bridge-contract / weak-coercion / named-import / screen-host / session-writeback / hardlink-safety / doc-path-claim（扫 3985 处声明、0 落空）/ upstream-face。视图层另跑三组自建最小 DOM 宿主断言：mystery 十二条、voice 十三条（桥十一条另计）、time-env 九条。全程未跑 npm run check 全量，未跑 npm test 全量。",
+        "【zero 归零的复核读数】method-consumption-audit 更新后：死方法 311 条（基线 311 / 新增 0）；模块入度 279 件（product 214 / orchestrator-only 65）；弱档 65 件（基线 65 / 新增 0）；zero 档 0 件。dead-export 基线 68 降到 27 条（摘除已删文件的导出账）。dead-module-baseline.json 的 entries 74 降到 65。",
+        "【台账落盘与占位撒账】临时台账落盘为 tests/audit/r6_kernel_disposition.tsv（13 行含表头）；scripts/doc-path-claim-planned-deliverables.json 的 entries 从 3 降到 2（撤掉该条占位并注明已履行），doc-path-claim 门复跑 0 落空。",
+        "【运行时验证边界】本项对 88 个 App 的既有功能零改动；新增的是三个页面（游戏大厅推理谜题、相册声音、日记今天）与一处装配点。能保证的是内核能力有了门、且门在无头环境下按契约工作（最小 DOM 宿主断言全绿）；不能保证的是这些页面在真机上好玩好看、在 360px 窄屏下不挤 —— 无头宿主的 scan 用正则扫标签、只支持 data-x 两种选择器，它证明的是 DOM 结构按顺序生成，不是浏览器里看着对。八件 B 类退役的部分是永久放弃，此后不再存在，不保留任何「以后可能用」的残件。",
+        "【产物】新增 config/mystery-face-bridge.js 228 行、apps/games/mystery/mystery-view.js 234 行、apps/games/mystery/mystery.css 351 行、config/voice-face-bridge.js 222 行、apps/album/album-voice-view.js 244 行、apps/album/album-voice.css 312 行、tests/audit/r6_kernel_disposition.tsv 13 行；改 index.js、apps/games/games-app.js、apps/games/poker/poker-view.js、apps/games/poker/poker.css、apps/album/album-app.js、apps/album/album-view.js、config/storage.js、scripts/keys-audit.mjs、scripts/dead-module-baseline.json、scripts/dead-export-baseline.json、scripts/dead-method-baseline.json、四个 R6 套件、PLAN.md、scripts/doc-path-claim-planned-deliverables.json；删 config/club-coop.js、config/mentorship-colearn.js、config/multi-activity-reroute.js、config/parallel-life.js、config/relation-revisit.js、config/serial-narrative.js、config/social-ecosystem.js、config/story-reentry.js 共 8 件 63671 字节。"
     ]
 };
 
@@ -2168,6 +2175,17 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
             window.VirtualPhone.memoryCore = new MemoryCore(storage);
             window.VirtualPhone.memoryCore.attachPromptHook();
+            /* [v4.102.0 · R13-O3] 时间-环境感知注入（`config/time-env.js`）的装配点。
+             *   为什么放在这里：`TimeEnvManager` 自带 `isEnabled()`（读 storage、默认开）
+             *   与 `attachPromptHook()`（幂等 guard），能力是齐的 —— 缺的只是"有人 new 它"。
+             *   此前 `window.VirtualPhone?.timeEnv` 在**全库零赋值**，设置页那个开关因此是空的：
+             *   读永远是 undefined（界面按默认 true 显示），写只落 storage、没人消费。
+             *   挂法照 memoryCore 同一条：先装配、再挂钩子；钩子挂不上（宿主无事件源）
+             *   不算启动失败，故整段包在 try 里静默。 */
+            try {
+                window.VirtualPhone.timeEnv = new TimeEnvManager(storage);
+                window.VirtualPhone.timeEnv.attachPromptHook();
+            } catch (_e) { /* 时间环境是增强项：装不上不影响手机本体 */ }
             /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
              *   而未打开过的 App 根本没有构造期（实例只在 phone:openApp 懒加载时才 new）。
              *   后果：保存过设置后重载、只要没先点开那个 App，设置就完全不生效（不报错、只错行为）。
