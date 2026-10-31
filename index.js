@@ -323,7 +323,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.106.0';
+const ST_PHONE_VERSION = '4.107.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -553,19 +553,19 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-01",
+    date: "2026-11-02",
     items: [
-        "【时间的两个钟】新建 `config/time-source.js`：本仓此前**同时存在两个钟而没有一处说出来过** —— 剧情钟（`timeManager.getCurrentStoryTime()`，角色世界里的现在）与墙钟（`Date.now()`，这台设备真实跑了多久）。两者都合法，但每个字段只许属于其中一个。本版把它写成显式的边界：`CLOCKS` 只认 story / wall，16 个时刻字段逐个登记归属并逐条给理由，未登记字段 `fieldClockOf` 返回 null（**刻意不猜默认值**：没声明与声明为墙钟必须不同形）。**口径偏差声明**：计划书要求五处全部走既有 `time-manager.js`，实施改为新建 `time-source.js` 当边界 —— 理由是 time-manager 提供的是剧情时刻本身，而缺陷在「哪个字段属于哪个钟」从未被声明，那在它的职责之外。",
-        "【唯一取数口与唯一降级出口】`storyNow(win)` 读不到时 `ms` 必为 null 并带成因码（no-host / no-time-manager / threw / empty-face / bad-stamp，逐一给人话，因为不同成因处置相反），**绝不补墙钟**；`stampPair(win)` 一次取两个钟，免得写点各自拼一遍时把两个字段填成同一个钟；`storyTsOf(rec)` 只认剧情轨（`storyAt` → 老字段 `timestamp`），**绝不回退 `createdAt`**；`storyNowWallFallback(win)` 是唯一的显式降级出口，`degraded:true` + 原样转发原因，使「哪个 App 在什么条件下用了墙钟」成为可答的问题。",
-        "【批次 1 五处真接线】消息（删掉三条分支各自的 `|| Date.now()`，改落 `storyAt` / `realTimestamp` 双轨）、相册索引（补 `storyAt`，排序改成剧情轨优先）、日历备忘、日记条目、上传索引各自补齐剧情轨。此处修的是本版立项时实测的形态：相册与日历**此前只有墙钟**，所以「照片时间与消息时间对不上」在它们身上是必然，不是偶发。",
-        "【验收硬线】同一时刻造一条消息 + 一张照片 + 一条日程 + 一篇日记，四者读回的 ts 必须**逐位相等**。日记的时间戳最初写成「正文日期优先」，随即发现正文日期只能反解到当天 12:00 而剧情钟给 14:30 —— 同一时刻造的日记必然与消息差几小时，硬线当场失效；改为剧情钟优先、正文日期只在读不到剧情钟时兜底。",
-        "【批次 3 白名单的造法】`tests/fixtures/bare-now-whitelist.json` 150 个文件逐条回答「为什么这里必须用墙钟」，判据是**未登记即红**而不是零容忍（零容忍会逼着把节流与审计也改成剧情钟，那会让冷却在剧情回拨后永不失效）。`wechat-data.js` 剩余的 25 处逐条核过，全部是 wall 档（运行时 id / `deletedAt` / 缓存新鲜度 / 轮询超时 / 版本号）。",
-        "【缺陷形态：口径的第五度复发】本模块首版为守住「零 import」而**就地手写了一份取数强口径**（两处 `typeof raw === 'number' && Number.isFinite(raw) && raw > 0`），weak-coercion 门当场报 W1 两处 —— 而这正是那道门点了四轮才立起来的结论：口径一旦有第二份实现，下一个人就会再写一遍弱的那版。改法是引用 `config/num-gate.js`（它本身是零依赖叶子模块，引用它不造出依赖方向问题），「零 import」的原意是**不许反向依赖业务模块**，不是「不许复用口径」；配套把判据 A3 从「零 import」改成白名单 import + 口径不得就地重写。",
-        "【顺手治的存量债】`stageTree` 的手写依赖清单已经害了三次（v4.104.0 加 recycle-bin 时红一次，本版加 time-source 又要红一次）。处置不是再抄几行，而是新建 `tests/_stage-tree.mjs`：按源码里的相对 import 递归补齐，找不到的依赖记进 `missing` 而不静默跳过。探针实测缺失清单为空、补齐清单恰为 life-events / recycle-bin / time-source 三个模块，一次修好 system-v290（2 红）/ v292（1 红）/ v3410（7 红）；v3410 余下 1 红是 v4.105.0 给 needsim-view 加确认守卫后老判据（只许 import data 层）过严，改成 `ALLOWED_VIEW_IMPORTS` 白名单并逐条给理由，而不是放宽成任意 import 都行。",
-        "【两个零消费导出改为真接线】`fieldClockOf` / `storySourceLine` / `CLOCKS` / `FIELD_CLOCK_WHY` / `storyNowMs` 一度是零消费导出。处置主张**接线而非进基线**：诊断中心新增「时间双轨」面，报两个钟各自的读数、相差几天、16 个字段逐条理由，并把批次 1 七处写点的字段名逐个过归属表（未登记当场点名）—— 把这张表建好却不读，等于又造一个「建好了没人用」的面。",
-        "【运行时验证边界】本版全部判据在 Node 无头环境成立（24 条判据 + 四向负控制：真源码破坏 → 落副本 → 在副本上重跑同款判据）；诊断页新增面在浏览器里的实际排版未复核，UI 层仍需实机看一眼。本版**未跑全量回归**（36 项计划完成前禁止），验证为定向：17 道静态门全绿 + 18 个受影响套件全绿。",
-        "【交棒改写】`config/story-clock.js` 与 `config/time-source.js` 是**两件事**，不当成同一面的两份实现：前者回答「哪一天」（跨三源比对日期并报冲突），后者回答「哪个钟 + 从哪取」。下一版做批次 2（带时间流的 weibo / honey / bilibili / taobao / lofter）时，白名单里标了「属批次 2 待收口项」的那几处就是清单。",
-        "【版本升至 4.106.0】五源同源（`index.js` / `update-log.json` / `manifest.json` / `package.json` / `tests/audit/status-ledger.json`）+ 边界文档复校。"
+        "【版本升至 4.107.0】R13-O5 设置项生效时机：三档闭集 + 176 项逐条登记 + 三档双向真证明 + 覆盖率 100%（五源同源）",
+        "【本版治什么】用户把开关拨过去，界面没有任何一处回答「现在生效了，还是下一轮，还是得重开手机」：设置页 12115 行里「生效时机」四个字只有个位数。三类开关长得一模一样，而它们的行为完全不同",
+        "【本版做什么】新建 config/setting-effect.js（三档闭集 immediate / next-turn / next-session + 176 项逐条带理由 + 待生效账 + 两个推进器 + 统一写入口 applyChange）",
+        "【本版做什么】判据 tests/system-v4108.test.mjs 二十一项：A 闭集与未声明不同形 / B 三档双向真证明（含交叉面：跑一轮不许带走 next-session）/ C 覆盖率 100% 且防幽灵 / D 待生效区不回落实源 / E 四向负控制 / F 真接线三面",
+        "【本版做什么】真接线：设置页三档各接一个真控件走统一口（提示音 immediate / 用户消息监听 next-turn / 蜜语语音开关 next-session）；index.js 挂两个推进器（GENERATION_STARTED 推 next-turn、实例重建前推 next-session）；bindEvents 末尾给全部带 id 的控件逐项挂时机提示，漏登记直接挂黄标",
+        "【自己抓到的缺陷形态】首版枚举口径只覆盖了一部分控件类型：按「带 id 属性」抽得 110 项，按真控件（input/select/textarea）抽得 176 项，差 66 项全是 select / textarea / range / password 类真设置项。覆盖率 100% 这条判据当场把这个口径差抓了出来",
+        "【自己抓到的缺陷形态】登记表里有 57 条理由写成「同上」前向引用，读到那一条的人拿不到上一条，等于没有说明。判据已把「理由不许含同上」写死，57 条逐条改写成能独立成立的因果句",
+        "【自己抓到的缺陷形态】真源键与控件 id 不同名（提示音控件 id 是 setting-wechat-message-sound-enabled，老常量真源键是 wechat_message_sound_enabled）：按控件 id 登记后若直接写，分档就只是纸面上的。统一口已支持显式传 storageKey 并写了判据",
+        "【顺手治的存量债】v4.106.0 抬版时只跑了 gen_plan_baseline 的打印分支、没跑 --check，导致 PLAN 版本行与三处体量数字全滞后，直到本版跑 O7 判据才被逮到。已修好入口，并把「抬版必须连带重算三处入口」写进 bump 脚本本体",
+        "【交棒改写】config/story-clock.js 回答「哪一天」，config/time-source.js 回答「哪个钟 + 从哪取」，config/setting-effect.js 回答「什么时候生效」。三者各司一面，不当成同一面的三份实现",
+        "【运行时验证边界】判据证明的是「分档语义与接线成立」，不是「浏览器里那行提示长得对」。settings-app.js 的 DOM 挂标在无头环境不可验，真机需人工确认黄标数"
     ]
 };
 
@@ -2246,6 +2246,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (rbCtx?.eventSource && rbCtx?.event_types?.GENERATION_STARTED) {
                         rbCtx.eventSource.on(rbCtx.event_types.GENERATION_STARTED, () => {
                             try { window.VirtualPhone?.lonshaBridge?.applyCoordinatedInjection(); } catch (e) {}
+                            /* [v4.107.0 · R13-O5] 一轮生成开始 ⇒ 上一轮的 next-turn 待生效改动交出去。
+                             * 选这个时刻而不是「生成结束」：用户拨开关是为了**这一轮**就用上，
+                             * 挂在开始前才叫「下一轮生效」，挂在结束后就变成「下下轮」。 */
+                            try { window.VirtualPhone?.pumpSettingEffects?.(); } catch (e) {}
                         });
                     }
                 } catch (e) { /* 静默 */ }
@@ -11102,8 +11106,29 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     // 🔥 按需加载设置模块
                     loadSettingsModule().then(SettingsAppClass => {
                         // 🔥 单例模式：只在第一次打开时创建实例
+                        /* [v4.107.0 · R13-O5] 重开手机 / 实例重建 ⇒ 先把 next-session 的待生效改动落进真源，
+                         * 再让新实例去读。顺序反了就等于「重开之后还是旧值」。 */
+                        if (window.VirtualPhone.settingsApp && window.VirtualPhone.pumpSettingEffects) {
+                            void window.VirtualPhone.pumpSettingEffects('session');
+                        }
                         if (!window.VirtualPhone.settingsApp) {
                             window.VirtualPhone.settingsApp = new SettingsAppClass(phoneShell, storage, settings);
+                            /* [v4.107.0 · R13-O5] 把待生效账的推进器挂到实例上：
+                             * next-turn 由 GENERATION_STARTED 推（生成开始时），
+                             * next-session 由「重开手机」推（实例重建时）。
+                             * 两档必须分开挂，否则档位形同虚设（串台）。 */
+                            window.VirtualPhone.pumpSettingEffects = async (scope) => {
+                                const app = window.VirtualPhone.settingsApp;
+                                if (!app || !app.pendingEffects) return 0;
+                                const pending = app.pendingEffects;
+                                if (scope === 'session') {
+                                    const items = pending.commitSession();
+                                    return await app.flushPendingEffects(items);
+                                }
+                                app._pendingEffectsTurn = Number(app._pendingEffectsTurn || 0) + 1;
+                                const items = pending.commitTurn();
+                                return await app.flushPendingEffects(items);
+                            };
                         }
                         window.VirtualPhone.settingsApp.render();
 

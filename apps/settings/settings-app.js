@@ -45,6 +45,7 @@ import * as PhoneTagFilter from '../../config/tag-filter.js';
 import * as recycleBin from '../../config/recycle-bin.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
 import { SYS_KEYS } from '../../config/system-controls.js';
+import { effectLine, effectAtOf, effectWhyOf, applyChange, PendingEffects } from '../../config/setting-effect.js';
 import {
     PHONE_FLOATING_ENTRY_DEFAULT_STYLE,
     PHONE_FLOATING_ENTRY_ENABLED_KEY,
@@ -243,6 +244,11 @@ export class SettingsApp {
         this.storage = storage;
         this.settings = settings;
         this.imageManager = new ImageUploadManager(storage);
+        /* [v4.107.0 · R13-O5] 待生效账：next-turn / next-session 两档的改动先落这里，
+         * 由 index.js 的两个推进器（GENERATION_STARTED / 重建）搬到真源。
+         * 它只回答「账上有没有」，不持有任何设置值本身（那是 storage 的事）。 */
+        this.pendingEffects = new PendingEffects();
+        this._pendingEffectsTurn = 0;
         this._albumImagePicker = null;
         this.currentTab = 'general'; // 可选值: 'general', 'memory', 'llm', 'tts', 'image', 'lobby'
         void ensurePhoneContextLimitSetting(this.storage);
@@ -256,6 +262,75 @@ export class SettingsApp {
                 }
             }, false, 'settings:swipe-back');
         }
+    }
+
+    /**
+     * [v4.107.0 · R13-O5] 设置项「生效时机」的统一写入口。
+     *
+     * 为什么收成一个口：设置页里 130 个 change 监听器各自 await this.storage.set(...)，
+     *   于是「这一项要不要等一轮」就散在 12000 行里，没有任何一处可答。本方法把这件事
+     *   交给 config/setting-effect.js 的那张表：拨动哪一个键，就按它登记的那一档处置。
+     *
+     * @param {string} key 控件的 id（同时也是 storage 键 —— 设置页里这两者同名）
+     * @param {*} value 新值
+     * @returns {Promise<{mode:string, at:string|null, wrote:boolean}>}
+     */
+    async _applySettingChange(key, value, o) {
+        const k = String(key == null ? '' : key).trim();
+        if (!k) return { mode: 'immediate', at: null, wrote: false };
+        /* storageKey：登记用的键（控件 id）与真源键不同名时由调用方给出。
+         *   两者不同名是设置页既有的历史事实（老常量 vs 新 id），
+         *   不统一改键名（会动到已存用户的存档），只在写入时显式区分。 */
+        const sk = String((o && o.storageKey) || k).trim() || k;
+        const pending = this.pendingEffects || (this.pendingEffects = new PendingEffects());
+        const r = applyChange({
+            key: k,
+            value,
+            pending,
+            turn: this._pendingEffectsTurn || 0,
+            reader: () => this.storage.get(sk),
+            writer: (kk, vv) => { void this.storage.set(sk, vv); }
+        });
+        this._renderEffectBadge(k, r);
+        return r;
+    }
+
+    /**
+     * 在控件旁挂一行时机提示。未登记的项挂**黄标**（处置是去补登记表，不是无视）。
+     * 已经挂过的不重复挂（bindEvents 会被多次调用，重复插会越挂越多）。
+     */
+    _renderEffectBadge(key) {
+        try {
+            const root = this._getActiveSettingsRoot();
+            const doc = this._createSettingsScopedDocument(root);
+            const el = doc.getElementById(key);
+            if (!el) return;
+            const at = effectAtOf(key);
+            const line = at === null ? '时机未声明' : effectLine(key);
+            const why = at === null ? '这一项还没登记生效时机（见 config/setting-effect.js）' : effectWhyOf(key);
+            const sel = '.setting-effect-badge[data-for="' + key + '"]';
+            let badge = el.parentElement?.querySelector?.(sel);
+            if (!badge) {
+                badge = doc.createElement('div');
+                badge.className = 'setting-effect-badge';
+                badge.setAttribute('data-for', key);
+                (el.parentElement || el).appendChild(badge);
+            }
+            badge.setAttribute('data-at', at === null ? 'unknown' : String(at));
+            badge.style.cssText = 'display:block;margin-top:4px;font-size:11px;line-height:1.4;'
+                + (at === null ? 'color:#b8860b;' : 'color:#8a8a8a;');
+            badge.textContent = '生效时机：' + line + (why ? '　·　' + why : '');
+        } catch (_e) { /* 提示挂不上不能影响设置本身 */ }
+    }
+
+    /** 把待生效账上的某一批推进结果写进真源（推进器在 index.js 调）。 */
+    async flushPendingEffects(items) {
+        const list = Array.isArray(items) ? items : [];
+        for (const it of list) {
+            if (!it || !it.key) continue;
+            await this.storage.set(it.key, it.value);
+        }
+        return list.length;
     }
 
     _safeGetContext() {
@@ -5345,7 +5420,8 @@ export class SettingsApp {
             });
         });
         document.getElementById('phone-user-message-listener-enabled')?.addEventListener('change', async (e) => {
-            await this.storage.set('phone-user-message-listener-enabled', !!e.target.checked);
+            /* [R13-O5] 登记为 next-turn：改完立即读回**不变**，走过一轮生成后才生效 */
+            await this._applySettingChange('phone-user-message-listener-enabled', !!e.target.checked);
         });
         document.getElementById('phone-wechat-offline-clean-user-reply-enabled')?.addEventListener('change', async (e) => {
             await this.storage.set('phone-wechat-offline-clean-user-reply-enabled', !!e.target.checked);
@@ -6549,7 +6625,12 @@ export class SettingsApp {
 
         document.getElementById('setting-wechat-message-sound-enabled')?.addEventListener('change', async (e) => {
             const enabled = !!e.target.checked;
-            await this.storage.set(WECHAT_MESSAGE_SOUND_ENABLED_KEY, enabled);
+            /* [R13-O5] 走统一口：这一项登记为 immediate，改完当场写（探针断言读回变了）。
+             * ★ 注意两套键名：控件 id 是 setting-wechat-message-sound-enabled，
+             *   而真源键是老常量 wechat_message_sound_enabled。登记表按控件 id 建，
+             *   故这里显式把「登记的键」与「真源键」分开传 —— 否则登记表的键与真正写的键
+             *   不是同一个东西，分档就只是纸面上的。 */
+            await this._applySettingChange('setting-wechat-message-sound-enabled', enabled, { storageKey: WECHAT_MESSAGE_SOUND_ENABLED_KEY });
             this.phoneShell?.showNotification?.('微信提示音', enabled ? '已开启' : '已关闭', enabled ? '✅' : '📵');
             if (enabled) window.VirtualPhone?.playWechatMessageSound?.({ source: 'settings_preview', throttleMs: 0 });
         });
@@ -10930,7 +11011,8 @@ export class SettingsApp {
         }
         if (honeyTtsEnabledToggle) {
             honeyTtsEnabledToggle.addEventListener('change', async (e) => {
-                await this.storage.set('phone-honey-tts-enabled', !!e.target.checked);
+                /* [R13-O5] 登记为 next-session：改完立即读回不变，重开手机（引擎重建）后才生效 */
+                await this._applySettingChange('phone-honey-tts-enabled', !!e.target.checked);
             });
         }
         if (honeyTtsModeSelect) {
@@ -11226,6 +11308,20 @@ export class SettingsApp {
 
         // 👇 新增：在这里调用独立的 API 事件绑定方法
         this.bindApiConfigEvents();
+
+        /* [v4.107.0 · R13-O5] 把「生效时机」逐项挂到控件旁。
+         * 这一步就是「黄标数为 0」的落地点：登记表里没有的键，这里会挂出「时机未声明」，
+         * 于是漏登记在界面上直接可见，不必等谁去读源码。
+         * 提示挂不上不能拖垮页面，故整体 try/catch。 */
+        try {
+            const badgeRoot = this._getActiveSettingsRoot();
+            const badgeDoc = this._createSettingsScopedDocument(badgeRoot);
+            badgeDoc.querySelectorAll('input[id], select[id], textarea[id]').forEach((el) => {
+                if (!el || !el.id) return;
+                if (String(el.type || '') === 'file') return;
+                this._renderEffectBadge(el.id);
+            });
+        } catch (_e) { /* 提示挂不上不能影响设置本身 */ }
     }
 
     // ==========================================

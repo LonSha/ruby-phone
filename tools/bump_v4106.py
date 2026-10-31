@@ -175,6 +175,15 @@ def main():
     wr('docs/runtime-verification-boundary.md', state['doc'])
     wr('tests/audit/status-ledger.json', state['led'])
     print('--- WRITTEN --- final version = ' + STEPS[-1][0])
+    # [v4.107.0 · 反思] 抬版必须连带把 PLAN / TODO 三处入口重新算一遍。
+    #   为什么写死在抬版流程里：v4.106.0 抬完之后只跑了 gen_plan_baseline 的**打印分支**（不带 --check），
+    #   于是 PLAN 的版本行与体量数字全滞后，直到下一版跑 O7 判据才被逮到 —— 那已经是两三版之后。
+    #   抬版是唯一会同时改动版本号与体量的动作，入口重算就应该挂在这里，而不是「记得手动跑一下」。
+    import subprocess as _sp
+    _r = _sp.call(['node', os.path.join(ROOT, 'tools', 'gen_plan_baseline.mjs'), '--write'])
+    assert _r == 0, 'gen_plan_baseline --write 失败：入口重算没做成，不许带着滞后入口收工'
+    _c = _sp.call(['node', os.path.join(ROOT, 'tools', 'gen_plan_baseline.mjs'), '--check'])
+    assert _c == 0, 'gen_plan_baseline --check 失败：入口仍与真源不一致'
     return 0
 
 
