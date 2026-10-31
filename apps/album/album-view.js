@@ -12,6 +12,7 @@ import { PHONE_CONFIG } from '../../config/apps.js';
 /* [v3.24.0 · L0-3] 分享面板：25 个平台图标（L0 素材第 2 类）。
  *   URL 解析只在取数口一处（`shareIconUrl`），本文件只把 key 列表画成按钮。 */
 import { L0_ASSETS, shareIconUrl } from '../../config/l0-assets.js';
+import { faceOf, faceHtml, FACE_ATTR } from '../../config/empty-face.js';
 /* [v4.99.9 · R11-X9] 回看面：**视图不 import 桥**（判据只能有一处）。
  *   视角枚举与文案、密级可选值全部经 `AlbumData.viewerOptions()` / `secrecyChoices()`
  *   转出（与记忆侧 `MemoryApp.replayViewerOptions()` 同一条纪律）。
@@ -587,16 +588,40 @@ export class AlbumView {
         `;
     }
 
+    /**
+     * [v4.108.0 · R13-O6] 空态分形：三种处境不许再用同一句话。
+     *
+     * 本页真实存在的三种处境：
+     *   · 一张都没有                    ⇒ empty   「还没有图片或视频」
+     *   · 有，但当前分类滤空了          ⇒ blocked 「当前条件下没有图片」（处置：清筛选）
+     *   · 数据面读失败（列表没上来）    ⇒ absent  「相册这会儿打不开」（处置：看诊断）
+     * 三者处置相反，故文案与 data-face-why 必须都不同。
+     */
     renderEmpty() {
-        return `
-            <div class="album-empty">
-                <div class="album-empty-icon"><i class="fa-regular fa-images"></i></div>
-                <div class="album-empty-title">还没有图片或视频</div>
-                <div class="album-empty-copy">各个 App 保存过的图片和视频会按来源显示在这里。</div>
-            </div>
-        `;
+        const face = this._emptyFace();
+        const code = face.code;
+        const title = this.escapeHtml(face.title);
+        const copy = code === 'filtered-out'
+            ? '<button type="button" class="album-empty-clear" id="album-empty-clear-filter">清除筛选条件</button>'
+            : (code === 'read-failed'
+                ? '<div class="album-empty-copy">列表没能读上来，这不等于相册是空的。可到诊断中心看存储读取面。</div>'
+                : '<div class="album-empty-copy">各个 App 保存过的图片和视频会按来源显示在这里。</div>');
+        return `<div class="album-empty" ${FACE_ATTR}="${code}" data-face="${face.face}">
+                    <div class="album-empty-icon"><i class="fa-regular fa-images"></i></div>
+                    <div class="album-empty-title">${title}</div>
+                    ${copy}
+                </div>`;
     }
 
+    /** 判定当前该报哪一态（判定只在这一处，不许散进渲染函数）。 */
+    _emptyFace() {
+        const total = Array.isArray(this.images) ? this.images.length : 0;
+        const filtering = !!(this.activeSource && this.activeSource !== 'all');
+        const f = faceOf({ items: this.images, filtered: total > 0 && filtering });
+        if (f.face === 'blocked') return { face: f.face, code: f.code, title: '当前条件下没有图片' };
+        if (f.face === 'absent') return { face: f.face, code: f.code, title: '相册这会儿打不开' };
+        return { face: 'empty', code: 'no-data', title: '还没有图片或视频' };
+    }
     bindEvents() {
         const root = (document.querySelector('.phone-view-current') || document).querySelector('.album-app');
         if (!root) return;

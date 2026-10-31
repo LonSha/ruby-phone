@@ -11,6 +11,7 @@
  * 结构：_esc + _draw + _bind（与 place-view 同风格）。
  * ============================================================ */
 'use strict';
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class WalletView {
     constructor(app) {
         this.app = app;
@@ -78,7 +79,10 @@ export class WalletView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="wl-empty">' + this._esc(face.reason === 'empty' ? '还没有记过账（钱数会随剧情自动入账）' : '读不到账户') + '</div>';
+            /* [R13-O6] 读不到不是「还没有」：文案与 data-face-why 都不同形 */
+            const wWhy1 = face.reason === 'empty' ? 'no-data' : (face.reason === 'bridge-absent' ? 'not-mounted' : 'read-failed');
+            const wFace1 = wWhy1 === 'no-data' ? 'empty' : 'absent';
+            body = '<div class="wl-empty" ' + FACE_ATTR + '="' + wWhy1 + '" data-face="' + wFace1 + '">' + this._esc(face.reason === 'empty' ? '还没有记过账（钱数会随剧情自动入账）' : '读不到账户（这不等于没有账户）') + '</div>';
         } else if (!proj.accounts.length) {
             body = '<div class="wl-empty">还没有任何账户（只有流水记录）</div>';
         } else {
@@ -106,7 +110,9 @@ export class WalletView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="wl-empty">' + this._esc(face.reason === 'empty' ? '还没有流水' : '读不到流水') + '</div>';
+            const wWhy2 = face.reason === 'empty' ? 'no-data' : (face.reason === 'bridge-absent' ? 'not-mounted' : 'read-failed');
+            const wFace2 = wWhy2 === 'no-data' ? 'empty' : 'absent';
+            body = '<div class="wl-empty" ' + FACE_ATTR + '="' + wWhy2 + '" data-face="' + wFace2 + '">' + this._esc(face.reason === 'empty' ? '还没有流水' : '读不到流水（这不等于没有流水）') + '</div>';
         } else if (!proj.tx.length) {
             body = '<div class="wl-empty">还没有流水记录</div>';
         } else {

@@ -15,6 +15,7 @@
  *   选择列表由 `L0_ASSETS.frames` 生成 ⇒ 加一套画框只改取数口一处。 */
 import { L0_ASSETS, galleryFrameUrl } from '../../config/l0-assets.js';
 import { buildTodayFace, todayHeadline } from '../../config/day-rhythm-bridge.js';
+import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class DiaryView {
     constructor(app) {
@@ -138,7 +139,7 @@ export class DiaryView {
         let listHtml;
         if (sorted.length === 0) {
             listHtml = `
-                <div class="diary-toc-empty">
+                <div class="diary-toc-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="diary-toc-empty-text">还没有日记，写一篇吧</div>
                 </div>
             `;

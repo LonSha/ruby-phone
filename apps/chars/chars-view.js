@@ -11,6 +11,10 @@
  * 结构：_esc + _draw + _bind（与 wallet-view 同风格）。
  * ============================================================ */
 'use strict';
+/* [v4.108.0 · R13-O6] 空态四态：本页原有五态归因（ready/empty/no-chars-face/no-snapshot/bridge-absent），
+ *   但渲染时只有「还没有」与「读不到」两句。并入统一词表后，非 ok 态一律带 data-face-why，
+ *   且「真的空」与「读不到」的文案与属性都不同形。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class CharsView {
     constructor(app) {
         this.app = app;
@@ -102,9 +106,13 @@ export class CharsView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="cs-empty">' + this._esc(face.reason === 'empty' ? '还没有被追踪的角色（角色状态会随剧情自动积累）' : '读不到角色状态') + '</div>';
+            /* [R13-O6] 读不到不是「还没有」：两者文案 + data-face-why 都不同形 */
+            const why = face.reason === 'empty' ? 'no-data' : (face.reason === 'bridge-absent' ? 'not-mounted' : 'read-failed');
+            const faceWhy = why === 'no-data' ? 'empty' : 'absent';
+            const txt = face.reason === 'empty' ? '还没有被追踪的角色（角色状态会随剧情自动积累）' : '读不到角色状态（这不等于没有角色）';
+            body = '<div class="cs-empty" ' + FACE_ATTR + '="' + why + '" data-face="' + faceWhy + '">' + this._esc(txt) + '</div>';
         } else if (!proj.roles.length) {
-            body = '<div class="cs-empty">还没有任何被追踪的角色</div>';
+            body = '<div class="cs-empty" ' + FACE_ATTR + '="no-data" data-face="empty">还没有任何被追踪的角色</div>';
         } else {
             const rows = proj.roles.map((r) => {
                 const fieldChips = r.fields.slice(0, 6).map((f) => [

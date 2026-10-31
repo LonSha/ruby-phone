@@ -30,6 +30,7 @@ import { ASK_RUN_STATES, askRunLine } from '../../config/ask-request.js';
  *   与追问面同规格：**只取数、不推算** —— 谁持有、该不该还全由契约件一处判
  *   （`app.itemCustody()` 转交），视图只排版。 */
 import { traceLineOf, ASK_THREAD_LIMITS } from '../../config/memory-ask-thread.js';
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class MemoryView {
   constructor(app) {
     this.app = app;
@@ -160,7 +161,7 @@ export class MemoryView {
   _senseHtml(pkg) {
     const rows = Array.isArray(pkg.senses) ? pkg.senses : [];
     if (!rows.length) {
-      return '<div class="mem-none">还没有带感官细节的记忆<br><span class="mem-hint">当对话里出现气味、触感、声音等描写时，会自动归档到这里</span></div>';
+      return '<div class="mem-none" ' + FACE_ATTR + '="no-data" data-face="empty">还没有带感官细节的记忆<br><span class="mem-hint">当对话里出现气味、触感、声音等描写时，会自动归档到这里</span></div>';
     }
     return rows.map((r) => {
       const items = r.items.map((it) =>
@@ -181,7 +182,7 @@ export class MemoryView {
   _sceneHtml(pkg) {
     const rows = Array.isArray(pkg.scenes) ? pkg.scenes : [];
     if (!rows.length) {
-      return '<div class="mem-none">还没有按地点聚起来的记忆<br><span class="mem-hint">带地点标注的对话会归到对应场景下</span></div>';
+      return '<div class="mem-none" ' + FACE_ATTR + '="no-data" data-face="empty">还没有按地点聚起来的记忆<br><span class="mem-hint">带地点标注的对话会归到对应场景下</span></div>';
     }
     return rows.map((r) => {
       const chips = r.senses.map((s) =>
@@ -264,7 +265,7 @@ export class MemoryView {
   _coverageHtml(pkg) {
     const c = (pkg && typeof pkg === 'object') ? pkg.coverage : null;
     if (!c || typeof c !== 'object') {
-      return '<div class="mem-none">覆盖度读数不可用（已降级，不影响已有记忆）</div>';
+      return '<div class="mem-none" ' + FACE_ATTR + '="read-failed" data-face="absent">覆盖度读数不可用（已降级，不影响已有记忆）</div>';
     }
     if (c.state === 'absent') {
       return '<div class="mem-none">宿主聊天上下文不可得，暂无法统计覆盖度</div>';

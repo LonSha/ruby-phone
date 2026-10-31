@@ -12,6 +12,7 @@
  * ============================================================ */
 'use strict';
 import { PROMISE_STATUS, ARC_STATUS } from './plotline-data.js';
+import { FACE_ATTR } from '../../config/empty-face.js';
 export class PlotlineView {
     constructor(app) {
         this.app = app;
@@ -105,7 +106,9 @@ export class PlotlineView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有大纲（记忆插件会随剧情建立阶段）' : '读不到大纲') + '</div>';
+            const pWhy = face.reason === 'empty' ? 'no-data' : (face.reason === 'bridge-absent' ? 'not-mounted' : 'read-failed');
+            const pFace = pWhy === 'no-data' ? 'empty' : 'absent';
+            body = '<div class="pn-empty" ' + FACE_ATTR + '="' + pWhy + '" data-face="' + pFace + '">' + this._esc(face.reason === 'empty' ? '还没有大纲（记忆插件会随剧情建立阶段）' : '读不到大纲（这不等于没有大纲）') + '</div>';
         } else if (!stage.hasStage) {
             body = '<div class="pn-empty">大纲面在，但还没有当前阶段</div>';
         } else {
@@ -135,7 +138,9 @@ export class PlotlineView {
         const ready = face.reason === 'ready';
         let body;
         if (!ready) {
-            body = '<div class="pn-empty">' + this._esc(face.reason === 'empty' ? '还没有承诺记录' : '读不到承诺') + '</div>';
+            const pWhy2 = face.reason === 'empty' ? 'no-data' : (face.reason === 'bridge-absent' ? 'not-mounted' : 'read-failed');
+            const pFace2 = pWhy2 === 'no-data' ? 'empty' : 'absent';
+            body = '<div class="pn-empty" ' + FACE_ATTR + '="' + pWhy2 + '" data-face="' + pFace2 + '">' + this._esc(face.reason === 'empty' ? '还没有承诺记录' : '读不到承诺（这不等于没有承诺）') + '</div>';
         } else if (!promises.length) {
             body = '<div class="pn-empty">还没有承诺记录（角色做出约定后会自动入账）</div>';
         } else {
