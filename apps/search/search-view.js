@@ -42,6 +42,10 @@ export class SearchView {
         this._keyword = '';
         this._scope = '';       // '' = 全部来源
         this._result = null;
+        /* [v4.110.0 · R13-X2] 模糊回忆折叠区：默认收起 —— 收起时一次都不算（算一次要扫既有索引）。 */
+        this._vagueOpen = false;
+        this._vague = null;
+        this._vagueKw = '';
     }
 
     render() {
@@ -146,6 +150,69 @@ export class SearchView {
     }
 
     /**
+     * [v4.110.0 · R13-X2] 模糊回忆折叠区：给「大概那阵子」这类问法一个入口。
+     *
+     * 【为什么是折叠区而不是第二套搜索】计划原文要求「只在既有搜索结果**之上追加**一栏，
+     *   不改原搜索路径」—— 折叠着的时候一个字符都不多，展开才去算。
+     * 【为什么每条都要摆出「为什么命中」】模糊检索天生容易「看上去像」，玩家只能靠原因
+     *   判断这是不是他要找的那一天。内核已保证 `why` 非空（`auditRecall` 守着），
+     *   本件只把它排版成人话，**不自己编一句理由**。
+     * 【三态不许同形】内核没听懂 / 自检没过 / 算崩了 —— 三种都 `ok:false`，
+     *   但说的不是同一句话：分别是「没抽出能找的条件」「没敢给结果」「算崩了」。
+     */
+    _vagueHtml() {
+        const kw = this._keyword.trim();
+        if (!kw) return '';
+        const open = this._vagueOpen === true;
+        const head = `<div class="gs-vague">
+            <button class="gs-vague-toggle${open ? ' gs-vague-on' : ''}" id="gs-vague-toggle">
+                🧠 模糊回忆（「上次那阵子」也能找）${open ? ' ▴' : ' ▾'}
+            </button>`;
+        if (!open) return head + '</div>';
+        let res = this._vague;
+        if (!res || this._vagueKw !== kw) {
+            try { res = this.app.vagueRecall?.(kw) || null; } catch (e) {
+                res = { ok: false, rows: [], total: 0, scanned: 0, gaps: [{ kind: 'threw', why: String((e && e.message) || e) }], line: '算崩了', readError: '' };
+            }
+            this._vague = res;
+            this._vagueKw = kw;
+        }
+        if (!res) return head + '</div>';
+        const gaps = Array.isArray(res.gaps) ? res.gaps : [];
+        const gapHtml = gaps.length
+            ? `<div class="gs-vague-gap">${gaps.map((g) => esc(String((g && g.why) || ''))).join('；')}</div>` : '';
+        const errHtml = res.readError
+            ? `<div class="gs-vague-gap">索引这轮读不出来（${esc(String(res.readError))}）—— 这不等于没有这段</div>` : '';
+        if (res.ok !== true) {
+            return head
+                + `<div class="gs-vague-none">${esc(String(res.line || '没听懂这句'))}</div>`
+                + errHtml + gapHtml + '</div>';
+        }
+        if (!res.total) {
+            return head
+                + `<div class="gs-vague-line">${esc(String(res.line || ''))}</div>`
+                + `<div class="gs-vague-none">按这几个条件一条都对不上 —— 但这是「我说的条件不对」，不是「手机里没有」。</div>`
+                + errHtml + gapHtml + '</div>';
+        }
+        const rows = res.rows.map((it) => {
+            const row = (it && it.row) || {};
+            const why = Array.isArray(it && it.why) ? it.why : [];
+            const whyHtml = why.map((w) => `<span class="gs-vague-why">${esc(String((w && w.text) || ''))}</span>`).join('');
+            const ref = (row && row.meta && row.meta.ref && row.meta.ref.id) ? row.meta.ref : null;
+            const refAttr = ref ? ` data-vref="${esc(JSON.stringify({ appId: ref.appId, kind: ref.kind, id: ref.id }))}"` : '';
+            return `<div class="gs-vague-row${row.appId ? ' gs-jumpable' : ''}" data-app="${esc(row.appId || '')}"${refAttr}>
+                <div class="gs-vague-title">${esc(String(row.title || '（没有标题）'))}</div>
+                <div class="gs-vague-meta">${esc(String(row.sourceLabel || row.sourceId || ''))}</div>
+                <div class="gs-vague-whys">${whyHtml}</div>
+            </div>`;
+        }).join('');
+        return head
+            + `<div class="gs-vague-line">${esc(String(res.line || ''))}</div>`
+            + (res.total > res.rows.length ? `<div class="gs-vague-gap">只摆前 ${res.rows.length} 条（共 ${res.total} 条）</div>` : '')
+            + rows + errHtml + gapHtml + '</div>';
+    }
+
+    /**
      * [v3.17.0 R-O1] 结果区。
      *   快速档仍走同步 `query`（与旧行为一字不差）；全历史档交给 `app.search()` 起分片扫描，
      *   本方法先返回一份占位。
@@ -155,18 +222,21 @@ export class SearchView {
     _resultsHtml() {
         const kw = this._keyword.trim();
         if (!kw) return this._hint();
+        /* [v4.110.0 · R13-X2] 模糊回忆折叠区**追加在结果之上**，不改原路径：
+         *   折叠着时它只占一行按钮，展开才去算（算一次要扫既有索引）。 */
+        const vague = this._vagueHtml();
         const full = this.app._fullMode === true;
         if (!this._result) {
-            if (full) return this._openScan(kw);
+            if (full) return vague + this._openScan(kw);
             const out = this.app.search(kw);
             this._result = (out && out.result) ? out.result : null;
         }
         const r = this._result;
-        if (!r) return this._scanPlaceholderHtml(kw);
+        if (!r) return vague + this._scanPlaceholderHtml(kw);
         const scope = r.scope || {};
         const note = this._scopeNote(scope);
         if (!r.results || !r.results.length) {
-            return `<div class="gs-empty"><div class="gs-empty-icon">🫥</div>
+            return vague + `<div class="gs-empty"><div class="gs-empty-icon">🫥</div>
                 <div class="gs-empty-title">没有找到「${esc(kw)}」</div>
                 <div class="gs-empty-sub">已检索 ${esc(String(r.scanned))} 条记录（${this.app.engine.listSources().length} 个来源）${esc(note)}</div>
                 ${this._scopeWarn(scope)}</div>`;
@@ -180,7 +250,7 @@ export class SearchView {
         const errs = (r.errors && r.errors.length)
             ? `<div class="gs-err">${r.errors.length} 个来源读取失败：${esc(r.errors.map(e => e.sourceId).join('、'))}</div>`
             : '';
-        return head + this._facetNote(r.facets) + this._scopeWarn(scope) + groups + errs;
+        return vague + head + this._facetNote(r.facets) + this._scopeWarn(scope) + groups + errs;
     }
 
     /**
@@ -599,6 +669,31 @@ export class SearchView {
             try {
                 window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, tab || null, null) }));
             } catch (_e) { /* 忽略 */ }
+        });
+        /* [v4.110.0 · R13-X2] 模糊回忆折叠区的两处交互：
+         *   ① 展开/收起 —— 展开即去算一次（算力只在用户主动要时才花）；
+         *   ② 点一条结果 —— 与主结果行**同一条派发路**（`phone:openApp` + 靶心），
+         *      不另开一条「模糊结果专用」的打开方式（那会变成第二份派发口径）。 */
+        root.querySelector('#gs-vague-toggle')?.addEventListener('click', () => {
+            this._vagueOpen = this._vagueOpen !== true;
+            this._vague = null;
+            this._vagueKw = '';
+            this._paint();
+        });
+        root.querySelectorAll('.gs-vague-row.gs-jumpable').forEach(item => {
+            item.addEventListener('click', () => {
+                const appId = String(item.dataset.app || '');
+                if (!appId) return;
+                let ref = null;
+                const rawRef = item.dataset.vref;
+                if (rawRef) {
+                    try { ref = JSON.parse(rawRef); }
+                    catch (_e) { console.warn('⚠️ 模糊回忆的靶心解析失败，退化为只打开 App：', rawRef); }
+                }
+                try {
+                    window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, null, ref) }));
+                } catch (_e) { /* 忽略 */ }
+            });
         });
     }
 }

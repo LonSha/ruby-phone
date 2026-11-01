@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""bump_v4110.py — 抬 v4.11.0（五源同源，单版）。
-范式抄自 tools/bump_v3980.py（同仓唯一抬版口径，不另立第二份）：
-  ① update-log.json：新键插首位 + latest / head 同置（indent=2 重建）；
-  ② manifest.json / package.json 的 version；
-  ③ index.js 的 ST_PHONE_VERSION 常量 + ST_PHONE_CURRENT_UPDATE 公告块；
-  ④ ITERATION_LOG.md：头部插迭代段 + 元信息当前版本行 + 版本数由真源重算；
-  ⑤ docs/runtime-verification-boundary.md：当版复校标记（数字由取数臂另跑）。
-纪律：只写上面五处；先算 draft、逐份断言；默认 dry-run，--write 才落盘。
-本版 v4.11.0 做的是第三期 A 包手机侧首项：R3-O1 通话同名人工认领。
-新增内核 config/call-attribution.js（会话级认领账：拒绝空值 / 可撤销 / 读不抛），
-并接三层（取数 / 控制器 / 视图）；新增判据 tests/system-v4110.test.mjs 二十例，
-新增 tools/iter170_seg.md（本版迭代段）。
+"""抬 v4.110.0（五源同源，单版）—— R13-X2 模糊回忆：说得出来的那一条才叫命中。
+
+范式逐条沿用 tools/bump_v4108.py（once 断言锚点恰中 1 次、parse_items 断言四类标志语、
+rebuild_block 重建公告块、五源同改、默认 dry-run）。本版只换 STEPS、SEG 与头注，逻辑一字未改 ——
+改逻辑等于让「五源同源」这件事有两份实现。
 """
 import io
 import json
 import os
 import re
 import sys
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WRITE = '--write' in sys.argv
 NL = chr(10)
@@ -26,7 +20,7 @@ BS = chr(92)
 
 # (ver, date, prev, seg_file, iter_no)
 STEPS = [
-    ('4.11.0', '2026-10-26', '4.10.0', 'tools/iter170_seg.md', 170),
+    ('4.110.0', '2026-11-04', '4.109.0', 'tools/iter244_seg.md', 244),
 ]
 
 
@@ -48,8 +42,6 @@ def once(s, old, new, tag):
 
 def parse_items(seg_path):
     seg = rd(seg_path).rstrip(NL)
-    assert BS not in seg, 'iter seg must not contain backslash'
-    assert '[' not in seg and ']' not in seg, 'iter seg must not contain brackets'
     items = []
     for line in seg.split(NL):
         line = line.strip()
@@ -64,19 +56,20 @@ def parse_items(seg_path):
         assert it.startswith(chr(0x3010)), it[:24]
         assert chr(0x3011) in it, it[:24]
         assert NL not in it and DQ not in it and BS not in it, it[:24]
+        # 方括号禁则**必须保留**：当版切片判据按「公告块里第一个 `]`」截头部，
+        #   items 里一旦出现 `]` 头部就被提前截断、后半读不到 ⇒ 假红。
         assert '[' not in it and ']' not in it, it[:24]
         items.append(it)
     assert len(items) >= 8, len(items)
 
     def _has(pat):
         return any(re.search(pat, it) for it in items)
-
     assert _has('版本升至'), 'missing closing: 版本升至 X(五源同源)'
     assert _has('自己抓到的缺陷|本版自己抓到|缺陷形态'), 'missing flaw-form anchor'
     assert _has('交棒改写|主动改写|下限形'), 'missing handoff anchor'
     assert _has('运行时验证边界'), 'missing runtime-boundary item'
     assert any(it.startswith(chr(0x3010) + '版本升至') for it in items), \
-        'iter seg must carry the closing item “版本升至 X（五源同源）”'
+        'iter seg must carry the closing item'
     return seg, items
 
 
@@ -94,6 +87,11 @@ def rebuild_block(ij, items, date):
         new_lines.append('        ' + json.dumps(it, ensure_ascii=False) + comma)
     new_lines.append('    ]')
     return ij[:bi] + NL.join(new_lines) + ij[bj:]
+
+
+META_ANCHOR = '- **当前版本**：`%s`（五源同源）'
+TAG = '个版本，按版本号索引'
+DOC_PAT = '（v2.82.0 起；**v%s 复校**）'
 
 
 def step(ver, date, prev, seg_path, iter_no, state):
@@ -122,31 +120,35 @@ def step(ver, date, prev, seg_path, iter_no, state):
     ij = once(ij, "const ST_PHONE_VERSION = '%s';" % prev,
               "const ST_PHONE_VERSION = '%s';" % ver, 'ST_PHONE_VERSION')
     ij = rebuild_block(ij, items, date)
-    for it in items:
-        assert json.dumps(it, ensure_ascii=False) in ij
     _miss = [it[:40] for it in items if json.dumps(it, ensure_ascii=False) not in ij]
-    assert not _miss, 'index.js 应公告块缺条目: ' + '; '.join(_miss)
-    assert ('版本升至 ' + ver) in ij, \
-        'index.js must expose the closing item' 
-    for _m in _miss:
-        print('[bump] MISSING: ' + _m)
+    assert not _miss, 'index.js 公告块缺条目: ' + '; '.join(_miss)
+    assert ('版本升至 ' + ver) in ij, 'index.js must expose the closing item'
     state['idx'] = ij
     il = state['il']
-    il = once(il, '- **当前版本**：`%s`' % prev, '- **当前版本**：`%s`' % ver, 'meta version line')
-    TAG = '个版本，按版本号索引'
+    il = once(il, META_ANCHOR % prev, META_ANCHOR % ver, 'meta version line')
     m = re.search(r'(\d+) ' + re.escape(TAG), il)
     assert m, 'version-count sentence must hit exactly 1'
-    print('  头部版本数：%s -> %d' % (m.group(1), len(new_versions)))
+    print('  头部版本数:%s -> %d' % (m.group(1), len(new_versions)))
     il = il[:m.start(1)] + str(len(new_versions)) + il[m.end(1):]
     il = seg + NL + NL + il
     assert il.count('## 迭代 %d ' % iter_no) == 1
     state['il'] = il
     doc = state['doc']
-    pat = '（v2.82.0 起；**v' + prev + ' 复校**）'
+    pat = DOC_PAT % prev
     assert doc.count(pat) == 1, doc.count(pat)
-    doc = doc.replace(pat, '（v2.82.0 起；**v' + ver + ' 复校**）', 1)
+    doc = doc.replace(pat, DOC_PAT % ver, 1)
     state['doc'] = doc
     assert ('**v' + ver + ' 复校**') in state['doc']
+    # 状态账本（五源之一）：version 与 version_sources 四处必须同改。
+    led = json.loads(state['led'])
+    assert led['version'] == prev, led['version']
+    assert led['version_same'] is True
+    for k, v in led['version_sources'].items():
+        assert v == prev, (k, v)
+    led['version'] = ver
+    for k in led['version_sources']:
+        led['version_sources'][k] = ver
+    state['led'] = json.dumps(led, ensure_ascii=False, indent=2) + NL
 
 
 def main():
@@ -157,6 +159,7 @@ def main():
         'idx': rd('index.js'),
         'il': rd('ITERATION_LOG.md'),
         'doc': rd('docs/runtime-verification-boundary.md'),
+        'led': rd('tests/audit/status-ledger.json'),
     }
     for ver, date, prev, seg, no in STEPS:
         step(ver, date, prev, seg, no, state)
@@ -170,7 +173,17 @@ def main():
     wr('index.js', state['idx'])
     wr('ITERATION_LOG.md', state['il'])
     wr('docs/runtime-verification-boundary.md', state['doc'])
+    wr('tests/audit/status-ledger.json', state['led'])
     print('--- WRITTEN --- final version = ' + STEPS[-1][0])
+    # [v4.107.0 · 反思] 抬版必须连带把 PLAN / TODO 三处入口重新算一遍。
+    #   为什么写死在抬版流程里：v4.106.0 抬完之后只跑了 gen_plan_baseline 的**打印分支**（不带 --check），
+    #   于是 PLAN 的版本行与体量数字全滞后，直到下一版跑 O7 判据才被逮到 —— 那已经是两三版之后。
+    #   抬版是唯一会同时改动版本号与体量的动作，入口重算就应该挂在这里，而不是「记得手动跑一下」。
+    import subprocess as _sp
+    _r = _sp.call(['node', os.path.join(ROOT, 'tools', 'gen_plan_baseline.mjs'), '--write'])
+    assert _r == 0, 'gen_plan_baseline --write 失败：入口重算没做成，不许带着滞后入口收工'
+    _c = _sp.call(['node', os.path.join(ROOT, 'tools', 'gen_plan_baseline.mjs'), '--check'])
+    assert _c == 0, 'gen_plan_baseline --check 失败：入口仍与真源不一致'
     return 0
 
 

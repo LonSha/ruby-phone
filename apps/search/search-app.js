@@ -27,6 +27,14 @@ import { SpotlightUniversalSearch, SEARCH_DOMAINS } from '../../config/spotlight
  *   （`applyFacets`）——**不重排相关性**（排序仍归引擎的 `scoreHit`），
  *   也**不新建索引、不新建性能守卫**（计划原文逐字点名）。 */
 import { facetsOf, applyFacets, recallTermsOf } from '../../config/search-facets.js';
+/* [v4.110.0 · R13-X2] 模糊回忆：「上次她说下雨那天」这类**没有完整检索词**的问句。
+ *   分工写死：
+ *     · 拆条件 + 判一条行       → `config/vague-recall.js`（判定层）；
+ *     · 归并排序 + 自检 + 一句话  → `config/vague-recall-batch.js`（归并层）。
+ *   本 App 只做两件事：把**既有引擎已经物化的行**交下去，再把结果交回来给视图排版。
+ *   **不新建索引、不改原搜索路径、不在键入时算**（算一次要扫全索引，只在用户主动展开时算）。 */
+import { parseVague } from '../../config/vague-recall.js';
+import { recallRows, auditRecall, vagueLine } from '../../config/vague-recall-batch.js';
 /* [v4.15.0 · R4-O3] 页面状态捕获与恢复(纯函数)。
  *   本层只做两件:把四格交给它归一,以及读写那一个会话键。
  *   **会话围栏由它说话**(appId + chatId 两格逐次比对)——本层不自己判一份。 */
@@ -418,6 +426,56 @@ export class SearchApp {
     }
 
     /**
+     * [v4.110.0 · R13-X2] 模糊回忆：把「大约那阵子」这句话变成可回源的一组命中。
+     *
+     * 【为什么在 App 而不在视图】视图不取数、不自算条件（本仓「视图纯渲染」纪律）。
+     * 【为什么不在键入时算】它要扫一遍既有索引（每源最多 600 条），
+     *   逐字输入都算一次会把输入框拖慢 —— 本方法只在用户**主动展开**折叠区时调。
+     * 【为什么自带自检】`auditRecall` 查的是「每条命中都说得出为什么」。
+     *   自检不过 ⇒ **不交结果**，只交一句「这次没敢给结果」：
+     *   宁可这一栏空着，也不能把说不出原因的行摆给用户当「找到了」。
+     *
+     * @param {string} kw 用户原句
+     * @returns {{ok:boolean,state:string,cond:object,rows:Array,total:number,scanned:number,
+     *            gaps:Array,line:string,readError:string}}
+     */
+    vagueRecall(kw) {
+        const now = this._now();
+        const cond = parseVague(kw, { now: now, knownActors: this._knownActors() });
+        let rows = [];
+        let readError = '';
+        try {
+            rows = this.engine.build() || [];
+        } catch (e) {
+            /* 索引读不出来是**一种处境**，不是「没有这段回忆」—— 如实记，不闷掉。 */
+            readError = String((e && e.message) || e);
+            rows = [];
+        }
+        let res = null;
+        try {
+            res = recallRows(rows, cond, { now: now });
+        } catch (e) {
+            return {
+                ok: false, state: 'unresolved', cond: cond, rows: [], total: 0, scanned: rows.length,
+                gaps: [{ kind: 'threw', why: '这轮模糊回忆算崩了（' + String((e && e.message) || e) + '）' }],
+                line: '没听懂这句，已按普通搜索处理', readError: readError
+            };
+        }
+        const audit = auditRecall(res);
+        if (!audit.ok) {
+            return {
+                ok: false, state: 'unresolved', cond: cond, rows: [], total: 0, scanned: rows.length,
+                gaps: [{ kind: 'self-check', why: '自检没过，本次不给结果：' + String(audit.problems[0] || '') }],
+                line: '这次没敢给结果，已按普通搜索处理', readError: readError
+            };
+        }
+        return {
+            ok: res.ok, state: res.state, cond: cond, rows: res.rows, total: res.total,
+            scanned: res.scanned, gaps: res.gaps, line: vagueLine(cond, res), readError: readError
+        };
+    }
+
+    /**
      * [v3.17.0 R-O1] 「数据变了」的唯一出口：索引失效 + **正在跑的扫描作废**。
      * 编辑 / 删楼 / 重生成 / 换会话都走这里（前三个是宿主事件，第四个是换源）。
      * 为什么必须连扫描一起作废：全历史扫一次可能跨几个帧，中途改楼后再把
@@ -545,6 +603,20 @@ export class SearchApp {
         .gs-prov { font-size:10.5px; color:#8b93a1; margin-top:3px; line-height:1.5; }
         .gs-prov-warn { color:#e0b050; }
         .gs-mark { background:rgba(242,181,68,.28); color:#ffe0a3; border-radius:3px; padding:0 1px; }
+        /* [v4.110.0 · R13-X2] 模糊回忆折叠区：收起只占一行按钮，与主结果区分色（它是**追加的一栏**，不是第二条主路）。 */
+        .gs-vague { margin:0 4px 10px; border-radius:12px; background:rgba(108,163,255,.07); border:1px solid rgba(108,163,255,.16); overflow:hidden; }
+        .gs-vague-toggle { display:block; width:100%; text-align:left; border:none; background:transparent; color:#9fbcff; font-size:12px; padding:9px 11px; cursor:pointer; }
+        .gs-vague-toggle.gs-vague-on { color:#cfe0ff; }
+        .gs-vague-line { font-size:11px; color:#93a1bb; padding:0 11px 7px; line-height:1.5; }
+        .gs-vague-none { font-size:11.5px; color:#c9b06a; padding:0 11px 9px; line-height:1.55; }
+        .gs-vague-gap { font-size:10.5px; color:#8b93a1; padding:0 11px 8px; line-height:1.5; }
+        .gs-vague-row { padding:8px 11px; border-top:1px solid rgba(255,255,255,.055); }
+        .gs-vague-row.gs-jumpable { cursor:pointer; }
+        .gs-vague-row.gs-jumpable:hover { background:rgba(255,255,255,.05); }
+        .gs-vague-title { font-size:12.5px; color:#eef1f6; word-break:break-word; }
+        .gs-vague-meta { font-size:10.5px; color:#7f858b; margin-top:2px; }
+        .gs-vague-whys { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+        .gs-vague-why { font-size:10.5px; color:#9fd0a8; background:rgba(110,190,130,.12); border-radius:999px; padding:1px 7px; }
         .gs-err { font-size:11px; color:#f87171; padding:6px 4px; }
         .gs-empty, .gs-hint { text-align:center; padding:48px 24px; color:#8b8f96; }
         .gs-empty-icon { font-size:34px; margin-bottom:10px; }

@@ -321,6 +321,11 @@ export class GlobalSearchEngine {
                             bodyFull: bodyFull,
                             bodyTruncated: body.length > BODY_SEARCH_CAP,
                             ts: Number(it.ts) || 0,
+                            /* [v4.110.0 · R13-X2] 源侧自带的天气标记**原样透传**：
+                             *   日记 / 场所两处的条目本来就有 `weather` 字段，而修前索引把它丢了 ——
+                             *   于是「下雨那天」这类问法只能靠正文里恰好写了「雨」才命中。
+                             *   透传**不参与打分**（`scoreHit` 只读标题与正文），只是把既有事实带过来。 */
+                            weather: String(it.weather || ''),
                             meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
                         });
                         n++;
@@ -798,6 +803,9 @@ export function buildDefaultSources(storage, deps = {}) {
             title: String(e?.title || e?.date || '一篇日记'),
             body: norm([e?.author, e?.content || e?.body].filter(Boolean).join(' · ')),
             ts: tsOf(e?.createdAt, e?.ts),
+            /* [v4.110.0 · R13-X2] 日记条目本来就有 `weather` 字段（`diary-data` 从页脚抽出来的），
+             *   此处带上它，模糊回忆才认得出「那天下雨的那篇」。 */
+            weather: String(e?.weather || ''),
             icon: '📔', appId: 'diary'
         }))
     });

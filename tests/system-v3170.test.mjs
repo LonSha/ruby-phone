@@ -268,8 +268,14 @@ test('v3170 A5. 依赖面收敛（三正文库不再进搜索闭包）', () => {
      *   闭包真涨了三件（spotlight-universal-search / apps.js 注册表 / app-library），
      *   405367 → 525604。这是**输入面真变大**，不是有人引正文库进来 ——
      *   上面那五条「重库不进闭包」的 assert 一条没动，量级哨兵按新真值抬到 560KB。 */
-    assert.ok(c.bytes < 560000,
-      '闭包字节必须仍在同一量级（上限 560KB，实测 ' + c.bytes + '）——'
+    /* ★ 口径三修（v4.110.0 · R13-X2）：v4.110.0 落盘的模糊回忆内核三件
+     *   （config/vague-recall.js / -terms / -batch，共 23901 字节）被 search-app
+     *   静态导入，闭包真再涨；此外 v4.99.7~v4.110.0 之间的既有增量也累积在此。
+     *   当前实测 560939。本条要守的东西一条未变（上面五条「重库不进闭包」钉住），
+     *   字节数只是**量级哨兵**（防有人把正文库整本 import 进来）——故按新真值
+     *   抬到 600KB（保留与历次同级的约 7% 余量），不把哨兵改成正文字数统计。 */
+    assert.ok(c.bytes < 600000,
+      '闭包字节必须仍在同一量级（上限 600KB，实测 ' + c.bytes + '）——'
       + '越过即是有人把正文库或大件引进来了');
 });
 
@@ -391,6 +397,14 @@ const CLOSURE = [
     'config/spotlight-universal-search.js',
     'config/apps.js',
     'config/app-library.js',
+    /* [v4.110.0 · R13-X2] 模糊回忆内核三件（vague-recall / -terms / -batch）被
+     *   apps/search/search-app.js 静态导入 —— CLOSURE 不补齐 ⇒ 副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。
+     *   本版实测真红：v281 D1/D2、v3170 E5/E6、v3760 E2 六项全部因缺件转红。
+     *   教训与 v4.99.7 同一条：**新增 config 依赖 ⇒ 同步补全部负控制的闭包**。 */
+    'config/vague-recall.js',
+    'config/vague-recall-terms.js',
+    'config/vague-recall-batch.js',
 ];
 function mkTree(tag) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3170-' + tag + '-'));

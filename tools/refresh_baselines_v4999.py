@@ -48,7 +48,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WRITE = '--write' in sys.argv
 NL = chr(10)
-VER = '4.99.9'
+VER = '4.110.0'
 
 # 嵌套与异名（lifecycle 探针把签名/路径分组成对象，基线把它们平铺成下划线键）
 NESTED_LC = {
@@ -120,6 +120,14 @@ PAIRS = [
         'nested': [],
         'nested_map': NESTED_LC,
         'alias': ALIAS_LC,
+        # ★ [v4.110.0 · R13-X2] criteria_pass_count 是**派生读数**（判据里 pass===true 的条数），
+        #   探针不直接给这个字段。此前工具对不上它 ⇒ 只能手抄 ⇒ 它必然漂移。
+        #   实证：v4.103.0 把 4 个 App 从手抄接线并入表驱动后，appExitPoints 50→47、
+        #   coverage 80.6%→79.7%，于是 R1/R4 由 pass 转 fail，而基线里
+        #   criteria_pass_count 仍停在 2，v324 的 A3「转 pass 的判据数必须与基线一致」
+        #   连红七版无人发现 —— 因为那条判据恰好守住了「读数不许静静变好」，
+        #   而它自己守的那一格是手抄的。修法：这一格改由判据现场派生，不再手抄。
+        'derived': {'criteria_pass_count': lambda live: sum(1 for c in (live.get('criteria') or []) if c.get('pass') is True)},
     },
 ]
 
@@ -219,6 +227,9 @@ def live_readings(live, pair):
 
 def resolve_live(live, key, pair):
     """把基线里的下划线平铺键解析成现场值（顺序：条数→嵌套→异名→同名→驼峰）。"""
+    dv = pair.get('derived') or {}
+    if key in dv:
+        return dv[key](live)
     co = pair.get('count_of') or {}
     if key in co:
         lst = live.get(co[key])

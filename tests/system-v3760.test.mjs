@@ -201,7 +201,16 @@ const CLOSURE_APP = CLOSURE_ENGINE.concat(CLOSURE_VIEW_EXTRA).concat([APP, 'apps
     'config/spotlight-face-bridge.js',
     'config/spotlight-universal-search.js',
     'config/apps.js',
-    'config/app-library.js']);
+    'config/app-library.js',
+    /* [v4.110.0 · R13-X2] 模糊回忆内核三件（vague-recall / -terms / -batch）被
+     *   apps/search/search-app.js 静态导入 —— CLOSURE_APP 不补齐 ⇒ 副本 import 就是
+     *   ERR_MODULE_NOT_FOUND，负控制会变成「因缺文件而红」而不是「因破坏而红」。
+     *   本版实测真红：v281 D1/D2、v3170 E5/E6、v3760 E2 六项全部因缺件转红。
+     *   教训与 v4.99.7 同一条：**新增 config 依赖 ⇒ 同步补全部负控制的闭包**。 */
+    'config/vague-recall.js',
+    'config/vague-recall-terms.js',
+    'config/vague-recall-batch.js',
+]);
 function mkTree(tag, files) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3760-' + tag + '-'));
     for (const f of files) {

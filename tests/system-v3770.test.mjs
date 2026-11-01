@@ -179,6 +179,40 @@ const MIRROR_FILES = [
      *   (chat-view + app-injection 的静态闭包 47 件,缺的恰好只有这一件)。 */
     'config/story-time-rel.js',
 ];
+/* [v4.110.0 · R13-X2 交棒改写] 镜像面从「手抄清单」改为「手抄底座 + 脚本真算的静态闭包」。
+ * ------------------------------------------------------------
+ * 为什么必须改（这不是风格选择，是四版连红的同一形态）：
+ *   底座清单是**手抄的**，产品侧每添一件 config 依赖就多一个手抄点，而没有人负责跟进。
+ *   实测先后漏掉的四件：
+ *     · v4.90.0 config/story-time-rel.js（上一版手抄补进来，注释已自陈「缺口照旧由脚本真算」）
+ *     · v4.104.0 config/recycle-bin.js（R13-O8 回收站，被 apps/wechat/wechat-data.js 导入）
+ *     · v4.106.0 config/time-source.js（R13-O4 两个钟）
+ *     · v4.108.0 config/empty-face.js（R13-O6 空态四态）
+ *   每一件的后果逐字同形：镜像根上 chat-view 装载失败（探针 exit 2），于是 B2（位置无关）
+ *   与 D1/D2/D3/D5（定点破坏）**一起**转红。注意这是**假红**：产品没坏，是负控制的输入不全。
+ *   上一版的注释里已经写下「缺口照旧由脚本真算」——那句话当时没被做成代码，于是同一年里
+ *   又漏了三件。所以这次不再手抄补齐，改成让清单自己长：闭包递归解析相对 import 直到收敛。
+ *   ★ 本仓纪律：手抄清单必然会漏，能算就别抄。 */
+function importClosureOf(root, entry) {
+    const seen = new Set();
+    const stack = [entry];
+    while (stack.length) {
+        const rel = stack.pop();
+        if (seen.has(rel)) continue;
+        seen.add(rel);
+        let src = '';
+        try { src = fs.readFileSync(path.join(root, rel), 'utf8'); } catch (_e) { continue; }
+        const re = /import\s+(?:[^'"]*?from\s+)?['"]([^'"]+)['"]/g;
+        let m;
+        while ((m = re.exec(src))) {
+            if (m[1].slice(0, 1) !== '.') continue;
+            stack.push(path.posix.normalize(path.posix.join(path.posix.dirname(rel), m[1])));
+        }
+    }
+    return [...seen];
+}
+/** 镜像面 = 手抄底座 ∪ chat-view 静态闭包（去重）。闭包每次现场算，不缓存。 */
+const mirrorFiles = () => [...new Set(MIRROR_FILES.concat(importClosureOf(ROOT, CV)))];
 /* [v3.79.0] 递归枚举全仓 .css —— 与 tests/audit/longlist_scale_probe.cjs 里那份**逐字同口径**
  *   （口径片段由本文件末的 D5 判据看守）。为什么两处各写一份而不上收：探针是 .cjs，
  *   套件是 .mjs，共享一个 .mjs 模块会让 .cjs 侧走不了 require；而镜像面比模块复用更
@@ -205,7 +239,7 @@ function mirror(dirOverride) {
     if (MIRROR) return MIRROR;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o6mirror-'));
     try {
-        for (const rel of MIRROR_FILES) {
+        for (const rel of mirrorFiles()) {
             const dst = path.join(dir, rel);
             fs.mkdirSync(path.dirname(dst), { recursive: true });
             fs.copyFileSync(path.join(ROOT, rel), dst);
@@ -225,7 +259,7 @@ function mirror(dirOverride) {
  *   别人弄坏的那份（实测：D1~D3 破坏过 chat-view 之后，D5 读到 L1/L2/L6/L7 一并转红）。
  *   本仓纪律：负控制必须在它自己那份输入上取数。 */
 function buildMirrorInto(dir) {
-    for (const rel of MIRROR_FILES) {
+    for (const rel of mirrorFiles()) {
         const dst = path.join(dir, rel);
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), dst);
