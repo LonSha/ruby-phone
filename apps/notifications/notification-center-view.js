@@ -14,6 +14,7 @@
 import {
     ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
 } from '../../config/notice-digest.js';
+import { getAwayMode } from '../../config/away-mode.js';
 /* [v4.99.7 · R11-X7] 中枢行反查不在这里 import 桥：
  *   视图**不许**自己去碰第二张表（v41000 F1 的规矩：映射只能有一处）。
  *   改为让 App 侧提供 `rowById()` 只读出口，视图只问不管。 */
@@ -91,6 +92,7 @@ export class NotificationCenterView {
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
             ${this._paradigmNote(split)}
             ${this._hubNote(feed)}
+            ${this._awaySection()}
             ${this._actionSection()}
             ${this._hiddenSection(split)}
             <div class="nc-list">${this._listHtml(rows)}</div>
@@ -181,6 +183,46 @@ export class NotificationCenterView {
         }
         return '';
     }
+    /* ---------------- [v4.115.0 · R13-X4] 不在的时候（离线与错过） ----------------
+     *   三态分开：正在离开（静音提示）/ 回来且有错过项（清单展开）/ 无错过或关闭（不占位）。
+     */
+    _awaySection() {
+        let away = null;
+        try {
+            away = window.VirtualPhone?.orchestrator?.awayMode || getAwayMode();
+        } catch (_e) { away = null; }
+        if (!away) return '';
+        const state = away.getAwayState();
+        if (state.isAway) {
+            return `<div class="nc-away-banner nc-away-active" style="background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.3);border-radius:8px;padding:8px 12px;margin:6px 0;font-size:12px;color:var(--text-color,#e6edf3);">
+                <i class="fa-solid fa-moon" style="color:#58a6ff;margin-right:6px;"></i>
+                <b>手机已放下</b> · 处于离开模式中（通知静音记账，已累计错过 ${state.missedCount} 条）
+            </div>`;
+        }
+        if (state.missedCount > 0) {
+            const summary = away.getMissedSummary();
+            const open = this._awayOpen === true;
+            const head = `<div class="nc-away-head" style="display:flex;justify-content:space-between;align-items:center;background:rgba(210,153,34,0.12);border:1px solid rgba(210,153,34,0.3);border-radius:8px;padding:8px 12px;margin:6px 0;font-size:12px;">
+                <span><i class="fa-solid fa-inbox" style="color:#d29922;margin-right:6px;"></i><b>不在的时候</b> · 错过了 ${state.missedCount} 条内容${summary.urgentCount ? `（含 ${summary.urgentCount} 条紧急）` : ''}</span>
+                <div>
+                    <button class="nc-ac-btn nc-away-toggle" data-away-toggle="1" style="padding:2px 8px;margin-right:4px;">${open ? '收起' : '查看'}</button>
+                    <button class="nc-ac-btn nc-away-ack" data-away-ack="1" style="padding:2px 8px;">已阅</button>
+                </div>
+            </div>`;
+            let body = '';
+            if (open) {
+                body = `<div class="nc-away-body" style="margin-bottom:8px;">` + summary.raw.map(m => `
+                    <div class="nc-row" style="border-left:2px solid ${m.priority >= 3 ? '#f85149' : '#d29922'};margin-bottom:4px;padding:4px 8px;">
+                        <div class="nc-row-t1"><b>${esc(m.title)}</b> <span style="font-size:11px;color:#8b949e;">· ${esc(APP_LABEL[m.appId] || m.appId)}</span>${m.stale ? ' <span style="font-size:10px;color:#f85149;border:1px solid #f85149;border-radius:3px;padding:0 2px;">已过期</span>' : ''}</div>
+                        <div class="nc-row-t2" style="font-size:12px;">${esc(m.body)}</div>
+                    </div>
+                `).join('') + `</div>`;
+            }
+            return `<div class="nc-away-box">${head}${body}</div>`;
+        }
+        return '';
+    }
+
     /* ---------------- [v3.85.0 · R-X1] 行动中心两列 ----------------
      *   数据**只**从宿主缓存读（`VirtualPhone._actionCenterCache`，由 config/action-center.js
      *   在咽喉处算好后挂上）：本视图不重算、不过滤、不判断哪条属哪列 ——
@@ -433,7 +475,25 @@ export class NotificationCenterView {
     _bind() {
         const root = this.app.phoneShell?.screen;
         if (!root) return;
-        /* [v4.19.0 · R4-O7] 组头三件事:展开/收起、静音、点代表条直达。 */
+        // [v4.115.0 · R13-X4] 不在的时候交互绑定
+        root.querySelectorAll('.nc-away-toggle').forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._awayOpen = !this._awayOpen;
+                this.render();
+            });
+        });
+        root.querySelectorAll('.nc-away-ack').forEach((b) => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                try {
+                    const away = window.VirtualPhone?.orchestrator?.awayMode || getAwayMode();
+                    if (away) away.markRead();
+                } catch (_e) {}
+                this.render();
+            });
+        });
+                /* [v4.19.0 · R4-O7] 组头三件事:展开/收起、静音、点代表条直达。 */
         root.querySelectorAll('.nc-group-toggle').forEach((b) => {
             b.addEventListener('click', (e) => {
                 e.stopPropagation();

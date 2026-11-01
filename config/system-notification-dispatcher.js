@@ -19,6 +19,7 @@
  *   修前排序**只看时间**（最新在最上），于是一条后台同步的 SILENT 能把
  *   「健康异动预警」盖到列表下面，用户看到的永远是最近的那条而不是最要紧的那条。 */
 import { resolvePresence, priorityOf, isOneShotState, presenceLine } from './presence-arbitration.js';
+import { getAwayMode } from './away-mode.js';
 export const NOTIFICATION_PRIORITY = Object.freeze({
     URGENT: 3,
     NORMAL: 2,
@@ -72,6 +73,7 @@ export class SystemNotificationDispatcher {
         this.storage = opts.storage || null;
         this.maxNotifications = opts.maxNotifications || 50;
         this.dndEnabled = opts.dndEnabled || false;
+        this.awayMode = opts.awayMode || (opts.storage ? getAwayMode({ storage: opts.storage }) : null);
         this.notifications = [];
         this.subscribers = new Set();
         /* 在场登记表：[来源 id] → { state, headless }。只由 notePresence 写。 */
@@ -138,6 +140,10 @@ export class SystemNotificationDispatcher {
         const presenceState = String(notif.presenceState || '');
         const presenceId = String(notif.presenceId || notif.appId || 'anon');
         let suppressedBy = '';
+        const isAway = Boolean(this.awayMode && typeof this.awayMode.isAway === 'function' && this.awayMode.isAway());
+        if (isAway && !suppressedBy) {
+            suppressedBy = 'away_mode';
+        }
         if (presenceState) {
             this.notePresence(presenceId, presenceState, { headless: notif.headless === true });
             const arb = resolvePresence(this._presence);
@@ -182,7 +188,12 @@ export class SystemNotificationDispatcher {
         }
 
         this._save();
-        this._notifySubscribers('POST', item);
+        if (isAway) {
+            try { this.awayMode.recordMissed(item); } catch (_e) {}
+            // [v4.115.0 · R13-X4] 离开模式：静默记入 missed 账本，压住即时弹窗，由回手机后的「不在的时候」清单呈现
+        } else {
+            this._notifySubscribers('POST', item);
+        }
         return item;
     }
 

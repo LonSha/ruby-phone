@@ -43,6 +43,7 @@ import * as PhoneTagFilter from '../../config/tag-filter.js';
  *   每次都长得不一样。这一格是本项唯一的用户可见入口 —— 各 App 的删除按钮只负责
  *   「移入回收站」，能不能捞回来由这里统一说清（含捞不回来的原因）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
+import { getAwayMode } from '../../config/away-mode.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
 import { SYS_KEYS } from '../../config/system-controls.js';
 import { effectLine, effectAtOf, effectWhyOf, applyChange, PendingEffects } from '../../config/setting-effect.js';
@@ -1184,6 +1185,20 @@ export class SettingsApp {
 
         // 设置页面没有子页面，直接返回主屏幕
         window.dispatchEvent(new CustomEvent('phone:goHome'));
+    }
+
+    /* [v4.115.0 · R13-X4] 设置页的离开模式（放下手机 / 离线与错过）快照 */
+    _getAwayMode() {
+        try {
+            return window.VirtualPhone?.orchestrator?.awayMode || getAwayMode({ storage: this.storage });
+        } catch (_e) {
+            return getAwayMode({ storage: this.storage });
+        }
+    }
+
+    _awayModeSnapshot() {
+        const away = this._getAwayMode();
+        return away ? away.getAwayState() : { isAway: false, missedCount: 0, enabled: true };
     }
 
     /* [v4.99.6 · R11-X8] 设置页的设备读数快照（三域各一行 + 汇总一句）。

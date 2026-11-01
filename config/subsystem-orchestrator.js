@@ -75,6 +75,7 @@ import { SpotlightUniversalSearch, SEARCH_DOMAINS } from './spotlight-universal-
 import { AutonomousLifeScheduler } from './autonomous-life-scheduler.js';
 import { SubconsciousDreamscapeMirror } from './subconscious-dreamscape-mirror.js';
 import { SystemNotificationDispatcher } from './system-notification-dispatcher.js';
+import { AwayMode } from './away-mode.js';
 /* [v4.88.0 · 第七批缝入] 十一件新内核的健康自检与一行读数。
  *   接在这里的理由：本中枢的 runSelfChecks 就是「全部子系统的健康自检」出口，
  *   新内核属于同一族。一行读数同时留下（否则那些 *Line 只有测试消费，
@@ -141,7 +142,8 @@ export class SubsystemOrchestrator {
         
         // 第十期 (R10) 拟真与认知机制全量汇流挂载
         this.mimicComm = new MimicCommEngine({ storage });
-        this.notifications = new SystemNotificationDispatcher({ storage });
+        this.awayMode = new AwayMode({ storage });
+        this.notifications = new SystemNotificationDispatcher({ storage, awayMode: this.awayMode });
         this.atmosphere = new DynamicAtmosphereLighting();
         this.spotlight = new SpotlightUniversalSearch({ storage });
         this.autonomousScheduler = new AutonomousLifeScheduler({ storage });
