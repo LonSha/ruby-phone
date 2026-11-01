@@ -502,3 +502,138 @@
     font-family: ui-monospace, Menlo, Consolas, monospace;
     color: var(--rcl-ink-3);
 }
+
+/* ========================================================
+ * [v4.111.0 · R13-X8] 复述页签样式
+ * 三条设计口径：
+ *   ① 三种处境三种色（读不出来 / 没找到 / 找到了）—— 本仓最贵的形态是「看着没错、
+ *      结果是错的」，压平任意两态都会造出处置相反的两件事长得一样；
+ *   ② 每条原话都是一个**按钮**（浅底 + 下划线感），暗示「点得回去」；
+ *      不可点的东西不做成按钮样（否则用户会一直点）。
+ *   ③ 「当时说到」用左侧竖线标，与正文分开 —— 它是截取的一句原话，不是总结。
+ */
+.rcl-nar-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.rcl-nar-bar input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--rcl-line);
+    border-radius: 7px;
+    background: var(--rcl-panel);
+    color: var(--rcl-ink);
+    font-size: 12px;
+    font-family: inherit;
+}
+.rcl-nar-bar button {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    border: 1px solid var(--rcl-accent);
+    border-radius: 7px;
+    background: rgba(47, 111, 208, .10);
+    color: var(--rcl-accent-2);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+.rcl-nar-idle {
+    padding: 12px 10px;
+    border-radius: 7px;
+    background: var(--rcl-panel-2);
+    color: var(--rcl-ink-3);
+    font-size: 11px;
+}
+.rcl-nar-face {
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.rcl-nar-ok {
+    background: rgba(26, 127, 74, .10);
+    color: #14603a;
+}
+.rcl-nar-empty {
+    background: var(--rcl-panel-2);
+    color: var(--rcl-ink-2);
+}
+.rcl-nar-err {
+    background: rgba(186, 42, 42, .10);
+    color: #8f2020;
+    font-weight: 600;
+}
+.rcl-nar-gaps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.rcl-nar-gap {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--rcl-panel-2);
+    color: var(--rcl-ink-3);
+    font-size: 10px;
+}
+.rcl-nar-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+.rcl-nar-ep {
+    padding: 9px 10px;
+    border: 1px solid var(--rcl-line);
+    border-radius: 8px;
+    background: var(--rcl-panel);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.rcl-nar-ep-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.rcl-nar-ep-at {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rcl-ink);
+}
+.rcl-nar-ep-n {
+    font-size: 10px;
+    color: var(--rcl-ink-3);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.rcl-nar-msgs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.rcl-nar-msg {
+    padding: 3px 8px;
+    border: 1px solid var(--rcl-line);
+    border-radius: 999px;
+    background: var(--rcl-panel-2);
+    color: var(--rcl-accent-2);
+    font-size: 10px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.rcl-nar-msg:hover {
+    border-color: var(--rcl-accent);
+}
+.rcl-nar-concl {
+    padding: 4px 0 4px 8px;
+    border-left: 2px solid var(--rcl-line);
+    color: var(--rcl-ink-2);
+    font-size: 11px;
+    line-height: 1.6;
+}
+.rcl-nar-concl-empty {
+    color: var(--rcl-ink-3);
+    font-style: italic;
+}

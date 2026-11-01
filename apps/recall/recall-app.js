@@ -39,6 +39,11 @@ import {
     decideInject, skipReasonLabel, recallReceipt, receiptFace, recallReadings
 } from './recall-data.js';
 import { RecallView } from './recall-view.js';
+/* [v4.111.0 · R13-X8] 复述内核：主题 → 带出处的段。**纯读面**：本 App 只为它提供
+ *   界面与取数，不替它落盘（它也不落盘）。引用核对在渲染前跑一遍 ——
+ *   渲染出一条点不回去的复述，比不渲染它更糟。 */
+import { narrate, auditCitations, narrativeLine } from '../../config/recall-narrative.js';
+import { RECALL_NARRATIVE_STATES, RECALL_NARRATIVE_GAPS } from '../../config/recall-narrative-terms.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 /** 覆盖值取值口（topN / floor 共用）：显式传入的**真数字**才认，取不出来就回落实例值。
@@ -641,11 +646,55 @@ export class RecallApp {
         if (this._view) this._view.refresh();
         return { ok: true };
     }
+    /* ════════ [v4.111.0 · R13-X8] 复述：让手机讲出「我们之前聊过什么」 ════════
+     * 为什么接在这里：本 App 本来就是「 memoria 的治理台」，而计划书给 X8 的入口是
+     *   「聊天页的找找之前聊的」或 `apps/recall` 的搜索框 —— 聊天页是 946KB 的巨兽
+     *   （P8），改它的代价与风险都高，而这条能力与「召回」是同一个主题：
+     *   召回台管「取回的路」，复述管「取回之后怎么讲」。
+     *
+     * 【三条口径】
+     *   ① **纯读**：不写任何键。故它没有 storage 兜底可言 —— 聊天从宿主现取，取不到就
+     *      如实报 `unreadable`（**不是** `empty`：读不出来不等于没有聊过）；
+     *   ② **渲染前过一遍引用核对**：`auditCitations` 不过就一条都不交。
+     *      这条判据是本期的核心（守的是「复述不许编」），放在界面这侧而不是只放在判据里；
+     *   ③ **降级要说明白**：归并失败时按时间列原始消息，并写「没能归并，以下是原消息」。
+     */
+    /** 宿主聊天数组（现取，不缓存：换会话后旧引用会静默生效）。 */
+    _hostChat() {
+        try {
+            const win = this._win();
+            const ctx = win?.SillyTavern?.getContext?.() || win?.parent?.SillyTavern?.getContext?.();
+            const chat = ctx && ctx.chat;
+            return Array.isArray(chat) ? chat : null;
+        } catch (_e) { return null; }
+    }
+    /**
+     * 复述取数口（视图唯一的入口）。
+     * @param {string} topic 用户说的话（可含口水词，内核会剥停用词）
+     * @returns {{state:string, episodes:Array, gaps:Array, scanned:number, line:string, readError:string}}
+     */
+    narrate(topic) {
+        const t = toStr(topic).trim();
+        if (!t) return { state: RECALL_NARRATIVE_STATES.empty, episodes: [], gaps: [RECALL_NARRATIVE_GAPS.NO_TOPIC], scanned: 0, line: '', readError: '' };
+        const chat = this._hostChat();
+        if (!chat) {
+            /* readError 与 empty 不同形：读不出来是一种**处境**，不是「没聊过这件事」。 */
+            return { state: RECALL_NARRATIVE_STATES.unreadable, episodes: [], gaps: [RECALL_NARRATIVE_GAPS.NO_CHAT], scanned: 0, line: '', readError: '聊天读不出来 —— 这不等于没有聊过' };
+        }
+        const res = narrate(t, chat);
+        const audit = auditCitations(res.episodes, chat);
+        /* ★ 自检不过就一条都不交：交半条等于把「点不回去」放给用户点。 */
+        if (!audit.ok) {
+            return { state: RECALL_NARRATIVE_STATES.unreadable, episodes: [], gaps: res.gaps.concat([RECALL_NARRATIVE_GAPS.BAD_ID]), scanned: res.scanned, line: '', readError: '引用核对没过（' + audit.bad.length + ' 条 id 在聊天里找不到），本次一条都不给' };
+        }
+        return { state: res.state, episodes: res.episodes, gaps: res.gaps, scanned: res.scanned, line: narrativeLine(res), readError: '' };
+    }
     /* ---------- 视图交互（视图只调这几个口，自己不拆数据） ---------- */
     tab() { return this._tab; }
     setTab(t) {
         const k = String(t || 'channels');
-        const ok = ['channels', 'fusion', 'ledger', 'policy'];
+        /* [v4.111.0 · R13-X8] `narrate` 是新增页签（复述）；既有四格一字未动。 */
+        const ok = ['channels', 'fusion', 'ledger', 'policy', 'narrate'];
         this._tab = ok.indexOf(k) >= 0 ? k : 'channels';
         return this._tab;
     }

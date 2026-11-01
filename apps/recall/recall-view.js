@@ -18,6 +18,15 @@
 import { RECALL_FACES, RECALL_CHANNELS, RECALL_CHANNEL_META, RECALL_ROOM_WEIGHTS }
     from './recall-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+/* [v4.111.0 · R13-X8] 复述页签的口径词表。**只取闭集与因由表**，不取停用词/限额
+ *   （视图不该知道归并规则，那是内核的事；这里只负责把内核给的因由说成人话）。 */
+import { RECALL_NARRATIVE_STATES, RECALL_NARRATIVE_GAPS } from '../../config/recall-narrative-terms.js';
+/* [v4.111.0 · R13-X8] 跳回原位置走本仓**同一条**出处定位路：
+ *   `normalizeSource` 归一靶心、`locateTarget` 投宿主 `locateChatFloor`。
+ *   为什么不用 `phone:openApp` + ref：那是「开某个 App 的某一条」，
+ *   而复述要的是「跳到主聊天的第 N 楼」—— 后者本仓早有唯一实现（v4.13.0 · R4-O1），
+ *   自造第二条会让「点了没反应」有两个排查入口。 */
+import { normalizeSource, locateTarget, sourceLocatorLine, locateResultLine } from '../../config/source-locator.js';
 /** HTML 转义要 replace 掉的「双引号」—— 用**字符数组 + split/join**，不写成正则字面量。
  *  ★ 本仓判据共用的剥注释器（stripComments）是字符状态机、**不解析正则字面量**：
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
@@ -41,7 +50,17 @@ const TABS = [
     { key: 'fusion', label: '融合' },
     { key: 'ledger', label: '台账' },
     { key: 'policy', label: '策略' },
+    /* [v4.111.0 · R13-X8] 复述：与「召回」同一个主题 —— 召回管取回的路，复述管取回之后怎么讲。 */
+    { key: 'narrate', label: '复述' },
 ];
+/** 复述因由的人话（键面**取内核真源**，不手写标识符形 —— 本仓 J7 形态）。 */
+const NARRATE_GAP_LABEL = {
+    [RECALL_NARRATIVE_GAPS.NO_CHAT]: '拿不到聊天（这不等于没聊过）',
+    [RECALL_NARRATIVE_GAPS.NO_TOPIC]: '这句话里没有能当主题的词',
+    [RECALL_NARRATIVE_GAPS.NO_MATCH]: '聊天里没有一句沾这个话题',
+    [RECALL_NARRATIVE_GAPS.NO_MERGE]: '有命中但彼此隔得太远，各自独立成段',
+    [RECALL_NARRATIVE_GAPS.BAD_ID]: '有条目拿不到真实 id，已丢弃（宁可不复述，不许点不回去）'
+};
 /** 房间人话：键面**取数据层真源**（计算键，与上面 FACE_META 同规格）——
  *  手写一套标识符形会与本仓已立判据（J7：归因文案表不得手写键）相撞，
  *  且真源一旦改名，本表会静默落兜底、多种处境显示成同一句话。 */
@@ -61,6 +80,9 @@ export class RecallView {
         this._root = null;
         this._flash = '';
         this._draft = { snapshot: '', extra: '' };
+        /* [v4.111.0 · R13-X8] 复述的输入与上次结果（页内态，不落盘 —— 纯读面）。 */
+        this._narrateTopic = '';
+        this._narrate = null;
     }
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -111,6 +133,7 @@ export class RecallView {
         if (cur === 'channels') parts.push(this._channelsPanel());
         else if (cur === 'fusion') parts.push(this._fusionPanel());
         else if (cur === 'ledger') parts.push(this._ledgerPanel());
+        else if (cur === 'narrate') parts.push(this._narratePanel());
         else parts.push(this._policyPanel());
         return parts.join('');
     }
@@ -346,6 +369,37 @@ export class RecallView {
         } else if (act === 'run-decide') {
             const v = app.decide(null, {});
             this._flash = v.inject ? ('可以注入 ' + v.count + ' 条') : ('不注入：' + app.skipLabelOf(v.reason));
+        } else if (act === 'nar-run') {
+            /* [v4.111.0 · R13-X8] 问一句：先取输入框现值（用户可能打完直接点、没触发 change），
+             * 再交给内核。**纯读**：本 App 不为它写任何键。 */
+            const inp = this._root ? this._root.querySelector('input[data-k="nar-topic"]') : null;
+            if (inp) this._narrateTopic = String(inp.value || '');
+            const topic = String(this._narrateTopic || '').trim();
+            if (!topic) {
+                this._narrate = null;
+                this._flash = '先写一句要问的话';
+            } else {
+                this._narrate = app.narrate(topic);
+                this._flash = '';
+            }
+        } else if (act === 'nar-jump') {
+            /* [v4.111.0 · R13-X8] 点一条原话回原位置。
+             * 走本仓**同一条**出处定位路（config/source-locator.js）：不另开一条，
+             * 否则「点了没反应」这类缺陷会有两个排查入口。楼层未知时**不给楼层**，不编。 */
+            const id = el ? (el.getAttribute('data-nar-id') || '') : '';
+            const flRaw = el ? (el.getAttribute('data-nar-floor') || '') : '';
+            /* 楼层**未知就不给楼层**（不拿 0 顶替 —— 0 是合法楼层，第 1 楼）。 */
+            const floor = (flRaw === '') ? null : Number(flRaw);
+            const target = normalizeSource({ ref: id, floor: floor });
+            const win = (typeof window !== 'undefined') ? window : globalThis;
+            const res = locateTarget(target, win);
+            if (res.ok) {
+                this._flash = locateResultLine(res);
+            } else {
+                /* 失败**要说出是哪一种**：宿主没有定位口 / 那一楼没了 / 宿主没回报，
+                 * 三者处置相反（等升级 / 去查历史楼 / 报缺陷）。 */
+                this._flash = sourceLocatorLine(target) + '；' + locateResultLine(res);
+            }
         } else if (act === 'clear-snaps') {
             if (!confirmDestroy({
                 appId: 'recall',
@@ -400,6 +454,97 @@ export class RecallView {
         }
         this.refresh();
     }
+    /* ---------- 面板 ⑤：复述 ---------- */
+    /**
+     * 「我们之前聊过搬家的事吗」——问一句，答一段带出处的复述。
+     *
+     * 三态**必须分开画**（本仓最贵的那类形态：看着没错、结果是错的）：
+     *   · 读不出来  —— 红，文案明写「这不等于没有聊过」
+     *   · 没找到    —— 中性，写「翻过 N 条，没找到」
+     *   · 找到了    —— 逐段列出，每段有自己的「哪一天 / 哪几条 / 当时说到哪」
+     * 降级（归并失败）时按时间列原始消息，并写「没能归并，以下是原消息」。
+     */
+    _narratePanel() {
+        const app = this.app;
+        const res = this._narrate || null;
+        const parts = [];
+        parts.push('<div class="rcl-panel rcl-nar">');
+        parts.push('<p class="rcl-hint">问一句「我们之前聊过…吗」。每条都是原话，点一下就回去；'
+            + '归并得笨是允许的，编一条不存在的才是错。</p>');
+        parts.push('<div class="rcl-nar-bar">');
+        parts.push('<input type="text" data-k="nar-topic" placeholder="比如：我们之前聊过搬家的事吗" value="'
+            + this._esc(this._narrateTopic || '') + '" />');
+        parts.push('<button type="button" data-act="nar-run">问一句</button>');
+        parts.push('</div>');
+        if (!res) {
+            parts.push('<div class="rcl-nar-idle">还没问。上面那句是你输入的原话，本页不改写它。</div>');
+            parts.push('</div>');
+            return parts.join('');
+        }
+        /* 处境行：三种处境三种颜色，且都写清「这是哪一种」。 */
+        if (res.readError) {
+            parts.push('<div class="rcl-nar-face rcl-nar-err">' + this._esc(res.readError) + '</div>');
+        } else if (res.state === RECALL_NARRATIVE_STATES.empty) {
+            parts.push('<div class="rcl-nar-face rcl-nar-empty">' + this._esc(res.line || '没找到') + '</div>');
+        } else {
+            parts.push('<div class="rcl-nar-face rcl-nar-ok">' + this._esc(res.line) + '</div>');
+        }
+        /* 因由（说清「为什么是这个结果」）。 */
+        if (Array.isArray(res.gaps) && res.gaps.length) {
+            parts.push('<div class="rcl-nar-gaps">');
+            const seen = new Set();
+            for (const g of res.gaps) {
+                if (seen.has(g)) continue;
+                seen.add(g);
+                parts.push('<span class="rcl-nar-gap">' + this._esc(NARRATE_GAP_LABEL[g] || ('未识别的因由：' + g)) + '</span>');
+            }
+            parts.push('</div>');
+        }
+        /* 段列表。 */
+        const eps = Array.isArray(res.episodes) ? res.episodes : [];
+        if (eps.length) {
+            parts.push('<div class="rcl-nar-list">');
+            eps.forEach((ep, i) => {
+                parts.push('<div class="rcl-nar-ep">');
+                parts.push('<div class="rcl-nar-ep-head">');
+                parts.push('<span class="rcl-nar-ep-at">' + this._esc(this._dayLabel(ep.at)) + '</span>');
+                parts.push('<span class="rcl-nar-ep-n">' + ((ep.msgs || []).length) + ' 条</span>');
+                parts.push('</div>');
+                const msgs = Array.isArray(ep.msgs) ? ep.msgs : [];
+                const floors = Array.isArray(ep.floors) ? ep.floors : [];
+                parts.push('<div class="rcl-nar-msgs">');
+                msgs.forEach((id, k) => {
+                    /* 每条都挂靶心（data-nar-id + data-nar-floor）：点一下就回原位置。
+                     * 没有 floor 的（宿主没给楼层）仍可点 —— 派发时只说 id，不编楼层。 */
+                    const fl = (k < floors.length) ? String(floors[k]) : '';
+                    parts.push('<button type="button" class="rcl-nar-msg" data-act="nar-jump"'
+                        + ' data-nar-id="' + this._esc(id) + '" data-nar-floor="' + this._esc(fl) + '">'
+                        + this._esc('第 ' + (fl === '' ? '?' : (Number(fl) + 1)) + ' 条') + '</button>');
+                });
+                parts.push('</div>');
+                if (ep.conclusion) {
+                    parts.push('<div class="rcl-nar-concl">当时说到：' + this._esc(ep.conclusion) + '</div>');
+                } else {
+                    parts.push('<div class="rcl-nar-concl rcl-nar-concl-empty">当时说到哪儿，读不出来（不替你总结）</div>');
+                }
+                parts.push('</div>');
+            });
+            parts.push('</div>');
+        }
+        parts.push('</div>');
+        return parts.join('');
+    }
+    /** 时间人话：**不可知时说明不可知**，不编日期。 */
+    _dayLabel(ms) {
+        const n = Number(ms);
+        if (!Number.isFinite(n) || n <= 0) return '时间不可知';
+        try {
+            const d = new Date(n);
+            const p2 = (x) => String(x).padStart(2, '0');
+            return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate())
+                + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+        } catch (_e) { return '时间不可知'; }
+    }
     _bindEvents() {
         const root = this._root;
         if (!root) return;
@@ -421,7 +566,10 @@ export class RecallView {
             const t = e.target;
             if (!t || !t.getAttribute) return;
             const k = t.getAttribute('data-k');
-            if (k === 'inject') {
+            if (k === 'nar-topic') {
+                this._narrateTopic = String(t.value || '');
+                /* 只记输入、**不跑**：跑一次会读整段聊天，输入过程中每键都跑等于每键扫一遍。 */
+            } else if (k === 'inject') {
                 const r = this.app.setInjectEnabled(t.checked === true);
                 this._flash = r.injectEnabled ? '允许注入' : '关了注入（用户明确关的，不是没召回到）';
                 this.refresh();
