@@ -4,6 +4,22 @@
  * ======================================================== */
 
 import { CLOCK_REASONS } from './clock-data.js';
+/* [v4.112.0 · R13-X1] 「今天」页签的词表**取真源**（键面与标签都从 config 读），
+ *   视图不手写第二份 —— 手写一份标识符形会与本仓已立判据（文案表不得手写键）相撞，
+ *   且真源一旦改名，本表会静默落兜底、多种处境显示成同一句话。 */
+import { TODAY_STATES, TODAY_SOURCE_STATES, TODAY_SOURCE_LABEL, TODAY_SOURCES } from '../../config/today-terms.js';
+
+/* [v4.112.0 · R13-X1] 「今天」的一条原话点回去 ⇒ 打开**那个 App**。
+ * ★ 诚实的边界（必须写在这里，否则下一个人会以为这是「精确定位」）：
+ *   本仓四个源 App（wechat / diary / calendar / album）**都还没有 `openRef` 定位口** ——
+ *   `config/open-ref.js` 登记表里七个 kind 是另一批 App（traveldesk / summdesk / …）。
+ *   故本条只做到「打开那个 App 的首屏」，**不声称落在那一条上**。
+ *   要做到精确定位，得先给四个 App 各补 openRef + clearRef 契约（v3660 的 C1/C2 会逐 App 验
+ *   「详情态同步」与「删中间项后仍命中同一条」）—— 那是另一项工作，不在 X1 里顺手做。
+ *   界面文案必须与这里一致：按钮写「打开日记」，**不写「打开这一条」**。 */
+const TODAY_JUMP_APP = Object.freeze({
+  wechat: 'wechat', calendar: 'calendar', diary: 'diary', album: 'album'
+});
 
 /* [v2.98.0] 键必须取 CLOCK_REASONS 的**值**（连字符形），不得另写一套下划线形。
    修前实测：本表键写作 no_clock_face / no_snapshot / bridge_absent，
@@ -27,6 +43,22 @@ export class ClockView {
     this.shell = shell;
     this.storage = storage;
     this._root = null;
+    /* [v4.112.0 · R13-X1] 页签态**不落盘**：它只是「现在在看哪一屏」，
+     *   每次打开都从「今天」开始 —— 用户打开时计最想知道的是今天发生了什么。 */
+    this._tab = 'today';
+  }
+
+  /** 页签表（既有一屏 = 时计原屏，新增一屏 = 今天）。 */
+  _tabs() {
+    return [
+      { key: 'today', label: '今天' },
+      { key: 'clock', label: '时计' }
+    ];
+  }
+
+  _switchTab(key) {
+    const ok = this._tabs().some((t) => t.key === key);
+    this._tab = ok ? key : 'today';
   }
 
   render() {
@@ -58,6 +90,20 @@ export class ClockView {
 
     // Header
     parts.push('<div class="cl-header"><h2>\u23f1\ufe0f 时计</h2></div>');
+
+    /* [v4.112.0 · R13-X1] 页签栏：两屏共用一条页签。
+     *   为什么不做成两个 App：计划书原文「不增加主屏格子压力」，而时间是 clock 的主题。 */
+    parts.push('<div class="cl-tabs">');
+    for (const t of this._tabs()) {
+      parts.push('<button type="button" class="cl-tab' + (this._tab === t.key ? ' is-on' : '')
+        + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
+    }
+    parts.push('</div>');
+
+    if (this._tab === 'today') {
+      parts.push(this._todayHtml());
+      return parts.join('\n');
+    }
 
     // Face card
     parts.push('<div class="cl-face cl-face-' + meta.tone + '">');
@@ -118,7 +164,108 @@ export class ClockView {
     return parts.join('\n');
   }
 
+  /* ════════ [v4.112.0 · R13-X1] 「今天」面板 ════════
+   * 五态各自画，且**每种都写清这是哪一种**：
+   *   · no-clock  —— 剧情钟读不到 ⇒ 边界定不下来（不等于今天没事）
+   *   · absent    —— 一个 App 都没接入（不等于今天没事）
+   *   · partly    —— 只接上了一部分，且今天还没有事（还不能说今天没事）
+   *   · empty     —— 都接上了，今天确实什么都没有
+   *   · ok        —— 有事件
+   * 压平任意两态，都会造出「处置相反的两件事长得一样」（本仓最贵的老账）。 */
+  _todayHtml() {
+    let res = null;
+    try { res = this.app.today(); } catch (_e) { res = null; }
+    const parts = [];
+    parts.push('<div class="cl-today">');
+    if (!res || typeof res !== 'object') {
+      /* 取数口自己抛了：这是**读数坏了**，不是「今天没事」。 */
+      parts.push('<div class="cl-today-face cl-face-err">今天的读数取不出来 —— 这不等于今天没事</div>');
+      parts.push('</div>');
+      return parts.join('\n');
+    }
+    const tone = (res.state === TODAY_STATES.ok) ? 'ok'
+      : (res.state === TODAY_STATES.empty) ? 'mute' : 'err';
+    const faceText = res.readError || res.line || '';
+    parts.push('<div class="cl-today-face cl-face-' + tone + '">' + this._esc(faceText) + '</div>');
+
+    /* 源状态：逐源一行。**没接入与今天没事必须分开写** —— 这是本项最容易被糊掉的一处。 */
+    parts.push('<div class="cl-today-srcs">');
+    for (const row of (res.sourceRows || [])) {
+      const cls = (row.state === TODAY_SOURCE_STATES.ok) ? 'is-ok'
+        : (row.state === TODAY_SOURCE_STATES.error) ? 'is-err' : 'is-off';
+      const label = TODAY_SOURCE_LABEL[row.source] || row.label || row.source;
+      let text;
+      if (row.state === TODAY_SOURCE_STATES.ok) {
+        text = label + '：今天 ' + row.count + ' 条'
+          + (row.dropped ? ('，另有 ' + row.dropped + ' 条没有可用时刻没排进来') : '');
+      } else if (row.state === TODAY_SOURCE_STATES.error) {
+        text = label + '：读不出来（**不等于**今天没有）';
+      } else {
+        text = label + '：还没有接入今天';
+      }
+      parts.push('<div class="cl-src-row ' + cls + '">' + this._esc(text) + '</div>');
+    }
+    parts.push('</div>');
+
+    const events = Array.isArray(res.events) ? res.events : [];
+    if (events.length) {
+      parts.push('<div class="cl-tl">');
+      for (const ev of events) {
+        const jumpApp = TODAY_JUMP_APP[ev.source] || '';
+        parts.push('<div class="cl-tl-row">');
+        parts.push('<span class="cl-tl-at">' + this._esc(this._todayTime(ev.at)) + '</span>');
+        parts.push('<span class="cl-tl-src">' + this._esc(ev.sourceLabel || ev.source) + '</span>');
+        parts.push('<span class="cl-tl-title">' + this._esc(ev.title || '（这一条没有标题）') + '</span>');
+        if (jumpApp) {
+          /* 文案只写「打开 X」：本仓这四个 App 还没有 openRef 定位口，
+           *   写「打开这一条」就是一句做不到的承诺（见 TODAY_JUMP_APP 头注）。 */
+          parts.push('<button type="button" class="cl-tl-go" data-today-app="' + this._esc(jumpApp)
+            + '">打开' + this._esc(ev.sourceLabel || '') + '</button>');
+        }
+        parts.push('</div>');
+      }
+      parts.push('</div>');
+      if (Number(res.truncated) > 0) {
+        parts.push('<div class="cl-today-cut">另有 ' + Number(res.truncated) + ' 条没排进来（本次只排了前 '
+          + TODAY_SOURCES.length + ' 类里的 ' + events.length + ' 条）</div>');
+      }
+    }
+    parts.push('</div>');
+    return parts.join('\n');
+  }
+
+  /** 时刻人话：读不出来就说读不出来，**不编一个日期**。 */
+  _todayTime(ms) {
+    const n = Number(ms);
+    if (!Number.isFinite(n) || n <= 0) return '时间不可知';
+    try {
+      const d = new Date(n);
+      const p2 = (x) => String(x).padStart(2, '0');
+      return p2(d.getHours()) + ':' + p2(d.getMinutes());
+    } catch (_e) { return '时间不可知'; }
+  }
+
   _bindEvents() {
+    /* [v4.112.0 · R13-X1] 页签切换与「打开某个 App」都走容器级委托：
+     *   面板是整段 innerHTML 重绘的，逐按钮挂监听会在每次 refresh 后失效（本仓治过同款）。 */
+    if (this._root && !this._delegated) {
+      this._root.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.getAttribute) return;
+        const tab = t.getAttribute('data-tab');
+        if (tab) { this._switchTab(tab); this.refresh(); return; }
+        const appId = t.getAttribute('data-today-app');
+        if (appId) {
+          try {
+            const win = (typeof window !== 'undefined') ? window : globalThis;
+            win.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: appId } }));
+          } catch (_e) {
+            /* 宿主不在（判据环境）：不假装开了。 */
+          }
+        }
+      });
+      this._delegated = true;
+    }
     const inject = this._root.querySelector('#cl-inject');
     const diag = this._root.querySelector('#cl-diag');
     if (inject) inject.addEventListener('change', (e) => {

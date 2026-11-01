@@ -22,3 +22,26 @@
 .cl-settings h3 { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
 .cl-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1; padding: 6px 0; cursor: pointer; }
 .cl-toggle input { accent-color: #60a5fa; }
+
+/* [v4.112.0 · R13-X1] 「今天」：两屏共用一条页签 + 一条时间轴。
+   色相口径：ok / mute / err 三档，与既有 cl-face 族一致（不新造第四种观感）。 */
+.cl-tabs { display: flex; gap: 6px; margin: 0 0 12px; }
+.cl-tab { flex: 0 0 auto; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: #94a3b8; font-size: 13px; cursor: pointer; }
+.cl-tab.is-on { background: rgba(96,165,250,.16); border-color: rgba(96,165,250,.45); color: #dbeafe; }
+.cl-today { display: flex; flex-direction: column; gap: 10px; }
+.cl-today-face { padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.6; }
+.cl-face-ok { background: rgba(52,211,153,.12); color: #6ee7b7; }
+.cl-face-mute { background: rgba(148,163,184,.12); color: #cbd5e1; }
+.cl-face-err { background: rgba(248,113,113,.14); color: #fca5a5; }
+.cl-today-srcs { display: flex; flex-direction: column; gap: 4px; }
+.cl-src-row { font-size: 12px; padding: 5px 10px; border-radius: 6px; background: rgba(255,255,255,.03); color: #cbd5e1; }
+.cl-src-row.is-ok { color: #a7f3d0; }
+.cl-src-row.is-err { color: #fca5a5; }
+.cl-src-row.is-off { color: #94a3b8; }
+.cl-tl { display: flex; flex-direction: column; gap: 0; border-left: 2px solid rgba(96,165,250,.25); margin-left: 6px; padding-left: 12px; }
+.cl-tl-row { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; }
+.cl-tl-at { flex: 0 0 auto; color: #60a5fa; font-variant-numeric: tabular-nums; font-size: 12px; }
+.cl-tl-src { flex: 0 0 auto; font-size: 11px; color: #94a3b8; padding: 2px 6px; border-radius: 5px; background: rgba(148,163,184,.12); }
+.cl-tl-title { flex: 1 1 auto; color: #e5e7eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-tl-go { flex: 0 0 auto; font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(96,165,250,.35); background: transparent; color: #93c5fd; cursor: pointer; }
+.cl-today-cut { font-size: 12px; color: #fbbf24; padding: 6px 10px; background: rgba(251,191,36,.08); border-radius: 6px; }
