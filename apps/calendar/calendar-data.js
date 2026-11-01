@@ -124,7 +124,7 @@ export class CalendarData {
         return map;
     }
 
-    addMemo({ dateKey, title, time = '', type = 'daily', color = 'blue', source = 'manual', globalReminder = null }) {
+    addMemo({ dateKey, title, time = '', type = 'daily', color = 'blue', source = 'manual', globalReminder = null, sourceMsgId = '' }) {
         const safeDateKey = String(dateKey || '').trim();
         const safeTitle = String(title || '').trim();
         if (!safeDateKey || !safeTitle) return null;
@@ -147,6 +147,11 @@ export class CalendarData {
             globalReminder: globalReminder === null || typeof globalReminder === 'undefined'
                 ? this.isRecurringType(safeType)
                 : globalReminder === true,
+            /* [v4.113.0 · R13-X3] 出处消息 id：**只有内联动作（`source='inline-action'`）会带**。
+             *   为什么写在数据里而不是只在界面上说一句：回执要能逐字交代「来自哪一条消息」，
+             *   而界面文案会随重绘丢掉；且判据要验「目标 app 里条目真带 sourceMsgId」，
+             *   它必须落在条目本身上。空串 = 不是从消息里来的（手动 / 约定投影都不带）。 */
+            sourceMsgId: String(sourceMsgId || '').trim(),
             /* 剧情轨（新字段）：读不到剧情钟时**是 null**，不拿墙钟冒充。 */
             storyAt: stamp.storyAt,
             createdAt: stamp.wallAt,

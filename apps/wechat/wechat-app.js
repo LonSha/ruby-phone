@@ -16,6 +16,10 @@ import { ImageCropper } from '../settings/image-cropper.js';
 /* [v4.29.0 · R4-X7] 群聊投票接线件（取数 / 持起点 / 落点形状）。
  *   判定词与标签表**只许内核一份**（config/group-vote-contract.js），本件只转发。 */
 import { GroupVote } from './group-vote.js';
+/* [v4.113.0 · R13-X3] 「就地办」动作条（纯旁路：本文件不改 chat-view 一个字节）。
+ *   本文件只负责三件事：造一个实例、在 setContent 之后叫它挂上去、在设置页给一个开关。
+ *   候选怎么算、写不写盘一律在 `config/inline-action*.js`，这里不重算任何一格。 */
+import { InlineActionBar } from './inline-action-bar.js';
 /* [v4.39.0 · R5-X4] 传闻源头契约（纯契约：只做读数与归一，不判内容真假）。
  *   本 App 只把「这一条消息在传闻面上的读数」取好交给视图 ——
  *   **独立来源怎么算**只许契约件那一份口径（视图再算一遍必然漂移）。 */
@@ -70,6 +74,9 @@ export class WechatApp {
         this.momentsView = new MomentsView(this);
         /* [v4.29.0 · R4-X7] 群聊投票面：只持「用户点了哪个选项」，读数一律现取。 */
         this.groupVote = new GroupVote(this);
+        /* [v4.113.0 · R13-X3] 动作条：动作条是一层**旁路 DOM**，
+         *   它不知道消息怎么画的，只知道画完了在哪里再挂一层。 */
+        this.inlineBar = new InlineActionBar(this);
         this._ensureWechatAvatarPoolLoaded();
 
         // 加载样式
@@ -285,6 +292,18 @@ export class WechatApp {
             screen.style.pointerEvents = 'none';
             setTimeout(() => { screen.style.pointerEvents = ''; }, 400);
         }
+    }
+
+    /* ================================================================
+     * [v4.113.0 · R13-X3] 「就地办」动作条的挂载口（**旁路**：不改 chat-view 一个字节）
+     * ----------------------------------------------------------------
+     * 为何要在这里多一个方法而不是直接调：两个理由
+     *   ① render() 里只能写**一行**（它是全仓最长的渲染函数，多写一行都难审）；
+     *   ② 动作条不在也不该把 render 搞崩—— 这里整段包 try，
+     *      任何一步失败都只能退回「没有动作条」，不许连消息一起白掉。
+     */
+    _mountInlineBar() {
+        try { return this.inlineBar ? this.inlineBar.mount() : 0; } catch (_e) { return 0; }
     }
 
     deactivate() {
@@ -4879,6 +4898,9 @@ export class WechatApp {
         const viewId = this.currentChat ? `wechat-chat-${this.currentChat.id}` : `wechat-main`;
         this.phoneShell.setContent(html, viewId);
         this.bindEvents();
+        /* [v4.113.0 · R13-X3] **必须在 setContent 之后**：容器没写完时 mount 只能拿到上一屏的旧 DOM。
+         *   本步只负责「挂一次」；后续局部刷新由动作条自己的观察器跟进。 */
+        this._mountInlineBar();
 
         if (this.currentView === 'contacts' && !this.currentChat) {
             setTimeout(() => {
@@ -6810,6 +6832,8 @@ export class WechatApp {
         const shellBg = this._getMainShellBackgroundConfig();
         const settingsContentStyle = shellBg.contentBgStyle || 'background: #ededed;';
         const useWechatWorldbook = window.VirtualPhone?.worldbookManager?.getEnabled?.('wechat') ?? true;
+        /* [v4.113.0 · R13-X3] 开关读数走动作条自己的 enabled()：存储键只许它一处读，这里再读一遍就是第二份口径（两处必然漂移）。 */
+        const inlineActionOn = this.inlineBar ? this.inlineBar.enabled() : false;
         const userInfo = this.wechatData.getUserInfo();
         const momentsBackground = String(userInfo?.momentsBackground || '').trim();
         const chatCssState = this._ensureChatCssPresetState();
@@ -7204,6 +7228,23 @@ export class WechatApp {
                         font-size: 13px;
                         cursor: pointer;
                     ">打开头像管理器</button>
+                </div>
+
+                <!-- [v4.113.0 · R13-X3] 消息下方的「就地办」动作条（整条由这个开关一键控制） -->
+                <div style="background: #fff; border-radius: 12px; margin: 15px; padding: 15px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="min-width: 0;">
+                            <div style="font-size: 14px; color: #222;">消息里就地办</div>
+                            <div style="font-size: 12px; color: #888; line-height: 1.45; margin-top: 4px;">
+                                对方说「周六有空吗」这种句子，消息下方会多一条动作条（加日程 / 记到备忘 / 回一句）。
+                                只有真认出来的才出条，认不出来就不出。关掉后界面与没有这个功能时一模一样。
+                            </div>
+                        </div>
+                        <label class="toggle-switch" style="flex: 0 0 auto;">
+                            <input type="checkbox" id="wechat-inline-action-enabled" ${inlineActionOn ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- 外观背景设置 -->
@@ -7653,6 +7694,16 @@ export class WechatApp {
             if (cssTextarea) cssTextarea.value = fallbackProfile?.css || '';
             renderCssSelect(fallbackProfile?.id || '');
             this.phoneShell.showNotification('已删除预设', profile.name, '✅');
+        });
+
+        /* [v4.113.0 · R13-X3] 开关写口只有一个：`inlineBar.setEnabled`。
+         *   本段不碰存储键、不碰 DOM：写键与重画都在动作条那一侧，否则开关与效果会各自半对。 */
+        document.getElementById('wechat-inline-action-enabled')?.addEventListener('change', (e) => {
+            const on = !!(e && e.target && e.target.checked);
+            const done = this.inlineBar ? this.inlineBar.setEnabled(on) : false;
+            if (!done) this.phoneShell.showNotification('没改成', '开关没写进去（存储不在）', '⚠️');
+            this.phoneShell.showNotification(on ? '已开启' : '已关掉',
+                on ? '消息下方会出现动作条' : '动作条已摘掉，界面与没有它时一模一样', on ? '✅' : 'ℹ️');
         });
 
         document.getElementById('wechat-use-worldbook')?.addEventListener('change', async (e) => {

@@ -543,6 +543,11 @@ const KEY_REGISTRY = [
   { key: 'phone_image_paths', scope: 'global', note: '图片路径索引' },
   { key: 'phone_album_upload_index', scope: 'global', note: '相册上传索引' },
   { key: 'phone_inline_reply_btn', scope: 'global', note: '行内回复按钮' },
+  /* [v4.113.0 · R13-X3] 「就地办」动作条的总开关。
+   *   刻意走**全局**而不是会话隔离：「这台手机要不要在消息下方长动作条」是用户对设备的偏好，
+   *   不是某段剧情的状态（与 recycle_bin_enabled 同一取舍）。这也是 K2 的真正侧面：
+   *   它不命中任何 CHAT_DATA_PATTERNS，故声明 global 与机制一致。 */
+  { key: 'phone_inline_action_enabled', scope: 'global', note: '[v4.113.0 · R13-X3] 消息就地办动作条总开关' },
   { key: 'phone_nai_queue_user_id', scope: 'global', note: 'NAI 队列用户标识' },
   { key: 'phone_wechat_alapi_sticker_cache_v1', scope: 'global', note: '表情贴纸缓存' },
   { key: 'phone_global_chat_css', scope: 'global', note: '全局聊天 CSS' },
