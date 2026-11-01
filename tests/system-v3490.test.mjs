@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fillClosure } from './lib/stage.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as DAT from '../apps/memtable/memtable-data.js';
 import * as APP from '../apps/memtable/memtable-app.js';
@@ -136,6 +137,10 @@ function makeWorkspace() {
         fs.mkdirSync(path.dirname(to), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), to);
     }
+    /* [v4.114.0 · R13-X7] 静态闭包补齐（工具在 tests/lib/stage.mjs）。
+     *   修前现场：本表是手工列的，被测件每加一个 import 就要人记得同步 ——
+     *   v4.104.0 加 config/recycle-bin.js 之后，本套件 28 条负控制全部 ERR_MODULE_NOT_FOUND。 */
+    fillClosure(d, ROOT);
     return d;
 }
 function breakIn(ws, rel, from, to) {

@@ -82,9 +82,17 @@ function extractArray(src) {
     /* ⚠ `]` 在字符类里**必须**转义，且只转一次：上一版拼成 `[^\]\]*]`（多一个 `]`）
      *   会让 RegExp 直接抛 Unterminated character class —— 那是抽取器自身崩了，
      *   不是「表与源码不一致」，两者混在一起会把判据基建缺陷读成被测对象缺陷。 */
-    const m = win.match(new RegExp(BS + '[' + '([^' + BS + ']]*)' + BS + ']'));
-    if (!m) return null;
-    return quoted(m[1]);
+    /* [v4.113.0 · 抽取器缺陷修正] 不许取「第一个方括号」—— **注释里也有方括号**。
+     *   实测踩到：recall 的 setTab 第一行是一句 `[v4.111.0 · R13-X8]` 的版本注记，
+     *   首版正则据此把注记当数组，抽出**空集**，于是判据报「声明 vs 源码 []」——
+     *   那是抽取器自己读错了，不是表与源码漂移（本仓治过的「判据基建缺陷读成被测对象缺陷」）。
+     *   修法：取**第一个内含引号串**的方括号组（页签名一定是带引号的字面量，注记里没有引号）。 */
+    const BRACKET = new RegExp(BS + '[' + '([^' + BS + ']]*)' + BS + ']', 'g');
+    for (const m of win.matchAll(BRACKET)) {
+        const got = quoted(m[1]);
+        if (got.length) return got;
+    }
+    return null;
 }
 /** ifchain：setTab 起 400 字符内所有 `=== 'x'` 比较串。 */
 function extractIfChain(src) {

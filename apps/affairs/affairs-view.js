@@ -7,6 +7,10 @@
  * 结构：_esc + _draw + _bind（与 plotline-view 同风格）。
  * ======================================================== */
 'use strict';
+/* [v4.114.0 · R13-X7] 「这个月要处理的」。**不另开页签**：本 App 在 tab-source 里登记为单页，
+ *   分页会把一屏读数拆成两份，且会让那张真源表与源码对不上（判据会红）。
+ *   故清单作为**同一页里的一段**派生出去。 */
+import { ErrandView } from './errand-view.js';
 
 export class AffairsView {
     constructor(app) {
@@ -58,6 +62,7 @@ export class AffairsView {
             list.length ? rows : '<div class="af-empty">还没有进行中的事务。在下面新建一件，或让角色在聊天里提起正在进行的事。</div>',
             closed.length ? '<div class="af-closed-head">已了结</div>' + closed.map((a) => '<div class="af-closed-row">' + this._esc(a.title) + '</div>').join('') : '',
             '  </div>',
+            '  <div class="af-errand-slot" id="af-errand-slot"></div>',
             '  <div class="af-new">',
             '    <input id="af-new-title" class="af-input" maxlength="40" placeholder="新事务标题（如：筹备展览）" />',
             '    <button id="af-new-btn" class="af-primary">新建事务</button>',
@@ -74,6 +79,15 @@ export class AffairsView {
     _bind() {
         const c = this.container;
         if (!c) return;
+        /* [v4.114.0 · R13-X7] 「这个月」那一段交给它自己画（判定与动作都在它那边）。
+         *   本行只负责「把宿主交给它」；它自己拿不到读数时会如实报「读不出来」。 */
+        try {
+            const slot = c.querySelector('#af-errand-slot');
+            if (slot && this.app && typeof this.app.monthFace === 'function') {
+                if (!this._errandView) this._errandView = new ErrandView(this.app);
+                this._errandView.render(slot);
+            }
+        } catch (_e) { /* 这一段画不出来不许连事务列表一起白掉 */ }
         const newBtn = c.querySelector('#af-new-btn');
         const newTitle = c.querySelector('#af-new-title');
         if (newBtn && newTitle) {

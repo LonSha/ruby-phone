@@ -419,6 +419,10 @@ const KEY_REGISTRY = [
    *   （前缀 /^aff/ 在 config/storage.js 登记，本节按 K1 逐键列名、不靠兜底）。
    *   刻意只存**引用**（open-ref 的 kind/id）与交互状态，不存源 App 正文 —— 不复制事实所有者。 */
   { key: 'affairs_v1', scope: 'chat', note: '[v4.48.0 · R6-O1] 进行中事务（阶段六态/参与者/待决选择两态/动作结果含源引用/引用桶；上限 40 条，最老 closed 先回收，活跃永不回收）' },
+  /* [v4.114.0 · R13-X7] 「这个月」清单（待办本体）。与 affairs_v1 同族同隔离：清单装的是这段对话里欠着的事，
+   *   落全局会把上一个角色的房租贴到新会话的同一张单上。consequence 刻意没有金额格 —— 没有金额格，就没有任何
+   *   路径能把「过期」悄悄变成「已扣款」。 */
+  { key: 'affairs_errands_v1', scope: 'chat', note: '[v4.114.0 · R13-X7] 这个月清单（四态闭集/十一因由/四类后果无金额格/五项限额/当日到期不算过期/终结态不被时间改写）' },
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
   { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },
   { key: 'creation_projects_v1', scope: 'chat', note: '[v4.50.0 · R6-O5] 长篇创作作品编排（作品级章节/素材依赖/跨章节局部改稿/脱机韧性）' },

@@ -20,6 +20,22 @@ const require = createRequire(import.meta.url);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+/* 全仓 JS 面（构造点可能不在 index.js）：一次采样，各 key 反复复用。只拿 apps/ config/ phone/ 与根目录的 .js，
+ * 不扫 tests/（判据自己里的字面量不能当构造点，否则这条判据会自我满足）。 */
+const REPO_JS = (() => {
+  const out = [];
+  const walk = (dir) => {
+    for (const ent of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      if (ent.name === 'node_modules' || ent.name.startsWith('.')) continue;
+      const rel = dir ? dir + '/' + ent.name : ent.name;
+      if (ent.isDirectory()) { walk(rel); continue; }
+      if (ent.name.endsWith('.js')) out.push(rel);
+    }
+  };
+  for (const top of ['apps', 'config', 'phone']) walk(top);
+  for (const f of fs.readdirSync(root)) if (f.endsWith('.js')) out.push(f);
+  return out;
+})();
 
 const idx = read('index.js');
 const tblSrc = (idx.match(/ST_PHONE_REBIND_APP_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
@@ -45,8 +61,17 @@ test('A3 每个 key 都能映射到真实单例构造点（防拼写错误静默
   const { parseLazyRoutes, LAZY_ROUTE_TABLE_REL } = require('./_lazy_routes.mjs');
   const rows = parseLazyRoutes(read(LAZY_ROUTE_TABLE_REL));
   assert.ok(rows.length >= 60, '表解析异常：只有 ' + rows.length + ' 行 —— 拒判');
+  /* ★ 构造点的第三种形态（v4.114.0 补）：`window.VirtualPhone.X = new 具体类(` ——
+   *   不经 `module.Y`、也不进懒加载表，直接在**实例文件里**绑上单例。
+   *   实测案例：`lonshaBridge` 在 apps/memory/lonsha-bridge.js:493 写的是
+   *   `window.VirtualPhone.lonshaBridge = new LonShaBridge(storage, memoryCore);`。
+   *   旧写法只在 index.js 里找 `new module.` 或查懒加载表，于是它被判成「无构造点」——
+   *   不是它没被构造，是判据只认一种写法。修法是把构造点面扫到全仓（仍要求「真有 new」，
+   *   不放宽成「名字出现过就算」）。 */
+  const skin = REPO_JS.map((p) => read(p)).join('\n');
   const miss = KEYS.filter((k) => {
     if (new RegExp('VirtualPhone\\.' + k + '\\s*=\\s*new\\s+module\\.').test(idx)) return false;
+    if (new RegExp('VirtualPhone\\.' + k + '\\s*=\\s*new\\s+[A-Za-z_$]').test(skin)) return false;
     return !rows.some((r) => r.key === k);
   });
   assert.deepEqual(miss, [], '表内有 key 全仓无对应构造点（`window.VirtualPhone.X = new module.Y(...)` 或表内 key/cls 成对）：' + miss.join(','));
@@ -123,6 +148,13 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
                                     //            六项能力观测是**设备级**读数（本机 / 宿主 / 插件共用），
                                     //            不随会话变 —— 由咽喉下一次 render 现采
     searchApp: 'search',            // [v3.58.0] 全局搜索：换会话作废在跑的全历史扫描（_scanGen）并重对齐宿主源表
+    gamesApp: 'games',
+    musicApp: 'music',             // [v4.103.0 · R13-O9] 音乐：换会话必须重扫当前会话卡片并刷新悬浮窗——
+                                    //             否则 B 会话的悬浮窗还挂着 A 会话的曲目
+    worldpulseApp: 'worldpulse',    // [v4.103.0 · R13-O9] 世界脉搏：换会话必须重绑楼层监听并重校基线
+                                    //             （实例跨会话复用，旧基线会把 B 会话的楼层按 A 判定）
+    lonshaBridge: 'memory',         // [v4.103.0 · R13-O9] 上游桥：换会话只把 _bm25Dirty 置真（表驱动三路径同一出口）
+              // [v4.103.0 · R13-O9] 游戏厅：换会话必须丢回合态并重取八款游戏台账
     affairsApp: 'affairs',          // [v4.48.0·第六期 R6-O1] 事务台：换会话必须丢上一次动作归因（_lastAction）
                                     //             与页签（都是实例态），事务 / 参与者 / 待决由咽喉下一次 render 重取
     commsApp: 'comms'               // [v4.49.0·第六期 R6-O2] 会话台：换会话必须丢选中会话与输入草稿（都是实例态），
@@ -130,7 +162,7 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。
-  const fileOverride = { graphApp: 'graph-app.js', memoryApp: 'memory-app.js' };
+  const fileOverride = { graphApp: 'graph-app.js', memoryApp: 'memory-app.js', lonshaBridge: 'lonsha-bridge.js' };
   const missing = [];
   for (const k of KEYS) {
     const dir = dirMap[k];

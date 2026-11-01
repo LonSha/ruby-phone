@@ -9,7 +9,7 @@
       "rel": "apps/album/album-data.js",
       "cls": "AlbumData",
       "name": "isManagedImagePath",
-      "line": 535,
+      "line": 557,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -113,7 +113,7 @@
       "rel": "apps/calendar/calendar-data.js",
       "cls": "CalendarData",
       "name": "togglePinned",
-      "line": 235,
+      "line": 304,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -377,7 +377,7 @@
       "rel": "apps/diagnose/diagnose-view.js",
       "cls": "DiagnoseView",
       "name": "resetSilence",
-      "line": 1629,
+      "line": 1720,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -385,7 +385,7 @@
       "rel": "apps/diary/diary-data.js",
       "cls": "DiaryData",
       "name": "setPageBg",
-      "line": 123,
+      "line": 168,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -393,7 +393,7 @@
       "rel": "apps/diary/diary-data.js",
       "cls": "DiaryData",
       "name": "getPageLineHeight",
-      "line": 236,
+      "line": 281,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -401,7 +401,7 @@
       "rel": "apps/diary/diary-data.js",
       "cls": "DiaryData",
       "name": "setPageLineHeight",
-      "line": 241,
+      "line": 286,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -409,7 +409,7 @@
       "rel": "apps/diary/diary-data.js",
       "cls": "DiaryData",
       "name": "generateEntryPhotos",
-      "line": 622,
+      "line": 766,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -417,7 +417,7 @@
       "rel": "apps/diary/diary-data.js",
       "cls": "DiaryData",
       "name": "setEntryOfflineHidden",
-      "line": 957,
+      "line": 1101,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -441,7 +441,7 @@
       "rel": "apps/focus/focus-app.js",
       "cls": "FocusApp",
       "name": "sessionSeconds",
-      "line": 133,
+      "line": 167,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -449,7 +449,7 @@
       "rel": "apps/focus/focus-app.js",
       "cls": "FocusApp",
       "name": "recordLine",
-      "line": 278,
+      "line": 312,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -857,7 +857,7 @@
       "rel": "apps/mofo/mofo-data.js",
       "cls": "MofoData",
       "name": "getBootstrapState",
-      "line": 26,
+      "line": 31,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -889,7 +889,7 @@
       "rel": "apps/music/music-data.js",
       "cls": "MusicData",
       "name": "setAutoPlay",
-      "line": 772,
+      "line": 813,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -897,7 +897,7 @@
       "rel": "apps/music/music-data.js",
       "cls": "MusicData",
       "name": "getRepeatOne",
-      "line": 828,
+      "line": 869,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -905,7 +905,7 @@
       "rel": "apps/music/music-data.js",
       "cls": "MusicData",
       "name": "setRepeatOne",
-      "line": 832,
+      "line": 873,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -985,7 +985,7 @@
       "rel": "apps/phone/phone-view.js",
       "cls": "PhoneCallView",
       "name": "tickEscalation",
-      "line": 3458,
+      "line": 3460,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1161,7 +1161,7 @@
       "rel": "apps/reading/reading-view.js",
       "cls": "ReadingView",
       "name": "checkAnnualStale",
-      "line": 739,
+      "line": 741,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1169,7 +1169,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "stateLabelOf",
-      "line": 395,
+      "line": 400,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1177,7 +1177,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "severityOf",
-      "line": 396,
+      "line": 401,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1185,7 +1185,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "roomOf",
-      "line": 536,
+      "line": 541,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1193,7 +1193,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "topNOf",
-      "line": 538,
+      "line": 543,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1201,7 +1201,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "injectEnabledOf",
-      "line": 539,
+      "line": 544,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1209,7 +1209,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "runRerank",
-      "line": 586,
+      "line": 591,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1217,7 +1217,7 @@
       "rel": "apps/recall/recall-app.js",
       "cls": "RecallApp",
       "name": "closeReceipt",
-      "line": 662,
+      "line": 711,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1233,7 +1233,7 @@
       "rel": "apps/search/search-app.js",
       "cls": "SearchApp",
       "name": "restoredNeedsRequery",
-      "line": 513,
+      "line": 571,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1241,14 +1241,6 @@
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
       "name": "uploadWallpaper",
-      "line": 417,
-      "isStatic": false,
-      "classInstantiated": true
-    },
-    {
-      "rel": "apps/settings/image-upload.js",
-      "cls": "ImageUploadManager",
-      "name": "uploadAppIcon",
       "line": 427,
       "isStatic": false,
       "classInstantiated": true
@@ -1256,7 +1248,7 @@
     {
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
-      "name": "uploadAvatar",
+      "name": "uploadAppIcon",
       "line": 437,
       "isStatic": false,
       "classInstantiated": true
@@ -1264,8 +1256,16 @@
     {
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
+      "name": "uploadAvatar",
+      "line": 447,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/settings/image-upload.js",
+      "cls": "ImageUploadManager",
       "name": "deleteWallpaper",
-      "line": 501,
+      "line": 511,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1273,7 +1273,7 @@
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
       "name": "deleteAppIcon",
-      "line": 507,
+      "line": 517,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1281,7 +1281,7 @@
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
       "name": "deleteAvatar",
-      "line": 513,
+      "line": 523,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1289,7 +1289,7 @@
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
       "name": "getAvatar",
-      "line": 774,
+      "line": 784,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1585,7 +1585,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "getHoneyHistoryInjectionChats",
-      "line": 416,
+      "line": 441,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1593,7 +1593,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "recordWalletTransaction",
-      "line": 1933,
+      "line": 1965,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1601,7 +1601,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "resolveGroupSpeaker",
-      "line": 2397,
+      "line": 2429,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1609,7 +1609,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "resolveGroupSpeakerIdentity",
-      "line": 2415,
+      "line": 2447,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1617,7 +1617,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "planGroupSpeakers",
-      "line": 2462,
+      "line": 2494,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1625,7 +1625,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "buildGroupForceSpeakInstruction",
-      "line": 2480,
+      "line": 2512,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1633,7 +1633,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "buildGroupCritiquePrompt",
-      "line": 2486,
+      "line": 2518,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1641,7 +1641,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "parseGroupCritique",
-      "line": 2492,
+      "line": 2524,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1649,7 +1649,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "relationAlbumOf",
-      "line": 2565,
+      "line": 2597,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1657,7 +1657,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "syncAvatarByChat",
-      "line": 3652,
+      "line": 3682,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1665,7 +1665,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "isPossibleName",
-      "line": 4287,
+      "line": 4340,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1673,7 +1673,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "guessAvatar",
-      "line": 4514,
+      "line": 4567,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1681,7 +1681,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "addGroupMember",
-      "line": 5165,
+      "line": 5309,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1689,7 +1689,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "removeGroupMember",
-      "line": 5176,
+      "line": 5320,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1697,7 +1697,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "correctFloor",
-      "line": 586,
+      "line": 612,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1705,7 +1705,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "isApiRunning",
-      "line": 623,
+      "line": 649,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1713,7 +1713,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "checkHotSearchChanged",
-      "line": 2331,
+      "line": 2370,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2493,5 +2493,6 @@
       "isStatic": false,
       "classInstantiated": true
     }
-  ]
+  ],
+  "generated_at_note": "行号按 tools/relocate_method_baseline.mjs 重定位（v4.95.0：源码插入导致其后行号整体后移）"
 }

@@ -32,6 +32,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { loadSurfaces, buildModuleIndegree } from '../scripts/lib/dead-surface.mjs';
+import { loadTree } from '../scripts/lib/binding-consumption.mjs';
 import { PlaceApp, PLACE_DISTRICT_KEY } from '../apps/place/place-app.js';
 import { CreationdeskApp, CW_COMMISSION_KEY } from '../apps/creationdesk/creationdesk-app.js';
 import { ReadingApp } from '../apps/reading/reading-app.js';
@@ -630,10 +633,31 @@ test('G1: 三件内核已不在三张账本的冻结条目里（本批处置的�
         const hit = importers.some((f) => read(f).includes('config/' + name));
         assert.equal(hit, true, rel + ' 必须被某个 App 真 import（否则清账只是把记录抹了）');
     }
-    // 负控制 ②：账本里其它条目必须还在（防止「清账=清空」这种假通过）
-    assert.ok(dm.length > 50, '模块账本不该被清空，实得 ' + dm.length + ' 条');
-    assert.ok(de.length > 50, '死导出账本不该被清空，实得 ' + de.length + ' 条');
-    assert.ok(bd.length > 80, '绑定账本不该被清空，实得 ' + bd.length + ' 条');
+    /* ★ 本条下半段原先写的是三个**手抄阈值**（dm>50 / de>50 / bd>80），而它们是按
+     *   v4.97.0 当时的账本规模写死的。v4.102.0「R13-O3 第六期内核清账」真清了账：
+     *   死导出 81 → 27、绑定 100 → 59、zero 档 12 → 0（四件接线、八件退役），
+     *   于是这三个阈值把「按计划真清了账」判成了红。
+     *   ★ 修法不是把 50 改成 25（下一次清账还会再红一遍），也不是把本段删了（那就丢了「清账=清空」的拦截），
+     *   而是把它换成**实时判据**：账本条目数必须恰好等于对应门真跑的现场读数。
+     *   清空会让两侧差成长数（一定红），真清账则两侧同步下降（正常绿）—— 比固定阈值强一层。 */
+    const runGate = (rel) => spawnSync(process.execPath, [path.join(ROOT, rel)], {
+        cwd: ROOT, encoding: 'utf8', timeout: 300000,
+    });
+    const deRun = runGate('scripts/dead-export-check.mjs');
+    assert.equal(deRun.status, 0, '死导出门必须能跑通：' + String(deRun.stderr || '').slice(0, 200));
+    const deLive = Number((/零消费 (\d+)/.exec(deRun.stdout || '') || [])[1]);
+    assert.ok(deLive > 0, '死导出门必须报出零消费读数');
+    assert.equal(de.length, deLive, '死导出账本条目数必须等于门真跑读数（' + de.length + ' vs ' + deLive + '）');
+    const bdRun = runGate('scripts/bind-consumption-audit.mjs');
+    assert.equal(bdRun.status, 0, '绑定门必须能跑通：' + String(bdRun.stderr || '').slice(0, 200));
+    const bdLive = Number((/绑定级死 (\d+)/.exec(bdRun.stdout || '') || [])[1]);
+    assert.ok(bdLive > 0, '绑定门必须报出零消费读数');
+    assert.equal(bd.length, bdLive, '绑定账本条目数必须等于门真跑读数（' + bd.length + ' vs ' + bdLive + '）');
+    const dmRun = runGate('scripts/method-consumption-audit.mjs');
+    assert.equal(dmRun.status, 0, '方法门必须能跑通：' + String(dmRun.stderr || '').slice(0, 200));
+    const dmLive = Number((/弱档 (\d+) \//.exec(dmRun.stdout || '') || [])[1]);
+    assert.ok(dmLive > 0, '方法门必须报出弱档读数');
+    assert.equal(dm.length, dmLive, '模块账本条目数必须等于门真跑读数（' + dm.length + ' vs ' + dmLive + '）');
 });
 
 test('G2: 三件内核仍是 tier=product（清账后不许被降级回去）', () => {
@@ -644,8 +668,23 @@ test('G2: 三件内核仍是 tier=product（清账后不许被降级回去）', 
     for (const rel of ['config/district-network.js', 'config/commission-pipeline.js', 'config/reading-studio.js']) {
         assert.equal(zeroRels.includes(rel), false, rel + ' 不得再是 tier=zero');
     }
-    // 反面对照：zero 档必须仍有条目（否则「不在 zero 里」可能因为 zero 档整个空了）
-    assert.ok(zeroRels.length > 0, 'zero 档不该被清空（实得 ' + zeroRels.length + ' 件）');
+    /* ★ 反面对照原写「zero 档必须仍有条目」，理由是「不在 zero 里」可能
+     *   因为 zero 档整个空了。但 v4.102.0 真的把 12 件 zero 清完了（四件接线、八件退役），
+     *   于是那条「底座」变成了一个永远不成立的断言。★ 修法不是删掉底座，而是把底座换成
+     *   现场真计算：用与门同一套库（buildModuleIndegree + loadTree）把真仓的入度面重算一遍，
+     *   然后要求：① 现场 zero 档件数恰好等于账本里 zero 档件数（两侧同步，不依赖固定数字）；
+     *   ② orchestrator-only 档的现场名单必须与账本名单逐条相等。这样「清账=清空」仍会红（账本空了两侧就对不上），
+     *   而真清账两侧同步下降时仍为绿。 */
+    const { raw: LIVE_RAWS } = loadSurfaces(ROOT);
+    const { bindTexts: LIVE_BIND } = loadTree(ROOT, { skipDirs: new Set(['node_modules', '.git', '.wrangler']) });
+    assert.ok(LIVE_RAWS.size > 300 && LIVE_BIND.size > 300, '现场扫描面崩塌：' + LIVE_RAWS.size + '/' + LIVE_BIND.size);
+    const LIVE_ROWS = buildModuleIndegree(LIVE_BIND);
+    const liveZero = LIVE_ROWS.filter((r) => r.tier === 'zero').map((r) => r.rel).sort();
+    assert.deepEqual(liveZero, zeroRels.slice().sort(),
+        '零入度档现场与账本不一致（两侧必须同步）：' + liveZero.length + ' vs ' + zeroRels.length);
+    const liveOrch = LIVE_ROWS.filter((r) => r.tier === 'orchestrator-only').map((r) => r.rel).sort();
+    const ledgerRel = dm.filter((e) => e && e.tier === 'orchestrator-only').map((e) => e.rel).sort();
+    assert.deepEqual(liveOrch, ledgerRel, 'orchestrator-only 现场名单必须与账本名单逐条相等');
 });
 
 test('G3: 内核纯函数仍可独立使用（App 只是消费者，不是唯一入口）', () => {

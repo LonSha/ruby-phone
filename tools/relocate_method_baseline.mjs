@@ -56,15 +56,26 @@ for (const e of doc.entries) {
   const cur = lines[e.line - 1] || '';
   if (cur.includes(e.name)) continue;           // 行号仍然对，跳过
 
-  const range = classBodyRange(e.rel, e.cls);
-  if (!range) { unresolved.push(e.rel + ' ' + e.cls + '（找不到类体）'); continue; }
-  const cand = [];
-  for (let i = range[0] - 1; i < range[1]; i += 1) {
-    // 声明形：行首缩进 + 名称 + ( ；排除调用形（前面有 . 或 =）
-    if (new RegExp('^[ \\t]+' + e.name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&') + '\\s*\\(').test(lines[i])) {
-      cand.push(i + 1);
-    }
-  }
+  /* 类体范围只是**收窄搜索面**的优化，不是正确性前提：拿不到就退回全文件扫描。
+   *   （mofo-data.js 的 MofoData 类体因模板字符串里的花括号永远配不平 —— 旧版在这里
+   *    直接 continue 记「找不到类体」，把它当成缺陷报了三个版本，其实行号一直能唯一确定。） */
+  const range = classBodyRange(e.rel, e.cls) || [1, lines.length];
+  const esc = e.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const declRe = new RegExp('^[ \\t]*(?:async\\s+|static\\s+|get\\s+|set\\s+|\\*\\s*)*' + esc + '\\s*\\(');
+  // 两段候选：先按类体范围收，再放宽到全文件。
+  //   ★ 为什么必须有第二段：classBodyRange 的花括号配平对**模板字符串里的花括号**没有分辨力，
+  //     一旦类体里出现 `${...}`（本仓 wechat-data / image-upload / weibo-data 全是这种），
+  //     配平会提前归零，range 被截在类体前段 —— 于是声明在文件后半段的方法一律 0 候选。
+  //     实测就是这条：26 条「未能定位」里有 23 条是某个模板字符串把类体截短造成的假阴性。
+  //   ★ 放宽是安全的：全文件搜索仍要求「行首（可无缩进）+ 可选修饰符 + 名称 + (」，
+  //     即声明形；且要求候选**恰好一个**。多个候选（同名方法在两个类里）仍然中止不猜。
+  const pick = (from, to) => {
+    const out = [];
+    for (let i = from; i < to; i += 1) if (declRe.test(lines[i])) out.push(i + 1);
+    return out;
+  };
+  let cand = pick(range[0] - 1, range[1]);
+  if (cand.length !== 1) cand = pick(0, lines.length);
   if (cand.length !== 1) {
     unresolved.push(e.rel + ':' + e.line + ' ' + e.cls + '.' + e.name + '（候选 ' + cand.length + ' 个：' + cand.join(',') + '）');
     continue;

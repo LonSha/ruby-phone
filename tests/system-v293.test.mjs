@@ -26,6 +26,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
+import { fillClosure } from './lib/stage.mjs';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { installRuntimeHost, resetHostFlags } from './_runtime_host.mjs';
@@ -44,6 +45,11 @@ function stageTree(files) {
     mkdirSync(path.dirname(abs), { recursive: true });
     writeFileSync(abs, content);
   }
+  /* [v4.114.0 · R13-X7] 静态闭包补齐（工具在 tests/lib/stage.mjs）。
+   *   本表是手工列的，被测件每加一个 import 就要人记得同步：
+   *   v4.104.0 给 calendar-data 加 config/recycle-bin.js 之后，
+   *   D / D2 两条负控制直接 ERR_MODULE_NOT_FOUND（看起来像被测件坏了）。 */
+  fillClosure(dir, ROOT);
   return dir;
 }
 const replaceOnce = (s, from, to) => {

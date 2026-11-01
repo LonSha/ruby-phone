@@ -2,10 +2,10 @@
   "_comment": "门禁逐门耗时预算（B3 下段「超阈值告警」的真源）。check-file.mjs 只读它、不自带阈值 —— 与「门清单真源是 package.json scripts.check」同款纪律。ms = 实测基线；limit_ms = 告警口径（ms × (1 + margin_pct/100)）。门不在本表 / 本文件不在场 ⇒ 只报耗时、不告警（fail-open：门慢不等于判据坏）。",
   "schema": "gate-budget@1",
   "margin_pct": 10,
-  "measured_at": "v4.94.0",
+  "measured_at": "v4.114.0",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 115400,
+  "total_ms": 315400,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -91,6 +91,11 @@
       "ms": 1150,
       "limit_ms": 1265,
       "why": "文档路径声明门要 walk 全仓 3522 处 tests/scripts/tools 形态的路径声明并逐条查磁盘存在性，扫描面与语法门同量级但每处多一次 path.join + existsSync；慢下来通常意味着扫描面被扩到 node_modules，或 skipFiles 白名单被误删。"
+    },
+    "browser": {
+      "ms": 200000,
+      "limit_ms": 220000,
+      "why": "浏览器层真跑一场（12 场景 × 4 视口 ≈ 495 次读数），是全链第二贵的一门。它慢下来通常来自场景数或视口数增长；这条预算按 v4.100.0 实测 200s 落，不随判据数线性涨。"
     },
     "upstream-face": {
       "ms": 650,

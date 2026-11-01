@@ -89,9 +89,13 @@ export const TABS_BY_APP = Object.freeze({
         note: 'PV 案头；兜底简报页'
     }),
     recall: Object.freeze({
-        tabs: Object.freeze(['channels', 'fusion', 'ledger', 'policy']),
+        /* [v4.113.0 · 回补欠账] 补上 narrate（复述）一页。
+         *   v4.111.0 在 recall-app 的 setTab 里加了这一格，当时没同步本表 ——
+         *   同一版只跑单门、没跑到 system-v3650，于是漂移没被抓到。
+         *   **表是声明，不是真源**：源码变了表不跟就是假声明，故在这里对齐。 */
+        tabs: Object.freeze(['channels', 'fusion', 'ledger', 'policy', 'narrate']),
         file: 'apps/recall/recall-app.js', shape: 'array',
-        note: '召回治理台；兜底通道页'
+        note: '召回治理台；兜底通道页（narrate=复述，v4.111.0 · R13-X8）'
     }),
     soundkit: Object.freeze({
         tabs: Object.freeze(['slots', 'editor', 'share', 'settings']),

@@ -227,7 +227,12 @@ test('E2: 模块面账本只收 config/ 与 phone/ 顶层，且档位只有两�
     assert.ok(['orchestrator-only', 'zero'].includes(e.tier), '弱档只能是这两档：' + e.tier);
   }
   const tally = b.entries.reduce((a, e) => (a[e.tier] = (a[e.tier] || 0) + 1, a), {});
-  assert.equal(tally['orchestrator-only'] + tally.zero, b.entries.length, '档位计数必须自洽');
+  /* ★ zero 档可以为 0 件：v4.102.0 把最后 12 件 zero 一体清了账（4 件接进产品面、8 件退役）。
+   *   旧写法 `tally['orchestrator-only'] + tally.zero` 在 zero 档为空时拿到 undefined，相加得 NaN，
+   *   于是「档位计数自洽」这条判据把合法状态判成红。修法是把缺席的档当 0 而不是放宽判据：
+   *   两档相加仍须恰好等于条目总数（多一少一都会红）。 */
+  const tallyN = (k) => tally[k] || 0;
+  assert.equal(tallyN('orchestrator-only') + tallyN('zero'), b.entries.length, '档位计数必须自洽');
 });
 
 test('E3: 真仓零新增（门禁 rc=0）且读数与账本一致', () => {

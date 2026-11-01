@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fillClosure } from './lib/stage.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/kettle/kettle-data.js';
@@ -1170,6 +1171,12 @@ function stageTree() {
     for (const f of ['kettle-data.js', 'kettle-view.js', 'kettle-app.js']) {
         fs.copyFileSync(path.join(ROOT, 'apps', 'kettle', f), path.join(kd, f));
     }
+    /* [v4.114.0 · R13-X7] 静态闭包补齐：把暂存树里已出现模块的静态依赖从真仓拷齐。
+     *   修前现场：v4.104.0 给多个 data/app 加 config/recycle-bin.js、v4.105.0 给多个视图
+     *   加 config/destructive-confirm.js，而这几套判据的 stageTree 只列了当时需要的那几件
+     *   ⇒ 十二轮负控制一律 ERR_MODULE_NOT_FOUND（看起来像被测件坏了，真因在暂存树）。
+     *   工具在 tests/lib/stage.mjs，只填空位、不覆盖已写入的破坏副本、真仓也没有就安静漏出。 */
+    fillClosure(dir, ROOT);
     return dir;
 }
 
