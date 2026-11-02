@@ -735,7 +735,9 @@ test('D1 四条新键必须在 keys 门账本里登记且 scope=chat（会话隔
     const keys = [];
     for (const [appRel, prefix] of [['apps/regexfilter/regexfilter-app.js', 'regexfilter_'],
         ['apps/punchcard/punchcard-app.js', 'punchcard_']]) {
-        const hits = [...read(appRel).matchAll(new RegExp("'(" + prefix + "[a-z_]+)'", 'g'))].map((m) => m[1]);
+        /* [v4.104.0] 回收站恢复器名（registerRestorer 的 app: '...'）不是 storage 键，
+             *   从常量声明行取键，避免恢复器名混入键面。 */
+        const hits = [...read(appRel).matchAll(new RegExp("=\\s*'(" + prefix + "[a-z_]+)';?", 'g'))].map((m) => m[1]);
         const uniq = [...new Set(hits)];
         assert.equal(uniq.length, 2, appRel + ' 必须恰好两条键，实测 ' + uniq.join(','));
         keys.push(...uniq);

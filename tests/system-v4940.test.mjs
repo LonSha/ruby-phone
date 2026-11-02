@@ -24,6 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { withAuditCopy } from './lib/audit-copy.mjs';
 import {
   maskKeepLines, collectClassMethods, buildNameIndex, findDeadMethods,
   buildInstantiationIndex, buildModuleIndegree,
@@ -247,8 +248,9 @@ test('E3: 真仓零新增（门禁 rc=0）且读数与账本一致', () => {
 /* ══════════════════════════════════════════════════════════════
  * F 探测器自证 —— 真源码破坏 / 塌陷 / 接线
  * ══════════════════════════════════════════════════════════════ */
-test('F1: 真类里加一个全仓无人调的方法 ⇒ rc=1 且点名（类名.方法名）', () => {
-  const target = rel('apps/archive/archive-app.js');
+test('F1: 真类里加一个全仓无人调的方法 ⇒ rc=1 且点名（类名.方法名）', () => withAuditCopy(ROOT, (copy) => {
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '未破坏副本必须通过同款真实门禁');
+  const target = (p => path.join(copy, p))('apps/archive/archive-app.js');
   const backup = fs.readFileSync(target, 'utf8');
   const ANCHOR = '    canonSlot() {';
   const hits = backup.split(ANCHOR).length - 1;
@@ -256,7 +258,7 @@ test('F1: 真类里加一个全仓无人调的方法 ⇒ rc=1 且点名（类名
   const PROBE = 'zpO2ProbeMethod';
   try {
     fs.writeFileSync(target, backup.replace(ANCHOR, `    ${PROBE}() { return 1; }\n${ANCHOR}`));
-    const r = runAudit();
+    const r = spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 });
     assert.equal(r.status, 1, '新增死方法必须让门禁 rc=1');
     assert.ok(r.stderr.includes(PROBE), '必须点名探测方法，而不是只说「有新增」');
     assert.match(r.stderr, new RegExp('ArchiveApp\\.' + PROBE), '报告必须带「类名.方法名」定位');
@@ -264,22 +266,23 @@ test('F1: 真类里加一个全仓无人调的方法 ⇒ rc=1 且点名（类名
     fs.writeFileSync(target, backup);
   }
   assert.equal(fs.readFileSync(target, 'utf8'), backup, '还原必须逐字节一致（无残留）');
-  assert.equal(runAudit().status, 0, '还原后必须复绿');
-});
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '还原后必须复绿');
+}));
 
-test('F2: 新建一件零 import 的 config 模块 ⇒ rc=1 且标 zero 档', () => {
-  const probe = rel('config/zp-o2-probe-orphan.js');
+test('F2: 新建一件零 import 的 config 模块 ⇒ rc=1 且标 zero 档', () => withAuditCopy(ROOT, (copy) => {
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '未破坏副本必须通过同款真实门禁');
+  const probe = (p => path.join(copy, p))('config/zp-o2-probe-orphan.js');
   try {
     fs.writeFileSync(probe, 'export function zpO2OrphanProbe() { return 1; }\n');
-    const r = runAudit();
+    const r = spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 });
     assert.equal(r.status, 1, '新增零 import 模块必须让门禁 rc=1');
     assert.ok(r.stderr.includes('config/zp-o2-probe-orphan.js'), '必须点名该孤儿模块');
     assert.match(r.stderr, /\[zero\]/, '必须标注档位，而不是只报文件名');
   } finally {
     fs.rmSync(probe, { force: true });
   }
-  assert.equal(runAudit().status, 0, '删除后必须复绿');
-});
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/method-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '删除后必须复绿');
+}));
 
 test('F3: 空扫描面 ⇒ exit 2（--fixture 也不豁免）', () => {
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'mempty-'));

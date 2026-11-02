@@ -1327,6 +1327,22 @@ export class PhoneStorage {
      * 三态分开：容器读不到（`readable:false`）/ 读到了但零键 / 读到了有几键。
      * @returns {{readable:boolean, chat:string[], global:string[], why:string}}
      */
+    /** Device-only usage vault: intentionally outside both exportable PhoneStorage buckets.
+     * No fallback to extensionSettings/chatMetadata when device storage is unavailable.
+     */
+    usagePatternStore() {
+        const key = 'rubyphone.device.usage-pattern.v1';
+        return {
+            read() {
+                try { return JSON.parse(globalThis.localStorage.getItem(key) || 'null'); }
+                catch (_) { return null; }
+            },
+            write(value) {
+                try { globalThis.localStorage.setItem(key, JSON.stringify(value)); return true; }
+                catch (_) { return false; }
+            }
+        };
+    }
     enumerateKeys() {
         const out = { readable: false, chat: [], global: [], why: '' };
         try {

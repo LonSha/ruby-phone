@@ -44,6 +44,7 @@ import * as PhoneTagFilter from '../../config/tag-filter.js';
  *   「移入回收站」，能不能捞回来由这里统一说清（含捞不回来的原因）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
 import { getAwayMode } from '../../config/away-mode.js';
+import { mountUsagePattern } from './usage-pattern-section.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
 import { SYS_KEYS } from '../../config/system-controls.js';
 import { effectLine, effectAtOf, effectWhyOf, applyChange, PendingEffects } from '../../config/setting-effect.js';
@@ -3457,6 +3458,7 @@ export class SettingsApp {
         this.phoneShell.setContent(html);
         this._applySettingsThemeIsolation();
         this.bindEvents();
+        mountUsagePattern(this._getActiveSettingsRoot(), this.storage);
     }
 
     _getImagePromptAppDefs() {

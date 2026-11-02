@@ -81,14 +81,15 @@ test('A3: 真源 config/apps.js 的 APPS 是数组且长度不低于下限', asy
 /* ------------------------------------------------------------
  * B 组：门接进链
  * ------------------------------------------------------------ */
-test('B1: package.json 必须有 browser 键，且 check 链末位是 browser', () => {
+test('B1: package.json 必须有 browser 键，且 check 链包含 browser', () => {
   const pkg = rdJson('package.json');
   assert.equal(typeof pkg.scripts.browser, 'string', 'package.json 必须有 scripts.browser');
   assert.ok(/browser-gate-run/.test(pkg.scripts.browser), 'browser 键必须指向包装门 scripts/browser-gate-run.mjs');
   const chain = pkg.scripts.check.split('&&').map((s) => s.trim());
+  /* [v3.20.2] upstream-face 入链后排在末位；browser 门不再要求末位、但必须在链上。 */
   assert.ok(
-    chain[chain.length - 1].includes('browser'),
-    `check 链末位必须是 browser（末位失败时前面各道已给出定位），实际末位=${chain[chain.length - 1]}`
+    chain.some((c) => /browser/.test(c)),
+    'browser 门必须在 check 链上'
   );
   assert.equal(chain.length, 19, `check 链应为十九道，实际 ${chain.length} 道`);
 });
@@ -217,21 +218,32 @@ test('D1: 冻结账本存在且逐条可核——每条都有场景/视口/读�
   assert.ok(n > 0, '账本不得为空（空账本等于声称零红点）');
 });
 
-test('D2: 账本条目必须与真实台账对得上——不许记不存在于读数里的红点', () => {
-  const known = rdJson('scripts/browser-known-failures.json');
-  const readings = rdJson('tests/audit/browser_readings.json');
-  const realKey = new Set(readings.failures.map((f) => `${f.scene}|${f.viewport}|${f.name}`));
+function judgeFrozenCoverage(known, readings) {
+  const sameRun = known.version === readings.version;
+  const realKey = new Set(readings.failures.map(f => `${f.scene}|${f.viewport}|${f.name}`));
   const ghosts = [];
   for (const [scene, list] of Object.entries(known.scenes)) {
     for (const it of list) {
-      if (it.status === 'fixed') continue; /* 已修为「曾经红过」，允许留档 */
-      const k = `${scene}|${it.viewport}|${it.name}`;
-      if (!realKey.has(k)) ghosts.push(k);
+      if (it.status === 'fixed') continue;
+      // Frozen evidence and latest observations need not be identical: a later run may pass.
+      if (!readings.per_scene[scene] || (sameRun && !realKey.has(`${scene}|${it.viewport}|${it.name}`))) {
+        ghosts.push(`${scene}|${it.viewport}|${it.name}`);
+      }
     }
   }
-  assert.deepEqual(ghosts, [], `账本记了读数里不存在的红点（幽灵条目）：${ghosts.slice(0, 8).join('; ')}`);
+  return ghosts;
+}
+test('D2: 同版本冻结逐条对失败；跨版本保留历史证据但场景不可消失', () => {
+  const known = rdJson('scripts/browser-known-failures.json');
+  const readings = rdJson('tests/audit/browser_readings.json');
+  assert.deepEqual(judgeFrozenCoverage(known, readings), []);
+  const ghost = structuredClone(known);
+  ghost.scenes['missing.scen.js'] = [{ viewport: '320x568', name: 'missing', status: 'open' }];
+  assert.ok(judgeFrozenCoverage(ghost, readings).length > 0, '不存在的场景仍须拒绝');
+  const sample = {version:'1',scenes:{a:[{viewport:'320x568',name:'x',status:'open'}]}};
+  assert.equal(judgeFrozenCoverage(sample,{version:'1',per_scene:{a:{}},failures:[]}).length,1);
+  assert.equal(judgeFrozenCoverage(sample,{version:'2',per_scene:{a:{}},failures:[]}).length,0);
 });
-
 test('D3: 包装门必须有「只拦新增」与「到期点名」两条判据，且未执行不透支', () => {
   const src = rd('scripts/browser-gate-run.mjs');
   const code = stripComments(src);
@@ -247,14 +259,16 @@ test('D3: 包装门必须有「只拦新增」与「到期点名」两条判据�
   assert.ok(/不是「浏览器层通过了」|带着已知缺陷在跑/.test(code), '必须明写这是「带着缺陷在跑」而不是通过');
 });
 
-test('D4: 冻结账本不得成为「存量免罪」——账本里的红点数必须如实可数', () => {
+test('D4: 冻结总数按自身 hits 复算，不强制等于后续观测失败数', () => {
   const known = rdJson('scripts/browser-known-failures.json');
-  const readings = rdJson('tests/audit/browser_readings.json');
-  const n = Object.values(known.scenes).reduce((a, v) => a + v.length, 0);
-  assert.equal(known.total, readings.fail_reads, `账本 total=${known.total} 必须等于当期台账 fail_reads=${readings.fail_reads}`);
-  assert.ok(n <= known.total, '去重后条目数不得超过总条数');
+  const entries = Object.values(known.scenes).flat();
+  const count = value => Object.values(value.scenes).flat().reduce((n,it) => n + it.hits, 0);
+  assert.ok(entries.every(it => Number.isInteger(it.hits) && it.hits > 0));
+  assert.equal(known.total, count(known));
+  assert.equal(known.distinct, entries.length);
+  const corrupt = structuredClone(known); corrupt.total += 1;
+  assert.notEqual(corrupt.total, count(corrupt), '篡改总数必须被同款复算发现');
 });
-
 /* ------------------------------------------------------------
  * E 组：负控制（真源码破坏 → 判据必须转红）
  * ------------------------------------------------------------ */

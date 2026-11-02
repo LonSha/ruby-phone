@@ -94,6 +94,7 @@ export const FIELD_CLOCKS = Object.freeze({
     startedAt: 'wall',
     finishedAt: 'wall',
     lastActiveAt: 'wall',
+    lastAt: 'wall',
     at: 'wall',
     ts: 'wall'
 });
@@ -114,6 +115,7 @@ export const FIELD_CLOCK_WHY = Object.freeze({
     startedAt: '一次任务 / 生成的开始时刻：用于耗时，属于机器时间',
     finishedAt: '一次任务 / 生成的结束时刻：用于耗时，属于机器时间',
     lastActiveAt: '最后活动时刻：用于活跃度节流，属于机器时间',
+    lastAt: '设备使用痕迹最后打开时刻：本机墙钟，不随剧情回拨',
     at: '账本 / 历史条目时刻（审计流水）：必须单调且跨会话可比',
     ts: '缓存条目 / 瞬态读数的新鲜度标记：属于机器时间'
 });

@@ -26,6 +26,7 @@
  * ======================================================== */
 
 /** 使用统计的 storage 键（会话隔离，见 config/storage.js 的 `/^usage_/`）。 */
+import { getUsagePattern } from './usage-pattern.js';
 export const USAGE_KEY = 'usage_stats_v1';
 
 /** 保留天数：超出即裁剪最旧的日子（防 chatMetadata 长线膨胀）。 */
@@ -272,6 +273,7 @@ function writeUsage(storage, usage) {
  * @returns {boolean} 是否成功落盘（失败不影响开 App，调用方也不该据此做分支）
  */
 export function trackerNote(storage, appId, at) {
+    try { getUsagePattern(storage).open(appId, at); } catch (_) { /* optional device trace */ }
     try {
         const usage = readUsage(storage);
         noteOpen(usage, appId, at);
@@ -282,6 +284,7 @@ export function trackerNote(storage, appId, at) {
 
 /** 采集点唯一入口：记一次「回桌面 / 关闭实例」。绝不抛。 */
 export function trackerClose(storage, at) {
+    try { getUsagePattern(storage).close(at); } catch (_) { /* optional device trace */ }
     try {
         const usage = readUsage(storage);
         noteClose(usage, at);

@@ -22,6 +22,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { withAuditCopy } from './lib/audit-copy.mjs';
 import {
   loadTree, buildConsumptionIndex, hasBindingConsumer,
 } from '../scripts/lib/binding-consumption.mjs';
@@ -188,33 +189,36 @@ test('E3: 真仓绑定级零新增（门禁 rc=0）', () => {
 });
 
 /* ══════════════════ F 探测器自证（负控制） ══════════════════ */
-test('F1: 新增真零消费导出 ⇒ rc=1（门禁会拦）', () => {
-  const target = rel('config/district-network.js');
+test('F1: 新增真零消费导出 ⇒ rc=1（门禁会拦）', () => withAuditCopy(ROOT, (copy) => {
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/bind-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '未破坏副本必须通过同款真实门禁');
+  const target = (p => path.join(copy, p))('config/district-network.js');
   const backup = fs.readFileSync(target, 'utf8');
   try {
     fs.writeFileSync(target, backup + '\nexport function __negControlOnlyExport() { return 1; }\n');
-    const r = spawnSync(process.execPath, [AUDIT], { encoding: 'utf8', cwd: ROOT, timeout: 300000 });
+    const r = spawnSync(process.execPath, [path.join(copy, 'scripts/bind-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 });
     assert.equal(r.status, 1, '新增零消费导出必须让门禁 rc=1');
     assert.match(r.stderr, /__negControlOnlyExport/, '必须点名这个新死导出');
   } finally {
     fs.writeFileSync(target, backup);
   }
-});
+}));
 
-test('F2: 真源码破坏后门禁仍要认出旧条目的消失（不静默）', () => {
-  const target = rel('config/diff-editor-desk.js');
+test('F2: 真源码破坏后门禁仍要认出旧条目的消失（不静默）', () => withAuditCopy(ROOT, (copy) => {
+  assert.equal(spawnSync(process.execPath, [path.join(copy, 'scripts/bind-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 }).status, 0, '未破坏副本必须通过同款真实门禁');
+  const target = (p => path.join(copy, p))('config/diff-editor-desk.js');
   const backup = fs.readFileSync(target, 'utf8');
   try {
+    assert.equal([...backup.matchAll(/export function computeParagraphDiff\b/g)].length, 1, '锚点必须恰中一次');
     const broken = backup.replace(/export function computeParagraphDiff\b/, 'export function computeParagraphDiffX');
     assert.notEqual(broken, backup, '破坏必须真的发生（锚点至少命中一次）');
     fs.writeFileSync(target, broken);
-    const r = spawnSync(process.execPath, [AUDIT], { encoding: 'utf8', cwd: ROOT, timeout: 300000 });
+    const r = spawnSync(process.execPath, [path.join(copy, 'scripts/bind-consumption-audit.mjs')], { encoding: 'utf8', cwd: copy, timeout: 300000 });
     assert.equal(r.status, 1, '改名后 computeParagraphDiffX 是新的零消费导出 ⇒ rc=1');
     assert.match(r.stderr, /computeParagraphDiffX/, '必须点名被改名后的新名字');
   } finally {
     fs.writeFileSync(target, backup);
   }
-});
+}));
 
 test('F3: --root 指到空目录 ⇒ rc=2 fail-closed（不许 0 文件全绿）', () => {
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'bindempty-'));

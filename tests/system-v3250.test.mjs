@@ -360,8 +360,10 @@ test('B4 换会话只重取读数：onChatChanged 走 probe，且不持跨轮副
 test('C1 两条新键必须在 keys 门账本里登记且 scope=chat（会话隔离族）', () => {
     const audit = read('scripts/keys-audit.mjs');
     const app = read('apps/piggy/piggy-app.js');
-    /* 键名从产品代码里取（不手抄），再要求账本里有它。 */
-    const hits = [...app.matchAll(/'(piggy_[a-z_]+)'/g)].map((mm) => mm[1]);
+    /* 键名从产品代码里取（不手抄），再要求账本里有它。
+     * [v4.104.0] 回收站接入新增 registerRestorer('piggy_tx' / 'piggy_card') —— 它们是
+     *   恢复器名，不是 storage 键，不属于本判据射程；从常量声明行取键。 */
+    const hits = [...app.matchAll(/=\s*'(piggy_[a-z_]+)';?/g)].map((mm) => mm[1]);
     const uniq = [...new Set(hits)];
     assert.equal(uniq.length, 2, '必须恰好两条键（settings / state），实测 ' + uniq.join(','));
     for (const key of uniq) {

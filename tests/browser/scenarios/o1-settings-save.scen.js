@@ -70,6 +70,8 @@ report({ name: 'settings-app-opens', ok: openSettings.ok, detail: openSettings.w
 
 /* ---------- 2. 设置 App 的视图真有盒子（不是零宽空壳） ---------- */
 const setRoot = document.querySelector('#yzp-settings-app') || document.querySelector('.settings-app');
+const usageEntry = setRoot?.querySelector('[data-usage-enabled]');
+report({ name: 'device-usage-entry-mounted', ok: !!usageEntry && !usageEntry.checked, detail: 'new device section mounts in the real settings controller, default off' });
 const setBox = setRoot ? setRoot.getBoundingClientRect() : null;
 report({ name: 'settings-has-box', ok: !!(setBox && setBox.width > 100 && setBox.height > 100), detail: setBox ? ('w=' + Math.round(setBox.width) + ' h=' + Math.round(setBox.height)) : 'missing' });
 

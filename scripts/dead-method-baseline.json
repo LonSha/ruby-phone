@@ -1,7 +1,7 @@
 {
   "note": "类方法面冻结账本（R11-O2）。判据：公开方法名在**全仓除声明行外零出现**即记死。新增未登记即红；条目被真接线后应清理。口径见 scripts/lib/dead-surface.mjs 头注释。 【v4.95.0 · R11-O3】SubsystemOrchestrator.manageUsageParadigm 已人工摘除：产品端真接线（phone/home-screen.js 调 resolveAppOrder、apps/usage/usage-app.js 读范式键），门的复活告警点名了它。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】本版新增的两条死方法当场被抓并修掉，故条数未增（315 → 315）：`BackupdeskApp.previewShare` 与 `BackupdeskApp.markShareRead` 此前只有判据在调、产品面零调用 —— 前者因为 `_shareVm` 里另写了一份 `sharePreviewOf`（同一件事两份口径），后者因为界面没有「记已读」入口。修法是**真接线**，不是写进账本：判据绿而对用户不存在，是本面最贵的一种假绿。 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，逐条手删，条数 315 → 311）：① `SmartGalleryVault.unlockVault` / `lockVault` / `queryPhotos` 三条 —— X9 把保险箱接进了相册的「回看」页：解锁走 `AlbumView.unlockVaultFromUI()` 真调 `unlockVault(pin)`（连错 3 次锁 30 秒的判据留在内核里，视图只转述它的话），「重新上锁」与离开回看页走 `lockVault()`，分区读数由 `replay-face-bridge.vaultPartitionOf()` 取代 `queryPhotos`；② `SubsystemOrchestrator.replayLifeExperience` —— 修前是纸面假驱动（`recordLifeProgram` / `getActPerspective` / `playbackProgramSummary` / `createReplayableProgram` 四处全传错参，每次调用都成功返回、每一项都是空的），本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，由回看面真调用。摘除前实测：`method-consumption-audit` 报「3 条基线方法已被重新消费」并逐条点名。 【v4.99.9 · R11-X9 行号校正】本版改动了 apps/album/album-data.js 与 apps/memory/memory-app.js，方法声明行号随之平移（E1 判据逐条对真源码，偏移即红）。此处**只按真源码重算 line 字段**，不改条目集合、不改 generated_at（非 --update：整本重写会把时间戳一起洗掉）。",
   "schema": "dead-method-baseline@1",
-  "generated_at": "2026-10-31T19:21:35.296Z",
+  "generated_at": "2026-11-02T15:08:46.005Z",
   "generated_version_hint": "auto",
   "rule": "只判增量。存量冻结是为了「不一次性清零牵连整批 App」（计划明令）。每条带 classInstantiated 以便分档处置。",
   "entries": [
@@ -864,14 +864,6 @@
     {
       "rel": "apps/music/music-ambience.js",
       "cls": "MusicAmbience",
-      "name": "detach",
-      "line": 200,
-      "isStatic": false,
-      "classInstantiated": true
-    },
-    {
-      "rel": "apps/music/music-ambience.js",
-      "cls": "MusicAmbience",
       "name": "destroyAmbience",
       "line": 322,
       "isStatic": false,
@@ -993,7 +985,7 @@
       "rel": "apps/piggy/piggy-app.js",
       "cls": "PiggyApp",
       "name": "lastRefreshedCards",
-      "line": 88,
+      "line": 99,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -1044,14 +1036,6 @@
       "line": 199,
       "isStatic": false,
       "classInstantiated": false
-    },
-    {
-      "rel": "apps/plotline/plotline-board.js",
-      "cls": "PlotlineBoard",
-      "name": "clearFocus",
-      "line": 97,
-      "isStatic": false,
-      "classInstantiated": true
     },
     {
       "rel": "apps/pvdesk/pvdesk-app.js",
@@ -1774,6 +1758,30 @@
       "classInstantiated": true
     },
     {
+      "rel": "config/away-mode.js",
+      "cls": "AwayMode",
+      "name": "markAway",
+      "line": 124,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/away-mode.js",
+      "cls": "AwayMode",
+      "name": "missedDuring",
+      "line": 184,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "config/away-mode.js",
+      "cls": "AwayMode",
+      "name": "clearMissed",
+      "line": 247,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "config/battery-thermodynamics.js",
       "cls": "BatteryThermodynamics",
       "name": "setAppLoad",
@@ -2201,7 +2209,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "manageAuthGrant",
-      "line": 361,
+      "line": 363,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2209,7 +2217,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "revokeAuth",
-      "line": 367,
+      "line": 369,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2217,7 +2225,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "trackCadenceThread",
-      "line": 374,
+      "line": 376,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2225,7 +2233,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "syncDwellingItem",
-      "line": 393,
+      "line": 395,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2233,7 +2241,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "coordinatePresence",
-      "line": 403,
+      "line": 405,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2241,7 +2249,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "evolveCoBuiltWorld",
-      "line": 414,
+      "line": 416,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2249,7 +2257,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "manageCreatorBundle",
-      "line": 424,
+      "line": 426,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2257,7 +2265,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "manageDailyRhythm",
-      "line": 435,
+      "line": 437,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2265,7 +2273,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "handleDiffEditing",
-      "line": 444,
+      "line": 446,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2273,7 +2281,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "checkDistrictOpportunities",
-      "line": 453,
+      "line": 455,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2281,7 +2289,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "advanceIncident",
-      "line": 462,
+      "line": 464,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2289,7 +2297,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "relayIntent",
-      "line": 472,
+      "line": 474,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2297,7 +2305,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "manageMediaProject",
-      "line": 486,
+      "line": 488,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2305,7 +2313,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "pauseMentorship",
-      "line": 551,
+      "line": 553,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2313,7 +2321,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "anchorWorkspaceResume",
-      "line": 558,
+      "line": 560,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2321,7 +2329,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "planOfflineBundleImport",
-      "line": 569,
+      "line": 571,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2329,7 +2337,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "advanceScenario",
-      "line": 576,
+      "line": 578,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2337,7 +2345,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "checkResponseCadence",
-      "line": 609,
+      "line": 611,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2345,7 +2353,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "leaseAppResource",
-      "line": 619,
+      "line": 621,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2353,7 +2361,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "controlSharing",
-      "line": 626,
+      "line": 628,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2361,7 +2369,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "rollbackPhoneTheme",
-      "line": 637,
+      "line": 639,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2369,7 +2377,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "auditReadability",
-      "line": 644,
+      "line": 646,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2377,7 +2385,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "mergeContextCard",
-      "line": 654,
+      "line": 656,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2385,7 +2393,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "manageWorkPackage",
-      "line": 675,
+      "line": 677,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2393,7 +2401,7 @@
       "rel": "config/subsystem-orchestrator.js",
       "cls": "SubsystemOrchestrator",
       "name": "adjudicateProposal",
-      "line": 685,
+      "line": 687,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2401,7 +2409,7 @@
       "rel": "config/system-notification-dispatcher.js",
       "cls": "SystemNotificationDispatcher",
       "name": "clearPresence",
-      "line": 111,
+      "line": 113,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2409,7 +2417,7 @@
       "rel": "config/system-notification-dispatcher.js",
       "cls": "SystemNotificationDispatcher",
       "name": "acknowledge",
-      "line": 222,
+      "line": 233,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2417,7 +2425,7 @@
       "rel": "config/system-notification-dispatcher.js",
       "cls": "SystemNotificationDispatcher",
       "name": "setDnd",
-      "line": 245,
+      "line": 256,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2493,6 +2501,5 @@
       "isStatic": false,
       "classInstantiated": true
     }
-  ],
-  "generated_at_note": "行号按 tools/relocate_method_baseline.mjs 重定位（v4.95.0：源码插入导致其后行号整体后移）"
+  ]
 }
