@@ -218,9 +218,13 @@ function makeEventSource() {
     const gen = wsrc.indexOf('await this._generate(ev)');
     ok('入口乐观出队先于生成调用', deq > 0 && gen > 0 && deq < gen, `deq=${deq} gen=${gen}`);
     ok('完成时不再有二次出队（st2 已移除）', !wsrc.includes('const st2 = this.getState();'));
-    const calls = (isrc.match(/worldpulseApp\??\.onChatChanged\?\.\(\)/g) || []).length;
-    ok('index.js 三处接入 worldpulse 换会话重绑（换会话 + 两处清数据）', calls === 3, String(calls));
-    ok('清数据路径同步重校', /clearCurrentData\(\);[\s\S]{0,900}worldpulseApp\?\.onChatChanged/.test(isrc));
+    const calls = (isrc.match(/worldpulseApp\??\.onChatChanged\??\.\(\)/g) || []).length;
+    /* [v4.103.0 · R13-O9] worldpulseApp 换会话重绑并入 ST_PHONE_REBIND_APP_KEYS 表驱动：
+     *   三条路径（换会话 + 两处清数据）由 rebindLazyApps() 统一覆盖，不再有三处显式调用。 */
+    const inRebindTable = /ST_PHONE_REBIND_APP_KEYS[\s\S]{0,12000}'worldpulseApp'/.test(isrc);
+    ok('index.js 三处接入 worldpulse 换会话重绑（[v4.103.0] 起由表驱动统一覆盖）', inRebindTable, String(calls));
+    ok('清数据路径同步重校（clearCurrentData 后 rebindLazyApps 表驱动重校，窗口 22 行内）',
+        /storage\.clearCurrentData\(\);[\s\S]{0,3000}rebindLazyApps\(\);/.test(isrc));
 }
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

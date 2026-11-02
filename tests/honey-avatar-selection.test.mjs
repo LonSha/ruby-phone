@@ -17,6 +17,11 @@ const source = fs
     .replace(
         '../../config/num-gate.js',
         new URL('../config/num-gate.js', import.meta.url).href
+    )
+    /* [v4.109.0] honey-view 新增 empty-face.js 导入（FACE_ATTR），data:URL 相对导入无法解析，须一并重写。 */
+    .replace(
+        '../../config/empty-face.js',
+        new URL('../config/empty-face.js', import.meta.url).href
     );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { HoneyView } = await import(moduleUrl);

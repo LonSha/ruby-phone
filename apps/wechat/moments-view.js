@@ -16,6 +16,8 @@ import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/
  *   （可选中译英 + 参考图构建 + provider + 上传），且这条路上有**三次** saveData()，
  *   每一次都会把状态写进按会话隔离的朋友圈数据里。 */
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+/* [v4.116.0 · R13-X5] 「谁看见了什么」投影预览：发布前把「不给3人看」展开成每个人的可见结论与原因 */
+import { projectAudienceForRoster } from '../../config/audience-projection.js';
 
 // 朋友圈视图 - 高仿微信版
 export class MomentsView {
@@ -2396,6 +2398,44 @@ ${memoryLines.slice(0, 10).join('\n')}
     _updatePendingMomentVisibilitySummary() {
         const summary = document.getElementById('wechat-moment-visibility-summary');
         if (summary) summary.textContent = this._getPendingMomentVisibilitySummary();
+        /* [v4.116.0 · R13-X5] 规则一变，投影预览立即重算 —— 预览永远跟着当前规则走。 */
+        this._refreshAudiencePreview();
+    }
+
+    /* [v4.116.0 · R13-X5] 「谁看见了什么」预览面板：把当前可见性规则投影到全名册，
+     *   逐人给出 可见/不可见 + 原因。纯读预览，不落盘、不改任何数据。
+     *   诚实边界：预览基于当前规则，实际以发送时规则为准。 */
+    _renderAudiencePreview() {
+        const host = document.getElementById('wechat-audience-preview');
+        if (!host) return;
+        const visibility = this.pendingMomentVisibility || { type: 'public', contactIds: [], contactNames: [] };
+        const contacts = this.app.wechatData.getContacts() || [];
+        const { entries, summary } = projectAudienceForRoster({ audienceRules: visibility, contacts });
+        const typeLabel = visibility.type === 'exclude' ? '不给谁看'
+            : (visibility.type === 'include' ? '仅给谁看' : '公开');
+        const items = entries.length > 0
+            ? `<div class="audience-preview-list">${entries.map(entry => `
+                <div class="audience-preview-item ${entry.visible ? 'is-visible' : 'is-hidden'}">
+                    <span class="audience-preview-verdict">${entry.visible ? '可见' : '看不到'}</span>
+                    <span class="audience-preview-name">${this._escapeHtml(entry.name)}</span>
+                    <span class="audience-preview-reason">${this._escapeHtml(entry.reasonText)}</span>
+                </div>
+            `).join('')}</div>`
+            : '<div class="audience-preview-empty">通讯录暂无好友，无可投影对象</div>';
+        host.innerHTML = `
+            <div class="audience-preview-head">
+                <span>「${typeLabel}」在这份通讯录里的投影</span>
+                <span class="audience-preview-count">${summary.visibleCount} 人可见 / ${summary.hiddenCount} 人看不到</span>
+            </div>
+            ${items}
+            <div class="audience-preview-note">预览基于当前规则，实际以发送时规则为准</div>
+        `;
+        host.classList.add('is-open');
+    }
+
+    _refreshAudiencePreview() {
+        const host = document.getElementById('wechat-audience-preview');
+        if (host && host.classList.contains('is-open')) this._renderAudiencePreview();
     }
 
     _bindMomentVisibilityScrollGuard(overlay) {
@@ -2711,7 +2751,9 @@ ${memoryLines.slice(0, 10).join('\n')}
                             <i class="fa-solid fa-chevron-right"></i>
                         </span>
                     </button>
+                    <button type="button" class="audience-preview-toggle" id="audience-preview-toggle">谁看见了什么？</button>
                 </div>
+                <div class="audience-preview" id="wechat-audience-preview" hidden></div>
             </div>
         `;
 
@@ -2744,6 +2786,19 @@ ${memoryLines.slice(0, 10).join('\n')}
 
         document.getElementById('wechat-moment-visibility-trigger')?.addEventListener('click', () => {
             this.showMomentVisibilityPicker();
+        });
+        /* [v4.116.0 · R13-X5] 「谁看见了什么」预览开关：展开投影面板；再次点击收起。 */
+        document.getElementById('audience-preview-toggle')?.addEventListener('click', () => {
+            const host = document.getElementById('wechat-audience-preview');
+            if (!host) return;
+            const willOpen = !host.classList.contains('is-open');
+            host.hidden = !willOpen;
+            if (willOpen) {
+                this._renderAudiencePreview();
+            } else {
+                host.classList.remove('is-open');
+                host.innerHTML = '';
+            }
         });
 
         document.getElementById('wechat-moment-text-image-trigger')?.addEventListener('click', () => {

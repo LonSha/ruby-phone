@@ -17,7 +17,10 @@ const idxSrc = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
 
 ok('MemoryCore 含有 reload 方法', memDataSrc.includes('reload() {'));
 ok('onChatChanged 包含 memoryCore.reload 调用', idxSrc.includes('window.VirtualPhone.memoryCore.reload?.()'));
-ok('onChatChanged 包含 lonshaBridge.onChatChanged 调用', idxSrc.includes('window.VirtualPhone.lonshaBridge.onChatChanged?.()'));
+ok('onChatChanged 包含 lonshaBridge 换会话重绑（[v4.103.0] 并入 ST_PHONE_REBIND_APP_KEYS 表驱动）',
+    /'lonshaBridge',\s*\/\/ \[v4\.103\.0 · R13-O9\]/.test(idxSrc)
+    && idxSrc.includes('for (const key of ST_PHONE_REBIND_APP_KEYS)')
+    && /phone\[key\]\?\.onChatChanged\?\.\(\)/.test(idxSrc));
 ok('clearCurrentData 包含 memoryCore.clearCurrentChat 调用', idxSrc.includes('window.VirtualPhone?.memoryCore?.clearCurrentChat?.()'));
 ok('clearAllData 监听器包含 memoryCore.clear 调用', idxSrc.includes('window.VirtualPhone?.memoryCore?.clear?.()'));
 ok('applyCoordinatedInjection 在无 directive 时清空槽位', bridgeSrc.includes("ctx.setExtensionPrompt('rubyphone_memory_coord', '', 1, 0)"));

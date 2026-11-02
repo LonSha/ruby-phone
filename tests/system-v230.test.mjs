@@ -231,8 +231,8 @@ const {
     // B1 换会话是**会话作用域**，不是实例销毁 → 不得全域清零
     ok('B1a 换会话路径已无 disposeChildRuntimes(\'\')（全域清零）',
         !/disposeChildRuntimes\(''\)/.test(P1));
-    ok('B1b 换会话路径确有仍被复用的实例（说明不该全域清零）',
-        /musicApp\.onChatChanged/.test(P1) && /gamesApp\.onChatChanged/.test(P1) && /worldpulseApp\.onChatChanged/.test(P1));
+    ok('B1b 换会话路径确有仍被复用的实例（[v4.103.0] 起由 rebindLazyApps 表驱动，不再显式点名）',
+        /rebindLazyApps\(\);/.test(P1) && /ST_PHONE_REBIND_APP_KEYS[\s\S]{0,12000}'musicApp'/.test(isrc) && /ST_PHONE_REBIND_APP_KEYS[\s\S]{0,12000}'gamesApp'/.test(isrc) && /ST_PHONE_REBIND_APP_KEYS[\s\S]{0,12000}'worldpulseApp'/.test(isrc));
 
     // B2 清当前数据：丢弃 honeyApp 前必须留出口（实例出口 或 域名兜底，至少一个）
     ok('B2a 清当前数据 honey 有出口',

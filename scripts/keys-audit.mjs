@@ -613,6 +613,9 @@ const KEY_REGISTRY = [
   { key: 'sys_access_level', scope: 'chat', note: '操作层档位（standard / enhanced / large，随会话隔离）' },
   { key: 'sys_access_compact', scope: 'chat', note: '紧凑列表开关（随会话隔离）' },
   { key: 'sys_access_theme', scope: 'chat', note: '主题档（auto / light / dark，随会话隔离）' },
+  /* [v4.115.0 · R13-X4] 离开状态机落账键：离开理由、起止时间与 missed 清单随会话隔离 ——
+   *   该键未被 K1 抓到是全量测试暴露的登记缺口（X4 交付时漏登）。 */
+  { key: 'sys_away_mode_state', scope: 'chat', note: '离开模式状态机（理由 / 起止 / missed 清单，随会话隔离）' },
   { key: '__migration_ledger', scope: 'global', note: '存储层迁移留痕账本（version+keys）' },
 
   // ══ [v3.93.0 · R-X9] 键名字符集放开后**补齐的登记**（142 条）══
