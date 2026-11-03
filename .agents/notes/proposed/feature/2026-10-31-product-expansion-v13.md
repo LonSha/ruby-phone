@@ -219,3 +219,7 @@ Status: proposed
 
 ## X6 / X9 实施复核
 X6 的旧侦察结论不成立：仓库已有 usage-tracker；当前复用采集口，设备本地存储与会话统计并存。详见[设备使用痕迹](../../implemented/feature/2026-11-03-device-usage-pattern.md)。逐 App 摘要在设置分区，未侵入每个 App 的原详情页。X9 缺少对方给玩家的备注等真实来源，本轮不实施，不用玩家给对方的备注冒充反向真源。
+
+## 第十四期后续范围
+
+[RubyPhone第十四期拓展](../../proposed/feature/2026-11-03-product-expansion-v14.md)在保留本篇历史理由的基础上接管后续排序；具体重叠和新增验收见新计划证据页，不据旧提案状态重做已交付底座。

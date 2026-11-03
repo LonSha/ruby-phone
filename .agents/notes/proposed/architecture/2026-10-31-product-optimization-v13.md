@@ -308,3 +308,7 @@ Status: proposed
 - 本份**只制定计划**，不代表任何一项已实施或已升版。
 - 本份不覆盖 `R-O3` 的核心部分——那是记忆侧 `L13-O1` 与本侧 O1 共同的母题，但**两侧的真宿主不是同一个**（记忆侧是 SillyTavern，本侧是浏览器）。本侧 O1 若跑通，也只能消掉 `runtime-verification-boundary.md` 里那 26 处 R-O3 中的一部分（静态排版与交互类），**涉及真模型/真存储的部分仍挂着**。
 - 本份**没有**逐条读 `tests/browser/scenarios/` 下 25 个 `_diag*` 文件的正文（只读了 `o1-app-enumeration` 一个）。它们是否已被取代、是否仍该留在仓里，属 O1 实施时的附带侦察项，本份不下结论。
+
+## 第十四期后续范围
+
+[RubyPhone第十四期优化](../../proposed/architecture/2026-11-03-product-optimization-v14.md)在保留本篇历史理由的基础上接管后续排序；具体重叠和新增验收见新计划证据页，不据旧提案状态重做已交付底座。
