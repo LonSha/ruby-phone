@@ -517,7 +517,22 @@ export class SearchApp {
         /* [v4.15.0 · R4-O3] 换会话必须把视图里那份内存快照也丢掉。
          *   为什么：键前缀只保证**存储位置**按会话隔开，
          *   不保证「手上这份是给谁的」——不丢就会把上一段的搜索词贴回新会话。 */
-        try { if (this.view) this.view._restored = null; } catch (_e) { /* 视图不在也没什么可丢 */ }
+        /* [R14-O2] 视图面的**全部**会话气息一起丢，不只是快照标记：
+         *   _keyword/_scope/_result 是上一段会话的搜索词与结果；
+         *   _vague/_vagueKw/_vagueOpen 是按关键词键控的模糊回忆缓存 ——
+         *   只清 _restored 的话，新会话打开面板会带着旧词起扫，
+         *   恢复失败分支还会把旧词当「当前输入」保留（见视图侧同号补丁）。 */
+        try {
+            if (this.view) {
+                this.view._restored = null;
+                this.view._keyword = '';
+                this.view._scope = '';
+                this.view._result = null;
+                this.view._vague = null;
+                this.view._vagueKw = '';
+                this.view._vagueOpen = false;
+            }
+        } catch (_e) { /* 视图不在也没什么可丢 */ }
     }
     /** 本轮代际的「取消」谓言（交给引擎的 `isCancelled`） */
     cancelToken(gen) {

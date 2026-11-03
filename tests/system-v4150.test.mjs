@@ -334,12 +334,19 @@ test('D3 ★★★ 破坏「先读快照再画」⇒ 同款判据必转红(画�
 
 test('D4 ★★★ 破坏「换会话作废内存快照」⇒ 同款判据必转红(跨会话串味)', () => {
   /* ★ 锚点取**去注释后的代码**:首版带着行尾那句块注释,
-   *   而 stripComments 已把注释剥掉 ⇒ 零命中(破坏锚点必须恰中一次这条纪律当场抛)。 */
+   *   而 stripComments 已把注释剥掉 ⇒ 零命中(破坏锚点必须恰中一次这条纪律当场抛)。
+   *   [R14-O2 接管] onChatChanged 的清场已从单行扩展为整块视图面清理,
+   *   锚点随实现更新为 _restored 赋值行;并新增判据:换会话必须连旧搜索词一起丢。 */
   const broken = breakOnce(appCode,
-    'if (this.view) this.view._restored = null;',
+    'this.view._restored = null;',
     'void 0;', 'd4');
   assert.equal(broken.includes('this.view._restored = null'), false, '破坏副本:已不作废');
   assert.ok(appCode.includes('this.view._restored = null'), '原版必须作废');
+  /* [R14-O2] 只丢快照标记不够:旧关键词/结果/模糊缓存同属上一段会话的气息。 */
+  const onChat = appCode.slice(appCode.indexOf('onChatChanged() {'));
+  const body = onChat.slice(0, onChat.indexOf('\n    }'));
+  assert.ok(body.includes('this.view._keyword'), '换会话必须丢旧搜索词');
+  assert.ok(body.includes('this.view._vagueKw'), '换会话必须丢模糊回忆缓存');
 });
 
 test('D5 ★★★ 破坏「读不出与没保存过分开」⇒ 同款判据必转红', () => {
