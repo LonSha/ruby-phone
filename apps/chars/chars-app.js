@@ -38,6 +38,11 @@ import { CharsPerspective } from './chars-perspective.js';
  *   视图不 import 桥、不引用 subsystems（F 类判据用正则钉住）。
  *   持久化走各数据主自己的 serialize/restore，写键已在 keys-audit 登记。 */
 import { mergeArchiveFaces } from '../../config/archive-face-bridge.js';
+/* [v4.118.0 · R13-X9] 别人的手机：借来看一眼（只读投影桥）。
+ *   纪律同本 App 三条纪律：只读 / 不抛 / 不猜。归因与气泡方向全部转手
+ *   config/other-side-view.js（同一口径只许一份实现）；诚实边界：他给你起的
+ *   备注名全仓无真源（恒缺席），他与别人的会话不造、unread/blocked 方向不成立单列。 */
+import { projectOtherSide } from '../../config/other-side-view.js';
 /** 设置键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^chars_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'chars_settings_v1';
 /** [v4.99.2 · R11-X1] 档案三件的落盘键（与 keys-audit 登记逐字一致；写口仅 _archiveSaveAll） */
@@ -337,6 +342,30 @@ export class CharsApp {
         const r = this._resolveArchiveHub();
         if (!r.ok) return null;
         try { return r.hub.volumes.getVolume(index); } catch (_e) { return null; }
+    }
+
+    /** [v4.118.0 · R13-X9] 借看别人的手机：只读投影桥（读口，无写）。
+     *  入参 source 是本机微信数据实例（wechatData），读它**只为确定你自己的身份**
+     *  （getUserInfo → 昵称/头像，任何人打开都一样）与「你与他的会话」按气泡方向
+     *  反转后的投影。所有缺席/方向不成立归因见 config/other-side-view.js 文件头。 */
+    borrowOtherSidePhone(contactName, source) {
+        try {
+            let chatId = '';
+            const safeName = String(contactName || '').trim();
+            if (source && typeof source === 'object') {
+                const list = source.data && Array.isArray(source.data.chats) ? source.data.chats
+                    : (Array.isArray(source.chats) ? source.chats : []);
+                const hit = list.find((c) => String(c.name || '').trim() === safeName
+                    || String(c.contactId || '').trim() === safeName);
+                if (hit && hit.id) chatId = String(hit.id);
+            }
+            return projectOtherSide({ source: source || null, contactName: safeName, chatId, messageLimit: 8 });
+        } catch (_e) {
+            return { state: 'no-source', reason: 'wechat-source-missing', reasonText: '微信数据源不可用，无法投影。',
+                contactName: String(contactName || ''), chatId: '', selfName: '', selfAvatar: '',
+                theirRemarkOfYou: { origin: 'absent', value: null }, conversation: [], bubbles: [],
+                withheld: [], writesNothing: true };
+        }
     }
 }
 export default CharsApp;

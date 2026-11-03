@@ -129,7 +129,7 @@
       "rel": "apps/chars/chars-app.js",
       "cls": "CharsApp",
       "name": "perspectivePack",
-      "line": 175,
+      "line": 180,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -137,7 +137,7 @@
       "rel": "apps/chars/chars-app.js",
       "cls": "CharsApp",
       "name": "perspectiveContrastLine",
-      "line": 177,
+      "line": 182,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -145,7 +145,7 @@
       "rel": "apps/chars/chars-app.js",
       "cls": "CharsApp",
       "name": "perspectiveTestimonyLine",
-      "line": 179,
+      "line": 184,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -153,7 +153,7 @@
       "rel": "apps/chars/chars-app.js",
       "cls": "CharsApp",
       "name": "resetPerspectiveScene",
-      "line": 185,
+      "line": 190,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -161,7 +161,7 @@
       "rel": "apps/chars/chars-app.js",
       "cls": "CharsApp",
       "name": "perspectiveRevoke",
-      "line": 203,
+      "line": 208,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -2501,5 +2501,6 @@
       "isStatic": false,
       "classInstantiated": true
     }
-  ]
+  ],
+  "generated_at_note": "行号按 tools/relocate_method_baseline.mjs 重定位（v4.95.0：源码插入导致其后行号整体后移）"
 }

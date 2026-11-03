@@ -323,7 +323,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.117.0';
+const ST_PHONE_VERSION = '4.118.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -555,15 +555,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-03",
     items: [
-        "【版本升至 4.117.0（五源同源）】R13-X6 使用痕迹落在设置独立分区，默认关闭采集与展示，逐 App 查看次数、最后打开时间、累计访问间隔与四态摘要。",
-        "【设备隐私】PhoneStorage 新增设备专口，聚合只在本机 localStorage，不进入 chatMetadata、extensionSettings、角色导出与备份，不向模型注入。",
-        "【复用采集】沿用 trackerNote 与 trackerClose，不新增开 App 监听，不迁移或删除已有会话统计，关闭新功能时旧统计输出逐字一致。",
-        "【玩家操作】开启后可承认痕迹或确认清零，关闭停止采集；十次以上标常用，十四天未开标淡去，三次打开仍为偶尔。",
-        "【时钟与时长】采用 wallNow 与可注入假钟，单次访问间隔四小时封顶，倒拨归零，重启不猜算，明确不是实际前台停留时长。",
-        "【本版自己抓到的缺陷形态】历史破坏测试改写真仓导致并发扫描撞到探针。改为临时真源码字节副本执行真实门禁与原有基线，不在生产门禁增加互斥锁。",
-        "【交棒改写】保留三套负控制真实基线比较、结构下限与点名判据，补独立复制/异常清理验证，禁止硬链接和 fixture 绕过；修正旧键名抽取和门链位置断言。",
-        "【运行时验证边界】新分区具备 Chromium 窄屏交互场景与内核状态流验证，不把独立宿主浏览器等同酒馆实机，不能保证不存在看起来没坏但显示不对的问题；各 App 自有详情页面摘要仍未逐页接入。",
-        "【X9 单独评估】缺少对方给玩家的备注等真实数据，本轮不交付借看他人手机，不拿玩家给联系人的备注冒充反向来源。"
+        "【版本升至 4.118.0（五源同源）】R13-X9 在群像档案面提供「借手机看看」入口，只读投影与你相关的那一屏。",
+        "【三态与四来源】内核固定 ready、no-contact、no-source 三整页态，逐项标注 other-side、self-identity、absent、not-other-side 四类来源归属。",
+        "【真实数据字段】消息按微信真源读取 from、content、time、date、type；非文本只显示有依据的类型占位，不生成不存在的正文。",
+        "【气泡视角】from 为 me 或本人昵称时，在对方手机中摆左侧；对方具名消息摆右侧；system 与空发言人不强行归位。",
+        "【产品诚实边界】他给玩家起的备注全仓无真源，恒报 absent；contact.remark 是玩家给联系人的备注，不拿反向冒充；他与别人的会话不投影。",
+        "【零写面】入口、投影内核与面板不写 localStorage、会话数据或源对象；withheld 单列 unread、blocked 与 otherConversations，避免反转你的读数。",
+        "【浏览器真入口】角色档案面须先填已登记角色并显式点击借手机看看，投影面不提供按钮、输入框或其他操作控件，覆盖窄屏可见性与无溢出。",
+        "【本版自己抓到的缺陷形态】首版内核误读 text 而非 content，已用真实微信字段修正；零写判据误把自检数组 push 当持久化写入，已改为下标追加并由系统套件与异步清理自证钉住。",
+        "【交棒改写】保留真实字段、气泡反转、恒缺席备注、withheld 三项与零写快照判据；后续版本不得用 contact.remark 冒充反向备注，也不得把 getMessages 的方向读数反转为对方手机事实。",
+        "【运行时验证边界】系统套件验证状态、来源、视角、负控制与快照不变，Chromium 四视口验证真实 CharsView 入口与面板；独立浏览器证据不等同酒馆实机，不宣称覆盖宿主主题差异，不能保证不存在看起来没坏但显示不对的问题。"
     ]
 };
 

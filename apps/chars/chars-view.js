@@ -15,6 +15,19 @@
  *   但渲染时只有「还没有」与「读不到」两句。并入统一词表后，非 ok 态一律带 data-face-why，
  *   且「真的空」与「读不到」的文案与属性都不同形。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
+/* [v4.118.0 · R13-X9] 借看别人的手机：视图不导入映射桥、不直接读取中枢（与 X1 桥接件同款纪律），
+ *   数据经 this.app.borrowOtherSidePhone（内部只读 wechatData，无写）。归因文案来自投影结果本身。
+ *   otherSideSelfCheck 是内核自查（三态/四来源/恒缺席判据），借看入口用它做守卫——内核语义若被改坏，拒绝投影。 */
+import { otherSideSelfCheck } from '../../config/other-side-view.js';
+const OS_TEXT = {
+  READY_TITLE: '借看：他的手机（只读投影）',
+  HINT_ORIGINS: '你能看到的只有「与你相关的那一屏」：你自己的微信身份（昵称/头像）、你与他的对话（气泡按他的视角摆向）、以及恒缺席的「他给你的备注」。他与别人的会话、他的未读/拉黑——没有真源，不造。',
+  LEFT_IS_YOU: '左气泡 = 你（在他的手机上你是「对方」）',
+  RIGHT_IS_THEM: '右气泡 = 他',
+  REMARK_ABSENT: '他给你起的备注：—（无真源，任何数据源都没有记录；造了就是假的）',
+  WITHHELD_TITLE: '明确不投影（方向不成立 / 无真源）',
+  VIEW_CLOSE: '收起'
+};
 export class CharsView {
     constructor(app) {
         this.app = app;
@@ -224,6 +237,11 @@ export class CharsView {
         parts.push(this._archiveBackpackBlock(f.backpack));
         parts.push(this._archiveDossierBlock(f.dossiers));
         parts.push(this._archiveVolumeBlock(f.volumes, counts.volumeStats));
+        parts.push('<div class="cs-arch-block"><div class="cs-arch-head">借看别人的手机</div>'
+            + '<div class="cs-arch-actions"><input class="cs-input" id="cs-os-name" maxlength="40" placeholder="角色名（须已登记档案）">'
+            + '<button class="cs-seg" id="cs-os-open">借手机看看</button></div>'
+            + '<div class="cs-arch-note" id="cs-os-note"></div>'
+            + '<div id="cs-os-view"></div></div>');
         return [
             '<div class="cs-card cs-archive">',
             '  <div class="cs-card-title">档案（背包 · 人物 · 卷宗）' +
@@ -240,6 +258,32 @@ export class CharsView {
             '  <div class="cs-arch-note" id="cs-arch-note"></div>',
             '</div>'
         ].join('\n');
+    }
+    _otherSidePanel(p) {
+        /* [v4.118.0 · R13-X9] 借看面板：只渲染投影结果，零操作按钮、零输入框。 */
+        const esc = (s) => this._esc(s);
+        if (!p) return '';
+        if (p.state === 'ready') {
+            const rows = (p.bubbles || []).map((b) => {
+                if (b.unplaced) return '      <div class="cs-os-bubble cs-os-sys">…' + esc(b.text || '') + '…</div>';
+                return '      <div class="cs-os-bubble ' + (b.side === 'left' ? 'cs-os-left' : 'cs-os-right') + '">'
+                    + esc(b.text || '') + '</div>';
+            }).join('\n');
+            return [
+                '  <div class="cs-os-panel">',
+                '    <div class="cs-os-title">' + esc(OS_TEXT.READY_TITLE) + ' · ' + esc(p.contactName) + '</div>',
+                '    <div class="cs-os-self">你自己（微信身份，真源）：' + esc(p.selfName || '我') + '</div>',
+                '    <div class="cs-os-legend">' + esc(OS_TEXT.LEFT_IS_YOU) + ' ｜ ' + esc(OS_TEXT.RIGHT_IS_THEM) + '</div>',
+                '    <div class="cs-os-chat">' + rows + '</div>',
+                '    <div class="cs-os-absent">' + esc(OS_TEXT.REMARK_ABSENT) + '</div>',
+                '    <div class="cs-os-withheld"><div class="cs-os-wh-title">' + esc(OS_TEXT.WITHHELD_TITLE) + '</div>'
+                    + (p.withheld || []).map((w) => '      <div class="cs-os-wh-row">· ' + esc(w.note) + '</div>').join('\n') + '</div>',
+                '    <div class="cs-os-hint">' + esc(OS_TEXT.HINT_ORIGINS) + '</div>',
+                '  </div>'
+            ].join('\n');
+        }
+        const why = { 'no-contact': '先登记档案（角色名），再借看。', 'no-source': p.reasonText || '微信数据源不可用。' };
+        return '  <div class="cs-os-panel cs-os-empty">' + esc(why[p.state] || p.reasonText || '暂无可投影内容。') + '</div>';
     }
     _archiveBackpackBlock(rows) {
         if (rows === null) {
@@ -463,6 +507,33 @@ export class CharsView {
                     '第' + idx + '卷 · ' + ((v && v.timeRange) || '') + ' · ' + recap,
                     false);
                 try { win.dispatchEvent(new win.CustomEvent('phone:openApp', { detail: { appId: 'diary' } })); } catch (_e) {}
+            });
+        }
+        /* [v4.118.0 · R13-X9] 借看别人的手机：显式确认（填名 + 须已登记档案）→ 只读投影 → 摆面板。
+         *   零写面：这里没有任何 save/setItem/push —— 唯一的 DOM 写是把投影结果摆进 #cs-os-view。 */
+        const osOpen = q('#cs-os-open');
+        if (osOpen) {
+            osOpen.addEventListener('click', () => {
+                const note = q('#cs-os-note');
+                const view = q('#cs-os-view');
+                const name = String((q('#cs-os-name') || {}).value || '').trim();
+                if (!name) { this._archNote(note, '先填角色名（须已登记档案）。', true); return; }
+                let dossierOk = false;
+                try { dossierOk = !!this.app.archiveGetDossier(name); } catch (_e) { dossierOk = false; }
+                if (!dossierOk) { this._archNote(note, '「' + name + '」还没有登记档案——借看入口只对已登记角色开放。', true); return; }
+                let src = null;
+                try { src = (typeof win !== 'undefined' && win.VirtualPhone && win.VirtualPhone.cachedWechatData) || null; } catch (_e) { src = null; }
+                let p = null;
+                try { p = this.app.borrowOtherSidePhone(name, src); } catch (_e) { p = null; }
+                const sc = (() => { try { return otherSideSelfCheck(); } catch (_e) { return { ok: false, issues: ['自查抛错'] }; } })();
+                if (!sc || sc.ok !== true) { this._archNote(note, '内核自查未通过（' + ((sc && sc.issues) || []).join('；') + '），拒绝投影。', true); return; }
+                if (!p) { this._archNote(note, '投影失败（读不到数据源，未写任何状态）。', true); return; }
+                try { if (view) view.innerHTML = this._otherSidePanel(p); } catch (_e) { /* 宿主节点不可用：不抛 */ }
+                this._archNote(note,
+                    p.state === 'ready'
+                        ? '已摆出「' + name + '」手机上与你相关的那一屏（只读，未写任何状态）。'
+                        : (p.reasonText || '无可投影内容。'),
+                    p.state !== 'ready');
             });
         }
     }

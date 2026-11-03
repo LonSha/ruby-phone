@@ -227,3 +227,34 @@
   .cs-px-row { flex-wrap: wrap; }
   .cs-input { width: 100%; }
 }
+/* [v4.118.0 · R13-X9] 借看别人的手机：只读投影面板。
+ *   视觉上刻意「像别人的手机」：窄、内缩、气泡左右分明；零操作控件（本面板里没有任何按钮）。 */
+.cs-os-panel {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.28);
+}
+.cs-os-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.cs-os-self { font-size: 11px; color: #94a3b8; }
+.cs-os-legend { font-size: 10px; color: #64748b; margin: 2px 0 6px; }
+.cs-os-chat { display: flex; flex-direction: column; gap: 4px; }
+.cs-os-bubble {
+  max-width: 78%;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+/* 左 = 你（在他的手机上你是「对方」）；右 = 他本人。方向语义必须与内核判据一致。 */
+.cs-os-left { align-self: flex-start; background: rgba(148, 163, 184, 0.20); }
+.cs-os-right { align-self: flex-end; background: rgba(56, 189, 248, 0.22); }
+.cs-os-sys { align-self: center; background: transparent; color: #94a3b8; font-size: 11px; }
+.cs-os-absent { margin-top: 8px; font-size: 11px; color: #fbbf24; line-height: 1.7; }
+.cs-os-withheld { margin-top: 6px; }
+.cs-os-wh-title { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+.cs-os-wh-row { font-size: 10px; color: #64748b; line-height: 1.7; }
+.cs-os-hint { margin-top: 6px; font-size: 10px; color: #64748b; line-height: 1.8; }
+.cs-os-empty { font-size: 12px; color: #94a3b8; }

@@ -1,38 +1,38 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-02T17:27:35.773Z",
-  "version": "4.117.0",
+  "measured_at": "2026-11-03T03:55:18.571Z",
+  "version": "4.118.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../tmp/rp_browser_v4117.log",
-    "bytes": 90051,
-    "sha256": "0d9a6887da0e70d5945433808771d175a0f7898da16c32117d2e955c3d6c155e"
+    "log": "../../../tmp/browser4118-combined.log",
+    "bytes": 105613,
+    "sha256": "ecaa4051cb801aaef0a720afdc941c17b03464bfd7fd26ee31a7dd8f4db00fa2"
   },
   "elapsed_ms": 0,
-  "scenes": 13,
+  "scenes": 14,
   "viewports": 4,
   "viewport_list": [
-    "768x1024",
-    "1280x800",
     "320x568",
-    "390x844"
+    "390x844",
+    "768x1024",
+    "1280x800"
   ],
-  "total_reads": 503,
-  "fail_reads": 129,
+  "total_reads": 596,
+  "fail_reads": 138,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 13,
-    "measured": 13,
+    "on_disk": 14,
+    "measured": 14,
     "missing": [],
     "extra": [],
     "complete": true
   },
   "per_scene": {
     "o1-app-data-states.scen.js": {
-      "reads": 24,
-      "fail": 8
+      "reads": 48,
+      "fail": 16
     },
     "o1-app-enumeration.scen.js": {
       "reads": 36,
@@ -55,8 +55,8 @@
       "fail": 0
     },
     "o1-shell-smoke.scen.js": {
-      "reads": 51,
-      "fail": 3
+      "reads": 68,
+      "fail": 4
     },
     "o6-longlist-extreme.scen.js": {
       "reads": 28,
@@ -78,6 +78,10 @@
       "reads": 12,
       "fail": 0
     },
+    "r13-other-side.scen.js": {
+      "reads": 52,
+      "fail": 0
+    },
     "r13-usage-pattern.scen.js": {
       "reads": 40,
       "fail": 0
@@ -86,6 +90,54 @@
   "failures": [
     {
       "scene": "o1-app-data-states.scen.js",
+      "viewport": "320x568",
+      "name": "data-open:music",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "320x568",
+      "name": "data-open:clock",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "320x568",
+      "name": "data-open:ledger",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "320x568",
+      "name": "data-group-summary",
+      "detail": "fixture=data-injected opened=2/5 failures=3"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "390x844",
+      "name": "data-open:music",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "390x844",
+      "name": "data-open:clock",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "390x844",
+      "name": "data-open:ledger",
+      "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
+      "viewport": "390x844",
+      "name": "data-group-summary",
+      "detail": "fixture=data-injected opened=2/5 failures=3"
+    },
+    {
+      "scene": "o1-app-data-states.scen.js",
       "viewport": "768x1024",
       "name": "data-open:music",
       "detail": "翻了 0 页仍找不到该图标（入口不在任何可达页）"
@@ -134,13 +186,13 @@
     },
     {
       "scene": "o1-app-enumeration.scen.js",
-      "viewport": "320x568",
+      "viewport": "390x844",
       "name": "home-paged",
       "detail": "页数=1"
     },
     {
       "scene": "o1-app-enumeration.scen.js",
-      "viewport": "320x568",
+      "viewport": "390x844",
       "name": "home-reachable-ids",
       "detail": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
     },
@@ -599,6 +651,12 @@
       "viewport": "1280x800",
       "name": "back-button-visible-in-search",
       "detail": "display=none"
+    },
+    {
+      "scene": "o1-shell-smoke.scen.js",
+      "viewport": "320x568",
+      "name": "icons-paged",
+      "detail": "pages=1 dots=0"
     },
     {
       "scene": "o1-shell-smoke.scen.js",
@@ -621,35 +679,35 @@
     {
       "scene": "o6-longlist-extreme.scen.js",
       "viewport": "320x568",
+      "name": "o6x-extreme-open",
+      "detail": "wechat=false room=false entryLap=15190ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+    },
+    {
+      "scene": "o6-longlist-extreme.scen.js",
+      "viewport": "320x568",
+      "name": "o6x-extreme-scale",
+      "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
+    },
+    {
+      "scene": "o6-longlist-extreme.scen.js",
+      "viewport": "320x568",
+      "name": "o6x-extreme-media-contract",
+      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
+    },
+    {
+      "scene": "o6-longlist-extreme.scen.js",
+      "viewport": "320x568",
+      "name": "scenario-threw",
+      "detail": "Cannot read properties of null (reading 'setAttribute')"
+    },
+    {
+      "scene": "o6-longlist-extreme.scen.js",
+      "viewport": "390x844",
       "name": "o6x-extreme-open",
       "detail": "wechat=false room=false entryLap=15210ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
     },
     {
       "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "o6x-extreme-scale",
-      "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "o6x-extreme-media-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "390x844",
-      "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=15200ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
       "viewport": "390x844",
       "name": "o6x-extreme-scale",
       "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
@@ -694,7 +752,7 @@
       "scene": "o6-longlist-extreme.scen.js",
       "viewport": "1280x800",
       "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=15201ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
+      "detail": "wechat=false room=false entryLap=15210ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
     },
     {
       "scene": "o6-longlist-extreme.scen.js",
@@ -814,13 +872,13 @@
       "scene": "o6-motion-throttle.scen.js",
       "viewport": "320x568",
       "name": "o6m-background-throttle",
-      "detail": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
+      "detail": "data-bg=doc-hidden runningAnims before=3 after=2 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
     },
     {
       "scene": "o6-motion-throttle.scen.js",
       "viewport": "390x844",
       "name": "o6m-background-throttle",
-      "detail": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
+      "detail": "data-bg=doc-hidden runningAnims before=3 after=2 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
     },
     {
       "scene": "o6-motion-throttle.scen.js",
