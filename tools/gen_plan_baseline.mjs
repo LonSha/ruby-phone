@@ -92,11 +92,15 @@ export function computePlanBaseline() {
  *   等于让工具替我决定接下来做什么。
  * ============================================================ */
 
-/** 从 PLAN.md 顶部入口解析出当期两份计划书链接（只认**第一个**匹配 = 现行入口）。 */
+/** 从 PLAN.md 顶部入口解析出当期两份计划书链接（只认**第一个**匹配 = 现行入口）。
+ *  [v4.118 维护] 路径不以 `.` 开头也必须匹配：此前 `(\.[^\s)]+)` 遇到坏链接
+ *  （如 C5 负控制写出的 `BROKEN/...`）会匹配落空，正则继续后扫**静默回退**命中
+ *  历史期号的同名链接，把「链接不存在」吞成「期号混用」——坏链接逃过门禁。
+ *  修法是放宽捕获、把「路径对不对」交给存在性检查 fail-closed 报红。 */
 export function parsePlanEntry(content) {
   const errors = [];
-  const opt = content.match(/\[优化提升九项\]\((\.[^\s)]+)\)/);
-  const exp = content.match(/\[拓展创新九项\]\((\.[^\s)]+)\)/);
+  const opt = content.match(/\[优化提升九项\]\(([^)\s]+)\)/);
+  const exp = content.match(/\[拓展创新九项\]\(([^)\s]+)\)/);
   if (!opt) errors.push('PLAN.md 顶部入口缺「[优化提升九项](...)」链接（入口形态丢失）');
   if (!exp) errors.push('PLAN.md 顶部入口缺「[拓展创新九项](...)」链接（入口形态丢失）');
   return { optFile: opt ? opt[1] : null, expFile: exp ? exp[1] : null, errors };

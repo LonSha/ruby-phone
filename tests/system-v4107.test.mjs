@@ -50,6 +50,17 @@ test('A2: TODO.md 顶部「最近更新」必须等于 update-log.json 的 lates
   assert.equal(m[1], String(live), `TODO.md 最近更新 v${m[1]} 必须等于 latest v${live}`);
 });
 
+/* [v4.118 维护] 当期计划书路径与编号前缀一律从 PLAN.md 顶部入口真源派生，
+ *  不得写死：本套件首发时把 v13 路径/前缀硬编码进判据，第十四期计划落盘后
+ *  四条用例集体过期 —— 这正是 A3 自己宣称要防的「判据漂移」，先在自己身上应验。 */
+const CURRENT = parsePlanEntry(PLAN());
+const CURRENT_BOOK = CURRENT.optFile;   // 当期优化计划书（相对 ROOT）
+const CURRENT_PREFIX = (CURRENT_BOOK.match(/-v(\d+)\.md$/) || [])[1]
+  ? 'R' + (CURRENT_BOOK.match(/-v(\d+)\.md$/)[1] - 0)
+  : null;
+assert.ok(CURRENT.optFile && CURRENT.expFile, 'PLAN 顶部入口必须能解析出当期两份计划书');
+assert.ok(CURRENT_PREFIX && /^[RX]/.test(CURRENT_PREFIX), '当期期号前缀必须可从文件名派生：' + CURRENT_PREFIX);
+
 test('A3: 期号与日期必须真的从计划书真源派生，不得在判据里写死（改标题即变）', () => {
   /* ★ 本条是「判据不漂移」的自守，而且故意不用「源码里有正则」这种文本判据：
    *   那种写法只能证明「正则还在文件里」，不能证明「取数真的跟着真源走」。
@@ -59,12 +70,11 @@ test('A3: 期号与日期必须真的从计划书真源派生，不得在判据�
   assert.equal(base.ok, true, '对照组：原件必须是绿的');
   assert.ok(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(base.raw.date || ''), '必须能从计划书文件名解析出日期');
   assert.ok(base.raw.epoch, '必须能从计划书标题解析出中文期号');
-
-  const BOOK = '.agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md';
+  const BOOK = CURRENT_BOOK;
   const p = path.join(ROOT, BOOK);
   const original = fs.readFileSync(p, 'utf8');
   const st = fs.statSync(p);
-  /* 把标题里的「第十三期」改成「第九十九期」（一个不可能与 PLAN 对齐的值），
+  /* 把标题里的中文期号改成「第九十九期」（一个不可能与 PLAN 对齐的值），
    * 若工具把期号写死了，这里就读不出变化、也不会报未换挡 —— 即本条会转红。 */
   const tampered = original.replace(/^#\s+Agent Note:([^\n]*)第[一二三四五六七八九十百]+期/m, (m, mid) => '# Agent Note:' + mid + '第九十九期');
   assert.notEqual(tampered, original, '破坏锛点必须命中计划书标题');
@@ -236,15 +246,16 @@ test('C1: 负控制 — 改期号（把顶部入口的「第十三期」改回�
   assert.ok(r.errors.some((e) => e.includes('顶部入口未换挡')), '必须精准点名「顶部入口未换挡」：' + r.errors.join('; '));
 });
 
-test('C2: 负控制 — 删一个编号（从优先级节删掉 R13-X9），A1 必须转红并点名', () => {
+test('C2: 负控制 — 从优先级节删掉当期最后一个编号，A1 必须转红并点名', () => {
   const r = withTampered('PLAN.md', (s) => {
     const i = s.indexOf('\n## 优先级');
     const head = s.slice(0, i);
-    const tail = s.slice(i).replace(/`R13-X9`/g, '`R13-X九`');
+    const tail = s.slice(i).replace(new RegExp('`' + CURRENT_PREFIX + '-X9`', 'g'), '`' + CURRENT_PREFIX + '-X九`');
+    assert.ok(tail.includes(CURRENT_PREFIX + '-X九'), '破坏锛点必须命中优先级节里的 ' + CURRENT_PREFIX + '-X9');
     return head + tail;
   }, () => computePlanEntries());
   assert.equal(r.ok, false, '删掉编号后必须转红');
-  assert.ok(r.errors.some((e) => e.includes('R13-X9')), '必须点名缺了 R13-X9：' + r.errors.join('; '));
+  assert.ok(r.errors.some((e) => e.includes(CURRENT_PREFIX + '-X9')), '必须点名缺了 ' + CURRENT_PREFIX + '-X9：' + r.errors.join('; '));
 });
 
 test('C3: 负控制 — 把 TODO 的版本号改回 v4.54.0，A1 必须转红（45 版滞后的原样复现）', () => {
@@ -254,8 +265,8 @@ test('C3: 负控制 — 把 TODO 的版本号改回 v4.54.0，A1 必须转红（
 });
 
 test('C4: 负控制 — 计划书里抽不到任何编号时必须报红（fail-closed，不许空集走完循环当通过）', () => {
-  const r = withTampered('.agents/notes/proposed/architecture/2026-10-31-product-optimization-v13.md',
-    (s) => s.replace(/^### R13-O/gm, '### 已删编号 O'),
+  const r = withTampered(CURRENT_BOOK,
+    (s) => s.replace(new RegExp('^### ' + CURRENT_PREFIX + '-O', 'gm'), '### 已删编号 O'),
     () => computePlanEntries());
   assert.equal(r.ok, false, '抽不到编号时必须报红');
   assert.ok(
