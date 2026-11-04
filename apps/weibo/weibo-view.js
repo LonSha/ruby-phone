@@ -1,3 +1,4 @@
+import { showPhonePrompt } from '../../config/phone-dialog.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -3329,9 +3330,9 @@ export class WeiboView {
         // 修正记录楼层 (修复弹窗重复bug)
         const correctAutoFloorBtn = document.getElementById('weibo-correct-auto-floor');
         if (correctAutoFloorBtn) {
-            correctAutoFloorBtn.onclick = () => {
+            correctAutoFloorBtn.onclick = async () => {
                 const current = this.app.weiboData.getAutoLastFloor();
-                const newFloor = prompt(`上次记录到: ${current} 层\n请输入修正后的楼层数:`, current);
+                const newFloor = await showPhonePrompt(`上次记录到: ${current} 层\n请输入修正后的楼层数:`, String(current));
                 if (newFloor !== null) {
                     const val = Math.max(0, parseInt(newFloor) || 0);
                     // 手动修正后，短时间抑制自动微博触发并清空已排队任务
@@ -3550,9 +3551,9 @@ export class WeiboView {
         // 修正楼层 (修复弹窗重复bug)
         const correctFloorBtn = document.getElementById('weibo-correct-floor');
         if (correctFloorBtn) {
-            correctFloorBtn.onclick = () => {
+            correctFloorBtn.onclick = async () => {
                 const settings = this.app.weiboData.getFloorSettings();
-                const newFloor = prompt(`当前楼层: ${settings.currentFloor}\n请输入修正后的楼层数:`, settings.currentFloor);
+                const newFloor = await showPhonePrompt(`当前楼层: ${settings.currentFloor}\n请输入修正后的楼层数:`, String(settings.currentFloor));
                 if (newFloor !== null) {
                     settings.currentFloor = Math.max(0, parseInt(newFloor) || 0);
                     this.app.weiboData.saveFloorSettings(settings);

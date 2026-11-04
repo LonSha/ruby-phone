@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../../config/phone-dialog.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -915,7 +916,7 @@ export class AlbumView {
         if (!image || this.isDeleting || this.isBulkDeleting) return;
         this.isDeleting = true;
         const isVideo = image.mediaType === 'video';
-        const ok = window.confirm(`删除这个${isVideo ? '视频' : '图片'}吗？引用它的页面或记录也会清空。`);
+        const ok = await showPhoneConfirm({ title: '删除媒体', message: `删除这个${isVideo ? '视频' : '图片'}吗？引用它的页面或记录也会清空。`, confirmText: '删除', danger: true });
         if (!ok) {
             this.isDeleting = false;
             return;
@@ -940,7 +941,7 @@ export class AlbumView {
         if (this.isBulkDeleting || this.isDeleting) return;
         const selected = this.images.filter(image => this.selectedPaths.has(image.path));
         if (selected.length === 0) return;
-        const ok = window.confirm(`删除选中的 ${selected.length} 个项目吗？引用它们的页面或记录也会清空。`);
+        const ok = await showPhoneConfirm({ title: '批量删除', message: `删除选中的 ${selected.length} 个项目吗？引用它们的页面或记录也会清空。`, confirmText: '删除', danger: true });
         if (!ok) return;
 
         const deleteBtn = (document.querySelector('.phone-view-current') || document).querySelector('#album-delete-selected');

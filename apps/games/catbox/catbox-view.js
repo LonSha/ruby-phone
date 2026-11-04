@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../../../config/phone-dialog.js';
 /* ========================================================
  *  柚月小手机 (Yuzuki's Little Phone)
  *  猫盒像素宠物视图
@@ -391,10 +392,10 @@ export class CatboxView {
             this._abandonConfirmOpen = true;
             this.render();
         });
-        document.getElementById('games-catbox-coadopt')?.addEventListener('click', () => {
+        document.getElementById('games-catbox-coadopt')?.addEventListener('click', async () => {
             const state = this.app.catboxData.getState?.() || {};
             if (state.coAdopter) {
-                if (confirm(`要解除与${state.coAdopter.name || '好友'}的共同收养吗？`)) {
+                if (await showPhoneConfirm(`要解除与${state.coAdopter.name || '好友'}的共同收养吗？`)) {
                     this.app.releaseCatboxCoAdopt?.();
                 }
                 return;

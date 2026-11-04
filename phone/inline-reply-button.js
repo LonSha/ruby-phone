@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../config/phone-dialog.js';
 /**
  * 内嵌快捷回复按钮（底部栏与快速回复集成）[从 index.js 剥离]
  * 提供底部栏快速回复气泡、魔坊标签快捷插入、微信/短信消息模板填充。
@@ -1575,22 +1576,22 @@ export     function createInlineReplyButton() {
                                 mofoEditorReturnMode = 'detail';
                                 renderMofoPane();
                             });
-                            menu.querySelector('#mofo-detail-clear-session-btn')?.addEventListener('click', (e) => {
+                            menu.querySelector('#mofo-detail-clear-session-btn')?.addEventListener('click', async (e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 const current = getEditingMofo();
                                 if (!current) return;
-                                const ok = confirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
+                                const ok = await showPhoneConfirm({ title: '清理魔坊数据', message: `清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`, confirmText: '清理', danger: true });
                                 if (!ok) return;
                                 mofoData.clearItemSessionData(current.id);
                                 rerenderMofoPane({ keepEditor: true });
                             });
-                            menu.querySelector('#mofo-detail-delete-global-btn')?.addEventListener('click', (e) => {
+                            menu.querySelector('#mofo-detail-delete-global-btn')?.addEventListener('click', async (e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 const current = getEditingMofo();
                                 if (!current) return;
-                                const ok = confirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
+                                const ok = await showPhoneConfirm({ title: '全局删除魔坊', message: `全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`, confirmText: '删除', danger: true });
                                 if (!ok) return;
                                 mofoData.removeItem(current.id);
                                 rerenderMofoPane({ keepEditor: false });
@@ -1617,7 +1618,7 @@ export     function createInlineReplyButton() {
                             menu.querySelector('#mofo-editor-save-btn')?.addEventListener('click', () => {
                                 const draft = readMofoEditorDraft();
                                 if (!draft.name) {
-                                    alert('名称不能为空');
+                                    showPhoneAlert('名称不能为空');
                                     return;
                                 }
                                 try {
@@ -1644,7 +1645,7 @@ export     function createInlineReplyButton() {
                                     }
                                     rerenderMofoPane({ keepEditor: true });
                                 } catch (err) {
-                                    alert(err?.message || '保存失败');
+                                    showPhoneAlert(err?.message || '保存失败');
                                 }
                             });
                             focusMofoEditorName();
@@ -1696,7 +1697,7 @@ export     function createInlineReplyButton() {
                             renderMofoPane();
                         });
                         menu.querySelectorAll('.mofo-inline-action-btn[data-mofo-action][data-mofo-id]').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
+                            btn.addEventListener('click', async (e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 const action = String(btn.getAttribute('data-mofo-action') || '').trim();
@@ -1716,7 +1717,7 @@ export     function createInlineReplyButton() {
                                 }
 
                                 if (action === 'clear-session') {
-                                    const ok = confirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
+                                    const ok = await showPhoneConfirm({ title: '清理魔坊数据', message: `清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`, confirmText: '清理', danger: true });
                                     if (!ok) return;
                                     mofoData.clearItemSessionData(id);
                                     rerenderMofoPane();
@@ -1724,7 +1725,7 @@ export     function createInlineReplyButton() {
                                 }
 
                                 if (action === 'delete-global' || action === 'delete') {
-                                    const ok = confirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
+                                    const ok = await showPhoneConfirm({ title: '全局删除魔坊', message: `全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`, confirmText: '删除', danger: true });
                                     if (!ok) return;
                                     mofoData.removeItem(id);
                                     rerenderMofoPane();

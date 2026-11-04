@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../../config/phone-dialog.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -1076,18 +1077,18 @@ export class MusicView {
             if (window.VirtualPhone?.notify) {
                 window.VirtualPhone.notify('音乐', '当前没有正在播放的歌曲', '🎵');
             } else {
-                alert('当前没有正在播放的歌曲');
+                showPhoneAlert('当前没有正在播放的歌曲');
             }
             return;
         }
 
-        const ok = confirm(`邀请 ${contact.name} 一起听《${snapshot.songName}》吗？`);
+        const ok = await showPhoneConfirm(`邀请 ${contact.name} 一起听《${snapshot.songName}》吗？`);
         if (!ok) return;
 
         const wechatApp = window.VirtualPhone?.wechatApp;
         const wechatData = await this._getWechatDataForListenShare();
         if (!wechatData) {
-            alert('微信数据未初始化');
+            showPhoneAlert('微信数据未初始化');
             return;
         }
 

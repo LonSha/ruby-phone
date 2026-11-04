@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../../config/phone-dialog.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
@@ -415,12 +416,12 @@ export class MomentsView {
         });
 
         document.querySelectorAll('.moment-delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 const momentId = String(btn.dataset.momentId || '').trim();
                 if (!momentId) return;
-                const ok = confirm('确定删除这条朋友圈吗？删除后不可恢复。');
+                const ok = await showPhoneConfirm({ title: '删除朋友圈', message: '确定删除这条朋友圈吗？删除后不可恢复。', confirmText: '删除', danger: true });
                 if (!ok) return;
                 const targetMoment = this.app.wechatData.getMoment(momentId);
                 const managedImageUrls = this._collectMomentManagedImageUrls(targetMoment);
