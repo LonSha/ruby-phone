@@ -185,10 +185,10 @@ for (const t of TARGETS) {
   await window.__sleep(560); // 返回键有 500ms 重入屏蔽（场景① 同款处置）
   /* 走真实入口：桌面图标 → 点击。图标用 `data-app` 标 id（不是 data-app-id，
    *   也不是 aria-label 文案 —— 文案会被 i18n 与自定义名改掉）。
-   *   ★ 图标可能落在**非当前页**：`.app-grid-pager` 是横向轨道，
-   *   非当前页 `aria-hidden=true` 且盒在视口外 —— 那不是「找不到入口」，
-   *   是分页的正确行为。故先在本页找，找不到就**真翻页**再找（禁 transition，
-   *   与场景① 同一取证口径：--dump-dom 单帧下 transition 冻结在 t=0）。 */
+   *   ★ 图标可能落在**非当前页**或**聚合文件夹/应用库**中：
+   *   1. 核心 App 平铺在桌面；
+   *   2. 非核心 App 聚合在像素文件夹（.app-cluster-tile）或应用库（.app-library-dock-entry）。
+   *   故先在本页找；找不到翻页；仍找不到则打开对应的聚合文件夹或应用库取入口。 */
   const findTile = () => {
     const all = [...document.querySelectorAll('.home-screen [data-app="' + t.id + '"]')];
     return all.find((el) => {
@@ -212,8 +212,27 @@ for (const t of TARGETS) {
       if (tile) break;
     }
   }
+  // [R14-O1] 聚合文件夹与应用库入口级联查找：未平铺在桌面的非核心 App 沿真实用户入口打开
   if (!tile) {
-    report({ name: 'data-open:' + t.id, ok: false, detail: '翻了 ' + flipped + ' 页仍找不到该图标（入口不在任何可达页）' });
+    const appData = byId.get(t.id);
+    const cat = appData?.libraryCategory || 'system';
+    const clusterTile = document.querySelector(`.home-screen [data-cluster="${cat}"]`);
+    if (clusterTile) {
+      realClick(clusterTile);
+      await window.__sleep(200);
+      tile = document.querySelector(`.cluster-overlay [data-app="${t.id}"], .cluster-sheet [data-app="${t.id}"], [data-app="${t.id}"]`);
+    }
+  }
+  if (!tile) {
+    const libDock = document.querySelector('.app-library-dock-entry, [data-app="__library"]');
+    if (libDock) {
+      realClick(libDock);
+      await window.__sleep(200);
+      tile = document.querySelector(`.app-library-app-item[data-app="${t.id}"]`);
+    }
+  }
+  if (!tile) {
+    report({ name: 'data-open:' + t.id, ok: false, detail: '翻了 ' + flipped + ' 页并排查聚合壳与应用库仍找不到该图标（入口不可达）' });
     failures += 1;
     continue;
   }
