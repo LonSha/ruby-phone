@@ -73,6 +73,58 @@ export class CalendarApp {
         //   匿名 add 会随每次重建累积（与 album 同型缺陷，同 weibo 范式）
         this._onSwipeBack = () => this.handleSwipeBack();
         window.addEventListener(PHONE_EVENTS.SWIPE_BACK, this._onSwipeBack);
+        this._focusRefId = '';
+    }
+
+    /* ========== [v4.119.0 · R14-O3] 聚合页点回原条目：日历备忘的跨 App 靶心 ==========
+     * 【靶心认的是哪一类】`OPEN_REF_KINDS.calendar` 归属 `calendar` App，源侧来自引擎的
+     *   `calendar` 源 = `calendar_memos`（不是 `calendar_commitments`）—— 两者 id 前缀不同
+     *  （`calendar_memo_<wallAt>_<rand>` vs 约定 id），若在这里改认约定，
+     *   引擎搜索出的靶心会一律 `not_found`，而界面只会说「这条没了」。
+     *
+     * 【口径五条】
+     *   ① 按 **id 现找**，不按下标（删中间条后剩下的靶心一字不变）；
+     *   ② 命中 ⇒ 把日历**翻到那一条所在的月份与那天**（`selectedDate` / `visibleYear` /
+     *      `visibleMonth`），并点亮 `detailMemoId`；只点亮不 render（咽喉统一做）；
+     *   ③ 日期读不出来 ⇒ 仍然点亮详情，但**不动当前视图日期**（不编一个日期）；
+     *   ④ 找不到 ⇒ 如实 `not_found`，不跳邻条；
+     *   ⑤ `clearRef` 真空。
+     */
+    openRef(ref) {
+        const id = String((ref && ref.id) || '').trim();
+        if (!id) return { ok: false, reason: 'empty_id' };
+        const data = this.calendarData;
+        const memos = (data && typeof data.getMemos === 'function') ? (data.getMemos() || []) : [];
+        const hit = memos.find(m => m && String(m.id || '') === id) || null;
+        if (!hit) {
+            return { ok: false, reason: 'not_found', id: id, saw: memos.length };
+        }
+        this._focusRefId = id;
+        const view = this.calendarView;
+        if (view) {
+            const parts = (data && typeof data.parseDateKey === 'function')
+                ? data.parseDateKey(hit.dateKey) : null;
+            if (parts && Number.isFinite(Number(parts.year)) && Number.isFinite(Number(parts.month))) {
+                view.selectedDate = { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) };
+                view.visibleYear = Number(parts.year);
+                view.visibleMonth = Number(parts.month);
+            }
+            view.detailMemoId = id;
+            view.detailEditMode = false;
+            view.detailTypePickerOpen = false;
+            view.activeDeleteMemoId = '';
+        }
+        return { ok: true, id: id, saw: memos.length };
+    }
+
+    clearRef() {
+        this._focusRefId = '';
+        const view = this.calendarView;
+        if (view) {
+            view.detailMemoId = '';
+            view.detailEditMode = false;
+        }
+        return { ok: true };
     }
 
     /* ========== [v4.41.0 · R5-X8] 周期日程、单次例外与多人空档 ========== */

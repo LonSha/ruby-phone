@@ -302,11 +302,19 @@ test('D5 视图：读数取不出来（抛错）不得冒充「今天没事」',
     assert.notEqual(html, new ViewMod.ClockView(emptyApp, {}, mkStorage())._todayHtml());
 });
 
-test('D6 跳转诚实边界：只写「打开 X」，不写做不到的「打开这一条」', () => {
-    const view = new ViewMod.ClockView(fakeApp(TM.TODAY_STATES.ok), {}, mkStorage());
-    const html = view._todayHtml();
-    assert.ok(html.includes('data-today-app='), '必须走 phone:openApp 派发');
-    assert.equal(html.includes('打开这一条'), false, '四源 App 都没有 openRef 定位口，不许承诺');
+test('D6 跳转诚实边界：文案由靶心在不在决定（无靶心只写「打开 X」，有靶心才能写「打开这一条」）', () => {
+    /* [v4.119.0 · R14-O3] 本条断言的口径变了，但它守的东西没变：不许写做不到的承诺。
+     *   修前：四源 App 都没 openRef → 全部不准写那五个字；
+     *   修后：diary / calendar 补了 openRef，故「有靶心的那一条」允许写；wechat / album 仍无口，
+     *   给它们写就是承诺不到。故断言必须同时验两面（只改成「不再断言」就是把它废掉）。 */
+    const plain = new ViewMod.ClockView(fakeApp(TM.TODAY_STATES.ok), {}, mkStorage())._todayHtml();
+    assert.ok(plain.includes('data-today-app='), '必须走 phone:openApp 派发');
+    assert.equal(plain.includes('打开这一条'), false, '没有靶心的那一条不许写「打开这一条」');
+    assert.equal(plain.includes('data-today-ref='), false, '没有靶心不许写空串 data-today-ref');
+    assert.ok(plain.includes('打开日记'), '没有靶心时只写「打开 X」');
+    const withRef = new ViewMod.ClockView(fakeApp(TM.TODAY_STATES.ok, true), {}, mkStorage())._todayHtml();
+    assert.ok(withRef.includes('打开这一条'), '有靶心的那一条必须真承诺（否则用户以为点不到）');
+    assert.ok(withRef.includes('data-today-ref='), '靶心必须随 data 属性带出（否则派发时投不出去）');
     const src = fs.readFileSync(path.join(ROOT, 'apps', 'clock', 'clock-view.js'), 'utf8');
     assert.ok(src.includes('TODAY_JUMP_APP'));
     assert.ok(src.includes("CustomEvent('phone:openApp'"), '必须派发官方跳转事件，不自造路');
@@ -447,15 +455,19 @@ function mkHostWithSources(opt) {
     return vp;
 }
 
-/** 视图用的假 App：只给 _todayHtml 所需的最小面。 */
-function fakeApp(state) {
+/** 视图用的假 App：只给 _todayHtml 所需的最小面。
+ *  [v4.119.0 · R14-O3] `withRef` 为 true 时给那一条脚本带上靶心（验「有靶心才能写打开这一条」）；
+ *  默认 false：原判据不动（无靶心的情形必须仍然不出现那五个字）。 */
+function fakeApp(state, withRef = false) {
     const okRow = { source: 'diary', label: '日记', state: TM.TODAY_SOURCE_STATES.ok, count: 1, dropped: 0 };
     const offRow = { source: 'album', label: '照片', state: TM.TODAY_SOURCE_STATES.absent, count: 0, dropped: 0 };
+    const ev = {
+        at: T0, source: 'diary', sourceLabel: '日记', id: 'd1', kind: TM.TODAY_KINDS.diary, title: '今天写的'
+    };
+    if (withRef) ev.ref = { appId: 'diary', kind: 'diary', id: 'd1' };
     const res = {
         state: state,
-        events: [{
-            at: T0, source: 'diary', sourceLabel: '日记', id: 'd1', kind: TM.TODAY_KINDS.diary, title: '今天写的'
-        }],
+        events: [ev],
         sourceRows: [okRow, offRow],
         truncated: 0, dropped: 0,
         line: TL.todayLine({

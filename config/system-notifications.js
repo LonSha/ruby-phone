@@ -19,6 +19,16 @@
 const DEFAULT_LIMIT = 200;
 /** 同 senderKey 在该窗口内视为「同一条通知的更新」，不新增条目（毫秒） */
 const MERGE_WINDOW_MS = 3 * 60 * 1000;
+/** [v4.119.0 · R14-O3] 靶心的**形状筛**（不归一：本层不 import 协议件，也不替消费侧猜归属）。
+ *  三个字段都是非空字符串才写；否则返 null（落账层不存一条永远投不出去的靶心）。 */
+function _refOf(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    const appId = (typeof v.appId === 'string') ? v.appId.trim() : '';
+    const kind = (typeof v.kind === 'string') ? v.kind.trim() : '';
+    const id = (typeof v.id === 'string') ? v.id.trim() : '';
+    if (!appId || !kind || !id) return null;
+    return { appId: appId, kind: kind, id: id };
+}
 
 export class NotificationLog {
     /**
@@ -102,7 +112,7 @@ export class NotificationLog {
                 head.message = message;
                 head.icon = icon;
                 head.appId = appId;
-                head.meta = meta;
+                head.meta = { ...meta, ref: _refOf(meta.ref) };
                 head.ts = ts;
                 head.count = (Number(head.count) || 1) + 1;
                 this._cache = list;
@@ -125,7 +135,12 @@ export class NotificationLog {
                     avatar: String(meta.avatar || ''),
                     avatarText: String(meta.avatarText || ''),
                     isGroup: !!meta.isGroup,
-                    timeText: String(meta.timeText || '')
+                    timeText: String(meta.timeText || ''),
+                    /* [v4.119.0 · R14-O3] 跨 App 靶心要能存下来：通知中心点一条要能落到那一条。
+                     *   ★ 这里只做**形状筛**（三个字段都是非空串），归一判在消费侧（config/open-ref.js）：
+                     *     两道都得有——本件防「把坏值写进落账层」，open-ref 防「投到没人认的 kind」。
+                     *   不合形就不写（不补空壳）：写一个永远投不出去的 ref，等于把用户丢在空白里。 */
+                    ref: _refOf(meta.ref)
                 }
             };
             list.unshift(item);
@@ -264,7 +279,9 @@ export class NotificationLog {
                 senderKey: String(r.senderKey || ''),
                 read: !!r.read,
                 count: Math.max(1, Number(r.count) || 1),
-                meta: (r.meta && typeof r.meta === 'object') ? r.meta : {}
+                /* [v4.119.0 · R14-O3] 读回时同样保留靶心：写不存就等于没写（重启后点一条又只能开 App首屏）。
+                 *   同样只做形状筛，不归一。 */
+                meta: Object.assign({}, (r.meta && typeof r.meta === 'object') ? r.meta : {}, { ref: _refOf(r.meta && r.meta.ref) })
             };
             if (!item.id) item.id = this._nextId(out, item.ts);
             out.push(item);

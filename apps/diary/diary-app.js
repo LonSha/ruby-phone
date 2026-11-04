@@ -28,6 +28,52 @@ export class DiaryApp {
                 window.VirtualPhone?.diaryApp?.handleSwipeBack(e);
             }, false, 'diary:swipe-back');
         }
+        this._focusRefId = '';
+    }
+
+    /* ========== [v4.119.0 · R14-O3] 聚合页点回原条目：日记的跨 App 靶心 ==========
+     * 【这个口要回答什么】「今天」里那一条日记、搜索里那一条命中 —— 点下去必须**落在那一篇上**，
+     *   而不是只把日记 App 打开到封面。本仓此前日记源在引擎里连 `meta.ref` 都没有，
+     *   `apps/clock/clock-view.js` 也只能诚实地写「打开日记」四个字。
+     *
+     * 【口径四条】（与 v3660 的 C1/C2 同一条验收线）
+     *   ① 按 **id 现找**，不按下标：删中间一篇之后，剩下的两篇靶心一字不变
+     *      （按 `date` / 下标实现的会在这里串项，而且不报错）；
+     *   ② 找不到 ⇒ 如实 `{ok:false, reason:'not_found'}`，**不跳邻条、不假装成功**；
+     *   ③ 命中 ⇒ 只**点亮详情态**（`currentEntryId` + `currentView='page'`），本函数不渲染
+     *      —— 渲染由咽喉在投靶心之后统一做（顺序反了详情态画不出来，v3.65 已立此纪律）；
+     *   ④ `clearRef` 把定位态真空掉（防「合上了但定位还在」）。
+     */
+    openRef(ref) {
+        const id = String((ref && ref.id) || '').trim();
+        if (!id) return { ok: false, reason: 'empty_id' };
+        const data = this.diaryData;
+        const entries = (data && typeof data.getEntries === 'function')
+            ? (data.getEntries() || [])
+            : ((data && Array.isArray(data.diaries)) ? data.diaries : []);
+        const hit = entries.find(d => d && String(d.id || '') === id) || null;
+        if (!hit) {
+            /* 报出「看过多少条」，好把「空库」与「投错 id」分开 —— 两者处置相反。 */
+            return { ok: false, reason: 'not_found', id: id, saw: entries.length };
+        }
+        this._focusRefId = id;
+        const view = this.diaryView;
+        if (view) {
+            view.currentEntryId = id;
+            view.currentView = 'page';
+            view.settingsPanelOpen = false;
+        }
+        return { ok: true, id: id, saw: entries.length };
+    }
+
+    clearRef() {
+        this._focusRefId = '';
+        const view = this.diaryView;
+        if (view && view.currentView === 'page') {
+            view.currentEntryId = null;
+            view.currentView = 'toc';
+        }
+        return { ok: true };
     }
 
     render() {

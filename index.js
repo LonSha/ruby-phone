@@ -11192,6 +11192,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                 if (!window.VirtualPhone.diaryApp) {
                                     window.VirtualPhone.diaryApp = new module.DiaryApp(phoneShell, storage);
                                 }
+                                applyOpenDetail(window.VirtualPhone.diaryApp, normalizeOpenDetail(e.detail));
+                                const refRaw = e.detail && e.detail.ref;
+                                if (refRaw) {
+                                    /* [v4.119.0 · R14-O3] 投靶心的回报必须出声：本仓最贵的缺陷形态是「不报错、只是没生效」，
+                                     *   而用户在界面上看到的是「停在日记首屏」——与「这条没了」长得一样。 */
+                                    const refRes = applyOpenRef(window.VirtualPhone.diaryApp, refRaw);
+                                    if (refRes && refRes.applied === false && refRes.why) {
+                                        console.warn('⚠️ 日记未定位到靶心（' + refRes.why + '）');
+                                    }
+                                }
                                 window.VirtualPhone.diaryApp.render();
                             } catch (initError) {
                                 console.error('❌ [调试] 创建/调用 DiaryApp 失败:', initError);
@@ -11385,6 +11395,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                                     window.VirtualPhone.calendarApp = new module.CalendarApp(phoneShell, storage);
                                 } else {
                                     window.VirtualPhone.calendarApp.attachPhoneShell?.(phoneShell);
+                                }
+                                applyOpenDetail(window.VirtualPhone.calendarApp, normalizeOpenDetail(e.detail));
+                                const refRaw = e.detail && e.detail.ref;
+                                if (refRaw) {
+                                    /* [v4.119.0 · R14-O3] 同上：日历侧投靶心也必须把回报念出来。 */
+                                    const refRes = applyOpenRef(window.VirtualPhone.calendarApp, refRaw);
+                                    if (refRes && refRes.applied === false && refRes.why) {
+                                        console.warn('⚠️ 日历未定位到靶心（' + refRes.why + '）');
+                                    }
                                 }
                                 window.VirtualPhone.calendarApp.render();
                             } catch (initError) {

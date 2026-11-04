@@ -50,7 +50,10 @@ function realSeed() {
             { from: '大厅角色', content: '大厅里的悄悄话', time: '11:00' }
         ]),
         // 日记
-        diary_entries: [{ title: '雨天', date: '9月17日', content: '写了很久', author: '我', createdAt: 1758000200000 }],
+        /* [v4.119.0 · R14-O3] 日记 / 日历备忘源从此**要求条目带 id**（没 id 的搜到了也点不回去，
+         *   属死链，源侧直接不收）。seed 按真实落盘形态补 id：真源 `diary-data` 的条目与
+         *   `calendar-data` 的备忘都是带稳定 id 写下去的。 */
+        diary_entries: [{ id: 'diary_entry_seed1', title: '雨天', date: '9月17日', content: '写了很久', author: '我', createdAt: 1758000200000 }],
         // 短信 / 通话
         phone_call_sms_conversations: [{
             name: '林晚照', updatedAt: 1758000300000,
@@ -62,7 +65,7 @@ function realSeed() {
         }],
         // 织光机 / 日历 / 音乐
         tw_letters: [{ title: '第一封信', paragraphs: ['段一', '段二'], ts: 1758000400000 }],
-        calendar_memos: [{ title: '体检', dateKey: '2026-09-20', time: '08:30', source: '手动', createdAt: 1758000500000 }],
+        calendar_memos: [{ id: 'calendar_memo_seed1', title: '体检', dateKey: '2026-09-20', time: '08:30', source: '手动', createdAt: 1758000500000 }],
         music_playlist: [{ name: '菊花台', artist: '周杰伦', album: '依然范特西' }],
         // 世界脉搏
         worldpulse_history_v1: [{ style: '温柔日常', content: '世界脉搏正文', floorCount: 128, createdAt: 1758000600000 }],

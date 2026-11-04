@@ -22,6 +22,20 @@ export function idOf(v) {
     return '';
 }
 
+/** 行上靶心的归一（只留 {appId, kind, id} 三字段的纯对象）。
+ *  ★ 不 import `config/open-ref.js` —— 那是协议件（会拖进 kind 登记表），
+ *   而本件是叶子（与 today-terms 同一纪律：口径件不牵算法）。
+ * 形状滤在此，归一判在消费侧：两道都得有 —— 本件防「把坏值当靶心画在按钮上」，
+ *   open-ref 防「投到没人认的 kind」。
+ */
+export function refOf(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    const appId = (typeof v.appId === 'string') ? v.appId.trim() : '';
+    const kind = (typeof v.kind === 'string') ? v.kind.trim() : '';
+    const id = idOf(v.id);
+    if (!appId || !kind || !id) return null;
+    return { appId: appId, kind: kind, id: id };
+}
 /** 标题收尾：纯空白 ⇒ 空串（视图自己决定说什么），超长截断加省略号。 */
 export function titleOf(v) {
     const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -66,6 +80,11 @@ export function collectSource(source, raw, start, end) {
             id: id,
             kind: String(it.kind == null ? '' : it.kind),
             title: titleOf(it.title),
+            /* [v4.119.0 · R14-O3] 行上带靶心（可空）。两道筛子：
+             *   本件只筛形状（三个字段都是非空串），归一是否成立由消费侧 applyOpenRef 再判一次；
+             *   坏值静默降为 null 的后果是按钮只写「打开 X」（诚实），
+             *   而不是写「打开这一条」却落不到（那是做不到的承诺）。 */
+            ref: refOf(it.ref),
             seq: i
         });
     }

@@ -8,15 +8,17 @@ import { CLOCK_REASONS } from './clock-data.js';
  *   视图不手写第二份 —— 手写一份标识符形会与本仓已立判据（文案表不得手写键）相撞，
  *   且真源一旦改名，本表会静默落兜底、多种处境显示成同一句话。 */
 import { TODAY_STATES, TODAY_SOURCE_STATES, TODAY_SOURCE_LABEL, TODAY_SOURCES } from '../../config/today-terms.js';
+/* [v4.119.0 · R14-O3] 载荷走唯一一支笔（与 search-view / 装配器同一件）：
+ *   手拼 { appId, ref } 会让字段名一漂，而漂掉的表现是「点了没反应」。 */
+import { buildOpenDetail } from '../../config/app-open-detail.js';
 
 /* [v4.112.0 · R13-X1] 「今天」的一条原话点回去 ⇒ 打开**那个 App**。
- * ★ 诚实的边界（必须写在这里，否则下一个人会以为这是「精确定位」）：
- *   本仓四个源 App（wechat / diary / calendar / album）**都还没有 `openRef` 定位口** ——
- *   `config/open-ref.js` 登记表里七个 kind 是另一批 App（traveldesk / summdesk / …）。
- *   故本条只做到「打开那个 App 的首屏」，**不声称落在那一条上**。
- *   要做到精确定位，得先给四个 App 各补 openRef + clearRef 契约（v3660 的 C1/C2 会逐 App 验
- *   「详情态同步」与「删中间项后仍命中同一条」）—— 那是另一项工作，不在 X1 里顺手做。
- *   界面文案必须与这里一致：按钮写「打开日记」，**不写「打开这一条」**。 */
+ * [v4.119.0 · R14-O3] 升级：**有靶心的那一条**，点下去就落在那一篇 / 那一则备忘上。
+ *   本版给 `diary` 与 `calendar` 两源补齐了 `OPEN_REF_KINDS` 登记与 App 侧 `openRef`，
+ *   于是这两源的按钮从「打开日记」变成「打开这一条」（真的能落到）；
+ *   `wechat` / `album` 仍**没有** `openRef` 定位口，按钮文案照旧只写「打开 X」——
+ *   ★ 文案必须由**靶心在不在**决定，不能按源名写死：写死就会出现「某天补了口但文案不改」
+ *   （或反过来，文案先承诺、口还没补）两类静默缺陷，而两类都只在用户点下去时才暴露。 */
 const TODAY_JUMP_APP = Object.freeze({
   wechat: 'wechat', calendar: 'calendar', diary: 'diary', album: 'album'
 });
@@ -217,10 +219,15 @@ export class ClockView {
         parts.push('<span class="cl-tl-src">' + this._esc(ev.sourceLabel || ev.source) + '</span>');
         parts.push('<span class="cl-tl-title">' + this._esc(ev.title || '（这一条没有标题）') + '</span>');
         if (jumpApp) {
-          /* 文案只写「打开 X」：本仓这四个 App 还没有 openRef 定位口，
-           *   写「打开这一条」就是一句做不到的承诺（见 TODAY_JUMP_APP 头注）。 */
+          /* 文案由**靶心在不在**决定（见 TODAY_JUMP_APP 头注）：
+           *   有靶心 ⇒ 「打开这一条」（真能落到那一条）；没靶心 ⇒ 「打开 X」（不承诺做不到的事）。
+           *   data-today-ref 只在有靶心时写，派发时才带 ref —— 空串靶心不投。 */
+          const refJson = ev && ev.ref ? this._esc(JSON.stringify(ev.ref)) : '';
+          const label = refJson ? ('打开这一条') : ('打开' + (ev.sourceLabel || ''));
           parts.push('<button type="button" class="cl-tl-go" data-today-app="' + this._esc(jumpApp)
-            + '">打开' + this._esc(ev.sourceLabel || '') + '</button>');
+            + (refJson ? ('" data-today-ref="' + refJson) : '"')
+            + ' title="' + this._esc(refJson ? ('落到' + (ev.sourceLabel || '') + '的那一条') : ('只打开' + (ev.sourceLabel || '') + '，落不到具体那一条'))
+            + '">' + this._esc(label) + '</button>');
         }
         parts.push('</div>');
       }
@@ -256,9 +263,22 @@ export class ClockView {
         if (tab) { this._switchTab(tab); this.refresh(); return; }
         const appId = t.getAttribute('data-today-app');
         if (appId) {
+          /* [v4.119.0 · R14-O3] 有靶心就投靶心（落到那一条），没靶心只开 App。
+           *   载荷走唯一一支笔（buildOpenDetail）：手拼 { appId, ref } 会让「字段名一漂」
+           *   又回到本仓老账上（ref / openRef / target 三种写法同时在）。
+           *    ★ ref 解析失败不静默吞：退为只开 App 并报原因（与 search-view 同款）。 */
+          let ref = null;
+          const refRaw = t.getAttribute('data-today-ref') || '';
+          if (refRaw) {
+            try { ref = JSON.parse(refRaw); }
+            catch (_e) {
+              ref = null;
+              try { console.warn('[clock] 今天的靶心读不出（退为只开 App）', refRaw); } catch (_e2) { /* 无 console 也不影响结论 */ }
+            }
+          }
           try {
             const win = (typeof window !== 'undefined') ? window : globalThis;
-            win.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: appId } }));
+            win.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, null, ref) }));
           } catch (_e) {
             /* 宿主不在（判据环境）：不假装开了。 */
           }

@@ -30,6 +30,19 @@ import { normalizePriority, priorityName } from './system-notification-dispatche
 
 /** ② 的优先级 → ① 渲染用的图标字形（挑最接近的一档，不新造字形）。 */
 const PRIORITY_ICON = { URGENT: '⚠️', NORMAL: '📱', SILENT: '🕰️' };
+/** [v4.119.0 · R14-O3] 跨 App 靶心的**形状筛**（不归一：本层不 import 协议件）。
+ *  ★ 这里只认**源自带**的 ref（派发器 `metadata.ref`），**不从 `deepLink` 反推**：
+ *   `deepLink` 是 `{targetApp, view, params}`，里面**不含条目身份** —— 硬猜一个 kind/id
+ *   会得到一条永远 not_found 的靶心，而用户看到的是「这条没了」。
+ *   正确做法是让派发器在 `metadata.ref` 里写明，本层只负责把它**完整带到行上**。 */
+function _refOf(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    const appId = (typeof v.appId === 'string') ? v.appId.trim() : '';
+    const kind = (typeof v.kind === 'string') ? v.kind.trim() : '';
+    const id = (typeof v.id === 'string') ? v.id.trim() : '';
+    if (!appId || !kind || !id) return null;
+    return { appId: appId, kind: kind, id: id };
+}
 
 /**
  * 把中枢派发器的一条通知映射成通知中心的行形状。
@@ -60,7 +73,10 @@ export function mapHubNotification(raw) {
             hubSource: true,
             hubPriority: pName,
             hubPriorityNum: pNum,
-            hubDeepLink: raw.deepLink || null
+            hubDeepLink: raw.deepLink || null,
+            /* [v4.119.0 · R14-O3] 靶心（可空）：派发器在 metadata.ref 里写明就能落到那一条；
+             *   没写就为 null（通知中心只开 App，不承诺落位）。不从 deepLink 反推（见上面 _refOf 头注）。 */
+            ref: _refOf(raw.metadata && raw.metadata.ref)
         }
     };
 }

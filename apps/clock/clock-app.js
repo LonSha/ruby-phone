@@ -17,6 +17,9 @@ import { readProjection, projectionScopeLine } from '../../config/projection-con
  *   内核只做聚合（config/today-timeline.js），取数在 App 这侧（它才拿得到各 App 实例）。 */
 import { buildToday, todayLine } from '../../config/today-timeline.js';
 import { TODAY_STATES, TODAY_SOURCES, TODAY_SOURCE_STATES, TODAY_KINDS } from '../../config/today-terms.js';
+/* [v4.119.0 · R14-O3] 今天的两条本地源（日记 / 日历）带靶心：靶心只能用渲射面的唯一一支笔写
+ *   （手写字段名一漂，消费侧就静默落空，而落空的表现是「点了没反应」）。 */
+import { buildOpenRef } from '../../config/open-ref.js';
 import { storyNow } from '../../config/time-source.js';
 
 export class ClockApp {
@@ -119,18 +122,29 @@ export class ClockApp {
     if (name === 'calendar') {
       const cd = vp?.calendarApp?.calendarData;
       if (!cd || typeof cd.getMemos !== 'function') return null;
-      return safe(() => (cd.getMemos() || []).map((mm) => ({
-        at: mm?.storyAt, id: String(mm?.id || ''), kind: TODAY_KINDS.memo,
-        title: String(mm?.title || '') + (mm?.time ? (' ' + String(mm.time)) : '')
-      })));
+      return safe(() => (cd.getMemos() || []).map((mm) => {
+        const id = String(mm?.id || '');
+        return {
+          at: mm?.storyAt, id: id, kind: TODAY_KINDS.memo,
+          title: String(mm?.title || '') + (mm?.time ? (' ' + String(mm.time)) : ''),
+          /* [v4.119.0 · R14-O3] 靶心用渲射面的**同一支笔**（buildOpenRef），
+           *   不手写 object 字面量 —— 归属一改就会有一处静默失配。 */
+          ref: buildOpenRef('calendar', id, 'calendar')
+        };
+      }));
     }
     if (name === 'diary') {
       const dd = vp?.diaryApp?.diaryData;
       if (!dd || typeof dd.getEntries !== 'function') return null;
-      return safe(() => (dd.getEntries() || []).map((e) => ({
-        at: e?.storyAt, id: String(e?.id || ''), kind: TODAY_KINDS.diary,
-        title: String(e?.title || e?.date || '')
-      })));
+      return safe(() => (dd.getEntries() || []).map((e) => {
+        const id = String(e?.id || '');
+        return {
+          at: e?.storyAt, id: id, kind: TODAY_KINDS.diary,
+          title: String(e?.title || e?.date || ''),
+          /* [v4.119.0 · R14-O3] 同上：日记条目带靶心，「今天」才能点回那一篇。 */
+          ref: buildOpenRef('diary', id, 'diary')
+        };
+      }));
     }
     if (name === 'album') {
       const ad = vp?.albumApp?.albumData;

@@ -15,6 +15,10 @@ import {
     ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
 } from '../../config/notice-digest.js';
 import { getAwayMode } from '../../config/away-mode.js';
+/* [v4.119.0 · R14-O3] 跨 App 靶心：通知中心点一条要能落到**那一条**上（日记那一篇 / 日历那一则），
+ *   而不是只把 App 打开到首屏。载荷走唯一一支笔（config/app-open-detail.js），
+ *   手拼 { appId, ref } 会让字段名一漂就静默落空（落空的表现是「点了没反应」）。 */
+import { buildOpenDetail } from '../../config/app-open-detail.js';
 /* [v4.99.7 · R11-X7] 中枢行反查不在这里 import 桥：
  *   视图**不许**自己去碰第二张表（v41000 F1 的规矩：映射只能有一处）。
  *   改为让 App 侧提供 `rowById()` 只读出口，视图只问不管。 */
@@ -432,7 +436,12 @@ export class NotificationCenterView {
         const countTag = (Number(n.count) || 1) > 1 ? `<span class="nc-count">×${Number(n.count)}</span>` : '';
         const appTag = APP_LABEL[n.appId] || n.appId || '系统';
         const jumpable = n.appId && n.appId !== '__sys__';
-        return `<div class="nc-item${unreadCls}${jumpable ? ' nc-jumpable' : ''}" data-id="${esc(n.id)}" data-app="${esc(n.appId || '')}">
+        /* 靶心只写**形状成立**的那一种（三个字段非空串）：写一个投不出去的 ref，
+         *   等于把用户丢在「点了没反应」里；写空串更糟（分不清是「没有靶心」还是「靶心坏了」）。 */
+        const refRaw = (n.meta && n.meta.ref && typeof n.meta.ref === 'object') ? n.meta.ref : null;
+        const refAttr = (refRaw && refRaw.appId && refRaw.kind && refRaw.id)
+            ? ` data-ref="${esc(JSON.stringify({ appId: refRaw.appId, kind: refRaw.kind, id: refRaw.id }))}"` : '';
+        return `<div class="nc-item${unreadCls}${jumpable ? ' nc-jumpable' : ''}" data-id="${esc(n.id)}" data-app="${esc(n.appId || '')}"${refAttr}>
             <div class="nc-avatar${showAvatar ? '' : ' nc-avatar-icon'}">${showAvatar ? avatarInner : `<i class="${fa}"></i>`}</div>
             <div class="nc-body">
                 <div class="nc-row1">
@@ -585,8 +594,19 @@ export class NotificationCenterView {
                 this.app.log.markRead(id);
                 this._syncBadge();
                 if (appId && appId !== '__sys__') {
+                    /* [v4.119.0 · R14-O3] 有靶心就投靶心（落到那一条）；没靶心只开 App（不承诺做不到的事）。
+                     *   ★ 解析失败不静默吞：退为只开 App 并出声（与 search-view / clock-view 同款）。 */
+                    let ref = null;
+                    const raw = item.getAttribute('data-ref') || '';
+                    if (raw) {
+                        try { ref = JSON.parse(raw); }
+                        catch (_e) {
+                            ref = null;
+                            try { console.warn('[notify] 靶心读不出（退为只开 App）', raw); } catch (_e2) { /* 无 console 也不影响结论 */ }
+                        }
+                    }
                     try {
-                        window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
+                        window.dispatchEvent(new CustomEvent('phone:openApp', { detail: buildOpenDetail(appId, null, ref) }));
                     } catch (_e) { /* 忽略 */ }
                     return;
                 }

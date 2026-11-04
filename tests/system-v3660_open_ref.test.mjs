@@ -91,8 +91,20 @@ async function loadMod(dir, rel) {
 test('A1 ★★★ 登记表：本切片声明的七个 kind 逐条在场，且归属 App 与声明一致', async () => {
     const m = await loadMod(ROOT, REF_REL);
     const kinds = Object.keys(m.OPEN_REF_KINDS);
-    assert.deepEqual(kinds.slice().sort(), Object.keys(EXPECT_KINDS).slice().sort(),
-        '★ 登记表与套件声明必须逐条对齐（登记表是消费侧的判据真源，必须独立对账）');
+    /* [v4.119.0 · R14-O3] 对账口径由「逐条相等」改为「本切片七条必须在场」：登记表会随后续切片继续长（diary / calendar 已登记），
+     *   若这里写死「七条相等」，每长一条都要改历史断言（那是拿改断言消红）；反过来只要求子集，
+     *   又会把「本切片的七条被调包成别的 kind」放过去。故：七条逐条在场（子集），
+     *   多出来的 kind 必须由后续切片的独立套件守（下面直接查盘，不靠口头约定）。 */
+    for (const k of Object.keys(EXPECT_KINDS)) {
+        assert.ok(kinds.indexOf(k) >= 0, '★ 本切片登记的 kind 必须在场：' + k);
+    }
+    const extra = kinds.filter((k) => !Object.prototype.hasOwnProperty.call(EXPECT_KINDS, k)).sort();
+    const o3 = path.join(ROOT, 'tests', 'r14_o3_aggregate_jumpback.test.mjs');
+    for (const k of extra) {
+        assert.ok(fs.existsSync(o3), '★ 登记表多出 kind「' + k + '」却没有后续切片套件守（登记面无人对账 = 白长）');
+        assert.ok(fs.readFileSync(o3, 'utf8').indexOf('\'' + k + '\'') >= 0,
+            '★ 后续套件必须真提到 kind「' + k + '」（否则那条登记就是无人守的角）');
+    }
     for (const [kind, appId] of Object.entries(EXPECT_KINDS)) {
         assert.equal(m.OPEN_REF_KINDS[kind].appId, appId, kind + ' 的归属 App 漂了');
         assert.ok(String(m.OPEN_REF_KINDS[kind].label || '').length > 0, kind + ' 缺 label（诊断视图要用）');

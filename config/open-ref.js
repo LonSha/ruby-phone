@@ -37,7 +37,13 @@ export const OPEN_REF_KINDS = Object.freeze({
     song: Object.freeze({ appId: 'musicdesk', label: '曲库曲目' }),
     novel: Object.freeze({ appId: 'pixiv', label: 'Pixiv 小说' }),
     illust: Object.freeze({ appId: 'pixiv', label: 'Pixiv 插画' }),
-    article: Object.freeze({ appId: 'lofter', label: '老福特文章' })
+    article: Object.freeze({ appId: 'lofter', label: '老福特文章' }),
+    /* [v4.119.0 · R14-O3] 聚合页点回原条目：日记与日历备忘补上跨 App 靶心。
+     * 为什么必须**先登记**再接线：`today` 的两源（diary / calendar）此前只有
+     *   「打开那个 App」这一句承诺（见 apps/clock/clock-view.js 的 TODAY_JUMP_APP 头注）。
+     *   未登记的 kind 一律不投（ref-kind-unknown）—— 登记面不动，消费侧怎么接线都是空话。 */
+    diary: Object.freeze({ appId: 'diary', label: '日记条目' }),
+    calendar: Object.freeze({ appId: 'calendar', label: '日历备忘' })
 });
 
 /** ref 归一的归因词表（判据按此表逐词核，防随口新词）。 */

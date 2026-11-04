@@ -799,15 +799,22 @@ export function buildDefaultSources(storage, deps = {}) {
     // ---- 日记（字段实证：title / date / content / author / createdAt）----
     sources.push({
         id: 'diary', label: '日记', icon: '📔', appId: 'diary', weight: 1.4,
-        items: () => asArray(get('diary_entries')).map(e => ({
+        items: () => asArray(get('diary_entries')).map(e => {
+            const id = String(e?.id || '');
+            if (!id) return null;   /* 没 id 就点不回去：不把死链放进搜索面 */
+            return {
             title: String(e?.title || e?.date || '一篇日记'),
             body: norm([e?.author, e?.content || e?.body].filter(Boolean).join(' · ')),
             ts: tsOf(e?.createdAt, e?.ts),
             /* [v4.110.0 · R13-X2] 日记条目本来就有 `weather` 字段（`diary-data` 从页脚抽出来的），
              *   此处带上它，模糊回忆才认得出「那天下雨的那篇」。 */
             weather: String(e?.weather || ''),
-            icon: '📔', appId: 'diary'
-        }))
+            icon: '📔', appId: 'diary',
+            /* [v4.119.0 · R14-O3] 聚合页点回原条目：日记条目带靶心，
+             *   否则「今天」里那一条只能打开 App 首屏（打开了不等于定位到）。 */
+            meta: { ref: buildOpenRef('diary', id, 'diary') }
+            };
+        }).filter(Boolean)
     });
 
     // ---- 短信（会话里 messages[].text；会话无 lastTime，用 messages 尾部时间兜底）----
@@ -853,12 +860,17 @@ export function buildDefaultSources(storage, deps = {}) {
     // ---- 日历备忘（字段实证：title / dateKey / time / createdAt；无 content 字段）----
     sources.push({
         id: 'calendar', label: '日历备忘', icon: '📅', appId: 'calendar', weight: 1.2,
-        items: () => asArray(get('calendar_memos')).map(m => ({
+        items: () => asArray(get('calendar_memos')).map(m => {
+            const id = String(m?.id || '');
+            if (!id) return null;
+            return {
             title: String(m?.title || '备忘'),
             body: norm([m?.dateKey, m?.time, m?.source].filter(Boolean).join(' · ')),
             ts: tsOf(m?.createdAt),
-            icon: '📅', appId: 'calendar'
-        }))
+            icon: '📅', appId: 'calendar',
+            meta: { ref: buildOpenRef('calendar', id, 'calendar') }
+            };
+        }).filter(Boolean)
     });
 
     // ---- 音乐歌单（字段实证：name / artist；无 addedAt）----
