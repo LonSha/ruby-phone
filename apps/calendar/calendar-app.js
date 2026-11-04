@@ -104,10 +104,16 @@ export class CalendarApp {
         if (view) {
             const parts = (data && typeof data.parseDateKey === 'function')
                 ? data.parseDateKey(hit.dateKey) : null;
-            if (parts && Number.isFinite(Number(parts.year)) && Number.isFinite(Number(parts.month))) {
-                view.selectedDate = { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) };
-                view.visibleYear = Number(parts.year);
-                view.visibleMonth = Number(parts.month);
+            /* [v4.120.0] 读数一律走全仓唯一口径 `numOrNull`（config/num-gate.js）。
+             *   不许写 `Number.isFinite(Number(x))`：那不是「更宽松」，而是把 null / '' / []
+             *   全读成 0 —— 于是一条日期坏掉的备忘会把日历翻到 1970 年 0 月，且一个字都不报。 */
+            const y = numOrNull(parts && parts.year);
+            const mo = numOrNull(parts && parts.month);
+            if (y !== null && mo !== null) {
+                const day = numOrNull(parts && parts.day);
+                view.selectedDate = { year: y, month: mo, day: (day === null ? 1 : day) };
+                view.visibleYear = y;
+                view.visibleMonth = mo;
             }
             view.detailMemoId = id;
             view.detailEditMode = false;

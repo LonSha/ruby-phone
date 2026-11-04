@@ -503,6 +503,12 @@ const KEY_REGISTRY = [
   { key: 'ruby_phone_lyrics_settings', scope: 'chat', note: '歌词/氛围设置' },
   { key: 'cheat_state_v1', scope: 'chat', note: '金手指装配清单' },
   { key: 'dt_state_v1', scope: 'chat', note: '撩语装配清单' },
+  /* [v4.120.0 · R14-O5] 「就地办」提交台账：某条消息上的某一档动作办过没有。
+   *   机制侧命中 CHAT_DATA_PATTERNS 的 `/^ia_/`（config/storage.js）→ 会话隔离。
+   *   **必须 chat**：它引用的是这段对话里的消息 id 与日历条目 id，
+   *   落全局会让另一个角色看到别人的办事记录，而那些 id 在那边根本不存在
+   *   —— 那种错不报错，只让「撤销」指到一条不相干的日程上。 */
+  { key: 'ia_ledger_v1', scope: 'chat', note: '[v4.120.0] 就地办提交台账（幂等与撤销的唯一真源）' },
   { key: 'asset_settings_v1', scope: 'chat', note: '资产 App 设置' },
   /* [v3.95.0 · R3-O6] 资产引擎的引导配置键（onboarded / enabledCategories）。
    *   机制侧命中 CHAT_DATA_PATTERNS 的 `/^__la_asset_/`（config/storage.js）→ 会话隔离。

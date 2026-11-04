@@ -22,7 +22,7 @@ import { bootTimingFaceText, bootTimingRows } from './diagnose-data.js';
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
  *   也不直摸上游全局 —— 本仓纪律：视图纯渲染，一切结论由 diagnose-data.js 给出）。 */
-import { checkpointFaceText, provenanceFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, perspectiveFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, selfCheckFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
+import { checkpointFaceText, provenanceFaceText, inlineActionFaceText, sessionGateFaceText, scheduleFaceText, financeFaceText, financeCommitFaceText, workflowFaceText, groupPaceFaceText, relationAlbumFaceText, perspectiveFaceText, datePlayFaceText, resumeWorkbenchFaceText, creationWorkbenchFaceText, backupFaceText, capHealthFaceText, selfCheckFaceText, knowledgeBridgeFaceText, creationFaceText, characterSlotFaceText, craftFaceText, disposalFaceText, handoffFaceText } from './diagnose-data.js';
 import { outcomeText, injectionFaceKeys } from '../../config/injection-contract.js';
 import { projectionLine } from '../../config/projection-contract.js';
 import { projectionFreshnessText } from '../../config/world-bridge.js';
@@ -169,6 +169,41 @@ export class DiagnoseView {
      *      只说「挡了一条」而不能说「挡了谁、为什么」等于没说。
      *  纯渲染：取数与三态判定全在内核（`collectDiagnose` 的 `sessionGate` 面 + `sessionGateFaceText`），
      *  本方法不自己数条数、不自己判原因（那都是同一口径的第二份实现）。 */
+    /* [v4.120.0 · R14-O5] 「就地办」幂等台账卡。三条口径与全页一致：
+     *   · 视图只排版：一行读数与闭集表都由内核面给，本卡不再自己数一遍；
+     *   · 面缺席必须与「自检通过」**文案互不同形**（读不到不等于没问题）；
+     *   · 有问题必须逐条点名（读的人才知道是哪条规矩破了）。 */
+    _inlineActionHtml(pkg) {
+        const face = (pkg && pkg.inlineActionFace) || null;
+        if (!face || face.ok === undefined) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>就地办台账读数读取失败（已降级）—— '
+                + '这只说明本页取不到该面，**不代表**台账自检就没问题。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(inlineActionFaceText(face)) + '</div>';
+        const statuses = Array.isArray(face.statuses) ? face.statuses : [];
+        const decisions = Array.isArray(face.decisions) ? face.decisions : [];
+        if (statuses.length || decisions.length) {
+            html += '<div class=' + Q + 'dg-table' + Q + '>'
+                + '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>记录状态</code>'
+                + this._chip(statuses.join(' / '), 'muted') + '</div>'
+                + '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>提交判定</code>'
+                + this._chip(decisions.join(' / '), 'ok') + '</div>'
+                + '<div class=' + Q + 'dg-trow' + Q + '><code class=' + Q + 'dg-key' + Q + '>台账键</code>'
+                + this._chip(String(face.key || '（空）'), 'muted')
+                + this._chip('上限 ' + String(face.limit || 0) + ' 条', 'muted') + '</div>'
+                + '</div>';
+        }
+        const problems = Array.isArray(face.problems) ? face.problems : [];
+        if (problems.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '><b>台账自检报了问题</b>'
+                + '（这些会让「办过没有」答错 —— 日历里多一条、或撤销指到别人那条上，都不报错）：</div>';
+            html += problems.map((p) => '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(p)) + '</div>').join('');
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>为什么判据要看闭集：双击 / 刷新 / 源句漂 / 撤后重办四种重复形态'
+            + '各自处置相反（拦 / 拦 / 放行并作废旧条 / 放行），一旦状态与判定名漂了，'
+            + '四种形态就会混成一种 —— 而混错的方向恰好是「用户点了两下，数据错一次」。</div>';
+        return html;
+    }
     /* [v3.66.0 · X2 第一切片] 跨 App 靶心协议卡（表自检 + 自等自证）。
      *   与「App 消费面矩阵」的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
      *   本卡答「投靶心这套协议自身现在还自洽吗」—— 表坏了（kind 漂 / 归属写错）时
@@ -1789,6 +1824,9 @@ export class DiagnoseView {
         /* [v3.66.0 · X2 第一切片] 跨 App 靶心协议卡紧跟矩阵卡之后：两张卡是同一族的两个问题 ——
          *   矩阵答「哪些 App 接上了平台面」，本卡答「这套投靶心的协议自身自洽吗」。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>跨 App 靶心协议（结果能不能落到那一条上）</h3>' + this._openRefHtml(pkg) + '</section>');
+         /* [v4.120.0 · R14-O5] 「就地办」幂等台账卡紧跟靶心卡：「点得回去」之后紧接着的问题是
+          *   「点多了会不会写出两条」。两张都是协议自洽面，摆在一起才看得出同一族的分工。 */
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>就地办幂等台账（双击 / 刷新 / 源句漂 / 撤后重办分得开吗）</h3>' + this._inlineActionHtml(pkg) + '</section>');
         /* [v3.86.0 · 拓展计划 R-X2] 来源链协议卡紧跟在靶心协议卡之后：两张卡问的是同一条链
          *   的两件不同事 —— 靶心卡答「这条结论能不能落到那一条上」（单点），本卡答
          *   「这条从哪来、中途经过谁、上游没了会怎样」（多点与失效传播）。 */

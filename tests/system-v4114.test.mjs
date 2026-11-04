@@ -32,6 +32,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeHarness } from './_inline_action_harness.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const temps = [];
@@ -47,245 +48,21 @@ const BarMod = await import(path.join(ROOT, 'apps', 'wechat', 'inline-action-bar
 const T0 = new Date(2026, 9, 1, 10, 0, 0).getTime();
 const NOW = { storyMs: T0 };
 
-/* ══════════ 迷你 DOM（只做到「够判」为止） ══════════ */
+/* ══════════ 迷你 DOM + 替身（[v4.120.0 · R14-O5] 已抽到共用底座） ══════════
+ * 为什么抽走：R14-O5 要在同一块交付物上验「双击 / 刷新 / 源句漂 / 撤后重办」，
+ *   若再抄第二份迷你 DOM，两套选择器迟早会漂 —— 而漂了之后「同一条纪律在
+ *   两份套件里结论不同」这种红点不指向任何一处源码，最难查。故只有一份。 */
+const H = makeHarness(new Date(2026, 9, 1, 10, 0, 0).getTime());
+const mkNode = H.mkNode;
+const installDom = H.installDom;
+const withDom = H.withDom;
+const mkStorage = H.mkStorage;
+const mkCalendar = H.mkCalendar;
+const mkMsg = H.mkMsg;
+const paintMessages = H.paintMessages;
+const mkApp = H.mkApp;
+const mkHost = H.mkHost;
 
-function mkNode(tag) {
-    const n = {
-        tagName: String(tag || 'div').toUpperCase(),
-        className: '',
-        id: '',
-        textContent: '',
-        value: '',
-        type: '',
-        parentNode: null,
-        children: [],
-        _attrs: new Map(),
-        _handlers: new Map(),
-        appendChild(c) { c.parentNode = n; n.children.push(c); return c; },
-        insertBefore(c, ref) {
-            c.parentNode = n;
-            const i = ref ? n.children.indexOf(ref) : -1;
-            if (i < 0) n.children.push(c); else n.children.splice(i, 0, c);
-            return c;
-        },
-        remove() {
-            const p = n.parentNode;
-            if (p) {
-                const i = p.children.indexOf(n);
-                if (i >= 0) p.children.splice(i, 1);
-                n.parentNode = null;
-            }
-        },
-        setAttribute(k, v) {
-            n._attrs.set(String(k), String(v));
-            if (k === 'class') n.className = String(v);
-            if (k === 'id') n.id = String(v);
-        },
-        getAttribute(k) { return n._attrs.has(String(k)) ? n._attrs.get(String(k)) : null; },
-        removeAttribute(k) { n._attrs.delete(String(k)); },
-        hasAttribute(k) { return n._attrs.has(String(k)); },
-        addEventListener(t, h) {
-            if (!n._handlers.has(t)) n._handlers.set(t, []);
-            n._handlers.get(t).push(h);
-        },
-        removeEventListener(t, h) {
-            const list = n._handlers.get(t) || [];
-            const i = list.indexOf(h);
-            if (i >= 0) list.splice(i, 1);
-        },
-        /** 该事件上**还活着**的监听器个数（D6 用它证「只绑一次」）。 */
-        listenerCount(t) { return (n._handlers.get(t) || []).length; },
-        fire(t, ev) {
-            const e = Object.assign({ target: n, preventDefault() { } }, ev || {});
-            for (const h of (n._handlers.get(t) || []).slice()) h(e);
-            return e;
-        },
-        get nextSibling() {
-            const p = n.parentNode;
-            if (!p) return null;
-            const i = p.children.indexOf(n);
-            return (i >= 0 && i + 1 < p.children.length) ? p.children[i + 1] : null;
-        },
-        querySelector(sel) { const r = n.querySelectorAll(sel); return r.length ? r[0] : null; },
-        querySelectorAll(sel) { return queryAll(n, sel); }
-    };
-    return n;
-}
-
-/** 选择器部件：`tag` / `.a` / `#x` / `[k]` / `[k="v"]`（够本件用，不追求通用）。 */
-const SIMPLE_RE = /^([a-zA-Z][\w-]*)?((?:[.#][\w-]+)*)((?:\[[^\]]+\])*)$/;
-
-function matchSimple(node, part) {
-    const m = SIMPLE_RE.exec(String(part).trim());
-    if (!m) return false;
-    if (m[1] && node.tagName !== m[1].toUpperCase()) return false;
-    const bits = m[2] ? m[2].match(/[.#][\w-]+/g) || [] : [];
-    for (const b of bits) {
-        if (b[0] === '.') {
-            const cls = node.className ? String(node.className).split(/\s+/) : [];
-            if (!cls.includes(b.slice(1))) return false;
-        } else if (node.id !== b.slice(1)) return false;
-    }
-    const attrs = m[3] ? m[3].match(/\[[^\]]+\]/g) || [] : [];
-    for (const a of attrs) {
-        const inner = a.slice(1, -1);
-        const eq = inner.indexOf('=');
-        if (eq < 0) {
-            if (!node.hasAttribute(inner.trim())) return false;
-        } else {
-            const k = inner.slice(0, eq).trim();
-            let v = inner.slice(eq + 1).trim();
-            if ((v[0] === '"' && v[v.length - 1] === '"') || (v[0] === "'" && v[v.length - 1] === "'")) v = v.slice(1, -1);
-            if (node.getAttribute(k) !== v) return false;
-        }
-    }
-    return true;
-}
-
-/** 后代组合 + 逗号或。 */
-function matchChain(node, chain) {
-    const parts = String(chain).trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return false;
-    if (!matchSimple(node, parts[parts.length - 1])) return false;
-    let i = parts.length - 2;
-    let cur = node.parentNode;
-    while (i >= 0) {
-        let hit = false;
-        while (cur) {
-            if (matchSimple(cur, parts[i])) { hit = true; cur = cur.parentNode; break; }
-            cur = cur.parentNode;
-        }
-        if (!hit) return false;
-        i -= 1;
-    }
-    return true;
-}
-
-function matchAny(node, sel) {
-    return String(sel).split(',').map((s) => s.trim()).filter(Boolean).some((s) => matchChain(node, s));
-}
-
-function walk(root, fn) {
-    for (const c of root.children) { fn(c); walk(c, fn); }
-}
-
-function queryAll(root, sel) {
-    const out = [];
-    walk(root, (n) => { if (matchAny(n, sel)) out.push(n); });
-    return out;
-}
-
-/** 装一份文档：`#chat-messages` 在 `.phone-view-current` 里，另有 `#chat-input`。 */
-function installDom() {
-    const doc = mkNode('html');
-    const head = mkNode('head');
-    const body = mkNode('body');
-    const view = mkNode('div');
-    view.setAttribute('class', 'phone-view-current');
-    const box = mkNode('div');
-    box.setAttribute('id', 'chat-messages');
-    const input = mkNode('input');
-    input.setAttribute('id', 'chat-input');
-    view.appendChild(box);
-    view.appendChild(input);
-    body.appendChild(view);
-    doc.appendChild(head);
-    doc.appendChild(body);
-    doc.head = head;
-    doc.body = body;
-    doc.createElement = (t) => mkNode(t);
-    doc.getElementById = (id) => queryAll(doc, '#' + String(id))[0] || null;
-    doc.querySelector = (s) => { const r = queryAll(doc, s); return r.length ? r[0] : null; };
-    doc.querySelectorAll = (s) => queryAll(doc, s);
-    return { doc: doc, head: head, body: body, view: view, box: box, input: input };
-}
-
-/** 在装好的 DOM + 假宿主里跑一段（二者都要还原：本套件多次用）。 */
-function withDom(host, fn) {
-    const prevDoc = globalThis.document;
-    const prevWin = globalThis.window;
-    const prevVp = globalThis.VirtualPhone;
-    const d = installDom();
-    const win = { document: d.doc, VirtualPhone: host || {}, setTimeout: setTimeout, requestAnimationFrame: (cb) => setTimeout(cb, 0) };
-    globalThis.document = d.doc;
-    globalThis.window = win;
-    globalThis.VirtualPhone = win.VirtualPhone;
-    try { return fn(d, win); } finally {
-        if (prevDoc === undefined) delete globalThis.document; else globalThis.document = prevDoc;
-        if (prevWin === undefined) delete globalThis.window; else globalThis.window = prevWin;
-        if (prevVp === undefined) delete globalThis.VirtualPhone; else globalThis.VirtualPhone = prevVp;
-    }
-}
-
-/** 存储替身（同步，与 PhoneStorage 的 read 面同形）。 */
-function mkStorage(init) {
-    const store = new Map(Object.entries(init || {}));
-    return {
-        store: store,
-        get: (k) => (store.has(k) ? store.get(k) : null),
-        set: (k, v) => { store.set(k, v); return true; },
-        remove: (k) => { store.delete(k); return true; }
-    };
-}
-
-/** 日历替身：记下每一次 addMemo 的入参（判据要核 sourceMsgId 真的落进去了）。 */
-function mkCalendar(opt) {
-    const o = opt || {};
-    const calls = [];
-    const deleted = [];
-    return {
-        calls: calls,
-        deleted: deleted,
-        addMemo(input) {
-            calls.push(input);
-            if (o.reject === true) return null;
-            return { id: 'memo_' + calls.length };
-        },
-        deleteMemo(id) { deleted.push(id); return o.deleteFails !== true; }
-    };
-}
-
-/** 造一条微信消息（默认是对方发的）。 */
-function mkMsg(id, content, extra) {
-    return Object.assign({ id: id, content: content, from: 'them', storyAt: T0 }, extra || {});
-}
-
-/* ══════════ 造 App + 挂载（D 面用） ══════════ */
-
-/** 把消息行铺进容器（形状对齐 chat-view：`.chat-message[data-message-id]`）。 */
-function paintMessages(box, msgs) {
-    for (const m of msgs) {
-        const row = mkNode('div');
-        row.setAttribute('class', 'chat-message message-left');
-        row.setAttribute('data-message-id', String(m.id));
-        box.appendChild(row);
-    }
-}
-
-/** 假 App：只给动作条真正用到的那几口（currentChat / wechatData / storage）。 */
-function mkApp(opts) {
-    const o = opts || {};
-    const msgs = o.messages || [];
-    const storage = o.storage || mkStorage({});
-    return {
-        currentChat: { id: 'c1', name: o.chatName || '阿莲' },
-        storage: storage,
-        wechatData: {
-            getMessages: (cid) => (String(cid) === 'c1' ? msgs : [])
-        }
-    };
-}
-
-/** 裸宿主（VirtualPhone）：日历 / 剧情钟可选。 */
-function mkHost(opts) {
-    const o = opts || {};
-    const vp = {};
-    if (o.calendar) vp.calendarApp = { calendarData: o.calendar };
-    if (o.clock !== false) {
-        vp.timeManager = { getCurrentStoryTime: () => ({ date: '2026-10-01', time: '10:00', timestamp: T0 }) };
-    }
-    return vp;
-}
 
 /* ══════════ 负控制用：真源码破坏 ══════════ */
 
@@ -295,7 +72,10 @@ function stageTree() {
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.mkdirSync(path.join(dir, 'apps', 'wechat'), { recursive: true });
     for (const f of ['num-gate.js', 'inline-action-terms.js', 'inline-action-time.js',
-        'inline-action.js', 'inline-action-commit.js']) {
+        'inline-action.js', 'inline-action-commit.js',
+        /* [v4.120.0 · R14-O5] 动作条现在静态 import 台账件：副本树必须够模块加载，
+         *   否则负控制会以 ERR_MODULE_NOT_FOUND 假红（那不是「纪律被破坏」，是「树不全」）。 */
+        'inline-action-ledger.js']) {
         fs.copyFileSync(path.join(ROOT, 'config', f), path.join(dir, 'config', f));
     }
     fs.copyFileSync(path.join(ROOT, 'apps', 'wechat', 'inline-action-bar.js'),

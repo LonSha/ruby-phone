@@ -18,6 +18,13 @@
  *   恢复后 id 逐字回来（R13-O8 已证明）。故本件的 undo 就是「调 deleteMemo」——
  *   再造一个「内联动作撤销栈」等于把用户学到的撤销行为分成两套。
  *
+ * [v4.120.0 · R14-O5] **幂等**：`ctx.ledger` 传入 `config/inline-action-ledger.js` 的
+ *   台账判定（`planCommit` 的结果）时，本件按判定分两支：
+ *     · `replayed` ⇒ **一个字节都不写**，直接把旧记录原样交回（`replayed:true`）；
+ *     · `drifted`  ⇒ 照常写，但回执文案必须写明「上一条已作废」——
+ *       否则用户会以为日历里只有一条，而实际有两条（一条已作废、一条新的）。
+ *   不传 `ctx.ledger` 时行为与 v4.113.0 **逐字一致**（旧调用方零改动）。
+ *
  * 【诚实边界（必须写进书）】
  *   · memo 档的日子**还没定**：本仓没有「无日期备忘」这种容器，故本件把它落在**今天**，
  *     并在标题前加「待定 · 」。这样用户打开日历一眼能看出「这条日子没定」——
@@ -35,6 +42,7 @@ export const INLINE_COMMIT_WHY = Object.freeze({
     noCalendar: 'no-calendar',   /* 日历不在（App 没起来）≠ 写成功 */
     rejected: 'rejected',        /* 数据层自已拒了（空标题 / 空日期键） */
     draftOnly: 'draft-only',     /* reply 档：只给草稿，没写盘 */
+    replayed: 'replayed',        /* [v4.120.0 · R14-O5] 台账判为重放：一个字节都没写 */
     unknownKind: 'unknown-kind'
 });
 
@@ -76,12 +84,29 @@ export function commitAction(action, ctx) {
     const kind = String(a.kind || '');
     const out = {
         ok: false, why: INLINE_COMMIT_WHY.unknownKind, kind: kind,
-        entryId: '', receipt: '', draft: ''
+        entryId: '', receipt: '', draft: '',
+        /* [v4.120.0 · R14-O5] 这次是「重放」还是「新建」—— 回执文案与判据都要靠它分。 */
+        replayed: false, supersededMemoId: ''
     };
     const srcId = String(a.sourceMsgId == null ? '' : a.sourceMsgId).trim();
     /* 没有出处就不办：写下去之后既回不了源、也无法在回执里交代来历。 */
     if (!srcId) { out.why = INLINE_COMMIT_WHY.noSource; return out; }
 
+    /* [v4.120.0 · R14-O5] 台账判定为「重放」⇒ 立刻短路，**一个字节都不写**。
+     *   这一步必须在 kind 分派之前：reply 档虽然不写盘，但它会把草稿填进输入框 ——
+     *   双击两次等于把手打了一半的字又填一遍，同样是重复动作。
+     *   旧回执原样交回（**不刷新时间戳**：回执说的是「什么时候办的」）。 */
+    const led = (c.ledger && typeof c.ledger === 'object') ? c.ledger : null;
+    if (led && led.decision === 'replayed' && led.record) {
+        const rec = led.record;
+        out.ok = true;
+        out.why = INLINE_COMMIT_WHY.replayed;
+        out.kind = String(rec.kind || kind);
+        out.entryId = String(rec.memoId || '');
+        out.replayed = true;
+        out.receipt = '这条已经办过了（没有重复写第二条）—— 回执仍指向原来那一条';
+        return out;
+    }
     if (kind === INLINE_ACTION_KINDS.reply) {
         /* 只交草稿：**不替你发**。发消息是用户手上那一步，本项不代劳。 */
         out.ok = true;
@@ -138,6 +163,13 @@ export function commitAction(action, ctx) {
     out.entryId = String(memo.id);
     out.receipt = '已写进日历：' + dateKey + (time ? (' ' + time) : '') + ' · ' + title
         + ' —— ' + receiptLine({ chatName: c.chatName, atMs: c.atMs });
+    /* [v4.120.0 · R14-O5] 源句 / 日期变了也照常写（用户确实改了这件事），
+     *   但回执必须写明「上一条已作废」——否则用户会以为日历里只有一条，
+     *   而实际上旧那条（描述已不对的那种）还在日历里（本件不替用户删数据）。 */
+    if (led && led.decision === 'drifted' && led.supersede) {
+        out.supersededMemoId = String(led.supersede.memoId || '');
+        out.receipt += '（上一条已作废；它还在日历里，要清掉请手动删）';
+    }
     return out;
 }
 

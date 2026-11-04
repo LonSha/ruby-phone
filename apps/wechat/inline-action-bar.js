@@ -34,6 +34,14 @@ import {
 } from '../../config/inline-action-terms.js';
 import { scanMessage } from '../../config/inline-action.js';
 import { commitAction, undoCommit } from '../../config/inline-action-commit.js';
+/* [v4.120.0 · R14-O5] 幂等台账：身份 / 指纹 / 四种重复形态的判定都在纯函数件里，
+ *   本件只负责「读台账 → 问判定 → 按判定写盘 → 回写台账」这条线。
+ *   为什么不把判定写在本件：判定要能单独被单测逐态验（双击 / 刷新 / 源句漂 / 撤后重办），
+ *   而这些在 DOM 里跑不动。 */
+import {
+    identityOf, readLedger, writeLedger, planCommit, appendRecord, planUndo,
+    IA_RECORD_STATUS, IA_LEDGER_WHY
+} from '../../config/inline-action-ledger.js';
 
 /** 样式只注一次（本件是唯一主人，不往 wechat-app 的巨大样式串里再塞一截）。 */
 const STYLE_ID = 'inline-action-bar-style';
@@ -203,7 +211,10 @@ export class InlineActionBar {
         const parts = [];
         for (const p of plan) {
             const kinds = p.actions.map((a) => String(a.kind || '')).join(',');
-            const done = this._done.has(p.mid) ? '+' : '-';
+            /* [v4.120.0 · R14-O5] `_done` 的键是 `msgId|kind`：同一消息上两个档
+             *   （办日程 / 写日记）各自独立，不能共用一个「已办」标记，
+             *   否则办了一个另一个也会显示成「撤销」。 */
+            const done = p.actions.map((a) => (this._done.has(p.mid + '|' + String(a.kind || '')) ? '+' : '-')).join('');
             const note = this._noteOf.has(p.mid) ? '!' : '.';
             parts.push(p.mid + ':' + kinds + done + note);
         }
@@ -221,7 +232,11 @@ export class InlineActionBar {
             const kinds = Array.prototype.slice.call(bars || [])
                 .map((b) => String(b.getAttribute('data-ia-kind') || '')).join(',');
             const hasNote = stack.querySelectorAll('.ia-receipt, .ia-fail');
-            const done = stack.querySelectorAll('[data-ia-undo]').length ? '+' : '-';
+            /* [v4.120.0 · R14-O5] done 必须**逐档**取，与 `_planSig` 同维度。
+             *   不同维度会让两个签名永远不相等 ⇒ 每次观察回调都整层重画（节点数不涨，
+             *   但一直在删了重建），而「看起来还是对的」—— 这类病只有签名自己对拍才查得出来。 */
+            const done = Array.prototype.slice.call(bars || [])
+                .map((b) => (b.querySelectorAll('[data-ia-undo]').length ? '+' : '-')).join('');
             const note = (hasNote && hasNote.length) ? '!' : '.';
             parts.push(mid + ':' + kinds + done + note);
         }
@@ -330,13 +345,17 @@ export class InlineActionBar {
         /* 为什么给它：计划书要求每条都能看出为什么被命中（不写 why 等于没理由）。 */
         why.textContent = String(act.why || '');
         bar.appendChild(why);
-        const done = this._done.get(msgId);
+        const kindKey = String(act.kind || '');
+        const done = this._done.get(String(msgId) + '|' + kindKey);
         const btn = doc.createElement('button');
         btn.type = 'button';
         btn.className = 'ia-btn';
         if (done && done.ok) {
-            /* 已办：同一位置换成「撤销」（一个按钮两态，界面不写第二份判定）。 */
+            /* 已办：同一位置换成「撤销」（一个按钮两态，界面不写第二份判定）。
+             *   ★ 撤销必须知道**是哪一档**：`data-ia-undokind` 不能省，
+             *     否则一条消息两个档时撤销按钮分不清撤谁。 */
             btn.setAttribute('data-ia-undo', msgId);
+            btn.setAttribute('data-ia-undokind', kindKey);
             btn.textContent = INLINE_ACTION_LABEL.undo;
         } else {
             btn.setAttribute('data-ia-do', msgId);
@@ -358,7 +377,7 @@ export class InlineActionBar {
         const t = e && e.target;
         if (!t || typeof t.getAttribute !== 'function') return;
         const undoId = t.getAttribute('data-ia-undo');
-        if (undoId) { this._undo(undoId); return; }
+        if (undoId) { this._undo(undoId, t.getAttribute('data-ia-undokind')); return; }
         const doId = t.getAttribute('data-ia-do');
         if (doId) this._commit(doId, t.getAttribute('data-ia-action'));
     }
@@ -388,31 +407,129 @@ export class InlineActionBar {
         if (!act) return null;
         const chat = this.app?.currentChat || {};
         const storyMs = this._storyMs();
+        /* [v4.120.0 · R14-O5] 先问台账：这一步**不写盘**，只拿到判定。
+         *   · replayed ⇒ 不再 addMemo（双击只新增一条）；
+         *   · drifted  ⇒ 照建，但旧记录降级 superseded；
+         *   · recommit ⇒ 撤后重办，合法重办。 */
+        const storage = this._storage();
+        const ledger = readLedger(storage);
+        const plan = planCommit(ledger, act, storyMs || Date.now());
         const res = commitAction(act, {
             calendarData: this._calendarData(),
             nowMs: storyMs,
             chatName: String(chat.name || ''),
-            atMs: storyMs
+            atMs: storyMs,
+            ledger: plan
         });
-        /* reply 档：把草稿**填进输入框**，不发（发不发是用户那一步）。 */
-        if (res.ok && res.draft) this._fillDraft(res.draft);
-        if (res.ok) this._done.set(String(msgId), res);
+        /* reply 档：把草稿**填进输入框**，不发（发不发是用户那一步）。
+         *   ★ 重放时不填：填两遍等于把用户打了一半的字又覆盖一次。 */
+        if (res.ok && res.draft && !res.replayed) this._fillDraft(res.draft);
+        if (res.ok) this._done.set(String(msgId) + '|' + String(kind), res);
+        /* 只有真写了新条目（或重放交回旧条目）才落账。reply 档不写盘 ⇒ 也不必台账（它没有条目可撤）。 */
+        if (res.ok && res.entryId) {
+            const p = act.payload || {};
+            const entry = {
+                identity: identityOf(act),
+                sourceMsgId: String(act.sourceMsgId || ''),
+                kind: String(act.kind || ''),
+                memoId: String(res.entryId),
+                fingerprint: [String(act.title == null ? '' : act.title).trim(),
+                    String(p.dateKey == null ? '' : p.dateKey).trim(),
+                    String(p.time == null ? '' : p.time).trim()].join('|'),
+                title: String(p.title == null ? act.title : p.title).trim(),
+                dateKey: String(p.dateKey == null ? '' : p.dateKey).trim(),
+                time: String(p.time == null ? '' : p.time).trim(),
+                status: IA_RECORD_STATUS.committed,
+                at: Number(storyMs) || Date.now()
+            };
+            /* drifted 时 memo 按「待定 · 」改过标题，台账必须记**写进数据的那一版**，
+             *   否则撤销时会把「人工改过」误判成「内容变了」而拒绝撤销。 */
+            if (res.replayed) {
+                /* 重放不新增记录（旧记录已经在台账里，`at` 不许被刷新）。 */
+            } else {
+                const written = this._memoById(res.entryId);
+                if (written) {
+                    entry.title = String(written.title || entry.title);
+                    entry.dateKey = String(written.dateKey || entry.dateKey);
+                    entry.time = String(written.time || entry.time);
+                }
+                writeLedger(storage, appendRecord(ledger, entry, plan.decision === 'drifted' ? plan.supersede : null));
+            }
+        }
         /* 写不出来时说清哪一步没成 —— 不把「没写成」说成「已经写进去」。 */
         this._note(msgId, res.ok ? res.receipt : ('没办成：' + String(res.why || '')), res.ok);
         this._refreshAll();
         return res;
     }
 
-    _undo(msgId) {
-        const done = this._done.get(String(msgId));
-        if (!done || !done.ok) return { ok: false, why: 'nothing-to-undo' };
-        const res = undoCommit(done, { calendarData: this._calendarData() });
-        if (res.ok) this._done.delete(String(msgId));
-        this._note(msgId, res.ok
-            ? '已撤销（那条日程进了回收站，可在设置里恢复）'
-            : ('撤销没成：' + String(res.why || '')), res.ok);
+    /** 按 id 取当前某条日历备忘（读不到就是 null —— 不编）。 */
+    _memoById(id) {
+        const cd = this._calendarData();
+        const key = String(id || '').trim();
+        if (!cd || typeof cd.getMemos !== 'function' || !key) return null;
+        try {
+            return (cd.getMemos() || []).find((m) => m && String(m.id || '') === key) || null;
+        } catch (_e) {
+            return null;
+        }
+    }
+
+    /**
+     * 撤销（[v4.120.0 · R14-O5] 改走台账 `planUndo`）。
+     * --------------------------------------------------------
+     * 【为什么不再直接吃内存里的回执】旧版把 `_done` 里的回执整个交给 `undoCommit`，
+     *   于是「刷新之后撤销」「撤过一次再撤」都表现成「什么都没发生，但按钮还是撤销」。
+     *   台账把「办过哪一条、办时是什么样」落到 storage，刷新之后仍然答得出。
+     *
+     * 【三条撤销纪律（都在 `planUndo` 里判，本件只翻译成人话）】
+     *   ① 按 `memoId` 删，**不按标题找** —— 标题可以被改，id 不会；
+     *   ② 条目被人工改过 ⇒ 报 `modified-since`，**不静默删**（那是用户的东西）；
+     *   ③ 条目已经不在 ⇒ 报 `entry-missing`，**不报成功**。
+     *
+     * 【`memoNow` 为什么要先取】「有没有被改过」只能跟**现在的样子**比；
+     *   台账里存的是创建时的快照，拿快照跟自己比永远相等（那就是永远撤得掉，白判）。
+     */
+    _undo(msgId, kind) {
+        const id = String(msgId || '');
+        const kindKey = String(kind || '');
+        const identity = identityOf({ sourceMsgId: id, kind: kindKey });
+        const storage = this._storage();
+        const ledger = readLedger(storage);
+        /* 先定位记录才拿得到 memoId；没有记录 ⇒ 本来就没什么可撤（不是「撤销失败」）。 */
+        const rec = ledger.find((r) => r.identity === identity
+            && r.status !== IA_RECORD_STATUS.superseded) || null;
+        if (!rec) {
+            this._note(id, '没找到可撤销的记录（可能已经撤过了）', false);
+            this._refreshAll();
+            return { ok: false, why: IA_LEDGER_WHY.nothingToUndo };
+        }
+        const plan = planUndo(ledger, identity, this._memoById(rec.memoId));
+        if (!plan.ok) {
+            this._note(id, this._undoWhyText(plan.why), false);
+            /* 判定不过 ⇒ **一个字节都不写**：台账保持原样，条目也不动。
+             *   `_done` 同样留着 —— 它确实办过，只是这一刻撤不掉。 */
+            this._refreshAll();
+            return { ok: false, why: plan.why };
+        }
+        const res = undoCommit({ ok: true, entryId: rec.memoId }, { calendarData: this._calendarData() });
+        if (!res.ok) {
+            this._note(id, '撤销没成：日历那边没删掉（' + String(res.why || '') + '）', false);
+            this._refreshAll();
+            return { ok: false, why: res.why };
+        }
+        writeLedger(storage, plan.nextRecords);
+        this._done.delete(id + '|' + kindKey);
+        this._note(id, '已撤销（那条日程进了回收站，可在设置里恢复）', true);
         this._refreshAll();
-        return res;
+        return { ok: true, why: IA_LEDGER_WHY.ok, memoId: rec.memoId };
+    }
+    /** 撤销判定的三种「不成」各自一句人话（不合并成一句「撤销失败」）。 */
+    _undoWhyText(why) {
+        const w = String(why || '');
+        if (w === IA_LEDGER_WHY.entryMissing) return '撤销没成：那条日程已经不在日历里了（被删或换掉了）';
+        if (w === IA_LEDGER_WHY.modifiedSince) return '撤销没成：那条日程办完之后被改过，我不替你删';
+        if (w === IA_LEDGER_WHY.nothingToUndo) return '没找到可撤销的记录（可能已经撤过了）';
+        return '撤销没成：' + w;
     }
 
     /** 把草稿填进输入框（**不发**；也不覆盖用户已经打了一半的字）。 */

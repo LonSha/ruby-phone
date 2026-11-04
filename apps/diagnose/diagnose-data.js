@@ -160,6 +160,12 @@ import { unifiedIconCoverage } from '../../config/app-icons.js';
  *   与矩阵卡的分工：矩阵答「哪些 App 接上了哪些平台面」（静态接线面），
  *   本面答「投靶心这套协议**自身**现在还自洽吗」（表自检 + 自等自证）。 */
 import { OPEN_REF_KINDS, OPEN_REF_REASONS, openRefSelfCheck, buildOpenRef, normalizeOpenRef, sameRef } from '../../config/open-ref.js';
+/* [v4.120.0 · R14-O5] 「就地办」幂等台账协议面：与 openRefFace 同一族 —— 协议件自身现在还自洽吗。
+ *   为什么这一面必须有：动作条点下去**会真写数据**，而它的幂等判定藏在纯函数件里
+ *   （`config/inline-action-ledger.js`）。表坏了（状态闭集漂 / 判定名重名）时，
+ *   行为是「双击偶尔还是写出两条」或「撤销某天忽然指到别人那条上」——
+ *   两种都不报错，只在数据里留下一处错。故把它的自检摆到诊断页，与其余协议面同规格。 */
+import { iaLedgerSelfCheck, IA_RECORD_STATUS, IA_LEDGER_WHY, IA_LEDGER_KEY, IA_LEDGER_LIMIT } from '../../config/inline-action-ledger.js';
 /* [v3.86.0 · 拓展计划 R-X2] 来源链协议面：与 openRefFace 同一族——协议件自身现在还自洽吗。
  *   与靶心协议面的分工（两面常被混为一谈，是两个不同的问题）：
  *     靶心面答「这条结论**能不能落到**那一条上」（单点定位能力）；
@@ -881,6 +887,46 @@ export function collectDiagnose(win, storage) {
                 line: '跨 App 靶心协议：' + String(rows.length) + ' 个 kind 挂在 ' + String(apps.length)
                     + ' 个 App 上；归因 ' + String(reasons) + ' 态；表自检与自等自证'
                     + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**（见下）' : '全部通过') + '。'
+            };
+        } catch (_e) { return null; }
+    })();
+    /* ── [v4.120.0 · R14-O5] 「就地办」幂等台账协议面 ──
+     *   摆的是什么：状态闭集 / 判定闭集 / 台账键与上限 / 纯函数件的自检结论。
+     *   为什么要摆到这里：这一面答的不是「用户点了会不会成功」，而是
+     *   「这套『办过没有』的判据自身还成立吗」—— 它坏了的表现是点击仍然好好返回、
+     *   只是日历里偶尔多一条、或者撤销指到别人那条上（本仓最贵的那种不报错的错）。
+     *   三条纪律与全页一致：只读（不读盘、不写盘，只调纯函数自检）、
+     *   不抛（单面 try/catch）、不猜（自检跑不出来就如实说跑不出来，不当成通过）。 */
+    const inlineActionFace = (() => {
+        try {
+            const self = iaLedgerSelfCheck();
+            if (!self || !Array.isArray(self.problems)) {
+                return { ok: false, reason: 'self-check-unavailable', problems: ['台账自检跑不出来（不是「没问题」）'], line: '' };
+            }
+            const problems = self.problems.map(String);
+            const statuses = Object.keys(IA_RECORD_STATUS || {});
+            const whys = Object.keys(IA_LEDGER_WHY || {});
+            const decisions = ['new', 'replayed', 'drifted', 'recommit', 'invalid'];
+            /* 自证第二侧：闭集必须**真的分得开**（恒真的命名集合会让上面那条判据全绿）。 */
+            if (new Set(Object.values(IA_RECORD_STATUS || {})).size !== statuses.length) problems.push('状态值重名');
+            if (new Set(Object.values(IA_LEDGER_WHY || {})).size !== whys.length) problems.push('判定值重名');
+            /* 一行读数只算一次：`line` 与 `text` 取同一个值 —— 视图与本文件的文案转发
+             *   都从这里读，不许两边各拼一遍（那是同一口径两份实现的第三种形态）。 */
+            const line = '就地办台账：键 ' + String(IA_LEDGER_KEY || '（空）') + '（随会话隔离）；'
+                + '状态 ' + String(statuses.length) + ' 态 · 判定 ' + String(decisions.length) + ' 态 · 归因 '
+                + String(whys.length) + ' 条；上限 ' + String(Number(IA_LEDGER_LIMIT) || 0) + ' 条；'
+                + (problems.length ? '**有 ' + String(problems.length) + ' 条问题**（见下）' : '自检全部通过') + '。';
+            return {
+                ok: problems.length === 0,
+                reason: 'ok',
+                problems: problems,
+                key: String(IA_LEDGER_KEY || ''),
+                limit: Number(IA_LEDGER_LIMIT) || 0,
+                statuses: statuses,
+                decisions: decisions,
+                whys: whys.map((k) => String(IA_LEDGER_WHY[k])),
+                text: line,
+                line: line
             };
         } catch (_e) { return null; }
     })();
@@ -2010,7 +2056,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2213,6 +2259,18 @@ export function financeCommitFaceText(face) {
         if (!f) return '财务提交向导：读取异常（已降级）—— 这不是「没有待确认的提交」';
         return String(f.text || '财务提交向导：无读数');
     } catch (_e) { return '财务提交向导：读取异常（已降级）'; }
+}
+/** [v4.120.0 · R14-O5] 「就地办」幂等台账协议面的一行读数（唯一实现在 `collectDiagnose` 内的那一面）。
+ *  与 provenanceFaceText 同范式：只做转发与文案，视图不自己拼。
+ *  面缺席必须说「读不到」并给归因 —— **不说**「台账没问题」（那是最危险的反向错读数）。 */
+export function inlineActionFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '就地办台账：读取异常（已降级）—— 这不是「台账没问题」';
+        const text = String(f.text || f.line || '');
+        if (!text) return '就地办台账：无读数（自检未给出结论）—— 这不是「没问题」';
+        return text;
+    } catch (_e) { return '就地办台账：读取异常（已降级）—— 这不是「台账没问题」'; }
 }
 /** [v3.86.0 · 拓展计划 R-X2] 来源链协议面的一行读数（唯一实现在本文件 `collectDiagnose` 内取的那一面）。
  *  与 financeFaceText 同范式：只做转发与文案，视图不自己拼。
@@ -2603,6 +2661,7 @@ datePlayFaceText,
     capHealthFaceText,
     selfCheckFaceText,
     provenanceFaceText,
+    inlineActionFaceText,
     knowledgeBridgeFaceText,
     creationFaceText,
     characterSlotFaceText,
