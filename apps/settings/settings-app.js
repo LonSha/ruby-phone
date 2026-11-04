@@ -43,6 +43,7 @@ import * as PhoneTagFilter from '../../config/tag-filter.js';
  *   每次都长得不一样。这一格是本项唯一的用户可见入口 —— 各 App 的删除按钮只负责
  *   「移入回收站」，能不能捞回来由这里统一说清（含捞不回来的原因）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
+import { showPhoneConfirm, showPhoneAlert, showPhonePrompt } from '../../config/phone-dialog.js';
 import { getAwayMode } from '../../config/away-mode.js';
 import { mountUsagePattern } from './usage-pattern-section.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
@@ -5475,65 +5476,8 @@ export class SettingsApp {
             .replace(/'/g, '&#39;');
     }
 
-    _showPhoneConfirm({
-        title = '确认操作',
-        message = '',
-        confirmText = '确定',
-        cancelText = '取消',
-        danger = false,
-        host: preferredHost = null
-    } = {}) {
-        return new Promise((resolve) => {
-            const hasCancel = String(cancelText || '').trim() !== '';
-            const host = preferredHost
-                || document.querySelector('.phone-view-current .settings-app')
-                || document.querySelector('.settings-app')
-                || document.querySelector('.phone-view-current')
-                || document.body;
-            host.querySelector?.('#settings-phone-confirm-modal')?.remove();
-            if (host !== document.body && window.getComputedStyle(host).position === 'static') {
-                host.style.position = 'relative';
-            }
-
-            const overlay = document.createElement('div');
-            overlay.id = 'settings-phone-confirm-modal';
-            overlay.style.cssText = [
-                'position:absolute',
-                'inset:0',
-                'z-index:10040',
-                'display:flex',
-                'align-items:center',
-                'justify-content:center',
-                'padding:16px',
-                'box-sizing:border-box',
-                'background:rgba(0,0,0,0.34)',
-                'backdrop-filter:blur(8px)',
-                '-webkit-backdrop-filter:blur(8px)'
-            ].join(';');
-            overlay.innerHTML = `
-                <div role="dialog" aria-modal="true" style="width:100%; max-width:270px; background:rgba(255,255,255,0.92); color:#111; border-radius:14px; overflow:hidden; box-shadow:0 14px 34px rgba(0,0,0,0.24);">
-                    <div style="padding:16px 16px 10px; text-align:center;">
-                        <div style="font-size:15px; font-weight:700; line-height:1.35;">${this._escapeHtml(title)}</div>
-                        <div style="font-size:12px; color:#555; line-height:1.55; margin-top:8px;">${this._escapeHtml(message)}</div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:${hasCancel ? '1fr 1fr' : '1fr'}; border-top:1px solid rgba(0,0,0,0.08);">
-                        ${hasCancel ? `<button type="button" data-action="cancel" style="height:42px; border:none; border-right:1px solid rgba(0,0,0,0.08); background:transparent; color:#333; font-size:14px; cursor:pointer;">${this._escapeHtml(cancelText)}</button>` : ''}
-                        <button type="button" data-action="confirm" style="height:42px; border:none; background:transparent; color:${danger ? '#d93025' : '#007aff'}; font-size:14px; font-weight:700; cursor:pointer;">${this._escapeHtml(confirmText)}</button>
-                    </div>
-                </div>
-            `;
-
-            const close = (value) => {
-                overlay.remove();
-                resolve(value);
-            };
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) close(false);
-            });
-            if (hasCancel) overlay.querySelector('[data-action="cancel"]')?.addEventListener('click', () => close(false));
-            overlay.querySelector('[data-action="confirm"]')?.addEventListener('click', () => close(true));
-            host.appendChild(overlay);
-        });
+    _showPhoneConfirm(opts = {}) {
+        return showPhoneConfirm(opts);
     }
 
     _extractLastAssistantRawText(context) {
@@ -5667,18 +5611,18 @@ export class SettingsApp {
                 : null;
 
             if (!context?.chat?.length) {
-                alert('❌ 聊天记录为空，无法诊断');
+                showPhoneAlert('❌ 聊天记录为空，无法诊断');
                 return;
             }
 
             const raw = this._extractLastAssistantRawText(context);
             if (!raw.trim()) {
-                alert('❌ 未找到可诊断的 AI 回复');
+                showPhoneAlert('❌ 未找到可诊断的 AI 回复');
                 return;
             }
 
             if (!raw.includes('<') && !raw.includes('[')) {
-                alert('ℹ️ 最后一条 AI 回复未检测到明显标签格式，无需诊断');
+                showPhoneAlert('ℹ️ 最后一条 AI 回复未检测到明显标签格式，无需诊断');
                 return;
             }
 
@@ -5711,7 +5655,7 @@ export class SettingsApp {
             const hasWhitelist = Array.isArray(parsed.whitelist) && parsed.whitelist.length > 0;
 
             if (!hasBlacklist && !hasWhitelist) {
-                alert('✅ AI 诊断完毕：当前文本无需新增过滤标签');
+                showPhoneAlert('✅ AI 诊断完毕：当前文本无需新增过滤标签');
                 return;
             }
 
@@ -5721,7 +5665,7 @@ export class SettingsApp {
             if (hasWhitelist) confirmText += `白名单建议：${parsed.whitelist.join(', ')}\n`;
             confirmText += '\n是否应用到输入框并保存？';
 
-            if (!confirm(confirmText)) return;
+            if (!await showPhoneConfirm(confirmText)) return;
 
             const blacklistValue = hasBlacklist ? parsed.blacklist.join(', ') : '';
             const whitelistValue = hasWhitelist ? parsed.whitelist.join(', ') : '';
@@ -5743,10 +5687,10 @@ export class SettingsApp {
                 if (whitelistInput) whitelistInput.style.background = '';
             }, 900);
 
-            alert('✅ 标签规则已更新并保存');
+            showPhoneAlert('✅ 标签规则已更新并保存');
         } catch (error) {
             console.error('标签 AI 诊断失败:', error);
-            alert('❌ AI 诊断失败：' + (error?.message || error));
+            showPhoneAlert('❌ AI 诊断失败：' + (error?.message || error));
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -6179,7 +6123,7 @@ export class SettingsApp {
                 await applyWallpaperPath(serverUrl, '壁纸已上传并保留到相册 App');
             } catch (err) {
                 if (err.message !== '用户取消') {
-                    alert('❌ 上传失败：' + formatImageUploadError(err));
+                    showPhoneAlert('❌ 上传失败：' + formatImageUploadError(err));
                 }
             }
         });
@@ -6273,7 +6217,7 @@ export class SettingsApp {
                 await applyCardTimeImagePath(serverUrl, '时间卡片图片已上传并保留到相册 App');
             } catch (err) {
                 if (err.message !== '用户取消') {
-                    alert('❌ 上传失败：' + formatImageUploadError(err));
+                    showPhoneAlert('❌ 上传失败：' + formatImageUploadError(err));
                 }
             }
         });
@@ -6337,7 +6281,7 @@ export class SettingsApp {
         });
 
         document.getElementById('clear-card-layout-css')?.addEventListener('click', async () => {
-            const ok = confirm('确定清空卡片式首页 CSS 吗？');
+            const ok = await showPhoneConfirm('确定清空卡片式首页 CSS 吗？');
             if (!ok) return;
             const textarea = document.getElementById('phone-card-layout-custom-css');
             if (textarea) textarea.value = '';
@@ -6465,13 +6409,13 @@ export class SettingsApp {
                         detail: { appId, icon: serverUrl }
                     }));
 
-                    alert('✅ 图标上传成功！');
+                    showPhoneAlert('✅ 图标上传成功！');
 
                     // 重新渲染设置页面（保持在设置页面）
                     this.render();
                 } catch (err) {
                     if (err.message !== '用户取消') {
-                        alert('❌ 上传失败：' + formatImageUploadError(err));
+                        showPhoneAlert('❌ 上传失败：' + formatImageUploadError(err));
                     }
                 }
             });
@@ -6479,7 +6423,7 @@ export class SettingsApp {
 
         // 一键恢复默认APP图标 + 清理上传文件
         document.getElementById('reset-app-icons-and-cleanup')?.addEventListener('click', async () => {
-            const ok = confirm('确定恢复默认 APP 图标并清理已上传图标文件吗？\n\n该操作会清空当前自定义图标配置，且尝试删除对应 /backgrounds 文件。');
+            const ok = await showPhoneConfirm('确定恢复默认 APP 图标并清理已上传图标文件吗？\n\n该操作会清空当前自定义图标配置，且尝试删除对应 /backgrounds 文件。');
             if (!ok) return;
 
             const btn = document.getElementById('reset-app-icons-and-cleanup');
@@ -6500,7 +6444,7 @@ export class SettingsApp {
                     summary.push(`⚠️ ${result.fileDeleteFailed} 个文件未能自动删除（可能是当前酒馆版本不支持删除接口），但图标引用已清空。`);
                 }
 
-                alert(summary.join('\n'));
+                showPhoneAlert(summary.join('\n'));
 
                 // 通知主屏幕刷新图标（重置后需要立即生效）
                 window.dispatchEvent(new CustomEvent('phone:updateAppIcon', {
@@ -6509,7 +6453,7 @@ export class SettingsApp {
 
                 this.render();
             } catch (e) {
-                alert('❌ 恢复失败：' + (e?.message || e));
+                showPhoneAlert('❌ 恢复失败：' + (e?.message || e));
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = oldText || '恢复默认图标并清理上传';
@@ -6716,7 +6660,7 @@ export class SettingsApp {
 
         // 一键更新所有提示词（恢复默认）
         document.getElementById('setting-reset-all-prompts')?.addEventListener('click', async (e) => {
-            const ok = confirm('确定将所有 APP 默认提示词一键同步为最新版本吗？\n\n若某项当前使用自定义预设，更新后会自动切回该自定义预设；已保存的自定义预设不会被覆盖。');
+            const ok = await showPhoneConfirm('确定将所有 APP 默认提示词一键同步为最新版本吗？\n\n若某项当前使用自定义预设，更新后会自动切回该自定义预设；已保存的自定义预设不会被覆盖。');
             if (!ok) return;
 
             const btn = e.currentTarget;
@@ -6728,7 +6672,7 @@ export class SettingsApp {
                 }
                 const promptManager = window.VirtualPhone?.promptManager;
                 if (!promptManager) {
-                    alert('❌ 提示词管理器未初始化');
+                    showPhoneAlert('❌ 提示词管理器未初始化');
                     return;
                 }
 
@@ -6756,10 +6700,10 @@ export class SettingsApp {
                         ? `当前正在使用的 ${restoredCount} 个自定义预设已自动保留并继续生效。`
                         : '当前使用默认预设的项目已切换到最新官方默认版本。'
                 ];
-                alert(`✅ 已一键同步默认提示词为最新版本\n\n${details.join('\n')}\n\n已保存的自定义预设不会被覆盖。`);
+                showPhoneAlert(`✅ 已一键同步默认提示词为最新版本\n\n${details.join('\n')}\n\n已保存的自定义预设不会被覆盖。`);
             } catch (e) {
                 console.error('❌ 一键更新所有提示词失败:', e);
-                alert('❌ 更新失败：' + (e?.message || e));
+                showPhoneAlert('❌ 更新失败：' + (e?.message || e));
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -8689,7 +8633,7 @@ export class SettingsApp {
             const groups = getNovelAIVibeGroups();
             const target = groups.find(group => group.id === activeId);
             if (!target) return;
-            if (!confirm(`删除 Vibe 组「${target.name}」？`)) return;
+            if (!await showPhoneConfirm(`删除 Vibe 组「${target.name}」？`)) return;
             const nextGroups = groups.filter(group => group.id !== activeId);
             await this._saveNovelAIVibeGroups(nextGroups);
             await this.storage.set('phone-image-novelai-active-vibe-group', '');
@@ -9036,7 +8980,7 @@ export class SettingsApp {
             const presets = this._getOpenAIImagePresets(appKey);
             const target = presets.find(preset => preset.id === activeId);
             if (!target) return;
-            if (!confirm(`删除 GPT 生图预设「${target.name}」？`)) return;
+            if (!await showPhoneConfirm(`删除 GPT 生图预设「${target.name}」？`)) return;
 
             const nextPresets = presets.filter(preset => preset.id !== activeId);
             await this._saveOpenAIImagePresets(appKey, nextPresets);
@@ -9050,7 +8994,7 @@ export class SettingsApp {
             const presetMap = this._getOpenAIImagePresetMap();
             const scopes = Array.from(new Set(this._getImagePromptAppDefs().map(def => this._normalizeImagePresetScope(def.id))));
             const totalCount = scopes.reduce((sum, scope) => sum + this._getOpenAIImagePresets(scope).length, 0);
-            if (totalCount > 0 && !confirm(`确定删除全部 ${totalCount} 套 GPT 生图预设吗？\n\n会清空蜜语、微信/日记、微博的 GPT 预设和当前选择；NAI 预设、API Key、模型和连接设置不会删除。`)) return;
+            if (totalCount > 0 && !await showPhoneConfirm(`确定删除全部 ${totalCount} 套 GPT 生图预设吗？\n\n会清空蜜语、微信/日记、微博的 GPT 预设和当前选择；NAI 预设、API Key、模型和连接设置不会删除。`)) return;
 
             scopes.forEach(scope => {
                 presetMap[scope] = [];
@@ -9242,7 +9186,7 @@ export class SettingsApp {
             const presets = this._getImagePromptPresets(appKey);
             const target = presets.find(preset => preset.id === activeId);
             if (!target) return;
-            if (!confirm(`删除生图提示词设定「${target.name}」？`)) return;
+            if (!await showPhoneConfirm(`删除生图提示词设定「${target.name}」？`)) return;
 
             const nextPresets = presets.filter(preset => preset.id !== activeId);
             await this._saveImagePromptPresets(appKey, nextPresets);
@@ -9274,7 +9218,7 @@ export class SettingsApp {
                 this.phoneShell?.showNotification?.('NAI 预设', '没有可删除的 NAI 预设，已恢复默认尺寸', '✅');
                 return;
             }
-            if (!confirm(`确定删除全部 ${totalCount} 套 NAI 生图预设吗？\n\n会清空蜜语、微信/日记、微博的 NAI 预设和当前选择，并恢复默认初始尺寸；API Key、模型和连接设置不会删除。`)) return;
+            if (!await showPhoneConfirm(`确定删除全部 ${totalCount} 套 NAI 生图预设吗？\n\n会清空蜜语、微信/日记、微博的 NAI 预设和当前选择，并恢复默认初始尺寸；API Key、模型和连接设置不会删除。`)) return;
 
             scopes.forEach(scope => {
                 presetMap[scope] = [];
@@ -9609,7 +9553,7 @@ export class SettingsApp {
             const workflows = this._getComfyUIWorkflows();
             const target = workflows.find(workflow => workflow.id === activeId);
             if (!target) return;
-            if (!confirm(`删除 ComfyUI 工作流「${target.name}」？`)) return;
+            if (!await showPhoneConfirm(`删除 ComfyUI 工作流「${target.name}」？`)) return;
 
             const nextWorkflows = workflows.filter(workflow => workflow.id !== activeId);
             await this._saveComfyUIWorkflows(nextWorkflows);
@@ -11142,7 +11086,7 @@ export class SettingsApp {
                 voiceLongPressTimer = setTimeout(async () => {
                     const selectedVal = ttsVoicePreset.value;
                     if (!selectedVal) return;
-                    if (!confirm(`删除历史音色「${selectedVal}」？`)) return;
+                    if (!await showPhoneConfirm(`删除历史音色「${selectedVal}」？`)) return;
                     let history = [];
                     try { history = JSON.parse(this.storage.get('phone-tts-voice-history') || '[]'); } catch(e) {}
                     history = history.filter(v => v !== selectedVal);
@@ -11184,7 +11128,7 @@ export class SettingsApp {
                     this.phoneShell.showNotification('提示', '请先选择或输入要删除的音色', '⚠️');
                     return;
                 }
-                if (!confirm(`确定删除音色「${currentVoice}」？`)) return;
+                if (!await showPhoneConfirm(`确定删除音色「${currentVoice}」？`)) return;
 
                 // 从历史列表移除
                 let history = [];
@@ -11216,7 +11160,7 @@ export class SettingsApp {
                     this.phoneShell.showNotification('提示', '请先选择或输入要删除的豆包音色', '⚠️');
                     return;
                 }
-                if (!confirm(`确定删除豆包音色「${currentVoice}」？`)) return;
+                if (!await showPhoneConfirm(`确定删除豆包音色「${currentVoice}」？`)) return;
 
                 let history = [];
                 try { history = JSON.parse(this.storage.get('phone-tts-volc-voice-history') || '[]'); } catch(e) {}
@@ -11238,19 +11182,37 @@ export class SettingsApp {
         }
 
         // 清空当前角色数据
-        document.getElementById('clear-current-data')?.addEventListener('click', () => {
-            if (confirm('确定清空当前角色的所有手机数据（含蜜语生成内容）？\n\n微信/微博等全局自定义 CSS 会保留。\n此操作不可恢复！')) {
+        document.getElementById('clear-current-data')?.addEventListener('click', async () => {
+            const ok = await showPhoneConfirm({
+                title: '清空当前角色数据',
+                message: '确定清空当前角色的所有手机数据（含蜜语生成内容）？\n\n微信/微博等全局自定义 CSS 会保留。\n此操作不可恢复！',
+                confirmText: '清空数据',
+                danger: true
+            });
+            if (ok) {
                 window.dispatchEvent(new CustomEvent('phone:clearCurrentData'));
-                alert('✅ 数据已清空！');
+                showPhoneAlert('✅ 数据已清空！');
             }
         });
         
         // 清空所有数据
-        document.getElementById('clear-all-data')?.addEventListener('click', () => {
-            if (confirm('⚠️ 警告！\n\n确定清空所有角色的手机数据（含蜜语生成内容）？\n此操作将删除所有聊天记录、消息、联系人，并恢复微信/微博自定义 CSS！\n\n此操作不可恢复！')) {
-                if (confirm('再次确认：真的要删除所有数据吗？')) {
+        document.getElementById('clear-all-data')?.addEventListener('click', async () => {
+            const first = await showPhoneConfirm({
+                title: '⚠️ 警告：清空全部角色数据',
+                message: '确定清空所有角色的手机数据（含蜜语生成内容）？\n此操作将删除所有聊天记录、消息、联系人，并恢复微信/微博自定义 CSS！\n\n此操作不可恢复！',
+                confirmText: '继续清空',
+                danger: true
+            });
+            if (first) {
+                const second = await showPhoneConfirm({
+                    title: '再次确认',
+                    message: '真的要删除所有数据吗？此操作彻底清空无法撤销！',
+                    confirmText: '彻底删除',
+                    danger: true
+                });
+                if (second) {
                     window.dispatchEvent(new CustomEvent('phone:clearAllData'));
-                    alert('✅ 所有数据已清空！');
+                    showPhoneAlert('✅ 所有数据已清空！');
                 }
             }
         });
@@ -11287,13 +11249,13 @@ export class SettingsApp {
                     if (dockAppIds.length > 1) {
                         dockAppIds.splice(index, 1);
                     } else {
-                        alert('⚠️ 至少需要保留1个快捷应用');
+                        showPhoneAlert('⚠️ 至少需要保留1个快捷应用');
                         return;
                     }
                 } else {
                     // 未选中，添加（最多4个）
                     if (dockAppIds.length >= 4) {
-                        alert('⚠️ 最多只能选择4个快捷应用');
+                        showPhoneAlert('⚠️ 最多只能选择4个快捷应用');
                         return;
                     }
                     dockAppIds.push(appId);
@@ -11626,13 +11588,13 @@ export class SettingsApp {
         const apiProfileSaveBtn = document.getElementById('phone-api-profile-save');
         if (apiProfileSaveBtn) {
             apiProfileSaveBtn.onclick = async () => {
-                const name = String(prompt('请输入新的 API 预设名称', '') || '').trim();
+                const name = String((await showPhonePrompt('请输入新的 API 预设名称', '')) || '').trim();
                 if (!name) return;
 
                 const config = readApiConfig();
                 const existingIdx = config.profiles.findIndex(p => p.name === name);
                 if (existingIdx >= 0) {
-                    alert(`预设“${name}”已存在。请换一个名称，或选择该预设后点“保存当前”。`);
+                    showPhoneAlert(`预设“${name}”已存在。请换一个名称，或选择该预设后点“保存当前”。`);
                     return;
                 }
 
@@ -11648,7 +11610,7 @@ export class SettingsApp {
                     const idx = saved.profiles.findIndex(p => p.name === name);
                     if (idx >= 0) select.value = String(idx);
                 }
-                alert('✅ API 预设已新建');
+                showPhoneAlert('✅ API 预设已新建');
             };
         }
 
@@ -11659,14 +11621,14 @@ export class SettingsApp {
                 const select = document.getElementById('phone-api-profile-select');
                 const idx = select ? parseInt(select.value, 10) : -1;
                 if (!Number.isInteger(idx) || idx < 0) {
-                    alert('请先选择一个要保存的预设；如果要创建新预设，请点“新建预设”。');
+                    showPhoneAlert('请先选择一个要保存的预设；如果要创建新预设，请点“新建预设”。');
                     return;
                 }
 
                 const config = readApiConfig();
                 const target = config.profiles[idx];
                 if (!target) return;
-                if (!confirm(`确定覆盖保存预设“${target.name}”吗？`)) return;
+                if (!await showPhoneConfirm(`确定覆盖保存预设“${target.name}”吗？`)) return;
 
                 const formConfig = collectConfigFromForm();
                 config.profiles[idx] = { ...target, ...formConfig, name: target.name };
@@ -11677,7 +11639,7 @@ export class SettingsApp {
                 renderAppRouteSelects(saved);
                 const nextSelect = document.getElementById('phone-api-profile-select');
                 if (nextSelect) nextSelect.value = String(idx);
-                alert('✅ 当前 API 预设已保存');
+                showPhoneAlert('✅ 当前 API 预设已保存');
             };
         }
 
@@ -11688,21 +11650,21 @@ export class SettingsApp {
                 const select = document.getElementById('phone-api-profile-select');
                 const idx = select ? parseInt(select.value, 10) : -1;
                 if (!Number.isInteger(idx) || idx < 0) {
-                    alert('请先选择一个预设');
+                    showPhoneAlert('请先选择一个预设');
                     return;
                 }
 
                 const config = readApiConfig();
                 const target = config.profiles[idx];
                 if (!target) return;
-                if (!confirm(`确定删除预设“${target.name}”吗？`)) return;
+                if (!await showPhoneConfirm(`确定删除预设“${target.name}”吗？`)) return;
 
                 config.profiles.splice(idx, 1);
                 if (config.activeProfileName === target.name) config.activeProfileName = '';
                 const saved = await saveApiConfig(config);
                 renderProfileSelect(saved);
                 renderAppRouteSelects(saved);
-                alert('✅ 预设已删除');
+                showPhoneAlert('✅ 预设已删除');
             };
         }
 
@@ -11724,7 +11686,7 @@ export class SettingsApp {
                 const saved = await saveApiConfig(config);
                 renderProfileSelect(saved);
                 renderAppRouteSelects(saved);
-                alert(Number.isInteger(idx) && idx >= 0
+                showPhoneAlert(Number.isInteger(idx) && idx >= 0
                     ? '✅ 手机专属 API 配置已保存，并已同步到当前选中预设。'
                     : '✅ 手机专属 API 配置已保存。');
             };
@@ -11764,12 +11726,12 @@ export class SettingsApp {
                     });
 
                     if (result.success) {
-                        alert('✅ API 连接成功！');
+                        showPhoneAlert('✅ API 连接成功！');
                     } else {
-                        alert('❌ 测试失败：\n' + result.error);
+                        showPhoneAlert('❌ 测试失败：\n' + result.error);
                     }
                 } catch (error) {
-                    alert('❌ 连接异常：\n' + error.message);
+                    showPhoneAlert('❌ 连接异常：\n' + error.message);
                 } finally {
                     apiTestBtn.innerText = originalText;
                     isTesting = false;
@@ -11982,10 +11944,10 @@ export class SettingsApp {
                     }
 
                     displayModelSelect(models);
-                    alert(`✅ 成功拉取 ${models.length} 个模型！请在下拉框中选择。`);
+                    showPhoneAlert(`✅ 成功拉取 ${models.length} 个模型！请在下拉框中选择。`);
                 } catch (error) {
                     const baseMsg = `❌ 拉取失败: ${error.message}`;
-                    alert(baseMsg + '\n\n您可以直接在下方输入框手动填写模型名。');
+                    showPhoneAlert(baseMsg + '\n\n您可以直接在下方输入框手动填写模型名。');
                 } finally {
                     apiFetchBtn.innerText = originalText;
                     isFetching = false;
@@ -12021,7 +11983,7 @@ export class SettingsApp {
                 : null;
 
             if (!context || !context.chat || context.chat.length === 0) {
-                alert('❌ 无法获取聊天记录');
+                showPhoneAlert('❌ 无法获取聊天记录');
                 return;
             }
 
@@ -12075,7 +12037,7 @@ export class SettingsApp {
                         const effectiveText = effectiveTime
                             ? `${effectiveTime.date || '未知'} ${effectiveTime.weekday || ''} ${effectiveTime.time || '未知'}`.trim()
                             : '未知';
-                        alert(
+                        showPhoneAlert(
                             '⚠️ 手机时间未回退\n\n' +
                             `正文时间：${extractedText}\n` +
                             `当前手机时间：${effectiveText}\n\n` +
@@ -12083,13 +12045,13 @@ export class SettingsApp {
                             '如需改回正文时间，请删除小手机里更晚时间的微信聊天记录后再同步。'
                         );
                     } else {
-                        alert(`✅ 时间已同步：${extractedText}`);
+                        showPhoneAlert(`✅ 时间已同步：${extractedText}`);
                     }
                 } else {
-                    alert('❌ 时间管理器未初始化');
+                    showPhoneAlert('❌ 时间管理器未初始化');
                 }
             } else {
-                alert(
+                showPhoneAlert(
                     '❌ 未能从正文中识别到可解析的时间格式\n\n' +
                     '可用示例：\n' +
                     '1) 417年11月7日|星期三|21:28\n' +
@@ -12102,7 +12064,7 @@ export class SettingsApp {
             }
         } catch (e) {
             console.error('❌ 时间同步失败:', e);
-            alert('❌ 时间同步失败：' + e.message);
+            showPhoneAlert('❌ 时间同步失败：' + e.message);
         }
     }
 

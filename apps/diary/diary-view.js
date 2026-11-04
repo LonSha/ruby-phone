@@ -1,3 +1,4 @@
+import { showPhoneConfirm, showPhoneAlert } from '../../config/phone-dialog.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
@@ -367,12 +368,12 @@ export class DiaryView {
 
         let longPressTimer = null;
         const deleteSelectedBtn = document.getElementById('diary-delete-selected');
-        if (deleteSelectedBtn) deleteSelectedBtn.onclick = () => {
+        if (deleteSelectedBtn) deleteSelectedBtn.onclick = async () => {
             const entries = this._sortEntries(this.app.diaryData.getEntries());
             const liveIds = new Set(entries.map(entry => String(entry.id)));
             const ids = Array.from(this.tocSelectedIds).map(id => String(id || '')).filter(id => liveIds.has(id));
             if (ids.length === 0) {
-                alert('请先勾选要删除的日记');
+                showPhoneAlert('请先勾选要删除的日记');
                 return;
             }
 
@@ -381,7 +382,7 @@ export class DiaryView {
                 ? `确定删除全部 ${entries.length} 篇日记吗？此操作不可恢复！`
                 : `确定删除已勾选的 ${ids.length} 篇日记吗？此操作不可恢复！`;
 
-            if (confirm(confirmText)) {
+            if (await showPhoneConfirm(confirmText)) {
                 if (isDeletingAll) {
                     this.app.diaryData.clearAllEntries();
                 } else {
@@ -415,7 +416,7 @@ export class DiaryView {
         const selectedIds = () => Array.from(this.tocSelectedIds);
         const ensureSelection = () => {
             if (this.tocSelectedIds.size > 0) return true;
-            alert('请先勾选日记');
+            showPhoneAlert('请先勾选日记');
             return false;
         };
         document.getElementById('diary-toc-select-all')?.addEventListener('click', () => {
@@ -522,9 +523,9 @@ export class DiaryView {
                 this._openEditDialog(editBtn.dataset.id);
             };
 
-            if (deleteBtn) deleteBtn.onclick = (e) => {
+            if (deleteBtn) deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                if (confirm('确定删除这篇日记吗？')) {
+                if (await showPhoneConfirm('确定删除这篇日记吗？')) {
                     this.app.diaryData.deleteEntry(deleteBtn.dataset.id);
                     this.render();
                 }
@@ -1129,9 +1130,9 @@ export class DiaryView {
                 try {
                     await this.app.diaryData.setCoverBg(base64);
                     this.render();
-                    alert('✅ 封面背景已成功上传到酒馆服务器');
+                    showPhoneAlert('✅ 封面背景已成功上传到酒馆服务器');
                 } catch (err) {
-                    alert('❌ 封面背景上传失败：' + (err?.message || err));
+                    showPhoneAlert('❌ 封面背景上传失败：' + (err?.message || err));
                 }
             }
         };
@@ -1146,9 +1147,9 @@ export class DiaryView {
                 try {
                     await this.app.diaryData.setTocBg(base64);
                     this.render();
-                    alert('✅ 目录背景已成功上传到酒馆服务器');
+                    showPhoneAlert('✅ 目录背景已成功上传到酒馆服务器');
                 } catch (err) {
-                    alert('❌ 目录背景上传失败：' + (err?.message || err));
+                    showPhoneAlert('❌ 目录背景上传失败：' + (err?.message || err));
                 }
             }
         };
@@ -1163,27 +1164,27 @@ export class DiaryView {
                 try {
                     await this.app.diaryData.setGlobalBg(base64);
                     this.render();
-                    alert('✅ 日记默认背景已成功上传到酒馆服务器');
+                    showPhoneAlert('✅ 日记默认背景已成功上传到酒馆服务器');
                 } catch (err) {
-                    alert('❌ 日记默认背景上传失败：' + (err?.message || err));
+                    showPhoneAlert('❌ 日记默认背景上传失败：' + (err?.message || err));
                 }
             }
         };
 
         const bgResetDefault = document.getElementById('diary-bg-reset-default');
         if (bgResetDefault) bgResetDefault.onclick = async () => {
-            if (!confirm('确定恢复默认日记背景，并清理已上传的封面、目录、日记背景文件吗？')) return;
+            if (!await showPhoneConfirm('确定恢复默认日记背景，并清理已上传的封面、目录、日记背景文件吗？')) return;
             try {
                 bgResetDefault.disabled = true;
                 bgResetDefault.textContent = '正在恢复...';
                 const result = await this.app.diaryData.resetDefaultBackgrounds();
                 result?.cleanup?.();
                 this.render();
-                alert(`✅ 已恢复默认背景，并开始清理 ${result?.cleanupCount || 0} 个上传文件`);
+                showPhoneAlert(`✅ 已恢复默认背景，并开始清理 ${result?.cleanupCount || 0} 个上传文件`);
             } catch (err) {
                 bgResetDefault.disabled = false;
                 bgResetDefault.textContent = '恢复默认背景并清理上传文件';
-                alert('❌ 恢复默认背景失败：' + (err?.message || err));
+                showPhoneAlert('❌ 恢复默认背景失败：' + (err?.message || err));
             }
         };
 
@@ -1241,8 +1242,8 @@ export class DiaryView {
             const start = parseInt(startInput?.value) || 0;
             const end = parseInt(endInput?.value) || 0;
 
-            if (start >= end) { alert('起始楼层必须小于结束楼层'); return; }
-            if (end - start < 2) { alert('楼层范围太小，至少需要2层'); return; }
+            if (start >= end) { showPhoneAlert('起始楼层必须小于结束楼层'); return; }
+            if (end - start < 2) { showPhoneAlert('楼层范围太小，至少需要2层'); return; }
 
             this.app.diaryData.stopBatch = false;
             const runToken = ++this._diaryManualRunToken;
@@ -1433,16 +1434,16 @@ export class DiaryView {
             if (pm?.prompts?.diary?.generate) {
                 try {
                     pm.updateActivePromptUserPreset?.('diary', 'generate', textarea.value) ?? pm.updatePrompt?.('diary', 'generate', textarea.value);
-                    alert('✅ 提示词已保存');
+                    showPhoneAlert('✅ 提示词已保存');
                 } catch (e) {
-                    alert(`⚠️ ${e?.message || '请先新增预设再保存'}`);
+                    showPhoneAlert(`⚠️ ${e?.message || '请先新增预设再保存'}`);
                 }
             }
         };
 
         const promptReset = document.getElementById('diary-s-prompt-reset');
-        if (promptReset) promptReset.onclick = () => {
-            if (!confirm('确定恢复为默认提示词？')) return;
+        if (promptReset) promptReset.onclick = async () => {
+            if (!await showPhoneConfirm('确定恢复为默认提示词？')) return;
             const pm = this._getPromptManager();
             if (pm) {
                 const defaultContent = pm.resetPromptToDefault?.('diary', 'generate')
@@ -1635,15 +1636,15 @@ export class DiaryView {
                 const sessionToken = captureSessionToken(this.app.storage);
                 try {
                     const saved = this.app.diaryData.updateEntryContent(entryId, submitted);
-                    if (saved !== true) { alert('保存失败，文字仍保留'); return; }
+                    if (saved !== true) { showPhoneAlert('保存失败，文字仍保留'); return; }
                     const receipt = await confirmEditOwner(this.app.storage, 'diary_entries',
                         (entries) => Array.isArray(entries) && entries.some(entry => entry?.id === entryId && entry.content === submitted));
-                    if (!receipt.saved) { alert('保存未确认，文字仍保留；请检查连接后重试'); return; }
+                    if (!receipt.saved) { showPhoneAlert('保存未确认，文字仍保留；请检查连接后重试'); return; }
                     await buffer?.settle(receipt, submitted);
                     if (!guardSessionWrite(this.app.storage, sessionToken, 'diary-edit-submit')
                         || this._editingEntryId !== entryId || document.getElementById('diary-edit-text') !== textarea
                         || textarea.value !== submitted) return;
-                } catch (err) { alert('保存失败：' + (err?.message || err)); return; }
+                } catch (err) { showPhoneAlert('保存失败：' + (err?.message || err)); return; }
                 } finally { if (this._pendingEditSave === pendingEdit) this._pendingEditSave = null; }
             }
             closeEditor();
@@ -1686,7 +1687,7 @@ export class DiaryView {
             const textarea = document.getElementById('diary-new-text');
             const content = String(textarea?.value || '').trim();
             if (!content) {
-                alert('请先输入日记内容');
+                showPhoneAlert('请先输入日记内容');
                 return;
             }
 
@@ -1707,7 +1708,7 @@ export class DiaryView {
                     (entries) => Array.isArray(entries) && entries.some(item => item?.id === entry.id && item.content === content));
                 if (!receipt.saved) {
                     if (this._pendingNewEntryConfirmation?.entry?.id === entry.id) this._pendingNewEntryConfirmation.inFlight = false;
-                    alert('保存未确认，文字仍保留；请检查连接后重试'); return;
+                    showPhoneAlert('保存未确认，文字仍保留；请检查连接后重试'); return;
                 }
                 await buffer?.settle(receipt, submitted);
                 const completed = this._pendingNewEntryConfirmation;
@@ -1722,7 +1723,7 @@ export class DiaryView {
                 this.isBackNav = true;
                 this.render();
             } catch (err) {
-                alert('保存失败：' + (err?.message || err));
+                showPhoneAlert('保存失败：' + (err?.message || err));
             }
         };
     }
@@ -1771,20 +1772,20 @@ export class DiaryView {
             const file = fileInput.files?.[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = () => {
+            reader.onload = async () => {
                 fileInput.value = '';
                 const content = String(reader.result || '').trim();
                 if (!content) {
-                    alert('文件内容为空');
+                    showPhoneAlert('文件内容为空');
                     return;
                 }
 
                 const diaries = this.app.diaryData.parseImportedDiaries(content);
                 if (diaries.length === 0) {
-                    alert('没有识别到可导入的日记');
+                    showPhoneAlert('没有识别到可导入的日记');
                     return;
                 }
-                if (!confirm(`已识别 ${diaries.length} 篇日记，确认直接导入吗？`)) return;
+                if (!await showPhoneConfirm(`已识别 ${diaries.length} 篇日记，确认直接导入吗？`)) return;
 
                 try {
                     const imported = this.app.diaryData.importEntriesFromText(content);
@@ -1795,11 +1796,11 @@ export class DiaryView {
                     const shell = window.VirtualPhone?.phoneShell || this.app.phoneShell;
                     shell?.showNotification('导入完成', `已导入 ${imported.length} 篇日记`, '✅');
                 } catch (err) {
-                    alert('导入失败：' + (err?.message || err));
+                    showPhoneAlert('导入失败：' + (err?.message || err));
                 }
             };
             reader.onerror = () => {
-                alert('读取文件失败');
+                showPhoneAlert('读取文件失败');
                 fileInput.value = '';
             };
             reader.readAsText(file, 'UTF-8');
@@ -1816,16 +1817,16 @@ export class DiaryView {
         if (saveBtn) saveBtn.onclick = async () => {
             const content = String(textarea?.value || '').trim();
             if (!content) {
-                alert('请先粘贴要导入的日记');
+                showPhoneAlert('请先粘贴要导入的日记');
                 return;
             }
 
             const diaries = this.app.diaryData.parseImportedDiaries(content);
             if (diaries.length === 0) {
-                alert('没有识别到可导入的日记');
+                showPhoneAlert('没有识别到可导入的日记');
                 return;
             }
-            if (!confirm(`确认导入 ${diaries.length} 篇日记吗？`)) return;
+            if (!await showPhoneConfirm(`确认导入 ${diaries.length} 篇日记吗？`)) return;
 
             try {
                 const imported = this.app.diaryData.importEntriesFromText(content);
@@ -1836,7 +1837,7 @@ export class DiaryView {
                 const shell = window.VirtualPhone?.phoneShell || this.app.phoneShell;
                 shell?.showNotification('导入完成', `已导入 ${imported.length} 篇日记`, '✅');
             } catch (err) {
-                alert('导入失败：' + (err?.message || err));
+                showPhoneAlert('导入失败：' + (err?.message || err));
             }
         };
 

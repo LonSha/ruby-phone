@@ -55,7 +55,7 @@
     "check_chain_len": 20
   },
   "tests": {
-    "test_files": 379,
+    "test_files": 380,
     "audit_dir_exists": true,
     "audit_files": 27
   },
@@ -112,7 +112,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 377,
+        "suite_files": 378,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },

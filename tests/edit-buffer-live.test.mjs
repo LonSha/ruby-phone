@@ -384,7 +384,7 @@ test('H3 日记：编辑槽按条目分、新建槽独立；保存失败弹明�
   /* 保存失败：必须 `saved !== true` 判、必须有可读提示、必须 return（不许走 closeEditor 把页面关掉）。 */
   const saveBody = diarySrc.slice(diarySrc.indexOf('if (saveBtn) saveBtn.onclick'), diarySrc.indexOf('_bindNewEntryEvents()'));
   assert.ok(saveBody.includes('const saved = this.app.diaryData.updateEntryContent('), '必须读真写口回执');
-  assert.ok(saveBody.includes("if (saved !== true) { alert('保存失败，文字仍保留'); return; }"),
+  assert.ok(saveBody.includes("if (saved !== true) { showPhoneAlert('保存失败，文字仍保留'); return; }") || saveBody.includes("if (saved !== true) { alert('保存失败，文字仍保留'); return; }"),
     '失败必须给明话并留在页面（关掉页面 = 文字没了）');
   assert.equal(saveBody.indexOf('closeEditor();') > saveBody.indexOf('if (saved !== true)'), true,
     'closeEditor 只许落在成功之后');
@@ -416,7 +416,7 @@ test('I0 ★★★ 阳性对照：未破坏时五条签名必须全为真（否�
   assert.ok(bindSrc.includes('|| entries[target]?.text !== submittedText'), 'settle 必须比对文字');
   assert.ok(bindSrc.includes('if (!current()) return false;'), 'capture/settle 必须先过会话栅栏');
   assert.ok(bindSrc.includes("if (book?.schema !== 2 || book.chatId !== token.id"), '读侧必须核会话身份');
-  assert.ok(diarySrc.includes("alert('保存失败，文字仍保留')"), '日记失败必须留明话');
+  assert.ok(diarySrc.includes("showPhoneAlert('保存失败，文字仍保留')") || diarySrc.includes("alert('保存失败，文字仍保留')"), '日记失败必须留明话');
   assert.ok(chatSrc.includes('if (this._inputBufferScope !== scope)'), '聊天实例态必须分槽');
 });
 
@@ -442,10 +442,11 @@ test('I3 ★★★ 破坏「读侧核会话身份」⇒ 同款判据必转红（
 });
 
 test('I4 ★★★ 破坏「日记保存失败留明话」⇒ 同款判据必转红（静默关页=文字没了）', () => {
-  const broken = breakOnce(diarySrc, "if (saved !== true) { alert('保存失败，文字仍保留'); return; }",
+  const alertStr = diarySrc.includes("showPhoneAlert('保存失败，文字仍保留')") ? "showPhoneAlert('保存失败，文字仍保留')" : "alert('保存失败，文字仍保留')";
+  const broken = breakOnce(diarySrc, `if (saved !== true) { ${alertStr}; return; }`,
     "if (saved !== true) { }", 'i4');
-  assert.equal(broken.includes("alert('保存失败，文字仍保留')"), false, '破坏副本：已不留明话');
-  assert.ok(diarySrc.includes("alert('保存失败，文字仍保留')"), '原版必须留');
+  assert.equal(broken.includes(alertStr), false, '破坏副本：已不留明话');
+  assert.ok(diarySrc.includes(alertStr), '原版必须留');
 });
 
 test('I5 聊天仅在确认后清理且按提交快照匹配', () => {
