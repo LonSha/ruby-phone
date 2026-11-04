@@ -5240,6 +5240,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             if (!root || !root.dataset) return { ok: false, why: 'no-documentElement' };
             root.dataset.axLevel = String(state.level);
             root.dataset.axTheme = String(state.theme);
+            root.dataset.theme = String(state.theme);
             if (state.compact) root.dataset.axCompact = '1';
             else { try { delete root.dataset.axCompact; } catch (_e) { root.removeAttribute('data-ax-compact'); } }
             return { ok: true, why: '' };

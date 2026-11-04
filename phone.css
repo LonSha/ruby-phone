@@ -36,6 +36,29 @@
     --rp-z-modal: 10000;
     --rp-z-toast: 100000;
     --rp-z-max: 2147483646;
+}
+
+/* ========================================================
+   [U3] 暗色主题设计 token 映射表
+   当 html[data-theme="dark"] 或 html[data-ax-theme="dark"] 时，
+   将灰阶 slate 变量反转映射，实现系统级暗色模式。
+   ======================================================== */
+html[data-theme="dark"],
+html[data-ax-theme="dark"] {
+    --rp-slate-50: #020617;
+    --rp-slate-100: #0f172a;
+    --rp-slate-200: #1e293b;
+    --rp-slate-300: #334155;
+    --rp-slate-400: #475569;
+    --rp-slate-500: #64748b;
+    --rp-slate-600: #94a3b8;
+    --rp-slate-700: #cbd5e1;
+    --rp-slate-800: #e2e8f0;
+    --rp-slate-900: #f1f5f9;
+    --rp-slate-950: #f8fafc;
+}
+
+:root {
     /* 🔥 新版：统一的全局文字颜色 */
     --phone-global-text: #000000;
     --phone-frame-color: #1a1a1a;
@@ -21355,6 +21378,13 @@ html[data-bg] .phone-screen *::after {
     html:not([data-motion]) .diary-generating-spinner {
         animation: none !important;
     }
+    html:not([data-motion]) .phone-screen *,
+    html:not([data-motion]) .phone-screen *::before,
+    html:not([data-motion]) .phone-screen *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
 }
 
 /* ④ 静止档：连状态类动画与过渡一起停（用户显式选的，最彻底的一档） */
@@ -22470,13 +22500,13 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 .battery-icon[data-status="threw"] { opacity: .75; }
 .battery-icon[data-status="missing"] .battery-body,
 .battery-icon[data-status="threw"] .battery-body {
-    border-color: #999 !important;
-    background: rgba(255,255,255,.4) !important;
+    border-color: #999;
+    background: rgba(255,255,255,.4);
 }
 .battery-icon[data-status="missing"] .battery-text,
 .battery-icon[data-status="threw"] .battery-text {
     font-size: 9px;
-    color: #888 !important;
+    color: #888;
 }
 /* 设置页三域读数：读不到那两档左侧加一条色带，一眼能分「缺失」与「读取失败」。 */
 .yzp-settings-device-face .yzp-device-face-row {
