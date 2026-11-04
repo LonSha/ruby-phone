@@ -432,8 +432,13 @@ function mutate(tag, edits) {
 }
 /** 一条「1200 楼 + 一条可跳转日记」的宿主：既测得到末楼，也测得到分组/跳转。 */
 function mkStorage(extra = {}) {
+    /* [R14-O2] 日记条目必须带 **id**：v4.119.0（R14-O3）给日记源加了
+     *   「没 id 就是死链，直接不收」的前置检查。夹具此前不带 id，
+     *   于是 C1 的 `quickHits` 自那一刻起恒为 0 —— 快速档与全历史档的
+     *   「分流」契约本体没坏，坏的是「可判的命中不存在」。
+     *   这是夹具跟上真实契约，不是放宽判据。 */
     const m = new Map(Object.entries(Object.assign({
-        diary_entries: [{ title: '日记标题', date: '9月1日', content: '日记正文独有词', author: '我', createdAt: 1758000000000 }]
+        diary_entries: [{ id: 'd-v3170', title: '日记标题', date: '9月1日', content: '日记正文独有词', author: '我', createdAt: 1758000000000 }]
     }, extra)));
     return { get: (k, d = null) => (m.has(k) ? m.get(k) : d), set: (k, v) => m.set(k, v), remove: (k) => m.delete(k), _m: m };
 }

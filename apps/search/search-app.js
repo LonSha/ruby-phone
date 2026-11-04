@@ -531,8 +531,27 @@ export class SearchApp {
                 this.view._vague = null;
                 this.view._vagueKw = '';
                 this.view._vagueOpen = false;
+                /* [v4.121.0 · R14-O2] **视图侧那一格扫描记账也要丢**。
+                 *   此前漏了它，于是换会话后留下一个可被复现的窗口：
+                 *     ① A 会话起了一轮全历史扫描，视图 `_scanning = {gen: g, kw: '咖啡'}`；
+                 *     ② 换到 B 会话，App 的 `_scanGen++` ⇒ A 那轮回来时 `_scanGen !== gen` 成立，
+                 *        被 App 侧正确判成 cancelled —— 这一道是好的；
+                 *     ③ 但 `renderResults` 有**两道**关：先 `s.gen !== gen`，再 `_keyword.trim() !== kw`。
+                 *        视图 `_scanning` 还停在 `{gen: g}`，第①道关两边都是 g ⇒ **通过**；
+                 *     ④ 用户在 B 会话里恰好又搜了同样的词，第②道关也通过 ⇒
+                 *        A 会话的命中被写进 B 会话的面板。
+                 *   判据（E 组）钉的就是这个窗口：换会话后**旧的视图记账必须不在**。 */
+                this.view._scanning = null;
             }
         } catch (_e) { /* 视图不在也没什么可丢 */ }
+        /* [v4.121.0 · R14-O2] Spotlight 内核是**惰性单例**，它的索引是累加的
+         *   （`items` / `index` 只增不删，见内核 `indexEntities` 的注）——
+         *   不在这里整份清掉，上一段会话的联系人 / 会话预览 / 日记正文
+         *   会一直留在倒排表里，新会话照样搜得到。
+         *   为什么 reset 而不是「靠重灌覆盖」：重灌只能覆盖**这一轮又出现的 id**，
+         *   上一段独有的 id 这一轮根本不会出现在 `_spotlightSources()` 里，
+         *   于是没有任何一次写入会碰它们 —— 那是「只错结果、不报错」的典型形态。 */
+        try { if (this._spotlightEngine) this._spotlightEngine.reset(); } catch (_e) { /* 单例不在就没残留 */ }
     }
     /** 本轮代际的「取消」谓言（交给引擎的 `isCancelled`） */
     cancelToken(gen) {

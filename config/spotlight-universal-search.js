@@ -23,31 +23,91 @@ export class SpotlightUniversalSearch {
     constructor(opts = {}) {
         this.index = new Map(); // token -> Set(itemId)
         this.items = new Map(); // itemId -> item
+        /* [v4.121.0 · R14-O2] domain -> Set(fullId)。**倒排表的反向账**：
+         *   没有这本账时，删掉/替换一个域只能全表扫 token 的 Set；
+         *   更要命的是——此前**根本没有删**这件事（见下方 indexEntities 的注）。 */
+        this._domainIds = new Map();
         this.searchHistory = [];
         this.maxHistory = opts.maxHistory || 20;
     }
 
     /**
-     * 批量导入或更新可搜索实体
+     * [v4.121.0 · R14-O2] 清掉一个域的全部索引条目（倒排表与正文表一起清）。
+     *
+     * 【为什么必须按域清而不是「再灌一遍就覆盖了」】
+     *   本类的 `items` / `index` 都是 **Map/Set 累加**结构，同名 key 会被覆盖，
+     *   但**这一轮没再出现的 id 会原地留着**。于是发生过这件事（探针实测）：
+     *     ① A 会话灌入 `WECHAT:c1（内容「秘密片段」）`；
+     *     ② 换到 B 会话，`_spotlightSources()` 按新会话的 `wechat_data` 重新取数，
+     *        自然取不到 c1 —— 于是**没有任何一次写入会碰 c1**；
+     *     ③ B 会话里搜「秘密片段」仍然命中 c1 ⇒ 上一段会话的片段泄漏到新会话，
+     *        不报错、不抛异常，只是「搜得到不该搜到的东西」。
+     *   同一根因的第二个面孔：用户删掉一条日记后，它在搜索里**永远搜得到**。
+     *   两个面孔都由「按域替换」一次治掉 —— 搜索面本来就是**快照**，不是增量日志。
+     *
+     * @param {string} domain 要清空的领域；不存在时静默无操作
+     * @returns {number} 清掉的条目数
+     */
+    clearDomain(domain) {
+        const dom = String(domain || '');
+        const ids = this._domainIds.get(dom);
+        if (!ids || !ids.size) { this._domainIds.delete(dom); return 0; }
+        for (const fullId of ids) this.items.delete(fullId);
+        /* 倒排表逆清理：每个 token 的命中集里摘掉这几个 id，摘空的 token 连键一起删
+         *   （留着空 Set 会让「这个词在不在索引里」永远答「在」，白占内存也不再可判）。 */
+        for (const [token, bucket] of this.index) {
+            for (const fullId of ids) bucket.delete(fullId);
+            if (!bucket.size) this.index.delete(token);
+        }
+        const n = ids.size;
+        this._domainIds.delete(dom);
+        return n;
+    }
+
+    /**
+     * [v4.121.0 · R14-O2] 整份清空（换会话的唯一出口）。
+     *   连 `searchHistory` 一起清：它是**上一段会话**的用户输入痕迹，
+     *   留着不显示时无害，一旦哪天被摆上面板就是同一类泄漏。
+     * @returns {number} 清掉的条目数
+     */
+    reset() {
+        const n = this.items.size;
+        this.index.clear();
+        this.items.clear();
+        this._domainIds.clear();
+        this.searchHistory = [];
+        return n;
+    }
+
+    /**
+     * 批量导入可搜索实体（**按域整份替换**，不是增量追加）。
+     *
      * @param {string} domain 实体领域
      * @param {Array<Object>} entities 待索引列表 [{ id, title, subtitle, content, deepLink }]
      */
     indexEntities(domain, entities = []) {
+        const dom = String(domain || '');
+        /* [v4.121.0 · R14-O2] 先清这一域的旧条目 —— 本方法是「这一域**现在**长这样」，
+         *   不是「再补几条」。旧语义（只增不删）会让上面 clearDomain 注释里
+         *   那两张面孔同时成立，而调用点每次都是拿全量重灌，本就期待替换。 */
+        this.clearDomain(dom);
+        const bucket = new Set();
         for (const ent of entities) {
             if (!ent || !ent.id) continue;
-            const fullId = `${domain}:${ent.id}`;
+            const fullId = `${dom}:${ent.id}`;
             const searchableText = `${ent.title || ''} ${ent.subtitle || ''} ${ent.content || ''}`.toLowerCase();
             
             const record = {
                 id: fullId,
                 rawId: ent.id,
-                domain,
+                domain: dom,
                 title: ent.title,
                 subtitle: ent.subtitle || '',
                 content: ent.content || '',
                 deepLink: ent.deepLink || null
             };
             this.items.set(fullId, record);
+            bucket.add(fullId);
 
             // 建立轻量 bigram + 分词倒排
             const tokens = this._tokenize(searchableText);
@@ -56,6 +116,11 @@ export class SpotlightUniversalSearch {
                 this.index.get(t).add(fullId);
             }
         }
+        /* 这一域「现在」的条目账（下次 clearDomain 就照它逆清理）。
+         *   空域也照落一格空 Set：它是「这一域刚灌过、现在 0 条」的凭据 ——
+         *   `clearDomain` 的返回值与「这域从没灌过」在处置上一样（都是 0 条可清），
+         *   但对账时这两件事必须分得开。 */
+        this._domainIds.set(dom, bucket);
     }
 
     /**
