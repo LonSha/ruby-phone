@@ -1,0 +1,482 @@
+{
+ "apps/accessdesk/accessdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/accounting/accounting.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/achievement/achievement.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 2
+ },
+ "apps/affairs/affairs.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/album/album-image-picker.css": {
+  "slate": 0,
+  "important": 105,
+  "zindex": 3
+ },
+ "apps/album/album-voice.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/album/album.css": {
+  "slate": 0,
+  "important": 107,
+  "zindex": 9
+ },
+ "apps/annidate/annidate.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/archive/archive.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/asset/asset.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/avatarframe/avatarframe.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/backupdesk/backupdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/bilibili/bili.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/block/block.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/calendar/calendar.css": {
+  "slate": 0,
+  "important": 766,
+  "zindex": 7
+ },
+ "apps/caphealth/caphealth.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/cardtable/cardtable.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/chars/chars.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/cheat/cheat.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/clock/clock.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/comms/comms.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/cotdesk/cotdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/creationdesk/creationdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/date/date.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/diagdesk/diagdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/diagnose/diagnose.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/diary/diary-today.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/diary/diary.css": {
+  "slate": 0,
+  "important": 49,
+  "zindex": 16
+ },
+ "apps/dirtytalk/dt.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/doujin/doujin.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/focus/focus.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/freehome/freehome.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/games/board/board.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/games/catbox/catbox.css": {
+  "slate": 0,
+  "important": 15,
+  "zindex": 19
+ },
+ "apps/games/game2048/game2048.css": {
+  "slate": 0,
+  "important": 4,
+  "zindex": 0
+ },
+ "apps/games/games.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/games/guesswhat/guesswhat.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/games/ludo/ludo.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/games/mystery/mystery.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/games/poker/poker.css": {
+  "slate": 0,
+  "important": 37,
+  "zindex": 9
+ },
+ "apps/games/scriptkill/scriptkill.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/games/seaturtle/seaturtle.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/games/sudoku/sudoku.css": {
+  "slate": 0,
+  "important": 4,
+  "zindex": 2
+ },
+ "apps/games/undercover/undercover.css": {
+  "slate": 0,
+  "important": 19,
+  "zindex": 15
+ },
+ "apps/games/werewolf/werewolf.css": {
+  "slate": 0,
+  "important": 5,
+  "zindex": 11
+ },
+ "apps/health/health.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/honey/honey.css": {
+  "slate": 0,
+  "important": 310,
+  "zindex": 50
+ },
+ "apps/kettle/kettle.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/ledger/ledger.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/lexiscore/lexiscore.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/lofter/lofter.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/loverspace/loverspace.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/magazine/magazine.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/memory/graph.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/memory/memory.css": {
+  "slate": 0,
+  "important": 2,
+  "zindex": 1
+ },
+ "apps/memtable/memtable.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/music/music-ambience.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/music/music.css": {
+  "slate": 0,
+  "important": 50,
+  "zindex": 12
+ },
+ "apps/musicdesk/musicdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/needsim/needsim.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/peek/peek.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 1
+ },
+ "apps/periodmath/periodmath.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/piggy/piggy.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/pixiv/pixiv.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/place/place.css": {
+  "slate": 0,
+  "important": 1,
+  "zindex": 0
+ },
+ "apps/playbook/playbook.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 2
+ },
+ "apps/plotline/plotline.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/profile/profile.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/punchcard/punchcard.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/pvdesk/pvdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/recall/recall.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/regexfilter/regexfilter.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/shop/shop.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/socialguard/socialguard.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/soundkit/soundkit.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/sourcebook/sourcebook.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/stickerdesk/stickerdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/sullydesk/sullydesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/summdesk/summdesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/taobao/taobao.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/taskentry/taskentry.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/theater/theater.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/tieba/tieba.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 4
+ },
+ "apps/traveldesk/traveldesk.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/usage/usage.css": {
+  "slate": 0,
+  "important": 1,
+  "zindex": 0
+ },
+ "apps/uterus/uterus.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/wallet/wallet.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/wangxiang/wangxiang.css": {
+  "slate": 0,
+  "important": 342,
+  "zindex": 11
+ },
+ "apps/weather/weather.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/weibo/weibo.css": {
+  "slate": 0,
+  "important": 130,
+  "zindex": 8
+ },
+ "apps/widget/widget.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/workflow/workflow.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 0
+ },
+ "apps/xhs/xhs.css": {
+  "slate": 0,
+  "important": 0,
+  "zindex": 5
+ },
+ "phone.css": {
+  "slate": 0,
+  "important": 2000,
+  "zindex": 85
+ },
+ "phone/pet.css": {
+  "slate": 0,
+  "important": 3,
+  "zindex": 1
+ },
+ "phone/pixel-skin.css": {
+  "slate": 0,
+  "important": 76,
+  "zindex": 2
+ }
+}

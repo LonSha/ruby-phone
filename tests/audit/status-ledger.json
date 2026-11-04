@@ -47,14 +47,15 @@
       "screen-host",
       "session-writeback",
       "hardlink-safety",
+      "ui-tokens",
       "doc-path-claim",
       "browser",
       "upstream-face"
     ],
-    "check_chain_len": 19
+    "check_chain_len": 20
   },
   "tests": {
-    "test_files": 370,
+    "test_files": 379,
     "audit_dir_exists": true,
     "audit_files": 27
   },
@@ -90,7 +91,7 @@
     "app_dirs": 88,
     "apps_ids": 89,
     "index_lines": 14168,
-    "css_bytes": 713924,
+    "css_bytes": 723604,
     "crossrepo": {
       "produced_faces": 30
     }
@@ -111,7 +112,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 368,
+        "suite_files": 377,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -136,7 +137,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "3f7a780f38c2b456"
+    "sha256_16": "50e65f167d773786"
   },
   "unknown": [],
   "unknown_count": 0

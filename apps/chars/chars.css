@@ -57,13 +57,13 @@
 }
 .cs-count {
   font-weight: 400;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
 }
 /* ---- 归因卡（三档色调，形态可分辨） ---- */
 .cs-reason { border-left: 3px solid #38bdf8; }
 .cs-reason-ok { border-left-color: #38bdf8; }
 .cs-reason-warn { border-left-color: #e3b341; }
-.cs-reason-off { border-left-color: #64748b; }
+.cs-reason-off { border-left-color: var(--rp-slate-500, #64748b); }
 .cs-reason-head {
   font-size: 13px;
   font-weight: 700;
@@ -95,7 +95,7 @@
 }
 .cs-role-floor {
   font-size: 10px;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
   white-space: nowrap;
 }
 /* ---- 字段 chips ---- */
@@ -119,7 +119,7 @@
 }
 .cs-todo {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
   line-height: 1.6;
   padding-left: 12px;
   position: relative;
@@ -131,7 +131,7 @@
   color: #38bdf8;
 }
 .cs-todo-date {
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
   font-size: 10px;
 }
 /* ---- 设置 ---- */
@@ -150,7 +150,7 @@
 .cs-switch {
   background: rgba(255, 255, 255, .08);
   border: 1px solid rgba(255, 255, 255, .12);
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
   border-radius: 20px;
   padding: 5px 16px;
   font-size: 12px;
@@ -166,13 +166,13 @@
 /* ---- 空态 / 溢出 ---- */
 .cs-empty {
   font-size: 12px;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
   line-height: 1.8;
 }
 .cs-more {
   margin-top: 6px;
   font-size: 10px;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
 }/* ══════════ [v4.26.0 · R4-X5] 角色信息差与证词对照 ══════════ */
 .cs-px-row {
   display: flex;
@@ -190,7 +190,7 @@
 .cs-seg {
   background: transparent;
   border: 0;
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
   font-size: 11px;
   padding: 5px 10px;
   cursor: pointer;
@@ -205,14 +205,14 @@
   background: rgba(255, 255, 255, .06);
   border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 8px;
-  color: #e2e8f0;
+  color: var(--rp-slate-200, #e2e8f0);
   font-size: 12px;
   padding: 5px 10px;
 }
 /* 提示行：逐字强调「角色模式只写可知内容」—— 不是装饰，是这一面的语义落点。 */
 .cs-px-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
   line-height: 1.7;
   margin-top: 4px;
 }
@@ -237,8 +237,8 @@
   background: rgba(15, 23, 42, 0.28);
 }
 .cs-os-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-.cs-os-self { font-size: 11px; color: #94a3b8; }
-.cs-os-legend { font-size: 10px; color: #64748b; margin: 2px 0 6px; }
+.cs-os-self { font-size: 11px; color: var(--rp-slate-400, #94a3b8); }
+.cs-os-legend { font-size: 10px; color: var(--rp-slate-500, #64748b); margin: 2px 0 6px; }
 .cs-os-chat { display: flex; flex-direction: column; gap: 4px; }
 .cs-os-bubble {
   max-width: 78%;
@@ -251,10 +251,10 @@
 /* 左 = 你（在他的手机上你是「对方」）；右 = 他本人。方向语义必须与内核判据一致。 */
 .cs-os-left { align-self: flex-start; background: rgba(148, 163, 184, 0.20); }
 .cs-os-right { align-self: flex-end; background: rgba(56, 189, 248, 0.22); }
-.cs-os-sys { align-self: center; background: transparent; color: #94a3b8; font-size: 11px; }
+.cs-os-sys { align-self: center; background: transparent; color: var(--rp-slate-400, #94a3b8); font-size: 11px; }
 .cs-os-absent { margin-top: 8px; font-size: 11px; color: #fbbf24; line-height: 1.7; }
 .cs-os-withheld { margin-top: 6px; }
-.cs-os-wh-title { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
-.cs-os-wh-row { font-size: 10px; color: #64748b; line-height: 1.7; }
-.cs-os-hint { margin-top: 6px; font-size: 10px; color: #64748b; line-height: 1.8; }
-.cs-os-empty { font-size: 12px; color: #94a3b8; }
+.cs-os-wh-title { font-size: 11px; color: var(--rp-slate-400, #94a3b8); margin-bottom: 2px; }
+.cs-os-wh-row { font-size: 10px; color: var(--rp-slate-500, #64748b); line-height: 1.7; }
+.cs-os-hint { margin-top: 6px; font-size: 10px; color: var(--rp-slate-500, #64748b); line-height: 1.8; }
+.cs-os-empty { font-size: 12px; color: var(--rp-slate-400, #94a3b8); }

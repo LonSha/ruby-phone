@@ -57,13 +57,13 @@
 }
 .pn-count {
   font-weight: 400;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
 }
 /* ---- 归因卡（三档色调，形态可分辨） ---- */
 .pn-reason { border-left: 3px solid #b08d57; }
 .pn-reason-ok { border-left-color: #b08d57; }
 .pn-reason-warn { border-left-color: #e3b341; }
-.pn-reason-off { border-left-color: #64748b; }
+.pn-reason-off { border-left-color: var(--rp-slate-500, #64748b); }
 .pn-reason-head {
   font-size: 13px;
   font-weight: 700;
@@ -83,7 +83,7 @@
 }
 .pn-stage-goal {
   font-size: 12px;
-  color: #cbd5e1;
+  color: var(--rp-slate-300, #cbd5e1);
   line-height: 1.7;
   margin-top: 5px;
 }
@@ -165,7 +165,7 @@
 }
 .pn-item-meta {
   font-size: 10px;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
   margin-top: 4px;
 }
 /* ---- 角色认知 ---- */
@@ -177,7 +177,7 @@
 .pn-know-name {
   font-size: 12px;
   font-weight: 700;
-  color: #cbd5e1;
+  color: var(--rp-slate-300, #cbd5e1);
   margin-bottom: 4px;
 }
 .pn-know-line {
@@ -205,7 +205,7 @@
    红色会被读成「确定不知情」，而这一格的全部意义就是「无从分辨」。 */
 .pn-know-tag.other {
   background: rgba(148, 163, 184, .14);
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
 }
 /* ---- 设置 ---- */
 .pn-row {
@@ -223,7 +223,7 @@
 .pn-switch {
   background: rgba(255, 255, 255, .08);
   border: 1px solid rgba(255, 255, 255, .12);
-  color: #94a3b8;
+  color: var(--rp-slate-400, #94a3b8);
   border-radius: 20px;
   padding: 5px 16px;
   font-size: 12px;
@@ -239,51 +239,51 @@
 /* ---- 空态 ---- */
 .pn-empty {
   font-size: 12px;
-  color: #64748b;
+  color: var(--rp-slate-500, #64748b);
   line-height: 1.8;
 }
 
 /* ---- [v4.27.0 · R4-X6] 因果线索与未完事项板 ---- */
-.pn-cb-line { font-size: 12px; color: #94a3b8; line-height: 1.9; }
+.pn-cb-line { font-size: 12px; color: var(--rp-slate-400, #94a3b8); line-height: 1.9; }
 .pn-cb-group { margin-top: 8px; border-top: 1px dashed rgba(255, 255, 255, .08); padding-top: 6px; }
-.pn-cb-group-title { font-size: 12px; color: #cbd5e1; display: flex; justify-content: space-between; }
+.pn-cb-group-title { font-size: 12px; color: var(--rp-slate-300, #cbd5e1); display: flex; justify-content: space-between; }
 .pn-cb-node { padding: 4px 0; }
 .pn-cb-node-main { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .pn-cb-kind, .pn-cb-closure {
   font-size: 11px; border-radius: 10px; padding: 1px 8px;
-  border: 1px solid rgba(255, 255, 255, .14); color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, .14); color: var(--rp-slate-400, #94a3b8);
 }
-.pn-cb-text { font-size: 13px; color: #e2e8f0; }
+.pn-cb-text { font-size: 13px; color: var(--rp-slate-200, #e2e8f0); }
 .pn-cb-acts { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .pn-cb-btn {
   font-size: 11px; border-radius: 12px; padding: 2px 10px; cursor: pointer;
-  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); color: #cbd5e1;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); color: var(--rp-slate-300, #cbd5e1);
 }
 .pn-cb-btn[disabled] { opacity: .45; cursor: default; }
-.pn-cb-edge { font-size: 12px; color: #94a3b8; padding: 2px 0; }
-.pn-cb-edge-from, .pn-cb-edge-to { color: #cbd5e1; }
-.pn-cb-edge-arrow { color: #64748b; padding: 0 4px; }
-.pn-cb-edge-label { color: #64748b; padding-left: 6px; }
+.pn-cb-edge { font-size: 12px; color: var(--rp-slate-400, #94a3b8); padding: 2px 0; }
+.pn-cb-edge-from, .pn-cb-edge-to { color: var(--rp-slate-300, #cbd5e1); }
+.pn-cb-edge-arrow { color: var(--rp-slate-500, #64748b); padding: 0 4px; }
+.pn-cb-edge-label { color: var(--rp-slate-500, #64748b); padding-left: 6px; }
 /* 推测边**视觉上也要与已确认边分开**：它是「别把猜测当事实」的落点 */
 .pn-cb-spec .pn-cb-group-title { color: #d9a441; }
 .pn-cb-warn {
   font-size: 10px; border-radius: 8px; padding: 0 6px; margin-left: 6px;
   border: 1px solid rgba(217, 164, 65, .5); color: #d9a441;
 }
-.pn-cb-trace { margin-top: 8px; font-size: 12px; color: #94a3b8; }
-.pn-cb-trace-path { font-size: 12px; color: #e2e8f0; word-break: break-all; }
-.pn-cb-trace-note { font-size: 11px; color: #64748b; }
+.pn-cb-trace { margin-top: 8px; font-size: 12px; color: var(--rp-slate-400, #94a3b8); }
+.pn-cb-trace-path { font-size: 12px; color: var(--rp-slate-200, #e2e8f0); word-break: break-all; }
+.pn-cb-trace-note { font-size: 11px; color: var(--rp-slate-500, #64748b); }
 /* ---------- [v4.38.0 · R5-X2] 目标树（纯计划模式，.pn-goal-*） ----------
  * 为什么「计划 vs 事实」单独一行且给独立底色：那是用户来这一屏的理由
  * （勾了不等于发生了）；混在状态行里会被读成附注。 */
 .pn-goal-card { margin-top: 10px; }
 .pn-goal-input { display: flex; gap: 6px; margin: 6px 0; }
 .pn-goal-input input {
-  flex: 1; min-width: 0; background: #0f172a; color: #e2e8f0;
-  border: 1px solid #1e293b; border-radius: 8px; padding: 6px 8px; font-size: 12px;
+  flex: 1; min-width: 0; background: var(--rp-slate-900, #0f172a); color: var(--rp-slate-200, #e2e8f0);
+  border: 1px solid var(--rp-slate-800, #1e293b); border-radius: 8px; padding: 6px 8px; font-size: 12px;
 }
 .pn-goal-input button {
-  background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+  background: var(--rp-slate-800, #1e293b); color: var(--rp-slate-200, #e2e8f0); border: 1px solid var(--rp-slate-700, #334155);
   border-radius: 8px; padding: 6px 10px; font-size: 12px;
 }
 .pn-goal-face {
@@ -295,15 +295,15 @@
   background: rgba(217, 164, 65, .14); color: #e8c37a; font-size: 12px; line-height: 1.5;
 }
 .pn-goal-rows { margin-top: 6px; }
-.pn-goal-rows-title { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+.pn-goal-rows-title { font-size: 11px; color: var(--rp-slate-500, #64748b); margin-bottom: 4px; }
 .pn-goal-row {
-  font-size: 12px; color: #cbd5e1; line-height: 1.6;
+  font-size: 12px; color: var(--rp-slate-300, #cbd5e1); line-height: 1.6;
   padding-left: calc(6px + (var(--depth, 1) - 1) * 12px);
-  border-left: 2px solid #1e293b;
+  border-left: 2px solid var(--rp-slate-800, #1e293b);
 }
 .pn-goal-actions { display: flex; gap: 6px; margin-top: 8px; }
 .pn-goal-mini {
-  background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+  background: var(--rp-slate-800, #1e293b); color: var(--rp-slate-200, #e2e8f0); border: 1px solid var(--rp-slate-700, #334155);
   border-radius: 999px; padding: 3px 10px; font-size: 11px;
 }
 .pn-goal-selfwarn { margin-top: 6px; font-size: 11px; color: #f87171; }

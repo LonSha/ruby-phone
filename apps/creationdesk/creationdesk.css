@@ -73,7 +73,7 @@
 .cwb-hy-lane {
     margin-top: 8px;
     padding: 7px 9px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--rp-slate-200, #e2e8f0);
     border-left: 3px solid #cfd8e3;
     border-radius: 7px;
     background: #fff;

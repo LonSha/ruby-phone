@@ -5,7 +5,7 @@
 .gph-root {
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    background: linear-gradient(180deg, var(--rp-slate-50, #f8fafc) 0%, #eef2f7 100%);
     display: flex;
     flex-direction: column;
     overflow: hidden;

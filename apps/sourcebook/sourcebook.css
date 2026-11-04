@@ -32,12 +32,12 @@
     --sbr-sp-few-weeks: #7c3aed;
     --sbr-sp-few-months: #ea580c;
     --sbr-sp-months: #b91c1c;
-    --sbr-sp-years: #475569;
+    --sbr-sp-years: var(--rp-slate-600, #475569);
 
     /* 六族口吻色相 */
     --sbr-tn-mixed: #9333ea;
     --sbr-tn-happy: #ca8a04;
-    --sbr-tn-difficult: #475569;
+    --sbr-tn-difficult: var(--rp-slate-600, #475569);
     --sbr-tn-anticipation: #0891b2;
     --sbr-tn-tender: #db2777;
     --sbr-tn-daily: #78716c;
