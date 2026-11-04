@@ -154,6 +154,7 @@
     "apps/weather/weather-app.js": "天气 App 的刷新节流与粒子动画。注：粒子动画属性能敏感项，卡顿时优先移除。",
     "apps/weather/weather-data.js": "天气数据层的缓存新鲜度。",
     "apps/wechat/contacts-view.js": "联系人列表的动画与索引节流。",
+    "apps/wechat/inline-action-bar.js": "[v4.121.0 · R14-O6] 两处 `Date.now()` 都是「剧情钟取不到时的墙钟兜底」，属 wall 档：① `planCommit(ledger, act, storyMs || Date.now())` —— 台账去重窗口需要一个单调时刻，剧情钟为 null 时只能退到墙钟（否则无法判定重放）；② `at: Number(storyMs) || Date.now()` —— 台账条目时刻同上。两处的**首选值都是剧情钟**（`_storyMs()`），墙钟只在前者为空时兜底，故不改变「用户看见的时刻走剧情钟」这条纪律。",
     "apps/weibo/weibo-app.js": "微博 App 控制器的防抖。",
     "apps/widget/widget-app.js": "桌面小组件的刷新节流。",
     "apps/widget/widget-data.js": "小组件数据层的缓存新鲜度。",

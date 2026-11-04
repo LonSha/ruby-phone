@@ -298,9 +298,11 @@ function loadDamaged(anchor, replacement, tag) {
 }
 
 test('E1 负控制：把 restore 改成「重建新 id」，同款「id 逐字相同」判据必须转红', async () => {
+    /* 锚点随 R14-O6 改了形态：`ok = fn(...) !== false` 换成了「先取 out、再判冲突标记」，
+     *   故破坏点挪到取 out 的那一行 —— 语义没变（仍然是把 payload 的 id 换掉）。 */
     const bad = await loadDamaged(
-        '        ok = fn(row.payload, row.meta || null) !== false;\n',
-        '        ok = fn({ ...(row.payload || {}), id: `rebuilt_${String(row.id)}` }, row.meta || null) !== false;\n',
+        '        const out = fn(row.payload, row.meta || null);\n',
+        '        const out = fn({ ...(row.payload || {}), id: `rebuilt_${String(row.id)}` }, row.meta || null);\n',
         'id-rebuild'
     );
     const { DiaryData } = DIARY;

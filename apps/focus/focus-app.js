@@ -135,7 +135,13 @@ export class FocusApp {
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         if (!Array.isArray(this.tasks)) this.tasks = [];
-        if (this.tasks.some((t) => String(t?.id || '') === id)) return true;
+        const dup = this.tasks.find((t) => String(t?.id || '') === id);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict）。
+             *   番茄钟的历史统计按 taskId 对齐 —— 静默丢弃原件会让统计挂到另一条任务上。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= this.tasks.length) this.tasks.splice(at, 0, payload);
         else this.tasks.push(payload);

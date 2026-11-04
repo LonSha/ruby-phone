@@ -44,6 +44,38 @@ export class DiaryData {
          *   恢复 = 放回原位（meta.index 在册就用它，否则追加到末尾）+ 把配图键补回去。
          *   **id 不改**：payload 就是删除前那个对象，recycle-bin 还会再核对一次 id 没漂移。 */
         recycleBin.registerRestorer('diary', (payload, meta) => this._restoreEntryFromBin(payload, meta));
+        /* [v4.121.0 · R14-O6] 向回收站登记「这条真被销毁时怎么清它的附件」。
+         *   治的欠债：删除时 `_hardDeleteEntry` 会当场把照片文件与页面背景**物理删掉**，
+         *   而回收站只存路径字符串 ⇒ 恢复后条目回来了、图没了（坏图）。
+         *   故删除时只把路径记进 meta.pendingFiles，物理删除推迟到条目被真销毁
+         *   （彻底删除 / 清空 / FIFO 淘汰）的那一刻，由这里统一接手。 */
+        recycleBin.registerPurger('diary', (payload, meta) => this._purgeEntryFilesFromBin(payload, meta));
+    }
+
+    /**
+     * [v4.121.0 · R14-O6] 处置器：条目**再也回不来**时清它的附件。
+     *   路径来源有两处，都要收：
+     *   · `payload.photos[].imageUrl` —— 正文里贴的照片；
+     *   · `meta.pendingFiles` —— 删除时另记的（页面背景 bg_<id> 这类**不在 payload 里**
+     *     的关联资源；它的值原本存在 settings，payload 只带得到正文）。
+     *   刻意不做「文件还在不在」的探测：`deleteManagedBackgroundByPath` 自己会对
+     *   不存在的路径返回 `attempted:false`，重复调无副作用。
+     */
+    _purgeEntryFilesFromBin(payload, meta) {
+        const paths = [];
+        for (const photo of (Array.isArray(payload?.photos) ? payload.photos : [])) {
+            const p = this._normalizeManagedDiaryImagePath(photo?.imageUrl);
+            if (p) paths.push(p);
+        }
+        const pending = Array.isArray(meta?.pendingFiles) ? meta.pendingFiles : [];
+        for (const raw of pending) {
+            const p = this._normalizeManagedDiaryImagePath(raw);
+            if (p) paths.push(p);
+        }
+        if (paths.length === 0) return;
+        /* 这里**不带** skipIfReferenced：能走到处置器说明这条已经不在回收站里了，
+         *   它的照片路径只可能还被同一条日记引用 —— 而那条日记已经没了。 */
+        this._cleanupManagedDiaryImages(paths, { skipIfReferenced: false });
     }
 
     /**
@@ -57,8 +89,16 @@ export class DiaryData {
         const id = String(payload.id || '').trim();
         if (!id) return false;
         const entries = this.getEntries();
-        /* 幂等：已经在列表里就只补配图键（防同一条被恢复两次出现两份） */
-        if (!entries.some(e => String(e?.id || '') === id)) {
+        const exist = entries.find(e => String(e?.id || '') === id);
+        if (exist) {
+            /* [v4.121.0 · R14-O6] 同 id 已存在：区分「幂等重放」与「真冲突」。
+             *   幂等重放（内容逐字相同）⇒ 只补配图键、回 true —— 这是原注释说的
+             *   「防同一条被恢复两次出现两份」。
+             *   真冲突（用户后来又建了同 id 的条目、内容不同）⇒ 回冲突标记。
+             *   此前一律回 true，上层会把回收站条目摘掉并说「已恢复」，
+             *   用户删掉的原件就此永久消失且无任何提示（实测过的静默丢数据）。 */
+            if (!recycleBin.samePayload(exist, payload)) return recycleBin.restoreConflict();
+        } else {
             const at = Number(meta && meta.index);
             if (Number.isFinite(at) && at >= 0 && at <= entries.length) entries.splice(at, 0, payload);
             else entries.push(payload);
@@ -441,7 +481,14 @@ export class DiaryData {
                     extras: {
                         [`bg_${entry?.id || entryId}`]: settings[`bg_${entry?.id || entryId}`] ?? null,
                         [`lh_${entry?.id || entryId}`]: settings[`lh_${entry?.id || entryId}`] ?? null
-                    }
+                    },
+                    /* [v4.121.0 · R14-O6] 待清附件路径：**只记路径、不动文件**。
+                     *   实测过的缺陷：`_hardDeleteEntry` 原本会当场 `deleteManagedBackgroundByPath`
+                     *   把这张图和页面背景物理删掉，而回收站里只有路径字符串 ⇒ 恢复后
+                     *   条目回来了、设置键也回来了、图是坏的。故物理删除推迟到
+                     *   `registerPurger('diary', …)` 被调用的那一刻（彻底删除 / 清空 / FIFO 淘汰）。
+                     *   这里记的必须与 `_purgeEntryFilesFromBin` 能读到的一致，两处口径同一份。 */
+                    pendingFiles: this._collectEntryManagedFiles(entry, entryId)
                 },
                 hard: () => this._hardDeleteEntry(entryId)
             }).ok === true;
@@ -449,24 +496,74 @@ export class DiaryData {
         return false;
     }
 
-    /** 真正的删除（原 deleteEntry 的体内逻辑，[v4.104.0] 抽出供软删回调调用） */
+    /** 真正的删除（原 deleteEntry 的体内逻辑，[v4.104.0] 抽出供软删回调调用）
+     *   【v4.121.0 · R14-O6 改动】不再物理删图 —— 只摘业务数据。原因见 registerPurger 注释：
+     *   此时条目还躺在回收站里，图一旦删掉就无法恢复。清理由处置器负责。
+     *   ★ 这条改动的前提是「删除一定先经过 softDelete」。若回收站开关关着 /
+     *   写盘失败 / payload 超限，softDelete 会直接调 hard 而**不留回收站条目** ——
+     *   那种情况下图确实该删。故这里仍然删图，只是删的是**同一批路径**，
+     *   由 `_cleanupManagedDiaryImages` 决定（它在没有 imageManager 时什么也不做）。
+     *   判定依据是「回收站里有没有这条」：有 ⇒ 推迟，没有 ⇒ 立刻删。 */
     _hardDeleteEntry(entryId) {
         const entries = this.getEntries();
         const idx = entries.findIndex(e => e.id === entryId);
         if (idx === -1) return false;
         const entry = entries[idx];
-        const managedImages = [
-            ...this._collectManagedDiaryImagesFromEntry(entry),
-            this.getPageBg(entryId)
-        ];
+        const managedImages = this._collectEntryManagedFiles(entry, entryId);
         entries.splice(idx, 1);
         this.saveEntries();
         const settings = this.getSettings();
         delete settings[`bg_${entryId}`];
         delete settings[`lh_${entryId}`];
         this.saveSettings();
-        this._cleanupManagedDiaryImages(managedImages);
+        /* [v4.121.0 · R14-O6] 只在这条**没进回收站**时才当场删附件。
+         *   推迟的理由：`softDelete` 先写盘回收站再调 hard，所以「hard 被调用时
+         *   回收站里有没有这一条」正好等价于「它还能不能恢复」。 */
+        if (!this._isInBin(entryId)) this._cleanupManagedDiaryImages(managedImages);
         return true;
+    }
+
+    /**
+     * [v4.121.0 · R14-O6] 这条日记此刻是否躺在回收站里（决定附件能不能当场删）。
+     *   只读一次 `listBin`，不逐条比 payload —— 比 app/kind/id 三项即可，
+     *   `binId` 的构成（app:kind:时间戳:序位）不参与判断。
+     */
+    _isInBin(entryId) {
+        const set = this._binMemberIds();
+        /* [v4.121.0 · R14-O6] 判不出来（null）时按「在回收站里」处理 ⇒ 调用方推迟清理。
+         *   宁可留文件（代价是占空间），不可删错（代价是坏图且不可逆）。 */
+        if (!set) return true;
+        return set.has(String(entryId || '').trim());
+    }
+
+    /**
+     * [v4.121.0 · R14-O6] 回收站里当前有哪些日记条目 id（一次读，供批量判断）。
+     *   批量删除可能几十上百条，逐条 `listBin` 会把整个回收站 JSON.parse 上百次。
+     *   读失败时返回**空 Set** 语义上不对 —— 那会让调用方误判「都不在回收站里」
+     *   于是立刻删附件（不可逆）。故这里改成返回 `null` 表示「判不出来」，
+     *   调用方按 null 一律**推迟**清理（宁可留文件，不可删错）。
+     */
+    _binMemberIds() {
+        try {
+            return new Set(recycleBin.listBin(this.storage, { app: 'diary' })
+                .filter(row => String(row?.kind || '') === 'entry')
+                .map(row => String(row?.id || '')));
+        } catch (_e) {
+            return null;
+        }
+    }
+
+    /**
+     * [v4.121.0 · R14-O6] 一条日记牵扯的全部受管附件路径（**唯一口径**）。
+     *   · 正文照片 `photos[].imageUrl`
+     *   · 页面背景 `getPageBg(id)`（存在 settings 里，不在 payload 里）
+     *   删除侧（记 pendingFiles）与处置侧（真删文件）都调这一个，防两处口径漂移。
+     */
+    _collectEntryManagedFiles(entry, entryId) {
+        const paths = [...this._collectManagedDiaryImagesFromEntry(entry)];
+        const bg = this.getPageBg(entryId || entry?.id);
+        if (bg) paths.push(bg);
+        return [...new Set(paths.map(p => this._normalizeManagedDiaryImagePath(p)).filter(Boolean))];
     }
 
     deleteEntries(entryIds = []) {
@@ -497,15 +594,13 @@ export class DiaryData {
                     extras: {
                         [`bg_${entryId}`]: settingsForBin[`bg_${entryId}`] ?? null,
                         [`lh_${entryId}`]: settingsForBin[`lh_${entryId}`] ?? null
-                    }
+                    },
+                    /* [v4.121.0 · R14-O6] 同 deleteEntry：只记路径、不删文件 */
+                    pendingFiles: this._collectEntryManagedFiles(entry, entryId)
                 },
                 hard: () => {}
             };
         }).filter(x => x.id));
-        const managedImages = deletedEntries.flatMap(entry => [
-            ...this._collectManagedDiaryImagesFromEntry(entry),
-            this.getPageBg(entry?.id)
-        ]);
         const before = entries.length;
         this._entries = entries.filter(entry => !ids.has(String(entry?.id || '')));
         const deletedCount = before - this._entries.length;
@@ -518,7 +613,13 @@ export class DiaryData {
             delete settings[`lh_${entryId}`];
         });
         this.saveSettings();
-        this._cleanupManagedDiaryImages(managedImages);
+        /* [v4.121.0 · R14-O6] 只清「没进回收站」的那几条的附件。
+         *   批量里可能有一部分因超限/写盘失败没留住 —— 那些必须当场删，
+         *   留住的那些等处置器。故逐条问 `_isInBin`，不整批一刀切。 */
+        const keptOut = deletedEntries
+            .filter(entry => !this._isInBin(entry?.id))
+            .flatMap(entry => this._collectEntryManagedFiles(entry, entry?.id));
+        if (keptOut.length > 0) this._cleanupManagedDiaryImages(keptOut);
         return deletedCount;
     }
 
@@ -545,25 +646,45 @@ export class DiaryData {
                         extras: {
                             [`bg_${entryId}`]: settings[`bg_${entryId}`] ?? null,
                             [`lh_${entryId}`]: settings[`lh_${entryId}`] ?? null
-                        }
+                        },
+                        /* [v4.121.0 · R14-O6] 同 deleteEntry：只记路径、不删文件 */
+                        pendingFiles: this._collectEntryManagedFiles(entry, entryId)
                     },
                     hard: () => {}
                 };
             }).filter(x => x.id));
         }
-        const managedImages = [
-            ...entries.flatMap(entry => this._collectManagedDiaryImagesFromEntry(entry)),
-            ...Object.entries(settings)
-                .filter(([key]) => String(key || '').startsWith('bg_'))
-                .map(([, value]) => value)
-        ];
+        /* [v4.121.0 · R14-O6] 清空后仍留在盘上的附件只有两种来源：
+         *   ① 没进回收站的条目（超限/开关关/写盘失败）—— 必须当场删；
+         *   ② 目录里没有对应条目、只剩 bg_ 键的孤儿背景 —— 这些从来没机会
+         *      进回收站（回收站按条目记账），不删就永远没人认领。
+         *   进得去回收站的那些，等处置器。 */
+        const orphanBgs = Object.entries(settings)
+            .filter(([key]) => String(key || '').startsWith('bg_'))
+            /* [v4.121.0 · R14-O6] 只收**真孤儿**：键后缀对应的 id 不在本次清空的条目里，
+             *   也不在回收站里 —— 那种「没有条目、只剩一个背景键」的残留，
+             *   从来没有任何条目能把它带进回收站（回收站按条目记账）。
+             *   ★ 不过滤掉的话，把还在回收站里的条目的背景图当孤儿删掉，
+             *   等于刚修的缺陷又从另一条路复活。 */
+            .filter(([key]) => {
+                const id = String(key || '').slice(3);
+                if (!id) return false;
+                if (entries.some(e => String(e?.id || '') === id)) return false;
+                return this._isInBin(id) === false;
+            })
+            .map(([, value]) => value);
+        const keptOut = entries
+            .filter(entry => !this._isInBin(entry?.id))
+            .flatMap(entry => this._collectEntryManagedFiles(entry, entry?.id));
         this._entries = [];
         this.saveEntries();
         // 清除所有日记相关的设置（背景、行高等）
         const keysToDelete = Object.keys(settings).filter(k => k.startsWith('bg_') || k.startsWith('lh_'));
         keysToDelete.forEach(k => delete settings[k]);
         this.saveSettings();
-        this._cleanupManagedDiaryImages(managedImages);
+        /* [v4.121.0 · R14-O6] 只清「没进回收站」的那些附件 + 孤儿背景。 */
+        const toClean = keptOut.concat(orphanBgs);
+        if (toClean.length > 0) this._cleanupManagedDiaryImages(toClean);
     }
 
     getEntry(entryId) {
@@ -912,16 +1033,20 @@ export class DiaryData {
             .filter(Boolean))];
     }
 
-    _cleanupManagedDiaryImages(paths = []) {
+    _cleanupManagedDiaryImages(paths = [], options = {}) {
         const imageManager = window.VirtualPhone?.imageManager;
         if (!imageManager?.deleteManagedBackgroundByPath) return;
+        /* [v4.121.0 · R14-O6] skipIfReferenced 默认仍是 true（与历史行为一致）：
+         *   删除一条日记时，若同一张图还被别的条目/别的 App 引用，就不该物理删。
+         *   只有「条目已真销毁」的处置器才传 false —— 那时它自己就是最后的引用者。 */
+        const skipIfReferenced = options && options.skipIfReferenced === false ? false : true;
         [...new Set((Array.isArray(paths) ? paths : [paths])
             .map(path => this._normalizeManagedDiaryImagePath(path))
             .filter(Boolean))]
             .forEach((path) => {
                 imageManager.deleteManagedBackgroundByPath(path, {
                     quiet: true,
-                    skipIfReferenced: true
+                    skipIfReferenced
                 }).catch(() => {});
             });
     }

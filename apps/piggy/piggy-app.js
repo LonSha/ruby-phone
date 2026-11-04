@@ -180,7 +180,14 @@ export class PiggyApp {
         if (!sid) return false;
         const base = this.state || normalizePiggyState(null);
         const txs = Array.isArray(base.transactions) ? base.transactions.slice() : [];
-        if (txs.some((t) => String(t?.id || '') === sid)) return true;
+        const dup = txs.find((t) => String(t?.id || '') === sid);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict）。
+             *   ★ 这里必须**在归一化之前**返回：归一化会按流水重算余额，
+             *   若先归一化再报冲突，余额已经被动过了 —— 用户看到「恢复失败」但钱变了。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= txs.length) txs.splice(at, 0, payload);
         else txs.push(payload);
@@ -246,7 +253,12 @@ export class PiggyApp {
         if (!sid) return false;
         const base = this.state || normalizePiggyState(null);
         const cards = Array.isArray(base.cards) ? base.cards.slice() : [];
-        if (cards.some((c) => String(c?.id || '') === sid)) return true;
+        const dup = cards.find((c) => String(c?.id || '') === sid);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict） */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= cards.length) cards.splice(at, 0, payload);
         else cards.push(payload);

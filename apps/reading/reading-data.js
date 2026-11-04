@@ -441,7 +441,16 @@ export class ReadingData {
         if (!payload || typeof payload !== 'object') return false;
         const id = String(payload?.id || '').trim();
         if (!id) return false;
-        if (this.shelf.some(b => String(b?.id || '') === id)) return true;
+        const exist = this.shelf.find(b => String(b?.id || '') === id);
+        if (exist) {
+            /* [v4.121.0 · R14-O6] 同 id 已存在时区分幂等重放与真冲突（详见
+             *   config/recycle-bin.js 的 restoreConflict 注释）。此前这里直接
+             *   `return true`，上层会摘掉回收站条目并说「已恢复」 —— 而书架上留着
+             *   的是用户后来新加的那本，删掉的原书进度/标记永久丢失。
+             *   实测（R14-O6 探针）：shelf 变成 ["新建的书一"]，回收站条目已被摘。 */
+            if (recycleBin.samePayload(exist, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= this.shelf.length) this.shelf.splice(at, 0, payload);
         else this.shelf.push(payload);

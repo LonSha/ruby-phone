@@ -527,7 +527,12 @@ export class PhoneCallData {
         if (!payload || typeof payload !== 'object') return false;
         const history = this.getCallHistory();
         const pid = String(payload?.id || '');
-        if (pid && history.some(r => String(r?.id || '') === pid)) return true;
+        const dup = pid ? history.find(r => String(r?.id || '') === pid) : null;
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict） */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= history.length) history.splice(at, 0, payload);
         else history.push(payload);
@@ -540,7 +545,13 @@ export class PhoneCallData {
         if (!payload || typeof payload !== 'object') return false;
         const contacts = this.getContacts();
         const pid = String(payload?.id || '').trim();
-        if (pid && contacts.some(c => String(c?.id || '').trim() === pid)) return true;
+        const dup = pid ? contacts.find(c => String(c?.id || '').trim() === pid) : null;
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突。这里尤其贵：联系人 id 被短信/
+             *   通话/微信多处引用，静默丢弃原件等于「引用还在、人被换成了另一个」。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= contacts.length) contacts.splice(at, 0, payload);
         else contacts.push(payload);
@@ -578,7 +589,12 @@ export class PhoneCallData {
         }
         if (!Array.isArray(conversation.messages)) conversation.messages = [];
         const mid = String(payload?.id || '').trim();
-        if (mid && conversation.messages.some(m => String(m?.id || '').trim() === mid)) return true;
+        const dup = mid ? conversation.messages.find(m => String(m?.id || '').trim() === mid) : null;
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict） */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= conversation.messages.length) {
             conversation.messages.splice(at, 0, payload);

@@ -103,7 +103,20 @@ export class MusicData {
         if (!name) return false;
         const playlist = this.getPlaylist();
         const key = this._getSongDedupKey(name, String(payload?.artist || '未知'));
-        if (playlist.some(s => this._getSongDedupKey(s?.name, s?.artist) === key)) return true;
+        const dup = playlist.find(s => this._getSongDedupKey(s?.name, s?.artist) === key);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 音乐没有稳定业务 id，判重靠「歌名 / 歌手」这个可复现的串
+             *   （见 undo-capability 里 music 那条 why）。这里**刻意不引入** restoreConflict，
+             *   理由可复算：
+             *   · 歌单里已有同一个「歌名 / 歌手」时，用户看到的那个东西**就是这一首**，
+             *     再加一条只会变成列表里两行一样的歌 —— 那才是用户能看见的错。
+             *   · 恢复器在这里表达的是「这首歌在歌单里」这个事实，而不是
+             *     「这条记录与回收站里那份逐字相同」。前者已经成立。
+             *   其余恢复器都改成「逐字相同才算幂等」，因为它们的条目有唯一 id、
+             *   同 id 不同内容必然意味着**用户的数据被顶掉了**；音乐这里没有 id，
+             *   也就不存在「被顶掉」这个风险。 */
+            return true;
+        }
         playlist.push(payload);
         this.savePlaylist();
         this._notifyStateChange();

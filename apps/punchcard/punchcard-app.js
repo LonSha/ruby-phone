@@ -152,7 +152,13 @@ export class PunchcardApp {
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         if (!Array.isArray(this.cards)) this.cards = [];
-        if (this.cards.some((c) => String(c?.id || '') === id)) return true;
+        const dup = this.cards.find((c) => String(c?.id || '') === id);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict）。
+             *   打卡的连续天数是时间敏感资产 —— 静默丢弃原件会让链断在一个「别人」身上。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= this.cards.length) this.cards.splice(at, 0, payload);
         else this.cards.push(payload);
@@ -200,7 +206,12 @@ export class PunchcardApp {
         const card = this.cards.find((c) => String(c?.id || '') === cid) || null;
         if (!card) return false;
         if (!Array.isArray(card.items)) card.items = [];
-        if (card.items.some((it) => String(it?.id || '') === iid)) return true;
+        const dup = card.items.find((it) => String(it?.id || '') === iid);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict） */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= card.items.length) card.items.splice(at, 0, payload);
         else card.items.push(payload);

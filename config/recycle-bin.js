@@ -82,6 +82,14 @@ const REASON_TEXT = Object.freeze({
     'entry-missing': '回收站里没有这一条（可能已被恢复或彻底删除）',
     'payload-missing': '这一条没有存下正文，无法恢复',
     'id-drift': '恢复出来的条目 id 与删除前不一致，已拒绝写入',
+    /* [v4.121.0 · R14-O6] 新增：目标位置已经有同 id 的条目。
+     *   治的欠债：恢复器发现「已在列表里」时 `return true`（它想表达「幂等，别造第二份」），
+     *   而 restoreById 收到 true 就把回收站条目摘了，并回「已恢复」。
+     *   实测（R14-O6 探针）：删备忘 cm1 → 用户手工又建了同 id 的 cm1（内容不同）
+     *   → 点恢复 → `{"ok":true,"text":"已恢复"}`，但现存的是**新写的那条**，
+     *   用户删掉的原件就这么没了，而且没有任何提示。
+     *   故把「什么都不做」和「写成功了」分成两个返回值。 */
+    'id-conflict': '已有一项和它同 id，没有覆盖。原件仍在回收站，请先处理现有那项',
     'apply-failed': '写回去的时候出错了，条目已留在回收站',
     'bad-confirm': '清空需要二次确认（确认令牌不对，已取消）',
     'too-large': '这条太大，没有存进回收站（直接删除了）',
@@ -254,9 +262,12 @@ export function softDelete(storage, spec) {
     };
 
     /* 先进先出：超上限时从**最旧**的删起。刻意保留新记录 —— 用户刚删错的那条
-     *   必须在回收站里，这是本模块存在的全部理由。 */
+     *   必须在回收站里，这是本模块存在的全部理由。
+     *   [v4.121.0 · R14-O6] 被挤掉的条目是**真销毁**，也要处置它的外部资源 ——
+     *   否则日记照片这类附件会永远留在盘上没人认领（既不显示也没人能删）。 */
     const next = entries.concat([entry]);
-    while (next.length > BIN_MAX) next.shift();
+    const evicted = [];
+    while (next.length > BIN_MAX) evicted.push(next.shift());
 
     const written = writeRaw(storage, next);
     /* 写盘失败 → 不进回收站，但**仍然执行删除**：回收站坏了不该让用户
@@ -267,6 +278,9 @@ export function softDelete(storage, spec) {
     }
 
     if (hard) hard();
+    /* [v4.121.0 · R14-O6] 写盘成功后才处置被挤掉的旧条目：写盘失败时它们其实还在原档里，
+     *   不能先清文件（那会把还能恢复的条目变成坏图）。 */
+    for (const row of evicted) disposeEntry(row);
     return { ok: true, soft: true, binId: entry.binId };
 }
 
@@ -324,10 +338,12 @@ export function softDeleteMany(storage, specs) {
     }
 
     let written = false;
+    const evicted = [];
     if (added.length > 0) {
         const next = entries.concat(added);
-        /* 先进先出，且**保住新记录**：同上，用户刚删的那批必须在回收站里 */
-        while (next.length > BIN_MAX) next.shift();
+        /* 先进先出，且**保住新记录**：同上，用户刚删的那批必须在回收站里。
+         *   [v4.121.0 · R14-O6] 被挤掉的是真销毁 → 收起来，写盘成功后再处置。 */
+        while (next.length > BIN_MAX) evicted.push(next.shift());
         written = writeRaw(storage, next);
     }
 
@@ -336,6 +352,8 @@ export function softDeleteMany(storage, specs) {
     for (const fn of hards) {
         try { fn(); } catch (e) { console.warn('[RecycleBin] 批量删除的 hard 回调失败:', e); }
     }
+    /* [v4.121.0 · R14-O6] 被挤掉的旧条目：写盘成功才处置（同 softDelete 的理由） */
+    for (const row of evicted) disposeEntry(row);
     return { ok: true, soft: written, added: written ? added.length : 0, reasons: skipped };
 }
 
@@ -399,7 +417,10 @@ export function binStats(storage) {
         totalChars,
         limit: BIN_MAX,
         enabled: isRecycleBinEnabled(storage),
-        registeredApps: Array.from(RESTORERS.keys()).sort()
+        registeredApps: Array.from(RESTORERS.keys()).sort(),
+        /* [v4.121.0 · R14-O6] 有几个 App 登记了处置器。这是**诊断面**：没登记的 App
+         *   意味着「它的条目被彻底删除时没有任何人清外部资源」—— 附件会永远留在盘上。 */
+        purgerApps: Array.from(PURGERS.keys()).sort()
     };
 }
 
@@ -426,6 +447,136 @@ export function registerRestorer(app, fn) {
     RESTORERS.set(key, fn);
     return true;
 }
+
+/**
+ * [v4.121.0 · R14-O6] 恢复器的第三种返回值：**目标位置已经有一项同 id，我没有覆盖**。
+ *
+ * 【为什么需要它】`registerRestorer` 的契约原本只有 true/false：true = 写成功了，
+ *   false = 失败了。但恢复器真实会遇到第三种情况 —— 「列表里已经有一条同 id 的，
+ *   我不该造第二份」。各 App 此前一律写成 `if (已在) return true`，想表达的是
+ *   「幂等，别重复造」，可 `restoreById` 收到 true 就摘掉回收站条目并回「已恢复」。
+ *   结果：用户删掉的原件永久消失，现存的是**别人**（用户自己后来新建的 / 别的
+ *   恢复路径写回的）那一条，而且界面显示成功。
+ *
+ *   这是本仓最贵的那族形态：不报错、只是默默拿走了本该保留的东西。
+ *
+ * 【怎么用】恢复器检测到同 id 已存在时 `return restoreConflict()`，而不是 `return true`。
+ *   `restoreById` 会如实回 `ok:false, reason:'id-conflict'` 且**不动回收站** ——
+ *   用户可以先把现有那项改名/删掉，再来恢复原件。
+ *
+ * 【为什么不是 `return false`】false 会被归成 `apply-failed`（「写回去的时候出错了」），
+ *   那是错的话术：这里没有出错，是刻意不覆盖。用户要看到的是「请先处理现有那项」。
+ */
+export function restoreConflict() {
+    return RESTORE_CONFLICT;
+}
+
+/** 冲突标记（冻结对象，防止调用方误改；用身份比较，不用结构比较） */
+const RESTORE_CONFLICT = Object.freeze({ __recycleBinRestoreConflict: true });
+
+/**
+ * [v4.121.0 · R14-O6] 恢复器配套：判断「现存那一项是不是就是我要恢复的这一条」。
+ *
+ * 【为什么需要】恢复器遇到同 id 已存在时，有两种完全不同的情况，此前被混成一种：
+ *   · **幂等重放** —— 用户点了两次恢复（或两条恢复路径都跑到），现存的就是上次
+ *     恢复写回的原件，内容逐字相同。这时「什么都不做、回成功」是对的。
+ *   · **真冲突** —— 现存的是用户后来新建 / 编辑过的那一项。这时「什么都不做、
+ *     回成功」会把回收站条目摘掉，原件永久消失。
+ *   两者在恢复器眼里长得一样（都是「id 已存在」），故必须比内容。
+ *
+ * @returns {boolean} 逐字相同（含键序无关）⇒ true。任何差异都算不相等。
+ */
+export function samePayload(a, b) {
+    const norm = (v) => {
+        /* 稳定序列化：键按字典序排。业务对象由不同路径构造时键序常不同，
+         *   直接 JSON.stringify 会把「内容一样、键序不同」判成不同 —— 那会让
+         *   每一次幂等重放都变成一次「冲突」提示，用户会以为回收站坏了。 */
+        const seen = new Set();
+        const walk = (x) => {
+            /* undefined 与 null 都表达「没有 payload」：恢复器可能给任一，
+             *   若按字面区分，`samePayload(undefined, null)` 会判不等 ——
+             *   于是「两处都没有 payload」这种最平凡的幂等重放会被报成冲突。 */
+            if (x === undefined) return null;
+            if (x === null || typeof x !== 'object') return x;
+            if (seen.has(x)) return '[circular]';
+            seen.add(x);
+            if (Array.isArray(x)) {
+                const out = x.map(walk);
+                seen.delete(x);
+                return out;
+            }
+            const out = {};
+            for (const k of Object.keys(x).sort()) out[k] = walk(x[k]);
+            seen.delete(x);
+            return out;
+        };
+        try { return JSON.stringify(walk(v)); } catch (_e) { return null; }
+    };
+    const sa = norm(a);
+    const sb = norm(b);
+    if (sa === null || sb === null) return false;
+    return sa === sb;
+}
+
+/* ============================================================
+ * 处置器（[v4.121.0 · R14-O6] 附件类资源必须在**真正销毁**时才清）
+ * ------------------------------------------------------------
+ * 【治的欠债】日记删除时 `_hardDeleteEntry` 会当场把照片文件与页面背景图
+ *   **物理删掉**（走 `imageManager.deleteManagedBackgroundByPath`），而回收站里
+ *   存的 payload 只有 `photos[].imageUrl` 这个**路径字符串**。
+ *   于是恢复后：条目回来了、`bg_<id>` 设置键也写回去了，但路径指向的文件
+ *   早在删除那一刻就没了 —— 界面上是一张坏图。实测（R14-O6 探针）：
+ *
+ *      删后条目: 0  图片清理调用: [["delete","...d1_a.jpg"],["delete","...d1_bg.jpg"]]
+ *      恢复: {"ok":true,"text":"已恢复"}  条目: 1  bg: "/backgrounds/phone_diary_d1_bg.jpg"
+ *      ⇒ 恢复成功、设置键回来了、文件不在了。
+ *
+ * 【为什么不能把图片内容存进回收站】日记照片会被压成 base64 dataURL 或写成本地
+ *   文件，单张就可能上兆。回收站要留 200 条 —— 存内容等于把存档撑爆（撑爆的后果
+ *   是全量数据一起坏，见文件头【诚实边界】②）。故内容不能进回收站。
+ *
+ * 【故改用「推迟处置」】删除时只把「待清的附件路径」记进条目的 `meta.pendingFiles`
+ *   （纯数据，可 JSON 序列化），文件的物理删除**推迟到**条目被真正销毁的那一刻：
+ *   · `purgeBinEntry` —— 用户点「彻底删除」
+ *   · `clearBin`      —— 用户确认清空
+ *   · FIFO 淘汰       —— 超过 `BIN_MAX` 被挤掉的最旧条目
+ *   这三处正是「这条再也回不来了」的三个时刻。在这之前，文件一直躺着 ——
+ *   它们本来就是用户的，占的那点空间换的是一条真能恢复的日记。
+ *
+ * 【为什么不用「softDelete 的 hard 回调里不删」】因为 `hard` 契约是「立刻把业务
+ *   数据摘掉」，与附件清理解耦不了；而且 `hard` 是调用方传进来的函数，config 侧
+ *   存不住（条目要 JSON 序列化，函数进不去）。处置器走注册表，与 `registerRestorer`
+ *   同构，不破坏依赖方向。
+ */
+const PURGERS = new Map();
+
+/**
+ * 登记「条目被真正销毁时怎么清它的外部资源」。各 App 在数据类构造时调一次。
+ *
+ * @param {string} app   App 标识（与 `softDelete` 的 `spec.app` 同口径）
+ * @param {(payload:*, meta:?object) => void} fn  只管清，不返回成败 —— 清理失败不该
+ *   让「彻底删除」这个动作失败（条目已经不在回收站里了，重来一次也捞不回来）。
+ * @returns {boolean} 登记是否生效
+ */
+export function registerPurger(app, fn) {
+    const key = String(app || '').trim();
+    if (!key || typeof fn !== 'function') return false;
+    PURGERS.set(key, fn);
+    return true;
+}
+
+/** 内部：条目真销毁时调一次处置器。不抛 —— 清理失败不得让销毁动作半途而废 */
+function disposeEntry(row) {
+    if (!row || typeof row !== 'object') return;
+    const fn = PURGERS.get(String(row.app || ''));
+    if (typeof fn !== 'function') return;
+    try {
+        fn(row.payload == null ? null : row.payload, row.meta && typeof row.meta === 'object' ? row.meta : null);
+    } catch (e) {
+        console.warn('[RecycleBin] 条目处置器失败（条目已销毁，资源可能残留）:', e);
+    }
+}
+
 
 /** 把条目从回收站数组里摘掉（不改业务数据），返回 [新数组, 被摘的条目] */
 function detach(entries, binId) {
@@ -476,7 +627,14 @@ export function restoreById(storage, binId) {
 
     let ok = false;
     try {
-        ok = fn(row.payload, row.meta || null) !== false;
+        const out = fn(row.payload, row.meta || null);
+        /* [v4.121.0 · R14-O6] 恢复器回冲突标记 ⇒ 如实说不覆盖，**回收站条目留着**。
+         *   身份比较（===）而不是结构比较：只有本模块导出的那个冻结对象算数，
+         *   恢复器随手 return 一个 `{...}` 不会被误判成冲突。 */
+        if (out === RESTORE_CONFLICT) {
+            return { ok: false, app, id: String(row.id || ''), reason: 'id-conflict', text: REASON_TEXT['id-conflict'] };
+        }
+        ok = out !== false;
     } catch (e) {
         console.warn('[RecycleBin] 恢复写回失败:', e);
         ok = false;
@@ -501,6 +659,10 @@ export function purgeBinEntry(storage, binId) {
     const [next, row] = detach(entries, binId);
     if (!row) return { ok: false, reason: 'entry-missing', text: REASON_TEXT['entry-missing'] };
     writeRaw(storage, next);
+    /* [v4.121.0 · R14-O6] **先写盘摘条目、再清外部资源**。顺序不能反：
+     *   反过来的话，清理中途崩溃 ⇒ 条目还在回收站、附件已经没了 ⇒
+     *   用户再点恢复得到一条坏图，而且这次「彻底删除」看起来失败了。 */
+    disposeEntry(row);
     return { ok: true, app: String(row.app || ''), id: String(row.id || '') };
 }
 
@@ -516,6 +678,10 @@ export function clearBin(storage, confirmToken) {
     const entries = readRaw(storage);
     const cleared = entries.length;
     writeRaw(storage, []);
+    /* [v4.121.0 · R14-O6] 清空是「这些再也回不来了」的最彻底时刻，逐条处置外部资源。
+     *   放在 writeRaw 之后：先让回收站变成空的（这是用户看到的「已清空」），
+     *   再慢慢清文件 —— 清文件中途崩不会让用户看到「清空了但还留着」的中间态。 */
+    for (const row of entries) disposeEntry(row);
     return { ok: true, cleared };
 }
 

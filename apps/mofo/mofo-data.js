@@ -653,7 +653,13 @@ export class MofoData {
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         const list = this._ensureCache();
-        if (!list.some(item => String(item.id) === id)) {
+        const dup = list.find(item => String(item.id) === id);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict）。
+             *   ★ 注意顺序：**先判冲突再撤墓碑**。若先撤墓碑再报冲突，用户会看到
+             *     「恢复失败」但条目其实已经处于「可被合并/同步看见」的状态 —— 半恢复。 */
+            if (!recycleBin.samePayload(dup, payload)) return recycleBin.restoreConflict();
+        } else {
             const at = Number(meta && meta.index);
             if (Number.isFinite(at) && at >= 0 && at <= list.length) list.splice(at, 0, payload);
             else list.push(payload);

@@ -3975,13 +3975,18 @@ getWeekday(date) {
         return true;
     }
 
-    /** [v4.104.0 · R13-O8] 回收站写回口：朋友圈 */
+    /** [v4.104.0 · R13-O8] 回收站写回口：朋友圈
+     *   【v4.121.0 · R14-O6】同 id 已存在时区分幂等重放与真冲突（见 restoreConflict 注释）。 */
     _restoreMomentFromBin(payload, meta) {
         if (!payload || typeof payload !== 'object') return false;
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         if (!Array.isArray(this.data.moments)) this.data.moments = [];
-        if (this.data.moments.some(m => String(m?.id || '').trim() === id)) return true;
+        const exist = this.data.moments.find(m => String(m?.id || '').trim() === id);
+        if (exist) {
+            if (recycleBin.samePayload(exist, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= this.data.moments.length) this.data.moments.splice(at, 0, payload);
         else this.data.moments.unshift(payload);
@@ -5096,7 +5101,14 @@ parseAIResponse(text) {
         this.getMessages(chatId);
         if (!Array.isArray(this.data.messages[chatId])) this.data.messages[chatId] = [];
         const mid = String(payload?.id || '').trim();
-        if (mid && this.data.messages[chatId].some(m => String(m?.id || '').trim() === mid)) return true;
+        const dup = mid ? this.data.messages[chatId].find(m => String(m?.id || '').trim() === mid) : null;
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 同 id 已在会话里：逐字相同 ⇒ 幂等重放，回成功；
+             *   不同 ⇒ 真冲突（同 id 不可能是两条不同消息，说明有新写入撞了号），
+             *   如实说不覆盖、回收站条目留着。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= this.data.messages[chatId].length) {
             this.data.messages[chatId].splice(at, 0, payload);
@@ -5108,17 +5120,59 @@ parseAIResponse(text) {
         return true;
     }
 
-    /** [v4.104.0 · R13-O8] 回收站写回口：整个会话 + 它的全部消息一起回来 */
+    /** [v4.104.0 · R13-O8] 回收站写回口：整个会话 + 它的全部消息一起回来
+     *   【v4.121.0 · R14-O6 修复】原实现是 `this.data.messages[chatId] = msgs` ——
+     *   **整份覆盖**。实测（R14-O6 探针）：
+     *
+     *       删会话 c1（含 m1/m2）→ 用户又建了同 id 的会话并聊了 n1
+     *       → 恢复：「ok:true, 已恢复」
+     *       → chats: [{"id":"c1","name":"A群（新建）"}]      ← 新会话元信息保住了
+     *       → messages.c1: [m1, m2]                          ← 新消息 n1 没了
+     *
+     *   用户看到的是「恢复成功」，实际丢的是**删除之后新写的内容**。
+     *   本仓最贵的那族缺陷形态：不报错、只是默默少了东西。
+     *   故改为按 id **合并**：旧消息回来、新消息保留；同 id 以恢复的那份为准
+     *   （它才是用户当初删掉的原件，新会话里若有同 id 说明是复用了旧 id 的新记录，
+     *   这种撞号留旧的那份更能保证「恢复 = 回到删除前」这条语义）。
+     */
     _restoreChatFromBin(payload) {
         if (!payload || typeof payload !== 'object') return false;
         const chat = payload.chat;
         const chatId = String(chat?.id || '').trim();
         if (!chatId) return false;
+        const msgs = Array.isArray(payload.messages) ? payload.messages : [];
+        const current = Array.isArray(this.data.messages[chatId]) ? this.data.messages[chatId] : [];
+        /* [v4.121.0 · R14-O6] 先做**冲突检查**、后写任何东西。
+         *   同 id 在恢复批次与现存消息里各有一条、且内容不同 ⇒ 这是撞号（不是幂等重放），
+         *   保留哪一份都会静默丢掉另一份 ⇒ 如实说不覆盖，回收站条目留着，
+         *   用户先处理现有那条再来恢复。这一检查必须在 `chats.unshift` 之前：
+         *   否则会话元信息已经写进去了，再报失败就成了一次「写了一半」。 */
+        const restoredById = new Map();
+        for (const m of msgs) {
+            const id = String(m?.id || '').trim();
+            if (id && !restoredById.has(id)) restoredById.set(id, m);
+        }
+        for (const m of current) {
+            const id = String(m?.id || '').trim();
+            if (!id) continue;
+            const twin = restoredById.get(id);
+            if (twin && !recycleBin.samePayload(twin, m)) return recycleBin.restoreConflict();
+        }
         if (!Array.isArray(this.data.chats)) this.data.chats = [];
         if (!this.data.chats.some(c => String(c?.id || '') === chatId)) this.data.chats.unshift(chat);
-        const msgs = Array.isArray(payload.messages) ? payload.messages : [];
         if (msgs.length > 0) {
-            this.data.messages[chatId] = msgs;
+            /* [v4.121.0 · R14-O6] 合并而不是覆盖。三步：
+             *   ① 恢复的这批按原顺序排在前面（它们时间上更早）；
+             *   ② 现存里**不在恢复批次内**的追加到后面（删除之后新写的）；
+             *   ③ 现存里与恢复批次同 id 的丢弃 —— 上面已确认它们内容逐字相同（幂等重放），
+             *      丢掉的是**重复的那份**而不是不同的内容。 */
+            const kept = current.filter(m => {
+                const id = String(m?.id || '').trim();
+                /* 没有 id 的现存消息无法判重 —— 一律保留（宁可多留一条，
+                 *   也不要在恢复路径上静默丢用户数据）。 */
+                return !id || !restoredById.has(id);
+            });
+            this.data.messages[chatId] = msgs.concat(kept);
             this._messagesDirty[chatId] = true;
         }
         this.saveData();

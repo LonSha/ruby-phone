@@ -195,7 +195,14 @@ export class WeiboData {
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         const posts = this.getUserPosts();
-        if (posts.some(p => String(p?.id || '') === id)) return true;
+        const dup = posts.find(p => String(p?.id || '') === id);
+        if (dup) {
+            /* [v4.121.0 · R14-O6] 幂等重放 vs 真冲突（见 config/recycle-bin.js restoreConflict）。
+             *   ★ 返回必须在加计数之前：下面的 profile.posts + 1 是「帖子真的回来了」
+             *   的副作用；先加再报冲突会让计数虚高一条，而且没人会去修它。 */
+            if (recycleBin.samePayload(dup, payload)) return true;
+            return recycleBin.restoreConflict();
+        }
         const at = Number(meta && meta.index);
         if (Number.isFinite(at) && at >= 0 && at <= posts.length) posts.splice(at, 0, payload);
         else posts.unshift(payload);

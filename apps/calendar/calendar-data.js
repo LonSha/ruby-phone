@@ -31,18 +31,28 @@ export class CalendarData {
         recycleBin.registerRestorer('calendar_holiday', (payload) => this._restoreHolidayFromBin(payload));
     }
 
-    /** [v4.104.0 · R13-O8] 回收站写回口：备忘 */
+    /** [v4.104.0 · R13-O8] 回收站写回口：备忘
+     *   【v4.121.0 · R14-O6】同 id 已存在时不再一律回 true —— 见下方注释。 */
     _restoreMemoFromBin(payload, meta) {
         if (!payload || typeof payload !== 'object') return false;
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         const memos = this.getMemos();
-        if (!memos.some(m => String(m?.id || '') === id)) {
-            const at = Number(meta && meta.index);
-            if (Number.isFinite(at) && at >= 0 && at <= memos.length) memos.splice(at, 0, payload);
-            else memos.push(payload);
-            this.saveMemos();
+        const exist = memos.find(m => String(m?.id || '') === id);
+        if (exist) {
+            /* [v4.121.0 · R14-O6] 同 id 已存在，必须区分两种情况：
+             *   · 内容逐字相同 ⇒ 幂等重放（用户连点两次恢复），回 true 是对的；
+             *   · 内容不同 ⇒ **真冲突**（用户后来又建/改了这一条）。
+             *     此时回 true 会让 recycle-bin 摘掉回收站条目并说「已恢复」，
+             *     而实际上原件被永久丢弃 —— 实测过的静默丢数据。
+             *     故回冲突标记，让上层如实说「已有一项同 id，没有覆盖」。 */
+            if (recycleBin.samePayload(exist, payload)) return true;
+            return recycleBin.restoreConflict();
         }
+        const at = Number(meta && meta.index);
+        if (Number.isFinite(at) && at >= 0 && at <= memos.length) memos.splice(at, 0, payload);
+        else memos.push(payload);
+        this.saveMemos();
         /* 派生面重建：与新建走同一个出口（refreshDomainLifeEvent 自带幂等 upsert），
          *   刻意不手写一份 add —— 同一件事只许一个实现。 */
         try { this.refreshDomainLifeEvent(payload); } catch (_e) { /* 派生失败不该判整条恢复失败 */ }
@@ -55,10 +65,14 @@ export class CalendarData {
         const id = String(payload?.id || '').trim();
         if (!id) return false;
         const holidays = this.getHolidays();
-        if (!holidays.some(h => String(h?.id || '') === id)) {
-            holidays.push(payload);
-            this.saveHolidays();
+        const exist = holidays.find(h => String(h?.id || '') === id);
+        if (exist) {
+            /* [v4.121.0 · R14-O6] 同上：同 id 逐字相同才算幂等，否则如实报冲突。 */
+            if (recycleBin.samePayload(exist, payload)) return true;
+            return recycleBin.restoreConflict();
         }
+        holidays.push(payload);
+        this.saveHolidays();
         return true;
     }
 
