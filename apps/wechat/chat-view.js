@@ -1,3 +1,5 @@
+import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
+import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -2840,6 +2842,8 @@ export class ChatView {
         };
     }
 renderChatRoom(chat) {
+        const scope = String(this.app.storage?.currentConversationId || '') + ':' + String(chat.id);
+        if (this._inputBufferScope !== scope) { this.inputText = ''; this._inputBufferScope = scope; }
         const messages = this.app.wechatData.getMessages(chat.id);
         const userInfo = this.app.wechatData.getUserInfo();
         const isCurrentChatSending = this.isSending && String(this._activeSendingChatId || '') === String(chat.id || '');
@@ -9520,6 +9524,7 @@ renderChatRoom(chat) {
     bindEvents() {
         const currentView = this.getCurrentWechatView();
         const input = currentView.querySelector('#chat-input');
+        bindEditBuffer(this.app.storage, 'wechatApp', 'chat:' + this.app.currentChat?.id, input);
         const sendBtn = currentView.querySelector('#send-btn');
         const query = (selector) => currentView.querySelector(selector);
         const queryAll = (selector) => currentView.querySelectorAll(selector);
@@ -10543,7 +10548,7 @@ renderChatRoom(chat) {
     }
 
     // 🔥 发送按钮点击处理（抽取为独立方法，方便复用）
-    handleSendClick(input) {
+    async handleSendClick(input) {
         // 🔥 终极全局防抖：抵抗 DOM 重绘带来的闭合变量失效与幽灵点击中止
         const now = Date.now();
         if (now < Number(this._suppressEmptySendUntil || 0)) {
@@ -10596,11 +10601,46 @@ renderChatRoom(chat) {
             const timeFields = this._shouldUseRealTimeForOnlineChat()
                 ? this._buildWechatRealTimeFields()
                 : {};
-            this.app.wechatData.addMessage(this.app.currentChat.id, {
+            const submittedText = input.value;
+            const message = {
                 from: 'me', content: text, type: 'text', avatar: this.app.wechatData.getUserInfo().avatar,
                 quote: this.activeQuote,  // 🔥 携带引用信息
                 ...timeFields
-            });
+            };
+            const previousSubmission = this._pendingTextConfirmation;
+            if (previousSubmission?.inFlight && previousSubmission.sessionId === this.app.storage?.currentConversationId
+                && previousSubmission.chatId === targetChatId) return;
+            const pendingMessage = previousSubmission
+                && previousSubmission.sessionId === this.app.storage?.currentConversationId
+                && previousSubmission.chatId === targetChatId
+                ? this.app.wechatData.getMessages(targetChatId)?.find(item => item?.id === previousSubmission.id)
+                : null;
+            if (pendingMessage) {
+                Object.assign(pendingMessage, message, { id: previousSubmission.id });
+                this.app.wechatData._saveMessages(targetChatId);
+                this.app.wechatData.saveData();
+                message.id = previousSubmission.id;
+                previousSubmission.inFlight = true;
+            } else {
+                this.app.wechatData.addMessage(targetChatId, message);
+                this._pendingTextConfirmation = { sessionId: this.app.storage?.currentConversationId,
+                    chatId: targetChatId, text: submittedText, id: message.id, inFlight: true };
+            }
+            const receipt = await confirmEditOwner(this.app.storage, this.app.wechatData._getMessageKey(targetChatId),
+                (items) => Array.isArray(items) && items.some(item => item?.id === message.id && item.content === text));
+            if (!receipt.saved) {
+                if (this._pendingTextConfirmation?.id === message.id) this._pendingTextConfirmation.inFlight = false;
+                this.app.phoneShell.showNotification('提示', '发送未确认，文字仍保留；请检查连接', '⚠️');
+                return;
+            }
+            await input._rubyEditBuffer?.settle(receipt, submittedText);
+            const completed = this._pendingTextConfirmation;
+            if (completed?.id !== message.id || this.app.storage?.currentConversationId !== completed.sessionId
+                || input.value !== submittedText || String(this.app?.currentChat?.id || '') !== targetChatId) {
+                if (completed?.id === message.id) completed.inFlight = false;
+                return;
+            }
+            this._pendingTextConfirmation = null;
             input.value = '';
             this.inputText = '';
             this._collapseTransientInputPanels({ render: false });

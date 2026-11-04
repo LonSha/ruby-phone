@@ -1,3 +1,6 @@
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
+import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -1606,6 +1609,8 @@ export class DiaryView {
     }
 
     _bindEditEvents() {
+        const editor = document.getElementById('diary-edit-text');
+        const buffer = bindEditBuffer(this.app.storage, 'diaryApp', 'edit:' + this._editingEntryId, editor);
         const closeEditor = () => {
             const returnToPage = this._previousView === 'page' && !!this.currentEntryId;
             this.currentView = returnToPage ? 'page' : 'toc';
@@ -1618,10 +1623,28 @@ export class DiaryView {
         if (cancelBtn) cancelBtn.onclick = closeEditor;
 
         const saveBtn = document.getElementById('diary-edit-save');
-        if (saveBtn) saveBtn.onclick = () => {
+        if (saveBtn) saveBtn.onclick = async () => {
             const textarea = document.getElementById('diary-edit-text');
             if (textarea && this._editingEntryId) {
-                this.app.diaryData.updateEntryContent(this._editingEntryId, textarea.value);
+                if (this._pendingEditSave) return;
+                const submitted = textarea.value;
+                const entryId = this._editingEntryId;
+                const pendingEdit = { entryId };
+                this._pendingEditSave = pendingEdit;
+                try {
+                const sessionToken = captureSessionToken(this.app.storage);
+                try {
+                    const saved = this.app.diaryData.updateEntryContent(entryId, submitted);
+                    if (saved !== true) { alert('保存失败，文字仍保留'); return; }
+                    const receipt = await confirmEditOwner(this.app.storage, 'diary_entries',
+                        (entries) => Array.isArray(entries) && entries.some(entry => entry?.id === entryId && entry.content === submitted));
+                    if (!receipt.saved) { alert('保存未确认，文字仍保留；请检查连接后重试'); return; }
+                    await buffer?.settle(receipt, submitted);
+                    if (!guardSessionWrite(this.app.storage, sessionToken, 'diary-edit-submit')
+                        || this._editingEntryId !== entryId || document.getElementById('diary-edit-text') !== textarea
+                        || textarea.value !== submitted) return;
+                } catch (err) { alert('保存失败：' + (err?.message || err)); return; }
+                } finally { if (this._pendingEditSave === pendingEdit) this._pendingEditSave = null; }
             }
             closeEditor();
         };
@@ -1650,6 +1673,7 @@ export class DiaryView {
     }
 
     _bindNewEntryEvents() {
+        const buffer = bindEditBuffer(this.app.storage, 'diaryApp', 'new', document.getElementById('diary-new-text'));
         const cancelBtn = document.getElementById('diary-new-cancel');
         if (cancelBtn) cancelBtn.onclick = () => {
             this.currentView = 'toc';
@@ -1658,7 +1682,7 @@ export class DiaryView {
         };
 
         const saveBtn = document.getElementById('diary-new-save');
-        if (saveBtn) saveBtn.onclick = () => {
+        if (saveBtn) saveBtn.onclick = async () => {
             const textarea = document.getElementById('diary-new-text');
             const content = String(textarea?.value || '').trim();
             if (!content) {
@@ -1667,7 +1691,32 @@ export class DiaryView {
             }
 
             try {
-                const entry = this.app.diaryData.createManualEntry(content);
+                const prior = this._pendingNewEntryConfirmation;
+                const sessionId = this.app.storage?.currentConversationId;
+                if (prior?.inFlight && prior.sessionId === sessionId) return;
+                const sessionToken = captureSessionToken(this.app.storage);
+                const entry = prior?.sessionId === sessionId && prior.entry?.id && this.app.diaryData.getEntry(prior.entry.id)
+                    ? prior.entry : this.app.diaryData.createManualEntry(content);
+                if (!entry?.id) throw new Error('未收到保存回执');
+                if (prior?.entry === entry && prior.content !== content) {
+                    if (!this.app.diaryData.updateEntryContent(entry.id, content)) throw new Error('更新日记失败');
+                }
+                this._pendingNewEntryConfirmation = { sessionId, content, entry, inFlight: true };
+                const submitted = textarea.value;
+                const receipt = await confirmEditOwner(this.app.storage, 'diary_entries',
+                    (entries) => Array.isArray(entries) && entries.some(item => item?.id === entry.id && item.content === content));
+                if (!receipt.saved) {
+                    if (this._pendingNewEntryConfirmation?.entry?.id === entry.id) this._pendingNewEntryConfirmation.inFlight = false;
+                    alert('保存未确认，文字仍保留；请检查连接后重试'); return;
+                }
+                await buffer?.settle(receipt, submitted);
+                const completed = this._pendingNewEntryConfirmation;
+                if (completed?.entry?.id !== entry.id || !guardSessionWrite(this.app.storage, sessionToken, 'diary-new-submit')
+                    || document.getElementById('diary-new-text') !== textarea || textarea.value !== submitted) {
+                    if (completed?.entry?.id === entry.id) completed.inFlight = false;
+                    return;
+                }
+                this._pendingNewEntryConfirmation = null;
                 this.currentEntryId = entry.id;
                 this.currentView = 'page';
                 this.isBackNav = true;
@@ -1764,7 +1813,7 @@ export class DiaryView {
         };
 
         const saveBtn = document.getElementById('diary-import-save');
-        if (saveBtn) saveBtn.onclick = () => {
+        if (saveBtn) saveBtn.onclick = async () => {
             const content = String(textarea?.value || '').trim();
             if (!content) {
                 alert('请先粘贴要导入的日记');

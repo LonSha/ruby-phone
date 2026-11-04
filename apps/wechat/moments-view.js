@@ -1,3 +1,5 @@
+import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
+import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -2765,6 +2767,7 @@ ${memoryLines.slice(0, 10).join('\n')}
 
     // 绑定发朋友圈页面事件
     bindPostMomentEvents() {
+        bindEditBuffer(this.app.storage, 'wechatApp', 'moment:new', document.getElementById('moment-text-input'));
         // 返回按钮
         document.getElementById('back-from-post')?.addEventListener('click', () => {
             this._leavePostMomentDraft({ published: false });
@@ -2900,7 +2903,7 @@ ${memoryLines.slice(0, 10).join('\n')}
     }
 
     // 发表朋友圈
-    publishMoment() {
+    async publishMoment() {
         const textInput = document.getElementById('moment-text-input');
         const rawText = textInput?.value?.trim() || '';
         const extracted = this._extractMomentImageTagsFromText(rawText);
@@ -2929,8 +2932,12 @@ ${memoryLines.slice(0, 10).join('\n')}
             contactNames: []
         };
 
-        // 创建朋友圈
-        const moment = {
+        // 创建朋友圈。未确认的重试复用同一条记录，避免保存回执不明时重复发布。
+        const retry = this._pendingMomentConfirmation;
+        if (retry?.inFlight && retry.sessionId === this.app.storage?.currentConversationId) return;
+        const sameRetry = retry && retry.sessionId === this.app.storage?.currentConversationId
+            && this.app.wechatData.data?.moments?.some(item => item?.id === retry.moment.id);
+        const moment = sameRetry ? retry.moment : {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
             name: userInfo.name || '我',
             avatar: userInfo.avatar || '😊',
@@ -2954,8 +2961,34 @@ ${memoryLines.slice(0, 10).join('\n')}
         };
 
         // 添加到数据
-        this.app.wechatData.addMoment(moment);
-
+        if (!sameRetry) {
+            this.app.wechatData.addMoment(moment);
+            this._pendingMomentConfirmation = { sessionId: this.app.storage?.currentConversationId, text, images, moment, inFlight: true };
+        } else {
+            moment.text = text;
+            moment.images = images;
+            moment.visibility = { type: visibility.type, contactIds: [...(visibility.contactIds || [])], contactNames: [...(visibility.contactNames || [])] };
+            retry.inFlight = true;
+            this.app.wechatData.saveData();
+        }
+        const submittedText = textInput?.value;
+        const receipt = await confirmEditOwner(this.app.storage, this.app.wechatData.getStorageKey(),
+            (data) => Array.isArray(data?.moments) && data.moments.some(item => item?.id === moment.id
+                && item.text === text && JSON.stringify(item.images) === JSON.stringify(images)));
+        if (!receipt.saved) {
+            if (this._pendingMomentConfirmation?.moment?.id === moment.id) this._pendingMomentConfirmation.inFlight = false;
+            this.app.phoneShell.showNotification('提示', '发布未确认，文字仍保留；请检查连接', '⚠️');
+            return;
+        }
+        await textInput?._rubyEditBuffer?.settle(receipt, submittedText);
+        const completed = this._pendingMomentConfirmation;
+        if (completed?.moment?.id !== moment.id || this.app.storage?.currentConversationId !== completed.sessionId
+            || (textInput && (textInput.value !== submittedText
+                || document.getElementById('moment-text-input') !== textInput))) {
+            if (completed?.moment?.id === moment.id) completed.inFlight = false;
+            return;
+        }
+        this._pendingMomentConfirmation = null;
         // 标记草稿已发布，避免离开页面时被误清理
         this._postMomentDraftCommitted = true;
 

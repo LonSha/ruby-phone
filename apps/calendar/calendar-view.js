@@ -1,3 +1,6 @@
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
+import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
  *  柚月小手机 (Yuzuki's Little Phone)
  *  日历视图层
@@ -679,6 +682,17 @@ export class CalendarView {
     }
 
     bindEvents() {
+        const editorRoot = document.querySelector('.phone-view-current') || document;
+        for (const [id, target, field] of [
+            ['yzp-calendar-memo-input', 'new:' + this.toDateKey(this.selectedDate) + ':title', 'draftMemoTitle'],
+            ['yzp-calendar-time-input', 'new:' + this.toDateKey(this.selectedDate) + ':time', 'draftMemoTime'],
+            ['yzp-calendar-edit-input', 'edit:' + this.detailMemoId + ':title', 'editMemoTitle'],
+            ['yzp-calendar-edit-time-input', 'edit:' + this.detailMemoId + ':time', 'editMemoTime']
+        ]) {
+            const input = editorRoot.querySelector('#' + id);
+            bindEditBuffer(this.app.storage, 'calendarApp', target, input);
+            input?.addEventListener('input', () => { this[field] = input.value; });
+        }
         const root = document.querySelector('.phone-view-current .yzp-calendar-app');
         if (!root) return;
         this.bindPromptFoldToggles(root);
@@ -857,7 +871,7 @@ export class CalendarView {
                 this.render();
             });
         });
-        root.querySelector('#yzp-calendar-add-form')?.addEventListener('submit', (e) => {
+        root.querySelector('#yzp-calendar-add-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const titleInput = root.querySelector('#yzp-calendar-memo-input');
             const timeInput = root.querySelector('#yzp-calendar-time-input');
@@ -870,10 +884,13 @@ export class CalendarView {
             const dateKey = this.toDateKey(this.selectedDate);
             const time = String(timeInput?.value || '').trim();
             const type = this.selectedMemoType || 'daily';
+            if (this._pendingMemoConfirmation?.inFlight
+                && this._pendingMemoConfirmation.sessionId === this.app.storage?.currentConversationId) return;
             /* [v4.44.0 · R5-O2] 这份表单是从**群投票转交**来的：走交接口提交，
              *   由它一次做完「建日程 + 建约定 + 记幂等台账」，并把回执如实回报。
              *   ★ 只有用户**显式提交**才走这里 —— 打开表单、预填、关掉，一个字节都不写。
              *   ★ 台账在交接口里判重：同一场投票重复转交再提交，不会双建。 */
+            let memoId = null;
             if (this._voteHandoff) {
                 const handoff = this._voteHandoff;
                 let receipt = null;
@@ -887,6 +904,8 @@ export class CalendarView {
                     ok ? '📅' : '⚠️'
                 );
                 if (ok) {
+                    memoId = receipt.memo?.id || null;
+                    this._pendingMemoConfirmation = { sessionId: this.app.storage?.currentConversationId, id: memoId, inFlight: true };
                     this._voteHandoff = null;
                     this._voteHandoffLine = '';
                 } else {
@@ -897,20 +916,56 @@ export class CalendarView {
                     return;
                 }
             } else {
-                this.app.calendarData.addMemo({ dateKey, title, time, type });
+                const prior = this._pendingMemoConfirmation;
+                if (prior?.inFlight && prior.sessionId === this.app.storage?.currentConversationId) return;
+                const sameSessionMemo = prior?.sessionId === this.app.storage?.currentConversationId
+                    && this.app.calendarData.getMemos().some(item => item?.id === prior.id);
+                if (sameSessionMemo) {
+                    memoId = prior.id;
+                    if (!this.app.calendarData.updateMemo(memoId, { dateKey, title, time, type })) return;
+                } else {
+                    memoId = this.app.calendarData.addMemo({ dateKey, title, time, type })?.id;
+                }
+                this._pendingMemoConfirmation = { sessionId: this.app.storage?.currentConversationId, id: memoId, inFlight: true };
             }
+            const submittedTitle = titleInput?.value;
+            const submittedTime = timeInput?.value;
+            const sessionToken = captureSessionToken(this.app.storage);
+            const receipt = await confirmEditOwner(this.app.storage, this.app.calendarData.memoKey,
+                (items) => Array.isArray(items) && items.some(item => memoId && item?.id === memoId
+                    && item.dateKey === dateKey && item.title === title.slice(0, 160)
+                    && item.time === time.slice(0, 16) && item.type === this.app.calendarData.normalizeType(type)));
+            if (!receipt.saved) {
+                if (this._pendingMemoConfirmation?.id === memoId) this._pendingMemoConfirmation.inFlight = false;
+                this.app.phoneShell?.showNotification?.('日历', '保存未确认，文字仍保留；请检查连接', '⚠️');
+                return;
+            }
+            await titleInput?._rubyEditBuffer?.settle(receipt, submittedTitle);
+            await timeInput?._rubyEditBuffer?.settle(receipt, submittedTime);
+            const completed = this._pendingMemoConfirmation;
+            if (completed?.id !== memoId || !guardSessionWrite(this.app.storage, sessionToken, 'calendar-memo-submit')
+                || document.querySelector('.phone-view-current .yzp-calendar-app') !== root
+                || root.querySelector('#yzp-calendar-memo-input') !== titleInput
+                || root.querySelector('#yzp-calendar-time-input') !== timeInput
+                || titleInput?.value !== submittedTitle || timeInput?.value !== submittedTime) {
+                if (completed?.id === memoId) completed.inFlight = false;
+                return;
+            }
+            this._pendingMemoConfirmation = null;
             if (type === 'date') {
                 const context = this.app._getContext?.() || {};
-                this.app.proposeCommitmentFromMemo?.({
+                const proposed = this.app.proposeCommitmentFromMemo?.({
                     actor: context.name2 || '角色',
                     with: context.name1 || '玩家',
                     content: title,
                     dateKey,
                     time,
-                    place: ''
+                    place: '',
+                    eventKey: `memo:${memoId}`
                 });
-                const created = this.app.loadCommitments?.().items?.slice(-1)[0];
-                if (created?.status === 'proposed') this.app.confirmCommitmentById?.(created.id);
+                if (proposed?.ok && proposed.item?.status === 'proposed') {
+                    this.app.confirmCommitmentById?.(proposed.item.id, `memo-confirm:${memoId}`);
+                }
             }
             this.addPanelOpen = false;
             this.typePickerOpen = false;
@@ -1070,8 +1125,10 @@ export class CalendarView {
                 this.render();
             });
         });
-        root.querySelector('#yzp-calendar-edit-form')?.addEventListener('submit', (e) => {
+        root.querySelector('#yzp-calendar-edit-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const sessionId = this.app.storage?.currentConversationId;
+            if (this._pendingMemoEdit?.sessionId === sessionId) return;
             const titleInput = root.querySelector('#yzp-calendar-edit-input');
             const timeInput = root.querySelector('#yzp-calendar-edit-time-input');
             const title = String(titleInput?.value || '').trim();
@@ -1086,9 +1143,35 @@ export class CalendarView {
                 type: this.editMemoType || 'daily'
             });
             if (!saved) return;
+            const submittedTitle = titleInput?.value;
+            const submittedTime = timeInput?.value;
+            const submittedId = this.detailMemoId;
+            const sessionToken = captureSessionToken(this.app.storage);
+            const submittedType = this.app.calendarData.normalizeType(this.editMemoType || 'daily');
+            const pending = { sessionId, id: submittedId };
+            this._pendingMemoEdit = pending;
+            try {
+            const receipt = await confirmEditOwner(this.app.storage, this.app.calendarData.memoKey,
+                (items) => Array.isArray(items) && items.some(item => item?.id === submittedId
+                    && item.title === title.slice(0, 160) && item.time === String(submittedTime || '').trim().slice(0, 16)
+                    && item.type === submittedType));
+            if (!receipt.saved) {
+                this.app.phoneShell?.showNotification?.('日历', '保存未确认，文字仍保留；请检查连接', '⚠️');
+                return;
+            }
+            await titleInput?._rubyEditBuffer?.settle(receipt, submittedTitle);
+            await timeInput?._rubyEditBuffer?.settle(receipt, submittedTime);
+            if (!guardSessionWrite(this.app.storage, sessionToken, 'calendar-memo-edit')
+                || document.querySelector('.phone-view-current .yzp-calendar-app') !== root
+                || root.querySelector('#yzp-calendar-edit-input') !== titleInput
+                || root.querySelector('#yzp-calendar-edit-time-input') !== timeInput
+                || this.detailMemoId !== submittedId || titleInput?.value !== submittedTitle || timeInput?.value !== submittedTime) return;
             this.detailEditMode = false;
             this.detailTypePickerOpen = false;
             this.render();
+            } finally {
+                if (this._pendingMemoEdit === pending) this._pendingMemoEdit = null;
+            }
         });
         root.querySelectorAll('[data-memo-delete]').forEach(btn => {
             btn.addEventListener('click', (e) => {
