@@ -7,6 +7,7 @@
  *
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
+import { showPhonePrompt, showPhoneConfirm } from './phone-dialog.js';
 // 提示词管理器 - 核心架构
 export class PromptManager {
     constructor(storage) {
@@ -2488,8 +2489,9 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
             }
         });
 
-        host.querySelector('.phone-prompt-preset-new')?.addEventListener('click', () => {
-            const name = String(window.prompt('请输入提示词预设名称', '') || '').trim();
+        host.querySelector('.phone-prompt-preset-new')?.addEventListener('click', async () => {
+            const rawName = await showPhonePrompt('请输入提示词预设名称', '', { host: host.closest('.phone-view-current, .phone-screen, body') || host });
+            const name = String(rawName || '').trim();
             if (!name) return;
             try {
                 const preset = this.createPromptUserPreset(app, feature, name, textarea.value || '');
@@ -2501,7 +2503,6 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
                 notify('新增失败', e?.message || String(e), '❌');
             }
         });
-
         host.querySelector('.phone-prompt-preset-save')?.addEventListener('click', () => {
             try {
                 const preset = this.updateActivePromptUserPreset(app, feature, textarea.value || '');
@@ -2511,8 +2512,7 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
                 notify('保存失败', e?.message || String(e), '❌');
             }
         });
-
-        host.querySelector('.phone-prompt-preset-delete')?.addEventListener('click', () => {
+        host.querySelector('.phone-prompt-preset-delete')?.addEventListener('click', async () => {
             const activeId = String(select?.value || '').trim();
             if (!activeId) {
                 notify('不能删除', '默认提示词不能删除', '⚠️');
@@ -2524,7 +2524,8 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
             }
             const preset = this.getPromptUserPresets(app, feature).find(item => item.id === activeId);
             if (!preset) return;
-            if (!window.confirm(`删除提示词预设「${preset.name}」？`)) return;
+            const ok = await showPhoneConfirm(`删除提示词预设「${preset.name}」？`, { host: host.closest('.phone-view-current, .phone-screen, body') || host });
+            if (!ok) return;
             this.deletePromptUserPreset(app, feature, activeId);
             const defaultContent = this.resetPromptToDefault(app, feature);
             textarea.value = defaultContent;

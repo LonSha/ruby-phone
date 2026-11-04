@@ -1,3 +1,4 @@
+import { showPhoneConfirm } from '../../config/phone-dialog.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -1327,7 +1328,7 @@ export class WangxiangView {
         };
         const deleteOrderRecord = async card => {
             const orderId = String(card?.dataset?.marketOrderId || '');
-            if (!orderId || !window.confirm('删除这条订单记录？此操作不会退款或恢复库存。')) return;
+            if (!orderId || !await showPhoneConfirm({ title: '删除订单', message: '删除这条订单记录？此操作不会退款或恢复库存。', confirmText: '删除', danger: true })) return;
             try {
                 const removed = await this.app.removeMarketplaceOrder(orderId);
                 if (!removed) return;
@@ -1442,7 +1443,7 @@ export class WangxiangView {
             }
             const removeAddress = event.target?.closest?.('[data-wangxiang-address-remove]');
             if (removeAddress) {
-                if (!window.confirm('删除这条收货地址？')) return;
+                if (!await showPhoneConfirm({ title: '删除收货地址', message: '删除这条收货地址？', confirmText: '删除', danger: true })) return;
                 await this.app.removeDeliveryAddress(removeAddress.dataset.wangxiangAddressRemove);
                 this._renderMarketplaceOrders(root);
                 return;
@@ -1690,7 +1691,7 @@ export class WangxiangView {
             }
             return;
         }
-        if (action === 'abandon' && !window.confirm('确定放弃这个任务？')) return;
+        if (action === 'abandon' && !await showPhoneConfirm({ title: '放弃任务', message: '确定放弃这个任务？', confirmText: '放弃', danger: true })) return;
 
         button.disabled = true;
         try {
