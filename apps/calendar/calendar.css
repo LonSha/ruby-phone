@@ -66,9 +66,9 @@
 
 #phone-panel-content .phone-screen .yzp-calendar-icon-btn,
 #phone-panel-content .phone-screen .yzp-calendar-small-btn {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
     border: 1px solid var(--yzp-cal-line) !important;
     border-radius: 50% !important;
     display: inline-flex !important;
@@ -78,7 +78,7 @@
     margin: 0 !important;
     background: var(--yzp-cal-panel) !important;
     color: var(--yzp-cal-text) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     line-height: 1 !important;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
     cursor: pointer !important;

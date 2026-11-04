@@ -191,15 +191,17 @@
 }
 
 .diary-toc-btn {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     border-radius: 50%;
     border: none;
     background: rgba(0,0,0,0.05);
     color: #8a7a6a;
     font-size: 14px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
@@ -1010,17 +1012,19 @@
 }
 
 .diary-photo-tool {
-    width: 26px;
-    height: 26px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
     border: 0;
-    border-radius: 0;
-    background: transparent;
-    color: rgba(79, 63, 48, 0.66) !important;
-    display: flex;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.4);
+    color: rgba(79, 63, 48, 0.75) !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     font-family: Arial, "Helvetica Neue", sans-serif;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
