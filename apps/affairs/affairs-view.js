@@ -10,6 +10,7 @@
 /* [v4.114.0 · R13-X7] 「这个月要处理的」。**不另开页签**：本 App 在 tab-source 里登记为单页，
  *   分页会把一屏读数拆成两份，且会让那张真源表与源码对不上（判据会红）。
  *   故清单作为**同一页里的一段**派生出去。 */
+import { AffairLiveView } from './affair-live-view.js';
 import { ErrandView } from './errand-view.js';
 
 export class AffairsView {
@@ -71,6 +72,9 @@ export class AffairsView {
         ].join('\n');
         this.container.innerHTML = html;
         this._bind();
+        const liveSlot = document.createElement('div'); this.container.appendChild(liveSlot);
+        if (!this._liveView) this._liveView = new AffairLiveView(this.app);
+        this._liveView.render(liveSlot);
     }
     _stageLabel(s) {
         const map = { planning: '在商议', scheduled: '已排期', doing: '进行中', wrapping: '收尾中', closed: '了结', unknown: '阶段不明' };

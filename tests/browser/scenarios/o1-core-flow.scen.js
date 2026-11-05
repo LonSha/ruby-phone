@@ -1,3 +1,4 @@
+import { desktopIconByName } from '/tests/browser/desktop-navigation.mjs';
 /* ============================================================
  * tests/browser/scenarios/o1-core-flow.scen.js — O1 基线场景②：核心流程
  * ------------------------------------------------------------
@@ -80,10 +81,7 @@ async function openAppByName(name, viewSel) {
   // goHome 之后 500ms 内有重入屏蔽（_homeReturnGuardUntil），真路径下用户点不了那么快；
   //   这里等过去，否则会把「屏蔽生效」误读成「App 打不开」。
   await window.__sleep(560);
-  const icon = [...document.querySelectorAll('.home-screen .app-icon')].find((el) => {
-    const t = el.querySelector('.app-name');
-    return t && t.textContent.trim() === name;
-  });
+  const icon = await desktopIconByName(name);
   if (!icon) return { ok: false, why: '找不到图标 ' + name };
   realClick(icon);
   const up = await waitFor(() => document.querySelector(viewSel), { timeoutMs: 12000 });
@@ -117,11 +115,17 @@ if (back && backHit.ok) {
 const backHome = await waitFor(() => !!document.querySelector('.home-screen') && !document.querySelector('.phone-view-current .ga-root'), { timeoutMs: 6000 });
 report({ name: 'back-button-returns-home', ok: backHome, detail: backHome ? '已回桌面' : '点了没回桌面（按钮没绑定 / 路由断了）' });
 
+// 分类入口仍有文件夹层，真点击返回到桌面根层后核对按钮。
+if (window.VirtualPhone?.home?._viewStack?.top?.()?.level === 'cluster') {
+  realClick(document.getElementById('phone-back-button'));
+  await window.__sleep(600);
+}
+await waitFor(() => { const b = document.getElementById('phone-back-button'); return b && getComputedStyle(b).display === 'none'; }, { timeoutMs: 6000 });
 const backHiddenNow = (() => {
   const b = document.getElementById('phone-back-button');
   return !!b && getComputedStyle(b).display === 'none';
 })();
-report({ name: 'back-button-hidden-at-home', ok: backHiddenNow, detail: backHiddenNow ? '桌面态已隐藏' : '桌面态仍在显示' });
+report({ name: 'back-button-hidden-at-home', ok: backHiddenNow, detail: backHiddenNow ? '桌面态已隐藏' : '桌面态仍在显示 history=' + JSON.stringify(window.VirtualPhone?.home?.phoneShell?.viewHistory) + ' stack=' + JSON.stringify(window.VirtualPhone?.home?._viewStack?.top?.()) });
 
 /* ---------- 4. 锁屏：点药丸 → 锁屏层出现并覆盖屏幕；再点 → 解锁 ---------- */
 const punch = document.querySelector('.phone-punch-hole');

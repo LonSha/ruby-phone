@@ -23,6 +23,7 @@
  *     · 落账层把 meta 收成固定几字段 ⇒ 靶心写进去了却被丢掉，重启后全变「只开 App」。
  *   故 B / C / D / E / H 五面必须各自独立可观测。
  * ======================================================== */
+import { copyTreeSafe } from './_mirror_tree.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -405,16 +406,16 @@ test('F1 ★★★ 装配器：两件 App 都在 render 之前投靶心，页签
 /** 副本树必须够模块加载：一整份 config/ + 被破坏的 App 整个目录 + data/（引擎静态 import 它）。 */
 function damage(rel, anchor, replacement) {
   const dir = mkTemp('rp_r14o3_');
-  fs.cpSync(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
+  copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'), { recursive: true });
   if (rel.indexOf('apps/') === 0) {
     const seg = rel.split('/')[1];
-    fs.cpSync(path.join(ROOT, 'apps', seg), path.join(dir, 'apps', seg), { recursive: true });
+    copyTreeSafe(path.join(ROOT, 'apps', seg), path.join(dir, 'apps', seg), { recursive: true });
   }
   /* 引擎静态 import 了 `data/cheat-index.js` 与 `data/dirtytalk-index.js`：
    *   副本树若只带 config/ + apps/，ESM 解析会 MODULE_NOT_FOUND，
    *   而那是**判据基建坏了**，会被误读成「破坏没反应」。 */
   if (fs.existsSync(path.join(ROOT, 'data'))) {
-    fs.cpSync(path.join(ROOT, 'data'), path.join(dir, 'data'), { recursive: true });
+    copyTreeSafe(path.join(ROOT, 'data'), path.join(dir, 'data'), { recursive: true });
   }
   const src = readRel(rel);
   const hits = src.split(anchor).length - 1;

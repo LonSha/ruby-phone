@@ -1032,7 +1032,7 @@ export class PhoneShell {
             /* [v4.92.0] 像素 B 键：优先走 HomeScreen 的掌机视图栈（聚合壳等）。
              *   栈在桌面根层级时 pressPixelBack 返回 {shook:true} —— 桌面再按 B 键只抖动，
              *   不再像旧逻辑那样「在桌面按返回=静默 return」。 */
-            const hs = window.VirtualPhone?.homeScreen;
+            const hs = window.VirtualPhone?.home;
             if (hs && typeof hs.pressPixelBack === 'function') {
                 const r = hs.pressPixelBack();
                 if (r && r.shook) return;      // 桌面根层级：抖动即终态

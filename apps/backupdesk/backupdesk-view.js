@@ -11,6 +11,8 @@
  *   · **不自己判**：分面 / 冲突 / 迁移 / 快照差异的名与文案全部来自内核。
  * ========================================================= */
 'use strict';
+import { renderExperienceImport } from './experience-import-view.js';
+import { renderExperiencePack } from './experience-pack-view.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -45,6 +47,8 @@ export class BackupdeskView {
         if (!el) return;
         el.innerHTML = this._html(vm);
         this._bind(el);
+        const slot = document.createElement('div'); el.appendChild(slot); renderExperiencePack(slot, this.app.storage);
+        const receive = document.createElement('div'); el.appendChild(receive); renderExperienceImport(receive, this.app.storage);
     }
     _head(vm) {
         let h = '<div class="bk-head">';

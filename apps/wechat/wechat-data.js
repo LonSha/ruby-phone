@@ -1,3 +1,4 @@
+import { receivedReplyCondition } from '../../config/condition-reminder-runtime.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -3227,9 +3228,9 @@ export class WechatData {
         this._saveMessages(chatId);
 
         this.saveData();
+        receivedReplyCondition(this.storage, chatId, message);
         return true;
     }
-
     updateMessageById(chatId, messageId, patch = {}) {
         const safeChatId = String(chatId || '').trim();
         const safeMessageId = String(messageId || '').trim();

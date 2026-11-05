@@ -1,3 +1,4 @@
+import { checkConditionReminders } from './condition-reminder-runtime.js';
 import { SC_KEY, SC_LIMITS } from './shared-chore-terms.js';
 import { sharedChore, choreAction } from './shared-chore.js';
 export function readChores(storage) {
@@ -28,6 +29,7 @@ export function saveChore(storage, raw, action) {
         storage.set(SC_KEY, JSON.stringify(read.rows), false);
         const got = readChores(storage);
         if (!got.ok || JSON.stringify(got.rows) !== JSON.stringify(read.rows)) return { ok: false, why: 'write-failed' };
+        checkConditionReminders(storage);
         return { ok: true, chore: result.chore };
     } catch (_) { return { ok: false, why: 'write-failed' }; }
 }

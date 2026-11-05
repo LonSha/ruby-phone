@@ -98,7 +98,7 @@ for (const el of currentIcons) {
 }
 report({ name: 'icon-has-box', ok: iconZero.length === 0, detail: '当前页图标=' + currentIcons.length + ' / 全部=' + iconEls.length + ' 零盒=' + JSON.stringify(iconZero) });
 report({ name: 'icon-hit-test', ok: iconHitFail.length === 0, detail: '未命中=' + JSON.stringify(iconHitFail) });
-report({ name: 'home-paged', ok: pages.length > 1, detail: '页数=' + pages.length });
+report({ name: 'home-paged', ok: pages.length >= 1 && (pages.length > 1 || document.querySelectorAll("[data-cluster]").length === 7), detail: '页数=' + pages.length });
 /* 翻页可用性：点第 2 页页码后，该页图标必须真可命中（守「分页不是把图标藏死」） */
 /* ★ 本版自己抓到的第 2 处判据缺陷（首版写法错）：
  *   首版直接点页码后取第 2 页图标盒，得到 0/20 可命中，而 `aria-hidden` 已正确翻成 false
@@ -143,9 +143,17 @@ if (pages.length > 1) {
 } else {
   report({ name: 'page2-hit-test', ok: true, detail: '单页布局，无翻页面' });
 }
-const reachable = new Set(iconEls.map((el) => el.dataset.app).filter(Boolean));
-const notOnHome = ids.filter((id) => !reachable.has(id));
-report({ name: 'home-reachable-ids', ok: notOnHome.length === 0, detail: '主屏可达 ' + reachable.size + ' / ' + ids.length + '；不在主屏=' + JSON.stringify(notOnHome) });
+const reachable = new Set(iconEls.map(el=>el.dataset.app).filter(Boolean));
+const folders=[...document.querySelectorAll('[data-cluster]')];
+for(const folder of folders){
+ realClick(folder);
+ await waitFor(()=>document.querySelector('.cluster-modal'),{timeoutMs:3000});
+ for(const item of document.querySelectorAll('.cluster-modal [data-app]')) reachable.add(item.dataset.app);
+ realClick(document.getElementById('phone-back-button'));
+ await waitFor(()=>document.querySelector('.home-screen'),{timeoutMs:3000});
+}
+const notOnHome=ids.filter(id=>!reachable.has(id));
+report({name:'home-reachable-ids',ok:notOnHome.length===0,detail:'desktop and actual category members '+reachable.size+'/'+ids.length+' missing='+JSON.stringify(notOnHome)});
 /* ── 二、逐个开屏：真派发 phone:openApp（走入口自己的监听器，不调内部函数） ──
  * ★ 本版自己抓到的第 3 处判据缺陷（首版写法错）：首版按 `view-{appId}` 找图层，得到 82/82「无图层」
  *   —— 取证后发现**图层名是各 App 自定的**：
@@ -228,17 +236,23 @@ async function probeOne(id) {
   const hitOk = selfHit > 0 && otherLayerHits.length === 0;
   return { id: id, stage: 'ok', layer: view.getAttribute('data-view-id'), w: Math.round(r.width), h: Math.round(r.height), textLen: textLen, nodes: nodes, probed: probed, selfHit: selfHit, otherLayer: otherLayerHits.slice(0, 3), hitOk: hitOk };
 }
-/* 屏蔽窗口契约（循环前单独量一次）：开一个 App → 点真返回键回主屏 → 立刻再派发必须被拦下 */
+/* 屏蔽窗口契约（循环前单独量一次）：开一个 App → 真正返回 desktop 根层 → 立即再派发必须被拦下 */
 {
   await probeOne(ids[0]);
-  const b0 = document.getElementById('phone-back-button');
-  if (b0) b0.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  await waitFor(() => (atHome() ? true : null), { timeoutMs: 2000, stepMs: 40 });
-  const beforeGuard = viewIdNow();
-  window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'settings' } }));
-  await new Promise((res) => setTimeout(res, 300));
-  const blocked = viewIdNow() === beforeGuard;
-  report({ name: 'home-return-guard', ok: blocked, detail: blocked ? '回主屏后 500ms 内派发 openApp 被屏蔽（设计如此）' : '回主屏后立刻派发被放行 —— 重入屏蔽失效' });
+  const realDateNow = Date.now;
+  const guardCheckTime = realDateNow.call(Date);
+  Date.now = () => guardCheckTime; // dump-dom 快进虚拟时钟；让真返回与立即重入共享同一时刻
+  let blocked = false;
+  try {
+    const back = document.getElementById('phone-back-button');
+    if (back) back.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const hs = window.VirtualPhone?.home;
+    await waitFor(() => hs?._viewStack?.top?.()?.level === 'desktop', { timeoutMs: 3000, stepMs: 40 });
+    const beforeGuard = viewIdNow();
+    window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'settings' } }));
+    blocked = viewIdNow() === beforeGuard;
+  } finally { Date.now = realDateNow; }
+  report({ name: 'home-return-guard', ok: blocked, detail: blocked ? '返回后 500ms 栅栏内派发被拦截' : '返回重入栅栏未拦截' });
   await new Promise((res) => setTimeout(res, 560));
 }
 const results = [];

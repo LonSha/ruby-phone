@@ -1,0 +1,11 @@
+import {previewExperienceImport,readExperiences,importExperience} from '../../config/experience-import.js';
+import {captureSessionToken,guardSessionWrite} from '../../config/session-gate.js';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+export function renderExperienceImport(root,storage) {
+ const token=captureSessionToken(storage);const read=readExperiences(storage);let preview=null;
+ root.innerHTML='<section><h3>接收经历包</h3><p>接收人名称仅核对包内声明，不提供文件加密或身份认证。导入只进入经历收藏，不写回消息、日程或作品。</p><label>包内授权接收人<input data-recipient></label><label>经历包 JSON<textarea data-json maxlength="250000"></textarea></label><button data-check>预览导入</button><div data-preview></div><button data-commit disabled>确认收藏</button><p role="status"></p>'+read.rows.map(pack=>'<article><b>'+esc(pack.title)+'</b>'+pack.items.map(item=>'<p>'+esc(item.text)+' · '+esc(item.attachment)+'</p>').join('')+'</article>').join('')+'</section>';
+ const status=text=>root.querySelector('[role="status"]').textContent=text;
+ for(const el of root.querySelectorAll('input,textarea'))el.oninput=()=>{preview=null;root.querySelector('[data-commit]').disabled=true;root.querySelector('[data-preview]').textContent='';};
+ root.querySelector('[data-check]').onclick=()=>{const result=previewExperienceImport(root.querySelector('textarea').value,root.querySelector('input').value.trim());preview=result.ok?result.pack:null;root.querySelector('[data-preview]').textContent=preview?preview.items.map(i=>i.text+' · '+i.attachment).join('\n'):'包格式或接收人不符';root.querySelector('[data-commit]').disabled=!preview||!read.ok;};
+ root.querySelector('[data-commit]').onclick=async()=>{if(!preview||!guardSessionWrite(storage,token,'experience-import'))return;if(!confirm('收藏当前预览？原应用数据保留。'))return;if(!guardSessionWrite(storage,token,'experience-import'))return;const result=await importExperience(storage,preview,JSON.stringify(read.rows));if(!guardSessionWrite(storage,token,'experience-import'))return;renderExperienceImport(root,storage);status(result.ok?result.duplicate?'已有同一经历包，未重复收藏':'已收藏':'保存未确认或收藏已变化');};
+}

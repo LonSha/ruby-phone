@@ -1,3 +1,4 @@
+import { desktopIcon } from '/tests/browser/desktop-navigation.mjs';
 /* ============================================================
  * tests/browser/scenarios/o6-longlist-extreme.scen.js — R-O6 极端数据档
  * ------------------------------------------------------------
@@ -71,17 +72,10 @@ report({ name: 'o6x-shell-ready', ok: !!(up && panelUp), detail: 'entry=' + Stri
 if (!panelUp) { done(); }
 
 async function openWechat() {
-  const dots = Array.from(document.querySelectorAll('.home-page-dot'));
-  for (const d of dots) {
-    realClick(d);
-    await window.__sleep(250);
-    const ic = Array.from(document.querySelectorAll('.app-icon')).find((el) => {
-      const t = el.querySelector('.app-name');
-      return t && t.textContent.trim() === '微信';
-    });
-    if (ic) { realClick(ic); return await waitFor(() => document.querySelector('.wechat-app'), { timeoutMs: 20000 }); }
-  }
-  return false;
+  const icon = await desktopIcon('wechat');
+  if (!icon) return false;
+  realClick(icon);
+  return await waitFor(() => document.querySelector('.wechat-app'), { timeoutMs: 15000 });
 }
 async function openLongChat() {
   const row = document.querySelector('.wechat-app .chat-item');
@@ -102,11 +96,15 @@ const allNodes = nodes();
 const perMsg = msgEls.length ? Math.round((allNodes / msgEls.length) * 100) / 100 : 0;
 report({
   name: 'o6x-extreme-scale',
-  ok: msgEls.length === LINES && perMsg >= 6 && perMsg <= 14,
-  detail: 'chatMessages=' + msgEls.length + '/' + LINES + ' allNodes=' + allNodes + ' nodesPerMessage=' + perMsg
+  ok: msgEls.length === Math.min(LINES, 200) && perMsg >= 6 && perMsg <= 14 && !!document.querySelector('[data-role=load-earlier]'),
+  detail: 'windowMessages=' + msgEls.length + '/200 fixtureTotal=' + LINES + ' allNodes=' + allNodes + ' nodesPerMessage=' + perMsg
     + ' dividers=' + document.querySelectorAll('.message-time-divider').length
     + '（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）',
 });
+const earlier = document.querySelector('[data-role=load-earlier]');
+realClick(earlier);
+const expanded = await waitFor(() => document.querySelectorAll('.chat-message').length === 400, { timeoutMs: 8000 });
+report({ name: 'longlist-earlier-page', ok: !!expanded, detail: '点击更早入口后 messages=' + document.querySelectorAll('.chat-message').length + ' expected=400 fixtureTotal=' + LINES });
 function mediaState() {
   const list = Array.from(document.querySelectorAll('.message-image'));
   let decoded = 0, lazy = 0, asyncAttr = 0;
@@ -124,7 +122,7 @@ report({
   detail: 'media=' + JSON.stringify(m) + ' 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）',
 });
 
-const before = { nodes: allNodes, msgs: msgEls.length, ledger: ledger(stats()) };
+const before = { nodes: nodes(), msgs: document.querySelectorAll('.chat-message').length, ledger: ledger(stats()) };
 for (let i = 0; i < 10; i++) {
   window.dispatchEvent(new CustomEvent('phone:goHome', { detail: {} }));
   await window.__sleep(120);

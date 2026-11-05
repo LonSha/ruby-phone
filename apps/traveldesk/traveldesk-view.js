@@ -115,6 +115,11 @@ export class TraveldeskView {
             } else h += '<div class="tv-empty">还没有成员。</div>';
             /* 地点顺序 */
             if (vm.party.stops.length) h += '<div class="tv-note">路线:' + esc(vm.party.stops.map(function (x, i) { return String(i + 1) + '.' + x.place; }).join(' → ')) + '</div>';
+            for (const stop of vm.party.stops) {
+                h += '<div class="tv-row"><span>' + esc(stop.place) + ' · ' + esc(stop.progress) + ' · 晚到 ' + num(stop.lateMinutes) + ' 分钟' + (stop.meetWith ? ' · 会合 ' + esc(stop.meetWith) : '') + '</span><span>';
+                for (const op of ['current', 'skip', 'late', 'meet', 'reschedule']) h += '<button data-act="tvp-progress" data-id="' + esc(stop.id) + '" data-op="' + op + '">' + ({current:'当前站',skip:'跳站',late:'晚到',meet:'会合',reschedule:'重排日期'}[op]) + '</button>';
+                h += '<button data-act="tvp-calendar" data-id="' + esc(stop.id) + '">关联日历接续</button><button data-act="tvp-unlink" data-id="' + esc(stop.id) + '">解除日历关联</button></span></div>';
+            }
             /* 分工与清单 */
             for (const t of vm.party.tasks) h += '<div class="tv-row"><span>' + (t.done ? '☑ ' : '☐ ') + esc(t.title) + (t.owner ? ' · ' + esc(t.owner) : '') + '</span><span><button class="tv-btn tv-mini" data-act="tvp-task" data-id="' + esc(t.id) + '">' + (t.done ? '取消' : '打勾') + '</button></span></div>';
             for (const c of vm.party.checklist) h += '<div class="tv-row"><span>' + (c.done ? '☑ ' : '☐ ') + esc(c.text) + '</span><span><button class="tv-btn tv-mini" data-act="tvp-check" data-id="' + esc(c.id) + '">' + (c.done ? '取消' : '打勾') + '</button></span></div>';
@@ -235,7 +240,40 @@ export class TraveldeskView {
                 };
                 /* [v4.03.0 · R3-X6] 行程板动作:一律派给宿主的 partyAct(**视图不自己改板**),
                  *   回报写进 _flash 再重渲染 —— 与本件既有动作同一范式。 */
-                if (act === 'tvp-intake') { const r = self.app.partyAct('intake', { board: (function () { try { return JSON.parse(val('board')); } catch (e) { return null; } })() }); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }
+                if (act === 'tvp-unlink') {
+                    const expected = JSON.stringify(self.app._party);
+                    if (!window.confirm('解除这个站点的日历关联？原日程保留。')) return;
+                    self._flash = self.app.partyAct('calendar-unlink', { id: b.getAttribute('data-id'), expected }).note; self.app.render();
+                }
+                else if (act === 'tvp-calendar') {
+                    const calendar = window.VirtualPhone?.calendarApp?.calendarData;
+                    if (!calendar || calendar.storage !== self.app.storage) { self._flash = '请先打开日历，再返回旅行页接续'; self.app.render(); return; }
+                    const rows = calendar.getMemos();
+                    if (!rows.length) { self._flash = '日历没有可关联的日程'; self.app.render(); return; }
+                    const linkedId = self.app._party?.stops.find(s => s.id === b.getAttribute('data-id'))?.calendarMemoId;
+                    const answer = linkedId ? String(rows.findIndex(m => m.id === linkedId) + 1) : window.prompt('选择要关联的日程编号：' + rows.map((m, i) => '\n' + (i + 1) + '. ' + m.title + ' · ' + m.dateKey).join(''));
+                    if (answer === null) return;
+                    const index = Number(answer) - 1;
+                    if (!Number.isInteger(index) || !rows[index]) { self._flash = linkedId ? '关联日程已失效，请在原日历核对' : '日程编号无效'; self.app.render(); return; }
+                    const preview = self.app.partyAct('calendar-preview', { id: b.getAttribute('data-id'), memoId: rows[index].id });
+                    if (!preview.ok) { self._flash = preview.note; self.app.render(); return; }
+                    if (!window.confirm(preview.note)) return;
+                    const result = self.app.partyAct('calendar-confirm', { preview });
+                    self._flash = result.note; self.app.render();
+                }
+                else if (act === 'tvp-progress') {
+                    const op = b.getAttribute('data-op');
+                    const a = { id: b.getAttribute('data-id'), op, expected: JSON.stringify(self.app._party) };
+                    if (op === 'reschedule') { a.day = window.prompt('该站新日期 YYYY-MM-DD（仅更新行程板，关联日历须另行确认）'); if (a.day === null) return; }
+                    if (op === 'late') { const answer = window.prompt('晚到分钟数（1–1440）'); if (answer === null) return; a.minutes = Number(answer); }
+                    if (op === 'meet') { a.person = window.prompt('会合对象'); if (a.person === null) return; }
+                    const preview = self.app.partyAct('progress-preview', a);
+                    if (!preview.ok) { self._flash = preview.note; self.app.render(); return; }
+                    if (!window.confirm(preview.note + '\n受影响站点：' + preview.affected.map(s => s.place + (s.day ? '（' + s.day + '）' : '')).join('、'))) return;
+                    const result = self.app.partyAct('progress-confirm', a);
+                    self._flash = result.note; self.app.render();
+                }
+                else if (act === 'tvp-intake') { const r = self.app.partyAct('intake', { board: (function () { try { return JSON.parse(val('board')); } catch (e) { return null; } })() }); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }
                 else if (act === 'tvp-clear') { const r = self.app.partyAct('clear-board', {}); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }
                 else if (act === 'tvp-people') { const r = self.app.partyAct('people', {}); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }
                 else if (act === 'tvp-commit') { const r = self.app.partyAct('commit-costs', {}); self._flash = (r && r.note) ? r.note : '这一步没接上'; self.app.render(); }

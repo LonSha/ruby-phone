@@ -423,6 +423,8 @@ const KEY_REGISTRY = [
    *   落全局会把上一个角色的房租贴到新会话的同一张单上。consequence 刻意没有金额格 —— 没有金额格，就没有任何
    *   路径能把「过期」悄悄变成「已扣款」。 */
   { key: 'affairs_shared_chores_v1', scope: 'chat', note: 'R14-X4 共同事项执行回执与费用草案' },
+  { key: 'affairs_live_v1', scope: 'chat', note: 'R14-X8 事件实况查看记录' },
+  { key: 'wf_condition_reminders_v1', scope: 'chat', note: 'R14-X3 条件提醒与来源回执' },
   { key: 'affairs_errands_v1', scope: 'chat', note: '[v4.114.0 · R13-X7] 这个月清单（四态闭集/十一因由/四类后果无金额格/五项限额/当日到期不算过期/终结态不被时间改写）' },
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
   { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },
@@ -623,6 +625,8 @@ const KEY_REGISTRY = [
   { key: 'sys_access_theme', scope: 'chat', note: '主题档（auto / light / dark，随会话隔离）' },
   /* [v4.115.0 · R13-X4] 离开状态机落账键：离开理由、起止时间与 missed 清单随会话隔离 ——
    *   该键未被 K1 抓到是全量测试暴露的登记缺口（X4 交付时漏登）。 */
+  { key: 'experience_received_v1', scope: 'chat', note: '经历包收藏，不回填原应用' },
+  { key: 'tw_envelopes_v1', scope: 'chat', note: '剧情日期解封的素材文字快照' },
   { key: 'sys_away_mode_state', scope: 'chat', note: '离开模式状态机（理由 / 起止 / missed 清单，随会话隔离）' },
   { key: '__migration_ledger', scope: 'global', note: '存储层迁移留痕账本（version+keys）' },
 

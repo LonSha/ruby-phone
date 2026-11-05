@@ -14,6 +14,7 @@
 import {
     ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
 } from '../../config/notice-digest.js';
+import { renderAwayReview } from './away-review-view.js';
 import { getAwayMode } from '../../config/away-mode.js';
 /* [v4.119.0 · R14-O3] 跨 App 靶心：通知中心点一条要能落到**那一条**上（日记那一篇 / 日历那一则），
  *   而不是只把 App 打开到首屏。载荷走唯一一支笔（config/app-open-detail.js），
@@ -96,7 +97,7 @@ export class NotificationCenterView {
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
             ${this._paradigmNote(split)}
             ${this._hubNote(feed)}
-            ${this._awaySection()}
+            ${this._awaySection()}<div data-away-review></div>
             ${this._actionSection()}
             ${this._hiddenSection(split)}
             <div class="nc-list">${this._listHtml(rows)}</div>
@@ -484,6 +485,9 @@ export class NotificationCenterView {
     _bind() {
         const root = this.app.phoneShell?.screen;
         if (!root) return;
+        const awayReview = window.VirtualPhone?.orchestrator?.awayMode || getAwayMode();
+        const reviewRoot = root.querySelector('[data-away-review]');
+        if (reviewRoot && awayReview && !awayReview.isAway() && awayReview.getMissedSummary().raw.length) renderAwayReview(reviewRoot, awayReview);
         // [v4.115.0 · R13-X4] 不在的时候交互绑定
         root.querySelectorAll('.nc-away-toggle').forEach((b) => {
             b.addEventListener('click', (e) => {

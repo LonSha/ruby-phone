@@ -162,7 +162,7 @@ export function normalizeSlot(raw, index) {
         label: label || id,
         /** 剧情/墙钟时刻由调用方给；读不出就是 null（不兜底成「现在」）。 */
         at: numOrNull(r.at),
-        order: Number.isFinite(Number(index)) ? Math.max(0, Math.floor(Number(index))) : 0,
+        order: numOrNull(index) === null ? 0 : Math.max(0, Math.floor(numOrNull(index))),
     };
 }
 

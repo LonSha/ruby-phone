@@ -1,3 +1,4 @@
+import { desktopIcon } from '/tests/browser/desktop-navigation.mjs';
 /* ============================================================
  * tests/browser/scenarios/o6-longlist-perf.scen.js — R-O6 长列表 / 面板重开 / 恢复
  * ------------------------------------------------------------
@@ -86,17 +87,10 @@ if (!panelUp) { done(); }
 
 /** 打开微信：逐页找图标（桌面分页），找到即用真点击。 */
 async function openWechat() {
-  const dots = Array.from(document.querySelectorAll('.home-page-dot'));
-  for (const d of dots) {
-    realClick(d);
-    await window.__sleep(250);
-    const ic = Array.from(document.querySelectorAll('.app-icon')).find((el) => {
-      const t = el.querySelector('.app-name');
-      return t && t.textContent.trim() === '微信';
-    });
-    if (ic) { realClick(ic); return await waitFor(() => document.querySelector('.wechat-app'), { timeoutMs: 15000 }); }
-  }
-  return false;
+  const icon = await desktopIcon('wechat');
+  if (!icon) return false;
+  realClick(icon);
+  return await waitFor(() => document.querySelector('.wechat-app'), { timeoutMs: 15000 });
 }
 async function openLongChat() {
   const row = document.querySelector('.wechat-app .chat-item');
@@ -123,11 +117,15 @@ const allNodes = nodes();
 const perMsg = msgEls.length ? Math.round((allNodes / msgEls.length) * 100) / 100 : 0;
 report({
   name: 'o6-longlist-scale',
-  ok: msgEls.length === LINES && perMsg >= 6 && perMsg <= 14,
-  detail: 'chatMessages=' + msgEls.length + '/' + LINES + ' tiders=' + dividers + ' allNodes=' + allNodes + ' nodesPerMessage=' + perMsg + '（每条 6~14 为真实现代价区间，超出即渲染路径变了）',
+  ok: msgEls.length === Math.min(LINES, 200) && perMsg >= 6 && perMsg <= 14 && !!document.querySelector('[data-role=load-earlier]'),
+  detail: 'windowMessages=' + msgEls.length + '/200 fixtureTotal=' + LINES + ' tiders=' + dividers + ' allNodes=' + allNodes + ' nodesPerMessage=' + perMsg + '（每条 6~14 为真实现代价区间，超出即渲染路径变了）',
 });
 
 /* ---------- ② 非关键媒体是否真被延后解码 ---------- */
+const earlier = document.querySelector('[data-role=load-earlier]');
+realClick(earlier);
+const expanded = await waitFor(() => document.querySelectorAll('.chat-message').length === 400, { timeoutMs: 8000 });
+report({ name: 'longlist-earlier-page', ok: !!expanded, detail: '点击更早入口后 messages=' + document.querySelectorAll('.chat-message').length + ' expected=400 fixtureTotal=' + LINES });
 function mediaState() {
   const list = Array.from(document.querySelectorAll('.message-image'));
   let decoded = 0, lazy = 0, asyncAttr = 0;
@@ -154,7 +152,7 @@ report({
 });
 
 /* ---------- ③ 复开 20 次：资源账本不得增长 ---------- */
-const before = { nodes: allNodes, msgs: msgEls.length, ledger: ledger(stats()) };
+const before = { nodes: nodes(), msgs: document.querySelectorAll('.chat-message').length, ledger: ledger(stats()) };
 for (let i = 0; i < 20; i++) {
   window.dispatchEvent(new CustomEvent('phone:goHome', { detail: {} }));
   await window.__sleep(110);

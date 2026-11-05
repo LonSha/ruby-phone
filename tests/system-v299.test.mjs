@@ -490,6 +490,8 @@ test('v299 G0. 镜像树自证：未破坏时五道门全绿（否则 F 组是�
 
 test('v299 F1. 负控制：诊断视图的样式投递路径被抹掉 ⇒ registry R3 红灯并点名该文件', () => {
     withMirror({
+        /* 诊断样式也已打包进 phone.css：负控制必须同时摘除 bundle 与 link 两条投递路径。 */
+        'phone.css': (s) => s.replace(/\.dg-/g, '.removed-diagnostic-'),
         [DG_VIEW]: (s) => mutateOnce(
             mutateOnce(s, "const DIAGNOSE_CSS_URL = new URL('./diagnose.css?v=1.0.0', import.meta.url).href;", "const DIAGNOSE_CSS_URL = '';"),
             'link.href = DIAGNOSE_CSS_URL;', "link.href = '';"),

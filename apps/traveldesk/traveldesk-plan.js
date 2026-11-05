@@ -132,7 +132,7 @@ export function normalizeStop(raw, index) {
     const r = isPlain(raw) ? raw : ((typeof raw === 'string') ? { place: raw } : {});
     const place = toStr(r.place || r.name).trim();
     if (!place) return { stop: null, why: 'no_place' };
-    return { stop: { id: toStr(r.id) || ('tvp_s_' + String(index + 1)), place: place, day: toStr(r.day), note: toStr(r.note) }, why: '' };
+    return { stop: { id: toStr(r.id) || ('tvp_s_' + String(index + 1)), place: place, day: toStr(r.day), progress: ['current', 'visited', 'skipped'].includes(r.progress) ? r.progress : 'pending', lateMinutes: Number.isSafeInteger(r.lateMinutes) && r.lateMinutes > 0 && r.lateMinutes <= 1440 ? r.lateMinutes : 0, calendarMemoId: toStr(r.calendarMemoId), meetWith: toStr(r.meetWith).slice(0, 80), note: toStr(r.note) }, why: '' };
 }
 export function normalizeTask(raw, index) {
     const r = isPlain(raw) ? raw : ((typeof raw === 'string') ? { title: raw } : {});

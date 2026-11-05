@@ -1,0 +1,10 @@
+export const EXPERIENCE_KEY = 'experience_received_v1';
+function valid(pack) { return pack && pack.format === 'ruby-experience-v1' && typeof pack.title === 'string' && pack.title.trim() && pack.title.length <= 80 && typeof pack.recipient === 'string' && pack.recipient.trim() && Array.isArray(pack.items) && pack.items.length > 0 && pack.items.length <= 24 && new Set(pack.items.map(r=>r?.ref)).size === pack.items.length && pack.items.every(r=>r && typeof r.ref === 'string' && /^(calendar|photo|work|message):.+$/.test(r.ref) && typeof r.text === 'string' && r.text.length <= 8000 && typeof r.attachment === 'string'); }
+function clean(pack) { return {format:'ruby-experience-v1',title:pack.title,recipient:pack.recipient,items:pack.items.map(({ref,text,attachment})=>({ref,text,attachment}))}; }
+export function previewExperienceImport(text, recipient) {
+    try { if (typeof text !== 'string' || text.length > 250000) return {ok:false}; const raw=JSON.parse(text); if (!valid(raw) || raw.recipient !== recipient) return {ok:false}; return {ok:true,pack:clean(raw)}; } catch (_) { return {ok:false}; }
+}
+export function readExperiences(storage) { try { const raw=storage.get(EXPERIENCE_KEY); const rows=raw==null?[]:typeof raw==='string'?JSON.parse(raw):raw; if(!Array.isArray(rows)||rows.length>40||rows.some(r=>!valid(r)))return {ok:false,rows:[]};return {ok:true,rows}; } catch (_) {return {ok:false,rows:[]};} }
+export async function importExperience(storage, pack, expected) {
+    const read=readExperiences(storage);if(!read.ok||!valid(pack)||JSON.stringify(read.rows)!==expected)return {ok:false};const payload=clean(pack);if(read.rows.some(r=>JSON.stringify(clean(r))===JSON.stringify(payload)))return {ok:true,duplicate:true};if(read.rows.length>=40)return {ok:false};const rows=[...read.rows,payload];try{await storage.set(EXPERIENCE_KEY,rows);return {ok:JSON.stringify(readExperiences(storage).rows)===JSON.stringify(rows),duplicate:false};}catch(_){return {ok:false};}
+}

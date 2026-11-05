@@ -158,6 +158,9 @@
     "apps/weibo/weibo-app.js": "微博 App 控制器的防抖。",
     "apps/widget/widget-app.js": "桌面小组件的刷新节流。",
     "apps/widget/widget-data.js": "小组件数据层的缓存新鲜度。",
-    "apps/xhs/xhs-data.js": "小红书的抓取节流。"
+    "apps/xhs/xhs-data.js": "小红书的抓取节流。",
+    "apps/timeweaver/time-envelope-view.js": "信封创建操作时间，与共同事项 owner 的 completedAt 墙钟回执比较；剧情日期解封仍只使用 storyClock，不回退墙钟。",
+    "apps/affairs/condition-reminder-view.js": "提醒规则 createdAt 为本地创建操作审计时间，不用于剧情日期匹配或补足剧情钟。",
+    "apps/wechat/gathering-wire.js": "邀约创建、答复、改期与确认的操作审计时间；候选剧情时段来自显式输入，不由墙钟生成。"
   }
 }

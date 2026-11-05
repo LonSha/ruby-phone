@@ -1,5 +1,5 @@
 # ruby-phone 发展规划
-> **第十四期产品计划（2026-11-03，现行提案）**：优化9项＋拓展9项（`R14-O*` / `R14-X*`），双仓合计36项。规划基线v4.118.0 / `4d3420a`；仅制定计划，未实施、未升版。
+> **第十四期产品计划（2026-11-03，现行提案）**：优化9项＋拓展9项（`R14-O*` / `R14-X*`），双仓合计36项。规划基线v4.118.0 / `4d3420a`；当前 v4.124.0 已实施多个切片并进入验收收口，逐项完成状态以实际证据为准，最终门禁与提交推送尚未完成。
 > [优化提升九项](.agents/notes/proposed/architecture/2026-11-03-product-optimization-v14.md) · [拓展创新九项](.agents/notes/proposed/feature/2026-11-03-product-expansion-v14.md) · [源码证据与六个大批次](docs/planning/2026-11-03-product-evidence-v14.md)。
 > 第十三期及更早内容为历史留痕，未完成项与交付声明均须按第十四期证据页复核，不直接当施工单。
 > **第十三期产品计划（2026-10-31，历史提案）**：本仓优化9项＋拓展9项（编号 `R13-O*` / `R13-X*`）；与 LonSha 第十三期（`L13-*`）合计36项。**本轮只制定计划，不代表功能已实施或升版。**
@@ -79,9 +79,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.118.0**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **370 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.118.0 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **298** 件、tests **370** 套件、scripts **31** 件；`index.js` **869989 字节 / 14168 行**；`phone.css` **713924 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 版本 | **v4.124.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **398 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.124.0 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **316** 件、tests **398** 套件、scripts **31** 件；`index.js` **877092 字节 / 14242 行**；`phone.css` **716697 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |

@@ -85,7 +85,7 @@ if (icons.length > 0) {
 // 分页：页数与页码圆点必须一致
 const pages = document.querySelectorAll('.app-grid-page');
 const dots = document.querySelectorAll('.home-page-dot');
-report({ name: 'icons-paged', ok: pages.length > 1 && dots.length === pages.length, detail: 'pages=' + pages.length + ' dots=' + dots.length });
+report({ name: 'icons-paged', ok: pages.length >= 1 && (dots.length === pages.length || (pages.length === 1 && document.querySelectorAll("[data-cluster]").length === 7)), detail: 'pages=' + pages.length + ' dots=' + dots.length });
 
 // 返回键：主屏幕必须不可见（v3.56.0 的病灶之一就是它从未渲染）
 const back = document.getElementById('phone-back-button');

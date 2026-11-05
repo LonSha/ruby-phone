@@ -36,6 +36,7 @@ export class AwayMode {
         this._awayUntil = null;
         this._awayReason = AWAY_REASONS.MANUAL;
         this._missed = [];
+        this.reviewCursor = { group: 'all', page: 0 };
         this._maxMissed = 100;
         this._subscribers = new Set();
 
@@ -47,6 +48,7 @@ export class AwayMode {
         try {
             const saved = this.storage.get('sys_away_mode_state');
             if (saved && typeof saved === 'object') {
+                if (saved.reviewCursor && typeof saved.reviewCursor.group === 'string' && Number.isInteger(saved.reviewCursor.page) && saved.reviewCursor.page >= 0) this.reviewCursor = saved.reviewCursor;
                 this._isAway = Boolean(saved.isAway);
                 this._awaySince = saved.awaySince || null;
                 this._awayUntil = saved.awayUntil || null;
@@ -59,11 +61,12 @@ export class AwayMode {
     _save() {
         if (!this.storage?.set) return;
         try {
-            this.storage.set('sys_away_mode_state', {
+            return this.storage.set('sys_away_mode_state', {
                 isAway: this._isAway,
                 awaySince: this._awaySince,
                 awayUntil: this._awayUntil,
                 awayReason: this._awayReason,
+                reviewCursor: this.reviewCursor,
                 missed: this._missed
             });
         } catch (_e) {}
@@ -241,6 +244,30 @@ export class AwayMode {
         this._save();
     }
 
+    async saveReviewCursor(group, page) {
+        if (typeof group !== 'string' || !Number.isInteger(page) || page < 0) return false;
+        const previous = this.reviewCursor;
+        this.reviewCursor = { group, page };
+        try { await this._save(); } catch (_) { this.reviewCursor = previous; return false; }
+        try {
+            if (JSON.stringify(this.storage?.get('sys_away_mode_state')?.reviewCursor) === JSON.stringify(this.reviewCursor)) return true;
+        } catch (_) {}
+        this.reviewCursor = previous;
+        return false;
+    }
+    /** Review is not a reply or execution receipt. */
+    async reviewMissed(id, status) {
+        if (!['later', 'seen', 'handle', 'dismiss'].includes(status)) return false;
+        if (this._missed.filter(item => item.id === id).length !== 1) return false;
+        const previous = this._missed;
+        this._missed = previous.map(item => item.id === id ? { ...item, reviewStatus: status, read: status === 'seen' ? true : item.read } : item);
+        try { await this._save(); } catch (_) { this._missed = previous; return false; }
+        try {
+            const saved = this.storage?.get('sys_away_mode_state');
+            if (!saved || JSON.stringify(saved.missed) !== JSON.stringify(this._missed)) { this._missed = previous; return false; }
+            return true;
+        } catch (_) { this._missed = previous; return false; }
+    }
     /**
      * 清理错过项
      */

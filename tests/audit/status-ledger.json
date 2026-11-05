@@ -54,7 +54,7 @@
     "check_chain_len": 19
   },
   "tests": {
-    "test_files": 387,
+    "test_files": 398,
     "audit_dir_exists": true,
     "audit_files": 27
   },
@@ -73,9 +73,14 @@
       "o7-perf-probe.scen.js",
       "o7-reopen-leak.scen.js",
       "r13-other-side.scen.js",
-      "r13-usage-pattern.scen.js"
+      "r13-usage-pattern.scen.js",
+      "r14-affair-live.scen.js",
+      "r14-condition-reminder.scen.js",
+      "r14-envelope-pack-away.scen.js",
+      "r14-shared-chore.scen.js",
+      "r14-travel-progress.scen.js"
     ],
-    "scenario_count": 14,
+    "scenario_count": 19,
     "probe_scenarios": 25,
     "infra": {
       "runner": true,
@@ -89,8 +94,8 @@
   "scale": {
     "app_dirs": 88,
     "apps_ids": 89,
-    "index_lines": 14239,
-    "css_bytes": 715110,
+    "index_lines": 14242,
+    "css_bytes": 716697,
     "crossrepo": {
       "produced_faces": 30
     }
@@ -111,7 +116,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 385,
+        "suite_files": 396,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -136,7 +141,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "5b2fce2c2e9377b0"
+    "sha256_16": "acf03b66e14572df"
   },
   "unknown": [],
   "unknown_count": 0

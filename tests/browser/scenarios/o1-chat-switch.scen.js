@@ -1,3 +1,4 @@
+import { desktopIconByName } from '/tests/browser/desktop-navigation.mjs';
 /* ============================================================
  * tests/browser/scenarios/o1-chat-switch.scen.js — O1 基线场景⑤：切会话
  * ------------------------------------------------------------
@@ -73,10 +74,7 @@ report({
 /* ---------- 4. 切会话后仍能正常进出 App（端到端收口） ---------- */
 async function openAppByName(name, viewSel) {
   await window.__sleep(560);
-  const icon = [...document.querySelectorAll('.home-screen .app-icon')].find((el) => {
-    const t = el.querySelector('.app-name');
-    return t && t.textContent.trim() === name;
-  });
+  const icon = await desktopIconByName(name);
   if (!icon) return { ok: false, why: '找不到图标 ' + name };
   realClick(icon);
   const up = await waitFor(() => document.querySelector(viewSel), { timeoutMs: 12000 });
@@ -99,7 +97,7 @@ const iconsAfterSwitch = document.querySelectorAll('.home-screen .app-icon').len
 const dotsAfterSwitch = document.querySelectorAll('.home-page-dot').length;
 report({
   name: 'home-intact-after-switch',
-  ok: iconsAfterSwitch > 0 && dotsAfterSwitch > 0,
+  ok: iconsAfterSwitch > 0 && (dotsAfterSwitch > 0 || document.querySelectorAll("[data-cluster]").length === 7),
   detail: 'icons=' + iconsAfterSwitch + ' dots=' + dotsAfterSwitch,
 });
 

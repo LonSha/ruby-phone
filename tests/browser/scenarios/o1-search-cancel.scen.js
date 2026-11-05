@@ -1,3 +1,4 @@
+import { desktopIcon } from '/tests/browser/desktop-navigation.mjs';
 /* ============================================================
  * tests/browser/scenarios/o1-search-cancel.scen.js — O1 基线场景③：搜索与取消（第 4 版）
  * ------------------------------------------------------------
@@ -121,44 +122,10 @@ if (modalShown) {
  *   ① dot2 变 .is-active（页码状态真切换）；
  *   ② 第 2 页的图标中心点能被 elementFromPoint 命中（图标物理上进了视口）；
  *   ③ 第 2 页的 aria-hidden 翻成 false（goIconPage 的真实账目）。 */
-const dots = [...document.querySelectorAll('.home-page-dot')];
-report({ name: 'pager-dots-present', ok: dots.length > 1, detail: 'dots=' + dots.length });
-const dot2 = dots[1];
-report({ name: 'pager-dot-reachable', ok: hitTest(dot2).ok, detail: hitTest(dot2).why });
-/* [v7] 真浏览器取证口径：--dump-dom 单帧模式下 CSS transition 冻结在 t=0 ——
- *   实测（_diag-notrans 诊断）：行内 transform 已写对（translate3d(-100%)），
- *   但 transition 不推进，computed 恒为恒等，页盒永远停在 t=0 位置，
- *   图标中心点全部落不进视口。禁掉 transition 后同一行内值立即生效
- *   （matrix(…,-432,0)、p2.left=56、图标 hit=SPAN.app-icon-emoji 真命中）。
- *   这不是产品缺陷：真机上 0.28s 过渡正常推进；
- *   禁 transition 等效于系统「减少动画」的用户形态 —— 合法取证口径。 */
-const pagerEl = document.querySelector('.app-grid-pager');
-if (pagerEl) pagerEl.style.transition = 'none';
-if (dot2) realClick(dot2);
-await window.__sleep(400);   /* 等 transform 过渡（0.28s）落地 */
-
-const dot2Active = !!(dot2 && dot2.classList.contains('is-active'));
-const page2 = document.querySelector('.app-grid-page[data-page-index="1"]');
-const page2Icons = page2 ? [...page2.querySelectorAll('.app-icon')] : [];
-const iconOnScreen = page2Icons.length > 0 && page2Icons.some((el) => hitTest(el).ok);
-const page2Aria = page2 ? page2.getAttribute('aria-hidden') : 'missing';
-report({
-  name: 'page2-moved-into-view',
-  ok: dot2Active && iconOnScreen && page2Aria === 'false',
-  detail: 'dot2Active=' + dot2Active + ' icons=' + page2Icons.length + ' iconHit=' + iconOnScreen + ' aria-hidden=' + page2Aria,
-});
-/* 第 2 页图标物理可达的全量读数（此刻 App 还没打开，桌面图标不被遮 ——
- *   v4 的 iconHit=false 是取证时机错：在搜索面板打开后才回头测桌面图标，
- *   被 App 视图整个盖住，自然全 miss。翻页后立刻测才是真实读数。） */
-const page2Reachable = page2Icons.filter((el) => hitTest(el).ok).length;
-report({ name: 'page2-icons-reachable', ok: page2Icons.length > 0 && page2Reachable === page2Icons.length, detail: 'reachable=' + page2Reachable + '/' + page2Icons.length });
-
-/* ---------- 2. 打开搜索（第 39 位，只在第 2 页） ---------- */
-const searchIcon = page2Icons.find((el) => {
-  const t = el.querySelector('.app-name');
-  return t && t.textContent.trim() === '全局搜索';
-});
-report({ name: 'search-icon-on-page2', ok: !!searchIcon, detail: searchIcon ? '找到「全局搜索」且在视口内' : '第 2 页没有搜索图标（分页没生效）' });
+const searchIcon = await desktopIcon('search');
+const folder = document.querySelector('.cluster-modal');
+report({name:'search-folder-open',ok:!!folder,detail:'system folder rendered via real desktop click'});
+report({name:'search-icon-reachable',ok:!!searchIcon && hitTest(searchIcon).ok,detail:hitTest(searchIcon).why});
 if (searchIcon) realClick(searchIcon);
 const gsUp = await waitFor(() => document.querySelector('.gs-wrap'), { timeoutMs: 15000 });
 report({ name: 'search-app-opens', ok: gsUp, detail: gsUp ? '.gs-wrap 已渲染' : '未渲染' });

@@ -184,6 +184,9 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
 - **注入格式化单一真源**：`LonShaBridge.prototype.recallBlock(queryText, opts)`（2026-10-22按现役源码订正）。`opts` 支持 `topN / label / userName / actors / strictActors / maxLines / maxChars / hardChars`；按证据身份去重，缺身份时按完整内容；默认最多3条（可设1–5），每条默认80字预算/120字硬边界，在可用句读处收束，无合适句读才退回预算截取。来源分为亲历/听说/推测，不一律称共同经历。`strictActors: true` 按在场人物过滤，无命中返回空串。新增注入点仍走此方法，不在调用方另拼格式；微信单聊/群聊与蜜语使用同一入口。
 
 ## 织光机 (apps/timeweaver/)
+- R14 实施中：time-envelope-view / config/time-envelope 提供素材文字快照、剧情日期或共同事项新完成记录解封、延期与撤回；tw_envelopes_v1 随会话隔离。
+- backupdesk 的 experience-pack / experience-import 提供逐项文字预览、JSON 导出与确认收藏去重，experience_received_v1 随会话隔离；附件只提示缺失，不回填原应用。
+- notification-center 的 away-review 提供每批5条、按应用分组、逐条审阅和重开游标，状态归原 AwayMode；已看不等于回复。
 - timeweaver-engine.js：纯函数内核（collectFragments 聚合 / composeLetter 本地规则成信），零 LLM、零副作用。
 - timeweaver-app.js：控制器（composeAILetter LLM 升华 / saveLetter+listLetters 收藏册 / autoWeaveIfDue 定期织信 / shareLetterToMoments 朋友圈分享）。
 - timeweaver-collector.js：从聊天痕迹采样（含 collectLonshaRecall 读快照桥 recallAudit）。

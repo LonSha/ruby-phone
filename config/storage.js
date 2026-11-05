@@ -436,6 +436,7 @@ export class PhoneStorage {
             //   两条都要进会话隔离，否则账本会落到全局 extensionSettings 串味。
             /^asset_/,
             /^__la_asset_/,
+            /^experience_received_v1$/, // 经历收藏随会话隔离
             /^tw_/,               // [v2.15.0] 织光机（收藏册 tw_letters / 定期织信游标 tw_last_auto，随会话隔离）
             // [v2.19.0] 积温引擎（jiwen_state 五轴状态/上次 tick/消息游标，随会话隔离）。
             //   修复：v2.8.0 移植起该键未匹配任何 pattern，被写入全局 extensionSettings，

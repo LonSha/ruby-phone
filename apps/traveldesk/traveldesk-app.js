@@ -8,6 +8,9 @@ import {
     TV_LEDGER_MAX, TV_PEOPLE_MAX, TV_EPSILON, TV_CURRENCY_SYMBOLS, toCNY, balancesOf, consolidateFamilies,
     internalSettlement, externalSettlement, normalizeExpenses, normalizeExpense, readingsOf, trimRows, listOf, toStr, isPlain
 } from './traveldesk-data.js';
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+import { travelCalendarPreview, commitTravelCalendar } from './traveldesk-calendar.js';
+import { progressAction } from './traveldesk-progress.js';
 import { TraveldeskView } from './traveldesk-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 /* [v4.03.0 · R3-X6] 协作行程板内核:归一 / 参加者判定 / 读数(预计与实际分列) /
@@ -193,6 +196,45 @@ export class TraveldeskApp {
         if (act === 'intake') {
             if (!isPlain(a.board)) return { ok: false, note: '没给板子内容' };
             return this.intakeBoard(JSON.stringify(a.board));
+        }
+        if (act === 'calendar-unlink') {
+            if (a.expected !== JSON.stringify(party)) return { ok: false, note: '行程已变化，请刷新' };
+            const stop = party.stops.find(s => s.id === a.id);
+            if (!stop) return { ok: false, note: '站点已失效' };
+            stop.calendarMemoId = '';
+            const write = this._writeRaw(TV_PARTY_KEY, party);
+            if (!write.saved || JSON.stringify(this._readPartyRaw()) !== JSON.stringify(party)) return { ok: false, note: '解除关联保存未确认' };
+            this._party = party;
+            return { ok: true, note: '已解除站点关联，原日程保留' };
+        }
+        if (act === 'calendar-preview' || act === 'calendar-confirm') {
+            const sessionToken = captureSessionToken(this.storage);
+            if (!guardSessionWrite(this.storage, sessionToken, 'travel-calendar-entry')) return { ok: false, note: '会话身份不可用' };
+            const calendar = globalThis.window?.VirtualPhone?.calendarApp?.calendarData;
+            if (!calendar || calendar.storage !== this.storage) return { ok: false, note: '日历未就绪或会话不一致，请先打开日历' };
+            if (act === 'calendar-preview') {
+                const preview = travelCalendarPreview(party, a.id, a.memoId || party.stops.find(s => s.id === a.id)?.calendarMemoId, calendar);
+                return { ...preview, sessionToken };
+            }
+            if (!a.preview || typeof a.preview !== 'object') return { ok: false, note: '缺少确认预览' };
+            if (!guardSessionWrite(this.storage, a.preview.sessionToken, 'travel-calendar')) return { ok: false, note: '会话已变化，请重新预览日历接续' };
+            const result = commitTravelCalendar(party, a.preview, calendar);
+            if (!result.ok) return result;
+            party.stops.find(s => s.id === a.preview.stopId).calendarMemoId = a.preview.memoId;
+            const write = this._writeRaw(TV_PARTY_KEY, party);
+            if (!write.saved || JSON.stringify(this._readPartyRaw()) !== JSON.stringify(party)) return { ok: false, note: '日历已接续，但站点关联保存未确认，请刷新后重新关联' };
+            this._party = party;
+            return { ...result, note: result.note + '；站点关联已保存' };
+        }
+        if (act === 'progress-preview' || act === 'progress-confirm') {
+            if (a.expected !== JSON.stringify(party)) return { ok: false, note: '行程已变化，请重新预览' };
+            const result = progressAction(party, a);
+            if (!result.ok || act === 'progress-preview') return result;
+            const w = this._writeRaw(TV_PARTY_KEY, result.party);
+            const back = this._readPartyRaw();
+            if (!w.saved || JSON.stringify(back) !== JSON.stringify(result.party)) return { ok: false, note: '保存未确认，请刷新后核对' };
+            this._party = result.party;
+            return { ...result, saved: true };
         }
         if (act === 'clear-board') {
             const w = this._writeRaw(TV_PARTY_KEY, {});

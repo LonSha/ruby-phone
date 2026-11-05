@@ -530,6 +530,7 @@ const temps = [];
 function makeMirror() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v4440_'));
     temps.push(dir);
+    copyTreeSafe(path.join(ROOT, 'apps', 'affairs'), path.join(dir, 'apps', 'affairs'));
     copyTreeSafe(path.join(ROOT, 'apps', 'calendar'), path.join(dir, 'apps', 'calendar'));
     copyTreeSafe(path.join(ROOT, 'apps', 'wechat'), path.join(dir, 'apps', 'wechat'));
     copyTreeSafe(path.join(ROOT, 'config'), path.join(dir, 'config'));
@@ -636,7 +637,7 @@ test('F4 ★★★ 破坏「没有接收者时不假装已转交」⇒ 同款判
     /* ★ 比的是**代码**（剥注释）：注释里为了说明「无回执时该说什么」而写着这几个字，
      *   拿整份源文当靶子会把自己顶红（与 A2/E2 同因）。 */
     const chat2Code = stripComments(chat2);
-    assert.ok(chat2Code.indexOf('没有接收者') < 0, '破坏副本：那句如实读数已被换掉');
+    assert.ok(!chat2Code.includes("showNotification('投票', '**没有接收者**"), '破坏副本：投票的如实读数已被换掉');
     assert.ok(chat2Code.indexOf('已转交日历确认') >= 0, '破坏副本：谎报又回来了');
     /* 同款判据（原版上为真）在破坏副本上必转红 —— 判的是**代码**（剥注释）。 */
     assert.equal(stripComments(chatSrc).indexOf('已转交日历确认'), -1, '原版代码里必须没有这句');

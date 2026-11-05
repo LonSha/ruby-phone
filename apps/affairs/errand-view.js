@@ -1,3 +1,4 @@
+import { ConditionReminderView } from './condition-reminder-view.js';
 /* ========================================================
  * errand-view.js — [v4.114.0 · R13-X7] 事务台的「这个月」页
  * --------------------------------------------------------
@@ -65,6 +66,10 @@ export class ErrandView {
         this.container.appendChild(slot);
         if (!this.sharedView) this.sharedView = new SharedChoreView(this.app);
         this.sharedView.render(slot);
+        const reminderSlot = document.createElement('div');
+        this.container.appendChild(reminderSlot);
+        if (!this.conditionView) this.conditionView = new ConditionReminderView(this.app);
+        this.conditionView.render(reminderSlot);
     }
 
     _row(e) {

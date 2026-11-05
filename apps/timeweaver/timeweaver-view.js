@@ -2,6 +2,7 @@
  * timeweaver-view.js — 织光机视图（生活流时间线 + 里程碑 + 情感曲线 + 亲密度榜 + 年度信）
  * ======================================================== */
 'use strict';
+import { renderEnvelopes } from './time-envelope-view.js';
 import { buildNarrative } from './timeweaver-collector.js';
 // [v3.0.2] R2-C：注入读数（送达侧）的文案出口。刻意**不在视图里拼结论** ——
 //   本仓反复踩到「视图自己兜底推出一个结论」，于是不同面给出互相矛盾的说法。
@@ -26,6 +27,8 @@ export class TimeweaverView {
         const html = model.empty ? this._empty(model) : this._layout(model);
         this.app.phoneShell.setContent(this._css() + html, 'timeweaver-main');
         this._bind();
+        const container = this.app.phoneShell.layerHost?.('timeweaver-main') || this.app.phoneShell.getContentContainer?.();
+        if (container) { container.querySelector('[data-time-envelopes]')?.remove(); const slot = document.createElement('div'); slot.dataset.timeEnvelopes = ''; container.appendChild(slot); renderEnvelopes(slot, this.app.storage); }
     }
 
     /* 生活碎片为空时的空态。

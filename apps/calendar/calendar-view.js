@@ -1,3 +1,4 @@
+import { ConditionReminderView } from '../affairs/condition-reminder-view.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
@@ -180,7 +181,11 @@ export class CalendarView {
         `;
 
         this.app.phoneShell.setContent(html, 'calendar-main');
-        requestAnimationFrame(() => this.bindEvents());
+        requestAnimationFrame(() => {
+            this.bindEvents();
+            const host = document.querySelector('.phone-view-current .yzp-calendar-main');
+            if (host) { const slot = document.createElement('div'); host.appendChild(slot); new ConditionReminderView(this.app).render(slot); }
+        });
     }
 
     /* ══ [v4.99.4 · R11-X3] 今日视图的生活流条 ════════════════════════════

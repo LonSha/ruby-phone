@@ -1,0 +1,22 @@
+import {renderEnvelopes} from '/apps/timeweaver/time-envelope-view.js';
+import {renderExperiencePack} from '/apps/backupdesk/experience-pack-view.js';
+import {renderAwayReview} from '/apps/notifications/away-review-view.js';
+import {renderExperienceImport} from '/apps/backupdesk/experience-import-view.js';
+import {AwayMode} from '/config/away-mode.js';
+const map=new Map([['tw_letters',[{id:'l',title:'旧信',paragraphs:['SEALED CONTENT']}]],['calendar_memos',[{id:'m',title:'周末出游'}]]]);
+const storage={currentConversationId:'batch-f',get:k=>map.get(k),set:(k,v)=>map.set(k,structuredClone(v))};
+const root=document.createElement('div');document.body.append(root);window.confirm=()=>true;
+renderEnvelopes(root,storage);root.querySelector('[name=title]').value='未来';root.querySelector('[name=day]').value='2026-11-08';root.querySelector('[name=ref]').checked=true;root.querySelector('form').requestSubmit();await new Promise(resolve=>setTimeout(resolve,20));
+report({name:'envelope-sealed',ok:map.get('tw_envelopes_v1')?.length===1&&!root.textContent.includes('SEALED CONTENT'),detail:'no clock keeps saved body out of DOM'});
+window.prompt=()=> '2026-11-10';root.querySelector('[data-delay]').click();await new Promise(resolve=>setTimeout(resolve,20));
+report({name:'envelope-delay',ok:map.get('tw_envelopes_v1')[0].day==='2026-11-10',detail:'explicit later date persisted'});
+root.querySelector('[data-withdraw]').click();await new Promise(resolve=>setTimeout(resolve,20));report({name:'envelope-withdraw',ok:root.textContent.includes('已撤回'),detail:'withdrawal prevents opening'});
+renderExperiencePack(root,storage);root.querySelector('[name=title]').value='经历';root.querySelector('[name=recipient]').value='甲';root.querySelector('[name=ref]').checked=true;root.querySelector('form').requestSubmit();report({name:'pack-preview',ok:root.querySelector('[data-preview]').textContent.includes('周末出游')&&!root.querySelector('[data-export]').disabled,detail:'explicit recipient and selected source preview'});
+root.querySelector('[name=recipient]').dispatchEvent(new Event('input',{bubbles:true}));report({name:'pack-invalidates',ok:root.querySelector('[data-export]').disabled,detail:'editing invalidates previous authorization preview'});
+const away=new AwayMode({storage});away.markAway();for(let i=0;i<7;i++)away.recordMissed({id:'n'+i,appId:'calendar',title:'错过'+i});away.markBack();renderAwayReview(root,away);window.confirm=()=>false;root.querySelector('[data-status=seen]').click();report({name:'away-cancel',ok:!away.getMissedSummary().raw[0].read,detail:'cancel preserves unread'});window.confirm=()=>true;root.querySelector('[data-status=seen]').click();await new Promise(r=>setTimeout(r,20));report({name:'away-seen',ok:away.getMissedSummary().raw[0].read===true,detail:'individual seen does not acknowledge entire batch'});root.querySelector('[data-next]').click();await new Promise(r=>setTimeout(r,20));renderAwayReview(root,new AwayMode({storage}));report({name:'away-resume',ok:root.textContent.includes('第2批'),detail:'persisted cursor resumes after reopening'});
+const pack={format:'ruby-experience-v1',title:'导入经历',recipient:'甲',items:[{ref:'calendar:m',text:'周末出游',attachment:'无附件'}]};
+function previewImport(){root.querySelector('input').value='甲';root.querySelector('textarea').value=JSON.stringify(pack);root.querySelector('[data-check]').click();}
+renderExperienceImport(root,storage);previewImport();window.confirm=()=>false;root.querySelector('[data-commit]').click();await new Promise(r=>setTimeout(r,20));report({name:'import-cancel',ok:!map.has('experience_received_v1'),detail:'cancel never writes received pack'});
+window.confirm=()=>true;root.querySelector('[data-commit]').click();await new Promise(r=>setTimeout(r,20));previewImport();root.querySelector('[data-commit]').click();await new Promise(r=>setTimeout(r,20));report({name:'import-dedup',ok:map.get('experience_received_v1')?.length===1&&root.textContent.includes('未重复收藏'),detail:'repeat import remains one collection entry'});
+previewImport();storage.currentConversationId='other';root.querySelector('[data-commit]').click();await new Promise(r=>setTimeout(r,20));report({name:'import-session',ok:map.get('experience_received_v1').length===1,detail:'old session preview cannot write'});
+done();

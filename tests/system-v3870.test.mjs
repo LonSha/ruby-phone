@@ -368,7 +368,7 @@ test('v3870 C1. 咽喉接线：导入 / 刷新 / 动作 / 挂载四处都在，�
         assert.ok(idx.includes(s), '咽喉导入缺 ：' + s);
     }
     assert.ok(idx.includes('function refreshFinanceCommit() {'), '取数函数必须在场');
-    assert.ok(idx.includes('function applyFinanceCommitAction(action) {'), '动作函数必须在场');
+    assert.match(idx, /function applyFinanceCommitAction\(action(?:,\s*choreId)?\)\s*\{/, '动作函数必须在场（兼容按事项提交参数）');
     assert.ok(idx.includes('applyFinanceCommitAction: applyFinanceCommitAction,'), '动作必须挂上唯一出口');
     assert.ok(idx.includes('financeCommitFace: function ()'), '面必须挂上（诊断与视图只读这一份）');
     /* 账本写入口只允许一处（视图与诊断都不许写）。 */

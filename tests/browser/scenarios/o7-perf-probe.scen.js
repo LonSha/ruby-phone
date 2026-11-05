@@ -1,3 +1,4 @@
+import { desktopIcon } from '/tests/browser/desktop-navigation.mjs';
 
 /* O7 渲染性能 before 读数：起壳 / 面板重开 / 搜索扫描 / 长列表
  * 口径：performance.now() 差值（真浏览器、真渲染、被动采样）；
@@ -42,13 +43,7 @@ await waitFor(()=>drawerPanel.classList.contains('phone-panel-open')&&getCompute
 mark('reopenDone');
 report({name:'perf-panel-reopen',ok:true,detail:Math.round(marks.reopenDone-marks.reopenStart)+'ms'});
 /* --- 3. 全历史搜索扫描（16000 楼，O2 让出后的节奏） --- */
-const dots=[...document.querySelectorAll('.home-page-dot')];
-const pagerEl=document.querySelector('.app-grid-pager');
-if(pagerEl) pagerEl.style.transition='none';
-realClick(dots[1]);
-await window.__sleep(400);
-const page2=document.querySelector('.app-grid-page[data-page-index="1"]');
-const si=[...page2.querySelectorAll('.app-icon')].find(el=>{const t=el.querySelector('.app-name');return t&&t.textContent.trim()==='全局搜索';});
+const si = await desktopIcon('search');
 realClick(si);
 await waitFor(()=>document.querySelector('.gs-wrap'),{timeoutMs:15000});
 mark('searchOpen');
