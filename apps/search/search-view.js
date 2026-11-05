@@ -10,6 +10,8 @@
  *   本件是**第一处**把靶心（ref）带进 `phone:openApp` 的派发点 ——
  *   不手写对象字面量，免得字段名与核心那支笔漂开。 */
 import { buildOpenDetail } from '../../config/app-open-detail.js';
+/* [v4.118.0 · R14-O9] 空态分形：搜索的「没搜到」与「来源读失败」分开标注。 */
+import { FACE_ATTR } from '../../config/empty-face.js';
 /* [v3.86.0 · 拓展计划 R-X2] 行面来源链读数：一行结果**从哪来、上游还在不在**。
  *   为什么接在这里：全局搜索能找到内容，但用户此前看不到这条命中的**来源关系**；
  *   查询与结论仍在内核（`pgRowFace` 四态互不同形），本件只拿回来排版 ——
@@ -236,7 +238,7 @@ export class SearchView {
         const scope = r.scope || {};
         const note = this._scopeNote(scope);
         if (!r.results || !r.results.length) {
-            return vague + `<div class="gs-empty"><div class="gs-empty-icon">🫥</div>
+            return vague + `<div class="gs-empty" ${FACE_ATTR}="no-data" data-face="empty"><div class="gs-empty-icon">🫥</div>
                 <div class="gs-empty-title">没有找到「${esc(kw)}」</div>
                 <div class="gs-empty-sub">已检索 ${esc(String(r.scanned))} 条记录（${this.app.engine.listSources().length} 个来源）${esc(note)}</div>
                 ${this._scopeWarn(scope)}</div>`;
@@ -248,7 +250,7 @@ export class SearchView {
                 ${g.items.map(it => this._row(it, kw)).join('')}
             </div>`).join('');
         const errs = (r.errors && r.errors.length)
-            ? `<div class="gs-err">${r.errors.length} 个来源读取失败：${esc(r.errors.map(e => e.sourceId).join('、'))}</div>`
+            ? `<div class="gs-err" ${FACE_ATTR}="read-failed" data-face="absent">${r.errors.length} 个来源读取失败：${esc(r.errors.map(e => e.sourceId).join('、'))}</div>`
             : '';
         return vague + head + this._facetNote(r.facets) + this._scopeWarn(scope) + groups + errs;
     }
@@ -344,7 +346,7 @@ export class SearchView {
         return parts.length ? `<div class="gs-group-rest">⚠️ ${parts.map(p => esc(p)).join('；')}</div>` : '';
     }
     _scanPlaceholderHtml(kw) {
-        return `<div class="gs-empty"><div class="gs-empty-icon">⏳</div>
+        return `<div class="gs-empty" ${FACE_ATTR}="not-ready" data-face="absent"><div class="gs-empty-icon">⏳</div>
             <div class="gs-empty-title">正在检索「${esc(kw)}」</div>
             <div class="gs-empty-sub">全历史扫描中……</div></div>`;
     }

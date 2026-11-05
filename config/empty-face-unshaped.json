@@ -2,7 +2,7 @@
   "schema": 1,
   "attr": "data-face-why",
   "owner": "config/empty-face.js",
-  "generatedBy": "R13-O6 未分形台账（v4.109.0）",
+  "generatedBy": "R14-O9 分形推进（v4.118.0）：loverspace/needsim/search 已接线，其余保持台账",
   "rules": [
     "本台账只登记**尚未接线**的 App。已接线的 App 出现在这里就是错的（判据 D1 会报红）。",
     "reason=view-pending：有空态文案但本版没排到（计划书口径：先做高频 App，其余进台账）。",
@@ -10,8 +10,8 @@
     "reason=no-view：本 App 没有 *-view.js，空态在 *-app.js 里渲染，不在本项射程。",
     "台账条目必须在磁盘上真实存在；删了 App 不删条目同样是错（判据会报红）。"
   ],
-  "shapedCount": 25,
-  "unshapedCount": 63,
+  "shapedCount": 28,
+  "unshapedCount": 60,
   "unshaped": [
     {
       "app": "diagnose",
@@ -30,33 +30,6 @@
       "emptyTexts": 5,
       "reason": "view-pending",
       "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
-    },
-    {
-      "app": "needsim",
-      "views": [
-        "apps/needsim/needsim-view.js"
-      ],
-      "emptyTexts": 5,
-      "reason": "view-pending",
-      "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
-    },
-    {
-      "app": "search",
-      "views": [
-        "apps/search/search-view.js"
-      ],
-      "emptyTexts": 5,
-      "reason": "view-pending",
-      "note": "有 5 处空态文案，按「先做高频 app，其余进台账」口径排队"
-    },
-    {
-      "app": "loverspace",
-      "views": [
-        "apps/loverspace/loverspace-view.js"
-      ],
-      "emptyTexts": 4,
-      "reason": "view-pending",
-      "note": "有 4 处空态文案，按「先做高频 app，其余进台账」口径排队"
     },
     {
       "app": "memtable",

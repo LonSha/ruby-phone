@@ -15,6 +15,8 @@
  * ======================================================== */
 'use strict';
 import { LOVER_REASONS, LOVER_LIMITS, QUESTION_STATES } from './loverspace-data.js';
+/* [v4.118.0 · R14-O9] 空态分形：真没有 / 读不到 分开说（同 album 的纪律）。 */
+import { faceOf, FACE_ATTR } from '../../config/empty-face.js';
 
 /* 两个显示助手：与数据层同源（都只看毫秒与 Date），不 imports App —— 免得 App<->View 成环。 */
 function agoText(ms) {
@@ -161,7 +163,7 @@ export class LoverSpaceView {
                 + this._esc(this._dur(proj.nextFootprint.inMs)) + '</span></div>');
         }
         if (!vis.visible.length) {
-            parts.push('<div class="lov-empty">今天还没有足迹。</div>');
+            parts.push('<div class="lov-empty" ' + FACE_ATTR + '="' + this._todayFace().code + '" data-face="' + this._todayFace().face + '">今天还没有足迹。</div>');
         } else {
             parts.push('<div class="lov-footline">');
             for (const f of vis.visible) {
@@ -301,7 +303,7 @@ export class LoverSpaceView {
         parts.push('<div class="lov-letters">');
         parts.push('<h3 class="lov-list-title">情书（' + letters.length + '）</h3>');
         if (!letters.length) {
-            parts.push('<div class="lov-empty">还没有信。先随便写一封给 Ta（或者把 Ta 写来的贴进「记一封来信」）。</div>');
+            parts.push('<div class="lov-empty" ' + FACE_ATTR + '="' + this._lettersFace().code + '" data-face="' + this._lettersFace().face + '">还没有信。先随便写一封给 Ta（或者把 Ta 写来的贴进「记一封来信」）。</div>');
         } else {
             for (const l of letters.slice().reverse()) {
                 const mine = String(l.senderId || 'user') === 'user';
@@ -360,7 +362,7 @@ export class LoverSpaceView {
         parts.push('<div class="lov-qstat">等你答 <strong>' + proj.awaitingChar + '</strong> · 等 Ta 答 <strong>'
             + proj.awaitingUser + '</strong> · 已答 <strong>' + proj.answered + '</strong></div>');
         if (!qs.length) {
-            parts.push('<div class="lov-empty">还没有问答。</div>');
+            parts.push('<div class="lov-empty" ' + FACE_ATTR + '="' + this._qaFace().code + '" data-face="' + this._qaFace().face + '">还没有问答。</div>');
         } else {
             for (const q of qs.slice().reverse()) {
                 const state = (String(q.answerText || '').trim())
@@ -657,3 +659,30 @@ export class LoverSpaceView {
 /* 视图内部两个开关是**视图态**（不是数据态）：切走再回来该重来，故不进 App、不落盘。 */
 LoverSpaceView.prototype._showIncoming = false;
 LoverSpaceView.prototype._showAskByChar = false;
+
+
+/* ══════════════ [v4.118.0 · R14-O9] 空态分形判定（只在此一处，不散进渲染） ══════════════ */
+/** 今日足迹空态：数据面读不到 ⇒ absent（这会儿打不开），真没有 ⇒ empty。 */
+LoverSpaceView.prototype._todayFace = function () {
+    try {
+        const app = this.app;
+        const vis = app && typeof app.visibleToday === 'function' ? app.visibleToday() : null;
+        return faceOf({ items: vis ? vis.visible : null, error: vis ? undefined : true });
+    } catch (_e) { return { face: 'absent', code: 'read-failed' }; }
+};
+/** 情书空态：读不到列表 ⇒ absent，真没有 ⇒ empty。 */
+LoverSpaceView.prototype._lettersFace = function () {
+    try {
+        const app = this.app;
+        const ls = app && Array.isArray(app.letters) ? app.letters : null;
+        return faceOf({ items: Array.isArray(ls) ? ls : null, error: Array.isArray(ls) ? undefined : true });
+    } catch (_e) { return { face: 'absent', code: 'read-failed' }; }
+};
+/** 问答空态：读不到 ⇒ absent，真没有 ⇒ empty。 */
+LoverSpaceView.prototype._qaFace = function () {
+    try {
+        const app = this.app;
+        const qs = app && Array.isArray(app.questions) ? app.questions : null;
+        return faceOf({ items: Array.isArray(qs) ? qs : null, error: Array.isArray(qs) ? undefined : true });
+    } catch (_e) { return { face: 'absent', code: 'read-failed' }; }
+};

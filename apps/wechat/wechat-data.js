@@ -3954,6 +3954,25 @@ getWeekday(date) {
         this.saveData();
     }
 
+    /** [v4.118.0 · R14-O8] 已发朋友圈改可见性规则（发布前后同一份规则的「编辑刷新」入口）。
+     *   归一复用 normalizeMomentVisibility 的口径（别名闭集 + 名单去重），
+     *   写回 moment.visibility 后落盘。返回 { ok, reason }，不装成已验证。 */
+    updateMomentVisibility(momentId, visibility) {
+        const safeId = String(momentId || '').trim();
+        if (!safeId) return { ok: false, reason: 'no-id' };
+        const moment = this.getMoment(safeId);
+        if (!moment) return { ok: false, reason: 'not-found' };
+        const raw = (visibility && typeof visibility === 'object') ? visibility : { type: 'public' };
+        /* 复用 normalizeMomentVisibility：把别名收进三型闭集、名单去重（与读取同口径） */
+        const normalized = this.normalizeMomentVisibility({ visibility: raw });
+        moment.visibility = {
+            type: normalized.type,
+            contactIds: normalized.contactIds,
+            contactNames: normalized.contactNames
+        };
+        this.saveData();
+        return { ok: true, reason: '' };
+    }
     deleteMoment(momentId) {
         const safeId = String(momentId || '').trim();
         if (!safeId || !Array.isArray(this.data.moments)) return false;

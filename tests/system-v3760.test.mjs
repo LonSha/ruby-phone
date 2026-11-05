@@ -210,6 +210,10 @@ const CLOSURE_APP = CLOSURE_ENGINE.concat(CLOSURE_VIEW_EXTRA).concat([APP, 'apps
     'config/vague-recall.js',
     'config/vague-recall-terms.js',
     'config/vague-recall-batch.js',
+    /* [v4.118.0 · R14-O9] search-view 新增 empty-face 依赖（空态分形）——
+     *   CLOSURE 不补齐 ⇒ 副本 import 就是 ERR_MODULE_NOT_FOUND，负控制会变成
+     *   「因缺文件而红」而不是「因破坏而红」（同一支笔的教训再次出现）。 */
+    'config/empty-face.js',
 ]);
 function mkTree(tag, files) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-v3760-' + tag + '-'));

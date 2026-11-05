@@ -1307,6 +1307,95 @@ export class MomentsView {
     }
 
     // 显示操作弹窗
+    /* 【R14-O8】判定是否本人动态（与 renderMomentItem 的 isOwnMoment 同口径）。 */
+    _isOwnMoment(moment) {
+        const userName = String(this.app.wechatData.getUserInfo()?.name || '').trim();
+        return String(moment?.name || '').trim() === userName;
+    }
+    /* 【R14-O8】已发详情「谁能看到」：逐人对拍**真源** canContactViewMoment ——
+     *   不复用发布预览的投影内核另算一遍（预览/实际两套算法不许分叉：这里直接消费真源）。
+     *   规则读不出时真源按 public 处理，界面如实标注「按公开处理」，不装成已验证。
+     *   附「编辑规则」入口：改完走 wechatData.updateMomentVisibility 落盘并当场刷新结果。 */
+    showMomentAudienceDetail(momentId) {
+        const moment = this.app.wechatData.getMoment(momentId);
+        if (!moment) {
+            this.app.phoneShell?.showNotification?.('提示', '该动态已不存在', '⚠️');
+            return;
+        }
+        document.querySelector('.moment-audience-overlay')?.remove();
+        const contacts = (this.app.wechatData.getContacts() || [])
+            .filter(contact => String(contact?.name || '').trim());
+        /* 逐人对拍真源：visible 来自 canContactViewMoment 本尊。 */
+        const entries = contacts.map(contact => {
+            const visible = this.app.wechatData.canContactViewMoment(moment, contact);
+            return { name: String(contact?.name || ''), visible, contact };
+        });
+        const visibility = this.app.wechatData.normalizeMomentVisibility(moment);
+        const typeLabel = visibility.type === 'exclude' ? '不给谁看'
+            : (visibility.type === 'include' ? '仅给谁看' : '公开');
+        const visibleCount = entries.filter(e => e.visible).length;
+        const overlay = document.createElement('div');
+        overlay.className = 'moment-audience-overlay';
+        overlay.innerHTML = `
+            <div class="moment-audience-dialog" role="dialog" aria-modal="true" aria-label="谁能看到">
+                <div class="moment-audience-header">
+                    <button type="button" class="moment-audience-close" aria-label="关闭">✕</button>
+                    <div class="moment-audience-title">谁能看到</div>
+                    <button type="button" class="moment-audience-edit">编辑规则</button>
+                </div>
+                <div class="moment-audience-summary">「${this._escapeHtml(typeLabel)}」 · ${visibleCount} 人可见 / ${entries.length - visibleCount} 人看不到</div>
+                <div class="moment-audience-list">
+                    ${entries.length === 0 ? '<div class="moment-audience-empty">通讯录暂无好友</div>' : entries.map(entry => `
+                        <div class="moment-audience-item ${entry.visible ? 'is-visible' : 'is-hidden'}">
+                            <span class="moment-audience-verdict">${entry.visible ? '可见' : '看不到'}</span>
+                            <span class="moment-audience-name">${this._escapeHtml(entry.name)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="moment-audience-note">逐人结果按当前实际规则计算；编辑规则后立即刷新</div>
+            </div>
+        `;
+        (document.querySelector('#phone-panel-content .phone-screen') || document.body).appendChild(overlay);
+        overlay.querySelector('.moment-audience-close')?.addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        /* 【R14-O8】编辑规则：确认后写回真源并当场重开本弹层（结果即时刷新）。 */
+        overlay.querySelector('.moment-audience-edit')?.addEventListener('click', () => {
+            overlay.remove();
+            this.showMomentVisibilityPickerForMoment(momentId);
+        });
+    }
+    /* 【R14-O8】已发动态的规则编辑器：复用发布选择器的交互，确认时走
+     *   wechatData.updateMomentVisibility（真源落盘），再重开详情看结果。 */
+    showMomentVisibilityPickerForMoment(momentId) {
+        const moment = this.app.wechatData.getMoment(momentId);
+        if (!moment) return;
+        const prevPending = this.pendingMomentVisibility;
+        /* 借用发布选择器：把已发规则装进 pending，完成回调里写回真源。 */
+        this.pendingMomentVisibility = JSON.parse(JSON.stringify(
+            this.app.wechatData.normalizeMomentVisibility(moment) || { type: 'public', contactIds: [], contactNames: [] }
+        ));
+        const overlay = this.showMomentVisibilityPicker();
+        const host = document.querySelector('.wechat-moment-visibility-overlay');
+        if (!host) {
+            this.pendingMomentVisibility = prevPending;
+            return;
+        }
+        const doneBtn = host.querySelector('.wechat-moment-visibility-done');
+        if (doneBtn) {
+            const onClick = () => {
+                const result = this.app.wechatData.updateMomentVisibility(momentId, this.pendingMomentVisibility);
+                if (result?.ok) {
+                    this.app.phoneShell?.showNotification?.('已更新', '可见规则已更新，结果已刷新', '✅');
+                } else {
+                    this.app.phoneShell?.showNotification?.('失败', '规则未更新：' + String(result?.reason || '未知'), '⚠️');
+                }
+                this.pendingMomentVisibility = prevPending;
+                setTimeout(() => this.showMomentAudienceDetail(momentId), 60);
+            };
+            doneBtn.addEventListener('click', onClick, { once: true });
+        }
+        return overlay;
+    }
     showActionPopup(btn, momentId) {
         // 🔥 检查当前按钮是否已有弹窗
         const existingPopup = btn.querySelector('.action-popup');
@@ -1334,6 +1423,12 @@ export class MomentsView {
                 <i class="fa-solid fa-comment"></i>
                 <span>评论</span>
             </div>
+            ${this._isOwnMoment(moment) ? `
+            <div class="action-popup-btn audience-btn" data-moment-id="${momentId}">
+                <i class="fa-solid fa-user-group"></i>
+                <span>谁能看到</span>
+            </div>
+            ` : ''}
         `;
 
         // 🔥 直接添加到按钮内部（按钮已经是 position: relative）
@@ -1351,6 +1446,12 @@ export class MomentsView {
             e.stopPropagation();
             popup.remove();
             this.showCommentInput(momentId);
+        });
+        // 【R14-O8】谁能看到：已发详情的逐人结果（同一份真源规则）
+        popup.querySelector('.audience-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popup.remove();
+            this.showMomentAudienceDetail(momentId);
         });
 
         // 点击外部关闭

@@ -785,7 +785,10 @@ test('E3 视图不自己算内核（那是数据层与 App 的事）', () => {
      *   白名单以外仍然报错。 */
     const ALLOWED_VIEW_IMPORTS = [
         './needsim-data.js',
-        '../../config/destructive-confirm.js'
+        '../../config/destructive-confirm.js',
+        /* [v4.118.0 · R14-O9] 空态分形：empty-face 是零依赖叶子（纯词表+判定），
+         *   视图只取 FACE_ATTR/faceOf 做空态归因，不算「视图自己算内核」。 */
+        '../../config/empty-face.js'
     ];
     const imports = [...read(NS_VIEW).matchAll(/from '[^']+'/g)].map((m) => m[0]);
     assert.ok(imports.length >= 1, '视图至少要 import 键面真源');

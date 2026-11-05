@@ -23,6 +23,8 @@
  *   否则真源表增删一态，视图会静默少画一态而不报错（本仓 J7 形态）。 */
 import { SIMS_FACES } from './needsim-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+/* [v4.118.0 · R14-O9] 空态分形：真没有 / 读不到 分开说（同 album 的纪律）。 */
+import { faceOf, FACE_ATTR } from '../../config/empty-face.js';
 
 /** 转义要 replace 的三个字符 —— 用**拼装形**，不写实体字面量。 */
 const DQUOTE = String.fromCharCode(34);
@@ -259,7 +261,7 @@ export class NeedsimView {
             parts.push('<div class="nsm-mem-kind">' + (r.auto ? '自己冒出来的' : '我点出来的') + '</div>');
             parts.push('</div>');
         }
-        if (!rows.length) parts.push('<div class="nsm-none">还没有记下任何一件事</div>');
+        if (!rows.length) { const f = NeedsimView._rowsFace(rows); parts.push('<div class="nsm-none" ' + FACE_ATTR + '="' + f.code + '" data-face="' + f.face + '">还没有记下任何一件事</div>'); }
         parts.push('</div>');
         parts.push('</div>');
         return parts.join('');
@@ -296,7 +298,7 @@ export class NeedsimView {
                 + (r.wishDone ? '・完成了今日愿望' : '') + '</div>');
             parts.push('</div>');
         }
-        if (!rows.length) parts.push('<div class="nsm-none">还没有任何回执</div>');
+        if (!rows.length) { const f = NeedsimView._rowsFace(rows); parts.push('<div class="nsm-none" ' + FACE_ATTR + '="' + f.code + '" data-face="' + f.face + '">还没有任何回执</div>'); }
         parts.push('</div>');
         parts.push('</div>');
         return parts.join('');
@@ -484,3 +486,11 @@ export class NeedsimView {
         });
     }
 }
+
+
+/* ══════════════ [v4.118.0 · R14-O9] 空态分形判定：rows 拿不到(数据面不在) ⇒ absent，
+ *   拿到但空 ⇒ empty。判定只在这一处，不散进渲染。 ══════════════ */
+NeedsimView._rowsFace = function (rows) {
+    if (!Array.isArray(rows)) return { face: 'absent', code: 'read-failed' };
+    return faceOf({ items: rows });
+};

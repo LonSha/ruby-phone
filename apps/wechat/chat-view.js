@@ -134,6 +134,10 @@ export class ChatView {
         this._wechatTtsCacheOrder = [];
         this._wechatTtsCacheLimit = 24;
         this._imagePromptGenerationLocks = new Set();
+        /* [R14-O7] 每个会话各自已加载的尾部窗口深度（`chatId → 条数`）。
+         *   修前这是一个标量 `_loadedWindow`，切会话会串味（探针 _dbg_o7d 实测）。 */
+        this._windowByChat = new Map();
+        this._loadedWindow = undefined;
         /* [v4.00.0 · R3-O7] 在飞生图的中止控制面：任务键 → AbortController。
          *   传输层（NAI 队列等待 / ComfyUI 历史轮询 / fetch）早已接 signal，
          *   只差把用户侧的取消接到同一个 signal 上。 */
@@ -2846,6 +2850,17 @@ renderChatRoom(chat) {
         if (this._inputBufferScope !== scope) { this.inputText = ''; this._inputBufferScope = scope; }
         const messages = this.app.wechatData.getMessages(chat.id);
         const userInfo = this.app.wechatData.getUserInfo();
+        /* [R14-O7] **首屏也走尾部窗口**。修前这里直接
+         *   `${this.renderMessagesWithDateDividers(messages, userInfo)}` —— 把**全量**铺进 DOM。
+         *   前期实测：5000 条的会话，首屏交给渲染函数的数组长度是 **5000**。
+         *   R4-O4 只改了 `_refreshCurrentChatMessages` 的回退路径，首屏这条路径漏了。
+         *   切片只影响**交给渲染函数的数组** —— 不改数据源、不删历史。 */
+        const win = tailWindowOf(messages, {
+            loaded: this._windowSizeOf(chat.id), pageSize: CHAT_WINDOW_SIZE
+        });
+        this._lastRenderedWindow = win;
+        this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
+        this._lastRenderedMsgIds[String(chat.id || '')] = messages.map(m => String(m?.id ?? ''));
         const isCurrentChatSending = this.isSending && String(this._activeSendingChatId || '') === String(chat.id || '');
         const hasInputText = String(this.inputText || '').trim() !== '';
         const rightButtonIsMore = !isCurrentChatSending && !hasInputText;
@@ -2860,7 +2875,8 @@ renderChatRoom(chat) {
         return `
     <div class="chat-room" data-chat-id="${safeChatId}">
                 <div class="chat-messages" id="chat-messages" data-chat-id="${safeChatId}">
-                    ${this.renderMessagesWithDateDividers(messages, userInfo)}
+                    ${this.renderLoadEarlierEntry(win)}
+                    ${this.renderMessagesWithDateDividers(win.items, userInfo)}
                 </div>
 
                 <!-- 输入区 -->
@@ -3046,10 +3062,25 @@ renderChatRoom(chat) {
     /**
      * [v4.16.0 · R4-O4] 当前已加载的尾部窗口大小(缺省等于 CHAT_WINDOW_SIZE)。
      *   用户往回翻时靠 `showEarlierMessages()` 把它放大, 而**不是**把整段一次铺出去。
+     *
+     * 【R14-O7】窗口大小**按会话隔离**。修前 `_loadedWindow` 是**单个标量**：
+     *   前期实测——
+     *     A 会话翻 3 页 → windowSize=800；
+     *     切到只有 10 条的 B → windowSize 仍是 800（继承了 A 的翻页深度）；
+     *     B 调一次 showEarlierMessages → next=min(10, 800+200)=10 ⇒ **把标量写成了 10**；
+     *     切回 A → windowSize=10 ⇒ A 的 2000 条里只剩 10 条可见，用户的翻页位置被 B 抹掉。
+     *   这不是「数值不对」，是**一个会话的浏览深度污染了另一个会话**（本仓最贵的那类
+     *   「不报错、只是默默没生效」）。故改成 `chatId → 深度` 的台账，切会话天然隔离。
      */
-    windowSize() {
-        const n = numOrNull(this._loadedWindow);
+    _windowSizeOf(chatId) {
+        const id = String(chatId || '').trim();
+        const map = this._windowByChat;
+        const raw = (map && typeof map.get === 'function') ? map.get(id) : null;
+        const n = numOrNull(raw);
         return (n !== null && n > 0) ? Math.floor(n) : CHAT_WINDOW_SIZE;
+    }
+    windowSize() {
+        return this._windowSizeOf(this.app.currentChat?.id);
     }
     /**
      * [v4.16.0 · R4-O4] 再往回看一页(把尾部窗口放大 `CHAT_WINDOW_SIZE` 条)。
@@ -3060,11 +3091,50 @@ renderChatRoom(chat) {
         const chatId = String(this.app.currentChat?.id || '').trim();
         if (!chatId) return { ok: false, loaded: 0, hasMore: false };
         const total = (this.app.wechatData.getMessages(chatId) || []).length;
-        const next = Math.min(total, this.windowSize() + CHAT_WINDOW_SIZE);
-        const changed = next > this.windowSize();
+        const cur = this._windowSizeOf(chatId);
+        const next = Math.min(total, cur + CHAT_WINDOW_SIZE);
+        const changed = next > cur;
+        if (this._windowByChat && typeof this._windowByChat.set === 'function') {
+            this._windowByChat.set(chatId, next);
+        }
+        /* 兼容旧标量读数（诊断面 / 既有判据可能读过 `_loadedWindow`）：只写**当前会话**的。 */
         this._loadedWindow = next;
         if (changed) this._refreshCurrentChatMessages();
         return { ok: changed, loaded: next, hasMore: next < total };
+    }
+    /**
+     * [R14-O7] 「加载更早的消息」入口的**真渲染**。
+     *   【为什么要一个真按钮】修前 `showEarlierMessages()` **全仓零调用方**
+     *   （只有定义、它自己、和一条测试字符串）—— 也就是说窗口一旦被切成 200 条，
+     *   用户永远看不到更早的，而界面上没有任何「更早的还在，点这里看」的提示。
+     *   这正是本仓反复治理的「能力写好了、产品端零消费」。故顶部放一颗真按钮。
+     */
+    renderLoadEarlierEntry(win) {
+        const w = win && typeof win === 'object' ? win : null;
+        if (!w || !w.ok || !w.hasMore) return '';
+        return `<button class="wechat-load-earlier-entry" data-role="load-earlier" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:9px 0;font-size:12px;color:#576b95;background:transparent;border:none;cursor:pointer;">
+            <i class="fa-solid fa-angles-up" style="font-size:11px;"></i>
+            <span>查看更早的消息</span>
+        </button>`;
+    }
+    /** [R14-O7] 绑定「查看更早的消息」按钮（事件委托到稳定容器，避免每次重画后失效）。 */
+    bindLoadEarlierEvents() {
+        const currentView = this.getCurrentWechatView ? this.getCurrentWechatView() : null;
+        const messagesDiv = currentView?.querySelector?.('#chat-messages')
+            || (typeof document !== 'undefined' ? document.getElementById('chat-messages') : null);
+        if (!messagesDiv || messagesDiv._loadEarlierEventsBound) return;
+        messagesDiv._loadEarlierEventsBound = true;
+        messagesDiv.addEventListener('click', (e) => {
+            const btn = e.target.closest?.('[data-role="load-earlier"]');
+            if (!btn || !messagesDiv.contains(btn)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const r = this.showEarlierMessages();
+            /* 拉到头之后按钮还在（刚才是 hasMore:false 才不渲染）—— 如实说一句。 */
+            if (r && r.ok === false && r.hasMore === false) {
+                this.app?.phoneShell?.showNotification?.('提示', '已经是最早的消息了', '📜');
+            }
+        });
     }
     _refreshCurrentChatMessages(options = {}) {
         const chatId = String(this.app.currentChat?.id || '').trim();
@@ -3124,12 +3194,14 @@ renderChatRoom(chat) {
         // 全量渲染回退路径（结构变更/删除/编辑/首次渲染）
         /* [v4.16.0 · R4-O4] **只渲染尾部窗口**:几千条的会话一次铺进 DOM 会把首屏变成一次长任务。
          *   切片只影响**交给渲染函数的数组** —— 不改数据源、不删历史。
-         *   ★ `currIds` 仍然记**全量** id:增量追加的判据(纯尾部追加)靠它才不会误判。 */
+         *   ★ `currIds` 仍然记**全量** id:增量追加的判据(纯尾部追加)靠它才不会误判。
+         *   【R14-O7】窗口深度按**本会话**取（`_windowSizeOf`），不再沿用全局标量。 */
         const win = tailWindowOf(messages, {
-            loaded: this._loadedWindow, pageSize: CHAT_WINDOW_SIZE
+            loaded: this._windowSizeOf(chatId), pageSize: CHAT_WINDOW_SIZE
         });
         this._lastRenderedWindow = win;
-        messagesDiv.innerHTML = this.renderMessagesWithDateDividers(win.items, userInfo);
+        messagesDiv.innerHTML = this.renderLoadEarlierEntry(win)
+            + this.renderMessagesWithDateDividers(win.items, userInfo);
         this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
         this._lastRenderedMsgIds[chatId] = currIds;
 
@@ -3138,6 +3210,7 @@ renderChatRoom(chat) {
         this.bindSpecialMessageEvents();
         this.bindInnerThoughtEvents();
         this.bindMessageSelectionEvents();
+        this.bindLoadEarlierEvents();
         this._syncMessageSelectionBar();
 
         if (!keepScroll) return true;
@@ -3467,10 +3540,25 @@ renderChatRoom(chat) {
         // 1. 记录更新前的滚动状态
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
+        /* [R14-O7] **这条路径也要走尾部窗口**。修前它把传进来的**全量**再交给渲染：
+         *   前期实测，5000 条数据时交给渲染函数的数组长度是 **5000**。
+         *   它是本仓**13 处调用方**的主刷新路径（回执、删除、重roll、换会话后刷新……），
+         *   所以「只有 `_refreshCurrentChatMessages` 走了窗口」是不够的 —— 只要有一条
+         *   刷新路径铺全量，长会话就照样一次长任务。 */
+        const cid = String(options.chatId || this.app?.currentChat?.id || '').trim();
+        const win = tailWindowOf(messages, {
+            loaded: this._windowSizeOf(cid), pageSize: CHAT_WINDOW_SIZE
+        });
+        this._lastRenderedWindow = win;
+        if (cid) {
+            this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
+            this._lastRenderedMsgIds[cid] = (Array.isArray(messages) ? messages : []).map(m => String(m?.id ?? ''));
+        }
+
         // 2. 生成新 HTML
         let newHtml = '';
         try {
-            newHtml = this.renderMessagesWithDateDividers(messages, userInfo);
+            newHtml = this.renderLoadEarlierEntry(win) + this.renderMessagesWithDateDividers(win.items, userInfo);
         } catch (error) {
             console.error('微信消息列表 HTML 生成失败:', error);
             return;
@@ -3491,6 +3579,7 @@ renderChatRoom(chat) {
             this.bindSpecialMessageEvents();
             this.bindInnerThoughtEvents();
             this.bindMessageSelectionEvents();
+            this.bindLoadEarlierEvents();
         } catch (error) {
             console.error('微信消息列表事件绑定失败:', error);
         }
@@ -10078,6 +10167,8 @@ renderChatRoom(chat) {
         this.bindMessageLongPressEvents();
         this.bindManualTimeMarkerEvents();
         this.bindMessageSelectionEvents();
+        /* [R14-O7] 「查看更早的消息」入口的委托绑定（首屏也有这条路径）。 */
+        this.bindLoadEarlierEvents();
 
         // 🔊 语音气泡点击播放逻辑
         const voiceMessagesDiv = document.getElementById('chat-messages');

@@ -228,7 +228,7 @@ test('C3 往回翻入口在场,且「已到开头」如实回报', () => {
   assert.match(chatCode, /showEarlierMessages\(\) \{/);
   const fn = chatCode.slice(chatCode.indexOf('showEarlierMessages() {'));
   const body = fn.slice(0, fn.indexOf('\n    }'));
-  assert.ok(body.includes('this.windowSize() + CHAT_WINDOW_SIZE'), '每次放大一页');
+  assert.ok(body.includes('cur + CHAT_WINDOW_SIZE'), '每次放大一页');
   assert.ok(body.includes('hasMore: next < total'), '「还有没有更早的」必须按真实总数算');
   assert.ok(body.includes('ok: changed'), '没变化时如实返回 false(不假装拉了)');
   assert.match(chatCode, /windowSize\(\) \{/, '必须有当前窗口大小读数');
@@ -272,13 +272,14 @@ test('D1 ★★★ 破坏「从尾部切」⇒ 同款判据必转红(又把用�
 });
 
 test('D2 ★★★ 破坏「聊天全量路径真切片」⇒ 同款判据必转红(整段重铺回归)', () => {
-  const broken = breakOnce(chatCode,
-    'renderMessagesWithDateDividers(win.items, userInfo)',
-    'renderMessagesWithDateDividers(messages, userInfo)',
-    'd2');
-  assert.equal(broken.includes('renderMessagesWithDateDividers(win.items, userInfo)'), false,
-    '破坏副本:又交给全量');
-  assert.ok(chatCode.includes('renderMessagesWithDateDividers(win.items, userInfo)'), '原版必须交切片');
+  /* 【R14-O7】修后三条渲染路径(首屏 renderChatRoom / 回退 _refreshCurrentChatMessages /
+   *   smartUpdateMessages)都交切片 —— 破坏必须**三处全破坏**，只坏一处仍留两条真切片。 */
+  const anchor = 'renderMessagesWithDateDividers(win.items, userInfo)';
+  const hits = chatCode.split(anchor).length - 1;
+  assert.ok(hits >= 2, '三条渲染路径都应交切片(实测 ' + hits + ' 处)');
+  const broken = chatCode.split(anchor).join('renderMessagesWithDateDividers(messages, userInfo)');
+  assert.equal(broken.includes(anchor), false, '破坏副本:全部又交给全量');
+  assert.ok(chatCode.includes(anchor), '原版必须交切片');
 });
 
 test('D3 ★★★ 破坏「增量只算尾部追加」⇒ 同款判据必转红(删也算新增)', () => {
