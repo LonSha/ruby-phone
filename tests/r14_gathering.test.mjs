@@ -444,11 +444,13 @@ test('F3 版本锚：五源同版且 ≥ 4.124.0', () => {
     const man = JSON.parse(read('manifest.json'));
     const log = JSON.parse(read('update-log.json'));
     const idx = read('index.js').match(/ST_PHONE_VERSION = '([^']+)'/)[1];
-    assert.equal(pkg.version, MIN_VERSION);
-    assert.equal(man.version, MIN_VERSION);
-    assert.equal(log.latest, MIN_VERSION);
-    assert.equal(idx, MIN_VERSION);
-    assert.ok(log.versions && log.versions[MIN_VERSION], '更新日志必须有本版条目');
+    const toNum = (v) => String(v).split('.').map((x) => Number.parseInt(x, 10)).reduce((a, b) => a * 1000 + b, 0);
+    assert.ok(toNum(pkg.version) >= toNum(MIN_VERSION), 'package.version 必须 >= ' + MIN_VERSION);
+    assert.equal(pkg.version, man.version, 'package 与 manifest 必须同版');
+    assert.equal(log.latest, pkg.version, 'update-log.latest 必须同版');
+    assert.equal(idx, pkg.version, 'index.js 版本常量必须同版');
+    assert.ok(log.versions && log.versions[pkg.version], '更新日志必须有本版条目');
+    assert.ok(log.versions && log.versions[MIN_VERSION], '更新日志必须有出生版条目');
 });
 
 test('F4 ★ 负控制：真源码副本上重跑同款判据，四处破坏必须各自被抓', async () => {
