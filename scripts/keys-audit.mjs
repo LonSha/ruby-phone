@@ -425,6 +425,7 @@ const KEY_REGISTRY = [
   { key: 'affairs_errands_v1', scope: 'chat', note: '[v4.114.0 · R13-X7] 这个月清单（四态闭集/十一因由/四类后果无金额格/五项限额/当日到期不算过期/终结态不被时间改写）' },
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
   { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },
+  { key: 'gathering_plan_v1', scope: 'chat', note: '[v4.124.0 · R14-X2] 多人邀约台账（邀请名单/候选时段/逐人答复四态/改期轮次/散场回执；取消不删聊天、确认不双建）' },
   { key: 'creation_projects_v1', scope: 'chat', note: '[v4.50.0 · R6-O5] 长篇创作作品编排（作品级章节/素材依赖/跨章节局部改稿/脱机韧性）' },
   { key: 'reading_studio_v1', scope: 'chat', note: '[v4.51.0 · R6-O6] 主动研读工作室状态机（核心问题/观点对照/疑问批注/论证草稿/改版保护作者正文）' },
   { key: 'schedule_ledger', scope: 'chat', note: '[v3.67.0] 日程提醒协议账本（四源归一后的幂等键/撤回/改期/回档留痕；上限 240）' },

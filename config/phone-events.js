@@ -65,7 +65,12 @@ export const PHONE_EVENTS = Object.freeze({
     CAUSAL_SOURCE: 'phone:causalSource',
     // [v4.29.0 · R4-X7] 群聊投票的**确认转交**：本仓只把「哪一份活动、谁参加」
     //   原样交给约定 owner（日历），自己零写盘 —— 表决不直接变成承诺。
-    GROUP_VOTE_CONFIRM: 'phone:groupVoteConfirm'
+    GROUP_VOTE_CONFIRM: 'phone:groupVoteConfirm',
+    // [v4.124.0 · R14-X2] 多人邀约的**时段确认转交**：detail 带
+    //   {gatherId,title,slotId,slotLabel,slotAt,round,scheduleKey,replayed,going,
+    //    participants[],chatRefs[]}。★ 本事件不建日程 —— 建不建、建在哪天是
+    //   约定 owner（日历）的事；本仓只把「定的是哪个时段、按什么幂等键」端点出去。
+    GATHERING_CONFIRM: 'phone:gatheringConfirm'
 });
 
 /**
@@ -167,6 +172,13 @@ export const PHONE_EVENT_CONTRACT = Object.freeze({
             + '{activityId,optionId,round,participants[]}。★ 本事件**不产出承诺** —— '
             + '约定 owner（日历）拿到这份活动读数后由用户显式落笔，'
             + '手机侧一个字节都不写（writesNothing 恒 true）。'
+    },
+    [PHONE_EVENTS.GATHERING_CONFIRM]: {
+        kind: PHONE_EVENT_KINDS.COMMUNICATION, target: 'window',
+        note: '多人邀约的时段确认转交（v4.124.0 · R14-X2）：detail 带 '
+            + '{gatherId,title,slotId,slotLabel,slotAt,round,scheduleKey,replayed,going,'
+            + 'participants[],chatRefs[]}。★ 本事件**不建日程**：建不建、建在哪天是'
+            + '约定 owner（日历）的事；`scheduleKey` 是幂等键，重复确认恒同键（不双建）。'
     },
 });
 

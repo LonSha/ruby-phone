@@ -22,12 +22,14 @@ import {
   /* 只导入真用到的入口（常量表由内核与判据消费，本层不重判故不重复持有） */
   openThread, appendPoint, closeThread, addThreadParticipants,
   markPointSeen, markPointAnswered, planPoint,
+  markPointReply, replyPointsOf, COMM_REPLY_ACTIONS, replyLandingOf, COMM_LANDING,
   liveThreads, pendingAttention, findThread, idleThreads,
   threadSummaryLine, threadCounts, resumeOf, threadMaterial,
   threadStateOf, attentionOf,
   commSelfCheck, readThreads, writeThreads,
 } from '../../config/comm-thread.js';
 import { stampOfCall, commTimeSelfCheck } from '../../config/comm-time.js';
+import { buildOpenDetail } from '../../config/app-open-detail.js';
 import { CommsView } from './comms-view.js';
 
 function toStr(v) { return String(v == null ? '' : v).trim(); }
@@ -85,6 +87,58 @@ export class CommsApp {
         this._lastAction = { op: 'markAnswered', ok: res.ok, why: res.why };
         return res;
     }
+    /* ========== [v4.123.0 · R14-X1] 待回应清单（会话台→待回应） ========== */
+    /**
+     * 手动回应一个接触点（三动作：已回应 / 稍后 / 无需回应）。
+     *   写路径唯一：视图按钮 → 本方法 → 内核 markPointReply → writeThreads。
+     */
+    reply(threadId, pointId, action) {
+        const res = markPointReply(this.list(), threadId, pointId, action, Date.now());
+        if (res.ok) writeThreads(this.storage, res.list);
+        this._lastAction = { op: 'reply', ok: res.ok, why: res.why };
+        return res;
+    }
+    /**
+     * 全部待回应项（跨段收拢，按交流线分组交给视图逐项渲染）。
+     *   ★ 只收 open 段（closed 段的事已经了结，不该再出现在清单里）。
+     */
+    replyBoard() {
+        const out = [];
+        for (const t of this.live().concat(this.idle())) {
+            const pts = replyPointsOf(t);
+            if (!pts.length) continue;
+            out.push({ thread: t, points: pts });
+        }
+        return out;
+    }
+    /**
+     * 回到原处（R14-X1）：把一个接触点送回它来的地方。
+     *   ★ 派发链只有一条（`phone:openApp`）：本 App 不持有 wechatApp / phoneApp 实例
+     *     （持有即耦合，且那个实例可能还没懒加载出来）。载荷走唯一一支笔
+     *     `buildOpenDetail`，不手拼 { appId, ref } 字面量。
+     *   ★ landed=false 是**如实读数**，不是失败：本版三个来源都还没有逐条定位口，
+     *     所以「打开微信」这一级承诺是诚实的；谎报落地比不落地更糟。
+     * @returns {{ok:boolean, appId:string, landed:boolean, why:string}}
+     */
+    goto(point) {
+        const land = replyLandingOf(point);
+        const why = land.why;
+        const okApp = !!land.appId && why !== COMM_LANDING.NO_SOURCE;
+        this._lastAction = { op: 'goto', ok: okApp, why: why };
+        if (!okApp) return { ok: false, appId: land.appId, landed: land.landed, why: why };
+        try {
+            const win = this._win();
+            if (!win || typeof win.dispatchEvent !== 'function' || typeof win.CustomEvent !== 'function') {
+                return { ok: false, appId: land.appId, landed: false, why: 'no-host' };
+            }
+            win.dispatchEvent(new win.CustomEvent('phone:openApp', { detail: buildOpenDetail(land.appId, null, land.ref) }));
+        } catch (_e) {
+            return { ok: false, appId: land.appId, landed: false, why: 'dispatch-threw' };
+        }
+        return { ok: true, appId: land.appId, landed: land.landed, why: why };
+    }
+    /** 某个接触点的落地读数（视图只取，不自算）。 */
+    landingOf(point) { return replyLandingOf(point); }
     /* ========== 投影（给视图/生成侧/其他 App 消费） ========== */
     /**
      * ★ 从**痕迹所有者**的原始读数造一个接触点（本件唯一的跨层入口，也是

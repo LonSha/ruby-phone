@@ -16,6 +16,9 @@ import { ImageCropper } from '../settings/image-cropper.js';
 /* [v4.29.0 · R4-X7] 群聊投票接线件（取数 / 持起点 / 落点形状）。
  *   判定词与标签表**只许内核一份**（config/group-vote-contract.js），本件只转发。 */
 import { GroupVote } from './group-vote.js';
+import { GatheringWire, replyIdOfWord, GP_MESSAGE_KINDS } from './gathering-wire.js';
+/* 答复标签走**内核唯一映射**（视图不写第二份映射表）。 */
+import { replyLabel, gatherIdOfMessage } from '../../config/gathering-plan.js';
 /* [v4.113.0 · R13-X3] 「就地办」动作条（纯旁路：本文件不改 chat-view 一个字节）。
  *   本文件只负责三件事：造一个实例、在 setContent 之后叫它挂上去、在设置页给一个开关。
  *   候选怎么算、写不写盘一律在 `config/inline-action*.js`，这里不重算任何一格。 */
@@ -74,6 +77,9 @@ export class WechatApp {
         this.momentsView = new MomentsView(this);
         /* [v4.29.0 · R4-X7] 群聊投票面：只持「用户点了哪个选项」，读数一律现取。 */
         this.groupVote = new GroupVote(this);
+        /* [v4.124.0 · R14-X2] 多人邀约接线件：只持「用户在看哪一场、点了哪个时段」，
+         *   逐人答复与阶段判定一律现取（内核 + 台账）。 */
+        this.gathering = new GatheringWire(this);
         /* [v4.113.0 · R13-X3] 动作条：动作条是一层**旁路 DOM**，
          *   它不知道消息怎么画的，只知道画完了在哪里再挂一层。 */
         this.inlineBar = new InlineActionBar(this);
@@ -1749,7 +1755,159 @@ export class WechatApp {
 .message-group-vote-statement.is-support { background: rgba(7,193,96,0.12); color: #07883f; }
 .message-group-vote-statement.is-oppose { background: rgba(244,67,54,0.12); color: #c62828; }
 .message-group-vote-statement.is-abstain { background: rgba(0,0,0,0.05); color: #757575; }
-
+/* ========================================
+   [v4.124.0 · R14-X2] 群聊邀约卡
+   · 五态**视觉不许同形**：说来(绿) / 不来(红) / 还没定(灰黄) /
+     要复核(橙·带「第 N 轮说」出处) / 还没说(虚线框)。
+     把「要复核」画成「还没说」，用户就不知道自己在等什么；
+     把「还没说」画成「不来」，就是把沉默当成拒绝。
+   · 时段按钮 is-on = 用户点过的那一个（再点即取消，不回落成别的）。
+   · 主按钮 disabled 时**不做半透明假可点**：说了「还定不下来」就真的不许点。
+   ======================================== */
+.message-gather {
+    width: clamp(200px, 62vw, 248px);
+    max-width: calc(100vw - 120px);
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 11px 9px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    font-size: 12px;
+    color: #111;
+}
+.message-left .message-gather { border-top-left-radius: 3px; }
+.message-right .message-gather { border-top-right-radius: 3px; }
+.message-gather-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+.message-gather-title { font-size: 12px; font-weight: 600; color: #111; margin-right: auto; }
+.message-gather-badge {
+    font-size: 10px;
+    color: #8a8a8a;
+    background: rgba(0,0,0,0.04);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.message-gather-badge.is-round { color: #576b95; background: rgba(87,107,149,0.10); }
+.message-gather-quest {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+    line-height: 1.4;
+    margin-bottom: 7px;
+    word-break: break-word;
+}
+.message-gather-line {
+    font-size: 10px;
+    color: #9a9a9a;
+    line-height: 1.5;
+    margin-bottom: 6px;
+    word-break: break-word;
+}
+.message-gather-rows { margin-bottom: 2px; }
+.message-gather-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 7px;
+    border-radius: 7px;
+    background: rgba(0,0,0,0.03);
+    margin-bottom: 4px;
+    border: 0.5px solid transparent;
+}
+.message-gather-row.is-yes { background: rgba(7,193,96,0.10); }
+.message-gather-row.is-no { background: rgba(244,67,54,0.09); }
+.message-gather-row.is-maybe { background: rgba(255,193,7,0.13); }
+.message-gather-row.is-stale {
+    background: rgba(255,152,0,0.12);
+    border-color: rgba(255,152,0,0.35);
+}
+.message-gather-row.is-pending {
+    background: transparent;
+    border-style: dashed;
+    border-color: rgba(0,0,0,0.16);
+}
+.message-gather-who {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message-gather-reply-text { flex: 0 0 auto; font-size: 11px; color: #666; }
+.message-gather-row.is-yes .message-gather-reply-text { color: #07883f; font-weight: 600; }
+.message-gather-row.is-no .message-gather-reply-text { color: #c62828; }
+.message-gather-row.is-maybe .message-gather-reply-text { color: #a17400; }
+.message-gather-row.is-stale .message-gather-reply-text { color: #c46a00; font-weight: 600; }
+.message-gather-row.is-pending .message-gather-reply-text { color: #9a9a9a; font-style: italic; }
+.message-gather-set {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.06);
+    color: #444;
+    font-size: 11px;
+    cursor: pointer;
+}
+.message-gather-slots { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px; }
+.message-gather-slot {
+    height: 26px;
+    padding: 0 10px;
+    border: 0.5px solid rgba(0,0,0,0.12);
+    border-radius: 999px;
+    background: #fff;
+    color: #444;
+    font-size: 11px;
+    cursor: pointer;
+}
+.message-gather-slot.is-on {
+    background: rgba(7,193,96,0.12);
+    border-color: rgba(7,193,96,0.55);
+    color: #07883f;
+    font-weight: 600;
+}
+.message-gather-foot {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    font-size: 10px;
+    color: #8a8a8a;
+    line-height: 1.5;
+    word-break: break-word;
+}
+.message-gather-actions { display: flex; gap: 6px; margin-top: 7px; }
+.message-gather-btn {
+    flex: 1;
+    height: 28px;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.message-gather-btn.is-glass { background: rgba(0,0,0,0.05); color: #444; }
+.message-gather-btn.is-primary { background: #07c160; color: #fff; font-weight: 600; }
+.message-gather-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* 单条答复气泡（[答复：甲 来]）：只报「他说了什么」，不改卡上计数 ——
+   消息是证据、台账是读数，两族不许合成一格。 */
+.message-gather-reply {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 11px;
+    color: #444;
+}
+.message-gather-reply.is-yes { background: rgba(7,193,96,0.12); color: #07883f; }
+.message-gather-reply.is-no { background: rgba(244,67,54,0.12); color: #c62828; }
+.message-gather-reply.is-maybe { background: rgba(255,193,7,0.16); color: #a17400; }
 .message-music-card.state-invite .message-music-card-status {
     color: #1ed760;
 }
@@ -8373,5 +8531,83 @@ export class WechatApp {
     /** 自检：转发内核十条口径真跑。 */
     voteSelfCheck() {
         try { return this.groupVote.selfCheck(); } catch (_e) { return { problems: ['selfcheck-threw'] }; }
+    }
+    /* ================================================================
+     * [v4.124.0 · R14-X2] 多人邀约面出口（十个）
+     *   与 votePack 同规格：本层只转发，**不重判任何一格**。
+     *   逐人答复与阶段判定全在 `config/gathering-plan.js`；
+     *   本层只持「用户在看哪一场、点了哪个时段」（实例态，不是读数）。
+     * ================================================================ */
+    /** 一次取齐（逐人清单 + 门 + 一行读数 + 状态标签）。 */
+    gatherPack(gatherId) {
+        try { return this.gathering.pack(gatherId); }
+        catch (_e) { return this.gathering.pack(''); }
+    }
+    /** 当前焦点场（读不到 ⇒ null）。 */
+    gatherFocused() {
+        try { return this.gathering.focused(); } catch (_e) { return null; }
+    }
+    /** 设焦点场（'' = 清掉）。 */
+    gatherSetFocus(gatherId) {
+        try { return this.gathering.setFocus(gatherId); } catch (_e) { return ''; }
+    }
+    /** 用户点了哪个时段（'' = 还没点）。 */
+    gatherPickedSlot() {
+        try { return this.gathering.pickedSlot; } catch (_e) { return ''; }
+    }
+    /** 设为要定的那个时段；空值即清空（**不回落成第一个**）。 */
+    gatherSetPickedSlot(slotId) {
+        try { return this.gathering.setPickedSlot(slotId); } catch (_e) { return ''; }
+    }
+    /** 中文答复词 → 内核答复 id（唯一映射在接线件，视图不写第二份表）。 */
+    gatheringReplyIdOfWord(word) {
+        try { return replyIdOfWord(word); } catch (_e) { return ''; }
+    }
+    /** 由一条邀约消息派生场次 id（视图与接线件共用同一条规则，不写第二份算法）。 */
+    gatherIdOfMessage(messageId, chatId, title) {
+        try { return gatherIdOfMessage(messageId, chatId, title); } catch (_e) { return ''; }
+    }
+    /** 答复 id → 中文标签（唯一映射在内核，视图不写第二份映射）。 */
+    replyLabelOf(reply) {
+        try { return replyLabel(reply); } catch (_e) { return ''; }
+    }
+    /** 本件认识的两条邀约消息类别（视图不写第二份类型字面量）。 */
+    gatheringMessageKinds() {
+        try { return GP_MESSAGE_KINDS.slice(); } catch (_e) { return []; }
+    }
+    /** 记一条**用户手动**答复（origin='manual'，与消息回执分开记）。 */
+    gatherMarkReply(gatherId, memberId, reply) {
+        try { return this.gathering.markReply(gatherId, memberId, reply); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null }; }
+    }
+    /** 改期（旧答复降为「要复核」，已定时段作废）。 */
+    gatherChangeDate(gatherId, input) {
+        try { return this.gathering.changeDate(gatherId, input || {}); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null, stale: [] }; }
+    }
+    /** 确认时段 → 转交日历 owner（本层零写盘建日程）。 */
+    gatherConfirmSlot(gatherId, slotId) {
+        try { return this.gathering.confirmSlot(gatherId, slotId); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null, wrote: false }; }
+    }
+    /** 取消（**不删聊天**；取消后不再建日程）。 */
+    gatherCancel(gatherId, reason) {
+        try { return this.gathering.cancel(gatherId, undefined, reason); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null }; }
+    }
+    /** 散场（活动结束回执：谁真到了）。 */
+    gatherClose(gatherId, receipt) {
+        try { return this.gathering.close(gatherId, undefined, receipt || {}); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null }; }
+    }
+    /** 从一条邀约卡消息建一场（幂等：同一条消息恒同一场）。 */
+    gatherOpenFromMessage(msg) {
+        try { return this.gathering.openFromMessage(msg); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null }; }
+    }
+    /** 从一条答复消息记一条答复（归属当前焦点场）。 */
+    gatherApplyReply(msg) {
+        try { return this.gathering.applyReplyFromMessage(msg); }
+        catch (_e) { return { ok: false, why: 'wire-threw', gathering: null }; }
     }
 }

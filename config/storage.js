@@ -368,6 +368,10 @@ export class PhoneStorage {
             /^comm/,
             /* [v4.50.0 · R6-O3] 群聊议事(group_deliberation_v1): 隔离群议题与立场状态机。 */
             /^group_deliberation/,
+            /* [v4.124.0 · R14-X2] 多人邀约(gathering_plan_v1): 隔离邀请名单 / 逐人答复 /
+             *   候选时段 / 改期轮次。必须随会话隔离 —— 换角色之后「上一场谁说来」
+             *   若串进来，会把 B 角色的答复当成 A 角色的答应。 */
+            /^gathering_/,
             /* [v4.50.0 · R6-O5] 长篇创作工程(creation_projects_v1): 隔离长篇作品编排与修订历史。 */
             /^creation_project/,
             /* [v4.51.0 · R6-O4 / v4.102.0 R13-O3] 能改道的多人活动(multi_activity_reroute_v1)。

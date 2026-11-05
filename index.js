@@ -323,7 +323,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.118.0';
+const ST_PHONE_VERSION = '4.124.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -553,18 +553,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-03",
+    date: "2026-11-05",
     items: [
-        "【版本升至 4.118.0（五源同源）】R13-X9 在群像档案面提供「借手机看看」入口，只读投影与你相关的那一屏。",
-        "【三态与四来源】内核固定 ready、no-contact、no-source 三整页态，逐项标注 other-side、self-identity、absent、not-other-side 四类来源归属。",
-        "【真实数据字段】消息按微信真源读取 from、content、time、date、type；非文本只显示有依据的类型占位，不生成不存在的正文。",
-        "【气泡视角】from 为 me 或本人昵称时，在对方手机中摆左侧；对方具名消息摆右侧；system 与空发言人不强行归位。",
-        "【产品诚实边界】他给玩家起的备注全仓无真源，恒报 absent；contact.remark 是玩家给联系人的备注，不拿反向冒充；他与别人的会话不投影。",
-        "【零写面】入口、投影内核与面板不写 localStorage、会话数据或源对象；withheld 单列 unread、blocked 与 otherConversations，避免反转你的读数。",
-        "【浏览器真入口】角色档案面须先填已登记角色并显式点击借手机看看，投影面不提供按钮、输入框或其他操作控件，覆盖窄屏可见性与无溢出。",
-        "【本版自己抓到的缺陷形态】首版内核误读 text 而非 content，已用真实微信字段修正；零写判据误把自检数组 push 当持久化写入，已改为下标追加并由系统套件与异步清理自证钉住。",
-        "【交棒改写】保留真实字段、气泡反转、恒缺席备注、withheld 三项与零写快照判据；后续版本不得用 contact.remark 冒充反向备注，也不得把 getMessages 的方向读数反转为对方手机事实。",
-        "【运行时验证边界】系统套件验证状态、来源、视角、负控制与快照不变，Chromium 四视口验证真实 CharsView 入口与面板；独立浏览器证据不等同酒馆实机，不宣称覆盖宿主主题差异，不能保证不存在看起来没坏但显示不对的问题。"
+        "【版本升至 4.124.0（五源同源）】R14-X2 多人邀约的邀请到散场：邀约卡、逐人答复、改期、时段确认与散场回执走同一条旅程（群聊议题 → 邀约卡 → 日历）。",
+        "【改期让旧答复待复核，不默认全员参加】reschedule 一个字节都不改写旧轮答复，要复核的那几个人由 replyBoard 从「更早轮里真的答过话」现算成 stale，并带出「他当时怎么说的、哪一轮说的」；从没开过口的人仍是 pending，沉默不被当成答应、也不被当成拒绝。",
+        "【只确认后建日程，取消不删聊天，重复确认不重复建】confirmGathering 只产出读数（wrote 恒 false），幂等键 scheduleKey 由「场次 + 轮次 + 时段」确定性派生并原样交给约定 owner（日历）；cancelGathering 只改台账阶段、chatRefs 一个字节不动；同一场同一轮同一时段重复确认恒同键并如实报 replayed。",
+        "【三圈人分开数】invited（被邀请全体）/ replied（本轮真的回过话的）/ going（本轮明确说来的）分开计，另单列 pending（从没说过）、stale（要复核）、foreign（答复表里有人但不在邀请名单）；把 stale 并进 pending 会让「改期」这件事在界面上消失。",
+        "【五态视觉不同形】说来(绿)、不来(红)、还没定(灰黄)、要复核(橙·带「第 N 轮说『X』」出处)、还没说(虚线框)：把「要复核」画成「还没说」用户就不知道在等什么，把「还没说」画成「不来」就是把沉默当拒绝。",
+        "【宿主接收端走同一条落笔路径】phone:gatheringConfirm 由宿主接住，把 scheduleKey 写进日历草稿的 activityId 位，复用 R5-O2 群投票转交的同一份 vote-handoff-store 两键实现（不为这件事去 new CalendarApp，那会把日历构造期监听器提前装进来）；回执同步写回微信侧，没接收者时如实说「没有接收者」。",
+        "【消息入口不造假答复】[邀约：标题｜名单｜时段] 建卡、[答复：谁 词] 记答复；答复词认不出时返回 null 走原样消息路径，不在名单里留一个「说了句听不懂的话却算答过」的人。",
+        "【本版自己抓到的缺陷形态】首版 reschedule 把旧轮 live 答复直接改写成 stale，等于把「第 1 轮他说来」永久抹成「他说 stale」，用户再想核对「到底谁答应过」就查不到；改为旧轮零改写、stale 由读函数从历史推导，并用「旧轮答复仍是 yes」与「stale 行必须带出 was 与 wasRound」两条判据钉住。第二处是 gatheringLine 文案里的字面 ** 会被 _escapeHtml 转义成星号显示，已去除。",
+        "【交棒改写】后续切片若要接日历侧的「改期后二次确认」，只改 confirmGathering 的幂等键组成一处，并同步 GP_REASONS；不得把 stale 写进答复表、不得把 pending 写成一条答复、不得为让按钮看起来更有用而替用户挑时段。",
+        "【运行时验证边界】系统套件验证建场拒绝、逐人答复、改期读回、幂等键、取消不动聊天、散场只收被邀请者、宿主回执与接线件往返；不宣称覆盖酒馆实机主题差异。"
     ]
 };
 
@@ -11009,6 +11009,58 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } catch (_e) { /* 回执没送到不影响「草稿已落」这件事本身 */ }
             });
 
+            /* [v4.124.0 · R14-X2] 多人邀约的**时段确认**接收者。
+             * 【为什么需要这一处】微信侧把「定的是哪个时段、按什么幂等键」端点出去了，
+             *   但**建不建日程、建在哪天**在约定 owner（日历）。宿主这层的职责只有两件：
+             *   ① 把凭据**落成日历草稿**（走 `vote-handoff-store.js` 的两键读写唯一实现：
+             *      `calendar_vote_handoff` 这一份草稿就是「待你补日期与时段」那一步的载体，
+             *      与 R5-O2 的群投票转交共用同一条落笔路径 —— 不为这一件事去 new CalendarApp，
+             *      那会把日历实例的构造期监听器提前装进来，而用户其实没打开过日历）；
+             *   ② 把回执**同步**写回微信侧（派发时监听器是同步跑的，所以「已转交」这句
+             *      在派发返回时已经有真实结果）。
+             * 【★ 幂等】`scheduleKey` 原样写进草稿的 `activityId` 位：同一场同一轮同一时段
+             *   重新确认恒同键，日历侧据此不双建（`receiveHandoff` 会报 replayed）。
+             * 【★ 与群投票的区别】群投票的 activityId 由「选项 + 参与名单」派生；
+             *   邀约的 scheduleKey 由「场次 + 轮次 + 时段」派生 —— 后者**带轮次**，
+             *   因为改期之后同一时段可以重新成立（那是**另一场约定**，不是重复建）。 */
+            window.addEventListener(PHONE_EVENTS.GATHERING_CONFIRM, (e) => {
+                const detail = (e && e.detail) || null;
+                let read = null;
+                try {
+                    const d = (detail && typeof detail === 'object') ? detail : {};
+                    const key = String(d.scheduleKey || '').trim();
+                    if (!key) {
+                        /* 没有幂等键 ⇒ 收不下（不拿一份认不出的凭据去写草稿）。 */
+                        read = {
+                            ok: false, state: GV_HANDOFF_STATES.FAILED,
+                            why: 'handoff-no-activity', handoff: null, line: ''
+                        };
+                        read.line = gvHandoffLine(read);
+                    } else {
+                        read = receiveHandoff(storage, {
+                            activityId: key,
+                            optionId: String(d.slotId || '').trim() || 'slot',
+                            round: Number(d.round) || 1,
+                            participants: Array.isArray(d.participants) ? d.participants : [],
+                            label: String(d.title || '').trim(),
+                            place: String(d.slotLabel || '').trim()
+                        });
+                    }
+                } catch (_e) {
+                    read = {
+                        ok: false, state: GV_HANDOFF_STATES.FAILED,
+                        why: 'host-threw', handoff: null, line: ''
+                    };
+                    read.line = gvHandoffLine(read);
+                }
+                /* 回执同步送回微信侧（用户没开过微信时没人在等这句提示）。 */
+                try {
+                    const gv = window.VirtualPhone?.wechatApp?.gathering;
+                    if (gv && typeof gv.noteConfirmReceipt === 'function') {
+                        gv.noteConfirmReceipt(read);
+                    }
+                } catch (_e) { /* 回执没送到不影响「草稿已落」这件事本身 */ }
+            });
             // 监听返回主页
             window.addEventListener('phone:goHome', () => {
                 // [v3.15.0 · 计划 #52] 回桌面 = 本次访问结束：结算时长。

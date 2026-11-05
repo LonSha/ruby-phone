@@ -4315,6 +4315,24 @@ renderChatRoom(chat) {
                 break;
             }
 
+            case 'gathering_card': {
+                messageBody = this._renderGatheringCard(msg);
+                break;
+            }
+            case 'gathering_reply': {
+                /* ★ 一条答复消息**只是一条答复**：它不改卡上的任何计数
+                 *   （计数由卡重绘时从台账现读）—— 消息是证据，台账是读数。 */
+                const gr = (msg.gatheringReply && typeof msg.gatheringReply === 'object') ? msg.gatheringReply : {};
+                const who = this._escapeHtml(String(gr.name || gr.memberId || senderName || '').trim());
+                const label = this.app.replyLabelOf ? String(this.app.replyLabelOf(gr.reply) || '') : '';
+                const cls = gr.reply === 'yes' ? 'is-yes' : (gr.reply === 'no' ? 'is-no' : 'is-maybe');
+                messageBody = `
+                    <div class="message-gather-reply ${cls}">
+                        <span>${who}</span><span>${this._escapeHtml(label)}</span>
+                    </div>
+                `;
+                break;
+            }
             case 'honey_invite': {
                 const statusText = String(msg.honeyInviteStatus || msg.status || '').trim();
                 const displayStatus = statusText || (isMe ? '等待回应' : '等待中...');
@@ -4454,6 +4472,112 @@ renderChatRoom(chat) {
                 ${actionsHtml}
             </div>
         `;
+    }
+    /* ============================================================
+     * [v4.124.0 · R14-X2] 多人邀约卡
+     *   ★ 三圈人分开摆（说来 / 不来 / 还没定），**「要复核」单独一行**：
+     *     改期之后「上次说来的还算不算」必须是屏幕上看得见的一行 ——
+     *     并进「没回」就等于把「改期」这件事从界面上抹掉了。
+     *   ★ 卡片只摆**台账现读**的读数，不由消息数推算：
+     *     消息是证据，台账是读数。view 不重判任何一格。
+     * ============================================================ */
+    _renderGatheringCard(msg) {
+        const card = (msg && msg.gatheringCard && typeof msg.gatheringCard === 'object') ? msg.gatheringCard : {};
+        const pack = this.app.gatherPack
+            ? this.app.gatherPack(this._gatherIdOfMsg(msg))
+            : null;
+        /* 台账还没这一场（首次渲染这张卡）⇒ 现在建一场，再取读数。
+         *   ★ 幂等：同一条消息恒同一场，重绘/回看不重复建。 */
+        if (!pack || !pack.found) {
+            try { this.app.gatherOpenFromMessage?.(msg); } catch (_e) { /* 建不出来就走降级渲染 */ }
+        }
+        const p = (this.app.gatherPack ? this.app.gatherPack(this._gatherIdOfMsg(msg)) : null) || pack;
+        const title = this._escapeHtml(String(card.title || (msg && msg.content) || '').trim());
+        if (!p || !p.found) {
+            /* ★ 读不出来时**如实说**，不摆一份空名单：空名单会被读成「没人被邀请」。 */
+            return `
+                <div class="message-gather">
+                    <div class="message-gather-head">
+                        <span class="message-gather-title">邀约</span>
+                    </div>
+                    <div class="message-gather-quest">${title}</div>
+                    <div class="message-gather-foot">这一场的逐人答复读不出来（不是「没人被邀请」）</div>
+                </div>
+            `;
+        }
+        const board = p.board || {};
+        const rows = Array.isArray(board.rows) ? board.rows : [];
+        const c = board.counts || {};
+        const rowHtml = rows.map((r) => {
+            const reply = String(r.reply || '');
+            const cls = reply === 'yes' ? 'is-yes'
+                : (reply === 'no' ? 'is-no'
+                    : (reply === 'stale' ? 'is-stale' : (reply === 'maybe' ? 'is-maybe' : 'is-pending')));
+            const label = this.app.replyLabelOf ? String(this.app.replyLabelOf(reply) || reply) : reply;
+            /* stale 那一行必须写清「上次是怎么说的」—— 否则用户不知道该复核什么。 */
+            const was = (reply === 'stale' && r.was)
+                ? '（第 ' + String(r.wasRound || '?') + ' 轮说「'
+                    + this._escapeHtml(String(this.app.replyLabelOf ? this.app.replyLabelOf(r.was) : r.was))
+                    + '」）'
+                : '';
+            const mid = this._escapeHtml(String(r.memberId || ''));
+            return `
+                <div class="message-gather-row ${cls}">
+                    <span class="message-gather-who">${this._escapeHtml(String(r.name || r.memberId || ''))}</span>
+                    <span class="message-gather-reply-text">${this._escapeHtml(label)}${was}</span>
+                    <button type="button" class="message-gather-set" data-action="gather-mark-yes" data-member-id="${mid}">来</button>
+                    <button type="button" class="message-gather-set" data-action="gather-mark-no" data-member-id="${mid}">不来</button>
+                </div>
+            `;
+        }).join('');
+        /* 候选时段：用户显式点选一个（不默认选第一个）。 */
+        const slots = Array.isArray(board.candidates) ? board.candidates : [];
+        const picked = String(p.pickedSlot || board.pickedSlotId || '');
+        const slotHtml = slots.map((s) => {
+            const sid = this._escapeHtml(String(s.id || ''));
+            const on = picked && picked === s.id;
+            return `
+                <button type="button" class="message-gather-slot ${on ? 'is-on' : ''}"
+                    data-action="gather-pick-slot" data-slot-id="${sid}">${this._escapeHtml(String(s.label || s.id || ''))}</button>
+            `;
+        }).join('');
+        const gate = p.gate || {};
+        const foot = [];
+        if (c.stale) {
+            foot.push('改期过了：第 ' + String(board.round || 1) + ' 轮有 ' + c.stale + ' 人上次说过话，要重新确认（不是默认还来）');
+        }
+        if (c.pending) foot.push('没回 ' + c.pending + ' 人（还没说，不算答应）');
+        if (c.foreign) foot.push('表外答复 ' + c.foreign + ' 条（不在邀请名单，不计入）');
+        if (gate.warn) foot.push(String(gate.warn));
+        return `
+            <div class="message-gather" data-gather-id="${this._escapeHtml(String(p.gathering?.gatherId || ''))}">
+                <div class="message-gather-head">
+                    <span class="message-gather-title">邀约</span>
+                    <span class="message-gather-badge">${this._escapeHtml(String(p.stateLabel || ''))}</span>
+                    <span class="message-gather-badge is-round">第 ${this._escapeHtml(String(board.round || 1))} 轮</span>
+                </div>
+                <div class="message-gather-quest">${title}</div>
+                <div class="message-gather-line">${this._escapeHtml(String(p.line || ''))}</div>
+                ${rowHtml ? `<div class="message-gather-rows">${rowHtml}</div>` : ''}
+                ${slotHtml ? `<div class="message-gather-slots">${slotHtml}</div>` : '<div class="message-gather-foot">还没有候选时段（先给几个时间让人挑）</div>'}
+                ${foot.length ? `<div class="message-gather-foot">${foot.map((x) => this._escapeHtml(x)).join('<br>')}</div>` : ''}
+                <div class="message-gather-actions">
+                    <button type="button" class="message-gather-btn is-glass" data-action="gather-reschedule">改期</button>
+                    <button type="button" class="message-gather-btn is-glass" data-action="gather-cancel">取消</button>
+                    <button type="button" class="message-gather-btn is-primary" data-action="gather-confirm-slot"
+                        ${gate.canConfirm ? '' : 'disabled'}>定这个时段</button>
+                </div>
+            </div>
+        `;
+    }
+    /** 由消息算场次 id（与接线件同一条派生规则；视图不另写一份算法）。 */
+    _gatherIdOfMsg(msg) {
+        const m = (msg && typeof msg === 'object') ? msg : {};
+        try {
+            return this.app.gatherIdOfMessage
+                ? this.app.gatherIdOfMessage(m.id, m.chatId || this.app.currentChat?.id || '', m.content || '')
+                : '';
+        } catch (_e) { return ''; }
     }
     extractInnerThought(content) {
         const source = String(content ?? '');
@@ -7962,6 +8086,51 @@ renderChatRoom(chat) {
             };
         }
 
+        /* [v4.124.0 · R14-X2] 多人邀约两条标签（AI 侧唯一入口）。
+         *   · `[邀约：周五 KTV｜甲、乙、丙｜周五晚 8 点 / 周六下午]`
+         *     → 一张邀约卡（邀请对象按原序、候选时段按原序，**不排序**）；
+         *   · `[答复：甲 来]` / `[答复：乙 不去]` / `[答复：丙 还没定]` → 一条逐人答复。
+         *   解析只**读**：把标签里的东西搬成形状，谁算到场由内核判。 */
+        const gatherCardMatch = String(content || '').trim()
+            .match(/^\[邀约[：:]\s*([^｜|\]]+?)(?:\s*[｜|]\s*([^｜|\]]*))?(?:\s*[｜|]\s*([^\]]*))?\]$/);
+        if (gatherCardMatch) {
+            const title = String(gatherCardMatch[1] || '').trim();
+            const whoRaw = String(gatherCardMatch[2] || '').trim();
+            const whenRaw = String(gatherCardMatch[3] || '').trim();
+            const invitees = whoRaw
+                ? whoRaw.split(/[、,，\/]/).map((s) => String(s || '').trim()).filter(Boolean)
+                    .map((name) => ({ id: name, name: name }))
+                : [];
+            const candidates = whenRaw
+                ? whenRaw.split(/[、,，\/]/).map((s) => String(s || '').trim()).filter(Boolean)
+                    .map((label) => ({ label: label }))
+                : [];
+            if (title) {
+                return {
+                    type: 'gathering_card',
+                    gatheringCard: { title: title, invitees: invitees, candidates: candidates },
+                    content: `[邀约：${title}${invitees.length ? '｜' + invitees.map((x) => x.name).join('、') : ''}${candidates.length ? '｜' + candidates.map((x) => x.label).join(' / ') : ''}]`
+                };
+            }
+        }
+        const gatherReplyMatch = String(content || '').trim()
+            .match(/^\[答复[：:]\s*([^\s\]：:]+)\s*[：:]?\s*([^\]]*)\]$/);
+        if (gatherReplyMatch) {
+            const who = String(gatherReplyMatch[1] || '').trim();
+            const word = String(gatherReplyMatch[2] || '').trim();
+            /* 中文答复词到内核答复 id 的映射只许接线件一份（视图不写第二份表）。 */
+            const reply = this.app.gatheringReplyIdOfWord
+                ? this.app.gatheringReplyIdOfWord(word) : '';
+            /* 认不出的答复词**不造一条假答复**：返回 null（走原样消息路径），
+             *   否则会在名单里留下一个「他说了句听不懂的话却算作答过了」。 */
+            if (who && reply) {
+                return {
+                    type: 'gathering_reply',
+                    gatheringReply: { memberId: who, name: who, reply: reply, word: word },
+                    content: `[答复：${who} ${word}]`
+                };
+            }
+        }
         const stickerMatch = String(content || '').trim().match(/^\[表情包\]\s*[（(]\s*([^)）]+?)\s*[)）]\s*$/);
         if (stickerMatch) {
             const keyword = String(stickerMatch[1] || '').trim();
@@ -8506,6 +8675,87 @@ renderChatRoom(chat) {
                 /* ★ [v4.31.0 · R5-O3] 把这张卡的**票号**原样带下去（渲染时由接线件写在
                  *   data-poll-id 上）：同群两张票各确认各的。取不到 ⇒ 空串（旧卡零改动）。 */
                 this.confirmGroupVote(btn.dataset.pollId || '');
+            });
+        });
+        /* [v4.124.0 · R14-X2] 邀约卡的五个入口。
+         *   ★ 全部只调 App 出口，**视图不碰存储、不判阶段**：
+         *     「能不能定」「点了算不算」都在内核，这里只把用户点的那一下转过去。 */
+        const gatherIdOf = (el) => {
+            const card = el?.closest?.('.message-gather');
+            return String(card?.dataset?.gatherId || '');
+        };
+        currentView.querySelectorAll('[data-action="gather-pick-slot"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                /* 再点一次同一个 = 取消点选（**不回落成别的那个**）。 */
+                const sid = String(btn.dataset.slotId || '');
+                const cur = this.app.gatherPickedSlot ? this.app.gatherPickedSlot() : '';
+                this.app.gatherSetPickedSlot?.(cur === sid ? '' : sid);
+                this.app.render();
+            });
+        });
+        currentView.querySelectorAll('[data-action="gather-mark-yes"], [data-action="gather-mark-no"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = String(btn.dataset.memberId || '');
+                /* ★ 「来 / 不来」两个词在这里转成内核答复 id：
+                 *   词表唯一映射在接线件，视图不写第二份。 */
+                const word = btn.dataset.action === 'gather-mark-yes' ? '来' : '不去';
+                const reply = this.app.gatheringReplyIdOfWord ? this.app.gatheringReplyIdOfWord(word) : '';
+                if (!reply) return;
+                this.app.gatherMarkReply?.(gatherIdOf(btn), mid, reply);
+                this.app.render();
+            });
+        });
+        currentView.querySelectorAll('[data-action="gather-reschedule"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                /* 改期：旧答复一律转「要复核」（内核判定），已定时段作废。 */
+                this.app.gatherChangeDate?.(gatherIdOf(btn), { reason: '用户改期' });
+                this.app.render();
+            });
+        });
+        currentView.querySelectorAll('[data-action="gather-cancel"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                /* 取消：**只改这场台账的阶段，绝不删聊天**。 */
+                this.app.gatherCancel?.(gatherIdOf(btn), '用户取消');
+                this.app.render();
+            });
+        });
+        currentView.querySelectorAll('[data-action="gather-confirm-slot"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this._isMessageSelectionActiveForCurrentChat()) return;
+                e.preventDefault();
+                e.stopPropagation();
+                /* ★ 定时段要把**用户点选的那个**原样带下去：没点选 ⇒ 空串，
+                 *   内核如实拒 slot-absent（**不替用户挑第一个**）。 */
+                const sid = this.app.gatherPickedSlot ? this.app.gatherPickedSlot() : '';
+                if (!sid) return;
+                /* ★ 念**回执**，不念假设：宿主收下了说收下了、重复转交说重复、
+                 *   拒收说为什么、没有接收者就如实说没有（与 R5-O2 同规格）。 */
+                const res = this.app.gatherConfirmSlot?.(gatherIdOf(btn), sid);
+                try {
+                    const receipt = res && res.receipt ? res.receipt : null;
+                    if (res && res.ok === false) {
+                        this.app.phoneShell?.showNotification('邀约', '这一场还定不下来：' + String(res.why || ''), '⚠️');
+                    } else if (!receipt) {
+                        this.app.phoneShell?.showNotification('邀约', '**没有接收者**：日历没接这一份（本卡零写盘，不代建日程）。', '⚠️');
+                    } else if (receipt.ok) {
+                        this.app.phoneShell?.showNotification('邀约', String(receipt.line || '已转交日历') + '（本卡零写盘，重复确认不会重复建）。', '✅');
+                    } else {
+                        this.app.phoneShell?.showNotification('邀约', String(receipt.line || '这一份转交不过去。'), '⚠️');
+                    }
+                } catch (_e) { /* 提示失败不影响已落的台账 */ }
+                this.app.render();
             });
         });
         currentView.querySelectorAll('.message-image-prompt-cancel').forEach(btn => {

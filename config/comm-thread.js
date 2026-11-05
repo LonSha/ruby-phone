@@ -53,6 +53,30 @@ export const COMM_CHANNELS = Object.freeze({
     CALL: 'phone-call',
     SMS: 'phone-sms',
 });
+/**
+ * 来路 App 登记表（R14-X1「回到原处」的路由面，唯一一处）。
+ *   ★ 为什么登记在这里：接触点的 channel 是**内核词表**，
+ *     「这个 channel 该回哪个 App」与它是同一件事的两面，分开写就是
+ *     第二份口径（改词表却漏改路由表 = 按钮指向空 App，界面上还长得像能点）。
+ *   注意 telegram 不在表里：本仓没有那个来源。未登记的 channel 一律不投。
+ */
+/**
+ * 回到原处的落地归因（**单独一表**，不往 COMM_REASONS 里塞）。
+ *   ★ 为什么不并进 COMM_REASONS：那张表的十二项是 R6-O2 已冻结的口径
+ *     （判据按项数核），塞第 13 项会让「接触点判定」与「跳转落地」两个
+ *     完全不同层的归因混在一张表里，历史判据也会当场变红。分层存，各自数各自。
+ */
+export const COMM_LANDING = Object.freeze({
+    OK: '',
+    NO_APP: 'no-app',
+    NO_SOURCE: 'no-source',
+    NO_LANDING: 'no-landing',
+});
+export const COMM_CHANNEL_APP = Object.freeze({
+    'wechat': 'wechat',
+    'phone-call': 'phone',
+    'phone-sms': 'phone',
+});
 /** 一段交流的四态（absent 与 unreadable 分列，刻意不压平）。 */
 export const COMM_STATES = Object.freeze({
     ABSENT: 'absent',
@@ -65,6 +89,19 @@ export const COMM_ATTENTION = Object.freeze({
     SETTLED: 'settled',
     UNREAD: 'unread',
     UNANSWERED: 'unanswered',
+});
+/**
+ * 回应三动作（R14-X1 待回应清单的逐项选择）。
+ *   ★ 与上面三格的分工：`COMM_ATTENTION` 是**系统读数**（unread/unanswered 怎么算）；
+ *     本词表是**用户决定**（逐项手动标记）。两者必须分存 —— 合成一个就会把
+ *     「系统看到有回执」伪装成「用户决定过已回应」（R14-X1 验收③要防的那件事）。
+ *   放词表区（而不是写在回应函数旁边）是因为归一层要用它做白名单：
+ *   normalizePoint 重建字段时靠 hasReplyAction 接住 replyState，词表必须在前面。
+ */
+export const COMM_REPLY_ACTIONS = Object.freeze({
+    ANSWERED: 'answered',
+    LATER: 'later',
+    NOT_NEEDED: 'not-needed',
 });
 /** 归因词表（why 只许取这里的值）。 */
 export const COMM_REASONS = Object.freeze({
@@ -110,6 +147,8 @@ function strList(v, cap) {
     return out;
 }
 function hasKind(k) { return Object.values(COMM_KINDS).indexOf(str(k)) >= 0; }
+/** 是不是三动作之一（R14-X1）。放这里与 hasKind 同族：归一层的判词只认词表。 */
+function hasReplyAction(a) { return Object.values(COMM_REPLY_ACTIONS).indexOf(str(a)) >= 0; }
 function hasChannel(c) { return Object.values(COMM_CHANNELS).indexOf(str(c)) >= 0; }
 
 /**
@@ -143,6 +182,15 @@ export function normalizePoint(raw) {
         at: at,
         seen: p.seen === true,
         answered: p.answered === true,
+        /* [v4.123.0 · R14-X1] 用户回应的决定（与上面两行的系统读数**分存**）。
+           ★ 必须在这里白名单接住：本函数是重建式归一（不是展开继承），
+             不列出来的字段写回存储后就被抹掉了 —— replyState 漏过这一关，
+             会出现「点了已回应，刷新又回到待回应清单」（写进去的是真数据，
+             读出来的却是它不认识的那一格）。
+           取值只认三动作，其余一律读成「没决定过」；时刻读不出就是 null，不补现在。 */
+        replyState: hasReplyAction(p.replyState) ? str(p.replyState) : '',
+        replyAt: numOrNull(p.replyAt),
+        replyOrigin: str(p.replyOrigin) === 'manual' ? 'manual' : '',
         label: capStr(p.label, COMM_LIMITS.note),
         readable: readable,
     };
@@ -396,6 +444,98 @@ export function markPointSeen(list, threadId, pointId) {
 /** 标记回过（清 unanswered）。 */
 export function markPointAnswered(list, threadId, pointId) {
     return markPoint(list, threadId, pointId, 'answered');
+}
+/* ───────── [v4.123.0 · R14-X1] 待回应清单：三动作回应状态机 ───────── */
+/**
+ * 回应三动作（R14-X1 验收旅程的逐项选择）。
+ *   ★ `answered` 与既有 seen/answered 布尔的分工：
+ *     · 旧布尔是**接触点读数**（unread/unanswered 投影的原料，R6-O2 既有口径，不动）；
+ *     · `replyState` 是**用户决定**（手动标记，带 origin 与时刻）；
+ *     两者必须分开存 —— 合成一个就会把「系统看到有回执」伪装成「用户决定过已回应」
+ *     （正是 X1 验收③「手动标记与实际消息回执区分」要防的那件事）。
+ */
+/**
+ * 手动回应一个接触点（R14-X1）。
+ *   · `answered`：顺手把 seen/answered 布尔一并置真（用户都决定回应了，读数面
+ *     不该继续挂着「未回」—— 这是唯一允许两族状态交汇的一格，且方向单向：
+ *     手动回应 ⇒ 读数收敛；反向（markSeen/markAnswered）**绝不**写 replyState）。
+ *   · `later` / `not-needed`：不动 seen/answered（「稍后」不是「已回」，投影不变），
+ *     只把决定记在 replyState 上 —— 待回应清单据此移出该项（决定过就不再骚扰），
+ *     但注意面的读数照旧（X1 验收①：回应一项不关闭整段交流，也不篡改读数）。
+ */
+export function markPointReply(list, threadId, pointId, action, now) {
+    const arr = Array.isArray(list) ? list : [];
+    const act = str(action);
+    const allowed = [COMM_REPLY_ACTIONS.ANSWERED, COMM_REPLY_ACTIONS.LATER, COMM_REPLY_ACTIONS.NOT_NEEDED];
+    if (allowed.indexOf(act) < 0) {
+        return { ok: false, why: COMM_REASONS.BAD_SHAPE, thread: null, list: arr };
+    }
+    const loc = locate(arr, threadId);
+    if (!loc || loc.idx < 0 || !loc.cur) return { ok: false, why: COMM_REASONS.NOT_FOUND, thread: null, list: arr };
+    const want = str(pointId);
+    let hit = false;
+    const points = loc.cur.points.map(function (p) {
+        if (p.id !== want) return p;
+        hit = true;
+        const patch = { replyState: act, replyAt: numOrNull(now), replyOrigin: 'manual' };
+        if (act === COMM_REPLY_ACTIONS.ANSWERED) { patch.seen = true; patch.answered = true; }
+        return Object.assign({}, p, patch);
+    });
+    if (!hit) return { ok: false, why: COMM_REASONS.NOT_FOUND, thread: loc.cur, list: arr };
+    const next = arr.slice();
+    next[loc.idx] = Object.assign({}, loc.raw, { points: points });
+    return { ok: true, why: COMM_REASONS.OK, thread: next[loc.idx], list: next };
+}
+/**
+ * 待回应投影（R14-X1 的核心读数）：一段交流里「还等着用户决定」的接触点。
+ *   ★ 修前实测缺陷：`threadCounts` 的 incoming 过滤**显式排除 MISSED** ——
+ *     漏接悬着（endedOnMissed）却不在 unread/unanswered 任何一个里，
+ *     会话台上只有一行红字提示、没有任何可操作的逐项清单。本投影把
+ *     missed **首次**纳入逐项待回应（漏接恰恰最该回应：回拨）。
+ *   口径：incoming 且未做过手动回应（replyState 为空）的 ——
+ *     · message / call / sms：seen 与 answered 任一未满足（旧读数的口径不变，只是收进清单）；
+ *     · missed：一律纳入（漏接没有 seen/answered 按钮可用，回应即回拨决定）。
+ *   outgoing 一律不进（自己发出去的不需要自己回应）。
+ */
+export function replyPointsOf(thread) {
+    const t = normalizeThread(thread);
+    if (!t) return [];
+    return t.points.filter(function (p) {
+        if (p.direction !== 'incoming') return false;
+        /* ★ 无源不猜（验收②）：读不出源（refId 缺 / at 缺 / 类别不认识）的接触点
+         *   不许上清单 —— 它会让用户对着一条「不知道该去哪回应」的条目做决定，
+         *   而且点完还会把这条坏读数记成「处理过了」。清单只收**有原处可回**的。 */
+        if (p.readable !== true) return false;
+        if (p.replyState) return false;
+        if (p.kind === COMM_KINDS.MISSED) return true;
+        return !(p.seen === true && p.answered === true);
+    });
+}
+/**
+ * 回到原处（R14-X1 验收旅程的最后一格）：把一个接触点折成跨 App 派发载荷。
+ *   ★ 三类来源各有各的可落点，**不谎报**：
+ *     · wechat 消息：refId 是会话 id（或消息 id），本仓微信侧没有 openRef 定位口
+ *       （见 apps/clock/clock-view.js 头注已记的那笔账），故只承诺「打开微信」，
+ *       `landed:false` 如实报「落不到具体那一条」；
+ *     · 来电 / 漏接：通话记录没有逐条定位口，同样只开电话 App；
+ *     · 短信：短信也没有逐条定位口。
+ *   为什么不留一个假靶心：投一个找不到的 ref 会让用户以为「这条被删了」，
+ *   而真相是「本版没有那个定位口」—— 两件事处置相反（一个要找备份，一个等升级）。
+ *   待后续切片补齐 openRef 后，本函数只改这里一处即可。
+ * @returns {{appId:string, ref:object|null, landed:boolean, why:string}}
+ *   why 四态（COMM_LANDING 逐条对应，不许随口新词）：
+ *     ''          能落到那一条（本版为零例，待 openRef 补齐）
+ *     no-source   这条接触点自己就读不出来（无源不猜）
+ *     no-app      它的 channel 没有登记归属 App（路由表漏了一格）
+ *     no-landing  本版没有逐条定位口，只能开 App（如实说，不假装）
+ */
+export function replyLandingOf(point) {
+    const p = normalizePoint(point);
+    const appId = COMM_CHANNEL_APP[p.channel] || '';
+    if (!p.readable) return { appId: appId, ref: null, landed: false, why: COMM_LANDING.NO_SOURCE };
+    if (!appId) return { appId: '', ref: null, landed: false, why: COMM_LANDING.NO_APP };
+    /* 本版三个来源都还没有逐条定位口：如实报 no-landing，不编 ref。 */
+    return { appId: appId, ref: null, landed: false, why: COMM_LANDING.NO_LANDING };
 }
 /**
  * 续谈判定：新接触点该**续**旧段还是**开**新段。

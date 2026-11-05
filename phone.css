@@ -22178,6 +22178,33 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     font-size: 10px;
     cursor: pointer;
 }
+.cm-reply { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid #33505b; border-radius: 8px; background: #132027; }
+.cm-reply-title { margin: 0; font-size: 13px; font-weight: 600; color: #8fd6bd; }
+.cm-reply-sub { margin: 0; font-size: 11px; color: #9db4be; }
+.cm-reply-group { display: flex; flex-direction: column; gap: 3px; }
+.cm-reply-who { margin: 0; font-size: 12px; font-weight: 600; color: #cbdfe6; }
+.cm-reply-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.cm-reply-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.cm-reply-btns { flex: 0 0 auto; display: flex; gap: 3px; }
+.cm-pt-go {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    border: 1px solid #4b6f7d;
+    border-radius: 4px;
+    background: transparent;
+    color: #9dc4d1;
+    font-size: 10px;
+    cursor: pointer;
+}
+.cm-reply-btn {
+    padding: 1px 6px;
+    border: 1px solid #3d6270;
+    border-radius: 4px;
+    background: #1d333b;
+    color: #bcd8e1;
+    font-size: 10px;
+    cursor: pointer;
+}
 .cm-acts { display: flex; justify-content: flex-end; }
 .cm-act {
     padding: 4px 9px;
@@ -22197,6 +22224,8 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     .cm-name { font-size: 12px; }
     .cm-pt-label { max-width: 96px; }
     .cm-act { font-size: 10px; padding: 3px 7px; }
+    .cm-reply-btn { font-size: 9px; padding: 1px 4px; }
+    .cm-pt-go { font-size: 9px; padding: 1px 4px; }
 }
 /* ========================================
    📚 [v4.87.0] 应用库

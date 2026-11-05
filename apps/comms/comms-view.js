@@ -17,6 +17,9 @@ function _esc(v) {
         .replace(/"/g, '&#x26quot;');
 }
 const KIND_LABEL = { message: '消息', call: '通话', missed: '漏接', sms: '短信' };
+/* [v4.123.0 · R14-X1] 落地 App 的展示名。**只做展示**：归属由内核
+ *   COMM_CHANNEL_APP 决定，这里写错只影响文案，不影响投递目标。 */
+const APP_LABEL = { wechat: '微信', phone: '电话' };
 const ATTN_LABEL = { settled: '已回', unread: '未读', unanswered: '未回' };
 export class CommsView {
     constructor(app) {
@@ -53,10 +56,67 @@ export class CommsView {
             '    <button class="cm-new-btn" type="button" data-cm-act="open">开一段</button>',
             '  </section>',
             pendLine,
+            this._replySection(),
             empty,
             '<div class="cm-list">' + rows + '</div>',
             '</div>',
         ].join('\n');
+    }
+    /* ───────── [v4.123.0 · R14-X1] 待回应清单（逐项三动作，回到原处）───────── */
+    _replySection() {
+        /* ★ 读数一律向 App 取（replyBoard 的口径在内核 replyPointsOf，视图不自算）。 */
+        const board = this.app.replyBoard();
+        if (!board.length) {
+            return '<section class="cm-reply cm-reply-none"><p class="cm-empty">没有等着回应的事。</p></section>';
+        }
+        const groups = board.map((g) => {
+            const rows = g.points.map((p) => (
+                '<li class="cm-reply-item">'
+                + '<span class="cm-pt-kind cm-k-' + _esc(p.kind) + '">' + _esc(KIND_LABEL[p.kind] || p.kind) + '</span>'
+                + '<span class="cm-pt-label">' + _esc(p.label || p.refId) + '</span>'
+                + '<span class="cm-reply-btns">'
+                + '<button class="cm-pt-go" type="button" data-cm-act="goto" data-t="' + _esc(g.thread.id) + '" data-p="' + _esc(p.id) + '"'
+                + ' title="' + _esc(this._landingTitle(p)) + '">回到原处</button>'
+                + '<button class="cm-reply-btn" type="button" data-cm-act="reply" data-r="answered" data-t="' + _esc(g.thread.id) + '" data-p="' + _esc(p.id) + '">已回应</button>'
+                + '<button class="cm-reply-btn" type="button" data-cm-act="reply" data-r="later" data-t="' + _esc(g.thread.id) + '" data-p="' + _esc(p.id) + '">稍后</button>'
+                + '<button class="cm-reply-btn" type="button" data-cm-act="reply" data-r="not-needed" data-t="' + _esc(g.thread.id) + '" data-p="' + _esc(p.id) + '">无需回应</button>'
+                + '</span></li>'
+            )).join('');
+            return [
+                '<div class="cm-reply-group" data-t="' + _esc(g.thread.id) + '">',
+                '  <p class="cm-reply-who">' + _esc(g.thread.participant) + '</p>',
+                '  <ul class="cm-reply-list">' + rows + '</ul>',
+                '</div>',
+            ].join('\n');
+        }).join('');
+        return [
+            '<section class="cm-reply">',
+            '  <h4 class="cm-reply-title">待回应</h4>',
+            '  <p class="cm-reply-sub">消息、错过来电……逐项选择；回一项不收这段交流。</p>',
+            groups,
+            '</section>',
+        ].join('\n');
+    }
+    /**
+     * 回到原处的悬停说明：**由落地读数决定文案**，不写死「落到那一条」。
+     *   本版 no-landing 是常态（三个来源都没有逐条定位口），文案必须如实说
+     *   「只打开 X」；不然按钮长得像能落到那一条，用户点完会以为「这条没了」。
+     */
+    /** 按 (交流线 id, 接触点 id) 取那一条原始接触点（取不到返回空对象，让落地如实报 no-source）。 */
+    _pointOf(tid, pid) {
+        const list = this.app.live().concat(this.app.idle());
+        for (const t of list) {
+            if (String(t.id) !== String(tid)) continue;
+            for (const p of (t.points || [])) if (String(p.id) === String(pid)) return p;
+        }
+        return {};
+    }
+    _landingTitle(p) {
+        const land = this.app.landingOf(p);
+        if (!land || !land.appId) return '这一条没登记来源，去不了';
+        const who = APP_LABEL[land.appId] || land.appId;
+        if (land.landed) return '落到' + who + '的那一条';
+        return '只打开' + who + '（本版落不到具体那一条）';
     }
     _card(t) {
         /* ★ 读数一律向 App 取（口径在内核），视图**不自算** —— 自算即第二份口径。 */
@@ -116,6 +176,18 @@ export class CommsView {
                 const res = this.app.open(name, '');
                 if (res.ok && input) input.value = '';
                 this.app.render(host);
+                return;
+            }
+            if (act === 'reply') {
+                const r = String(el.dataset.r || '');
+                this.app.reply(t, p, r);
+                this.app.render(host);
+                return;
+            }
+            if (act === 'goto') {
+                /* ★ 跳出去之前先把这一项的选择**记下来**：这是回到原处的入口，
+                 *   不是「已回应」。不改 replyState —— 去了原处之后用户才决定怎么回。 */
+                this.app.goto(this._pointOf(t, p));
                 return;
             }
             if (act === 'seen') { this.app.markSeen(t, p); this.app.render(host); return; }
