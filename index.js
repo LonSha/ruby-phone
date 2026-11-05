@@ -1,3 +1,5 @@
+import { readChores } from './config/shared-chore-store.js';
+import { choreFinanceDraft } from './config/shared-chore-finance.js';
 import {
     bindMofoSyncDeps,
     getOrCreateMofoData,
@@ -3762,7 +3764,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
      *   · 撤销撤的是**本机的那一笔确认**，不是任何真实余额。
      * @returns {{ok:boolean, note:string, state:string, plan:string}}
      */
-    function applyFinanceCommitAction(action) {
+    function applyFinanceCommitAction(action, choreId) {
         try {
             const vp = window.VirtualPhone;
             if (!vp || !storage) return { ok: false, note: '宿主未就绪', state: '', plan: '' };
@@ -3778,9 +3780,10 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 else return { ok: false, note: '提交账本读不出来（不是「没有提交」）', state: '', plan: '' };
             }
 
-            const draft = vp._financeDraftCache || null;
-            if (!draft) return { ok: false, note: '这一轮还没取到结算草稿（先打开旅行记账）', state: '', plan: '' };
+            const choreRead = choreId ? readChores(storage) : null; const currentChore = choreRead?.ok ? choreRead.rows.find(row => row.id === choreId) : null; const draft = choreId ? choreFinanceDraft(currentChore) : vp._financeDraftCache || null;
+            if (!draft) return { ok: false, note: choreId ? '共同事项已作废、来源失效或无可确认金额' : '这一轮还没取到结算草稿（先打开旅行记账）', state: '', plan: '' };
 
+            if (choreId && act !== 'commit') return { ok: false, note: '共同事项只接受明确确认' };
             if (act === 'revoke') {
                 const key = String(vp._financeCommitPreview && vp._financeCommitPreview.idemKey || '');
                 const res = revokeCommit(ledger, key);
@@ -3816,7 +3819,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             try { const back = storage.get?.(FINANCE_COMMIT_LEDGER_KEY); got = (typeof back === 'string') ? JSON.parse(back) : back; } catch (_er) { got = null; }
             const rb = readbackCommit(plan, Array.isArray(got) ? got : null);
             refreshFinanceCommit();
-            if (rb.confirmed !== true) return { ok: true, note: '已提交，但读回来没对上（相位：' + String(rb.phase || '') + '）', state: FC_STATES.settled.key, plan: plan.plan };
+            if (rb.confirmed !== true) return { ok: false, note: '已提交，但读回来没对上（相位：' + String(rb.phase || '') + '）', state: FC_STATES.settled.key, plan: plan.plan };
             return { ok: true, note: '已确认提交（本机记一笔；真实余额由各来源自己写）', state: FC_STATES.settled.key, plan: plan.plan };
         } catch (e) {
             return { ok: false, note: '提交失败：' + String((e && e.message) || e), state: '', plan: '' };

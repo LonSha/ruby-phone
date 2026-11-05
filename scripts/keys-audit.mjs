@@ -422,6 +422,7 @@ const KEY_REGISTRY = [
   /* [v4.114.0 · R13-X7] 「这个月」清单（待办本体）。与 affairs_v1 同族同隔离：清单装的是这段对话里欠着的事，
    *   落全局会把上一个角色的房租贴到新会话的同一张单上。consequence 刻意没有金额格 —— 没有金额格，就没有任何
    *   路径能把「过期」悄悄变成「已扣款」。 */
+  { key: 'affairs_shared_chores_v1', scope: 'chat', note: 'R14-X4 共同事项执行回执与费用草案' },
   { key: 'affairs_errands_v1', scope: 'chat', note: '[v4.114.0 · R13-X7] 这个月清单（四态闭集/十一因由/四类后果无金额格/五项限额/当日到期不算过期/终结态不被时间改写）' },
   { key: 'comm_threads_v1', scope: 'chat', note: '[v4.49.0 · R6-O2] 一段交流（接触点四类含漏接/注意面三态含未读未回/漏接续谈读数；上限 40 段 80 点，gapHours 超窗一律开新段不硬续）' },
   { key: 'group_deliberation_v1', scope: 'chat', note: '[v4.50.0 · R6-O3] 群聊议事议题与立场状态机（四态立场/私有知情边界/未回应问题/分话题拆合）' },

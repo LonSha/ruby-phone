@@ -17,6 +17,7 @@
 'use strict';
 import { ERRAND_LABEL, ERRAND_APPS, ERRAND_STATES } from '../../config/errand-terms.js';
 
+import { SharedChoreView } from './shared-chore-view.js';
 export class ErrandView {
     constructor(app) {
         this.app = app;
@@ -60,6 +61,10 @@ export class ErrandView {
         ].join('\n');
         this.container.innerHTML = html;
         this._bind();
+        const slot = document.createElement('div');
+        this.container.appendChild(slot);
+        if (!this.sharedView) this.sharedView = new SharedChoreView(this.app);
+        this.sharedView.render(slot);
     }
 
     _row(e) {
