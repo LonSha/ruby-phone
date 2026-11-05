@@ -382,6 +382,68 @@ export class LonShaBridge {
             return `${head}\n${lines.join('\n')}\n${tail}`;
         } catch (e) { return ''; }   // lonsha 记忆注入静默失败，不影响发送
     }
+
+    // ---------------- ②c [v4.125.0] 具身现场感知与防偷窥拦截 ----------------
+    /**
+     * 接收并应用来自 LonSha 的即时现场状态 (L0 Scene State)
+     * @param {Object} sceneState { location, time, action, tension, inSceneCharacters }
+     */
+    applyScenePresenceState(sceneState) {
+        if (!sceneState || typeof sceneState !== 'object') return false;
+        try {
+            this._lastSceneState = {
+                location: String(sceneState.location || '').trim(),
+                time: String(sceneState.time || '').trim(),
+                action: String(sceneState.action || '').trim(),
+                tension: String(sceneState.tension || '').trim(),
+                inSceneCharacters: Array.isArray(sceneState.inSceneCharacters) ? sceneState.inSceneCharacters.slice() : sceneState.inSceneCharacters,
+                updatedAt: Date.now()
+            };
+            this.stats.sceneSyncCount = (this.stats.sceneSyncCount || 0) + 1;
+            return true;
+        } catch (e) { return false; }
+    }
+
+    /**
+     * 读取当前手机缓存的现场快照
+     */
+    getScenePresenceState() {
+        return this._lastSceneState || null;
+    }
+
+    /**
+     * 生成手机端 HUD 状态条文案
+     */
+    getSceneHudLine() {
+        const sc = this._lastSceneState;
+        if (!sc) return '📍当前现场 · 离线感知';
+        const loc = sc.location || '当前现场';
+        const cast = sc.inSceneCharacters === undefined
+            ? ''
+            : (sc.inSceneCharacters.length === 0 ? ' · 现场无人' : ' · 在场: ' + sc.inSceneCharacters.join('、'));
+        return `📍${loc}${cast}`;
+    }
+
+    /**
+     * 裁决当前针对某角色的通信行为是否应当被现场面对面拦截
+     * @param {'CHAT_MESSAGE'|'CALL_LOG'} actionType 行为类型
+     * @param {string} targetCharacter 目标角色名
+     * @returns {{intercepted:boolean, suggestedAction?:string, reason?:string, notice?:string}}
+     */
+    checkPresenceInterception(actionType, targetCharacter) {
+        const sc = this._lastSceneState;
+        if (!sc || !Array.isArray(sc.inSceneCharacters)) return { intercepted: false };
+        const target = String(targetCharacter || '').trim();
+        if (sc.inSceneCharacters.includes(target)) {
+            return {
+                intercepted: true,
+                suggestedAction: 'FACE_TO_FACE',
+                reason: 'co-present-in-scene',
+                notice: `角色「${target}」就在物理现场，转为面对面交流与现场防窥模式。`
+            };
+        }
+        return { intercepted: false };
+    }
     // ---------------- ③ 注入协调: 桥接管手机记忆的注入位 ----------------
     /**
      * 生成前由 RubyPhone 调用 (替代 memoryCore.attachPromptHook 的本地注入)。

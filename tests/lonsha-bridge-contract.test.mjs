@@ -60,3 +60,44 @@ test('=== 4. recall 返回结构契约 ===', () => {
     ok(bridgeSrc.includes('score:'), 'recall 返回含 score 字段');
     ok(bridgeSrc.includes('layer:'), 'recall 返回含 layer 字段');
 });
+
+test('=== 5. [v4.125.0] 具身现场快照同步与在场防偷窥拦截契约 ===', async () => {
+    const mod = await import('../apps/memory/lonsha-bridge.js');
+    ok(typeof mod.LonShaBridge.prototype.applyScenePresenceState === 'function', 'applyScenePresenceState 挂载');
+    ok(typeof mod.LonShaBridge.prototype.getScenePresenceState === 'function', 'getScenePresenceState 挂载');
+    ok(typeof mod.LonShaBridge.prototype.getSceneHudLine === 'function', 'getSceneHudLine 挂载');
+    ok(typeof mod.LonShaBridge.prototype.checkPresenceInterception === 'function', 'checkPresenceInterception 挂载');
+
+    const bridge = new mod.LonShaBridge();
+    // 1. 同步现场状态
+    const syncRes = bridge.applyScenePresenceState({
+        location: '东侧旧钟楼',
+        action: '两人面对面对质',
+        inSceneCharacters: ['Alice', 'Bob']
+    });
+    ok(syncRes, 'applyScenePresenceState 返回 true');
+    const sc = bridge.getScenePresenceState();
+    assert.equal(sc.location, '东侧旧钟楼');
+    assert.deepStrictEqual(sc.inSceneCharacters, ['Alice', 'Bob']);
+
+    // 2. HUD 文案生成
+    const hud = bridge.getSceneHudLine();
+    assert.match(hud, /📍东侧旧钟楼 · 在场: Alice、Bob/);
+
+    // 3. 现场防偷窥面对面拦截裁决
+    const interceptAlice = bridge.checkPresenceInterception('CHAT_MESSAGE', 'Alice');
+    ok(interceptAlice.intercepted, 'Alice在场时私信行为应被拦截');
+    assert.equal(interceptAlice.suggestedAction, 'FACE_TO_FACE');
+
+    const interceptCharlie = bridge.checkPresenceInterception('CHAT_MESSAGE', 'Charlie');
+    ok(!interceptCharlie.intercepted, 'Charlie不在场时私信行为不拦截');
+
+    // 4. 负控制变异测试
+    const mutatedSrc = bridgeSrc.replaceAll('checkPresenceInterception', 'nonExistentPresenceMethod');
+    assert.ok(!mutatedSrc.includes('checkPresenceInterception'), '负控制变异成功');
+    assert.throws(() => {
+        if (!mutatedSrc.includes('checkPresenceInterception')) {
+            throw new Error('negative-control: checkPresenceInterception method missing');
+        }
+    }, /negative-control/);
+});
