@@ -76,23 +76,42 @@ test('R15-Batch-F: 虚拟滚动切片、角色主题与数字遗物解密 (R15-O
     assert.equal(emptySlice.visibleCount, 0);
     assert.equal(emptySlice.topPadding, 0);
 
-    // 2. R15-X7 角色专属主题引擎验证
+    // 2. R15-X7 酒馆通用多角色专属主题引擎验证（拒绝硬编码单一角色）
     const themeEngine = shell.themeEngine;
     assert.ok(themeEngine);
     const defaultTheme = themeEngine.getCurrentTheme();
-    assert.equal(defaultTheme.id, 'default');
+    assert.equal(defaultTheme.id, 'system_default');
     assert.equal(defaultTheme.chatSendLabel, '发送');
 
-    // 切换至凯瑟琳专属主题
-    const frostApplied = themeEngine.applyTheme('catherine_frost');
-    assert.equal(frostApplied.applied, true);
-    assert.equal(frostApplied.theme.name, '凯瑟琳·冰霜守候');
-    assert.equal(frostApplied.theme.chatSendLabel, '传递魔力');
-    assert.equal(frostApplied.cssVariables['--phone-primary'], '#38bdf8');
+    // 动态接入酒馆角色卡 A（例如冰系法师）
+    themeEngine.deriveThemeFromCharacter({
+        id: 'char_tavern_001',
+        name: '寒霜魔导师',
+        personality: '高傲冷淡的皇家首席法师'
+    });
+    // 切换至角色 A 活跃状态
+    const charAActive = themeEngine.setActiveCharacter('char_tavern_001');
+    assert.equal(charAActive.applied, true);
+    assert.match(charAActive.theme.name, /寒霜魔导师·契约主题/);
+    assert.equal(charAActive.theme.chatSendLabel, '回应');
+    assert.equal(charAActive.cssVariables['--phone-primary'], '#0ea5e9');
 
-    // 负控制：非法主题回退为 default
-    const invalidTheme = themeEngine.applyTheme('non_existent_theme');
-    assert.equal(invalidTheme.theme.id, 'default');
+    // 动态接入酒馆角色卡 B（例如热情旅人），并提供自定义主色
+    themeEngine.deriveThemeFromCharacter({
+        id: 'char_tavern_002',
+        name: '流浪吟游诗人',
+        personality: '热情浪漫的旅人',
+        color: '#f97316'
+    });
+    // 切换至角色 B 活跃状态
+    const charBActive = themeEngine.setActiveCharacter('char_tavern_002');
+    assert.equal(charBActive.theme.primaryColor, '#f97316');
+    assert.equal(charBActive.theme.chatSendLabel, '传递心意');
+
+    // 切换回群聊或未选角色，优雅回退系统默认
+    const fallbackActive = themeEngine.setActiveCharacter(null);
+    assert.equal(fallbackActive.theme.id, 'system_default');
+    assert.equal(fallbackActive.theme.chatSendLabel, '发送');
 
     // 3. R15-X8 随身数字遗物探索解密验证
     const vault = shell.relicsVault;
