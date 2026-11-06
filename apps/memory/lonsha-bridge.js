@@ -49,8 +49,23 @@ class BridgeBM25 {
         if (!t) { t = BridgeBM25.tokenize(key); this._tCache.set(key, t); }
         return t;
     }
+    /** [v4.135.0 · V17-R3] 认知边界元数据保真：V16 四桶过滤靠 owner/character/scope 判定，
+     *   此前 rebuild→search→recall 三层全丢这些字段 ⇒ 真实 BM25 主通道上防全知恒失效（假绿）。
+     *   这里定义唯一提取器，所有索引/检索路径必须调它，不得各写一份。 */
+    static cognitionMeta(m) {
+        const o = m || {};
+        return {
+            character: o.character ?? null,
+            owner: o.owner ?? null,
+            scope: o.scope ?? null,
+            knownBy: Array.isArray(o.knownBy) ? o.knownBy.slice() : null,
+            knowledge: o.knowledge ?? null,
+            origin: o.origin ?? null,
+            tags: Array.isArray(o.tags) ? o.tags.slice() : null
+        };
+    }
     rebuild(docs) {
-        this.docs = (docs || []).map(d => ({ id: d.id, text: d.text, floor: d.floor ?? null, storyTime: d.storyTime || null, source: d.source || null, tf: new Map(), _dl: 0 }));
+        this.docs = (docs || []).map(d => Object.assign({ id: d.id, text: d.text, floor: d.floor ?? null, storyTime: d.storyTime || null, source: d.source || null, tf: new Map(), _dl: 0 }, BridgeBM25.cognitionMeta(d)));
         this.df.clear();
         this.N = this.docs.length;
         for (const d of this.docs) {
@@ -64,7 +79,7 @@ class BridgeBM25 {
         if (!doc?.id) return;
         const i = this.docs.findIndex(d => d.id === doc.id);
         if (i >= 0) this.docs.splice(i, 1);
-        const d = { id: doc.id, text: doc.text, floor: doc.floor ?? null, storyTime: doc.storyTime || null, source: doc.source || null, tf: new Map(), _dl: 0 };
+        const d = Object.assign({ id: doc.id, text: doc.text, floor: doc.floor ?? null, storyTime: doc.storyTime || null, source: doc.source || null, tf: new Map(), _dl: 0 }, BridgeBM25.cognitionMeta(doc));
         const toks = this._tokens(d.text);
         d._dl = toks.length;
         for (const t of toks) d.tf.set(t, (d.tf.get(t) || 0) + 1);
@@ -91,7 +106,7 @@ class BridgeBM25 {
                 s += idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * ((d._dl || 1) / (avgdl || 1))));
             }
             seenQ.clear();
-            if (s > 0) scores.push({ id: d.id, text: d.text, floor: d.floor, storyTime: d.storyTime, source: d.source, score: s });
+            if (s > 0) scores.push(Object.assign({ id: d.id, text: d.text, floor: d.floor, storyTime: d.storyTime, source: d.source, score: s }, BridgeBM25.cognitionMeta(d)));
         }
         scores.sort((a, b2) => b2.score - a.score);
         return scores.slice(0, topK);
@@ -106,6 +121,8 @@ export class LonShaBridge {
         // [RB] 注入协调: true = 由桥接管手机记忆注入, memoryCore.autoInject 自动退位
         this.coordinated = true;
         this.stats = { backfillCount: 0, injectCount: 0, rollbacks: 0, floorsIngested: 0, lastBackfill: null };
+        // [v4.135.0 · V17-R1] 记忆访问热表：被真正注入的手机记忆升温，下轮 BM25 名次前移（跨会话持久化）。
+        this._resonanceHeat = {};
         this._bm25 = new BridgeBM25();
         this._bm25Dirty = true;
         // [RB] 懒检测基线: 追踪 memoryCore 数据版本戳与记忆池条目数, 捕获桥外写入路径
@@ -123,12 +140,13 @@ export class LonShaBridge {
                 if (typeof d.enabled === 'boolean') this.enabled = d.enabled;
                 if (typeof d.coordinated === 'boolean') this.coordinated = d.coordinated;
                 if (d.stats) this.stats = { ...this.stats, ...d.stats };
+                if (d.resonanceHeat && typeof d.resonanceHeat === 'object') this._resonanceHeat = d.resonanceHeat;
             }
         } catch (e) { /* 忽略 */ }
     }
     _save() {
         try {
-            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, updatedAt: new Date().toISOString() });
+            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, updatedAt: new Date().toISOString() });
         } catch (e) { /* 忽略 */ }
     }
     /** [RB] 协调注入生效时, 让 MemoryCore 本地 prompt 钩子退位 (避免双注入打架) */
@@ -147,17 +165,17 @@ export class LonShaBridge {
         try {
             const docs = [];
             for (const m of (this.memoryCore?.longTerm || [])) {
-                if (m?.content) docs.push({ id: m.id, text: m.content, floor: m.floor ?? null, storyTime: m.storyTime || null, source: 'long' });
+                if (m?.content) docs.push(Object.assign({ id: m.id, text: m.content, floor: m.floor ?? null, storyTime: m.storyTime || null, source: 'long' }, BridgeBM25.cognitionMeta(m)));
             }
             for (const m of (this.memoryCore?.shortTerm || [])) {
-                if (m?.content) docs.push({ id: m.id, text: m.content, floor: m.floor ?? null, storyTime: m.storyTime || null, source: 'short' });
+                if (m?.content) docs.push(Object.assign({ id: m.id, text: m.content, floor: m.floor ?? null, storyTime: m.storyTime || null, source: 'short' }, BridgeBM25.cognitionMeta(m)));
             }
             const pool = this.memoryCore?.pool?.pool;
             if (pool) {
                 for (const key of ['temporal', 'perception', 'spatial']) {
                     let i = 0;
                     for (const m of (pool[key] || [])) {
-                        if (m?.content) docs.push({ id: key + '_' + (m.id || (i++)), text: m.content, floor: m?.metadata?.floor ?? null, storyTime: null, source: 'pool:' + key });
+                        if (m?.content) docs.push(Object.assign({ id: key + '_' + (m.id || (i++)), text: m.content, floor: m?.metadata?.floor ?? null, storyTime: null, source: 'pool:' + key }, BridgeBM25.cognitionMeta(m)));
                     }
                 }
             }
@@ -253,6 +271,12 @@ export class LonShaBridge {
         return out.slice(0, 8);
     }
 
+    /** [v4.135.0 · V17-R] 访问热键唯一真源：召回加权与注入回写必须调同一个函数。
+     *   优先用 recall 已挂好的 _heatKey；缺席时按 floor + 内容前 40 字确定性派生。 */
+    _heatKeyOf(rec) {
+        return String((rec && rec._heatKey) || ('fl:' + ((rec && rec.floor) ?? '') + '|' + String((rec && (rec.content || rec.text)) || '').slice(0, 40)));
+    }
+
     // ---------------- ② 召回: RubyPhone 记忆库 → LonSha (BM25 稀疏检索) ----------------
     /**
      * 供 LonSha 插件在生成前召回时调用。[RB] 已升级为 BM25 稀疏检索
@@ -265,19 +289,33 @@ export class LonShaBridge {
             let res = null;
             if (this._bm25.N > 0) {
                 // BM25 主通道: 分数归一到 0~1 近似区间
-                res = this._bm25.search(String(queryText || ''), topN).map(r => ({
+                res = this._bm25.search(String(queryText || ''), topN).map(r => Object.assign({
                     content: r.text,
                     score: Math.max(0.1, Math.min(1, r.score / 12)),
                     layer: r.source || 'bm25',
                     floor: r.floor
-                }));
+                }, BridgeBM25.cognitionMeta(r)));
             }
             // 空结果兜底: 走 MemoryCore 内建混合检索 (池触发 + 关键词)
             if (!res || !res.length) {
-                res = (this.memoryCore.recall(String(queryText || ''), topN) || []).map(r => ({
+                res = (this.memoryCore.recall(String(queryText || ''), topN) || []).map(r => Object.assign({
                     content: r.content, score: r._score || 0.5, layer: r.layer, floor: null
-                }));
+                }, BridgeBM25.cognitionMeta(r)));
             }
+            /* [v4.135.0 · V17-R1] 真实召回侧消费：历史被注入越多的记忆，BM25 名次越靠前。
+             *   有界加权（≤ +30%），只动名次边界、不改原始 score 语义；热表缺席时逐字节等同旧行为。 */
+            try {
+                const heat = this._resonanceHeat || {};
+                res = res.map(r => {
+                    const hk = this._heatKeyOf(r);
+                    const h = Number(heat[hk]) || 0;
+                    return Object.assign({}, r, {
+                        score: r.score * (1 + Math.min(0.3, Math.log1p(h) * 0.1)),
+                        _heatKey: hk
+                    });
+                }).sort((a, b) => (b.score || 0) - (a.score || 0));
+                this.stats.heatRerankCount = (this.stats.heatRerankCount || 0) + 1;
+            } catch (_) { /* 热表缺席/异常一律退回原序，不影响召回 */ }
             this.stats.injectCount++;
             return res;
         } catch (e) {
@@ -360,6 +398,7 @@ export class LonShaBridge {
             const lived = [];
             const other = [];
             const seen = new Set();
+            const injectedKeys = [];   // [v4.135.0 · V17-R2] 真正进入 system 块的证据身份
             for (const m of mems) {
                 const raw = String((m && (m.content || m.text)) || '').replace(/\s+/g, ' ').trim();
                 if (!raw) continue;
@@ -368,6 +407,7 @@ export class LonShaBridge {
                 const key = evidenceKey(m, raw);
                 if (seen.has(key)) continue;
                 seen.add(key);
+                injectedKeys.push(m);   // 保留原记录引用，回写侧用同一 _heatKeyOf 派生
                 const body = trimToSentence(raw, maxChars, hardChars);
                 const kind = originOf(m);
                 if (kind === 'hearsay') other.push(`- ${body}（听说，非亲历）`);
@@ -377,6 +417,17 @@ export class LonShaBridge {
             }
             const lines = lived.concat(other);
             if (!lines.length) return '';
+            /* [v4.135.0 · V17-R2] 真实注入侧回写：只有进了最终 system 块的记忆才升温。
+             *   与 LonSha 端 reinforceOnAccess 同构 —— 召回→注入→强化→下轮更易召回 的闭环。 */
+            try {
+                if (!this._resonanceHeat || typeof this._resonanceHeat !== 'object') this._resonanceHeat = {};
+                for (const rec of injectedKeys) {
+                    const hk = this._heatKeyOf(rec);
+                    this._resonanceHeat[hk] = (Number(this._resonanceHeat[hk]) || 0) + 1;
+                }
+                this.stats.heatReinforced = (this.stats.heatReinforced || 0) + injectedKeys.length;
+                this._save();
+            } catch (_) { /* 升温失败不阻断注入 */ }
             const label = String(opts.label || '').trim() || actors[0] || '角色';
             const userName = String(opts.userName || '').trim() || '你';
             const head = `【角色记忆 · 来自剧情】${label}记得这些往事：`;
