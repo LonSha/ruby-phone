@@ -125,6 +125,8 @@ export class LonShaBridge {
         this._resonanceHeat = {};
         // [v4.136.0 · V18-R1] 演化去重边表（跨会话持久化）：记录已被更高版本演化替代的旧记忆。
         this._pyramidEvolutionLinks = [];
+        // [v4.137.0 · V20-R1] 全息双向共生总线消息通道与自主离线事件队列
+        this._holographicBusEvents = [];
         this._bm25 = new BridgeBM25();
         this._bm25Dirty = true;
         // [RB] 懒检测基线: 追踪 memoryCore 数据版本戳与记忆池条目数, 捕获桥外写入路径
@@ -144,12 +146,13 @@ export class LonShaBridge {
                 if (d.stats) this.stats = { ...this.stats, ...d.stats };
                 if (d.resonanceHeat && typeof d.resonanceHeat === 'object') this._resonanceHeat = d.resonanceHeat;
                 if (Array.isArray(d.pyramidEvolutionLinks)) this._pyramidEvolutionLinks = d.pyramidEvolutionLinks;
+                if (Array.isArray(d.holographicBusEvents)) this._holographicBusEvents = d.holographicBusEvents;
             }
         } catch (e) { /* 忽略 */ }
     }
     _save() {
         try {
-            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, pyramidEvolutionLinks: this._pyramidEvolutionLinks || [], updatedAt: new Date().toISOString() });
+            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, pyramidEvolutionLinks: this._pyramidEvolutionLinks || [], holographicBusEvents: this._holographicBusEvents || [], updatedAt: new Date().toISOString() });
         } catch (e) { /* 忽略 */ }
     }
     /** [RB] 协调注入生效时, 让 MemoryCore 本地 prompt 钩子退位 (避免双注入打架) */
@@ -506,6 +509,40 @@ export class LonShaBridge {
      */
     getScenePresenceState() {
         return this._lastSceneState || null;
+    }
+    /**
+     * [v4.137.0 · V20-R1] 全息双向共生总线：手机端向 LonSha 发射事件
+     * @param {string} type 事件类型 (如 'IM_MESSAGE', 'BILL_TRANSFER', 'NOTE_MEMO', 'APP_STATE_MUTATION')
+     * @param {Object} payload 载荷详情
+     */
+    emitHolographicEvent(type, payload = {}) {
+        const event = {
+            id: `holo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            type: String(type || 'GENERIC'),
+            payload: { ...payload },
+            timestamp: Date.now()
+        };
+        this._holographicBusEvents.push(event);
+        if (this._holographicBusEvents.length > 50) this._holographicBusEvents.shift();
+        this._save();
+
+        // 若 LonSha 记忆插件挂载在同一 window，双向即时穿透
+        try {
+            const win = typeof window !== 'undefined' ? window : null;
+            if (win?.LonShaMemoryPlugin?.engine?.onRubyPhoneHolographicEvent) {
+                win.LonShaMemoryPlugin.engine.onRubyPhoneHolographicEvent(event);
+            }
+        } catch (_e) {}
+        return event;
+    }
+    /**
+     * [v4.137.0 · V20-R1] 全息双向共生总线：消费并排队待同步的事件
+     */
+    drainHolographicEvents() {
+        const evts = (this._holographicBusEvents || []).slice();
+        this._holographicBusEvents = [];
+        this._save();
+        return evts;
     }
 
     /**
