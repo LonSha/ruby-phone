@@ -104,11 +104,12 @@ export class ControlCenter {
     }
 
     // ---------------- 片段 ----------------
-
     _togglesHtml() {
         const dnd = isDndOn(this.storage);
         const wifi = isWifiOn(this.storage);
         const torch = isFlashlightOn(this.storage);
+        const bridge = window.VirtualPhone?.lonshaBridge;
+        const antiPeek = bridge?.isPrivacyAntiPeekActive?.() ?? false;
         const tile = (id, icon, label, on, tone) => `
             <button class="sys-cc-tile${on ? ' sys-cc-on' : ''}" id="${id}" data-on="${on ? '1' : '0'}"${tone ? ` style="--cc-tone:${tone}"` : ''}>
                 <i class="${icon}"></i><span>${label}</span>
@@ -118,6 +119,33 @@ export class ControlCenter {
             ${tile('sys-cc-dnd', 'fa-solid fa-moon', '免打扰', dnd, '#6c5ce7')}
             ${tile('sys-cc-wifi', 'fa-solid fa-wifi', 'Wi-Fi', wifi, '#0984e3')}
             ${tile('sys-cc-torch', 'fa-solid fa-lightbulb', '手电筒', torch, '#fdcb6e')}
+            ${tile('sys-cc-anti-peek', 'fa-solid fa-user-shield', '防偷窥', antiPeek, '#00b894')}
+        </div>
+        ${this._nearFieldRadarHtml()}`;
+    }
+
+    _nearFieldRadarHtml() {
+        const bridge = window.VirtualPhone?.lonshaBridge;
+        const radar = bridge?.scanNearFieldRadar?.() || { available: false, activeCharacters: [], summaryLine: '雷达就绪' };
+        const history = bridge?.getNearFieldHistory?.() || [];
+        const lastCard = history.length ? history[history.length - 1].dialogueCard : '';
+        return `<div class="sys-cc-near-field" style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.04);border-radius:8px;font-size:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span><i class="fa-solid fa-satellite-dish" style="color:#0984e3;margin-right:4px;"></i>NFC近场通信雷达</span>
+                <span class="sys-cc-radar-badge" style="font-size:10px;color:${radar.available ? '#00b894' : '#636e72'};">${radar.available ? '● 发现活跃目标' : '○ 无同室目标'}</span>
+            </div>
+            <div class="sys-cc-radar-summary" style="margin-top:4px;color:#2d3436;font-size:11px;">${_esc(radar.summaryLine)}</div>
+            ${radar.available ? `
+                <div style="margin-top:6px;display:flex;gap:6px;">
+                    <button class="sys-cc-btn-nfc" id="sys-cc-nfc-card" data-target="${_esc(radar.activeCharacters[0] || '')}" style="padding:4px 8px;font-size:11px;border-radius:4px;border:1px solid #0984e3;background:#ebf5fb;color:#0984e3;cursor:pointer;">
+                        <i class="fa-solid fa-id-card"></i> 碰一碰递名片
+                    </button>
+                    <button class="sys-cc-btn-nfc" id="sys-cc-nfc-photo" data-target="${_esc(radar.activeCharacters[0] || '')}" style="padding:4px 8px;font-size:11px;border-radius:4px;border:1px solid #6c5ce7;background:#f3f0fc;color:#6c5ce7;cursor:pointer;">
+                        <i class="fa-solid fa-image"></i> 快传照片
+                    </button>
+                </div>
+            ` : ''}
+            ${lastCard ? `<div class="sys-cc-nfc-result" style="margin-top:4px;color:#00b894;font-size:10px;">${_esc(lastCard)}</div>` : ''}
         </div>`;
     }
 
@@ -247,6 +275,35 @@ export class ControlCenter {
             writeFlag(this.storage, SYS_KEYS.FLASHLIGHT, next);
             applyFlashlightVisual(next);
             this._paintTile(btn, next);
+        });
+        // [R15-O9] 防偷窥隐私模式切换
+        root.querySelector('#sys-cc-anti-peek')?.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            const bridge = window.VirtualPhone?.lonshaBridge;
+            if (bridge && typeof bridge.setManualAntiPeek === 'function') {
+                const next = btn.dataset.on !== '1';
+                bridge.setManualAntiPeek(next);
+                this._paintTile(btn, next);
+            }
+        });
+        // [R15-X1] NFC 近场通信碰一碰事件
+        root.querySelector('#sys-cc-nfc-card')?.addEventListener('click', (e) => {
+            const target = e.currentTarget.dataset.target || '';
+            const bridge = window.VirtualPhone?.lonshaBridge;
+            if (bridge && typeof bridge.transmitNearFieldItem === 'function' && target) {
+                const res = bridge.transmitNearFieldItem(target, 'CARD');
+                const out = root.querySelector('.sys-cc-nfc-result');
+                if (out) out.textContent = res.message;
+            }
+        });
+        root.querySelector('#sys-cc-nfc-photo')?.addEventListener('click', (e) => {
+            const target = e.currentTarget.dataset.target || '';
+            const bridge = window.VirtualPhone?.lonshaBridge;
+            if (bridge && typeof bridge.transmitNearFieldItem === 'function' && target) {
+                const res = bridge.transmitNearFieldItem(target, 'PHOTO');
+                const out = root.querySelector('.sys-cc-nfc-result');
+                if (out) out.textContent = res.message;
+            }
         });
         // 锁屏
         root.querySelector('#sys-cc-lock')?.addEventListener('click', () => {

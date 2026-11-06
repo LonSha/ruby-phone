@@ -444,6 +444,106 @@ export class LonShaBridge {
         }
         return { intercepted: false };
     }
+
+    // ---------------- ②d [v4.126.0 · R15-O9 / R15-X1] 防偷窥隐私模式与 NFC 近场通信 ----------------
+    /**
+     * 判断当前是否处于同室防偷窥隐私伪装模式
+     * 规则：只要现场明确有其他活跃在场角色（非空数组且包含其他角色），或者用户主动锁定了防窥开关
+     */
+    isPrivacyAntiPeekActive() {
+        if (this._manualAntiPeekLocked === true) return true;
+        const sc = this._lastSceneState;
+        if (!sc || !Array.isArray(sc.inSceneCharacters)) return false;
+        return sc.inSceneCharacters.length > 0;
+    }
+
+    /**
+     * 设置手动防偷窥伪装模式开关
+     */
+    setManualAntiPeek(on) {
+        this._manualAntiPeekLocked = !!on;
+        return this._manualAntiPeekLocked;
+    }
+
+    /**
+     * 对通知或预览正文实施防窥模糊伪装过滤
+     * @param {string} rawText 原始文本
+     * @param {string} [category] 分类（如 'message', 'secret', 'album'）
+     * @returns {string} 伪装文本
+     */
+    maskTextForAntiPeek(rawText, category = 'message') {
+        if (!this.isPrivacyAntiPeekActive()) return String(rawText || '');
+        if (category === 'album') return '【🔒 照片内容已按防偷窥规则隐藏】';
+        if (category === 'secret') return '【🔒 核心绝密内容已掩盖】';
+        return '收到一条新消息（防窥模式已隐藏正文）';
+    }
+
+    /**
+     * [R15-X1] 近场通信雷达：探测同场物理活跃角色
+     * @returns {{available:boolean, activeCharacters:string[], radarStatus:string}}
+     */
+    scanNearFieldRadar() {
+        const sc = this._lastSceneState;
+        if (!sc || !Array.isArray(sc.inSceneCharacters) || sc.inSceneCharacters.length === 0) {
+            return {
+                available: false,
+                activeCharacters: [],
+                radarStatus: 'no-nearby-targets',
+                summaryLine: '雷达未探测到同场面对面角色（需处于同室物理场景）'
+            };
+        }
+        const targets = sc.inSceneCharacters.slice();
+        return {
+            available: true,
+            activeCharacters: targets,
+            radarStatus: 'targets-detected',
+            summaryLine: `📡 近场雷达已锁定 ${targets.length} 位同室角色：${targets.join('、')}`
+        };
+    }
+
+    /**
+     * [R15-X1] 发起面对面 NFC 快传（交换名片/随身照片）
+     * @param {string} targetCharacter 接收方角色
+     * @param {'CARD'|'PHOTO'} shareType 分享类型
+     * @param {Object} [payload] 随附数据
+     */
+    transmitNearFieldItem(targetCharacter, shareType, payload = {}) {
+        const radar = this.scanNearFieldRadar();
+        const target = String(targetCharacter || '').trim();
+        if (!radar.available || !radar.activeCharacters.includes(target)) {
+            return {
+                ok: false,
+                reason: 'target-not-in-near-field',
+                message: `目标「${target}」未处于近场雷达可达范围，快传取消。`
+            };
+        }
+        const txId = 'nfc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const item = {
+            txId,
+            target,
+            shareType: String(shareType || 'CARD').toUpperCase(),
+            payload: { ...payload },
+            timestamp: Date.now(),
+            receiptSound: 'nfc_chime.wav',
+            dialogueCard: `【NFC 碰一碰】已成功向 ${target} 面对面直传「${shareType === 'PHOTO' ? '相册照片' : '个人电子名片'}」！`
+        };
+        if (!this._nfcTransmissionHistory) this._nfcTransmissionHistory = [];
+        this._nfcTransmissionHistory.push(item);
+        if (this._nfcTransmissionHistory.length > 20) this._nfcTransmissionHistory.shift();
+        return {
+            ok: true,
+            item,
+            message: item.dialogueCard
+        };
+    }
+
+    /**
+     * 获取近场传输记录
+     */
+    getNearFieldHistory() {
+        return (this._nfcTransmissionHistory || []).slice();
+    }
+
     // ---------------- ③ 注入协调: 桥接管手机记忆的注入位 ----------------
     /**
      * 生成前由 RubyPhone 调用 (替代 memoryCore.attachPromptHook 的本地注入)。

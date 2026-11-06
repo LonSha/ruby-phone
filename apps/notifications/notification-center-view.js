@@ -442,6 +442,10 @@ export class NotificationCenterView {
         const refRaw = (n.meta && n.meta.ref && typeof n.meta.ref === 'object') ? n.meta.ref : null;
         const refAttr = (refRaw && refRaw.appId && refRaw.kind && refRaw.id)
             ? ` data-ref="${esc(JSON.stringify({ appId: refRaw.appId, kind: refRaw.kind, id: refRaw.id }))}"` : '';
+        const bridge = window.VirtualPhone?.lonshaBridge;
+        const msgText = (bridge && typeof bridge.maskTextForAntiPeek === 'function')
+            ? bridge.maskTextForAntiPeek(n.message, 'message')
+            : n.message;
         return `<div class="nc-item${unreadCls}${jumpable ? ' nc-jumpable' : ''}" data-id="${esc(n.id)}" data-app="${esc(n.appId || '')}"${refAttr}>
             <div class="nc-avatar${showAvatar ? '' : ' nc-avatar-icon'}">${showAvatar ? avatarInner : `<i class="${fa}"></i>`}</div>
             <div class="nc-body">
@@ -449,7 +453,7 @@ export class NotificationCenterView {
                     <span class="nc-name">${esc(n.title)}</span>
                     <span class="nc-time">${esc(this._timeText(n.ts))}</span>
                 </div>
-                <div class="nc-row2">${esc(n.message)}</div>
+                <div class="nc-row2">${esc(msgText)}</div>
                 <div class="nc-row3">
                     <span class="nc-apptag">${esc(appTag)}</span>
                     ${countTag}
