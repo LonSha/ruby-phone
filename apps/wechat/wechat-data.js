@@ -5399,6 +5399,43 @@ parseAIResponse(text) {
         }
     }    
 
+    /**
+     * [v4.128.0 · R15-X2] 群聊实时协同工作台：发布协同任务/投票清单
+     * @param {string} chatId 群聊 ID
+     * @param {{title:string, items:string[], initiator:string}} taskInfo
+     */
+    postGroupCollaborationTask(chatId, taskInfo = {}) {
+        const chat = this.getChat(chatId);
+        if (!chat || chat.type !== 'group') return { ok: false, reason: 'not-a-group-chat' };
+        const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const title = String(taskInfo.title || '团队即时协同任务').trim();
+        const initiator = String(taskInfo.initiator || '我').trim();
+        const items = Array.isArray(taskInfo.items) ? taskInfo.items.map(it => ({ title: String(it), done: false, assignee: null })) : [];
+
+        const task = {
+            taskId,
+            chatId,
+            title,
+            initiator,
+            items,
+            createdAt: Date.now(),
+            status: 'active'
+        };
+
+        if (!chat.collaborationTasks) chat.collaborationTasks = [];
+        chat.collaborationTasks.push(task);
+
+        this.addMessage(chatId, {
+            from: 'system',
+            content: `📋【群协同任务】${initiator} 发起了新任务：「${title}」（共 ${items.length} 个子项）`,
+            type: 'system',
+            avatar: '📌'
+        });
+
+        this.saveData();
+        return { ok: true, task };
+    }    
+
     async updateGroupMemberProfile(chatId, oldName, updates = {}) {
         const chat = this.getChat(chatId);
         const previousName = String(oldName || '').trim();

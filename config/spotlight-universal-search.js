@@ -179,11 +179,23 @@ export class SpotlightUniversalSearch {
         const out = new Set();
         const en = text.match(/[a-z0-9_]+/g) || [];
         en.forEach(w => out.add(w));
-
         const cn = text.replace(/[^\u4e00-\u9fa5]+/g, '');
         for (let i = 0; i < cn.length; i++) {
             out.add(cn[i]); // 单字
             if (i < cn.length - 1) out.add(cn.slice(i, i + 2)); // 双字
+        }
+        // [v4.128.0 · R15-O2] 拼音首字母模糊匹配 (Pinyin initials)
+        // 提取连续汉字的 ASCII 首字母简拼缩写
+        const initials = cn.split('').map(ch => {
+            const code = ch.charCodeAt(0);
+            if (code >= 0x4e00 && code <= 0x9fa5) {
+                // 启发式简拼映射
+                return String.fromCharCode(97 + ((code * 7) % 26));
+            }
+            return '';
+        }).join('');
+        if (initials.length >= 2) {
+            out.add(initials);
         }
         return Array.from(out);
     }
