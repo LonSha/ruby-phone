@@ -14,6 +14,8 @@ import { currentTrack as _currentTrack } from '../config/system-controls.js';
 /* [v4.88.0] 时钟轮询的静止退避（缝自 jiangxi1129/gaze）。纯函数内核：
  *   本文件只持有 streak/interval 两个读数并按裁决自调度，不自己算倍率。 */
 import { judgeGazeTick, initialGazeState } from '../config/gaze-backoff.js';
+import { ImeDraftGuardian } from './ime-draft-guardian.js';
+import { AmbientCallSimulator } from './ambient-call-simulator.js';
 
 function _esc(s) {
     return String(s ?? '')
@@ -199,11 +201,15 @@ export class LockScreen {
     const trackHtml = track
       ? `<div class="pls-track" data-app="music" role="button" title="打开音乐"><span class="pls-track-icon">🎵</span><span class="pls-track-title">${_esc(track.title)}</span>${track.artist ? `<span class="pls-track-artist">${_esc(track.artist)}</span>` : ''}</div>`
       : '';
+    // [v4.130.0 · R15-X4] 锁屏情境微语与动态壁纸自适应
+    const signature = this.phoneShell?.personaSign || '万物皆有回响';
+    const weather = this.phoneShell?.currentWeather || '晴朗';
     root.innerHTML =
       '<div class="pls-shade"></div>' +
-      '<div class="pls-hello" id="pls-hello">' + _esc(parts.greeting) + '</div>' +
+      '<div class="pls-hello" id="pls-hello">' + _esc(parts.greeting) + ' · ' + _esc(weather) + '</div>' +
       '<div class="pls-date" id="pls-date">' + parts.date + '</div>' +
       '<div class="pls-time" id="pls-time">' + parts.time + '</div>' +
+      '<div class="pls-sign" style="font-size:12px;opacity:0.8;margin-top:4px;text-align:center;">“' + _esc(signature) + '”</div>' +
       '<div class="pls-battery">' + batLine + '</div>' +
       trackHtml +
       notesHtml +

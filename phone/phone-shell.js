@@ -10,6 +10,8 @@
 // 手机外壳
 import { PHONE_CONFIG } from '../config/apps.js';
 import { LockScreen } from './lock-screen.js';
+import { ImeDraftGuardian } from './ime-draft-guardian.js';
+import { AmbientCallSimulator } from './ambient-call-simulator.js';
 import { ManagedRuntime, childRuntime } from '../config/runtime-lifecycle.js';   // [v2.26.0/v2.31.0] 运行时资源登记与统一回收
 import { PHONE_EVENTS } from '../config/phone-events.js';          // [v2.26.0] 事件名单一真源
 /* [v4.99.6 · R11-X8] 设备读数面（电量 / 信号）：
@@ -58,6 +60,8 @@ export class PhoneShell {
         this._lastDeviceFace = null;
         this._seedBatteryRequested = false;
         this.lockScreen = null;
+        this.imeGuardian = new ImeDraftGuardian(); // [v4.130.0 · R15-O4] 输入法草稿中枢真实挂载
+        this.ambientCallSimulator = AmbientCallSimulator; // [v4.130.0 · R15-X3] 通话环境音模拟器真实挂载
         // 🔥 视觉历史栈（滑动返回用）
         this.viewHistory = [];
         /* [v4.87.0] 视图状态版本号：**唯一**用于「App 到底接没接住这次返回」的判据。
