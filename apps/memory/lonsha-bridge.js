@@ -298,7 +298,13 @@ export class LonShaBridge {
     recallBlock(queryText, opts = {}) {
         try {
             const topN = Math.max(1, Math.min(5, Number(opts.topN) || 3));
-            const mems = this.recall(queryText, topN) || [];
+            let mems = this.recall(queryText, topN) || [];
+            if (!mems.length) return '';
+            // [v4.134.0 · R16-O1] 针对当前发言角色/互动角色的认知视界净化
+            const activeSpeaker = String(opts.label || opts.activeSpeaker || '').trim();
+            if (activeSpeaker && typeof this.filterContextForCognitiveHorizon === 'function') {
+                mems = this.filterContextForCognitiveHorizon(mems, activeSpeaker);
+            }
             if (!mems.length) return '';
             const actors = Array.isArray(opts.actors)
                 ? opts.actors.filter(Boolean).map(a => String(a).trim()).filter(Boolean)

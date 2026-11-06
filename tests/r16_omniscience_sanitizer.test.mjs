@@ -36,7 +36,22 @@ test('R16-O1: 跨角色防全知视界净化与私密记录过滤', async () => 
   const sanitizedWithBob = bridge.filterContextForCognitiveHorizon(records, 'Alice');
   assert.equal(sanitizedWithBob.length, 3, '同室在场时应按需放行');
 
-  // 3. 负控制：如果故意返回包含不在场角色秘密的未过滤数组，测试必须断言失败
+  // 3. 验证 recallBlock 真实接线端到端执行
+  bridge.applyScenePresenceState({
+    location: '咖啡厅室内',
+    inSceneCharacters: ['Alice']
+  });
+  // mock recall
+  bridge.recall = () => [
+    { content: '公共新闻：今天天气晴朗' },
+    { content: 'Alice 的日记：今天见到了玩家', character: 'Alice' },
+    { content: 'Bob 的绝密私信：暗号是海雕', character: 'Bob' }
+  ];
+  const blockResult = bridge.recallBlock('查询', { label: 'Alice', userName: 'User' });
+  assert.ok(blockResult.includes('Alice 的日记'), 'Alice 的日记应该在 block 中');
+  assert.equal(blockResult.includes('Bob 的绝密私信'), false, 'recallBlock 必须穿透执行视界过滤，绝不能包含 Bob 绝密私信');
+
+  // 4. 负控制：如果故意返回包含不在场角色秘密的未过滤数组，测试必须断言失败
   const fakeSanitized = records.slice();
   assert.throws(() => {
     if (fakeSanitized.some(r => r.character === 'Bob')) {
