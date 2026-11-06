@@ -479,6 +479,28 @@ export class LonShaBridge {
     }
 
     /**
+     * [v4.134.0 · R16-O1] 针对酒馆角色上下文认知视界的防全知信息净化
+     * 过滤掉不在场角色的私有隐私，避免手机通知或本地备忘录沦为全知泄漏通道
+     */
+    filterContextForCognitiveHorizon(records, activeSpeaker) {
+        if (!Array.isArray(records)) return [];
+        const speaker = String(activeSpeaker || '').trim();
+        const sc = this._lastSceneState;
+        const inScene = sc && Array.isArray(sc.inSceneCharacters) ? sc.inSceneCharacters : [];
+
+        return records.filter(rec => {
+            if (!rec || typeof rec !== 'object') return false;
+            // 若记录带有私密所有者标记且非公共条目
+            const owner = String(rec.owner || rec.character || '').trim();
+            if (owner && speaker && owner !== speaker && !inScene.includes(owner)) {
+                // 不在场角色的专属记录直接拦截，严防宿主全知剧透
+                return false;
+            }
+            return true;
+        });
+    }
+
+    /**
      * [R15-X1] 近场通信雷达：探测同场物理活跃角色
      * @returns {{available:boolean, activeCharacters:string[], radarStatus:string}}
      */
