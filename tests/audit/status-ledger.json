@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.125.0",
+  "version": "4.137.0",
   "version_sources": {
-    "package": "4.125.0",
-    "manifest": "4.125.0",
-    "update_log_latest": "4.125.0",
-    "index_const": "4.125.0"
+    "package": "4.137.0",
+    "manifest": "4.137.0",
+    "update_log_latest": "4.137.0",
+    "index_const": "4.137.0"
   },
   "version_same": true,
   "gates": {
@@ -54,7 +54,7 @@
     "check_chain_len": 19
   },
   "tests": {
-    "test_files": 398,
+    "test_files": 420,
     "audit_dir_exists": true,
     "audit_files": 27
   },
@@ -92,9 +92,9 @@
     "chromium_env_note": "未显式指定 RUBY_PHONE_CHROMIUM —— 走 Playwright 缓存探测通道；本格为 null 表示「未指定」，不表示「没有浏览器」"
   },
   "scale": {
-    "app_dirs": 88,
+    "app_dirs": 94,
     "apps_ids": 89,
-    "index_lines": 14238,
+    "index_lines": 14240,
     "css_bytes": 716697,
     "crossrepo": {
       "produced_faces": 30
@@ -116,7 +116,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 396,
+        "suite_files": 418,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -141,7 +141,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "1904be8ff081b6f4"
+    "sha256_16": "5ea3c5da53058f80"
   },
   "unknown": [],
   "unknown_count": 0

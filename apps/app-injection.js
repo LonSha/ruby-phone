@@ -59,7 +59,7 @@ import { defaultPlotlineSettings, readPlotlineFace, plotlinePromptBlock } from '
 import { defaultCharsSettings, readCharsFace, charsPromptBlock } from './chars/chars-data.js';
 import { defaultClockSettings, readClockFace, CLOCK_REASONS, clockPromptBlock } from './clock/clock-data.js';
 import { defaultLedgerSettings, readLedgerFace, LEDGER_REASONS, ledgerPromptBlock } from './ledger/ledger-data.js';
-import VirtualDeviceContextualOrchestrator from './settings/virtual-device-contextual-orchestrator.js';
+import { buildDeviceRuntimePrompt, DEVICE_RUNTIME_KEY } from '../config/device-runtime.js';
 
 /* ------------------------------------------------------------------
  * 一、storage 键（与各 App 逐字一致；这里只做读，不登记新键）
@@ -179,14 +179,8 @@ const LIGHT_SPECS = Object.freeze([
     },
     {
         appId: 'deviceContext', key: 'deviceContextApp', name: 'SYSTEM (虚拟手机全息情境)', tier: INJECTION_TIERS.FACT,
-        settingsKey: 'device_orchestrator_settings_v1', defaults: () => ({ injectToPrompt: true }),
-        build: (p, s, st) => {
-            try {
-                const devState = p.snapshot && p.snapshot.deviceDirectives;
-                if (!devState) return '';
-                return VirtualDeviceContextualOrchestrator.arbitrateDeviceDirectives(devState);
-            } catch (_e) { return ''; }
-        }
+        settingsKey: DEVICE_RUNTIME_KEY, defaults: () => ({ injectToPrompt: false }),
+        build: (_p, _s, storage) => buildDeviceRuntimePrompt(storage)
     }
 ]);
 
@@ -390,7 +384,7 @@ export function collectMissingAppInjections(win, storage, opts = {}) {
             const s = readSettings(storage, spec.settingsKey, spec.defaults);
             if (!s.injectToPrompt) { notes.disabled.push(spec.appId); continue; }
             let content = '';
-            try { content = String(spec.build(probe, s) || ''); } catch (_e) { content = ''; }
+            try { content = String(spec.build(probe, s, storage) || ''); } catch (_e) { content = ''; }
             if (!content) { notes.empty.push(spec.appId); continue; }
             candidates.push({ appId: spec.appId, name: spec.name, tier: spec.tier, content: content });
         }

@@ -1,3 +1,4 @@
+import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 /* ========================================================
  *  LonSha 记忆引擎 ↔ RubyPhone 双向数据桥 (LonShaBridge) v2
  *
@@ -113,6 +114,7 @@ class BridgeBM25 {
     }
 }
 
+const DEVICE_HOLOGRAPHIC_EVENTS_KEY = 'device_holographic_events_v1';
 export class LonShaBridge {
     constructor(storage, memoryCore) {
         this.storage = storage;
@@ -133,6 +135,7 @@ export class LonShaBridge {
         this._seenVersion = -1;
         this._seenPoolCount = -1;
         this._load();
+        this._holographicBusEvents = this._readHolographicEvents();
         this._promoteInjection();
     }
     // ---------------- 配置持久化 (挂 extensionSettings) ----------------
@@ -146,13 +149,13 @@ export class LonShaBridge {
                 if (d.stats) this.stats = { ...this.stats, ...d.stats };
                 if (d.resonanceHeat && typeof d.resonanceHeat === 'object') this._resonanceHeat = d.resonanceHeat;
                 if (Array.isArray(d.pyramidEvolutionLinks)) this._pyramidEvolutionLinks = d.pyramidEvolutionLinks;
-                if (Array.isArray(d.holographicBusEvents)) this._holographicBusEvents = d.holographicBusEvents;
+                // Legacy global events have no trustworthy chat identity; never import them into a chat.
             }
         } catch (e) { /* 忽略 */ }
     }
     _save() {
         try {
-            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, pyramidEvolutionLinks: this._pyramidEvolutionLinks || [], holographicBusEvents: this._holographicBusEvents || [], updatedAt: new Date().toISOString() });
+            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, pyramidEvolutionLinks: this._pyramidEvolutionLinks || [], updatedAt: new Date().toISOString() });
         } catch (e) { /* 忽略 */ }
     }
     /** [RB] 协调注入生效时, 让 MemoryCore 本地 prompt 钩子退位 (避免双注入打架) */
@@ -515,6 +518,13 @@ export class LonShaBridge {
      * @param {string} type 事件类型 (如 'IM_MESSAGE', 'BILL_TRANSFER', 'NOTE_MEMO', 'APP_STATE_MUTATION')
      * @param {Object} payload 载荷详情
      */
+    _readHolographicEvents() {
+        try {
+            const raw = this.storage?.get?.(DEVICE_HOLOGRAPHIC_EVENTS_KEY, []);
+            const rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            return Array.isArray(rows) ? JSON.parse(JSON.stringify(rows.slice(-50))) : [];
+        } catch (_e) { return []; }
+    }
     emitHolographicEvent(type, payload = {}) {
         const event = {
             id: `holo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -522,9 +532,10 @@ export class LonShaBridge {
             payload: { ...payload },
             timestamp: Date.now()
         };
+        this._holographicBusEvents = this._readHolographicEvents();
         this._holographicBusEvents.push(event);
         if (this._holographicBusEvents.length > 50) this._holographicBusEvents.shift();
-        this._save();
+        if (this.storage?.set?.(DEVICE_HOLOGRAPHIC_EVENTS_KEY, this._holographicBusEvents) === false) throw new Error('全息队列未保存');
 
         // 若 LonSha 记忆插件挂载在同一 window，双向即时穿透
         try {
@@ -538,10 +549,28 @@ export class LonShaBridge {
     /**
      * [v4.137.0 · V20-R1] 全息双向共生总线：消费并排队待同步的事件
      */
+    /** Non-destructive batch: acknowledge only after the receiver persists it. */
+    peekHolographicEvents() {
+        const token = captureSessionToken(this.storage);
+        const events = this._readHolographicEvents();
+        const conversationId = String(this.storage?.currentConversationId || '');
+        return { conversationId, events, acknowledge: () => {
+            if (!guardSessionWrite(this.storage, token, 'holographic-ack')) return false;
+            const ids = new Set(events.map(e => e.id));
+            const remaining = this._readHolographicEvents().filter(e => !ids.has(e.id));
+            if (this.storage?.set?.(DEVICE_HOLOGRAPHIC_EVENTS_KEY, remaining) === false) return false;
+            this._holographicBusEvents = remaining;
+            return true;
+        } };
+    }
+    acknowledgeHolographicEvents(batch) {
+        if (!batch?.conversationId || batch.conversationId !== String(this.storage?.currentConversationId || '')) return false;
+        return typeof batch.acknowledge === 'function' && batch.acknowledge();
+    }
     drainHolographicEvents() {
-        const evts = (this._holographicBusEvents || []).slice();
+        const evts = this._readHolographicEvents();
+        if (this.storage?.set?.(DEVICE_HOLOGRAPHIC_EVENTS_KEY, []) === false) throw new Error('全息队列未排空');
         this._holographicBusEvents = [];
-        this._save();
         return evts;
     }
 
@@ -735,6 +764,7 @@ export class LonShaBridge {
      * 同时清掉 > floor 的残留记忆 (保险丝: 正常情况下 RA 采集点已即时失效)。
      */
     onChatChanged() {
+        this._holographicBusEvents = this._readHolographicEvents();
         this._bm25Dirty = true;
     }
     onFloorCommitted(floor) {

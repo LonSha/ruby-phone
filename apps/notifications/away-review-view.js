@@ -2,9 +2,9 @@ import { captureSessionToken, guardSessionWrite } from '../../config/session-gat
 import { buildOpenDetail } from '../../config/app-open-detail.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
 const labels = { later: '稍后', seen: '已看', handle: '去处理', dismiss: '无需处理' };
-export function renderAwayReview(root, away) {
+export function renderAwayReview(root, away, orderRows = rows => rows) {
     const token = captureSessionToken(away.storage);
-    const rows = away.getMissedSummary().raw;
+    const rows = orderRows(away.getMissedSummary().raw);
     let group = away.reviewCursor?.group || 'all'; let page = away.reviewCursor?.page || 0;
     function draw(notice = '') {
         const filtered = rows.filter(item => group === 'all' || item.appId === group);

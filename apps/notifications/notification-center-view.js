@@ -504,7 +504,7 @@ export class NotificationCenterView {
         if (!root) return;
         const awayReview = window.VirtualPhone?.orchestrator?.awayMode || getAwayMode();
         const reviewRoot = root.querySelector('[data-away-review]');
-        if (reviewRoot && awayReview && !awayReview.isAway() && awayReview.getMissedSummary().raw.length) renderAwayReview(reviewRoot, awayReview);
+        if (reviewRoot && awayReview && !awayReview.isAway() && awayReview.getMissedSummary().raw.length) renderAwayReview(reviewRoot, awayReview, reorderOfflineNotifications);
         // [v4.115.0 · R13-X4] 不在的时候交互绑定
         root.querySelectorAll('.nc-away-toggle').forEach((b) => {
             b.addEventListener('click', (e) => {

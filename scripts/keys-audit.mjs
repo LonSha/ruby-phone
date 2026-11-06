@@ -187,6 +187,8 @@ const isChatByMechanism = (key) => patterns.some((p) => {
  *   legacy 历史误存键（读旧档→迁移→删）：不参与 K2，但仍须活着
  * ⚠️ 这是**准入清单**：新增键必须登记，否则 K1 红灯；K3 检查每条是否还活着。 */
 const KEY_REGISTRY = [
+  { key: 'device_runtime_v1', scope: 'chat', note: '剧情设备模拟状态及显式开关' },
+  { key: 'device_holographic_events_v1', scope: 'chat', note: '全息事件队列，会话隔离而非全局桥配置' },
   // ══ 会话隔离（chatMetadata）══
   // ══ [v4.85.0 · R10] 第十期拟真机制会话隔离数据 ══
   { key: 'audio_wiretap_records', scope: 'chat', note: '环境窃听解密与录音留痕' },

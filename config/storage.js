@@ -43,6 +43,8 @@ export class PhoneStorage {
         // ==================== 聊天数据的关键字匹配规则 ====================
         // 匹配这些关键字的 key 会被存入 chatMetadata（聊天专属）
         this.CHAT_DATA_PATTERNS = [
+            /^device_runtime_v1$/,
+            /^device_holographic_events_v1$/,
             // [v4.85.0 · R10] 第十期拟真机制会话隔离数据
             /^audio_wiretap_/,
             /^autonomous_life_/,

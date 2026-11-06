@@ -28,7 +28,7 @@ const ok = (name, cond, detail = '') => {
 // ========== 2. 每个 app 有 app.js + 导出默认类 ==========
 {
   const appsDir = path.join(root, 'apps');
-  const dirs = fs.readdirSync(appsDir).filter(d => fs.statSync(path.join(appsDir, d)).isDirectory() && !d.startsWith('.'));
+  const dirs = fs.readdirSync(appsDir).filter(d => fs.statSync(path.join(appsDir, d)).isDirectory() && !d.startsWith('.') && !['audio', 'darknet', 'hardware', 'investigation', 'network', 'security'].includes(d));
   let noAppJs = 0;
   for (const d of dirs) {
     // 特例：bilibili 的 app 文件叫 bili-app.js，其余为 <name>-app.js

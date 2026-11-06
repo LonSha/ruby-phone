@@ -61,6 +61,7 @@ import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask
  *   盘上的「生成中」卡住两小时也没有任何读数，用户能做的只有自己猜。 */
 import { checkStall, stallLine } from './config/stall-watch.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
+import { advanceDeviceRuntime } from './config/device-runtime.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
 import { mountMissingAppInjection } from './apps/app-injection.js';
 import { createInitialState as createDrivesState, advance as advanceDrives, formatVar as formatDrivesVar, classifyMessageText as classifyDrivesText } from './config/drives-engine.js';
@@ -555,15 +556,16 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-05",
+    date: "2026-11-06",
     items: [
-        "【版本升至 4.125.0（五源同源）】联合联动特别版：虚拟手机跨仓感知具身物理现场快照（L0 Scene State）、HUD 状态投射与在场防偷窥门禁。",
-        "【物理现场向手机 HUD 投射】双向桥接器 lonsha-bridge 实时同步物理现场地点与在场角色三态语义，手机顶部 HUD 投射「📍地点 · 在场角色」，断线或缺席时 fail-closed 优雅隐藏。",
-        "【面对面防偷窥拦截裁决】当目标角色处于当前物理现场近身时，checkPresenceInterception 拦截短信/电话外发并引导当面交互，杜绝隔空通信穿帮。",
-        "【删楼回滚与时空对齐】提供 rollbackPhoneBridgeToFloor 状态对齐接口，配合记忆引擎删楼事件即时回滚物理现场与防偷窥判据，避免幻觉残留。",
-        "【交棒改写】保留多人邀约全链路与状态台账，新增物理现场与在场权限路由桥接能力，五源同源契约保持单调递增。",
-        "【本版自己抓到的缺陷形态】首版跨端桥接缺失状态三态区分导致空在场名单误判为全员在场，已通过严格空数组与 undefined 判据修复。"
-    ]
+        "【版本升至 4.137.0（五源同源）】【V20 生产接线修复】新增会话隔离的设备模拟状态与高级设置操作面，十五个子系统由真实操作执行、保存并进入提示词收集器。",
+        "【默认关闭与模拟边界】设备模拟及提示词注入默认关闭；终端、信号、加密、投送和擦除均为剧情状态，不执行真实设备操作。",
+        "【会话保护】全息事件改为会话队列；设置面板使用会话令牌拒绝旧面板跨会话写入；事件不携带口令或档案正文。",
+        "【通知与验证】离线通知审阅接入生产排序；新增生产入口定向测试和多视口浏览器夹具。双仓跨端消费及最终全量验收仍待闭环，不宣称全部完成。",
+        "【提示词预算】设备编排按优先级最多选择三条，单条限制 1200 字符、所选正文总计限制 3200 字符；不将字符预算宣称为精确 Token 预算。",
+        "【擦除边界】恐慌擦除须显式确认，仅清除当前会话模拟器的敏感子状态，不删除真实聊天、相册或磁盘数据。",
+        "【本版自己抓到的缺陷形态与交棒改写】修复仅测试引用的设备内核、无人生产的指令字段与版本资料漂移；门禁保留真实判据，不以定向通过替代最终验收。"
+]
 };
 
 
@@ -2242,6 +2244,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     const rbCtx = window.SillyTavern?.getContext?.();
                     if (rbCtx?.eventSource && rbCtx?.event_types?.GENERATION_STARTED) {
                         rbCtx.eventSource.on(rbCtx.event_types.GENERATION_STARTED, () => {
+                            try { advanceDeviceRuntime(storage); } catch (e) {}
                             try { window.VirtualPhone?.lonshaBridge?.applyCoordinatedInjection(); } catch (e) {}
                             /* [v4.107.0 · R13-O5] 一轮生成开始 ⇒ 上一轮的 next-turn 待生效改动交出去。
                              * 选这个时刻而不是「生成结束」：用户拨开关是为了**这一轮**就用上，

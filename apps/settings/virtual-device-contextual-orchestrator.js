@@ -32,7 +32,9 @@ export function arbitrateDeviceDirectives({
   damageDirective = '',
   airdropDirective = '',
   duressDirective = '',
-  voiceTamperDirective = ''
+  voiceTamperDirective = '',
+  hardwareDirective = '', meshDirective = '', evidenceDirective = '',
+  forensicDirective = '', leakDirective = '', vaultDirective = '', notificationDirective = ''
 } = {}) {
   const p0Critical = [];
   const p1Urgent = [];
@@ -44,6 +46,8 @@ export function arbitrateDeviceDirectives({
   if (simDirective && simDirective.includes('伪基站')) p0Critical.push(simDirective);
   if (powerDirective && powerDirective.includes('强制黑屏关机')) p0Critical.push(powerDirective);
 
+  if (leakDirective) p0Critical.push(leakDirective);
+  if (hardwareDirective) p1Urgent.push(hardwareDirective);
   // P1: 物理设备残损、极度低电量、隔空投送接收
   if (powerDirective && !powerDirective.includes('强制黑屏关机')) p1Urgent.push(powerDirective);
   if (damageDirective) p1Urgent.push(damageDirective);
@@ -55,6 +59,9 @@ export function arbitrateDeviceDirectives({
   if (bleDirective && !bleDirective.includes('距离告警')) p2Context.push(bleDirective);
   if (simDirective && !simDirective.includes('伪基站')) p2Context.push(simDirective);
 
+  for (const item of [meshDirective, evidenceDirective, forensicDirective, vaultDirective, notificationDirective]) {
+    if (item) p2Context.push(item);
+  }
   // 严格按 P0 -> P1 -> P2 组装，限制最多输出 3 条最核心矛盾
   const selected = [];
   for (const item of p0Critical) {
@@ -67,6 +74,13 @@ export function arbitrateDeviceDirectives({
     if (selected.length < 3) selected.push(item);
   }
 
+  // Enforce a character budget, not an unverified token claim. Never stringify arbitrary objects.
+  let remaining = 3200;
+  for (let i = 0; i < selected.length; i++) {
+    const text = typeof selected[i] === 'string' ? selected[i] : '';
+    selected[i] = text.slice(0, Math.min(1200, remaining));
+    remaining -= selected[i].length;
+  }
   if (selected.length === 0) return '';
 
   return `【虚拟手机情境全息编排 · 物理与数字环境综合指示】\n` +
