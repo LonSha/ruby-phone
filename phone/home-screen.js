@@ -595,6 +595,7 @@ export class HomeScreen {
                     </div>
                 </section>
                 ${this.renderSocialCard()}
+                ${this.renderSmartContextWidget()}
                 ${this.renderSettingsCard()}
                 ${this.renderMusicCard()}
             </div>
@@ -730,6 +731,36 @@ export class HomeScreen {
                     </div>
                 </div>
                 ${this.renderAppBadge(app)}
+            </section>
+        `;
+    }
+
+    /** [v4.127.0 · R15-X9] 渲染桌面情境动态小组件 (Smart Widgets) */
+    renderSmartContextWidget() {
+        const bridge = window.VirtualPhone?.lonshaBridge;
+        const hudLine = bridge?.getSceneHudLine?.() || '📍当前现场 · 离线感知';
+        const radar = bridge?.scanNearFieldRadar?.() || { available: false, activeCharacters: [] };
+        const suspendedList = this.phoneShell?.getSuspendedAppList?.() || [];
+        const taskCount = suspendedList.length;
+
+        const targetNames = radar.activeCharacters && radar.activeCharacters.length > 0
+            ? radar.activeCharacters.join('、')
+            : '独处中';
+
+        return `
+            <section class="home-smart-widget-card yzp-home-widget-card" style="margin:10px 14px;padding:12px;background:rgba(255,255,255,0.7);backdrop-filter:blur(10px);border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid rgba(255,255,255,0.4);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="font-size:12px;font-weight:600;color:var(--phone-accent,#0984e3);display:flex;align-items:center;gap:4px;">
+                        <i class="fa-solid fa-compass"></i><span>情境流 · Smart Widget</span>
+                    </div>
+                    <div style="font-size:11px;color:#636e72;">后台任务: ${taskCount}</div>
+                </div>
+                <div style="font-size:12px;color:#2d3436;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    ${this._escapeHtml(hudLine)}
+                </div>
+                <div style="font-size:11px;color:#636e72;display:flex;align-items:center;gap:6px;">
+                    <span>👥 同场角色: <b>${this._escapeHtml(targetNames)}</b></span>
+                </div>
             </section>
         `;
     }

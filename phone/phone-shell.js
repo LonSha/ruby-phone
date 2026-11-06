@@ -1551,8 +1551,17 @@ export class PhoneShell {
             });
             allViews.forEach(v => {
                 const id = v.getAttribute('data-view-id');
+                // [v4.127.0 · R15-O1] 桌面多任务栈与原位悬浮：保留已打开 App 的 DOM 图层，禁止暴力销毁
                 if (!this.viewHistory.find(item => item.id === id)) {
-                    v.remove(); // 连同背景图缓存一起彻底销毁
+                    if (id && id.startsWith('view-') && id !== 'view-home') {
+                        v.className = 'phone-view-layer phone-view-suspended';
+                        v.style.display = 'none';
+                        v.style.zIndex = '1';
+                        // 记录后台挂起时刻
+                        v.dataset.suspendedAt = String(Date.now());
+                    } else {
+                        v.remove();
+                    }
                 }
             });
         }
@@ -1580,6 +1589,18 @@ export class PhoneShell {
      *   ② 是为了让「已有当前层」的路径（例如已经走 setContent 渲染过的 App）
      *   不被新建一个空层抢走渲染位。
      * ============================================================ */
+    /** 取当前多任务栈中处于后台挂起状态的 App 列表 */
+    getSuspendedAppList() {
+        const stack = this.screen?.querySelector?.('.view-stack-container');
+        if (!stack) return [];
+        const suspended = stack.querySelectorAll('.phone-view-suspended');
+        return Array.from(suspended).map(el => ({
+            viewId: el.getAttribute('data-view-id') || '',
+            suspendedAt: Number(el.dataset.suspendedAt) || 0,
+            hasContent: el.children.length > 0
+        }));
+    }
+
     /** 告诉壳「现在在哪个 App 里」（index.js 的 phone:openApp 咽喉点调）。
      *   不做其他任何事：历史栈 / Z-index / 回键都归 setContent（唯一收口点）。 */
     setCurrentApp(appId) {
