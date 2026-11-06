@@ -7,8 +7,8 @@ const bind = JSON.parse(fs.readFileSync('scripts/bind-dead-baseline.json', 'utf8
 
 test('dead surface baseline has explicit, non-empty triage evidence', () => {
     assert.equal(method.entries.length, 334);
-    assert.equal(method.entries.filter((e) => e.classInstantiated === false).length, 137);
-    assert.equal(method.entries.filter((e) => e.classInstantiated === true).length, 197);
+    assert.equal(method.entries.filter((e) => e.classInstantiated === false).length, 7);
+    assert.equal(method.entries.filter((e) => e.classInstantiated === true).length, 327);
     assert.equal(bind.entries.length, 59);
     for (const entry of bind.entries) {
         assert.ok(entry.evidence, `${entry.file}:${entry.name} lacks evidence`);

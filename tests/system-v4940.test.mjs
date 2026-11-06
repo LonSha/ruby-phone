@@ -145,13 +145,20 @@ test('C2: 字符串面并集口径 —— 事件表里以字符串写的名字�
     '字符串面里出现名字即判活（本判据是下界，宁可漏报不出假红）');
 });
 
-test('C3: 实例化索引只认 `new Cls(`', () => {
+test('C3: 实例化索引支持限定名构造与懒加载类名证据', () => {
   const masked = new Map([
-    ['a.js', maskKeepLines('const x = new Aa(1); const y = Aa.of();')],
+    ['a.js', maskKeepLines('const x = new Aa(1); const y = new module.Bb(2);')],
+    ['config/app-lazy-routes.js', maskKeepLines('{ cls: "Cc", module: "./apps/c.js" }')],
   ]);
-  const idx = buildInstantiationIndex(masked, new Set(['Aa', 'Bb']));
+  const raw = new Map([
+    ['a.js', 'const x = new Aa(1); const y = new module.Bb(2);'],
+    ['config/app-lazy-routes.js', '{ cls: "Cc", module: "./apps/c.js" }'],
+  ]);
+  const idx = buildInstantiationIndex(masked, new Set(['Aa', 'Bb', 'Cc', 'Dd']), raw);
   assert.equal(idx.get('Aa').length, 1, 'Aa 被 new 过一次');
-  assert.equal(idx.get('Bb').length, 0, 'Bb 从未被 new');
+  assert.equal(idx.get('Bb').length, 1, '限定名 module.Bb 被识别');
+  assert.equal(idx.get('Cc').length, 1, '懒加载路由 cls 被识别为动态实例化证据');
+  assert.equal(idx.get('Dd').length, 0, 'Dd 从未被 new');
 });
 
 /* ══════════════════════════════════════════════════════════════

@@ -283,15 +283,28 @@ export function findDeadMethods(classes, nameIndex) {
 }
 
 /** 类实例化点：`new Cls(`（掩码面，去字符串后仍保留真 new）。 */
-export function buildInstantiationIndex(maskedByRel, classNames) {
+export function buildInstantiationIndex(maskedByRel, classNames, rawByRel = null) {
   const want = classNames instanceof Set ? classNames : new Set(classNames);
   const idx = new Map();
   for (const n of want) idx.set(n, []);
-  for (const [rel, text] of maskedByRel) {
+  const scanByRel = new Map(maskedByRel);
+  if (rawByRel) {
+    for (const [rel, text] of rawByRel) {
+      if (rel === 'config/app-lazy-routes.js') scanByRel.set(rel, text);
+    }
+  }
+  for (const [rel, text] of scanByRel) {
     if (typeof text !== 'string' || !text) continue;
-    for (const m of text.matchAll(/\bnew[ \t]+([A-Za-z_$][\w$]*)[ \t]*\(/g)) {
+    for (const m of text.matchAll(/\bnew[ \t]+(?:[A-Za-z_$][\w$]*\.)*([A-Za-z_$][\w$]*)[ \t]*\(/g)) {
       if (!want.has(m[1])) continue;
       idx.get(m[1]).push(rel);
+    }
+    // App 懒加载通过路由表保存导出类名，再由动态模块对象构造；这是生产实例化证据。
+    if (rel === 'config/app-lazy-routes.js') {
+      const routeText = rawByRel?.get(rel) || text;
+      for (const m of routeText.matchAll(/\bcls\s*:\s*["']([A-Za-z_$][\w$]*)["']/g)) {
+        if (want.has(m[1])) idx.get(m[1]).push(rel);
+      }
     }
   }
   return idx;

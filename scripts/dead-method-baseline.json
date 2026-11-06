@@ -1,7 +1,7 @@
 {
   "note": "类方法面冻结账本（R11-O2）。判据：公开方法名在**全仓除声明行外零出现**即记死。新增未登记即红；条目被真接线后应清理。口径见 scripts/lib/dead-surface.mjs 头注释。 【v4.95.0 · R11-O3】SubsystemOrchestrator.manageUsageParadigm 已人工摘除：产品端真接线（phone/home-screen.js 调 resolveAppOrder、apps/usage/usage-app.js 读范式键），门的复活告警点名了它。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】本版新增的两条死方法当场被抓并修掉，故条数未增（315 → 315）：`BackupdeskApp.previewShare` 与 `BackupdeskApp.markShareRead` 此前只有判据在调、产品面零调用 —— 前者因为 `_shareVm` 里另写了一份 `sharePreviewOf`（同一件事两份口径），后者因为界面没有「记已读」入口。修法是**真接线**，不是写进账本：判据绿而对用户不存在，是本面最贵的一种假绿。 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，逐条手删，条数 315 → 311）：① `SmartGalleryVault.unlockVault` / `lockVault` / `queryPhotos` 三条 —— X9 把保险箱接进了相册的「回看」页：解锁走 `AlbumView.unlockVaultFromUI()` 真调 `unlockVault(pin)`（连错 3 次锁 30 秒的判据留在内核里，视图只转述它的话），「重新上锁」与离开回看页走 `lockVault()`，分区读数由 `replay-face-bridge.vaultPartitionOf()` 取代 `queryPhotos`；② `SubsystemOrchestrator.replayLifeExperience` —— 修前是纸面假驱动（`recordLifeProgram` / `getActPerspective` / `playbackProgramSummary` / `createReplayableProgram` 四处全传错参，每次调用都成功返回、每一项都是空的），本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，由回看面真调用。摘除前实测：`method-consumption-audit` 报「3 条基线方法已被重新消费」并逐条点名。 【v4.99.9 · R11-X9 行号校正】本版改动了 apps/album/album-data.js 与 apps/memory/memory-app.js，方法声明行号随之平移（E1 判据逐条对真源码，偏移即红）。此处**只按真源码重算 line 字段**，不改条目集合、不改 generated_at（非 --update：整本重写会把时间戳一起洗掉）。",
   "schema": "dead-method-baseline@1",
-  "generated_at": "2026-11-06T16:33:42.258Z",
+  "generated_at": "2026-11-06T18:06:50.473Z",
   "generated_version_hint": "auto",
   "rule": "只判增量。存量冻结是为了「不一次性清零牵连整批 App」（计划明令）。每条带 classInstantiated 以便分档处置。",
   "entries": [
@@ -19,7 +19,7 @@
       "name": "intakeItems",
       "line": 56,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/archive/archive-app.js",
@@ -27,7 +27,7 @@
       "name": "canonSlot",
       "line": 673,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/bilibili/bili-data.js",
@@ -43,7 +43,7 @@
       "name": "isWeeklyMonthly",
       "line": 158,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -51,7 +51,7 @@
       "name": "commonSlots",
       "line": 168,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -59,7 +59,7 @@
       "name": "recurrenceContractSelfCheck",
       "line": 175,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -67,7 +67,7 @@
       "name": "voteHandoffSelfCheck",
       "line": 335,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -75,7 +75,7 @@
       "name": "voteHandoffStateLabel",
       "line": 355,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -83,7 +83,7 @@
       "name": "voteHandoffStateIds",
       "line": 361,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -91,7 +91,7 @@
       "name": "commitmentPlaybook",
       "line": 482,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -99,7 +99,7 @@
       "name": "advanceCommitmentStep",
       "line": 509,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-app.js",
@@ -107,7 +107,7 @@
       "name": "commitmentSummary",
       "line": 588,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/calendar/calendar-data.js",
@@ -131,7 +131,7 @@
       "name": "perspectivePack",
       "line": 180,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/chars/chars-app.js",
@@ -139,7 +139,7 @@
       "name": "perspectiveContrastLine",
       "line": 182,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/chars/chars-app.js",
@@ -147,7 +147,7 @@
       "name": "perspectiveTestimonyLine",
       "line": 184,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/chars/chars-app.js",
@@ -155,7 +155,7 @@
       "name": "resetPerspectiveScene",
       "line": 190,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/chars/chars-app.js",
@@ -163,7 +163,7 @@
       "name": "perspectiveRevoke",
       "line": 208,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/comms/comms-app.js",
@@ -171,7 +171,7 @@
       "name": "pointOf",
       "line": 157,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/comms/comms-app.js",
@@ -179,7 +179,7 @@
       "name": "selfCheckAll",
       "line": 179,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -187,7 +187,7 @@
       "name": "annualDraftMaterial",
       "line": 138,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -195,7 +195,7 @@
       "name": "setNote",
       "line": 151,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -203,7 +203,7 @@
       "name": "saveEditBuffer",
       "line": 167,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -211,7 +211,7 @@
       "name": "applyRecovery",
       "line": 220,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -219,7 +219,7 @@
       "name": "settleSave",
       "line": 235,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -227,7 +227,7 @@
       "name": "hyDecisionIds",
       "line": 579,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -235,7 +235,7 @@
       "name": "boardHeldBucketIds",
       "line": 629,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -243,7 +243,7 @@
       "name": "boardPickHeldIds",
       "line": 631,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -251,7 +251,7 @@
       "name": "boardStateHint",
       "line": 633,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-app.js",
@@ -259,7 +259,7 @@
       "name": "boardLimits",
       "line": 634,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/creationdesk/creationdesk-board.js",
@@ -275,7 +275,7 @@
       "name": "cleanUrl",
       "line": 248,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/date/date-app.js",
@@ -283,7 +283,7 @@
       "name": "checkScene",
       "line": 249,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/date/date-app.js",
@@ -291,7 +291,7 @@
       "name": "planBorrow",
       "line": 270,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/date/date-app.js",
@@ -299,7 +299,7 @@
       "name": "dayStart",
       "line": 467,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/date/date-app.js",
@@ -307,7 +307,7 @@
       "name": "spanSince",
       "line": 470,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -315,7 +315,7 @@
       "name": "archiveAt",
       "line": 267,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -323,7 +323,7 @@
       "name": "deltaCells",
       "line": 406,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -331,7 +331,7 @@
       "name": "flowCells",
       "line": 414,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -339,7 +339,7 @@
       "name": "versionCells",
       "line": 422,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -347,7 +347,7 @@
       "name": "fieldCells",
       "line": 427,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -355,7 +355,7 @@
       "name": "stepCells",
       "line": 435,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagdesk/diagdesk-app.js",
@@ -363,7 +363,7 @@
       "name": "typeUnknownCount",
       "line": 459,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagnose/diagnose-app.js",
@@ -371,7 +371,7 @@
       "name": "silenceSummaryLine",
       "line": 69,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/diagnose/diagnose-view.js",
@@ -427,7 +427,7 @@
       "name": "shopNameOf",
       "line": 383,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/doujin/doujin-app.js",
@@ -435,7 +435,7 @@
       "name": "gaugeInfo",
       "line": 560,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/focus/focus-app.js",
@@ -443,7 +443,7 @@
       "name": "sessionSeconds",
       "line": 173,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/focus/focus-app.js",
@@ -451,7 +451,7 @@
       "name": "recordLine",
       "line": 318,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/gacha/gacha-app.js",
@@ -459,7 +459,7 @@
       "name": "shareToChat",
       "line": 29,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/gacha/gacha-data.js",
@@ -515,7 +515,7 @@
       "name": "setUndercoverPrompt",
       "line": 1025,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/games/games-app.js",
@@ -523,7 +523,7 @@
       "name": "resetUndercoverPrompt",
       "line": 1042,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/games/poker/poker-app.js",
@@ -619,7 +619,7 @@
       "name": "roundLabelOf",
       "line": 412,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/kettle/kettle-app.js",
@@ -627,7 +627,7 @@
       "name": "optionTextOf",
       "line": 413,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/lofter/lofter-app.js",
@@ -659,7 +659,7 @@
       "name": "footprintsOfToday",
       "line": 186,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/loverspace/loverspace-app.js",
@@ -667,7 +667,7 @@
       "name": "nextToday",
       "line": 196,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/awakening-engine.js",
@@ -787,7 +787,7 @@
       "name": "askCarryLine",
       "line": 484,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -795,7 +795,7 @@
       "name": "itemCustodySelfCheck",
       "line": 536,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -803,7 +803,7 @@
       "name": "settingImpactHasUpstream",
       "line": 569,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -811,7 +811,7 @@
       "name": "settingRewriteSelfCheck",
       "line": 866,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -819,7 +819,7 @@
       "name": "planLoreImportOutlet",
       "line": 970,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -827,7 +827,7 @@
       "name": "loreClasses",
       "line": 973,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -835,7 +835,7 @@
       "name": "loreLedger",
       "line": 1339,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -843,7 +843,7 @@
       "name": "loreImportSelfCheck",
       "line": 1345,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -851,7 +851,7 @@
       "name": "isAskingCanceled",
       "line": 1589,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -859,7 +859,7 @@
       "name": "evidenceQuery",
       "line": 1622,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -867,7 +867,7 @@
       "name": "phoneFactBatch",
       "line": 1644,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -875,7 +875,7 @@
       "name": "phoneFactPlanEdit",
       "line": 1650,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-app.js",
@@ -883,7 +883,7 @@
       "name": "needsUserAction",
       "line": 1677,
       "isStatic": true,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/memory-data.js",
@@ -915,7 +915,7 @@
       "name": "fieldHistoryOf",
       "line": 248,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/mofo/mofo-data.js",
@@ -939,7 +939,7 @@
       "name": "shareCurrentTrackToWechat",
       "line": 224,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/music/music-data.js",
@@ -971,7 +971,7 @@
       "name": "sortWhyOf",
       "line": 532,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/musicdesk/musicdesk-app.js",
@@ -979,7 +979,7 @@
       "name": "queueKeepOf",
       "line": 791,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -987,7 +987,7 @@
       "name": "levelLabelOf",
       "line": 518,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -995,7 +995,7 @@
       "name": "moodLabelOf",
       "line": 519,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -1003,7 +1003,7 @@
       "name": "actionLabelOf",
       "line": 520,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -1011,7 +1011,7 @@
       "name": "wishTextOf",
       "line": 522,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -1019,7 +1019,7 @@
       "name": "wishStateOf",
       "line": 683,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/needsim/needsim-app.js",
@@ -1027,7 +1027,7 @@
       "name": "closeMemory",
       "line": 807,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/notifications/notifications-app.js",
@@ -1035,7 +1035,7 @@
       "name": "ackHub",
       "line": 183,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/phone/phone-view.js",
@@ -1051,7 +1051,7 @@
       "name": "lastRefreshedCards",
       "line": 99,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/pixiv/pixiv-app.js",
@@ -1075,7 +1075,7 @@
       "name": "routeTo",
       "line": 366,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/place/place-app.js",
@@ -1083,7 +1083,7 @@
       "name": "roamProblems",
       "line": 393,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/plotline/plotline-app.js",
@@ -1091,7 +1091,7 @@
       "name": "boardFocus",
       "line": 172,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/plotline/plotline-app.js",
@@ -1099,7 +1099,7 @@
       "name": "boardKindIds",
       "line": 199,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/pvdesk/pvdesk-app.js",
@@ -1107,7 +1107,7 @@
       "name": "lyricsModeOf",
       "line": 538,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/pvdesk/pvdesk-app.js",
@@ -1115,7 +1115,7 @@
       "name": "scriptOf",
       "line": 617,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1123,7 +1123,7 @@
       "name": "annualTwoVersions",
       "line": 147,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1131,7 +1131,7 @@
       "name": "annualVersionsLine",
       "line": 149,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1139,7 +1139,7 @@
       "name": "annualCompose",
       "line": 155,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1147,7 +1147,7 @@
       "name": "annualCover",
       "line": 161,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1155,7 +1155,7 @@
       "name": "annualToc",
       "line": 163,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1163,7 +1163,7 @@
       "name": "annualSelfCheck",
       "line": 185,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1171,7 +1171,7 @@
       "name": "currentFindTask",
       "line": 903,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1179,7 +1179,7 @@
       "name": "indexBuildCount",
       "line": 912,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1187,7 +1187,7 @@
       "name": "currentAnchorTask",
       "line": 967,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1195,7 +1195,7 @@
       "name": "dossierToggle",
       "line": 1066,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-app.js",
@@ -1203,7 +1203,7 @@
       "name": "topicDossierSelfCheck",
       "line": 1123,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/reading/reading-view.js",
@@ -1219,7 +1219,7 @@
       "name": "stateLabelOf",
       "line": 400,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1227,7 +1227,7 @@
       "name": "severityOf",
       "line": 401,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1235,7 +1235,7 @@
       "name": "roomOf",
       "line": 541,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1243,7 +1243,7 @@
       "name": "topNOf",
       "line": 543,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1251,7 +1251,7 @@
       "name": "injectEnabledOf",
       "line": 544,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1259,7 +1259,7 @@
       "name": "runRerank",
       "line": 591,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/recall/recall-app.js",
@@ -1267,7 +1267,7 @@
       "name": "closeReceipt",
       "line": 711,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/regexfilter/regexfilter-app.js",
@@ -1275,7 +1275,7 @@
       "name": "previewPreset",
       "line": 144,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/search/search-app.js",
@@ -1283,7 +1283,7 @@
       "name": "restoredNeedsRequery",
       "line": 605,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/settings/image-upload.js",
@@ -1347,7 +1347,7 @@
       "name": "presetCategories",
       "line": 97,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/socialguard/socialguard-app.js",
@@ -1355,7 +1355,7 @@
       "name": "cleanNotifications",
       "line": 137,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/socialguard/socialguard-app.js",
@@ -1363,7 +1363,7 @@
       "name": "deletePost",
       "line": 141,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/socialguard/socialguard-app.js",
@@ -1371,7 +1371,7 @@
       "name": "summaryFor",
       "line": 151,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/soundkit/soundkit-app.js",
@@ -1379,7 +1379,7 @@
       "name": "chainStats",
       "line": 496,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sourcebook/sourcebook-app.js",
@@ -1387,7 +1387,7 @@
       "name": "spanLabelOf",
       "line": 379,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sourcebook/sourcebook-app.js",
@@ -1395,7 +1395,7 @@
       "name": "toneLabelOf",
       "line": 380,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sourcebook/sourcebook-app.js",
@@ -1403,7 +1403,7 @@
       "name": "guardLabelOf",
       "line": 381,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sourcebook/sourcebook-app.js",
@@ -1411,7 +1411,7 @@
       "name": "capsuleCount",
       "line": 446,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/stickerdesk/stickerdesk-app.js",
@@ -1419,7 +1419,7 @@
       "name": "intakeCategories",
       "line": 90,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/stickerdesk/stickerdesk-app.js",
@@ -1427,7 +1427,7 @@
       "name": "doRename",
       "line": 100,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/stickerdesk/stickerdesk-app.js",
@@ -1435,7 +1435,7 @@
       "name": "doDissolve",
       "line": 108,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/stickerdesk/stickerdesk-app.js",
@@ -1443,7 +1443,7 @@
       "name": "doMove",
       "line": 116,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sullydesk/sullydesk-app.js",
@@ -1451,7 +1451,7 @@
       "name": "setRoster",
       "line": 72,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/sullydesk/sullydesk-app.js",
@@ -1459,7 +1459,7 @@
       "name": "filterBy",
       "line": 76,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/summdesk/summdesk-app.js",
@@ -1467,7 +1467,7 @@
       "name": "setCursors",
       "line": 71,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/taobao/taobao-app.js",
@@ -1475,7 +1475,7 @@
       "name": "lastPushed",
       "line": 126,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/taobao/taobao-app.js",
@@ -1483,7 +1483,7 @@
       "name": "templateSteps",
       "line": 143,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/taskentry/taskentry-app.js",
@@ -1491,7 +1491,7 @@
       "name": "tabSourceOf",
       "line": 190,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/taskentry/taskentry-app.js",
@@ -1499,7 +1499,7 @@
       "name": "hiddenCards",
       "line": 223,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/taskentry/taskentry-app.js",
@@ -1507,7 +1507,7 @@
       "name": "restoreReading",
       "line": 238,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/theater/theater-data.js",
@@ -1523,7 +1523,7 @@
       "name": "subjectAt",
       "line": 205,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/uterus/uterus-app.js",
@@ -1531,7 +1531,7 @@
       "name": "themeOf",
       "line": 211,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/uterus/uterus-app.js",
@@ -1539,7 +1539,7 @@
       "name": "sacCells",
       "line": 337,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/wangxiang/points.js",
@@ -1587,7 +1587,7 @@
       "name": "acceptTask",
       "line": 1355,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/wechat/contacts-view.js",
@@ -1779,7 +1779,7 @@
       "name": "varTypes",
       "line": 95,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/worldpulse/worldpulse-app.js",
@@ -1787,7 +1787,7 @@
       "name": "loreDryRunFace",
       "line": 172,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "config/ambient-audio-wiretap.js",

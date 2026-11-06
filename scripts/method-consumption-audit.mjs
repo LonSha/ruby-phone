@@ -88,7 +88,7 @@ if (!REAL_REPO && !FIXTURE && collapse.length) {
 
 const nameIndex = buildNameIndex(masked, raw, new Set(publicEntries.map((m) => m.name)));
 const deadMethods = findDeadMethods(classesWithMethods, nameIndex);
-const instIndex = buildInstantiationIndex(masked, new Set(classesWithMethods.map((c) => c.cls)));
+const instIndex = buildInstantiationIndex(masked, new Set(classesWithMethods.map((c) => c.cls)), raw);
 
 /* 方法条目带上「所属类是否被 new 过」：同一条方法，类从没被 new 过与类被 new 过，
  * 处置动作不同（前者连实例都不存在，后者只是这个方法没人调）——报告里必须能分。 */
