@@ -123,6 +123,8 @@ export class LonShaBridge {
         this.stats = { backfillCount: 0, injectCount: 0, rollbacks: 0, floorsIngested: 0, lastBackfill: null };
         // [v4.135.0 · V17-R1] 记忆访问热表：被真正注入的手机记忆升温，下轮 BM25 名次前移（跨会话持久化）。
         this._resonanceHeat = {};
+        // [v4.136.0 · V18-R1] 演化去重边表（跨会话持久化）：记录已被更高版本演化替代的旧记忆。
+        this._pyramidEvolutionLinks = [];
         this._bm25 = new BridgeBM25();
         this._bm25Dirty = true;
         // [RB] 懒检测基线: 追踪 memoryCore 数据版本戳与记忆池条目数, 捕获桥外写入路径
@@ -141,12 +143,13 @@ export class LonShaBridge {
                 if (typeof d.coordinated === 'boolean') this.coordinated = d.coordinated;
                 if (d.stats) this.stats = { ...this.stats, ...d.stats };
                 if (d.resonanceHeat && typeof d.resonanceHeat === 'object') this._resonanceHeat = d.resonanceHeat;
+                if (Array.isArray(d.pyramidEvolutionLinks)) this._pyramidEvolutionLinks = d.pyramidEvolutionLinks;
             }
         } catch (e) { /* 忽略 */ }
     }
     _save() {
         try {
-            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, updatedAt: new Date().toISOString() });
+            this.storage?.set?.(LONSHA_BRIDGE_KEY, { enabled: this.enabled, coordinated: this.coordinated, stats: this.stats, resonanceHeat: this._resonanceHeat, pyramidEvolutionLinks: this._pyramidEvolutionLinks || [], updatedAt: new Date().toISOString() });
         } catch (e) { /* 忽略 */ }
     }
     /** [RB] 协调注入生效时, 让 MemoryCore 本地 prompt 钩子退位 (避免双注入打架) */
@@ -274,7 +277,26 @@ export class LonShaBridge {
     /** [v4.135.0 · V17-R] 访问热键唯一真源：召回加权与注入回写必须调同一个函数。
      *   优先用 recall 已挂好的 _heatKey；缺席时按 floor + 内容前 40 字确定性派生。 */
     _heatKeyOf(rec) {
-        return String((rec && rec._heatKey) || ('fl:' + ((rec && rec.floor) ?? '') + '|' + String((rec && (rec.content || rec.text)) || '').slice(0, 40)));
+        return String((rec && (rec.id || rec._heatKey)) || ('fl:' + ((rec && rec.floor) ?? '') + '|' + String((rec && (rec.content || rec.text)) || '').slice(0, 40)));
+    }
+
+    /** [v4.136.0 · V18-R1] 记录演化边：旧记忆指向换代新记忆（跨会话持久化） */
+    recordEvolutionLink(fromId, toId, type = 'evolution') {
+        if (!fromId || !toId) return;
+        if (!Array.isArray(this._pyramidEvolutionLinks)) this._pyramidEvolutionLinks = [];
+        const existing = this._pyramidEvolutionLinks.find(e => e.fromId === fromId && e.toId === toId);
+        if (existing) {
+            existing.type = type;
+        } else {
+            this._pyramidEvolutionLinks.push({ fromId, toId, type, timestamp: Date.now() });
+        }
+        this._save();
+    }
+
+    /** [v4.136.0 · V18-R1] 查询条目是否已被演化替代 */
+    hasSupersedingEvolution(key) {
+        if (!key || !Array.isArray(this._pyramidEvolutionLinks)) return false;
+        return this._pyramidEvolutionLinks.some(e => e.fromId === key && e.type === 'evolution');
     }
 
     // ---------------- ② 召回: RubyPhone 记忆库 → LonSha (BM25 稀疏检索) ----------------
@@ -290,6 +312,7 @@ export class LonShaBridge {
             if (this._bm25.N > 0) {
                 // BM25 主通道: 分数归一到 0~1 近似区间
                 res = this._bm25.search(String(queryText || ''), topN).map(r => Object.assign({
+                    id: r.id,
                     content: r.text,
                     score: Math.max(0.1, Math.min(1, r.score / 12)),
                     layer: r.source || 'bm25',
@@ -299,6 +322,7 @@ export class LonShaBridge {
             // 空结果兜底: 走 MemoryCore 内建混合检索 (池触发 + 关键词)
             if (!res || !res.length) {
                 res = (this.memoryCore.recall(String(queryText || ''), topN) || []).map(r => Object.assign({
+                    id: r.id,
                     content: r.content, score: r._score || 0.5, layer: r.layer, floor: null
                 }, BridgeBM25.cognitionMeta(r)));
             }
@@ -316,6 +340,22 @@ export class LonShaBridge {
                 }).sort((a, b) => (b.score || 0) - (a.score || 0));
                 this.stats.heatRerankCount = (this.stats.heatRerankCount || 0) + 1;
             } catch (_) { /* 热表缺席/异常一律退回原序，不影响召回 */ }
+
+            /* [v4.136.0 · V18-R1] 演化去重抑制过滤：若条目已被更高版本的演化节点换代，自动压制不优先呈现 */
+            try {
+                const evoLinks = (this._pyramidEvolutionLinks && Array.isArray(this._pyramidEvolutionLinks)) ? this._pyramidEvolutionLinks : [];
+                if (evoLinks.length) {
+                    const supersededFrom = new Set(evoLinks.filter(e => e.type === 'evolution').map(e => e.fromId));
+                    const origLen = res.length;
+                    res = res.filter(r => {
+                        const k = this._heatKeyOf(r);
+                        return !supersededFrom.has(k);
+                    });
+                    if (origLen > res.length) {
+                        this.stats.evolutionFiltered = (this.stats.evolutionFiltered || 0) + (origLen - res.length);
+                    }
+                }
+            } catch (_) { /* 演化过滤失败降级放行 */ }
             this.stats.injectCount++;
             return res;
         } catch (e) {
