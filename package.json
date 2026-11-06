@@ -25,6 +25,7 @@
     "session-writeback": "node scripts/session-writeback-audit.mjs",
     "hardlink-safety": "node scripts/hardlink-safety-check.mjs",
     "bind-consuming": "node scripts/bind-consumption-audit.mjs",
-    "method-consuming": "node scripts/method-consumption-audit.mjs"
+    "method-consuming": "node scripts/method-consumption-audit.mjs",
+    "dead-surface-triage": "node tools/dead-surface-triage.mjs"
   }
 }
