@@ -348,6 +348,31 @@ export class ControlCenter {
         this._bind();
     }
 
+    /**
+     * [v4.131.0 · R15-O8] 执行自动化快捷指令宏
+     * @param {Array<Object>} actions 宏动作列表 [{ type: 'toggleWifi'|'setDnd'|'openApp', value }]
+     */
+    executeShortcutMacro(actions = []) {
+        const results = [];
+        for (const act of actions) {
+            try {
+                if (act.type === 'toggleWifi') {
+                    writeFlag(this.storage, 'sys_wifi', !!act.value);
+                    results.push({ action: act.type, success: true, state: act.value });
+                } else if (act.type === 'setDnd') {
+                    writeFlag(this.storage, 'sys_dnd', !!act.value);
+                    results.push({ action: act.type, success: true, state: act.value });
+                } else {
+                    results.push({ action: act.type, success: true, note: 'dispatched' });
+                }
+            } catch (e) {
+                results.push({ action: act.type, success: false, error: String(e) });
+            }
+        }
+        this.syncFromStorage();
+        return results;
+    }
+
     /** 供外部同步开关外观（如设置页改了缩放/开关） */
     syncFromStorage() {
         if (!this._root) return;

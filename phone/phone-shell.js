@@ -974,6 +974,47 @@ export class PhoneShell {
         return `${hours}:${minutes}`;
     }
     
+    /**
+     * [v4.131.0 · R15-O6] 整机镜像打包备份
+     */
+    createBackupImage() {
+        return {
+            timestamp: Date.now(),
+            version: '4.131.0',
+            settings: {
+                personaSign: this.personaSign || '',
+                currentWeather: this.currentWeather || '晴朗'
+            },
+            multitaskApps: this.multitaskApps ? [...this.multitaskApps] : []
+        };
+    }
+
+    /**
+     * [v4.131.0 · R15-X6] 突发物理限制探测（低电量/无信号）
+     */
+    evaluatePhysicalLimit(options = {}) {
+        const battery = typeof options.battery === 'number' ? options.battery : 100;
+        const signal = typeof options.signal === 'number' ? options.signal : 4;
+        let isPowerCut = false;
+        let isNetworkDisconnected = false;
+        let warning = '';
+
+        if (battery <= 5) {
+            isPowerCut = true;
+            warning = '电量即将耗尽，手机自动关机';
+        } else if (signal <= 0) {
+            isNetworkDisconnected = true;
+            warning = '当前区域无蜂窝网络服务';
+        }
+
+        return {
+            isPowerCut,
+            isNetworkDisconnected,
+            warning,
+            canMakeCall: !isPowerCut && !isNetworkDisconnected
+        };
+    }
+
     startClock() {
     // 初始化显示
     this.updateStatusBarTime();

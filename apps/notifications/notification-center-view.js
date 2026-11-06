@@ -24,6 +24,19 @@ import { buildOpenDetail } from '../../config/app-open-detail.js';
  *   视图**不许**自己去碰第二张表（v41000 F1 的规矩：映射只能有一处）。
  *   改为让 App 侧提供 `rowById()` 只读出口，视图只问不管。 */
 
+/**
+ * [v4.131.0 · R15-O5] 离线通知时间轴重排
+ * @param {Array<Object>} notifications 待排队通知
+ * @returns {Array<Object>} 按故事逻辑时间严格升序排列的通知列表
+ */
+export function reorderOfflineNotifications(notifications = []) {
+    return (notifications || []).slice().sort((a, b) => {
+        const tA = Number(a.storyTimestamp || a.timestamp || 0);
+        const tB = Number(b.storyTimestamp || b.timestamp || 0);
+        return tA - tB;
+    });
+}
+
 function esc(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
