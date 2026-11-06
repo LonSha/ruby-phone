@@ -34,7 +34,7 @@ test('R15-Batch-E: 拟真输入法口癖联想与长草稿防护中枢 (R15-O4)'
     assert.equal(emptySave, false);
 });
 
-test('R15-Batch-E: 通话环境背景音与天气噪点模拟器 (R15-X3)', () => {
+test('R15-Batch-E: 通话环境背景音与天气噪点模拟器 (R15-X4)', () => {
     // 1. 暴风雪情境音
     const blizzardAtmosphere = AmbientCallSimulator.formatCallAtmosphere({
         weather: '极地暴雪',
@@ -66,8 +66,12 @@ test('R15-Batch-E: 通话环境背景音与天气噪点模拟器 (R15-X3)', () =
     assert.match(clearAtmosphere.noiseTag, /清晰的通话背景音/);
 });
 
-test('R15-Batch-E: PhoneShell 宿主接线验证', () => {
+test('R15-Batch-E: PhoneShell 宿主接线与锁屏情境动态壁纸微语 (R15-X3)', () => {
     const shell = new PhoneShell();
+    shell.personaSign = '与你同在';
+    shell.currentWeather = '暴风雪';
     assert.ok(shell.imeGuardian instanceof ImeDraftGuardian, 'ImeDraftGuardian 必须挂载在 shell.imeGuardian');
     assert.equal(typeof shell.ambientCallSimulator.formatCallAtmosphere, 'function', 'AmbientCallSimulator 必须暴露在 shell 上');
+    assert.equal(shell.personaSign, '与你同在');
+    assert.equal(shell.currentWeather, '暴风雪');
 });
