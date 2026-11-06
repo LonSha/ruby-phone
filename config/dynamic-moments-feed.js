@@ -15,7 +15,8 @@
 export const MOMENT_VISIBILITY = Object.freeze({
     PUBLIC: 'PUBLIC',
     FRIENDS: 'FRIENDS',
-    PRIVATE: 'PRIVATE'
+    PRIVATE: 'PRIVATE',
+    GROUP: 'GROUP'
 });
 
 export class DynamicMomentsFeed {
@@ -60,6 +61,7 @@ export class DynamicMomentsFeed {
             mediaUrls: Array.isArray(postData.mediaUrls) ? postData.mediaUrls.slice(0, 9) : [],
             location: postData.location ? String(postData.location).trim() : null,
             visibility: postData.visibility || MOMENT_VISIBILITY.PUBLIC,
+            allowedGroup: Array.isArray(postData.allowedGroup) ? postData.allowedGroup.map(g => String(g).trim().toLowerCase()) : [],
             timestamp: postData.timestamp || Date.now(),
             likes: [],      // [{ actorId, actorName, timestamp }]
             comments: []    // [{ id, authorId, authorName, text, replyToName, timestamp }]
@@ -69,6 +71,27 @@ export class DynamicMomentsFeed {
         if (this.posts.length > this.maxPosts) this.posts.pop();
         this._save();
         return post;
+    }
+
+    /**
+     * 获取指定观察者可见的朋友圈列表
+     * @param {string} viewerId 
+     * @param {string} viewerGroup 
+     * @returns {Array}
+     */
+     getVisiblePosts(viewerId = 'user', viewerGroup = null) {
+        const vId = String(viewerId).toLowerCase();
+        const vGrp = viewerGroup ? String(viewerGroup).toLowerCase() : null;
+        return this.posts.filter(p => {
+            if (p.authorId && String(p.authorId).toLowerCase() === vId) return true;
+            if (p.visibility === MOMENT_VISIBILITY.PUBLIC) return true;
+            if (p.visibility === MOMENT_VISIBILITY.PRIVATE) return false;
+            if (p.visibility === MOMENT_VISIBILITY.GROUP) {
+                if (!p.allowedGroup || p.allowedGroup.length === 0) return false;
+                return vGrp && p.allowedGroup.includes(vGrp);
+            }
+            return true;
+        });
     }
 
     /**

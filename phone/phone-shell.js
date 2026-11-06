@@ -1601,6 +1601,19 @@ export class PhoneShell {
         }));
     }
 
+    /**
+     * [v4.129.0 · R15-O3] 调起跨 App 媒体分享中枢
+     * @param {Object} payload { text, mediaUrl, mediaUrls, title, targetContactId, visibility }
+     * @returns {Promise<Object>}
+     */
+    async openShareSheet(payload) {
+        if (!this._shareSheet) {
+            const { ShareSheet } = await import('./share-sheet.js');
+            this._shareSheet = new ShareSheet({ phone: this });
+        }
+        return this._shareSheet;
+    }
+
     /** 告诉壳「现在在哪个 App 里」（index.js 的 phone:openApp 咽喉点调）。
      *   不做其他任何事：历史栈 / Z-index / 回键都归 setContent（唯一收口点）。 */
     setCurrentApp(appId) {
