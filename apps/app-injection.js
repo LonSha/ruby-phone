@@ -59,6 +59,7 @@ import { defaultPlotlineSettings, readPlotlineFace, plotlinePromptBlock } from '
 import { defaultCharsSettings, readCharsFace, charsPromptBlock } from './chars/chars-data.js';
 import { defaultClockSettings, readClockFace, CLOCK_REASONS, clockPromptBlock } from './clock/clock-data.js';
 import { defaultLedgerSettings, readLedgerFace, LEDGER_REASONS, ledgerPromptBlock } from './ledger/ledger-data.js';
+import VirtualDeviceContextualOrchestrator from './settings/virtual-device-contextual-orchestrator.js';
 
 /* ------------------------------------------------------------------
  * 一、storage 键（与各 App 逐字一致；这里只做读，不登记新键）
@@ -174,6 +175,17 @@ const LIGHT_SPECS = Object.freeze([
             const probe = ledgerProbeOf(p);
             if (readLedgerFace(probe, p.snapshot) !== LEDGER_REASONS.ready) return '';
             return ledgerPromptBlock(probe.ledger);
+        }
+    },
+    {
+        appId: 'deviceContext', key: 'deviceContextApp', name: 'SYSTEM (虚拟手机全息情境)', tier: INJECTION_TIERS.FACT,
+        settingsKey: 'device_orchestrator_settings_v1', defaults: () => ({ injectToPrompt: true }),
+        build: (p, s, st) => {
+            try {
+                const devState = p.snapshot && p.snapshot.deviceDirectives;
+                if (!devState) return '';
+                return VirtualDeviceContextualOrchestrator.arbitrateDeviceDirectives(devState);
+            } catch (_e) { return ''; }
         }
     }
 ]);
