@@ -310,13 +310,15 @@ export class HomeScreen {
     }
 
     renderLibraryApp(app) {
-        const iconImage = this._getAppIconImage(app);
+        const pixelSvg = appIconSvg(app.id);
+        const pixelIcon = pixelSvg ? svgToDataUri(pixelSvg) : null;
+        const iconImage = pixelIcon || this._getAppIconImage(app);
         const iconStyle = iconImage
-            ? this._buildCustomIconStyle(iconImage)
-            : `background:${app.color};`;
+            ? this._buildCustomIconStyle(iconImage, { fit: 'cover' })
+            : `background:${app.color || '#7d8590'};`;
         const iconContent = iconImage
-            ? this._renderCustomIconImage(iconImage, 'home-custom-icon-img yzp-home-custom-icon-img')
-            : `<span class="app-icon-emoji yzp-home-app-icon-emoji">${this._escapeHtml(app.icon)}</span>`;
+            ? ''
+            : `<span class="app-icon-emoji yzp-home-app-icon-emoji">${this._escapeHtml(app.icon || '·')}</span>`;
         const name = this._getAppDisplayName(app);
         return `
             <div class="app-library-app-item" data-app="${app.id}" data-name="${this._escapeHtml(name)}" role="button" tabindex="0"

@@ -1665,8 +1665,46 @@ export class SettingsApp {
                     .settings-app span,
                     .settings-app div {
                         max-width: 100% !important;
-                        word-break: break-word !important;
-                        overflow-wrap: anywhere !important;
+                        min-width: 0;
+                        word-break: normal !important;
+                        overflow-wrap: break-word !important;
+                    }
+                    .settings-app .setting-toggle {
+                        display: grid !important;
+                        grid-template-columns: minmax(0, 1fr) 42px !important;
+                        align-items: center !important;
+                        column-gap: 12px !important;
+                        width: 100% !important;
+                        box-sizing: border-box !important;
+                    }
+                    .settings-app .setting-toggle > :first-child {
+                        min-width: 0 !important;
+                        overflow-wrap: break-word !important;
+                    }
+                    .settings-app .setting-toggle > .toggle-switch,
+                    .settings-app .setting-toggle > input[type="checkbox"] {
+                        justify-self: end !important;
+                        flex: 0 0 42px !important;
+                    }
+                    .settings-app .setting-desc,
+                    .settings-app .setting-info {
+                        line-height: 1.5 !important;
+                        white-space: normal !important;
+                    }
+                    #tab-general .setting-item[style*="justify-content: space-between"] {
+                        display: grid !important;
+                        grid-template-columns: minmax(0, 1fr) minmax(88px, 132px) !important;
+                        align-items: start !important;
+                        column-gap: 10px !important;
+                    }
+                    #tab-general .setting-item[style*="justify-content: space-between"] > :first-child {
+                        min-width: 0 !important;
+                    }
+                    #tab-general .setting-item[style*="justify-content: space-between"] input:not([type="checkbox"]),
+                    #tab-general .setting-item[style*="justify-content: space-between"] select {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        box-sizing: border-box !important;
                     }
                     .settings-app input[type="checkbox"]:not(.phone-memory-perm):not(.phone-image-provider-app-bind):not(.phone-lobby-group-check):not(.phone-lobby-character-check) {
                         -webkit-appearance: checkbox !important;
@@ -1990,6 +2028,12 @@ export class SettingsApp {
                         transform: rotate(90deg);
                     }
                     @media (max-width: 380px) {
+                        .settings-app .setting-toggle {
+                            grid-template-columns: minmax(0, 1fr) 38px !important;
+                            column-gap: 8px !important;
+                        }
+                        .settings-app .setting-label { font-size: 12px !important; }
+                        .settings-app .setting-desc { font-size: 10px !important; }
                         #tab-general > details[data-settings-fold-key] > summary {
                             min-height: 44px !important;
                             padding-left: 12px !important;

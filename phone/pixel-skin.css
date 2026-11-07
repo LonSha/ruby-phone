@@ -73,10 +73,15 @@
 #phone-panel-content .phone-punch-hole::after{ content:none !important; display:none !important; }
 
 /* ---------------- 状态栏 ---------------- */
-#phone-panel-content .phone-statusbar{
+#phone-panel-content .phone-body-panel .phone-statusbar{
+  top:4px !important;
+  left:4px !important;
+  right:4px !important;
   background:var(--px-black) !important;
   border-bottom:2px solid var(--px-dkblue) !important;
-  height:22px !important;
+  height:34px !important;
+  min-height:34px !important;
+  box-sizing:border-box !important;
   color:var(--px-cream) !important;
   font-family:"Courier New",ui-monospace,monospace !important;
   font-size:10px !important; letter-spacing:1px !important;
@@ -119,7 +124,64 @@
 /* ---------------- 聚合壳（文件夹） ---------------- */
 #phone-panel-content .phone-screen .app-cluster-icon{
   border:2px solid var(--px-black) !important; border-radius:0 !important;
+  background-color:transparent !important;
+  background-repeat:no-repeat !important;
+  background-position:center !important;
+  background-size:contain !important;
   box-shadow: inset 2px 2px 0 rgba(255,255,255,.55), inset -2px -2px 0 rgba(0,0,0,.35) !important;
+}
+/* 应用库使用与桌面同一套掌机图标，不继承旧的圆角拟物库样式。 */
+#phone-panel-content .phone-screen .app-library-app{
+  background:var(--px-white) !important;
+  color:var(--px-black) !important;
+  font-family:"Courier New",ui-monospace,monospace !important;
+}
+#phone-panel-content .phone-screen .app-library-header{
+  padding:42px 14px 8px !important;
+  align-items:baseline !important;
+  flex-wrap:wrap !important;
+}
+#phone-panel-content .phone-screen .app-library-title{
+  font-size:18px !important;
+  letter-spacing:0 !important;
+}
+#phone-panel-content .phone-screen .app-library-search{
+  border:2px solid var(--px-black) !important;
+  border-radius:0 !important;
+  background:var(--px-cream) !important;
+  color:var(--px-black) !important;
+  font-family:inherit !important;
+}
+#phone-panel-content .phone-screen .app-library-group-title{
+  color:var(--px-dkblue) !important;
+  font-size:11px !important;
+}
+#phone-panel-content .phone-screen .app-library-group-count{
+  border:1px solid var(--px-black) !important;
+  border-radius:0 !important;
+  background:var(--px-cream) !important;
+  color:var(--px-black) !important;
+}
+#phone-panel-content .phone-screen .app-library-app-icon{
+  width:44px !important;
+  height:44px !important;
+  border:2px solid var(--px-black) !important;
+  border-radius:0 !important;
+  background-color:var(--px-cream) !important;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.65), inset -2px -2px 0 rgba(0,0,0,.3) !important;
+  image-rendering:pixelated !important;
+  background-size:cover !important;
+}
+#phone-panel-content .phone-screen .app-library-app-icon.custom-icon{
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.65), inset -2px -2px 0 rgba(0,0,0,.3) !important;
+}
+#phone-panel-content .phone-screen .app-library-app-name{
+  color:var(--px-black) !important;
+  font-family:"Courier New",ui-monospace,monospace !important;
+  font-size:9px !important;
+  line-height:1.3 !important;
+  word-break:normal !important;
+  overflow-wrap:anywhere !important;
 }
 
 /* ---------------- 唯一返回键（左下掌机 B 键） ---------------- */
