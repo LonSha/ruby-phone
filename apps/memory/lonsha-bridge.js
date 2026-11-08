@@ -834,35 +834,95 @@ export class LonShaBridge {
 
 
     // [R18·36项演化双计划] 挂载 RubyPhone 现代生活与跨应用总线反哺枢纽
+    /* [v18 · 接线修复] 修前三条反哺全部**写不进任何记忆**，原因有三，现逐条改掉：
+     *   ① 调 `this.onFloorCommitted(null, [{content,tag}])`，而 onFloorCommitted(floor) 只收一个参数
+     *      —— 第二参数（真正的事实内容）当场被丢弃；
+     *   ② 传进去的 floor 是 null，onFloorCommitted 里 `floorOrNull(null)` 判空后直接 return
+     *      —— 连「记了一笔」都不会发生；
+     *   ③ 即便走到写入，`{content, tag}` 也不是 memoryCore 认识的形状。
+     *   现改为直接调用**真实的记忆写入面**（与 backfill() 同一套 API）：
+     *     memoryCore.record('ai', text, { tags }, meta) + pool.addTemporal(...)，并只做轻量落盘。
+     */
     mountEvolutionPipeline(eventBus) {
-        if (!eventBus) return;
+        if (!eventBus) return { ok: false, reason: 'no-event-bus' };
+        if (this._eventBus === eventBus) return { ok: true, reused: true };
         this._eventBus = eventBus;
-        
-        // 监听生活事件织网
+        const read = { at: Date.now(), subscribed: [], written: 0, skipped: 0 };
+        this._evolutionRead = read;
+
+        /** 统一的落账口：把一条手机侧事实写进记忆底座（与 backfill 同 API，不另造形状）。 */
+        const commitFact = (text, tags, extraMeta) => {
+            const body = String(text || '').trim();
+            if (body.length < 6) { read.skipped++; return false; }
+            const core = this.memoryCore;
+            if (!core) { read.skipped++; read.lastError = 'memoryCore-absent'; return false; }
+            try {
+                const meta = Object.assign({ pinned: true, source: 'ruby-phone-evolution' }, extraMeta || {});
+                if (typeof core.record === 'function') {
+                    core.record('ai', body, { tags: Array.isArray(tags) ? tags : [tags] }, meta);
+                } else if (core.pool && typeof core.pool.addTemporal === 'function') {
+                    core.pool.addTemporal(body, { timestamp: new Date().toISOString(), metadata: meta });
+                } else { read.skipped++; read.lastError = 'no-write-api'; return false; }
+                /* 轻量层同步：池里有时间层就把同一条也补进去，保证时间轴可检索 */
+                try {
+                    if (core.pool && typeof core.pool.addTemporal === 'function') {
+                        core.pool.addTemporal(body, { timestamp: new Date().toISOString(), metadata: meta });
+                    }
+                } catch (_e) { /* 时间层是增强，失败不回滚主写入 */ }
+                this._bm25Dirty = true;
+                read.written++;
+                read.lastWrite = { at: Date.now(), text: body.slice(0, 80) };
+                try { this._save(); } catch (_e) {}
+                return true;
+            } catch (e) {
+                read.lastError = String((e && e.message) || e);
+                return false;
+            }
+        };
+
+        // 监听生活事件织网（日历/外卖/打车等跨应用日程）
         this._eventBus.on("daily_life_event", (payload, envelope) => {
             try {
-                const summary = (payload && payload.summary) || (envelope && envelope.payload && envelope.payload.summary) || "生活事件发生";
-                this.onFloorCommitted?.(null, [{ content: `[手机生活织网] ${summary}`, tag: "life_fabric" }]);
-            } catch (e) {}
+                const p = payload || (envelope && envelope.payload) || {};
+                const summary = p.summary || p.text || "生活事件发生";
+                commitFact(`[手机生活织网] ${summary}`, ["life_fabric", "mobile", p.fromApp || "life"], { fromApp: p.fromApp || null });
+            } catch (e) { read.lastError = String((e && e.message) || e); }
         });
-        
+        read.subscribed.push('daily_life_event');
+
         // 监听健康与生物识别异常波动
         this._eventBus.on("biometric_stress_alert", (payload, envelope) => {
             try {
-                const { heartRate, stressLevel } = payload || (envelope && envelope.payload) || {};
-                if (stressLevel > 0.7) {
-                    this.onFloorCommitted?.(null, [{ content: `[手环生物体征] 角色心率剧增至 ${heartRate} bpm，处于高应激状态`, tag: "biometric_stress" }]);
-                }
-            } catch (e) {}
+                const p = payload || (envelope && envelope.payload) || {};
+                const { heartRate, heartRateBpm, stressIndex } = p;
+                /* [v18 · 量纲守卫] 引擎给的是 stressIndex(0~100)，早期桥端假设 0~1。
+                 *   这里统一归一化再判阈：否则百分制 95 与归一化 0.95 会得到相反结论，
+                 *   而 `skipped` 又不区分「真的低」与「量纲错」—— 静默丢事件的经典坑。 */
+                const raw = Number(p.stressLevel ?? stressIndex);
+                const stress01 = raw > 1 ? raw / 100 : raw;
+                const hrVal = Number(heartRateBpm ?? heartRate ?? 0);
+                if (stress01 > 0.7) {
+                    commitFact(`[手环生物体征] 角色心率剧增至 ${hrVal} bpm，处于高应激状态`, ["biometric_stress", "health"], { heartRate: hrVal || null, stressLevel: stress01 });
+                } else { read.skipped++; }
+            } catch (e) { read.lastError = String((e && e.message) || e); }
         });
-        
+        read.subscribed.push('biometric_stress_alert');
+
         // 监听撤回与打字焦虑悬念
         this._eventBus.on("typing_anxiety_recall", (payload, envelope) => {
             try {
-                const { partner, hesitationMs } = payload || (envelope && envelope.payload) || {};
-                this.onFloorCommitted?.(null, [{ content: `[微信沟通悬念] 对话方 ${partner} 经历长达 ${hesitationMs}ms 犹豫后撤回了消息`, tag: "typing_anxiety" }]);
-            } catch (e) {}
+                const p = payload || (envelope && envelope.payload) || {};
+                const { partner, hesitationMs } = p;
+                commitFact(`[微信沟通悬念] 对话方 ${partner || '对方'} 经历长达 ${hesitationMs ?? 0}ms 犹豫后撤回了消息`, ["typing_anxiety", "wechat"], { partner: partner ?? null, hesitationMs: hesitationMs ?? null });
+            } catch (e) { read.lastError = String((e && e.message) || e); }
         });
+        read.subscribed.push('typing_anxiety_recall');
+
+        return { ok: read.subscribed.length === 3, subscribed: read.subscribed.slice() };
+    }
+    /** [v18] 反哺链路的可读读数（诊断面板/测试从这里读，不另造形状）。 */
+    getEvolutionRead() {
+        return this._evolutionRead ? Object.assign({}, this._evolutionRead) : { at: null, subscribed: [], written: 0, skipped: 0, note: 'not-mounted' };
     }
 
     // ---------------- 状态 ----------------

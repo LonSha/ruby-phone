@@ -68,12 +68,36 @@ export class HealthApp {
     //   保留实例与构造期注册的常驻监听器，避免重建实例导致监听器累积。
     this.data = new HealthData(this.storage);
   }
-
+  /**
+   * [v18 · 生产方接线] 手环采样节拍 → 演化管线。
+   *   【为什么挂这里】SmartWearableBiometricInteropV2 与进化管线此前全仓零调用方，
+   *     引擎写好了却没人喂数据，`biometric_stress_alert` 永远没有生产方。
+   *   【取什么作为情绪输入】不编造：用本 App 真实的生理阶段（getPhaseInfo）做映射 ——
+   *     产程/产兆/宫缩等高张力阶段 ⇒ panic，其余按 arousalLevel 走 flustered / normal；
+   *     每次按小时推进生理时间后采样一次，是"真实推进"而非定时器轮询。
+   *   任何异常都不影响健康 App 自身，失败只记在 window.VirtualPhone._evolution36Read。
+   */
+  sampleWearableIntoEvolution() {
+    try {
+      const rt = window.VirtualPhone?.evolutionRuntime;
+      if (!rt || typeof rt.onBiometricSample !== 'function') return 0;
+      const info = this.data?.getPhaseInfo?.() || {};
+      const phase = String(info.phase || '');
+      const highTension = ['产兆前驱', '第一产程', '第二产程', '第三产程', '产后恢复'].includes(phase);
+      const midTension = /敏感|波动|升高|坠胀|宫缩/.test(String(info.arousalLevel || ''));
+      const state = highTension ? 'panic' : (midTension ? 'romantic_tension' : 'normal');
+      return rt.onBiometricSample(state, false);
+    } catch (_e) { return 0; }
+  }
   render() {
     // [v2.56.0] 渲染是 App 首次真正被用户打开的时刻，宿主必然已就绪；此处重试一次
     //   _initHooks（内部幂等），覆盖构造期 SillyTavern context 尚未就绪、
     //   导致注入钩子静默未挂载的窗口。
     this._initHooks();
+    /* [v18 · 生产方接线] 打开健康 App 是「用户真的在看自己的生理状态」这一刻 ⇒
+     *   顺手采一次手环样本交给演化管线。偷懒但真实：不造假定时器，
+     *   只在真实发生的行为点采样（和微信发送时上报打字犹豫同一纪律）。 */
+    this.sampleWearableIntoEvolution();
     this.view.render(this.phoneShell.layerHost?.('health-main') || this.phoneShell.screen);
   }
 }

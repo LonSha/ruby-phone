@@ -61,6 +61,21 @@ import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask
  *   盘上的「生成中」卡住两小时也没有任何读数，用户能做的只有自己猜。 */
 import { checkStall, stallLine } from './config/stall-watch.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
+/* [v18·36项演化双计划 · 接线修复] 跨应用事件总线必须是**静态 import**。
+ *   修前写法：`const EventBusCls = (typeof PhoneEventBusPipeline !== "undefined" ? PhoneEventBusPipeline : null);`
+ *   —— index.js 是 ES module，裸标识符不会回落到 globalThis，且此文件从未 import 该类，
+ *   于是 EventBusCls 恒为 null ⇒ window.VirtualPhone.eventBus 从未被创建 ⇒
+ *   lonshaBridge.mountEvolutionPipeline() 从未执行 ⇒ 手机生活事件到记忆层的反哺链一直是断的。 */
+import PhoneEventBusPipeline from './phone/phone-event-bus-pipeline.js';
+/* [v18 · 生产方接线] 演化管线生产方：把真实业务动作（聊天片段/手环采样/打字犹豫）
+ *   转换成总线事件。ES module 内裸标识符不会回落到 globalThis，必须静态 import。 */
+import { mountEvolutionRuntime } from './phone/evolution36-runtime.js';
+/* [v18 · 生产方接线] runtime 的取类方式会回落到 globalThis，但**宿主从不 import 这三个引擎文件**
+ *   ⇒ globalThis 上根本没有它们 ⇒ 三条通道全部 missing（生产方是个空壳）。
+ *   这里静态 import 并注入实例：既保证模块被求值，也让引擎实例由宿主统一持有，不再分裂。 */
+import CrossAppDailyLifeFabric from './apps/daily/cross-app-daily-life-fabric.js';
+import SmartWearableBiometricInteropV2 from './apps/health/smart-wearable-biometric-interop-v2.js';
+import TypingHesitationRecallAnxiety from './apps/wechat/typing-hesitation-recall-anxiety.js';
 import { advanceDeviceRuntime } from './config/device-runtime.js';
 import { reportOpToWorldAxis, buildWorldAxisPhoneOp } from './config/phone-action-to-worldaxis-causal-feedback.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
@@ -2241,16 +2256,92 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             try {
                 mountLonShaBridge(storage, window.VirtualPhone.memoryCore);
             // [36项演化双计划] 挂载跨应用事件总线与双向桥生活事件反哺闭环
+            /* [v18 · 接线修复] 原实现有两个断点，现一并修掉：
+             *   ① 取类用裸标识符 `typeof PhoneEventBusPipeline` —— ES module 里不回落到 globalThis，
+             *      且此前没有 import ⇒ EventBusCls 恒 null ⇒ eventBus 从未创建。
+             *      现在改为文件顶部的静态 import（见量 import 段）。
+             *   ② 建好总线后从不校验是否真的挂上，失败也无读数。
+             *      现在把结果写进 window.VirtualPhone._evolution36Read，供诊断面板/测试读取。 */
             try {
+                const read = { at: Date.now(), bus: false, pipeline: false, error: '' };
                 if (!window.VirtualPhone.eventBus) {
-                    const EventBusCls = (typeof PhoneEventBusPipeline !== "undefined" ? PhoneEventBusPipeline : null);
-                    if (EventBusCls) window.VirtualPhone.eventBus = new EventBusCls();
+                    if (typeof PhoneEventBusPipeline === 'function') {
+                        window.VirtualPhone.eventBus = new PhoneEventBusPipeline();
+                    } else {
+                        read.error = 'PhoneEventBusPipeline-not-a-constructor';
+                    }
                 }
-                if (window.VirtualPhone.eventBus && window.VirtualPhone.lonshaBridge?.mountEvolutionPipeline) {
+                read.bus = !!window.VirtualPhone.eventBus;
+                if (read.bus && typeof window.VirtualPhone.lonshaBridge?.mountEvolutionPipeline === 'function') {
                     window.VirtualPhone.lonshaBridge.mountEvolutionPipeline(window.VirtualPhone.eventBus);
+                    read.pipeline = true;
                     console.log("[RubyPhone] ✓ 演化双计划：跨应用事件总线与LonSha双向桥反哺链路已融会贯通");
+                } else if (!read.bus) {
+                    console.warn("[RubyPhone] ⚠️ 演化管线：事件总线未能建立（" + (read.error || 'unknown') + '）');
+                } else {
+                    console.warn("[RubyPhone] ⚠️ 演化管线：lonshaBridge.mountEvolutionPipeline 不可用，生活事件将无法反哺记忆");
                 }
-            } catch (busErr) { console.warn("[RubyPhone] 演化管线事件总线挂载异常:", busErr); }
+                /* [v18 · 生产方接线] 上一轮只做了「订阅方」，全仓没有一处 emit ⇒ 订阅永远收不到。
+                 *   这里挂上生产方：业务动作（聊天片段 / 手环采样 / 打字犹豫）→ 引擎 → 总线 → 记忆反哺。
+                 *   引擎实例**由宿主注入**：runtime 自身只会回落到 globalThis，而宿主从不求值那三个
+                 *   引擎文件，靠回落必然是空壳（三条通道全 missing）。 */
+                try {
+                    if (read.bus) {
+                        const rt = mountEvolutionRuntime({
+                            bus: window.VirtualPhone.eventBus,
+                            scope: window,
+                            engines: {
+                                dailyFabric: new CrossAppDailyLifeFabric(),
+                                biometric: new SmartWearableBiometricInteropV2(),
+                                typingAnxiety: new TypingHesitationRecallAnxiety()
+                            }
+                        });
+                        window.VirtualPhone.evolutionRuntime = rt;
+                        read.producer = !!rt && rt.ok === true;
+                        read.producerWired = rt && Array.isArray(rt.wired) ? rt.wired.slice() : [];
+                        read.producerMissing = rt && Array.isArray(rt.missing) ? rt.missing.slice() : [];
+                        if (!read.producer) console.warn("[RubyPhone] ⚠️ 演化管线：生产方未就绪", rt && rt.error);
+                        else if (read.producerMissing.length) console.warn("[RubyPhone] ⚠️ 演化管线：部分引擎缺席", read.producerMissing);
+                    }
+                } catch (rtErr) {
+                    read.producer = false;
+                    read.error = String((rtErr && rtErr.message) || rtErr);
+                    console.warn("[RubyPhone] 演化管线生产方挂载异常:", rtErr);
+                }
+                window.VirtualPhone._evolution36Read = read;
+                /* [v18 · 生产方接线] 真实业务调用方①：每轮生成开始前，把最近一段手机侧文本
+                 *   交给生活织网引擎（餐饮/日程/出行/相册识别），产出的事件经总线落进记忆。
+                 *   用「最近已落地的 AI 楼层」而非用户输入：那是手机里真实发生过的生活线索。 */
+                try {
+                    const seedEvolutionFromRecentFloor = () => {
+                        try {
+                            const rt = window.VirtualPhone.evolutionRuntime;
+                            if (!rt || typeof rt.onChatSnippet !== 'function') return;
+                            const ctx = window.SillyTavern?.getContext?.();
+                            const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+                            for (let i = chat.length - 1; i >= 0 && i >= chat.length - 4; i--) {
+                                const raw = typeof chat[i]?.mes === 'string' ? chat[i].mes : '';
+                                const text = raw.replace(/\s+/g, ' ').trim();
+                                if (text.length >= 6) { rt.onChatSnippet(text.slice(0, 400)); break; }
+                            }
+                            /* 手环采样：只在健康 App 已被用户打开过（实例在位）时补采一次，
+                             *   用真实生理阶段做输入，不为了「有数据」去造假状态。 */
+                            try { window.VirtualPhone?.healthApp?.sampleWearableIntoEvolution?.(); } catch (_e) {}
+                        } catch (_e) { /* 演化链失败不影响生成 */ }
+                    };
+                    window.VirtualPhone._seedEvolutionFromRecentFloor = seedEvolutionFromRecentFloor;
+                    const ctx2 = window.SillyTavern?.getContext?.();
+                    if (ctx2?.eventSource && ctx2?.event_types?.MESSAGE_RECEIVED) {
+                        ctx2.eventSource.on(ctx2.event_types.MESSAGE_RECEIVED, seedEvolutionFromRecentFloor);
+                    }
+                    if (ctx2?.eventSource && ctx2?.event_types?.GENERATION_STARTED) {
+                        ctx2.eventSource.on(ctx2.event_types.GENERATION_STARTED, seedEvolutionFromRecentFloor);
+                    }
+                } catch (_e) { /* 静默：钩子缺席不影响启动 */ }
+            } catch (busErr) {
+                window.VirtualPhone._evolution36Read = { at: Date.now(), bus: false, pipeline: false, error: String((busErr && busErr.message) || busErr) };
+                console.warn("[RubyPhone] 演化管线事件总线挂载异常:", busErr);
+            }
                 // [RB] 协调注入: 生成前由桥统一把手机记忆注入最新楼层 (本地钩子自动让位)
                 try {
                     const rbCtx = window.SillyTavern?.getContext?.();

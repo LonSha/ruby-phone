@@ -9924,6 +9924,10 @@ renderChatRoom(chat) {
         // 📱 输入中：有字就打断等待；删空时若仍在 focus，保持安静等待 blur 再决定
         input?.addEventListener('input', (e) => {
             this.inputText = e.target.value;
+            /* [v18 · 生产方接线] 记录打字节奏时间戳：发送时用它与发送时刻的差
+             *   估算「犹豫时长」，再交给演化管线生产方判定这条悬念要不要落进记忆。
+             *   只记时间，不改变任何发送行为。 */
+            this._lastTypingAt = Date.now();
             if (this.activeQuickReplyKey !== 'time') {
                 currentView.querySelectorAll('.quick-reply-live-text').forEach(el => {
                     const text = String(e.target.value || '').trim();
@@ -10943,6 +10947,20 @@ renderChatRoom(chat) {
                 ? this._buildWechatRealTimeFields()
                 : {};
             const submittedText = input.value;
+            /* [v18 · 生产方接线] 打字犹豫 → 演化管线：用户打了一段又大幅改动/删减才发出，
+             *   正是「打了又删」这种潜台词物证。交一条给生产方，由它决定是否升级为悬念事实。
+             *   全程 try 包裹：这条链挂了绝不能影响发送。 */
+            try {
+                const rt = window.VirtualPhone?.evolutionRuntime;
+                const rawDraft = String(submittedText || '');
+                const sentText = String(text || '');
+                if (rt && typeof rt.onTypingHesitation === 'function'
+                    && rawDraft.trim() && rawDraft !== sentText && rawDraft.length > sentText.length) {
+                    const durSec = Math.max(0.5, ((Date.now() - Number(this._lastTypingAt || Date.now())) / 1000));
+                    rt.onTypingHesitation(targetChatId, rawDraft, sentText, durSec);
+                }
+                delete this._lastTypingAt;
+            } catch (_e) { /* 演化链失败不影响发送 */ }
             const message = {
                 from: 'me', content: text, type: 'text', avatar: this.app.wechatData.getUserInfo().avatar,
                 quote: this.activeQuote,  // 🔥 携带引用信息
