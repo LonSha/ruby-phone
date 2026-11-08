@@ -13,7 +13,6 @@ export function applyPhysicalDamage(currentState = {}, damageLevel = "mild") {
         critical: { cracksCount: 15, touchDeadZone: true, batteryDrainRate: 5.0, speakerStatic: true }
     };
     const dmg = levels[damageLevel] || levels.mild;
-
     return {
         healthStatus: damageLevel,
         cracksOverlayActive: true,
@@ -23,3 +22,6 @@ export function applyPhysicalDamage(currentState = {}, damageLevel = "mild") {
         narrativeNote: "[手机硬件物理残损] 屏幕边缘布满裂痕，触控操作偶有迟滞。"
     };
 }
+
+export const simulatePhysicalDegradation = applyPhysicalDamage;
+

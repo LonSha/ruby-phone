@@ -1,4 +1,5 @@
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
+import { RubyPhoneLonShaBidirectionalFeedbackHub } from './ruby-phone-lonsha-bidirectional-feedback-hub.js';
 /* ========================================================
  *  LonSha 记忆引擎 ↔ RubyPhone 双向数据桥 (LonShaBridge) v2
  *
@@ -136,6 +137,8 @@ export class LonShaBridge {
         this._seenPoolCount = -1;
         this._load();
         this._holographicBusEvents = this._readHolographicEvents();
+        // [v4.139.0 · R17-O4] 手机日常操作双向因果反哺中枢
+        this.feedbackHub = new RubyPhoneLonShaBidirectionalFeedbackHub(this);
         this._promoteInjection();
     }
     // ---------------- 配置持久化 (挂 extensionSettings) ----------------
@@ -540,8 +543,9 @@ export class LonShaBridge {
         // 若 LonSha 记忆插件挂载在同一 window，双向即时穿透
         try {
             const win = typeof window !== 'undefined' ? window : null;
-            if (win?.LonShaMemoryPlugin?.engine?.onRubyPhoneHolographicEvent) {
-                win.LonShaMemoryPlugin.engine.onRubyPhoneHolographicEvent(event);
+            const target = win?.LonShaMemory?.engine || win?.LonShaMemoryPlugin?.engine || win?.LonShaMemory;
+            if (target && typeof target.onRubyPhoneHolographicEvent === 'function') {
+                target.onRubyPhoneHolographicEvent(event);
             }
         } catch (_e) {}
         return event;
@@ -741,9 +745,16 @@ export class LonShaBridge {
             const ctx = window.SillyTavern?.getContext?.();
             if (!ctx?.setExtensionPrompt) return false;
             // 复用 MemoryCore 的指令块构建 (含背景前提/相关记忆/使用规则)
-            const directive = this.memoryCore.buildPromptDirective(
+            let directive = this.memoryCore.buildPromptDirective(
                 this.memoryCore._recentTexts ? this.memoryCore._recentTexts(4) : []
             );
+            // [R17-O4] 融合手机全息操作因果反哺提示词
+            if (this.feedbackHub && typeof this.feedbackHub.consumePendingDirectives === 'function') {
+                const feedbackDir = this.feedbackHub.consumePendingDirectives();
+                if (feedbackDir) {
+                    directive = directive ? `${directive}\n${feedbackDir}` : feedbackDir;
+                }
+            }
             if (!directive) {
                 try { ctx.setExtensionPrompt('rubyphone_memory_coord', '', 1, 0); } catch (e) {}
                 return false;

@@ -11,15 +11,12 @@ export function calculateVirtualSlice(totalItems = 0, scrollTop = 0, viewportHei
     const st = Math.max(0, Number(scrollTop));
     const vh = Math.max(100, Number(viewportHeight));
     const ih = Math.max(10, Number(itemHeight));
-
     const totalHeight = total * ih;
     const startIndex = Math.max(0, Math.floor(st / ih) - 2);
     const visibleCount = Math.ceil(vh / ih) + 4;
     const endIndex = Math.min(total, startIndex + visibleCount);
-
     const topSpacerHeight = startIndex * ih;
     const bottomSpacerHeight = Math.max(0, (total - endIndex) * ih);
-
     return {
         startIndex,
         endIndex,
@@ -29,3 +26,17 @@ export function calculateVirtualSlice(totalItems = 0, scrollTop = 0, viewportHei
         renderedCount: endIndex - startIndex
     };
 }
+
+export class VirtualSliceScrollingFPSBooster {
+    constructor(options = {}) {
+        this.itemHeight = options.itemHeight || 40;
+        this.viewportHeight = options.viewportHeight || 400;
+        this.bufferCount = options.bufferCount || 4;
+    }
+
+    computeSlice(scrollTop = 0, totalItems = 0) {
+        return calculateVirtualSlice(totalItems, scrollTop, this.viewportHeight, this.itemHeight);
+    }
+}
+
+export default VirtualSliceScrollingFPSBooster;
