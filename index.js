@@ -2240,6 +2240,17 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             // LonSha 记忆引擎 ↔ RubyPhone 双向数据桥
             try {
                 mountLonShaBridge(storage, window.VirtualPhone.memoryCore);
+            // [36项演化双计划] 挂载跨应用事件总线与双向桥生活事件反哺闭环
+            try {
+                if (!window.VirtualPhone.eventBus) {
+                    const EventBusCls = (typeof PhoneEventBusPipeline !== "undefined" ? PhoneEventBusPipeline : null);
+                    if (EventBusCls) window.VirtualPhone.eventBus = new EventBusCls();
+                }
+                if (window.VirtualPhone.eventBus && window.VirtualPhone.lonshaBridge?.mountEvolutionPipeline) {
+                    window.VirtualPhone.lonshaBridge.mountEvolutionPipeline(window.VirtualPhone.eventBus);
+                    console.log("[RubyPhone] ✓ 演化双计划：跨应用事件总线与LonSha双向桥反哺链路已融会贯通");
+                }
+            } catch (busErr) { console.warn("[RubyPhone] 演化管线事件总线挂载异常:", busErr); }
                 // [RB] 协调注入: 生成前由桥统一把手机记忆注入最新楼层 (本地钩子自动让位)
                 try {
                     const rbCtx = window.SillyTavern?.getContext?.();
