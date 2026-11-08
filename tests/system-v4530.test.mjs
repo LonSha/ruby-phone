@@ -32,6 +32,15 @@ const ME = await import(pathToFileURL(rel(ME_REL)).href);
 
 function vnum(v) { return v.split('.').map(Number).reduce((a, b, i) => a + b * Math.pow(100, 2 - i), 0); }
 
+/* 负控制副本的落盘清单：跑完必须清掉。
+ * 教训：旧版只写不删，仓库里长期躺着 `.tmp_broken_*.js`，被 audit-orphan-modules
+ * 判成「死文件」（它们确实零引用）。负控制残留会污染全仓审计，必须在退出时回收。 */
+const TEMP_FILES = [];
+process.on('exit', () => {
+  for (const f of TEMP_FILES) {
+    try { fs.rmSync(f, { force: true }); } catch { /* 清理失败不影响测试结论 */ }
+  }
+});
 function breakSource(filePath, anchor, replacement, suffix) {
   let code = read(filePath);
   const idx = code.indexOf(anchor);
@@ -41,6 +50,7 @@ function breakSource(filePath, anchor, replacement, suffix) {
   const broken = before + replacement + after + (suffix || '');
   const tmp = path.join(ROOT, '.tmp_broken_' + path.basename(filePath));
   fs.writeFileSync(tmp, broken, 'utf8');
+  TEMP_FILES.push(tmp);
   return pathToFileURL(tmp).href;
 }
 

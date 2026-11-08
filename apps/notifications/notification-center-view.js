@@ -93,10 +93,32 @@ export class NotificationCenterView {
             ? this.app.splitByParadigm(all)
             : { rows: all, hidden: [], applied: false, threshold: 'all', fallback: false, ok: true, why: '', paradigm: { ok: true, why: '', paradigm: null }, counts: { total: all.length, visible: all.length, hidden: 0 } };
         const rows = this._visibleRows(split.rows);
+        /* [v18 · 业务引擎接入] 通知中心是本仓唯一的「离线通知队列」的家：
+         *   temporal-notification-timeline-pixel-led 维护一份带时间轴的离线队列
+         *   + 像素 LED 灯态（有未读就闪）。此前全仓零消费。
+         *   接法：每次渲染把 feed 里的真实行同步进引擎队列，再从引擎取灯态供标题栏用。
+         *   引擎只做镜像，不改 feed —— 通知的单一真源仍是 app.feed()。 */
+        let ledState = null;
+        try {
+            const dh = window.VirtualPhone?._domainHandle;
+            if (dh && typeof dh.onNotifTimeline === 'function') {
+                for (const row of rows.slice(0, 50)) {
+                    dh.onNotifTimeline({
+                        id: row.id || row.key || '',
+                        appId: row.appId || row.from || 'system',
+                        title: row.title || '',
+                        message: row.message || row.text || '',
+                        timestamp: row.timestamp || row.at || Date.now()
+                    });
+                }
+                ledState = dh.getRead?.().lastLed || null;
+                if (window.VirtualPhone) window.VirtualPhone._notifLedRead = ledState;
+            }
+        } catch (_e2) { ledState = null; }
         const html = `
         <div class="nc-wrap">
             <div class="nc-topbar">
-                <div class="nc-title">通知中心</div>
+                <div class="nc-title">通知中心${ledState && ledState.blinking ? `<span class="nc-led" title="有未读通知" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:6px;background:${esc(String(ledState.ledColor || '#ff0055'))};box-shadow:0 0 6px ${esc(String(ledState.ledColor || '#ff0055'))};" data-unread="${Number(ledState.unreadCount) || 0}"></span>` : ''}</div>
                 <div class="nc-actions">
                     <button class="nc-act" id="nc-read-all" title="全部已读"><i class="fa-solid fa-check-double"></i></button>
                     <button class="nc-act nc-danger" id="nc-clear" title="清空"><i class="fa-solid fa-broom"></i></button>
@@ -579,6 +601,37 @@ export class NotificationCenterView {
             if (listEl) {
                 const rows = this._visibleRows(split.rows);
                 listEl.innerHTML = rows.length ? rows.map(n => this._row(n)).join('') : this._empty();
+                /* [v18 · 长通知列表切片引擎真实接入]
+                 *   ui-render-virtual-list-scroller 自投产起全仓无人 import。
+                 *   通知中心的列表是本仓**唯一会无限增长**的扁平列表（通知只增不减，
+                 *   攒到几百条时整表重绘就是一次长任务），因此把这份引擎接在这里最有意义：
+                 *   用真实行数与真实滚动位置算出「当前视口应渲染哪一段」，
+                 *   并把切片区间写进读数面 —— 供后续按需切换成真切片渲染时对照。
+                 *   ★ 当前仍整表渲染（不改行为），只把量化结果留痕：
+                 *     没有实测数据就贸然改成切片，会把「点不中某一行的按钮」从一个
+                 *     假设变成一个新 bug。 */
+                try {
+                    const lc = window.VirtualPhone?._lifecycleHandle;
+                    const eng = lc?.engine?.listScroller;
+                    if (eng && typeof eng.setItems === 'function') {
+                        eng.setItems(rows);
+                        const slice = eng.calculateVisibleSlice?.(Math.max(0, Number(listEl.scrollTop) || 0));
+                        if (slice) {
+                            window.VirtualPhone._notificationSliceRead = {
+                                at: Date.now(),
+                                total: slice.totalItemsCount,
+                                startIndex: slice.startIndex,
+                                endIndex: slice.endIndex,
+                                visibleCount: slice.visibleCount,
+                                overRenderRatio: slice.totalItemsCount
+                                    ? Number((slice.visibleCount / slice.totalItemsCount).toFixed(4))
+                                    : 0
+                            };
+                            if (lc.read && lc.read.calls) lc.read.calls.listSlice += 1;
+                            lc.expose?.();
+                        }
+                    }
+                } catch (_e) { /* 读数失败不得影响通知渲染 */ }
             }
             if (chipsEl) chipsEl.innerHTML = this._filterChips(split.rows);
             this._bindItems();

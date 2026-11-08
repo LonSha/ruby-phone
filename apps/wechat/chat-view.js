@@ -2859,6 +2859,33 @@ renderChatRoom(chat) {
             loaded: this._windowSizeOf(chat.id), pageSize: CHAT_WINDOW_SIZE
         });
         this._lastRenderedWindow = win;
+        /* [v18 · 万条兜底切片引擎真实接入]
+         *   virtual-slice-scrolling-fps-booster 自投产起全仓无人 import。
+         *   它与其他两份虚拟滚动的分工是**极端场景兜底**：
+         *   会话总量 ≥2000 条时，这条路径给出「如果按滚动位置硬切，应该渲染哪一段」，
+         *   用于在真机上量化「tailWindowOf 的 200 条窗口是否真的够」。
+         *   ★ 只读不留改：tailWindowOf 是当前唯一渲染口径，这里不替换它。 */
+        try {
+            const total = Array.isArray(messages) ? messages.length : 0;
+            if (total >= 2000) {
+                const lc = window.VirtualPhone?._lifecycleHandle;
+                const booster = lc?.engine?.sliceBooster;
+                if (booster) {
+                    const probe = booster.computeSlice?.(Math.max(0, Number(this._lastScrollTop) || 0), total);
+                    if (probe) {
+                        window.VirtualPhone._hugeSliceRead = {
+                            at: Date.now(), chatId: String(chat.id || ''), total,
+                            windowSize: CHAT_WINDOW_SIZE,
+                            sliceStart: probe.startIndex, sliceEnd: probe.endIndex,
+                            renderedCount: probe.renderedCount,
+                            windowCoversSlice: (total - CHAT_WINDOW_SIZE) <= probe.startIndex
+                        };
+                        if (lc.read && lc.read.calls) lc.read.calls.listSlice += 1;
+                        lc.expose?.();
+                    }
+                }
+            }
+        } catch (_e) { /* 兜底读数失败不影响首屏渲染 */ }
         this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
         this._lastRenderedMsgIds[String(chat.id || '')] = messages.map(m => String(m?.id ?? ''));
         const isCurrentChatSending = this.isSending && String(this._activeSendingChatId || '') === String(chat.id || '');
@@ -3588,6 +3615,40 @@ renderChatRoom(chat) {
         if (isNearBottom) {
             container.scrollTop = container.scrollHeight;
         }
+        /* [v18 · 60fps 虚拟滚动引擎真实接入]
+         *   ui-virtual-list-scroller-60fps 自投产起全仓无人 import。这里把它接到
+         *   **本仓 13 处刷新路径的主通道**（smartUpdateMessages）上：
+         *   用真实的消息条目、真实视口高度、真实滚动位置做一次切片计算，
+         *   产出 DOM 池规模 / 内存压力比 / 切片区间，写进 lifecyclye 读数面与
+         *   window.VirtualPhone._chatSliceRead，供真机诊断与回归断言。
+         *   ★ 只做**并行读数**，不改渲染：本仓已有 tailWindowOf 尾部窗口机制
+         *     （5000 条实测已降到窗口大小），再叠一层 DOM 复用属于重复实现，
+         *     反而会与手势/长按/引用绑定打架。引擎的价值在这里是「量化」，
+         *     不是「再渲染一遍」。 */
+        try {
+            const lc = window.VirtualPhone?._lifecycleHandle;
+            const eng = lc?.engine?.chatScroller60;
+            if (eng && typeof eng.setDataset === 'function') {
+                const items = Array.isArray(win && win.items) ? win.items : [];
+                eng.setDataset(items, container.clientHeight || 640);
+                eng.scrollTo(Math.max(0, Number(container.scrollTop) || 0));
+                const slice = eng.computeVirtualSlice?.();
+                if (slice) {
+                    window.VirtualPhone._chatSliceRead = {
+                        at: Date.now(),
+                        chatId: cid,
+                        totalCount: slice.totalCount,
+                        startIndex: slice.startIndex,
+                        endIndex: slice.endIndex,
+                        domPoolSize: slice.domPoolSize,
+                        memoryPressureRatio: slice.memoryPressureRatio,
+                        fpsMode: slice.fpsMode
+                    };
+                    if (lc.read && lc.read.calls) lc.read.calls.listSlice += 1;
+                    lc.expose?.();
+                }
+            }
+        } catch (_e) { /* 读数失败不得影响消息刷新 */ }
     }
 
     // 渲染单条消息（全新红包样式）
@@ -9928,6 +9989,19 @@ renderChatRoom(chat) {
              *   估算「犹豫时长」，再交给演化管线生产方判定这条悬念要不要落进记忆。
              *   只记时间，不改变任何发送行为。 */
             this._lastTypingAt = Date.now();
+            /* [v18 · 业务引擎接入] 智能回复气泡预测：草稿内容变了就重算三档气泡。
+             *   这是 smart-reply-predictive-chips 的唯一真实消费方（此前全仓零调用）。
+             *   引擎抛错只记读数，不影响输入。 */
+            try {
+                const dh = window.VirtualPhone?._domainHandle;
+                if (dh && typeof dh.predictReplyChips === 'function') {
+                    this._replyChips = dh.predictReplyChips(e.target.value, 'neutral');
+                }
+                /* 输入法热词候选：另一个引擎，跟着同一个输入事件走（不同引擎不同产出） */
+                if (dh && typeof dh.onSlangPredict === 'function') {
+                    this._slangCandidates = dh.onSlangPredict(e.target.value, {});
+                }
+            } catch (_e) { /* 引擎故障不影响输入 */ }
             if (this.activeQuickReplyKey !== 'time') {
                 currentView.querySelectorAll('.quick-reply-live-text').forEach(el => {
                     const text = String(e.target.value || '').trim();
@@ -9973,6 +10047,13 @@ renderChatRoom(chat) {
                     this.showQuickReplies = false;
                     this._setCustomEmojiSelectionMode(false);
                 }
+                /* [v18 · 业务引擎接入] 真实发送动作 = 两个引擎的真实触发点：
+                 *   retro-haptic-acoustic-synthesizer 的 playSendWhoosh（发送音效+上扬触感）
+                 *   haptic-spatial-audio-feedback-engine 的发送触感。
+                 *   放在 handleSendClick **之前**：发送失败时用户仍能听到/感到反馈。 */
+                try {
+                    window.VirtualPhone?._domainHandle?.onMessageSent?.();
+                } catch (_e) { /* 引擎故障不影响发送 */ }
                 this.handleSendClick(currentInput);
             }
             // 300毫秒防抖，防止触屏和鼠标事件同时触发导致跳过6秒等待

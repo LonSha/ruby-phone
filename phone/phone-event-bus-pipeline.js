@@ -47,6 +47,30 @@ export class PhoneEventBusPipeline {
         if (this.eventHistory.length > this.options.maxHistoryLog) {
             this.eventHistory.shift();
         }
+        /* [v18 · IPC 背压引擎真实接入]
+         *   ipc-event-bus-backpressure-controller 自投产起全仓无人 import。
+         *   它与本管线是**互补**关系而不是重复：本管线负责「投递与死信」，
+         *   它负责「令牌桶限流」—— 高频事件（消息刷屏、批量通知）需要这一层，
+         *   否则监听方会被瞬时洪峰打爆。
+         *   接在 emit 的最前段：被背压丢弃的事件直接记进读数面，
+         *   而不是让它在后面无声消失。 */
+        try {
+            const lc = window.VirtualPhone?._lifecycleHandle;
+            const ipc = lc?.engine?.ipc;
+            if (ipc && typeof ipc.publish === 'function') {
+                const priority = options.priority || 'normal';
+                const pub = ipc.publish(eventType, envelope, priority);
+                if (pub && pub.delivered === false) {
+                    window.VirtualPhone._ipcBackpressureRead = {
+                        at: Date.now(), type: eventType, reason: pub.reason,
+                        droppedTotal: ipc.droppedEventCount
+                    };
+                    if (lc.read && lc.read.calls) lc.read.calls.ipcDropped += 1;
+                } else if (lc && lc.read && lc.read.calls) {
+                    lc.read.calls.ipcPublished += 1;
+                }
+            }
+        } catch (_e) { /* 背压层异常绝不阻断真实投递 */ }
 
         const subscribers = this.listeners.get(eventType);
         if (!subscribers || subscribers.size === 0) {

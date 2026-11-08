@@ -557,6 +557,17 @@ export class SearchView {
             /* [v3.17.0 R-O1] 键入即作废上一轮全历史扫描的代际：上一轮可能还在分片跑，
              *   不作废它就会把**旧词**的命中写回面板（不报错、只错结果）。 */
             this._qtoken();
+            /* [v18 · 业务引擎接入] 拼音直达路由：用户敲的是拼音（如 "wx"、"an'an"）时，
+             *   global-pinyin-search-deeplink-router 能直接给出「该跳到哪个 App」，
+             *   不必等中文命中。此前该引擎全仓零消费。
+             *   它只做**补充提示**：路由命中不覆盖普通搜索结果，输错也绝不阻断搜索。 */
+            try {
+                const dh = window.VirtualPhone?._domainHandle;
+                if (dh && typeof dh.onGlobalSearch === 'function') {
+                    const route = dh.onGlobalSearch(this._keyword, this._deeplinkIndex?.() || []);
+                    this._pinyinRoute = route || null;
+                }
+            } catch (_e2) { this._pinyinRoute = null; }
             this._paint();
             /* [v4.15.0 · R4-O3] 输入后捕获一次(节流:不能每敲一个字写一次盘)。 */
             this._capture();

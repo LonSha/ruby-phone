@@ -1105,6 +1105,34 @@ export class PhoneStorage {
             if (!isChatData) {
                 this._setToLocalStorage(key, value, isChatData);
             }
+            /* [v18 · 分片存储引擎真实接入]
+             *   sqlite-wasm-zero-copy-indexeddb 自投产起全仓无人 import。
+             *   它的价值是「把大块数据切成 64KB 分片、只冲刷脏块」；
+             *   接在这一层是因为**这里是全仓唯一的持久化咽喉点**（所有 set 都过这里）。
+             *   只对确实大的载荷（≥32KB，序列化后）分片 —— 小键分片反而增加开销；
+             *   且只记账不改变真实落盘路径：真写仍由上面两条 save 完成，
+             *   分片层是并行镜像，供「大档案读回加速」后续使用。
+             *   ★ 不用 try 包住整个 set：失败绝不能影响真实存档。 */
+            try {
+                const lc = window.VirtualPhone?._lifecycleHandle;
+                if (lc && typeof lc.persistShards === 'function') {
+                    let sizeEstimate = 0;
+                    try {
+                        sizeEstimate = typeof value === 'string'
+                            ? value.length
+                            : JSON.stringify(value).length;
+                    } catch (_e) { sizeEstimate = 0; }
+                    if (sizeEstimate >= 32768) {
+                        const r = lc.persistShards({ [key]: value });
+                        if (r && r.flushedCount) {
+                            window.VirtualPhone._shardRead = {
+                                at: Date.now(), key, sizeEstimate,
+                                flushedCount: r.flushedCount, totalBytes: r.totalBytes
+                            };
+                        }
+                    }
+                }
+            } catch (_e) { /* 分片镜像失败不得影响真实落盘 */ }
 
         } catch (e) {
             console.error(`[PhoneStorage] 保存 ${key} 失败:`, e);

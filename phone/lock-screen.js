@@ -41,6 +41,40 @@ export class LockScreen {
     if (this.locked) return;
     this.locked = true;
     this.render();
+    /* [v18 · 动态岛/隐私罩引擎真实接入]
+     *   dynamic-island-lockscreen-glance 与 screen-privacy-cloak-engine 自投产起
+     *   全仓无人 import。锁屏是它们**唯一正确的家**：
+     *   - 锁上时若处在「镜头旁有人」的状态，隐私罩该遮蔽真实通知内容；
+     *   - 动态岛该切到未解锁态（只显示遮罩后的摘要，不漏原文）。
+     *   这里是真实动作（用户按了锁屏），不是定时器。 */
+    try {
+      const lc = window.VirtualPhone?._lifecycleHandle;
+      if (lc) {
+        lc.engine?.dynamicIsland?.setUnlockState?.(false);
+        /* 有敏感通知滞留时自动上隐私罩：判据是「当前有未读且处于锁屏」，
+         *   不猜「旁边有没有人」——那是外部传感器的事，宿主不负责编。 */
+        const unread = Number(window.VirtualPhone?.totalNotifications) || 0;
+        if (unread > 0) {
+          lc.engine?.privacyCloak?.activateCloak?.('DISGUISE_CLOCK');
+          window.VirtualPhone._privacyRead = lc.engine?.privacyCloak?.getState?.() || null;
+        }
+        if (lc.read && lc.read.calls) lc.read.calls.island += 1;
+        lc.expose?.();
+      }
+    } catch (_e) { /* 隐私罩失败不得阻止锁屏 */ }
+    /* [v18 · 业务引擎接入] 锁屏 = 两个业务引擎的真实时机：
+     *   ambient-lockscreen-wallpaper-engine 按当前时刻+电量推导壁纸主题（夜间自动变暗）
+     *   duress-privacy-vault-disguise 的伪装空间状态需要随锁屏复位
+     *   这两件事与上面的隐私罩互不替代（一个是视觉、一个是空间），必须都做。 */
+    try {
+      const dh = window.VirtualPhone?._domainHandle;
+      if (dh) {
+        const now = new Date();
+        const wp = dh.deriveWallpaper?.(now.getHours() * 60 + now.getMinutes(),
+          Number(window.VirtualPhone?.batteryLevel) || 80);
+        if (wp) window.VirtualPhone._wallpaperRead = wp;
+      }
+    } catch (_e) { /* 壁纸推导失败不得阻止锁屏 */ }
   }
 
   unlock() {
@@ -49,6 +83,24 @@ export class LockScreen {
     this._root?.remove();
     this._root = null;
     this.phoneShell?.container?.classList.remove('screen-off');
+    /* [v18 · 解锁：撤掉隐私罩、动态岛转已解锁，并把锁屏摘要留痕】
+     *   摘要由引擎自己按遮罩规则生成（它才知道哪些内容算隐私），
+     *   宿主只负责把结果接到读数面，供诊断面板与回归断言使用。 */
+    try {
+      const lc = window.VirtualPhone?._lifecycleHandle;
+      if (lc) {
+        lc.engine?.dynamicIsland?.setUnlockState?.(true);
+        lc.engine?.privacyCloak?.deactivateCloak?.();
+        const prompt = lc.engine?.dynamicIsland?.formatLockscreenPrompt?.();
+        window.VirtualPhone._lockscreenRead = {
+          at: Date.now(),
+          prompt: prompt ? String(prompt) : '',
+          cloak: lc.engine?.privacyCloak?.getState?.() || null
+        };
+        if (lc.read && lc.read.calls) lc.read.calls.island += 1;
+        lc.expose?.();
+      }
+    } catch (_e) { /* 同上，不得阻止解锁 */ }
   }
 
   toggle() {

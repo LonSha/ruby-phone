@@ -16,6 +16,40 @@ export class RubyPhoneLonShaBidirectionalFeedbackHub {
         this.pendingDirectives = [];
         return lines.join('\n');
     }
+    /**
+     * 通用指令入队口 —— 供**非本 hub 专属**的引擎投递提示词。
+     *
+     * 为什么需要它：本仓有一批「氛围/情境」引擎（通话声场、起居物联、电量、
+     *   弱信号、掌机触感…）产出的是 `promptDirective` 文本，但它们既不是
+     *   通讯录也不是账单，没有对应的 onXxx 方法。修前这些字符串只能烂在
+     *   自己的实例里 —— 引擎写完了，模型永远看不到。
+     *   `applyCoordinatedInjection()` 每次生成前都会调用
+     *   consumePendingDirectives()，所以只要从这里入队，产出就有了真实消费方。
+     *
+     * 纪律：
+     *   · 只接收非空字符串，逐条去重（同一句重复投递等于噪声）；
+     *   · 队列上限 24 条，超出丢最旧的 —— 一次生成塞 40 条环境描述会淹掉正文；
+     *   · 永不抛（调用方是宿主事件回调，抛错会打断用户操作）。
+     */
+    pushDirective(line, source = 'ambient') {
+        try {
+            const text = String(line == null ? '' : line).trim();
+            if (!text) return false;
+            if (this.pendingDirectives.includes(text)) return false;
+            this.pendingDirectives.push(text);
+            while (this.pendingDirectives.length > 24) this.pendingDirectives.shift();
+            this.lastDirectiveSource = String(source || 'ambient');
+            return true;
+        } catch (_e) { return false; }
+    }
+    /** 队列现状（诊断用：证明「引擎产出真的入队了」而不是只调了一次函数） */
+    getDirectiveQueueState() {
+        return {
+            pending: this.pendingDirectives.length,
+            preview: this.pendingDirectives.slice(0, 3).map(s => String(s).slice(0, 60)),
+            lastSource: this.lastDirectiveSource || null
+        };
+    }
 
     /**
      * 捕获通讯录角色备注修改事件并反哺记忆

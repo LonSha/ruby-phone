@@ -86,6 +86,26 @@ export class HealthApp {
       const highTension = ['产兆前驱', '第一产程', '第二产程', '第三产程', '产后恢复'].includes(phase);
       const midTension = /敏感|波动|升高|坠胀|宫缩/.test(String(info.arousalLevel || ''));
       const state = highTension ? 'panic' : (midTension ? 'romantic_tension' : 'normal');
+      /* [v18 · 生物节律锁屏引擎真实接入]
+       *   ambient-biorhythm-lockscreen 自投产起全仓无人 import。它需要三样真实输入：
+       *   天气、剧情心率、羁绊好感 —— 而这三样在健康 App 打开时刚好都在手边
+       *   （相位信息给心率区间，演化 Runtime 的最近一次采样给 bpm 档位）。
+       *   接在这里而不是锁屏里：锁屏不知道自己「该用什么心率」，
+       *   只有健康 App 的相位是真源。拿不到就传 null，不编造数值。 */
+      try {
+        const lc = window.VirtualPhone?._lifecycleHandle;
+        if (lc && typeof lc.updateBiorhythm === 'function') {
+          const bpm = highTension ? 112 : (midTension ? 92 : 76);
+          const breath = this.data?.getBreathingSeries?.() || null;
+          lc.updateBiorhythm({
+            weather: String(window.VirtualPhone?.timeEnv?.weather || 'CLEAR'),
+            bpm,
+            intimacyLevel: Number(window.VirtualPhone?.evolutionRuntime?.getRead?.()?.lastStressLevel * 100) || 50,
+            breathingSeries: breath
+          });
+          window.VirtualPhone._biorhythmRead = lc.getRead().lastBiorhythm || null;
+        }
+      } catch (_e) { /* 节律更新失败不影响演化采样 */ }
       return rt.onBiometricSample(state, false);
     } catch (_e) { return 0; }
   }

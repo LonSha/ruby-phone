@@ -3064,6 +3064,43 @@ ${memoryLines.slice(0, 10).join('\n')}
         // 添加到数据
         if (!sameRetry) {
             this.app.wechatData.addMoment(moment);
+            /* [v18 · 业务引擎接入] 发出一条朋友圈 ⇒ npc-social-graph-dynamic-moments
+             *   按「这条内容 + 在场角色」算出谁会点赞。此前该引擎全仓零消费
+             *   （它有测试，但生产侧从未调用过 —— 朋友圈点赞永远是 0）。
+             *   纪律：
+             *     · 只写 likeList（点赞是轻动作、可撤销）；**不写评论**
+             *       （评论应当是角色真的开口说话，不能凭空造台词）；
+             *     · 可见性为「仅自己」时不触发（自己给自己点赞是错的）；
+             *     · 引擎抛错就保持点赞为 0，绝不让发朋友圈失败。 */
+            try {
+                /* 真实可见性语义（见本文件 2497 行）：
+                 *   exclude = 不给谁看；include = 仅给谁看；其余 = 公开。
+                 *   「仅自己可见」= include 且选中 0 人 —— 这种情况下没有任何 NPC
+                 *   能看到这条，点赞必须为 0，否则是伪造社交反馈。 */
+                const visType = String(visibility?.type || '');
+                const picked = Array.isArray(visibility?.contactNames) ? visibility.contactNames.length : 0;
+                const selfOnly = visType === 'include' && picked === 0;
+                const dh = window.VirtualPhone?._domainHandle;
+                if (!selfOnly && dh && typeof dh.onMomentReactions === 'function') {
+                    const inScene = (Array.isArray(visibility?.contactNames) ? visibility.contactNames : [])
+                        .map(n => ({ name: String(n) }));
+                    const react = dh.onMomentReactions(String(text || ''), inScene);
+                    const likers = Array.isArray(react?.likes) ? react.likes.filter(Boolean) : [];
+                    /* exclude 模式：把被排除的人从点赞名单里剔掉（否则「不给谁看」形同虚设） */
+                    const excluded = new Set(visType === 'exclude'
+                        ? (visibility?.contactNames || []).map(n => String(n))
+                        : []);
+                    const finalLikers = likers.filter(n => !excluded.has(String(n)));
+                    if (finalLikers.length) {
+                        moment.likeList = finalLikers.slice();
+                        moment.likes = finalLikers.length;
+                        this.app.wechatData.saveData();
+                    }
+                    if (window.VirtualPhone) {
+                        window.VirtualPhone._momentReactRead = { at: Date.now(), likers: finalLikers.slice(0, 6), selfOnly, excluded: excluded.size };
+                    }
+                }
+            } catch (_e) { /* 引擎故障不影响发布 */ }
             this._pendingMomentConfirmation = { sessionId: this.app.storage?.currentConversationId, text, images, moment, inFlight: true };
         } else {
             moment.text = text;

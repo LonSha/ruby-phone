@@ -70,7 +70,15 @@ export const PHONE_EVENTS = Object.freeze({
     //   {gatherId,title,slotId,slotLabel,slotAt,round,scheduleKey,replayed,going,
     //    participants[],chatRefs[]}。★ 本事件不建日程 —— 建不建、建在哪天是
     //   约定 owner（日历）的事；本仓只把「定的是哪个时段、按什么幂等键」端点出去。
-    GATHERING_CONFIRM: 'phone:gatheringConfirm'
+    GATHERING_CONFIRM: 'phone:gatheringConfirm',
+    /* [v18 · 生命周期引擎契约补登记] 下面四个是拓展计划里**长期在派发、但一直没登记**
+     *   的事件（生命周期引擎接线时才暴露出这件事）。由 system-v226 的对账①抓出：
+     *   「契约外: [phone:lock, phone:privacyRisk, phone:screenFlipDown, phone:unlock]」。
+     *   这正是本文件开头说的那类病灶 —— 打错一个字只会静默失联，没人发现。 */
+    LOCK: 'phone:lock',
+    UNLOCK: 'phone:unlock',
+    SCREEN_FLIP_DOWN: 'phone:screenFlipDown',
+    PRIVACY_RISK: 'phone:privacyRisk'
 });
 
 /**
@@ -179,6 +187,25 @@ export const PHONE_EVENT_CONTRACT = Object.freeze({
             + '{gatherId,title,slotId,slotLabel,slotAt,round,scheduleKey,replayed,going,'
             + 'participants[],chatRefs[]}。★ 本事件**不建日程**：建不建、建在哪天是'
             + '约定 owner（日历）的事；`scheduleKey` 是幂等键，重复确认恒同键（不双建）。'
+    },
+    /* [v18] 锁屏四事件：派发方是 lock-screen.js 与壳层手势，
+     *   消费方是生命周期引擎（动态岛/隐私罩）与域引擎（氛围壁纸）。
+     *   detail 一律为对象（makePhoneEvent 保证），无字段时为空对象。 */
+    [PHONE_EVENTS.LOCK]: {
+        kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
+        note: '屏幕锁上：动态岛转未解锁态、有未读则上隐私罩、按时刻推导壁纸主题。'
+    },
+    [PHONE_EVENTS.UNLOCK]: {
+        kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
+        note: '屏幕解锁：撤掉隐私罩（不撤会出现「已解锁但仍显示伪装时钟」）。'
+    },
+    [PHONE_EVENTS.SCREEN_FLIP_DOWN]: {
+        kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
+        note: '手机反扣（屏幕朝下）：隐私罩升到最严档，遮蔽通知正文。'
+    },
+    [PHONE_EVENTS.PRIVACY_RISK]: {
+        kind: PHONE_EVENT_KINDS.LIFECYCLE, target: 'window',
+        note: '外部感知到窥视风险：detail.mode 指定遮蔽样式（默认 DISGUISE_CLOCK）。'
     },
 });
 

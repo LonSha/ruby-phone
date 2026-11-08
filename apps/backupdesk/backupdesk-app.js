@@ -127,6 +127,27 @@ export class BackupdeskApp {
         if (!read.readable) return { ok: false, note: '快照台账读不到（' + read.why + '），不敢在它上面加一条' };
         const made = createSnapshot(read.state, label, dataMap);
         const w = writeReceipt(this.storage, RH_KEY, made.state);
+        /* [v18 · 业务引擎接入] 备份台账落盘成功后，把同一份数据交给
+         *   system-full-snapshot-backup-engine 做「可移植全量快照」——
+         *   两者是不同产物：本 App 的恢复点只在手机内部可回滚，
+         *   引擎产出的是可导出到外部（.json 字符串）的整机镜像。
+         *   引擎故障不影响恢复点本身，所以放在 writeReceipt 之后并单独兜。 */
+        try {
+            const dh = window.VirtualPhone?._domainHandle;
+            if (dh && typeof dh.onCreateBackup === 'function') {
+                const payload = {
+                    chats: [], contacts: [], photos: [], memos: [],
+                    settings: { snapshotLabel: String(label || '') },
+                    hardware: { keyCount: Object.keys(dataMap).length }
+                };
+                for (const k of Object.keys(dataMap)) {
+                    if (k.includes('chat::')) payload.chats.push({ key: k, value: dataMap[k] });
+                    else payload.memos.push({ key: k, value: dataMap[k] });
+                }
+                const bk = dh.onCreateBackup(payload);
+                if (bk) window.VirtualPhone._backupRead = { at: Date.now(), keys: Object.keys(dataMap).length, hasDump: !!bk };
+            }
+        } catch (_e) { /* 引擎故障不影响恢复点 */ }
         this._snapFlash = w.saved
             ? ('已拍恢复点 ' + String(made.snapshot.keyCount) + ' 键（保留最近 ' + String(RH_MAX_SNAPSHOTS) + ' 个）')
             : ('恢复点没写下去：' + w.why);

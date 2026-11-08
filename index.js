@@ -47,6 +47,16 @@ import {
 import { receiveHandoff } from './apps/calendar/vote-handoff-store.js';
 import { showIncomingSmsPopup } from './apps/phone/sms-popup.js';
 import { PhoneFloatingEntry } from './phone/floating-entry.js';
+/* [v18 · 死代码接入] 14 个自投产起全仓无人 import 的 phone/ 引擎，
+ *   统一由 lifecycle-engines-mount 装配并绑到宿主的真实生命周期事件上。
+ *   它们此前各自可跑、也有单测，但没有任何调用点 —— 「文件存在、能力为零」。
+ *   装配面与调用面都在该模块里，读数经 window.VirtualPhone._lifecycleRead 暴露。 */
+import { mountLifecycleEngines, bindLifecycleEngines } from './phone/lifecycle-engines-mount.js';
+/* [v18 · 第二批死代码接入] apps/ 下 40 个业务引擎（回复气泡/触感/通话声场/权限/
+ *   备份/朋友圈/取证/暗网/唤醒…）自投产起生产侧零消费。它们与生命周期引擎形态不同：
+ *   听的是**业务动作**（发消息、来电、锁屏、备份），不是宿主事件。
+ *   装配层见 phone/domain-engines-mount.js，分派表与「找不到宿主就记 noHost」的纪律也在那里。 */
+import { mountDomainEngines, bindDomainEngines } from './phone/domain-engines-mount.js';
 import { parseWechatVoiceContent } from './apps/wechat/voice-text.js';
 import { MemoryCore } from './apps/memory/memory-data.js';
 // [v4.102.0 · R13-O3] 时间-环境感知注入：此前 `window.VirtualPhone.timeEnv` 全库从未被赋值，
@@ -2342,6 +2352,15 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 window.VirtualPhone._evolution36Read = { at: Date.now(), bus: false, pipeline: false, error: String((busErr && busErr.message) || busErr) };
                 console.warn("[RubyPhone] 演化管线事件总线挂载异常:", busErr);
             }
+            /* ★ 注意：两批引擎装配块**必须放在 next-turn 注入钩子之后**（原位置在
+             *   演化总线之后、RB 钩子之前）。原因不是风格：
+             *   tests/system-v4108.test.mjs 的 F2 判据用
+             *   `indexOf('event_types.GENERATION_STARTED')` 定位生成开始钩子，
+             *   再向后找最近一个「右括号+分号」串作为回调体边界。
+             *   ★★ 这条注释本身也踩过坑：第一版在注释里写下了那个三字符序列，
+             *      判据于是把它当成了钩子的闭合点 —— 判据被注释"劫持"，
+             *      实测 F2 转红。**注释里不能出现判据要搜索的字面量。**
+             *   把装配块挪到钩子之后，钩子形状恢复原样，判据继续有效。 */
                 // [RB] 协调注入: 生成前由桥统一把手机记忆注入最新楼层 (本地钩子自动让位)
                 try {
                     const rbCtx = window.SillyTavern?.getContext?.();
@@ -2365,6 +2384,60 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 } catch (e) { /* 静默 */ }
             } catch (e) {
                 console.warn('[Memory] LonSha桥挂载失败:', e);
+            }
+            /* ══ [v18 · 死代码接入] 两批休眠引擎的唯一装配点 ══
+             *   放在 next-turn 钩子**之后**：一是不再切开钩子的形状（见上面那段说明），
+             *   二是这里 memoryCore / lonshaBridge / feedbackHub 都已就位 ——
+             *   业务引擎产出的 promptDirective 要走 feedbackHub 队列才算有真消费方。
+             *   幂等：_lifecycleHandle / _domainHandle 已存在则复用，不重复绑事件
+             *   （重复装配会把同一次开关机计两遍）。 */
+            try {
+                if (!window.VirtualPhone._lifecycleHandle) {
+                    const lcHandle = mountLifecycleEngines({
+                        virtualPhone: window.VirtualPhone,
+                        shell: window.VirtualPhone.phoneShell || null,
+                        storage
+                    });
+                    bindLifecycleEngines(lcHandle, {
+                        virtualPhone: window.VirtualPhone,
+                        shell: window.VirtualPhone.phoneShell || null
+                    });
+                    window.VirtualPhone._lifecycleHandle = lcHandle;
+                    window.VirtualPhone._lifecycleRead = lcHandle.getRead();
+                    const miss = lcHandle.getRead().missing || [];
+                    if (miss.length) console.warn('[RubyPhone] 生命周期引擎装配缺失:', miss.join(','));
+                }
+            } catch (lcErr) {
+                window.VirtualPhone._lifecycleRead = {
+                    at: Date.now(), wired: {}, missing: [],
+                    error: String((lcErr && lcErr.message) || lcErr)
+                };
+                console.warn('[RubyPhone] 生命周期引擎装配异常:', lcErr);
+            }
+            try {
+                if (!window.VirtualPhone._domainHandle) {
+                    const dmHandle = mountDomainEngines({
+                        virtualPhone: window.VirtualPhone,
+                        shell: window.VirtualPhone.phoneShell || null,
+                        storage,
+                        memoryCore: window.VirtualPhone.memoryCore || null,
+                        feedbackHub: window.VirtualPhone.lonshaBridge?.feedbackHub || null
+                    });
+                    bindDomainEngines(dmHandle, {
+                        virtualPhone: window.VirtualPhone,
+                        shell: window.VirtualPhone.phoneShell || null
+                    });
+                    window.VirtualPhone._domainHandle = dmHandle;
+                    window.VirtualPhone._domainRead = dmHandle.getRead();
+                    const dmiss = dmHandle.getRead().missing || [];
+                    if (dmiss.length) console.warn('[RubyPhone] 业务引擎装配缺失:', dmiss.join(','));
+                }
+            } catch (dmErr) {
+                window.VirtualPhone._domainRead = {
+                    at: Date.now(), wired: {}, hosted: {}, noHost: [], missing: [],
+                    error: String((dmErr && dmErr.message) || dmErr)
+                };
+                console.warn('[RubyPhone] 业务引擎装配异常:', dmErr);
             }
         } catch (e) {
             console.warn('[Memory] 记忆系统初始化失败:', e);
@@ -10477,9 +10550,14 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 window.VirtualPhone.phoneApp = new module.PhoneApp(phoneShell, storage);
             }
             currentApp = 'phone';
-
             // 派发来电事件
             window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.INCOMING_CALL, { callerName }));
+            /* [v18 · 业务引擎接入] 来电是通话声场/声学调制/通话音景三个引擎的
+             *   唯一真实触发点。这里显式调一次，不依赖监听器 —— 因为上面这行
+             *   dispatchEvent 是同步的，监听器里抛错会打断来电流程。 */
+            try {
+                window.VirtualPhone?._domainHandle?.onIncomingCall?.({ callerName });
+            } catch (_e) { /* 引擎故障不影响来电本身 */ }
         }).catch(err => {
             console.error('❌ 加载通话模块失败:', err);
         });
@@ -11181,6 +11259,30 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 //   ★ 幂等：usage-tracker 的 noteClose 只结算「挂着的 open」，没有 open 时是空操作
                 //     —— 连按返回键 / 重复派发 goHome 不会重复计时。
                 try { usageTrackClose(storage); } catch (_e) { /* 采集失败不得阻断界面重建 */ }
+                /* [v18 · 墓碑真实输入] 回桌面前把当前 App 的**真实**状态存进墓碑，
+                 *   下次 phone:openApp 的 resumeApp 才有东西可水合。
+                 *   只取三样能确定的东西：当前 App、当前楼层快照时间、滚动位置。
+                 *   不编造草稿内容 —— 草稿归各 App 自己的存储管。 */
+                try {
+                    const lc = window.VirtualPhone?._lifecycleHandle;
+                    const closingApp = currentApp;
+                    if (lc && closingApp) {
+                        const scrollTop = (() => {
+                            try {
+                                const c = phoneShell?.getContentContainer?.();
+                                return c && typeof c.scrollTop === 'number' ? c.scrollTop : 0;
+                            } catch (_e) { return 0; }
+                        })();
+                        lc.engine?.tombstone?.suspendApp?.(closingApp, {
+                            lastFloor: window.SillyTavern?.getContext?.()?.chat?.length || 0,
+                            closingAt: Date.now()
+                        }, scrollTop);
+                        /* 卡带快照：像素桌面的多任务面板读的是这个 */
+                        lc.engine?.cartridge?.suspendApp?.(closingApp, { scrollPos: scrollTop });
+                        if (lc.read && lc.read.calls) { lc.read.calls.suspend += 1; lc.read.calls.cartridge += 1; }
+                        lc.expose?.();
+                    }
+                } catch (_e) { /* 墓碑写入失败不影响回桌面 */ }
                 releasePhoneInactiveResources(null);
                 currentApp = null;
                 window.currentWechatApp = null;
@@ -11214,6 +11316,28 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 //     不算一次真实打开（否则同一秒点两下会得到两条读数）。
                 //   ★ 此处**不做任何分支**、不看返回值：采集是旁路，路由是主路。
                 try { usageTrackOpen(storage, appId); } catch (_e) { /* 采集失败不得阻断开 App */ }
+                /* [v18 · 墓碑真实输出] 若该 App 上次是被「回桌面」挂起的，这里把真实
+                 *   滚动位置水合回去。bindLifecycleEngines 里的 resume 只做记账，
+                 *   真正把视口放回原位必须在这一层做 —— 只有宿主知道容器是谁。 */
+                try {
+                    const lc = window.VirtualPhone?._lifecycleHandle;
+                    if (lc && lc.engine?.tombstone) {
+                        const r = lc.engine.tombstone.resumeApp?.(appId);
+                        if (r && r.freshLaunch === false && r.scrollOffset > 0) {
+                            const applyScroll = () => {
+                                try {
+                                    const c = phoneShell?.getContentContainer?.();
+                                    if (c) c.scrollTop = r.scrollOffset;
+                                } catch (_e) {}
+                            };
+                            applyScroll();
+                            /* 视图是异步渲染的：下一帧再放一次，避免被 render 覆盖回 0。 */
+                            try { (window.requestAnimationFrame || setTimeout)(applyScroll, 0); } catch (_e) {}
+                            if (lc.read && lc.read.calls) lc.read.calls.resume += 1;
+                            lc.expose?.();
+                        }
+                    }
+                } catch (_e) { /* 水合失败就当新开，不影响开 App */ }
 
                 const app = currentApps.find(a => a.id === appId);
                 if (app) {

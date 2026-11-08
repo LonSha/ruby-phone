@@ -11129,7 +11129,20 @@ export class SettingsApp {
             await setAsrProviderField('relay-url', e.target.value);
         });
         if (asrLanguageSelect) asrLanguageSelect.addEventListener('change', async (e) => {
-            await this.storage.set('phone-asr-language', String(e.target.value || 'zh-CN').trim() || 'zh-CN');
+            const nextLocale = String(e.target.value || 'zh-CN').trim() || 'zh-CN';
+            await this.storage.set('phone-asr-language', nextLocale);
+            /* [v18 · i18n 引擎真实接入] i18n-dynamic-locale-engine 自投产起全仓无人 import。
+             *   这里接的是**用户真的改了语言**这一动作：把同一份 locale 交给引擎，
+             *   它会算出系统时间显示（含时区偏移）等本地化结果，供锁屏/状态栏取用。
+             *   复用 asr 的语言键而不是新造一个键：宿主的语言只有这一处真源。 */
+            try {
+                const lc = window.VirtualPhone?._lifecycleHandle;
+                if (lc && typeof lc.applyLocale === 'function') {
+                    const tz = -(new Date().getTimezoneOffset() / 60);
+                    lc.applyLocale(nextLocale, tz);
+                    window.VirtualPhone._localeRead = lc.getRead().lastLocale || null;
+                }
+            } catch (_e) { /* 本地化失败不得阻断设置写入 */ }
         });
         const asrAutoLocalInput = document.getElementById('phone-asr-auto-local');
         if (asrAutoLocalInput) asrAutoLocalInput.addEventListener('change', async (e) => {

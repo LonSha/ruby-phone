@@ -244,7 +244,22 @@ export class AssetApp {
             const actors = face.ledger && face.ledger.actors ? face.ledger.actors : {};
             const ks = Object.keys(actors);
             for (let i = 0; i < ks.length; i++) names[ks[i]] = ks[i];
-            return assetPromptBlock(face.ledger, { era: this.era(), names: names, injectToPrompt: true });
+            const block = assetPromptBlock(face.ledger, { era: this.era(), names: names, injectToPrompt: true });
+            /* [v18 · 业务引擎接入] asset-extract-spec 是同一件事的**「读回来」那一半**：
+             *   它不渲染账本，而是给模型一份「怎样从正文里抽取资产事实」的规范
+             *   （字段上限、分类、notFound 兜底）。此前全仓零消费 —— 账本能写不能读。
+             *   接法：注入块之后追加抽取规范，让模型既能看见账本、也知道怎么回填。
+             *   规范缺失/抛错时返回原块，绝不因为引擎故障让资产块整个消失。 */
+            try {
+                const dh = window.VirtualPhone?._domainHandle;
+                const spec = dh?.getAssetExtractSpec?.();
+                const prompt = spec && typeof spec.prompt === 'string' ? spec.prompt.trim() : '';
+                if (prompt) {
+                    if (window.VirtualPhone) window.VirtualPhone._assetSpecRead = { at: Date.now(), era: spec.era || null, fieldCount: spec.fieldCount || 0 };
+                    return block + '\n' + prompt;
+                }
+            } catch (_e2) { /* 规范缺席：只给账本块 */ }
+            return block;
         } catch (_e) { return ''; }
     }
 
