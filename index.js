@@ -62,6 +62,7 @@ import { canCancel as mtrCanCancel, applyCancel as mtrApplyCancel, normalizeTask
 import { checkStall, stallLine } from './config/stall-watch.js';
 import { mountLonShaBridge } from './apps/memory/lonsha-bridge.js';
 import { advanceDeviceRuntime } from './config/device-runtime.js';
+import { reportOpToWorldAxis, buildWorldAxisPhoneOp } from './config/phone-action-to-worldaxis-causal-feedback.js';
 /* [v3.96.0 · R3-O6] 免实例装配：不依赖任何 App 实例的生成侧注入入口 */
 import { mountMissingAppInjection } from './apps/app-injection.js';
 import { createInitialState as createDrivesState, advance as advanceDrives, formatVar as formatDrivesVar, classifyMessageText as classifyDrivesText } from './config/drives-engine.js';
@@ -327,7 +328,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
 const ST_PHONE_VERSION = '4.137.0';
-const ST_PHONE_CSS_REVISION = '20261107-v2181-pixel-ui-fixes';
+const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 /* [v4.92.0] 像素皮肤：独立于 phone.css 的 pixel-skin.css（复古掌机 OS 视觉）。
@@ -2246,6 +2247,13 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         rbCtx.eventSource.on(rbCtx.event_types.GENERATION_STARTED, () => {
                             try { advanceDeviceRuntime(storage); } catch (e) {}
                             try { window.VirtualPhone?.lonshaBridge?.applyCoordinatedInjection(); } catch (e) {}
+                            /* [v4.138.0 · V21-R10] 检查待向 WorldAxis 反哺的手机因果动作 */
+                            try {
+                                if (window.VirtualPhone?._pendingWorldAxisOps?.length) {
+                                    const ops = window.VirtualPhone._pendingWorldAxisOps.splice(0, 10);
+                                    for (const op of ops) reportOpToWorldAxis(op, window);
+                                }
+                            } catch (e) {}
                             /* [v4.107.0 · R13-O5] 一轮生成开始 ⇒ 上一轮的 next-turn 待生效改动交出去。
                              * 选这个时刻而不是「生成结束」：用户拨开关是为了**这一轮**就用上，
                              * 挂在开始前才叫「下一轮生效」，挂在结束后就变成「下下轮」。 */

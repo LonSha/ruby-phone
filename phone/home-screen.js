@@ -28,6 +28,8 @@ import { buildDesktopTiles, isCoreDesktop, clusterByCategory } from '../config/a
 import { resolveAppOrder, resolveActiveParadigm } from '../config/usage-paradigm.js';
 import { unifiedIconOf, hasUnifiedIcon } from '../config/app-icons.js';
 import { folderIconSvg, svgToDataUri, createViewStack, VIEW_LEVEL, PX_BACK_NUDGE_MS, PX_DESKTOP_SHAKE, appIconSvg } from './pixel-engine.js';
+import { createPixelViewStackSentinel } from './pixel-viewstack-b-sentinel.js';
+import { play8BitSfx, SFX_TYPE } from './pixel-8bit-audio-synthesizer.js';
 import { childRuntime } from '../config/runtime-lifecycle.js';   // [v2.31.0] 实例级资源域
 /* [v3.93.0 · 拓展计划 R-X9] 桌面图标的可读名（唯一实现在内核，本文件只消费）。
  *   修前实测：本文件给图标只挂了 onclick —— 没有 tabindex / role / aria-label，
@@ -48,6 +50,8 @@ export class HomeScreen {
          *   左下「◀ 退」是唯一返回入口；本栈只管「像素 B 键」的语义，
          *   物理返回与右滑仍走 config/back-guard.js / SWIPE_BACK。 */
         this._viewStack = createViewStack();
+        /* [v4.138.0 · V21-R1] 挂载全局掌机视图栈防死锁哨兵 */
+        this._viewSentinel = createPixelViewStackSentinel(this.phoneShell);
         // [v2.31.0] 实例级资源域：本实例在 window 上注册的 4 个长期存活监听器
         //   （updateWallpaper / updateAppIcon / updateCardLayoutCss / timeUpdated）
         //   彼此用 `if (!this._xxxEventBound)` 互相隔离 —— 于是**没有任何一处**
@@ -295,6 +299,7 @@ export class HomeScreen {
                 </div>
             </div>
         `;
+        this._viewStack.push(VIEW_LEVEL.CLUSTER, 'library', () => this.closeLibrary());
         this.phoneShell.setContent(html, 'view-library');
         this.bindLibraryEvents();
 
@@ -309,21 +314,23 @@ export class HomeScreen {
         }
     }
 
+    /* 关闭应用库（B 键出栈时由 onExit 调用）：回到桌面。 */
+    closeLibrary() {
+        this._viewStack.reset();
+        try { this.phoneShell?.goHome?.(); } catch (_e) { /* 不抛 */ }
+    }
+
     renderLibraryApp(app) {
-        const pixelSvg = appIconSvg(app.id);
-        const pixelIcon = pixelSvg ? svgToDataUri(pixelSvg) : null;
-        const iconImage = pixelIcon || this._getAppIconImage(app);
-        const iconStyle = iconImage
-            ? this._buildCustomIconStyle(iconImage, { fit: 'cover' })
-            : `background:${app.color || '#7d8590'};`;
-        const iconContent = iconImage
-            ? ''
+        const uni = unifiedIconOf(app.id);
+        const iconImage = uni || this._getAppIconImage(app);
+        const iconHtml = iconImage
+            ? this._renderCustomIconImage(iconImage, 'home-custom-icon-img yzp-home-custom-icon-img')
             : `<span class="app-icon-emoji yzp-home-app-icon-emoji">${this._escapeHtml(app.icon || '·')}</span>`;
         const name = this._getAppDisplayName(app);
         return `
             <div class="app-library-app-item" data-app="${app.id}" data-name="${this._escapeHtml(name)}" role="button" tabindex="0"
                  aria-label="${this._escapeHtml(name)}">
-                <div class="app-library-app-icon${iconImage ? ' custom-icon' : ''}" style="${iconStyle}">${iconContent}</div>
+                <div class="app-library-app-icon pxbox pxcorner">${iconHtml}</div>
                 <div class="app-library-app-name">${this._escapeHtml(name)}</div>
             </div>
         `;
@@ -336,6 +343,7 @@ export class HomeScreen {
         const openApp = (el) => {
             const appId = el?.dataset?.app;
             if (!appId) return;
+            this._viewStack.push(VIEW_LEVEL.APP, appId);
             window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId } }));
         };
 

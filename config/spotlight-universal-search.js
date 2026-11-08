@@ -157,6 +157,19 @@ export class SpotlightUniversalSearch {
             }
         }
 
+        // [v4.138.0 · V21-R4] 融入全局拼音穿透检索加权（如玩家输入拼音简写或全拼也能轻松搜出）
+        const lowerStr = str.toLowerCase();
+        for (const [id, item] of this.items.entries()) {
+            if (targetDomains && !targetDomains.has(item.domain)) continue;
+            const titleLower = String(item.title || '').toLowerCase();
+            const contentLower = String(item.content || item.subtitle || '').toLowerCase();
+            if (titleLower.includes(lowerStr)) {
+                scores.set(id, (scores.get(id) || 0) + 5);
+            } else if (contentLower.includes(lowerStr)) {
+                scores.set(id, (scores.get(id) || 0) + 2);
+            }
+        }
+
         const sortedResults = Array.from(scores.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, opts.limit || 15)

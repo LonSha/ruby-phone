@@ -15,6 +15,12 @@ import Damage from '../apps/hardware/physical-damage-touch-degradation-simulator
 import Airdrop from '../apps/network/offline-direct-p2p-file-airdrop-transceiver.js';
 import Duress from '../apps/security/biometrics-duress-panic-wipe-vault.js';
 import Orchestrator from '../apps/settings/virtual-device-contextual-orchestrator.js';
+/* [v4.138.0 · V21 史诗级双计划] 新增 8 项拟真生活与极客子系统对接 */
+import { scanWirelessEnvironment } from '../apps/hardware/rf-sniffer-matrix-engine.js';
+import { createDarknetMarketState, purchaseDarknetItem } from '../apps/darknet/dual-domain-space-darknet-market.js';
+import { crossExamineAlibi } from '../apps/investigation/forensic-timeline-clue-matrix.js';
+import { simulatePhysicalDegradation } from '../apps/hardware/physical-damage-degradation-simulator.js';
+import { executeGeekTerminalCommand } from '../apps/security/pixel-geek-terminal-sandbox.js';
 
 export const DEVICE_RUNTIME_KEY = 'device_runtime_v1';
 const LIMIT = 50;
@@ -28,7 +34,8 @@ const factories = {
     power: Power.createInitialPowerState, sim: Sim.createInitialSimCarrierState,
     ble: Ble.createInitialBleMatrixState, shell: Shell.createInitialShellSandboxState,
     damage: Damage.createInitialDamageState, airdrop: Airdrop.createInitialP2PAirdropState,
-    duress: Duress.createInitialDuressVaultState
+    duress: Duress.createInitialDuressVaultState,
+    darknetMarket: createDarknetMarketState
 };
 function initial() {
     return { version: 1, enabled: false, injectToPrompt: false, revision: 0,
@@ -124,6 +131,11 @@ action('secureFile', 'security', '登记剧情敏感文件（无真实加密）'
 action('leak', 'security', '登记文件违规操作', { fileId: 'file-1', actor: '角色乙', action: 'SCREENSHOT_OR_TRANSFER' }, ['fileId','actor'], (s,p) => { if (!Object.hasOwn(s.vaultFiles,p.fileId)) throw new Error('文件未登记'); return Security.recordUnauthorizedAccess(s,p.fileId,p); });
 action('voice', 'voice', '模拟音频特征审计', { clipId: 'clip-1', callerName: '角色甲', durationSec: 10, frequencyJitter: 0.001, phaseDiscontinuity: 0.8, spectralArtifactNoise: 0.9 }, ['clipId','callerName'], (s,p) => { for (const k of ['frequencyJitter','phaseDiscontinuity','spectralArtifactNoise']) if (p[k] < 0 || p[k] > 1) throw new Error('音频特征须在0..1'); return Voice.auditIncomingAudio(s,p); });
 action('npc', 'push', '登记离线演化角色', { name: '角色甲', affinity: 85, role: 'friend' }, ['name'], (_s,p,state) => { state.npcProfiles = state.npcProfiles.filter(n => n.name !== p.name).concat(p).slice(-20); });
+/* [v4.138.0 · V21 史诗级双计划] 新增 4 个高级极客与侦探物证操作接入 */
+action('geekCmd', 'shell', '执行原生极客掌机终端命令', { command: 'help' }, ['command'], (_s, p) => executeGeekTerminalCommand(p.command));
+action('rfScan', 'hardware', '嗅探无线电与环境 Wi-Fi 频谱', { rangeMeters: 50 }, [], (_s, p) => scanWirelessEnvironment(p.rangeMeters));
+action('alibiCheck', 'evidence', '跨应用侦探物证链不在场证明对撞', { actor: '嫌疑人', targetTime: 1800000000000, marginMs: 300000 }, ['actor'], (_s, p, state) => crossExamineAlibi(p.actor, p.targetTime, Array.from(state.modules.evidence?.evidenceNodes?.values() || []), p.marginMs));
+action('buyDarknet', 'darknetMarket', '在暗网黑市采购虚构情报', { itemId: 'item_zero_day' }, ['itemId'], (s, p) => purchaseDarknetItem(s, p.itemId));
 
 export function deviceActionCatalog() {
     return Object.entries(actions).map(([id,a]) => ({ id, module: a.module, label: a.label, example: { ...a.example } }));
