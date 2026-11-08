@@ -1,5 +1,13 @@
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { RubyPhoneLonShaBidirectionalFeedbackHub } from './ruby-phone-lonsha-bidirectional-feedback-hub.js';
+import { KeystrokeBiometricsTypingHesitation } from '../wechat/keystroke-biometrics-typing-hesitation.js';
+import { CellularRadioWeakSignalSimulation } from '../network/cellular-radio-weak-signal-simulation.js';
+import { OnDemandDeliveryTakeoutEcosystem } from '../shop/on-demand-delivery-takeout-ecosystem.js';
+import { ThermodynamicsBatteryPhysicsSim } from '../hardware/thermodynamics-battery-physics-sim.js';
+import { SmartWearableBiometricInterop } from '../health/smart-wearable-biometric-interop.js';
+import { DiDiMobilityRideHailingSystem } from '../traveldesk/didi-mobility-ride-hailing-system.js';
+import { CovertAudioVoiceMemoRecorder } from '../audio/covert-audio-voice-memo-recorder.js';
+import { VirtualFilesystemCloudVault } from '../archive/virtual-filesystem-cloud-vault.js';
 /* ========================================================
  *  LonSha 记忆引擎 ↔ RubyPhone 双向数据桥 (LonShaBridge) v2
  *
@@ -139,6 +147,17 @@ export class LonShaBridge {
         this._holographicBusEvents = this._readHolographicEvents();
         // [v4.139.0 · R17-O4] 手机日常操作双向因果反哺中枢
         this.feedbackHub = new RubyPhoneLonShaBidirectionalFeedbackHub(this);
+        // [v4.139.0 · R18] 挂载第十八期拟真物联与现代生活核心应用
+        try {
+            this.typingHesitation = new KeystrokeBiometricsTypingHesitation();
+            this.cellularSignal = new CellularRadioWeakSignalSimulation();
+            this.deliveryEcosystem = new OnDemandDeliveryTakeoutEcosystem();
+            this.batteryPhysics = new ThermodynamicsBatteryPhysicsSim();
+            this.wearableInterop = new SmartWearableBiometricInterop();
+            this.mobilitySystem = new DiDiMobilityRideHailingSystem();
+            this.covertRecorder = new CovertAudioVoiceMemoRecorder();
+            this.cloudVault = new VirtualFilesystemCloudVault();
+        } catch (e) {}
         this._promoteInjection();
     }
     // ---------------- 配置持久化 (挂 extensionSettings) ----------------
