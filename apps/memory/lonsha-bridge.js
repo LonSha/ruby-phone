@@ -832,6 +832,39 @@ export class LonShaBridge {
         } catch (e) { /* 忽略 */ }
     }
 
+
+    // [R18·36项演化双计划] 挂载 RubyPhone 现代生活与跨应用总线反哺枢纽
+    mountEvolutionPipeline(eventBus) {
+        if (!eventBus) return;
+        this._eventBus = eventBus;
+        
+        // 监听生活事件织网
+        this._eventBus.on("daily_life_event", (payload, envelope) => {
+            try {
+                const summary = (payload && payload.summary) || (envelope && envelope.payload && envelope.payload.summary) || "生活事件发生";
+                this.onFloorCommitted?.(null, [{ content: `[手机生活织网] ${summary}`, tag: "life_fabric" }]);
+            } catch (e) {}
+        });
+        
+        // 监听健康与生物识别异常波动
+        this._eventBus.on("biometric_stress_alert", (payload, envelope) => {
+            try {
+                const { heartRate, stressLevel } = payload || (envelope && envelope.payload) || {};
+                if (stressLevel > 0.7) {
+                    this.onFloorCommitted?.(null, [{ content: `[手环生物体征] 角色心率剧增至 ${heartRate} bpm，处于高应激状态`, tag: "biometric_stress" }]);
+                }
+            } catch (e) {}
+        });
+        
+        // 监听撤回与打字焦虑悬念
+        this._eventBus.on("typing_anxiety_recall", (payload, envelope) => {
+            try {
+                const { partner, hesitationMs } = payload || (envelope && envelope.payload) || {};
+                this.onFloorCommitted?.(null, [{ content: `[微信沟通悬念] 对话方 ${partner} 经历长达 ${hesitationMs}ms 犹豫后撤回了消息`, tag: "typing_anxiety" }]);
+            } catch (e) {}
+        });
+    }
+
     // ---------------- 状态 ----------------
     getStats() {
         return {
