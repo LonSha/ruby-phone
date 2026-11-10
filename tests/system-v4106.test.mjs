@@ -481,6 +481,117 @@ test('E2 ★白名单外一律不许出现裸 Date.now()（批次 3 收口的机
 });
 
 /* ============================================================
+ * E 面补：v4.140.0 批次 3 收口的**行为判据**（不只是「没有裸 Date.now()」）
+ * ============================================================
+ * 为什么 E1/E2 不够：它们只查「文件里还有没有裸 `Date.now()`」。
+ *   若有人把 `Date.now()` 换成 `wallNow()`、却**不接 win**，E2 会全绿，
+ *   而朋友圈时间依然跟剧情脱节 —— 这正是「看起来收口了、其实没接上」。
+ *   故这里钉住行为：给一个**远未来**的假剧情钟，看两个引擎的时刻是否跟着它走。
+ */
+test('E3 ★批次 3 收口行为判据：moments 两引擎必须真的走剧情钟（传 win ⇒ 跟着 win 走）', async () => {
+    const { createMomentsLivingEcosystem } = await import(
+        pathToFileURL(path.join(ROOT, 'apps/moments/moments-living-social-ecosystem.js')).href);
+    const { generateMomentReactions } = await import(
+        pathToFileURL(path.join(ROOT, 'apps/moments/npc-social-graph-dynamic-moments.js')).href);
+
+    /* 2044-10-28 09:30 —— 远未来，绝不可能与墙钟相等。
+     * ★ `timestamp` 是 `storyNow` 取 ms 的**唯一来源**（date/time 只用于文案）：
+     *   只给 date/time 时 storyNow 给 `ms:null / reason:'bad-stamp'`，引擎会正确降级。
+     *   这一点由 B 面判据看守，这里必须给全三件才测得出「跟着剧情钟走」。 */
+    const STORY_MS = Date.UTC(2044, 9, 28, 9, 30, 0);
+    const fakeWin = {
+        VirtualPhone: {
+            timeManager: {
+                getCurrentStoryTime: () => ({
+                    date: '2044年10月28日', time: '09:30', weekday: '星期五',
+                    timestamp: STORY_MS, source: 'e3-fake-time-manager'
+                })
+            }
+        }
+    };
+
+    const eco = createMomentsLivingEcosystem(undefined, fakeWin);
+    const post = eco.postMoment({ author: '夏洛特', content: 'E3 判据动态' });
+    assert.equal(post.timestamp, STORY_MS,
+        '★ postMoment 的 timestamp 必须是剧情钟（否则用户会看到本机日期）');
+
+    /* 种子动态：`-3600*2000` 的相对偏移必须建在**同一个钟**上 */
+    const seed = eco.getFeed(20).find(m => m.id === 'moment_1');
+    assert.equal(seed.timestamp, STORY_MS - 3600 * 2000,
+        '★ 种子动态的相对偏移必须建在剧情钟上（否则剧情回拨后它会跑到未来）');
+
+    const c = eco.addComment(post.id, '玩家', '好吃吗');
+    assert.equal(c.timestamp, STORY_MS, '★ 评论时刻必须是剧情钟');
+    const feed = eco.getFeed(20).find(m => m.id === post.id);
+    assert.equal(feed.comments[1].timestamp, STORY_MS + 500,
+        '★ 自动回复的 +500 偏移必须建在同一钟上（混用会让回复排到评论前面）');
+
+    const r = generateMomentReactions('正文', [
+        { name: '爱丽丝', relation: 'lover' }, { name: '博比', relation: 'rival' }
+    ], fakeWin);
+    assert.equal(r.comments[0].timestamp, STORY_MS, '★ NPC 评论时刻必须是剧情钟');
+    assert.equal(r.comments[1].timestamp, STORY_MS + 5000, '★ rival 的 +5000 偏移同上');
+
+    /* 反证：不传 win 时**必须**降级到墙钟（而不是 null）。
+     *   理由：timestamp 是排序与「多久前」的必填数字字段，null 会直接崩；
+     *   故本处走 storyNowWallFallback（唯一允许的显式降级出口）。 */
+    const noWin = createMomentsLivingEcosystem();
+    const p2 = noWin.postMoment({ author: 'x', content: 'y' });
+    assert.equal(typeof p2.timestamp, 'number', '★ 无宿主时必须降级到墙钟，不许给 null');
+    assert.ok(Math.abs(p2.timestamp - Date.now()) < 5000, '★ 无宿主时的降级值必须是当前墙钟');
+    const rNo = generateMomentReactions('正文', [{ name: '爱丽丝', relation: 'lover' }]);
+    assert.notEqual(rNo.comments[0].timestamp, STORY_MS,
+        '★ win 必须真的被消费：传与不传的结果不许相同（相同即说明 win 被忽略了）');
+});
+
+/* ── E4：**从装配层入口**测，专治「引擎自己会读 win、装配层却不给它」──
+ *
+ * 为什么 E3 不够（这是本仓一条真实的判据漏洞，已用负控制验证过）：
+ *   E3 直接 `createMomentsLivingEcosystem(undefined, fakeWin)` 并显式传 win，
+ *   于是它只能证明「引擎愿意用 win」。把 `phone/domain-engines-mount.js` 里那行
+ *   透传删掉（`createMomentsLivingEcosystem()`），E3 **照样全绿** —— 因为 E3
+ *   绕过了装配层。而真实故障恰恰发生在装配层：引擎有能力、装配没接上。
+ *   故 E4 必须从 `mountDomainEngines` 这个真实入口进。
+ */
+test('E4 ★装配层必须真的把宿主交给引擎（从 mountDomainEngines 入口测，E3 绕过了它）', async () => {
+    const { mountDomainEngines, bindDomainEngines } = await import(
+        pathToFileURL(path.join(ROOT, 'phone/domain-engines-mount.js')).href);
+
+    const STORY_MS = Date.UTC(2044, 9, 28, 9, 30, 0);
+    const fakeWin = {
+        VirtualPhone: {
+            timeManager: {
+                getCurrentStoryTime: () => ({
+                    date: '2044年10月28日', time: '09:30', weekday: '星期五',
+                    timestamp: STORY_MS, source: 'e4-fake-time-manager'
+                })
+            }
+        }
+    };
+
+    /* ① 装配时给 win ⇒ engine.moments 的写点必须走剧情钟 */
+    const h = mountDomainEngines({ win: fakeWin });
+    assert.ok(h.engine.moments, '★ engine.moments 必须装配成功（装配失败则本判据无意义）');
+    const post = h.engine.moments.postMoment({ author: '夏洛特', content: 'E4 动态' });
+    assert.equal(post.timestamp, STORY_MS,
+        '★ 装配层没把 win 交给 moments 引擎（引擎有能力，装配漏传）');
+
+    /* ② handle.onMomentReactions 也必须把宿主透传给纯函数引擎 */
+    const bound = bindDomainEngines(h, {});
+    const r = bound.onMomentReactions('正文', [{ name: '爱丽丝', relation: 'lover' }]);
+    assert.ok(r && Array.isArray(r.comments), '★ onMomentReactions 必须返回 {likes, comments}');
+    assert.equal(r.comments[0].timestamp, STORY_MS,
+        '★ onMomentReactions 没把宿主交给 generateMomentReactions');
+
+    /* ③ 反证：装配时**不给** win ⇒ 必须降级到墙钟（不许崩、不许 null） */
+    const h2 = mountDomainEngines({});
+    const p2 = h2.engine.moments.postMoment({ author: 'x', content: 'y' });
+    assert.equal(typeof p2.timestamp, 'number', '★ 无宿主时必须降级到墙钟，不许给 null');
+    assert.ok(Math.abs(p2.timestamp - Date.now()) < 5000, '★ 无宿主时的降级值必须是当前墙钟');
+    assert.notEqual(p2.timestamp, STORY_MS, '★ 无宿主时不许凭空造出剧情时刻');
+});
+
+/* ============================================================
  * F 面 负控制：真源码破坏 → 落副本 → 在副本上重跑同款真判据
  * ============================================================ */
 

@@ -126,6 +126,14 @@ export function mountDomainEngines(deps = {}) {
         read, engine: {},
         getRead() { return JSON.parse(JSON.stringify(read)); }
     };
+    /* [v4.140.0] 把宿主存到引擎容器上，供 `bindDomainEngines` 里的分派函数取用。
+     *   为什么不用闭包：`bindDomainEngines(handle, host)` 是**另一个函数**，
+     *   它拿不到 `mountDomainEngines` 的 `deps` —— 那里写 `deps.win` 会直接
+     *   抛 ReferenceError 并被 catch 吞掉（E4 判据抓到的真实 bug）。
+     *   为什么不用 `host` 参数：`bindDomainEngines` 的 `host` 是
+     *   `{virtualPhone, shell}`，语义是「宿主 UI」，不含 timeManager 所在的 window。
+     *   故把装配时那个 window 原样挂在引擎容器上，单一来源、不各写一份。 */
+    handle.engine.__win = deps.win || null;
 
     const makers = {
         replyChips: () => new SmartReplyPredictiveChips(),
@@ -148,7 +156,7 @@ export function mountDomainEngines(deps = {}) {
         geekShell: () => new VirtualShellGeekSandboxTerminal(),
         txVault: () => new AtomicFilesystemSnapshotVault(),
         digitalLegacy: () => new OfflineAirdropDigitalLegacy(),
-        moments: () => createMomentsLivingEcosystem(),
+        moments: () => createMomentsLivingEcosystem(undefined, deps.win || null),
         npcFeed: () => new NPCAutonomousSocialFeedEngine(),
         forensic: () => createForensicClueMatrix(),
         darknet: () => new DarknetBizarreBazaarEngine(),
@@ -431,7 +439,18 @@ export function bindDomainEngines(handle, host = {}) {
     };
     handle.onMomentReactions = (postText, inScene) => {
         try {
-            const r = engine.momentReactions?.(postText || '', inScene || []) || [];
+            /* 第三参是宿主：评论 timestamp 属剧情钟（FIELD_CLOCKS.timestamp='story'），
+             *   不传 win 就只能显式降级到墙钟。
+             * ★ 这里**不能**用 `deps.win`：本函数属于 `bindDomainEngines(handle, host)`，
+             *   该作用域里没有 `deps`（那是 `mountDomainEngines` 的形参）——
+             *   写 `deps.win` 会抛 ReferenceError，被 catch 吞成 `lastError`，
+             *   于是 onMomentReactions 静默返回 `[]`（点赞永远是 0，且不报错）。
+             *   这个 bug 是被 E4 判据（从装配层入口测）抓到的，故在此留档。
+             *   取宿主的唯一可靠来源：装配时存下的 `engine.__win`（见 mountDomainEngines）
+             *   → 执行时真实存在的 `window`。两者都没有 ⇒ 显式降级到墙钟。 */
+            const host = handle.engine.__win
+                || (typeof window === 'undefined' ? null : window);
+            const r = engine.momentReactions?.(postText || '', inScene || [], host) || [];
             bump('momentReact');
             return r;
         } catch (e) { fail('momentReactions', e); return []; }

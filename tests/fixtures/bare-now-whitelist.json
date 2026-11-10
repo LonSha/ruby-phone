@@ -1,6 +1,6 @@
 {
   "schema": "bare-now-whitelist@1",
-  "version": "4.139.0",
+  "version": "4.140.0",
   "note": "R13-O4 批次 3：`apps/` 下裸 `Date.now()` 的逐文件登记表。判据见 tests/system-v4106.test.mjs 的 E1/E2。纪律：**未登记即红**（不是零容忍，是「必须逐条说出理由」）。批次 1 已收口五个 App 时刻字段；批次 2（带时间流的 App：weibo / honey / bilibili / taobao / lofter 等）与剩余文件的收口在后续版本推进，收掉一个就从这里删一条。【v4.139.0 · v17/v18 引擎批次】v17/v18 两期共 18 项引擎（物联拟真生活 / 抽象心智 / 环境生命）落盘时带进 50 个新文件、139 处裸 Date.now()，本版**逐条登记**并写明用途：绝大多数是引擎内部流水与幂等键（wall 档：去重、单调排序、新鲜度），少数是真实经过时间（录音时长 / 通话时长 / 死信开关心跳：必须跟墙钟走）。★ 其中 `apps/moments/moments-living-social-ecosystem.js` 与 `apps/moments/npc-social-graph-dynamic-moments.js` 的 timestamp 是**内容时间轴**，按口径应走 storyNow —— 本轮**如实登记为 story 档待收口**，不宣称已收口。登记本身不等于收口：收口指改走 time-source；本批只做到「每处都说得出为什么」。",
   "policy": {
     "story": "用户看见的时刻（FIELD_CLOCKS 里 story 档）→ 必须走 config/time-source.js 的 storyNow / storyNowWallFallback / stampPair",
@@ -115,8 +115,7 @@
     "apps/mofo/mofo-sync.js": "魔坊同步的退避窗口。",
     "apps/mofo/mofo-view.js": "魔坊渲染动画。",
     "apps/moments/moments-dynamic-interaction-network.js": "引擎内部**流水与幂等键**（动态网络 updatedAt ×5、帖子/评论 id 幂等后缀、createdAt ×2），属 wall 档：这些值参与去重、单调排序与新鲜度判定，若改走剧情钟，剧情回拨会让去重失效、审计流水倒序。本处不经 FIELD_CLOCKS 的 story 档渲染；**若将来把它接进用户可见文案，必须改走 storyNow**，否则「看起来没坏但显示不对」——文案里的时刻会与剧情时间对不上。",
-    "apps/moments/moments-living-social-ecosystem.js": "**内容时间轴**：这里的 timestamp 是\"这条动态发生在什么时候\"，含 `Date.now() - 3600*2000` / `+500` 这类**相对偏移**，用来造出\"过去/刚发生\"的社交流水。★ 如实登记为**story 档待收口**：它最终会渲染成用户可见的时间文案，按 FIELD_CLOCKS 口径应改走 storyNow(win)。本轮**不宣称已收口**（改它要动引擎的 win 注入面，属后续版本），只把欠债写在这里，避免它被当成\"机器时间\"混过去。",
-    "apps/moments/npc-social-graph-dynamic-moments.js": "**内容时间轴**：NPC 动态的 timestamp（含 `+5000` 偏移），同上属 **story 档待收口**（会渲染成用户可见时间），本轮如实登记、不宣称收口。",
+    "apps/moments/moments-living-social-ecosystem.js": "**幂等键**（wall 档）：本文件 4 处 timestamp 已于 v4.140.0 改走 `config/time-source.js` 的 `storyNowWallFallback`（剧情钟 + 唯一显式降级出口），v4.139.0 时如实登记的「story 档待收口」已收口。此处剩下的 1 处裸 `Date.now()` 只用于 `postMoment` 的 `id`（`moment_<ts>_<rand>`）：它是**去重与排序稳定用的幂等键**，不渲染给用户看，按 FIELD_CLOCK_WHY 的「随机 id」归 wall 档；若跟着剧情钟走，剧情回拨后新动态会与旧动态撞 id。",
     "apps/music/music-app.js": "音乐播放器的**真实播放进度**（必须跟真实时间走）。注：`timestamp` 一处属批次 2 待收口项。",
     "apps/music/music-data.js": "播放列表的审计时刻。",
     "apps/music/music-view.js": "播放器渲染动画。",
@@ -211,6 +210,7 @@
     "apps/widget/widget-data.js": "小组件数据层的缓存新鲜度。",
     "apps/worldpulse/worldpulse-app.js": "世界脉搏的刷新节流。",
     "apps/worldpulse/worldpulse-engine.js": "世界脉搏的采样窗口（机器时间）。",
-    "apps/xhs/xhs-data.js": "小红书的抓取节流。"
+    "apps/xhs/xhs-data.js": "小红书的抓取节流。",
+    "apps/moments/npc-social-graph-dynamic-moments.js": "本文件 v4.140.0 起**已无裸 `Date.now()`**（2 处评论 timestamp 改走 `storyNowWallFallback`，函数增设第三参 `win`，由 `phone/domain-engines-mount.js` 的 `onMomentReactions` 透传宿主）。保留本条目只为记录收口轨迹与回滚点；若将来在此新增墙钟用途，理由必须重写，不得沿用本条。"
   }
 }

@@ -1,4 +1,4 @@
-> **最近更新：v4.139.0**（第十三期 R13-O7：PLAN / TODO 入口交给机器 —— 三处换挡 + 一处判据，那个「TODO 顶面落后 45 个版本」的洞从此有机器看守）
+> **最近更新：v4.140.0**（第十三期 R13-O7：PLAN / TODO 入口交给机器 —— 三处换挡 + 一处判据，那个「TODO 顶面落后 45 个版本」的洞从此有机器看守）
 > **现行产品待办（2026-11-03）**：第十四期 `R14-O1～O9 / R14-X1～X9`，见[优化计划](.agents/notes/proposed/architecture/2026-11-03-product-optimization-v14.md)、[拓展计划](.agents/notes/proposed/feature/2026-11-03-product-expansion-v14.md)及[批次与证据](docs/planning/2026-11-03-product-evidence-v14.md)。下方第十三期和更早状态均为历史记录；第十四期十八项（R14-O1~O9 / R14-X1~X9）已于 v4.124.0 全部实施并通过十九道门禁 Exit Code 0 全绿收口，已完成提交与推送（commit 2c06d60）。
 > 上一版留痕 v4.54.0（第六期批次 F 两项：R6-X7 跨媒介互动连载 + R6-X9 平行人生试玩场）保留在下方历史段。
 # TODO / 迭代积压

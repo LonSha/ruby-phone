@@ -1,3 +1,12 @@
+## 迭代 261 · v4.140.0 · 批次 3 时间轴收口（朋友圈两引擎改走剧情钟）（2026-11-10）
+- 【版本升至 4.140.0（五源同源）】package.json / manifest.json / index.js 的 ST_PHONE_VERSION / update-log 的 latest 与 head 五处同源抬到 4.140.0。本版只做一件事：把 v4.139.0 白名单里如实登记为「story 档待收口」的那笔欠债收掉，不夹带其他改动。
+- 【收口内容：朋友圈两引擎的时间轴改走剧情钟】`apps/moments/moments-living-social-ecosystem.js` 的 5 处 `Date.now()` 与 `apps/moments/npc-social-graph-dynamic-moments.js` 的 2 处，原先全部是「这条动态 / 这条评论发生在什么时候」—— 它会渲染成用户可见的时间文案，按 `FIELD_CLOCKS.timestamp = 'story'` 的口径属剧情钟。本版改为走 `config/time-source.js`：`postMoment` / `addComment` / 自动回复 / NPC 评论一律取剧情时刻，`id`（`moment_<ts>_<rand>`）保持墙钟 —— 它是去重与排序稳定的幂等键，不渲染给用户看，若跟着剧情钟走，剧情回拨后新动态会与旧动态撞 id。
+- 【为什么用 storyNowWallFallback 而不是 storyNow】`timestamp` 在这两个引擎里是**必填数字字段**（`getFeed` 按它排序、UI 按它算「多久前」），而 `storyNow` 读不到时给 `null`（纪律：绝不补墙钟）。若这里也用 null，排序与相对时间会直接崩掉。故走本仓**唯一允许的显式降级出口**：读不到时退回墙钟并带 `degraded` / `reason`，使「哪个引擎在什么条件下用了墙钟」成为可答的问题。这是有意降级，不是漏改 —— 理由写在两个文件各自的头注里。
+- 【宿主注入面】`MomentsLivingSocialEcosystem` 的构造签名改为 `(state = {}, win = null)`，`generateMomentReactions` 增设第三参 `win = null`；装配层 `phone/domain-engines-mount.js` 从 `deps.win` 取宿主并挂在引擎容器上，`index.js` 的装配点补传 `win: window`。不传 `win` 时行为可预期（显式降级到墙钟），不会崩。
+- 【本版自己抓到的缺陷：判据绕过装配层 + 一处 ReferenceError】① 首版判据 E3 直接调工厂并显式传 `win`，于是它只能证明「引擎愿意用 win」；把装配层那行透传删掉，E3 **照样全绿** —— 而真实故障恰恰发生在装配层。故补 E4，从 `mountDomainEngines` 这个真实入口进，并用负控制验证：删掉透传后 E4 精确报出「装配层没把 win 交给 moments 引擎」。② E4 立刻抓到一处真 bug：`bindDomainEngines` 里的分派函数写了 `deps.win`，但该作用域没有 `deps`（那是 `mountDomainEngines` 的形参），抛 ReferenceError 后被 catch 吞成 `lastError`，于是 `onMomentReactions` 静默返回空数组 —— 点赞永远是 0 且不报错。已改为从引擎容器上取宿主，并把这个坑写进注释。
+- 【交棒改写：E1/E2 不够，必须补行为判据】原判据 E1/E2 只查「文件里还有没有裸 `Date.now()`」。若有人把 `Date.now()` 换成 `wallNow()` 却不接宿主，E2 会全绿，而朋友圈时间依然跟剧情脱节。故新增 E3（行为：给远未来假剧情钟，看时刻是否跟着它走）与 E4（入口：从装配层进），两条都用「传 win 与不传 win 结果必须不同」做反证，防止判据恒绿。
+- 【读数与账本同步】因源码增行与新增判据，全仓读数按既有工具重算（零手抄）：`tools/refresh_doc_readings.py --write`（导入条数 1400 → 1402）、`tools/gen_status_ledger.mjs --write`（index_lines 14484 → 14488）、`tools/gen_plan_baseline.mjs --write`、`tools/relocate_method_baseline.mjs --write`（只改 line 字段：postMoment 33 → 60、likeMoment 52 → 82，条目集合不变）。另把白名单里两条「story 档待收口」的登记改写成收口后的真实理由。
+- 【运行时验证边界】本轮以仓库内全量套件与审计工具为证：6346 条测试全绿、`npm run check` 十九门全绿；但**不能保证**真机 SillyTavern 环境下的朋友圈时间显示、宿主 `timeManager` 的实际取值时序、以及剧情回拨后的排序表现 —— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，须在真机复现后再修，不把门禁全绿当成实机已验。
 ## 迭代 260 · v4.139.0 · 第十八期物联拟真生活与接线收口（2026-11-09）
 - 【版本升至 4.139.0（五源同源）】修正版本资料漂移：manifest 与 package 已抬至 4.139.0，而入口常量与 update-log 仍停在 4.137.0/4.138.0。五源同源是判据，不是抬版仪式——本次把缺口补齐并让 update-log 首键即当版。
 - 【第十八期物联拟真生活（R18-X1~X9 / R18-O1~O9）】新增虚拟文件系统云端保险库、隐蔽录音备忘、空间音频触感、热力学电池物理、智能穿戴生理互操作、蜂窝弱信号与射频邻近雷达、应用沙箱权限矩阵、灾难遥测自动重启、外卖生态、网约车出行、击键生物特征迟疑建模、屏幕阅读器桥、应用挂起墓碑、动态岛锁屏一瞥、多语言动态引擎、IPC 背压控制、零拷贝索引库与虚拟列表渲染底座。
@@ -7557,7 +7566,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.139.0`（五源同源）
+- **当前版本**：`4.140.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

@@ -1137,7 +1137,7 @@
       "rel": "apps/moments/moments-living-social-ecosystem.js",
       "cls": "MomentsLivingSocialEcosystem",
       "name": "postMoment",
-      "line": 33,
+      "line": 60,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1145,7 +1145,7 @@
       "rel": "apps/moments/moments-living-social-ecosystem.js",
       "cls": "MomentsLivingSocialEcosystem",
       "name": "likeMoment",
-      "line": 52,
+      "line": 82,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -3133,5 +3133,6 @@
       "isStatic": false,
       "classInstantiated": true
     }
-  ]
+  ],
+  "generated_at_note": "行号按 tools/relocate_method_baseline.mjs 重定位（v4.95.0：源码插入导致其后行号整体后移）"
 }

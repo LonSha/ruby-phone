@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.139.0';
+const ST_PHONE_VERSION = '4.140.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -582,7 +582,7 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-09",
+    date: "2026-11-10",
     /* 与 update-log 逐字同源：本块是用户唯一能看到的更新说明，
      *   条目必须与 update-log 中当版的 items 逐条相等；
      *   只改一处会造成「版本号对了、内容是旧的」这种更误导的状态。
@@ -590,17 +590,16 @@ const ST_PHONE_CURRENT_UPDATE = {
      *   （tests/system-v312 的 E2、system-v324 的 A4），注释里出现方括号会
      *   让头部被提前截断、后半 items 全读不到 ⇒ 假红。 */
     items: [
-        "【版本升至 4.139.0（五源同源）】修正版本资料漂移：manifest 与 package 已抬至 4.139.0，而入口常量与 update-log 仍停在 4.137.0/4.138.0。五源同源是判据，不是抬版仪式——本次把缺口补齐并让 update-log 首键即当版。",
-        "【第十八期物联拟真生活（R18-X1~X9 / R18-O1~O9）】新增虚拟文件系统云端保险库、隐蔽录音备忘、空间音频触感、热力学电池物理、智能穿戴生理互操作、蜂窝弱信号与射频邻近雷达、应用沙箱权限矩阵、灾难遥测自动重启、外卖生态、网约车出行、击键生物特征迟疑建模、屏幕阅读器桥、应用挂起墓碑、动态岛锁屏一瞥、多语言动态引擎、IPC 背压控制、零拷贝索引库与虚拟列表渲染底座。",
-        "【接通休眠引擎】把仓内早已存在且有单测、但生产侧零调用的第二批业务引擎挂到真实宿主时机：回复气泡接微信输入框、键击与发送音效接触感合成器、来电接情境环境音、锁屏接情境壁纸推导、备份落盘接快照引擎、资产抽取规范接资产账本、离线通知队列与呼吸灯接通知中心、朋友圈可见性过滤接互动引擎。",
-        "【装配纪律】找不到真实宿主时如实记 noHost，不虚构挂载；同族多份引擎必须分派不同动作，不允许多份叠在同一处刷数字；任一引擎抛错只记读数、不中断宿主事件。",
-        "【双向反哺】氛围类引擎产出的指令行此前只能烂在实例里，现经队友列入口径入队、逐条去重、24 条上限，并走每次生成前都被消费的既有注入链路。",
-        "【事件契约补齐】PHONE_EVENTS 补登记锁屏、解锁、翻扣静音、隐私风险四项长期在派发却无契约的生命周期事件，消除「有派发无登记」的契约外弹窗。",
-        "【绑定级消费清零】装配层改用模块自带的工厂函数而非直接 new 类，使此前仅被名字级判绿的工厂导出获得真实消费方；绑定级门禁新增 0，并清掉已复活的旧基线项。",
-        "【审计口径三档化】孤儿审计从「零引用即死」细分为：生产与测试都零引用（DEAD）、只有测试引用而生产零消费（TESTONLY）、纯转发兼容层（FORWARD）。后两档单列，避免把测试守着的档位和兼容层误判为死文件。",
-        "【运行时验证边界】本轮以仓库内全量套件与审计工具为证：1347 个文件可按 ES Module 解析、1400 条静态相对导入可解析、具名导入门 1336 条全满足；但**不能保证**真机视觉排版、真实网络往返、宿主存储迁移与渲染帧耗时 —— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，须在真机复现后再修，不把门禁全绿当成实机已验。",
-        "【本版自己抓到的缺陷形态】① 旧发布版存在 ESM 具名导出缺失：物理损伤模拟器只导出 applyPhysicalDamage，而 device-runtime 已按 simulatePhysicalDegradation 导入，安装包一加载即抛 SyntaxError —— 本分支补上别名导出并加负控制；② named-import 门禁把 export const 解构导出误判成缺失（自造假红），已修正解析并验证破坏后仍能转红；③ 死表面账本与死方法账本把条目数当等值锚，真实接线反而翻红。",
-        "【交棒改写】把三条「把水位当契约」的等值锚改写为不变量：死表面账本改「防塌陷下限 + 两档穷尽互斥」；探针判据散文改「现场读数写回、零手抄」；入口注释不再使用 ASCII 方括号，避免历史判据按首个右方括号截断头部而假红。"
+        "【版本升至 4.140.0（五源同源）】package.json / manifest.json / index.js 的 ST_PHONE_VERSION / update-log 的 latest 与 head 五处同源抬到 4.140.0。本版只做一件事：把 v4.139.0 白名单里如实登记为「story 档待收口」的那笔欠债收掉，不夹带其他改动。",
+        "【收口内容：朋友圈两引擎的时间轴改走剧情钟】`apps/moments/moments-living-social-ecosystem.js` 的 5 处 `Date.now()` 与 `apps/moments/npc-social-graph-dynamic-moments.js` 的 2 处，原先全部是「这条动态 / 这条评论发生在什么时候」—— 它会渲染成用户可见的时间文案，按 `FIELD_CLOCKS.timestamp = 'story'` 的口径属剧情钟。本版改为走 `config/time-source.js`：`postMoment` / `addComment` / 自动回复 / NPC 评论一律取剧情时刻，`id`（`moment_<ts>_<rand>`）保持墙钟 —— 它是去重与排序稳定的幂等键，不渲染给用户看，若跟着剧情钟走，剧情回拨后新动态会与旧动态撞 id。",
+        "【为什么用 storyNowWallFallback 而不是 storyNow】`timestamp` 在这两个引擎里是**必填数字字段**（`getFeed` 按它排序、UI 按它算「多久前」），而 `storyNow` 读不到时给 `null`（纪律：绝不补墙钟）。若这里也用 null，排序与相对时间会直接崩掉。故走本仓**唯一允许的显式降级出口**：读不到时退回墙钟并带 `degraded` / `reason`，使「哪个引擎在什么条件下用了墙钟」成为可答的问题。这是有意降级，不是漏改 —— 理由写在两个文件各自的头注里。",
+        "【宿主注入面】`MomentsLivingSocialEcosystem` 的构造签名改为 `(state = {}, win = null)`，`generateMomentReactions` 增设第三参 `win = null`；装配层 `phone/domain-engines-mount.js` 从 `deps.win` 取宿主并挂在引擎容器上，`index.js` 的装配点补传 `win: window`。不传 `win` 时行为可预期（显式降级到墙钟），不会崩。",
+        "【本版自己抓到的缺陷：判据绕过装配层 + 一处 ReferenceError】① 首版判据 E3 直接调工厂并显式传 `win`，于是它只能证明「引擎愿意用 win」；把装配层那行透传删掉，E3 **照样全绿** —— 而真实故障恰恰发生在装配层。故补 E4，从 `mountDomainEngines` 这个真实入口进，并用负控制验证：删掉透传后 E4 精确报出「装配层没把 win 交给 moments 引擎」。② E4 立刻抓到一处真 bug：`bindDomainEngines` 里的分派函数写了 `deps.win`，但该作用域没有 `deps`（那是 `mountDomainEngines` 的形参），抛 ReferenceError 后被 catch 吞成 `lastError`，于是 `onMomentReactions` 静默返回空数组 —— 点赞永远是 0 且不报错。已改为从引擎容器上取宿主，并把这个坑写进注释。",
+        "【交棒改写：E1/E2 不够，必须补行为判据】原判据 E1/E2 只查「文件里还有没有裸 `Date.now()`」。若有人把 `Date.now()` 换成 `wallNow()` 却不接宿主，E2 会全绿，而朋友圈时间依然跟剧情脱节。故新增 E3（行为：给远未来假剧情钟，看时刻是否跟着它走）与 E4（入口：从装配层进），两条都用「传 win 与不传 win 结果必须不同」做反证，防止判据恒绿。",
+        "【读数与账本同步】因源码增行与新增判据，全仓读数按既有工具重算（零手抄）：`tools/refresh_doc_readings.py --write`（导入条数 1400 → 1402）、`tools/gen_status_ledger.mjs --write`（index_lines 14484 → 14488）、`tools/gen_plan_baseline.mjs --write`、`tools/relocate_method_baseline.mjs --write`（只改 line 字段：postMoment 33 → 60、likeMoment 52 → 82，条目集合不变）。另把白名单里两条「story 档待收口」的登记改写成收口后的真实理由。",
+        "【运行时验证边界】本轮以仓库内全量套件与审计工具为证：6346 条测试全绿、`npm run check` 十九门全绿；但**不能保证**真机 SillyTavern 环境下的朋友圈时间显示、宿主 `timeManager` 的实际取值时序、以及剧情回拨后的排序表现 —— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，须在真机复现后再修，不把门禁全绿当成实机已验。"
+    
+    
     
 ]
 };
@@ -2430,7 +2429,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                         shell: window.VirtualPhone.phoneShell || null,
                         storage,
                         memoryCore: window.VirtualPhone.memoryCore || null,
-                        feedbackHub: window.VirtualPhone.lonshaBridge?.feedbackHub || null
+                        feedbackHub: window.VirtualPhone.lonshaBridge?.feedbackHub || null,
+                        /* [v4.140.0] 宿主透传给业务引擎：moments 的 timestamp 属剧情钟，
+                         *   引擎要靠它去问 timeManager（唯一剧情源）。不传 ⇒ 引擎只能
+                         *   显式降级到墙钟，朋友圈时间就会跟剧情脱节。 */
+                        win: window
                     });
                     bindDomainEngines(dmHandle, {
                         virtualPhone: window.VirtualPhone,
