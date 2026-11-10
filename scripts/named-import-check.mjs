@@ -106,7 +106,20 @@ for (const f of SCAN_FILES) {
 
 /* ---------- 1. 收集每个模块的具名导出面 ---------- */
 const EXPORT_DECL_RE = /^\s*export\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/gm;
-const EXPORT_LIST_RE = /export\s*\{([^}]*)\}/g;
+/* 解构式导出：`export const { a, b, c } = factory;`
+ *   它同样产生真实具名导出（Node 里可 `import { a }`），但上面那条 EXPORT_DECL_RE
+ *   要求 `const` 后面紧跟标识符，遇到 `{` 就匹配失败 —— 于是整组名字被当作不存在。
+ *   实测后果：apps/phone/status-tracker.js 用这种写法导出 5 个 status 函数，
+ *   phone/domain-engines-mount.js 正常消费它们，本门却报 3 条「缺失导出」。
+ *   那是**门禁自己的缺陷**，不是源码缺陷（该模块 node 实跑导入成功），
+ *   故在此补上解构分支，避免用假红挡住真实交付。 */
+const EXPORT_DESTRUCT_RE = /export\s+(?:const|let|var)\s*\{([^}]*)\}\s*=/g;
+/* 注意边界：`export { a }`（re-export 列表）与 `export const { a } = x`（解构导出）
+ *   只差中间那几个字符。若本正则贪婪成 /export\s*\{([^}]*)\}/，就会把解构块的花括号
+ *   当作 re-export 列表吞掉，把块内字面量无条件算成已定义导出 —— 那样门禁会永远放行
+ *   （实测过：删掉 status-tracker 解构块里的 findLatestStatus，门禁仍 rc=0）。
+ *   故用否定断言要求 `export` 之后不能是 const/let/var，解构形态只由上面那条专用分支负责。 */
+const EXPORT_LIST_RE = /export\s*(?!const\b|let\b|var\b)\{([^}]*)\}/g;
 const exportsOf = new Map();
 const rawOf = new Map();
 for (const f of files) {
@@ -118,6 +131,15 @@ for (const f of files) {
   let m;
   EXPORT_DECL_RE.lastIndex = 0;
   while ((m = EXPORT_DECL_RE.exec(code))) names.add(m[1]);
+  EXPORT_DESTRUCT_RE.lastIndex = 0;
+  while ((m = EXPORT_DESTRUCT_RE.exec(code))) {
+    for (const part of m[1].split(',')) {
+      const raw = part.trim();
+      if (!raw) continue;
+      const nm = raw.includes(':') ? raw.split(':').pop().trim() : raw;
+      if (/^[A-Za-z_$][\w$]*$/.test(nm)) names.add(nm);
+    }
+  }
   EXPORT_LIST_RE.lastIndex = 0;
   while ((m = EXPORT_LIST_RE.exec(code))) {
     for (const part of m[1].split(',')) {

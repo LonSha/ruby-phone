@@ -1,6 +1,6 @@
 {
   "note": " 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，条数 114 → 113）：`config/life-program-replay.js:8 STORAGE_KEY`（`evidence:\"name-clash\"`）此前是因为\"同名绑定在别处出现过、但本文件这一处零消费\"被记死的；X9 之后它被**真接线**：`config/replay-face-bridge.js` 以 `STORAGE_KEY as REPLAY_LEDGER_KEY` 转出，相册与记忆两侧的取数口都用这个常量去读盘（桥里刻意不写 `lpr_program_replay_v1` 字面量，两处写字面量就会有一处先漂）。摘除前实测：`bind-consumption-audit` 报「1 条基线项已复活（config/life-program-replay.js:8 STORAGE_KEY）」。",
-  "generated_at": "2026-10-31T23:22:06.407Z",
+  "generated_at": "2026-11-09T01:20:38.573Z",
   "generated_version_hint": "auto",
   "rule": "绑定级零消费冻结账本：新增项必须显式登记理由；条目被真接线后应清理。口径见 scripts/bind-consumption-audit.mjs 头注释。",
   "entries": [
@@ -128,12 +128,6 @@
         "apps/cardtable/cardtable-data.js",
         "apps/diagdesk/diagdesk-app.js"
       ]
-    },
-    {
-      "file": "apps/phone/first-chunk-barrier.js",
-      "name": "createFirstChunkBarrier",
-      "line": 4,
-      "evidence": "no-ref"
     },
     {
       "file": "apps/punchcard/punchcard-data.js",

@@ -47,10 +47,16 @@ import { SystemFullSnapshotBackupEngine } from '../apps/security/system-full-sna
 import { VirtualShellGeekSandboxTerminal } from '../apps/security/virtual-shell-geek-sandbox-terminal.js';
 import { AtomicFilesystemSnapshotVault } from '../apps/archive/atomic-filesystem-snapshot-vault.js';
 import { OfflineAirdropDigitalLegacy } from '../apps/archive/offline-airdrop-digital-legacy.js';
-import { MomentsLivingSocialEcosystem } from '../apps/moments/moments-living-social-ecosystem.js';
+/* [绑定级消费] 这两个模块对外只暴露「类 + 工厂 + default 三件套」，而工厂
+ *   存在的意义本就是让调用方不必自己 new。装配层原先只 import 类，
+ *   于是 createMomentsLivingEcosystem / createForensicClueMatrix 在整个生产侧
+ *   变成绑定级零消费导出（名字级判绿——同名标识符在别处出现过——但没有任何
+ *   import 绑定真的调用它）。改用工厂：既是模块作者预期的用法，也让这两个
+ *   导出获得真实消费方。scripts/bind-consumption-audit.mjs 会盯着这一条。 */
+import { createMomentsLivingEcosystem } from '../apps/moments/moments-living-social-ecosystem.js';
 import { generateMomentReactions } from '../apps/moments/npc-social-graph-dynamic-moments.js';
 import { NPCAutonomousSocialFeedEngine } from '../apps/social/npc-autonomous-social-feed-engine.js';
-import { ForensicCrossAppClueMatrix } from '../apps/investigation/forensic-cross-app-clue-matrix.js';
+import { createForensicClueMatrix } from '../apps/investigation/forensic-cross-app-clue-matrix.js';
 import { DarknetBizarreBazaarEngine } from '../apps/darknet/darknet-bizarre-bazaar-engine.js';
 import { AwakeningEngine } from '../apps/memory/awakening-engine.js';
 import { executePinyinGlobalSearch } from '../apps/search/global-pinyin-search-deeplink-router.js';
@@ -142,9 +148,9 @@ export function mountDomainEngines(deps = {}) {
         geekShell: () => new VirtualShellGeekSandboxTerminal(),
         txVault: () => new AtomicFilesystemSnapshotVault(),
         digitalLegacy: () => new OfflineAirdropDigitalLegacy(),
-        moments: () => new MomentsLivingSocialEcosystem(),
+        moments: () => createMomentsLivingEcosystem(),
         npcFeed: () => new NPCAutonomousSocialFeedEngine(),
-        forensic: () => new ForensicCrossAppClueMatrix(),
+        forensic: () => createForensicClueMatrix(),
         darknet: () => new DarknetBizarreBazaarEngine(),
         awakening: () => new AwakeningEngine(deps.memoryCore || makeNullMemoryCore()),
         statusTracker: () => makeParser(),

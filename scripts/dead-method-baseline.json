@@ -1,7 +1,7 @@
 {
   "note": "类方法面冻结账本（R11-O2）。判据：公开方法名在**全仓除声明行外零出现**即记死。新增未登记即红；条目被真接线后应清理。口径见 scripts/lib/dead-surface.mjs 头注释。 【v4.95.0 · R11-O3】SubsystemOrchestrator.manageUsageParadigm 已人工摘除：产品端真接线（phone/home-screen.js 调 resolveAppOrder、apps/usage/usage-app.js 读范式键），门的复活告警点名了它。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】本版新增的两条死方法当场被抓并修掉，故条数未增（315 → 315）：`BackupdeskApp.previewShare` 与 `BackupdeskApp.markShareRead` 此前只有判据在调、产品面零调用 —— 前者因为 `_shareVm` 里另写了一份 `sharePreviewOf`（同一件事两份口径），后者因为界面没有「记已读」入口。修法是**真接线**，不是写进账本：判据绿而对用户不存在，是本面最贵的一种假绿。 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，逐条手删，条数 315 → 311）：① `SmartGalleryVault.unlockVault` / `lockVault` / `queryPhotos` 三条 —— X9 把保险箱接进了相册的「回看」页：解锁走 `AlbumView.unlockVaultFromUI()` 真调 `unlockVault(pin)`（连错 3 次锁 30 秒的判据留在内核里，视图只转述它的话），「重新上锁」与离开回看页走 `lockVault()`，分区读数由 `replay-face-bridge.vaultPartitionOf()` 取代 `queryPhotos`；② `SubsystemOrchestrator.replayLifeExperience` —— 修前是纸面假驱动（`recordLifeProgram` / `getActPerspective` / `playbackProgramSummary` / `createReplayableProgram` 四处全传错参，每次调用都成功返回、每一项都是空的），本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，由回看面真调用。摘除前实测：`method-consumption-audit` 报「3 条基线方法已被重新消费」并逐条点名。 【v4.99.9 · R11-X9 行号校正】本版改动了 apps/album/album-data.js 与 apps/memory/memory-app.js，方法声明行号随之平移（E1 判据逐条对真源码，偏移即红）。此处**只按真源码重算 line 字段**，不改条目集合、不改 generated_at（非 --update：整本重写会把时间戳一起洗掉）。",
   "schema": "dead-method-baseline@1",
-  "generated_at": "2026-11-06T18:06:50.473Z",
+  "generated_at": "2026-11-10T09:50:08.608Z",
   "generated_version_hint": "auto",
   "rule": "只判增量。存量冻结是为了「不一次性清零牵连整批 App」（计划明令）。每条带 classInstantiated 以便分档处置。",
   "entries": [
@@ -26,6 +26,78 @@
       "cls": "ArchiveApp",
       "name": "canonSlot",
       "line": 673,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/archive/atomic-filesystem-snapshot-vault.js",
+      "cls": "AtomicFilesystemSnapshotVault",
+      "name": "exportFullSystemDump",
+      "line": 47,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/archive/atomic-filesystem-snapshot-vault.js",
+      "cls": "AtomicFilesystemSnapshotVault",
+      "name": "importFullSystemDump",
+      "line": 63,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/archive/offline-airdrop-digital-legacy.js",
+      "cls": "OfflineAirdropDigitalLegacy",
+      "name": "dispatchAirdropFile",
+      "line": 12,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/archive/offline-airdrop-digital-legacy.js",
+      "cls": "OfflineAirdropDigitalLegacy",
+      "name": "armDigitalLegacy",
+      "line": 25,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/archive/virtual-filesystem-cloud-vault.js",
+      "cls": "VirtualFilesystemCloudVault",
+      "name": "formatFilesystemPrompt",
+      "line": 57,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/audio/covert-audio-voice-memo-recorder.js",
+      "cls": "CovertAudioVoiceMemoRecorder",
+      "name": "addPinMarker",
+      "line": 41,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/audio/covert-audio-voice-memo-recorder.js",
+      "cls": "CovertAudioVoiceMemoRecorder",
+      "name": "formatAudioPrompt",
+      "line": 67,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/audio/haptic-spatial-audio-feedback-engine.js",
+      "cls": "HapticSpatialAudioFeedbackEngine",
+      "name": "getRecentFeedbackSummary",
+      "line": 43,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/audio/retro-haptic-acoustic-synthesizer.js",
+      "cls": "RetroHapticAcousticSynthesizer",
+      "name": "setAmbientScene",
+      "line": 46,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -266,6 +338,30 @@
       "cls": "CreationdeskBoard",
       "name": "facetIds",
       "line": 153,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/daily/cross-app-daily-life-fabric.js",
+      "cls": "CrossAppDailyLifeFabric",
+      "name": "getRecentLifeEvents",
+      "line": 84,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/darknet/darknet-bizarre-bazaar-engine.js",
+      "cls": "DarknetBizarreBazaarEngine",
+      "name": "getMarketListing",
+      "line": 37,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/darknet/darknet-bizarre-bazaar-engine.js",
+      "cls": "DarknetBizarreBazaarEngine",
+      "name": "purchaseItem",
+      "line": 45,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -582,6 +678,30 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/hardware/dynamic-power-battery-physics.js",
+      "cls": "DynamicPowerBatteryPhysics",
+      "name": "plugInCharger",
+      "line": 61,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/hardware/thermodynamics-battery-physics-sim.js",
+      "cls": "ThermodynamicsBatteryPhysicsSim",
+      "name": "stepPhysics",
+      "line": 30,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/hardware/thermodynamics-battery-physics-sim.js",
+      "cls": "ThermodynamicsBatteryPhysicsSim",
+      "name": "formatHardwarePrompt",
+      "line": 62,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "apps/health/health-data.js",
       "cls": "HealthData",
       "name": "recordIntimacy",
@@ -610,6 +730,30 @@
       "cls": "HealthData",
       "name": "getIntimacyPrompt",
       "line": 558,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/smart-wearable-biometric-interop.js",
+      "cls": "SmartWearableBiometricInterop",
+      "name": "updateHeartRate",
+      "line": 33,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/smart-wearable-biometric-interop.js",
+      "cls": "SmartWearableBiometricInterop",
+      "name": "recordSleepSession",
+      "line": 48,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/health/smart-wearable-biometric-interop.js",
+      "cls": "SmartWearableBiometricInterop",
+      "name": "formatWearablePrompt",
+      "line": 57,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -675,7 +819,7 @@
       "name": "maybeEcho",
       "line": 190,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/awakening-engine.js",
@@ -683,7 +827,7 @@
       "name": "maybeMisremember",
       "line": 219,
       "isStatic": false,
-      "classInstantiated": false
+      "classInstantiated": true
     },
     {
       "rel": "apps/memory/global-search-engine.js",
@@ -721,7 +865,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "recordEvolutionLink",
-      "line": 290,
+      "line": 312,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -729,7 +873,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "hasSupersedingEvolution",
-      "line": 303,
+      "line": 325,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -737,7 +881,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "applyScenePresenceState",
-      "line": 494,
+      "line": 516,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -745,7 +889,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "getScenePresenceState",
-      "line": 513,
+      "line": 535,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -753,7 +897,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "peekHolographicEvents",
-      "line": 553,
+      "line": 576,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -761,7 +905,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "acknowledgeHolographicEvents",
-      "line": 566,
+      "line": 589,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -769,7 +913,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "drainHolographicEvents",
-      "line": 570,
+      "line": 593,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -777,7 +921,15 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "checkPresenceInterception",
-      "line": 596,
+      "line": 619,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/lonsha-bridge.js",
+      "cls": "LonShaBridge",
+      "name": "getEvolutionRead",
+      "line": 924,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -910,6 +1062,62 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "getDirectiveQueueState",
+      "line": 46,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "onContactRemarkChanged",
+      "line": 57,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "onFinancialTransfer",
+      "line": 82,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "onTypingHesitationObserved",
+      "line": 106,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "onDeliveryArrivalObserved",
+      "line": 126,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "onBiometricSpikeObserved",
+      "line": 146,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js",
+      "cls": "RubyPhoneLonShaBidirectionalFeedbackHub",
+      "name": "getEvents",
+      "line": 161,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "apps/memtable/memtable-app.js",
       "cls": "MemtableApp",
       "name": "fieldHistoryOf",
@@ -922,6 +1130,22 @@
       "cls": "MofoData",
       "name": "getBootstrapState",
       "line": 31,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/moments/moments-living-social-ecosystem.js",
+      "cls": "MomentsLivingSocialEcosystem",
+      "name": "postMoment",
+      "line": 33,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/moments/moments-living-social-ecosystem.js",
+      "cls": "MomentsLivingSocialEcosystem",
+      "name": "likeMoment",
+      "line": 52,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1026,6 +1250,38 @@
       "cls": "NeedsimApp",
       "name": "closeMemory",
       "line": 807,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/network/cellular-radio-weak-signal-simulation.js",
+      "cls": "CellularRadioWeakSignalSimulation",
+      "name": "updateEnvironment",
+      "line": 28,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/network/cellular-radio-weak-signal-simulation.js",
+      "cls": "CellularRadioWeakSignalSimulation",
+      "name": "formatNetworkPrompt",
+      "line": 83,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/network/cellular-rf-proximity-radar.js",
+      "cls": "CellularRFProximityRadar",
+      "name": "getTrackedList",
+      "line": 66,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/network/radio-cellular-weak-signal-sim.js",
+      "cls": "RadioCellularWeakSignalSim",
+      "name": "simulatePacketDispatch",
+      "line": 53,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1286,6 +1542,70 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/security/app-sandbox-permission-interceptor.js",
+      "cls": "AppSandboxPermissionInterceptor",
+      "name": "checkAccess",
+      "line": 54,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/app-sandbox-permission-interceptor.js",
+      "cls": "AppSandboxPermissionInterceptor",
+      "name": "revokePermission",
+      "line": 58,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/app-sandbox-permission-matrix.js",
+      "cls": "AppSandboxPermissionMatrix",
+      "name": "setPermission",
+      "line": 21,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/dead-man-switch-digital-vault.js",
+      "cls": "DeadManSwitchDigitalVault",
+      "name": "depositSealedLetter",
+      "line": 16,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/dead-man-switch-digital-vault.js",
+      "cls": "DeadManSwitchDigitalVault",
+      "name": "checkSwitchState",
+      "line": 41,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/dead-man-switch-digital-vault.js",
+      "cls": "DeadManSwitchDigitalVault",
+      "name": "getTriggeredLetters",
+      "line": 70,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/duress-privacy-vault-disguise.js",
+      "cls": "DuressPrivacyVaultDisguise",
+      "name": "isDisguiseActive",
+      "line": 46,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/security/system-full-snapshot-backup-engine.js",
+      "cls": "SystemFullSnapshotBackupEngine",
+      "name": "restoreFromBackup",
+      "line": 51,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "apps/settings/image-upload.js",
       "cls": "ImageUploadManager",
       "name": "uploadWallpaper",
@@ -1342,10 +1662,50 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/share/nfc-airdrop-proximity-exchange.js",
+      "cls": "NFCAirdropProximityExchange",
+      "name": "exchangePayload",
+      "line": 33,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/shop/on-demand-delivery-takeout-ecosystem.js",
+      "cls": "OnDemandDeliveryTakeoutEcosystem",
+      "name": "createOrder",
+      "line": 21,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/shop/on-demand-delivery-takeout-ecosystem.js",
+      "cls": "OnDemandDeliveryTakeoutEcosystem",
+      "name": "advanceDeliveryStep",
+      "line": 42,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/shop/on-demand-delivery-takeout-ecosystem.js",
+      "cls": "OnDemandDeliveryTakeoutEcosystem",
+      "name": "formatDeliveryPrompt",
+      "line": 61,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "apps/shop/shop-app.js",
       "cls": "ShopApp",
       "name": "presetCategories",
       "line": 97,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/social/npc-autonomous-social-feed-engine.js",
+      "cls": "NPCAutonomousSocialFeedEngine",
+      "name": "interactWithPost",
+      "line": 58,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1518,6 +1878,38 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/traveldesk/didi-mobility-ride-hailing-system.js",
+      "cls": "DiDiMobilityRideHailingSystem",
+      "name": "createTrip",
+      "line": 21,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/traveldesk/didi-mobility-ride-hailing-system.js",
+      "cls": "DiDiMobilityRideHailingSystem",
+      "name": "advanceTripStep",
+      "line": 38,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/traveldesk/didi-mobility-ride-hailing-system.js",
+      "cls": "DiDiMobilityRideHailingSystem",
+      "name": "triggerDeviationAlert",
+      "line": 59,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/traveldesk/didi-mobility-ride-hailing-system.js",
+      "cls": "DiDiMobilityRideHailingSystem",
+      "name": "formatTripPrompt",
+      "line": 65,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "apps/uterus/uterus-app.js",
       "cls": "UterusApp",
       "name": "subjectAt",
@@ -1626,6 +2018,38 @@
       "cls": "GroupVote",
       "name": "messageKinds",
       "line": 372,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/keystroke-biometrics-typing-hesitation.js",
+      "cls": "KeystrokeBiometricsTypingHesitation",
+      "name": "simulateTypingSession",
+      "line": 30,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/keystroke-biometrics-typing-hesitation.js",
+      "cls": "KeystrokeBiometricsTypingHesitation",
+      "name": "simulateMiskeyAndRecall",
+      "line": 55,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/keystroke-biometrics-typing-hesitation.js",
+      "cls": "KeystrokeBiometricsTypingHesitation",
+      "name": "formatUnsentDraftsForPrompt",
+      "line": 70,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "apps/wechat/typing-hesitation-recall-anxiety.js",
+      "cls": "TypingHesitationRecallAnxiety",
+      "name": "executeEmergencyRecall",
+      "line": 44,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1750,6 +2174,14 @@
       "classInstantiated": true
     },
     {
+      "rel": "apps/wechat/wechat-intuition-reply-chips.js",
+      "cls": "WeChatIntuitionReplyChips",
+      "name": "generateIntuitionChips",
+      "line": 18,
+      "isStatic": true,
+      "classInstantiated": false
+    },
+    {
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "correctFloor",
@@ -1786,14 +2218,6 @@
       "cls": "WorldpulseApp",
       "name": "loreDryRunFace",
       "line": 172,
-      "isStatic": false,
-      "classInstantiated": true
-    },
-    {
-      "rel": "config/ambient-audio-wiretap.js",
-      "cls": "AmbientAudioWiretap",
-      "name": "stopRecording",
-      "line": 56,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2534,6 +2958,14 @@
       "classInstantiated": true
     },
     {
+      "rel": "phone/accessibility-screen-reader-bridge.js",
+      "cls": "AccessibilityScreenReaderBridge",
+      "name": "getLatestVoiceOver",
+      "line": 36,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "phone/ambient-call-simulator.js",
       "cls": "AmbientCallSimulator",
       "name": "formatCallAtmosphere",
@@ -2566,10 +2998,18 @@
       "classInstantiated": true
     },
     {
+      "rel": "phone/dynamic-island-lockscreen-glance.js",
+      "cls": "DynamicIslandLockscreenGlance",
+      "name": "updateDynamicIslandActivity",
+      "line": 42,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "phone/home-screen.js",
       "cls": "HomeScreen",
       "name": "isHomeScreenVisible",
-      "line": 70,
+      "line": 74,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2577,7 +3017,7 @@
       "rel": "phone/home-screen.js",
       "cls": "HomeScreen",
       "name": "renderDiaryCard",
-      "line": 826,
+      "line": 836,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2585,15 +3025,7 @@
       "rel": "phone/home-screen.js",
       "cls": "HomeScreen",
       "name": "renderFeatureCard",
-      "line": 901,
-      "isStatic": false,
-      "classInstantiated": true
-    },
-    {
-      "rel": "phone/ime-draft-guardian.js",
-      "cls": "ImeDraftGuardian",
-      "name": "getDraft",
-      "line": 37,
+      "line": 911,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2602,6 +3034,22 @@
       "cls": "ImeDraftGuardian",
       "name": "suggestCatchphrases",
       "line": 51,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/multitask-viewstack-resumption-engine.js",
+      "cls": "MultitaskViewstackResumptionEngine",
+      "name": "handleInterrupt",
+      "line": 41,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
+      "rel": "phone/phone-event-bus-pipeline.js",
+      "cls": "PhoneEventBusPipeline",
+      "name": "getBusTelemetry",
+      "line": 93,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2646,6 +3094,14 @@
       "classInstantiated": true
     },
     {
+      "rel": "phone/sqlite-wasm-zero-copy-indexeddb.js",
+      "cls": "SQLiteWASMZeroCopyIndexedDB",
+      "name": "readChunk",
+      "line": 35,
+      "isStatic": false,
+      "classInstantiated": true
+    },
+    {
       "rel": "phone/theme-pack-engine.js",
       "cls": "ThemePackEngine",
       "name": "deriveThemeFromCharacter",
@@ -2670,9 +3126,9 @@
       "classInstantiated": true
     },
     {
-      "rel": "phone/virtual-scroller.js",
-      "cls": "VirtualListScroller",
-      "name": "computeSlice",
+      "rel": "phone/ui-virtual-list-scroller-60fps.js",
+      "cls": "UIVirtualListScroller60FPS",
+      "name": "setItemCustomHeight",
       "line": 26,
       "isStatic": false,
       "classInstantiated": true

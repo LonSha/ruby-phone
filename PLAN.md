@@ -126,9 +126,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.124.0**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **398 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.124.0 机器台账复算**：apps **88 个 App 目录**（`config/apps.js` **89 条 id**）、config **316** 件、tests **398** 套件、scripts **31** 件；`index.js` **877092 字节 / 14242 行**；`phone.css` **716697 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 版本 | **v4.139.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **431 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.139.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **318** 件、tests **431** 套件、scripts **31** 件；`index.js` **895604 字节 / 14484 行**；`phone.css` **716697 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
@@ -244,14 +244,13 @@
 ---
 
 ## 优先级
-> 当期排序：第十四期R14；六个大批次按证据页执行。
-1. 批次A：`R14-O1` / `R14-O2` / `R14-O3` —— 可靠地留下与返回。
-2. 批次B：`R14-O4` / `R14-O5` / `R14-O6` —— 改错与办事可以放心。
-3. 批次C：`R14-O7` / `R14-O8` / `R14-O9` —— 长篇与长用都流畅。
-4. 批次D：`R14-X1` / `R14-X2` / `R14-X4` —— 交流与约定形成过程。
-5. 批次E：`R14-X3` / `R14-X7` / `R14-X8` —— 准备下一幕与持续活动。
-6. 批次F：`R14-X5` / `R14-X6` / `R14-X9` —— 回访、交接与体验收口。
-
+> 当期排序：第十七期 R17（与两份当期计划书的编号顺序逐条对齐；计划书未另定批次先后，故此处按编号顺序登记，不自行发明排序理由）。
+1. 批次A：`R17-O1` / `R17-O2` / `R17-O3` —— 检索穿透、长列表流畅、视图栈不死锁。
+2. 批次B：`R17-O4` / `R17-O5` / `R17-O6` —— 跨仓反哺、声学与触感、同室防偷窥。
+3. 批次C：`R17-O7` / `R17-O8` / `R17-O9` —— 冷备份迁移、硬件损耗、沙盒终端。
+4. 批次D：`R17-X1` / `R17-X2` / `R17-X3` —— 直觉回复、物证链、朋友圈生态。
+5. 批次E：`R17-X4` / `R17-X5` / `R17-X6` —— 近场快传、暗网集市、射频雷达。
+6. 批次F：`R17-X7` / `R17-X8` / `R17-X9` —— 情境锁屏、通话声场、数字遗物。
 ## 第十三期优先级（历史）
 
 > **当期排序：第十三期 R13**（与计划书 §3 交付顺序逐条对齐）。四项排序理由全部继承计划书原话，不由本文件自行发明：

@@ -56,12 +56,6 @@
       "reason": "严重度分级映射，与 severityLabel 同族；当前显示路径走 severityLabel，本项为冗余面（建议后续删除）。"
     },
     {
-      "file": "apps/phone/first-chunk-barrier.js",
-      "name": "createFirstChunkBarrier",
-      "line": 39,
-      "reason": "主动放弃项：接入 api-manager.callAI 必须钩住 _callIndependentAPI/_callTavernAPI/_callTavernGenerateRawFallback 三条后端路径各自的流式首包，否则 follower 等 lead 全量完成会造成恶性串行化，风险过高。"
-    },
-    {
       "file": "apps/settings/image-cropper.js",
       "name": "cropImage",
       "line": 748,

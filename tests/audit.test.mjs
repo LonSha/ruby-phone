@@ -28,7 +28,14 @@ const ok = (name, cond, detail = '') => {
 // ========== 2. 每个 app 有 app.js + 导出默认类 ==========
 {
   const appsDir = path.join(root, 'apps');
-  const dirs = fs.readdirSync(appsDir).filter(d => fs.statSync(path.join(appsDir, d)).isDirectory() && !d.startsWith('.') && !['audio', 'darknet', 'hardware', 'investigation', 'network', 'security', 'call', 'keyboard', 'moments', 'share'].includes(d));
+  /* 排除名单 = 引擎/基础设施目录，不是可路由的 UI App（内部没有 <name>-app.js，
+   *   也不在 config/apps.js 的 APPS 表里）。v17/v18 新增的三处（daily / iot / social）
+   *   放的是「生活织体 / 物联中枢 / NPC 社交流」引擎，同样不走 App 外壳。
+   *   判据本意是「每个 **App** 目录都有 app.js」，把引擎目录算进来是判据的旧假设过期，
+   *   不是真的缺文件 —— 因此这里补名单，而不是给引擎造一个空 app.js。 */
+  const ENGINE_DIRS = ['audio', 'darknet', 'hardware', 'investigation', 'network', 'security',
+    'call', 'keyboard', 'moments', 'share', 'daily', 'iot', 'social'];
+  const dirs = fs.readdirSync(appsDir).filter(d => fs.statSync(path.join(appsDir, d)).isDirectory() && !d.startsWith('.') && !ENGINE_DIRS.includes(d));
   let noAppJs = 0;
   for (const d of dirs) {
     // 特例：bilibili 的 app 文件叫 bili-app.js，其余为 <name>-app.js

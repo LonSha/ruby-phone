@@ -69,6 +69,11 @@ function mkStorage(map) {
 function allOn(extra) {
     const m = {};
     for (const k of LIGHT_KEYS) m[k] = JSON.stringify({ injectToPrompt: true });
+    /* [夹具补正] v4.137.0 起 LIGHT_SPECS 多了一条 deviceContext（虚拟手机全息情境），
+     *   它的默认值是 `{ injectToPrompt: false }`（默认关闭是产品口径，不是缺陷）。
+     *   本函数的名字是「全开」，故必须把它也打开 —— 否则 B4 ② 的「开关开着不得记
+     *   disabled」会因为夹具只开了七个而把第八个当成关掉的，属于夹具的旧假设过期。 */
+    m['device_runtime_v1'] = JSON.stringify({ injectToPrompt: true });
     return Object.assign(m, extra || {});
 }
 /** 一份形状真实、各面都在的快照（时计 + 世界账本 + 场景）。 */
@@ -134,9 +139,16 @@ test('v3960 A3. 十个来源 App 的纯函数读面齐备（结构面：谁参�
 
 test('v3960 A4. 档位一律显式给（不靠标签猜 tier）', () => {
     /* tierOf 的标签猜法是为上游自由文本准备的；本模块知道自己是什么。 */
-    /* 七个轻量：每条 spec 上显式 `tier: INJECTION_TIERS.X`。 */
-    const n = (MOD.match(/tier: INJECTION_TIERS\./g) || []).length;
-    assert.equal(n, 7, '七个轻量装配来源各须显式声明档位，实测 ' + n + ' 处');
+    /* [交棒改写：条数不是不变量] 原判据把「七处 tier」钉成等值锚。v4.137.0 的
+     *   R20-O1 把 virtual-phone holographic context（deviceContext）并进这张轻量表
+     *   ⇒ 表变成八条，等值锚当场翻红 —— 而那是**正当新增的装配来源**，不是缺陷。
+     *   真正要守的不变量是：**每一条轻量 spec 都必须显式声明档位**（不靠 label 猜）。
+     *   故改为「appId 与 tier 数必须相等、且都不少于七条」—— 漏一条 tier 立刻红。 */
+    const specs = (MOD.match(/appId: '/g) || []).length;
+    const tiers = (MOD.match(/tier: INJECTION_TIERS\./g) || []).length;
+    assert.ok(specs >= 7, '轻量装配来源不得少于七条（实测 ' + specs + '）—— 表被清空等于判据失效');
+    assert.equal(tiers, specs,
+        '每条轻量装配来源都须显式声明档位（appId ' + specs + ' 条 / tier ' + tiers + ' 处）');
     /* 三个重型：走 heavyTiers 表，三档齐备（cheat=规则 / dt=人设 / asset=事实）。 */
     assert.ok(/const heavyTiers = \{/.test(MOD), '重型三档必须收在一张表里（不散落各调用点）');
     for (const t of ['RULE', 'PERSONA', 'FACT']) {
