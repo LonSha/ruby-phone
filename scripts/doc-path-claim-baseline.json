@@ -14,7 +14,11 @@
     "tests/audit/upstream_face_cache.js",
     "tests/audit/upstream_face_lag.js",
     "tests/audit/upstream_face_unconsumed.js",
-    "tests/run.mjs"
+    "tests/run.mjs",
+    "tests/audit/module_consumption_ledger.json",
+    "tests/audit/realhost_readings.json",
+    "tests/audit/_realhost_suite.mjs",
+    "tests/audit/plan_currency.tsv"
   ],
   "fixtures_or_placeholders": [
     "scripts/audit-y.mjs",

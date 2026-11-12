@@ -1,3 +1,16 @@
+# TODO / 迭代积压 — ruby-phone
+> **现行产品待办（2026-11-11）**：第二十一期 `R21-O1～O9 / R21-X1～X9`（双仓合计 36 项）。
+> 立项依据全部来自 2026-11-11 实勘机器读数，见 [第二十一期产品证据](docs/planning/2026-11-11-product-evidence-v21.md)。
+> [优化提升九项](.agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md) · [拓展创新九项](.agents/notes/proposed/feature/2026-11-11-product-expansion-v21.md)。
+> **基线** v4.140.0 / `827ecdc`。下方所有更早期号均为历史记录，不按旧勾选直接施工。
+>
+> **本期只开四条真缺口（每条都有机器读数）**：
+> ①`R21-O1` R17-O2 的 60fps 虚拟滚动**只出读数不改渲染**（`chat-view.js` 3618–3651 行注释自认）⇒ 兑现它；
+> ②`R21-O2`/`X1` 时间单源 story 档还剩 6 处真·内容时间轴（`loverspace`×2 / `music` / `piggy` / `chat-view`×2）⇒ 收口；
+> ③`R21-O3`/`O4` `chat-view.js` 19775 行无上界判据 + 覆盖率从未被读过 ⇒ 补上机器守；
+> ④`R21-O7`/`O8`/`O9` `FORWARD=2` 纯转发层 + 跨 App 一物多账 + 事件派发无订阅 ⇒ 三笔结构性收尾。
+
+---
 > **最近更新：v4.140.0**（第十三期 R13-O7：PLAN / TODO 入口交给机器 —— 三处换挡 + 一处判据，那个「TODO 顶面落后 45 个版本」的洞从此有机器看守）
 > **现行产品待办（2026-11-03）**：第十四期 `R14-O1～O9 / R14-X1～X9`，见[优化计划](.agents/notes/proposed/architecture/2026-11-03-product-optimization-v14.md)、[拓展计划](.agents/notes/proposed/feature/2026-11-03-product-expansion-v14.md)及[批次与证据](docs/planning/2026-11-03-product-evidence-v14.md)。下方第十三期和更早状态均为历史记录；第十四期十八项（R14-O1~O9 / R14-X1~X9）已于 v4.124.0 全部实施并通过十九道门禁 Exit Code 0 全绿收口，已完成提交与推送（commit 2c06d60）。
 > 上一版留痕 v4.54.0（第六期批次 F 两项：R6-X7 跨媒介互动连载 + R6-X9 平行人生试玩场）保留在下方历史段。

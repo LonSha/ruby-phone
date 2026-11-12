@@ -17,6 +17,70 @@
       "land_version": "v5.0.0",
       "date": "2026-10-31",
       "why": "R13-O2 声明的条件判据文件名占位（xxx 表示随实施确定的具体版本号），实施时须落实名并从台账移除"
+    },
+    {
+      "path": "tests/browser/scenarios/r21-windowed-stream.scen.js",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O1 交付物：窗口化消息流渲染通道的浏览器场景判据"
+    },
+    {
+      "path": "tools/gen_time_debt_readings.mjs",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O2 交付物：内容时间轴收口进度读数生成器"
+    },
+    {
+      "path": "tests/audit/time_debt_readings.json",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O2 交付物：story 档 6 处收口进度机器读数"
+    },
+    {
+      "path": "scripts/coverage-report.mjs",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O4 交付物：覆盖率读数生成器（回答「哪些 app 一行测试都没有」）"
+    },
+    {
+      "path": "tests/audit/coverage_baseline.json",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O4 交付物：覆盖率基线读数"
+    },
+    {
+      "path": "tests/audit/forward_layer_ledger.json",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O7 交付物：纯转发层清零台账（FORWARD=2 的两笔）"
+    },
+    {
+      "path": "tools/audit-event-subscribers.mjs",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O9 交付物：事件契约「派发无订阅」扫描器"
+    },
+    {
+      "path": "tests/audit/event_subscribers.json",
+      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+      "epoch": "R21",
+      "land_version": "v4.150.0",
+      "date": "2026-11-11",
+      "why": "R21-O9 交付物：逐事件 emit/on 次数与订阅方清单读数"
     }
   ]
 }
