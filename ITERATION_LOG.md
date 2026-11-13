@@ -1,3 +1,24 @@
+## 迭代 263 · v4.142.0 · R21-O5 玩家可见时间文案统一口径（2026-11-13）
+- 【版本升至 4.142.0（五源同源）】第二十一期批次 A 第二步 R21-O5：朋友圈、微信气泡、日记目录统一玩家可见时间文案，剧情钟与墙钟不混算。
+- 【统一口径】config/time-caption.js 按 time-source 的字段归属分派：story 档只读记录自身的剧情日期与时刻；wall 档显示相对量。跨钟比较拒答 cross-clock，未知字段、缺日期、非法读数与未来墙钟读数分别给原因码，不返回空串冒充成功。
+- 【三处接线】朋友圈读取该条动态的 date/time；微信常规分隔符与手工时间标记共用同一出口；日记目录保留 entry.date 与正文反解日期的回退链。缺剧情文案显示时间不详或未知日期，不拿当前剧情钟改写历史。
+- 【本版自己抓到的缺陷形态】首稿误把当前剧情 face 用于历史记录，导致旧朋友圈随剧情推进而变时间；复查后改为记录自身 face，并移除重复取当前钟的助手。墙钟显式坏锚点不再悄悄回退，未来读数也不再被夹成刚刚。
+- 【交棒改写】首稿判据只看接线字符串并伪造错误返回值，不能证明视图执行与真实实现可被破坏。改为三处视图方法真调用、临时副本真源码破坏后复用同一拒答断言；原仓源码不动，负控制不污染并行项目。
+- 【定向验证】tests/system-v4142.test.mjs 七条通过：跨两年剧情日期、跨钟拒答、三处视图执行、墙钟边界、真源码负控制。不启动全量回归，不把源码测试当成酒馆实机验收。
+- 【运行时验证边界】本版仅做 Node 定点验证与相关静态读数复校，不能保证真机 SillyTavern 主题和窄屏排版；看起来没坏但显示不对仍须在真实宿主复现。历史条目没有自身剧情日期与时刻时如实占位，不推测补齐。
+
+## 迭代 262 · v4.141.0 · 第二十一期批次 A 第一步 R21-O2：内容时间轴收口 + 收口进度机器读数（2026-11-12）
+- 【版本升至 4.141.0（五源同源）】package.json / manifest.json / index.js 的 ST_PHONE_VERSION / update-log 的 latest 与 head / 白名单 version 五处同源抬到 4.141.0。本版是 R21 批次 A 第一步（R21-O2）：把 v4.140.0 之后的全部 story 档内容时间轴欠债一次收干净，并给收口进度立机器读数。
+- 【收口 6 处规格点（一律 storyNowWallFallback，与 v4.140.0 同口径：必填数字、参与排序）】apps/loverspace/loverspace-app.js 的 ask / askByChar（提问 timestamp，questioner/answerer 语义照旧）、apps/music/music-app.js 的 shareCurrentTrackToWechat（分享消息 timestamp）、apps/piggy/piggy-app.js 的 addTransaction（记账 time，同时进流水 id 与月度聚合键）、apps/wechat/chat-view.js 的 _applyWechatPaymentAction / _claimGroupRedPacketForCurrentUser（群红包领取记录的 timestamp ×2）。
+- 【实勘新增 5 文件 7 处 story 档收口】实勘中发现规格清单之外还有同类内容时间轴仍走裸 Date.now()，同口径一并收口：apps/games/games-app.js（猫盒邀请 chat.timestamp）、apps/games/poker/poker-app.js（分享消息 chat.timestamp 兜底；_buildWechatRealTimeFields 的 realTimestamp 属墙钟真实时刻，留函数头注释）、apps/honey/honey-data.js（_getCurrentPhoneStoryTimeInfo timestamp 兜底）、apps/weibo/weibo-data.js（_ensurePreservedTimeAnchor 的 now / elapsedMinutes / repushedAt 共 3 处；likedAt / generatedAt 属幂等键留墙钟）、apps/wangxiang/wangxiang-app.js（timestamp 兜底）。wall 档留档：apps/bilibili/bili-data.js（now 只进 id 幂等键、createdAt 零消费）。
+- 【白名单欠债字样清零（判据①）】tests/fixtures/bare-now-whitelist.json 里 9 条登记理由改写为「【R21-O2 已收口】…」形态（另含 moments 两文件 v4.140.0 历史收口叙述），全表 204 条已无任何「待收口」字样 —— 登记、实现与读数同源。
+- 【新增读数生成器 tools/gen_time_debt_readings.mjs】扫白名单每条理由文本，输出三列计数（story 档已收口 / story 档待收口 / wall 档合法）到 tests/audit/time_debt_readings.json，并同源产出运行时模块 config/time-debt-readings.js（文件头标注 AUTO-GENERATED 勿手改）。本版读数：204 条 = 已收口 11 / 待收口 0 / wall 档合法 193。
+- 【诊断台接线：时间轴收口进度行】apps/clock/clock-view.js 诊断卡新增一行「时间轴收口 x/y · 已清零」，读数取自动生成的 config/time-debt-readings.js，视图不手抄数字 —— 手抄会出现「收口推进了、诊断行还停在旧读数」的静默漂移。
+- 【判据 tests/system-v4141.test.mjs 四组】① 白名单「待收口」字样清零；② 6 处规格收口点逐一真跑（UTC 2044 假剧情钟宿主）：loverspace ask/askByChar、music 分享、piggy 记账、chat-view 两处群红包领取，timestamp 必须跟剧情钟走；③ 负控制：把 storyNowWallFallback 换回 Date.now() 必红；④ 生成器读数与磁盘逐字一致（防手抄，对 config/time-debt-readings.js 与 tests/audit/time_debt_readings.json 双向校验）。
+- 【本版自己抓到的缺陷：判据首稿四类硬伤与一处施工纪律违规，全被既有门禁当场抓住】① 判据首稿把 fileURLToPath 写在没导入的地方、stub 只记返回值不记调用、两条测试重名、还留了占位残行 —— 这不是笔误，是「先写判据、回头再验证」的旧习惯；本版改为先把六处收口点用临时暂存树真跑一遍再落盘判据，四类硬伤在落盘前就被自己的探针挡住。② 判据用裸 fs.cpSync 做暂存镜像，被 v3230 的 A1 当场抓到（tests/ 下只许走 tests/_mirror_tree.mjs 的 copyTreeSafe）；改成共享实现后才发现自己的暂存树函数不是 async —— 一处纪律改动牵动两个调用点，正是「同一逻辑在自己手里抄两份」的代价。③ 改弹窗 items 时拼接丢了收口的右方括号，语法门 1350 个文件当场报错；没有这道门，它会以「弹窗打不开」的形态留到真机。这三条都不是本版做出来的功能问题，而是本版施工时留下的坑由既有判据抓住 ——若判据只在功能面用力，这三条会全部漏过。
+- 【交棒改写：负控制不再改真源，断言不再只看非 null】① C 组初稿是「把真源改成 Date.now()、跑一遍、再恢复」—— 在 node --test 按文件并发的仓里这是活锁：别的套件同时读到被破坏的真源就会假红。改为 v4113 的既定先例：把 config/ 与 apps/ 整树暂存到系统临时目录、只在暂存树上破坏、再 import 暂存树里的模块（真源一字未动，C3 就是这条的自证）。② 首稿断言只问 timestamp 不是 null —— 可空字段的旧实现常常也给非 null（走墙钟就给），它守不住收口。改为 v4.140.0 同口径的双保险：与假剧情钟相差不超过 5 分钟，且与 Date.now 相差超过一年。③ 原判据只数「源码里还有没有裸 Date.now」，有人把 Date.now 换成 wallNow 却不接宿主时它会全绿；故补 B 组行为判据真跑六处，让「改了名字没改来源」当场转红。
+- 【运行时验证边界】按纪律只做单文件定点验证（node --test tests/system-v4141.test.mjs），不做全量回归；判据环境为 Node 假宿主，不能保证真机 SillyTavern 下剧情钟时序与降级路径的实际表现 —— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，须在真机复现后再修，不把单文件全绿当成实机已验。
+
 ## 迭代 261 · v4.140.0 · 批次 3 时间轴收口（朋友圈两引擎改走剧情钟）（2026-11-10）
 - 【版本升至 4.140.0（五源同源）】package.json / manifest.json / index.js 的 ST_PHONE_VERSION / update-log 的 latest 与 head 五处同源抬到 4.140.0。本版只做一件事：把 v4.139.0 白名单里如实登记为「story 档待收口」的那笔欠债收掉，不夹带其他改动。
 - 【收口内容：朋友圈两引擎的时间轴改走剧情钟】`apps/moments/moments-living-social-ecosystem.js` 的 5 处 `Date.now()` 与 `apps/moments/npc-social-graph-dynamic-moments.js` 的 2 处，原先全部是「这条动态 / 这条评论发生在什么时候」—— 它会渲染成用户可见的时间文案，按 `FIELD_CLOCKS.timestamp = 'story'` 的口径属剧情钟。本版改为走 `config/time-source.js`：`postMoment` / `addComment` / 自动回复 / NPC 评论一律取剧情时刻，`id`（`moment_<ts>_<rand>`）保持墙钟 —— 它是去重与排序稳定的幂等键，不渲染给用户看，若跟着剧情钟走，剧情回拨后新动态会与旧动态撞 id。
@@ -7566,7 +7587,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.140.0`（五源同源）
+- **当前版本**：`4.142.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

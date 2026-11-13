@@ -4,6 +4,7 @@
  * ======================================================== */
 
 import { PokerApp } from './poker/poker-app.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 // [v2.82.0] 构造期全局监听器收口所需：单次 guard 与宿主级登记层（可回收）。
 import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
@@ -2695,7 +2696,8 @@ export class GamesApp extends PokerApp {
         });
         chat.lastMessage = '[猫盒共养邀请]';
         chat.time = inviteTime.time || chat.time || '';
-        chat.timestamp = inviteTime.timestamp || Date.now();
+        /* [R21-O2] chat.timestamp 属内容时间轴（消息排序字段）⇒ story 档收口。 */
+        chat.timestamp = inviteTime.timestamp || storyNowWallFallback(window).ms;
         wechatData.saveData?.();
         this._syncWechatHomeBadge?.(wechatData);
         this.phoneShell?.showNotification?.('猫盒', `已邀请${chat.name}共同收养`, '🐱');

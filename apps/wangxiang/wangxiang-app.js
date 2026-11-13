@@ -13,6 +13,7 @@ import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { WechatData } from '../wechat/wechat-data.js';
 import { parseWangxiangTaskTags } from './wangxiang-task-parser.js';
 import { PointsLedger } from './points.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
 import { numOrNull } from '../../config/num-gate.js';
 
@@ -610,7 +611,8 @@ export class WangxiangApp {
                  *  空数组读成 0，于是「解析不出时间戳」被当成「时间戳是 0（1970）」。 */
                 const tsParsed = numOrNull(parsedTimestamp);
                 const tsCurrent = numOrNull(current.timestamp);
-                const timestamp = tsParsed !== null ? tsParsed : (tsCurrent !== null ? tsCurrent : Date.now());
+                /* [R21-O2] timestamp 是内容时间轴字段 ⇒ story 档收口（走唯一降级出口）。 */
+                const timestamp = tsParsed !== null ? tsParsed : (tsCurrent !== null ? tsCurrent : storyNowWallFallback(window).ms);
                 return {
                     date: String(current.date),
                     weekday: String(current.weekday || ''),

@@ -22,6 +22,7 @@ import {
     readPiggyFace, yuanToCents, piggyPromptBlock,
 } from './piggy-data.js';
 import { PiggyView } from './piggy-view.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 
 /* 会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^piggy_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'piggy_settings';
@@ -137,7 +138,7 @@ export class PiggyApp {
             amountCents: cents,
             remark: o.remark,
             source: '存钱罐',
-            time: Date.now(),
+            time: storyNowWallFallback(this._win()).ms,
         });
         if (!r) return false;
         this.state = r.state;

@@ -6,6 +6,7 @@ import { PokerData } from './poker-data.js';
 import { PokerView } from './poker-view.js';
 import { WechatData } from '../../wechat/wechat-data.js';
 import { buildGameSillyTavernContextMessages } from '../common/games-ai-context.js';
+import { storyNowWallFallback } from '../../../config/time-source.js';
 // [v2.82.0] 构造期全局监听器入登记层（可回收）+ 单次 guard（重建不累积）。
 //   修前形态：`window.addEventListener('phone:swipeBack', () => this.handleSwipeBack())`
 //   写在构造函数里，匿名 handler 无人持有、无解绑出口、无幂等 guard ——
@@ -205,6 +206,8 @@ export class PokerApp {
     }
 
     _buildWechatRealTimeFields(timestamp = Date.now()) {
+        /* [R21-O2] 本函数产出 `realTimestamp`（**真实经过时间**，在线模式显式要求墙钟），
+         *  属 wall 档合法 —— 不收口（收了反而把「真实时刻」读成剧情时刻）。 */
         const dateObj = new Date(Number(timestamp || Date.now()));
         const pad = (value) => String(value).padStart(2, '0');
         const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -289,7 +292,8 @@ export class PokerApp {
             chat.unread = (chat.unread || 0) + 1;
             chat.lastMessage = '[德州扑克分享]';
             chat.time = shareTime.time || chat.time || '';
-            chat.timestamp = shareTime.timestamp || Date.now();
+            /* [R21-O2] chat.timestamp 属内容时间轴（消息排序字段）⇒ story 档收口。 */
+            chat.timestamp = shareTime.timestamp || storyNowWallFallback(window).ms;
         }
         wechatData.saveData?.();
         this._syncWechatHomeBadge(wechatData);

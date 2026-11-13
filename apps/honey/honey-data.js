@@ -12,6 +12,7 @@ import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：记录总结是一次跨帧的长请求（240s 超时），
  *   回信时可能已经换了会话。它写的是 `honey_host_history_*`（按会话隔离的键），
  *   所以旧回信落回来会把上一段会话的总结与已覆盖轮次哈希写进新会话的桶 ——
@@ -1077,7 +1078,8 @@ export class HoneyData {
             time: String(safe.time || '').trim(),
             date: String(safe.date || '').trim(),
             weekday: String(safe.weekday || '').trim(),
-            timestamp: Number(safe.timestamp || 0) || Date.now()
+            /* [R21-O2] timestamp 是内容时间轴字段 ⇒ story 档收口（走唯一降级出口）。 */
+            timestamp: Number(safe.timestamp || 0) || storyNowWallFallback(window).ms
         };
     }
 

@@ -26,6 +26,9 @@ function makeLocalBilibiliUrl(seed, index) {
 }
 
 export function normalizeBilibiliEntries(entries, query, now = Date.now()) {
+  /* [R21-O2] 收口读数：本文件的 `now` 只进 `id`/幂等键（`bili-<ts>-<i>`），
+   *  `createdAt` 目前无任何消费点（bilibili 目录内零引用）。
+   *  动态展示时间由 `relativeTime`（相对文案）承担，不依赖墙钟绝对值 —— 归 wall 档合法。 */
   return (Array.isArray(entries) ? entries : [])
     .map((entry, index) => {
       const rawUrl = compactText(entry.url);

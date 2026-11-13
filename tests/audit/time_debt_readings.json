@@ -1,0 +1,23 @@
+{
+  "schema": "time-debt-readings@1",
+  "version": "4.142.0",
+  "total": 204,
+  "storyClosed": 11,
+  "storyPending": 0,
+  "wallLegal": 193,
+  "pendingFiles": [],
+  "closedFiles": [
+    "apps/games/games-app.js",
+    "apps/games/poker/poker-app.js",
+    "apps/honey/honey-data.js",
+    "apps/loverspace/loverspace-app.js",
+    "apps/moments/moments-living-social-ecosystem.js",
+    "apps/music/music-app.js",
+    "apps/piggy/piggy-app.js",
+    "apps/wangxiang/wangxiang-app.js",
+    "apps/wechat/chat-view.js",
+    "apps/weibo/weibo-data.js",
+    "apps/moments/npc-social-graph-dynamic-moments.js"
+  ],
+  "generatedAt": "由判据强制与磁盘一致，本字段仅说明生成来源：tools/gen_time_debt_readings.mjs"
+}

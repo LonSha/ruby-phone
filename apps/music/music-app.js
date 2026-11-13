@@ -12,6 +12,7 @@
 // ========================================
 
 import { MusicData } from './music-data.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 import { MusicAmbience } from './music-ambience.js';
 import { MusicView } from './music-view.js';
 
@@ -249,7 +250,7 @@ export class MusicApp {
             type: 'text',
             text: `🎵 分享单曲《${songTitle}》- ${songArtist}`,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestamp: Date.now()
+            timestamp: storyNowWallFallback(window).ms
         };
 
         wechatData.addMessage(chatId, msg);

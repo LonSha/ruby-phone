@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.140.0';
+const ST_PHONE_VERSION = '4.142.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -582,26 +582,17 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-10",
-    /* 与 update-log 逐字同源：本块是用户唯一能看到的更新说明，
-     *   条目必须与 update-log 中当版的 items 逐条相等；
-     *   只改一处会造成「版本号对了、内容是旧的」这种更误导的状态。
-     *   ★ 本注释里刻意不用 ASCII 方括号：历史判据用「首个右方括号」当头部终点
-     *   （tests/system-v312 的 E2、system-v324 的 A4），注释里出现方括号会
-     *   让头部被提前截断、后半 items 全读不到 ⇒ 假红。 */
+    date: "2026-11-13",
+    // 与 update-log 当版条目逐字同源。
     items: [
-        "【版本升至 4.140.0（五源同源）】package.json / manifest.json / index.js 的 ST_PHONE_VERSION / update-log 的 latest 与 head 五处同源抬到 4.140.0。本版只做一件事：把 v4.139.0 白名单里如实登记为「story 档待收口」的那笔欠债收掉，不夹带其他改动。",
-        "【收口内容：朋友圈两引擎的时间轴改走剧情钟】`apps/moments/moments-living-social-ecosystem.js` 的 5 处 `Date.now()` 与 `apps/moments/npc-social-graph-dynamic-moments.js` 的 2 处，原先全部是「这条动态 / 这条评论发生在什么时候」—— 它会渲染成用户可见的时间文案，按 `FIELD_CLOCKS.timestamp = 'story'` 的口径属剧情钟。本版改为走 `config/time-source.js`：`postMoment` / `addComment` / 自动回复 / NPC 评论一律取剧情时刻，`id`（`moment_<ts>_<rand>`）保持墙钟 —— 它是去重与排序稳定的幂等键，不渲染给用户看，若跟着剧情钟走，剧情回拨后新动态会与旧动态撞 id。",
-        "【为什么用 storyNowWallFallback 而不是 storyNow】`timestamp` 在这两个引擎里是**必填数字字段**（`getFeed` 按它排序、UI 按它算「多久前」），而 `storyNow` 读不到时给 `null`（纪律：绝不补墙钟）。若这里也用 null，排序与相对时间会直接崩掉。故走本仓**唯一允许的显式降级出口**：读不到时退回墙钟并带 `degraded` / `reason`，使「哪个引擎在什么条件下用了墙钟」成为可答的问题。这是有意降级，不是漏改 —— 理由写在两个文件各自的头注里。",
-        "【宿主注入面】`MomentsLivingSocialEcosystem` 的构造签名改为 `(state = {}, win = null)`，`generateMomentReactions` 增设第三参 `win = null`；装配层 `phone/domain-engines-mount.js` 从 `deps.win` 取宿主并挂在引擎容器上，`index.js` 的装配点补传 `win: window`。不传 `win` 时行为可预期（显式降级到墙钟），不会崩。",
-        "【本版自己抓到的缺陷：判据绕过装配层 + 一处 ReferenceError】① 首版判据 E3 直接调工厂并显式传 `win`，于是它只能证明「引擎愿意用 win」；把装配层那行透传删掉，E3 **照样全绿** —— 而真实故障恰恰发生在装配层。故补 E4，从 `mountDomainEngines` 这个真实入口进，并用负控制验证：删掉透传后 E4 精确报出「装配层没把 win 交给 moments 引擎」。② E4 立刻抓到一处真 bug：`bindDomainEngines` 里的分派函数写了 `deps.win`，但该作用域没有 `deps`（那是 `mountDomainEngines` 的形参），抛 ReferenceError 后被 catch 吞成 `lastError`，于是 `onMomentReactions` 静默返回空数组 —— 点赞永远是 0 且不报错。已改为从引擎容器上取宿主，并把这个坑写进注释。",
-        "【交棒改写：E1/E2 不够，必须补行为判据】原判据 E1/E2 只查「文件里还有没有裸 `Date.now()`」。若有人把 `Date.now()` 换成 `wallNow()` 却不接宿主，E2 会全绿，而朋友圈时间依然跟剧情脱节。故新增 E3（行为：给远未来假剧情钟，看时刻是否跟着它走）与 E4（入口：从装配层进），两条都用「传 win 与不传 win 结果必须不同」做反证，防止判据恒绿。",
-        "【读数与账本同步】因源码增行与新增判据，全仓读数按既有工具重算（零手抄）：`tools/refresh_doc_readings.py --write`（导入条数 1400 → 1402）、`tools/gen_status_ledger.mjs --write`（index_lines 14484 → 14488）、`tools/gen_plan_baseline.mjs --write`、`tools/relocate_method_baseline.mjs --write`（只改 line 字段：postMoment 33 → 60、likeMoment 52 → 82，条目集合不变）。另把白名单里两条「story 档待收口」的登记改写成收口后的真实理由。",
-        "【运行时验证边界】本轮以仓库内全量套件与审计工具为证：6346 条测试全绿、`npm run check` 十九门全绿；但**不能保证**真机 SillyTavern 环境下的朋友圈时间显示、宿主 `timeManager` 的实际取值时序、以及剧情回拨后的排序表现 —— 遇到「看起来没坏但显示不对」的问题，属于边界文档登记的第二类，须在真机复现后再修，不把门禁全绿当成实机已验。"
-    
-    
-    
-]
+        "【版本升至 4.142.0（五源同源）】第二十一期批次 A 第二步 R21-O5：朋友圈、微信气泡、日记目录统一玩家可见时间文案，剧情钟与墙钟不混算。",
+        "【统一口径】config/time-caption.js 按 time-source 的字段归属分派：story 档只读记录自身的剧情日期与时刻；wall 档显示相对量。跨钟比较拒答 cross-clock，未知字段、缺日期、非法读数与未来墙钟读数分别给原因码，不返回空串冒充成功。",
+        "【三处接线】朋友圈读取该条动态的 date/time；微信常规分隔符与手工时间标记共用同一出口；日记目录保留 entry.date 与正文反解日期的回退链。缺剧情文案显示时间不详或未知日期，不拿当前剧情钟改写历史。",
+        "【本版自己抓到的缺陷形态】首稿误把当前剧情 face 用于历史记录，导致旧朋友圈随剧情推进而变时间；复查后改为记录自身 face，并移除重复取当前钟的助手。墙钟显式坏锚点不再悄悄回退，未来读数也不再被夹成刚刚。",
+        "【交棒改写】首稿判据只看接线字符串并伪造错误返回值，不能证明视图执行与真实实现可被破坏。改为三处视图方法真调用、临时副本真源码破坏后复用同一拒答断言；原仓源码不动，负控制不污染并行项目。",
+        "【定向验证】tests/system-v4142.test.mjs 七条通过：跨两年剧情日期、跨钟拒答、三处视图执行、墙钟边界、真源码负控制。不启动全量回归，不把源码测试当成酒馆实机验收。",
+        "【运行时验证边界】本版仅做 Node 定点验证与相关静态读数复校，不能保证真机 SillyTavern 主题和窄屏排版；看起来没坏但显示不对仍须在真实宿主复现。历史条目没有自身剧情日期与时刻时如实占位，不推测补齐。",
+    ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
 if (window.GGP_Loaded) {

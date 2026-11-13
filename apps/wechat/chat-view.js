@@ -12,6 +12,8 @@ import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 import { ImageCropper } from '../settings/image-cropper.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
+import { captionOf } from '../../config/time-caption.js';
 /* [v4.16.0 · R4-O4] 尾部窗口:长聊天只渲染最近 N 条,而不重铺整段记录。
  *   为什么用**尾部**而不是 `windowOf`:后者从头部切(服务瀑布流),
  *   而聊天用户看的是最近 N 条 —— 两种切片方向相反。 */
@@ -2557,6 +2559,8 @@ export class ChatView {
         return `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
     }
 
+
+
     _formatWechatDateFromTimestamp(timestamp) {
         const dateObj = new Date(Number(timestamp || 0));
         if (!Number.isFinite(dateObj.getTime())) return '';
@@ -3001,12 +3005,7 @@ renderChatRoom(chat) {
                 }
 
                 if (isDateChanged || shouldShowAiFirstDivider || msgTimestamp - lastRenderedTimestamp >= 3 * 60 * 1000 || (index === 0 && msgTimestamp)) {
-                    let displayText = '';
-                    if (isDateChanged) {
-                        displayText = `${msgDate}${msg.weekday ? ' ' + msg.weekday : ''} ${msg.time || ''}`;
-                    } else {
-                        displayText = msg.time || '';
-                    }
+                    const displayText = this._buildWechatTimeDividerText(msg, { forceDate: !!isDateChanged });
 
                     if (displayText.trim()) {
                         html += `
@@ -3039,19 +3038,15 @@ renderChatRoom(chat) {
     }
 
     _buildWechatTimeDividerText(msg = {}, { forceDate = false } = {}) {
-        const msgTimestamp = Number(msg?.timestamp || 0);
-        const msgDate = msg?.date ? this._normalizeWechatDateDisplay(msg.date) : null;
+        // 历史记录只读自身 face；当前剧情钟不是这条消息发生的时刻。
+        const date = msg?.date ? this._normalizeWechatDateDisplay(msg.date) : '';
         const time = String(msg?.time || '').trim();
-        if (forceDate && msgDate) {
-            return `${msgDate}${msg.weekday ? ' ' + msg.weekday : ''}${time ? ' ' + time : ''}`.trim();
+        const cap = captionOf('timestamp', msg?.timestamp, { face: { date, time } });
+        if (!cap.ok) return '时间不详';
+        if (forceDate && date) {
+            return `${date}${msg.weekday ? ' ' + msg.weekday : ''}${time ? ' ' + time : ''}`.trim();
         }
-        if (time) return time;
-        if (msgTimestamp) {
-            const dateText = this._formatWechatDateFromTimestamp(msgTimestamp);
-            const timeText = this._formatWechatTimeFromTimestamp(msgTimestamp);
-            return forceDate ? `${dateText} ${timeText}`.trim() : timeText;
-        }
-        return '';
+        return time || cap.text;
     }
 
     renderManualTimeMarkerDivider(msg, messageIndex, displayText) {
@@ -8444,7 +8439,7 @@ renderChatRoom(chat) {
                 name: actor,
                 amount: claimAmount.toFixed(2),
                 mode: targetPacketMode === 'group_lucky' ? 'lucky' : 'average',
-                timestamp: Date.now()
+                timestamp: storyNowWallFallback(window).ms
             }];
             const claimedAmount = claims.reduce((sum, claim) => sum + Math.round((Number.parseFloat(claim?.amount || 0) || 0) * 100), 0) / 100;
             const isFullyClaimed = (packetCount > 0 && claims.length >= packetCount)
@@ -18636,7 +18631,7 @@ ${callTranscript}`;
             name: userName,
             amount: claimAmount.toFixed(2),
             mode: packetMode === 'group_lucky' ? 'lucky' : 'average',
-            timestamp: Date.now()
+            timestamp: storyNowWallFallback(window).ms
         }];
         const claimedAmount = claims.reduce((sum, claim) => sum + Math.round((Number.parseFloat(claim?.amount || 0) || 0) * 100), 0) / 100;
         const isFullyClaimed = (packetCount > 0 && claims.length >= packetCount)

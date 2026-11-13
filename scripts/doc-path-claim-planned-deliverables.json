@@ -27,22 +27,6 @@
       "why": "R21-O1 交付物：窗口化消息流渲染通道的浏览器场景判据"
     },
     {
-      "path": "tools/gen_time_debt_readings.mjs",
-      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
-      "epoch": "R21",
-      "land_version": "v4.150.0",
-      "date": "2026-11-11",
-      "why": "R21-O2 交付物：内容时间轴收口进度读数生成器"
-    },
-    {
-      "path": "tests/audit/time_debt_readings.json",
-      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
-      "epoch": "R21",
-      "land_version": "v4.150.0",
-      "date": "2026-11-11",
-      "why": "R21-O2 交付物：story 档 6 处收口进度机器读数"
-    },
-    {
       "path": "scripts/coverage-report.mjs",
       "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
       "epoch": "R21",

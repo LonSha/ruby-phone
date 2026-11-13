@@ -11,6 +11,11 @@ import { TODAY_STATES, TODAY_SOURCE_STATES, TODAY_SOURCE_LABEL, TODAY_SOURCES } 
 /* [v4.119.0 · R14-O3] 载荷走唯一一支笔（与 search-view / 装配器同一件）：
  *   手拼 { appId, ref } 会让字段名一漂，而漂掉的表现是「点了没反应」。 */
 import { buildOpenDetail } from '../../config/app-open-detail.js';
+/* [v4.141.0 · R21-O2] 诊断卡新增「时间轴收口进度」行。读数取**自动生成的同源模块**
+ *   config/time-debt-readings.js（由 tools/gen_time_debt_readings.mjs 扫白名单产出，
+ *   与 tests/audit/time_debt_readings.json 同一次扫描），视图不手抄数字 ——
+ *   手抄会出现「收口推进了、诊断行还停在旧读数」的静默漂移。 */
+import { TIME_DEBT_READINGS } from '../../config/time-debt-readings.js';
 
 /* [v4.112.0 · R13-X1] 「今天」的一条原话点回去 ⇒ 打开**那个 App**。
  * [v4.119.0 · R14-O3] 升级：**有靶心的那一条**，点下去就落在那一篇 / 那一则备忘上。
@@ -153,6 +158,8 @@ export class ClockView {
       if (proj.anchor) {
         parts.push('<div class="cl-stat-row"><span>锚点</span><span>有</span></div>');
       }
+      /* [v4.141.0 · R21-O2] 内容时间轴收口进度：x/y（story 档欠债清零即 0 待收口）。 */
+      parts.push('<div class="cl-stat-row"><span>时间轴收口</span><span>' + TIME_DEBT_READINGS.storyClosed + '/' + TIME_DEBT_READINGS.total + (TIME_DEBT_READINGS.storyPending > 0 ? ' · 待收口 ' + TIME_DEBT_READINGS.storyPending : ' · 已清零') + '</span></div>');
       parts.push('</div>');
     }
 

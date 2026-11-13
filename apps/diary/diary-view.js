@@ -18,6 +18,8 @@ import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
  *   选择列表由 `L0_ASSETS.frames` 生成 ⇒ 加一套画框只改取数口一处。 */
 import { L0_ASSETS, galleryFrameUrl } from '../../config/l0-assets.js';
 import { buildTodayFace, todayHeadline } from '../../config/day-rhythm-bridge.js';
+/* [v4.142.0 · R21-O5] 时间文案统一口径：story 档只出剧情日期，跨档拒答 */
+import { captionOf } from '../../config/time-caption.js';
 import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class DiaryView {
@@ -149,7 +151,12 @@ export class DiaryView {
         } else {
             listHtml = sorted.map(entry => {
                 const parsedDiary = data.parseDiaryContent(entry.content || '');
-                const parsed = this._parseDate(entry.date || parsedDiary.date);
+                /* [v4.142.0 · R21-O5] 目录行的日期文案走统一口径：`date` 属剧情钟，
+                 *   只显示剧情日期本身（正文反解的日期同属剧情轨，保留原回退链）；
+                 *   剧情日期读不到时拒答占位（_parseDate 的「未知日期」），不猜不补墙钟。 */
+                const dateSrc = String(entry.date || parsedDiary.date || '').trim();
+                const dateCap = captionOf('date', dateSrc, { face: dateSrc ? { date: dateSrc } : null });
+                const parsed = this._parseDate(dateCap.ok ? dateCap.text : '');
                 const preview = String(parsedDiary.body || '')
                     .replace(/\s+/g, ' ')
                     .trim()

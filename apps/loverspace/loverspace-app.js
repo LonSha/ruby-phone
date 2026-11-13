@@ -35,6 +35,7 @@ import {
 } from './loverspace-data.js';
 import { LoverSpaceView } from './loverspace-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 
 /* 六个会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^lover_/`，否则跨会话串味 */
 const SETTINGS_KEY = 'lover_settings';
@@ -365,7 +366,7 @@ export class LoverSpaceApp {
     /** 你问 Ta 一个问题（提问者=user、等 Ta 答）。 */
     ask(text) {
         const names = this._ctxNames();
-        const r = askQuestion({ questionText: text, questioner: 'user', answerer: 'char', timestamp: Date.now() }, Date.now());
+        const r = askQuestion({ questionText: text, questioner: 'user', answerer: 'char', timestamp: storyNowWallFallback(this._win()).ms }, Date.now());
         if (!r.question) return { ok: false, error: '还没写问题', reason: r.error };
         this.questions = this.questions.concat([r.question]);
         this._writeJSON(QUESTION_KEY, this.questions);
@@ -375,7 +376,7 @@ export class LoverSpaceApp {
 
     /** 记一个 **Ta 问你** 的问题（等用户答）。源没有这个入口（它只驱动模型去问）。 */
     askByChar(text) {
-        const r = askQuestion({ questionText: text, questioner: 'char', answerer: 'user', timestamp: Date.now() }, Date.now());
+        const r = askQuestion({ questionText: text, questioner: 'char', answerer: 'user', timestamp: storyNowWallFallback(this._win()).ms }, Date.now());
         if (!r.question) return { ok: false, error: '还没写问题', reason: r.error };
         this.questions = this.questions.concat([r.question]);
         this._writeJSON(QUESTION_KEY, this.questions);

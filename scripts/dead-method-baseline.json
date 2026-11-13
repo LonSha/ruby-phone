@@ -105,7 +105,7 @@
       "rel": "apps/bilibili/bili-data.js",
       "cls": "BiliData",
       "name": "ingestModelText",
-      "line": 155,
+      "line": 158,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -609,7 +609,7 @@
       "rel": "apps/games/games-app.js",
       "cls": "GamesApp",
       "name": "setUndercoverPrompt",
-      "line": 1025,
+      "line": 1026,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -617,7 +617,7 @@
       "rel": "apps/games/games-app.js",
       "cls": "GamesApp",
       "name": "resetUndercoverPrompt",
-      "line": 1042,
+      "line": 1043,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -625,7 +625,7 @@
       "rel": "apps/games/poker/poker-app.js",
       "cls": "PokerApp",
       "name": "openPoker",
-      "line": 487,
+      "line": 491,
       "isStatic": false,
       "classInstantiated": false
     },
@@ -801,7 +801,7 @@
       "rel": "apps/loverspace/loverspace-app.js",
       "cls": "LoverSpaceApp",
       "name": "footprintsOfToday",
-      "line": 186,
+      "line": 187,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -809,7 +809,7 @@
       "rel": "apps/loverspace/loverspace-app.js",
       "cls": "LoverSpaceApp",
       "name": "nextToday",
-      "line": 196,
+      "line": 197,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1161,7 +1161,7 @@
       "rel": "apps/music/music-app.js",
       "cls": "MusicApp",
       "name": "shareCurrentTrackToWechat",
-      "line": 224,
+      "line": 225,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1305,7 +1305,7 @@
       "rel": "apps/piggy/piggy-app.js",
       "cls": "PiggyApp",
       "name": "lastRefreshedCards",
-      "line": 99,
+      "line": 100,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1977,7 +1977,7 @@
       "rel": "apps/wangxiang/wangxiang-app.js",
       "cls": "WangxiangApp",
       "name": "acceptTask",
-      "line": 1355,
+      "line": 1357,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2185,7 +2185,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "correctFloor",
-      "line": 619,
+      "line": 624,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2193,7 +2193,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "isApiRunning",
-      "line": 656,
+      "line": 661,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2201,7 +2201,7 @@
       "rel": "apps/weibo/weibo-data.js",
       "cls": "WeiboData",
       "name": "checkHotSearchChanged",
-      "line": 2377,
+      "line": 2382,
       "isStatic": false,
       "classInstantiated": true
     },

@@ -13,6 +13,10 @@
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
+/* [R21-O2] weibo 时间线时间轴：`repushedAt` 驱动「X分钟前」的相对时间（真实消耗点），
+ *  与锚点 `preservedAt` 一起归 story 档（走唯一降级出口）。
+ *  `likedAt` / `generatedAt` 只进排序与去重（幂等键）且无渲染消费 ⇒ wall 档合法。 */
+import { storyNowWallFallback } from '../../config/time-source.js';
 /* [v3.18.0 · R-O4] 「最近正文」循环与跨 App 一致性块收敛到同一份实现 */
 import { collectRecentChat, contextFaces, consistencyBlock, retellNode } from '../../config/context-compose.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：推荐流是**在飞请求**（走 _apiQueue 串行、跨帧返回）。
@@ -285,7 +289,8 @@ export class WeiboData {
 
     _ensurePreservedTimeAnchor(post) {
         if (!post || typeof post !== 'object') return post;
-        const now = Date.now();
+        /* [R21-O2] 锚点 preservedAt 属内容时间轴 ⇒ story 档收口（走唯一降级出口）。 */
+        const now = storyNowWallFallback(window).ms;
         const originalTime = String(post.originalTime || post.time || '').trim();
         const baseMinutes = Number.isFinite(post.preservedBaseMinutes)
             ? Math.max(0, Math.floor(post.preservedBaseMinutes))
@@ -304,11 +309,11 @@ export class WeiboData {
     _updatePreservedPostDisplayTime(post) {
         if (!post || typeof post !== 'object') return post;
         const anchored = this._ensurePreservedTimeAnchor(post);
-        const elapsedMinutes = Math.max(0, Math.floor((Date.now() - anchored.preservedAt) / 60000));
+        const elapsedMinutes = Math.max(0, Math.floor((storyNowWallFallback(window).ms - anchored.preservedAt) / 60000));
         return {
             ...anchored,
             time: this._formatWeiboRelativeTimeFromMinutes((anchored.preservedBaseMinutes || 0) + elapsedMinutes),
-            repushedAt: Date.now()
+            repushedAt: storyNowWallFallback(window).ms
         };
     }
 

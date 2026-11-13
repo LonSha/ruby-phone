@@ -20,6 +20,8 @@ import { collectRecentChat, contextFaces, consistencyBlock } from '../../config/
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 /* [v4.116.0 · R13-X5] 「谁看见了什么」投影预览：发布前把「不给3人看」展开成每个人的可见结论与原因 */
 import { projectAudienceForRoster } from '../../config/audience-projection.js';
+/* [v4.142.0 · R21-O5] 时间文案统一口径：story 档只出剧情日期，wall 档出相对量，跨档拒答 */
+import { captionOf } from '../../config/time-caption.js';
 
 // 朋友圈视图 - 高仿微信版
 export class MomentsView {
@@ -70,7 +72,13 @@ export class MomentsView {
 
     // 渲染单条朋友圈
     renderMomentItem(moment, hasBgImage = false) {
-        const timeStr = this.formatTime(moment.time);
+        /* [v4.142.0 · R21-O5] 时间文案统一口径：`time` 字段属剧情钟
+         *   （fieldClockOf('time') === 'story'），文案只从剧情 face 的日期/时刻来；
+         *   face 读不到时走拒答占位「时间不详」，绝不拿墙钟把剧情时刻算成「刚刚」。 */
+        const cap = captionOf('time', moment.time, {
+            face: { date: String(moment.date || '').trim(), time: String(moment.time || '').trim() },
+        });
+        const timeStr = cap.ok ? cap.text : '时间不详';
         // 🔥 优先实时从联系人/聊天获取头像，确保头像同步更新
         const contactAvatar = this.getContactAvatar(moment.name) || moment.avatar || '👤';
         const userName = String(this.app.wechatData.getUserInfo()?.name || '').trim();
@@ -2019,7 +2027,8 @@ ${replyTo ? `- 回复对象：${replyTo}` : ''}
 
             const text = String(item?.text || item?.content || '').trim();
             const images = Array.isArray(item?.images) ? item.images : [];
-            const time = String(item?.time || '').trim() || '刚刚';
+            const timeRaw = String(item?.time || '').trim();
+            const time = timeRaw || '时间不详';
 
             const likeList = Array.isArray(item?.likeList)
                 ? item.likeList
@@ -2476,6 +2485,8 @@ ${memoryLines.slice(0, 10).join('\n')}
         const value = typeof phoneTime === 'string' ? phoneTime.trim() : '';
         return value || '手机时间未知';
     }
+
+
 
     // 旧版render方法（保持兼容）
     render() {
