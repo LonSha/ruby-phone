@@ -69,10 +69,13 @@ function pipelineJudge(outDir) {
   } catch (_e) { return false; }
 }
 
-/** J2：当前金手指库相对 v3.15.0 冻结台账是否「只多了一条、且旧的逐字未变」。 */
+/** J2：当前金手指库相对 v3.15.0 冻结台账是否「只追加、且旧的逐字未变」。
+ *  [1108 扩库] 下限形：v3.16.0 时「恰好 ledger.count+1 且 ch166 收尾」；
+ *    后续合法扩库（ch167–ch203）只追加其后，不应被钉死的具体数字/末位 id 判红。
+ *    仍锁：旧台账逐字 md5、ch166 原位、索引同源、每条 chars 忠实。 */
 function appendJudge(fullArr, idxArr, ledger) {
   try {
-    if (fullArr.length !== ledger.count + 1) return false;
+    if (fullArr.length < ledger.count + 1) return false;
     if (idxArr.length !== fullArr.length) return false;
     for (const row of ledger.packs) {
       const p = fullArr.find((x) => x.id === row.id);
@@ -81,9 +84,8 @@ function appendJudge(fullArr, idxArr, ledger) {
       if (String(p.sub) !== String(row.sub) || p.type !== row.type || p.desc !== row.desc) return false;
       if (md5(p.content) !== row.contentMd5) return false;
     }
-    const last = fullArr[fullArr.length - 1];
-    if (last.id !== 'ch166') return false;
-    if (last.chars !== last.content.length) return false;
+    if (!fullArr[ledger.count] || fullArr[ledger.count].id !== 'ch166') return false;
+    for (const p of fullArr) if (p.chars !== p.content.length) return false;
     for (const r of idxArr) {
       const p = fullArr.find((x) => x.id === r.id);
       if (!p) return false;
@@ -251,11 +253,13 @@ test('D1 ★★★ ch166 位移：两份文件同源、品阶按字数分档、�
 test('D2 ★★★ id 稳定性铁律：旧 165 包一字未动（逐包内容 md5 对冻结台账）', () => {
   const ledger = JSON.parse(read('tests/audit/cheat-packs-before-v3160.json'));
   assert.equal(ledger.count, 165, '冻结台账记的是 v3.15.0 时的 165 包');
-  assert.equal(cheatPacks.length, 166, '库规模实测 ' + cheatPacks.length);
+  // [1108 扩库] 下限形：v3.16.0 实测 166；后续合法扩库只追加 ch167+、旧包不动，
+  // 不应被钉死的具体数字判红（与 v2.88.0 A1 下限形同规）。仍锁前 165 包逐字冻结。
+  assert.ok(cheatPacks.length >= 166, '库规模下限 166，实测 ' + cheatPacks.length);
   for (let i = 0; i < 165; i++) {
     assert.equal(cheatPacks[i].id, 'ch' + String(i + 1).padStart(3, '0'), '前 165 包的 id 次序必须不变');
   }
-  assert.equal(cheatPacks[165].id, 'ch166', '新包必须在末尾（不重排）');
+  assert.equal(cheatPacks[165].id, 'ch166', 'ch166 位置不漂移（后续扩库只追加其后）');
   const drifted = [];
   for (const row of ledger.packs) {
     const p = cheatPacks.find((x) => x.id === row.id);

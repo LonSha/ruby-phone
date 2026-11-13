@@ -867,6 +867,9 @@
 <!-- R21-O8 v4.147.0 -->
 - R21-O8 已完成源码与定点验证：跨 App 实体归并 —— 新增 config/entity-link.js 纯函数内核（linkEntity 时间窗 + 金额指纹双向匹配，三态 linked/ambiguous/unlinked 由候选数唯一决定，ambiguous 候选全列不给 entityId 不替用户挑），底座实勘持久账恰好两本（shop_orders 与 accounting_records），规格例子的 apps/delivery 是 lonsha-bridge 内存态无落盘、如实登记不假造第三本账；entityId FNV-1a 确定性派生（两次调用同值、两侧发起同值、键序无关）；只读铁律字节级自证（entity-link 零 import 零写存储，accounting-app 对 shop_orders 只有 get）；判据取空闲号 v4147（规格号 v4170 已被 v4.17.0 占用，连续第二版抓到同号两用形态）；玩家入口为记账 App 支出行关联徽标（linked 显对侧订单号、ambiguous 显候选数并把全部候选列进悬停提示）；11 例全绿含两向负控制（复刻「取第一个」坏实现必被同款断言抓住 + 真实现同输入确实全列）；定向验证 14 套全绿；批次 D 进行中，下一项 R21-O9。
 
+<!-- 金手指 1108 扩库（数据批次增强，不抬主版本、不占判据号指纹） -->
+- 金手指 1108 扩库已完成源码与定点验证：以作者四份世界书（1013 V4.1 / 1026 / 1108 / 漫漫长路）为源，`scripts/merge-cheats-1108.mjs` 可复现地把 `data/cheats.js` + `data/cheat-index.js` 从 166 包扩到 **203 包**（ch167–ch203，新增 37 包）；前 166 包 id/次序/正文逐字冻结，v3.16.0 冻结台账 165 条 md5 全部仍成立。新增包按家族归并：1026 的「骇客 + 技术与权能详解」合 1 包、漫漫长路 21 段合 1 包（45,736 字），不拆半套卡；判据 `tests/cheat-1108.test.mjs` 15 例 A～E 五组全绿，含假账 md5 必转红与未知 id 如实丢弃的负控制。抽卡池现取 203 项、搜索/分组/装配/注入四条纯函数链路实证命中新包；`tests/system-v3160.test.mjs` 的「恰好 166 包 / ch166 收尾」按同仓下限形纪律改成只追加不判死，守住旧台账与 ch166 原位。定向验证 10 套全绿（cheat-1108 / v247 / v288 / v3160 / v3170 / gacha-data / gacha-app / dead-surface-triage / settings-image-source-selection 等）。**明确未做**：1013 附件对 36 个旧同名包的 V4.1 修订、6 条冻结 `·子条` 的家族补全 —— 两者都要改已进玩家存档的旧包正文，另开版本并刷新冻结台账，清单见 `docs/cheat-1108-pending-revisions.md`；无真机、不能保证浏览器 DOM/真实模型/动态抽卡表现，边界见 `docs/cheat-1108-verification-boundary.md`。本批不写 R21-O9 在途六源，不与 `system-v4148` 抢版本指纹。
+
 <!-- coverage-debt:begin（本段由 scripts/coverage-report.mjs --write 生成，勿手改） -->
 ### 覆盖率欠账清单（v4.145.0 机器读数，勿手改）
 
