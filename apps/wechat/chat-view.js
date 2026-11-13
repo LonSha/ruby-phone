@@ -18,6 +18,11 @@ import { captionOf } from '../../config/time-caption.js';
  *   为什么用**尾部**而不是 `windowOf`:后者从头部切(服务瀑布流),
  *   而聊天用户看的是最近 N 条 —— 两种切片方向相反。 */
 import { tailWindowOf } from '../../config/list-window.js';
+/* [R21-O1] 真·窗口化消息流：与上面的 `tailWindowOf` 分层共存 ——
+ *   `tailWindowOf` 管「取多少条数据交给渲染」，本模块管「物化多少条节点进 DOM」。
+ *   两个上界各管一层，不合并成一个常量。 */
+import { computeWindowedRange, windowItems, normalizeStreamMode, WINDOWED_STREAM_KEY, WINDOWED_STREAM_MODE, WINDOWED_STREAM_LIMIT, WINDOWED_STREAM_ROW_HEIGHT } from './chat-view-windowed-stream.js';
+
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：微信生图是本仓最长的在飞请求之一
  *   （先等英文 TAG 一轮 AI、再等图片 provider、再等上传落盘）。
  *   它写的是 `wechat_messages_*`（按会话隔离的键），旧回信落回来会把图片挂到
@@ -2907,7 +2912,7 @@ renderChatRoom(chat) {
     <div class="chat-room" data-chat-id="${safeChatId}">
                 <div class="chat-messages" id="chat-messages" data-chat-id="${safeChatId}">
                     ${this.renderLoadEarlierEntry(win)}
-                    ${this.renderMessagesWithDateDividers(win.items, userInfo)}
+                    ${this._windowedFirstPaintHtml(win.items, userInfo, chat.id)}
                 </div>
 
                 <!-- 输入区 -->
@@ -2966,8 +2971,150 @@ renderChatRoom(chat) {
         `;
     }
 
+    _windowedStreamHeightOf(chatId) {
+        const key = String(chatId || '').trim();
+        if (!key) return { heights: [], avg: WINDOWED_STREAM_ROW_HEIGHT };
+        if (!(this._windowedHeightsByChat instanceof Map)) this._windowedHeightsByChat = new Map();
+        let entry = this._windowedHeightsByChat.get(key);
+        if (!entry) {
+            entry = { heights: [], avg: WINDOWED_STREAM_ROW_HEIGHT };
+            this._windowedHeightsByChat.set(key, entry);
+        }
+        return entry;
+    }
+    /** 把容器里已物化的行高写回台账（真实高度，不是固定 68px 估算）。 */
+    _windowedStreamCaptureHeights(container, chatId) {
+        if (!container?.querySelectorAll) return;
+        const entry = this._windowedStreamHeightOf(chatId);
+        const rows = container.querySelectorAll('.chat-message[data-message-index]');
+        let sum = 0;
+        let count = 0;
+        rows.forEach((el) => {
+            const idx = Number.parseInt(el?.dataset?.messageIndex || '', 10);
+            const h = Number(el?.getBoundingClientRect?.().height || 0);
+            if (!Number.isInteger(idx) || idx < 0 || h <= 0) return;
+            entry.heights[idx] = h;
+            sum += h;
+            count += 1;
+        });
+        if (count > 0) entry.avg = Math.max(1, Math.round(sum / count));
+    }
+    /** `baseOffset` = 尾部窗口第一条在全量数组里的全局下标；节点 `data-message-index` 用全局下标。 */
+    _windowedStreamHtml(messages, userInfo, range, chatId = '', baseOffset = 0) {
+        const entries = windowItems(messages, range);
+        const html = this.renderMessagesWithDateDividers(entries.map(x => x.item), userInfo, baseOffset + range.startIndex);
+        const top = Number(range.topSpacer) || 0;
+        const bottom = Number(range.bottomSpacer) || 0;
+        return `<div class="wechat-window-spacer" data-window-spacer="top" style="height:${top}px;min-height:${top}px;flex:0 0 ${top}px;pointer-events:none"></div>${html}<div class="wechat-window-spacer" data-window-spacer="bottom" style="height:${bottom}px;min-height:${bottom}px;flex:0 0 ${bottom}px;pointer-events:none"></div>`;
+    }
+    _windowedFirstPaintHtml(messages, userInfo, chatId) {
+        const list = Array.isArray(messages) ? messages : [];
+        if (normalizeStreamMode(this.app?.storage?.get?.(WINDOWED_STREAM_KEY)) !== WINDOWED_STREAM_MODE.WINDOWED || list.length <= WINDOWED_STREAM_LIMIT) {
+            return this.renderMessagesWithDateDividers(list, userInfo);
+        }
+        const baseOffset = this._windowedBaseOffsetOf(chatId, list);
+        const entry = this._windowedStreamHeightOf(chatId);
+        const heights = baseOffset > 0 ? entry.heights.slice(baseOffset, baseOffset + list.length) : entry.heights;
+        const approxTotal = entry.avg * list.length;
+        const range = computeWindowedRange(list.length, Math.max(0, approxTotal - 640), 640, {
+            maxNodes: WINDOWED_STREAM_LIMIT, heights, avgRowHeight: entry.avg
+        });
+        this._lastWindowedRange = range;
+        this._lastWindowedBase = { chatId: String(chatId || ''), baseOffset };
+        return this._windowedStreamHtml(list, userInfo, range, chatId, baseOffset);
+    }
+    /** 尾部窗口在全量里的起点：优先按会话记录，其次从数据源长度反推。 */
+    _windowedBaseOffsetOf(chatId, list) {
+        const key = String(chatId || '').trim();
+        const cached = this._lastWindowedBase;
+        if (cached && cached.chatId === key && Number.isInteger(cached.baseOffset)) return cached.baseOffset;
+        const total = Number(this.app?.wechatData?.getMessages?.(key)?.length || list.length || 0);
+        return Math.max(0, total - (Array.isArray(list) ? list.length : 0));
+    }
+    bindWindowedStreamEvents(container = null) {
+        const target = container || this.getCurrentWechatView?.()?.querySelector?.('#chat-messages') || document.getElementById('chat-messages');
+        if (!target || target._windowedStreamScrollBound) return;
+        target._windowedStreamScrollBound = true;
+        target.addEventListener('scroll', () => {
+            if (normalizeStreamMode(this.app?.storage?.get?.(WINDOWED_STREAM_KEY)) !== WINDOWED_STREAM_MODE.WINDOWED) return;
+            if (target._windowedStreamFrame) return;
+            const raf = globalThis.requestAnimationFrame || ((fn) => setTimeout(fn, 16));
+            target._windowedStreamFrame = raf(() => {
+                target._windowedStreamFrame = 0;
+                const cid = String(target.dataset.chatId || this.app?.currentChat?.id || '');
+                const full = this.app?.wechatData?.getMessages?.(cid) || [];
+                /* 换窗只换「物化哪一段」，数据窗口仍由 `tailWindowOf` 决定 —— 两层各管一层。 */
+                const win = tailWindowOf(full, { loaded: this._windowSizeOf(cid), pageSize: CHAT_WINDOW_SIZE });
+                const list = win.items;
+                const baseOffset = Math.max(0, full.length - list.length);
+                const range = this._computeWindowedRangeFor(list, target, cid, baseOffset);
+                const prev = this._lastWindowedRange;
+                const sameRange = prev && prev.startIndex === range.startIndex && prev.endIndex === range.endIndex;
+                if (sameRange) return;
+                this._lastWindowedRange = range;
+                this._lastWindowedBase = { chatId: cid, baseOffset };
+                this._windowedStreamCaptureHeights(target, cid);
+                const anchor = this._windowedStreamAnchorOf(list, range);
+                target.innerHTML = this._windowedStreamHtml(list, this.app.wechatData.getUserInfo(), range, cid, baseOffset);
+                this._windowedStreamRestoreAnchor(target, list, range, anchor, baseOffset);
+                this.bindMessageLongPressEvents();
+                this.bindManualTimeMarkerEvents();
+                this.bindSpecialMessageEvents();
+                this.bindInnerThoughtEvents();
+                this.bindMessageSelectionEvents();
+            });
+        }, { passive: true });
+    }
+    _computeWindowedRangeFor(list, container, chatId, baseOffset = 0) {
+        const entry = this._windowedStreamHeightOf(chatId);
+        const heights = Number(baseOffset) > 0 ? entry.heights.slice(Number(baseOffset), Number(baseOffset) + list.length) : entry.heights;
+        return computeWindowedRange(list.length, container?.scrollTop, container?.clientHeight, {
+            maxNodes: WINDOWED_STREAM_LIMIT, heights, avgRowHeight: entry.avg
+        });
+    }
+    /** 取「重渲染前视口顶那条消息」作为锚点，换窗后按它的新位置还原滚动。 */
+    _windowedStreamAnchorOf(list, range) {
+        const total = list.length;
+        const anchorIndex = Math.max(0, Math.min(total - 1, Number(range?.startIndex) || 0));
+        return { index: anchorIndex, messageId: String(list?.[anchorIndex]?.id || '').trim() };
+    }
+    _windowedStreamRestoreAnchor(container, list, range, anchor, baseOffset = 0) {
+        if (!container || !anchor) return;
+        const entry = this._windowedStreamHeightOf(container.dataset.chatId);
+        if (anchor.index >= range.startIndex && anchor.index < range.endIndex) {
+            let offset = 0;
+            for (let i = range.startIndex; i < anchor.index; i++) {
+                offset += Number(entry.heights[Number(baseOffset) + i] || entry.avg) || 0;
+            }
+            const spacerTop = Number(range.topSpacer) || 0;
+            container.scrollTop = Math.max(0, spacerTop + offset);
+            return;
+        }
+        container.scrollTop = Math.max(0, Number(range.topSpacer) || 0);
+    }
+    renderWindowedMessageStream(messages, userInfo, container) {
+        const list = Array.isArray(messages) ? messages : [];
+        const cid = String(container?.dataset?.chatId || this.app?.currentChat?.id || '');
+        const baseOffset = this._windowedBaseOffsetOf(cid, list);
+        const range = this._computeWindowedRangeFor(list, container, cid, baseOffset);
+        this._lastWindowedRange = range;
+        this._lastWindowedBase = { chatId: cid, baseOffset };
+        if (container) this.bindWindowedStreamEvents(container);
+        return this._windowedStreamHtml(list, userInfo, range, cid, baseOffset);
+    }
+    /** 写入窗口化模式；设置页只调这一个入口，避免「写键」与「立即重画」两处口径。 */
+    async setMessageStreamMode(value) {
+        const mode = normalizeStreamMode(value);
+        try { await this.app?.storage?.set?.(WINDOWED_STREAM_KEY, mode); } catch (_e) { /* 存储不在场时不影响本次重画 */ }
+        this._lastWindowedRange = null;
+        this._lastWindowedBase = null;
+        this._windowedHeightsByChat = new Map();
+        this._refreshCurrentChatMessages();
+        return mode;
+    }
+
     // 🔥 渲染消息列表（常规3分钟时间胶囊 + AI首条>1分钟强制显示）
-    renderMessagesWithDateDividers(messages, userInfo) {
+    renderMessagesWithDateDividers(messages, userInfo, indexOffset = 0) {
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return '';
         }
@@ -2977,6 +3124,7 @@ renderChatRoom(chat) {
         let lastRenderedDate = null;
 
         messages.forEach((msg, index) => {
+            const messageIndex = index + indexOffset;
             try {
                 const msgTimestamp = msg.timestamp || 0;
                 const msgDate = msg.date ? this._normalizeWechatDateDisplay(msg.date) : null;
@@ -2997,7 +3145,7 @@ renderChatRoom(chat) {
                 if (isManualTimeMarker) {
                     const markerText = this._buildWechatTimeDividerText(msg, { forceDate: true });
                     if (markerText) {
-                        html += this.renderManualTimeMarkerDivider(msg, index, markerText);
+                        html += this.renderManualTimeMarkerDivider(msg, messageIndex, markerText);
                         lastRenderedTimestamp = msgTimestamp;
                         if (msgDate) lastRenderedDate = msgDate;
                     }
@@ -3026,7 +3174,7 @@ renderChatRoom(chat) {
                     }
                 }
 
-                html += this.renderMessage(msg, userInfo, index);
+                html += this.renderMessage(msg, userInfo, messageIndex);
             } catch (e) {
                 console.error('渲染单条消息失败，已跳过:', e, msg);
             }
@@ -3180,7 +3328,11 @@ renderChatRoom(chat) {
         // ========================================
         const prevIds = this._lastRenderedMsgIds?.[chatId] || [];
         const currIds = messages.map(m => String(m?.id ?? ''));
-        const isPureAppend = prevIds.length > 0
+        /* 窗口化模式下「纯尾部追加」不能直接 append：窗口化 DOM 里还有上下占位节点，
+         *   直接 append 会让新消息落到占位之后、索引与占位脱节。窗口只物化 ≤40 条，
+         *   走窗口重画代价很小，故这里直接跳过增量捷径。 */
+        const windowedMode = normalizeStreamMode(this.app?.storage?.get?.(WINDOWED_STREAM_KEY)) === WINDOWED_STREAM_MODE.WINDOWED;
+        const isPureAppend = !windowedMode && prevIds.length > 0
             && currIds.length > prevIds.length
             && prevIds.every((id, i) => id === currIds[i]);
 
@@ -3223,7 +3375,10 @@ renderChatRoom(chat) {
         });
         this._lastRenderedWindow = win;
         messagesDiv.innerHTML = this.renderLoadEarlierEntry(win)
-            + this.renderMessagesWithDateDividers(win.items, userInfo);
+            + (windowedMode
+                ? this._windowedFirstPaintHtml(win.items, userInfo, chatId)
+                : this.renderMessagesWithDateDividers(win.items, userInfo));
+        if (windowedMode) this.bindWindowedStreamEvents(messagesDiv);
         this._lastRenderedMsgIds = this._lastRenderedMsgIds || {};
         this._lastRenderedMsgIds[chatId] = currIds;
 
@@ -3580,15 +3735,21 @@ renderChatRoom(chat) {
         // 2. 生成新 HTML
         let newHtml = '';
         try {
-            newHtml = this.renderLoadEarlierEntry(win) + this.renderMessagesWithDateDividers(win.items, userInfo);
+            const windowedMode = normalizeStreamMode(this.app?.storage?.get?.(WINDOWED_STREAM_KEY)) === WINDOWED_STREAM_MODE.WINDOWED;
+            newHtml = this.renderLoadEarlierEntry(win)
+                + (windowedMode
+                    ? this.renderWindowedMessageStream(win.items, userInfo, container)
+                    : this.renderMessagesWithDateDividers(win.items, userInfo));
         } catch (error) {
             console.error('微信消息列表 HTML 生成失败:', error);
             return;
         }
-
         // 3. 移动端安全替换：抛弃危险的 outerHTML，使用原生 innerHTML 替换
         try {
             container.innerHTML = newHtml;
+            if (normalizeStreamMode(this.app?.storage?.get?.(WINDOWED_STREAM_KEY)) === WINDOWED_STREAM_MODE.WINDOWED) {
+                this.bindWindowedStreamEvents(container);
+            }
         } catch (error) {
             console.error('微信消息列表刷新失败:', error);
             return;

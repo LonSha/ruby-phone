@@ -1474,6 +1474,11 @@ export class SettingsApp {
         const MOTION_LEVEL_IDS = ['auto', 'full', 'reduced', 'still'];
         const motionRaw = String(this.storage.get('sys_motion_level') || '').trim().toLowerCase();
         const motionLevel = MOTION_LEVEL_IDS.indexOf(motionRaw) >= 0 ? motionRaw : 'auto';
+        /* [R21-O1] 消息流渲染方式：默认全量（保守兼容）；`windowed` 才启用真·窗口化通道。
+         *   读取口径与 `apps/wechat/chat-view-windowed-stream.js::normalizeStreamMode` 同源：
+         *   未知值一律回落全量，绝不猜用户想要什么。 */
+        const messageStreamModeRaw = String(this.storage.get('wechat-message-render-mode') || '').trim();
+        const messageStreamMode = messageStreamModeRaw === 'windowed' ? 'windowed' : 'full';
         const cardLayoutCustomCss = String(this.storage.get(CARD_LAYOUT_CUSTOM_CSS_KEY) || '');
         // 加载壁纸和颜色设置
         const customWallpaper = this.imageManager.getWallpaper();
@@ -2714,6 +2719,18 @@ export class SettingsApp {
                                 </div>
                             </div>
 
+                            <div class="setting-item">
+                                <div class="setting-toggle">
+                                    <div>
+                                        <div class="setting-label">消息流渲染方式</div>
+                                        <div class="setting-desc">窗口化只物化可见区间（长会话更省节点、更顺滑）；全量渲染所有已加载消息，长会话会变卡</div>
+                                    </div>
+                                    <select id="wechat-message-render-mode" style="width: 112px; height: 34px; padding: 0 8px; border: 1px solid rgba(18, 24, 38, 0.12); border-radius: 10px; background: #f8fafc; color: #111827; font-size: 12px;">
+                                        <option value="full" ${messageStreamMode === 'full' ? 'selected' : ''}>全量</option>
+                                        <option value="windowed" ${messageStreamMode === 'windowed' ? 'selected' : ''}>窗口化</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="setting-item">
                                 <div class="setting-label">小手机整体大小</div>
                                 <div class="setting-desc">调整整个小手机外壳和内容区域尺寸，电脑端和移动端都会生效</div>
@@ -6364,6 +6381,14 @@ export class SettingsApp {
             const value = String(e.target.value || 'auto');
             await this.storage.set('sys_motion_level', value);
             try { window.VirtualPhone?.motion?.refresh?.(value); } catch (_e) { /* 运行时不在场时不影响设置落盘 */ }
+        });
+        /* [R21-O1] 消息流渲染方式变更：写键后让聊天视图**立即**重画当前会话。
+         *   只调 `setMessageStreamMode` 一个入口 —— 写键与重画的口径都在那边，设置页不复制一份。 */
+        document.getElementById('wechat-message-render-mode')?.addEventListener('change', async (e) => {
+            const value = String(e.target.value || 'full') === 'windowed' ? 'windowed' : 'full';
+            e.target.value = value;
+            await this.storage.set('wechat-message-render-mode', value);
+            try { await window.VirtualPhone?.wechatApp?.chatView?.setMessageStreamMode?.(value); } catch (_e) { /* 聊天视图不在场时下次打开生效 */ }
         });
 
         document.getElementById('save-card-layout-css')?.addEventListener('click', async () => {

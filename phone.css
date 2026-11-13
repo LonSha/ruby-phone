@@ -22565,3 +22565,12 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 .dg-key { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
 .dg-face { font-size: 12px; opacity: .7; }
 .dg-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; font-size: 12px; }
+/* [R21-O1] 窗口化消息流的上下占位：只撑高度、不接事件、不参与选择。 */
+.wechat-window-spacer {
+    display: block;
+    width: 100%;
+    flex: 0 0 auto;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+}

@@ -19,14 +19,6 @@
       "why": "R13-O2 声明的条件判据文件名占位（xxx 表示随实施确定的具体版本号），实施时须落实名并从台账移除"
     },
     {
-      "path": "tests/browser/scenarios/r21-windowed-stream.scen.js",
-      "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
-      "epoch": "R21",
-      "land_version": "v4.150.0",
-      "date": "2026-11-11",
-      "why": "R21-O1 交付物：窗口化消息流渲染通道的浏览器场景判据"
-    },
-    {
       "path": "scripts/coverage-report.mjs",
       "plan": ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
       "epoch": "R21",

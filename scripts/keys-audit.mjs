@@ -783,7 +783,8 @@ const KEY_REGISTRY = [
   { key: 'wechat-group-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
   { key: 'wechat-moments-context-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
   { key: 'wechat-single-call-history-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
-{ key: 'wechat-single-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-single-chat-limit', scope: 'global', note: '微信相关设置（设置页 / chat-view 读写）' },
+  { key: 'wechat-message-render-mode', scope: 'global', note: '微信消息流渲染方式（设置页 / chat-view 读写，R21-O1 窗口化通道）' },
   { key: '__rubyphone_loader_owner', scope: 'global', note: '[v4.57.0 · R-EX1] 单实例互斥令牌守卫（全局互斥挂钩，防多实例幽灵重影）' },
 ];
 
