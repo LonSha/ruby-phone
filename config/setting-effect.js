@@ -75,6 +75,7 @@ export const SETTING_EFFECT = Object.freeze({
     'phone-image-debug-payload': { at: 'immediate', why: '只决定是否把请求体打进控制台' },
     'phone-tag-filter-enabled': { at: 'immediate', why: '过滤开关本身即时可判（黑白名单内容另计）' },
     'recycle-bin-enabled': { at: 'immediate', why: '软删开关决定下一次删除怎么走，不涉及生成' },
+    'wechat-message-render-mode': { at: 'immediate', why: '只决定消息流按窗口化还是全量物化，重绘即见；不参与生成' },
 
     /* ── next-turn：要被「一轮生成」读到 ── */
     'setting-wechat-online-proactive-enabled': { at: 'next-turn', why: '主动发言由生成轮次驱动；中途改会让本轮前后的判定来自两套设定' },

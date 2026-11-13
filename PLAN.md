@@ -152,9 +152,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.143.0**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **十九道静态门全过**；全量 `node --test tests/*.test.mjs` **434 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.143.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **320** 件、tests **434** 套件、scripts **31** 件；`index.js` **895477 字节 / 14482 行**；`phone.css` **716960 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 版本 | **v4.144.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **二十道静态门全过**；全量 `node --test tests/*.test.mjs` **435 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.144.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **320** 件、tests **435** 套件、scripts **32** 件；`index.js` **896367 字节 / 14481 行**；`phone.css` **716960 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
@@ -369,4 +369,6 @@
 <!-- R21-O5 v4.142.0 -->
 - R21-O5 已完成源码与定点验证：时间文案三处同源，7 条通过，未做实机验收；批次 A 收口，下一项 R21-O1。
 <!-- R21-O1 v4.143.0 -->
+<!-- R21-O6 v4.144.0 -->
 - R21-O1 已完成源码与定点验证：窗口化通道物化上界 40，与 tailWindowOf 的 200 条数据窗口分层共存；20 条系统判据 + 三视口浏览器场景全绿；默认全量、显式开启。批次 B 进行中，下一项 R21-O6。
+- R21-O6 已完成源码与定点验证：趋势门真启子进程跑探针（必带 --expose-gc），尾段上界 8KB（实测 2KB）/ 总增长上界 64KB（实测 15KB），不可比（未强制回收 / 样本不足）一律 exit 2 拒判而不发合格证；15 条判据全绿（含真跑三次与每轮真留 1MB 的负控制，实测尾段 3074KB 转红）；批次 B 两项已全部完成，下一项是批次 C 的 R21-O4。

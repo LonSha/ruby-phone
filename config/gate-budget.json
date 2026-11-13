@@ -5,7 +5,7 @@
   "measured_at": "v4.114.0",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 315400,
+  "total_ms": 317509,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -81,6 +81,11 @@
       "ms": 700,
       "limit_ms": 770,
       "why": "R-O3 静态门：只读七个写回口文件的文本（不走 apps/ 全量扫描），与 screen-host 同量级；慢下来通常意味着扫描面被扩到全仓"
+    },
+    "memory-trend": {
+      "ms": 2109,
+      "limit_ms": 2320,
+      "why": "R21-O6 增加的趋势门：它**真启一个子进程**跑探针（--expose-gc，8 轮 × 400 次 三面混合调用 + 3 跑中位数），故折算与脚本启动同量级（实测 2.1s）。它慢下来通常意味着探针的 ROUNDS/OPS 被放大，或它本已变成一道真重的测量道"
     },
     "hardlink-safety": {
       "ms": 800,

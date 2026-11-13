@@ -91,7 +91,11 @@ test('B1: package.json 必须有 browser 键，且 check 链包含 browser', () 
     chain.some((c) => /browser/.test(c)),
     'browser 门必须在 check 链上'
   );
-  assert.equal(chain.length, 19, `check 链应为十九道，实际 ${chain.length} 道`);
+  /* ★ [v4.144.0 · 养递改写，同 v4930 F6 / v4940 F6 先例] 本档原写「恰十九道」等值锚，新增任何一道门即红
+   *   —— 那是养递仪式不是缺陷（加一道真门并不让旧门变弱）。改成下限形：本档守「不得回退到十八道以下」，
+   *   「当版真到了多少道」由 B2（CONTEXT.md 口径必须与现场链长一致）与 system-v3190 C4（门名与顺序逐位同构）守。 */
+  assert.ok(chain.length >= 19, `check 链不得少于十九道（实测 ${chain.length} 道）`);
+  assert.ok(chain.some((c) => /memory-trend/.test(c)), '趋势门（memory-trend）必须在 check 链上（读数不进链 = 等于没人读）');
 });
 
 test('B2: CONTEXT.md 的门数口径必须与 package.json 的 check 链道数一致', () => {

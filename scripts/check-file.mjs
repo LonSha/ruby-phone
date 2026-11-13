@@ -187,6 +187,16 @@ const READS = {
          *   它们是分布读数，不像「新增」那样有判红语义；登记面只留判据真用得上的。 */
         { id: 'added', label: '新增未登记', re: /基线 \d+ \/ 新增 (\d+)/, g: 1 }
     ],
+    /* ── [v4.144.0 · R21-O6] 第十八道门：长会话内存跨轮趋势。
+     *   ★ 这道门的**产物早就在盘上**（memory_growth_probe.cjs + memory_growth_baseline.json，
+     *     基线自己的 note 逐字写着「只判跟轮趋势」），**但没有任何门在读这个读数** ——
+     *     与 doc-path-claim 那一次是同一种形态（产物在、判据也在，就是没人跑）。
+     *   主读数只登记两根上界与轮数：它们是这门判红与否的真值（其余读数仍逐字落文件里可查）。 */
+    'memory-trend': [
+        { id: 'tail', label: '尾段增长KB', re: /尾段增长 (-?\d+)KB/, g: 1 },
+        { id: 'total', label: '总增长KB', re: /总增长 (-?\d+)KB/, g: 1 },
+        { id: 'rounds', label: '轮数', re: /轮数 (\d+)/, g: 1 }
+    ],
     'session-writeback': [
         { id: 'files', label: '扫描生产文件数', re: /扫描 (\d+) 个生产 \.js/, g: 1 },
         { id: 'captures', label: '令牌捕获点', re: /捕获点 (\d+) · 栅栏点 (\d+)/, g: 1 },

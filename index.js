@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.143.0';
+const ST_PHONE_VERSION = '4.144.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -584,18 +584,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-13",
     items: [
-        "【版本升至 4.143.0（五源同源）】第二十一期批次 B 第一步 R21-O1：兑现 R17-O2 的窗口化消息流渲染承诺 —— 新增窗口化通道按可见区间加缓冲只物化有限节点，判据在真实 DOM 上数节点而不是估算。",
-        "【两层上界各管一层】config/list-window.js 的 tailWindowOf 继续管「取多少条数据」（默认 200），新模块 apps/wechat/chat-view-windowed-stream.js 管「物化多少节点」（硬上界 40）；两者不合并成一个常量，系统判据 A2 与 D1 同时钉住分离与共存。",
-        "【可变行高与像素缓冲】模块不再按固定 68px 一刀切：接受稀疏高度台账（按全局消息下标），未测量处用均值兜底，用前缀偏移与二分查找定位区间；缓冲区按「一屏像素」而不是「若干行」，缓冲改成 0 会在滚动那一帧露出白屏，负控制据此转红。",
-        "【索引贯穿全局下标】renderMessagesWithDateDividers 新增 indexOffset 并算出 messageIndex，renderMessage 与 renderManualTimeMarkerDivider 都收全局下标；窗口化的偏移是 baseOffset 加 startIndex，长按、撤回、引用、编辑与时间标记菜单才会落到正确楼层，而不是窗口内相对楼层。",
-        "【三条刷新路径接线】首屏 renderChatRoom、全量回退 _refreshCurrentChatMessages、增量入口 smartUpdateMessages 三条都按设置二选一；窗口化模式下禁用「纯尾部追加」增量捷径，避免新消息被追加到下方占位节点之后。",
-        "【滚动恢复按台账不按旧节点】换窗前先把已物化行的 getBoundingClientRect().height 写回台账，再按 topSpacer 加区间内高度和算新 scrollTop；重画后旧节点已不存在，若按元素位置恢复就会失败。",
-        "【设置入口与规格偏差如实登记】规格原写「高级实验室」，实勘设置页只有 general / memory / llm / tts / image / lobby 六个 tab、没有高级实验室，故开关落在「常规」；规格写「静默生效」，实现选择「默认全量、窗口化显式开启」的保守兼容策略。两处偏差不宣称与规格逐字一致。",
-        "【本版自己抓到的缺陷形态】首稿把窗口化先做成固定行高，占位高度与真实气泡高度脱节，滚动换窗会跳变；改台账后才发现索引必须传全局下标，否则长按菜单会操作到错误的楼。另有负控制首轮因一屏缓冲下未封顶区间本就小于 40 而恒绿，把两侧缓冲放大到 3 屏后才有分辨力。",
-        "【交棒改写与负控制】C 组不用「改参数」冒充负控制：把 apps/wechat 整树复制到系统临时目录，只在副本上破坏封顶与缓冲，再跑同一组断言；真源一字未动，C3 就是自证。",
-        "【定向验证与浏览器读数】tests/system-v4143.test.mjs 二十条通过（A 口径 / B 行为 / C 负控制 / D 接线 / E 版本锚）；tests/browser/scenarios/r21-windowed-stream.scen.js 在 390×844、320×568、1280×800 三档各 11 条通过：1000 条夹具下物化 19 条且不超过 40、滚到顶中底仍是 19 条、切回全量 200 条、Infinity 档 67 对正常 40、零缓冲 10 对 40。",
-        "【运行时验证边界】本版只做 Node 定点验证与独立浏览器场景复校。浏览器夹具是注入的存储键而非用户真实历史，规格要求的 3000 条档只在系统测试纯函数面覆盖，浏览器层用 1000 条；不能保证真机 SillyTavern 主题与目标设备帧率，看起来没坏但显示不对仍须在真实宿主复现。",
-        "【待收口清单】全量 node --test 回归与全量浏览器门本轮未跑；R21-O6 长会话内存跨轮趋势门尚未开始。不把单项全绿当成整期收口。"
+        "【版本升至 4.144.0（五源同源）】第二十一期批次 B 第二步 R21-O6：把「探针建好了、基线也落了、可没有任何门在读」这第三笔账收成一道真会响的门 —— 探针与基线早在盘上（8 轮 heap 4362 到 4378 KB，基线自己的 note 逐字写着只判跨轮趋势），而 `grep -rn memory_growth scripts/*.mjs` 零命中，读数是死的。",
+        "【两根上界留四倍余量】尾段增长上界 8KB（实测 2KB）、总增长上界 64KB（实测 15KB）；上界不是拍出来的：同一份代码 12 连跑曾出现 0.5 与 55.25 KB/轮两个档次，压到实测值身上只会得到一道时红时绿的噪声门；而真泄漏的量级由本版负控制给出 —— 每轮真留 1MB 时尾段实测 3074KB，任何合理上界都拦得住。",
+        "【判决下沉重到 lib、只留一份实现】scripts/lib/memory-trend.mjs 里两个纯函数：judgeTrendReadings 判「读数越没越界」，guardProbeOutput 判「这份读数能不能拿来判」，两侧任一越界即红而不是取并集的发涩写法；门与判据都 import 它，判据不靠真跑一次来猜结论。",
+        "【不可比就不发合格证】gc_forced 不是 true 一律 exit 2 拒判：实测同一份代码不带 --expose-gc 得 166.75KB/轮、带则 0.5KB/轮，差 300 倍；那个读数量的是未回收垃圾不是泄漏。七种拒判理由互不同形（空输出 / 未强制回收 / 缺 readings / 样本非数组 / 样本过少 / 轮数过少 / 主读数缺格），不得坍成一个「不行」。",
+        "【五处接线缺一即等于没接】package.json 的 memory-trend 脚本与 check 链（链长 19 增到 20，位置在 session-writeback 与 hardlink-safety 之间）、gate-tiers 静态档（必须与链同序）、gate-budget 逐门预算（ms 实测 2109，limit_ms 由 margin_pct 自算）、check-file 主读数登记（三条读数正则）。这道门要说明的正是：读数不进链 = 等于没人读。",
+        "【本版自己抓到的缺陷形态一：负控制差一点就成假对照】首稿用 `Buffer.alloc(1MB)` 保留，实测 heapUsed 几乎不动（Buffer 算 external memory），负控制于是永远不会红；第二稿改用长字符串仍不行（V8 对长串做共享/优化，8×1MB 只涨 4KB）；直到第三稿换成 `new Array(n).fill(x)` 的堆内 double 数组，才真量到 3074KB。这次曲折本身就是判据 D3 存在的理由：它要求负控制读数必须比正跑高一个量级以上，否则那条负控制换不来任何分辨力。",
+        "【本版自己抓到的缺陷形态二：旧门禁的等值锚会拦住每一次新增】tests/system-v4100.test.mjs 的 B1 原本把链长钉成 `assert.equal(chain.length, 19)`，加一道真门就红 —— 那是抬版仪式不是缺陷。按仓内既定先例（v4930 F6 / v4940 F6）改成下限形，并补一条「memory-trend 必须在链上」的正向断言；「当版真到了几道」由 B2（CONTEXT.md 口径必须与现场链长一致）与 v3190 C4（门名与顺序逐位同构）继续看守。",
+        "【交棒改写】门脚本原先把判决写在 CLI 主体里，判据一 import 它就会真起子进程 —— 那是「判据靠意外作用才断言」。改成把 CLI 骨架与纯函数面分离到 lib：门跑 lib 下判，判据也跑 lib 下判，同一份实现，且判据不必真跑就能断言边界值、七种拒判理由与越界形态。真跑留给 D 组的三次复跑与两条负控制。",
+        "【定向验证读数】tests/system-v4144.test.mjs 十五条通过（A 口径 / B 纯函数行为 / C 五处接线 / D 真跑三次 + 真负控制 + 读不到拒判 / E 版本锚与诚实边界）。真跑读数：尾段增长 2KB、总增长 15 到 16KB、8 轮 8 样本、gc_forced 恒 true、门耗时 2.1 秒；负控制读数：尾段 3074KB、总增长 7184KB、exit 1 并点名尾段。",
+        "【运行时验证边界】本版只做 Node 定点验证。门量的是「纯模块面反复调用的堆趋势」，不是真机渲染耗时、不是真宿主注入对象占用、也不是小时级长时运行 —— 基线的三条不可测项仍在清单里，判据 E2 钉住它不许被顺手抹掉。不能保证真机 SillyTavern 下长会话的真实堆形态，看起来没坏但显示不对仍须在真实宿主复现。",
+        "【待收口清单】全量 node --test 回归与全量浏览器门本轮仍未跑（浏览器全 20 场景 × 4 视口本轮只跑到 4 场景即被超时截断，读数未落台账）；批次 B 两项已全部完成，下一项是批次 C 的 R21-O4 覆盖率读数进账本。不把单项全绿当成整期收口。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

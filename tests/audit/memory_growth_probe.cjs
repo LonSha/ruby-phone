@@ -46,6 +46,11 @@ const PER_ROUND = Math.max(10, Number(argVal('--ops')) || 400);
 /* ★ [v3.23.4] 判决取**跨次中位数**：连跑 TRIALS 次（各自独立采样窗口），
  *   中位数进判决，单次读数只落 readings。理由见下方 ① 段与 ③b 段的注释。 */
 const TRIALS = Math.max(1, Math.min(9, Number(argVal('--trials')) || 3));
+/* ★ [v4.144.0 · R21-O6] `--keep-kb N`：每轮向一个被引用的数组里留 N KB。
+ *   它只服务一件事：给「趋势门」一个真会泄漏的对照组（负控制）。
+ *   不传时行为与改前逐字相同；传了就必然把 tail 拉高，否则说明保留本身没生效（那就是一条假负控制）。 */
+const KEEP_KB = Math.max(0, Number(argVal('--keep-kb')) || 0);
+const retained = [];
 
 const IDX = path.join(ROOT, 'index.js');
 const APPS = path.join(ROOT, 'apps');
@@ -133,6 +138,12 @@ const out = {
             DR.dryRunLoreBlock({ entries: [{ comment: 'c' + i, content: 'x'.repeat(64) }] }, { maxChars: 500 });
             PL.plotlinePromptBlock({ worldProg: { knowledge: { 甲: { known: ['x'], unaware: ['y'] } } } }, { maxLines: 10 });
         }
+        /* ★ 实测三种保留形态，只有第三种在 heapUsed 上真长出来：
+         *   `Buffer.alloc(N)` → 算 external memory（heapUsed 几乎不动）；
+         *   `'x'.repeat(N)` → V8 对长串做共享/优化（实测 8×1MB 区区 +4KB）；
+         *   `new Array(n).fill(x)` → 堆内 double 元素数组，实测 120000 元素≈ 960KB，逐轮稳定累加。
+         *   负控制必须能把读数真拉高，否则它就是「本来就不会红」的安慰剿。 */
+        if (KEEP_KB > 0) retained.push(new Array(Math.ceil(KEEP_KB * 1024 / 8)).fill(r));
         samples.push(heapKB());
     }
     const first = samples[0];
@@ -143,6 +154,8 @@ const out = {
     const tailFirst = samples[half];
     const tailGrowth = last - tailFirst;
     const perRoundKB = Math.round((tailGrowth / Math.max(1, samples.length - half)) * 100) / 100;
+    out.readings.keep_kb = KEEP_KB;
+    out.readings.retained_arrays = retained.length;
     out.readings.heap_samples_kb = samples;
     out.readings.heap_first_kb = first;
     out.readings.heap_last_kb = last;

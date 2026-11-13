@@ -1,17 +1,17 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-05T13:34:59.966Z",
-  "version": "4.124.0",
+  "measured_at": "2026-11-13T07:36:32.141Z",
+  "version": "4.143.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../tmp/r14-browser-full-raw.log",
-    "bytes": 134765,
-    "sha256": "8a7036f85ca00008e21639e387fc0f94d6803790ca35d473ee9312de8486c5c1"
+    "log": "../../../tmp/gate-full.log",
+    "bytes": 147159,
+    "sha256": "08da5d819828827f12b941617020d216a2dec5947e51eda670a41d3e751d037f"
   },
   "elapsed_ms": 0,
-  "scenes": 19,
+  "scenes": 20,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,12 +19,12 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 772,
-  "fail_reads": 121,
+  "total_reads": 828,
+  "fail_reads": 5,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 19,
-    "measured": 19,
+    "on_disk": 20,
+    "measured": 20,
     "missing": [],
     "extra": [],
     "complete": true
@@ -36,19 +36,19 @@
     },
     "o1-app-enumeration.scen.js": {
       "reads": 48,
-      "fail": 8
+      "fail": 0
     },
     "o1-chat-switch.scen.js": {
-      "reads": 32,
-      "fail": 12
+      "reads": 36,
+      "fail": 0
     },
     "o1-core-flow.scen.js": {
       "reads": 68,
-      "fail": 12
+      "fail": 0
     },
     "o1-search-cancel.scen.js": {
-      "reads": 76,
-      "fail": 48
+      "reads": 64,
+      "fail": 3
     },
     "o1-settings-save.scen.js": {
       "reads": 48,
@@ -56,23 +56,23 @@
     },
     "o1-shell-smoke.scen.js": {
       "reads": 68,
-      "fail": 4
+      "fail": 0
     },
     "o6-longlist-extreme.scen.js": {
-      "reads": 28,
-      "fail": 16
+      "reads": 36,
+      "fail": 0
     },
     "o6-longlist-perf.scen.js": {
-      "reads": 28,
-      "fail": 16
+      "reads": 36,
+      "fail": 0
     },
     "o6-motion-throttle.scen.js": {
       "reads": 32,
-      "fail": 1
+      "fail": 2
     },
     "o7-perf-probe.scen.js": {
-      "reads": 28,
-      "fail": 4
+      "reads": 32,
+      "fail": 0
     },
     "o7-reopen-leak.scen.js": {
       "reads": 12,
@@ -105,322 +105,14 @@
     "r14-travel-progress.scen.js": {
       "reads": 44,
       "fail": 0
+    },
+    "r21-windowed-stream.scen.js": {
+      "reads": 44,
+      "fail": 0
     }
   },
   "failures": [
     {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "320x568",
-      "name": "home-paged",
-      "detail": "页数=1"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "320x568",
-      "name": "home-reachable-ids",
-      "detail": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "390x844",
-      "name": "home-paged",
-      "detail": "页数=1"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "390x844",
-      "name": "home-reachable-ids",
-      "detail": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "768x1024",
-      "name": "home-paged",
-      "detail": "页数=1"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "768x1024",
-      "name": "home-reachable-ids",
-      "detail": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "1280x800",
-      "name": "home-paged",
-      "detail": "页数=1"
-    },
-    {
-      "scene": "o1-app-enumeration.scen.js",
-      "viewport": "1280x800",
-      "name": "home-reachable-ids",
-      "detail": "主屏可达 10 / 89；不在主屏=[\"mofo\",\"wangxiang\",\"music\",\"playbook\",\"achievement\",\"xhs\",\"tieba\",\"health\",\"memory\",\"graph\",\"peek\",\"bilibili\",\"theater\",\"mood\",\"tarot\",\"reading\",\"gacha\",\"timeweaver\",\"worldpulse\",\"p"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "320x568",
-      "name": "app-opens-after-switch",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "320x568",
-      "name": "back-button-after-switch",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "320x568",
-      "name": "home-intact-after-switch",
-      "detail": "icons=15 dots=0"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "390x844",
-      "name": "app-opens-after-switch",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "390x844",
-      "name": "back-button-after-switch",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "390x844",
-      "name": "home-intact-after-switch",
-      "detail": "icons=15 dots=0"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "768x1024",
-      "name": "app-opens-after-switch",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "768x1024",
-      "name": "back-button-after-switch",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "768x1024",
-      "name": "home-intact-after-switch",
-      "detail": "icons=15 dots=0"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "1280x800",
-      "name": "app-opens-after-switch",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "1280x800",
-      "name": "back-button-after-switch",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-chat-switch.scen.js",
-      "viewport": "1280x800",
-      "name": "home-intact-after-switch",
-      "detail": "icons=15 dots=0"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "320x568",
-      "name": "open-app-gacha",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "320x568",
-      "name": "app-content-has-box",
-      "detail": "null"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "320x568",
-      "name": "back-button-in-app",
-      "detail": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "390x844",
-      "name": "open-app-gacha",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "390x844",
-      "name": "app-content-has-box",
-      "detail": "null"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "390x844",
-      "name": "back-button-in-app",
-      "detail": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "768x1024",
-      "name": "open-app-gacha",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "768x1024",
-      "name": "app-content-has-box",
-      "detail": "null"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "768x1024",
-      "name": "back-button-in-app",
-      "detail": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "1280x800",
-      "name": "open-app-gacha",
-      "detail": "找不到图标 幸运转盘"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "1280x800",
-      "name": "app-content-has-box",
-      "detail": "null"
-    },
-    {
-      "scene": "o1-core-flow.scen.js",
-      "viewport": "1280x800",
-      "name": "back-button-in-app",
-      "detail": "display=none box={\"w\":0,\"h\":0,\"t\":0,\"l\":0} hit=zero-box 0x0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "pager-dots-present",
-      "detail": "dots=0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "pager-dot-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "page2-moved-into-view",
-      "detail": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "page2-icons-reachable",
-      "detail": "reachable=0/0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "search-icon-on-page2",
-      "detail": "第 2 页没有搜索图标（分页没生效）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "search-app-opens",
-      "detail": "未渲染"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "search-mode-btn-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "full-mode-toggled",
-      "detail": "按钮文字="
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "scan-bar-lights-up",
-      "detail": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "search-cancel-reachable",
-      "detail": "missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "search-input-survives-cancel",
-      "detail": "输入框被取消操作打散"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "320x568",
-      "name": "back-button-visible-in-search",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "pager-dots-present",
-      "detail": "dots=0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "pager-dot-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "page2-moved-into-view",
-      "detail": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "page2-icons-reachable",
-      "detail": "reachable=0/0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "search-icon-on-page2",
-      "detail": "第 2 页没有搜索图标（分页没生效）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "search-app-opens",
-      "detail": "未渲染"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "search-mode-btn-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "390x844",
-      "name": "full-mode-toggled",
-      "detail": "按钮文字="
-    },
-    {
       "scene": "o1-search-cancel.scen.js",
       "viewport": "390x844",
       "name": "scan-bar-lights-up",
@@ -430,409 +122,25 @@
       "scene": "o1-search-cancel.scen.js",
       "viewport": "390x844",
       "name": "search-cancel-reachable",
-      "detail": "missing"
+      "detail": "box=0x0 hit=zero-box 0x0"
     },
     {
       "scene": "o1-search-cancel.scen.js",
       "viewport": "390x844",
-      "name": "search-input-survives-cancel",
-      "detail": "输入框被取消操作打散"
+      "name": "search-cancel-clears-results",
+      "detail": "取消后结果条目=60 文案=🧠 模糊回忆（「上次那阵子」也能找） ▾"
     },
     {
-      "scene": "o1-search-cancel.scen.js",
+      "scene": "o6-motion-throttle.scen.js",
       "viewport": "390x844",
-      "name": "back-button-visible-in-search",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "pager-dots-present",
-      "detail": "dots=0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "pager-dot-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "page2-moved-into-view",
-      "detail": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "page2-icons-reachable",
-      "detail": "reachable=0/0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "search-icon-on-page2",
-      "detail": "第 2 页没有搜索图标（分页没生效）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "search-app-opens",
-      "detail": "未渲染"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "search-mode-btn-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "full-mode-toggled",
-      "detail": "按钮文字="
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "scan-bar-lights-up",
-      "detail": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "search-cancel-reachable",
-      "detail": "missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "search-input-survives-cancel",
-      "detail": "输入框被取消操作打散"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "768x1024",
-      "name": "back-button-visible-in-search",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "pager-dots-present",
-      "detail": "dots=0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "pager-dot-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "page2-moved-into-view",
-      "detail": "dot2Active=false icons=0 iconHit=false aria-hidden=missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "page2-icons-reachable",
-      "detail": "reachable=0/0"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "search-icon-on-page2",
-      "detail": "第 2 页没有搜索图标（分页没生效）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "search-app-opens",
-      "detail": "未渲染"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "search-mode-btn-reachable",
-      "detail": "no-element"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "full-mode-toggled",
-      "detail": "按钮文字="
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "scan-bar-lights-up",
-      "detail": "15s 内扫描条从未点亮（扫描未启动/无分片让出）"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "search-cancel-reachable",
-      "detail": "missing"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "search-input-survives-cancel",
-      "detail": "输入框被取消操作打散"
-    },
-    {
-      "scene": "o1-search-cancel.scen.js",
-      "viewport": "1280x800",
-      "name": "back-button-visible-in-search",
-      "detail": "display=none"
-    },
-    {
-      "scene": "o1-shell-smoke.scen.js",
-      "viewport": "320x568",
-      "name": "icons-paged",
-      "detail": "pages=1 dots=0"
-    },
-    {
-      "scene": "o1-shell-smoke.scen.js",
-      "viewport": "390x844",
-      "name": "icons-paged",
-      "detail": "pages=1 dots=0"
-    },
-    {
-      "scene": "o1-shell-smoke.scen.js",
-      "viewport": "768x1024",
-      "name": "icons-paged",
-      "detail": "pages=1 dots=0"
-    },
-    {
-      "scene": "o1-shell-smoke.scen.js",
-      "viewport": "1280x800",
-      "name": "icons-paged",
-      "detail": "pages=1 dots=0"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=1086ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "o6x-extreme-scale",
-      "detail": "chatMessages=0/4000 allNodes=126 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "o6x-extreme-media-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "320x568",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "390x844",
-      "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=1126ms roomLap(fromEntry)=1040ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "390x844",
-      "name": "o6x-extreme-scale",
-      "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "390x844",
-      "name": "o6x-extreme-media-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "390x844",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "768x1024",
-      "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=1112ms roomLap(fromEntry)=1000ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "768x1024",
-      "name": "o6x-extreme-scale",
-      "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "768x1024",
-      "name": "o6x-extreme-media-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "768x1024",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "1280x800",
-      "name": "o6x-extreme-open",
-      "detail": "wechat=false room=false entryLap=1121ms roomLap(fromEntry)=1040ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "1280x800",
-      "name": "o6x-extreme-scale",
-      "detail": "chatMessages=0/4000 allNodes=132 nodesPerMessage=0 dividers=0（每条 6~14 为真实现代价区间；该区间**不随夹具长度漂移**正是同步长档要证明的事）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "1280x800",
-      "name": "o6x-extreme-media-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约；收益面如实登记（decoded 由容器几何决定，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-extreme.scen.js",
-      "viewport": "1280x800",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "320x568",
-      "name": "o6-longchat-open",
-      "detail": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "320x568",
-      "name": "o6-longlist-scale",
-      "detail": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "320x568",
-      "name": "o6-media-lazy-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "320x568",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "390x844",
-      "name": "o6-longchat-open",
-      "detail": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "390x844",
-      "name": "o6-longlist-scale",
-      "detail": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "390x844",
-      "name": "o6-media-lazy-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "390x844",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "768x1024",
-      "name": "o6-longchat-open",
-      "detail": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "768x1024",
-      "name": "o6-longlist-scale",
-      "detail": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "768x1024",
-      "name": "o6-media-lazy-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "768x1024",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "1280x800",
-      "name": "o6-longchat-open",
-      "detail": "wechat=false room=false openLap=0ms（同一次运行的相对量级，不设阈值）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "1280x800",
-      "name": "o6-longlist-scale",
-      "detail": "chatMessages=0/1500 tiders=0 allNodes=132 nodesPerMessage=0（每条 6~14 为真实现代价区间，超出即渲染路径变了）"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "1280x800",
-      "name": "o6-media-lazy-contract",
-      "detail": "media={\"total\":0,\"decoded\":0,\"lazy\":0,\"asyncAttr\":0} 口径=属性契约（全部消息图片带 loading=lazy 与 decoding=async）；收益面：本层经 App 路径实测 decoded=total（**未观察到减少**），简单容器微测 211/600（该层支持）⇒ 收益归目标设备复核，本项不设阈值"
-    },
-    {
-      "scene": "o6-longlist-perf.scen.js",
-      "viewport": "1280x800",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'setAttribute')"
+      "name": "o6m-background-throttle",
+      "detail": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
     },
     {
       "scene": "o6-motion-throttle.scen.js",
       "viewport": "1280x800",
       "name": "o6m-background-throttle",
       "detail": "data-bg=doc-hidden runningAnims before=2 after=1 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
-    },
-    {
-      "scene": "o7-perf-probe.scen.js",
-      "viewport": "320x568",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'querySelectorAll')"
-    },
-    {
-      "scene": "o7-perf-probe.scen.js",
-      "viewport": "390x844",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'querySelectorAll')"
-    },
-    {
-      "scene": "o7-perf-probe.scen.js",
-      "viewport": "768x1024",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'querySelectorAll')"
-    },
-    {
-      "scene": "o7-perf-probe.scen.js",
-      "viewport": "1280x800",
-      "name": "scenario-threw",
-      "detail": "Cannot read properties of null (reading 'querySelectorAll')"
     }
   ],
   "gate_exit_code": null,
