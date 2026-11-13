@@ -197,6 +197,14 @@ const READS = {
         { id: 'total', label: '总增长KB', re: /总增长 (-?\d+)KB/, g: 1 },
         { id: 'rounds', label: '轮数', re: /轮数 (\d+)/, g: 1 }
     ],
+    /* ── [v4.145.0 · R21-O4] 第十九道门：覆盖率欠账。
+     *   注意它链上只跑**结构自检**（秒级），真量对账是 --verify。所以主读数登记的是
+     *   「账本里的 app 目录数 / 零测试目录数」—— 这两条是「账本还在跟着仓库走」的真值；
+     *   覆盖率高低**不是**判红依据（本门只判退步）。 */
+    'coverage-debt': [
+        { id: 'dirs', label: 'app目录数', re: /app 目录 (\d+) 个/, g: 1 },
+        { id: 'zero', label: '零测试目录数', re: /零测试目录 (\d+) 个/, g: 1 }
+    ],
     'session-writeback': [
         { id: 'files', label: '扫描生产文件数', re: /扫描 (\d+) 个生产 \.js/, g: 1 },
         { id: 'captures', label: '令牌捕获点', re: /捕获点 (\d+) · 栅栏点 (\d+)/, g: 1 },

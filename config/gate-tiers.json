@@ -18,13 +18,14 @@
         "npm run weak-coercion",
         "npm run session-writeback",
         "npm run memory-trend",
+        "npm run coverage-debt",
         "npm run hardlink-safety",
         "npm run doc-path-claim",
         "npm run upstream-face",
         "node scripts/named-import-check.mjs",
         "node scripts/screen-host-check.mjs"
       ],
-      "why": "这十八道门回答「结构有没有坏」。memory-trend 额外回答「跨轮趋势有没有真的在长」（读数不是结构，但它必须被门读，否则读数等于不存在）。它们不回答「用户点得到吗」—— 那条归浏览器档。session-writeback 额外回答「写回口的时序对不对」（令牌必须在第一个 await 之前记下）—— 接线在场不等于语义活着。"
+      "why": "这十九道门回答「结构有没有坏」。memory-trend 额外回答「跨轮趋势有没有真的在长」（读数不是结构，但它必须被门读，否则读数等于不存在）。它们不回答「用户点得到吗」—— 那条归浏览器档。coverage-debt 额外回答「哪些 app 目录一行测试都没有」（它只判退步、不设绝对下限，真量对账走 --verify）。session-writeback 额外回答「写回口的时序对不对」（令牌必须在第一个 await 之前记下）—— 接线在场不等于语义活着。"
     },
     "targeted": {
       "label": "定向套件（进程内，毫秒~秒级）",

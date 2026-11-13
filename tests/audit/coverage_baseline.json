@@ -1,0 +1,1073 @@
+{
+  "schema": "coverage-baseline@1",
+  "version": "4.145.0",
+  "measured_at": "2026-11-13",
+  "measured_by": "node scripts/coverage-report.mjs --write",
+  "drop_pp": 0.5,
+  "note": "这是**欠账账本**，不是成绩单：它记的是「哪些 app 目录缺测试」，不是「我们做得多好」。 诚实边界一：Node 的 --experimental-test-coverage **不覆盖浏览器层** —— tests/browser/ 下的场景（20 个正式场景 × 4 档视口）不计入本表任何一格，那一面归 tests/browser/gate.mjs 与 tests/audit/browser_readings.json。 诚实边界二：它量的是**行被执行过**，不是**行为被断言过**。一行被 import 进测试进程就算覆盖，哪怕没有任何断言碰它。所以本表只用来找「一行都没跑的角落」，不用来宣称质量。 口径：line% 是**行加权**（Σ覆盖行/Σ总行，由 line% 与未覆盖行清单联立解出），不是各文件百分比的平均；「零测试」= 磁盘上有这个文件、量出来一行都没覆盖，含从未被 import 的那些。 门禁只做「不许退步」：任一 app 目录 line% 不得比本账本低超过 drop_pp，且零测试目录数不得增加。不设绝对下限 —— 本仓整体行覆盖 60.95%，设 80% 会立刻变恒红噪声门。",
+  "totals": {
+    "app_dirs": 101,
+    "files_on_disk": 437,
+    "zero_test_files": 115,
+    "zero_test_dirs": 10,
+    "coverage_rows": 2483
+  },
+  "dirs": {
+    "accessdesk": {
+      "line_pct": 0,
+      "files_on_disk": 2,
+      "files_with_test": 0,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "accessdesk-app.js",
+        "accessdesk-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "accounting": {
+      "line_pct": 71.82,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "achievement": {
+      "line_pct": 55.68,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "achievement-app.js",
+        "achievement-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "affairs": {
+      "line_pct": 55.25,
+      "files_on_disk": 6,
+      "files_with_test": 6,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "album": {
+      "line_pct": 34.5,
+      "files_on_disk": 5,
+      "files_with_test": 5,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "annidate": {
+      "line_pct": 55.22,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "archive": {
+      "line_pct": 67.58,
+      "files_on_disk": 7,
+      "files_with_test": 7,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "asset": {
+      "line_pct": 63.4,
+      "files_on_disk": 16,
+      "files_with_test": 1,
+      "zero_test_files": 15,
+      "zero_test_names": [
+        "asset-app.js",
+        "asset-view.js",
+        "engine/asset-core.js",
+        "engine/asset-extract-spec.js",
+        "engine/asset-holdings.js",
+        "engine/asset-keys.js",
+        "engine/asset-ledger.js",
+        "engine/asset-library.js",
+        "engine/asset-market.js",
+        "engine/asset-project.js",
+        "engine/asset-settlement.js",
+        "engine/asset-store.js",
+        "engine/asset-terms.js",
+        "engine/calendar-grid.js",
+        "engine/extract-core.js"
+      ],
+      "files_unloaded": 15,
+      "unknown_weight_files": 0
+    },
+    "audio": {
+      "line_pct": 93.46,
+      "files_on_disk": 6,
+      "files_with_test": 6,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "avatarframe": {
+      "line_pct": 100,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "avatarframe-app.js",
+        "avatarframe-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "backupdesk": {
+      "line_pct": 80.46,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "bilibili": {
+      "line_pct": 46.67,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "block": {
+      "line_pct": 99.19,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "block-app.js",
+        "block-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "calendar": {
+      "line_pct": 33.62,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "call": {
+      "line_pct": 83.33,
+      "files_on_disk": 2,
+      "files_with_test": 2,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "caphealth": {
+      "line_pct": 0,
+      "files_on_disk": 2,
+      "files_with_test": 0,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "caphealth-app.js",
+        "caphealth-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "cardtable": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "cardtable-app.js",
+        "cardtable-data.js",
+        "cardtable-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "chars": {
+      "line_pct": 76.21,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "cheat": {
+      "line_pct": 71.96,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "clock": {
+      "line_pct": 69.53,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "comms": {
+      "line_pct": 34.72,
+      "files_on_disk": 2,
+      "files_with_test": 2,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "cotdesk": {
+      "line_pct": 58.64,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "creationdesk": {
+      "line_pct": 67.54,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "daily": {
+      "line_pct": 81,
+      "files_on_disk": 1,
+      "files_with_test": 1,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "darknet": {
+      "line_pct": 97.33,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 2
+    },
+    "date": {
+      "line_pct": 99.74,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "date-app.js",
+        "date-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "diagdesk": {
+      "line_pct": 65.53,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "diagnose": {
+      "line_pct": 79.63,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "diagnose-app.js",
+        "diagnose-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "diary": {
+      "line_pct": 27.38,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "dirtytalk": {
+      "line_pct": 72.24,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "doujin": {
+      "line_pct": 24.9,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "focus": {
+      "line_pct": 70.04,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "freehome": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "freehome-app.js",
+        "freehome-data.js",
+        "freehome-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "gacha": {
+      "line_pct": 89.59,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "games": {
+      "line_pct": 26.73,
+      "files_on_disk": 33,
+      "files_with_test": 1,
+      "zero_test_files": 32,
+      "zero_test_names": [
+        "board/board-data.js",
+        "board/board-view.js",
+        "board/chess-engine.js",
+        "board/gomoku-engine.js",
+        "board/jungle-engine.js",
+        "board/shogi-engine.js",
+        "board/xiangqi-engine.js",
+        "catbox/catbox-data.js",
+        "catbox/catbox-view.js",
+        "common/games-ai-context.js",
+        "game2048/game2048-data.js",
+        "game2048/game2048-view.js",
+        "games-data.js",
+        "games-view.js",
+        "guesswhat/guesswhat-data.js",
+        "guesswhat/guesswhat-view.js",
+        "ludo/ludo-data.js",
+        "ludo/ludo-view.js",
+        "mystery/mystery-view.js",
+        "poker/poker-app.js",
+        "poker/poker-data.js",
+        "poker/poker-view.js",
+        "scriptkill/scriptkill-data.js",
+        "scriptkill/scriptkill-view.js",
+        "seaturtle/seaturtle-data.js",
+        "seaturtle/seaturtle-view.js",
+        "sudoku/sudoku-data.js",
+        "sudoku/sudoku-view.js",
+        "undercover/undercover-data.js",
+        "undercover/undercover-view.js",
+        "werewolf/werewolf-data.js",
+        "werewolf/werewolf-view.js"
+      ],
+      "files_unloaded": 32,
+      "unknown_weight_files": 0
+    },
+    "hardware": {
+      "line_pct": 74.45,
+      "files_on_disk": 8,
+      "files_with_test": 8,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 3
+    },
+    "health": {
+      "line_pct": 68.59,
+      "files_on_disk": 23,
+      "files_with_test": 22,
+      "zero_test_files": 1,
+      "zero_test_names": [
+        "health-app.js"
+      ],
+      "files_unloaded": 1,
+      "unknown_weight_files": 6
+    },
+    "honey": {
+      "line_pct": 7.39,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "honey-app.js",
+        "honey-data.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "investigation": {
+      "line_pct": 97.53,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 3
+    },
+    "iot": {
+      "line_pct": 50,
+      "files_on_disk": 1,
+      "files_with_test": 1,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "kettle": {
+      "line_pct": 77.96,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "keyboard": {
+      "line_pct": 37.93,
+      "files_on_disk": 1,
+      "files_with_test": 1,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "ledger": {
+      "line_pct": 64.58,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "lexiscore": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "lexiscore-app.js",
+        "lexiscore-data.js",
+        "lexiscore-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "lofter": {
+      "line_pct": 51.31,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "loverspace": {
+      "line_pct": 33.05,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "magazine": {
+      "line_pct": 56.12,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "memory": {
+      "line_pct": 60.6,
+      "files_on_disk": 14,
+      "files_with_test": 14,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 2
+    },
+    "memtable": {
+      "line_pct": 83.09,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "mofo": {
+      "line_pct": 0,
+      "files_on_disk": 4,
+      "files_with_test": 0,
+      "zero_test_files": 4,
+      "zero_test_names": [
+        "mofo-app.js",
+        "mofo-data.js",
+        "mofo-sync.js",
+        "mofo-view.js"
+      ],
+      "files_unloaded": 4,
+      "unknown_weight_files": 0
+    },
+    "moments": {
+      "line_pct": 97.65,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "mood": {
+      "line_pct": 100,
+      "files_on_disk": 2,
+      "files_with_test": 2,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 2
+    },
+    "music": {
+      "line_pct": 12.23,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "musicdesk": {
+      "line_pct": 66.53,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "needsim": {
+      "line_pct": 75.46,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "network": {
+      "line_pct": 76.13,
+      "files_on_disk": 7,
+      "files_with_test": 7,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 2
+    },
+    "notifications": {
+      "line_pct": 45.9,
+      "files_on_disk": 5,
+      "files_with_test": 5,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "peek": {
+      "line_pct": 22.62,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "periodmath": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "periodmath-app.js",
+        "periodmath-data.js",
+        "periodmath-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "phone": {
+      "line_pct": 99.32,
+      "files_on_disk": 6,
+      "files_with_test": 2,
+      "zero_test_files": 4,
+      "zero_test_names": [
+        "phone-app.js",
+        "phone-data.js",
+        "phone-view.js",
+        "sms-popup.js"
+      ],
+      "files_unloaded": 4,
+      "unknown_weight_files": 1
+    },
+    "piggy": {
+      "line_pct": 59.26,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "pixiv": {
+      "line_pct": 53.05,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "place": {
+      "line_pct": 86.12,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "playbook": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "playbook-app.js",
+        "playbook-data.js",
+        "playbook-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "plotline": {
+      "line_pct": 86.47,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "profile": {
+      "line_pct": 62.87,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "punchcard": {
+      "line_pct": 100,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "punchcard-app.js",
+        "punchcard-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "pvdesk": {
+      "line_pct": 51.76,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "reading": {
+      "line_pct": 82.64,
+      "files_on_disk": 5,
+      "files_with_test": 5,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "recall": {
+      "line_pct": 69.56,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "regexfilter": {
+      "line_pct": 100,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "regexfilter-app.js",
+        "regexfilter-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "search": {
+      "line_pct": 76.49,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "security": {
+      "line_pct": 86.6,
+      "files_on_disk": 11,
+      "files_with_test": 11,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "settings": {
+      "line_pct": 7.58,
+      "files_on_disk": 8,
+      "files_with_test": 8,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "share": {
+      "line_pct": 75.27,
+      "files_on_disk": 2,
+      "files_with_test": 2,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "shop": {
+      "line_pct": 83.53,
+      "files_on_disk": 4,
+      "files_with_test": 2,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "shop-app.js",
+        "shop-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "social": {
+      "line_pct": 68.42,
+      "files_on_disk": 1,
+      "files_with_test": 1,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "socialguard": {
+      "line_pct": 61.25,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "socialguard-app.js",
+        "socialguard-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "soundkit": {
+      "line_pct": 66.58,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "sourcebook": {
+      "line_pct": 77.87,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "stickerdesk": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "stickerdesk-app.js",
+        "stickerdesk-data.js",
+        "stickerdesk-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "sullydesk": {
+      "line_pct": 0,
+      "files_on_disk": 3,
+      "files_with_test": 0,
+      "zero_test_files": 3,
+      "zero_test_names": [
+        "sullydesk-app.js",
+        "sullydesk-data.js",
+        "sullydesk-view.js"
+      ],
+      "files_unloaded": 3,
+      "unknown_weight_files": 0
+    },
+    "summdesk": {
+      "line_pct": 49.23,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "taobao": {
+      "line_pct": 99.46,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "taobao-app.js",
+        "taobao-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "tarot": {
+      "line_pct": 100,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "tarot-app.js",
+        "tarot-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "taskentry": {
+      "line_pct": 66.12,
+      "files_on_disk": 2,
+      "files_with_test": 1,
+      "zero_test_files": 1,
+      "zero_test_names": [
+        "taskentry-app.js"
+      ],
+      "files_unloaded": 1,
+      "unknown_weight_files": 0
+    },
+    "theater": {
+      "line_pct": 74.78,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "tieba": {
+      "line_pct": 54.36,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "tieba-app.js",
+        "tieba-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "timeweaver": {
+      "line_pct": 65.8,
+      "files_on_disk": 5,
+      "files_with_test": 5,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "traveldesk": {
+      "line_pct": 36.69,
+      "files_on_disk": 7,
+      "files_with_test": 7,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 2
+    },
+    "usage": {
+      "line_pct": 45.91,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "uterus": {
+      "line_pct": 79,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "wallet": {
+      "line_pct": 53.29,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "wangxiang": {
+      "line_pct": 20.82,
+      "files_on_disk": 4,
+      "files_with_test": 4,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "weather": {
+      "line_pct": 100,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "weather-app.js",
+        "weather-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 1
+    },
+    "wechat": {
+      "line_pct": 11.22,
+      "files_on_disk": 20,
+      "files_with_test": 20,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "weibo": {
+      "line_pct": 10.36,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 0
+    },
+    "widget": {
+      "line_pct": 98.82,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "widget-app.js",
+        "widget-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    },
+    "workflow": {
+      "line_pct": 54.87,
+      "files_on_disk": 3,
+      "files_with_test": 2,
+      "zero_test_files": 1,
+      "zero_test_names": [
+        "workflow-app.js"
+      ],
+      "files_unloaded": 1,
+      "unknown_weight_files": 0
+    },
+    "worldpulse": {
+      "line_pct": 52.67,
+      "files_on_disk": 3,
+      "files_with_test": 3,
+      "zero_test_files": 0,
+      "zero_test_names": [],
+      "files_unloaded": 0,
+      "unknown_weight_files": 1
+    },
+    "xhs": {
+      "line_pct": 30,
+      "files_on_disk": 3,
+      "files_with_test": 1,
+      "zero_test_files": 2,
+      "zero_test_names": [
+        "xhs-app.js",
+        "xhs-view.js"
+      ],
+      "files_unloaded": 2,
+      "unknown_weight_files": 0
+    }
+  }
+}

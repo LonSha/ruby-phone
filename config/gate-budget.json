@@ -5,7 +5,7 @@
   "measured_at": "v4.114.0",
   "measured_by": "npm run check:file（全链一次）",
   "measured_log": "/sdcard/rpwork/cf_baseline.txt",
-  "total_ms": 317509,
+  "total_ms": 318119,
   "gates": {
     "syntax": {
       "ms": 1052,
@@ -86,6 +86,11 @@
       "ms": 2109,
       "limit_ms": 2320,
       "why": "R21-O6 增加的趋势门：它**真启一个子进程**跑探针（--expose-gc，8 轮 × 400 次 三面混合调用 + 3 跑中位数），故折算与脚本启动同量级（实测 2.1s）。它慢下来通常意味着探针的 ROUNDS/OPS 被放大，或它本已变成一道真重的测量道"
+    },
+    "coverage-debt": {
+      "ms": 610,
+      "limit_ms": 671,
+      "why": "R21-O4 新增的覆盖率欠账门：链上这一档只做**结构自检**（读账本 + 磁盘目录集合对账 + TODO 段同源 + 两条诚实边界在场），不真跑 11 分钟的全量覆盖 —— 真量对账是 --verify，归 full 档。实测 0.6 秒。它慢下来通常意味着有人把 --verify 错接进了默认档"
     },
     "hardlink-safety": {
       "ms": 800,

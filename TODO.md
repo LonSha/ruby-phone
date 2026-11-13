@@ -860,3 +860,118 @@
 <!-- R21-O6 v4.144.0 -->
 - R21-O1 已完成源码与定点验证：窗口化通道物化上界 40，与 tailWindowOf 的 200 条数据窗口分层共存；20 条系统判据 + 三视口浏览器场景全绿；默认全量、显式开启。批次 B 进行中，下一项 R21-O6。
 - R21-O6 已完成源码与定点验证：趋势门真启子进程跑探针（必带 --expose-gc），尾段上界 8KB（实测 2KB）/ 总增长上界 64KB（实测 15KB），不可比（未强制回收 / 样本不足）一律 exit 2 拒判而不发合格证；15 条判据全绿（含真跑三次与每轮真留 1MB 的负控制，实测尾段 3074KB 转红）；批次 B 两项已全部完成，下一项是批次 C 的 R21-O4。
+<!-- R21-O4 v4.145.0 -->
+- R21-O4 已完成源码与定点验证：覆盖率读数进账本 —— 新增 coverage-debt 门拆两档（链上跑秒级结构自检实测 673ms，--verify 才真跑或离线复算判退步），账本记 101 个 app 目录三列读数（437 个盘上文件 / 115 个零覆盖 / 10 个零测试目录 / 2483 条覆盖行），门禁只判「不许退步」（降幅超 0.5pp 或零测试目录增加即红，绝不设绝对下限）；21 条判据全绿（含抬基线 10pp 必红、删目录必拒判两条负控制，以及从 630703 字节真跑日志离线复算逐字对账）；批次 C 进行中，下一项 R21-O3。
+
+<!-- coverage-debt:begin（本段由 scripts/coverage-report.mjs --write 生成，勿手改） -->
+### 覆盖率欠账清单（v4.145.0 机器读数，勿手改）
+
+- app 目录 101 个 · 盘上文件 437 个 · 一行都没覆盖 115 个
+- **零测试目录 10 个**：accessdesk、caphealth、cardtable、freehome、lexiscore、mofo、periodmath、playbook、stickerdesk、sullydesk
+- 口径：`line%` 是**行加权**（不是各文件百分比的平均）；「零测试」= 磁盘上有这个文件、量出来一行都没覆盖，含**从未被 import**的那些。
+- 重算：`node scripts/coverage-report.mjs --write`（真跑一次全量覆盖，约 11 分钟）。
+
+| app 目录 | line% | 有测试的文件 | 零测试的文件 |
+|---|---|---|---|
+| `mofo` | 0.00 | 0 | 4 |
+| `cardtable` | 0.00 | 0 | 3 |
+| `freehome` | 0.00 | 0 | 3 |
+| `lexiscore` | 0.00 | 0 | 3 |
+| `periodmath` | 0.00 | 0 | 3 |
+| `playbook` | 0.00 | 0 | 3 |
+| `stickerdesk` | 0.00 | 0 | 3 |
+| `sullydesk` | 0.00 | 0 | 3 |
+| `accessdesk` | 0.00 | 0 | 2 |
+| `caphealth` | 0.00 | 0 | 2 |
+| `honey` | 7.39 | 1 | 2 |
+| `settings` | 7.58 | 8 | 0 |
+| `weibo` | 10.36 | 3 | 0 |
+| `wechat` | 11.22 | 20 | 0 |
+| `music` | 12.23 | 4 | 0 |
+| `wangxiang` | 20.82 | 4 | 0 |
+| `peek` | 22.62 | 3 | 0 |
+| `doujin` | 24.90 | 3 | 0 |
+| `games` | 26.73 | 1 | 32 |
+| `diary` | 27.38 | 3 | 0 |
+| `xhs` | 30.00 | 1 | 2 |
+| `loverspace` | 33.05 | 3 | 0 |
+| `calendar` | 33.62 | 4 | 0 |
+| `album` | 34.50 | 5 | 0 |
+| `comms` | 34.72 | 2 | 0 |
+| `traveldesk` | 36.69 | 7 | 0 |
+| `keyboard` | 37.93 | 1 | 0 |
+| `notifications` | 45.90 | 5 | 0 |
+| `usage` | 45.91 | 3 | 0 |
+| `bilibili` | 46.67 | 3 | 0 |
+| `summdesk` | 49.23 | 3 | 0 |
+| `iot` | 50.00 | 1 | 0 |
+| `lofter` | 51.31 | 3 | 0 |
+| `pvdesk` | 51.76 | 3 | 0 |
+| `worldpulse` | 52.67 | 3 | 0 |
+| `pixiv` | 53.05 | 3 | 0 |
+| `wallet` | 53.29 | 4 | 0 |
+| `tieba` | 54.36 | 1 | 2 |
+| `workflow` | 54.87 | 2 | 1 |
+| `annidate` | 55.22 | 3 | 0 |
+| `affairs` | 55.25 | 6 | 0 |
+| `achievement` | 55.68 | 1 | 2 |
+| `magazine` | 56.12 | 3 | 0 |
+| `cotdesk` | 58.64 | 3 | 0 |
+| `piggy` | 59.26 | 3 | 0 |
+| `memory` | 60.60 | 14 | 0 |
+| `socialguard` | 61.25 | 1 | 2 |
+| `profile` | 62.87 | 3 | 0 |
+| `asset` | 63.40 | 1 | 15 |
+| `ledger` | 64.58 | 3 | 0 |
+| `diagdesk` | 65.53 | 3 | 0 |
+| `timeweaver` | 65.80 | 5 | 0 |
+| `taskentry` | 66.12 | 1 | 1 |
+| `musicdesk` | 66.53 | 3 | 0 |
+| `soundkit` | 66.58 | 3 | 0 |
+| `creationdesk` | 67.54 | 4 | 0 |
+| `archive` | 67.58 | 7 | 0 |
+| `social` | 68.42 | 1 | 0 |
+| `health` | 68.59 | 22 | 1 |
+| `clock` | 69.53 | 3 | 0 |
+| `recall` | 69.56 | 3 | 0 |
+| `focus` | 70.04 | 3 | 0 |
+| `accounting` | 71.82 | 3 | 0 |
+| `cheat` | 71.96 | 3 | 0 |
+| `dirtytalk` | 72.24 | 3 | 0 |
+| `hardware` | 74.45 | 8 | 0 |
+| `theater` | 74.78 | 3 | 0 |
+| `share` | 75.27 | 2 | 0 |
+| `needsim` | 75.46 | 3 | 0 |
+| `network` | 76.13 | 7 | 0 |
+| `chars` | 76.21 | 4 | 0 |
+| `search` | 76.49 | 3 | 0 |
+| `sourcebook` | 77.87 | 3 | 0 |
+| `kettle` | 77.96 | 3 | 0 |
+| `uterus` | 79.00 | 3 | 0 |
+| `diagnose` | 79.63 | 1 | 2 |
+| `backupdesk` | 80.46 | 4 | 0 |
+| `daily` | 81.00 | 1 | 0 |
+| `reading` | 82.64 | 5 | 0 |
+| `memtable` | 83.09 | 3 | 0 |
+| `call` | 83.33 | 2 | 0 |
+| `shop` | 83.53 | 2 | 2 |
+| `place` | 86.12 | 3 | 0 |
+| `plotline` | 86.47 | 4 | 0 |
+| `security` | 86.60 | 11 | 0 |
+| `gacha` | 89.59 | 3 | 0 |
+| `audio` | 93.46 | 6 | 0 |
+| `darknet` | 97.33 | 3 | 0 |
+| `investigation` | 97.53 | 4 | 0 |
+| `moments` | 97.65 | 3 | 0 |
+| `widget` | 98.82 | 1 | 2 |
+| `block` | 99.19 | 1 | 2 |
+| `phone` | 99.32 | 2 | 4 |
+| `taobao` | 99.46 | 1 | 2 |
+| `date` | 99.74 | 1 | 2 |
+| `avatarframe` | 100.00 | 1 | 2 |
+| `punchcard` | 100.00 | 1 | 2 |
+| `regexfilter` | 100.00 | 1 | 2 |
+| `tarot` | 100.00 | 1 | 2 |
+| `weather` | 100.00 | 1 | 2 |
+| `mood` | 100.00 | 2 | 0 |
+<!-- coverage-debt:end -->
