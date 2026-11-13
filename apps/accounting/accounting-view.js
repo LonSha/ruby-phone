@@ -4,6 +4,7 @@
  * 归因文案表的键取 ACCOUNTING_REASONS 的**值**（连字符形），不另写一套下划线形。
  * ======================================================== */
 import { ACCOUNTING_REASONS, formatMoney } from './accounting-data.js';
+import { LINK_STATUS } from '../../config/entity-link.js';
 
 const FACE_META = {
     [ACCOUNTING_REASONS.ready]: { icon: '\ud83d\udcd2', label: '账本已就绪', tone: 'ok' },
@@ -133,9 +134,21 @@ export class AccountingView {
             parts.push('<div class="ac-records">');
             parts.push('<h3>最近流水</h3>');
             for (const r of recs) {
+                /* [R21-O8] 支出行旁的关联徽标：linked 显示对侧 id、ambiguous 列全部候选、
+                 * unlinked 不显示。只读对账，点开看详情走 title 提示。 */
+                const li = (typeof app.linkInfoOf === 'function') ? app.linkInfoOf(r.id) : null;
+                let badge = '';
+                if (li && li.status === LINK_STATUS.linked && Array.isArray(li.sources) && li.sources.length === 2) {
+                    const other = li.sources.find((s) => s.app !== 'accounting');
+                    badge = '<span class="ac-rec-link" title="本次关联：商城订单 ' + this._esc(other ? other.id : '') + '">&#128279; ' + this._esc(other ? other.id : '') + '</span>';
+                } else if (li && li.status === LINK_STATUS.ambiguous && Array.isArray(li.candidates) && li.candidates.length > 1) {
+                    const names = li.candidates.map((c) => c.id).join(' / ');
+                    badge = '<span class="ac-rec-link is-ambig" title="有 ' + li.candidates.length + ' 条同额订单都对得上，不替你挑：' + this._esc(names) + '">&#8253; ' + li.candidates.length + ' 个候选</span>';
+                }
                 parts.push('<div class="ac-record" data-id="' + this._esc(r.id) + '">');
                 parts.push('<span class="ac-rec-cat">' + this._esc(r.category) + '</span>');
                 parts.push('<span class="ac-rec-note">' + this._esc(r.note || this._dateLabel(r.at)) + '</span>');
+                parts.push(badge);
                 parts.push('<span class="ac-rec-amt ' + (r.kind === 'income' ? 'is-in' : 'is-out') + '">' + (r.kind === 'income' ? '+' : '-') + this._esc(formatMoney(r.amount)) + '</span>');
                 parts.push('<button class="ac-mini ac-rec-del">\u2715</button>');
                 parts.push('</div>');

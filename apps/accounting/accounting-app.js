@@ -20,6 +20,7 @@ import {
        别名（如 `selfTest as x`）在它眼里不算消费。 */
     selfTest,
 } from './accounting-data.js';
+import { linkEntity } from '../../config/entity-link.js';
 import { AccountingView } from './accounting-view.js';
 
 const SETTINGS_KEY = 'accounting_settings';
@@ -89,6 +90,25 @@ export class AccountingApp {
     projection() { return this.stats; }
     accountList() { return this.accounts.slice(); }
     recordList() { return this.records.slice(); }
+
+    /**
+     * [R21-O8] 流水的跨 App 关联读数（**只读**）：现取 shop_orders 做对账。
+     * 只 storage.get、永不 set —— 写归各 owner（shop 下单自己落键）。
+     * 返回 config/entity-link.js 的三态结果（linked / ambiguous / unlinked）。
+     */
+    linkInfoOf(recordId) {
+        try {
+            let orders = [];
+            if (this.storage) {
+                const raw = this.storage.get('shop_orders');
+                const arr = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                if (Array.isArray(arr)) orders = arr;
+            }
+            return linkEntity('accounting', recordId, { accounting: this.records, shop: orders });
+        } catch (_e) {
+            return { status: 'unlinked', entityId: null, candidates: [], reason: 'probe-failed' };
+        }
+    }
     groups() { return ACCOUNT_GROUPS.map((g) => ({ name: g.name, icon: g.icon })); }
     typesOf(group) { return (ACCOUNT_TYPES[group] || ['其他']).slice(); }
     expenseCategories() { return EXPENSE_CATEGORIES.slice(); }
