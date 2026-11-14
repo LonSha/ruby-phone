@@ -402,6 +402,16 @@
         "update-log.json"
       ],
       "why": "历史迭代文档或旧架构规划中提及的旧路径"
+    },
+    {
+      "path": "tests/audit/forward_layer_ledger.json",
+      "refs": [
+        ".agents/notes/proposed/architecture/2026-11-11-product-optimization-v21.md",
+        "docs/planning/2026-11-11-product-evidence-v21.md",
+        "scripts/doc-path-claim-baseline.json",
+        "tests/system-v4146.test.mjs"
+      ],
+      "why": "R21-O7 声明的条件台账（「有动态构造路径就登记保留理由」）。实查两文件无动态构造路径 ⇒ 走规格给出的另一条合法分支「删净」（v4.146.0 删除 apps/games/games-data.js 与 games-view.js），台账按设计无需产生，故从未落盘。与 plan 台账既有语义的区别：它是「计划了、但另一条分支成立而永不需要存在」，不是「还没到期」。v4.150.0 到期时从 doc-path-claim-planned-deliverables.json 撤出、改用本类登记，保留 tests/system-v4146.test.mjs「删净 ⇒ 台账不得留陈旧保留理由」的条件式消费点可继续引用该文件名"
     }
   ]
 }

@@ -462,6 +462,69 @@ test('E1 白名单存在且结构可读：每条带理由，且白名单文件�
     }
 });
 
+/** 去掉注释后的源码：判据只认代码，不认注释里的自述（本仓既有纪律）。
+ *  ★ 本版钉住的缺陷形态（v4.150.0 实测）：E2 原先直接对**全文**做 `Date.now()` 字面匹配，
+ *    于是「头注里引用 `Date.now()` 作防御说明」的文件被判成有裸墙钟 ——
+ *    把**警示牌**当成了**违规行为**。实测受此影响的文件有 17 个，其中 16 个因在白名单里
+ *    而被掩盖，唯一露头的是 apps/wechat/chat-read-cursor.js（v4.149.0 新增，未进白名单）。
+ *
+ *  【为什么不是「把那个文件登进白名单」】
+ *    登白名单等于承认「这里真有裸墙钟」，而它一处真调用都没有 —— 那是**假账**。
+ *    白名单的语义是「这里必须用墙钟，理由如下」，不是「这里出现了这四个字的字符串」。
+ *
+ *  【为什么也不改成「只认 `Date.now` 后面跟 `(` 且不在注释里」的半吊子】
+ *    与 system-v4146 同族纪律：**不缩窄判据本体，只修扫描面**。
+ *    本函数只剥**注释**、**保留字符串** —— 所以 `eval('Date.now()')` 这类
+ *    「把调用藏进字符串再求值」的写法**仍然会被抓到**（负控制 E2b 钉住这一点）。
+ *    若连字符串一起剥，整片字符串面就成了豁免区，下一个人把调用写进模板串即可绕过。
+ *  实现与 tests/system-v4146.test.mjs 的 stripComments 同源（含正则字面量启发式），
+ *    不重写第三份状态机。 */
+function stripComments(src) {
+    let out = '';
+    let i = 0;
+    let state = 'code';
+    let quote = '';
+    let inClass = false;
+    const prevNonWs = () => {
+        for (let k = out.length - 1; k >= 0; k--) {
+            const ch = out[k];
+            if (!/\s/.test(ch)) return ch;
+        }
+        return '';
+    };
+    const KEYWORD_RE = /\b(?:return|typeof|instanceof|in|of|new|delete|void|do|else|yield|await|case|throw)$/;
+    while (i < src.length) {
+        const c = src[i];
+        const d = src[i + 1];
+        if (state === 'code') {
+            if (c === '/' && d === '*') { state = 'block'; i += 2; continue; }
+            if (c === '/' && d === '/') { state = 'line'; i += 2; continue; }
+            if (c === '/') {
+                const p = prevNonWs();
+                const isRegexStart = p === '' || '([{,;=:!&|?+-*%~^<>'.includes(p)
+                    || KEYWORD_RE.test(out.replace(/\s+$/, ''));
+                if (isRegexStart) { state = 'regex'; inClass = false; i += 1; continue; }
+                out += c; i += 1; continue;
+            }
+            if (c === '"' || c === "'" || c === '`') { state = 'str'; quote = c; out += c; i += 1; continue; }
+            out += c; i += 1; continue;
+        }
+        if (state === 'regex') {
+            if (c === '\\') { i += 2; continue; }
+            if (c === '[') { inClass = true; i += 1; continue; }
+            if (c === ']') { inClass = false; i += 1; continue; }
+            if (c === '/' && !inClass) { state = 'code'; i += 1; continue; }
+            if (c === '\n') { state = 'code'; out += '\n'; i += 1; continue; }
+            i += 1; continue;
+        }
+        if (state === 'block') { if (c === '*' && d === '/') { state = 'code'; i += 2; continue; } i += 1; continue; }
+        if (state === 'line') { if (c === '\n') { state = 'code'; out += c; } i += 1; continue; }
+        if (c === '\\') { out += c + (d || ''); i += 2; continue; }
+        if (c === quote) { state = 'code'; out += c; i += 1; continue; }
+        out += c; i += 1;
+    }
+    return out;
+}
 test('E2 ★白名单外一律不许出现裸 Date.now()（批次 3 收口的机读判据）', () => {
     const abs = path.join(ROOT, BARE_NOW_WHITELIST);
     const raw = JSON.parse(fs.readFileSync(abs, 'utf8'));
@@ -469,7 +532,9 @@ test('E2 ★白名单外一律不许出现裸 Date.now()（批次 3 收口的机
     const offenders = [];
     for (const rel of listAppJs()) {
         const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-        const n = (src.match(/Date\.now\(\)/g) || []).length;
+        /* ★ v4.150.0：只认**代码面**的裸墙钟，注释里引用 `Date.now()` 作说明不算。
+         *   string 不剥（见 stripComments 头注：剥掉整片字符串面就成了豁免区）。 */
+        const n = (stripComments(src).match(/Date\.now\(\)/g) || []).length;
         if (n > 0 && !allowed.has(rel)) offenders.push(rel + ' ×' + n);
     }
     /* 本版是**分批**推进（批次 1 五处、批次 2 带时间流的 App、批次 3 白名单），
@@ -478,6 +543,34 @@ test('E2 ★白名单外一律不许出现裸 Date.now()（批次 3 收口的机
     assert.deepEqual(offenders, [],
         '★ 这些文件有裸 Date.now() 但没登记进白名单（收掉，或登记并写明为什么这里必须用墙钟）：\n'
         + offenders.join('\n'));
+});
+test('E2b 负控制：注释里的 `Date.now()` 不算，代码面里的一律算（两向都验）', () => {
+    /* ① 仅注释里有 ⇒ 不算违规（这正是本版修的形态：警示牌不是违规行为）。 */
+    const commentOnly = '/* 判定面出现 Date.now() 就是负控制靶子 */\nconst x = 1;\n';
+    assert.equal((stripComments(commentOnly).match(/Date\.now\(\)/g) || []).length, 0,
+        '★ 注释里的 Date.now() 必须被剥掉 —— 否则「引用它作说明」等于「违反它」');
+    const lineCommentOnly = '// 不许写 Date.now()\nconst y = 2;\n';
+    assert.equal((stripComments(lineCommentOnly).match(/Date\.now\(\)/g) || []).length, 0,
+        '★ 行注释里的同款 token 也必须被剥掉');
+    assert.equal((commentOnly.match(/Date\.now\(\)/g) || []).length, 1,
+        '对照：原文里确实有那个 token（判据不是靠「原文本来就没有」才绿）');
+    /* ② 代码面里有 ⇒ 必须算（否则修扫描面就等于把判据放宽成永绿）。 */
+    const inCode = 'const t = Date.now();\n';
+    assert.equal((stripComments(inCode).match(/Date\.now\(\)/g) || []).length, 1,
+        '★ 代码面里的真调用必须被抓到');
+    /* ③ **藏进字符串**里的调用也必须算 —— 这是「不缩窄判据本体」的硬证据：
+     *    若把字符串也剥掉，下面这一行会变成 0 处，整片字符串面就成了豁免区。 */
+    const inString = "const s = eval('Date.now()');\n";
+    assert.equal((stripComments(inString).match(/Date\.now\(\)/g) || []).length, 1,
+        '★ 字符串里再过一道手的调用仍必须被抓到（剥字符串会放过它）');
+    /* ④ 模板串同理（半吊子实现常在这里漏）。 */
+    const inTemplate = 'const s = `x${Date.now()}y`;\n';
+    assert.equal((stripComments(inTemplate).match(/Date\.now\(\)/g) || []).length, 1,
+        '★ 模板串插值里的调用必须被抓到');
+    /* ⑤ 注释里**引用带引号的示例**不得把状态机带进字符串态（v4146 同款坑）。 */
+    const tricky = "// 例：if (s === 'a') 与 /(['\"])/ 这种正则\nconst z = Date.now();\n";
+    assert.equal((stripComments(tricky).match(/Date\.now\(\)/g) || []).length, 1,
+        '★ 注释含引号/正则示例时，后面的真调用仍必须被数到');
 });
 
 /* ============================================================

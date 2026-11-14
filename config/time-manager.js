@@ -353,6 +353,13 @@ export class TimeManager {
         }
     }
 
+    /** 已发布剧情读数的只读副本；缓存过期时不重算、不拉桥、不退回墙钟。 */
+    peekCurrentStoryTime() {
+        const age = Date.now() - this._cacheTimestamp;
+        if (!this._cache || !Number.isFinite(age) || age < 0 || age >= this._cacheTTL) return null;
+        if (this._cache.isReal === true) return null;
+        return { ...this._cache };
+    }
     /**
      * 🎯 核心方法：获取当前剧情时间
      * @returns {Object} { time: "14:30", date: "2044年10月28日", weekday: "星期三", timestamp: 1730102400000 }

@@ -422,9 +422,11 @@ test('v297 D2. 负控制：把推送型桥的 snapshot 当函数调用 → J2 �
 });
 
 test('v297 D3. 负控制：抽掉真源出口 → J3 拒判（消费方会全数失联）', () => {
+    /* 锚点跟随真源签名演进：v4.150.0 起统一探针吃可选 options（publishedOnly / bridgeId），
+     *   破坏仍是「把出口改名成私有」——判据要证的是 J3 拒判，不是钉住参数表形态。 */
     const broken = replaceOnce(read(SRC_REL),
-        'export function readPushProbe(win) {',
-        'function _readPushProbeRenamed(win) {');
+        'export function readPushProbe(win, options = {}) {',
+        'function _readPushProbeRenamed(win, options = {}) {');
     const dir = stageTree({ [SRC_REL]: broken });
     try {
         const r = runGate(dir);

@@ -669,7 +669,7 @@ export function projectionFreshnessText(fresh) {
  */
 const PROBE_ORDER = Object.freeze([LONSHA_BRIDGE_ID, WORLDAXIS_BRIDGE_ID]);
 
-function probeOne(id, win) {
+function probeOne(id, win, options = {}) {
     const base = { id, mounted: false, hasSnapshot: false, snapshot: null, kind: 'unknown', reason: 'not-mounted', sourceState: null, lastError: null };
     try {
         const w = resolveWin(win);
@@ -686,12 +686,12 @@ function probeOne(id, win) {
         const kind = (raw && typeof raw === 'object') ? 'push' : (typeof raw === 'function' ? 'pull' : 'unknown');
         let snap = null;
         if (kind === 'push') snap = raw;
-        else if (kind === 'pull') {
+        else if (kind === 'pull' && options.publishedOnly !== true) {
             // 拉取型：只在它自己说「已发布」时才真去拉（否则空拉一次只会把对方的记账刷脏）
             const pub = readPublished(id, win);
             if (pub.has) { try { snap = b.snapshot(); } catch (_e) { snap = null; } }
         }
-        if (!snap && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
+        if (!snap && options.publishedOnly !== true && typeof b.refresh === 'function') { try { snap = b.refresh(); } catch (_e) { snap = null; } }
         const ok = !!(snap && typeof snap === 'object');
         return { id, mounted: true, hasSnapshot: ok, snapshot: ok ? snap : null, kind, reason: ok ? 'ready' : 'no-snapshot', sourceState, lastError };
     } catch (_e) { return base; }
@@ -702,16 +702,18 @@ function probeOne(id, win) {
  * 都不行时退回第一台的如实读数（谁在场报谁）。
  * 不抛（任何畸形都降级）、只读（不写上游）。
  * @param {object} [win]
+ * @param {object} [options] publishedOnly=true 只读已发布对象，不调用 stat/snapshot/refresh；bridgeId 限定来源。
  * @returns {{ id, mounted, hasSnapshot, snapshot, kind, reason, sourceState, lastError }}
  */
-export function readPushProbe(win) {
+export function readPushProbe(win, options = {}) {
     let first = null;
-    for (const id of PROBE_ORDER) {
-        const p = probeOne(id, win);
+    const ids = options.bridgeId ? PROBE_ORDER.filter((id) => id === options.bridgeId) : PROBE_ORDER;
+    for (const id of ids) {
+        const p = probeOne(id, win, options);
         if (p.hasSnapshot) return p;
         if (!first && p.mounted) first = p;
     }
-    return first || probeOne(PROBE_ORDER[0], win);
+    return first || probeOne(ids[0], win, options);
 }
 
 /**

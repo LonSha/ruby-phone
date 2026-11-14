@@ -152,9 +152,9 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.148.0**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **二十一道静态门全过**；全量 `node --test tests/*.test.mjs` **440 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.148.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **321** 件、tests **440** 套件、scripts **34** 件；`index.js` **900114 字节 / 14481 行**；`phone.css` **716960 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 版本 | **v4.150.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 门禁 | `npm run check` **二十一道静态门全过**；全量 `node --test tests/*.test.mjs` **441 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.150.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **321** 件、tests **441** 套件、scripts **34** 件；`index.js` **898536 字节 / 14482 行**；`phone.css` **716960 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |

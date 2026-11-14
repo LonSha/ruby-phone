@@ -159,20 +159,23 @@ function readTimeManager(win) {
  *   · `source` 原样转发 timeManager 给出的来源（chat / manual-sync / worldaxis …），
  *     未知即空串 —— 不在这里发明第三个来源名。
  */
-export function storyNow(win) {
+/** options.readOnly=true 只读已发布缓存；不重算剧情钟，不接受墙钟回落。 */
+export function storyNow(win, options = {}) {
     const out = {
         ok: false, ms: null, date: '', time: '', weekday: '',
         source: '', reason: 'no-host', degraded: false
     };
     if (!win) return out;
     const tm = readTimeManager(win);
-    if (!tm || typeof tm.getCurrentStoryTime !== 'function') {
+    if (!tm || (options.readOnly === true
+        ? typeof tm.peekCurrentStoryTime !== 'function'
+        : typeof tm.getCurrentStoryTime !== 'function')) {
         out.reason = 'no-time-manager';
         return out;
     }
     let face = null;
     try {
-        face = tm.getCurrentStoryTime();
+        face = options.readOnly === true ? tm.peekCurrentStoryTime() : tm.getCurrentStoryTime();
     } catch (_e) {
         out.reason = 'threw';
         return out;
