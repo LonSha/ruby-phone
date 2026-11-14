@@ -474,12 +474,10 @@
     },
     {
       "app": "games",
-      "views": [
-        "apps/games/games-view.js"
-      ],
+      "views": [],
       "emptyTexts": 0,
-      "reason": "no-empty-face",
-      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+      "reason": "no-view",
+      "note": "v4.146.0 R21-O7 删掉了 games-view.js 纯转发壳（各 6 行、全仓零说明符引用），空态改在 games-app.js 里渲染，故归 no-view 档"
     },
     {
       "app": "kettle",

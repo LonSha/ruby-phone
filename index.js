@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.147.0';
+const ST_PHONE_VERSION = '4.148.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -584,16 +584,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-14",
     items: [
-        "【版本升至 4.147.0（五源同源）】第二十一期批次 D 第二步 R21-O8：新增 config/entity-link.js 纯函数内核，linkEntity 按「时间窗 + 金额指纹」双向匹配把 shop_orders 与 accounting_records 两本账里同一件事归并成三态读数。只读不写任何 app 的账，写归各 owner。",
-        "【底座实勘：持久账恰好两本，不假造第三本】规格例子里写的 apps/delivery 并不存在为独立持久账：外卖与跑腿生态由 lonsha-bridge 在内存里持 Map，无落盘。本版如实登记它不在归并面 —— 不为了凑三本账的故事假造一本账本。跨 App 归并就是 shop 与 accounting 两条真实链，双向都能发起。",
-        "【三态互斥，候选数唯一决定】零候选即 unlinked；一候选即 linked，entityId 由两个来源排序拼接后 FNV-1a 确定性派生，两次调用同值、两侧发起同值；两个及以上候选即 ambiguous，候选清单全列，不给 entityId、不给最佳 —— 挑哪个都是猜。互斥的意思是不许两头占：不存在「既算同一件又列出候选」的中间态。",
-        "【ambiguous 必须全列候选】规格原文钉死这一条：多个候选时列出全部不许挑一个。文本指纹故意不做：订单行是商品名、流水备注是自由文本，两者没有构造性对应关系，拿文本猜等于把「像不像」当成「是不是」。口径只有两个硬条件：金额分对分相等、时间差不超过十分钟窗。",
-        "【缺陷形态：规格给的判据号第二次踩占用号】规格原文写 system-v4170，那一号早在 v4.17.0 就被「未点保存的编辑内容也能恢复」占用。与上一版 R21-O7 的 v4160 同一缺陷形态 —— 号段指纹在规格起草时没查重。实测四一四七到四二零零区间大量空闲，本档取第一个空闲号 v4147。这是连续第二版抓到同一形态，交棒时记一条：凡规格写死的判据号，施工前必须查重。",
-        "【交棒改写：把「猜一个最好的」改成「全列不猜」】匹配器最顺手的写法是取第一个命中当结果 —— 一行代码就完事。但同额订单在十分钟内出现两笔时，挑任何一个都是在没有依据的情况下替用户做决定。改成三态之后，判据断言的不是「匹配到了」，而是「有据才 linked、无据就 unlinked、多据就全列」。这与上一版「单侧断言改两态互斥」是同族改写：不许把另一条合法路径判死，也不许替用户走完那条路。",
-        "【运行时验证边界】本版是纯静态对账面加只读徽标，没有写入路径变化、没有余额计算改动。不能保证的是：真宿主里 accounting 视图的徽标渲染表现与点击交互 —— 本环境无真机，那一条仍归 docs 里的运行时验证边界文档。本版量的是「三态判定正确、只读性字节级成立、负控制两向都活着」。",
-        "【只读性两向自证】B1 断言调用前后两本账 JSON 序列化逐字节相同；B2 在去注释后的真代码面扫：entity-link 零 import、零写存储调用，accounting-app 对 shop_orders 只有 get 没有 set。写归 owner 的边界在源码面钉住，不是靠注释自述。",
-        "【负控制两向】D1 在内存里复刻「取第一个」的坏实现，跑与 A2 同一套断言函数，必须被抓住 —— 抓不到说明 A2 是恒绿的假判据；D2 反向用真实现跑同一输入，必须 ambiguous 且三条候选全列，即判据的绿不是靠夹具垫出来的。",
-        "【玩家入口】记账 App 支出行旁新增关联徽标：linked 显示对侧订单号，悬停可见「本次关联」；ambiguous 显示候选数并把全部候选列进悬停提示，明确写「不替你挑」；unlinked 不显示。徽标数据走 app.linkInfoOf 只读现取，不持跨轮副本。"
+        "【版本升至 4.148.0（五源同源）】第二十一期批次 D 第三步 R21-O9：把「登记了契约、发出去了、全仓没人听」这笔账收成一道 fail-closed 的方向审计 —— 新增 tools/audit-event-subscribers.mjs，把 emit 方向与 on 方向拆开按仓内真实派发/订阅形态扫（CustomEvent/makePhoneEvent 构造 × addEventListener/addListener/on 助手三形态），emit>0 且 on=0 的每一条必须给出经实证的存续理由进 DEBT_LEDGER，缺理由 exit 2 拒判。本版不删契约、不为读数好看而假删。",
+        "【底座实勘：先修审计器自己，再谈欠账】首版工具的松窗正则把「addEventListener('click', () => { …dispatchEvent('phone:goHome')… })」回调体内的派发误计成订阅，on 读数虚高（goHome 19 实为 3、openApp 16 实为 3）、debt 只会少报。修法是令牌必须落在事件实参位：窗内不许跨右括号、花括号或箭头 —— 这条与 R21-O4「错的不是判据，是判据赖以成立的那个解析器」同族：审计器自己不精确，欠账台账就是假的。",
+        "【欠账五条逐条实证，不静默放行】pet-statechange：消费由构造器回调 onPhoneReady 加 dataset.petState 状态镜像承接（pet-controller.js:158），事件是对外遥测；motionResume：仓内重取由 createResumeScheduler 合成器承接（index.js:743），RESUME_EVENT 是 config/motion.js 显式对外 API；viewBack：v4.148.0 已修真缺陷 —— phone-shell._forceLayerBack 现在自己 setCurrentApp 同步（谁动图层谁同步），宿主无需订阅，事件降级为对外遥测；canonAdopt：跨仓转交凭据，owner 在仓外；causalSource：回源凭证对外遥测，仓内兜底 toastr 直读。台账逐字落进工具真代码面，判据 D 组负控制真删真源验证它活着。",
+        "【缺陷形态：规格给的判据号第三次踩占用号】规格原文写 system-v4180，那一号早在 v4.18.0 就被「通知按事情收拢」占用（前有 v4160、v4170 同号两用）。本档施工前查重取第一个空闲号 v4148。连续第三版抓到同一形态，交棒记死：凡规格写死的判据号，施工前必须查重。",
+        "【交棒改写：把「debt 必须为零」改成「debt 必须有据」】最顺手的收口是写「debt.length 必须等于 0」然后逼着删契约 —— 但五条里有跨仓转交与对外 API 面，删了就是把合法路径判死，与 R21-O7「不许为了 DEAD=0 好看而假删」同族。收口改成两路互斥：进 debt ⇒ 台账必须有经实证的理由，缺一条工具自己 exit 2；不进 debt ⇒ 要么有订阅要么双向无使用。判据断言「有据才存续」而不是「必须为零」。",
+        "【玩家可见的修复】viewBack 这条不是台账挂账了事：实测宿主在外壳自己退层时不同步 currentApp，导致返回后活跃 App 状态漂移。本版把同步收敛到外壳自身（_forceLayerBack 内 setCurrentApp），行为修复与遥测降级一并落地 —— 台账里每条「对外遥测」的理由都必须能对着真代码指认，不许拿「遥测」两个字糊弄。",
+        "【本版自己抓到的假绿：判据 A1 曾是自指伪证，还替整个进程送终】A1 初版用 await import() 当「第二证人」，但审计工具结尾的 process.exit(0) 会直接终止调用方进程 —— 运行器把 13 例报成「1 例 ok」，余下 12 例根本没跑；且它读的是同一个盘上文件，自己与自己比恒真。修成子进程真跑 --json 取独立读数，工具加 IS_MAIN 守卫（被 import 时不得替调用方决定生命周期）。修完后假绿消失，C1 那条从未执行过的断言当场转红（它按单反斜杠拼匹配串，而源码字符串字面量是双反斜杠），改为宽容转义层级后全绿。教训：假绿不是「少跑了几条」，是把判据连同它看守的对象一起藏起来了。",
+        "【判据面 A～E 五组，负控制真删真源】A 组把 import 真扫与盘上读数逐字对账（第二证人：任一方单方面改数都抓得住）；B 组台账 fail-closed —— 每个台账键必须真在 debt 里、理由不少于 20 字且须含实证要素，多挂空账与少挂同罪（只查少不查多就是半个判据）；C 组精度口径 —— emit 与 on 的令牌必须落在事件实参位，窗内禁跨右括号、花括号与箭头，并要求 viewBack 修复的 setCurrentApp 全仓恰两处（修复点加定义点，多一条写入路径即红）；D 组真删 apps/album/album-app.js 的唯一订阅行，重扫必须 debt 五变六且工具 exit 2 拒判，恢复后必须仍五条（既证扫描器活着，又证 fail-closed 活着）；E 组版本锚取下限形，不把本版号写死进判据。",
+        "【抬版连带面：三处「同一件事两个记账者」当场收口，一处指向空气的僵尸台账被摘】抬版本体之外，本版真跑定向门时逼出三处已在盘上的欠账 —— 全部是**同一件事有了第二个记账者**，不是「跑个全量看看」发现的：① tests/audit/status-ledger.json 记静态门 18 件、config/gate-tiers.json 的 static 档声明 19 条，两处各说一套数（v4940 的 F8 当场转红）。根因是台账按**命名约定**枚举 scripts 下的 -check/-audit 文件，而 v4.145.0（R21-O4）新增的覆盖率门落在 scripts/coverage-report.mjs —— 名字带 -report，于是被推断漏掉。修法不是在两个数里挑一个好看的：**声明面为真源**，命名约定降级为交叉核对，两者分叉**如实进 unknown**，台账新增 static_gate_source 与 static_gate_convention_diff 两格（后者恒为对象、用 compared 说「没比过」，免得 null 被 S4 当成缺失）。② config/empty-face-unshaped.json 里 games 一行仍指着 apps/games/games-view.js，而该文件在 v4.146.0（R21-O7 纯转发层清零）已被删除 ⇒ 台账指向空气，D3/D4 两条判据当场转红。处置是**改判不删条**：该 App 的空态现在在 games-app.js 里渲染，故 reason 由 no-empty-face 改为 no-view、views 清空，条目与 App 都留着（删了就是「删 App 不删台账」，是同一条判据要抓的另一半）。③ scripts/dead-method-baseline.json 两条方法声明行号因本版改动 phone/phone-shell.js 而平移（986 到 992、1001 到 1007），按真源码逐条重算 line 字段，**不动条目集合、不动 generated_at**（非整本重写：那会把时间戳一起洗掉）。教训与全仓一致：读数与声明分叉时，先问「谁是真源」，别问「哪个数好看」。",
+        "【全量回归抓到的第二条假红：删壳判据把「记事」当成「引用」】全量 node --test 的唯二红点都落在 v4146 的 C1/D2：本版在 index.js 当版公告里写下「该文件在 v4.146.0 已被删除」，旧判据对全文做子串包含，于是把这段历史记事当场判成复活引用。修法**不是**把判据缩窄成只认 import 说明符 —— 那会放过 const P = ./games-view.js 再 await import(P) 这种变量拼串复活，等于拿真阳性换绿；而是只缩窄**扫描面**：在 index.js 里按 ST_PHONE_CURRENT_UPDATE 的常量边界把公告块摘成一行注释再比对，其余文件照旧全量子串。两侧负控制都留：C4 一面证公告里的提及不算引用，另一面证普通模块里把路径写进字符串仍会被抓，再加一条第二证人（除公告外真仓一处都没有）。教训与本版同族：**放宽判据**与**收窄扫描面**必须分清，前者是换绿，后者只是把记事从证据里剔除。",
+        "【运行时验证边界】本版量的是静态扫描面的读数与真仓逐字一致、台账 fail-closed 活着、负控制真删真源读数必变。不能保证的是：真宿主里各 App 监听器的注册时序与运行期派发表现 —— 本环境无真机，那一条仍归 docs/runtime-verification-boundary.md。这类形态的共性是**看起来没坏但显示不对**（登记了契约、也真发出去了，只是没人听，界面照样渲染、控制台照样干净），本版只能挡住机制面，**不能保证**该形态在真机上一出现就被发现。扫描面与 import-resolve 门同面，tests 与 docs 的监听器是夹具不算订阅方，读数对动态 addEventListener 拼串一言未发。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

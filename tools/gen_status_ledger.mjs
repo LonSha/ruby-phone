@@ -91,12 +91,71 @@ export function collectStatus() {
     unknown.push(`版本四源不全同源：package=${v.package} manifest=${v.manifest} update-log=${v.update_log_latest} index=${v.index_const}`);
   }
 
-  /* ── 门禁面：静态门（scripts/*.mjs）与 npm scripts 链 */
+  /* ── 门禁面：静态门（scripts/*.mjs）与 npm scripts 链
+   *
+   * ★ 静态门的**数量口径**必须与 `config/gate-tiers.json` 的 static 档同源。
+   *   「按命名约定枚举 scripts/」（-check.mjs / -audit.mjs）是**推断**，
+   *   「分档表逐条声明」才是真源。v4.145.0（R21-O4）新增覆盖率门时把它实现成
+   *   `scripts/coverage-report.mjs` —— 文件名不带 -check / -audit ⇒ 推断漏掉它：
+   *   台账 18、分档表 19，两处各说一套数（tests/system-v4940.test.mjs 的 F8 当场抓住）。
+   *   这不是「哪个数更好看」的取舍，是同一件事有了两个记账者。
+   *   处置与全仓一致：**声明面为真源**，命名约定只留作交叉核对；
+   *   两者分叉时**如实进 unknown**（不许静默挑一个看起来对的数，也不许把分叉洗平）。 */
   const scriptNames = listDir('scripts');
-  const gates = scriptNames
+  const gatesByConvention = scriptNames
     ? scriptNames.filter((n) => n.endsWith('-check.mjs') || n.endsWith('-audit.mjs')).sort()
     : null;
-  if (!gates) unknown.push('scripts/ 读不到，静态门清单为 null');
+  if (!gatesByConvention) unknown.push('scripts/ 读不到，静态门清单为 null');
+  /* 声明面 → 脚本文件名的解析：命令既可写成 `npm run <key>`（回查 package.json 的真脚本），
+   *   也可直接写成 `node scripts/<file>.mjs`。解析不出一律记 null（不猜）。 */
+  const resolveGateFile = (cmd) => {
+    const direct = /scripts\/([A-Za-z0-9._-]+\.mjs)/.exec(String(cmd));
+    if (direct) return direct[1];
+    const named = /^npm run ([a-z0-9-]+)$/.exec(String(cmd).trim());
+    if (named && pkg && pkg.scripts && typeof pkg.scripts[named[1]] === 'string') {
+      const inner = /scripts\/([A-Za-z0-9._-]+\.mjs)/.exec(pkg.scripts[named[1]]);
+      return inner ? inner[1] : null;
+    }
+    return null;
+  };
+  const tiersDoc = readJson('config/gate-tiers.json');
+  let gatesByDeclaration = null;
+  if (tiersDoc && tiersDoc.tiers && tiersDoc.tiers.static && Array.isArray(tiersDoc.tiers.static.commands)) {
+    gatesByDeclaration = tiersDoc.tiers.static.commands.map(resolveGateFile);
+  }
+  const unresolvedGates = gatesByDeclaration ? gatesByDeclaration.filter((x) => !x) : [];
+  if (gatesByDeclaration && (unresolvedGates.length || gatesByDeclaration.length === 0)) {
+    unknown.push('config/gate-tiers.json 的 static 档有 ' + unresolvedGates.length
+      + ' 条命令解析不到 scripts/*.mjs ⇒ 声明口径不可用，静态门清单退回命名约定枚举（须人工复核）');
+    gatesByDeclaration = null;
+  }
+  if (!gatesByDeclaration && scriptNames) {
+    unknown.push('config/gate-tiers.json 的 static 档读不到 ⇒ 静态门清单退回按命名约定枚举（口径已降级，须人工复核）');
+  }
+  const gates = gatesByDeclaration ? gatesByDeclaration.slice().sort() : gatesByConvention;
+  /* 两个口径的差集：只在声明面 / 只在命名约定面。非空即进 unknown —— 分叉不许静默。
+   *   对象**恒为对象**（不取 null）：三态在这里没有意义 —— 「没比过」由 compared:false 说出来，
+   *   免得 S4「null 必须有解释」把一格可选读数当成缺失。 */
+  let gateConventionDiff = { compared: false, declared_only: [], convention_only: [] };
+  if (gatesByConvention && gatesByDeclaration) {
+    const conv = new Set(gatesByConvention);
+    const dec = new Set(gatesByDeclaration);
+    gateConventionDiff = {
+      compared: true,
+      declared_only: gatesByDeclaration.filter((n) => !conv.has(n)),
+      convention_only: gatesByConvention.filter((n) => !dec.has(n)),
+    };
+    /* ★ 只把 convention_only 归为「未知」：那才是真的需要人看一眼的形态 ——
+     *   `scripts/*-check|*-audit.mjs` 看着像门，却没人把它登记进分档表。
+     *   declared_only 不是缺陷：命名约定**不是法律**（`coverage-report.mjs` 是覆盖率门，
+     *   名字带 -report，被命名约定枚举漏掉、被声明面收下，这才是对的）。
+     *   两边的差集一律**留在 static_gate_convention_diff 里可查**，不静默、也不冒充未知。 */
+    if (gateConventionDiff.convention_only.length) {
+      unknown.push('静态门枚举口径分叉：按命名约定多出 ' + gateConventionDiff.convention_only.length
+        + ' 件未被 config/gate-tiers.json 声明（' + gateConventionDiff.convention_only.join(',')
+        + '）—— 它们像门却不是门，或者该登记而未登记');
+    }
+  }
   const checkChain = (pkg && pkg.scripts && typeof pkg.scripts.check === 'string')
     ? (pkg.scripts.check.match(/npm run ([a-z0-9-]+)/g) || []).map((s) => s.replace('npm run ', ''))
     : null;
@@ -215,8 +274,14 @@ export function collectStatus() {
     version_sources: v,
     version_same: versionSame,
     gates: {
+      /* 静态门口径的**来源**必须写进台账：声明面 / 命名约定兜底。
+       *   两处读数（台账 18 vs 分档表 19）之所以曾经各说一套，就是因为口径只活在代码里。
+       *   写下来之后，后来者看台账就知道这个数是从哪来的、还能不能复算。 */
+      static_gate_source: gatesByDeclaration ? 'config/gate-tiers.json#tiers.static' : 'scripts/*-check|*-audit.mjs',
       static_gate_files: gates ? gates.length : null,
       static_gate_list: gates,
+      /* 两个口径的差集：compared:false 表示没比过（不是「一致」）。 */
+      static_gate_convention_diff: gateConventionDiff,
       check_chain: checkChain,
       check_chain_len: checkChain ? checkChain.length : null,
     },

@@ -57,9 +57,12 @@ export const PHONE_EVENTS = Object.freeze({
     //   R4-X6 的因果线追溯起点是两个**真派发**的对外事件，当时漏登本契约表。
     //   与 v2.26.0 的 PET_STATECHANGE 同形：有派发、无契约 ⇒ 打错一个字只会静默失联。
     //   成因同族：全量回归被禁期间没人跑到那条对账判据。
-    // [v4.87.0] 外壳代退一层（_forceLayerBack）成功后派发：宿主（index.js）据此把
-    //   currentApp 对齐到退到的那一层 —— 43 个 view 经 getContentContainer() 按
-    //   currentApp 取图层，不同步会把下一次渲染写进上一个 App 的图层（静默错位）。
+    // [v4.87.0] 外壳代退一层（_forceLayerBack）成功后派发。
+    //   [v4.148.0 · R21-O9 事件审计实测修正] 此前注释声称「宿主（index.js）据此把
+    //   currentApp 对齐到退到的那一层」—— 实测宿主从未监听本事件（emit 大于 0 且
+    //   on 等于 0），那句自述与现实不符。修正后：同步由外壳自己在退层时
+    //   setCurrentApp 完成（谁动图层谁同步）；本事件保留为对外遥测，
+    //   仓内零订阅是有意为之，理由记在事件审计台账里。
     VIEW_BACK: 'phone:viewBack',
     CANON_ADOPT: 'phone:canonAdopt',
     CAUSAL_SOURCE: 'phone:causalSource',

@@ -1,0 +1,374 @@
+{
+  "version": "4.148.0",
+  "scannedFiles": 796,
+  "contractSize": 26,
+  "events": [
+    {
+      "event": "phone:goHome",
+      "emit": 35,
+      "on": 3,
+      "onFiles": [
+        "apps/music/music-app.js",
+        "phone/lifecycle-engines-mount.js",
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/achievement/achievement-view.js",
+        "apps/album/album-app.js",
+        "apps/album/album-view.js",
+        "apps/asset/asset-view.js",
+        "apps/bilibili/bili-view.js",
+        "apps/calendar/calendar-app.js",
+        "apps/chars/chars-view.js",
+        "apps/diary/diary-app.js",
+        "apps/games/poker/poker-app.js",
+        "apps/games/poker/poker-view.js",
+        "apps/health/health-view.js",
+        "apps/honey/honey-app.js",
+        "apps/honey/honey-view.js",
+        "apps/memory/graph-view.js",
+        "apps/memory/memory-view.js",
+        "apps/mofo/mofo-app.js",
+        "apps/mofo/mofo-view.js",
+        "apps/music/music-app.js",
+        "apps/music/music-view.js",
+        "apps/peek/peek-view.js",
+        "apps/phone/phone-app.js",
+        "apps/place/place-view.js",
+        "apps/playbook/playbook-view.js",
+        "apps/plotline/plotline-view.js",
+        "apps/profile/profile-view.js",
+        "apps/settings/settings-app.js",
+        "apps/theater/theater-view.js",
+        "apps/tieba/tieba-view.js",
+        "apps/wallet/wallet-view.js",
+        "apps/wangxiang/wangxiang-app.js",
+        "apps/wechat/wechat-app.js",
+        "apps/weibo/weibo-app.js",
+        "apps/weibo/weibo-view.js",
+        "apps/xhs/xhs-view.js",
+        "phone/phone-shell.js"
+      ]
+    },
+    {
+      "event": "phone:swipeBack",
+      "emit": 1,
+      "on": 12,
+      "onFiles": [
+        "apps/album/album-app.js",
+        "apps/calendar/calendar-app.js",
+        "apps/diary/diary-app.js",
+        "apps/games/poker/poker-app.js",
+        "apps/honey/honey-app.js",
+        "apps/mofo/mofo-app.js",
+        "apps/music/music-app.js",
+        "apps/phone/phone-app.js",
+        "apps/settings/settings-app.js",
+        "apps/wangxiang/wangxiang-app.js",
+        "apps/wechat/wechat-app.js",
+        "apps/weibo/weibo-app.js"
+      ],
+      "emitFiles": [
+        "phone/phone-shell.js"
+      ]
+    },
+    {
+      "event": "phone:openApp",
+      "emit": 16,
+      "on": 3,
+      "onFiles": [
+        "phone/inline-reply-button.js",
+        "phone/lifecycle-engines-mount.js",
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/chars/chars-view.js",
+        "apps/clock/clock-view.js",
+        "apps/comms/comms-app.js",
+        "apps/honey/honey-view.js",
+        "apps/memory/memory-view.js",
+        "apps/notifications/away-review-view.js",
+        "apps/notifications/notification-center-view.js",
+        "apps/plotline/plotline-view.js",
+        "apps/search/search-view.js",
+        "apps/wangxiang/wangxiang-app.js",
+        "apps/wechat/chat-view.js",
+        "apps/weibo/weibo-app.js",
+        "phone/home-screen.js",
+        "phone/lock-screen.js",
+        "config/task-entry.js",
+        "index.js"
+      ]
+    },
+    {
+      "event": "phone:panelVisibility",
+      "emit": 2,
+      "on": 6,
+      "onFiles": [
+        "apps/album/album-app.js",
+        "apps/games/games-app.js",
+        "apps/honey/honey-app.js",
+        "phone/floating-entry.js",
+        "phone/inline-reply-button.js",
+        "config/motion.js"
+      ],
+      "emitFiles": [
+        "phone/phone-shell.js",
+        "index.js"
+      ]
+    },
+    {
+      "event": "phone:updateGlobalBadge",
+      "emit": 5,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/games/poker/poker-app.js",
+        "apps/wechat/chat-view.js",
+        "apps/wechat/wechat-app.js",
+        "apps/weibo/weibo-data.js",
+        "index.js"
+      ]
+    },
+    {
+      "event": "phone:updateWallpaper",
+      "emit": 2,
+      "on": 2,
+      "onFiles": [
+        "apps/album/album-app.js",
+        "phone/home-screen.js"
+      ],
+      "emitFiles": [
+        "apps/album/album-data.js",
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:updateAppIcon",
+      "emit": 2,
+      "on": 1,
+      "onFiles": [
+        "phone/home-screen.js"
+      ],
+      "emitFiles": [
+        "apps/album/album-data.js",
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:updateCardLayoutCss",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "phone/home-screen.js"
+      ],
+      "emitFiles": [
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:timeUpdated",
+      "emit": 2,
+      "on": 3,
+      "onFiles": [
+        "apps/wangxiang/wangxiang-app.js",
+        "phone/domain-engines-mount.js",
+        "phone/home-screen.js"
+      ],
+      "emitFiles": [
+        "apps/settings/settings-app.js",
+        "config/time-manager.js"
+      ]
+    },
+    {
+      "event": "phone:albumImageDeleted",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "apps/album/album-app.js"
+      ],
+      "emitFiles": [
+        "apps/settings/image-upload.js"
+      ]
+    },
+    {
+      "event": "phone:sendToChat",
+      "emit": 3,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/gacha/gacha-app.js",
+        "apps/place/place-app.js",
+        "apps/tarot/tarot-view.js"
+      ]
+    },
+    {
+      "event": "phone:floatingEntrySettingsChanged",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "phone/floating-entry.js"
+      ],
+      "emitFiles": [
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:incomingCall",
+      "emit": 1,
+      "on": 2,
+      "onFiles": [
+        "apps/phone/phone-app.js",
+        "phone/domain-engines-mount.js"
+      ],
+      "emitFiles": [
+        "index.js"
+      ]
+    },
+    {
+      "event": "phone:clearCurrentData",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:clearAllData",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/settings/settings-app.js"
+      ]
+    },
+    {
+      "event": "phone:pet-statechange",
+      "emit": 1,
+      "on": 0,
+      "onFiles": [],
+      "emitFiles": [
+        "phone/pet-controller.js"
+      ]
+    },
+    {
+      "event": "phone:motionResume",
+      "emit": 1,
+      "on": 0,
+      "onFiles": [],
+      "emitFiles": [
+        "index.js"
+      ]
+    },
+    {
+      "event": "phone:viewBack",
+      "emit": 1,
+      "on": 0,
+      "onFiles": [],
+      "emitFiles": [
+        "phone/phone-shell.js"
+      ]
+    },
+    {
+      "event": "phone:canonAdopt",
+      "emit": 1,
+      "on": 0,
+      "onFiles": [],
+      "emitFiles": [
+        "apps/archive/archive-view.js"
+      ]
+    },
+    {
+      "event": "phone:causalSource",
+      "emit": 1,
+      "on": 0,
+      "onFiles": [],
+      "emitFiles": [
+        "apps/plotline/plotline-view.js"
+      ]
+    },
+    {
+      "event": "phone:groupVoteConfirm",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/wechat/chat-view.js"
+      ]
+    },
+    {
+      "event": "phone:gatheringConfirm",
+      "emit": 1,
+      "on": 1,
+      "onFiles": [
+        "index.js"
+      ],
+      "emitFiles": [
+        "apps/wechat/gathering-wire.js"
+      ]
+    },
+    {
+      "event": "phone:lock",
+      "emit": 0,
+      "on": 2,
+      "onFiles": [
+        "phone/domain-engines-mount.js",
+        "phone/lifecycle-engines-mount.js"
+      ],
+      "emitFiles": []
+    },
+    {
+      "event": "phone:unlock",
+      "emit": 0,
+      "on": 1,
+      "onFiles": [
+        "phone/lifecycle-engines-mount.js"
+      ],
+      "emitFiles": []
+    },
+    {
+      "event": "phone:screenFlipDown",
+      "emit": 0,
+      "on": 1,
+      "onFiles": [
+        "phone/lifecycle-engines-mount.js"
+      ],
+      "emitFiles": []
+    },
+    {
+      "event": "phone:privacyRisk",
+      "emit": 0,
+      "on": 1,
+      "onFiles": [
+        "phone/lifecycle-engines-mount.js"
+      ],
+      "emitFiles": []
+    }
+  ],
+  "debt": [
+    "phone:pet-statechange",
+    "phone:motionResume",
+    "phone:viewBack",
+    "phone:canonAdopt",
+    "phone:causalSource"
+  ],
+  "debtLedger": {
+    "phone:pet-statechange": "消费由构造器回调 onPhoneReady + dataset.petState 镜像承接，事件为对外遥测",
+    "phone:motionResume": "仓内重取由 resume 合成器承接，RESUME_EVENT 是 config/motion.js 显式对外 API",
+    "phone:viewBack": "v4.148.0 外壳已自同步 currentApp（谁动图层谁同步），事件降级为对外遥测",
+    "phone:canonAdopt": "跨仓转交凭据：owner 在仓外，本仓零写盘只播报",
+    "phone:causalSource": "回源凭证对外遥测，仓内兜底为 toastr 直读"
+  },
+  "zeroUse": []
+}

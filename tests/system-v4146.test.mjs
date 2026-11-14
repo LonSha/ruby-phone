@@ -126,11 +126,32 @@ function stripComments(src) {
     return out;
 }
 
-/** 在给定源码面里找「指向 rel 的活引用」。 */
+/** 在给定源码面里找「指向 rel 的活引用」。
+ *  ★ v4.148.0 实测的假红形态：本判据原先直接对**全文**做子串包含，
+ *    于是本版在 index.js 的当版公告里写下 `apps/games/games-view.js` 这个路径
+ *    （那是**历史记事**，告诉后来人这壳是被哪个版本删的），
+ *    被判据当成「复活引用」，C1/D2 当场转红。
+ *
+ *  【为什么不是「改成只认 import 说明符」】
+ *    那是**放宽判据本体**换取绿：`const P = './games-view.js'; await import(P)`
+ *    这种变量拼串复活路径就不再被抓（B3 只扫含 `import(` 的字面行，盖不住它）。
+ *    所以这里不缩窄判据，只缩窄**扫描面**：公告块是记事、不是代码面，
+ *    在 index.js 里按机器可定位的常量边界把它摘掉，其余一律照旧全量子串比对。
+ *
+ *  【两侧负控制都留（C4）】
+ *    ① 真仓 index.js 公告里提了这个路径 ⇒ 不得被判成引用（否则下一个人写记事就转红）；
+ *    ② 普通代码里把路径写进字符串 ⇒ 仍必须被抓（否则「只是字符串」就成了整片豁免）。
+ *    只留 ① 不留 ②，下一次有人把整个字符串面豁免掉也照样绿。 */
+const ANNOUNCEMENT_RE = /const ST_PHONE_CURRENT_UPDATE = \{[\s\S]*?\n\};/;
+const ANNOUNCEMENT_NOTE = '/* ST_PHONE_CURRENT_UPDATE：当版公告是记事，不是代码面 */';
+function codeFace(rel, src) {
+    const masked = stripComments(src);
+    return rel === 'index.js' ? masked.replace(ANNOUNCEMENT_RE, ANNOUNCEMENT_NOTE) : masked;
+}
 function refsTo(rel, sources) {
     const base = path.basename(rel);
     return sources
-        .filter(({ rel: r, src }) => r !== rel && stripComments(src).includes(base))
+        .filter(({ rel: r, src }) => r !== rel && codeFace(r, src).includes(base))
         .map((x) => x.rel);
 }
 
@@ -192,7 +213,10 @@ test('B3 删掉的名字不许在动态 import 拼串里活着（规格要求先
     for (const f of FORWARDERS) {
         const base = path.basename(f, '.js');
         for (const { rel, src } of SOURCES) {
-            for (const line of stripComments(src).split('\n')) {
+            /* 与 C1 同一扫描面口径：公告块是记事不是代码面，先摘掉再逐行扫
+             * （否则「await import(P)」这句**描述拼串形态的记事**自己就会命中本判据，
+             *  v4.148.0 全量回归实测踩到）。判据本体不动：真代码里的 import( 照旧逐行抓。 */
+            for (const line of codeFace(rel, src).split('\n')) {
                 if (!/import\s*\(/.test(line)) continue;
                 assert.ok(!line.includes(base), '★ ' + rel + ' 用动态 import 拼出了已删模块名：' + line.trim());
             }
@@ -234,6 +258,33 @@ test('D2 负控制：真仓此刻确实是「零引用」—— 判据不是靠�
     for (const f of FORWARDERS) {
         assert.deepEqual(refsTo(f, SOURCES), [], '真仓源码面必须零引用 ' + path.basename(f));
     }
+});
+test('C4 两侧负控制：公告里的提及不算引用，普通代码里的路径字符串仍算', () => {
+    /* ① 真仓这一面：index.js 的抬版公告确实写了这个路径（那是历史记事），不得被判成引用。
+     *    否则「下一个人都不敢写下历史」，而删壳不留来由正是本套 C2 要抓的另一半。 */
+    assert.equal(
+        codeFace('index.js', read('index.js')).includes('games-view.js'), false,
+        '★ index.js 的当版公告块必须被排除在代码面之外（它是记事，不是引用）');
+    assert.equal(
+        codeFace('index.js', read('index.js')).includes('ST_PHONE_CURRENT_UPDATE'), true,
+        '★ 排除只许命中公告块本体，不许把 index.js 剩下的代码面一起吃掉');
+    /* ② 反向面：普通模块里把路径写进字符串，仍必须被抓 ——
+     *    否则「只是写了个字符串」就成了整片豁免，`await import(P)` 变量拼串必然漏网。 */
+    const probes = [
+        { rel: 'apps/games/__probe_str.js', src: "const P = './games-view.js';\nawait import(P);\n" },
+        { rel: 'apps/games/__probe_import.js', src: "import './games-view.js';\n" },
+        { rel: 'apps/games/__probe_patient.js', src: "export { X } from './games-view.js';\n" },
+    ];
+    const hits = refsTo('apps/games/games-view.js', probes);
+    for (const p of probes) {
+        assert.ok(hits.includes(p.rel), '★ ' + p.rel + ' 必须被抓到（缩窄的是公告块扫描面，不是判据本体）');
+    }
+    /* ③ 第二证人：真仓全量子串面里除了 index.js 公告，确实一处都没有 —— 逐文件点名。 */
+    const raw = SOURCES
+        .filter(({ rel, src }) => rel !== 'index.js' && stripComments(src).includes('games-view.js'))
+        .map((x) => x.rel);
+    assert.ok(raw.length === 0 || raw.every((r) => r !== 'index.js'),
+        '★ 真仓除公告外不得有任何文件提到它，实得 ' + JSON.stringify(raw));
 });
 
 /* ═══════════════════════════ E · 版本锚 ═══════════════════════════ */

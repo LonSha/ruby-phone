@@ -864,6 +864,12 @@ export class PhoneShell {
             const id = hist[i] && hist[i].id;
             if (!id || id === 'home') continue;
             this._applyViewLayerState(id);
+            /* [v4.148.0 · R21-O9] 外壳自己把 currentApp 对齐到退到的层。
+             *   此前契约注释声称「宿主（index.js）据此同步」—— 本版事件审计
+             *   实测宿主从未监听 viewBack（emit>0 且 on=0），那句自述是假的，
+             *   图层漂移风险真实存在。同步动作归退层的执行者（谁动图层谁同步），
+             *   事件保留为对外遥测；仓内零订阅是有意为之（审计台账有理由）。 */
+            this.setCurrentApp(id);
             try {
                 window.dispatchEvent(new CustomEvent('phone:viewBack', {
                     detail: { appId: normalizeSurfaceAppId(id), from: normalizeSurfaceAppId(startViewId) }
