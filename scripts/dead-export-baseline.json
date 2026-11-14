@@ -2,6 +2,12 @@
   "note": "零消费导出冻结账本：新增项必须显式登记理由；条目被消费后应清理。",
   "entries": [
     {
+      "file": "apps/games/poker/poker-data.js",
+      "name": "HAND_LABELS",
+      "line": 1037,
+      "reason": "扑克牌型名表（高牌到同花顺九档）。此前唯一的读取方是 apps/games/games-data.js 那个纯转发壳（export { HAND_LABELS } from poker-data），R21-O7 删掉壳之后它暴露成真·产品端零消费：牌桌上显示的是 STREET_LABELS（poker-view 真消费），牌型名还没上 UI。属机制数据面预留，接入点未定，故按本仓口径冻结并留理由 —— 不为了 DEAD=0 好看而假删，也不为了满足审计而凭空加一个消费方。"
+    },
+    {
       "file": "apps/health/bio-engine.js",
       "name": "SPECIAL_STAGES",
       "line": 18,
@@ -48,6 +54,12 @@
       "name": "cropImage",
       "line": 748,
       "reason": "裁剪逻辑已内联在 image-cropper 的交互流程中，本导出为拆分时可复用面，全仓仅声明行。"
+    },
+    {
+      "file": "apps/wechat/chat-read-cursor.js",
+      "name": "cursorSelfCheck",
+      "line": 131,
+      "reason": "R21-X1 的对外机器读数出口：判据 system-v4149 B 组拿它与真代码面逐条对账（verdictSource/wallClockRole 是「铁律自述必须与代码一致」的对账锚），产品运行面不需要它。属测试消费面冻结。"
     },
     {
       "file": "apps/wechat/group-scheduler.js",
@@ -144,12 +156,6 @@
       "name": "lintPixelSvg",
       "line": 54,
       "reason": "像素纪律 lint 工具，产品端当前无直接调用（消费在判据套件 v4920），保留供后续产品端 SVG 生成/校验接线"
-    },
-    {
-      "file": "apps/games/poker/poker-data.js",
-      "name": "HAND_LABELS",
-      "line": 1037,
-      "reason": "扑克牌型名表（高牌到同花顺九档）。此前唯一的读取方是 apps/games/games-data.js 那个纯转发壳（export { HAND_LABELS } from poker-data），R21-O7 删掉壳之后它暴露成真·产品端零消费：牌桌上显示的是 STREET_LABELS（poker-view 真消费），牌型名还没上 UI。属机制数据面预留，接入点未定，故按本仓口径冻结并留理由 —— 不为了 DEAD=0 好看而假删，也不为了满足审计而凭空加一个消费方。"
     }
   ]
 }

@@ -5639,6 +5639,7 @@ export class WechatApp {
                         <div class="chat-meta">
                             <div class="chat-time">${formatWechatChatListTime(chat, storyTime)}</div>
                             ${chat.unread > 0 ? `<span class="chat-badge">${chat.unread > 99 ? '99+' : chat.unread}</span>` : ''}
+                            ${this._cursorBadgeHtml(chat)}
                         </div>
                     </div>
                 `).join('')}
@@ -6539,6 +6540,23 @@ export class WechatApp {
         });
     }
 
+    /** [v4.149.0 · R21-X1] 按剧情钟算的会话级未读角标（与粗计数器并排，不替换它）。
+     *  消费 getChatReadCursor：no-cursor 态不亮（游标刚上线时全仓都是 no-cursor，
+     *  若那时也亮角标就等于把「没读过」误报成「有新消息」，比没有这个角标更糟）。 */
+    _cursorBadgeHtml(chat) {
+        if (!chat?.id || !this.currentChat) return '';
+        try {
+            if (!this.wechatData.getChatReadCursor(chat.id)) return ''; /* no-cursor 不亮。 */
+            const st = this.wechatData.unreadCursorStateOf(chat.id);
+            if (st.state !== 'behind' || !(st.count > 0)) return '';
+            /* 只在「当前打开的就是本会话」之外才显示 —— 自己正在看的会话不弹角标。 */
+            if (String(this.currentChat.id) === String(chat.id)) return '';
+            return `<span class="chat-badge chat-badge-cursor" aria-label="按剧情时间落后 ${st.count} 条">⏱${st.count > 99 ? '99+' : st.count}</span>`;
+        } catch (_e) {
+            return '';
+        }
+    }
+
     openChat(chatId) {
         const chat = this.wechatData.getChat(chatId);
         if (chat) {
@@ -6551,6 +6569,9 @@ export class WechatApp {
             // 🔥 核心修复：在进入聊天窗口之前，强行触发一次 getMessages 拉取独立存储，防止界面白板
             this.wechatData.getMessages(chatId);
             this.currentChat = chat;
+            /* [v4.149.0 · R21-X1] 打开会话即落阅读游标（楼层推进 + 双钟记账）。
+             *   失败不阻塞打开：游标是记账，不是门禁。 */
+            try { this.wechatData.markChatRead(chatId); } catch (_e) { }
             this.render();
         }
     }

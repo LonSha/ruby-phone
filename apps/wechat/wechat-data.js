@@ -32,6 +32,9 @@ import { buildRelationAlbum, readRelationHistory, relationAlbumLine, RELATION_AL
  *   只解决「群成员表里谁叫什么」，解决不了「手机侧与主聊天是不是同一个人」。
  *   消费侧只搬运，不重算候选（见 config/entity-candidates-contract.js 档头）。 */
 import { readEntityCandidates, entityFaceLine } from '../../config/entity-candidates-contract.js';
+/* [v4.149.0 · R21-X1] 阅读游标：未读判定只比剧情钟，墙钟只做机器记账。
+ *   判定唯一出口在 chat-read-cursor.js，本文件只负责落盘与读取。 */
+import { markRead, readCursorOf, unreadStateOf } from './chat-read-cursor.js';
 
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -597,10 +600,11 @@ export class WechatData {
             contactAutoAvatarMap: {},
             walletByChat: {},
             walletTransactions: [],
-            musicListening: {}
+            musicListening: {},
+            /* [v4.149.0 · R21-X1] 阅读游标表：{ [chatId]: {chatId,lastReadFloor,lastReadStoryAt,lastReadWallAt} } */
+            readCursors: {}
         };
     }
-
     /**
      * 🔥 数据迁移：将旧格式的 messages 迁移到独立存储
      * @param {Object} oldMessages - 旧格式的消息数据
@@ -1652,7 +1656,9 @@ export class WechatData {
                 walletByChat: this.data.walletByChat || {},
                 walletTransactions: this.data.walletTransactions || [],
                 musicListening: this.data.musicListening || {},
-                honeyInviteLog: this.data.honeyInviteLog || []
+                honeyInviteLog: this.data.honeyInviteLog || [],
+                /* [v4.149.0 · R21-X1] 阅读游标随主数据落盘（不含消息内容，与 chats 同级）。 */
+                readCursors: this.data.readCursors || {}
                 // 🔥 messages 不再保存到主数据中
             };
 
@@ -1709,7 +1715,8 @@ export class WechatData {
             contactAutoAvatarMap: {},
             walletByChat: {},
             walletTransactions: [],
-            musicListening: {}
+            musicListening: {},
+            readCursors: {}
         };
 
         this._cleanupManagedImagesForDeletedMessages(deletedMessages);
@@ -2401,6 +2408,48 @@ export class WechatData {
         const safeChatId = String(chatId || '').trim();
         if (!safeChatId) return null;
         return this._normalizeChatList(this.data?.chats || []).find(c => String(c.id || '') === safeChatId) || null;
+    }
+    /* ══════ [v4.149.0 · R21-X1] 阅读游标：三个入口，判定逻辑全在 chat-read-cursor.js ══════ */
+    /**
+     * 落一次读进度（打开会话时调用）。楼层 = 当前消息数 - 1（最后一条的下标）。
+     * 剧情钟经 stampPair 取（可能 null：读不到如实存 null，判定面会退到楼层兜底）；
+     * 墙钟只进 lastReadWallAt（机器记账用），判定面永远碰不到它。
+     */
+    markChatRead(chatId) {
+        const safeChatId = String(chatId || '').trim();
+        if (!safeChatId) return false;
+        const messages = this.getMessages(safeChatId);
+        const floor = (Array.isArray(messages) ? messages.length : 0) - 1;
+        if (floor < 0) return false;
+        const stamp = stampPair(typeof window === 'undefined' ? null : window);
+        const next = markRead(this.data.readCursors || {}, safeChatId, {
+            floor,
+            storyAt: stamp.storyAt,
+            wallAt: stamp.wallAt
+        });
+        if (next === this.data.readCursors) return false; /* 没前进就不写盘。 */
+        this.data.readCursors = next;
+        return true;
+    }
+    /** 读一个会话的游标（坏 / 无 ⇒ null，调用方据此落 no-cursor）。
+     *  消费面：`_cursorBadgeHtml` 的 no-cursor 分支（角标只在 behind 态亮，但必须先读游标判态）
+     *  与判据 B 组的持久化往返对账。 */
+    getChatReadCursor(chatId) {
+        return readCursorOf(this.data.readCursors || {}, chatId);
+    }
+    /**
+     * 未读判定转发（判定唯一出口是 chat-read-cursor.unreadStateOf）。
+     * 注意与既有 chat.unread 计数器分工：那个是「收到就 +1、打开就清零」的粗计数器，
+     * 本判定回答「按剧情钟到底落后几条」—— 两套并存，本方法不改 chat.unread。
+     */
+    unreadCursorStateOf(chatId) {
+        const safeChatId = String(chatId || '').trim();
+        if (!safeChatId) return { state: 'no-cursor', count: 0, firstUnreadIndex: null };
+        return unreadStateOf({
+            cursors: this.data.readCursors || {},
+            chatId: safeChatId,
+            messages: this.getMessages(safeChatId) || []
+        });
     }
 
     /**
