@@ -61,7 +61,7 @@ import {
     ensurePhoneContextLimitSetting,
     normalizePhoneContextLimit
 } from '../../config/context-settings.js';
-
+import { probeCrossRepoClockAlignment } from '../memory/cross-repo-clock-alignment.js';
 const DEFAULT_DOUBAO_CLONE_WORKER_URL = '';
 const DEFAULT_MIMO_TTS_RELAY_URL = '';
 const SETTINGS_FOLD_ARROW_HTML = '<span class="settings-fold-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>';
@@ -5393,9 +5393,15 @@ export class SettingsApp {
             { id: 'phone_online', name: '通话', desc: '语音/视频通话场景' }
         ];
         const allPerms = this._getMemoryPermissionMap();
-
+        const clockAlignment = probeCrossRepoClockAlignment(typeof window !== 'undefined' ? window : null);
         return `
             <div class="setting-section" style="margin: 12px 0 8px; padding: 10px 12px;">
+                <div class="setting-item" style="padding: 4px 0 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #222; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🔗 手机与记忆中枢</span>
+                        <span class="phone-clock-alignment-badge" style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: normal; background: ${clockAlignment.state === 'aligned' ? '#e6f7ec; color: #167a39;' : (clockAlignment.state === 'skewed' ? '#fff7e6; color: #b76e00;' : '#f5f5f5; color: #666;')}">${this._escapeHtml(clockAlignment.label)}</span>
+                    </div>
+                </div>
                 <div class="setting-item setting-toggle">
                     <div>
                         <div class="setting-label" style="display:inline-flex; align-items:center; gap:6px;">
