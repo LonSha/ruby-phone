@@ -122,6 +122,7 @@ const WS_FILES = [
     'apps/uterus/uterus-app.js',
     'apps/uterus/uterus-view.js',
     'apps/uterus/uterus.css',
+    'config/bodycord-bridge.js',
     APPS,
     STORAGE,
     INDEX,

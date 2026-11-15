@@ -54,7 +54,8 @@ const TABS = [
     { key: 'board', label: '画板' },
     { key: 'fetuses', label: '胎明细' },
     { key: 'readings', label: '读数' },
-    { key: 'ledger', label: '台账' }
+    { key: 'ledger', label: '台账' },
+    { key: 'extarch', label: '外部档案' }
 ];
 
 /* 十六进制混色。源用 mixColor 生二十个色调；本件的色调已在数据层查表，
@@ -164,6 +165,7 @@ export class UterusView {
         if (tab === 'fetuses') parts.push(this._fetusPanel());
         else if (tab === 'readings') parts.push(this._readingPanel());
         else if (tab === 'ledger') parts.push(this._ledgerPanel());
+        else if (tab === 'extarch') parts.push(this._extarchPanel());
         else parts.push(this._boardPanel());
         if (this._flash) parts.push('<div class="ud-flash">' + this._esc(this._flash) + NL() + '</div>');
         return parts.join('');
@@ -425,6 +427,34 @@ export class UterusView {
         return parts.join('');
     }
     /* ---------- 台账页签 ---------- */
+    /* ---------- [v4.153.0 · R21-X10] 外部档案（Bodycord 只读投影） ---------- */
+    _extarchPanel() {
+        this.app.extarchProbe();
+        const f = this.app.extarchFace();
+        const inner = [];
+        inner.push(this._note(this.app.extarchFaceText(), f.state === 'present' ? 'ok' : (f.state === 'malformed' ? 'err' : 'off')));
+        if (f.state === 'present') {
+            const lines = [];
+            lines.push('对象档案 ' + f.targets.length + ' 份（轻档 ' + f.lightCount + ' · 正式档 ' + (f.targets.length - f.lightCount) + '）');
+            if (f.active) lines.push('当前查看：' + f.active);
+            if (f.dateMode || f.fictionDate) lines.push('剧情历：' + (f.dateMode === 'fiction' ? '虚拟历' : '剧情日期') + (f.fictionDate ? ' · ' + f.fictionDate : ''));
+            lines.push('账面：时光机 ' + f.counts.snapshots + ' 条 · 内射流水 ' + f.counts.insems + ' 条 · 受精判定 ' + f.counts.judgments + ' 条');
+            inner.push(this._box('在场事实（只投影，不重算数值——那是 Bodycord 自己的事）', '', '<div class="ud-kv">' + lines.map((x) => this._esc(x)).join('<br>') + '</div>'));
+            const rows = f.targets.map((t) => {
+                const bits = [];
+                bits.push(t.name + (t.isUser ? '（本人）' : '') + (t.light ? ' · 轻档' : ''));
+                if (!t.present) bits.push(' · 不在场');
+                if (t.hasProfile) bits.push(' · 有推演档');
+                if (t.hasPeriod) bits.push(' · 有周期档');
+                if (t.varsCount !== null) bits.push(' · 变量 ' + t.varsCount);
+                if (t.noteLen) bits.push(' · 笔记 ' + t.noteLen + ' 字');
+                return this._esc(bits.join(''));
+            });
+            inner.push(this._box('逐份档案（按对方的 order 原序列）', '', rows.length ? '<div class="ud-kv">' + rows.join('<br>') + '</div>' : this._empty('零档案（空档案也是档案，不是没装）')));
+        }
+        return this._box('外部档案 · Bodycord', '严格纯读：不写 metadata、不代管保险丝、不重算口径', inner.join(''));
+    }
+
     _ledgerPanel() {
         const app = this.app;
         const rows = app.ledgerRows();

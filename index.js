@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.152.0';
+const ST_PHONE_VERSION = '4.153.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -584,17 +584,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-15",
     items: [
-        "【版本升至 4.152.0（五源同源）】第二十一期批次 E 收尾 R21-X5：新增 apps/phone/conversation-thread-binder.js 严格纯读内核，把「先微信聊 20 分钟、再打个电话 5 分钟」这件事从「两本各记各的账」收成一段可读的交流；通话详情页新增一行「本段交流」读数，唯一候选时可点回当时的微信会话。",
-        "【缺陷形态：两本账互不相识】修前实测：wechat-data.js 只记消息（getMessages(chatId)）、phone-data.js 只记通话（addCallRecord 落 caller/date/time/duration/status/transcript），全仓没有任何一处回答「这通电话接着哪段聊天」。后果三件都不报错：通话详情只有独立的一段转写、看不出前面还有若干条微信；玩家想回看「打电话之前说了什么」只能自己翻会话靠记忆对时间；跨天的两件事在界面上同形，而处置相反。",
-        "【与 comm-thread 的分工不许合并】config/comm-thread.js（R6-O2）是写入型台账：把接触点 append 进自己的存储键，回答「这一段聊到哪、断在哪」。本件是严格纯读：不写任何存储、不 append 任何接触点。合并二者会把「读一次就改一次台账」（打开详情页即产生副作用）带进来，与 comm-thread 的「误合比漏合更伤」纪律直接冲突，故两件各自持口径、互不引用，判据 A12 钉住这一条。",
-        "【三态由候选数唯一决定】0 条候选 ⇒ standalone；1 条 ⇒ threaded；2 条以上 ⇒ ambiguous 且**候选全列**，不替用户挑（与 R21-O8 的跨 App 归并同款纪律）。归因四面分列不压平：窗外（out-of-window）/ 跨天（other-day）/ 同窗不同人（other-participant）/ 同人同窗但话题无重叠（no-topic-overlap）—— 四种「没串上」的处置完全不同，压成一态就等于把原因丢了。",
-        "【跨天一律不串，这是本件唯一一处宁可保守】昨晚的微信与今早的电话在界面上同形，但处置相反：前者该并成一段，后者本就该分开。故通话日与消息日（各按剧情钟取本地年月日）不同即不参与候选。合错了用户看到的是假的关系进展，而多出一段用户自己会合。",
-        "【话题面：不可比与不比是两件事】通话侧没有转写文本时话题面**不可比**，如实标 topicComparable=false 并放行 —— 若把它当成「重叠 0」拦下，等于「没转写的电话永远串不上」。两侧都有文本才做 bigram 交集判定；分词口径不新造第二份，直接消费 config/search-facets.js 的 bigramsOf（R14 立的词序无关口径）。",
-        "【单一时钟口径，读不出不猜】通话时刻走 config/comm-time.js 的 stampOfCall（本仓那一格的唯一出口），消息时刻走 config/time-source.js 的 storyTsOf（storyAt 优先、老字段 timestamp 兼容，墙钟不回退）。通话时刻读不出 ⇒ 整体不串并如实归因 call-clock-absent，绝不回落 Date.now() —— 那会把昨天那通串到今天的微信上。内核里连 || Date.now() 这一形态都有判据看守。",
-        "【严格纯读的硬证据】内核零 import 存储层、零写路径；判据 A7 不只做文本扫描，还在真跑六个分支面（含全部四种归因）的同时挂 storage 间谍句柄，断言 get/set/remove 计数恒为 0 且宿主对象序列化前后逐字不变（与 R21-X2 的纯读硬证据同规格）。",
-        "【本版自己抓到两处并当场钉住】① 跨天自检用例写在了时间窗之外（相隔一天必然出 90 分钟窗），于是归因落到 out-of-window —— 是**用例**写错被读成实现错，修正用例并补「窗外」与「窗内跨天」两条分列断言；② 判据 A12 首版用裸词匹配内核源码里的 comm-thread，把注释里那行设计说明读成了「口径合并」—— 与 dead-export 门当年踩的「注释里的提及不算消费」同族，故判据面改为先剥注释与字符串再判定。另外 A5 首版手算 bigram 交集写成 3，按真值改为 1（同一句正控「两侧同文本 ⇒ 全交集」补齐）。",
-        "【交棒改写：把「串成一段」的语义收窄成「可判事实」】计划原文只说要串起来；本版把它落成三态 + 四归因 + 一张显式阈值表（窗口 90 分钟、候选上限 8、话题下限 1），并把「面板点回原处」如实收窄为「唯一候选时才可点、多候选只报数不代挑」—— 跳转失败不抛、不接管微信的导航权。",
-        "【运行时验证边界】本版量的是真实内核导入下的归一、三态、四归因、阈值与纯读契约，以及产品侧接线与样式在场。不能保证的是真机 SillyTavern 里模型写出的通话转写与微信消息在话题上确实重叠 —— 话题面本就是启发式，重叠不足时本件**如实判 standalone**而不硬凑，这是数据源性质决定的，不是本版缺陷；这类形态的共性是**看起来没坏但显示不对**（界面照样渲染出「独立通话」，只是没串上本可串上的一段），这类形态的共性是没有报错但读数偏保守，那一条仍归 docs/runtime-verification-boundary.md。本环境无真机，不做已执行声明。"
+        "【版本升至 4.153.0（五源同源）】R21-X10（计划外缝入）：Bodycord 档案桥。新增 `config/bodycord-bridge.js` 严格纯读内核与 `tests/system-v4154.test.mjs` 9 例；`apps/uterus` 接「外部档案」只读页签（App 探针 + 自检原样转发）。上一版 R21-X5 的提交 `b3ef8c3` 同版收口（通话与消息串联、判据 13 例、全量 check 全绿），本版台账一并覆盖。",
+        "【缝的是什么与怎么缝】上游扩展 soduiz/SillyTavern-Bodycord（生理孕育面板）把状态落在聊天 metadata 的 `bodycord_state` 键。本件只读这份公开数据键，投影给 uterus 当「外部档案」看：五态面分形（no-context / no-metadata / absent / malformed / present），只报在场事实（有谁、轻还是正式、账面大小、剧情历名），不重算任何生理数值——那是对方插件的事，重算必然缝出第二套互相打架的口径。",
+        "【许可纪律】对方是 PolyForm Strict 1.0.0，禁止把代码做进自己的东西发布。故本件一行对方代码都不搬，只消费它的数据键名与字段名（接口事实，不是受保护表达）；判据 B3 钉住「不照抄条款散文、不携带对方源路径、不重算数值口径」三条红线。看它的数据怎么写，现场读它的仓库即可，本仓不携带任何片段。",
+        "【纯读硬证据】与 R21-X5 同规格：真跑五态全路时断言宿主对象序列化前后逐字不变、`Object.freeze` 入参照常可读；chat_metadata 是会抛的 getter 时必须降级归 no-metadata，绝不外抛。内核零写路径（判据剥注释后扫 `saveMetadata` / `saveChat` / `.set(` / `prune`）。",
+        "【本版自己抓到并当场修掉】首版 `readBodycordFace` 只兜了 context 解析，没兜 `ctx.chat_metadata` 的读取——chat_metadata 在真实宿主里可能是会抛的 getter（对方插件环境千奇百怪），判据 A3 用「getter 直接抛」的合成宿主当场抓到，修实现不修判据。另 B3 首版把「提对方许可名」误当违规（名字是事实陈述，条款表达才是受保护面），判据改禁条款原文短语。",
+        "【交棒改写：入口不藏不弹】uterus 页签常驻（absent 也照常显示并明说「没装，不是缺陷」），不在场不静默隐藏、也不制造弹窗噪音——五态各有明话，处置不同：absent 该读成「未安装」，malformed 该读成「形状不对」，present 空 targets 该读成「零档案」，压成一句「没数据」就把原因丢了。",
+        "【运行时验证边界】本版量的是合成宿主下的五态投影、纯读契约、产品侧接线与自检同源。不能保证的是真实酒馆里 Bodycord 各版本 schema 的历史漂移（它自带 schema 字段，形状漂移时本件如实归 malformed 并明说），也不能保证 uterus 真机渲染下的呈现——本环境无真机，那一条仍归 docs/runtime-verification-boundary.md。这类形态的共性是看起来没坏但显示不对（页签在、读数也可能偏保守），本版只能挡住机制面。",
+        "【批次 F 顺延】R21-X3（编号被 v4.151.0 占用的静音叙事桥）、X4 / X6 / X7 / X8 / X9 六项仍零实现，本版未动它们；X3 编号冲突待处置（补实现或改名，二选一）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

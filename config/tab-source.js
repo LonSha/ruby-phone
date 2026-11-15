@@ -114,9 +114,9 @@ export const TABS_BY_APP = Object.freeze({
         note: '诊断案头；兜底总览页'
     }),
     uterus: Object.freeze({
-        tabs: Object.freeze(['board', 'fetuses', 'readings', 'ledger']),
+        tabs: Object.freeze(['board', 'fetuses', 'readings', 'ledger', 'extarch']),
         file: 'apps/uterus/uterus-app.js', shape: 'ifchain',
-        note: '子宫画板；兜底画板页'
+        note: '子宫画板；兜底画板页（v4.153.0 增外部档案只读页签）'
     }),
     /* ---------- shape: view（app 层不夹取；白名单在 view 层 tabs 数组） ---------- */
     memtable: Object.freeze({

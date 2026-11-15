@@ -350,6 +350,7 @@ const KEY_REGISTRY = [
   { key: 'diagdesk_ledger', scope: 'chat', note: '[v3.47.0] 诊断案头动作台账（每一次收档 / 放下 / 存草稿 / 出文本的回执）' },
   { key: 'uterus_subject', scope: 'chat', note: '[v3.48.0] 子宫画板收下的角色状态原文（+ 收下时刻；读不出来与就是空不同形）' },
   { key: 'uterus_ledger', scope: 'chat', note: '[v3.48.0] 子宫画板动作台账（每一次收下 / 放下 / 推帧 / 出文本 / 清台账的回执）' },
+  { key: 'bodycord_state', scope: 'chat', note: '[v4.153.0] 外部档案桥只读的外部扩展状态键（ Bodycord 落在 chat_metadata 的档案；本仓不写、不清理、不重算，对方自己的账自己管）' },
   { key: 'memtable_templates', scope: 'chat', note: '[v3.49.0] 结构化记忆案头模板库（贴回的模板 JSON 归一后整库；超上限只报不截）' },
   { key: 'memtable_data', scope: 'chat', note: '[v3.49.0] 结构化记忆案头数据库（按模板落数据；行表走 __rows；按确认才落）' },
   { key: 'memtable_xml', scope: 'chat', note: '[v3.49.0] 结构化记忆案头更新包原文（贴回的 XML + 收下时刻）' },

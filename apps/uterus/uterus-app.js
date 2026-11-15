@@ -45,6 +45,9 @@ import {
 } from './uterus-data.js';
 import { UterusView } from './uterus-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [v4.153.0 · R21-X10] Bodycord 档案桥（严格纯读）：外部插件的聊天 metadata
+ *   档案只投影、不重算、不代管。探针在 tab 选中时才取（不在场就是不在场）。 */
+import { readBodycordFace, bodycordBridgeSelfCheck, BODYCORD_FACES } from '../../config/bodycord-bridge.js';
 export const UD_SUBJECT_KEY = 'uterus_subject';
 export const UD_LEDGER_KEY = 'uterus_ledger';
 
@@ -357,8 +360,28 @@ Object.assign(UterusApp.prototype, {
     tab() { return this._tab; },
     setTab(k) {
         const s = toStr(k);
-        if (s === 'board' || s === 'fetuses' || s === 'readings' || s === 'ledger') this._tab = s;
+        if (s === 'board' || s === 'fetuses' || s === 'readings' || s === 'ledger' || s === 'extarch') this._tab = s;
         return this._tab;
+    },
+    /* ---------- [v4.153.0 · R21-X10] 外部档案（Bodycord，严格纯读） ---------- */
+    _extarchFace: null,
+    extarchProbe() {
+        this._extarchFace = readBodycordFace();
+        return this._extarchFace;
+    },
+    extarchFace() { return this._extarchFace || readBodycordFace(); },
+    extarchSelfCheck() { return bodycordBridgeSelfCheck(); },
+    extarchFaceText() {
+        const f = this.extarchFace();
+        if (!f) return '';
+        const label = {
+            [BODYCORD_FACES.NO_CONTEXT]: '宿主链上没有语境对象（不在承载宿主里跑）',
+            [BODYCORD_FACES.NO_METADATA]: 'context 在场但没有聊天 metadata（没进任何聊天）',
+            [BODYCORD_FACES.ABSENT]: '这个聊天没装 Bodycord（键不在——不是缺陷，入口照常）',
+            [BODYCORD_FACES.MALFORMED]: 'Bodycord 档案形状不对（targets/order 缺位），如实报、不猜',
+            [BODYCORD_FACES.PRESENT]: '已读出（只投影在场事实，数值归对方插件算）'
+        };
+        return label[f.state] || f.state;
     },
     setInput(v) { this._input = toStr(v); return this._input; },
     inputOf() { return this._input; },
