@@ -21,6 +21,8 @@ import { scanSupersede, reviveSuperseded, SUPERSEDE_STATUS } from '../../config/
  *   修前记忆全靠被动采集（正文丢桶、后续检索捞回来），于是「共同经历」这类
  *   需要主动声明的东西，从来没被声明过 —— 它只是恰好躺在某句话里，检索到了算运气。 */
 import { parseMemoryBlock, memoryBlockLine } from '../../config/memory-block.js';
+/* [v4.151.0 · R21-X3] HUD 块按**语义**剥除（见 apps/memory/hud-bridge-parser.js 头）。 */
+import { stripHudBlocks } from './hud-bridge-parser.js';
 /* [v3.80.0 · 缝入 A2] 三级记忆：world（跨卡共同）/ shared:<角色>（跨卡角色）/ save（本档）。
  *   存储只加**一个**全局键（键面成本：每加一键就要在 keys-audit 回答归属、在
  *   CHAT_DATA_PATTERNS 与机制对齐）；`/^memory_/` 全判会话隔离的口径不变，
@@ -153,6 +155,13 @@ export class MemoryCore {
         this.pendingMemoryBlock = (block && block.present) ? block : null;
 
         let content = String(text || '');
+        /* [v4.151.0 · R21-X3] HUD 块**先按语义剥掉**，再走通用清洗。顺序不可换：
+         *   `cleanFloorForSummary` 的方括号大类规则是**碰巧覆盖** HUD 块 —— HUD 里
+         *   一旦有 JSON 数组（`"guns":[…]`），那条通用 `/\[([A-Z]…)\][\s\S]*?\[\\/\1\]/`
+         *   会被第一个 `]` 咬断，剩下的半截 JSON 反倒当成正文记进记忆。按块语义剥，
+         *   才能保证「进记忆的正文里不含 HUD 数据」 —— 这正是 M1 的折叠面。
+         *   位置在 parseMemoryBlock 之后（记忆块与 HUD 块是两种块，互不从属）。 */
+        try { content = stripHudBlocks(content); } catch (_e) { /* 剥除失败保留原文 */ }
         // [芋圆] 采集前清洗: 剔除 horae 等插件注入的状态块/HTML/成对块/裸K=V行, 避免把系统状态当记忆采进去
         try { content = cleanFloorForSummary(content); } catch (e) { /* 清洗失败保留原文 */ }
         content = content.replace(/\s+/g, ' ').trim();

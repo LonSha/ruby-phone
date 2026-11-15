@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.150.0';
+const ST_PHONE_VERSION = '4.151.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -582,20 +582,20 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-14",
+    date: "2026-11-15",
     items: [
-        "【版本升至 4.150.0（五源同源）】第二十一期 R21-X2 双仓剧情钟对齐校验落地：新增 apps/memory/cross-repo-clock-alignment.js，把 RubyPhone 手机端剧情钟与 LonSha 记忆插件外供的 clock 快照摆在同一坐标上比较，只输出 aligned / skewed / unavailable 三态与偏差分钟数；设置页「手机与记忆中枢」新增一行只读角标，报告差异但不改写任一侧。",
-        "【纯读口径：查看不得改变被查看系统】X2 的头注写着「纯读无副作用」，而两条现成通路都不满足：统一桥探针 readPushProbe 在对象快照缺席时会调拉取型 snapshot、stat 或 refresh，手机端 getCurrentStoryTime 在缓存过期时会重算候选时间并可能读 WorldAxis。本版给两者各加显式只读入口：readPushProbe 支持 publishedOnly 与 bridgeId 选项，TimeManager 新增 peekCurrentStoryTime 只回有效期内的缓存浅拷贝。调用方不传选项时旧行为逐字不变，避免把只读要求强加给九账等既有消费者。",
-        "【缺陷形态：规格给的判据号是可占用的号码】规格原文指名 tests/system-v4151.test.mjs 与 v4.150.0，而仓内 cheat-1108.test.mjs 的注释早已把 system-v4151 当未来号登记过，v4.149.0 的提交也没有真正落下五源。本版施工前先查重、再落盘：判据号沿用 v4151，但版本从真实的 4.148.0 直接抬到 4.150.0，并在迭代记录里写明 4.149.0 从未进入 update-log，避免后续抬版把不存在的版本当上游。",
-        "【精度不足不猜时刻：上游 clock 只有 date 与 label】LonSha 的 GameClock.getSnapshot 主要外供 date、label、precision、turn，精确到分钟的时分并不总在场。初版实现把缺失时间当空串处理，随后又尝试按同一日期解析，等于把「下午」这类时段标签推向失败但不解释、或更糟地按午夜理解。现改为：只有日期加模糊时段时直接返回 unavailable 并带出 unparsable-time-format，文案明说读不到；有精确时分时才按统一 UTC 坐标解析比较，避免把手机本地时区毫秒与插件无时区文本直接相减。",
-        "【同口径不复写第二份：桥形态仍只有一处判据】X2 没有自己判断 snapshot 是对象还是函数，也没有自持桥名字面量，全部经 config/world-bridge.js 的 readPushProbe 与 readPushField 取数；新增选项也在真源内部实现，产品侧只声明 publishedOnly 与 bridgeId。这正是 bridge-contract 门 J2 与 J4 要守的形态，本版改动后该门仍然全绿，说明新选项没有把形态判据散回产品代码。",
-        "【阈值走唯一数值口径，弱类型不塌成零】偏差阈值经 config/num-gate.js 的 numOrNull 归一：空串、null 与 undefined 都读成「没给阈值」而按零处理，而不是被 Number 弱口径读成 0 之后又假装是玩家显式设置；未舍入的偏差参与判定，返回时才做两位数格式化，避免 0.6 分钟被四舍五入成 1 分钟却仍判 aligned 的自相矛盾。",
-        "【判据面九条：真导入内核，不靠源码字符串自证】tests/system-v4151.test.mjs 直接导入真实内核对与 TimeManager，逐条覆盖精确时分解析与无效日期、三态互斥、方向归因、阈值弱类型、label 精度、纯读调用计数、缓存冷热与过期、无宿主与无桥归因。断言读的是返回值而不是源码里有没有某句话，避免把「写了注释」当成「行为对了」。",
-        "【负控制：调用计数与前后快照对账，而不是截图证明只读】B 组用计数守卫验证 publishedOnly 下 refresh 与拉取型 snapshot 一次都不被调用，并对比调用前后宿主的序列化快照；B2 让手机端提供会抛的 getCurrentStoryTime 与会抛的 refresh，如果有一条被触发用例立刻红。这比「声称只读」强，也比浏览器截图更能说明机制层没写回。",
-        "【交棒改写：把「面板显示偏差」改成「面板显示可比或读不到」】计划原文的验收是手动调快记忆侧一小时、面板立刻显示偏差。本版如实收窄为下限形：面板保证的是三态与归因，偏差数字只在两侧都能解析到分钟时才给出；上游只给时段标签时显示读不到，而不是编一个看起来合理的分钟数。放宽到「必须显示数字」会逼实现去猜时段映射，那是把假读数写进产品。",
-        "【运行时验证边界】本版量的是合成宿主下的真函数行为与调用计数、相关静态门全绿、存档对象序列化前后相等。不能保证的是真机 SillyTavern 里跨插件快照的生成时序、真实表盘渲染与玩家肉眼读数。这类形态的共性是**看起来没坏但显示不对**（跨仓两侧都各自有钟、界面也照样渲染，只是两侧不是同一时刻），本版只能挡住机制面，**不能保证**该形态在真机上一出现就被发现；那一条仍归 docs/runtime-verification-boundary.md。本环境无真机，不做已执行声明。",
-        "【本版自己抓到的真缺陷：边界写了，但用户那一侧看不到】全量回归时 system-v328 的 A2/B1/D2 三条当场转红，根因不是判据坏了，而是本版公告的「运行时验证边界」那一条**只写了边界、没带上与边界文档同源的标志语**。那三条判据守的正是这件事：工程侧把边界写进 docs，用户侧却另说一套，于是**用户根本读不到边界**。修法按真源同步（tools/sync_v4151_announce.py 从 tools/iter270_seg.md 的条目重写 update-log 与 index.js 两处消费者），不手改三处 —— 手改迟早会出现「两处对、一处旧」，而判据只守两处逐字相同，不会告诉你「两处一起错」。",
-        "【连带面：一条存量红按「修扫描面、不修本体」处置】全量回归的另一条红在 system-v4106 的 E2：白名单外的 apps/wechat/chat-read-cursor.js 被报「有裸 Date.now()」。实查该文件**零处真调用**，唯一命中是头注里引用 `realTimestamp/Date.now()` 那句**防御说明**（「判定面出现它就是要抓的靶子」）—— 判据按字面 token 扫全文、不剥注释，把「警示牌」当成了「违规行为」。这条红由 v4.149.0 引入（上一版只跑了 19 套定向套件、未跑全量，故未被发现），本版如实登记。本案的处置纪律**不缩窄判据本体**（那会放过 `eval('Date.now()')` 这类再过一道手的真调用），而是修扫描面：把注释与字符串剥掉后再匹配，同时补一条负控制 —— 破坏副本里把 `Date.now()` 从注释搬到真代码，同款判据必须转红。白名单结构判据 E1 不动（白名单仍是「新墙钟必须逐条写理由」的入口）。"
+        "【版本升至 4.151.0（五源同源）】第二十一期 R21-X3 HUD 机制缝入落地：把上游 TavernOS HUD（alewwi，AGPL-3.0）的两条可验证机制缝进本仓——M1 末帧回喂（旧块不进记忆正文、只把最后一楼快照以短码行回喂模型）与 M3 块解析现场态映射；新增 apps/memory/hud-bridge-parser.js、NOTICE-HUD.md 与 tests/system-v4152.test.mjs，死方法账本摘掉 applyScenePresenceState，合规署名见 NOTICE-HUD.md。",
+        "【缺陷形态：建好了、没人喂】修前实测：lonsha-bridge.js 自 v4.125.0 起备好整套现场态接口，而 applyScenePresenceState 全仓只有 tests 在调、零个产品侧提供方，三处消费端长期读兜底——桌面情境流恒显示离线感知、控制中心雷达恒显示无同室目标、同场防窥恒判不在场。引擎在、读数恒假；本版补的是提供方，不动任何既有消费端。",
+        "【数据源是模型每楼附的 HUD 块】上游约定的块内 sc 段是时间、日期、地点、天气、氛围、情绪、转折七字段，cs 段是在场人物表，空字段写 empty 或不写。HUD 块转现场态走 applyScenePresenceState 唯一写入口，形状同构，缝过来即闭环。",
+        "【清洗顺序不可换：按块语义剥，不靠碰巧】实测发现 cleanFloorForSummary 的方括号大类规则碰巧覆盖 HUD 块——块里一旦有 JSON 数组，通用正则会被第一个右方括号咬断，剩下半截 JSON 反倒被当成正文记进记忆。故 record 内先按块语义剥除再走通用清洗，顺序写死并有判据看守。",
+        "【块边界两条重写判据】标签认四种书写含实体形态（消息经宿主渲染后常以实体回到原文）；块内不许再出现开标签——模型在正文里提及块名会被旧正则当成块起点一路吞到真块，结果正文被剥掉半截；裸散文不认，开标签后必须是代码围栏、JSON 或键值行。写了标签没填数据记为空块而不是没有块，诊断读数必须分开。",
+        "【三态如实投影，不许合并】无现场字段返回 null 不编空现场；cs 缺席是未知、cs 在但空是明确没人——两者在下游是真判据：防窥与拦截只认数组，桌面读数对未知不写现场无人。坏块与空块不覆盖既有现场态，不许半截数据改真状态。",
+        "【回喂是短码行不是完整快照】完整快照等于每轮重述世界，既贵又诱导模型照抄旧值；短码行只说在这一格上往前推一步、与正文冲突以正文为准。预算三态 full、compact、none 量纲如实标字符不冒充 token；none 时不写空串——空串会把上一轮槽位清空。",
+        "【两面摄取同一套纯函数】事件面挂在 onMessageReceived 新楼层分支（非回放、非流式中），自愈面挂在生成前注入前扫历史最后一楼——流式、回放、插件重载漏事件时兜底，保证现场态不过期；两面共用 applyScenePresenceState 唯一写入口，不重复写同一楼。",
+        "【如实不落第三条机制】上游的差分计量（重 build 一次 prompt 相减量开销）本仓没有可验证落点：没有统一 prompt builder、宿主 setExtensionPrompt 只写不读、无 tokenizer，字符冒充 token 会把估算写成读数。本版不做也不留占位实现，理由三条登记在模块文末与 NOTICE-HUD.md。",
+        "【交棒改写：把「缝入上游代码」改成「缝入可验证机制」】计划原文是照抄上游 HUD 扩展；如实收窄为机制级移植——上游依赖 settings、i18n、DOM 与自身渲染栈，本仓零依赖纯模块，照抄无法过静态门。判据与事故教训逐条保留，代码逐段重写，这是下限形：宁可少缝一条，不缝一条无法验证的。",
+        "【运行时验证边界】本版量的是真实内核导入下的解析、投影、桥摄取与产品侧接线判据、相关静态门全绿。不能保证的是真机 SillyTavern 里模型确实每楼按上游约定写块、写出来的字段语义正确——模型不写块时现场态仍走既有兜底，这是数据源性质决定的，不是本版缺陷；这类形态的共性是看起来没坏但显示不对（现场态引擎照常在跑、界面也照样渲染，只是读数停在离线兜底），本版只能挡住机制面，不能保证该形态在真机上一出现就被发现；那一条仍归 docs/runtime-verification-boundary.md。本环境无真机，不做已执行声明。",
+        "【本版自己抓到的真缺陷：判据先红、修实现而不是修判据】v4152 首跑三红：空块被块边界判据拒成没有块（lookahead 漏了闭标签分支的前导空白）——修的是实现的正则，不是把判据放宽；投影漏了 mood 字段而回喂行在用它——补字段而不是删断言；死方法账本仍记着已复活的方法——按账本与代码一致性判据摘账。判据红时先问实现错没错，这个顺序本身就是本版要守的纪律。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -2370,6 +2370,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     if (rbCtx?.eventSource && rbCtx?.event_types?.GENERATION_STARTED) {
                         rbCtx.eventSource.on(rbCtx.event_types.GENERATION_STARTED, () => {
                             try { advanceDeviceRuntime(storage); } catch (e) {}
+                            /* [v4.151.0 · R21-X3] HUD 自愈面：注入前先从历史最后一楼扫一次
+                             * HUD 块。事件面（MESSAGE_RECEIVED 路径的 ingestHudFromFloor）
+                             * 在流式/回放/插件重载时可能漏，扫历史兜底保证现场态不过期。
+                             * 两面共用同一套纯函数与 applyScenePresenceState 唯一写入口。 */
+                            try { window.VirtualPhone?.lonshaBridge?.refreshHudFromChat(); } catch (e) {}
                             try { window.VirtualPhone?.lonshaBridge?.applyCoordinatedInjection(); } catch (e) {}
                             /* [v4.138.0 · V21-R10] 检查待向 WorldAxis 反哺的手机因果动作 */
                             try {
@@ -10125,6 +10130,11 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     } catch (e) {}
                     try { window.VirtualPhone?.memoryCore?.invalidateFloorAt?.(index, swipeIndex); } catch (e) {}
                     window.VirtualPhone?.memoryCore?.record?.('ai', text, {}, memMeta);
+                    /* [v4.151.0 · R21-X3] HUD 现场态摄取：AI 楼层最终文本进桥。
+                     * 只在「新楼层」摄取（非回放/非流式中）——回放与漏事件场景交给
+                     * GENERATION_STARTED 前的 refreshHudFromChat 自愈面统一兜底，
+                     * 避免同一楼被事件面和扫历史面重复写一次。 */
+                    try { window.VirtualPhone?.lonshaBridge?.ingestHudFromFloor(text, { floor: index, swipe: swipeIndex }); } catch (e) {}
                 } catch (e) {}
             }
 

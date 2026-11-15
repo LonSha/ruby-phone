@@ -8,6 +8,15 @@ import { SmartWearableBiometricInterop } from '../health/smart-wearable-biometri
 import { DiDiMobilityRideHailingSystem } from '../traveldesk/didi-mobility-ride-hailing-system.js';
 import { CovertAudioVoiceMemoRecorder } from '../audio/covert-audio-voice-memo-recorder.js';
 import { VirtualFilesystemCloudVault } from '../archive/virtual-filesystem-cloud-vault.js';
+/* [v4.151.0 · R21-X3] TavernOS HUD 机制缝入（AGPL-3.0，见被引入模块头署名）。
+ *   本桥是「现场态」的唯一提供方与唯一消费方之间的那段缝：
+ *   上游给块、本桥转成 applyScenePresenceState 的入参形状，再喂给既有三处消费端。 */
+import {
+    parseHudSnapshot,
+    deriveScenePresence,
+    hudSnapshotPromptBlock,
+    latestHudSnapshot
+} from './hud-bridge-parser.js';
 /* ========================================================
  *  LonSha 记忆引擎 ↔ RubyPhone 双向数据桥 (LonShaBridge) v2
  *
@@ -535,6 +544,105 @@ export class LonShaBridge {
     getScenePresenceState() {
         return this._lastSceneState || null;
     }
+    /* ---------------- ②c' [v4.151.0 · R21-X3] HUD 块的提供方 ----------------
+     * 【修前实测的断点】`applyScenePresenceState` 自 v4.125.0 起就在盘上，
+     *   但**全仓没有一个产品侧调用方**：只有 tests/ 在调它。于是三处消费端
+     *   长期读兜底 —— 桌面情境流恒「📍当前现场 · 离线感知」、控制中心雷达恒
+     *   「无同室目标」、同场防窥恒判「不在场」。引擎在、读数恒假，这正是本仓
+     *   点名过的「建好了没人喂」形态。
+     * 【本版补的是提供方，不是新机制】数据来源是模型每楼附的 HUD 块（上游
+     *   TavernOS HUD 的形状），解析与映射全在 hud-bridge-parser.js（纯函数）。
+     */
+
+    /**
+     * 楼层级入口：从一条 AI 楼层的原文里取 HUD 块，转成现场态并应用。
+     * 由 index.js 的 onMessageReceived 在「新楼层 / 非历史回放」分支调用。
+     *
+     * 四态如实落进 `_lastHudRead`（诊断面读它，不重算第二份）：
+     *   · no-block    这一楼没写 HUD（多数情况，不是失败）—— **不动**既有现场态；
+     *   · empty       块空 —— 记读数，不覆盖现场态（空块不是「现场清空」）；
+     *   · malformed   块坏 —— 记读数与原文片段，不覆盖（不许半截数据改真状态）；
+     *   · ok          解析成功 → `applyScenePresenceState`（唯一写入口，含 stale 判定）。
+     *
+     * @param {string} text 楼层原文
+     * @param {{floor?:number|null, swipe?:number|null}} [meta]
+     * @returns {{state:string, applied:boolean, reason?:string, snapshotUpdatedAt?:number|null}}
+     */
+    ingestHudFromFloor(text, meta = {}) {
+        const res = parseHudSnapshot(text);
+        const read = {
+            at: Date.now(),
+            floor: (meta && meta.floor !== undefined && meta.floor !== null) ? meta.floor : null,
+            swipe: (meta && meta.swipe !== undefined && meta.swipe !== null) ? meta.swipe : null,
+            state: res.state,
+            format: res.format || '',
+            reason: res.reason || '',
+            applied: false
+        };
+        this._lastHudRead = read;
+        if (res.state !== 'ok') return read;
+        const presence = deriveScenePresence(res.snapshot);
+        if (!presence) {
+            /* 块解析成功但**这一楼没有任何现场字段**：这与「现场没人」不是一回事，
+             * 故不调用 applyScenePresenceState（那会把旧现场覆盖成空）。 */
+            read.state = 'ok-no-scene';
+            return read;
+        }
+        const applied = this.applyScenePresenceState(presence);
+        read.applied = !!applied;
+        read.snapshotUpdatedAt = this._lastSceneState ? this._lastSceneState.updatedAt : null;
+        if (applied) this._lastHudSnapshot = res.snapshot;
+        return read;
+    }
+
+    /** 诊断面读数：最近一次 HUD 摄取的结果（不重算、不落盘）。 */
+    getHudRead() {
+        return this._lastHudRead ? { ...this._lastHudRead } : { state: 'no-read', at: null };
+    }
+
+    /**
+     * 从宿主聊天历史里现取**最后一楼**的 HUD 快照并应用。
+     *
+     * 为什么另有一个「扫历史」的入口：`ingestHudFromFloor` 依赖事件真的到达
+     * （流式、回放、插件重载都会漏）；本条是**自愈面**——生成前调它一次，
+     * 只要历史里有块，现场态就不会因为漏了一个事件而永远是空的。
+     * 两者不重复写入同一楼：本方法只取 latestHudSnapshot 的结果，底层是同一套纯函数。
+     *
+     * @param {Array} chat 宿主 context.chat（不传则自己取）
+     * @returns {{state:string, floor:number|null, applied:boolean}}
+     */
+    refreshHudFromChat(chat) {
+        let rows = chat;
+        if (!Array.isArray(rows)) {
+            try { rows = window.SillyTavern?.getContext?.()?.chat; } catch (_e) { rows = undefined; }
+        }
+        const found = latestHudSnapshot(rows);
+        const read = { state: found.state, floor: found.floor, applied: false };
+        this._lastHudRead = { at: Date.now(), floor: found.floor, swipe: null, state: found.state, format: found.format || '', reason: found.reason || '', applied: false };
+        if (found.state !== 'ok') return read;
+        const presence = deriveScenePresence(found.snapshot);
+        if (!presence) { this._lastHudRead.state = 'ok-no-scene'; read.state = 'ok-no-scene'; return read; }
+        const applied = this.applyScenePresenceState(presence);
+        read.applied = !!applied;
+        this._lastHudRead.applied = !!applied;
+        if (applied) this._lastHudSnapshot = found.snapshot;
+        return read;
+    }
+
+    /**
+     * M1 回喂：把上一楼 HUD 快照拼成一段**短码行**交给模型。
+     * 由 `applyCoordinatedInjection` 在挂注入时追加（与记忆块同一条 system 位，
+     * 不另开槽位 —— 另开槽位会与宿主里别的扩展抢 Depth）。
+     *
+     * @param {{budgetChars?:number}} [options]
+     * @returns {{text:string, mode:'full'|'compact'|'none', costChars:number}}
+     */
+    buildHudSnapshotBlock(options = {}) {
+        const snapshot = this._lastHudSnapshot || null;
+        if (!snapshot) return { text: '', mode: 'none', costChars: 0 };
+        const block = hudSnapshotPromptBlock(snapshot, options);
+        return { text: block.text, mode: block.mode, costChars: block.costChars };
+    }
     /**
      * [v4.137.0 · V20-R1] 全息双向共生总线：手机端向 LonSha 发射事件
      * @param {string} type 事件类型 (如 'IM_MESSAGE', 'BILL_TRANSFER', 'NOTE_MEMO', 'APP_STATE_MUTATION')
@@ -774,6 +882,17 @@ export class LonShaBridge {
                     directive = directive ? `${directive}\n${feedbackDir}` : feedbackDir;
                 }
             }
+            /* [v4.151.0 · R21-X3] M1 末帧回喂：上一楼的 HUD 快照以**短码行**追加在同一段
+             *   system 位里，不另开槽位。另开槽位（第二个 setExtensionPrompt key）会与宿主里
+             *   其它扩展抢 Depth 排序，且本仓没有读回接口，出问题时无法自证谁盖了谁。
+             *   预算三态（full/compact/none）由 hudSnapshotPromptBlock 决定；none 时**不写空串**
+             *   ——空串写进去会把上一轮的槽位清空（那是另一处真缺陷的形态）。 */
+            try {
+                const hudBlock = this.buildHudSnapshotBlock();
+                if (hudBlock.text) {
+                    directive = directive ? `${directive}\n${hudBlock.text}` : hudBlock.text;
+                }
+            } catch (_e) { /* HUD 块失败不阻断记忆注入 */ }
             if (!directive) {
                 try { ctx.setExtensionPrompt('rubyphone_memory_coord', '', 1, 0); } catch (e) {}
                 return false;
