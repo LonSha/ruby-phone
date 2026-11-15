@@ -30,6 +30,13 @@ import { SYS_KEYS } from '../../config/system-controls.js';
 import { pushWalkFrame, initialWalkState, laneProgress } from '../../config/binaural-walk.js';
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件空态集中在通话 / 短信两条线。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
+/* [v4.152.0 · R21-X5] 通话与消息的「同一段对话」串联（严格纯读，不落账）。
+ *   通话时间解析走 comm-time 的唯一出口（读不出就是 null，绝不补现在）；
+ *   串联判定全在内核，本文件只做**取数 + 投影**。 */
+import { bindConversationThread, conversationLine, conversationBinderSelfCheck } from './conversation-thread-binder.js';
+import { stampOfCall } from '../../config/comm-time.js';
+/* 消息侧剧情时刻走全仓唯一出口（`storyAt` 优先 / 老字段 `timestamp` 兼容；墙钟不回退）。 */
+import { storyTsOf } from '../../config/time-source.js';
 
 export class PhoneCallView {
     constructor(app) {
@@ -1894,6 +1901,16 @@ export class PhoneCallView {
         const durationText = record.duration > 0
             ? `${Math.floor(record.duration / 60)}分${record.duration % 60}秒`
             : '未知';
+        /* [v4.152.0 · R21-X5] 「本段交流」读数：三态各有各的形态（不压平）。
+         *   纯读 —— 只取数与判态，一个字都不写回存储。 */
+        const threadLine = (() => {
+            try { return this._callThreadLineOf(record); }
+            catch (_e) { return { bound: null, line: '' }; }
+        })();
+        const threadBound = threadLine.bound;
+        const threadRowHtml = threadLine.line
+            ? `<div class="phone-call-thread-row${threadBound?.state === 'threaded' ? ' phone-call-thread-row-clickable' : ''}"${threadBound?.state === 'threaded' ? ' id="phone-call-thread-jump" role="button" tabindex="0"' : ''}>${this._escapeHtml(threadLine.line)}</div>`
+            : '';
 
         // 构建消息列表
         let messagesHtml = '';
@@ -1925,6 +1942,7 @@ export class PhoneCallView {
                     <div class="phone-call-transcript-title">${this._escapeHtml(record.caller || '未知')}</div>
                     <div class="phone-call-transcript-duration">${durationText}</div>
                 </div>
+                ${threadRowHtml}
                 <div class="phone-call-messages" id="phone-call-transcript-messages">
                     <div style="text-align: center; color: rgba(0,0,0,0.3); font-size: 10px; padding: 3px 0;">
                         通话已接通
@@ -1941,15 +1959,31 @@ export class PhoneCallView {
                 </div>
             </div>
         `;
-
         this.app.phoneShell.setContent(html, 'phone-transcript');
-
         // 绑定返回按钮
         document.getElementById('phone-call-transcript-back')?.addEventListener('click', () => {
             this.renderMain();
         });
-
+        /* [v4.152.0 · R21-X5] 「本段交流」行：点它回当时的微信会话（只在真串成一段时可点）。
+         *   纪律：三态各有各的读法 —— threaded 可点回源，ambiguous 只报候选数**不替用户挑**，
+         *   standalone 如实说独立（不给一个点进去是空气的按钮）。 */
+        document.getElementById('phone-call-thread-jump')?.addEventListener('click', () => {
+            this._jumpToThreadChat(threadBound);
+        });
         this._bindCallTtsBubbleClickEvents(document.getElementById('phone-call-transcript-messages'));
+    }
+    /** 从「本段交流」行跳回当时的微信会话（候选唯一时；多候选时只提示，不代挑）。 */
+    _jumpToThreadChat(bound) {
+        const target = bound && bound.candidate ? String(bound.candidate.chatId || '') : '';
+        if (!target) {
+            this.app.phoneShell.showNotification('本段交流', '有多个候选会话，请自己挑一段（本件不替用户选）', '💬');
+            return;
+        }
+        try {
+            window.VirtualPhone?.openApp?.('wechat');
+            const chatId = target;
+            window.VirtualPhone?.wechatApp?.openChatById?.(chatId);
+        } catch (_e) { /* 跳转失败不抛：本件不接管微信的导航权 */ }
     }
 
     // ========================================
@@ -3777,6 +3811,78 @@ export class PhoneCallView {
     _getPhoneWechatData() {
         return window.VirtualPhone?.wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData || null;
     }
+    /* ============================================================
+     * [v4.152.0 · R21-X5] 「同一段对话」串联的**取数面**（判定全在内核）
+     * ------------------------------------------------------------
+     * 纪律三条，每条都有对应的判据：
+     *   ① 通话时刻走 `stampOfCall`（comm-time 唯一出口）—— 读不出**如实交 null**，
+     *      内核据此落 `call-clock-absent`，绝不回落成 Date.now()（那会把「昨天那通」
+     *      串到今天的微信上）；
+     *   ② 消息一侧只取**该联系人会话内**的最近若干条，剧情时刻取 `storyTsOf` 同源口径
+     *      （`storyAt` 优先、老字段 `timestamp` 兼容），墙钟 `realTimestamp` **不参与**；
+     *   ③ 本方法只读，不写任何存储、不改 message 对象（负控制会在只读面数调用次数）。
+     * ============================================================ */
+    _collectCallThreadPoints(record, wechatData) {
+        const who = String(record?.caller || '').trim();
+        if (!wechatData || !who) return { call: null, messages: [] };
+        let chat = null;
+        try {
+            const contact = this._resolveWechatContact(who);
+            chat = (contact?.id && typeof wechatData.getChatByContactId === 'function'
+                ? wechatData.getChatByContactId(contact.id)
+                : null) || null;
+            if (!chat) {
+                const list = typeof wechatData.getChatList === 'function' ? (wechatData.getChatList() || []) : [];
+                const keyName = this._normalizeWechatLookupName(who);
+                chat = list.find(item => item?.type !== 'group'
+                    && [item?.name, item?.remark, item?.nickname]
+                        .some(value => this._normalizeWechatLookupName(value) === keyName)) || null;
+            }
+        } catch (_e) { chat = null; }
+        /* 通话侧文本 = transcript 文本（无 transcript ⇒ 空串 ⇒ 话题面不可比，内核如实标出）。 */
+        const transcript = Array.isArray(record?.transcript) ? record.transcript : [];
+        const callText = transcript.map(m => String(m?.text || '').trim()).filter(Boolean).join(' ');
+        const call = {
+            id: String(record?.id || ''),
+            participant: who,
+            storyAt: stampOfCall(record, null),
+            durationSec: Number(record?.duration) || 0,
+            status: String(record?.status || ''),
+            text: callText
+        };
+        if (!chat || typeof wechatData.getMessages !== 'function') return { call: call, messages: [] };
+        let raw = [];
+        try { raw = wechatData.getMessages(chat.id) || []; } catch (_e) { raw = []; }
+        const messages = [];
+        /* 只回看**该通话时刻之前**（含窗内之后一点）的最近 200 条 —— 串联语义是「这通电话
+         *   接着前面的聊天」，未来的消息不参与（否则 roll 出的后续消息会把段拉到未来）。 */
+        const from = raw.length > 200 ? raw.length - 200 : 0;
+        for (let i = from; i < raw.length; i += 1) {
+            const m = raw[i];
+            if (!m || typeof m !== 'object') continue;
+            if (m.hiddenFromPrompt === true || m.isTimeMarker === true || m.type === 'time_marker') continue;
+            const storyAt = storyTsOf({ storyAt: m.storyAt, timestamp: m.timestamp });
+            if (storyAt === null) continue;
+            messages.push({
+                id: String(m.id || ''),
+                chatId: String(chat.id || ''),
+                participant: String(chat.name || who),
+                storyAt: storyAt,
+                text: String(m.content ?? m.text ?? '').trim()
+            });
+        }
+        return { call: call, messages: messages };
+    }
+    /** 投影：给通话详情页用的「本段交流」一行（读不出 / 串不上都如实说，不猜）。 */
+    _callThreadLineOf(record) {
+        const wechatData = this._getPhoneWechatData();
+        const points = this._collectCallThreadPoints(record, wechatData);
+        const bound = bindConversationThread(points.call, points.messages);
+        return { bound: bound, line: conversationLine(bound) };
+    }
+
+    /* [v4.152.0 · R21-X5] 自检（内核原样转发，本层不重判——与 comms-app 的 selfCheck 同款）。 */
+    conversationThreadSelfCheck() { return conversationBinderSelfCheck(); }
 
     _ensurePhoneWechatDataLoaded({ rerenderContacts = false } = {}) {
         if (this._getPhoneWechatData()) return Promise.resolve(this._getPhoneWechatData());

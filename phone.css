@@ -8090,6 +8090,23 @@ input:checked + .toggle-slider:before {
     color: var(--phone-secondary-text, #999);
     line-height: 1.6;
 }
+/* [v4.152.0 · R21-X5] 「本段交流」行：三态各有各的形态（threaded 可点回源）。 */
+.phone-call-thread-row {
+    margin: 0 12px 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--phone-card-bg, rgba(255, 255, 255, 0.72));
+    border: 1px solid var(--phone-border-color, rgba(0, 0, 0, 0.06));
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--phone-secondary-text, #6b7280);
+    flex-shrink: 0;
+}
+.phone-call-thread-row-clickable {
+    cursor: pointer;
+    color: var(--phone-accent-color, #2f6fed);
+    border-color: var(--phone-accent-color, rgba(47, 111, 237, 0.35));
+}
 
 /* 通话记录查看页的气泡样式覆盖（浅色背景适配） */
 .phone-call-transcript .phone-call-message-ai {
