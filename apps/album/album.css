@@ -1200,3 +1200,76 @@
 }
 /* [v4.99.9 · R11-X9] 归档条：回看台账的唯一写入口。*/.album-archive-bar .album-replay-note { margin-top: 6px; }
 .album-archive-bar .album-vault-actions { margin-top: 8px; }
+
+/* ══════════ [v4.154.0 · R21-X4] 照片时间面：格面角标 + 剧情日子分组 + 预览时间行 ══════════ */
+
+/* 来源组内部的日子分节容器（沿用 album-grid 的排布，只是多包一层）。 */
+#phone-panel-content .phone-screen .album-source-section-body { display: block; }
+
+/* 日子分组头：日期组与「📷 时间不详」组不同形 —— 后者虚线边 + 弱化色，
+ *   让「这一组是没有日期的」在视觉上与「这一组是某一天」读起来不一样。 */
+#phone-panel-content .phone-screen .album-story-day-section { margin-top: 10px; }
+#phone-panel-content .phone-screen .album-story-day-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0 2px 5px;
+}
+#phone-panel-content .phone-screen .album-story-day-heading strong {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3c4043;
+    letter-spacing: 0.02em;
+}
+#phone-panel-content .phone-screen .album-story-day-heading small {
+    font-size: 10px;
+    color: #9aa0a6;
+}
+#phone-panel-content .phone-screen .album-story-day-section.is-undated .album-story-day-heading strong {
+    color: #8a6d3b;
+    padding: 1px 7px;
+    border: 1px dashed #d9c9a3;
+    border-radius: 999px;
+    background: #fdf8ee;
+}
+
+/* 格面时间角标：压在缩略图左下角；时间不详的一枚用同款胶囊 + 暖色系。 */
+#phone-panel-content .phone-screen .album-tile { position: relative; }
+#phone-panel-content .phone-screen .album-tile-time {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    z-index: 2;
+    max-width: calc(100% - 8px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(20, 22, 26, 0.62);
+    color: #fff;
+    font-size: 9px;
+    line-height: 1.5;
+    pointer-events: none;
+}
+#phone-panel-content .phone-screen .album-tile-time.is-undated {
+    background: rgba(138, 109, 59, 0.86);
+}
+
+/* 预览页时间行：在文件名 / 路径之下，样式与 path 行同族但弱一档。 */
+#phone-panel-content .phone-screen .album-preview-time {
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 1.55;
+    color: #6b7280;
+    word-break: break-word;
+}
+
+/* 分组区汇总行：如实点名「多少项带拍摄时刻 / 多少项时间不详」，弱化灰字。 */
+#phone-panel-content .phone-screen .album-story-day-note {
+    padding: 1px 2px 2px;
+    font-size: 9px;
+    line-height: 1.5;
+    color: #9298a0;
+    word-break: break-word;
+}

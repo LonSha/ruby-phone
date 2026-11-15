@@ -352,7 +352,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.153.0';
+const ST_PHONE_VERSION = '4.154.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -584,14 +584,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-15",
     items: [
-        "【版本升至 4.153.0（五源同源）】R21-X10（计划外缝入）：Bodycord 档案桥。新增 `config/bodycord-bridge.js` 严格纯读内核与 `tests/system-v4154.test.mjs` 9 例；`apps/uterus` 接「外部档案」只读页签（App 探针 + 自检原样转发）。上一版 R21-X5 的提交 `b3ef8c3` 同版收口（通话与消息串联、判据 13 例、全量 check 全绿），本版台账一并覆盖。",
-        "【缝的是什么与怎么缝】上游扩展 soduiz/SillyTavern-Bodycord（生理孕育面板）把状态落在聊天 metadata 的 `bodycord_state` 键。本件只读这份公开数据键，投影给 uterus 当「外部档案」看：五态面分形（no-context / no-metadata / absent / malformed / present），只报在场事实（有谁、轻还是正式、账面大小、剧情历名），不重算任何生理数值——那是对方插件的事，重算必然缝出第二套互相打架的口径。",
-        "【许可纪律】对方是 PolyForm Strict 1.0.0，禁止把代码做进自己的东西发布。故本件一行对方代码都不搬，只消费它的数据键名与字段名（接口事实，不是受保护表达）；判据 B3 钉住「不照抄条款散文、不携带对方源路径、不重算数值口径」三条红线。看它的数据怎么写，现场读它的仓库即可，本仓不携带任何片段。",
-        "【纯读硬证据】与 R21-X5 同规格：真跑五态全路时断言宿主对象序列化前后逐字不变、`Object.freeze` 入参照常可读；chat_metadata 是会抛的 getter 时必须降级归 no-metadata，绝不外抛。内核零写路径（判据剥注释后扫 `saveMetadata` / `saveChat` / `.set(` / `prune`）。",
-        "【本版自己抓到并当场修掉】首版 `readBodycordFace` 只兜了 context 解析，没兜 `ctx.chat_metadata` 的读取——chat_metadata 在真实宿主里可能是会抛的 getter（对方插件环境千奇百怪），判据 A3 用「getter 直接抛」的合成宿主当场抓到，修实现不修判据。另 B3 首版把「提对方许可名」误当违规（名字是事实陈述，条款表达才是受保护面），判据改禁条款原文短语。",
-        "【交棒改写：入口不藏不弹】uterus 页签常驻（absent 也照常显示并明说「没装，不是缺陷」），不在场不静默隐藏、也不制造弹窗噪音——五态各有明话，处置不同：absent 该读成「未安装」，malformed 该读成「形状不对」，present 空 targets 该读成「零档案」，压成一句「没数据」就把原因丢了。",
-        "【运行时验证边界】本版量的是合成宿主下的五态投影、纯读契约、产品侧接线与自检同源。不能保证的是真实酒馆里 Bodycord 各版本 schema 的历史漂移（它自带 schema 字段，形状漂移时本件如实归 malformed 并明说），也不能保证 uterus 真机渲染下的呈现——本环境无真机，那一条仍归 docs/runtime-verification-boundary.md。这类形态的共性是看起来没坏但显示不对（页签在、读数也可能偏保守），本版只能挡住机制面。",
-        "【批次 F 顺延】R21-X3（编号被 v4.151.0 占用的静音叙事桥）、X4 / X6 / X7 / X8 / X9 六项仍零实现，本版未动它们；X3 编号冲突待处置（补实现或改名，二选一）。"
+        "【版本升至 4.154.0（五源同源）】R21-X4 照片 EXIF 与剧情时间校准收口：新增 `config/photo-time-align.js`（只读校准仪，与注入剧情钟比较，五态判定闭集）与 `config/album-story-face.js`（相册时间面唯一桥）；`apps/album` 数据/视图接「剧情日期分组 + 『📷 时间不详』独立组 + 格面时间角标 + 预览时间行」；新增 `tests/system-v4155.test.mjs`。",
+        "【验收旅程怎么闭合】计划原文：「导入 10 张无 EXIF 照片 → 10 张全进『时间不详』，没有一张被塞进『今天』」。判定只认剧情轨 `storyAt`（与 R13-O4 的 `storyTsOf` 同口径）：写点读不到剧情钟时索引里本来就是空串 ⇒ 相册读成 null ⇒ 进『📷 时间不详』组；**绝不回退 `createdAt`（墙钟）**、绝不拿 `Date.now()` 猜。无 EXIF 的照片照常显示、单独成组，不隐藏不丢弃。",
+        "【为什么判定收在桥里】「谁算时间不详」「按剧情日怎么切组」若散在视图里各写一遍，最便宜的写法就是 `|| createdAt`——那正是验收要拦的形态。故 `album-story-face.js` 是唯一判定面，`AlbumData` 透传、`AlbumView` 只排版；文案只走 `photoTimeLabel` 单一出口，不发明第二套判定词。",
+        "【与 EXIF 的关系如实说】相册索引里没有真正的 EXIF 块；索引里的 `storyAt` 就是这条影像自带的拍摄时刻，且本来就在剧情钟坐标上。桥把形状直译成 `exif.timestamp` 喂进同一台校准仪（`alignOne`/`alignAlbum`），得到同一套五态判定；两枚读数同钟 ⇒ `DRIFTED` 结构上不会出现——这是「同一只钟量两次」的必然读数，不是缺陷。真正的 EXIF 文件解析（从图片二进制读 DateTimeOriginal）本版不做也不留占位：没有可验证的解析落点，宁缺毋滥。",
+        "【组头不冒充「今天」】日期组 label 只写剧情历日期 `YYYY-MM-DD`——组头只能断言「照片落在剧情历的这一天」，当前剧情钟读数与它未必同日，写「（今天）」就是冒充。时间不详组的键 `undated` 与任何真实日期键不同形。",
+        "【本版自己抓到并当场修掉】首版日子分组 label 写成 `${key}（今天）`，把「照片在剧情历的某天」演成「就是今天」——修实现不修验收；首版把 `albumPhotoTimeRow` 单独导出，产品侧零消费会被 dead-export 门禁拦（且聚合逻辑会形成第二套实现）——收成内部函数，聚合一律走 `alignAlbum` 唯一实现。",
+        "【交棒改写：把「时间不详」从视图散写收成桥唯一判定】计划原文只说「相册按剧情日期分组、时间不详单独一组且可见」；本版如实收窄为三条可验证判据——判定只认剧情轨 `storyAt`、绝不回退 `createdAt`、真 EXIF 二进制解析没有可验证落点就不留占位。旧判据（R13-O4 的 `storyTsOf` 只认剧情轨）原样沿用不重写；「谁算时间不详」收在 `album-story-face.js` 一处，视图只排版、判定没有第二份。",
+        "【运行时验证边界】本版量的是真实内核导入下的判定闭集、分组形状、「createdAt 不救场」硬证据、纯读契约（冻结入参序列化逐字不变）与产品侧接线判据。不能保证的是真机酒馆里历史照片（4.106.0 之前写入的索引）没有 `storyAt` 字段——它们会全部如实进「时间不详」组，这是数据源性质决定的，不是本版缺陷；本环境无真机，不做已执行声明。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

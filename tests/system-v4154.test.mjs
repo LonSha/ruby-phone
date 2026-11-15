@@ -127,16 +127,21 @@ test('v4154 C1. 内核自检与判据同源（正控必真）', () => {
     assert.equal(self.ok, true, '内核自检必须全绿：' + JSON.stringify(self.problems));
 });
 
-test('v4154 C2. 版本锚：五源同源且不低于 4.153.0（下限形）', () => {
+test('v4154 C2. 版本锚：五源同源且不低于 4.153.0（下限形，不把本版号写死进判据）', () => {
     const pkg = JSON.parse(read('package.json'));
     const man = JSON.parse(read('manifest.json'));
     const log = JSON.parse(read('update-log.json'));
     const idx = read('index.js');
     const il = read('ITERATION_LOG.md');
-    const ver = '4.153.0';
-    assert.equal(pkg.version, ver);
-    assert.equal(man.version, ver);
-    assert.equal(log.latest, ver);
+    const ver = pkg.version;
+    const cmp = (a, b) => {
+        const A = a.split('.').map(Number), B = b.split('.').map(Number);
+        for (let i = 0; i < 3; i++) { if (A[i] !== B[i]) return A[i] - B[i]; }
+        return 0;
+    };
+    assert.ok(cmp(ver, '4.153.0') >= 0, '版本低于本版下限：' + ver);
+    assert.equal(man.version, ver, 'manifest 与 package 同源');
+    assert.equal(log.latest, ver, 'update-log.latest 同源');
     assert.ok(log.versions[ver], '当版条目在场');
     assert.ok(idx.includes("const ST_PHONE_VERSION = '" + ver + "';"), 'index.js 版本常量同源');
     assert.ok(il.includes('版本升至 ' + ver), '迭代段收口条目在场');

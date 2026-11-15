@@ -8,8 +8,9 @@
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 
-import { AlbumData } from './album-data.js?v=1.4.2&r=20260726-album-media';
-import { ALBUM_CSS_URL, AlbumView } from './album-view.js?v=1.4.2&r=20260802-album-toolbar';
+/* [v4.154.0 · R21-X4] album-data / album-view 接入照片时间面，抬版本参数防浏览器缓存。 */
+import { AlbumData } from './album-data.js?v=1.4.3&r=20261115-album-story-day';
+import { ALBUM_CSS_URL, AlbumView } from './album-view.js?v=1.4.3&r=20261115-album-story-day';
 // [v4.102.0 · R13-O3] 声音叙事页：voice-narrative 的第一个产品端界面（相册音频面）。
 import { AlbumVoiceView } from './album-voice-view.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';   // [v2.26.0] 事件名单一真源
@@ -26,6 +27,14 @@ export class AlbumApp {
         this.albumData = new AlbumData(storage);
         this.albumView = new AlbumView(this);
         this.voiceView = new AlbumVoiceView(this);
+
+        /* [v4.154.0 · R21-X4] 装配点消费内核自检：桥（album-story-face）与校准仪
+         *   （photo-time-align）的判定闭集在装配时验一次，形状漂移当场在控制台
+         *   留痕，而不是等用户翻相册才发现「时间不详」组整组消失。 */
+        const photoTimeCheck = this.albumData.photoTimeSelfCheck();
+        if (!photoTimeCheck?.ok) {
+            console.warn('[RubyPhone] R21-X4 照片时间面自检未过：', photoTimeCheck);
+        }
 
         // [v2.25.0] 监听器改由实例字段持有：albumApp 在清数据时被置 null 重建，
         //   构造期直接 add 匿名函数会使每次重建净增 5 个全局监听器（泄漏）。

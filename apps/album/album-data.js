@@ -38,6 +38,18 @@ import { recordLifeProgram } from '../../config/life-program-replay.js';
 /* [v4.106.0 · R13-O4] 相册的**读数口径**收口到唯一实现：`storyTsOf` 只认剧情轨
  *   （`storyAt` → 老字段 `timestamp`），**绝不回退 `createdAt`**（那是墙钟）。 */
 import { storyTsOf } from '../../config/time-source.js';
+/* [v4.154.0 · R21-X4] 照片时间面（EXIF/剧情轨 →「时间不详」）的唯一桥。
+ *   判定与文案不在这里重写：谁算「时间不详」、按剧情日怎么切组、
+ *   「📷 时间不详」一组的键与 label，全部只问 `album-story-face.js`。 */
+import {
+    groupAlbumImagesByStoryDay,
+    albumPhotoTimeSummary,
+    isUndatedPhoto,
+    storyStampOfAlbumPhoto,
+    albumStoryGroupSelfCheck
+} from '../../config/album-story-face.js';
+import { storyNow } from '../../config/time-source.js';
+import { alignOne, photoTimeLabel, photoTimeSelfCheck as photoTimeCoreSelfCheck } from '../../config/photo-time-align.js';
 
 export class AlbumData {
     constructor(storage) {
@@ -122,6 +134,47 @@ export class AlbumData {
 
     getImages() {
         return this.getMedia().filter(item => item.mediaType !== 'video');
+    }
+
+    /* ══════════ [v4.154.0 · R21-X4] 照片时间面出口（只读，判定全在桥里） ══════════
+     * 【为什么是透传而不是重算】「谁算时间不详」「按剧情日怎么切组」若在这里重写一遍，
+     *   就有了第二套口径；本层只把 `getMedia()` 的读数原样交给 `album-story-face.js`，
+     *   视图消费本层出口，桥的判据改动自动到达 UI。
+     * 【为什么 `win` 由调用方注入】数据层不该自己摸 `window`——测试与合成宿主
+     *   都从这一格传入，与 `storyNow(win)` 的既有纪律同形。 */
+
+    /** 按剧情日期切组的影像分组（「📷 时间不详」单独一组且可见）。 */
+    groupImagesByStoryDay(images) {
+        return groupAlbumImagesByStoryDay(images);
+    }
+
+    /** 整册时间面汇总（dated / undated 计数与逐行校准读数，纯读）。 */
+    photoTimeSummary(images, win) {
+        return albumPhotoTimeSummary(images, win);
+    }
+
+    /** 结构自检（装配点消费）：核心五态闭集自检 + 相册桥自检，两者都过才算过。 */
+    photoTimeSelfCheck() {
+        const core = photoTimeCoreSelfCheck();
+        const bridge = albumStoryGroupSelfCheck();
+        return { ok: core?.ok === true && bridge?.ok === true, core, bridge };
+    }
+
+    /** 单张照片的时间读数（`{ms, dateKey}`；`ms === null` 即时间不详）。 */
+    storyStampOfImage(image) {
+        return storyStampOfAlbumPhoto(image);
+    }
+
+    /** 单张照片是否「时间不详」（判定只此一处，视图不重写）。 */
+    isImageUndated(image) {
+        return isUndatedPhoto(image);
+    }
+
+    /** 单张照片的时间文案（`photo-time-align` 的单文案出口，视图不自己拼判定词）。 */
+    photoTimeLabelOf(image, win) {
+        const stamp = storyStampOfAlbumPhoto(image);
+        const photo = stamp.ms === null ? {} : { exif: { timestamp: stamp.ms } };
+        return photoTimeLabel(alignOne(photo, storyNow(win, { readOnly: true })));
     }
 
     /* ══════════ [v4.99.9 · R11-X9] 回看面取数（只读已落盘记录，不生成内容） ══════════

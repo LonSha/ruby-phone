@@ -18,7 +18,8 @@ import { faceOf, faceHtml, FACE_ATTR } from '../../config/empty-face.js';
  *   转出（与记忆侧 `MemoryApp.replayViewerOptions()` 同一条纪律）。
  *   本视图只排桥已经定好的 label / line / view。 */
 
-export const ALBUM_CSS_URL = new URL('./album.css?v=1.3.0&r=20261030-album-replay', import.meta.url).href;
+/* [v4.154.0 · R21-X4] 相册 CSS 版本参数随时间角标 / 剧情日子分组一起抬（防浏览器缓存）。 */
+export const ALBUM_CSS_URL = new URL('./album.css?v=1.4.0&r=20261115-album-story-day', import.meta.url).href;
 
 export class AlbumView {
     constructor(app) {
@@ -207,8 +208,8 @@ export class AlbumView {
                                 </span>
                                 ${canFocus ? '<i class="fa-solid fa-chevron-right album-source-heading-arrow" aria-hidden="true"></i>' : ''}
                             </button>
-                            <div class="album-grid">
-                                ${shownImages.map(image => this.renderTile(image)).join('')}
+                            <div class="album-source-section-body">
+                                ${this.renderStoryDaySections(shownImages)}
                             </div>
                         </section>
                     `;
@@ -578,14 +579,49 @@ export class AlbumView {
         const mediaHtml = isVideo
             ? `<video src="${this.escapeAttr(image.src)}" muted playsinline webkit-playsinline preload="metadata" aria-hidden="true"></video><span class="album-video-indicator" aria-hidden="true"><i class="fa-solid fa-play"></i></span>`
             : `<img src="${this.escapeAttr(image.src)}" alt="">`;
+        /* [v4.154.0 · R21-X4] 时间角标：时间不详的照片**明说**「时间不详」——
+         *   判定与文案全走数据层出口（桥的单一口径），这里只排版。 */
+        const undated = this.app.albumData.isImageUndated(image);
+        const stamp = this.app.albumData.storyStampOfImage(image);
+        const timeBadge = undated
+            ? `<span class="album-tile-time is-undated">📷 时间不详</span>`
+            : (stamp.dateKey ? `<span class="album-tile-time">${this.escapeHtml(stamp.dateKey)}</span>` : '');
         return `
             <div class="album-tile${isVideo ? ' is-video' : ''}${this.selectedPaths.has(image.path) ? ' selected' : ''}" data-index="${index}" title="${this.escapeHtml(image.filename)}">
                 <button type="button" class="album-tile-main" data-index="${index}" aria-label="${this.selectionMode ? '选择' : '查看'}${isVideo ? '视频' : '图片'}">
                     ${mediaHtml}
                     <span class="album-checkmark"><i class="fa-solid fa-check"></i></span>
                 </button>
+                ${timeBadge}
             </div>
         `;
+    }
+
+    /* ══════════ [v4.154.0 · R21-X4] 剧情日子分组 ══════════
+     * 【为什么在来源分组之下再切日子】来源（哪个 App 存的）与日期（什么时候拍的）
+     *   是两个正交的轴；来源轴沿用既有 `renderSourceSections`，日期轴在本方法里
+     *   对**每个来源组内部**再按剧情日切一层。判定（谁进「📷 时间不详」）只在
+     *   `album-story-face.js` 一处；组 label 只写剧情历日期，不冒充「今天」。 */
+    renderStoryDaySections(images = []) {
+        const groups = this.app.albumData.groupImagesByStoryDay(images);
+        /* [v4.154.0 · R21-X4] 汇总行消费 `photoTimeSummary` 的如实计数：
+         *   「带拍摄时刻 / 时间不详」各是多少，一眼可见——时间不详不但单独成组，
+         *   还在这里被**点名**，绝不悄悄混进某个日期组。 */
+        const summary = this.app.albumData.photoTimeSummary(images);
+        const summaryNote = (summary && summary.total > 0)
+            ? `<div class="album-story-day-note">${this.escapeHtml(`本组 ${summary.total} 项 · ${summary.dated} 项带拍摄时刻 · ${summary.undated} 项时间不详（不按保存时间倒推）`)}</div>`
+            : '';
+        return `${summaryNote}` + groups.map(group => `
+            <section class="album-story-day-section${group.undated ? ' is-undated' : ''}" data-day-key="${this.escapeAttr(group.key)}">
+                <div class="album-story-day-heading">
+                    <strong>${this.escapeHtml(group.label)}</strong>
+                    <small>${group.images.length} 项</small>
+                </div>
+                <div class="album-grid">
+                    ${group.images.map(image => this.renderTile(image)).join('')}
+                </div>
+            </section>
+        `).join('');
     }
 
     /**
@@ -800,6 +836,7 @@ export class AlbumView {
                 <div class="album-preview-meta">
                     <div class="album-preview-name">${this.escapeHtml(image.filename)}</div>
                     <div class="album-preview-path">${this.escapeHtml(image.path)}</div>
+                    <div class="album-preview-time">${this.escapeHtml(this.app.albumData.photoTimeLabelOf(image, window))}</div>
                     <div class="album-preview-tags">
                         ${image.sources.slice(0, 4).map(source => `<span>${this.escapeHtml(source)}</span>`).join('')}
                     </div>
