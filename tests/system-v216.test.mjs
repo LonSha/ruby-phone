@@ -302,7 +302,8 @@ function mkStorage(seed = {}) {
         idx.indexOf('notificationLog?.push?.(') < idx.indexOf('if (isPhoneOpen && phoneShell?.showNotification'));
     // 免打扰门
     ok('index 导入系统控制内核', /from '\.\/config\/system-controls\.js'/.test(idx));
-    ok('通知咽喉接免打扰门', /if \(isDndOnState\(storage\)\) return;/.test(idx));
+    /* [v4.155.0 交棒改写] X3 在免打扰门内加入静音叙事块，return 不再紧随；判据语义不变：门必须接在咽喉上 */
+    ok('通知咽喉接免打扰门', /if \(isDndOnState\(storage\)\)/.test(idx));
     // 控制中心装配（本轮回归点：类写完必须有人 new）
     ok('index 静态导入 ControlCenter', /import \{ ControlCenter \}/.test(idx));
     ok('index 实例化 ControlCenter', /new ControlCenter\(phoneShell, storage\)/.test(idx));

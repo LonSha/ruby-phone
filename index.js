@@ -98,6 +98,10 @@ import { createFontScaleManager } from './phone/font-scale.js';
 import { NotificationLog } from './config/system-notifications.js';
 // [v2.16.0] 系统控制内核（免打扰门 / 缩放 / 开关状态；纯函数模块，无反向依赖）
 import { isDndOn as isDndOnState } from './config/system-controls.js';
+/* [v4.155.0 · R21-X3] 静音与勿扰的剧情内解释（唯一桥）。缓存串照 app 面惯例，
+ *   r=20261115-silence-bridge 让桥在抬版后被宿主强制重取；带缓串的静态 import
+ *   在两道导入面门禁里都是先剥问号再判的合法形态（album-app 同款先例）。 */
+import { silenceNarrative, silenceNote, silenceNarrativeSelfCheck } from './config/silence-narrative-bridge.js?v=4.155.0&r=20261115-silence-bridge';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
 import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimeReleasedAt, childRuntimePrematureBy } from './config/runtime-lifecycle.js';
@@ -352,7 +356,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.154.0';
+const ST_PHONE_VERSION = '4.155.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -584,14 +588,15 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-15",
     items: [
-        "【版本升至 4.154.0（五源同源）】R21-X4 照片 EXIF 与剧情时间校准收口：新增 `config/photo-time-align.js`（只读校准仪，与注入剧情钟比较，五态判定闭集）与 `config/album-story-face.js`（相册时间面唯一桥）；`apps/album` 数据/视图接「剧情日期分组 + 『📷 时间不详』独立组 + 格面时间角标 + 预览时间行」；新增 `tests/system-v4155.test.mjs`。",
-        "【验收旅程怎么闭合】计划原文：「导入 10 张无 EXIF 照片 → 10 张全进『时间不详』，没有一张被塞进『今天』」。判定只认剧情轨 `storyAt`（与 R13-O4 的 `storyTsOf` 同口径）：写点读不到剧情钟时索引里本来就是空串 ⇒ 相册读成 null ⇒ 进『📷 时间不详』组；**绝不回退 `createdAt`（墙钟）**、绝不拿 `Date.now()` 猜。无 EXIF 的照片照常显示、单独成组，不隐藏不丢弃。",
-        "【为什么判定收在桥里】「谁算时间不详」「按剧情日怎么切组」若散在视图里各写一遍，最便宜的写法就是 `|| createdAt`——那正是验收要拦的形态。故 `album-story-face.js` 是唯一判定面，`AlbumData` 透传、`AlbumView` 只排版；文案只走 `photoTimeLabel` 单一出口，不发明第二套判定词。",
-        "【与 EXIF 的关系如实说】相册索引里没有真正的 EXIF 块；索引里的 `storyAt` 就是这条影像自带的拍摄时刻，且本来就在剧情钟坐标上。桥把形状直译成 `exif.timestamp` 喂进同一台校准仪（`alignOne`/`alignAlbum`），得到同一套五态判定；两枚读数同钟 ⇒ `DRIFTED` 结构上不会出现——这是「同一只钟量两次」的必然读数，不是缺陷。真正的 EXIF 文件解析（从图片二进制读 DateTimeOriginal）本版不做也不留占位：没有可验证的解析落点，宁缺毋滥。",
-        "【组头不冒充「今天」】日期组 label 只写剧情历日期 `YYYY-MM-DD`——组头只能断言「照片落在剧情历的这一天」，当前剧情钟读数与它未必同日，写「（今天）」就是冒充。时间不详组的键 `undated` 与任何真实日期键不同形。",
-        "【本版自己抓到并当场修掉】首版日子分组 label 写成 `${key}（今天）`，把「照片在剧情历的某天」演成「就是今天」——修实现不修验收；首版把 `albumPhotoTimeRow` 单独导出，产品侧零消费会被 dead-export 门禁拦（且聚合逻辑会形成第二套实现）——收成内部函数，聚合一律走 `alignAlbum` 唯一实现。",
-        "【交棒改写：把「时间不详」从视图散写收成桥唯一判定】计划原文只说「相册按剧情日期分组、时间不详单独一组且可见」；本版如实收窄为三条可验证判据——判定只认剧情轨 `storyAt`、绝不回退 `createdAt`、真 EXIF 二进制解析没有可验证落点就不留占位。旧判据（R13-O4 的 `storyTsOf` 只认剧情轨）原样沿用不重写；「谁算时间不详」收在 `album-story-face.js` 一处，视图只排版、判定没有第二份。",
-        "【运行时验证边界】本版量的是真实内核导入下的判定闭集、分组形状、「createdAt 不救场」硬证据、纯读契约（冻结入参序列化逐字不变）与产品侧接线判据。不能保证的是真机酒馆里历史照片（4.106.0 之前写入的索引）没有 `storyAt` 字段——它们会全部如实进「时间不详」组，这是数据源性质决定的，不是本版缺陷；本环境无真机，不做已执行声明。"
+        "【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡",
+        "【缺陷形态】本版自己抓到一处自伤：诊断面一行读数与视图 HTML 的引号在转义链里被撕成错形（一处漏收尾引号、一处引号嵌套错位），node --check 当场拦下 —— 与 v3.469.0 在记忆插件上踩过的「一行撕三行」同族，处置同条：写完立即过语法门，不等跑测再爆",
+        "【读数分形】到货数的「读不到」与「真零条」在消费点保持不同形：notificationLog 在场才取未读数，缺席即 null（unavailable），绝不塌成 0（no-arrivals）；剧情钟走 storyNow 只读口（peekCurrentStoryTime，不重算、不补墙钟），读不到时段桥宁可不说",
+        "【宿主记账与桥的边界】只有真正产出候选的那一轮才由宿主把剧情毫秒记进 silence_told_cursor（写 storyAt 不写墙钟，R21-O2 钉过的写点纪律）；桥本身零存储零写路径（D2 判据钉死）—— 写入归宿主，记忆写入归记忆 owner，三层 owner 各守各的门",
+        "【勿扰不是缺席】候选句全部只解释「为什么没看到 / 为什么没被打断」，绝不编造「我出门了」；跨桶串供（白天静音说昨晚睡了）由 A3 表格级判据钉死，六桶两两交集为空，深夜桶没有「开会」、工作时段桶没有「睡」",
+        "【交棒改写】诊断面从「各跑一份自检」改为「读装配点已判好的 _x3SelfCheck 与咽喉现场态 _x3」：同源不重算，与 scheduleBridge 的缓存纪律同一条 —— 两处各判一次，哪天口径差了就是两份读数；诊断卡只报「桥自洽吗 + 上一次现场判了什么」，不重跑业务判定",
+        "【运行时验证边界】本版判据为静态接线断言 + 桥单测（19 条）；「深夜勿扰收到 3 条、次日角色带出理由」的验收旅程只验证到「候选句含昨晚 / 睡 / 没看到」这一层，角色真挑哪一句、怎么措辞、何时说，仍在运行时由模型决定，判据不越权替角色验收台词 —— 这类形态的标志语是「看起来没坏但显示不对」：跑法坏了不会报错，判据不能保证在真机上把它一出现就拦下",
+        "【门禁锚】桥的 import 带缓存串 v=4.155.0 与 r=20261115-silence-bridge（album-app 先例同款），两道导入面门禁（import-resolve / named-import）都是剥问号后判：路径可解析、具名成员逐一可满足；桥只依赖零依赖叶子 num-gate",
+        "【交付环境】本地旧仓 /home/user/ruby-phone 因 35 个 loose objects 读不得也删不得而瘫痪（HEAD 对象本身不可读，proot 权限墙，root 亦不可穿透），本版在全新克隆 /home/user/ruby-phone-v4155 上交付 —— 旧仓需用户侧清理或重建"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -2225,6 +2230,19 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 window.VirtualPhone.timeEnv = new TimeEnvManager(storage);
                 window.VirtualPhone.timeEnv.attachPromptHook();
             } catch (_e) { /* 时间环境是增强项：装不上不影响手机本体 */ }
+            /* [v4.155.0 · R21-X3] 静音叙事桥的装配点自检：零依赖、纯读、桶表闭集。
+             *   放这里与 timeEnv 同一条挂法 —— 自检绿不绿在启动时留痕，坏了不影响手机本体；
+             *   结论挂 _x3SelfCheck 供诊断面读（诊断不再各跑一份，同源不重算）。 */
+            try {
+                const _sc = silenceNarrativeSelfCheck();
+                window.VirtualPhone._x3SelfCheck = {
+                    ok: _sc.ok === true, bad: Array.isArray(_sc.bad) ? _sc.bad : [],
+                    buckets: Array.isArray(_sc.buckets) ? _sc.buckets : [],
+                    sample: String(_sc.sample || '')
+                };
+            } catch (_se) {
+                window.VirtualPhone._x3SelfCheck = { ok: false, bad: ['self-check threw'], buckets: [], sample: '' };
+            }
             /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
              *   而未打开过的 App 根本没有构造期（实例只在 phone:openApp 懒加载时才 new）。
              *   后果：保存过设置后重载、只要没先点开那个 App，设置就完全不生效（不报错、只错行为）。
@@ -3038,7 +3056,21 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         } catch (_e) { /* 控制中心不可用时忽略 */ }
     }
 
-    function showUnifiedPhoneNotification(title, message, icon = '📱', options = {}) {
+    /* [v4.155.0 · R21-X3] 静音叙事的宿主侧记账键与游标读法。写在咽喉之前：
+ *   游标是「上一次真的给过候选」那一轮的剧情毫秒 —— 桥的频率门拿它算间隔，
+ *   只挡「刚说过又说」，绝不挡首谈。读失败一律 null（门按「从没说过」放行）。 */
+const SILENCE_TOLD_KEY = 'silence_told_cursor';
+function readSilenceLastTold(storage) {
+    try {
+        const raw = storage && typeof storage.get === 'function' ? storage.get(SILENCE_TOLD_KEY) : null;
+        if (!raw) return null;
+        const parsed = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        const ms = parsed && parsed.storyMs;
+        return (typeof ms === 'number' && ms > 0) ? ms : null;
+    } catch (_e) { return null; }
+}
+
+function showUnifiedPhoneNotification(title, message, icon = '📱', options = {}) {
         const safeTitle = String(title || '系统提示');
         const safeMessage = String(message || '');
         const meta = (options && typeof options === 'object') ? options : {};
@@ -3067,7 +3099,36 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         } catch (_e) { /* 刷新失败不影响通知展示 */ }
         // [v2.16.0] 免打扰门：开启时通知只入账、不弹横幅（消息不会丢，只是不打断）
         try {
-            if (isDndOnState(storage)) return;
+            if (isDndOnState(storage)) {
+                /* [v4.155.0 · R21-X3] 静音叙事消费点（唯一现场态提供方）。被门拦下的这批消息
+                 *   在机器面上是既成事实，在角色嘴里一个字都没有 —— 桥在这里判这一轮该不该
+                 *   给候选句。arrivals 读不到 ⇒ unavailable（读不到与真零条不同形，绝不相塌）；
+                 *   剧情钟走只读口（不重算、不补墙钟）。 */
+                const _snStory = (typeof storyNow === 'function')
+                    ? storyNow(window, { readOnly: true }) : null;
+                const _snArrivals = (notificationLog && typeof notificationLog.unreadCount === 'function')
+                    ? notificationLog.unreadCount() : null;
+                const _sn = silenceNarrative(Object.freeze({
+                    dndOn: true,
+                    arrivals: _snArrivals, story: _snStory,
+                    lastToldAt: readSilenceLastTold(storage)
+                }));
+                /* 宿主侧只做一件事：真正产出候选时把剧情毫秒记进 storage —— 这是**宿主记账**
+                 *   （写 storyAt 不写墙钟，R21-O2 钉钟前钉过的写点纪律），不是桥在写记忆；
+                 *   写失败静默（落账失败不阻断本就静默的通知链）。 */
+                if (_sn && _sn.face === 'candidates'
+                    && typeof storage?.set === 'function') {
+                    try { storage.set(SILENCE_TOLD_KEY, JSON.stringify({
+                        storyMs: _sn.storyMs, wallAt: Date.now(), face: _sn.face
+                    })); } catch (_sw) { /* 记账失败不阻断 */ }
+                }
+                /* 候选句不塞上下文：素材挂 _x3 面上给诊断与角色回话前取用，桥不替角色选。 */
+                try { if (window.VirtualPhone) window.VirtualPhone._x3 = {
+                    face: _sn.face, reason: _sn.reason, bucket: _sn.bucket,
+                    arrivals: _sn.arrivals, candidates: _sn.candidates, note: silenceNote(_sn)
+                }; } catch (_sx) { /* 挂不上不影响通知链 */ }
+                return;
+            }
         } catch (_e) { /* 状态不可读时按未开启处理，保证通知仍可送达 */ }
         // 核心修复：检查手机面板是否真实可见
         const phonePanel = document.getElementById('phone-panel');

@@ -13,6 +13,8 @@ import { schemaStateText, storageFaceLine, secretFaceText, evidenceFaceText, kno
 import { iconFaceText } from './diagnose-data.js';
 /* [v4.105.0 · R13-O2] 销毁动作分级面的一行文案转发（同 iconFaceText：视图不自拼结论）。 */
 import { undoFaceText } from './diagnose-data.js';
+/* [v4.155.0 · R21-X3] 静音叙事文案面（同 undoFaceText 范式：视图不自拼结论）。 */
+import { silenceFaceText } from './diagnose-data.js';
 /* [v4.106.0 · R13-O4] 时间双轨面的一行文案转发（同 iconFaceText：视图不自拼结论）。 */
 import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
@@ -1686,6 +1688,27 @@ export class DiagnoseView {
      *   本方法**只排版**：三档计数、逐档 id 与「有问题的提示」全部来自内核读数。
      *   三态不同形：面缺席 ⇒ 红档说读取异常（不许读成「全覆盖」）；有问题 ⇒ 红档点名；
      *   没问题 ⇒ 绿档，并把 undo / confirm 两档的 App id 逐个列出 —— 只说计数等于没说。 */
+    /* [v4.155.0 · R21-X3] 静音叙事卡（协议自洽面）：单面 try/catch，不拖垮全页。
+     *   三态不同形：面缺席 ⇒ 红档明说读取异常（不许洗成自检绿）；自检红 ⇒ 红档点名；
+     *   自检绿 ⇒ 绿档一行读数 + 桶名芯片。 */
+    _silenceFaceHtml(pkg) {
+        const face = (pkg && pkg.silenceFace) || null;
+        const text = silenceFaceText(face);
+        if (!face) {
+            return '<div class=' + Q + 'dg-note dg-bad' + Q + '>' + escapeHtml(text) + '</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(text) + '</div>';
+        const rows = Array.isArray(face.buckets) ? face.buckets : [];
+        if (face.ok === true && rows.length) {
+            html += '<div class=' + Q + 'dg-chips' + Q + '>';
+            rows.forEach((b) => {
+                html += this._chip(String(b), 'ok');
+            });
+            html += '</div>';
+        }
+        return html;
+    }
+
     _undoFaceHtml(pkg) {
         const face = (pkg && pkg.undoFace) || null;
         const text = undoFaceText(face);
@@ -1817,6 +1840,7 @@ export class DiagnoseView {
         /* [v4.105.0 · R13-O2] 销毁动作分级卡紧跟图标覆盖率卡：两张卡同族 ——
          *   都是「平台级声明是否成立」的读数（一张问图标齐不齐，一张问删了能不能回来）。
          *   放在这里而不是页面尾部：用户最需要看到它的时候，正是他准备点「清空」之前。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>静音叙事桥（勿扰的解释素材自洽吗）</h3>' + this._silenceFaceHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>销毁动作分级（89 件 App 删了能不能回来）</h3>' + this._undoFaceHtml(pkg) + '</section>');
         /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
          *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），

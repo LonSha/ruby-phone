@@ -167,11 +167,21 @@ test('v4155 C4. 装配点消费自检 + 版本参数已抬', () => {
 });
 
 test('v4155 C5. 版本锚：4.154.0 五源同源', () => {
-    for (const rel of ['manifest.json', 'package.json']) {
-        assert.ok(read(rel).includes('4.154.0'), `${rel} 已升至 4.154.0`);
-    }
-    assert.ok(read('index.js').includes("ST_PHONE_VERSION = '4.154.0'"));
-    assert.ok(read('index.js').includes('【版本升至 4.154.0（五源同源）】R21-X4'));
-    assert.ok(read('update-log.json').includes('"latest": "4.154.0"'));
+    /* [v4.155.0 交棒改写·下限形] 精确钉 4.154.0 在抬版后必红；按 v4154 C2 惯例
+     *   改写为下限形：五源仍必须互相同源，且不得低于本版发布时的 4.154.0。 */
+    const pkg = JSON.parse(read('package.json'));
+    const ver = pkg.version;
+    const cmp = (a, b) => {
+        const A = a.split('.').map(Number), B = b.split('.').map(Number);
+        for (let i = 0; i < 3; i++) { if (A[i] !== B[i]) return A[i] - B[i]; }
+        return 0;
+    };
+    assert.ok(cmp(ver, '4.154.0') >= 0, '版本低于本版下限：' + ver);
+    const man = JSON.parse(read('manifest.json'));
+    assert.equal(man.version, ver, 'manifest 与 package 同源');
+    const log = JSON.parse(read('update-log.json'));
+    assert.equal(log.latest, ver, 'update-log.latest 同源');
+    assert.ok(read('index.js').includes("ST_PHONE_VERSION = '" + ver + "'"), 'index 版本常量同源');
+    assert.ok(read('update-log.json').includes('【版本升至 4.154.0（五源同源）】R21-X4'), '历史条目真源在场');
     assert.ok(read('ITERATION_LOG.md').includes('## 迭代 274 · v4.154.0 · R21-X4'));
 });

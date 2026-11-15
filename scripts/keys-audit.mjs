@@ -91,7 +91,13 @@ const PROP_CALL_RE = /(?:storage|VirtualPhone(?:\?)?\.storage)\??\.(?:set|get|re
  *   （asset-project.js 用它读 `stock.worth`），不是 storage 键，也没有任何 storage 调用点。
  *   它靠 `_KEY` 后缀形似键名，无法从语法上区分开同类命名；故显式排除并写明理由——
  *   这是本门禁**唯一**的口径例外，新增例外必须同规格写明「为什么它不是键」。 */
-const NON_KEY_LITERALS = new Set(['worth', '__ubBackGuard']);
+const NON_KEY_LITERALS = new Set(['worth', '__ubBackGuard',
+  /* `undated`（v4.155.0 实测踩到）：v4.154.0 相册剧情分组的**显示分组键**
+   （config/album-story-face.js 的 UNDATED_DAY_KEY，照片按剧情日期分组的内存 Map 键），
+   没有任何 storage 调用点。它命中 CONST_RE 是同形巧合：`export const UNDATED_DAY_KEY = 'undated'`
+   长得像键常量。照 `worth` 先例显式排除并写明理由 —— **它不是键**：没有 scope 可声明，
+   登记进 KEY_REGISTRY 才是真的错（K3 会判它幽灵）。 */
+  'undated']);
 /* `__ubBackGuard`（v2.99.0 新增，实测踩到）：它是 **window 上的运行时状态槽名**，
  *   由 config/back-guard.js 写入 window[BACK_GUARD_KEY]，与 storage 无关
  *   （back-guard 不调 storage 的任何方法，全仓也无人把它当 storage 键读）。
@@ -187,6 +193,8 @@ const isChatByMechanism = (key) => patterns.some((p) => {
  *   legacy 历史误存键（读旧档→迁移→删）：不参与 K2，但仍须活着
  * ⚠️ 这是**准入清单**：新增键必须登记，否则 K1 红灯；K3 检查每条是否还活着。 */
 const KEY_REGISTRY = [
+  /* [v4.155.0 · R21-X3] 静音叙事游标：上一次真给过候选理由的剧情毫秒（宿主记账，桥零写）。 */
+  { key: 'silence_told_cursor', scope: 'chat', note: '静音叙事已解释游标（上一次给候选的剧情毫秒）' },
   { key: 'device_runtime_v1', scope: 'chat', note: '剧情设备模拟状态及显式开关' },
   { key: 'device_holographic_events_v1', scope: 'chat', note: '全息事件队列，会话隔离而非全局桥配置' },
   // ══ 会话隔离（chatMetadata）══

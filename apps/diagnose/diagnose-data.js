@@ -176,6 +176,9 @@ import { provenanceSelfCheck, pgSummaryLine, PG_NODE_KINDS, PG_EDGE_KINDS, PG_ST
 /* [v3.67.0 · 拓展计划 X3] 日程提醒协议面：与 openRefFace 同一族——协议件自身现在还自洽吗。
  *   四源归一结果、账本状态、缺口、投递计划，在此面陈列（不重算，只读缓存）。 */
 import { scheduleBridgeSelfCheck, scheduleLedgerSelfCheck, scheduleAdviceLine, SCHEDULE_SOURCES } from '../../config/schedule-bridge.js';
+/* [v4.155.0 · R21-X3] 静音叙事桥的协议自检面：诊断只问『桥自身自洽吗』，
+ *   不重算业务判定（现场态由通知咽喉在免打扰门处判定并挂 _x3，同源不重取）。 */
+import { silenceNarrativeSelfCheck } from '../../config/silence-narrative-bridge.js';
 /* [v3.68.0 · 拓展计划 X4] 财务总览协议面：与 scheduleFace 同一族——协议件自身现在还自洽吗。
  *   七源归一结果、结算草稿状态、提交账本状态、缺口，在此面陈列（不重算，只读缓存）。 */
 import { financeSourceSelfCheck, financeLedgerSelfCheck, FINANCE_SOURCES, FINANCE_LEDGER_LIMIT } from '../../config/finance-overview.js';
@@ -778,6 +781,35 @@ export function collectDiagnose(win, storage) {
      *    可撤销性只认声明面，不认调用方 —— 调用方只想少弹一个框）。
      *   三条纪律与全页一致：只读（只算字符串，不投递、不碰 App 实例）、不抛（单面 try/catch）、
      *   不猜（取不到即 null，不伪造「89 件全覆盖」）。 */
+    /* [v4.155.0 · R21-X3] 静音叙事面（只读，与其它协议面同纪律：不抛、不猜、不重算）。
+     *   两层读数分形：桥自检（协议自洽性）+ 咽喉现场态（上一次静音判定的冻结读数）。
+     *   取不到即 null —— 绝不洗成『自检全绿』。 */
+    const silenceFace = (() => {
+        try {
+            const check = silenceNarrativeSelfCheck();
+            const live = win && win.VirtualPhone ? win.VirtualPhone._x3 : null;
+            const selfCheck = win && win.VirtualPhone ? win.VirtualPhone._x3SelfCheck : null;
+            return {
+                ok: check && check.ok === true,
+                bad: (check && Array.isArray(check.bad)) ? check.bad : [],
+                buckets: (check && Array.isArray(check.buckets)) ? check.buckets : [],
+                sample: String((check && check.sample) || ''),
+                live: (live && typeof live === 'object') ? live : null,
+                selfCheck: (selfCheck && typeof selfCheck === 'object') ? selfCheck : null,
+                line: ''
+            };
+        } catch (_e) { return null; }
+    })();
+    /* 一行读数在这里判好（视图不自拼结论，与 undoFace 同范式）。 */
+    if (silenceFace) {
+        if (silenceFace.ok !== true) {
+            silenceFace.line = '静音叙事桥：自检红 —— ' + (silenceFace.bad.length ? silenceFace.bad.join(' · ') : '原因不明');
+        } else {
+            silenceFace.line = '静音叙事桥：自检绿（六桶 ' + String(silenceFace.buckets.length) + ' 桶 · 样句「' + silenceFace.sample + '」）'
+                + ' · 现场' + (silenceFace.live ? ('：' + String(silenceFace.live.note || '')) : '态未挂载（尚未有静音期通知过）');
+        }
+    }
+
     const undoFace = (() => {
         try {
             const count = undoModeCounts();
@@ -2056,7 +2088,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2582,6 +2614,17 @@ export function iconFaceText(face) {
  *     声明面取不到时最容易被洗成「都分级好了」；
  *   · 面在、有问题 ⇒ 逐条点名（残留账数量 / 条数对不上 / 自证失败）；
  *   · 面在、没问题 ⇒ 报三档分布 + 可撤销与已确认两档的 App id（点得出名字才算说清）。 */
+/* [v4.155.0 · R21-X3] 静音叙事面的一行读数（唯一实现在 collectDiagnose 内取的那一面）。
+ *  三态不同形（与全页同纪律）：面缺席 ⇒ 明说读取异常，并**禁止**读成『自检绿』；
+ *   面在、自检红 ⇒ 逐条点名 bad；面在、自检绿 ⇒ 报桶数 + 样句 + 现场态。 */
+export function silenceFaceText(face) {
+    try {
+        const f = (face && typeof face === 'object') ? face : null;
+        if (!f) return '静音叙事桥：读取异常（已降级）—— 这不是「自检绿」';
+        return String(f.line || '静音叙事桥：无读数');
+    } catch (_e) { return '静音叙事桥：读取异常（已降级）'; }
+}
+
 export function undoFaceText(face) {
     try {
         const f = (face && typeof face === 'object') ? face : null;
@@ -2666,6 +2709,7 @@ datePlayFaceText,
     creationFaceText,
     characterSlotFaceText,
     iconFaceText,
+    silenceFaceText,
     undoFaceText,
     timeFaceText
 };

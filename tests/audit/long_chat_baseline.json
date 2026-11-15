@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 760,
+    "files": 763,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 15,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=760，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
+      "got_text": "files=763，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
     }
   ],
   "timing_criteria": [
