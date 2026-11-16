@@ -20,6 +20,8 @@ import { L0_ASSETS, galleryFrameUrl } from '../../config/l0-assets.js';
 import { buildTodayFace, todayHeadline } from '../../config/day-rhythm-bridge.js';
 /* [v4.142.0 · R21-O5] 时间文案统一口径：story 档只出剧情日期，跨档拒答 */
 import { captionOf } from '../../config/time-caption.js';
+/* [v4.156.0 R21-X9] Weekly recap bridge: aggregation and judgement all live in the bridge; view only renders face and line. */
+import { weeklyRecap, weeklyRecapNote, weekWindowOf } from '../../config/weekly-recap.js?v=4.156.0&r=20261116-batch-f';
 import { FACE_ATTR } from '../../config/empty-face.js';
 
 export class DiaryView {
@@ -95,6 +97,36 @@ export class DiaryView {
         const coverFrameUrl = galleryFrameUrl(coverFrameKey);
         const frameStyle = coverFrameUrl ? `background-image: url('${coverFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain;` : '';
 
+        /* [v4.156.0 R21-X9] Weekly recap block on the diary cover. Event ledger is
+         *   aggregated by the host into window.VirtualPhone._x9Events; this view only
+         *   hands it to the bridge. Week window from weekWindowOf (story ms only).
+         *   Empty week / unlinked / recap stay distinct shapes. */
+        const _x9Events = (typeof window !== 'undefined') ? window.VirtualPhone?._x9Events : null;
+        const _x9Win = weekWindowOf((typeof window !== 'undefined' && window.VirtualPhone?._x9NowMs) || null);
+        const _x9 = weeklyRecap({
+            startMs: _x9Win.ok ? _x9Win.startMs : null,
+            endMs: _x9Win.ok ? _x9Win.endMs : null,
+            events: _x9Events
+        });
+        const _x9Esc = String(_x9.line || '').replace(/[&<>"']/g, (c) => ({
+            [String.fromCharCode(38)]: String.fromCharCode(38) + 'amp;',
+            [String.fromCharCode(60)]: String.fromCharCode(38) + 'lt;',
+            [String.fromCharCode(62)]: String.fromCharCode(38) + 'gt;',
+            [String.fromCharCode(34)]: String.fromCharCode(38) + 'quot;',
+            [String.fromCharCode(39)]: String.fromCharCode(38) + '#39;'
+        }[c]));
+        const _x9Html = `
+            <div class="diary-weekly-recap" id="diary-weekly-recap" data-face="${_x9.face}">
+                <div class="diary-weekly-recap-title">📅 本周回顾</div>
+                <div class="diary-weekly-recap-line">${_x9Esc}</div>
+                ${(_x9.face === 'recap' && Array.isArray(_x9.items)) ? _x9.items.map((it) => `
+                    <div class="diary-weekly-recap-item" data-app="${it.appId}" data-record="${it.source.recordId}" data-kind="${it.kind}"">
+                        <span class="diary-weekly-recap-app">${String(it.appName || it.appId || '')}</span>
+                        <span class="diary-weekly-recap-text">${String(it.title || it.kindLabel || '')}</span>
+                    </div>
+                `).join('') : ''}
+            </div>
+        `;
         const html = `
             <div class="diary-app">
                 <div class="diary-cover${coverFrameUrl ? ' has-frame' : ''}" id="diary-cover" style="${bgStyle}">

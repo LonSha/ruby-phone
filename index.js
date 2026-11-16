@@ -101,7 +101,15 @@ import { isDndOn as isDndOnState } from './config/system-controls.js';
 /* [v4.155.0 · R21-X3] 静音与勿扰的剧情内解释（唯一桥）。缓存串照 app 面惯例，
  *   r=20261115-silence-bridge 让桥在抬版后被宿主强制重取；带缓串的静态 import
  *   在两道导入面门禁里都是先剥问号再判的合法形态（album-app 同款先例）。 */
-import { silenceNarrative, silenceNote, silenceNarrativeSelfCheck } from './config/silence-narrative-bridge.js?v=4.155.0&r=20261115-silence-bridge';
+import { silenceNarrative, silenceNote, silenceNarrativeSelfCheck } from './config/silence-narrative-bridge.js?v=4.156.0&r=20261116-batch-f';
+/* [v4.156.0 · R21-X6/X7/X8/X9] 批次 F 剩余四座的唯一桥。同 X3 挂法：
+ *   带缓串的静态 import（两道导入面门禁剥问号后判的合法形态）。
+ *   分工写死：桥判（面 / 归因 / 文案），宿主只算输入、只做剧情毫秒记账；
+ *   候选句素材一律不塞上下文（X3 先例：挂 _xN 面给角色，挑哪句是模型的事）。 */
+import { appChangeDigest, digestNote, appChangeDigestSelfCheck } from './config/app-change-digest.js?v=4.156.0&r=20261116-batch-f';
+import { devicePhysicalNarrative, physicalNote, devicePhysicalNarrativeSelfCheck } from './config/device-physical-narrative.js?v=4.156.0&r=20261116-batch-f';
+import { backupDiffPreview, backupDiffPreviewSelfCheck } from './config/backup-diff-view.js?v=4.156.0&r=20261116-batch-f';
+import { weeklyRecap, weeklyRecapNote, weekWindowOf, weeklyRecapSelfCheck } from './config/weekly-recap.js?v=4.156.0&r=20261116-batch-f';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
 import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimeReleasedAt, childRuntimePrematureBy } from './config/runtime-lifecycle.js';
@@ -356,7 +364,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.155.0';
+const ST_PHONE_VERSION = '4.156.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -2157,6 +2165,34 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                             const sh = (typeof phoneShell !== 'undefined') ? phoneShell : null;
                             if (sh && typeof sh.refreshDeviceFace === 'function') sh.refreshDeviceFace();
                         } catch (_e) { /* 读数面挂了不影响推进 */ }
+                        /* [v4.156.0 · R21-X7] 设备物理叙事：电量被 tick 掉的同一拍判一次
+                         *   该不该给「设备可感细节」候选。face 走中枢唯一读数口（不另读）；
+                         *   剧情毫秒走只读口；weight 传 dispatcher 的在场仲裁读数（在场才许提，
+                         *   读不到 ⇒ fail-closed 不许提）；候选挂 _x7 给角色挑，本桥不替角色说话。 */
+                        try {
+                            const sub7 = window.VirtualPhone?.subsystems || null;
+                            const raw7 = (sub7 && typeof sub7.battery?.face === 'function') ? sub7.battery.face() : null;
+                            const st7 = (typeof storyNow === 'function') ? storyNow(window, { readOnly: true }) : null;
+                            const arb7 = (window.VirtualPhone?.notifications?.readPresence)
+                                ? window.VirtualPhone.notifications.readPresence() : null;
+                            const winner7 = (arb7 && typeof arb7.winner === 'string') ? arb7.winner : '';
+                            const PRIO7 = { error: 8, alertError: 7, notice: 6, attention: 5, sweeping: 4, working: 3, thinking: 2, idle: 1, roam: 1, sleeping: 0 };
+                            const weight7 = (winner7 && typeof PRIO7[winner7] === 'number')
+                                ? Math.min(1, PRIO7[winner7] / 8) : null;
+                            const _p = devicePhysicalNarrative(Object.freeze({
+                                face: raw7,
+                                nowStoryMs: (st7 && st7.ok === true) ? st7.ms : null,
+                                lastToldStoryMs: x7ReadTold(storage),
+                                weight: weight7
+                            }));
+                            if (_p.face === 'candidates' && st7 && st7.ok === true) {
+                                x7WriteTold(storage, st7.ms);   /* 宿主记账：记「这轮真的给过」 */
+                            }
+                            window.VirtualPhone._x7 = {
+                                face: _p.face, reason: _p.reason, tier: _p.tier,
+                                gate: _p.gate, candidates: _p.candidates, note: physicalNote(_p)
+                            };
+                        } catch (_pe) { /* 叙事旁路：坏了不影响推进 */ }
                     }
                 });
                 window.VirtualPhone.lifeClock = lifeClock;
@@ -2242,6 +2278,95 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 };
             } catch (_se) {
                 window.VirtualPhone._x3SelfCheck = { ok: false, bad: ['self-check threw'], buckets: [], sample: '' };
+            }
+            /* [v4.156.0 · R21-X6/X7/X8/X9] 四座桥的装配点自检（与 _x3SelfCheck 同挂法）。
+             *   自检绿不绿启动时留痕；坏了不影响手机本体（桥全是增强面）。 */
+            const _bridgeChecks = [
+                ['_x6SelfCheck', appChangeDigestSelfCheck],
+                ['_x7SelfCheck', devicePhysicalNarrativeSelfCheck],
+                ['_x8SelfCheck', backupDiffPreviewSelfCheck],
+                ['_x9SelfCheck', weeklyRecapSelfCheck],
+            ];
+            for (const [_ck, _fn] of _bridgeChecks) {
+                try {
+                    const _r = _fn();
+                    window.VirtualPhone[_ck] = {
+                        ok: _r.ok === true, bad: Array.isArray(_r.bad) ? _r.bad : [],
+                        sample: String(_r.sample || '')
+                    };
+                } catch (_ce) {
+                    window.VirtualPhone[_ck] = { ok: false, bad: ['self-check threw'], sample: '' };
+                }
+            }
+            /* [v4.156.0 · R21-X9] 剧情周回顾的事件账聚合（只读）：四源各自 storyAt 是剧情毫秒，
+             *   聚合后挂 _x9Events 给日记封面那个消费点与桥判。每条必须带可回源三元组
+             *   （appId / recordId / kind），点不回去的条目桥会如实记 unsourced 不进摘要。
+             *   剧情钟走只读口；读不到就不给周窗（桥自己会报 unavailable，不补墙钟）。
+             *   ★ 惰性聚合：打开日记时才算（_x9Events 置 null 后由消费点触发或此处每次刷新）。 */
+            window.VirtualPhone.refreshWeeklyRecapLedger = () => {
+                const evs = [];
+                const pushEv = (appId, appName, kind, title, storyMs, recordId) => {
+                    evs.push({ appId, appName, kind, title: String(title || '').slice(0, 60), storyMs, recordId });
+                };
+                try {
+                    const wd = window.VirtualPhone?.wechatApp?.wechatData || window.VirtualPhone?.cachedWechatData;
+                    if (wd && typeof wd.getChatList === 'function') {
+                        for (const chat of (wd.getChatList() || [])) {
+                            if (!chat || !chat.id) continue;
+                            const msgs = wd.getMessages ? wd.getMessages(chat.id) : (chat.messages || []);
+                            if (!Array.isArray(msgs)) continue;
+                            for (const m of msgs) {
+                                if (!m) continue;
+                                pushEv('wechat', '微信', 'message', m.content,
+                                    (typeof m.storyAt === 'number' && m.storyAt > 0) ? m.storyAt : null,
+                                    String(m.messageId ?? m.id ?? ''));
+                            }
+                        }
+                    }
+                } catch (_we) { /* 微信源缺席不拖垮其它源 */ }
+                try {
+                    const dd = window.VirtualPhone?.diaryApp?.diaryData;
+                    if (dd && typeof dd.getEntries === 'function') {
+                        for (const e of (dd.getEntries() || [])) {
+                            if (!e) continue;
+                            pushEv('diary', '日记', 'diary_written', e.title || e.excerpt || (e.content || '').slice(0, 40),
+                                (typeof e.storyAt === 'number' && e.storyAt > 0) ? e.storyAt : null,
+                                String(e.id || ''));
+                        }
+                    }
+                } catch (_de) { /* 日记源缺席不拖垮其它源 */ }
+                try {
+                    const ad = window.VirtualPhone?.albumApp?.albumData;
+                    if (ad && typeof ad.getMedia === 'function') {
+                        for (const p of (ad.getMedia() || [])) {
+                            if (!p) continue;
+                            pushEv('album', '相册', 'photo_added', p.name || p.path || '',
+                                (typeof p.storyAt === 'number' && p.storyAt > 0) ? p.storyAt : null,
+                                String(p.id || p.path || ''));
+                        }
+                    }
+                } catch (_ae) { /* 相册源缺席不拖垮其它源 */ }
+                try {
+                    const cd = (window.VirtualPhone?.calendarApp || window.VirtualPhone?._calendarReminderApp)?.calendarData;
+                    if (cd && typeof cd.getMemos === 'function') {
+                        for (const m of (cd.getMemos() || [])) {
+                            if (!m) continue;
+                            pushEv('calendar', '日历', 'calendar_event', m.title || m.content || '',
+                                (typeof m.storyAt === 'number' && m.storyAt > 0) ? m.storyAt : null,
+                                String(m.id || ''));
+                        }
+                    }
+                } catch (_ce) { /* 日历源缺席不拖垮其它源 */ }
+                return evs;
+            };
+            try {
+                window.VirtualPhone._x9NowMs = ((typeof storyNow === 'function')
+                    ? storyNow(window, { readOnly: true }) : null);
+                window.VirtualPhone._x9NowMs = (window.VirtualPhone._x9NowMs && window.VirtualPhone._x9NowMs.ok === true)
+                    ? window.VirtualPhone._x9NowMs.ms : null;
+                window.VirtualPhone._x9Events = window.VirtualPhone.refreshWeeklyRecapLedger();
+            } catch (_x9e) {
+                window.VirtualPhone._x9Events = null;  /* 聚合失败 ⇒ 桥如实报 no_ledger */
             }
             /* [v3.96.0 · R3-O6] 免实例装配挂载点：装配类 App 的注入钩子长在**各自的构造期**，
              *   而未打开过的 App 根本没有构造期（实例只在 phone:openApp 懒加载时才 new）。
@@ -3059,6 +3184,43 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
     /* [v4.155.0 · R21-X3] 静音叙事的宿主侧记账键与游标读法。写在咽喉之前：
  *   游标是「上一次真的给过候选」那一轮的剧情毫秒 —— 桥的频率门拿它算间隔，
  *   只挡「刚说过又说」，绝不挡首谈。读失败一律 null（门按「从没说过」放行）。 */
+/* [v4.156.0 · R21-X6] App 变动摘要的宿主记账键：离开 / 回到（剧情毫秒）。
+ *   离开锚点在 phone:goHome 咽喉写、回到锚点在 phone:openApp 咽喉写，
+ *   两个键只记剧情毫秒不记墙钟（剧情回拨后墙钟间隔没有意义）。 */
+const X6_LEFT_KEY = 'app_change_left_at';
+const X6_RETURN_KEY = 'app_change_return_at';
+function x6WriteStoryMs(storage, key) {
+    try {
+        const st = (typeof storyNow === 'function') ? storyNow(window, { readOnly: true }) : null;
+        if (!st || st.ok !== true || st.ms === null) return false;  /* 剧情钟读不到 ⇒ 不记账（不补墙钟） */
+        storage?.set?.(key, JSON.stringify({ storyMs: st.ms }));
+        return true;
+    } catch (_e) { return false; }
+}
+function x6ReadStoryMs(storage, key) {
+    try {
+        const raw = storage && typeof storage.get === 'function' ? storage.get(key) : null;
+        if (!raw) return null;
+        const parsed = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        const ms = parsed && parsed.storyMs;
+        return (typeof ms === 'number' && ms >= 0) ? ms : null;
+    } catch (_e) { return null; }
+}
+/* [v4.156.0 · R21-X7] 设备物理叙事的宿主记账键：上次真的给过候选的剧情毫秒。同 X3 游标口径。 */
+const X7_TOLD_KEY = 'device_physical_told_cursor';
+function x7WriteTold(storage, storyMs) {
+    try { storage?.set?.(X7_TOLD_KEY, JSON.stringify({ storyMs })); } catch (_e) { /* 记账失败不阻断 */ }
+}
+function x7ReadTold(storage) {
+    try {
+        const raw = storage && typeof storage.get === 'function' ? storage.get(X7_TOLD_KEY) : null;
+        if (!raw) return null;
+        const parsed = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        const ms = parsed && parsed.storyMs;
+        return (typeof ms === 'number' && ms > 0) ? ms : null;
+    } catch (_e) { return null; }
+}
+
 const SILENCE_TOLD_KEY = 'silence_told_cursor';
 function readSilenceLastTold(storage) {
     try {
@@ -11357,6 +11519,9 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         lc.expose?.();
                     }
                 } catch (_e) { /* 墓碑写入失败不影响回桌面 */ }
+                /* [v4.156.0 · R21-X6] 回桌面 = 离开 App：写离开锚点（剧情毫秒）。
+                 *   剧情钟读不到就不写 —— 变动摘要宁可下轮不出现，也不用墙钟顶替剧情钟。 */
+                try { if (currentApp) x6WriteStoryMs(storage, X6_LEFT_KEY); } catch (_e) { /* 旁路 */ }
                 releasePhoneInactiveResources(null);
                 currentApp = null;
                 window.currentWechatApp = null;
@@ -11390,6 +11555,51 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 //     不算一次真实打开（否则同一秒点两下会得到两条读数）。
                 //   ★ 此处**不做任何分支**、不看返回值：采集是旁路，路由是主路。
                 try { usageTrackOpen(storage, appId); } catch (_e) { /* 采集失败不得阻断开 App */ }
+                /* [v4.156.0 · R21-X6] 打开 App = 回来：写回到锚点，然后当场判一次变动摘要。
+                 *   桥只判不写（writesNothing 恒 true）；写锚点的是**宿主记账**，不是桥写记忆。
+                 *   判读结果挂 window.VirtualPhone._x6 给视图与诊断读（素材不塞上下文）。 */
+                try {
+                    const _x6ReturnOk = x6WriteStoryMs(storage, X6_RETURN_KEY);
+                    if (_x6ReturnOk && typeof appChangeDigest === 'function') {
+                        const _left = x6ReadStoryMs(storage, X6_LEFT_KEY);
+                        const _ret = x6ReadStoryMs(storage, X6_RETURN_KEY);
+                        /* 事件账：微信的流水走常驻缓存真源（storyAt 是剧情毫秒，
+                         *   与锚点同钟），按 kind 归一后交桥；窗口判定是桥的事。 */
+                        const _x6Events = (() => {
+                            try {
+                                const wd = window.VirtualPhone?.wechatApp?.wechatData
+                                    || window.VirtualPhone?.cachedWechatData || null;
+                                if (!wd || typeof wd.getChatList !== 'function') return null;
+                                const evs = [];
+                                for (const chat of (wd.getChatList() || [])) {
+                                    if (!chat || !chat.id) continue;
+                                    const msgs = wd.getMessages ? wd.getMessages(chat.id) : (chat.messages || []);
+                                    if (!Array.isArray(msgs)) continue;
+                                    for (const m of msgs) {
+                                        if (!m) continue;
+                                        evs.push({
+                                            id: String(m.messageId ?? m.id ?? ''),
+                                            kind: 'message',
+                                            storyMs: (typeof m.storyAt === 'number' && m.storyAt > 0) ? m.storyAt : null,
+                                            title: String(m.content || '').slice(0, 24)
+                                        });
+                                    }
+                                }
+                                return evs;
+                            } catch (_le) { return null; }
+                        })();
+                        const _d = appChangeDigest(Object.freeze({
+                            appId: String(appId || ''),
+                            leftAt: _left, returnAt: _ret,
+                            events: _x6Events
+                        }));
+                        window.VirtualPhone._x6 = {
+                            appId: _d.appId, face: _d.face, reason: _d.reason,
+                            items: _d.items, hit: _d.hit, dropped: _d.dropped,
+                            line: digestNote(_d)
+                        };
+                    }
+                } catch (_e) { /* 摘要旁路：任何失败都不影响开 App */ }
                 /* [v18 · 墓碑真实输出] 若该 App 上次是被「回桌面」挂起的，这里把真实
                  *   滚动位置水合回去。bindLifecycleEngines 里的 resume 只做记账，
                  *   真正把视口放回原位必须在这一层做 —— 只有宿主知道容器是谁。 */

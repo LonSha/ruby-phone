@@ -28,6 +28,8 @@ import { inspectBackupPayload } from '../../config/portable-recovery-hub.js';
  *   ★ 为什么不在这里自己判三态：那会让 missing / rejected / ok 的口径出现第二份实现，
  *     与视图那边各写一遍是同一个病（本仓治过多次）。 */
 import { payloadInspectFrom, sharePreviewOf, shareTraceOf, bundlePlanOf } from '../../config/share-migrate-bridge.js';
+/* [v4.156.0 · R21-X8] 恢复点差异的人读预览走唯一桥：本件不再自己拼「差异 N 键」那句话。 */
+import { backupDiffPreview } from '../../config/backup-diff-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 /* [v4.99.8 · R11-X4] 分享边界内核：谁能看、看得到什么、撤回后留不留痕 —— **全由内核判**。
  *   本件只做三件事：读盘 / 把用户意图转交内核 / 把结果落盘。不写第二份授权判据。 */
@@ -512,18 +514,20 @@ export class BackupdeskApp {
                 ? ('恢复点 ' + String(rows.length) + ' 个（上限 ' + String(RH_MAX_SNAPSHOTS) + ' 个，超出按拍点时间挤掉最老的）')
                 : ('恢复点**读不到**（' + String(read.why) + '）—— 这是「读不出」，不是「没拍过」'),
             empty: read.readable && rows.length === 0,
-            diff: d ? {
-                id: d.id, label: d.label,
-                count: d.diff.diffCount,
-                added: (d.diff.added || []).slice(0, 20),
-                modified: (d.diff.modified || []).slice(0, 20),
-                removed: (d.diff.removed || []).slice(0, 20),
-                line: d.diff.diffCount === 0
-                    ? '与当前键面逐键相同（没有可还原的差异）'
-                    : ('差异 ' + String(d.diff.diffCount) + ' 键：新增 ' + String((d.diff.added || []).length) +
-                        ' / 变更 ' + String((d.diff.modified || []).length) +
-                        ' / 移除 ' + String((d.diff.removed || []).length)),
-            } : null,
+            /* [v4.156.0 · R21-X8] 预览文案与人话名单全走唯一桥（backup-diff-view）：
+             *   「将恢复 N 个 app、覆盖 M 项」由桥说，且桥在结尾重申「确认前存档不会变」。 */
+            diff: d ? (() => {
+                const pv = backupDiffPreview({ diff: d.diff, label: d.label });
+                return {
+                    id: d.id, label: d.label,
+                    count: d.diff.diffCount,
+                    added: (d.diff.added || []).slice(0, 20),
+                    modified: (d.diff.modified || []).slice(0, 20),
+                    removed: (d.diff.removed || []).slice(0, 20),
+                    names: pv.names,
+                    line: pv.line,
+                };
+            })() : null,
             inspect: this._snapInspect ? {
                 /* [v4.99.8 · R11-X4] 三态原样透传：视图只认 state + label，不再自己拼文案
                  *   （原先这里把 ok/error 两格拼成两句话，等于在 App 层又写了一份口径）。 */

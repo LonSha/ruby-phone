@@ -1,3 +1,11 @@
+## 迭代 276 · v4.156.0 · R21-X6/X7/X8/X9（批次 F 收官四座）
+
+- **四座唯一桥**：app-change-digest / device-physical-narrative / backup-diff-view / weekly-recap，零依赖只 import num-gate，面闭集 + 归因码闭集 + 限额闭集四组分形，各带 selfCheck（正反两面 + 纯读扫描）。
+- **接线四处**：X6 双咽喉锚点 + 微信变动条；X7 生活流 onTick + _x7 候选面；X8 backupdesk diff 面走桥消掉第二份文案；X9 四源聚合 + 日记封面回顾块。
+- **自检抓真缺陷**：X8 计数被列表上限污染（截列表不截计数修复）；X9 用例设计错（perAppCap 语义修正用例）。
+- **判据**：tests/system-v4157.test.mjs 48/48 绿；v4156 复跑 19/19 绿（E4 版本锚改下限形）。
+- **版本**：五源同源抬至 4.156.0（index.js / manifest.json / package.json / update-log.json / ITERATION_LOG.md），index.js 缓存串同步 v=4.156.0&r=20261116-batch-f。
+
 ## 迭代 275 · v4.155.0 · R21-X3 静音与勿扰的剧情内解释（2026-11-15）
 - 【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡
 - 【缺陷形态】本版自己抓到一处自伤：诊断面一行读数与视图 HTML 的引号在转义链里被撕成错形（一处漏收尾引号、一处引号嵌套错位），node --check 当场拦下 —— 与 v3.469.0 在记忆插件上踩过的「一行撕三行」同族，处置同条：写完立即过语法门，不等跑测再爆

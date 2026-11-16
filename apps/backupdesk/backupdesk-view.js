@@ -198,10 +198,13 @@ export class BackupdeskView {
                 '</div>';
         }
         if (s.diff) {
-            h += '<div class="bk-note">' + esc(s.diff.label || s.diff.id) + '：' + esc(s.diff.line) + '</div>';
-            if ((s.diff.modified || []).length) h += '<div class="bk-row"><span class="bk-row-k">变更</span><span class="bk-row-v">' + esc(s.diff.modified.join('、')) + '</span></div>';
-            if ((s.diff.added || []).length) h += '<div class="bk-row"><span class="bk-row-k">新增</span><span class="bk-row-v">' + esc(s.diff.added.join('、')) + '</span></div>';
-            if ((s.diff.removed || []).length) h += '<div class="bk-row"><span class="bk-row-k">移除</span><span class="bk-row-v">' + esc(s.diff.removed.join('、')) + '</span></div>';
+            /* [v4.156.0 · R21-X8] line 已含「「恢复点名」：」头（桥的唯一实现），这里不再重复；
+             *   名单优先用桥翻好的人话 app 名（未登记键桥会如实给原键名）。 */
+            h += '<div class="bk-note">' + esc(s.diff.line) + '</div>';
+            const nm = s.diff.names || {};
+            if ((s.diff.modified || []).length) h += '<div class="bk-row"><span class="bk-row-k">变更</span><span class="bk-row-v">' + esc(((nm.modified && nm.modified.length) ? nm.modified : s.diff.modified).join('、')) + '</span></div>';
+            if ((s.diff.added || []).length) h += '<div class="bk-row"><span class="bk-row-k">新增</span><span class="bk-row-v">' + esc(((nm.added && nm.added.length) ? nm.added : s.diff.added).join('、')) + '</span></div>';
+            if ((s.diff.removed || []).length) h += '<div class="bk-row"><span class="bk-row-k">移除</span><span class="bk-row-v">' + esc(((nm.removed && nm.removed.length) ? nm.removed : s.diff.removed).join('、')) + '</span></div>';
         }
         if (s.inspect) h += '<div class="bk-note">' + esc(s.inspect.text) + '</div>';
         h += '<div class="bk-acts">';

@@ -5621,8 +5621,24 @@ export class WechatApp {
             `;
         }
 
+        /* [v4.156.0 · R21-X6] 你不在时的变动条（宿主咽喉判好挂 _x6，这里只画）。
+         *   只有 face === 'digest' 才出现：nothing（一直在/离开没新事）与 unavailable
+         *   （读不到/回拨）一律不画 —— 「没事」不冒充「有事」，「读不到」不冒充「没事」。 */
+        const _digest = (typeof window !== 'undefined') ? window.VirtualPhone?._x6 : null;
+        const _digestLineEsc = String((_digest && _digest.line) || '').replace(/[&<>"']/g, (c) => {
+            const k = c.charCodeAt(0);
+            if (k === 38) return '&amp;';
+            if (k === 60) return '&lt;';
+            if (k === 62) return '&gt;';
+            if (k === 34) return '&quot;';
+            return '&#39;';
+        });
+        const _digestBar = (_digest && _digest.face === 'digest' && Array.isArray(_digest.items) && _digest.items.length)
+            ? `<div class="wechat-change-digest" data-x6="1"><span>${_digestLineEsc}</span></div>`
+            : '';
         return `
             <div class="wechat-chat-list">
+                ${_digestBar}
                 ${chats.map(chat => `
                     <div class="chat-item" data-chat-id="${chat.id}">
                         <div class="chat-avatar">

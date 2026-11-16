@@ -312,12 +312,11 @@ test('v4156 E3. 真接线：装配点跑自检、消费点在通知咽喉/诊断
     assert.equal(check.ok, true, '桥自检同源通过');
 });
 
-test('v4156 E4. 版本锚：4.155.0 五源同源', () => {
-    for (const rel of ['manifest.json', 'package.json']) {
-        assert.ok(read(rel).includes('4.155.0'), `${rel} 已升至 4.155.0`);
-    }
-    assert.ok(read('index.js').includes("ST_PHONE_VERSION = '4.155.0'"));
-    assert.ok(read('index.js').includes('【版本升至 4.155.0（五源同源）】R21-X3'));
-    assert.ok(read('update-log.json').includes('"latest": "4.155.0"'));
-    assert.ok(read('ITERATION_LOG.md').includes('## 迭代 275 · v4.155.0 · R21-X3'));
+test('v4156 E4. 版本锚：版本下限形（v4156 交付的那批文件仍须在册）', () => {
+    /* [v4.156.0 修正] 原版把 4.155.0 写死成精确等值，抬版后必然红。
+     *   版本锚的正确形态是**下限**：本版交付的文件与标记必须在场，
+     *   精确版本号归当前版的判据（system-v4157）管。 */
+    assert.ok(read('index.js').includes('R21-X3 静音与勿扰的剧情内解释'), 'X3 桥注释必须在册');
+    assert.ok(read('index.js').includes('【版本升至 4.155.0（五源同源）】R21-X3'), 'X3 交付标记必须在册');
+    assert.ok(read('ITERATION_LOG.md').includes('## 迭代 275 · v4.155.0 · R21-X3'), 'X3 迭代账必须在册');
 });
