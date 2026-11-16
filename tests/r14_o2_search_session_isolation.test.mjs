@@ -278,7 +278,8 @@ function closureOf(entry) {
         const re = /from\s+['"](\.[^'"]+)['"]/g;
         let m;
         while ((m = re.exec(src))) {
-            const target = path.posix.normalize(path.posix.join(path.posix.dirname(rel), m[1]));
+            const spec = m[1].split(/[?#]/, 1)[0];
+            const target = path.posix.normalize(path.posix.join(path.posix.dirname(rel), spec));
             stack.push(target);
         }
     }

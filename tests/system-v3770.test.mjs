@@ -206,7 +206,8 @@ function importClosureOf(root, entry) {
         let m;
         while ((m = re.exec(src))) {
             if (m[1].slice(0, 1) !== '.') continue;
-            stack.push(path.posix.normalize(path.posix.join(path.posix.dirname(rel), m[1])));
+            const spec = m[1].split(/[?#]/, 1)[0];
+            stack.push(path.posix.normalize(path.posix.join(path.posix.dirname(rel), spec)));
         }
     }
     return [...seen];
