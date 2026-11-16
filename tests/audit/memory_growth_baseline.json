@@ -1,55 +1,84 @@
 {
   "file": "tests/audit/memory_growth_probe.cjs",
   "note": "内存快照增长 / 渲染耗时取证。**无浏览器 / 无 DOM**：计时读数一律不是实机渲染耗时。",
-  "measured_at": "v3.23.3",
+  "measured_at": "v4.157.0",
   "node_version": "v24.18.0",
   "gc_forced": true,
   "noise_note": "已用 --expose-gc 强制回收后取样；单点仍不可判泄漏，只判**跨轮趋势**。",
   "rounds": 8,
+  "trials": 3,
   "ops_per_round": 400,
   "readings": {
+    "keep_kb": 0,
+    "retained_arrays": 0,
     "heap_samples_kb": [
-      4362,
-      4367,
-      4376,
-      4376,
-      4376,
-      4376,
       4378,
-      4378
+      4388,
+      4391,
+      4391,
+      4391,
+      4391,
+      4393,
+      4403
     ],
-    "heap_first_kb": 4362,
-    "heap_last_kb": 4378,
-    "heap_total_growth_kb": 16,
+    "heap_first_kb": 4378,
+    "heap_last_kb": 4403,
+    "heap_total_growth_kb": 15,
     "heap_tail_growth_kb": 2,
     "heap_tail_kb_per_round": 0.5,
-    "host_roundtrip_samples_kb": [
-      5188,
-      5183,
-      5194,
-      5223,
-      5204,
-      5204,
-      5204,
-      5206,
-      5218,
-      5221,
-      5213,
-      5213,
-      5213,
-      5213,
-      5213,
-      5213,
-      5214,
-      5214,
-      5214,
-      5214,
-      5214,
-      5214,
-      5214,
-      5214
+    "heap_tail_growth_raw_last_kb": 12,
+    "heap_total_growth_raw_last_kb": 25,
+    "heap_tail_growth_kb_samples": [
+      2,
+      0,
+      9
     ],
-    "host_roundtrip_per_round_kb": 0.5,
+    "heap_total_growth_kb_samples": [
+      25,
+      3,
+      7
+    ],
+    "heap_tail_kb_per_round_samples": [
+      0.5,
+      0,
+      2.25
+    ],
+    "heap_tail_growth_median_kb": 2,
+    "heap_total_growth_median_kb": 7,
+    "heap_growth_trials": 3,
+    "host_roundtrip_samples_kb": [
+      5330,
+      5340,
+      5341,
+      5381,
+      5381,
+      5353,
+      5353,
+      5355,
+      5369,
+      5372,
+      5390,
+      5364,
+      5364,
+      5364,
+      5364,
+      5373,
+      5364,
+      5364,
+      5365,
+      5365,
+      5376,
+      5364,
+      5366,
+      5366
+    ],
+    "host_roundtrip_per_round_kb": -6.5,
+    "host_roundtrip_per_round_kb_samples": [
+      -6.5,
+      2.25,
+      -2.5
+    ],
+    "host_roundtrip_per_round_median_kb": -2.5,
     "host_roundtrip_restored": [
       true,
       true,
@@ -75,17 +104,6 @@
       true,
       true,
       true
-    ],
-    "host_roundtrip_per_round_kb_samples": [
-      0.5,
-      0,
-      0
-    ],
-    "host_roundtrip_per_round_median_kb": 0,
-    "heap_tail_kb_per_round_samples": [
-      0.5,
-      1.25,
-      2
     ]
   },
   "timings": {
@@ -93,9 +111,9 @@
       "not_render": true,
       "warn": "★ 这是「视图串生成」耗时，**不是 DOM 渲染耗时** —— 本环境无布局引擎。",
       "reps": 400,
-      "total_ms": 20.501,
-      "per_op_ms": 0.051,
-      "html_chars": 1739,
+      "total_ms": 78.158,
+      "per_op_ms": 0.195,
+      "html_chars": 2768,
       "threw": 0
     }
   },
@@ -112,7 +130,9 @@
   },
   "verdict": {
     "module_heap": "linear-acceptable",
-    "module_heap_note": "后半段每轮增长 1.25KB（3 跑中位数，< 32KB/轮）—— 属「线性且微小」",
+    "module_heap_median_kb_per_round": 0.5,
+    "module_heap_trials": 3,
+    "module_heap_note": "后半段每轮增长 0.5KB（3 跑中位数，< 32KB/轮）—— 属「线性且微小」",
     "listeners": "ok",
     "listeners_note": "构造-启动-停止 8 轮后全局监听器回到基线（0）",
     "event_source": "ok",
@@ -120,7 +140,7 @@
     "new_app_hooks": "ok",
     "new_app_hooks_note": "两个新 App 重复 render 后宿主订阅数不变（各恰 1 条）—— 幂等哨兵在场",
     "host_injection": "linear-acceptable",
-    "host_injection_note": "装/卸 8 轮后四个宿主全局逐轮还原，堆后端每轮 0.5KB（3 跑中位数，< 32KB/轮）⇒ 桩宿主下无沉淀；真宿主占用仍不可测（见 unmeasurable）",
+    "host_injection_note": "装/卸 8 轮后四个宿主全局逐轮还原，堆后端每轮 -6.5KB（3 跑中位数，< 32KB/轮）⇒ 桩宿主下无沉淀；真宿主占用仍不可测（见 unmeasurable）",
     "render": "string-build-ok"
   },
   "facts": {
@@ -155,6 +175,50 @@
       "trials": 3
     }
   },
+  "approx_measurable": [
+    {
+      "item": "宿主（SillyTavern）注入对象的内存占用（**桩宿主近似**）",
+      "how": "反复 install → 使用（造视图元素 / 挂全局监听 / 挂事件源 handler / 写 storage） → uninstall → resetHostFlags；判 (a) 四个宿主全局按**同一性**还原， (b) 堆的跨轮趋势（带 gc 才判，不带 gc 拒判）",
+      "readings": {
+        "host_roundtrip_per_round_kb": -6.5,
+        "host_roundtrip_per_round_kb_samples": [
+          -6.5,
+          2.25,
+          -2.5
+        ],
+        "host_roundtrip_per_round_median_kb": -2.5,
+        "host_roundtrip_samples_kb": [
+          5330,
+          5340,
+          5341,
+          5381,
+          5381,
+          5353,
+          5353,
+          5355,
+          5369,
+          5372,
+          5390,
+          5364,
+          5364,
+          5364,
+          5364,
+          5373,
+          5364,
+          5364,
+          5365,
+          5365,
+          5376,
+          5364,
+          5366,
+          5366
+        ],
+        "globals_restored_all": true,
+        "verdict": "linear-acceptable"
+      },
+      "still_unmeasurable": "**真宿主**（SillyTavern 本体）里那一份注入对象的**实际占用** —— 夹具是零依赖替身，不是宿主本体；真机读数归 R-O3（真宿主实机验证）"
+    }
+  ],
   "unmeasurable": [
     {
       "item": "真实 DOM 渲染 / 排版 / 合成耗时",
@@ -167,50 +231,6 @@
     {
       "item": "V8 之外的运行时内存",
       "why": "process.memoryUsage 只覆盖当前进程"
-    }
-  ],
-  "approx_measurable": [
-    {
-      "item": "宿主（SillyTavern）注入对象的内存占用（**桩宿主近似**）",
-      "how": "反复 install → 使用（造视图元素 / 挂全局监听 / 挂事件源 handler / 写 storage） → uninstall → resetHostFlags；判 (a) 四个宿主全局按**同一性**还原， (b) 堆的跨轮趋势（带 gc 才判，不带 gc 拒判）",
-      "readings": {
-        "host_roundtrip_per_round_kb": 0.5,
-        "host_roundtrip_per_round_kb_samples": [
-          0.5,
-          0,
-          0
-        ],
-        "host_roundtrip_per_round_median_kb": 0,
-        "host_roundtrip_samples_kb": [
-          5188,
-          5183,
-          5194,
-          5223,
-          5204,
-          5204,
-          5204,
-          5206,
-          5218,
-          5221,
-          5213,
-          5213,
-          5213,
-          5213,
-          5213,
-          5213,
-          5214,
-          5214,
-          5214,
-          5214,
-          5214,
-          5214,
-          5214,
-          5214
-        ],
-        "globals_restored_all": true,
-        "verdict": "linear-acceptable"
-      },
-      "still_unmeasurable": "**真宿主**（SillyTavern 本体）里那一份注入对象的**实际占用** —— 夹具是零依赖替身，不是宿主本体；真机读数归 R-O3（真宿主实机验证）"
     }
   ],
   "corrections": [
@@ -368,7 +388,32 @@
         "跨会话小时级堆增长",
         "V8 之外的运行时内存"
       ]
+    },
+    "v4.157.0": {
+      "why": "v4.157.0（R22 统一反馈出口批次）：趋势门的判决口径修正后的复校。修的是**门读错口径**，不是产品逻辑 —— 探针自 v3.23.4 起已认定「单次采样斜率即噪声」并只对斜率取跨次中位数，而 memory-trend-check / lib 仍直接读窗口 0 的 heap_tail_growth_kb / heap_total_growth_kb，实测同一份代码 8 路并发下 tail 在 2KB 与 13KB 之间翻面（空闲稳定 2KB），全量门下间歇误红。本版把探针各窗口原始读数与跨次中位数一并落盘，门改读中位数；负控制的保留改为每个窗口都真发生，否则中位数会把真泄漏洗掉（实测修前 tail_samples [3071,-4,8] ⇒ 中位数 8）。",
+      "how": "node --expose-gc tests/audit/memory_growth_probe.cjs --json   ← 必须带 --expose-gc，否则读数不可判",
+      "readings": {
+        "readings.heap_tail_growth_median_kb": 2,
+        "readings.heap_total_growth_median_kb": 7,
+        "readings.heap_tail_growth_kb_samples": [
+          2,
+          0,
+          9
+        ],
+        "readings.heap_growth_trials": 3,
+        "readings.heap_tail_kb_per_round_samples": [
+          0.5,
+          0,
+          2.25
+        ]
+      },
+      "unchanged": [
+        "上界口径（8KB / 64KB）与 TAIL_LIMIT_KB < 32 的分辨力约束",
+        "负控制量级（--keep-kb 1024 ⇒ 尾段约 3074KB、总增长约 7175KB，仍高一个数量级以上）",
+        "三档退出码与 gc_forced 拒判口径",
+        "unmeasurable 四条（真实 DOM 渲染 / 真宿主内存 / 小时级堆增长 / V8 之外运行时）"
+      ],
+      "note": "本轮只改**判决输入的口径**，阈值一分未放宽。"
     }
-  },
-  "trials": 3
+  }
 }

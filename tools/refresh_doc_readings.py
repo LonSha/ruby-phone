@@ -120,7 +120,14 @@ def main():
     }
 
     drift = {k: (on_disk[k], live[k]) for k in live if on_disk[k] != live[k]}
-    recert = ('v' + ver + ' 复校') in doc
+    # ★ [v4.157.0 修正] 复校标记必须**只看标题行**：
+    #   原判据用 `('v' + ver + ' 复校') in doc`（全文子串）。而本工具自己写入的
+    #   「来由段」里也含同一串字面量 ⇒ 第一次写入后来由段留在文档里，第二次起
+    #   `recert` 恒为真 ⇒ 标题行的复校标记**再也不会被替换**，抬版即陈旧，
+    #   且 v3202 E2 / v328 B2 / v3870 E1 等一整族判据集体转红而各自看起来
+    #   像「文档自己坏了」。此处改为只认标题行里那一个标记。
+    title_line = doc.split(NL)[0]
+    recert = ('**v' + ver + ' 复校**') in title_line
     print('[refresh-doc] ver=%s' % ver)
     print('[refresh-doc] live  syntax=%d import=%d/%d'
           % (live['syntax_files'], live['import_files'], live['import_specs']))
@@ -155,8 +162,14 @@ def main():
                 break
         new_doc = NL.join(lines)
     if not recert:
-        # 标题行里的复校标记（既有形态：**v3.72.0 复校**）
-        new_doc = re.sub(r'（\*\*v[\d.]+ 复校\*\*）', '（**v%s 复校**）' % ver, new_doc, count=1)
+        # 标题行里的复校标记。
+        # ★ [v4.157.0 修正] 原正则要求 `（**vX 复校**）` —— 但本仓标题的**真实形态**是
+        #   `（v2.82.0 起；**vX 复校**）`：左括号与标记之间还有「起；**」。原正则因此
+        #   **一次都没匹配上** ⇒ 标题标记从 v4.99.8 起就再没被抬过版，
+        #   而工具每次仍报「已写入」并返回 0 —— 这正是「跑过了 ≠ 落盘了」的同形。
+        #   修法：只替换**标记本身**（`\*\*vX 复校\*\*`），不碰它周围的「起；」与括号，
+        #   于是两种形态都能命中；标题行只有一处标记，历史复校行不在标题行、不受影响。
+        new_doc = re.sub(r'\*\*v[\d.]+ 复校\*\*', '**v%s 复校**' % ver, new_doc, count=1)
     wr(DOC, new_doc)
     print('[refresh-doc] 已写入：syntax=%d import=%d/%d recert=%s'
           % (live['syntax_files'], live['import_files'], live['import_specs'], ver))

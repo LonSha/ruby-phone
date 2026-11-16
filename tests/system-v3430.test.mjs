@@ -1199,6 +1199,13 @@ function stageTree() {
     fs.copyFileSync(path.join(ROOT, 'config', 'empty-face.js'), path.join(dir, 'config', 'empty-face.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'destructive-confirm.js'), path.join(dir, 'config', 'destructive-confirm.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'undo-capability.js'), path.join(dir, 'config', 'undo-capability.js'));
+    /* [v4.157.0 · R22] destructive-confirm.js 已把确认/输入收口到统一反馈出口
+     *   config/phone-feedback.js（v4.157.0 起新增），副本树必须带上它 ——
+     *   否则副本里 destructive-confirm.js 的 import 解析不到，I13~I19 七条
+     *   **破坏类**负控制全部抛 MODULE_NOT_FOUND 假红（判据根本没跑到）。
+     *   这正是本段注释警告的形态：依赖清单是手工白名单，不跟就假红。
+     *   处置是补齐白名单（副本树要真装得下），不是放宽断言。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'phone-feedback.js'), path.join(dir, 'config', 'phone-feedback.js'));
     const kd = path.join(dir, 'apps', 'pvdesk');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['pvdesk-data.js', 'pvdesk-view.js', 'pvdesk-app.js']) {

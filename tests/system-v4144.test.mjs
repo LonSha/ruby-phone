@@ -67,6 +67,45 @@ test('A1 两根上界必须是实测值的量级倍数（趋势门不是精确�
   assert.ok(LIB.TAIL_LIMIT_KB < 32, '★ 尾段上界不得放宽到 32KB —— 那是探针判 leak-candidate 的同一根线，放到那里门就不再有分辨力');
 });
 
+test('A3 ★ 判决必须取跨次中位数：单次窗口读数再大也不得直接翻红（v4.157.0 R22 回归）', () => {
+  /* 根因（实测，不是推演）：探针自 v3.23.4 起就认定「单次采样不可判」，只对每轮斜率取中位数；
+   * 而门原先直接读窗口 0 的 heap_tail_growth_kb / heap_total_growth_kb ——
+   * 同一份代码在 8 路并发下 tail 在 2KB 与 13KB 之间翻面（空闲稳定 2KB），
+   * 于是全量门下把「GC 迟到一轮」当成了泄漏（实测 3 次真跑中第 2 次翻红）。 */
+  const noisyWindowOnly = {
+    heap_tail_growth_kb: 13, heap_total_growth_kb: 34,
+    heap_tail_growth_median_kb: 2, heap_total_growth_median_kb: 15,
+  };
+  assert.equal(LIB.judgeTrendReadings(noisyWindowOnly).verdict, 'pass',
+    '★ 窗口 0 越界但跨次中位数在上界内 ⇒ 必须 pass（单次窗口是噪声，不是判决）');
+  /* 反向：中位数真越界时必须红 —— 不得把中位数写成「一律放过」。 */
+  const realLeak = {
+    heap_tail_growth_kb: 2, heap_total_growth_kb: 15,
+    heap_tail_growth_median_kb: 3076, heap_total_growth_median_kb: 7176,
+  };
+  const j = LIB.judgeTrendReadings(realLeak);
+  assert.equal(j.verdict, 'over-limit', '★ 中位数真越界（负控制量级）⇒ 必须红');
+  assert.equal(j.over.length, 2, '两根都越界时两条都要点名');
+  /* 旧探针/夹具没有中位数字段时回落到窗口读数：不得静默变成 0（那会把门关成永绿）。 */
+  assert.equal(LIB.judgeTrendReadings({ heap_tail_growth_kb: 9, heap_total_growth_kb: 15 }).verdict, 'over-limit',
+    '缺中位数字段时必须回落窗口读数，且仍按同一上界判红');
+});
+
+test('A4 ★ 门与探针的口径必须同源：探针真落中位数字段，门真读它，负控制不被中位数洗掉', () => {
+  const probe = read(PROBE_REL);
+  assert.ok(/heap_tail_growth_median_kb/.test(probe) && /heap_total_growth_median_kb/.test(probe),
+    '★ 探针必须落跨次中位数字段（否则门无从取中位数）');
+  assert.ok(/heap_tail_growth_kb_samples/.test(probe) && /heap_total_growth_kb_samples/.test(probe),
+    '★ 探针必须留下各窗口原始读数（中位数要可复算，不靠一个黑盒数）');
+  const gate = read(GATE_REL);
+  assert.ok(/heap_tail_growth_median_kb/.test(gate) || /judgeTrendReadings/.test(gate),
+    '门必须真读中位数口径（经 lib 或就地）');
+  const nb = JSON.parse(runGate(['--keep-kb', '1024', '--json']).out);
+  assert.ok(nb.readings.heap_tail_growth_kb > LIB.TAIL_LIMIT_KB * 100,
+    '★ 负控制必须仍落在真泄漏量级（实得 ' + nb.readings.heap_tail_growth_kb
+    + 'KB）—— 若被中位数稀释成个位 KB，说明保留没在每个窗口发生');
+});
+
 test('A2 判决词三态互不同形：pass / over-limit / 拒判理由码（不得全塌成「不行」）', () => {
   const ok = LIB.judgeTrendReadings({ heap_tail_growth_kb: 2, heap_total_growth_kb: 15 });
   assert.equal(ok.verdict, 'pass');

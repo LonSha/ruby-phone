@@ -1273,7 +1273,7 @@
       "rel": "apps/phone/phone-view.js",
       "cls": "PhoneCallView",
       "name": "tickEscalation",
-      "line": 3494,
+      "line": 3500,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1281,7 +1281,7 @@
       "rel": "apps/phone/phone-view.js",
       "cls": "PhoneCallView",
       "name": "conversationThreadSelfCheck",
-      "line": 3885,
+      "line": 3891,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1449,7 +1449,7 @@
       "rel": "apps/reading/reading-view.js",
       "cls": "ReadingView",
       "name": "checkAnnualStale",
-      "line": 741,
+      "line": 742,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1969,7 +1969,7 @@
       "rel": "apps/wechat/contacts-view.js",
       "cls": "ContactsView",
       "name": "scrollToGroupSection",
-      "line": 1415,
+      "line": 1423,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2041,7 +2041,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "getHoneyHistoryInjectionChats",
-      "line": 445,
+      "line": 446,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2049,7 +2049,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "recordWalletTransaction",
-      "line": 1973,
+      "line": 1974,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2057,7 +2057,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "resolveGroupSpeaker",
-      "line": 2479,
+      "line": 2482,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2065,7 +2065,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "resolveGroupSpeakerIdentity",
-      "line": 2497,
+      "line": 2500,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2073,7 +2073,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "planGroupSpeakers",
-      "line": 2544,
+      "line": 2547,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2081,7 +2081,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "buildGroupForceSpeakInstruction",
-      "line": 2562,
+      "line": 2565,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2089,7 +2089,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "buildGroupCritiquePrompt",
-      "line": 2568,
+      "line": 2571,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2097,7 +2097,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "parseGroupCritique",
-      "line": 2574,
+      "line": 2577,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2105,7 +2105,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "relationAlbumOf",
-      "line": 2647,
+      "line": 2650,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2113,7 +2113,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "syncAvatarByChat",
-      "line": 3732,
+      "line": 3735,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2121,7 +2121,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "isPossibleName",
-      "line": 4414,
+      "line": 4417,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2129,7 +2129,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "guessAvatar",
-      "line": 4641,
+      "line": 4644,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2137,7 +2137,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "addGroupMember",
-      "line": 5432,
+      "line": 5435,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2145,7 +2145,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "removeGroupMember",
-      "line": 5443,
+      "line": 5446,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2153,7 +2153,7 @@
       "rel": "apps/wechat/wechat-data.js",
       "cls": "WechatData",
       "name": "postGroupCollaborationTask",
-      "line": 5456,
+      "line": 5459,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2537,7 +2537,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "getPromptPresets",
-      "line": 2283,
+      "line": 2284,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2545,7 +2545,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "getEnabledPromptsForChat",
-      "line": 2539,
+      "line": 2540,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2553,7 +2553,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "exportConfig",
-      "line": 2659,
+      "line": 2660,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2561,7 +2561,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "importConfig",
-      "line": 2670,
+      "line": 2671,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -3117,5 +3117,6 @@
       "isStatic": false,
       "classInstantiated": true
     }
-  ]
+  ],
+  "generated_at_note": "行号按 tools/relocate_method_baseline.mjs 重定位（v4.95.0：源码插入导致其后行号整体后移）"
 }

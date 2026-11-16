@@ -115,6 +115,9 @@ if (JSON_MODE) {
   process.stdout.write('[memory-trend] 尾段增长 ' + tail + 'KB（上界 ' + TAIL_LIMIT_KB + 'KB）· 总增长 ' + total
     + 'KB（上界 ' + TOTAL_LIMIT_KB + 'KB）· 轮数 ' + roundsLive + '· 样本 ' + samples.length
     + '· 强制GC ' + String(live.gc_forced) + String.fromCharCode(10));
+  /* 口径自报：两个数是**跨次中位数**（单次窗口值只落 JSON 的 readings，参与者可复算）。 */
+  process.stdout.write('[memory-trend] 判决口径：跨 ' + String(numOrNull(rd2.heap_growth_trials) || 0)
+    + ' 次采样窗口取中位数（单次窗口读数不当判决，见探针 v3.23.4 噪声实测）' + String.fromCharCode(10));
   if (keepKB !== null && keepKB > 0) {
     process.stdout.write('[memory-trend] 负控制开关：每轮真留 ' + keepKB + 'KB（累计 ' + String(retainedN) + ' 个数组）'+ String.fromCharCode(10));
   }

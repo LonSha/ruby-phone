@@ -152,16 +152,35 @@ const out = {
     /* 趋势判定：用**后半段斜率**（前半段含 JIT/缓存填充，不是泄漏） */
     const half = Math.floor(samples.length / 2) || 1;
     const tailFirst = samples[half];
-    const tailGrowth = last - tailFirst;
+    /* ★ [v4.157.0 · R22] 根因二次定位（实测）：越界不是「整体抬高」，而是**单个采样点迟到** ——
+     *   8 路并发下 heap_samples_kb 常常只差在末点一格（…,4388,4388,4391,4391），
+     *   而 tail = last - samples[half] 把这一格的抖动直接当成 9KB 越界。
+     *   跨次中位数只能滤**窗口之间**的抖动，滤不掉**窗口之内**的端点抖动。
+     *   故末点改用「后半段取样点的中位数」作锚：一个点迟到不改变中位数，
+     *   而真正的泄漏（每轮都涨）会让后半段整体抬高，中位数照样跟上。
+     *   负控制的保留是逐轮真发生的，后半段整体抬高 ⇒ 这条稳健口径不会把它洗掉。 */
+    const tailRegion = samples.slice(half + 1);
+    const tailAnchor = tailRegion.length ? medianOf(tailRegion) : last;
+    const tailGrowth = tailAnchor - tailFirst;
+    const totalGrowth = tailAnchor - first;
     const perRoundKB = Math.round((tailGrowth / Math.max(1, samples.length - half)) * 100) / 100;
     out.readings.keep_kb = KEEP_KB;
     out.readings.retained_arrays = retained.length;
     out.readings.heap_samples_kb = samples;
     out.readings.heap_first_kb = first;
     out.readings.heap_last_kb = last;
-    out.readings.heap_total_growth_kb = growthKB;
+    out.readings.heap_total_growth_kb = totalGrowth;
     out.readings.heap_tail_growth_kb = tailGrowth;
     out.readings.heap_tail_kb_per_round = perRoundKB;
+    /* 观测值：末点原始差（不参与判决，只留档，便于人工核对稳健口径改了什么） */
+    out.readings.heap_tail_growth_raw_last_kb = last - tailFirst;
+    out.readings.heap_total_growth_raw_last_kb = growthKB;
+    /* ★ [v4.157.0 · R22] 单次窗口的 tail/total 与斜率同族地是**噪声**：
+     *   实测同一份代码在 8 路并发下 tail 在 2KB 与 13KB 之间翻面，而空闲时稳定在 2KB。
+     *   本探针自 v3.23.4 起就对斜率取了跨次中位数，唯独 tail/total 只落窗口 0 —— 于是下游
+     *   趋势门拿到的是一个「随负载抖动」的数。这里把每个窗口的原始读数都留下，供中位数复算。 */
+    out.readings.heap_tail_growth_kb_samples = [tailGrowth];
+    out.readings.heap_total_growth_kb_samples = [growthKB];
     /* ★ [v3.23.4] 单次采样的斜率**本身就是噪声**：8 轮里只要 GC 迟到一轮，末轮就多背 50~270KB
      *   （实测同一份代码 12 连跑：0.5 / 0.75 / 1 / 1.25 / 1.5 / 2.25 / 4 / **55.25** KB/轮 ——
      *   差一个半数量级）。按单次读数发判决 = 「把抖动当机制」，且会让下游判据（H2/I2 逐字比
@@ -178,13 +197,29 @@ const out = {
                 DR.dryRunLoreBlock({ entries: [{ comment: 'c' + i, content: 'x'.repeat(64) }] }, { maxChars: 500 });
                 PL.plotlinePromptBlock({ worldProg: { knowledge: { 甲: { known: ['x'], unaware: ['y'] } } } }, { maxLines: 10 });
             }
+            /* ★ [v4.157.0 · R22] 负控制的保留必须**每个采样窗口都真发生**：
+             *   原先只有窗口 0 保留，后续 trial 不保留 ⇒ 中位数被稀释（实测 tail_samples
+             *   [3071,-4,8] ⇒ 中位数 8），负控制等于被中位数洗掉了。保留与采样同窗口同轮，
+             *   否则「跨次中位数」与「真泄漏」就不在同一个口径上比。 */
+            if (KEEP_KB > 0) retained.push(new Array(Math.ceil(KEEP_KB * 1024 / 8)).fill(r + t));
             ts.push(heapKB());
         }
         const th = Math.floor(ts.length / 2) || 1;
+        /* 与窗口 0 同一稳健口径：末锚取后半段中位数，避免单个迟到的点直接翻红。 */
+        const tRegion = ts.slice(th + 1);
+        const tAnchor = tRegion.length ? medianOf(tRegion) : ts[ts.length - 1];
         out.readings.heap_tail_kb_per_round_samples.push(
-            Math.round(((ts[ts.length - 1] - ts[th]) / Math.max(1, ts.length - th)) * 100) / 100);
+            Math.round(((tAnchor - ts[th]) / Math.max(1, ts.length - th)) * 100) / 100);
+        /* 与斜率同一口径：每个窗口的 tail/total 原始读数一并留下（窗口 0 已在上面压入）。 */
+        out.readings.heap_tail_growth_kb_samples.push(tAnchor - ts[th]);
+        out.readings.heap_total_growth_kb_samples.push(tAnchor - ts[0]);
     }
     const perRoundMedKB = medianOf(out.readings.heap_tail_kb_per_round_samples);
+    /* ★ [v4.157.0 · R22] 与斜率同源的跨次中位数：下游趋势门读这两个数下判，
+     *   单次窗口的 heap_tail_growth_kb / heap_total_growth_kb 只落 readings（降级为观测值）。 */
+    out.readings.heap_tail_growth_median_kb = medianOf(out.readings.heap_tail_growth_kb_samples);
+    out.readings.heap_total_growth_median_kb = medianOf(out.readings.heap_total_growth_kb_samples);
+    out.readings.heap_growth_trials = TRIALS;
     /* 阈值是**量级判据**：每轮 < 32KB 视为「线性且微小」；≥ 32KB/轮 才立泄漏候选。
      * ★ v3.22.0：**未强制回收时一律拒判**（inconclusive）。
      *   理由：不带 --expose-gc 时读数含未回收垃圾 —— 实测 166.75KB/轮 vs 带 gc 的 0.5KB/轮，

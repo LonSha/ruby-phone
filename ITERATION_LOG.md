@@ -1,4 +1,5 @@
 ## 迭代 277 · v4.157.0 · R22 统一反馈出口与全量门禁修复（2026-11-16）
+- 【版本升至 4.157.0（五源同源）】R22 统一反馈出口与全量门禁修复收口：五源同源（update-log.json / manifest.json / package.json / index.js / ITERATION_LOG.md）对齐到 4.157.0，当版公告 10 条逐字同源。
 - 【统一反馈出口】新增 `config/phone-feedback.js`，收口历史 `alert` / `confirm` / `prompt`；同步兼容层保留旧事件时序，异步 API 提供页内无障碍对话框。
 - 【安全边界】无 PhoneShell 或无 DOM 时确认与输入 fail-closed；提示不抛异常；破坏性操作不因宿主能力缺失而默认放行。
 - 【迁移纪律】批量迁移只替换宿主限定调用，保留 `GroupVote.confirm` 等业务方法；静态扫描与定向测试同步覆盖误改风险。

@@ -23,8 +23,16 @@ export function judgeTrendReadings(readings, limits) {
   const L = limits || {};
   const tailMax = numOrNull(L.tail) !== null ? L.tail : TAIL_LIMIT_KB;
   const totalMax = numOrNull(L.total) !== null ? L.total : TOTAL_LIMIT_KB;
-  const tail = numOrNull(readings && readings.heap_tail_growth_kb);
-  const total = numOrNull(readings && readings.heap_total_growth_kb);
+  /* ★ [v4.157.0 · R22] 判决取**跨次中位数**（探针 `heap_*_growth_median_kb`），不是窗口 0。
+   *   根因（实测，不是推演）：单次窗口的 tail/total 与「每轮斜率」同族地是噪声 ——
+   *   同一份代码在 8 路并发下 tail 在 2KB 与 13KB 之间翻面（空闲时稳定 2KB），
+   *   而探针自 v3.23.4 起就已认定「单次采样不可判」并只对斜率取中位数。
+   *   门读窗口 0 ⇒ 把 GC 迟到一轮当成泄漏，全量门下间歇误红（实测 3 次真跑中第 2 次翻红）。
+   *   缺中位数字段时回落到窗口读数（旧探针/夹具仍可判，不静默变成 0）。 */
+  const tailMed = numOrNull(readings && readings.heap_tail_growth_median_kb);
+  const totalMed = numOrNull(readings && readings.heap_total_growth_median_kb);
+  const tail = tailMed !== null ? tailMed : numOrNull(readings && readings.heap_tail_growth_kb);
+  const total = totalMed !== null ? totalMed : numOrNull(readings && readings.heap_total_growth_kb);
   const over = [];
   if (tail !== null && tail > tailMax) over.push('尾段增长 ' + tail + 'KB > 上界 ' + tailMax + 'KB');
   if (total !== null && total > totalMax) over.push('总增长 ' + total + 'KB > 上界 ' + totalMax + 'KB');
