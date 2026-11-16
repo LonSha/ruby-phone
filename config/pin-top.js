@@ -8,7 +8,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const PIN_TOP_FACES = Object.freeze(['empty', 'unpinned', 'pinned']);
+const PIN_TOP_FACES = Object.freeze(['empty', 'unpinned', 'pinned']);
 export const PIN_TOP_LIMITS = Object.freeze({ maxPinned: 20 });
 
 export function normalizePinSet(pins) {
@@ -53,7 +53,7 @@ export function orderChats(chats, pins) {
     return { face, chats: ordered, pinnedCount: pinned.length, total: list.length };
 }
 
-export function pinTopNote(r) {
+function pinTopNote(r) {
     const face = r && r.face;
     if (face === 'empty') return '还没有任何会话';
     if (face === 'pinned') return `置顶 ${r.pinnedCount} 个会话`;

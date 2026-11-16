@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  * worldpulse-view.js — 世界脉搏视图（开关/风格/阈值/手动脉冲/历史流）
  * ======================================================== */
@@ -163,7 +164,7 @@ export class WorldpulseView {
             await this.app.manualPulse();
             rerender();
         });
-        $('wp-clear')?.addEventListener('click', () => { if (confirm('清空全部世界动态历史？')) { this.app.clearHistory(); rerender(); } });
+        $('wp-clear')?.addEventListener('click', () => { if (phoneConfirm('清空全部世界动态历史？')) { this.app.clearHistory(); rerender(); } });
     }
 
     _css() {

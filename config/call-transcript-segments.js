@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const CALL_SEG_FACES = Object.freeze(['empty', 'segments', 'invalid']);
+const CALL_SEG_FACES = Object.freeze(['empty', 'segments', 'invalid']);
 
 export function segmentTranscript(transcript) {
     const arr = Array.isArray(transcript) ? transcript : null;

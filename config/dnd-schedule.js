@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const DND_FACES = Object.freeze(['disabled', 'outside', 'inside', 'invalid']);
+const DND_FACES = Object.freeze(['disabled', 'outside', 'inside', 'invalid']);
 
 export function normalizeWindow(w) {
     if (!w || typeof w !== 'object') return { ok: false };
@@ -38,7 +38,7 @@ export function dndFace({ enabled, hour, window } = {}) {
     return { face: inside ? 'inside' : 'outside', quiet: inside, hour: numOrNull(hour) };
 }
 
-export function dndNote(r) {
+function dndNote(r) {
     const face = r && r.face;
     if (face === 'disabled') return '免打扰未开启';
     if (face === 'invalid') return '免打扰时段读不出来';

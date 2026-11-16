@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { CONDITION_REMINDER_KEY, readConditionReminders, evaluateConditionReminders } from '../../config/condition-reminder-store.js';
 import { conditionReminderSources } from '../../config/condition-reminder-sources.js';
 import { reminderPreview } from '../../config/condition-reminder.js';
@@ -33,7 +34,7 @@ export class ConditionReminderView {
             if (!item) return;
             const rule = { id: globalThis.crypto.randomUUID(), kind, chatId: String(form.get('chatId') || '').trim(), target: item.id, label: item.label, enabled: true, createdAt: Date.now() };
             const preview = reminderPreview(rule, source.sources);
-            if (preview.available && globalThis.confirm('等待条件满足：' + item.label + '。满足后提醒一次，确认创建？')) write([...read.rules, rule]);
+            if (preview.available && phoneConfirm('等待条件满足：' + item.label + '。满足后提醒一次，确认创建？')) write([...read.rules, rule]);
         });
         container.querySelectorAll('[data-rule]').forEach(button => button.addEventListener('click', () => write(read.rules.map(r => r.id === button.dataset.rule ? { ...r, enabled: !r.enabled } : r))));
     }

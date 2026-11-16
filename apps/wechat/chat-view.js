@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
@@ -1382,7 +1383,7 @@ export class ChatView {
         const confirmText = clearAll
             ? `确定清空全部 ${targetEmojis.length} 张自定义表情吗？`
             : `确定删除已选中的 ${targetEmojis.length} 张自定义表情吗？`;
-        if (!window.confirm(confirmText)) return;
+        if (!phoneConfirm(confirmText)) return;
 
         const imageManager = window.VirtualPhone?.imageManager;
         let fileCleanupFailedCount = 0;
@@ -14640,7 +14641,7 @@ renderChatRoom(chat) {
 
         // 🔥 清空聊天记录按钮
         document.getElementById('clear-chat-btn')?.addEventListener('click', () => {
-            if (confirm('确定清空与「' + this.app.currentChat.name + '」的所有聊天记录？\n\n相关零钱流水也会清除，此操作不可恢复！')) {
+            if (phoneConfirm('确定清空与「' + this.app.currentChat.name + '」的所有聊天记录？\n\n相关零钱流水也会清除，此操作不可恢复！')) {
                 const chatId = this.app.currentChat.id;
 
                 // 🔥 改用底层封装好的 clearMessages 方法，它内置了清空时间缓存的逻辑
@@ -14941,7 +14942,7 @@ renderChatRoom(chat) {
                 const imageManager = window.VirtualPhone?.imageManager;
 
                 // 🔥 提示用户：全局还是局部？
-                const isGlobal = confirm("上传成功！\n\n点击【确定】将此图片设为「全局微信背景」\n点击【取消】仅设为「当前聊天背景」");
+                const isGlobal = phoneConfirm("上传成功！\n\n点击【确定】将此图片设为「全局微信背景」\n点击【取消】仅设为「当前聊天背景」");
                 if (isGlobal) {
                     const latestUserInfo = this.app.wechatData.getUserInfo?.() || {};
                     const oldGlobalBg = String(latestUserInfo.globalChatBackground || '').trim();
@@ -18748,7 +18749,7 @@ ${callTranscript}`;
         if (!emoji) return;
 
         const currentDescription = String(emoji.description || emoji.name || '').trim();
-        const nextDescriptionRaw = window.prompt(
+        const nextDescriptionRaw = phonePrompt(
             '修改这个自定义表情的线下描述。\n\n线上发送时仍然发图片；只有线下正文注入时会转成这个描述。\n\n输入 /delete 可删除该表情。',
             currentDescription
         );
@@ -18757,7 +18758,7 @@ ${callTranscript}`;
 
         const normalized = String(nextDescriptionRaw || '').replace(/\s+/g, ' ').trim().slice(0, 20);
         if (normalized === '/delete') {
-            const ok = window.confirm(`确定删除表情“${emoji.name || currentDescription || '未命名表情'}”吗？`);
+            const ok = phoneConfirm(`确定删除表情“${emoji.name || currentDescription || '未命名表情'}”吗？`);
             if (!ok) return;
 
             let fileCleanupFailed = false;

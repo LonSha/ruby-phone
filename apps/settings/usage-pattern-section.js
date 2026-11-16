@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { APPS } from '../../config/apps.js';
 import { getUsagePattern } from '../../config/usage-pattern.js';
 import { formatDuration } from '../../config/usage-tracker.js';
@@ -33,7 +34,7 @@ export function mountUsagePattern(root, storage) {
     };
     section.querySelector('[data-usage-enabled]').addEventListener('change', event => showResult(api.configure(event.target.checked)));
     section.querySelector('[data-usage-clear]').addEventListener('click', () => {
-        if (host.ownerDocument.defaultView?.confirm('清掉本机所有使用痕迹？不会删除角色或旧的会话统计。')) showResult(api.clear());
+        if (phoneConfirm('清掉本机所有使用痕迹？不会删除角色或旧的会话统计。')) showResult(api.clear());
     });
     section.querySelectorAll('[data-usage-ack]').forEach(button => button.addEventListener('click', () => showResult(api.acknowledge(button.dataset.usageAck))));
 }

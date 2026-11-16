@@ -7,7 +7,7 @@
 import { numOrNull } from './num-gate.js';
 
 export const WISHLIST_STATES = Object.freeze(['todo', 'doing', 'done']);
-export const WISHLIST_FACES = Object.freeze(['empty', 'active', 'allDone']);
+const WISHLIST_FACES = Object.freeze(['empty', 'active', 'allDone']);
 
 export function normalizeItems(items) {
     const arr = Array.isArray(items) ? items : [];
@@ -40,7 +40,7 @@ export function wishlistView(items) {
     return { face, groups, counts, total: list.length };
 }
 
-export function wishlistNote(r) {
+function wishlistNote(r) {
     const face = r && r.face;
     if (face === 'empty') return '愿望清单还是空的';
     if (face === 'allDone') return `想做的 ${r.counts.done} 件事都做到了`;

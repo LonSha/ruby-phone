@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -6167,7 +6168,7 @@ export class WechatApp {
 
         const isWalletReset = this.wechatData.getWalletBalance() !== null;
         if (isWalletReset) {
-            const confirmed = window.confirm(
+            const confirmed = phoneConfirm(
                 '确定要重新评估微信零钱吗？\n\n' +
                 '评估成功后，当前余额会被新余额替换，全部零钱收支明细也会永久清空，且无法恢复。\n\n' +
                 '如果评估失败，现有余额和明细不会变更。'
@@ -6448,7 +6449,7 @@ export class WechatApp {
                     return;
                 }
 
-                const ok = confirm(`确定删除与「${chat.name}」的聊天吗？\n\n删除后将清空该会话的聊天记录与相关零钱流水，且不可恢复。`);
+                const ok = phoneConfirm(`确定删除与「${chat.name}」的聊天吗？\n\n删除后将清空该会话的聊天记录与相关零钱流水，且不可恢复。`);
                 if (!ok) return;
 
                 this.wechatData.deleteChat(chatId);
@@ -7794,7 +7795,7 @@ export class WechatApp {
         });
 
         newProfileBtn?.addEventListener('click', async () => {
-            const name = String(window.prompt('请输入会话样式预设名称', '') || '').trim();
+            const name = String(phonePrompt('请输入会话样式预设名称', '') || '').trim();
             if (!name) return;
             const profiles = this._loadChatCssProfiles();
             if (this._getAllChatCssProfiles().some(profile => profile.name === name)) {
@@ -7860,7 +7861,7 @@ export class WechatApp {
                 const now = Date.now();
 
                 if (profile) {
-                    if (!window.confirm(`会话样式预设「${name}」已存在，是否用该 TXT 覆盖？`)) return;
+                    if (!phoneConfirm(`会话样式预设「${name}」已存在，是否用该 TXT 覆盖？`)) return;
                     profile.css = css;
                     profile.updatedAt = now;
                 } else {
@@ -7922,7 +7923,7 @@ export class WechatApp {
                 this.phoneShell.showNotification('删除失败', '请先选择一个会话样式预设', '⚠️');
                 return;
             }
-            if (!window.confirm(`删除会话样式预设「${profile.name}」？`)) return;
+            if (!phoneConfirm(`删除会话样式预设「${profile.name}」？`)) return;
 
             profiles.splice(profileIndex, 1);
             await this._saveChatCssProfiles(profiles);
@@ -8165,7 +8166,7 @@ export class WechatApp {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
                 if (action === 'chat') {
-                    const ok = confirm('确定清理微信聊天数据吗？\n\n将清空全部会话、消息和零钱流水，但保留联系人与朋友圈。');
+                    const ok = phoneConfirm('确定清理微信聊天数据吗？\n\n将清空全部会话、消息和零钱流水，但保留联系人与朋友圈。');
                     if (!ok) return;
                     const chatCount = this.wechatData.getChatList().length;
                     this.wechatData.clearAllChatData();
@@ -8182,7 +8183,7 @@ export class WechatApp {
                 }
 
                 if (action === 'moments') {
-                    const ok = confirm('确定清理微信朋友圈吗？\n\n将清空所有朋友圈动态与互动记录。');
+                    const ok = phoneConfirm('确定清理微信朋友圈吗？\n\n将清空所有朋友圈动态与互动记录。');
                     if (!ok) return;
                     const moments = this.wechatData.getMoments();
                     const momentsCount = moments.length;
@@ -8195,7 +8196,7 @@ export class WechatApp {
                 }
 
                 if (action === 'all') {
-                    const ok = confirm('确定全清微信数据吗？\n\n将删除聊天、朋友圈、联系人等所有微信数据，且不可恢复。');
+                    const ok = phoneConfirm('确定全清微信数据吗？\n\n将删除聊天、朋友圈、联系人等所有微信数据，且不可恢复。');
                     if (!ok) return;
                     this.wechatData.resetAllData();
                     this._resetWechatSingletonCaches();
@@ -8285,7 +8286,7 @@ export class WechatApp {
         });
 
         document.getElementById('confirm-load')?.addEventListener('click', async () => {
-            const shouldClear = confirm('智能加载联系人前，是否先清空当前微信里的所有联系人、群聊和聊天记录？\n\n点击“确定”会先清空再生成，避免重复联系人/群聊；点击“取消”则保留现有数据并继续追加补全。');
+            const shouldClear = phoneConfirm('智能加载联系人前，是否先清空当前微信里的所有联系人、群聊和聊天记录？\n\n点击“确定”会先清空再生成，避免重复联系人/群聊；点击“取消”则保留现有数据并继续追加补全。');
             const confirmBtn = document.getElementById('confirm-load');
             const errorPanel = document.getElementById('contact-generation-error');
             const rawResponseEl = document.getElementById('contact-generation-raw-response');

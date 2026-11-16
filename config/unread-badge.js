@@ -8,7 +8,7 @@
 import { numOrNull } from './num-gate.js';
 
 export const BADGE_LIMITS = Object.freeze({ cap: 99 });
-export const BADGE_FACES = Object.freeze(['none', 'count', 'capped']);
+const BADGE_FACES = Object.freeze(['none', 'count', 'capped']);
 
 export function badgeOf(perChat) {
     const arr = Array.isArray(perChat) ? perChat : [];
@@ -23,7 +23,7 @@ export function badgeOf(perChat) {
     return { face: 'count', total, label: String(total) };
 }
 
-export function badgeNote(r) {
+function badgeNote(r) {
     const face = r && r.face;
     if (face === 'none') return '没有未读';
     return `${r.total} 条未读`;

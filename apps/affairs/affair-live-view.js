@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { liveSources, readLive, liveChanges, writeLive } from '../../config/affair-live.js';
 export class AffairLiveView {
@@ -31,7 +32,7 @@ export class AffairLiveView {
             const fresh = readLive(storage); const entry = fresh.rows.find(e => e.id === button.dataset.liveEdit);
             if (!fresh.ok || !entry) return;
             const current = liveSources(storage);
-            const answer = prompt('填写要保留的来源编号，逗号分隔：' + current.rows.map((r,i) => '\n' + (i+1) + '. ' + r.label).join(''));
+            const answer = phonePrompt('填写要保留的来源编号，逗号分隔：' + current.rows.map((r,i) => '\n' + (i+1) + '. ' + r.label).join(''));
             if (answer === null) return;
             const indices = [...new Set(answer.split(/[,，]/).map(v => Number(v.trim()) - 1))];
             if (!indices.length || indices.length > 24 || indices.some(i => !Number.isInteger(i) || !current.rows[i])) { this.notice = '来源编号无效'; this.render(root); return; }
@@ -42,7 +43,7 @@ export class AffairLiveView {
             save(fresh.rows.map(e => e.id === entry.id ? {...e, refs, seen} : e));
         });
         root.querySelectorAll('[data-live-delete]').forEach(button => button.onclick = () => {
-            if (!confirm('删除实况查看记录？原内容保留。')) return;
+            if (!phoneConfirm('删除实况查看记录？原内容保留。')) return;
             const fresh = readLive(storage); if (fresh.ok) save(fresh.rows.filter(e => e.id !== button.dataset.liveDelete));
         });
     }

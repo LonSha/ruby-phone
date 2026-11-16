@@ -1,9 +1,10 @@
+import { phoneConfirm, phonePrompt } from './phone-feedback.js';
 /* ============================================================
  * config/destructive-confirm.js — 销毁动作的**唯一**二次确认实现 [v4.105.0 · R13-O2]
  * ------------------------------------------------------------
  * 【本面治的欠债（修前实测处境）】
  *   本仓「清空 / 删除」类按钮此前有三种写法并存，第三种是**没有**：
- *     ① window.confirm('...')             —— 散在 9 个文件、文案各写一遍；
+ *     ① phoneConfirm('...')             —— 散在 9 个文件、文案各写一遍；
  *     ② this._showPhoneConfirm({...})     —— 只在设置页（7 处），别家拿不到；
  *     ③ 直接调 self.app.clearAll()        —— 19 个 App、40 个分支，点一下就没。
  *   第 ③ 种的后果不是崩溃，而是**一键到底**：改错能撤销（O2 声明面）这条主轴，
@@ -87,7 +88,7 @@ export function confirmDestroy(opts) {
         return o.assumeConfirm === true;
     }
     try {
-        return window.confirm(d.text) === true;
+        return phoneConfirm(d.text) === true;
     } catch (_e) {
         /* 确认框自己抛 ⇒ 视同「没拿到同意」，不放行（fail-closed）。 */
         return false;

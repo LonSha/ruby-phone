@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const CONTACT_GROUP_FACES = Object.freeze(['empty', 'ungrouped', 'grouped']);
+const CONTACT_GROUP_FACES = Object.freeze(['empty', 'ungrouped', 'grouped']);
 
 export function normalizeGroups(groups) {
     const out = [];

@@ -26,7 +26,7 @@ export function virtualWindow(total, scrollTop, itemHeight, opts) {
     };
 }
 
-export function virtualWindowNote(r) {
+function virtualWindowNote(r) {
     if (!r || r.face === 'empty') return '没有消息';
     return `物化 ${r.count} 条（DOM 上界 ${r.upperBound}）`;
 }

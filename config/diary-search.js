@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const DIARY_SEARCH_FACES = Object.freeze(['empty', 'all', 'results', 'noMatch']);
+const DIARY_SEARCH_FACES = Object.freeze(['empty', 'all', 'results', 'noMatch']);
 
 export function diarySearch(entries, query, range) {
     const list = Array.isArray(entries) ? entries.filter((e) => e && typeof e === 'object') : [];

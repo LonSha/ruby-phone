@@ -4,7 +4,7 @@
  * 文案唯一实现：横幅的标题/正文/图标/动作由本桥一处给全，App 只声明内容不各自拼 DOM。
  * 纯函数零 IO，不碰 DOM，不写存储。
  */
-export const BANNER_FACES = Object.freeze(['none', 'banner']);
+const BANNER_FACES = Object.freeze(['none', 'banner']);
 
 export function bannerOf(spec) {
     if (!spec || typeof spec !== 'object') return { face: 'none', banner: null };
@@ -25,7 +25,7 @@ export function bannerOf(spec) {
     };
 }
 
-export function bannerNote(r) {
+function bannerNote(r) {
     return (r && r.face === 'banner') ? r.banner.title : '没有要显示的通知';
 }
 

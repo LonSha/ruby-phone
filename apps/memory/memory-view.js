@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /**
  * 记忆 App - 视图组件 (MemoryView)
  * iOS 风格: 概览卡 + 洞察分页 + 检索 + 时间线 + 自动注入开关
@@ -1285,7 +1286,7 @@ export class MemoryView {
       window.toastr?.info(e.target.checked ? '已开启自动注入' : '已关闭自动注入', '记忆');
     });
     q('#mem-clear')?.addEventListener('click', () => {
-      if (!confirm('确定清空当前聊天的全部记忆?')) return;
+      if (!phoneConfirm('确定清空当前聊天的全部记忆?')) return;
       try { this.app.data?.clearCurrentChat?.(); } catch (_e) { /* 忽略 */ }
       this._draw();
     });

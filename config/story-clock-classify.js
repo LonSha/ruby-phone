@@ -5,8 +5,8 @@
  * 或 wall 档（渲染节奏，可保留）。分类只按调用点特征判，不替调用方改写。
  * 四态：invalid / story / wall / unknown。
  */
-export const CLOCK_CLASSES = Object.freeze(['story', 'wall', 'unknown']);
-export const CLOCK_FACES = Object.freeze(['invalid', 'classified']);
+const CLOCK_CLASSES = Object.freeze(['story', 'wall', 'unknown']);
+const CLOCK_FACES = Object.freeze(['invalid', 'classified']);
 
 export function classifyClockSite(site) {
     if (!site || typeof site !== 'object') return { face: 'invalid', cls: 'unknown' };
@@ -27,7 +27,7 @@ export function classifySummary(sites) {
     return { face: arr.length ? 'classified' : 'invalid', counts: out, total: arr.length };
 }
 
-export function clockClassifyNote(r) {
+function clockClassifyNote(r) {
     if (!r || r.face === 'invalid') return '没有可分类的时钟用法';
     const c = r.counts;
     return `story ${c.story} / wall ${c.wall} / 未知 ${c.unknown}`;

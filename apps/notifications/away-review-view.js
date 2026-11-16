@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { buildOpenDetail } from '../../config/app-open-detail.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
@@ -17,7 +18,7 @@ export function renderAwayReview(root, away, orderRows = rows => rows) {
         root.querySelector('[data-next]').onclick = async () => { if ((page + 1) * 5 < filtered.length) page++; draw(await persistCursor() ? '' : '进度保存未确认'); };
         root.querySelectorAll('[data-status]').forEach(button => button.onclick = async () => {
             if (!guardSessionWrite(away.storage, token, 'away-review')) { draw('会话已变化，请重新打开'); return; }
-            if (!confirm('确认标记为“' + labels[button.dataset.status] + '”？原通知动作仍需在原应用确认。')) return;
+            if (!phoneConfirm('确认标记为“' + labels[button.dataset.status] + '”？原通知动作仍需在原应用确认。')) return;
             if (!guardSessionWrite(away.storage, token, 'away-review')) return;
             const original = batch.find(item => item.id === button.dataset.id);
             const current = away.getMissedSummary().raw.filter(item => item.id === original?.id);

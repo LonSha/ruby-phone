@@ -254,7 +254,8 @@ function collectClosure(root, seeds) {
     files[rel] = src;
     for (const m of src.matchAll(/from\s+'([^']+)'/g)) {
       if (!SKIP_IMPORT.test(m[1])) continue;
-      const next = path.normalize(path.join(path.dirname(rel), m[1])).split(path.sep).join('/');
+      const spec = m[1].split(/[?#]/, 1)[0];
+      const next = path.normalize(path.join(path.dirname(rel), spec)).split(path.sep).join('/');
       if (!Object.prototype.hasOwnProperty.call(files, next)) queue.push(next);
     }
   }

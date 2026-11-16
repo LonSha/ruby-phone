@@ -4,7 +4,7 @@
  * 纪律：纯函数，只算「哪些分区/条目匹配查询」，不碰 DOM、不新建设置索引。
  * 分区带 title + items（每个 item 带 label/keywords）。空查询全显；无命中如实 noMatch。
  */
-export const SETTINGS_FILTER_FACES = Object.freeze(['empty', 'all', 'results', 'noMatch']);
+const SETTINGS_FILTER_FACES = Object.freeze(['empty', 'all', 'results', 'noMatch']);
 
 export function filterSettings(sections, query) {
     const list = Array.isArray(sections) ? sections.filter((s) => s && typeof s === 'object') : [];

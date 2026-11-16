@@ -22,6 +22,10 @@ const source = fs
     .replace(
         '../../config/empty-face.js',
         new URL('../config/empty-face.js', import.meta.url).href
+    )
+    .replace(
+        '../../config/phone-feedback.js',
+        new URL('../config/phone-feedback.js', import.meta.url).href
     );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { HoneyView } = await import(moduleUrl);

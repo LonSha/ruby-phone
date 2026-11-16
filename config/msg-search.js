@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const MSG_SEARCH_FACES = Object.freeze(['empty', 'results', 'noMatch']);
+const MSG_SEARCH_FACES = Object.freeze(['empty', 'results', 'noMatch']);
 export const MSG_SEARCH_LIMITS = Object.freeze({ maxHits: 50 });
 
 export function searchMessages(conversations, query) {
@@ -45,7 +45,7 @@ export function searchMessages(conversations, query) {
     return { face: 'results', hits: capped, total: hits.length, truncated: hits.length > capped.length, query: q };
 }
 
-export function msgSearchNote(r) {
+function msgSearchNote(r) {
     const face = r && r.face;
     if (face === 'empty') return '没有可搜的消息';
     if (face === 'noMatch') return `没有找到含「${r.query}」的消息`;

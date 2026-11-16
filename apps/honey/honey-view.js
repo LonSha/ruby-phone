@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -2629,7 +2630,7 @@ export class HoneyView {
             }
 
             const confirmText = `确定要申请与主播联播吗？\n本次上麦将扣除：${collabCost}金币`;
-            if (!window.confirm(confirmText)) return;
+            if (!phoneConfirm(confirmText)) return;
 
             if (collabCost > 0) {
                 const consumeResult = this.app?.honeyData?.consumeHoneyCoins?.(collabCost) || { success: false, balanceBefore: 0, balanceAfter: 0 };
@@ -3006,7 +3007,7 @@ export class HoneyView {
 
         currentView.querySelector('#honey-history-summary-clear-turns')?.addEventListener('click', (e) => {
             e.preventDefault();
-            if (!confirm('确定清理这条总结已经覆盖的原始直播历史吗？\n\n总结会保留，未总结的新记录也会保留。')) return;
+            if (!phoneConfirm('确定清理这条总结已经覆盖的原始直播历史吗？\n\n总结会保留，未总结的新记录也会保留。')) return;
             const result = this.app?.honeyData?.clearSummarizedHostHistoryTurns?.(hostName);
             const removed = Number(result?.removed || 0);
             this.app.phoneShell.showNotification('蜜语', removed > 0 ? `已清理 ${removed} 条已总结原文` : '没有可清理的已总结原文', removed > 0 ? '🧹' : 'ℹ️');
@@ -3015,7 +3016,7 @@ export class HoneyView {
 
         currentView.querySelector('#honey-history-summary-delete')?.addEventListener('click', (e) => {
             e.preventDefault();
-            if (!confirm('确定删除这条蜜语记录总结吗？\n\n原始互动记录会保留，之后可以重新总结。')) return;
+            if (!phoneConfirm('确定删除这条蜜语记录总结吗？\n\n原始互动记录会保留，之后可以重新总结。')) return;
             const ok = this.app?.honeyData?.clearHostHistorySummary?.(hostName);
             if (ok) {
                 this.app.phoneShell.showNotification('蜜语', '已删除记录总结，可重新总结', '🗑️');
@@ -3488,7 +3489,7 @@ export class HoneyView {
         container.querySelectorAll('.honey-delete-custom-video-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetUrl = e.currentTarget.dataset.url;
-                if (confirm('确定要从视频池中移除该视频吗？')) {
+                if (phoneConfirm('确定要从视频池中移除该视频吗？')) {
                     this.app.honeyData?.removeCustomLiveVideo?.(targetUrl);
                     if ((this.app.honeyData?.getCustomLiveVideos?.() || []).length < 2) {
                         this._customVideoListExpanded = false;
@@ -4443,7 +4444,7 @@ export class HoneyView {
                 if (!name) return;
                 const liveInputState = this._captureLiveChatInputState(root);
 
-                const qtyInput = window.prompt('送出数量（1-999）', '1');
+                const qtyInput = phonePrompt('送出数量（1-999）', '1');
                 if (qtyInput === null) return; // 用户取消
                 const parsedQty = Number.parseInt(String(qtyInput).trim(), 10);
                 if (!Number.isInteger(parsedQty) || parsedQty < 1) return;
@@ -4685,7 +4686,7 @@ export class HoneyView {
             }
 
             if (action === 'remove-honey-friend') {
-                const ok = confirm(`确定删除好友 ${name} 吗？\n\n会同时删除：\n1) 蜜语好友列表里的该好友\n2) 微信通讯录中的对应联系人\n3) 微信里与该好友的聊天记录`);
+                const ok = phoneConfirm(`确定删除好友 ${name} 吗？\n\n会同时删除：\n1) 蜜语好友列表里的该好友\n2) 微信通讯录中的对应联系人\n3) 微信里与该好友的聊天记录`);
                 if (!ok) return;
                 const removed = this.app?.honeyData?.removeHoneyFriend?.(name);
                 if (removed) {
@@ -5214,7 +5215,7 @@ export class HoneyView {
                 return;
             }
 
-            const inputText = window.prompt(`输入要提现的金币数量（当前 ${this._formatCoinDisplay(coinBalance)} 金币，10 金币 = 1 元）`, String(coinBalance));
+            const inputText = phonePrompt(`输入要提现的金币数量（当前 ${this._formatCoinDisplay(coinBalance)} 金币，10 金币 = 1 元）`, String(coinBalance));
             if (inputText === null) return;
 
             const withdrawCoins = Math.max(0, Math.floor(Number.parseFloat(String(inputText).trim()) || 0));
@@ -5431,7 +5432,7 @@ export class HoneyView {
                 }
 
                 const defaultName = `honey_live_${Date.now()}`;
-                let customName = window.prompt('请为该视频命名\n(建议使用纯英文+数字，避免特殊字符导致无法加载)：', defaultName);
+                let customName = phonePrompt('请为该视频命名\n(建议使用纯英文+数字，避免特殊字符导致无法加载)：', defaultName);
                 if (customName === null) return;
 
                 customName = customName.replace(/[^a-zA-Z0-9_-]/g, '').trim();
@@ -5455,7 +5456,7 @@ export class HoneyView {
         }
 
         root.querySelector('#honey-clear-data')?.addEventListener('click', async () => {
-            const ok = confirm('确定一键清理蜜语的所有生成内容？\n\n将删除：\n1) 推荐与直播缓存\n2) 关注列表与关注历史备份\n3) 蜜语好友申请\n4) 当前会话中的 <Honey> 标签内容\n5) 蜜语生成并保存到 /backgrounds/ 的直播图片\n\n此操作不可恢复。');
+            const ok = phoneConfirm('确定一键清理蜜语的所有生成内容？\n\n将删除：\n1) 推荐与直播缓存\n2) 关注列表与关注历史备份\n3) 蜜语好友申请\n4) 当前会话中的 <Honey> 标签内容\n5) 蜜语生成并保存到 /backgrounds/ 的直播图片\n\n此操作不可恢复。');
             if (!ok) return;
 
             try {

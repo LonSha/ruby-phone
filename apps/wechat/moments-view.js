@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
 /* ========================================================
@@ -428,7 +429,7 @@ export class MomentsView {
                 e.preventDefault();
                 const momentId = String(btn.dataset.momentId || '').trim();
                 if (!momentId) return;
-                const ok = confirm('确定删除这条朋友圈吗？删除后不可恢复。');
+                const ok = phoneConfirm('确定删除这条朋友圈吗？删除后不可恢复。');
                 if (!ok) return;
                 const targetMoment = this.app.wechatData.getMoment(momentId);
                 const managedImageUrls = this._collectMomentManagedImageUrls(targetMoment);

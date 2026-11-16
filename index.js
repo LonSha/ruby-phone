@@ -126,6 +126,7 @@ import { wishlistSelfCheck } from './config/wishlist.js?v=4.157.0&r=20261116-r22
 import { bannerSelfCheck } from './config/incoming-banner.js?v=4.157.0&r=20261116-r22';
 import { unreadBadgeSelfCheck } from './config/unread-badge.js?v=4.157.0&r=20261116-r22';
 import { settingsFilterSelfCheck } from './config/settings-filter.js?v=4.157.0&r=20261116-r22';
+import { feedbackSelfCheck, phoneNotice } from './config/phone-feedback.js';
 import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
 import { msgSearchSelfCheck } from './config/msg-search.js?v=4.157.0&r=20261116-r22';
 import { chatVirtualWindowSelfCheck } from './config/chat-virtual-window.js?v=4.157.0&r=20261116-r22';
@@ -618,17 +619,16 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-15",
+    date: "2026-11-16",
     items: [
-        "【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡",
-        "【缺陷形态】本版自己抓到一处自伤：诊断面一行读数与视图 HTML 的引号在转义链里被撕成错形（一处漏收尾引号、一处引号嵌套错位），node --check 当场拦下 —— 与 v3.469.0 在记忆插件上踩过的「一行撕三行」同族，处置同条：写完立即过语法门，不等跑测再爆",
-        "【读数分形】到货数的「读不到」与「真零条」在消费点保持不同形：notificationLog 在场才取未读数，缺席即 null（unavailable），绝不塌成 0（no-arrivals）；剧情钟走 storyNow 只读口（peekCurrentStoryTime，不重算、不补墙钟），读不到时段桥宁可不说",
-        "【宿主记账与桥的边界】只有真正产出候选的那一轮才由宿主把剧情毫秒记进 silence_told_cursor（写 storyAt 不写墙钟，R21-O2 钉过的写点纪律）；桥本身零存储零写路径（D2 判据钉死）—— 写入归宿主，记忆写入归记忆 owner，三层 owner 各守各的门",
-        "【勿扰不是缺席】候选句全部只解释「为什么没看到 / 为什么没被打断」，绝不编造「我出门了」；跨桶串供（白天静音说昨晚睡了）由 A3 表格级判据钉死，六桶两两交集为空，深夜桶没有「开会」、工作时段桶没有「睡」",
-        "【交棒改写】诊断面从「各跑一份自检」改为「读装配点已判好的 _x3SelfCheck 与咽喉现场态 _x3」：同源不重算，与 scheduleBridge 的缓存纪律同一条 —— 两处各判一次，哪天口径差了就是两份读数；诊断卡只报「桥自洽吗 + 上一次现场判了什么」，不重跑业务判定",
-        "【运行时验证边界】本版判据为静态接线断言 + 桥单测（19 条）；「深夜勿扰收到 3 条、次日角色带出理由」的验收旅程只验证到「候选句含昨晚 / 睡 / 没看到」这一层，角色真挑哪一句、怎么措辞、何时说，仍在运行时由模型决定，判据不越权替角色验收台词 —— 这类形态的标志语是「看起来没坏但显示不对」：跑法坏了不会报错，判据不能保证在真机上把它一出现就拦下",
-        "【门禁锚】桥的 import 带缓存串 v=4.155.0 与 r=20261115-silence-bridge（album-app 先例同款），两道导入面门禁（import-resolve / named-import）都是剥问号后判：路径可解析、具名成员逐一可满足；桥只依赖零依赖叶子 num-gate",
-        "【交付环境】本地旧仓 /home/user/ruby-phone 因 35 个 loose objects 读不得也删不得而瘫痪（HEAD 对象本身不可读，proot 权限墙，root 亦不可穿透），本版在全新克隆 /home/user/ruby-phone-v4155 上交付 —— 旧仓需用户侧清理或重建"
+        "【R22 统一反馈出口】新增 config/phone-feedback.js，收口通知、确认和输入的产品反馈边界；迁移历史 App 与手机层的宿主 alert/confirm/prompt 调用，业务数据键、保存协议和会话隔离保持不变。",
+        "【页内异步交互】提供 phoneConfirmAsync 与 phonePromptAsync；对话框具备 role=dialog、aria-modal、标题/描述关联、Esc 取消、Tab 焦点循环、遮罩取消和焦点归还，提示使用 status/live 语义。",
+        "【安全降级】无 PhoneShell 或无 DOM 时，确认与输入 fail-closed，提示返回可诊断的失败结果；破坏性操作不会因为宿主能力缺失而默认放行。",
+        "【同步兼容边界】旧事件处理器先通过同步兼容出口完成调用面收口，不把几十个保存和导航路径一次性改成 async；后续页面可按批次切换真正的异步页内交互。",
+        "【业务方法保护】批量迁移只替换宿主对象上的原生反馈调用，保留 GroupVote.confirm 等业务协议方法；反馈静态扫描同步收窄为宿主限定形，避免把业务方法误报或误改。",
+        "【回归判据】反馈模块、编辑缓冲、设置、微信、Honey、回收站、会话隔离、朋友圈可见性和 R22 定向测试合计 102 条通过；syntax、import-resolve、named-import 与 diff-check 同步通过。",
+        "【门禁边界】本版继续保留全量测试、零消费导出审计和历史版本台账的独立门禁；并发 Promise 生命周期、旧版本测试和既有审计债务不得通过放宽断言或伪登记掩盖。",
+        "【发布台账】版本升至 4.157.0（五源同源）；update-log、入口公告和状态账本保持同源，公告逐项记录本版反馈迁移及验证边界，后续门禁可从同一版本事实复算。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -2313,7 +2313,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r22X1', pinTopSelfCheck], ['_r22X2', dndSelfCheck], ['_r22X3', contactGroupSelfCheck],
                 ['_r22X4', callSegSelfCheck], ['_r22X5', diarySearchSelfCheck], ['_r22X6', wishlistSelfCheck],
                 ['_r22X7', bubbleThemeSelfCheck], ['_r22X8', clipboardSelfCheck], ['_r22X9', readingProgressSelfCheck],
-                ['_r22O2', settingsFilterSelfCheck], ['_r22O3', a11ySelfCheck], ['_r22O4', msgSearchSelfCheck],
+                ['_r22O2', settingsFilterSelfCheck], ['_r22O3', a11ySelfCheck], ['_r22O4', msgSearchSelfCheck], ['_r22Feedback', feedbackSelfCheck],
                 ['_r22O1', chatVirtualWindowSelfCheck], ['_r22O8', bannerSelfCheck], ['_r22O9', unreadBadgeSelfCheck],
                 ['_r22O5', clockClassifySelfCheck], ['_r22O6', coverageSelfCheck], ['_r22O7', eventDebtSelfCheck],
             ];
@@ -3300,7 +3300,11 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
             const _r22Hour = (typeof storyNow === 'function' ? storyNow(window, { readOnly: true })?.date : '') || '';
             const _r22HourMatch = String(_r22Hour).match(/(\d{1,2}):/);
             const _r22Quiet = r22DndFace({ enabled: _r22DndEnabled, hour: _r22HourMatch ? Number(_r22HourMatch[1]) : null, window: _r22DndCfg?.window || { start: 23, end: 7 } });
-            if (_r22Quiet.quiet || isDndOnState(storage)) {
+            const _r22ShouldSilence = (() => {
+                if (isDndOnState(storage)) return true;
+                return !!_r22Quiet.quiet;
+            })();
+            if (_r22ShouldSilence) {
                 /* [v4.155.0 · R21-X3] 静音叙事消费点（唯一现场态提供方）。被门拦下的这批消息
                  *   在机器面上是既成事实，在角色嘴里一个字都没有 —— 桥在这里判这一轮该不该
                  *   给候选句。arrivals 读不到 ⇒ unavailable（读不到与真零条不同形，绝不相塌）；

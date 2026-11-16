@@ -1,3 +1,11 @@
+## 迭代 277 · v4.157.0 · R22 统一反馈出口与全量门禁修复（2026-11-16）
+- 【统一反馈出口】新增 `config/phone-feedback.js`，收口历史 `alert` / `confirm` / `prompt`；同步兼容层保留旧事件时序，异步 API 提供页内无障碍对话框。
+- 【安全边界】无 PhoneShell 或无 DOM 时确认与输入 fail-closed；提示不抛异常；破坏性操作不因宿主能力缺失而默认放行。
+- 【迁移纪律】批量迁移只替换宿主限定调用，保留 `GroupVote.confirm` 等业务方法；静态扫描与定向测试同步覆盖误改风险。
+- 【门禁修复】将 26 个本轮零消费的表现层导出收窄为模块内部符号，使 dead-export 与 bind-consuming 均无新增项；不把产品端零消费伪装成消费方。
+- 【版本台账】`update-log.json`、`index.js` 公告和 `status-ledger` 对齐到 4.157.0；当前版本条目 8 项，历史套件插入序保持兼容。
+- 【验证】syntax / import-resolve / named-import / 静态审计与多个历史定向组通过；全量并发测试仍有 Node 测试生命周期 pending 和少量历史台账漂移，继续分组处理，不以放宽断言收绿。
+
 ## 迭代 276 · v4.156.0 · R21-X6/X7/X8/X9（批次 F 收官四座）
 
 - **四座唯一桥**：app-change-digest / device-physical-narrative / backup-diff-view / weekly-recap，零依赖只 import num-gate，面闭集 + 归因码闭集 + 限额闭集四组分形，各带 selfCheck（正反两面 + 纯读扫描）。
@@ -7750,7 +7758,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.155.0`（五源同源）
+- **当前版本**：`4.157.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

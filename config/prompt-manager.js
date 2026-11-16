@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from './phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -2489,7 +2490,7 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
         });
 
         host.querySelector('.phone-prompt-preset-new')?.addEventListener('click', () => {
-            const name = String(window.prompt('请输入提示词预设名称', '') || '').trim();
+            const name = String(phonePrompt('请输入提示词预设名称', '') || '').trim();
             if (!name) return;
             try {
                 const preset = this.createPromptUserPreset(app, feature, name, textarea.value || '');
@@ -2524,7 +2525,7 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
             }
             const preset = this.getPromptUserPresets(app, feature).find(item => item.id === activeId);
             if (!preset) return;
-            if (!window.confirm(`删除提示词预设「${preset.name}」？`)) return;
+            if (!phoneConfirm(`删除提示词预设「${preset.name}」？`)) return;
             this.deletePromptUserPreset(app, feature, activeId);
             const defaultContent = this.resetPromptToDefault(app, feature);
             textarea.value = defaultContent;

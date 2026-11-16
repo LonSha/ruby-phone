@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../config/phone-feedback.js';
 /**
  * 内嵌快捷回复按钮（底部栏与快速回复集成）[从 index.js 剥离]
  * 提供底部栏快速回复气泡、魔坊标签快捷插入、微信/短信消息模板填充。
@@ -1580,7 +1581,7 @@ export     function createInlineReplyButton() {
                                 e.preventDefault();
                                 const current = getEditingMofo();
                                 if (!current) return;
-                                const ok = confirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
+                                const ok = phoneConfirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
                                 if (!ok) return;
                                 mofoData.clearItemSessionData(current.id);
                                 rerenderMofoPane({ keepEditor: true });
@@ -1590,7 +1591,7 @@ export     function createInlineReplyButton() {
                                 e.preventDefault();
                                 const current = getEditingMofo();
                                 if (!current) return;
-                                const ok = confirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
+                                const ok = phoneConfirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
                                 if (!ok) return;
                                 mofoData.removeItem(current.id);
                                 rerenderMofoPane({ keepEditor: false });
@@ -1617,7 +1618,7 @@ export     function createInlineReplyButton() {
                             menu.querySelector('#mofo-editor-save-btn')?.addEventListener('click', () => {
                                 const draft = readMofoEditorDraft();
                                 if (!draft.name) {
-                                    alert('名称不能为空');
+                                    phoneNotice('名称不能为空');
                                     return;
                                 }
                                 try {
@@ -1644,7 +1645,7 @@ export     function createInlineReplyButton() {
                                     }
                                     rerenderMofoPane({ keepEditor: true });
                                 } catch (err) {
-                                    alert(err?.message || '保存失败');
+                                    phoneNotice(err?.message || '保存失败');
                                 }
                             });
                             focusMofoEditorName();
@@ -1716,7 +1717,7 @@ export     function createInlineReplyButton() {
                                 }
 
                                 if (action === 'clear-session') {
-                                    const ok = confirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
+                                    const ok = phoneConfirm(`清理魔坊「${current.name}」在当前会话的数据？\n条目会保留。`);
                                     if (!ok) return;
                                     mofoData.clearItemSessionData(id);
                                     rerenderMofoPane();
@@ -1724,7 +1725,7 @@ export     function createInlineReplyButton() {
                                 }
 
                                 if (action === 'delete-global' || action === 'delete') {
-                                    const ok = confirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
+                                    const ok = phoneConfirm(`全局删除魔坊「${current.name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
                                     if (!ok) return;
                                     mofoData.removeItem(id);
                                     rerenderMofoPane();

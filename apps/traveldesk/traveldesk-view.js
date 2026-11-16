@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  * traveldesk-view.js — [v3.54.0] 旅行记账案头 · 视图
  * 挂载走 shell.getContentContainer；与号与尖括号走拼装形。
@@ -242,7 +243,7 @@ export class TraveldeskView {
                  *   回报写进 _flash 再重渲染 —— 与本件既有动作同一范式。 */
                 if (act === 'tvp-unlink') {
                     const expected = JSON.stringify(self.app._party);
-                    if (!window.confirm('解除这个站点的日历关联？原日程保留。')) return;
+                    if (!phoneConfirm('解除这个站点的日历关联？原日程保留。')) return;
                     self._flash = self.app.partyAct('calendar-unlink', { id: b.getAttribute('data-id'), expected }).note; self.app.render();
                 }
                 else if (act === 'tvp-calendar') {
@@ -251,25 +252,25 @@ export class TraveldeskView {
                     const rows = calendar.getMemos();
                     if (!rows.length) { self._flash = '日历没有可关联的日程'; self.app.render(); return; }
                     const linkedId = self.app._party?.stops.find(s => s.id === b.getAttribute('data-id'))?.calendarMemoId;
-                    const answer = linkedId ? String(rows.findIndex(m => m.id === linkedId) + 1) : window.prompt('选择要关联的日程编号：' + rows.map((m, i) => '\n' + (i + 1) + '. ' + m.title + ' · ' + m.dateKey).join(''));
+                    const answer = linkedId ? String(rows.findIndex(m => m.id === linkedId) + 1) : phonePrompt('选择要关联的日程编号：' + rows.map((m, i) => '\n' + (i + 1) + '. ' + m.title + ' · ' + m.dateKey).join(''));
                     if (answer === null) return;
                     const index = Number(answer) - 1;
                     if (!Number.isInteger(index) || !rows[index]) { self._flash = linkedId ? '关联日程已失效，请在原日历核对' : '日程编号无效'; self.app.render(); return; }
                     const preview = self.app.partyAct('calendar-preview', { id: b.getAttribute('data-id'), memoId: rows[index].id });
                     if (!preview.ok) { self._flash = preview.note; self.app.render(); return; }
-                    if (!window.confirm(preview.note)) return;
+                    if (!phoneConfirm(preview.note)) return;
                     const result = self.app.partyAct('calendar-confirm', { preview });
                     self._flash = result.note; self.app.render();
                 }
                 else if (act === 'tvp-progress') {
                     const op = b.getAttribute('data-op');
                     const a = { id: b.getAttribute('data-id'), op, expected: JSON.stringify(self.app._party) };
-                    if (op === 'reschedule') { a.day = window.prompt('该站新日期 YYYY-MM-DD（仅更新行程板，关联日历须另行确认）'); if (a.day === null) return; }
-                    if (op === 'late') { const answer = window.prompt('晚到分钟数（1–1440）'); if (answer === null) return; a.minutes = Number(answer); }
-                    if (op === 'meet') { a.person = window.prompt('会合对象'); if (a.person === null) return; }
+                    if (op === 'reschedule') { a.day = phonePrompt('该站新日期 YYYY-MM-DD（仅更新行程板，关联日历须另行确认）'); if (a.day === null) return; }
+                    if (op === 'late') { const answer = phonePrompt('晚到分钟数（1–1440）'); if (answer === null) return; a.minutes = Number(answer); }
+                    if (op === 'meet') { a.person = phonePrompt('会合对象'); if (a.person === null) return; }
                     const preview = self.app.partyAct('progress-preview', a);
                     if (!preview.ok) { self._flash = preview.note; self.app.render(); return; }
-                    if (!window.confirm(preview.note + '\n受影响站点：' + preview.affected.map(s => s.place + (s.day ? '（' + s.day + '）' : '')).join('、'))) return;
+                    if (!phoneConfirm(preview.note + '\n受影响站点：' + preview.affected.map(s => s.place + (s.day ? '（' + s.day + '）' : '')).join('、'))) return;
                     const result = self.app.partyAct('progress-confirm', a);
                     self._flash = result.note; self.app.render();
                 }

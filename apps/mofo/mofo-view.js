@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -401,7 +402,7 @@ export class MofoView {
                 if (!id) return;
                 const item = this.app.mofoData.getItemById(id);
                 const name = item?.name || '该模板';
-                const ok = confirm(`删除魔坊「${name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
+                const ok = phoneConfirm(`删除魔坊「${name}」？\n会删除条目定义，并清理各会话里的对应运行态数据。`);
                 if (!ok) return;
                 const removed = this.app.mofoData.removeItem(id);
                 if (!removed) return;

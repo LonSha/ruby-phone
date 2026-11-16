@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  * creationdesk-view.js — [v3.90.0 · 拓展计划 R-X6]
  *   素材到发布的完整创作工作台 · 视图（纯渲染）
@@ -468,7 +469,7 @@ export class CreationdeskView {
                 const t = b.getAttribute('data-cw-bcommit') || '';
                 if (t === 'chat') {
                     const ok = (typeof window !== 'undefined' && typeof window.confirm === 'function')
-                        ? window.confirm('把选定的材料登记为「下一次主聊天要带的材料」？\n（只登记，不发送 —— 发送要你在主聊天里再确认一次）')
+                        ? phoneConfirm('把选定的材料登记为「下一次主聊天要带的材料」？\n（只登记，不发送 —— 发送要你在主聊天里再确认一次）')
                         : true;
                     if (!ok) return;
                 }
@@ -504,7 +505,7 @@ export class CreationdeskView {
                 const sub = b.getAttribute('data-cw-hy-act') || '';
                 /* 丢弃与采纳各要一次显式确认（丢弃清临时选择、采纳要转上游）。 */
                 if (sub === 'discard' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
-                    const ok = window.confirm('丢弃这次预演？\n（只清本机的临时选择，正史一个字节都不会动）');
+                    const ok = phoneConfirm('丢弃这次预演？\n（只清本机的临时选择，正史一个字节都不会动）');
                     if (!ok) return;
                 }
                 Promise.resolve(self.app.hyAct(sub)).catch(function () { /* 回执在 app 层已如实落到 flash */ });
@@ -533,14 +534,14 @@ export class CreationdeskView {
                         self.app.submitDraft(cid, { content: '样稿 ' + new Date().toLocaleString() });
                     } else if (act === 'scope') {
                         const req = (typeof window !== 'undefined' && typeof window.prompt === 'function')
-                            ? window.prompt('要加的需求（确认后由委托人决定是否同意）', '') : '';
+                            ? phonePrompt('要加的需求（确认后由委托人决定是否同意）', '') : '';
                         if (!req) return;
                         self.app.proposeScopeChange(cid, { additionalRequirements: [String(req)] });
                     } else if (act === 'settle') {
                         self.app.acceptAndSettle(cid);
                     } else if (act === 'cancel') {
                         const ok = (typeof window !== 'undefined' && typeof window.confirm === 'function')
-                            ? window.confirm('取消这笔委托？\n（草稿全部保留，按已付定金结算）') : true;
+                            ? phoneConfirm('取消这笔委托？\n（草稿全部保留，按已付定金结算）') : true;
                         if (!ok) return;
                         self.app.cancelCommission(cid);
                     }

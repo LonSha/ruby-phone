@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import {previewExperienceImport,readExperiences,importExperience} from '../../config/experience-import.js';
 import {captureSessionToken,guardSessionWrite} from '../../config/session-gate.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -7,5 +8,5 @@ export function renderExperienceImport(root,storage) {
  const status=text=>root.querySelector('[role="status"]').textContent=text;
  for(const el of root.querySelectorAll('input,textarea'))el.oninput=()=>{preview=null;root.querySelector('[data-commit]').disabled=true;root.querySelector('[data-preview]').textContent='';};
  root.querySelector('[data-check]').onclick=()=>{const result=previewExperienceImport(root.querySelector('textarea').value,root.querySelector('input').value.trim());preview=result.ok?result.pack:null;root.querySelector('[data-preview]').textContent=preview?preview.items.map(i=>i.text+' · '+i.attachment).join('\n'):'包格式或接收人不符';root.querySelector('[data-commit]').disabled=!preview||!read.ok;};
- root.querySelector('[data-commit]').onclick=async()=>{if(!preview||!guardSessionWrite(storage,token,'experience-import'))return;if(!confirm('收藏当前预览？原应用数据保留。'))return;if(!guardSessionWrite(storage,token,'experience-import'))return;const result=await importExperience(storage,preview,JSON.stringify(read.rows));if(!guardSessionWrite(storage,token,'experience-import'))return;renderExperienceImport(root,storage);status(result.ok?result.duplicate?'已有同一经历包，未重复收藏':'已收藏':'保存未确认或收藏已变化');};
+ root.querySelector('[data-commit]').onclick=async()=>{if(!preview||!guardSessionWrite(storage,token,'experience-import'))return;if(!phoneConfirm('收藏当前预览？原应用数据保留。'))return;if(!guardSessionWrite(storage,token,'experience-import'))return;const result=await importExperience(storage,preview,JSON.stringify(read.rows));if(!guardSessionWrite(storage,token,'experience-import'))return;renderExperienceImport(root,storage);status(result.ok?result.duplicate?'已有同一经历包，未重复收藏':'已收藏':'保存未确认或收藏已变化');};
 }

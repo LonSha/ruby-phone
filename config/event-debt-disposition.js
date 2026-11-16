@@ -6,7 +6,7 @@
  * 四态：invalid / clean / debt。
  */
 export const EVENT_DISPOSITIONS = Object.freeze(['subscribe', 'telemetry', 'cross-repo']);
-export const EVENT_FACES = Object.freeze(['invalid', 'clean', 'debt']);
+const EVENT_FACES = Object.freeze(['invalid', 'clean', 'debt']);
 
 export function disposeEvents(events) {
     if (!Array.isArray(events)) return { face: 'invalid', debt: [], clean: [] };
@@ -31,7 +31,7 @@ export function disposeEvents(events) {
     return { face: debt.length ? 'debt' : 'clean', debt, clean };
 }
 
-export function eventDebtNote(r) {
+function eventDebtNote(r) {
     if (!r || r.face === 'invalid') return '事件读数读不出来';
     if (r.face === 'clean') return '没有无据的事件欠账';
     return `${r.debt.length} 条事件派发无订阅且无据：${r.debt.map((d) => d.name).join('、')}`;

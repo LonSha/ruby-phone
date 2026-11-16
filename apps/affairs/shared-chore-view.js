@@ -1,3 +1,4 @@
+import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { readChores, saveChore } from '../../config/shared-chore-store.js';
 import { choreSplit } from '../../config/shared-chore.js';
 import { SC_LABEL } from '../../config/shared-chore-terms.js';
@@ -33,7 +34,7 @@ export class SharedChoreView {
             if (button.dataset.op === 'finance') {
                 const vp = globalThis.window?.VirtualPhone;
                 if (!vp?.applyFinanceCommitAction) { this.notice = '财务确认入口暂不可用'; this.draw(); return; }
-                if (!globalThis.confirm('确认将此分摊草案记入本机？此操作不代表付款或对方收款。')) return;
+                if (!phoneConfirm('确认将此分摊草案记入本机？此操作不代表付款或对方收款。')) return;
                 const result = vp.applyFinanceCommitAction('commit', button.dataset.id);
                 this.notice = result.note || '未收到财务回执'; this.draw(); return;
             }

@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const CLIPBOARD_FACES = Object.freeze(['empty', 'fresh', 'expired', 'foreign']);
+const CLIPBOARD_FACES = Object.freeze(['empty', 'fresh', 'expired', 'foreign']);
 export const CLIPBOARD_LIMITS = Object.freeze({ maxChars: 4000, ttlMs: 30 * 60 * 1000 });
 
 export function clipboardState(clip, nowMs) {

@@ -1,3 +1,4 @@
+import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -3331,7 +3332,7 @@ export class WeiboView {
         if (correctAutoFloorBtn) {
             correctAutoFloorBtn.onclick = () => {
                 const current = this.app.weiboData.getAutoLastFloor();
-                const newFloor = prompt(`上次记录到: ${current} 层\n请输入修正后的楼层数:`, current);
+                const newFloor = phonePrompt(`上次记录到: ${current} 层\n请输入修正后的楼层数:`, current);
                 if (newFloor !== null) {
                     const val = Math.max(0, parseInt(newFloor) || 0);
                     // 手动修正后，短时间抑制自动微博触发并清空已排队任务
@@ -3552,7 +3553,7 @@ export class WeiboView {
         if (correctFloorBtn) {
             correctFloorBtn.onclick = () => {
                 const settings = this.app.weiboData.getFloorSettings();
-                const newFloor = prompt(`当前楼层: ${settings.currentFloor}\n请输入修正后的楼层数:`, settings.currentFloor);
+                const newFloor = phonePrompt(`当前楼层: ${settings.currentFloor}\n请输入修正后的楼层数:`, settings.currentFloor);
                 if (newFloor !== null) {
                     settings.currentFloor = Math.max(0, parseInt(newFloor) || 0);
                     this.app.weiboData.saveFloorSettings(settings);

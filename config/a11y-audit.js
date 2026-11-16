@@ -5,7 +5,7 @@
  * 页面描述由调用方（诊断/测试）提供：{ nodes: [{ tag, hasLabel, hasRole, tabIndex, clickable }] }。
  * 交互元素（button/input/a/clickable）缺 aria-label / role / tabindex 各计缺一项。
  */
-export const A11Y_FACES = Object.freeze(['empty', 'pass', 'gaps']);
+const A11Y_FACES = Object.freeze(['empty', 'pass', 'gaps']);
 
 export function a11yAudit(pageDesc) {
     const nodes = pageDesc && Array.isArray(pageDesc.nodes) ? pageDesc.nodes.filter((n) => n && typeof n === 'object') : [];

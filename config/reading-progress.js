@@ -6,7 +6,7 @@
  */
 import { numOrNull } from './num-gate.js';
 
-export const READING_PROGRESS_FACES = Object.freeze(['unstarted', 'reading', 'finished', 'unavailable']);
+const READING_PROGRESS_FACES = Object.freeze(['unstarted', 'reading', 'finished', 'unavailable']);
 
 export function readingProgress({ book, progress } = {}) {
     const b = book && typeof book === 'object' ? book : null;
@@ -32,7 +32,7 @@ export function readingProgress({ book, progress } = {}) {
     };
 }
 
-export function readingProgressNote(r) {
+function readingProgressNote(r) {
     const face = r && r.face;
     if (face === 'unavailable') return '这本书还读不到页数';
     if (face === 'unstarted') return '还没开始读';

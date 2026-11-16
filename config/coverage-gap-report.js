@@ -4,7 +4,7 @@
  * 纪律：纯函数。吃「目录 → { 文件数, 有测试文件数 }」，吐零测试目录清单与覆盖率形状。
  * 只报事实，不补测试、不设绝对下限。四态：invalid / allCovered / hasGaps。
  */
-export const COVERAGE_FACES = Object.freeze(['invalid', 'allCovered', 'hasGaps']);
+const COVERAGE_FACES = Object.freeze(['invalid', 'allCovered', 'hasGaps']);
 
 export function coverageReport(dirs) {
     if (!dirs || typeof dirs !== 'object') return { face: 'invalid', zeroDirs: [], total: 0 };
@@ -22,7 +22,7 @@ export function coverageReport(dirs) {
     return { face: zeroDirs.length ? 'hasGaps' : 'allCovered', zeroDirs, total };
 }
 
-export function coverageNote(r) {
+function coverageNote(r) {
     if (!r || r.face === 'invalid') return '覆盖率读数读不出来';
     if (r.face === 'allCovered') return `${r.total} 个目录都有测试`;
     return `${r.zeroDirs.length} 个目录一行测试都没有：${r.zeroDirs.map((d) => d.name).join('、')}`;
