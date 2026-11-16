@@ -17,6 +17,7 @@ import { readPhoneContextLimit } from '../../config/context-settings.js';
 import { collectRecentChat } from '../../config/context-compose.js';
 import { PHONE_CONFIG } from '../../config/apps.js';
 import { formatWechatChatListTime } from '../wechat/chat-list-time.js';
+import { segmentTranscript as _r22SegmentTranscript, callSegNote } from '../../config/call-transcript-segments.js?v=4.157.0&r=20261116-r22';
 /* [v3.74.0 · 计划 R-O4 第 4 条] 视图层不得顺手写数据：通话设置里那一格此前是
  *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
  *   开关照样翻过去，重开设置页才发现没存住。现在走 writeConfirmed（写 + 回读一次）。 */
@@ -1912,10 +1913,15 @@ export class PhoneCallView {
             ? `<div class="phone-call-thread-row${threadBound?.state === 'threaded' ? ' phone-call-thread-row-clickable' : ''}"${threadBound?.state === 'threaded' ? ' id="phone-call-thread-jump" role="button" tabindex="0"' : ''}>${this._escapeHtml(threadLine.line)}</div>`
             : '';
 
+        // [v4.157.0 · R22-X4] 已有通话转写先走唯一分段桥，分段缺时刻保持 null，不补墙钟。
+        const _r22Segments = _r22SegmentTranscript(record.transcript);
+        this._r22TranscriptFace = { face: _r22Segments.face, note: callSegNote(_r22Segments), talkers: _r22Segments.talkers };
+        const _r22ByIndex = _r22Segments.segments;
         // 构建消息列表
         let messagesHtml = '';
         if (record.transcript && record.transcript.length > 0) {
             record.transcript.forEach((msg, index) => {
+                const _r22Seg = _r22ByIndex.find(x => x.text === String(msg?.text || '') && x.speaker === String(msg?.speaker || (msg?.from === 'me' ? userName : record.caller || '未知'))) || null;
                 const isUser = msg.from === 'me';
                 const cssClass = isUser ? 'phone-call-message-user' : 'phone-call-message-ai';
                 const msgId = String(msg?._id || `${record.id || 'record'}_${index}`).trim();

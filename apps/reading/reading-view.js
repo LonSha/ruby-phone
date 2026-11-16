@@ -14,6 +14,7 @@ import { L0_ASSETS } from '../../config/l0-assets.js';
 import { paraWindowOf, anchorOf, paraLine } from '../../config/list-window.js';
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
+import { readingProgress as _r22ReadingProgress } from '../../config/reading-progress.js?v=4.157.0&r=20261116-r22';
 
 /* 纸纹 key → URL 表（从 L0 取数口读，避免本文件自持第二条路径） */
 const PAPER_TEXTURE_URLS = Object.freeze(Object.fromEntries(
@@ -914,7 +915,10 @@ export class ReadingView {
         const chapterOptions = book.chapters.map((c, i) =>
             `<option value="${i}" ${i === this.curChapter ? 'selected' : ''}>${esc(c.title || ('第' + (i + 1) + '章'))}</option>`).join('');
         const authorLine = book.author ? ` · ${esc(book.author)}` : '';
-        const pct = book.chapters.length ? Math.round(((this.curChapter + 1) / book.chapters.length) * 100) : 0;
+        /* [v4.157.0 · R22-X9] 进度条与存盘字段同走 reading-progress 桥；章节/段落锚点由宿主提供。 */
+        const _r22Progress = _r22ReadingProgress({ book: { id: book.id, totalChapters: book.chapters.length }, progress: { chapter: this.curChapter, para: this.anchorPara, percent: book.chapters.length ? ((this.curChapter + 1) / book.chapters.length) * 100 : null } });
+        this._r22ReadingProgressFace = _r22Progress;
+        const pct = _r22Progress.face === 'invalid' ? 0 : Math.round(Number(_r22Progress.percent) || 0);
         return `
         <div class="rd-reader">
             <div class="rd-reader-bar">

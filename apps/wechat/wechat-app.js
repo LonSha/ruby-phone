@@ -39,6 +39,14 @@ import {
   sharedItemRows, handoffGate, sharedPastSelfCheck
 } from '../../config/shared-past-contract.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
+/* [v4.157.0 · R22] 四座桥接入本 App（各自只判一格，写盘/取数归本层）：
+ *   X1 置顶排序、O4 消息全文搜索、X7 气泡主题、X8 剧情内剪贴板、O9 未读角标单口径。 */
+import { searchMessages } from '../../config/msg-search.js?v=4.157.0&r=20261116-r22';
+import { clipboardState, clipboardNote } from '../../config/cross-app-clipboard.js?v=4.157.0&r=20261116-r22';
+import { bubbleTheme, bubbleThemeNote } from '../../config/chat-bubble-theme.js?v=4.157.0&r=20261116-r22';
+import { badgeOf } from '../../config/unread-badge.js?v=4.157.0&r=20261116-r22';
+import { orderChats as _r22OrderChatsX1 } from '../../config/pin-top.js?v=4.157.0&r=20261116-r22';
+import { storyNowWallFallback } from '../../config/time-source.js';
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
@@ -4791,8 +4799,40 @@ export class WechatApp {
             const textarea = document.getElementById('prompt-editor');
             textarea.select();
             document.execCommand('copy');
-            this.phoneShell.showNotification('已复制', '提示词已复制到剪贴板', '📋');
+            /* [v4.157.0 · R22-X8] 跨 App 剪贴板：把「刚复制了什么、还能不能跨 App 粘」
+             *   交给唯一桥判决，本层只写暂存（写入归宿主）。门控不通过时照样提示已复制，
+             *   但**不再声称可以跨 App 粘** —— 失败态如实说出，不塌陷成一句话。 */
+            const _r22State = this._r22StageClipboard(textarea.value, 'prompt-editor');
+            const _r22Note = clipboardNote(_r22State);
+            this.phoneShell.showNotification('已复制', _r22Note || '提示词已复制到剪贴板', '📋');
         });
+    }
+
+    /** [v4.157.0 · R22-X8] 把一段文本登记为「可跨 App 粘贴」的暂存项。
+     *   暂存的写盘与生命期归宿主（这里），能不能粘由 `config/cross-app-clipboard.js` 判。
+     *   键固定为 `rp22_clipboard`，同时挂 `_r22Clipboard` 供诊断面/角色读取。 */
+    _r22StageClipboard(text, srcApp) {
+        const body = String(text == null ? '' : text);
+        if (!body.trim()) {
+            this._r22Clipboard = { face: 'empty' };
+            try { window.VirtualPhone._r22Clipboard = this._r22Clipboard; } catch (e) {}
+            return this._r22Clipboard;
+        }
+        const rec = { text: body, at: Date.now(), srcApp: String(srcApp || '') };
+        try { this.storage?.set?.('rp22_clipboard', rec); } catch (e) {}
+        const state = clipboardState(rec, Date.now());
+        this._r22Clipboard = state;
+        try { window.VirtualPhone._r22Clipboard = state; } catch (e) {}
+        return state;
+    }
+    /** [R22-X8] 反向读口：某个 App 想粘贴时先问这一句（读不到 ≠ 能粘，读不到就是 empty）。 */
+    _r22PasteGate(targetApp) {
+        let rec = null;
+        try { rec = this.storage?.get?.('rp22_clipboard') || null; } catch (e) { rec = null; }
+        const state = clipboardState(rec, Date.now());
+        this._r22Clipboard = state;
+        try { window.VirtualPhone._r22Clipboard = state; } catch (e) {}
+        return state;
     }
 
     // 🔥 新增：批量添加联系人（支持AI生成的联系人）
@@ -4872,7 +4912,11 @@ export class WechatApp {
         }
 
         // 重新计算真实的未读总数
-        const unreadCount = chatList.reduce((sum, chat) => sum + chat.unread, 0);
+        /* [v4.157.0 · R22-O9] 未读角标单口径：汇总与封顶（99+）由 config/unread-badge.js 唯一给出，
+         *   本层不再自己 reduce；每会话的 unread 仍来自阅读游标（chat-read-cursor）那一份。 */
+        const _r22Badge = badgeOf(chatList);
+        window.VirtualPhone._r22UnreadBadge = { face: _r22Badge.face, total: _r22Badge.total, label: _r22Badge.label };
+        const unreadCount = _r22Badge.total;
 
         // 🔥 始终同步最新的未读总数到全局 App 图标
         if (window.VirtualPhone?.home) {
@@ -8425,6 +8469,13 @@ export class WechatApp {
                     [c.name, c.remark].some(value => String(value || '').toLowerCase().includes(query))
                 );
                 const chats = this.wechatData.getChatList().filter(c => c.name.toLowerCase().includes(query));
+                /* [v4.157.0 · R22-O4] 消息全文搜索：跨会话搜消息正文，命中给「会话+消息」定位，
+                 *   点一下跳回原会话。判定/排序/截断全在 config/msg-search.js（本层只备输入、只绑点击）。 */
+                const _r22Convs = this.wechatData.getChatList().map(c => ({
+                    id: c.id, name: c.name, messages: this.wechatData.getMessages(c.id)
+                }));
+                const _r22Hits = searchMessages(_r22Convs, query);
+                window.VirtualPhone._r22MsgSearch = { face: _r22Hits.face, total: _r22Hits.total, hits: _r22Hits.hits.slice(0, 10) };
 
                 let resultsHtml = '';
 
@@ -8446,6 +8497,18 @@ export class WechatApp {
                         <div class="chat-info">
                             <div class="chat-name">${chat.name}</div>
                             <div class="chat-last-msg">${chat.lastMessage}</div>
+                        </div>
+                    </div>
+                `).join('');
+                }
+
+                if (_r22Hits.face === 'results') {
+                    resultsHtml += '<div style="font-size:12px;color:#888;padding:15px 15px 5px;">聊天记录（' + String(_r22Hits.total) + ' 条）</div>';
+                    resultsHtml += _r22Hits.hits.slice(0, 20).map(h => `
+                    <div class="chat-item r22-msg-hit" data-chat-id="${h.chatId}" data-msg-id="${h.msgId == null ? '' : h.msgId}" style="padding: 8px 15px; cursor:pointer;">
+                        <div class="chat-info">
+                            <div class="chat-name">${h.chatName || '会话'}</div>
+                            <div class="chat-last-msg">${h.snippet}</div>
                         </div>
                     </div>
                 `).join('');
@@ -8481,7 +8544,14 @@ export class WechatApp {
         document.querySelectorAll('#search-results .chat-item').forEach(item => {
             item.addEventListener('click', () => {
                 const chatId = item.dataset.chatId;
+                /* [v4.157.0 · R22-O4] 消息命中：带上 msgId 跳回原会话，
+                 *   由会话视图负责把那条滚到可见（本层不重复实现定位）。 */
+                const msgId = String(item.dataset.msgId || '').trim();
                 this.openChat(chatId);
+                if (msgId) {
+                    this._r22PendingFocusMsgId = msgId;
+                    try { this.chatView?.focusMessageById?.(msgId); } catch (_e) { /* 定位失败不影响打开会话 */ }
+                }
             });
         });
     }

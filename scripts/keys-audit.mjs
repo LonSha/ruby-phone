@@ -193,6 +193,14 @@ const isChatByMechanism = (key) => patterns.some((p) => {
  *   legacy 历史误存键（读旧档→迁移→删）：不参与 K2，但仍须活着
  * ⚠️ 这是**准入清单**：新增键必须登记，否则 K1 红灯；K3 检查每条是否还活着。 */
 const KEY_REGISTRY = [
+  /* [v4.157.0 · R22] 新增会话级产品状态；按剧情/角色隔离，不落全局偏好。 */
+  { key: 'rp22_chat_bubble_theme', scope: 'chat', note: '微信气泡主题选择' },
+  { key: 'rp22_clipboard', scope: 'chat', note: '跨 App 剪贴板暂存内容及来源回执' },
+  { key: 'rp22_contact_groups', scope: 'chat', note: '联系人分组投影配置' },
+  { key: 'rp22_dnd_schedule', scope: 'chat', note: '微信主动消息免打扰时段配置' },
+  { key: 'app_change_left_at', scope: 'chat', note: '离开 App 时剧情时间游标' },
+  { key: 'app_change_return_at', scope: 'chat', note: '返回 App 时剧情时间游标' },
+  { key: 'device_physical_told_cursor', scope: 'chat', note: '设备叙事已解释游标' },
   /* [v4.155.0 · R21-X3] 静音叙事游标：上一次真给过候选理由的剧情毫秒（宿主记账，桥零写）。 */
   { key: 'silence_told_cursor', scope: 'chat', note: '静音叙事已解释游标（上一次给候选的剧情毫秒）' },
   { key: 'device_runtime_v1', scope: 'chat', note: '剧情设备模拟状态及显式开关' },

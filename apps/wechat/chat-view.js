@@ -22,6 +22,16 @@ import { tailWindowOf } from '../../config/list-window.js';
  *   `tailWindowOf` 管「取多少条数据交给渲染」，本模块管「物化多少条节点进 DOM」。
  *   两个上界各管一层，不合并成一个常量。 */
 import { computeWindowedRange, windowItems, normalizeStreamMode, WINDOWED_STREAM_KEY, WINDOWED_STREAM_MODE, WINDOWED_STREAM_LIMIT, WINDOWED_STREAM_ROW_HEIGHT } from './chat-view-windowed-stream.js';
+/* [v4.157.0 · R22-O1/X7/X8/O5] 四座新桥（纯函数，各自唯一实现）：
+ *   `virtualWindow`   —— 物化上界（R22-O1，与上面的 `computeWindowedRange` 同族，只管上界）
+ *   `bubbleTheme`     —— 气泡主题投影（R22-X7）
+ *   `clipboardState`  —— 跨 App 剪贴板门控（R22-X8）
+ *   `classifyClockSite` —— 裸时钟分流（R22-O5）
+ *   本层只消费它们的判决与形状，不自己再算一份。 */
+import { virtualWindow } from '../../config/chat-virtual-window.js?v=4.157.0&r=20261116-r22';
+import { bubbleTheme } from '../../config/chat-bubble-theme.js?v=4.157.0&r=20261116-r22';
+import { clipboardState, clipboardNote } from '../../config/cross-app-clipboard.js?v=4.157.0&r=20261116-r22';
+import { classifyClockSite } from '../../config/story-clock-classify.js?v=4.157.0&r=20261116-r22';
 
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：微信生图是本仓最长的在飞请求之一
  *   （先等英文 TAG 一轮 AI、再等图片 provider、再等上传落盘）。
@@ -3065,12 +3075,37 @@ renderChatRoom(chat) {
             });
         }, { passive: true });
     }
+    /** [v4.157.0 · R22-O1] 物化上界收口：本次换窗到底最多能铺多少节点。
+     *   判在上界桥里（`config/chat-virtual-window.js`），本层只把数字取回来用；
+     *   **读不出 ≠ 没上界** —— 异常/不适用时返回 null，由调用点回退到本层原常量，
+     *   不把「桥没答」涂成「上界是 0」。 */
+    _r22WindowUpperBound(container) {
+        try {
+            const h = Number(container?.clientHeight) || 0;
+            if (!(h > 0)) return null;
+            /* 宿主算输入：视口能容下几行 = 视口高 / 行高（行高取本层已用的常量）。
+             *   桥只回答「这个行数下 DOM 上界是多少」，不替本层猜视口。 */
+            const rowH = Number(WINDOWED_STREAM_ROW_HEIGHT) || 1;
+            const visible = Math.max(1, Math.ceil(h / rowH));
+            const r = virtualWindow(Number(WINDOWED_STREAM_LIMIT) || 1, 0, 1, { windowSize: visible, overscan: 0 });
+            const ub = Number(r?.upperBound);
+            return Number.isFinite(ub) && ub > 0 ? ub : null;
+        } catch (e) {
+            return null;
+        }
+    }
     _computeWindowedRangeFor(list, container, chatId, baseOffset = 0) {
         const entry = this._windowedStreamHeightOf(chatId);
         const heights = Number(baseOffset) > 0 ? entry.heights.slice(Number(baseOffset), Number(baseOffset) + list.length) : entry.heights;
-        return computeWindowedRange(list.length, container?.scrollTop, container?.clientHeight, {
-            maxNodes: WINDOWED_STREAM_LIMIT, heights, avgRowHeight: entry.avg
+        /* [R22-O1] 上界取「桥算出的上限」与「本层常量」两者较小者：收口只允许更小，
+         *   桥读不出时保持本层原样 —— 单侧收口，不会因为桥出错反而放大 DOM。 */
+        const _r22Ub = this._r22WindowUpperBound(container);
+        const maxNodes = _r22Ub == null ? WINDOWED_STREAM_LIMIT : Math.min(WINDOWED_STREAM_LIMIT, _r22Ub);
+        const range = computeWindowedRange(list.length, container?.scrollTop, container?.clientHeight, {
+            maxNodes, heights, avgRowHeight: entry.avg
         });
+        this._r22LastWindowBound = { face: _r22Ub == null ? 'fallback' : 'bounded', upperBound: _r22Ub, used: maxNodes };
+        return range;
     }
     /** 取「重渲染前视口顶那条消息」作为锚点，换窗后按它的新位置还原滚动。 */
     _windowedStreamAnchorOf(list, range) {
@@ -3189,6 +3224,11 @@ renderChatRoom(chat) {
         // 历史记录只读自身 face；当前剧情钟不是这条消息发生的时刻。
         const date = msg?.date ? this._normalizeWechatDateDisplay(msg.date) : '';
         const time = String(msg?.time || '').trim();
+        /* [v4.157.0 · R22-O5] 裸钟分流：这里是**内容时间轴**上的渲染点，先请桥判它
+         *   属于 story 档还是 wall 档。story / unknown 档一律保守 —— 分不出档就不
+         *   许拿墙钟顶上；本层不在此补第二份钟（降级只走 time-source 那一个出口）。 */
+        const _r22Cls = classifyClockSite({ field: 'timestamp', context: String(msg?.type || 'message') });
+        this._r22LastClockClass = { field: _r22Cls.field, cls: _r22Cls.cls, face: _r22Cls.face, reason: _r22Cls.reason };
         const cap = captionOf('timestamp', msg?.timestamp, { face: { date, time } });
         if (!cap.ok) return '时间不详';
         if (forceDate && date) {
@@ -3972,7 +4012,7 @@ renderChatRoom(chat) {
                         ${showInnerThought ? 'padding-right: 22px; border-bottom-right-radius: 0;' : ''}
                         font-size: 14px;
                         line-height: 1.4;
-                        background: ${isMe ? '#95ec69' : '#fff'};
+                        background: ${isMe ? (this.app?._r22BubbleThemeFace?.style?.self || '#95ec69') : (this.app?._r22BubbleThemeFace?.style?.other || '#fff')};
                         color: ${isMe ? '#000' : '#1c1c1e'};
                         box-shadow: ${isMe ? 'none' : '0 1px 2px rgba(0,0,0,0.08)'};
                         word-break: break-word;
@@ -4812,13 +4852,17 @@ renderChatRoom(chat) {
     }
 
     renderTextMessageBubble(content, { isGroupChat = false } = {}) {
+        /* [v4.157.0 · R22-X7] 主题形状来自单一主题桥，默认值维持原有视觉；用户配置只选主题 id。 */
+        const _r22ThemeId = String(this.app?.storage?.get?.('rp22_chat_bubble_theme') || 'default');
+        const _r22Theme = bubbleTheme(_r22ThemeId);
+        this.app._r22BubbleThemeFace = { face: _r22Theme.face, id: _r22Theme.id, style: _r22Theme.style };
         const parsed = this.extractInnerThought(content);
         const cleanContent = parsed.visibleContent || (parsed.innerThought ? '...' : content);
         const visibleText = this._stripCallSpeechPrefix(cleanContent);
         const visibleHtml = this.parseEmoji(visibleText);
 
         if (!parsed.innerThought || isGroupChat) {
-            return `<div class="message-text">${visibleHtml}</div>`;
+            return `<div class="message-text r22-bubble-theme-${this._escapeHtml(_r22Theme.id)}" data-r22-bubble-theme="${this._escapeHtml(_r22Theme.id)}" style="--r22-bubble-self:${_r22Theme.style.self};--r22-bubble-other:${_r22Theme.style.other};--r22-bubble-radius:${Number(_r22Theme.style.radius)||8}px;">${visibleHtml}</div>`;
         }
 
         return `

@@ -23,6 +23,7 @@ import { captionOf } from '../../config/time-caption.js';
 /* [v4.156.0 R21-X9] Weekly recap bridge: aggregation and judgement all live in the bridge; view only renders face and line. */
 import { weeklyRecap, weeklyRecapNote, weekWindowOf } from '../../config/weekly-recap.js?v=4.156.0&r=20261116-batch-f';
 import { FACE_ATTR } from '../../config/empty-face.js';
+import { diarySearch as _r22DiarySearch, diarySearchNote } from '../../config/diary-search.js?v=4.157.0&r=20261116-r22';
 
 export class DiaryView {
     constructor(app) {
@@ -169,19 +170,24 @@ export class DiaryView {
         const data = this.app.diaryData;
         const entries = data.getEntries();
         const sorted = this._sortEntries(entries);
+        /* [v4.157.0 · R22-X5] 目录日记搜索：bridge 判定命中，视图只映射回原条目。 */
+        const _r22DiaryQuery = String(this._r22DiaryQuery || '').trim();
+        const _r22DiaryHits = _r22DiarySearch(sorted.map(e => ({ id: e.id, title: e.title || '', content: e.content || '', date: e.date || '' })), _r22DiaryQuery);
+        this._r22DiarySearchFace = { face: _r22DiaryHits.face, note: diarySearchNote(_r22DiaryHits), total: _r22DiaryHits.total };
+        const _r22DiaryRows = _r22DiaryQuery ? _r22DiaryHits.hits.map(h => sorted.find(e => String(e.id) === String(h.id))).filter(Boolean) : sorted;
         const tocBg = data.getTocBg();
         const bgStyle = tocBg ? `background-image: url('${tocBg}'); background-size: cover; background-position: center;` : '';
         const enterClass = this.isBackNav ? '' : 'diary-view-enter';
 
         let listHtml;
-        if (sorted.length === 0) {
+        if (_r22DiaryRows.length === 0) {
             listHtml = `
                 <div class="diary-toc-empty" ${FACE_ATTR}="no-data" data-face="empty">
                     <div class="diary-toc-empty-text">还没有日记，写一篇吧</div>
                 </div>
             `;
         } else {
-            listHtml = sorted.map(entry => {
+            listHtml = _r22DiaryRows.map(entry => {
                 const parsedDiary = data.parseDiaryContent(entry.content || '');
                 /* [v4.142.0 · R21-O5] 目录行的日期文案走统一口径：`date` 属剧情钟，
                  *   只显示剧情日期本身（正文反解的日期同属剧情轨，保留原回退链）；

@@ -528,13 +528,13 @@ test('v4157 F2. 四座桥都是纯函数：同一输入两次调用结果逐位�
     assert.equal(JSON.stringify(face), faceSnapshot, 'X7 不许改读数');
 });
 
-test('v4157 F3. 版本锚：五源同源到 4.156.0', () => {
+test('v4157 F3. 版本锚：五源同源到 4.157.0', () => {
     const idx = read('index.js');
     const manifest = JSON.parse(read('manifest.json'));
     const pkg = JSON.parse(read('package.json'));
-    assert.match(idx, /4\.156\.0/, 'index.js 里必须出现 4.156.0');
-    assert.equal(manifest.version, '4.156.0', 'manifest 版本必须 4.156.0');
-    assert.equal(pkg.version, '4.156.0', 'package.json 版本必须 4.156.0');
+    assert.match(idx, /4\.157\.0/, 'index.js 里必须出现 4.156.0');
+    assert.equal(manifest.version, '4.157.0', 'manifest 版本必须 4.156.0');
+    assert.equal(pkg.version, '4.157.0', 'package.json 版本必须 4.156.0');
 });
 
 test('v4157 F4. 四座桥文件都在册且非空（含头部纪律注释）', () => {

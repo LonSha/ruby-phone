@@ -39,3 +39,7 @@ node --test tests/*.test.mjs               # 全部
 ## 许可证
 
 MIT License — Copyright (c) 2026 LonSha
+
+## 当前版本
+
+`4.157.0`（2026-11-16）：第二十二期 18 项优化与拓展已接入产品路径。

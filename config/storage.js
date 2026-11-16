@@ -61,6 +61,9 @@ export class PhoneStorage {
             /^vfs_files_/,
 
             /^wechat_/,           // 微信数据
+            /^rp22_/,             // [v4.157.0 · R22] 会话级产品状态（主题/分组/剪贴板/免打扰）
+            /^app_change_/,       // App 离开/返回剧情游标
+            /^device_physical_told_cursor$/, // 设备叙事解释游标
             /^weibo_/,            // 微博数据
             /^honey_/,            // 蜜语数据
             /^chat_games_/,        // 按聊天独立的游戏存档

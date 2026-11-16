@@ -12,6 +12,7 @@ import { receivedReplyCondition } from '../../config/condition-reminder-runtime.
 import { GlobalSocialStore } from '../../config/global-social-store.js';
 import { parseWechatVoiceContent } from './voice-text.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { orderChats as _r22OrderChats } from '../../config/pin-top.js?v=4.157.0&r=20261116-r22';
 import {
     matchMemberByName,
     matchMemberCandidates,
@@ -2378,17 +2379,19 @@ export class WechatData {
             this.data.chats = chats;
             this.saveData();
         }
-        return [...chats].sort((a, b) => {
-            const pinA = Number(a.pinnedAt || 0) || 0;
-            const pinB = Number(b.pinnedAt || 0) || 0;
-            if (pinA > 0 || pinB > 0) {
-                if (pinA > 0 && pinB > 0) return pinA - pinB;
-                return pinA > 0 ? -1 : 1;
-            }
-            const timeA = a.timestamp || 0;
-            const timeB = b.timestamp || 0;
-            return timeB - timeA; // 降序排列（时间戳越大的越靠前）
-        });
+        /* [v4.157.0 · R22-X1] 置顶排序唯一实现收口到 config/pin-top.js 桥。
+         *   置顶集合与时刻仍在本层存（chat.pinnedAt），桥只回答「按什么顺序排」；
+         *   未置顶者按最后消息时间降序，置顶者按置顶时刻正序（与旧行为一致），
+         *   排序数据由桥统一给出，App 层不再自拼第二份比较器。 */
+        const _r22Pins = chats
+            .filter((c) => Number(c.pinnedAt || 0) > 0)
+            .map((c) => ({ chatId: c.id, pinnedAt: Number(c.pinnedAt) }));
+        const _r22Ordered = _r22OrderChats(chats, _r22Pins);
+        const _r22PinnedIds = new Set(_r22Ordered.chats.slice(0, _r22Ordered.pinnedCount).map((c) => String(c.id)));
+        const _r22Rest = [...chats]
+            .filter((c) => !_r22PinnedIds.has(String(c.id)))
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        return _r22Ordered.chats.slice(0, _r22Ordered.pinnedCount).concat(_r22Rest);
     }
 
     setChatPinned(chatId, pinned = true) {

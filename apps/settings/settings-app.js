@@ -10,6 +10,8 @@
 // 设置APP
 // [v2.27.0] 登记制 + 事件契约（手写 window._xxxBound guard 与字面量事件名收敛到单一真源）
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
+import { filterSettings as _r22FilterSettings, settingsFilterNote } from '../../config/settings-filter.js?v=4.157.0&r=20261116-r22';
+import { a11yAudit as _r22A11yAudit, a11yNote } from '../../config/a11y-audit.js?v=4.157.0&r=20261116-r22';
 /* [v3.81.0 · A6] 便携负载的纯函数对：魔标校验 + 按内容去重追加（三处导入共用同一份口径）。
  *   此前三处（NAI 预设 / GPT 预设 / ComfyUI 工作流）各自解析、各自按名去重 ——
  *   同一份文件导两次就多一份（id 每次新生成、名字又被改名规则绕开）。 */
@@ -3518,7 +3520,49 @@ export class SettingsApp {
         `;
 
         this.phoneShell.setContent(html);
-        this._applySettingsThemeIsolation();
+        /* [v4.157.0 · R22-O2/O3] 设置搜索与无障碍审计消费真实设置 DOM。
+         * [v4.157.1 · R22-O4] 搜索补齐结果状态、清空键与空分组收起：
+         *   修前只能隐藏 setting-item，分组标题/空 details 仍留在页面上，
+         *   用户得到的是「一堆空白设置页」，而不是「没有匹配」。 */
+        const _r22Root = document.getElementById('yzp-settings-app') || document.querySelector('.settings-app');
+        if (_r22Root) {
+            const _r22Items = Array.from(_r22Root.querySelectorAll('.setting-item'));
+            const _r22Sections = [{ title: '设置', items: _r22Items.map((el, i) => ({ label: String(el.textContent || '').trim(), keywords: String(el.id || '') + ' ' + String(el.className || ''), _i: i })) }];
+            let _r22Search = _r22Root.querySelector('#r22-settings-filter');
+            let _r22SearchStatus = _r22Root.querySelector('#r22-settings-filter-status');
+            let _r22SearchClear = _r22Root.querySelector('#r22-settings-filter-clear');
+            if (!_r22Search) {
+                const wrap = document.createElement('div');
+                wrap.className = 'r22-settings-filter-wrap';
+                wrap.setAttribute('role', 'search');
+                wrap.setAttribute('aria-label', '搜索设置');
+                wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:8px 10px 4px;';
+                _r22Search = document.createElement('input'); _r22Search.type = 'search'; _r22Search.id = 'r22-settings-filter'; _r22Search.placeholder = '搜索设置（如：头像、API、微信）'; _r22Search.setAttribute('aria-label', '搜索设置');
+                _r22Search.style.cssText = 'flex:1;min-width:0;padding:8px 10px;border:1px solid #ddd;border-radius:9px;box-sizing:border-box;';
+                _r22SearchClear = document.createElement('button'); _r22SearchClear.type = 'button'; _r22SearchClear.id = 'r22-settings-filter-clear'; _r22SearchClear.textContent = '清空'; _r22SearchClear.setAttribute('aria-label', '清空设置搜索');
+                _r22SearchClear.style.cssText = 'flex:0 0 auto;padding:8px 10px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#555;cursor:pointer;';
+                wrap.append(_r22Search, _r22SearchClear);
+                _r22SearchStatus = document.createElement('div'); _r22SearchStatus.id = 'r22-settings-filter-status'; _r22SearchStatus.setAttribute('role', 'status'); _r22SearchStatus.setAttribute('aria-live', 'polite'); _r22SearchStatus.style.cssText = 'min-height:18px;margin:0 12px 6px;color:#777;font-size:11px;';
+                const _r22Tabs = _r22Root.querySelector('.settings-tabs'); if (_r22Tabs) { _r22Tabs.insertAdjacentElement('afterend', wrap); wrap.insertAdjacentElement('afterend', _r22SearchStatus); }
+            }
+            const _r22Containers = Array.from(_r22Root.querySelectorAll('.setting-section, details')).filter((el) => el.querySelector('.setting-item'));
+            const applyFilter = () => {
+                const r = _r22FilterSettings(_r22Sections, _r22Search.value);
+                const hit = new Set();
+                if (r.face === 'results') for (const sec of r.sections) for (const it of sec.items) hit.add(it._i);
+                _r22Items.forEach((el, i) => { el.hidden = r.face === 'results' ? !hit.has(i) : r.face === 'noMatch'; });
+                _r22Containers.forEach((el) => { el.hidden = !!_r22Search.value.trim() && !el.querySelector('.setting-item:not([hidden])'); });
+                if (_r22SearchStatus) _r22SearchStatus.textContent = settingsFilterNote(r);
+                if (_r22SearchClear) _r22SearchClear.disabled = !_r22Search.value;
+                this._r22SettingsFilterFace = { face: r.face, matched: r.matched, note: settingsFilterNote(r) };
+            };
+            _r22Search.addEventListener('input', applyFilter);
+            if (_r22SearchClear) _r22SearchClear.addEventListener('click', () => { _r22Search.value = ''; _r22Search.focus(); applyFilter(); });
+            _r22Search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && _r22Search.value) { _r22Search.value = ''; applyFilter(); } });
+            applyFilter();
+            const nodes = Array.from(_r22Root.querySelectorAll('button,input,a,select,textarea,[role]')).map(el => ({ tag: el.tagName.toLowerCase(), hasLabel: !!(el.getAttribute('aria-label') || el.getAttribute('title') || String(el.textContent || '').trim()), hasRole: !!(el.getAttribute('role') || ['button','input','a','select','textarea'].includes(el.tagName.toLowerCase())), tabIndex: el.tabIndex, clickable: el.matches('button,a,[role=button],[role=tab]') }));
+            const ar = _r22A11yAudit({ nodes }); this._r22A11yFace = { face: ar.face, interactive: ar.interactive, gapCount: ar.gapCount, note: a11yNote(ar) };
+        }
         this.bindEvents();
         mountUsagePattern(this._getActiveSettingsRoot(), this.storage);
         mountDeviceRuntimeSection(this._getActiveSettingsRoot(), this.storage);

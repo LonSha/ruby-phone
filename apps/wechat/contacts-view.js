@@ -13,6 +13,7 @@
 import { ImageCropper } from '../settings/image-cropper.js';
 import { AlbumData } from '../album/album-data.js';
 import { AlbumImagePicker } from '../album/album-image-picker.js';
+import { groupContacts as _r22GroupContacts, contactGroupNote } from '../../config/contact-group.js?v=4.157.0&r=20261116-r22';
 
 export class ContactsView {
     constructor(wechatApp) {
@@ -206,7 +207,13 @@ export class ContactsView {
         const groupChats = this.app.wechatData.getChatList()
             .filter(chat => chat?.type === 'group')
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
-        const grouped = this.groupContacts(contacts);
+        /* [v4.157.0 · R22-X3] 联系人分组消费：宿主持久化分组，桥负责投影。 */
+        let _r22Groups = [];
+        try { _r22Groups = this.app.storage?.get?.('rp22_contact_groups') || []; if (typeof _r22Groups === 'string') _r22Groups = JSON.parse(_r22Groups); } catch (e) { _r22Groups = []; }
+        const _r22Grouped = _r22GroupContacts(contacts, _r22Groups);
+        this.app._r22ContactGroupFace = { face: _r22Grouped.face, note: contactGroupNote(_r22Grouped), total: _r22Grouped.total };
+        const grouped = this.groupContacts(_r22Grouped.ungrouped.length ? _r22Grouped.ungrouped : contacts);
+        const _r22GroupHtml = _r22Grouped.sections.map(g => `<div class="contacts-group r22-contact-group" data-r22-group="${this._escapeAttr(g.id)}"><div class="group-letter">${this._escapeHtml(g.label)}</div>${g.contacts.map(contact => `<div class="contact-item" data-contact-id="${this._escapeAttr(contact.id)}"><div class="contact-avatar">${this.app.renderAvatar(contact.avatar, '👤', contact.name)}</div><div class="contact-name">${this._escapeHtml(contact.name)}</div></div>`).join('')}</div>`).join('');
 
         return `
             <div class="wechat-contacts">
@@ -242,6 +249,7 @@ export class ContactsView {
                         <div class="contacts-group" data-section="contacts">
                             <div class="group-letter">联系人</div>
                         </div>
+                        ${_r22GroupHtml}
                         ${Object.keys(grouped).sort().map(letter => `
                             <div class="contacts-group">
                                 <div class="group-letter">${letter}</div>

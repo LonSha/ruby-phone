@@ -110,6 +110,30 @@ import { appChangeDigest, digestNote, appChangeDigestSelfCheck } from './config/
 import { devicePhysicalNarrative, physicalNote, devicePhysicalNarrativeSelfCheck } from './config/device-physical-narrative.js?v=4.156.0&r=20261116-batch-f';
 import { backupDiffPreview, backupDiffPreviewSelfCheck } from './config/backup-diff-view.js?v=4.156.0&r=20261116-batch-f';
 import { weeklyRecap, weeklyRecapNote, weekWindowOf, weeklyRecapSelfCheck } from './config/weekly-recap.js?v=4.156.0&r=20261116-batch-f';
+/* [v4.157.0 · R22] 第二十二期十八项的纯函数内核。同前几期挂法：
+ *   带缓串静态 import；内核只判（面 / 归因 / 文案），宿主只算输入、只记账；
+ *   候选一律挂 window.VirtualPhone._r22 面供角色/诊断取用，绝不塞上下文。 */
+import { pinTopSelfCheck } from './config/pin-top.js?v=4.157.0&r=20261116-r22';
+import { dndSelfCheck } from './config/dnd-schedule.js?v=4.157.0&r=20261116-r22';
+import { contactGroupSelfCheck } from './config/contact-group.js?v=4.157.0&r=20261116-r22';
+import { bubbleTheme as chatBubbleTheme } from './config/chat-bubble-theme.js?v=4.157.0&r=20261116-r22';
+import { bubbleThemeSelfCheck } from './config/chat-bubble-theme.js?v=4.157.0&r=20261116-r22';
+import { clipboardSelfCheck } from './config/cross-app-clipboard.js?v=4.157.0&r=20261116-r22';
+import { readingProgressSelfCheck } from './config/reading-progress.js?v=4.157.0&r=20261116-r22';
+import { callSegSelfCheck } from './config/call-transcript-segments.js?v=4.157.0&r=20261116-r22';
+import { diarySearchSelfCheck } from './config/diary-search.js?v=4.157.0&r=20261116-r22';
+import { wishlistSelfCheck } from './config/wishlist.js?v=4.157.0&r=20261116-r22';
+import { bannerSelfCheck } from './config/incoming-banner.js?v=4.157.0&r=20261116-r22';
+import { unreadBadgeSelfCheck } from './config/unread-badge.js?v=4.157.0&r=20261116-r22';
+import { settingsFilterSelfCheck } from './config/settings-filter.js?v=4.157.0&r=20261116-r22';
+import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
+import { msgSearchSelfCheck } from './config/msg-search.js?v=4.157.0&r=20261116-r22';
+import { chatVirtualWindowSelfCheck } from './config/chat-virtual-window.js?v=4.157.0&r=20261116-r22';
+import { clockClassifySelfCheck } from './config/story-clock-classify.js?v=4.157.0&r=20261116-r22';
+import { coverageSelfCheck } from './config/coverage-gap-report.js?v=4.157.0&r=20261116-r22';
+import { eventDebtSelfCheck } from './config/event-debt-disposition.js?v=4.157.0&r=20261116-r22';
+import { bannerOf as r22BannerOf } from './config/incoming-banner.js?v=4.157.0&r=20261116-r22';
+import { dndFace as r22DndFace } from './config/dnd-schedule.js?v=4.157.0&r=20261116-r22';
 import { ControlCenter } from './phone/control-center.js';
 // [v2.27.0] 运行时资源登记与统一回收（v2.26 建内核，本版把 index.js 的常驻轮询接上）
 import { globalRuntime, globalRuntimeSnapshot, onceFlag, disposeChildRuntimes, childRuntimeStats, childRuntimeOverDisposed, childRuntimeReleaseLog, childRuntimePrematureLog, childRuntimeReleasedAt, childRuntimePrematureBy } from './config/runtime-lifecycle.js';
@@ -364,7 +388,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.156.0';
+const ST_PHONE_VERSION = '4.157.0';
 const ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -2286,6 +2310,12 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_x7SelfCheck', devicePhysicalNarrativeSelfCheck],
                 ['_x8SelfCheck', backupDiffPreviewSelfCheck],
                 ['_x9SelfCheck', weeklyRecapSelfCheck],
+                ['_r22X1', pinTopSelfCheck], ['_r22X2', dndSelfCheck], ['_r22X3', contactGroupSelfCheck],
+                ['_r22X4', callSegSelfCheck], ['_r22X5', diarySearchSelfCheck], ['_r22X6', wishlistSelfCheck],
+                ['_r22X7', bubbleThemeSelfCheck], ['_r22X8', clipboardSelfCheck], ['_r22X9', readingProgressSelfCheck],
+                ['_r22O2', settingsFilterSelfCheck], ['_r22O3', a11ySelfCheck], ['_r22O4', msgSearchSelfCheck],
+                ['_r22O1', chatVirtualWindowSelfCheck], ['_r22O8', bannerSelfCheck], ['_r22O9', unreadBadgeSelfCheck],
+                ['_r22O5', clockClassifySelfCheck], ['_r22O6', coverageSelfCheck], ['_r22O7', eventDebtSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {
@@ -3233,9 +3263,13 @@ function readSilenceLastTold(storage) {
 }
 
 function showUnifiedPhoneNotification(title, message, icon = '📱', options = {}) {
-        const safeTitle = String(title || '系统提示');
-        const safeMessage = String(message || '');
+        let safeTitle = String(title || '系统提示');
+        let safeMessage = String(message || '');
         const meta = (options && typeof options === 'object') ? options : {};
+        /* [v4.157.0 · R22-O8] 通知统一出口：单一入口先投影横幅规格，避免各 App 自拼标题/正文/图标。
+         *   真正落账仍在 notificationLog，返回面形仍与既有队列兼容。 */
+        const _r22Banner = r22BannerOf({ appId: meta.appId || '', title: safeTitle, body: safeMessage, icon, action: meta.action || '' });
+        if (_r22Banner.face === 'banner') { safeTitle = _r22Banner.banner.title; safeMessage = _r22Banner.banner.body; icon = _r22Banner.banner.icon; }
         const senderKey = String(meta.senderKey || `${safeTitle}:${safeMessage}:${icon}`);
         // [v2.16.0] 通知中心落账：在展示的同时写入历史（单一真源，showNotification 与统一入口共用）
         //   失败静默——落账绝不允许阻断通知展示。
@@ -3261,7 +3295,12 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
         } catch (_e) { /* 刷新失败不影响通知展示 */ }
         // [v2.16.0] 免打扰门：开启时通知只入账、不弹横幅（消息不会丢，只是不打断）
         try {
-            if (isDndOnState(storage)) {
+            const _r22DndCfg = storage?.get?.('rp22_dnd_schedule') || null;
+            const _r22DndEnabled = isDndOnState(storage) || _r22DndCfg?.enabled === true;
+            const _r22Hour = (typeof storyNow === 'function' ? storyNow(window, { readOnly: true })?.date : '') || '';
+            const _r22HourMatch = String(_r22Hour).match(/(\d{1,2}):/);
+            const _r22Quiet = r22DndFace({ enabled: _r22DndEnabled, hour: _r22HourMatch ? Number(_r22HourMatch[1]) : null, window: _r22DndCfg?.window || { start: 23, end: 7 } });
+            if (_r22Quiet.quiet || isDndOnState(storage)) {
                 /* [v4.155.0 · R21-X3] 静音叙事消费点（唯一现场态提供方）。被门拦下的这批消息
                  *   在机器面上是既成事实，在角色嘴里一个字都没有 —— 桥在这里判这一轮该不该
                  *   给候选句。arrivals 读不到 ⇒ unavailable（读不到与真零条不同形，绝不相塌）；
