@@ -1,5 +1,5 @@
 /* ============================================================
- * tests/audit/scan_chat_render_split.mjs — R22-O1 大文件拆分闸
+ * tests/audit/scan_chat_render_split.mjs — R22-O1 / R22-O2 大文件拆分闸
  * ------------------------------------------------------------
  * 为什么需要这道闸：
  *   「把 chat-view.js 拆小」这句话最容易变成两件假事：
@@ -7,7 +7,7 @@
  *     ② 抽出去了，但顺手改了逻辑 —— 于是「拆」变成了「改」，没人验。
  *   本闸把这两件事都变成可红可绿的机器判据。
  *
- * 五道关（全绿才 rc=0）：
+ * 五道关（全绿才 rc=0）＋ R22-O2 四关（R6–R9）：
  *   R1 快照零差异：12 个 sha256 逐键相同；`__error:` 形态不许新增
  *      （抛错也是产出，"抽前抽后都抛同样的错"算等价，"抽后才抛"必须红）。
  *   R2 行数只降不涨：chat-view.js 行数 ≤ 台账里的天花板，且必须低于拆分行数。
@@ -20,12 +20,20 @@
  *      多引一个领域引擎就可能把判定搬进"只排版"的模块里。
  *   R0 fail-closed：文件读不到 ⇒ exit 2（不许把"读不到"当成"通过"）。
  *
+ * R22-O2 追加（通话界面内核 chat-call-core.js）：
+ *   R6 逐字节：两个通话方法的 body_sha256 必须与台账里的源文件真值相同。
+ *   R7 单份实现：两个方法在通话内核里各 1 次，chat-view.js 里 0 次（只留指针）。
+ *   R8 混入接得上：import chatCallCore + 文件末尾 Object.assign(ChatView.prototype, chatCallCore)。
+ *   R9 依赖面恰好 0 个 import（通话内核只用 this.* 与全局；多引一个都是把判定搬进来了）。
+ *   R4b2 运行时补刀：原型上真拿到这两个方法。
+ *
  * 用法：
  *   node tests/audit/scan_chat_render_split.mjs          # 检查（默认）
  *   node tests/audit/scan_chat_render_split.mjs --json   # 机器可读
  * ============================================================ */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -130,6 +138,202 @@ export function checkCoreImports(coreText) {
   return { ok: problems.length === 0, problems, names: got };
 }
 
+/* ================================================================
+ * R22-O2：通话界面内核（chat-call-core.js）
+ * ----------------------------------------------------------------
+ * 与 R22-O1 同一套纪律，但「正确值」不同：
+ *   · R22-O1 的渲染内核允许**恰好 4 个** import（它要排版，必须引主题色/表情）；
+ *   · R22-O2 的通话内核正确值是 **0 个** —— 它只用 this.*（ChatView 实例）、
+ *     全局（window.VirtualPhone / window.SillyTavern）与本地变量。
+ *     任何 import 出现，都意味着有人把判定搬进了这个「只摆界面」的模块。
+ *   · 通话族是 DOM/事件型，产不出纯字符串快照（_chat_render_snapshot.mjs 只覆盖
+ *     纯字符串产出），所以等价性改用 body_sha256 逐字节 + 运行时原型补刀。
+ * ================================================================ */
+
+export const CALL_CORE = 'apps/wechat/chat-call-core.js';
+export const CALL_LEDGER = 'tests/audit/chat_call_split.json';
+
+/** R22-O2 抽出的 2 个方法（顺序即源文件顺序）。 */
+export const EXTRACTED2 = ['showVideoCallInterface', 'showVoiceCallInterface'];
+
+/** 通话内核允许的 import 名：恰好 0 个（实测结论，不是省略）。 */
+export const CALL_CORE_IMPORTS = [];
+
+/* 用字符码代替转义字面量：本文件里就能不出现反斜杠，判据本身也更好读。 */
+const BS = String.fromCharCode(92);
+const NL = String.fromCharCode(10);
+const TICK = String.fromCharCode(96);
+const isSpaceCh = (c) => c.charCodeAt(0) <= 32;
+const isWordCh = (c) => {
+  const k = c.charCodeAt(0);
+  return (k >= 48 && k <= 57) || (k >= 65 && k <= 90) || (k >= 97 && k <= 122) || c === '_' || c === '$';
+};
+
+/** 找一个 4 空格缩进、处于行首的方法起点；找不到返回 -1。 */
+export function methodStart(text, name) {
+  const needle = '    ' + name + '(';
+  let at = text.indexOf(needle);
+  while (at >= 0 && !(at === 0 || text[at - 1] === NL)) at = text.indexOf(needle, at + 1);
+  return at;
+}
+
+/** 方法体提取：从 `    NAME(` 起到配对的 `}`（含）为止。
+ *  口径与搬迁脚本、台账取 sha256 时完全一致 —— 跳字符串/模板串/注释/正则，
+ *  **不含**对象字面量属性之间的那个逗号，所以与 class 里那份逐字节相等。 */
+export function bodyOf(text, name) {
+  const start = methodStart(text, name);
+  if (start < 0) return null;
+  let i = text.indexOf('{', start + name.length);
+  if (i < 0) return null;
+  let depth = 0;
+  const n = text.length;
+  while (i < n) {
+    const ch = text[i];
+    if (ch === "'" || ch === '"' || ch === TICK) {
+      i++;
+      while (i < n && text[i] !== ch) {
+        if (text[i] === BS) i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      while (i < n && text[i] !== NL) i++;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const e = text.indexOf('*/', i + 2);
+      i = e < 0 ? n : e + 2;
+      continue;
+    }
+    if (ch === '/') {
+      let j = i - 1;
+      while (j >= 0 && isSpaceCh(text[j])) j--;
+      const prev = j >= 0 ? text[j] : '';
+      if (prev === '' || '(,=:[!&|?{};+-*%~^<>'.includes(prev)) {
+        i++;
+        let inClass = false;
+        while (i < n) {
+          const c = text[i];
+          if (c === BS) {
+            i += 2;
+            continue;
+          }
+          if (c === '[') inClass = true;
+          else if (c === ']') inClass = false;
+          else if (c === '/' && !inClass) {
+            i++;
+            break;
+          } else if (c === NL) break;
+          i++;
+        }
+        while (i < n && isWordCh(text[i])) i++;
+        continue;
+      }
+      i++;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+    i++;
+  }
+  return null;
+}
+
+export function sha256(text) {
+  return createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+/* ---------------- R6：逐字节（拆不许顺手改逻辑） ---------------- */
+
+export function checkBodySha(callCoreText, callLedger) {
+  const problems = [];
+  const cands = (callLedger && callLedger.candidates) || {};
+  for (const name of EXTRACTED2) {
+    const rec = cands[name];
+    if (!rec || !rec.body_sha256) {
+      problems.push(name + '：台账里没有 body_sha256 记录（没记真值就等于没验）');
+      continue;
+    }
+    const body = bodyOf(callCoreText, name);
+    if (!body) {
+      problems.push(name + '：通话内核里取不到方法体');
+      continue;
+    }
+    const got = sha256(body);
+    if (got !== rec.body_sha256) {
+      problems.push(name + '：body_sha256 变了 ' + rec.body_sha256.slice(0, 12) + ' → ' + got.slice(0, 12));
+    }
+  }
+  return { ok: problems.length === 0, problems };
+}
+
+/* ---------------- R7：单份实现 ---------------- */
+
+export function checkSingleImplementation2(callCoreText, viewText) {
+  const problems = [];
+  for (const name of EXTRACTED2) {
+    const inCore = countDefs(callCoreText, name);
+    const inView = countDefs(viewText, name);
+    if (inCore !== 1) problems.push(name + '：通话内核里定义了 ' + inCore + ' 次（必须恰 1 次）');
+    if (inView !== 0) problems.push(name + '：chat-view.js 里还留着 ' + inView + ' 次定义（第二份实现）');
+  }
+  const extra = defNames(callCoreText).filter((n) => !EXTRACTED2.includes(n));
+  if (extra.length) problems.push('通话内核多出未登记的方法：' + extra.join(', ') + '（要搬就写进台账）');
+  return { ok: problems.length === 0, problems };
+}
+
+/* ---------------- R8：混入接得上 ---------------- */
+
+export function checkMixin2(viewText) {
+  const problems = [];
+  const importTail = "import { chatCallCore } from './chat-call-core.js";
+  const assignStmt = 'Object.assign(ChatView.prototype, chatCallCore);';
+  if (!viewText.includes(importTail)) {
+    problems.push("chat-view.js 缺 import { chatCallCore } from './chat-call-core.js…'");
+  }
+  const classAt = viewText.indexOf('export class ChatView {');
+  if (classAt < 0) problems.push('chat-view.js 里找不到 export class ChatView {');
+  const mixAt = viewText.indexOf(assignStmt);
+  if (mixAt < 0) {
+    problems.push('chat-view.js 缺 ' + assignStmt);
+  } else if (classAt >= 0 && mixAt < classAt) {
+    problems.push('通话混入语句出现在 class 声明之前（此时 ChatView 还不存在）');
+  }
+  /* 只数「以该语句开头的代码行」：注释里也会出现这句话（指针注释），
+   * 按字符串出现次数数会把注释算进来，那是假红。 */
+  const stmtLine = (l) => l.trim().indexOf('Object.assign(ChatView.prototype,') === 0;
+  const assigns = viewText.split(NL).filter(stmtLine).length;
+  if (assigns !== 2) {
+    problems.push('ChatView.prototype 的 Object.assign 语句有 ' + assigns + ' 处（应为 2：渲染内核 + 通话内核）');
+  }
+
+  const pointers = viewText.split('已抽到 ./chat-call-core.js').length - 1;
+  if (pointers !== 2) {
+    problems.push('chat-view.js 里指向通话内核的指针注释 ' + pointers + ' 处（应为 2，两个方法各一处、不留第二份实现）');
+  }
+  return { ok: problems.length === 0, problems };
+}
+
+/* ---------------- R9：依赖面必须是 0 ---------------- */
+
+export function checkCallCoreImports(callCoreText) {
+  const got = coreImportNames(callCoreText);
+  const problems = [];
+  if (got.length) {
+    problems.push('通话内核多引依赖：' + got.join(', ') + '（正确值是 0 —— 只摆界面的模块不许引来判定）');
+  }
+  if (callCoreText.split('require(').length - 1 > 0) {
+    problems.push('通话内核出现 require(');
+  }
+  return { ok: problems.length === 0, problems, names: got };
+}
+
+
 /* ---------------- R1：快照零差异 ---------------- */
 
 export function snapshotDiff(baseMap, nowMap) {
@@ -169,7 +373,7 @@ export function checkRatchet(ledger, viewLines) {
 
 /* ---------------- 主流程 ---------------- */
 
-export function runChecks({ viewText, coreText, snapshotBase, snapshotNow, ledger }) {
+export function runChecks({ viewText, coreText, callCoreText, callLedger, snapshotBase, snapshotNow, ledger }) {
   const results = [];
   const push = (id, name, r) => results.push({ id, name, ok: r.ok, problems: r.problems || [] });
 
@@ -179,11 +383,21 @@ export function runChecks({ viewText, coreText, snapshotBase, snapshotNow, ledge
   push('R4', '原型混入接得上（import + class 之后 assign）', checkMixin(viewText));
   push('R5', '核心模块依赖面恰好 4 个', checkCoreImports(coreText));
 
+
+  /* R22-O2：通话内核四关（输入缺失时 fail-closed，不许静默跳过） */
+  if (typeof callCoreText === 'string' && callLedger && typeof callLedger === 'object') {
+    push('R6', '通话内核 2 个方法 body_sha256 逐字节不变', checkBodySha(callCoreText, callLedger));
+    push('R7', '通话 2 个方法各一份实现（内核 1 次 / 视图 0 次）', checkSingleImplementation2(callCoreText, viewText));
+    push('R8', '通话内核混入接得上（import + class 之后 assign）', checkMixin2(viewText));
+    push('R9', '通话内核依赖面恰好 0 个 import', checkCallCoreImports(callCoreText));
+  } else {
+    push('R6-R9', 'R22-O2 输入缺失（fail-closed）', { ok: false, problems: ['没有传入 callCoreText / callLedger'] });
+  }
   return { ok: results.every((r) => r.ok), results };
 }
 
 async function main() {
-  const need = [CHAT_VIEW, CORE, SNAPSHOT, LEDGER];
+  const need = [CHAT_VIEW, CORE, CALL_CORE, SNAPSHOT, LEDGER, CALL_LEDGER];
   const missing = need.filter((rel) => !existsSync(path.join(ROOT, rel)));
   if (missing.length) {
     console.error('[chat-render-split] fail-closed：读不到 ' + missing.join(', '));
@@ -191,6 +405,8 @@ async function main() {
   }
   const viewText = read(CHAT_VIEW);
   const coreText = read(CORE);
+  const callCoreText = read(CALL_CORE);
+  const callLedger = JSON.parse(read(CALL_LEDGER));
   const snap = JSON.parse(read(SNAPSHOT));
   const ledger = JSON.parse(read(LEDGER));
 
@@ -198,7 +414,7 @@ async function main() {
   const { ChatView } = await import(path.join(ROOT, CHAT_VIEW));
   const snapshotNow = captureChatRenderSnapshot(ChatView);
 
-  const { ok, results } = runChecks({ viewText, coreText, snapshotBase: snap.snapshots, snapshotNow, ledger });
+  const { ok, results } = runChecks({ viewText, coreText, callCoreText, callLedger, snapshotBase: snap.snapshots, snapshotNow, ledger });
 
   /* 运行时补一刀：原型上真拿到这 7 个方法（文本判据够了，但「真取到」更硬）。 */
   const own = Object.getOwnPropertyNames(ChatView.prototype);
@@ -210,9 +426,17 @@ async function main() {
     problems: runtimeMissing.length ? ['原型缺：' + runtimeMissing.join(', ')] : [],
   });
 
-  const allOk = ok && runtimeMissing.length === 0;
+  /* R22-O2 运行时补刀：两个通话方法也必须在原型上真取到（证明 assign 真跑了）。 */
+  const runtimeMissing2 = EXTRACTED2.filter((n) => !own.includes(n));
+  results.push({
+    id: 'R4b2',
+    name: '运行时原型上真取到这 2 个通话方法',
+    ok: runtimeMissing2.length === 0,
+    problems: runtimeMissing2.length ? ['原型缺：' + runtimeMissing2.join(', ')] : [],
+  });
+  const allOk = ok && runtimeMissing2.length === 0;
   if (process.argv.includes('--json')) {
-    console.log(JSON.stringify({ ok: allOk, viewLines: linesOf(viewText), results }, null, 2));
+    console.log(JSON.stringify({ ok: allOk, viewLines: linesOf(viewText), callCoreLines: linesOf(callCoreText), results }, null, 2));
   } else {
     for (const r of results) {
       console.log((r.ok ? 'OK  ' : 'FAIL') + ' [' + r.id + '] ' + r.name);
@@ -220,7 +444,7 @@ async function main() {
     }
     console.log(
       '\n[chat-render-split] ' + (allOk ? '通过' : '未通过') + '：chat-view.js ' + linesOf(viewText) + ' 行 / 核心 ' +
-        linesOf(coreText) + ' 行 / 快照 ' + Object.keys(snap.snapshots).length + ' 键'
+        linesOf(coreText) + ' 行 / 通话内核 ' + linesOf(callCoreText) + ' 行 / 快照 ' + Object.keys(snap.snapshots).length + ' 键'
     );
   }
   if (!allOk) process.exit(1);

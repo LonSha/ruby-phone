@@ -4,7 +4,7 @@
   "note": "大文件拆分的账：拆了什么 / 拆前多长 / 拆后多长 / 凭什么说是等价。行数是机器读数，不是估计；等价性由 chat_render_snapshot.json 的 12 个 sha256 逐键钉住。",
   "source": "apps/wechat/chat-view.js",
   "lines_before_split": 19981,
-  "view_lines_max": 19628,
+  "view_lines_max": 18532,
   "core_module": "apps/wechat/chat-render-core.js",
   "core_lines": 389,
   "mixin": "Object.assign(ChatView.prototype, chatRenderCore)",
@@ -14,13 +14,41 @@
     "why_this_segment": "这 7 个方法在源码里本来就连续成段（投票卡 → 邀约卡 → 内心 OS → 文本气泡 → 表情面板），中间没有夹任何事件绑定或写库逻辑；抽走后 chat-view.js 只留一行指向注释，接缝干净。",
     "why_safe": "对这 358 行做自由标识符实测（剥注释/字符串后统计）：没有一处指向 chat-view.js 的模块作用域，只用到 4 个 import（bubbleTheme / FACE_ATTR / getPhoneInlineEmoji / renderPhoneInlineEmoji），其余全是 this.*。故用原型混入回归，this 仍绑定 ChatView 实例，调用点零改动。",
     "methods": [
-      { "name": "_votePackCached", "source_line": 4651, "why": "一次渲染内复用投票读数（缓存键含条数/末条 id/票号）" },
-      { "name": "_renderGroupVoteCard", "source_line": 4664, "why": "群投票卡排版（判定全来自内核，本方法连状态字面量比较都不写）" },
-      { "name": "_renderGatheringCard", "source_line": 4745, "why": "多人邀约卡排版（只摆台账现读，不由消息数推算）" },
-      { "name": "_gatherIdOfMsg", "source_line": 4835, "why": "由消息算场次 id（与接线件同一条派生规则，视图不另写算法）" },
-      { "name": "extractInnerThought", "source_line": 4843, "why": "内心 OS 拆解（纯字符串 → {visibleContent, innerThought}）" },
-      { "name": "renderTextMessageBubble", "source_line": 4858, "why": "文本气泡（主题形状来自单一主题桥 bubbleTheme）" },
-      { "name": "renderEmojiPanel", "source_line": 4886, "why": "表情面板（系统表情 + 自定义表情两段，产出 HTML 字符串）" }
+      {
+        "name": "_votePackCached",
+        "source_line": 4651,
+        "why": "一次渲染内复用投票读数（缓存键含条数/末条 id/票号）"
+      },
+      {
+        "name": "_renderGroupVoteCard",
+        "source_line": 4664,
+        "why": "群投票卡排版（判定全来自内核，本方法连状态字面量比较都不写）"
+      },
+      {
+        "name": "_renderGatheringCard",
+        "source_line": 4745,
+        "why": "多人邀约卡排版（只摆台账现读，不由消息数推算）"
+      },
+      {
+        "name": "_gatherIdOfMsg",
+        "source_line": 4835,
+        "why": "由消息算场次 id（与接线件同一条派生规则，视图不另写算法）"
+      },
+      {
+        "name": "extractInnerThought",
+        "source_line": 4843,
+        "why": "内心 OS 拆解（纯字符串 → {visibleContent, innerThought}）"
+      },
+      {
+        "name": "renderTextMessageBubble",
+        "source_line": 4858,
+        "why": "文本气泡（主题形状来自单一主题桥 bubbleTheme）"
+      },
+      {
+        "name": "renderEmojiPanel",
+        "source_line": 4886,
+        "why": "表情面板（系统表情 + 自定义表情两段，产出 HTML 字符串）"
+      }
     ]
   },
   "equivalence_proof": {
@@ -41,10 +69,15 @@
   },
   "not_done": {
     "index.js": "LonSha 仓 index.js（13546 行）本轮只完成结构快照与依赖实测（tests/audit/index_structure.json：175 块 / 12295 行 / 90.8%），**尚未动刀**；下一刀候选 LonShaMemoryPlugin（1382 行，只依赖 56 个 IIFE 局部名）。",
-    "chat_view_rest": "chat-view.js 仍是 19629 行：renderMessage（783）/ bindEvents（690）/ showVideoCallInterface（561）/ showVoiceCallInterface（544）四个巨方法尚未拆，它们体内有真业务分支，不能按本次「裸搬」口径处理。"
+    "chat_view_rest": "chat-view.js 现为 18532 行：renderMessage（783）/ bindEvents（690）/ parseSpecialMessage（326）/ showBackgroundPicker（369）等巨型方法尚未拆，它们体内有真业务分支或模块级常量依赖，按「整段裸搬」口径不可搬。",
+    "added_by_o2": "R22-O2 已把 showVideoCallInterface / showVoiceCallInterface 搬走（台账 chat_call_split.json）；通话族里剩下的 _pruneCallSnapshots 等仍留在视图，因为它们依赖 applySnapshotRetention / DEFAULT_RETAINED_ROUNDS / retentionLine 这些模块级常量。"
   },
   "next_batch": {
-    "candidate": "showVideoCallInterface + showVoiceCallInterface（视频/语音通话界面，558+544 行）",
-    "blocker": "两者都要读 this.* 之外的模块级常量与事件绑定，先做自由标识符实测再定，不许先假定能裸搬。"
+    "candidate": "bindEvents（690 行）/ renderMessage（783 行）这类巨型方法的**体内切片**",
+    "blocker": "R22-O2（通话界面两个方法）已于本批落地，闸已扩到 R6–R9 + R4b2，台账见 tests/audit/chat_call_split.json。剩下的大头不是「整段可搬」，而是「体内可以切出纯排版/纯解析子段」：逐字节口径只对整段成立，方法体内切片需要新的等价性证明（建议：行为对拍 + 切片前后的调用序记录），否则拆完只能靠人读 diff 担保。",
+    "done_batches": [
+      "R22-O1 → apps/wechat/chat-render-core.js（7 方法 / 快照 12 键）",
+      "R22-O2 → apps/wechat/chat-call-core.js（2 方法 / body_sha256 + 运行时原型）"
+    ]
   }
 }

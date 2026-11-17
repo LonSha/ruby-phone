@@ -25,6 +25,8 @@ import {
   CORE,
   SNAPSHOT,
   LEDGER,
+  CALL_CORE,
+  CALL_LEDGER,
   EXTRACTED,
   CORE_IMPORTS,
   linesOf,
@@ -44,6 +46,8 @@ const viewText = read(CHAT_VIEW);
 const coreText = read(CORE);
 const snap = JSON.parse(read(SNAPSHOT));
 const ledger = JSON.parse(read(LEDGER));
+const callCoreText = read(CALL_CORE);
+const callLedger = JSON.parse(read(CALL_LEDGER));
 const { ChatView } = await import(path.join(ROOT, CHAT_VIEW));
 const now = captureChatRenderSnapshot(ChatView);
 
@@ -198,22 +202,26 @@ test('chat-view.js 不再直接 import bubbleTheme（同一桥只许一处引版
   assert.equal(/^import\s*\{\s*bubbleTheme\s*\}/m.test(coreText), true);
 });
 
-test('R5 正控制：runChecks 真数据全绿（含 R1/R2/R3/R4/R5）', () => {
+test('R5 正控制：runChecks 真数据全绿（含 R1/R2/R3/R4/R5 + R22-O2 的 R6–R9）', () => {
   const { ok, results } = runChecks({
     viewText,
     coreText,
+    callCoreText,
+    callLedger,
     snapshotBase: snap.snapshots,
     snapshotNow: now,
     ledger,
   });
   assert.equal(ok, true, JSON.stringify(results.filter((r) => !r.ok)));
-  assert.deepEqual(results.map((r) => r.id), ['R1', 'R2', 'R3', 'R4', 'R5']);
+  assert.deepEqual(results.map((r) => r.id), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9']);
 });
 
 test('R5 负控制⑭：runChecks 在快照被篡改时整体判红（闸不是只会说 OK）', () => {
   const { ok } = runChecks({
     viewText,
     coreText,
+    callCoreText,
+    callLedger,
     snapshotBase: { ...snap.snapshots, 'gatheringCard': '1'.repeat(64) },
     snapshotNow: now,
     ledger,
@@ -241,7 +249,7 @@ test('进程级：--json 输出结构可机读', () => {
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
   assert.ok(j.viewLines > 0);
-  assert.deepEqual(j.results.map((x) => x.id), ['R1', 'R2', 'R3', 'R4', 'R5', 'R4b']);
+  assert.deepEqual(j.results.map((x) => x.id), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R4b', 'R4b2']);
 });
 
 test('fail-closed（静态判据）：缺文件必须 exit 2，不许把读不到当通过', () => {

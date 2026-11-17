@@ -1,0 +1,57 @@
+{
+  "schema": "chat-call-split@1",
+  "plan": "R22-O2",
+  "note": "第二批拆分的账：把聊天视图里两个通话界面方法搬到 chat-call-core.js。等价性不靠快照（通话族是 DOM/事件型，产不出纯字符串产出，_chat_render_snapshot.mjs 覆盖不到），改用三层机器可验：body_sha256 逐字节 + 单份实现计数 + 运行时原型。行数是机器读数，不是估计。",
+  "source": "apps/wechat/chat-view.js",
+  "lines_before_split": 19629,
+  "view_lines_max": 18532,
+  "core_module": "apps/wechat/chat-call-core.js",
+  "core_lines": 1137,
+  "mixin": "Object.assign(ChatView.prototype, chatCallCore)",
+  "why_this_segment": "台账 R22-O1 的 next_batch 点名的两个方法，而且它们在源码里各占一个完整连续段（视频通话 L15851–L16412 / 语音通话 L17246–L17790），段首段尾都是别的方法边界，抽走后视图里只留一段指向注释，接缝干净。中间夹着的 _pruneCallSnapshots 等通话族方法**没有**一起搬：它们依赖模块级的 applySnapshotRetention / DEFAULT_RETAINED_ROUNDS / retentionLine，属于「不能裸搬」，本轮不贪多。",
+  "candidates": {
+    "showVideoCallInterface": {
+      "source_range": "L15851-L16412",
+      "body_lines": 561,
+      "body_sha256": "37493c492f56b827a19540d5bc70c29dff785ec84bddfba7a34a8ffdeb3acab9",
+      "block_sha256": "fcad36fd0bac181a175ce38dbddf66a3d7737c9237ae8a1efe44c9b4cd0c76c5",
+      "view_pointer": "L15852-L15854",
+      "why_bare_movable": "对 chat-view.js 全部 363 个类方法逐个算自由标识符（剥注释/字符串/正则后）：本方法指向模块作用域的依赖是**空集**（moduleDeps = []），只用 this.*（ChatView 实例）、全局 window.VirtualPhone / window.SillyTavern 与本地变量。"
+    },
+    "showVoiceCallInterface": {
+      "source_range": "L17246-L17790",
+      "body_lines": 544,
+      "body_sha256": "e87de5a165f3217d9c376ea3a34098602d6b11611ec5813539a08ed93c657c27",
+      "block_sha256": "d87a144f9c74b3dfa5d33e1f0d92c2646c0b19100585436e43f8d3ab7c94ca14",
+      "view_pointer": "L16688-L16690",
+      "why_bare_movable": "同上实测：moduleDeps = []。这两个方法正是 R22-O1 台账 next_batch.blocker 要求「先做实测再定」的那一对；实测支持裸搬，本批才动手。"
+    }
+  },
+  "syntax_note": "唯一一处非逐字节改动：方法结束行 `    }` 后面加了一个逗号（`    },`）。因为对象字面量的属性之间必须有逗号、而 class 里不需要——这是语法形态差异，不是改代码。闸的提取口径是「从 `    NAME(` 到配对的 `}` 为止」，不含这个逗号，所以 body_sha256 与源文件逐字节相等（已验：R6 绿）。第一次生成时漏了逗号，node --check 直接报 Unexpected identifier，也是这条规则的现场证据。",
+  "equivalence_proof": {
+    "layers": [
+      "L1 body_sha256 逐字节：数值取自**拆分前**源文件切段的真值（/tmp/r22_o2_plan.json），闸 R6 拿核心模块里现取的方法体重算并比对；改一个字符就红。",
+      "L2 单份实现：闸 R7 要求两个方法在 chat-call-core.js 里各恰 1 次、在 chat-view.js 里 0 次（视图侧只留指针注释），且通话内核不许出现台账外的方法。",
+      "L3 运行时原型：闸 R4b2 真 import chat-view.js，Object.getOwnPropertyNames(ChatView.prototype) 里必须真有这两个方法——这同时证明 Object.assign 在模块加载时确实执行了、this 仍绑定 ChatView 实例。"
+    ],
+    "gate": "tests/audit/scan_chat_render_split.mjs（R6 / R7 / R8 / R9 / R4b2，全绿才 rc=0）",
+    "how_to_recheck": "node tests/audit/scan_chat_render_split.mjs",
+    "why_no_snapshot": "renderMessage / 通话界面这类方法产出 DOM 与事件绑定，_chat_render_snapshot.mjs 只覆盖纯字符串产出（R22-O1 的 7 个排版方法）。套用它会把「取不到」记成「等价」，那是假绿；所以本批换成逐字节+运行时，并在此写明边界。"
+  },
+  "side_effects_checked": {
+    "a11y": "tests/audit/a11y_baseline.json 已按搬迁后分布刷新（--write 后复跑 --check 通过）：总量 aria-label 350 / role 115 / tabindex 17 **不变**，files 441→442；chat-view.js 的 45/7/0 → 40/7/0 与 chat-call-core.js 的 5/0/0 严格对冲（纯搬迁，零无障碍损失）。",
+    "unread_badge": "tests/audit/scan_unread_badge_single.mjs 扫 787 文件（较 R22-O1 的 786 新增 1 文件）rc=0。",
+    "imports": "chat-view.js 只新增 1 行 import（chatCallCore，版本后缀与 chatRenderCore 同款 '?v=4.157.0&r=20261116-r22'）；通话内核 import 数为 0，闸 R9 钉住。",
+    "syntax": "两个文件 node --check 均通过；chat-view.js 19629 → 18532 行。"
+  },
+  "honest_limits": [
+    "R6 只能证明「方法体文本没变」。text 相同 ⇒ 逻辑相同，这条对纯搬迁成立；若哪天有人做「状态访问器注入」这类改写，逐字节口径就失效，必须换行为对拍。",
+    "通话界面没跑真实通话：本仓测试环境没有真实 WebRTC/媒体流，运行时只验到「原型上有这个方法」+ 模块加载不抛错，没验到「拨出去能通」。",
+    "自由标识符实测是启发式的：剥注释/字符串/正则后统计自由名，与仓内既有探针同源。它能排除「明显依赖模块作用域」，不能证明语义完全等价。",
+    "chat-view.js 仍是 18532 行：真正的大头（renderMessage 783 / bindEvents 690 / parseSpecialMessage 326 等）体内有真业务分支，按本批口径不可裸搬。"
+  ],
+  "next_batch": {
+    "candidate": "bindEvents（690 行）/ renderMessage（783 行）这类巨型方法的内部切片",
+    "blocker": "它们不是「整段可搬」，而是「体内可以切出纯排版/纯解析子段」。要动它们，得先有「方法体内切片」的搬迁口径与等价性证明方式（逐字节只对整段成立），否则拆完只能靠人读 diff 担保。这是方法论决定，不是搬运量问题。"
+  }
+}
