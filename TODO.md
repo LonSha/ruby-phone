@@ -1,5 +1,8 @@
 # TODO / 迭代积压 — ruby-phone
-> **第二十三期已立项（2026-11-17，目标版待定 / 基线 v4.157.0 `7cac358`）**：`R23-O1～O9 / R23-X1～X9`
+>
+> **交付记录（2026-11-17）：R23-X1~X9 九项已落地并带闸。** 桥在 `config/v23-trace.js`（166 行），
+> 消费点 `index.js#_bridgeChecks['_r23Trace']`；判据 `tests/r23_x_trace.test.mjs` 32 条全绿（含 2 条负控制）。
+> 行数台账重压：837 文件 / 402843 行（+165）。**O8 `cheats.js` 数据治理仍未开工。**> **第二十三期已立项（2026-11-17，目标版待定 / 基线 v4.157.0 `7cac358`）**：`R23-O1～O9 / R23-X1～X9`
 > （双仓合计 36 项，全部为产品项；判据/台账为每项默认纪律，不占名额）。
 > 证据：[2026-11-17-product-evidence-v23](docs/planning/2026-11-17-product-evidence-v23.md)
 > · [优化九项](.agents/notes/proposed/architecture/2026-11-17-product-optimization-v23.md)

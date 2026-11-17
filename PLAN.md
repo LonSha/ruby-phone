@@ -26,6 +26,14 @@
 ## 第二十三期执行批次（双仓协同，共36项）
 ### 第二大部：RubyPhone 虚拟手机与生活生态（18项：R23-O1~O9 优化 + R23-X1~X9 拓展）
 
+> **【R23-X1~X9 交付映射（2026-11-17）】** 拓展九项**已落地并带闸**：九座纯函数桥集中住在 `config/v23-trace.js`（三态不塌：证据不足一律 `insufficient`、读不出锚一律 `unknown`），
+> 真实消费点是 `index.js` 的 `_bridgeChecks` 装配表（启动时跑 `v23TraceSelfCheck()`，与 R21/R22 那两批同挂法）。
+> · 九项：X1 跨 App 时间轴（partial 时逐源点名读不到的源）／X2 角色沉默（窗口未走完不许判沉默）／X3 话题挂起（suspended/resumed/expired）／X4 作息画像（样本<5 不产结论）／X5 误发撤回（unknown 不许说成「没看到」）／X6 多设备同步（synced/lagging/unknown 三态）／X7 年度回顾（空年逐字说「没怎么说过话」）／X8 草稿跨轮（悄悄消失 → dropped 显形）／X9 群聊谁在听（observed 必须有实测反应楼层）。
+> · 判据：`tests/r23_x_trace.test.mjs` **32 条**（含两条负控制：「把没证据当没看过」「布尔同步态洗白 unknown」均当场判红）。
+> · 读数同步：全仓 `.js` 836 → **837** / 402678 → **402843** 行（新增桥 166 行），`file_size_ceiling.json` 已按 `--write` 重压并写入台账；`r23_o1` 钉的读数同步改为 837/402843。
+> · 闸面：syntax 1443 文件 / import-resolve 1540 条 / dead-export 零新增 / named-import 1473 条 / bind-audit 59=59 新增0 / method-audit 388<基线389 / doc-path-claim 4419 处 0 落空。
+> · **优化九项 R23-O1~O9 的现状**：O1（拆渲染内核）与 O2（裸钟分类）已由 R22-O1/O2 收口并有闸；O3（零测试目录）/O4（事件欠账）/O5（未读角标）/O6（消息搜索）/O7（无障碍基线）/O9（通知横幅）源自 R22 的等价条目，均已各自有闸；**O8（`data/cheats.js` 27611 行数据与代码分离）仍未开工**，不得按「已交付」读取。
+
 #### 第 0 刀：v22 账实对账（不占本期名额，先于一切施工）
 把 R22-O1~O9 逐条按 **已做 / 部分 / 未做** 三态重登，每条附机器读数。
 **R22 拓展九项已真交付**（`settings-filter` / `a11y-audit` / `pin-top` / `dnd-schedule` / `contact-group` /

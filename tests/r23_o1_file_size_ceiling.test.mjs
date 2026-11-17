@@ -1,7 +1,7 @@
 /* ============================================================
  * tests/r23_o1_file_size_ceiling.test.mjs —— 全仓单文件行数上界门判据（R23-O1）
  * ------------------------------------------------------------
- * 判据正的一面：全仓 836 个 .js 的读数与台账一致，大文件都有天花板，总量没涨。
+ * 判据正的一面：全仓 837 个 .js 的读数与台账一致，大文件都有天花板，总量没涨。
  * 判据反的一面（负控制）：把每条判据自己打坏 —— 大文件不记账 / 文件涨了 /
  *   降了不压台账 / 台账条目文件已删 / 总量涨了 / 探针只扫到几个文件 —— **必须逐条翻红**。
  *
@@ -52,11 +52,11 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：836 个 .js / 合计 402678 行 / 45 个大文件，台账全绿', () => {
+test('真仓读数：837 个 .js / 合计 402843 行 / 45 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 836, '扫到的 .js 数量与 R23-O2 切片后的实际不符');
-  assert.equal(r.stats.total, 402678, '全仓合计行数与台账不符');
+  assert.equal(r.stats.files, 837, '扫到的 .js 数量与 R23-O2 切片后的实际不符');
+  assert.equal(r.stats.total, 402843, '全仓合计行数与台账不符');
   assert.equal(r.stats.overDefault, 45, '大文件数量应为 45');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
@@ -83,7 +83,7 @@ test('台账元信息自洽：default_max / total_lines_max / 大文件数对得
   assert.equal(big, Object.keys(ledger.files).length);
 });
 
-test('buildLedger 只收大文件：小文件不进台账（否则台账会变成 836 行噪音）', () => {
+test('buildLedger 只收大文件：小文件不进台账（否则台账会变成 837 行噪音）', () => {
   const built = buildLedger(rows, DEFAULT_MAX, new Date('2026-11-17T00:00:00Z'));
   assert.equal(Object.keys(built.files).length, 45);
   assert.ok(!('apps/wechat/chat-render-core.js' in built.files), '小文件不该进台账');
@@ -151,7 +151,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 836);
+  assert.equal(j.stats.files, 837);
   assert.deepEqual(j.problems, []);
 });
 

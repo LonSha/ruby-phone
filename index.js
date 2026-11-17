@@ -126,6 +126,8 @@ import { wishlistSelfCheck } from './config/wishlist.js?v=4.157.0&r=20261116-r22
 import { bannerSelfCheck } from './config/incoming-banner.js?v=4.157.0&r=20261116-r22';
 import { unreadBadgeSelfCheck } from './config/unread-badge.js?v=4.157.0&r=20261116-r22';
 import { settingsFilterSelfCheck } from './config/settings-filter.js?v=4.157.0&r=20261116-r22';
+/* [v4.158.0 · R23-X1~X9] 九项拓展桥：纯函数，只在装配点做自检与读数，不碰 DOM。 */
+import { v23TraceSelfCheck } from './config/v23-trace.js?v=4.157.0&r=20261117-r23';
 import { feedbackSelfCheck, phoneNotice } from './config/phone-feedback.js';
 /* 【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡 —— 历史留档（v4.155.0 交付面，勿当待办删）。 */
 import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
@@ -2319,6 +2321,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r22O2', settingsFilterSelfCheck], ['_r22O3', a11ySelfCheck], ['_r22O4', msgSearchSelfCheck], ['_r22Feedback', feedbackSelfCheck],
                 ['_r22O1', chatVirtualWindowSelfCheck], ['_r22O8', bannerSelfCheck], ['_r22O9', unreadBadgeSelfCheck],
                 ['_r22O5', clockClassifySelfCheck], ['_r22O6', coverageSelfCheck], ['_r22O7', eventDebtSelfCheck],
+                ['_r23Trace', v23TraceSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {
