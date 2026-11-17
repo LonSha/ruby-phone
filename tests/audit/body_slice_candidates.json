@@ -2,7 +2,7 @@
   "schema": "body-slice-ledger@1",
   "plan": "R23-O2",
   "note": "方法体内切片的**候选读数**（不是等价性证明）。口径：同文件内切片 → 模块作用域不变，所以约束只剩三条：读哪些外层局部（→形参）、写哪些外层局部（→回传）、用不用 this（→传 self）。定级规则在 scan_body_slice_candidates.mjs#classify，只有一份。切完的等价性证明 protocol 见 protocol 字段。",
-  "generated_at": "2026-11-17T10:44:12.268Z",
+  "generated_at": "2026-11-17T11:22:44.590Z",
   "rule": {
     "min_block_lines": 20,
     "max_params": 8,
@@ -19,26 +19,37 @@
         "method": "renderMessage",
         "found": true,
         "method_lines": 783,
-        "blocks": 2
+        "blocks": 2,
+        "drift": 1,
+        "unreliable": true
       },
       {
         "method": "bindEvents",
         "found": true,
         "method_lines": 607,
-        "blocks": 1
+        "blocks": 1,
+        "drift": 0,
+        "unreliable": false
       },
       {
         "method": "parseSpecialMessage",
         "found": true,
         "method_lines": 326,
-        "blocks": 3
+        "blocks": 3,
+        "drift": 0,
+        "unreliable": false
       },
       {
         "method": "showBackgroundPicker",
         "found": true,
         "method_lines": 369,
-        "blocks": 1
+        "blocks": 1,
+        "drift": 0,
+        "unreliable": false
       }
+    ],
+    "unreliable_methods": [
+      "renderMessage"
     ],
     "counts": {
       "READY": 0,
@@ -62,6 +73,8 @@
       "method": "renderMessage",
       "found": true,
       "method_lines": 783,
+      "drift": 1,
+      "unreliable": true,
       "blocks": [
         {
           "file": "apps/wechat/chat-view.js",
@@ -79,6 +92,7 @@
           ],
           "nested_returns": 0,
           "level": "NOT_YET",
+          "unreliable": true,
           "why": "段内有 return（控制流会外流，切出去要改签名）",
           "params": 1
         },
@@ -105,6 +119,7 @@
           "own_depth_returns": [],
           "nested_returns": 0,
           "level": "TUPLE",
+          "unreliable": true,
           "why": "需回传 1 个变量（messageBody）",
           "params": 7
         }
@@ -115,6 +130,8 @@
       "method": "bindEvents",
       "found": true,
       "method_lines": 607,
+      "drift": 0,
+      "unreliable": false,
       "blocks": [
         {
           "file": "apps/wechat/chat-view.js",
@@ -136,6 +153,7 @@
           "own_depth_returns": [],
           "nested_returns": 2,
           "level": "TUPLE",
+          "unreliable": false,
           "why": "需回传 1 个变量（executeSend）",
           "params": 4
         }
@@ -146,6 +164,8 @@
       "method": "parseSpecialMessage",
       "found": true,
       "method_lines": 326,
+      "drift": 0,
+      "unreliable": false,
       "blocks": [
         {
           "file": "apps/wechat/chat-view.js",
@@ -166,6 +186,7 @@
           ],
           "nested_returns": 0,
           "level": "NOT_YET",
+          "unreliable": false,
           "why": "段内有 return（控制流会外流，切出去要改签名）",
           "params": 1
         },
@@ -186,6 +207,7 @@
           ],
           "nested_returns": 0,
           "level": "NOT_YET",
+          "unreliable": false,
           "why": "段内有 return（控制流会外流，切出去要改签名）",
           "params": 1
         },
@@ -205,6 +227,7 @@
           ],
           "nested_returns": 0,
           "level": "NOT_YET",
+          "unreliable": false,
           "why": "段内有 return（控制流会外流，切出去要改签名）",
           "params": 0
         }
@@ -215,6 +238,8 @@
       "method": "showBackgroundPicker",
       "found": true,
       "method_lines": 369,
+      "drift": 0,
+      "unreliable": false,
       "blocks": [
         {
           "file": "apps/wechat/chat-view.js",
@@ -239,6 +264,7 @@
           "own_depth_returns": [],
           "nested_returns": 1,
           "level": "NOT_YET",
+          "unreliable": false,
           "why": "回写/外带变量 6 个（>3）",
           "params": 2
         }

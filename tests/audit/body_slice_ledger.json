@@ -154,5 +154,39 @@
       "why": "段内 7 个声明里有 6 个在段后（html 模板里）被用 —— 要回传 6 个值，超过 MAX_WRITE=3，不如不切"
     }
   ],
-  "next_batch_hint": "要往前走，缺的是能处理「外流 return」的手段，而不是更多候选：① 段内 return 可以先在原地判、只在尾部外流时把值回传给调用者（改签名，需 L3 对拍）；② executeSend 这类「段内声明、段外使用」应归到「回传 1 个值」的 TUPLE，而不是 NOT_YET —— 本批为保守没动。"
+  "next_batch_hint": "要往前走，缺的是能处理「外流 return」的手段，而不是更多候选：① 段内 return 可以先在原地判、只在尾部外流时把值回传给调用者（改签名，需 L3 对拍）；② executeSend 这类「段内声明、段外使用」应归到「回传 1 个值」的 TUPLE，而不是 NOT_YET —— 本批为保守没动。",
+  "o3_precondition": {
+    "target": "apps/settings/settings-app.js（12362 行 / 104 方法）",
+    "measured": {
+      "file_lines": 12362,
+      "methods": 104,
+      "method_lines_sum": 11236,
+      "biggest": [
+        {
+          "name": "bindEvents",
+          "lines": 5374,
+          "at": 6104
+        },
+        {
+          "name": "render",
+          "lines": 2308,
+          "at": 1263
+        },
+        {
+          "name": "renderImageGenerationSection",
+          "lines": 1028,
+          "at": 4054
+        },
+        {
+          "name": "bindApiConfigEvents",
+          "lines": 649,
+          "at": 11482
+        }
+      ]
+    },
+    "finding": "本探针在 settings-app.js 上**读不出可用候选**：bindEvents（5374 行）报 0 个候选、renderImageGenerationSection（1028 行）也 0 个。查清了，这不是「没得切」——是**括号账本漂移**：findMethod 用**原文**行靠花括号配对找方法结尾，而深度判定用**清洗后**的行，两套账本混用，在字符串里带 lone brace 的方法上直接漂移（settings-app.bindEvents 漂移 -2、chat-view.renderMessage 漂移 +1）。深度基准一错，所有块都因「深度不等于基线」被挡掉。",
+    "fix_applied_now": "给 analyzeMethod 加了漂移自检（方法体开头与结尾的净深度必须相等），不相等就盖 unreliable 章并进 summary.unreliable_methods；R23-O2 已切的两段都不漂移（drift 0），所以本批结论不受影响。",
+    "next_step": "R23-O3 第一步不是切片，是把括号账本收成一本：让 scrub 在抹掉字符串/注释内容时**保留其中括号的计数**（例如把字面量里的 { } 换成不参与配对的同类占位），使「原文定界」与「清洗后深度」一致；然后 renderMessage / settings-app 的读数才会从 unreliable 变可信。",
+    "tried_and_reverted": "也试过「方法边界改用清洗后的行来算」，结果 renderMessage / settings-app.bindEvents / renderImageGenerationSection 直接**找不到方法**（清洗后括号不配对，配平判据永远不成立）—— 所以两边各有一本错账，必须修账本，不能在两本错账之间二选一。"
+  }
 }

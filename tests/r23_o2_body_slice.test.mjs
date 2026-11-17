@@ -31,6 +31,8 @@ import {
   classifyBrace,
   classify,
   analyzeAll,
+  analyzeMethod,
+  scrub,
 } from './audit/scan_body_slice_candidates.mjs';
 import { captureBindEventsSnapshot } from './_bind_events_snapshot.mjs';
 
@@ -259,6 +261,28 @@ test('探针·进程级：读数工具 rc=0，且 bindEvents 已无 READY 候选
   assert.ok(bind && bind.found, 'bindEvents 没被分析到');
   const ready = bind.blocks.filter((b) => b.level === 'READY');
   assert.deepEqual(ready, [], 'bindEvents 又出现 READY 候选（说明台账该更新了）');
+});
+
+test('探针·漂移自检：括号账本对不上的方法必须盖 unreliable 章（R23-O3 前置发现）', () => {
+  /* 为什么有这条：探针用「方法体开头/结尾的花括号净深度相等」自检括号账本。
+     实测发现 renderMessage 漂移 +1、settings-app.js 的 bindEvents 漂移 -2（5374 行报出 0 个候选，
+     那不是「没得切」而是读数不可信）。没这条自检时，0 个候选会被当成结论。
+     当 R23-O3 把括号账本修好（例如 scrub 保留括号计数）时，下面这条会**翻红**，
+     提醒人来更新 —— 这是故意的棘轮，不是脆弱测试。 */
+  const viewLines = viewText.split('\n');
+  const viewClean = scrub(viewText).split('\n');
+  const bind = analyzeMethod({ lines: viewLines, cleanLines: viewClean, method: 'bindEvents' });
+  assert.equal(bind.unreliable, false, 'chat-view.bindEvents 不应漂移');
+  assert.equal(bind.drift, 0);
+
+  const setText = read('apps/settings/settings-app.js');
+  const setLines = setText.split('\n');
+  const setClean = scrub(setText).split('\n');
+  const big = analyzeMethod({ lines: setLines, cleanLines: setClean, method: 'bindEvents' });
+  assert.equal(big.found, true, 'settings-app.bindEvents 应找得到');
+  assert.equal(big.method_lines, 5374, 'settings-app.bindEvents 应是 5374 行');
+  assert.equal(big.unreliable, true, '已知漂移 -2；修好后这条会红，请更新本判据');
+  assert.ok(big.drift !== 0, '漂移量应为非 0：' + big.drift);
 });
 
 test('探针·读数文件覆盖所有 TARGETS，且每段都带定级理由', () => {

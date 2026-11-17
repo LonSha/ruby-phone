@@ -336,6 +336,13 @@ export function analyzeMethod({ lines, cleanLines, method }) {
 
   const out = [];
   const bodyDepth = braceDepthAt(cleanLines, bodyFrom);
+  /* 【漂移自检（R23-O3 前置发现）】方法体开头与结尾的花括号净深度必须相等 —— 两边都是
+     「方法自己那一层」。若不等，说明 scrub 在这一段里吃掉/留下了不配对的括号（模板字面量、
+     正则、注释边界都可能），此时 bodyDepth 是错的，**所有块的深度判定都会连锁失效**。
+     典型现场：settings-app.js 的 bindEvents（5374 行）在这条自检缺失时报出「0 个候选」——
+     那不是「没得切」，是读数不可信。所以宁可给它盖个 unreliable 章，也不许当成结论用。 */
+  const drift = braceDepthAt(cleanLines, bodyTo + 1) - bodyDepth;
+  const unreliable = drift !== 0;
   for (const b of blocks) {
     const len = b.to - b.from + 1;
     if (len < MIN_BLOCK_LINES) continue;
@@ -377,12 +384,13 @@ export function analyzeMethod({ lines, cleanLines, method }) {
       own_depth_returns: ownReturns,
       nested_returns: nestedReturns,
       level: verdict.level,
+      unreliable, // 本段所属方法的深度基准是否漂移（true = 这个定级不可当结论用）
       why: verdict.why,
       params: verdict.params === undefined ? outerReads.length + (usesThis ? 1 : 0) : verdict.params,
     });
   }
   out.sort((a, b) => (a.level === b.level ? b.lines - a.lines : a.level < b.level ? -1 : 1));
-  return { method, found: true, method_lines: range.end - range.start + 1, blocks: out };
+  return { method, found: true, method_lines: range.end - range.start + 1, drift, unreliable, blocks: out };
 }
 
 /** 全量分析（读真仓）。 */
@@ -407,7 +415,8 @@ function main() {
   const results = analyzeAll();
   const all = results.flatMap((r) => r.blocks);
   const summary = {
-    methods: results.map((r) => ({ method: r.method, found: r.found, method_lines: r.method_lines || 0, blocks: r.blocks.length })),
+    methods: results.map((r) => ({ method: r.method, found: r.found, method_lines: r.method_lines || 0, blocks: r.blocks.length, drift: r.drift, unreliable: r.unreliable })),
+    unreliable_methods: results.filter((r) => r.unreliable).map((r) => r.method),
     counts: {
       READY: all.filter((b) => b.level === 'READY').length,
       TUPLE: all.filter((b) => b.level === 'TUPLE').length,
@@ -460,6 +469,9 @@ function main() {
     if (!r.found) {
       console.log('[body-slice] ' + r.method + '：找不到方法');
       continue;
+    }
+    if (r.unreliable) {
+      console.log(`\n[body-slice] ${r.method}（${r.method_lines} 行）⚠ 读数不可信：花括号深度漂移 ${r.drift}（scrub 吃/留了不配对的括号）。下方候选数**不得当结论用**。`);
     }
     console.log(
       `\n[body-slice] ${r.method}（${r.method_lines} 行）候选 ${r.blocks.length} 段：READY ${r.blocks.filter((b) => b.level === 'READY').length} / TUPLE ${r.blocks.filter((b) => b.level === 'TUPLE').length} / NOT_YET ${r.blocks.filter((b) => b.level === 'NOT_YET').length}`

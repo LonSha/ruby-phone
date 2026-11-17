@@ -29,6 +29,12 @@
 > · 落地：`bindEvents` 体内两段 → `apps/wechat/chat-input-bind.js`（逐字节不动 / `this` 经 `.call` / 零 import）。`chat-view.js` 18531 → **18449**，`bindEvents` 690 → **607**，事件挂载 48 条逐条不变。
 > · 判据：`tests/r23_o2_body_slice.test.mjs` 23 条（L1 逐字节 4 / L2 调用点 6 / L3 运行时 5 / 探针自检 6 / 台账 2），含负控制。
 > · 诚实的代价：全仓行数 402654 → **402678（+24）**（切片固有成本），已压在 `file_size_ceiling.json` 并写在 note 里。
+> **【R23-O3 前置发现（2026-11-17，已并入上一提交之后的同一轮）】先测再切，测出的第一个问题不是「切哪段」而是「账本不对」**：
+> · `settings-app.js`（12362 行 / 104 方法，`bindEvents` **5374 行**、`render` 2308、`renderImageGenerationSection` 1028、`bindApiConfigEvents` 649）—— 前两个大方法在探针里都报 **0 个候选**。
+> · 查清是**括号账本漂移**：`findMethod` 用原文行靠花括号配对定方法边界，深度判定却用清洗后的行，两本账混用 ⇒ `settings-app.bindEvents` 漂移 **-2**、`chat-view.renderMessage` 漂移 **+1**；基准一错，所有块都被「深度≠基线」挡掉。
+> · 已加漂移自检：方法体首尾净深度不相等 ⇒ 盖 `unreliable` 章并进 `summary.unreliable_methods`；R23-O2 已切两段 drift 均为 0，本批结论不受影响。
+> · 也试过「边界改用清洗后行算」：结果 renderMessage / settings-app.bindEvents / renderImageGenerationSection 直接**找不到方法**。两边各有一本错账 —— 必须修账本，不能二选一。
+> · 所以 **O3 第一步不是切片**：让 scrub 抹内容时保留括号计数，把两本账收成一本；之后读数才从 unreliable 变可信。本项已写成判据（`tests/r23_o2_body_slice.test.mjs` 的漂移自检条，修好会翻红提醒更新）。
 >
 > ---
 > **第二十二期原立项（2026-11-16，目标版 v4.157.0 / 9a8adcf）**：`R22-O1～O9 / R22-X1～X9`
