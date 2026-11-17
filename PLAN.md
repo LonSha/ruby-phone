@@ -9,6 +9,11 @@
 > ③ **无障碍面稀薄且无基线**：`aria-label` 43 文件 / `role=` 33 / `tabindex` 13，且没有任何读数守着不让它下滑。
 > [优化提升九项](.agents/notes/proposed/architecture/2026-11-17-product-optimization-v23.md) · [拓展创新九项](.agents/notes/proposed/feature/2026-11-17-product-expansion-v23.md)。
 > **基线**：v4.157.0 / `7cac358`（两仓 `feat/*` 分支已全部合入 main，故为新立期号，不与 v21/v22 重复）。
+>
+> **【R23-O1 读数更正（2026-11-17，`52863c48` 之后）】** 上面第 ① ② 条的读数是**立项时**的，已不再成立，保留原文只为留痕，**不得再被引用为现状**：
+> · R22 优化九项**已全部收口**（每项都有闸 + 台账）：拆 `chat-view.js`（R22-O1 渲染内核 389 行 / R22-O2 通话内核 1137 行，视图 19977 → **18531** 物理行）、裸钟 83 → **71 处（wall 71 / story 0 / unknown 0，跨 chat-view.js 63 + chat-call-core.js 8）**、零测试目录、5 条事件欠账、通知横幅单一出口、未读角标单口径、无障碍补齐（`a11y_baseline.json` 350/115/17）。
+> · 「无上界门」这条欠账**已关**：新增 `tests/audit/scan_file_size_ceiling.mjs` + `tests/audit/file_size_ceiling.json`，口径是**全仓 + 默认上限 1200 + 逐文件棘轮 + 总量棘轮**（当前 **835 个 `.js` / 合计 402654 行 / 大文件 45 个**；最大是 `data/cheats.js` **27611**（正是上面第②条点名的那一个，只扫 `apps/` 会漏掉）、次之 `chat-view.js` 18531、`settings-app.js` 12362）。新文件超过 1200 行必须落台账；台账 `lines_max` 记的是当前真读数，涨了判红、降了不压也判红。
+> · 口径提示：本门行数是**物理行数**（末尾换行不计），与 `chat_render_split.json` 的 `view_lines_max`（split 长度）差 1，属口径差。
 
 ## 第二十三期执行批次（双仓协同，共36项）
 ### 第二大部：RubyPhone 虚拟手机与生活生态（18项：R23-O1~O9 优化 + R23-X1~X9 拓展）

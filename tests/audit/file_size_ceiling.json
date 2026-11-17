@@ -1,0 +1,190 @@
+{
+  "schema": "file-size-ceiling@1",
+  "plan": "R23-O1",
+  "note": "全仓 apps/ config/ 下 .js 的文件行数天花板。台账里只收「大文件」（> default_max）；小文件靠 default_max 兜底。lines_max 记的是当前真读数，只降不涨：涨了 R2 红，降了不压 R3 红。行数口径 = 物理行数（末尾换行不计）：所以 chat-view.js 在这里是 18531，而 chat_render_split.json 的 view_lines_max 用的是 split 长度 18532，两者差 1 是口径差不是不一致。",
+  "default_max": 1200,
+  "generated_at": "2026-11-17T10:27:55.023Z",
+  "total_lines_max": 402654,
+  "files": {
+    "data/cheats.js": {
+      "lines_max": 27611,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wechat/chat-view.js": {
+      "lines_max": 18531,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/settings/settings-app.js": {
+      "lines_max": 12362,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "data/gacha-items.js": {
+      "lines_max": 11926,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/honey/honey-view.js": {
+      "lines_max": 9489,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wechat/wechat-app.js": {
+      "lines_max": 8721,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wechat/wechat-data.js": {
+      "lines_max": 5621,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/image-generation-manager.js": {
+      "lines_max": 5243,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/honey/honey-data.js": {
+      "lines_max": 5227,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/weibo/weibo-view.js": {
+      "lines_max": 4696,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/phone/phone-view.js": {
+      "lines_max": 4239,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/games/games-app.js": {
+      "lines_max": 3836,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wechat/moments-view.js": {
+      "lines_max": 3163,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "data/illness-library.js": {
+      "lines_max": 3072,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/prompt-manager.js": {
+      "lines_max": 2737,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/weibo/weibo-data.js": {
+      "lines_max": 2718,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/diagnose/diagnose-data.js": {
+      "lines_max": 2715,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/diary/diary-data.js": {
+      "lines_max": 2275,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wangxiang/wangxiang-view.js": {
+      "lines_max": 2125,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/diary/diary-view.js": {
+      "lines_max": 2072,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wangxiang/wangxiang-app.js": {
+      "lines_max": 1975,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "phone/phone-shell.js": {
+      "lines_max": 1939,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/wechat/contacts-view.js": {
+      "lines_max": 1929,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/diagnose/diagnose-view.js": {
+      "lines_max": 1910,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "data/cheat-index.js": {
+      "lines_max": 1874,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/memory/memory-app.js": {
+      "lines_max": 1851,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/music/music-view.js": {
+      "lines_max": 1848,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/health/bio-races.js": {
+      "lines_max": 1839,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "phone/inline-reply-button.js": {
+      "lines_max": 1839,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/api-manager.js": {
+      "lines_max": 1785,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/storage.js": {
+      "lines_max": 1748,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/worldbook-manager.js": {
+      "lines_max": 1633,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/asset/engine/asset-core.js": {
+      "lines_max": 1618,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/memory/memory-view.js": {
+      "lines_max": 1600,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/calendar/calendar-view.js": {
+      "lines_max": 1548,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/health/surgery-library.js": {
+      "lines_max": 1523,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/music/music-data.js": {
+      "lines_max": 1513,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/memory/global-search-engine.js": {
+      "lines_max": 1424,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/reading/reading-app.js": {
+      "lines_max": 1414,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "phone/home-screen.js": {
+      "lines_max": 1359,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/mofo/mofo-data.js": {
+      "lines_max": 1320,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/reading/reading-view.js": {
+      "lines_max": 1292,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "config/apps.js": {
+      "lines_max": 1267,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/games/poker/poker-app.js": {
+      "lines_max": 1212,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/uterus/uterus-data.js": {
+      "lines_max": 1210,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    }
+  }
+}
