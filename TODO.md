@@ -1,5 +1,22 @@
 # TODO / 迭代积压 — ruby-phone
-> **第二十二期已立项（2026-11-16，目标版 v4.157.0 / 9a8adcf）**：`R22-O1～O9 / R22-X1～X9`
+> **第二十三期已立项（2026-11-17，目标版待定 / 基线 v4.157.0 `7cac358`）**：`R23-O1～O9 / R23-X1～X9`
+> （双仓合计 36 项，全部为产品项；判据/台账为每项默认纪律，不占名额）。
+> 证据：[2026-11-17-product-evidence-v23](docs/planning/2026-11-17-product-evidence-v23.md)
+> · [优化九项](.agents/notes/proposed/architecture/2026-11-17-product-optimization-v23.md)
+> · [拓展九项](.agents/notes/proposed/feature/2026-11-17-product-expansion-v23.md)。
+>
+> **第 0 刀（不占名额，先于一切施工）：v22 账实对账。**
+> 立项实勘发现 R22 **拓展九项桥文件已全部落盘**（`settings-filter` / `a11y-audit` / `pin-top` / `dnd-schedule` /
+> `contact-group` / `call-transcript-segments` / `diary-search` / `wishlist` / `chat-bubble-theme` /
+> `cross-app-clipboard` / `reading-progress`，共 11 座），但**优化九项多数未落地**
+> （`chat-view.js` 仍 19977 行 / 裸钟仍 83 处 / `zero_test_dirs` 仍 10 / 事件欠账仍 5），
+> 而 CHANGELOG 写的是「十八项同批交付」。按本仓纪律：**发现账实不符先记账**，
+> 把 R22-O1~O9 逐条重登为 **已做 / 部分 / 未做**，**不许用一个「补登」抹平两种事实**。
+>
+> 下方第二十二期记录保留为历史；**其优化九项不得按「已交付」读取**，拓展九项可按已交付读取但不得重做。
+>
+> ---
+> **第二十二期原立项（2026-11-16，目标版 v4.157.0 / 9a8adcf）**：`R22-O1～O9 / R22-X1～X9`
 > （双仓合计 36 项，全部为产品项；判据/台账为每项默认纪律，不占名额）。
 > 证据：[2026-11-16-product-evidence-v22](docs/planning/2026-11-16-product-evidence-v22.md)
 > · [优化九项](.agents/notes/proposed/architecture/2026-11-16-product-optimization-v22.md)
