@@ -12,6 +12,8 @@
 // ========================================
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../config/phone-events.js';
+/* [R22-O9] 未读角标单口径：微信未读合计只走 config/unread-badge.js 的 badgeOf。 */
+import { badgeOf } from '../../config/unread-badge.js?v=4.157.0&r=20261116-r22';
 import { readPhoneContextLimit } from '../../config/context-settings.js';
 /* [R21-O2] weibo 时间线时间轴：`repushedAt` 驱动「X分钟前」的相对时间（真实消耗点），
  *  与锚点 `preservedAt` 一起归 story 档（走唯一降级出口）。
@@ -2252,7 +2254,8 @@ export class WeiboData {
             if (window.VirtualPhone?.home?.apps) {
                 const apps = window.VirtualPhone.home.apps;
                 // [v2.91.0] 唯一写出口（写 currentApps 真源，不再写 home.apps 这一份副本）
-                const unreadTotal = wechatData.getChatList().reduce((sum, c) => sum + (Number(c.unread) || 0), 0);
+                /* [R22-O9] 合计唯一出口：badgeOf（config/unread-badge.js），本层不再自算。 */
+                const unreadTotal = badgeOf(wechatData.getChatList()).total;
                 if (typeof window.VirtualPhone?.setAppBadge === 'function') {
                     window.VirtualPhone.setAppBadge('wechat', unreadTotal);
                 } else {

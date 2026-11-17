@@ -17,6 +17,8 @@ import { storyNowWallFallback } from '../../../config/time-source.js';
 //   handler 内经 window.VirtualPhone?.gamesApp 动态取活实例，不再钉住旧实例。
 import { onceFlag, globalRuntime } from '../../../config/runtime-lifecycle.js';
 import { PHONE_EVENTS, makePhoneEvent } from '../../../config/phone-events.js';
+/* [R22-O9] 未读角标单口径：微信未读合计只走 config/unread-badge.js 的 badgeOf。 */
+import { badgeOf } from '../../../config/unread-badge.js?v=4.157.0&r=20261116-r22';
 
 export class PokerApp {
     constructor(phoneShell, storage) {
@@ -303,7 +305,8 @@ export class PokerApp {
     _syncWechatHomeBadge(wechatData = this.getWechatData()) {
         try {
             if (!wechatData) return;
-            const total = (wechatData.getChatList?.() || []).reduce((sum, chat) => sum + (Number(chat.unread) || 0), 0);
+            /* [R22-O9] 合计唯一出口：badgeOf（config/unread-badge.js），本层不再自算。 */
+            const total = badgeOf(wechatData.getChatList?.() || []).total;
             // [v2.91.0] 唯一写出口：写入 currentApps 真源并镜像渲染面
             if (typeof window.VirtualPhone?.setAppBadge === 'function') {
                 window.VirtualPhone.setAppBadge('wechat', total);

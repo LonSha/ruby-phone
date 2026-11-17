@@ -1,0 +1,11 @@
+{
+  "schema": "unread-badge-whitelist@1",
+  "plan": "R22-O9",
+  "note": "apps/ 下所有 reduce 求和 `.unread` 的命中，必须在 R1 口径下逐条解释「为什么这不是微信会话未读求和」。缺理由或理由过短的条目会被门禁判为不合格（不是静默放过）。",
+  "entries": [
+    {
+      "file": "apps/notifications/notification-center-view.js",
+      "why": "这里求的是「落账层按 App 聚合的通知未读」（log.unreadByApp()），不是微信会话的 unread 计数；两者数据源不同，通知中心本来就不该走 chat-read-cursor。"
+    }
+  ]
+}

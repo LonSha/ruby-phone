@@ -33,6 +33,9 @@ import { virtualWindow } from '../../config/chat-virtual-window.js?v=4.157.0&r=2
 import { bubbleTheme } from '../../config/chat-bubble-theme.js?v=4.157.0&r=20261116-r22';
 import { clipboardState, clipboardNote } from '../../config/cross-app-clipboard.js?v=4.157.0&r=20261116-r22';
 import { classifyClockSite } from '../../config/story-clock-classify.js?v=4.157.0&r=20261116-r22';
+/* [R22-O9] 未读角标单口径：合计与封顶只走 config/unread-badge.js 的 badgeOf，
+ *   App 层不再自己 reduce（本文件原有一处自算，已按 R22-O9 收口）。 */
+import { badgeOf } from '../../config/unread-badge.js?v=4.157.0&r=20261116-r22';
 
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：微信生图是本仓最长的在飞请求之一
  *   （先等英文 TAG 一轮 AI、再等图片 provider、再等上传落盘）。
@@ -12562,8 +12565,9 @@ renderChatRoom(chat) {
                             const apps = window.VirtualPhone.home.apps;
                             if (apps) {
                                 // [v2.91.0] 唯一写出口（未读合计是 NaN 安全的：缺省按 0 计）
+                                /* [R22-O9] 合计唯一出口：badgeOf（config/unread-badge.js），本层不再自算。 */
                                 const chatList = this.app.wechatData.getChatList();
-                                const unreadTotal = chatList.reduce((sum, c) => sum + (Number(c.unread) || 0), 0);
+                                const unreadTotal = badgeOf(chatList).total;
                                 if (typeof window.VirtualPhone.setAppBadge === 'function') {
                                     window.VirtualPhone.setAppBadge('wechat', unreadTotal);
                                 } else {
