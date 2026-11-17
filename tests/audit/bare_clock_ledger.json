@@ -14,7 +14,7 @@
   },
   "sites": [
     {
-      "line": 241,
+      "line": 243,
       "col": 37,
       "field": "(inline)",
       "fn": "_stripWechatTagsFromTavernContext",
@@ -30,7 +30,7 @@
       "needs": ""
     },
     {
-      "line": 242,
+      "line": 244,
       "col": 54,
       "field": "(inline)",
       "fn": "_stripWechatTagsFromTavernContext",
@@ -46,7 +46,7 @@
       "needs": ""
     },
     {
-      "line": 644,
+      "line": 646,
       "col": 17,
       "field": "ts",
       "fn": "_setLobbyPersonaCache",
@@ -62,7 +62,7 @@
       "needs": ""
     },
     {
-      "line": 659,
+      "line": 661,
       "col": 14,
       "field": "(inline)",
       "fn": "_getLobbyPersonaCache",
@@ -78,7 +78,7 @@
       "needs": ""
     },
     {
-      "line": 827,
+      "line": 829,
       "col": 27,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -94,7 +94,7 @@
       "needs": ""
     },
     {
-      "line": 828,
+      "line": 830,
       "col": 20,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -110,7 +110,7 @@
       "needs": ""
     },
     {
-      "line": 837,
+      "line": 839,
       "col": 27,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -126,7 +126,7 @@
       "needs": ""
     },
     {
-      "line": 838,
+      "line": 840,
       "col": 20,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -142,7 +142,7 @@
       "needs": ""
     },
     {
-      "line": 2735,
+      "line": 2737,
       "col": 50,
       "field": "(inline)",
       "fn": "_applyAiReplyTimeline",
@@ -158,7 +158,7 @@
       "needs": ""
     },
     {
-      "line": 2801,
+      "line": 2803,
       "col": 46,
       "field": "(inline)",
       "fn": "_applyAiReplyTimeline",
@@ -174,7 +174,7 @@
       "needs": ""
     },
     {
-      "line": 2897,
+      "line": 2899,
       "col": 33,
       "field": "at",
       "fn": "renderChatRoom",
@@ -190,7 +190,7 @@
       "needs": ""
     },
     {
-      "line": 3835,
+      "line": 3837,
       "col": 29,
       "field": "at",
       "fn": "smartUpdateMessages",
@@ -206,7 +206,7 @@
       "needs": ""
     },
     {
-      "line": 5379,
+      "line": 5027,
       "col": 44,
       "field": "(inline)",
       "fn": "generateImagePromptMessage",
@@ -222,7 +222,7 @@
       "needs": ""
     },
     {
-      "line": 5660,
+      "line": 5308,
       "col": 51,
       "field": "(inline)",
       "fn": "_persistWechatGeneratedImage",
@@ -238,7 +238,7 @@
       "needs": ""
     },
     {
-      "line": 5683,
+      "line": 5331,
       "col": 51,
       "field": "(inline)",
       "fn": "_persistWechatGeneratedVideo",
@@ -254,7 +254,7 @@
       "needs": ""
     },
     {
-      "line": 5864,
+      "line": 5512,
       "col": 84,
       "field": "(inline)",
       "fn": "renderImagePromptCard",
@@ -270,7 +270,7 @@
       "needs": ""
     },
     {
-      "line": 6853,
+      "line": 6501,
       "col": 48,
       "field": "(inline)",
       "fn": "_sendActiveQuickReply",
@@ -286,7 +286,7 @@
       "needs": ""
     },
     {
-      "line": 7289,
+      "line": 6937,
       "col": 69,
       "field": "(inline)",
       "fn": "_bindCustomEmojiImageRecovery",
@@ -302,7 +302,7 @@
       "needs": ""
     },
     {
-      "line": 7430,
+      "line": 7078,
       "col": 21,
       "field": "(inline)",
       "fn": "_getPersistentStickerCacheEntry",
@@ -318,7 +318,7 @@
       "needs": ""
     },
     {
-      "line": 7467,
+      "line": 7115,
       "col": 48,
       "field": "(inline)",
       "fn": "_setPersistentStickerCacheEntry",
@@ -334,7 +334,7 @@
       "needs": ""
     },
     {
-      "line": 8037,
+      "line": 7685,
       "col": 49,
       "field": "(inline)",
       "fn": "_extractWeiboNewsTokens",
@@ -350,7 +350,7 @@
       "needs": ""
     },
     {
-      "line": 8662,
+      "line": 8310,
       "col": 35,
       "field": "paymentHandledAt",
       "fn": "_applyWechatPaymentAction",
@@ -366,7 +366,7 @@
       "needs": ""
     },
     {
-      "line": 8670,
+      "line": 8318,
       "col": 31,
       "field": "paymentHandledAt",
       "fn": "_applyWechatPaymentAction",
@@ -382,7 +382,7 @@
       "needs": ""
     },
     {
-      "line": 8744,
+      "line": 8392,
       "col": 41,
       "field": "catboxInviteResolvedAt",
       "fn": "_handleCatboxCoAdoptResponse",
@@ -398,7 +398,7 @@
       "needs": ""
     },
     {
-      "line": 8828,
+      "line": 8476,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -414,7 +414,7 @@
       "needs": ""
     },
     {
-      "line": 8840,
+      "line": 8488,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -430,7 +430,7 @@
       "needs": ""
     },
     {
-      "line": 8852,
+      "line": 8500,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -446,7 +446,7 @@
       "needs": ""
     },
     {
-      "line": 8864,
+      "line": 8512,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -462,7 +462,7 @@
       "needs": ""
     },
     {
-      "line": 8876,
+      "line": 8524,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -478,7 +478,7 @@
       "needs": ""
     },
     {
-      "line": 9153,
+      "line": 8801,
       "col": 57,
       "field": "(inline)",
       "fn": "syncWeiboNewsToWeiboApp",
@@ -494,7 +494,7 @@
       "needs": ""
     },
     {
-      "line": 10192,
+      "line": 9840,
       "col": 34,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -510,7 +510,7 @@
       "needs": ""
     },
     {
-      "line": 10233,
+      "line": 9881,
       "col": 17,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -526,7 +526,7 @@
       "needs": ""
     },
     {
-      "line": 10376,
+      "line": 10024,
       "col": 25,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -542,7 +542,7 @@
       "needs": ""
     },
     {
-      "line": 10397,
+      "line": 10045,
       "col": 25,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -558,7 +558,7 @@
       "needs": ""
     },
     {
-      "line": 10922,
+      "line": 10570,
       "col": 61,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -574,7 +574,7 @@
       "needs": ""
     },
     {
-      "line": 10925,
+      "line": 10573,
       "col": 65,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -590,7 +590,7 @@
       "needs": ""
     },
     {
-      "line": 10928,
+      "line": 10576,
       "col": 61,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -606,7 +606,7 @@
       "needs": ""
     },
     {
-      "line": 10931,
+      "line": 10579,
       "col": 64,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -622,7 +622,7 @@
       "needs": ""
     },
     {
-      "line": 10934,
+      "line": 10582,
       "col": 66,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -638,7 +638,7 @@
       "needs": ""
     },
     {
-      "line": 11165,
+      "line": 10813,
       "col": 30,
       "field": "(inline)",
       "fn": "showManualTimeMarkerMenu",
@@ -654,7 +654,7 @@
       "needs": ""
     },
     {
-      "line": 11167,
+      "line": 10815,
       "col": 21,
       "field": "(inline)",
       "fn": "showManualTimeMarkerMenu",
@@ -670,7 +670,7 @@
       "needs": ""
     },
     {
-      "line": 11180,
+      "line": 10828,
       "col": 21,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -686,7 +686,7 @@
       "needs": ""
     },
     {
-      "line": 11241,
+      "line": 10889,
       "col": 52,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -702,7 +702,7 @@
       "needs": ""
     },
     {
-      "line": 11241,
+      "line": 10889,
       "col": 94,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -718,7 +718,7 @@
       "needs": ""
     },
     {
-      "line": 11560,
+      "line": 11208,
       "col": 31,
       "field": "(inline)",
       "fn": "_gateCompletionClaims",
@@ -734,7 +734,7 @@
       "needs": ""
     },
     {
-      "line": 11610,
+      "line": 11258,
       "col": 86,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -750,7 +750,7 @@
       "needs": ""
     },
     {
-      "line": 11612,
+      "line": 11260,
       "col": 41,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -766,7 +766,7 @@
       "needs": ""
     },
     {
-      "line": 12227,
+      "line": 11875,
       "col": 46,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -782,7 +782,7 @@
       "needs": ""
     },
     {
-      "line": 12259,
+      "line": 11907,
       "col": 65,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -798,7 +798,7 @@
       "needs": ""
     },
     {
-      "line": 12351,
+      "line": 11999,
       "col": 75,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -814,7 +814,7 @@
       "needs": ""
     },
     {
-      "line": 12387,
+      "line": 12035,
       "col": 66,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -830,7 +830,7 @@
       "needs": ""
     },
     {
-      "line": 12504,
+      "line": 12152,
       "col": 71,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -846,7 +846,7 @@
       "needs": ""
     },
     {
-      "line": 12552,
+      "line": 12200,
       "col": 76,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -862,7 +862,7 @@
       "needs": ""
     },
     {
-      "line": 13526,
+      "line": 13175,
       "col": 59,
       "field": "(inline)",
       "fn": "buildMessagesArray",
@@ -878,7 +878,7 @@
       "needs": ""
     },
     {
-      "line": 14250,
+      "line": 13899,
       "col": 44,
       "field": "(inline)",
       "fn": "showTransferDialog",
@@ -894,7 +894,7 @@
       "needs": ""
     },
     {
-      "line": 14323,
+      "line": 13972,
       "col": 35,
       "field": "(inline)",
       "fn": "_sendGift",
@@ -910,7 +910,7 @@
       "needs": ""
     },
     {
-      "line": 15357,
+      "line": 15006,
       "col": 30,
       "field": "(inline)",
       "fn": "showMessageMenu",
@@ -926,7 +926,7 @@
       "needs": ""
     },
     {
-      "line": 15360,
+      "line": 15009,
       "col": 21,
       "field": "(inline)",
       "fn": "showMessageMenu",
@@ -942,7 +942,7 @@
       "needs": ""
     },
     {
-      "line": 16211,
+      "line": 15860,
       "col": 32,
       "field": "(inline)",
       "fn": "showVideoCallInterface",
@@ -958,7 +958,7 @@
       "needs": ""
     },
     {
-      "line": 16523,
+      "line": 16172,
       "col": 53,
       "field": "(inline)",
       "fn": "showVideoCallInterface",
@@ -974,7 +974,7 @@
       "needs": ""
     },
     {
-      "line": 16592,
+      "line": 16241,
       "col": 44,
       "field": "(inline)",
       "fn": "showVideoCallInterface",
@@ -990,7 +990,7 @@
       "needs": ""
     },
     {
-      "line": 16742,
+      "line": 16391,
       "col": 64,
       "field": "(inline)",
       "fn": "showVideoCallInterface",
@@ -1006,7 +1006,7 @@
       "needs": ""
     },
     {
-      "line": 17606,
+      "line": 17255,
       "col": 32,
       "field": "(inline)",
       "fn": "showVoiceCallInterface",
@@ -1022,7 +1022,7 @@
       "needs": ""
     },
     {
-      "line": 17923,
+      "line": 17572,
       "col": 53,
       "field": "(inline)",
       "fn": "showVoiceCallInterface",
@@ -1038,7 +1038,7 @@
       "needs": ""
     },
     {
-      "line": 17973,
+      "line": 17622,
       "col": 44,
       "field": "(inline)",
       "fn": "showVoiceCallInterface",
@@ -1054,7 +1054,7 @@
       "needs": ""
     },
     {
-      "line": 18121,
+      "line": 17770,
       "col": 64,
       "field": "(inline)",
       "fn": "showVoiceCallInterface",
@@ -1070,7 +1070,7 @@
       "needs": ""
     },
     {
-      "line": 18411,
+      "line": 18060,
       "col": 43,
       "field": "(inline)",
       "fn": "showRedPacketDialog",
@@ -1086,7 +1086,7 @@
       "needs": ""
     },
     {
-      "line": 18478,
+      "line": 18127,
       "col": 39,
       "field": "(inline)",
       "fn": "showRedPacketDialog",
@@ -1102,7 +1102,7 @@
       "needs": ""
     },
     {
-      "line": 18636,
+      "line": 18285,
       "col": 35,
       "field": "lastModified",
       "fn": "showAddCustomEmojiDialog",
@@ -1118,7 +1118,7 @@
       "needs": ""
     },
     {
-      "line": 18854,
+      "line": 18503,
       "col": 31,
       "field": "paymentHandledAt",
       "fn": "_claimGroupRedPacketForCurrentUser",
@@ -1134,7 +1134,7 @@
       "needs": ""
     },
     {
-      "line": 19772,
+      "line": 19421,
       "col": 48,
       "field": "(inline)",
       "fn": "bindCallBubbleClickEvents",

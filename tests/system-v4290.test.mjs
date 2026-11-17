@@ -61,7 +61,9 @@ const VIEW = await import(pathToFileURL(path.join(ROOT, VIEW_REL)).href);
 const EVENTS = await import(pathToFileURL(path.join(ROOT, EVENTS_REL)).href);
 const kernelSrc = read(KERNEL_REL);
 const wireSrc = read(WIRE_REL);
-const viewSrc = read(VIEW_REL);
+/* [R22-O1] 视图层现在是两件：chat-view.js + 抽出去的 chat-render-core.js。
+ *   票卡排版已搬进内核文件，判据要认「视图层」整面 —— 否则搬一次就等于判据失明一次。 */
+const viewSrc = read(VIEW_REL) + '\n' + read('apps/wechat/chat-render-core.js');
 const appSrc = read(APP_REL);
 const S = K.GV_STATES;
 const countOf = (hay, needle) => hay.split(needle).length - 1;

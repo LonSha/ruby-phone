@@ -1,0 +1,20 @@
+{
+  "schema": "chat-render-snapshot@1",
+  "plan": "R22-O1",
+  "plan_note": "抽 chat-render-core.js 之前捕获的渲染输出 sha256；抽之后必须逐键相同（__error 形态也算一项，不许把抛错当通过）。",
+  "generated_at": "2026-11-17T07:47:24.627Z",
+  "snapshots": {
+    "bubble.plain": "7fcc911fc984cd960cedc9e64ee28d7ec09573c143bb5ffafa38b7a0a116a90f",
+    "bubble.innerThought.single": "be915c96bbf3201295cc779895a4de615a37e7e6416c670735c65b45cedbd2c1",
+    "bubble.innerThought.group": "6f559e3f9e5c653be69178cb12760faf7f8d5b39d5ad7dda79b64b852dc2546d",
+    "bubble.onlyInnerThought": "b551fac0223535eb821a586b4044d006eb7bd4d8d11b84ab8f70e7708e1a862c",
+    "bubble.emojiToken": "f59fa6c2ea48909c2d6d76b0f9a6a1f2331b546a421081f797734b21959c894d",
+    "bubble.htmlEscape": "f85029dbd8e10cf046ca456620b451c35d1c76113a90fa004287f3ce06f64e81",
+    "extractInnerThought.multi": "84f1ac7b05ff36fab5475f192712a55bcaeeccda38baaa1911225d379ceaa5af",
+    "extractInnerThought.none": "178da43cf6193ae08d3878d081169498bcb506b4b925de33bb6cb34e8b9a45b3",
+    "emojiPanel": "87b2f0a4b872105af92aeea8bbd71ab0387b5c6c8cff47d861fad4c629b3e21b",
+    "groupVoteCard.picked": "a91da021e4d75b70462edceef96f74f887942566e5effcc0e2e5c1ba213361f6",
+    "groupVoteCard.packAbsent": "09474b9ab4042c481e475970426c674ec760e4b938ff4eb10bdb3584401af772",
+    "gatheringCard": "7c1aa5ffa071af055e706d9b2f1c8cae0d80cf850b643bcd63cca3afa19e2ebe"
+  }
+}

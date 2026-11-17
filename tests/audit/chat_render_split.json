@@ -1,0 +1,50 @@
+{
+  "schema": "chat-render-split@1",
+  "plan": "R22-O1",
+  "note": "大文件拆分的账：拆了什么 / 拆前多长 / 拆后多长 / 凭什么说是等价。行数是机器读数，不是估计；等价性由 chat_render_snapshot.json 的 12 个 sha256 逐键钉住。",
+  "source": "apps/wechat/chat-view.js",
+  "lines_before_split": 19981,
+  "view_lines_max": 19628,
+  "core_module": "apps/wechat/chat-render-core.js",
+  "core_lines": 389,
+  "mixin": "Object.assign(ChatView.prototype, chatRenderCore)",
+  "batch1": {
+    "what": "渲染族里**零业务判定**的连续 7 个方法（源 L4639–L4996，逐字节搬，未改一行）",
+    "source_range": "L4639-L4996",
+    "why_this_segment": "这 7 个方法在源码里本来就连续成段（投票卡 → 邀约卡 → 内心 OS → 文本气泡 → 表情面板），中间没有夹任何事件绑定或写库逻辑；抽走后 chat-view.js 只留一行指向注释，接缝干净。",
+    "why_safe": "对这 358 行做自由标识符实测（剥注释/字符串后统计）：没有一处指向 chat-view.js 的模块作用域，只用到 4 个 import（bubbleTheme / FACE_ATTR / getPhoneInlineEmoji / renderPhoneInlineEmoji），其余全是 this.*。故用原型混入回归，this 仍绑定 ChatView 实例，调用点零改动。",
+    "methods": [
+      { "name": "_votePackCached", "source_line": 4651, "why": "一次渲染内复用投票读数（缓存键含条数/末条 id/票号）" },
+      { "name": "_renderGroupVoteCard", "source_line": 4664, "why": "群投票卡排版（判定全来自内核，本方法连状态字面量比较都不写）" },
+      { "name": "_renderGatheringCard", "source_line": 4745, "why": "多人邀约卡排版（只摆台账现读，不由消息数推算）" },
+      { "name": "_gatherIdOfMsg", "source_line": 4835, "why": "由消息算场次 id（与接线件同一条派生规则，视图不另写算法）" },
+      { "name": "extractInnerThought", "source_line": 4843, "why": "内心 OS 拆解（纯字符串 → {visibleContent, innerThought}）" },
+      { "name": "renderTextMessageBubble", "source_line": 4858, "why": "文本气泡（主题形状来自单一主题桥 bubbleTheme）" },
+      { "name": "renderEmojiPanel", "source_line": 4886, "why": "表情面板（系统表情 + 自定义表情两段，产出 HTML 字符串）" }
+    ]
+  },
+  "equivalence_proof": {
+    "snapshot": "tests/audit/chat_render_snapshot.json",
+    "keys": 12,
+    "kind": "sha256 of real method output（DOM 替身真做 HTML 转义）",
+    "gate": "tests/audit/scan_chat_render_split.mjs",
+    "test": "tests/r22_o1_chat_render_snapshot.test.mjs",
+    "honest_limits": [
+      "只覆盖纯字符串产出的 7 个方法；不覆盖事件绑定、异步写库、真实排版。",
+      "快照覆盖的是 12 条 fixture（默认主题 / 无自定义表情 / 两张票各一），不是全输入空间。"
+    ]
+  },
+  "side_effects_checked": {
+    "a11y": "tests/audit/a11y_baseline.json 已按搬迁后分布刷新：总量 aria-label 350 / role 115 / tabindex 17 **不变**，files 440→441；chat-view.js 的 3/5/2 与核心模块的 3/5/2 严格对冲（纯搬迁，零无障碍损失）。",
+    "unread_badge": "tests/audit/scan_unread_badge_single.mjs 扫 786 文件（新增 1 文件）rc=0。",
+    "imports_cleaned": "chat-view.js 里因搬迁而失去用途的 3 个 import 已删（bubbleTheme / getPhoneInlineEmoji / renderPhoneInlineEmoji）；FACE_ATTR 仍在用（L14722），保留。"
+  },
+  "not_done": {
+    "index.js": "LonSha 仓 index.js（13546 行）本轮只完成结构快照与依赖实测（tests/audit/index_structure.json：175 块 / 12295 行 / 90.8%），**尚未动刀**；下一刀候选 LonShaMemoryPlugin（1382 行，只依赖 56 个 IIFE 局部名）。",
+    "chat_view_rest": "chat-view.js 仍是 19629 行：renderMessage（783）/ bindEvents（690）/ showVideoCallInterface（561）/ showVoiceCallInterface（544）四个巨方法尚未拆，它们体内有真业务分支，不能按本次「裸搬」口径处理。"
+  },
+  "next_batch": {
+    "candidate": "showVideoCallInterface + showVoiceCallInterface（视频/语音通话界面，558+544 行）",
+    "blocker": "两者都要读 this.* 之外的模块级常量与事件绑定，先做自由标识符实测再定，不许先假定能裸搬。"
+  }
+}

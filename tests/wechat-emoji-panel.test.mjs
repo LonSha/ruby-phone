@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const chatViewSource = fs.readFileSync(new URL('../apps/wechat/chat-view.js', import.meta.url), 'utf8');
+/* [R22-O1] 表情面板已随渲染内核抽到 chat-render-core.js：本面判的是「视图层」
+ *   整面，故读两件再拼成一份源 —— 搬走不等于不需要验，只是换成验在哪个文件里。 */
+const chatViewSource =
+    fs.readFileSync(new URL('../apps/wechat/chat-view.js', import.meta.url), 'utf8') +
+    '\n' +
+    fs.readFileSync(new URL('../apps/wechat/chat-render-core.js', import.meta.url), 'utf8');
 const phoneShellSource = fs.readFileSync(new URL('../phone/phone-shell.js', import.meta.url), 'utf8');
 
 test('wechat emoji tabs expose interactive semantics for mobile webviews', () => {

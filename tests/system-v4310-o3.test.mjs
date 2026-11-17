@@ -315,7 +315,8 @@ const sayP = (id, memberId, option, choice, pollId) => ({
 // ========== G. 接线与纯度 ==========
 {
   const wireSrc = read('apps/wechat/group-vote.js');
-  const viewSrc = read('apps/wechat/chat-view.js');
+  /* [R22-O1] 票卡排版已抽到 chat-render-core.js：视图层 = 两件之和。 */
+  const viewSrc = read('apps/wechat/chat-view.js') + '\n' + read('apps/wechat/chat-render-core.js');
   const appSrc = read('apps/wechat/wechat-app.js');
   ok('G1 接线件有逐票列举出口', /pollIds\s*\(chatId\)/.test(wireSrc));
   ok('G2 接线件有按消息取票号出口', /pollIdOfMessage\s*\(chatId,\s*messageId\)/.test(wireSrc));

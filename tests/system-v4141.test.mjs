@@ -309,7 +309,11 @@ test('B7 六处收口位置在源码里确实都走同一个降级出口（不�
         'apps/loverspace/loverspace-app.js': 2,
         'apps/music/music-app.js': 1,
         'apps/piggy/piggy-app.js': 1,
-        'apps/wechat/chat-view.js': 2,
+        /* [R22-O5 后订正] 本项写入时这里只有 2 处；R22-O5 又把 12 处 story 裸钟收口到
+         *   同一出口，故现在是 14（R22-O5 自己的判据 tests/r22_o5_bare_clock_gate.test.mjs
+         *   也断言 14 = 本期 12 + 既有 2）。这里是**跟着读数订正**，不是放宽判据：
+         *   判据要的仍是「每一处都走同一个出口」，数错一处这条依然会红。 */
+        'apps/wechat/chat-view.js': 14,
     };
     for (const [rel, want] of Object.entries(expect)) {
         const src = readRel(rel);

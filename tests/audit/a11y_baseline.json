@@ -2,9 +2,9 @@
   "schema": "a11y-baseline@1",
   "plan": "R22-O3",
   "note": "纯图标按钮的可访问名覆盖基线。R1 要求 uncovered=0；R2 要求每文件 aria-label/role/tabindex 与总量不低于本台账。",
-  "generated_at": "2026-11-17T07:41:53.285Z",
+  "generated_at": "2026-11-17T07:49:59.867Z",
   "totals": {
-    "files": 440,
+    "files": 441,
     "buttons": 1548,
     "ariaLabel": 350,
     "role": 115,
@@ -3261,6 +3261,14 @@
       "iconOnly": 0,
       "iconOnlyCovered": 0
     },
+    "apps/wechat/chat-render-core.js": {
+      "ariaLabel": 3,
+      "role": 5,
+      "tabindex": 2,
+      "buttons": 12,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
     "apps/wechat/chat-snapshot.js": {
       "ariaLabel": 0,
       "role": 0,
@@ -3286,12 +3294,12 @@
       "iconOnlyCovered": 0
     },
     "apps/wechat/chat-view.js": {
-      "ariaLabel": 48,
-      "role": 12,
-      "tabindex": 2,
-      "buttons": 109,
-      "iconOnly": 42,
-      "iconOnlyCovered": 42
+      "ariaLabel": 45,
+      "role": 7,
+      "tabindex": 0,
+      "buttons": 97,
+      "iconOnly": 40,
+      "iconOnlyCovered": 40
     },
     "apps/wechat/contacts-view.js": {
       "ariaLabel": 7,

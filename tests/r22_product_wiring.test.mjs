@@ -17,7 +17,11 @@ test('R22 all 18 pure kernels pass positive and negative self-checks', async()=>
 });
 test('R22 product consumers are wired beyond the index self-check registry',()=>{
  const reads=[
-  ['apps/wechat/chat-view.js',['virtualWindow(','classifyClockSite(','bubbleTheme(']],
+  /* [R22-O1] 视图层拆成两件：气泡主题投影（bubbleTheme）随渲染内核搬到
+   *   chat-render-core.js，另两座桥（virtualWindow / classifyClockSite）仍在 chat-view.js。
+   *   判据按「哪座桥住在哪个文件」逐条认，不按文件名一刀切。 */
+  ['apps/wechat/chat-view.js',['virtualWindow(','classifyClockSite(']],
+  ['apps/wechat/chat-render-core.js',['bubbleTheme(']],
   ['apps/wechat/wechat-app.js',['searchMessages(','badgeOf(','_r22StageClipboard(']],
   ['apps/wechat/contacts-view.js',['_r22GroupContacts(']],['apps/reading/reading-view.js',['_r22ReadingProgress(']],
   ['apps/phone/phone-view.js',['_r22SegmentTranscript(']],['apps/diary/diary-view.js',['_r22DiarySearch(']],
