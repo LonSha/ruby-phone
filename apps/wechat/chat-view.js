@@ -979,7 +979,7 @@ export class ChatView {
         return val === undefined || val === null || val === '' || val === true || val === 'true' || val === 1;
     }
 
-    _buildWechatRealTimeFields(timestamp = Date.now()) {
+    _buildWechatRealTimeFields(timestamp = storyNowWallFallback(window).ms) {
         const info = this._formatRealDateTime(timestamp);
         return {
             time: info.time,
@@ -2598,13 +2598,13 @@ export class ChatView {
 
         const timestamp = typeof window.VirtualPhone?.timeManager?.parseTimeToTimestamp === 'function'
             ? window.VirtualPhone.timeManager.parseTimeToTimestamp(parsed)
-            : (Number(parsed.timestamp) || Date.now());
+            : (Number(parsed.timestamp) || storyNowWallFallback(window).ms);
 
         return {
             time: parsed.time,
             date: parsed.date,
             weekday: parsed.weekday || window.VirtualPhone?.timeManager?.calculateWeekday?.(parsed.date) || '星期一',
-            timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : Date.now()
+            timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : storyNowWallFallback(window).ms
         };
     }
 
@@ -2724,8 +2724,8 @@ export class ChatView {
 
         const contentText = String(messageObj.content || fallbackContent || '').trim();
         if (this._shouldUseRealTimeForOnlineChat(options)) {
-            let baseTimestamp = Number(this._aiReplyTimestampCursor || options?.baseTimestamp || Date.now());
-            if (!Number.isFinite(baseTimestamp) || baseTimestamp <= 0) baseTimestamp = Date.now();
+            let baseTimestamp = Number(this._aiReplyTimestampCursor || options?.baseTimestamp || storyNowWallFallback(window).ms);
+            if (!Number.isFinite(baseTimestamp) || baseTimestamp <= 0) baseTimestamp = storyNowWallFallback(window).ms;
 
             let minutesToAdd = contentText.length <= 12 ? 0 : 1;
             const isFirstInReplyBatch = options?.isFirstInReplyBatch === true;
@@ -2746,7 +2746,7 @@ export class ChatView {
             messageObj.date = messageObj.date || this._formatWechatDateFromTimestamp(nextTimestamp);
             messageObj.weekday = messageObj.weekday || this._getWechatWeekdayFromTimestamp(nextTimestamp, '');
             messageObj.timestamp = nextTimestamp;
-            messageObj.realTimestamp = Date.now();
+            messageObj.realTimestamp = storyNowWallFallback(window).ms;
             this._aiReplyTimestampCursor = nextTimestamp;
             this._aiReplyTimeCursor = {
                 time: messageObj.time,
@@ -12320,7 +12320,7 @@ renderChatRoom(chat) {
                     this._applyAiReplyTimeline(m, normalizedTextContent, {
                         isFirstInReplyBatch: bgIndex === 0,
                         extraGapMinutes: (bgShortGapMap.get(bgIndex) || 0) + consumeProactiveStoryGapMinutes(),
-                        baseTimestamp: options?.proactiveMeta?.now || Date.now()
+                        baseTimestamp: options?.proactiveMeta?.now || storyNowWallFallback(window).ms
                     });
 
                     const specialSender = String(special?.sender || '').trim();
@@ -12466,7 +12466,7 @@ renderChatRoom(chat) {
                 this._applyAiReplyTimeline(msg, normalizedTextContent, {
                     isFirstInReplyBatch: msgIndex === 0,
                     extraGapMinutes: (inlineShortGapMap.get(msgIndex) || 0) + consumeProactiveStoryGapMinutes(),
-                    baseTimestamp: options?.proactiveMeta?.now || Date.now()
+                    baseTimestamp: options?.proactiveMeta?.now || storyNowWallFallback(window).ms
                 });
 
                 const specialSender = String(special?.sender || '').trim();
@@ -13477,7 +13477,7 @@ renderChatRoom(chat) {
             : '';
 
         const timeManager = window.VirtualPhone?.timeManager;
-        const realTimeInfo = this._formatRealDateTime(proactiveMeta.now || Date.now());
+        const realTimeInfo = this._formatRealDateTime(proactiveMeta.now || storyNowWallFallback(window).ms);
         const useRealTimeForOnlineChat = this._shouldUseRealTimeForOnlineChat(options);
         const storyTimeInfo = timeManager?.getCurrentStoryTime?.();
         const currentTime = useRealTimeForOnlineChat
@@ -13884,7 +13884,7 @@ renderChatRoom(chat) {
 
     _buildOnlineProactiveRules({ userName = '用户', targetChat = null, customEmojiList = '', proactiveMeta = {} } = {}) {
         const promptManager = window.VirtualPhone?.promptManager;
-        const realTimeInfo = this._formatRealDateTime(proactiveMeta.now || Date.now());
+        const realTimeInfo = this._formatRealDateTime(proactiveMeta.now || storyNowWallFallback(window).ms);
         const timeManager = window.VirtualPhone?.timeManager;
         const useRealTimeForOnlineChat = this._shouldUseRealTimeForOnlineChat();
         const storyTimeInfo = timeManager?.getCurrentStoryTime?.();
@@ -16977,8 +16977,8 @@ ${groupParticipants.join('、') || '暂无成员'}
         };
 
         if (useRealTime) {
-            const baseTimestamp = Number(callStartTime?.timestamp || Date.now());
-            const endTimestamp = (Number.isFinite(baseTimestamp) && baseTimestamp > 0 ? baseTimestamp : Date.now()) + safeElapsed * 1000;
+            const baseTimestamp = Number(callStartTime?.timestamp || storyNowWallFallback(window).ms);
+            const endTimestamp = (Number.isFinite(baseTimestamp) && baseTimestamp > 0 ? baseTimestamp : storyNowWallFallback(window).ms) + safeElapsed * 1000;
             return this._buildWechatRealTimeFields(endTimestamp);
         }
 
