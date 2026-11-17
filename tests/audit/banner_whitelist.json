@@ -1,0 +1,41 @@
+{
+  "schema": "banner-whitelist@1",
+  "note": "每条必须写「为什么这不是通知横幅」。逃生口不是黑洞：理由为空等于没登记。",
+  "entries": [
+    {
+      "file": "apps/games/werewolf/werewolf-view.js",
+      "line": 67,
+      "why": "游戏页内常驻「系统公告」状态条，不是入站通知（不进队列、不弹出）"
+    },
+    {
+      "file": "apps/notifications/notification-center-view.js",
+      "line": 237,
+      "why": "离开模式状态条：呈现手机当前状态，不是一条入站通知"
+    },
+    {
+      "file": "apps/weather/weather-view.js",
+      "line": 105,
+      "why": "静态声明条（本页不联网/不定位），文案不是通知"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 188,
+      "why": "布局占位块（weibo-banner-spacer），无文案无语义"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 1127,
+      "why": "微博个人封面图上传控件（banner=封面），与通知无关"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 1138,
+      "why": "同上：封面图上传按钮的 label"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 3379,
+      "why": "同上：封面图上传事件绑定"
+    }
+  ]
+}

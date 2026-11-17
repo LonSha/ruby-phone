@@ -29,6 +29,7 @@ import {
   witnessRows,
   runStatus,
 } from '../../../config/mystery-face-bridge.js';
+import { bannerOf } from '../../../config/incoming-banner.js';
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -95,10 +96,13 @@ export class MysteryView {
         </div>`;
     }).join('');
 
-    const notice = this._notice
-      ? `<div class="gm-notice gm-notice-${esc(this._notice.kind)}">
-           <div class="gm-notice-title">${esc(this._notice.title)}</div>
-           <div class="gm-notice-detail">${esc(this._notice.detail)}</div>
+    const noticeBanner = this._notice
+      ? bannerOf({ appId: 'games', title: this._notice.title, body: this._notice.detail })
+      : null;
+    const notice = (noticeBanner && noticeBanner.face === 'banner')
+      ? `<div class="gm-notice gm-notice-${esc(this._notice.kind)}" data-banner-app="${esc(noticeBanner.banner.appId)}">
+           <div class="gm-notice-title">${esc(noticeBanner.banner.title)}</div>
+           <div class="gm-notice-detail">${esc(noticeBanner.banner.body)}</div>
          </div>`
       : '';
 

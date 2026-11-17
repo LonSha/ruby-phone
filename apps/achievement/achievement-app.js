@@ -6,6 +6,7 @@
 import { AchievementData } from './achievement-data.js';
 import { AchievementView } from './achievement-view.js';
 import { onceFlag, globalRuntime } from '../../config/runtime-lifecycle.js';
+import { bannerOf } from '../../config/incoming-banner.js';
 
 export class AchievementApp {
   constructor(phoneShell, storage) {
@@ -44,12 +45,14 @@ export class AchievementApp {
     // 构造悬浮成就横幅
     const banner = document.createElement('div');
     banner.className = 'ach-unlock-banner';
+    const unlock = bannerOf({ appId: 'achievement', title: ach.name, body: ach.intro, icon: '🏆' });
+    banner.dataset.bannerApp = unlock.banner.appId;
     banner.innerHTML = `
       <div class="ach-banner-trophy"><i class="fa-solid fa-trophy"></i></div>
       <div class="ach-banner-text">
         <div class="ach-banner-sub">ACHIEVEMENT UNLOCKED</div>
-        <div class="ach-banner-name">${ach.name}</div>
-        <div class="ach-banner-intro">${ach.intro}</div>
+        <div class="ach-banner-name">${unlock.banner.title}</div>
+        <div class="ach-banner-intro">${unlock.banner.body}</div>
       </div>
     `;
 

@@ -1,0 +1,162 @@
+{
+  "schema": "banner-singleton@1",
+  "bridge": "config/incoming-banner.js",
+  "totalSites": 19,
+  "routedCount": 12,
+  "whitelistedCount": 7,
+  "pending": 0,
+  "sites": [
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 47,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "banner.className = 'ach-unlock-banner';"
+    },
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 51,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"ach-banner-trophy\"><i class=\"fa-solid fa-trophy\"></i></div>"
+    },
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 52,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"ach-banner-text\">"
+    },
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 53,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"ach-banner-sub\">ACHIEVEMENT UNLOCKED</div>"
+    },
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 54,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"ach-banner-name\">${unlock.banner.title}</div>"
+    },
+    {
+      "file": "apps/achievement/achievement-app.js",
+      "line": 55,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"ach-banner-intro\">${unlock.banner.body}</div>"
+    },
+    {
+      "file": "apps/album/album-voice-view.js",
+      "line": 140,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "? `<div class=\"av-notice av-notice-${esc(this._notice.kind)}\" data-banner-app=\"${esc(noticeBanner.banner.appId)}\">"
+    },
+    {
+      "file": "apps/album/album-voice-view.js",
+      "line": 141,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"av-notice-title\">${esc(noticeBanner.banner.title)}</div>"
+    },
+    {
+      "file": "apps/album/album-voice-view.js",
+      "line": 142,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"av-notice-detail\">${esc(noticeBanner.banner.body)}</div>"
+    },
+    {
+      "file": "apps/games/mystery/mystery-view.js",
+      "line": 103,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "? `<div class=\"gm-notice gm-notice-${esc(this._notice.kind)}\" data-banner-app=\"${esc(noticeBanner.banner.appId)}\">"
+    },
+    {
+      "file": "apps/games/mystery/mystery-view.js",
+      "line": 104,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"gm-notice-title\">${esc(noticeBanner.banner.title)}</div>"
+    },
+    {
+      "file": "apps/games/mystery/mystery-view.js",
+      "line": 105,
+      "routed": true,
+      "whitelistedWhy": "",
+      "needs": "",
+      "text": "<div class=\"gm-notice-detail\">${esc(noticeBanner.banner.body)}</div>"
+    },
+    {
+      "file": "apps/games/werewolf/werewolf-view.js",
+      "line": 67,
+      "routed": false,
+      "whitelistedWhy": "游戏页内常驻「系统公告」状态条，不是入站通知（不进队列、不弹出）",
+      "needs": "",
+      "text": "<div class=\"games-werewolf-notice\">"
+    },
+    {
+      "file": "apps/notifications/notification-center-view.js",
+      "line": 237,
+      "routed": false,
+      "whitelistedWhy": "离开模式状态条：呈现手机当前状态，不是一条入站通知",
+      "needs": "",
+      "text": "return `<div class=\"nc-away-banner nc-away-active\" style=\"background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.3);border-radi"
+    },
+    {
+      "file": "apps/weather/weather-view.js",
+      "line": 105,
+      "routed": false,
+      "whitelistedWhy": "静态声明条（本页不联网/不定位），文案不是通知",
+      "needs": "",
+      "text": "parts.push('<div class=\"wth-banner\">本页**不替你问天气**：没有联网、没有定位。'"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 188,
+      "routed": false,
+      "whitelistedWhy": "布局占位块（weibo-banner-spacer），无文案无语义",
+      "needs": "",
+      "text": "<div class=\"weibo-banner-spacer\" style=\"height: 85px; flex-shrink: 0;\"></div>"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 1127,
+      "routed": false,
+      "whitelistedWhy": "微博个人封面图上传控件（banner=封面），与通知无关",
+      "needs": "",
+      "text": "<input type=\"file\" id=\"weibo-settings-banner-upload\" accept=\"image/png, image/jpeg, image/gif, image/webp, image/*\" style=\"display: none;\">"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 1138,
+      "routed": false,
+      "whitelistedWhy": "同上：封面图上传按钮的 label",
+      "needs": "",
+      "text": "<label for=\"weibo-settings-banner-upload\" class=\"weibo-settings-btn\" style=\"width: auto; margin: 0; padding: 5px 12px; font-size: 11px; disp"
+    },
+    {
+      "file": "apps/weibo/weibo-view.js",
+      "line": 3379,
+      "routed": false,
+      "whitelistedWhy": "同上：封面图上传事件绑定",
+      "needs": "",
+      "text": "document.getElementById('weibo-settings-banner-upload')?.addEventListener('change', async (e) => {"
+    }
+  ]
+}

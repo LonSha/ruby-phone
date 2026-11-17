@@ -29,6 +29,7 @@ import {
   dirtyRows,
   runStatus,
 } from '../../config/voice-face-bridge.js';
+import { bannerOf } from '../../config/incoming-banner.js';
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -132,10 +133,13 @@ export class AlbumVoiceView {
       ? '<ul class="av-dirty-list">' + dirty.map((d) => `<li>${esc(d.cueId)} · ${esc(d.typeLabel)} · ${esc(d.text || '（无台词）')}</li>`).join('') + '</ul>'
       : '<div class="av-note">还没有改过任何一句。</div>';
 
-    const notice = this._notice
-      ? `<div class="av-notice av-notice-${esc(this._notice.kind)}">
-           <div class="av-notice-title">${esc(this._notice.title)}</div>
-           <div class="av-notice-detail">${esc(this._notice.detail)}</div>
+    const noticeBanner = this._notice
+      ? bannerOf({ appId: 'album', title: this._notice.title, body: this._notice.detail })
+      : null;
+    const notice = (noticeBanner && noticeBanner.face === 'banner')
+      ? `<div class="av-notice av-notice-${esc(this._notice.kind)}" data-banner-app="${esc(noticeBanner.banner.appId)}">
+           <div class="av-notice-title">${esc(noticeBanner.banner.title)}</div>
+           <div class="av-notice-detail">${esc(noticeBanner.banner.body)}</div>
          </div>`
       : '';
 
