@@ -34,7 +34,7 @@ export class BiliView {
     this.container.innerHTML = [
       '<div class="bl-root">',
       '  <header class="bl-header">',
-      '    <button class="bl-nav" id="bl-home"><i class="fa-solid fa-chevron-left"></i></button>',
+      '    <button aria-label="返回" class="bl-nav" id="bl-home"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2>B站</h2>',
       '  </header>',
       '  <div class="bl-search">',

@@ -109,7 +109,7 @@ export class MysteryView {
     const html = `
       <div class="games-app gm-app">
         <div class="gm-top">
-          <button class="gm-icon" id="gm-back-lobby" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+          <button aria-label="返回" class="gm-icon" id="gm-back-lobby" type="button"><i class="fa-solid fa-chevron-left"></i></button>
           <div>
             <div class="gm-title">${esc(run.mystery.title)}</div>
             <div class="gm-sub">${esc(status.text)}</div>

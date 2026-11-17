@@ -1,0 +1,3537 @@
+{
+  "schema": "a11y-baseline@1",
+  "plan": "R22-O3",
+  "note": "纯图标按钮的可访问名覆盖基线。R1 要求 uncovered=0；R2 要求每文件 aria-label/role/tabindex 与总量不低于本台账。",
+  "generated_at": "2026-11-17T07:41:53.285Z",
+  "totals": {
+    "files": 440,
+    "buttons": 1548,
+    "ariaLabel": 350,
+    "role": 115,
+    "tabindex": 17,
+    "iconOnly": 295,
+    "iconOnlyCovered": 295
+  },
+  "perFile": {
+    "apps/accessdesk/accessdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/accessdesk/accessdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/accounting/accounting-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/accounting/accounting-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/accounting/accounting-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/achievement/achievement-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/achievement/achievement-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/achievement/achievement-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/affairs/affair-live-view.js": {
+      "ariaLabel": 0,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/affairs/affairs-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/affairs/affairs-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/affairs/condition-reminder-view.js": {
+      "ariaLabel": 0,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/affairs/errand-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/affairs/shared-chore-view.js": {
+      "ariaLabel": 1,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/album/album-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/album/album-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/album/album-image-picker.js": {
+      "ariaLabel": 6,
+      "role": 4,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/album/album-view.js": {
+      "ariaLabel": 13,
+      "role": 2,
+      "tabindex": 0,
+      "buttons": 15,
+      "iconOnly": 7,
+      "iconOnlyCovered": 7
+    },
+    "apps/album/album-voice-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/annidate/annidate-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/annidate/annidate-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/annidate/annidate-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/app-injection.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/archive-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/archive-canon.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/archive-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/archive-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 12,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/atomic-filesystem-snapshot-vault.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/offline-airdrop-digital-legacy.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/archive/virtual-filesystem-cloud-vault.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/asset-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/asset-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/asset-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/asset/engine/asset-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-extract-spec.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-holdings.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-keys.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-ledger.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-library.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-market.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-project.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-settlement.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-store.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/asset-terms.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/calendar-grid.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/asset/engine/extract-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/ai-voice-deepfake-tamper-detector.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/contextual-voice-call-ambience-sim.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/covert-audio-voice-memo-recorder.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/haptic-retro-audio-feedback-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/haptic-spatial-audio-feedback-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/audio/retro-haptic-acoustic-synthesizer.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/avatarframe/avatarframe-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/avatarframe/avatarframe-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/avatarframe/avatarframe-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/backupdesk/backupdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/backupdesk/backupdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 16,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/backupdesk/experience-import-view.js": {
+      "ariaLabel": 0,
+      "role": 2,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/backupdesk/experience-pack-view.js": {
+      "ariaLabel": 0,
+      "role": 2,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/bilibili/bili-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/bilibili/bili-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/bilibili/bili-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/block/block-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/block/block-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/block/block-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 12,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/calendar/calendar-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/calendar/calendar-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/calendar/calendar-view.js": {
+      "ariaLabel": 18,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 29,
+      "iconOnly": 12,
+      "iconOnlyCovered": 12
+    },
+    "apps/calendar/vote-handoff-store.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/call/contextual-cellular-call-acoustic-modulator.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/call/dynamic-context-call-soundscape.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/caphealth/caphealth-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/caphealth/caphealth-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 1,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cardtable/cardtable-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cardtable/cardtable-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cardtable/cardtable-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 4,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/chars/chars-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/chars/chars-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/chars/chars-perspective.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/chars/chars-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/cheat/cheat-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cheat/cheat-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cheat/cheat-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 11,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/clock/clock-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/clock/clock-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/clock/clock-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/comms/comms-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/comms/comms-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cotdesk/cotdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cotdesk/cotdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/cotdesk/cotdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/creationdesk/board-chat-store.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/creationdesk/creationdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/creationdesk/creationdesk-board.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/creationdesk/creationdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 35,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/daily/cross-app-daily-life-fabric.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/darknet/darknet-bizarre-bazaar-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/darknet/darknet-dual-domain-vault.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/darknet/dual-domain-space-darknet-market.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/date/date-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/date/date-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/date/date-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 17,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagdesk/diagdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagdesk/diagdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagdesk/diagdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 7,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagnose/diagnose-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagnose/diagnose-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diagnose/diagnose-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diary/diary-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diary/diary-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/diary/diary-view.js": {
+      "ariaLabel": 1,
+      "role": 2,
+      "tabindex": 1,
+      "buttons": 26,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/dirtytalk/dirtytalk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/dirtytalk/dt-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/dirtytalk/dt-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/doujin/doujin-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/doujin/doujin-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/doujin/doujin-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 19,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/focus/focus-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/focus/focus-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/focus/focus-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 9,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/freehome/freehome-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/freehome/freehome-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/freehome/freehome-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 4,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/gacha/gacha-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/gacha/gacha-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/gacha/gacha-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/board-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/board-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/chess-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/gomoku-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/jungle-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/shogi-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/board/xiangqi-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/catbox/catbox-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/catbox/catbox-view.js": {
+      "ariaLabel": 6,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 5,
+      "iconOnlyCovered": 5
+    },
+    "apps/games/common/games-ai-context.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/game2048/game2048-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/game2048/game2048-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/games/games-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/guesswhat/guesswhat-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/guesswhat/guesswhat-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 11,
+      "iconOnly": 4,
+      "iconOnlyCovered": 4
+    },
+    "apps/games/ludo/ludo-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/ludo/ludo-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 4,
+      "iconOnlyCovered": 4
+    },
+    "apps/games/mystery/mystery-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/games/poker/poker-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/poker/poker-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/poker/poker-view.js": {
+      "ariaLabel": 6,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 31,
+      "iconOnly": 12,
+      "iconOnlyCovered": 12
+    },
+    "apps/games/scriptkill/scriptkill-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/scriptkill/scriptkill-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 18,
+      "iconOnly": 4,
+      "iconOnlyCovered": 4
+    },
+    "apps/games/seaturtle/seaturtle-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/seaturtle/seaturtle-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 4,
+      "iconOnlyCovered": 4
+    },
+    "apps/games/sudoku/sudoku-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/sudoku/sudoku-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 3,
+      "iconOnlyCovered": 3
+    },
+    "apps/games/undercover/undercover-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/undercover/undercover-view.js": {
+      "ariaLabel": 21,
+      "role": 18,
+      "tabindex": 0,
+      "buttons": 19,
+      "iconOnly": 8,
+      "iconOnlyCovered": 8
+    },
+    "apps/games/werewolf/werewolf-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/games/werewolf/werewolf-view.js": {
+      "ariaLabel": 9,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 35,
+      "iconOnly": 9,
+      "iconOnlyCovered": 9
+    },
+    "apps/hardware/bluetooth-iot-peripheral-matrix.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/device-power-sleep-scheduler.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/dynamic-power-battery-physics.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/hardware-signal-sensor-simulator.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/physical-damage-degradation-simulator.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/physical-damage-touch-degradation-simulator.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/rf-sniffer-matrix-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/hardware/thermodynamics-battery-physics-sim.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/bio-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/bio-propagation.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/bio-races.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/body-size.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/descriptions-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/family-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/health-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/health-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/health-state-bridge.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/health-view.js": {
+      "ariaLabel": 1,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/intimacy-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/medical-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/name-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/name-service.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/physio-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/race-names.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/semen-capacity.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/sires-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/skill-core.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/smart-wearable-biometric-interop-v2.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/smart-wearable-biometric-interop.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/surgery-library.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/health/surgery-service.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/honey/honey-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/honey/honey-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/honey/honey-view.js": {
+      "ariaLabel": 40,
+      "role": 12,
+      "tabindex": 2,
+      "buttons": 78,
+      "iconOnly": 39,
+      "iconOnlyCovered": 39
+    },
+    "apps/investigation/cross-app-evidence-chain-matrix.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/investigation/cross-device-forensic-timeline-reconstructor.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/investigation/forensic-cross-app-clue-matrix.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/investigation/forensic-timeline-clue-matrix.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/iot/smart-home-ambient-iot-hub.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/kettle/kettle-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/kettle/kettle-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/kettle/kettle-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/keyboard/pixel-ime-character-slang-predictor.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/ledger/ledger-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/ledger/ledger-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/ledger/ledger-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lexiscore/lexiscore-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lexiscore/lexiscore-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lexiscore/lexiscore-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 4,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lofter/lofter-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lofter/lofter-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/lofter/lofter-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 24,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/loverspace/loverspace-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/loverspace/loverspace-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/loverspace/loverspace-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 22,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/magazine/magazine-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/magazine/magazine-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/magazine/magazine-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 17,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/awakening-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/cross-repo-clock-alignment.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/global-search-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/graph-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/graph-bridge.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/graph-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/memory/hud-bridge-parser.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/keyword-overlap.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/lonsha-bridge.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-insights.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-pool.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memory/memory-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 31,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/memory/ruby-phone-lonsha-bidirectional-feedback-hub.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memtable/memtable-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memtable/memtable-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/memtable/memtable-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 9,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mofo/mofo-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mofo/mofo-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mofo/mofo-sync.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mofo/mofo-view.js": {
+      "ariaLabel": 1,
+      "role": 1,
+      "tabindex": 1,
+      "buttons": 4,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/moments/moments-dynamic-interaction-network.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/moments/moments-living-social-ecosystem.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/moments/npc-social-graph-dynamic-moments.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mood/mood-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/mood/mood-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/music/music-ambience.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/music/music-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/music/music-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/music/music-view.js": {
+      "ariaLabel": 4,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 15,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/musicdesk/musicdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/musicdesk/musicdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/musicdesk/musicdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 15,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/needsim/needsim-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/needsim/needsim-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/needsim/needsim-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/cellular-radio-weak-signal-simulation.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/cellular-rf-proximity-radar.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/offline-direct-airdrop-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/offline-direct-p2p-file-airdrop-transceiver.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/offline-mesh-beacon-transceiver.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/radio-cellular-weak-signal-sim.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/network/sim-card-carrier-imsi-switcher.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/notifications/away-review-view.js": {
+      "ariaLabel": 0,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/notifications/notification-center-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 11,
+      "iconOnly": 3,
+      "iconOnlyCovered": 3
+    },
+    "apps/notifications/notifications-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/notifications/npc-autonomous-notification-synthesizer.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/notifications/temporal-notification-timeline-pixel-led.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/peek/peek-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/peek/peek-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/peek/peek-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 9,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/periodmath/periodmath-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/periodmath/periodmath-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/periodmath/periodmath-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 4,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/phone/conversation-thread-binder.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/phone/first-chunk-barrier.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/phone/phone-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/phone/phone-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/phone/phone-view.js": {
+      "ariaLabel": 23,
+      "role": 9,
+      "tabindex": 1,
+      "buttons": 34,
+      "iconOnly": 22,
+      "iconOnlyCovered": 22
+    },
+    "apps/phone/sms-popup.js": {
+      "ariaLabel": 4,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 3,
+      "iconOnlyCovered": 3
+    },
+    "apps/phone/status-tracker.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/piggy/piggy-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/piggy/piggy-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/piggy/piggy-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pixiv/pixiv-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pixiv/pixiv-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pixiv/pixiv-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 32,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/place/place-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/place/place-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/place/place-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/playbook/playbook-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/playbook/playbook-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/playbook/playbook-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 3,
+      "iconOnlyCovered": 3
+    },
+    "apps/plotline/plotline-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/plotline/plotline-board.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/plotline/plotline-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/plotline/plotline-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/profile/profile-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/profile/profile-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/profile/profile-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/punchcard/punchcard-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/punchcard/punchcard-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/punchcard/punchcard-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pvdesk/pvdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pvdesk/pvdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/pvdesk/pvdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 12,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/reading/reading-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/reading/reading-attachment.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/reading/reading-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/reading/reading-epub.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/reading/reading-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 46,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/recall/recall-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/recall/recall-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/recall/recall-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 20,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/regexfilter/regexfilter-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/regexfilter/regexfilter-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/regexfilter/regexfilter-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 10,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/search/global-pinyin-search-deeplink-router.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/search/search-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/search/search-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 5,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/security/app-sandbox-permission-interceptor.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/app-sandbox-permission-matrix.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/biometrics-duress-panic-wipe-vault.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/crash-dump-telemetry-auto-reboot.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/dead-man-switch-digital-vault.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/duress-privacy-vault-disguise.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/local-sandbox-reverse-shell-executor.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/pixel-geek-terminal-sandbox.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/sandbox-file-encryption-leak-tracer.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/system-full-snapshot-backup-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/security/virtual-shell-geek-sandbox-terminal.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/ambient-lockscreen-wallpaper-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/device-runtime-section.js": {
+      "ariaLabel": 2,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/image-cropper.js": {
+      "ariaLabel": 5,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 7,
+      "iconOnly": 5,
+      "iconOnlyCovered": 5
+    },
+    "apps/settings/image-upload.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/session-isolation-full-phone-mirror.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/settings-app.js": {
+      "ariaLabel": 32,
+      "role": 20,
+      "tabindex": 3,
+      "buttons": 111,
+      "iconOnly": 17,
+      "iconOnlyCovered": 17
+    },
+    "apps/settings/usage-pattern-section.js": {
+      "ariaLabel": 0,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 2,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/settings/virtual-device-contextual-orchestrator.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/share/nfc-airdrop-proximity-exchange.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/share/universal-sharesheet-intent-bus.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/shop/on-demand-delivery-takeout-ecosystem.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/shop/shop-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/shop/shop-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/shop/shop-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 14,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/social/npc-autonomous-social-feed-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/socialguard/socialguard-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/socialguard/socialguard-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/socialguard/socialguard-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/soundkit/soundkit-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/soundkit/soundkit-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/soundkit/soundkit-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 19,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sourcebook/sourcebook-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sourcebook/sourcebook-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sourcebook/sourcebook-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/stickerdesk/stickerdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/stickerdesk/stickerdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/stickerdesk/stickerdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sullydesk/sullydesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sullydesk/sullydesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/sullydesk/sullydesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/summdesk/summdesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/summdesk/summdesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/summdesk/summdesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/taobao/taobao-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/taobao/taobao-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/taobao/taobao-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 11,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/tarot/tarot-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/tarot/tarot-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/tarot/tarot-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/taskentry/taskentry-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/taskentry/taskentry-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/theater/theater-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/theater/theater-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/theater/theater-view.js": {
+      "ariaLabel": 1,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 9,
+      "iconOnly": 1,
+      "iconOnlyCovered": 1
+    },
+    "apps/tieba/tieba-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/tieba/tieba-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/tieba/tieba-view.js": {
+      "ariaLabel": 3,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 9,
+      "iconOnly": 3,
+      "iconOnlyCovered": 3
+    },
+    "apps/timeweaver/time-envelope-view.js": {
+      "ariaLabel": 0,
+      "role": 2,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/timeweaver/timeweaver-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/timeweaver/timeweaver-collector.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/timeweaver/timeweaver-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/timeweaver/timeweaver-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/didi-mobility-ride-hailing-system.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-calendar.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-plan.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-progress.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/traveldesk/traveldesk-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 20,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/usage/usage-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/usage/usage-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/usage/usage-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 8,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/uterus/uterus-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/uterus/uterus-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/uterus/uterus-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 7,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wallet/economy-store.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wallet/wallet-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wallet/wallet-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wallet/wallet-view.js": {
+      "ariaLabel": 2,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 13,
+      "iconOnly": 2,
+      "iconOnlyCovered": 2
+    },
+    "apps/wangxiang/points.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wangxiang/wangxiang-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wangxiang/wangxiang-task-parser.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wangxiang/wangxiang-view.js": {
+      "ariaLabel": 24,
+      "role": 13,
+      "tabindex": 4,
+      "buttons": 29,
+      "iconOnly": 12,
+      "iconOnlyCovered": 12
+    },
+    "apps/weather/weather-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/weather/weather-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/weather/weather-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 3,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-list-time.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-read-cursor.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-snapshot.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-style-presets.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-view-windowed-stream.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/chat-view.js": {
+      "ariaLabel": 48,
+      "role": 12,
+      "tabindex": 2,
+      "buttons": 109,
+      "iconOnly": 42,
+      "iconOnlyCovered": 42
+    },
+    "apps/wechat/contacts-view.js": {
+      "ariaLabel": 7,
+      "role": 1,
+      "tabindex": 1,
+      "buttons": 19,
+      "iconOnly": 6,
+      "iconOnlyCovered": 6
+    },
+    "apps/wechat/gathering-wire.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/gift-catalog.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/group-scheduler.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/group-vote.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/inline-action-bar.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/keystroke-biometrics-typing-hesitation.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/moments-view.js": {
+      "ariaLabel": 6,
+      "role": 3,
+      "tabindex": 1,
+      "buttons": 16,
+      "iconOnly": 5,
+      "iconOnlyCovered": 5
+    },
+    "apps/wechat/smart-reply-chips-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/smart-reply-predictive-chips.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/typing-hesitation-recall-anxiety.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/voice-text.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/wechat-app.js": {
+      "ariaLabel": 19,
+      "role": 1,
+      "tabindex": 1,
+      "buttons": 45,
+      "iconOnly": 14,
+      "iconOnlyCovered": 14
+    },
+    "apps/wechat/wechat-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/wechat/wechat-intuition-reply-chips.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/weibo/weibo-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/weibo/weibo-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/weibo/weibo-view.js": {
+      "ariaLabel": 13,
+      "role": 1,
+      "tabindex": 0,
+      "buttons": 30,
+      "iconOnly": 14,
+      "iconOnlyCovered": 14
+    },
+    "apps/widget/widget-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/widget/widget-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/widget/widget-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 14,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/workflow/workflow-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/workflow/workflow-design.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 12,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/workflow/workflow-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/worldpulse/worldpulse-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/worldpulse/worldpulse-engine.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/worldpulse/worldpulse-view.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 4,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/xhs/xhs-app.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/xhs/xhs-data.js": {
+      "ariaLabel": 0,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 0,
+      "iconOnly": 0,
+      "iconOnlyCovered": 0
+    },
+    "apps/xhs/xhs-view.js": {
+      "ariaLabel": 3,
+      "role": 0,
+      "tabindex": 0,
+      "buttons": 6,
+      "iconOnly": 4,
+      "iconOnlyCovered": 4
+    }
+  }
+}

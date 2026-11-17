@@ -68,9 +68,9 @@ export class CharsView {
         const html = [
             '<div class="cs-root">',
             '  <header class="cs-header">',
-            '    <button class="cs-nav" id="cs-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="cs-nav" id="cs-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>群像</h2>',
-            '    <button class="cs-nav" id="cs-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="cs-nav" id="cs-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="cs-body">',
             this._reasonCard(face),

@@ -18,7 +18,7 @@ export class AchievementView {
       <div class="ach-root">
         <header class="ach-header">
           <div class="ach-title-row">
-            <button class="ach-back-btn" id="ach-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+            <button aria-label="返回" class="ach-back-btn" id="ach-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
             <h2 class="ach-title">成就簿</h2>
             <div class="ach-header-spacer"></div>
           </div>

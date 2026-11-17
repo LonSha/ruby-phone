@@ -1584,7 +1584,7 @@ export class MomentsView {
         inputBox.className = 'inline-comment-box';
         inputBox.innerHTML = `
             <input type="text" class="inline-comment-input" placeholder="${replyTo ? `回复 ${replyTo}` : '评论'}" autofocus>
-            <button class="inline-comment-send"><i class="fa-solid fa-paper-plane"></i></button>
+            <button aria-label="发送" class="inline-comment-send"><i class="fa-solid fa-paper-plane"></i></button>
         `;
         interactionsEl.appendChild(inputBox);
 
@@ -2780,7 +2780,7 @@ ${memoryLines.slice(0, 10).join('\n')}
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-post">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-post">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>

@@ -168,23 +168,23 @@ export class ImageCropper {
                     <div class="cropper-hint">拖动图片调整位置，双指缩放</div>
 
                     <div class="cropper-controls">
-                        <button class="cropper-zoom-btn" id="zoom-out">
+                        <button aria-label="缩小" class="cropper-zoom-btn" id="zoom-out">
                             <i class="fa-solid fa-minus"></i>
                         </button>
                         <input type="range" id="zoom-slider" min="50" max="200" value="125" class="cropper-slider">
-                        <button class="cropper-zoom-btn" id="zoom-in">
+                        <button aria-label="放大" class="cropper-zoom-btn" id="zoom-in">
                             <i class="fa-solid fa-plus"></i>
                         </button>
                     </div>
 
                     <div class="cropper-actions">
-                        <button class="cropper-action-btn" id="rotate-left">
+                        <button aria-label="向左旋转" class="cropper-action-btn" id="rotate-left">
                             <i class="fa-solid fa-rotate-left"></i>
                         </button>
-                        <button class="cropper-action-btn" id="reset-btn">
+                        <button aria-label="重置角度" class="cropper-action-btn" id="reset-btn">
                             <i class="fa-solid fa-arrows-rotate"></i>
                         </button>
-                        <button class="cropper-action-btn" id="rotate-right">
+                        <button aria-label="向右旋转" class="cropper-action-btn" id="rotate-right">
                             <i class="fa-solid fa-rotate-right"></i>
                         </button>
                     </div>

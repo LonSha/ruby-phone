@@ -25,7 +25,7 @@ export class XhsView {
     container.innerHTML = `
       <div class="xhs-root">
         <header class="xhs-header">
-          <button class="xhs-back-btn" id="xhs-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+          <button aria-label="返回" class="xhs-back-btn" id="xhs-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
           <div class="xhs-header-tabs">
             <span class="xhs-tab active">发现</span>
             <span class="xhs-tab">关注</span>
@@ -51,7 +51,7 @@ export class XhsView {
           <div class="xhs-drawer-overlay"></div>
           <div class="xhs-drawer-content">
             <div class="xhs-drawer-header">
-              <button class="xhs-drawer-close" id="xhs-compose-close"><i class="fa-solid fa-xmark"></i></button>
+              <button aria-label="关闭" class="xhs-drawer-close" id="xhs-compose-close"><i class="fa-solid fa-xmark"></i></button>
               <h3>发布小红书笔记</h3>
               <button class="xhs-drawer-publish" id="xhs-submit-post">发布</button>
             </div>
@@ -249,7 +249,7 @@ export class XhsView {
             <span class="time">${note.time}</span>
           </div>
         </div>
-        <button class="xhs-detail-close" id="xhs-detail-close"><i class="fa-solid fa-xmark"></i></button>
+        <button aria-label="关闭" class="xhs-detail-close" id="xhs-detail-close"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="xhs-detail-scroll">
         <div class="xhs-detail-cover">

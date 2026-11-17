@@ -1015,9 +1015,9 @@ export class PokerView {
                 <div class="games-share-overlay" id="games-share-overlay">
                     <div class="games-share-dialog games-share-compose">
                         <div class="games-share-header">
-                            <button class="games-share-close" id="games-share-back" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button aria-label="返回" class="games-share-close" id="games-share-back" type="button"><i class="fa-solid fa-chevron-left"></i></button>
                             <span>发送给</span>
-                            <button class="games-share-close" id="games-share-close" type="button"><i class="fa-solid fa-xmark"></i></button>
+                            <button aria-label="关闭" class="games-share-close" id="games-share-close" type="button"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                         <div class="games-share-recipient">
                             <div class="games-share-avatar">${this.app.renderPlayerAvatar({ name: target.name, avatar: target.avatar })}</div>
@@ -1047,7 +1047,7 @@ export class PokerView {
                 <div class="games-share-dialog">
                     <div class="games-share-header">
                         <span>分享到微信</span>
-                        <button class="games-share-close" id="games-share-close" type="button"><i class="fa-solid fa-xmark"></i></button>
+                        <button aria-label="关闭" class="games-share-close" id="games-share-close" type="button"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <div class="games-share-preview">
                         <div class="games-share-card">

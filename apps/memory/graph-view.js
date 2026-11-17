@@ -40,7 +40,7 @@ export class GraphView {
     const html = [
       '<div class="gph-root">',
       '  <header class="gph-header">',
-      '    <button class="gph-back" id="gph-back"><i class="fa-solid fa-chevron-left"></i></button>',
+      '    <button aria-label="返回" class="gph-back" id="gph-back"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2 class="gph-title"><i class="fa-solid fa-diagram-project"></i> 知识图谱</h2>',
       '    <button class="gph-sync" id="gph-sync" title="同步手机记忆到图谱"><i class="fa-solid fa-arrows-rotate"></i></button>',
       '  </header>',

@@ -78,7 +78,7 @@ export class PeekView {
     this.container.innerHTML = [
       '<div class="pk-root">',
       '  <header class="pk-header">',
-      '    <button class="pk-nav" id="pk-home"><i class="fa-solid fa-chevron-left"></i></button>',
+      '    <button aria-label="返回" class="pk-nav" id="pk-home"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2>查手机</h2>',
       '    <label class="pk-inject"><input type="checkbox" id="pk-auto" '
         + (this.app.data.autoInject ? 'checked' : '') + ' /> 注入上下文</label>',

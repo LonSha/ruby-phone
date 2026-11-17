@@ -155,7 +155,7 @@ export class MofoView {
         const html = `
             <div class="mofo-app" style="position:relative; height: 100%; box-sizing: border-box; padding-top: max(34px, env(safe-area-inset-top)); display: flex; flex-direction: column; background: linear-gradient(180deg, #f9fbff 0%, #f3f7ff 100%); color: #1f2f46;">
                 <div style="position:relative; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid #dde5f3; background:#fff; flex-shrink:0;">
-                    <button class="mofo-back-btn app-back-btn" style="width:30px; height:30px; padding:0; box-sizing:border-box; border:1px solid #dce5f5; border-radius:8px; background:#f4f7fe; color:#4b6288; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-chevron-left" style="font-size:12px; line-height:1;"></i></button>
+                    <button aria-label="返回" class="mofo-back-btn app-back-btn" style="width:30px; height:30px; padding:0; box-sizing:border-box; border:1px solid #dce5f5; border-radius:8px; background:#f4f7fe; color:#4b6288; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-chevron-left" style="font-size:12px; line-height:1;"></i></button>
                     <div style="position:absolute; left:50%; transform:translateX(-50%); font-size: 16px; font-weight: 700; letter-spacing: 0.5px; color:#1f2f46;">魔坊</div>
                     <div style="width:30px; height:30px;"></div>
                 </div>

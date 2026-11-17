@@ -2941,7 +2941,7 @@ renderChatRoom(chat) {
                     ${this.showQuickReplies ? this.renderQuickReplyPanel() : ''}
 
                     <!-- 引用预览栏 - 仿真实微信浅灰条 -->
-                    ${this.activeQuote ? `<div class="active-quote-bar" style="padding: 2px 8px; background: rgba(0,0,0,0.05); font-size: 10px; color: #888; display: flex; justify-content: space-between; align-items: center; line-height: 1.2;"><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${this._escapeHtml(this.activeQuote.sender)}: ${this._escapeHtml(this.activeQuote.content.length > 20 ? this.activeQuote.content.substring(0, 20) + '...' : this.activeQuote.content)}</div><button id="cancel-quote-btn" style="background: none; border: none; color: #aaa; cursor: pointer; padding: 0 4px; font-size: 10px; line-height: 1;"><i class="fa-solid fa-xmark"></i></button></div>` : ''}
+                    ${this.activeQuote ? `<div class="active-quote-bar" style="padding: 2px 8px; background: rgba(0,0,0,0.05); font-size: 10px; color: #888; display: flex; justify-content: space-between; align-items: center; line-height: 1.2;"><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${this._escapeHtml(this.activeQuote.sender)}: ${this._escapeHtml(this.activeQuote.content.length > 20 ? this.activeQuote.content.substring(0, 20) + '...' : this.activeQuote.content)}</div><button aria-label="关闭" id="cancel-quote-btn" style="background: none; border: none; color: #aaa; cursor: pointer; padding: 0 4px; font-size: 10px; line-height: 1;"><i class="fa-solid fa-xmark"></i></button></div>` : ''}
 
                     <!-- 输入行 -->
                     <div class="chat-input-bar" style="display: flex; align-items: center; justify-content: space-between; ${inputBarStyle}">
@@ -9614,7 +9614,7 @@ renderChatRoom(chat) {
                         <div style="font-size:14px; color:#111; font-weight:700; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</div>
                         ${timeText ? `<div style="font-size:10px; color:#999; margin-top:3px;">${timeText}</div>` : ''}
                     </div>
-                    <button id="wechat-poker-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
+                    <button aria-label="关闭" id="wechat-poker-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -9684,7 +9684,7 @@ renderChatRoom(chat) {
                         <div style="font-size:14px; color:#111; font-weight:700; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</div>
                         <div style="font-size:10px; color:#999; margin-top:3px;">${result}${timeText ? ` · ${timeText}` : ''}</div>
                     </div>
-                    <button id="wechat-werewolf-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
+                    <button aria-label="关闭" id="wechat-werewolf-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -9790,7 +9790,7 @@ renderChatRoom(chat) {
                         <div style="font-size:14px; color:#111; font-weight:700; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</div>
                         <div style="font-size:10px; color:#999; margin-top:3px;">${result}${timeText ? ` · ${timeText}` : ''}</div>
                     </div>
-                    <button id="wechat-undercover-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
+                    <button aria-label="关闭" id="wechat-undercover-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1; flex:0 0 auto;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -9935,7 +9935,7 @@ renderChatRoom(chat) {
             ">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                     <div style="font-size:13px; color:#111;">微博分享</div>
-                    <button id="wechat-weibo-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1;">
+                    <button aria-label="关闭" id="wechat-weibo-preview-close" style="border:none; background:none; color:#999; font-size:14px; cursor:pointer; line-height:1;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -14195,7 +14195,7 @@ renderChatRoom(chat) {
         <div class="wechat-app">
             <!-- 顶部灰色区域 -->
             <div style="background: #ededed; padding: 34px 12px 14px 12px;">
-                <button class="wechat-back-btn" id="back-from-transfer" style="color:#000; background:none; border:none; font-size:14px; cursor:pointer; padding:0; margin-bottom:12px;">
+                <button aria-label="返回" class="wechat-back-btn" id="back-from-transfer" style="color:#000; background:none; border:none; font-size:14px; cursor:pointer; padding:0; margin-bottom:12px;">
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
                 <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -14513,7 +14513,7 @@ renderChatRoom(chat) {
             <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-menu">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-menu">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -14707,7 +14707,7 @@ renderChatRoom(chat) {
             <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-bg">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-bg">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -15446,7 +15446,7 @@ renderChatRoom(chat) {
                         <div style="font-size:13px; color:#222; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${this._escapeHtml(title)}
                         </div>
-                        <button id="wechat-call-transcript-close" style="
+                        <button aria-label="关闭" id="wechat-call-transcript-close" style="
                             border:none; background:transparent; color:#666;
                             width:28px; height:28px; border-radius:6px; cursor:pointer;
                             display:flex; align-items:center; justify-content:center;
@@ -15875,7 +15875,7 @@ renderChatRoom(chat) {
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-delete">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-delete">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -16050,7 +16050,7 @@ renderChatRoom(chat) {
             <div class="wechat-header" style="background: rgba(255,255,255,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.3);">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #333;">${isGroupCall ? '群视频通话' : '视频通话'}</div>
                 <div class="wechat-header-right"></div>
@@ -16081,7 +16081,7 @@ renderChatRoom(chat) {
                     ${isGroupCall ? '正在呼叫群成员...' : '正在呼叫...'}
                 </div>
 
-                <button id="cancel-call-btn" style="
+                <button aria-label="挂断" id="cancel-call-btn" style="
                     width: 65px;
                     height: 65px;
                     border-radius: 50%;
@@ -16224,7 +16224,7 @@ renderChatRoom(chat) {
             <div class="wechat-header" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.2);">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
                     <span class="wechat-header-title-text">${contact.name}${isGroupCall ? '<span style="font-size:11px; margin-left:4px; opacity:0.88;">(群视频)</span>' : ''}<span class="status-dot dot-green" id="video-call-status-dot"></span></span>
@@ -16302,7 +16302,7 @@ renderChatRoom(chat) {
                 <!-- 底部：输入框和控制按钮 -->
                 <div style="background: rgba(255,255,255,0.24); padding: 10px; flex-shrink: 0; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.16);">
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <button id="video-hangup-btn" style="
+                        <button aria-label="挂断" id="video-hangup-btn" style="
                             width: 30px;
                             height: 30px;
                             border-radius: 50%;
@@ -17089,7 +17089,7 @@ ${groupParticipants.join('、') || '暂无成员'}
             <div class="wechat-header" style="background: rgba(255,255,255,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.3);">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #333;">${isGroupCall ? '群语音来电' : '语音来电'}</div>
                 <div class="wechat-header-right"></div>
@@ -17120,7 +17120,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 36px;">
-                    <button id="incoming-call-reject-btn" style="
+                    <button aria-label="挂断" id="incoming-call-reject-btn" style="
                         width: 56px;
                         height: 56px;
                         border-radius: 50%;
@@ -17131,7 +17131,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                         cursor: pointer;
                         box-shadow: 0 4px 16px rgba(255, 59, 48, 0.35);
                     "><i class="fa-solid fa-phone-slash"></i></button>
-                    <button id="incoming-call-answer-btn" style="
+                    <button aria-label="拨打" id="incoming-call-answer-btn" style="
                         width: 56px;
                         height: 56px;
                         border-radius: 50%;
@@ -17223,7 +17223,7 @@ ${groupParticipants.join('、') || '暂无成员'}
             <div class="wechat-header" style="background: rgba(255,255,255,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.3);">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #333;">${isGroupCall ? '群视频来电' : '视频来电'}</div>
                 <div class="wechat-header-right"></div>
@@ -17254,7 +17254,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 36px;">
-                    <button id="incoming-call-reject-btn" style="
+                    <button aria-label="挂断" id="incoming-call-reject-btn" style="
                         width: 56px;
                         height: 56px;
                         border-radius: 50%;
@@ -17265,7 +17265,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                         cursor: pointer;
                         box-shadow: 0 4px 16px rgba(255, 59, 48, 0.35);
                     "><i class="fa-solid fa-phone-slash"></i></button>
-                    <button id="incoming-call-answer-btn" style="
+                    <button aria-label="拨打" id="incoming-call-answer-btn" style="
                         width: 56px;
                         height: 56px;
                         border-radius: 50%;
@@ -17368,7 +17368,7 @@ ${groupParticipants.join('、') || '暂无成员'}
             <div class="wechat-header" style="background: rgba(255,255,255,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.3);">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #333;">${isGroupCall ? '群语音通话' : '语音通话'}</div>
                 <div class="wechat-header-right"></div>
@@ -17399,7 +17399,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                     ${isGroupCall ? '正在呼叫群成员...' : '正在呼叫...'}
                 </div>
 
-                <button id="cancel-call-btn" style="
+                <button aria-label="挂断" id="cancel-call-btn" style="
                     width: 50px;
                     height: 50px;
                     border-radius: 50%;
@@ -17619,7 +17619,7 @@ ${callTranscript}`;
             <div class="wechat-header" style="background: rgba(255,255,255,0.4); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">
                 <div class="wechat-header-left">
                     <!-- 隐藏的返回按钮，用于接管并拦截右滑手势，防止路由迷失直接退回桌面 -->
-                    <button class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
+                    <button aria-label="返回" class="wechat-back-btn" id="overlay-hidden-back" style="display:none;"></button>
                 </div>
                 <div class="wechat-header-title" style="color: #333;">
                     <span class="wechat-header-title-text">${contact.name}${isGroupCall ? '<span style="font-size:11px; margin-left:4px; opacity:0.78;">(群语音)</span>' : ''}<span class="status-dot dot-green" id="voice-call-status-dot"></span></span>
@@ -17691,7 +17691,7 @@ ${callTranscript}`;
                             -webkit-touch-callout: default;
                             touch-action: auto;
                         ">
-                        <button id="voice-send-btn" style="
+                        <button aria-label="发送" id="voice-send-btn" style="
                             width: 32px;
                             height: 32px;
                             background: transparent;
@@ -17706,7 +17706,7 @@ ${callTranscript}`;
                         ">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
-                        <button id="voice-hangup-btn" style="
+                        <button aria-label="挂断" id="voice-hangup-btn" style="
                             width: 32px;
                             height: 32px;
                             background: transparent;
@@ -18279,13 +18279,13 @@ ${callTranscript}`;
         <div class="wechat-app">
             <div class="wechat-header" style="background: #f7f7f7;">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-redpacket" style="color: #000;">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-redpacket" style="color: #000;">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
                 <div class="wechat-header-title" style="font-size:14px;">发红包</div>
                 <div class="wechat-header-right">
-                    <button class="wechat-header-btn" style="font-size: 12px; color: #666;">
+                    <button aria-label="更多" class="wechat-header-btn" style="font-size: 12px; color: #666;">
                         <i class="fa-solid fa-ellipsis"></i>
                     </button>
                 </div>
@@ -18518,7 +18518,7 @@ ${callTranscript}`;
         <div class="wechat-app">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-add-emoji">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-add-emoji">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -18987,7 +18987,7 @@ ${callTranscript}`;
                 ">
                     <!-- 顶部红色弧形 -->
                     <div style="background: #e75a46; height: 60px; border-radius: 0 0 50% 50% / 0 0 20px 20px; position: relative;">
-                        <button class="wechat-back-btn" id="back-from-rp-detail" style="position:absolute; top:30px; right:12px; background:none; border:none; color:#fff; font-size:14px; cursor:pointer;">
+                        <button aria-label="关闭" class="wechat-back-btn" id="back-from-rp-detail" style="position:absolute; top:30px; right:12px; background:none; border:none; color:#fff; font-size:14px; cursor:pointer;">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -19156,7 +19156,7 @@ ${callTranscript}`;
                     <!-- 顶部返回 -->
                     <div style="padding: 34px 12px 0;">
                         <div class="wechat-header-title" style="display:none;">转账详情</div>
-                        <button class="wechat-back-btn" id="back-from-transfer-detail" style="background:none; border:none; color:#000; font-size:14px; cursor:pointer; padding:0;">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-transfer-detail" style="background:none; border:none; color:#000; font-size:14px; cursor:pointer; padding:0;">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -19222,7 +19222,7 @@ ${callTranscript}`;
         <div class="wechat-app">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-group-settings">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-group-settings">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -19290,7 +19290,7 @@ ${callTranscript}`;
                                         margin: 0 auto 4px;
                                     ">${this.app.renderAvatar(avatar, '👤', member)}</div>
                                     <div style="font-size: 10px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${memberLabel}</div>
-                                    <button class="remove-member-btn" data-member="${memberToken}" style="
+                                    <button aria-label="缩小" class="remove-member-btn" data-member="${memberToken}" style="
                                         position: absolute;
                                         top: -4px;
                                         right: 0;
@@ -19487,7 +19487,7 @@ ${callTranscript}`;
         <div class="wechat-app">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-add-member">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-add-member">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>

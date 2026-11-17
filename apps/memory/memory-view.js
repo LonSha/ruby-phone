@@ -1226,7 +1226,7 @@ export class MemoryView {
     const html = [
       '<div class="mem-root">',
       '  <header class="mem-header">',
-      '    <button class="mem-back" id="mem-back"><i class="fa-solid fa-chevron-left"></i></button>',
+      '    <button aria-label="返回" class="mem-back" id="mem-back"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2 class="mem-title"><i class="fa-solid fa-brain"></i> 记忆</h2>',
       '    <button class="mem-sleep" id="mem-sleep" title="立即巩固"><i class="fa-solid fa-moon"></i></button>',
       '  </header>',

@@ -54,9 +54,9 @@ export class PlaceView {
         const html = [
             '<div class="pl-root">',
             '  <header class="pl-header">',
-            '    <button class="pl-nav" id="pl-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="pl-nav" id="pl-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>地点图景</h2>',
-            '    <button class="pl-nav" id="pl-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="pl-nav" id="pl-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="pl-body">',
             this._reasonCard(face),

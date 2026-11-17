@@ -49,9 +49,9 @@ export class PlotlineView {
         const html = [
             '<div class="pn-root">',
             '  <header class="pn-header">',
-            '    <button class="pn-nav" id="pn-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="pn-nav" id="pn-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>剧情线</h2>',
-            '    <button class="pn-nav" id="pn-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="pn-nav" id="pn-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="pn-body">',
             this._reasonCard(face),

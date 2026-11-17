@@ -32,7 +32,7 @@ export class TheaterView {
     this.container.innerHTML = [
       '<div class="th-root">',
       '  <header class="th-header">',
-      '    <button class="th-nav" id="th-home"><i class="fa-solid fa-chevron-left"></i></button>',
+      '    <button aria-label="返回" class="th-nav" id="th-home"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2>小剧场</h2>',
       '  </header>',
       '  <div class="th-form">',

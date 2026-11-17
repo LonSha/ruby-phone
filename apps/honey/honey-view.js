@@ -533,7 +533,7 @@ export class HoneyView {
             <div class="honey-app honey-page-recommend has-theme-background">
                 ${backgroundHtml}
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title honey-brand-title">
                         <img class="honey-brand-logo" src="${this._escapeHtml(this._getHoneyAssetUrl('honey.png'))}" alt="蜜语">
                     </div>
@@ -1517,7 +1517,7 @@ export class HoneyView {
             <div class="honey-app honey-page-live has-theme-background is-scene-collapsed ${isUserLive ? 'is-user-live' : ''} ${this.isScenePanelOpen ? 'is-scene-modal-open' : ''}">
                 ${this._buildHoneyThemeBackgroundHtml()}
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title honey-meta-title honey-nav-title-live" id="honey-ui-title-top-wrap">
                         <span class="honey-meta-title-track" id="honey-ui-title-top-track">
                             <span class="honey-meta-title-text" id="honey-ui-title-top">${this._escapeHtml(liveTitleDisplayText || '直播间')}</span>
@@ -2855,7 +2855,7 @@ export class HoneyView {
             <div class="honey-app honey-page-follow has-theme-background">
                 ${this._buildHoneyThemeBackgroundHtml()}
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title honey-brand-title">
                         <img class="honey-brand-logo" src="${this._escapeHtml(this._getHoneyAssetUrl('honey.png'))}" alt="蜜语">
                     </div>
@@ -2943,7 +2943,7 @@ export class HoneyView {
                 ${this._buildHoneyThemeBackgroundHtml()}
                 <!-- 顶部导航栏（严格复用原有类名，保证不被挤压） -->
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back-from-history"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back-from-history"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title" style="font-size: 14px;">${this._escapeHtml(hostName)} 的记录</div>
                     <button class="honey-icon-btn" id="honey-history-summary-btn" title="总结记录" aria-label="总结记录"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                 </div>
@@ -3104,7 +3104,7 @@ export class HoneyView {
             <div class="honey-app honey-page-mine has-theme-background">
                 ${this._buildHoneyThemeBackgroundHtml()}
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title honey-brand-title">
                         <img class="honey-brand-logo" src="${this._escapeHtml(this._getHoneyAssetUrl('honey.png'))}" alt="蜜语">
                     </div>
@@ -3201,7 +3201,7 @@ export class HoneyView {
             <div class="honey-app honey-page-settings has-theme-background">
                 ${this._buildHoneyThemeBackgroundHtml(themeMedia)}
                 <div class="honey-nav">
-                    <button class="honey-back-btn" id="honey-back-from-settings"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button aria-label="返回" class="honey-back-btn" id="honey-back-from-settings"><i class="fa-solid fa-chevron-left"></i></button>
                     <div class="honey-nav-title honey-brand-title">
                         <img class="honey-brand-logo" src="${this._escapeHtml(this._getHoneyAssetUrl('honey.png'))}" alt="蜜语">
                     </div>
@@ -3466,7 +3466,7 @@ export class HoneyView {
             html += `
             <div class="honey-custom-video-item">
                 <span class="honey-custom-video-name"><i class="fa-regular fa-file-video honey-custom-video-icon"></i>${safeFilename}</span>
-                <button class="honey-delete-custom-video-btn" data-url="${safeUrlAttr}"><i class="fa-solid fa-trash-can"></i></button>
+                <button aria-label="删除" class="honey-delete-custom-video-btn" data-url="${safeUrlAttr}"><i class="fa-solid fa-trash-can"></i></button>
             </div>
         `;
         });

@@ -1649,7 +1649,7 @@ export class PhoneCallView {
         const html = `
             <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
                 <div class="phone-call-main-header">
-                    <button class="phone-call-settings-btn" id="phone-call-contacts-back">
+                    <button aria-label="返回" class="phone-call-settings-btn" id="phone-call-contacts-back">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                     <div class="phone-call-main-title">${this.contactSelectionMode ? `已选 ${this.selectedContactIds.size}` : '电话联系人'}</div>
@@ -1845,7 +1845,7 @@ export class PhoneCallView {
                 <div class="phone-call-incoming-name">${this._escapeHtml(safeName)}</div>
                 <div class="phone-call-incoming-status" id="phone-call-dialing-status">正在拨号<span class="phone-call-typing-dots"></span></div>
                 <div class="phone-call-incoming-btns">
-                    <button class="phone-call-btn phone-call-btn-reject" id="phone-call-dial-cancel">
+                    <button aria-label="拒接" class="phone-call-btn phone-call-btn-reject" id="phone-call-dial-cancel">
                         <i class="fa-solid fa-phone-slash"></i>
                     </button>
                 </div>
@@ -1942,7 +1942,7 @@ export class PhoneCallView {
         const html = `
             <div class="phone-call-transcript">
                 <div class="phone-call-transcript-header">
-                    <button class="phone-call-transcript-back" id="phone-call-transcript-back">
+                    <button aria-label="返回" class="phone-call-transcript-back" id="phone-call-transcript-back">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                     <div class="phone-call-transcript-title">${this._escapeHtml(record.caller || '未知')}</div>
@@ -2011,7 +2011,7 @@ export class PhoneCallView {
         const html = `
             <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
                 <div class="phone-call-settings-header">
-                    <button class="phone-call-settings-back" id="phone-call-settings-back">
+                    <button aria-label="返回" class="phone-call-settings-back" id="phone-call-settings-back">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                     <div class="phone-call-settings-title">通话设置</div>
@@ -2282,10 +2282,10 @@ export class PhoneCallView {
                 <div class="phone-call-incoming-status">来电<span class="phone-call-typing-dots"></span></div>
                 ${this._renderEscalationReason()}
                 <div class="phone-call-incoming-btns">
-                    <button class="phone-call-btn phone-call-btn-reject" id="phone-call-reject">
+                    <button aria-label="拒接" class="phone-call-btn phone-call-btn-reject" id="phone-call-reject">
                         <i class="fa-solid fa-phone-slash"></i>
                     </button>
-                    <button class="phone-call-btn phone-call-btn-accept" id="phone-call-accept">
+                    <button aria-label="接听" class="phone-call-btn phone-call-btn-accept" id="phone-call-accept">
                         <i class="fa-solid fa-phone"></i>
                     </button>
                 </div>
@@ -2345,10 +2345,10 @@ export class PhoneCallView {
                     <button class="phone-call-regen-btn" id="phone-call-regen" title="重新生成" style="display:none; color: rgba(255,255,255,0.7);">
                         <i class="fa-solid fa-rotate-right" style="color: inherit;"></i>
                     </button>
-                    <button class="phone-call-send-btn" id="phone-call-send" style="color: #34c759;"${isOutgoingCall ? ' disabled aria-disabled="true"' : ''}>
+                    <button aria-label="发送" class="phone-call-send-btn" id="phone-call-send" style="color: #34c759;"${isOutgoingCall ? ' disabled aria-disabled="true"' : ''}>
                         <i class="fa-solid fa-paper-plane" style="color: inherit;"></i>
                     </button>
-                    <button class="phone-call-hangup-btn" id="phone-call-hangup" style="color: #ff3b30;">
+                    <button aria-label="挂断" class="phone-call-hangup-btn" id="phone-call-hangup" style="color: #ff3b30;">
                         <i class="fa-solid fa-phone-slash" style="color: inherit;"></i>
                     </button>
                 </div>

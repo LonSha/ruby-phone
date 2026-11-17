@@ -40,9 +40,9 @@ export class WalletView {
         const html = [
             '<div class="wl-root">',
             '  <header class="wl-header">',
-            '    <button class="wl-nav" id="wl-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="wl-nav" id="wl-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>钱袋</h2>',
-            '    <button class="wl-nav" id="wl-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="wl-nav" id="wl-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="wl-body">',
             this._reasonCard(face),

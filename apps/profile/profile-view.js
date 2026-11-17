@@ -42,9 +42,9 @@ export class ProfileView {
         const html = [
             '<div class="pf-root">',
             '  <header class="pf-header">',
-            '    <button class="pf-nav" id="pf-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="pf-nav" id="pf-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>档案</h2>',
-            '    <button class="pf-nav" id="pf-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="pf-nav" id="pf-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="pf-body">',
             this._reasonCard(face),

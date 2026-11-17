@@ -14,7 +14,7 @@ export class TiebaView {
     container.innerHTML = `
       <div class="tb-root">
         <header class="tb-header">
-          <button class="tb-back-btn" id="tb-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+          <button aria-label="返回" class="tb-back-btn" id="tb-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
           <div class="tb-header-title">百度贴吧</div>
           <button class="tb-post-trigger" id="tb-post-open-btn"><i class="fa-solid fa-pen-to-square"></i> 发帖</button>
         </header>
@@ -44,7 +44,7 @@ export class TiebaView {
           <div class="tb-compose-overlay"></div>
           <div class="tb-compose-card">
             <div class="tb-compose-head">
-              <button class="tb-compose-close" id="tb-compose-close"><i class="fa-solid fa-xmark"></i></button>
+              <button aria-label="关闭" class="tb-compose-close" id="tb-compose-close"><i class="fa-solid fa-xmark"></i></button>
               <h3>发布新帖</h3>
               <button class="tb-compose-submit" id="tb-compose-submit">发布</button>
             </div>
@@ -108,7 +108,7 @@ export class TiebaView {
 
     card.innerHTML = `
       <div class="tb-detail-header">
-        <button class="tb-detail-back" id="tb-detail-back"><i class="fa-solid fa-chevron-left"></i></button>
+        <button aria-label="返回" class="tb-detail-back" id="tb-detail-back"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="tb-detail-barname">${post.barName}</div>
         <button class="tb-detail-like-btn ${post.isLiked ? 'liked' : ''}" id="tb-detail-like-btn">
           <i class="fa-solid fa-thumbs-up"></i> ${post.likes}

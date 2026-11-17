@@ -44,9 +44,9 @@ export class AssetView {
         const html = [
             '<div class="as-root">',
             '  <header class="as-header">',
-            '    <button class="as-nav" id="as-home"><i class="fa-solid fa-chevron-left"></i></button>',
+            '    <button aria-label="返回" class="as-nav" id="as-home"><i class="fa-solid fa-chevron-left"></i></button>',
             '    <h2>' + this._esc(tw(T, 'assetTab')) + '</h2>',
-            '    <button class="as-nav" id="as-refresh"><i class="fa-solid fa-rotate"></i></button>',
+            '    <button aria-label="刷新" class="as-nav" id="as-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="as-body">',
             this._reasonCard(face, T, pkg),

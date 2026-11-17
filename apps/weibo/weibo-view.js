@@ -163,7 +163,7 @@ export class WeiboView {
                 <!-- 顶部导航栏 -->
                 <div class="weibo-nav-bar">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-home-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-home-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -172,7 +172,7 @@ export class WeiboView {
                         <button class="weibo-nav-btn" id="weibo-search-toggle-btn" title="搜索微博">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </button>
-                        <button class="weibo-nav-btn" id="weibo-settings-btn">
+                        <button aria-label="设置" class="weibo-nav-btn" id="weibo-settings-btn">
                             <i class="fa-solid fa-gear"></i>
                         </button>
                     </div>
@@ -618,13 +618,13 @@ export class WeiboView {
                 <!-- 顶部导航栏 -->
                 <div class="weibo-nav-bar">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-detail-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-detail-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
                     <div class="weibo-nav-title" style="font-size: 14px;">${title.length > 12 ? title.substring(0, 12) + '...' : title}</div>
                     <div class="weibo-nav-right">
-                        <button class="weibo-nav-btn" id="weibo-hot-settings-btn">
+                        <button aria-label="设置" class="weibo-nav-btn" id="weibo-hot-settings-btn">
                             <i class="fa-solid fa-gear"></i>
                         </button>
                     </div>
@@ -732,7 +732,7 @@ export class WeiboView {
                 <!-- 导航栏（固定） -->
                 <div class="weibo-nav-bar" style="position: relative; flex-shrink: 0;">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-detail-page-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-detail-page-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -942,7 +942,7 @@ export class WeiboView {
             <div class="weibo-app weibo-subpage">
                 <div class="weibo-nav-bar">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-hot-settings-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-hot-settings-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1037,7 +1037,7 @@ export class WeiboView {
             <div class="weibo-app weibo-subpage">
                 <div class="weibo-nav-bar">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-settings-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-settings-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1301,7 +1301,7 @@ export class WeiboView {
             <div class="weibo-app">
                 <div class="weibo-nav-bar">
                     <div class="weibo-nav-left">
-                        <button class="weibo-back-btn" id="weibo-post-back">
+                        <button aria-label="返回" class="weibo-back-btn" id="weibo-post-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1682,7 +1682,7 @@ export class WeiboView {
             <div class="weibo-forward-dialog">
                 <div class="weibo-forward-header">
                     <span>转发到微信</span>
-                    <button class="weibo-forward-close" id="weibo-forward-close">
+                    <button aria-label="关闭" class="weibo-forward-close" id="weibo-forward-close">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -1726,11 +1726,11 @@ export class WeiboView {
             overlay.innerHTML = `
                 <div class="weibo-forward-dialog weibo-forward-dialog-compose">
                     <div class="weibo-forward-header">
-                        <button class="weibo-forward-close" id="weibo-forward-back">
+                        <button aria-label="返回" class="weibo-forward-close" id="weibo-forward-back">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                         <span>发送给</span>
-                        <button class="weibo-forward-close" id="weibo-forward-close-2">
+                        <button aria-label="关闭" class="weibo-forward-close" id="weibo-forward-close-2">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -1867,7 +1867,7 @@ export class WeiboView {
         inputBox.className = 'weibo-inline-comment-box';
         inputBox.innerHTML = `
             <input type="text" class="weibo-comment-input" placeholder="${replyTo ? `回复 ${replyTo}` : '写评论...'}" autofocus>
-            <button class="weibo-comment-send"><i class="fa-solid fa-paper-plane weibo-send-plane-icon"></i></button>
+            <button aria-label="发送" class="weibo-comment-send"><i class="fa-solid fa-paper-plane weibo-send-plane-icon"></i></button>
         `;
         postEl.appendChild(inputBox);
 

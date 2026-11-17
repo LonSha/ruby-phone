@@ -4693,7 +4693,7 @@ export class WechatApp {
         <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-editor">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-editor">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -4979,7 +4979,7 @@ export class WechatApp {
 
         const getHeaderRight = () => {
             if (this.currentChat) {
-                return `<button class="wechat-header-btn" id="chat-info">
+                return `<button aria-label="更多" class="wechat-header-btn" id="chat-info">
                     <i class="fa-solid fa-ellipsis"></i>
                 </button>`;
             }
@@ -4990,10 +4990,10 @@ export class WechatApp {
                     </button>`;
             }
             return `
-                <button class="wechat-header-btn" id="wechat-search">
+                <button aria-label="搜索" class="wechat-header-btn" id="wechat-search">
                     <i class="fa-solid fa-search"></i>
                 </button>
-                <button class="wechat-header-btn" id="wechat-add">
+                <button aria-label="放大" class="wechat-header-btn" id="wechat-add">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             `;
@@ -6810,7 +6810,7 @@ export class WechatApp {
         <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-profile-edit">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-profile-edit">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -7097,7 +7097,7 @@ export class WechatApp {
         <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-settings">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-settings">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -8043,7 +8043,7 @@ export class WechatApp {
             <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-avatar-manager">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-avatar-manager">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -8219,7 +8219,7 @@ export class WechatApp {
         <div class="${shellBg.appClass}" style="${shellBg.appStyle}">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-load">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-load">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>
@@ -8362,7 +8362,7 @@ export class WechatApp {
         <div class="wechat-app">
             <div class="wechat-header">
                 <div class="wechat-header-left">
-                    <button class="wechat-back-btn" id="back-from-clear">
+                    <button aria-label="返回" class="wechat-back-btn" id="back-from-clear">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                 </div>

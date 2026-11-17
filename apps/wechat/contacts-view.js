@@ -470,7 +470,7 @@ export class ContactsView {
             <div class="${shellBg.appClass || 'wechat-app'}" style="${shellBg.appStyle || ''}">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-edit-group-member"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-edit-group-member"><i class="fa-solid fa-chevron-left"></i></button>
                     </div>
                     <div class="wechat-header-title">编辑群成员</div>
                     <div class="wechat-header-right"></div>
@@ -620,7 +620,7 @@ export class ContactsView {
             <div class="${shellBg.appClass || 'wechat-app'}" style="${shellBg.appStyle || ''}">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-edit-contact">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-edit-contact">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1262,7 +1262,7 @@ export class ContactsView {
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-delete-contact">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-delete-contact">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1435,7 +1435,7 @@ export class ContactsView {
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-add-friend">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-add-friend">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1667,7 +1667,7 @@ export class ContactsView {
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-create-group">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-create-group">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
@@ -1843,7 +1843,7 @@ export class ContactsView {
             <div class="wechat-app">
                 <div class="wechat-header">
                     <div class="wechat-header-left">
-                        <button class="wechat-back-btn" id="back-from-group-name">
+                        <button aria-label="返回" class="wechat-back-btn" id="back-from-group-name">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>

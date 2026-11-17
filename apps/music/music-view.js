@@ -172,7 +172,7 @@ export class MusicView {
                 <div class="music-settings">
                     <div class="music-settings-header">
                         <div class="music-settings-header-left">
-                            <button class="music-back-btn" id="music-settings-back">
+                            <button aria-label="返回" class="music-back-btn" id="music-settings-back">
                                 <i class="fa-solid fa-chevron-left"></i>
                             </button>
                         </div>

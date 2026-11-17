@@ -16,7 +16,7 @@ export class PlaybookView {
       <div class="playbook-root">
         <header class="playbook-header">
           <div class="playbook-title-row">
-            <button class="playbook-back-btn" id="pb-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+            <button aria-label="返回" class="playbook-back-btn" id="pb-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
             <h2 class="playbook-title">灵感工坊</h2>
             <div class="playbook-header-action">
               <button class="playbook-icon-btn" id="pb-info-btn" title="玩法说明"><i class="fa-solid fa-circle-question"></i></button>
@@ -26,7 +26,7 @@ export class PlaybookView {
             <div class="playbook-search-box">
               <i class="fa-solid fa-magnifying-glass"></i>
               <input type="text" id="pb-search-input" placeholder="搜索 458 种玩法、体位、调教姿势..." value="${this.searchKeyword}" />
-              ${this.searchKeyword ? '<button class="pb-clear-search" id="pb-clear-search"><i class="fa-solid fa-xmark"></i></button>' : ''}
+              ${this.searchKeyword ? '<button aria-label="关闭" class="pb-clear-search" id="pb-clear-search"><i class="fa-solid fa-xmark"></i></button>' : ''}
             </div>
           </div>
           <nav class="playbook-cat-nav" id="pb-cat-nav">
