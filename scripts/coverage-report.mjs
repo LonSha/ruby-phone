@@ -57,6 +57,7 @@ import {
     buildAppStats,
     judgeNoRegression,
     zeroTestDirs,
+    coverageCollectionBroken,
     renderDebtSection,
     spliceDebtSection
 } from './lib/coverage-debt.mjs';
@@ -207,6 +208,15 @@ function selfCheck() {
     } else {
         console.log('[coverage] 账本 v' + base.version + '（量于 ' + base.measured_at + '）· app 目录 ' +
             Object.keys(base.dirs || {}).length + ' 个 · 零测试目录 ' + zeros.length + ' 个');
+        /* R23-O4：读数年龄要说出来。旧账本被引用成「现状」是本仓踩过的坑（R23-O1 已修过一轮），
+         * 所以这里把「量于哪天、距今几天」打在每次自检的第一屏；超过 90 天只提示不判红
+         * ——判红会变成恒红噪声门（本环境全量覆盖跑不起来，永远刷不了）。 */
+        if (base.measured_at) {
+            const age = Math.floor((Date.now() - new Date(base.measured_at + 'T00:00:00Z').getTime()) / 86400000);
+            if (Number.isFinite(age) && age >= 0) {
+                console.log('[coverage] 读数年龄 ' + age + ' 天' + (age > 90 ? '（>90 天：请找能跑全量的环境执行 --write 重测；本档不判红，但不得把旧账本当现状）' : ''));
+            }
+        }
         if (!problems.length) {
             console.log('[coverage] v 覆盖率账本结构自检通过（账本与磁盘同源、TODO 段同源、两条诚实边界都在）');
             console.log('[coverage] 说明：本档**不判覆盖率高低**，真量对账走 `node scripts/coverage-report.mjs --verify`。');
@@ -264,6 +274,17 @@ function main() {
 
     const totalZero = live.appDirs.reduce((a, d) => a + live.dirs[d].zero_test_files, 0);
     const totalFiles = live.appDirs.reduce((a, d) => a + live.dirs[d].files_on_disk, 0);
+
+    /* R23-O4：坏采集守卫 —— 必须在 --write 与判决之前。
+     * 现场证据：本环境真跑一次全量覆盖，spec 表里 441 个文件条条「一行都没覆盖」，
+     * 若不拦，--verify 会报「101 个目录全退步 100pp」（假退步），--write 会把 0% 写成新基线（假基线）。 */
+    const collection = coverageCollectionBroken({ totalFiles, totalZero });
+    if (collection.broken) {
+        console.error('[coverage] 拒判：' + collection.reason);
+        console.error('[coverage] 说明：这是「测量坏了」不是「覆盖率 0」；既不写基线、也不判退步。');
+        console.error('[coverage] 复现：node --test --experimental-test-coverage --test-reporter=spec（本环境全量跑会中途崩）');
+        return 2;
+    }
 
     if (WRITE) {
         const pkg = readJson('package.json');

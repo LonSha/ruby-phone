@@ -14,6 +14,7 @@
 > · R22 优化九项**已全部收口**（每项都有闸 + 台账）：拆 `chat-view.js`（R22-O1 渲染内核 389 行 / R22-O2 通话内核 1137 行，视图 19977 → **18531** 物理行）、裸钟 83 → **71 处（wall 71 / story 0 / unknown 0，跨 chat-view.js 63 + chat-call-core.js 8）**、零测试目录、5 条事件欠账、通知横幅单一出口、未读角标单口径、无障碍补齐（`a11y_baseline.json` 350/115/17）。
 > · 「无上界门」这条欠账**已关**：新增 `tests/audit/scan_file_size_ceiling.mjs` + `tests/audit/file_size_ceiling.json`，口径是**全仓 + 默认上限 1200 + 逐文件棘轮 + 总量棘轮**（当前 **835 个 `.js` / 合计 402654 行 / 大文件 45 个**；最大是 `data/cheats.js` **27611**（正是上面第②条点名的那一个，只扫 `apps/` 会漏掉）、次之 `chat-view.js` 18531、`settings-app.js` 12362）。新文件超过 1200 行必须落台账；台账 `lines_max` 记的是当前真读数，涨了判红、降了不压也判红。
 > · 口径提示：本门行数是**物理行数**（末尾换行不计），与 `chat_render_split.json` 的 `view_lines_max`（split 长度）差 1，属口径差。
+> · **覆盖率账本仍未刷新（R23-O4 诚实结论）**：`tests/audit/coverage_baseline.json` 仍是 **2026-11-13** 的读数（零测试目录 10 / 零覆盖文件 115 / app 目录 101）。本机真跑全量覆盖会给出「441 个文件条条零覆盖」，那是**采集没跑起来**，不是覆盖率 0 —— 若跑 `--write` 会把这份 0% 写成新基线。本轮因此交付的是「坏采集守卫」（`scripts/lib/coverage-debt.mjs#coverageCollectionBroken`，命中即 rc=2，`--write`/`--verify` 都被拦）+ 自检首屏打印「读数年龄 N 天」。真刷新必须在能跑全量的环境执行 `node scripts/coverage-report.mjs --write`，**不许**拿本机 0% 当读数。
 
 ## 第二十三期执行批次（双仓协同，共36项）
 ### 第二大部：RubyPhone 虚拟手机与生活生态（18项：R23-O1~O9 优化 + R23-X1~X9 拓展）

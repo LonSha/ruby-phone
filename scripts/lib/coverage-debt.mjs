@@ -141,6 +141,32 @@ export function buildAppStats({ rows, diskFilesByApp, appDirs }) {
     return dirs;
 }
 
+/** 汇总视角：零测试目录在下面，先放「采集坏了」的判据。 */
+/**
+ * 采集是否根本没跑起来（R23-O4 现场教训，2026-11-17）：
+ * 本环境真跑一次全量覆盖，spec 表里 441 个盘上文件全是「一行都没覆盖」，脚本却照样往下走 ——
+ * 于是 `--verify` 把这件事读成「101 个目录全部退步 100pp」，而 `--write` 会把这个 0% 写成**新基线**。
+ * 两者都是把「测量坏了」当成「产品退步」或「产品就这样」。所以给一个显式的坏采集判据：
+ *   · totalFiles === 0               ⇒ 没扫到任何文件，拒判；
+ *   · totalZero === totalFiles       ⇒ 全部文件零覆盖，拒判（「覆盖率 0%」理论上可能，
+ *                                      但「441 个文件条条零覆盖」只可能是采集没跑起来）；
+ *   · 零覆盖占比 ≥ 98% 且文件数 ≥ 100 ⇒ 同上；给一点余量，但不给假绿。
+ * 这不是「解释数据」，是**拒绝把坏输入写进基线**。
+ */
+export function coverageCollectionBroken({ totalFiles, totalZero }) {
+    if (!Number.isFinite(totalFiles) || !Number.isFinite(totalZero)) {
+        return { broken: true, reason: '文件数/零覆盖数不是数字（读数结构不对）' };
+    }
+    if (totalFiles <= 0) return { broken: true, reason: '盘上一个文件都没扫到' };
+    if (totalZero === totalFiles) {
+        return { broken: true, reason: totalFiles + ' 个文件全部「一行都没覆盖」—— 这不是覆盖率 0，是采集没跑起来' };
+    }
+    if (totalFiles >= 100 && totalZero / totalFiles >= 0.98) {
+        return { broken: true, reason: '零覆盖文件 ' + totalZero + '/' + totalFiles + '（≥98%）—— 采集大概率没跑起来' };
+    }
+    return { broken: false, reason: '' };
+}
+
 /** 汇总视角：零测试目录（该目录下一个文件都没被正覆盖）。 */
 export function zeroTestDirs(dirs) {
     return Object.keys(dirs).filter((d) => dirs[d].files_with_test === 0).sort();
