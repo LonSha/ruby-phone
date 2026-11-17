@@ -22,6 +22,13 @@
 > · 零测试目录、5 条事件欠账、通知横幅、未读角标、无障碍均已带闸收口。
 > · 「无上界门」**已关**：`tests/audit/scan_file_size_ceiling.mjs` + `file_size_ceiling.json`（全仓 **835 个 `.js` / 402654 行 / 大文件 45 个**，最大 `data/cheats.js` 27611；默认上限 1200 + 逐文件 / 总量双棘轮）。
 > · 所以 R23 的施工起点不是「先补十项欠账」，而是**在已收口的基线上做结构与方法学**（方法体内切片的等价性口径 → 第二大的 `settings-app.js`）。
+> **【R23-O2 结构线交付（2026-11-17）】方法体内切片从「想法」变成「可复跑的读数 + 真切片」**：
+> · 读数：`tests/audit/scan_body_slice_candidates.mjs` → `body_slice_candidates.json`（READY/TUPLE/NOT_YET 三档 + 每档理由 + `own_depth_returns` 行号）。它自己也被现场纠错四次：
+> ① `switch` 的 `case` 片段不是合法语句块；② 按行深度过滤会把 `if` 块里的 `return` 误判成「嵌套回调」→ 改成按字符扫 + 花括号**种类**栈；
+> ③ 段内声明在段后仍被用（`executeSend`）要回传；④ 只出现在模板字面量 `${}` 里的引用会被 scrub 抹掉（`presetHtml`）→ 逃逸检测同时看原文行。
+> · 落地：`bindEvents` 体内两段 → `apps/wechat/chat-input-bind.js`（逐字节不动 / `this` 经 `.call` / 零 import）。`chat-view.js` 18531 → **18449**，`bindEvents` 690 → **607**，事件挂载 48 条逐条不变。
+> · 判据：`tests/r23_o2_body_slice.test.mjs` 23 条（L1 逐字节 4 / L2 调用点 6 / L3 运行时 5 / 探针自检 6 / 台账 2），含负控制。
+> · 诚实的代价：全仓行数 402654 → **402678（+24）**（切片固有成本），已压在 `file_size_ceiling.json` 并写在 note 里。
 >
 > ---
 > **第二十二期原立项（2026-11-16，目标版 v4.157.0 / 9a8adcf）**：`R22-O1～O9 / R22-X1～X9`

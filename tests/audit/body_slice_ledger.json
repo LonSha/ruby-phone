@@ -1,0 +1,158 @@
+{
+  "schema": "body-slice-ledger@1",
+  "plan": "R23-O2",
+  "generated_at": "2026-11-17T10:44:37.981Z",
+  "what_this_is": "方法体内切片的**落地记录**（人维护）。候选读数在同目录 body_slice_candidates.json（工具生成，别手改）。",
+  "method": {
+    "strategy": "block-slice-out-of-file",
+    "why_not_whole_method": "剩下的大方法体内有真业务分支：parseSpecialMessage 依赖 7 个模块级符号，整段搬进新模块就必须 import 一堆判定 —— 那是把判定搬进「只排版」的地方（R22 闸 R9 禁的事）。",
+    "why_out_of_file_not_same_file": "同文件切段（搬到同文件模块级函数）作用域确实不变，但函数壳 + 调用点至少 +6 行/段，实测把 chat-view.js 从 18531 推到 18551 —— 反而变大。块的读/写/this 三条都小到「读 1、写 0、用 this」时，出文件后新模块**零 import** 也成立，这才是既压方法又压文件的那条路。",
+    "selection_rule": "只有 READY（不写外层、无外流 return、形参≤8）才允许切；TUPLE/NOT_YET 一律不动。",
+    "indent_policy": "函数体**逐字节不动**（含原有 8 空格缩进）：不接受 dedent，不接受 this→self，不接受重排。代价是函数体缩进多出 4 格，换来「逐字节可比」这条硬证明。"
+  },
+  "false_filters": [
+    {
+      "id": "F1",
+      "what": "switch 里的 case 片段被当成独立块",
+      "how": "isStatementBlock：段内花括号净变化为 0 且起点深度==方法体基线，首 token 不是 case/default:/}/)/,/.",
+      "hit_at": "renderMessage L4579+ 的 gathering_reply 分支（旧行号）"
+    },
+    {
+      "id": "F2",
+      "what": "按行花括号深度过滤 return → 把 if 块内部的 return 误判成「嵌套回调」",
+      "how": "scanReturnScopes：按字符扫，维护花括号**种类**栈，只有外层没有 fn 才算外流",
+      "hit_at": "renderMessage L3875-3898 / parseSpecialMessage L7843-7865、L7968-7998、L8000-8064"
+    },
+    {
+      "id": "F3",
+      "what": "段内声明的名字在段后仍被使用（需回传）却没算",
+      "how": "escapes：段自身作用域（深度==基线）的声明 ∩ 段后仍出现",
+      "hit_at": "bindEvents 的 executeSend"
+    },
+    {
+      "id": "F4",
+      "what": "只出现在模板字面量 ${} 里的引用被 scrub 抹掉，导致「段后还在用」漏判",
+      "how": "escapes 同时看**原文行**与清洗行",
+      "hit_at": "showBackgroundPicker 的 presetHtml"
+    }
+  ],
+  "slices": [
+    {
+      "id": "A",
+      "name": "bindVoiceInputButton",
+      "source_file": "apps/wechat/chat-view.js",
+      "source_method": "bindEvents",
+      "source_from": 9970,
+      "source_to": 10010,
+      "source_lines": 41,
+      "body_sha256": "4aaa6b33ec27bf299170dd70f48ac3b08440625f8427f2a4929fb4f5187bdecf",
+      "target_file": "apps/wechat/chat-input-bind.js",
+      "params": [
+        "query"
+      ],
+      "this_via": ".call(this, query)",
+      "outer_reads": [
+        "query"
+      ],
+      "outer_writes": [],
+      "escapes": [],
+      "uses_this": true,
+      "level_before": "READY"
+    },
+    {
+      "id": "B+C",
+      "name": "bindQuickReplyButtons",
+      "source_file": "apps/wechat/chat-view.js",
+      "source_method": "bindEvents",
+      "source_from": 10021,
+      "source_to": 10064,
+      "source_lines": 44,
+      "body_sha256": "3f4b56aa016bfba764c43d018b10a636428a5069a64ceffb66bf4f5db4becc75",
+      "target_file": "apps/wechat/chat-input-bind.js",
+      "params": [
+        "query"
+      ],
+      "this_via": ".call(this, query)",
+      "outer_reads": [
+        "query"
+      ],
+      "outer_writes": [],
+      "escapes": [],
+      "uses_this": true,
+      "level_before": "READY",
+      "note": "B 与 C 原本被一个空行分开，同批搬成一个函数：两段都是「拿一个按钮 → 挂 4 个监听 → 交给同一个处理器」，拆两个函数只是多一层跳转。"
+    }
+  ],
+  "readings": {
+    "chat_view_lines_before": 18531,
+    "chat_view_lines_after": 18449,
+    "bind_events_lines_before": 690,
+    "bind_events_lines_after": 607,
+    "new_module_lines": 106,
+    "new_module_imports": 0,
+    "repo_total_lines_before": 402654,
+    "repo_total_lines_after": 402678,
+    "repo_total_delta_note": "全仓 +24 行是切片的固有成本（函数壳 + 调用点 + 模块头），不是偷偷长；已在 file_size_ceiling.json 的 note 里写明并随提交可见。"
+  },
+  "protocol": {
+    "why_not_body_sha256_alone": "R22 的 body_sha256 是「整段方法逐字节」，切片会改调用点，整段逐字节口径不成立。",
+    "required_proof": [
+      "L1 切出的函数体与源行区间逐字节相同（台账里的 body_sha256 由**切片当时**从源文件算出，之后每次跑闸重算函数体 sha 对账；改一个字符就红）",
+      "L2 调用点：chat-view.js 里只剩一条 fn.call(this, query)，且原段文本已不存在（防第二份实现）；新模块零 import（依赖面为 0）",
+      "L3 运行时：切片前后对同一 fixture 的**产出**相同。本批两段是 DOM 型（没有返回值），产出定义为「事件挂载序列」= 48 条 `元素路径::事件名`，顺序也逐条比对"
+    ],
+    "l3_artifact": "tests/audit/bind_events_snapshot.json（切片前基线）+ tests/_bind_events_snapshot.mjs（采集器）",
+    "l3_limits": "querySelectorAll 返回空列表 → 依赖遍历已有节点的分支不在快照覆盖内；只挂监听不派发事件 → 回调体是否改坏由 L1 逐字节兜着。"
+  },
+  "not_sliced": [
+    {
+      "method": "renderMessage",
+      "from": 4010,
+      "to": 4087,
+      "lines": 78,
+      "level": "TUPLE",
+      "why": "读 6 个外层局部 + 回写 messageBody：切了要回传 1 个变量，形参 7 个（含 self）"
+    },
+    {
+      "method": "bindEvents",
+      "from": 9877,
+      "to": 9912,
+      "lines": 36,
+      "level": "TUPLE",
+      "why": "段内声明的 executeSend 在段后被用（监听器在段外挂）——要回传函数，属于「回传 1 个值」，可做但本轮不动"
+    },
+    {
+      "method": "parseSpecialMessage",
+      "from": 7844,
+      "to": 7866,
+      "lines": 23,
+      "level": "NOT_YET",
+      "why": "整段是一个 if 块，块内 return 是它自己的控制流（外流），切出去就会从「返回红包对象」变成「返回 undefined 后继续走」"
+    },
+    {
+      "method": "parseSpecialMessage",
+      "from": 7969,
+      "to": 7999,
+      "lines": 31,
+      "level": "NOT_YET",
+      "why": "同上：两处外流 return"
+    },
+    {
+      "method": "parseSpecialMessage",
+      "from": 8001,
+      "to": 8065,
+      "lines": 65,
+      "level": "NOT_YET",
+      "why": "同上：四处外流 return"
+    },
+    {
+      "method": "showBackgroundPicker",
+      "from": 14244,
+      "to": 14268,
+      "lines": 25,
+      "level": "NOT_YET",
+      "why": "段内 7 个声明里有 6 个在段后（html 模板里）被用 —— 要回传 6 个值，超过 MAX_WRITE=3，不如不切"
+    }
+  ],
+  "next_batch_hint": "要往前走，缺的是能处理「外流 return」的手段，而不是更多候选：① 段内 return 可以先在原地判、只在尾部外流时把值回传给调用者（改签名，需 L3 对拍）；② executeSend 这类「段内声明、段外使用」应归到「回传 1 个值」的 TUPLE，而不是 NOT_YET —— 本批为保守没动。"
+}

@@ -38,7 +38,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
 
 /** 扫描清单（顺序即输出顺序）。第一个是主文件：白名单里没写 file 的条目默认指它。 */
-const TARGETS = ['apps/wechat/chat-view.js', 'apps/wechat/chat-call-core.js'];
+const TARGETS = ['apps/wechat/chat-view.js', 'apps/wechat/chat-call-core.js', 'apps/wechat/chat-input-bind.js'];
 const LEDGER = 'tests/audit/bare_clock_ledger.json';
 const WHITELIST = 'tests/audit/bare_clock_whitelist.json';
 

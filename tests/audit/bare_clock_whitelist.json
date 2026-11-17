@@ -4,339 +4,363 @@
   "wall": [
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 244,
+      "line": 245,
       "col": 37,
       "why": "时间戳缺省的显示回退（不写内容时间轴）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 245,
+      "line": 246,
       "col": 54,
-      "why": "同 241：显示格式化的回退值"
+      "why": "同上：显示格式化的回退值"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 647,
+      "line": 648,
       "col": 17,
       "why": "大厅人格缓存 ts（TTL 记账）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 662,
+      "line": 663,
       "col": 14,
       "why": "缓存 TTL 判定"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 830,
-      "col": 27,
-      "why": "分类器按字段/上下文判为 wall（渲染节奏）"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
       "line": 831,
-      "col": 20,
+      "col": 27,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 840,
-      "col": 27,
+      "line": 832,
+      "col": 20,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
       "line": 841,
+      "col": 27,
+      "why": "分类器按字段/上下文判为 wall（渲染节奏）"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 842,
       "col": 20,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2738,
+      "line": 2739,
       "col": 50,
       "why": "等待时长测量（性能）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2804,
+      "line": 2805,
       "col": 46,
       "why": "等待时长测量（性能）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2900,
+      "line": 2901,
       "col": 33,
       "why": "渲染遥测载荷 at"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 3838,
+      "line": 3839,
       "col": 29,
       "why": "增量更新遥测载荷 at"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5028,
+      "line": 5029,
       "col": 44,
       "why": "生成任务唯一 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5309,
+      "line": 5310,
       "col": 51,
       "why": "落盘文件名唯一后缀"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5332,
+      "line": 5333,
       "col": 51,
       "why": "落盘文件名唯一后缀"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5513,
+      "line": 5514,
       "col": 84,
       "why": "卡片 DOM id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6502,
+      "line": 6503,
       "col": 48,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6938,
+      "line": 6939,
       "col": 69,
       "why": "图片重试破缓存参数"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7079,
+      "line": 7080,
       "col": 21,
       "why": "贴纸缓存 TTL"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7116,
+      "line": 7117,
       "col": 48,
       "why": "贴纸缓存写入时刻"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7686,
+      "line": 7687,
       "col": 49,
       "why": "占位 token 唯一性"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8311,
+      "line": 8312,
       "col": 35,
       "why": "支付幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8319,
+      "line": 8320,
       "col": 31,
       "why": "支付幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8393,
+      "line": 8394,
       "col": 41,
       "why": "邀请已处理幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8477,
+      "line": 8478,
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8489,
+      "line": 8490,
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8501,
+      "line": 8502,
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8513,
+      "line": 8514,
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8525,
+      "line": 8526,
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8802,
+      "line": 8803,
       "col": 57,
       "why": "同步事件 senderKey 唯一性"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9841,
+      "line": 9842,
       "col": 34,
       "why": "最近输入时刻（节流）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9882,
+      "line": 9883,
       "col": 17,
       "why": "空发送抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10025,
-      "col": 25,
-      "why": "事件处理时钟（节流判定）"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 10046,
-      "col": 25,
-      "why": "事件处理时钟（节流判定）"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 10571,
+      "line": 10489,
       "col": 61,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10574,
+      "line": 10492,
       "col": 65,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10577,
+      "line": 10495,
       "col": 61,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10580,
+      "line": 10498,
       "col": 64,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10583,
+      "line": 10501,
       "col": 66,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10814,
+      "line": 10732,
       "col": 30,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10816,
+      "line": 10734,
       "col": 21,
       "why": "双击防抖窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10829,
+      "line": 10747,
       "col": 21,
-      "why": "发送节流窗口"
+      "why": "事件处理时钟（节流判定）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10890,
+      "line": 10808,
       "col": 52,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11209,
+      "line": 11127,
       "col": 31,
       "why": "工作流 runId"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11259,
+      "line": 11177,
       "col": 86,
       "why": "回复批次 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11261,
+      "line": 11179,
       "col": 41,
       "why": "请求起始时刻（耗时测量）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11876,
+      "line": 11794,
       "col": 46,
       "why": "群聊 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11908,
+      "line": 11826,
       "col": 65,
       "why": "联系人 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12000,
+      "line": 11918,
       "col": 75,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12036,
+      "line": 11954,
       "col": 66,
       "why": "后台发送 senderKey"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12153,
+      "line": 12071,
       "col": 71,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12201,
+      "line": 12119,
       "col": 76,
       "why": "内联发送 senderKey"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13176,
+      "line": 13094,
       "col": 59,
       "why": "图片占位符唯一标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13900,
+      "line": 13818,
       "col": 44,
       "why": "转账 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13973,
+      "line": 13891,
       "col": 35,
       "why": "礼物消息 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 15007,
+      "line": 14925,
       "col": 30,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 14928,
+      "col": 21,
+      "why": "消息菜单双击防抖窗口"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 16878,
+      "col": 43,
+      "why": "红包 id"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 16945,
+      "col": 39,
+      "why": "红包 id"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 17103,
+      "col": 35,
+      "why": "自定义表情 lastModified"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 17321,
+      "col": 31,
+      "why": "领取幂等标记"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 18239,
+      "col": 48,
+      "why": "TTS 手工队列标记"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
@@ -387,40 +411,16 @@
       "why": "显式墙钟秒数"
     },
     {
-      "file": "apps/wechat/chat-view.js",
-      "line": 16960,
-      "col": 43,
-      "why": "红包 id"
+      "file": "apps/wechat/chat-input-bind.js",
+      "line": 66,
+      "col": 25,
+      "why": "快捷回复按钮的 450ms 连点防抖时间戳（纯交互节奏，不写内容时间轴）"
     },
     {
-      "file": "apps/wechat/chat-view.js",
-      "line": 17027,
-      "col": 39,
-      "why": "红包 id"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 17185,
-      "col": 35,
-      "why": "自定义表情 lastModified"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 17403,
-      "col": 31,
-      "why": "领取幂等标记"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 18321,
-      "col": 48,
-      "why": "TTS 手工队列标记"
-    },
-    {
-      "file": "apps/wechat/chat-view.js",
-      "line": 15010,
-      "col": 0,
-      "why": "消息菜单双击防抖窗口"
+      "file": "apps/wechat/chat-input-bind.js",
+      "line": 87,
+      "col": 25,
+      "why": "快捷回复按钮的 450ms 连点防抖时间戳（纯交互节奏，不写内容时间轴）"
     }
   ],
   "story": [

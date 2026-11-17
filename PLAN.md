@@ -16,6 +16,13 @@
 > · 口径提示：本门行数是**物理行数**（末尾换行不计），与 `chat_render_split.json` 的 `view_lines_max`（split 长度）差 1，属口径差。
 > · **覆盖率账本仍未刷新（R23-O4 诚实结论）**：`tests/audit/coverage_baseline.json` 仍是 **2026-11-13** 的读数（零测试目录 10 / 零覆盖文件 115 / app 目录 101）。本机真跑全量覆盖会给出「441 个文件条条零覆盖」，那是**采集没跑起来**，不是覆盖率 0 —— 若跑 `--write` 会把这份 0% 写成新基线。本轮因此交付的是「坏采集守卫」（`scripts/lib/coverage-debt.mjs#coverageCollectionBroken`，命中即 rc=2，`--write`/`--verify` 都被拦）+ 自检首屏打印「读数年龄 N 天」。真刷新必须在能跑全量的环境执行 `node scripts/coverage-report.mjs --write`，**不许**拿本机 0% 当读数。
 
+>
+> **【R23 结构线交付映射（2026-11-17）】** 下面四件已落地并带闸。**编号说明**：它们在提交/测试名里的前缀是 `R23-O1/O2/O4`，但**不占用**本计划下面正式条目（`R23-O1` 抽渲染内核、`R23-O2` 裸钟、`R23-O4` 事件欠账）的编号 —— 四件都是「把 R22 遗留的方法学与读数补齐」，属于前置的结构线。正式条目现状见上面更正段（均已收口）。
+> · **O1 全仓行数上界门**：`tests/audit/scan_file_size_ceiling.mjs` + `file_size_ceiling.json`，14 条判据（含 7 条负控制）。
+> · **O2 方法体内切片的方法学 + 首批落地**：`tests/audit/scan_body_slice_candidates.mjs`（候选读数）+ `body_slice_ledger.json`（人维护的落地记录）+ `tests/_bind_events_snapshot.mjs`（DOM 型方法的 L3 产出快照）。**真切了两段**：`bindEvents` 体内 L9970-10010 / L10021-10064 → `apps/wechat/chat-input-bind.js`，函数体逐字节不动、`this` 经 `.call` 传入、新模块零 import。读数：`chat-view.js` 18531 → **18449**，`bindEvents` 690 → **607**，事件挂载序列 48 条逐条不变。23 条判据。
+> · **O4 覆盖率坏采集守卫**：`coverageCollectionBroken()` 在 `--write` **之前**拦「条条零覆盖」，`--verify` 从 rc=1（101 条假退步）变成 rc=2（拒判）。账本一字未动。12 条判据。
+> · **切片的固有成本（写清，不许当成悄悄长）**：块切出文件至少要付函数壳 + 调用点，全仓行数因此 **402654 → 402678（+24）**。若要抵消，只能靠后续真正删代码，不能靠不压台账。
+> · **同文件切 vs 出文件（实测结论）**：同文件切段作用域不变，但会把 `chat-view.js` 从 18531 推到 **18551**（函数壳+调用点 +6 行/段）。只有当块「读 ≤1、写 0、用 this」时，出文件后新模块零 import 也成立 —— 那才是既压方法又压文件的那条路。
 ## 第二十三期执行批次（双仓协同，共36项）
 ### 第二大部：RubyPhone 虚拟手机与生活生态（18项：R23-O1~O9 优化 + R23-X1~X9 拓展）
 

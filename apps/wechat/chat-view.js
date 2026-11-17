@@ -87,6 +87,7 @@ import { detectImageMime, normalizeImageDataUrlMime, resolveImageMime } from '..
 import { replacePhoneInlineEmojiTokens } from '../../config/phone-emoji.js';
 import { chatRenderCore } from './chat-render-core.js?v=4.157.0&r=20261116-r22';
 import { chatCallCore } from './chat-call-core.js?v=4.157.0&r=20261116-r22';
+import { bindVoiceInputButton, bindQuickReplyButtons } from './chat-input-bind.js?v=4.158.0&r=20261117-r23';
 import { getMemory as getContactMemory, updateMemory as updateContactMemory } from '../../config/phone-chat-memory.js';
 // [v3.14.0 · 计划 #65] 实例级资源域：通话计时器（视频/语音）不再靠「挂断按钮那一处 clearInterval」
 import { childRuntime } from '../../config/runtime-lifecycle.js';
@@ -9967,47 +9968,7 @@ renderChatRoom(chat) {
             this.app.render();
         });
 
-        // 🎤 [v2.13.0] 语音输入按钮：点按说话，识别结果填入输入框（追加，不覆盖已有内容）
-        const voiceInputBtn = query('#voice-input-btn');
-        if (voiceInputBtn) {
-            const runVoiceInput = async (e) => {
-                e?.preventDefault?.();
-                e?.stopPropagation?.();
-                if (voiceInputBtn.dataset.busy === '1') return;
-                const asrManager = window.VirtualPhone?.asrManager;
-                if (!asrManager || typeof asrManager.recognizeOnce !== 'function') {
-                    this.app.phoneShell?.showNotification('语音输入', 'ASR 管理器未初始化，请先在设置→TTS 页配置', '⚠️');
-                    return;
-                }
-                voiceInputBtn.dataset.busy = '1';
-                voiceInputBtn.style.color = '#07c160';
-                try {
-                    const text = await asrManager.recognizeOnce();
-                    const safeText = String(text || '').trim();
-                    if (safeText) {
-                        const chatInput = query('#chat-input');
-                        const prev = String(chatInput?.value || this.inputText || '').trim();
-                        // 追加而非覆盖：保留用户已输入的半句话
-                        const next = prev ? `${prev} ${safeText}` : safeText;
-                        this.inputText = next;
-                        if (chatInput) chatInput.value = next;
-                        // 同步触发输入事件，让发送按钮状态/倒计时等逻辑更新
-                        chatInput?.dispatchEvent(new Event('input', { bubbles: true }));
-                    } else {
-                        this.app.phoneShell?.showNotification('语音输入', '没有听到声音', '⚠️');
-                    }
-                } catch (err) {
-                    this.app.phoneShell?.showNotification('语音输入失败', String(err?.message || err || '识别失败').slice(0, 120), '❌');
-                } finally {
-                    voiceInputBtn.dataset.busy = '';
-                    voiceInputBtn.style.color = '#555';
-                }
-            };
-            // 移动端点按（touchend 触发，避免与长按冲突）
-            voiceInputBtn.addEventListener('touchend', (e) => { e.preventDefault(); runVoiceInput(e); }, { passive: false });
-            // 桌面端点击
-            voiceInputBtn.addEventListener('click', (e) => { runVoiceInput(e); });
-        }
+        bindVoiceInputButton.call(this, query);
 
         queryAll('.quick-reply-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -10018,50 +9979,7 @@ renderChatRoom(chat) {
             });
         });
 
-        const quickReplySendBtn = query('.quick-reply-send');
-        const runQuickReplySend = (e) => {
-            e?.preventDefault?.();
-            e?.stopPropagation?.();
-            const now = Date.now();
-            if (now - Number(quickReplySendBtn?.dataset.lastActionAt || 0) < 450) return;
-            if (quickReplySendBtn) quickReplySendBtn.dataset.lastActionAt = String(now);
-            this._clearQuickReplyTimeScrollTimers();
-            this._sendActiveQuickReply();
-        };
-        quickReplySendBtn?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, { passive: false });
-        quickReplySendBtn?.addEventListener('touchend', runQuickReplySend);
-        quickReplySendBtn?.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        quickReplySendBtn?.addEventListener('click', runQuickReplySend);
-
-        const quickReplyCancelBtn = query('.quick-reply-cancel');
-        const runQuickReplyCancel = (e) => {
-            e?.preventDefault?.();
-            e?.stopPropagation?.();
-            const now = Date.now();
-            if (now - Number(quickReplyCancelBtn?.dataset.lastActionAt || 0) < 450) return;
-            if (quickReplyCancelBtn) quickReplyCancelBtn.dataset.lastActionAt = String(now);
-            this._clearQuickReplyTimeScrollTimers();
-            this.showQuickReplies = false;
-            this.activeQuickReplyKey = '';
-            this.quickReplyTimeText = '';
-            this.app.render();
-        };
-        quickReplyCancelBtn?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, { passive: false });
-        quickReplyCancelBtn?.addEventListener('touchend', runQuickReplyCancel);
-        quickReplyCancelBtn?.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        quickReplyCancelBtn?.addEventListener('click', runQuickReplyCancel);
+        bindQuickReplyButtons.call(this, query);
 
         queryAll('.quick-time-option').forEach(option => {
             option.addEventListener('click', (e) => {

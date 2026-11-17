@@ -61,7 +61,9 @@ const byFile = {};
 for (const s of LEDGER.sites) byFile[s.file] = (byFile[s.file] || 0) + 1;
 const sumByFile = Object.values(byFile).reduce((a, b) => a + b, 0);
 ok("台账：跨文件读数自洽（byFile 相加 = total）", sumByFile === LEDGER.total && JSON.stringify(byFile) === JSON.stringify(LEDGER.byFile));
-ok("台账：覆盖 chat-view.js 与 chat-call-core.js（63 + 8）", byFile["apps/wechat/chat-view.js"] === 63 && byFile["apps/wechat/chat-call-core.js"] === 8);
+/* R23-O2 起第三把伞：bindEvents 体内两段（含各 1 处 450ms 防抖时间戳）搬到 chat-input-bind.js，
+ * 所以 chat-view.js 63 → 61、新文件 2；**总数不变仍是 71** —— 切片只搬钟，不生产钟也不消钟。 */
+ok("台账：覆盖 chat-view.js / chat-call-core.js / chat-input-bind.js（61 + 8 + 2）", byFile["apps/wechat/chat-view.js"] === 61 && byFile["apps/wechat/chat-call-core.js"] === 8 && byFile["apps/wechat/chat-input-bind.js"] === 2);
 
 console.log(pass + " 通过, " + fail + " 失败");
 process.exit(fail > 0 ? 1 : 0);

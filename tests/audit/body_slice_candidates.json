@@ -1,0 +1,248 @@
+{
+  "schema": "body-slice-ledger@1",
+  "plan": "R23-O2",
+  "note": "方法体内切片的**候选读数**（不是等价性证明）。口径：同文件内切片 → 模块作用域不变，所以约束只剩三条：读哪些外层局部（→形参）、写哪些外层局部（→回传）、用不用 this（→传 self）。定级规则在 scan_body_slice_candidates.mjs#classify，只有一份。切完的等价性证明 protocol 见 protocol 字段。",
+  "generated_at": "2026-11-17T10:44:12.268Z",
+  "rule": {
+    "min_block_lines": 20,
+    "max_params": 8,
+    "max_write": 3,
+    "levels": {
+      "READY": "不写外层、不 return、显式传参 ≤ max_params —— 可直接切",
+      "TUPLE": "写外层 ≤ max_write，或形参超限 —— 切的时候回传元组/对象",
+      "NOT_YET": "写外层过多 / 段内 return / 动态作用域 —— 先别动"
+    }
+  },
+  "summary": {
+    "methods": [
+      {
+        "method": "renderMessage",
+        "found": true,
+        "method_lines": 783,
+        "blocks": 2
+      },
+      {
+        "method": "bindEvents",
+        "found": true,
+        "method_lines": 607,
+        "blocks": 1
+      },
+      {
+        "method": "parseSpecialMessage",
+        "found": true,
+        "method_lines": 326,
+        "blocks": 3
+      },
+      {
+        "method": "showBackgroundPicker",
+        "found": true,
+        "method_lines": 369,
+        "blocks": 1
+      }
+    ],
+    "counts": {
+      "READY": 0,
+      "TUPLE": 2,
+      "NOT_YET": 5
+    },
+    "ready_lines": 0
+  },
+  "protocol": {
+    "why_not_body_sha256": "R22 的 body_sha256 是「整段逐字节」，切片会改调用点，逐字节口径不成立",
+    "required_proof": [
+      "L1 切出的函数体：与其源行区间逐字节相同（切时算 body_sha256，落进本台账的 slices[]）",
+      "L2 调用点：源区间被替换成一次调用，且实参来自 outer_reads、回写按 outer_writes 接回（闸按名对账）",
+      "L3 行为：切片前后对同一批 fixture 的**产出**逐字节相同（方法返回值为字符串/结构时可 sha256；DOM 型则用事件挂载计数 + 调用序快照）"
+    ],
+    "blocker": "L3 需要为每个目标方法配 fixture 采集器；renderMessage/bindEvents 依赖 DOM 与 this 状态，采集器要基于 R22-O1 的 DOM 替身扩写。"
+  },
+  "methods": [
+    {
+      "file": "apps/wechat/chat-view.js",
+      "method": "renderMessage",
+      "found": true,
+      "method_lines": 783,
+      "blocks": [
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "renderMessage",
+          "from": 3876,
+          "to": 3899,
+          "lines": 24,
+          "outer_reads": [],
+          "outer_writes": [],
+          "escapes": [],
+          "uses_this": true,
+          "has_return": true,
+          "own_depth_returns": [
+            3879
+          ],
+          "nested_returns": 0,
+          "level": "NOT_YET",
+          "why": "段内有 return（控制流会外流，切出去要改签名）",
+          "params": 1
+        },
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "renderMessage",
+          "from": 4010,
+          "to": 4087,
+          "lines": 78,
+          "outer_reads": [
+            "isMe",
+            "isPaymentRefunded",
+            "messageBody",
+            "paymentStatus",
+            "showInnerThought",
+            "voiceText"
+          ],
+          "outer_writes": [
+            "messageBody"
+          ],
+          "escapes": [],
+          "uses_this": true,
+          "has_return": false,
+          "own_depth_returns": [],
+          "nested_returns": 0,
+          "level": "TUPLE",
+          "why": "需回传 1 个变量（messageBody）",
+          "params": 7
+        }
+      ]
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "method": "bindEvents",
+      "found": true,
+      "method_lines": 607,
+      "blocks": [
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "bindEvents",
+          "from": 9877,
+          "to": 9912,
+          "lines": 36,
+          "outer_reads": [
+            "input",
+            "query",
+            "sendBtn"
+          ],
+          "outer_writes": [],
+          "escapes": [
+            "executeSend"
+          ],
+          "uses_this": true,
+          "has_return": false,
+          "own_depth_returns": [],
+          "nested_returns": 2,
+          "level": "TUPLE",
+          "why": "需回传 1 个变量（executeSend）",
+          "params": 4
+        }
+      ]
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "method": "parseSpecialMessage",
+      "found": true,
+      "method_lines": 326,
+      "blocks": [
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "parseSpecialMessage",
+          "from": 8001,
+          "to": 8065,
+          "lines": 65,
+          "outer_reads": [],
+          "outer_writes": [],
+          "escapes": [],
+          "uses_this": true,
+          "has_return": true,
+          "own_depth_returns": [
+            8021,
+            8039,
+            8050,
+            8059
+          ],
+          "nested_returns": 0,
+          "level": "NOT_YET",
+          "why": "段内有 return（控制流会外流，切出去要改签名）",
+          "params": 1
+        },
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "parseSpecialMessage",
+          "from": 7969,
+          "to": 7999,
+          "lines": 31,
+          "outer_reads": [],
+          "outer_writes": [],
+          "escapes": [],
+          "uses_this": true,
+          "has_return": true,
+          "own_depth_returns": [
+            7980,
+            7994
+          ],
+          "nested_returns": 0,
+          "level": "NOT_YET",
+          "why": "段内有 return（控制流会外流，切出去要改签名）",
+          "params": 1
+        },
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "parseSpecialMessage",
+          "from": 7844,
+          "to": 7866,
+          "lines": 23,
+          "outer_reads": [],
+          "outer_writes": [],
+          "escapes": [],
+          "uses_this": false,
+          "has_return": true,
+          "own_depth_returns": [
+            7853
+          ],
+          "nested_returns": 0,
+          "level": "NOT_YET",
+          "why": "段内有 return（控制流会外流，切出去要改签名）",
+          "params": 0
+        }
+      ]
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "method": "showBackgroundPicker",
+      "found": true,
+      "method_lines": 369,
+      "blocks": [
+        {
+          "file": "apps/wechat/chat-view.js",
+          "method": "showBackgroundPicker",
+          "from": 14244,
+          "to": 14268,
+          "lines": 25,
+          "outer_reads": [
+            "presetBgs"
+          ],
+          "outer_writes": [],
+          "escapes": [
+            "allChatsBgActive",
+            "backgroundActionButtonStyle",
+            "listBgActive",
+            "pickerContentStyle",
+            "presetHtml",
+            "shellBg"
+          ],
+          "uses_this": true,
+          "has_return": false,
+          "own_depth_returns": [],
+          "nested_returns": 1,
+          "level": "NOT_YET",
+          "why": "回写/外带变量 6 个（>3）",
+          "params": 2
+        }
+      ]
+    }
+  ]
+}
