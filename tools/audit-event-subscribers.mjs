@@ -160,31 +160,54 @@ for (const row of rows) {
     row.on = row.onFiles.length;
 }
 
-const debt = rows.filter((r) => r.emit > 0 && r.on === 0).map((r) => r.event);
-
-/* 欠账台账 [v4.148.0 · R21-O9]：每条「派发无订阅」必须在此给出**经实证的**
- *   存续理由，缺一条本工具 exit 2 拒判（判决依据进真代码，不靠注释自述）。
- *   逐条实证记录（2026-11-14 审计）：
- *   · pet-statechange：消费由**非事件通道**承接——PetController 构造器回调
- *     onPhoneReady + root.dataset.petState 状态镜像（pet-controller.js:158），
- *     事件只是对外遥测镜像，仓内再走 addEventListener 属重复通道。
- *   · motionResume：仓内重取由 createResumeScheduler 合成器承接（index.js:743
- *     scheduler.flush），事件是 config/motion.js 显式 export 的 RESUME_EVENT
- *     对外 API 面；契约注释宣称的消费方（「后台降频的消费方」）从未落仓。
- *   · viewBack：v4.148.0 已修真缺陷——phone-shell._forceLayerBack 现在自己
- *     setCurrentApp 同步（谁动图层谁同步），宿主无需订阅；事件降级为对外遥测。
- *   · canonAdopt：archive→上游的**跨仓转交**凭据（本件零写盘），owner 在仓外。
- *   · causalSource：plotline 回源凭证**对外遥测**（仓内兜底走 toastr 直读）。 */
-const DEBT_LEDGER = Object.freeze({
-    'phone:pet-statechange': '消费由构造器回调 onPhoneReady + dataset.petState 镜像承接，事件为对外遥测',
-    'phone:motionResume': '仓内重取由 resume 合成器承接，RESUME_EVENT 是 config/motion.js 显式对外 API',
-    'phone:viewBack': 'v4.148.0 外壳已自同步 currentApp（谁动图层谁同步），事件降级为对外遥测',
-    'phone:canonAdopt': '跨仓转交凭据：owner 在仓外，本仓零写盘只播报',
-    'phone:causalSource': '回源凭证对外遥测，仓内兜底为 toastr 直读',
+/* 已改判层（R22-O7）：这五条**不是**欠账，是被实证为「对外遥测 / 跨仓转交」，
+ *   从 debt 移出并单列。移出不等于看过就算 —— 每条必须给出证据字符串，
+ *   证据为空则本工具 exit 2 拒判（判决依据进真代码，不靠注释自述）。 */
+const RECLASSIFIED = Object.freeze({
+    'phone:pet-statechange': {
+        kind: 'telemetry',
+        why: '消费由构造器回调 onPhoneReady + dataset.petState 镜像承接，事件为对外遥测',
+        evidence: 'phone/pet-controller.js:158 onPhoneReady / root.dataset.petState'
+    },
+    'phone:motionResume': {
+        kind: 'telemetry',
+        why: '仓内重取由 resume 合成器承接，RESUME_EVENT 是 config/motion.js 显式对外 API',
+        evidence: 'index.js:743 scheduler.flush / config/motion.js RESUME_EVENT'
+    },
+    'phone:viewBack': {
+        kind: 'telemetry',
+        why: 'v4.148.0 外壳已自同步 currentApp（谁动图层谁同步），事件降级为对外遥测',
+        evidence: 'phone/phone-shell.js _forceLayerBack -> setCurrentApp'
+    },
+    'phone:canonAdopt': {
+        kind: 'cross-repo',
+        why: '跨仓转交凭据：owner 在仓外，本仓零写盘只播报',
+        evidence: 'archive 桥出口（本仓无写盘点）'
+    },
+    'phone:causalSource': {
+        kind: 'telemetry',
+        why: '回源凭证对外遥测，仓内兜底为 toastr 直读',
+        evidence: 'apps/plotline toastr 直读兜底'
+    },
 });
-for (const d of debt) {
-    if (!DEBT_LEDGER[d]) {
-        console.error('[event-sub] 欠账 ' + d + ' 无台账理由 ⇒ 拒判：先实证再落账，不许静默放行');
+
+const noSubscriber = rows.filter((r) => r.emit > 0 && r.on === 0);
+const debt = [];
+const reclassified = [];
+for (const r of noSubscriber) {
+    const rc = RECLASSIFIED[r.event];
+    if (!rc) { debt.push(r.event); continue; }
+    if (!rc.why || !String(rc.why).trim() || !rc.evidence || !String(rc.evidence).trim()) {
+        console.error('[event-sub] ' + r.event + ' 已改判但缺理由/证据 ⇒ 拒判：改判不是免单');
+        process.exit(2);
+    }
+    reclassified.push({ event: r.event, kind: rc.kind, why: rc.why, evidence: rc.evidence, emit: r.emit });
+}
+/* 反向闸：把一条 emit>0 的事件登记成已改判，但它其实已经有订阅方 —— 那是账不诚实，也拒判。 */
+for (const ev of Object.keys(RECLASSIFIED)) {
+    const row = rows.find((r) => r.event === ev);
+    if (row && row.on > 0) {
+        console.error('[event-sub] ' + ev + ' 登记为已改判，但仓内已有 ' + row.on + ' 个订阅方 ⇒ 拒判：撤掉改判');
         process.exit(2);
     }
 }
@@ -194,7 +217,9 @@ const reading = {
     contractSize: events.length,
     events: rows,
     debt,
-    debtLedger: { ...DEBT_LEDGER },
+    reclassified,
+    /* 旧字段保留兼容：内容现在从 reclassified 派生，不再手抄一份。 */
+    debtLedger: Object.fromEntries(reclassified.map((r) => [r.event, r.why])),
     zeroUse: rows.filter((r) => r.emit === 0 && r.on === 0).map((r) => r.event),
 };
 

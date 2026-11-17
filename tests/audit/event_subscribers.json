@@ -356,12 +356,43 @@
       "emitFiles": []
     }
   ],
-  "debt": [
-    "phone:pet-statechange",
-    "phone:motionResume",
-    "phone:viewBack",
-    "phone:canonAdopt",
-    "phone:causalSource"
+  "debt": [],
+  "reclassified": [
+    {
+      "event": "phone:pet-statechange",
+      "kind": "telemetry",
+      "why": "消费由构造器回调 onPhoneReady + dataset.petState 镜像承接，事件为对外遥测",
+      "evidence": "phone/pet-controller.js:158 onPhoneReady / root.dataset.petState",
+      "emit": 1
+    },
+    {
+      "event": "phone:motionResume",
+      "kind": "telemetry",
+      "why": "仓内重取由 resume 合成器承接，RESUME_EVENT 是 config/motion.js 显式对外 API",
+      "evidence": "index.js:743 scheduler.flush / config/motion.js RESUME_EVENT",
+      "emit": 1
+    },
+    {
+      "event": "phone:viewBack",
+      "kind": "telemetry",
+      "why": "v4.148.0 外壳已自同步 currentApp（谁动图层谁同步），事件降级为对外遥测",
+      "evidence": "phone/phone-shell.js _forceLayerBack -> setCurrentApp",
+      "emit": 1
+    },
+    {
+      "event": "phone:canonAdopt",
+      "kind": "cross-repo",
+      "why": "跨仓转交凭据：owner 在仓外，本仓零写盘只播报",
+      "evidence": "archive 桥出口（本仓无写盘点）",
+      "emit": 1
+    },
+    {
+      "event": "phone:causalSource",
+      "kind": "telemetry",
+      "why": "回源凭证对外遥测，仓内兜底为 toastr 直读",
+      "evidence": "apps/plotline toastr 直读兜底",
+      "emit": 1
+    }
   ],
   "debtLedger": {
     "phone:pet-statechange": "消费由构造器回调 onPhoneReady + dataset.petState 镜像承接，事件为对外遥测",
