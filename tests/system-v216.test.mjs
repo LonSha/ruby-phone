@@ -303,7 +303,13 @@ function mkStorage(seed = {}) {
     // 免打扰门
     ok('index 导入系统控制内核', /from '\.\/config\/system-controls\.js'/.test(idx));
     /* [v4.155.0 交棒改写] X3 在免打扰门内加入静音叙事块，return 不再紧随；判据语义不变：门必须接在咽喉上 */
-    ok('通知咽喉接免打扰门', /if \(isDndOnState\(storage\)\)/.test(idx));
+    /* [R25-X6 交棒改写] 门不再是一条 `if (isDndOnState(storage)) return;`：
+     *   开关读数 + 免打扰时段面一起进唯一判决口 decideDelivery，
+     *   真正的「弹 / 不弹」在 `if (!_tierDecision.banner)` 上。
+     *   判据语义不变（门必须接在咽喉上，且开关仍被读取），故分两半各钉一处，
+     *   免得「把门删了但留下一个没人用的 isDndOnState」也能通过。 */
+    ok('通知咽喉接免打扰门',
+        /isDndOnState\(storage\)/.test(idx) && /if \(!_tierDecision\.banner\)/.test(idx));
     // 控制中心装配（本轮回归点：类写完必须有人 new）
     ok('index 静态导入 ControlCenter', /import \{ ControlCenter \}/.test(idx));
     ok('index 实例化 ControlCenter', /new ControlCenter\(phoneShell, storage\)/.test(idx));

@@ -20,6 +20,8 @@ import { getAwayMode } from '../../config/away-mode.js';
  *   而不是只把 App 打开到首屏。载荷走唯一一支笔（config/app-open-detail.js），
  *   手拼 { appId, ref } 会让字段名一漂就静默落空（落空的表现是「点了没反应」）。 */
 import { buildOpenDetail } from '../../config/app-open-detail.js';
+/* [R25-X6] 三档标签与挡下回执：口径来自 config/notify-tiers.js（本视图不另判一次）。 */
+import { tierOf, TIER_TABLE, summarizeReceipts } from '../../config/notify-tiers.js';
 /* [v4.99.7 · R11-X7] 中枢行反查不在这里 import 桥：
  *   视图**不许**自己去碰第二张表（v41000 F1 的规矩：映射只能有一处）。
  *   改为让 App 侧提供 `rowById()` 只读出口，视图只问不管。 */
@@ -132,6 +134,7 @@ export class NotificationCenterView {
             ${this._flash ? `<div class="nc-flash">${esc(this._flash)}</div>` : ''}
             ${this._paradigmNote(split)}
             ${this._hubNote(feed)}
+            ${this._receiptNote()}
             ${this._awaySection()}<div data-away-review></div>
             ${this._actionSection()}
             ${this._hiddenSection(split)}
@@ -471,6 +474,14 @@ export class NotificationCenterView {
         const unreadCls = n.read ? '' : ' nc-unread';
         const countTag = (Number(n.count) || 1) > 1 ? `<span class="nc-count">×${Number(n.count)}</span>` : '';
         const appTag = APP_LABEL[n.appId] || n.appId || '系统';
+        /* [R25-X6] 三档在行上可见：重要 / 静默 各一个标签，普通不占位（默认档不刷屏）。
+         *   档位来自行本身（落账时写进来的 tier / 中枢派发器的 priorityName），
+         *   认不出就是普通档 —— 不猜成重要。 */
+        const _tierInfo = tierOf(n.tier !== undefined ? n.tier : n.priorityName);
+        const tierTag = _tierInfo.tier === 'normal'
+            ? ''
+            : ('<span class="nc-tier" data-tier="' + esc(_tierInfo.tier) + '">'
+                + esc(TIER_TABLE[_tierInfo.tier].label) + '</span>');
         const jumpable = n.appId && n.appId !== '__sys__';
         /* 靶心只写**形状成立**的那一种（三个字段非空串）：写一个投不出去的 ref，
          *   等于把用户丢在「点了没反应」里；写空串更糟（分不清是「没有靶心」还是「靶心坏了」）。 */
@@ -491,12 +502,30 @@ export class NotificationCenterView {
                 <div class="nc-row2">${esc(msgText)}</div>
                 <div class="nc-row3">
                     <span class="nc-apptag">${esc(appTag)}</span>
+                    ${tierTag}
                     ${countTag}
                     ${jumpable ? '<span class="nc-jump">打开 ›</span>' : ''}
                 </div>
             </div>
             <button class="nc-del" data-del="${esc(n.id)}" title="删除"><i class="fa-solid fa-xmark"></i></button>
         </div>`;
+    }
+
+    /* ---------------- [R25-X6] 挡下回执 ----------------
+     *  「有回执」= 用户能回答「刚才是不是被挡下了什么」。
+     *  三种读数**不同形**（本仓既有纪律）：
+     *    · 宿主没挂回执账 → 明写「读不到回执」，不是「什么都没挡」；
+     *    · 账在、最近没挡 → 「没有通知被挡下」；
+     *    · 账在、挡下了   → 逐原因计数，并指路去设置改时段。 */
+    _receiptNote() {
+        const raw = (typeof window !== 'undefined') ? window.VirtualPhone?._notifyReceipts : null;
+        const sum = summarizeReceipts(Array.isArray(raw) ? raw : null, { hours: 24 });
+        if (sum.face === 'unreadable') {
+            return '<div class="nc-digest-line nc-hub-warn">回执读不到（宿主未挂挡下账）—— 这不等于「什么都没挡」</div>';
+        }
+        if (sum.face === 'empty') return '';
+        return '<div class="nc-digest-line" data-receipt="holds">' + esc(sum.line)
+            + ' · <span class="nc-receipt-hint">可在设置 › 通知分级里调时段</span></div>';
     }
 
     _empty() {

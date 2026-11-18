@@ -1,3 +1,9 @@
+/* [R25-X4] 会话列表的时刻与日期也走**同一份格式真源**：
+ *   旧写法把 `MM/DD` 与 `昨天 HH:MM` 硬拼在这里，于是用户改 12 小时制 / 日期顺序时，
+ *   聊天列表纹丝不动 —— “改了没变”是比“没这个设置”更坏的体验。
+ *   第三参数接受两种形态：已归一化的 settings 对象，或 readFormatSettings() 的返回值（带 settings）。 */
+import { formatClockText, formatShortDay, DEFAULT_FORMAT } from '../../config/time-format.js';
+
 function parseCalendarDate(value) {
     const match = String(value || '').trim().match(/^(\d{1,8})\s*(?:年|[-/])\s*(\d{1,2})\s*(?:月|[-/])\s*(\d{1,2})\s*日?$/);
     if (!match) return null;
@@ -41,8 +47,17 @@ function getCalendarDayNumber({ year, month, day }) {
     return era * 146097 + dayOfEra;
 }
 
-export function formatWechatChatListTime(chat = {}, storyTime = {}) {
-    const fallback = String(chat.time || '').trim() || '刚刚';
+function settingsOf(format) {
+    if (!format || typeof format !== 'object') return DEFAULT_FORMAT;
+    if (format.settings && typeof format.settings === 'object') return format.settings;
+    return format;
+}
+
+export function formatWechatChatListTime(chat = {}, storyTime = {}, format = null) {
+    const settings = settingsOf(format);
+    const fallbackRaw = String(chat.time || '').trim() || '刚刚';
+    /* 时钟部分一律过真源：认不出是 `HH:MM` 的文本（如“刚刚”）原样返回，**不猜**。 */
+    const fallback = formatClockText(fallbackRaw, settings);
     if (!String(chat.lastMessage || '').trim()) return fallback;
 
     const currentDate = parseCalendarDate(storyTime.date);
@@ -54,9 +69,7 @@ export function formatWechatChatListTime(chat = {}, storyTime = {}) {
     if (daysAgo === 0) return fallback;
     if (daysAgo === 1) return `昨天 ${fallback}`;
 
-    const pad = value => String(value).padStart(2, '0');
-    const monthAndDay = `${pad(messageDate.month)}/${pad(messageDate.day)}`;
-    return messageDate.year === currentDate.year
-        ? monthAndDay
-        : `${messageDate.year}/${monthAndDay}`;
+    const short = formatShortDay(messageDate, settings.dateStyle, currentDate.year);
+    if (!short) return fallback;
+    return short;
 }

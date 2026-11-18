@@ -280,7 +280,11 @@ test('探针·漂移自检：括号账本对不上的方法必须盖 unreliable 
   const setClean = scrub(setText).split('\n');
   const big = analyzeMethod({ lines: setLines, cleanLines: setClean, method: 'bindEvents' });
   assert.equal(big.found, true, 'settings-app.bindEvents 应找得到');
-  assert.equal(big.method_lines, 5374, 'settings-app.bindEvents 应是 5374 行');
+  /* [R25-X4/X6 更新] bindEvents 从 5374 长到 5382：本轮在 bindEvents 里加了两节设置的绑定调用
+     （时间格式 4 个控件 + 通知三档/时段 3 个控件）。这里钉的是「当前真读数」，
+     它继续长就该继续更新本行 —— 那说明 bindEvents 这个 5000+ 行的巨型方法又胖了，
+     正是 R25-O5（设置面 IA）要处理的东西，不是把本行删掉就能变绿。 */
+  assert.equal(big.method_lines, 5382, 'settings-app.bindEvents 应是 5382 行');
   assert.equal(big.unreliable, true, '已知漂移 -2；修好后这条会红，请更新本判据');
   assert.ok(big.drift !== 0, '漂移量应为非 0：' + big.drift);
 });

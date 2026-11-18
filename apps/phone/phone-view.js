@@ -17,6 +17,8 @@ import { readPhoneContextLimit } from '../../config/context-settings.js';
 import { collectRecentChat } from '../../config/context-compose.js';
 import { PHONE_CONFIG } from '../../config/apps.js';
 import { formatWechatChatListTime } from '../wechat/chat-list-time.js';
+/* [R25-X4] 短信会话列表与微信列表共用同一份时间格式真源。 */
+import { readFormatSettings as readTimeFormatSettings } from '../../config/time-format.js';
 import { segmentTranscript as _r22SegmentTranscript, callSegNote } from '../../config/call-transcript-segments.js?v=4.157.0&r=20261116-r22';
 /* [v3.74.0 · 计划 R-O4 第 4 条] 视图层不得顺手写数据：通话设置里那一格此前是
  *   `storage.set(...)` 且不看返回值 —— 真机上 set 是 async，读数永远「成功」，
@@ -254,13 +256,14 @@ export class PhoneCallView {
 
         const contacts = this._getSmsStyleContacts();
         const storyTime = window.VirtualPhone?.timeManager?.getCurrentStoryTime?.() || {};
+        const timeFormat = readTimeFormatSettings(window.VirtualPhone?.storage);
         const listHtml = contacts.length > 0
             ? contacts.map(contact => {
                 const meta = formatWechatChatListTime({
                     lastMessage: contact.preview,
                     time: contact.time,
                     date: contact.date
-                }, storyTime);
+                }, storyTime, timeFormat);
                 return `
                     <button class="phone-sms-conversation" type="button" data-sms-contact="${this._escapeAttr(contact.name)}" data-sms-search="${this._escapeAttr(contact.name.toLowerCase())}">
                         <div class="phone-sms-conversation-copy">

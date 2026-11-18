@@ -77,6 +77,15 @@ export const SETTING_EFFECT = Object.freeze({
     'setting-a11y-font-scale': { at: 'immediate', why: '字号只改 documentElement 上的 CSS 变量，重绘即见' },
     'setting-a11y-reduced-motion': { at: 'immediate', why: '减弱动效只决定类名与过渡时长，下一帧生效' },
     'setting-a11y-high-contrast': { at: 'immediate', why: '高对比只决定类名与边框色，下一帧生效' },
+    /* [R25-X4] 时间格式四控件：只改“怎么显示”，不改任何数据，下一次重绘即见。 */
+    'setting-time-hour-cycle': { at: 'immediate', why: '只决定时钟渲染成 12 还是 24 制，下一帧重绘即见' },
+    'setting-time-date-style': { at: 'immediate', why: '只决定年/月/日排序，下一帧重绘即见' },
+    'setting-time-zone': { at: 'immediate', why: '只决定墙上时间的时区来源，下一帧重绘即见' },
+    'setting-time-zone-offset': { at: 'immediate', why: '固定偏移只在固定档生效，属显示层参数' },
+    /* [R25-X6] 通知分级与免打扰：只改“什么时候打扰我”，不动任何已存消息。 */
+    'setting-notify-dnd-enabled': { at: 'immediate', why: '免打扰开关只决定横幅要不要弹，通知照旧入中心，所以当场生效' },
+    'setting-notify-dnd-start': { at: 'immediate', why: '时段起点只影响按小时判定的免打扰，下一次判定即生效' },
+    'setting-notify-dnd-end': { at: 'immediate', why: '时段终点只参与「现在在不在免打扰」的小时判定，不重写历史通知' },
     'phone-image-debug-payload': { at: 'immediate', why: '只决定是否把请求体打进控制台' },
     'phone-tag-filter-enabled': { at: 'immediate', why: '过滤开关本身即时可判（黑白名单内容另计）' },
     'recycle-bin-enabled': { at: 'immediate', why: '软删开关决定下一次删除怎么走，不涉及生成' },

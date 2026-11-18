@@ -22,6 +22,10 @@ import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js
 import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows } from './diagnose-data.js';
 /* [R25-O7] 无障碍三档：一行文案走内核（「读了什么 / 真读回来什么」的比较口径只允许有一份）。 */
 import { a11yTriadText } from '../../config/a11y-triad.js';
+/* [R25-X4] 时间格式：卡片里的 8 格全部来自 `pkg.timeFormat.matrix`（真算）。 */
+import { timeFormatText } from '../../config/time-format.js';
+/* [R25-X6] 通知分级：三档逐档判决与回执都来自 pkg.notifyTier（本视图不重算）。 */
+import { notifyTierText } from '../../config/notify-tiers.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
@@ -1128,7 +1132,93 @@ export class DiagnoseView {
         }
         return html;
     }
-    _bootTimingHtml(pkg) {
+    /** [R25-X4] 时间格式卡片：一行结论 + 五面投影 + 8 格矩阵。
+     *  为什么要摆矩阵：只写「12 小时制已生效」是一句声明，用户无法验证；
+     *  矩阵是逐格真算的，哪一格算不出来会当天显示原因。 */
+    _timeFormatHtml(pkg) {
+        const face = (pkg && pkg.timeFormat) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note' + Q + '>读不到时间格式面 —— 宿主未提供 storage。'
+                + '这是「没这个读数」，**不是**「默认档也够用」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(timeFormatText(face)) + '</div>';
+        const st = face.settings || {};
+        if (face.projection) {
+            const pv = face.projection;
+            html += '<ul class=' + Q + 'dg-list' + Q + '>'
+                + '<li class=' + Q + 'dg-row' + Q + '>状态栏 / 消息戳：' + escapeHtml(String(pv.statusBar)) + '</li>'
+                + '<li class=' + Q + 'dg-row' + Q + '>日记 / 日历日期：' + escapeHtml(String(pv.diaryDate)) + '</li>'
+                + '<li class=' + Q + 'dg-row' + Q + '>锁屏摘要：' + escapeHtml(String(pv.lockscreenSummary)) + '</li>'
+                + '</ul>';
+        } else {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>这个设置下算不出投影（'
+                + escapeHtml(String(face.projectionUnreadable || '')) + '）—— 例如「跟随本机」但拿不到本机偏移。'
+                + '界面此时不会展示一个猜的时间。</div>';
+        }
+        const rows = Array.isArray(face.matrix) ? face.matrix : [];
+        if (rows.length) {
+            html += '<div class=' + Q + 'dg-sub' + Q + '>8 种组合逐格（当前时区档：'
+                + escapeHtml(String(st.zone || '?')) + '）</div><ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                const bad = r.ok ? '' : ' dg-bad';
+                const body = r.ok
+                    ? (escapeHtml(String(r.clock)) + ' · ' + escapeHtml(String(r.date)))
+                    : ('算不出：' + escapeHtml(String(r.reason || '')));
+                html += '<li class=' + Q + 'dg-row' + bad + Q + '>'
+                    + escapeHtml(String(r.hourCycle)) + ' + ' + escapeHtml(String(r.dateStyle))
+                    + ' → ' + body + '</li>';
+            });
+            html += '</ul>';
+        }
+        if (Array.isArray(face.rejected) && face.rejected.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>这些字段存了不合法值已回退默认：'
+                + escapeHtml(face.rejected.join('、')) + '</div>';
+        }
+        const ap = (pkg && pkg.timeFormatApplied) || null;
+        if (ap) {
+            const cls = ap.state === 'same' ? 'dg-sub' : ('dg-note dg-bad');
+            html += '<div class=' + Q + cls + Q + '>' + escapeHtml(String(ap.line || ''))
+                + (ap.rendered ? ('（状态栏最后显示：' + escapeHtml(String(ap.rendered)) + '）') : '')
+                + '</div>';
+        }
+        return html;
+    }
+        /** [R25-X6] 通知分级卡片：三档逐档判决（真算）+ 时段读数 + 回执。
+     *  为什么不只画行为表：表是「设计上应该怎样」，逐档判决才是「现在真会怎样」。 */
+    _notifyTierHtml(pkg) {
+        const face = (pkg && pkg.notifyTier) || null;
+        if (!face) {
+            return '<div class=' + Q + 'dg-note' + Q + '>读不到通知分级面 —— 宿主未提供 storage。'
+                + '这是「没这个读数」，**不是**「三档都一样」。</div>';
+        }
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(notifyTierText(face)) + '</div>';
+        const rows = Array.isArray(face.rows) ? face.rows : [];
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                const who = String(r.deliver) === 'banner' ? '弹横幅 + 进中心' : '只进中心';
+                const bad = (String(r.deliver) === 'center') ? ' dg-bad' : '';
+                html += '<li class=' + Q + 'dg-row' + bad + Q + '>'
+                    + escapeHtml(String(r.label)) + '（' + escapeHtml(String(r.tier)) + '）→ '
+                    + escapeHtml(who)
+                    + (r.reasons && r.reasons.length ? (' · 原因：' + escapeHtml(r.reasons.join('、'))) : '')
+                    + ' · 免打扰面：' + escapeHtml(String(r.dndFace || ''))
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+        const sch = face.schedule || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>时段读数：' + escapeHtml(String(sch.state || '?'))
+            + (sch.rejected && sch.rejected.length ? (' · 不合法字段：' + escapeHtml(sch.rejected.join('、'))) : '')
+            + ' · 免打扰=' + escapeHtml(face.dndEnabled ? '开' : '关')
+            + ' · 此刻 ' + escapeHtml(face.hour === null || face.hour === undefined ? '（时刻读不到）' : String(face.hour) + ' 点')
+            + '</div>';
+        const rc = face.receipts || {};
+        html += '<div class=' + Q + (rc.face === 'unreadable' ? 'dg-note dg-bad' : 'dg-note') + Q + '>回执：'
+            + escapeHtml(String(rc.line || '')) + '</div>';
+        return html;
+    }
+        _bootTimingHtml(pkg) {
         const face = (pkg && pkg.bootTiming) || null;
         if (!face) {
             return '<div class=' + Q + 'dg-note' + Q + '>读不到启动耗时面 —— 宿主未挂 '
@@ -1980,6 +2070,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>错误可读化（用户看到的那句话）</h3>' + this._errorReadableHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>无障碍三档（字号 / 减弱动效 / 高对比 · 写入与读回对拍）</h3>' + this._a11yTriadHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>时间格式（12/24 制 · 日期顺序 · 时区 · 8 格逐算）</h3>' + this._timeFormatHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>通知分级（重要 / 普通 / 静默 · 免打扰时段 · 挡下回执）</h3>' + this._notifyTierHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>导出脱敏</h3>' + this._secretHtml(pkg) + '</section>');

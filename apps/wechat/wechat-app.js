@@ -40,6 +40,9 @@ import {
   sharedItemRows, handoffGate, sharedPastSelfCheck
 } from '../../config/shared-past-contract.js';
 import { formatWechatChatListTime } from './chat-list-time.js?v=20260717-wechat-list-time';
+/* [R25-X4] 会话列表的时刻/日期跟随时间格式真源（12/24 制 · 日期顺序）。
+ *   旧行为：chat-list-time 硬拼 MM/DD，改设置对列表无效。 */
+import { readFormatSettings as readTimeFormatSettings } from '../../config/time-format.js';
 /* [v4.157.0 · R22] 四座桥接入本 App（各自只判一格，写盘/取数归本层）：
  *   X1 置顶排序、O4 消息全文搜索、X7 气泡主题、X8 剧情内剪贴板、O9 未读角标单口径。 */
 import { searchMessages } from '../../config/msg-search.js?v=4.157.0&r=20261116-r22';
@@ -5656,6 +5659,8 @@ export class WechatApp {
     renderChatList() {
         const chats = this.wechatData.getChatList();
         const storyTime = window.VirtualPhone?.timeManager?.getCurrentStoryTime?.() || {};
+        /* [R25-X4] 真源读一次，整列共用 —— 逐行读会让同一屏出现两种格式（渲染到一半用户改了设置）。 */
+        const timeFormat = readTimeFormatSettings(this.storage);
 
         if (chats.length === 0) {
             return `
@@ -5698,7 +5703,7 @@ export class WechatApp {
                             <div class="chat-last-msg">${chat.lastMessage || '暂无消息'}</div>
                         </div>
                         <div class="chat-meta">
-                            <div class="chat-time">${formatWechatChatListTime(chat, storyTime)}</div>
+                            <div class="chat-time">${formatWechatChatListTime(chat, storyTime, timeFormat)}</div>
                             ${chat.unread > 0 ? `<span class="chat-badge">${chat.unread > 99 ? '99+' : chat.unread}</span>` : ''}
                             ${this._cursorBadgeHtml(chat)}
                         </div>

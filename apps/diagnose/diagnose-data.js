@@ -263,6 +263,11 @@ import { diagnosticPackText } from '../../config/error-readable.js';
 import { judgeBoot, judgeBootSamples, bootTrend, bootBudgetLine } from '../../config/boot-budget.js';
 /* [R25-O7] 无障碍三档：对拍面走内核（期望值与读回值的比较口径只允许有一份）。 */
 import { a11yTriadFace as a11yTriadFaceOf } from '../../config/a11y-triad.js';
+/* [R25-X4] 时间格式面：设置真相 + 五面投影 + 8 格矩阵（全部真算）。 */
+import { timeFormatFace as timeFormatFaceOf, judgeTimeFormatApplied } from '../../config/time-format.js';
+/* [R25-X6] 通知分级：三档逐档真算 + 时段读数 + 挡下回执。 */
+import { notifyTierFace as notifyTierFaceOf, summarizeReceipts } from '../../config/notify-tiers.js';
+import { isDndOn as isDndOnState } from '../../config/system-controls.js';
 
 
 /** [R26-O1] 首屏预算面：从宿主读 boot-timing 现算（不自建实例，不缓存读数）。
@@ -773,6 +778,28 @@ export function collectDiagnose(win, storage) {
      *   ★ 这一面必须读**真实宿主 document**（`w.document`），不是诊断页自己的根：
      *     三档是写到 `documentElement` 上的，读别的根只会读到「这张卡自己的样式」。 */
     const a11ySc = safe(() => a11yTriadFaceOf((w && w.document) ? w : null, storage), null) || null;
+    /* [R25-X4] 时间格式面：只从宿主读（storage 真源），不在诊断页自建一份设置。 */
+    const timeFormatSc = safe(() => timeFormatFaceOf(storage, {}), null) || null;
+    /* [R25-X4] 与**状态栏最后一次渲染**对拍：存的是 X，界面真用的是 Y。
+     *   「已生效」只能靠两边各读一次来证明，不能靠设置页自己说。 */
+    /* [R25-X4] 与**状态栏最后一次渲染**对拍（判据在 config/time-format.js，不在本页）。 */
+    /* [R25-X6] 通知分级面：三档逐档判决 + 时段 + 回执。
+     *   hour 取剧情钟（与咽喉同一来源）；回执读宿主账（宿主没挂 ⇒ summarizeReceipts 报 unreadable）。 */
+    const notifySc = safe(() => {
+        const receipts = (w && w.VirtualPhone) ? w.VirtualPhone._notifyReceipts : null;
+        const st = safe(() => w.VirtualPhone?.timeManager?.getCurrentStoryTime?.(), null) || {};
+        const hm = String(st.time || '').match(/(\d{1,2}):/);
+        return notifyTierFaceOf(storage, {
+            hour: hm ? Number(hm[1]) : null,
+            dndEnabled: safe(() => isDndOnState(storage), false) === true,
+            ledger: { summary: (o) => summarizeReceipts(Array.isArray(receipts) ? receipts : null, o) }
+        });
+    }, null) || null;
+    const timeFormatApplied = (() => {
+        if (!timeFormatSc) return null;
+        const receipt = safe(() => (w && w.VirtualPhone) ? w.VirtualPhone._timeFormat : null, null);
+        return judgeTimeFormatApplied(timeFormatSc, receipt);
+    })();
     /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
      *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
      *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
@@ -2222,7 +2249,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。

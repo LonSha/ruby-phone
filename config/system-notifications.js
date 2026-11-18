@@ -103,6 +103,9 @@ export class NotificationLog {
             const message = String(rec.message || meta.content || '');
             const icon = String(rec.icon || '');
             const senderKey = String(rec.senderKey || `${title}:${icon}`);
+            /* [R25-X6] 档位（重要/普通/静默）随行落账：通知中心要按档显示标签，
+             *   而「这一条属于哪档」只有咽喉判得出来。空串 = 调用方没标（当普通档）。 */
+            const tier = String(rec.tier || meta.tier || '').trim();
             const appId = String(rec.appId || meta.appId || this._guessAppId(senderKey, icon));
             const ts = Number(rec.ts) || Date.now();
             const list = this.list();
@@ -113,6 +116,7 @@ export class NotificationLog {
                 head.icon = icon;
                 head.appId = appId;
                 head.meta = { ...meta, ref: _refOf(meta.ref) };
+                if (tier) head.tier = tier;
                 head.ts = ts;
                 head.count = (Number(head.count) || 1) + 1;
                 this._cache = list;
@@ -129,6 +133,7 @@ export class NotificationLog {
                 senderKey,
                 read: false,
                 count: 1,
+                ...(tier ? { tier: tier } : {}),
                 meta: {
                     name: String(meta.name || ''),
                     content: String(meta.content || ''),

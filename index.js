@@ -98,6 +98,11 @@ import { createFontScaleManager } from './phone/font-scale.js';
 import { NotificationLog } from './config/system-notifications.js';
 // [v2.16.0] 系统控制内核（免打扰门 / 缩放 / 开关状态；纯函数模块，无反向依赖）
 import { isDndOn as isDndOnState } from './config/system-controls.js';
+/* [R25-X6] 通知语义分级 + 免打扰时段 + 挡下回执。
+ *   三档行为的唯一真源（重要/普通/静默），咽喉只调决定不自己写 `if (priority < 3)`。 */
+import {
+    decideDelivery, readDndSchedule, createDeliveryLedger, tierOf
+} from './config/notify-tiers.js';
 /* [v4.155.0 · R21-X3] 静音与勿扰的剧情内解释（唯一桥）。缓存串照 app 面惯例，
  *   r=20261115-silence-bridge 让桥在抬版后被宿主强制重取；带缓串的静态 import
  *   在两道导入面门禁里都是先剥问号再判的合法形态（album-app 同款先例）。 */
@@ -3393,6 +3398,14 @@ function readSilenceLastTold(storage) {
     } catch (_e) { return null; }
 }
 
+/* [R25-X6] 挡下回执账：环形 50 条（每次启动重建，不落盘 —— 
+ *   回执只回答「刚刚这个会话里挡下了什么」，跨启动的历史由通知中心本身保留）。 */
+let _notifyLedger = null;
+function notifyLedgerOf() {
+    if (!_notifyLedger) _notifyLedger = createDeliveryLedger({ limit: 50 });
+    return _notifyLedger;
+}
+
 function showUnifiedPhoneNotification(title, message, icon = '📱', options = {}) {
         let safeTitle = String(title || '系统提示');
         let safeMessage = String(message || '');
@@ -3411,6 +3424,9 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 icon,
                 senderKey,
                 meta,
+                /* [R25-X6] 档位随落账写进去：通知中心按档显示标签，
+                 *   档位判定只有咽喉有（咽喉是唯一知道免打扰现场的地方）。 */
+                tier: (meta.tier !== undefined ? meta.tier : meta.priority),
                 appId: String(meta.appId || '')
             });
         } catch (_e) { /* 落账失败不阻断通知 */ }
@@ -3424,18 +3440,31 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 window.VirtualPhone.notificationsApp.render();
             }
         } catch (_e) { /* 刷新失败不影响通知展示 */ }
-        // [v2.16.0] 免打扰门：开启时通知只入账、不弹横幅（消息不会丢，只是不打断）
+        /* [R25-X6] 投递判决走唯一口（config/notify-tiers.js）——
+         *   修前三档在咽喉上**一律同形**：静默档到点照样弹横幅（「静默」只是日志里的数字），
+         *   还且拦下之后**没有任何回执**，用户事后无法回答「刚才是不是挡下了什么」。
+         *   现在：静默档永不弹横幅（只进中心），免打扰期间一律只进中心（零打扰），
+         *   每一条被挡下的都记进回执账（宿主面上可看）。 */
+        let _tierDecision = null;
         try {
-            const _r22DndCfg = storage?.get?.('rp22_dnd_schedule') || null;
-            const _r22DndEnabled = isDndOnState(storage) || _r22DndCfg?.enabled === true;
+            const _sched = readDndSchedule(storage);
+            const _r22DndEnabled = isDndOnState(storage) || _sched.enabled === true;
             const _r22Hour = (typeof storyNow === 'function' ? storyNow(window, { readOnly: true })?.date : '') || '';
             const _r22HourMatch = String(_r22Hour).match(/(\d{1,2}):/);
-            const _r22Quiet = r22DndFace({ enabled: _r22DndEnabled, hour: _r22HourMatch ? Number(_r22HourMatch[1]) : null, window: _r22DndCfg?.window || { start: 23, end: 7 } });
-            const _r22ShouldSilence = (() => {
-                if (isDndOnState(storage)) return true;
-                return !!_r22Quiet.quiet;
-            })();
-            if (_r22ShouldSilence) {
+            const _r22Quiet = r22DndFace({ enabled: _r22DndEnabled, hour: _r22HourMatch ? Number(_r22HourMatch[1]) : null, window: _sched.window || { start: 23, end: 7 } });
+            _tierDecision = decideDelivery({
+                tier: tierOf(meta.tier !== undefined ? meta.tier : meta.priority),
+                dnd: _r22Quiet,
+                pierceUrgent: meta.pierceDnd === true
+            });
+            const _row = notifyLedgerOf().record(_tierDecision, { title: safeTitle, appId: String(meta.appId || '') });
+            try {
+                if (window.VirtualPhone) {
+                    window.VirtualPhone._notifyTier = { decision: _tierDecision, schedule: _sched, row: _row, at: Date.now() };
+                    window.VirtualPhone._notifyReceipts = notifyLedgerOf().list();
+                }
+            } catch (_nt) { /* 挂不上不影响通知链 */ }
+            if (!_tierDecision.banner) {
                 /* [v4.155.0 · R21-X3] 静音叙事消费点（唯一现场态提供方）。被门拦下的这批消息
                  *   在机器面上是既成事实，在角色嘴里一个字都没有 —— 桥在这里判这一轮该不该
                  *   给候选句。arrivals 读不到 ⇒ unavailable（读不到与真零条不同形，绝不相塌）；
@@ -3444,8 +3473,10 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     ? storyNow(window, { readOnly: true }) : null;
                 const _snArrivals = (notificationLog && typeof notificationLog.unreadCount === 'function')
                     ? notificationLog.unreadCount() : null;
+                /* 叙事桥只解释**免打扰**这类「本该响而没响」的到达；静默档本来就该静，
+                 *   给它编一套「被吵到了但没听见」的台词是错的。 */
                 const _sn = silenceNarrative(Object.freeze({
-                    dndOn: true,
+                    dndOn: _tierDecision.reasons.indexOf('dnd') >= 0,
                     arrivals: _snArrivals, story: _snStory,
                     lastToldAt: readSilenceLastTold(storage)
                 }));
@@ -11727,7 +11758,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         if (route && route.key && window.VirtualPhone) delete window.VirtualPhone[route.key];
                         window.dispatchEvent(new Event('phone:goHome'));
                         (window.requestAnimationFrame || setTimeout)(() => {
-                            try { window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: id } })); } catch (_e) {}
+                            try { window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId: id })); } catch (_e) {}
                         }, 0);
                         return true;
                     } catch (_e) { return false; }
@@ -11783,7 +11814,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 };
                 const openAppById = (id) => {
                     try {
-                        window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: id } }));
+                        window.dispatchEvent(makePhoneEvent(PHONE_EVENTS.OPEN_APP, { appId: id }));
                         return true;
                     } catch (_e) { return false; }
                 };

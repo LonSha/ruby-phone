@@ -28,6 +28,21 @@ import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
  *   为什么不在这里自己拼 CSS 变量：拼第二份就等于把「默认值/区间/变量名」抄一遍，
  *   迟早与 `touch-readability-baseline.js` 不一致（R26-O5 要清的就是这类重写）。 */
 import { readA11yTriad, applyA11yTriad } from '../../config/a11y-triad.js';
+/* [R25-X4] 时间格式：12/24 制 · 日期顺序 · 时区。
+ *   本节只负责「摆控件 + 把选的值写进真源 + 当场把预览重算一遍」，
+ *   格式化本身全在 config/time-format.js（否则第二份实现一定漂）。 */
+import {
+    readFormatSettings, normalizeFormat, composeMoment, systemOffsetMinutes,
+    timeFormatText, FORMAT_STORAGE_KEY, DEFAULT_FORMAT
+} from '../../config/time-format.js';
+/* [R25-X6] 通知分级与免打扰：三档行为的真源、时段读写口、挡下回执汇总。 */
+import {
+    NOTIFY_TIERS, TIER_TABLE, readDndSchedule, writeDndSchedule, notifyTierText, summarizeReceipts
+} from '../../config/notify-tiers.js';
+import { SYS_KEYS } from '../../config/system-controls.js';
+/* [R25-X6] 免打扰开关的读写口：开关状态只走 system-controls 的唯一读/写口，
+ *   时段（起止小时）走 config/notify-tiers.js 的 writeDndSchedule —— 本节不自己拼 storage.set('sys_dnd')。 */
+import { writeFlag, isDndOn } from '../../config/system-controls.js';
 import {
     STORAGE_KEY as A11Y_STORAGE_KEY,
     DEFAULT_READABILITY_SETTINGS,
@@ -64,7 +79,7 @@ import { getAwayMode } from '../../config/away-mode.js';
 import { mountUsagePattern } from './usage-pattern-section.js';
 import { mountDeviceRuntimeSection } from './device-runtime-section.js';
 // [v2.19.0] 显示缩放双源统一：设置页与控制中心共享 sys_shell_scale 新键
-import { SYS_KEYS } from '../../config/system-controls.js';
+/* [R25-X6] SYS_KEYS / writeFlag / isDndOn 已在文件头部统一引入（避免同类重复声明）。 */
 import { effectLine, effectAtOf, effectWhyOf, applyChange, PendingEffects } from '../../config/setting-effect.js';
 import {
     PHONE_FLOATING_ENTRY_DEFAULT_STYLE,
@@ -3006,6 +3021,8 @@ export class SettingsApp {
 
                     <div class="phone-settings-tab-content ${this.currentTab === 'memory' ? 'is-active' : 'is-hidden'}" id="tab-memory" role="tabpanel" ${this.currentTab === 'memory' ? '' : 'hidden'}>
                         ${this.renderA11yTriadSection()}
+                        ${this.renderTimeFormatSection()}
+                        ${this.renderNotifyTierSection()}
                         ${this.renderShortcutSection()}
                                 ${this.renderMemoryPermissionSection()}
                         ${this.renderTagFilterSection()}
@@ -5516,6 +5533,218 @@ export class SettingsApp {
         }
     }
 
+    /**
+     * [R25-X6] 「通知分级与免打扰」：三档行为说明 + 免打扰开关/时段 + 挡下回执。
+     *
+     * 【本节要治的缺陷】
+     *   三档名字早就在中枢里（URGENT/NORMAL/SILENT），但用户在界面上**看不到**档位，
+     *   也改不了免打扰时段（时段配置只能手改存档）；被挡下的通知事后**没有回执**，
+     *   于是「刚才是不是挡下了什么」这个问题在界面上无法回答。
+     *
+     * 【本节不做的事】
+     *   · 不自己判三档该不该弹（判决在 config/notify-tiers.js 的 decideDelivery）；
+     *   · 不自己算时段（判据在 config/dnd-schedule.js 的 dndFace，本页只读写配置）。
+     */
+    renderNotifyTierSection() {
+        const sched = readDndSchedule(this.storage);
+        const dndOn = isDndOn(this.storage);
+        const stateLine = notifyTierText({ schedule: sched, rows: [] });
+        const raw = (typeof window !== 'undefined') ? window.VirtualPhone?._notifyReceipts : null;
+        const receipt = summarizeReceipts(Array.isArray(raw) ? raw : null, { hours: 24 });
+        /* 只生成 option：<select> 的 id 必须是**字面量**写在模板里，
+         *   否则「设置页有哪些真控件」的扫描面认不到它（v4108 C1 覆盖率门）。 */
+        const hourOptions = (value) => {
+            const opts = [];
+            for (let h = 0; h < 24; h += 1) {
+                opts.push('<option value="' + h + '"' + (h === value ? ' selected' : '') + '>'
+                    + String(h).padStart(2, '0') + ':00</option>');
+            }
+            return opts.join('');
+        };
+        const tierRows = NOTIFY_TIERS.map((id) => {
+            const t = TIER_TABLE[id];
+            return `<div class="setting-item" style="padding: 6px 0; border-bottom: 1px dashed #f2f2f2;">
+                    <div style="font-size: 13px; color: #222;">${this._escapeHtml(t.label)}档
+                        <span style="font-size: 11px; color: #999;">（${t.banner ? '弹横幅' : '不弹横幅'} · 进中心）</span></div>
+                    <div style="font-size: 11px; color: #8a8a8a; margin-top: 2px; line-height: 1.5;">${this._escapeHtml(t.note)}</div>
+                </div>`;
+        }).join('');
+        const receiptLine = receipt.face === 'unreadable'
+            ? '回执读不到（宿主未挂挡下账）—— 不等于「什么都没挡」'
+            : receipt.line;
+        return `
+            <div class="setting-section" data-notify-tier-section="1" style="margin: 12px 0 8px; padding: 10px 12px;">
+                <div class="setting-item" style="padding: 4px 0 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #222;">通知分级与免打扰</div>
+                    <div data-notify-tier-state style="font-size: 11px; color: #8a8a8a; margin-top: 2px;">${this._escapeHtml(stateLine)}</div>
+                </div>
+                ${tierRows}
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-notify-dnd-enabled" style="font-size: 13px; color: #222;">免打扰</label>
+                    <input type="checkbox" id="setting-notify-dnd-enabled" data-notify-dnd="enabled" ${dndOn || sched.enabled ? 'checked' : ''}>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-notify-dnd-start" style="font-size: 13px; color: #222;">时段开始</label>
+                    <select id="setting-notify-dnd-start" data-notify-dnd="setting-notify-dnd-start" style="font-size: 12px; padding: 2px 6px;">${hourOptions(sched.window.start)}</select>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-notify-dnd-end" style="font-size: 13px; color: #222;">时段结束</label>
+                    <select id="setting-notify-dnd-end" data-notify-dnd="setting-notify-dnd-end" style="font-size: 12px; padding: 2px 6px;">${hourOptions(sched.window.end)}</select>
+                </div>
+                <div data-notify-receipt style="font-size: 11px; color: #8a8a8a; margin-top: 6px; line-height: 1.5;">${this._escapeHtml(receiptLine)}</div>
+                <div style="font-size: 11px; color: #8a8a8a; margin-top: 4px; line-height: 1.5;">时段内一律只进通知中心、不弹横幅（开始 23 / 结束 07 表示 23:00→次日 07:00）。</div>
+            </div>`;
+    }
+
+    /** [R25-X6] 绑定：开关走 system-controls 的唯一写口，时段走 notify-tiers 的唯一写口。 */
+    bindNotifyTierEvents(settingsRoot = this._getActiveSettingsRoot()) {
+        try {
+            const doc = this._createSettingsScopedDocument(settingsRoot);
+            const root = settingsRoot || doc;
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            const els = root.querySelectorAll('[data-notify-dnd]');
+            if (!els || !els.length) return;
+            const refresh = () => {
+                const sched = readDndSchedule(this.storage);
+                const stEl = root.querySelector('[data-notify-tier-state]');
+                if (stEl) stEl.textContent = notifyTierText({ schedule: sched, rows: [] });
+                const rcEl = root.querySelector('[data-notify-receipt]');
+                const raw = (typeof window !== 'undefined') ? window.VirtualPhone?._notifyReceipts : null;
+                const receipt = summarizeReceipts(Array.isArray(raw) ? raw : null, { hours: 24 });
+                if (rcEl) {
+                    rcEl.textContent = receipt.face === 'unreadable'
+                        ? '回执读不到（宿主未挂挡下账）—— 不等于「什么都没挡」'
+                        : receipt.line;
+                }
+            };
+            const commit = async (kind) => {
+                if (kind === 'enabled') {
+                    const el = root.querySelector('[data-notify-dnd="enabled"]');
+                    const on = !!(el && el.checked);
+                    try { writeFlag(this.storage, SYS_KEYS.DND, on); }
+                    catch (e) { console.warn('[通知分级] 免打扰开关落盘失败:', e); }
+                    await writeDndSchedule(this.storage, { enabled: on });
+                    refresh();
+                    return;
+                }
+                const st = root.querySelector('[data-notify-dnd="setting-notify-dnd-start"]');
+                const en = root.querySelector('[data-notify-dnd="setting-notify-dnd-end"]');
+                const r = await writeDndSchedule(this.storage, {
+                    start: st ? Number(st.value) : undefined,
+                    end: en ? Number(en.value) : undefined
+                });
+                if (!r.ok) console.warn('[通知分级] 时段没落盘:', (r.rejected || []).join('、'), r.detail || '');
+                refresh();
+            };
+            els.forEach((el) => {
+                el.addEventListener('change', () => { void commit(el.getAttribute('data-notify-dnd')); });
+            });
+        } catch (e) {
+            console.warn('[通知分级] 绑定失败:', e);
+        }
+    }
+
+    /**
+     * [R25-X4] 「时间与格式」：三档选择 + 当场预览 + 状态行。
+     *
+     * 【本节要治的缺陷】
+     *   同一个时刻在界面各处各算一遍：状态栏永远 24 小时制、微信会话列表硬拼 `MM/DD`、
+     *   日历头部用上游给的`YYYY年M月D日`。于是「改成 12 小时制」只影响其中一处，
+     *   而用户看到的是“改了没变” —— 比根本没有这个设置更坏。
+     *
+     * 【本节不做的事】
+     *   · 不自己拼时间字符串（预览也走 `composeMoment`，与真实界面同一份投影）；
+     *   · 不判「什么值合法」（`normalizeFormat` 逐项点名拒收）。
+     */
+    renderTimeFormatSection() {
+        const face = readFormatSettings(this.storage);
+        const cur = face.settings || DEFAULT_FORMAT;
+        const pick = (value, label, now) => `<option value="${value}"${value === now ? ' selected' : ''}>${this._escapeHtml(label)}</option>`;
+        return `
+            <div class="setting-section" data-time-format-section="1" style="margin: 12px 0 8px; padding: 10px 12px;">
+                <div class="setting-item" style="padding: 4px 0 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #222;">时间与格式</div>
+                    <div data-time-format-state style="font-size: 11px; color: #8a8a8a; margin-top: 2px;">${this._escapeHtml(timeFormatText(face))}</div>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-time-hour-cycle" style="font-size: 13px; color: #222;">小时制</label>
+                    <select id="setting-time-hour-cycle" data-time-format="hourCycle" style="font-size: 12px; padding: 2px 6px;">
+                        ${pick('h24', '24 小时制', cur.hourCycle)}${pick('h12', '12 小时制', cur.hourCycle)}
+                    </select>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-time-date-style" style="font-size: 13px; color: #222;">日期顺序</label>
+                    <select id="setting-time-date-style" data-time-format="dateStyle" style="font-size: 12px; padding: 2px 6px;">
+                        ${pick('ymd', '2026-11-18（年-月-日）', cur.dateStyle)}${pick('mdy', '11/18/2026（月/日/年）', cur.dateStyle)}${pick('dmy', '18/11/2026（日/月/年）', cur.dateStyle)}${pick('cn', '2026年11月18日', cur.dateStyle)}
+                    </select>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-time-zone" style="font-size: 13px; color: #222;">时区</label>
+                    <select id="setting-time-zone" data-time-format="zone" style="font-size: 12px; padding: 2px 6px;">
+                        ${pick('system', '跟随本机', cur.zone)}${pick('utc', 'UTC', cur.zone)}${pick('fixed', '固定偏移', cur.zone)}
+                    </select>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-time-zone-offset" style="font-size: 13px; color: #222;">固定偏移（分钟，东为正）</label>
+                    <input type="number" id="setting-time-zone-offset" data-time-format="zoneOffsetMinutes" min="-840" max="840" step="15" value="${Number(cur.zoneOffsetMinutes) || 0}" style="width: 92px; font-size: 12px; padding: 2px 6px;">
+                </div>
+                <div data-time-format-preview style="font-size: 12px; color: #444; margin-top: 6px; padding: 6px 8px; background: #f7f7f7; border-radius: 6px;">${this._escapeHtml(this._timeFormatSampleText(cur, face))}</div>
+                <div style="font-size: 11px; color: #8a8a8a; margin-top: 6px; line-height: 1.5;">状态栏时钟、微信 / 短信会话列表、日历头部都跟随这里。诊断中心「时间格式」卡片会把 8 种组合逐格真算一遍，不是文案。固定偏移只在「固定偏移」档生效。</div>
+            </div>`;
+    }
+
+    /** [R25-X4] 预览：与真实界面同一份投影（`composeMoment`），不另拼一套。 */
+    _timeFormatSampleText(settings, face) {
+        const use = settings || DEFAULT_FORMAT;
+        const m = composeMoment(Date.now(), use, { systemOffsetMinutes: systemOffsetMinutes() });
+        if (!m.ok) return '预览：这个设置下算不出来（' + String(m.reason || '') + '）—— 界面也不会展示一个猜的时间';
+        const stateBit = (face && face.state === 'unreadable') ? '（存的是默认档）' : '';
+        return '预览' + stateBit + '：' + m.surfaces.statusBar + ' · ' + m.surfaces.diaryDate + ' · ' + m.surfaces.lockscreenSummary;
+    }
+
+    /** [R25-X4] 三个控件的绑定：改动 → 归一 → 落盘 → 重读真源 → 刷新状态行与预览。 */
+    bindTimeFormatEvents(settingsRoot = this._getActiveSettingsRoot()) {
+        try {
+            const doc = this._createSettingsScopedDocument(settingsRoot);
+            const root = settingsRoot || doc;
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            const els = root.querySelectorAll('[data-time-format]');
+            if (!els || !els.length) return;
+            const commit = async () => {
+                const pickEl = (k) => root.querySelector('[data-time-format="' + k + '"]');
+                const hc = pickEl('hourCycle');
+                const ds = pickEl('dateStyle');
+                const zn = pickEl('zone');
+                const off = pickEl('zoneOffsetMinutes');
+                const raw = {};
+                if (hc) raw.hourCycle = hc.value;
+                if (ds) raw.dateStyle = ds.value;
+                if (zn) raw.zone = zn.value;
+                if (off) raw.zoneOffsetMinutes = off.value;
+                const norm = normalizeFormat(raw);
+                try {
+                    await this.storage.set(FORMAT_STORAGE_KEY, JSON.stringify(norm.settings));
+                } catch (e) {
+                    console.warn('[时间格式] 落盘失败（本次预览已按新值算，但重启后会回退）:', e);
+                }
+                /* 写盘之后**重读**再画：这样“控件上写的”与“真源里存的”不一致时，界面会暴露它。 */
+                const face = readFormatSettings(this.storage);
+                const stEl = root.querySelector('[data-time-format-state]');
+                if (stEl) stEl.textContent = timeFormatText(face);
+                const pv = root.querySelector('[data-time-format-preview]');
+                if (pv) pv.textContent = this._timeFormatSampleText(face.settings, face);
+            };
+            els.forEach((el) => {
+                el.addEventListener('change', () => { void commit(); });
+                if (el.getAttribute('data-time-format') === 'zoneOffsetMinutes') {
+                    el.addEventListener('input', () => { void commit(); });
+                }
+            });
+        } catch (e) {
+            console.warn('[时间格式] 绑定失败:', e);
+        }
+    }
+
     /** [R25-X7] 外接键盘快捷键：**查看 + 改 + 恢复默认**（键位真源在 config/keyboard-map.js）。
      *  为什么要有「改」：一组硬编码快捷键等于替用户决定了他桌面上的键位习惯；
      *  为什么要有「恢复默认」：改坏了必须有一步退路（否则只能清存档）。 */
@@ -6309,6 +6538,10 @@ export class SettingsApp {
         this._bindPhoneColorPickers(settingsRoot);
         /* [R25-O7] 无障碍三档控件：改动立刻写到 documentElement（并落盘真源）。 */
         this.bindA11yTriadEvents(settingsRoot);
+        /* [R25-X6] 通知分级与免打扰时段。 */
+        this.bindNotifyTierEvents(settingsRoot);
+        /* [R25-X4] 时间格式三控件。 */
+        this.bindTimeFormatEvents(settingsRoot);
         /* [R25-X7] 快捷键改键口（只绑这一节的按钮）。 */
         this.bindShortcutEvents(settingsRoot);
 

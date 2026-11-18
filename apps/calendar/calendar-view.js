@@ -2,6 +2,10 @@ import { ConditionReminderView } from '../affairs/condition-reminder-view.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
+/* [R25-X4] 日历头部的「剧情时间」也走日期格式真源。
+ *   旧写法直接把上游给的 `2026年11月18日` 或自己拼的 `YYYY年M月D日` 贴出来，
+ *   于是用户选了 `ymd` / `mdy` 对日历完全无感。 */
+import { readFormatSettings as readTimeFormatSettings, formatDateParts, formatClockText } from '../../config/time-format.js';
 /* ========================================================
  *  柚月小手机 (Yuzuki's Little Phone)
  *  日历视图层
@@ -1497,8 +1501,20 @@ export class CalendarView {
 
     getStoryTimeLabel() {
         const storyTime = this.getStoryTime();
-        const date = storyTime?.date || `${this.selectedDate.year}年${this.selectedDate.month}月${this.selectedDate.day}日`;
-        const time = storyTime?.time || '';
+        const face = readTimeFormatSettings(this.app?.storage);
+        const style = face.settings.dateStyle;
+        /* 只有**能解析成三元组**的剧情日期才重排格式；解不出来的原样贴出，
+         * 不许用「今天」冒充（那会把剧情纪年换成公历）。 */
+        const src = String(storyTime?.date || '').trim();
+        const m = src.match(/(\d{1,6})[-\/年]\s*(\d{1,2})[-\/月]\s*(\d{1,2})\s*日?/);
+        const parsed = m
+            ? formatDateParts({ year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) }, style)
+            : null;
+        const date = parsed
+            || src
+            || formatDateParts(this.selectedDate, style)
+            || '';
+        const time = formatClockText(String(storyTime?.time || ''), face.settings);
         const weekday = storyTime?.weekday || this.getWeekdayLabel(this.selectedDate);
         return `剧情时间 ${date} ${weekday}${time ? ` ${time}` : ''}`;
     }

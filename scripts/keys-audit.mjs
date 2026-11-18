@@ -653,6 +653,17 @@ const KEY_REGISTRY = [
    *     动到已存用户的存档（本仓「不静默改动存量数据」纪律）。要全局是下一轮的迁移工程，不是本项。
    *   默认值与可接受键形在 config/keyboard-map.js，本处只登记归属。 */
   { key: 'sys_keyboard_shortcuts', scope: 'chat', note: '[R25-X7] 键盘快捷键键位覆盖（返回/回桌面/搜索/发送/切 App）' },
+  /* [R25-X4] 时间格式（12/24 制 · 日期顺序 · 时区）。
+   *   与 sys_keyboard_shortcuts / sys_motion_level 同列，按**机制现状**登记为 chat：
+   *   `sys_` 族当下落在会话面，K2 只问「声明与实际匹配不匹配」。
+   *   （若将来要把「这台手机怎么显示时间」做成全局，那是一次迁移工程，不是改一行常量。） */
+  { key: 'sys_time_format', scope: 'chat', note: '[R25-X4] 小时制 / 日期顺序 / 时区（状态栏·会话列表·日历跟随）' },
+  /* [R25-X6] 免打扰开关。K1 抓到它是本轮新增的功能性使用点（设置页那一节要读开关初值、
+   *   写开关状态，走的是 system-controls 的 writeFlag/isDndOn，键名仍解析到 sys_dnd）。
+   *   归属同样按**机制现状**登记为 chat：`sys_` 族落在会话面，CHAT_DATA_PATTERNS 已收录
+   *   `^sys_`（system-v216 有判据钉着「sys_dnd 路由到 chatMetadata」）。
+   *   时段（起止小时）不在这个键里，走 rp22_dnd_schedule。 */
+  { key: 'sys_dnd', scope: 'chat', note: '[R25-X6] 免打扰开关（时段与回执另存 rp22_dnd_schedule）' },
   { key: 'sys_access_compact', scope: 'chat', note: '紧凑列表开关（随会话隔离）' },
   { key: 'sys_access_theme', scope: 'chat', note: '主题档（auto / light / dark，随会话隔离）' },
   /* [v4.115.0 · R13-X4] 离开状态机落账键：离开理由、起止时间与 missed 清单随会话隔离 ——

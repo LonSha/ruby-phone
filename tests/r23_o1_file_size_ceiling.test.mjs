@@ -52,11 +52,11 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：889 个 .js / 合计 379451 行 / 44 个大文件，台账全绿', () => {
+test('真仓读数：898 个 .js / 合计 382637 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 889, '扫到的 .js 数量与当前实际不符（R24 新增分片/模块后已复核）');
-  assert.equal(r.stats.total, 379451, '全仓合计行数与台账不符（R24-O9 拆 cheats.js 后降 23400+ 行）');
+  assert.equal(r.stats.files, 898, '扫到的 .js 数量与当前实际不符（R25-X4/X6 新增两个 config 内核后已复核）');
+  assert.equal(r.stats.total, 382637, '全仓合计行数与台账不符（R25-X4/X6 两个新内核 + 五处消费面接线，台账 note 里写了为什么涨）');
   assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
@@ -77,7 +77,7 @@ test('「无上界门」这条欠账真的关了：PLAN.md 点名的三个大文
   assert.ok(cheatsRow.lines < DEFAULT_MAX, 'data/cheats.js 应已降到默认上限之内，实得 ' + cheatsRow.lines);
   assert.ok(!('data/cheats.js' in ledger.files), '已降到上限内的文件不该继续占台账条目');
   assert.equal(ledger.files['apps/wechat/chat-view.js'].lines_max, 18449);
-  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12362);
+  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12798);
   assert.ok(rows.every((r) => r.lines <= DEFAULT_MAX || r.path in ledger.files), '存在未被记账的大文件');
 });
 
@@ -156,7 +156,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 889);
+  assert.equal(j.stats.files, 898);
   assert.deepEqual(j.problems, []);
 });
 

@@ -1,17 +1,17 @@
 {
   "schema": "file-size-ceiling@1",
   "plan": "R23-O1",
-  "note": "全仓 apps/ config/ 下 .js 的文件行数天花板。台账里只收「大文件」（> default_max）；小文件靠 default_max 兜底。lines_max 记的是当前真读数，只降不涨：涨了 R2 红，降了不压 R3 红。行数口径 = 物理行数（末尾换行不计）：所以 chat-view.js 在这里是 18531，而 chat_render_split.json 的 view_lines_max 用的是 split 长度 18532，两者差 1 是口径差不是不一致。 R23-O2（同文件内/出文件切片）之后该文件是 18449。 **总量棘轮的一个已知代价**：把方法体内的一段搬到新模块，会让全仓行数**上涨**（每个切片至少要付函数壳 + 调用点这 6 行），R23-O2 为此涨了 24 行（402654 → 402678）。这不是偷偷长，是切片本身的成本，已写在这里并在提交里可见；要抵消它得靠后续真正删代码，不能靠「不压台账」。",
+  "note": "全仓 apps/ config/ 下 .js 的文件行数天花板。台账里只收「大文件」（> default_max）；小文件靠 default_max 兜底。lines_max 记的是当前真读数，只降不涨：涨了 R2 红，降了不压 R3 红。行数口径 = 物理行数（末尾换行不计）：所以 chat-view.js 在这里是 18531，而 chat_render_split.json 的 view_lines_max 用的是 split 长度 18532，两者差 1 是口径差不是不一致。 R23-O2（同文件内/出文件切片）之后该文件是 18449。 **总量棘轮的一个已知代价**：把方法体内的一段搬到新模块，会让全仓行数**上涨**（每个切片至少要付函数壳 + 调用点这 6 行），R23-O2 为此涨了 24 行（402654 → 402678）。这不是偷偷长，是切片本身的成本，已写在这里并在提交里可见；要抵消它得靠后续真正删代码，不能靠「不压台账」。 **R25-X4/X6 的上涨（381454 → 382634）**：两个新内核落盘 —— config/time-format.js（335 行）与 config/notify-tiers.js（337 行）；其余是「内核必须接到真实消费点」的接线成本：settings-app.js +230（两节控件与绑定）、diagnose-view.js +92、phone-shell.js +29、diagnose-data.js +27、calendar-view.js +16、wechat-app.js +5、phone-view.js +3。这几处正是判据 X4-1/X6-11 要求的「不只交模块」的代价：只写内核不接消费点的方案行数更少，但那是文档写了 ≠ 代码在。压回原位的唯一正当手段是 R25-O1 拆骨（settings-app.js 12795 / chat-view.js 18449），不是把接线删掉。",
   "default_max": 1200,
-  "generated_at": "2026-11-18T02:54:29.453Z",
-  "total_lines_max": 379451,
+  "generated_at": "2026-11-18T08:06:13.768Z",
+  "total_lines_max": 382637,
   "files": {
     "apps/wechat/chat-view.js": {
       "lines_max": 18449,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/settings/settings-app.js": {
-      "lines_max": 12362,
+      "lines_max": 12798,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "data/gacha-items.js": {
@@ -23,7 +23,7 @@
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/wechat/wechat-app.js": {
-      "lines_max": 8721,
+      "lines_max": 8726,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/wechat/wechat-data.js": {
@@ -43,7 +43,7 @@
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/phone/phone-view.js": {
-      "lines_max": 4239,
+      "lines_max": 4242,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/games/games-app.js": {
@@ -58,6 +58,10 @@
       "lines_max": 3072,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
+    "apps/diagnose/diagnose-data.js": {
+      "lines_max": 2885,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
     "config/prompt-manager.js": {
       "lines_max": 2737,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
@@ -66,16 +70,16 @@
       "lines_max": 2718,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
-    "apps/diagnose/diagnose-data.js": {
-      "lines_max": 2715,
-      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
-    },
     "apps/diary/diary-data.js": {
       "lines_max": 2275,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/wangxiang/wangxiang-view.js": {
       "lines_max": 2125,
+      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
+    },
+    "apps/diagnose/diagnose-view.js": {
+      "lines_max": 2083,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/diary/diary-view.js": {
@@ -87,15 +91,11 @@
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "phone/phone-shell.js": {
-      "lines_max": 1939,
+      "lines_max": 1974,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/wechat/contacts-view.js": {
       "lines_max": 1929,
-      "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
-    },
-    "apps/diagnose/diagnose-view.js": {
-      "lines_max": 1910,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "data/cheat-index.js": {
@@ -139,7 +139,7 @@
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/calendar/calendar-view.js": {
-      "lines_max": 1548,
+      "lines_max": 1564,
       "note": "大文件（> 默认上限），只降不涨；真需要长就在提交里改这里"
     },
     "apps/health/surgery-library.js": {

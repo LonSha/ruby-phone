@@ -155,7 +155,8 @@ export function buildLedger(rows, defaultMax = DEFAULT_MAX, now = new Date()) {
     schema: 'file-size-ceiling@1',
     plan: PLAN,
     note: '全仓 apps/ config/ 下 .js 的文件行数天花板。台账里只收「大文件」（> default_max）；小文件靠 default_max 兜底。lines_max 记的是当前真读数，只降不涨：涨了 R2 红，降了不压 R3 红。行数口径 = 物理行数（末尾换行不计）：所以 chat-view.js 在这里是 18531，而 chat_render_split.json 的 view_lines_max 用的是 split 长度 18532，两者差 1 是口径差不是不一致。 R23-O2（同文件内/出文件切片）之后该文件是 18449。' +
-      ' **总量棘轮的一个已知代价**：把方法体内的一段搬到新模块，会让全仓行数**上涨**（每个切片至少要付函数壳 + 调用点这 6 行），R23-O2 为此涨了 24 行（402654 → 402678）。这不是偷偷长，是切片本身的成本，已写在这里并在提交里可见；要抵消它得靠后续真正删代码，不能靠「不压台账」。',
+      ' **总量棘轮的一个已知代价**：把方法体内的一段搬到新模块，会让全仓行数**上涨**（每个切片至少要付函数壳 + 调用点这 6 行），R23-O2 为此涨了 24 行（402654 → 402678）。这不是偷偷长，是切片本身的成本，已写在这里并在提交里可见；要抵消它得靠后续真正删代码，不能靠「不压台账」。' +
+      ' **R25-X4/X6 的上涨（381454 → 382634）**：两个新内核落盘 —— config/time-format.js（335 行）与 config/notify-tiers.js（337 行）；其余是「内核必须接到真实消费点」的接线成本：settings-app.js +230（两节控件与绑定）、diagnose-view.js +92、phone-shell.js +29、diagnose-data.js +27、calendar-view.js +16、wechat-app.js +5、phone-view.js +3。这几处正是判据 X4-1/X6-11 要求的「不只交模块」的代价：只写内核不接消费点的方案行数更少，但那是文档写了 ≠ 代码在。压回原位的唯一正当手段是 R25-O1 拆骨（settings-app.js 12795 / chat-view.js 18449），不是把接线删掉。',
     default_max: defaultMax,
     generated_at: now.toISOString(),
     total_lines_max: rows.reduce((a, r) => a + r.lines, 0),

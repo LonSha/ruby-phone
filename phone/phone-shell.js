@@ -34,6 +34,10 @@ import { installBackGuard, registerBackCloser } from '../config/back-guard.js';
  *   所以修法不能一律补白：浅底 + 浅字 = 字直接消失（比透底更糟）。
  *   深/浅两档按各 App 的实际字色统计得出，表与判据同在 config/app-surfaces.js。 */
 import { appSurface, appSurfaceColor, normalizeSurfaceAppId } from '../config/app-surfaces.js';
+/* [R25-X4] 时间格式单一真源（12/24 小时制 · 日期顺序 · 时区）。
+ *   在此之前本文件的 getCurrentTime() 自己 `String(h).padStart(2,'0')` ——
+ *   于是「用户设了 12 小时制」对状态栏完全无效。 */
+import { formatClockText, readFormatSettings } from '../config/time-format.js';
 
 export class PhoneShell {
     constructor() {
@@ -962,7 +966,32 @@ export class PhoneShell {
             && this._isStorageEnabledByDefault(realTimeKey);
     }
 
+    /* [R25-X4] 状态栏时钟：**只认时间格式真源**。
+     *   上游（剧情钟 / 墙钟双源）给的是 `HH:MM` 文本，这里不把它换成毫秒再格式化 ——
+     *   剧情钟不是真时刻，换算成毫秒会把「这不是真实时间」这件事糊掉。
+     *   所以真正的输入源仍是 `_readRawClockText()`，本方法只做「按用户选的 12/24 制重排」。
+     *   设置读不到（storage 缺失 / 抛错）时 `readFormatSettings` 会回报 unreadable，
+     *   此时按默认档显示，并把「用的是默认档、不是你选的那份」记在 `_timeFormatFace` 上，
+     *   供诊断页读回 —— 不许悄悄当成「已生效」。 */
     getCurrentTime() {
+        let raw = null;
+        try { raw = this._readRawClockText(); }
+        catch (_e) { raw = null; }
+        if (raw == null) return raw;
+        const host = (typeof window !== 'undefined') ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+        const storage = host && host.VirtualPhone ? host.VirtualPhone.storage : null;
+        const face = readFormatSettings(storage);
+        const text = formatClockText(raw, face.settings);
+        /* 读回对拍面：把「界面最后一次真用的那份设置与渲染结果」留在宿主上，
+         * 诊断页拿它跟 storage 里的真源对比 —— 只声明「已生效」是没人能验的。 */
+        const receipt = { ...face, at: Date.now(), surface: 'statusBar', raw: String(raw), text: String(text) };
+        this._timeFormatFace = receipt;
+        try { if (host && host.VirtualPhone) host.VirtualPhone._timeFormat = receipt; } catch (_e) { /* 只读宿主 */ }
+        return text;
+    }
+
+    /** 上游原文（剧情钟 / 实时钟 / 本机墙钟）——不做任何格式改写。 */
+    _readRawClockText() {
         const timeManager = window.VirtualPhone?.timeManager;
 
         if (timeManager) {
