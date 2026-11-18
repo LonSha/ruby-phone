@@ -176,6 +176,7 @@ export class BackupdeskView {
         h += this._plan(vm);
         h += this._snap(vm);
         h += this._machine(vm);
+        h += this._growth(vm);
         h += this._share(vm);
         h += '</div>';
         return h;
@@ -245,6 +246,49 @@ export class BackupdeskView {
         }
         return h + '</div>';
     }
+    /**
+     * [R25-O6] 占用面：谁在占（按字节排序）、归属不明的单列、清理差异预览（只预览不执行）。
+     *   四件事都**不塌**：读不到不画 0、归属不明不摊进 App、预览必写「会失去什么」、
+     *   没有基线就说没有基线（不拿 0 当基线）。
+     */
+    _growth(vm) {
+        const g = vm.growth || {};
+        let h = '<div class="bk-box bk-growth"><h3>占用（谁在占盘 / 排序 / 清理差异预览）</h3>';
+        h += '<div class="bk-acts"><button class="bk-chip" data-bk-grow="measure">测一次（只读）</button></div>';
+        h += '<div class="bk-note">' + esc(g.text || "") + '</div>';
+        if (g.basis) h += '<div class="bk-note">口径：' + esc(g.basis) + '</div>';
+        if (g.state === "ok") {
+            h += '<div class="bk-note">合计 <span data-bk-grow-total="1">' + esc(String(g.totalBytes)) + '</span> 字节 / ' + esc(String(g.totalKeys)) + ' 条键</div>';
+            for (const r of (g.rows || [])) {
+                h += '<div class="bk-row" data-bk-grow-row="1"><span class="bk-row-k">' + esc(r.label) + '</span>' +
+                    '<span class="bk-row-v">' + esc(String(r.bytes)) + ' 字节 · ' + esc(String(r.count)) + ' 条</span></div>';
+            }
+            if (g.unmapped && g.unmapped.count) {
+                h += '<div class="bk-note bk-self-bad">' + esc(g.unmapped.label + '：' + String(g.unmapped.count) + ' 条 / ' + String(g.unmapped.bytes) + ' 字节（单列，不摊进任何 App）') + '</div>';
+            }
+            if ((g.unreadable || []).length) {
+                h += '<div class="bk-note bk-self-bad">' + esc('有 ' + String(g.unreadable.length) + ' 条键读失败（不是空值）：' + g.unreadable.join(', ')) + '</div>';
+            }
+        }
+        const pv = g.preview;
+        if (pv) {
+            h += '<div class="bk-note">清理差异预览（applied=' + (pv.applied ? 'true' : 'false') + ' · 只预览不执行）：' + esc(pv.text || '') + '</div>';
+            for (const it of (pv.items || [])) {
+                h += '<div class="bk-row"><span class="bk-row-k">' + esc(it.label) + '</span>' +
+                    '<span class="bk-row-v">' + esc(it.text) + '</span></div>';
+                h += '<div class="bk-note">会失去：' + esc(it.loss || '') + '（' + esc(it.recoverable ? '可再生成' : '删了不会自己长回来') + '）</div>';
+            }
+        }
+        h += '<div class="bk-note" data-bk-grow-verdict="1">' + esc(this._growVerdictLine(g.verdict)) + '</div>';
+        return h + '</div>';
+    }
+    /** 占用面的读回结论：三态各自成句，unknown 不说成「一致」。 */
+    _growVerdictLine(v) {
+        if (!v) return '读回对拍：还没有测量过';
+        if (v.state === 'same') return v.text;
+        if (v.state === 'mismatch') return v.text;
+        return '读回对拍：判不出（' + String(v.reason || '') + '）—— 这不等于一致';
+    }
     /** 读回对拍的结论行：三态各自成句，unknown 不说成「一致」。 */
     _verdictLine(v) {
         if (!v) return '读回对拍：还没有回放面';
@@ -302,6 +346,27 @@ export class BackupdeskView {
             const v = self.app.machineVerdict(seen);
             const badge = el.querySelector('[data-bk-tm-verdict]');
             if (badge) badge.textContent = self._verdictLine(v);
+        }
+        /* [R25-O6] 占用面：按一次「测一次」让 App 枚举全量键面（只读），然后重渲染。
+         *   重渲染是必须的：数字与榜都是这次测量的结果，不重渲染就只能看到上次的。 */
+        el.querySelectorAll('[data-bk-grow]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                self.app.measureGrowth();
+                self.app.render();
+            });
+        });
+        /* 读回对拍：读**屏上真正显示的那个合计数字与行数**（不是再算一遍），
+         *   算完直接改写结论行 —— 不进 render，避免渲染→读回→渲染的死循环。 */
+        const growTotal = el.querySelector('[data-bk-grow-total]');
+        if (growTotal) {
+            const seen = {
+                totalBytes: Number(String(growTotal.textContent || '').trim()),
+                rows: el.querySelectorAll('[data-bk-grow-row]').length
+            };
+            self.app.setGrowthObserved(seen);
+            const v = self.app.growthVerdict(seen);
+            const line = el.querySelector('[data-bk-grow-verdict]');
+            if (line) line.textContent = self._growVerdictLine(v);
         }
         /* [v4.99.8 · R11-X4] 分享面：四个动作对应 App 上四个口（pick / viewer 是纯视图态，
          *   draft / revoke 走内核）。★ 「预览」不是动作 —— 选人之后就自动算，

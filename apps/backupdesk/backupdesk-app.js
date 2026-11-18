@@ -36,6 +36,11 @@ import { writeReceipt } from '../../config/write-receipt.js';
  *   否则「未读数」会出现第二份口径（这正是本仓反复治的病）。 */
 import { replayAt as replayAtMoment, momentsOf as machineMomentsOf, faceTextOf as machineFaceTextOf, judgeReplayApplied, READ_ONLY_BADGE, MACHINE_FACES, FACE_LABELS as MACHINE_FACE_LABELS } from '../../config/time-machine.js';
 import { unreadStateOf } from '../wechat/chat-read-cursor.js';
+/* [R25-O6] 数据增长治理：占用 / 排序 / 清理差异预览。内核只算不删，**本件也只读**：
+ *   读全量键面（这是全仓离「顺手清一清」最近的地方），但一个键都不删、不写。 */
+import { measureOccupancy, previewCleanup, growthBetween, faceTextOf as growthFaceTextOf, judgeGrowthApplied, bytesOfValue, USAGE_KEY } from '../../config/data-growth.js';
+/* App id / 中文名真源（本仓多处 App 已这么 import；key 归属靠它判，不自建一份名单）。 */
+import { APPS } from '../../config/apps.js';
 /* [v4.99.8 · R11-X4] 分享边界内核：谁能看、看得到什么、撤回后留不留痕 —— **全由内核判**。
  *   本件只做三件事：读盘 / 把用户意图转交内核 / 把结果落盘。不写第二份授权判据。 */
 import {
@@ -70,10 +75,7 @@ export class BackupdeskApp {
         /* [R25-X2] 时光机的回放结果与读回同样丢掉（不属于本段的「当时」不能留着）。 */
         this._machine = null;
         this._machineObserved = null;
-        /* [R25-X2] 时光机的**这一次**回放结果与屏上读回。两者都是「这一次点出来的」，
-         *   换会话必须丢（上一个会话的「当时」贴到新会话 = 用户会照着一份不属于本段的历史复盘）。 */
-        this._machine = null;
-        this._machineObserved = null;
+        /* [R25-O6] 占用的上一次测量（增长读数的基线）与屏上读回：两者都是「这一次算出来的」。
         /* [v4.99.8 · R11-X4] 分享与迁移审阅面的**实例态**：当前选中的草案 id、
          *   当前预览的收件人、提示行。三者都是「这一次点出来的」，换会话必须丢
          *   （上一个会话选中的草案贴到新会话 = 用户会以为自己分享了别人的东西）。
@@ -498,6 +500,8 @@ export class BackupdeskApp {
             snap: this._snapVm(),
             /* [R25-X2] 时光机面（只读回放）。 */
             machine: this._machineVm(),
+            /* [R25-O6] 占用面（只读测量：谁在占、排序、清理差异预览）。 */
+            growth: this._growthVm(),
             /* [v4.99.8 · R11-X4] 分享与迁移审阅面（起草 / 收件人视角预览 / 撤回留痕）。 */
             share: this._shareVm(),
         };
@@ -554,6 +558,85 @@ export class BackupdeskApp {
             text: r ? String(r.text || '') : '先选一个恢复点：当时的样子 = 那一刻的键面 + 四个面的投影（只读）',
             rows: rows,
             verdict: r ? judgeReplayApplied(r, this._machineObserved) : null
+        };
+    }
+    /* ============ [R25-O6] 数据增长治理：谁在占、谁最大、清掉会失去什么 ============
+     * 为什么在这里：本 App 已经在管「恢复到哪个点」，而「盘上现在有多胖、哪个家族最胖」
+     *   是同一张桌子的另一半；放到设置里会长成第二个「清理」入口。
+     * ★ 只读硬约束：本方法只枚举 + 读值，**不删不写**；清理只有差异预览（applied:false）。
+     *   判据扫这个方法体（tests/r25_o6_data_growth.test.mjs）。
+     */
+    measureGrowth() {
+        const host = this.host();
+        const keys = (host && host.keys) ? host.keys : null;
+        const readable = !!(keys && keys.readable);
+        const knownIds = Array.isArray(APPS) ? APPS.map((a) => String(a && a.id || '')) .filter(Boolean) : [];
+        const labels = {};
+        if (Array.isArray(APPS)) for (const a of APPS) if (a && a.id) labels[String(a.id)] = String(a.name || a.id);
+        const entries = [];
+        if (readable && this.storage && typeof this.storage.get === 'function') {
+            const push = (key, layer) => {
+                try { entries.push({ key: String(key), layer, raw: this.storage.get(key) }); }
+                catch (_e) { entries.push({ key: String(key), layer, failed: true }); }
+            };
+            for (const k of (keys.chat || [])) push(k, 'chat');
+            for (const k of (keys.global || [])) push(k, 'global');
+        }
+        const measured = measureOccupancy(entries, { readable, why: keys ? String(keys.why || '') : '宿主没有键枚举能力', knownIds, labels });
+        /* 快照面：台账读不出就**不评**那一条策略（不拿 0 顶替）；时刻与字节都按真数据算。 */
+        const read = this._readSnapState();
+        const moments = read.readable
+            ? Object.values(read.state.snapshots || {})
+                .map((x) => ({ id: x.id, at: Number(x.createdAt) || 0, bytes: bytesOfValue(x) }))
+                .sort((a, b) => b.at - a.at)
+            : [];
+        let usageBytes;
+        try {
+            const raw = (this.storage && typeof this.storage.get === 'function') ? this.storage.get(USAGE_KEY) : undefined;
+            usageBytes = (raw === undefined || raw === null || raw === '') ? 0 : bytesOfValue(raw);
+        } catch (_e) { usageBytes = undefined; }
+        const preview = previewCleanup(measured, { readable: read.readable, why: read.why, moments, usageBytes });
+        const growth = growthBetween(this._growthPrev, measured);
+        this._growthPrev = measured;
+        this._growth = measured;
+        this._growthPreview = preview;
+        this._growthDelta = growth;
+        this._growthObserved = null;
+        this._growthPreview = null;
+        this._growthDelta = null;
+        return measured;
+    }
+    /** 屏上真正显示的两个数字（视图渲染后回读 DOM），供对拍用。 */
+    setGrowthObserved(seen) {
+        this._growthObserved = (seen && typeof seen === 'object') ? seen : null;
+    }
+    /** 读回对拍结论：没测量 / 没回读 ⇒ unknown（不说成一致）。 */
+    growthVerdict(seen) {
+        return judgeGrowthApplied(this._growth, seen === undefined ? this._growthObserved : seen);
+    }
+    /** 占用面的视图模型：数字全来自内核，视图不自己算（算两份必然走岔）。 */
+    _growthVm() {
+        const m = this._growth;
+        const pv = this._growthPreview || null;
+        const g = this._growthDelta || null;
+        return {
+            state: m ? String(m.state || '') : 'idle',
+            reason: m ? String(m.reason || '') : '',
+            text: m ? growthFaceTextOf(m, pv, g) : '还没测量：按下「测一次」= 枚举全量键面并算字节（只读，不删不写）',
+            basis: m ? String(m.basis || '') : '',
+            totalBytes: m ? m.totalBytes : null,
+            totalKeys: m ? m.totalKeys : null,
+            rows: (m && m.rows) ? m.rows.slice(0, 10) : [],
+            unmapped: (m && m.unmapped) ? m.unmapped : null,
+            unreadable: (m && m.unreadableKeys) ? m.unreadableKeys.slice(0, 8) : [],
+            preview: pv ? {
+                applied: !!pv.applied, dryRun: !!pv.dryRun, totalBytes: pv.totalBytes, text: pv.text, note: pv.note,
+                items: (pv.items || []).map((x) => ({
+                    id: x.id, label: x.label, count: x.count, bytes: x.bytes, available: !!x.available,
+                    loss: x.loss, recoverable: !!x.recoverable, text: x.text
+                }))
+            } : null,
+            verdict: m ? judgeGrowthApplied(m, this._growthObserved) : null
         };
     }
     /** 快照面的视图模型：台账读不出与空台账**分两句话**，差异与体检读数各自成形。 */
@@ -623,6 +706,12 @@ export class BackupdeskApp {
         this._shareViewer = '';
         this._shareFlash = '';
         this._shareFlashBad = false;
+        /* [R25-O6] 占用的测量、基线与读回一并丢：上一个会话的占用不是本段的占用。 */
+        this._growth = null;
+        this._growthPrev = null;
+        this._growthPreview = null;
+        this._growthDelta = null;
+        this._growthObserved = null;
         this._bundlePlan = null;
         this.render();
     }
