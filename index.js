@@ -401,6 +401,8 @@ import { MOTION_STORAGE_KEY, applyMotionLevel, applyMotionGate, bindVisibilityGa
  *   环形缓冲有界保存、可 arm/disarm。 */
 import { createPerfSampler } from './config/perf-sampler.js';
 import { APP_LAZY_ROUTES, APP_LAZY_ROUTE_INDEX } from './config/app-lazy-routes.js';   // [v3.61.0 · 计划 O6] 表驱动懒加载路由
+/* [R25-X1]崩溃边界：一个 App抛错只挂它自己。内核零依赖，宿主只提供重启动作。 */
+import { createCrashBoundary, crashLine } from './config/app-crash-boundary.js';
 const bootTiming = createBootTiming();
 /* [v3.15.0 · 计划 #52] 使用统计的**采集咽喉点接线**。
  *   为什么采集放在 `phone:openApp` / `phone:goHome` 这两个咽喉点，而不是放在洞察 App 内部：
@@ -11638,6 +11640,45 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 }
             });
 
+            /* [R25-X1] 崩溃边界：① 全局 error / unhandledrejection 兜住「整机白屏」；
+             *   ② App 打开失败（懒加载 .catch）走 load-failed 回执；
+             *   ③ 「重启」= 回桌面 → 丢掉坏实例 → 下一帧重开：桌面始终可用，只死那一个 App。
+             *   为什么不在这里猜 appId：全局错误可能来自定时器/后台任务，编一个在前台的名字
+             *   会让用户按错方向排查（本仓「不猜」纪律）。App 级的失败由调用点带上确证 appId。 */
+            const crashBoundary = createCrashBoundary({
+                onCrash: (receipt) => {
+                    try { console.warn('盾 ' + crashLine(receipt)); } catch (_e) { /* 文案不得再制造一次崩溃 */ }
+                },
+                restart: (crash) => {
+                    const id = (crash && crash.appId) ? crash.appId : '';
+                    if (!id) return false;   // 整机级错误不冒充「重开了某个 App」
+                    try {
+                        const route = APP_LAZY_ROUTE_INDEX.get(id);
+                        if (route && route.key && window.VirtualPhone) delete window.VirtualPhone[route.key];
+                        window.dispatchEvent(new Event('phone:goHome'));
+                        (window.requestAnimationFrame || setTimeout)(() => {
+                            try { window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: id } })); } catch (_e) {}
+                        }, 0);
+                        return true;
+                    } catch (_e) { return false; }
+                }
+            });
+            if (window.VirtualPhone) window.VirtualPhone._crashBoundary = crashBoundary;
+            try {
+                window.addEventListener('error', (ev) => {
+                    try {
+                        const err = (ev && ev.error) ? ev.error : ((ev && ev.message) ? ev.message : 'window error');
+                        crashBoundary.report(err, { kind: 'uncaught-error' });
+                    } catch (_e) { /* 边界自己绝不抛 */ }
+                });
+                window.addEventListener('unhandledrejection', (ev) => {
+                    try {
+                        const err = (ev && ev.reason) ? ev.reason : new Error('unhandled rejection');
+                        crashBoundary.report(err, { kind: 'unhandled-rejection' });
+                    } catch (_e) { /* 同上 */ }
+                });
+            } catch (_e) { /* 无 window（测试/无宿主）不得阻断启动 */ }
+
             // 监听打开APP
             window.addEventListener('phone:openApp', (e) => {
                 const { appId } = e.detail;
@@ -11774,6 +11815,9 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         .catch(err => {
                             console.error('❌ 加载' + lazyRoute.errTitle + '失败:', err);
                             phoneShell?.showNotification('错误', lazyRoute.errTitle + '加载失败', '❌');
+                            /* [R25-X1] 带回执：哪个 App、什么错、第几次、还救不救。
+                             *   这里的 appId 是**确证**的（就是刚加载失败的那个），不靠推断。 */
+                            try { crashBoundary.report(err, { appId: appId, kind: 'load-failed' }); } catch (_e) {}
                         });
                 } else if (appId === 'settings') {
                     // 🔥 按需加载设置模块

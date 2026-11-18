@@ -254,6 +254,9 @@ import {
  *   五态互不同形（empty / unknown / absent / failed / partial）+ 每个失败五项必答
  *   + 按域登记的稳定错误码 + 一步到处置入口（复用既有 open-ref 口径）。 */
 import { DIAG_STATES, DIAG_DOMAINS, CODE_TABLE, buildDisposal, disposalLine, canJump, codeTableSelfCheck } from '../../config/diagnose-action.js';
+/* [R25-X1] 崩溃回执的一行文案走**边界模块自己**的实现：诊断页不另写一套说法，
+ *   否则同一次崩溃在两处措辞不同，用户就得分不清是不是两件事。 */
+import { crashLine as crashReceiptLine } from '../../config/app-crash-boundary.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -269,6 +272,55 @@ export function bootTimingFace(win) {
         const face = inst.collect();
         return (face && typeof face === 'object') ? face : null;
     } catch (_e) { return null; }
+}
+
+/** [R25-X1] 崩溃边界面：同样**从宿主实例读**（不自建实例 —— 自建的那个只会看见
+ *  「诊断页打开之后」的崩溃，那不是本节要回答的问题）。
+ *  取不到就 null：那是「宿主没挂边界」（旧版插件），不是「零崩溃」—— 两者在文案里
+ *  必须不同形（本仓「没这个读数」≠「读数是 0」）。 */
+export function crashBoundaryFace(win) {
+    const w = hostWindow(win);
+    const host = w && w.VirtualPhone ? w.VirtualPhone : null;
+    const inst = host && host._crashBoundary ? host._crashBoundary : null;
+    if (!inst || typeof inst.state !== 'function') return null;
+    try {
+        const st = inst.state();
+        return (st && typeof st === 'object') ? st : null;
+    } catch (_e) { return null; }
+}
+
+/** 崩溃边界面的一行文案（三态：没挂 / 零崩溃 / 有崩溃并点名）。 */
+export function crashBoundaryFaceText(face) {
+    if (!face) {
+        return '崩溃边界：读不到（宿主未挂 VirtualPhone._crashBoundary）—— 这是「没这个读数」，**不是**「没崩过」';
+    }
+    const total = (typeof face.total === 'number' && Number.isFinite(face.total)) ? face.total : 0;
+    const apps = Array.isArray(face.apps) ? face.apps : [];
+    if (total === 0) {
+        return '崩溃边界：本次会话零崩溃（已监 window error + unhandledrejection，重启预算 ' + String(face.maxRestarts) + ' 次）';
+    }
+    const parts = ['崩溃边界：共 ' + total + ' 次 / 涉及 ' + apps.length + ' 个来源'];
+    const degraded = Array.isArray(face.degraded) ? face.degraded : [];
+    if (degraded.length) parts.push('★ 转人工：' + degraded.map((x) => (x ? x : '整机级')).join('、'));
+    const events = Array.isArray(face.events) ? face.events : [];
+    const last = events.length ? events[events.length - 1] : null;
+    if (last) {
+        try { parts.push('最近：' + crashReceiptLine(last)); } catch (_e) { /* 文案坏了不影响读数 */ }
+    }
+    return parts.join(' · ');
+}
+
+/** 崩溃边界的行表（诊断页逐 App 展开用；排序与「整机级」标注都在内核里定）。 */
+export function crashBoundaryRows(face) {
+    if (!face || !Array.isArray(face.apps)) return [];
+    return face.apps.map((r) => ({
+        appId: r.appId || '',
+        label: r.appId ? r.appId : '整机级',
+        count: Number(r.count) || 0,
+        restarts: Number(r.restarts) || 0,
+        lastKind: r.lastKind || '',
+        degraded: r.degraded === true
+    }));
 }
 
 /**
@@ -639,6 +691,9 @@ export function collectDiagnose(win, storage) {
     const previewSc = (() => { try { return rollbackPreviewFace(w); } catch (_e) { return null; } })();
     /* [v3.13.0 · 计划 #14] 启动耗时面：**从宿主实例读**（本内核不自建实例 —— 见 bootTimingFace 注释）。 */
     const bootSc = safe(() => bootTimingFace(w), null) || null;
+    /* [R25-X1] 崩溃边界面：边界实例由宿主安装（index.js 的 phone:openApp 通路 + 全局
+     *   error/rejection 监听），诊断页只旁听 —— 自己建一个只会读到「打开诊断页之后」。 */
+    const crashSc = safe(() => crashBoundaryFace(w), null) || null;
     /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
      *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
      *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
@@ -2088,7 +2143,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crashBoundary: crashSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2685,6 +2740,9 @@ export default {
     rollbackPreviewRows,
     bootTimingFace,
     bootTimingFaceText,
+    crashBoundaryFace,
+    crashBoundaryFaceText,
+    crashBoundaryRows,
     bootTimingRows,
     checkpointFaceText,
     sessionGateFaceText,
