@@ -261,6 +261,8 @@ import { crashLine as crashReceiptLine } from '../../config/app-crash-boundary.j
 import { diagnosticPackText } from '../../config/error-readable.js';
 /* [R26-O1] 首屏预算：判定与趋势都走内核，诊断页不自己算阈值。 */
 import { judgeBoot, judgeBootSamples, bootTrend, bootBudgetLine } from '../../config/boot-budget.js';
+/* [R25-O7] 无障碍三档：对拍面走内核（期望值与读回值的比较口径只允许有一份）。 */
+import { a11yTriadFace as a11yTriadFaceOf } from '../../config/a11y-triad.js';
 
 
 /** [R26-O1] 首屏预算面：从宿主读 boot-timing 现算（不自建实例，不缓存读数）。
@@ -767,6 +769,10 @@ export function collectDiagnose(win, storage) {
     /* [R25-O9] 错误可读面：同一取数纪律 —— 从宿主读，不自建。 */
     const errReadSc = safe(() => errorReadableFace(w), null) || null;
     const errPackSc = safe(() => errorReadablePack(w), null) || null;
+    /* [R25-O7] 无障碍三档对拍面：把「真源想要的值」与「documentElement 上真读回来的值」逐轴比。
+     *   ★ 这一面必须读**真实宿主 document**（`w.document`），不是诊断页自己的根：
+     *     三档是写到 `documentElement` 上的，读别的根只会读到「这张卡自己的样式」。 */
+    const a11ySc = safe(() => a11yTriadFaceOf((w && w.document) ? w : null, storage), null) || null;
     /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
      *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
      *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
@@ -2216,7 +2222,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。

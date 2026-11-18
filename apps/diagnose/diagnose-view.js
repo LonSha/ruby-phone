@@ -20,6 +20,8 @@ import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
 import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows } from './diagnose-data.js';
+/* [R25-O7] 无障碍三档：一行文案走内核（「读了什么 / 真读回来什么」的比较口径只允许有一份）。 */
+import { a11yTriadText } from '../../config/a11y-triad.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
@@ -1100,6 +1102,32 @@ export class DiagnoseView {
         }
         return html;
     }
+    /** [R25-O7] 无障碍三档卡片：一行对拍结论 + 逐轴「要什么 / 读回来什么」。
+     *  逐轴把 expected 与 actual 都摆出来：只写「已应用」等于让人相信调用方的口头声明。 */
+    _a11yTriadHtml(pkg) {
+        const face = (pkg && pkg.a11yTriad) || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(a11yTriadText(face)) + '</div>';
+        const rows = (face && Array.isArray(face.rows)) ? face.rows : [];
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                const bad = (r.status === 'mismatch' || r.status === 'unreadable') ? ' dg-bad' : '';
+                const want = (r.want === null || r.want === undefined) ? '要不到' : String(r.want);
+                const got = (r.got === null || r.got === undefined) ? '读不到' : String(r.got);
+                html += '<li class=' + Q + 'dg-row' + bad + Q + '>'
+                    + escapeHtml(r.label) + ' · ' + escapeHtml(r.carrier)
+                    + ' · 应为 ' + escapeHtml(want) + ' · 实为 ' + escapeHtml(got)
+                    + ' · ' + escapeHtml(String(r.status))
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+        if (face && face.triad && Array.isArray(face.triad.rejected) && face.triad.rejected.length) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>这些轴存了不合法值已回退默认：'
+                + escapeHtml(face.triad.rejected.join('、')) + '</div>';
+        }
+        return html;
+    }
     _bootTimingHtml(pkg) {
         const face = (pkg && pkg.bootTiming) || null;
         if (!face) {
@@ -1951,6 +1979,7 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>首屏预算（超了哪一段）</h3>' + this._bootBudgetHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>错误可读化（用户看到的那句话）</h3>' + this._errorReadableHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>无障碍三档（字号 / 减弱动效 / 高对比 · 写入与读回对拍）</h3>' + this._a11yTriadHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>导出脱敏</h3>' + this._secretHtml(pkg) + '</section>');

@@ -387,6 +387,9 @@ import { CROSSREPO_FEATURES } from './config/crossrepo-registry.js';
  *   实例刻意在**模块求值时**就建好：这样连「模块求值到入口之间」那段也纳进读数 ——
  *   否则「谁拖慢了启动」这个问题在第一个 span 开出来之前就有一部分答案被丢掉了。 */
 import { createBootTiming, bootTimingLine } from './config/boot-timing.js';
+/* [R25-O7] 无障碍三档的应用面：读真源 + 写到 documentElement（此前 baseline 只被审计调用，
+ *   三档值算得出来却从没落到界面上 —— 见 config/a11y-triad.js 文件头）。 */
+import { readA11yTriad, applyA11yTriad } from './config/a11y-triad.js';
 /* [v3.79.0 · 计划 R-O6 第二层] 动效档位与「后台降频 / 恢复重取」统一出口。
  *   修前实测：`prefers-reduced-motion` 与 `animation-play-state` 全仓零命中；
  *   面板隐藏后 `yzp-home-vinyl-spin` 仍是 running，宠物 video 在面板关闭与页面隐藏
@@ -2775,7 +2778,69 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
         /* [v3.13.0] 收段 + 一行汇总：既有那句只报「核心合计」，这一行报**谁慢**
          *   （逐段读数与重复加载点在诊断页完整可见；这里给同一实现的一行形）。 */
         endBootCore();
-        console.log('[启动耗时] ' + bootTimingLine(bootTiming.collect()));
+        const _btSnap = bootTiming.collect();
+        console.log('[启动耗时] ' + bootTimingLine(_btSnap));
+        /* [R26-O1] 启动预算的**跨启动真源**：每次启动追加一条到存储，
+         *   内存里只留最近 20 条（趋势看最近三版）。
+         *   为什么必须落盘：`_bootBudgetHistory` 此前全仓**无人写入**，
+         *   于是诊断页的「连续三版趋势」永远是 insufficient ——
+         *   一个算得出来、却永远没有输入的面（本仓「读数没有真源」同族）。
+         *   页面刷新会把内存清空，所以历史只能存 storage。 */
+        try {
+            if (!window.VirtualPhone) window.VirtualPhone = {};
+            const _btHistKey = 'sys_boot_budget_history';
+            let _btHist = [];
+            try {
+                const _raw = storage && typeof storage.get === 'function' ? storage.get(_btHistKey) : null;
+                const _parsed = typeof _raw === 'string' ? JSON.parse(_raw) : _raw;
+                if (Array.isArray(_parsed)) _btHist = _parsed.filter((x) => x && typeof x === 'object');
+            } catch (_e) { _btHist = []; }
+            _btHist.push({
+                at: Date.now(),
+                version: ST_PHONE_VERSION,
+                totalMs: (typeof _btSnap.totalMs === 'number') ? _btSnap.totalMs : null,
+                clock: _btSnap.clock,
+                stages: Array.isArray(_btSnap.segments)
+                    ? _btSnap.segments.map((s) => ({ name: s.name, ms: (typeof s.ms === 'number' ? s.ms : null) }))
+                    : []
+            });
+            while (_btHist.length > 20) _btHist.shift();
+            window.VirtualPhone._bootBudgetHistory = _btHist;
+            /* 中位采样：同一台机器的最近三次启动（不足三份时判据会如实退回「按最后一次判」）。 */
+            window.VirtualPhone._bootSamples = _btHist.slice(-3).map((h) => ({
+                clock: h.clock || 'absent',
+                segments: (h.stages || []).map((s) => ({ name: s.name, ms: s.ms, state: s.ms === null ? 'unmeasurable' : 'measured' })),
+                totalMs: h.totalMs
+            }));
+            try {
+                const _w = storage && typeof storage.set === 'function' ? storage.set(_btHistKey, JSON.stringify(_btHist)) : null;
+                if (_w && typeof _w.catch === 'function') {
+                    _w.catch((e) => console.warn('[启动预算] 历史落盘失败（内存读数仍有效）:', e));
+                }
+            } catch (_e2) { /* 写历史失败不得影响启动 */ }
+        } catch (_e) { /* 预算历史是旁听，坏了不影响手机本身 */ }
+        /* [R25-O7] 无障碍三档：**在任何 App 渲染之前**写到 documentElement。
+         *   写在核心模块之后、UI 模块之前：此时 storage 已就绪（真源可读），
+         *   而首页/微信等界面还没建 —— 用户不会先看到默认字号再被改成大字（无闪变）。 */
+        try {
+            if (!window.VirtualPhone) window.VirtualPhone = {};
+            const _a11yTriad = readA11yTriad(storage);
+            const _a11yReceipt = applyA11yTriad(document, _a11yTriad.profile);
+            window.VirtualPhone._a11yTriad = { triad: _a11yTriad, receipt: _a11yReceipt, at: Date.now() };
+            if (!_a11yReceipt.applied) {
+                console.warn('[无障碍三档] 应用未成功：' + String(_a11yReceipt.reason || 'unknown'));
+            }
+        } catch (_e) {
+            /* 应用失败不得阻断启动，但要留下「没成功」的痕迹（不许静默当成已应用）。 */
+            try {
+                if (!window.VirtualPhone) window.VirtualPhone = {};
+                window.VirtualPhone._a11yTriad = {
+                    triad: { state: 'unreadable', reason: 'apply-threw', profile: null, rejected: [] },
+                    receipt: { applied: false, reason: 'apply-threw', detail: String((_e && _e.message) || _e || '') },
+                    at: Date.now()
+                };
+            } catch (_e2) { /* 连痕迹都留不下：放弃，但不抛 */ }
+        }
     }
 
     // 🔥 UI 模块加载状态

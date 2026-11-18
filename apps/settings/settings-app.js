@@ -24,6 +24,15 @@ import {
     parseStateLine
 } from '../../config/portable-payload.js';
 import { globalRuntime, onceFlag } from '../../config/runtime-lifecycle.js';
+/* [R25-O7] 无障碍三档：设置页只负责**收集三轴**，应用与读回对拍都走唯一内核。
+ *   为什么不在这里自己拼 CSS 变量：拼第二份就等于把「默认值/区间/变量名」抄一遍，
+ *   迟早与 `touch-readability-baseline.js` 不一致（R26-O5 要清的就是这类重写）。 */
+import { readA11yTriad, applyA11yTriad } from '../../config/a11y-triad.js';
+import {
+    STORAGE_KEY as A11Y_STORAGE_KEY,
+    DEFAULT_READABILITY_SETTINGS,
+    normalizeReadabilitySettings
+} from '../../config/touch-readability-baseline.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
 import { ImageCropper } from './image-cropper.js';
@@ -2991,7 +3000,8 @@ export class SettingsApp {
                     </div>
 
                     <div class="phone-settings-tab-content ${this.currentTab === 'memory' ? 'is-active' : 'is-hidden'}" id="tab-memory" role="tabpanel" ${this.currentTab === 'memory' ? '' : 'hidden'}>
-                        ${this.renderMemoryPermissionSection()}
+                        ${this.renderA11yTriadSection()}
+                                ${this.renderMemoryPermissionSection()}
                         ${this.renderTagFilterSection()}
                     </div>
 
@@ -5415,6 +5425,91 @@ export class SettingsApp {
         }
     }
 
+    /**
+     * [R25-O7] 无障碍三档（字号 / 减弱动效 / 高对比）。
+     *
+     * 【这一节为什么必须存在】
+     *   三轴的值早就在 `config/touch-readability-baseline.js` 里算得出来，
+     *   但全仓**没有任何一个控件能改它** —— 用户能看到的只有「默认档」。
+     *   于是「开了高对比」与「没开」在界面上完全一致：能力写在盘上，用户摸不到。
+     *
+     * 【本节不做的事】
+     *   · 不拼 CSS 变量（应用口只有 `applyA11yTriad` 一个，抄第二份就会与真源漂）；
+     *   · 不判「什么值合法」（`readA11yTriad` 已按可接受值收口并逐轴点名）。
+     */
+    renderA11yTriadSection() {
+        const triad = readA11yTriad(this.storage);
+        const p = triad.profile || DEFAULT_READABILITY_SETTINGS;
+        const pct = Math.round(Number(p.fontScale) * 100);
+        const stateLine = triad.state === 'unreadable'
+            ? ('读不到三档设置（' + String(triad.reason || '') + '）—— 当前界面显示的是兜底默认值，不是你的选择')
+            : (triad.state === 'invalid'
+                ? ('存了不合法的值，已回退默认：' + triad.rejected.join('、'))
+                : (triad.state === 'absent' ? '还没设置过（三轴均为默认）' : '已设置'));
+        return `
+            <div class="setting-section" style="margin: 12px 0 8px; padding: 10px 12px;">
+                <div class="setting-item" style="padding: 4px 0 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #222;">无障碍三档</div>
+                    <div style="font-size: 11px; color: #8a8a8a; margin-top: 2px;">${this._escapeHtml(stateLine)}</div>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-a11y-font-scale" style="font-size: 13px; color: #222;">字号</label>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <input type="range" id="setting-a11y-font-scale" data-a11y-axis="font" min="85" max="130" step="5" value="${pct}" style="width: 120px;">
+                        <span data-a11y-readout="font" style="font-size: 12px; color: #666; min-width: 44px; text-align: right;">${pct}%</span>
+                    </span>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-a11y-reduced-motion" style="font-size: 13px; color: #222;">减弱动效</label>
+                    <input type="checkbox" id="setting-a11y-reduced-motion" data-a11y-axis="motion" ${p.reducedMotion ? 'checked' : ''}>
+                </div>
+                <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0;">
+                    <label for="setting-a11y-high-contrast" style="font-size: 13px; color: #222;">高对比</label>
+                    <input type="checkbox" id="setting-a11y-high-contrast" data-a11y-axis="contrast" ${p.highContrast ? 'checked' : ''}>
+                </div>
+                <div style="font-size: 11px; color: #8a8a8a; line-height: 1.5;">改完立即写到界面；诊断中心「无障碍三档」卡片会把**写入值**与**读回值**逐轴对拍。</div>
+            </div>`;
+    }
+
+    /** [R25-O7] 三档控件绑定：改动 → 归一 → 落盘 → 立刻写到 documentElement。 */
+    bindA11yTriadEvents(settingsRoot = this._getActiveSettingsRoot()) {
+        try {
+            const doc = this._createSettingsScopedDocument(settingsRoot);
+            const root = settingsRoot || doc;
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            const els = root.querySelectorAll('[data-a11y-axis]');
+            if (!els || !els.length) return;
+            const commit = async () => {
+                const fontEl = root.querySelector('#setting-a11y-font-scale');
+                const motionEl = root.querySelector('#setting-a11y-reduced-motion');
+                const contrastEl = root.querySelector('#setting-a11y-high-contrast');
+                const raw = {
+                    ...DEFAULT_READABILITY_SETTINGS,
+                    fontScale: (Math.round(Number(fontEl && fontEl.value) || 100)) / 100,
+                    reducedMotion: !!(motionEl && motionEl.checked),
+                    highContrast: !!(contrastEl && contrastEl.checked),
+                    updatedAt: Date.now()
+                };
+                const profile = normalizeReadabilitySettings(raw);
+                try {
+                    await this.storage.set(A11Y_STORAGE_KEY, JSON.stringify(profile));
+                } catch (e) {
+                    console.warn('[无障碍三档] 落盘失败（界面已按新值生效，但重启后会回退）:', e);
+                }
+                /* 写到**全局** document（三档的载体是 documentElement，不是设置页自己的根）。 */
+                applyA11yTriad(globalThis.document, profile);
+                const readout = root.querySelector('[data-a11y-readout="font"]');
+                if (readout) readout.textContent = Math.round(profile.fontScale * 100) + '%';
+            };
+            els.forEach((el) => {
+                el.addEventListener('input', () => { void commit(); });
+                el.addEventListener('change', () => { void commit(); });
+            });
+        } catch (e) {
+            console.warn('[无障碍三档] 绑定失败:', e);
+        }
+    }
+
     renderMemoryPermissionSection() {
         const isMemoryPermissionOpen = this.storage.get('phone-settings-memory-permission-open') === true;
         const userMessageListenerRaw = this.storage.get('phone-user-message-listener-enabled');
@@ -6108,6 +6203,8 @@ export class SettingsApp {
         const $ = (selector) => settingsRoot?.querySelector(selector) || document.querySelector(selector);
 
         this._bindPhoneColorPickers(settingsRoot);
+        /* [R25-O7] 无障碍三档控件：改动立刻写到 documentElement（并落盘真源）。 */
+        this.bindA11yTriadEvents(settingsRoot);
 
         document.getElementById('yzp-settings-home-back')?.addEventListener('click', (event) => {
             event.preventDefault();

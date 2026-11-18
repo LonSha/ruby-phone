@@ -72,6 +72,11 @@ export const SETTING_EFFECT = Object.freeze({
     'setting-phone-floating-entry-enabled': { at: 'immediate', why: '浮窗显隐，改完即调外壳' },
     'phone-home-layout': { at: 'immediate', why: '首页布局属于渲染，重绘即生效' },
     'phone-motion-level': { at: 'immediate', why: '动效档位只影响本机动画强度' },
+    /* [R25-O7] 无障碍三档三个控件：都是「改完下一帧就该看到」的本机渲染项，
+     *   不参与生成、不需要重建实例（应用口 config/a11y-triad.js 写完即读回对拍）。 */
+    'setting-a11y-font-scale': { at: 'immediate', why: '字号只改 documentElement 上的 CSS 变量，重绘即见' },
+    'setting-a11y-reduced-motion': { at: 'immediate', why: '减弱动效只决定类名与过渡时长，下一帧生效' },
+    'setting-a11y-high-contrast': { at: 'immediate', why: '高对比只决定类名与边框色，下一帧生效' },
     'phone-image-debug-payload': { at: 'immediate', why: '只决定是否把请求体打进控制台' },
     'phone-tag-filter-enabled': { at: 'immediate', why: '过滤开关本身即时可判（黑白名单内容另计）' },
     'recycle-bin-enabled': { at: 'immediate', why: '软删开关决定下一次删除怎么走，不涉及生成' },
