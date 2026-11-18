@@ -132,6 +132,26 @@ import { v23TraceSelfCheck } from './config/v23-trace.js?v=4.157.0&r=20261117-r2
 import { phoneFactsSelfCheck } from './config/phone-facts.js';
 /* [v4.158.0 · R24-X7] 角色自主行为预算：消费事实通道的值，四态（allowed/suppressed/exhausted/disabled）+ 回执可回源。 */
 import { actorAutonomySelfCheck } from './config/actor-autonomy-budget.js';
+import { appPermissionsSelfCheck } from './config/app-permissions.js';
+import { phoneStoreSelfCheck } from './config/phone-store.js';
+/* [v4.158.0 · R24-X9 / X6] 锁屏「今天」聚合（只读事实，不新算）+ 中英双语唯一取词出口。 */
+import { lockScreenSelfCheck } from './config/lock-screen.js';
+import { i18nSelfCheck } from './config/i18n.js';
+/* [v4.158.0 · R24-O4/O5/O7] 主题令牌 / 媒体缓存 / 数据体检三件底座。 */
+import { themeTokensSelfCheck } from './config/theme-tokens.js';
+import { mediaCacheSelfCheck } from './config/media-cache.js';
+import { dataHealthSelfCheck } from './config/data-health.js';
+/* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
+import { chatWindowSelfCheck } from './config/chat-window.js';
+import { focusScopeSelfCheck } from './config/focus-scope.js';
+/* [v4.158.0 · R24-O3/X3] 样式懒加载与启动预算 + 声明式 App 清单（第三方装载）。 */
+import { styleLoaderSelfCheck } from './config/style-loader.js';
+import { appManifestSelfCheck } from './config/app-manifest.js';
+import { appLifecycleSelfCheck } from './config/app-lifecycle.js';
+import { phoneArchiveSelfCheck } from './config/phone-archive.js';
+import { hostAdapterSelfCheck } from './config/host-adapter.js';
+import { settingsRegistrySelfCheck } from './config/settings-registry.js';
+import { cheatLazySelfCheck } from './config/cheat-lazy.js';
 import { feedbackSelfCheck, phoneNotice } from './config/phone-feedback.js';
 /* 【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡 —— 历史留档（v4.155.0 交付面，勿当待办删）。 */
 import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
@@ -2328,10 +2348,37 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r23Trace', v23TraceSelfCheck],
                 ['_r24X1', phoneFactsSelfCheck],
                 ['_r24X7', actorAutonomySelfCheck],
+                ['_r24X2', appPermissionsSelfCheck],
+                ['_r24O1', phoneStoreSelfCheck],
+                ['_r24X9', lockScreenSelfCheck],
+                ['_r24X6', i18nSelfCheck],
+                ['_r24O4', themeTokensSelfCheck],
+                ['_r24O5', mediaCacheSelfCheck],
+                ['_r24O7', dataHealthSelfCheck],
+                ['_r24O2', chatWindowSelfCheck],
+                ['_r24O8', focusScopeSelfCheck],
+                ['_r24O3', styleLoaderSelfCheck],
+                ['_r24X3', appManifestSelfCheck],
+                ['_r24X8', appLifecycleSelfCheck],
+                ['_r24X4', phoneArchiveSelfCheck],
+                ['_r24X5', hostAdapterSelfCheck],
+                ['_r24O6', settingsRegistrySelfCheck],
+                ['_r24O9', cheatLazySelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {
                     const _r = _fn();
+                    // O9 的按需取用自检是 async（要真 import 分片）⇒ 先占位再回填，别把 Promise 当结果。
+                    if (_r && typeof _r.then === 'function') {
+                        window.VirtualPhone[_ck] = { ok: false, bad: ['pending'], sample: '' };
+                        _r.then((_v) => {
+                            window.VirtualPhone[_ck] = {
+                                ok: _v && _v.ok === true, bad: Array.isArray(_v && _v.bad) ? _v.bad : [],
+                                sample: String((_v && _v.sample) || '')
+                            };
+                        }).catch(() => { window.VirtualPhone[_ck] = { ok: false, bad: ['self-check threw'], sample: '' }; });
+                        continue;
+                    }
                     window.VirtualPhone[_ck] = {
                         ok: _r.ok === true, bad: Array.isArray(_r.bad) ? _r.bad : [],
                         sample: String(_r.sample || '')

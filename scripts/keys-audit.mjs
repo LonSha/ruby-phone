@@ -193,6 +193,12 @@ const isChatByMechanism = (key) => patterns.some((p) => {
  *   legacy 历史误存键（读旧档→迁移→删）：不参与 K2，但仍须活着
  * ⚠️ 这是**准入清单**：新增键必须登记，否则 K1 红灯；K3 检查每条是否还活着。 */
 const KEY_REGISTRY = [
+  /* [v4.158.0 · R24-X5] 离线演示种子：只写进 createMemoryHost() 的内存实现，从不碰宿主 storage。
+   *   登记理由：它们是**真的键名**（离线/真机同一份 schema），归属必须先答再写。 */
+  { key: 'phone.contacts', scope: 'global', note: '离线演示种子：联系人表' },
+  { key: 'phone.messages', scope: 'global', note: '离线演示种子：消息表' },
+  { key: 'phone.photos', scope: 'global', note: '离线演示种子：相册表' },
+  { key: 'phone.offline.probe', scope: 'global', note: '离线适配器自检用的探针键（读回/删后读回）' },
   /* [v4.157.0 · R22] 新增会话级产品状态；按剧情/角色隔离，不落全局偏好。 */
   { key: 'rp22_chat_bubble_theme', scope: 'chat', note: '微信气泡主题选择' },
   { key: 'rp22_clipboard', scope: 'chat', note: '跨 App 剪贴板暂存内容及来源回执' },

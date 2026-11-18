@@ -69,7 +69,7 @@ g2.publish('unread', 'notice', 5, 300);
 ok('退订后不再收到（publish4 时计数已到 2，此后再不增长）', hits === 2);
 
 /* ── 快照与回执台账 ── */
-const snap = g2.snapshot(300);
+const snap = g2.snapshotAt(300);
 ok('snapshot 逐事实给面 + 三态计数', snap.total === 1 && snap.counts.known === 1 && snap.faces.unread.value === 5);
 const g3 = M.createFactRegistry({ ttlMs: 1000, receiptCap: 3 });
 g3.declarePublisher('a', 'p', { ttlMs: 1000 });

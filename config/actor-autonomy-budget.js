@@ -197,7 +197,7 @@ export function createAutonomyBudget(opts) {
         return { ok: true, enabled };
     }
 
-    function snapshot(nowMs) {
+    function snapshotAt(nowMs) {
         prune(nowMs);
         const rows = [];
         for (const act of Object.keys(limits)) {
@@ -220,7 +220,7 @@ export function createAutonomyBudget(opts) {
         return receipts.slice();
     }
 
-    return { canAct, record, setEnabled, snapshot, describe, receiptLog };
+    return { canAct, record, setEnabled, snapshotAt, describe, receiptLog };
 }
 
 /**
@@ -261,7 +261,7 @@ export function actorAutonomySelfCheck() {
     /* 回执可回源 */
     const log = b.receiptLog();
     if (log.length !== 2 || !log[0].factRef || !log[0].rule) bad.push('receipt:shape');
-    const snap = b.snapshot(5000);
+    const snap = b.snapshotAt(5000);
     if (snap.rows[0].used !== 0) bad.push('snapshot:prune');
     const okQuiet = inQuietHours(2 * 60, DEFAULT_QUIET) === true && inQuietHours(600, DEFAULT_QUIET) === false;
     if (!okQuiet) bad.push('quiet:boundary');

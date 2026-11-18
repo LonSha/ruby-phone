@@ -336,7 +336,11 @@ const {
 
         /* [v3.14.0 · 计划 #65] chat-view 两条通话计时器：接进实例域（交棒判据） */
         {
-            const cv = read('apps/wechat/chat-view.js');
+            // R23-O2 切片后：语音输入在 chat-input-bind.js、通话计时器在 chat-call-core.js。
+            //   判据跟代码走，不跟旧文件名走（否则会变成"文件被拆了就红"的假红）。
+            const cv = read('apps/wechat/chat-view.js') + '\n'
+                + read('apps/wechat/chat-call-core.js') + '\n'
+                + read('apps/wechat/chat-input-bind.js');
             ok('接线·chat-view: 通话计时器已进实例域（video/voice 各一条 tag）',
                 /addInterval\([\s\S]{0,900}?'call:video'\)/.test(cv)
                 && /addInterval\([\s\S]{0,900}?'call:voice'\)/.test(cv));

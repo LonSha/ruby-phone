@@ -72,7 +72,7 @@ ok('describe 报出五类动作（默认值 + 覆盖），被覆盖的那类取�
     return d.actions.length === 5 && sm.limit === 2 && pm.limit === 1 && d.windowMs === 1000 && d.unansweredLimit === 3;
 })());
 ok('snapshot 逐动作报 limit/used/remaining', (() => {
-    const s = b.snapshot(5000);
+    const s = b.snapshotAt(5000);
     const sm = s.rows.find((x) => x.action === 'send_message');
     return s.rows.length === 5 && typeof sm.remaining === 'number' && sm.limit === 2 && s.enabled === true;
 })());

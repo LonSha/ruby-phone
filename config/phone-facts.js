@@ -221,7 +221,7 @@ export function createFactRegistry(opts) {
     }
 
     /** 全表快照 + 三态计数（界面一屏读全部事实，不逐个去翻别人的键）。 */
-    function snapshot(nowMs) {
+    function snapshotAt(nowMs) {
         const faces = {};
         const counts = { known: 0, stale: 0, unknown: 0 };
         for (const fact of decls.keys()) {
@@ -261,7 +261,7 @@ export function createFactRegistry(opts) {
     }
 
     return {
-        declarePublisher, setPublisherPower, publish, read, snapshot,
+        declarePublisher, setPublisherPower, publish, read, snapshotAt,
         subscribe, describe, receiptLog
     };
 }
@@ -304,7 +304,7 @@ export function phoneFactsSelfCheck() {
     if (r5.face !== FACT_STATES.UNKNOWN || r5.reason !== FACT_UNKNOWN_REASONS.PUBLISHER_OFF) bad.push('publisher-off');
     const p2 = reg.publish('clock', 'story-clock', 483, 900);
     if (p2.ok) bad.push('断电后不许发布成功');
-    const snap = reg.snapshot(800);
+    const snap = reg.snapshotAt(800);
     if (snap.total !== 2 || snap.counts.unknown !== 2) bad.push('snapshot:counts');
     const log = reg.receiptLog();
     if (!log.length || typeof log[0].fact !== 'string' || typeof log[0].face !== 'string') bad.push('receipt:shape');

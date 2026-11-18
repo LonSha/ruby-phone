@@ -52,12 +52,12 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：837 个 .js / 合计 402843 行 / 45 个大文件，台账全绿', () => {
+test('真仓读数：889 个 .js / 合计 379451 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 837, '扫到的 .js 数量与 R23-O2 切片后的实际不符');
-  assert.equal(r.stats.total, 402843, '全仓合计行数与台账不符');
-  assert.equal(r.stats.overDefault, 45, '大文件数量应为 45');
+  assert.equal(r.stats.files, 889, '扫到的 .js 数量与当前实际不符（R24 新增分片/模块后已复核）');
+  assert.equal(r.stats.total, 379451, '全仓合计行数与台账不符（R24-O9 拆 cheats.js 后降 23400+ 行）');
+  assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
 
@@ -69,8 +69,13 @@ test('台账里每一行的 lines_max 都等于当前真读数（快照，不留
 });
 
 test('「无上界门」这条欠账真的关了：PLAN.md 点名的三个大文件都在台账里', () => {
-  // data/cheats.js 是 PLAN.md 原文点名的 27612 行文件 —— 只扫 apps/ 会漏掉它，这是本批修掉的真漏
-  assert.equal(ledger.files['data/cheats.js'].lines_max, 27611);
+  // data/cheats.js 曾是 PLAN.md 原文点名的 27612 行文件。R24-O9 已把它拆成 34 个分片：
+  //   现在它是 54 行的聚合器，**故意不再进台账**（低于默认上限）（这就是本项的交付），
+  //   故这里改判「它真的掉下去了」，而不是留着旧天花板当纪念。
+  const cheatsRow = rows.find((r) => r.path === 'data/cheats.js');
+  assert.ok(cheatsRow, 'data/cheats.js 必须仍在扫描面里');
+  assert.ok(cheatsRow.lines < DEFAULT_MAX, 'data/cheats.js 应已降到默认上限之内，实得 ' + cheatsRow.lines);
+  assert.ok(!('data/cheats.js' in ledger.files), '已降到上限内的文件不该继续占台账条目');
   assert.equal(ledger.files['apps/wechat/chat-view.js'].lines_max, 18449);
   assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12362);
   assert.ok(rows.every((r) => r.lines <= DEFAULT_MAX || r.path in ledger.files), '存在未被记账的大文件');
@@ -83,9 +88,9 @@ test('台账元信息自洽：default_max / total_lines_max / 大文件数对得
   assert.equal(big, Object.keys(ledger.files).length);
 });
 
-test('buildLedger 只收大文件：小文件不进台账（否则台账会变成 837 行噪音）', () => {
+test('buildLedger 只收大文件：小文件不进台账（否则台账会变成 889 行噪音）', () => {
   const built = buildLedger(rows, DEFAULT_MAX, new Date('2026-11-17T00:00:00Z'));
-  assert.equal(Object.keys(built.files).length, 45);
+  assert.equal(Object.keys(built.files).length, 44);
   assert.ok(!('apps/wechat/chat-render-core.js' in built.files), '小文件不该进台账');
   assert.equal(built.total_lines_max, sum(rows));
 });
@@ -151,7 +156,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 837);
+  assert.equal(j.stats.files, 889);
   assert.deepEqual(j.problems, []);
 });
 

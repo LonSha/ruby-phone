@@ -232,7 +232,9 @@ ok('AsrManager 有 startRecording 方法', typeof AsrManager.prototype.startReco
   ok('settings-app 含 ASR provider 下拉', /id="phone-asr-provider"/.test(settings));
   ok('settings-app 含 ASR 测试按钮', /id="phone-asr-test"/.test(settings));
   ok('settings-app 绑定 ASR 事件', /phone-asr-test/.test(settings) && /setAsrProviderField/.test(settings));
-  const chat = fs.readFileSync(path.join(root, 'apps/wechat/chat-view.js'), 'utf8');
+  // R23-O2 切片后：按钮在 chat-view.js，绑定在 chat-input-bind.js。两处都读才是真接线。
+  const chat = fs.readFileSync(path.join(root, 'apps/wechat/chat-view.js'), 'utf8')
+    + String.fromCharCode(10) + fs.readFileSync(path.join(root, 'apps/wechat/chat-input-bind.js'), 'utf8');
   ok('chat-view 含语音输入按钮', /id="voice-input-btn"/.test(chat));
   ok('chat-view 绑定语音输入事件', /runVoiceInput/.test(chat));
 }

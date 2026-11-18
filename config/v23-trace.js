@@ -5,12 +5,11 @@
  *   证据不足一律 `insufficient`，读不出锚一律 `unknown`，绝不用 false / 0 / 空串顶替。
  *   「没证据」与「是假的」在本仓是两个事实，本桥把这条守成机器可读的形状。
  */
+import { numOrNull } from './num-gate.js';
 
-/** 取楼层（数字或数字串），读不出返回 null —— 不把 '' 当 0。 */
+/** 取楼层（数字或数字串），读不出返回 null —— 不把 '' / '  ' / [] / false 当 0（走全仓唯一口径）。 */
 function floorOf(v) {
-    if (v === null || v === undefined || v === '') return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
+    return numOrNull(v);
 }
 
 /* ── R23-X1 跨 App 时间轴总览：三态 + 逐源列出读不到的源 ── */
