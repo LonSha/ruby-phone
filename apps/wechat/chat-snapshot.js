@@ -3,6 +3,9 @@
  *  截图引擎核心 (精准去灰边 + 移动端提速版)
  * ======================================================== */
 
+/* [R25-X3] 截图前脱敏：截出来的图不该带手机号 / 金额 / 证件 / 邮箱 / 指定联系人。 */
+import { redact, redactReceipt, REDACT_RULE_IDS } from '../../config/privacy-redactor.js';
+
 async function getHtml2Canvas() {
     if (typeof window.html2canvas === 'function') return window.html2canvas;
     return new Promise((resolve, reject) => {
@@ -47,6 +50,40 @@ export async function captureWechatChatSnapshot(sourceRoot, { longCapture = fals
 
     const btns = cloneRoot.querySelectorAll('.wechat-back-btn, .wechat-header-left > *, .wechat-header-right > *');
     btns.forEach(el => { el.style.opacity = '0'; });
+
+    /* [R25-X3] 在**克隆树**上脱敏（不碰真 DOM，用户看到的聊天不变），且必须在出图之前 ——
+     *  顺序反了等于先拍下来再打码，图上还是原文。回执挂到宿主，诊断页可查。 */
+    let _redactReport = { total: 0, hits: [], rules: REDACT_RULE_IDS.slice() };
+    try {
+        const names = (window.VirtualPhone && Array.isArray(window.VirtualPhone.privacyNames))
+            ? window.VirtualPhone.privacyNames
+            : [];
+        const walker = document.createTreeWalker(cloneRoot, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+        let total = 0;
+        const hits = [];
+        for (const node of textNodes) {
+            const r = redact(node.nodeValue, { names });
+            if (r.total > 0) {
+                node.nodeValue = r.text;
+                total += r.total;
+                for (const h of r.hits) hits.push(h);
+            }
+        }
+        _redactReport = { total, hits, rules: REDACT_RULE_IDS.slice() };
+    } catch (_e) {
+        /* 脱敏失败不阻断截图，但**必须**在回执里说出来（不能默默截一张全量图）。 */
+        _redactReport = { total: 0, hits: [], rules: REDACT_RULE_IDS.slice(), failed: true };
+    }
+    try {
+        if (window.VirtualPhone) {
+            window.VirtualPhone._redactReport = Object.freeze({
+                total: _redactReport.total, hits: _redactReport.hits.slice(),
+                line: redactReceipt(_redactReport), failed: _redactReport.failed === true
+            });
+        }
+    } catch (_e) {}
 
     const cloneMessages = cloneRoot.querySelector('#chat-messages');
     if (cloneMessages) {
