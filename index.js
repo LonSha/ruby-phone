@@ -158,7 +158,7 @@ import { dataHealthSelfCheck } from './config/data-health.js';
 import { chatWindowSelfCheck } from './config/chat-window.js';
 import { focusScopeSelfCheck } from './config/focus-scope.js';
 /* [v4.158.0 · R24-O3/X3] 样式懒加载与启动预算 + 声明式 App 清单（第三方装载）。 */
-import { styleLoaderSelfCheck } from './config/style-loader.js';
+import { styleLazySelfCheck } from './config/style-lazy.js';
 import { appManifestSelfCheck } from './config/app-manifest.js';
 import { appLifecycleSelfCheck } from './config/app-lifecycle.js';
 import { phoneArchiveSelfCheck } from './config/phone-archive.js';
@@ -436,6 +436,8 @@ const bootTiming = createBootTiming();
  *   ★ 单一读写门：这两个函数是 `usage_stats_v1` 的唯一读写口，本文件绝不自己碰 storage。
  *     调用一律包在 try/catch 内且**不看返回值** —— 采集失败绝不允许影响开 App。 */
 import { trackerNote as usageTrackOpen, trackerClose as usageTrackClose } from './config/usage-tracker.js';
+/* [R25-O4] 样式懒加载：搬出 phone.css 的 App 样式在打开时才取（内核见同文件头注释）。 */
+import { createStyleLoader, STYLE_LAZY_TIMEOUT_MS } from './config/style-lazy.js';
 const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // [v2.8.11] 版本真值：必须与 manifest.json 的 version 保持一致
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
@@ -2434,7 +2436,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r24O7', dataHealthSelfCheck],
                 ['_r24O2', chatWindowSelfCheck],
                 ['_r24O8', focusScopeSelfCheck],
-                ['_r24O3', styleLoaderSelfCheck],
+                ['_r25O4', styleLazySelfCheck],
                 ['_r24X3', appManifestSelfCheck],
                 ['_r24X8', appLifecycleSelfCheck],
                 ['_r24X4', phoneArchiveSelfCheck],
@@ -11943,6 +11945,22 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 }, true);
             } catch (_e) { /* 键盘层装配失败：整机照常用鼠标/触摸操作 */ }
 
+            /* [R25-O4] 样式懒加载执行器：9 个 App 的样式已搬出 phone.css，打开时才注入 <link>——
+             *   桌面首屏不再为它们的字节付代价。构造失败（无 document）不影响任何 App，照常 bundled。 */
+            let appStyleLoader = null;
+            try {
+                appStyleLoader = createStyleLoader({
+                    doc: document,
+                    baseUrl: ST_PHONE_BASE_URL,
+                    now: (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') ? () => performance.now() : null,
+                    timeoutMs: STYLE_LAZY_TIMEOUT_MS
+                });
+                if (window.VirtualPhone) {
+                    window.VirtualPhone._r25O4 = window.VirtualPhone._r25O4 || {};
+                    window.VirtualPhone._r25O4.loader = appStyleLoader;
+                    window.VirtualPhone._r25O4.collect = () => appStyleLoader.collect();
+                }
+            } catch (_e) { appStyleLoader = null; }
             // 监听打开APP
             window.addEventListener('phone:openApp', (e) => {
                 const { appId } = e.detail;
@@ -12048,8 +12066,34 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 //   兜底 / 按会话状态分流等真实差异，表驱动会抹掉它们 —— 不进表）。
                 const lazyRoute = APP_LAZY_ROUTE_INDEX.get(appId);
                 if (lazyRoute) {
-                    bootTiming.instrumentImport(import(lazyRoute.module), lazyRoute.module)
-                        .then(module => {
+                    /* [R25-O4] 样式与模块**并行**取，但都到齐才 render：
+                     *   · 并行：样式慢不该等 JS，JS 慢也不应该等样式；
+                     *   · 到齐才画：先画再上样式 = 用户先看一次裸奔再跳一下，比慢更难受；
+                     *   · 样式没来（degraded）也照开 —— 绝不拿样式挂住整机，回执写明 reason。 */
+                    Promise.all([
+                        bootTiming.instrumentImport(import(lazyRoute.module), lazyRoute.module),
+                        appStyleLoader ? appStyleLoader.ensure(appId) : Promise.resolve(null)
+                    ])
+                        .then(pair => {
+                            const module = pair[0];
+                            const styleNote = pair[1];
+                            /* 样式回执上屏（诊断与回归断言都读这里；没有读数就不写，不编 0）。 */
+                            try {
+                                if (window.VirtualPhone) {
+                                    window.VirtualPhone._r25O4 = window.VirtualPhone._r25O4 || {};
+                                    window.VirtualPhone._r25O4.last = styleNote || null;
+                                }
+                                const col = appStyleLoader ? appStyleLoader.collect() : null;
+                                /* 读数必须落在**真有 dataset 的节点**上：phoneShell 是 JS 对象
+                                 * （class PhoneShell），它没有 .dataset —— 往它上面写等于写进虚空
+                                 * （「读不到冒充写成功」的老坑；o4-dataset-readout 浏览器读数当场抓住过）。 */
+                                if (col) {
+                                    window.VirtualPhone._r25O4.collect = () => col;
+                                    document.body.dataset.appStyleLoaded = String(col.loaded);
+                                    document.body.dataset.appStyleDegraded = String(col.degraded);
+                                    document.body.dataset.appStyleBytesOut = String(col.bytesOut);
+                                }
+                            } catch (_e) {}
                             if (!window.VirtualPhone[lazyRoute.key]) {
                                 window.VirtualPhone[lazyRoute.key] = new module[lazyRoute.cls](phoneShell, storage);
                             }

@@ -1,17 +1,17 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-18T15:20:26.955Z",
+  "measured_at": "2026-11-18T16:18:32.281Z",
   "version": "4.157.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../tmp/gate_o3.log",
-    "bytes": 159751,
-    "sha256": "f6b108bb72bb22d61145c1fa1b94011282a5d4c6ef25fa4ed3cdab5afb38a6dc"
+    "log": "../../../tmp/gate_o4_full2.log",
+    "bytes": 173184,
+    "sha256": "19aa71b76f7ae190535f81cce3f4318ff13ab39882f6e81b46ca67d85a3a9fe0"
   },
   "elapsed_ms": 0,
-  "scenes": 22,
+  "scenes": 23,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,12 +19,12 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 890,
+  "total_reads": 948,
   "fail_reads": 0,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 22,
-    "measured": 22,
+    "on_disk": 23,
+    "measured": 23,
     "missing": [],
     "extra": [],
     "complete": true
@@ -66,12 +66,16 @@
       "reads": 36,
       "fail": 0
     },
+    "o4-style-lazy.scen.js": {
+      "reads": 40,
+      "fail": 0
+    },
     "o6-longlist-extreme.scen.js": {
       "reads": 36,
       "fail": 0
     },
     "o6-longlist-perf.scen.js": {
-      "reads": 18,
+      "reads": 36,
       "fail": 0
     },
     "o6-motion-throttle.scen.js": {

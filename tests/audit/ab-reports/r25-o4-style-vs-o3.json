@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "A（旧）": "/tmp/rphead",
+    "B（新）": "/home/user/ruby-phone",
+    "操作序列": "o4-style-lazy.scen.js",
+    "视口": "390x844",
+    "浏览器": "Chromium 131.0.6778.33",
+    "运行问题": "无"
+  },
+  "rows": [
+    {
+      "name": "o4-style-lazy.scen.js::viewport-applied",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-boot-to-interactive",
+      "face": "diff",
+      "a": {
+        "ok": "ok",
+        "detail": "从脚本开始到可交互（VirtualPhone 就绪 + 桌面出图 + 弹窗处理完）=12280ms；本条只作参考值，不判红"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "从脚本开始到可交互（VirtualPhone 就绪 + 桌面出图 + 弹窗处理完）=12257ms；本条只作参考值，不判红"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-first-paint-no-app-css",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "首屏 link[id^=app-style-] 数量=0（应=0：未触达的 App 样式不许进首屏）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "首屏 link[id^=app-style-] 数量=0（应=0：未触达的 App 样式不许进首屏）"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-probe-not-applied-at-boot",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "首屏探针 --nsm-bg=\"#eef1f6\" --snd-bg=\"#10161d\"（都应空串：空=样式确实不在首屏）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "首屏探针 --nsm-bg=\"\" --snd-bg=\"\"（都应空串：空=样式确实不在首屏）"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-first-paint-css-bytes",
+      "face": "diff",
+      "a": {
+        "ok": "ok",
+        "detail": "phone.css 首屏载入文本长度=684111字符（真 fetch 量的；源文件 623617 字节 —— 中文占多字节，字符数天然小于字节数）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "phone.css 首屏载入文本长度=595899字符（真 fetch 量的；源文件 623617 字节 —— 中文占多字节，字符数天然小于字节数）"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-open-feeds-style",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "link#app-style-needsim 载入并解析=false；打开后探针 --nsm-bg=\"#eef1f6\"（非空=样式真生效）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "link#app-style-needsim 载入并解析=true；打开后探针 --nsm-bg=\"#eef1f6\"（非空=样式真生效）"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-untouched-still-out",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "打开 needsim 之后 --snd-bg=\"#10161d\"（应仍空串：没打开 soundkit 就不该有它的样式）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "打开 needsim 之后 --snd-bg=\"\"（应仍空串：没打开 soundkit 就不该有它的样式）"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-second-app-also-fed",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "link#app-style-soundkit 载入=false；--snd-bg=\"#10161d\""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "link#app-style-soundkit 载入=true；--snd-bg=\"#10161d\""
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-receipts",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "取不到 _r25O4.collect ⇒ unknown（不编 0）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "loaded=2 degraded=0 unknown=0 bytesOut=96641B 条数=9"
+      }
+    },
+    {
+      "name": "o4-style-lazy.scen.js::o4-dataset-readout",
+      "face": "diff",
+      "a": {
+        "ok": "FAIL",
+        "detail": "取不到 phone shell ⇒ 读数未上屏"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "dataset.appStyleLoaded=2 appStyleDegraded=0 appStyleBytesOut=96641"
+      }
+    }
+  ],
+  "counts": {
+    "same": 2,
+    "diff": 8,
+    "only-a": 0,
+    "only-b": 0
+  },
+  "total": 10,
+  "changed": 8,
+  "verdict": "changed"
+}
