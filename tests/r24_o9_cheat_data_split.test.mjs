@@ -30,8 +30,29 @@ ok('数据搬进分片（不是删掉了）', shards.length > 0, '分片数 ' + 
 ok('每个分片自己也在千行内', shards.every((f) => lines(fs.readFileSync(path.join(shardDir, f), 'utf8')) < 1000));
 
 // —— 2) 同源逐条对拍：分离前后每包逐字一致（以 git HEAD 的旧文件为基准） ——
-const show = spawnSync('git', ['show', 'HEAD:data/cheats.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 * 80 });
-ok('取得到分离前的基准文件', show.status === 0 && String(show.stdout || '').length > 500000, 'stderr=' + String(show.stderr || '').slice(0, 120));
+/* 【基准为什么不能钉在 HEAD（本轮修的既有红）】
+ *   原判据是 `git show HEAD:data/cheats.js`。R24-O9 一提交，HEAD 上的 cheats.js 就变成了
+ *   53 行的壳（内部 import './cheats/part-NN.js'），拿它当「分离前的基准」必然对拍失败；
+ *   更糟的是把那份壳写到 /tmp 再 import，模块解析会去找 /tmp/cheats/part-01.js —— 报的错
+ *   与「内容漂移」毫无关系，README 读者会照着错的线索查。
+ *   正确基准是**拆分提交的父提交**（那一刻文件还是 27611 行）。它在历史里是固定的，
+ *   不随 HEAD 前进而失效；找不到就如实红，不许静默跳过。 */
+/* 定位基准：**不靠 commit message**（本仓的提交标题写的是「O1-O9」，按 R24-O9 匹配会落空，
+ *  而空 baseRef 会让 `git show ':data/cheats.js'` 静默返回 index 里的壳 —— 一个看起来成功、
+ *  实际拿错基准的坑）。这里按「文件第一次变成壳（<1000 行）」定位拆分提交，取其父提交。 */
+const shas = String(spawnSync('git', ['log', '--format=%H', '--', 'data/cheats.js'], { cwd: ROOT, encoding: 'utf8' }).stdout || '')
+    .split(NL).filter(Boolean);
+let baseRef = '';
+for (const sha of shas) {
+    const body = String(spawnSync('git', ['show', sha + ':data/cheats.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 * 80 }).stdout || '');
+    if (body && lines(body) < 1000) { baseRef = sha + '^'; break; }
+}
+ok('找得到拆分提交（基准可推导）', !!baseRef, 'data/cheats.js 历史里找不到「变成壳」的那一版');
+
+const show = baseRef
+    ? spawnSync('git', ['show', baseRef + ':data/cheats.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 * 80 })
+    : { status: 1, stdout: '', stderr: 'no-base' };
+ok('取得到分离前的基准文件', show.status === 0 && String(show.stdout || '').length > 500000 && lines(String(show.stdout || '')) > 1000, 'baseRef=' + baseRef + ' lines=' + lines(String(show.stdout || '')) + ' stderr=' + String(show.stderr || '').slice(0, 120));
 
 let packCount = 0;
 const tmp = path.join(os.tmpdir(), 'r24-o9-baseline-' + process.pid + '.mjs');
