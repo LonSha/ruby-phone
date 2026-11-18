@@ -23,7 +23,8 @@
  * R22-O2 追加（通话界面内核 chat-call-core.js）：
  *   R6 逐字节：两个通话方法的 body_sha256 必须与台账里的源文件真值相同。
  *   R7 单份实现：两个方法在通话内核里各 1 次，chat-view.js 里 0 次（只留指针）。
- *   R8 混入接得上：import chatCallCore + 文件末尾 Object.assign(ChatView.prototype, chatCallCore)。
+ *   R8 混入接得上：三个内核各自 import + 在 class ChatView 之后 Object.assign 到原型
+ *      （渲染内核 chatRenderCore / 通话内核 chatCallCore / 文本解析内核 chatTextCore）。
  *   R9 依赖面恰好 0 个 import（通话内核只用 this.* 与全局；多引一个都是把判定搬进来了）。
  *   R4b2 运行时补刀：原型上真拿到这两个方法。
  *
@@ -308,10 +309,25 @@ export function checkMixin2(viewText) {
    * 按字符串出现次数数会把注释算进来，那是假红。 */
   const stmtLine = (l) => l.trim().indexOf('Object.assign(ChatView.prototype,') === 0;
   const assigns = viewText.split(NL).filter(stmtLine).length;
-  if (assigns !== 2) {
-    problems.push('ChatView.prototype 的 Object.assign 语句有 ' + assigns + ' 处（应为 2：渲染内核 + 通话内核）');
+  /* [R25-O1] 本闸现在必须认识第三个内核（文本解析族 chat-text-core）。
+   * 不许只把数字从 2 改成 3 —— 那等于给新增内核开后门。所以同时要求：
+   *   ① 存在 import { chatTextCore } from './chat-text-core.js…'；
+   *   ② 存在 Object.assign(ChatView.prototype, chatTextCore);；
+   *   ③ 它出现在 class 声明之后（此时 ChatView 才存在）。 */
+  const textImport = "import { chatTextCore } from './chat-text-core.js";
+  const textAssign = 'Object.assign(ChatView.prototype, chatTextCore);';
+  if (!viewText.includes(textImport)) {
+    problems.push("chat-view.js 缺 import { chatTextCore } from './chat-text-core.js…'");
   }
-
+  const textMixAt = viewText.indexOf(textAssign);
+  if (textMixAt < 0) {
+    problems.push('chat-view.js 缺 ' + textAssign);
+  } else if (classAt >= 0 && textMixAt < classAt) {
+    problems.push('文本解析内核混入语句出现在 class 声明之前');
+  }
+  if (assigns !== 3) {
+    problems.push('ChatView.prototype 的 Object.assign 语句有 ' + assigns + ' 处（应为 3：渲染内核 + 通话内核 + 文本解析内核）');
+  }
   const pointers = viewText.split('已抽到 ./chat-call-core.js').length - 1;
   if (pointers !== 2) {
     problems.push('chat-view.js 里指向通话内核的指针注释 ' + pointers + ' 处（应为 2，两个方法各一处、不留第二份实现）');
@@ -388,7 +404,7 @@ export function runChecks({ viewText, coreText, callCoreText, callLedger, snapsh
   if (typeof callCoreText === 'string' && callLedger && typeof callLedger === 'object') {
     push('R6', '通话内核 2 个方法 body_sha256 逐字节不变', checkBodySha(callCoreText, callLedger));
     push('R7', '通话 2 个方法各一份实现（内核 1 次 / 视图 0 次）', checkSingleImplementation2(callCoreText, viewText));
-    push('R8', '通话内核混入接得上（import + class 之后 assign）', checkMixin2(viewText));
+    push('R8', '三个内核混入都接得上（渲染 / 通话 / 文本解析；import + class 之后 assign）', checkMixin2(viewText));
     push('R9', '通话内核依赖面恰好 0 个 import', checkCallCoreImports(callCoreText));
   } else {
     push('R6-R9', 'R22-O2 输入缺失（fail-closed）', { ok: false, problems: ['没有传入 callCoreText / callLedger'] });

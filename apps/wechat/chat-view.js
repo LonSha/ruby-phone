@@ -87,6 +87,7 @@ import { detectImageMime, normalizeImageDataUrlMime, resolveImageMime } from '..
 import { replacePhoneInlineEmojiTokens } from '../../config/phone-emoji.js';
 import { chatRenderCore } from './chat-render-core.js?v=4.157.0&r=20261116-r22';
 import { chatCallCore } from './chat-call-core.js?v=4.157.0&r=20261116-r22';
+import { chatTextCore } from './chat-text-core.js?v=4.157.0&r=20261118-r25';
 import { bindVoiceInputButton, bindQuickReplyButtons } from './chat-input-bind.js?v=4.158.0&r=20261117-r23';
 import { getMemory as getContactMemory, updateMemory as updateContactMemory } from '../../config/phone-chat-memory.js';
 // [v3.14.0 · 计划 #65] 实例级资源域：通话计时器（视频/语音）不再靠「挂断按钮那一处 clearInterval」
@@ -2591,26 +2592,6 @@ export class ChatView {
         return String(dateText || '').replace(/^0+(\d{1,6}年)/, '$1');
     }
 
-    _parseManualTimeAdvanceCommand(text = '') {
-        const raw = String(text || '').trim();
-        const match = raw.match(/^\[\s*时间推进\s*[：:]\s*([^\]]+?)\s*\]$/);
-        if (!match) return null;
-
-        const payload = String(match[1] || '').trim();
-        const parsed = window.VirtualPhone?.timeManager?.parseStatusbar?.(payload);
-        if (!parsed?.time || !parsed?.date) return null;
-
-        const timestamp = typeof window.VirtualPhone?.timeManager?.parseTimeToTimestamp === 'function'
-            ? window.VirtualPhone.timeManager.parseTimeToTimestamp(parsed)
-            : (Number(parsed.timestamp) || storyNowWallFallback(window).ms);
-
-        return {
-            time: parsed.time,
-            date: parsed.date,
-            weekday: parsed.weekday || window.VirtualPhone?.timeManager?.calculateWeekday?.(parsed.date) || '星期一',
-            timestamp: numOrNull(timestamp) !== null ? numOrNull(timestamp) : storyNowWallFallback(window).ms
-        };
-    }
 
     _handleManualTimeAdvance(input, text, targetChatId, options = {}) {
         const parsedTime = this._parseManualTimeAdvanceCommand(text);
@@ -6053,31 +6034,6 @@ renderChatRoom(chat) {
         };
     }
 
-    _readBracketGroupAt(value = '', startIndex = 0) {
-        const text = String(value || '');
-        const opener = text[startIndex];
-        if (opener !== '（' && opener !== '(') return null;
-
-        const primaryCloser = opener === '（' ? '）' : ')';
-        const alternateCloser = opener === '（' ? ')' : '）';
-        let depth = 1;
-        for (let index = startIndex + 1; index < text.length; index += 1) {
-            const char = text[index];
-            if (opener === '(' && char === '(') {
-                depth += 1;
-                continue;
-            }
-            if (char !== primaryCloser && char !== alternateCloser) continue;
-            depth -= 1;
-            if (depth === 0) {
-                return {
-                    text: text.slice(startIndex + 1, index),
-                    endIndex: index + 1
-                };
-            }
-        }
-        return null;
-    }
 
     _hasCjkText(value = '') {
         return /[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(String(value || ''));
@@ -6413,25 +6369,6 @@ renderChatRoom(chat) {
         return next;
     }
 
-    _extractQuickReplyPayload(text = '', key = '') {
-        const raw = String(text || '').trim();
-        if (!raw) return '';
-        const map = {
-            image: '图片',
-            video: '视频',
-            sticker: '表情包',
-            'voice-strip': '语音条',
-            location: '定位'
-        };
-        const label = map[key];
-        if (label) {
-            const match = new RegExp(`^\\[${label}\\]\\s*[（(]\\s*([\\s\\S]*?)\\s*[）)]$`).exec(raw);
-            if (match) return String(match[1] || '').trim();
-        }
-        const timeMatch = /^\[\s*时间推进\s*[：:]\s*([^\]]+?)\s*\]$/.exec(raw);
-        if (key === 'time' && timeMatch) return String(timeMatch[1] || '').trim();
-        return raw;
-    }
 
     _buildQuickReplySendText(text = '', key = this.activeQuickReplyKey) {
         const payload = this._extractQuickReplyPayload(text, key);
@@ -7445,27 +7382,6 @@ renderChatRoom(chat) {
      * 某些AI模型会在中文字符之间插入空格，如 "不 过 ， 如 果"
      * 此方法会智能清理这种异常空格，同时保留正常的词间空格
      */
-    cleanAbnormalSpaces(text) {
-        if (!text || typeof text !== 'string') return text;
-
-        // 🔥 模式1：连续的"单字+空格"序列（如"不 过 ， 如 果"）
-        // 匹配：中文字符/标点 + 空格 + 中文字符/标点，且这种模式连续出现3次以上
-        // 这表示AI在每个字符之间都加了空格
-
-        // 检测是否存在异常空格模式：单个中文字符后跟空格，连续出现
-        const abnormalPattern = /([\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef])\s(?=[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef])/g;
-
-        // 计算异常模式出现的次数
-        const matches = text.match(abnormalPattern);
-
-        // 如果异常模式出现次数超过3次，说明这是AI的异常输出，需要清理
-        if (matches && matches.length >= 3) {
-            // 移除中文字符之间的单个空格
-            return text.replace(/([\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef])\s+(?=[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef])/g, '$1');
-        }
-
-        return text;
-    }
 
     _stripCallSpeechPrefix(text, options = {}) {
         const preserveVoiceTag = options?.preserveVoiceTag === true;
@@ -7551,33 +7467,6 @@ renderChatRoom(chat) {
 
         lines.push('以上资金状态是系统真实记录，必须视为当前有效事实，不得擅自篡改已领取/已收款状态。');
         return lines.join('\n');
-    }
-    _parseWeiboCommentLine(line) {
-        if (!line) return null;
-        const cleaned = String(line || '').trim();
-        if (!cleaned) return null;
-
-        // 兼容：1. 昵称 (ip[地区])：内容 / 昵称 回复 昵称 (ip[地区])：内容
-        const matched = cleaned.match(/^\d+[.、]\s*(.+?)\s*(?:[（(]\s*(?:ip|IP|来自|IP属地)?[：:\s]*\[?([^\]）)]+)\]?\s*[）)])?\s*[：:]\s*([\s\S]+)$/i);
-        if (!matched) return null;
-
-        let head = (matched[1] || '').trim();
-        const location = String(matched[2] || '').replace(/^(ip|IP|来自|IP属地)[：:\s]*/i, '').trim();
-        const text = (matched[3] || '').trim();
-        if (!head || !text) return null;
-
-        let replyTo = '';
-        const replyMatch = head.match(/^(.+?)\s*回复\s*(.+)$/);
-        if (replyMatch) {
-            head = replyMatch[1].trim();
-            replyTo = replyMatch[2].trim();
-        }
-
-        const cleanName = (name) => String(name || '').trim().replace(/^@/, '').replace(/^[\[\(（【]/, '').replace(/[\]\)）】]$/, '').trim();
-        const name = cleanName(head) || '网友';
-        replyTo = cleanName(replyTo);
-
-        return { name, location, text, replyTo };
     }
 
     _parseWeiboNewsCard(content) {
@@ -7738,23 +7627,6 @@ renderChatRoom(chat) {
             .trim();
     }
 
-    _parseIncomingCallMarker(content) {
-        const source = String(content || '');
-        if (!source) return null;
-
-        const callMatch = source.match(/(?:\[\s*(?:拨打|发起)\s*(?:微信)?(群)?(语音|视频)(?:通话)?\s*\]|【\s*(?:拨打|发起)\s*(?:微信)?(群)?(语音|视频)(?:通话)?\s*】)/i);
-        if (!callMatch) return null;
-
-        const callTypeStr = callMatch[2] || callMatch[4] || '语音';
-        const callType = callTypeStr === '视频' ? 'video' : 'voice';
-        const isGroupCall = Boolean((callMatch[1] || callMatch[3] || '').trim());
-
-        return {
-            callType,
-            callTypeStr,
-            isGroupCall
-        };
-    }
 
     // 🔥 解析AI返回的特殊消息格式（转账/红包/定位/微博新闻/来电）
     parseSpecialMessage(content) {
@@ -18447,3 +18319,5 @@ Object.assign(ChatView.prototype, chatRenderCore);
 
 /* [v4.157.0 · R22-O2] 通话界面原型混入（实现见 ./chat-call-core.js） */
 Object.assign(ChatView.prototype, chatCallCore);
+/* [R25-O1] 文本解析内核原型混入（实现见 ./chat-text-core.js） */
+Object.assign(ChatView.prototype, chatTextCore);

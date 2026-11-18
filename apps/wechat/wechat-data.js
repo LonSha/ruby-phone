@@ -1,4 +1,8 @@
 import { receivedReplyCondition } from '../../config/condition-reminder-runtime.js';
+/* [R25-O1] 括号组读取此前在本文件与 chat-view 各有一份**同源副本**（判据 O1-12 当面点名）。
+ *   现改为消费唯一实现（chat-text-core）；两份变一份。 */
+import { chatTextCore } from './chat-text-core.js';
+const readBracketGroupAtCore = (value, startIndex) => chatTextCore._readBracketGroupAt(value, startIndex);
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -3673,7 +3677,7 @@ getWeekday(date) {
         while (scanIndex < raw.length) {
             while (scanIndex < raw.length && /\s/.test(raw[scanIndex])) scanIndex += 1;
             if (raw[scanIndex] !== '（' && raw[scanIndex] !== '(') break;
-            const group = this._readBracketGroupAt(raw, scanIndex);
+            const group = readBracketGroupAtCore(raw, scanIndex);
             if (!group) {
                 scanIndex += 1;
                 continue;
@@ -3703,32 +3707,6 @@ getWeekday(date) {
             description: single,
             prompt: single
         };
-    }
-
-    _readBracketGroupAt(value = '', startIndex = 0) {
-        const text = String(value || '');
-        const opener = text[startIndex];
-        if (opener !== '（' && opener !== '(') return null;
-
-        const primaryCloser = opener === '（' ? '）' : ')';
-        const alternateCloser = opener === '（' ? ')' : '）';
-        let depth = 1;
-        for (let index = startIndex + 1; index < text.length; index += 1) {
-            const char = text[index];
-            if (opener === '(' && char === '(') {
-                depth += 1;
-                continue;
-            }
-            if (char !== primaryCloser && char !== alternateCloser) continue;
-            depth -= 1;
-            if (depth === 0) {
-                return {
-                    text: text.slice(startIndex + 1, index),
-                    endIndex: index + 1
-                };
-            }
-        }
-        return null;
     }
 
     // 🔥 通过聊天对象同步头像（更可靠）

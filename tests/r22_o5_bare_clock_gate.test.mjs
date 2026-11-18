@@ -45,8 +45,13 @@ ok("白名单覆盖台账每一个 wall 行（按 file:line 对账）", wallLine
 
 // 5. 12 处 story 真的走了统一出口（不是靠文档声称）
 // 12 处由本项改入，另 2 处是 v21 就有的（合计 14）。不是恰好 12 —— 写清楚，别用总数冒充本期交付量。
-const routed = (SRC.match(/storyNowWallFallback\(window\)\.ms/g) || []).length;
-ok("chat-view 里统一钟出口 14 处（本期 12 + 既有 2）", routed === 14);
+/* [R25-O1 第一刀后订正] 14 处里 2 处随 _parseIncomingCallMarker / _parseManualTimeAdvanceCommand
+ * 搬进 apps/wechat/chat-text-core.js。判据要的仍是「这一处走的是同一个统一出口」，
+ * 所以按文件分别钉死：view 12 + core 2 = 14。只把总数改成 12 才是放水。 */
+const SRC_TEXT_CORE = fs.readFileSync(path.join(ROOT, 'apps/wechat/chat-text-core.js'), 'utf8');
+const routedView = (SRC.match(/storyNowWallFallback\(window\)\.ms/g) || []).length;
+const routedCore = (SRC_TEXT_CORE.match(/storyNowWallFallback\(window\)\.ms/g) || []).length;
+ok("统一钟出口 14 处（chat-view 12 + chat-text-core 2；本期 12 + 既有 2 的结构未变）", routedView === 12 && routedCore === 2);
 
 // 6. 台账与源码对得上：每个 wall 行号在源码里真的还有 Date.now()
 const wallSites = LEDGER.sites.filter((s) => s.cls === "wall");

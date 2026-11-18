@@ -1,0 +1,219 @@
+{
+ "cleanAbnormalSpaces": [
+  {
+   "ok": true
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": ""
+  },
+  {
+   "ok": true,
+   "v": "a b c"
+  },
+  {
+   "ok": true,
+   "v": "不过如果这样说的话就好了"
+  },
+  {
+   "ok": true,
+   "v": "中文无空格"
+  },
+  {
+   "ok": true,
+   "v": "hello world this is fine"
+  },
+  {
+   "ok": true,
+   "v": "字字字字"
+  }
+ ],
+ "_readBracketGroupAt": [
+  {
+   "ok": true,
+   "v": {
+    "text": "甲",
+    "endIndex": 3
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "text": "b",
+    "endIndex": 3
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "text": "甲",
+    "endIndex": 4
+   }
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": {
+    "text": "",
+    "endIndex": 2
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "text": "a（b",
+    "endIndex": 5
+   }
+  },
+  {
+   "ok": true,
+   "v": null
+  }
+ ],
+ "_parseIncomingCallMarker": [
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": {
+    "callType": "voice",
+    "callTypeStr": "语音",
+    "isGroupCall": false
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "callType": "video",
+    "callTypeStr": "视频",
+    "isGroupCall": false
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "callType": "voice",
+    "callTypeStr": "语音",
+    "isGroupCall": true
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "callType": "video",
+    "callTypeStr": "视频",
+    "isGroupCall": true
+   }
+  }
+ ],
+ "_extractQuickReplyPayload": [
+  {
+   "ok": true,
+   "v": "海边日落"
+  },
+  {
+   "ok": true,
+   "v": "片段"
+  },
+  {
+   "ok": true,
+   "v": "猫"
+  },
+  {
+   "ok": true,
+   "v": "三秒"
+  },
+  {
+   "ok": true,
+   "v": "咖啡馆"
+  },
+  {
+   "ok": true,
+   "v": "三天后"
+  },
+  {
+   "ok": true,
+   "v": "原文"
+  },
+  {
+   "ok": true,
+   "v": ""
+  }
+ ],
+ "_parseWeiboCommentLine": [
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": {
+    "name": "小明",
+    "location": "北京",
+    "text": "好看",
+    "replyTo": ""
+   }
+  },
+  {
+   "ok": true,
+   "v": {
+    "name": "阿澈",
+    "location": "上海",
+    "text": "同感",
+    "replyTo": "小明"
+   }
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": {
+    "name": "网友",
+    "location": "广州",
+    "text": "到此一游",
+    "replyTo": ""
+   }
+  }
+ ],
+ "_parseManualTimeAdvanceCommand": [
+  {
+   "ok": false,
+   "e": "window is not defined"
+  },
+  {
+   "ok": true,
+   "v": null
+  },
+  {
+   "ok": true,
+   "v": null
+  }
+ ]
+}
