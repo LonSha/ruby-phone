@@ -19,7 +19,7 @@ import { silenceFaceText } from './diagnose-data.js';
 import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
-import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows } from './diagnose-data.js';
+import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText } from './diagnose-data.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
@@ -1054,6 +1054,17 @@ export class DiagnoseView {
     /** [R25-X1] 崩溃边界卡片：一行读数 + 逐来源行表。
      *  为什么把「没挂」与「零崩溃」分成两句：前者是「不知道」，后者是「真没事」，
      *  手机在用户手里出问题时，这两句的下一步动作完全不同。 */
+    /** [R25-O9] 错误可读卡片：最近一次给用户看的人话 + 建议（人话在宿主算，本处只渲染）。 */
+    _errorReadableHtml(pkg) {
+        const face = (pkg && pkg.errorReadable) || null;
+        const pack = (pkg && pkg.errorReadablePack) || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(errorReadableFaceText(face)) + '</div>';
+        if (pack) {
+            html += '<pre class=' + Q + 'dg-pack' + Q + '>' + escapeHtml(pack) + '</pre>'
+                + '<div class=' + Q + 'dg-note' + Q + '>点选上方文本即可复制（不含聊天正文；同输入重算逐字节一致）</div>';
+        }
+        return html;
+    }
     _crashBoundaryHtml(pkg) {
         const face = (pkg && pkg.crashBoundary) || null;
         let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(crashBoundaryFaceText(face)) + '</div>';
@@ -1922,6 +1933,7 @@ export class DiagnoseView {
          *   的读数）—— 摆在前面的卡会让人以为「启动慢」是当前正在发生的事。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>错误可读化（用户看到的那句话）</h3>' + this._errorReadableHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>导出脱敏</h3>' + this._secretHtml(pkg) + '</section>');

@@ -403,6 +403,8 @@ import { createPerfSampler } from './config/perf-sampler.js';
 import { APP_LAZY_ROUTES, APP_LAZY_ROUTE_INDEX } from './config/app-lazy-routes.js';   // [v3.61.0 · 计划 O6] 表驱动懒加载路由
 /* [R25-X1]崩溃边界：一个 App抛错只挂它自己。内核零依赖，宿主只提供重启动作。 */
 import { createCrashBoundary, crashLine } from './config/app-crash-boundary.js';
+/* [R25-O9]错误可读化：用户侧只看得懂人话，看不到控制台原文。 */
+import { classifyError, errorLine } from './config/error-readable.js';
 const bootTiming = createBootTiming();
 /* [v3.15.0 · 计划 #52] 使用统计的**采集咽喉点接线**。
  *   为什么采集放在 `phone:openApp` / `phone:goHome` 这两个咽喉点，而不是放在洞察 App 内部：
@@ -11813,8 +11815,30 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                             window.VirtualPhone[lazyRoute.key].render();
                         })
                         .catch(err => {
+                            /* 控制台留原文给工程师；用户侧走人话（R25-O9）。两者不互相替代。 */
                             console.error('❌ 加载' + lazyRoute.errTitle + '失败:', err);
-                            phoneShell?.showNotification('错误', lazyRoute.errTitle + '加载失败', '❌');
+                            let readable = null;
+                            try { readable = classifyError(err, { kind: 'load-failed', module: lazyRoute.errTitle }); } catch (_e) {}
+                            phoneShell?.showNotification(
+                                '出错',
+                                readable ? errorLine(readable) : (lazyRoute.errTitle + '加载失败'),
+                                '⚠️'
+                            );
+                            /* 最近一次人话留给诊断页（真源在宿主，诊断页不自建一份）。 */
+                            try {
+                                if (readable && window.VirtualPhone) {
+                                    window.VirtualPhone._lastError = {
+                                        at: Date.now(),
+                                        family: readable.family,
+                                        name: readable.name,
+                                        message: readable.message,
+                                        code: readable.code,
+                                        human: readable.human,
+                                        advice: readable.advice,
+                                        module: readable.module
+                                    };
+                                }
+                            } catch (_e) {}
                             /* [R25-X1] 带回执：哪个 App、什么错、第几次、还救不救。
                              *   这里的 appId 是**确证**的（就是刚加载失败的那个），不靠推断。 */
                             try { crashBoundary.report(err, { appId: appId, kind: 'load-failed' }); } catch (_e) {}

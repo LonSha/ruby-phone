@@ -257,6 +257,8 @@ import { DIAG_STATES, DIAG_DOMAINS, CODE_TABLE, buildDisposal, disposalLine, can
 /* [R25-X1] 崩溃回执的一行文案走**边界模块自己**的实现：诊断页不另写一套说法，
  *   否则同一次崩溃在两处措辞不同，用户就得分不清是不是两件事。 */
 import { crashLine as crashReceiptLine } from '../../config/app-crash-boundary.js';
+/* [R25-O9] 诊断包文本也走内核同一实现 —— 页面上的包与用户自己贴的包必须是同一份。 */
+import { diagnosticPackText } from '../../config/error-readable.js';
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -308,6 +310,36 @@ export function crashBoundaryFaceText(face) {
         try { parts.push('最近：' + crashReceiptLine(last)); } catch (_e) { /* 文案坏了不影响读数 */ }
     }
     return parts.join(' · ');
+}
+
+/** [R25-O9] 错误可读面：读宿主记的「最近一次给用户看的人话」。
+ *  取不到就 null（旧版插件 / 本会话还没走到用户侧失败）—— 不得说成「没有错误」。 */
+export function errorReadableFace(win) {
+    const w = hostWindow(win);
+    const host = w && w.VirtualPhone ? w.VirtualPhone : null;
+    const last = host && host._lastError ? host._lastError : null;
+    return (last && typeof last === 'object') ? last : null;
+}
+
+/** [R25-O9] 诊断包文本（页面直接渲染成可点选复制的 pre）。
+ *  取不到最近错误就 null —— 不生成一份「空包」冒充可用。 */
+export function errorReadablePack(win) {
+    const face = errorReadableFace(win);
+    if (!face) return null;
+    try {
+        return diagnosticPackText({
+            family: face.family, code: face.code, name: face.name, message: face.message,
+            module: face.module, version: face.version, at: face.at, recent: face.recent
+        });
+    } catch (_e) { return null; }
+}
+
+export function errorReadableFaceText(face) {
+    if (!face) return '错误可读化：本次会话没有记录到用户可见的错误（这不等于「从未出错」—— 只是没走到用户侧）';
+    const human = (typeof face.human === 'string' && face.human) ? face.human : '（无人话）';
+    const advice = (typeof face.advice === 'string' && face.advice) ? face.advice : '（无建议）';
+    const who = (typeof face.module === 'string' && face.module) ? ('「' + face.module + '」') : '';
+    return '最近一次' + who + '：' + human + '。建议：' + advice;
 }
 
 /** 崩溃边界的行表（诊断页逐 App 展开用；排序与「整机级」标注都在内核里定）。 */
@@ -694,6 +726,9 @@ export function collectDiagnose(win, storage) {
     /* [R25-X1] 崩溃边界面：边界实例由宿主安装（index.js 的 phone:openApp 通路 + 全局
      *   error/rejection 监听），诊断页只旁听 —— 自己建一个只会读到「打开诊断页之后」。 */
     const crashSc = safe(() => crashBoundaryFace(w), null) || null;
+    /* [R25-O9] 错误可读面：同一取数纪律 —— 从宿主读，不自建。 */
+    const errReadSc = safe(() => errorReadableFace(w), null) || null;
+    const errPackSc = safe(() => errorReadablePack(w), null) || null;
     /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
      *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
      *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
@@ -2143,7 +2178,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crashBoundary: crashSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2743,6 +2778,9 @@ export default {
     crashBoundaryFace,
     crashBoundaryFaceText,
     crashBoundaryRows,
+    errorReadableFace,
+    errorReadableFaceText,
+    errorReadablePack,
     bootTimingRows,
     checkpointFaceText,
     sessionGateFaceText,
