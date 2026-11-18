@@ -1,0 +1,345 @@
+{
+  "meta": {
+    "A（旧）": "/tmp/rphead",
+    "B（新）": "/home/user/ruby-phone",
+    "操作序列": "o1-core-flow.scen.js + o3-media-20.scen.js",
+    "视口": "390x844",
+    "浏览器": "Chromium 131.0.6778.33",
+    "运行问题": "无"
+  },
+  "rows": [
+    {
+      "name": "o1-core-flow.scen.js::viewport-applied",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::flow-setup",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "shell=true home=true"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "shell=true home=true"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::update-modal-dismissed",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "公告弹窗已关闭（含长公告滚动后关闭）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "公告弹窗已关闭（含长公告滚动后关闭）"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::open-app-gacha",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "已渲染 .phone-view-current .ga-root"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "已渲染 .phone-view-current .ga-root"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::app-content-has-box",
+      "face": "diff",
+      "a": {
+        "ok": "ok",
+        "detail": "{\"w\":302,\"h\":657,\"t\":86,\"l\":44}"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "{\"w\":332,\"h\":722,\"t\":53,\"l\":29}"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::back-button-in-app",
+      "face": "diff",
+      "a": {
+        "ok": "ok",
+        "detail": "display=flex box={\"w\":27,\"h\":22,\"t\":92,\"l\":98} hit=命中本体"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "display=flex box={\"w\":30,\"h\":24,\"t\":59,\"l\":89} hit=命中本体"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::back-button-returns-home",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "已回桌面"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "已回桌面"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::back-button-hidden-at-home",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "桌面态已隐藏"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "桌面态已隐藏"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::punch-hole-reachable",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "命中本体"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "命中本体"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::lock-screen-appears",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": ".phone-lockscreen 在场"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": ".phone-lockscreen 在场"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::lock-screen-covers",
+      "face": "diff",
+      "a": {
+        "ok": "ok",
+        "detail": "lock={\"w\":390,\"h\":738,\"t\":46,\"l\":0} screen={\"w\":302,\"h\":657,\"t\":86,\"l\":44}"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "lock={\"w\":390,\"h\":738,\"t\":46,\"l\":0} screen={\"w\":335,\"h\":730,\"t\":50,\"l\":27}"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::lock-screen-toggles-off",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "已解锁"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "已解锁"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::panel-survives-lock-cycle",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "外壳未被打散"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "外壳未被打散"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::panel-reopen-single-instance",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "关闭后=1 重开后=1（必须恒为 1，>1 即外壳泄漏）"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "关闭后=1 重开后=1（必须恒为 1，>1 即外壳泄漏）"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::home-after-reopen",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "重开后回到桌面且渲染完成"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "重开后回到桌面且渲染完成"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::clear-data-survives",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "err=null home=true"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "err=null home=true"
+      }
+    },
+    {
+      "name": "o1-core-flow.scen.js::host-stub-ledger",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "blocked=1 saveChat=1"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "blocked=1 saveChat=1"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::viewport-applied",
+      "face": "same",
+      "a": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "want=390 innerWidth=390 outerWidth=390 docEl=390"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::scenario-threw",
+      "face": "only-a",
+      "a": {
+        "ok": "FAIL",
+        "detail": "Failed to fetch dynamically imported module: http://127.0.0.1:39409/config/media-lifetime.js"
+      },
+      "b": {
+        "ok": "missing",
+        "detail": ""
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-view-reachable",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "相册已开屏；albumView.openPreview/closePreview 可取到，入口=桌面图标"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-payload-real",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "画布生成 20 张 320x320 PNG，去重后 20 张，最小单张 7938 B，合计约 175 KiB（占位图会被这条拦下）"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-open-close-20",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "20 轮开/关全部合格：关前 live=1、关后 live=0、句柄 src 真摘、覆盖层节点真出 DOM"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-receipts",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "回执 20 条，ok=true 20 条，台账上限 64（丢最旧、不丢最坏）"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-live-and-dataset",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "live=0 残留覆盖层=0 dataset.mlReleased=20（应=20） mlLive=0 mlLastReceipt.ok=true"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-toolbar-visible",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "工具条可见文本=\n                            全部来源 · 20 项 · 已释放 20\n          （夹具：getMedia 临时指向本场景 20 张，读数后还原）"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-switch-path",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "连开 3 张不关：覆盖层 1 个（应=1，换图不留孤儿）、live=1；最后一次关掉 live=0，本轮释放 3 张（应=3）"
+      }
+    },
+    {
+      "name": "o3-media-20.scen.js::o3-heap-reference",
+      "face": "only-b",
+      "a": {
+        "ok": "missing",
+        "detail": ""
+      },
+      "b": {
+        "ok": "ok",
+        "detail": "heap before=22MiB after=22MiB face=same deltaPct=0；本条只作参考"
+      }
+    }
+  ],
+  "counts": {
+    "same": 15,
+    "diff": 3,
+    "only-a": 1,
+    "only-b": 8
+  },
+  "total": 27,
+  "changed": 12,
+  "verdict": "changed"
+}
