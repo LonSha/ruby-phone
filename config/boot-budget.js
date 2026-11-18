@@ -35,8 +35,9 @@ export const BUDGET_STAGES = Object.freeze(Object.keys(BOOT_BUDGET).filter((k) =
 /** 趋势容差：±5% 之内算平（读数抖动不该被说成涨/跌）。 */
 export const TREND_TOLERANCE = 0.05;
 
-/** 中位数（连跑三次取中位数；空 ⇒ null，不编 0）。 */
-export function medianOf(samples) {
+/** 中位数（连跑三次取中位数；空 ⇒ null，不编 0）。**模块内部**：
+ *  对外只有 judgeBootSamples（它才是产品需要的那件事）。 */
+function medianOf(samples) {
     const list = Array.isArray(samples)
         ? samples.filter((x) => typeof x === 'number' && Number.isFinite(x))
         : [];
@@ -122,6 +123,37 @@ export function judgeBoot(snap, opts) {
         };
     }
     return { verdict: 'within', ok: true, totalMs, budget: budget, exceeded: [], worst: null, unmeasurableStages: [], stages };
+}
+
+
+/**
+ * 连跑三次（或多份）读数取中位后判预算 —— 单次抖动不该决定「达标/超线」。
+ * 少于 3 份时退化成「用最后一份」（并如实是单次读数，不做中位假装）。
+ * @param {Array<Object>} snaps
+ * @param {{budget?:Object}} [opts]
+ */
+export function judgeBootSamples(snaps, opts) {
+    const list = Array.isArray(snaps) ? snaps.filter((s) => s && typeof s === 'object') : [];
+    if (!list.length) return judgeBoot(null, opts);
+    if (list.length < 3) return judgeBoot(list[list.length - 1], opts);
+    const stageMap = new Map();
+    for (const s of list) {
+        const { sums } = stageTotals(s);
+        for (const [k, v] of sums) {
+            if (!stageMap.has(k)) stageMap.set(k, []);
+            stageMap.get(k).push(v);
+        }
+    }
+    const segments = [];
+    for (const [name, arr] of stageMap) {
+        const ms = medianOf(arr);
+        segments.push({ name, ms, state: ms === null ? 'unmeasurable' : 'measured' });
+    }
+    const totals = list.map((s) => (typeof s.totalMs === 'number' && Number.isFinite(s.totalMs)) ? s.totalMs : null)
+        .filter((v) => v !== null);
+    const totalMs = totals.length ? medianOf(totals) : null;
+    const clock = list.every((s) => s.clock === 'absent') ? 'absent' : 'ok';
+    return judgeBoot({ clock, segments, totalMs }, opts);
 }
 
 /**

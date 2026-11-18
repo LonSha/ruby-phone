@@ -17,8 +17,8 @@ import {
     BOOT_BUDGET,
     BUDGET_STAGES,
     TREND_TOLERANCE,
-    medianOf,
     judgeBoot,
+    judgeBootSamples,
     bootTrend,
     bootBudgetLine
 } from '../config/boot-budget.js';
@@ -103,12 +103,23 @@ test('O1-8 坏输入不崩：null / 缺 segments 都如实 absent 而不是「0m
     assert.doesNotThrow(() => bootBudgetLine(null));
 });
 
-test('O1-9 medianOf：奇数取中、偶数取均值、空与脏数据如实 null', () => {
-    assert.equal(medianOf([300, 100, 200]), 200);
-    assert.equal(medianOf([100, 200]), 150);
-    assert.equal(medianOf([]), null);
-    assert.equal(medianOf(['x', null, undefined]), null);
-    assert.equal(medianOf([100, 'x', 300]), 200, '非数被过滤后取中位');
+test('O1-9 连跑三次取中位再判：单次抖动不许决定达标/超线', () => {
+    /* first-data 三次 200 / 400 / 300 ⇒ 中位 300（= 预算，未超）；若只看最后一次 300 也达标，
+     *  但若只看最差那次 400 就会误判超线 —— 中位的意义就在这里。 */
+    const samples = [
+        snapOf([['shell', 80], ['router', 40], ['first-data', 200]]),
+        snapOf([['shell', 90], ['router', 50], ['first-data', 400]]),
+        snapOf([['shell', 85], ['router', 45], ['first-data', 300]])
+    ];
+    const j = judgeBootSamples(samples);
+    assert.equal(j.verdict, 'within', '中位 300 未超 300 预算');
+    const worst = judgeBoot(samples[1]);
+    assert.equal(worst.verdict, 'over', '单看最差一次会超线——所以必须取中位');
+
+    /* 不足三份：退化成最后一次，如实不做中位假装 */
+    const few = judgeBootSamples(samples.slice(0, 2));
+    assert.equal(few.verdict, 'over', '两次时用最后一次（400）判，如实超线');
+    assert.equal(judgeBootSamples([]).verdict, 'absent');
 });
 
 test('O1-10 趋势：升 / 降 / 平三态，且容差之内算平', () => {

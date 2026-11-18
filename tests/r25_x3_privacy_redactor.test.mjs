@@ -17,8 +17,6 @@ import {
     REDACT_RULE_IDS,
     NAME_TOKEN,
     redact,
-    needsRedact,
-    redactLines,
     redactReceipt
 } from '../config/privacy-redactor.js';
 
@@ -95,8 +93,8 @@ test('X3-9 任意形状输入都不崩（null / 数字 / 对象）', () => {
         assert.equal(r.text, '');
         assert.equal(r.total, 0);
     }
-    assert.equal(needsRedact('13800138000'), true);
-    assert.equal(needsRedact('干净的一句话'), false);
+    assert.ok(redact('13800138000').total > 0);
+    assert.equal(redact('干净的一句话').total, 0);
 });
 
 test('X3-10 规则白名单：只勾 phone 时金额原样保留', () => {
@@ -106,11 +104,11 @@ test('X3-10 规则白名单：只勾 phone 时金额原样保留', () => {
     assert.deepEqual(REDACT_RULE_IDS.slice().sort(), ['amount', 'email', 'idcard', 'phone']);
 });
 
-test('X3-11 行表批量遮蔽：长度不变、总数可核、回执点名类别', () => {
-    const out = redactLines(['a 13800138000', 'b 干净', '¥5']);
-    assert.equal(out.lines.length, 3);
-    assert.equal(out.total, 2);
-    assert.equal(out.lines[1], 'b 干净');
+test('X3-11 多行逐个遮蔽：长度不变、总数可核、回执点名类别', () => {
+    const lines = ['a 13800138000', 'b 干净', '¥5'].map((x) => redact(x));
+    assert.equal(lines.length, 3);
+    assert.equal(lines.reduce((a, r) => a + r.total, 0), 2);
+    assert.equal(lines[1].text, 'b 干净');
     const receipt = redactReceipt(redact('13800138000 与 ¥5'));
     assert.ok(receipt.includes('电话 1 处'));
     assert.ok(receipt.includes('金额 1 处'));

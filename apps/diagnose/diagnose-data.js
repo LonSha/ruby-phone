@@ -260,7 +260,7 @@ import { crashLine as crashReceiptLine } from '../../config/app-crash-boundary.j
 /* [R25-O9] 诊断包文本也走内核同一实现 —— 页面上的包与用户自己贴的包必须是同一份。 */
 import { diagnosticPackText } from '../../config/error-readable.js';
 /* [R26-O1] 首屏预算：判定与趋势都走内核，诊断页不自己算阈值。 */
-import { judgeBoot, bootTrend, bootBudgetLine } from '../../config/boot-budget.js';
+import { judgeBoot, judgeBootSamples, bootTrend, bootBudgetLine } from '../../config/boot-budget.js';
 
 
 /** [R26-O1] 首屏预算面：从宿主读 boot-timing 现算（不自建实例，不缓存读数）。
@@ -272,7 +272,10 @@ export function bootBudgetFace(win) {
     if (!inst || typeof inst.collect !== 'function') return null;
     try {
         const snap = inst.collect();
-        const judge = judgeBoot(snap);
+        /* [R26-O1] 连跑三次取中位：宿主把多次采样放在 `_bootSamples`（不足三份就按最后一次判，
+         *  不做「中位」假装）。单次抖动量不出这台机器真实的启动水平。 */
+        const samples = Array.isArray(host._bootSamples) ? host._bootSamples : [];
+        const judge = samples.length >= 3 ? judgeBootSamples(samples) : judgeBoot(snap);
         const trend = bootTrend(Array.isArray(host._bootBudgetHistory) ? host._bootBudgetHistory : []);
         return { judge: judge, trend: trend, line: bootBudgetLine(judge, trend) };
     } catch (_e) { return null; }

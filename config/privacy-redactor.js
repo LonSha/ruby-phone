@@ -89,23 +89,6 @@ export function redact(text, opts) {
     return { text: out, hits: hits, total: total, rules: wanted };
 }
 
-/** 一段文本是否需要遮（调用方想在 UI 上标「已脱敏」时用）。 */
-export function needsRedact(text, opts) {
-    try { return redact(text, opts).total > 0; } catch (_e) { return false; }
-}
-
-/** 行表批量遮蔽（分享/导出多行文本时用；返回同一长度）。 */
-export function redactLines(lines, opts) {
-    if (!Array.isArray(lines)) return { lines: [], total: 0 };
-    let total = 0;
-    const out = lines.map((line) => {
-        const r = redact(line, opts);
-        total += r.total;
-        return r.text;
-    });
-    return { lines: out, total: total };
-}
-
 /** 一行回执（截图/分享后给用户的说明；必须说清「遮了几处、哪几类」）。 */
 export function redactReceipt(result) {
     const r = (result && typeof result === 'object') ? result : null;
