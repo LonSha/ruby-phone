@@ -171,6 +171,7 @@ import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
 import { msgSearchSelfCheck } from './config/msg-search.js?v=4.157.0&r=20261116-r22';
 import { chatVirtualWindowSelfCheck } from './config/chat-virtual-window.js?v=4.157.0&r=20261116-r22';
 import { chatScrollMemorySelfCheck } from './config/chat-scroll-memory.js';
+import { mediaLifetimeSelfCheck } from './config/media-lifetime.js';
 import { clockClassifySelfCheck } from './config/story-clock-classify.js?v=4.157.0&r=20261116-r22';
 import { coverageSelfCheck } from './config/coverage-gap-report.js?v=4.157.0&r=20261116-r22';
 import { eventDebtSelfCheck } from './config/event-debt-disposition.js?v=4.157.0&r=20261116-r22';
@@ -2418,7 +2419,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r22X4', callSegSelfCheck], ['_r22X5', diarySearchSelfCheck], ['_r22X6', wishlistSelfCheck],
                 ['_r22X7', bubbleThemeSelfCheck], ['_r22X8', clipboardSelfCheck], ['_r22X9', readingProgressSelfCheck],
                 ['_r22O2', settingsFilterSelfCheck], ['_r22O3', a11ySelfCheck], ['_r22O4', msgSearchSelfCheck], ['_r22Feedback', feedbackSelfCheck],
-                ['_r22O1', chatVirtualWindowSelfCheck], ['_r25O2', chatScrollMemorySelfCheck],
+                ['_r22O1', chatVirtualWindowSelfCheck], ['_r25O2', chatScrollMemorySelfCheck], ['_r25O3', mediaLifetimeSelfCheck],
                 ['_r22O8', bannerSelfCheck], ['_r22O9', unreadBadgeSelfCheck],
                 ['_r22O5', clockClassifySelfCheck], ['_r22O6', coverageSelfCheck], ['_r22O7', eventDebtSelfCheck],
                 ['_r23Trace', v23TraceSelfCheck],

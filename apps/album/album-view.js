@@ -10,6 +10,8 @@ import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
  * ======================================================== */
 
 import { PHONE_CONFIG } from '../../config/apps.js';
+/* [R25-O3] 媒体生命周期台账：登记 / 释放方案 / 回执。视图只执行 steps，决策全在内核（同一纪律：判据只有一处）。 */
+import { ML_MAX_LIVE, mlTrack, mlReleasePlan, mlReceipt, mlBytesOfSrc } from '../../config/media-lifetime.js';
 /* [v3.24.0 · L0-3] 分享面板：25 个平台图标（L0 素材第 2 类）。
  *   URL 解析只在取数口一处（`shareIconUrl`），本文件只把 key 列表画成按钮。 */
 import { L0_ASSETS, shareIconUrl } from '../../config/l0-assets.js';
@@ -117,7 +119,7 @@ export class AlbumView {
                 <main class="album-body">
                     ${this.images.length ? `
                         <div class="album-body-toolbar">
-                            <span>${this.escapeHtml(activeSourceLabel)} · ${visibleImages.length} 项</span>
+                            <span>${this.escapeHtml(activeSourceLabel)} · ${visibleImages.length} 项${(Number(this._mediaReleasedTotal) || 0) > 0 ? ` · 已释放 ${Number(this._mediaReleasedTotal)}` : ''}</span>
                             <div class="album-body-toolbar-actions">
                                 <button type="button" class="album-source-filter" id="album-source-filter" aria-haspopup="menu" aria-expanded="false">
                                     <span>分类</span>
@@ -134,6 +136,14 @@ export class AlbumView {
         `;
 
         this.app.phoneShell.setContent(html, 'album-main');
+        /* [R25-O3] 诊断读数随渲染补写：换屏/重渲染会换出新的 `.album-app` 节点，
+         *   dataset 上的 mlLive / mlReleased 跟着旧节点一起丢了 —— 那样「已释放 N」要等
+         *   下一次释放才重新出现，重渲染后的人和回归都读不到。这里用实例上的真值补写。 */
+        const _mlHost = document.querySelector('.album-app');
+        if (_mlHost && _mlHost.dataset) {
+            _mlHost.dataset.mlLive = String((this._mediaLive || new Map()).size);
+            _mlHost.dataset.mlReleased = String(Number(this._mediaReleasedTotal) || 0);
+        }
         requestAnimationFrame(() => this.bindEvents());
     }
 
@@ -812,10 +822,25 @@ export class AlbumView {
         const isVideo = image.mediaType === 'video';
         this.previewOpen = true;
         const root = (document.querySelector('.phone-view-current') || document).querySelector('.album-app');
+        /* 换图先走一遍释放：直接 remove() 旧覆盖层会留下一条「挂过 DOM 但没人摘 src」的句柄。 */
+        if (root?.querySelector('.album-preview')) this.releasePreviewMedia();
         root?.querySelector('.album-preview')?.remove();
+        /* [R25-O3] 打开预览就把这条媒体登记进台账：**先登记再挂 DOM**，否则「挂上了但没登记」
+         *   的句柄永远没人释放（这正是修前那 20 张原图的下场）。超上限的旧句柄按计划当场释放。 */
+        const _mlId = (isVideo ? 'v:' : 'i:') + String(image.path || ('idx-' + index));
+        const _mlTracked = mlTrack(this._mediaLive, {
+            id: _mlId,
+            kind: isVideo ? 'video' : 'image',
+            src: String(image.src || ''),
+            at: Date.now()
+        }, ML_MAX_LIVE);
+        this._mediaLive = _mlTracked.state;
+        this._mediaTrackRejected = _mlTracked.rejected;
+        this._mediaSrcBytes = mlBytesOfSrc(image.src);
 
         const overlay = document.createElement('div');
         overlay.className = 'album-preview';
+        overlay.dataset.mlId = _mlId;
         overlay.innerHTML = `
             <div class="album-preview-panel">
                 <div class="album-preview-top">
@@ -939,7 +964,51 @@ export class AlbumView {
     closePreview() {
         this.previewOpen = false;
         this.pausePreview();
+        /* [R25-O3] 关掉预览 = 这条媒体的寿命结束：按内核给的 steps 真摘 src（video 先 pause），
+         *   再把结果写成回执。修前这里只 remove() 元素，位图要等 GC 顺手。 */
+        this.releasePreviewMedia();
         document.querySelectorAll('.album-preview').forEach(preview => preview.remove());
+    }
+
+    /** 按计划释放当前预览里的媒体；回执落 this._mediaReceipts 并在相册工具条上留一个人能看的数。 */
+    releasePreviewMedia() {
+        const nodes = document.querySelectorAll('.album-preview-image, .album-preview-video');
+        let released = 0;
+        let receipts = this._mediaReceipts || [];
+        const live = [...(this._mediaLive || new Map()).values()];
+        nodes.forEach(node => {
+            const isVideo = node.tagName === 'VIDEO';
+            const rec = live.find(item => (isVideo ? item.kind === 'video' : item.kind === 'image'))
+                || { id: '', kind: isVideo ? 'video' : 'image', src: node.getAttribute('src') || '' };
+            const plan = mlReleasePlan(rec);
+            let ok = false;
+            try {
+                for (const step of plan.steps) {
+                    if (step === 'pause') node.pause?.();
+                    if (step === 'detach-src') {
+                        node.removeAttribute('src');
+                        node.removeAttribute('srcset');
+                        if (isVideo) { try { node.load?.(); } catch (e) { } }
+                    }
+                }
+                ok = !node.hasAttribute('src');
+            } catch (e) {
+                ok = false;
+            }
+            const r = mlReceipt(rec, plan, ok, Date.now(), receipts);
+            receipts = r.receipts;
+            if (ok) released += 1;
+        });
+        this._mediaReceipts = receipts;
+        this._mediaLive = new Map();
+        this._mediaReleasedTotal = (Number(this._mediaReleasedTotal) || 0) + released;
+        const host = document.querySelector('.album-app');
+        if (host && host.dataset) {
+            host.dataset.mlLive = '0';
+            host.dataset.mlReleased = String(this._mediaReleasedTotal);
+            host.dataset.mlLastReceipt = JSON.stringify(receipts[receipts.length - 1] || null);
+        }
+        return released;
     }
 
     pausePreview() {

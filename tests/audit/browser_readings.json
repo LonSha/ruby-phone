@@ -1,17 +1,17 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-18T13:26:40.694Z",
+  "measured_at": "2026-11-18T15:20:26.955Z",
   "version": "4.157.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../tmp/gate_all.log",
-    "bytes": 157956,
-    "sha256": "498fe1a328c9505c4f6df2437c549904e08de7a49391ae7e47757a797825c1e8"
+    "log": "../../../tmp/gate_o3.log",
+    "bytes": 159751,
+    "sha256": "f6b108bb72bb22d61145c1fa1b94011282a5d4c6ef25fa4ed3cdab5afb38a6dc"
   },
   "elapsed_ms": 0,
-  "scenes": 21,
+  "scenes": 22,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,12 +19,12 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 872,
-  "fail_reads": 1,
+  "total_reads": 890,
+  "fail_reads": 0,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 21,
-    "measured": 21,
+    "on_disk": 22,
+    "measured": 22,
     "missing": [],
     "extra": [],
     "complete": true
@@ -62,17 +62,21 @@
       "reads": 44,
       "fail": 0
     },
+    "o3-media-20.scen.js": {
+      "reads": 36,
+      "fail": 0
+    },
     "o6-longlist-extreme.scen.js": {
       "reads": 36,
       "fail": 0
     },
     "o6-longlist-perf.scen.js": {
-      "reads": 36,
+      "reads": 18,
       "fail": 0
     },
     "o6-motion-throttle.scen.js": {
       "reads": 32,
-      "fail": 1
+      "fail": 0
     },
     "o7-perf-probe.scen.js": {
       "reads": 32,
@@ -115,14 +119,7 @@
       "fail": 0
     }
   },
-  "failures": [
-    {
-      "scene": "o6-motion-throttle.scen.js",
-      "viewport": "768x1024",
-      "name": "o6m-background-throttle",
-      "detail": "data-bg=doc-hidden runningAnims before=3 after=2 petPlaying before=1 after=0 samplerArmed before=true after=false（document.hidden 是属性替换模拟，不触发真实节流窗口：本项证明代码收到隐藏信号后真停了，不证明省了多少电）"
-    }
-  ],
+  "failures": [],
   "gate_exit_code": null,
   "gate_exit_code_note": "回放模式只读日志、观测不到 gate 退出码，故记 null（不猜不补）；真实判定以日志末的 fail 计数为准。",
   "honest_boundary": "本台账证明「门真跑了一次并如实报出读数」；它不证明 89 个入口的内容都正确。门内判据的红点即为当期真缺陷，逐条列在 failures 里。"

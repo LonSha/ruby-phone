@@ -52,11 +52,11 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：904 个 .js / 合计 384551 行 / 44 个大文件，台账全绿', () => {
+test('真仓读数：905 个 .js / 合计 384790 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 904, '扫到的 .js 数量与当前实际不符（R25-X2/X5/X9 新增 time-machine / layout-breaks / story-clock-fanout 三个内核后已复核）');
-  assert.equal(r.stats.total, 384551, '全仓合计行数与台账不符（R25-X2/O6/X5/X9 各期内核 + 接线与读回，以及 O1 拆骨后的重量变化，台账 note 里写了为什么涨/为什么降）');
+  assert.equal(r.stats.files, 905, '扫到的 .js 数量与当前实际不符（R25-X2/X5/X9 新增 time-machine / layout-breaks / story-clock-fanout 三个内核后已复核）');
+  assert.equal(r.stats.total, 384790, '全仓合计行数与台账不符（R25-X2/O6/X5/X9 各期内核 + 接线与读回，以及 O1 拆骨后的重量变化，台账 note 里写了为什么涨/为什么降）');
   assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
@@ -158,7 +158,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 904);
+  assert.equal(j.stats.files, 905);
   assert.deepEqual(j.problems, []);
 });
 
