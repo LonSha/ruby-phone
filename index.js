@@ -128,6 +128,10 @@ import { unreadBadgeSelfCheck } from './config/unread-badge.js?v=4.157.0&r=20261
 import { settingsFilterSelfCheck } from './config/settings-filter.js?v=4.157.0&r=20261116-r22';
 /* [v4.158.0 · R23-X1~X9] 九项拓展桥：纯函数，只在装配点做自检与读数，不碰 DOM。 */
 import { v23TraceSelfCheck } from './config/v23-trace.js?v=4.157.0&r=20261117-r23';
+/* [v4.158.0 · R24-X1] 事实通道：值与事件的补集（事件=动词，事实=名词）。纯内核 + 显式时钟，不碰 DOM。 */
+import { phoneFactsSelfCheck } from './config/phone-facts.js';
+/* [v4.158.0 · R24-X7] 角色自主行为预算：消费事实通道的值，四态（allowed/suppressed/exhausted/disabled）+ 回执可回源。 */
+import { actorAutonomySelfCheck } from './config/actor-autonomy-budget.js';
 import { feedbackSelfCheck, phoneNotice } from './config/phone-feedback.js';
 /* 【版本升至 4.155.0（五源同源）】R21-X3 静音与勿扰的剧情内解释交付：唯一桥 config/silence-narrative-bridge.js（454 行纯函数：六时段桶 / 五态分形 / 频率门 / 只产候选不写记忆），通知咽喉在免打扰门处真调主入口，装配点跑桥自检，诊断面加静音叙事卡 —— 历史留档（v4.155.0 交付面，勿当待办删）。 */
 import { a11ySelfCheck } from './config/a11y-audit.js?v=4.157.0&r=20261116-r22';
@@ -2322,6 +2326,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r22O1', chatVirtualWindowSelfCheck], ['_r22O8', bannerSelfCheck], ['_r22O9', unreadBadgeSelfCheck],
                 ['_r22O5', clockClassifySelfCheck], ['_r22O6', coverageSelfCheck], ['_r22O7', eventDebtSelfCheck],
                 ['_r23Trace', v23TraceSelfCheck],
+                ['_r24X1', phoneFactsSelfCheck],
+                ['_r24X7', actorAutonomySelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {

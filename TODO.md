@@ -19,6 +19,14 @@
 > 文件级沙箱 `config/virtual-file-system.js`（`APP_SCOPES`）、租约内核 `config/runtime-resource-lease-budget.js`、
 > 跨 App 事务 `config/crossapp-transaction-stack.js` —— 五项均已存在。
 >
+> **交付进行中（R24，2026-11-18）**：`R24-X1` 已落地 —— `config/phone-facts.js`（事实通道：known/stale/unknown 三态 +
+> 单发布者铁律 + 回执环形台账），判据 `tests/r24_x1_phone_facts.test.mjs` **26/26 绿**；
+> `R24-X7` 已落地 —— `config/actor-autonomy-budget.js`（四态 allowed/suppressed/exhausted/disabled + 可回源铁律 +
+> 五类默认额度），判据 `tests/r24_x7_actor_autonomy.test.mjs` **30/30 绿**。两者均进 `index.js` 的 `_bridgeChecks`。
+> 已过门：`syntax` / `import-resolve` / `dead-exports` / `named-import` / `doc-path-claim` / `weak-coercion`（新文件零命中）。
+> **存量红（与本轮无关，留待全量阶段统一处理）**：`system-v4980` A1（PLAN 基线表 348/450/14805 vs 磁盘 349/472/14808）、
+> `weak-coercion` 报 `config/v23-trace.js` 两处弱口径（R23 交付件，本轮未改）。
+>
 > **第二十三期（2026-11-17，已收口 · 历史留档）**：`R23-O1～O9` 收口 8/9（`O8` 未开工，已移交 `R24-O9`），
 > `R23-X1～X9` 全部交付（`config/v23-trace.js` 166 行 + 32 条判据）。下方记录保留为历史。
 >
