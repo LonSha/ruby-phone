@@ -1,5 +1,27 @@
 # TODO / 迭代积压 — ruby-phone
 >
+> **第二十四期已立项（2026-11-18，目标版待定 / 基线 v4.157.0 `d3108eb`）**：`R24-O1～O9 / R24-X1～X9`
+> （双仓合计 36 项，全部为产品项；判据/台账为每项默认纪律，不占名额）。
+> **本期不给「再加一个 App」名额**：101 个 app / 345 个 config 模块，「记录 / 展示 / 追踪」这一层已经饱和。
+> 只做底座与整机级：`O1` 持久层 v2（schema/迁移/配额）· `O2` 虚拟滚动兑现（R21-O1 的欠账）·
+> `O3` 启动预算 · `O4` 主题令牌与双模 · `O5` 媒体内存 · `O6` 设置中心信息架构 · `O7` 数据体检 ·
+> `O8` 键盘与焦点 · `O9` `cheats.js` 数据/代码分离（**接 R23-O8「未开工」那一项**）；
+> `X1` 状态总线 · `X2` 权限面 · `X3` 第三方 App 装载 · `X4` 整机可携 · `X5` 离线演示 ·
+> `X6` 多语言 · `X7` 角色自主行为预算 · `X8` 后台语义 · `X9` 锁屏与「今天」。
+> 证据：[2026-11-18-product-evidence-v24](docs/planning/2026-11-18-product-evidence-v24.md)
+> · [优化九项](.agents/notes/proposed/architecture/2026-11-18-product-optimization-v24.md)
+> · [拓展九项](.agents/notes/proposed/feature/2026-11-18-product-expansion-v24.md)。
+>
+> **排队中（非现行排序，勿当现行读）**：第二十五期【兜底与拆骨】[roadmap-v25](docs/planning/2026-11-18-product-roadmap-v25.md) ·
+> 第二十六期【从能跑到能移交】[roadmap-v26](docs/planning/2026-11-18-product-roadmap-v26.md)。两期各 18 项，双仓每期合计 36 项。
+> 路线图条目带 `【实读】` / `【待复核】` 两态：**`【待复核】` 开工前必须先出实读证据**，否则当轮不进交付。
+> **R24 立项前核对已记账，勿再当缺口重提**：全局搜索 `config/spotlight-universal-search.js`、撤销面 `config/undo-capability.js`、
+> 文件级沙箱 `config/virtual-file-system.js`（`APP_SCOPES`）、租约内核 `config/runtime-resource-lease-budget.js`、
+> 跨 App 事务 `config/crossapp-transaction-stack.js` —— 五项均已存在。
+>
+> **第二十三期（2026-11-17，已收口 · 历史留档）**：`R23-O1～O9` 收口 8/9（`O8` 未开工，已移交 `R24-O9`），
+> `R23-X1～X9` 全部交付（`config/v23-trace.js` 166 行 + 32 条判据）。下方记录保留为历史。
+>
 > **交付记录（2026-11-17）：R23-X1~X9 九项已落地并带闸。** 桥在 `config/v23-trace.js`（166 行），
 > 消费点 `index.js#_bridgeChecks['_r23Trace']`；判据 `tests/r23_x_trace.test.mjs` 32 条全绿（含 2 条负控制）。
 > 行数台账重压：837 文件 / 402843 行（+165）。**O8 `cheats.js` 数据治理仍未开工。**> **第二十三期已立项（2026-11-17，目标版待定 / 基线 v4.157.0 `7cac358`）**：`R23-O1～O9 / R23-X1～X9`
