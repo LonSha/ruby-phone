@@ -259,6 +259,39 @@ import { DIAG_STATES, DIAG_DOMAINS, CODE_TABLE, buildDisposal, disposalLine, can
 import { crashLine as crashReceiptLine } from '../../config/app-crash-boundary.js';
 /* [R25-O9] 诊断包文本也走内核同一实现 —— 页面上的包与用户自己贴的包必须是同一份。 */
 import { diagnosticPackText } from '../../config/error-readable.js';
+/* [R26-O1] 首屏预算：判定与趋势都走内核，诊断页不自己算阈值。 */
+import { judgeBoot, bootTrend, bootBudgetLine } from '../../config/boot-budget.js';
+
+
+/** [R26-O1] 首屏预算面：从宿主读 boot-timing 现算（不自建实例，不缓存读数）。
+ *  趋势读宿主累积的 `_bootBudgetHistory`（宿主每版追加一条；不足三版如实说不足）。 */
+export function bootBudgetFace(win) {
+    const w = hostWindow(win);
+    const host = w && w.VirtualPhone ? w.VirtualPhone : null;
+    const inst = host && host.bootTiming ? host.bootTiming : null;
+    if (!inst || typeof inst.collect !== 'function') return null;
+    try {
+        const snap = inst.collect();
+        const judge = judgeBoot(snap);
+        const trend = bootTrend(Array.isArray(host._bootBudgetHistory) ? host._bootBudgetHistory : []);
+        return { judge: judge, trend: trend, line: bootBudgetLine(judge, trend) };
+    } catch (_e) { return null; }
+}
+
+export function bootBudgetFaceText(face) {
+    if (!face) return '首屏预算：读不到（宿主未挂 VirtualPhone.bootTiming）—— 这是「没这个读数」，不是「达标」';
+    return (typeof face.line === 'string' && face.line) ? face.line : bootBudgetLine(face.judge, face.trend);
+}
+
+export function bootBudgetRows(face) {
+    const j = (face && face.judge) ? face.judge : null;
+    if (!j || !Array.isArray(j.stages)) return [];
+    return j.stages.map((s) => ({
+        stage: s.stage, budget: s.budget,
+        actual: (typeof s.actual === 'number' && Number.isFinite(s.actual)) ? s.actual : null,
+        over: (typeof s.actual === 'number' && s.actual > s.budget)
+    }));
+}
 
 /** [v3.13.0] 启动耗时面：从宿主读实例读数。
  *  为什么走 `window.VirtualPhone.bootTiming` 而不是自己新建一个实例：
@@ -723,6 +756,8 @@ export function collectDiagnose(win, storage) {
     const previewSc = (() => { try { return rollbackPreviewFace(w); } catch (_e) { return null; } })();
     /* [v3.13.0 · 计划 #14] 启动耗时面：**从宿主实例读**（本内核不自建实例 —— 见 bootTimingFace 注释）。 */
     const bootSc = safe(() => bootTimingFace(w), null) || null;
+    /* [R26-O1] 首屏预算面：与启动耗时同源（同一份 collect()），只多一步判定。 */
+    const bootBudgetSc = safe(() => bootBudgetFace(w), null) || null;
     /* [R25-X1] 崩溃边界面：边界实例由宿主安装（index.js 的 phone:openApp 通路 + 全局
      *   error/rejection 监听），诊断页只旁听 —— 自己建一个只会读到「打开诊断页之后」。 */
     const crashSc = safe(() => crashBoundaryFace(w), null) || null;
@@ -2178,7 +2213,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2775,6 +2810,9 @@ export default {
     rollbackPreviewRows,
     bootTimingFace,
     bootTimingFaceText,
+    bootBudgetFace,
+    bootBudgetFaceText,
+    bootBudgetRows,
     crashBoundaryFace,
     crashBoundaryFaceText,
     crashBoundaryRows,

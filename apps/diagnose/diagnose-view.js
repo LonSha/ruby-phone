@@ -19,7 +19,7 @@ import { silenceFaceText } from './diagnose-data.js';
 import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
-import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText } from './diagnose-data.js';
+import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows } from './diagnose-data.js';
 /* [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面：一行总述走内核转发（本文件不自拼）。 */
 import { crossRepoFaceText } from './diagnose-data.js';
 /* [v3.20.2] 上游检查点「内容级只读对照」面：一行文案与逐条明细**都走内核转发**（本文件不自拼结论，
@@ -1084,6 +1084,22 @@ export class DiagnoseView {
         }
         return html;
     }
+    /** [R26-O1] 首屏预算卡片：一行判定 + 逐段预算/实测（超线的那段标红）。 */
+    _bootBudgetHtml(pkg) {
+        const face = (pkg && pkg.bootBudget) || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(bootBudgetFaceText(face)) + '</div>';
+        const rows = bootBudgetRows(face);
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>'; 
+            rows.forEach((r) => {
+                const bad = r.over ? ' dg-bad' : '';
+                const act = (r.actual === null) ? '测不出' : (Math.round(r.actual) + 'ms');
+                html += '<li class=' + Q + 'dg-row' + bad + Q + '>' + escapeHtml(r.stage) + ' · 实测 ' + escapeHtml(act) + ' / 预算 ' + escapeHtml(String(r.budget)) + 'ms</li>';
+            });
+            html += '</ul>';
+        }
+        return html;
+    }
     _bootTimingHtml(pkg) {
         const face = (pkg && pkg.bootTiming) || null;
         if (!face) {
@@ -1932,6 +1948,7 @@ export class DiagnoseView {
         /* [v3.13.0 · 计划 #14] 启动耗时卡放在最后：它是**启动期**的读数（其余卡片都是当前态
          *   的读数）—— 摆在前面的卡会让人以为「启动慢」是当前正在发生的事。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>首屏预算（超了哪一段）</h3>' + this._bootBudgetHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>错误可读化（用户看到的那句话）</h3>' + this._errorReadableHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
