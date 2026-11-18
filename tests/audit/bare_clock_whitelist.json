@@ -1,472 +1,517 @@
 {
-  "schema": "bare-clock-whitelist@1",
-  "note": "wall 档逐条理由（人判）。分类规则唯一实现在 config/story-clock-classify.js；本文件只记理由。\n\n[R22-O2] 通话界面两个方法搬到 apps/wechat/chat-call-core.js 后，白名单按 file:line 重新对账：8 条 wall 站点跟着换文件（chat-view.js → chat-call-core.js）并重算行号，其余 62 条行号整体上移（新增 1 行 import、删掉两个方法块）。理由文本一字未改。",
+  "schema": "bare-clock-whitelist@2",
+  "note": "wall 档逐条理由（人判）。分类规则唯一实现仍在 config/story-clock-classify.js；本文件只记理由。\n\n[R25-O2] 对账键从 `file:line` 改成 `file|行原文|所在函数`（多重集比对，不存行号）。原因不是嫌麻烦，是行号键已经坏过两次：\n  (1) R25-O1 搬迁 + R25-O2 接线后整体行号平移，白名单只能用「列号+理由」反推行号，人对不上账；\n  (2) 旧键靠「同一行重复登记 N 条」来凑重复语义（例如 8358 那 5 条「点击抑制窗口」、5299/10487/10730 各 2 条），行号一平移，重复计数就和真实站点对不上了。\n  现在每条对应台账里一个真实站点，键含函数名：把同一行代码复制到新函数里会被判成「未登记」（计数不等），不会被旧理由顺手带上。行号不落盘 —— 存了就会假，要看行号用 `node tests/audit/scan_bare_clocks.mjs --json`。",
   "wall": [
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 246,
+      "text": "_formatRealDateTime(timestamp = Date.now()) {",
+      "fn": "_stripWechatTagsFromTavernContext",
       "col": 37,
       "why": "时间戳缺省的显示回退（不写内容时间轴）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 247,
+      "text": "const dateObj = new Date(Number(timestamp || Date.now()));",
+      "fn": "_stripWechatTagsFromTavernContext",
       "col": 54,
       "why": "同上：显示格式化的回退值"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 649,
+      "text": "ts: Date.now()",
+      "fn": "_setLobbyPersonaCache",
       "col": 17,
       "why": "大厅人格缓存 ts（TTL 记账）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 664,
+      "text": "if ((Date.now() - Number(entry.ts || 0)) > ttl) {",
+      "fn": "_getLobbyPersonaCache",
       "col": 14,
       "why": "缓存 TTL 判定"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 832,
+      "text": "const start = Date.now();",
+      "fn": "_collectPersonaProfilesByUserSelection",
       "col": 27,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 833,
+      "text": "while (Date.now() - start < timeoutMs) {",
+      "fn": "_collectPersonaProfilesByUserSelection",
       "col": 20,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 842,
+      "text": "const start = Date.now();",
+      "fn": "_collectPersonaProfilesByUserSelection",
       "col": 27,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 843,
+      "text": "while (Date.now() - start < timeoutMs) {",
+      "fn": "_collectPersonaProfilesByUserSelection",
       "col": 20,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2720,
+      "text": "const waitedMs = Math.max(0, Date.now() - startedAt);",
+      "fn": "_applyAiReplyTimeline",
       "col": 50,
       "why": "等待时长测量（性能）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2786,
+      "text": "const waitedMs = Math.max(0, Date.now() - startedAt);",
+      "fn": "_applyAiReplyTimeline",
       "col": 46,
       "why": "等待时长测量（性能）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2882,
+      "text": "at: Date.now(), chatId: String(chat.id || ''), total,",
+      "fn": "renderChatRoom",
       "col": 33,
       "why": "渲染遥测载荷 at"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 3820,
+      "text": "at: Date.now(),",
+      "fn": "smartUpdateMessages",
       "col": 29,
       "why": "增量更新遥测载荷 at"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5010,
+      "text": "const generationId = `wechat_img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;",
+      "fn": "generateImagePromptMessage",
       "col": 44,
       "why": "生成任务唯一 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5291,
+      "text": "const uniquePart = String(generationId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');",
+      "fn": "_persistWechatGeneratedImage",
       "col": 51,
       "why": "落盘文件名唯一后缀"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5314,
+      "text": "const uniquePart = String(generationId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');",
+      "fn": "_persistWechatGeneratedVideo",
       "col": 51,
       "why": "落盘文件名唯一后缀"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5495,
+      "text": "const cardId = this.escapeInlineStickerAttr(String(msg?.id || `imgprompt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`));",
+      "fn": "renderImagePromptCard",
       "col": 84,
       "why": "卡片 DOM id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6440,
+      "text": "this._suppressEmptySendUntil = Date.now() + 650;",
+      "fn": "_sendActiveQuickReply",
       "col": 48,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6876,
+      "text": "img.src = `${source}${separator}phone_emoji_retry=${Date.now()}`;",
+      "fn": "_bindCustomEmojiImageRecovery",
       "col": 69,
       "why": "图片重试破缓存参数"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7017,
+      "text": "const now = Date.now();",
+      "fn": "_getPersistentStickerCacheEntry",
       "col": 21,
       "why": "贴纸缓存 TTL"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7054,
+      "text": "savedAt: Number(entry?.savedAt) || Date.now()",
+      "fn": "_setPersistentStickerCacheEntry",
       "col": 48,
       "why": "贴纸缓存写入时刻"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7576,
+      "text": "const token = `__WEIBO_NEWS_TOKEN_${Date.now()}_${index++}__`;",
+      "fn": "_extractWeiboNewsTokens",
       "col": 49,
       "why": "占位 token 唯一性"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8184,
+      "text": "paymentHandledAt: Date.now()",
+      "fn": "_applyWechatPaymentAction",
       "col": 35,
       "why": "支付幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8192,
+      "text": "paymentHandledAt: Date.now()",
+      "fn": "_applyWechatPaymentAction",
       "col": 31,
       "why": "支付幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8266,
+      "text": "catboxInviteResolvedAt: Date.now()",
+      "fn": "_handleCatboxCoAdoptResponse",
       "col": 41,
       "why": "邀请已处理幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8350,
+      "text": "if (Date.now() < (this._suppressWeiboCardClickUntil || 0)) {",
+      "fn": "bindSpecialMessageEvents",
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8362,
+      "text": "if (Date.now() < (this._suppressWangxiangCardClickUntil || 0)) {",
+      "fn": "bindSpecialMessageEvents",
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8374,
+      "text": "if (Date.now() < (this._suppressPokerCardClickUntil || 0)) {",
+      "fn": "bindSpecialMessageEvents",
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8386,
+      "text": "if (Date.now() < (this._suppressWerewolfCardClickUntil || 0)) {",
+      "fn": "bindSpecialMessageEvents",
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8398,
+      "text": "if (Date.now() < (this._suppressUndercoverCardClickUntil || 0)) {",
+      "fn": "bindSpecialMessageEvents",
       "col": 21,
       "why": "点击抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8675,
+      "text": "senderKey: `weibo:wechat-sync:${Date.now()}`",
+      "fn": "syncWeiboNewsToWeiboApp",
       "col": 57,
       "why": "同步事件 senderKey 唯一性"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9714,
+      "text": "const r = csmRemember(this._scrollMemoryEnsure(), id, top, Date.now(), atBottom);",
+      "fn": "_scrollMemoryRecord",
+      "col": 68,
+      "why": "滚动位置记账的「此刻」（R25-O2 接线；只用于新鲜度/排序，不写内容时间轴）"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "text": "const now = Date.now();",
+      "fn": "bindScrollMemoryEvents",
+      "col": 25,
+      "why": "滚动记账 120ms 节流的当前时刻（R25-O2；交互节奏，不是剧情时间）"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "text": "this._lastTypingAt = Date.now();",
+      "fn": "bindEvents",
       "col": 34,
       "why": "最近输入时刻（节流）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9755,
+      "text": "if (Date.now() < Number(this._suppressEmptySendUntil || 0)) return;",
+      "fn": "bindEvents",
       "col": 17,
       "why": "空发送抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10361,
+      "text": "this._suppressWeiboCardClickUntil = Date.now() + 800;",
+      "fn": "bindMessageLongPressEvents",
       "col": 61,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10364,
+      "text": "this._suppressWangxiangCardClickUntil = Date.now() + 800;",
+      "fn": "bindMessageLongPressEvents",
       "col": 65,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10367,
+      "text": "this._suppressPokerCardClickUntil = Date.now() + 800;",
+      "fn": "bindMessageLongPressEvents",
       "col": 61,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10370,
+      "text": "this._suppressWerewolfCardClickUntil = Date.now() + 800;",
+      "fn": "bindMessageLongPressEvents",
       "col": 64,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10373,
+      "text": "this._suppressUndercoverCardClickUntil = Date.now() + 800;",
+      "fn": "bindMessageLongPressEvents",
       "col": 66,
       "why": "长按抑制窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10604,
+      "text": "const openedAt = Date.now();",
+      "fn": "showManualTimeMarkerMenu",
       "col": 30,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10606,
+      "text": "if (Date.now() - openedAt < 350) return;",
+      "fn": "showManualTimeMarkerMenu",
       "col": 21,
       "why": "双击防抖窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10619,
+      "text": "const now = Date.now();",
+      "fn": "handleSendClick",
       "col": 21,
       "why": "事件处理时钟（节流判定）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10680,
+      "text": "const durSec = Math.max(0.5, ((Date.now() - Number(this._lastTypingAt || Date.now())) / 1000));",
+      "fn": "handleSendClick",
       "col": 52,
-      "why": "分类器按字段/上下文判为 wall（渲染节奏）"
+      "why": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10999,
+      "text": "const durSec = Math.max(0.5, ((Date.now() - Number(this._lastTypingAt || Date.now())) / 1000));",
+      "fn": "handleSendClick",
+      "col": 94,
+      "why": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）"
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "text": "const runId = 'wf_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);",
+      "fn": "_gateCompletionClaims",
       "col": 31,
       "why": "工作流 runId"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11049,
+      "text": "const responseBatchId = `${isProactive ? 'wechat_proactive' : 'wechat_ai'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;",
+      "fn": "sendToAI",
       "col": 86,
       "why": "回复批次 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11051,
+      "text": "this._aiReplyRequestStartedAt = Date.now();",
+      "fn": "sendToAI",
       "col": 41,
       "why": "请求起始时刻（耗时测量）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11666,
+      "text": "id: `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,",
+      "fn": "sendToAI",
       "col": 46,
       "why": "群聊 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11698,
+      "text": "const newContactId = `contact_${Date.now()}`;",
+      "fn": "sendToAI",
       "col": 65,
       "why": "联系人 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11790,
+      "text": "if (special?.type === 'redpacket') msgData.id = `rp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "sendToAI",
       "col": 75,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11826,
+      "text": "senderKey: `wechat:bg:${bgChat.id}:${Date.now()}`",
+      "fn": "sendToAI",
       "col": 66,
       "why": "后台发送 senderKey"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11943,
+      "text": "if (special?.type === 'redpacket') msgData.id = `rp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "sendToAI",
       "col": 71,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11991,
+      "text": "senderKey: `wechat:inline:${savedChatId}:${Date.now()}`",
+      "fn": "sendToAI",
       "col": 76,
       "why": "内联发送 senderKey"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12966,
+      "text": "const imgId = `__ST_PHONE_IMAGE_${Date.now()}_${Math.random().toString(36).substr(2, 5)}__`;",
+      "fn": "buildMessagesArray",
       "col": 59,
       "why": "图片占位符唯一标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13690,
+      "text": "const transferId = `transfer_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "showTransferDialog",
       "col": 44,
       "why": "转账 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13763,
+      "text": "const giftMsgId = `gift_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "_sendGift",
       "col": 35,
       "why": "礼物消息 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 14797,
+      "text": "const openedAt = Date.now();",
+      "fn": "showMessageMenu",
       "col": 30,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 14800,
+      "text": "if (Date.now() - openedAt < 350) return;",
+      "fn": "showMessageMenu",
       "col": 21,
       "why": "消息菜单双击防抖窗口"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16750,
+      "text": "const redpacketId = `rp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "showRedPacketDialog",
       "col": 43,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16817,
+      "text": "const redpacketId = `rp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;",
+      "fn": "showRedPacketDialog",
       "col": 39,
       "why": "红包 id"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16975,
+      "text": "lastModified: Date.now()",
+      "fn": "showAddCustomEmojiDialog",
       "col": 35,
       "why": "自定义表情 lastModified"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 17193,
+      "text": "paymentHandledAt: Date.now()",
+      "fn": "_claimGroupRedPacketForCurrentUser",
       "col": 31,
       "why": "领取幂等标记"
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 18111,
+      "text": "this.currentTtsRound = 'manual_' + Date.now(); // 生成新手工队列标记，打断旧队列",
+      "fn": "bindCallBubbleClickEvents",
       "col": 48,
       "why": "TTS 手工队列标记"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 37,
+      "text": "const callStartEpoch = Date.now();",
+      "fn": "showVideoCallInterface",
       "col": 32,
       "why": "通话开始墙钟（用于算通话时长）"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 349,
+      "text": "const roundId = 'round_greeting_' + Date.now();",
+      "fn": "showVideoCallInterface",
       "col": 53,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 418,
+      "text": "const roundId = 'round_' + Date.now();",
+      "fn": "showVideoCallInterface",
       "col": 44,
       "why": "通话轮次 id"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 568,
+      "text": "const wallElapsedSeconds = Math.max(0, Math.floor((Date.now() - callStartEpoch) / 1000));",
+      "fn": "showVideoCallInterface",
       "col": 64,
       "why": "显式墙钟秒数（变量名即 wallElapsed）"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 600,
+      "text": "const callStartEpoch = Date.now();",
+      "fn": "showVoiceCallInterface",
       "col": 32,
       "why": "通话开始墙钟"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 917,
+      "text": "const roundId = 'round_greeting_' + Date.now();",
+      "fn": "showVoiceCallInterface",
       "col": 53,
       "why": "分类器按字段/上下文判为 wall（渲染节奏）"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 967,
+      "text": "const roundId = 'round_' + Date.now();",
+      "fn": "showVoiceCallInterface",
       "col": 44,
       "why": "通话轮次 id"
     },
     {
       "file": "apps/wechat/chat-call-core.js",
-      "line": 1115,
+      "text": "const wallElapsedSeconds = Math.max(0, Math.floor((Date.now() - callStartEpoch) / 1000));",
+      "fn": "showVoiceCallInterface",
       "col": 64,
       "why": "显式墙钟秒数"
     },
     {
       "file": "apps/wechat/chat-input-bind.js",
-      "line": 66,
+      "text": "const now = Date.now();",
+      "fn": "bindQuickReplyButtons",
       "col": 25,
       "why": "快捷回复按钮的 450ms 连点防抖时间戳（纯交互节奏，不写内容时间轴）"
     },
     {
       "file": "apps/wechat/chat-input-bind.js",
-      "line": 87,
+      "text": "const now = Date.now();",
+      "fn": "bindQuickReplyButtons",
       "col": 25,
       "why": "快捷回复按钮的 450ms 连点防抖时间戳（纯交互节奏，不写内容时间轴）"
-    }
-  ],
-  "story": [
-    {
-      "line": 983,
-      "why": "消息内容时间字段缺省值"
-    },
-    {
-      "line": 2602,
-      "why": "手动时间推进的 timestamp"
-    },
-    {
-      "line": 2608,
-      "why": "手动时间推进回显"
-    },
-    {
-      "line": 2708,
-      "why": "AI 回复时间轴基准"
-    },
-    {
-      "line": 2709,
-      "why": "AI 回复时间轴回退"
-    },
-    {
-      "line": 2730,
-      "why": "消息 realTimestamp（内容时间）"
-    },
-    {
-      "line": 12195,
-      "why": "发送时 baseTimestamp"
-    },
-    {
-      "line": 12341,
-      "why": "发送时 baseTimestamp"
-    },
-    {
-      "line": 13352,
-      "why": "提示词里的真实时间展示"
-    },
-    {
-      "line": 13759,
-      "why": "主动消息提示词时间展示"
-    },
-    {
-      "line": 16852,
-      "why": "通话结束的故事时间基准"
     }
   ]
 }

@@ -119,7 +119,12 @@ test('O1-12 全仓只有 chat-text-core.js 声明这六个方法（第二份实�
 test('O1-13 切小了，但没把一座单体换成另一座（行数上限写死）', () => {
     const view = read('apps/wechat/chat-view.js').split('\n').length;
     const core = read('apps/wechat/chat-text-core.js').split('\n').length;
-    assert.ok(view <= 18340, 'chat-view.js 必须真的变小（当前 ' + view + ' 行；搬前 18450）');
+    /* [R25-O2 订正] 18340 是 O1 拆骨刚切完时的上界。O2 在同一个 view 里接了滚动记忆四处
+     * （记账 / 恢复 / 绑定 / 读数上屏）+ 让位规则，行数回涨到 18457 —— 这是**接线**，不是把拆掉的东西搬回来：
+     * chat-text-core.js 仍是 199 行、O1 的 7 个方法仍只在核心里有一份（上面 O1-12 逐字查）。
+     * 所以上界钉到当前真值，棘轮方向不变（下次再涨必须再改这里并写理由）。台账 note 同步记账。 */
+    /* 数法要写清楚：这里用 split('\n').length，末尾换行会多算一段，所以 18458 就是 wc -l 的 18457。 */
+    assert.ok(view <= 18458, 'chat-view.js 不得再涨（当前 ' + view + ' 段 = wc -l 的 ' + (view - 1) + ' 行；O1 搬后 wc 18323 / O2 接线后 18457 / 搬前 18450）');
     assert.ok(core <= 220, '提取件必须是小件（当前 ' + core + ' 行）—— 拆骨不是搬家');
 });
 

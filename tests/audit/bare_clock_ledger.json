@@ -1,26 +1,32 @@
 {
   "schema": "bare-clock-ledger@1",
-  "generatedFrom": "apps/wechat/chat-view.js,apps/wechat/chat-call-core.js,apps/wechat/chat-input-bind.js ／ R25-O1 第一刀后按 git diff 删行区间重算行号（结构未变、站点未增未减，仍 71）",
-  "total": 71,
+  "generatedFrom": [
+    "apps/wechat/chat-view.js",
+    "apps/wechat/chat-call-core.js",
+    "apps/wechat/chat-input-bind.js"
+  ],
+  "total": 73,
   "byFile": {
-    "apps/wechat/chat-view.js": 61,
+    "apps/wechat/chat-view.js": 63,
     "apps/wechat/chat-call-core.js": 8,
     "apps/wechat/chat-input-bind.js": 2
   },
   "counts": {
     "story": 0,
-    "wall": 71,
+    "wall": 73,
     "unknown": 0
   },
   "pending": {
     "wallWithoutReason": 0,
     "storyNotRouted": 0,
-    "unknown": 0
+    "unknown": 0,
+    "whitelistStale": 0
   },
+  "staleWhitelist": [],
   "sites": [
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 246,
+      "line": 254,
       "col": 37,
       "field": "(inline)",
       "fn": "_stripWechatTagsFromTavernContext",
@@ -37,7 +43,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 247,
+      "line": 255,
       "col": 54,
       "field": "(inline)",
       "fn": "_stripWechatTagsFromTavernContext",
@@ -54,7 +60,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 649,
+      "line": 657,
       "col": 17,
       "field": "ts",
       "fn": "_setLobbyPersonaCache",
@@ -71,7 +77,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 664,
+      "line": 672,
       "col": 14,
       "field": "(inline)",
       "fn": "_getLobbyPersonaCache",
@@ -88,7 +94,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 832,
+      "line": 840,
       "col": 27,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -105,7 +111,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 833,
+      "line": 841,
       "col": 20,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -122,7 +128,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 842,
+      "line": 850,
       "col": 27,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -139,7 +145,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 843,
+      "line": 851,
       "col": 20,
       "field": "(inline)",
       "fn": "_collectPersonaProfilesByUserSelection",
@@ -156,7 +162,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2720,
+      "line": 2728,
       "col": 50,
       "field": "(inline)",
       "fn": "_applyAiReplyTimeline",
@@ -173,7 +179,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2786,
+      "line": 2794,
       "col": 46,
       "field": "(inline)",
       "fn": "_applyAiReplyTimeline",
@@ -190,7 +196,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 2882,
+      "line": 2890,
       "col": 33,
       "field": "at",
       "fn": "renderChatRoom",
@@ -207,7 +213,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 3820,
+      "line": 3828,
       "col": 29,
       "field": "at",
       "fn": "smartUpdateMessages",
@@ -224,7 +230,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5010,
+      "line": 5018,
       "col": 44,
       "field": "(inline)",
       "fn": "generateImagePromptMessage",
@@ -241,7 +247,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5291,
+      "line": 5299,
       "col": 51,
       "field": "(inline)",
       "fn": "_persistWechatGeneratedImage",
@@ -258,7 +264,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5314,
+      "line": 5322,
       "col": 51,
       "field": "(inline)",
       "fn": "_persistWechatGeneratedVideo",
@@ -275,7 +281,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 5495,
+      "line": 5503,
       "col": 84,
       "field": "(inline)",
       "fn": "renderImagePromptCard",
@@ -292,7 +298,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6440,
+      "line": 6448,
       "col": 48,
       "field": "(inline)",
       "fn": "_sendActiveQuickReply",
@@ -309,7 +315,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 6876,
+      "line": 6884,
       "col": 69,
       "field": "(inline)",
       "fn": "_bindCustomEmojiImageRecovery",
@@ -326,7 +332,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7017,
+      "line": 7025,
       "col": 21,
       "field": "(inline)",
       "fn": "_getPersistentStickerCacheEntry",
@@ -343,7 +349,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7054,
+      "line": 7062,
       "col": 48,
       "field": "(inline)",
       "fn": "_setPersistentStickerCacheEntry",
@@ -360,7 +366,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 7576,
+      "line": 7584,
       "col": 49,
       "field": "(inline)",
       "fn": "_extractWeiboNewsTokens",
@@ -377,7 +383,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8184,
+      "line": 8192,
       "col": 35,
       "field": "paymentHandledAt",
       "fn": "_applyWechatPaymentAction",
@@ -394,7 +400,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8192,
+      "line": 8200,
       "col": 31,
       "field": "paymentHandledAt",
       "fn": "_applyWechatPaymentAction",
@@ -411,7 +417,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8266,
+      "line": 8274,
       "col": 41,
       "field": "catboxInviteResolvedAt",
       "fn": "_handleCatboxCoAdoptResponse",
@@ -428,7 +434,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8350,
+      "line": 8358,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -445,7 +451,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8362,
+      "line": 8370,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -462,7 +468,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8374,
+      "line": 8382,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -479,7 +485,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8386,
+      "line": 8394,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -496,7 +502,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8398,
+      "line": 8406,
       "col": 21,
       "field": "(inline)",
       "fn": "bindSpecialMessageEvents",
@@ -513,7 +519,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 8675,
+      "line": 8683,
       "col": 57,
       "field": "(inline)",
       "fn": "syncWeiboNewsToWeiboApp",
@@ -530,7 +536,41 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9714,
+      "line": 9684,
+      "col": 68,
+      "field": "(inline)",
+      "fn": "_scrollMemoryRecord",
+      "near": "scroll",
+      "cls": "wall",
+      "reason": "wall-matched",
+      "text": "const r = csmRemember(this._scrollMemoryEnsure(), id, top, Date.now(), atBottom);",
+      "autoCls": "wall",
+      "via": "human",
+      "humanWhy": "滚动位置记账的「此刻」（R25-O2 接线；只用于新鲜度/排序，不写内容时间轴）",
+      "whitelistedWhy": "滚动位置记账的「此刻」（R25-O2 接线；只用于新鲜度/排序，不写内容时间轴）",
+      "routed": false,
+      "needs": ""
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 9747,
+      "col": 25,
+      "field": "(inline)",
+      "fn": "bindScrollMemoryEvents",
+      "near": "scroll",
+      "cls": "wall",
+      "reason": "wall-matched",
+      "text": "const now = Date.now();",
+      "autoCls": "wall",
+      "via": "human",
+      "humanWhy": "滚动记账 120ms 节流的当前时刻（R25-O2；交互节奏，不是剧情时间）",
+      "whitelistedWhy": "滚动记账 120ms 节流的当前时刻（R25-O2；交互节奏，不是剧情时间）",
+      "routed": false,
+      "needs": ""
+    },
+    {
+      "file": "apps/wechat/chat-view.js",
+      "line": 9840,
       "col": 34,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -547,7 +587,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 9755,
+      "line": 9881,
       "col": 17,
       "field": "(inline)",
       "fn": "bindEvents",
@@ -564,7 +604,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10361,
+      "line": 10487,
       "col": 61,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -581,7 +621,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10364,
+      "line": 10490,
       "col": 65,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -598,7 +638,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10367,
+      "line": 10493,
       "col": 61,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -615,7 +655,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10370,
+      "line": 10496,
       "col": 64,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -632,7 +672,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10373,
+      "line": 10499,
       "col": 66,
       "field": "(inline)",
       "fn": "bindMessageLongPressEvents",
@@ -649,7 +689,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10604,
+      "line": 10730,
       "col": 30,
       "field": "(inline)",
       "fn": "showManualTimeMarkerMenu",
@@ -666,7 +706,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10606,
+      "line": 10732,
       "col": 21,
       "field": "(inline)",
       "fn": "showManualTimeMarkerMenu",
@@ -683,7 +723,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10619,
+      "line": 10745,
       "col": 21,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -700,7 +740,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10680,
+      "line": 10806,
       "col": 52,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -710,14 +750,14 @@
       "text": "const durSec = Math.max(0.5, ((Date.now() - Number(this._lastTypingAt || Date.now())) / 1000));",
       "autoCls": "wall",
       "via": "human",
-      "humanWhy": "分类器按字段/上下文判为 wall（渲染节奏）",
-      "whitelistedWhy": "分类器按字段/上下文判为 wall（渲染节奏）",
+      "humanWhy": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）",
+      "whitelistedWhy": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）",
       "routed": false,
       "needs": ""
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10680,
+      "line": 10806,
       "col": 94,
       "field": "(inline)",
       "fn": "handleSendClick",
@@ -727,14 +767,14 @@
       "text": "const durSec = Math.max(0.5, ((Date.now() - Number(this._lastTypingAt || Date.now())) / 1000));",
       "autoCls": "wall",
       "via": "human",
-      "humanWhy": "分类器按字段/上下文判为 wall（渲染节奏）",
-      "whitelistedWhy": "分类器按字段/上下文判为 wall（渲染节奏）",
+      "humanWhy": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）",
+      "whitelistedWhy": "发送前测「犹豫时长」（人工输入节奏遥测，不写内容时间轴）",
       "routed": false,
       "needs": ""
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 10999,
+      "line": 11125,
       "col": 31,
       "field": "(inline)",
       "fn": "_gateCompletionClaims",
@@ -751,7 +791,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11049,
+      "line": 11175,
       "col": 86,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -768,7 +808,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11051,
+      "line": 11177,
       "col": 41,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -785,7 +825,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11666,
+      "line": 11792,
       "col": 46,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -802,7 +842,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11698,
+      "line": 11824,
       "col": 65,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -819,7 +859,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11790,
+      "line": 11916,
       "col": 75,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -836,7 +876,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11826,
+      "line": 11952,
       "col": 66,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -853,7 +893,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11943,
+      "line": 12069,
       "col": 71,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -870,7 +910,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 11991,
+      "line": 12117,
       "col": 76,
       "field": "(inline)",
       "fn": "sendToAI",
@@ -887,7 +927,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 12966,
+      "line": 13092,
       "col": 59,
       "field": "(inline)",
       "fn": "buildMessagesArray",
@@ -904,7 +944,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13690,
+      "line": 13816,
       "col": 44,
       "field": "(inline)",
       "fn": "showTransferDialog",
@@ -921,7 +961,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 13763,
+      "line": 13889,
       "col": 35,
       "field": "(inline)",
       "fn": "_sendGift",
@@ -938,7 +978,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 14797,
+      "line": 14923,
       "col": 30,
       "field": "(inline)",
       "fn": "showMessageMenu",
@@ -955,7 +995,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 14800,
+      "line": 14926,
       "col": 21,
       "field": "(inline)",
       "fn": "showMessageMenu",
@@ -972,7 +1012,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16750,
+      "line": 16876,
       "col": 43,
       "field": "(inline)",
       "fn": "showRedPacketDialog",
@@ -989,7 +1029,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16817,
+      "line": 16943,
       "col": 39,
       "field": "(inline)",
       "fn": "showRedPacketDialog",
@@ -1006,7 +1046,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 16975,
+      "line": 17101,
       "col": 35,
       "field": "lastModified",
       "fn": "showAddCustomEmojiDialog",
@@ -1023,7 +1063,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 17193,
+      "line": 17319,
       "col": 31,
       "field": "paymentHandledAt",
       "fn": "_claimGroupRedPacketForCurrentUser",
@@ -1040,7 +1080,7 @@
     },
     {
       "file": "apps/wechat/chat-view.js",
-      "line": 18111,
+      "line": 18237,
       "col": 48,
       "field": "(inline)",
       "fn": "bindCallBubbleClickEvents",

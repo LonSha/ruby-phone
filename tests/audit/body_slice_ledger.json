@@ -85,14 +85,15 @@
   ],
   "readings": {
     "chat_view_lines_before": 18531,
-    "chat_view_lines_after": 18449,
+    "chat_view_lines_after": 18457,
     "bind_events_lines_before": 690,
     "bind_events_lines_after": 607,
     "new_module_lines": 106,
     "new_module_imports": 0,
     "repo_total_lines_before": 402654,
     "repo_total_lines_after": 402678,
-    "repo_total_delta_note": "全仓 +24 行是切片的固有成本（函数壳 + 调用点 + 模块头），不是偷偷长；已在 file_size_ceiling.json 的 note 里写明并随提交可见。"
+    "repo_total_delta_note": "全仓 +24 行是切片的固有成本（函数壳 + 调用点 + 模块头），不是偷偷长；已在 file_size_ceiling.json 的 note 里写明并随提交可见。",
+    "chat_view_lines_after_note": "R23-O2 切片当场 18449。此后 R25-O1 拆骨 -126 → 18323，R25-O2 滚动记忆四处接线 +134 → 18457。本字段按「当前真读数」维护（判据要拿它跟磁盘对账），但方向没变：切片本身仍是净减（18531 → 18449），O1/O2 各自的上界钉死在各自判据里（r25_o1 O1-13 / file_size_ceiling）。"
   },
   "protocol": {
     "why_not_body_sha256_alone": "R22 的 body_sha256 是「整段方法逐字节」，切片会改调用点，整段逐字节口径不成立。",

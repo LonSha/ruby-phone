@@ -11,7 +11,13 @@
  *   R22-O2 把 showVideoCallInterface / showVoiceCallInterface 逐字节搬到了
  *   `apps/wechat/chat-call-core.js`，其中 8 处墙钟跟着搬走。探针若仍只扫 chat-view.js，
  *   这 8 处就变成「台账里有、源码里没有」的幽灵，或者更糟：从台账里悄悄消失、没人发现覆盖率掉了。
- *   所以 TARGETS 是**文件清单**，每个站点都带 `file`，白名单按 `file:line` 对账。
+ *   所以 TARGETS 是**文件清单**，每个站点都带 `file`。
+ *
+ * 【白名单对账键（R25-O2 改）】
+ *   R22 起用 `file:line`。行号会随搬迁/接线整体平移，白名单只能靠人肉反推，
+ *   而且旧条目靠「同一行重复登记 N 条」凑重复语义 —— 一平移就对不上账。
+ *   现在键是 `file|行原文|所在函数`，按**多重集**比对（同一 key 登记 N 条才够盖 N 个站点），
+ *   行号不参与对账。好处是平移免疫；代价是同一行代码被复制到新函数里时会计数不足 → 判未登记（这正是要的）。
  *
  * 【分类器唯一实现不在本文件】
  *   分类规则在 `config/story-clock-classify.js`（纯函数，v4.157.0 已交付）。
@@ -26,7 +32,7 @@
  *   node tests/audit/scan_bare_clocks.mjs --write         # 重写 tests/audit/bare_clock_ledger.json
  *   node tests/audit/scan_bare_clocks.mjs                 # 只打印汇总
  *   node tests/audit/scan_bare_clocks.mjs --json          # 机读
- *   node tests/audit/scan_bare_clocks.mjs --check         # 有 unknown 未裁决 或 有 story 未收口 → exit 1
+ *   node tests/audit/scan_bare_clocks.mjs --check         # unknown 未裁决 / story 未收口 / 白名单死条目 → exit 1
  * 退出码：0=可接受 1=有未收口 2=拒判
  * ============================================================ */
 import fs from 'node:fs';
@@ -108,32 +114,59 @@ const summary = classifySummary(sites.map((s) => ({ field: s.field === '(inline)
 
 /* 白名单：wall 档必须逐条有理由才算出账；story 档必须已改走统一剧情钟出口。
  * 收口判据用「该行是否出现 storyNow/wallNow」判断，不是靠人声称。
- * 对账键是 `file:line`；条目没写 file 时视为 TARGETS[0]（兼容 R22-O2 之前的条目）。 */
-let whitelist = { schema: 'bare-clock-whitelist@1', wall: [], note: '' };
+ * 对账键：`file|行原文|所在函数`，多重集（R25-O2 起；行号不参与，理由见文件头与白名单 note）。
+ * 条目没写 file 时视为 TARGETS[0]（兼容 R22-O2 之前的条目）。 */
+let whitelist = { schema: 'bare-clock-whitelist@2', wall: [], note: '' };
 if (fs.existsSync(path.join(ROOT, WHITELIST))) {
     try { whitelist = JSON.parse(fs.readFileSync(path.join(ROOT, WHITELIST), 'utf8')); } catch { /* 保持空 */ }
 }
 const wlFile = (w) => w.file || TARGETS[0];
-const key = (file, line) => file + ':' + line;
+const normText = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+const key = (file, text, fn) => wlFile({ file }) + '|' + normText(text) + '|' + String(fn || '');
+/* 白名单死条目：登记了却对不上任何源码站点。不许静默丢掉 —— 那就是「以为登记了，其实早就没了」。 */
+const staleWl = [];
+function makePool(list) {
+    const pool = new Map();
+    for (const w of list || []) {
+        if (!w.text) { staleWl.push({ file: wlFile(w), why: w.why || '', stale: 'legacy-no-text' }); continue; }
+        const k = key(wlFile(w), w.text, w.fn);
+        if (!pool.has(k)) pool.set(k, []);
+        pool.get(k).push(w);
+    }
+    return {
+        take(k) { const b = pool.get(k); return b && b.length ? b.shift() : null; },
+        leftovers() {
+            const out = [];
+            for (const arr of pool.values()) for (const w of arr) out.push({ file: wlFile(w), text: w.text, fn: w.fn, why: w.why || '', stale: 'no-site' });
+            return out;
+        }
+    };
+}
 /* 人工裁决层：分类器判不了（unknown）的站点，由人逐条判进 wall / story，并把理由落盘。
  * 保留 autoCls 字段：台账必须能看出「机器原来怎么判、人改成什么」，否则人工裁决会变成第二个黑箱。 */
-const wallByKey = new Map((whitelist.wall || []).map((w) => [key(wlFile(w), w.line), w.why]));
-const storyByKey = new Map((whitelist.story || []).map((w) => [key(wlFile(w), w.line), w.why]));
+const wallPool = makePool(whitelist.wall);
+const storyPool = makePool(whitelist.story);
 for (const s of sites) {
-    const k = key(s.file, s.line);
+    const k = key(s.file, s.text, s.fn);
     s.autoCls = s.cls;
-    if (storyByKey.has(k)) { s.cls = 'story'; s.via = 'human'; s.humanWhy = storyByKey.get(k); }
-    else if (wallByKey.has(k)) { s.cls = 'wall'; s.via = 'human'; s.humanWhy = wallByKey.get(k); }
+    const hitStory = storyPool.take(k);
+    const hitWall = hitStory ? null : wallPool.take(k);
+    if (hitStory) { s.cls = 'story'; s.via = 'human'; s.humanWhy = hitStory.why; }
+    else if (hitWall) { s.cls = 'wall'; s.via = 'human'; s.humanWhy = hitWall.why; }
     else s.via = 'classifier';
 }
+staleWl.push(...wallPool.leftovers(), ...storyPool.leftovers());
 const recount = { story: 0, wall: 0, unknown: 0 };
 for (const s of sites) recount[s.cls]++;
 const effSummary = { face: 'classified', counts: recount, total: sites.length };
 
 for (const s of sites) {
-    s.whitelistedWhy = s.cls === 'wall' ? (s.humanWhy || '分类器判 wall') : '';
+    /* R25-O2 收紧：以前这里回退成「分类器判 wall」，于是「分类器自己判 wall 的站点」
+     * 即使白名单里根本没登记，也会显示成有理由 —— 台账 pending.wallWithoutReason 因此能恒为 0。
+     * 现在理由只能来自人登记；分类器给的只是 autoCls，不再冒充理由。 */
+    s.whitelistedWhy = s.cls === 'wall' ? (s.humanWhy || '') : '';
     s.routed = /storyNow|wallNow/.test(s.text);
-    if (s.cls === 'wall' && !s.whitelistedWhy) s.needs = 'wall-whitelist';
+    if (s.cls === 'wall' && s.via !== 'human') s.needs = 'wall-whitelist';
     else if (s.cls === 'story' && !s.routed) s.needs = 'story-route';
     else if (s.cls === 'unknown') s.needs = 'human-triage';
     else s.needs = '';
@@ -151,8 +184,11 @@ const ledger = {
     pending: {
         wallWithoutReason: sites.filter((s) => s.needs === 'wall-whitelist').length,
         storyNotRouted: sites.filter((s) => s.needs === 'story-route').length,
-        unknown: sites.filter((s) => s.needs === 'human-triage').length
+        unknown: sites.filter((s) => s.needs === 'human-triage').length,
+        whitelistStale: staleWl.length
     },
+    /* 白名单死条目明细（正常为空数组）：登记在案、源码里已找不到对应站点的条目不静默丢弃。 */
+    staleWhitelist: staleWl,
     sites
 };
 
@@ -163,12 +199,12 @@ else {
     const perFile = Object.entries(byFile).map(([f, n]) => f.split('/').pop() + ' ' + n).join(' · ');
     console.log(`[bare-clock] ${TARGETS.join(' + ')} 共 ${ledger.total} 处裸钟（${perFile}）`);
     console.log(`[bare-clock] 分类：story ${effSummary.counts.story} / wall ${effSummary.counts.wall} / unknown ${effSummary.counts.unknown}`);
-    console.log(`[bare-clock] 待收口：story 未走统一出口 ${ledger.pending.storyNotRouted} · wall 无白名单理由 ${ledger.pending.wallWithoutReason} · 需人判 ${ledger.pending.unknown}`);
+    console.log(`[bare-clock] 待收口：story 未走统一出口 ${ledger.pending.storyNotRouted} · wall 无白名单理由 ${ledger.pending.wallWithoutReason} · 需人判 ${ledger.pending.unknown} · 白名单死条目 ${ledger.pending.whitelistStale}`);
     if (WRITE) console.log(`[bare-clock] 台账已写：${LEDGER}`);
 }
 
 if (CHECK) {
-    const bad = ledger.pending.storyNotRouted + ledger.pending.wallWithoutReason + ledger.pending.unknown;
+    const bad = ledger.pending.storyNotRouted + ledger.pending.wallWithoutReason + ledger.pending.unknown + ledger.pending.whitelistStale;
     process.exit(bad > 0 ? 1 : 0);
 }
 process.exit(0);

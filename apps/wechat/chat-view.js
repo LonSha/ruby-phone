@@ -1,6 +1,7 @@
 import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 import { confirmEditOwner } from '../../config/edit-buffer-confirm.js';
 import { bindEditBuffer } from '../../config/edit-buffer-binding.js';
+import { CSM_KEY, CSM_QUARANTINE_SUFFIX, csmParse, csmRemember, csmRestoreOf, csmVerdict } from '../../config/chat-scroll-memory.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
  *  作者 (Author): LonSha
@@ -160,6 +161,13 @@ export class ChatView {
         /* [R14-O7] 每个会话各自已加载的尾部窗口深度（`chatId → 条数`）。
          *   修前这是一个标量 `_loadedWindow`，切会话会串味（探针 _dbg_o7d 实测）。 */
         this._windowByChat = new Map();
+        /* [R25-O2] 会话滚动位置记忆：修前 `_lastScrollTop` 只有读、**全仓零写**，
+         *   所以那个万条探针永远读到 0，位置也从来没被记住；重开一律贴底。
+         *   草稿那一半在 config/edit-buffer-binding.js（key = chat:<id>），本处只补位置。 */
+        this._scrollMemory = null;
+        this._scrollMemoryLoaded = false;
+        this._scrollMemoryFace = 'unknown';
+        this._scrollMemoryWhy = '';
         this._loadedWindow = undefined;
         /* [v4.00.0 · R3-O7] 在飞生图的中止控制面：任务键 → AbortController。
          *   传输层（NAI 队列等待 / ComfyUI 历史轮询 / fetch）早已接 signal，
@@ -9644,10 +9652,128 @@ renderChatRoom(chat) {
         return document.querySelector('.phone-view-current') || document;
     }
 
+    /* ============ [R25-O2] 会话滚动位置记忆（读写只走 CSM_KEY 一个键）============ */
+    /** 读台账（懒加载，一次）：读不出**先隔离原文**再重建，不把「读不出」当「没记过」。 */
+    _scrollMemoryEnsure() {
+        if (this._scrollMemoryLoaded) return this._scrollMemory;
+        this._scrollMemoryLoaded = true;
+        let raw = null;
+        let why = '';
+        try { raw = this.app?.storage?.get?.(CSM_KEY) ?? null; } catch (_e) { raw = null; why = 'read-failed'; }
+        const parsed = csmParse(raw);
+        this._scrollMemory = parsed.state;
+        this._scrollMemoryFace = why ? 'unknown' : parsed.face;
+        this._scrollMemoryWhy = why || parsed.reason || '';
+        if (!why && parsed.face === 'unreadable') {
+            try { this.app?.storage?.set?.(CSM_KEY + CSM_QUARANTINE_SUFFIX, parsed.rawText); } catch (_e) { /* 隔离失败不影响本轮 */ }
+        }
+        return this._scrollMemory;
+    }
+    /** 记一条位置。还没排版（scrollHeight / clientHeight 读不出）时**不记** —— 不把 0 当位置。 */
+    _scrollMemoryRecord(chatId, container) {
+        if (!container) return null;
+        const top = Math.max(0, Number(container.scrollTop) || 0);
+        const h = Number(container.scrollHeight) || 0;
+        const ch = Number(container.clientHeight) || 0;
+        if (!(h > 0) || !(ch > 0)) return null;
+        const id = String(chatId || '').trim();
+        if (!id) return null;
+        /* 顺手把万条兜底探针那条**死读**接上真数据：修前 _lastScrollTop 全仓零写，探针永远读到 0。 */
+        this._lastScrollTop = top;
+        const atBottom = (h - top - ch) < 100;
+        const r = csmRemember(this._scrollMemoryEnsure(), id, top, Date.now(), atBottom);
+        this._scrollMemory = r.state;
+        this._scrollMemoryFace = 'ok';
+        this._lastScrollMemoryWrite = { chatId: id, top: top, atBottom: atBottom, dropped: r.dropped };
+        try {
+            this.app?.storage?.set?.(CSM_KEY, JSON.stringify(r.state));
+            this._lastScrollMemoryWrite.ok = true;
+        } catch (_e) {
+            this._lastScrollMemoryWrite.ok = false;
+        }
+        return this._lastScrollMemoryWrite;
+    }
+    /** 恢复位置：只有 exact 才动 scrollTop；bottom / absent 保持本层原有贴底行为。 */
+    _scrollMemoryRestore(chatId, container, retried) {
+        if (!container) return null;
+        const maxTop = Math.max(0, (Number(container.scrollHeight) || 0) - (Number(container.clientHeight) || 0));
+        if (maxTop === 0 && !retried) {
+            /* 刚插进 DOM 还没排版：稍后再试一次（只一次，不设轮询）。
+             *   ★ 用 setTimeout 而不是 rAF：本仓实测某些环境（headless 单帧 dump）rAF 整体停摆，
+             *     押在帧上就等于「某些环境里位置永远不恢复」—— O2 的浏览器读数就是这么逼出来的。 */
+            if (!this._scrollMemoryRetryTimer) {
+                this._scrollMemoryRetryTimer = setTimeout(() => {
+                    this._scrollMemoryRetryTimer = null;
+                    this._scrollMemoryRestore(chatId, container, true);
+                }, 32);
+            }
+            return null;
+        }
+        const r = csmRestoreOf(this._scrollMemoryEnsure(), String(chatId || '').trim(), maxTop);
+        if (r.mode === 'exact') {
+            container.scrollTop = r.top;
+            this._lastScrollTop = r.top;
+            /* 记下「本次进入已按台账落位」：后面那条「首次加载所以贴底」的强制滚动
+             *   必须让位，否则恢复完立刻被顶回底部（浏览器层实测 delta=5698 就是这么来的）。 */
+            this._scrollMemoryRestoredChatId = String(chatId || '');
+        } else {
+            this._scrollMemoryRestoredChatId = '';
+        }
+        this._scrollMemoryVerdict = { face: r.face, top: r.top, maxTop: maxTop, reason: r.reason };
+        /* 读数上屏：恢复到底走没走、走的是哪一档，元素自己带住（诊断与浏览器层都读它）。 */
+        /* 对拍「想去的」与「实际落到的」：写 scrollTop 不等于真落到那儿
+         *   （内容变短、图片未解码都可能让它落到别处）—— 这一读数就是给这种情况留的。 */
+        const landed = Number(container.scrollTop) || 0;
+        const took = csmVerdict(Number(r.top) || 0, landed, 2);
+        try {
+            if (container.dataset) {
+                container.dataset.csmFace = String(r.face);
+                container.dataset.csmTop = String(Math.round(Number(r.top) || 0));
+                container.dataset.csmMax = String(Math.round(maxTop));
+                container.dataset.csmLanded = String(Math.round(landed));
+                container.dataset.csmTook = String(took.face);
+            }
+        } catch (_e) { /* 读数上屏失败不影响恢复 */ }
+        return this._scrollMemoryVerdict;
+    }
+    /** 绑定滚动记账（每元素一次）。按毫秒节流 + 尾随一次落笔，不新增常驻定时器。 */
+    /* 记账节流用**时间**而不是 rAF：本仓实测某些环境（单帧 dump 的 headless）rAF 会整体停摆，
+     *   把记账押在帧上就等于「滚动时永远不记」。代价是节流粒度按毫秒算，不是按帧。 */
+    bindScrollMemoryEvents(container = null) {
+        const target = container || document.getElementById('chat-messages');
+        if (!target || target._scrollMemoryBound) return false;
+        target._scrollMemoryBound = true;
+        target.addEventListener('scroll', () => {
+            const now = Date.now();
+            const last = Number(this._scrollMemoryLastAt) || 0;
+            const flush = () => {
+                this._scrollMemoryFlushTimer = null;
+                const cid = String(target.dataset.chatId || this.app?.currentChat?.id || '');
+                this._scrollMemoryRecord(cid, target);
+            };
+            if (now - last >= 120) {
+                this._scrollMemoryLastAt = now;
+                flush();
+                return;
+            }
+            /* 尾随一次：保证「停下不动」之后最后那个位置也记到（否则记的永远是节流窗口里的旧值） */
+            if (this._scrollMemoryFlushTimer) return;
+            this._scrollMemoryFlushTimer = setTimeout(flush, 160);
+        }, { passive: true });
+        return true;
+    }
+
     bindEvents() {
         const currentView = this.getCurrentWechatView();
         const input = currentView.querySelector('#chat-input');
         bindEditBuffer(this.app.storage, 'wechatApp', 'chat:' + this.app.currentChat?.id, input);
+        /* [R25-O2] 位置恢复接在同一个「DOM 已就位」的时机上（与草稿同一处，别的地方会早于排版）。
+         *   顺序：先绑记账再恢复 —— 否则恢复触发的 scroll 事件不会被记下来。 */
+        const _scrollBox = currentView.querySelector('#chat-messages') || document.getElementById('chat-messages');
+        if (_scrollBox && this.app.currentChat) {
+            this.bindScrollMemoryEvents(_scrollBox);
+            this._scrollMemoryRestore(this.app.currentChat.id, _scrollBox);
+        }
         const sendBtn = currentView.querySelector('#send-btn');
         const query = (selector) => currentView.querySelector(selector);
         const queryAll = (selector) => currentView.querySelectorAll(selector);
@@ -18129,6 +18255,14 @@ ${callTranscript}`;
     scrollToBottomIfNeeded(force = false) {
         const messagesDiv = document.getElementById('chat-messages');
         if (!messagesDiv) return;
+        /* [R25-O2] 「首次加载所以贴底」不再是无条件的：本会话本次进入已经按台账
+         *   落到位（exact）时，这条强制滚动是**第二名裁判**，必须让位。
+         *   只让 exact 这一档：absent / bottom 仍然贴底（那两种的更正确结果就是底部）。 */
+        if (force) {
+            const cid = String(this.app?.currentChat?.id || '');
+            const restored = String(this._scrollMemoryRestoredChatId || '');
+            if (cid && cid === restored) return;
+        }
 
         // 计算用户是否在底部附近（距离底部100px以内）
         const isNearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 100;
