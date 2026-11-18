@@ -31,6 +31,11 @@ import { payloadInspectFrom, sharePreviewOf, shareTraceOf, bundlePlanOf } from '
 /* [v4.156.0 · R21-X8] 恢复点差异的人读预览走唯一桥：本件不再自己拼「差异 N 键」那句话。 */
 import { backupDiffPreview } from '../../config/backup-diff-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+/* [R25-X2] 状态回放（时光机）：内核只做投影，**一个字节都不写**。
+ *   未读判定不在内核里重写，用的是本仓唯一实现 unreadStateOf —— 注入进去，
+ *   否则「未读数」会出现第二份口径（这正是本仓反复治的病）。 */
+import { replayAt as replayAtMoment, momentsOf as machineMomentsOf, faceTextOf as machineFaceTextOf, judgeReplayApplied, READ_ONLY_BADGE, MACHINE_FACES, FACE_LABELS as MACHINE_FACE_LABELS } from '../../config/time-machine.js';
+import { unreadStateOf } from '../wechat/chat-read-cursor.js';
 /* [v4.99.8 · R11-X4] 分享边界内核：谁能看、看得到什么、撤回后留不留痕 —— **全由内核判**。
  *   本件只做三件事：读盘 / 把用户意图转交内核 / 把结果落盘。不写第二份授权判据。 */
 import {
@@ -62,6 +67,13 @@ export class BackupdeskApp {
         this._snapFlashBad = false;
         this._snapDiff = null;
         this._snapInspect = null;
+        /* [R25-X2] 时光机的回放结果与读回同样丢掉（不属于本段的「当时」不能留着）。 */
+        this._machine = null;
+        this._machineObserved = null;
+        /* [R25-X2] 时光机的**这一次**回放结果与屏上读回。两者都是「这一次点出来的」，
+         *   换会话必须丢（上一个会话的「当时」贴到新会话 = 用户会照着一份不属于本段的历史复盘）。 */
+        this._machine = null;
+        this._machineObserved = null;
         /* [v4.99.8 · R11-X4] 分享与迁移审阅面的**实例态**：当前选中的草案 id、
          *   当前预览的收件人、提示行。三者都是「这一次点出来的」，换会话必须丢
          *   （上一个会话选中的草案贴到新会话 = 用户会以为自己分享了别人的东西）。
@@ -484,8 +496,64 @@ export class BackupdeskApp {
             flash: this._flash, flashBad: this._flashBad,
             /* [v4.96.0 · R11-O3 第二批] 恢复快照面的读数（视图只渲染，判定全在内核与本件的读写口）。 */
             snap: this._snapVm(),
+            /* [R25-X2] 时光机面（只读回放）。 */
+            machine: this._machineVm(),
             /* [v4.99.8 · R11-X4] 分享与迁移审阅面（起草 / 收件人视角预览 / 撤回留痕）。 */
             share: this._shareVm(),
+        };
+    }
+    /* ============ [R25-X2] 时光机：回到某时刻的手机（只读） ============
+     * 为什么在这里：本 App 已经是「拍点 / 比差异 / 选择性还原」的受控面，而
+     *   「那个点当时长什么样」是同一件事的另一半 —— 放别处会长成第二个备份入口。
+     * ★ 只读硬约束：本方法不写任何键、不调 writeReceipt、不动 storage。
+     *   判据会扫这个函数体（tests/r25_x2_time_machine.test.mjs），因为
+     *   「回放顺手把状态也写回去」是这个功能最容易犯的错。
+     */
+    replayMoment(momentMs) {
+        const read = this._readSnapState();
+        if (!read.readable) {
+            this._machine = {
+                state: 'unreadable', reason: 'snapshot-ledger-unreadable',
+                text: '恢复点台账读不到（' + String(read.why) + '）—— 这是「读不出」，不是「没有历史」',
+                faces: null
+            };
+            return this._machine;
+        }
+        this._machine = replayAtMoment(read.state, momentMs, { unreadOf: unreadStateOf });
+        this._machineObserved = null;
+        return this._machine;
+    }
+    /** 屏上真正显示的四个字符串（视图渲染后回读 DOM），供对拍用。 */
+    setMachineObserved(seen) {
+        this._machineObserved = (seen && typeof seen === 'object') ? seen : null;
+    }
+    /** 读回对拍结论：没有回放面 / 屏上没回读 ⇒ unknown（不说成一致）。 */
+    machineVerdict(seen) {
+        return judgeReplayApplied(this._machine, seen === undefined ? this._machineObserved : seen);
+    }
+    /** 时光机面的视图模型：时刻表来自台账，四行来自内核投影（视图不自己算数）。 */
+    _machineVm() {
+        const read = this._readSnapState();
+        const moments = read.readable ? machineMomentsOf(read.state) : [];
+        const r = this._machine;
+        const rows = (r && r.faces)
+            ? MACHINE_FACES.map((f) => ({
+                key: f,
+                label: MACHINE_FACE_LABELS[f],
+                state: String((r.faces[f] && r.faces[f].state) || 'unknown'),
+                text: machineFaceTextOf(r, f)
+            }))
+            : [];
+        return {
+            badge: READ_ONLY_BADGE,
+            readable: read.readable,
+            why: read.why,
+            moments: moments.slice(0, 8).map((m) => ({ id: m.id, label: m.label, at: m.at })),
+            state: r ? String(r.state || '') : 'idle',
+            reason: r ? String(r.reason || '') : '',
+            text: r ? String(r.text || '') : '先选一个恢复点：当时的样子 = 那一刻的键面 + 四个面的投影（只读）',
+            rows: rows,
+            verdict: r ? judgeReplayApplied(r, this._machineObserved) : null
         };
     }
     /** 快照面的视图模型：台账读不出与空台账**分两句话**，差异与体检读数各自成形。 */

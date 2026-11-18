@@ -175,6 +175,7 @@ export class BackupdeskView {
         h += this._range(vm);
         h += this._plan(vm);
         h += this._snap(vm);
+        h += this._machine(vm);
         h += this._share(vm);
         h += '</div>';
         return h;
@@ -213,6 +214,44 @@ export class BackupdeskView {
         h += '</div></div>';
         return h;
     }
+    /**
+     * [R25-X2] 时光机卡片：选一个恢复点 → 看那一刻的手机长什么样。
+     * ★ 只读：这一面没有任何写动作（没有 setItem / writeReceipt / 提交按钮），
+     *   连「还原」都不在这里 —— 还原在上一张卡（那是会写盘的另一个动作，别有歧义）。
+     */
+    _machine(vm) {
+        const m = vm.machine || {};
+        let h = '<div class="bk-box bk-machine"><h3>时光机（回到某个恢复点，看当时的手机）</h3>';
+        h += '<div class="bk-note">' + esc(m.badge || '') + '</div>';
+        if (!m.readable) {
+            h += '<div class="bk-note bk-self-bad">' + esc('恢复点台账读不到（' + String(m.why || '') + '）—— 这是「读不出」，不是「没历史」') + '</div>';
+        } else if (!(m.moments || []).length) {
+            h += '<div class="bk-note">还没有恢复点可回放（先在上面那张卡里拍一个）。</div>';
+        } else {
+            h += '<div class="bk-acts">';
+            for (const p of m.moments) {
+                h += '<button class="bk-chip" data-bk-tm="' + esc(String(p.at)) + '">' + esc(p.label) + ' · ' + esc(new Date(p.at).toISOString().slice(0, 16).replace('T', ' ')) + '</button>';
+            }
+            h += '</div>';
+        }
+        if (m.text) h += '<div class="bk-note">' + esc(m.text) + '</div>';
+        for (const r of (m.rows || [])) {
+            h += '<div class="bk-row"><span class="bk-row-k">' + esc(r.label) + '</span>' +
+                '<span class="bk-row-v" data-bk-face="' + esc(r.key) + '">' + esc(r.text) + '</span>' +
+                '<span class="bk-row-v">' + esc(r.state) + '</span></div>';
+        }
+        if (m.rows && m.rows.length) {
+            h += '<div class="bk-note" data-bk-tm-verdict="1">' + esc(this._verdictLine(m.verdict)) + '</div>';
+        }
+        return h + '</div>';
+    }
+    /** 读回对拍的结论行：三态各自成句，unknown 不说成「一致」。 */
+    _verdictLine(v) {
+        if (!v) return '读回对拍：还没有回放面';
+        if (v.verdict === 'same') return '读回对拍：屏上四行与内核投影逐字一致';
+        if (v.verdict === 'mismatch') return '读回对拍：不一致 ' + String((v.diffs || []).length) + ' 处';
+        return '读回对拍：判不出（' + String(((v.diffs || [])[0] || {}).why || '') + '）';
+    }
     _bind(el) {
         const self = this;
         el.querySelectorAll('[data-bk-dim]').forEach(function (b) {
@@ -245,6 +284,25 @@ export class BackupdeskView {
                 }
             });
         });
+        /* [R25-X2] 时光机：点一个恢复点就让 App 回放一次（只读，不写键）。
+         *   点完立刻重渲染，四行换成本次回放的投影。 */
+        el.querySelectorAll('[data-bk-tm]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                self.app.replayMoment(Number(b.getAttribute('data-bk-tm')));
+                self.app.render();
+            });
+        });
+        /* 读回对拍：读的是**屏上真正显示的四个字符串**（不是再算一遍投影），
+         * 算完直接改写结论行 —— 不进 render，避免渲染→读回→渲染的死循环。 */
+        const faceEls = el.querySelectorAll('[data-bk-face]');
+        if (faceEls.length) {
+            const seen = {};
+            faceEls.forEach(function (n) { seen[n.getAttribute('data-bk-face')] = n.textContent; });
+            self.app.setMachineObserved(seen);
+            const v = self.app.machineVerdict(seen);
+            const badge = el.querySelector('[data-bk-tm-verdict]');
+            if (badge) badge.textContent = self._verdictLine(v);
+        }
         /* [v4.99.8 · R11-X4] 分享面：四个动作对应 App 上四个口（pick / viewer 是纯视图态，
          *   draft / revoke 走内核）。★ 「预览」不是动作 —— 选人之后就自动算，
          *   让它成一个按钮会让人以为「点了才算过一遍」。 */

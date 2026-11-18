@@ -510,6 +510,22 @@ function brokenBridgeCopy(pairs, outName) {
   fs.writeFileSync(file, src, 'utf8');
   return 'file://' + file;
 }
+/** 按相对 import 把切片外的依赖一并搬进临时仓（依赖闭包）。 */
+function copyDepClosure(tmp, rel, seen) {
+  const abs = path.join(ROOT, rel);
+  if (seen.has(abs) || !fs.existsSync(abs)) return;
+  seen.add(abs);
+  const dest = path.join(tmp, rel);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  const src = fs.readFileSync(abs, 'utf8');
+  if (!fs.existsSync(dest)) fs.writeFileSync(dest, src, 'utf8');
+  const re = /from '(\.[^']+)'/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const dep = path.relative(ROOT, path.resolve(path.dirname(abs), m[1])).replace(/\\/g, '/');
+    copyDepClosure(tmp, dep, seen);
+  }
+}
 /** 把破坏后的 App 落成临时目录（apps/backupdesk 全件 + config 全件），返回模块。 */
 async function brokenAppModule(pairs) {
   const src = brokenSource(APP_REL, pairs);
@@ -526,6 +542,13 @@ async function brokenAppModule(pairs) {
   for (const f of fs.readdirSync(path.join(ROOT, 'config'))) {
     if (/\.js$/.test(f)) fs.copyFileSync(path.join(ROOT, 'config', f), path.join(tmp, 'config', f));
   }
+  /* ★ 切片必须带依赖闭包：本轮 X2 让 app 多了一条跨目录 import
+   *   （`../wechat/chat-read-cursor.js`，注入唯一的未读判定器），只复制
+   *   `apps/backupdesk` + `config` 会让它在切片里解析不到、把负控制打成
+   *   `ERR_MODULE_NOT_FOUND` —— 那是切片自己的洞，不是产品的红。 */
+  /* 不预置自身：预置会让首次调用立刻返回，而「不覆盖已落盘的件」靠下面的
+     existsSync 守卫就够（破坏后的 App 已先写进去了）。 */
+  copyDepClosure(tmp, APP_REL, new Set());
   return await import('file://' + path.join(dir, 'backupdesk-app.js').replace(/\\/g, '/'));
 }
 
