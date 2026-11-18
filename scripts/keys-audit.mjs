@@ -646,6 +646,13 @@ const KEY_REGISTRY = [
    *   刻意不新开「低动画」与「字体缩放」键：前者就是 sys_motion_level、后者就是
    *   phone-font-scale（同一件事两个存储位必然漂移）。 */
   { key: 'sys_access_level', scope: 'chat', note: '操作层档位（standard / enhanced / large，随会话隔离）' },
+  /* [R25-X7] 外接键盘的键位覆盖。
+   *   归属按**机制现状**登记为 chat：`sys_` 族当下落在会话面（与 sys_motion_level 同列），
+   *   而本门禁的 K2 就是「声明必须与 CHAT_DATA_PATTERNS 的实际匹配一致」。
+   *   ★ 没有为了让键位全局化去改 CHAT_DATA_PATTERNS：那会把所有 `sys_` 键的落点一起挪，
+   *     动到已存用户的存档（本仓「不静默改动存量数据」纪律）。要全局是下一轮的迁移工程，不是本项。
+   *   默认值与可接受键形在 config/keyboard-map.js，本处只登记归属。 */
+  { key: 'sys_keyboard_shortcuts', scope: 'chat', note: '[R25-X7] 键盘快捷键键位覆盖（返回/回桌面/搜索/发送/切 App）' },
   { key: 'sys_access_compact', scope: 'chat', note: '紧凑列表开关（随会话隔离）' },
   { key: 'sys_access_theme', scope: 'chat', note: '主题档（auto / light / dark，随会话隔离）' },
   /* [v4.115.0 · R13-X4] 离开状态机落账键：离开理由、起止时间与 missed 清单随会话隔离 ——

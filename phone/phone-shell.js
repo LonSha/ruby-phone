@@ -1240,6 +1240,8 @@ export class PhoneShell {
         let releaseBackCloser = () => {};
         const close = () => {
             try { releaseBackCloser(); } catch (_e) { /* 注销失败不得阻断关闭 */ }
+            /* [R25-O8] 出栈：焦点层随浮层一起关（否则 Tab 会继续困在一个已经不存在的层里）。 */
+            try { this._focusLayers?.close?.('image-viewer'); } catch (_e) { /* 出栈失败不得阻断关闭 */ }
             overlay.remove();
         };
         try {
@@ -1403,6 +1405,10 @@ export class PhoneShell {
         overlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
 
         phoneBody.appendChild(overlay);
+        /* [R25-O8] 入栈：浮层一进 DOM 就占一层，Tab 只在它内部循环、Esc 只关它。
+         *   为什么要显式入栈：这个浮层挂在 phone-body 上，而「当前 App 内容层」在它**下面** ——
+         *   没有栈的话 Tab 会跑到被遮住的按钮上（这正是 R25-O8 要治的那条）。 */
+        try { this._focusLayers?.open?.('image-viewer', overlay); } catch (_e) { /* 入栈失败不影响浮层 */ }
     }
 
     _buildImageViewerDownloadName(rawName = 'phone-image') {

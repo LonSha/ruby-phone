@@ -33,6 +33,11 @@ import {
     DEFAULT_READABILITY_SETTINGS,
     normalizeReadabilitySettings
 } from '../../config/touch-readability-baseline.js';
+/* [R25-X7] 快捷键：设置页只摆键位与改键口，键形判定与匹配都在 `config/keyboard-map.js`。 */
+import {
+    SHORTCUT_STORAGE_KEY as KEYBOARD_STORAGE_KEY,
+    readKeyBindings, shortcutRows, shortcutText, comboOf, acceptsCombo, humanCombo
+} from '../../config/keyboard-map.js';
 import { PHONE_EVENTS } from '../../config/phone-events.js';
 import { ImageUploadManager } from './image-upload.js';
 import { ImageCropper } from './image-cropper.js';
@@ -3001,6 +3006,7 @@ export class SettingsApp {
 
                     <div class="phone-settings-tab-content ${this.currentTab === 'memory' ? 'is-active' : 'is-hidden'}" id="tab-memory" role="tabpanel" ${this.currentTab === 'memory' ? '' : 'hidden'}>
                         ${this.renderA11yTriadSection()}
+                        ${this.renderShortcutSection()}
                                 ${this.renderMemoryPermissionSection()}
                         ${this.renderTagFilterSection()}
                     </div>
@@ -5510,6 +5516,104 @@ export class SettingsApp {
         }
     }
 
+    /** [R25-X7] 外接键盘快捷键：**查看 + 改 + 恢复默认**（键位真源在 config/keyboard-map.js）。
+     *  为什么要有「改」：一组硬编码快捷键等于替用户决定了他桌面上的键位习惯；
+     *  为什么要有「恢复默认」：改坏了必须有一步退路（否则只能清存档）。 */
+    renderShortcutSection() {
+        const face = readKeyBindings(this.storage);
+        const rows = shortcutRows(face.bindings);
+        const list = rows.map((r) => `
+                <div class="setting-item" data-shortcut-row="${r.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #f2f2f2;">
+                    <span style="font-size: 13px; color: #222;">${this._escapeHtml(r.label)}</span>
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                        <code data-shortcut-combo="${r.id}" style="font-size: 11px; padding: 2px 6px; background: #f5f5f5; border-radius: 4px; color: #444;">${this._escapeHtml(r.human)}</code>
+                        <button type="button" data-shortcut-capture="${r.id}" style="font-size: 11px; padding: 2px 8px; border: 1px solid #d0d0d0; border-radius: 4px; background: #fff; color: #333; cursor: pointer;">改键</button>
+                        <button type="button" data-shortcut-reset="${r.id}" style="font-size: 11px; padding: 2px 8px; border: 1px solid #e6e6e6; border-radius: 4px; background: #fafafa; color: #888; cursor: pointer;">默认</button>
+                    </span>
+                </div>`).join('');
+        return `
+            <div class="setting-section" style="margin: 12px 0 8px; padding: 10px 12px;">
+                <div class="setting-item" style="padding: 4px 0 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #222;">键盘快捷键（桌面 / 外接键盘）</div>
+                    <div style="font-size: 11px; color: #8a8a8a; margin-top: 2px;">${this._escapeHtml(shortcutText(face))}</div>
+                </div>
+                ${list}
+                <div data-shortcut-hint style="font-size: 11px; color: #8a8a8a; margin-top: 6px; line-height: 1.5;">点「改键」后按下你想要的组合（必须带 Ctrl / Alt / Shift / Cmd；Esc 只给「返回」用）。冲突的键位不会生效，并会在这里如实告诉你。</div>
+            </div>`;
+    }
+
+    /** [R25-X7] 快捷键的绑定：改键 / 恢复默认 / 写回真源（写回后当场重画该行）。 */
+    bindShortcutEvents(settingsRoot = this._getActiveSettingsRoot()) {
+        try {
+            const doc = this._createSettingsScopedDocument(settingsRoot);
+            const root = settingsRoot || doc;
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            const writeRow = (id, human) => {
+                const el = root.querySelector('[data-shortcut-combo="' + id + '"]');
+                if (el) el.textContent = human;
+            };
+            const persist = async (next) => {
+                try {
+                    await this.storage.set(KEYBOARD_STORAGE_KEY, JSON.stringify(next));
+                    return true;
+                } catch (e) {
+                    console.warn('[快捷键] 落盘失败:', e);
+                    return false;
+                }
+            };
+            root.querySelectorAll('[data-shortcut-capture]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-shortcut-capture');
+                    const hint = root.querySelector('[data-shortcut-hint]');
+                    if (hint) hint.textContent = '正在等按键：按下你想要的组合（Esc 取消）…';
+                    const onKey = async (ev) => {
+                        try {
+                            ev.preventDefault?.();
+                            ev.stopPropagation?.();
+                            doc.removeEventListener?.('keydown', onKey, true);
+                            globalThis.document?.removeEventListener?.('keydown', onKey, true);
+                            if (ev.key === 'Escape') {
+                                if (hint) hint.textContent = '已取消（没有改动）';
+                                return;
+                            }
+                            const combo = comboOf(ev);
+                            if (!combo) { if (hint) hint.textContent = '这个键识别不了，换一个'; return; }
+                            if (!acceptsCombo(id, combo)) {
+                                if (hint) hint.textContent = '「' + humanCombo(combo) + '」不能给这个动作用（必须带修饰键）';
+                                return;
+                            }
+                            const cur = readKeyBindings(this.storage);
+                            const next = { ...cur.bindings, [id]: combo };
+                            await persist(next);
+                            const after = readKeyBindings(this.storage);
+                            writeRow(id, humanCombo(after.bindings[id]));
+                            if (hint) {
+                                hint.textContent = after.rejected.length
+                                    ? ('已写下，但这些动作的键位被拒并回退默认：' + after.rejected.join('、'))
+                                    : ('已设为 ' + humanCombo(combo));
+                            }
+                        } catch (e) { console.warn('[快捷键] 改键失败:', e); }
+                    };
+                    if (typeof doc.addEventListener === 'function') doc.addEventListener('keydown', onKey, true);
+                    else globalThis.document?.addEventListener?.('keydown', onKey, true);
+                });
+            });
+            root.querySelectorAll('[data-shortcut-reset]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-shortcut-reset');
+                    const cur = readKeyBindings(this.storage);
+                    const next = { ...cur.bindings };
+                    delete next[id];
+                    await persist(next);
+                    const after = readKeyBindings(this.storage);
+                    writeRow(id, humanCombo(after.bindings[id]));
+                });
+            });
+        } catch (e) {
+            console.warn('[快捷键] 绑定失败:', e);
+        }
+    }
+
     renderMemoryPermissionSection() {
         const isMemoryPermissionOpen = this.storage.get('phone-settings-memory-permission-open') === true;
         const userMessageListenerRaw = this.storage.get('phone-user-message-listener-enabled');
@@ -6205,6 +6309,8 @@ export class SettingsApp {
         this._bindPhoneColorPickers(settingsRoot);
         /* [R25-O7] 无障碍三档控件：改动立刻写到 documentElement（并落盘真源）。 */
         this.bindA11yTriadEvents(settingsRoot);
+        /* [R25-X7] 快捷键改键口（只绑这一节的按钮）。 */
+        this.bindShortcutEvents(settingsRoot);
 
         document.getElementById('yzp-settings-home-back')?.addEventListener('click', (event) => {
             event.preventDefault();

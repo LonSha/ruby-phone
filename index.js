@@ -390,6 +390,9 @@ import { createBootTiming, bootTimingLine } from './config/boot-timing.js';
 /* [R25-O7] 无障碍三档的应用面：读真源 + 写到 documentElement（此前 baseline 只被审计调用，
  *   三档值算得出来却从没落到界面上 —— 见 config/a11y-triad.js 文件头）。 */
 import { readA11yTriad, applyA11yTriad } from './config/a11y-triad.js';
+/* [R25-O8 / R25-X7] 键盘层：焦点栈与快捷键的键位真源（各自一份，互不重复声明）。 */
+import { createFocusLayers } from './config/focus-layer.js';
+import { comboOf, readKeyBindings, matchShortcut } from './config/keyboard-map.js';
 /* [v3.79.0 · 计划 R-O6 第二层] 动效档位与「后台降频 / 恢复重取」统一出口。
  *   修前实测：`prefers-reduced-motion` 与 `animation-play-state` 全仓零命中；
  *   面板隐藏后 `yzp-home-vinyl-spin` 仍是 running，宠物 video 在面板关闭与页面隐藏
@@ -11745,6 +11748,107 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     } catch (_e) { /* 同上 */ }
                 });
             } catch (_e) { /* 无 window（测试/无宿主）不得阻断启动 */ }
+
+            /* [R25-O8 / R25-X7] 键盘层：焦点栈 + 最小快捷键。
+             *   · 焦点栈回答「现在最上面是哪一层」，Tab 只在那一层内首尾相接；
+             *   · 快捷键的键位真源在 `config/keyboard-map.js`（设置页可改，读不到 ≠ 用默认）；
+             *   · 栈空时 Tab 的边界 = 当前 App 的内容层（兜底作用域，**不算一层**：
+             *     Esc 不会被它吃掉，仍交给外壳的「返回上一层」）。
+             *   为什么整块包在 try 里：键盘层是旁听者，坏了也不能让整机点不动。 */
+            try {
+                const focusLayers = createFocusLayers({
+                    doc: document,
+                    fallbackRoot: () => {
+                        try {
+                            return (phoneShell && typeof phoneShell.getContentContainer === 'function')
+                                ? phoneShell.getContentContainer() : null;
+                        } catch (_e) { return null; }
+                    }
+                });
+                /* 把栈交给外壳：图片预览这类「挂在 phone-body 上的浮层」要自己入栈/出栈。 */
+                if (phoneShell) phoneShell._focusLayers = focusLayers;
+                const keyRead = readKeyBindings(storage);
+                const keyState = { read: keyRead, lastAction: null, lastConflict: null };
+                if (!window.VirtualPhone) window.VirtualPhone = {};
+                window.VirtualPhone._keyboard = {
+                    focusLayers: focusLayers,
+                    state: () => ({
+                        ...focusLayers.state(),
+                        bindings: keyState.read.bindings,
+                        bindingState: keyState.read.state,
+                        rejected: keyState.read.rejected,
+                        lastAction: keyState.lastAction,
+                        lastConflict: keyState.lastConflict
+                    })
+                };
+                const openAppById = (id) => {
+                    try {
+                        window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: id } }));
+                        return true;
+                    } catch (_e) { return false; }
+                };
+                const runShortcut = (m, ev) => {
+                    const act = m.action;
+                    if (act === 'back') {
+                        /* 先问栈：有浮层就关浮层（只关最上面那一层）；栈空才回上一层。 */
+                        const r = focusLayers.handleKey({ key: 'Escape', preventDefault: () => ev.preventDefault() });
+                        if (r.handled) return true;
+                        if (phoneShell && typeof phoneShell.backOneLayer === 'function') {
+                            phoneShell.backOneLayer();
+                            return true;
+                        }
+                        return false;
+                    }
+                    if (act === 'home') {
+                        if (phoneShell && typeof phoneShell.goHome === 'function') { phoneShell.goHome(); return true; }
+                        return false;
+                    }
+                    if (act === 'search') return openAppById('search');
+                    if (act === 'send') {
+                        /* 发送走**既有按钮**的点击通路（不另造一条发送链：那条链有停流、失败回执、
+                         *   按钮 mode 切换等一堆既有语义，复制一份必然长歪）。 */
+                        const btn = document.querySelector('#send-btn');
+                        if (btn && typeof btn.click === 'function') { btn.click(); return true; }
+                        return false;
+                    }
+                    if (act === 'switch-app') {
+                        const slot = Number(m.slot) || 0;
+                        const list = Array.isArray(APPS) ? APPS : [];
+                        const app = list[slot - 1];
+                        if (!app || !app.id) return false;
+                        return openAppById(app.id);
+                    }
+                    return false;
+                };
+                window.addEventListener('keydown', (ev) => {
+                    try {
+                        if (!ev || ev.defaultPrevented) return;
+                        if (ev.key === 'Tab') {
+                            const r = focusLayers.handleKey({
+                                key: 'Tab', shiftKey: ev.shiftKey === true,
+                                preventDefault: () => ev.preventDefault()
+                            });
+                            if (r.handled) keyState.lastAction = { action: 'focus-cycle', to: r.to, at: Date.now() };
+                            return;
+                        }
+                        const combo = comboOf(ev);
+                        if (!combo) return;
+                        const m = matchShortcut(combo, keyState.read.bindings);
+                        if (!m) return;
+                        if (m.conflict) {
+                            keyState.lastConflict = { combo: combo, actions: m.conflict, at: Date.now() };
+                            return;   /* 冲突时谁都不触发（且留痕，便于查「按了没反应」） */
+                        }
+                        /* 正在输入时不抢键：只有「发送」和「返回」在输入态仍生效。 */
+                        const tag = ev.target && ev.target.tagName ? String(ev.target.tagName) : '';
+                        const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(tag);
+                        if (typing && m.action !== 'send' && m.action !== 'back') return;
+                        const ok = runShortcut(m, ev);
+                        keyState.lastAction = { action: m.action, combo: combo, ok: ok, at: Date.now() };
+                        if (ok) ev.preventDefault();
+                    } catch (_e) { /* 键盘层绝不制造新崩溃 */ }
+                }, true);
+            } catch (_e) { /* 键盘层装配失败：整机照常用鼠标/触摸操作 */ }
 
             // 监听打开APP
             window.addEventListener('phone:openApp', (e) => {
