@@ -62,6 +62,14 @@ import { MemoryCore } from './apps/memory/memory-data.js';
 // [v4.102.0 · R13-O3] 时间-环境感知注入：此前 `window.VirtualPhone.timeEnv` 全库从未被赋值，
 //   设置页那个开关读到的永远是 undefined（拿默认值 true 显示、写回 storage 却没人消费）。
 import TimeEnvManager from './config/time-env.js';
+/* [R25-X9] 剧情钟读取口。★ 修前 index.js 里 5 处都写着 `typeof storyNow === 'function'` 保护，
+ *   而 **本文件从未 import 过 storyNow** —— 模块作用域里它恒为 undefined，
+ *   于是状态栏叙事桥、静音叙事、周回顾账、通知免打扰的小时判定全部静默走空分支
+ *   （没有报错，因为 typeof 未声明变量不抛）。这就是「代码在、路不通」的又一例。 */
+import { storyNow } from './config/time-source.js';
+/* [R25-X9] 剧情钟联动面：一次算出四个消费面（会话戳/日记/日程/锁屏）。 */
+import { fanoutOf as storyFanoutOf, judgeFanout as judgeStoryFanout, fanoutText as storyFanoutText } from './config/story-clock-fanout.js';
+import { readFormatSettings as readStoryFormatSettings } from './config/time-format.js';
 import { SubsystemOrchestrator } from './config/subsystem-orchestrator.js';
 /* [v4.99.4 · R11-X3] 生活流的**低频时钟**：它不做业务，只把中枢的 `advanceAutonomousLifeStep`
  *   接成「手机自己会动」。修前该方法产品端零调用，自驱生活只在测试里存在。 */
@@ -2198,6 +2206,55 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     return { status: 'unmounted', mounted: false, steps: 0, why: 'read_threw', line: '生活流：读不到（' + String((e && e.message) || e) + '）' };
                 }
             }
+            /* [R25-X9] 剧情钟联动：**一次**算出四个消费面（会话戳 / 日记 / 日程 / 锁屏），
+             *   挂到宿主面 `VirtualPhone._storyFanout`，各消费面读这一份。
+             *   为什么要有这个函数：修前四个面各算各的，其中锁屏压根没接钟
+             *   （`_nowParts()` 用 `new Date()` + `getMonth()+1` 拼本机今天）。
+             *   三态：剧情毫秒读不到 ⇒ fanout 报 unreadable，**不**回落墙钟
+             *   （「不知道剧情几点」与「现在就是本机这个点」是两件事）。
+             *   ★ 时间格式在这里读一次（readStoryFormatSettings），不是每个面各读一遍 ——
+             *     逐面读会在同一帧里读到两次不同的设置（设置刚改时尤其明显）。 */
+            function refreshStoryFanout() {
+                try {
+                    const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
+                    if (!vp) return null;
+                    const st = (typeof storyNow === 'function') ? storyNow(window, { readOnly: true }) : null;
+                    const ms = (st && st.ok === true) ? st.ms : null;
+                    const face = storyFanoutOf(ms, readStoryFormatSettings(storage), {});
+                    vp._storyFanout = face;
+                    vp._storyFanoutText = storyFanoutText(face);
+                    vp.refreshStoryFanout = refreshStoryFanout;
+                    /* 锁屏在锁屏态时自己按 signature 重画；这里只把面换掉，不重建它。 */
+                    try {
+                        const ls = phoneShell && phoneShell.lockScreen;
+                        if (ls && typeof ls.syncFace === 'function') ls.syncFace();
+                    } catch (_e) { /* 锁屏不在场不影响其它面 */ }
+                    return face;
+                } catch (_e) {
+                    /* 广播失败不许静默成功：把失败写成可读回的一态。 */
+                    try {
+                        if (typeof window !== 'undefined' && window.VirtualPhone) {
+                            window.VirtualPhone._storyFanout = {
+                                state: 'unreadable', reason: 'fanout-threw',
+                                detail: String((_e && _e.message) || _e), surfaces: null,
+                                note: '广播抛错（不是「四处一致」）'
+                            };
+                        }
+                    } catch (_e2) { /* 连回执都挂不上时只能放弃 */ }
+                    return null;
+                }
+            }
+            /* 读回对拍：消费面真显示的文本 vs 广播面。诊断页与判据用同一个结论口。 */
+            function storyFanoutVerdict(observed) {
+                try {
+                    const face = (typeof window !== 'undefined' && window.VirtualPhone)
+                        ? window.VirtualPhone._storyFanout : null;
+                    return judgeStoryFanout(face, observed || null);
+                } catch (_e) { return { verdict: 'unknown', diffs: [] }; }
+            }
+
+            /* 装配期先算一拍：首屏锁屏/状态栏不必等第一次 life-clock tick（60s 起步）才有剧情时间。 */
+            try { refreshStoryFanout(); } catch (_e) { /* 首帧读不到不影响启动 */ }
             function refreshLifeClockFace() {
                 const host = phoneShell && phoneShell.container;
                 if (!host || typeof host.querySelector !== 'function') return false;
@@ -2227,6 +2284,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     },
                     onTick: () => {
                         try { refreshLifeClockFace(); } catch (_e) { /* 前台指示挂了不影响推进 */ }
+                        /* [R25-X9] 钟一跳，四个消费面同时换一份：不是各自去读一次钟。 */
+                        try { refreshStoryFanout(); } catch (_e) { /* 联动面挂了不影响推进 */ }
                         /* [v4.99.6 · R11-X8] 推进之后设备读数跟着重画：这一拍里电量被 tick 掉了、
                          *   信号可能被换了场景 —— 状态栏不重画就会停在上一拍的读数上（显示旧值）。 */
                         try {

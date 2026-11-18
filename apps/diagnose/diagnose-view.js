@@ -1218,7 +1218,101 @@ export class DiagnoseView {
             + escapeHtml(String(rc.line || '')) + '</div>';
         return html;
     }
-        _bootTimingHtml(pkg) {
+    /** [R25-X5] 布局档位卡片：量测面 + 三档语义 + 与根节点属性对拍。
+     *  为什么不只画「你现在是宽屏」：档位是**量出来的**，属性是**写上去的**，
+     *  两者可能不一致（壳没挂、根节点没建好、写了但被覆盖），所以必须把 observed 一起画出来。 */
+    _layoutHtml(pkg) {
+        const sc = (pkg && pkg.layout) || null;
+        if (!sc || !sc.face) {
+            return '<div class=' + Q + 'dg-note' + Q + '>读不到布局档位面 —— 宿主窗口尺寸未提供。'
+                + '这是「没这个读数」，**不是**「标准档」。</div>';
+        }
+        const face = sc.face;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(sc.text || '')) + '</div>';
+        if (face.state !== 'measured') {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>量不到窗口尺寸（原因：'
+                + escapeHtml(String(face.reason || 'unknown')) + '），所以壳**没有**写档位属性 —— '
+                + '界面此刻走的是 CSS 原有的媒体查询兜底，不是「三档里的某一档」。</div>';
+        } else {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            html += '<li class=' + Q + 'dg-row' + Q + '>档位：' + escapeHtml(String(face.tier))
+                + ' · 朝向：' + escapeHtml(face.orientation === 'landscape' ? '横屏' : '竖屏')
+                + ' · 窗口：' + escapeHtml(face.width + '×' + face.height) + '</li>';
+            html += '<li class=' + Q + 'dg-row' + Q + '>该档布局：' + escapeHtml(String(face.note)) + '</li>';
+            const ob = sc.observed || null;
+            html += '<li class=' + Q + 'dg-row' + Q + '>根节点属性：'
+                + (ob ? escapeHtml('data-layout=' + String(ob.layout || '（空）')
+                    + ' · data-orientation=' + String(ob.orientation || '（空）'))
+                    : '（读不到 #phone-panel）')
+                + '</li>';
+            const applied = String(sc.applied || 'unknown');
+            const cls = applied === 'same' ? 'dg-ok' : (applied === 'mismatch' ? 'dg-bad' : 'dg-warn');
+            const label = applied === 'same' ? '写入与读回一致'
+                : (applied === 'mismatch' ? '写入与读回不一致（壳写的与根节点上的不是一回事）'
+                    : '无法判定（面没量到或属性读不到）');
+            html += '<li class=' + Q + 'dg-row' + Q + '><span class=' + Q + 'dg-chip ' + cls + Q + '>'
+                + escapeHtml(label) + '</span></li>';
+            html += '</ul>';
+        }
+        const bp = face.breakpoints || {};
+        html += '<div class=' + Q + 'dg-note' + Q + '>三档阈值（单一真源 config/layout-breaks.js）：'
+            + 'compact ≤ ' + escapeHtml(String(bp.compactMax === undefined ? 479 : bp.compactMax))
+            + ' · standard &lt; ' + escapeHtml(String(bp.wideMin === undefined ? 900 : bp.wideMin))
+            + ' · wide ≥ ' + escapeHtml(String(bp.wideMin === undefined ? 900 : bp.wideMin))
+            + '；横竖切换只改属性、不重建 DOM（丢草稿的正是重建）。</div>';
+        return html;
+    }
+
+/** [R25-X9] 剧情钟联动卡片：四个面 + 与锁屏真 DOM 的读回对拍。
+     *  为什么必须画 observed：修前锁屏用 `new Date()` 拼本机日期，
+     *  只画「广播面」是自述，画上「屏幕上真显示的」才叫对拍。 */
+    _storyFanoutHtml(pkg) {
+        const sc = (pkg && pkg.storyFanout) || null;
+        if (!sc) {
+            return '<div class=' + Q + 'dg-note' + Q + '>读不到剧情钟联动面 —— 宿主未挂 '
+                + '<code class=' + Q + 'dg-key' + Q + '>VirtualPhone._storyFanout</code>。'
+                + '这是「没这个读数」，**不是**「四处一致」。</div>';
+        }
+        const face = sc.face || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(String(sc.text || '')) + '</div>';
+        if (!face || face.state !== 'ok' || !face.surfaces) {
+            html += '<div class=' + Q + 'dg-note dg-bad' + Q + '>剧情时刻读不到（'
+                + escapeHtml(String((face && face.reason) || 'unknown'))
+                + '）—— 四个面都停在上一帧，**没有**回落到本机墙钟。'
+                + '（修前的做法是锁屏直接用 `new Date()` 拼本机日期，那才是假读数。）</div>';
+            return html;
+        }
+        html += '<ul class=' + Q + 'dg-list' + Q + '>';
+        ['chatStamp', 'diaryDate', 'scheduleDate', 'lockscreenSummary'].forEach((k) => {
+            html += '<li class=' + Q + 'dg-row' + Q + '>' + escapeHtml(k) + '：'
+                + escapeHtml(String(face.surfaces[k] || '')) + '</li>';
+        });
+        html += '</ul>';
+        const vd = String(sc.verdict || 'unknown');
+        const cls = vd === 'same' ? 'dg-ok' : (vd === 'mismatch' ? 'dg-bad' : 'dg-warn');
+        const label = vd === 'same' ? '锁屏显示与广播面一致'
+            : (vd === 'mismatch' ? '锁屏显示与广播面**不一致**（各算各的还没收口）'
+                : '无法判定（锁屏没显示 / 没挂）');
+        html += '<div class=' + Q + 'dg-note' + Q + '><span class=' + Q + 'dg-chip ' + cls + Q + '>'
+            + escapeHtml(label) + '</span>';
+        if (sc.observed && sc.observed.lockscreenSummary) {
+            html += ' 屏幕上是：' + escapeHtml(String(sc.observed.lockscreenSummary));
+        }
+        html += '</div>';
+        if (Array.isArray(sc.diffs) && sc.diffs.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            sc.diffs.forEach((d) => {
+                html += '<li class=' + Q + 'dg-row dg-bad' + Q + '>' + escapeHtml(String(d.surface))
+                    + '：广播=' + escapeHtml(String(d.want)) + ' · 实际=' + escapeHtml(String(d.got)) + '</li>';
+            });
+            html += '</ul>';
+        }
+        html += '<div class=' + Q + 'dg-note' + Q + '>四个面由同一次 composeMoment 得出；'
+            + '会话戳与日记/日程本来就共用 time-format，锁屏此前是唯一没接钟的面。</div>';
+        return html;
+    }
+
+    _bootTimingHtml(pkg) {
         const face = (pkg && pkg.bootTiming) || null;
         if (!face) {
             return '<div class=' + Q + 'dg-note' + Q + '>读不到启动耗时面 —— 宿主未挂 '
@@ -2072,6 +2166,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>无障碍三档（字号 / 减弱动效 / 高对比 · 写入与读回对拍）</h3>' + this._a11yTriadHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>时间格式（12/24 制 · 日期顺序 · 时区 · 8 格逐算）</h3>' + this._timeFormatHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>通知分级（重要 / 普通 / 静默 · 免打扰时段 · 挡下回执）</h3>' + this._notifyTierHtml(pkg) + '</section>');
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>布局档位（三档断点 · 朝向 · 写入与读回对拍）</h3>' + this._layoutHtml(pkg) + '</section>');
+         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>剧情钟联动（会话 / 日记 / 日程 / 锁屏 · 与屏幕读回对拍）</h3>' + this._storyFanoutHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>源键规则</h3>' + this._sourceKeysHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存档健康</h3>' + this._storageHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>导出脱敏</h3>' + this._secretHtml(pkg) + '</section>');

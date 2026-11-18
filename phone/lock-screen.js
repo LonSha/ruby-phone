@@ -162,12 +162,32 @@ export class LockScreen {
   }
 
   _nowParts() {
-    const d = new Date();
-    const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    /* [R25-X9] 锁屏摘要是「四个面」之一，必须读**同一份**剧情钟联动面。
+     *   修前这里是 `const d = new Date()` + `(d.getMonth()+1)+'月'+...` ——
+     *   拼的是**本机今天**：剧情里写着 2044 年，锁屏显示真实日期，而且与
+     *   会话戳/日记/日程三处永远对不上（其中这一处压根没接钟）。
+     *   读不到联动面时**不回落墙钟**（那正是假读数的来源），显式给「读不到」态。 */
+    const fan = (typeof window !== 'undefined')
+      ? (window.VirtualPhone?._storyFanout || null) : null;
+    if (fan && fan.state === 'ok' && fan.surfaces) {
+      const ex = fan.extras || {};
+      const time = String(ex.lockscreenTime || fan.surfaces.chatStamp || '');
+      const date = String(ex.lockscreenDate || fan.surfaces.diaryDate || '');
+      const hour = (typeof ex.lockscreenHour === 'number') ? ex.lockscreenHour : null;
+      return {
+        time: time,
+        date: date,
+        greeting: this._greeting(hour),
+        source: 'story',
+        summary: String(fan.surfaces.lockscreenSummary || '')
+      };
+    }
     return {
-      time: d.getHours() + ':' + this._pad(d.getMinutes()),
-      date: (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weeks[d.getDay()],
-      greeting: this._greeting(d.getHours())
+      time: '--:--',
+      date: '时间读不到',
+      greeting: '你好',
+      source: 'unreadable',
+      summary: ''
     };
   }
 

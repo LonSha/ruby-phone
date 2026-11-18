@@ -38,6 +38,13 @@ import { appSurface, appSurfaceColor, normalizeSurfaceAppId } from '../config/ap
  *   在此之前本文件的 getCurrentTime() 自己 `String(h).padStart(2,'0')` ——
  *   于是「用户设了 12 小时制」对状态栏完全无效。 */
 import { formatClockText, readFormatSettings } from '../config/time-format.js';
+/* [R25-X5] 多设备布局的断点单一真源（三档 + 朝向 + 读回对拍）。
+ *   修前：`phone.css` 里阈值各写各的（310/359/360/420/500/501/520/600/768/900），
+ *   且脚本面**零** resize / orientationchange 处理 ⇒ 横竖切换只能靠媒体查询自己重排，
+ *   「现在是哪一档」在 JS 面根本不存在，也就谈不上「切换不丢状态」。
+ *   现在壳只做一件事：量窗口 → 往根节点写 `data-layout` / `data-orientation`，
+ *   **只写属性、不重建 DOM**（重建才是丢状态的根源）。 */
+import { layoutFace, judgeLayoutApplied, FACE_STATES as LAYOUT_STATES } from '../config/layout-breaks.js';
 
 export class PhoneShell {
     constructor() {
@@ -171,6 +178,7 @@ export class PhoneShell {
         this.bindPanelEvents();
         this.bindSwipeGesture();
         this.bindTimeUpdateEvent();
+        this.bindLayoutFace();   // [R25-X5] 三档断点：量窗口 → 写属性（不重建 DOM）
         this.startClock();
         this.initBattery();  // 🔋 初始化电池
         this.lockScreen = new LockScreen(this);
@@ -217,7 +225,68 @@ export class PhoneShell {
         this.lockScreen = null;
         try { n = this._runtime ? this._runtime.dispose() : 0; } catch (_) { /* 回收失败不阻断重建 */ }
         this._timeUpdateEventBound = false;
+        /* [R25-X5] 与上一行同理：登记层回收后监听器已经没了，guard 必须一起复位，
+         *   否则「destroy 后重建」的壳会跳过 bindLayoutFace —— 监听不再登记、
+         *   链首那个属性也不再写，界面就停在上一次的档位上而无人知晓。 */
+        this._layoutFaceBound = false;
+        this._lastLayoutFace = null;
         return n;
+    }
+
+    /* ============ [R25-X5] 三档断点：量窗口 → 写属性（不重建 DOM） ============
+     * 为什么长在壳上：属性要写在**手机根节点**（#phone-panel）上，而这一点只有壳知道；
+     *   三档语义与阈值在 config/layout-breaks.js（单一真源），壳不记数字。
+     * 为什么只写属性：横竖切换时任何 `innerHTML=` / 重建都会丢草稿与滚动位 ——
+     *   「切换不丢状态」的兑现方式就是**不动子树**，只换两个属性让 CSS 重排。
+     */
+    bindLayoutFace() {
+        if (this._layoutFaceBound) return;   // 幂等：重复 createInPanel 不叠加监听
+        this._layoutFaceBound = true;
+        const onResize = () => {
+            try { this.applyLayoutFace('resize'); }
+            catch (_e) { /* 量不到就停在上一次档位，**不清空**已有属性（清空=界面变无档） */ }
+        };
+        this.bindGlobal(window, 'resize', onResize);
+        this.bindGlobal(window, 'orientationchange', onResize);
+        this.applyLayoutFace('mount');
+    }
+
+    /**
+     * 量一次窗口，把档位写到手机根节点，并做读回对拍。
+     * @param {'mount'|'resize'|string} reason
+     * @returns {object} 量测面（诊断/判据读这个）
+     */
+    applyLayoutFace(reason) {
+        const w = (typeof window !== 'undefined') ? window.innerWidth : undefined;
+        const h = (typeof window !== 'undefined') ? window.innerHeight : undefined;
+        const face = layoutFace({ width: w, height: h });
+        /* 宿主可能只有半个 document（测试/嵌入宿主常见：有 createElement 没有 getElementById）。
+         * 修前这里直接调 document.getElementById(...)，在这种宿主上会抛 —— 而它挂在
+         * createInPanel 的链首，一抛就把整个壳的创建打断（量布局失败不该有这种权限）。 */
+        const doc = (typeof document !== 'undefined') ? document : null;
+        const panelOf = (doc && typeof doc.getElementById === 'function')
+            ? doc.getElementById('phone-panel') : null;
+        const root = panelOf || this.container || null;
+        /* 量到了才写：量不到时写一个 standard 会让界面「看起来正常」，从此没人再发现量测坏了。 */
+        if (face.state === LAYOUT_STATES.measured && root && typeof root.setAttribute === 'function') {
+            const attrs = face.attributes;
+            for (const k in attrs) {
+                if (Object.prototype.hasOwnProperty.call(attrs, k)) root.setAttribute(k, attrs[k]);
+            }
+        }
+        const observed = (root && typeof root.getAttribute === 'function')
+            ? { layout: root.getAttribute('data-layout'), orientation: root.getAttribute('data-orientation') }
+            : null;
+        const applied = judgeLayoutApplied(face, observed);
+        /* 回执挂宿主面：写属性失败/根节点没建好时，「写了」与「没生效」在外部完全同形，
+         * 所以把 observed 与 applied 一起挂出去。**不写墙钟时间戳**（壳层不在裸 Date.now 白名单）。 */
+        try {
+            if (typeof window !== 'undefined' && window.VirtualPhone) {
+                window.VirtualPhone._layoutFace = { face: face, applied: applied, reason: reason, observed: observed };
+            }
+        } catch (_e) { /* 挂不上不影响布局 */ }
+        this._lastLayoutFace = face;
+        return face;
     }
 
     bindTimeUpdateEvent() {

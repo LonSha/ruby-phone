@@ -22591,3 +22591,54 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
     -webkit-user-select: none;
     user-select: none;
 }
+
+/* ============================================================
+ * [R25-X5] 三档断点（单一真源：config/layout-breaks.js）
+ * ------------------------------------------------------------
+ * 为什么用属性选择器而不再堆 @media：阈值已经由脚本量测后写成 data-layout /
+ *   data-orientation，CSS 只需按「档位语义」排一次。再写一段 @media 就是第二份阈值
+ *   —— 本文件里已经有 310/359/360/420/500/501/520/600/768/900 十套阈值，
+ *   它们继续给「没量到档位」的场景兜底，但不再是新逻辑的来源。
+ * 三档语义：
+ *   compact  3 列桌面 + 边距收紧        （窄屏先保住可点面积）
+ *   standard 4 列桌面 + 内容限宽 560 居中（手机一行别太长）
+ *   wide     6 列桌面 + 内容限宽 960 居中 + 字号放大（宽屏不是把手机那列拉宽）
+ * 量不到档位（没有 data-layout 属性）时这三段**一条都不生效**，退回原有 @media 兜底。
+ * ============================================================ */
+#phone-panel[data-layout="compact"] {
+    --phone-grid-columns: 3; --phone-content-max: none; --phone-nav-rail: 0px; --phone-pad-scale: .85;
+}
+#phone-panel[data-layout="standard"] {
+    --phone-grid-columns: 4; --phone-content-max: 560px; --phone-nav-rail: 0px; --phone-pad-scale: 1;
+}
+#phone-panel[data-layout="wide"] {
+    --phone-grid-columns: 6; --phone-content-max: 960px; --phone-nav-rail: 0px; --phone-pad-scale: 1.15;
+}
+
+#phone-panel[data-layout="compact"] .phone-screen .home-screen .app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    padding: 3% 3.5% !important;
+}
+#phone-panel[data-layout="standard"] .phone-screen .home-screen .app-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+#phone-panel[data-layout="wide"] .phone-screen .home-screen .app-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+
+/* 内容限宽：standard / wide 两档都居中限宽（各自的上限来自单一真源），compact 不限。 */
+#phone-panel[data-layout="standard"] .phone-in-panel .phone-screen .view-layer,
+#phone-panel[data-layout="wide"] .phone-in-panel .phone-screen .view-layer {
+    max-width: var(--phone-content-max);
+    margin-inline: auto;
+}
+
+/* 字号档：宽屏放大一档（读远一点也看得清）；紧凑档不缩小字，只收紧边距。 */
+#phone-panel[data-layout="wide"] .phone-in-panel {
+    font-size: calc(1em * 1.15);
+}
+
+/* 横屏：状态栏与内容之间的纵向留白收紧（横向空间换来的高度要留给内容）。 */
+#phone-panel[data-orientation="landscape"] .phone-in-panel .phone-screen {
+    padding-top: 0;
+}

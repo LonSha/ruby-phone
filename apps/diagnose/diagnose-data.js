@@ -267,6 +267,10 @@ import { a11yTriadFace as a11yTriadFaceOf } from '../../config/a11y-triad.js';
 import { timeFormatFace as timeFormatFaceOf, judgeTimeFormatApplied } from '../../config/time-format.js';
 /* [R25-X6] 通知分级：三档逐档真算 + 时段读数 + 挡下回执。 */
 import { notifyTierFace as notifyTierFaceOf, summarizeReceipts } from '../../config/notify-tiers.js';
+/* [R25-X5] 布局档位：三档断点单一真源（判档 + 读回对拍 + 人话）。 */
+import { layoutFace as layoutFaceOf, judgeLayoutApplied as judgeLayoutAppliedOf, layoutText } from '../../config/layout-breaks.js';
+/* [R25-X9] 剧情钟联动：四面的唯一真源 + 读回对拍 + 人话。 */
+import { judgeFanout as judgeStoryFanoutOf, fanoutText as storyFanoutTextOf } from '../../config/story-clock-fanout.js';
 import { isDndOn as isDndOnState } from '../../config/system-controls.js';
 
 
@@ -800,6 +804,43 @@ export function collectDiagnose(win, storage) {
         const receipt = safe(() => (w && w.VirtualPhone) ? w.VirtualPhone._timeFormat : null, null);
         return judgeTimeFormatApplied(timeFormatSc, receipt);
     })();
+    /* [R25-X9] 剧情钟联动面：四个面是否来自同一次计算，以及**锁屏真显示的文本**是否就是这一份。
+     *   ★ 读回必须读真实 DOM（#pls-date / #pls-time），不能读「我们以为写进去的变量」：
+     *     修前锁屏压根没接钟，读变量只会得到一份漂亮的自述。 */
+    const storyFanoutSc = safe(() => {
+        const vp = (w && w.VirtualPhone) ? w.VirtualPhone : null;
+        const face = vp ? (vp._storyFanout || null) : null;
+        const doc = (w && w.document) ? w.document : null;
+        const dateEl = doc && doc.querySelector ? doc.querySelector('#pls-date') : null;
+        const timeEl = doc && doc.querySelector ? doc.querySelector('#pls-time') : null;
+        const observed = {};
+        if (dateEl && timeEl) {
+            const d = String(dateEl.textContent || '').trim();
+            const t = String(timeEl.textContent || '').trim();
+            if (d || t) observed.lockscreenSummary = (d + ' ' + t).trim();
+        }
+        const verdict = judgeStoryFanoutOf(face, (Object.keys(observed).length ? observed : null));
+        return {
+            face: face,
+            text: storyFanoutTextOf(face),
+            observed: (Object.keys(observed).length ? observed : null),
+            verdict: verdict.verdict,
+            diffs: verdict.diffs
+        };
+    }, null) || null;
+
+    /* [R25-X5] 布局档位面：量宿主窗口 → 三档 + 朝向，再与壳**真写到根节点上的属性**对拍。
+     *   ★ 必须读宿主 `window.innerWidth/innerHeight`：诊断页自身的容器宽度是画在页面里的，
+     *     读它只会得到「这张卡有多宽」。壳没挂（或属性没写成功）时对拍给 `unknown`，
+     *     不是「一致」。 */
+    const layoutSc = safe(() => {
+        const face = layoutFaceOf({ width: (w ? w.innerWidth : undefined), height: (w ? w.innerHeight : undefined) });
+        const root = safe(() => (w && w.document) ? w.document.getElementById('phone-panel') : null, null);
+        const observed = (root && typeof root.getAttribute === 'function')
+            ? { layout: root.getAttribute('data-layout'), orientation: root.getAttribute('data-orientation') }
+            : null;
+        return { face: face, observed: observed, applied: judgeLayoutAppliedOf(face, observed), text: layoutText(face) };
+    }, null) || null;
     /* ── [v3.19.0 · 计划一「共同配套」第 2 条] 跨仓功能登记面 ──
      *   ★ 取数**全部复用本函数已经取到的两份读数**，一个新取数点都不开：
      *     · lonsha 侧  ← `probe`（统一探针：mounted / reason / sourceState / lastError）+ `snapshot`
@@ -2249,7 +2290,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, layout: layoutSc, storyFanout: storyFanoutSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。

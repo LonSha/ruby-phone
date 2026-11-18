@@ -267,7 +267,9 @@ const literals = [...litCount.keys()].sort();
  * C. 三处泄漏的行为级验证（mock 真实注册表语义）
  * ============================================================ */
 {
-    // C1 phone-shell：5 监听器 + 1 定时器 → destroy 全回收，重建不累积
+    // C1 phone-shell：7 监听器 + 1 定时器 → destroy 全回收，重建不累积
+    //   （R25-X5 把 resize/orientationchange 两个真监听器也经 bindGlobal 登记，
+    //   所以「每壳 5」变成了「每壳 7」：不变量没变，数目跟着事实走。）
     const { PhoneShell } = await import('../phone/phone-shell.js');
     const savedSI2 = globalThis.setInterval;
     let shellTimers = 0;
@@ -281,18 +283,18 @@ const literals = [...litCount.keys()].sort();
     }
     const beforeDestroy = live();
     ok('shell: 4 次重建不回收 → 监听器线性累积（修复前形态）',
-        beforeDestroy === 20, String(beforeDestroy));
-    ok('shell: 每个壳注册 5 个长期监听器（pointermove/pointerup/pointercancel/blur/timeUpdated）',
-        onTarget('document').length === 12 && onTarget('window').length === 8,
+        beforeDestroy === 28, String(beforeDestroy));
+    ok('shell: 每个壳注册 7 个长期监听器（pointermove/pointerup/pointercancel/blur/timeUpdated + resize/orientationchange）',
+        onTarget('document').length === 12 && onTarget('window').length === 16,
         JSON.stringify({ doc: onTarget('document').length, win: onTarget('window').length }));
     ok('shell: 每个壳注册 1 个 30s 时钟定时器', shellTimers === 4, String(shellTimers));
     ok('shell: 壳内已无裸 window/document addEventListener（全走登记层）',
         !/^\s*(window|document)\.addEventListener\(/m.test(srcOf('phone/phone-shell.js')));
     let sum = 0;
     for (const s of shells) sum += s.destroy();
-    ok('shell: destroy 回收全部 20 监听器 + 4 定时器',
-        sum === 24 && live() === 0, `released=${sum} live=${live()}`);
-    ok('shell: destroy 返回实际回收项数（24 = 4壳×(5监听+1定时)）', sum === 24, String(sum));
+    ok('shell: destroy 回收全部 28 监听器 + 4 定时器',
+        sum === 32 && live() === 0, `released=${sum} live=${live()}`);
+    ok('shell: destroy 返回实际回收项数（32 = 4壳×(7监听+1定时)）', sum === 32, String(sum));
     ok('shell: destroy 幂等', shells[0].destroy() === 0);
     // 配平形态：new→create→destroy 每轮净 0
     resetReg();
