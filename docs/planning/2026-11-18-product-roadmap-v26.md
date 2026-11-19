@@ -58,3 +58,32 @@ R21~R25 做完之后，这台手机具备了整机能力、也有了失败面。
 1. **本期的每一项都必须能在「别人刚 clone 下来」的环境里复跑**，不许依赖某台机器的现场状态。
 2. **O9 的自生成清单是本期唯一允许的「清单类交付」**，其余各项不许拿清单交差。
 3. `X2` 与 lonsha 侧 `L26-X2` 是**同一件事的两端**，两仓必须同轮验收，单边完成不算交付。
+## 5. 交付登记（2026-11-19，随第三方小手机缝入推进）
+
+> 口径：只登记**已接线且有判据**的，未开工的照实列在下面第 5.2 节，不许读成「本期已完」。
+
+### 5.1 已交付（12 件）
+
+| 编号 | 交付件 | 判据 | 一句话口径 |
+|---|---|---|---|
+| O1 | `config/boot-budget.js` | `tests/r26_o1_boot_budget.test.mjs` | 首屏可交互预算；超预算点名「超了哪一段」 |
+| O1b | `config/boot-fallback.js` | `tests/r26_o1b_boot_fallback.test.mjs` | 缝 Dream fish `Promise.race` 兜底；超时一律 `degraded`，绝不判 `ok` |
+| **O1c** | `config/compat-shims.js` | `tests/r26_o1c_compat_shims.test.mjs` | 缝雪穗机垫片层：只补缺、不覆盖原生、垫过即 `degraded`、保不住就抛 |
+| O4 | `config/log-gate.js` | `tests/r26_o4_log_level.test.mjs` | 四级 + 采样；error 永不采样 |
+| O6 | `config/migration-matrix.js` | `tests/r26_o6_migration_matrix.test.mjs` | 迁移兼容矩阵，不可升组合明确拒载 |
+| O6b | 同件报数面 | `tests/r26_o6b_migration_counts.test.mjs` | 返回 `{moved, archived, skipped}`；静默改数据即红 |
+| O6c | 同件排除面 | `tests/r26_o6c_test_key_skip.test.mjs` | 缝雪穗机 `__migrated`：测试键 `__t` 不许当真数据搬走 |
+| X1a | `config/export-redact.js` | `tests/r26_x1a_export_redact.test.mjs` | 缝 Lumière `snapshot()`：backup 留钥 / share 脱敏 / 未知策略拒载；只动副本 |
+| X2b | 消费面 | `tests/r26_x2_consume_once.test.mjs` | 缝 myworld `pullViewer()`：读完即标记已消费，防同一投稿进两次剧情 |
+| X4b | `config/share-fragment.js` | `tests/r26_x4_share_fragment.test.mjs` | 缝 myworld `shareCode()`：凭证走 URL fragment，不走 query |
+| X5 | `config/random-source.js` | `tests/r26_x5_random_source.test.mjs` | 缝 myworld `forceGlitch`：随机面可被外部强制，序列耗尽必抛不许回落原生 |
+| X5b | 同件迁移面 | `tests/r26_x5b_random_migration.test.mjs` | `config/` + `index.js` 87 处 `Math.random` 全量迁到 `rand()`；零 import 契约件实名豁免 |
+
+### 5.2 未开工（照实列出，不计入交付）
+
+`O2` 依赖瘦身 / `O3` 内存阈值 / `O5` 默认值单一真源 / `O7` 两语言包缺键面 / `O8` 主题私有色板清零 / `O9` 能力清单自生成 / `X1` 快照与多版本回滚（现有 X1a 只是「导出不泄密」，不等于回滚）/ `X3` 关系时间线可视化 / `X6` 数据健康看板 / `X7` 剪贴板与拖放（`config/cross-app-clipboard.js` 是 R22 存量，不是本期 X7）/ `X8` 通知中心深化 / `X9` 系统更新语义。
+
+### 5.3 本轮两条实测教训
+
+1. **垫片不是「补上就算好」**：首版 `Promise.allSettled` 垫片用 `Array.from` 兜非可迭代入参，结果 `allSettled(123)` 返回空数组 = 假装「零个任务全成功」。判据 A7 当场抓住，改成按规范 reject。
+2. **全量测试不许并行跑读数面**：`node --test` 默认并发，`system-v3204`（worktree 脏读）与 `system-v3730`（台账逐格对账）会互相抢现场状态出 2 条假红；`--test-concurrency=1` 即 1830/1830 全绿。读数面天生要独占现场。

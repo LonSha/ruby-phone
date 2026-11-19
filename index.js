@@ -166,6 +166,7 @@ import { installConsoleBridge, logGateSelfCheck } from './config/log-gate.js';
 /* [R26-O6] 迁移兼容矩阵的自检：启动时留痕，相位与其它桥自检同。 */
 import { migrationMatrixSelfCheck } from './config/migration-matrix.js';
 import { bootFallbackSelfCheck } from './config/boot-fallback.js';
+import { SHIM_IDS, installCompatShims, failedShimReport, compatShimText, isShim, compatShimSelfCheck } from './config/compat-shims.js';
 import { EXPORT_POLICIES, prepareExport, exportRedactText, verifyExport, exportRedactSelfCheck } from './config/export-redact.js';
 /* [R26-X4] 分享凭证只走 URL fragment：fragment 不进服务端日志、不进 Referer、不被 CDN 缓存。 */
 import { SHARE_FRAGMENT_PREFIX, SHARE_FRAGMENT_KEYS, buildShareCredential, encodeShareFragment, buildShareUrl, parseShareFragment, shareFragmentText, shareFragmentSelfCheck } from './config/share-fragment.js';
@@ -2432,6 +2433,31 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
             /* [v4.156.0 · R21-X6/X7/X8/X9] 四座桥的装配点自检（与 _x3SelfCheck 同挂法）。
              *   自检绿不绿启动时留痕；坏了不影响手机本体（桥全是增强面）。 */
+            /* [R26-O1c] 旧 WebView 兼容垫片：只补缺的、不覆盖原生、垫了不冒充原生。
+             *   缝自雪穗机垫片层（structuredClone / Promise.allSettled / trimStart 全 polyfill）。
+             *   放在日志闸之前：首屏装配期里任何一次新 API 调用都要先有兜底。
+             *   垫过之后裁定是 degraded 而不是 ok；isShim() 逐项回答「现在是原生还是垫片」。 */
+            let _compatShimReport = null;
+            try {
+                _compatShimReport = installCompatShims(typeof globalThis !== 'undefined' ? globalThis : window);
+                window.VirtualPhone.compatShims = {
+                    ids: SHIM_IDS,
+                    report: _compatShimReport,
+                    text: compatShimText(_compatShimReport),
+                    isShim: isShim,
+                    selfCheck: compatShimSelfCheck
+                };
+            } catch (_csErr) {
+                /* 垫片装不上不影响手机本体，但必须留痕：诊断面据此看到「失败」而不是「一切正常」。 */
+                _compatShimReport = failedShimReport(_csErr);
+                window.VirtualPhone.compatShims = {
+                    ids: SHIM_IDS,
+                    report: _compatShimReport,
+                    text: compatShimText(_compatShimReport),
+                    isShim: isShim,
+                    selfCheck: compatShimSelfCheck
+                };
+            }
             /* [R26-O4] 日志闸：把 console 的五个方法接到分级 + 采样流水线上。
              *   失败不影响手机本体（桥是增强面）；把 undo 也挂在 VirtualPhone 上，
              *   好让判据/诊断能复验「真接管、真撤销」。 */
@@ -2530,6 +2556,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r26O4', logGateSelfCheck],
                 ['_r26O6', migrationMatrixSelfCheck],
                 ['_r26O1b', bootFallbackSelfCheck],
+                ['_r26O1c', compatShimSelfCheck],
                 ['_r26X1a', exportRedactSelfCheck],
                 ['_r26X4', shareFragmentSelfCheck],
                 ['_r26X2', consumeOnceSelfCheck],

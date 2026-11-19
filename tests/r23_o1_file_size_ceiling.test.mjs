@@ -52,11 +52,11 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：915 个 .js / 合计 387717 行 / 44 个大文件，台账全绿', () => {
+test('真仓读数：916 个 .js / 合计 388032 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 915, '扫到的 .js 数量与当前实际不符（R26-O4 新增 config/log-gate.js + tests/r26_o4_log_level.test.mjs 后已复核）');
-  assert.equal(r.stats.total, 387717, '全仓合计行数与台账不符（R26-O4 log-gate 370 + 接线 23；R26-O1b boot-fallback 264 + 判据 179；R26-O6b 判据 ~190 + 矩阵报数 42；R26-X5b 随机源迁移：48 个已含函数体的文件各加 1 行 random-source 导入 = +47 行，现 915 文件 / 387717 行（台账 note 里写了为什么涨））');
+  assert.equal(r.stats.files, 916, '扫到的 .js 数量与当前实际不符（R26-O4 新增 config/log-gate.js + tests/r26_o4_log_level.test.mjs 后已复核）');
+  assert.equal(r.stats.total, 388032, '全仓合计行数与台账不符（R26-O4 log-gate 370 + 接线 23；R26-O1b boot-fallback 264 + 判据 179；R26-O6b 判据 ~190 + 矩阵报数 42；R26-X5b 随机源迁移：48 个已含函数体的文件各加 1 行 random-source 导入 = +47 行，现 916 文件 / 388032 行；R26-O1c 兼容垫片：config/compat-shims.js 307 + 接线 24 + 判据 ~325 = +656 行（台账 note 里写了为什么涨））');
   assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
@@ -159,7 +159,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 915, '子进程读数必须与正面真仓读数同源');
+  assert.equal(j.stats.files, 916, '子进程读数必须与正面真仓读数同源');
   assert.deepEqual(j.problems, []);
 });
 

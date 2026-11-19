@@ -1,6 +1,6 @@
 {
   "file": "tests/audit/schedule_conflict_baseline.json",
-  "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**",
+  "note": "F-4「剧情日程冲突」可行性基线。读数由 tests/audit/schedule_conflict_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不实施。**（2026-11-19 R26-O1c 新增 config/compat-shims.js：扫描面 +1 文件，读数随真仓复算）",
   "measured_at": "v3.7.0",
   "node_version": "v24.18.0",
   "probe": "tests/audit/schedule_conflict_probe.cjs",
@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 833,
+    "files_scanned": 834,
     "consume_points": 23,
     "consume_files": 6,
     "local_engine_hits": 0
