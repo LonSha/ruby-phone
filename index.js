@@ -167,6 +167,10 @@ import { installConsoleBridge, logGateSelfCheck } from './config/log-gate.js';
 import { migrationMatrixSelfCheck } from './config/migration-matrix.js';
 import { bootFallbackSelfCheck } from './config/boot-fallback.js';
 import { EXPORT_POLICIES, prepareExport, exportRedactText, verifyExport, exportRedactSelfCheck } from './config/export-redact.js';
+/* [R26-X4] 分享凭证只走 URL fragment：fragment 不进服务端日志、不进 Referer、不被 CDN 缓存。 */
+import { SHARE_FRAGMENT_PREFIX, SHARE_FRAGMENT_KEYS, buildShareCredential, encodeShareFragment, buildShareUrl, parseShareFragment, shareFragmentText, shareFragmentSelfCheck } from './config/share-fragment.js';
+/* [R26-X2] 反向输入「读完即消费」：预览不消费，投递一次性，且不许覆盖首次消费人。 */
+import { CONSUME_MODES, CONSUME_STATES, consumeModeOf, consumeStateOf, previewOnce, deliverOnce, verifyConsumeOnce, consumeOnceText, consumeOnceSelfCheck } from './config/consume-once.js';
 import { dataHealthSelfCheck } from './config/data-health.js';
 /* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
 import { chatWindowSelfCheck } from './config/chat-window.js';
@@ -2446,6 +2450,32 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     window.VirtualPhone.logBridgeUndo = _logBr.undo;
                 }
             } catch (_logBrErr) { /* 装桥失败：保持原 console 不变 */ }
+            /* [R26-X4/X2] 分享与一次性投递：不依赖 console 桥，独立挂载。
+             *   shareFragment：把分享草案变成一条只带 #share= 的链接（query 一律剥掉并点名）。
+             *   consumeOnce：preview 只读、deliver 一次性；读到就消费，别让同一条被反复取走。 */
+            try {
+                window.VirtualPhone.shareFragment = {
+                    prefix: SHARE_FRAGMENT_PREFIX,
+                    keys: SHARE_FRAGMENT_KEYS,
+                    credential: buildShareCredential,
+                    encode: encodeShareFragment,
+                    url: buildShareUrl,
+                    parse: parseShareFragment,
+                    text: shareFragmentText,
+                    selfCheck: shareFragmentSelfCheck
+                };
+                window.VirtualPhone.consumeOnce = {
+                    modes: CONSUME_MODES,
+                    states: CONSUME_STATES,
+                    modeOf: consumeModeOf,
+                    stateOf: consumeStateOf,
+                    preview: previewOnce,
+                    deliver: deliverOnce,
+                    verify: verifyConsumeOnce,
+                    text: consumeOnceText,
+                    selfCheck: consumeOnceSelfCheck
+                };
+            } catch (_r26X4MountErr) { /* 挂载失败不影响手机本体（分享是增强面） */ }
             const _bridgeChecks = [
                 ['_x6SelfCheck', appChangeDigestSelfCheck],
                 ['_x7SelfCheck', devicePhysicalNarrativeSelfCheck],
@@ -2481,6 +2511,8 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r26O6', migrationMatrixSelfCheck],
                 ['_r26O1b', bootFallbackSelfCheck],
                 ['_r26X1a', exportRedactSelfCheck],
+                ['_r26X4', shareFragmentSelfCheck],
+                ['_r26X2', consumeOnceSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {
