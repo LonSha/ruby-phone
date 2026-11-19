@@ -19,7 +19,6 @@
 
 /* [R26-O6] 迁移兼容矩阵：只回答「允不允许升 / 欠什么证据」，不读不写盘
  *   （本类 schemaFace 的纪律：裁定不等于迁移；迁移必须调用方显式发起）。 */
-import { planMigration as _planMigration, matrixRows as _matrixRows } from './migration-matrix.js';
 
 export class PhoneStorage {
     constructor() {
@@ -1370,18 +1369,6 @@ export class PhoneStorage {
         };
     }
 
-    /**
-     * [R26-O6] 迁移计划：把「哪个时代」变成「允不允许升、凭什么、欠什么」。
-     *   ★ 纯计划：本方法**不写盘**。执行迁移的调用方必须先拿到 verdict==='allow'。
-     * @param {{chatKey?:string, cardKey?:string, savedChatKey?:string, savedCardKey?:string}} evidence
-     */
-    migrationPlan(evidence) {
-        return _planMigration({ face: this.schemaFace(), evidence: evidence || {} });
-    }
-    /** [R26-O6] 矩阵面：逐对版本的可升 / 拒载（诊断卡与判据读这一处）。 */
-    migrationMatrixRows() {
-        return _matrixRows(this.schemaFace());
-    }
     /**
      * [v3.91.0 · 拓展计划 R-X7] 两层的**只读键枚举面**（备份与迁移的取数口）。
      *

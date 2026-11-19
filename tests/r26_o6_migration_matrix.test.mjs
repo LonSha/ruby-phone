@@ -152,9 +152,9 @@ test('O6-A6 未登记边一律拒载：不许降级成「尽量试试」', () =>
 test('O6-A7 接线在不在：storage 薄方法 / index 自检 / 诊断卡', () => {
     const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
     const st = read('config/storage.js');
-    assert.ok(st.includes('migration-matrix.js'), 'storage.js 必须 import 矩阵');
-    assert.ok(/migrationPlan\(evidence\)/.test(st), 'storage 要有 migrationPlan 薄方法');
-    assert.ok(/migrationMatrixRows\(\)/.test(st), 'storage 要能出矩阵面');
+    /* storage.js 必须能在隔离环境里单文件加载（v273 / v284 / v289 都把它复制到临时目录
+     * 单独 import），所以矩阵依赖**不许**挂在 storage.js 上 —— 真消费在诊断面。 */
+    assert.ok(!st.includes("from './migration-matrix.js'"), 'storage.js 不得静态依赖迁移矩阵（会让隔离套件加载失败）');
     const idx = read('index.js');
     assert.ok(idx.includes("['_r26O6', migrationMatrixSelfCheck]"), 'index 启动自检要登记');
     const data = read('apps/diagnose/diagnose-data.js');
