@@ -12,6 +12,7 @@
  * ======================================================== */
 'use strict';
 
+import { rand } from './random-source.js';
 import { buildOpenRef } from './open-ref.js';
 import { writeReceipt } from './write-receipt.js';
 
@@ -188,7 +189,7 @@ export function createIntent(params) {
     if (!params || typeof params !== 'object') {
         throw new Error('createIntent: params must be an object');
     }
-    const id = safeStr(params.id) || ('intent_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    const id = safeStr(params.id) || ('intent_' + Date.now() + '_' + rand().toString(36).slice(2, 7));
     const title = safeStr(params.title) || '未命名意图';
     const goal = safeStr(params.goal) || '';
     const source = (params.source && typeof params.source === 'object') ? params.source : { appId: 'system' };

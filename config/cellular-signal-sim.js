@@ -14,6 +14,7 @@
  *    - 无服务或断网时发送消息，进入挂起队列 (PENDING_OFFLINE)
  *    - 信号恢复（>= 1 格）时自动排队补发，触发剧情投递回执
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const NETWORK_TYPES = Object.freeze({
     FIVE_G: '5G',
@@ -133,7 +134,7 @@ export class CellularSignalSim {
      * @returns {Object} { sent: boolean, status: 'SENT'|'QUEUED', messageId: string }
      */
     dispatchMessage(message) {
-        const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const id = 'msg_' + Date.now() + '_' + rand().toString(36).slice(2, 6);
         const item = {
             id,
             ...message,

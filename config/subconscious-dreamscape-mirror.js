@@ -24,6 +24,7 @@
  *   重试次数用完给 `give-up`。判定内核在 `config/dream-guard.js`，本件只调用。
  * ============================================================ */
 
+import { rand } from './random-source.js';
 import { judgeDreamText, DREAM_VERDICTS, dreamContextBlock } from './dream-guard.js';
 
 export const DREAM_ARCHETYPES = Object.freeze({
@@ -120,7 +121,7 @@ export class SubconsciousDreamscapeMirror {
 
         // 4. 组装梦境镜像档案
         const record = {
-            id: 'dream_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'dream_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             timestamp: Date.now(),
             actorName,
             archetype,

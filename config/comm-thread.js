@@ -37,6 +37,7 @@
  *   本件**不摸任何 App 存储**，读写只经注入的 storage 句柄上的那一个键。
  * ============================================================ */
 'use strict';
+import { rand } from './random-source.js';
 import { numOrNull } from './num-gate.js';
 
 /* ---------- 词表（全部冻结；判据按词表核，不按实现核） ---------- */
@@ -317,13 +318,13 @@ export function openThread(list, participant, now, note) {
     const arr = Array.isArray(list) ? list : [];
     if (arr.length >= COMM_LIMITS.threads) {
         const t = normalizeThread({
-            id: 't' + String(at == null ? 0 : at) + '_' + Math.random().toString(36).slice(2, 8),
+            id: 't' + String(at == null ? 0 : at) + '_' + rand().toString(36).slice(2, 8),
             participant: who, note: note, openedAt: at, lastAt: at,
         });
         return { ok: false, why: COMM_REASONS.BAD_SHAPE, thread: t, list: arr };
     }
     const t = normalizeThread({
-        id: 'c' + String(at == null ? 0 : at) + '_' + Math.random().toString(36).slice(2, 8),
+        id: 'c' + String(at == null ? 0 : at) + '_' + rand().toString(36).slice(2, 8),
         participant: who,
         participants: [who],
         points: [],

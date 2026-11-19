@@ -8,6 +8,7 @@
  *     ③ 发布版本与素材溯源：发布成品保留完整制作谱系；
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const MEDIA_PROJECT_TYPES = Object.freeze({
     PODCAST: 'podcast',
@@ -52,7 +53,7 @@ export function normalizeMediaStudioState(raw) {
 export function createMediaProject(state, projectSpec, now = Date.now()) {
     const s = normalizeMediaStudioState(state);
     const spec = (projectSpec && typeof projectSpec === 'object') ? projectSpec : {};
-    const id = safeStr(spec.id) || `jmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = safeStr(spec.id) || `jmp_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const title = safeStr(spec.title);
     const type = Object.values(MEDIA_PROJECT_TYPES).includes(spec.type) ? spec.type : MEDIA_PROJECT_TYPES.PODCAST;
 
@@ -99,7 +100,7 @@ export function submitMediaProposal(state, projectId, proposalSpec, now = Date.n
     }
 
     const spec = (proposalSpec && typeof proposalSpec === 'object') ? proposalSpec : {};
-    const propId = safeStr(spec.id) || `prop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const propId = safeStr(spec.id) || `prop_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
     const author = safeStr(spec.author) || 'user';
     const content = safeStr(spec.content);
 

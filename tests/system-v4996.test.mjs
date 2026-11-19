@@ -606,18 +606,28 @@ function brokenCopy(rel, pairs, outName) {
     assert.equal(n, 1, '负控制锚点必须恰中一次：' + JSON.stringify(String(from).slice(0, 70)));
     src = src.replace(from, to);
   }
+  /* [R26-X5b] 依赖复制改成**递归**：原来只收一级（`from './x'`），而 config/random-source.js
+     自己还 import './num-gate.js'（二级），漏它就会以 ERR_MODULE_NOT_FOUND 假红。
+     同类问题已第七次出现 —— 手写/单层清单必挂，只有依赖图闭包是稳的。 */
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_x8_'));
-  const deps = new Set();
-  const re = /from\s+'\.\/([^']+)'/g;
-  let m;
-  while ((m = re.exec(src)) !== null) deps.add(m[1]);
-  for (const dep of deps) {
-    const from = path.join(ROOT, 'config', dep);
-    if (fs.existsSync(from)) fs.copyFileSync(from, path.join(dir, dep));
-  }
+  copyDepsRecursive(src, dir);
   const file = path.join(dir, outName);
   fs.writeFileSync(file, src, 'utf8');
   return 'file://' + file;
+}
+
+function copyDepsRecursive(srcText, dir, seen = new Set()) {
+  const re = /from\s+'\.\/([^']+)'/g;
+  let m;
+  while ((m = re.exec(srcText)) !== null) {
+    const dep = m[1];
+    if (seen.has(dep)) continue;
+    seen.add(dep);
+    const from = path.join(ROOT, 'config', dep);
+    if (!fs.existsSync(from)) continue;
+    fs.copyFileSync(from, path.join(dir, dep));
+    copyDepsRecursive(fs.readFileSync(from, 'utf8'), dir, seen);
+  }
 }
 
 /** 真源码**文本**破坏（同 brokenCopy 的锚点纪律，用于「抽真函数体」类判据：不必落盘成模块）。 */

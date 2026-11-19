@@ -12,6 +12,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { rand } from './random-source.js';
 import { numOrNull } from './num-gate.js';
 
 export const RS_STORAGE_KEY = 'reading_studio_v1';
@@ -25,7 +26,7 @@ function normStr(v) {
  * 创建或标准化研读案卷结构
  */
 export function createReadingDossier(raw = {}) {
-    const id = normStr(raw.id || raw.dossierId) || `dossier_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normStr(raw.id || raw.dossierId) || `dossier_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const researchQuestion = normStr(raw.researchQuestion) || '未设定研读问题';
     const title = normStr(raw.title) || `关于「${researchQuestion}」的研读案卷`;
 
@@ -75,7 +76,7 @@ function normBook(b) {
 
 function normExcerpt(e) {
     if (!e || typeof e !== 'object') return null;
-    const id = normStr(e.id) || `exc_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normStr(e.id) || `exc_${rand().toString(36).slice(2, 7)}`;
     const bookId = normStr(e.bookId);
     if (!bookId) return null;
     return {
@@ -93,7 +94,7 @@ function normExcerpt(e) {
 
 function normView(v) {
     if (!v || typeof v !== 'object') return null;
-    const id = normStr(v.id) || `view_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normStr(v.id) || `view_${rand().toString(36).slice(2, 7)}`;
     const claim = normStr(v.claimText || v.claim);
     if (!claim) return null;
     return {
@@ -107,7 +108,7 @@ function normView(v) {
 
 function normAnnotation(a) {
     if (!a || typeof a !== 'object') return null;
-    const id = normStr(a.id) || `ann_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normStr(a.id) || `ann_${rand().toString(36).slice(2, 7)}`;
     const excerptId = normStr(a.excerptId);
     return {
         id,

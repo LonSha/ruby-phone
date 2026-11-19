@@ -7,6 +7,7 @@
  *
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
+import { rand } from './random-source.js';
 export class TtsManager {
     constructor(storage) {
         this.storage = storage;
@@ -227,7 +228,7 @@ export class TtsManager {
         }
 
         const serverPath = await this._uploadNimoCloneAudioToServer(audioFile, mime);
-        const id = `nimo_clone_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const id = `nimo_clone_${Date.now()}_${rand().toString(36).slice(2, 8)}`;
         const voice = {
             id,
             nick: nick || audioFile.name || 'MiMo复刻音色',
@@ -348,7 +349,7 @@ export class TtsManager {
 
     async _uploadNimoCloneAudioToServer(file, mime = '') {
         const ext = this._getAudioExtension(mime, file?.name);
-        const random = Math.random().toString(36).slice(2, 8);
+        const random = rand().toString(36).slice(2, 8);
         const filename = `yuzuki-phone-mimo-clone-${Date.now()}-${random}.${ext}`;
         const data = await this._readFileAsBase64(file);
         const headers = await this._buildStJsonHeaders();

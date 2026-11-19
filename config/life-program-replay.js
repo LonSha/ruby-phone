@@ -8,6 +8,7 @@
  *     ③ 严格正史隔离：重放仅产出叙事预览，绝不篡改底层聊天或全局日历；
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const DEFAULT_LIFE_PROGRAM_STATE = Object.freeze({
     programs: {}, // id -> lifeProgram
@@ -33,7 +34,7 @@ export function normalizeLifeProgramState(raw) {
 export function recordLifeProgram(state, programSpec, now = Date.now()) {
     const s = normalizeLifeProgramState(state);
     const spec = (programSpec && typeof programSpec === 'object') ? programSpec : {};
-    const id = safeStr(spec.id) || `prog_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = safeStr(spec.id) || `prog_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const title = safeStr(spec.title);
 
     if (!title) {

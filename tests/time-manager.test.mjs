@@ -10,7 +10,16 @@ const bridgeSource = fs.readFileSync(new URL('../config/world-bridge.js', import
    故在此把该 specifier 显式改写为内联桥模块的绝对 data: URL —— 桥模块是叶子模块
    （自身零 import），内联即自足。这一改写即 tests/system-v228.test.mjs 回归护栏所要求的形态。 */
 const bridgeModuleUrl = `data:text/javascript;base64,${Buffer.from(bridgeSource).toString('base64')}`;
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(source.replace('./world-bridge.js', bridgeModuleUrl)).toString('base64')}`;
+/* [R26-X5b] time-manager 新增 `import { rand } from './random-source.js'`，同一形态再走一遍：
+   random-source 自身含 `./num-gate.js`（叶子，零 import），两级都内联成绝对 data: URL。
+   这正是 tests/system-v228.test.mjs 的「data: URL 加载的相对 import 已重写」护栏所要求的形态。 */
+const numGateSource = fs.readFileSync(new URL('../config/num-gate.js', import.meta.url), 'utf8');
+const numGateModuleUrl = `data:text/javascript;base64,${Buffer.from(numGateSource).toString('base64')}`;
+const randomSourceSource = fs
+    .readFileSync(new URL('../config/random-source.js', import.meta.url), 'utf8')
+    .replace('./num-gate.js', numGateModuleUrl);
+const randomSourceModuleUrl = `data:text/javascript;base64,${Buffer.from(randomSourceSource).toString('base64')}`;
+const moduleUrl = `data:text/javascript;base64,${Buffer.from(source.replace('./world-bridge.js', bridgeModuleUrl).replace('./random-source.js', randomSourceModuleUrl)).toString('base64')}`;
 const { TimeManager } = await import(moduleUrl);
 
 function createTimeManager(values = {}) {

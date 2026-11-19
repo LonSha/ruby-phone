@@ -595,7 +595,9 @@ function brokenSource(rel, pairs) {
 function brokenBridgeCopy(pairs, outName) {
   const src = brokenSource(BRIDGE_REL, pairs);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_x9_'));
-  for (const dep of ['life-program-replay.js', 'replayable-phone-program.js', 'smart-gallery-vault.js']) {
+  /* [R26-X5b] 三件内核现各自静态导入 config/random-source.js（含其 num-gate 叶子）：破坏副本必须带齐依赖，
+     否则以 ERR_MODULE_NOT_FOUND 假红（加载器限制，不是判据转红）。 */
+  for (const dep of ['life-program-replay.js', 'replayable-phone-program.js', 'smart-gallery-vault.js', 'random-source.js', 'num-gate.js']) {
     fs.copyFileSync(path.join(ROOT, 'config', dep), path.join(dir, dep));
   }
   const file = path.join(dir, outName);

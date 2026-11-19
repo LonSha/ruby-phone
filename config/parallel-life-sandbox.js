@@ -16,6 +16,7 @@
  *        严禁静默全量合并，仅允许玩家对选定的偶发感悟或创作灵感进行逐项预览并经确认后导回；
  *     ⑤ 安全丢弃(discardSandbox)：放弃沙盒后状态封存，主线历史保持绝对清洁与完整接续。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 'use strict';
 
@@ -137,7 +138,7 @@ export function advanceSandboxDay(sandbox, {
     if (Array.isArray(newWorks)) {
         for (const w of newWorks) {
             next.sandboxState.creativeWorks.push({
-                workId: safeStr(w.workId, `sb_work_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+                workId: safeStr(w.workId, `sb_work_${Date.now()}_${rand().toString(36).slice(2, 6)}`),
                 day: dayIndex,
                 title: safeStr(w.title, '沙盒习作'),
                 contentSummary: safeStr(w.contentSummary),
@@ -158,7 +159,7 @@ export function advanceSandboxDay(sandbox, {
     if (Array.isArray(notableEpiphanies)) {
         for (const ep of notableEpiphanies) {
             next.sandboxState.unconfirmedMemories.push({
-                memoryId: safeStr(ep.memoryId, `mem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+                memoryId: safeStr(ep.memoryId, `mem_${Date.now()}_${rand().toString(36).slice(2, 6)}`),
                 day: dayIndex,
                 category: safeStr(ep.category, 'insight'),
                 text: safeStr(ep.text || ep),

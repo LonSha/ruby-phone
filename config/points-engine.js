@@ -9,6 +9,7 @@
  *   5. 成就解锁: 累计阈值(完成数/最长连击/活跃天数/困难任务等)
  *   6. 积分流水: 不可变账本(type/amount/reason/date), 余额=sum(amount)
  * ======================================================== */
+import { rand } from './random-source.js';
 'use strict';
 
 export const DIFFICULTY_MULTIPLIER = Object.freeze({ easy: 1, medium: 2, hard: 3 });
@@ -93,7 +94,7 @@ export function addLedgerEntry(ledger, entry) {
   const amount = Math.round(Number(entry.amount) || 0);
   if (amount === 0) return ledger;
   return [{
-    id: entry.key || ('ledger-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+    id: entry.key || ('ledger-' + Date.now() + '-' + rand().toString(36).slice(2, 6)),
     type: entry.type || 'task_reward',
     amount,
     reason: entry.reason || '',

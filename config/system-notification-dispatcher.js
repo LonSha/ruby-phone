@@ -18,6 +18,7 @@
  *   为什么接在这里：通知中心正是「同一时刻多路都在说话」的那个口 ——
  *   修前排序**只看时间**（最新在最上），于是一条后台同步的 SILENT 能把
  *   「健康异动预警」盖到列表下面，用户看到的永远是最近的那条而不是最要紧的那条。 */
+import { rand } from './random-source.js';
 import { resolvePresence, priorityOf, isOneShotState, presenceLine } from './presence-arbitration.js';
 import { getAwayMode } from './away-mode.js';
 export const NOTIFICATION_PRIORITY = Object.freeze({
@@ -159,7 +160,7 @@ export class SystemNotificationDispatcher {
             }
         }
         const item = {
-            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'notif_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             appId: notif.appId || NOTIFICATION_CHANNELS.SYSTEM,
             presenceState,
             suppressedBy,

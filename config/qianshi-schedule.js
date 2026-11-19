@@ -6,6 +6,7 @@
  * 在手机端呈现角色在对话中做出的约定与待办事项（如约会、承诺、交付任务、重要事件）。
  * 支持双层状态追踪（整线事项状态与单次动作状态）、逾期检测、人工勾选达成与日程日历视图。
  */
+import { rand } from './random-source.js';
 
 export const STORAGE_KEY = 'qss_qianshi_schedule_v1';
 
@@ -24,7 +25,7 @@ export class QianshiScheduleManager {
             throw new Error('Schedule item must have a title');
         }
 
-        const id = item.id || `sch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const id = item.id || `sch_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
         const existing = this.schedules.get(id);
 
         const record = {

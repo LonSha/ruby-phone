@@ -33,6 +33,7 @@
  *          `leaked`（不在场的线被塞进了本场注入面 —— 这是**错**，不是一种状态）。
  * ============================================================ */
 
+import { rand } from './random-source.js';
 import { numOrNull } from './num-gate.js';
 
 /** 四个落点。四者**必须**都写出来才允许摇骰 —— 缺一落点即拒判。 */
@@ -59,7 +60,7 @@ function text(v) {
 
 /** 骰子：**脚本的**。区间 [1,100]，注入随机源以便测试与复现（seed 不给就用 Math.random）。 */
 export function rollD100(rng) {
-    const r = typeof rng === 'function' ? rng() : Math.random();
+    const r = typeof rng === 'function' ? rng() : rand();
     const clamped = Math.min(Math.max(Number(r), 0), 0.999999999);
     return Math.floor(clamped * 100) + 1;
 }

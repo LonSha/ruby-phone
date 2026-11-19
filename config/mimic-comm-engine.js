@@ -13,6 +13,7 @@
  *    - 撤回动作并非粗暴删除，而是将原消息转变为带情绪痕迹的系统留痕
  *    - 支持推演撤回意图标签（CONFESSION_REGRET / SECRET_RETRACT / EMOTIONAL_OUTBURST）
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const TYPING_STATES = Object.freeze({
     IDLE: 'IDLE',
@@ -138,7 +139,7 @@ export class MimicCommEngine {
         }
 
         return {
-            id: 'recall_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'recall_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             originalMessageId: message?.id || null,
             actorName,
             nuance,

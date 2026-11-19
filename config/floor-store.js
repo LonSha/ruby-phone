@@ -16,6 +16,7 @@
  * 纯 ESM export（对齐 drives-engine/jiwen-engine 约定，本仓库 type:module，
  * IIFE+require 会返回空对象）。
  */
+import { rand } from './random-source.js';
 
 // ========== TH 通道探测（五档降级链，葵葵机 getPhoneRawGenerator 同款思路） ==========
 function _resolveTH() {
@@ -38,7 +39,7 @@ function _resolveContext() {
 
 /** 唯一 id（wx_ 前缀沿用葵葵机惯例，方便调试辨识来源） */
 function _uid(prefix = 'fl') {
-    return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    return `${prefix}_${Date.now()}_${Math.floor(rand() * 100000)}`;
 }
 
 function _ts() { return Date.now(); }

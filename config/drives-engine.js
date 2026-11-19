@@ -11,6 +11,7 @@
  *   - 昼夜节律高斯峰, 疲劳-活力耦合, 未回复里程碑, 突发 whim
  *  剥离: LLM 分类器 / HTTP / fs / crypto —— 替换为规则分类器 + 传入 storage
  * ======================================================== */
+import { rand } from './random-source.js';
 'use strict';
 
 const TIMEZONE_OFFSET_HOURS = 8;
@@ -177,8 +178,8 @@ function fatigueBase(sleep, now_ts) {
 }
 
 function noise(sigma = 0.02) {
-  const u1 = Math.max(Number.EPSILON, Math.random());
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * Math.random()) * sigma;
+  const u1 = Math.max(Number.EPSILON, rand());
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * rand()) * sigma;
 }
 
 const NEG_DIMS = new Set(['dejection', 'irritability', 'anxiety', 'fear']);
@@ -454,7 +455,7 @@ function maybeRollIntention(state, now_ts) {
     : 0;
   if (lastRoll >= windowStart) return;
   state.lust_intention_last_roll_at = new Date(windowStart).toISOString();
-  if (Math.random() < INTENTION_ROLL_PROB) {
+  if (rand() < INTENTION_ROLL_PROB) {
     const addedAt = new Date(now_ts).toISOString();
     state.lust_intention_pending.push({
       id:         'int-' + now_ts,
@@ -482,11 +483,11 @@ function maybeFireWhim(state, now_ts) {
   const threshold = positive ? 0.6 : 0.5;
   const pool      = (positive ? POS_W : NEG_W).filter((k) => d[k] > threshold);
   if (pool.length < 2) return;
-  const count     = 2 + Math.floor(Math.random() * Math.min(2, pool.length - 1));
-  const chosen    = pool.slice().sort(() => Math.random() - 0.5).slice(0, count);
+  const count     = 2 + Math.floor(rand() * Math.min(2, pool.length - 1));
+  const chosen    = pool.slice().sort(() => rand() - 0.5).slice(0, count);
 
   const deltas = {};
-  for (const k of chosen) deltas[k] = 0.03 + Math.random() * 0.02;
+  for (const k of chosen) deltas[k] = 0.03 + rand() * 0.02;
   deltas.lust = 0.04;
 
   state.active_whim = {

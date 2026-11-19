@@ -11,6 +11,7 @@
  * 3. 紧急一键伪装切回 (Panic Camouflage Switch):
  *    - 遇突发查岗时，输入指定伪装手势立即销毁分身前台显示并静默退回主空间
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const DEFAULT_SPACE_ID = 'space_default';
 
@@ -61,7 +62,7 @@ export class ParallelPersonaSpaces {
             throw new Error('name and pin are required to create a persona space');
         }
 
-        const id = 'space_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+        const id = 'space_' + Date.now() + '_' + rand().toString(36).slice(2, 5);
         const space = {
             id,
             name: String(spaceData.name).trim(),

@@ -12,6 +12,7 @@
  * 3. 实时骑手轨迹与配送地图插桩 (Rider Coordinate Interpolation):
  *    - 输出经纬度轨迹拟真插值点供前端动效呈现
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const ORDER_STATUS = Object.freeze({
     PLACED: 'PLACED',
@@ -65,7 +66,7 @@ export class HyperlocalDeliveryService {
         const totalPrice = items.reduce((sum, it) => sum + it.price, 0);
 
         const order = {
-            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+            id: 'ord_' + Date.now() + '_' + rand().toString(36).slice(2, 5),
             recipientActorId: orderData.recipientActorId || 'char',
             recipientActorName: String(orderData.recipientActorName).trim(),
             address: orderData.address || '幸福路幸福小区302室',

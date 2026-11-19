@@ -13,6 +13,7 @@
  * ======================================================== */
 'use strict';
 
+import { rand } from './random-source.js';
 import { writeReceipt } from './write-receipt.js';
 
 export const AR_STORAGE_KEY = 'ar_receipts_v1';
@@ -180,7 +181,7 @@ export function planActionReceipt(existingList, draft, now = Date.now()) {
         };
     }
 
-    const id = safeStr(draft.id) || ('rcpt_' + now + '_' + Math.random().toString(36).slice(2, 7));
+    const id = safeStr(draft.id) || ('rcpt_' + now + '_' + rand().toString(36).slice(2, 7));
     const receipt = normalizeActionReceipt({
         id,
         actionKey,

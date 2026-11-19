@@ -12,6 +12,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、不可变更新，全面冻结导出。
  */
+import { rand } from './random-source.js';
 
 export const CP_WORK_STATUS = Object.freeze({
     DRAFT: 'draft',
@@ -51,7 +52,7 @@ function normId(s) {
  * 创建新长篇作品工程
  */
 export function createProjectWork(raw = {}) {
-    const workId = normId(raw.workId || raw.id || `work_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    const workId = normId(raw.workId || raw.id || `work_${Date.now()}_${rand().toString(36).slice(2, 7)}`);
     const title = String(raw.title || '未命名长篇作品').trim();
     const premise = String(raw.premise || '').trim();
 
@@ -152,7 +153,7 @@ export function planPlotRevision(work, chapterId, plotPatch = {}, opts = {}) {
     if (!ch) return { ok: false, reason: 'chapter-not-found' };
 
     const selectedTargets = new Set(Array.isArray(opts.selectedTargets) ? opts.selectedTargets.map(normId) : []);
-    const revisionId = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const revisionId = `rev_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
 
     // 备份原有情节与摘要
     const oldSynopsis = ch.synopsis;

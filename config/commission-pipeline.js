@@ -10,6 +10,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态受控克隆，全面冻结导出。
  */
+import { rand } from './random-source.js';
 import { numOrNull } from './num-gate.js';
 
 export const COMMISSION_STAGES = Object.freeze({
@@ -36,7 +37,7 @@ function normStr(v) {
 
 
 export function createCommission(raw = {}) {
-    const id = normStr(raw.id) || `comm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normStr(raw.id) || `comm_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const title = normStr(raw.title) || '未命名创作委托';
     const client = normStr(raw.client) || '委托人';
     const creator = normStr(raw.creator) || 'user';

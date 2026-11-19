@@ -4936,7 +4936,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
             writeRuns: rows => storage.set(WF_RUNS_KEY, JSON.stringify(rows)),
             invoke: wfInvokeOwner,
             publish: rec => { window.VirtualPhone._workflowRun = rec; refreshWorkflow(); },
-            newKey: () => 'run-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+            newKey: () => 'run-' + Date.now() + '-' + rndSource().toString(36).slice(2),
             now: () => Date.now(),
             yieldStep: () => new Promise(resolve => setTimeout(resolve, 0)),
         });
@@ -8425,7 +8425,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
 
                 if ((latestFloor - safeLastIdx) < autoFloor) return;
 
-                const delay = Math.max(0, parseInt(options.delay, 10) || (8000 + Math.random() * 4000));
+                const delay = Math.max(0, parseInt(options.delay, 10) || (8000 + rndSource() * 4000));
                 const chatId = ctx?.chatId || 'default';
                 const queueKey = `weibo:auto:${chatId}:${safeLastIdx}->${latestFloor}`;
 
@@ -9538,7 +9538,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     return;
                 }
                 if (!existingContact) {
-                    const newContactId = `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const newContactId = `contact_${Date.now()}_${rndSource().toString(36).substr(2, 9)}`;
                     existingContact = wechatData.addContact({
                         id: newContactId,
                         name: resolvedContactName || rawContactName,
@@ -9582,7 +9582,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
 
             // 4. 都找不到，才创建新聊天（🔥 必须有实际消息才允许创建，防止幽灵空会话）
             if (!chat && data.messages && data.messages.length > 0) {
-                const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const newChatId = `chat_${Date.now()}_${rndSource().toString(36).substr(2, 9)}`;
                 chat = wechatData.createChat({
                     id: newChatId,
                     contactId: existingContact?.id,
@@ -10256,7 +10256,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     // 2) 未命中群聊才按单聊联系人处理（保持原逻辑）
                     let existingContact = wechatData.findContactByAlias?.(contactName);
                     if (!existingContact) {
-                        const newContactId = `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                        const newContactId = `contact_${Date.now()}_${rndSource().toString(36).substr(2, 9)}`;
                         existingContact = wechatData.addContact({
                             id: newContactId,
                             name: contactName,
@@ -10271,7 +10271,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     if (!chat) chat = wechatData.getChatList().find(c => c.name === contactName && c.type !== 'group');
                     if (!chat) {
                         chat = wechatData.createChat({
-                            id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            id: `chat_${Date.now()}_${rndSource().toString(36).substr(2, 9)}`,
                             contactId: existingContact.id,
                             name: existingContact.name || contactName,
                             type: 'single',
@@ -10721,7 +10721,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
             const currentContentKey = String(text.length || 0) + '_' + String(text || '').slice(0, 120);
             if (message._phone_batch_content_key !== currentContentKey) {
                 message._phone_batch_content_key = currentContentKey;
-                message._phone_stable_batch_id = `batch_${context.chatId || 'chat'}_${index}_${swipeIndex}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                message._phone_stable_batch_id = `batch_${context.chatId || 'chat'}_${index}_${swipeIndex}_${Date.now()}_${rndSource().toString(36).substr(2, 5)}`;
             }
             const currentBatchId = message._phone_stable_batch_id || `batch_${context.chatId || 'chat'}_${index}_${swipeIndex}`;
 
@@ -10848,7 +10848,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                             const parsed = weiboData.parseWeiboContent(text);
                                 if (parsed.posts.length > 0) {
                                     parsed.posts.forEach((post, idx) => {
-                                        post.id = Date.now().toString(36) + idx.toString(36) + Math.random().toString(36).substr(2, 4);
+                                        post.id = Date.now().toString(36) + idx.toString(36) + rndSource().toString(36).substr(2, 4);
                                         if (!post.likeList) post.likeList = [];
                                         if (!post.commentList) post.commentList = [];
                                     });
@@ -10957,7 +10957,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         if (parsed.posts.length > 0) {
                             // 为每条微博添加ID
                             parsed.posts.forEach((post, idx) => {
-                                post.id = Date.now().toString(36) + idx.toString(36) + Math.random().toString(36).substr(2, 4);
+                                post.id = Date.now().toString(36) + idx.toString(36) + rndSource().toString(36).substr(2, 4);
                                 if (!post.likeList) post.likeList = [];
                                 if (!post.commentList) post.commentList = [];
                             });
@@ -11016,7 +11016,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
 
                         if ((latestFloor - lastIdx) >= autoFloor) {
                             // 🔥 延迟 5-8 秒执行，防止与其他扩展 API 并发冲突；执行前校验会话，避免切窗串写
-                            const delay = 5000 + Math.random() * 3000;
+                            const delay = 5000 + rndSource() * 3000;
                             setTimeout(() => {
                                 const currentCtx = getContext();
                                 const currentChatId = String(currentCtx?.chatMetadata?.file_name || currentCtx?.chatId || 'default_chat');

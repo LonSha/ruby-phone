@@ -1,7 +1,7 @@
 {
   "note": "类方法面冻结账本（R11-O2）。判据：公开方法名在**全仓除声明行外零出现**即记死。新增未登记即红；条目被真接线后应清理。口径见 scripts/lib/dead-surface.mjs 头注释。 【v4.95.0 · R11-O3】SubsystemOrchestrator.manageUsageParadigm 已人工摘除：产品端真接线（phone/home-screen.js 调 resolveAppOrder、apps/usage/usage-app.js 读范式键），门的复活告警点名了它。摘除方式为手工删条，非 --update。 【v4.96.0 · R11-O3 批次2】已人工摘除（非 --update）：方法面 SubsystemOrchestrator.manageRecoverySnapshot / theatreRule 两条为假驱动，已在 orchestrator 内退役（调用签名全错、返回形状对但内容空）；模块面 config/recovery-hub.js 与 config/portable-recovery-hub.js 已真接进 apps/backupdesk（拍点/差异/还原/包体体检），config/rule-theatre.js 已真接进 apps/theater（规则面板，独立于小剧场生成流）。 【v4.99.8 · R11-X4】本版新增的两条死方法当场被抓并修掉，故条数未增（315 → 315）：`BackupdeskApp.previewShare` 与 `BackupdeskApp.markShareRead` 此前只有判据在调、产品面零调用 —— 前者因为 `_shareVm` 里另写了一份 `sharePreviewOf`（同一件事两份口径），后者因为界面没有「记已读」入口。修法是**真接线**，不是写进账本：判据绿而对用户不存在，是本面最贵的一种假绿。 【v4.99.9 · R11-X9】已人工摘除（**非 --update**，逐条手删，条数 315 → 311）：① `SmartGalleryVault.unlockVault` / `lockVault` / `queryPhotos` 三条 —— X9 把保险箱接进了相册的「回看」页：解锁走 `AlbumView.unlockVaultFromUI()` 真调 `unlockVault(pin)`（连错 3 次锁 30 秒的判据留在内核里，视图只转述它的话），「重新上锁」与离开回看页走 `lockVault()`，分区读数由 `replay-face-bridge.vaultPartitionOf()` 取代 `queryPhotos`；② `SubsystemOrchestrator.replayLifeExperience` —— 修前是纸面假驱动（`recordLifeProgram` / `getActPerspective` / `playbackProgramSummary` / `createReplayableProgram` 四处全传错参，每次调用都成功返回、每一项都是空的），本版按内核真实签名重写为 `(state, programSpec, actIndex, characterId)`，由回看面真调用。摘除前实测：`method-consumption-audit` 报「3 条基线方法已被重新消费」并逐条点名。 【v4.99.9 · R11-X9 行号校正】本版改动了 apps/album/album-data.js 与 apps/memory/memory-app.js，方法声明行号随之平移（E1 判据逐条对真源码，偏移即红）。此处**只按真源码重算 line 字段**，不改条目集合、不改 generated_at（非 --update：整本重写会把时间戳一起洗掉）。",
   "schema": "dead-method-baseline@1",
-  "generated_at": "2026-11-19T07:07:09.885Z",
+  "generated_at": "2026-11-19T11:04:46.502Z",
   "generated_version_hint": "auto",
   "rule": "只判增量。存量冻结是为了「不一次性清零牵连整批 App」（计划明令）。每条带 classInstantiated 以便分档处置。",
   "entries": [
@@ -473,7 +473,7 @@
       "rel": "apps/diagnose/diagnose-view.js",
       "cls": "DiagnoseView",
       "name": "resetSilence",
-      "line": 2055,
+      "line": 2092,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2201,7 +2201,7 @@
       "rel": "config/ambient-audio-wiretap.js",
       "cls": "AmbientAudioWiretap",
       "name": "decryptWiretapAudio",
-      "line": 83,
+      "line": 84,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2209,7 +2209,7 @@
       "rel": "config/ambient-audio-wiretap.js",
       "cls": "AmbientAudioWiretap",
       "name": "getEvidenceRecordings",
-      "line": 95,
+      "line": 96,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2217,7 +2217,7 @@
       "rel": "config/autonomous-life-scheduler.js",
       "cls": "AutonomousLifeScheduler",
       "name": "triggerAutonomousEvent",
-      "line": 77,
+      "line": 78,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2225,7 +2225,7 @@
       "rel": "config/autonomous-life-scheduler.js",
       "cls": "AutonomousLifeScheduler",
       "name": "getRecentEvents",
-      "line": 122,
+      "line": 123,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2233,7 +2233,7 @@
       "rel": "config/away-mode.js",
       "cls": "AwayMode",
       "name": "markAway",
-      "line": 127,
+      "line": 128,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2241,7 +2241,7 @@
       "rel": "config/away-mode.js",
       "cls": "AwayMode",
       "name": "missedDuring",
-      "line": 187,
+      "line": 188,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2249,7 +2249,7 @@
       "rel": "config/away-mode.js",
       "cls": "AwayMode",
       "name": "clearMissed",
-      "line": 274,
+      "line": 275,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2273,7 +2273,7 @@
       "rel": "config/calendar-autonomous-life.js",
       "cls": "CalendarAutonomousLifeEngine",
       "name": "generateSpontaneousEvent",
-      "line": 78,
+      "line": 79,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2281,7 +2281,7 @@
       "rel": "config/calendar-autonomous-life.js",
       "cls": "CalendarAutonomousLifeEngine",
       "name": "resolveEvent",
-      "line": 125,
+      "line": 126,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2289,7 +2289,7 @@
       "rel": "config/cellular-signal-sim.js",
       "cls": "CellularSignalSim",
       "name": "setSignalBars",
-      "line": 86,
+      "line": 87,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2297,7 +2297,7 @@
       "rel": "config/cellular-signal-sim.js",
       "cls": "CellularSignalSim",
       "name": "dispatchMessage",
-      "line": 135,
+      "line": 136,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2305,7 +2305,7 @@
       "rel": "config/cellular-signal-sim.js",
       "cls": "CellularSignalSim",
       "name": "switchDataSim",
-      "line": 177,
+      "line": 178,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2313,7 +2313,7 @@
       "rel": "config/cellular-signal-sim.js",
       "cls": "CellularSignalSim",
       "name": "toggleSimSlot",
-      "line": 184,
+      "line": 185,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2321,7 +2321,7 @@
       "rel": "config/cloud-drive-sync.js",
       "cls": "CloudDriveSync",
       "name": "actorUploadSecretFragment",
-      "line": 91,
+      "line": 92,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2329,7 +2329,7 @@
       "rel": "config/cloud-drive-sync.js",
       "cls": "CloudDriveSync",
       "name": "decryptDownload",
-      "line": 109,
+      "line": 110,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2337,7 +2337,7 @@
       "rel": "config/dynamic-moments-feed.js",
       "cls": "DynamicMomentsFeed",
       "name": "publishPost",
-      "line": 50,
+      "line": 51,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2345,7 +2345,7 @@
       "rel": "config/dynamic-moments-feed.js",
       "cls": "DynamicMomentsFeed",
       "name": "getVisiblePosts",
-      "line": 82,
+      "line": 83,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2353,7 +2353,7 @@
       "rel": "config/dynamic-moments-feed.js",
       "cls": "DynamicMomentsFeed",
       "name": "simulateAutonomousReactions",
-      "line": 148,
+      "line": 149,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2361,7 +2361,7 @@
       "rel": "config/floor-store.js",
       "cls": "FloorStore",
       "name": "readByTarget",
-      "line": 92,
+      "line": 93,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2369,7 +2369,7 @@
       "rel": "config/floor-store.js",
       "cls": "FloorStore",
       "name": "mergeWithExternal",
-      "line": 241,
+      "line": 242,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2377,7 +2377,7 @@
       "rel": "config/global-social-store.js",
       "cls": "GlobalSocialStore",
       "name": "appendMessage",
-      "line": 274,
+      "line": 275,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2385,7 +2385,7 @@
       "rel": "config/global-social-store.js",
       "cls": "GlobalSocialStore",
       "name": "getConversationMessages",
-      "line": 330,
+      "line": 331,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2393,7 +2393,7 @@
       "rel": "config/global-social-store.js",
       "cls": "GlobalSocialStore",
       "name": "removeConversation",
-      "line": 343,
+      "line": 344,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2425,7 +2425,7 @@
       "rel": "config/hyperlocal-delivery-service.js",
       "cls": "HyperlocalDeliveryService",
       "name": "advanceOrderStatus",
-      "line": 94,
+      "line": 95,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2433,7 +2433,7 @@
       "rel": "config/hyperlocal-delivery-service.js",
       "cls": "HyperlocalDeliveryService",
       "name": "getActiveOrders",
-      "line": 119,
+      "line": 120,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2457,7 +2457,7 @@
       "rel": "config/loader-mutex-token.js",
       "cls": "LoaderMutexTokenGuard",
       "name": "isHolding",
-      "line": 65,
+      "line": 66,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2465,7 +2465,7 @@
       "rel": "config/loader-mutex-token.js",
       "cls": "LoaderMutexTokenGuard",
       "name": "bindAutoRelease",
-      "line": 75,
+      "line": 76,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2473,7 +2473,7 @@
       "rel": "config/mimic-comm-engine.js",
       "cls": "MimicCommEngine",
       "name": "planTypingSchedule",
-      "line": 44,
+      "line": 45,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2481,7 +2481,7 @@
       "rel": "config/mimic-comm-engine.js",
       "cls": "MimicCommEngine",
       "name": "synthesizeVoiceWaveform",
-      "line": 85,
+      "line": 86,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2489,7 +2489,7 @@
       "rel": "config/mimic-comm-engine.js",
       "cls": "MimicCommEngine",
       "name": "generateRecallTrace",
-      "line": 124,
+      "line": 125,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2497,7 +2497,7 @@
       "rel": "config/parallel-persona-spaces.js",
       "cls": "ParallelPersonaSpaces",
       "name": "createPersonaSpace",
-      "line": 59,
+      "line": 60,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2505,7 +2505,7 @@
       "rel": "config/parallel-persona-spaces.js",
       "cls": "ParallelPersonaSpaces",
       "name": "unlockAndSwitchSpace",
-      "line": 85,
+      "line": 86,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2513,7 +2513,7 @@
       "rel": "config/parallel-persona-spaces.js",
       "cls": "ParallelPersonaSpaces",
       "name": "triggerCamouflagePanic",
-      "line": 99,
+      "line": 100,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2521,7 +2521,7 @@
       "rel": "config/parallel-persona-spaces.js",
       "cls": "ParallelPersonaSpaces",
       "name": "isAppVisibleInCurrentSpace",
-      "line": 117,
+      "line": 118,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2529,7 +2529,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "getPromptPresets",
-      "line": 2284,
+      "line": 2285,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2537,7 +2537,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "getEnabledPromptsForChat",
-      "line": 2540,
+      "line": 2541,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2545,7 +2545,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "exportConfig",
-      "line": 2660,
+      "line": 2661,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2553,7 +2553,7 @@
       "rel": "config/prompt-manager.js",
       "cls": "PromptManager",
       "name": "importConfig",
-      "line": 2671,
+      "line": 2672,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2561,7 +2561,7 @@
       "rel": "config/qianshi-schedule.js",
       "cls": "QianshiScheduleManager",
       "name": "addOrUpdateSchedule",
-      "line": 22,
+      "line": 23,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2569,7 +2569,7 @@
       "rel": "config/qianshi-schedule.js",
       "cls": "QianshiScheduleManager",
       "name": "updateStatus",
-      "line": 52,
+      "line": 53,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2577,7 +2577,7 @@
       "rel": "config/qianshi-schedule.js",
       "cls": "QianshiScheduleManager",
       "name": "listSchedules",
-      "line": 67,
+      "line": 68,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2585,7 +2585,7 @@
       "rel": "config/qianshi-schedule.js",
       "cls": "QianshiScheduleManager",
       "name": "getSummaryCounts",
-      "line": 82,
+      "line": 83,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2617,7 +2617,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "publishVideo",
-      "line": 58,
+      "line": 59,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2625,7 +2625,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "likeVideo",
-      "line": 80,
+      "line": 81,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2633,7 +2633,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "startLiveStream",
-      "line": 92,
+      "line": 93,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2641,7 +2641,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "sendDanmaku",
-      "line": 111,
+      "line": 112,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2649,7 +2649,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "sendGift",
-      "line": 134,
+      "line": 135,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2657,7 +2657,7 @@
       "rel": "config/short-video-live-hub.js",
       "cls": "ShortVideoLiveHub",
       "name": "endLiveStream",
-      "line": 161,
+      "line": 162,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2665,7 +2665,7 @@
       "rel": "config/smart-band-biometrics.js",
       "cls": "SmartBandBiometrics",
       "name": "syncSleepSession",
-      "line": 164,
+      "line": 165,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2673,7 +2673,7 @@
       "rel": "config/smart-gallery-vault.js",
       "cls": "SmartGalleryVault",
       "name": "addPhoto",
-      "line": 58,
+      "line": 59,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2681,7 +2681,7 @@
       "rel": "config/smart-gallery-vault.js",
       "cls": "SmartGalleryVault",
       "name": "movePhotoSecrecy",
-      "line": 132,
+      "line": 133,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2881,7 +2881,7 @@
       "rel": "config/system-notification-dispatcher.js",
       "cls": "SystemNotificationDispatcher",
       "name": "clearPresence",
-      "line": 113,
+      "line": 114,
       "isStatic": false,
       "classInstantiated": true
     },

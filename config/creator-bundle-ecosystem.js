@@ -8,6 +8,7 @@
  *     ③ 接收方受控选择性安装与无损卸载；
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const STORAGE_KEY = 'cbe_creator_bundle_v1';
 
@@ -32,7 +33,7 @@ export function normalizeBundleEcosystemState(raw) {
  */
 export function buildCreatorBundle(bundleSpec, now = Date.now()) {
     const spec = (bundleSpec && typeof bundleSpec === 'object') ? bundleSpec : {};
-    const id = safeStr(spec.id) || `cbundle_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = safeStr(spec.id) || `cbundle_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const title = safeStr(spec.title);
 
     if (!title) {

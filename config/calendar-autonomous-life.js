@@ -10,6 +10,7 @@
  * 3. 动态日程提醒与临近触发 (Proximity Alerts & Notification Trigger)
  * 4. 履约与违约状态机 (Pending -> Active -> Completed / Flaked，违约反噬人际好感)
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const EVENT_CATEGORIES = {
   DATE: 'date',           // 约会/情感
@@ -39,7 +40,7 @@ export class CalendarAutonomousLifeEngine {
    * 添加日程事件并检查时间冲突
    */
   addEvent(event) {
-    if (!event.id) event.id = 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    if (!event.id) event.id = 'evt_' + Date.now() + '_' + rand().toString(36).slice(2, 6);
     if (!event.status) event.status = EVENT_STATUS.SCHEDULED;
 
     // 冲突检测

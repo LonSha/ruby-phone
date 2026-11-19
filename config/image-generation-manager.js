@@ -8,6 +8,7 @@
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 
+import { rand } from './random-source.js';
 import { decompress as decompressZstd } from '../assets/vendor/fzstd.js';
 
 const NOVELAI_QUEUE_POLL_MS = 3000;
@@ -1632,7 +1633,7 @@ export class ImageGenerationManager {
     }
 
     _createQueueTaskId() {
-        return `phone-nai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+        return `phone-nai-${Date.now().toString(36)}-${rand().toString(36).slice(2, 10)}`;
     }
 
     _getQueueUserId() {
@@ -1647,13 +1648,13 @@ export class ImageGenerationManager {
             const cryptoApi = globalThis.crypto;
             const randomPart = typeof cryptoApi?.randomUUID === 'function'
                 ? cryptoApi.randomUUID()
-                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+                : `${Date.now().toString(36)}-${rand().toString(36).slice(2, 12)}`;
             const userId = `phone-${randomPart}`;
             window.localStorage?.setItem(storageKey, userId);
             this._queueUserId = userId;
             return userId;
         } catch (e) {
-            this._queueUserId = `phone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+            this._queueUserId = `phone-${Date.now().toString(36)}-${rand().toString(36).slice(2, 12)}`;
             return this._queueUserId;
         }
     }
@@ -2445,7 +2446,7 @@ export class ImageGenerationManager {
         const novelAIVibes = await this._resolveNovelAIVibeReferences(options, config);
         const resolvedSeed = Number.isFinite(seed) && seed >= 0
             ? Math.floor(seed)
-            : Math.floor(Math.random() * 4294967295);
+            : Math.floor(rand() * 4294967295);
 
         const parameters = {
             width,
@@ -3518,7 +3519,7 @@ export class ImageGenerationManager {
         scale = Number.isFinite(scale) ? Math.max(0, Math.min(50, scale)) : 7;
         cfgRescale = Number.isFinite(cfgRescale) ? Math.max(0, Math.min(1, cfgRescale)) : 0;
         if (!Number.isFinite(seed) || seed < 0) {
-            seed = Math.floor(Math.random() * 4294967295);
+            seed = Math.floor(rand() * 4294967295);
         } else {
             seed = Math.floor(seed);
         }
@@ -3824,7 +3825,7 @@ export class ImageGenerationManager {
         const blob = this._dataUrlToBlob(imageData);
         if (!blob) return null;
         const ext = /jpe?g/i.test(blob.type) ? 'jpg' : (/webp/i.test(blob.type) ? 'webp' : 'png');
-        const filename = `yuzuki_ref_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const filename = `yuzuki_ref_${Date.now()}_${rand().toString(36).slice(2, 8)}.${ext}`;
         const formData = new FormData();
         formData.append('image', blob, filename);
         formData.append('type', 'input');
@@ -4553,7 +4554,7 @@ export class ImageGenerationManager {
             throw new Error('当前 ComfyUI 工作流需要参考图，但本次没有可用的参考图');
         }
 
-        const clientId = `yuzuki-phone-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const clientId = `yuzuki-phone-${Date.now()}-${rand().toString(16).slice(2)}`;
         const promptPayload = JSON.stringify({
             prompt: built.workflow,
             client_id: clientId
@@ -5090,7 +5091,7 @@ export class ImageGenerationManager {
         const prompt = String(options.prompt || '').trim();
         const seed = Number(config.runninghubSeed ?? -1);
         const resolvedSeed = seed < 0
-            ? Math.floor(Math.random() * 4294967295)
+            ? Math.floor(rand() * 4294967295)
             : seed;
 
         const nodeInfoList = this._resolveRunningHubNodeInfoList(options);

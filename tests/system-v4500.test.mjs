@@ -295,7 +295,14 @@ function breakSource(relPath, oldStr, newStr) {
     assert.ok(idx >= 0, `锚点未找到: ${oldStr}`);
     assert.equal(content.indexOf(oldStr, idx + 1), -1, `锚点不唯一: ${oldStr}`);
     const broken = content.replace(oldStr, newStr);
-    const tmpFile = path.join(os.tmpdir(), `broken_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.js`);
+    /* [R26-X5b] 破坏副本原来直接落在 os.tmpdir() 根上，单文件 import —— 而被破坏的两件现各自
+       静态导入 config/random-source.js（含其 num-gate 叶子），单文件落法会以 ERR_MODULE_NOT_FOUND
+       假红（加载器限制，不是判据转红；同类问题已第六次出现）。故落独立目录并带齐依赖。 */
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v4500_'));
+    for (const dep of ['random-source.js', 'num-gate.js']) {
+        fs.copyFileSync(path.join(ROOT, 'config', dep), path.join(dir, dep));
+    }
+    const tmpFile = path.join(dir, path.basename(relPath));
     fs.writeFileSync(tmpFile, broken, 'utf8');
     return tmpFile;
 }

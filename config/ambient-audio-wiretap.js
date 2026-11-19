@@ -12,6 +12,7 @@
  * 3. 剧情证据留痕与录音回放 (Audio Evidence Log):
  *    - 将关键涉密录音标记为剧情物证 (CASE_EVIDENCE)
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export class AmbientAudioWiretap {
     constructor(opts = {}) {
@@ -40,7 +41,7 @@ export class AmbientAudioWiretap {
     startRecording(location = '城市某处') {
         this.isRecording = true;
         this._currentSession = {
-            id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'rec_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             startedAt: Date.now(),
             location,
             noiseLevel: 0.35,

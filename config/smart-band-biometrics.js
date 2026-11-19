@@ -13,6 +13,7 @@
  * 3. 健康周报与生命体征数据物化 (Biometric Weekly Digest):
  *    - 生成近 7 天步数、睡眠时长与卡路里消耗概览
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const SLEEP_STAGES = Object.freeze({
     DEEP: 'DEEP',
@@ -85,17 +86,17 @@ export class SmartBandBiometrics {
 
         switch (scenarioType) {
             case 'INTIMATE_MOMENT': // 告白、拥抱、极度心动
-                hrDelta = Math.round(35 + Math.random() * 20);
+                hrDelta = Math.round(35 + rand() * 20);
                 stressDelta = 10;
                 resonanceTitle = '心跳急剧加速（心动过载）';
                 break;
             case 'CONFRONTATION': // 谎言拆穿、剑拔弩张
-                hrDelta = Math.round(40 + Math.random() * 25);
+                hrDelta = Math.round(40 + rand() * 25);
                 stressDelta = 45;
                 resonanceTitle = '应激压力激增';
                 break;
             case 'PANIC': // 惊悚、密室逃亡
-                hrDelta = Math.round(55 + Math.random() * 30);
+                hrDelta = Math.round(55 + rand() * 30);
                 stressDelta = 60;
                 resonanceTitle = '恐慌级心律失常预警';
                 break;

@@ -6,6 +6,7 @@
  * 在手机端呈现主角与各角色随身携带的重要信物、剧情关键道具、纪念品与消费品。
  * 追踪物品来源剧情楼层、情感象征意义、当前持有者与转赠历史。
  */
+import { rand } from './random-source.js';
 
 export const STORAGE_KEY = 'ibp_inventory_backpack_v1';
 
@@ -24,7 +25,7 @@ export class InventoryBackpackManager {
             throw new Error('Item must have a name');
         }
 
-        const id = item.id || `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const id = item.id || `item_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
         const record = {
             id,
             name: item.name,

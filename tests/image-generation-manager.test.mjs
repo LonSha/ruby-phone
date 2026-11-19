@@ -1,15 +1,32 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
-
+import { fileURLToPath, pathToFileURL } from 'node:url';
+/*
+ * 加载方式说明（R26-X5b 迁移后改）：
+ * 原来用 `data:text/javascript;base64,...` 直接 import 源码副本 —— data: URL **不能解析任何相对导入**，
+ * 所以 config/image-generation-manager.js 一旦新增 `import { rand } from './random-source.js'`，
+ * 整个文件就以 ERR_UNSUPPORTED_RESOLVE_REQUEST 假红（那是加载器限制，不是判据转红；同类问题已第四次出现）。
+ * 改法：把真件的依赖图落到临时目录，import 真文件 —— 副本仍是真件，只是换了个可解析的落点。
+ */
+const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const source = fs
-    .readFileSync(new URL('../config/image-generation-manager.js', import.meta.url), 'utf8')
+    .readFileSync(path.join(rootDir, 'config/image-generation-manager.js'), 'utf8')
     .replace(
         "import { decompress as decompressZstd } from '../assets/vendor/fzstd.js';",
         'const decompressZstd = () => new Uint8Array();'
     );
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
-const { ImageGenerationManager } = await import(moduleUrl);
+const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_imgmgr_'));
+process.on('exit', () => {
+    try { fs.rmSync(fixtureDir, { recursive: true, force: true }); } catch (_e) { /* 忽略 */ }
+});
+for (const dep of ['random-source.js', 'num-gate.js']) {
+    fs.copyFileSync(path.join(rootDir, 'config', dep), path.join(fixtureDir, dep));
+}
+fs.writeFileSync(path.join(fixtureDir, 'image-generation-manager.js'), source);
+const { ImageGenerationManager } = await import(pathToFileURL(path.join(fixtureDir, 'image-generation-manager.js')).href);
 const manager = new ImageGenerationManager(null);
 
 test('NovelAI character parser supports foreground and background depth positions', () => {

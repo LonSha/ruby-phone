@@ -17,6 +17,7 @@
  * 3. 错失窗口与剧情补偿机制 (Missed Window Reconciliation):
  *    - 错过接听或回复时，角色生成对应的情感碎碎念便签
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const ROUTINE_PHASES = Object.freeze({
     MORNING_COMMUTE: 'MORNING_COMMUTE',
@@ -101,7 +102,7 @@ export class AutonomousLifeScheduler {
         }
 
         const event = {
-            id: 'auto_ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'auto_ev_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             actorId: actorId || 'char',
             actorName: actorName || '对方',
             phase,

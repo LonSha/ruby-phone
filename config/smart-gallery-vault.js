@@ -13,6 +13,7 @@
  * 3. EXIF 伪元数据分析 (EXIF Timestamp & Geolocation):
  *    - 模拟拍摄相机型号、光圈、GPS 经纬度及时间戳
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const PHOTO_SECRECY = Object.freeze({
     PUBLIC: 'PUBLIC',
@@ -60,7 +61,7 @@ export class SmartGalleryVault {
             throw new Error('Photo url is required');
         }
 
-        const id = photoData.id || ('img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+        const id = photoData.id || ('img_' + Date.now() + '_' + rand().toString(36).slice(2, 6));
         const secrecy = photoData.secrecy || PHOTO_SECRECY.PUBLIC;
         const actors = Array.isArray(photoData.actors) ? photoData.actors : [];
         const scene = photoData.scene || '日常';

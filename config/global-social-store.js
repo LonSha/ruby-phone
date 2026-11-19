@@ -7,6 +7,7 @@
  *
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export class GlobalSocialStore {
     constructor(storage) {
@@ -92,7 +93,7 @@ export class GlobalSocialStore {
     _createContactSkeleton({ name = '', avatar = '', relation = '' } = {}) {
         const now = Date.now();
         return {
-            id: `gcontact_${now}_${Math.random().toString(36).slice(2, 8)}`,
+            id: `gcontact_${now}_${rand().toString(36).slice(2, 8)}`,
             name: String(name || '').trim(),
             avatar: String(avatar || '').trim(),
             relation: String(relation || '').trim(),
@@ -223,7 +224,7 @@ export class GlobalSocialStore {
     _createConversationSkeleton({ app = '', appConversationId = '', name = '', type = 'single', participantContactIds = [] } = {}) {
         const now = Date.now();
         return {
-            id: `gconv_${now}_${Math.random().toString(36).slice(2, 8)}`,
+            id: `gconv_${now}_${rand().toString(36).slice(2, 8)}`,
             appRefs: {}, // app -> appConversationId
             name: String(name || '').trim(),
             type: String(type || 'single').trim() || 'single',
@@ -300,7 +301,7 @@ export class GlobalSocialStore {
 
         const now = Date.now();
         const nextMessage = {
-            id: safeMessageId || `gmsg_${now}_${Math.random().toString(36).slice(2, 8)}`,
+            id: safeMessageId || `gmsg_${now}_${rand().toString(36).slice(2, 8)}`,
             from: String(message?.from || '').trim(),
             fromAppContactId: String(message?.fromAppContactId || '').trim(),
             type: String(message?.type || 'text').trim() || 'text',

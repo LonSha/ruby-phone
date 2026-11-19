@@ -7,13 +7,14 @@
  * 提供严格的令牌抢占、持有者识别、心跳延续与优雅交接。
  * 杜绝多个手机容器并存引起的事件重复触发、DOM 污染与内存泄漏。
  */
+import { rand } from './random-source.js';
 
 const DEFAULT_OWNER_KEY = '__rubyphone_loader_owner';
 
 export class LoaderMutexTokenGuard {
     constructor(config = {}) {
         this.ownerKey = config.ownerKey || DEFAULT_OWNER_KEY;
-        this.holderId = config.holderId || `holder_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        this.holderId = config.holderId || `holder_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     }
 
     /**

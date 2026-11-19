@@ -12,6 +12,7 @@
  * 3. 冲突合并与云端版本恢复 (Conflict Resolution & Versioning):
  *    - 支持本地与云端版本比对，拉取历史修订版本
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export class CloudDriveSync {
     constructor(opts = {}) {
@@ -89,7 +90,7 @@ export class CloudDriveSync {
      * @returns {Object} 碎片登记
      */
     actorUploadSecretFragment(actorName, fileName, rawContent, secretKey) {
-        const id = 'secret_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const id = 'secret_' + Date.now() + '_' + rand().toString(36).slice(2, 6);
         return this.syncUpload({
             fileId: id,
             name: fileName,

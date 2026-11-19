@@ -8,6 +8,7 @@
  *     ③ 共同历史演变纪要：保留由谁提出、由谁批准、为何采纳的连续脉络；
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const STORAGE_KEY = 'cbw_co_built_world_v1';
 
@@ -41,7 +42,7 @@ export function normalizeCoBuiltWorldState(raw) {
 export function proposeWorldChange(state, proposalSpec, now = Date.now()) {
     const s = normalizeCoBuiltWorldState(state);
     const spec = (proposalSpec && typeof proposalSpec === 'object') ? proposalSpec : {};
-    const id = safeStr(spec.id) || `wprop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = safeStr(spec.id) || `wprop_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const proposer = safeStr(spec.proposer);
     const summary = safeStr(spec.summary);
 

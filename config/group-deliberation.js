@@ -12,6 +12,7 @@
  * 
  * 零宿主依赖、零 DOM、纯函数、状态不可变或受控克隆，全面冻结导出。
  */
+import { rand } from './random-source.js';
 
 export const GD_TOPIC_STATES = Object.freeze({
     OPEN: 'open',
@@ -64,7 +65,7 @@ function deepFreeze(obj) {
  * @returns {object}
  */
 export function createTopic(raw = {}) {
-    const topicId = normId(raw.topicId || raw.id || `topic_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    const topicId = normId(raw.topicId || raw.id || `topic_${Date.now()}_${rand().toString(36).slice(2, 7)}`);
     const title = String(raw.title || '未命名议题').trim();
     const proposerId = normId(raw.proposerId || raw.authorId || 'unknown');
     const initialSummary = String(raw.summary || title).trim();
@@ -159,7 +160,7 @@ export function updateStance(topic, memberId, stanceUpdate = {}) {
 export function addQuestion(topic, question = {}) {
     if (!topic || typeof topic !== 'object') return null;
     const next = JSON.parse(JSON.stringify(topic));
-    const qid = normId(question.questionId || question.id || `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`);
+    const qid = normId(question.questionId || question.id || `q_${Date.now()}_${rand().toString(36).slice(2, 6)}`);
     const fromMemberId = normId(question.fromMemberId || question.from || 'unknown');
     const targetMemberId = question.targetMemberId ? normId(question.targetMemberId) : null;
     const text = String(question.text || '').trim();

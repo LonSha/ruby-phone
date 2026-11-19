@@ -30,7 +30,10 @@ function stageTree() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v4116_'));
     temps.push(dir);
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
-    for (const f of ['away-mode.js', 'system-notification-dispatcher.js', 'presence-arbitration.js']) {
+    /* [R26-X5b] away-mode / system-notification-dispatcher 现各自静态导入 random-source（含其 num-gate 叶子）。
+       隔离夹具不复制依赖 ⇒ 以 ERR_MODULE_NOT_FOUND 假红（那是加载器限制，不是判据转红）。
+       同类问题已第五次出现，故这里也按「依赖图」补齐，而不是只补眼前这两个。 */
+    for (const f of ['away-mode.js', 'system-notification-dispatcher.js', 'presence-arbitration.js', 'random-source.js', 'num-gate.js']) {
         const abs = path.join(ROOT, 'config', f);
         if (fs.existsSync(abs)) fs.copyFileSync(abs, path.join(dir, 'config', f));
     }

@@ -5,10 +5,20 @@ import test from 'node:test';
 const source = fs
     .readFileSync(new URL('../config/image-generation-manager.js', import.meta.url), 'utf8')
     .replace(
-        "import { decompress as decompressZstd } from '../assets/vendor/fzstd.js';",
+"import { decompress as decompressZstd } from '../assets/vendor/fzstd.js';",
         'const decompressZstd = () => new Uint8Array();'
     );
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
+/* [R26-X5b] 该件新增 `import { rand } from './random-source.js'`：data: URL 无 base，相对 specifier 会在
+   import 期抛 ERR_UNSUPPORTED_RESOLVE_REQUEST（整文件失败，不是断言失败）。
+   按 tests/system-v228.test.mjs 护栏要求的形态，把 random-source（含其 ./num-gate.js 叶子）内联成绝对 data: URL。 */
+const numGateSource = fs.readFileSync(new URL('../config/num-gate.js', import.meta.url), 'utf8');
+const numGateModuleUrl = `data:text/javascript;base64,${Buffer.from(numGateSource).toString('base64')}`;
+const randomSourceSource = fs
+    .readFileSync(new URL('../config/random-source.js', import.meta.url), 'utf8')
+    .replace('./num-gate.js', numGateModuleUrl);
+const randomSourceModuleUrl = `data:text/javascript;base64,${Buffer.from(randomSourceSource).toString('base64')}`;
+const patched = source.replace('./random-source.js', randomSourceModuleUrl);
+const moduleUrl = `data:text/javascript;base64,${Buffer.from(patched).toString('base64')}`;
 const { ImageGenerationManager } = await import(moduleUrl);
 
 const createManager = (storageData = {}) => {

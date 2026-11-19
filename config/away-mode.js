@@ -14,6 +14,7 @@
  *   3. 策略与机制分离：过期的判定由可选 isStaleFn 策略提供，内核只汇集不武断推测；
  *   4. 不自动补发连环弹窗：回来后只通过「不在的时候」清单静默呈现，拒绝二次打扰。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const AWAY_REASONS = Object.freeze({
     MANUAL: 'manual',         // 用户主动放下手机
@@ -159,7 +160,7 @@ export class AwayMode {
     recordMissed(item) {
         if (!this.isAway() || !item) return null;
         const record = {
-            id: item.id || ('missed_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+            id: item.id || ('missed_' + Date.now() + '_' + rand().toString(36).slice(2, 6)),
             appId: item.appId || 'system',
             channel: item.channel || item.appId || 'system',
             title: String(item.title || '').trim(),

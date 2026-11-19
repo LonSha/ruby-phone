@@ -7,10 +7,11 @@
  * 2. 格式化为 WorldAxis 标准入站 causal op (Idempotent Action Normalization)
  * 3. 作为客观世界演化的驱动因，闭环双向互动 (Closed-Loop Causal Synthesis)
  * ============================================================ */
+import { rand } from './random-source.js';
 export function buildWorldAxisPhoneOp(actionType, details = {}) {
     const validActs = ["block_actor", "send_message", "transfer_money", "call_emergency"];
     const act = validActs.includes(actionType) ? actionType : "send_message";
-    const opId = `op_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const opId = `op_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
 
     return {
         opId,

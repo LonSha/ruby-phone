@@ -8,6 +8,7 @@
  *     - 支持交易反悔与因果回退 (rollback_causal_step)
  *     - 决不伪造真实货币与现实支付
  * ============================================================ */
+import { rand } from './random-source.js';
 export function executeDistrictTransaction(wallet, transaction = {}) {
     if (!wallet) return { success: false, reason: 'invalid_wallet' };
 
@@ -34,7 +35,7 @@ export function executeDistrictTransaction(wallet, transaction = {}) {
     balances.quota += deltaQuota;
 
     const receipt = {
-        txId: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        txId: `tx_${Date.now()}_${rand().toString(36).slice(2, 6)}`,
         deltaCurrency,
         deltaTrust,
         deltaQuota,

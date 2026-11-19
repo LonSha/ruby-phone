@@ -12,6 +12,7 @@
  *     ④ 用户处置裁决：支持更新(update)、保留现状(retain)或标记过期(mark_stale)；
  *     ⑤ 零写原则：纯函数计算受影响清单与合并结果，不直接修改数据库或跨层越权。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 'use strict';
 
@@ -98,7 +99,7 @@ export function normalizeArtifact(raw) {
     const baseFingerprint = safeStr(raw.baseFingerprint, '');
     const lockedSegments = Array.isArray(raw.lockedSegments)
         ? raw.lockedSegments.map(s => ({
-            id: safeStr(s.id, `seg_${Math.random().toString(36).slice(2, 6)}`),
+            id: safeStr(s.id, `seg_${rand().toString(36).slice(2, 6)}`),
             key: safeStr(s.key),
             content: safeStr(s.content),
             userLocked: Boolean(s.userLocked)

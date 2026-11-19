@@ -8,6 +8,7 @@
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 // 剧情时间管理器
+import { rand } from './random-source.js';
 import { readWorldClock, readWorldAxisSnapshot } from './world-bridge.js';
 export class TimeManager {
     constructor(storage) {
@@ -836,22 +837,22 @@ getWeekday(date) {
 getWechatMessageMinutesToAdd(content = '', options = {}) {
     const text = String(content || '').trim();
     const length = text.length;
-    const rand = Math.random();
+    const rnd = rand();
 
     // 很短句（嗯/好/收到）大多数不推进，少量推进 1 分钟
-    if (length <= 6) return rand < 0.8 ? 0 : 1;
+    if (length <= 6) return rnd < 0.8 ? 0 : 1;
 
     // 短句：0/1 随机
-    if (length <= 14) return rand < 0.55 ? 0 : 1;
+    if (length <= 14) return rnd < 0.55 ? 0 : 1;
 
     // 中句：多数推进 1，少量推进 2
-    if (length <= 30) return rand < 0.8 ? 1 : 2;
+    if (length <= 30) return rnd < 0.8 ? 1 : 2;
 
     // 长句：1/2 随机，更偏向 2
-    if (length <= 60) return rand < 0.35 ? 1 : 2;
+    if (length <= 60) return rnd < 0.35 ? 1 : 2;
 
     // 超长句：2/3 随机，更偏向 2，避免一下跳太猛
-    return rand < 0.75 ? 2 : 3;
+    return rnd < 0.75 ? 2 : 3;
 }
 
 /**

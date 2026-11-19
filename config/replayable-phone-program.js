@@ -8,10 +8,11 @@
  *     - 支持不同角色视角 (perspective) 复演比对
  *     - 决不因复演修改底层的真实生活账本
  * ============================================================ */
+import { rand } from './random-source.js';
 export function createReplayableProgram(programTitle, steps = []) {
     const list = Array.isArray(steps) ? steps : [];
     return {
-        programId: `prog_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        programId: `prog_${Date.now()}_${rand().toString(36).slice(2, 6)}`,
         title: String(programTitle || '').trim(),
         totalSteps: list.length,
         steps: list.map((s, idx) => ({

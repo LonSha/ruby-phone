@@ -11,6 +11,7 @@
  * 3. 动态时间线编织与未读红点 (Feed Timeline & Unread Badges):
  *    - 与剧情世界时间线同步
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const MOMENT_VISIBILITY = Object.freeze({
     PUBLIC: 'PUBLIC',
@@ -53,7 +54,7 @@ export class DynamicMomentsFeed {
         }
 
         const post = {
-            id: 'moment_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'moment_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             authorId: postData.authorId || 'user',
             authorName: String(postData.authorName).trim(),
             avatar: postData.avatar || '',
@@ -126,7 +127,7 @@ export class DynamicMomentsFeed {
         if (!post || !commentData?.text) return null;
 
         const comment = {
-            id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+            id: 'c_' + Date.now() + '_' + rand().toString(36).slice(2, 5),
             authorId: commentData.authorId || 'user',
             authorName: String(commentData.authorName).trim(),
             text: String(commentData.text).trim(),
@@ -156,7 +157,7 @@ export class DynamicMomentsFeed {
 
             const isLiked = post.likes.some(l => l.actorId === char.actorId);
             // 好感度 > 40 或 亲密关系有 70% 概率点赞
-            if (!isLiked && (char.intimacy >= 40 || char.relationType === 'LOVER' || Math.random() < 0.6)) {
+            if (!isLiked && (char.intimacy >= 40 || char.relationType === 'LOVER' || rand() < 0.6)) {
                 this.toggleLike(postId, char.actorId, char.actorName);
                 reactions.push({ type: 'LIKE', actorName: char.actorName });
             }

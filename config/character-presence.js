@@ -9,6 +9,7 @@
  *     ③ 支持邀请排队(queue)与撤回(cancel)；撤回诚实记录，绝不伪造对方已读；
  *     ④ 角色活动结束后自动接回挂起的原议题，实现自然的时序互动闭环。
  * ======================================================== */
+import { rand } from './random-source.js';
 'use strict';
 
 /** 角色在场与可用性三态 */
@@ -132,7 +133,7 @@ export function evaluateCharacterPresence(charId, context = {}, now = Date.now()
  */
 export function queueInvitation(queue = [], draft = {}, now = Date.now()) {
     const list = Array.isArray(queue) ? [...queue] : [];
-    const id = safeStr(draft.id) || ('inv_' + now + '_' + Math.random().toString(36).slice(2, 7));
+    const id = safeStr(draft.id) || ('inv_' + now + '_' + rand().toString(36).slice(2, 7));
     const characterId = safeStr(draft.characterId);
     const topic = safeStr(draft.topic) || '未命名议题';
     const preferredChannel = safeStr(draft.preferredChannel) || CONTACT_CHANNELS.WECHAT;

@@ -9,6 +9,7 @@
  *     ③ 无任意代码执行风险：仅基于白名单意图与数据映射；
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const WORK_PACKAGE_STEP_STATUS = Object.freeze({
     PENDING: 'pending',
@@ -44,7 +45,7 @@ export function normalizeWorkPackageState(raw) {
 export function saveWorkPackage(state, packageSpec, now = Date.now()) {
     const s = normalizeWorkPackageState(state);
     const spec = (packageSpec && typeof packageSpec === 'object') ? packageSpec : {};
-    const id = safeStr(spec.id) || `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = safeStr(spec.id) || `pkg_${Date.now()}_${rand().toString(36).slice(2, 7)}`;
     const title = safeStr(spec.title);
     const steps = safeArr(spec.steps);
 
@@ -92,7 +93,7 @@ export function startWorkPackageInstance(state, packageId, initialInputs = {}, n
         return { success: false, reason: 'package-not-found', state: s };
     }
 
-    const instanceId = `inst_${pkg.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const instanceId = `inst_${pkg.id}_${Date.now()}_${rand().toString(36).slice(2, 6)}`;
     const stepStates = pkg.steps.map((st, idx) => ({
         stepId: st.id,
         status: idx === 0 ? WORK_PACKAGE_STEP_STATUS.RUNNING : WORK_PACKAGE_STEP_STATUS.PENDING,

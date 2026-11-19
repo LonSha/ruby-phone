@@ -1,3 +1,4 @@
+import { rand } from './random-source.js';
 import { phoneConfirm, phonePrompt } from './phone-feedback.js';
 /* ========================================================
  *  RubyPhone — SillyTavern 虚拟智能手机 UI
@@ -2318,7 +2319,7 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
             && !this._isBuiltInPromptPresetId(safeSourceId)
             && !data[app][feature].some(item => String(item?.id || '') === safeSourceId);
         const preset = {
-            id: canReuseSourceId ? safeSourceId : `import_${now.toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+            id: canReuseSourceId ? safeSourceId : `import_${now.toString(36)}_${rand().toString(36).slice(2, 7)}`,
             name: name || '导入配置',
             content: safeContent,
             createdAt: now,
@@ -2360,7 +2361,7 @@ IP属地：根据故事背景，生成虚拟的命名城市的IP市区
         if (!Array.isArray(data[app][feature])) data[app][feature] = [];
 
         const now = Date.now();
-        const id = `preset_${now.toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        const id = `preset_${now.toString(36)}_${rand().toString(36).slice(2, 7)}`;
         const preset = {
             id,
             name: safeName,

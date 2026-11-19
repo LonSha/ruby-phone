@@ -13,6 +13,7 @@
  * 3. 直播间热度与亲密度打赏回执 (Tipping & Heat Dynamics):
  *    - 记录单场直播观众峰值与亲密度榜单
  * ======================================================== */
+import { rand } from './random-source.js';
 
 export const LIVE_ROOM_STATUS = Object.freeze({
     IDLE: 'IDLE',
@@ -61,7 +62,7 @@ export class ShortVideoLiveHub {
         }
 
         const item = {
-            id: 'sv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            id: 'sv_' + Date.now() + '_' + rand().toString(36).slice(2, 6),
             authorId: videoData.authorId || 'char',
             authorName: String(videoData.authorName).trim(),
             title: String(videoData.title || '').trim(),
@@ -114,7 +115,7 @@ export class ShortVideoLiveHub {
         }
 
         const msg = {
-            id: 'danmaku_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+            id: 'danmaku_' + Date.now() + '_' + rand().toString(36).slice(2, 5),
             senderName,
             text: String(text).trim(),
             isUser,

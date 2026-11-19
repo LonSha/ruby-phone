@@ -1,6 +1,7 @@
 /**
  * 生活事件时间线 — 适配自 jiuyi777/xiao-shouji lifeEvents.ts
  */
+import { rand } from './random-source.js';
 const VALID_TYPES = new Set(['chat', 'call', 'diary', 'photo', 'calendar', 'music', 'social', 'video', 'memo', 'system']);
 const VALID_APPS = new Set(['wechat', 'qq', 'phone', 'diary', 'calendar', 'gallery', 'xiaohongshu', 'bilibili', 'music', 'memo', 'system']);
 
@@ -17,7 +18,7 @@ export function buildLifeEvent(event) {
   const title = cleanText(event.title) || '生活事件';
   const summary = cleanText(event.summary);
   return {
-    id: cleanText(event.id) || ('life-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    id: cleanText(event.id) || ('life-' + Date.now().toString(36) + rand().toString(36).slice(2, 6)),
     type: VALID_TYPES.has(event.type) ? event.type : 'system',
     app: VALID_APPS.has(event.app) ? event.app : 'system',
     characterId: cleanText(event.characterId) || undefined,
