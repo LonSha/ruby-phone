@@ -12,6 +12,9 @@
  * ======================================================== */
 'use strict';
 
+/* [R26-X5] 分享 id 的随机数走可强制源：排查“分享链接对不上”时能一键钉死。 */
+import { rand } from './random-source.js';
+
 /** 共享授权范围 */
 export const SHARING_SCOPES = Object.freeze({
     PRIVATE_ONE_TO_ONE: 'private_one_to_one', // 单人私聊
@@ -38,7 +41,7 @@ function safeNum(v, fallback = 0) {
  * 构造分享协议草案
  */
 export function buildShareDraft(opts = {}, now = Date.now()) {
-    const id = safeStr(opts.id) || ('share_' + now + '_' + Math.random().toString(36).slice(2, 7));
+    const id = safeStr(opts.id) || ('share_' + now + '_' + rand().toString(36).slice(2, 7));
     const snippet = safeStr(opts.snippet);
     const scope = Object.values(SHARING_SCOPES).includes(opts.scope) ? opts.scope : SHARING_SCOPES.PRIVATE_ONE_TO_ONE;
     const recipients = Array.isArray(opts.recipients) ? opts.recipients.map(safeStr).filter(Boolean) : [];

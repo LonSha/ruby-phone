@@ -171,6 +171,8 @@ import { EXPORT_POLICIES, prepareExport, exportRedactText, verifyExport, exportR
 import { SHARE_FRAGMENT_PREFIX, SHARE_FRAGMENT_KEYS, buildShareCredential, encodeShareFragment, buildShareUrl, parseShareFragment, shareFragmentText, shareFragmentSelfCheck } from './config/share-fragment.js';
 /* [R26-X2] 反向输入「读完即消费」：预览不消费，投递一次性，且不许覆盖首次消费人。 */
 import { CONSUME_MODES, CONSUME_STATES, consumeModeOf, consumeStateOf, previewOnce, deliverOnce, verifyConsumeOnce, consumeOnceText, consumeOnceSelfCheck } from './config/consume-once.js';
+/* [R26-X5] 可强制随机源：默认就是原生 Math.random，强制口只用于复现。 */
+import { RANDOM_MODE, isForced, activeMode, setSource, resetSource, rand as rndSource, randInt, chance, pick, useSequence, useSeed, randomSourceText, randomSourceSelfCheck } from './config/random-source.js';
 import { dataHealthSelfCheck } from './config/data-health.js';
 /* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
 import { chatWindowSelfCheck } from './config/chat-window.js';
@@ -2476,6 +2478,24 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     selfCheck: consumeOnceSelfCheck
                 };
             } catch (_r26X4MountErr) { /* 挂载失败不影响手机本体（分享是增强面） */ }
+            /* [R26-X5] 随机源：默认原生，强制口只用于复现偶发现象（用完必须 undo）。 */
+            try {
+                window.VirtualPhone.randomSource = {
+                    modes: RANDOM_MODE,
+                    mode: activeMode,
+                    forced: isForced,
+                    set: setSource,
+                    reset: resetSource,
+                    rand: rndSource,
+                    int: randInt,
+                    chance: chance,
+                    pick: pick,
+                    useSequence: useSequence,
+                    useSeed: useSeed,
+                    text: randomSourceText,
+                    selfCheck: randomSourceSelfCheck
+                };
+            } catch (_r26X5MountErr) { /* 挂载失败不影响手机本体 */ }
             const _bridgeChecks = [
                 ['_x6SelfCheck', appChangeDigestSelfCheck],
                 ['_x7SelfCheck', devicePhysicalNarrativeSelfCheck],
@@ -2513,6 +2533,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r26X1a', exportRedactSelfCheck],
                 ['_r26X4', shareFragmentSelfCheck],
                 ['_r26X2', consumeOnceSelfCheck],
+                ['_r26X5', randomSourceSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {

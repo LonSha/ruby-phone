@@ -503,7 +503,10 @@ function brokenSource(rel, pairs) {
 function brokenBridgeCopy(pairs, outName) {
   const src = brokenSource(BRIDGE_REL, pairs);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_x4_'));
-  for (const dep of ['sharing-boundary.js', 'portable-recovery-hub.js', 'offline-creator-bundle-pipeline.js']) {
+  /* R26-X5：sharing-boundary 现在静态依赖 random-source（再依赖 num-gate），
+   * 复制到临时仓时依赖列表必须同步 —— 否则副本加载直接 ERR_MODULE_NOT_FOUND，
+   * 负控制会以「模块找不到」而不是「判据转红」的方式失败。 */
+  for (const dep of ['sharing-boundary.js', 'portable-recovery-hub.js', 'offline-creator-bundle-pipeline.js', 'random-source.js', 'num-gate.js']) {
     fs.copyFileSync(path.join(ROOT, 'config', dep), path.join(dir, dep));
   }
   const file = path.join(dir, outName);
