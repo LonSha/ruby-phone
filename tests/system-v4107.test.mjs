@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { computePlanEntries, parsePlanEntry } from '../tools/gen_plan_baseline.mjs';
+import { computePlanEntries, parsePlanEntry, headZoneOf, prioritySectionOf } from '../tools/gen_plan_baseline.mjs';
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dir, '..');
@@ -75,13 +75,17 @@ test('A3: 期号与日期必须真的从计划书真源派生，不得在判据�
   const original = fs.readFileSync(p, 'utf8');
   const st = fs.statSync(p);
   /* 把标题里的中文期号改成「第九十九期」（一个不可能与 PLAN 对齐的值），
-   * 若工具把期号写死了，这里就读不出变化、也不会报未换挡 —— 即本条会转红。 */
-  const tampered = original.replace(/^#\s+Agent Note:([^\n]*)第[一二三四五六七八九十百]+期/m, (m, mid) => '# Agent Note:' + mid + '第九十九期');
+   * 若工具把期号写死了，这里就读不出变化、也不会报未换挡 —— 即本条会转红。
+   * [v4.159] 破坏点跟着文档形态走：只改**首行标题**里的「第X期」，
+   *   不依赖 `# Agent Note:` 这个旧前缀（R24 起标题已改成 `# 第X期 · …`）。 */
+  const first = original.split('\n', 1)[0];
+  const tFirst = first.replace(/第[一二三四五六七八九十]+期/, '第九十九期');
+  const tampered = tFirst === first ? original : tFirst + original.slice(first.length);
   assert.notEqual(tampered, original, '破坏锛点必须命中计划书标题');
   try {
     fs.writeFileSync(p, tampered, 'utf8');
     const r = computePlanEntries();
-    assert.equal(r.raw.epoch, '九十九', '期号必须跟着真源变（写死的话读到的还是十三）');
+    assert.equal(r.raw.epoch, '九十九', '期号必须跟着真源变（写死的话读到的还是二十四）');
     assert.equal(r.ok, false, '期号变了而 PLAN 顶部没变 ⇒ 必须报未换挡');
     assert.ok(
       r.errors.some((e) => e.includes('顶部入口未换挡')),
@@ -94,16 +98,14 @@ test('A3: 期号与日期必须真的从计划书真源派生，不得在判据�
   assert.equal(computePlanEntries().ok, true, '恢复后必须回到绿（破坏没污染仓库）');
 });
 
-test('A4: 优先级节必须逐字列出当期全部编号（缺一个即红）', () => {
+test('A4: 优先级节必须逐字列出当期全部编号（缺一个即红；只看现行节，历史节不算数）', () => {
   const r = computePlanEntries();
-  const plan = PLAN();
-  const i = plan.indexOf('\n## 优先级');
-  assert.ok(i >= 0, 'PLAN.md 必须有「## 优先级」节');
-  const rest = plan.slice(i + 1);
-  const endAt = rest.search(/\n---\n/);
-  const section = endAt >= 0 ? rest.slice(0, endAt) : rest;
+  const section = prioritySectionOf(PLAN());
+  assert.ok(section, 'PLAN.md 必须有「## 优先级」节');
   const missing = r.raw.numbers.filter((n) => !section.includes(n));
   assert.deepEqual(missing, [], '优先级节缺当期编号：' + missing.join(' '));
+  /* 现行节必须到下一个二级标题就停：历史优先级节里的编号不得替它作证。 */
+  assert.ok(!/^##\s/m.test(section.slice(1)), '现行优先级节必须是独立的一段（历史节不得并入）');
 });
 
 /* ------------------------------------------------------------
@@ -179,13 +181,10 @@ test('B1: --write 只许写 TODO 的版本号那一格，不得代写 PLAN 的�
   assert.ok(!/## 优先级/.test(body), '写入函数不得写入优先级节');
 });
 
-test('B2: 抽样 — 计划书里每个 `### R<n>-*` 标题都必须在优先级节出现（不是只抽前几个）', () => {
+test('B2: 抽样 — 计划书里每个 `### R<n>-*`（或 `## O<n> ·`）标题都必须在优先级节出现（不是只抽前几个）', () => {
   const r = computePlanEntries();
-  const plan = PLAN();
-  const i = plan.indexOf('\n## 优先级');
-  const rest = plan.slice(i + 1);
-  const endAt = rest.search(/\n---\n/);
-  const section = endAt >= 0 ? rest.slice(0, endAt) : rest;
+  const section = prioritySectionOf(PLAN());
+  assert.ok(section, 'PLAN.md 必须有「## 优先级」节');
   const uniq = Array.from(new Set(r.raw.numbers));
   const absent = uniq.filter((n) => !section.includes(n));
   assert.deepEqual(absent, [], '这些真编号在优先级节里找不到：' + absent.join(' '));
@@ -238,7 +237,7 @@ function withTampered(file, transform, fn) {
   }
 }
 
-test('C1: 负控制 — 改期号（把顶部入口的「第十三期」改回去），A1 必须转红', () => {
+test('C1: 负控制 — 改现行期号（把顶部入口的「第二十四期」改掉），A1 必须转红', () => {
   const before = computePlanEntries();
   assert.equal(before.ok, true, '对照组：原件必须是绿的');
   const r = withTampered('PLAN.md', (s) => s.replace(/第[一二三四五六七八九十]+期产品计划（/, '第九期产品计划（'), () => computePlanEntries());
@@ -265,8 +264,13 @@ test('C3: 负控制 — 把 TODO 的版本号改回 v4.54.0，A1 必须转红（
 });
 
 test('C4: 负控制 — 计划书里抽不到任何编号时必须报红（fail-closed，不许空集走完循环当通过）', () => {
+  /* 两代文档形态都要打掉：旧 `### R24-O1`、新 `## O1 ·`。
+   * 只打旧形态的话，新形态计划书根本命中不了，破坏就成了空转。 */
   const r = withTampered(CURRENT_BOOK,
-    (s) => s.replace(new RegExp('^### ' + CURRENT_PREFIX + '-O', 'gm'), '### 已删编号 O'),
+    (s) => {
+      const a = s.replace(new RegExp('^###\\s+' + CURRENT_PREFIX + '-O', 'gm'), '### 已删编号 O');
+      return a.replace(/^##\s+([OX])([0-9]+)\s*[·:：.、]/gm, '## 已删编号 $1$2');
+    },
     () => computePlanEntries());
   assert.equal(r.ok, false, '抽不到编号时必须报红');
   assert.ok(
@@ -276,10 +280,67 @@ test('C4: 负控制 — 计划书里抽不到任何编号时必须报红（fail-
 });
 
 test('C5: 负控制 — 顶部入口链接坏掉时必须报红（不是静默跳过校对）', () => {
-  const r = withTampered('PLAN.md', (s) => s.replace('[优化提升九项](', '[优化提升九项](BROKEN/'), () => computePlanEntries());
+  const r = withTampered('PLAN.md', (s) => s.replace('· [优化九项](', '· [优化九项](BROKEN/'), () => computePlanEntries());
   assert.equal(r.ok, false, '链接坏掉必须报红');
   assert.ok(
     r.errors.some((e) => e.includes('不存在')) || r.errors.some((e) => e.includes('链接')),
     '必须点名链接坏掉：' + r.errors.join('; ')
   );
+});
+
+/* ------------------------------------------------------------
+ * A6：入口解析必须只看**顶部入口区**（本版抓到的第四处假绿）
+ * ------------------------------------------------------------
+ * 现象：第二十四期把入口文案从「[优化提升九项]」简化成「[优化九项]」，
+ *   旧正则**全文**首匹配落空后继续后扫，命中第 23 期留档行 ⇒ 工具读到的是
+ *   **已收口的上一期**。于是 C1「改现行期号」实测 r.ok = true —— 真破坏打不红。
+ * 修法：现行入口 = 文件开头到第一条 `> ---` / `---` 分隔线之间。
+ * 本条守三面：①边界真的截断；②历史行被改坏不影响取数；③入口改名时
+ *   fail-closed 报红（而不是回退到历史链接）。
+ * ------------------------------------------------------------ */
+test('A6: 入口解析只看顶部入口区 — 历史留档行不得替现行入口作证', () => {
+  const plan = PLAN();
+  const head = headZoneOf(plan);
+
+  /* ① 边界：顶部区必须是全文真子集，且不含任何历史期号/留档措辞 */
+  assert.ok(head.length > 0 && head.length < plan.length, '顶部入口区必须是全文的真子集');
+  assert.ok(plan.includes('第二十三期产品计划（'), '前提：全文仍有第 23 期留档行（旧写法的假绿来源）');
+  assert.ok(!head.includes('第二十三期产品计划（'), '顶部入口区不得含历史期号 —— 否则历史行会替现行入口作证');
+  assert.ok(!head.includes('已收口'), '顶部入口区不得含「已收口」这类留档措辞');
+
+  /* ② 历史行改坏，取数必须一字不变（证明解析没有后扫） */
+  const before = parsePlanEntry(plan);
+  const brokenHistory = plan.replace('[优化提升九项](', '[优化提升九项](BROKEN-HISTORY/');
+  assert.notEqual(brokenHistory, plan, '破坏锛点必须命中历史留档行的旧文案链接');
+  const afterHist = parsePlanEntry(brokenHistory);
+  assert.equal(afterHist.optFile, before.optFile, '历史行改坏后现行入口不得改变');
+  assert.deepEqual(afterHist.errors, [], '历史行改坏不得让现行入口报错：' + afterHist.errors.join('; '));
+
+  /* ③ 顶部入口文案改名 ⇒ fail-closed 报红，且不得回退到历史链接 */
+  const renamed = plan.replace('· [优化九项](', '· [本期优化]( ');
+  assert.notEqual(renamed, plan, '破坏锛点必须命中顶部入口链接');
+  const afterRename = parsePlanEntry(renamed);
+  assert.equal(afterRename.optFile, null, '顶部入口形态丢失时必须返回 null（不许回退历史链接）');
+  assert.ok(
+    afterRename.errors.some((e) => e.includes('入口形态丢失')),
+    '必须点名入口形态丢失：' + afterRename.errors.join('; ')
+  );
+});
+
+/* ------------------------------------------------------------
+ * A7：期号只能有一处口径（标题 vs 文件名）
+ * ------------------------------------------------------------
+ * 与 A3 的分工：A3 走「标题 vs PLAN 顶部入口」，本条走「标题 vs 文件名」。
+ * 两条同时绿才说明期号没有被拆成两个各说各话的真源 ——
+ * 「改了标题忘了改名」这种半截换挡，此前全文 includes 那条路永远看不见。
+ * ------------------------------------------------------------ */
+test('A7: 标题期号与文件名期号必须同源 — 半截换挡必须报红', () => {
+  const r = withTampered(CURRENT_BOOK, (s) => {
+    const first = s.split('\n', 1)[0];
+    const tamperedFirst = first.replace(/第[一二三四五六七八九十]+期/, '第九十九期');
+    assert.notEqual(tamperedFirst, first, '破坏锛点必须命中计划书首行标题里的期号');
+    return tamperedFirst + s.slice(first.length);
+  }, () => computePlanEntries());
+  assert.equal(r.ok, false, '只改标题不改文件名（半截换挡）必须报红');
+  assert.ok(r.errors.some((e) => e.includes('期号两处不一致')), '必须点名期号两处不一致：' + r.errors.join('; '));
 });

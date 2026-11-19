@@ -16716,24 +16716,6 @@ input:checked + .toggle-slider:before {
 .arc-pick.on { border-left: 3px solid var(--arc-ok); padding-left: 5px; }
 .arc-pick .arc-btn { flex: 0 0 auto; }
 
-/* ---------- 窄屏 ---------- */
-@media (max-width: 420px) {
-    .pvd-root { padding: 10px; font-size: 12px; }
-    .pvd-row { flex-wrap: wrap; }
-    .pvd-row > span:first-child { min-width: 0; }
-    .pvd-pre { max-height: 240px; }
-    .pvd-pre-out { max-height: 320px; }
-    .pvd-table { font-size: 10px; }
-}
-
-/* ---------- 窄屏（本件是六页签 + 六格仪表 + 逐态卡片条的竖排界面） ---------- */
-@media (max-width: 420px) {
-    .nsm-root { padding: 10px 8px; gap: 8px; }
-    .nsm-need-top { flex-wrap: wrap; }
-    .nsm-cat { flex-direction: column; align-items: flex-start; gap: 2px; }
-    .nsm-cat-k { flex: 0 0 auto; }
-    .nsm-rec-mood { margin-left: 0; }
-}
 /* ══════════════ [v3.38.0] 召回治理台（recall） ══════════════ */
 /* ========================================================
  * recall.css — [v3.38.0] 记忆宫殿 · 召回治理台 样式层
@@ -18823,13 +18805,6 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 }
 .mem-sr-note:empty { display: none; }
 .mem-sr-note-text { color: #b45309; font-size: 12px; }
-/* 320px 窄屏：主按钮与输入框不并排挤爆 */
-@media (max-width: 340px) {
-    .af-new { flex-direction: column; }
-    .af-primary { width: 100%; }
-}
-
-
 /* ==== [v4.49.0 · R6-O2] 会话台（apps/comms/comms.css 同名段）==== */
 /* ========================================================
  * comms.css — [v4.49.0 · 第六期 R6-O2] 会话台样式

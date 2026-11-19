@@ -31,6 +31,12 @@
  *   把 doc / 钟 当参数收 —— 测试用假 doc 把「同 id 已存在但没 settle」「错一次就把
  *   promise 永久写死」这些边界真造出来。
  * ============================================================ */
+/* [v4.157.0 · R25 清红] 数值取值一律走全仓唯一的门（v3570 门点名的 4 处之一）。
+ *   这里原来各写一份 `Number.isFinite(Number(x)) ? Number(x) : null`：
+ *   那是弱口径 —— `Number('')` / `Number([])` 都是 0，于是「没给」与「给了 0」塌成同形，
+ *   而本文件的处置正好相反（没给 ⇒ 用默认超时/容差；给了 0 ⇒ 立刻超时/零容差）。
+ *   `numOrNull` 只认 number 与非空数字字符串，其余如实 null。 */
+import { numOrNull } from './num-gate.js';
 
 /** 已搬出 phone.css 的样式表（appId → 自带 css 文件）。
  *  bytes 是**从 phone.css 里真搬走的字节数**（由迁移工具算完写入，不是估的）。
@@ -101,7 +107,8 @@ export function styleReceipt(plan, outcome) {
         return { ok: true, face: 'bundled', appId: String(p.appId || ''), href: '', bytes: 0, elapsedMs: null, reason: '样式在首屏（本 App 不做懒加载）' };
     }
     const loaded = o.loaded === true ? true : (o.loaded === false ? false : null);
-    const ms = (o.elapsedMs === null || o.elapsedMs === undefined) ? null : (Number.isFinite(Number(o.elapsedMs)) ? Number(o.elapsedMs) : null);
+    /* 耗时读数走唯一取值门：''/[]/true 一律「没给」（旧写法把它们折成 0ms ⇒ 假装很快）。 */
+    const ms = numOrNull(o.elapsedMs);
     const face = loaded === true ? 'loaded' : (loaded === false ? 'degraded' : 'unknown');
     return {
         ok: loaded === true,
@@ -123,7 +130,10 @@ export function styleVerdict(beforeBytes, afterBytes, tolerancePct) {
     }
     const b = Number(beforeBytes);
     const a = Number(afterBytes);
-    const tol = Number.isFinite(Number(tolerancePct)) ? Math.abs(Number(tolerancePct)) : 1;
+    /* 容差也走唯一取值门。默认仍按旧口径取 0（=不改判），只在「真给了数」时用给的值；
+     * 旧写法把 ''/true/[] 折成 0 或 1，是同一类塌形。 */
+    const tolGiven = numOrNull(tolerancePct);
+    const tol = tolGiven === null ? 0 : Math.abs(tolGiven);
     if (!Number.isFinite(b) || !Number.isFinite(a) || b <= 0 || a < 0) return { face: 'unknown', deltaPct: null };
     const deltaPct = Math.round(((a - b) / b) * 1000) / 10;
     const face = Math.abs(deltaPct) <= tol ? 'same' : (deltaPct < 0 ? 'improved' : 'regressed');
@@ -142,7 +152,12 @@ export function createStyleLoader(opts) {
     const doc = o.doc || (typeof document !== 'undefined' ? document : null);
     const baseUrl = String(o.baseUrl == null ? '' : o.baseUrl);
     const now = (typeof o.now === 'function') ? o.now : null;
-    const timeoutMs = Number.isFinite(Number(o.timeoutMs)) ? Number(o.timeoutMs) : STYLE_LAZY_TIMEOUT_MS;
+    /* ★ 这一处是真缺陷，不是口径洁癖：旧写法 `Number.isFinite(Number(o.timeoutMs)) ? … : 4000`
+     *   在「没给 timeoutMs」时走的是 Number(undefined) = **0** ⇒ 超时定时器 0ms ⇒
+     *   每次打开 App 都立刻判 unknown（样式等于永远没等到）。走取值门后「没给」真拿默认值，
+     *   而调用方显式传 0 仍然照旧立刻超时（给了 0 与没给不再同形）。 */
+    const timeoutGiven = numOrNull(o.timeoutMs);
+    const timeoutMs = timeoutGiven === null ? STYLE_LAZY_TIMEOUT_MS : timeoutGiven;
     const setT = (typeof o.setTimeout === 'function') ? o.setTimeout : (typeof setTimeout === 'function' ? setTimeout : null);
     const clearT = (typeof o.clearTimeout === 'function') ? o.clearTimeout : (typeof clearTimeout === 'function' ? clearTimeout : null);
     const receipts = [];

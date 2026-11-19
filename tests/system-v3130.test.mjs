@@ -314,8 +314,19 @@ test('B2 ★★ 两个启动大段 + 请求侧标记在场（三态可分：没�
     ]) {
         assert.equal(src.split(anchor).length - 1, 1, name + ' 应恰好在场 1 次');
     }
-    /* 一行汇总必须走真源（不得就地拼一遍文案） */
-    assert.ok(/bootTimingLine\(bootTiming\.collect\(\)\)/.test(src), '汇总日志必须消费真源文案');
+    /* 一行汇总必须走真源（不得就地拼一遍文案）
+     * [v4.157.x · R25 清红] 原判据写死 `bootTimingLine(bootTiming.collect())` 这个**同一次调用**的字面形态。
+     *   R26-O1 要在收段处复用同一份快照落盘（跨启动预算），于是拆成两行：
+     *     `const _btSnap = bootTiming.collect();` 然后 `console.log('[启动耗时] ' + bootTimingLine(_btSnap));`
+     *   真源文案照旧消费，只是不再内联 —— 旧判据把「写法」当成了「机制」，于是红在这件没变的事上。
+     *   改判为量**数据流**：快照要么内联取自 collect()，要么先落一格再喂给 bootTimingLine；
+     *   同时保留「必须是 console.log 的字符串拼接」这一面（那才是「一行汇总」的实质）。 */
+    const inlineFeed = /bootTimingLine\(\s*bootTiming\.collect\(\)\s*\)/;
+    const snapVar = /const\s+(\w+)\s*=\s*bootTiming\.collect\(\)\s*;/.exec(src);
+    const fedFromTruth = inlineFeed.test(src)
+        || (snapVar && new RegExp('bootTimingLine\\(\\s*' + snapVar[1] + '\\s*\\)').test(src));
+    assert.ok(fedFromTruth, '汇总日志必须消费真源文案（collect() 的快照要喂给 bootTimingLine，内联或先落到一格都算）');
+    assert.ok(/console\.log\([^\n]*bootTimingLine\(/.test(src), '汇总行应是 console.log 的字符串拼接（不是自己拼一遍读数）');
     /* ★ [v3.79.0 改判：距离窗 → 作用域窗]
      *   旧判据是 `/window\.VirtualPhone\s*=[\s\S]{0,400}?bootTiming: bootTiming/`：一条
      *   「多远之内」的代理判据。它量错了对象 —— 本版把动效运行时挂到同一个出口时，

@@ -23,12 +23,15 @@ import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/doujin/doujin-data.js';
 import * as APP from '../apps/doujin/doujin-app.js';
 import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
+import { styleSplitFacts } from './_style_split.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DJ_DATA = 'apps/doujin/doujin-data.js';
 const DJ_APP = 'apps/doujin/doujin-app.js';
 const DJ_VIEW = 'apps/doujin/doujin-view.js';
 const DJ_CSS = 'apps/doujin/doujin.css';
+/* 本版样式段头标记（R25-O4 后它在本 App 自己的 css 里，不在 phone.css 里）。 */
+const STYLE_MARK = '[v3.44.0] 同人商店';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -814,27 +817,34 @@ test('C2 六处接线落点到位（少一处就静默错数据 / 点了没反�
 });
 
 test('C3 样式段头独立成行（本仓踩过粘连坑：语法合法但样式挂错选择器）', () => {
-    const css = read(PHONE_CSS);
-    const mark = '[v3.44.0] 同人商店';
-    const idx = css.indexOf(mark);
-    assert.ok(idx > 0);
-    const lineStart = css.lastIndexOf(NL, idx) + 1;
-    const lineEnd = css.indexOf(NL, idx);
-    const line = css.slice(lineStart, lineEnd);
-    assert.ok(line.startsWith('/*'), '段头行必须以块注释起头，实测：' + line.slice(0, 40));
-    assert.ok(line.trimEnd().endsWith('*/'), '段头行必须以块注释收尾，实测：' + line.slice(-40));
-    assert.ok(lineStart === 0 || css[lineStart - 1] === NL, '段头不许接在上一段尾后');
-    assert.equal(line.split('/*').length, 2, '段头行只许有一个块注释起头');
-    /* 段序：本版段必须排在**上一版**段之前（最新版在最前）。
-     * ★ 写成绝对形（「heads[0] 必须是本版」）等于给下一版埋一条必红的断言。 */
-    assert.ok(css.indexOf(mark) < css.indexOf('[v3.43.0] PV 案头'),
-        '本版段必须在 v3.43.0 段之前（最新版在最前）');
+    /* 段头形态查的是**本 App 自己的 css**（R25-O4 后 phone.css 不是它的家）。
+     * 老判据还查「本版段必须排在 v3.43.0 段之前」的段序 —— 那是 phone.css 里的约定；
+     * 搬出后每个 App 各自一份 css，段序不再是可观测的事实，故撤掉（C5 的逐类对应仍在）。 */
+    const css = read(DJ_CSS);
+    const idx = css.indexOf(STYLE_MARK);
+    assert.ok(idx > 0, '段头必须在场（含版本标记 ' + STYLE_MARK + '）');
+    const head = css.slice(0, idx);
+    assert.ok(head.trimStart().startsWith('/*'), '文件必须以块注释段头起头，实测：' + head.slice(0, 40));
+    const close = css.indexOf('*/', idx);
+    assert.ok(close > idx, '段头注释必须包住版本标记（标记落在注释外会被当选择器吃掉）');
+    assert.equal(head.split('*/').length, 1, '段头注释在标记之前不得提前收尾');
+    const after = css.slice(close + 2, close + 4);
+    assert.ok(after.startsWith(NL), '注释收尾后必须换行，不许与正文粘连，实测：' + JSON.stringify(after));
 });
 
-test('C4 源文件与 phone.css 段必须逐字同源（手工改两处必会再犯）', () => {
+test('C4 样式唯一真源：搬出后 phone.css 里不许再有整份副本（手工留两处必会再犯）', () => {
     const phone = read(PHONE_CSS);
     const src = read(DJ_CSS).trim();
-    assert.ok(phone.indexOf(src) > 0, 'phone.css 里的本版段必须与源文件逐字同源');
+    assert.ok(src.length > 0, 'doujin.css 不得为空（唯一真源不许是空文件）');
+    /* 老判据查「源文件正文逐字出现在 phone.css」；搬出后那条恒假。改成反向：
+       打包面**不许**再含整份副本 —— 两处副本正是老判据要防的形态。 */
+    assert.equal(phone.includes(src), false, 'phone.css 里不得再含 doujin.css 整份副本');
+    assert.equal(phone.includes('.djn-root'), false, 'phone.css 不得残留 .djn-root 规则');
+    const sf = styleSplitFacts(ROOT, { appId: 'doujin', cssRel: DJ_CSS, headerMark: STYLE_MARK, prefixes: ['djn'] });
+    assert.ok(sf.cssExists, DJ_CSS + ' 必须在盘（本 App 样式的唯一真源）');
+    assert.ok(sf.ledger.present, 'config/style-lazy.js 的 STYLE_LAZY 必须登记 doujin（不登记 ⇒ 打开就裸奔）');
+    assert.ok(sf.ledgerPointsHere, '账本必须把 doujin 指向 ' + DJ_CSS + '，实测：' + sf.ledger.css);
+    assert.equal(sf.bundleResidual, 0, 'phone.css 不得再残留本 App 独占规则，实测 ' + sf.bundleResidual + ' 处');
 });
 
 test('C5 样式类名与视图产出逐类对应（视图产出的类必须有样式落点）', () => {

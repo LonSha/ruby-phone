@@ -610,12 +610,17 @@ test('E3 样式双侧投递：源样式与 phone.css 打包侧逐类同投', () 
         assert.ok(appCssSrc.indexOf('.mem-sr-' + st) >= 0, '缺逐行态配色 ' + st);
     }
     /* 段头必须独立成行（本仓踩过粘连坑），且打包侧与源段逐字同源。
-     * [v4.87.0 交棒] 提取到下一段注释（v4.48.0）前为止，防止 phone.css 追加后续段落导致 slice 尾部溢出 */
+     * [v4.87.0 交棒] 提取到下一段的段头注释前为止。
+     * ★ 不许数等号：下一段段头是「块注释 + 若干等号 + 版本标记」，而等号个数**各版不同**
+     *   （v4.48 段是 5 个、v4.49 段是 4 个）。原判据写死 5 个等号，v4.49 段一落盘就截不断，
+     *   把后面一万三千多字符一起吃进来 —— 判据自己把「同源」判成了不同源（读数空白先怀疑量法）。
+     *   故改成按「块注释 + 版本标记」的形态取下一段，不数等号。 */
     const seg = (src) => {
         const i = src.indexOf('[v4.46.0 · R5-X6]');
         assert.ok(i >= 0, '缺本版段头');
         const rest = src.slice(i);
-        const j = rest.indexOf('/* ===== [v4.');
+        const m = /\/\*[^\n]{0,30}\[v4\.\d+\.\d+/.exec(rest.slice(1));
+        const j = m ? m.index + 1 : -1;
         return (j < 0 ? rest : rest.slice(0, j)).trim();
     };
     assert.equal(seg(bundleCssSrc), seg(appCssSrc), '★ phone.css 的本版段必须与 apps/memory/memory.css 逐字同源');

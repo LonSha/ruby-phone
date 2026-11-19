@@ -97,22 +97,86 @@ export function computePlanBaseline() {
  *  （如 C5 负控制写出的 `BROKEN/...`）会匹配落空，正则继续后扫**静默回退**命中
  *  历史期号的同名链接，把「链接不存在」吞成「期号混用」——坏链接逃过门禁。
  *  修法是放宽捕获、把「路径对不对」交给存在性检查 fail-closed 报红。 */
-export function parsePlanEntry(content) {
-  const errors = [];
-  const opt = content.match(/\[优化提升九项\]\(([^)\s]+)\)/);
-  const exp = content.match(/\[拓展创新九项\]\(([^)\s]+)\)/);
-  if (!opt) errors.push('PLAN.md 顶部入口缺「[优化提升九项](...)」链接（入口形态丢失）');
-  if (!exp) errors.push('PLAN.md 顶部入口缺「[拓展创新九项](...)」链接（入口形态丢失）');
-  return { optFile: opt ? opt[1] : null, expFile: exp ? exp[1] : null, errors };
+/* [v4.159 维护] 顶部入口区 = 文件开头那一段「> **第N期产品计划**」，到第一条
+ * `> ---` / `---` 分隔线为止。入口链接解析与「顶部是否换挡」的校对**都必须**
+ * 限制在段内 —— 段后是历史留档（第 23 期起按此格式留档），里面同样有
+ * 「第N期产品计划（日期」「[优化提升九项](...)」这类文本。
+ *
+ * 这是本仓第三次撞同一个坑（前两次：坏链接静默回退、C5 破坏打在留档行上）：
+ *   第二十四期把入口文案从「优化提升九项」简化成「优化九项」，旧正则全文
+ *   首匹配落空后继续后扫，命中第 23 期留档行 ⇒ 工具读到的是**已收口的上一期**，
+ *   于是「改现行期号」这种真破坏打不红（v4107/C1 实测 r.ok = true）。
+ * 修法不是补一个字面量，而是把「哪一段才是现行入口」变成可判定的边界。 */
+export function headZoneOf(content) {
+  const s = String(content || '');
+  const cuts = [];
+  const a = s.search(/\n> ---/);
+  if (a >= 0) cuts.push(a);
+  const b = s.search(/\n---\n/);
+  if (b >= 0) cuts.push(b);
+  const cut = cuts.length ? Math.min.apply(null, cuts) : s.length;
+  return s.slice(0, cut);
 }
 
-/** 把计划书正文里的 `### R13-O1` 一类标题抽成编号列表。 */
-function collectPlanNumbers(md) {
+export function parsePlanEntry(content) {
+  const errors = [];
+  const head = headZoneOf(content);
+  const pick = (re) => {
+    const m = head.match(re);
+    return m ? m[1] : null;
+  };
+  /* 入口文案认双形态：现行「[优化九项]」/「[拓展九项]」，历史留档「[优化提升九项]」/
+   * 「[拓展创新九项]」。文案是人写的缩写，不该因为改名就让工具罢工；
+   * 但**只在顶部区里认**，落空即 fail-closed 报错，绝不回退全文件。 */
+  const optFile = pick(/\[(?:优化提升九项|优化九项)\]\(([^)\s]+)\)/);
+  const expFile = pick(/\[(?:拓展创新九项|拓展九项)\]\(([^)\s]+)\)/);
+  if (!optFile) errors.push('PLAN.md 顶部入口区缺「[优化九项](...)」（旧形态「[优化提升九项](...)」同样认）链接（入口形态丢失）');
+  if (!expFile) errors.push('PLAN.md 顶部入口区缺「[拓展九项](...)」（旧形态「[拓展创新九项](...)」同样认）链接（入口形态丢失）');
+  return { optFile, expFile, errors };
+}
+
+/** 把计划书正文里的编号抽成列表 —— **两代文档形态都认**：
+ *  · 旧形态（≤R23）：`### R13-O1 标题`（编号自带期号前缀）
+ *  · 新形态（R24 起）：`## O1 · 标题`（编号前缀由文件名派生，不在标题里重复）
+ * 前缀一律由调用方从计划书文件名派生，不从标题里猜。
+ * fail-closed：两种形态都抽不到就返回空数组，由调用方报错（不许空集当通过）。 */
+function collectPlanNumbers(md, epochNum) {
   const out = [];
-  const re = /^###\s+(R[0-9]+-[OX][0-9]+)\s/mg;
+  let re = /^###\s+(R[0-9]+-[OX][0-9]+)\s/mg;
   let m;
   while ((m = re.exec(md)) !== null) out.push(m[1]);
+  if (out.length > 0) return out;
+  if (!epochNum) return out;
+  const P = 'R' + epochNum;
+  re = /^##\s+([OX])([0-9]+)\s*[·:：.、]/mg;
+  while ((m = re.exec(md)) !== null) out.push(P + '-' + m[1] + String(Number(m[2])));
   return out;
+}
+
+/** 中文期号 → 数字（只认「二十四」「九」「十」这类纯数字写法，不猜别的）。
+ * 返回 null 表示读不懂 ⇒ 调用方 fail-closed。 */
+function fromChineseNum(cn) {
+  const D = { 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  const s = String(cn || '');
+  if (s === '十') return 10;
+  const m = s.match(/^([一二三四五六七八九])?十([一二三四五六七八九])?$/);
+  if (m) return (m[1] ? D[m[1]] : 1) * 10 + (m[2] ? D[m[2]] : 0);
+  return D[s] === undefined ? null : D[s];
+}
+
+/** 现行优先级节正文：从 `## 优先级` 起，到**下一个二级标题**或分隔线为止。
+ *  [v4.159] 此前切到第一个 `---`，把「## 历史优先级（第二十三期 …）」也包进来了 ——
+ *  于是「现行排序没换挡」可以靠历史节里的同名编号蒙混过关。本期 R23/R24 前缀不同
+ *  才没当场炸，换成「改名不改号」的期就会真炸。现行节必须自证，历史节不算数。 */
+export function prioritySectionOf(plan) {
+  const s = String(plan || '');
+  const i = s.indexOf('\n## 优先级');
+  if (i < 0) return null;
+  const rest = s.slice(i + 1);
+  const tail = rest.slice(1);
+  const m = tail.match(/\n(?:##\s|---\n)/);
+  const end = m ? m.index + 1 : rest.length;
+  return rest.slice(0, end);
 }
 
 export function computePlanEntries() {
@@ -137,24 +201,41 @@ export function computePlanEntries() {
 
   /* 期号与日期真源 */
   let epochCn = null;
+  let epochNum = null;
   let planDate = null;
   if (entry.optFile) {
     const d = entry.optFile.match(/([0-9]{4}-[0-9]{2}-[0-9]{2})/);
     if (!d) errors.push('计划书文件名里读不到日期 ⇒ 日期真源取不到（fail-closed，不猜）');
     else planDate = d[1];
+    const v = entry.optFile.match(/-v([0-9]+)\.md$/);
+    if (!v) errors.push('计划书文件名里读不到「-v<期号>.md」⇒ 编号前缀取不到（fail-closed，不猜）');
+    else epochNum = Number(v[1]);
   }
   if (optContent) {
-    const m = optContent.match(/^#\s+Agent Note:[^\n]*第([一二三四五六七八九十百]+)期/m);
-    if (!m) errors.push('优化计划书标题里读不到「第<中文数字>期」⇒ 期号真源取不到（fail-closed，不猜）');
+    /* 只取**首行**：两代标题都认（`# Agent Note:…第X期` / `# 第X期 · …`）。
+     * 不在全文里搜，避免正文提到历史期号时读错。 */
+    const firstLine = optContent.split('\n', 1)[0] || '';
+    const m = firstLine.match(/^#\s+[^\n]*?第([一二三四五六七八九十百]+)期/);
+    if (!m) errors.push('优化计划书首行标题里读不到「第<中文数字>期」⇒ 期号真源取不到（fail-closed，不猜）');
     else epochCn = m[1];
+  }
+  /* 标题期号与文件名期号必须同源：改了标题不改名（或反之）就是两处口径 ——
+   * 这种「半截换挡」此前靠「全文 includes」永远看不出来。 */
+  if (epochCn && epochNum !== null) {
+    const byCn = fromChineseNum(epochCn);
+    if (byCn === null) {
+      errors.push('计划书标题里的中文期号「第' + epochCn + '期」读不成数字（fail-closed，不猜）');
+    } else if (byCn !== epochNum) {
+      errors.push('期号两处不一致：标题写「第' + epochCn + '期」= ' + byCn + '，文件名写 v' + epochNum + '（半截换挡）');
+    }
   }
 
   /* 编号集合真源 */
-  const optNumbers = optContent ? collectPlanNumbers(optContent) : [];
-  const expNumbers = expContent ? collectPlanNumbers(expContent) : [];
+  const optNumbers = optContent ? collectPlanNumbers(optContent, epochNum) : [];
+  const expNumbers = expContent ? collectPlanNumbers(expContent, epochNum) : [];
   const numbers = optNumbers.concat(expNumbers);
   if (numbers.length === 0) {
-    errors.push('两份当期计划书里一条 `### R<n>-*` 编号都抽不到 ⇒ 优先级节无从校对（fail-closed）');
+    errors.push('两份当期计划书里一条编号都抽不到（`### R<n>-*` 与 `## O<n> ·` 两代形态皆无）⇒ 优先级节无从校对（fail-closed）');
   } else {
     const prefixes = new Set(numbers.map((n) => n.replace(/-[OX][0-9]+$/, '')));
     if (prefixes.size > 1) {
@@ -165,23 +246,22 @@ export function computePlanEntries() {
     }
   }
 
-  /* 第一处：PLAN.md 顶部入口（期号 + 日期） */
+  /* 第一处：PLAN.md 顶部入口（期号 + 日期）
+   * [v4.159] 只在顶部入口区内校对：此前全文 includes，历史留档行
+   *   「第23期产品计划（2026-11-17」会把本该报红的破坏吞掉。 */
   if (plan !== null && epochCn && planDate) {
     const need = '第' + epochCn + '期产品计划（' + planDate;
-    if (!plan.includes(need)) {
+    if (!headZoneOf(plan).includes(need)) {
       errors.push('PLAN.md 顶部入口未换挡：应含「' + need + '…」，实测缺（期号/日期与当期计划书不一致）');
     }
   }
 
-  /* 第二处：PLAN.md「## 优先级」节的编号集合 */
+  /* 第二处：PLAN.md「## 优先级」节的编号集合（只看现行节，历史节不算数） */
   if (plan !== null && numbers.length > 0) {
-    const prIdx = plan.indexOf('\n## 优先级');
-    if (prIdx < 0) {
+    const section = prioritySectionOf(plan);
+    if (section === null) {
       errors.push('PLAN.md 找不到「## 优先级」节（优先级入口消失）');
     } else {
-      const rest = plan.slice(prIdx + 1);
-      const endAt = rest.search(/\n---\n/);
-      const section = endAt >= 0 ? rest.slice(0, endAt) : rest;
       const missing = numbers.filter((n) => !section.includes(n));
       if (missing.length > 0) {
         errors.push('PLAN.md 优先级节缺当期编号 ' + missing.length + ' 个：' + missing.join(' ') + '（旧排序未换挡）');

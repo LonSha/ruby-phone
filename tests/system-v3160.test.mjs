@@ -322,6 +322,22 @@ test('E3 ★★ 破坏：追加脚本的转义函数变恒等 → 含反引号/�
   const broken = damageSrc(APPEND, anchor, 'const escTpl = (s) => String(s);');
   assert.ok(/const escTpl = \(s\) => String\(s\);/.test(broken), '破坏必须真的生效');
   const fixture = '<夹具>\n\n<简介>\n带 ` 反引号与 ${插值} 的正文。\n';
+  /* [v4.157.x · R25 清红] 条目现在落在 `data/cheats/part-NN.js`（R24-O9 数据/代码分离），
+   *   `data/cheats.js` 只剩分片 import 清单 —— 所以「产物」要按「分片目录 + 聚合文件」扫，
+   *   谁含这条就读谁。只盯 cheats.js 会把「写成功了」读成「没写进去」（读数空白先怀疑量法）。 */
+  const readProduced = (d) => {
+    const files = [path.join(d, 'data', 'cheats.js')];
+    const pd = path.join(d, 'data', 'cheats');
+    if (fs.existsSync(pd)) {
+      for (const f of fs.readdirSync(pd)) if (f.endsWith('.js')) files.push(path.join(pd, f));
+    }
+    for (const p of files) {
+      let t = '';
+      try { t = fs.readFileSync(p, 'utf8'); } catch (_e) { continue; }
+      if (t.includes('"id": "ch199"')) return t;
+    }
+    return '';
+  };
   function runAppend(src, tag) {
     const dir = mkTmp(tag);
     fs.mkdirSync(path.join(dir, 'scripts'), { recursive: true });
@@ -329,11 +345,23 @@ test('E3 ★★ 破坏：追加脚本的转义函数变恒等 → 含反引号/�
     fs.writeFileSync(path.join(dir, 'scripts', 'append-cheat.mjs'), src);
     fs.copyFileSync(path.join(ROOT, 'data', 'cheats.js'), path.join(dir, 'data', 'cheats.js'));
     fs.copyFileSync(path.join(ROOT, 'data', 'cheat-index.js'), path.join(dir, 'data', 'cheat-index.js'));
+    /* [v4.157.x · R25 清红] cheats.js 已改为 import 分片（`data/cheats/part-*.js`）：
+     *   只复制两个入口文件，副本里就缺分片，脚本起来第一句就 ERR_MODULE_NOT_FOUND ——
+     *   那不是「转义坏了」，是夹具没跟上数据布局（实测报错原文就指向 data/cheats/part-01.js）。
+     *   逐文件搬（不用 cpSync：它的 dest 语义在「目标已存在」时是合并，实测把目录又套了一层，
+     *   结果 part-01.js 落在 data/cheats/cheats/ 下，脚本照旧找不到）。 */
+    const partsDir = path.join(ROOT, 'data', 'cheats');
+    if (fs.existsSync(partsDir)) {
+      const destParts = path.join(dir, 'data', 'cheats');
+      fs.mkdirSync(destParts, { recursive: true });
+      for (const f of fs.readdirSync(partsDir)) {
+        fs.copyFileSync(path.join(partsDir, f), path.join(destParts, f));
+      }
+    }
     fs.writeFileSync(path.join(dir, 'body.txt'), fixture);
     const r = spawnSync('node', ['scripts/append-cheat.mjs', '--id', 'ch199', '--name', '夹具', '--src', 'body.txt'],
       { cwd: dir, encoding: 'utf8', timeout: 120000 });
-    const txt = fs.readFileSync(path.join(dir, 'data', 'cheats.js'), 'utf8');
-    return { r: r, txt: txt };
+    return { r: r, txt: readProduced(dir), dir: dir };
   }
   /* ★ 断言必须只取 content 模板串本体：desc 字段走 JSON.stringify（双引号串），
    *   反引号在那里**本来就合法**——直接对条目整段做正则会把 desc 当成漏转义。 */
@@ -348,7 +376,8 @@ test('E3 ★★ 破坏：追加脚本的转义函数变恒等 → 含反引号/�
   }
   const b = runAppend(broken, 'appendbad');
   const bc = contentSlice(b.txt);
-  assert.ok(bc !== null, '夹具条目必须在产物里（写入本身要成功）');
+  assert.ok(bc !== null, '夹具条目必须在产物里（写入本身要成功）；rc=' + b.r.status
+    + ' 产物长度=' + b.txt.length + ' stderr=' + String(b.r.stderr || '').slice(0, 300));
   assert.ok(bc.includes('带 ` 反引号'), '★ 破坏后正文出现裸反引号（转义失效可观测）');
   const o = runAppend(APPEND, 'appendok');
   assert.equal(o.r.status, 0, '原件上必须跑通：' + String(o.r.stderr).slice(0, 200));

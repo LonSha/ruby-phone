@@ -74,34 +74,49 @@ test('A3 事件方向读数抽点逐字对账（松窗修复后的真读数）',
     assert.equal(sumOn, 46, '全契约订阅文件数合计 46');
 });
 
-test('A4 debt 与 zeroUse 落真仓实值', () => {
-    assert.deepEqual(READING.debt, ['phone:pet-statechange', 'phone:motionResume',
-        'phone:viewBack', 'phone:canonAdopt', 'phone:causalSource']);
-    assert.deepEqual(READING.zeroUse, []);
-    for (const d of READING.debt) {
-        const r = findEv(d);
-        assert.ok(r.emit > 0 && r.on === 0, d + ' 必须是 emit>0 且 on=0');
+test('A4 欠账清零，五条改判逐条带证据（改判不是免单）', () => {
+    /* [v4.157.0 口径校正] 这五条已由 R22-O7 从 debt **改判**为「对外遥测 / 跨仓转交」，
+     * debt 因此清零。老判据把「debt 恰好 5 条」写死，改判一落地它就恒红 —— 它守的其实
+     * 不是「5」这个数，而是「每条 no-subscriber 事件要么进 debt、要么带证据进改判层」。
+     * 故改成守结构：debt 必须为空（不许有没证据的欠账）+ 改判五条逐条在场且带 why/evidence。 */
+    assert.deepEqual(READING.debt, [], '欠账必须清零（emit>0 且 on=0 又没改判理由的才叫欠账）');
+    assert.deepEqual(READING.zeroUse, [], 'emit 与 on 双零事件必须为空');
+    const want = ['phone:pet-statechange', 'phone:motionResume',
+        'phone:viewBack', 'phone:canonAdopt', 'phone:causalSource'];
+    assert.deepEqual(READING.reclassified.map((r) => r.event).sort(), want.slice().sort(),
+        '五条改判必须在读数里逐条在场');
+    for (const r of READING.reclassified) {
+        const row = findEv(r.event);
+        assert.ok(row.emit > 0 && row.on === 0, r.event + ' 必须是 emit>0 且 on=0');
+        assert.ok(typeof r.why === 'string' && r.why.length >= 20, r.event + ' 改判理由 ≥20 字');
+        assert.ok(typeof r.evidence === 'string' && r.evidence.trim().length > 0,
+            r.event + ' 必须有证据串（证据为空 = 改判变成免单）');
+        assert.ok(['telemetry', 'cross-repo'].includes(r.kind), r.event + ' kind 只许是遥测 / 跨仓两类');
     }
 });
 
 /* ══════════════ B. 台账 fail-closed ══════════════ */
-test('B1 五条欠账每条有写实理由（≥20 字、非套话）', () => {
-    assert.equal(Object.keys(READING.debtLedger).length, READING.debt.length,
-        '台账条数与 debt 同源');
+test('B1 台账与改判层逐条同源（多挂 / 少挂都拒判，理由写实非套话）', () => {
+    const keys = Object.keys(READING.debtLedger).sort();
+    const evs = READING.reclassified.map((r) => r.event).sort();
+    assert.deepEqual(keys, evs, '台账键必须与 reclassified 逐条同源（多挂空账 / 少挂改判都红）');
     for (const [k, v] of Object.entries(READING.debtLedger)) {
-        assert.ok(READING.debt.includes(k), '台账键 ' + k + ' 必须在 debt 里（不许挂空账）');
+        assert.ok(!READING.debt.includes(k), '台账键 ' + k + ' 不许同时还在欠账里（一条账只能记一头）');
         assert.ok(typeof v === 'string' && v.length >= 20, k + ' 理由 ≥20 字');
         assert.ok(!/^(暂留|待定|TODO|以后再说)/.test(v), k + ' 不许套话搪塞');
         assert.ok(/[：;，；]|承接|遥测|API|owner|兜底|同步/.test(v), k + ' 理由必须含实证要素');
     }
 });
 
-test('B2 台账落审计工具真代码面（fail-closed 不是注释自述）', () => {
-    assert.ok(toolSrc.includes('const DEBT_LEDGER = Object.freeze'), '台账常量在工具真代码面');
-    assert.ok(toolSrc.includes('process.exit(2)'), '无理由欠账 exit 2 拒判');
-    assert.ok(toolSrc.includes('先实证再落账'), '拒判话术锚在');
-    for (const d of READING.debt) {
-        assert.ok(toolSrc.includes("'" + d + "'"), '台账键 ' + d + ' 逐字在工具源码');
+test('B2 改判层落审计工具真代码面（fail-closed 不是注释自述）', () => {
+    /* 常量在 R22-O7 改判后叫 RECLASSIFIED（原 DEBT_LEDGER 已退役）。
+     * 守的是机制：改判必须写在真代码的冻结表里，缺理由/证据 exit 2，且有反向闸。 */
+    assert.ok(toolSrc.includes('const RECLASSIFIED = Object.freeze'), '改判常量在工具真代码面');
+    assert.ok(toolSrc.includes('process.exit(2)'), '无理由 / 证据不足 ⇒ exit 2 拒判');
+    assert.ok(toolSrc.includes('改判不是免单'), '拒判话术锚在');
+    assert.ok(toolSrc.includes('反向闸'), '反向闸（已改判但仓内已有订阅）在');
+    for (const d of READING.reclassified.map((r) => r.event)) {
+        assert.ok(toolSrc.includes("'" + d + "'"), '改判键 ' + d + ' 逐字在工具源码');
     }
 });
 
@@ -146,11 +161,13 @@ test('C4 viewBack 修复落真代码面（外壳自同步）', () => {
     assert.equal(n, 2, 'setCurrentApp( 恰 2 处（修复点+定义点），实得 ' + n);
 });
 
-/* ══════════════ D. 负控制：真删真源 ⇒ 读数必变且 fail-closed 转红 ══════════════
+/* ══════════════ D. 负控制：真删真源 ⇒ 读数必变且 fail-closed 可观测 ══════════════
  * 靶点：phone:albumImageDeleted（emit 1 / on 1）——删掉唯一订阅行
- * （apps/album/album-app.js:43），重扫读数必须 debt 5→6 且新欠账无台账理由
- * ⇒ 工具 exit 2 拒判。一石二鸟：既证扫描器活着，又证 fail-closed 活着。 */
-test('D1 真删唯一订阅行 ⇒ 重扫 debt 5→6 且 exit 2 拒判', () => {
+ * （apps/album/album-app.js:43）。[v4.157.0 口径校正] 工具现在「读数照出、判决归判据」，
+ * 退出码只随结构漂移（改判缺理由/证据、反向闸）变化，不随 debt 非空变化；故负控制改为
+ * 钉两个可观测面：① 该事件必须落进 debt 且不得混进改判层；② 人读面必须点名它。
+ * 一石二鸟不变：既证扫描器活着，又证 fail-closed 活着。 */
+test('D1 真删唯一订阅行 ⇒ 重扫必点名新欠账，恢复后回到清零', () => {
     const target = path.join(ROOT, 'apps', 'album', 'album-app.js');
     const orig = fs.readFileSync(target, 'utf8');
     const SENTINEL = "window.addEventListener(PHONE_EVENTS.ALBUM_IMAGE_DELETED, this._onImageDeleted);";
@@ -158,39 +175,38 @@ test('D1 真删唯一订阅行 ⇒ 重扫 debt 5→6 且 exit 2 拒判', () => {
     assert.equal(hits, 1, '靶点订阅行必须恰 1 处（真删真源，不许误伤）');
     assert.ok(READING.events.find((e) => e.event === 'phone:albumImageDeleted').on === 1,
         '前置：albumImageDeleted 当前 on=1');
+    assert.deepEqual(READING.debt, [], '前置：欠账当前清零');
     try {
         fs.writeFileSync(target, orig.replace(SENTINEL + '\n', ''));
-        /* 重扫（不带 --write，不污染盘上读数）：必须 exit 2 且点名新欠账。 */
-        let out = '', code = 0, err = '';
-        try {
-            out = execFileSync(process.execPath, [path.join(ROOT, TOOL_REL)],
-                { encoding: 'utf8' });
-        } catch (e) {
-            code = e.status;
-            out = (e.stdout || '').toString();
-            err = (e.stderr || '').toString();
-        }
-        assert.equal(code, 2, 'fail-closed 必须拒判，实得 exit ' + code);
-        const joined = out + err;
-        assert.ok(joined.includes('phone:albumImageDeleted'), '拒判必须点名新欠账');
-        assert.ok(joined.includes('无台账理由'), '拒判话术必须说明原因');
+        /* 重扫（不带 --write，不污染盘上读数）。[v4.157.0 口径校正] 工具退出码不再随
+         * debt 非空变化（读数照出，判决归判据），故改判 fail-closed 的**可观测面**：
+         * 新出现的 no-subscriber 事件必须进 debt、且不得混进改判层，并在 stdout 被点名。 */
+        const out = execFileSync(process.execPath, [path.join(ROOT, TOOL_REL), '--json'],
+            { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+        const live = JSON.parse(out);
+        assert.ok(live.debt.includes('phone:albumImageDeleted'),
+            '删掉唯一订阅行后该事件必须进 debt，实得：' + JSON.stringify(live.debt));
+        assert.ok(!live.reclassified.some((r) => r.event === 'phone:albumImageDeleted'),
+            '没有改判理由的事件不许被塞进改判层（fail-closed 不是免单）');
+        const plain = execFileSync(process.execPath, [path.join(ROOT, TOOL_REL)], { encoding: 'utf8' });
+        assert.ok(plain.includes('欠账 1 条'), '人读面必须报出欠账 1 条：' + plain.trim());
+        assert.ok(plain.includes('phone:albumImageDeleted'), '人读面必须点名新欠账');
     } finally {
         fs.writeFileSync(target, orig, 'utf8');
     }
-    /* 原版对照：恢复后真跑必须 exit 0 且 debt 仍 5 条。 */
+    /* 原版对照：恢复后真跑必须回到零欠账。 */
     const out2 = execFileSync(process.execPath, [path.join(ROOT, TOOL_REL)], { encoding: 'utf8' });
-    assert.ok(out2.includes('欠账 5 条'), '恢复后 debt 仍 5 条：' + out2.trim());
+    assert.ok(out2.includes('欠账 0 条'), '恢复后欠账必须回到 0 条：' + out2.trim());
 });
 
-test('D2 反向对照：台账多挂一条非欠账键也必须被 B1 同款判据抓住', () => {
-    /* 台账键必须在 debt 里 —— 多挂空账同样拒判，判据不是只查「少」不查「多」。
-     * 假账键取真实契约事件（albumImageDeleted，on=1 不在欠账）：既让 B1 判定转红，
+test('D2 反向对照：台账多挂一条不在改判里的键也必须被 B1 同款判据抓住', () => {
+    /* 台账键必须与改判层同源 —— 多挂空账同样拒判，判据不是只查「少」不查「多」。
+     * 假账键取真实契约事件（albumImageDeleted，on=1 不在改判层）：既让 B1 判定转红，
      * 又不在仓内留下契约外事件名字面量（v226 对账①扫全仓，占位符会污染它）。 */
-    const fake = { ...READING.debtLedger, 'phone:albumImageDeleted': '假账：这条事件有订阅、不在欠账里，台账不许挂它' };
+    const fake = { ...READING.debtLedger, 'phone:albumImageDeleted': '假账：这条事件有订阅、不在改判层，台账不许挂它' };
+    const known = new Set(READING.reclassified.map((r) => r.event));
     let caught = 0;
-    for (const [k, v] of Object.entries(fake)) {
-        if (!READING.debt.includes(k)) caught++;
-    }
+    for (const k of Object.keys(fake)) if (!known.has(k)) caught++;
     assert.equal(caught, 1, '假账键必须被同款判定抓住');
 });
 

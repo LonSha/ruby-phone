@@ -22,6 +22,7 @@ import { spawnSync } from 'node:child_process';
 import * as DAT from '../apps/needsim/needsim-data.js';
 import * as APP from '../apps/needsim/needsim-app.js';
 import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
+import { styleSplitFacts } from './_style_split.mjs';
 import { stageTreeWithDeps } from './_stage-tree.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,8 @@ const NS_DATA = 'apps/needsim/needsim-data.js';
 const NS_APP = 'apps/needsim/needsim-app.js';
 const NS_VIEW = 'apps/needsim/needsim-view.js';
 const NS_CSS = 'apps/needsim/needsim.css';
+/* 本版样式段头标记（R25-O4 后它在本 App 自己的 css 里，不在 phone.css 里）。 */
+const STYLE_MARK = '[v3.41.0] 需求沙盘';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -641,32 +644,46 @@ test('C2 六处接线落点到位（少一处就静默错数据 / 点了没反�
         assert.ok(keys.includes(Q + k + Q), k + ' 必须在 keys-audit 登记');
     }
     assert.ok(read(V255).includes("needsimApp: 'needsim'"), 'v255 dirMap 必须登记 needsim 目录');
-    const css = read(PHONE_CSS);
-    assert.ok(css.includes('[v3.41.0] 需求沙盘'), 'phone.css 必须有本版段头');
-    assert.ok(css.includes('.nsm-root'), 'phone.css 必须贴上本件样式正文');
-    assert.ok(css.indexOf('[v3.41.0] 需求沙盘') < css.indexOf('[v3.40.0] 对话水壶'),
-        '本版段必须在 v3.40.0 段之前（最新版在最前）');
+    /* ⑥ 样式真源与投递路径（R25-O4 起本 App 样式已搬出 phone.css）。
+     *    老判据查「phone.css 必须有本版段头 / 必须贴上正文 / 段序」—— 前两条位置已不存在，
+     *    段序在 phone.css 里也无意义（本 App 的段不在那了）。改写不是放宽：
+     *    改成查「唯一真源在盘 + 账本登记并指向本份 + 打包面不许残留副本」三条。 */
+    const sf = styleSplitFacts(ROOT, { appId: 'needsim', cssRel: NS_CSS, headerMark: STYLE_MARK, prefixes: ['nsm'] });
+    assert.ok(sf.cssExists, NS_CSS + ' 必须在盘（本 App 样式的唯一真源）');
+    assert.ok(sf.ledger.present, 'config/style-lazy.js 的 STYLE_LAZY 必须登记 needsim（不登记 ⇒ 打开就裸奔）');
+    assert.ok(sf.ledgerPointsHere, '账本必须把 needsim 指向 ' + NS_CSS + '，实测：' + sf.ledger.css);
+    assert.equal(sf.bundleResidual, 0,
+        'phone.css 不得再残留本 App 独占规则（残留 = 样式又变两处），实测 ' + sf.bundleResidual + ' 处');
 });
 
 test('C3 样式段头独立成行（本仓踩过粘连坑：语法合法但样式挂错选择器）', () => {
-    const css = read(PHONE_CSS);
-    const idx = css.indexOf('[v3.41.0] 需求沙盘');
-    assert.ok(idx > 0);
-    const lineStart = css.lastIndexOf(NL, idx) + 1;
-    const lineEnd = css.indexOf(NL, idx);
-    const line = css.slice(lineStart, lineEnd);
-    assert.ok(line.startsWith('/*'), '段头行必须以块注释起头，实测：' + line.slice(0, 40));
-    assert.ok(line.trimEnd().endsWith('*/'), '段头行必须以块注释收尾，实测：' + line.slice(-40));
-    assert.ok(lineStart === 0 || css[lineStart - 1] === NL, '段头不许接在上一段尾后');
-    assert.equal(line.split('/*').length, 2, '段头行只许有一个块注释起头');
+    /* R25-O4 后段头形态查的是**本 App 自己的 css**（phone.css 不是它的家）。
+     * ★ 老判据守的是「段头是单独一行、以块注释起头并在同一行内收尾」的单行形；
+     *   本 App css 的段头是块注释起头 + 第二行写件名与版本标记，故改为守三件：
+     *   标记落在注释内、注释在标记之后才收尾、收尾后必须换行。 */
+    const css = read(NS_CSS);
+    const idx = css.indexOf(STYLE_MARK);
+    assert.ok(idx > 0, '段头必须在场（含版本标记 ' + STYLE_MARK + '）');
+    const head = css.slice(0, idx);
+    assert.ok(head.trimStart().startsWith('/*'), '文件必须以块注释段头起头，实测：' + head.slice(0, 40));
+    const close = css.indexOf('*/', idx);
+    assert.ok(close > idx, '段头注释必须包住版本标记（标记落在注释外会被当选择器吃掉）');
+    assert.equal(head.split('*/').length, 1, '段头注释在标记之前不得提前收尾');
+    const after = css.slice(close + 2, close + 4);
+    assert.ok(after.startsWith(NL), '注释收尾后必须换行，不许与正文粘连，实测：' + JSON.stringify(after));
 });
 
-test('C4 源文件与 phone.css 段必须逐字同源（手工改两处必会再犯）', () => {
+test('C4 样式唯一真源：搬出后 phone.css 里不许再有整份副本（手工留两处必会再犯）', () => {
     const src = read(NS_CSS).trim();
     const css = read(PHONE_CSS);
-    assert.ok(css.includes(src), 'needsim.css 正文必须逐字出现在 phone.css 的本版段里');
-    /* 段头里的段名要与源文件名对得上（抄别件的段名会让下一个回灌脚本找错段）。 */
-    const head = css.slice(css.lastIndexOf('/*', css.indexOf('[v3.41.0] 需求沙盘')), css.indexOf(NL, css.indexOf('[v3.41.0] 需求沙盘')));
+    assert.ok(src.length > 0, 'needsim.css 不得为空（唯一真源不许是空文件）');
+    /* 老判据查「源文件正文逐字出现在 phone.css」；搬出后那条恒假。改成反向：
+       打包面**不许**再含整份副本 —— 两处副本正是老判据要防的形态。 */
+    assert.equal(css.includes(src), false, 'phone.css 里不得再含 needsim.css 整份副本');
+    assert.equal(css.includes('.nsm-root'), false, 'phone.css 不得残留 .nsm-root 规则');
+    /* 段头里的件名要与源文件名对得上（抄别件的段名会让下一个回灌脚本找错段）。
+       段头仍然在，只是搬到了本 App 自己的 css 里 —— 这条判据原样保留、只换查的对象。 */
+    const head = read(NS_CSS).slice(0, read(NS_CSS).indexOf('*/'));
     assert.ok(head.includes('needsim'), '段头要标明件名，实测：' + head);
 });
 

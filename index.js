@@ -153,6 +153,11 @@ import { i18nSelfCheck } from './config/i18n.js';
 /* [v4.158.0 · R24-O4/O5/O7] 主题令牌 / 媒体缓存 / 数据体检三件底座。 */
 import { themeTokensSelfCheck } from './config/theme-tokens.js';
 import { mediaCacheSelfCheck } from './config/media-cache.js';
+/* [R24-O5 边界] 媒体缓存的会话级释放钩子：内核在 config/media-cache.js，
+ *   挂载点在 onChatChanged / releasePhoneInactiveResources（本文件搜索 mediaCacheOn）。
+ *   为什么要经 hooks 这一层：index.js 不可被 import，直接写在 IIFE 里的调用只能用
+ *   「源码里有这行字」来证；hooks 是纯函数，判据能真调、负控制能真打红。 */
+import { mediaCacheEnsure, mediaCacheOnChatChanged, mediaCacheOnInactive } from './config/media-cache-hooks.js';
 import { dataHealthSelfCheck } from './config/data-health.js';
 /* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
 import { chatWindowSelfCheck } from './config/chat-window.js';
@@ -11079,6 +11084,13 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
     }
 
     function onChatChanged() {
+        /* [R24-O5 边界] 会话级媒体缓存释放：换会话时把上一会话的图片缓存整块放掉。
+         *   挂载点必须在这里，而不是只在内核里提供一个 release 方法 ——
+         *   「方法写好了、零调用点」是本仓已付过代价的形态（判据 r24_o5_media_cache_boundary A6 盯这行）。
+         *   catch 兜住：释放失败不许阻断换会话（换会话比省内存更要紧）。 */
+        try {
+            mediaCacheOnChatChanged(mediaCacheEnsure(window, null), 'chat-changed');
+        } catch (_mediaCacheChatErr) { /* 释放失败不影响换会话 */ }
         // 🔄 切换会话时清空自动微博队列，避免旧会话任务串入新会话
         resetAutoWeiboQueue('chat_changed');
         ensureWechatInteractionDefaults();
@@ -11630,6 +11642,12 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         if (appId === activeAppId) return;
                         appInstance?.deactivate?.();
                     });
+                    /* [R24-O5 边界] 低内存 / 切 App 回收：媒体缓存也在这条路上放掉。
+                     *   这是计划书原文点名的**第二个**挂载点（第一个是 onChatChanged）——
+                     *   少接一个就等于一半没接：换会话能放、切 App 不放，长会话里仍会顶到上限。 */
+                    try {
+                        mediaCacheOnInactive(mediaCacheEnsure(window, null), activeAppId);
+                    } catch (_mediaCacheInactiveErr) { /* 不阻断其它资源的回收 */ }
                     if (activeAppId !== 'wechat') {
                         if (!phone.wechatApp?.deactivate) phone.wechatApp?.chatView?.releaseInactiveResources?.();
                     }

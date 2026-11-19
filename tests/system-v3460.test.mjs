@@ -30,6 +30,9 @@ const CD_DATA = 'apps/cotdesk/cotdesk-data.js';
 const CD_APP = 'apps/cotdesk/cotdesk-app.js';
 const CD_VIEW = 'apps/cotdesk/cotdesk-view.js';
 const CD_CSS = 'apps/cotdesk/cotdesk.css';
+/* 样式真源与投递账（R25-O4 起本 App 样式已搬出 phone.css）。 */
+const STYLE_LAZY = 'config/style-lazy.js';
+const STYLE_MARK = '[v3.46.0] 思维链案头';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -637,6 +640,8 @@ function wireProblems(files) {
     const index = stripComments(files.index);
     const keys = stripComments(files.keys);
     const css = files.phoneCss;
+    const appCss = files.appCss;
+    const lazy = files.lazy || '';
     if (apps.indexOf(Q + 'cotdesk' + Q) < 0) bad.push('wire-app-registry-lost');
     if (index.indexOf('./apps/cotdesk/cotdesk-app.js') < 0) bad.push('wire-app-entry-lost');
     if (storage.indexOf('/^cotdesk_/') < 0) bad.push('wire-storage-prefix-lost');
@@ -645,8 +650,13 @@ function wireProblems(files) {
     }
     if (index.indexOf(Q + 'cotdesk' + Q) < 0) bad.push('wire-lazy-branch-lost');
     if (index.indexOf('cotdeskApp') < 0) bad.push('wire-shell-field-lost');
-    if (css.indexOf('v3.46.0] 思维链案头（cotdesk）') < 0) bad.push('wire-css-lost');
-    if (css.indexOf('.cd-root') < 0) bad.push('wire-css-lost');
+    /* 样式落点（R25-O4 起搬到本 App 自己的 css）：① 真源在盘且有段头与根类；
+     * ② 投递账登记本件并指向本份；③ phone.css 不得再留副本（否则又变两处）。 */
+    if (appCss.indexOf(STYLE_MARK) < 0) bad.push('wire-css-lost');
+    if (appCss.indexOf('.cd-root') < 0) bad.push('wire-css-lost');
+    if (lazy.indexOf(Q + 'cotdesk' + Q) < 0) bad.push('wire-css-lazy-entry-lost');
+    if (lazy.indexOf('./apps/cotdesk/cotdesk.css') < 0) bad.push('wire-css-lazy-entry-lost');
+    if (String(css).indexOf('.cd-root') >= 0) bad.push('wire-css-duplicate');
     return bad;
 }
 /** 接线面取数口。★ root 可指向副本树 —— 破坏类负控制只准写副本，绝不写真仓：
@@ -660,7 +670,7 @@ function wireJudgeAt(root) {
     const rd = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
     return wireProblems({
         apps: rd(APPS), storage: rd(STORAGE), index: routeSurface(rd(INDEX), TABLE_IN(root)),
-        keys: rd(KEYS), phoneCss: rd(PHONE_CSS)
+        keys: rd(KEYS), phoneCss: rd(PHONE_CSS), appCss: rd(CD_CSS), lazy: rd(STYLE_LAZY)
     });
 }
 function wireJudge() { return wireJudgeAt(ROOT); }
@@ -668,7 +678,7 @@ function wireJudge() { return wireJudgeAt(ROOT); }
 function stageWire() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_wire_'));
     temps.push(dir);
-    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS, LAZY_ROUTE_TABLE_REL]) {
+    for (const rel of [APPS, STORAGE, INDEX, KEYS, PHONE_CSS, CD_CSS, STYLE_LAZY, LAZY_ROUTE_TABLE_REL]) {
         const dst = path.join(dir, rel);
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), dst);
@@ -1016,11 +1026,20 @@ test('N4 四条键逐条在册且 scope 正确（少一条 = keys 门报未登�
     }
     assert.equal(s.split("scope: 'chat'").length - 1 >= 4, true, '四条都应是 chat 作用域');
 });
-test('N5 样式逐字同源投递进 phone.css（少这一条 = 页面没样式，看起来像坏了）', () => {
+test('N5 样式唯一真源 + 投递登记（R25-O4 搬出 phone.css 后的新口径）', () => {
+    /* 老判据查「.cd 整份样式逐字同源在 phone.css 里」；R25-O4 起那段已搬进 apps/cotdesk/cotdesk.css，
+     * 由 config/style-lazy.js 的 STYLE_LAZY 账在打开 App 时懒加载。改写不是放宽：
+     * ① 真源在盘且有本版段头与非空正文；② 账本登记本件并指向本份；③ 打包面不许再残留副本。 */
     const own = read(CD_CSS);
+    assert.ok(own.indexOf(STYLE_MARK) >= 0, CD_CSS + ' 必须有本版段头');
+    assert.ok(own.trim().length > 0, CD_CSS + ' 不得为空（唯一真源不许是空文件）');
+    assert.ok(own.indexOf('.cd-root') >= 0, CD_CSS + ' 必须挂着 .cd-root 根类');
+    const lazy = read(STYLE_LAZY);
+    assert.ok(lazy.indexOf(Q + 'cotdesk' + Q) >= 0, 'STYLE_LAZY 必须登记 cotdesk（不登记 ⇒ 打开就裸奔）');
+    assert.ok(lazy.indexOf('./apps/cotdesk/cotdesk.css') >= 0, '账本必须把 cotdesk 指向 ' + CD_CSS);
     const phone = read(PHONE_CSS);
-    assert.ok(phone.indexOf(own.trim()) >= 0, '.cd 整份样式必须逐字同源在 phone.css 里');
-    assert.ok(phone.indexOf('/* ══════════════ [v3.46.0] 思维链案头（cotdesk） ══════════════ */') >= 0);
+    assert.equal(phone.indexOf(own.trim()) >= 0, false, 'phone.css 里不得再含 cotdesk.css 整份副本');
+    assert.equal(phone.indexOf('.cd-root') >= 0, false, 'phone.css 不得残留 .cd-root 规则');
 });
 test('N6 样式与视图逐类对应（少一个类 = 那一格没样式，看起来像坏了）', () => {
     const view = stripComments(read(CD_VIEW));

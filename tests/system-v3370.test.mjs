@@ -79,6 +79,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
+import { styleSplitFacts } from './_style_split.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -91,6 +92,9 @@ const SK_DATA = 'apps/soundkit/soundkit-data.js';
 const SK_APP = 'apps/soundkit/soundkit-app.js';
 const SK_VIEW = 'apps/soundkit/soundkit-view.js';
 const SK_CSS = 'apps/soundkit/soundkit.css';
+/* 本版样式段头标记（R25-O4 后它在本 App 自己的 css 里，不在 phone.css 里）。 */
+const STYLE_MARK = '[v3.37.0] 白盒音效盒';
+const NL = String.fromCharCode(10);
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
 const INDEX = 'index.js';
@@ -416,17 +420,32 @@ test('C2 六处接线落点到位（少一处就静默错数据 / 点了没反�
     assert.ok(read(INDEX).includes('./apps/soundkit/soundkit-app.js'), '懒加载分支必须指对文件');
     assert.ok(read(KEYS).includes("key: 'soundkit_settings'"), 'keys-audit 必须登记设置键');
     assert.ok(read(V255).includes("soundkitApp: 'soundkit'"), 'v255 目录映射必须在册');
-    assert.ok(read('phone.css').includes('v3.37.0] 白盒音效盒'), 'phone.css 必须有本版段头');
+    /* ⑥ 样式真源与投递路径（R25-O4 起本 App 样式已搬出 phone.css）。
+     *    老判据查「phone.css 必须有本版段头」—— 那个位置已不存在（搬空了）。
+     *    改写不是放宽：改成查「唯一真源在盘 + 账本登记并指向本份 + 打包面不许残留副本」三条。 */
+    const sf = styleSplitFacts(ROOT, { appId: 'soundkit', cssRel: SK_CSS, headerMark: STYLE_MARK, prefixes: ['snd'] });
+    assert.ok(sf.cssExists, SK_CSS + ' 必须在盘（本 App 样式的唯一真源）');
+    assert.ok(sf.ledger.present, 'config/style-lazy.js 的 STYLE_LAZY 必须登记 soundkit（不登记 ⇒ 打开就裸奔）');
+    assert.ok(sf.ledgerPointsHere, '账本必须把 soundkit 指向 ' + SK_CSS + '，实测：' + sf.ledger.css);
+    assert.equal(sf.bundleResidual, 0,
+        'phone.css 不得再残留本 App 独占规则（残留 = 样式又变两处），实测 ' + sf.bundleResidual + ' 处');
 });
 test('C3 样式段头**独立成行**（本仓踩过粘连坑：语法合法但样式挂错选择器）', () => {
-    const css = read('phone.css');
-    const idx = css.indexOf('[v3.37.0] 白盒音效盒');
-    assert.ok(idx > 0, '段头必须在场');
-    const lineStart = css.lastIndexOf('\n', idx);
-    assert.ok(css.slice(lineStart + 1, idx).startsWith('/*'), '段头必须从行首开始（前面只有 /*）');
-    assert.equal(css[idx - 1] !== '\n' && css[lineStart + 1] === '/', true, '段头必须独立成行');
-    const seg = read(SK_CSS);
-    assert.ok(css.includes(seg.trim()), 'phone.css 里的样式段必须与源文件**逐字同源**');
+    /* R25-O4 后段头形态查的是**本 App 自己的 css**（phone.css 不是它的家）。 */
+    const css = read(SK_CSS);
+    const idx = css.indexOf(STYLE_MARK);
+    assert.ok(idx > 0, '段头必须在场（含版本标记 ' + STYLE_MARK + '）');
+    const head = css.slice(0, idx);
+    assert.ok(head.trimStart().startsWith('/*'), '文件必须以块注释段头起头，实测：' + head.slice(0, 40));
+    /* 标记必须落在注释内、注释在标记之后才收尾（标记落在注释外会被当选择器吃掉）。 */
+    const close = css.indexOf('*/', idx);
+    assert.ok(close > idx, '段头注释必须包住版本标记');
+    assert.equal(head.split('*/').length, 1, '段头注释在标记之前不得提前收尾');
+    /* 粘连坑：注释收尾后必须换行，不许紧跟选择器。 */
+    const after = css.slice(close + 2, close + 4);
+    assert.ok(after.startsWith(NL), '注释收尾后必须换行，不许与正文粘连，实测：' + JSON.stringify(after));
+    /* 老判据「源文件正文逐字出现在 phone.css」已随搬出失效；此处守唯一真源非空。 */
+    assert.ok(css.trim().length > 0, SK_CSS + ' 不得为空（唯一真源不许是空文件）');
 });
 test('C4 视图调用面闭合：视图调用的每个 App 方法都真在 App 上', () => {
     const view = read(SK_VIEW);

@@ -39,7 +39,7 @@ import {
   checkRatchet,
   runChecks,
 } from './audit/scan_chat_render_split.mjs';
-import { captureChatRenderSnapshot } from './_chat_render_snapshot.mjs';
+import { captureChatRenderSnapshot, portableText, sha256, REPO_ROOT_PLACEHOLDER } from './_chat_render_snapshot.mjs';
 
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
 const viewText = read(CHAT_VIEW);
@@ -87,6 +87,32 @@ test('R1 负控制③：基线空表 → 判红（空表本身不是通过）', 
 
 test('R1 负控制④：抽后才抛错（基线真 hash / 本次 __error）→ 判红', () => {
   red(snapshotDiff(snap.snapshots, { ...now, 'emojiPanel': '__error:' + 'a'.repeat(64) }));
+});
+
+/* ---------------- R1 采集层：归一化只许折检出根 ----------------
+ * 2026-11 这次两键漂移的真因不是产品变了，而是渲染色里带了 `file://<检出根>/...`
+ * （`config/phone-emoji.js` 用 `new URL(..., import.meta.url).href` 取图）。
+ * 采集层现在把它折成 `<repo-root>`，下面三条把它钉住：
+ *   折得准（严格等于期望串）／不吃别的（文件名与尺寸仍在）／不吃到把差异抹平。 */
+
+test('R1 采集层把检出根折成占位，文件名与尺寸一个字节不动', () => {
+  const raw = '<img src="file://' + ROOT + '/assets/emoji/goutou.webp" style="width:16px;">';
+  const folded = portableText(raw);
+  assert.equal(folded, '<img src="' + REPO_ROOT_PLACEHOLDER + '/assets/emoji/goutou.webp" style="width:16px;">');
+  assert.ok(folded.includes('/assets/emoji/goutou.webp'), '文件名被归一化吃掉了');
+  assert.ok(folded.includes('width:16px'), '尺寸被归一化吃掉了');
+});
+
+test('R1 负控制⑮：归一化没把产品差异抹平（16px → 18px 照样换 hash）', () => {
+  assert.notEqual(
+    sha256(portableText('<img style="width:16px;">')),
+    sha256(portableText('<img style="width:18px;">'))
+  );
+});
+
+test('R1 正控制：本次 12 键与基线逐键相等（采集层两头用同一把尺）', () => {
+  assert.deepEqual(Object.keys(now).sort(), Object.keys(snap.snapshots).sort());
+  for (const k of Object.keys(now)) assert.equal(now[k], snap.snapshots[k], k + ' 与基线不一致');
 });
 
 /* ---------------- R3：单份实现 ---------------- */

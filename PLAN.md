@@ -240,8 +240,8 @@
 | 量 | 读数 | 出处 |
 |---|---|---|
 | 版本 | **v4.157.0**（五源同源） | `update-log.json` latest / `package.json` |
-| 门禁 | `npm run check` **二十一道静态门全过**；全量 `node --test tests/*.test.mjs` **508 套件**实跑（存量红在案，逐项见 `docs/planning/2026-11-19-o5-settings-ia-evidence.md` §7「已知红」） | `package.json` scripts.check / `tests/` 实跑 |
-| 体量 | **v4.157.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **383** 件、tests **508** 套件、scripts **35** 件；`index.js` **948008 字节 / 15235 行**；`phone.css` **623617 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
+| 门禁 | `npm run check` **二十一道静态门全过**；全量 `node --test tests/*.test.mjs` **509 套件实跑全绿** | `package.json` scripts.check / `tests/` 实跑 |
+| 体量 | **v4.157.0 机器台账复算**：apps **101 个 App 目录**（`config/apps.js` **89 条 id**）、config **384** 件、tests **509** 套件、scripts **35** 件；`index.js` **949732 字节 / 15253 行**；`phone.css` **622770 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
 | 平台消费面 | **82 行 × 六条平台级消费面**矩阵（生成侧注入 28 / 全局搜索 27 / 系统通知 14 / 微信链路 10 / 上游读数 12 / 生命周期 67；六面全无 4 件已入「不适用」台账） | `config/app-consumption-matrix.js` / `tests/system-v3550.test.mjs` |
 | 素材 | L0 四类静态素材**已全部接入产品侧消费点**（v3.24.0）；素材路线图前三层十八件已缝完（v3.25~v3.54） | `config/l0-assets.js` / `tests/system-v3240.test.mjs` |
@@ -357,6 +357,19 @@
 ---
 
 ## 优先级（唯一现行排序 · 判据 `tests/system-v4107.test.mjs` A1/A4）
+
+> 本节由机器校对：**当期全部 18 个编号必须逐字出现在本节内**（缺一个即红）。
+> 本节只管「编号是否齐全」，不管「排序是否合理」——排序永远是人做的。
+> 本期六批次的先后与批内顺序，全部照抄两份计划书「## 批次与依赖」的原话，不自行发明。
+
+1. 批次A：`R24-O1` / `R24-O4` / `R24-O5` —— 底座三项互为依赖（存储 / 令牌 / 媒体），顺序不能反。
+2. 批次B：`R24-O2` / `R24-O3` / `R24-O9` —— 性能三项共同决定包体与首屏（渲染 / 启动 / 数据），可与 A 批并行。
+3. 批次C：`R24-O6` / `R24-O8` / `R24-O7` —— 体验收口，依赖 A+B（设置重构要吃 O4 令牌，体检要吃 O1 store）。
+4. 批次D：`R24-X1` / `R24-X2` —— 通道与规则，先做（总线是其他项的输入，权限是装载的前置）。
+5. 批次E：`R24-X3` / `R24-X8` / `R24-X9` —— 整机能力，依赖 A 批。
+6. 批次F：`R24-X4` / `R24-X5` / `R24-X6` / `R24-X7` —— 可移与可看，可与 B 批并行。
+
+## 历史优先级（第二十三期 R23 · 已换挡至第二十四期 R24）
 
 > 本节由机器校对：**当期全部 18 个编号必须逐字出现在本节内**（缺一个即红）。
 > 本节只管「编号是否齐全」，不管「排序是否合理」——排序永远是人做的。

@@ -19,7 +19,7 @@ import { silenceFaceText } from './diagnose-data.js';
 import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
-import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows } from './diagnose-data.js';
+import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows, mediaCacheFaceText, mediaCacheRows } from './diagnose-data.js';
 /* [R25-O7] 无障碍三档：一行文案走内核（「读了什么 / 真读回来什么」的比较口径只允许有一份）。 */
 import { a11yTriadText } from '../../config/a11y-triad.js';
 /* [R25-X4] 时间格式：卡片里的 8 格全部来自 `pkg.timeFormat.matrix`（真算）。 */
@@ -1084,6 +1084,22 @@ export class DiagnoseView {
                     + ' · 已重启 ' + escapeHtml(String(r.restarts)) + ' 次'
                     + (r.lastKind ? ' · 最近类：' + escapeHtml(r.lastKind) : '')
                     + (r.degraded ? ' · <b>已转人工</b>' : '')
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+        return html;
+    }
+    /** [R24-O5 边界] 媒体缓存卡片：一行读数 + 六格明细（缺/读不出各成态，不画成 0）。 */
+    _mediaCacheHtml(pkg) {
+        const face = (pkg && pkg.mediaCache) || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(mediaCacheFaceText(face)) + '</div>';
+        const rows = mediaCacheRows(face);
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                html += '<li class=' + Q + 'dg-row' + Q + '>'
+                    + escapeHtml(r.label) + ' · ' + escapeHtml(String(r.value))
                     + '</li>';
             });
             html += '</ul>';
@@ -2162,6 +2178,8 @@ export class DiagnoseView {
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>首屏预算（超了哪一段）</h3>' + this._bootBudgetHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
+        /* [R24-O5 边界] 媒体缓存读数卡：数据来自 pkg.mediaCache（本视图不重算）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>媒体缓存（图片占多少、谁会放）</h3>' + this._mediaCacheHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>错误可读化（用户看到的那句话）</h3>' + this._errorReadableHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>无障碍三档（字号 / 减弱动效 / 高对比 · 写入与读回对拍）</h3>' + this._a11yTriadHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>时间格式（12/24 制 · 日期顺序 · 时区 · 8 格逐算）</h3>' + this._timeFormatHtml(pkg) + '</section>');

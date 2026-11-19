@@ -15,9 +15,36 @@
  *     第一版替身没做转义，结果四个不同输入同一个 hash（内容被吃掉却被当成等价）—— 已修。
  * ============================================================ */
 import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function sha256(s) {
   return createHash('sha256').update(String(s), 'utf8').digest('hex');
+}
+
+/* ============================================================
+ * [v4.157.0 · R25 清红] 快照要对「换一台机器 / 换一个检出目录」稳定
+ * ------------------------------------------------------------
+ * 实测（不是猜）：`config/phone-emoji.js` 的图源是
+ *   `new URL('../assets/emoji/goutou.webp', import.meta.url).href`
+ * 在 Node 下取到的是**绝对文件 URL**，于是渲染串里带上了检出根路径。
+ * 后果：同一份代码分别在 `/home/user/ruby-phone` 与 `/tmp/wt_head` 两处跑，
+ *   `bubble.emojiToken` / `emojiPanel` 两个 hash 必然不同 —— 而产品一个字节没变。
+ * 那不是「行为漂移」，是判据把环境当成了被测物（读数空白先怀疑量法）。
+ *
+ * 处置：落账与比对前，把**检出根**折成固定占位 `<repo-root>`。
+ *   只折这一个前缀：文件名 / 目录层级 / 尺寸 / 类名一个字符都不碰，
+ *   所以「狗头换成别的图」「16px 改 18px」照样翻红（负控制见 r22_o1 的 R1 组）。
+ * ============================================================ */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(HERE, '..');
+const REPO_ROOT_URL = 'file://' + REPO_ROOT;
+export const REPO_ROOT_PLACEHOLDER = '<repo-root>';
+
+export function portableText(value) {
+  return String(value)
+    .split(REPO_ROOT_URL).join(REPO_ROOT_PLACEHOLDER)
+    .split(REPO_ROOT).join(REPO_ROOT_PLACEHOLDER);
 }
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '"', "'": '&#39;' };
@@ -25,7 +52,10 @@ function escapeLikeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESC[c]);
 }
 
-/** 装一个「够判」的 document 替身：唯一要求是 createElement 的转义行为与真 DOM 一致。 */
+/** 装一个「够判」的 document 替身：唯一要求是 createElement 的转义行为与真 DOM 一致。
+ * 诚实写明一处不一致：`ESC` 里双引号映射成它自己（没有折成引号实体），
+ *   这是 v4.22 起既有的形态，快照已经钉住了它。动它等于改产品行为 ——
+ *   那是别的事，不在本次拆分里，所以这里只标注不修。 */
 export function installSnapshotDom() {
   const saved = { document: globalThis.document, window: globalThis.window };
   if (!saved.window) globalThis.window = {};
@@ -114,8 +144,8 @@ export function captureChatRenderSnapshot(ChatView, options) {
   const restoreDom = installSnapshotDom();
   const out = {};
   const run = (key, fn) => {
-    try { out[key] = sha256(fn()); }
-    catch (e) { out[key] = '__error:' + sha256(String((e && e.message) || e)); }
+    try { out[key] = sha256(portableText(fn())); }
+    catch (e) { out[key] = '__error:' + sha256(portableText(String((e && e.message) || e))); }
   };
 
   try {

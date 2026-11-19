@@ -417,6 +417,18 @@ function mkTree(tag) {
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         fs.copyFileSync(path.join(ROOT, f), dst);
     }
+    /* [v4.157.x · R25 清红] `data/cheats.js` 自 R24-O9 起改为 import 分片（`data/cheats/part-NN.js`）：
+     *   CLOSURE 里只有聚合文件 ⇒ 副本 import 立刻 ERR_MODULE_NOT_FOUND。
+     *   那不是「破坏被发现」，是「因缺件而红」—— 正是上面几条注释反复点名的坑。
+     *   分片整目录补齐（逐文件搬；不要用 cpSync 的 dest 语义，实测会把目录套一层）。 */
+    const partsDir = path.join(ROOT, 'data', 'cheats');
+    if (fs.existsSync(partsDir)) {
+        const destParts = path.join(dir, 'data', 'cheats');
+        fs.mkdirSync(destParts, { recursive: true });
+        for (const f of fs.readdirSync(partsDir)) {
+            fs.copyFileSync(path.join(partsDir, f), path.join(destParts, f));
+        }
+    }
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
     return dir;
 }

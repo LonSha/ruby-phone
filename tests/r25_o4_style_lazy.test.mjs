@@ -191,6 +191,12 @@ test('O4-7 负控制：把「没来」写成 ok=true ⇒ O4-5 同款断言必须
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_o4_'));
     const file = path.join(dir, 'style-lazy.broken.js');
     fs.writeFileSync(file, broken);
+    /* [v4107 维护] style-lazy.js 现在 import 了 config/num-gate.js（把弱口径
+     * `Number.isFinite(Number(x))` 换成 numOrNull）。负控制把实现复制到 /tmp 单跑时，
+     * 那条相对 import 会解析到不存在的 /tmp/.../num-gate.js ⇒ ERR_MODULE_NOT_FOUND。
+     * 修法是**把叶子依赖一起搬**（num-gate.js 零 import，搬它不改变被测行为），
+     * 而不是把负控制改成「在仓内写临时文件」（那会把测试变成会留残骸的事故）。 */
+    fs.copyFileSync(path.join(ROOT, 'config/num-gate.js'), path.join(dir, 'num-gate.js'));
     const mod = await import(pathToFileURL(file).href);
     const doc = makeFakeDoc();
     const loader = mod.createStyleLoader({ doc: doc, baseUrl: 'x/', now: () => 1 });

@@ -34,6 +34,10 @@ import {
     projectionFreshnessText
 } from '../../config/world-bridge.js';
 import { backGuardReport } from '../../config/back-guard.js';
+/* [R24-O5 边界] 媒体缓存读数面：内核与挂载钩子都在 config/，本文件只把它读成一张卡。
+ *   为什么必须在这里露一面：计划书 O5 第 4 条要求「读数暴露到洞察 App 的一个分页」——
+ *   内核有 stats() 而没人读，就是本仓反复出现的「登记面不算交付」。 */
+import { mediaCacheFace, mediaCacheFaceText, mediaCacheRows } from '../../config/media-cache-hooks.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏的**被挡回信账本**（唯一真源 `config/session-gate.js`）。
  *   计划验收要求「旧响应有可读拒绝原因」—— 那条要求正落在这里：
  *   栅栏在写回口挡下旧会话回信时只 `console.warn`（不抛、不弹窗，见该模块文件头），
@@ -775,6 +779,9 @@ export function collectDiagnose(win, storage) {
     /* [R25-X1] 崩溃边界面：边界实例由宿主安装（index.js 的 phone:openApp 通路 + 全局
      *   error/rejection 监听），诊断页只旁听 —— 自己建一个只会读到「打开诊断页之后」。 */
     const crashSc = safe(() => crashBoundaryFace(w), null) || null;
+    /* [R24-O5 边界] 媒体缓存读数：**每次 render 现取**（不缓存），缺 cache 时如实 absent，
+     *   读失败时如实 unknown —— 两种「没有数」都不许被画成「占用 0」。 */
+    const mediaCacheSc = safe(() => mediaCacheFace(w), null) || null;
     /* [R25-O9] 错误可读面：同一取数纪律 —— 从宿主读，不自建。 */
     const errReadSc = safe(() => errorReadableFace(w), null) || null;
     const errPackSc = safe(() => errorReadablePack(w), null) || null;
@@ -2290,7 +2297,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, layout: layoutSc, storyFanout: storyFanoutSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, mediaCache: mediaCacheSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, layout: layoutSc, storyFanout: storyFanoutSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2867,6 +2874,9 @@ export function timeFaceText(face) {
     } catch (_e) { return '时间双轨：读取异常（已降级）'; }
 }
 
+/* [R24-O5 边界] 视图层要具名导入这两个（named-import 门盯的就是「import 的名字在目标模块里真的存在」）。
+ *   `mediaCacheFace` 不外给：它只在本文件内部取一面，外给就多一个零跨文件消费的导出。 */
+export { mediaCacheFaceText, mediaCacheRows };
 export default {
     CONSUMED_FIELDS,
     schemaStateText,
@@ -2893,6 +2903,9 @@ export default {
     crashBoundaryFace,
     crashBoundaryFaceText,
     crashBoundaryRows,
+    mediaCacheFace,
+    mediaCacheFaceText,
+    mediaCacheRows,
     errorReadableFace,
     errorReadableFaceText,
     errorReadablePack,

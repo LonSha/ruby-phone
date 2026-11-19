@@ -19,6 +19,11 @@
  *   写入回执只在 `ok === true` 时算成，零条结果 → `unknown`（不拿「没报错」冒充「改成功」）。
  */
 import { filterSettings } from './settings-filter.js';
+/* [v4.157.0 · R25 清红] 取值口径走全仓唯一的门（v3570 门点名的 4 处之一）。
+ *   下面 `sameValue` 原来是就地一段 `Number.isFinite(Number(a))`：那会把
+ *   `''` / `[]` 这类「没给」也折成 0，于是「存储里没设过」被误判成「设成了 0」——
+ *   而这两者在恢复默认的预览里处置相反（一个本来就该跳过，一个要摆出来给人勾）。 */
+import { numOrNull } from './num-gate.js';
 
 /** 分组真源：设置页六个 tab（`data-tab` 值，见 settings-app.js 的 role=tab 按钮）。 */
 export const IA_GROUPS = Object.freeze({
@@ -141,7 +146,13 @@ export function iaSearch(index, query) {
 
 function sameValue(a, b) {
     if (a === b) return true;
-    if (typeof b === 'number' && a !== null && a !== undefined && String(a).trim() !== '' && Number.isFinite(Number(a))) return Number(a) === b;
+    /* 数字默认值 vs 存储里的值：只有「真取到数」才按数比。旧写法把
+     * `''` / `[]` / `'  '` 都折成 0（`Number('')===0`），于是「没设过」与「设成 0」
+     * 塌成同形 —— 恢复默认的预览会把没设过的项当成「已改成 0」。 */
+    if (typeof b === 'number') {
+        const n = numOrNull(a);
+        if (n !== null) return n === b;
+    }
     if (typeof b === 'boolean') {
         if (a === 'true') return b === true;
         if (a === 'false') return b === false;
