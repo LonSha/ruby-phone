@@ -37,6 +37,10 @@ export const MIGRATION_EDGES = [
     }
 ];
 
+/** 测试夹具键标记。命中就不迁（不靠人记得跑完清理）。 */
+const TEST_KEY_MARK = '__t';
+function isTestKey(v) { return str(v).indexOf(TEST_KEY_MARK) >= 0; }
+
 function str(v) {
     return v === null || v === undefined ? '' : String(v).trim();
 }
@@ -88,6 +92,14 @@ export function planMigration(input) {
     }
 
     /* ---- legacy：先证据后矩阵 ---- */
+    /* 测试夹具键（`__t`）不迁：跑一次测试不该往真档里塞一堆假聊天。
+     * 缝自雪穗机：迁移面显式排除测试键，而不是靠人记得跑完清理。
+     * 排在证据门之前：测试键连「证据齐不齐」都不用问。 */
+    if (isTestKey(ev.chatKey) || isTestKey(ev.savedChatKey) || isTestKey(ev.cardKey) || isTestKey(ev.savedCardKey)) {
+        out.verdict = 'skip';
+        out.reason = 'test-key';
+        return out;
+    }
     const missing = EVIDENCE_FIELDS.filter(function (f) { return !str(ev[f]); });
     if (missing.length) {
         out.verdict = 'need-evidence';
