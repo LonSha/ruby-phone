@@ -66,9 +66,9 @@
     "check_chain_len": 21
   },
   "tests": {
-    "test_files": 450,
+    "test_files": 508,
     "audit_dir_exists": true,
-    "audit_files": 32
+    "audit_files": 56
   },
   "browser": {
     "scenarios": [
@@ -79,6 +79,10 @@
       "o1-search-cancel.scen.js",
       "o1-settings-save.scen.js",
       "o1-shell-smoke.scen.js",
+      "o2-longlist-10k.scen.js",
+      "o3-media-20.scen.js",
+      "o4-style-lazy.scen.js",
+      "o5-settings-ia.scen.js",
       "o6-longlist-extreme.scen.js",
       "o6-longlist-perf.scen.js",
       "o6-motion-throttle.scen.js",
@@ -93,7 +97,7 @@
       "r14-travel-progress.scen.js",
       "r21-windowed-stream.scen.js"
     ],
-    "scenario_count": 20,
+    "scenario_count": 24,
     "probe_scenarios": 25,
     "infra": {
       "runner": true,
@@ -107,8 +111,8 @@
   "scale": {
     "app_dirs": 101,
     "apps_ids": 89,
-    "index_lines": 14805,
-    "css_bytes": 717587,
+    "index_lines": 15235,
+    "css_bytes": 623617,
     "crossrepo": {
       "produced_faces": 30
     }
@@ -129,7 +133,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 448,
+        "suite_files": 506,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
