@@ -22,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as DAT from '../apps/sourcebook/sourcebook-data.js';
 import * as APP from '../apps/sourcebook/sourcebook-app.js';
 import { withRouteSurface, routeSurface, readRepoTable, LAZY_ROUTE_TABLE_REL } from './_lazy_routes.mjs';
+import { styleSplitFacts } from './_style_split.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -35,6 +36,8 @@ const INDEX = 'index.js';
 const KEYS = 'scripts/keys-audit.mjs';
 const V255 = 'tests/system-v255.test.mjs';
 const PHONE_CSS = 'phone.css';
+/* 本版样式段头标记（R25-O4 后它在本 App 自己的 css 里，不在 phone.css 里）。 */
+const STYLE_MARK = '[v3.39.0] 时光胶囊';
 const NL = String.fromCharCode(10);
 /** 单引号（破坏表里拼锚点用）：一律拼装形，不写裸引号。 */
 const Q = String.fromCharCode(39);
@@ -650,34 +653,41 @@ test('C2 六处接线落点到位（少一处就静默错数据 / 点了没反�
     }
     /* ⑤ 懒加载目录映射（v255 套件用）。 */
     assert.ok(read(V255).includes("sourcebookApp: 'sourcebook'"), 'v255 dirMap 必须登记 sourcebook 目录');
-    /* ⑥ 样式段（段头独立成行）。 */
-    const css = read(PHONE_CSS);
-    assert.ok(css.includes('[v3.39.0] 时光胶囊'), 'phone.css 必须有本版段头');
-    assert.ok(css.includes('.sbr-root'), 'phone.css 必须贴上本件样式正文');
-    /* 段序：最新版必须在最前（本仓约定）。 */
-    assert.ok(css.indexOf('[v3.39.0] 时光胶囊') < css.indexOf('[v3.38.0] 召回治理台'),
-        '本版段必须在 v3.38.0 段之前（最新版在最前）');
+    /* ⑥ 样式真源与投递路径（R25-O4 起本 App 样式已搬出 phone.css）。
+     *    老判据查「phone.css 必须有本版段头」—— 那个位置已不存在（搬空了）。
+     *    改写不是放宽：改成查「唯一真源在盘 + 账本登记 + 打包面不许残留副本」三条。 */
+    const sf = styleSplitFacts(ROOT, { appId: 'sourcebook', cssRel: SB_CSS, headerMark: STYLE_MARK, prefixes: ['sbr'] });
+    assert.ok(sf.cssExists, 'apps/sourcebook/sourcebook.css 必须在盘（本 App 样式的唯一真源）');
+    assert.ok(sf.ledger.present, 'config/style-lazy.js 的 STYLE_LAZY 必须登记 sourcebook（不登记 ⇒ 打开就裸奔）');
+    assert.ok(sf.ledgerPointsHere, '账本必须把 sourcebook 指向 apps/sourcebook/sourcebook.css，实测：' + sf.ledger.css);
+    assert.equal(sf.bundleResidual, 0,
+        'phone.css 不得再残留本 App 独占规则（残留 = 样式又变两处，正是老判据要防的形态），实测 ' + sf.bundleResidual + ' 处');
 });
 
 test('C3 样式段头独立成行（本仓踩过粘连坑：语法合法但样式挂错选择器）', () => {
-    const css = read(PHONE_CSS);
-    const idx = css.indexOf('[v3.39.0] 时光胶囊');
-    assert.ok(idx > 0);
-    const lineStart = css.lastIndexOf(NL, idx) + 1;
-    const lineEnd = css.indexOf(NL, idx);
-    const line = css.slice(lineStart, lineEnd);
-    /* 段头行必须是「行首块注释起头、行尾块注释收尾」。 */
-    assert.ok(line.startsWith('/*'), '段头行必须以块注释起头，实测：' + line.slice(0, 40));
-    assert.ok(line.trimEnd().endsWith('*/'), '段头行必须以块注释收尾，实测：' + line.slice(-40));
-    assert.ok(lineStart === 0 || css[lineStart - 1] === NL, '段头不许接在上一段尾后');
-    /* 段头行内不许夹着别的东西（行里只能有一个注释对）。 */
-    assert.equal(line.split('/*').length, 2, '段头行只许有一个块注释起头');
+    /* 同上：段头形态查的是**本 App 自己的 css**（搬出后 phone.css 不是它的家）。 */
+    const css = read(SB_CSS);
+    const idx = css.indexOf(STYLE_MARK);
+    assert.ok(idx > 0, '段头必须在场（含版本标记 ' + STYLE_MARK + '）');
+    const head = css.slice(0, idx);
+    assert.ok(head.trimStart().startsWith('/*'), '文件必须以块注释段头起头，实测：' + head.slice(0, 40));
+    /* 段头行必须是「行首块注释起头、行尾块注释收尾」：标记必须落在注释内、注释在标记之后才收尾。 */
+    const close = css.indexOf('*/', idx);
+    assert.ok(close > idx, '段头注释必须包住版本标记（标记落在注释外 = 会被当选择器吃掉）');
+    assert.equal(head.split('*/').length, 1, '段头注释在标记之前不得提前收尾（提前收尾 = 标记落到注释外）');
+    /* 粘连坑：注释收尾后必须换行，不许紧跟选择器。 */
+    const after = css.slice(close + 2, close + 4);
+    assert.ok(after.startsWith(NL), '注释收尾后必须换行，不许与正文粘连，实测：' + JSON.stringify(after));
 });
 
-test('C4 源文件与 phone.css 段必须逐字同源（手工改两处必会再犯）', () => {
+test('C4 样式唯一真源：搬出后 phone.css 里不许再有整份副本（手工留两处必会再犯）', () => {
     const src = read(SB_CSS).trim();
     const css = read(PHONE_CSS);
-    assert.ok(css.includes(src), 'sourcebook.css 正文必须逐字出现在 phone.css 的本版段里');
+    assert.ok(src.length > 0, 'sourcebook.css 不得为空（唯一真源不许是空文件）');
+    /* 老判据查「源文件正文逐字出现在 phone.css」；搬出后那条恒假。改成反向：
+       打包面**不许**再含整份副本 —— 两处副本正是老判据要防的形态。 */
+    assert.equal(css.includes(src), false, 'phone.css 里不得再含 sourcebook.css 整份副本');
+    assert.equal(css.includes('.sbr-root'), false, 'phone.css 不得残留 .sbr-root 规则');
 });
 
 test('C5 视图调用面闭合：视图调用的每个 App 方法都真在 App 上', () => {
