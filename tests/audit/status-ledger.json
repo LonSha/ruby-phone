@@ -66,7 +66,7 @@
     "check_chain_len": 21
   },
   "tests": {
-    "test_files": 511,
+    "test_files": 518,
     "audit_dir_exists": true,
     "audit_files": 56
   },
@@ -111,7 +111,7 @@
   "scale": {
     "app_dirs": 101,
     "apps_ids": 89,
-    "index_lines": 15272,
+    "index_lines": 15339,
     "css_bytes": 622770,
     "crossrepo": {
       "produced_faces": 30
@@ -133,7 +133,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 509,
+        "suite_files": 516,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
