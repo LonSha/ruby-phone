@@ -1,17 +1,15 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-18T16:18:32.281Z",
+  "measured_at": "2026-11-19T02:01:34.852Z",
   "version": "4.157.0",
   "browser": "playwright-cache:chromium-1148",
-  "mode": "replay",
+  "mode": "direct",
   "source": {
-    "log": "../../../tmp/gate_o4_full2.log",
-    "bytes": 173184,
-    "sha256": "19aa71b76f7ae190535f81cce3f4318ff13ab39882f6e81b46ca67d85a3a9fe0"
+    "gate": "tests/browser/gate.mjs"
   },
-  "elapsed_ms": 0,
-  "scenes": 23,
+  "elapsed_ms": 425905,
+  "scenes": 24,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,12 +17,12 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 948,
+  "total_reads": 992,
   "fail_reads": 0,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 23,
-    "measured": 23,
+    "on_disk": 24,
+    "measured": 24,
     "missing": [],
     "extra": [],
     "complete": true
@@ -68,6 +66,10 @@
     },
     "o4-style-lazy.scen.js": {
       "reads": 40,
+      "fail": 0
+    },
+    "o5-settings-ia.scen.js": {
+      "reads": 44,
       "fail": 0
     },
     "o6-longlist-extreme.scen.js": {
@@ -124,7 +126,7 @@
     }
   },
   "failures": [],
-  "gate_exit_code": null,
-  "gate_exit_code_note": "回放模式只读日志、观测不到 gate 退出码，故记 null（不猜不补）；真实判定以日志末的 fail 计数为准。",
+  "gate_exit_code": 0,
+  "gate_exit_code_note": "直线模式原样透传 gate.mjs 的退出码。",
   "honest_boundary": "本台账证明「门真跑了一次并如实报出读数」；它不证明 89 个入口的内容都正确。门内判据的红点即为当期真缺陷，逐条列在 failures 里。"
 }

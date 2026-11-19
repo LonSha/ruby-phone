@@ -52,11 +52,11 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：905 个 .js / 合计 384875 行 / 44 个大文件，台账全绿', () => {
+test('真仓读数：907 个 .js / 合计 385634 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 905, '扫到的 .js 数量与当前实际不符（R25-X2/X5/X9 新增 time-machine / layout-breaks / story-clock-fanout 三个内核后已复核）');
-  assert.equal(r.stats.total, 384875, '全仓合计行数与台账不符（R25-X2/O6/X5/X9 各期内核 + 接线与读回，以及 O1 拆骨后的重量变化，台账 note 里写了为什么涨/为什么降）');
+  assert.equal(r.stats.files, 907, '扫到的 .js 数量与当前实际不符（R25-O5 新增 settings-ia.js 与 settings-ia-panel.js 后已复核）');
+  assert.equal(r.stats.total, 385634, '全仓合计行数与台账不符（R25-O5 按「新文件装逻辑、老文件只付接线费」落盘，台账 note 里写了为什么涨）');
   assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
@@ -79,7 +79,8 @@ test('「无上界门」这条欠账真的关了：PLAN.md 点名的三个大文
   // [R25-O1] 第一刀把文本解析族（6 个方法）搬到 apps/wechat/chat-text-core.js；
   //   台账按真读数重压（18451 → 18457，R25-O2 接线四处 + 恢复读数上屏），只降不涨的棘轮方向未变。
   assert.equal(ledger.files['apps/wechat/chat-view.js'].lines_max, 18457);
-  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12798);
+  // [R25-O5] settings-app.js 12798 → 12802：只付 1 行 import + 1 行 mount + 2 行注释；逻辑全在新文件里。
+  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12802);
   assert.ok(rows.every((r) => r.lines <= DEFAULT_MAX || r.path in ledger.files), '存在未被记账的大文件');
 });
 
@@ -158,7 +159,7 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 905);
+  assert.equal(j.stats.files, 907);
   assert.deepEqual(j.problems, []);
 });
 

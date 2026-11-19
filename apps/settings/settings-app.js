@@ -13,6 +13,7 @@ import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedb
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { filterSettings as _r22FilterSettings, settingsFilterNote } from '../../config/settings-filter.js?v=4.157.0&r=20261116-r22';
 import { a11yAudit as _r22A11yAudit, a11yNote } from '../../config/a11y-audit.js?v=4.157.0&r=20261116-r22';
+import { mountIaPanel } from './settings-ia-panel.js?v=4.157.0&r=20261119-r25o5';
 /* [v3.81.0 · A6] 便携负载的纯函数对：魔标校验 + 按内容去重追加（三处导入共用同一份口径）。
  *   此前三处（NAI 预设 / GPT 预设 / ComfyUI 工作流）各自解析、各自按名去重 ——
  *   同一份文件导两次就多一份（id 每次新生成、名字又被改名规则绕开）。 */
@@ -3600,6 +3601,9 @@ export class SettingsApp {
         this.bindEvents();
         mountUsagePattern(this._getActiveSettingsRoot(), this.storage);
         mountDeviceRuntimeSection(this._getActiveSettingsRoot(), this.storage);
+        /* R25-O5：组目录 / 跨 tab 搜索可见 / 统一恢复默认。判据在 config/settings-ia.js、DOM 在 settings-ia-panel.js，
+         * 本文件只留这一行接线 —— O5 自带「新增行数有上限」，逻辑不搬进这一万二千行。 */
+        this._r25IaMount = mountIaPanel(this._getActiveSettingsRoot(), { storage: this.storage, jumpSlot: (this._r25IaJump = this._r25IaJump || { key: null }), lastReceipt: () => this._r25IaLastReceipt, onAfterReset: (r) => { this._r25IaLastReceipt = r; this.phoneShell?.showNotification?.('设置', r.note, r.face === 'applied' ? '✅' : '⚠️'); this.render(); } });
     }
 
     _getImagePromptAppDefs() {
