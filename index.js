@@ -166,6 +166,7 @@ import { installConsoleBridge, logGateSelfCheck } from './config/log-gate.js';
 /* [R26-O6] 迁移兼容矩阵的自检：启动时留痕，相位与其它桥自检同。 */
 import { migrationMatrixSelfCheck } from './config/migration-matrix.js';
 import { bootFallbackSelfCheck } from './config/boot-fallback.js';
+import { EXPORT_POLICIES, prepareExport, exportRedactText, verifyExport, exportRedactSelfCheck } from './config/export-redact.js';
 import { dataHealthSelfCheck } from './config/data-health.js';
 /* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
 import { chatWindowSelfCheck } from './config/chat-window.js';
@@ -2432,6 +2433,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 const _logBr = installConsoleBridge(typeof console === 'object' ? console : null, { level: 'info' });
                 if (_logBr && _logBr.ok === true) {
                     window.VirtualPhone.logGate = _logBr.gate;
+                    /* [R26-X1a] 导出脱敏闸：任何出仓数据都要先说清「备份还是分享」。
+                     *   backup → 密钥保留（否则恢复不了）；share → 脱敏（密钥不得外流）；
+                     *   未登记策略 → 拒载，不许默认走任一边。缝自 Lumiere：快照=脱敏副本，源不动。 */
+                    window.VirtualPhone.exportRedact = {
+                        policies: EXPORT_POLICIES,
+                        prepare: prepareExport,
+                        text: exportRedactText,
+                        verify: verifyExport,
+                        selfCheck: exportRedactSelfCheck
+                    };
                     window.VirtualPhone.logBridgeUndo = _logBr.undo;
                 }
             } catch (_logBrErr) { /* 装桥失败：保持原 console 不变 */ }
@@ -2469,6 +2480,7 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r26O4', logGateSelfCheck],
                 ['_r26O6', migrationMatrixSelfCheck],
                 ['_r26O1b', bootFallbackSelfCheck],
+                ['_r26X1a', exportRedactSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {
