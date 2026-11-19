@@ -38,6 +38,9 @@ import { backGuardReport } from '../../config/back-guard.js';
  *   为什么必须在这里露一面：计划书 O5 第 4 条要求「读数暴露到洞察 App 的一个分页」——
  *   内核有 stats() 而没人读，就是本仓反复出现的「登记面不算交付」。 */
 import { mediaCacheFace, mediaCacheFaceText, mediaCacheRows } from '../../config/media-cache-hooks.js';
+import { logGateFace, logGateFaceText, logGateRows } from '../../config/log-gate.js';
+import { matrixRows as migrationMatrixRows, planMigration as migrationPlanOf, migrationCountsText, migrationFaceText } from '../../config/migration-matrix.js';
+import { BOOT_PHASES, createBootGuard, probeCapabilities, bootFallbackFaceText } from '../../config/boot-fallback.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏的**被挡回信账本**（唯一真源 `config/session-gate.js`）。
  *   计划验收要求「旧响应有可读拒绝原因」—— 那条要求正落在这里：
  *   栅栏在写回口挡下旧会话回信时只 `console.warn`（不抛、不弹窗，见该模块文件头），
@@ -782,6 +785,43 @@ export function collectDiagnose(win, storage) {
     /* [R24-O5 边界] 媒体缓存读数：**每次 render 现取**（不缓存），缺 cache 时如实 absent，
      *   读失败时如实 unknown —— 两种「没有数」都不许被画成「占用 0」。 */
     const mediaCacheSc = safe(() => mediaCacheFace(w), null) || null;
+    /* [R26-O4] 日志闸读数：装桥后才有。没装 ⇒ absent（「没量过」而不是「日志 0 条」），
+     *   读失败 ⇒ unknown。两种「没有数」都不许被写成 0。 */
+    const logGateSc = safe(() => logGateFace(w), null) || null;
+    /* [R26-O6] 迁移矩阵面：逐对版本「可升 / 拒载」。取的是同一份 storageFace 的当前代，
+     *   不另读一遍存储（同一读数不两处各算一次）。 */
+    const migrationSc = safe(() => {
+        const sch = storageFace && storageFace.chat && storageFace.chat.schema ? storageFace.chat.schema : null;
+        return {
+            state: String((sch && sch.state) || 'unknown'),
+            current: Number((sch && sch.current) || 2),
+            rows: migrationMatrixRows({ current: Number((sch && sch.current) || 2) })
+        };
+    }, null) || null;
+    /* [R26-O1b] 启动兜底面：不在这里跑真启动（诊断不该改变被诊断物），
+     *   只派生一份「空 guard 的裁定」+ 运行时能力探针，供诊断卡显示「本机缺什么能力」。
+     *   依赖超时的真实读数由 boot-timing / boot-budget 那条线出，本面不重复量。 */
+    const bootFallbackSc = safe(() => {
+        const scope = w || globalThis;
+        const caps = probeCapabilities(scope);
+        const guard = createBootGuard({ fallbackMs: 12000, scope: scope });
+        const bf = guard.face();
+        return {
+            state: bf.state,
+            text: bootFallbackFaceText(bf) + '（本面不跑真启动）',
+            missing: caps.missing,
+            phases: BOOT_PHASES.slice(),
+            rows: caps.rows
+        };
+    }, null) || null;
+    /* [R26-O6b] 迁移报数：迁移只喊「升了」无法对账，必须报动几组/归档几键/跳几条/拒几条。 */
+    const migrationLedger = safe(() => {
+        const sch0 = storageFace && storageFace.chat && storageFace.chat.schema ? storageFace.chat.schema : null;
+        const st0 = String((sch0 && sch0.state) || 'unknown');
+        const cur0 = Number((sch0 && sch0.current) || 2);
+        const plan0 = migrationPlanOf({ face: { state: st0, version: cur0, current: cur0 }, evidence: null });
+        return { countsText: migrationCountsText(plan0), text: migrationFaceText(plan0) };
+    }, null) || null;
     /* [R25-O9] 错误可读面：同一取数纪律 —— 从宿主读，不自建。 */
     const errReadSc = safe(() => errorReadableFace(w), null) || null;
     const errPackSc = safe(() => errorReadablePack(w), null) || null;
@@ -2297,7 +2337,7 @@ export function collectDiagnose(win, storage) {
             };
         } catch (_e) { return null; }
     })();
-    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, mediaCache: mediaCacheSc, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, layout: layoutSc, storyFanout: storyFanoutSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
+    return { at, snapshotAt, secretFace, bridges, bridgeReport: report, probeSelf, fields, backStack, sourceKeys, rulebook, audit, projection, projItems, injection, injBlocks, obsNotes, storageFace, evidence, freshness, knowledge, storyClock: clockSc, rollbackPreview: previewSc, checkpoint, bootTiming: bootSc, bootBudget: bootBudgetSc, crashBoundary: crashSc, mediaCache: mediaCacheSc, logGate: logGateSc, bootFallback: bootFallbackSc, migration: migrationSc, migrationLedger, errorReadable: errReadSc, errorReadablePack: errPackSc, a11yTriad: a11ySc, timeFormat: timeFormatSc, timeFormatApplied, notifyTier: notifySc, layout: layoutSc, storyFanout: storyFanoutSc, crossRepo: repoFace, appFaces, iconFace, undoFace, openRefFace, silenceFace, inlineActionFace, provenanceFace, scheduleFace, financeFace, financeCommitFace, resumeWorkbenchFace, workflowFace, groupPaceFace, relationAlbumFace, perspectiveFace, datePlayFace, creationWorkbenchFace, backupFace, capHealthFace, knowledgeBridgeFace, creationFace, characterSlotFace, craftFace, disposalFace, handoff, sessionGate, selfCheckFace, timeFace };
 }
 
 /** [v3.83.0 · 计划 R-O7] 诊断处置面的一行读数（视图不自拼）。
@@ -2876,7 +2916,7 @@ export function timeFaceText(face) {
 
 /* [R24-O5 边界] 视图层要具名导入这两个（named-import 门盯的就是「import 的名字在目标模块里真的存在」）。
  *   `mediaCacheFace` 不外给：它只在本文件内部取一面，外给就多一个零跨文件消费的导出。 */
-export { mediaCacheFaceText, mediaCacheRows };
+export { mediaCacheFaceText, mediaCacheRows, logGateFaceText, logGateRows };
 export default {
     CONSUMED_FIELDS,
     schemaStateText,

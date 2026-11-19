@@ -158,6 +158,14 @@ import { mediaCacheSelfCheck } from './config/media-cache.js';
  *   为什么要经 hooks 这一层：index.js 不可被 import，直接写在 IIFE 里的调用只能用
  *   「源码里有这行字」来证；hooks 是纯函数，判据能真调、负控制能真打红。 */
 import { mediaCacheEnsure, mediaCacheOnChatChanged, mediaCacheOnInactive } from './config/media-cache-hooks.js';
+/* [R26-O4] 日志分级与采样：零侵入接管 console（默认 info + 全量采样 ⇒ pass-through，
+ *   而 config/ 下 150 处输出里一处 console.debug 也没有 ⇒ 默认态行为与不装一致）。
+ *   内核在 config/log-gate.js；挂载点在本文件（搜索 logGate）；自检登记在 _bridgeChecks。
+ *   接管可撤销：VirtualPhone.logBridgeUndo（判据 r26_o4_log_level A7 盯这行）。 */
+import { installConsoleBridge, logGateSelfCheck } from './config/log-gate.js';
+/* [R26-O6] 迁移兼容矩阵的自检：启动时留痕，相位与其它桥自检同。 */
+import { migrationMatrixSelfCheck } from './config/migration-matrix.js';
+import { bootFallbackSelfCheck } from './config/boot-fallback.js';
 import { dataHealthSelfCheck } from './config/data-health.js';
 /* [v4.158.0 · R24-O2/O8] 窗口化挂载策略 + 三层焦点模型。 */
 import { chatWindowSelfCheck } from './config/chat-window.js';
@@ -2417,6 +2425,16 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
             }
             /* [v4.156.0 · R21-X6/X7/X8/X9] 四座桥的装配点自检（与 _x3SelfCheck 同挂法）。
              *   自检绿不绿启动时留痕；坏了不影响手机本体（桥全是增强面）。 */
+            /* [R26-O4] 日志闸：把 console 的五个方法接到分级 + 采样流水线上。
+             *   失败不影响手机本体（桥是增强面）；把 undo 也挂在 VirtualPhone 上，
+             *   好让判据/诊断能复验「真接管、真撤销」。 */
+            try {
+                const _logBr = installConsoleBridge(typeof console === 'object' ? console : null, { level: 'info' });
+                if (_logBr && _logBr.ok === true) {
+                    window.VirtualPhone.logGate = _logBr.gate;
+                    window.VirtualPhone.logBridgeUndo = _logBr.undo;
+                }
+            } catch (_logBrErr) { /* 装桥失败：保持原 console 不变 */ }
             const _bridgeChecks = [
                 ['_x6SelfCheck', appChangeDigestSelfCheck],
                 ['_x7SelfCheck', devicePhysicalNarrativeSelfCheck],
@@ -2448,6 +2466,9 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r24X5', hostAdapterSelfCheck],
                 ['_r24O6', settingsRegistrySelfCheck],
                 ['_r24O9', cheatLazySelfCheck],
+                ['_r26O4', logGateSelfCheck],
+                ['_r26O6', migrationMatrixSelfCheck],
+                ['_r26O1b', bootFallbackSelfCheck],
             ];
             for (const [_ck, _fn] of _bridgeChecks) {
                 try {

@@ -144,6 +144,7 @@ export const SETTING_ENTRIES = Object.freeze([
 
     { id: 'performance.lazyStyles', group: 'performance', label: '样式懒加载', default: true, effect: '只加载当前 App 的样式，首屏更快', keywords: '样式 懒加载 启动 lazy' },
     { id: 'performance.mediaCacheMb', group: 'performance', label: '媒体缓存上限', default: 48, effect: '超过就按最久未用逐张淘汰，不整块清空', keywords: '缓存 图片 上限 cache' },
+    { id: 'performance.logLevel', group: 'performance', label: '日志级别', default: 'info', effect: '低于所选级别的输出不再出现；error 永远留（采样也留）', keywords: '日志 级别 采样 log level' },
 
     { id: 'data.healthCheck', group: 'data', label: '数据体检', default: 'weekly', effect: '按周扫孤儿键与坏数据，只报告不自动删', keywords: '体检 孤儿 数据 health' },
     { id: 'data.keepDraft', group: 'data', label: '保留草稿', default: true, effect: '关掉后退出 App 不保留未发送内容', keywords: '草稿 draft' }

@@ -19,7 +19,7 @@ import { silenceFaceText } from './diagnose-data.js';
 import { timeFaceText } from './diagnose-data.js';
 import { rollbackPreviewFaceText, rollbackPreviewRows } from './diagnose-data.js';
 /* [v3.13.0 · 计划 #14] 启动耗时面：一行文案与逐段明细**都走内核转发**（本文件不自拼）。 */
-import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows, mediaCacheFaceText, mediaCacheRows } from './diagnose-data.js';
+import { bootTimingFaceText, bootTimingRows, crashBoundaryFaceText, crashBoundaryRows, errorReadableFaceText, bootBudgetFaceText, bootBudgetRows, mediaCacheFaceText, mediaCacheRows, logGateFaceText, logGateRows } from './diagnose-data.js';
 /* [R25-O7] 无障碍三档：一行文案走内核（「读了什么 / 真读回来什么」的比较口径只允许有一份）。 */
 import { a11yTriadText } from '../../config/a11y-triad.js';
 /* [R25-X4] 时间格式：卡片里的 8 格全部来自 `pkg.timeFormat.matrix`（真算）。 */
@@ -1106,6 +1106,43 @@ export class DiagnoseView {
         }
         return html;
     }
+    /** [R26-O4] 日志分级与采样卡片：分级留/丢逐级列出，error 那一格写「恒留」。 */
+    _logGateHtml(pkg) {
+        const face = (pkg && pkg.logGate) || null;
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>' + escapeHtml(logGateFaceText(face)) + '</div>';
+        const rows = logGateRows(face);
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                html += '<li class=' + Q + 'dg-row' + Q + '>'
+                    + escapeHtml(r.label) + ' · ' + escapeHtml(String(r.value))
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+        return html;
+    }
+    /** [R26-O6] 存储迁移矩阵卡片：逐格写「可升 / 拒载」，不渲染成一句话。 */
+    _migrationMatrixHtml(pkg) {
+        const face = (pkg && pkg.migration) || null;
+        const rows = (face && Array.isArray(face.rows)) ? face.rows : [];
+        let html = '<div class=' + Q + 'dg-sub' + Q + '>'
+            + escapeHtml(face
+                ? ('存储代际 ' + String(face.state || 'unknown') + ' · 当前 v' + String(face.current || '?')
+                   + ' · 未登记的边一律拒载（不许静默降级）')
+                : '迁移矩阵：没有读数（没量过）')
+            + '</div>';
+        if (rows.length) {
+            html += '<ul class=' + Q + 'dg-list' + Q + '>';
+            rows.forEach((r) => {
+                html += '<li class=' + Q + 'dg-row' + Q + '>'
+                    + escapeHtml(r.label) + ' · ' + escapeHtml(String(r.value))
+                    + '</li>';
+            });
+            html += '</ul>';
+        }
+        return html;
+    }
     /** [R26-O1] 首屏预算卡片：一行判定 + 逐段预算/实测（超线的那段标红）。 */
     _bootBudgetHtml(pkg) {
         const face = (pkg && pkg.bootBudget) || null;
@@ -2177,6 +2214,10 @@ export class DiagnoseView {
          *   的读数）—— 摆在前面的卡会让人以为「启动慢」是当前正在发生的事。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>启动耗时（谁拖慢了启动）</h3>' + this._bootTimingHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>首屏预算（超了哪一段）</h3>' + this._bootBudgetHtml(pkg) + '</section>');
+        /* [R26-O6] 迁移矩阵卡：逐格可升/拒载（数据来自 pkg.migration）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>存储迁移矩阵（哪版能升、哪版明确拒载）</h3>' + this._migrationMatrixHtml(pkg) + '</section>');
+        /* [R26-O4] 日志闸卡：分级/采样计数来自 pkg.logGate（本视图不重算）。 */
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>日志分级与采样（留下多少、丢了什么）</h3>' + this._logGateHtml(pkg) + '</section>');
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>崩溃边界（谁挂了、还救不救）</h3>' + this._crashBoundaryHtml(pkg) + '</section>');
         /* [R24-O5 边界] 媒体缓存读数卡：数据来自 pkg.mediaCache（本视图不重算）。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>媒体缓存（图片占多少、谁会放）</h3>' + this._mediaCacheHtml(pkg) + '</section>');
