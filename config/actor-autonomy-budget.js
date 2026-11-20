@@ -57,7 +57,7 @@ const DEFAULT_LIMITS = Object.freeze({
     set_reminder: 2
 });
 
-const DEFAULT_WINDOW_MS = 3600000;      // 一小时窗口
+const DEFAULT_AUTONOMY_WINDOW_MS = 3600000;      // 一小时窗口
 const DEFAULT_UNANSWERED_LIMIT = 3;     // 连续三条没回就闭嘴
 const DEFAULT_QUIET = Object.freeze({ from: 23 * 60, to: 7 * 60 }); // 23:00–07:00
 
@@ -82,7 +82,7 @@ export function createAutonomyBudget(opts) {
     const o = (opts && typeof opts === 'object') ? opts : {};
     let enabled = o.enabled !== false;
     const windowOpt = numOrNull(o.windowMs);
-    const windowMs = windowOpt === null ? DEFAULT_WINDOW_MS : windowOpt;
+    const windowMs = windowOpt === null ? DEFAULT_AUTONOMY_WINDOW_MS : windowOpt;
     const unansweredOpt = numOrNull(o.unansweredLimit);
     const unansweredLimit = unansweredOpt === null ? DEFAULT_UNANSWERED_LIMIT : unansweredOpt;
     const quiet = (o.quiet && typeof o.quiet === 'object') ? o.quiet : DEFAULT_QUIET;

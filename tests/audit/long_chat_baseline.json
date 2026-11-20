@@ -1,7 +1,7 @@
 {
   "file": "tests/audit/long_chat_probe.cjs",
   "probe": "tests/audit/long_chat_probe.cjs",
-  "note": "（2026-11-19 R26-O1c 新增 config/compat-shims.js：扫描面 +1 文件，读数随真仓复算）长会话（1000 楼）楼层消费路径取证：静态四类站点 + 活体缩放。合成宿主 + 真模块，非实机。",
+  "note": "（2026-11-19 R26-O1c 新增 config/compat-shims.js：扫描面 +1 文件，读数随真仓复算）长会话（1000 楼）楼层消费路径取证：静态四类站点 + 活体缩放。合成宿主 + 真模块，非实机。（2026-11-19 R26 第二批 X1/O2/O3/O5/O7/O8/O9/X3/X6/X7/X8/X9 落地：config +12 模块、tests +12 判据，扫描面 834/835 → 846，读数随真仓复算）",
   "measured_at": "v3.9.1",
   "host": {
     "fixture": "tests/_runtime_host.mjs",
@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 835,
+    "files": 847,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 15,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=835，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
+      "got_text": "files=847，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
     }
   ],
   "timing_criteria": [

@@ -51,7 +51,7 @@ export const MAX_MESSAGE = 200;
 export const DEFAULT_MAX_RESTARTS = 2;
 
 /** 同签名去重窗口。 */
-export const DEFAULT_WINDOW_MS = 60000;
+export const DEFAULT_CRASH_WINDOW_MS = 60000;
 
 /** 事件留存上限（诊断面只看最近这些；溢出只计数不丢账）。 */
 export const MAX_EVENTS = 50;
@@ -123,7 +123,7 @@ export function createCrashBoundary(opts) {
         : DEFAULT_MAX_RESTARTS;
     const windowMs = (typeof o.windowMs === 'number' && Number.isFinite(o.windowMs) && o.windowMs >= 0)
         ? o.windowMs
-        : DEFAULT_WINDOW_MS;
+        : DEFAULT_CRASH_WINDOW_MS;
     const onCrash = (typeof o.onCrash === 'function') ? o.onCrash : null;
 
     /** appId（全局错误用 '' 键）→ 记账。 */

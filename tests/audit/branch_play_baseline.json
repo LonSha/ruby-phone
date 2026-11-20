@@ -1,6 +1,6 @@
 {
   "file": "tests/audit/branch_play_baseline.json",
-  "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**（2026-11-19 R26-O1c 新增 config/compat-shims.js：扫描面 +1 文件，读数随真仓复算）",
+  "note": "F-1「分支与玩法（持久检查点 / 回滚预览 / 分支只读对照）」可行性基线。读数由 tests/audit/branch_play_probe.cjs 生成（--json 直接落盘，零手抄）。**只取证，不定案实施。**（2026-11-19 R26-O1c 新增 config/compat-shims.js：扫描面 +1 文件，读数随真仓复算）（2026-11-19 R26 第二批 X1/O2/O3/O5/O7/O8/O9/X3/X6/X7/X8/X9 落地：config +12 模块、tests +12 判据，扫描面 834/835 → 846，读数随真仓复算）",
   "measured_at": "v3.8.0",
   "probe": "tests/audit/branch_play_probe.cjs",
   "upstream_frozen": {
@@ -18,7 +18,7 @@
     ]
   },
   "readings": {
-    "files_scanned": 834,
+    "files_scanned": 846,
     "rollback_points": 41,
     "rollback_files": 4,
     "rollback_entry_defs": 12,

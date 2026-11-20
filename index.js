@@ -167,6 +167,18 @@ import { installConsoleBridge, logGateSelfCheck } from './config/log-gate.js';
 import { migrationMatrixSelfCheck } from './config/migration-matrix.js';
 import { bootFallbackSelfCheck } from './config/boot-fallback.js';
 import { SHIM_IDS, installCompatShims, failedShimReport, compatShimText, isShim, compatShimSelfCheck } from './config/compat-shims.js';
+import { SNAPSHOT_FACES, createStorageSnapshotStore, diffFields, snapshotFaceText, versionSnapshotSelfCheck } from './config/version-snapshot.js';
+import { DEFAULT_THRESHOLDS, RECLAIM_LEVELS, resolveThresholds, assessUsage, planReclaim, runReclaim, memoryFaceText, memoryReclaimSelfCheck } from './config/memory-reclaim.js';
+import { UPDATE_STEPS, UPDATE_KINDS, UPDATE_STATES, compareVersion, planUpdate, applyUpdate, updateFaceText, systemUpdateSelfCheck } from './config/system-update.js';
+import { CORE_KEYS, APP_KEY_SUFFIXES, expectedKeys, auditI18nCoverage, i18nCoverageText, i18nCoverageSelfCheck } from './config/i18n-coverage.js';
+import { DEFAULT_SCOPES, scanDefaultDeclarations, auditDefaultSource, defaultSourceText, defaultSourceSelfCheck } from './config/default-source.js';
+import { CAPABILITY_KINDS, CAPABILITY_STATES, DORMANT_REASONS, resolveKind, buildManifest, manifestText, collectReferences, capabilityManifestSelfCheck } from './config/capability-manifest.js';
+import { SLIM_DISPOSITIONS, SLIM_TARGET_STATES, buildSlimPlan, slimPlanText, dependencySlimmingSelfCheck } from './config/dependency-slimming.js';
+import { COLOR_PATTERNS, scanHardcodedColors, auditThemeHardcode, themeHardcodeText, themeHardcodeSelfCheck } from './config/theme-hardcode.js';
+import { RELATION_EVENT_KINDS, buildTimeline, nearestEvent, timelineText, relationTimelineSelfCheck } from './config/relation-timeline.js';
+import { HEALTH_STATES, DEFAULT_GROWTH_RATIO, assessHealth, healthBoardText, healthBoardSelfCheck } from './config/health-board.js';
+import { TRANSFER_KINDS, DROP_TARGETS, planDrop, sniffClipboard, dropText, clipboardDndSelfCheck } from './config/clipboard-dnd.js';
+import { DIGEST_DISABLED_REASON, groupNotifications, markReadBulk, clearBulk, buildDigest, digestText, notificationDigestSelfCheck } from './config/notification-digest.js';
 import { EXPORT_POLICIES, prepareExport, exportRedactText, verifyExport, exportRedactSelfCheck } from './config/export-redact.js';
 /* [R26-X4] 分享凭证只走 URL fragment：fragment 不进服务端日志、不进 Referer、不被 CDN 缓存。 */
 import { SHARE_FRAGMENT_PREFIX, SHARE_FRAGMENT_KEYS, buildShareCredential, encodeShareFragment, buildShareUrl, parseShareFragment, shareFragmentText, shareFragmentSelfCheck } from './config/share-fragment.js';
@@ -2458,6 +2470,159 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                     selfCheck: compatShimSelfCheck
                 };
             }
+            /* [R26-X1] 整机快照与多版本回滚：读写接到真 storage，快照本体只活在闭包里
+             *   （不为救数据先污染数据）。回滚先存后改，所以回滚本身也能再回滚。 */
+            try {
+                const _snapStore = createStorageSnapshotStore(storage);
+                window.VirtualPhone.versionSnapshot = {
+                    faces: SNAPSHOT_FACES,
+                    store: _snapStore,
+                    diff: diffFields,
+                    text: () => snapshotFaceText(_snapStore),
+                    selfCheck: versionSnapshotSelfCheck
+                };
+            } catch (_snapErr) { /* 快照是救生面：装不上不影响手机本体，但诊断面看得见「没装」 */ }
+            /* [R26-O3] 内存压力阈值与回收：阈值可配、草稿永不自动回收、失败不冒充释放量。
+             *   探针读 navigator.storage.estimate；读不到就答 absent —— 绝不假报「0 字节」。 */
+            try {
+                const probeUsage = async () => {
+                    try {
+                        const est = (typeof navigator === 'object' && navigator.storage && typeof navigator.storage.estimate === 'function')
+                            ? await navigator.storage.estimate() : null;
+                        if (!est || !Number.isFinite(est.usage)) return { state: 'absent', reason: 'navigator.storage.estimate 不可用' };
+                        return { state: 'ok', ...assessUsage(est.usage, DEFAULT_THRESHOLDS) };
+                    } catch (_pe) {
+                        return { state: 'absent', reason: String((_pe && _pe.message) || _pe) };
+                    }
+                };
+                window.VirtualPhone.memoryReclaim = {
+                    thresholds: DEFAULT_THRESHOLDS,
+        levels: RECLAIM_LEVELS,
+                    resolve: resolveThresholds,
+                    assess: assessUsage,
+                    plan: planReclaim,
+                    run: runReclaim,
+                    text: memoryFaceText,
+                    probeUsage,
+                    selfCheck: memoryReclaimSelfCheck
+                };
+            } catch (_memErr) { /* 回收是增强面：装不上不影响手机本体 */ }
+            /* [R26-X9] 系统更新语义：变更说明 / 迁移步骤 / 可延后 / 跨大版本强制先备份。
+             *   挂的是「计划 + 执行 + 裁定文案」三口，界面只读这一处，不许各自再算一遍版本。 */
+            try {
+                window.VirtualPhone.systemUpdate = {
+                    steps: UPDATE_STEPS,
+                    kinds: UPDATE_KINDS,
+                    states: UPDATE_STATES,
+                    compare: compareVersion,
+                    plan: planUpdate,
+                    apply: applyUpdate,
+                    text: updateFaceText,
+                    selfCheck: systemUpdateSelfCheck
+                };
+            } catch (_updErr) { /* 升级面是增强面：装不上不影响手机本体 */ }
+            /* [R26-O2] 依赖瘦身：只被测试引用的清单 + 逐条处置（接线/豁免/删除），未处置必须数出来 */
+            try {
+                window.VirtualPhone.dependencySlimming = {
+                    dispositions: SLIM_DISPOSITIONS,
+                    states: SLIM_TARGET_STATES,
+                    plan: buildSlimPlan,
+                    text: slimPlanText,
+                    selfCheck: dependencySlimmingSelfCheck
+                };
+            } catch (_dependencySlimmingErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-O8] 私有硬编码色板：只认字面量颜色（var(--token) 不算），豁免逐条登记 */
+            try {
+                window.VirtualPhone.themeHardcode = {
+                    patterns: COLOR_PATTERNS,
+                    scan: scanHardcodedColors,
+                    audit: auditThemeHardcode,
+                    text: themeHardcodeText,
+                    selfCheck: themeHardcodeSelfCheck
+                };
+            } catch (_themeHardcodeErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-X3] 关系时间线数据面：可拖（nearestEvent）/ 可筛 / 可点到具体消息，空就说空 */
+            try {
+                window.VirtualPhone.relationTimeline = {
+                    kinds: RELATION_EVENT_KINDS,
+                    build: buildTimeline,
+                    nearest: nearestEvent,
+                    text: timelineText,
+                    selfCheck: relationTimelineSelfCheck
+                };
+            } catch (_relationTimelineErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-X6] 数据健康看板：损坏优先于增长，无基线单列 unknown，空面不混进正常 */
+            try {
+                window.VirtualPhone.healthBoard = {
+                    states: HEALTH_STATES,
+                    growthRatio: DEFAULT_GROWTH_RATIO,
+                    assess: assessHealth,
+                    text: healthBoardText,
+                    selfCheck: healthBoardSelfCheck
+                };
+            } catch (_healthBoardErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-X7] 剪贴板与拖放：落点白名单 + 拒因可读 + 空载荷不算搬过去 */
+            try {
+                window.VirtualPhone.clipboardDnd = {
+                    kinds: TRANSFER_KINDS,
+                    targets: DROP_TARGETS,
+                    plan: planDrop,
+                    sniff: sniffClipboard,
+                    text: dropText,
+                    selfCheck: clipboardDndSelfCheck
+                };
+            } catch (_clipboardDndErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-X8] 通知中心：同源分组 / 批量已读清除 / 每日摘要可关（关了就明说关了） */
+            try {
+                window.VirtualPhone.notificationDigest = {
+                    disabledReason: DIGEST_DISABLED_REASON,
+                    group: groupNotifications,
+                    markRead: markReadBulk,
+                    clear: clearBulk,
+                    digest: buildDigest,
+                    text: digestText,
+                    selfCheck: notificationDigestSelfCheck
+                };
+            } catch (_notificationDigestErr) { /* 诊断面：装不上不影响手机本体，但看得见「没装」 */ }
+            /* [R26-O5] 默认值单一真源：扫描面 + 显示值对拍。同名即冲突，显示值必须等于声明值；
+             *   多行结构比不了字面量的单独列出来，绝不因为比不了就当一致。 */
+            try {
+                window.VirtualPhone.defaultSource = {
+                    scopes: DEFAULT_SCOPES,
+                    scan: scanDefaultDeclarations,
+                    audit: auditDefaultSource,
+                    text: defaultSourceText,
+                    selfCheck: defaultSourceSelfCheck
+                };
+            } catch (_defSrcErr) { /* 默认值真源是诊断面：装不上不影响手机本体，但诊断面看得见「没装」 */ }
+            /* [R26-O9] 能力清单自生成：清单只分类不存快照（存一份就是手抄版复辟）；引用计数由调用方喂。
+             *   启动期不扫全仓（产品和测试面共 20MB+），留给诊断面板按需调用。 */
+            try {
+                window.VirtualPhone.capabilityManifest = {
+                    kinds: CAPABILITY_KINDS,
+                    states: CAPABILITY_STATES,
+                    reasons: DORMANT_REASONS,
+                    resolveKind: resolveKind,
+                    build: buildManifest,
+                    refs: collectReferences,
+                    text: manifestText,
+                    selfCheck: capabilityManifestSelfCheck
+                };
+            } catch (_capManErr) { /* 能力清单是诊断面：装不上不影响手机本体 */ }
+            /* [R26-O7] 多语言覆盖审计：期望键由闭集规则现算（不手抄），缺口精确到
+             *   「哪个 locale 的哪个 App 的哪个键」。没有任何语言包时只说「全部键都缺」，
+             *   绝不报 0 缺键 —— 那是读数冒充。 */
+            try {
+                const _i18nAppIds = () => (Array.isArray(APPS) ? APPS.map((a) => a && a.id).filter(Boolean) : []);
+                window.VirtualPhone.i18nCoverage = {
+                    coreKeys: CORE_KEYS,
+                    suffixes: APP_KEY_SUFFIXES,
+                    expected: () => expectedKeys(_i18nAppIds()),
+                    audit: (packs) => auditI18nCoverage(packs, _i18nAppIds()),
+                    text: (report) => i18nCoverageText(report),
+                    selfCheck: i18nCoverageSelfCheck
+                };
+            } catch (_i18nCovErr) { /* 覆盖审计是诊断面：装不上不影响手机本体，但诊断面看得见「没装」 */ }
             /* [R26-O4] 日志闸：把 console 的五个方法接到分级 + 采样流水线上。
              *   失败不影响手机本体（桥是增强面）；把 undo 也挂在 VirtualPhone 上，
              *   好让判据/诊断能复验「真接管、真撤销」。 */
@@ -2557,6 +2722,18 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
                 ['_r26O6', migrationMatrixSelfCheck],
                 ['_r26O1b', bootFallbackSelfCheck],
                 ['_r26O1c', compatShimSelfCheck],
+                ['_r26X1', versionSnapshotSelfCheck],
+                ['_r26O3', memoryReclaimSelfCheck],
+                ['_r26X9', systemUpdateSelfCheck],
+                ['_r26O7', i18nCoverageSelfCheck],
+                ['_r26O5', defaultSourceSelfCheck],
+                ['_r26O9', capabilityManifestSelfCheck],
+                ['_r26O2', dependencySlimmingSelfCheck],
+                ['_r26O8', themeHardcodeSelfCheck],
+                ['_r26X3', relationTimelineSelfCheck],
+                ['_r26X6', healthBoardSelfCheck],
+                ['_r26X7', clipboardDndSelfCheck],
+                ['_r26X8', notificationDigestSelfCheck],
                 ['_r26X1a', exportRedactSelfCheck],
                 ['_r26X4', shareFragmentSelfCheck],
                 ['_r26X2', consumeOnceSelfCheck],
